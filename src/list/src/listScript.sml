@@ -358,6 +358,39 @@ val EVERY_CONJ = store_thm("EVERY_CONJ",
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
      FIRST_ASSUM ACCEPT_TAC);
 
+val EVERY_MEM = store_thm(
+  "EVERY_MEM",
+  ``!P l:'a list. EVERY P l = !e. MEM e l ==> P e``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [EVERY_DEF, MEM] THEN
+  mesonLib.MESON_TAC []);
+
+val EXISTS_MEM = store_thm(
+  "EXISTS_MEM",
+  ``!P l:'a list. EXISTS P l = ?e. MEM e l /\ P e``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [EXISTS_DEF, MEM] THEN
+  mesonLib.MESON_TAC []);
+
+val NOT_EVERY = store_thm(
+  "NOT_EVERY",
+  ``!P l. ~EVERY P l = EXISTS ($~ o P) l``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [EVERY_DEF, EXISTS_DEF, DE_MORGAN_THM,
+                   combinTheory.o_THM]);
+
+val NOT_EXISTS = store_thm(
+  "NOT_EXISTS",
+  ``!P l. ~EXISTS P l = EVERY ($~ o P) l``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [EVERY_DEF, EXISTS_DEF, DE_MORGAN_THM,
+                   combinTheory.o_THM]);
+
+val MEM_MAP = store_thm(
+  "MEM_MAP",
+  ``!(l:'a list) (f:'a -> 'b) x.
+       MEM x (MAP f l) = ?y. (x = f y) /\ MEM y l``,
+  LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, MEM] THEN
+  mesonLib.ASM_MESON_TAC []);
+
 val LENGTH_NIL = store_thm("LENGTH_NIL",
  --`!l:'a list. (LENGTH l = 0) = (l = [])`--,
       LIST_INDUCT_TAC THEN
@@ -557,6 +590,158 @@ Induct THEN REWRITE_TAC [EVERY_DEF,MEM]
            THEN FIRST_ASSUM MATCH_MP_TAC
            THEN ASM_REWRITE_TAC [MEM]]);
 
+val EVERY_MONOTONIC = store_thm(
+  "EVERY_MONOTONIC",
+  ``!(P:'a -> bool) Q.
+       (!x. P x ==> Q x) ==> !l. EVERY P l ==> EVERY Q l``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN LIST_INDUCT_TAC THEN
+  REWRITE_TAC [EVERY_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC);
+
+(* ----------------------------------------------------------------------
+   ZIP and UNZIP functions (taken from rich_listTheory)
+   ---------------------------------------------------------------------- *)
+val ZIP =
+    let val lemma = prove(
+    (--`?ZIP. (ZIP ([], []) = []) /\
+       (!(x1:'a) l1 (x2:'b) l2.
+        ZIP ((CONS x1 l1), (CONS x2 l2)) = CONS (x1,x2)(ZIP (l1, l2)))`--),
+    let val th = prove_rec_fn_exists list_Axiom
+        (--`(fn [] l = []) /\
+         (fn (CONS (x:'a) l') (l:'b list) =
+                           CONS (x, (HD l)) (fn  l' (TL l)))`--)
+        in
+    STRIP_ASSUME_TAC th
+    THEN EXISTS_TAC
+           (--`UNCURRY (fn:('a)list -> (('b)list -> ('a # 'b)list))`--)
+    THEN ASM_REWRITE_TAC[pairTheory.UNCURRY_DEF,HD,TL]
+     end)
+    in
+    new_specification
+        {consts = [{const_name = "ZIP", fixity = Prefix}],
+         name = "ZIP",
+         sat_thm = lemma
+        }
+    end;
+
+val UNZIP = new_recursive_definition {
+  name = "UNZIP",
+  def =
+    --`(UNZIP [] = ([], [])) /\
+       (!x l. UNZIP (CONS (x:'a # 'b) l) =
+               (CONS (FST x) (FST (UNZIP l)),
+                CONS (SND x) (SND (UNZIP l))))`--,
+  rec_axiom = list_Axiom};
+
+
+val SUC_NOT = arithmeticTheory.SUC_NOT
+val LENGTH_ZIP = store_thm("LENGTH_ZIP",
+  --`!(l1:'a list) (l2:'b list).
+         (LENGTH l1 = LENGTH l2) ==>
+         (LENGTH(ZIP(l1,l2)) = LENGTH l1) /\
+         (LENGTH(ZIP(l1,l2)) = LENGTH l2)`--,
+  LIST_INDUCT_TAC THEN REPEAT (FILTER_GEN_TAC (--`l2:'b list`--)) THEN
+  LIST_INDUCT_TAC THEN
+  REWRITE_TAC[ZIP,LENGTH,NOT_SUC,SUC_NOT,INV_SUC_EQ] THEN
+  DISCH_TAC THEN RES_TAC THEN ASM_REWRITE_TAC[]);
+
+val LENGTH_UNZIP = store_thm(
+  "LENGTH_UNZIP",
+  ``!pl. (LENGTH (FST (UNZIP pl)) = LENGTH pl) /\
+         (LENGTH (SND (UNZIP pl)) = LENGTH pl)``,
+  LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [UNZIP, LENGTH]);
+
+val ZIP_UNZIP = store_thm("ZIP_UNZIP",
+    (--`!l:('a # 'b)list. ZIP(UNZIP l) = l`--),
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[UNZIP,ZIP]);
+
+val UNZIP_ZIP = store_thm("UNZIP_ZIP",
+    (--`!l1:'a list. !l2:'b list.
+     (LENGTH l1 = LENGTH l2) ==> (UNZIP(ZIP(l1,l2)) = (l1,l2))`--),
+    LIST_INDUCT_TAC THEN REPEAT (FILTER_GEN_TAC (--`l2:'b list`--))
+    THEN LIST_INDUCT_TAC
+    THEN ASM_REWRITE_TAC[UNZIP,ZIP,LENGTH,NOT_SUC,SUC_NOT,INV_SUC_EQ]
+    THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC THEN REWRITE_TAC[]);
+
+open simpLib boolSimps pairTheory;
+infix ++;
+val arith_ss = bool_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
+val ZIP_MAP = store_thm(
+  "ZIP_MAP",
+  ``!l1 l2 f1 f2.
+       (LENGTH l1 = LENGTH l2) ==>
+       (ZIP (MAP f1 l1, l2) = MAP (\p. (f1 (FST p), SND p)) (ZIP (l1, l2))) /\
+       (ZIP (l1, MAP f2 l2) = MAP (\p. (FST p, f2 (SND p))) (ZIP (l1, l2)))``,
+  LIST_INDUCT_TAC THEN REWRITE_TAC [MAP, LENGTH] THEN REPEAT GEN_TAC THEN
+  STRIP_TAC THENL [
+    Q.SUBGOAL_THEN `l2 = []` SUBST_ALL_TAC THEN
+    REWRITE_TAC [ZIP, MAP] THEN mesonLib.ASM_MESON_TAC [LENGTH_NIL],
+    Q.SUBGOAL_THEN
+       `?l2h l2t. (l2 = l2h::l2t) /\ (LENGTH l2t = LENGTH l1)`
+    STRIP_ASSUME_TAC THENL [
+      mesonLib.ASM_MESON_TAC [LENGTH_CONS],
+      ASM_SIMP_TAC bool_ss [ZIP, MAP, FST, SND]
+    ]
+  ]);
+
+open mesonLib
+infix 8 by ;
+fun (q by t) = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC THENL [t, ALL_TAC]
+fun Cases_on q =
+  REPEAT_TCL STRIP_THM_THEN (fn th => SUBST_ALL_TAC th THEN
+                                      ASSUME_TAC th)
+  (Q.SPEC q num_CASES)
+val MEM_ZIP = store_thm(
+  "MEM_ZIP",
+  ``!(l1:'a list) (l2:'b list) p.
+       (LENGTH l1 = LENGTH l2) ==>
+       (MEM p (ZIP(l1, l2)) =
+        ?n. n < LENGTH l1 /\ (p = (EL n l1, EL n l2)))``,
+  LIST_INDUCT_TAC THEN SIMP_TAC bool_ss [LENGTH] THEN REPEAT STRIP_TAC THENL [
+    `l2 = []`  by ASM_MESON_TAC [LENGTH_NIL] THEN
+    FULL_SIMP_TAC arith_ss [ZIP, MEM, LENGTH],
+    `?l2h l2t. (l2 = l2h::l2t) /\ (LENGTH l2t = LENGTH l1)`
+      by ASM_MESON_TAC [LENGTH_CONS] THEN
+    FULL_SIMP_TAC arith_ss [MEM,ZIP,LENGTH] THEN EQ_TAC THEN
+    STRIP_TAC THENL [
+      Q.EXISTS_TAC `0` THEN ASM_SIMP_TAC arith_ss [EL, HD],
+      Q.EXISTS_TAC `SUC n` THEN ASM_SIMP_TAC arith_ss [EL,TL],
+      Cases_on `n` THEN FULL_SIMP_TAC arith_ss [EL,HD,TL] THEN
+      ASM_MESON_TAC []
+    ]
+  ]);
+
+val EL_ZIP = store_thm(
+  "EL_ZIP",
+  ``!(l1:'a list) (l2:'b list) n.
+        (LENGTH l1 = LENGTH l2) /\ n < LENGTH l1 ==>
+        (EL n (ZIP (l1, l2)) = (EL n l1, EL n l2))``,
+  Induct THEN SIMP_TAC arith_ss [LENGTH] THEN REPEAT STRIP_TAC THEN
+  `?l2h l2t. (l2 = l2h::l2t) /\ (LENGTH l2t = LENGTH l1)`
+     by ASM_MESON_TAC [LENGTH_CONS] THEN
+  FULL_SIMP_TAC arith_ss [ZIP,LENGTH] THEN
+  Cases_on `n` THEN ASM_SIMP_TAC arith_ss [ZIP,EL,HD,TL]);
+
+
+val MAP2_ZIP = store_thm("MAP2_ZIP",
+    (--`!l1 l2. (LENGTH l1 = LENGTH l2) ==>
+     !f:'a->'b->'c. MAP2 f l1 l2 = MAP (UNCURRY f) (ZIP (l1,l2))`--),
+    let val UNCURRY_DEF = pairTheory.UNCURRY_DEF
+    in
+    LIST_INDUCT_TAC THEN REPEAT (FILTER_GEN_TAC (--`l2:'b list`--))
+    THEN LIST_INDUCT_TAC THEN REWRITE_TAC[MAP,MAP2,ZIP,LENGTH,NOT_SUC,SUC_NOT]
+    THEN ASM_REWRITE_TAC[CONS_11,UNCURRY_DEF,INV_SUC_EQ]
+    end);
+
+val MEM_EL = store_thm(
+  "MEM_EL",
+  ``!(l:'a list) x. MEM x l = ?n. n < LENGTH l /\ (x = EL n l)``,
+  Induct THEN ASM_SIMP_TAC arith_ss [MEM,LENGTH] THEN REPEAT GEN_TAC THEN
+  EQ_TAC THEN STRIP_TAC THENL [
+    Q.EXISTS_TAC `0` THEN ASM_SIMP_TAC arith_ss [EL, HD],
+    Q.EXISTS_TAC `SUC n` THEN ASM_SIMP_TAC arith_ss [EL, TL],
+    Cases_on `n` THEN FULL_SIMP_TAC arith_ss [EL, HD, TL] THEN
+    ASM_MESON_TAC []
+  ]);
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

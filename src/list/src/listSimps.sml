@@ -22,7 +22,8 @@ val list_ss = rewrites
        [APPEND, EL, EVERY_DEF, FLAT, HD, LENGTH, MAP, MAP2, MEM, NULL_DEF,
         SUM, TL, APPEND_ASSOC, CONS, CONS_11, LENGTH_APPEND, LENGTH_MAP,
         MAP_APPEND, NOT_CONS_NIL, NOT_NIL_CONS, MAP_EQ_NIL, gMAP_EQ_NIL,
-        APPEND_NIL, CONS_ACYCLIC, list_case_def, APPEND_eq_NIL];
+        APPEND_NIL, CONS_ACYCLIC, list_case_def, APPEND_eq_NIL,
+        ZIP, UNZIP];
 
 
 (*---------------------------------------------------------------------------

@@ -734,36 +734,8 @@ val SUFFIX_DEF = new_definition("SUFFIX_DEF",
 (*  UNZIP_SND [(x0,y0;...;(xn-1,yn-1)] = [y0;...;yn-1]          *)
 (*--------------------------------------------------------------*)
 
-val ZIP =
-    let val lemma = prove(
-    (--`?ZIP. (ZIP ([], []) = []) /\
-       (!(x1:'a) l1 (x2:'b) l2.
-        ZIP ((CONS x1 l1), (CONS x2 l2)) = CONS (x1,x2)(ZIP (l1, l2)))`--),
-    let val th = prove_rec_fn_exists list_Axiom
-        (--`(fn [] l = []) /\
-         (fn (CONS (x:'a) l') (l:'b list) =
-                           CONS (x, (HD l)) (fn  l' (TL l)))`--)
-        in
-    STRIP_ASSUME_TAC th
-    THEN EXISTS_TAC
-           (--`UNCURRY (fn:('a)list -> (('b)list -> ('a # 'b)list))`--)
-    THEN ASM_REWRITE_TAC[pairTheory.UNCURRY_DEF,HD,TL]
-     end)
-    in
-    new_specification
-        {consts = [{const_name = "ZIP", fixity = Prefix}],
-         name = "ZIP",
-         sat_thm = lemma
-        }
-    end;
-
-val UNZIP = new_list_rec_definition("UNZIP",
-    (--`(UNZIP [] = ([], [])) /\
-     (!x l. UNZIP (CONS (x:'a # 'b) l) =
-        (CONS (FST x) (FST (UNZIP l)),
-         CONS (SND x) (SND (UNZIP l))))`--));
-
-
+val ZIP = listTheory.ZIP;
+val UNZIP = listTheory.UNZIP;
 
 val UNZIP_FST_DEF = new_definition("UNZIP_FST_DEF",
     (--`!l:('a#'b)list. UNZIP_FST l = FST(UNZIP l)`--));
@@ -2875,13 +2847,7 @@ val UNZIP_SNOC = store_thm("UNZIP_SNOC",
      UNZIP(SNOC x l) = (SNOC(FST x)(FST(UNZIP l)), SNOC(SND x)(SND(UNZIP l)))`--),
     GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SNOC,UNZIP]);
 
-val LENGTH_ZIP = store_thm("LENGTH_ZIP",
-    (--`!l1:'a list. !l2:'b list. (LENGTH l1 = LENGTH l2) ==>
-    (LENGTH(ZIP(l1,l2)) = LENGTH l1) /\ (LENGTH(ZIP(l1,l2)) = LENGTH l2)`--),
-    LIST_INDUCT_TAC THEN REPEAT (FILTER_GEN_TAC (--`l2:'b list`--))
-    THEN LIST_INDUCT_TAC
-    THEN REWRITE_TAC[ZIP,LENGTH,NOT_SUC,SUC_NOT,INV_SUC_EQ]
-    THEN DISCH_TAC THEN RES_TAC THEN ASM_REWRITE_TAC[]);
+val LENGTH_ZIP = save_thm("LENGTH_ZIP", listTheory.LENGTH_ZIP);
 
 val LENGTH_UNZIP_FST = store_thm("LENGTH_UNZIP_FST",
     (--`!l:('a # 'b)list. LENGTH (UNZIP_FST l) = LENGTH l`--),
@@ -2893,17 +2859,9 @@ val LENGTH_UNZIP_SND = store_thm("LENGTH_UNZIP_SND",
     PURE_ONCE_REWRITE_TAC[UNZIP_SND_DEF]
     THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[UNZIP,LENGTH]);
 
-val ZIP_UNZIP = store_thm("ZIP_UNZIP",
-    (--`!l:('a # 'b)list. ZIP(UNZIP l) = l`--),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[UNZIP,ZIP]);
+val ZIP_UNZIP = save_thm("ZIP_UNZIP", listTheory.ZIP_UNZIP);
 
-val UNZIP_ZIP = store_thm("UNZIP_ZIP",
-    (--`!l1:'a list. !l2:'b list.
-     (LENGTH l1 = LENGTH l2) ==> (UNZIP(ZIP(l1,l2)) = (l1,l2))`--),
-    LIST_INDUCT_TAC THEN REPEAT (FILTER_GEN_TAC (--`l2:'b list`--))
-    THEN LIST_INDUCT_TAC
-    THEN ASM_REWRITE_TAC[UNZIP,ZIP,LENGTH,NOT_SUC,SUC_NOT,INV_SUC_EQ]
-    THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC THEN REWRITE_TAC[]);
+val UNZIP_ZIP = save_thm("UNZIP_ZIP", listTheory.UNZIP_ZIP);
 
 val SUM_APPEND = store_thm("SUM_APPEND",
     (--`!l1 l2. SUM (APPEND l1 l2) = SUM l1 + SUM l2`--),
@@ -3198,15 +3156,7 @@ val OR_EL_FOLDR = save_thm("OR_EL_FOLDR",
     GEN_ALL (CONV_RULE (DEPTH_CONV ETA_CONV)
     (REWRITE_RULE[SOME_EL_FOLDR,I_THM](AP_THM OR_EL_DEF (--`l:bool list`--)))));
 
-val MAP2_ZIP = store_thm("MAP2_ZIP",
-    (--`!l1 l2. (LENGTH l1 = LENGTH l2) ==>
-     !f:'a->'b->'c. MAP2 f l1 l2 = MAP (UNCURRY f) (ZIP (l1,l2))`--),
-    let val UNCURRY_DEF = pairTheory.UNCURRY_DEF
-    in
-    LIST_INDUCT_TAC THEN REPEAT (FILTER_GEN_TAC (--`l2:'b list`--))
-    THEN LIST_INDUCT_TAC THEN REWRITE_TAC[MAP,MAP2,ZIP,LENGTH,NOT_SUC,SUC_NOT]
-    THEN ASM_REWRITE_TAC[CONS_11,UNCURRY_DEF,INV_SUC_EQ]
-    end);
+val MAP2_ZIP = save_thm("MAP2_ZIP", listTheory.MAP2_ZIP);
 
 val _ = export_theory();
 
