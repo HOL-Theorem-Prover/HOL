@@ -7,6 +7,7 @@ type thry = TypeBasePure.typeBase
 
 val ERR = mk_HOL_ERR "Induction";
 
+val monitoring = ref false
 
 fun induct_info db s =
  Option.map (fn facts => {nchotomy = TypeBasePure.nchotomy_of facts,
@@ -251,17 +252,6 @@ fun prove_case f thy (tm,TCs_locals,thm) =
  end;
 
 
-(* Special purpose *)
-fun nstrip_prod_type n ty = 
- if n < 1 then raise ERR "nstrip_prod_type" "first arg. too small"
- else let fun strip 1 ty = [ty]
-            | strip m ty = 
-               let val (ty1,ty2) = pairSyntax.dest_prod ty
-              in ty1::nstrip_prod_type (n-1) ty2
-               end
-      in strip n ty
-      end;
-
 fun detuple newvar =
   let fun detup M = 
      if pairLib.is_pair M
@@ -273,6 +263,15 @@ fun detuple newvar =
  in detup
  end;
 
+(*---------------------------------------------------------------------------*)
+(* For monitoring how much time and inferences building the induction        *)
+(* theorem takes.                                                            *)
+(*---------------------------------------------------------------------------*)
+
+val monitoring = ref 0;
+
+val _ = Feedback.register_trace("tfl_ind",monitoring,1);
+
 (*---------------------------------------------------------------------------*
  * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
  *                                                                           *
@@ -282,6 +281,7 @@ fun detuple newvar =
  *---------------------------------------------------------------------------*)
 
 fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
+let fun f() = 
 let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val (pats,TCsl) = unzip pat_TCs_list
     val case_thm = complete_cases thy pats
@@ -303,15 +303,13 @@ let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val dc = MP Sinduct dant
     val (vstruct,vars) = detuple (wfrecUtils.vary[P]) (hd pats)
     val dc' = itlist GEN vars (SPEC vstruct dc)
-(*
-    val Parg_ty = type_of(fst(dest_forall(concl dc)))
-    val vars = map (wfrecUtils.vary[P]) (nstrip_prod_type args Parg_ty)
-    val dc' = itlist GEN vars (SPEC (fst(mk_vstruct Parg_ty vars)) dc) 
-*)
 in
    GEN P (DISCH (concl Rinduct_assum) dc')
 end
-handle e => raise wrap_exn "Induction" "mk_induction" e;
+handle e => raise wrap_exn "Induction" "mk_induction" e
+in 
+  if !monitoring > 0 then Count.apply f () else f()
+end
 
 
 
@@ -372,5 +370,4 @@ fun type_cases thy =
 
 *)
 
-end;
-
+end

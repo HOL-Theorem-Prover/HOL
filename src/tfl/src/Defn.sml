@@ -70,13 +70,13 @@ fun extract_info db =
 val ind_suffix = ref "_ind";
 val def_suffix = ref "_def";
 
-fun indSuffix s = (s ^ !ind_suffix);
-fun defSuffix s = (s ^ !def_suffix);
-fun defPrim s   = defSuffix(s^"_primitive");
+fun indSuffix s     = (s ^ !ind_suffix);
+fun defSuffix s     = (s ^ !def_suffix);
+fun defPrim s       = defSuffix(s^"_primitive");
 fun defExtract(s,n) = defSuffix(s^"_extract"^Lib.int_to_string n);
-fun argMunge s = defSuffix(s^"_curried");
-fun auxStem stem   = stem^"_AUX";
-fun unionStem stem = stem^"_UNION";
+fun argMunge s      = defSuffix(s^"_curried");
+fun auxStem stem    = stem^"_AUX";
+fun unionStem stem  = stem^"_UNION";
 
 val imp_elim =
  let val P = mk_var("P",bool)
@@ -536,7 +536,11 @@ fun wfrec_eqns thy eqns =
      val given_pats = givens pats
      val corollaries = map (C SPEC corollary') given_pats
      val (case_rewrites,context_congs) = extraction_thms thy
-     val corollaries' = map (simplify case_rewrites) corollaries
+     val RW = REWRITES_CONV (add_rewrites empty_rewrites case_rewrites)
+     val rule = RIGHT_CONV_RULE 
+                  (LIST_BETA_CONV THENC REPEATC (RW THENC LIST_BETA_CONV))
+     val corollaries' = map rule corollaries
+(*      val corollaries' = map (simplify case_rewrites) corollaries *)
      val Xtract = extract [R1] context_congs f (proto_def,WFR)
  in
     {proto_def=proto_def,
@@ -1079,7 +1083,7 @@ fun mk_defn stem eqns =
        val (tup_eqs,stem',untuple) = pairf(stem,eqns)
           handle HOL_ERR _ => raise ERR "mk_defn"
                "failure in internal translation to tupled format"
-         val wfrec_res = wfrec_eqns facts tup_eqs
+       val wfrec_res = wfrec_eqns facts tup_eqs
      in
         if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
         then nestrec_defn (facts,(stem,stem'),wfrec_res,untuple)
