@@ -36,6 +36,7 @@ local
   open mlibUseful;
 in
   fun chat l m = trace {module = "folTools", message = m, level = l};
+  fun chatting l = visible {module = "folTools", level = l};
   val ERR = mk_HOL_ERR "folTools";
   val BUG = BUG;
 end;
@@ -94,7 +95,7 @@ fun update_parm_mapping f (parm : parameters) : parameters =
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun possibly f x = case total f x of SOME y => y | NONE => x;
+fun possibly f x = f x handle HOL_ERR _ => x;
 
 fun timed_fn s f a =
   let
@@ -106,13 +107,43 @@ fun timed_fn s f a =
 
 val type_vars_in_terms = foldl (fn (h, t) => union (type_vars_in_term h) t) [];
 
-fun strip_dom_rng 0 ty = ([], ty)
-  | strip_dom_rng n ty =
-  let val (d, r) = dom_rng ty in (cons d ## I) (strip_dom_rng (n - 1) r) end;
+fun variant_tys avoid =
+  let
+    fun f acc _ 0 = acc
+      | f acc i n =
+      let val v = mk_vartype ("'ty" ^ int_to_string i)
+      in if mem v avoid then f acc (i + 1) n else f (v :: acc) (i + 1) (n - 1)
+      end
+  in
+    f [] 0
+  end;
+
+fun strip_dom_rng ty =
+  case total dom_rng ty of NONE => ([], ty)
+  | SOME (d, r) => (cons d ## I) (strip_dom_rng r);
+
+fun strip_dom_rng_n 0 ty = ([], ty)
+  | strip_dom_rng_n n ty =
+  let val (d, r) = dom_rng ty in (cons d ## I) (strip_dom_rng_n (n - 1) r) end;
 
 fun const_scheme c =
   let val {Thy, Name, ...} = dest_thy_const c
   in prim_mk_const {Name = Name, Thy = Thy}
+  end;
+
+fun const_scheme_n n f =
+  let
+    val c = const_scheme f
+    val (ds, r) = strip_dom_rng (type_of c)
+    val diff = n - length ds
+  in
+    if diff <= 0 then c else
+      let
+        val _ = is_vartype r orelse raise ERR "const_scheme_n" "inflexible"
+        val xs = variant_tys (type_varsl (r :: ds)) diff
+      in
+        inst [r |-> foldl op--> r xs] c
+      end
   end;
 
 fun mk_vthm th =
@@ -171,10 +202,8 @@ fun add_thm vth lmap : logic_map =
     val {parm, axioms, thms, hyps, consts} = lmap
     val th = hol_thm_to_fol (#mapping parm) vth
   in
-    if mem th thms then lmap
-    else
-      {parm = parm, axioms = (th, vth) :: axioms, thms = th :: thms,
-       hyps = hyps, consts = consts}
+    {parm = parm, axioms = (th, vth) :: axioms,
+     thms = mlibThm.FRESH_VARS th :: thms, hyps = hyps, consts = consts}
   end;
 
 fun add_hyp vth lmap : logic_map =
@@ -182,10 +211,8 @@ fun add_hyp vth lmap : logic_map =
     val {parm, axioms, thms, hyps, consts} = lmap
     val th = hol_thm_to_fol (#mapping parm) vth
   in
-    if mem th hyps then lmap
-    else
-      {parm = parm, axioms = (th, vth) :: axioms, thms = thms,
-       hyps = th :: hyps, consts = consts}
+    {parm = parm, axioms = (th, vth) :: axioms, thms = thms,
+     hyps = mlibThm.FRESH_VARS th :: hyps, consts = consts}
   end;
 
 fun add_const s {parm, axioms, thms, hyps, consts} : logic_map =
@@ -194,9 +221,47 @@ fun add_const s {parm, axioms, thms, hyps, consts} : logic_map =
 
 val add_thms = C (foldl (uncurry add_thm));
 
+local
+  fun iconst (cs, th) =
+    let val c = NEW_SKOLEM_CONST th
+    in (fst (strip_comb c) :: cs, SKOLEM_CONST_RULE c th)
+    end;
+
+  fun ithm th =
+    let
+      val (h, c) = (hyp th, concl th)
+      val tyV = subtract (type_vars_in_term c) (type_vars_in_terms h)
+      val (cs, th) = curry (repeat iconst) [] th
+      val vths = map (mk_vthm o GEN_ALL) (CONJUNCTS' th)
+    in
+      (map (fst o dest_var) cs, map ((I ## K tyV) ## I) vths)
+    end;
+
+  fun append2 (a, b) (c, d) = (a @ c, b @ d);
+
+  fun carefully s f t m = f t m
+    handle HOL_ERR _ =>
+      (chat 1 ("metis: raised exception adding a" ^ s ^ ": dropping.\n"); m);
+
+in
+  fun build_map (parm, thmhyps) =
+    let
+      val (thms, hyps) = partition (null o hyp) thmhyps
+      val (cs, thms) = foldl (uncurry (C append2 o ithm)) ([], []) thms
+      val (cs, hyps) = foldl (uncurry (C append2 o ithm)) (cs, []) hyps
+      val lmap = new_map parm
+      val lmap = foldl (fn(t,m)=>carefully" theorem"add_thm t m) lmap thms
+      val lmap = foldl (fn(t,m)=>carefully"n assumption"add_hyp t m) lmap hyps
+      val lmap = foldl (fn(c,m)=>add_const c m) lmap cs
+    in
+      lmap
+    end
+    handle HOL_ERR _ => raise BUG "build_map" "shouldn't fail";
+end;
+
 val pp_logic_map : logic_map pp =
   mlibUseful.pp_map (fn {hyps, thms, ...} => (rev hyps, rev thms))
-  (mlibUseful.pp_pair (mlibUseful.pp_list pp_thm1) (mlibUseful.pp_list pp_thm1));
+  (mlibUseful.pp_pair (mlibUseful.pp_list mlibThm.pp_thm) (mlibUseful.pp_list mlibThm.pp_thm));
 
 (* ------------------------------------------------------------------------- *)
 (* Equality axioms.                                                          *)
@@ -224,17 +289,22 @@ val EQ_BOOL = prove
    ASM_CASES_TAC ``y:bool`` THEN
    ASM_REWRITE_TAC []);
 
+val EQ_EXTENSION =
+  CONV_RULE CNF_CONV EXT_POINT_DEF ::
+  CONJUNCTS (CONV_RULE CNF_CONV (INST_TYPE [beta |-> bool] EXT_POINT_DEF));
+
 local
-  fun break tm (res, subs) =
+  fun break tm (res, subtms) =
     let
       val (f, args) = strip_comb tm
-      val f_n = (if is_const f then const_scheme f else f, length args)
+      val n = length args
+      val f = if is_const f then const_scheme_n n f else f
     in
-      (insert f_n res, args @ subs)
+      (insert (f, n) res, args @ subtms)
     end;
 
   fun boolify (tm, len) =
-    let val (_, ty) = strip_dom_rng len (type_of tm)
+    let val (_, ty) = strip_dom_rng_n len (type_of tm)
     in (if ty = bool then tm else inst [ty |-> bool] tm, len)
     end;
 
@@ -256,7 +326,7 @@ local
 
   fun mk_axiom pflag (tm, len) =
     let
-      val (ctys, rty) = strip_dom_rng len (type_of tm)
+      val (ctys, rty) = strip_dom_rng_n len (type_of tm)
       val largs = map genvar ctys
       val rargs = map genvar ctys
       val th1 = foldl (paired_C MK_COMB) (REFL tm)
@@ -273,7 +343,9 @@ in
   fun substitution_thms skols {rels, funs} =
     let
       fun is_skol v = is_var v andalso mem (fst (dest_var v)) skols
+      fun is_eql (t,2) = same_const equality t | is_eql _ = false
       val funs = filter (not o is_skol o fst) funs
+      val rels = filter (not o is_eql) rels
     in
       map mk_vthm (mk_axioms true rels @ mk_axioms false funs)
     end;
@@ -282,7 +354,7 @@ end;
 local
   val eq_tm      = ``$= :'a->'a->bool``;
   val eq_thms    = map mk_vthm [EQ_REFL, EQ_SYMTRANS];
-  val eq_thms_ho = map mk_vthm [EQ_COMB, EQ_BOOL] @ eq_thms;
+  val eq_thms_ho = map mk_vthm (EQ_COMB :: EQ_BOOL :: EQ_EXTENSION) @ eq_thms;
 in
   fun add_equality_axioms (lmap as {parm, axioms, consts, ...}) : logic_map =
     if not (#equality parm) then lmap else
@@ -301,11 +373,9 @@ end;
 (* Combinator reduction theorems.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-val EXT_POINT = CONV_RULE CNF_CONV EXT_POINT_DEF;
-
 local
   val fo_thms = map mk_vthm [K_THM, I_THM];
-  val ho_thms = fo_thms @ map mk_vthm [S_THM, C_THM, o_THM, EXT_POINT];
+  val ho_thms = fo_thms @ map mk_vthm [S_THM, C_THM, o_THM];
 in
   fun add_combinator_thms lmap : logic_map =
     let
@@ -413,11 +483,9 @@ val EXISTS_FALSE = prove
    REWRITE_TAC [EXISTENTIALITY]);
 
 local
-  val always_bool_thms = map mk_vthm [TRUTH, FALSITY'];
-
   val simple_bool_thms =
-    always_bool_thms @
-    map mk_vthm [FORALL_TRUE, FORALL_FALSE, EXISTS_TRUE, EXISTS_FALSE];
+    map mk_vthm
+    [TRUTH, FALSITY', FORALL_TRUE, FORALL_FALSE, EXISTS_TRUE, EXISTS_FALSE];
 
   val gen_bool_thms =
     simple_bool_thms @
@@ -430,7 +498,7 @@ in
       val {parm as {boolean, mapping, ...}, ...} = lmap
     in
       C add_thms lmap
-      (if not (#higher_order mapping) then always_bool_thms
+      (if not (#higher_order mapping) then []
        else if boolean then gen_bool_thms else simple_bool_thms)
     end;
 end;
@@ -451,15 +519,18 @@ fun eliminate consts =
   mlibStream.filter
   (fn (_, ths) =>
    null (intersect consts (varnames (map concl ths))) orelse
-   (chat 1 "folTools: solution contained a skolem const: dropping.\n"; false));
+   (chat 1 "metis: solution contained a skolem const: dropping.\n";
+    chatting 2 andalso
+    (chat 2 (foldl (fn (h,t) => t ^ "  " ^ thm_to_string h ^ "\n") "" ths);
+     false)));
 
-fun FOL_SOLVER solv lmap lim =
+fun FOL_SOLVE solv lmap lim =
   let
     val {parm, axioms, thms, hyps, consts} =
       (add_equality_axioms o add_boolean_thms o add_combinator_thms) lmap
     val (thms, hyps) = (rev thms, rev hyps)
     val solver =
-      timed_fn "folTools: solver initialization time: "
+      timed_fn "metis: solver initialization time: "
       (initialize_solver solv) {thms = thms, hyps = hyps, limit = lim}
     fun exn_handler f x = f x
       handle Time => raise ERR "FOL_SOLVER" "Time exception raised"
@@ -471,14 +542,31 @@ fun FOL_SOLVER solv lmap lim =
         else hol_literals_to_fol (#mapping parm) query
       val () = save_fol_problem (thms, hyps, q)
       val lift = fol_thms_to_hol (#mapping parm) (C assoc axioms) query
-      val timed_lift = timed_fn "folTools: proof translation time: " lift
+      val timed_lift = timed_fn "metis: proof translation time: " lift
       val timed_stream = mlibStream.map_thk
-        (timed_fn "folTools: proof search time: " o exn_handler)
+        (timed_fn "metis: proof search time: " o exn_handler)
     in
       eliminate consts
       (mlibStream.map timed_lift (timed_stream (fn () => solver q) ()))
     end
   end;
+
+local
+  fun end_find s =
+    mlibStream.hd s handle Empty => raise ERR "FOL_FIND" "no solution found";
+in
+  fun FOL_FIND slv lmap lim = end_find o FOL_SOLVE slv lmap lim;
+end;
+
+local
+  fun end_refute (_, [t]) = CLEANUP_SKOLEM_CONSTS_RULE t
+    | end_refute _ = raise BUG "FOL_REFUTE" "weird";
+in
+  fun FOL_REFUTE slv lmap lim =
+    (end_refute o FOL_FIND slv lmap lim) (([], []), [F]);
+end;
+
+fun FOL_TACTIC slv lmap lim = ACCEPT_TAC (FOL_REFUTE slv lmap lim);
 
 (* ------------------------------------------------------------------------- *)
 (* HOL normalization to first-order form.                                    *)
@@ -492,62 +580,7 @@ val FOL_NORM_CONV =
 
 val FOL_NORM_RULE = CONV_RULE FOL_NORM_CONV;
 
-(* ------------------------------------------------------------------------- *)
-(* A basic interface to the first-order prover.                              *)
-(* ------------------------------------------------------------------------- *)
-
-type Init = {parm : parameters, thms : thm list, hyps : thm list, lim : limit};
-
-local
-  fun iconst (cs, th) =
-    let val c = NEW_SKOLEM_CONST th
-    in (fst (strip_comb c) :: cs, SKOLEM_CONST_RULE c th)
-    end;
-
-  fun ithm th =
-    let
-      val th = FOL_NORM_RULE th
-      val (h, c) = (hyp th, concl th)
-      val tyV = subtract (type_vars_in_term c) (type_vars_in_terms h)
-      val (cs, th) = curry (repeat iconst) [] th
-      val vths = map (mk_vthm o GEN_ALL) (CONJUNCTS' th)
-    in
-      (map (fst o dest_var) cs, map ((I ## K tyV) ## I) vths)
-    end;
-
-  fun append2 (a, b) (c, d) = (a @ c, b @ d);
-
-  fun init ({parm, thms, hyps, ...} : Init) =
-    let
-      val (cs, thms) = foldl (uncurry (C append2 o ithm)) ([], []) thms
-      val (cs, hyps) = foldl (uncurry (C append2 o ithm)) (cs, []) hyps
-      val lmap = new_map parm
-      val lmap = foldl (fn (t, m) => possibly (add_thm t) m) lmap thms
-      val lmap = foldl (fn (t, m) => possibly (add_hyp t) m) lmap hyps
-      val lmap = foldl (fn (c, m) => add_const c m) lmap cs
-    in
-      lmap
-    end
-    handle HOL_ERR _ => raise BUG "init_map" "shouldn't fail";
-in
-  val init_map = timed_fn "folTools: normalization time: " init
-end;
-
-local
-  fun end_find s =
-    mlibStream.hd s handle Empty => raise ERR "FOL_FIND" "no solution found";
-
-  fun end_refute (_, [t]) = CLEANUP_SKOLEM_CONSTS_RULE t
-    | end_refute _ = raise BUG "FOL_REFUTE" "weird";
-in
-  fun FOL_SOLVE slv (init as {lim, ...}) = FOL_SOLVER slv (init_map init) lim;
-  fun FOL_FIND slv init = end_find o FOL_SOLVE slv init;
-  fun FOL_REFUTE slv init = (end_refute o FOL_FIND slv init) (([], []), [F]);
-end;
-
-(* ------------------------------------------------------------------------- *)
-(* Stripping, elimination of choice operator (@), then FOL_NORM_CONV.        *)
-(* ------------------------------------------------------------------------- *)
+(* Normalization tactic = Stripping + Elimination of @ + FOL_NORM_CONV *)
 
 fun NEW_CHOOSE_THEN ttac th =
   (X_CHOOSE_THEN o genvar o type_of o bvar o rand o concl) th ttac th;
@@ -565,27 +598,26 @@ val FOL_STRIP_TAC =
   DISCH_THEN FOL_STRIP_ASSUME_TAC;
 
 val FOL_NORM_TAC =
-  timed_fn "folTools: tactic normalization time: "
-  (REPEAT FOL_STRIP_TAC THEN
+  timed_fn "metis: tactic normalization time: "
+  (REPEAT (POP_ASSUM MP_TAC) THEN
+   REPEAT FOL_STRIP_TAC THEN
    CCONTR_TAC THEN
    REPEAT (POP_ASSUM MP_TAC) THEN
    SELECT_TAC THEN
    CONV_TAC (REPEATC (REWR_CONV AND_IMP_INTRO)) THEN
 
-   (* Strictly speaking, this next line is logically unnecessary, but tends *)
-   (* to give a big speed-up to normalization and proof translation phases. *)
-   (* Check out GILMORE_9 for an example of this phenomenon. *)
+   (* Performing CNF here tends to give a big speed-up in the normalization *)
+   (* and proof translation phases. See GILMORE_9 for an example of this.   *)
    CONV_TAC (RATOR_CONV (RAND_CONV FOL_NORM_CONV)) THEN
 
    FOL_STRIP_TAC);
 
-(* ------------------------------------------------------------------------- *)
-(* Calling the first-order prover from a HOL tactic.                         *)
-(* ------------------------------------------------------------------------- *)
 
-fun FOL_TAC (slv, parm, lim) ths =
-  let fun init asms = {parm = parm, thms = ths, hyps = asms, lim = lim}
-  in FOL_NORM_TAC THEN ASSUM_LIST (ACCEPT_TAC o FOL_REFUTE slv o init)
+(* A flexible tactic that performs normalization of theorems and goal. *)
+
+fun FOL_NORM_TTAC tac =
+  let fun f tl = FOL_NORM_TAC THEN POP_ASSUM_LIST (fn al => tac (al @ tl))
+  in f o timed_fn "metis: normalization time: " (map FOL_NORM_RULE)
   end;
 
 end

@@ -28,7 +28,7 @@ val subsumed_filter : solver -> solver
 
 (* User-friendly interface to generic solvers *)
 
-val solve  : solver -> formula list -> thm list list
+val solve  : solver -> int -> formula list -> thm list list
 val find   : solver -> formula list -> thm list option
 val refute : solver -> thm option
 
@@ -54,10 +54,11 @@ val SLICE : limit ref
 
 type cost_fn = meter_reading -> real
 
-val time1 : cost_fn                     (* Time taken (in seconds) *)
-val time2 : cost_fn                     (* Time squared *)
-val infs1 : cost_fn                     (* Number of inferences made*)
-val infs2 : cost_fn                     (* Inferences squared *)
+val once_only : cost_fn                 (* Time taken (in seconds) *)
+val time1     : cost_fn                 (* Time taken (in seconds) *)
+val time2     : cost_fn                 (* Time squared *)
+val infs1     : cost_fn                 (* Number of inferences made*)
+val infs2     : cost_fn                 (* Inferences squared *)
 
 (* This allows us to hierarchically arrange solver nodes. *)
 

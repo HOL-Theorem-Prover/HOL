@@ -5,8 +5,8 @@
 
 (*
 app load
- ["mlibUseful", "Mosml", "mlibTerm", "mlibThm", "mlibCanon", "mlibTheap",
-  "mlibStream", "mlibSolver", "mlibMeter", "mlibUnits", "mlibResolvers"];
+ ["Moscow", "mlibUseful", "mlibTerm", "mlibThm", "mlibCanon", "mlibSupport",
+  "mlibStream", "mlibSolver", "mlibMeter", "mlibUnits", "mlibClauseset1"];
 *)
 
 (*
@@ -14,204 +14,249 @@ app load
 structure mlibResolution :> mlibResolution =
 struct
 
-open mlibUseful mlibTerm mlibThm mlibCanon mlibMeter mlibSolver mlibResolvers mlibTheap;
+open mlibUseful mlibTerm mlibMatch mlibMeter mlibSolver mlibClause;
 
 infix |-> ::> @> oo ## ::* ::@;
 
+structure O = Option; local open Option in end;
 structure S = mlibStream; local open mlibStream in end;
 structure U = mlibUnits; local open mlibUnits in end;
-
-type 'a subsume = 'a mlibSubsume.subsume;
+structure A = mlibSupport; local open mlibSupport in end;
+structure B = mlibClauseset1; local open mlibClauseset1 in end;
 
 (* ------------------------------------------------------------------------- *)
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := {module = "mlibResolution", alignment = K 1} :: !traces;
+val () = traces := {module = "mlibResolution", alignment = I} :: !traces;
 
 fun chat l m = trace {module = "mlibResolution", message = m, level = l};
 
 (* ------------------------------------------------------------------------- *)
-(* Tuning parameters.                                                        *)
+(* Parameters.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
 type parameters =
-  {subsumption_checking : int,          (* in the range 0..3 *)
-   positive_refinement  : bool,
-   theap_parm           : mlibTheap.parameters}
+  {restart     : int option,
+   clause_parm : mlibClause.parameters,
+   sos_parm    : mlibSupport.parameters};
 
-val defaults =
-  {subsumption_checking = 1,
-   positive_refinement  = true,
-   theap_parm           = mlibTheap.defaults};
-
-(* ------------------------------------------------------------------------- *)
-(* Clause stores.                                                            *)
-(* ------------------------------------------------------------------------- *)
-
-type store = thm subsume * resolvers;
-
-val empty_store : store = (mlibSubsume.empty, empty_resolvers);
-
-fun store_add th (s, r) =
-  (mlibSubsume.add (clause th |-> th) s, add_resolver th r);
-
-fun store_resolvants ((_, r) : store) = find_resolvants r;
-
-fun store_subsumed ((s, _) : store) = mlibSubsume.subsumed s o clause;
-
-fun store_info (s, r) = "(" ^ mlibSubsume.info s ^ "," ^ resolvers_info r ^ ")";
+val defaults : parameters =
+  {restart     = NONE,
+   clause_parm = mlibClause.defaults,
+   sos_parm    = mlibSupport.defaults};
 
 (* ------------------------------------------------------------------------- *)
-(* Positive refinement.                                                      *)
+(* Helper functions.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+fun state_info (sos, used) =
+  "(" ^ int_to_string (A.size sos) ^ "," ^ int_to_string (B.size used) ^ ")";
+
+fun add_unit units cl =
+  case total clause_thm cl of NONE => ()
+  | SOME th => if mlibThm.is_unit th then units := U.add th (!units) else ();
+
+(* ------------------------------------------------------------------------- *)
+(* Resolution procedure.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 local
-  val pos_th = List.all positive o clause;
-
-  fun check true = K true
-    | check false = fn ({mate, ...} : resolvant) => pos_th mate;
+  fun comment (n,x) = (if n = 0 then () else chat 1 (int_to_string n ^ "x"); x);
+  fun select units used =
+    let
+      fun remove n sos =
+        case A.remove sos of NONE => (n, NONE)
+        | SOME (cl, sos) => check n sos (demodulate units (B.simplify used cl))
+      and check n sos cl =
+        if B.subsumed used cl then remove (n + 1) sos
+        else (n, SOME (cl, (sos, used)))
+    in
+      remove 0
+    end;
 in
-  fun positive_check false = K (K true)
-    | positive_check true = check o pos_th;
+  fun select_clause units (sos, used) = comment (select units used sos);
 end;
 
-(* ------------------------------------------------------------------------- *)
-(* Full resolution procedure.                                                *)
-(* ------------------------------------------------------------------------- *)
-
-exception Contradiction of thm;
-
-fun unit_strengthen units th =
-  (case first (U.subsumes units) (clause th) of SOME th => th
-   | NONE => U.demod units th);
-
-fun subsumption_check store th =
-  case store_subsumed store th of [] => SOME th | _ :: _ => NONE;
-
-fun theap_strengthen theap th =
-  (case mlibSubsume.strictly_subsumed (theap_subsumers theap) (clause th) of []
-     => th
-   | (_, th) :: _ => th);
-
-fun resolve (parm : parameters) =
+fun resolve record units_ref (sos, used) cl =
   let
-    fun feedback k r =
-      int_to_string k ^ (if k = r then "" else "/" ^ int_to_string r)
-
-    fun L n = n <= #subsumption_checking parm
-    val pos_filt = Option.filter o positive_check (#positive_refinement parm)
-
-    fun ftest b f = if b then Option.mapPartial (subsumption_check f) else I
-    fun stest b s = if b then subsumption_check s else SOME
-    fun wpass b w = if b then theap_strengthen w else I
-    fun upass u = unit_strengthen u
-
-    fun next_candidate u f s w =
-      case theap_remove w of NONE => NONE
-      | SOME (th, w) =>
-        (case (ftest (L 1) f o stest (L 1) s o wpass (L 2) w o upass u) th of
-           NONE => next_candidate u f s w
-         | SOME th => SOME (th, w))
-
-    fun retention_test u f s th =
-      List.mapPartial
-      (Option.mapPartial (ftest (L 3) f o stest (L 3) s o upass u o #res) o
-       pos_filt th)
-
-    fun check_add th =
-      if is_contradiction th then raise Contradiction th else U.add th
+    val () = chat 3 ("\ngiven clause:\n" ^ clause_to_string cl ^ "\n")
+    val () = add_unit units_ref cl
+    val used = B.add cl used
+    val units = !units_ref
+    val cl = FRESH_VARS cl
+    val cls = B.deduce used units cl
+    val () = app (add_unit units_ref) cls
+    val infs = length cls
+    val () = chat 3 (foldl (fn (h,t) => t ^ clause_to_string h ^ "\n")
+                     "\nnew clauses:\n" cls)
+    val () = (record infs; chat 1 (int_to_string infs ^ "+"))
+    val sos = A.addl cls sos
   in
-    fn record => fn (facts, used, unused) => fn units =>
-    (case next_candidate units facts used unused of NONE => NONE
-     | SOME (th, unused) =>
-       let
-         val units = check_add th units
-         val used = store_add th used
-         val th = FRESH_VARS th
-         val resolvants =
-           store_resolvants facts th @ store_resolvants used th
-         val () = record (length resolvants)
-         val units = foldl (uncurry check_add) units (map #res resolvants)
-         val keep = retention_test units facts used th resolvants
-         val () = chat 2 (feedback (length keep) (length resolvants))
-         val unused = theap_addl keep unused
-       in
-         SOME ((facts, used, unused), units)
-       end)
-       handle ERR_EXN _ => raise BUG "resolve" "shouldn't fail"
+    (sos, used)
   end;
 
-fun raw_resolution parm =
+fun resolution_stream (parm : parameters) slice_ref units_ref initials =
+  let
+    fun thk func state () = (chat 2 (state_info state); func state)
+    fun reset N =
+      let
+        fun f 0 state = S.CONS (NONE, thk (reset (2 * N)) state)
+          | f n state = g (n - 1) (select_clause (!units_ref) state)
+        and g _ NONE = S.NIL
+          | g n (SOME (cl, state)) =
+          if not (null (clause_lits cl)) then h n (cl, state)
+          else S.CONS (SOME cl, thk (h n o pair cl) state)
+        and h n (cl, state) =
+          let
+            val state = resolve (record_infs (!slice_ref)) units_ref state cl
+          in
+            if check_meter (!slice_ref) then f n state
+            else S.CONS (NONE, thk (f n) state)
+          end
+      in
+        fn (sos, used) =>
+        let
+          val () = chat 1 ("|" ^ (if N < 0 then "*" else int_to_string N) ^ "|")
+          val used = B.reset used
+          val initials = B.initialize used (!units_ref) initials
+          val () = chat 3
+            ("\nresolution': initials =\n" ^
+             PP.pp_to_string 60 (pp_list pp_clause) initials ^ "\n")
+          val sos = A.addl initials (A.reset sos)
+        in
+          f N (sos, used)
+        end
+      end
+
+    val {sos_parm, restart, ...} = parm
+    val initial_state = (A.new sos_parm, B.empty)
+  in
+    thk (reset (case restart of SOME n => n | NONE => ~1)) initial_state ()
+  end;
+
+fun lift_f cl = [clause_thm cl];
+
+fun lift_g g cl =
+  let
+    val gs = map (pair g) (interval 0 (length g))
+    val ths = map (clause_thm o C dest_coherents cl o wrap) gs
+  in
+    case List.find mlibThm.is_contradiction ths of NONE => ths
+    | SOME th => map (fn l => mlibThm.CONTR l th) g
+  end;
+
+fun resolution' (parm : parameters) =
   mk_solver_node
   {name = "resolution",
    solver_con =
-   fn {slice, units, thms, hyps} =>
+   fn {slice = slice_ref, units = units_ref, thms, hyps} =>
    let
-     val resolve' = resolve parm
-     fun run wrap state =
-       if not (check_meter (!slice)) then S.CONS (NONE, wrap state)
-       else
-         (chat 1 "+";
-          case resolve' (record_infs (!slice)) state (!units) of NONE => S.NIL
-          | SOME (state, units') => (units := units'; run wrap state))
-     fun wrapper g (a as (_, _, w)) () =
-       (chat 2 (theap_info w); run (wrapper g) a)
-       handle Contradiction th => contradiction_solver th g
-     val facts = foldl (fn (t, l) => store_add t l) empty_store thms
-     val used = empty_store
-     val unused = theap_addl hyps (new_theap (#theap_parm parm))
+     val {clause_parm, ...} = parm
+     fun stream f i =
+       S.map (O.map f) (resolution_stream parm slice_ref units_ref i)
+     val initials = map (NEQ_SIMP o mk_clause clause_parm) (thms @ hyps)
+     val () = app (add_unit units_ref) initials
+     val initials = map (demodulate (!units_ref)) initials
      val () = chat 2
-       ("resolution--initializing--#thms=" ^ int_to_string (length thms) ^
-        "--#hyps=" ^ int_to_string (length hyps) ^
-        "--facts=" ^ store_info facts ^
-        "--unused=" ^ theap_info unused ^ ".\n")
+      ("resolution--initializing--#initials=" ^
+       int_to_string (length initials) ^ ".\n")
    in
-     fn goals => wrapper goals (facts, used, unused) ()
+     fn [False] => stream lift_f initials
+      | g =>
+        let val c = map negate g
+        in stream (lift_g c) (mk_coherent clause_parm c :: initials)
+        end
    end};
-
-fun resolution' parm =
-  (if #positive_refinement parm then set_of_support everything else I)
-  (raw_resolution parm);
 
 val resolution = resolution' defaults;
 
 (* quick testing
 load "UNLINK";
-open UNLINK;
-val time = Mosml.time;
+open mlibCanon UNLINK;
+val time = Moscow.time;
 quotation := true;
+
 installPP pp_term;
 installPP pp_formula;
 installPP mlibSubst.pp_subst;
-installPP pp_thm;
+installPP mlibThm.pp_thm;
+fun initialize x y = try (fn (a,b) => mlibSolver.initialize a b) (x,y);
+fun refute x = try (time mlibSolver.refute) x;
 
 (* Testing the resolution prover *)
 
-val limit : limit ref = ref {infs = NONE, time = SOME 30.0};
-fun resolution_prove g =
-  try (time refute)
-  (initialize (set_of_support all_negative resolution)
-   {limit = !limit, thms = [], hyps = axiomatize (Not (generalize g))});
+val limit : limit ref = ref {infs = NONE, time = NONE};
+fun resolution_prove g = (fn x => refute o initialize x)
+  (resolution'
+   {restart     = NONE,
+    clause_parm = {literal_order = true,
+                   term_order = true,
+                   tracking = false},
+    sos_parm    = {size_bias = 100}})
+  {limit = !limit, thms = [],
+   hyps = eq_axiomatize' (Not (generalize g))};
+
+val attack = map (fn {name, goal} => (print ("\n\n" ^ name ^ "\n"); let val th = resolution_prove (parse_formula goal) val () = print ("\n" ^ mlibThm.proof_to_string (mlibThm.proof (Option.valOf th))) in th end));
+
+(*
+*)
+val avoided = ["P34", "P38", "GILMORE_9"];
+fun avoid set =
+  List.filter (fn ({name, ...} : 'a problem) => not (mem name avoided)) set;
+try attack (avoid equality);
+attack (avoid nonequality);
+
+val judita3 = parse_formula (get equality "JUDITA_3");
+eq_axiomatize' (Not (generalize judita3));
+resolution_prove judita3;
+
+val p49' = parse_formula
+  `p a /\ p b /\ ~(a = b) /\ ~p c /\ (!x. x = d \/ x = e) ==> F`;
+eq_axiomatize' (Not (generalize p49'));
+resolution_prove p49';
+
+val p49 = parse_formula (get equality "P49");
+eq_axiomatize' (Not (generalize p49));
+resolution_prove p49;
+
+val agatha = parse_formula (get equality "AGATHA");
+val Imp (h, And (c1, And (c2, c3))) = agatha;
+val agatha1 = Imp (h, c1);
+val agatha2 = Imp (h, c2);
+val agatha3 = Imp (h, c3);
+resolution_prove agatha1;
+resolution_prove agatha2;
+resolution_prove agatha3;
+resolution_prove agatha;
+
+val p51 = parse_formula (get equality "P51");
+resolution_prove p51;
+
+stop;
 
 axiomatize (Not (generalize True));
 resolution_prove True;
 
+val p_or_not_p = parse_formula (get nonequality "P_or_not_P");
+axiomatize (Not (generalize p_or_not_p));
+resolution_prove p_or_not_p;
+
 val prop13 = parse_formula (get nonequality "PROP_13");
-axiomatize (Not (generalize prop13));
+(*axiomatize (Not (generalize prop13));*)
 resolution_prove prop13;
 
 val p33 = parse_formula (get nonequality "P33");
-axiomatize (Not (generalize p33));
+(*axiomatize (Not (generalize p33));*)
 resolution_prove p33;
 
 val p59 = parse_formula (get nonequality "P59");
-val ths = axiomatize (Not (generalize p59));
+(*axiomatize (Not (generalize p59));*)
 resolution_prove p59;
 
 val p39 = parse_formula (get nonequality "P39");
-clausal (Not (generalize p39));
-axiomatize (Not (generalize p39));
+(*clausal (Not (generalize p39));*)
+(*axiomatize (Not (generalize p39));*)
 resolution_prove p39;
 
 val num14 = parse_formula (get tptp "NUM014-1");
@@ -221,11 +266,17 @@ val p55 = parse_formula (get nonequality "P55");
 resolution_prove p55;
 
 val p26 = parse_formula (get nonequality "P26");
-clausal (Not (generalize p26));
+(*clausal (Not (generalize p26));*)
 resolution_prove p26;
 
 val los = parse_formula (get nonequality "LOS");
 resolution_prove los;
+
+val lcl107 = parse_formula (get tptp "LCL107-1");
+resolution_prove lcl107;
+
+val steamroller = parse_formula (get nonequality "STEAM_ROLLER");
+resolution_prove steamroller;
 
 val reduced_num284 = parse_formula
   `fibonacci 0 (s 0) /\ fibonacci (s 0) (s 0) /\
@@ -238,14 +289,14 @@ val reduced_num284 = parse_formula
 resolution_prove reduced_num284;
 
 val p29 = parse_formula (get nonequality "P29");
-clausal (Not (generalize p29));
+(*clausal (Not (generalize p29));*)
 resolution_prove p29;
 
 val num1 = parse_formula (get tptp "NUM001-1");
 resolution_prove num1;
 
 val gilmore9 = parse_formula (get nonequality "GILMORE_9");
-axiomatize (Not (generalize gilmore9));
+(*axiomatize (Not (generalize gilmore9));*)
 resolution_prove gilmore9;
 
 val model_completeness = parse_formula (get nonequality "MODEL_COMPLETENESS");

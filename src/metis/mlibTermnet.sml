@@ -9,7 +9,7 @@ app load ["mlibUseful", "Mosml", "mlibTerm"];
 
 (*
 *)
-structure mlibTermNet :> mlibTermNet =
+structure mlibTermnet :> mlibTermnet =
 struct
 
 open mlibUseful mlibTerm;
@@ -22,10 +22,8 @@ val flatten = List.concat;
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-local
-  fun fifo_order (m, _) (n, _) = m <= n;
-in
-  fun restore_fifo_order l = map snd (sort fifo_order l);
+local fun fifo_order ((m, _), (n, _)) = Int.compare (m, n);
+in fun restore_fifo_order l = map snd (sort fifo_order l);
 end;
 
 fun partition_find f l =
@@ -45,7 +43,7 @@ datatype pattern = VAR | FN of string * int;
 
 type 'a map = (pattern, 'a) tree;
 
-datatype 'a term_map = MAP of int * (int * 'a) map list;
+datatype 'a termnet = MAP of int * (int * 'a) map list;
 
 val empty = MAP (0, []);
 
@@ -54,7 +52,7 @@ fun size (MAP (i, _)) = i;
 fun to_list (MAP (_, n)) =
   restore_fifo_order (flatten (map (tree_foldr (K flatten) wrap) n));
 
-fun pp_term_map pp_a = pp_map to_list (pp_list pp_a);
+fun pp_termnet pp_a = pp_map to_list (pp_list pp_a);
 
 local
   fun find_pat x (BRANCH (p, _)) = p = x
@@ -138,13 +136,13 @@ end;
 (*
 type 'a simple = int * int * term list * 'a list;
 
-type 'a term_map = ('a simple, 'a term_map) sum;
+type 'a termnet = ('a simple, 'a termnet) sum;
 
 fun check (0, _, t, a) =
   INR (from_maplets (foldl (fn (x, xs) => op|-> x :: xs) [] (zip t a)))
   | check p = INL p;
 
-val empty : 'a term_map = INR empty;
+val empty : 'a termnet = INR empty;
 
 fun new n = check (n, 0, [], []);
 
@@ -165,9 +163,9 @@ val from_maplets = INR o from_maplets;
 
 val to_list = fn INL (_, _, _, xs) => rev xs | INR d => to_list d;
 
-val pp_term_map =
+val pp_termnet =
   fn pp_a => fn pp =>
-  (fn INL (_, _, _, xs) => pp_list pp_a pp xs | INR d => pp_term_map pp_a pp d);
+  (fn INL (_, _, _, xs) => pp_list pp_a pp xs | INR d => pp_termnet pp_a pp d);
 *)
 
 end

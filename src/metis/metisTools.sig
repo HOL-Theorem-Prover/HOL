@@ -6,6 +6,14 @@
 signature metisTools =
 sig
 
+(* "Metis" trace levels:
+   0: No output
+   1: The equivalent of the Meson: dots
+   2: Timing information
+   3: More detailed prover information: slice by slice
+   4: Log of each step in proof translation
+   5: Log of each inference during proof search *)
+
 type 'a stream = 'a mlibStream.stream
 type limit     = mlibMeter.limit
 type term      = Term.term
@@ -24,9 +32,11 @@ val update_parm_interface : (Fparm -> Fparm) -> parameters -> parameters
 val update_parm_solver    : (Mparm -> Mparm) -> parameters -> parameters
 val update_parm_limit     : (limit -> limit) -> parameters -> parameters
 
-(* Interface to the metis solver *)
-val GEN_METIS_SOLVE :
-  parameters -> {thms : thm list, hyps : thm list} -> Query -> Result stream
+(* Prolog solver *)
+val PROLOG_SOLVE : thm list -> Query -> Result stream
+
+(* Metis solver *)
+val GEN_METIS_SOLVE : parameters -> thm list -> Query -> Result stream
 
 (* Tactic interface to the metis prover *)
 val GEN_METIS_TAC : parameters -> thm list -> tactic
@@ -35,13 +45,21 @@ val GEN_METIS_TAC : parameters -> thm list -> tactic
 val limit : limit ref
 
 (* Canned parameters for common situations *)
-val METIS_TAC      : thm list -> tactic           (* First-order, typeless *)
-val HO_METIS_TAC   : thm list -> tactic           (* Higher-order, typed *)
+val FO_METIS_TAC   : thm list -> tactic           (* First-order *)
+val FOT_METIS_TAC  : thm list -> tactic           (* + types *)
+val HO_METIS_TAC   : thm list -> tactic           (* Higher-order *)
+val HOT_METIS_TAC  : thm list -> tactic           (* + types *)
 val FULL_METIS_TAC : thm list -> tactic           (* + combinator reductions *)
 
 (* Simple user interface to the metis prover *)
-val METIS_PROVE      : thm list -> term -> thm
+val FO_METIS_PROVE   : thm list -> term -> thm
+val FOT_METIS_PROVE  : thm list -> term -> thm
 val HO_METIS_PROVE   : thm list -> term -> thm
+val HOT_METIS_PROVE  : thm list -> term -> thm
 val FULL_METIS_PROVE : thm list -> term -> thm
+
+(* Uses heuristics to apply one of FO_, HO_ or FULL_. *)
+val METIS_TAC   : thm list -> tactic
+val METIS_PROVE : thm list -> term -> thm
 
 end

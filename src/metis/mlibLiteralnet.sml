@@ -9,21 +9,21 @@ app load ["mlibUseful", "Mosml", "mlibTerm"];
 
 (*
 *)
-structure mlibLiteralNet :> mlibLiteralNet =
+structure mlibLiteralnet :> mlibLiteralnet =
 struct
 
 open mlibUseful mlibTerm;
 
 infixr |-> ::> oo;
 
-structure T = mlibTermNet; local open mlibTermNet in end;
+structure T = mlibTermnet; local open mlibTermnet in end;
 
 (* ------------------------------------------------------------------------- *)
 (* Literal nets.                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-type 'a literal_map =
-  ('a T.term_map * 'a T.term_map) * ((int * 'a list) * (int * 'a list));
+type 'a literalnet =
+  ('a T.termnet * 'a T.termnet) * ((int * 'a list) * (int * 'a list));
 
 val empty = ((T.empty, T.empty), ((0, []), (0, [])));
 
@@ -38,7 +38,7 @@ fun from_maplets l = foldl (uncurry insert) empty l;
 fun to_list ((pos, neg), ((_, t), (_, f))) =
   rev t @ rev f @ T.to_list pos @ T.to_list neg;
 
-fun pp_literal_map pp_a = pp_map to_list (pp_list pp_a);
+fun pp_literalnet pp_a = pp_map to_list (pp_list pp_a);
 
 local
   fun pos     ((pos, _  ), _               ) = T.size pos;

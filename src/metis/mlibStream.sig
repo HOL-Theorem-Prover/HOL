@@ -6,6 +6,8 @@
 signature mlibStream =
 sig
 
+type ('a, 'b) sum = ('a, 'b) mlibUseful.sum
+
 datatype 'a stream = NIL | CONS of 'a * (unit -> 'a stream)
 type 'a Sthk = unit -> 'a stream
 
@@ -19,7 +21,8 @@ val tl            : 'a stream -> 'a stream             (* raises Empty *)
 val dest          : 'a stream -> 'a * 'a stream        (* raises Empty *)
 val repeat        : 'a -> 'a stream
 val count         : int -> int stream
-val fold          : ('a -> (unit -> 'b) -> 'b) -> 'b -> 'a stream -> 'b
+val foldl         : ('a * 's -> ('s,'b) sum) -> 's -> 'a stream -> ('s,'b) sum
+val foldr         : ('a * (unit -> 's) -> 's) -> 's -> 'a stream -> 's
 val map           : ('a -> 'b) -> 'a stream -> 'b stream
 val map_thk       : ('a Sthk -> 'a Sthk) -> 'a Sthk -> 'a Sthk
 val partial_map   : ('a -> 'b option) -> 'a stream -> 'b stream

@@ -22,7 +22,7 @@ infixr 7 >>;
 infixr 6 ||;
 infix ##;
 
-type 'a stream = 'a mlibStream.stream;
+type 'a stream = 'a S.stream;
 val omap       = Option.map;
 
 (* ------------------------------------------------------------------------- *)
@@ -102,7 +102,8 @@ type 'a iprinter = ('a * bool) pp;
 
 local
   val sort_ops : infixities -> infixities =
-    let fun order {prec, ...} {prec = prec', ...} = prec < prec'
+    let fun order ({prec = p,  tok = _, left_assoc = _},
+                   {prec = p', tok = _, left_assoc = _}) = Int.compare (p, p')
     in sort order
     end;
   fun unflatten ({tok, prec, left_assoc}, ([], _)) =
@@ -119,7 +120,7 @@ end;
 
 local
   fun chop (#" " :: chs) = (curry op+ 1 ## I) (chop chs) | chop chs = (0, chs);
-  fun nspaces n = N n (curry op^ " ") "";
+  fun nspaces n = funpow n (curry op^ " ") "";
   fun spacify tok =
     let
       val chs = explode tok

@@ -1,10 +1,10 @@
 (* ========================================================================= *)
-(* A TYPE FOR SUBSUMPTION CHECKING                                           *)
+(* SUBSUMPTION CHECKING                                                      *)
 (* Created by Joe Hurd, April 2002                                           *)
 (* ========================================================================= *)
 
 (*
-app load ["mlibThm", "mlibMatch"];
+app load ["mlibLiteralnet", "mlibMatch"];
 *)
 
 (*
@@ -12,11 +12,11 @@ app load ["mlibThm", "mlibMatch"];
 structure mlibSubsume :> mlibSubsume =
 struct
 
-infix |-> ::>;
+infix ## |-> ::>;
 
 open mlibUseful mlibTerm mlibMatch;
 
-structure N = mlibLiteralNet; local open mlibLiteralNet in end;
+structure N = mlibLiteralnet; local open mlibLiteralnet in end;
 
 val ofilter       = Option.filter;
 type subst        = mlibSubst.subst;
@@ -37,41 +37,19 @@ fun chat l m = trace {module = "mlibSubsume", message = m, level = l};
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val frozen_prefix = "FROZEN__";
-
-fun mk_frozen v = Fn (frozen_prefix ^ v, []);
-
-local
-  val chk = String.isPrefix frozen_prefix;
-  val dest =
-    let val l = size frozen_prefix in fn s => String.extract (s, l, NONE) end;
-in
-  fun dest_frozen (Fn (s, [])) =
-    (assert (chk s) (ERR "dest_frozen" "not a frozen var"); dest s)
-    | dest_frozen _ = raise ERR "dest_frozen" "bad structure";
-end;
-
-val is_frozen = can dest_frozen;
-
-fun freeze_vars fms =
-  let
-    val vars = FV (list_mk_disj fms)
-    val sub = foldl (fn (v, s) => (v |-> mk_frozen v) ::> s) |<>| vars
-  in
-    map (formula_subst sub) fms
-  end;
-
-local
-  fun f (v |-> a) = (v |-> (if is_frozen a then Var (dest_frozen a) else a));
-in
-  val defrost_vars = mlibSubst.from_maplets o map f o mlibSubst.to_maplets;
-end;
-
-val lit_size = formula_size o literal_atom;
+val literal_size = formula_size o literal_atom;
 
 val sort_literals_by_size =
-  map snd o sort (fn (m, _) => fn (n, _) => m <= n) o
-  map (fn lit => (lit_size lit, lit));
+  map snd o sort (fn ((m, _), (n, _)) => Int.compare (n, m)) o
+  map (fn vlit => (literal_size vlit, vlit));
+
+fun psym lit =
+  let
+    val (s, (x,y)) = (I ## dest_eq) (dest_literal lit)
+    val () = assert (x <> y) (ERR "psym" "refl")
+  in
+    mk_literal (s, mk_eq (y,x))
+  end;
 
 (* ------------------------------------------------------------------------- *)
 (* The core engine for subsumption checking.                                 *)
@@ -79,69 +57,79 @@ val sort_literals_by_size =
 
 type 'a sinfo = {sub : subst, hd : formula, tl : formula list, fin : 'a};
 
-type 'a subs = 'a sinfo N.literal_map;
+type 'a subs = 'a sinfo N.literalnet;
 
-fun add_lits (i as {hd, ...}) (net : 'a subs) = N.insert (hd |-> i) net;
+fun add_lits k a (net : 'a subs) = N.insert (k |-> a) net;
 
-local
-  fun subsum strict lits =
-    let
-      val accept =
-        (if strict then ofilter (non mlibSubst.is_renaming) else SOME) o
-        defrost_vars
-      val impossible =
-        let val lit_net = N.from_maplets (map (fn l => (l |-> ())) lits)
-        in List.exists (null o N.matched lit_net)
-        end
-      fun extend sub lits fin net =
-        if impossible lits then net
-        else
-          case sort_literals_by_size lits of [] => raise BUG "extend" "null"
-          | hd :: tl => add_lits {sub = sub, hd = hd, tl = tl, fin = fin} net
-      fun examine lit ({sub, hd, tl, fin}, s as (net, res)) =
-        case total (matchl_literals sub) [(hd, lit)] of NONE => s
-        | SOME sub =>
-          if null tl then
-            case accept sub of SOME sub => (net, (sub, fin) :: res) | NONE => s
-          else (extend sub (map (formula_subst sub) tl) fin net, res)
-      fun narrow1 net (lit, s) = foldl (examine lit) s (N.match net lit)
-      fun narrow (net, res) =
-        if N.size net = 0 then res
-        else narrow (foldl (narrow1 net) (N.empty, res) lits)
-    in
-      narrow
-    end;
-in
-  fun subsumes strict net lits =
-    subsum strict (freeze_vars lits) (net, [])
-    handle ERR_EXN _ => raise BUG "subsumes" "shouldn't fail";
-end;
+fun subsums flits =
+  let
+    fun extend sub [] fin (net, res) = (net, (sub, fin) :: res)
+      | extend sub (h :: t) fin (net, res) =
+      (add_lits (formula_subst sub h) {sub=sub, hd=h, tl=t, fin=fin} net, res)
+    fun examine flit ({sub, hd, tl, fin}, s) =
+      case total (matchl_literals sub) [(hd, flit)] of NONE => s
+      | SOME sub => extend sub tl fin s
+    fun narrow1 net (flit, s) =
+      (case total psym flit of NONE => I
+       | SOME flit => C (foldl (examine flit)) (N.match net flit))
+      (foldl (examine flit) s (N.match net flit))
+    fun narrow (net, res) =
+      if N.size net = 0 then res
+      else narrow (foldl (narrow1 net) (N.empty, res) flits)
+  in
+    fn nr => narrow nr
+  end
+  handle ERR_EXN _ => raise BUG "subsums" "shouldn't fail";
 
 (* ------------------------------------------------------------------------- *)
 (* The user interface.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-type 'a subsume = ('a, 'a subs) sum;
+type 'a subsume = (subst * (int * 'a)) list * (int * 'a) subs;
 
-val empty : 'a subsume = INR N.empty;
+val empty : 'a subsume = ([], N.empty);
 
-fun add _ (s as INL _) = s
-  | add (fms |-> fin) (INR net) =
-  case sort_literals_by_size fms of [] => INL fin
-  | h :: t => INR (add_lits {sub = |<>|, hd = h, tl = t, fin = fin} net);
+fun add (lits |-> a) (con, net) =
+  let
+    val fin = (length lits, a)
+  in
+    case sort_literals_by_size lits of [] => ((|<>|, fin) :: con, net)
+    | h :: t => (con, add_lits h {sub = |<>|, hd = h, tl = t, fin = fin} net)
+  end;
 
-fun subsumed (INL fin) _ = [(|<>|, fin)]
-  | subsumed (INR _) [] = []
-  | subsumed (INR net) lits = subsumes false net lits;
+local
+  fun Filt n = List.filter (fn (_, (m, _)) => m <= n);
+  fun Sort l = sort (fn ((_, (m, _)), (_, (n, _))) => Int.compare (m, n)) l;
+  fun Strip l = map (fn (a, (_, b)) => (a, b)) l;
+in
+  fun subsumes  (c, n) l = Strip (Sort (subsums l (n, c)));
+  fun subsumes' (c, n) l = Strip (Sort (Filt (length l) (subsums l (n, c))));
+end;
 
-fun strictly_subsumed _ [] = []
-  | strictly_subsumed (INL fin) _ = [(|<>|, fin)]
-  | strictly_subsumed (INR net) lits = subsumes true net lits;
+fun info (con, net) = int_to_string (length con + N.size net);
 
-fun info ((INL _) : 'a subsume) = "*"
-  | info (INR net) = int_to_string (N.size net);
+fun pp_subsume pp = pp_map info pp_string pp;
 
-val pp_subsum = pp_map info pp_string;
+local
+  fun subsetq s t =
+    let
+      fun p x =
+        mem x t orelse (case total psym x of NONE => false | SOME x => mem x t)
+    in
+      List.all p s
+    end;
+
+  fun single vlits = add (vlits |-> ()) empty;
+in
+  fun subsumes1  vlits flits =
+    if subsetq vlits flits then [|<>|]
+    else map fst (subsumes (single vlits) flits);
+
+  fun subsumes1' vlits flits =
+    if length vlits <= length flits andalso subsetq vlits flits then [|<>|]
+    else (***map fst (subsumes' (single vlits) flits)*)
+         raise BUG "mlibSubsume.subsumes1'" "this shouldn't happen at the moment";
+end;  
 
 (* Quick testing
 quotation := true;

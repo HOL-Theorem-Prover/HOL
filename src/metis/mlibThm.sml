@@ -16,12 +16,22 @@ open mlibUseful mlibTerm mlibKernel mlibMatch;
 
 infixr |-> ::> oo ##;
 
+structure T = mlibTermnet; local open mlibTermnet in end;
+
 type subst        = mlibSubst.subst;
 val |<>|          = mlibSubst.|<>|;
 val op ::>        = mlibSubst.::>;
 val term_subst    = mlibSubst.term_subst;
 val formula_subst = mlibSubst.formula_subst;
 val pp_subst      = mlibSubst.pp_subst;
+
+(* ------------------------------------------------------------------------- *)
+(* Chatting.                                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+val () = traces := {module = "mlibThm", alignment = K 1} :: !traces;
+
+fun chat l m = trace {module = "mlibThm", message = m, level = l};
 
 (* ------------------------------------------------------------------------- *)
 (* Annotated primitive inferences.                                           *)
@@ -46,6 +56,12 @@ fun primitive_inference (Axiom'    cl              ) = AXIOM cl
 
 val clause = fst o dest_thm;
 
+fun dest_axiom th =
+  case dest_thm th of (lits, (Axiom, [])) => lits
+  | _ => raise ERR "dest_axiom" "";
+
+val is_axiom = can dest_axiom;
+  
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printing of theorems                                               *)
 (* ------------------------------------------------------------------------- *)
@@ -96,15 +112,96 @@ in
   end;
 end;
 
+val pp_proof = pp_list (pp_pair pp_thm pp_inference');
+
 (* Purely functional pretty-printing *)
 
 fun thm_to_string'       len = PP.pp_to_string len pp_thm;
 fun inference_to_string' len = PP.pp_to_string len pp_inference';
+fun proof_to_string'     len = PP.pp_to_string len pp_proof;
 
 (* Pretty-printing using !LINE_LENGTH *)
 
 fun thm_to_string       th  = thm_to_string'       (!LINE_LENGTH) th;
 fun inference_to_string inf = inference_to_string' (!LINE_LENGTH) inf;
+fun proof_to_string     p   = proof_to_string'     (!LINE_LENGTH) p;
+
+(* ------------------------------------------------------------------------- *)
+(* Theorem operations.                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  fun cmp Axiom    Axiom    = EQUAL
+    | cmp Axiom    _        = LESS
+    | cmp _        Axiom    = GREATER
+    | cmp Refl     Refl     = EQUAL
+    | cmp Refl     _        = LESS
+    | cmp _        Refl     = GREATER
+    | cmp Assume   Assume   = EQUAL
+    | cmp Assume   _        = LESS
+    | cmp _        Assume   = GREATER
+    | cmp Inst     Inst     = EQUAL
+    | cmp Inst     _        = LESS
+    | cmp _        Inst     = GREATER
+    | cmp Factor   Factor   = EQUAL
+    | cmp Factor   _        = LESS
+    | cmp _        Factor   = GREATER
+    | cmp Resolve  Resolve  = EQUAL
+    | cmp Resolve  Equality = LESS
+    | cmp Equality Resolve  = GREATER
+    | cmp Equality Equality = EQUAL;
+
+  fun cm [] = EQUAL
+    | cm ((th1, th2) :: l) =
+    let
+      val (l1, (p1, ths1)) = dest_thm th1
+      val (l2, (p2, ths2)) = dest_thm th2
+    in
+      case Int.compare (length l1, length l2) of EQUAL
+        => (case lex_compare formula_compare (zip l1 l2) of EQUAL
+              => (case cmp p1 p2 of EQUAL
+                    => cm (zip ths1 ths2 @ l)
+                  | x => x)
+            | x => x)
+      | x => x
+    end
+in
+  val thm_compare = cm o wrap;
+end;
+
+local
+  val deps = snd o snd o dest_thm;
+  val empty = Binarymap.mkDict thm_compare;
+  fun peek th m = Binarymap.peek (m, th);
+  fun ins (th, a) m = Binarymap.insert (m, th, a);
+in
+  fun thm_map f =
+    let
+      fun g th m =
+        case peek th m of SOME a => (a, m)
+        | NONE =>
+          let
+            val (al, m) = maps g (deps th) m
+            val a = f (th, al)
+          in
+            (a, ins (th, a) m)
+          end
+    in
+      fn th => fst (g th empty)
+    end;
+end;
+
+local
+  val deps = snd o snd o dest_thm;
+  fun empty a = (Binaryset.empty thm_compare, a);
+  fun mem th (s, _) = Binaryset.member (s, th);
+  fun ins f th (s, a) = (Binaryset.add (s, th), f (th, a))
+in
+  fun thm_foldr f =
+    let fun g (th, x) = if mem th x then x else ins f th (foldl g x (deps th))
+    in fn a => fn th => snd (g (th, empty a))
+    end;
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Reconstructing proofs.                                                    *)
@@ -117,7 +214,7 @@ fun reconstruct_resolvant cl1 cl2 (cl1', cl2') =
   | ([l], []) => SOME l
   | ([], [l']) => SOME (negate l')
   | ([l], [l']) => if negate l = l' then SOME l else NONE
-  | ([], []) => NONE;
+  | ([], []) => SOME False;
 
 fun reconstruct_equality l r =
   let
@@ -154,21 +251,45 @@ fun reconstruct (cl, (Axiom, [])) = Axiom' cl
       case f (cl, cl) of SOME l => l
       | NONE =>
         case first f (List.tabulate (length cl, split cl)) of SOME l => l
-        | NONE => raise BUG "inference" "couldn't reconstruct resolvant"
+        | NONE =>
+          raise BUG "inference"
+          ("couldn't reconstruct resolvant" ^
+           "\nth = " ^ thm_to_string (AXIOM cl) ^
+           "\nth1 = " ^ thm_to_string th1 ^
+           "\nth2 = " ^ thm_to_string th2)
   in
     Resolve' (l, th1, th2)
   end
-  | reconstruct (Not fm :: cl, (Equality, [th])) =
-  let
-    val (tm1, tm2) = dest_eq fm
-  in
-    case first (reconstruct_equality tm1 tm2) (zip (clause th) cl) of
-      SOME (l, p) => Equality' (l, p, tm2, true, th)
-    | NONE =>
-      case first (reconstruct_equality tm2 tm1) (zip (clause th) cl) of
-        SOME (l, p) => Equality' (l, p, tm1, false, th)
-      | NONE => raise BUG "inference" "couldn't reconstruct equality step"
-  end
+  | reconstruct (Not eq :: cl, (Equality, [th])) =
+    if length (clause th) < length cl then
+      let
+        val (l, r) = dest_eq eq
+        val lit = hd cl
+        fun f (p |-> t) =
+          if t = l then SOME (p, false)
+          else if t = r then SOME (p, true)
+          else NONE
+      in
+        case first f (literal_subterms lit) of SOME (p, lr) =>
+          let
+            val (l, r) = if lr then (l, r) else (r, l)
+            val lit = literal_rewrite (p |-> l) lit
+          in
+            Equality' (lit, p, r, lr, th)
+          end
+        | NONE => raise BUG "inference" "couldn't reconstruct weak equality"
+      end
+    else
+      let
+        val line = zip (clause th) cl
+        fun sync l r = first (reconstruct_equality l r) line
+        val (l, r) = dest_eq eq
+      in
+        case sync l r of SOME (lit, p) => Equality' (lit, p, r, true, th)
+        | NONE =>
+          case sync r l of SOME (lit, p) => Equality' (lit, p, l, false, th)
+          | NONE => raise BUG "inference" "couldn't reconstruct equality step"
+      end
   | reconstruct _ = raise BUG "inference" "malformed inference";
 
 fun inference th =
@@ -183,21 +304,10 @@ fun inference th =
     i
   end;
 
-fun proof top =
-  let
-    val already_seen =
-      let val h = Polyhash.mkPolyTable (10000, BUG "proof" "argh")
-      in Option.isSome o Polyhash.peekInsert h o C pair ()
-      end
-    fun reduce (th, pf) =
-      if already_seen th then pf
-      else (th, inference th) :: foldl reduce pf (snd (snd (dest_thm th)))
-  in
-    reduce (top, [])
-  end;
+val proof = thm_foldr (fn (th, l) => (th, inference th) :: l) [];
 
 (* ------------------------------------------------------------------------- *)
-(* Contradictions and unit clauses.                                          *)
+(* Contradictions and units.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 val is_contradiction = null o clause;
@@ -206,6 +316,10 @@ fun dest_unit th =
   case clause th of [lit] => lit | _ => raise ERR "dest_unit" "not a unit";
 
 val is_unit = can dest_unit;
+
+val dest_unit_eq = dest_eq o dest_unit;
+
+val is_unit_eq = can dest_unit_eq;
 
 (* ------------------------------------------------------------------------- *)
 (* Derived rules                                                             *)
@@ -217,22 +331,26 @@ fun WEAKEN lits th = foldl (uncurry CONTR) th (rev lits);
 
 fun FRESH_VARSL ths =
   let
-    val fvs = FVL (List.concat (map clause ths))
+    val fvs = FVL [] (List.concat (map clause ths))
     val vvs = new_vars (length fvs)
     val sub = mlibSubst.from_maplets (zipwith (curry op |->) fvs vvs)
   in
     map (INST sub) ths
-  end;
+  end
+  handle ERR_EXN _ => raise BUG "FRESH_VARSL" "shouldn't fail";
 
 val FRESH_VARS = unwrap o FRESH_VARSL o wrap;
 
 fun UNIT_SQUASH th =
-  let
-    fun squash env (x :: (xs as y :: _)) = squash (unify_literals env x y) xs
-      | squash env _ = env
-  in
-    FACTOR (INST (squash |<>| (clause th)) th)
-  end;
+  case clause th of [] => raise ERR "UNIT_SQUASH" "contradiction"
+  | [_] => th
+  | _ :: _ :: _ =>
+    let
+      fun squash env (x :: (xs as y :: _)) = squash (unify_literals env x y) xs
+        | squash env _ = env
+    in
+      FACTOR (INST (squash |<>| (clause th)) th)
+    end;
   
 val REFLEXIVITY = REFL (Var "x");
 
@@ -263,6 +381,118 @@ fun REL_CONGRUENCE (relation, arity) =
     val refl = ASSUME (Not (Atom (Fn (relation, xs))))
   in
     foldl f refl (rev (interval 0 arity))
+  end;
+
+fun SYM lit th =
+  let
+    fun g x y = RESOLVE lit th (EQUALITY (refl x) [0] y true (REFL x))
+    fun f (true, (x,y)) = g x y | f (false, (x,y)) = g y x
+  in
+    f ((I ## dest_eq) (dest_literal lit))
+  end;
+
+local
+  fun psym lit =
+    let
+      val (s, (x,y)) = (I ## dest_eq) (dest_literal lit)
+      val () = assert (x <> y) (ERR "psym" "refl")
+    in
+      mk_literal (s, mk_eq (y,x))
+    end;
+
+  fun syms [] th = th
+    | syms (l :: ls) th =
+    syms ls
+    (case total psym l of NONE => th
+     | SOME l' => if mem l' ls then SYM l th else th);
+in
+  val EQ_FACTOR = FACTOR o (W (syms o clause)) o FACTOR;
+end;
+
+fun SUBST (rw, lr, r) (th, lit, p) =
+  RESOLVE (dest_unit rw) rw (EQUALITY lit p r lr th);
+
+fun REWR (rw, lr) tm =
+  let
+    val (l,r) = (if lr then I else swap) (dest_unit_eq rw)
+    val env = match l tm
+  in
+    (INST env rw, lr, term_subst env r)
+  end;
+
+fun DEPTH conv =
+  let
+    fun rewr1 (th, lit) (x as (_,_,r)) p =
+      (SUBST x (th, lit, p), literal_rewrite (p |-> r) lit)
+
+    fun rewr_top thl tm p =
+      (case total conv tm of NONE => (thl, tm)
+       | SOME (x as (_,_,r)) => rewr_top (rewr1 thl x (rev p)) r p)
+
+    fun rewr thl tm_orig p =
+      let
+        val (thl, tm) = rewr_top thl tm_orig p
+        val (thl, tm) = rewr_sub thl tm p
+      (*val () = chat 3 ("rewr: " ^ term_to_string tm_orig ^ " --> " ^ term_to_string tm ^ "\n")*)
+      in
+        if tm = tm_orig then (thl, tm) else rewr thl tm p
+      end
+    and rewr_sub thl (tm as Var _) _ = (thl, tm)
+      | rewr_sub thl (tm as Fn (name, xs)) p =
+      let
+        fun f ((n, x), (tl, ys)) =
+          let val (tl, y) = rewr tl x (n :: p) in (tl, y :: ys) end
+        val (thl, ys) = (I ## rev) (foldl f (thl, []) (enumerate 0 xs))
+      in
+        (thl, if ys = xs then tm else Fn (name, ys))
+      end
+
+    fun rewr_lits (lit, th) =
+      if not (mem lit (clause th)) then
+        (assert (is_eq (negate lit)) (BUG "DEPTH" "weird"); th)
+      else fst (fst (rewr_sub (th, lit) (dest_atom (literal_atom lit)) []))
+  in
+    fn th => foldl rewr_lits th (clause th)
+(***    handle ERR_EXN _ => raise BUG "DEPTH" "shouldn't fail"*)
+  end;
+ 
+fun REWRITE ths =
+  let
+    fun f th = let val (l,_) = dest_unit_eq th in T.insert (l |-> th) end
+    val net = foldl (uncurry f) T.empty ths
+    fun mat tm = first (fn th => total (REWR (th,true)) tm) (T.match net tm)
+  in
+    DEPTH (partial (ERR "REWRITE" "no matching rewrites") mat)
+  end;
+
+fun ORD_REWRITE ord rws =
+  let
+    fun f rw =
+      let
+        val lr as (l,r) = dest_unit_eq rw
+      in
+        case ord lr of SOME EQUAL => I
+        | SOME LESS => T.insert (r |-> (rw,false,r,l))
+        | SOME GREATER => T.insert (l |-> (rw,true,l,r))
+        | NONE => T.insert (l|->(rw,true,l,r)) o T.insert (r|->(rw,false,r,l))
+      end
+    val net = foldl (uncurry f) T.empty rws
+    fun g tm (rw,lr,l,r) =
+      let
+        val env = match l tm
+        val (l,r) = Df (term_subst env) (l,r)
+        val () = assert (ord (l,r) = SOME GREATER)
+                        (ERR "ORD_REWRITE" "order violation")
+      in
+        (INST env rw, lr, r)
+      end      
+    fun mat tm = first (total (g tm)) (T.match net tm)
+  in
+    fn th => DEPTH (partial (ERR "ORD_REWRITE" "no matching rewrites") mat) th
+    handle ERR_EXN _ =>
+      (print ("\nrewrs: " ^ PP.pp_to_string 60 (pp_list pp_thm) rws ^
+              "\nth: " ^ PP.pp_to_string 60 pp_thm th ^ "\n");
+       raise BUG "ORD_REWRITE" "shouldn't fail")
   end;
 
 end

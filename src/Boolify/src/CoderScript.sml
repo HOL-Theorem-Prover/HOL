@@ -118,7 +118,7 @@ val wf_coder_op = store_thm
    ++ DISCH_THEN (K ALL_TAC)
    ++ MATCH_MP_TAC EQ_EXT
    ++ RW_TAC std_ss []
-   ++ Know `wf_encoder p f` >> HO_METIS_TAC [wf_encoder_eq]
+   ++ Know `wf_encoder p f` >> METIS_TAC [wf_encoder_eq]
    ++ STRIP_TAC
    ++ (Cases_on `enc2dec p e x`
        ++ Cases_on `enc2dec p f x`

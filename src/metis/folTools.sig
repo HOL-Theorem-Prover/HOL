@@ -46,27 +46,21 @@ val empty_map    : logic_map                      (* Uses defaults *)
 val add_thm      : vars * thm -> logic_map -> logic_map
 val add_hyp      : vars * thm -> logic_map -> logic_map
 val add_const    : string -> logic_map -> logic_map
+val build_map    : parameters * thm list -> logic_map
 val pp_logic_map : logic_map pp
 
 (* A pure interface to the first-order solver: no normalization *)
-type Query      = vars * term list
-type Result     = vars * thm list
-val FOL_SOLVER : solver_node -> logic_map -> limit -> Query -> Result stream
+type Query  = vars * term list
+type Result = vars * thm list
+val FOL_SOLVE  : solver_node -> logic_map -> limit -> Query -> Result stream
+val FOL_FIND   : solver_node -> logic_map -> limit -> Query -> Result
+val FOL_REFUTE : solver_node -> logic_map -> limit -> thm
+val FOL_TACTIC : solver_node -> logic_map -> limit -> tactic
 
-(* HOL normalization to first-order clausal form *)
+(* HOL normalization to conjunctive normal form *)
 val FOL_NORM_CONV : conv
 val FOL_NORM_RULE : rule
-
-(* An interface to first-order solvers with normalization *)
-type Init = {parm : parameters, thms : thm list, hyps : thm list, lim : limit}
-val FOL_SOLVE  : solver_node -> Init -> Query -> Result stream
-val FOL_FIND   : solver_node -> Init -> Query -> Result
-val FOL_REFUTE : solver_node -> Init -> thm
-
-(* Stripping, elimination of choice operator (@), then FOL_NORM_CONV *)
-val FOL_NORM_TAC : tactic
-
-(* Calling the first-order prover from a HOL tactic *)
-val FOL_TAC : solver_node * parameters * limit -> thm list -> tactic
+val FOL_NORM_TAC  : tactic    (* Stripping + Elimination of @ + FOL_NORM_CONV *)
+val FOL_NORM_TTAC : (thm list -> tactic) -> thm list -> tactic
 
 end

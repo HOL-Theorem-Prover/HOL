@@ -54,6 +54,14 @@ val EXT_POINT_DEF =
 
 val _ = add_const "EXT_POINT";
 
+val EXT_POINT = store_thm
+  ("EXT_POINT",
+   ``!(f : 'a -> 'b) g. (f (EXT_POINT f g) = g (EXT_POINT f g)) = (f = g)``,
+   REPEAT GEN_TAC THEN
+   EQ_TAC THENL
+   [MATCH_ACCEPT_TAC EXT_POINT_DEF,
+    DISCH_THEN (fn th => REWRITE_TAC [th])]);
+
 (* ------------------------------------------------------------------------- *)
 (* UNIV_POINT                                                                *)
 (* If a predicate P is true on its UNIV_POINT, it is true everywhere.        *)

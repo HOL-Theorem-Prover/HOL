@@ -41,53 +41,6 @@ datatype formula =
 | Exists of string * formula;
 
 (* ------------------------------------------------------------------------- *)
-(* A datatype to antiquote both terms and formulas.                          *)
-(* ------------------------------------------------------------------------- *)
-
-datatype thing = Term of term | Formula of formula;
-
-(* ------------------------------------------------------------------------- *)
-(* Built-in infix operators and reserved symbols.                            *)
-(* ------------------------------------------------------------------------- *)
-
-val infixes : infixities ref = ref
-  [(* ML style *)
-   {tok = " / ",   prec = 7,  left_assoc = true},
-   {tok = " div ", prec = 7,  left_assoc = true},
-   {tok = " mod ", prec = 7,  left_assoc = true},
-   {tok = " * ",   prec = 7,  left_assoc = true},
-   {tok = " + ",   prec = 6,  left_assoc = true},
-   {tok = " - ",   prec = 6,  left_assoc = true},
-   {tok = " ^ ",   prec = 6,  left_assoc = true},
-   {tok = " @ ",   prec = 5,  left_assoc = false},
-   {tok = " :: ",  prec = 5,  left_assoc = false},
-   {tok = " = ",   prec = 4,  left_assoc = true},    (* may be interpreted *)
-   {tok = " == ",  prec = 4,  left_assoc = true},    (* won't be interpreted *)
-   {tok = " <> ",  prec = 4,  left_assoc = true},
-   {tok = " <= ",  prec = 4,  left_assoc = true},
-   {tok = " < ",   prec = 4,  left_assoc = true},
-   {tok = " >= ",  prec = 4,  left_assoc = true},
-   {tok = " > ",   prec = 4,  left_assoc = true},
-   {tok = " o ",   prec = 8,  left_assoc = true},    (* ML prec = 3 *)
-   (* HOL style *)
-   {tok = " % ",   prec = 9,  left_assoc = true},    (* function application *)
-   {tok = " -> ",  prec = 2,  left_assoc = false},   (* HOL ty prec = 50 *)
-   {tok = " : ",   prec = 1,  left_assoc = false},   (* not in HOL grammars *)
-   {tok =  ", ",   prec = 0,  left_assoc = false},   (* HOL tm prec = 50 *)
-   (* Convenient alternative symbols *)
-   {tok = " ** ",  prec = 7,  left_assoc = true},
-   {tok = " ++ ",  prec = 6,  left_assoc = true},
-   {tok = " -- ",  prec = 6,  left_assoc = true}];
-
-val connectives =
-  [{tok = " /\\ ", prec = ~1, left_assoc = false},
-   {tok = " \\/ ", prec = ~2, left_assoc = false},
-   {tok = " ==> ", prec = ~3, left_assoc = false},
-   {tok = " <=> ", prec = ~4, left_assoc = false}];
-
-val reserved = ["!", "?", "(", ")", ".", "~"];
-
-(* ------------------------------------------------------------------------- *)
 (* Constructors and destructors.                                             *)
 (* ------------------------------------------------------------------------- *)
 
@@ -138,6 +91,13 @@ fun dest_atom (Atom a) = a
   | dest_atom _ = raise ERR "dest_atom" "";
 
 val is_atom = can dest_atom;
+
+(* Negations *)
+
+fun dest_neg (Not p) = p
+  | dest_neg _ = raise ERR "dest_neg" "";
+
+val is_neg = can dest_neg;
 
 (* Conjunctions *)
 
@@ -208,11 +168,59 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
+(* A datatype to antiquote both terms and formulas.                          *)
+(* ------------------------------------------------------------------------- *)
+
+datatype thing = Term of term | Formula of formula;
+
+(* ------------------------------------------------------------------------- *)
+(* Built-in infix operators and reserved symbols.                            *)
+(* ------------------------------------------------------------------------- *)
+
+val infixes : infixities ref = ref
+  [(* ML style *)
+   {tok = " / ",   prec = 7,  left_assoc = true},
+   {tok = " div ", prec = 7,  left_assoc = true},
+   {tok = " mod ", prec = 7,  left_assoc = true},
+   {tok = " * ",   prec = 7,  left_assoc = true},
+   {tok = " + ",   prec = 6,  left_assoc = true},
+   {tok = " - ",   prec = 6,  left_assoc = true},
+   {tok = " ^ ",   prec = 6,  left_assoc = true},
+   {tok = " @ ",   prec = 5,  left_assoc = false},
+   {tok = " :: ",  prec = 5,  left_assoc = false},
+   {tok = " = ",   prec = 4,  left_assoc = true},    (* may be interpreted *)
+   {tok = " == ",  prec = 4,  left_assoc = true},    (* won't be interpreted *)
+   {tok = " <> ",  prec = 4,  left_assoc = true},
+   {tok = " <= ",  prec = 4,  left_assoc = true},
+   {tok = " < ",   prec = 4,  left_assoc = true},
+   {tok = " >= ",  prec = 4,  left_assoc = true},
+   {tok = " > ",   prec = 4,  left_assoc = true},
+   {tok = " o ",   prec = 8,  left_assoc = true},    (* ML prec = 3 *)
+   (* HOL style *)
+   {tok = " % ",   prec = 9,  left_assoc = true},    (* function application *)
+   {tok = " -> ",  prec = 2,  left_assoc = false},   (* HOL ty prec = 50 *)
+   {tok = " : ",   prec = 1,  left_assoc = false},   (* not in HOL grammars *)
+   {tok =  ", ",   prec = 0,  left_assoc = false},   (* HOL tm prec = 50 *)
+   (* Convenient alternative symbols *)
+   {tok = " ** ",  prec = 7,  left_assoc = true},
+   {tok = " ++ ",  prec = 6,  left_assoc = true},
+   {tok = " -- ",  prec = 6,  left_assoc = true}];
+
+val connectives =
+  [{tok = " /\\ ", prec = ~1, left_assoc = false},
+   {tok = " \\/ ", prec = ~2, left_assoc = false},
+   {tok = " ==> ", prec = ~3, left_assoc = false},
+   {tok = " <=> ", prec = ~4, left_assoc = false}];
+
+val reserved = ["!", "?", "(", ")", ".", "~"];
+
+(* ------------------------------------------------------------------------- *)
 (* Deciding whether a string denotes a variable or constant.                 *)
 (* ------------------------------------------------------------------------- *)
 
-val var_string =
-  C mem [#"_", #"v", #"w", #"x", #"y", #"z"] o Char.toLower o hd o explode;
+local val initials = [#"_",#"v",#"w",#"x",#"y",#"z",#"V",#"W",#"X",#"Y",#"Z"];
+in val var_string = ref (C mem initials o Char.toLower o hd o explode);
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printing.                                                          *)
@@ -221,22 +229,15 @@ val var_string =
 (* Purely functional pretty-printing *)
 
 val pp_vname =
-  pp_map (fn s => if var_string s then s else "var->" ^ s ^ "<-var") pp_string;
-
-val pp_cname =
-  pp_map (fn s => if var_string s then "const->" ^ s ^ "<-const" else s)
-  pp_string;
-
-val pp_fname =
-  pp_map (fn s => if var_string s then "fn->" ^ s ^ "<-fn" else s) pp_string;
+  pp_map (fn s => if !var_string s then s else "var->" ^ s ^ "<-var") pp_string;
 
 fun pp_term' ops =
   let
     val ops = ops @ connectives
     val iprinter = pp_infixes ops
     val itoks = optoks ops
-    fun pp_uninfix pp_s pp s =
-      if mem s itoks then PP.add_string pp ("(" ^ s ^ ")") else pp_s pp s
+    fun specialf s = mem s itoks orelse !var_string s
+    val pp_fname = pp_map (fn s=>if specialf s then "("^s^")" else s) pp_string
     fun idest (Fn (f, [a, b])) = SOME (f, a, b) | idest _ = NONE
     fun is_op t = case idest t of SOME (f, _, _) => mem f itoks | NONE => false
     fun is_q (Fn ("!", _)) = true | is_q (Fn ("?", _)) = true | is_q _ = false
@@ -246,10 +247,8 @@ fun pp_term' ops =
       | binds _ tm = ([], tm)
     open PP
     fun basic pp (Var v) = pp_vname pp v
-      | basic pp (Fn (c, [])) = pp_uninfix pp_cname pp c
       | basic pp (Fn (f, a)) =
-      (pp_uninfix pp_fname pp f;
-       app (fn x => (add_break pp (1, 0); argument pp x)) a)
+      (pp_fname pp f; app (fn x => (add_break pp (1,0); argument pp x)) a)
     and argument pp tm =
       if is_var tm orelse is_const tm then basic pp tm else pp_btm pp tm
     and quant pp (tm, r) =
@@ -276,7 +275,7 @@ fun pp_term' ops =
         val (n, x) = negs tm
       in
         begin_block pp INCONSISTENT n;
-        N n (fn () => add_string pp "~") ();
+        funpow n (fn () => add_string pp "~") ();
         if is_op x then pp_btm pp x else quant pp (x, r);
         end_block pp
       end
@@ -342,30 +341,28 @@ val lex_str = lexer o mlibStream.from_list o explode;
 (* Purely functional parsing *)
 
 val vname_parser =
-  some (fn tok => not (mem tok reserved) andalso var_string tok);
+  some (fn tok => not (mem tok reserved) andalso !var_string tok);
 
 fun term_parser ops =
   let
-    val ops            = ops @ connectives
-    val iparser        = parse_infixes ops
-    val itoks          = optoks ops
-    val avoid          = itoks @ reserved
-    fun fname tok      = not (mem tok avoid) andalso not (var_string tok)
-    fun uninfix tok    = mem tok itoks
-    val uninfix_parser = (exact "(" ++ some uninfix ++ exact ")") >> (fst o snd)
-    val fname_parser   = some fname || uninfix_parser
-    fun bind s (v, t)  = Fn (s, [Var v, t])
-    fun basic inp      =
-      ((exact "(" ++ tm_parser ++ exact ")") >> (fn (_, (t, _)) => t) ||
+    val ops          = ops @ connectives
+    val iparser      = parse_infixes ops
+    val itoks        = optoks ops
+    val avoid        = itoks @ reserved
+    fun fname tok    = not (mem tok avoid) andalso not (!var_string tok)
+    val fname_parser = some fname || (exact "("++any++exact ")") >> (fst o snd)
+    fun bind s (v,t) = Fn (s, [Var v, t])
+    fun basic inp    =
+      (vname_parser >> Var ||
+       fname_parser >> (fn f => Fn (f, [])) ||
+       (exact "(" ++ tm_parser ++ exact ")") >> (fn (_, (t, _)) => t) ||
        (exact "!" ++ atleastone vname_parser ++ exact "." ++ tm_parser) >>
        (fn (_, (vs, (_, body))) => foldr (bind "!") body vs) ||
        (exact "?" ++ atleastone vname_parser ++ exact "." ++ tm_parser) >>
-       (fn (_, (vs, (_, body))) => foldr (bind "?") body vs) ||
-       fname_parser >> (fn f => Fn (f, [])) ||
-       vname_parser >> Var) inp
+       (fn (_, (vs, (_, body))) => foldr (bind "?") body vs)) inp
     and molecule inp      =
       ((many (exact "~") ++ ((fname_parser ++ many basic) >> Fn || basic)) >>
-       (fn (l, t) => N (length l) (fn x => Fn ("~", [x])) t)) inp
+       (fn (l, t) => funpow (length l) (fn x => Fn ("~", [x])) t)) inp
     and tm_parser inp  = iparser (fn (f, a, b) => Fn (f, [a, b])) molecule inp
   in
     tm_parser
@@ -406,7 +403,7 @@ fun parse_term        q = parse_term'        (!infixes) q;
 fun parse_formula     q = parse_formula'     (!infixes) q;
 
 (* ------------------------------------------------------------------------- *)
-(* Basic operations on terms and formulas.                                   *)
+(* New variables.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
 local
@@ -416,6 +413,10 @@ in
   val new_var  = num_var o new_int;
   val new_vars = map num_var o new_ints;
 end;
+
+(* ------------------------------------------------------------------------- *)
+(* Sizes of terms and formulas.                                              *)
+(* ------------------------------------------------------------------------- *)
 
 local
   fun szt n []                    = n
@@ -438,6 +439,58 @@ in
   val formula_size = sz  0 o wrap;
 end;
 
+(* ------------------------------------------------------------------------- *)
+(* Total comparison functions for terms and formulas.                        *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  fun lex EQUAL f x = f x | lex x _ _ = x;
+
+  fun cmt [] = EQUAL
+    | cmt ((Var _, Fn _) :: _) = LESS
+    | cmt ((Fn _, Var _) :: _) = GREATER
+    | cmt ((Var v, Var w) :: l) = lex (String.compare (v, w)) cmt l
+    | cmt ((Fn (f, a), Fn (g, b)) :: l) =
+    (case lex (String.compare (f, g)) (Int.compare o Df length) (a, b) of EQUAL
+       => cmt (zip a b @ l)
+     | x => x);
+
+  fun cm [] = EQUAL
+    | cm ((True,          True         ) :: l) = cm l
+    | cm ((True,          _            ) :: _) = LESS
+    | cm ((_,             True         ) :: _) = GREATER
+    | cm ((False,         False        ) :: l) = cm l
+    | cm ((False,         _            ) :: _) = LESS
+    | cm ((_,             False        ) :: _) = GREATER
+    | cm ((Atom t,        Atom u       ) :: l) = lex (cmt [(t, u)]) cm l
+    | cm ((Atom _,        _            ) :: _) = LESS
+    | cm ((_,             Atom _       ) :: _) = GREATER
+    | cm ((Not p,         Not q        ) :: l) = cm ((p, q) :: l)
+    | cm ((Not _ ,        _            ) :: _) = LESS
+    | cm ((_,             Not _        ) :: _) = GREATER
+    | cm ((And (p1, q1),  And (p2, q2) ) :: l) = cm ((p1, p2) :: (q1, q2) :: l)
+    | cm ((And _,         _            ) :: _) = LESS
+    | cm ((_,             And _        ) :: _) = GREATER
+    | cm ((Or (p1, q1),   Or (p2, q2)  ) :: l) = cm ((p1, p2) :: (q1, q2) :: l)
+    | cm ((Or _,          _            ) :: _) = LESS
+    | cm ((_,             Or _         ) :: _) = GREATER
+    | cm ((Imp (p1, q1),  Imp (p2, q2) ) :: l) = cm ((p1, p2) :: (q1, q2) :: l)
+    | cm ((Imp _,         _            ) :: _) = LESS
+    | cm ((_,             Imp _        ) :: _) = GREATER
+    | cm ((Iff (p1, q1),  Iff (p2, q2) ) :: l) = cm ((p1, p2) :: (q1, q2) :: l)
+    | cm ((Iff _,         _            ) :: _) = LESS
+    | cm ((_,             Iff _        ) :: _) = GREATER
+    | cm ((Forall (v, p), Forall (w, q)) :: l) =
+    lex (String.compare (v, w)) (cm o cons (p, q)) l
+    | cm ((Forall _,      Exists _     ) :: _) = LESS
+    | cm ((Exists _,      Forall _     ) :: _) = GREATER
+    | cm ((Exists (v, p), Exists (w, q)) :: l) =
+    lex (String.compare (v, w)) (cm o cons (p, q)) l;
+in
+  val term_compare    = cmt o wrap;
+  val formula_compare = cm o wrap;
+end;
+  
 (* ------------------------------------------------------------------------- *)
 (* Basic operations on literals.                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -524,6 +577,10 @@ fun dest_eq (Atom (Fn ("=", [a, b]))) = (a, b)
 
 val is_eq = can dest_eq;
 
+val refl = mk_eq o D;
+
+val sym = mk_eq o swap o dest_eq;
+
 val lhs = fst o dest_eq;
 
 val rhs = snd o dest_eq;
@@ -560,9 +617,9 @@ local
     | fv vs ((av, Forall (x, p)) :: fms) = fv vs ((insert x av, p) :: fms)
     | fv vs ((av, Exists (x, p)) :: fms) = fv vs ((insert x av, p) :: fms);
 in    
-  fun FVT tm  = rev (fvt [] [] [tm]);
-  fun FV  fm  = rev (fv  [] [([], fm)]);
-  fun FVL fms = rev (fv  [] (map (pair []) fms));
+  fun FVT   tm  = rev (fvt [] [] [tm]);
+  fun FV    fm  = rev (fv  [] [([], fm)]);
+  fun FVL l fms = rev (fv  l  (map (pair []) fms));
 end;
 
 val specialize = snd o strip_forall;
@@ -579,6 +636,8 @@ fun subterm [] tm = tm
   subterm t (List.nth (args, h))
   handle Subscript => raise ERR "subterm" "bad path";
 
+fun literal_subterm p = subterm p o dest_atom o literal_atom;
+
 local
   fun update _ _ [] = raise ERR "rewrite" "bad path"
     | update f n (h :: t) = if n = 0 then f h :: t else h :: update f (n - 1) t;
@@ -592,16 +651,28 @@ end;
 local
   fun atom_rewrite r = Atom o rewrite r o dest_atom;
 in
-  fun literal_subterm p = subterm p o dest_atom o literal_atom;
-  fun literal_rewrite r = mk_literal o (I ## atom_rewrite r) o dest_literal;
+  fun literal_rewrite ([] |-> _) = raise ERR "literal_rewrite" "empty path"
+    | literal_rewrite r = mk_literal o (I ## atom_rewrite r) o dest_literal;
+end;
+
+local
+  fun f [] l = l | f ((p, t) :: w) l = g p t w ((rev p |-> t) :: l)
+  and g _ (Var _) w l = f w l
+    | g p (Fn (_, ts)) w l = 
+    let val a = map (fn (x,y) => (x::p,y)) (enumerate 0 ts) in f (a @ w) l end;
+in
+  fun subterms p tm = f [(p, tm)] [];
+  fun literal_subterms lit = g [] (dest_atom (literal_atom lit)) [] [];
 end;
 
 (* ------------------------------------------------------------------------- *)
 (* The Knuth-Bendix ordering.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-type Weight = string * int -> int;
-type Prec   = (string * int) * (string * int) -> order;
+type Weight       = string * int -> int;
+type Prec         = (string * int) * (string * int) -> order;
+type Termorder    = term * term -> order option;
+type Literalorder = formula * formula -> order option;
 
 val no_vars = mlibMultiset.empty String.compare;
 fun one_var v = mlibMultiset.insert (v, 1) no_vars;
@@ -644,5 +715,19 @@ fun kb_compare w p =
   in
     kbo o wrap
   end;
+
+fun kb_lcompare w p = kb_compare w p o Df (dest_atom o literal_atom);
+
+(* Weight = uniform, Prec = by arity *)
+
+local
+  fun weight (f, m) = 1;
+    
+  fun prec ((f, m), (g, n)) =
+    if m < n then LESS else if m > n then GREATER else String.compare (f, g);
+in
+  val kb_comp  = kb_compare weight prec;
+  val kb_lcomp = kb_lcompare weight prec;
+end;
 
 end

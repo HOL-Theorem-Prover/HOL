@@ -36,10 +36,8 @@ type Pattern = vars * term list
 type Result  = vars * thm list
 val fol_thms_to_hol : parameters -> Axioms -> Pattern -> thm1 list -> Result
 
-(* Pretty-printing first-order things that have come from HOL *)
-val print_types : bool ref
-val pp_term1    : term1 pp
-val pp_formula1 : formula1 pp
-val pp_thm1     : thm1 pp
+(* Prettify FOL representations of HOL terms---WILL BREAK PROOF TRANSLATION! *)
+val prettify_fol     : bool ref
+val prettify_formula : formula1 -> formula1
 
 end

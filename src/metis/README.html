@@ -13,9 +13,7 @@
 <td><ul>
 <li>The Metis library is released with <a href="http://hol.sf.net">HOL 4</a>.</li>
 
-<li>It provides an interface between HOL and first-order logic,</br>
-
-and tools for proving (and solving) first-order goals.</li>
+<li>It is an automatic prover for HOL subgoals.</li>
 </ul></td>
 </tr>
 </table>
@@ -31,91 +29,91 @@ At the top of your proof script, write
 
 <p>
 
-Then you can use
+Opening the Metis library makes available the automatic provers
 
 <p>
 
-<kbd>&nbsp&nbsp&nbsp&nbsp METIS_TAC&nbsp</kbd> to prove first-order goals; and <br>
-<kbd>&nbsp HO_METIS_TAC&nbsp</kbd> to prove (some) higher-order goals.
+<kbd>&nbsp&nbsp&nbsp METIS_TAC : thm list -> tactic</kbd><br>
+<kbd>&nbsp METIS_PROVE : thm list -> term -> thm</kbd>
 
 <p>
 
-Both of these tactics take a list of theorems that are used to prove
-the goal.
+which both take a list of theorems that are used to prove the goal.
 
 
-<h2>Inside the Metis Library</h2>
+<h2>Examples</h2>
 
-The Metis tactics prove a HOL goal <kbd>hol_goal</kbd> as follows:
+<kbd>prove (``?x. x``, METIS_TAC []);</kbd>
+
+<p>
+
+<kbd>prove (``!x. ~(x = 0) ==> ?!y. x = SUC y``,<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp METIS_TAC [numTheory.INV_SUC, arithmeticTheory.num_CASES]);</kbd>
+
+<p>
+
+<kbd>METIS_PROVE [prim_recTheory.LESS_SUC_REFL, arithmeticTheory.num_CASES]<br>
+``(!P. (!n. (!m. m < n ==> P m) ==> P n) ==> !n. P n) ==><br>
+&nbsp !P. P 0 /\ (!n. P n ==> P (SUC n)) ==> !n. P n``;</kbd>
+
+<h2>How It Works</h2>
+
+This is how <kbd>METIS_TAC</kbd> proves a HOL goal:
 
 <p>
 
 <ol>
-<li>HOL tactics simplify <kbd>hol_goal</kbd> and convert it to CNF. [<em>folTools, normalForms</em>]</li>
+<li>First some HOL conversions and tactics simplify the goal and
+convert it to conjunctive normal form.</li>
 
-<li>A first-order goal <kbd>fol_goal</kbd> is derived from
-<kbd>hol_goal</kbd>. [<em>folMapping</em>]</li>
+<li>The normalized problem is converted to first-order syntax.</li>
 
-<li>First-order calculi attack <kbd>fol_goal</kbd>, hopefully deriving
-a theorem <kbd>fol_th</kbd>. [<em>mlibMetis</em>]</li>
+<li>Resolution and model elimination provers attack the first-order
+problem, hopefully deriving a refutation.</li>
 
-<li>A logical kernel keeps track of the proof of every first-order
-theorem that is derived. [<em>mlibKernel</em>]</li>
-
-<li>The proof of <kbd>fol_th</kbd> is translated to HOL, producing a
-HOL theorem <kbd>hol_th</kbd>. [<em>folMapping</em>]</li>
-
-<li><kbd>hol_th</kbd> is used to prove the original HOL goal
-<kbd>hol_goal</kbd>. [<em>folTools</em>]</li>
+<li>The first-order refutation is lifted to a HOL proof of the
+original goal.</li>
 </ol>
 
 
 <h2>Comparison with <kbd>MESON_TAC</kbd></h2>
 
-The Metis provers are generally slower than <kbd>MESON_TAC</kbd>, but
-have better coverage. For example, <kbd>MESON_TAC</kbd> cannot prove
-the following two goals:
+<kbd>METIS_TAC</kbd> is generally slower than <kbd>MESON_TAC</kbd> on
+simple problems, but has better coverage. For example,
+<kbd>MESON_TAC</kbd> cannot prove the following goals:
 
 <p>
 
-<kbd>&nbsp METIS_PROVE [] ``p (\x. x) /\ q ==> q /\ p (\y. y)``;</kbd><br>
-<kbd>&nbsp METIS_PROVE [] ``?x. x``;</kbd>
+<kbd>&nbsp METIS_PROVE [] ``?x. x``;</kbd><br>
+<kbd>&nbsp METIS_PROVE [] ``p (\x. x) /\ q ==> q /\ p (\y. y)``;</kbd>
 
 <p>
 
 The combination of model elimination and resolution calculi in
-<kbd>HO_METIS_TAC</kbd> allows some hard goals to be proved that are
-too deep for the HOL version of <kbd>MESON_TAC</kbd>, such as the
-<kbd>GILMORE_9</kbd> and <kbd>STEAM_ROLLER</kbd> problems.
+<kbd>METIS_TAC</kbd> allows some hard goals to be proved that are too
+deep for the HOL version of <kbd>MESON_TAC</kbd>, such as the
+<kbd>GILMORE_9</kbd> and <kbd>STEAM_ROLLER</kbd> problems. Also, the
+ordered paramodulation used by the resolution component of
+<kbd>METIS_TAC</kbd> allows it to prove harder equality problems. An
+example to illustrate this is the goal
 
 <p>
 
-The Metis library provides an interface to tools that solve goals as
-well as prove them, including the user-friendly
-
-<p>
-
-<kbd>&nbsp metisLib.PROLOG_SOLVE : thm list -> Query -> Result stream</kbd>
-
-<p>
-
-<kbd>MESON_TAC</kbd> automatically spots higher-order goals and sets
-up the proof translation accordingly, but in the Metis library you
-have to do this manually by selecting either <kbd>METIS_TAC</kbd> or
-<kbd>HO_METIS_TAC</kbd>.
+<kbd>&nbsp METIS_PROVE []<br>
+&nbsp ``(!x y. x * y = y * x) /\ (!x y z. x * y * z = x * (y * z)) ==><br>
+&nbsp&nbsp  a * b * c * d * e * f = f * e * d * c * b * a``;</kbd>
 
 
 <h2>Known Bugs</h2>
 
-The resolution component in <kbd>HO_METIS_TAC</kbd> occasionally goes
-completely haywire and eats all the memory <kbd>:-(</kbd>
+<kbd>METIS_TAC</kbd> combines resolution and model elimination calculi
+by time-slicing between them, so in principle it could successfully
+prove a goal on one occasion but diverge on another. However, this
+situation isn't likely to arise in practice.
 
 <p>
 
-<kbd>HO_METIS_TAC</kbd> combines resolution and model elimination
-calculi by time-slicing between them, so in principle it could
-successfully prove a goal on one occasion but diverge on
-another. However, this situation isn't likely to arise in practice.
+Using resolution as a solver is incomplete when equality is present.
 
 
 <h2>History and Credit</h2>
@@ -126,16 +124,15 @@ used for first-order proof in HOL.
 
 <p>
 
-The model elimination and resolution calculi were based on code in
-<kbd>mesonLib</kbd> and John Harrison's forthcoming book about theorem
-proving.
+The model elimination and resolution calculi were based on
+<kbd>MESON_TAC</kbd> and John Harrison's forthcoming book about
+theorem proving.
 
 <p>
 
-A collection of HOL goals that could be successfully proved by a Metis
-prover are <a
-href="http://www.cl.cam.ac.uk/~jeh1004/research/problems/hol.sml.gz">available
-in first-order format</a>.
+A large collection of HOL subgoals are <a
+href="http://www.cl.cam.ac.uk/~jeh1004/research/problems">available in
+first-order format</a>.
 
 
 <h2>Etymology</h2>
@@ -171,27 +168,55 @@ of Canada are
 
 <h2>Change Log</h2>
 
+<h3>Version 1.2: 19 November 2002</h3>
+
+<kbd>Goals submitted to MESON_TAC when HOL is built .......... 1779</kbd><br>
+<kbd>Proved by MESON_TAC ..................................... 1779</kbd><br>
+<kbd>Proved by METIS_TAC within 10s .......................... 1774</kbd><br>
+
+<h3>Between Versions 1.1 and 1.2</h3>
+
+<ul>
+
+<li>Ground-up reimplementation of the resolution calculus, which now
+performs ordered resolution and ordered paramodulation.</li>
+
+<li>A single entry-point <kbd>METIS_TAC</kbd>, which uses heuristics
+to decide whether to apply <kbd>FO_METIS_TAC</kbd> or
+<kbd>HO_METIS_TAC</kbd>.</li>
+
+<li><kbd>{HO|FO}_METIS_TAC</kbd> both initially operate in typeless
+mode, and automatically try again with types if an error occurs during
+proof translation.</li>
+
+<li>Extensionality axiom now included in <kbd>HO_METIS_TAC</kbd> by
+default.</li>
+
+</ul>
+
+<p>
+
 <h3>Version 1.1: 21 September 2002</h3>
 
-<kbd>Goals submitted to MESON_TAC when HOL is built ............. 1745</kbd><br>
-<kbd>Proved by MESON_TAC ........................................ 1745</kbd><br>
-<kbd>Provable by METIS_TAC within 10s ........................... 1485</kbd><br>
-<kbd>Provable by HO_METIS_TAC within 10s ........................ 1698</kbd><br>
-<kbd>Provable by one of METIS_TAC and HO_METIS_TAC within 10s ... 1717</kbd>
+<kbd>Goals submitted to MESON_TAC when HOL is built .......... 1745</kbd><br>
+<kbd>Proved by MESON_TAC ..................................... 1745</kbd><br>
+<kbd>Proved by FO_METIS_TAC within 10s ....................... 1485</kbd><br>
+<kbd>Proved by HO_METIS_TAC within 10s ....................... 1698</kbd><br>
+<kbd>Proved by one of {FO|HO}_METIS_TAC within 10s ........... 1717</kbd>
 
 <h3>Between Versions 1.0 and 1.1</h3>
 
 <ul>
 
 <li>Added a <kbd>"metis"</kbd> entry to the HOL trace system: it nows
-prints status information during proof (if HOL is in interactive mode).</li>
+prints status information during proof (if HOL is in interactive
+mode).</li>
 
-<li>Restricted (universal and existential) quantifiers are now normalized
-by the NNF conversion.</li>
+<li>Restricted (universal and existential) quantifiers are now
+normalized by the NNF conversion.</li>
 
-<li>(First-order) <kbd>METIS_TAC</kbd> can now handle boolean variables.</li>
-
-<li>Improved performance in the model elimination proof procedure due to better caching (following a suggestion from John Harrison).</li>
+<li>Improved performance in the model elimination proof procedure due
+to better caching (following a suggestion from John Harrison).</li>
 
 <li>First-order substitutions are now fully Boultonized.</li>
 
@@ -204,11 +229,11 @@ as small as possible.</li>
 
 <h3>Version 1.0: 18 July 2002</h3>
 
-<kbd>Goals submitted to MESON_TAC when HOL is built ............. 1435</kbd><br>
-<kbd>Proved by MESON_TAC ........................................ 1435</kbd><br>
-<kbd>Provable by METIS_TAC within 10s ........................... 1240</kbd><br>
-<kbd>Provable by HO_METIS_TAC within 10s ........................ 1346</kbd><br>
-<kbd>Provable by one of METIS_TAC and HO_METIS_TAC within 10s ... 1389</kbd>
+<kbd>Goals submitted to MESON_TAC when HOL is built .......... 1435</kbd><br>
+<kbd>Proved by MESON_TAC ..................................... 1435</kbd><br>
+<kbd>Proved by FO_METIS_TAC within 10s ....................... 1240</kbd><br>
+<kbd>Proved by HO_METIS_TAC within 10s ....................... 1346</kbd><br>
+<kbd>Proved by one of {FO|HO}_METIS_TAC within 10s ........... 1389</kbd>
 
 </body>
 

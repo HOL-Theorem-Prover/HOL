@@ -64,29 +64,22 @@ fun RESOLVE fm th1 th2 =
     val cl1' = List.filter (not o equal fm) cl1
     val cl2  = clause th2
     val cl2' = List.filter (not o equal (negate fm)) cl2
-    val ()   =
-      assert (cl1 <> cl1' orelse cl2 <> cl2')
-      (ERR "RESOLVE" "resolvant does not feature in either clause")
+    val cl = cl1' @ cl2'
   in
-    Thm (cl1' @ cl2', (Resolve, [th1, th2]))
+    if cl = cl1 then th1
+    else if cl = cl2 then th2
+    else Thm (cl, (Resolve, [th1, th2]))
   end;
 
-fun EQUALITY fm p res lr th =
+fun EQUALITY lit p r lr th =
   let
-    val eq_lit =
-      let
-        val red = literal_subterm p fm
-      in
-        Not (mk_eq (if lr then (red, res) else (res, red)))
-      end
+    val l = literal_subterm p lit
+    val eq_lit = Not (mk_eq (if lr then (l,r) else (r,l)))
+    val th_lits = clause th
     val other_lits =
-      let
-        val l = clause th
-      in
-        case index (equal fm) l of NONE
-          => raise ERR "EQUALITY" "literal does not occur in clause"
-        | SOME n => update_nth (literal_rewrite (p |-> res)) n l
-      end
+      case index (equal lit) th_lits of
+        NONE => literal_rewrite (p |-> r) lit :: th_lits
+      | SOME n => update_nth (literal_rewrite (p |-> r)) n th_lits
   in
     Thm (eq_lit :: other_lits, (Equality, [th]))
   end;

@@ -20,7 +20,7 @@ open mlibUseful mlibTerm mlibMatch mlibThm mlibCanon mlibMeter mlibSolver;
 infix |-> ::> @> oo ##;
 
 structure S = mlibStream; local open mlibStream in end;
-structure N = mlibLiteralNet; local open mlibLiteralNet in end;
+structure N = mlibLiteralnet; local open mlibLiteralnet in end;
 structure U = mlibUnits; local open mlibUnits in end;
 
 val |<>|          = mlibSubst.|<>|;
@@ -34,6 +34,8 @@ val formula_subst = mlibSubst.formula_subst;
 val () = traces := {module = "mlibMeson", alignment = K 1} :: !traces;
 
 fun chat l m = trace {module = "mlibMeson", message = m, level = l};
+
+fun chatting l = visible {module = "mlibMeson", level = l};
 
 (* ------------------------------------------------------------------------- *)
 (* Tuning parameters.                                                        *)
@@ -51,9 +53,63 @@ val defaults =
   {ancestor_pruning = true,
    ancestor_cutting = true,
    state_simplify   = true,
-   cache_cutting    = true,
-   divide_conquer   = true,
+   cache_cutting    = false,
+   divide_conquer   = false,
    unit_lemmaizing  = true};
+
+fun update_ancestor_pruning f parm =
+  let
+    val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+  in
+    {ancestor_pruning = f a, ancestor_cutting = b, state_simplify = s,
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u}
+  end;
+
+fun update_ancestor_cutting f parm =
+  let
+    val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+  in
+    {ancestor_pruning = a, ancestor_cutting = f b, state_simplify = s,
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u}
+  end;
+
+fun update_state_simplify f parm =
+  let
+    val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+  in
+    {ancestor_pruning = a, ancestor_cutting = b, state_simplify = f s,
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u}
+  end;
+
+fun update_cache_cutting f parm =
+  let
+    val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+  in
+    {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+     cache_cutting = f c, divide_conquer = d, unit_lemmaizing = u}
+  end;
+
+fun update_divide_conquer f parm =
+  let
+    val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+  in
+    {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+     cache_cutting = c, divide_conquer = f d, unit_lemmaizing = u}
+  end;
+
+fun update_unit_lemmaizing f parm =
+  let
+    val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+  in
+    {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = f u}
+  end;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -64,26 +120,6 @@ fun halves n = let val n1 = n div 2 in (n1, n - n1) end;
 fun splittable [] = false
   | splittable [_] = false
   | splittable _ = true;
-
-(*
-fun protect r f x =
-  let
-    val v = !r
-    val y = f x handle e as ERR_EXN _ => (r := v; raise e)
-    val () = r := v
-  in
-    y
-  end;
-
-fun until p =
-  let
-    open mlibStream
-    fun u NIL = NIL
-      | u (CONS (x, xs)) = CONS (x, if p x then K NIL else fn () => u (xs ()))
-  in
-    u
-  end;
-*)
 
 local
   val prefix = "_m";
@@ -133,7 +169,7 @@ fun filter_meter meter =
 
 type rule = {asms : formula list, c : formula, thm : thm, asmn : int};
 
-datatype rules = Rules of rule N.literal_map;
+datatype rules = Rules of rule N.literalnet;
 
 fun dest_rules (Rules r) = r;
 val empty_rules = Rules N.empty;
@@ -144,7 +180,7 @@ val rules_unify = N.unify o dest_rules;
 
 val pp_rules =
   pp_map dest_rules
-  (N.pp_literal_map
+  (N.pp_literalnet
    (pp_map (fn {asms, c, ...} => (asms, c))
     (pp_binop " ==>" (pp_list pp_formula) pp_formula)));
 
@@ -274,7 +310,7 @@ fun unit_cut false _ = I
 
 fun freshen_rule ({thm, asms, c, ...} : rule) i =
   let
-    val fvs = FVL (c :: asms)
+    val fvs = FVL [] (c :: asms)
     val fvn = length fvs
     val mvs = mk_mvars i fvn
     val sub = mlibSubst.from_maplets (zipwith (curry op|->) fvs mvs)
@@ -329,7 +365,8 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
         (record_infs (!meter) 1; cont (update_proof (cons (ASSUME g)) state))
       else
         let
-        (*val () = print ("meson: " ^ formula_to_string g ^ ".\n")*)
+          val () = if not (chatting 4) then ()
+                   else chat 4 ("meson: " ^ formula_to_string g ^ ".\n")
           fun reduction a () =
             let
               val state = update_env (K (unify_literals env g (negate a))) state
@@ -383,7 +420,8 @@ fun meson_finally g ({env, proof, ...} : state) =
     val () = assert (length proof = length g) (BUG "meson" "bad final state")
     val g' = map (formula_subst env) g
     val proof' = map (INST env) (rev proof)
-  (*val () = (print "meson_finally: "; printVal (g', proof'); print ".\n")*)
+    val () = chat 3
+      (foldl (fn (h,t)=>t^"  "^thm_to_string h^"\n") "meson_finally:\n" proof')
     val () =
       assert (List.all (uncurry thm_proves) (zip proof' g'))
       (BUG "meson" "did not prove goal list")
@@ -433,8 +471,11 @@ fun meson' parm =
      val system as {saturated = b, ...} = mk_system parm units slice ruls
      fun d n = if !b then S.NIL else (b := true; S.CONS (n, fn () => d (n + 1)))
      fun f q d = (chat 1 ("-" ^ int_to_string d); raw_meson system q d)
+     fun unit_check goals NONE = U.prove (!units) goals | unit_check _ s = s
    in
-     fn goals => filter_meter slice (S.flatten (S.map (f goals) (d 0)))
+     fn goals =>
+     filter_meter slice
+     (S.map (unit_check goals) (S.flatten (S.map (f goals) (d 0))))
    end};
 
 val meson = meson' defaults;

@@ -6,18 +6,13 @@
 signature mlibResolution =
 sig
 
-type solver_node = mlibSolver.solver_node
-
-(* Tuning parameters *)
 type parameters =
-  {subsumption_checking : int,                    (* in the range 0..3 *)
-   positive_refinement  : bool,
-   theap_parm           : mlibTheap.parameters}
-
+  {restart     : int option,
+   clause_parm : mlibClause.parameters,
+   sos_parm    : mlibSupport.parameters}
 val defaults : parameters
 
-(* Resolution *)
-val resolution' : parameters -> solver_node
-val resolution  : solver_node                     (* Uses defaults *)
+val resolution' : parameters -> mlibSolver.solver_node
+val resolution  : mlibSolver.solver_node             (* Uses defaults *)
 
 end

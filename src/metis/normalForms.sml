@@ -246,7 +246,20 @@ val SKICo_CONV = COMBIN_CONV [MK_K, MK_I, MK_C, MK_o, MK_S];
 (*   (!x. P x) ==> ?z. P z                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val simplify_ss = simpLib.++ (pureSimps.pure_ss, boolSimps.BOOL_ss);
+val FUN_EQ = prove
+  (``!(f : 'a -> 'b) g. (!x. f x = g x) = (f = g)``,
+   CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
+   REWRITE_TAC []);
+
+val SIMPLIFY_SS =
+  simpLib.SIMPSET
+  {convs = [{name = "extensionality simplification", trace = 2,
+             key = SOME([], Term`!x. (f:'a -> 'b) x = g x`),
+             conv = K (K (REWR_CONV FUN_EQ))}],
+   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
+
+val simplify_ss =
+  simpLib.++ (simpLib.++ (pureSimps.pure_ss, boolSimps.BOOL_ss), SIMPLIFY_SS);
 
 val SIMPLIFY_CONV = SIMP_CONV simplify_ss [];
 
@@ -285,12 +298,26 @@ val NCOND_EXPAND = prove
    tautLib.TAUT_TAC);
 
 val DE_MORGAN_THM1 = prove
-  (``!x y. (~(x /\ y) = ~x \/ ~y)``,
+  (``!x y. ~(x /\ y) = (~x \/ ~y)``,
    tautLib.TAUT_TAC);
 
 val DE_MORGAN_THM2 = prove
-  (``!x y. (~(x \/ y) = ~x /\ ~y)``,
+  (``!x y. ~(x \/ y) = (~x /\ ~y)``,
    tautLib.TAUT_TAC);
+
+val NNF_EXISTS_UNIQUE = prove
+  (``!p. $?! p = ((?(x : 'a). p x) /\ !x y. p x /\ p y ==> (x = y))``,
+   GEN_TAC THEN
+   (KNOW_TAC ``$?! p = ?!(x : 'a). p x`` THEN1
+    (CONV_TAC (DEPTH_CONV (ETA_CONV)) THEN REWRITE_TAC [])) THEN
+   DISCH_THEN (fn th => REWRITE_TAC [th]) THEN
+   REWRITE_TAC [EXISTS_UNIQUE_THM]);
+
+val NOT_EXISTS_UNIQUE = prove
+  (``!p. ~($?! p) = ((!(x : 'a). ~p x) \/ ?x y. p x /\ p y /\ ~(x = y))``,
+   REWRITE_TAC [NNF_EXISTS_UNIQUE, DE_MORGAN_THM1] THEN
+   CONV_TAC (TOP_DEPTH_CONV (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV)) THEN
+   REWRITE_TAC [NOT_IMP, CONJ_ASSOC]);
 
 val RES_FORALL_THM = prove
   (``!p m. RES_FORALL p m = !(x : 'a). x IN p ==> m x``,
@@ -328,6 +355,7 @@ local
     (map REWR_CONV
      [IMP_DISJ_THM', NIMP_CONJ_THM, EQ_EXPAND', NEQ_EXPAND,
       COND_EXPAND', NCOND_EXPAND, DE_MORGAN_THM1, DE_MORGAN_THM2,
+      NNF_EXISTS_UNIQUE, NOT_EXISTS_UNIQUE,
       RES_FORALL_THM, RES_EXISTS_THM, NOT_RES_FORALL, NOT_RES_EXISTS] @
      [NOT_FORALL_CONV, NOT_EXISTS_CONV]);
   val q_neg = REPEATQC (MK_QCONV beta_neg) THENQC TRY_QCONV (MK_QCONV push_neg);

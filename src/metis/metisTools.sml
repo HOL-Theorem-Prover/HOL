@@ -20,18 +20,26 @@ infix THEN ORELSE THENC;
 (* Chatting and error handling.                                              *)
 (* ------------------------------------------------------------------------- *)
 
+(* "Metis" trace levels:
+   0: No output
+   1: The equivalent of the Meson: dots
+   2: Timing information
+   3: More detailed prover information: slice by slice
+   4: Log of each step in proof translation
+   5: Log of each inference during proof search *)
+
 local
   open mlibUseful;
   val aligned_traces =
     [{module = "mlibSolver",     alignment = fn 1 => 1 | n => n + 1},
      {module = "mlibMeson",      alignment = fn 1 => 1 | n => n + 1},
+     {module = "mlibClause",     alignment = fn n => n + 4},
      {module = "mlibResolution", alignment = fn 1 => 1 | n => n + 1},
      {module = "folMapping",  alignment = fn n => n + 3},
-     {module = "folTools",    alignment = fn n => n + 1},
+     {module = "folTools",    alignment = fn 1 => 2 | n => n + 2},
      {module = "metisTools",  alignment = I},
      {module = "metisLib",    alignment = I}];
 in
-  val () = tracing := 1;
   val () = register_trace ("metis", tracing, 10);
   val () = tracing := (if !Globals.interactive then 1 else 0);
   val () = traces := aligned_traces;
@@ -62,44 +70,78 @@ fun update_parm_solver f {interface, solver, limit} =
 fun update_parm_limit f {interface, solver, limit} =
   {interface = interface, solver = solver, limit = f limit};
 
-val parm =
-  update_parm_solver
-  (mlibMetis.update_parm_delta (K false) o mlibMetis.update_parm_resolution (K false))
-  defaults;
-
-val ho_parm =
-  update_parm_interface
-  (update_parm_mapping
-   (update_parm_higher_order (K true) o update_parm_with_types (K true)))
-  defaults;
-
-val full_parm =
-  update_parm_interface (update_parm_combinator (K true)) ho_parm;
-
 (* ------------------------------------------------------------------------- *)
-(* Interface to the metis solver.                                            *)
+(* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun GEN_METIS_SOLVE parm {thms, hyps} =
+fun contains s =
+  let
+    fun g [] _ = true | g _ [] = false | g (a::b) (c::d) = a = c andalso g b d
+    val k = explode s
+    fun f [] = false | f (l as _ :: ys) = g k l orelse f ys
+  in
+    f o explode
+  end;
+
+fun trap f g x =
+  f x
+  handle e as HOL_ERR {message, ...} =>
+    (if not (contains "proof translation error" message) then raise e else
+       (chat 1 "metis: proof translation error: trying again with types.\n";
+        g x));
+
+(* ------------------------------------------------------------------------- *)
+(* Prolog solver.                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  val prolog_parm =
+    {equality   = false,
+     boolean    = false,
+     combinator = false,
+     mapping    = {higher_order = false, with_types = true}};
+in
+  fun PROLOG_SOLVE ths =
+    let
+      val () = (chat 1 "prolog: "; chat 2 "\n")
+      val lmap = build_map (prolog_parm, map FOL_NORM_RULE ths)
+    in
+      FOL_SOLVE mlibMeson.prolog lmap mlibMeter.unlimited
+    end;
+end;
+
+(* ------------------------------------------------------------------------- *)
+(* Metis solver.                                                             *)
+(* ------------------------------------------------------------------------- *)
+
+fun GEN_METIS_SOLVE parm ths =
   let
     val {interface, solver, limit, ...} : parameters = parm
     val () = (chat 1 "metis solver: "; chat 2 "\n")
+    val lmap = build_map (interface, map FOL_NORM_RULE ths)
   in
-    FOL_SOLVE (mlibMetis.metis' solver)
-    {parm = interface, thms = thms, hyps = hyps, lim = limit}
+    FOL_SOLVE (mlibMetis.metis' solver) lmap limit
   end;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactic interface to the metis prover.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun GEN_METIS_TAC parm ths =
+fun X_METIS_TAC ttac ths goal =
+  (chat 1 "metis: "; chat 2 "\n"; FOL_NORM_TTAC ttac ths goal);
+
+fun GEN_METIS_TTAC parm =
   let
     val {interface, solver, limit, ...} : parameters = parm
+    fun ttac ths =
+      let val lmap = build_map (interface, ths)
+      in FOL_TACTIC (mlibMetis.metis' solver) lmap limit
+      end
   in
-    FOL_TAC (mlibMetis.metis' solver, interface, limit) ths o
-    (fn x => (chat 1 "metis: "; chat 2 "\n"; x))
+    ttac
   end;
+
+val GEN_METIS_TAC = X_METIS_TAC o GEN_METIS_TTAC;
 
 (* ------------------------------------------------------------------------- *)
 (* All the following use this limit.                                         *)
@@ -111,19 +153,155 @@ val limit : limit ref = ref (#limit defaults);
 (* Canned parameters for common situations.                                  *)
 (* ------------------------------------------------------------------------- *)
 
-fun set_limit f p x y = f (update_parm_limit (K (!limit)) p) x y;
+fun inc_limit p = update_parm_limit (K (!limit)) p;
+fun set_limit f p t g = f (inc_limit p) t g;
 
-val METIS_TAC      = set_limit GEN_METIS_TAC parm;
-val HO_METIS_TAC   = set_limit GEN_METIS_TAC ho_parm;
-val FULL_METIS_TAC = set_limit GEN_METIS_TAC full_parm;
+(* First-order *)
+
+val fo_parm =
+  update_parm_interface
+  (update_parm_mapping (K {higher_order = false, with_types = false}))
+  defaults;
+
+val fot_parm =
+  update_parm_interface
+  (update_parm_mapping (update_parm_with_types (K true))) fo_parm;
+
+val FOT_METIS_TTAC = set_limit GEN_METIS_TTAC fot_parm;
+
+fun FO_METIS_TTAC ths =
+  trap (set_limit GEN_METIS_TTAC fo_parm ths) (FOT_METIS_TTAC ths);
+
+(* Higher-order *)
+
+val ho_parm =
+  update_parm_interface
+  (update_parm_mapping (K {higher_order = true, with_types = false}))
+  defaults;
+
+val hot_parm =
+  update_parm_interface
+  (update_parm_mapping (update_parm_with_types (K true))) ho_parm;
+
+val HOT_METIS_TTAC = set_limit GEN_METIS_TTAC hot_parm;
+
+fun HO_METIS_TTAC ths =
+  trap (set_limit GEN_METIS_TTAC ho_parm ths) (HOT_METIS_TTAC ths);
+
+(* Higher-order with rules for combinator reductions *)
+
+val full_parm =
+  update_parm_interface (update_parm_combinator (K true)) hot_parm;
+
+val FULL_METIS_TTAC =
+  set_limit GEN_METIS_TTAC full_parm (*** o map normalForms.EXT_RULE***);
+
+(* ------------------------------------------------------------------------- *)
+(* Canned tactics.                                                           *)
+(* ------------------------------------------------------------------------- *)
+
+val FO_METIS_TAC   = X_METIS_TAC FO_METIS_TTAC;
+val FOT_METIS_TAC  = X_METIS_TAC FOT_METIS_TTAC;
+val HO_METIS_TAC   = X_METIS_TAC HO_METIS_TTAC;
+val HOT_METIS_TAC  = X_METIS_TAC HOT_METIS_TTAC;
+val FULL_METIS_TAC = X_METIS_TAC FULL_METIS_TTAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Simple user interface to the metis prover.                                *)
 (* ------------------------------------------------------------------------- *)
 
-fun METIS_PROVE      ths goal = prove (goal, METIS_TAC      ths);
+fun FO_METIS_PROVE   ths goal = prove (goal, FO_METIS_TAC   ths);
+fun FOT_METIS_PROVE  ths goal = prove (goal, FOT_METIS_TAC  ths);
 fun HO_METIS_PROVE   ths goal = prove (goal, HO_METIS_TAC   ths);
+fun HOT_METIS_PROVE  ths goal = prove (goal, HOT_METIS_TAC  ths);
 fun FULL_METIS_PROVE ths goal = prove (goal, FULL_METIS_TAC ths);
+
+(* ------------------------------------------------------------------------- *)
+(* Uses heuristics to apply one of FO_, HO_ or FULL_.                        *)
+(* ------------------------------------------------------------------------- *)
+
+datatype class = First | Higher | Full;
+
+fun class_str First = "first-order"
+  | class_str Higher = "higher-order"
+  | class_str Full = "higher-order + combinators";
+
+fun class_tac First = FO_METIS_TTAC
+  | class_tac Higher = HO_METIS_TTAC
+  | class_tac Full = FULL_METIS_TTAC;
+
+local
+  fun update s v t =
+    (v |-> t) :: List.filter (fn {redex, ...} => redex <> v) s;
+
+  fun bump Full _ = Full
+    | bump Higher Full = Full
+    | bump Higher _ = Higher
+    | bump First cl = cl;
+
+  fun ord cc [] = cc
+    | ord (cl, cs) ((s, tm) :: tms) =
+    let
+      val (f, xs) = strip_comb tm
+      val f = subst s f
+      val n = length xs
+      val tms = map (fn x => (s, x)) xs @ tms
+    in
+      case List.find (fn (x,_) => x = f) cs of
+        NONE => ord (cl, (f, n) :: cs) tms
+      | SOME (_, ~1) => ord ((if n = 0 then cl else bump Higher cl), cs) tms
+      | SOME (_, n') => ord ((if n = n' then cl else bump Higher cl), cs) tms
+    end;
+
+  fun order (cl, _) [] = cl
+    | order (cl, cs) ((s, tm) :: tms) =
+    if is_exists tm then
+      let
+        val (v, b) = dest_exists tm
+        val g = genvar (type_of v)
+      in
+        order (cl, cs) ((update s v g, b) :: tms)
+      end
+    else if is_conj tm then
+      let val (a, b) = dest_conj tm
+      in order (cl, cs) ((s, a) :: (s, b) :: tms)
+      end
+    else if is_forall tm then
+      let
+        val (v, b) = dest_forall tm
+        val g = genvar (type_of v)
+      in
+        order (cl, (g, ~1) :: cs) ((update s v g, b) :: tms)
+      end
+    else if is_disj tm then
+      let val (a, b) = dest_disj tm
+      in order (cl, cs) ((s, a) :: (s, b) :: tms)
+      end
+    else if is_neg tm then
+      let val a = dest_neg tm
+      in order (cl, cs) ((s, a) :: tms)
+      end
+    else
+      let val cl = if mem (subst s tm, ~1) cs then bump Higher cl else cl
+      in order (ord (cl, cs) [(s, tm)]) tms
+      end;
+in
+  fun classify fms =
+    order (First, []) (map (fn tm => ([], tm)) fms)
+    handle HOL_ERR _ => raise mlibUseful.BUG "metisTools.classify" "shouldn't fail";
+end;
+
+fun METIS_TTAC ths =
+  let
+    val class = classify (map concl ths)
+    val () = chat 2 ("metis: a " ^ class_str class ^ " problem.\n")
+  in
+    class_tac class ths
+  end;
+
+val METIS_TAC = X_METIS_TAC METIS_TTAC;
+
+fun METIS_PROVE ths goal = prove (goal, METIS_TAC ths);
 
 (* Quick testing
 installPP mlibTerm.pp_subst;

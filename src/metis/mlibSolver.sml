@@ -40,7 +40,7 @@ fun chat l m = trace {module = "mlibSolver", message = m, level = l};
 (* ------------------------------------------------------------------------- *)
 
 fun drop_after f =
-  S.fold (fn x => fn xs => S.CONS (x, if f x then K S.NIL else xs)) S.NIL;
+  S.foldr (fn (x, xs) => S.CONS (x, if f x then K S.NIL else xs)) S.NIL;
 
 fun time_to_string t =
   let val dp = if t < 10.0 then 2 else if t < 1000.0 then 1 else 0
@@ -102,7 +102,7 @@ local
     let
       val fms = distinctivize (List.mapPartial (total dest_unit) ths)
     in
-      if non null (mlibSubsume.subsumed s fms) then (NONE, s)
+      if non null (mlibSubsume.subsumes s fms) then (NONE, s)
       else (SOME (SOME ths), mlibSubsume.add (fms |-> ()) s)
     end
     handle ERR_EXN _ => raise BUG "advance" "shouldn't fail";
@@ -116,9 +116,14 @@ end;
 
 fun raw_solve s = S.partial_map I o (subsumed_filter (solved_filter s));
 
-fun solve s = S.to_list o (raw_solve s);
+local
+  fun tk 0 _ = [] | tk n t = stk n (t ())
+  and stk _ S.NIL = [] | stk n (S.CONS (h, t)) = h :: tk (n - 1) t;
+in
+  fun solve s n q = tk n (fn () => raw_solve s q);
+end;
 
-fun find s = (fn S.NIL => NONE | S.CONS (x, _) => SOME x) o raw_solve s;
+fun find s = total unwrap o (solve s 1);
 
 fun refute s = Option.map unwrap (find s [False]);
 
@@ -158,10 +163,11 @@ type cost_fn = mlibMeter.meter_reading -> real;
 local
   fun sq x : real = x * x;
 in
-  val time1 : cost_fn = fn {time, ...} => time;
-  val time2 : cost_fn = fn {time, ...} => sq time;
-  val infs1 : cost_fn = fn {infs, ...} => Real.fromInt infs;
-  val infs2 : cost_fn = fn {infs, ...} => sq (Real.fromInt infs);
+  val once_only : cost_fn = fn {infs, ...} => if infs = 0 then 0.0 else 1.0e30;
+  val time1     : cost_fn = fn {time, ...} => time;
+  val time2     : cost_fn = fn {time, ...} => sq time;
+  val infs1     : cost_fn = fn {infs, ...} => Real.fromInt infs;
+  val infs2     : cost_fn = fn {infs, ...} => sq (Real.fromInt infs);
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -193,7 +199,7 @@ fun init_subnode (cost, (name, solver : solver)) goal =
 
 fun least_cost [] = K NONE
   | least_cost _ =
-  (SOME o snd o min (fn (r, _) => fn (s, _) => r <= s) o
+  (SOME o snd o fst o min (fn ((r, _), (s, _)) => Real.compare (r, s)) o
    map (fn (n, Subnode {used, cost, ...}) => (cost used, n)))
 
 val choose_subnode =
@@ -236,7 +242,7 @@ fun schedule check read stat =
              val nodes = update_nth (K node) n nodes
              val () =
                case res of NONE => ()
-               | SOME _ => (chat 2 (stat nodes); chat 1 "$\n")
+               | SOME _ => (chat 2 (stat nodes); chat 1 "#\n")
            in
              S.CONS (res, fn () => sched nodes)
            end)

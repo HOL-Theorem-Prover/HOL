@@ -20,11 +20,19 @@ fun BUG f s = BUG_EXN {origin_function = f, message = s};
 
 fun ERR_to_string (ERR_EXN {origin_function, message}) =
   "\nERR in function " ^ origin_function ^ ":\n" ^ message ^ "\n"
-  | ERR_to_string _ = raise BUG "ERR_to_string" "not a ERR_EXN";
+  | ERR_to_string _ = raise BUG "ERR_to_string" "not an ERR_EXN";
 
 fun BUG_to_string (BUG_EXN {origin_function, message}) =
   "\nBUG in function " ^ origin_function ^ ":\n" ^ message ^ "\n"
   | BUG_to_string _ = raise BUG "BUG_to_string" "not a BUG_EXN";
+
+local
+  fun p {origin_function, message} = origin_function ^ ": \"" ^ message ^ "\"";
+in
+  fun report (ERR_EXN m) = "ERR in " ^ p m
+    | report (BUG_EXN m) = "BUG in " ^ p m
+    | report _ = raise BUG "report" "not an ERR_EXN or BUG_EXN";
+end;
 
 fun assert b e = if b then () else raise e;
 
@@ -55,16 +63,20 @@ val traces : {module : string, alignment : int -> int} list ref = ref [];
 
 local
   val MAX = 10;
-  val trace_printer = Lib.say;
   fun query m l =
     let val t = List.find (fn {module, ...} => module = m) (!traces)
     in case t of NONE => MAX | SOME {alignment, ...} => alignment l
     end;
 in
+  fun visible {module = m, level = l} =
+    0 < !tracing andalso (MAX <= !tracing orelse query m l <= !tracing);
+end;
+
+local
+  val trace_printer = Lib.say;
+in
   fun trace {module = m, message = s, level = l} =
-    if 0 < !tracing andalso (MAX <= !tracing orelse query m l <= !tracing)
-    then trace_printer s
-    else ();
+    if visible {module = m, level = l} then trace_printer s else ();
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -74,10 +86,10 @@ end;
 fun C f x y = f y x;
 fun I x = x;
 fun K x y = x;
-fun N 0 _ x = x | N n f x = N (n - 1) f (f x);
 fun S f g x = f x (g x);
 fun W f x = f x x;
 fun f oo g = fn x => f o (g x);
+fun funpow 0 _ x = x | funpow n f x = funpow (n - 1) f (f x);
 
 (* ------------------------------------------------------------------------- *)
 (* Booleans                                                                  *)
@@ -92,15 +104,15 @@ fun non f = not o f;
 (* Pairs                                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun op## (f, g) (x, y) = (f x, g y);
-fun D x = (x, x);
+fun op## (f,g) (x,y) = (f x, g y);
+fun D x = (x,x);
 fun Df f = f ## f;
 fun fst (x,_) = x;
 fun snd (_,y) = y;
-fun pair x y = (x, y)
-(* Note: val add_fst = pair and add_snd = C pair; *)
-fun curry f x y = f (x, y);
-fun uncurry f (x, y) = f x y;
+fun pair x y = (x,y)     (* Note: val add_fst = pair and add_snd = C pair; *)
+fun swap (x,y) = (y,x);
+fun curry f x y = f (x,y);
+fun uncurry f (x,y) = f x y;
 fun equal x y = (x = y);
 
 (* ------------------------------------------------------------------------- *)
@@ -234,49 +246,58 @@ fun distinct [] = true
   | distinct (x :: rest) = not (mem x rest) andalso distinct rest;
 
 (* ------------------------------------------------------------------------- *)
+(* Comparisons.                                                              *)
+(* ------------------------------------------------------------------------- *)
+
+fun lex_compare f =
+  let
+    fun lex [] = EQUAL
+      | lex (x :: l) = case f x of EQUAL => lex l | y => y
+  in
+    lex
+  end;
+
+(* ------------------------------------------------------------------------- *)
 (* Finding the minimal element of a list, wrt some order.                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun min f =
+fun min cmp =
   let
-    fun min_acc best [] = best
-      | min_acc best (h :: t) = min_acc (if f best h then best else h) t
+    fun min_acc (l, x, r) _ [] = (x, List.revAppend (l, r))
+      | min_acc (best as (_, x, _)) l (h :: t) =
+      min_acc (case cmp (h, x) of LESS => (l, h, t) | _ => best) (h :: l) t
   in
     fn [] => raise ERR "min" "empty list"
-     | h :: t => min_acc h t
+     | h :: t => min_acc ([], h, t) [] t
   end;
 
 (* ------------------------------------------------------------------------- *)
 (* Merge (for the following merge-sort, but generally useful too).           *)
 (* ------------------------------------------------------------------------- *)
 
-fun merge f =
+fun merge cmp =
   let
-    fun mrg res [] ys = foldl (op ::) ys res
-      | mrg res xs [] = foldl (op ::) xs res
-      | mrg res (xs as x :: xt) (ys as y :: yt) =
-      if f x y then mrg (x :: res) xt ys else mrg (y :: res) xs yt
+    fun mrg acc [] ys = List.revAppend (acc, ys)
+      | mrg acc xs [] = List.revAppend (acc, xs)
+      | mrg acc (xs as x :: xt) (ys as y :: yt) =
+      (case cmp (x, y) of GREATER => mrg (y :: acc) xs yt
+       | _ => mrg (x :: acc) xt ys)
   in
     mrg []
   end;
 
 (* ------------------------------------------------------------------------- *)
-(* Order function here should be <= for a stable sort...                     *)
-(* ...and I think < gives a reverse stable sort (but don't quote me).        *)
+(* Merge sort.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
-fun sort f =
+fun sort cmp =
   let
-    fun srt [] = []
-      | srt (l as [x]) = l
-      | srt l =
-      let
-        val halfway = length l div 2
-      in
-        merge f (srt (List.take (l, halfway))) (srt (List.drop (l, halfway)))
-      end
+    val m = merge cmp
+    fun f [] = []
+      | f (xs as [_]) = xs
+      | f xs = let val (l, r) = split xs (length xs div 2) in m (f l) (f r) end
   in
-    srt
+    f
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -317,6 +338,18 @@ end;
 (* ------------------------------------------------------------------------- *)
 (* Strings.                                                                  *)
 (* ------------------------------------------------------------------------- *)
+
+local
+  fun len l = (length l, l)
+  val upper = len (explode "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+  val lower = len (explode "abcdefghijklmnopqrstuvwxyz");
+  fun rotate (n,l) c k = List.nth (l, (k+Option.valOf(index(equal c)l)) mod n);
+in
+  fun rot k c =
+    if Char.isLower c then rotate lower c k
+    else if Char.isUpper c then rotate upper c k
+    else c;
+end;
 
 fun variant x vars = if mem x vars then variant (x ^ "'") vars else x;
 
@@ -374,8 +407,15 @@ fun pp_sequence sep pp_a =
     (PP.begin_block pp PP.INCONSISTENT 0; pp_seq pp l; PP.end_block pp)
   end;
 
-fun pp_binop s pp_a pp_b pp (a, b) =
+fun pp_unop s pp_a pp a =
   (PP.begin_block pp PP.CONSISTENT 0;
+   PP.add_string pp s;
+   PP.add_break pp (1, 0);
+   pp_a pp a;
+   PP.end_block pp);
+
+fun pp_binop s pp_a pp_b pp (a, b) =
+  (PP.begin_block pp PP.INCONSISTENT 0;
    pp_a pp a;
    PP.add_string pp s;
    PP.add_break pp (1, 0);
@@ -387,13 +427,17 @@ fun pp_nothing pp _ = (PP.begin_block pp PP.CONSISTENT 0; PP.end_block pp);
 fun pp_string pp s =
   (PP.begin_block pp PP.CONSISTENT 0; PP.add_string pp s; PP.end_block pp);
 
-val pp_unit = pp_map (K "()") pp_string;
+fun pp_unit pp = pp_map (K "()") pp_string pp;
 
 val pp_bool = pp_map bool_to_string pp_string;
 
 val pp_int = pp_map int_to_string pp_string;
 
 val pp_real = pp_map real_to_string pp_string;
+
+val pp_order =
+  pp_map (fn LESS => "LESS" | EQUAL => "EQUAL" | GREATER => "GREATER")
+  pp_string;
 
 fun pp_list pp_a = pp_bracket ("[", "]") (pp_sequence "," pp_a);
 
@@ -404,11 +448,12 @@ fun pp_triple pp_a pp_b pp_c =
   (pp_map (fn (a, b, c) => (a, (b, c)))
    (pp_binop "," pp_a (pp_binop "," pp_b pp_c)));
 
-local
-  val pp_l = pp_sequence "," (pp_binop " =" pp_string pp_unit_pp);
-in
-  fun pp_record l = pp_bracket ("{", "}") (unit_pp pp_l l);
+local fun pp_l pp = pp_sequence "," (pp_binop " =" pp_string pp_unit_pp) pp;
+in fun pp_record l = pp_bracket ("{", "}") (unit_pp pp_l l);
 end;
+
+fun pp_option pp_a pp NONE = pp_string pp "NONE"
+  | pp_option pp_a pp (SOME a) = pp_unop "SOME" pp_a pp a;
 
 (* ------------------------------------------------------------------------- *)
 (* Sums.                                                                     *)
@@ -420,11 +465,14 @@ fun is_inl (INL _) = true | is_inl (INR _) = false;
 
 fun is_inr (INR _) = true | is_inr (INL _) = false;
 
+fun pp_sum pp_a _ pp (INL a) = pp_a pp a
+  | pp_sum _ pp_b pp (INR b) = pp_b pp b;
+
 (* ------------------------------------------------------------------------- *)
 (* Maplets.                                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-datatype ('a, 'b) maplet = |-> of 'a * 'b;
+datatype ('a, 'b) maplet = op|-> of 'a * 'b;
 
 fun pp_maplet pp_a pp_b =
   pp_map (fn a |-> b => (a, b)) (pp_binop " |->" pp_a pp_b);
@@ -435,8 +483,14 @@ fun pp_maplet pp_a pp_b =
 
 datatype ('a, 'b) tree = BRANCH of 'a * ('a, 'b) tree list | LEAF of 'b;
 
-fun tree_size (LEAF _) = 1
-  | tree_size (BRANCH (_, t)) = foldl (op+ o (tree_size ## I)) 1 t;
+local
+  fun f (LEAF _) = {leaves = 1, branches = 0}
+    | f (BRANCH (_, ts)) = foldl g {leaves = 0, branches = 1} ts
+  and g (t, {leaves = l, branches = b}) =
+    let val {leaves=l', branches=b'} = f t in {leaves=l+l', branches=b+b'} end;
+in
+  fun tree_size t = f t;
+end;
 
 fun tree_foldr f_b f_l (LEAF l) = f_l l
   | tree_foldr f_b f_l (BRANCH (p, s)) = f_b p (map (tree_foldr f_b f_l) s);
@@ -484,5 +538,15 @@ fun with_flag (r, update) f x =
   in
     y
   end;
+
+(* ------------------------------------------------------------------------- *)
+(* Information about the environment.                                        *)
+(* ------------------------------------------------------------------------- *)
+
+val host = Option.getOpt (OS.Process.getEnv "HOSTNAME", "unknown");
+
+val date = Date.fmt "%H:%M:%S %d/%m/%Y" o Date.fromTimeLocal o Time.now;
+
+val today = Date.fmt "%d/%m/%Y" o Date.fromTimeLocal o Time.now;
 
 end

@@ -33,6 +33,7 @@ val purecnf        : formula -> formula list list
 val simpcnf        : formula -> formula list list
 val clausal        : formula -> formula list list
 val cnf            : formula -> formula
+val is_cnf         : formula -> bool
 val axiomatize     : formula -> thm list
 val eq_axiomatize  : formula -> thm list          (* Adds equality axioms *)
 val eq_axiomatize' : formula -> thm list          (* Adds if equality occurs *)

@@ -159,11 +159,9 @@ val full_skolemize = specialize o prenex o skolemize o nnf o simplify;
 (* A tautology filter for clauses.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun tautologous cls =
-  let
-    val (pos, neg) = List.partition positive cls
-  in
-    intersect pos (map negate neg) <> []
+fun tautologous lits =
+  let val (pos, neg) = List.partition positive lits
+  in intersect pos (map negate neg) <> []
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -186,13 +184,18 @@ val clausal =
 
 val cnf = list_mk_conj o map list_mk_disj o clausal;
 
+local val is_clause = List.all is_literal o strip_disj o snd o strip_forall;
+in val is_cnf = List.all is_clause o strip_conj;
+end;
+
 val axiomatize = map AXIOM o clausal;
 
 fun eq_axiomatize fm =
   let
+    val functions' = List.filter (fn (_,n) => 0 < n) o functions
     val eqs = [REFLEXIVITY, SYMMETRY, TRANSITIVITY]
     val rels = map REL_CONGRUENCE (relations_no_eq fm)
-    val funs = map FUN_CONGRUENCE (functions fm)
+    val funs = map FUN_CONGRUENCE (functions' fm)
   in
     eqs @ funs @ rels @ axiomatize fm
   end;

@@ -1,8 +1,7 @@
 
    [Metis]
      * The Metis library is released with [1]HOL 4.
-     * It provides an interface between HOL and first-order logic, and
-       tools for proving (and solving) first-order goals.
+     * It is an automatic prover for HOL subgoals.
 
 Quick Guide to Using the Metis Library
 
@@ -11,60 +10,64 @@ Quick Guide to Using the Metis Library
      load "metisLib";
      open metisLib;
 
-   Then you can use
+   Opening the Metis library makes available the automatic provers
 
-        METIS_TAC  to prove first-order goals; and
-     HO_METIS_TAC  to prove (some) higher-order goals.
+       METIS_TAC : thm list -> tactic
+     METIS_PROVE : thm list -> term -> thm
 
-   Both  of  these tactics take a list of theorems that are used to prove
-   the goal.
+   which both take a list of theorems that are used to prove the goal.
 
-Inside the Metis Library
+Examples
 
-   The Metis tactics prove a HOL goal hol_goal as follows:
+   prove (``?x. x``, METIS_TAC []);
 
-    1. HOL  tactics  simplify  hol_goal and convert it to CNF. [folTools,
-       normalForms]
-    2. A first-order goal fol_goal is derived from hol_goal. [folMapping]
-    3. First-order  calculi attack fol_goal, hopefully deriving a theorem
-       fol_th. [mlibMetis]
-    4. A  logical  kernel  keeps  track of the proof of every first-order
-       theorem that is derived. [mlibKernel]
-    5. The  proof of fol_th is translated to HOL, producing a HOL theorem
-       hol_th. [folMapping]
-    6. hol_th is used to prove the original HOL goal hol_goal. [folTools]
+   prove (``!x. ~(x = 0) ==> ?!y. x = SUC y``,
+          METIS_TAC [numTheory.INV_SUC, arithmeticTheory.num_CASES]);
+
+   METIS_PROVE [prim_recTheory.LESS_SUC_REFL, arithmeticTheory.num_CASES]
+   ``(!P. (!n. (!m. m < n ==> P m) ==> P n) ==> !n. P n) ==>
+     !P. P 0 /\ (!n. P n ==> P (SUC n)) ==> !n. P n``;
+
+How It Works
+
+   This is how METIS_TAC proves a HOL goal:
+
+    1. First  some  HOL  conversions  and  tactics  simplify the goal and
+       convert it to conjunctive normal form.
+    2. The normalized problem is converted to first-order syntax.
+    3. Resolution  and  model  elimination provers attack the first-order
+       problem, hopefully deriving a refutation.
+    4. The  first-order  refutation  is  lifted  to  a  HOL  proof of the
+       original goal.
 
 Comparison with MESON_TAC
 
-   The Metis provers are generally slower than MESON_TAC, but have better
-   coverage. For example, MESON_TAC cannot prove the following two goals:
+   METIS_TAC  is  generally slower than MESON_TAC on simple problems, but
+   has better coverage. For example, MESON_TAC cannot prove the following
+   goals:
 
-     METIS_PROVE [] ``p (\x. x) /\ q ==> q /\ p (\y. y)``;
      METIS_PROVE [] ``?x. x``;
+     METIS_PROVE [] ``p (\x. x) /\ q ==> q /\ p (\y. y)``;
 
    The  combination  of  model  elimination  and  resolution  calculi  in
-   HO_METIS_TAC allows some hard goals to be proved that are too deep for
+   METIS_TAC  allows  some  hard goals to be proved that are too deep for
    the  HOL  version of MESON_TAC, such as the GILMORE_9 and STEAM_ROLLER
-   problems.
+   problems.  Also,  the  ordered  paramodulation  used by the resolution
+   component of METIS_TAC allows it to prove harder equality problems. An
+   example to illustrate this is the goal
 
-   The  Metis  library provides an interface to tools that solve goals as
-   well as prove them, including the user-friendly
-
-     metisLib.PROLOG_SOLVE : thm list -> Query -> Result stream
-
-   MESON_TAC automatically spots higher-order goals and sets up the proof
-   translation  accordingly, but in the Metis library you have to do this
-   manually by selecting either METIS_TAC or HO_METIS_TAC.
+     METIS_PROVE []
+     ``(!x y. x * y = y * x) /\ (!x y z. x * y * z = x * (y * z)) ==>
+      a * b * c * d * e * f = f * e * d * c * b * a``;
 
 Known Bugs
 
-   The  resolution component in HO_METIS_TAC occasionally goes completely
-   haywire and eats all the memory :-(
-
-   HO_METIS_TAC  combines  resolution  and  model  elimination calculi by
+   METIS_TAC   combines  resolution  and  model  elimination  calculi  by
    time-slicing between them, so in principle it could successfully prove
    a goal on one occasion but diverge on another. However, this situation
    isn't likely to arise in practice.
+
+   Using resolution as a solver is incomplete when equality is present.
 
 History and Credit
 
@@ -72,11 +75,11 @@ History and Credit
    replacement  to  John  Harrison's  MESON_TAC that is commonly used for
    first-order proof in HOL.
 
-   The  model  elimination  and  resolution calculi were based on code in
-   mesonLib and John Harrison's forthcoming book about theorem proving.
+   The  model  elimination and resolution calculi were based on MESON_TAC
+   and John Harrison's forthcoming book about theorem proving.
 
-   A collection of HOL goals that could be successfully proved by a Metis
-   prover are [2]available in first-order format.
+   A  large  collection  of  HOL subgoals are [2]available in first-order
+   format.
 
 Etymology
 
@@ -100,13 +103,30 @@ Etymology
 
 Change Log
 
+  Version 1.2: 19 November 2002
+
+   Goals submitted to MESON_TAC when HOL is built .......... 1779
+   Proved by MESON_TAC ..................................... 1779
+   Proved by METIS_TAC within 10s .......................... 1774
+
+  Between Versions 1.1 and 1.2
+
+     * Ground-up  reimplementation  of the resolution calculus, which now
+       performs ordered resolution and ordered paramodulation.
+     * A  single  entry-point  METIS_TAC, which uses heuristics to decide
+       whether to apply FO_METIS_TAC or HO_METIS_TAC.
+     * {HO|FO}_METIS_TAC  both  initially  operate  in typeless mode, and
+       automatically try again with types if an error occurs during proof
+       translation.
+     * Extensionality axiom now included in HO_METIS_TAC by default.
+
   Version 1.1: 21 September 2002
 
-   Goals submitted to MESON_TAC when HOL is built ............. 1745
-   Proved by MESON_TAC ........................................ 1745
-   Provable by METIS_TAC within 10s ........................... 1485
-   Provable by HO_METIS_TAC within 10s ........................ 1698
-   Provable by one of METIS_TAC and HO_METIS_TAC within 10s ... 1717
+   Goals submitted to MESON_TAC when HOL is built .......... 1745
+   Proved by MESON_TAC ..................................... 1745
+   Proved by FO_METIS_TAC within 10s ....................... 1485
+   Proved by HO_METIS_TAC within 10s ....................... 1698
+   Proved by one of {FO|HO}_METIS_TAC within 10s ........... 1717
 
   Between Versions 1.0 and 1.1
 
@@ -114,7 +134,6 @@ Change Log
        status information during proof (if HOL is in interactive mode).
      * Restricted   (universal   and  existential)  quantifiers  are  now
        normalized by the NNF conversion.
-     * (First-order) METIS_TAC can now handle boolean variables.
      * Improved  performance in the model elimination proof procedure due
        to better caching (following a suggestion from John Harrison).
      * First-order substitutions are now fully Boultonized.
@@ -123,16 +142,16 @@ Change Log
 
   Version 1.0: 18 July 2002
 
-   Goals submitted to MESON_TAC when HOL is built ............. 1435
-   Proved by MESON_TAC ........................................ 1435
-   Provable by METIS_TAC within 10s ........................... 1240
-   Provable by HO_METIS_TAC within 10s ........................ 1346
-   Provable by one of METIS_TAC and HO_METIS_TAC within 10s ... 1389
+   Goals submitted to MESON_TAC when HOL is built .......... 1435
+   Proved by MESON_TAC ..................................... 1435
+   Proved by FO_METIS_TAC within 10s ....................... 1240
+   Proved by HO_METIS_TAC within 10s ....................... 1346
+   Proved by one of {FO|HO}_METIS_TAC within 10s ........... 1389
 
 References
 
    1. http://hol.sf.net/
-   2. http://www.cl.cam.ac.uk/~jeh1004/research/problems/hol.sml.gz
+   2. http://www.cl.cam.ac.uk/~jeh1004/research/problems
    3. http://www.seds.org/nineplanets/nineplanets/amalthea.html#metisx
    4. http://www.stir.ac.uk/Departments/Arts/ReligiousStudies/rlists/7212/7212-11.html
    5. http://www.turtle-island.com/metis.html

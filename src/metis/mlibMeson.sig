@@ -18,7 +18,13 @@ type parameters =
    divide_conquer   : bool,
    unit_lemmaizing  : bool}
 
-val defaults : parameters
+val defaults                : parameters
+val update_ancestor_pruning : (bool -> bool) -> parameters -> parameters
+val update_ancestor_cutting : (bool -> bool) -> parameters -> parameters
+val update_state_simplify   : (bool -> bool) -> parameters -> parameters
+val update_cache_cutting    : (bool -> bool) -> parameters -> parameters
+val update_divide_conquer   : (bool -> bool) -> parameters -> parameters
+val update_unit_lemmaizing  : (bool -> bool) -> parameters -> parameters
 
 (* The meson solver *)
 val meson' : parameters -> solver_node

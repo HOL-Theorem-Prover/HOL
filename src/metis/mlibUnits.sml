@@ -17,7 +17,7 @@ open mlibUseful mlibTerm mlibThm mlibMatch;
 
 infix |-> ::> @> oo ##;
 
-structure N = mlibLiteralNet; local open mlibLiteralNet in end;
+structure N = mlibLiteralnet; local open mlibLiteralnet in end;
 
 (* ------------------------------------------------------------------------- *)
 (* Auxiliary functions.                                                      *)
@@ -31,19 +31,35 @@ fun lift_options f =
     g []
   end;
 
+fun psym lit =
+  let
+    val (s, (x,y)) = (I ## dest_eq) (dest_literal lit)
+    val () = assert (x <> y) (ERR "psym" "refl")
+  in
+    mk_literal (s, mk_eq (y,x))
+  end;
+
 (* ------------------------------------------------------------------------- *)
 (* Operations on the raw unit cache.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-type uns = thm N.literal_map;
+type uns = thm N.literalnet;
 
 val uempty : uns = N.empty;
-
-fun uadd th uns = N.insert (dest_unit th |-> th) uns;
 
 fun usubsumes uns lit =
   List.find (can (C match_literals lit) o dest_unit)
   (rev (N.match uns lit));
+
+fun uadd th uns =
+  let
+    val l = dest_unit th
+  in
+    if Option.isSome (usubsumes uns l) then uns
+    else
+      (case total psym l of NONE => I | SOME l' => N.insert (l' |-> SYM l th))
+      (N.insert (l |-> th) uns)
+  end;
 
 fun uprove uns =
   let

@@ -96,7 +96,7 @@ val enc2dec_some_alt = store_thm
    RW_TAC std_ss []
    ++ Cases_on `x`
    ++ RW_TAC std_ss [FST, SND]
-   ++ HO_METIS_TAC [enc2dec_some]);
+   ++ METIS_TAC [enc2dec_some]);
 
 val wf_enc2dec = store_thm
   ("wf_enc2dec",

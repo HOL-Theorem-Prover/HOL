@@ -19,6 +19,26 @@ open mlibUseful mlibTerm mlibThm mlibMeter mlibCanon mlibSolver mlibMeson mlibRe
 infix |-> ::> @> oo ## ::* ::@;
 
 (* ------------------------------------------------------------------------- *)
+(* Aligning trace levels.                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+(* Metis trace levels:
+   0: No output
+   1: Status information during proof search
+   2: More detailed prover information: slice by slice
+   3: High-level proof search information
+   4: Log of every inference during proof search *)
+
+val aligned_traces =
+  [{module = "mlibSolver",     alignment = I},
+   {module = "mlibMeson",      alignment = I},
+   {module = "mlibClause",     alignment = fn n => n + 3},
+   {module = "mlibResolution", alignment = I}];
+
+val () = tracing := 1;
+val () = traces := aligned_traces;
+
+(* ------------------------------------------------------------------------- *)
 (* Tuning parameters.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
@@ -85,9 +105,9 @@ fun update_parm_resolution_parm f parm =
 
 fun metis' {meson = m, delta = d, resolution = r, meson_parm, resolution_parm} =
   combine
-  ((if m then cons (time1, meson' meson_parm) else I)
+  ((if m then cons (time2, meson' meson_parm) else I)
    ((if r then cons (time1, resolution' resolution_parm) else I)
-    ((if d then cons (time2, delta' meson_parm) else I)
+    ((if d then cons (once_only, delta' meson_parm) else I)
      [])));
 
 val metis = metis' defaults;
@@ -98,24 +118,25 @@ val metis = metis' defaults;
 
 val settings = ref defaults;
 
-val limit : limit ref = ref {time = SOME 10.0, infs = NONE};
+val limit : limit ref = ref {time = NONE, infs = NONE};
 
-fun raw_prove (Imp (a, Imp (b, False))) =
-  let
-    val (thms, hyps) = (axiomatize a, axiomatize b)
-    val solv = metis' (!settings)
-  in
-    refute (initialize solv {limit = !limit, thms = thms, hyps = hyps})
-  end
-  | raw_prove _ = raise ERR "raw_prove" "formula not of type a ==> b ==> F";
+local
+  fun raw a b = (axiomatize a, axiomatize b, I);
 
-fun prove g =
-  let
-    val hyps = eq_axiomatize' (Not (generalize g))
-    val solv = set_of_support all_negative (metis' (!settings))
-  in
-    refute (initialize solv {limit = !limit, thms = [], hyps = hyps})
-  end;
+  fun syn g =
+    ([], eq_axiomatize' (Not (generalize g)), set_of_support all_negative);
+in
+  fun prove g =
+    let
+      val (thms, hyps, sos) =
+        case g of Imp (a, Imp (b, False))
+          => if is_cnf a andalso is_cnf b then raw a b else syn g
+        | _ => syn g
+      val solv = sos (metis' (!settings))
+    in
+      refute (initialize solv {limit = !limit, thms = thms, hyps = hyps})
+    end;
+end;
 
 fun query database =
   initialize prolog {thms = axiomatize database, hyps = [], limit = unlimited};
