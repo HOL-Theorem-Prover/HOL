@@ -44,13 +44,17 @@ in
 end
 
 (* type parsing *)
+fun remove_ty_aq t =
+  if is_ty_antiq t then dest_ty_antiq t
+  else raise ERROR "Type" "antiquotation is not of a type"
+val typ1_rec = {vartype = TCPretype.Vartype, tyop = TCPretype.Tyop,
+                antiq = TCPretype.fromType o remove_ty_aq}
+val typ2_rec = {vartype = TCPretype.Vartype, tyop = TCPretype.Tyop,
+                antiq = TCPretype.fromType}
 val type_parser1 =
-  ref (parse_type.parse_type false (!the_type_grammar):
-       term frag list -> (term frag list * term parse_type.pretype option))
+  ref (parse_type.parse_type typ1_rec false (!the_type_grammar))
 val type_parser2 =
-  ref (parse_type.parse_type false (!the_type_grammar):
-       hol_type frag list -> (hol_type frag list *
-                              hol_type parse_type.pretype option))
+  ref (parse_type.parse_type typ2_rec false (!the_type_grammar))
 
 (* pretty printing *)
 val term_printer = ref (term_pp.pp_term (term_grammar()) (type_grammar()))
@@ -59,8 +63,8 @@ val type_printer = ref (type_pp.pp_type (type_grammar()))
 fun update_type_fns () =
   if !type_grammar_changed then let
   in
-    type_parser1 := parse_type.parse_type false (type_grammar());
-    type_parser2 := parse_type.parse_type false (type_grammar());
+    type_parser1 := parse_type.parse_type typ1_rec false (type_grammar());
+    type_parser2 := parse_type.parse_type typ2_rec false (type_grammar());
     type_printer := type_pp.pp_type (type_grammar());
     type_grammar_changed := false
   end
@@ -69,24 +73,7 @@ fun update_type_fns () =
 local
   (* types *)
   open parse_type
-  fun toType0 (ty : hol_type pretype) =
-    case ty of
-      pVartype s => mk_vartype s
-    | pType (s, tylist) => mk_type {Tyop = s, Args = map toType0 tylist}
-    | pAQ t => t
-
-  fun remove_aqs pty =
-    case pty of
-      pAQ t => if is_ty_antiq t then pAQ (dest_ty_antiq t)
-               else
-                 raise ERROR "toPreTerm" "antiquotation is not of a type"
-    | pType(s, tys) => pType(s, map remove_aqs tys)
-    | pVartype s => pVartype s
-
 in
-
-  fun toType (ty: term pretype) = toType0 (remove_aqs ty)
-  val pretype2type = toType0
 
   fun ftoString [] = ""
     | ftoString (QUOTE s :: rest) = s ^ ftoString rest
@@ -106,7 +93,7 @@ in
       in
         raise ERROR "Type" errstring
       end
-    | SOME pt => toType0 pt
+    | SOME pt => TCPretype.toType pt
   end
 
   fun toThyaddon s =
@@ -167,7 +154,7 @@ fun pp_type pps ty = let
   val _ = update_type_fns()
 in
   Portable.add_string pps ":";
-  (!type_printer) pps (Type.prettify ty) type_pp.Top 100
+  (!type_printer) pps ty type_pp.Top 100
 end
 
 val type_to_string = Portable.pp_to_string 75 pp_type
@@ -177,32 +164,31 @@ fun print_type ty = Portable.output(Portable.std_out, type_to_string ty);
 local
   (* terms *)
   open parse_term term_grammar
-  fun restr_binding tyvs b tm s E = let
+  fun restr_binding b tm s E = let
     open Parse_support
     (* have to return a (function of type preterm -> preterm) * env *)
     val (oldbfn, oldbE) = b "\\" E
     (* oldbfn takes a body and returns an abstraction *)
     (* oldbE is the environment that records binding of var of b *)
     val Res_rator = Lib.assoc s (binder_restrictions())
-    val (Res_t, newE) = make_atom tyvs Res_rator oldbE
+    val (Res_t, newE) = make_atom Res_rator oldbE
   in
     ((fn body => Preterm.Comb{Rator = Res_t, Rand = oldbfn body}), newE)
   end
 
-  fun mk_binder tyvs vs = let
+  fun mk_binder vs = let
     open Parse_support
-    val mk_binder = mk_binder tyvs
   in
     case vs of
-      SIMPLE s => make_binding_occ tyvs s
+      SIMPLE s => make_binding_occ s
     | VPAIR(v1, v2) => let
       in
-        make_vstruct tyvs [mk_binder v1, mk_binder v2] NONE
+        make_vstruct [mk_binder v1, mk_binder v2] NONE
       end
-    | VS_AQ x => make_aq_binding_occ tyvs x
+    | VS_AQ x => make_aq_binding_occ x
     | TYPEDV (v, pty) => let
       in
-        make_vstruct tyvs [mk_binder v] (SOME (toType pty))
+        make_vstruct [mk_binder v] (SOME pty)
       end
     | RESTYPEDV (v, tm) =>
       raise ERROR
@@ -210,25 +196,22 @@ local
         "Restricted quantifications should have been eliminated at this point"
   end
 
-  fun toTermInEnv tyvs t = let
+  fun toTermInEnv t = let
     open parse_term
     open Parse_support
     exception Foo
-    val toTermInEnv = toTermInEnv tyvs
-    val mk_binder = mk_binder tyvs
   in
     case t of
       COMB(COMB(VAR "gspec special", t1), t2) =>
-        make_set_abs tyvs (toTermInEnv t1, toTermInEnv t2)
+        make_set_abs (toTermInEnv t1, toTermInEnv t2)
     | COMB(t1, t2) => list_make_comb (map toTermInEnv [t1, t2])
-    | VAR s => make_atom tyvs s
+    | VAR s => make_atom s
     | ABS(vs, t) => bind_term "\\" [mk_binder vs] (toTermInEnv t)
-    | TYPED(t, pty) => make_constrained (toTermInEnv t) (toType pty)
+    | TYPED(t, pty) => make_constrained (toTermInEnv t) pty
     | AQ t => make_aq t
   end
 
-  fun toPreTerm pt =
-    Parse_support.make_preterm (toTermInEnv (Type.fresh_tyvar_stream()) pt)
+  fun toPreTerm pt = Parse_support.make_preterm (toTermInEnv pt)
 
   fun term_to_vs t = let
     fun ultimately s t =
@@ -377,16 +360,14 @@ in
 
   fun preTerm q = let
     val pt0 = parse_preTerm q
-    val str = Type.fresh_tyvar_stream()
   in
-    Parse_support.make_preterm (toTermInEnv str pt0)
+    Parse_support.make_preterm (toTermInEnv pt0)
   end
   fun toTerm pt = let
-    val str = Type.fresh_tyvar_stream ()
     val prfns = SOME(term_to_string, type_to_string)
     open Parse_support
   in
-    Preterm.typecheck prfns str (make_preterm (toTermInEnv str pt))
+    Preterm.typecheck prfns (make_preterm (toTermInEnv pt))
   end
 
   val Term = toTerm o parse_preTerm

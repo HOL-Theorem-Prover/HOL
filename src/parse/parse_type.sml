@@ -12,27 +12,27 @@ val std_suffix_precedence = 100
 type grammar = (int * grammar_rule) list
 
 
-datatype 'a pretype =
-  pVartype of string | pType of (string * 'a pretype list) | pAQ of 'a
+fun n_appls _ ([], t) = t
+  | n_appls pT (op1::ops, t) = n_appls pT (ops, pT(token_string op1, [t]))
+fun n_appls_l _ ([], t) = raise Fail "parse_type.n_appls_l: can't happen"
+  | n_appls_l pT (op1::ops, xs) = n_appls pT (ops, pT(token_string op1, xs))
 
-
-fun n_appls([], t) = t
-  | n_appls(op1::ops, t) = n_appls(ops, pType(token_string op1, [t]))
-fun n_appls_l([], t) = raise Fail "parse_type.n_appls_l: can't happen"
-  | n_appls_l(op1::ops, args) = n_appls(ops, pType(token_string op1, args))
-
-fun parse_type allow_unknown_suffixes G = let
+fun parse_type tyfns allow_unknown_suffixes G = let
+  val {vartype = pVartype, tyop = pType, antiq = pAQ} = tyfns
   val lex = type_tokens.lex
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)
-  fun item t = (lex >- (fn t' => if t = t' then return t else fail)) ++ fail
   fun itemP P = (lex >- (fn t => if P t then return t else fail)) ++ fail
+
+  fun is_LParen t = case t of LParen => true | _ => false
+  fun is_RParen t = case t of RParen => true | _ => false
+  fun is_Comma t = case t of Comma => true | _ => false
 
   fun parse_base_level f =
     (itemP is_ident >- (fn t => return (pType(token_string t, [])))) ++
     (itemP is_tvar >- (fn t => return (pVartype (token_string t)))) ++
     (itemP is_aq >- (fn t => return (pAQ (dest_aq t)))) ++
-    (item LParen >> f >-> item RParen)
+    (itemP is_LParen >> f >-> itemP is_RParen)
 
   fun parse_op slist =
     itemP (fn t =>
@@ -61,11 +61,11 @@ fun parse_type allow_unknown_suffixes G = let
     val next_level = parse_term rs
     val same_level = parse_rule r rs
     val tuple_arg =
-      item LParen >>
+      itemP is_LParen >>
       chainl1
       (parse_term G >- (fn t => return [t]))
-      (item Comma >> return (fn tl1 => fn tl2 => tl1 @ tl2)) >-
-      (fn args => item RParen >> return args)
+      (itemP is_Comma >> return (fn tl1 => fn tl2 => tl1 @ tl2)) >-
+      (fn args => itemP is_RParen >> return args)
   in
     (case rule of
        INFIX (stlist, NONASSOC) =>
@@ -85,10 +85,10 @@ fun parse_type allow_unknown_suffixes G = let
      | SUFFIX slist =>
          (next_level >-                             (fn t =>
           many (parse_op slist) >-                  (fn oplist =>
-          return (n_appls(oplist, t))))) ++
+          return (n_appls pType (oplist, t))))) ++
          (tuple_arg >-                              (fn args =>
           many1 (parse_op slist) >-                 (fn oplist =>
-          return (n_appls_l(oplist, args)))))) strm
+          return (n_appls_l pType (oplist, args)))))) strm
   end
 in
   parse_term G

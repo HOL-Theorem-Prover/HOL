@@ -10,11 +10,14 @@ in
   type grammar
   val rules : grammar -> (int * grammar_rule) list
 
-  datatype 'a pretype =
-    pVartype of string | pType of (string * 'a pretype list) | pAQ of 'a
+  val parse_type :
+    {vartype : string -> 'a, tyop : (string * 'a list) -> 'a,
+     antiq : 'b -> 'a} -> bool -> grammar -> ('a, 'b frag) Parser
 
-  val parse_type : bool -> grammar -> (''a pretype, ''a frag) Parser
-    (* The boolean argument specifies whether or not arbitrary type names
+    (* The record of functions specify how to deal with the need to
+       construct variable types, type operators and antiquotations
+
+       The boolean argument specifies whether or not arbitrary type names
        should be accepted as suffixes.  With this set to true, the parser
        will not cavil at "'a foo", for arbitrary identifier foo.  With it
        false, it will only permit suffixes that are present in the grammar.

@@ -681,7 +681,7 @@ fun pp_term (G : grammar) TyG = let
       add_string "(ty_antiq(";
       add_break(0,0);
       add_string "`:";
-      type_pp.pp_type TyG pps (Type.prettify ty) type_pp.Top (depth - 1);
+      type_pp.pp_type TyG pps ty type_pp.Top (depth - 1);
       add_string "`))";
       end_block()
     end
@@ -697,7 +697,7 @@ fun pp_term (G : grammar) TyG = let
           fun add_type () = let
           in
             add_string (" "^type_intro); add_break (0,0);
-            type_pp.pp_type TyG pps (Type.prettify Ty) type_pp.Top (depth - 1)
+            type_pp.pp_type TyG pps Ty type_pp.Top (depth - 1)
           end
           val new_freevar =
             showtypes andalso (not (mem tm (!fvars_seen))) andalso

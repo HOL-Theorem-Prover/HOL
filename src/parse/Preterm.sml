@@ -9,7 +9,7 @@ fun PRETERM_ERR function message =
                    message = message};
 
 
-type pretype = Type.hol_type
+type pretype = TCPretype.pretype
 
 datatype preterm = Var   of {Name : string,  Ty : pretype}
                  | Const of {Name : string,  Ty : pretype}
@@ -21,24 +21,13 @@ datatype preterm = Var   of {Name : string,  Ty : pretype}
 (*---------------------------------------------------------------------------*
  * Getting "hidden" functions from Type and Term.                            *
  *---------------------------------------------------------------------------*)
-local open Type
+local
       val dty = Type.mk_vartype"'x"
       val dtm = Term.mk_var{Name="dummy",Ty=dty}
-      val unify_ref = ref (fn _:hol_type => fn _:hol_type => ())
-      val shrink_type_ref =
-           ref (fn _:(hol_type*hol_type) list => fn _:hol_type => dty)
-      val chase_ref = ref (fn _:hol_type => dty)
-      val tyvars_ref = ref (fn _:hol_type => fn x:hol_type list => x)
-      val constify_ref = ref (fn{Name:string,Ty:hol_type} => dtm)
+      val constify_ref = ref (fn{Name:string,Ty:Type.hol_type} => dtm)
       val Combify_ref = ref (fn{Rator:Term.term,Rand:Term.term} => dtm)
-      val _ = Type.Preterm_init unify_ref shrink_type_ref chase_ref tyvars_ref
       val _ = Term.Preterm_init constify_ref Combify_ref
 in
-  val unify = !unify_ref
-  val shrink_type = !shrink_type_ref
-  val chase = !chase_ref
-  val tyvars = !tyvars_ref
-
   val constify = !constify_ref
   val Combify = !Combify_ref
 end;
@@ -49,8 +38,10 @@ end;
  * type inference fails.
  *---------------------------------------------------------------------------*)
 
-fun to_term (Var n) = Term.mk_var n
-  | to_term (Const r) = constify r
+fun ptremove {Name, Ty} = {Name = Name, Ty = TCPretype.toType Ty}
+
+fun to_term (Var n) = Term.mk_var (ptremove n)
+  | to_term (Const r) = constify (ptremove r)
   | to_term (Comb{Rator,Rand}) = Combify{Rator=to_term Rator,Rand=to_term Rand}
   | to_term (Abs{Bvar,Body}) = Term.mk_abs{Bvar=to_term Bvar,Body=to_term Body}
   | to_term (Antiq tm) = tm
@@ -67,27 +58,28 @@ fun is_atom (Var _) = true
  * Type inference for HOL terms. Looks ugly because of error messages, but is
  * actually very simple, given side-effecting unification.
  *---------------------------------------------------------------------------*)
-local val --> = Type.-->
+local fun -->(ty1,ty2) = TCPretype.Tyop("fun", [ty1, ty2])
       infix  -->
       fun type_of (Var{Ty, ...}) = Ty
         | type_of (Const{Ty, ...}) = Ty
-        | type_of (Comb{Rator, ...}) = chase (type_of Rator)
+        | type_of (Comb{Rator, ...}) = TCPretype.chase (type_of Rator)
         | type_of (Abs{Bvar,Body}) = type_of Bvar --> type_of Body
         | type_of (Constrained(_,ty)) = ty
-        | type_of (Antiq tm) = Term.type_of tm
+        | type_of (Antiq tm) = TCPretype.fromType (Term.type_of tm)
 in
-fun TC printers tyvars = let
+fun TC printers = let
   fun default_typrinter x = "<hol_type>"
   fun default_tmprinter x = "<term>"
   val (ptm, pty) =
     case printers of
-      SOME (x,y) => (Lib.say o x, Lib.say o y)
+      SOME (x,y) => (Lib.say o x, Lib.say o y o TCPretype.toType)
     | NONE => (Lib.say o default_tmprinter, Lib.say o default_typrinter)
   fun check(Comb{Rator, Rand}) =
-        (check Rator; check Rand;
-         unify (type_of Rator)
-               (type_of Rand --> Lib.state(Lib.next tyvars))
-         handle (e as Exception.HOL_ERR{origin_structure="Type",
+        (check Rator;
+         check Rand;
+         TCPretype.unify (type_of Rator)
+         (type_of Rand --> TCPretype.new_uvar())
+         handle (e as Exception.HOL_ERR{origin_structure="TCPretype",
                                         origin_function="unify",message})
          => let val tmp = !Globals.show_types
                 val _   = Globals.show_types := true
@@ -110,7 +102,7 @@ fun TC printers tyvars = let
             end)
       | check (Abs{Bvar, Body}) = (check Bvar; check Body)
       | check (Constrained(tm,ty)) =
-          (check tm; unify (type_of tm) ty
+          (check tm; TCPretype.unify (type_of tm) ty
             handle (e as Exception.HOL_ERR{origin_structure="Type",
                                            origin_function="unify",message})
             => let val tmp = !Globals.show_types
@@ -135,81 +127,87 @@ end end;
  * variables for the remaining unconstrained type variables.
  *---------------------------------------------------------------------------*)
 
-
-fun zap_dollar ""  = raise PRETERM_ERR"zap_dollar" "empty string"
-  | zap_dollar s =
-      if String.sub(s,0) = #"$"
-       then String.substring(s,1,String.size s-1)
-      else s;
-
-val tyVars =
- let fun union [] S = S
-       | union S [] = S
-       | union (h::t) S = union t (insert h S)
-     fun tyV (Var{Ty,...}) L       = tyvars Ty L
-       | tyV (Const{Ty,...}) L     = tyvars Ty L
-       | tyV (Comb{Rator,Rand}) L  = tyV Rand(tyV Rator L)
-       | tyV (Abs{Bvar,Body}) L    = tyV Body(tyV Bvar L)
-       | tyV (Antiq tm) L          = union (Term.type_vars_in_term tm) L
-       | tyV (Constrained(tm,_)) L = tyV tm L
- in rev o C tyV []
- end;
-
-local fun askii n = Char.toString(Char.chr (n + 97));
-      fun nonzero 0 = "" | nonzero n = Int.toString n;
-      nonfix div mod
-      val div = Int.div and mod = Int.mod
+fun clean shr = let
+  fun cl(Var{Name,Ty})      = Term.mk_var{Name=Name,  Ty=shr Ty}
+    | cl(Const{Name,Ty})    = Term.mk_const{Name=Name,Ty=shr Ty}
+    | cl(Comb{Rator,Rand})  = Term.mk_comb{Rator=cl Rator,Rand=cl Rand}
+    | cl(Abs{Bvar,Body})    = Term.mk_abs{Bvar=cl Bvar,Body=cl Body}
+    | cl(Antiq tm)          = tm
+    | cl(Constrained(tm,_)) = cl tm
 in
-fun num2tyv m =
- Type.mk_vartype
-    (String.concat(["'",askii(mod(m,26)), nonzero(div(m,26))]))
+  cl
 end;
 
 
-(*---------------------------------------------------------------------------
- * Use the "src" stream to generate new elements, not in "taken", up to
- * the quantity equal to the length of the list (1st parameter to V). The
- * 2nd parameter to V is just the accumulator, which is not hidden.
- *---------------------------------------------------------------------------*)
+fun has_unconstrained_uvar ty = let
+  open TCPretype
+in
+  case ty of
+    Tyop(s, args) => List.exists has_unconstrained_uvar args
+  | UVar(ref NONE) => true
+  | UVar(ref (SOME t)) => has_unconstrained_uvar t
+  | Vartype _ => false
+end
 
-fun vary src taken =
-  let fun V [] fresh = rev fresh
-        | V (_::rst) fresh =
-             let val _ = while (mem (state src) taken) do next src
-                 val v' = state src before (next src; ())
-             in V rst (v'::fresh)
-             end
-  in  V  end;
-
-
-fun clean shr =
-  let fun cl(Var{Name,Ty})      = Term.mk_var{Name=zap_dollar Name,  Ty=shr Ty}
-        | cl(Const{Name,Ty})    = Term.mk_const{Name=zap_dollar Name,Ty=shr Ty}
-        | cl(Comb{Rator,Rand})  = Term.mk_comb{Rator=cl Rator,Rand=cl Rand}
-        | cl(Abs{Bvar,Body})    = Term.mk_abs{Bvar=cl Bvar,Body=cl Body}
-        | cl(Antiq tm)          = tm
-        | cl(Constrained(tm,_)) = cl tm
-  in cl
-  end;
+fun tyVars tm =
+  case tm of
+    Var{Ty,...} => TCPretype.tyvars Ty
+  | Const{Ty,...} => TCPretype.tyvars Ty
+  | Comb{Rator,Rand} => Lib.union (tyVars Rator) (tyVars Rand)
+  | Abs{Bvar,Body} => Lib.union (tyVars Bvar) (tyVars Body)
+  | Antiq tm => map Type.dest_vartype (Term.type_vars_in_term tm)
+  | Constrained(tm,ty) => Lib.union (tyVars tm) (TCPretype.tyvars ty)
 
 fun cleanup tm =
- if !Globals.guessing_tyvars
- then let val V = tyVars tm
-          val (utvs,stvs) = Lib.partition Type.is_vartype V
-          val utv_src = mk_istream (fn x => x+1) 0 num2tyv
-          val new_utvs = vary utv_src utvs stvs []
-          val _ = Lib.mesg (not(null stvs) andalso
-                            !Globals.notify_on_tyvar_guess)
-             ("inventing new type variable names: "
-               ^String.concat(Lib.commafy (map Type.dest_vartype new_utvs)))
-      in
-         clean (shrink_type (zip stvs new_utvs)) tm
-      end
- else clean (shrink_type []) tm handle HOL_ERR _
-      => raise PRETERM_ERR"typecheck.cleanup"
-        "Unconstrained type variable (and Globals.guessing_tyvars is false).";
+  if !Globals.guessing_tyvars then let
+    val V = tyVars tm
+    fun cleanup tm = let
+      open optmonad TCPretype
+      val clean = clean o remove_made_links
+      infix >> >-
+    in
+      case tm of
+        Var{Name, Ty} =>
+          replace_null_links Ty >-
+          (fn _ => return (Term.mk_var{Name = Name, Ty = clean Ty}))
+      | Const{Name, Ty} =>
+          replace_null_links Ty >-
+          (fn _ => return (Term.mk_const{Name = Name, Ty = clean Ty}))
+      | Comb{Rator, Rand} =>
+          cleanup Rator >-
+          (fn Rator' => cleanup Rand >-
+           (fn Rand' => return (Term.mk_comb{Rator=Rator', Rand=Rand'})))
+      | Abs{Bvar, Body} =>
+          cleanup Bvar >-
+          (fn Bvar' => cleanup Body >-
+           (fn Body' => return (Term.mk_abs{Bvar = Bvar', Body = Body'})))
+      | Antiq t => return t
+      | Constrained(tm, ty) => cleanup tm
+    end
+    val (newV, result) = cleanup tm V
+    val guessed_vars = List.take(newV, length newV - length V)
+    val _ =
+      Lib.mesg (not (null guessed_vars) andalso !Globals.notify_on_tyvar_guess)
+      ("inventing new type variable names: " ^
+       String.concat(Lib.commafy (List.rev guessed_vars)))
+  in
+    valOf result
+  end
+ else let
+   fun shr ty =
+     if has_unconstrained_uvar ty then
+       raise PRETERM_ERR"typecheck.cleanup"
+         "Unconstrained type variable (and Globals.guessing_tyvars is false)."
+     else let
+       open TCPretype
+     in
+       clean (remove_made_links ty)
+     end
+ in
+   clean shr tm
+ end
 
 
-fun typecheck pfns fresh_tyvs tm = (TC pfns fresh_tyvs tm; cleanup tm);
+fun typecheck pfns tm = (TC pfns tm; cleanup tm);
 
 end; (* PRETERM *)

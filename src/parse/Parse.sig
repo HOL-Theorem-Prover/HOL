@@ -42,7 +42,6 @@ in
   val == : hol_type frag list -> 'a -> hol_type
 
   val type_grammar : unit -> parse_type.grammar
-  val pretype2type : hol_type parse_type.pretype -> hol_type
 
   (* the parsing algorithm for types admits the possibility that type
      suffixes might be of looser binding than infixes, but the

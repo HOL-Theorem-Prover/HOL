@@ -33,12 +33,12 @@ fun quotetoString [] = ""
 
 datatype 'a varstruct =
   SIMPLE of string | VPAIR of ('a varstruct * 'a varstruct) |
-  TYPEDV of 'a varstruct * 'a parse_type.pretype |
+  TYPEDV of 'a varstruct * TCPretype.pretype |
   RESTYPEDV of 'a varstruct * 'a preterm | VS_AQ of 'a
 and 'a preterm =
   COMB of ('a preterm * 'a preterm) | VAR of string |
   ABS of ('a varstruct * 'a preterm) | AQ of 'a |
-  TYPED of ('a preterm * 'a parse_type.pretype)
+  TYPED of ('a preterm * TCPretype.pretype)
 
 fun strip_comb0 acc (COMB(t1, t2)) = strip_comb0 (t2::acc) t1
   | strip_comb0 acc t = (t, acc)
@@ -428,7 +428,7 @@ fun is_nonterm t = not (is_terminal t)
 
 
 datatype 'a lookahead_item =
-  Token of 'a term_token | PreType of 'a parse_type.pretype
+  Token of 'a term_token | PreType of TCPretype.pretype
 
 
 datatype 'a PStack =

@@ -4,18 +4,18 @@ signature parse_term = sig
   in
     datatype 'a varstruct =
       SIMPLE of string | VPAIR of ('a varstruct * 'a varstruct) |
-      TYPEDV of 'a varstruct * 'a parse_type.pretype |
+      TYPEDV of 'a varstruct * TCPretype.pretype |
       RESTYPEDV of 'a varstruct * 'a preterm | VS_AQ of 'a
     and 'a preterm =
       COMB of ('a preterm * 'a preterm) | VAR of string |
       ABS of ('a varstruct * 'a preterm) | AQ of 'a |
-      TYPED of ('a preterm * 'a parse_type.pretype)
+      TYPED of ('a preterm * TCPretype.pretype)
 
     val strip_comb : 'a preterm -> ('a preterm * 'a preterm list)
 
     datatype 'a lookahead_item =
       Token of 'a term_tokens.term_token |
-      PreType of 'a parse_type.pretype
+      PreType of TCPretype.pretype
 
     datatype 'a stack_item =
       Terminal of stack_terminal |
@@ -31,7 +31,7 @@ signature parse_term = sig
     exception PrecConflict of stack_terminal * stack_terminal
 
     val parse_term :
-      grammar -> (''a parse_type.pretype, ''a frag) Parser ->
+      grammar -> (TCPretype.pretype, ''a frag) Parser ->
       (''a frag list * ''a PStack) ->
       (''a frag list * ''a PStack) * unit option
 
