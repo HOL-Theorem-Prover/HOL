@@ -262,7 +262,7 @@ val LIFT_COND_ss =
 
 val CONJ_ss = SIMPSET {
   ac = [],
-  congs = [SPEC_ALL boolTheory.AND_CONG],
+  congs = [REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL boolTheory.AND_CONG)],
   convs = [], dprocs = [], filter = NONE, rewrs = []}
 
 
