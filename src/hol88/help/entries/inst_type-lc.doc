@@ -1,14 +1,15 @@
 \DOC inst_type
 
-\TYPE {Compat.inst_type : (hol_type * hol_type) list -> hol_type -> hol_type}
+\TYPE {hol88Lib.inst_type : (hol_type * hol_type) list -> hol_type -> hol_type}
 
 \SYNOPSIS
 Instantiates types in a type.
 
 \DESCRIBE
-If {[(t1',t1),...,(tn',tn)]} is a list of type instantiations, where {t1...tn}
-are the initial types, and {t1'...tn'} the desired instantiations, and {ty} is
-a type to instantiate, the call
+Found in the hol88 library. If {[(t1',t1),...,(tn',tn)]} is a list of
+type instantiations, where {t1...tn} are the initial types, and
+{t1'...tn'} the desired instantiations, and {ty} is a type to
+instantiate, the call
 {
    inst_type [(t1',t1),...,(tn',tn)] ty
 }
@@ -27,7 +28,7 @@ Never fails.
   - inst_type [((==`:bool`==),(==`:'a`==))] (==`:'a # 'b`==);
   (==`:bool # 'b`==) : hol_type
 
-  - inst_type [((==`:num`==),(==`:'a # 'b`==)),((==`:bool`==),(==`:'a`==))] 
+  - inst_type [((==`:num`==),(==`:'a # 'b`==)),((==`:bool`==),(==`:'a`==))]
               (==`:'a # 'b`==);
   (==`:bool # 'b`==) : hol_type
 
@@ -37,10 +38,10 @@ Never fails.
 Not in hol90, since the author decided that {type_subst} was a better name.
 {inst_type} and {type_subst} have different types, but modulo that, they
 perform identically.
-
+{
     - type_subst;
     val it = fn : hol_type subst -> hol_type -> hol_type
-
+}
 \SEEALSO
 type_subst, inst, INST_TYPE.
 
