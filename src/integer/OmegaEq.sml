@@ -98,7 +98,7 @@ end
 
 fun find_eliminable_equality vs (acc as (leastv, conj, rest)) cs = let
   fun ocons NONE xs = xs | ocons (SOME x) xs = x::xs
-  fun doclause (acc as (leastv, conj, rest)) c k = let
+  fun doclause (acc as (leastv, conj, rest)) unexamined c k = let
     val fvs = FVL [lhand (rand c)] empty_tmset
     val i = HOLset.intersection(vs,fvs)
     fun check_mins (v, (leastv, changed)) = let
@@ -122,7 +122,7 @@ fun find_eliminable_equality vs (acc as (leastv, conj, rest)) cs = let
         val v = hd (HOLset.listItems i)
       in
         if Arbint.abs (int_of_term (rel_coeff v c)) = Arbint.one then
-          (SOME (v,Arbint.one), SOME c, ocons conj rest)
+          (SOME (v,Arbint.one), SOME c, ocons conj rest @ unexamined)
         else k unchanged_acc
       end
     | sz => let
@@ -138,7 +138,7 @@ in
   | (c::cs) => if not (is_eq c) then
                  find_eliminable_equality vs (leastv,conj,c::rest) cs
                else
-                 doclause acc c
+                 doclause acc cs c
                  (fn acc' => find_eliminable_equality vs acc' cs)
 end
 
@@ -275,8 +275,7 @@ fun OmegaEq t = let
           raise ERR "OmegaEq" "Term not existentially quantified"
   val conjns = strip_conj body
   val (vwithleast, conj, rest) =
-      Profile.profile "find_elim_eq"
-      (find_eliminable_equality exv_set (NONE, NONE, [])) conjns
+      find_eliminable_equality exv_set (NONE, NONE, []) conjns
   val _ = isSome vwithleast orelse raise UNCHANGED
   val (to_elim, elimc) = valOf vwithleast
   val c = valOf conj
@@ -321,7 +320,9 @@ time OmegaEq   ``?i j. (0 = 3 * i + 5 * j + ~1 * n + 0)``;
 
 time OmegaEq   ``?i j. (0 = 3 * i + 6 * j + ~1 * n + 0)``;
 
-time OmegaEq   ``?x y. (0 = 2 * x + 3 * y + 2) /\ (0 = 2 * x + 3 * y + 4)``
+time OmegaEq   ``?x y. (0 = 2 * x + 3 * y + 2) /\ (0 = 2 * x + 3 * y + 4)``;
+
+time OmegaEq   ``?n. (0 = 1 * n + 1) /\ 0 <= 1 * n + 0``;
 
 *)
 

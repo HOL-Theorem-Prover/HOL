@@ -54,9 +54,12 @@ end
     coefficients appropriately smaller, or equating it to false (which
     will happen if there the numeral term is of the wrong divisibility).
 
+    If there are no variables, will evaluation 0 = rn to true or false.
+
     If there is nothing to eliminate, then return QConv.UNCHANGED.
    ---------------------------------------------------------------------- *)
 
+exception Foo
 fun gcd_eq_check tm = let
   open Arbint
   val INT_RING_CONV =
@@ -64,6 +67,7 @@ fun gcd_eq_check tm = let
   val r = rand tm
   val summands = strip_plus r
   val (vars, numpart) = front_last summands
+  val _ = not (null vars) orelse raise Foo
   val numpart_i = int_of_term numpart
   val coeffs = map (abs o int_of_term o #1 o dest_mult) vars
   val g = gcdl coeffs
@@ -101,13 +105,14 @@ in
             g_num_nonzero) THENC
       LAND_CONV REDUCE_CONV THENC REWR_CONV CooperThms.F_and_l
     end
-end tm
+end tm handle Foo => REDUCE_CONV tm
 
 (* ----------------------------------------------------------------------
     gcd_le_check tm
 
     performs a "gcd check" for terms of the form
       0 <= (c1 * v1) + (c2 * v2) + .. + (cn * vn) + n
+    if there are no variables, evaluates 0 <= n to true or false.
    ---------------------------------------------------------------------- *)
 
 fun gcd_le_check tm = let
@@ -115,7 +120,7 @@ fun gcd_le_check tm = let
   val INT_RING_CONV =
       EQT_ELIM o (REWRITE_CONV [INT_LDISTRIB, INT_MUL_ASSOC] THENC REDUCE_CONV)
   val r = rand tm
-  val (varpart, numpart) = dest_plus r
+  val (varpart, numpart) = dest_plus r handle HOL_ERR _ => raise Foo
   val vars = strip_plus varpart
   val numpart_i = int_of_term numpart
   val coeffs = map (abs o int_of_term o #1 o dest_mult) vars
@@ -135,7 +140,7 @@ in
   K newrhs_th THENC
   K (MP (SPECL [g_t, numpart, newvars_sum] elim_le_coeffs) zero_lt_g) THENC
   RAND_CONV (RAND_CONV REDUCE_CONV)
-end tm
+end tm handle Foo => REDUCE_CONV tm
 
 (* ----------------------------------------------------------------------
     gcd_check tm
@@ -408,12 +413,28 @@ end
      ... + c1 * v1 + c2 * v1 --> ... + (c1 + c2) * v1    stop
      ... + c1 * v1 + c2 * v2 --> ... + c2 * v2 + c1 * v1 cont (if v2 < v1)
 
+    Eliminates summands which have zero coefficients, as long as the
+    term being inserted into is in normal form, complete with numeral
+    as rightmost summand.
+
    ---------------------------------------------------------------------- *)
 
 fun SORT_AND_GATHER1_CONV tm =
     (RTOP_TWO_CONV PAIRWISE_GATHER_CONV THENC
      TRY_CONV (LAND_CONV SORT_AND_GATHER1_CONV) THENC
      CHECK_RZERO_CONV) tm
+
+(* ----------------------------------------------------------------------
+    INTERNAL_SG1_CONV tm
+
+    does the insertion sort of SORT_AND_GATHER1_CONV, but doesn't
+    attempt to normalise zero-coefficients.
+
+   ---------------------------------------------------------------------- *)
+
+fun INTERNAL_SG1_CONV tm =
+    (RTOP_TWO_CONV PAIRWISE_GATHER_CONV THENC
+     TRY_CONV (LAND_CONV INTERNAL_SG1_CONV)) tm
 
 (* ----------------------------------------------------------------------
     SORT_AND_GATHER_CONV tm
@@ -429,12 +450,13 @@ fun SORT_AND_GATHER_CONV tm = let
         (LASSOC_ADD_CONV THENC LAND_CONV SORT_AND_GATHER_CONV THENC
          SORT_AND_GATHER_CONV) tm
       else
-        SORT_AND_GATHER1_CONV tm
+        INTERNAL_SG1_CONV tm
 in
   if is_plus tm then
-    LAND_CONV SORT_AND_GATHER_CONV THENC prepare_insertion
+    LAND_CONV SORT_AND_GATHER_CONV THENC prepare_insertion THENC
+    addzero THENC CHECK_RZERO_CONV
   else
-    ALL_CONV
+    addzero THENC CHECK_RZERO_CONV
 end tm
 
 (* ----------------------------------------------------------------------
@@ -509,7 +531,7 @@ end tm
     and :int.
    ---------------------------------------------------------------------- *)
 
-fun NORMALISE_MULT t = let
+fun NORMALISE_MULT0 t = let
   open arithmeticTheory
   (* t is a multiplication term, over either :num or :int *)
   val (dest, strip, mk, listmk, AC, is_lit, MULT_LID) =
@@ -550,7 +572,10 @@ in
     end
 end t
 
-
+val NORMALISE_MULT  =
+    NORMALISE_MULT0 THENC REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
+                                        INT_NEGNEG] THENC
+    REWRITE_CONV [INT_NEG_LMUL]
 
 
 end
