@@ -53,6 +53,7 @@ val PROVE_TAC = BasicProvers.PROVE_TAC
 val RW_TAC    = BasicProvers.RW_TAC
 val SRW_TAC   = BasicProvers.SRW_TAC
 val EVAL      = computeLib.EVAL_CONV;
+val EVAL_TAC  = CONV_TAC EVAL;
 
 val && = BasicProvers.&&;
 infix &&;
@@ -93,7 +94,9 @@ fun DECIDE_TAC (g as (asl,_)) =
 ((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith asl)
       THEN numLib.ARITH_TAC)
  ORELSE
- tautLib.TAUT_TAC) g;
+ tautLib.TAUT_TAC 
+ ORELSE 
+ NO_TAC) g;
 
 fun ZAP_TAC ss thl =
    BasicProvers.STP_TAC ss

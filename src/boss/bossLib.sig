@@ -56,6 +56,7 @@ sig
   val RW_TAC   : simpset -> thm list -> tactic
   val SRW_TAC  : simpLib.ssdata list -> thm list -> tactic
   val EVAL     : term -> thm
+  val EVAL_TAC : tactic
 
   (* A compound automated reasoner. *)
 

@@ -13,10 +13,7 @@ val iota_def =
 
 
 val (iota_eqn, iota_ind) =
-TotalDefn.tprove 
- (iota_def,
-  WF_REL_TAC iota_def `measure \(b,t). SUC t - b` 
-    THEN DECIDE_TAC);
+Defn.tprove (iota_def, WF_REL_TAC `measure \(b,t). SUC t - b` THEN DECIDE_TAC);
 
 
 (*---------------------------------------------------------------------------*
@@ -31,7 +28,7 @@ val iota_bounds = Q.prove
   THEN RW_TAC list_ss [listTheory.MEM]
   THENL [DECIDE_TAC, 
          DECIDE_TAC, 
-         PROVE_TAC [DECIDE `x+y <= z ==> x<=z`],
+         PROVE_TAC [DECIDE (Term`x+y <= z ==> x<=z`)],
          PROVE_TAC[]]);
 
 
@@ -57,12 +54,7 @@ val iota_length = Q.prove
       Some computations with iota.
  ---------------------------------------------------------------------------*)
 
-local open computeLib
-      val compset = bossLib.initial_rws()
-      val _ = add_thms [iota_eqn] compset
-in
-val Eval = Count.apply (CBV_CONV compset) o Term
-end;
+val Eval = EVAL o Term;
 
 Eval `iota 0 0`;
 Eval `iota 0 12`;

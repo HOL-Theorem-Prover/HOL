@@ -79,7 +79,13 @@ val _ = mkMyInfix  "U"     270;
 val _ = mkMyInfix  "R"     270;
 val _ = mkMyPrefix "X"     255; 
 
-(* Term `A X STATE TRUE FAILS` = Term`A ((X (STATE TRUE)) FAILS)` *)
+(*---------------------------------------------------------------------------
+     Things can look slightly ambiguous:
+
+       Term `A X STATE TRUE FAILS` 
+         = 
+       Term`A ((X (STATE TRUE)) FAILS)`
+ ---------------------------------------------------------------------------*)
 
 let val overloading = app o curry overload_on
 in overloading "~"   [boolSyntax.negation, Term`NOT`];
@@ -178,9 +184,9 @@ val _ = Hol_datatype
 
 val wfSTRUCTURE_def = Define
 `wfSTRUCTURE (M: ('state,'atom) STRUCTURE) 
- = (states0 M) SUBSET (states M) /\ 
-   (!P Q. (P,Q) IN (fairSets M) ==> P SUBSET (states M) /\ Q SUBSET (states M))
-   /\ (!s. s IN (states M) ==> ((valids M) s) SUBSET (atoms M))`;
+ = (M.states0 SUBSET M.states) /\ 
+   (!P Q. (P,Q) IN M.fairSets ==> P SUBSET M.states /\ Q SUBSET M.states) /\ 
+   (!s. s IN M.states ==> (M.valids s) SUBSET M.atoms)`;
 
 (*---------------------------------------------------------------------------*
  * Definition 3: of paths PI:
@@ -190,15 +196,18 @@ val wfSTRUCTURE_def = Define
 
 val _ = Hol_datatype `Path = PATH of num -> 'state`;
 
-val STATE_NO_def = Define `STATE_NO (PATH(Sn)) n = (Sn n)`;
 val _ = mkMyInfix "STATE_NO" 140;
+val _ = mkMyInfix "IS_PATH_IN" 140;
+val _ = mkMyInfix "IS_FAIR_PATH_IN" 140;
+val _ = mkMyInfix "FROM" 140;
+
+val STATE_NO_def = Define `PATH(Sn) STATE_NO n = Sn n`;
 
 val IS_PATH_IN_def = Define
-    `IS_PATH_IN (PI: 'state Path) (M: ('state,'atom) STRUCTURE) =
-    (PI STATE_NO 0) IN (states M)
-    /\ !n. ((PI STATE_NO n), (PI STATE_NO (n+1))) IN (transitions M)`;
+    `(PI:'state Path) IS_PATH_IN  (M:('state,'atom)STRUCTURE)
+       = (PI STATE_NO 0) IN M.states /\ 
+         !n. ((PI STATE_NO n), (PI STATE_NO (n+1))) IN M.transitions`;
 
-val _ = mkMyInfix "IS_PATH_IN" 140;
 
 (*---------------------------------------------------------------------------*
  * Definition 4: of inf(PI):
@@ -214,22 +223,18 @@ val _ = mkMyInfix "IS_PATH_IN" 140;
 val INF_def = Define `INF PI = {s | !m. ?n. n > m /\ (PI STATE_NO m = s)}`;
 
 val IS_FAIR_PATH_IN_def = Define
-    `IS_FAIR_PATH_IN (PI: 'state Path) (M:('state,'atom)STRUCTURE)
+    `(PI:'state Path) IS_FAIR_PATH_IN  (M:('state,'atom)STRUCTURE)
       = (PI IS_PATH_IN M) /\
-        !P Q. (P,Q) IN (fairSets M)
+        !P Q. (P,Q) IN M.fairSets
               ==> ~(((INF PI) INTER P) = {}) 
               ==> ~(((INF PI) INTER Q) = {})`;
-
-val _ = mkMyInfix "IS_FAIR_PATH_IN" 140;
 
 (*---------------------------------------------------------------------------*
  * PISn denotes sn in PI
  * PIn denotes the Path sn,sn+1,sn+2...
  *---------------------------------------------------------------------------*)
 
-val _ = mkMyInfix "FROM" 140;
-
-val FROM_def = Define `$FROM PI n = PATH(\x. PI STATE_NO (n+x))`;
+val FROM_def = Define `PI FROM n = PATH(\x. PI STATE_NO (n+x))`;
 
 
 (*---------------------------------------------------------------------------*)

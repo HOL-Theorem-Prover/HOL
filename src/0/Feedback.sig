@@ -45,8 +45,8 @@ sig
     val traces            : unit -> {name:string, max : int,
                                      trace_level:int, default:int} list
     val register_trace    : (string * int ref * int) -> unit
-    val register_ftrace   :
-      (string * ((unit -> int) * (int -> unit)) * int) -> unit
+    val register_ftrace   : (string * ((unit -> int) * (int -> unit)) * int)
+                             -> unit
     val register_btrace   : (string * bool ref) -> unit
 
     val current_trace     : string -> int
