@@ -22,8 +22,9 @@ and mosmlholmode = MosmlHolBT | MosmlHolBTBT
 
 and mosml_content =
      MosmlContent of string
+   | MosmlStr of string
    | MosmlIndent of int
-   | MosmlHol of string option * mosmlholmode * holdoc  (* ident preceding delim *)
+   | MosmlHol of (string * string list) option * mosmlholmode * holdoc  (* ident preceding delim, strings preceding delim  *)
    | MosmlText of textdoc
    | MosmlTex of texdoc
    | MosmlDir of directive

@@ -10,6 +10,14 @@ let delim_wrap d s = (delim_info d).sopen ^ s ^ (delim_info d).sclose
 
 let add_to_list r xs = (r := !r @ xs)
 
+let extractstrs ds =
+  let rec go strs whites = function
+      [] -> (List.rev strs, List.rev whites)
+    | (MosmlStr s::ds) -> go (s::strs) whites ds
+    | (d::ds) -> go strs (d::whites) ds
+  in
+  go [] [] ds
+
 %}
 
 /* content */
@@ -65,8 +73,9 @@ let add_to_list r xs = (r := !r @ xs)
 
 /* low precedence (loosest) */
 
-%nonassoc below_mosmlwhitetok
+%nonassoc below_mosmlintertok
 %nonassoc Indent
+%nonassoc Str
 %nonassoc White ToHol ToText ToTex ToDir
 
 /* high precedence (tightest) */
@@ -114,14 +123,14 @@ mosml_parse_rev :
 /* note worse hackery: if there's an indent (i.e., newline) in between,
    it just appears as inline MosmlContent... sorry! */
 mosml_token_rev :
-  Str                     { [MosmlContent ("\"" ^ $1 ^ "\"")] }
+  Str                     { [MosmlStr $1] }
 | Dot                     { [MosmlContent "."] }
 | Int                     { [MosmlContent $1] }
 | Real                    { [MosmlContent $1] }
 | Word                    { [MosmlContent $1] }
 | Char                    { [MosmlContent ("#\"" ^ $1 ^ "\"")] }
 | Sep                     { [MosmlContent $1] }
-| Ident opt_mosml_whitestuff_rev mosml_to_hol_rev
+| Ident opt_mosml_interstuff_rev mosml_to_hol_rev
                           { $3 ($1,$2) }
 | ToHol hol_parse From    { [MosmlHol(None,
                                       (match $1 with
@@ -132,18 +141,21 @@ mosml_token_rev :
 | mosmlwhitetok           { [$1] }
 
 mosml_to_hol_rev :
-  /* empty */ %prec below_mosmlwhitetok
+  /* empty */ %prec below_mosmlintertok
                           { fun (x,y) -> y @ [MosmlContent (fst x)] }
-| ToHol hol_parse From    { fun (x,y) -> MosmlHol(Some (fst x),
+| ToHol hol_parse From    { fun (x,y) -> let (strs,whites) = extractstrs y in
+                                         MosmlHol(Some (fst x,
+                                                        List.rev strs),
                                                   (match $1 with
                                                      DelimHolMosml  -> MosmlHolBT
                                                    | DelimHolMosmlD -> MosmlHolBTBT
                                                    | _ -> raise (NeverHappen "mosml_to_hol_rev")),
-                                                  $2) :: y }
+                                                  $2) :: whites }
 
-opt_mosml_whitestuff_rev :
+opt_mosml_interstuff_rev :
   /* empty */                             { [] }
-| opt_mosml_whitestuff_rev mosmlwhitetok  { $2 :: $1 }
+| opt_mosml_interstuff_rev mosmlwhitetok  { $2 :: $1 }
+| opt_mosml_interstuff_rev Str            { MosmlStr $2 :: $1 }
 
 mosmlwhitetok :
   White                    { MosmlContent $1 }
