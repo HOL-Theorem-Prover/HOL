@@ -10,7 +10,7 @@
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib pairTools numLib metisLib;
+open HolKernel Parse boolLib bossLib pairTools numLib metisLib pairTheory;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -87,13 +87,15 @@ val lemma = Q.prove
       (BYTE_TO_NUM (b7,b6,b5,b4,b3,b2,b1,b0)) = (b7,b6,b5,b4,b3,b2,b1,b0)`,
   REPEAT Cases THEN EVAL_TAC);
 
-val BYTE_TO_NUM_TO_BYTE = Q.prove
-(`!b. NUM_TO_BYTE(BYTE_TO_NUM b) = b`,
-  METIS_TAC [lemma, pairTheory.ABS_PAIR_THM]);
+val BYTE_TO_NUM_TO_BYTE = Q.store_thm
+("BYTE_TO_NUM_TO_BYTE",
+ `!b. NUM_TO_BYTE(BYTE_TO_NUM b) = b`,
+  METIS_TAC [lemma, ABS_PAIR_THM]);
 
-val NUM_TO_BYTE_TO_NUM = Q.prove
-(`!n. n < 256 ==> (BYTE_TO_NUM (NUM_TO_BYTE n) = n)`,
- CONV_TAC (REPEATC (BOUNDED_CONV EVAL)) THEN PROVE_TAC []);
+val NUM_TO_BYTE_TO_NUM = Q.store_thm
+("NUM_TO_BYTE_TO_NUM",
+ `!n. n < 256 ==> (BYTE_TO_NUM (NUM_TO_BYTE n) = n)`,
+ CONV_TAC (REPEATC (BOUNDED_FORALL_CONV EVAL)) THEN PROVE_TAC []);
 
 (*---------------------------------------------------------------------------
         Shift a byte left and right
@@ -184,15 +186,9 @@ val AND8_def = Define
 (* Algebraic lemmas for XOR8                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val XOR8_ZERO = Q.store_thm
-("XOR8_ZERO",
- `!x. x XOR8 ZERO = x`,
- BYTE_EVAL_TAC);
+val XOR8_ZERO = Q.store_thm("XOR8_ZERO", `!x. x XOR8 ZERO = x`, BYTE_EVAL_TAC);
 
-val XOR8_INV = Q.store_thm
-("XOR8_INV",
- `!x. x XOR8 x = ZERO`,
- BYTE_EVAL_TAC);
+val XOR8_INV = Q.store_thm("XOR8_INV", `!x. x XOR8 x = ZERO`, BYTE_EVAL_TAC);
 
 val XOR8_AC = Q.store_thm
 ("XOR8_AC",
@@ -278,15 +274,13 @@ val from_state_def = Define
  = (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15)`;
 
 
-val to_state_Inversion = 
-  Q.store_thm
+val to_state_Inversion = Q.store_thm
   ("to_state_Inversion",
    `!s:state. from_state(to_state s) = s`,
    BLOCK_EVAL_TAC);
 
 
-val from_state_Inversion = 
-  Q.store_thm
+val from_state_Inversion = Q.store_thm
   ("from_state_Inversion",
    `!s:state. to_state(from_state s) = s`,
    BLOCK_EVAL_TAC);
@@ -296,7 +290,7 @@ val from_state_Inversion =
 (*    Apply an Sbox to the state                                             *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Parse.hide "S";
+val _ = Parse.hide "S";   (* to make parameter S a variable *)
 
 val genSubBytes_def = try Define
   `genSubBytes S (b00,b01,b02,b03,
@@ -309,6 +303,7 @@ val genSubBytes_def = try Define
               S b20, S b21, S b22, S b23,
               S b30, S b31, S b32, S b33)`;
 
+val _ = Parse.reveal "S";
 
 val SubBytes_def    = Define `SubBytes = genSubBytes Sbox`;
 val InvSubBytes_def = Define `InvSubBytes = genSubBytes InvSbox`;
@@ -589,7 +584,7 @@ val lemma_d4 = Count.apply Q.prove
 (*  Set up permutative rewriting for XOR8                                    *)
 (*---------------------------------------------------------------------------*)
 
-val [c,a] = CONJUNCTS XOR8_AC;
+val [a,c] = CONJUNCTS XOR8_AC;
 
 (*---------------------------------------------------------------------------*)
 (* The following lemma is hideous to prove without permutative rewriting     *)
@@ -605,7 +600,7 @@ val rearrange_xors = Q.prove
   (b1 XOR8 b2 XOR8 b3 XOR8 b4) XOR8
   (c1 XOR8 c2 XOR8 c3 XOR8 c4) XOR8
   (d1 XOR8 d2 XOR8 d3 XOR8 d4)`,
- RW_TAC (std_ss ++ simpLib.ac_ss [(c,a)]) []);
+ RW_TAC std_ss [AC a c]);
 
 val mix_lemma1 = Q.prove
 (`!a b c d. 
