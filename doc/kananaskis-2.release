@@ -40,6 +40,7 @@ Bugs fixed:
   * Many, many documentation typos and bugs were fixed.  (Thanks to
     Carl Witty for the report of most of these.)
 
+
 New features:
 -------------
 
@@ -66,3 +67,11 @@ New theories:
 
 New tools:
 ----------
+
+  * A new first-order proof tactic (called METIS_TAC) that uses
+    ordered resolution and paramodulation, specifically tailored for
+    subgoals that require equality reasoning.
+ 
+  * A 'boolification' tool that automatically defines functions that map
+    datatypes to boolean vectors. These kind of functions are needed
+    for sending HOL subgoals to a model-checker or SAT solver.
