@@ -9,7 +9,6 @@ Expectations:
 - Develop theory of 1-bounded expectation for qtlTheory
 
 WP:
-- Remove the Assert command, instead Define `Assert p c = c`
 - Theorems connecting wlp and wp
   - Lemma: wlp prog p = 1 - awp prog (1 - p)      [for 1-bounded p]
   - Theorem: Leq (Conj (wlp prog p) (wp prog q)) (wp prog (Conj p q))
@@ -17,7 +16,7 @@ WP:
 - Derived commands to model concurrency using nondeterminism
 
 Temporal Logic:
-- Get it working with positive reals and 1-bounded expectations
+- Get qtlTheory working with positive reals and 1-bounded expectations
 - Verify random walker
 
 Example Verifications:

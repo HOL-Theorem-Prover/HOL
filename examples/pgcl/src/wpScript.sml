@@ -8,7 +8,6 @@
 (* (Comment out "load" and "quietdec"s for compilation)                      *)
 (* ------------------------------------------------------------------------- *)
 (*
-*)
 loadPath :=
   ["/home/jeh1004/dev/hol/metis/src/mlib",
    "/home/jeh1004/dev/hol/metis/src/normalize",
@@ -17,6 +16,7 @@ app load
   ["bossLib","realLib","rich_listTheory","stringTheory",
    "metisLib","posrealLib","expectationTheory","intLib"(*,"MetisLib"*)];
 quietdec := true;
+*)
 
 open HolKernel Parse boolLib bossLib intLib realLib metisLib;
 open combinTheory listTheory rich_listTheory stringTheory integerTheory
@@ -24,8 +24,8 @@ open combinTheory listTheory rich_listTheory stringTheory integerTheory
 open posetTheory posrealTheory posrealLib expectationTheory;
 
 (*
-*)
 quietdec := false;
+*)
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "wp"                                            *)
@@ -90,14 +90,15 @@ val () = type_abbrev ("state", Type `:string -> int`);
 (* ------------------------------------------------------------------------- *)
 
 val () = Hol_datatype `command =
-  Assert of (state -> posreal) => command
-| Abort
+  Abort
 | Skip
 | Assign of string => (state -> int)
 | Seq    of command => command
 | Demon  of command => command
 | Prob   of (state -> posreal) => command => command
 | While  of (state -> bool) => command`;
+
+val Assert_def = Define `Assert (x : state -> posreal) (c : command) = c`;
 
 val Program_def = Define
   `(Program [] = Skip) /\
@@ -143,8 +144,7 @@ val Probchoice_def = Define
 (* ------------------------------------------------------------------------- *)
 
 val wp_def = Define
-  `(wp (Assert p a) = wp a) /\
-   (wp Abort = \r. Zero) /\
+  `(wp Abort = \r. Zero) /\
    (wp Skip = \r. r) /\
    (wp (Assign v e) = \r s. r (\w. if w = v then e s else s w)) /\
    (wp (Seq a b) = \r. wp a (wp b r)) /\
@@ -178,10 +178,6 @@ val sublinear_necessary = store_thm
 (* ------------------------------------------------------------------------- *)
 (* All wp transformers are healthy                                           *)
 (* ------------------------------------------------------------------------- *)
-
-val healthy_wp_assert = lemma
-  (``!exp prog. healthy (wp prog) ==> healthy (wp (Assert exp prog))``,
-   RW_TAC posreal_ss [wp_def]);
 
 val healthy_wp_abort = lemma
   (``healthy (wp Abort)``,
@@ -407,17 +403,17 @@ val healthy_wp_prob = lemma
        RW_TAC std_ss [sublinear_def]
        ++ Know `sublinear (wp prog)` >> PROVE_TAC [healthy_sublinear]
        ++ SIMP_TAC std_ss [sublinear_def]
-       ++ DISCH_THEN (MP_TAC o Q.SPECL [`r1`, `r2`, `c1`, `c2`, `c`, `s`])
+       ++ DISCH_THEN (MP_TAC o Q.SPECL [`r`, `r'`, `c1`, `c2`, `c`, `s`])
        ++ Know `sublinear (wp prog')` >> PROVE_TAC [healthy_sublinear]
        ++ SIMP_TAC std_ss [sublinear_def]
-       ++ DISCH_THEN (MP_TAC o Q.SPECL [`r1`, `r2`, `c1`, `c2`, `c`, `s`])
+       ++ DISCH_THEN (MP_TAC o Q.SPECL [`r`, `r'`, `c1`, `c2`, `c`, `s`])
        ++ ASM_SIMP_TAC std_ss []
-       ++ Q.SPEC_TAC (`wp prog' r1 s`, `x1'`)
-       ++ Q.SPEC_TAC (`wp prog' r2 s`, `x2'`)
-       ++ Q.SPEC_TAC (`wp prog r1 s`, `x1`)
-       ++ Q.SPEC_TAC (`wp prog r2 s`, `x2`)
-       ++ Q.SPEC_TAC (`wp prog' (\s'. c1 * r1 s' + c2 * r2 s' - c) s`, `y'`)
-       ++ Q.SPEC_TAC (`wp prog (\s'. c1 * r1 s' + c2 * r2 s' - c) s`, `y`)
+       ++ Q.SPEC_TAC (`wp prog' r s`, `x1'`)
+       ++ Q.SPEC_TAC (`wp prog' r' s`, `x2'`)
+       ++ Q.SPEC_TAC (`wp prog r s`, `x1`)
+       ++ Q.SPEC_TAC (`wp prog r' s`, `x2`)
+       ++ Q.SPEC_TAC (`wp prog' (\s'. c1 * r s' + c2 * r' s' - c) s`, `y'`)
+       ++ Q.SPEC_TAC (`wp prog (\s'. c1 * r s' + c2 * r' s' - c) s`, `y`)
        ++ REPEAT (Q.PAT_ASSUM `healthy X` (K ALL_TAC))
        ++ RW_TAC posreal_ss [add_ldistrib]
        ++ Know `!a b c d : posreal. (a + b) + (c + d) = (a + c) + (b + d)`
@@ -447,21 +443,21 @@ val healthy_wp_prob = lemma
        ++ Know `up_continuous (expect,Leq) (wp prog)`
        >> PROVE_TAC [healthy_up_continuous]
        ++ RW_TAC std_ss [up_continuous_def, expect_def]
-       ++ POP_ASSUM (MP_TAC o Q.SPECL [`c`, `x`])
+       ++ POP_ASSUM (MP_TAC o Q.SPECL [`c`, `r'`])
        ++ RW_TAC posreal_ss []
        ++ Know `up_continuous (expect,Leq) (wp prog')`
        >> PROVE_TAC [healthy_up_continuous]
        ++ RW_TAC std_ss [up_continuous_def, expect_def]
-       ++ POP_ASSUM (MP_TAC o Q.SPECL [`c`, `x`])
+       ++ POP_ASSUM (MP_TAC o Q.SPECL [`c`, `r'`])
        ++ RW_TAC posreal_ss []
        ++ RW_TAC std_ss [lub_def, expect_def]
        >> (RW_TAC std_ss [Leq_def]
            ++ MATCH_MP_TAC le_add2
            ++ (CONJ_TAC ++ MATCH_MP_TAC le_lmul_imp)
-           << [Suff `Leq (wp prog z) (wp prog x)` >> RW_TAC std_ss [Leq_def]
+           << [Suff `Leq (wp prog r) (wp prog r')` >> RW_TAC std_ss [Leq_def]
                ++ MATCH_MP_TAC healthy_mono
                ++ METIS_TAC [lub_def, expect_def],
-               Suff `Leq (wp prog' z) (wp prog' x)` >> RW_TAC std_ss [Leq_def]
+               Suff `Leq (wp prog' r) (wp prog' r')` >> RW_TAC std_ss [Leq_def]
                ++ MATCH_MP_TAC healthy_mono
                ++ PROVE_TAC [lub_def, expect_def]])
        ++ RW_TAC posreal_ss [Leq_def]
@@ -564,9 +560,9 @@ val wp_while_monotonic = lemma
    ++ (RW_TAC posreal_ss [monotonic_def, refines_def, expect_def]
        ++ RW_TAC std_ss [Leq_def]
        ++ RW_TAC posreal_ss [])
-   << [Suff `Leq (trans x') (trans y')` >> RW_TAC std_ss [Leq_def]
+   << [Suff `Leq (trans e) (trans e')` >> RW_TAC std_ss [Leq_def]
        ++ METIS_TAC [healthy_mono],
-       Suff `Leq (trans x') (trans y')` >> RW_TAC std_ss [Leq_def]
+       Suff `Leq (trans e) (trans e')` >> RW_TAC std_ss [Leq_def]
        ++ METIS_TAC [healthy_mono],
        FULL_SIMP_TAC std_ss [Leq_def]]);
 
@@ -591,7 +587,7 @@ val wp_while_upcontinuous = lemma
    ++ Q.EXISTS_TAC `\s. sup (\r. ?y. c y /\ (r = l y s))`
    ++ REVERSE CONJ_TAC
    >> (RW_TAC posreal_ss [sup_le, Leq_def]
-       ++ Suff `Leq (l y') z`
+       ++ Suff `Leq (l y) z`
        >> RW_TAC posreal_ss [Leq_def]
        ++ FIRST_ASSUM MATCH_MP_TAC
        ++ PROVE_TAC [])
@@ -954,8 +950,7 @@ val wp_healthy = store_thm
   ("wp_healthy",
    ``!prog. healthy (wp prog)``,
    Induct
-   << [PROVE_TAC [healthy_wp_assert],
-       PROVE_TAC [healthy_wp_abort],
+   << [PROVE_TAC [healthy_wp_abort],
        PROVE_TAC [healthy_wp_skip],
        PROVE_TAC [healthy_wp_assign],
        PROVE_TAC [healthy_wp_seq],
@@ -1027,8 +1022,7 @@ val refines_demon_prob = store_thm
 (* ------------------------------------------------------------------------- *)
 
 val wlp_def = Define
-  `(wlp (Assert p a) = wlp a) /\
-   (wlp Abort = \r. Magic) /\
+  `(wlp Abort = \r. Magic) /\
    (wlp Skip = \r. r) /\
    (wlp (Assign v e) = \r s. r (\w. if w = v then e s else s w)) /\
    (wlp (Seq a b) = \r. wlp a (wlp b r)) /\
@@ -1114,7 +1108,7 @@ val wlp_assert_vc = store_thm
         Leq mid (wlp a post) /\
         Leq pre mid ==>
         Leq pre (wlp (Assert pre a) post)``,
-   RW_TAC std_ss [wlp_def]
+   RW_TAC std_ss [Assert_def]
    ++ METIS_TAC [leq_trans]);
 
 val wlp_abort_vc = store_thm

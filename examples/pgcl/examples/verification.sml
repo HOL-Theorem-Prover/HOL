@@ -239,15 +239,14 @@ val annotated_rabin_def = Define
                          Assign "i" (\v. v"i" - v"d");
                          Assign "n" (\v. v"n" - 1)]))]))`;
 
-val wlp_annotated_rabin = Count.apply prove
-  (``wlp annotated_rabin = wlp rabin``,
-   RW_TAC std_ss [annotated_rabin_def, rabin_def, FUN_EQ_THM]
-   ++ RW_TAC std_ss [wlp_def, Program_def]);
+val annotated_rabin = Count.apply prove
+  (``annotated_rabin = rabin``,
+   RW_TAC std_ss [annotated_rabin_def, Assert_def, rabin_def]);
 
 val partial_rabin = Count.apply prove
   (``Leq (\v. if v"i" = 1 then 1 else if 1 < v"i" then 2 / 3 else 0)
      (wlp rabin (\v. if v"i" = 1 then 1 else 0))``,
-   (RW_TAC std_ss [annotated_rabin_def, GSYM wlp_annotated_rabin]
+   (RW_TAC std_ss [annotated_rabin_def, GSYM annotated_rabin]
     ++ wlp_tac
     ++ TRY (Suff `F` >> METIS_TAC [] ++ COOPER_TAC)
     ++ ASM_SIMP_TAC posreal_ss [rabin_invar1_def, rabin_invar2_def]
