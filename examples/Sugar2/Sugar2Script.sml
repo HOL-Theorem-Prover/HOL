@@ -14,32 +14,31 @@ load "Sugar2SemanticsTheory"; load "rich_listTheory"; load "intLib";
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open Globals HolKernel Parse boolLib;
-infixr 3 -->;
-infix 8 by;
-infix &&;
-infix ++;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-open bossLib;
+
+open Globals HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
 * Open theories
 ******************************************************************************)
+
 open Sugar2SemanticsTheory PathTheory listTheory rich_listTheory;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
 ******************************************************************************)
+
 val _ = intLib.deprecate_int();
 
 (******************************************************************************
 * Start a new theory called Sugar2
 ******************************************************************************)
+
 val _ = new_theory "Sugar2";
 
 (******************************************************************************
 * w |=T= b is equivalent to ?l. (w =[l]) /\ l |= b
 ******************************************************************************)
+
 val S_BOOL_TRUE =
  store_thm
   ("S_BOOL_TRUE",
@@ -55,6 +54,7 @@ val S_BOOL_TRUE =
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
 ******************************************************************************)
+
 val S_REPEAT_BOOL_TRUE =
  store_thm
   ("S_REPEAT_BOOL_TRUE",
@@ -62,7 +62,7 @@ val S_REPEAT_BOOL_TRUE =
       !i. i < LENGTH w ==> B_SEM M (EL i w) b``,
    RW_TAC std_ss 
     [S_SEM_def,B_SEM_def,CONJ_ASSOC, LENGTH_CONS,LENGTH_NIL,
-     Cooper.COOPER_PROVE ``(n >= 1 /\ !i. ~(1 <= i) \/ ~(i < n)) = (n = 1)``]
+     Cooper.COOPER_PROVE ``(n >= 1n /\ !i. ~(1 <= i) \/ ~(i < n)) = (n = 1)``]
     THEN EQ_TAC
     THEN RW_TAC std_ss []
     THENL
@@ -417,13 +417,13 @@ val F_NEG_FREE_def =
 val F_SEM_TRUE_EQ_LEMMA =
  store_thm
   ("F_SEM_TRUE_EQ_LEMMA",
-   ``!m1 m2 m3 m4 m5 p v1 f v2.
+   ``!M p v1 f v2.
        (v1 = STRONG_CLOCK B_TRUE) /\
        (v2 = WEAK_CLOCK B_TRUE)   /\
        F_NEG_FREE f
        ==>
-       (F_SEM (m1,m2,m3,m4,m5) p v1 f =
-         F_SEM (m1,m2,m3,m4,m5) p v2 f)``,
+       (F_SEM M p v1 f =
+         F_SEM M p v2 f)``,
    recInduct (fetch "Sugar2Semantics" "F_SEM_ind")
     THEN REPEAT CONJ_TAC
     THEN RW_TAC std_ss 
@@ -435,12 +435,11 @@ val F_SEM_TRUE_EQ_LEMMA =
 val F_SEM_TRUE_EQ_LEMMA =
  store_thm
   ("F_SEM_TRUE_EQ_LEMMA",
-   ``!m1 m2 m3 m4 m5 p v1 f v2.
+   ``!M p v1 f v2.
        (v1 = STRONG_CLOCK B_TRUE) /\
        (v2 = WEAK_CLOCK B_TRUE)
        ==>
-       (F_SEM (m1,m2,m3,m4,m5) p v1 f =
-         F_SEM (m1,m2,m3,m4,m5) p v2 f)``,
+       (F_SEM M p v1 f = F_SEM M p v2 f)``,
    recInduct (fetch "Sugar2Semantics" "F_SEM_ind")
     THEN REPEAT CONJ_TAC
     THEN RW_TAC std_ss 
@@ -451,15 +450,15 @@ val F_SEM_TRUE_EQ_LEMMA =
 val F_SEM_TRUE_EQ =
  store_thm
   ("F_SEM_TRUE_EQ",
-   ``!m1 m2 m3 m4 m5 p v1 f v2.
-       (F_SEM (m1,m2,m3,m4,m5) p (STRONG_CLOCK B_TRUE) f =
-         F_SEM (m1,m2,m3,m4,m5) p (WEAK_CLOCK B_TRUE) f)``,
+   ``!M p v1 f v2.
+       (F_SEM M p (STRONG_CLOCK B_TRUE) f =
+        F_SEM M p (WEAK_CLOCK B_TRUE) f)``,
    RW_TAC std_ss [F_SEM_TRUE_EQ_LEMMA]);
 
 val F_SEM_TRUE_EQ =
  store_thm
   ("F_SEM_TRUE_EQ",
-   	``F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f``,
+   ``F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f``,
    Cases_on `M` THEN Cases_on `r` THEN Cases_on `r'` THEN Cases_on `r`
     THEN RW_TAC std_ss [F_SEM_TRUE_EQ_LEMMA]);
 *)
@@ -467,6 +466,7 @@ val F_SEM_TRUE_EQ =
 (******************************************************************************
 * US_SEM M w r means "w is in the language of r" in the unclocked semantics
 ******************************************************************************)
+
 val US_SEM_def =
  Define
   `(US_SEM M w (S_BOOL b) = ?l. (w = [l]) /\ B_SEM M l b)
@@ -498,6 +498,7 @@ val US_SEM_def =
 * UF_SEM M p f means "p |= f"  in the unclocked semantics
 * (F_WEAK_IMP case unfolded to make totality proof go through)
 ******************************************************************************)
+
 val UF_SEM_def =
  Define
    `(UF_SEM M p (F_BOOL b) = 
@@ -550,6 +551,7 @@ val UF_SEM_def =
 * UF_SEM M p f means "p |= f"  in the unclocked semantics
 * Derivation of folded equation
 ******************************************************************************)
+
 val UF_SEM =
  store_thm
   ("UF_SEM",
@@ -600,6 +602,7 @@ val UF_SEM =
 (******************************************************************************
 * S_CLOCK_FREE r means r contains no clocking statements
 ******************************************************************************)
+
 val S_CLOCK_FREE_def =
  Define
   `(S_CLOCK_FREE (S_BOOL b)          = T)
@@ -622,13 +625,13 @@ val S_CLOCK_FREE_def =
 * Proof that if S_CLOCK_FREE r then the unclocked semantics of
 * SEREs is the same as the clocked semantics with clock equal to T
 ******************************************************************************)
+
 val S_SEM_TRUE_LEMMA =
  prove
-  (``!m1 m2 m3 m4 m5 w r. 
+  (``!M w r. 
       S_CLOCK_FREE r
       ==>
-      (S_SEM (m1,m2,m3,m4,m5) w B_TRUE r =
-        US_SEM (m1,m2,m3,m4,m5) w r)``,
+      (S_SEM M w B_TRUE r = US_SEM M w r)``,
    recInduct (fetch "-" "US_SEM_ind")
     THEN RW_TAC std_ss [S_SEM_def, US_SEM_def, S_CLOCK_FREE_def]
     THENL
@@ -656,6 +659,7 @@ val S_SEM_TRUE =
 (******************************************************************************
 * F_CLOCK_FREE f means f contains no clocking statements
 ******************************************************************************)
+
 val F_CLOCK_FREE_def =
  Define
   `(F_CLOCK_FREE (F_BOOL b)            = T)
@@ -688,11 +692,11 @@ val INIT_TAC =
 val F_SEM_TRUE_LEMMA =
  store_thm
   ("F_SEM_TRUE_LEMMA",
-   ``!m1 m2 m3 m4 m5 p f. 
+   ``!M p f. 
       F_CLOCK_FREE f /\ F_NEG_FREE f
       ==>
-      (F_SEM (m1,m2,m3,m4,m5) p (STRONG_CLOCK B_TRUE) f =
-        UF_SEM (m1,m2,m3,m4,m5) p f)``,
+      (F_SEM M p (STRONG_CLOCK B_TRUE) f =
+        UF_SEM M p f)``,
    recInduct (fetch "-" "UF_SEM_ind")
     THEN REPEAT CONJ_TAC
     THENL
