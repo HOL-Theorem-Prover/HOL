@@ -114,6 +114,8 @@ sig
   type 'a cmp       = 'a * 'a -> order
   val pair_compare  : ('a cmp * 'b cmp) -> ('a * 'b) cmp
   val list_compare  : 'a cmp -> 'a list cmp
+  val measure_cmp   : ('a -> int) -> 'a cmp
+  val inv_img_cmp   : ('b -> 'a) -> 'a cmp -> 'b cmp
 
   datatype 'a delta
        = SAME

@@ -262,6 +262,9 @@ fun pair_compare (acmp, bcmp) ((a1, b1), (a2, b2)) =
       EQUAL => bcmp(b1, b2)
     | x => x
 
+fun measure_cmp f (x,y) = Int.compare(f x, f y)
+fun inv_img_cmp f c (x,y) = c (f x, f y)
+
 (*---------------------------------------------------------------------------*
  * For loops                                                                 *
  *---------------------------------------------------------------------------*)
