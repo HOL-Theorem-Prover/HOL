@@ -1,5 +1,5 @@
 This example is a verification of the Miller-Rabin probabilistic
-primality test incorporating version 2 of probability theory and some
+primality test, incorporating version 2 of probability theory and some
 cute example probabilistic programs.
 
 The reason I haven't incorporated it into src/ is that it takes about

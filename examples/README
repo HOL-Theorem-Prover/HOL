@@ -58,6 +58,13 @@ Currently here are the following:
             Andy Gordon and Tom Melham,
             Proceedings of TPHOLs'96, Springer LNCS 1125.
 
+  * miller
+
+       This example is a verification of the Miller-Rabin
+       probabilistic primality test, incorporating version 2 of
+       probability theory and some cute example probabilistic
+       programs.
+
   * root2.sml
 
        An adaptation of a proof by John Harrison that the square 
