@@ -2,16 +2,24 @@
 
 \TYPE {C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c}
 
-\SYNOPSIS
-Permutes first two arguments to curried function: {C f x y} = {f y x}.
-
 \KEYWORDS
-combinator, permute.
+Combinator.
+
+\SYNOPSIS Permutes first two arguments to curried function: {C f x y}
+equals {f y x}.
 
 \FAILURE
-Never fails.
+{C f} never fails and {C f x} never fails, but {C f x y} fails if {f y x}
+fails.
+
+\EXAMPLE
+{
+    - map (C cons []) [1,2,3];
+
+    > val it = [[1], [2], [3]] : int list list
+}
 
 \SEEALSO
-\#\#, B, I, K, o, S, W.
+Lib, \#\#, A, B, I, K, S, W.
 
 \ENDDOC

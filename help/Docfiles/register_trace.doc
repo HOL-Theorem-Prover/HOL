@@ -1,6 +1,6 @@
-\DOC register_trace.doc
+\DOC register_trace
 
-\TYPE {register_trace.doc : string -> int ref -> unit}
+\TYPE {register_trace : string -> int ref -> unit}
 
 \SYNOPSIS
 Registers a new tracing variable.
@@ -19,6 +19,6 @@ Fails if there is already a tracing variable registered under the
 name given.
 
 \SEEALSO
-current_trace, reset_trace, reset_traces, trace, traces.
+Feedback, reset_trace, reset_traces, trace, traces.
 
 \ENDDOC

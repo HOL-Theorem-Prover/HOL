@@ -2,11 +2,10 @@
 
 \TYPE {concat : string -> string -> string}
 
+\KEYWORDS Curry
+
 \SYNOPSIS
 Concatenates two ML strings.
-
-\KEYWORDS
-string, join.
 
 \FAILURE
 Never fails.
@@ -22,9 +21,11 @@ Never fails.
     - concat "hello" (concat " " "world");
     > val it = "hello world" : string
 }
+
 \COMMENTS
+
 This function is open at the top level and is not the same as the
 Basis function {String.concat}.  The latter concatenates a list of
-strings, replacing {concatl} in the HOL distribution.
+strings.
 
 \ENDDOC

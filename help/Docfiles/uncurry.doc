@@ -1,8 +1,9 @@
 \DOC uncurry
 
-\TYPE {uncurry : ((* -> ** -> ***) -> (* # **) -> ***)}
+\TYPE {uncurry : ('a -> 'b -> 'c) -> ('a * 'b) -> 'c}
 
 \SYNOPSIS
+
 Converts a function taking two arguments into a function taking a single
 paired argument.
 
@@ -14,7 +15,16 @@ The application {uncurry f} returns {\(x,y). f x y}, so that
 \FAILURE
 Never fails.
 
+\EXAMPLE
+{
+    - fun add x y = x + y
+    > val add = fn : int -> int -> int
+
+    - uncurry add (3,4);
+    > val it = 7 : int
+}
+
 \SEEALSO
-curry.
+Lib, curry.
 
 \ENDDOC

@@ -1,42 +1,60 @@
 \DOC trace
 
-\TYPE {trace : string -> int -> unit}
+\TYPE {trace : string * int -> ('a -> 'b) -> 'a -> 'b}
 
 \SYNOPSIS
-Sets a tracing variable to a new value.
+Invoke a function with a specified level of tracing.
 
 \KEYWORDS
 Tracing.
 
 \DESCRIBE
-The {trace} function is used to set the value of a tracing variable.
-These variable control the verboseness of various tools within the
-system.  The higher these numbers, the more verbose the tools become.
-This can be useful both when debugging proofs (with the simplifier for
-example), and also as a guide to how an automatic proof is proceeding
-(with {mesonLib} for example).
 
-A call to {trace nm v} attempts to set the tracing variable associated
-with the string {nm} to value {v}.  A tracing variable is associated
-with a string by registering it using the function {register_trace}.
+The {trace} function is used to set the value of a tracing variable 
+for the duration of one top-level function call.
+
+A call to {trace (nm,i) f x} attempts to set the tracing variable
+associated with the string {nm} to value {i}.  Then it evaluates
+{f x} and returns the resulting value after restoring the 
+trace level of {nm}. 
 
 \FAILURE
 Fails if the name given is not associated with a registered tracing
-variable.
+variable. Also fails if the function invocation fails.
 
 \EXAMPLE
 {
-- REWRITE_CONV [] (Term`p /\ T /\ q`);
-> val it = |- p /\ T /\ q = p /\ q : Thm.thm
-- trace "rewrite" 1;
-> val it = () : unit
-- REWRITE_CONV [] (Term`p /\ T /\ q`);
-<<HOL message: Rewrite:
-|- T /\ q = q.>>
-> val it = |- p /\ T /\ q = p /\ q : Thm.thm
+    - load "mesonLib"; 
+
+    - trace ("meson",2) prove 
+         (concl SKOLEM_THM,mesonLib.MESON_TAC []);
+
+    0 inferences so far. Searching with maximum size 0.
+    0 inferences so far. Searching with maximum size 1.
+    Internal goal solved with 2 MESON inferences.
+    0 inferences so far. Searching with maximum size 0.
+    0 inferences so far. Searching with maximum size 1.
+    Internal goal solved with 2 MESON inferences.
+    0 inferences so far. Searching with maximum size 0.
+    0 inferences so far. Searching with maximum size 1.
+    Internal goal solved with 2 MESON inferences.
+    0 inferences so far. Searching with maximum size 0.
+    0 inferences so far. Searching with maximum size 1.
+    Internal goal solved with 2 MESON inferences.
+      solved with 2 MESON inferences.
+
+    > val it = |- !P. (!x. ?y. P x y) = ?f. !x. P x (f x) : thm
+
+    - traces();
+
+    > val it =
+        [{default = 1, name = "meson", trace_level = 1},
+         {default = 10, name = "Subgoal number", trace_level = 10},
+         {default = 0, name = "Rewrite", trace_level = 0},
+         {default = 0, name = "Ho_Rewrite", trace_level = 0}]
 }
 
 \SEEALSO
-current_trace, register_trace, reset_trace, reset_traces, traces.
+Feedback, register_trace, set_trace, reset_trace, reset_traces, traces, with_flag
 
 \ENDDOC

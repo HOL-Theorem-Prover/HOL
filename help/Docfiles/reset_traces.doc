@@ -1,6 +1,6 @@
 \DOC reset_traces
 
-\TYPE {.reset_traces : unit -> unit}
+\TYPE {reset_traces : unit -> unit}
 
 \SYNOPSIS
 Resets all registered tracing variables to their default values.
@@ -12,7 +12,7 @@ Tracing.
 Never fails.
 
 \SEEALSO
-current_trace, register_trace, reset_trace, trace, traces.
+Feedback, set_trace, register_trace, reset_trace, trace, traces.
 
 
 \ENDDOC

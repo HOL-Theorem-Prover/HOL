@@ -1,0 +1,21 @@
+\DOC index
+
+\TYPE {index : ''a -> ''a list -> int}
+
+\SYNOPSIS
+
+\KEYWORDS
+
+\DESCRIBE
+
+\FAILURE
+
+\EXAMPLE
+{
+}
+
+\COMMENTS
+
+\SEEALSO
+
+\ENDDOC

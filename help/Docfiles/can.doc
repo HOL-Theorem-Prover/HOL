@@ -1,6 +1,10 @@
 \DOC can
 
-\TYPE {can : ((* -> **) -> * -> bool)}
+\TYPE {can : ('a -> 'b) -> 'a -> bool}
+
+\KEYWORDS
+
+Failure, exceptions.
 
 \SYNOPSIS
 Tests for failure.
@@ -10,17 +14,22 @@ Tests for failure.
 It evaluates to {false} if the application fails.
 
 \FAILURE
-Never fails.
+
+Only fails if {f x} raises the {Interrupt} exception.
 
 \EXAMPLE
 {
-#hd [];;
-evaluation failed     hd
+    - hd [];
+    ! Uncaught exception: 
+    ! Empty
 
-#can hd [];;
-false : bool
+    - can hd [];
+    > val it = false : bool
+
+    - can (fn _ => raise Interrupt) 3;
+    > Interrupted.
 }
 \SEEALSO
-assert.
+Lib, assert, try, trye, partial, total, with_exn, assert_exn.
 
 \ENDDOC

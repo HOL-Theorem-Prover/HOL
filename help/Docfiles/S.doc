@@ -1,17 +1,18 @@
 \DOC S
 
-\TYPE {S : ((* -> ** -> ***) -> (* -> **) -> * -> ***)}
-
-\SYNOPSIS
-Performs function composition: {S f g x} = {f x (g x)} (the {S} combinator).
+\TYPE {S : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c}
 
 \KEYWORDS
-combinator.
+Combinator.
+
+\SYNOPSIS
+Generalized function composition: {S f g x} equals {f x (g x)}.
 
 \FAILURE
-Never fails.
+{S f} never fails and {S f g} never fails, but {S f g x} fails if 
+{g x} fails or {f x (g x)} fails.
 
 \SEEALSO
-\#, B, C, CB, Co, I, K, KI, o, oo, W.
+Lib, \#\#, A, B, C, I, K, W.
 
 \ENDDOC

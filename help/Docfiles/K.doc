@@ -1,17 +1,18 @@
 \DOC K
 
-\TYPE {K : (* -> ** -> *)}
-
-\SYNOPSIS
-Forms a constant function: {(K x) y} = {x}.
+\TYPE {K : 'a -> 'b -> 'a}
 
 \KEYWORDS
-combinator, constant.
+Combinator.
+
+\SYNOPSIS
+
+Forms a constant function: {K x y} = {x}.
 
 \FAILURE
 Never fails.
 
 \SEEALSO
-\#, B, C, CB, Co, I, KI, o, oo, S, W.
+Lib, \#\#, A, B, C, I, S, W.
 
 \ENDDOC

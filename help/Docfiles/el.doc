@@ -1,12 +1,12 @@
 \DOC el
 
-\TYPE {el : (int -> * list -> *)}
+\TYPE {el : int -> 'a list -> 'a}
 
 \SYNOPSIS
 Extracts a specified element from a list.
 
 \DESCRIBE
-{el i [x1;...;xn]} returns {xi}. Note that the elements are numbered starting
+{el i [x1,...,xn]} returns {xi}. Note that the elements are numbered starting
 from {1}, not {0}.
 
 \FAILURE
@@ -15,10 +15,11 @@ length of the list.
 
 \EXAMPLE
 {
-#el 3 [1;2;7;1];;
-7 : int
+    - el 3 [1,2,7,1];
+    > val it = 7 : int
+
 }
 \SEEALSO
-hd, tl.
+Lib, hd, tl, index.
 
 \ENDDOC

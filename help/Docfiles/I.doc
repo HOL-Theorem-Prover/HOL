@@ -1,17 +1,17 @@
 \DOC I
 
-\TYPE {I : (* -> *)}
+\TYPE {I : 'a -> 'a}
+
+\KEYWORDS
+Combinator.
 
 \SYNOPSIS
 Performs identity operation: {I x} = {x}.
-
-\KEYWORDS
-combinator, identity.
 
 \FAILURE
 Never fails.
 
 \SEEALSO
-\#, B, C, CB, Co, K, KI, o, oo, S, W.
+Lib, \#\#, A, B, C, K, o, S, W.
 
 \ENDDOC

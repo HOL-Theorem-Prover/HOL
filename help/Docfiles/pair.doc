@@ -1,8 +1,10 @@
 \DOC pair
 
-\TYPE {pair : (* -> ** -> (* # **))}
+\TYPE {pair : ('a -> 'b -> ('a # 'b))}
 
-\SYNOPSIS
+\SYNOPSIS 
+Not implemented. 
+
 Makes two values into a pair.
 
 \DESCRIBE

@@ -1,20 +1,17 @@
 \DOC B
 
-\TYPE {B : (('a -> 'b) -> ('c -> 'a) -> 'c -> 'b)}
-
-\SYNOPSIS
-Performs curried function-composition: {B f g x} = {f (g x)}.
-
-\COMMENTS
-Not yet in hol90
+\TYPE {B : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b}
 
 \KEYWORDS
 combinator, compose.
+
+\SYNOPSIS
+Performs curried function-composition: {B f g x} = {f (g x)}.
 
 \FAILURE
 Never fails.
 
 \SEEALSO
-\#\#, C, I, K, o, S, W.
+Lib, \#\#, A, C, I, K, S, W.
 
 \ENDDOC
