@@ -52,7 +52,7 @@ val b = rhs(concl(EVAL(Term`Atom((=) (HD(EXPLODE "b")))`)));
 val c = rhs(concl(EVAL(Term`Atom((=) (HD(EXPLODE "c")))`)));
 
 val r0 = Term `^One # ^Two`;
-val r1 = Term `Repeat (^One # ^Two)`
+val r1 = Term `Repeat (^One # ^Two)`;
 val r2 = Term `Repeat ^Any # ^One`;
 val r3 = Term `^r2 # ^r1`;
 
