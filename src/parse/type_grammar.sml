@@ -134,6 +134,9 @@ in
   new_tyop G0 s
 end
 
+fun remove_abbreviation(TYG(G, dict0)) s =
+    TYG(G, #1 (Binarymap.remove(dict0, s)) handle Binarymap.NotFound => dict0)
+
 fun rev_append [] acc = acc
   | rev_append (x::xs) acc = rev_append xs (x::acc)
 
