@@ -3,10 +3,10 @@ struct
 
 (*
    app load ["EquivType","pairTheory",
-             "numeralTheory","selectUtil","wordUtil","bitsTheory"];
+             "numeralTheory","wordUtil","bitsTheory"];
 *)
 
-open HolKernel boolLib wordUtil selectUtil Q Parse EquivType
+open HolKernel boolLib wordUtil Q Parse EquivType
      computeLib bossLib simpLib numLib pairTheory numeralTheory
      arithmeticTheory prim_recTheory bitsTheory;
 
@@ -897,7 +897,7 @@ val MOD_WL_ELIM = store_thm("MOD_WL_ELIM",
 val w2n_EVAL = store_thm("w2n_EVAL",
   `!n. w2n (n2w n) = MOD_WL n`,
   B_RW_TAC [w2n_def,n2w_def]
-    THEN ONCE_REWRITE_TAC [etar] THEN SELECT_TAC
+    THEN ONCE_REWRITE_TAC [etar] THEN SELECT_ELIM_TAC
     THEN B_RW_TAC [dest_word_mk_word_exists,dest_word_mk_word_eq2]
     THEN B_FULL_SIMP_TAC [EQUIV_def]
 );
@@ -941,27 +941,29 @@ val w2n_LT = store_thm("w2n_LT",
 
 (* -------------------------------------------------------- *)
 
-fun SELECT_WORD_TAC th1 th2 =
+fun SELECT_WORD_TAC th1 th2 n =
   B_SIMP_TAC [n2w_def,th1,mk_word_eq_one_one]
-    THEN ONCE_REWRITE_TAC [etar] THEN SELECT_TAC
+    THEN ONCE_REWRITE_TAC [etar]
+    THEN REPEAT STRIP_TAC
+    THEN NTAC n SELECT_ELIM_TAC
     THEN B_RW_TAC [dest_word_mk_word_exists,dest_word_mk_word_eq2]
     THEN ASM_B_SIMP_TAC [th2,EQUIV_SYM,GSYM EQUIV_QT];
 
 val ADD_EVAL = store_thm("ADD_EVAL",
   `!a b. n2w a + n2w b = n2w (a + b)`,
-  SELECT_WORD_TAC word_add_def ADD_WELLDEF);
+  SELECT_WORD_TAC word_add_def ADD_WELLDEF 2);
 
 val MUL_EVAL = store_thm("MUL_EVAL",
   `!a b. n2w a * n2w b = n2w (a * b)`,
-  SELECT_WORD_TAC word_mul_def MUL_WELLDEF);
+  SELECT_WORD_TAC word_mul_def MUL_WELLDEF 2);
 
 val ONE_COMP_EVAL = store_thm("ONE_COMP_EVAL",
   `!a. NOT (n2w a) = n2w (ONE_COMP a)`,
-  SELECT_WORD_TAC word_1comp_def ONE_COMP_WELLDEF);
+  SELECT_WORD_TAC word_1comp_def ONE_COMP_WELLDEF 1);
 
 val TWO_COMP_EVAL = store_thm("TWO_COMP_EVAL",
   `!a. ~(n2w a) = n2w (TWO_COMP a)`,
-  SELECT_WORD_TAC word_2comp_def TWO_COMP_WELLDEF);
+  SELECT_WORD_TAC word_2comp_def TWO_COMP_WELLDEF 1);
 
 val WORD_SUB_LT_EQ = store_thm("WORD_SUB_LT_EQ",
   `!a b. b <= a /\ LT_WL b ==> (n2w a - n2w b = n2w (a - b))`,
@@ -976,46 +978,46 @@ val WORD_SUB_LT_EQ = store_thm("WORD_SUB_LT_EQ",
 
 val LSR_ONE_EVAL = store_thm("LSR_ONE_EVAL",
   `!a. word_lsr1 (n2w a) = n2w (LSR_ONE a)`,
-  SELECT_WORD_TAC word_lsr1_def LSR_ONE_WELLDEF);
+  SELECT_WORD_TAC word_lsr1_def LSR_ONE_WELLDEF 1);
 
 val ASR_ONE_EVAL = store_thm("ASR_ONE_EVAL",
   `!a. word_asr1 (n2w a) = n2w (ASR_ONE a)`,
-  SELECT_WORD_TAC word_asr1_def ASR_ONE_WELLDEF
+  SELECT_WORD_TAC word_asr1_def ASR_ONE_WELLDEF 1
 );
 
 val ROR_ONE_EVAL = store_thm("ROR_ONE_EVAL",
   `!a. word_ror1 (n2w a) = n2w (ROR_ONE a)`,
-  SELECT_WORD_TAC word_ror1_def ROR_ONE_WELLDEF
+  SELECT_WORD_TAC word_ror1_def ROR_ONE_WELLDEF 1
 );
 
 val RRX_EVAL = store_thm("RRX_EVAL",
   `!a c. RRX c (n2w a) = n2w (RRXn c a)`,
-  SELECT_WORD_TAC RRX_def RRX_WELLDEF
+  SELECT_WORD_TAC RRX_def RRX_WELLDEF 1
 );
 
 val LSB_EVAL = store_thm("LSB_EVAL",
   `!a. LSB (n2w a) = LSBn a`,
-  SELECT_WORD_TAC LSB_def LSB_WELLDEF
+  SELECT_WORD_TAC LSB_def LSB_WELLDEF 1
 );
 
 val MSB_EVAL = store_thm("MSB_EVAL",
   `!a. MSB (n2w a) = MSBn a`,
-  SELECT_WORD_TAC MSB_def MSB_WELLDEF
+  SELECT_WORD_TAC MSB_def MSB_WELLDEF 1
 );
 
 val OR_EVAL = store_thm("OR_EVAL",
   `!a b. n2w a | n2w b = n2w (OR a b)`,
-  SELECT_WORD_TAC bitwise_or_def OR_WELLDEF
+  SELECT_WORD_TAC bitwise_or_def OR_WELLDEF 2
 );
 
 val EOR_EVAL = store_thm("EOR_EVAL",
   `!a b. n2w a # n2w b = n2w (EOR a b)`,
-  SELECT_WORD_TAC bitwise_eor_def EOR_WELLDEF
+  SELECT_WORD_TAC bitwise_eor_def EOR_WELLDEF 2
 );
 
 val AND_EVAL = store_thm("AND_EVAL",
   `!a b. n2w a & n2w b = n2w (AND a b)`,
-  SELECT_WORD_TAC bitwise_and_def AND_WELLDEF
+  SELECT_WORD_TAC bitwise_and_def AND_WELLDEF 2
 );
 
 val BITS_EVAL = store_thm("BITS_EVAL",
