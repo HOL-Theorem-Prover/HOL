@@ -6,7 +6,7 @@
 structure probUtil :> probUtil =
 struct
 
-open HolKernel Parse Hol_pp basicHol90Lib Psyntax;
+open HolKernel Parse Hol_pp boolLib;
 
 infixr 0 THEN THENL ORELSE THENC;
 infix 1 THEN1;
@@ -16,7 +16,7 @@ infix 1 THEN1;
 (* ------------------------------------------------------------------------- *)
 
 fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "probUtil",
+  = HOL_ERR{origin_structure = "probUtil",
 		      origin_function = f, message = s};
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;

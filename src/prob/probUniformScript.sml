@@ -1,6 +1,6 @@
 (* non-interactive mode
 *)
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory "probUniform";
 
@@ -29,15 +29,14 @@ if !show_assums then () else
   show_assums := true);
 *)
 
-open Psyntax bossLib arithmeticTheory numTheory realTheory seqTheory
-     pred_setTheory
+open bossLib arithmeticTheory numTheory realTheory seqTheory pred_setTheory
      ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
      probUtil booleanSequenceTheory booleanSequenceTools probExtraTheory
      probExtraTools probCanonTheory probCanonTools probAlgebraTheory
      probTheory stateTransformerTheory probIndepTheory;
 
 infixr 0 ++ << || ORELSEC ##;
-infix 1 >>;
+infix 1 >> |->;
 nonfix THEN THENL ORELSE;
 
 val op++ = op THEN;
@@ -50,7 +49,7 @@ val op>> = op THEN1;
 (* ------------------------------------------------------------------------- *)
 
 fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "probUniform",
+  = HOL_ERR{origin_structure = "probUniform",
 		      origin_function = f, message = s};
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
@@ -260,7 +259,7 @@ val PROB_UNIF = store_thm
         ++ PSET_TAC [o_DEF]
         ++ PROVE_TAC [])
     ++ MP_TAC (Q.SPECL [`unif n`, `$= m`, `\s. SHD s = F`]
-               (INST_TYPE [(``:num``, ``:'a``)] INDEP_PROB))
+               (INST_TYPE [alpha |-> numSyntax.num] INDEP_PROB))
     ++ RW_TAC std_ss [INDEP_UNIF, MEASURABLE_BASIC]
     ++ KILL_ALL_TAC
     ++ MP_TAC (Q.SPEC `F` (CONJUNCT2 (CONJUNCT2 PROB_BASIC)))
@@ -282,7 +281,7 @@ val PROB_UNIF = store_thm
         ++ PSET_TAC [o_DEF]
         ++ PROVE_TAC [])
     ++ MP_TAC (Q.SPECL [`unif n`, `$= m`, `\s. SHD s = T`]
-               (INST_TYPE [(``:num``, ``:'a``)] INDEP_PROB))
+               (INST_TYPE [alpha |-> numSyntax.num] INDEP_PROB))
     ++ RW_TAC std_ss [INDEP_UNIF, MEASURABLE_BASIC]
     ++ KILL_ALL_TAC
     ++ MP_TAC (Q.SPEC `T` (CONJUNCT2 (CONJUNCT2 PROB_BASIC)))
@@ -335,8 +334,7 @@ val PROB_UNIF_BOUND = store_thm
    ++ KNOW_TAC `k < 2 EXP unif_bound n` >> DECIDE_TAC
    ++ POP_ASSUM (fn th => RW_TAC std_ss [th, o_DEF, PROB_UNIF])
    ++ KNOW_TAC `&(SUC k) = &k + 1`
-   >> (SUFF_TAC `&(SUC k) = &(k + 1)` >> RW_TAC real_ss [REAL_ADD]
-       ++ DECIDE_TAC)
+   >> (RW_TAC real_ss [REAL_ADD,REAL_INJ])
    ++ POP_ASSUM (fn th => RW_TAC real_ss [th, REAL_ADD_RDISTRIB]));
 
 val PROB_UNIF_GOOD = store_thm
@@ -392,7 +390,7 @@ val PROB_UNIFORM_LOWER_BOUND = store_thm
    ++ ASM_REWRITE_TAC []
    ++ RW_TAC std_ss []
    ++ KNOW_TAC `&(SUC (SUC m)) = &(SUC m) + 1`
-   >> (RW_TAC arith_ss [REAL_ADD] ++ DECIDE_TAC)
+   >> (RW_TAC arith_ss [REAL_ADD,REAL_INJ] ++ DECIDE_TAC)
    ++ RW_TAC std_ss [REAL_ADD_RDISTRIB]
    ++ MATCH_MP_TAC REAL_LT_ADD2
    ++ RW_TAC real_ss []);
@@ -418,7 +416,7 @@ val PROB_UNIFORM_UPPER_BOUND = store_thm
    ++ ASM_REWRITE_TAC []
    ++ RW_TAC std_ss []
    ++ KNOW_TAC `&(SUC (SUC m)) = &(SUC m) + 1`
-   >> (RW_TAC arith_ss [REAL_ADD] ++ DECIDE_TAC)
+   >> (RW_TAC arith_ss [REAL_ADD,REAL_INJ] ++ DECIDE_TAC)
    ++ RW_TAC std_ss [REAL_ADD_RDISTRIB]
    ++ MATCH_MP_TAC REAL_LT_ADD2
    ++ RW_TAC real_ss []);
@@ -447,7 +445,7 @@ val PROB_UNIFORM_PAIR_SUC = store_thm
    ++ RW_TAC std_ss [LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR]
    ++ RW_TAC std_ss [PROVE [] `~X /\ X = F`]
    ++ KNOW_TAC `!m. (m = k) /\ (m < SUC n) = (m = k)` >> DECIDE_TAC
-   ++ KNOW_TAC `!m. (m = k') /\ (m < SUC n) = (m = k')` >> DECIDE_TAC
+   ++ KNOW_TAC `!m. (m = k') /\ (m < SUC n) = (m = k')` >> RW_TAC arith_ss []
    ++ RW_TAC std_ss [PROVE [] `X \/ (X /\ Y) = X`]
    ++ NTAC 2 (POP_ASSUM (K ALL_TAC))
    ++ KNOW_TAC `(\s. ~(FST (unif n s) < SUC n) /\
@@ -470,16 +468,16 @@ val PROB_UNIFORM_PAIR_SUC = store_thm
        ++ RW_TAC std_ss [] <<
        [MATCH_MP_TAC MEASURABLE_INTER
         ++ MP_TAC (Q.SPEC `unif n`
-                   (INST_TYPE [(``:num``, ``:'a``)] INDEP_MEASURABLE2))
+                   (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE2))
         ++ MP_TAC (Q.SPEC `unif n`
-                   (INST_TYPE [(``:num``, ``:'a``)] INDEP_MEASURABLE1))
+                   (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE1))
         ++ RW_TAC std_ss [o_ASSOC]
         ++ POP_ASSUM MATCH_MP_TAC
         ++ MP_TAC (Q.SPEC `uniform t (SUC n)`
-                   (INST_TYPE [(``:num``, ``:'a``)] INDEP_MEASURABLE1))
+                   (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE1))
         ++ RW_TAC std_ss [o_ASSOC],
         MP_TAC (Q.SPEC `unif n`
-                (INST_TYPE [(``:num``, ``:'a``)] INDEP_MEASURABLE1))
+                (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE1))
         ++ RW_TAC std_ss [o_ASSOC],
         PSET_TAC [o_DEF]
         ++ PROVE_TAC []])
@@ -489,7 +487,7 @@ val PROB_UNIFORM_PAIR_SUC = store_thm
           = prob ((\m. ~(m < SUC n)) o FST o unif n)
             * prob ((\m. m = k) o FST o uniform t (SUC n))`
    >> (MP_TAC (Q.SPEC `unif n`
-               (INST_TYPE [(``:num``, ``:'a``)] INDEP_PROB))
+               (INST_TYPE [alpha |-> numSyntax.num] INDEP_PROB))
        ++ MP_TAC (Q.SPEC `n` INDEP_UNIF)
        ++ RW_TAC std_ss [o_ASSOC]
        ++ POP_ASSUM MATCH_MP_TAC
@@ -516,16 +514,16 @@ val PROB_UNIFORM_PAIR_SUC = store_thm
        ++ RW_TAC std_ss [] <<
        [MATCH_MP_TAC MEASURABLE_INTER
         ++ MP_TAC (Q.SPEC `unif n`
-                   (INST_TYPE [(``:num``, ``:'a``)] INDEP_MEASURABLE2))
+                   (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE2))
         ++ MP_TAC (Q.SPEC `unif n`
-                   (INST_TYPE [(``:num``, ``:'a``)] INDEP_MEASURABLE1))
+                   (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE1))
         ++ RW_TAC std_ss [o_ASSOC]
         ++ POP_ASSUM MATCH_MP_TAC
         ++ MP_TAC (Q.SPEC `uniform t (SUC n)`
-                   (INST_TYPE [(``:num``, ``:'a``)] INDEP_MEASURABLE1))
+                   (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE1))
         ++ RW_TAC std_ss [o_ASSOC],
         MP_TAC (Q.SPEC `unif n`
-                (INST_TYPE [(``:num``, ``:'a``)] INDEP_MEASURABLE1))
+                (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE1))
         ++ RW_TAC std_ss [o_ASSOC],
         PSET_TAC [o_DEF]
         ++ PROVE_TAC []])
@@ -535,7 +533,7 @@ val PROB_UNIFORM_PAIR_SUC = store_thm
           = prob ((\m. ~(m < SUC n)) o FST o unif n)
             * prob ((\m. m = k') o FST o uniform t (SUC n))`
    >> (MP_TAC (Q.SPEC `unif n`
-               (INST_TYPE [(``:num``, ``:'a``)] INDEP_PROB))
+               (INST_TYPE [alpha |-> numSyntax.num] INDEP_PROB))
        ++ MP_TAC (Q.SPEC `n` INDEP_UNIF)
        ++ RW_TAC std_ss [o_ASSOC]
        ++ POP_ASSUM MATCH_MP_TAC
@@ -560,7 +558,7 @@ val PROB_UNIFORM_PAIR_SUC = store_thm
    ++ MP_TAC (Q.SPECL [`(\m. m < SUC n) o FST o unif n`, `1 / 2`]
               PROB_COMPL_LE1)
    ++ MP_TAC (Q.SPEC `unif n`
-              (INST_TYPE [(``:num``, ``:'a``)] INDEP_MEASURABLE1))
+              (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE1))
    ++ RW_TAC std_ss [INDEP_UNIF, o_ASSOC]
    ++ KILL_ALL_TAC
    ++ RW_TAC real_ss [o_DEF]

@@ -1,6 +1,6 @@
 (* non-interactive mode
 *)
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory "probIndep";
 
@@ -27,7 +27,7 @@ if !show_assums then () else
   show_assums := true);
 *)
 
-open Psyntax bossLib arithmeticTheory realTheory seqTheory pred_setTheory
+open bossLib arithmeticTheory realTheory seqTheory pred_setTheory
      ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
      probUtil booleanSequenceTheory booleanSequenceTools probExtraTheory
      probExtraTools probCanonTheory probCanonTools probAlgebraTheory
@@ -47,7 +47,7 @@ val op>> = op THEN1;
 (* ------------------------------------------------------------------------- *)
 
 fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "probIndep",
+  = HOL_ERR{origin_structure = "probIndep",
 		      origin_function = f, message = s};
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
@@ -319,7 +319,7 @@ val ALG_COVER_SET_INDUCTION = store_thm
 val ALG_COVER_EXISTS_UNIQUE = store_thm
   ("ALG_COVER_EXISTS_UNIQUE",
    ``!l. alg_cover_set l ==> !s. ?!x. MEM x l /\ alg_embed x s``,
-   Ho_resolve.MATCH_MP_TAC ALG_COVER_SET_INDUCTION
+   HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
    ++ CONJ_TAC >> RW_TAC list_ss [MEM, ALG_COVER_UNIV, K_DEF, alg_embed_def]
    ++ RW_TAC std_ss [] >> PROVE_TAC [ALG_COVER_WELL_DEFINED]
@@ -372,7 +372,7 @@ val ALG_COVER_HEAD = store_thm
   ("ALG_COVER_HEAD",
    ``!l. alg_cover_set l
      ==> !f. (f o alg_cover l = algebra_embed (FILTER f l))``,
-   Ho_resolve.MATCH_MP_TAC ALG_COVER_SET_INDUCTION
+   HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ CONJ_TAC
    >> PSET_TAC [ALG_COVER_UNIV, K_DEF, o_DEF, FILTER, ALGEBRA_EMBED_BASIC]
    ++ RW_TAC std_ss [o_DEF, GSYM EQ_EXT_EQ]
@@ -409,7 +409,7 @@ val ALG_COVER_TAIL_MEASURABLE = store_thm
    ``!l. alg_cover_set l
      ==> !q. (measurable (q o (\x. SDROP (LENGTH (alg_cover l x)) x))
               = measurable q)``,
-   Ho_resolve.MATCH_MP_TAC ALG_COVER_SET_INDUCTION
+   HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ CONJ_TAC
    >> PSET_TAC [ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, o_DEF, I_THM]
    ++ RW_TAC std_ss []
@@ -425,7 +425,7 @@ val ALG_COVER_TAIL_PROB = store_thm
    ``!l. alg_cover_set l
      ==> !q. measurable q
      ==> (prob (q o (\x. SDROP (LENGTH (alg_cover l x)) x)) = prob q)``,
-   Ho_resolve.MATCH_MP_TAC ALG_COVER_SET_INDUCTION
+   HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ CONJ_TAC
    >> PSET_TAC [ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, o_DEF, I_THM]
    ++ RW_TAC std_ss []
@@ -460,7 +460,7 @@ val INDEP_INDEP_SET_LEMMA = store_thm
      ==> !x. MEM x l
      ==> (prob (alg_embed x INTER q o (\x. SDROP (LENGTH (alg_cover l x)) x))
           = (1 / 2) pow LENGTH x * prob q)``,
-   Ho_resolve.MATCH_MP_TAC ALG_COVER_SET_INDUCTION
+   HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ REPEAT STRIP_TAC
    >> PSET_TAC [MEM, ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, I_THM, o_DEF,
 		ALG_EMBED_BASIC, pow, REAL_MUL_LID]
@@ -641,7 +641,7 @@ val INDEP_BIND = store_thm
    ++ Q.SPEC_TAC (`r`, `r`)
    ++ Q.PAT_ASSUM `alg_cover_set l` MP_TAC
    ++ Q.SPEC_TAC (`l`, `l`)
-   ++ Ho_resolve.MATCH_MP_TAC ALG_COVER_SET_INDUCTION
+   ++ HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ RW_TAC std_ss [] <<
    [POP_ASSUM (MP_TAC o Q.SPEC `r ([]:bool list)`)
     ++ RW_TAC std_ss [BIND_DEF, o_DEF, ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def,

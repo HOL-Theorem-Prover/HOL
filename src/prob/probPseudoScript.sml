@@ -1,6 +1,6 @@
 (* non-interactive mode
 *)
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory "probPseudo";
 
@@ -23,14 +23,13 @@ if !show_assums then () else
   show_assums := true);
 *)
 
-open Psyntax bossLib arithmeticTheory numTheory realTheory seqTheory
-     pred_setTheory
+open bossLib arithmeticTheory numTheory realTheory seqTheory pred_setTheory
      ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
      probUtil booleanSequenceTheory booleanSequenceTools probExtraTheory
      probExtraTools;
 
 infixr 0 ++ << || ORELSEC ##;
-infix 1 >>;
+infix 1 >> |->;
 nonfix THEN THENL ORELSE;
 
 val op++ = op THEN;
@@ -43,7 +42,7 @@ val op>> = op THEN1;
 (* ------------------------------------------------------------------------- *)
 
 fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "probPseudo",
+  = HOL_ERR{origin_structure = "probPseudo",
 		      origin_function = f, message = s};
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
@@ -73,9 +72,9 @@ val PSEUDO_EXECUTE = prove
 val PSEUDO_LINEAR1_EXECUTE = save_thm
   ("PSEUDO_LINEAR1_EXECUTE",
    Q.SPECL [`pseudo_linear_hd`, `pseudo_linear_tl 103 95 79`]
-     (INST_TYPE [(``:num``, ``:'a``)] PSEUDO_EXECUTE));
+     (INST_TYPE [alpha |-> numSyntax.num] PSEUDO_EXECUTE));
 
-val pseudo_linear1_def = Parse.new_specification
+val pseudo_linear1_def = new_specification
   {consts = [{const_name="pseudo_linear1",fixity=Prefix}],
    name = "pseudo_linear1_def",
    sat_thm = PSEUDO_LINEAR1_EXECUTE};

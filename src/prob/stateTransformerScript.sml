@@ -1,5 +1,5 @@
 (* non-interactive mode *)
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory "stateTransformer";
 
@@ -27,7 +27,7 @@ val op>> = op THEN1;
 (* ------------------------------------------------------------------------- *)
 
 fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "stateTransformer",
+  = HOL_ERR{origin_structure = "stateTransformer",
 		      origin_function = f, message = s};
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;

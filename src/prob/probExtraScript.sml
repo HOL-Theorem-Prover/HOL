@@ -1,4 +1,4 @@
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory "probExtra";
 
@@ -16,7 +16,7 @@ if !show_assums then () else (
 );
 *)
 
-open Psyntax bossLib arithmeticTheory realTheory seqTheory pred_setTheory
+open bossLib arithmeticTheory realTheory seqTheory pred_setTheory pairLib
      ind_typeTheory listTheory rich_listTheory pairTheory realLib probUtil;
 
 infixr 0 ++ << || ORELSEC ##;
@@ -37,9 +37,8 @@ type conv = Abbrev.conv
 (* Error handling.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "probExtraTheory",
-		      origin_function = f, message = s};
+val ERROR = mk_HOL_ERR "probExtraTheory";
+
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
 
@@ -47,10 +46,7 @@ fun assert b f s = if b then () else assert_false f s;
 (* Extra definitions/theorems from boolTheory.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val EQ_EXT_EQ = store_thm
-  ("EQ_EXT_EQ",
-   ``!(f:'a->'b) g. (!x. f x = g x) = (f = g)``,
-   PROVE_TAC [EQ_EXT]);
+val EQ_EXT_EQ = save_thm("EQ_EXT_EQ", GSYM boolTheory.FUN_EQ_THM);
 
 val RAND_THM = store_thm
   ("RAND_THM",

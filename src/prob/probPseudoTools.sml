@@ -7,7 +7,7 @@
 structure probPseudoTools :> probPseudoTools =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 (* interactive mode
 if !show_assums then () else

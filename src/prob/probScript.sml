@@ -1,6 +1,6 @@
 (* non-interactive mode
 *)
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory "prob";
 
@@ -25,7 +25,7 @@ if !show_assums then () else
   show_assums := true);
 *)
 
-open Psyntax bossLib arithmeticTheory realTheory seqTheory pred_setTheory
+open bossLib arithmeticTheory realTheory seqTheory pred_setTheory
      ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
      probUtil booleanSequenceTheory booleanSequenceTools probExtraTheory
      probExtraTools probCanonTheory probCanonTools probAlgebraTheory;
@@ -44,7 +44,7 @@ val op>> = op THEN1;
 (* ------------------------------------------------------------------------- *)
 
 fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "prob",
+  = HOL_ERR{origin_structure = "prob",
 		      origin_function = f, message = s};
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
@@ -186,7 +186,7 @@ val ALGEBRA_MEASURE_DEF_ALT = store_thm
   ("ALGEBRA_MEASURE_DEF_ALT",
    ``!l. algebra_measure l = alg_measure (alg_canon l)``,
    RW_TAC std_ss [algebra_measure_def]
-   ++ Ho_resolve.MATCH_MP_TAC REAL_INF_MIN
+   ++ HO_MATCH_MP_TAC REAL_INF_MIN
    ++ RW_TAC std_ss []
    >> (EXISTS_TAC ``alg_canon l``
        ++ RW_TAC std_ss []
@@ -204,7 +204,7 @@ val ALGEBRA_MEASURE_BASIC = store_thm
 val ALGEBRA_CANON_MEASURE_MAX = store_thm
   ("ALGEBRA_CANON_MEASURE_MAX",
    ``!l. algebra_canon l ==> alg_measure l <= 1``,
-   Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
+   HO_MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
    ++ CONJ_TAC >> (RW_TAC list_ss [alg_measure_def] ++ REAL_ARITH_TAC)
    ++ CONJ_TAC >> (RW_TAC list_ss [alg_measure_def, pow] ++ REAL_ARITH_TAC)
    ++ RW_TAC list_ss [ALG_MEASURE_APPEND]
@@ -230,7 +230,7 @@ val ALGEBRA_MEASURE_MONO_EMBED = store_thm
            ==> algebra_embed b SUBSET algebra_embed c
            ==> alg_measure b <= alg_measure c`
    >> PROVE_TAC [algebra_canon_def, ALG_CANON_IDEMPOT]
-   ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
+   ++ HO_MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
    ++ PSET_TAC [algebra_embed_def, ALG_MEASURE_BASIC, alg_embed_def] <<
    [Cases_on `b` >> RW_TAC std_ss [REAL_LE_REFL, ALG_MEASURE_BASIC]
     ++ MP_TAC (Q.SPEC `h` ALG_EMBED_POPULATED)
@@ -238,7 +238,7 @@ val ALGEBRA_MEASURE_MONO_EMBED = store_thm
     RW_TAC std_ss [ALGEBRA_CANON_MEASURE_MAX],
     NTAC 2 (POP_ASSUM MP_TAC)
     ++ Q.SPEC_TAC (`b`, `b`)
-    ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_CASES
+    ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ PSET_TAC [ALG_MEASURE_BASIC, ALG_MEASURE_POS, ALGEBRA_EMBED_BASIC] <<
     [KNOW_TAC `alg_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
                = alg_canon [[]]`
@@ -269,7 +269,7 @@ val ALG_MEASURE_COMPL = store_thm
    ``!b. algebra_canon b ==> !c. algebra_canon c
          ==> (COMPL (algebra_embed b) = algebra_embed c)
          ==> (alg_measure b + alg_measure c = 1)``,
-   Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
+   HO_MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
    ++ PSET_TAC [ALG_MEASURE_BASIC, ALGEBRA_EMBED_BASIC] <<
    [KNOW_TAC `alg_canon c = alg_canon [[]]`
     >> PSET_TAC [ALG_CANON_REP, ALGEBRA_EMBED_BASIC]
@@ -281,7 +281,7 @@ val ALG_MEASURE_COMPL = store_thm
                  ALG_MEASURE_BASIC, REAL_ADD_RID],
     NTAC 2 (POP_ASSUM MP_TAC)
     ++ Q.SPEC_TAC (`c`, `c`)
-    ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_CASES
+    ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ PSET_TAC [ALGEBRA_EMBED_BASIC, ALG_MEASURE_BASIC] <<
     [SUFF_TAC `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) = [[]]`
      >> PROVE_TAC [MEM_NIL_STEP, MEM]
@@ -314,7 +314,7 @@ val ALG_MEASURE_ADDITIVE = store_thm
 	 ==> (algebra_embed c INTER algebra_embed d = {})
 	     /\ (algebra_embed b = algebra_embed c UNION algebra_embed d)
 	     ==> (alg_measure b = alg_measure c + alg_measure d)``,
-   Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
+   HO_MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
    ++ PSET_TAC [ALG_MEASURE_BASIC, ALGEBRA_EMBED_BASIC] <<
    [KNOW_TAC `c = []` >> PROVE_TAC [ALGEBRA_CANON_EMBED_EMPTY]
     ++ KNOW_TAC `d = []` >> PROVE_TAC [ALGEBRA_CANON_EMBED_EMPTY]
@@ -326,7 +326,7 @@ val ALG_MEASURE_ADDITIVE = store_thm
     ++ PROVE_TAC [],
     NTAC 4 (POP_ASSUM MP_TAC)
     ++ Q.SPEC_TAC (`c`, `c`)
-    ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_CASES
+    ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ PSET_TAC [ALG_MEASURE_BASIC, ALGEBRA_EMBED_BASIC] <<
     [SUFF_TAC `d = APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)`
      >> RW_TAC real_ss []
@@ -339,7 +339,7 @@ val ALG_MEASURE_ADDITIVE = store_thm
      ++ PROVE_TAC [ALGEBRA_CANON_EMBED_UNIV],
      NTAC 3 (POP_ASSUM MP_TAC)
      ++ Q.SPEC_TAC (`d`, `d`)
-     ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_CASES
+     ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
      ++ PSET_TAC [ALG_MEASURE_BASIC, ALGEBRA_EMBED_BASIC] <<
      [SUFF_TAC `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) =
                 APPEND (MAP (CONS T) l1') (MAP (CONS F) l2')`
@@ -393,7 +393,7 @@ val PROB_ALGEBRA = store_thm
   ("PROB_ALGEBRA",
    ``!l. prob (algebra_embed l) = algebra_measure l``,
    RW_TAC list_ss [prob_def]
-   ++ Ho_resolve.MATCH_MP_TAC REAL_SUP_MAX
+   ++ HO_MATCH_MP_TAC REAL_SUP_MAX
    ++ CONJ_TAC <<
    [RW_TAC std_ss [SUBSET_DEF, SPECIFICATION]
     ++ PROVE_TAC [],
@@ -515,7 +515,7 @@ val PROB_STL = store_thm
    >> (DISCH_THEN (MP_TAC o Q.SPEC `alg_canon b'`)
        ++ RW_TAC std_ss [algebra_canon_def, ALG_CANON_EMBED, ALG_CANON_IDEMPOT]
        ++ PROVE_TAC [algebra_canon_def, ALG_CANON_EMBED, ALG_CANON_IDEMPOT])
-   ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_CASES
+   ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
    ++ PSET_TAC [ALGEBRA_EMBED_BASIC, ALG_MEASURE_BASIC, o_DEF] <<
    [SUFF_TAC `b = []` >> RW_TAC std_ss [ALG_MEASURE_BASIC]
     ++ KNOW_TAC `!v. ~algebra_embed b v`

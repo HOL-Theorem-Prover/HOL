@@ -6,11 +6,11 @@
 structure probExtraTools :> probExtraTools = 
 struct
 
-open HolKernel Parse basicHol90Lib;
-open Psyntax bossLib pred_setTheory probUtil probExtraTheory;
+open HolKernel Parse boolLib;
+open bossLib pred_setTheory probUtil probExtraTheory;
 
-infixr 0 ++ || ORELSEC ## THENC;
-infix 1 >>;
+infixr 0 ++ || ORELSEC ## THENC -->;
+infix 1 >> |->;
 nonfix THEN ORELSE;
 
 val op++ = op THEN;
@@ -21,9 +21,7 @@ val op>> = op THEN1;
 (* Error handling.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "probExtraTools",
-		      origin_function = f, message = s};
+val ERROR = mk_HOL_ERR "probExtraTools";
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
 
@@ -70,16 +68,19 @@ fun pset_ss_ty ty = simpLib.++(std_ss, simpLib.SIMPSET {
 	    name = "IN_LAMBDA_CONV", trace = 2}],
   dprocs = [],
   filter = NONE,
-  rewrs = map (INST_TYPE [(ty, ``:'a``)]) (GSYM SPECIFICATION::pred_set_rewrs),
+  rewrs = map (INST_TYPE [alpha |-> ty]) 
+              (GSYM SPECIFICATION::pred_set_rewrs),
   congs = []});
 
 fun PSET_TAC_ty ty ths
   = REPEAT (POP_ASSUM MP_TAC)
     ++ RW_TAC (pset_ss_ty ty) ths
     ++ REPEAT (POP_ASSUM MP_TAC)
-    ++ RW_TAC std_ss (INST_TYPE [(ty, ``:'a``)] SPECIFICATION::ths);
+    ++ RW_TAC std_ss (INST_TYPE [alpha |-> ty] SPECIFICATION::ths);
 
-val pset_ss = pset_ss_ty ``:num->bool``;
-val PSET_TAC = PSET_TAC_ty ``:num->bool``;
+open numSyntax;
+
+val pset_ss  = pset_ss_ty (num --> bool)
+val PSET_TAC = PSET_TAC_ty (num --> bool)
 
 end;

@@ -1,6 +1,6 @@
 (* non-interactive mode
 *)
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory "probCanon";
 
@@ -10,7 +10,6 @@ if !show_assums then () else (
   load "realLib";
   load "arithmeticTheory";
   load "pred_setTheory";
-  load "ind_typeTheory";
   load "rich_listTheory";
   load "pairTheory";
   load "probUtil";
@@ -19,9 +18,8 @@ if !show_assums then () else (
 );
 *)
 
-open Psyntax bossLib arithmeticTheory realTheory seqTheory pred_setTheory
-     ind_typeTheory listTheory rich_listTheory pairTheory realLib
-     probUtil probExtraTheory;
+open bossLib arithmeticTheory realTheory seqTheory pred_setTheory pairLib
+     listTheory rich_listTheory pairTheory realLib probUtil probExtraTheory;
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >>;
@@ -36,9 +34,7 @@ val op>> = op THEN1;
 (* Error handling.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "probCanon",
-		      origin_function = f, message = s};
+val ERROR = mk_HOL_ERR "probCanon";
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
 
@@ -49,8 +45,9 @@ fun assert b f s = if b then () else assert_false f s;
 val alg_twin_def = Define
   `alg_twin x y = ?l. (x = SNOC T l) /\ (y = SNOC F l)`;
 
-val alg_order_def = Define `(alg_order [] l' = T)
-  /\ (alg_order l [] = F)
+val alg_order_def = Define 
+    `(alg_order [] _ = T)
+  /\ (alg_order _ [] = F)
   /\ (alg_order (h::t) (h'::t') = ((h = T) /\ (h' = F))
       \/ ((h = h') /\ alg_order t t'))`;
 
@@ -734,7 +731,7 @@ val ALG_CANON2_PREFIXFREE_PRESERVE = store_thm
 
 val ALG_CANON2_SHORTENS = store_thm
   ("ALG_CANON2_SHORTENS",
-   ``!l x. MEM x (alg_canon2 l) ==> (?y. MEM y l /\ IS_PREFIX y x)``,
+   ``!l x. MEM x (alg_canon2 l) ==> ?y. MEM y l /\ IS_PREFIX y x``,
    REWRITE_TAC [alg_canon2_def]
    ++ Induct >> RW_TAC list_ss [MEM, FOLDR]
    ++ RW_TAC list_ss [FOLDR]

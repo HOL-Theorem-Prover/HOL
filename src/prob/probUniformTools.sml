@@ -7,7 +7,7 @@
 structure probUniformTools :> probUniformTools =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 (* interactive mode
 if !show_assums then () else
@@ -18,14 +18,14 @@ if !show_assums then () else
   show_assums := true);
 *)
 
-open Psyntax Drule bossLib reduceLib probPseudoTools probUniformTheory;
+open Drule bossLib PairedLambda reduceLib probPseudoTools probUniformTheory;
 
 infix 1 THENC
 infix 0 ORELSEC;
 
 val FST_CONV = RATOR_CONV o RAND_CONV;
 val SND_CONV = RAND_CONV;
-val BETA_PAIR_CONV = DEPTH_CONV (Let_conv.GEN_BETA_CONV);
+val BETA_PAIR_CONV = DEPTH_CONV GEN_BETA_CONV;
 
 fun UNIF_CONV tm
   = (RATOR_CONV REDUCE_CONV
@@ -35,9 +35,8 @@ fun UNIF_CONV tm
             THENC REWR_CONV LET_THM
             THENC RAND_CONV UNIF_CONV
             THENC BETA_PAIR_CONV
-            THENC FST_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV (SHD_PSEUDO_CONV)))
-                            THENC COND_CONV
-                            THENC REDUCE_CONV)
+            THENC FST_CONV(RATOR_CONV(RATOR_CONV (RAND_CONV (SHD_PSEUDO_CONV)))
+                            THENC COND_CONV THENC REDUCE_CONV)
             THENC SND_CONV STL_PSEUDO_CONV)) tm;
 
 fun UNIFORM_CONV tm

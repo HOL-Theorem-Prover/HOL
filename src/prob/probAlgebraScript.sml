@@ -1,12 +1,13 @@
 (* non-interactive mode
 *)
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory "probAlgebra";
 
 (* interactive mode
 if !show_assums then () else (
   load "bossLib";
+  load "numLib";
   load "realLib";
   load "arithmeticTheory";
   load "pred_setTheory";
@@ -25,13 +26,13 @@ if !show_assums then () else (
 );
 *)
 
-open Psyntax bossLib arithmeticTheory realTheory seqTheory pred_setTheory
+open bossLib arithmeticTheory realTheory seqTheory pred_setTheory
      ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
      probUtil booleanSequenceTheory booleanSequenceTools probExtraTheory
-     probExtraTools probCanonTheory probCanonTools;
+     probExtraTools probCanonTheory probCanonTools numSyntax;
 
-infixr 0 ++ << || ORELSEC ##;
-infix 1 >>;
+infixr 0 ++ << || ORELSEC ## -->;
+infix 1 >> |->;
 nonfix THEN ORELSE;
 
 val op++ = op THEN;
@@ -44,7 +45,7 @@ val op>> = op THEN1;
 (* ------------------------------------------------------------------------- *)
 
 fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "probAlgebra",
+  = HOL_ERR{origin_structure = "probAlgebra",
 		      origin_function = f, message = s};
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
@@ -268,7 +269,7 @@ val ALG_CANON_EMBED = store_thm
 val ALGEBRA_CANON_UNIV = store_thm
   ("ALGEBRA_CANON_UNIV",
    ``!l. algebra_canon l ==> ((algebra_embed l = UNIV) ==> (l = [[]]))``,
-   Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
+   HO_MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
    ++ RW_TAC std_ss []
    >> PSET_TAC [algebra_embed_def, FOLDR]
    ++ KNOW_TAC `(algebra_embed l1 = UNIV)`
@@ -297,7 +298,7 @@ val ALG_CANON_REP = store_thm
        ++ RW_TAC std_ss [algebra_canon_def, ALG_CANON_IDEMPOT]
        ++ Q.PAT_ASSUM `!c. P c` (MP_TAC o Q.SPEC `alg_canon c`)
        ++ RW_TAC std_ss [ALG_CANON_IDEMPOT, ALG_CANON_EMBED])
-   ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
+   ++ HO_MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
    ++ RW_TAC std_ss [] <<
    [Cases_on `c` >> RW_TAC std_ss []
     ++ PSET_TAC [algebra_embed_def, FOLDR]
@@ -305,7 +306,7 @@ val ALG_CANON_REP = store_thm
     PROVE_TAC [ALGEBRA_EMBED_BASIC, ALGEBRA_CANON_UNIV],
     NTAC 2 (POP_ASSUM MP_TAC)
     ++ Q.SPEC_TAC (`c`, `c`)
-    ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_CASES
+    ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ RW_TAC std_ss [] <<
     [POP_ASSUM MP_TAC
      ++ REVERSE (Cases_on `l1`)
@@ -383,7 +384,7 @@ val ALGEBRA_EMBED_COMPL = store_thm
                   (?l'. COMPL (algebra_embed l) = algebra_embed l')`
    >> (DISCH_THEN (MP_TAC o Q.SPEC `alg_canon l`)
        ++ RW_TAC std_ss [algebra_canon_def, ALG_CANON_EMBED, ALG_CANON_IDEMPOT])
-   ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
+   ++ HO_MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
    ++ PSET_TAC [ALGEBRA_EMBED_BASIC] <<
    [Q.EXISTS_TAC `[[]]`
     ++ PSET_TAC [ALGEBRA_EMBED_BASIC],
@@ -429,7 +430,7 @@ val MEASURABLE_STL = store_thm
      >> (DISCH_THEN (MP_TAC o Q.SPEC `alg_canon b`)
 	 ++ RW_TAC std_ss [algebra_canon_def, ALG_CANON_IDEMPOT,
                            ALG_CANON_EMBED])
-   ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_CASES
+   ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
    ++ PSET_TAC [o_DEF, ALGEBRA_EMBED_BASIC] <<
    [Q.EXISTS_TAC `[]`
     ++ PSET_TAC [ALGEBRA_EMBED_BASIC]
@@ -467,7 +468,7 @@ val MEASURABLE_INTER_HALVES = store_thm
     ++ RW_TAC std_ss [MEASURABLE_BASIC],
     REPEAT STRIP_TAC
     ++ ONCE_REWRITE_TAC [(GSYM o Q.SPECL [`(\x. SHD x = T)`, `p`]
-                          o INST_TYPE [(``:num->bool``, ``:'a``)]) COMPL_SPLITS]
+                          o INST_TYPE [alpha |-> (num --> bool)]) COMPL_SPLITS]
     ++ MATCH_MP_TAC MEASURABLE_UNION
     ++ PURE_ASM_REWRITE_TAC [COMPL_SHD]
     ++ PROVE_TAC []]);
@@ -514,7 +515,7 @@ val MEASURABLE_INTER_SHD = store_thm
     >> (DISCH_THEN (MP_TAC o Q.SPEC `alg_canon b'`)
         ++ RW_TAC std_ss [ALG_CANON_EMBED, ALG_CANON_IDEMPOT,
                           algebra_canon_def])
-    ++ Ho_resolve.MATCH_MP_TAC ALGEBRA_CANON_CASES
+    ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ REPEAT CONJ_TAC <<
     [PSET_TAC [ALGEBRA_EMBED_BASIC]
      ++ Q.EXISTS_TAC `[]`

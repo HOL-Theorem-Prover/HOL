@@ -5,8 +5,8 @@
 structure booleanSequenceTools :> booleanSequenceTools = 
 struct
 
-open HolKernel Parse basicHol90Lib;
-open Psyntax bossLib probUtil probExtraTheory booleanSequenceTheory;
+open HolKernel Parse boolLib;
+open bossLib probUtil probExtraTheory booleanSequenceTheory;
 
 infixr 0 ++ || ORELSEC ## THENC;
 infix 1 >>;
@@ -21,7 +21,7 @@ val op>> = op THEN1;
 (* ------------------------------------------------------------------------- *)
 
 fun ERROR f s
-  = Exception.HOL_ERR{origin_structure = "booleanSequenceTools",
+  = HOL_ERR{origin_structure = "booleanSequenceTools",
 		      origin_function = f, message = s};
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;

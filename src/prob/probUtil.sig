@@ -1,5 +1,6 @@
 signature probUtil =
 sig
+  include Abbrev
 
   val grab : 'a option -> 'a
   val total : ('a -> 'b) -> 'a -> 'b option
@@ -25,20 +26,17 @@ sig
   val permute : int list -> 'a list -> 'a list
   val permute_random : 'a list -> 'a list
 
-  type term = Term.term
   type sequent = term list * term
-  type tactic = Abbrev.tactic
-  type conv = Abbrev.conv
 
   val is_imp : term -> bool
   val profile : ('a -> 'b) -> 'a -> 'b
 
   val type_fold : (string * 'a -> 'b)
     -> ((string * ('a -> 'b) list) * 'a -> 'b)
-    -> Type.hol_type -> 'a -> 'b
+    -> hol_type -> 'a -> 'b
 
-  val term_fold : ((string * Type.hol_type) * 'a -> 'b)
-    -> ((string * Type.hol_type) * 'a -> 'b)
+  val term_fold : ((string * hol_type) * 'a -> 'b)
+    -> ((string * hol_type) * 'a -> 'b)
     -> ((('a -> 'b) * ('a -> 'b)) * 'a -> 'b)
     -> ((('a -> 'b) * ('a -> 'b)) * 'a -> 'b)
     -> Term.term -> 'a -> 'b
