@@ -1,21 +1,14 @@
 structure Canon_Port :> Canon_Port =
 struct
 
-open Parse HolKernel basicHol90Lib liteLib Psyntax Ho_rewrite Ho_boolTheory;
+open Parse HolKernel boolLib liteLib Ho_Rewrite tautLib;
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+val (Type,Term) = parse_from_grammars combinTheory.combin_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
 
 infix THEN THENC;
-
-type term = Term.term
-type thm = Thm.thm
-type tactic = Abbrev.tactic
-type conv = Abbrev.conv
-type thm_tactic = Abbrev.thm_tactic;
-
 
 val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
 val LEFT_AND_EXISTS_THM  = GSYM LEFT_EXISTS_AND_THM;
@@ -28,23 +21,25 @@ val RIGHT_IMP_FORALL_THM = GSYM RIGHT_FORALL_IMP_THM;
 val LEFT_IMP_EXISTS_THM  = boolTheory.LEFT_EXISTS_IMP_THM;
 val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
 
-fun TAUT q = Ho_rewrite.TAUT(Parse.Term q);
 fun freesl tml = itlist (union o free_vars) tml [];;
+
+fun is_eqc tm =
+ (case Term.dest_thy_const tm
+   of {Name="=",Thy="min",...} => true
+    | other => false)
+  handle HOL_ERR _ => false;
 
 local fun get_heads lconsts tm (sofar as (cheads,vheads)) =
         let val (v,bod) = dest_forall tm
-        in
-          get_heads (subtract lconsts [v]) bod sofar
+        in get_heads (subtract lconsts [v]) bod sofar
         end
         handle HOL_ERR _ =>
             let val (l,r) =  dest_conj tm handle HOL_ERR _ => dest_disj tm
-            in
-              get_heads lconsts l (get_heads lconsts r sofar)
+            in get_heads lconsts l (get_heads lconsts r sofar)
             end
         handle HOL_ERR _ =>
             let val tm' = dest_neg tm
-            in
-               get_heads lconsts tm' sofar
+            in get_heads lconsts tm' sofar
             end
         handle HOL_ERR _ =>
             let val (hop,args) = strip_comb tm
@@ -66,8 +61,7 @@ end;
 local
   val APP_CONV =
     let val eq = Term`!f:'a->'b. !x. f x = I f x`
-    in
-      REWR_CONV (prove (eq, REWRITE_TAC[combinTheory.I_THM]))
+    in REWR_CONV (prove (eq, REWRITE_TAC[combinTheory.I_THM]))
     end
 
   fun APP_N_CONV n tm =
@@ -75,11 +69,9 @@ local
     else (RATOR_CONV (APP_N_CONV (n - 1)) THENC APP_CONV) tm
 
   fun BINOP_CONV conv tm =
-    let
-      val (lop,r) = dest_comb tm
-      val (opn,l) = dest_comb lop
-    in
-      MK_COMB(AP_TERM opn (conv l),conv r)
+    let val (lop,r) = dest_comb tm
+        val (opn,l) = dest_comb lop
+    in MK_COMB(AP_TERM opn (conv l),conv r)
     end
 
   fun FOL_CONV hddata tm =
@@ -102,27 +94,20 @@ local
         end
 in
   fun GEN_FOL_CONV (cheads,vheads) =
-    let
-      val hddata =
-        if vheads = [] then
-          let
-            val hops = mk_set (map fst cheads)
-            fun getmin h =
-              let val ns = mapfilter
-                (fn (k,n) => if k = h then n else fail()) cheads
-              in
-                (if length ns < 2 then fail() else h,
-                 end_itlist (curry Int.min) ns)
-              end
-          in
-            mapfilter getmin hops
-          end
-        else
-          map (fn t => if is_const t andalso fst(dest_const t) = "="
-                         then (t,2) else (t,0))
-          (mk_set (map fst (vheads @ cheads)))
-    in
-      FOL_CONV hddata
+    let val hddata =
+          if vheads = []
+          then let val hops = mk_set (map fst cheads)
+                   fun getmin h =
+                    let val ns = mapfilter
+                          (fn (k,n) => if k=h then n else fail()) cheads
+                    in (if length ns < 2 then fail() else h,
+                        end_itlist (curry Int.min) ns)
+                    end
+               in mapfilter getmin hops
+               end
+          else map (fn t => if is_eqc t then (t,2) else (t,0))
+                   (mk_set (map fst (vheads @ cheads)))
+    in FOL_CONV hddata
     end
 end
 
@@ -152,21 +137,20 @@ local
   val NNFC_CONV0 =
     GEN_REWRITE_CONV TOP_SWEEP_CONV (common_tauts @ cnf_tauts)
 in
-  val NNFC_CONV =
-    let fun SINGLE_SWEEP_CONV conv tm =
-         let val th = conv tm
-             val tm' = rand(concl th)
-             val th' = if is_abs tm' then NNFC_CONV0 tm'
-                       else SUB_CONV (SINGLE_SWEEP_CONV conv) tm'
-         in
-           TRANS th th'
-         end
-         handle HOL_ERR _ =>
-            if is_abs tm then NNFC_CONV0 tm
-            else SUB_CONV (SINGLE_SWEEP_CONV conv) tm;
-    in
-      SINGLE_SWEEP_CONV (GEN_REWRITE_CONV I (common_tauts @ dnf_tauts))
-    end
+val NNFC_CONV =
+  let fun SINGLE_SWEEP_CONV conv tm =
+       let val th = conv tm
+           val tm' = rand(concl th)
+           val th' = if is_abs tm' then NNFC_CONV0 tm'
+                     else SUB_CONV (SINGLE_SWEEP_CONV conv) tm'
+       in TRANS th th'
+       end
+       handle HOL_ERR _ =>
+          if is_abs tm then NNFC_CONV0 tm
+          else SUB_CONV (SINGLE_SWEEP_CONV conv) tm;
+  in
+    SINGLE_SWEEP_CONV (GEN_REWRITE_CONV I (common_tauts @ dnf_tauts))
+  end
 end
 
 
@@ -233,16 +217,17 @@ val PRENEX_CONV =
 	      exception DEST_CONST
 	  in let val cname = name_of_const lop
                               handle HOL_ERR _ => raise DEST_CONST
-	     in if cname = "!" orelse cname = "?" then
+	     in if cname = ("!","bool") orelse cname = ("?","bool") then
 		 AP_TERM lop (ABS_CONV PRENEX_QCONV r)
-		else if cname = "~" then
+		else if cname = ("~","bool") then
 		    (THENQC (RAND_CONV PRENEX_QCONV, PRENEX2_QCONV)) tm
 		     else failwith "unchanged"
 	     end
 	     handle DEST_CONST =>
 	     let val (oper,l) = dest_comb lop
 		 val cname = name_of_const oper
-	     in if cname = "/\\" orelse cname = "\\/" orelse cname = "==>" then
+	     in if cname = ("/\\","bool") orelse cname = ("\\/","bool")
+                  orelse cname = ("==>","min") then
 		 let val th =
 		     let val lth = PRENEX_QCONV l
 		     in let val rth = PRENEX_QCONV r

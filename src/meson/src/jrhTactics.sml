@@ -1,12 +1,9 @@
 structure jrhTactics :> jrhTactics =
   struct
-    open HolKernel Drule liteLib Psyntax;
+    open HolKernel boolLib liteLib;
 
-    type thm = Thm.thm
-    type tactic = Abbrev.tactic
     type Goal = (thm list * term)
-    type justification = thm list -> thm
-    type Goalstate = Goal list * justification
+    type Goalstate = Goal list * validation
     type Tactic = Goal -> Goalstate
     type Thm_Tactic = thm -> Tactic
     type Thm_Tactical = Thm_Tactic -> Thm_Tactic
@@ -21,42 +18,35 @@ structure jrhTactics :> jrhTactics =
 
     fun mk_Goalstate g = ([g], hd)
    
-    fun ERR f s = Exception.HOL_ERR{origin_structure="jrhTactics",
-                          origin_function=f,message=s};
+    val ERR = mk_HOL_ERR"jrhTactics";
 
-    fun by t (gs, vf) =
-      case gs 
-       of [] => raise ERR  "by" "Can't apply tactic to empty Goal list"
-        | g::others =>
-            let val (newgs, vf1) = t g
-            in (newgs @ others,
-                fn thl => let val (t_thms, rest) = 
-                              Lib.split_after (* chopn *) (length newgs) thl
-                          in vf ((vf1 t_thms)::rest)
-                          end)
-            end
-
-
-    local
-      fun rotate_p1 ([], just) = ([], just)
-        | rotate_p1 ((g::gs), just) =
-          let val newgs = gs @ [g]
-               fun newj ths = just (last ths::butlast ths)
-          in
-            (newgs, newj)
+    fun by t ([], _) = raise ERR  "by" "Can't apply tactic to empty Goal list"
+      | by t (g::others, vf) =
+          let val (newgs, vf1) = t g
+          in (newgs @ others,
+              fn thl =>
+                let val (t_thms, rest) = Lib.split_after (length newgs) thl
+                in vf (vf1 t_thms::rest)
+                end)
           end
 
-      fun rotate_n1 ([], just) = ([], just)
-        | rotate_n1 (gs, just) =
-          let val (newg, newgs) = (last gs, butlast gs)
-              fun newj (th::ths) = just (ths @ [th])
-          in
-            (newg::newgs, newj)
-          end
+
+    local fun rotate_p1 ([], just) = ([], just)
+            | rotate_p1 ((g::gs), just) =
+                let val newgs = gs @ [g]
+                    fun newj ths = just (last ths::butlast ths)
+                in (newgs, newj)
+                end
+          fun rotate_n1 ([], just) = ([], just)
+            | rotate_n1 (gs, just) =
+                let val (newg, newgs) = (last gs, butlast gs)
+                    fun newj (th::ths) = just (ths @ [th])
+                in (newg::newgs, newj)
+                end
     in
-      fun rotate n =
-        if n > 0 then funpow n rotate_p1
-                 else funpow (~n) rotate_n1
+    fun rotate n = 
+      if n > 0 then funpow n rotate_p1 
+               else funpow (~n) rotate_n1
     end
 
     local
@@ -67,11 +57,10 @@ structure jrhTactics :> jrhTactics =
         | bysn n (t::ts) (g as (gl,j)) =
           let val newg as (newgl,j') = by t g
               val k = length newgl + 1 - length gl
-          in
-            bysn (n - k) ts (rotate k newg)
+          in bysn (n - k) ts (rotate k newg)
           end
     in
-      fun bys l = bysn 0 l
+    fun bys l = bysn 0 l
     end
 
 
@@ -88,12 +77,10 @@ structure jrhTactics :> jrhTactics =
     fun convert (T:Tactic) ((asl:term list), (g:term)) =
       let val (gs, jf) = T (map ASSUME asl, g)
           val newgs = map (fn (asl, g) => (map concl asl, g)) gs
-      in
-        (newgs, jf)
+      in (newgs, jf)
       end
 
     (* our actual Tactics *)
-
     fun ASSUME_TAC th : Tactic =
       fn (asl, g) =>
       ([(th::asl, g)],
@@ -104,14 +91,17 @@ structure jrhTactics :> jrhTactics =
 
     fun ASSUM_LIST thlf (asl, g)     = thlf asl (asl, g)
     fun POP_ASSUM_LIST thlf (asl, g) = thlf asl ([], g)
-    fun FIRST_ASSUM ttac (asl, g)    = tryfind (fn th => ttac th (asl, g)) asl
+    fun FIRST_ASSUM ttac (asl, g) = tryfind (fn th => ttac th (asl, g)) asl
 
     fun UNDISCH_THEN tm ttac (asl,g) =
-      let val (th, asl') = Lib.pluck (fn th => concl th = tm) asl
-      in ttac th (asl', g)
+      let
+        val (th, asl') = Lib.pluck (fn th => concl th = tm) asl
+      in
+        ttac th (asl', g)
       end
 
-    fun FIRST_X_ASSUM ttac = FIRST_ASSUM(fn th => UNDISCH_THEN (concl th) ttac)
+    fun FIRST_X_ASSUM ttac =
+      FIRST_ASSUM (fn th => UNDISCH_THEN (concl th) ttac);
 
     fun ALL_TAC (asl, g) = ([(asl,g)], fn [th] => th)
 
@@ -124,25 +114,26 @@ structure jrhTactics :> jrhTactics =
       POP_ASSUM_LIST (MAP_EVERY (f >- ASSUME_TAC) o rev)
 
     infix ORELSE
-    fun (t1 ORELSE t2) g = t1 g handle Exception.HOL_ERR _ => t2 g
+    fun (t1 ORELSE t2) g = t1 g handle HOL_ERR _ => t2 g
     fun REPEAT t g = ((t THEN REPEAT t) ORELSE ALL_TAC) g
 
 
     fun X_CHOOSE_TAC t xth (asl, g) =
-      let val xtm = concl xth
-          val (x, bod) = dest_exists xtm
-          val pat = ASSUME (Term.subst [x |-> t] bod)
+      let
+        val xtm = concl xth
+        val (x, bod) = dest_exists xtm
+        val pat = ASSUME (Term.subst [x |-> t] bod)
       in
         ([(pat::asl, g)], fn [th] => CHOOSE (t, xth) th)
       end
-    handle Exception.HOL_ERR _ => raise ERR "X_CHOOSE_TAC" ""
+    handle HOL_ERR _ => raise ERR "X_CHOOSE_TAC" ""
 
     fun thm_frees thm = 
       itlist (union o free_vars) (hyp thm) (free_vars (concl thm))
 
     fun CHOOSE_TAC xth (asl, g) =
       let val x = fst (dest_exists (concl xth))
-          handle Exception.HOL_ERR _ => raise ERR "CHOOSE_TAC" ""
+          handle HOL_ERR _ => raise ERR "CHOOSE_TAC" ""
           val avoids = itlist (union o free_vars o concl) asl
                               (union (free_vars g) (thm_frees xth))
           val newvar = variant avoids x
@@ -167,20 +158,20 @@ structure jrhTactics :> jrhTactics =
                         fn [th1, th2] => DISJ_CASES dth th1 th2)
       end
 
-    fun DISJ_CASES_THEN ttac th = DISJ_CASES_TAC th THEN POP_ASSUM ttac;
+    fun DISJ_CASES_THEN ttac th =
+      DISJ_CASES_TAC th THEN POP_ASSUM ttac;
 
     infix ORELSE_TCL
     fun (ttcl1 ORELSE_TCL ttcl2) ttac th =
-      ttcl1 ttac th handle Exception.HOL_ERR _ => ttcl2 ttac th
+      ttcl1 ttac th handle HOL_ERR _ => ttcl2 ttac th
 
     fun CONTR_TAC cth (asl, g) =
       let val th = CONTR g cth
-      in 
-        ([], fn [] => th)
+      in ([], fn [] => th)
       end
 
     fun ACCEPT_TAC th (asl, g) =
       if aconv (concl th) g then ([], fn [] => th)
       else raise ERR "ACCEPT_TAC" ""
 
-  end
+end

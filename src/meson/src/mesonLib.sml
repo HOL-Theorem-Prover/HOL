@@ -5,19 +5,14 @@
 structure mesonLib :> mesonLib =
 struct
 
-open HolKernel Parse basicHol90Lib;
-open liteLib Ho_rewrite Canon_Port Psyntax;
-open Exception;
+open HolKernel boolLib Parse liteLib Ho_Rewrite Canon_Port tautLib;
 
 infix THEN THENC ORELSE ORELSE_TCL;
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
-
-type thm = Thm.thm
-type tactic = Abbrev.tactic;
 
 (*---------------------------------------------------------------------------*
  * Miscellaneous bits.                                                       *
@@ -39,10 +34,8 @@ fun assoc2 item =
 fun allpairs f l1 l2 = itlist (union o C map l2 o f) l1 [];;
 
 fun thm_eq th1 th2 = (dest_thm th1 = dest_thm th2);
-val the_true =  mk_const("T", Type.bool);
-val the_false = mk_const("F", Type.bool);
-
-fun TAUT q = Ho_rewrite.TAUT (Term q);
+val the_true = T
+val the_false = F
 
 fun type_match vty cty sofar =
   if is_vartype vty
@@ -61,11 +54,8 @@ fun type_match vty cty sofar =
        end;
 
 fun is_beq tm =
-  let val (s,ty) = dest_const(rator(rator tm))
-  in
-    (s = "=") andalso (Lib.trye hd (snd(dest_type ty)) = Type.bool)
-  end
-  handle HOL_ERR _ => false;
+ (type_of (#lhs(boolSyntax.dest_eq tm)) = bool)
+ handle HOL_ERR _ => false;
 
 (*---------------------------------------------------------------------------*
  * Global constant.                                                          *
@@ -97,7 +87,7 @@ val chatting = ref 1;           (* Gives intermediate info as proof runs.
                                    is given. When the number is 0, no output
                                    is given. Otherwise, jrh's original output
                                    is given.                                 *)
-val _ = register_trace "meson" chatting;   (* not idempotent? *)
+val _ = register_trace "meson" chatting;
 
 
 
@@ -604,7 +594,6 @@ val state = (g,([],2 * offinc,maxinf))
      * ((fol_term * int) list * int * int);;
 
 *)
-
 (* ------------------------------------------------------------------------- *)
 (* With iterative deepening of inferences or depth.                          *)
 (*                                                                           *)
@@ -756,30 +745,24 @@ end
 local
   fun bump_hol_thm offset th =
     let val fvs = subtract (free_vars (concl th)) (freesl(hyp th))
-    in
-      INST (map (fn v => (hol_of_var(fol_of_var v + offset),v)) fvs) th
+    in INST (map (fn v => (hol_of_var(fol_of_var v + offset),v)) fvs) th
     end
   fun hol_negate tm = dest_neg tm handle HOL_ERR _ => mk_neg tm
   fun merge_inst (t,x) current = (fol_subst current t,x)::current
   val finish_RULE = Rewrite.GEN_REWRITE_RULE I Rewrite.empty_rewrites
-    [Ho_rewrite.TAUT (Term `(~p ==> p) = p`),
-     Ho_rewrite.TAUT (Term `(p ==> ~p) = ~p`)]
+                          [TAUT `(~p ==> p) = p`, TAUT `(p ==> ~p) = ~p`]
 in
   fun meson_to_hol insts (Subgoal(g,gs,(n,th),offset,locin)) =
-    let
-      open Ho_match  (* necessary? *)
-      val newins = itlist merge_inst locin insts
-      val g'     = fol_inst newins g
-      val hol_g  = hol_of_literal g'
-      val ths    = map (meson_to_hol newins) gs
-      val hth =
-        if concl th = the_true then ASSUME hol_g
-        else
-          let val cth = make_hol_contrapos(n,th)
-          in
-            if null(ths) then cth else
-              Conv.MATCH_MP cth (Lib.end_itlist Thm.CONJ ths)
-              handle e as (HOL_ERR _) =>
+    let val newins = itlist merge_inst locin insts
+        val g'     = fol_inst newins g
+        val hol_g  = hol_of_literal g'
+        val ths    = map (meson_to_hol newins) gs
+        val hth = 
+           if concl th = the_true then ASSUME hol_g
+           else let val cth = make_hol_contrapos(n,th)
+                in if null ths then cth 
+                   else Drule.MATCH_MP cth (Lib.end_itlist Thm.CONJ ths)
+              handle e as HOL_ERR _ =>
                 (say ("Attempting to match "^
                       (term_to_string (concl cth))^" and "^
                       (term_to_string (concl (end_itlist CONJ ths)))^
@@ -787,7 +770,7 @@ in
                       " and th = "^(term_to_string (concl th))^"\n");
                  raise e)
           end
-      val ith = PART_MATCH I hth hol_g
+      val ith = HO_PART_MATCH I hth hol_g
     in
       finish_RULE (DISCH (hol_negate(concl ith)) ith)
     end
@@ -795,8 +778,7 @@ end
 
 fun ASM_FOL_TAC (asl,w) =
   let val headsp = itlist Canon_Port.get_thm_heads asl ([],[])
-  in
-    jrhTactics.RULE_ASSUM_TAC
+  in jrhTactics.RULE_ASSUM_TAC
       (CONV_RULE(Canon_Port.GEN_FOL_CONV headsp)) (asl,w)
   end
 
@@ -842,90 +824,69 @@ val create_equality_axioms =
     val veq_tm = rator(rator(concl(hd eq_thms)))
     fun create_equivalence_axioms (eq,_) =
       let val tyins = type_match (type_of veq_tm) (type_of eq) []
-      in
-        map (INST_TYPE tyins) eq_thms
+      in map (INST_TYPE tyins) eq_thms
       end
     fun tm_consts tm acc =
       let val (fnc,args) = strip_comb tm
-      in
-        if args = [] then acc
+      in if args = [] then acc
         else itlist tm_consts args (insert (fnc,length args) acc)
       end
     fun fm_consts tm (acc as (preds,funs)) =
       fm_consts(snd(dest_forall tm)) acc
         handle HOL_ERR _ => fm_consts(snd(dest_exists tm)) acc
         handle HOL_ERR _ =>
-              let val (l,r) = dest_conj tm
-              in
-                fm_consts l (fm_consts r acc)
-              end
+           let val (l,r) = dest_conj tm in fm_consts l (fm_consts r acc) end
         handle HOL_ERR _ =>
-              let val (l,r) = dest_disj tm
-              in
-                fm_consts l (fm_consts r acc)
-              end
+           let val (l,r) = dest_disj tm in fm_consts l (fm_consts r acc) end
         handle HOL_ERR _ =>
-              let val (l,r) = dest_imp tm
-              in
-                fm_consts l (fm_consts r acc)
-              end
+           let val (l,r) = dest_imp tm in fm_consts l (fm_consts r acc) end
         handle HOL_ERR _ => fm_consts (dest_neg tm) acc
         handle HOL_ERR _ =>
-              let val (l,r) = dest_eq tm
-              in
-                if type_of l = Type.bool
-                then fm_consts r (fm_consts l acc)
-                else failwith "atomic equality"
-              end
+           let val (l,r) = dest_eq tm
+           in if type_of l = Type.bool
+              then fm_consts r (fm_consts l acc)
+              else failwith "atomic equality"
+           end
         handle HOL_ERR _ =>
-              let val (pred,args) = strip_comb tm
-              in
-               if args = [] then acc
-               else (insert (pred,length args) preds,
-                     itlist tm_consts args funs)
-               end;
+           let val (pred,args) = strip_comb tm
+           in if args = [] then acc
+              else (insert (pred,length args) preds,
+                    itlist tm_consts args funs)
+           end;
 
     fun create_congruence_axiom pflag (tm,len) =
-      let
-        val (atys,rty) = splitlist (fn ty =>
+      let val (atys,rty) = splitlist (fn ty =>
                let val (opn,l) = dest_type ty
                in if opn = "fun" then (hd l,hd(tl l)) else fail()
                end) (type_of tm)
-        val ctys = fst(chop_list len atys)
-        val largs = map genvar ctys
-        and rargs = map genvar ctys
-        val th1 = rev_itlist (C (curry MK_COMB))
+         val ctys = fst(chop_list len atys)
+         val largs = map genvar ctys
+         and rargs = map genvar ctys
+         val th1 = rev_itlist (C (curry MK_COMB))
                              (map (ASSUME o mk_eq) (zip largs rargs)) (REFL tm)
-        val th2 = if pflag then eq_elim_RULE th1 else th1
+         val th2 = if pflag then eq_elim_RULE th1 else th1
       in
         itlist (fn e => fn th =>
                 CONV_RULE imp_elim_CONV (DISCH e th)) (hyp th2) th2
       end
   in
     fn tms =>
-    let
-      val (preds,funs) = itlist fm_consts tms ([],[])
-      val (eqs0,noneqs) =
-        partition (fn (t,_) => is_const t andalso
-                               fst(dest_const t) = "=") preds
-    in
-      if eqs0 = [] then []
-      else
-        let
-          val pcongs = map (create_congruence_axiom true) noneqs
-          and fcongs = map (create_congruence_axiom false) funs
-          val (preds1,_) =
-            itlist fm_consts (map concl (pcongs @ fcongs)) ([],[])
-          val eqs1 = filter
-               (fn (t,_) => is_const t andalso fst(dest_const t) = "=") preds1
-          val eqs = union eqs0 eqs1
-          val equivs = itlist
+    let val (preds,funs) = itlist fm_consts tms ([],[])
+        val (eqs0,noneqs) = partition (is_eqc o fst) preds
+    in if eqs0 = [] then []
+       else let val pcongs = map (create_congruence_axiom true) noneqs
+                and fcongs = map (create_congruence_axiom false) funs
+                val (preds1,_) =
+                  itlist fm_consts (map concl (pcongs @ fcongs)) ([],[])
+                val eqs1 = filter (is_eqc o fst) preds1
+                val eqs = union eqs0 eqs1
+                val equivs = itlist
                   (Lib.op_union thm_eq o create_equivalence_axioms) eqs []
-        in
-          equivs@pcongs@fcongs
-        end
+            in
+               equivs@pcongs@fcongs
+            end
     end
-  end
+ end
 
 (* ------------------------------------------------------------------------- *)
 (* Push duplicated copies of poly theorems to match existing assumptions.    *)
@@ -945,10 +906,12 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
             grab_constants (rand tm) acc
           else union (find_terms is_const tm) acc
     fun match_consts (tm1,tm2) =
-      let val (s1,ty1) = dest_const tm1
-          and (s2,ty2) = dest_const tm2
+      let val (s1,thy1,ty1) = dest_thy_const tm1
+          and (s2,thy2,ty2) = dest_thy_const tm2
       in
-        if (s1=s2) then type_match ty1 ty2 [] else failwith "match_consts"
+        if (s1=s2) andalso (thy1=thy2)
+        then type_match ty1 ty2 [] 
+        else failwith "match_consts"
       end
     fun polymorph mconsts th =
       let val tvs = subtract (type_vars_in_term (concl th))
@@ -1043,7 +1006,7 @@ fun GEN_MESON_TAC min max step ths g =
 
 
 val max_depth = ref 30;
-fun ASM_MESON_TAC thl g = GEN_MESON_TAC 0 (!max_depth) 1 thl g;
+val ASM_MESON_TAC = GEN_MESON_TAC 0 (!max_depth) 1;
 
 fun MESON_TAC ths = POP_ASSUM_LIST (K ALL_TAC) THEN ASM_MESON_TAC ths;
 
