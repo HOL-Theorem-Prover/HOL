@@ -16,7 +16,6 @@ structure arithmeticScript =
 struct
 
 open HolKernel boolLib Parse Prim_rec;
-infix THEN THENC THENL |-> ORELSE;
 
 (* interactive use:
    app load ["prim_recTheory","primWFTheory", "QLib"];
@@ -2070,6 +2069,31 @@ val ADD_DIV_ADD_DIV = store_thm("ADD_DIV_ADD_DIV",
       THEN PURE_ONCE_REWRITE_TAC[ADD_ASSOC]
       THEN PURE_ONCE_REWRITE_TAC[GSYM RIGHT_ADD_DISTRIB]
       THEN IMP_RES_THEN (fn t => REWRITE_TAC[t]) DIV_MULT]);
+
+val ADD_DIV_RWT = store_thm(
+  "ADD_DIV_RWT",
+  ``!n. 0 < n ==>
+        !m p. (m MOD n = 0) \/ (p MOD n = 0) ==>
+              ((m + p) DIV n = m DIV n + p DIV n)``,
+  REPEAT STRIP_TAC THEN
+  IMP_RES_THEN (ASSUME_TAC o GSYM) DIVISION THEN
+  MATCH_MP_TAC DIV_UNIQUE THENL [
+    Q.EXISTS_TAC `p MOD n` THEN
+    ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB, GSYM ADD_ASSOC, EQ_ADD_RCANCEL] THEN
+    CONV_TAC (RAND_CONV (REWR_CONV (GSYM ADD_0))) THEN
+    FIRST_X_ASSUM (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC [],
+    Q.EXISTS_TAC `m MOD n` THEN
+    ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB] THEN
+    Q.SUBGOAL_THEN `p DIV n * n = p` SUBST1_TAC THENL [
+       CONV_TAC (LAND_CONV (REWR_CONV (GSYM ADD_0))) THEN
+       FIRST_X_ASSUM (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC [],
+       ALL_TAC
+    ] THEN
+    Q.SUBGOAL_THEN `m DIV n * n + p + m MOD n = m DIV n * n + m MOD n + p`
+                   (fn th => ASM_REWRITE_TAC [th]) THEN
+    REWRITE_TAC [GSYM ADD_ASSOC, EQ_ADD_LCANCEL] THEN
+    MATCH_ACCEPT_TAC ADD_COMM
+  ]);
 
 val NOT_MULT_LESS_0 = prove(
     (--`!m n. 0<m /\ 0<n ==> 0 < m*n`--),
