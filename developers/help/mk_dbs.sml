@@ -6,7 +6,7 @@
 (* app load ["Mosml","Database","Parsspec"]; *)
 
 fun mkentry s = {comp = Database.Term(s, SOME"HOL"),
-                 file = s^".doc", line = 0};
+                 file = s^".adoc", line = 0};
 
 fun mapfilter f [] = []
   | mapfilter f (h::t) =
@@ -19,7 +19,7 @@ fun docdir_to_entries path (endpath, entries) =
   let val dir = Path.concat (path, endpath)
       val L0 = Mosml.listDir dir
       val L1 = List.filter (fn s => not(s=".") andalso not(s="..")) L0
-      val L2 = mapfilter (fn s => String.substring(s,0,String.size s - 4)) L1
+      val L2 = mapfilter (fn s => String.substring(s,0,String.size s - 5)) L1
   in
     List.foldl (fn (e,l) => (mkentry e::l)) entries L2
   end;
@@ -29,7 +29,7 @@ fun docdir_to_entries path (endpath, entries) =
  *---------------------------------------------------------------------------*)
 fun buildDb holpath =
 let val doc_indices = List.foldl (docdir_to_entries holpath) []
-           ["help/Docfiles",
+           ["help/ADocfiles",
             "src/arith/help/entries",
             "src/hol88/help/entries",
             "src/list/help/entries",
@@ -181,11 +181,10 @@ let val doc_indices = List.foldl (docdir_to_entries holpath) []
            "tautLib.sig",
 
            (* TFL *)
-           "Context.sig","Thry.sig","listTools.sig","RW.sig",
-           "USyntax.sig","pairTools.sig","Rules.sig","WFTheory.sig",
-           (* "pair_caseTheory.sig", *)
-           "TCTheory.sig","arithTools.sig",
-           "primWFTheory.sig","Tfl.sig","boolTools.sig","tflLib.sig",
+           "Context.sig","Thry.sig",(* "listTools.sig" *)"RW.sig",
+           "USyntax.sig","pairTools.sig","Rules.sig",
+           "arithTools.sig",
+           "relationTheory.sig", "Tfl.sig","boolTools.sig","tflLib.sig",
            "Thms.sig",  (* "datatypeRW.sig", *)
 
            (* tree theories *)

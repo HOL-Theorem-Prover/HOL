@@ -9,8 +9,12 @@ COMPFLAGS=-I ${MOSMLHOME}/src/compiler
 MOSMLLEX=${MOSMLHOME}/bin/mosmllex
 MOSMLYACC=${MOSMLHOME}/bin/mosmlyac
 
-all: mk_dbs
+all: mk_dbs ../../help/ADocfiles clean-doc.sed
+	./cleandocdir.sh ../../help/Docfiles ../../help/ADocfiles
 	./mk_dbs ../../
+
+../../help/ADocfiles:
+	mkdir ../../help/ADocfiles
 
 mk_dbs: mk_dbs.uo Database.uo Lexer.uo Parser.uo Parsspec.uo
 	$(MOSMLC) $(COMPFLAGS) -o $@ mk_dbs.uo
