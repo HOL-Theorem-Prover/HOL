@@ -1,30 +1,26 @@
-Theory for an example by C.A.R. Hoare 
+(*---------------------------------------------------------------------------
+    An example by C.A.R. Hoare (example found in Isabelle/HOLCF sources)
 
-(example found in Isabelle/HOLCF sources)
+        p x = if b1 x 
+                 then p (g x)
+                 else x fi
 
---------------------------------------------------------------
+        q x = if b1 x orelse b2 x 
+                 then q (g x)
+                 else x fi
 
-p x = if b1 x 
-         then p (g x)
-         else x fi
+    Prove: for all b1 b2 g. q o p = q 
 
-q x = if b1 x orelse b2 x 
-         then q (g x)
-         else x fi
+    Our Assumptions: 
 
-Prove: for all b1 b2 g. q o p = q 
+        (1) that we are interested in total correctness;
+        (2) that "orelse" can be translated to disjunction
 
----------------------------------------------------------------
-
-Our Assumptions: 
-
-    (1) that we are interested in total correctness;
-    (2) that "orelse" can be translated to disjunction
-
-We attack the problem by making schematic definitions, which 
-become constrained by termination conditions. The main insight driving
-the proof is that if the function named "q" above terminates then 
-so does "p". 
+    We attack the problem by making schematic definitions, which 
+    become constrained by termination conditions. The main insight
+    driving the proof is that if the function named "q" above 
+    terminates then so does "p". 
+ ---------------------------------------------------------------------------*)
 
 load "bossLib"; open bossLib;
 

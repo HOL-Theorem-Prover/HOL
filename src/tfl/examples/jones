@@ -65,9 +65,9 @@ val pparam = Define
 
 val perm_defn =
     Defn.Hol_defn "perm"
-        `  (perm x []         = x)
-        /\ (perm [] (y :: ys) = perm (y::ys) ys)
-        /\ (perm (h :: xs) z  = perm z xs)`;
+        `  (perm x []       = x)
+        /\ (perm [] (y::ys) = perm (y::ys) ys)
+        /\ (perm (h::xs) z  = perm z xs)`;
 
 
 val (perm_eqns,perm_ind) = Defn.tprove
@@ -88,8 +88,8 @@ val (perm_eqns,perm_ind) = Defn.tprove
 
 val late_g = 
     Define
-        `  (late_g [] d        = d)
-        /\ (late_g (c :: cs) d = late_g cs (c :: d))`; 
+        `  (late_g [] d      = d)
+        /\ (late_g (c::cs) d = late_g cs (c :: d))`; 
 
 val late_f = 
     Define

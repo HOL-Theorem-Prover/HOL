@@ -1,6 +1,5 @@
 app load ["bossLib", "bagTheory", "stringTheory", "wordTheory"];
          
-
 open bossLib;
 
 val _ = Hol_datatype 
@@ -9,8 +8,6 @@ val _ = Hol_datatype
          | Short
          | Int 
          | Long`;
-
-val basic_integral = theorem "basic_integral_type_Axiom"
 
 val _ = Hol_datatype
   `CType = Void 
@@ -97,9 +94,9 @@ val rbags_defn =
    (rbags (RValreq e)          = rbags e) /\
    (rbags (CCond e1 e2 e3)     = BAG_UNION (BAG_UNION(rbags e1) (rbags e2))
                                            (rbags e3)) /\
-   (rbags __________           = EMPTY_BAG) /\
+   (rbags __________           = {||}) /\
 
-   (rbagsl []      = EMPTY_BAG) /\
+   (rbagsl []      = {||}) /\
    (rbagsl (e::es) = BAG_UNION (rbags e) (rbagsl es))`;
 
 val (rbags_eqns,rbags_ind) = 
