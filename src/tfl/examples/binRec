@@ -1,0 +1,370 @@
+app load ["bossLib", "Q"]; open bossLib; 
+
+infix 8 by; infix &&;
+show_assums := true;
+
+(*---------------------------------------------------------------------------
+       Definitions of schemas for binary recursion, 
+       continuation-passing style, and accumulator style.
+ ---------------------------------------------------------------------------*)
+
+val binRec_eqn = 
+ Define
+    `binRec (x:'a) = 
+        if atomic x then A x 
+        else join (binRec (left x)) 
+                  (binRec (right x))`;
+
+val binRec_ind = theorem "binRec_def";
+
+val bin_cpRec_def = 
+ Define 
+    `bin_cpRec (x:'a, f) = 
+       if atomic x then f (base x) 
+       else bin_cpRec (right x, \u. join (bin_cpRec (left x,f)) u)`;
+
+
+(*---------------------------------------------------------------------------
+     Complex, but tail recursive 
+ ---------------------------------------------------------------------------*)
+
+val bin_accRec_def0 = 
+ Define
+    `bin_accRec0 (x:'a, todo, v) = 
+        if atomic x
+        then (list_case (join v (base x))
+                        (\h t. bin_accRec0 (h, t, join v (base x))) todo)
+        else bin_accRec0 (left x, right x::todo, v)`;
+
+(*---------------------------------------------------------------------------
+        More general version.
+ ---------------------------------------------------------------------------*)
+val baRec_def0 = 
+ Define
+    `(baRec ([],v) = (v:'b)) 
+  /\ (baRec ((h:'a)::t, v) =
+        if atomic h 
+          then baRec (t, join v (A h:'b))
+          else baRec (APPEND (dest h) t, v))`;
+
+
+val APPEND_Summ = Q.prove
+`!l1 l2. 
+    list_to_mset (APPEND l1 l2) = Summ (list_to_mset l1) (list_to_mset l2)`
+(Induct THEN RW_TAC list_ss [multisetTheory.list_to_mset_def,
+                             multisetTheory.Summ]);
+
+val mem_Inm = Q.prove
+`!x l. x <- list_to_mset l = MEM x l`
+(Induct_on `l` THEN RW_TAC list_ss [multisetTheory.In_mset, 
+                                    multisetTheory.list_to_mset_def,mem_def]);
+
+val tc_lemma = Q.prove
+`!atomic dest join A R. 
+ WF R /\ (!h y. ~atomic h /\ mem y (dest h) ==> R y h)
+      ==>
+ ?R'. WF R' /\   
+     (!v t h. ~atomic h ==> R' (APPEND (dest h) t, v) (h::t, v)) /\
+    (!v t (h:'a). atomic h ==> R' (t, join (v:'b) (A h:'b)) (h::t,v))`
+let open multisetTheory multisetWFTheory 
+in REPEAT STRIP_TAC 
+ THEN Q.EXISTS_TAC `inv_image (pred_multiset R) (list_to_mset o FST)`
+ THEN CONJ_TAC THENL
+ [PROVE_TAC [relationTheory.WF_inv_image, WF_multiset],
+  RW_TAC bool_ss [relationTheory.inv_image_def, list_to_mset_def,
+        pred_multiset_def,combinTheory.o_DEF,Finitem_list_to_mset] THENL
+ [Q.EXISTS_TAC `h` THEN RW_TAC bool_ss [Diffm_Addm_same,Diffm_Mnil,In_mset]
+   THEN Q.EXISTS_TAC `list_to_mset (dest (h:'a))`
+   THEN RW_TAC bool_ss [Finitem_list_to_mset,mem_Inm,APPEND_Summ]
+   THEN RW_TAC bool_ss [mset_ext,Countm,Countm_Summ] 
+   THEN RW_TAC arith_ss [],
+  MAP_EVERY Q.EXISTS_TAC [`h`, `Mnil`]
+   THEN RW_TAC bool_ss [Finitem_Mnil, Finitem_Addm,In_mset]
+   THEN RW_TAC bool_ss [Diffm_Addm_same,Diffm_Mnil, Summ]]]
+end;
+
+val baRec_def1 = 
+ UNDISCH 
+   (ONCE_REWRITE_RULE [PROVE[]`x ==> y ==> z ==> a = z /\ y /\ x ==> a`]
+          (DISCH_ALL baRec_def0));
+
+val baRec_def2 = 
+  CHOOSE (Term`R:'a list#'b -> 'a list#'b -> bool`, 
+          UNDISCH_ALL (SPEC_ALL tc_lemma)) baRec_def1;
+
+val baRec_def3 = 
+  REWRITE_RULE [AND_IMP_INTRO]
+    (UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                 (DISCH_ALL baRec_def2)));
+
+val baRec_eqn = CONJUNCT1 baRec_def3;
+val baRec_ind = CONJUNCT2 baRec_def3;
+
+(*---------------------------------------------------------------------------
+    Relating binary recursion to tail recursion, via the 
+    "hd-multiset" tail recursion of baRec.
+ ---------------------------------------------------------------------------*)
+
+val lem = Q.prove
+`(!(h:'a) (y:'a). ~atomic h ==> (y=left h) \/ (y=right h) ==> R y h) = 
+  !h. ~atomic h ==> R (left h) h /\ R (right h) h` (PROVE_TAC[]);
+
+val baRec_def4 = 
+UNDISCH_ALL
+ (REWRITE_RULE[mem_def,lem]
+   (BETA_RULE
+     (Q.INST [`dest:'a -> 'a list` |-> `\x:'a. [left x; right x]:'a list`] 
+            (DISCH_ALL baRec_def3))));;
+
+val lem2 = Q.prove 
+    `(!x:'a. ~(atomic x) ==> R (left x) x) ==>
+     (!x:'a. ~(atomic x) ==> R (right x) x) ==> Q
+      = 
+     (!h:'a. ~atomic h ==> R (left h) h /\ R (right h) h) ==> Q` (PROVE_TAC[]);
+
+val binRec_def1 = UNDISCH_ALL (REWRITE_RULE [lem2] (DISCH_ALL binRec_def));
+
+val REV_ITLIST_DEF =
+ Define
+     `(REV_ITLIST f [] v = v) /\
+      (REV_ITLIST f (CONS h t) v = REV_ITLIST f t (f h v))`;
+
+val binRec_to_baRec = 
+ Q.prove
+  `!R atomic A join left right.
+       WF R /\ (!x. ~atomic x ==> R (left x) x /\ R (right x) x)
+            /\ (!p q r:'b. join (join p q) r = join p (join q r))
+       ==> 
+        !(todo:'a list) (res0:'b). 
+          REV_ITLIST 
+             (\tr res. join res (binRec right left join A atomic tr)) todo res0
+            =
+          baRec (\x:'a. [left x; right x]) A join atomic (todo,res0)`
+(REPEAT GEN_TAC THEN STRIP_TAC
+  THEN tflLib.REC_INDUCT_TAC (CONJUNCT2 baRec_def4)
+  THEN RW_TAC bool_ss [] THENL
+  [RW_TAC list_ss [REV_ITLIST_DEF,CONJUNCT1 baRec_def4],
+   RW_TAC list_ss [REV_ITLIST_DEF] 
+     THEN ONCE_REWRITE_TAC [CONJUNCT1 baRec_def4] 
+     THEN RW_TAC bool_ss [] THENL
+     [GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV)
+           empty_rewrites [CONJUNCT1 binRec_def1] THEN ZAP_TAC bool_ss [],
+      RES_TAC THEN NTAC 2 (POP_ASSUM (K ALL_TAC))
+        THEN POP_ASSUM (SUBST_ALL_TAC o SYM)
+        THEN GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV)
+                  empty_rewrites [CONJUNCT1 binRec_def1] 
+        THEN RW_TAC list_ss [REV_ITLIST_DEF]]]);
+
+
+(*---------------------------------------------------------------------------
+    Thus, we have the final transformation for binary recursions:
+
+    [!x. ~(atomic x) ==> R (left x) x /\ R (right x) x, WF R,
+     !p q r. join (join p q) r = join p (join q r)]
+    |- !x res0.
+         join res0 (binRec right left join A atomic x)
+             =
+         baRec (\x. [left x; right x]) A join atomic ([x],res0)
+
+ ---------------------------------------------------------------------------*)
+
+val tail_binRec = 
+DISCH_ALL
+ (BETA_RULE (REWRITE_RULE [REV_ITLIST_DEF] 
+   (GEN (Term `x`) (SPEC (Term`[x]`) 
+      (UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] 
+         (SPEC_ALL binRec_to_baRec)))))));
+
+val filter_def = 
+ Define 
+     `(filter P [] = []) /\
+      (filter P (CONS h t) = (P h => CONS h (filter P t) | filter P t))`;
+
+val filter_LENGTH = 
+ Q.prove
+   `!P l. LENGTH (FILTER P l) <= LENGTH l`
+(Induct_on `l` 
+  THEN ZAP_TAC (list_ss && [FILTER]) [DECIDE `x<=y ==> x <= SUC y`]);
+
+fun left(x,h::t) =  (x,filter (curry (op <=) h) t);
+fun right(x,h::t) = (h,filter (curry (op >) h) t);
+fun join (p1,l1) (p2,l2) = (p1, l1@(p2::l2));
+fun atomic(n,[]) = true
+  | atomic(n,l) = false;
+
+fun quik0 (nl) = 
+  if atomic nl then nl
+  else join (quik (left nl)) (quik0 (right nl));
+
+fun quik l = quik0 (hd l,l);
+
+val def1 = INST_TYPE [alpha |-> Type `:num # num list`,
+                      beta  |-> Type `:num # num list`] tail_binRec;
+val def2 = Q.INST [`A` |-> `\x:num#num list. x`] def1;
+val def3 = Q.INST [`atomic` |-> `pair_case(\(x:num) (y:num list). 
+                                   list_case T (\h t. F) y)`] def2;
+val def4 = Q.INST [`R` |-> `measure 
+                              (LENGTH o (SND:num#num list -> num list))`] def3;
+val cat_def =
+ Define
+    `cat (p1,q1) (p2,q2) = (p1, APPEND q1 (CONS p2 q2))`;
+
+val cat_assoc = 
+ Q.prove
+     `!p q r. cat p (cat q r) = cat (cat p q) r`
+(REPEAT Cases
+   THEN RW_TAC list_ss [cat_def]
+   THEN ONCE_REWRITE_TAC [GSYM listTheory.APPEND_ASSOC]
+   THEN REWRITE_TAC [listTheory.APPEND]);
+
+val def5 = Q.INST [`join` |-> `cat:num#num list->num#num list->num#num list`]
+                  def4;
+val witleft_def =
+ Define
+    `witleft (x:num, CONS h t) = (x, filter ($<= h) t)`;
+
+val witright_def =
+ Define
+    `witright (x:num, CONS h t) = (h, filter ($> h) t)`;
+
+val def6 = Q.INST [`left` |-> `witleft`] def5;
+val def7 = Q.INST [`right` |-> `witright`] def6;
+val def8 = REWRITE_RULE [WFTheory.WF_measure, GSYM cat_assoc] def7
+
+val termination = 
+ Q.prove
+      `!x:num#num list.
+            ~(pair_case (\x y. list_case T (\h t. F) y) x) 
+               ==>
+               measure (LENGTH o SND) (witleft x) x /\
+               measure (LENGTH o SND) (witright x) x`
+(Cases_on `x` THEN REWRITE_TAC [pairTheory.pair_case_def]
+  THEN CONV_TAC (DEPTH_CONV Let_conv.GEN_BETA_CONV)
+  THEN Cases_on `y` THENL
+ [RW_TAC bool_ss [],
+  REWRITE_TAC [listTheory.list_case_def] 
+    THEN RW_TAC list_ss 
+          [WFTheory.measure_def, relationTheory.inv_image_def,
+           witleft_def,witright_def,combinTheory.o_DEF]
+    THEN PROVE_TAC [DECIDE `x <= y ==> x < SUC y`, filter_LENGTH]]);
+
+val def9 = MP def8 termination;
+
+val Quick_def =
+ Define
+     `Quick l = SND(binRec witright witleft cat (\x.x)
+                      (pair_case (\x y. list_case T (\h t. F) y)) (0,l))`;
+
+g`(Quick [] = []) /\
+  !h t. Quick (CONS h t) = 
+          APPEND (Quick (filter ($<= h) t))
+              (CONS h (Quick (filter ($> h) t)))`;
+
+e (CONJ_TAC);
+(*1*)
+e (REWRITE_TAC [Quick_def]);
+expandf (REWRITE_TAC [binRec_eqn]);
+(*2*)
+e (REWRITE_TAC [Quick_def]);
+expandf (REWRITE_TAC [binRec_eqn]);
+
+
+
+(*
+val filter_def = 
+ CONJUNCT1
+  (Define 
+      `(filter P [] r = r) /\
+       (filter P (CONS h t) (Y,N) 
+          = filter P t (P h => (CONS h Y, N) | (Y, CONS h N)))`);
+
+val filter_LENGTH = 
+ Q.prove
+     `!P l l0 l1 m0 m1. 
+         ((l0,l1) = filter P l (m0,m1)) 
+            ==> (LENGTH l0 + LENGTH l1
+                   =
+                 LENGTH l + LENGTH m0 + LENGTH m1)`
+(Induct_on `l` THEN RW_TAC list_ss [filter_def]
+  THEN RES_TAC THEN RW_TAC list_ss []);
+
+val filter_LENGTH1 = 
+ Q.prove
+     `!P l l0 l1.
+        ((l0,l1) = filter P l ([],[])) 
+            ==> LENGTH l0 <= LENGTH l /\ LENGTH l1 <= LENGTH l`
+(RW_TAC bool_ss [] 
+  THEN IMP_RES_THEN (MP_TAC o SYM) filter_LENGTH
+  THEN RW_TAC list_ss []);
+
+val qsort_def = 
+ let val def0 = DISCH_ALL baRec_eqn
+     val def1 = INST_TYPE [alpha |-> Type `:'a list`,
+                           beta  |-> Type `:'a list`] def0
+     val def2 = Q.INST [`atomic` |-> `list_case T (\h t. F)`] def1
+     val def3 = Q.INST [`R` |-> `measure LENGTH`] def2
+     val def4 = Q.INST [`join` |-> `\v l. list_case v (\h t. CONS h v) l`] def3
+     val def5 = Q.INST [`dest` |-> 
+                        `\l. list_case ARB 
+                               (\h t. pair_case (\p1 p2. [p1; p2])
+                                        (filter (Q h) t ([],[]))) l`] def4
+     val def6 = Q.INST [`A:'a list -> 'a list` |-> `\x:'a list. x`] def5
+     val def7 = BETA_RULE def6
+     val def8 = REWRITE_RULE [WFTheory.WF_measure] def7
+
+(* Bug: Define needs variables? 
+val Quick_def = 
+ Define
+     `Quick Q = baRec
+          (\l.
+            list_case ARB
+              (\h t. pair_case (\p1 p2. [p1; p2]) (filter (Q h) t ([],[])))
+              l)
+          (\x. x)
+          (\v l. list_case v (\h t. CONS h v) l)
+          (list_case T (\h t. F))`;
+
+val def9 = PURE_REWRITE_RULE[GSYM Quick_def] def8;
+
+val termination =
+ Q.prove
+   `!h y. 
+      ~(list_case T (\h t. F) h) 
+       ==>
+        mem y
+         (list_case ARB
+           (\h t. pair_case (\p1 p2. [p1; p2]) (filter (Q h) t ([],[]))) h)
+       ==>
+         measure LENGTH y h`
+(Cases_on `h` THENL
+ [RW_TAC bool_ss [],
+  REWRITE_TAC [listTheory.list_case_def] 
+    THEN RW_TAC bool_ss [pairTheory.pair_case_def] THEN POP_ASSUM MP_TAC
+    THEN CONV_TAC (DEPTH_CONV (Let_conv.GEN_BETA_CONV))
+    THEN RW_TAC list_ss 
+          [mem_def,WFTheory.measure_def, relationTheory.inv_image_def]
+    THEN MATCH_MP_TAC (DECIDE `x <= y ==> x < SUC y`)
+    THEN PROVE_TAC (filter_LENGTH1::pairTheory.pair_rws)]);
+
+val pair_case_distrib = 
+  Q.prove`!P f p. P (pair_case f p) = pair_case (\x y. P (f x y)) p`
+ (Cases_on `p` THEN RW_TAC bool_ss []);
+
+val trivlem = 
+ Q.prove
+   `!l p. APPEND (pair_case (\p1 p2. [p1; p2]) p) l 
+            = 
+          let (p1,p2) = p in CONS p1 (CONS p2 l)`
+(Cases_on `p` THEN RW_TAC list_ss [pairTheory.pair_case_def]);
+
+val def10 = MP def9 termination;
+val def11 = Q.INST [`h` |-> `[]`] def10;
+val def11a = REWRITE_RULE [listTheory.list_case_def] def11;
+val def12 = Q.INST [`h` |-> `CONS h t`] (CONJUNCT2 def10);
+val def12a = BETA_RULE (REWRITE_RULE [listTheory.list_case_def] def12);
+val def12b = REWRITE_RULE [trivlem] def12a;
+val def13 = LIST_CONJ (CONJUNCTS def11a @ [def12b]);
+
+(* Question. Does this thing do quicksort? I bet not. *)
+
+*)
