@@ -1,6 +1,7 @@
 signature EnumType =
 sig
   include Abbrev
+  type tyinfo = TypeBasePure.tyinfo
 
   val define_enum_type :
       (string * string list * string * string) ->
@@ -20,8 +21,8 @@ sig
   (* and its constructors.  Returns a tyinfo along with a list of the names *)
   (* of the extra theorems that have been added to the tyinfo as *)
   (* simplifications *)
-  val enum_type_to_tyinfo :
-      (string * string list) -> (TypeBase.TypeInfo.tyinfo * string list)
+
+  val enum_type_to_tyinfo : string * string list -> tyinfo * string list
 
 end
 

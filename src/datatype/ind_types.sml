@@ -1215,9 +1215,9 @@ fun get_nestedty_info tyname =
                             (CONJUNCTS_CONV
                              (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
        end
-      open TypeBase.TypeInfo
+      open TypeBasePure
  in
-  case read tyname
+  case TypeBase.read tyname
    of SOME tyinfo => SOME (length (constructors_of tyinfo),
                          hol98_to_jrh_ind (induction_of tyinfo),
                          axiom_of tyinfo)

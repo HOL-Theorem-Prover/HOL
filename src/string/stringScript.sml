@@ -279,14 +279,14 @@ val _ = adjoin_to_theory
  (fn ppstrm => let
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
  in
-   S "val _ = TypeBase.TypeInfo.write";
-   S "  (TypeBase.TypeInfo.mk_tyinfo";
-   S "     {ax=TypeBase.ORIG string_Axiom,";
+   S "val _ = TypeBase.write";
+   S "  (TypeBasePure.mk_tyinfo";
+   S "     {ax=TypeBasePure.ORIG string_Axiom,";
    S "      case_def=STRING_CASE_DEF,";
    S "      case_cong=STRING_CASE_CONG,";
-   S "      induction=TypeBase.ORIG STRING_INDUCT_THM,";
+   S "      induction=TypeBasePure.ORIG STRING_INDUCT_THM,";
    S "      nchotomy=STRING_CASES,";
-   S "      size=SOME(Parse.Term`string_size`,TypeBase.ORIG STRING_SIZE_DEF),";
+   S "      size=SOME(Parse.Term`string_size`,TypeBasePure.ORIG STRING_SIZE_DEF),";
    S "      one_one=SOME STRING_11,";
    S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)});";
    S " ";

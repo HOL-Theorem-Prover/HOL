@@ -2495,14 +2495,14 @@ val _ = adjoin_to_theory
  (fn ppstrm => let
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
  in
-   S "val _ = TypeBase.TypeInfo.write";
-   S "  (TypeBase.TypeInfo.mk_tyinfo";
-   S "     {ax=TypeBase.ORIG prim_recTheory.num_Axiom,";
+   S "val _ = TypeBase.write";
+   S "  (TypeBasePure.mk_tyinfo";
+   S "     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,";
    S "      case_def=num_case_def,";
    S "      case_cong=num_case_cong,";
-   S "      induction=TypeBase.ORIG numTheory.INDUCTION,";
+   S "      induction=TypeBasePure.ORIG numTheory.INDUCTION,";
    S "      nchotomy=num_CASES,";
-   S "      size=SOME(Parse.Term`\\x:num. x`, TypeBase.ORIG boolTheory.REFL_CLAUSE),";
+   S "      size=SOME(Parse.Term`\\x:num. x`, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),";
    S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
    S "      distinct=SOME numTheory.NOT_SUC});"
  end)};

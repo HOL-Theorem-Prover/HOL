@@ -5,11 +5,12 @@ sig
   type thm          = Thm.thm
   type conv         = Abbrev.conv
   type tactic       = Abbrev.tactic
-  type thry         = TypeBase.TypeInfo.typeBase
+  type thry         = TypeBasePure.typeBase
   type proofs       = GoalstackPure.proofs
   type absyn        = Absyn.absyn
   type ppstream     = Portable.ppstream
   type 'a quotation = 'a Portable.frag list
+  type ('a,'b)subst = ('a,'b) Lib.subst
 
   type defn         = DefnBase.defn
 
@@ -32,8 +33,7 @@ sig
   val aux_defn   : defn -> defn option
   val union_defn : defn -> defn option
 
-  val inst_defn  : defn -> (term,term)Lib.subst *
-                           (hol_type,hol_type)Lib.subst -> defn
+  val inst_defn  : defn -> (term,term)subst * (hol_type,hol_type)subst -> defn
   val set_reln   : defn -> term -> defn
 
   val elim_tcs   : defn -> thm list -> defn

@@ -92,7 +92,7 @@ fun K0 ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm);
 
 fun list_mk_prod_tyl L =
  let val (front,(b,last)) = front_last L
-     val tysize = TypeBase.TypeInfo.type_size (TypeBase.TypeInfo.theTypeBase())
+     val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
      val last' = (if b then tysize else K0) last
      handle e => Raise (wrap_exn "TotalDefn" "last'" e);
   in
@@ -144,8 +144,8 @@ fun guessR defn =
            val domty0  = list_mk_prod_tyl domtyl
        in
           [mk_meas domty0,
-           mk_meas (TypeBase.TypeInfo.type_size
-                    (TypeBase.TypeInfo.theTypeBase()) domty)]
+           mk_meas (TypeBasePure.type_size
+                    (TypeBase.theTypeBase()) domty)]
        end
 end;
 
@@ -160,7 +160,7 @@ fun proveTotal tac defn =
       still useful. It knows all about the sizes of types.
  ---------------------------------------------------------------------------*)
 
-fun get_orig (TypeBase.ORIG th) = th
+fun get_orig (TypeBasePure.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
 
 val default_simps =
@@ -175,13 +175,13 @@ fun TC_SIMP_CONV simps tm =
  (REPEATC
    (CHANGED_CONV
      (Rewrite.REWRITE_CONV
-        (simps @ default_simps @ mapfilter TypeBase.TypeInfo.case_def_of
-               (TypeBase.TypeInfo.listItems (TypeBase.TypeInfo.theTypeBase())))
+        (simps @ default_simps @ mapfilter TypeBasePure.case_def_of
+               (TypeBasePure.listItems (TypeBase.theTypeBase())))
        THENC REDEPTH_CONV GEN_BETA_CONV))
   THENC Rewrite.REWRITE_CONV
           (pairTheory.pair_rws @
-           mapfilter (get_orig o #2 o valOf o TypeBase.TypeInfo.size_of0)
-               (TypeBase.TypeInfo.listItems (TypeBase.TypeInfo.theTypeBase())))
+           mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0)
+               (TypeBasePure.listItems (TypeBase.theTypeBase())))
   THENC REDEPTH_CONV BETA_CONV
   THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES]) tm;
 

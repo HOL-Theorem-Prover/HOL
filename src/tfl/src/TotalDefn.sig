@@ -1,12 +1,7 @@
 signature TotalDefn =
 sig
 
-  type term     = Term.term
-  type thm      = Thm.thm;
-  type conv     = Abbrev.conv
-  type tactic   = Abbrev.tactic
-  type defn     = DefnBase.defn
-  type 'a quotation = 'a Portable.frag list
+  include Abbrev
 
    (* Support for automated termination proofs *)
 

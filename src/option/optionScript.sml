@@ -294,26 +294,26 @@ val _ = adjoin_to_theory
   let val S = PP.add_string ppstrm
       fun NL() = PP.add_newline ppstrm
   in
-    S "val _ = TypeBase.TypeInfo.write";                 NL();
-    S "  (TypeBase.TypeInfo.mk_tyinfo";                  NL();
-    S "     {ax=TypeBase.ORIG option_Axiom,";            NL();
-    S "      case_def=option_case_def,";                 NL();
-    S "      case_cong=option_case_cong,";               NL();
-    S "      induction=TypeBase.ORIG option_induction,"; NL();
-    S "      nchotomy=option_nchotomy,";                 NL();
-    S "      size=NONE,";                                NL();
-    S "      one_one=SOME SOME_11,";                     NL();
-    S "      distinct=SOME NOT_NONE_SOME});";            NL();
+    S "val _ = TypeBase.write";                              NL();
+    S "  (TypeBasePure.mk_tyinfo";                           NL();
+    S "     {ax=TypeBasePure.ORIG option_Axiom,";            NL();
+    S "      case_def=option_case_def,";                     NL();
+    S "      case_cong=option_case_cong,";                   NL();
+    S "      induction=TypeBasePure.ORIG option_induction,"; NL();
+    S "      nchotomy=option_nchotomy,";                     NL();
+    S "      size=NONE,";                                    NL();
+    S "      one_one=SOME SOME_11,";                         NL();
+    S "      distinct=SOME NOT_NONE_SOME});";                NL();
     NL();
-    S "val option_Induct = Rewrite.ONCE_REWRITE_RULE ";  NL();
+    S "val option_Induct = Rewrite.ONCE_REWRITE_RULE ";               NL();
     S "                      [boolTheory.CONJ_SYM] option_induction"; NL();
-    S "val option_CASES = Rewrite.ONCE_REWRITE_RULE ";   NL();
+    S "val option_CASES = Rewrite.ONCE_REWRITE_RULE ";                NL();
     S "                      [boolTheory.DISJ_SYM] option_nchotomy";
     NL();NL();
     S "val _ = let open computeLib";                            NL();
     S "        in add_funs (map lazyfy_thm";                    NL();
     S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,";   NL();
-    S "                option_case_compute,OPTION_MAP_DEF,";  NL();
+    S "                option_case_compute,OPTION_MAP_DEF,";    NL();
     S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,";       NL();
     S "                OPTION_JOIN_DEF])";                      NL();
     S "        end;"

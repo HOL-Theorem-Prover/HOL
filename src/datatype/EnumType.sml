@@ -7,6 +7,7 @@ structure EnumType :> EnumType =
 struct
 
 open HolKernel boolLib Parse numLib;
+type tyinfo = TypeBasePure.tyinfo;
 
 infix THEN THENC |-> ##;  infixr -->
 
@@ -140,7 +141,7 @@ fun mk_size_definition ty = let
   val avar = mk_var("x", ty)
   val def = new_definition(cname^"_def", mk_eq(mk_comb(var_t, avar), zero_tm))
 in
-  SOME (rator (lhs (#2 (strip_forall (concl def)))), TypeBase.ORIG def)
+  SOME (rator (lhs (#2 (strip_forall (concl def)))), TypeBasePure.ORIG def)
 end
 
 (* ----------------------------------------------------------------------
@@ -332,7 +333,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val case_def = define_case initiality
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
-  open TypeBase TypeBase.TypeInfo
+  open TypeBasePure
   val tyinfo0 =
       mk_tyinfo { ax = ORIG initiality,
                   induction = ORIG induction,

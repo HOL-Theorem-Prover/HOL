@@ -2,7 +2,7 @@ signature Functional =
 sig
 
   type term = Term.term
-  type thry = TypeBase.TypeInfo.typeBase
+  type thry = TypeBasePure.typeBase
 
    datatype pattern
         = GIVEN   of term * int

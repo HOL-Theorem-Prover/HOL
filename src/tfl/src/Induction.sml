@@ -5,7 +5,7 @@ open HolKernel
 
 open boolLib Rules wfrecUtils;
 
-type thry = TypeBase.TypeInfo.typeBase
+type thry = TypeBasePure.typeBase
 
 infixr 3 -->;
 infix 3 |->;
@@ -15,10 +15,10 @@ val ERR = mk_HOL_ERR "Induction";
 
 
 fun induct_info db s =
- Option.map (fn facts => {nchotomy = TypeBase.TypeInfo.nchotomy_of facts,
+ Option.map (fn facts => {nchotomy = TypeBasePure.nchotomy_of facts,
                           constructors =
-                          TypeBase.TypeInfo.constructors_of facts})
-      (TypeBase.TypeInfo.get db s);
+                          TypeBasePure.constructors_of facts})
+      (TypeBasePure.get db s);
 
 (* -----------------------  Miscellaneous function  --------------------------
  *

@@ -2,8 +2,8 @@ signature Datatype =
 sig
 
  include Abbrev
- type tyinfo       = TypeBase.TypeInfo.tyinfo
- type typeBase     = TypeBase.TypeInfo.typeBase;
+ type tyinfo       = TypeBasePure.tyinfo
+ type typeBase     = TypeBasePure.typeBase;
  type AST          = ParseDatatype.AST
 
  type field_name   = string

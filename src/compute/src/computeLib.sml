@@ -171,7 +171,7 @@ val EVAL_CONV = CBV_CONV the_compset;
  ---------------------------------------------------------------------------*)
 
 fun write_datatype_info tyinfo =
- let open TypeBase TypeBase.TypeInfo
+ let open TypeBasePure
      val tyname = ty_name_of tyinfo
      val size_opt =
        case size_of0 tyinfo

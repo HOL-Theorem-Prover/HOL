@@ -29,6 +29,6 @@ sig
   val add_convs     : (term * int * conv) list -> unit
   val EVAL_CONV     : conv
 
-  val write_datatype_info : TypeBase.TypeInfo.tyinfo -> unit
+  val write_datatype_info : TypeBasePure.tyinfo -> unit
 
 end

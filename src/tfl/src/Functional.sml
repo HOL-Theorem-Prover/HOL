@@ -3,7 +3,7 @@ struct
 
 open HolKernel boolSyntax wfrecUtils Rsyntax;
 
-type thry   = TypeBase.TypeInfo.typeBase
+type thry = TypeBasePure.typeBase
 
 infixr 3 -->;
 infix 3 |->;
@@ -24,9 +24,9 @@ fun match_term thry tm1 tm2 = Term.match_term tm1 tm2;
 fun match_type thry ty1 ty2 = Type.match_type ty1 ty2;
 
 fun match_info db s =
-case TypeBase.TypeInfo.get db s
- of SOME facts => SOME{case_const = TypeBase.TypeInfo.case_const_of facts,
-                       constructors = TypeBase.TypeInfo.constructors_of facts}
+case TypeBasePure.get db s
+ of SOME facts => SOME{case_const = TypeBasePure.case_const_of facts,
+                       constructors = TypeBasePure.constructors_of facts}
   | NONE => NONE
 
 

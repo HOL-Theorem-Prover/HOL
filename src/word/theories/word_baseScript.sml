@@ -128,8 +128,7 @@ val LASTN_BUTLASTN_APPEND = prove(
 (* ---------------------------------------------------------------------*)
 
 val _ = Hol_datatype `word = WORD of 'a list`;
-val wordinfo = valOf (TypeBase.TypeInfo.read "word");
-val word_Ax = save_thm("word_Ax", TypeBase.TypeInfo.axiom_of wordinfo);
+val word_Ax = save_thm("word_Ax", TypeBase.axiom_of "word");
 
 (* ---------------------------------------------------------------------*)
 (* Some basic theorems about the type ('a)word				*)
@@ -139,19 +138,19 @@ val word_Ax = save_thm("word_Ax", TypeBase.TypeInfo.axiom_of wordinfo);
 val WORD_11 = store_thm(
   "WORD_11",
   --`!l l'. (WORD l = WORD l') = (l = l')`--,
-  REWRITE_TAC [valOf (TypeBase.TypeInfo.one_one_of wordinfo)]);
+  REWRITE_TAC [TypeBase.one_one_of "word"]);
 
 (* word_induct |- !P. (!l. P(WORD l)) ==> (!w. P w)			*)
 val word_induct = store_thm(
   "word_induct",
   --`!P. (!l. P (WORD l)) ==> !w. P w`--,
-  REWRITE_TAC [TypeBase.TypeInfo.induction_of wordinfo]);
+  REWRITE_TAC [TypeBase.induction_of "word"]);
 
 (* word_cases |- !w. ?l. w = WORD l  					*)
 val word_cases = store_thm(
   "word_cases",
   --`!w. ?l. w = WORD l`--,
-  REWRITE_TAC [TypeBase.TypeInfo.nchotomy_of wordinfo]);
+  REWRITE_TAC [TypeBase.nchotomy_of "word"]);
 
 (* ---------------------------------------------------------------------*)
 (* Define some bit accessing functions					*)

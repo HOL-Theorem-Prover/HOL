@@ -4,7 +4,7 @@ struct
 open HolKernel Parse boolLib pairLib
      Rules wfrecUtils Functional Induction DefnBase;
 
-type thry   = TypeBase.TypeInfo.typeBase
+type thry   = TypeBasePure.typeBase
 type proofs = GoalstackPure.proofs
 type absyn  = Absyn.absyn;
 
@@ -53,9 +53,9 @@ fun dest_hd_eqnl (hd_eqn::_) =
 fun extract_info db =
  let val (rws,congs) = rev_itlist
      (fn tyinfo => fn (R,C) =>
-         (TypeBase.TypeInfo.case_def_of tyinfo::R,
-          TypeBase.TypeInfo.case_cong_of tyinfo::C))
-     (TypeBase.TypeInfo.listItems db) ([],[])
+         (TypeBasePure.case_def_of tyinfo::R,
+          TypeBasePure.case_cong_of tyinfo::C))
+     (TypeBasePure.listItems db) ([],[])
  in {case_congs=congs, case_rewrites=rws}
  end;
 
@@ -958,14 +958,14 @@ in
 fun non_wfrec_defn (facts,bind,eqns) =
  let val ((_,args),_) = dest_hd_eqn eqns
  in if Lib.exists is_constructor args
-    then case TypeBase.TypeInfo.get facts
+    then case TypeBasePure.get facts
                  (fst(dest_type(type_of(first is_constructor args))))
        of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
         | SOME tyinfo =>
            let val def = Prim_rec.new_recursive_definition
                           {name=bind,def=eqns,
-                           rec_axiom=TypeBase.TypeInfo.axiom_of tyinfo}
-               val ind = TypeBase.TypeInfo.induction_of tyinfo
+                           rec_axiom=TypeBasePure.axiom_of tyinfo}
+               val ind = TypeBasePure.induction_of tyinfo
            in PRIMREC{eqs=def, ind=ind, bind=bind}
            end
     else ABBREV {eqn=new_definition (bind,eqns), bind=bind}
@@ -1033,7 +1033,7 @@ fun mk_defn stem eqns =
  let val _ = if Lexis.ok_identifier stem then ()
              else raise ERR "define"
                    (String.concat[Lib.quote stem," is not alphanumeric"])
-     val facts = TypeBase.TypeInfo.theTypeBase()
+     val facts = TypeBase.theTypeBase()
  in
   non_wfrec_defn (facts, defSuffix stem, eqns)
   handle HOL_ERR _

@@ -410,16 +410,16 @@ val _ = adjoin_to_theory
    let val S = PP.add_string ppstrm
        fun NL() = PP.add_newline ppstrm
    in
-      S "val pair_rws = [PAIR, FST, SND];";                 NL();
-      S "val _ = TypeBase.TypeInfo.write";                  NL();
-      S "  (TypeBase.TypeInfo.mk_tyinfo";                   NL();
-      S "     {ax=TypeBase.ORIG pair_Axiom,";               NL();
-      S "      case_def=pair_case_thm,";                    NL();
-      S "      case_cong=pair_case_cong,";                  NL();
-      S "      induction=TypeBase.ORIG pair_induction,";    NL();
-      S "      nchotomy=ABS_PAIR_THM,";                     NL();
-      S "      size=NONE,";                                 NL();
-      S "      one_one=SOME CLOSED_PAIR_EQ,";               NL();
+      S "val pair_rws = [PAIR, FST, SND];";                  NL();
+      S "val _ = TypeBase.write";                            NL();
+      S "  (TypeBasePure.mk_tyinfo";                         NL();
+      S "     {ax=TypeBasePure.ORIG pair_Axiom,";            NL();
+      S "      case_def=pair_case_thm,";                     NL();
+      S "      case_cong=pair_case_cong,";                   NL();
+      S "      induction=TypeBasePure.ORIG pair_induction,"; NL();
+      S "      nchotomy=ABS_PAIR_THM,";                      NL();
+      S "      size=NONE,";                                  NL();
+      S "      one_one=SOME CLOSED_PAIR_EQ,";                NL();
       S "      distinct=NONE});"
   end)};
 

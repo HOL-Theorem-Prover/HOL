@@ -10,15 +10,14 @@ struct
 open HolKernel boolLib;
 type simpset = simpLib.simpset;
 
+infix THEN THENL ORELSE ++;
 
-infix THEN THENL ORELSE;
+val op++ = simpLib.++;
 
 val ERR = mk_HOL_ERR "BasicProvers";
 
-local open simpLib
-      infix ++
-      val EXPAND_COND_CONV =
-           SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) []
+local val EXPAND_COND_CONV =
+           simpLib.SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) []
       val EXPAND_COND_TAC = CONV_TAC EXPAND_COND_CONV
       val EXPAND_COND = CONV_RULE EXPAND_COND_CONV
 in
@@ -124,7 +123,7 @@ val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
 fun add_constr tyinfo set =
-   let open TypeBase TypeBase.TypeInfo
+   let open TypeBasePure
        val C = constructors_of tyinfo
    in Binaryset.addList (set, map const_coords C)
    end;
@@ -133,7 +132,7 @@ infix &&;
 
 fun (ss && thl) = simpLib.++(ss,simpLib.rewrites thl);
 
-fun add_simpls tyinfo ss = ss && TypeBase.TypeInfo.simpls_of tyinfo;
+fun add_simpls tyinfo ss = ss && TypeBasePure.simpls_of tyinfo;
 
 fun is_dneg tm = 1 < snd(strip_neg tm);
 
@@ -208,12 +207,11 @@ local fun compare ((s1,s2),(t1,t2)) =
         case String.compare(s1,t1)
          of EQUAL => String.compare (s2,t2)
           | other => other
-      val constr_set0 = Binaryset.empty compare
+      val empty_constr_set = Binaryset.empty compare
 in
 fun PRIM_STP_TAC ss finisher =
-  let open TypeBase TypeBase.TypeInfo
-      val tyl = listItems (theTypeBase())
-      val constr_set = rev_itlist add_constr tyl constr_set0
+  let val tyl = TypeBasePure.listItems (TypeBase.theTypeBase())
+      val constr_set = rev_itlist add_constr tyl empty_constr_set
       val has_constr_eqn = Lib.can (find_term (constructed constr_set))
       val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
   in
@@ -240,8 +238,7 @@ end;
  ---------------------------------------------------------------------------*)
 
 fun STP_TAC ss finisher =
-  let open TypeBase TypeBase.TypeInfo
-      val tyl = listItems (theTypeBase())
+  let val tyl = TypeBasePure.listItems (TypeBase.theTypeBase())
       val ss' = rev_itlist add_simpls tyl ss
   in
     PRIM_STP_TAC ss' finisher
@@ -249,22 +246,22 @@ fun STP_TAC ss finisher =
 
 
 fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
+
 val bool_ss = boolSimps.bool_ss;
 
-open simpLib
-infix ++
-val (srw_ss : simpset ref) = let
-  open TypeBase TypeBase.TypeInfo
-  val base = boolSimps.bool_ss
-  val tyl = listItems (theTypeBase())
-in
-  ref (rev_itlist add_simpls tyl base)
-end;
+val (srw_ss : simpset ref) = 
+ let val base = bool_ss
+     val tyl = TypeBasePure.listItems (TypeBase.theTypeBase())
+ in
+    ref (rev_itlist add_simpls tyl base)
+ end;
 
-fun update_fn tyi = srw_ss := (!srw_ss && TypeBase.TypeInfo.simpls_of tyi)
-val _ = TypeBase.TypeInfo.register_update_fn update_fn
+fun update_fn tyi = srw_ss := (!srw_ss && TypeBasePure.simpls_of tyi)
+
+val _ = TypeBase.register_update_fn update_fn
 
 fun get_srw_ss () = !srw_ss
+
 fun augment_srw_ss ssdl =
     (srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) ssdl)
 
