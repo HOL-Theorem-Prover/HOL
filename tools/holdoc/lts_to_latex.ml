@@ -574,11 +574,19 @@ let msym v s = (* munge symbolic identifier *)
    try List.assoc s holsyms
    with Not_found -> texify s
 
+let mindent n = (* munge an indentation of level n *)
+  let rec ntimes n x =
+    match n with
+      0 -> []
+    | n -> x :: ntimes (n-1) x in
+  let m = (n-5) / 2 in
+  String.concat "" (ntimes m "\\quad") ^ " "
+
 let mtok v t =
   match t with
     Ident(s,true)  -> mident v s
   | Ident(s,false) -> msym v s
-  | Indent(n)      -> ""
+  | Indent(n)      -> mindent n
   | White(s)       -> s
   | Comment(s)     -> "\\text{\\small(*"^s^"*)}"
   | Sep(s)         -> texify s
