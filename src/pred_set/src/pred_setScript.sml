@@ -2971,8 +2971,7 @@ val delete_non_element = #1 (EQ_IMP_RULE (SPEC_ALL DELETE_NON_ELEMENT))
 
 val AC_ITSET_INSERT = store_thm(
   "AC_ITSET_INSERT",
-  ``!f s. (!x y z. f x (f y z) = f (f x y) z) /\
-          (!x y. f x y = f y x) /\
+  ``!f s. (!x y z. f x (f y z) = f y (f x z)) /\
           FINITE s ==>
           !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -3001,8 +3000,7 @@ val AC_ITSET_INSERT = store_thm(
       POP_ASSUM SUBST_ALL_TAC THEN
       FULL_SIMP_TAC bool_ss [FINITE_INSERT, CARD_INSERT, DELETE_INSERT,
                              IN_INSERT] THEN
-      ASM_SIMP_TAC arith_ss [delete_non_element] THEN AP_TERM_TAC THEN
-      PROVE_TAC []
+      ASM_SIMP_TAC arith_ss [delete_non_element]
     ],
     ALL_TAC
   ] THEN (* ~(x IN s) *)
@@ -3026,8 +3024,9 @@ val AC_ITSET_INSERT = store_thm(
   Q.PAT_ASSUM `REST s = t` (K ALL_TAC) THEN
   `t = x INSERT u` by
      (FULL_SIMP_TAC bool_ss [EXTENSION, IN_INSERT] THEN PROVE_TAC []) THEN
-  ASM_SIMP_TAC arith_ss [delete_non_element] THEN AP_TERM_TAC THEN
-  PROVE_TAC []);
+  ASM_SIMP_TAC arith_ss [delete_non_element]);
+
+
 
 val SUM_SET_def = new_definition(
   "SUM_SET_def",
