@@ -19,15 +19,18 @@ type Subst   = (term, term) subst * tySubst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = mlibUseful.traces := insert "matchTools" (!mlibUseful.traces);
-
-val chat = mlibUseful.trace "matchTools";
+local
+  open mlibUseful;
+in
+  val () = traces := {module = "matchTools", alignment = K 1} :: !traces;
+  fun chat l m = trace {module = "matchTools", message = m, level = l};
+  val ERR = mk_HOL_ERR "matchTools";
+  val BUG = BUG;
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
-
-val ERR = mk_HOL_ERR "matchTools";
 
 fun assert b e = if b then () else raise e;
 

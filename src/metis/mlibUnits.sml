@@ -17,7 +17,7 @@ open mlibUseful mlibTerm mlibThm mlibMatch;
 
 infix |-> ::> @> oo ##;
 
-structure D = mlibLiteralDisc; local open mlibLiteralDisc in end;
+structure N = mlibLiteralNet; local open mlibLiteralNet in end;
 
 (* ------------------------------------------------------------------------- *)
 (* Auxiliary functions.                                                      *)
@@ -35,15 +35,15 @@ fun lift_options f =
 (* Operations on the raw unit cache.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-type uns = thm D.literal_map;
+type uns = thm N.literal_map;
 
-val uempty : uns = D.empty;
+val uempty : uns = N.empty;
 
-fun uadd th uns = D.insert (dest_unit th |-> th) uns;
+fun uadd th uns = N.insert (dest_unit th |-> th) uns;
 
 fun usubsumes uns lit =
   List.find (can (C match_literals lit) o dest_unit)
-  (rev (D.match uns lit));
+  (rev (N.match uns lit));
 
 fun uprove uns =
   let
@@ -82,7 +82,7 @@ fun demod (INL th) = K th
   | demod (INR uns) = udemod uns;
 
 fun info ((INL _) : units) = "*"
-  | info (INR uns) = int_to_string (D.size uns);
+  | info (INR uns) = int_to_string (N.size uns);
 
 val pp_units = pp_map info pp_string;
 

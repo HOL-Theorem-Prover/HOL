@@ -9,22 +9,6 @@ struct
 infixr 0 oo ## |->;
 
 (* ------------------------------------------------------------------------- *)
-(* Magic features.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-(* This ensures that interruptions (SIGINTs) are actually seen by the *)
-(* linked executable as Interrupt exceptions. *)
-
-prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
-val _ = catch_interrupt true;
-
-(* Pointer equality using the run-time system. *)
-
-local val address : 'a -> int = Obj.magic
-in fun pointer_eq (x : 'a) (y : 'a) = address x = address y
-end;
-
-(* ------------------------------------------------------------------------- *)
 (* Exceptions, profiling and tracing.                                        *)
 (* ------------------------------------------------------------------------- *)
 
@@ -65,13 +49,23 @@ fun timed f a =
     (Time.toReal usr + Time.toReal sys, res)
   end;
 
-val tracing = ref false;
+val tracing = ref 0;
 
-val traces : string list ref = ref [];
+val traces : {module : string, alignment : int -> int} list ref = ref [];
 
-fun trace m s =
-  if !tracing andalso List.exists (fn x => x = m) (!traces) then print s
-  else ();
+local
+  val MAX = 10;
+  val trace_printer = Lib.say;
+  fun query m l =
+    let val t = List.find (fn {module, ...} => module = m) (!traces)
+    in case t of NONE => MAX | SOME {alignment, ...} => alignment l
+    end;
+in
+  fun trace {module = m, message = s, level = l} =
+    if 0 < !tracing andalso (MAX <= !tracing orelse query m l <= !tracing)
+    then trace_printer s
+    else ();
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Combinators                                                               *)
@@ -326,6 +320,14 @@ end;
 
 fun variant x vars = if mem x vars then variant (x ^ "'") vars else x;
 
+fun variant_num x vars =
+  let
+    fun xn n = x ^ int_to_string n
+    fun v n = let val x' = xn n in if mem x' vars then v (n + 1) else x' end
+  in
+    if mem x vars then v 1 else x
+  end;
+
 fun dest_prefix p =
   let
     fun check s = assert (String.isPrefix p s) (ERR "dest_prefix" "")
@@ -461,31 +463,16 @@ fun tree_partial_foldl f_b f_l =
 (* mlibUseful imperative features.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-fun lazify_thunk f =
-  let
-    val s = Susp.delay f
-  in
-    fn () => Susp.force s
-  end;
+fun lazify_thunk f = let val s = Susp.delay f in fn () => Susp.force s end;
 
 local
   val generator = ref 0
 in
-  fun new_int () =
-    let
-      val res = !generator
-      val () = generator := res + 1
-    in
-      res
-    end;
+  fun new_int () = let val n = !generator val () = generator := n + 1 in n end;
 
-  fun new_ints n =
-    let
-      val res = !generator
-      val () = generator := res + n
-    in
-      interval res n
-    end;
+  fun new_ints 0 = []
+    | new_ints k =
+    let val n = !generator val () = generator := n + k in interval n k end;
 end;
 
 fun with_flag (r, update) f x =

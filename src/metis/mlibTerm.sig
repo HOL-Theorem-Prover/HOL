@@ -17,12 +17,10 @@ datatype term =
   Var of string
 | Fn  of string * term list
 
-type atom = string * term list
-
 datatype formula =
   True
 | False
-| Atom   of atom
+| Atom   of term
 | Not    of formula
 | And    of formula * formula
 | Or     of formula * formula
@@ -43,6 +41,10 @@ val is_var          : term -> bool
 
 val dest_fn         : term -> string * term list
 val is_fn           : term -> bool
+val fn_name         : term -> string
+val fn_args         : term -> term list
+val fn_arity        : term -> int
+val fn_function     : term -> string * int
 
 val mk_const        : string -> term
 val dest_const      : term -> string
@@ -51,6 +53,9 @@ val is_const        : term -> bool
 val mk_binop        : string -> term * term -> term
 val dest_binop      : string -> term -> term * term
 val is_binop        : string -> term -> bool
+
+val dest_atom       : formula -> term
+val is_atom         : formula -> bool
 
 val list_mk_conj    : formula list -> formula
 val strip_conj      : formula -> formula list
@@ -95,11 +100,6 @@ val new_vars     : int -> term list
 val term_size    : term -> int
 val formula_size : formula -> int
 
-(* Operations on atoms *)
-val dest_atom     : formula -> string * term list
-val is_atom       : formula -> bool
-val atom_relation : formula -> string * int
-
 (* Operations on literals *)
 val mk_literal   : bool * formula -> formula
 val dest_literal : formula -> bool * formula
@@ -119,21 +119,31 @@ val relation_names : formula -> string list
 
 (* The equality relation has a special status *)
 val eq_rel          : string * int
+val mk_eq           : term * term -> formula
+val dest_eq         : formula -> term * term
+val is_eq           : formula -> bool
+val lhs             : formula -> term
+val rhs             : formula -> term
 val eq_occurs       : formula -> bool
 val relations_no_eq : formula -> (string * int) list
 
 (* Free variables *)
 val FVT        : term -> string list
 val FV         : formula -> string list
+val FVL        : formula list -> string list
 val specialize : formula -> formula
 val generalize : formula -> formula
 
 (* Subterms *)
-val arity           : term -> int
 val subterm         : int list -> term -> term
 val rewrite         : (int list, term) maplet -> term -> term
-val literal_arity   : formula -> int
 val literal_subterm : int list -> formula -> term
 val literal_rewrite : (int list, term) maplet -> formula -> formula
+
+(* The Knuth-Bendix ordering *)
+type Weight = string * int -> int
+type Prec   = (string * int) * (string * int) -> order
+val kb_weight  : Weight -> term -> int * string mlibMultiset.mset
+val kb_compare : Weight -> Prec -> term * term -> order option
 
 end

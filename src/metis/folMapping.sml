@@ -29,12 +29,17 @@ val INST_TY    = matchTools.INST_TY;
 val PINST      = matchTools.PINST;
 
 (* ------------------------------------------------------------------------- *)
-(* Chatting.                                                                 *)
+(* Chatting and error handling.                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val () = mlibUseful.traces := insert "folMapping" (!mlibUseful.traces);
-
-val chat = mlibUseful.trace "folMapping";
+local
+  open mlibUseful;
+in
+  val () = traces := {module = "folMapping", alignment = K 1} :: !traces;
+  fun chat l m = trace {module = "folMapping", message = m, level = l};
+  val ERR = mk_HOL_ERR "folMapping";
+  val BUG = BUG;
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Mapping parameters.                                                       *)
@@ -61,9 +66,6 @@ fun update_parm_with_types f (parm : parameters) : parameters =
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
-
-val ERR = mk_HOL_ERR "folMapping";
-val BUG = mlibUseful.BUG;
 
 fun zipwith f =
   let
@@ -284,11 +286,14 @@ val term_op_map =
    ("bool.?", "existential"), ("bool.!", "universal")];
 
 local
-  fun pr_varname v = if is_prime v then "_" ^ dest_prime v else v;
   val pr_op = possibly (fn x => assoc x type_op_map);
+  fun Var' v = mlibTerm.Var (if is_prime v then "_" ^ dest_prime v else v);
+  fun Fn' (f, a) =
+    mlibTerm.Fn
+    (if mlibTerm.var_string f then (if null a then "c_" else "f_") ^ f else f, a);
 in
-  fun prettify_type (mlibTerm.Var v)     = mlibTerm.Var (pr_varname v)
-    | prettify_type (mlibTerm.Fn (f, a)) = mlibTerm.Fn (pr_op f, map prettify_type a);
+  fun prettify_type (mlibTerm.Var v)     = Var' v
+    | prettify_type (mlibTerm.Fn (f, a)) = Fn' (pr_op f, map prettify_type a);
 end;
 
 local
@@ -324,11 +329,9 @@ end;
 val prettify_formula =
   let
     open mlibTerm
-    fun promote (Fn A)  = Atom A
-      | promote (Var _) = raise BUG "prettify_formula" "ARGH!"
     fun pr True            = True
       | pr False           = False
-      | pr (Atom A)        = promote (prettify_term (Fn A))
+      | pr (Atom tm)       = Atom (prettify_term tm)
       | pr (Not f)         = Not (pr f)
       | pr (And (f, g))    = And (pr f, pr g)
       | pr (Or (f, g))     = Or (pr f, pr g)
@@ -354,11 +357,11 @@ end;
 (* Translate a HOL type to FOL, and back again.                              *)
 (* ------------------------------------------------------------------------- *)
 
-fun hol_type_to_fol tyvars =
+fun hol_type_to_fol tyV =
   let
     fun ty_to_fol hol_ty =
       if is_vartype hol_ty then
-        (if mem hol_ty tyvars then mlibTerm.Var else (fn s => mlibTerm.Fn (s, [])))
+        (if mem hol_ty tyV then mlibTerm.Var else (fn s => mlibTerm.Fn (s, [])))
         (dest_vartype hol_ty)
       else
         let val (f, args) = dest_type hol_ty
@@ -383,49 +386,37 @@ try fol_type_to_hol t;
 (* Translate a HOL literal to FOL.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun hol_term_to_fol (parm : parameters) (tm_vars, ty_vars) =
+fun hol_term_to_fol (parm : parameters) (tmV, tyV) =
   let
     val {with_types, higher_order, ...} = parm
-    fun tmty_to_fol tm =
-      if not with_types then tm_to_fol tm
-      else mlibTerm.Fn (":", [tm_to_fol tm, hol_type_to_fol ty_vars (type_of tm)])
-    and tm_to_fol tm =
-      if mem tm tm_vars then mlibTerm.Var (fst (dest_var tm))
+    fun tmty2fol tm =
+      if not with_types then tm2fol tm
+      else mlibTerm.Fn (":", [tm2fol tm, hol_type_to_fol tyV (type_of tm)])
+    and tm2fol tm =
+      if mem tm tmV then mlibTerm.Var (fst (dest_var tm))
       else if higher_order then
         if is_comb tm then
           let val (a, b) = dest_comb tm
-          in mlibTerm.Fn ("%", [tmty_to_fol a, tmty_to_fol b])
+          in mlibTerm.Fn ("%", [tmty2fol a, tmty2fol b])
           end
         else mlibTerm.Fn (dest_varconst tm, [])
       else
         let
           val (f, args) = strip_comb tm
-          val () =
-            assert (not (mem f tm_vars))
-            (ERR "hol_term_to_fol" "higher-order term")
+          val () = assert (not (mem f tmV)) (ERR "hol_term_to_fol" "ho term")
         in
-          mlibTerm.Fn (dest_varconst f, map tmty_to_fol args)
+          mlibTerm.Fn (dest_varconst f, map tmty2fol args)
         end
   in
-    tmty_to_fol
+    tmty2fol
   end;
 
 fun hol_atom_to_fol parm vs tm =
   if is_eq tm then
     let val (a, b) = dest_eq tm
-    in mlibTerm.Atom ("=", [hol_term_to_fol parm vs a, hol_term_to_fol parm vs b])
+    in mlibTerm.Atom (mlibTerm.Fn ("=", map (hol_term_to_fol parm vs) [a, b]))
     end
-  else if #higher_order parm then
-    mlibTerm.Atom ("B", [hol_term_to_fol parm vs tm])
-  else
-    let
-      val (r, args) = strip_comb tm
-      val () =
-        assert (not (mem r (fst vs)))
-        (ERR "hol_term_to_fol" "higher-order atom")
-    in
-      mlibTerm.Atom (dest_varconst r, map (hol_term_to_fol parm vs) args)
-    end;
+  else mlibTerm.Atom (mlibTerm.Fn ("$", [hol_term_to_fol parm vs tm]));
 
 fun hol_literal_to_fol parm vars lit =
   if is_neg lit then mlibTerm.Not (hol_atom_to_fol parm vars (dest_neg lit))
@@ -551,15 +542,12 @@ fun fol_term_to_hol ({higher_order, with_types = true, ...} : parameters) =
     tm_to_hol
   end;
 
-fun fol_atom_to_hol parm (mlibTerm.Atom ("=", [x, y])) =
+fun fol_atom_to_hol parm (mlibTerm.Atom (mlibTerm.Fn ("=", [x, y]))) =
   unify_mk_eq (fol_term_to_hol parm x, fol_term_to_hol parm y)
-  | fol_atom_to_hol parm (mlibTerm.Atom (r, args)) =
-  cast_to bool
-  (if #higher_order parm then
-     case (r, args) of ("B", [fol_tm]) => fol_term_to_hol parm fol_tm
-     | _ => raise ERR "fol_atom_to_hol" "weird higher-order atom"
-   else unify_list_mk_comb (mk_varconst r, map (fol_term_to_hol parm) args))
-  | fol_atom_to_hol _ _ = raise BUG "fol_atom_to_fol" "not an atom";
+  | fol_atom_to_hol parm (mlibTerm.Atom (mlibTerm.Fn ("$", [tm]))) =
+  cast_to bool (fol_term_to_hol parm tm)
+  | fol_atom_to_hol _ _ = raise BUG "fol_atom_to_fol" "malformed atom";
+
 
 fun fol_literal_to_hol _ mlibTerm.True = T
   | fol_literal_to_hol _ mlibTerm.False = F
@@ -644,10 +632,10 @@ fun proof_step parm prev =
         val ((hol_ms1, hol_lits1), hol_th1) = res0 fol_th1 fol_lit
         val ((hol_ms2, hol_lits2), hol_th2) = res0 fol_th2 (negate fol_lit)
 (*
-        val () = chat ("resolve: hol_lits1 =\n" ^ terms_to_string hol_lits1)
-        val () = chat ("resolve: hol_lits2 =\n" ^ terms_to_string hol_lits2)
-        val () = chat ("resolve: hol_ms1 =\n" ^ terms_to_string hol_ms1)
-        val () = chat ("resolve: hol_ms2 =\n" ^ terms_to_string hol_ms2)
+        val () = chat 2 ("resolve: hol_lits1 =\n" ^ terms_to_string hol_lits1)
+        val () = chat 2 ("resolve: hol_lits2 =\n" ^ terms_to_string hol_lits2)
+        val () = chat 2 ("resolve: hol_ms1 =\n" ^ terms_to_string hol_ms1)
+        val () = chat 2 ("resolve: hol_ms2 =\n" ^ terms_to_string hol_ms2)
 *)
         val sub = new_unify_ty (hol_lit :: hol_ms1 @ map negate_lit' hol_ms2)
         val hol_lit' = pinst sub hol_lit
@@ -674,12 +662,12 @@ local
 
   fun chat_proof_step parm prev (p as (fol_th, inf)) =
     let
-      val () = chat
+      val () = chat 1
         ("_____________________________________________________\n" ^
          "\nfol: " ^ mlibThm.thm_to_string fol_th ^ "\n" ^
          "\ninf: " ^ mlibThm.inference_to_string inf ^ "\n")
       val res = proof_step parm prev p
-      val () = chat
+      val () = chat 1
         ("\nhol: " ^ thm_to_string (finalize_lits res) ^ "\n")
     in
       res

@@ -16,8 +16,6 @@ open mlibUseful mlibTerm;
 
 infixr |-> ::> oo;
 
-val isSome  = Option.isSome;
-val drop    = List.drop;
 val flatten = List.concat;
 
 (* ------------------------------------------------------------------------- *)
@@ -40,131 +38,136 @@ fun partition_find f l =
   end;
 
 (* ------------------------------------------------------------------------- *)
-(* Term nets are optimized for match, matched and unify queries.             *)
+(* Term discrimination trees are optimized for match queries.                *)
 (* ------------------------------------------------------------------------- *)
 
-type 'a subterm_info =
-  {skip : 'a, var : 'a option, fns : ((string * int) * 'a) list};
+datatype pattern = VAR | FN of string * int;
 
-datatype 'a net = END of 'a list | SUBTERM of 'a net subterm_info;
+type 'a map = (pattern, 'a) tree;
 
-datatype 'a term_map = NET of int * (int * 'a) net;
+datatype 'a term_map = MAP of int * (int * 'a) map list;
 
-val empty_net = SUBTERM {skip = END [], var = NONE, fns = []};
+val empty = MAP (0, []);
 
-val empty = NET (0, empty_net);
+fun size (MAP (i, _)) = i;
 
-fun size (NET (i, _)) = i;
-
-fun to_list (NET (_, SUBTERM {skip = END l, ...})) = restore_fifo_order l
-  | to_list (NET _) = raise BUG "net_to_maplets" "corrupt";
+fun to_list (MAP (_, n)) =
+  restore_fifo_order (flatten (map (tree_foldr (K flatten) wrap) n));
 
 fun pp_term_map pp_a = pp_map to_list (pp_list pp_a);
 
 local
-  fun add a [] net =
+  fun find_pat x (BRANCH (p, _)) = p = x
+    | find_pat _ (LEAF _) = raise BUG "find_pat" "misplaced LEAF";
+
+  fun add a [] l = LEAF a :: l
+    | add a (tm :: rest) l =
     let
-      val other_ends =
-        case net of END l => l
-        | SUBTERM {skip = END [], var = NONE, fns = []} => []
-        | _ => raise BUG "::+" "corrupt at end"
+      val (pat, rest) =
+        case tm of Var _ => (VAR, rest)
+        | Fn (f, args) => (FN (f, length args), args @ rest)
+      val (this, others) = partition_find (find_pat pat) l
+      val next =
+        case this of NONE => []
+        | SOME (BRANCH (_, l)) => l
+        | SOME (LEAF _) => raise BUG "add" "misplaced LEAF"
     in
-      (END (a :: other_ends), [])
-    end
-    | add a (Var _ :: rest) (SUBTERM {skip, var, fns}) =
-    let
-      val next = case var of SOME n => n | NONE => empty_net
-      val (next, share) = add a rest next
-    in
-      if null fns then
-        (SUBTERM {skip = next, var = SOME next, fns = []}, next :: share)
-      else
-        (SUBTERM {skip = fst (add a rest skip), var = SOME next, fns = fns}, [])
-    end
-    | add a (Fn (f, args) :: rest) (SUBTERM {skip, var, fns}) =
-    let
-      val arity = length args
-      val sym = (f, arity)
-      val (this_fn, other_fns) = partition_find (equal sym o fst) fns
-      val next = case this_fn of SOME (_, n) => n | NONE => empty_net
-      val (next, share) = add a (args @ rest) next
-      val fns = (sym, next) :: other_fns
-      val share =
-        if length share < arity then [] else drop (next :: share, arity)
-    in
-      if non null share andalso null other_fns andalso non isSome var then
-        (SUBTERM {skip = hd share, var = var, fns = fns}, share)
-      else
-        (SUBTERM {skip = fst (add a rest skip), var = var, fns = fns}, [])
-    end
-    | add a (_ :: _) (END _) = raise BUG "::+" "corrupt along path";
+      BRANCH (pat, add a rest next) :: others
+    end;
 in
-  fun insert (tm |-> a) (NET (i, d)) = NET (i + 1, fst (add (i, a) [tm] d))
+  fun insert (tm |-> a) (MAP (i, n)) = MAP (i + 1, add (i, a) [tm] n)
   handle ERR_EXN _ => raise BUG "insert" "should never fail";
 end;
 
 fun from_maplets l = foldl (uncurry insert) empty l;
 
 local
-  fun mat res [] = res
-    | mat res (([], END l) :: others) = mat (l @ res) others
-    | mat res ((tm :: rest, SUBTERM {skip = _, var, fns}) :: others) =
-    let
-      val others =
-        case var of NONE => others | SOME net => (rest, net) :: others
-      val others =
-        case tm of Var _ => others
-        | Fn (f, args) =>
-          (case List.find (equal (f, length args) o fst) fns of NONE => others
-           | SOME (_, net) => (args @ rest, net) :: others)
-    in
-      mat res others
-    end
-    | mat _ _ = raise BUG "match" "corrupt";
+  fun mat VAR (_ :: rest) = SOME rest
+    | mat (FN (f, n)) (Fn (g, args) :: rest) =
+    if f = g andalso n = length args then SOME (args @ rest) else NONE
+    | mat (FN _) (Var _ :: _) = NONE
+    | mat _ [] = raise BUG "match" "ran out of subterms";
+
+  fun final a [] = SOME a
+    | final _ (_ :: _) = raise BUG "match" "too many subterms";
 in
-  fun match (NET (_, d)) tm = restore_fifo_order (mat [] [([tm], d)])
+  fun match (MAP (_, n)) tm =
+    restore_fifo_order (flatten (map (tree_partial_foldl mat final [tm]) n))
   handle ERR_EXN _ => raise BUG "match" "should never fail";
 end;
 
 local
-  fun uni res [] = res
-    | uni res (([], END l) :: others) = uni (l @ res) others
-    | uni res ((Var _ :: rest, SUBTERM {skip, var = _, fns = _}) :: others) =
-    uni res ((rest, skip) :: others)
-    | uni res ((Fn (f, args) :: rest, SUBTERM {skip = _, var, fns}) :: others) =
-    let
-      val others =
-        case var of NONE => others | SOME net => (rest, net) :: others
-      val others =
-        case List.find (equal (f, length args) o fst) fns of NONE => others
-        | SOME (_, net) => (args @ rest, net) :: others
-    in
-      uni res others
-    end
-    | uni _ _ = raise BUG "unify" "corrupt";
+  fun more VAR = 0 | more (FN (f, n)) = n;
+  fun mat pat (0, Var _ :: rest) = SOME (more pat, rest)
+    | mat VAR (0, Fn _ :: _) = NONE
+    | mat (FN (f, n)) (0, Fn (g, args) :: rest) =
+    if f = g andalso n = length args then SOME (0, args @ rest) else NONE
+    | mat _ (0, []) = raise BUG "matched" "ran out of subterms"
+    | mat pat (n, rest) = SOME (more pat + n - 1, rest);
+
+  fun final a (0, []) = SOME a
+    | final _ (0, _ :: _) = raise BUG "matched" "too many subterms"
+    | final _ (n, _) = raise BUG "matched" "still skipping";
 in
-  fun unify (NET (_, d)) tm = restore_fifo_order (uni [] [([tm], d)])
-  handle ERR_EXN _ => raise BUG "unify" "should never fail";
+  fun matched (MAP (_, n)) tm =
+    restore_fifo_order (flatten (map (tree_partial_foldl mat final (0,[tm])) n))
+  handle ERR_EXN _ => raise BUG "matched" "should never fail";
 end;
 
 local
-  fun mtd res [] = res
-    | mtd res (([], END l) :: others) = mtd (l @ res) others
-    | mtd res ((Var _ :: rest, SUBTERM {skip, var = _, fns = _}) :: others) =
-    mtd res ((rest, skip) :: others)
-    | mtd res
-    ((Fn (f, args) :: rest, SUBTERM {skip = _, var = _, fns}) :: others) =
-    let
-      val others =
-        case List.find (equal (f, length args) o fst) fns of NONE => others
-        | SOME (_, net) => (args @ rest, net) :: others
-    in
-      mtd res others
-    end
-    | mtd _ _ = raise BUG "matched" "corrupt";
+  fun more VAR = 0 | more (FN (f, n)) = n;
+  fun mat pat (0, Var _ :: rest) = SOME (more pat, rest)
+    | mat VAR (0, Fn _ :: rest) = SOME (0, rest)
+    | mat (FN (f, n)) (0, Fn (g, args) :: rest) =
+    if f = g andalso n = length args then SOME (0, args @ rest) else NONE
+    | mat _ (0, []) = raise BUG "unify" "ran out of subterms"
+    | mat pat (n, rest) = SOME (more pat + n - 1, rest);
+
+  fun final a (0, []) = SOME a
+    | final _ (0, _ :: _) = raise BUG "unify" "too many subterms"
+    | final _ (n, _) = raise BUG "unify" "still skipping";
 in
-  fun matched (NET (_, d)) tm = restore_fifo_order (mtd [] [([tm], d)])
-  handle ERR_EXN _ => raise BUG "matched" "should never fail";
+  fun unify (MAP (_, n)) tm =
+    restore_fifo_order (flatten (map (tree_partial_foldl mat final (0,[tm])) n))
+  handle ERR_EXN _ => raise BUG "unify" "should never fail";
 end;
+
+(* ------------------------------------------------------------------------- *)
+(* We can overlay the above type with a simple list type.                    *)
+(* ------------------------------------------------------------------------- *)
+(*
+type 'a simple = int * int * term list * 'a list;
+
+type 'a term_map = ('a simple, 'a term_map) sum;
+
+fun check (0, _, t, a) =
+  INR (from_maplets (foldl (fn (x, xs) => op|-> x :: xs) [] (zip t a)))
+  | check p = INL p;
+
+val empty : 'a term_map = INR empty;
+
+fun new n = check (n, 0, [], []);
+
+val insert = fn m =>
+  (fn INL (n, s, ts, xs) =>
+      (case m of t |-> x => check (n - 1, s + 1, t :: ts, x :: xs))
+    | INR d => INR (insert m d));
+
+val match = fn INL (_, _, _, xs) => K (rev xs) | INR d => match d;
+
+val matched = fn INL (_, _, _, xs) => K (rev xs) | INR d => matched d;
+
+val unify = fn INL (_, _, _, xs) => K (rev xs) | INR d => unify d;
+
+val size = fn INL (_, s, _, _) => s | INR d => size d;
+
+val from_maplets = INR o from_maplets;
+
+val to_list = fn INL (_, _, _, xs) => rev xs | INR d => to_list d;
+
+val pp_term_map =
+  fn pp_a => fn pp =>
+  (fn INL (_, _, _, xs) => pp_list pp_a pp xs | INR d => pp_term_map pp_a pp d);
+*)
 
 end

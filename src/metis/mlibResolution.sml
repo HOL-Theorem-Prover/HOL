@@ -21,15 +21,15 @@ infix |-> ::> @> oo ## ::* ::@;
 structure S = mlibStream; local open mlibStream in end;
 structure U = mlibUnits; local open mlibUnits in end;
 
-type 'a subsum = 'a mlibSubsum.subsum;
+type 'a subsume = 'a mlibSubsume.subsume;
 
 (* ------------------------------------------------------------------------- *)
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := insert "mlibResolution" (!traces);
+val () = traces := {module = "mlibResolution", alignment = K 1} :: !traces;
 
-val chat = trace "mlibResolution";
+fun chat l m = trace {module = "mlibResolution", message = m, level = l};
 
 (* ------------------------------------------------------------------------- *)
 (* Tuning parameters.                                                        *)
@@ -49,17 +49,18 @@ val defaults =
 (* Clause stores.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
-type store = thm subsum * resolvers;
+type store = thm subsume * resolvers;
 
-val empty_store : store = (mlibSubsum.empty, empty_resolvers);
+val empty_store : store = (mlibSubsume.empty, empty_resolvers);
 
-fun store_add th (s, r) = (mlibSubsum.add (clause th |-> th) s, add_resolver th r);
+fun store_add th (s, r) =
+  (mlibSubsume.add (clause th |-> th) s, add_resolver th r);
 
 fun store_resolvants ((_, r) : store) = find_resolvants r;
 
-fun store_subsumed ((s, _) : store) = mlibSubsum.subsumed s o clause;
+fun store_subsumed ((s, _) : store) = mlibSubsume.subsumed s o clause;
 
-fun store_info (s, r) = "(" ^ mlibSubsum.info s ^ "," ^ resolvers_info r ^ ")";
+fun store_info (s, r) = "(" ^ mlibSubsume.info s ^ "," ^ resolvers_info r ^ ")";
 
 (* ------------------------------------------------------------------------- *)
 (* Positive refinement.                                                      *)
@@ -89,7 +90,7 @@ fun subsumption_check store th =
   case store_subsumed store th of [] => SOME th | _ :: _ => NONE;
 
 fun theap_strengthen theap th =
-  (case mlibSubsum.strictly_subsumed (theap_subsumers theap) (clause th) of []
+  (case mlibSubsume.strictly_subsumed (theap_subsumers theap) (clause th) of []
      => th
    | (_, th) :: _ => th);
 
@@ -133,7 +134,7 @@ fun resolve (parm : parameters) =
          val () = record (length resolvants)
          val units = foldl (uncurry check_add) units (map #res resolvants)
          val keep = retention_test units facts used th resolvants
-         val () = chat (feedback (length keep) (length resolvants))
+         val () = chat 2 (feedback (length keep) (length resolvants))
          val unused = theap_addl keep unused
        in
          SOME ((facts, used, unused), units)
@@ -151,16 +152,16 @@ fun raw_resolution parm =
      fun run wrap state =
        if not (check_meter (!slice)) then S.CONS (NONE, wrap state)
        else
-         (chat "+";
+         (chat 1 "+";
           case resolve' (record_infs (!slice)) state (!units) of NONE => S.NIL
           | SOME (state, units') => (units := units'; run wrap state))
      fun wrapper g (a as (_, _, w)) () =
-       (chat (theap_info w); run (wrapper g) a)
+       (chat 2 (theap_info w); run (wrapper g) a)
        handle Contradiction th => contradiction_solver th g
      val facts = foldl (fn (t, l) => store_add t l) empty_store thms
      val used = empty_store
      val unused = theap_addl hyps (new_theap (#theap_parm parm))
-     val () = chat
+     val () = chat 2
        ("resolution--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--facts=" ^ store_info facts ^

@@ -28,12 +28,10 @@ datatype term =
   Var of string
 | Fn  of string * term list;
 
-type atom = string * term list;
-
 datatype formula =
   True
 | False
-| Atom   of atom
+| Atom   of term
 | Not    of formula
 | And    of formula * formula
 | Or     of formula * formula
@@ -107,6 +105,14 @@ fun dest_fn (Fn f) = f
 
 val is_fn = can dest_fn;
 
+val fn_name = fst o dest_fn;
+
+val fn_args = snd o dest_fn;
+
+val fn_arity = length o fn_args;
+
+fun fn_function tm = (fn_name tm, fn_arity tm);
+
 (* Constants *)
 
 fun mk_const c = (Fn (c, []));
@@ -126,21 +132,30 @@ fun dest_binop f (Fn (x, [a, b])) =
 
 fun is_binop f = can (dest_binop f);
 
+(* Atoms *)
+
+fun dest_atom (Atom a) = a
+  | dest_atom _ = raise ERR "dest_atom" "";
+
+val is_atom = can dest_atom;
+
 (* Conjunctions *)
 
 fun list_mk_conj l = (case rev l of [] => True | h :: t => foldl And h t);
 
 local
   fun conj cs (And (a, b)) = conj (a :: cs) b
-    | conj cs fm = rev (fm :: cs)
+    | conj cs fm = rev (fm :: cs);
 in
-  val strip_conj = conj []
+  fun strip_conj True = []
+    | strip_conj fm = conj [] fm;
 end;
 
 val flatten_conj =
   let
     fun flat acc []                  = acc
       | flat acc (And (p, q) :: fms) = flat acc (q :: p :: fms)
+      | flat acc (True       :: fms) = flat acc fms
       | flat acc (fm         :: fms) = flat (fm :: acc) fms
   in
     fn fm => flat [] [fm]
@@ -152,15 +167,17 @@ fun list_mk_disj l = (case rev l of [] => False | h :: t => foldl Or h t);
 
 local
   fun disj cs (Or (a, b)) = disj (a :: cs) b
-    | disj cs fm = rev (fm :: cs)
+    | disj cs fm = rev (fm :: cs);
 in
-  val strip_disj = disj []
+  fun strip_disj False = []
+    | strip_disj fm = disj [] fm;
 end;
 
 val flatten_disj =
   let
     fun flat acc []                 = acc
       | flat acc (Or (p, q) :: fms) = flat acc (q :: p :: fms)
+      | flat acc (False     :: fms) = flat acc fms
       | flat acc (fm        :: fms) = flat (fm :: acc) fms
   in
     fn fm => flat [] [fm]
@@ -279,7 +296,7 @@ local
     | demote (Iff (a, b))    = Fn ("<=>", [demote a, demote b])
     | demote (Forall (v, b)) = Fn ("!",   [Var v,    demote b])
     | demote (Exists (v, b)) = Fn ("?",   [Var v,    demote b])
-    | demote (Atom A)        = Fn A;
+    | demote (Atom t)        = t;
 in
   fun pp_formula' ops = pp_map demote (pp_term' ops);
 end;
@@ -364,8 +381,7 @@ local
     | promote (Fn ("<=>", [a, b]    )) = Iff (promote a, promote b)
     | promote (Fn ("!",   [Var v, b])) = Forall (v, promote b)
     | promote (Fn ("?",   [Var v, b])) = Exists (v, promote b)
-    | promote (Fn A                  ) = Atom A
-    | promote (Var v                 ) = Atom (v, []);
+    | promote tm                       = Atom tm;
 in
   fun formula_parser ops = term_parser ops >> promote;
 end;
@@ -394,23 +410,22 @@ fun parse_formula     q = parse_formula'     (!infixes) q;
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun num_var n = Var ("_" ^ int_to_string n);
+  val prefix  = "_";
+  val num_var = Var o mk_prefix prefix o int_to_string;
 in
   val new_var  = num_var o new_int;
   val new_vars = map num_var o new_ints;
 end;
 
 local
-  fun szt n []                         = n
-    | szt n (Var _             :: tms) = szt (n + 1) tms
-    (* Hack: it's best not to count HOL types when calculating term size *)
-    | szt n (Fn (":", [tm, _]) :: tms) = szt (n + 1) (tm :: tms)
-    | szt n (Fn (_  , args   ) :: tms) = szt (n + 1) (args @ tms);
+  fun szt n []                    = n
+    | szt n (Var _        :: tms) = szt (n + 1) tms
+    | szt n (Fn (_, args) :: tms) = szt (n + 1) (args @ tms);
 
   fun sz n []                     = n
     | sz n (True          :: fms) = sz (n + 1) fms
     | sz n (False         :: fms) = sz (n + 1) fms
-    | sz n (Atom (_, tms) :: fms) = sz (szt (n + 1) tms) fms
+    | sz n (Atom t        :: fms) = sz (szt (n + 1) [t]) fms
     | sz n (Not p         :: fms) = sz (n + 1) (p :: fms)
     | sz n (And (p, q)    :: fms) = sz (n + 1) (p :: q :: fms)
     | sz n (Or  (p, q)    :: fms) = sz (n + 1) (p :: q :: fms)
@@ -424,27 +439,15 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
-(* Basic operations on atoms.                                                *)
-(* ------------------------------------------------------------------------- *)
-
-fun dest_atom (Atom a) = a
-  | dest_atom _ = raise ERR "dest_atom" "not an atom";
-
-val is_atom = can dest_atom;
-
-val atom_relation = (I ## length) o dest_atom;
-
-(* ------------------------------------------------------------------------- *)
 (* Basic operations on literals.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-fun mk_literal (true, a as Atom _) = a
-  | mk_literal (false, a as Atom _) = Not a
-  | mk_literal _ = raise ERR "mk_literal" "arg not an atom";
+fun mk_literal (true,  a) = a
+  | mk_literal (false, a) = Not a;
 
-fun dest_literal (a as Atom _) = (true, a)
+fun dest_literal (a as Atom _)       = (true,  a)
   | dest_literal (Not (a as Atom _)) = (false, a)
-  | dest_literal _ = raise ERR "dest_literal" "not a literal";
+  | dest_literal _                   = raise ERR "dest_literal" "";
 
 val is_literal = can dest_literal;
 
@@ -467,21 +470,22 @@ fun negate (Not p) = p
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun f fs []                    = fs
-    | f fs (Var _        :: tms) = f fs tms
-    | f fs (Fn (n, args) :: tms) = f (insert (n, length args) fs) (args @ tms);
+  fun fnc fs []                 = fs
+    | fnc fs (Var _     :: tms) = fnc fs tms
+    | fnc fs (Fn (n, a) :: tms) = fnc (insert (n, length a) fs) (a @ tms);
 
-  fun func fs []                     = fs
-    | func fs (True          :: fms) = func fs fms
-    | func fs (False         :: fms) = func fs fms
-    | func fs (Atom (_, tms) :: fms) = func (f fs tms) fms
-    | func fs (Not p         :: fms) = func fs (p :: fms)
-    | func fs (And (p, q)    :: fms) = func fs (p :: q :: fms)
-    | func fs (Or  (p, q)    :: fms) = func fs (p :: q :: fms)
-    | func fs (Imp (p, q)    :: fms) = func fs (p :: q :: fms)
-    | func fs (Iff (p, q)    :: fms) = func fs (p :: q :: fms)
-    | func fs (Forall (_, p) :: fms) = func fs (p :: fms)
-    | func fs (Exists (_, p) :: fms) = func fs (p :: fms);
+  fun func fs []                          = fs
+    | func fs (True               :: fms) = func fs fms
+    | func fs (False              :: fms) = func fs fms
+    | func fs (Atom (Var _)       :: fms) = func fs fms
+    | func fs (Atom (Fn (_, tms)) :: fms) = func (fnc fs tms) fms
+    | func fs (Not p              :: fms) = func fs (p :: fms)
+    | func fs (And (p, q)         :: fms) = func fs (p :: q :: fms)
+    | func fs (Or  (p, q)         :: fms) = func fs (p :: q :: fms)
+    | func fs (Imp (p, q)         :: fms) = func fs (p :: q :: fms)
+    | func fs (Iff (p, q)         :: fms) = func fs (p :: q :: fms)
+    | func fs (Forall (_, p)      :: fms) = func fs (p :: fms)
+    | func fs (Exists (_, p)      :: fms) = func fs (p :: fms);
 in
   val functions = func [] o wrap;
 end;
@@ -489,17 +493,18 @@ end;
 val function_names = map fst o functions;
 
 local
-  fun rel rs []                     = rs
-    | rel rs (True          :: fms) = rel rs fms
-    | rel rs (False         :: fms) = rel rs fms
-    | rel rs (Atom (n, tms) :: fms) = rel (insert (n, length tms) rs) fms
-    | rel rs (Not p         :: fms) = rel rs (p :: fms)
-    | rel rs (And (p, q)    :: fms) = rel rs (p :: q :: fms)
-    | rel rs (Or  (p, q)    :: fms) = rel rs (p :: q :: fms)
-    | rel rs (Imp (p, q)    :: fms) = rel rs (p :: q :: fms)
-    | rel rs (Iff (p, q)    :: fms) = rel rs (p :: q :: fms)
-    | rel rs (Forall (_, p) :: fms) = rel rs (p :: fms)
-    | rel rs (Exists (_, p) :: fms) = rel rs (p :: fms);
+  fun rel rs []                        = rs
+    | rel rs (True             :: fms) = rel rs fms
+    | rel rs (False            :: fms) = rel rs fms
+    | rel rs (Atom (Var _)     :: fms) = rel rs fms
+    | rel rs (Atom (f as Fn _) :: fms) = rel (insert (fn_function f) rs) fms
+    | rel rs (Not p            :: fms) = rel rs (p :: fms)
+    | rel rs (And (p, q)       :: fms) = rel rs (p :: q :: fms)
+    | rel rs (Or  (p, q)       :: fms) = rel rs (p :: q :: fms)
+    | rel rs (Imp (p, q)       :: fms) = rel rs (p :: q :: fms)
+    | rel rs (Iff (p, q)       :: fms) = rel rs (p :: q :: fms)
+    | rel rs (Forall (_, p)    :: fms) = rel rs (p :: fms)
+    | rel rs (Exists (_, p)    :: fms) = rel rs (p :: fms);
 in
   val relations = rel [] o wrap;
 end;
@@ -511,6 +516,17 @@ val relation_names = map fst o relations;
 (* ------------------------------------------------------------------------- *)
 
 val eq_rel = ("=", 2);
+
+fun mk_eq (a, b) = Atom (Fn ("=", [a, b]));
+
+fun dest_eq (Atom (Fn ("=", [a, b]))) = (a, b)
+  | dest_eq _ = raise ERR "dest_eq" "";
+
+val is_eq = can dest_eq;
+
+val lhs = fst o dest_eq;
+
+val rhs = snd o dest_eq;
 
 val eq_occurs = mem eq_rel o relations;
 
@@ -535,7 +551,7 @@ local
   fun fv vs []                           = vs
     | fv vs ((_ , True         ) :: fms) = fv vs fms
     | fv vs ((_ , False        ) :: fms) = fv vs fms
-    | fv vs ((av, Atom (_, tms)) :: fms) = fv (fvt av vs tms) fms
+    | fv vs ((av, Atom t       ) :: fms) = fv (fvt av vs [t]) fms
     | fv vs ((av, Not p        ) :: fms) = fv vs ((av, p) :: fms)
     | fv vs ((av, And (p, q)   ) :: fms) = fv vs ((av, p) :: (av, q) :: fms)
     | fv vs ((av, Or  (p, q)   ) :: fms) = fv vs ((av, p) :: (av, q) :: fms)
@@ -544,8 +560,9 @@ local
     | fv vs ((av, Forall (x, p)) :: fms) = fv vs ((insert x av, p) :: fms)
     | fv vs ((av, Exists (x, p)) :: fms) = fv vs ((insert x av, p) :: fms);
 in    
-  fun FVT tm = rev (fvt [] [] [tm]);
-  fun FV  fm = rev (fv  [] [([], fm)]);
+  fun FVT tm  = rev (fvt [] [] [tm]);
+  fun FV  fm  = rev (fv  [] [([], fm)]);
+  fun FVL fms = rev (fv  [] (map (pair []) fms));
 end;
 
 val specialize = snd o strip_forall;
@@ -555,9 +572,6 @@ fun generalize fm = list_mk_forall (FV fm, fm);
 (* ------------------------------------------------------------------------- *)
 (* Subterms.                                                                 *)
 (* ------------------------------------------------------------------------- *)
-
-fun arity (Var _) = raise ERR "arity" "Var"
-  | arity (Fn (_, a)) = length a;
 
 fun subterm [] tm = tm
   | subterm (_ :: _) (Var _) = raise ERR "subterm" "Var"
@@ -576,34 +590,59 @@ in
 end;
 
 local
-  fun conv _ (Atom a) = (I, Fn a)
-    | conv _ (Not (Atom a)) = (Not, Fn a)
-    | conv s _ = raise ERR ("literal_" ^ s) "not atom or negation";
-  fun reconv (_, Var _) = raise BUG "literal_rewrite" "Var"
-    | reconv (f, Fn a) = f (Atom a);
+  fun atom_rewrite r = Atom o rewrite r o dest_atom;
 in
-  fun literal_arity lit = arity (snd (conv "arity" lit));
-  fun literal_subterm p lit = subterm p (snd (conv "subterm" lit));
-  fun literal_rewrite r lit = (reconv o (I ## rewrite r) o conv "rewrite") lit;
+  fun literal_subterm p = subterm p o dest_atom o literal_atom;
+  fun literal_rewrite r = mk_literal o (I ## atom_rewrite r) o dest_literal;
 end;
 
-(* Quick testing
-installPP pp_term;
-installPP pp_formula;
-quotation := true;
-parse_term `c`;
-parse_term `v`;
-parse_formula `p`;
-parse_formula `~p`;
-parse_formula `q /\ ~p`;
-parse_formula `f x`;
-parse_formula `f x y`;
-parse_formula `f x y * g z`;
-parse_formula `f((x + y) * z, g(c))`;
-parse_formula `f((x + y) * z, g(c)) <= 6`;
-parse_formula `f((x + y) * z, g(c)) <= 6 /\ P`;
-parse_formula `f((x + y) * z, g(c)) <= 6 /\ P ==> ~Q`;
-parse_formula `f((x + y) * z, g(c)) <= 6 /\ P ==> ~Q`;
-*)
+(* ------------------------------------------------------------------------- *)
+(* The Knuth-Bendix ordering.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+type Weight = string * int -> int;
+type Prec   = (string * int) * (string * int) -> order;
+
+val no_vars = mlibMultiset.empty String.compare;
+fun one_var v = mlibMultiset.insert (v, 1) no_vars;
+
+fun kb_weight w =
+  let
+    fun weight (Var v) = (0, one_var v)
+      | weight (Fn (f, a)) = foldl wght (w (f, length a), no_vars) a
+    and wght (t, (n, v)) = (curry op+ n ## mlibMultiset.union v) (weight t)
+  in
+    weight
+  end;
+
+(* The Knuth-Bendix ordering is partial when terms contain variables *)
+
+fun kb_compare w p =
+  let
+    fun kbo [] = SOME EQUAL
+      | kbo (tu :: rest) =
+      if op= tu then SOME EQUAL
+      else
+        let val ((wt, vt), (wu, vu)) = Df (kb_weight w) tu
+        in kbo1 (Int.compare (wt, wu)) (mlibMultiset.compare (vt, vu)) tu rest
+        end
+    and kbo1 _       NONE           _      _    = NONE
+      | kbo1 LESS    (SOME LESS)    _      _    = SOME LESS
+      | kbo1 GREATER (SOME LESS)    _      _    = NONE
+      | kbo1 EQUAL   (SOME LESS)    _      _    = SOME LESS
+      | kbo1 LESS    (SOME GREATER) _      _    = NONE
+      | kbo1 GREATER (SOME GREATER) _      _    = SOME GREATER
+      | kbo1 EQUAL   (SOME GREATER) _      _    = SOME GREATER
+      | kbo1 LESS    (SOME EQUAL)   _      _    = SOME LESS
+      | kbo1 GREATER (SOME EQUAL)   _      _    = SOME GREATER
+      | kbo1 EQUAL   (SOME EQUAL)   (t, u) rest = kbo2 t u rest
+    and kbo2 (Fn (f, a)) (Fn (g, b)) rest =
+      (case p ((f, length a), (g, length b)) of LESS => SOME LESS
+       | GREATER => SOME GREATER
+       | EQUAL => kbo (zip a b @ rest))
+      | kbo2 _ _ _ = raise BUG "kbo" "variable"
+  in
+    kbo o wrap
+  end;
 
 end

@@ -3,7 +3,7 @@
 (* Created by Joe Hurd, April 2002                                           *)
 (* ========================================================================= *)
 
-signature mlibSubsum =
+signature mlibSubsume =
 sig
 
 type 'a pp           = 'a mlibUseful.pp
@@ -11,13 +11,13 @@ type ('a, 'b) maplet = ('a, 'b) mlibUseful.maplet
 type formula         = mlibTerm.formula
 type subst           = mlibSubst.subst
 
-type 'a subsum
+type 'a subsume
 
-val empty             : 'a subsum
-val add               : (formula list, 'a) maplet -> 'a subsum -> 'a subsum
-val subsumed          : 'a subsum -> formula list -> (subst * 'a) list
-val strictly_subsumed : 'a subsum -> formula list -> (subst * 'a) list
-val info              : 'a subsum -> string
-val pp_subsum         : 'a subsum pp
+val empty             : 'a subsume
+val add               : (formula list, 'a) maplet -> 'a subsume -> 'a subsume
+val subsumed          : 'a subsume -> formula list -> (subst * 'a) list
+val strictly_subsumed : 'a subsume -> formula list -> (subst * 'a) list
+val info              : 'a subsume -> string
+val pp_subsum         : 'a subsume pp
 
 end

@@ -37,15 +37,20 @@ fun AXIOM cl =
   if List.all is_literal cl then Thm (cl, (Axiom, []))
   else raise ERR "AXIOM" "argument not a list of literals";
 
-fun REFL tm = Thm ([Atom ("=", [tm, tm])], (Refl, []));
+fun REFL tm = Thm ([mk_eq (tm, tm)], (Refl, []));
 
 fun ASSUME fm =
   if is_literal fm then Thm ([fm, negate fm], (Assume, []))
   else raise ERR "ASSUME" "argument not a literal";
 
-fun INST env th =
-  let val cl = map (formula_subst env) (clause th)
-  in if cl = clause th then th else Thm (cl, (Inst, [th]))
+fun INST env (th as Thm (cl, pr)) =
+  let
+    val cl' = map (formula_subst env) cl
+  in
+    if cl' = cl then th else
+      case pr of (Inst, [th'])
+        => if cl' = clause th' then th' else Thm (cl', (Inst, [th']))
+      | _ => Thm (cl', (Inst, [th]))
   end;
 
 fun FACTOR th =
@@ -72,7 +77,7 @@ fun EQUALITY fm p res lr th =
       let
         val red = literal_subterm p fm
       in
-        Not (Atom ("=", if lr then [red, res] else [res, red]))
+        Not (mk_eq (if lr then (red, res) else (res, red)))
       end
     val other_lits =
       let

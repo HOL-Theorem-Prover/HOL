@@ -43,14 +43,13 @@ fun matchl env [] = env
 fun match tm tm' = mlibSubst.norm (matchl |<>| [(tm, tm')]);
 
 local
-  fun conv (Atom (r, args), Atom (r', args')) =
-    SOME (Fn (r, args), Fn (r', args'))
-    | conv (Not p, Not q) = conv (p, q)
-    | conv (True, True) = NONE
-    | conv (False, False) = NONE
-    | conv _ = raise ERR "match_literals" "incompatible";
+  fun conv (Atom t, Atom t') = SOME (t, t')
+    | conv (Not p,  Not q)   = conv (p, q)
+    | conv (True,   True)    = NONE
+    | conv (False,  False)   = NONE
+    | conv _                 = raise ERR "match_literals" "incompatible";
 in
-  fun matchl_literals sub work = matchl sub (List.mapPartial conv work);
+  fun matchl_literals sub = matchl sub o List.mapPartial conv;
 end;
 
 fun match_literals lit lit' = mlibSubst.norm (matchl_literals |<>| [(lit, lit')]);
@@ -86,12 +85,11 @@ fun unify env tm tm' = unifyl env [(tm, tm')];
 fun unify_and_apply tm tm' = term_subst (unify |<>| tm tm') tm;
 
 local
-  fun conv (Atom (r, args), Atom (r', args')) =
-    SOME (Fn (r, args), Fn (r', args'))
-    | conv (Not p, Not q) = conv (p, q)
-    | conv (True, True) = NONE
-    | conv (False, False) = NONE
-    | conv _ = raise ERR "unify_literals" "incompatible";
+  fun conv (Atom t, Atom t') = SOME (t, t')
+    | conv (Not p,  Not q)   = conv (p, q)
+    | conv (True,   True)    = NONE
+    | conv (False,  False)   = NONE
+    | conv _                 = raise ERR "unify_literals" "incompatible";
 in
   fun unifyl_literals env = unifyl env o List.mapPartial conv;
 end;

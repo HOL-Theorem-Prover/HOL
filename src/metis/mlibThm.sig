@@ -45,6 +45,7 @@ val is_unit          : thm -> bool
 val CONTR          : formula -> thm -> thm
 val WEAKEN         : formula list -> thm -> thm
 val FRESH_VARS     : thm -> thm
+val FRESH_VARSL    : thm list -> thm list
 val UNIT_SQUASH    : thm -> thm
 val REFLEXIVITY    : thm
 val SYMMETRY       : thm

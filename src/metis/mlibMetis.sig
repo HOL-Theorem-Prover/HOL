@@ -13,17 +13,21 @@ type solver      = mlibSolver.solver
 type solver_node = mlibSolver.solver_node
 
 (* Tuning parameters *)
+type Mparm = mlibMeson.parameters
+type Rparm = mlibResolution.parameters
 type parameters =
   {meson           : bool,
    delta           : bool,
    resolution      : bool,
-   meson_parm      : mlibMeson.parameters,
-   resolution_parm : mlibResolution.parameters}
+   meson_parm      : Mparm,
+   resolution_parm : Rparm}
 
-val defaults               : parameters
-val update_parm_meson      : (bool -> bool) -> parameters -> parameters
-val update_parm_delta      : (bool -> bool) -> parameters -> parameters
-val update_parm_resolution : (bool -> bool) -> parameters -> parameters
+val defaults                    : parameters
+val update_parm_meson           : (bool -> bool) -> parameters -> parameters
+val update_parm_delta           : (bool -> bool) -> parameters -> parameters
+val update_parm_resolution      : (bool -> bool) -> parameters -> parameters
+val update_parm_meson_parm      : (Mparm -> Mparm) -> parameters -> parameters
+val update_parm_resolution_parm : (Rparm -> Rparm) -> parameters -> parameters
 
 (* The metis combination of solvers *)
 val metis' : parameters -> solver_node

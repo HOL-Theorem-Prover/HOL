@@ -22,12 +22,15 @@ infix |-> ::> @> oo ## ::* ::@;
 (* Tuning parameters.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
+type Mparm = mlibMeson.parameters;
+type Rparm = mlibResolution.parameters;
+
 type parameters =
   {meson           : bool,
    delta           : bool,
    resolution      : bool,
-   meson_parm      : mlibMeson.parameters,
-   resolution_parm : mlibResolution.parameters}
+   meson_parm      : Mparm,
+   resolution_parm : Rparm};
 
 val defaults =
   {meson           = true,
@@ -58,6 +61,22 @@ fun update_parm_resolution f parm =
   in
     {meson = meson, delta = delta, resolution = f resolution,
      meson_parm = meson_parm, resolution_parm = resolution_parm}
+  end;
+
+fun update_parm_meson_parm f parm =
+  let
+    val {meson, delta, resolution, meson_parm, resolution_parm} = parm
+  in
+    {meson = meson, delta = delta, resolution = resolution,
+     meson_parm = f meson_parm, resolution_parm = resolution_parm}
+  end;
+
+fun update_parm_resolution_parm f parm =
+  let
+    val {meson, delta, resolution, meson_parm, resolution_parm} = parm
+  in
+    {meson = meson, delta = delta, resolution = resolution,
+     meson_parm = meson_parm, resolution_parm = f resolution_parm}
   end;
 
 (* ------------------------------------------------------------------------- *)

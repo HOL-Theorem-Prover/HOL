@@ -31,9 +31,9 @@ val op ::> = mlibSubst.::>;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := insert "mlibSolver" (!traces);
+val () = traces := {module = "mlibSolver", alignment = K 1} :: !traces;
 
-val chat = trace "mlibSolver";
+fun chat l m = trace {module = "mlibSolver", message = m, level = l};
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -93,8 +93,8 @@ end;
 
 local
   fun munge s n = "MUNGED__" ^ int_to_string n ^ "__" ^ s;
-  fun munge_lit (n, Atom (p, a)) = Atom (munge p n, a)
-    | munge_lit (n, Not (Atom (p, a))) = Not (Atom (munge p n, a))
+  fun munge_lit (n, Atom (Fn (p, a))) = Atom (Fn (munge p n, a))
+    | munge_lit (n, Not (Atom (Fn (p, a)))) = Not (Atom (Fn (munge p n, a)))
     | munge_lit _ = raise BUG "munge_lit" "bad literal";
   fun distinctivize fms = map munge_lit (enumerate 0 fms);    
   fun advance NONE s = (SOME NONE, s)
@@ -102,12 +102,12 @@ local
     let
       val fms = distinctivize (List.mapPartial (total dest_unit) ths)
     in
-      if non null (mlibSubsum.subsumed s fms) then (NONE, s)
-      else (SOME (SOME ths), mlibSubsum.add (fms |-> ()) s)
+      if non null (mlibSubsume.subsumed s fms) then (NONE, s)
+      else (SOME (SOME ths), mlibSubsume.add (fms |-> ()) s)
     end
     handle ERR_EXN _ => raise BUG "advance" "shouldn't fail";
 in
-  fun subsumed_filter s g = S.partial_maps advance mlibSubsum.empty (s g);
+  fun subsumed_filter s g = S.partial_maps advance mlibSubsume.empty (s g);
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -216,17 +216,18 @@ end;
 fun schedule check read stat =
   let
     fun sched nodes =
-      (chat (stat nodes);
-       if not (check ()) then (chat "?\n"; S.CONS (NONE, fn () => sched nodes))
+      (chat 2 (stat nodes);
+       if not (check ()) then
+         (chat 1 "?\n"; S.CONS (NONE, fn () => sched nodes))
        else
-         case choose_subnode nodes of NONE => (chat "!\n"; S.NIL)
+         case choose_subnode nodes of NONE => (chat 1 "!\n"; S.NIL)
          | SOME n =>
            let
              val Subnode {name, used, solns, cost} = List.nth (nodes, n)
-             val () = chat name
+             val () = chat 1 name
              val seq = (Option.valOf solns) ()
              val r = read ()
-             val () = chat ("--t=" ^ time_to_string (#time r) ^ "\n")
+             val () = chat 2 ("--t=" ^ time_to_string (#time r) ^ "\n")
              val used = add_readings used r
              val (res, solns) =
                case seq of S.NIL => (NONE, NONE) | S.CONS (a, r) => (a, SOME r)
@@ -234,7 +235,8 @@ fun schedule check read stat =
                Subnode {name = name, used = used, cost = cost, solns = solns}
              val nodes = update_nth (K node) n nodes
              val () =
-               case res of NONE => () | SOME _ => chat (stat nodes ^ "$\n")
+               case res of NONE => ()
+               | SOME _ => (chat 2 (stat nodes); chat 1 "$\n")
            in
              S.CONS (res, fn () => sched nodes)
            end)
@@ -244,7 +246,7 @@ fun schedule check read stat =
 
 fun combine_solvers (n, i) csolvers {slice, units, thms, hyps} =
   let
-    val () = chat
+    val () = chat 2
       (n ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
        "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
     val meter = ref (new_meter expired)
@@ -275,7 +277,7 @@ fun combine csolvers =
 
 fun sos_solver_con filt name solver_con {slice, units, thms, hyps} =
   let
-    val () = chat
+    val () = chat 2
       (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
        "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
     val (hyps', thms') = List.partition filt (thms @ hyps)

@@ -25,9 +25,7 @@ val op ORELSEQC = uncurry QConv.ORELSEQC;
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun ERR f s =
-  HOL_ERR
-  {message = s, origin_function = f, origin_structure = "normalForms"};
+val ERR = mk_HOL_ERR "normalForms";
 
 fun distinct [] = true
   | distinct (x :: rest) = not (mem x rest) andalso distinct rest;
@@ -294,6 +292,26 @@ val DE_MORGAN_THM2 = prove
   (``!x y. (~(x \/ y) = ~x /\ ~y)``,
    tautLib.TAUT_TAC);
 
+val RES_FORALL_THM = prove
+  (``!p m. RES_FORALL p m = !(x : 'a). x IN p ==> m x``,
+   REWRITE_TAC [RES_FORALL_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
+
+val RES_EXISTS_THM = prove
+  (``!p m. RES_EXISTS p m = ?(x : 'a). x IN p /\ m x``,
+   REWRITE_TAC [RES_EXISTS_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
+
+val NOT_RES_FORALL = prove
+  (``!p m. ~RES_FORALL p m = ?(x : 'a). x IN p /\ ~m x``,
+   REWRITE_TAC [RES_FORALL_THM] THEN
+   CONV_TAC (DEPTH_CONV NOT_FORALL_CONV) THEN
+   REWRITE_TAC [IMP_DISJ_THM, DE_MORGAN_THM2]);
+
+val NOT_RES_EXISTS = prove
+  (``!p m. ~RES_EXISTS p m = !(x : 'a). x IN p ==> ~m x``,
+   REWRITE_TAC [RES_EXISTS_THM] THEN
+   CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV) THEN
+   REWRITE_TAC [IMP_DISJ_THM, DE_MORGAN_THM2, DE_MORGAN_THM1]);
+
 fun NNF_SUB_QCONV qc tm =
   (if is_forall tm then QUANT_CONV qc
    else if is_exists tm then QUANT_CONV qc
@@ -302,13 +320,17 @@ fun NNF_SUB_QCONV qc tm =
    else NO_CONV) tm;
 
 local
-  val zap_neg = REWR_CONV (CONJUNCT1 NOT_CLAUSES);
+  fun NEG_CONV c tm = (if is_neg tm then RAND_CONV c else NO_CONV) tm;
+  val beta_neg =
+    REWR_CONV (CONJUNCT1 NOT_CLAUSES) ORELSEC
+    BETA_CONV ORELSEC NEG_CONV BETA_CONV;
   val push_neg = FIRST_CONV
     (map REWR_CONV
      [IMP_DISJ_THM', NIMP_CONJ_THM, EQ_EXPAND', NEQ_EXPAND,
-      COND_EXPAND', NCOND_EXPAND, DE_MORGAN_THM1, DE_MORGAN_THM2] @
+      COND_EXPAND', NCOND_EXPAND, DE_MORGAN_THM1, DE_MORGAN_THM2,
+      RES_FORALL_THM, RES_EXISTS_THM, NOT_RES_FORALL, NOT_RES_EXISTS] @
      [NOT_FORALL_CONV, NOT_EXISTS_CONV]);
-  val q_neg = REPEATQC (MK_QCONV zap_neg) THENQC TRY_QCONV (MK_QCONV push_neg);
+  val q_neg = REPEATQC (MK_QCONV beta_neg) THENQC TRY_QCONV (MK_QCONV push_neg);
 in
   fun PARTIAL_NNF_QCONV qc tm =
     (q_neg THENQC

@@ -4,7 +4,7 @@
 <title>Metis Library Documentation</title>
 </head>
 
-<body>
+<body bgcolor=white>
 
 <table border>
 <tr>
@@ -26,6 +26,7 @@ At the top of your proof script, write
 
 <p>
 
+<kbd>&nbsp load "metisLib";</kbd><br>
 <kbd>&nbsp open metisLib;</kbd>
 
 <p>
@@ -45,8 +46,7 @@ the goal.
 
 <h2>Inside the Metis Library</h2>
 
-The <kbd>*METIS_TAC</kbd> tactics prove a HOL goal <kbd>hol_goal</kbd>
-as follows:
+The Metis tactics prove a HOL goal <kbd>hol_goal</kbd> as follows:
 
 <p>
 
@@ -72,24 +72,23 @@ HOL theorem <kbd>hol_th</kbd>. [<em>folMapping</em>]</li>
 
 <h2>Comparison with <kbd>MESON_TAC</kbd></h2>
 
-The Metis library has better treatment of boolean variables and lambda
-terms. For example, <kbd>MESON_TAC</kbd> cannot prove the following
-two goals:
+The Metis provers are generally slower than <kbd>MESON_TAC</kbd>, but
+have better coverage. For example, <kbd>MESON_TAC</kbd> cannot prove
+the following two goals:
 
 <p>
 
-<kbd>&nbsp metisLib.METIS_PROVE    [] ``p (\x. x) /\ q ==> q /\ p (\y. y)``;</kbd><br>
-<kbd>&nbsp metisLib.HO_METIS_PROVE [] ``?x. x``;</kbd>
+<kbd>&nbsp METIS_PROVE [] ``p (\x. x) /\ q ==> q /\ p (\y. y)``;</kbd><br>
+<kbd>&nbsp METIS_PROVE [] ``?x. x``;</kbd>
 
 <p>
 
 The combination of model elimination and resolution calculi in
 <kbd>HO_METIS_TAC</kbd> allows some hard goals to be proved that are
-too deep for <kbd>MESON_TAC</kbd>, such as the <kbd>GILMORE_9</kbd>
-and <kbd>STEAM_ROLLER</kbd> problems.
+too deep for the HOL version of <kbd>MESON_TAC</kbd>, such as the
+<kbd>GILMORE_9</kbd> and <kbd>STEAM_ROLLER</kbd> problems.
 
 <p>
-
 
 The Metis library provides an interface to tools that solve goals as
 well as prove them, including the user-friendly
@@ -105,31 +104,6 @@ up the proof translation accordingly, but in the Metis library you
 have to do this manually by selecting either <kbd>METIS_TAC</kbd> or
 <kbd>HO_METIS_TAC</kbd>.
 
-<p>
-
-When HOL is built, 1435 goals are submitted to <kbd>MESON_TAC</kbd>.
-
-<p>
-
-<kbd>&nbsp MESON_TAC ....................... proves 1435</kbd><br>
-
-<kbd>&nbsp METIS_TAC ....................... proves 1240 within 10 seconds</kbd><br>
-
-<kbd>&nbsp HO_METIS_TAC .................... proves 1346 within 10 seconds</kbd><br>
-
-<kbd>&nbsp One of METIS_TAC and HO_METIS_TAC proves 1389 within 10 seconds</kbd>
-
-<p>
-
-<kbd>MESON_TAC</kbd> is typically faster on these goals than both
-<kbd>METIS_TAC</kbd> and <kbd>HO_METIS_TAC</kbd>. The HOL goals that
-could be successfully proved by a Metis prover are available in
-first-order format at
-
-<p>
-
-<kbd>&nbsp <a href="http://www.cl.cam.ac.uk/~jeh1004/research/problems/hol.sml.gz">
-http://www.cl.cam.ac.uk/~jeh1004/research/problems/hol.sml.gz</a></kbd>
 
 <h2>Known Bugs</h2>
 
@@ -140,8 +114,9 @@ completely haywire and eats all the memory <kbd>:-(</kbd>
 
 <kbd>HO_METIS_TAC</kbd> combines resolution and model elimination
 calculi by time-slicing between them, so in principle it could
-successfully prove a goal on one occasion but diverge on another. In
-practice, however, this situation isn't likely to arise.
+successfully prove a goal on one occasion but diverge on
+another. However, this situation isn't likely to arise in practice.
+
 
 <h2>History and Credit</h2>
 
@@ -157,13 +132,16 @@ proving.
 
 <p>
 
-Release 1.0 was integrated into the HOL sources on 18 July 2002.
+A collection of HOL goals that could be successfully proved by a Metis
+prover are <a
+href="http://www.cl.cam.ac.uk/~jeh1004/research/problems/hol.sml.gz">available
+in first-order format</a>.
 
 
 <h2>Etymology</h2>
 
 Metis is the innermost moon of Jupiter, lying within the planetary
-ring. The picture above is the moon Metis, and comes from <a
+ring. The picture above is of the moon Metis, and comes from <a
 href="http://www.seds.org/nineplanets/nineplanets/amalthea.html#metisx">NASA</a>.
 
 <p>
@@ -190,10 +168,47 @@ of Canada are
   and a new identity as Metis."
 </blockquote>
 
+
+<h2>Change Log</h2>
+
+<h3>Version 1.1: 21 September 2002</h3>
+
+<kbd>Goals submitted to MESON_TAC when HOL is built ............. 1745</kbd><br>
+<kbd>Proved by MESON_TAC ........................................ 1745</kbd><br>
+<kbd>Provable by METIS_TAC within 10s ........................... 1485</kbd><br>
+<kbd>Provable by HO_METIS_TAC within 10s ........................ 1698</kbd><br>
+<kbd>Provable by one of METIS_TAC and HO_METIS_TAC within 10s ... 1717</kbd>
+
+<h3>Between Versions 1.0 and 1.1</h3>
+
+<ul>
+
+<li>Added a <kbd>"metis"</kbd> entry to the HOL trace system: it nows
+prints status information during proof (if HOL is in interactive mode).</li>
+
+<li>Restricted (universal and existential) quantifiers are now normalized
+by the NNF conversion.</li>
+
+<li>(First-order) <kbd>METIS_TAC</kbd> can now handle boolean variables.</li>
+
+<li>Improved performance in the model elimination proof procedure due to better caching (following a suggestion from John Harrison).</li>
+
+<li>First-order substitutions are now fully Boultonized.</li>
+
+<li>The first-order logical kernel makes local tweaks to keep proofs
+as small as possible.</li>
+
+</ul>
+
 <p>
 
-<kbd>METIS_TAC</kbd> seemed like a better name for the successor of
-<kbd>MESON_TAC</kbd> than <kbd>MEGRANDSON_TAC</kbd> <kbd>:-)</kbd>
+<h3>Version 1.0: 18 July 2002</h3>
+
+<kbd>Goals submitted to MESON_TAC when HOL is built ............. 1435</kbd><br>
+<kbd>Proved by MESON_TAC ........................................ 1435</kbd><br>
+<kbd>Provable by METIS_TAC within 10s ........................... 1240</kbd><br>
+<kbd>Provable by HO_METIS_TAC within 10s ........................ 1346</kbd><br>
+<kbd>Provable by one of METIS_TAC and HO_METIS_TAC within 10s ... 1389</kbd>
 
 </body>
 

@@ -17,6 +17,30 @@ open HolKernel Parse boolLib folTools folMapping;
 infix THEN ORELSE THENC;
 
 (* ------------------------------------------------------------------------- *)
+(* Chatting and error handling.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  open mlibUseful;
+  val aligned_traces =
+    [{module = "mlibSolver",     alignment = fn 1 => 1 | n => n + 1},
+     {module = "mlibMeson",      alignment = fn 1 => 1 | n => n + 1},
+     {module = "mlibResolution", alignment = fn 1 => 1 | n => n + 1},
+     {module = "folMapping",  alignment = fn n => n + 3},
+     {module = "folTools",    alignment = fn n => n + 1},
+     {module = "metisTools",  alignment = I},
+     {module = "metisLib",    alignment = I}];
+in
+  val () = tracing := 1;
+  val () = register_trace ("metis", tracing, 10);
+  val () = tracing := (if !Globals.interactive then 1 else 0);
+  val () = traces := aligned_traces;
+  fun chat l m = trace {module = "metisTools", message = m, level = l};
+  val ERR = mk_HOL_ERR "metisTools";
+  val BUG = BUG;
+end;
+
+(* ------------------------------------------------------------------------- *)
 (* Parameters.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
@@ -59,6 +83,7 @@ val full_parm =
 fun GEN_METIS_SOLVE parm {thms, hyps} =
   let
     val {interface, solver, limit, ...} : parameters = parm
+    val () = (chat 1 "metis solver: "; chat 2 "\n")
   in
     FOL_SOLVE (mlibMetis.metis' solver)
     {parm = interface, thms = thms, hyps = hyps, lim = limit}
@@ -68,9 +93,12 @@ fun GEN_METIS_SOLVE parm {thms, hyps} =
 (* Tactic interface to the metis prover.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun GEN_METIS_TAC parm ths goal =
-  let val {interface, solver, limit, ...} : parameters = parm
-  in FOL_TAC (mlibMetis.metis' solver, interface, limit) ths goal
+fun GEN_METIS_TAC parm ths =
+  let
+    val {interface, solver, limit, ...} : parameters = parm
+  in
+    FOL_TAC (mlibMetis.metis' solver, interface, limit) ths o
+    (fn x => (chat 1 "metis: "; chat 2 "\n"; x))
   end;
 
 (* ------------------------------------------------------------------------- *)

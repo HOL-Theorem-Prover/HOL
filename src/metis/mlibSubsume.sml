@@ -9,14 +9,13 @@ app load ["mlibThm", "mlibMatch"];
 
 (*
 *)
-structure mlibSubsum :> mlibSubsum =
+structure mlibSubsume :> mlibSubsume =
 struct
 
 infix |-> ::>;
 
 open mlibUseful mlibTerm mlibMatch;
 
-structure D = mlibLiteralDisc; local open mlibLiteralDisc in end;
 structure N = mlibLiteralNet; local open mlibLiteralNet in end;
 
 val ofilter       = Option.filter;
@@ -30,9 +29,9 @@ val formula_subst = mlibSubst.formula_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := insert "Subsumption1" (!traces);
+val () = traces := {module = "mlibSubsume", alignment = K 1} :: !traces;
 
-val chat = trace "Subsumption1";
+fun chat l m = trace {module = "mlibSubsume", message = m, level = l};
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -80,9 +79,9 @@ val sort_literals_by_size =
 
 type 'a sinfo = {sub : subst, hd : formula, tl : formula list, fin : 'a};
 
-type 'a subs = 'a sinfo D.literal_map;
+type 'a subs = 'a sinfo N.literal_map;
 
-fun add_lits (i as {hd, ...}) (net : 'a subs) = D.insert (hd |-> i) net;
+fun add_lits (i as {hd, ...}) (net : 'a subs) = N.insert (hd |-> i) net;
 
 local
   fun subsum strict lits =
@@ -105,10 +104,10 @@ local
           if null tl then
             case accept sub of SOME sub => (net, (sub, fin) :: res) | NONE => s
           else (extend sub (map (formula_subst sub) tl) fin net, res)
-      fun narrow1 net (lit, s) = foldl (examine lit) s (D.match net lit)
+      fun narrow1 net (lit, s) = foldl (examine lit) s (N.match net lit)
       fun narrow (net, res) =
-        if D.size net = 0 then res
-        else narrow (foldl (narrow1 net) (D.empty, res) lits)
+        if N.size net = 0 then res
+        else narrow (foldl (narrow1 net) (N.empty, res) lits)
     in
       narrow
     end;
@@ -122,9 +121,9 @@ end;
 (* The user interface.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-type 'a subsum = ('a, 'a subs) sum;
+type 'a subsume = ('a, 'a subs) sum;
 
-val empty : 'a subsum = INR D.empty;
+val empty : 'a subsume = INR N.empty;
 
 fun add _ (s as INL _) = s
   | add (fms |-> fin) (INR net) =
@@ -139,8 +138,8 @@ fun strictly_subsumed _ [] = []
   | strictly_subsumed (INL fin) _ = [(|<>|, fin)]
   | strictly_subsumed (INR net) lits = subsumes true net lits;
 
-fun info ((INL _) : 'a subsum) = "*"
-  | info (INR net) = int_to_string (D.size net);
+fun info ((INL _) : 'a subsume) = "*"
+  | info (INR net) = int_to_string (N.size net);
 
 val pp_subsum = pp_map info pp_string;
 

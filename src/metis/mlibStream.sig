@@ -7,6 +7,7 @@ signature mlibStream =
 sig
 
 datatype 'a stream = NIL | CONS of 'a * (unit -> 'a stream)
+type 'a Sthk = unit -> 'a stream
 
 (* If you're wondering how to create an infinite stream: *)
 (* val stream4 = let fun s4 () = CONS 4 s4 in s4 () end; *)
@@ -20,6 +21,7 @@ val repeat        : 'a -> 'a stream
 val count         : int -> int stream
 val fold          : ('a -> (unit -> 'b) -> 'b) -> 'b -> 'a stream -> 'b
 val map           : ('a -> 'b) -> 'a stream -> 'b stream
+val map_thk       : ('a Sthk -> 'a Sthk) -> 'a Sthk -> 'a Sthk
 val partial_map   : ('a -> 'b option) -> 'a stream -> 'b stream
 val maps          : ('a -> 'c -> 'b * 'c) -> 'c -> 'a stream -> 'b stream
 val partial_maps  : ('a -> 'c -> 'b option * 'c) -> 'c -> 'a stream -> 'b stream

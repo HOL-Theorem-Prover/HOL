@@ -16,6 +16,8 @@ infixr 0 oo ##;
 
 datatype 'a stream = NIL | CONS of 'a * (unit -> 'a stream);
 
+type 'a Sthk = unit -> 'a stream;
+
 (* ------------------------------------------------------------------------- *)
 (* mlibUseful functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
@@ -43,6 +45,15 @@ fun map f =
       | m (CONS (h, t)) = CONS (f h, fn () => m (t ()))
   in
     m
+  end;
+
+fun map_thk f =
+  let
+    fun mt NIL = NIL
+      | mt (CONS (h, t)) = CONS (h, mt' t)
+    and mt' t = f (fn () => mt (t ()))
+  in
+    mt'
   end;
 
 fun partial_map f =

@@ -29,12 +29,16 @@ type solver_node = mlibSolver.solver_node;
 type vars        = term list * hol_type list;
 
 (* ------------------------------------------------------------------------- *)
-(* Chatting.                                                                 *)
+(* Chatting and error handling.                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val () = mlibUseful.traces := insert "folTools" (!mlibUseful.traces);
-
-val chat = mlibUseful.trace "folTools";
+local
+  open mlibUseful;
+in
+  fun chat l m = trace {module = "folTools", message = m, level = l};
+  val ERR = mk_HOL_ERR "folTools";
+  val BUG = BUG;
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Mapping parameters.                                                       *)
@@ -90,27 +94,14 @@ fun update_parm_mapping f (parm : parameters) : parameters =
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val ERR = mk_HOL_ERR "folTools";
-val BUG = mlibUseful.BUG;
-
 fun possibly f x = case total f x of SOME y => y | NONE => x;
 
 fun timed_fn s f a =
   let
     val (t, r) = mlibUseful.timed f a
-    val () = chat (s ^ mlibUseful.real_to_string t ^ "\n")
+    val () = chat 1 (s ^ mlibUseful.real_to_string t ^ "\n")
   in
     r
-  end;
-
-fun map_tl f =
-  let
-    open mlibStream
-    fun mtl NIL = NIL
-      | mtl (CONS (h, t)) = CONS (h, f (mtl' t))
-    and mtl' s () = mtl (s ())
-  in
-    f o mtl'
   end;
 
 val type_vars_in_terms = foldl (fn (h, t) => union (type_vars_in_term h) t) [];
@@ -313,14 +304,15 @@ end;
 val EXT_POINT = CONV_RULE CNF_CONV EXT_POINT_DEF;
 
 local
-  val comb_thms = map mk_vthm [S_THM, K_THM, I_THM, C_THM, o_THM, EXT_POINT];
+  val fo_thms = map mk_vthm [K_THM, I_THM];
+  val ho_thms = fo_thms @ map mk_vthm [S_THM, C_THM, o_THM, EXT_POINT];
 in
   fun add_combinator_thms lmap : logic_map =
     let
       val {parm as {combinator, mapping, ...}, ...} = lmap
     in
-      if not combinator orelse not (#higher_order mapping) then lmap
-      else add_thms comb_thms lmap
+      if not combinator then lmap
+      else add_thms (if #higher_order mapping then ho_thms else fo_thms) lmap
     end;
 end;
 
@@ -421,9 +413,11 @@ val EXISTS_FALSE = prove
    REWRITE_TAC [EXISTENTIALITY]);
 
 local
+  val always_bool_thms = map mk_vthm [TRUTH, FALSITY'];
+
   val simple_bool_thms =
-    map mk_vthm
-    [TRUTH, FALSITY', FORALL_TRUE, FORALL_FALSE, EXISTS_TRUE, EXISTS_FALSE];
+    always_bool_thms @
+    map mk_vthm [FORALL_TRUE, FORALL_FALSE, EXISTS_TRUE, EXISTS_FALSE];
 
   val gen_bool_thms =
     simple_bool_thms @
@@ -435,8 +429,9 @@ in
     let
       val {parm as {boolean, mapping, ...}, ...} = lmap
     in
-      if not (#higher_order mapping) then lmap
-      else add_thms (if boolean then gen_bool_thms else simple_bool_thms) lmap
+      C add_thms lmap
+      (if not (#higher_order mapping) then always_bool_thms
+       else if boolean then gen_bool_thms else simple_bool_thms)
     end;
 end;
 
@@ -456,7 +451,7 @@ fun eliminate consts =
   mlibStream.filter
   (fn (_, ths) =>
    null (intersect consts (varnames (map concl ths))) orelse
-   (chat "folTools: solution contained a skolem const: dropping.\n"; false));
+   (chat 1 "folTools: solution contained a skolem const: dropping.\n"; false));
 
 fun FOL_SOLVER solv lmap lim =
   let
@@ -477,8 +472,8 @@ fun FOL_SOLVER solv lmap lim =
       val () = save_fol_problem (thms, hyps, q)
       val lift = fol_thms_to_hol (#mapping parm) (C assoc axioms) query
       val timed_lift = timed_fn "folTools: proof translation time: " lift
-      val timed_stream =
-        map_tl (timed_fn "folTools: proof search time: " o exn_handler)
+      val timed_stream = mlibStream.map_thk
+        (timed_fn "folTools: proof search time: " o exn_handler)
     in
       eliminate consts
       (mlibStream.map timed_lift (timed_stream (fn () => solver q) ()))
@@ -561,9 +556,11 @@ val FOL_STRIP_THM_THEN = FIRST_TCL [CONJUNCTS_THEN, NEW_CHOOSE_THEN];
 
 val FOL_STRIP_ASSUME_TAC = REPEAT_TCL FOL_STRIP_THM_THEN CHECK_ASSUME_TAC;
 
+val NEW_GEN_TAC = W (X_GEN_TAC o genvar o type_of o fst o dest_forall o snd);
+
 val FOL_STRIP_TAC =
   EQ_TAC ORELSE
-  GEN_TAC ORELSE
+  NEW_GEN_TAC ORELSE
   CONJ_TAC ORELSE
   DISCH_THEN FOL_STRIP_ASSUME_TAC;
 

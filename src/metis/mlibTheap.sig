@@ -6,8 +6,8 @@
 signature mlibTheap =
 sig
 
-type 'a subsum = 'a mlibSubsum.subsum
-type thm       = mlibThm.thm
+type 'a subsume = 'a mlibSubsume.subsume
+type thm        = mlibThm.thm
 
 (* Tuning parameters *)
 type parameters = {fifo_skew : int, cleaning_freq : int}
@@ -21,7 +21,7 @@ val theap_size      : theap -> int
 val theap_add       : thm -> theap -> theap
 val theap_addl      : thm list -> theap -> theap
 val theap_remove    : theap -> (thm * theap) option
-val theap_subsumers : theap -> thm subsum
+val theap_subsumers : theap -> thm subsume
 val theap_info      : theap -> string   (* Outputs "(size,weight)" *)
 
 end

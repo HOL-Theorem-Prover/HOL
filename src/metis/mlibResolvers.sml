@@ -26,9 +26,9 @@ val formula_subst = mlibSubst.formula_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := insert "mlibResolvers" (!traces);
+val () = traces := {module = "mlibResolvers", alignment = K 1} :: !traces;
 
-val chat = trace "mlibResolvers";
+fun chat l m = trace {module = "mlibResolvers", message = m, level = l};
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -105,7 +105,7 @@ fun sanity_resolvants net th =
 
 fun sanity_check net th (res : resolvant list) =
   let
-    val () = chat "X"
+    val () = chat 1 "X"
     val f = PP.pp_to_string (!LINE_LENGTH) (pp_list (pp_map AXIOM pp_thm))
     val fast = map (canonize o clause o #res) res
     val slow = map (canonize o clause o #res) (sanity_resolvants net th)

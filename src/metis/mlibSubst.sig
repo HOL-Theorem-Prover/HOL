@@ -26,6 +26,8 @@ val refine        : subst -> subst -> subst
 val is_renaming   : subst -> bool
 val to_maplets    : subst -> (string, term) maplet list
 val from_maplets  : (string, term) maplet list -> subst
+val foldl         : ((string, term) maplet -> 'a -> 'a) -> 'a -> subst -> 'a
+val foldr         : ((string, term) maplet -> 'a -> 'a) -> 'a -> subst -> 'a
 val pp_subst      : subst pp
 
 end

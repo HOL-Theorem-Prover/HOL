@@ -18,11 +18,11 @@ open mlibUseful mlibTerm mlibThm;
 
 structure Q = mlibQueue; local open mlibQueue in end;
 structure H = mlibHeap; local open mlibHeap in end;
-structure S = mlibSubsum; local open mlibSubsum in end;
+structure S = mlibSubsume; local open mlibSubsume in end;
 
-type 'a queue  = 'a Q.queue;
-type 'a heap   = 'a H.heap;
-type 'a subsum = 'a S.subsum;
+type 'a queue   = 'a Q.queue;
+type 'a heap    = 'a H.heap;
+type 'a subsume = 'a S.subsume;
 
 (* ------------------------------------------------------------------------- *)
 (* Tuning parameters.                                                        *)
@@ -38,7 +38,7 @@ val defaults = {fifo_skew = 3, cleaning_freq = 1000};
 
 type theap =
   ((int * int) * (int * int)) * thm queue * (int * (int * thm) heap) *
-  thm subsum;
+  thm subsume;
 
 local fun order ((m, _ : thm), (n, _ : thm)) = Int.compare (m, n);
 in val empty_theap_heap = H.empty order;

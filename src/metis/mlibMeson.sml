@@ -20,7 +20,7 @@ open mlibUseful mlibTerm mlibMatch mlibThm mlibCanon mlibMeter mlibSolver;
 infix |-> ::> @> oo ##;
 
 structure S = mlibStream; local open mlibStream in end;
-structure D = mlibLiteralDisc; local open mlibLiteralDisc in end;
+structure N = mlibLiteralNet; local open mlibLiteralNet in end;
 structure U = mlibUnits; local open mlibUnits in end;
 
 val |<>|          = mlibSubst.|<>|;
@@ -31,9 +31,9 @@ val formula_subst = mlibSubst.formula_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := insert "mlibMeson" (!traces);
+val () = traces := {module = "mlibMeson", alignment = K 1} :: !traces;
 
-val chat = trace "mlibMeson";
+fun chat l m = trace {module = "mlibMeson", message = m, level = l};
 
 (* ------------------------------------------------------------------------- *)
 (* Tuning parameters.                                                        *)
@@ -59,6 +59,13 @@ val defaults =
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
+fun halves n = let val n1 = n div 2 in (n1, n - n1) end;
+
+fun splittable [] = false
+  | splittable [_] = false
+  | splittable _ = true;
+
+(*
 fun protect r f x =
   let
     val v = !r
@@ -76,6 +83,15 @@ fun until p =
   in
     u
   end;
+*)
+
+local
+  val prefix = "_m";
+in
+  val mk_mvar      = mk_prefix prefix o int_to_string;
+  fun mk_mvars n i = map (Var o mk_mvar) (interval n i);
+  val dest_mvar    = string_to_int o dest_prefix prefix;
+end;
 
 datatype 'a choice = CHOICE of unit -> 'a * 'a choice;
 
@@ -115,29 +131,33 @@ fun filter_meter meter =
 (* Compiling the rule set used by meson.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-datatype rules = Rules of (thm * (formula list * formula)) D.literal_map;
+type rule = {asms : formula list, c : formula, thm : thm, asmn : int};
+
+datatype rules = Rules of rule N.literal_map;
 
 fun dest_rules (Rules r) = r;
-val empty_rules = Rules D.empty;
-val num_all_rules = D.size o dest_rules;
-val num_initial_rules = #f o D.size_profile o dest_rules;
+val empty_rules = Rules N.empty;
+val num_all_rules = N.size o dest_rules;
+val num_initial_rules = #f o N.size_profile o dest_rules;
 fun num_rules r = num_all_rules r - num_initial_rules r;
-val rules_unify = D.unify o dest_rules;
+val rules_unify = N.unify o dest_rules;
 
 val pp_rules =
   pp_map dest_rules
-  (D.pp_literal_map
-   (pp_map snd (pp_binop "==>" (pp_list pp_formula) pp_formula)));
+  (N.pp_literal_map
+   (pp_map (fn {asms, c, ...} => (asms, c))
+    (pp_binop " ==>" (pp_list pp_formula) pp_formula)));
 
 fun add_contrapositives chosen sos th (Rules ruls) =
   let
+    val th = FRESH_VARS th
     val lits = clause th
     val lits' = map negate lits
     val base = map (fn l => (subtract lits' [negate l], l)) (chosen lits)
     val contrs = if sos then (lits', False) :: base else base
-    fun f (c as (_, t)) = t |-> (th, c)
+    fun f (a, c) = c |-> {asms = a, c = c, thm = th, asmn = length a}
   in
-    Rules (foldl (fn (h, t) => D.insert (f h) t) ruls contrs)
+    Rules (foldl (fn (h, t) => N.insert (f h) t) ruls contrs)
   end;
 
 fun thms_to_rules chosen thms hyps =
@@ -155,11 +175,29 @@ val prolog_rules = thms_to_rules (wrap o hd);
 
 val thms_to_delta_goals =
   List.concat o
-  map (fn (f, n) => [Atom (f, new_vars n), Not (Atom (f, new_vars n))]) o
+  map (fn (f,n) => [Atom (Fn (f,new_vars n)), Not (Atom (Fn (f,new_vars n)))]) o
   foldl (uncurry union) [] o
   map relations o
   List.concat o
   map clause;
+
+(* ------------------------------------------------------------------------- *)
+(* The state passed around by meson.                                         *)
+(* ------------------------------------------------------------------------- *)
+
+type state = {env : subst, depth : int, proof : thm list, offset : int};
+
+fun update_env f ({env, depth, proof, offset} : state) =
+  {env = f env, depth = depth, proof = proof, offset = offset};
+
+fun update_depth f ({env, depth, proof, offset} : state) =
+  {env = env, depth = f depth, proof = proof, offset = offset};
+
+fun update_proof f ({env, depth, proof, offset} : state) =
+  {env = env, depth = depth, proof = f proof, offset = offset};
+
+fun update_offset f ({env, depth, proof, offset} : state) =
+  {env = env, depth = depth, proof = proof, offset = f offset};
 
 (* ------------------------------------------------------------------------- *)
 (* Ancestor pruning.                                                         *)
@@ -191,30 +229,38 @@ fun ancestor_cut false _ _ = K false
 (* Cache cutting.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
-fun cache_cont c =
+fun cache_cont c ({offset, ...} : state) =
   let
-    val memory = ref []
+    fun f v = case total dest_mvar v of NONE => true | SOME n => n < offset
+    val listify = mlibSubst.foldr (fn m as v |-> _ => if f v then cons m else I) []
+    val mem = ref []
+    fun purify (s as {env, depth = n, ...} : state) =
+      let
+        val l = listify env
+        fun p (n', l') = n <= n' andalso l = l'
+      in
+        if List.exists p (!mem) then raise ERR "cache_cut" "repetition"
+        else (mem := (n, l) :: (!mem); update_env (K (mlibSubst.from_maplets l)) s)
+      end
   in
-    fn s as (env, n, _) =>
-    if List.exists (fn (env', n', _) => pointer_eq env env' andalso n <= n')
-       (!memory) then raise ERR "cache_cut" "repetition"
-    else (memory := s :: !memory; c s)
+    c o purify
   end;
 
 fun cache_cut false = I
-  | cache_cut true = fn f => fn a => fn g => fn c => f a g (cache_cont c);
+  | cache_cut true =
+  fn f => fn a => fn g => fn c => fn s => f a g (cache_cont c s) s;
 
 (* ------------------------------------------------------------------------- *)
 (* Unit clause shortcut.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun grab_unit units (s as (_, _, th :: _)) =
+fun grab_unit units (s as {proof = th :: _, ...} : state) =
   (units := U.add th (!units); s)
-  | grab_unit _ (_, _, []) = raise BUG "grab_unit" "no thms";
+  | grab_unit _ {proof = [], ...} = raise BUG "grab_unit" "no thms";
 
-fun use_unit units g c (env, n, p) =
+fun use_unit units g c (s as {env, ...}) =
   let val prove = partial (ERR "use_unit" "NONE") (U.prove (!units))
-  in c (env, n, unwrap (prove [formula_subst env g]) :: p)
+  in c (update_proof (cons (unwrap (prove [formula_subst env g]))) s)
   end;
 
 fun unit_cut false _ = I
@@ -226,36 +272,39 @@ fun unit_cut false _ = I
 (* The core of meson: ancestor unification or Prolog-style extension.        *)
 (* ------------------------------------------------------------------------- *)
 
-type state = subst * int * thm list;
-
-fun state1 f ((env, n, p) : state) : state = (f env, n,   p);
-fun state2 f ((env, n, p) : state) : state = (env,   f n, p);
-fun state3 f ((env, n, p) : state) : state = (env,   n,   f p);
-
-fun rule_renamer (th, (asm, c)) =
+fun freshen_rule ({thm, asms, c, ...} : rule) i =
   let
-    val fvs = FV (list_mk_conj (c :: asm))
-    val vvs = new_vars (length fvs)
-    val sub = mlibSubst.from_maplets (zipwith (curry op|->) fvs vvs)
+    val fvs = FVL (c :: asms)
+    val fvn = length fvs
+    val mvs = mk_mvars i fvn
+    val sub = mlibSubst.from_maplets (zipwith (curry op|->) fvs mvs)
   in
-    (INST sub th, (map (formula_subst sub) asm, formula_subst sub c))
+    ((INST sub thm, map (formula_subst sub) asms, formula_subst sub c), i + fvn)
   end;
 
-fun reward r = state2 (fn n => n + r);
+fun reward r = update_depth (fn n => n + r);
 
-fun check_used m f cont (c as (_, n, _)) =
+fun spend m f c (s as {depth = n, ...} : state) =
   let
     val low = n - m
-    fun check (c' as (_, n', _)) =
-      if n' <= low then c' else raise ERR "meson" "repeated solution"
+    val () = assert (0 <= low) (ERR "meson" "impossible divide and conquer")
+    fun check (s' as {depth = n', ...} : state) =
+      if n' <= low then s' else raise ERR "meson" "divide and conquer"
   in
-    f (cont o check) c
+    f (c o check) s
   end;
 
-fun next_state false env (th, (asms, c)) g = (th, asms, unify_literals env c g)
-  | next_state true env (r as (th, (asms, c))) g =
-  (case total (match_literals c) g of NONE => next_state false env r g
-   | SOME sub => (INST sub th, map (formula_subst sub) asms, env));
+local
+  fun unify env (th, asms, c) g = (th, asms, unify_literals env c g)
+
+  fun match env (th, asms, c) g =
+    let val sub = match_literals c g
+    in (INST sub th, map (formula_subst sub) asms, env)
+    end;
+in
+  fun next_state false env r g = unify env r g
+    | next_state true env r g = match env r g handle ERR_EXN _ => unify env r g;
+end;
 
 local
   fun mp _ th [] p = FACTOR th :: p
@@ -263,65 +312,64 @@ local
     mp env (RESOLVE (formula_subst env g) (INST env th1) th) gs p
     | mp _ _ (_ :: _) [] = raise BUG "modus_ponens" "fresh out of thms"
 in
-  fun modus_ponens th gs (env, n, p) = (env, n, mp env (INST env th) (rev gs) p)
+  fun modus_ponens th gs (state as {env, ...}) =
+    update_proof (mp env (INST env th) (rev gs)) state;
 end;
+
+fun swivelp m n = update_proof (swivel m n);
 
 fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
   let
-    fun expand ancestors g cont (env, n, p) =
+    fun expand ancestors g cont (state as {env, ...}) =
       if not (check_meter (!meter)) then
-        (NONE, CHOICE (fn () => expand ancestors g cont (env, n, p)))
+        (NONE, CHOICE (fn () => expand ancestors g cont state))
       else if ancestor_prune (#ancestor_pruning parm) env g ancestors then
         raise ERR "meson" "ancestor pruning"
       else if ancestor_cut (#ancestor_cutting parm) env g ancestors then
-        (record_infs (!meter) 1; cont (env, n, ASSUME g :: p))
+        (record_infs (!meter) 1; cont (update_proof (cons (ASSUME g)) state))
       else
         let
         (*val () = print ("meson: " ^ formula_to_string g ^ ".\n")*)
           fun reduction a () =
-            let val env' = unify_literals env g (negate a)
-            in (record_infs (!meter) 1; cont (env', n, ASSUME g :: p))
+            let
+              val state = update_env (K (unify_literals env g (negate a))) state
+              val state = update_proof (cons (ASSUME g)) state
+            in
+              (record_infs (!meter) 1; cont state)
             end
-          val expansion = expand_rule ancestors g cont (env, n, p)
+          val expansion = expand_rule ancestors g cont state
         in
           first_choice
           (map reduction ancestors @
            map expansion (rules_unify rules (formula_subst env g))) ()
         end
-    and expand_rule ancestors g cont (env, n, p) r () =
+    and expand_rule ancestors g cont {env, depth, proof, offset} r () =
       let
-        val n = n - length (fst (snd r))
+        val depth = depth - #asmn r
         val () =
-          if 0 <= n then ()
+          if 0 <= depth then ()
           else (saturated := false; raise ERR "meson" "too deep")
-        val (th, asms, env) =
-          next_state (#state_simplify parm) env (rule_renamer r) g
+        val (r, offset) = freshen_rule r offset
+        val (th, asms, env) = next_state (#state_simplify parm) env r g
         val () = record_infs (!meter) 1
       in
         expands (g :: ancestors) asms (cont o modus_ponens th asms)
-        (env, n, p)
+        {env = env, depth = depth, proof = proof, offset = offset}
       end
-    and expands ancestors goals cont (env, n, p) =
-      if #divide_conquer parm andalso 2 <= length goals then
+    and expands ancestors g c (s as {depth = n, ...}) =
+      if #divide_conquer parm andalso splittable g then
         let
-          val l = length goals
-          val l2 = l div 2
-          val (g1, g2) = split goals l2
-          val n1 = n div 2
-          val n2 = n - n1
+          val (l1, l2) = halves (length g)
+          val (g1, g2) = split g l1
+          val (f1, f2) = Df (expands ancestors) (g1, g2)
+          val (n1, n2) = halves n
+          val s = update_depth (K n1) s
         in
           binary_choice
-          (fn () =>
-           expands ancestors g1
-           (expands ancestors g2 cont o reward n2) (env, n1, p))
-          (fn () =>
-           expands ancestors g2
-           (check_used (n1 + 1) (expands ancestors g1)
-            (cont o state3 (swivel l2 (l - l2))) o reward n2) (env, n1, p)) ()
+          (fn () => f1 (f2 c o reward n2) s)
+          (fn () => f2 (spend (n1 + 1) f1 (c o swivelp l1 l2) o reward n2) s) ()
         end
-      else
-        foldl (uncurry (cut expand ancestors)) cont (rev goals)
-        (env, n, p)
+      else foldl (uncurry (cut expand ancestors)) c (rev g) s
   in
     cut expand []
   end;
@@ -330,24 +378,24 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
 (* Full meson procedure.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun meson_finally goals (env, _, ths) =
+fun meson_finally g ({env, proof, ...} : state) =
   let
-    val () = assert (length ths = length goals) (BUG "meson" "bad final state")
-    val goals' = map (formula_subst env) goals
-    val ths' = map (INST env) (rev ths)
-  (*val () = (print "meson_finally: "; printVal (goals', ths'); print ".\n")*)
+    val () = assert (length proof = length g) (BUG "meson" "bad final state")
+    val g' = map (formula_subst env) g
+    val proof' = map (INST env) (rev proof)
+  (*val () = (print "meson_finally: "; printVal (g', proof'); print ".\n")*)
     val () =
-      assert (List.all (uncurry thm_proves) (zip ths' goals'))
+      assert (List.all (uncurry thm_proves) (zip proof' g'))
       (BUG "meson" "did not prove goal list")
   in
-    (SOME ths', CHOICE no_choice)
+    (SOME (FRESH_VARSL proof'), CHOICE no_choice)
   end;
 
 fun raw_meson system goals depth =
   choice_stream
   (fn () =>
    foldl (uncurry (meson_expand system)) (meson_finally goals) (rev goals)
-   (|<>|, depth, []));
+   {env = |<>|, depth = depth, proof = [], offset = 0});
 
 (* ------------------------------------------------------------------------- *)
 (* Raw solvers.                                                              *)
@@ -360,12 +408,15 @@ type 'a system =
       formula list -> formula -> (state -> 'a) -> state -> 'a};
 
 fun mk_system parm units meter rules : 'a system =
-  {parm      = parm,
-   rules     = rules,
-   meter     = meter,
-   saturated = ref false,
-   cut       =
-   cache_cut (#cache_cutting parm) o unit_cut (#unit_lemmaizing parm) units};
+  let
+    val {cache_cutting = caching, unit_lemmaizing = lemmaizing, ...} = parm
+  in
+    {parm      = parm,
+     rules     = rules,
+     meter     = meter,
+     saturated = ref false,
+     cut       = unit_cut lemmaizing units o cache_cut caching}
+  end;
 
 fun meson' parm =
   mk_solver_node
@@ -374,14 +425,14 @@ fun meson' parm =
    fn {slice, units, thms, hyps} =>
    let
      val ruls = meson_rules thms hyps
-     val () = chat
+     val () = chat 2
        ("meson--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
         "--#initial_rules=" ^ int_to_string (num_initial_rules ruls) ^ ".\n")
      val system as {saturated = b, ...} = mk_system parm units slice ruls
      fun d n = if !b then S.NIL else (b := true; S.CONS (n, fn () => d (n + 1)))
-     fun f q d = (chat ("-" ^ int_to_string d); raw_meson system q d)
+     fun f q d = (chat 1 ("-" ^ int_to_string d); raw_meson system q d)
    in
      fn goals => filter_meter slice (S.flatten (S.map (f goals) (d 0)))
    end};
@@ -396,7 +447,7 @@ fun delta' parm =
    let
      val ruls = meson_rules thms hyps
      val dgoals = thms_to_delta_goals hyps
-     val () = chat
+     val () = chat 2
        ("delta--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
@@ -404,8 +455,8 @@ fun delta' parm =
      val system as {saturated = b, ...} = mk_system parm units slice ruls
      val delta_goals = S.from_list dgoals
      fun d n = if !b then S.NIL else (b := true; S.CONS (n, fn () => d (n + 1)))
-     fun f d g = (chat "+"; S.map (K NONE) (raw_meson system [g] d))
-     fun g d = (chat (int_to_string d); S.flatten (S.map (f d) delta_goals))
+     fun f d g = (chat 1 "+"; S.map (K NONE) (raw_meson system [g] d))
+     fun g d = (chat 1 (int_to_string d); S.flatten (S.map (f d) delta_goals))
      fun h () = S.flatten (S.map g (d 0))
      fun unit_check goals NONE = U.prove (!units) goals | unit_check _ s = s
    in
@@ -422,8 +473,14 @@ fun prolog' parm =
   {name = "prolog",
    solver_con =
    fn {slice, units, thms, hyps} =>
-   let val system = mk_system parm units slice (prolog_rules thms hyps)
-   in fn goals => raw_meson system goals prolog_depth
+   let
+     val system = mk_system parm units slice (prolog_rules thms hyps)
+     fun comment S.NIL = "!\n"
+       | comment (S.CONS (NONE, _)) = "-"
+       | comment (S.CONS (SOME _, _)) = "$\n"
+     fun f t () = let val x = t () in chat 1 (comment x); x end
+   in
+     fn goals => S.map_thk f (fn () => raw_meson system goals prolog_depth) ()
    end};
 
 val prolog = prolog' defaults;
@@ -448,6 +505,15 @@ fun meson_prove g =
   try (time refute)
   (initialize (set_of_support all_negative meson)
    {limit = !limit, thms = [], hyps = axiomatize (Not (generalize g))});
+fun delta_prove g =
+  try (time refute)
+  (initialize  (set_of_support all_negative delta)
+   {limit = !limit, thms = [], hyps = eq_axiomatize (Not (generalize g))});
+
+(* Testing the delta prover *)
+
+val p48 = parse_formula (get equality "P48");
+delta_prove p48;
 
 (* Testing the prolog solver *)
 

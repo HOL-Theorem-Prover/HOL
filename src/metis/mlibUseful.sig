@@ -6,9 +6,6 @@
 signature mlibUseful =
 sig
 
-(* Magic features *)
-val pointer_eq : 'a -> 'a -> bool
-
 (* Exceptions, profiling and tracing *)
 exception ERR_EXN of {origin_function : string, message : string}
 exception BUG_EXN of {origin_function : string, message : string}
@@ -20,9 +17,9 @@ val total    : ('a -> 'b) -> 'a -> 'b option
 val can      : ('a -> 'b) -> 'a -> bool
 val partial  : exn -> ('a -> 'b option) -> 'a -> 'b
 val timed    : ('a -> 'b) -> 'a -> real * 'b
-val tracing  : bool ref
-val traces   : string list ref
-val trace    : string -> string -> unit
+val tracing  : int ref
+val traces   : {module : string, alignment : int -> int} list ref
+val trace    : {module : string, message : string, level : int} -> unit
 
 (* Combinators *)
 val C  : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
@@ -99,6 +96,7 @@ val primes        : int -> int list
 
 (* Strings *)
 val variant     : string -> string list -> string
+val variant_num : string -> string list -> string
 val dest_prefix : string -> string -> string
 val is_prefix   : string -> string -> bool
 val mk_prefix   : string -> string -> string
