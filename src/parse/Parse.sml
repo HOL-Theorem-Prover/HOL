@@ -6,6 +6,7 @@ type pp_element = term_grammar.pp_element
 type PhraseBlockStyle = term_grammar.PhraseBlockStyle
 type ParenStyle = term_grammar.ParenStyle
 type block_info = term_grammar.block_info
+type associativity = HOLgrammars.associativity
 
 
 fun ERROR f msg =
