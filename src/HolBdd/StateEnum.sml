@@ -19,10 +19,6 @@ load "HolBdd";
 load "HolBddTheory";
 *)
 
-(* Function to make arguments of subst work in Kananaskis *)
-
-fun pair2recd (v,M) = {redex=v, residue=M};
-
 val _ = 
  print 
   "\nComputeReachable is obsolete.\n\
@@ -1073,7 +1069,7 @@ fun ExtractTransitionSystem_CONV statevec tm =
      val B = pairSyntax.mk_pabs
               (statevec,
                 subst
-                  (map (fn v => pair2recd(mk_var(v,bool), mk_app0 v)) statevarnames)
+                  (map (fn v => (mk_var(v,bool) |-> mk_app0 v)) statevarnames)
                   init)
 (*   val Bth = pairLib.PBETA_CONV(mk_comb(B,map_tuple (mk_app0 o fst o dest_var) statevec)) *)
      val Bth = pairLib.PAIRED_BETA_CONV(mk_comb(B,map_tuple (mk_app0 o fst o dest_var) statevec))
@@ -1085,9 +1081,9 @@ fun ExtractTransitionSystem_CONV statevec tm =
      val R = pairSyntax.mk_pabs
               (mk_pair(statevec,statevec'),
                 subst
-                 ((map (fn v => pair2recd(mk_var(v,bool), mk_app v)) statevarnames)
+                 ((map (fn v => (mk_var(v,bool) |-> mk_app v)) statevarnames)
                   @
-                  (map (fn v => pair2recd(mk_primevar v, mk_app' v)) statevarnames))
+                  (map (fn v => (mk_primevar v |-> mk_app' v)) statevarnames))
                  step)
      val Rth = pairLib.PAIRED_BETA_CONV
                 (mk_comb

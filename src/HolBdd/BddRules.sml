@@ -34,10 +34,6 @@ open Pair_basic;
 
 local 
 
-(* Function to make arguments of subst work in Kananaskis *)
-
-fun pair2recd (v,M) = {redex=v, residue=M};
-
 open HolKernel Parse boolLib 
      BasicProvers pairSyntax pairTools numLib HolBdd;
 
@@ -365,9 +361,9 @@ fun BddImage (TermBdd(Btm,Bbdd)) (TermBdd(Rtm,Rbdd)) =
      val vs         = flatten_pair st
      val vs'        = flatten_pair st'
      val varset     = makeset(map varToInt vs)
-     val pairs      = (map2 (fn v => fn v' => pair2recd(v',v)) vs vs' 
+     val pairs      = (map2 (fn v => fn v' => (v' |-> v)) vs vs' 
                        @
-                       map2 (fn v => fn v' => pair2recd(v,v')) vs vs')
+                       map2 (fn v => fn v' => (v |-> v')) vs vs')
      val pairset    =  makepairSet
                         (map2 (fn v=>fn v'=>(varToInt v',varToInt v)) vs vs')
  in
@@ -399,9 +395,9 @@ fun BddPairedImage (TermBdd(Btm,Bbdd)) (TermBdd(Rtm,Rbdd)) =
      val vs         = flatten_pair st
      val vs'        = flatten_pair st'
      val varset     = makeset(map varToInt vs)
-     val pairs      = (map2 (fn v => fn v' => pair2recd(v',v)) vs vs'
+     val pairs      = (map2 (fn v => fn v' => (v' |-> v)) vs vs'
                        @
-                       map2 (fn v => fn v' => pair2recd(v,v')) vs vs')
+                       map2 (fn v => fn v' => (v |-> v')) vs vs')
      val pairset    =  makepairSet
                         (map2 (fn v=>fn v'=>(varToInt v',varToInt v)) vs vs')
  in
@@ -555,7 +551,7 @@ fun MkReachByRecThms Rtm Btm =
              orelse hol_err "R and B vars not consistent" "MkReachByRecThms"
      val ty     = type_of st
      val th = INST_TYPE
-               [pair2recd(ty,``:'a``),pair2recd(ty,``:'b``)]
+               [(``:'a`` |-> ty),(``:'b`` |-> ty)]
                HolBddTheory.ReachBy_rec
      val [th1,th2] = CONJUNCTS th
      val statevars = flatten_pair st
