@@ -1139,20 +1139,28 @@ fun COMB_SYNTH_CONV tm =
             handle HOL_ERR _ => raise ERR "SYNTH_COMB" "input match failure"
    in
     if is_pure_abs abstr
-     then (if aconv args bdy
-           then 
-            let val goal = ``^tm = (^out_bus = ^in_bus)``
-            in
-             prove
-              (goal,
-               REWRITE_TAC[COMB_def,FUN_EQ_THM] 
-               THEN GEN_BETA_TAC 
-               THEN REWRITE_TAC[])
-             handle HOL_ERR _ =>
-             (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
-              if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
-            end
-           else raise ERR "COMB_SYNTH_CONV" "pure abstraction")
+     then let val bdy_match =
+               BUS_MATCH bdy out_bus
+               handle HOL_ERR _ 
+               => raise ERR "SYNTH_COMB" "output match failure"
+              val goal =
+               mk_eq
+                (tm,
+                 list_mk_conj
+                  (map
+                   (fn (t1,t2) => mk_eq(t2,assoc t1 args_match)) 
+                   bdy_match))
+          in
+           prove
+            (goal,
+             REWRITE_TAC[COMB_def,BUS_CONCAT_def] 
+             THEN GEN_BETA_TAC 
+             THEN Ho_Rewrite.REWRITE_TAC[PAIR_EQ,FORALL_AND_THM]
+             THEN Ho_Rewrite.REWRITE_TAC[GSYM FUN_EQ_THM])
+           handle HOL_ERR _ =>
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+          end
     else if is_var bdy andalso can (assoc bdy) args_match
      then let val goal = ``^tm = (^out_bus = ^(assoc bdy args_match))``
           in
@@ -1474,30 +1482,39 @@ fun BUS_SPLIT tm =                           (* Pretty gross implementation! *)
 (*     P load inp done out)                                                  *)
 (*****************************************************************************)
 fun ABS_IN_OUT_SPLIT_CONV tm =
- let val (args,bdy) = dest_pabs tm
-     val [ld,inp,done,out] = strip_pair args
-     val inpth = BUS_SPLIT inp
-     val (inpvars,inpbdy) = strip_exists(concl inpth)
-     val outth = BUS_SPLIT out
-     val (outvars,outbdy) = strip_exists(concl outth)
-     val goal = 
-          mk_eq
-           (bdy,
-            list_mk_exists
-             (inpvars,
-              mk_conj
-               (inpbdy,
-                list_mk_exists(outvars,mk_conj(outbdy,bdy)))))
-     val th =  prove
-                (goal,
-                 RW_TAC std_ss [LEFT_EXISTS_AND_THM,inpth,outth])
-               handle HOL_ERR _ 
-               => (if_print "ABS_IN_OUT_SPLIT_CONV fails to prove:\n";
-                   if_print_term goal;print"\n";
-                   raise ERR "ABS_IN_OUT_SPLIT_CONV" "proof failure")
- in
-  MK_PABS(PGEN args th)
- end;
+ (let val (args,bdy) = dest_pabs tm
+      val [ld,inp,done,out] = strip_pair args
+      val inpth = BUS_SPLIT inp
+      val (inpvars,inpbdy) = strip_exists(concl inpth)
+      val outth = BUS_SPLIT out
+      val (outvars,outbdy) = strip_exists(concl outth)
+      val goal = 
+           mk_eq
+            (bdy,
+             list_mk_exists
+              (inpvars,
+               mk_conj
+                (inpbdy,
+                 list_mk_exists(outvars,mk_conj(outbdy,bdy)))))
+      val th1 = prove
+                 (goal,
+                  RW_TAC std_ss [LEFT_EXISTS_AND_THM,inpth,outth])
+                handle HOL_ERR _ 
+                => (if_print "ABS_IN_OUT_SPLIT_CONV fails to prove:\n";
+                    if_print_term goal;print"\n";
+                    raise ERR "ABS_IN_OUT_SPLIT_CONV" "proof failure")
+      val th2 = RIGHT_CONV_RULE
+                 (STRIP_QUANT_CONV
+                  (RAND_CONV
+                   (STRIP_QUANT_CONV
+                    (Ho_Rewrite.ONCE_REWRITE_CONV[UNWIND_THM]))
+                   THENC STRIP_QUANT_CONV
+                          (Ho_Rewrite.ONCE_REWRITE_CONV[UNWIND_THM]))) th1
+ 
+  in
+   MK_PABS(PGEN args th2)
+  end)
+ handle HOL_ERR _ => REFL tm;
 
 val at_thms =
  [UNDISCH REG_IMP,UNDISCH REGF_IMP,
@@ -1512,7 +1529,6 @@ val MAKE_NETLIST =
  Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
- CONV_RULE(RATOR_CONV(RAND_CONV ABS_IN_OUT_SPLIT_CONV))                    o
  SIMP_RULE std_ss [UNCURRY]                                                o
  Ho_Rewrite.REWRITE_RULE [BUS_CONCAT_ELIM]                                 o
  Ho_Rewrite.REWRITE_RULE
@@ -1522,7 +1538,8 @@ val MAKE_NETLIST =
     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
     POSEDGE_IMP_def,LATCH_def,
-    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_CONCAT_SPLIT]                     o
+    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                        o
+ CONV_RULE(RATOR_CONV(RAND_CONV ABS_IN_OUT_SPLIT_CONV))                    o
  GEN_BETA_RULE                                                             o
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
@@ -1557,7 +1574,8 @@ val MAKE_CIRCUIT =
     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
     DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
-    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_CONCAT_SPLIT]                     o
+    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                        o
+ CONV_RULE(RATOR_CONV(RAND_CONV ABS_IN_OUT_SPLIT_CONV))                    o
  GEN_BETA_RULE                                                             o
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,

@@ -487,4 +487,5 @@ ML reference "if_print_flag" to false.
 == [01.02.05: MJCG minor tweaks to MAKE_NETLIST and COMB_SYNTH_CONV]         ==
 == [06.02.05: MJCG added refinement to clocked dtype registers               ==
 == [08.02.05: MJCG added ?-quantification of internal wires to MAKE_CIRCUIT  ==
+== [10.02.05: MJCG split input and output busses                             ==
 ===============================================================================

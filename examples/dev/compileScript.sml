@@ -435,6 +435,33 @@ val BUS_CONCAT_def =
 val _ = set_fixity "<>" (Infixr 510);
 val _ = overload_on ("<>", ``BUS_CONCAT``);
 
+(*****************************************************************************)
+(* Identitly device (i.e. piece of wire)                                     *)
+(*****************************************************************************)
+val COMB_ID =
+ store_thm
+  ("COMB_ID",
+   ``COMB (\x. x) (inp,out) = (out = inp)``,
+   RW_TAC std_ss [COMB_def,FUN_EQ_THM]);
+
+val COMB_IN_SPLIT =
+ store_thm
+  ("COMB_IN_SPLIT",
+   ``COMB P (inp1 <> inp2, out) = 
+      (out = P o (inp1 <> inp2 ))``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+    THEN PROVE_TAC[]);
+
+(* COMB_CONCAT_SPLIT  *)
+
+val COMB_OUT_SPLIT =
+ store_thm
+  ("COMB_OUT_SPLIT",
+   ``COMB (f <> g) (inp, out1 <> out2) = 
+      COMB f (inp,out1) /\ COMB g (inp,out2)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+    THEN PROVE_TAC[]);
+
 val COMB_FST =
  store_thm
   ("COMB_FST",
@@ -460,14 +487,6 @@ val COMB_CONCAT_SND =
  store_thm
   ("COMB_CONCAT_SND",
    ``COMB (\(x,y). P y) (inp1 <> inp2, out) = COMB P (inp2,out)``,
-   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
-    THEN PROVE_TAC[]);
-
-val COMB_CONCAT_SPLIT =
- store_thm
-  ("COMB_CONCAT_SPLIT",
-   ``COMB (f <> g) (inp, out1 <> out2) = 
-      COMB f (inp,out1) /\ COMB g (inp,out2)``,
    RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
     THEN PROVE_TAC[]);
 
@@ -665,15 +684,6 @@ val SEL_CONCAT_CLAUSES =
     [SEL_2_1_CONCAT,SEL_2_2_CONCAT,
      SEL_3_1_CONCAT,SEL_3_2_CONCAT,SEL_3_3_CONCAT]);
 ******************************************************************************)
-
-(*****************************************************************************)
-(* Identitly device (i.e. piece of wire)                                     *)
-(*****************************************************************************)
-val COMB_ID =
- store_thm
-  ("COMB_ID",
-   ``COMB (\x. x) (inp,out) = (out = inp)``,
-   RW_TAC std_ss [COMB_def,FUN_EQ_THM]);
 
 (*****************************************************************************)
 (* Constant combinational device                                             *)
@@ -1158,5 +1168,10 @@ val MUX_at =
      MUX(sw at clk,in1 at clk,in2 at clk,out at clk)``,
    RW_TAC std_ss [MUX_def,at_def,when]);
 
+val UNWIND_THM = 
+ store_thm
+  ("UNWIND_THM",
+   ``!P x y. (x = y) /\ P x = (x = y) /\ P y``,
+   PROVE_TAC[]);
 
 val _ = export_theory();
