@@ -1,0 +1,738 @@
+app load ["bossLib", "Q"]; open bossLib;
+infix &&; infix 8 by;
+
+
+(*---------------------------------------------------------------------------
+        First, a few straightforward recursions, some with 
+        extended pattern matching.
+ ---------------------------------------------------------------------------*)
+
+val fact_def = Define `fact x = if x = 0 then 1 else x * fact(x-1)`;
+
+val Fib_def = 
+ Define `(Fib 0       = 1) 
+   /\    (Fib (SUC 0) = 1) 
+   /\    (Fib (SUC(SUC x)) = Fib x + Fib (SUC x))`;
+
+val assoc_def =
+ Define
+    `assoc (x:'a) ((a,y)::t) = if x=a then y else assoc x t`;
+
+Define`step x = x`;
+val SM = Define `SM s n = if n=0 then s else SM (step s) (n-1)`;
+
+(*---------------------------------------------------------------------------
+   For the following 3, a "normal" size measure like LENGTH wouldn't 
+   allow termination to be proved. Our parameterized size measure 
+   does work, however.
+ ---------------------------------------------------------------------------*)
+
+val flatten_def =
+  Define `(flatten  []           = [])
+     /\   (flatten ([]::rst)     = flatten rst)
+     /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
+
+val Tot_def = 
+  Define
+    `(Tot [] = 0) /\
+     (Tot (0::t) = Tot t) /\
+     (Tot (SUC n::t) = 1 + Tot (n::t))`;
+
+val Tot_def = 
+  Define
+    `(Tot [] = 0) /\
+     (Tot (0::t) = Tot t) /\
+     (Tot (n::t) = 1 + Tot (n-1::t))`;
+
+val gcd_def = 
+Define 
+    `(gcd (0,y) = y)         
+ /\  (gcd (SUC x, 0) = SUC x)
+ /\  (gcd (SUC x, SUC y) = 
+         if y <= x then gcd(x-y, SUC y) 
+                   else gcd(SUC x, y-x))`;
+
+val gcd_def =  (* curried *)
+  Define 
+    `(gcd 0 y = y)  /\
+     (gcd (SUC x) 0 = SUC x) /\
+     (gcd (SUC x) (SUC y) = 
+         if y <= x then gcd (x-y)   (SUC y) 
+                   else gcd (SUC x) (y-x))`;
+
+val percent2 = 
+  Define 
+    `(%% 0 y        = y)      /\
+     (%% (SUC x) 0  = SUC x)  /\
+     (%% (SUC x) (SUC y) = if y <= x then %% (x-y) (SUC y) 
+                                     else %% (SUC x) (y-x))`;
+
+val map2_def = 
+ Define
+  `(map2(f, []:'a list,L:'b list) = []:'c list) /\
+   (map2(f, h::t,   []) = [])                     /\
+   (map2(f, h1::t1, h2::t2) = f h1 h2::map2 (f, t1, t2))`;
+
+val sorted_def = 
+ Define
+    `(sorted (R, [])  = T) /\
+     (sorted (R, [x]) = T) /\   
+     (sorted (R, x::y::rst) = R x y /\ sorted (R, y::rst))`;
+
+val part_def = 
+Define
+     `(part (P, [], l1,l2) = (l1,l2)) /\
+      (part (P, h::rst, l1,l2) 
+         = if P h then part(P,rst, h::l1, l2)
+                  else part(P,rst,  l1,  h::l2))`;
+
+val div_def = Define
+   `(div(0,x) = (0,0)) /\
+    (div(SUC x, y) = 
+      let (q,r) = div(x,y)
+      in (if y <= SUC r then (SUC q,0) else (q, SUC r)))`;
+
+(* Test nested lets *)
+val div_def = Define
+   `(Div(0,x) = (0,0)) /\
+    (Div(SUC x, y) = let q = FST(Div(x,y)) 
+                     and r = SND(Div(x,y))
+                     in (y <= SUC r => (SUC q,0) 
+                        | (*otherwise*) (q, SUC r)))`;
+
+(* Test and nested ifs *)
+val smaller_def = Define
+  `(smaller((0,i), z) = (i:num))    /\
+   (smaller((SUC x, i), (0,j)) = j) /\
+   (smaller((SUC x, i), (SUC y,j)) = 
+        if SUC y = i then i else
+        if SUC x = j then j 
+        else smaller((x,i), (y,j)))`;
+
+
+val min_def = Define
+    `(min (SUC x) (SUC y) = min x y + 1)
+ /\  (min x y = 0)`;
+
+
+(*---------------------------------------------------------------------------*
+ * Dutch National Flag by functional programming. Similar to bubble sort.    *
+ *---------------------------------------------------------------------------*)
+
+Hol_datatype `colour = Red | White | Blue`;
+
+val Swap_def =
+ Define 
+   `(Swap  []                = NONE) 
+ /\ (Swap (White::Red::rst)  = SOME(Red::White::rst))
+ /\ (Swap (Blue::Red::rst)   = SOME(Red::Blue::rst))
+ /\ (Swap (Blue::White::rst) = SOME(White::Blue::rst))
+ /\ (Swap (x::rst)           = option_APPLY (CONS x) (Swap rst))`;
+
+val Swap_def' = 
+  let val Swap_NIL = CONJUNCT1 Swap_def
+  in 
+    CONJ Swap_NIL 
+     (REWRITE_RULE [Swap_NIL,optionTheory.option_APPLY_DEF] 
+             (CONJUNCT2 Swap_def))
+  end;
+
+(* Note that eta-expansion "\l. Flag l" needed in definition of Flag.  *)
+
+val Flag = 
+ Hol_defn "Flag" 
+         `Flag list = option_case list (\l. Flag l) (Swap list)`;
+
+Defn.eqns_of Flag;
+Defn.tcs_of Flag;
+
+
+(*---------------------------------------------------------------------------
+           Primitive recursion
+ ---------------------------------------------------------------------------*)
+
+val Fact_def = Define
+   `(Fact 0 = 1) /\
+    (Fact (SUC x) = Fact x * SUC x)`;
+
+val mem_def = 
+ Define 
+    `(mem x [] = F) /\ 
+     (mem x (h::t) = (x=h) \/ mem x t)`;
+
+val filter_def = 
+ Define 
+    `(filter P [] = []) /\ 
+     (filter P (h::t) = if P h then h::filter P t else filter P t)`;
+
+val part_def = 
+   Define
+       `(part P [] l1 l2 = (l1,l2)) /\
+        (part P (h::rst) l1 l2 =
+           if P h then part P rst (h::l1) l2
+                  else part P rst  l1 (h::l2))`;
+
+val fold_def = 
+ Define
+     `(fold b f [] = b) /\
+      (fold b f (h::t) = f h (fold b f t))`;
+
+val exists_def = 
+ Define
+     `(exists P [] = F) /\
+      (exists P (h::t) = (P h) \/ exists P t)`;
+
+val sumf_def = 
+ Define
+     `(sumf f [] = 0) /\
+      (sumf f (h::t) = f h + sumf f t)`;
+
+
+(*---------------------------------------------------------------------------
+             Schematic definitions
+ ---------------------------------------------------------------------------*)
+
+val While = Define `While s = if B s then While (C s) else s`;
+
+
+Hol_datatype `btree = LEAF 
+                    | NODE of btree => 'a => btree`;
+
+val btreeRec_def = 
+ Define
+   `(btreeRec LEAF (v:'a) (f:'a->'b->'a->'a)  = v)
+ /\ (btreeRec (NODE t1 M t2) v f = f (btreeRec t1 v f) M (btreeRec t2 v f))`;
+
+
+val unfold_def = 
+ Define
+    `unfold (x:'a) = 
+        if more x 
+        then let (y1,b,y2) = dest x 
+             in 
+               NODE (unfold y1) b (unfold y2)
+        else LEAF`;
+
+val fusion_def = 
+ Define
+     `fusion (x:'a) = 
+          if more x 
+          then let (y,i,z) = dest x
+               in 
+                g (fusion y) (i:'b) (fusion z)
+          else (c:'c)`;
+
+val linRec_def = 
+ Define
+    `linRec (x:'a) = 
+       if atomic x then A x 
+       else  join (linRec (dest x)) (D x:'b)`;
+
+val accRec_def0 = 
+ Define
+    `accRec (x:'a, u:'b) = 
+         if atomic x 
+         then join (A x) u
+         else accRec (dest x, join (D x:'b) u)`;
+
+(* Simplify constraints *)
+
+val accRec_def = 
+ UNDISCH
+ (REWRITE_RULE pairTheory.pair_rws
+   (BETA_RULE (REWRITE_RULE[relationTheory.inv_image_def]
+      (REWRITE_RULE
+        [UNDISCH (ISPEC (Term`FST:'a#'b->'a`)
+                    (Q.ID_SPEC relationTheory.WF_inv_image))]
+        (Q.INST [`R :'a#'b -> 'a#'b -> bool`
+                   |->
+                 `inv_image R (FST :'a#'b -> 'a)`]
+         (DISCH_ALL accRec_def0))))));
+
+(*---------------------------------------------------------------------------
+        Binary recursive schema.
+ ---------------------------------------------------------------------------*)
+val binRec_def = 
+ Define
+    `binRec (x:'a) = 
+      if atomic x then A x 
+      else join (binRec (left x)) 
+                (binRec (right x))`;
+
+(*---------------------------------------------------------------------------
+         General tail recursive schema for lists.
+ ---------------------------------------------------------------------------*)
+val baRec_def = 
+ Define
+    `(baRec ([],v) = (v:'b)) 
+  /\ (baRec (h::t, v) =
+        if atomic h 
+        then baRec (t, join v (A h:'b))
+        else baRec (APPEND (dest (h:'a)) t, v))`;
+
+
+(*---------------------------------------------------------------------------
+     Non-recursive, with a non-alphanumeric
+ ---------------------------------------------------------------------------*)
+
+Define `% x y = x MOD y`;
+
+(*---------------------------------------------------------------------------
+        Non-recursive, curried, complex patterns
+ ---------------------------------------------------------------------------*)
+
+Define `(g3 0 y z = 1) /\
+        (g3 x 0 z = 2) /\
+        (g3 x y 0 = 3)`;
+
+Define `(g4(0,x,y,z) = 1) /\
+        (g4(w,0,y,z) = 2) /\
+        (g4(w,x,0,z) = 3) /\
+        (g4(w,x,y,0) = 4)`;
+
+
+(*---------------------------------------------------------------------------
+      Some simple cases where termination is not yet proved automatically.
+ ---------------------------------------------------------------------------*)
+
+val qsort_def = 
+ Hol_defn "qsort"
+   `(qsort(ord,[]) = []) /\
+    (qsort(ord, x::rst) = 
+      APPEND (qsort(ord,FILTER ($~ o ord x) rst))
+             (x :: qsort(ord,FILTER(ord x) rst)))`;
+
+val fqsort_def = 
+ Hol_defn "fqsort"
+   `(fqsort ord [] = []) /\
+    (fqsort ord (x::rst) = 
+       let (l1,l2) = part (ord x) rst [] []
+       in 
+        APPEND (fqsort ord l1)  (x::fqsort ord l2))`;
+
+val variant_def = 
+  Hol_defn "variant" 
+     `variant x L = if MEM x L then variant (x+1) L else x`;
+
+
+(*---------------------------------------------------------------------------
+      Example of a "do-it-yourself" termination proof for variant.
+ ---------------------------------------------------------------------------*)
+
+Defn.tgoal variant_def;  
+
+e (WF_REL_TAC variant_def 
+       `measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`);
+
+(* Step-by-step way
+b();
+e (TotalDefn.TC_INTRO_TAC variant_def 
+     THEN Q.EXISTS_TAC`measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
+     THEN TotalDefn.TC_SIMP_TAC);
+*)
+e (RW_TAC std_ss []   (* Blasted eta-conv. to be done before induction *)
+   THEN Induct_on `L` THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]);
+
+(* Need a lemma *)
+
+val LENGTH_FILTER_SUBSET = Q.prove(
+`(!y. P y ==> Q y) ==> !L. LENGTH(FILTER P L) <= LENGTH (FILTER Q L)`,
+DISCH_TAC THEN Induct THEN ZAP_TAC (list_ss && [listTheory.FILTER]) []);
+
+(* Finish proof *)
+e (RW_TAC arith_ss [DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
+val [variant_eqns,variant_ind] = CONJUNCTS (top_thm());
+
+
+(*---------------------------------------------------------------------------
+     All wrapped up after proof found.
+ ---------------------------------------------------------------------------*)
+
+val (variant_eqn, variant_ind) = 
+Defn.tprove 
+  (variant_def, WF_REL_TAC variant_def 
+      `measure \(x,L). LENGTH(FILTER (\y. x<=y) L)`
+     THEN RW_TAC std_ss []
+     THEN Induct_on `L` 
+     THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM,
+                          DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
+
+(*---------------------------------------------------------------------------
+       Properties.
+ ---------------------------------------------------------------------------*)
+
+val variant_correct = Q.prove(
+`!x L. ~MEM (variant x L) L`,
+recInduct variant_ind
+  THEN RW_TAC std_ss []
+  THEN ONCE_REWRITE_TAC [variant_eqn]
+  THEN RW_TAC std_ss []);
+
+(*---------------------------------------------------------------------------*
+ *   Of all the numbers that aren't in L, variant x L is the                 *
+ *   smallest one that is greater-than-or-equal-to x.                        *
+ *---------------------------------------------------------------------------*)
+
+val variant_minimal = Q.prove(
+`!x L y. ~MEM y L /\ x<=y ==> variant x L <= y`,
+recInduct variant_ind
+  THEN RW_TAC std_ss []
+  THEN ONCE_REWRITE_TAC [variant_eqn]
+  THEN RW_TAC std_ss []
+  THEN `x < y` by PROVE_TAC [arithmeticTheory.LESS_OR_EQ]
+  THEN RW_TAC arith_ss []);
+
+
+(*---------------------------------------------------------------------------
+         Evaluation of variant with computeLib
+ ---------------------------------------------------------------------------*)
+load "computeLib";  open computeLib;
+
+(*---------------------------------------------------------------------------
+    First, build a standard computing base, one that knows basic 
+    facts about booleans and numbers (and numerals).
+
+    Note that ">" and ">=" are not defined for numerals, so 
+    we convert to "<" and "<=" via arithmeticTheory.{GREATER_EQ, GREATER_DEF}.
+ ---------------------------------------------------------------------------*)
+
+val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES]);
+
+fun norm q = Count.apply (CBV_CONV rws) (--q--);
+
+val num_rws = 
+  let open numeralTheory Rsyntax
+      val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
+      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
+                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
+                        arithmeticTheory.ALT_ZERO])
+      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
+      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
+ in 
+  [ drws', REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
+    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
+    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
+    numeral_exp, iSQR, 
+    arithmeticTheory.GREATER_EQ, arithmeticTheory.GREATER_DEF
+  ]
+end;
+
+val _ = add_thms (true,num_rws) rws;
+
+(*---------------------------------------------------------------------------
+        recast MEM definition as if-then-else
+ ---------------------------------------------------------------------------*)
+
+local val MEM_IF = Q.prove(
+           `!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
+            RW_TAC list_ss [listTheory.MEM]);
+      val MEM_DEF' = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF
+in
+val _ = add_thms (true,[variant_eqn,MEM_DEF']) rws
+end;
+
+norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;
+norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;16;16;16;165]`;
+norm `variant (SUC 0) []`;
+norm `variant (SUC 0) [SUC(SUC 0)]`;
+
+(*---------------------------------------------------------------------------
+      Example of a "do-it-yourself" termination proof for qsort.
+ ---------------------------------------------------------------------------*)
+
+Defn.tgoal qsort_def;  
+e (WF_REL_TAC qsort_def `measure (LENGTH o SND)`);
+e (RW_TAC list_ss [combinTheory.o_DEF,DECIDE `x<SUC y = x <= y`]);
+
+val FILTER_KT = Q.prove(`!l. FILTER (K T) l = l`,
+Induct THEN RW_TAC list_ss [listTheory.FILTER,combinTheory.K_DEF]);
+
+val lem = REWRITE_RULE [FILTER_KT]
+            (Q.INST [`Q` |-> `K T`] LENGTH_FILTER_SUBSET);
+e (RW_TAC std_ss [lem, combinTheory.K_DEF]);
+e (RW_TAC std_ss [lem, combinTheory.K_DEF]);
+
+(* Done, make ML bindings, and should also add into theory *)
+
+val (qsort_eqns,qsort_ind) = 
+  let val th = top_thm() in (CONJUNCT1 th, CONJUNCT2 th) end;
+
+(*---------------------------------------------------------------------------
+       All wrapped up after proof found.
+ ---------------------------------------------------------------------------*)
+
+val (qsort_eqn,qsort_ind) = 
+Defn.tprove 
+   (qsort_def, 
+     WF_REL_TAC qsort_def `measure (LENGTH o SND)`
+       THEN RW_TAC list_ss 
+             [combinTheory.o_DEF,combinTheory.K_DEF,
+              DECIDE `x<SUC y = x <= y`,
+              REWRITE_RULE [FILTER_KT]
+                  (Q.INST [`Q` |-> `K T`] LENGTH_FILTER_SUBSET)]);
+
+
+(*---------------------------------------------------------------------------
+        Wang's algorithm for propositional logic.
+ ---------------------------------------------------------------------------*)
+
+Hol_datatype `prop = VAR of 'a
+                   | NOT of prop
+                   | AND of prop => prop
+                   | OR  of prop => prop`;
+val Pr_def = 
+ Defn.Hol_defn "Pr"
+    `(Pr vl [] (VAR v::r)   vr = Pr vl [] r (v::vr))
+ /\  (Pr vl [] (NOT x::r)   vr = Pr vl [x] r vr)
+ /\  (Pr vl [] (OR x y::r)  vr = Pr vl [] (x::y::r) vr)
+ /\  (Pr vl [] (AND x y::r) vr = Pr vl [] (x::r) vr /\ Pr vl [] (y::r) vr)
+
+ /\  (Pr vl (VAR v::l)    r vr = Pr (v::vl) l r vr)
+ /\  (Pr vl (NOT x::l)    r vr = Pr vl l (x::r) vr)
+ /\  (Pr vl (AND x y::l)  r vr = Pr vl (x::y::l) r vr)
+ /\  (Pr vl (OR x y::l)   r vr = Pr vl (x::l) r vr /\ Pr vl (y::l) r vr)
+
+ /\  (Pr vl [] [] vr           = EXISTS (\y. MEM y vl) vr)`;
+
+
+val Prove_def = Define `Prove P = Pr [] [] [P] []`;
+
+(*---------------------------------------------------------------------------
+     Termination of Pr. We need a subsidiary measure function on 
+     propositions which makes a 2-argument proposition bigger than a 
+     list of 2 propositions. 
+ ---------------------------------------------------------------------------*)
+
+val Meas_def =
+ Define 
+    `(Meas (VAR v)   = 0)
+ /\  (Meas (NOT x)   = SUC (Meas x))
+ /\  (Meas (AND x y) = Meas x + Meas y + 2)
+ /\  (Meas (OR x y)  = Meas x + Meas y + 2)`;
+
+(*---------------------------------------------------------------------------*
+ *  Termination of Pr.                                                       *
+ *---------------------------------------------------------------------------*)
+
+val (Pr_eqns, Pr_ind) = Defn.tprove 
+(Pr_def,
+ WF_REL_TAC Pr_def
+    `measure \(w:'a list, x:'a prop list, y:'a prop list, z:'a list). 
+                      list_size Meas x + list_size Meas y`
+  THEN RW_TAC arith_ss [Meas_def,listTheory.list_size_def]);
+
+(*---------------------------------------------------------------------------
+      The following definition is in destructor style, and fails 
+      to prove termination. (Very strange looking definition - is it
+      correctly transcribed?)
+ ---------------------------------------------------------------------------*)
+
+Define `Gate (l:num list,x) = 
+           if l=[] then  1 
+           else (let rst = Gate (TL l, x) in FST (HD l, x))`;
+
+(*---------------------------------------------------------------------------
+       Constructor style succeeds. 
+ ---------------------------------------------------------------------------*)
+
+Define `(Gate ([],x) = 1)
+     /\ (Gate (h::t, x) = let rst = Gate (t, x) in (h+rst))`;
+
+Define `(Gate ([],x) = 1)
+     /\ (Gate (h::t, x) = h + Gate (t,x))`;
+
+
+(* Binary trees (again). *)
+
+Hol_datatype 
+    `Btree = Leaf of 'a
+           | Brh of 'a => Btree => Btree`;
+ 
+(* prim. rec. *)
+Define 
+   `(upheap R w (Leaf x) = Brh w (Leaf x) (Leaf x)) /\
+    (upheap R w (Brh v p q) =
+         if R w v then Brh w (upheap R v q) p
+                  else Brh v (upheap R w q) p)`;
+
+(*---------------------------------------------------------------------------
+     Not sure if this actually does anything useful. It might be nicer 
+     to define this schematically on R, and still have termination proved.
+     (Currently, termination is not attempted for schematic defns.)
+ ---------------------------------------------------------------------------*)
+Define
+   `(merge_heap R (Leaf x) b = b)                         
+ /\ (merge_heap R (Brh v b1 b2) (Leaf x) = Brh v b1 b2) 
+ /\ (merge_heap R (Brh v b1 b2) (Brh w c1 c2) 
+       = if R v w 
+         then Brh v (merge_heap R b1 b2) (Brh w c1 c2)
+         else Brh w (Brh v b1 b2) (merge_heap R c1 c2))`;
+
+(*---------------------------------------------------------------------------*
+ * This one fails, because you need to know a relation between term_size and *
+ * list_size. Would work with multiset ordering.                             *
+ *---------------------------------------------------------------------------*)
+
+val V_def = 
+Define
+   `(V [] acc = acc)
+ /\ (V (Leaf s::rst) acc        = V rst ([Leaf s]::acc)) 
+ /\ (V (Brh x tm1 tm2::rst) acc = V (tm1::tm2::rst) acc)`;
+
+TypeBase.type_size (TypeBase.theTypeBase()) (Type`:'a Btree list`);
+
+(*---------------------------------------------------------------------------*
+ * This one fails because the size of the tree is not changed.               *
+ * Termination is provable with the following interpretation "Int":          *
+ *                                                                           *
+ *    Int (Leaf) = 0                                                         *
+ *    Int (Brh x y) = 2 * Int x + Int y + 1                                  *
+ *---------------------------------------------------------------------------*)
+
+val Lin_def = 
+Define`(Lin (Leaf x) = Leaf x) 
+  /\   (Lin (Brh a (Leaf x) bt)        = Brh a (Leaf x) (Lin bt))
+  /\   (Lin (Brh a (Brh x bt1 bt2) bt) = Lin (Brh x bt1 (Brh a bt2 bt)))`;
+
+
+(*---------------------------------------------------------------------------
+     Majority vote, in a variety of slightly different presentations.
+ ---------------------------------------------------------------------------*)
+
+Define 
+  `(Maj [] (winner,lead)  = (winner,lead))
+/\ (Maj (h::t) (leader,0) = if h=leader then Maj t (leader,1) else Maj t (h,1))
+/\ (Maj (h::t) (leader, SUC m) = 
+        if h=leader then Maj t (leader, m+2) else Maj t (leader, m))`;
+
+(* Alternative formulation *)
+Define 
+   `(Maj [] (winner,lead)  = (winner,lead))
+ /\ (Maj (h::t) (leader,0) = Maj t (if h=leader then (leader,1) else (h,1)))
+ /\ (Maj (h::t) (leader, SUC m) = 
+        if h=leader then Maj t (leader, m+2)
+                    else Maj t (leader, m))`;
+
+(* Alternative formulation *)
+Define 
+   `(Maj [] (winner,lead)  = (winner,lead))
+ /\ (Maj (h::t) (leader,0) = Maj t (if h=leader then (leader,1) else (h,1)))
+ /\ (Maj (h::t) (leader,SUC m) = Maj t (leader, if h=leader then m+2 else m))`;
+
+Define 
+   `(Maj [] (winner,lead)      = (winner,lead))
+ /\ (Maj (h::t) (leader,0)     = Maj t ((if h=leader then leader else h),1))
+ /\ (Maj (h::t) (leader,SUC m) = Maj t (leader, if h=leader then m+2 else m))`;
+
+(* Fails. Would need wildcards before this would succeed. *)
+Define 
+   `(Maj [] (winner,lead) = (winner,lead))
+ /\ (Maj (h::t) (_,0)     = Maj t (h,1))
+ /\ (Maj (h::t) (leader, SUC m) 
+       = Maj t (leader, (if h=leader then m+2 else m)))`;
+
+
+(*---------------------------------------------------------------------------
+              Nested recursion
+ ---------------------------------------------------------------------------*)
+
+val N = Define `N x = if x>100 then x-10 else N(N(x+11))`; (* Fails *)
+val Ndef = Hol_defn "ninety1"
+                    `N x = if x>100 then x-10 else N(N(x+11))`;
+
+(* Fails (as it should) and doesn't clean up properly (as it shouldn't) *)
+
+Define `% x = if x>100 then x-10 else %(%(x+11))`;  
+
+(*---------------------------------------------------------------------------
+              Mutual recursion
+ ---------------------------------------------------------------------------*)
+
+val even_odd =
+ xDefine "even_odd"
+     `(even 0 = T)
+  /\  (even (SUC n) = odd n) 
+  /\  (odd 0 = F)
+  /\  (odd (SUC n) = even n)`;
+
+val even_odd =
+Define
+  `(&& 0 = T)          /\
+   (&& (SUC n) = !! n) /\
+   (!! 0 = F)          /\
+   (!! (SUC n) = && n)`;
+
+(*---------------------------------------------------------------------------
+      Higher order recursion. First we prove and install a
+      congruence rule for sum. Congruence rules for common 
+      higher-order list functions (MAP, EXISTS) have already  
+      been installed.
+ ---------------------------------------------------------------------------*)
+
+val sumf_cong = prove
+(Term
+  `!l1 l2 f f'. 
+    (l1=l2) /\ (!x. MEM x l2 ==> (f x = f' x))
+          ==>
+    (sumf f l1 = sumf f' l2)`,
+Induct 
+  THEN NTAC 2 (RW_TAC list_ss [sumf_def,listTheory.MEM]));
+
+local open Context
+in 
+  val _ = write_context (sumf_cong::read_context())
+end;
+  
+(*---------------------------------------------------------------------------
+        Now some "higher-order recursive" functions over a type of 
+        labelled n-ary trees (built from constructor "Node").
+ ---------------------------------------------------------------------------*)
+ 
+val ltree_map_def =
+  Defn.Hol_defn "ltree_map"
+    `ltree_map f (Node v tl) = Node (f v) (MAP (ltree_map f) tl)`;
+
+load "numLib"; open numLib listTheory;
+
+val (ltree_map_eqn, ltree_map_ind) =
+ Defn.tprove
+ (ltree_map_def, 
+   WF_REL_TAC ltree_map_def `^(hd(tl (TotalDefn.guessR ltree_map_def)))`
+    THEN Induct 
+    THEN RW_TAC list_ss [MEM,list_size_def,ltreeTheory.ltree_size_def]
+    THENL [ARITH_TAC,
+           PROVE_TAC [DECIDE `x < y+1 ==> x < y + (z + 2)`]]);
+
+val ltree_map_o = Q.prove(
+`!g t f. ltree_map f (ltree_map g t) = ltree_map (f o g) t`,
+recInduct ltree_map_ind
+  THEN RW_TAC std_ss [ltree_map_eqn]
+  THENL [RW_TAC std_ss [combinTheory.o_DEF],
+         Induct_on `tl` THEN ZAP_TAC list_ss [listTheory.MEM]]);
+
+val ltree_occurs_def =
+ Hol_defn "ltree_occurs"
+    `ltree_occurs x (Node v tl) = (x=v) \/ EXISTS (ltree_occurs x) tl`;
+
+val collect_def =
+ Hol_defn "collect"
+    `collect f (Node v tl) 
+       = FOLDR (\h a. APPEND (collect f h) a) [f v] tl`;
+
+val (collect_eqn, collect_ind) =
+ Defn.tprove
+ (collect_def,
+  WF_REL_TAC collect_def `^(Lib.el 2 (TotalDefn.guessR ltree_map_def))`
+    THEN Induct 
+    THEN RW_TAC list_ss [MEM,list_size_def,ltreeTheory.ltree_size_def]
+    THENL [ARITH_TAC,
+           PROVE_TAC [ARITH_PROVE (Term`x < y+1 ==> x < y + (z + 2)`)]]);
+
+val ltree_size_def2 =
+ Hol_defn "ltree_size2"
+    `ltree_size2 f (Node v tl) = 1 + f v + SUM (MAP (ltree_size2 f) tl)`;
+
+val ltree_SIZE_def =
+ Hol_defn 
+     "ltree_SIZE"
+     `ltree_SIZE f (Node v tl) = 1 + f v + sumf (ltree_SIZE f) tl`;
