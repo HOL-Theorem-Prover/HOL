@@ -5,9 +5,7 @@
 structure AC :> AC = 
 struct
 
-
-open ho_matchLib HolKernel Drule Conv
-     Psyntax liteLib Ho_rewrite Ho_match;
+open HolKernel Drule Conv Psyntax liteLib Ho_rewrite Ho_match;
 
 
  type term = Term.term

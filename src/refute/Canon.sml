@@ -1,8 +1,7 @@
 structure Canon :> Canon =
 struct
 
-open ho_matchLib HolKernel Parse basicHol90Lib
-     liteLib AC Ho_rewrite Ho_theorems Ho_resolve Psyntax;
+open HolKernel Parse basicHol90Lib liteLib AC Ho_rewrite Ho_resolve Psyntax;
 
  type term = Term.term
  type thm = Thm.thm
@@ -11,6 +10,16 @@ open ho_matchLib HolKernel Parse basicHol90Lib
 
 val EXISTS_DEF        = boolTheory.EXISTS_DEF;
 val EXISTS_UNIQUE_DEF = boolTheory.EXISTS_UNIQUE_DEF;
+val LEFT_AND_EXISTS_THM = GSYM LEFT_EXISTS_AND_THM;
+val AND_FORALL_THM      = GSYM FORALL_AND_THM;
+val LEFT_OR_FORALL_THM  = GSYM LEFT_FORALL_OR_THM;
+val RIGHT_OR_FORALL_THM = GSYM RIGHT_FORALL_OR_THM;
+val LEFT_IMP_FORALL_THM = GSYM LEFT_EXISTS_IMP_THM;
+val RIGHT_IMP_FORALL_THM = GSYM boolTheory.RIGHT_FORALL_IMP_THM;
+val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
+val OR_EXISTS_THM = GSYM EXISTS_OR_THM;
+val LEFT_IMP_EXISTS_THM  = boolTheory.LEFT_EXISTS_IMP_THM;
+val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
 
 infix 5 |-> -->
 infix THEN THENL THENC THENCQC THENQC
