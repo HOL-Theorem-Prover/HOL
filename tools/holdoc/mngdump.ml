@@ -497,7 +497,7 @@ and munge_hol_content0 : pvars -> token_cxt -> hol_content -> token_cxt
       let render_it =
         match t with
           HolIdent(true ,s) -> (fun () ->
-            if tcx.adjid then print_string "\;";
+            if tcx.adjid then print_string "\\;";
             munge_ident pvs s)
         | HolIdent(false,s) -> (fun () -> munge_symbol pvs tcx.bol s)
         | HolStr s          -> (fun () -> wrap "\\text{``" "''}" munge_texify_text s)
