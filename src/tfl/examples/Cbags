@@ -3,12 +3,12 @@ app load ["bossLib", "bagTheory", "stringTheory", "wordTheory"];
 
 open bossLib;
 
-Hol_datatype 
-    `basic_integral_type 
-          = Char 
-          | Short
-          | Int 
-          | Long`;
+val _ = Hol_datatype 
+   `basic_integral_type 
+         = Char 
+         | Short
+         | Int 
+         | Long`;
 
 val basic_integral = theorem "basic_integral_type_Axiom"
 
@@ -21,17 +21,33 @@ val _ = Hol_datatype
          | Struct of string
          | Function of CType => CType list`;
 
-val _ =
- Hol_datatype `MemObj = MByte of bool word 
-                      | MFunRef of string => num
-                      | MUndefined`;
+val _ = Hol_datatype 
+ `MemObj = MByte of bool word 
+         | MFunRef of string => num
+         | MUndefined`;
 
-val c_binops = Hol_datatype
-    `c_binops = CPlus | CMinus  | CLess  | CGreat | CLessE | CGreatE |
-                CEq   | CAssign | CTimes | CDiv   | CMod   | CNotEq`;
+val _ = Hol_datatype
+    `c_binops 
+         = CPlus 
+         | CMinus  
+         | CLess
+         | CGreat
+         | CLessE
+         | CGreatE
+         | CEq 
+         | CAssign
+         | CTimes
+         | CDiv
+         | CMod
+         | CNotEq`;
 
-val c_unops = Hol_datatype
-    `c_unops = CUnPlus | CUnMinus | CComp | CNot | CNullFunRef`;
+val _ = Hol_datatype
+    `c_unops 
+         = CUnPlus 
+         | CUnMinus
+         | CComp
+         | CNot
+         | CNullFunRef`;
 
 val _ = Hol_datatype
   `CExpr = Cnum of num  
@@ -58,27 +74,33 @@ val _ = Hol_datatype
          | ECompVal of MemObj list => CType
          | UndefinedExpr`;
 
+
+(*--------------------------------------------------------------------------
+      Function definition
+ ---------------------------------------------------------------------------*)
+
 val rbags_defn = 
  Defn.Hol_defn "rbags"
-  `(rbags (COr e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
-   (rbags (CAnd e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
+  `(rbags (COr e1 e2)          = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (CAnd e1 e2)         = BAG_UNION (rbags e1) (rbags e2)) /\
    (rbags (CApBinary bf e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
-   (rbags (CApUnary uf e) = rbags e) /\
-   (rbags (Deref e) = rbags e) /\
-   (rbags (Addr e) = rbags e) /\
-   (rbags (Assign f e1 e2 b) = BAG_UNION (rbags e1) b) /\
-   (rbags (SVar e s) = rbags e) /\
-   (rbags (FnApp e el) = BAG_UNION (rbags e) (rbagsl el)) /\
-   (rbags (CommaSep e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
-   (rbags (Cast t e) = rbags e) /\
-   (rbags (PostInc e) = rbags e) /\
-   (rbags (CAndOr_sqpt e) = rbags e) /\
-   (rbags (RValreq e) = rbags e) /\
-   (rbags (CCond e1 e2 e3) = BAG_UNION 
-                               (BAG_UNION (rbags e1) (rbags e2)) (rbags e3)) /\
-   (rbags ____ = EMPTY_BAG) /\
-   (rbagsl [] = EMPTY_BAG) /\
-   (rbagsl (CONS e es) = BAG_UNION (rbags e) (rbagsl es))`;
+   (rbags (CApUnary uf e)      = rbags e) /\
+   (rbags (Deref e)            = rbags e) /\
+   (rbags (Addr e)             = rbags e) /\
+   (rbags (Assign f e1 e2 b)   = BAG_UNION (rbags e1) b) /\
+   (rbags (SVar e s)           = rbags e) /\
+   (rbags (FnApp e el)         = BAG_UNION (rbags e) (rbagsl el)) /\
+   (rbags (CommaSep e1 e2)     = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (Cast t e)           = rbags e) /\
+   (rbags (PostInc e)          = rbags e) /\
+   (rbags (CAndOr_sqpt e)      = rbags e) /\
+   (rbags (RValreq e)          = rbags e) /\
+   (rbags (CCond e1 e2 e3)     = BAG_UNION (BAG_UNION(rbags e1) (rbags e2))
+                                           (rbags e3)) /\
+   (rbags __________           = EMPTY_BAG) /\
+
+   (rbagsl []      = EMPTY_BAG) /\
+   (rbagsl (e::es) = BAG_UNION (rbags e) (rbagsl es))`;
 
 val (rbags_eqns,rbags_ind) = 
  Defn.tprove
