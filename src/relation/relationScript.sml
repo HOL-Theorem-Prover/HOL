@@ -1311,7 +1311,7 @@ val inv_INVOL = store_thm(
 
 val O_DEF = new_definition(
   "O_DEF",
-  ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R1 x y /\ R2 y z``);
+  ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R2 x y /\ R1 y z``);
 val _ = set_fixity "O" (Infixr 800)
 
 val inv_O = store_thm(
