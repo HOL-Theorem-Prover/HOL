@@ -950,19 +950,19 @@ fun SELECT_WORD_TAC th1 th2 =
     THEN ASM_B_SIMP_TAC [th2,EQUIV_SYM,GSYM EQUIV_QT];
 
 val ADD_EVAL = store_thm("ADD_EVAL",
-  `n2w a + n2w b = n2w (a + b)`,
+  `!a b. n2w a + n2w b = n2w (a + b)`,
   SELECT_WORD_TAC word_add_def ADD_WELLDEF);
 
 val MUL_EVAL = store_thm("MUL_EVAL",
-  `n2w a * n2w b = n2w (a * b)`,
+  `!a b. n2w a * n2w b = n2w (a * b)`,
   SELECT_WORD_TAC word_mul_def MUL_WELLDEF);
 
 val ONE_COMP_EVAL = store_thm("ONE_COMP_EVAL",
-  `NOT (n2w a) = n2w (ONE_COMP a)`,
+  `!a. NOT (n2w a) = n2w (ONE_COMP a)`,
   SELECT_WORD_TAC word_1comp_def ONE_COMP_WELLDEF);
 
 val TWO_COMP_EVAL = store_thm("TWO_COMP_EVAL",
-  `~(n2w a) = n2w (TWO_COMP a)`,
+  `!a. ~(n2w a) = n2w (TWO_COMP a)`,
   SELECT_WORD_TAC word_2comp_def TWO_COMP_WELLDEF);
 
 val WORD_SUB_LT_EQ = store_thm("WORD_SUB_LT_EQ",
@@ -977,46 +977,46 @@ val WORD_SUB_LT_EQ = store_thm("WORD_SUB_LT_EQ",
 );
 
 val LSR_ONE_EVAL = store_thm("LSR_ONE_EVAL",
-  `word_lsr1 (n2w a) = n2w (LSR_ONE a)`,
+  `!a. word_lsr1 (n2w a) = n2w (LSR_ONE a)`,
   SELECT_WORD_TAC word_lsr1_def LSR_ONE_WELLDEF);
 
 val ASR_ONE_EVAL = store_thm("ASR_ONE_EVAL",
-  `word_asr1 (n2w a) = n2w (ASR_ONE a)`,
+  `!a. word_asr1 (n2w a) = n2w (ASR_ONE a)`,
   SELECT_WORD_TAC word_asr1_def ASR_ONE_WELLDEF
 );
 
 val ROR_ONE_EVAL = store_thm("ROR_ONE_EVAL",
-  `word_ror1 (n2w a) = n2w (ROR_ONE a)`,
+  `!a. word_ror1 (n2w a) = n2w (ROR_ONE a)`,
   SELECT_WORD_TAC word_ror1_def ROR_ONE_WELLDEF
 );
 
 val RRX_EVAL = store_thm("RRX_EVAL",
-  `RRX c (n2w a) = n2w (RRXn c a)`,
+  `!a c. RRX c (n2w a) = n2w (RRXn c a)`,
   SELECT_WORD_TAC RRX_def RRX_WELLDEF
 );
 
 val LSB_EVAL = store_thm("LSB_EVAL",
-  `LSB (n2w a) = LSBn a`,
+  `!a. LSB (n2w a) = LSBn a`,
   SELECT_WORD_TAC LSB_def LSB_WELLDEF
 );
 
 val MSB_EVAL = store_thm("MSB_EVAL",
-  `MSB (n2w a) = MSBn a`,
+  `!a. MSB (n2w a) = MSBn a`,
   SELECT_WORD_TAC MSB_def MSB_WELLDEF
 );
 
 val OR_EVAL = store_thm("OR_EVAL",
-  `n2w a | n2w b = n2w (OR a b)`,
+  `!a b. n2w a | n2w b = n2w (OR a b)`,
   SELECT_WORD_TAC bitwise_or_def OR_WELLDEF
 );
 
 val EOR_EVAL = store_thm("EOR_EVAL",
-  `n2w a # n2w b = n2w (EOR a b)`,
+  `!a b. n2w a # n2w b = n2w (EOR a b)`,
   SELECT_WORD_TAC bitwise_eor_def EOR_WELLDEF
 );
 
 val AND_EVAL = store_thm("AND_EVAL",
-  `n2w a & n2w b = n2w (AND a b)`,
+  `!a b. n2w a & n2w b = n2w (AND a b)`,
   SELECT_WORD_TAC bitwise_and_def AND_WELLDEF
 );
 
@@ -1034,6 +1034,33 @@ val SLICE_EVAL = store_thm("SLICE_EVAL",
   `!h l a. WORD_SLICE h l (n2w a) = SLICE h l (MOD_WL a)`,
   B_RW_TAC [WORD_SLICE_def,w2n_EVAL]
 );
+
+(* -------------------------------------------------------- *)
+
+val WORD_MULT_SUC = prove(
+  `!a b. a * n2w (b + 1) = a * n2w b + a`,
+  REPEAT STRIP_TAC
+    THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN SIMP_TAC arith_ss [MUL_EVAL,ADD_EVAL,LEFT_ADD_DISTRIB]
+);
+
+val WORD_NEG_LMUL = store_thm("WORD_NEG_LMUL",
+  `!a b. ~(a * b) = ~a * b`,
+  REPEAT STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
+    THEN Induct_on `n` THEN1 SIMP_TAC std_ss [GSYM word_0,WORD_MULT_CLAUSES,WORD_NEG_0]
+    THEN ASM_SIMP_TAC std_ss [WORD_NEG_ADD,ADD1,GSYM MUL_EVAL,WORD_MULT_SUC]
+);
+
+val WORD_NEG_RMUL = save_thm("WORD_NEG_RMUL",
+  (GEN_ALL o ONCE_REWRITE_RULE [WORD_MULT_COMM] o SPECL [`b`,`a`]) WORD_NEG_LMUL);
+
+val WORD_RIGHT_SUB_DISTRIB = store_thm("WORD_RIGHT_SUB_DISTRIB",
+  `!m n p. (m - n) * p = m * p - n * p`,
+  SIMP_TAC std_ss [word_sub_def,WORD_RIGHT_ADD_DISTRIB,WORD_NEG_LMUL]
+);
+
+val WORD_LEFT_SUB_DISTRIB = save_thm("WORD_LEFT_SUB_DISTRIB",
+  ONCE_REWRITE_RULE [WORD_MULT_COMM] WORD_RIGHT_SUB_DISTRIB);
 
 (* -------------------------------------------------------- *)
 
