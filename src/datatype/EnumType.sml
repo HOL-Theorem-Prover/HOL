@@ -258,48 +258,54 @@ fun define_enum_type(name,clist,ABS,REP) =
     }
  end;
 
-(*---------------------------------------------------------------------------
-     Should upgrade this so that it can be used in Prim_rec.
- ---------------------------------------------------------------------------*)
+val (COND_T, COND_F) = CONJ_PAIR (SPEC_ALL COND_CLAUSES)
+fun define_case (case_const_name, rep_t, rep_th, constrs) = let
+  val sz = length constrs
+  val m = mk_var("m", numSyntax.num)
+  fun V n = mk_var("v" ^ Int.toString n, alpha)
+  open numSyntax
+  fun mk_decision_tree lo hi =
+      if lo < hi then
+        if lo + 1 = hi then
+          mk_cond(mk_eq(m, mk_numeral (Arbnum.fromInt lo)),
+                  V lo, V hi)
+        else let
+            val mid = (lo + hi) div 2
+          in
+            mk_cond(mk_less(m, mk_numeral (Arbnum.fromInt mid)),
+                    mk_decision_tree lo (mid - 1),
+                    mk_decision_tree mid hi)
+          end
+      else if lo = hi then V lo
+      else raise Fail "can't happen 101"
+  val (ty, _) = dom_rng (type_of rep_t)
+  val case_t = mk_var(case_const_name,
+                      list_mk_fun(List.tabulate(sz, K alpha), ty --> alpha))
+  val args = List.tabulate(sz, (fn n => mk_var("v" ^ Int.toString n,
+                                               alpha)))
+  val e_t = mk_var("x", ty)
+  val def_t = mk_eq(mk_comb(list_mk_comb(case_t, args), e_t),
+                    mk_comb(mk_abs(m, mk_decision_tree 0 (sz - 1)),
+                            mk_comb(rep_t, e_t)))
+  val def_th = new_definition(case_const_name, def_t)
+  val bare_def_th = SPEC_ALL def_th
+  fun mk_consequence e = let
+    val th = INST [e_t |-> e] bare_def_th
+    val th = CONV_RULE (RAND_CONV (RAND_CONV (REWRITE_CONV [rep_th]) THENC
+                                   BETA_CONV)) th
+    fun follow_conds t =
+        if is_cond t then
+          (RATOR_CONV (RATOR_CONV (RAND_CONV (numLib.REDUCE_CONV))) THENC
+           (REWR_CONV COND_T ORELSEC REWR_CONV COND_F) THENC follow_conds) t
+        else ALL_CONV t
+  in
+    GENL args (CONV_RULE (RAND_CONV follow_conds) th)
+  end
+in
+  save_thm(case_const_name ^ "_def",
+           LIST_CONJ (map mk_consequence constrs))
+end
 
-fun define_case initiality =
- let val (V,tm) = strip_forall (concl initiality)
-     val tyinst = list_mk_fun(map type_of V,alpha)
-     val bare_initiality = SPEC_ALL initiality
-     val bare_initiality1 = INST_TYPE [alpha |-> tyinst] bare_initiality
-     val V' = map (Term.inst [alpha |-> tyinst]) V
-     val instantiations = itlist (fn v => fn L => list_mk_abs(V,v)::L) V []
-     val theta = map2(fn v => fn lm => {redex=v,residue=lm}) V' instantiations
-     val inst_initiality = INST theta bare_initiality1
-     val (f,body) = dest_exists (concl inst_initiality)
-     val (dom,_) = dom_rng (type_of f)
-     val tyname = fst(dest_type dom)
-     val constrs = map (rand o lhs) (strip_conj body)
-     val x = mk_var("x",fst(dom_rng(type_of f)))
-     val gfun = list_mk_abs(V@[x], list_mk_comb(f,x::V))
-     val g = mk_var("g",type_of gfun)
-     fun gclause (constr,r) = mk_eq(list_mk_comb(gfun,V@[constr]),r)
-     val gclauses = map gclause (zip constrs V)
-     val bodythl = CONJUNCTS (ASSUME body)
-     fun reduce (cla,fclause) =
-       EQ_MP (SYM (DEPTH_CONV BETA_CONV cla))
-             (rev_itlist (fn v => fn th =>
-                let val th0 = AP_THM th v
-                in TRANS th0 (BETA_CONV (rhs (concl th0)))
-                end) V fclause)
-
-     val gclause_thms = LIST_CONJ (map(GENL V o reduce) (zip gclauses bodythl))
-     val exists_tm = mk_exists(g,subst [gfun |-> g]
-                        (list_mk_conj (map (curry list_mk_forall V) gclauses)))
-     val gexists = CHOOSE(f,inst_initiality)
-                     (EXISTS(exists_tm,gfun) gclause_thms)
-     val case_const_name = tyname^"_case"
- in
-    Rsyntax.new_specification
-      {consts=[{const_name=case_const_name,fixity=Prefix}],
-       name = case_const_name^"_def",
-       sat_thm = gexists}
- end;
 
 fun enum_eq_CONV eq_elim_th repth t = let
   (* keying will have already ensured that t is an equality between two
@@ -345,10 +351,11 @@ fun enum_type_to_tyinfo (ty, constrs) = let
   val induction = prove_induction_thm nchotomy
   val size = mk_size_definition TYPE
   val distinct =
-      if length constrs > 30 then NONE
+      if length constrs > 15 then NONE
       else prove_distinctness_thm simpls constrs
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
-  val case_def = define_case initiality
+  val rep_t = rator (lhs (hd (strip_conj (concl rep_thm))))
+  val case_def = define_case (ty ^ "_case", rep_t, rep_thm, constrs)
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
   open TypeBasePure
   val tyinfo0 =
@@ -500,5 +507,16 @@ val initiality =
 val case_def = Count.apply define_case initiality;
 val nchotomy = Count.apply (prove_cases_thm ABS_ONTO) (rev defs);
 val case_cong = Count.apply (case_cong_thm nchotomy) case_def;
+
+
+fun gen_enum n = let
+  fun recurse acc n =
+      if n <= 0 then [QUOTE (String.concat ("foo = " :: acc))]
+      else recurse (("E"^Int.toString n^ " | ") :: acc) (n - 1)
+in
+  recurse ["E"^Int.toString n] (n - 1)
+end
+
+fun enum_test n = Hol_datatype (gen_enum n)
 
 *)
