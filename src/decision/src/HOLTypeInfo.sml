@@ -18,12 +18,12 @@ struct
 
 local
 
-open HolKernel boolTheory Parse Define_type Psyntax
+open HolKernel boolTheory Parse Datatype Psyntax
      Drule Conv Rewrite Prim_rec
      DecisionSupport DecisionNormConvs;
 open Prim_rec_Compat;
 
-infix ## THENC ORELSEC
+infix ## THENC ORELSEC -->;
 
 fun failwith function =
    raise HOL_ERR {origin_structure = "HOLTypeInfo",
@@ -512,10 +512,10 @@ val list_type_info : thm hol_type_info =
 
 fun define_type_info {name,type_spec,fixities,selectors,discriminators} =
    let fun define_function axiom (name,tm) =
-          (name,Rsyntax.new_recursive_definition
-                   {name = name,rec_axiom = old_style_to_new axiom,def = tm})
+          (name,Prim_rec.new_recursive_definition
+                   {name=name,rec_axiom=axiom, def=tm})
        fun mk_def_eq (name,comb,arg) =
-          let val ty = mk_type ("fun",[type_of comb,type_of arg])
+          let val ty = type_of comb --> type_of arg
           in  mk_eq (mk_comb (Rsyntax.mk_var {Name = name,Ty = ty},comb),arg)
           end
        fun define_selectors axiom (comb,specs) =
@@ -532,21 +532,19 @@ fun define_type_info {name,type_spec,fixities,selectors,discriminators} =
                then failwith("define_type_info -- type "^ Lib.quote name
                             ^" already exists.")
                 else ()
-       val name_Axiom =
-          define_type
-                  {name = name,fixities = fixities,type_spec = type_spec}
-       val name_Induct =
-          save_thm (name ^ "_Induct",prove_induction_thm name_Axiom)
-       and name_one_ones =
-          ((CONJUNCTS o save_thm)
-                   ((name ^ "_one_one"),prove_constructors_one_one name_Axiom)
-                handle HOL_ERR _ => [])
-       and name_distincts =
-          ((CONJUNCTS o save_thm)
-                   (name ^ "_distinct",prove_constructors_distinct name_Axiom)
-                handle HOL_ERR _ => [])
-       val name_cases =
-          save_thm (name ^ "_cases",prove_cases_thm name_Induct)
+       val _ = Datatype.Hol_datatype type_spec
+       val SOME tyinfo = TypeBase.read name
+       val name_Axiom = TypeBase.axiom_of tyinfo
+       val name_Induct = TypeBase.induction_of tyinfo
+       val name_one_ones = 
+           case TypeBase.one_one_of tyinfo
+            of NONE => []
+             | SOME th => CONJUNCTS th
+       val name_distincts =
+           case TypeBase.distinct_of tyinfo
+            of NONE => []
+             | SOME th => CONJUNCTS th
+       val name_cases = TypeBase.nchotomy_of tyinfo
        val ty = (type_of o #1 o dest_forall o concl) name_cases
        val ty_args = #Args (Rsyntax.dest_type ty)
        val cases = (strip_disj o #2 o dest_forall o concl) name_cases
