@@ -1676,27 +1676,32 @@ val finite_image0 = prove(
   ``(!x y. (f x = f y) = (x = y)) ==>
     !s. FINITE s ==> !s'. (s = IMAGE f s') ==> FINITE s'``,
   STRIP_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
-  SRW_TAC [][] THENL [
-    FULL_SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
+  CONJ_TAC THENL [
+    SRW_TAC [][EXTENSION, IN_IMAGE] THEN
     METIS_TAC [SET_CASES, IN_INSERT,
                NOT_IN_EMPTY, FINITE_EMPTY],
-    `?x. x IN s' /\ (f x = e)`
+    Q.X_GEN_TAC `s` THEN STRIP_TAC THEN
+    Q.X_GEN_TAC `e` THEN STRIP_TAC THEN
+    Q.X_GEN_TAC `t` THEN STRIP_TAC THEN
+    `?x. x IN t /\ (f x = e)`
         by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
             METIS_TAC []) THEN
-    Q_TAC SUFF_TAC `?s0. (s' = x INSERT s0) /\ (s = IMAGE f s0)` THEN1
+    Q_TAC SUFF_TAC `?s0. (t = x INSERT s0) /\ (s = IMAGE f s0)` THEN1
           NTAC 2 (SRW_TAC [][]) THEN
-    Q.EXISTS_TAC `s' DELETE x` THEN
+    Q.EXISTS_TAC `t DELETE x` THEN
     SRW_TAC [][INSERT_DELETE] THEN
     SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
     Q.X_GEN_TAC `y` THEN EQ_TAC THENL [
       STRIP_TAC THEN
-      `?u. u IN s' /\ (y = f u)`
+      `?u. u IN t /\ (y = f u)`
          by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
              METIS_TAC []) THEN
       Q.EXISTS_TAC `u` THEN SRW_TAC [][IN_DELETE] THEN METIS_TAC [],
-      SRW_TAC [][IN_DELETE] THEN
-      `f x'' IN IMAGE f s'` by SRW_TAC [][IN_IMAGE] THEN
-      `f x'' IN (f x INSERT s)` by ASM_REWRITE_TAC [] THEN
+      SIMP_TAC (srw_ss())[IN_DELETE] THEN
+      DISCH_THEN (Q.X_CHOOSE_THEN `z` STRIP_ASSUME_TAC) THEN
+      SRW_TAC [][] THEN
+      `f z IN IMAGE f t` by SRW_TAC [][IN_IMAGE] THEN
+      `f z IN (f x INSERT s)` by ASM_REWRITE_TAC [] THEN
       POP_ASSUM MP_TAC THEN SRW_TAC [][]
     ]
   ]);
