@@ -1,121 +1,18 @@
 structure Rules :> Rules = 
 struct
 
-open Exception Lib Thm boolTheory Drule Conv Let_conv
-open USyntax;
-infix 3 |->
+open HolKernel Drule Conv Rewrite Let_conv tflUtils
 
- type term = Term.term
- type hol_type = Type.hol_type
- type thm = Thm.thm
- type tactic = Abbrev.tactic
+type ('a,'b) subst = ('a,'b)Lib.subst
+type term = Term.term
+type thm = Thm.thm
 
 fun ERR func mesg = 
       HOL_ERR{origin_structure = "Rules",
               origin_function=func,message=mesg};
 
-
-(* Inference rules *)
-val REFL      = Thm.REFL
-val ASSUME    = Thm.ASSUME
-val MP        = Thm.MP
-val MATCH_MP  = Conv.MATCH_MP
-val CONJUNCT1 = Thm.CONJUNCT1
-val CONJUNCT2 = Thm.CONJUNCT2
-val CONJUNCTS = Drule.CONJUNCTS
-val DISCH     = Thm.DISCH
-val UNDISCH   = Drule.UNDISCH
-val INST_TYPE = Thm.INST_TYPE o map (fn (A |-> B) => {redex=A, residue=B})
-val SPEC      = Thm.SPEC
-val ISPEC     = Drule.ISPEC
-val ISPECL    = Drule.ISPECL
-val GEN       = Thm.GEN
-val GENL      = Drule.GENL
-val LIST_CONJ = Drule.LIST_CONJ
-val BETA_RULE = Conv.BETA_RULE;
-
-
-val DISCH_ALL = Drule.DISCH_ALL
-val IMP_TRANS = Drule.IMP_TRANS
-val SPEC_ALL  = Drule.SPEC_ALL
-val GEN_ALL   = Drule.GEN_ALL
-val CHOOSE    = Thm.CHOOSE
-val EXISTS    = Thm.EXISTS
-val SUBS      = Drule.SUBS
-val SYM       = Thm.SYM
-val PROVE_HYP = Drule.PROVE_HYP
-val DISJ_CASESL = Drule.DISJ_CASESL
-
-
-(*---------------------------------------------------------------------------
-         Capturing termination conditions.
- ----------------------------------------------------------------------------*)
-
-
-local fun !!v M = Dsyntax.mk_forall{Bvar=v, Body=M}
-      val mem = Lib.op_mem aconv
-      fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
-in
-fun solver (restrf,f,G,nref) simps context tm =
-  let val globals = f::G  (* not to be generalized *)
-      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
-      val rcontext = rev context
-      val antl = case rcontext of [] => [] 
-                               | _   => [list_mk_conj(map concl rcontext)]
-      val TC = genl(list_mk_imp(antl, tm))
-      val (R,arg,pat) = USyntax.dest_relation tm
-  in 
-     if can(find_term (aconv restrf)) arg
-     then (nref := true; raise ERR "solver" "nested function") 
-     else let val _ = if can(find_term (aconv f)) TC then nref := true else ()
-          in case rcontext
-              of [] => SPEC_ALL(ASSUME TC)
-               | _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
-          end
-  end
-end;
-
-(*
-local fun !!v M = Dsyntax.mk_forall{Bvar=v, Body=M}
-      val mem = Lib.op_mem aconv
-      fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
-in
-fun solver (restrf,f,G,nref) simps context tm =
-  let val globals = f::G  (* not to be generalized *)
-      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
-      val rcontext = rev context
-      val antl = case rcontext of [] => [] 
-                               | _   => [list_mk_conj(map concl rcontext)]
-      val (R,arg,pat) = USyntax.dest_relation tm
-      val TC = genl(list_mk_imp(antl, tm))
-      val _ = if can(find_term (aconv f)) TC then nref := true else ()
-  in 
-     if can(find_term (aconv f)) arg then raise ERR "solver" "nested function"
-     else case rcontext
-           of [] => SPEC_ALL(ASSUME TC)
-            | _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
-  end
-end;
-*)
-
 fun sthat P x = P x handle Interrupt => raise Interrupt
                          |     _     => false;
-
-
-(*
-local fun is_restr tm = (#Name(dest_const tm) = "RESTRICT")
-      val restricted = can(find_term(sthat is_restr))
-in
-*)
-
-fun CONTEXT_REWRITE_RULE (restrf,f,G,nr) {thms,congs,th} = 
-  let open RW 
-  in
-     REWRITE_RULE Fully 
-         (Pure thms, Context([],DONT_ADD), Congs congs,
-          Solver(solver (restrf,f,G,nr))) th
-  end;
-
 
 fun simpl_conv thl = 
   let open RW
@@ -132,7 +29,7 @@ fun simpl_conv thl =
 
 
 fun simplify thl = 
-  let val rewrite = RW.PURE_RW_RULE thl
+  let val rewrite = PURE_REWRITE_RULE thl
       fun simpl th =
        let val th' = CONV_RULE (DEPTH_CONV GEN_BETA_CONV) (rewrite th)
            val (_,c1) = dest_thm th
@@ -142,7 +39,8 @@ fun simplify thl =
   in simpl
   end;
 
-val RIGHT_ASSOC = RW.PURE_RW_RULE[GSYM DISJ_ASSOC];
+
+val RIGHT_ASSOC = PURE_REWRITE_RULE [GSYM boolTheory.DISJ_ASSOC];
 
 
 fun FILTER_DISCH_ALL P th =
@@ -157,6 +55,7 @@ fun FILTER_DISCH_ALL P th =
  *    A |- ?v1...v_n. M
  *
  *---------------------------------------------------------------------------*)
+
 fun EXISTL vlist thm =
    itlist (fn v => fn thm => EXISTS(mk_exists{Bvar=v,Body=concl thm},v) thm)
           vlist thm;
@@ -168,8 +67,9 @@ fun EXISTL vlist thm =
  *       A |- ?y_1...y_n. M
  *
  *---------------------------------------------------------------------------*)
+
 fun IT_EXISTS theta thm =
- itlist (fn (b as (redex |-> residue)) => fn thm => 
+ itlist (fn (b as {redex,residue}) => fn thm => 
     EXISTS(mk_exists{Bvar=residue, Body=subst [b] (concl thm)},
             redex) thm)
     theta thm;
@@ -197,6 +97,63 @@ fun EVEN_ORS thms =
    end;
 
 
-val prove = Tactical.prove;
+(*---------------------------------------------------------------------------*
+ *                                                                           *
+ *         x = (v1,...,vn)  |- M[x]                                          *
+ *    ---------------------------------------                                *
+ *      ?v1 ... vn. x = (v1,...,vn) |- M[x]                                  *
+ *                                                                           *
+ *---------------------------------------------------------------------------*)
+
+fun LEFT_ABS_VSTRUCT thm = 
+  let fun CHOOSER v (tm,thm) = 
+        let val ex_tm = mk_exists{Bvar=v,Body=tm}
+        in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
+        end
+      val veq = Lib.trye hd (filter (can dest_eq) (#1 (Thm.dest_thm thm)))
+      val {lhs,rhs} = dest_eq veq
+      val L = free_vars_lr rhs
+  in 
+    snd(itlist CHOOSER L (veq,thm))
+  end;
+
+
+(*---------------------------------------------------------------------------
+         Capturing termination conditions.
+ ----------------------------------------------------------------------------*)
+
+
+local fun !!v M = Dsyntax.mk_forall{Bvar=v, Body=M}
+      val mem = Lib.op_mem aconv
+      fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
+in
+fun solver (restrf,f,G,nref) simps context tm =
+  let val globals = f::G  (* not to be generalized *)
+      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
+      val rcontext = rev context
+      val antl = case rcontext of [] => [] 
+                               | _   => [list_mk_conj(map concl rcontext)]
+      val (R,arg,pat) = tflUtils.dest_relation tm
+      val TC = genl(list_mk_imp(antl, tm))
+  in 
+     if can(find_term (aconv restrf)) arg
+     then (nref := true; raise ERR "solver" "nested function") 
+     else let val _ = if can(find_term (aconv f)) TC 
+                      then nref := true else ()
+          in case rcontext
+              of [] => SPEC_ALL(ASSUME TC)
+               | _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
+          end
+  end
+end;
+
+
+fun CONTEXT_REWRITE_RULE (restrf,f,G,nr) {thms,congs,th} = 
+  let open RW 
+  in
+     REWRITE_RULE Fully 
+         (Pure thms, Context([],DONT_ADD), Congs congs,
+          Solver(solver (restrf,f,G,nr))) th
+  end;
 
 end; (* Rules *)

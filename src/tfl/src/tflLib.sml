@@ -14,7 +14,7 @@ val output = Portable.output
 val std_out = Portable.std_out
 val flush_out = Portable.flush_out
 
-val _ = RW.add_implicit_congs [Thms.IMP_CONG,Thms.COND_CONG];
+val _ = RW.add_implicit_congs [boolTheory.IMP_CONG,boolTheory.COND_CONG];
 val _ = RW.add_implicit_rws pairTheory.pair_rws;
 
 type term = Term.term
@@ -32,13 +32,11 @@ fun TFL_LIB_ERR func mesg =
  * Hol_datatype declarations).                                               *
  *---------------------------------------------------------------------------*)
 fun current_congs() = 
-   Context.read_context() 
+   Tfl.read_context() 
    @
    rev_itlist (fn db => fn C => (TypeBase.case_cong_of db::C))
              (TypeBase.listItems (TypeBase.theTypeBase())) [] ;
 
-fun func_of_cond_eqn tm =
-    #1(strip_comb(#lhs(dest_eq(#2 (strip_forall(#2(strip_imp tm)))))));
 
 fun timer s1 f s2 =
    let open Portable
@@ -129,6 +127,15 @@ fun grab_first_ident s =
    Substring.string ident_ss
  end;
 
+local (* this is dodgy - shouldn't it loop? *)
+      fun strip_imp tm = if is_neg tm then ([],tm) else strip_imp tm
+in
+fun termination_goals rules = 
+ itlist (fn th => fn A =>
+           let val tcl = (fst o strip_imp o #2 o strip_forall o concl) th
+           in tcl@A
+           end) (CONJUNCTS rules) (hyp rules)
+end;
 
 (*---------------------------------------------------------------------------*
  * "rfunction" is one of the main entrypoints to the definition mechanisms.  *
@@ -152,7 +159,7 @@ local fun id_thm th =
        in 
        GEN_ALL(DISCH_ALL(Rewrite.REWRITE_RULE(map ASSUME cntxt) (SPEC_ALL th)))
        end
-    val gen_all = USyntax.gen_all
+    val gen_all = tflUtils.gen_all
 in
 fun rfunction pp reducer name QR (Qeqns as (QUOTE s :: _)) =
   let val nm = grab_first_ident s
@@ -177,14 +184,14 @@ fun rfunction pp reducer name QR (Qeqns as (QUOTE s :: _)) =
                    (fn () => Tfl.gen_wfrec_definition 
                                  facts name {R=R, eqs=unc_eqs})
                     "Finished making definition.\n"
-             val f = func_of_cond_eqn(concl(CONJUNCT1 rules handle _ => rules))
+             val f = tflUtils.func_of_cond_eqn(concl(CONJUNCT1 rules handle _ => rules))
              val {induction,rules,nested_tcs} = 
                   pp{rules = rules, TCs=TCs,
                  induction = timer "starting induction proof\n"
                        (fn () => Tfl.mk_induction facts 
                             {fconst=f, R=R, SV=[], pat_TCs_list=full_pats_TCs})
                         "finished induction proof\n"} 
-             val normal_tcs = Tfl.termination_goals rules
+             val normal_tcs = termination_goals rules
              val res = case nested_tcs 
                  of [] => {induction=induction, rules=rules, tcs=normal_tcs}
                   | _  => let val (solved,simplified,stubborn) =
@@ -295,7 +302,7 @@ fun std_postprocessor p =
        (fn thl => 
           REWRITE_RULE Fully (Simpls(std_simpls, thl),
                               Context([],DONT_ADD), 
-                              Congs (Thms.IMP_CONG::current_congs()), 
+                              Congs (boolTheory.IMP_CONG::current_congs()), 
                               Solver std_solver))
     end;
 
@@ -329,7 +336,7 @@ fun lazyR_def name (qtm as QUOTE s::_) =
        let val facts = TypeBase.theTypeBase()
            val rules = #rules(Tfl.lazyR_def facts name 
                                  (Tfl.wfrec_eqns facts unc_eqs))
-           val f = func_of_cond_eqn(concl(CONJUNCT1 rules 
+           val f = tflUtils.func_of_cond_eqn(concl(CONJUNCT1 rules 
                    handle HOL_ERR _ => rules))
        in        
        if curried 
@@ -374,7 +381,7 @@ fun function name (qtm as QUOTE s::_) =
                     (fn () => Tfl.lazyR_def facts name 
                                      (Tfl.wfrec_eqns facts unc_eqs))
                  "Finished definition.\n"
-          val f = func_of_cond_eqn (concl(CONJUNCT1 rules 
+          val f = tflUtils.func_of_cond_eqn (concl(CONJUNCT1 rules 
                   handle HOL_ERR _ => rules))
           val induction = timer "Starting induction proof.\n"
               (fn () => Tfl.mk_induction facts 
@@ -409,7 +416,7 @@ fun is_prod_ty ty = ("prod" = #Tyop(dest_type ty));
   
 fun mk_vstrl [] V A = rev A
   | mk_vstrl (ty::rst) V A = 
-      let val (vstr,V1) = USyntax.mk_vstruct ty V
+      let val (vstr,V1) = tflUtils.mk_vstruct ty V
       in mk_vstrl rst V1 (vstr::A)
       end;
 
@@ -419,7 +426,7 @@ fun mk_vstrl [] V A = rev A
 
 fun REC_INDUCT_TAC thm =
   let val {Bvar=prop,Body} = dest_forall(concl thm)
-      val parg_tyl = #1(USyntax.strip_type (type_of prop))
+      val parg_tyl = #1(tflUtils.strip_type (type_of prop))
       val n = (length o #1 o strip_forall o #2 o strip_imp) Body
       fun ndest_forall trm = 
           let fun dest (0,tm,V) = (rev V,tm)
@@ -452,7 +459,7 @@ fun REC_INDUCT_TAC thm =
      THEN REPEAT CONJ_TAC 
      THEN REPEAT GEN_TAC 
      THEN REPEAT SAFE_DISCH_TAC 
-     THEN RW.ONCE_RW_TAC[rules]
+     THEN ONCE_REWRITE_TAC[rules]
      THEN REPEAT COND_CASES_TAC;
 
 local 

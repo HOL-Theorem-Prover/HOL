@@ -1,14 +1,17 @@
 signature Tfl =
  sig
-  type term = Term.term
-  type thm   = Thm.thm
+  type term   = Term.term
+  type thm    = Thm.thm
   type tactic = Abbrev.tactic
-  type thry = Thry.thry
+  type thry   = TypeBase.typeBase
 
    datatype pattern = GIVEN of term * int
                     | OMITTED of term * int
 
    val mk_functional : thry -> term -> {functional:term, pats: pattern list}
+
+   val read_context  : unit -> thm list
+   val write_context : thm list -> unit
 
    val prim_wfrec_definition : 
         thry -> string 
@@ -51,8 +54,6 @@ signature Tfl =
                     -> thry
                       -> {rules:thm, induction:thm, TCs:term list list}
                          -> {rules:thm, induction:thm, nested_tcs:thm list}
-
-   val termination_goals : thm -> term list
 
    val nested_function : thry -> string -> wfrec_eqns_result 
                         -> {rules:thm,ind:thm,SV:term list, R:term,

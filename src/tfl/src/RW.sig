@@ -73,6 +73,7 @@ sig
 
   (* Specialized rewriters for different types *)
   (* Terms *)
+(*
   val CRW_CONV          : thm list -> term -> thm
   val RW_CONV           : thm list -> term -> thm
   val PURE_RW_CONV      : thm list -> term -> thm
@@ -109,5 +110,5 @@ sig
 
   (* Folding in beta-conversion and a user-given standard simpset *)
   val Simpl : tactic -> thm list -> thm list -> tactic
-
+*)
 end;

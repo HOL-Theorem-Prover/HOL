@@ -844,7 +844,7 @@ fun rw_solver simpls context tm =
  end
 end;
 
-
+(* The rest is commented out and should be thought of as documentation
 (*----------------------------------------------------------------------------*
  * The following are all instantiations of the above routines, to make them   *
  * easier to invoke. Some of these are holdovers from unconditional           *
@@ -946,6 +946,7 @@ fun Simpl tac std_thms thl =
                                      Congs[],Solver std_solver)
   in RWTAC THEN TRY(CHANGED_TAC tac THEN RWTAC)
   end;
+*)
 
 
 end; (* structure RW *)

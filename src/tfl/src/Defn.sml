@@ -599,7 +599,7 @@ fun ptm_dest_var(VAR s) = s
 
 fun ptm_dest_comb (COMB(l,r)) = (l,r)
   | ptm_dest_comb   _ = raise ERR "ptm_dest_comb" "Expected a COMB"
-end;
+end; (* local open parse_term *)
 
 fun ptm_is_eq tm = Lib.can ptm_dest_eq tm;
 
@@ -631,15 +631,64 @@ fun ptm_strip_binder dest =
        end handle HOL_ERR _ => ([],ptm)
   in strip
   end;
+
 fun ptm_strip_forall ptm = ptm_strip_binder ptm_dest_forall ptm;
 
 
 fun dollar s = "$"^s;
+
 fun drop_dollar s =
    (if String.sub(s,0) = #"$"
     then String.substring(s,1,String.size s)
     else s)
-  handle _ => raise ERR "drop_dollar" "unexpected string"
+  handle _ => raise ERR "drop_dollar" "unexpected string";
+
+(*
+fun preview qthing =
+ let fun preev (q as [QUOTE _]) =
+         let val ptm = Parse.parse_preTerm q
+             val eqs = ptm_strip_conj ptm
+             val L = map (fst o ptm_dest_eq o snd o ptm_strip_forall) eqs
+         in
+           map (ptm_dest_var o fst o ptm_strip_comb) L
+         end
+       | preev qtm =  (* not clear that this is useful *)
+          let val tm = Parse.Term qtm
+              val eqs = strip_conj tm
+              open Psyntax
+              val L = map (fst o dest_eq o snd o strip_forall) eqs
+          in
+            map (atom_name o fst o strip_comb) L
+          end
+ in
+    mk_set (map drop_dollar (preev qthing))
+     handle HOL_ERR _
+     => raise ERR  "preview"
+             "unable to find name of function(s) to be defined"
+ end;
+*)
+
+
+(*
+fun expand_wildcards pats V vlist =
+  let fun expand_wildcard pat V =
+         if is_wildcard pat 
+         then let val v = num_variant
+  in
+    rev_itlist expand_wildcard pats V
+  end;
+
+fun munge eq (eqs,V) =
+ let val (vlist,body) = strip_forall eq
+     val {lhs,rhs}    = Dsyntax.dest_eq body
+     val (f,pats)     = strip_comb lhs
+     val (pats',V')   = expand_wildcards pats V vlist
+     val new_eq       = list_mk_forall(vlist,
+                          Dsyntax.mk_eq{lhs=list_mk_comb(f,pats'), rhs=rhs})
+ in (new_eq::eqs,V')
+ end;
+  
+*)
 
 fun preview qthing =
  let fun preev (q as [QUOTE _]) =
@@ -662,7 +711,7 @@ fun preview qthing =
      handle HOL_ERR _
      => raise ERR  "preview"
              "unable to find name of function(s) to be defined"
-end;
+ end;
 
 (*---------------------------------------------------------------------------
       MoscowML returns lists of QUOTE'd strings when a quote is spread
