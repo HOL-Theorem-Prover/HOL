@@ -1,4 +1,4 @@
-structure parse_term :> parse_term = 
+structure parse_term :> parse_term =
 struct
 
 open Lib
@@ -93,13 +93,26 @@ fun mk_prec_matrix G = let
   val matrix:(stack_terminal * stack_terminal, order) Polyhash.hash_table =
     Polyhash.mkPolyTable (length specs * length specs, NotFound)
   val rule_elements = term_grammar.rule_elements o #elements
+  val complained_already = ref false
   fun insert k v = let
     val insert_result = Polyhash.peekInsert matrix (k, v)
   in
     case (insert_result, v) of
       (SOME EQUAL, _) => ()  (* ignore this *)
     | (SOME _, EQUAL) => Polyhash.insert matrix (k,v)  (* EQUAL overrides *)
-    | (SOME oldv, _) => if oldv <> v then raise PrecConflict k else ()
+    | (SOME oldv, _) => if oldv <> v then
+                          (Polyhash.insert matrix (k, LESS);
+                           if not (!complained_already) then
+                             (Feedback.HOL_WARNING
+                                "Parse" "Term"
+                                ("Grammar ambiguous on token pair "^
+                                 STtoString G (#1 k) ^ " and " ^
+                                 STtoString G (#2 k) ^ ", and "^
+                                 "probably others too");
+                              complained_already := true)
+                           else
+                              ())
+                        else ()
     | (NONE, _) => ()
   end
   fun insert_eqs rule = let
