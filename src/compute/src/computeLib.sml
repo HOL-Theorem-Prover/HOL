@@ -162,7 +162,12 @@ val bool_redns =
       [COND_CLAUSES, COND_ID, NOT_CLAUSES, bool_case_DEF,
        AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
 
-fun bool_compset() = from_list bool_redns;
+fun bool_compset() = let
+  val base = from_list bool_redns
+  val _ = set_skip base boolSyntax.conditional (SOME 1)
+in
+  base
+end
 
 val the_compset = bool_compset();
 
