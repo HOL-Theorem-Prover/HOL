@@ -103,12 +103,6 @@ fun name v =
   else (print_term v; print "is not a boolean variable\n"; raise nameError);
 
 (*****************************************************************************)
-(* Test equality of BDD component of two term_bdds and return true or false  *)
-(*****************************************************************************)
-
-fun BddEqualTest (TermBdd(_,_,b1)) (TermBdd(_,_,b2)) = bdd.equal b1 b2;
-
-(*****************************************************************************)
 (* Oracle function                                                           *)
 (*                                                                           *)
 (*    vm t |--> TRUE                                                         *)
@@ -230,8 +224,7 @@ fun BddReplace tbl tb =
           bdd.replace b (bdd.makepairSet replacel))
  end;
 
-(*
-Test examples
+(* Test examples ==================================================================
 
 val tb1 = termToTermBdd ``x /\ y /\ z``;
 
@@ -241,21 +234,26 @@ and tbz = termToTermBdd ``z:bool``
 and tbp = termToTermBdd ``p:bool``
 and tbq = termToTermBdd ``q:bool``;
 
+(* Repeat to sync all the varmaps! *)
+
 val tb = tb1 and tbl = [(tbx,tbp),(tby,tbq)];
-val tb2 = BddReplace tbl tb;
+val tb = BddReplace tbl tb;
+
+val tb = tb1 and tbl = [(tbx,tby),(tby,tbz),(tbz,tbx)];
+val tb = BddReplace tbl tb;
 
 val tb = tb1 and tbl = [(tbx,tby),(tby,tbz)];
-val tb2 = BddReplace tbl tb;
+val tb = BddReplace tbl tb;
 (* ! Fail  "Trying to replace with variables already in the bdd" *)
 
 val tb = tb1 and tbl = [(tbx,tby),(tby,tbx)];
-val tb3 = BddReplace tbl tb;
-(* OK *)
+val tb = BddReplace tbl tb;
 
 val tb = tb1 and tbl = [(tbx,tbp),(tby,tbp)];
 val tb4 = BddReplace tbl tb;
-(* ! Fail  "Trying to replace with variables already in the bdd" *)
-*)
+(* p repeated *)
+
+======================================================= End of test examples *)
 
 (*****************************************************************************)
 (*    vm v |--> b    vm tm1 |--> b1    vm tm2 |--> b2                        *)
@@ -267,8 +265,8 @@ exception BddComposeError;
 
 fun BddCompose (TermBdd(vm,v,b)) (TermBdd(vm1,tm1,b1)) (TermBdd(vm2,tm2,b2)) =
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
-  then TermBdd(vm, subst[v |-> tm2]tm1, compose (var b, b2) b1)
-  else (print "different varmaps"; raise BddComposeError);
+  then TermBdd(vm, subst[v |-> tm2]tm1, compose b1 b2 (var b))
+  else (print "different varmaps\n"; raise BddComposeError);
 
 (*****************************************************************************)
 (* BddRestrict [((vm v1 |--> b1),c1),...,(vm vi |--> bi),ci)] (vm tm |--> b) *)
@@ -324,7 +322,8 @@ exception BddFreevarsContractVarmapError;
 
 fun BddFreevarsContractVarmap v (TermBdd(vm,tm,b)) =
  if mem v (free_vars tm)
-  then raise BddFreevarsContractVarmapError
+  then (print_term v; print " not in free_vars of\n"; print_term tm; print "\n";
+        raise BddFreevarsContractVarmapError)
   else TermBdd(Varmap.remove (name v) vm, tm, b);
 
 (*****************************************************************************)
@@ -350,8 +349,10 @@ exception BddVarError;
 
 fun BddVar tv vm v =
  case Varmap.peek vm (name v) of
-    SOME n => TermBdd(vm, v, (if tv then bdd.ithvar n else bdd.nithvar n))
-  | NONE   => raise BddVarError;
+    SOME n => if tv 
+               then TermBdd(vm, v,        bdd.ithvar n)
+               else TermBdd(vm, mk_neg v, bdd.nithvar n)
+  | NONE   => (print_term v; print " not in varmap\n"; raise BddVarError);
 
 (*****************************************************************************)
 (*   vm  t |--> b                                                            *)
@@ -393,7 +394,7 @@ exception BddOpError;
 fun BddOp (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
 if Varmap.eq(vm1,vm2)
  then TermBdd(vm1, termApply t1 t2 bddop, bdd.apply b1 b2 bddop)
- else (print "different varmaps"; raise BddOpError);
+ else (print "different varmaps\n"; raise BddOpError);
 
 (*****************************************************************************)
 (*  vm t |--> b   vm t1 |--> b1   vm t2 |--> b2                              *)
@@ -406,7 +407,7 @@ exception BddIteError;
 fun BddIte(TermBdd(vm,t,b), TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) = 
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
   then TermBdd(vm, mk_cond(t,t1,t2), ITE b b1 b2)
-  else (print "different varmaps"; raise BddIteError);
+  else (print "different varmaps\n"; raise BddIteError);
 
 (*****************************************************************************)
 (*                   vm t |--> b                                             *)
@@ -481,7 +482,7 @@ fun BddAppall vl (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
                               SOME n => n
                             | NONE   => raise BddAppallError) 
         vl)))
-  else (print "different varmaps"; raise BddAppallError);
+  else (print "different varmaps\n"; raise BddAppallError);
 
 (*****************************************************************************)
 (*                   vm t1 |--> b1    vm t2 |--> b2                          *)
@@ -510,7 +511,7 @@ fun BddAppex vl (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
                               SOME n => n
                             | NONE   => raise BddAppallError) 
         vl)))
-  else (print "different varmaps"; raise BddAppallError);
+  else (print "different varmaps\n"; raise BddAppallError);
 
 end;
 

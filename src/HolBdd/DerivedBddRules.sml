@@ -46,6 +46,19 @@ fun hol_err msg func =
 
 in
 
+
+(*****************************************************************************)
+(* Test equality of BDD component of two term_bdds and return true or false  *)
+(*****************************************************************************)
+
+fun BddEqualTest (TermBdd(_,_,b1)) (TermBdd(_,_,b2)) = bdd.equal b1 b2;
+
+(*****************************************************************************)
+(* Test if the BDD part is TRUE                                              *)
+(*****************************************************************************)
+
+fun isTRUE tb = bdd.equal (getBdd tb) bdd.TRUE;
+
 (*****************************************************************************)
 (* Count number of states (code from Ken Larsen)                             *)
 (*****************************************************************************)
@@ -114,7 +127,7 @@ fun GenTermToTermBdd leaffn vm tm =
   if is_var tm 
    then BddVar true vm tm else
   if is_neg tm andalso is_var(dest_neg tm) 
-   then BddVar false vm tm else
+   then BddVar false vm (dest_neg tm) else
   if is_cond tm 
    then (BddIte o fn3(recfn,recfn,recfn) o dest_cond) tm else
   if is_forall tm 
@@ -203,38 +216,6 @@ fun termToTermBdd tm =
  end;
 
 (*****************************************************************************)
-(* Iterate a function f : int -> term_bdd -> term_bdd from an initial        *)
-(* term_bdd and applied successively to 0,1,2,... until a fixed point is     *)
-(* reached. The fixedpoint is returned.                                      *)
-(*                                                                           *)
-(* The argument function                                                     *)
-(*                                                                           *)
-(*  report : (int -> term_bdd -> unit) ref                                   *)
-(*                                                                           *)
-(* is applied to the current iteration level and term_bdd, and can be used   *)
-(* to trace the iteration.                                                   *)
-(*                                                                           *)
-(*****************************************************************************)
-
-fun iterateToFixedpoint report f =
- let fun iter n tb =
-      let val _    = report n tb
-          val tb'  = f n tb
-      in
-       if BddEqualTest tb tb' then tb else iter (n+1) tb'
-      end
- in
-  iter 0
- end;
-
-(*****************************************************************************)
-(* A default report function that justs prints out the current iteration     *)
-(* level                                                                     *)
-(*****************************************************************************)
-
-fun defaultReport n tb =  (print(Int.toString n); print " ");
-
-(*****************************************************************************)
 (* Flatten a varstruct term into a list of variables (also in StateEnum).    *)
 (*****************************************************************************)
 
@@ -277,13 +258,13 @@ fun MkIterThms reachth Rtm Btm =
                 (RHS_CONV
                  (ONCE_DEPTH_CONV
                   (Ho_Rewrite.REWRITE_CONV[pairTheory.EXISTS_PROD]
-                    THENC RENAME_VARS_CONV (List.map (fst o dest_var) (flatten_pair st')))))
+                    THENC RENAME_VARS_CONV 
+                           (List.map (fst o dest_var) (flatten_pair st')))))
                 (SPECL[R,B,ntm,st]th2)
 
  in
   (th3, GEN ntm th4)
  end;
-
 
 (*****************************************************************************)
 (* Perform disjunctive partitioning                                          *)
@@ -363,6 +344,112 @@ fun BddApReplace tb tm =
    BddReplace tbl tb
  end;
 
+(*
+** BddSubst defined below applies a substitution
+** 
+**  [(oldtb1,newtb1),...,(oldtni,newtbi)]
+** 
+** to a term_bdd, where oldtbp (1 <= p <= i) must be of the form 
+**
+**   vm vp |--> bp 
+**
+** where vp is a variable, and v1,...,vp,...,vi are all distinct.
+** 
+** The preliminary version below separates the substitution
+** into a restriction (variables mapped to T or F) followed
+** by a variable renaming (replacement).
+** 
+** A more elaborate scheme will be implemented after
+** BuDDy's bdd_veccompose is available in MuDDy.
+*)
+
+(*****************************************************************************)
+(* Split a substitution                                                      *)
+(*                                                                           *)
+(*   [(oldtb1,newtb1),...,(oldtni,newtbi)]                                   *)
+(*                                                                           *)
+(* into a restriction and variable renaming,                                 *)
+(* failing if this isn't possible                                            *)
+(*****************************************************************************) 
+
+fun split_subst tbl =
+ let val (res,rep) = 
+      List.partition 
+       (fn (tb,tb')=>
+         let val tm' = getTerm tb'
+         in
+          (tm'=T) orelse (tm'=F)
+         end)
+       tbl
+ in
+  ((map (fn(tb,tb')=>(tb, getTerm tb')) res), rep)
+ end;
+
+(*****************************************************************************)
+(*                    [(vm v1 |--> b1 , vm tm1 |--> b1'),                    *)
+(*                                    .                                      *)
+(*                                    .                                      *)
+(*                                    .                                      *)
+(*                     (vm vi |--> bi , vm tmi |--> bi')]                    *)
+(*                    vm tm |--> b                                           *)
+(*  ------------------------------------------------------------------------ *)
+(*   vm (subst[v1 |-> tm1, ... , vi |-> tmi]tm)                              *)
+(*   |-->                                                                    *)
+(*   <appropriate BDD>                                                       *)
+(*****************************************************************************)
+
+fun BddSubst tbl tb =
+ let val (res,rep) = split_subst tbl
+ in
+  BddReplace rep (BddRestrict res tb)
+ end;
+
+(*****************************************************************************)
+(*   vm t |--> b                                                             *)
+(*  -------------                                                            *)
+(*  vm tm |--> b'                                                            *)
+(*                                                                           *)
+(* where boolean variables in t can be instantiated to get tm and b' is      *)
+(* the corresponding replacement of BDD variables in b                       *)
+(*****************************************************************************)
+
+exception BddApSubstError;
+
+fun BddApSubst tb tm =
+ let val (vm,t,b)  = dest_term_bdd tb
+     val (tml,tyl) = match_term t tm
+     val _         = if null tyl then () else (print "type match problem\n";
+                                               raise BddApSubstError)
+     val tbl       = (List.map 
+                       (fn{redex=old,residue=new}=> 
+                         (BddVar true vm old, 
+                          GenTermToTermBdd (!termToTermBddFun) vm new))
+                       tml 
+                      handle BddVarError => raise BddApSubstError)
+ in
+   BddSubst tbl tb
+ end;
+
+(* Test examples ==================================================================
+
+val tb1 = termToTermBdd ``x /\ y /\ z``;
+
+val tbx = termToTermBdd ``x:bool``
+and tby = termToTermBdd ``y:bool``
+and tbz = termToTermBdd ``z:bool``
+and tbp = termToTermBdd ``p:bool``
+and tbq = termToTermBdd ``q:bool``
+and tbT = termToTermBdd T
+and tbF = termToTermBdd F;
+
+(* Repeat to sync all the varmaps! *)
+
+val tbl = [(tbx,tbp),(tby,tbq),(tbz,tbF)];
+val tb2 = BddSubst tbl tb1;
+
+val tb3 = BddApSubst tb1 ``p /\ T /\ q``;
+======================================================= End of test examples *)
+
 (*****************************************************************************)
 (*     |- t1 = t2                                                            *)
 (*   ---------------                                                         *)
@@ -393,23 +480,94 @@ fun intToTerm n = numSyntax.mk_numeral(Arbnum.fromInt n);
 fun BddApConv conv tb = BddEqMp (conv(getTerm tb)) tb;
 
 (*****************************************************************************)
-(*   |- f (SUC n) s = ... f n ... s ...    |- f 0 s = ... s ...              *)
-(*   ----------------------------------------------------------              *)
-(*       |- f (SUC i) s = f i s       vm ``f i s`` |--> bi                   *)
+(* Iterate a function                                                        *)
+(*                                                                           *)
+(*   f : int -> 'a -> 'a                                                     *)
+(*                                                                           *)
+(* from an initial value, applying it successively to 0,1,2,... until        *)
+(*                                                                           *)
+(*   p : 'a -> bool                                                          *)
+(*                                                                           *)
+(* is true (at least one iteration is always performed)                      *)
+(*                                                                           *)
+(*****************************************************************************)
+
+fun iterate p f =
+ let fun iter n x =
+      let val x'  = f n x
+      in
+       if p x' then x else iter (n+1) x'
+      end
+ in
+  iter 0
+ end;
+
+(*****************************************************************************)
+(*   |- f 0 s = ... s ...     |- !n. f (SUC n) s = ... f n ... s ...         *)
+(*   ---------------------------------------------------------------         *)
+(*                     vm ``f i s`` |--> bi                                  *)
 (*                                                                           *)
 (* where i is the first number such that |- f (SUC i) s = f i s              *)
+(* and the function                                                          *)
+(*                                                                           *)
+(*  report : int -> term_bdd -> 'a                                           *)
+(*                                                                           *)
+(* is applied to the iteration level and current term_bdd and can be used    *)
+(* for tracing.                                                              *)
+(*                                                                           *)
+(* A state of the iteration is a pair (tb,tb') consisting of the             *)
+(* previous term_bdd tb and the current one tb'. The initial state            *)
+(* is (somewhat arbitarily) taken to be (tb0,tb0).                           *)
 (*****************************************************************************)
 
 exception computeFixedpointError;
 
 fun computeFixedpoint report vm (th0,thsuc) =
- let val tb0 =  eqToTermBdd (fn tm => raise computeFixedpointError) vm th0
-     fun f n tb =  
-      BddApConv
-       computeLib.EVAL_CONV
-       (eqToTermBdd (BddApReplace tb) vm (SPEC (intToTerm n) thsuc))
+ let val tb0 = eqToTermBdd (fn tm => raise computeFixedpointError) vm th0
+     fun f n (tb,tb') =  
+      (report n tb';
+       let val tb'' =
+        BddApConv
+         computeLib.EVAL_CONV
+         (eqToTermBdd (BddApSubst tb') vm (SPEC (intToTerm n) thsuc))
+       in
+        (tb',tb'')
+       end)
  in
-  iterateToFixedpoint report f tb0
+  fst(iterate (uncurry BddEqualTest) f (tb0,tb0))
  end;
+
+(*****************************************************************************)
+(*                                                                           *)
+(*         |- p s = ... s ...                                                *)
+(*         |- f 0 s  = ... s ...                                             *)
+(*         |- f (SUC n) s = ... f n ... s ...                                *)
+(*  ---------------------------------------------------                      *)
+(*  [vm ``f 1 s`` |--> b1,  ... , vm ``f i s`` |--> bi]                      *)
+(*                                                                           *)
+(* where i is the first number such that |- p s /\ f i s                     *)
+(*****************************************************************************)
+
+exception computeTraceError;
+
+fun computeTrace report vm pth (th0,thsuc) =
+ let val ptb = eqToTermBdd (fn tm => raise computeFixedpointError) vm pth
+     val tb0 = eqToTermBdd (fn tm => raise computeFixedpointError) vm th0
+     fun p tbl = isTRUE(BddOp(bdd.And, ptb, hd tbl))
+     fun f n tbl =  
+      (report n (hd tbl);
+       let val tb =
+        BddApConv
+         computeLib.EVAL_CONV
+         (eqToTermBdd (BddApSubst(hd tbl)) vm (SPEC (intToTerm n) thsuc))
+       in
+        tb :: tbl
+       end)
+ in
+  if isTRUE(BddOp(bdd.And,ptb,tb0))
+   then [tb0]
+   else iterate p f [tb0]
+ end;
+
 
 end;
