@@ -7,6 +7,8 @@ val print_thm = Parse.print_thm
 val concl = Thm.concl
 val say = Lib.say
 
+val hol_clock = Timer.startCPUTimer()
+
    (* ---------------------------------------------------------------------
     * Tracing utilities
     * ---------------------------------------------------------------------*)
@@ -51,7 +53,14 @@ fun tty_trace (LZ_TEXT fs) = (say "  "; say (fs ()); say "\n")
   | tty_trace (MORE_CONTEXT thm) =
     (say "  more context: "; print_thm thm; say "\n");
 
-val _ = trace_hook := (fn (n,a) => if (n <= !trace_level)
-                                   then tty_trace a else ());
+val _ = trace_hook :=
+        (fn (n,a) => if (n <= !trace_level) then
+                       (say "[";
+                        say (Int.toString
+                             (Time.toMilliseconds
+                              (#usr (Timer.checkCPUTimer hol_clock))));
+                        say "]: ";
+                        tty_trace a)
+                     else ())
 
 end (* struct *)
