@@ -1,19 +1,15 @@
-(* non-interactive mode *)
+(* non-interactive mode
+*)
 open HolKernel Parse boolLib;
-
 val _ = new_theory "state_transformer";
 
 (* interactive mode
-if !show_assums then () else (
-  load "pairTheory";
-  load "combinTheory";
-  load "bossLib";
-  load "probUtil";
-  show_assums := true
-);
+show_assums := true;
+loadPath := union ["../formalize"] (!loadPath);
+app load ["pairTheory", "combinTheory", "formalizeUseful"];
 *)
 
-open pairTheory combinTheory probUtil;
+open pairTheory combinTheory;
 
 infixr 0 ++ || ORELSEC;
 infix 1 >>;
@@ -21,15 +17,9 @@ infix 1 >>;
 val op++ = op THEN;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-
-(* ------------------------------------------------------------------------- *)
-(* Error handling.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-fun ERROR f s = HOL_ERR{origin_structure = "state_transformerScript",
-                        origin_function = f, message = s};
-fun assert_false f s = raise ERROR f s;
-fun assert b f s = if b then () else assert_false f s;
+val Suff = Q_TAC SUFF_TAC;
+val Know = Q_TAC KNOW_TAC;
+val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV);
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
@@ -101,7 +91,7 @@ val MMAP_COMP = store_thm
    ++ REWRITE_TAC [MMAP_DEF, o_DEF]
    ++ CONV_TAC (DEPTH_CONV BETA_CONV)
    ++ REWRITE_TAC [GSYM BIND_ASSOC]
-   ++ SUFF_TAC `(\x. UNIT (f (g x)))
+   ++ Suff `(\x. UNIT (f (g x)))
                   = (\a. BIND ((\x. UNIT (g x)) a) (\x. UNIT (f x)))`
       >> (STRIP_TAC ++ ASM_REWRITE_TAC [])
    ++ MATCH_MP_TAC EQ_EXT
@@ -168,5 +158,29 @@ val JOIN_MAP = store_thm
    ++ REWRITE_TAC [BIND_LEFT_UNIT, I_THM]
    ++ CONV_TAC (DEPTH_CONV (ETA_CONV ORELSEC BETA_CONV))
    ++ REWRITE_TAC []);
+
+val FST_o_UNIT = store_thm
+  ("FST_o_UNIT",
+   ``!x. FST o UNIT x = K x``,
+   FUN_EQ_TAC
+   ++ REWRITE_TAC [o_THM, UNIT_DEF, K_THM]
+   ++ BETA_TAC
+   ++ REWRITE_TAC [FST]);
+
+val SND_o_UNIT = store_thm
+  ("SND_o_UNIT",
+   ``!x. SND o UNIT x = I``,
+   FUN_EQ_TAC
+   ++ REWRITE_TAC [o_THM, UNIT_DEF, I_THM]
+   ++ BETA_TAC
+   ++ REWRITE_TAC [SND]);
+
+val FST_o_MMAP = store_thm
+  ("FST_o_MMAP",
+   ``!f g. FST o MMAP f g = f o FST o g``,
+   FUN_EQ_TAC
+   ++ REWRITE_TAC [MMAP_DEF, BIND_DEF, UNCURRY, o_THM, UNIT_DEF]
+   ++ BETA_TAC
+   ++ REWRITE_TAC [FST]);
 
 val _ = export_theory ();
