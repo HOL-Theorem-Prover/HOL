@@ -1,0 +1,36 @@
+This directory contains a hacked version of a utility used in making the
+database for the MoscowML `help' function. We have used some of the
+source to build help databases for HOL.
+
+When the HOL theories have all been built, typing
+  make
+in this directory will create an index file for the HOL distribution.
+
+-- Konrad Slind, Feb.28 1998.
+-- Michael Norrish, 12 Aug 1999
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+File mosml/examples/helpsigs/README                     PS 1996-04-10
+
+
+This directory contains the program used to create the database used
+by the Moscow ML `help' function.  It requires the Moscow ML compiler
+sources to be installed and compiled.
+
+The program illustrates the use of several libraries.
+
+The main program is makebase.  It reads the signatures in directory
+mosml/lib/ and creates
+
+    * a help database in helpsigs.val
+    * an ASCII format version of the database in index.txt
+    * a LaTeX format  version of the database in index.tex
+
+To create the main program, type
+
+	make
+
+To run the program thus compiled, type
+
+	makebase
