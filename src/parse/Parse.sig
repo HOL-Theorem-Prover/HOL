@@ -90,9 +90,9 @@ in
   local
     open term_grammar
   in
-    val parse_preTerm : term frag list -> term parse_term.preterm
-    val toTerm  : term_grammar.grammar -> term parse_term.preterm -> term
-    val resolve_names : term parse_term.preterm -> Preterm.preterm
+    val parse_preTerm : term frag list -> Absyn.absyn
+    val toTerm  : term_grammar.grammar -> Absyn.absyn -> term
+    val resolve_names : Absyn.absyn -> Preterm.preterm
     val preTerm : term frag list -> Preterm.preterm
     val Term : term frag list -> term
     val -- : term frag list -> 'a -> term

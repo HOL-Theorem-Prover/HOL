@@ -998,28 +998,44 @@ end
 val initial_pstack = PStack {stack = [], lookahead = [],
                              in_vstruct = [(VSRES_Normal, 0)]}
 
+fun is_final_pstack p =
+  case p of
+    PStack {stack = [(NonTerminal pt, _), (Terminal BOS, _)],
+            lookahead = [], in_vstruct = [(VSRES_Normal, 0)]} => true
+  | _ => false
 
 val recupd_errstring =
   "Record list must have (fld := value) or (fld updated_by f) elements only"
 
+fun to_vabsyn vs =
+  case vs of
+    SIMPLE x => Absyn.VIDENT x
+  | VPAIR(v1,v2) => Absyn.VPAIR(to_vabsyn v1, to_vabsyn v2)
+  | TYPEDV(v,ty) => Absyn.VTYPED(to_vabsyn v, ty)
+  | VS_AQ x => Absyn.VAQ x
+  | RESTYPEDV _ =>
+      raise ParseTermError
+        "Attempt to convert a vstruct still containing a RESTYPEDV"
+
 fun remove_specials t =
   case t of
     COMB (t1, t2) => let
+      open Absyn
     in
       case t1 of
         VAR s => if s = bracket_special then remove_specials t2
-                 else COMB(t1, remove_specials t2)
+                 else APP(IDENT s, remove_specials t2)
       | COMB (VAR s, f) => let
         in
-          if s = fnapp_special then COMB(remove_specials f, remove_specials t2)
+          if s = fnapp_special then APP(remove_specials f, remove_specials t2)
           else if s = recsel_special then
             case t2 of
-              VAR fldname => COMB(VAR (recsel_special ^ fldname),
-                                  remove_specials f)
+              VAR fldname => APP(IDENT (recsel_special ^ fldname),
+                                 remove_specials f)
             | _ => raise ParseTermError
                 "Record selection must have single id to right"
           else if s = reccons_special then
-            remove_recupdate f t2 (VAR "ARB")
+            remove_recupdate f t2 (IDENT "ARB")
           else if s = recwith_special then
             remove_recupdate' t2 (remove_specials f)
           else
@@ -1027,25 +1043,31 @@ fun remove_specials t =
               raise ParseTermError
                 "May not use record update functions at top level"
             else
-              COMB(remove_specials t1, remove_specials t2)
+              APP(remove_specials t1, remove_specials t2)
         end
-      | _ => COMB(remove_specials t1, remove_specials t2)
+      | _ => APP(remove_specials t1, remove_specials t2)
     end
-  | ABS(v, t2) => ABS(v, remove_specials t2)
-  | TYPED(t, ty) => TYPED(remove_specials t, ty)
-  | x => x
-and remove_recupdate upd1 updates bottom =
+  | ABS(v, t2) => Absyn.LAM(to_vabsyn v, remove_specials t2)
+  | TYPED(t, ty) => Absyn.TYPED(remove_specials t, ty)
+  | VAR s => Absyn.IDENT s
+  | AQ x => Absyn.AQ x
+and remove_recupdate upd1 updates bottom = let
+  open Absyn
+in
   case upd1 of
     COMB(COMB(VAR s, VAR fld), newvalue) => let
     in
       if s = recupd_special orelse s = recfupd_special then
-        COMB(COMB(VAR (s^fld), remove_specials newvalue),
+        APP(APP(IDENT (s^fld), remove_specials newvalue),
              remove_recupdate' updates bottom)
       else raise ParseTermError recupd_errstring
     end
   | _ =>
     raise ParseTermError recupd_errstring
-and remove_recupdate' updatelist bottom =
+end
+and remove_recupdate' updatelist bottom = let
+  open Absyn
+in
   case updatelist of
     VAR s => if s = recnil_special then bottom
              else raise ParseTermError recupd_errstring
@@ -1055,7 +1077,7 @@ and remove_recupdate' updatelist bottom =
       else
         if s = recupd_special orelse s = recfupd_special then
           case upd1 of
-            VAR fldname => COMB(COMB(VAR (s^fldname),
+            VAR fldname => APP(APP(IDENT (s^fldname),
                                      remove_specials updates),
                                 bottom)
           | _ => raise ParseTermError
@@ -1064,8 +1086,13 @@ and remove_recupdate' updatelist bottom =
           raise ParseTermError recupd_errstring
     end
   | _ => raise ParseTermError recupd_errstring
+end
 
 
+fun top_nonterminal pstack =
+  case pstack of
+    PStack {stack = (NonTerminal pt, _)::_, ...} => remove_specials pt
+  | _ => raise ParseTermError "No non-terminal on top of stack"
 
 (*
 infix Gmerge

@@ -180,48 +180,47 @@ local
     open Parse_support
   in
     case vs of
-      SIMPLE s => make_binding_occ s
-    | VPAIR(v1, v2) => let
+      Absyn.VIDENT s => make_binding_occ s
+    | Absyn.VPAIR(v1, v2) => let
       in
         make_vstruct [mk_binder v1, mk_binder v2] NONE
       end
-    | VS_AQ x => make_aq_binding_occ x
-    | TYPEDV (v, pty) => let
+    | Absyn.VAQ x => make_aq_binding_occ x
+    | Absyn.VTYPED (v, pty) => let
       in
         make_vstruct [mk_binder v] (SOME pty)
       end
-    | RESTYPEDV (v, tm) =>
-      raise ERROR
-        "mk_binder"
-        "Restricted quantifications should have been eliminated at this point"
   end
 
   fun toTermInEnv oinfo t = let
-    open parse_term
+    val mb = mk_binder
+    open parse_term Absyn
     open Parse_support
+    val mk_binder = mb
   in
     case t of
-      COMB(COMB(VAR "gspec special", t1), t2) =>
+      APP(APP(IDENT "gspec special", t1), t2) =>
         make_set_abs (toTermInEnv oinfo t1, toTermInEnv oinfo t2)
-    | COMB(t1, t2) => list_make_comb (map (toTermInEnv oinfo) [t1, t2])
-    | VAR s => make_atom oinfo s
-    | ABS(vs, t) => bind_term "\\" [mk_binder vs] (toTermInEnv oinfo t)
+    | APP(t1, t2) => list_make_comb (map (toTermInEnv oinfo) [t1, t2])
+    | IDENT s => make_atom oinfo s
+    | LAM(vs, t) => bind_term "\\" [mk_binder vs] (toTermInEnv oinfo t)
     | TYPED(t, pty) => make_constrained (toTermInEnv oinfo t) pty
     | AQ t => make_aq t
   end
 
   fun term_to_vs t = let
+    open Absyn
     fun ultimately s t =
       case t of
-        VAR s' => s = s'
+        IDENT s' => s = s'
       | TYPED (t', _) => ultimately s t'
       | _ => false
   in
     case t of
-      VAR s => SIMPLE s
-    | TYPED (t, ty) => TYPEDV(term_to_vs t, ty)
-    | AQ x => VS_AQ x
-    | COMB(COMB(comma, t1), t2) =>
+      IDENT s => VIDENT s
+    | TYPED (t, ty) => VTYPED(term_to_vs t, ty)
+    | AQ x => VAQ x
+    | APP(APP(comma, t1), t2) =>
         if ultimately "," comma then VPAIR(term_to_vs t1, term_to_vs t2)
         else raise Fail "term not suitable as varstruct"
     | _ => raise Fail "term not suitable as varstruct"
@@ -232,61 +231,64 @@ local
   in
     (v, t2)
   end handle Fail _ => let
-    val (f, args) = strip_comb t1
-    val newrhs = List.foldr (fn (a, body) => ABS(term_to_vs a, body)) t2 args
+    open Absyn
+    val (f, args) = strip_app t1
+    val newrhs = List.foldr (fn (a, body) => LAM(term_to_vs a, body)) t2 args
   in
     (term_to_vs f, newrhs)
   end
 
   fun munge_let binding_term body = let
-    open parse_term
+    open Absyn
     fun strip_and tm acc =
       case tm of
-        COMB (t1, t2) => let
+        APP (t1, t2) => let
         in
           case t1 of
-            COMB(VAR "and", t11) => strip_and t11 (strip_and t2 acc)
+            APP(IDENT "and", t11) => strip_and t11 (strip_and t2 acc)
           | _ => tm::acc
         end
       | _ => tm :: acc
     val binding_clauses = strip_and binding_term []
-    fun is_eq tm = case tm of COMB(COMB(VAR "=", _), _) => true | _ => false
-    fun dest_eq (COMB(COMB(VAR "=", t1), t2)) = (t1, t2)
+    fun is_eq tm = case tm of APP(APP(IDENT "=", _), _) => true | _ => false
+    fun dest_eq (APP(APP(IDENT "=", t1), t2)) = (t1, t2)
       | dest_eq _ = raise Fail "(pre-)term not an equality"
     val _ =
       List.all is_eq binding_clauses orelse
       raise ERROR "Term" "let with non-equality"
     val (lhses, rhses) =
       ListPair.unzip (map (reform_def o dest_eq) binding_clauses)
-    val central_abstraction = List.foldr ABS body lhses
+    val central_abstraction = List.foldr LAM body lhses
   in
-    List.foldl (fn(arg, b) => COMB(COMB(VAR "LET", b), arg))
+    List.foldl (fn(arg, b) => APP(APP(IDENT "LET", b), arg))
     central_abstraction rhses
   end
 
 
   fun traverse applyp f t = let
+    open Absyn
     val traverse = traverse applyp f
   in
     if applyp t then f traverse t
     else
       case t of
-        COMB(t1, t2) => COMB(traverse t1, traverse t2)
-      | ABS(vs, t) => ABS(vs, traverse t)
+        APP(t1, t2) => APP(traverse t1, traverse t2)
+      | LAM(vs, t) => LAM(vs, traverse t)
       | TYPED(t, pty) => TYPED(traverse t, pty)
       | AQ x => AQ x
-      | VAR s => VAR s
+      | IDENT s => IDENT s
   end
 
 
   fun remove_lets t0 = let
-    fun let_remove f (COMB(COMB(VAR "let", t1), t2)) = munge_let (f t1) (f t2)
+    open Absyn
+    fun let_remove f (APP(APP(IDENT "let", t1), t2)) = munge_let (f t1) (f t2)
       | let_remove _ _ = raise Fail "Can't happen"
     val t1 =
-      traverse (fn COMB(COMB(VAR "let", _), _) => true | _ => false) let_remove
+      traverse (fn APP(APP(IDENT "let", _), _) => true | _ => false) let_remove
       t0
     val _ =
-      traverse (fn VAR("and") => true | _ => false)
+      traverse (fn IDENT("and") => true | _ => false)
       (fn _ => raise ERROR "Term" "Invalid use of reserved word and") t1
   in
     t1
@@ -307,30 +309,26 @@ in
         handle term_tokens.LEX_ERR s =>
           raise ERROR "Term" ("Lexical error - "^s)
     in
-      case p of
-        PStack {lookahead = [],
-                stack = [(NonTerminal pt, _), (Terminal BOS, _)],
-                in_vstruct = [(VSRES_Normal, 0)]} =>
-        let
-          infix ++ >>
-          val (_, res) =
-            (many (fragstr.comment ++ fragstr.grab_whitespace) >>
-             fragstr.eof) cs
-        in
-          case res of
-            SOME _ => (remove_specials pt
-                       handle ParseTermError s => raise ERROR "Term" s)
-          | NONE =>
-              raise ERROR "Term"
-                ("Can't make sense of remaining: \""^ftoString cs)
-        end
-      | _ =>
-          raise ERROR "Term" ("Parse failed with \""^ftoString cs^"\" remaining")
+      if is_final_pstack p then let
+        infix ++ >>
+        val (_, res) =
+          (many (fragstr.comment ++ fragstr.grab_whitespace) >>
+           fragstr.eof) cs
+      in
+        case res of
+          SOME _ => (top_nonterminal p
+                     handle ParseTermError s => raise ERROR "Term" s)
+        | NONE =>
+            raise ERROR "Term"
+              ("Can't make sense of remaining: \""^ftoString cs^"\"")
+      end
+      else
+        raise ERROR "Term" ("Parse failed with \""^ftoString cs^"\" remaining")
     end
   end
 
 
-  val the_term_parser: (term frag list -> term parse_term.preterm) ref =
+  val the_term_parser: (term frag list -> Absyn.absyn) ref =
     ref (do_parse (!the_term_grammar) (!type_parser1))
 
   fun update_term_fns() = let
