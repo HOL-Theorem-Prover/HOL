@@ -8,7 +8,7 @@ open Holdocmodel
 
 let delim_wrap d s = (delim_info d).sopen ^ s ^ (delim_info d).sclose
 
-let add_to_list r xs = (r := !r @ xs)
+let add_to_list r xs = (r := xs @ !r)
 
 let add_to_class_list r tbl (cls,_) xs =
   if List.mem_assoc cls !r then
