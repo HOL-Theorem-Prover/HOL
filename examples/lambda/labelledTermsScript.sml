@@ -132,135 +132,59 @@ val labelled_sub = store_thm(
     SRW_TAC [][swap_subst_out, SUB_THM, swap_thm, labelled_term_rules]
   ]);
 
-val (lam_case0, _) = define_recursive_term_function
-  `(lam_case0 (VAR s) = \v c a f. v s) /\
-   (lam_case0 (CON k) = \v c a f. c k) /\
-   (lam_case0 (t @@ u) = \v c a f. a t u) /\
-   (lam_case0 (LAM v t) = \v' c a f. f v t)`;
 
-val lam_case_def =
-    Define`lam_case v c a f t = lam_case0 t v c a f`;
-
-val lam_case_thm = store_thm(
-  "lam_case_thm",
-  ``(!v c a f s. lam_case v c a f (VAR s) = v s) /\
-    (!v c a f k. lam_case v c a f (CON k) = c k) /\
-    (!v c a f t u. lam_case v c a f (t @@ u) = a t u) /\
-    (!v c a f w t. lam_case v c a f (LAM w t) =
-                     let x = NEW (FV (LAM w t)) in
-                       f x ([VAR x/w] t))``,
-  SRW_TAC [][lam_case_def, lam_case0]);
-
-val lam_case_cong = store_thm(
-  "lam_case_cong",
-  ``!M M' v c a f.
-       (M = M') /\
-       (!s. (M' = VAR s) ==> (v s = v' s)) /\
-       (!k. (M' = CON k) ==> (c k = c' k)) /\
-       (!t u. (M' = t @@ u) ==> (a t u = a' t u)) /\
-       (!v t. (M' = LAM v t) ==> (f v t = f' v t)) ==>
-       (lam_case v c a f M = lam_case v' c' a' f' M')``,
-  SRW_TAC [][] THEN
-  Q.SPEC_THEN `M` STRIP_ASSUME_TAC nc_CASES THEN
-  FULL_SIMP_TAC (srw_ss())[lam_case_thm] THEN
-  NEW_ELIM_TAC THEN SRW_TAC [][] THEN
-  FIRST_ASSUM MATCH_MP_TAC THEN
-  SRW_TAC [][ALPHA]);
-
-val nctyinfo = let
-  open TypeBasePure
-in
-  mk_tyinfo {ax = COPY("ncTheory.nc_RECURSION_WEAK",
-                       ncTheory.nc_RECURSION_WEAK),
-             induction = COPY("ncTheory.nc_INDUCTION", ncTheory.nc_INDUCTION),
-             case_def = lam_case_thm,
-             case_cong = lam_case_cong,
-             nchotomy = nc_CASES,
-             size = SOME (``size : 'a nc -> num``,
-                          COPY ("chap2Theory.size_thm", chap2Theory.size_thm)),
-             lift = NONE, encode = NONE,
-             one_one = SOME nc_INJECTIVITY,
-             distinct = SOME nc_DISTINCT}
-end;
-
-val _ = TypeBase.write [nctyinfo]
-
-val M = ``\f. lam_case (\s. VAR s : 'b nc) (\k. CON (OUTR k))
-                       (\u v. if is_comb u /\ is_const (rator u) /\
-                                 ISL (dest_const (rator u))
-                              then
-                                f (rand u) @@ f v
-                              else
-                                f u @@ f v)
-                       (\v t. LAM v (f t))``
-
-val (strip_lab_def, _) = define_recursive_term_function`
-  (strip_lab (VAR s : (num + 'a) nc) = (VAR s : 'a nc)) /\
-  (strip_lab (CON k) = CON (OUTR k)) /\
-  (strip_lab (u @@ v) = if is_const u /\ ISL (dest_const u) then
-                          strip_lab v
-                        else strip_lab u @@ strip_lab v) /\
-  (strip_lab (LAM w t) = LAM w (strip_lab t))
-`
+val stupid_lemma = prove(
+  ``(P SUBSET Q ==> P SUBSET R UNION Q) /\
+    (P SUBSET Q ==> P SUBSET Q UNION R) /\
+    (P SUBSET Q ==> P DELETE v SUBSET Q DELETE v) /\
+    !u. ~(t @@ u = u)``,
+  SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF] THEN
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN PROVE_TAC []);
 
 
-val strip_lab_lam = prove(
-  ``strip_lab (LAM x u) = let v = NEW (FV (LAM x u))
-                          in
-                            LAM v (strip_lab (swap v x u))``,
-  SRW_TAC [][strip_lab_def] THEN NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
-  ASM_SIMP_TAC (srw_ss()) [fresh_var_swap, lemma14a, swap_id]);
+val strip_lab_exists =
+    (SIMP_RULE (srw_ss()) [] o
+     CONV_RULE
+       (LAND_CONV (SIMP_CONV (srw_ss()) [nc_swapping, swap_thm, COND_RATOR,
+                                         COND_RAND, stupid_lemma])) o
+     Q.INST [`rswap` |-> `swap`, `rFV` |-> `FV`, `X` |-> `{}`,
+             `var` |-> `VAR`,
+             `con` |-> `\k. CON (OUTR k)`,
+             `app` |-> `\rt ru t u.
+                           if is_const t /\ ISL (dest_const t) then
+                              ru
+                           else rt @@ ru`,
+             `lam` |-> `\rt v t. LAM v rt`] o
+     INST_TYPE [alpha |-> ``:num + 'a``, beta |-> ``:'a nc``])
+    swap_RECURSION_generic
+
+val strip_lab_def =
+    new_specification ("strip_lab_def", ["strip_lab"],  strip_lab_exists)
+val strip_lab_thm = save_thm("strip_lab_thm", CONJUNCT1 strip_lab_def)
+val strip_lab_swap_commutes = save_thm("strip_lab_swap_commutes",
+                                       CONJUNCT1 (CONJUNCT2 strip_lab_def))
+val _ = export_rewrites ["strip_lab_swap_commutes"]
+
+val strip_lab_FV_lemma = CONJUNCT2 (CONJUNCT2 (strip_lab_def))
+
+val antisym_eq = prove(``(s = t) = (s SUBSET t /\ t SUBSET s)``,
+                       PROVE_TAC [pred_setTheory.SUBSET_ANTISYM,
+                                  pred_setTheory.SUBSET_REFL])
 
 val FV_strip_lab = store_thm(
   "FV_strip_lab",
   ``!t. FV (strip_lab t) = FV t``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [][strip_lab_def] THENL [
+  SIMP_TAC (srw_ss()) [FORALL_AND_THM, strip_lab_FV_lemma,
+                       antisym_eq] THEN
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][strip_lab_thm] THENL [
     `?k. t = CON k` by METIS_TAC [nc_CASES, is_const_thm] THEN
     SRW_TAC [][],
-    NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
-    SRW_TAC [][FV_SUB, pred_setTheory.EXTENSION] THEN METIS_TAC []
+    FULL_SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF],
+    FULL_SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF],
+    FULL_SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF]
   ]);
 val _ = export_rewrites ["FV_strip_lab"]
 
-
-val swap_strip_lab = store_thm(
-  "swap_strip_lab",
-  ``!t x y. strip_lab (swap x y t) = swap x y (strip_lab t)``,
-  HO_MATCH_MP_TAC pvh_induction THEN REPEAT STRIP_TAC THENL [
-    SRW_TAC [][strip_lab_def, swap_thm],
-    SRW_TAC [][strip_lab_def, swap_thm],
-    SRW_TAC [boolSimps.CONJ_ss][strip_lab_def, swap_thm],
-    SRW_TAC [][strip_lab_lam] THEN NEW_ELIM_TAC THEN
-    Q.X_GEN_TAC `z` THEN REPEAT STRIP_TAC THENL [
-      SIMP_TAC (srw_ss()) [swap_thm] THEN
-      SIMP_TAC (srw_ss()) [strip_lab_lam] THEN
-      NEW_ELIM_TAC THEN ASM_SIMP_TAC (srw_ss()) [] THEN
-      Q.X_GEN_TAC `u` THEN STRIP_TAC THENL [
-        SRW_TAC [][swap_ALPHA, Once swap_swap],
-        SRW_TAC [][GSYM swap_thm, swap_ALPHA]
-      ],
-      SRW_TAC [][swap_thm, strip_lab_lam] THEN NEW_ELIM_TAC THEN
-      Q.X_GEN_TAC `u` THEN STRIP_TAC THENL [
-        SRW_TAC [][swap_ALPHA],
-        SRW_TAC [][GSYM swap_thm]
-      ]
-    ]
-  ]);
-
-val strip_lab_lam = prove(
-  ``strip_lab (LAM v t) = LAM v (strip_lab t)``,
-  SRW_TAC [][strip_lab_lam] THEN NEW_ELIM_TAC THEN
-  SRW_TAC [][] THEN SRW_TAC [][swap_strip_lab, swap_ALPHA]);
-
-val strip_lab_thm = store_thm(
-  "strip_lab_thm",
-  ``(strip_lab (VAR s) = VAR s) /\
-    (strip_lab (CON k) = CON (OUTR k)) /\
-    (strip_lab (t @@ u) = if is_const t /\ ISL (dest_const t) then
-                            strip_lab u
-                          else strip_lab t @@ strip_lab u) /\
-    (strip_lab (LAM v t) = LAM v (strip_lab t))``,
-  SRW_TAC [][strip_lab_lam] THEN SRW_TAC [][strip_lab_def]);
 
 val lterm_ax = new_type_definition (
   "lterm",
@@ -272,6 +196,18 @@ val term_labelled_term =
                                  ABS  = "tolabelled",
                                  REP  = "fromlabelled",
                                  tyax = lterm_ax };
+
+val tolabelled_11 = store_thm(
+  "tolabelled_11",
+  ``labelled_term x /\ labelled_term y ==>
+    ((tolabelled x = tolabelled y) = (x = y))``,
+  PROVE_TAC [term_labelled_term]);
+
+val fromlabelled_11 = store_thm(
+  "fromlabelled_11",
+  ``(fromlabelled x = fromlabelled y) = (x = y)``,
+  PROVE_TAC [term_labelled_term]);
+val _ = export_rewrites ["fromlabelled_11"]
 
 val CON_def = Define`CON k = tolabelled (nc$CON (INR k))`;
 val VAR_def = Define`VAR s = tolabelled (nc$VAR s)`;
@@ -339,30 +275,12 @@ val lterm_INJECTIVITY = store_thm(
                    (n1 = n2) /\ (u1 = u2) /\
                    !z. [VAR z/v1]t1 = [VAR z/v2]t2)``,
   SIMP_TAC (srw_ss()) [VAR_def, CON_def, APP_def, EQ_IMP_THM, LAM_def,
-                       LAMi_def] THEN
-  REPEAT STRIP_TAC THEN
-  POP_ASSUM (MP_TAC o Q.AP_TERM `fromlabelled`) THEN
-  SIMP_TAC (srw_ss()) [labelled_term_rules] THEN
-  TRY (DISCH_THEN (REPEAT_TCL STRIP_THM_THEN
-                              (MP_TAC o Q.AP_TERM `tolabelled`)) THEN
-       SIMP_TAC (srw_ss()) [] THEN NO_TAC) THEN
-  SIMP_TAC (srw_ss()) [fromlabelled_11] THEN REPEAT STRIP_TAC THEN
-  IMP_RES_TAC INJECTIVITY_LEMMA1 THEN
-  POP_ASSUM (MP_TAC o Q.AP_TERM `tolabelled`) THEN
-  SIMP_TAC (srw_ss()) [] THEN
-  `!s. VAR s = fromlabelled (VAR s)` by
-       SRW_TAC [][VAR_def, labelled_term_rules] THEN
-  ASM_SIMP_TAC (srw_ss()) [GSYM SUB_def] THEN
-  POP_ASSUM (ASSUME_TAC o GSYM) THEN
-  ASM_SIMP_TAC (srw_ss()) [SUB_def, labelled_sub, labelled_term_rules] THEN
-  DISCH_THEN (K ALL_TAC) THEN AP_TERM_TAC THEN
-  Cases_on `v1 = v2` THEN SRW_TAC [][lemma14a] THEN
-  PROVE_TAC [LAM_INJ_ALPHA_FV, lemma15a]);
+                       LAMi_def, tolabelled_11, labelled_term_rules] THEN
+  SRW_TAC [][SUB_def, tolabelled_11, labelled_sub, labelled_term_rules]);
 
 val lterm_usable_INJECTIVITY = save_thm(
   "lterm_usable_INJECTIVITY",
   LIST_CONJ (List.take(CONJUNCTS lterm_INJECTIVITY, 3)));
-
 val _ = export_rewrites ["lterm_usable_INJECTIVITY"]
 
 val FV_def = Define`FV t = nc$FV (fromlabelled t)`;
@@ -466,16 +384,13 @@ end
 
 val strip_lab_commutes = prove(
   ``!t v u. [VAR v/u] (strip_lab t) = strip_lab ([VAR v/u] t)``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN
-  SRW_TAC [][strip_lab_thm, SUB_THM, SUB_VAR] THEN
-  Q_TAC (NEW_TAC "z") `{v;u;x} UNION FV t` THEN
-  `(LAM x t = LAM z (swap z x t)) /\
-   (LAM x (strip_lab t) = LAM z (swap z x (strip_lab t)))`
-     by SRW_TAC [][swap_ALPHA] THEN
-  SRW_TAC [][SUB_THM, strip_lab_thm, swap_subst_out, swap_strip_lab,
-             swap_thm] THEN
-  FIRST_X_ASSUM (Q.SPEC_THEN `x` MP_TAC) THEN
-  SIMP_TAC (srw_ss()) [lemma14a]);
+  vsubst_tac strip_lab_thm THENL [
+    `?k. t = CON k` by METIS_TAC [nc_CASES, is_const_thm] THEN
+    FULL_SIMP_TAC (srw_ss()) [SUB_THM],
+    Cases_on `is_const t` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    `?k. t = CON k` by METIS_TAC [nc_CASES, is_const_thm] THEN
+    FULL_SIMP_TAC (srw_ss()) [SUB_THM]
+  ]);
 
 val induction_lemma = prove(
   ``!P. (!t. labelled_term t ==> P (tolabelled t)) = (!t. P t)``,
@@ -533,16 +448,6 @@ val tolabelled_lam = prove(
   SRW_TAC [][GSYM LAM_def]);
 
 
-val lterm_INDUCTION' = store_thm(
-  "lterm_INDUCTION'",
-  ``!P. (!s. P (VAR s)) /\ (!k. P (CON k)) /\
-        (!t u. P t /\ P u ==> P(t @@ u)) /\
-        (!v t. (!y. P ([VAR y/v] t)) ==> P (LAM v t)) /\
-        (!v i M N. (!y. P ([VAR y/v] M)) /\ P N ==>
-                   P (LAMi i v M N)) ==>
-        !t. P t``,
-
-
 val lterm_INDUCTION = store_thm(
   "lterm_INDUCTION",
   ``!P.
@@ -552,27 +457,11 @@ val lterm_INDUCTION = store_thm(
       (!v i M N. (!y. P ([VAR y/v] M)) /\ P N ==>
                  P (LAMi i v M N)) ==>
       !t. P t``,
-  GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC [GSYM induction_lemma'] THEN
-  SIMP_TAC (srw_ss()) [RIGHT_FORALL_IMP_THM] THEN
-  HO_MATCH_MP_TAC strong_labt_ind THEN
-  SRW_TAC [][SUB_THM, SUB_VAR] THENL [
-    SRW_TAC [][GSYM VAR_def],
-    SRW_TAC [][GSYM VAR_def],
-    SRW_TAC [][GSYM CON_def],
-    SRW_TAC [][tolabelled_app, labelled_sub],
-    Q_TAC (NEW_TAC "z") `{x;y;v} UNION FV t` THEN
-    `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swap_ALPHA] THEN
-    SRW_TAC [][SUB_THM, tolabelled_lam] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC
-
-
-
-
-
   GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC [GSYM induction_lemma] THEN
   GEN_TAC THEN completeInduct_on `size t` THEN
   FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO] THEN
-  SRW_TAC [][] THEN Cases_on `t` THENL [
+  SRW_TAC [][] THEN
+  Q.ISPEC_THEN `t` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) nc_CASES THENL [
     FULL_SIMP_TAC (srw_ss()) [labelled_term_con, GSYM CON_def],
     FULL_SIMP_TAC (srw_ss()) [GSYM VAR_def],
     FULL_SIMP_TAC (srw_ss()) [labelled_app, size_thm] THENL [
@@ -613,21 +502,47 @@ val lSIMPLE_ALPHAi = store_thm(
   SIMP_TAC (srw_ss()) [LAMi_def, fromlabelled_subst, fromlabelled_thm,
                        GSYM FV_def, GSYM SIMPLE_ALPHA]);
 
+val lterm_swapping = store_thm(
+  "lterm_swapping",
+  ``swapping (swap : string -> string -> 'a lterm -> 'a lterm) FV``,
+  SRW_TAC [][swapping_def, lswap_def, FV_def] THENL [
+    SRW_TAC [][tolabelled_11],
+    SRW_TAC [][swap_identity]
+  ]);
 
-val (null_labelling_def, _) =
-    define_recursive_term_function
-    `(null_labelling (VAR s : 'a nc) = (VAR s: 'a lterm)) /\
-     (null_labelling (CON k) = CON k) /\
-     (null_labelling (t @@ u) = null_labelling t @@ null_labelling u) /\
-     (null_labelling (LAM v t) = LAM v (null_labelling t))`
+val lswap_identity = save_thm(
+  "lswap_identity",
+  last (CONJUNCTS (REWRITE_RULE [swapping_def] lterm_swapping)));
+
+val null_labelling_exists =
+    (SIMP_RULE (srw_ss()) [lswap_thm, stupid_lemma, lterm_swapping] o
+     Q.INST [`rFV` |-> `FV`, `rswap` |-> `swap`, `X` |-> `{}`,
+             `var` |-> `VAR`,
+             `con` |-> `CON`,
+             `app` |-> `\rt ru t u. rt @@ ru`,
+             `lam` |-> `\rt v t. LAM v rt`] o
+     INST_TYPE [beta |-> ``:'a lterm``])
+    swap_RECURSION_generic
+
+val null_labelling_def =
+    new_specification("null_labelling_def", ["null_labelling"],
+                      null_labelling_exists)
+
+val null_labelling_thm = save_thm(
+  "null_labelling_thm",
+  CONJUNCT1 null_labelling_def);
+val (null_labelling_swap_commutes, null_labelling_FV_lemma) =
+    CONJ_PAIR (CONJUNCT2 null_labelling_def)
+
+val _ = save_thm("null_labelling_swap_commutes", null_labelling_swap_commutes)
+val _ = export_rewrites ["null_labelling_swap_commutes"]
 
 val FV_null_labelling = store_thm(
   "FV_null_labelling",
   ``!t. FV (null_labelling t) = FV t``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN
-  SRW_TAC [][null_labelling_def, lFV_THM] THEN
-  NEW_ELIM_TAC THEN
-  SRW_TAC [][pred_setTheory.EXTENSION, FV_SUB] THEN PROVE_TAC []);
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][null_labelling_thm, lFV_THM]);
+val _ = export_rewrites ["FV_null_labelling"]
 
 val FV_strip_label = store_thm(
   "FV_strip_label",
@@ -638,8 +553,8 @@ val lFINITE_FV = store_thm(
   "lFINITE_FV",
   ``!t:'a lterm. FINITE (FV t)``,
   PROVE_TAC [FINITE_FV, FV_strip_label]);
+val _ = export_rewrites ["lFINITE_FV"]
 
-val _ = augment_srw_ss [rewrites [lFINITE_FV]];
 
 val l14a = store_thm(  (* use native induction principle *)
   "l14a",
@@ -681,52 +596,62 @@ val lFV_SUB = store_thm(
                         else FV t``,
   SRW_TAC [][FV_def, SUB_def, labelled_sub, labelled_term_rules, FV_SUB]);
 
+val lswap_ALPHA = store_thm(
+  "lswap_ALPHA",
+  ``~(v IN FV M) ==> (LAM v (swap v u M) = LAM u M : 'a lterm)``,
+  SRW_TAC [][FV_def, LAM_def, lswap_def, swap_ALPHA]);
+
+val lswap_ALPHAi = store_thm(
+  "lswap_ALPHAi",
+  ``~(v IN FV M) ==> (LAMi n v (swap v u M) N = LAMi n u M N)``,
+  SRW_TAC [][FV_def, LAMi_def, lswap_def, swap_ALPHA]);
+
+val lswap_subst = store_thm(
+  "lswap_subst",
+  ``lswap x y ([u/v] t) = [lswap x y u/swapstr x y v] (lswap x y t)``,
+  SRW_TAC [][lswap_def, SUB_def, labelled_sub, swap_subst]);
+
+val lswap_inverse = store_thm(
+  "lswap_inverse",
+  ``lswap x y (swap x y t) = t``,
+  SRW_TAC [][lswap_def]);
+val _ = export_rewrites ["lswap_inverse"]
+
 val null_labelling_vsubst = prove(
   ``!t u v. null_labelling ([VAR u/v] t) = [VAR u/v] (null_labelling t)``,
-  GEN_TAC THEN completeInduct_on `size t` THEN
-  FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN Cases_on `t` THEN
-  FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss)
-                [SUB_THM, lSUB_THM, null_labelling_def, size_thm] THEN
-  SRW_TAC [][SUB_THM, null_labelling_def, lALPHA_ERASE,
-             FV_null_labelling] THEN
-  Q_TAC (NEW_TAC "z") `FV u UNION {u'; v'; x}` THEN
-  `LAM x u = LAM z ([VAR z/x] u)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  `LAM x (null_labelling u) =
-     LAM z ([VAR z/x] (null_labelling u))` by
-       SRW_TAC [][lSIMPLE_ALPHA, FV_null_labelling] THEN
-  SRW_TAC [numSimps.ARITH_ss]
-          [SUB_THM, lSUB_THM, FV_null_labelling, null_labelling_def,
-           lALPHA_ERASE, FV_SUB_IMAGE, RENAME_blRENAME, blRENAME_COMPOSE,
-           GSYM pred_setTheory.IMAGE_COMPOSE, VNAME_DEF, lFV_SUB_IMAGE,
-           FV_null_labelling]);
+  HO_MATCH_MP_TAC simple_induction THEN
+  SIMP_TAC (srw_ss()) [null_labelling_thm, SUB_THM, lSUB_THM, SUB_VAR] THEN
+  CONJ_TAC THENL [
+    SRW_TAC [][null_labelling_thm],
+    MAP_EVERY Q.X_GEN_TAC [`x`,`t`] THEN STRIP_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`u`, `v`] THEN
+    Q_TAC (NEW_TAC "z") `{u;v;x} UNION FV t` THEN
+    `LAM x t = LAM z (swap z x t)` by SRW_TAC [][swap_ALPHA] THEN
+    `~(z IN FV (null_labelling t))` by SRW_TAC [][] THEN
+    `LAM x (null_labelling t) = LAM z (swap z x (null_labelling t))`
+       by SRW_TAC [][lswap_ALPHA] THEN
+    SRW_TAC [][SUB_THM, lSUB_THM, swap_subst_out, swap_thm,
+               null_labelling_thm] THEN
+    SRW_TAC [][lswap_subst, lswap_thm]
+  ]);
 
 val null_labelling_subst = store_thm(
   "null_labelling_subst",
   ``!t u v. null_labelling ([u/v] t) =
               [null_labelling u/v] (null_labelling t)``,
-  GEN_TAC THEN completeInduct_on `size t` THEN
-  FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN Cases_on `t` THEN
-  FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss)
-                [SUB_THM, lSUB_THM, null_labelling_def, size_thm] THEN
-  SRW_TAC [][SUB_THM, null_labelling_def, lALPHA_ERASE,
-             FV_null_labelling] THEN
-  Q_TAC (NEW_TAC "z") `FV u UNION FV u' UNION {v'; x}` THEN
-  `LAM x u = LAM z ([VAR z/x] u)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  `LAM x (null_labelling u) =
-     LAM z ([VAR z/x] (null_labelling u))` by
-       SRW_TAC [][lSIMPLE_ALPHA, FV_null_labelling] THEN
-  SRW_TAC [numSimps.ARITH_ss]
-          [SUB_THM, lSUB_THM, FV_null_labelling, null_labelling_def,
-           null_labelling_vsubst] THEN
-  MATCH_MP_TAC lALPHA_ERASE THEN
-  SRW_TAC [][FV_SUB, lFV_SUB, FV_null_labelling]);
-
-val null_labelling_thm = save_thm(
-  "null_labelling_thm",
-  SIMP_RULE (srw_ss()) [null_labelling_vsubst, lALPHA_ERASE,
-                        FV_null_labelling] null_labelling_def);
+  HO_MATCH_MP_TAC simple_induction THEN
+  SIMP_TAC (srw_ss()) [null_labelling_thm, SUB_THM, lSUB_THM, SUB_VAR] THEN
+  CONJ_TAC THENL [
+    SRW_TAC [][null_labelling_thm],
+    MAP_EVERY Q.X_GEN_TAC [`x`, `t`] THEN STRIP_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`u`, `v`] THEN
+    Q_TAC (NEW_TAC "z") `{x;v} UNION FV u UNION FV t` THEN
+    `LAM x t = LAM z (swap z x t)` by SRW_TAC [][swap_ALPHA] THEN
+    `LAM x (null_labelling t) = LAM z (swap z x (null_labelling t))`
+        by SRW_TAC [][lswap_ALPHA] THEN
+    SRW_TAC [][SUB_THM, lSUB_THM, swap_subst_out, null_labelling_thm] THEN
+    SRW_TAC [][lswap_subst]
+  ]);
 
 val label_free_def =
     Define`label_free t = (null_labelling (strip_label t) = t)`;
@@ -734,9 +659,28 @@ val label_free_def =
 val strip_null_labelling = store_thm(
   "strip_null_labelling",
   ``!t. strip_label (null_labelling t) = t``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN
-  SRW_TAC [][null_labelling_thm, strip_label_thm] THEN
-  PROVE_TAC [lemma14a]);
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][null_labelling_thm, strip_label_thm]);
+
+(* ----------------------------------------------------------------------
+    establishment of a recursion principle for labelled terms
+   ---------------------------------------------------------------------- *)
+
+val rec2 = (CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) o
+            GENL [``var : string -> 'b``,
+                  ``con : 'a -> 'b``,
+                  ``app : 'a nc -> 'a nc -> 'b``,
+                  ``lam : string -> 'a nc -> 'b``] o
+            SIMP_RULE (srw_ss()) [] o
+            Q.INST [`app` |-> `\rt ru t u. app t u`,
+                    `lam` |-> `\rt v t. lam v t`,
+                    `X` |-> `{}`] o
+            CONJUNCT1 o
+            CONV_RULE EXISTS_UNIQUE_CONV)
+           nc_RECURSION2
+val lam_case_def =
+    new_specification("lam_case_def", ["lam_case"], rec2)
+
 
 val base_recursion =
     MATCH_MP relationTheory.WF_RECURSION_THM
@@ -798,7 +742,7 @@ val lterm_RECURSION_WEAK = store_thm(
   SIMP_TAC (srw_ss()) [labelled_term_rules] THEN
   POP_ASSUM (CONV_TAC o EVERY_CONJ_CONV o STRIP_QUANT_CONV o LHS_CONV o
              REWR_CONV) THEN
-  SRW_TAC [][lam_case_thm, combinTheory.o_THM] THENL [
+  SRW_TAC [][lam_case_def, combinTheory.o_THM] THENL [
     `labelled_term (fromlabelled M)` by PROVE_TAC [from_ok] THEN
     `?P Q. fromlabelled M = P @@ Q` by PROVE_TAC [is_comb_APP_EXISTS] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
@@ -826,9 +770,7 @@ val lterm_RECURSION_WEAK = store_thm(
               size_thm, dest_const_thm] THEN
     NEW_ELIM_TAC THEN
     SIMP_TAC (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM, lemma14a, l14a,
-                         from_subst_var, GSYM VAR_def, SUB_MERGE],
-
-    FULL_SIMP_TAC (srw_ss()) [dest_const_thm, is_const_thm]
+                         from_subst_var, GSYM VAR_def, SUB_MERGE]
   ]);
 
 val lABS_def = Define`lABS (f: string -> 'a lterm) =
@@ -874,7 +816,7 @@ val phi_exists  =
 
 val phi_def = new_specification ("phi_def", ["phi"], phi_exists);
 
-val lsize_def = Define`size t = chap2$size (strip_label t)`;
+val lsize_def = Define`size t = nc$size (strip_label t)`;
 
 val lsize_thm = store_thm(
   "lsize_thm",
@@ -927,7 +869,7 @@ val FINITE_lRENAME_VARS = store_thm(
   SIMP_TAC (srw_ss())[lRENAME_VARS_def] THEN Induct THEN
   SRW_TAC [][GSPEC_OR, GSPEC_F, GSPEC_EQ]);
 
-val _ = augment_srw_ss [rewrites [FINITE_lRENAME_VARS]]
+val _ = export_rewrites ["FINITE_lRENAME_VARS"]
 
 val lRENAME_lam = store_thm(
   "lRENAME_lam",
@@ -979,8 +921,7 @@ val lsize_ignores_vsubsts = store_thm(
   "lsize_ignores_vsubsts",
   ``!t u v. size ([VAR u/v] t) = size (t:'a lterm)``,
   SRW_TAC [][lsize_ignores_renamings, vsub_lRENAME]);
-
-val _ = augment_srw_ss [rewrites [lsize_ignores_vsubsts]]
+val _ = export_rewrites ["lsize_ignores_vsubsts"]
 
 val lterm_CASES = store_thm(
   "lterm_CASES",
@@ -1121,12 +1062,11 @@ val lterm_DISTINCT = store_thm(
     (!v t v' n t' u. ~(LAM v t = LAMi n v' t' u' : 'a lterm))``,
   SRW_TAC [][VAR_def, CON_def, APP_def, LAM_def, LAMi_def] THEN
   REPEAT STRIP_TAC THEN POP_ASSUM (ASSUME_TAC o AP_TERM ``fromlabelled``) THEN
-  FULL_SIMP_TAC (srw_ss()) [labelled_term_rules] THEN
+  FULL_SIMP_TAC (srw_ss()) [labelled_term_rules, tolabelled_11] THEN
   `labelled_term (CON (INL n) @@ LAM v (fromlabelled t))` by
      PROVE_TAC [from_ok] THEN
   FULL_SIMP_TAC (srw_ss()) [labelled_app, labelled_term_con]);
-
-val _ = augment_srw_ss [rewrites [lterm_DISTINCT]]
+val _ = export_rewrites ["lterm_DISTINCT"]
 
 val lterm_INJECTIVITY_LEMMA1 = store_thm(
   "lterm_INJECTIVITY_LEMMA1",
@@ -1148,8 +1088,7 @@ val lterm_LAM_VAR_INJECTIVE = store_thm(
   IMP_RES_TAC lterm_INJECTIVITY_LEMMA1 THEN
   SRW_TAC [][l14a]);
 
-val _ = augment_srw_ss [rewrites [lterm_LAM_VAR_INJECTIVE]]
-
+val _ = export_rewrites ["lterm_LAM_VAR_INJECTIVE"]
 
 val lterm_LAM_INJ_ALPHA_FV = store_thm(
   "lterm_LAM_INJ_ALPHA_FV",
@@ -1316,7 +1255,7 @@ val lFINITE_FVS = store_thm(
   ``!R:'a lterm_isub. FINITE (FVS R)``,
   Induct THEN SRW_TAC [][lFVS_def]);
 
-val _ = augment_srw_ss [rewrites [lFINITE_FVS]]
+val _ = export_rewrites ["lFINITE_FVS"]
 
 val DOM_thm = store_thm(
   "DOM_thm",
@@ -1696,12 +1635,6 @@ val beta_CR_2 = store_thm(
         THEN1 PROVE_TAC [reduction_def] THEN
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
   PROVE_TAC [reduction_rules, strip_lemma]);
-
-val _ = export_rewrites ["tofrom_inverse", "fromto_inverse", "from_ok",
-                         "lFV_THM", "lFINITE_FV", "FINITE_lRENAME_VARS",
-                         "lsize_ignores_vsubsts",
-                         "lterm_DISTINCT", "lterm_LAM_VAR_INJECTIVE",
-                         "lFINITE_FVS"];
 
 val _ = export_theory ();
 

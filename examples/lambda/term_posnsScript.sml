@@ -453,21 +453,21 @@ val v_posns_subst = store_thm(
                                              p2 IN v_posns v u}
               else v_posns v t UNION
                    { APPEND p1 p2 | p1 IN v_posns w t /\ p2 IN v_posns v u}``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN
+  HO_MATCH_MP_TAC simple_induction THEN
   SIMP_TAC (srw_ss())[SUB_VAR, SUB_THM, v_posns_thm, EXTENSION] THEN
   REPEAT CONJ_TAC THENL [
     REPEAT GEN_TAC THEN REPEAT COND_CASES_TAC THEN
     REPEAT VAR_EQ_TAC THEN ASM_SIMP_TAC (srw_ss()) [v_posns_thm] THEN
     FULL_SIMP_TAC (srw_ss()) [],
     SRW_TAC [DNF_ss][] THEN REPEAT (POP_ASSUM (K ALL_TAC)) THEN
-COND_CASES_TAC THEN VAR_EQ_TAC
-
-
-PROVE_TAC [],
+    COND_CASES_TAC THEN REPEAT VAR_EQ_TAC THEN SRW_TAC [DNF_ss][] THEN
+    PROVE_TAC [],
+    MAP_EVERY Q.X_GEN_TAC [`x`, `t`] THEN STRIP_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`u`,`v`,`w`,`y`] THEN
     Q_TAC (NEW_TAC "z") `{v;w;x} UNION FV u UNION FV t` THEN
-    `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [DNF_ss][SUB_THM, v_posns_thm] THEN
-    REPEAT (POP_ASSUM (K ALL_TAC)) THEN PROVE_TAC []
+    `LAM x t = LAM z (swap z x t)` by SRW_TAC [][swap_ALPHA] THEN
+    SRW_TAC [][SUB_THM, swap_subst_out, v_posns_thm, v_posns_FV] THEN
+    SRW_TAC [DNF_ss][] THEN PROVE_TAC []
   ]);
 
 val bv_posns_at_subst = store_thm(
@@ -481,7 +481,7 @@ val bv_posns_at_subst = store_thm(
   Q_TAC (NEW_TAC "z") `{u; x} UNION FV t UNION FV v` THEN
   `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THENL [
     SRW_TAC [][SUB_THM, bv_posns_at_thm, v_posns_subst, v_posns_FV,
-               v_posns_thm, EXTENSION],
+               v_posns_thm, EXTENSION, bv_posns_thm],
     SRW_TAC [][SUB_THM, bv_posns_at_thm, lam_posns_subst]
   ]);
 
@@ -491,21 +491,25 @@ val bv_posns_at_subst2 = store_thm(
        vp IN v_posns v t /\ m IN lam_posns u ==>
        (bv_posns_at (APPEND vp m) ([u/v] t) =
         IMAGE (APPEND vp) (bv_posns_at m u))``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN
-  SRW_TAC [] [v_posns_thm, SUB_THM, SUB_VAR] THENL [
+  HO_MATCH_MP_TAC simple_induction THEN
+  ASM_SIMP_TAC (srw_ss()) [v_posns_thm, SUB_THM, SUB_VAR] THEN
+  REPEAT CONJ_TAC THENL [
     SRW_TAC [][EXTENSION],
-    `APPEND x m IN lam_posns ([u/v] t)`
-        by (SRW_TAC [][lam_posns_subst] THEN PROVE_TAC []) THEN
-    SRW_TAC [DNF_ss][bv_posns_at_thm, EXTENSION],
-    `APPEND x m IN lam_posns ([u/v] t')`
-        by (SRW_TAC [][lam_posns_subst] THEN PROVE_TAC []) THEN
-    SRW_TAC [DNF_ss][bv_posns_at_thm, EXTENSION],
+    REPEAT STRIP_TAC THENL [
+      `APPEND x m IN lam_posns ([u/v] t)`
+          by (SRW_TAC [][lam_posns_subst] THEN PROVE_TAC []) THEN
+      SRW_TAC [DNF_ss][bv_posns_at_thm, EXTENSION],
+      `APPEND x m IN lam_posns ([u/v] t')`
+          by (SRW_TAC [][lam_posns_subst] THEN PROVE_TAC []) THEN
+      SRW_TAC [DNF_ss][bv_posns_at_thm, EXTENSION]
+    ],
+    MAP_EVERY Q.X_GEN_TAC [`x`, `t`] THEN STRIP_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`u`,`v`,`vp`,`m`] THEN
+    Cases_on `x = v` THEN SRW_TAC [][] THEN
     Q_TAC (NEW_TAC "z") `FV t UNION FV u UNION {x;v}` THEN
-    `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    FULL_SIMP_TAC (srw_ss()) [SUB_THM, v_posns_thm] THEN
-    `APPEND x' m IN lam_posns ([u/v] ([VAR z/x] t))`
-       by (SRW_TAC [][lam_posns_subst] THEN PROVE_TAC []) THEN
-    SRW_TAC [DNF_ss][bv_posns_at_thm, EXTENSION]
+    `LAM x t = LAM z (swap z x t)` by SRW_TAC [][swap_ALPHA] THEN
+    SRW_TAC [][SUB_THM, bv_posns_at_thm, swap_subst_out] THEN
+    SRW_TAC [DNF_ss][EXTENSION]
   ]);
 
 val bv_posns_at_prefix_posn = store_thm(
@@ -542,19 +546,11 @@ val v_posns_arent_bv_posns = store_thm(
   "v_posns_arent_bv_posns",
   ``!t lp p. lp IN lam_posns t /\ p IN bv_posns_at lp t ==>
              !v. ~(p IN v_posns v t)``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN
-  SRW_TAC [] [lam_posns_thm, bv_posns_at_thm, v_posns_thm] THEN
-  POP_ASSUM MP_TAC THEN SRW_TAC [][bv_posns_at_thm] THENL [
-    PROVE_TAC [],
-    PROVE_TAC [],
-    Q_TAC (NEW_TAC "z") `{v;x} UNION FV t` THEN
-    `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [][v_posns_thm, v_posns_vsubst] THEN
-    PROVE_TAC [v_posns_injective],
-    Q_TAC (NEW_TAC "z") `{v;x} UNION FV t` THEN
-    `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [][v_posns_thm, v_posns_vsubst] THEN PROVE_TAC [lemma14a]
-  ]);
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [] [lam_posns_thm, bv_posns_at_thm, v_posns_thm,
+              bv_posns_thm] THEN
+  POP_ASSUM MP_TAC THEN SRW_TAC [][bv_posns_at_thm] THEN
+  PROVE_TAC [v_posns_injective]);
 
 val no_var_posns_in_var_posn_prefix = store_thm(
   "no_var_posns_in_var_posn_prefix",
