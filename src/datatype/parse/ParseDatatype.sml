@@ -21,12 +21,9 @@ struct
 
  type tyname   = string
 
- open HolKernel Abbrev optmonad monadic_parse fragstr;
- infix >> >- >-> ++
+val ERR = Feedback.mk_HOL_ERR "ParseDatatype";
 
-val ERR = mk_HOL_ERR "ParseDatatype";
-
-
+    open Abbrev
 datatype pretype
    = dVartype of string
    | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
@@ -53,15 +50,37 @@ fun pretypeToType pty =
     end
   | dAQ pty => pty
 
-fun ident0 s = let
-  open HOLtokens
-  infix OR
+val bads = CharSet.addString(CharSet.empty, "()$\"")
+
+fun ident_munge qb s = let
+  val s0 = String.sub(s, 0)
 in
-  (itemP Char.isAlpha >-                         (fn char1 =>
-   many_charP (Char.isAlphaNum OR ITEMS "_'") >- (fn rest =>
-   return (str char1 ^ rest)))) s
+  if Char.isAlpha s0 then
+    if s <> "of" then (qbuf.advance qb; s)
+    else raise ERR "ident" "Expected an identifier, got (reserved word) \"of\""
+  else let
+      val s_chars = CharSet.addString(CharSet.empty, s)
+      val overlap = CharSet.intersect(bads, s_chars)
+    in
+      if CharSet.isEmpty overlap then (qbuf.advance qb; s)
+      else raise ERR "ident" (s ^ " not a valid constructor/field/type name")
+    end
 end
-fun ident s = token ident0 s
+
+fun ident qb =
+    case qbuf.current qb of
+      base_tokens.BT_Ident s => ident_munge qb s
+    | bt => raise ERR "ident" ("Expected an identifier, got "^
+                               base_tokens.toString bt)
+
+fun scan s qb =
+    case qbuf.current qb of
+      base_tokens.BT_Ident s' => if s <> s' then
+                                   raise ERR "scan"
+                                         ("Wanted \""^s^"\"; got \""^s'^"\"")
+                                 else qbuf.advance qb
+    | x => raise ERR "scan" ("Wanted \""^s^"\"; got \""^
+                             base_tokens.toString x^"\"")
 
 fun qtyop {Tyop, Thy, Args} = dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
 fun tyop (s, args) = dTyop {Tyop = s, Thy = NONE, Args = args}
@@ -71,35 +90,58 @@ fun parse_type strm =
                          antiq = dAQ} true
   (Parse.type_grammar()) strm
 
-fun parse_constructor_id s =
-  (token (many1_charP (fn c => Lexis.in_class (Lexis.hol_symbols, Char.ord c)))
-   ++
-   ident) s
+val parse_constructor_id = ident
 
-val parse_record_fld =
-  ident >-
-  (fn fldname => symbol ":" >>
-   parse_type >-
-   (fn pty => return (fldname, pty)))
+fun parse_record_fld qb = let
+  val fldname = ident qb
+  val () = scan ":" qb
+in
+  (fldname, parse_type qb)
+end
 
-val parse_record_defn =
-  (symbol "<|" >> sepby1 (symbol ";") parse_record_fld >-> symbol "|>")
+fun sepby1 sepsym p qb = let
+  val i1 = p qb
+  fun recurse acc =
+      case Lib.total (scan sepsym) qb of
+        NONE => List.rev acc
+      | SOME () => recurse (p qb :: acc)
+in
+  recurse [i1]
+end
 
-val parse_phrase =
-  parse_constructor_id >-                            (fn constr_id =>
-  optional (symbol "of" >> sepby1 (symbol "=>") parse_type) >- (fn optargs =>
-  case optargs of
-    NONE => return (constr_id, [])
-  | SOME args => return (constr_id, args)))
 
-val parse_form =
-  (parse_record_defn >- return o Record) ++
-  (sepby1 (symbol "|") parse_phrase >-  return o Constructors)
+fun parse_record_defn qb = let
+  val () = scan "<|" qb
+  val result = sepby1 ";" parse_record_fld qb
+  val () = scan "|>" qb
+in
+  result
+end
 
-val parse_G =
-  ident >-                                           (fn tyname =>
-  symbol "=" >> parse_form >-                        (fn form =>
-  return (tyname, form)))
+fun parse_phrase qb = let
+  val constr_id = parse_constructor_id qb
+in
+  case qbuf.current qb of
+    base_tokens.BT_Ident "of" => let
+      val _ = qbuf.advance qb
+      val optargs = sepby1 "=>" parse_type qb
+    in
+      (constr_id, optargs)
+    end
+  | _ => (constr_id, [])
+end
+
+fun parse_form qb =
+    case qbuf.current qb of
+      base_tokens.BT_Ident "<|" => Record (parse_record_defn qb)
+    | _ => Constructors (sepby1 "|" parse_phrase qb)
+
+fun parse_G qb = let
+  val tyname = ident qb
+  val () = scan "=" qb
+in
+  (tyname, parse_form qb)
+end
 
 fun fragtoString (QUOTE s) = s
   | fragtoString (ANTIQUOTE _) = " ^... "
@@ -107,11 +149,15 @@ fun fragtoString (QUOTE s) = s
 fun quotetoString [] = ""
   | quotetoString (x::xs) = fragtoString x ^ quotetoString xs
 
-fun parse strm =
-  case fragstr.parse (sepby1 (symbol ";") parse_G) strm
-   of (strm, SOME result) => result
-    | (strm, NONE) => raise ERR "parse"
-          ("Parse failed with input remaining: "^quotetoString strm)
+fun parse q = let
+  val strm = qbuf.new_buffer q
+  val result = sepby1 ";" parse_G strm
+in
+  case qbuf.current strm of
+    base_tokens.BT_EOI => result
+  | _ => raise ERR "parse"
+                   ("Parse failed with "^qbuf.toString strm^"\nremaining")
+end
 
 
 (*---------------------------------------------------------------------------
