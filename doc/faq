@@ -1,0 +1,22 @@
+How to rewrite with a theorem the other way round?
+  -- Use GSYM
+
+What's with all this "cut looping" stuff?
+  -- It's the simplifier, and it's turned off in Taupo releases
+     onwards unless you set the trace level to one or higher.
+
+How can I find out more information about a HOL_ERR <poly> exception?
+  -- If expression e is causing the grief, then write
+        (e) handle E => raise E
+     (Often the parentheses around e will not be required.)
+
+Are error messages during the build like the following a source for
+concern?
+
+> File "Term.sml", line 1328, characters 10-42:
+> !   let val {const=Const(r1,_),theory,place} = const_decl name
+> !           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> ! Warning: pattern matching is not exhaustive
+
+  -- No.
+
