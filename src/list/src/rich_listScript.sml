@@ -1973,6 +1973,20 @@ val BUTLASTN_CONS = store_thm("BUTLASTN_CONS",
     THEN REWRITE_TAC[LENGTH,NOT_SUC_LESS_EQ_0,BUTLASTN,GSYM(CONJUNCT2 SNOC)]
     THEN ASM_REWRITE_TAC[LENGTH_SNOC,LESS_EQ_MONO]);
 
+(* added by Michael Norrish, 15 Feb 2000 *)
+val BUTLAST_CONS = store_thm(
+  "BUTLAST_CONS",
+  --`(!x:'a. BUTLAST [x] = []) /\
+     (!(x:'a) y z. BUTLAST (x::y::z) = x::BUTLAST (y::z))`--,
+  REWRITE_TAC [PRE, BUTLAST_DEF, LENGTH, SEG]);
+
+(* added by Michael Norrish, 15 Feb 2000 *)
+val LAST_CONS = store_thm(
+  "LAST_CONS",
+  --`(!x:'a. LAST [x] = x) /\
+     (!(x:'a) y z. LAST (x::y::z) = LAST(y::z))`--,
+  REWRITE_TAC [LAST_DEF, PRE, LENGTH, SEG, arithmeticTheory.ONE, HD]);
+
 (*  |- !l x. BUTLASTN(LENGTH l)(CONS x l) = [x] *)
 val BUTLASTN_LENGTH_CONS = save_thm("BUTLASTN_LENGTH_CONS",
     let val thm1 =
