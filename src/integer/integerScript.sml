@@ -1778,7 +1778,7 @@ val INT_DIVISION = store_thm(
   "INT_DIVISION",
   Term`!p. ~(p = 0) ==> !q. q = q / p * p + q % p`,
   REPEAT STRIP_TAC THEN ASM_SIMP_TAC int_ss [int_mod, int_sub] THEN
-  PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_SYM, INT_ADD_ASSOC, int_sub]);
+  PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM, INT_ADD_ASSOC, int_sub]);
 
 val INT_MOD = store_thm(
   "INT_MOD",
@@ -1954,7 +1954,7 @@ val INT_DIV_UNIQUE = store_thm(
         POP_ASSUM SUBST_ALL_TAC THEN
         FULL_SIMP_TAC int_ss [GSYM INT_NEG_LMUL, INT_MUL] THEN
         `r = &n + &(u * m)` by
-             PROVE_TAC [INT_ADD_SYM, int_sub, INT_EQ_SUB_RADD] THEN
+             PROVE_TAC [INT_ADD_COMM, int_sub, INT_EQ_SUB_RADD] THEN
         POP_ASSUM SUBST_ALL_TAC THEN
         FULL_SIMP_TAC int_ss [INT_ABS_NUM, INT_ADD, INT_LT, INT_NEG_GE0,
                               INT_LE] THEN
@@ -1998,7 +1998,7 @@ val INT_DIV_UNIQUE = store_thm(
         RULE_ASSUM_TAC (REWRITE_RULE [INT_LT, NOT_LESS,
                                       GSYM INT_NEG_RMUL, INT_ABS_NUM,
                                       INT_ABS_NEG, INT_MUL, INT_LE]) THEN
-        `r = &n + &(u * m)` by PROVE_TAC [INT_ADD_SYM, int_sub,
+        `r = &n + &(u * m)` by PROVE_TAC [INT_ADD_COMM, int_sub,
                                           INT_EQ_SUB_RADD] THEN
         POP_ASSUM SUBST_ALL_TAC THEN
         RULE_ASSUM_TAC
@@ -2048,7 +2048,7 @@ val INT_DIV_UNIQUE = store_thm(
         POP_ASSUM SUBST_ALL_TAC THEN
         RULE_ASSUM_TAC (REWRITE_RULE [INT_MUL, INT_ABS_NUM, INT_LE, INT_LT,
                                       INT_INJ, NOT_LESS_EQUAL]) THEN
-        `r = ~&n - &(u * m)` by PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_SYM] THEN
+        `r = ~&n - &(u * m)` by PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM] THEN
         POP_ASSUM (fn th =>
           `r = ~(&n + &(u * m))` by PROVE_TAC [th, int_sub, INT_NEG_ADD]) THEN
         POP_ASSUM SUBST_ALL_TAC THEN
@@ -2074,7 +2074,8 @@ val INT_DIV_UNIQUE = store_thm(
         `?v. r = &v` by PROVE_TAC [INT_NOT_LE, INT_LE_LT,
                                    NUM_POSINT_EXISTS] THEN
         POP_ASSUM SUBST_ALL_TAC THEN
-        `~&(u * m) = ~&n - &v` by PROVE_TAC [INT_ADD_SYM, INT_EQ_SUB_LADD] THEN
+        `~&(u * m) = ~&n - &v` by
+          PROVE_TAC [INT_ADD_COMM, INT_EQ_SUB_LADD] THEN
         POP_ASSUM (fn th =>
           `&(u * m) = &n + &v` by PROVE_TAC [th, int_sub, INT_NEG_ADD,
                                              INT_EQ_NEG]) THEN
@@ -2105,7 +2106,7 @@ val INT_DIV_UNIQUE = store_thm(
         RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_GE0, INT_LE, INT_NEG_MUL2,
                                       NOT_LESS_EQUAL, INT_MUL,
                                       INT_ABS_NUM]) THEN
-        `r = ~&n - &(u * m)` by PROVE_TAC [INT_ADD_SYM, INT_EQ_SUB_LADD] THEN
+        `r = ~&n - &(u * m)` by PROVE_TAC [INT_ADD_COMM, INT_EQ_SUB_LADD] THEN
         POP_ASSUM (fn th =>
           `r = ~(&n + &(u * m))` by PROVE_TAC [th, int_sub, INT_NEG_ADD]) THEN
         POP_ASSUM SUBST_ALL_TAC THEN
@@ -2128,7 +2129,7 @@ val INT_DIV_UNIQUE = store_thm(
                                    NUM_POSINT_EXISTS] THEN
         POP_ASSUM SUBST_ALL_TAC THEN
         `&v + &n = &(u * m)` by PROVE_TAC [INT_SUB_NEG2, INT_EQ_SUB_LADD,
-                                           INT_ADD_SYM] THEN
+                                           INT_ADD_COMM] THEN
         RULE_ASSUM_TAC (REWRITE_RULE [INT_ADD, INT_INJ, INT_LE,
                                       NOT_LESS_EQUAL]) THEN
         ASM_SIMP_TAC int_ss [],
@@ -2155,7 +2156,7 @@ val INT_MOD_UNIQUE = store_thm(
   ] THEN POP_ASSUM (fn th => SIMP_TAC int_ss [th] THEN ASSUME_TAC th) THEN
   `p / q = k` by PROVE_TAC [INT_DIV_UNIQUE] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
-  PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_SYM]);
+  PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM]);
 
 val INT_MOD_ID = store_thm(
   "INT_MOD_ID",
@@ -2454,17 +2455,27 @@ val INT_EXP_SUBTRACT_EXPONENTS = store_thm(
        THEN RW_TAC int_ss []]]);
 
 (*----------------------------------------------------------------------*)
-(* Define integer minimum                                               *)
+(* Define integer minimum and maximum                                   *)
 (*----------------------------------------------------------------------*)
 
 val INT_MIN = new_definition(
   "INT_MIN",
   Term`int_min (x:int) y = if x < y then x else y`);
 
+val INT_MAX = new_definition(
+  "INT_MAX",
+  Term`int_max (x:int) y = if x < y then y else x`);
+
 val INT_MIN_LT = store_thm(
   "INT_MIN_LT",
   Term`!x y z. x < int_min y z ==> x < y /\ x < z`,
   SIMP_TAC bool_ss [INT_MIN] THEN REPEAT GEN_TAC THEN COND_CASES_TAC THEN
+  PROVE_TAC [INT_LT_TRANS, INT_LT_TOTAL]);
+
+val INT_MAX_LT = store_thm(
+  "INT_MAX_LT",
+  Term`!x y z. int_max x y < z ==> x < z /\ y < z`,
+  SIMP_TAC bool_ss [INT_MAX] THEN REPEAT GEN_TAC THEN COND_CASES_TAC THEN
   PROVE_TAC [INT_LT_TRANS, INT_LT_TOTAL]);
 
 (*----------------------------------------------------------------------*)
