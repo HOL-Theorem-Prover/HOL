@@ -75,6 +75,11 @@ Credits
 
 Change Log
 
+     * Implemented  a  HOL  specific  finite  model,  which  knows  about
+       numbers, lists and sets.
+     * Removed multiple provers, METIS_TAC is now solely based on ordered
+       resolution.
+
   Version 1.5: 14 January 2004
 
    Subgoals proved by MESON_TAC when HOL is built .......... 2010

@@ -45,20 +45,20 @@ val GEN_METIS_TAC : parameters -> thm list -> tactic
 val limit : limit ref
 
 (* Canned parameters for common situations *)
-val FO_METIS_TAC   : thm list -> tactic           (* First-order *)
-val FOT_METIS_TAC  : thm list -> tactic           (* + types *)
-val HO_METIS_TAC   : thm list -> tactic           (* Higher-order *)
-val HOT_METIS_TAC  : thm list -> tactic           (* + types *)
-val FULL_METIS_TAC : thm list -> tactic           (* + combinator reductions *)
+val FO_METIS_TAC   : thm list -> tactic         (* First-order *)
+val FOT_METIS_TAC  : thm list -> tactic         (* + types *)
+val HO_METIS_TAC   : thm list -> tactic         (* Higher-order *)
+val HOT_METIS_TAC  : thm list -> tactic         (* + types *)
+val FULL_METIS_TAC : thm list -> tactic         (* + combinators & booleans *)
 
 (* Simple user interface to the metis prover *)
-val FO_METIS_PROVE   : thm list -> term -> thm    (* First-order *)
-val FOT_METIS_PROVE  : thm list -> term -> thm    (* + types *)
-val HO_METIS_PROVE   : thm list -> term -> thm    (* Higher-order *)
-val HOT_METIS_PROVE  : thm list -> term -> thm    (* + types *)
-val FULL_METIS_PROVE : thm list -> term -> thm    (* + combinator reductions *)
+val FO_METIS_PROVE   : thm list -> term -> thm  (* First-order *)
+val FOT_METIS_PROVE  : thm list -> term -> thm  (* + types *)
+val HO_METIS_PROVE   : thm list -> term -> thm  (* Higher-order *)
+val HOT_METIS_PROVE  : thm list -> term -> thm  (* + types *)
+val FULL_METIS_PROVE : thm list -> term -> thm  (* + combinators & booleans *)
 
-(* Uses heuristics to apply one of FO_, HO_ or FULL_. *)
+(* Uses heuristics to apply one of {FO|FOT}, {HO|HOT} or FULL. *)
 val METIS_TAC   : thm list -> tactic
 val METIS_PROVE : thm list -> term -> thm
 

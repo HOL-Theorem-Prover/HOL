@@ -94,17 +94,18 @@ val DEFAULTS = I : metisTools.parameters -> metisTools.parameters;
 val INTERFACE = metisTools.update_interface;
 val LIMIT = metisTools.update_limit o K;
 val SOLVER = metisTools.update_solver;
-val MAPPING = INTERFACE o update_mapping;
+val EQUALITY = INTERFACE (update_equality (K true));
+val COMBINATOR = INTERFACE (update_combinator (K true));
+val BOOLEAN = INTERFACE (update_boolean (K true));
+val MAPPING = INTERFACE o update_mapping_parm;
 val HIGHER_ORDER = MAPPING (folMapping.update_higher_order (K true));
 val FIRST_ORDER = MAPPING (folMapping.update_higher_order (K false));
 val TYPES = MAPPING (folMapping.update_with_types (K true));
 val NO_TYPES = MAPPING (folMapping.update_with_types (K false));
-val COMBINATOR = INTERFACE (update_combinator (K true));
-val BOOLEAN = INTERFACE (update_boolean (K true));
 val NO_PROVERS = (SOLVER o K) [];
 val RESOLUTION = (SOLVER o K) [mlibMetis.default_resolution];
-val MESON = (SOLVER o K) [mlibMetis.default_meson];
 val ORESOLUTION = (SOLVER o K) (#solver metisTools.defaults);
+val MESON = EQUALITY o (SOLVER o K) [mlibMetis.default_meson];
 
 val settings = ref DEFAULTS;
 
@@ -387,7 +388,7 @@ quit();
 *)
 
 val t = METIS_PROVE [] ``~((a : 'a) = b) /\ (!x : 'a. x = c) ==> F``;
-(* Running without types produces the following bogus proof:
+(* Running without types can produce the following bogus proof:
 [(|- F, Resolve ($ c, |- $ c, |- ~$ c)),
  (|- ~$ c, Resolve (falsity = c, |- falsity = c, |- ~(falsity = c) \/ ~$ c)),
  (|- ~(falsity = c) \/ ~$ c,
@@ -403,6 +404,11 @@ val t = METIS_PROVE [] ``~((a : 'a) = b) /\ (!x : 'a. x = c) ==> F``;
  (|- truth = c, Inst ([vg15896 |-> truth], |- vg15896 = c)),
  (|- vg15896 = c, Axiom [vg15896 = c])]
 *)
+
+(* A problem that is much easier with 'a lists than bool lists (see later) *)
+val t = METIS_PROVE [listTheory.list_CASES, listTheory.HD, listTheory.TL]
+  ``~(k = []) /\ ~(l = []) /\ (HD k = HD l) /\ (TL k = TL l) ==>
+    ((k:'a list) = l)``;
 
 (* ------------------------------------------------------------------------- *)
 val () = METIS_TEST "solving a selection of first-order HOL goals";
@@ -484,9 +490,6 @@ val t =
       (LMAP (f : 'a -> 'b) (t :'a llist) = LMAP f (LAPPEND x y')) /\
       (LMAP f t = LAPPEND (LMAP f x) (LMAP f y'))``;
 
-(* Bug check: this boolean case of extensionality wasn't covered *)
-val t = METIS_PROVE [] ``(!x. p x \/ ~q x) /\ (!x. ~p x \/ q x) ==> (p = q)``;
-
 (* Bug check: this used to be classified as a first-order problem *)
 val t = METIS_PROVE [combinTheory.I_THM] ``I T``;
 
@@ -497,7 +500,7 @@ val t =
   ``(!P. (!n. (!m. m < n ==> P m) ==> P n) ==> !n. P n) ==>
     !P. P 0 /\ (!n. P n ==> P (SUC n)) ==> !n. P n``;
 
-(* Examples from Jia Meng *)
+(* From Jia Meng *)
 val t =
   METIS_PROVE [combinTheory.K_THM]
   ``(!f. P (f a) a /\ !f. Q (f b) b) ==> ?x y. !g. P g x /\ Q g y``;
@@ -509,6 +512,26 @@ val () = METIS_TEST "higher-order goals requiring combinator reductions";
 val t =
   WITH_PARM (COMBINATOR o TYPES o HIGHER_ORDER)
   (MPROVE []) ``?f. !x. f x = x``;
+(*
+Running with no types and having some theorems about boolean operators
+around, an interesting error occurred. This was a proof found at the
+first-order level:
+
+    First negate         ~?f. !x. f x = x
+(1) and convert to CNF   !f. ~(f (x f) = x f)         (x is a skolem constant)
+(2) Now prove            ($= T) (x ($= T)) = (x ($= T))
+    and finally resolve (1) and (2) to give a contradiction.
+
+The resolution step cannot be lifted to HOL because
+
+      the type of f    is 'a   -> 'a
+  and the type of $= T is bool -> bool
+
+which cannot be unified.
+[Even though 'a is a type variable, the fact that it is present in the
+goal means that it must be treated as locally constant.]
+*)
+
 (* too expensive
 val t =
   WITH_PARM (COMBINATOR o TYPES o HIGHER_ORDER)
@@ -518,16 +541,9 @@ val t =
 val t =
   WITH_PARM (COMBINATOR o TYPES o HIGHER_ORDER)
   (MPROVE []) ``!x. S K x = I``; *)
-
-(* If we run this without types, like this:
-
-val t =
-  WITH_PARM (COMBINATOR o NO_TYPES o HIGHER_ORDER)
-  (MPROVE []) ``!x. S K x = I``;
-
-then it sometimes results in a proof that can't be lifted to HOL. The
-problem occurs due to extensionality, which is included in the
-combinator reduction theorems.
+(*
+Running without types sometimes results in a proof that can't be
+lifted to HOL. The problem occurs due to extensionality.
 
 The correct proof goes like so:
 
@@ -549,20 +565,18 @@ A (EXT_POINT A B)                                 = B (EXT_POINT A B)
 ---------------------------------------------------------------------------
 A                                                 = B
 
-This doesn't break the proof, which completes happily, but it does
+This doesn't stop the prover finding a refutation, but it does
 over-specialize the HOL types during proof translation, so one of the
 final HOL theorems becomes:
 
 |- S K x = (I : ('x -> 'y) -> ('x -> 'y))
 
-which breaks the proof, since it tries to resolve with
+This breaks proof translation, since it tries to resolve with
 
 |- ~(S K x = (I : 'a -> 'a))
 
 where the 'a is a locally constant type variable (since it appears in
 the goal).
-
-The moral is: when extensionality is kicking around, switch on types.
 *)
 
 (* too expensive
@@ -582,78 +596,26 @@ val t =
 val t =
   WITH_PARM (COMBINATOR o TYPES o HIGHER_ORDER)
   (MPROVE []) ``?p x. p x``;
-
-(* Yet another example where we need types. If we run this without types,
-
-val t =
-  WITH_PARM (COMBINATOR o NO_TYPES o HIGHER_ORDER)
-  (MPROVE []) ``?p x. p x``;
-
-then the provers simply apply the unit theorem
-
-$! (K T)
-
-which is too type-specific. *)
+(*
+Running without types might allow the provers to simply apply the unit
+theorem $! (K T) which is too type-specific.
+*)
 
 (* ------------------------------------------------------------------------- *)
 val () = METIS_TEST "higher-order goals requiring boolean theorems";
 (* ------------------------------------------------------------------------- *)
 
+(* Bug check: this boolean case of extensionality wasn't covered *)
 val t =
-  WITH_PARM (BOOLEAN o COMBINATOR o TYPES o HIGHER_ORDER)
-  (MPROVE []) ``?x. $! x``;
-(* too expensive
-val t =
-  WITH_PARM (BOOLEAN o COMBINATOR o TYPES o HIGHER_ORDER)
-  (MSOLVE 2 []) (([``x : 'a -> bool``], []), [``$! x``]);
-*)
+  WITH_PARM (BOOLEAN o TYPES o HIGHER_ORDER) (MPROVE [])
+  ``(!x. p x \/ ~q x) /\ (!x. ~p x \/ q x) ==> (p = q)``;
 
-(* With theorems about booleans, proving the following goal may result
-   in a proof that cannot be lifted to HOL.
-
-val t =
-  WITH_PARM (BOOLEAN o COMBINATOR o NO_TYPES o HIGHER_ORDER)
-  (MPROVE []) ``?f. !x. f x = x``;
-
-This is a proof found at the first-order level:
-
-    First negate         ~?f. !x. f x = x
-(1) and convert to CNF   !f. ~(f (x f) = x f)         (x is a skolem constant)
-(2) Now prove            ($= T) (x ($= T)) = (x ($= T))
-    and finally resolve (1) and (2) to give a contradiction.
-
-The resolution step cannot be lifted to HOL because
-
-      the type of f    is 'a   -> 'a
-  and the type of $= T is bool -> bool
-
-which cannot be unified.
-[Even though 'a is a type variable, the fact that it is present in the
-goal means that it must be treated as locally constant.]
-*)
-
-(* too expensive
-val t =
-  WITH_PARM (BOOLEAN o COMBINATOR o TYPES o HIGHER_ORDER)
-  (MPROVE []) ``P T /\ P F ==> !t. P t``; *)
-
-(* too expensive
-val t =
-  WITH_PARM (BOOLEAN o COMBINATOR o TYPES o HIGHER_ORDER)
-  (MPROVE []) ``!x. x \/ I (~x)``; *)
-
-(* Can't seem to solve this one at all
-val t =
-  WITH_PARM (BOOLEAN o COMBINATOR o TYPES o HIGHER_ORDER)
-  (MSOLVE 1 [])
-  (([``f : 'a -> 'a``], []), [(rhs o concl o SKICo_CONV) ``!x. f x = x``]);
-*)
-
-(* Can't seem to prove this one at all
+(* Bug check: the boolean list problem that is hard to prove *)
 val t =
   WITH_PARM (BOOLEAN o TYPES o HIGHER_ORDER)
-  (MPROVE []) ``(!x. f x) /\ (!x. x ==> p x) ==> p ($! f)``;
-*)
+  (MPROVE [listTheory.list_CASES, listTheory.HD, listTheory.TL])
+  ``~(k = []) /\ ~(l = []) /\ (HD k = HD l) /\ (TL k = TL l) ==>
+    ((k:bool list) = l)``;
 
 (* ------------------------------------------------------------------------- *)
 val () = METIS_TEST "some things that MESON can't do";

@@ -21,18 +21,18 @@ type tactic      = Abbrev.tactic
 type vars        = term list * hol_type list
   
 (* First-order parameters *)
-type Mparm = folMapping.parameters
 type parameters =
-  {equality   : bool,              (* Add equality axioms if needed *)
-   boolean    : bool,              (* Add rules for reasoning about booleans *)
-   combinator : bool,              (* Add combinator reduction rules *)
-   mapping    : Mparm}
+  {equality     : bool,     (* Add equality axioms if needed *)
+   combinator   : bool,     (* Add combinator reduction rules *)
+   boolean      : bool,     (* Add rules for reasoning about booleans *)
+   mapping_parm : folMapping.parameters}
 
-val defaults          : parameters
-val update_equality   : (bool -> bool) -> parameters -> parameters
-val update_boolean    : (bool -> bool) -> parameters -> parameters
-val update_combinator : (bool -> bool) -> parameters -> parameters
-val update_mapping    : (Mparm -> Mparm) -> parameters -> parameters
+type 'a parmupdate = ('a -> 'a) -> parameters -> parameters
+val defaults            : parameters
+val update_equality     : bool parmupdate
+val update_combinator   : bool parmupdate
+val update_boolean      : bool parmupdate
+val update_mapping_parm : folMapping.parameters parmupdate
 
 (* If recent_fol_problems is set to NONE then nothing happens (the default). *)
 (* If it is set to SOME l then every compiled FOL problem is cons'ed to l. *)

@@ -223,10 +223,10 @@ fun trap f g x =
 
 local
   val prolog_parm =
-    {equality   = false,
-     boolean    = false,
+    {equality = false,
+     boolean = false,
      combinator = false,
-     mapping    = {higher_order = false, with_types = true}};
+     mapping_parm = {higher_order = false, with_types = true}};
 in
   fun PROLOG_SOLVE ths =
     let
@@ -287,11 +287,12 @@ fun set_limit f p t g = f (inc_limit p) t g;
 (* First-order *)
 
 val fo_parm =
-  update_interface (update_mapping (K {higher_order=false, with_types=false}))
+  update_interface
+  (update_mapping_parm (K {higher_order = false, with_types = false}))
   (update_solver (K fo_solver) defaults);
 
 val fot_parm =
-  update_interface (update_mapping (update_with_types (K true))) fo_parm;
+  update_interface (update_mapping_parm (update_with_types (K true))) fo_parm;
 
 val FOT_METIS_TTAC = set_limit GEN_METIS_TTAC fot_parm;
 
@@ -301,23 +302,25 @@ fun FO_METIS_TTAC ths =
 (* Higher-order *)
 
 val ho_parm =
-  update_interface (update_mapping (K {higher_order=true, with_types=false}))
+  update_interface
+  (update_mapping_parm (K {higher_order = true, with_types = false}))
   (update_solver (K ho_solver) defaults);
 
 val hot_parm =
-  update_interface (update_mapping (update_with_types (K true))) ho_parm;
+  update_interface (update_mapping_parm (update_with_types (K true))) ho_parm;
 
 val HOT_METIS_TTAC = set_limit GEN_METIS_TTAC hot_parm;
 
 fun HO_METIS_TTAC ths =
   trap (set_limit GEN_METIS_TTAC ho_parm ths) (HOT_METIS_TTAC ths);
 
-(* Higher-order with rules for combinator reductions *)
+(* Higher-order with rules for combinator reductions and booleans *)
 
-val full_parm = update_interface (update_combinator (K true)) hot_parm;
+val full_parm =
+  (update_interface (update_combinator (K true) o update_boolean (K true)))
+  hot_parm;
 
-val FULL_METIS_TTAC =
-  set_limit GEN_METIS_TTAC full_parm (*** o map normalForms.EXT_RULE***);
+val FULL_METIS_TTAC = set_limit GEN_METIS_TTAC full_parm;
 
 (* ------------------------------------------------------------------------- *)
 (* Canned tactics.                                                           *)

@@ -47,50 +47,46 @@ end;
 (* Mapping parameters.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-type Mparm = folMapping.parameters;
-
 type parameters =
-  {equality   : bool,              (* Add equality axioms if needed *)
-   combinator : bool,              (* Add combinator reduction rules *)
-   boolean    : bool,              (* Add rules for reasoning about booleans *)
-   mapping    : Mparm};
+  {equality : bool, combinator : bool, boolean : bool,
+   mapping_parm : folMapping.parameters};
+
+type 'a parmupdate = ('a -> 'a) -> parameters -> parameters;
 
 val defaults =
-  {equality   = true,
-   combinator = false,
-   boolean    = false,
-   mapping    = folMapping.defaults};
+  {equality = false, combinator = false, boolean = false,
+   mapping_parm = folMapping.defaults};
 
 fun update_equality f (parm : parameters) : parameters =
   let
-    val {equality, boolean, combinator, mapping} = parm
+    val {equality,combinator,boolean,mapping_parm} = parm
   in
-    {equality = f equality, boolean = boolean, combinator = combinator,
-     mapping = mapping}
-  end;
-
-fun update_boolean f (parm : parameters) : parameters =
-  let
-    val {equality, boolean, combinator, mapping} = parm
-  in
-    {equality = equality, boolean = f boolean, combinator = combinator,
-     mapping = mapping}
+    {equality = f equality, combinator = combinator, boolean = boolean,
+     mapping_parm = mapping_parm}
   end;
 
 fun update_combinator f (parm : parameters) : parameters =
   let
-    val {equality, boolean, combinator, mapping} = parm
+    val {equality,combinator,boolean,mapping_parm} = parm
   in
-    {equality = equality, boolean = boolean, combinator = f combinator,
-     mapping = mapping}
+    {equality = equality, combinator = f combinator, boolean = boolean,
+     mapping_parm = mapping_parm}
   end;
 
-fun update_mapping f (parm : parameters) : parameters =
+fun update_boolean f (parm : parameters) : parameters =
   let
-    val {equality, boolean, combinator, mapping} = parm
+    val {equality,combinator,boolean,mapping_parm} = parm
   in
-    {equality = equality, boolean = boolean, combinator = combinator,
-     mapping = f mapping}
+    {equality = equality, combinator = combinator, boolean = f boolean,
+     mapping_parm = mapping_parm}
+  end;
+
+fun update_mapping_parm f (parm : parameters) : parameters =
+  let
+    val {equality,combinator,boolean,mapping_parm} = parm
+  in
+    {equality = equality, combinator = combinator, boolean = boolean,
+     mapping_parm = f mapping_parm}
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -219,7 +215,7 @@ fun add_thm vth lmap : logic_map =
     val _ = chatting 5 andalso
             chat ("adding thm:\n" ^ thm_to_string (snd vth) ^ "\n")
     val {parm, axioms, thms, hyps, consts} = lmap
-    val th = hol_thm_to_fol (#mapping parm) vth
+    val th = hol_thm_to_fol (#mapping_parm parm) vth
   in
     {parm = parm, axioms = (th, vth) :: axioms,
      thms = mlibThm.FRESH_VARS th :: thms, hyps = hyps, consts = consts}
@@ -230,7 +226,7 @@ fun add_hyp vth lmap : logic_map =
     val _ = chatting 5 andalso
             chat ("adding hyp:\n" ^ thm_to_string (snd vth) ^ "\n")
     val {parm, axioms, thms, hyps, consts} = lmap
-    val th = hol_thm_to_fol (#mapping parm) vth
+    val th = hol_thm_to_fol (#mapping_parm parm) vth
   in
     {parm = parm, axioms = (th, vth) :: axioms, thms = thms,
      hyps = mlibThm.FRESH_VARS th :: hyps, consts = consts}
@@ -309,17 +305,7 @@ val EQ_COMB = prove
    ASM_CASES_TAC ``f:'a->'b = g`` THEN
    ASM_REWRITE_TAC []);
 
-val EQ_BOOL = prove
-  (``!x y. ~x \/ ~(x = y) \/ y``,
-   REPEAT GEN_TAC THEN
-   ASM_CASES_TAC ``x:bool`` THEN
-   ASM_CASES_TAC ``y:bool`` THEN
-   ASM_REWRITE_TAC []);
-
-val EQ_EXTENSION =
-  CONV_RULE CNF_CONV EXT_POINT_DEF ::
-  (map GEN_ALL o CONJUNCTS o SPEC_ALL o CONV_RULE CNF_CONV o
-   INST_TYPE [beta |-> bool]) EXT_POINT_DEF;
+val EQ_EXTENSION = CONV_RULE CNF_CONV EXT_POINT_DEF;
 
 local
   fun break tm (res, subtms) =
@@ -380,21 +366,33 @@ in
 end;
 
 local
-  val eq_tm      = ``$= :'a->'a->bool``;
-  val eq_thms    = map mk_vthm [EQ_REFL, EQ_SYMTRANS];
-  val eq_thms_ho = map mk_vthm (EQ_COMB :: EQ_BOOL :: EQ_EXTENSION) @ eq_thms;
+  val eq_tm = ``$= :'a->'a->bool``;
+  val neq_fo = [mk_vthm EQ_REFL]
+  and xeq_fo = [mk_vthm EQ_SYMTRANS];
+  val eq_fo = neq_fo @ xeq_fo;
+
+  val neq_ho = neq_fo @ [mk_vthm EQ_EXTENSION]
+  and xeq_ho = xeq_fo @ map mk_vthm [EQ_COMB];
+  val eq_ho = neq_ho @ xeq_ho;
 in
-  fun add_equality_axioms (lmap as {parm, axioms, consts, ...}) : logic_map =
-    if not (#equality parm) then lmap else
-      C add_thms lmap
-      let
-        val atoms = flatten (map (thm_atoms o snd o snd) axioms)
-      in
-        if not (exists (equal eq_tm o fst) (rels_in_atoms atoms)) then []
-        else if #higher_order (#mapping parm) then eq_thms_ho
-        else eq_thms @ substitution_thms consts (relfuns_in_atoms atoms)
-      end
-    handle HOL_ERR _ => raise BUG "add_equality_axioms" "shouldn't fail";
+  fun add_equality_thms (lmap : logic_map) =
+    C add_thms lmap
+    let
+      val {parm,axioms,consts,...} = lmap
+      val {equality,mapping_parm,...} = parm
+      val {higher_order,...} = mapping_parm
+    in
+      if not equality then if higher_order then neq_ho else neq_fo
+      else
+        let
+          val atoms = flatten (map (thm_atoms o snd o snd) axioms)
+        in
+          if not (exists (equal eq_tm o fst) (rels_in_atoms atoms)) then []
+          else if higher_order then eq_ho
+          else eq_fo @ substitution_thms consts (relfuns_in_atoms atoms)
+        end
+    end
+    handle HOL_ERR _ => raise BUG "add_equality_thms" "shouldn't fail";
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -407,10 +405,11 @@ local
 in
   fun add_combinator_thms lmap : logic_map =
     let
-      val {parm as {combinator, mapping, ...}, ...} = lmap
+      val {parm as {combinator, mapping_parm, ...}, ...} = lmap
+      val {higher_order,...} = mapping_parm
     in
       if not combinator then lmap
-      else add_thms (if #higher_order mapping then ho_thms else fo_thms) lmap
+      else add_thms (if higher_order then ho_thms else fo_thms) lmap
     end;
 end;
 
@@ -418,116 +417,31 @@ end;
 (* Boolean theorems.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val FALSITY'     = prove (``~F``, REWRITE_TAC []);
+val FALSITY' = prove (``~F``, REWRITE_TAC []);
 
-val NOT_CLAUSES' = (map GEN_ALL o CONJUNCTS o SPEC_ALL) NOT_CLAUSES;
-val IMP_CLAUSES' = (map GEN_ALL o CONJUNCTS o SPEC_ALL) IMP_CLAUSES;
-val OR_CLAUSES'  = (map GEN_ALL o CONJUNCTS o SPEC_ALL) OR_CLAUSES;
-val AND_CLAUSES' = (map GEN_ALL o CONJUNCTS o SPEC_ALL) AND_CLAUSES;
-val EQ_CLAUSES'  = (map GEN_ALL o CONJUNCTS o SPEC_ALL) EQ_CLAUSES;
-
-val EXCLUDED_MIDDLE' = prove
-  (``!t. (t = T) \/ (t = F)``,
+val EQ_BOOL = (CONJUNCTS o prove)
+  (``(!x y. ~x \/ ~(x = y) \/ y) /\
+     (!x y. x \/ (x = y) \/ y) /\
+     (!x y. ~x \/ (x = y) \/ ~y)``,
+   REPEAT CONJ_TAC THEN
    REPEAT GEN_TAC THEN
-   ASM_CASES_TAC ``t:bool`` THEN
+   ASM_CASES_TAC ``x:bool`` THEN
+   ASM_CASES_TAC ``y:bool`` THEN
    ASM_REWRITE_TAC []);
 
-(* Could use these instead: needs experiments with a decent first-order *)
-(* to decide which is best.
-val IMPLICATION =
-  let
-    val tm = Term `p = (A ==> B)`
-  in
-    map (GENL [``A:bool``, ``B:bool``])
-    (CONJUNCTS
-     (MP
-      (SPEC ``A ==> B``
-       (GEN ``p:bool``
-        (DISCH tm
-         (CONV_RULE CNF_CONV
-          (REWRITE_RULE [SYM (ASSUME tm)] (SPEC_ALL IMP_DISJ_THM))))))
-        (REFL ``A ==> B``)))
-  end;
-
-val NEGATION = prove
-  (``!a. ~a = (a ==> F)``,
-   REWRITE_TAC [IMP_CLAUSES]);
-
-val DISJUNCTION = prove
-  (``!a b. (a \/ b) = (~a ==> b)``,
-   REWRITE_TAC [IMP_DISJ_THM]);
-
-val CONJUNCTION = prove
-  (``!a b. (a /\ b) = ~(a ==> ~b)``,
-   REWRITE_TAC [IMP_DISJ_THM, DE_MORGAN_THM]);
-*)
-
-val UNIVERSALITY = prove
-  (``!(p : 'a -> bool). $! p = (p = K T)``,
-   GEN_TAC THEN
-   (SUFF_TAC ``(!x : 'a. p x) = (p = K T)`` THEN1
-    (CONV_TAC (DEPTH_CONV ETA_CONV) THEN
-     DISCH_THEN ACCEPT_TAC)) THEN
-   EQ_TAC THENL
-   [DISCH_TAC THEN
-    MATCH_MP_TAC EQ_EXT THEN
-    GEN_TAC THEN
-    REWRITE_TAC [K_THM] THEN
-    POP_ASSUM MATCH_ACCEPT_TAC,
-    DISCH_THEN SUBST1_TAC THEN
-    REWRITE_TAC [K_THM]]);
-
-val FORALL_TRUE = prove
-  (``$! (K T : 'a -> bool)``,
-   REWRITE_TAC [UNIVERSALITY]);
-
-val FORALL_FALSE = prove
-  (``~$! (K F : 'a -> bool)``,
-   REWRITE_TAC [UNIVERSALITY] THEN
-   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
-   REWRITE_TAC [K_THM]);
-
-val EXISTENTIALITY = prove
-  (``!(p : 'a -> bool). $? p = ~(p = K F)``,
-   GEN_TAC THEN
-   (KNOW_TAC ``(p : 'a -> bool) = (\x. p x)`` THEN1
-    (CONV_TAC (DEPTH_CONV ETA_CONV) THEN
-     REFL_TAC)) THEN
-   DISCH_THEN SUBST1_TAC THEN
-   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
-   REWRITE_TAC [K_THM] THEN
-   BETA_TAC THEN
-   CONV_TAC (DEPTH_CONV NOT_FORALL_CONV) THEN
-   REWRITE_TAC []);
-
-val EXISTS_TRUE = prove
-  (``$? (K T : 'a -> bool)``,
-   REWRITE_TAC [EXISTENTIALITY] THEN
-   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
-   REWRITE_TAC [K_THM]);
-
-val EXISTS_FALSE = prove
-  (``~$? (K F : 'a -> bool)``,
-   REWRITE_TAC [EXISTENTIALITY]);
-
 local
-  val simple_bool_thms =
-    map mk_vthm
-    [TRUTH, FALSITY', FORALL_TRUE, FORALL_FALSE, EXISTS_TRUE, EXISTS_FALSE];
-
-  val gen_bool_thms =
-    simple_bool_thms @
-    map mk_vthm
-    (EXCLUDED_MIDDLE' :: UNIVERSALITY :: EXISTENTIALITY ::
-     NOT_CLAUSES' @ IMP_CLAUSES' @ OR_CLAUSES' @ AND_CLAUSES' @ EQ_CLAUSES');
+  val simple_bool = map mk_vthm [TRUTH, FALSITY'];
+  val gen_bool = simple_bool @ map mk_vthm EQ_BOOL;
 in
   fun add_boolean_thms lmap : logic_map =
+    C add_thms lmap
     let
-      val {parm as {boolean, mapping, ...}, ...} = lmap
+      val {parm,...} = lmap
+      val {boolean,mapping_parm,...} = parm
+      val {higher_order,...} = mapping_parm
     in
-      C add_thms lmap
-      (if not (#higher_order mapping) then []
-       else if boolean then gen_bool_thms else simple_bool_thms)
+      if not higher_order then []
+      else if boolean then gen_bool else simple_bool
     end;
 end;
 
@@ -556,7 +470,7 @@ fun eliminate consts =
 fun FOL_SOLVE solv lmap lim =
   let
     val {parm, axioms, thms, hyps, consts} =
-      (add_equality_axioms o add_boolean_thms o add_combinator_thms) lmap
+      (add_equality_thms o add_boolean_thms o add_combinator_thms) lmap
     val (thms, hyps) = (rev thms, rev hyps)
     val solver =
       timed_fn "solver initialization"
@@ -568,9 +482,9 @@ fun FOL_SOLVE solv lmap lim =
     let
       val q =
         if snd query = [F] then [mlibTerm.False]
-        else hol_literals_to_fol (#mapping parm) query
+        else hol_literals_to_fol (#mapping_parm parm) query
       val () = save_fol_problem (thms, hyps, q)
-      val lift = fol_thms_to_hol (#mapping parm) (C assoc axioms) query
+      val lift = fol_thms_to_hol (#mapping_parm parm) (C assoc axioms) query
       val timed_lift = timed_fn "proof translation" lift
       val timed_stream = mlibStream.map_thk (timed_fn "proof search" o exn_handler)
     in
