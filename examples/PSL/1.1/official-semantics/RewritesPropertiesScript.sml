@@ -1,8 +1,7 @@
 
 (*****************************************************************************)
 (* Correctness of the PSL 1.1 rewrites                                       *)
-(* (loosely follows hand proof from a document supplied by Dana Fisman       *)
-(* which is believed to be by John Havlicek                                  *)
+(* (guided in some places by hand proofs due to Dana Fisman)                 *)
 (* ------------------------------------------------------------------------- *)
 (*                                                                           *)
 (* Started:   Wed Feb 25, 2004                                               *)
