@@ -3296,8 +3296,6 @@ val add_rat = store_thm(
   ``x / y + u / v =
       if y = 0 then unint (x/y) + u/v
       else if v = 0 then x/y + unint (u/v)
-      else if x = 0 then u / v
-      else if u = 0 then x / y
       else if y = v then (x + u) / v
       else (x * v + u * y) / (y * v)``,
   SRW_TAC [][ui, REAL_DIV_LZERO, REAL_DIV_ADD] THEN
@@ -3307,8 +3305,6 @@ val add_ratl = store_thm(
   "add_ratl",
   ``x / y + z =
       if y = 0 then unint(x/y) + z
-      else if x = 0 then z
-      else if z = 0 then x/y
       else (x + z * y) / y``,
   SRW_TAC [][ui, REAL_DIV_LZERO] THEN
   `z = z/1` by SRW_TAC [][] THEN
@@ -3319,8 +3315,6 @@ val add_ratr = store_thm(
   "add_ratr",
   ``x + y / z =
       if z = 0 then x + unint (y/z)
-      else if x = 0 then y / z
-      else if y = 0 then x
       else (x * z + y) / z``,
   ONCE_REWRITE_TAC [REAL_ADD_COMM] THEN
   SRW_TAC [][add_ratl, REAL_DIV_LZERO]);
@@ -3341,7 +3335,6 @@ val mult_rat = store_thm(
   ``(x / y) * (u / v) =
        if y = 0 then unint (x/y) * (u/v)
        else if v = 0 then (x/y) * unint(u/v)
-       else if (x = 0) \/ (u = 0) then 0
        else (x * u) / (y * v)``,
   SRW_TAC [][ui, REAL_DIV_LZERO] THEN
   SRW_TAC [][REAL_DIV_LZERO] THEN
@@ -3355,9 +3348,7 @@ val mult_rat = store_thm(
 
 val mult_ratl = store_thm(
   "mult_ratl",
-  ``(x / y) * z = if z = 0 then 0
-                  else if y = 0 then unint (x/y) * z
-                  else if x = 0 then 0 else (x * z) / y``,
+  ``(x / y) * z = if y = 0 then unint (x/y) * z else (x * z) / y``,
   SRW_TAC [][ui] THEN
   SRW_TAC [][REAL_DIV_LZERO] THEN
   `z = z / 1` by SRW_TAC [][] THEN
@@ -3366,9 +3357,7 @@ val mult_ratl = store_thm(
 
 val mult_ratr = store_thm(
   "mult_ratr",
-  ``x * (y/z) = if x = 0 then 0
-                else if z = 0 then x * unint (y/z)
-                else if y = 0 then 0 else (x * y) / z``,
+  ``x * (y/z) = if z = 0 then x * unint (y/z) else (x * y) / z``,
   CONV_TAC (LAND_CONV (REWR_CONV REAL_MUL_COMM)) THEN
   SRW_TAC [][mult_ratl] THEN SRW_TAC [][ui, REAL_MUL_COMM]);
 
@@ -3386,6 +3375,65 @@ val neg_rat = store_thm(
     (x / ~y   = if y = 0 then unint(x/y) else ~x/y)``,
   SRW_TAC [][ui] THEN
   SRW_TAC [][real_div, GSYM REAL_NEG_INV, REAL_MUL_LNEG, REAL_MUL_RNEG]);
+
+val eq_rat = store_thm(
+  "eq_rat",
+  ``(x / y = u / v) = if y = 0 then unint (x/y) = u / v
+                      else if v = 0 then x / y = unint (u/v)
+                      else if y = v then x = u
+                      else x * v = y * u``,
+  SRW_TAC [][ui] THENL [
+    METIS_TAC [REAL_DIV_LMUL, REAL_EQ_LMUL],
+    `~(y * v = 0)` by SRW_TAC [][REAL_ENTIRE] THEN
+    `(x/y = u/v) = ((y * v) * (x/y) = (y * v) * (u/v))`
+       by METIS_TAC [REAL_EQ_LMUL2] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    `((y * v) * (x/y) = v * (y * (x/y))) /\
+     ((y * v) * (u/v) = y * (v * (u/v)))`
+       by (CONJ_TAC THEN
+           CONV_TAC (AC_CONV(REAL_MUL_ASSOC, REAL_MUL_COMM))) THEN
+    ASM_REWRITE_TAC [] THEN SRW_TAC [][REAL_DIV_LMUL] THEN
+    SRW_TAC [][REAL_MUL_COMM]
+  ]);
+
+val eq_ratl = store_thm(
+  "eq_ratl",
+  ``(x/y = z) = if y = 0 then unint(x/y) = z else x = y * z``,
+  SRW_TAC [][ui] THEN METIS_TAC [REAL_DIV_LMUL, REAL_EQ_LMUL]);
+
+val eq_ratr = store_thm(
+  "eq_ratr",
+  ``(z = x/y) = if y = 0 then z = unint(x/y) else y * z = x``,
+  METIS_TAC [eq_ratl]);
+
+val eq_ints = store_thm(
+  "eq_ints",
+  ``((&n = &m) = (n = m)) /\
+    ((~&n = &m) = (n = 0) /\ (m = 0)) /\
+    ((&n = ~&m) = (n = 0) /\ (m = 0)) /\
+    ((~&n = ~&m) = (n = m))``,
+  REWRITE_TAC [REAL_INJ, REAL_EQ_NEG] THEN
+  Q_TAC SUFF_TAC `!n m. (&n = ~&m) = (n = 0) /\ (m = 0)` THEN1
+      METIS_TAC [] THEN
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+    STRIP_TAC THEN
+    `&n <= ~&m` by METIS_TAC [REAL_LE_ANTISYM] THEN
+    `0 <= ~&m` by METIS_TAC [REAL_LE_TRANS, REAL_LE,
+                             arithmeticTheory.ZERO_LESS_EQ] THEN
+    `m <= 0` by METIS_TAC [REAL_LE, REAL_NEG_GE0] THEN
+    `m = 0` by SRW_TAC [numSimps.ARITH_ss][] THEN
+    FULL_SIMP_TAC (srw_ss()) [],
+    SRW_TAC [][]
+  ]);
+
+
+(*val div_rat = store_thm(
+  "div_rat",
+  ``(x/y) / (u/v) =
+      if (u = 0) \/ (v = 0) then (x/y) / unint (u/v)
+      else if y = 0 then unint(x/y) / (u/v)
+      else (x * v) / (y * u)``,
+  SRW_TAC [][ui] *)
 
 val _ = export_theory();
 

@@ -84,25 +84,40 @@ val real_ac_ss = simpLib.++ (real_ss, real_ac_SS);
    but this seems over the top.
 *)
 
+val num_eq_0 = prove(
+  ``~(NUMERAL (NUMERAL_BIT1 n) = 0) /\ ~(NUMERAL (NUMERAL_BIT2 n) = 0)``,
+  REWRITE_TAC [numeralTheory.numeral_distrib, numeralTheory.numeral_eq]);
+
+fun two_nats  rv nv th = let
+  open realSyntax numSyntax
+  val nb1_t = mk_injected (mk_comb(numeral_tm, mk_comb(numeral_bit1, nv)))
+  val nb2_t = mk_injected (mk_comb(numeral_tm, mk_comb(numeral_bit2, nv)))
+in
+  [INST [rv |-> nb1_t] th, INST [rv |-> nb2_t] th]
+end
+
+fun posnegonly rv nv th = let
+  open realSyntax
+  val injected = mk_injected nv
+in
+  [INST [rv |-> injected] th, INST [rv |-> mk_negated injected] th]
+end
+
+
 fun transform vs th = let
-  val simp = REWRITE_RULE [REAL_INJ]
+  val simp = REWRITE_RULE [REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0]
   open realSyntax
   val nvs = map (fn (t,_) => mk_var(#1 (dest_var t), numSyntax.num)) vs
+
   fun recurse vs nvs th =
       if null vs then [th]
       else let
           val (v,split) = hd vs
           val nv = hd nvs
-          val nv_injected = mk_injected nv
-          val pos = simp (INST[v |-> nv_injected] th)
+          val f = if split then posnegonly else two_nats
+          val newths = map simp (f v nv th)
         in
-          if split then let
-              val neg = simp (INST[v |-> mk_negated nv_injected] th)
-            in
-              recurse (tl vs) (tl nvs) pos @ recurse (tl vs) (tl nvs) neg
-            end
-          else
-            recurse (tl vs) (tl nvs) pos
+          List.concat (map (recurse (tl vs) (tl nvs)) newths)
         end
 in
   recurse vs nvs th
@@ -123,10 +138,26 @@ val mult_rats =
 val mult_ratls = transform [(x, true), (y, false), (z, true)] mult_ratl
 val mult_ratrs = transform [(x, true), (y, true), (z, false)] mult_ratr
 
-val neg_th = hd (transform [(y, false)] neg_rat)
+val neg_ths = transform [(y, false)] neg_rat
 
-val rwts = [mult_ints, add_ints, neg_th] @ add_rats @ add_ratls @ add_ratrs @
-           mult_rats @ mult_ratls @ mult_ratrs
+val sub1 = SPECL [realSyntax.mk_div(x,y), realSyntax.mk_div(u,v)] real_sub
+val sub1 = transform [(x, true), (y, false), (u, true), (v, false)] sub1
+val sub2 = SPECL [x, realSyntax.mk_div(u,v)] real_sub
+val sub2 = transform [(x, true), (u, true), (v, false)] sub2
+val sub3 = SPECL [realSyntax.mk_div(x,y), z] real_sub
+val sub3 = transform [(x, true), (y, false), (z, true)] sub3
+val sub4 = transform [(x, true), (y, true)] (SPEC_ALL real_sub)
+
+val eq_rats = transform [(x, true), (y, false), (u, true), (v, false)] eq_rat
+val eq_ratls = transform [(x, true), (y, false), (z, true)] eq_ratl
+
+val rwts = [mult_ints, add_ints, eq_ints, REAL_DIV_LZERO] @ neg_ths @
+           add_rats @ add_ratls @ add_ratrs @
+           mult_rats @ mult_ratls @ mult_ratrs @
+           sub1 @ sub2 @ sub3 @ sub4 @
+           eq_rats @ eq_ratls
+
+
 
 
 
