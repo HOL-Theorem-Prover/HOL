@@ -9,6 +9,7 @@
 (* Revision history:                                                         *)
 (*                                                                           *)
 (*   Thu Oct  4 15:45:52 BST 2001 -- created file                            *)
+(*   Thu Nov 15 17:07:37 GMT 2001 -- added unifyVarmap                       *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -96,6 +97,20 @@ fun extends (vm1:varmap) (vm2:varmap) =
                                        | NONE   => false))
           true
           vm1;
+
+
+(*****************************************************************************)
+(* Compute smallest varmap vm such that extends vm1 vm and extends vm2 vm.   *)
+(* Raises unifyVarmapError if vm1 and vm2 are incompatible.                  *)
+(*****************************************************************************)
+
+exception unifyVarmapError;
+
+val unify =
+ Binarymap.foldl
+  (fn (v,n,vm) => case Binarymap.peek(vm:varmap, v) of
+                     SOME n' => if n=n' then vm else raise unifyVarmapError
+                   | NONE    => Binarymap.insert(vm,v,n));
 
 (*****************************************************************************)
 (* remove s vm removes entry for string s from vm                            *)

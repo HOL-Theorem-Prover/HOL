@@ -426,13 +426,13 @@ fun BddRestrict tbl tb =
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (                print "unequal varmaps\n";
-                                  raise BddListComposeError) else
+                                  raise BddRestrictError) else
            if not(is_var v)
             then (print_term v  ; print " should be a variable\n";
-                                  raise BddListComposeError) else
+                                  raise BddRestrictError) else
            if mem v l
             then (print_term v  ; print" repeated\n";
-                                  raise BddListComposeError) 
+                                  raise BddRestrictError) 
             else (HOLset.union(ass,HOLset.union(ass1,ass2)),
                   (v :: l, c :: l'),
                   ((bdd.var b, mlval c)::restrictl)))

@@ -1171,15 +1171,17 @@ The following operations and predicates on varmaps are provided:
    eq      : varmap * varmap -> bool
    size    : varmap -> int
    extends : varmap -> varmap -> bool
+   unify   : varmap -> varmap -> varmap
 \end{verbatim}%
 \bnind{Varmap.empty}%
 \bnind{Varmap.insert}%
 \bnind{Varmap.remove}%
 \bnind{Varmap.peek}%
 \bnind{Varmap.dest}%
-\bnind{Varmap.eq}
+\bnind{Varmap.eq}%
 \bnind{Varmap.size}%
 \bnind{Varmap.extends}%
+\bnind{Varmap.unify}%
 
 
 with the semantics
@@ -1195,6 +1197,7 @@ with the semantics
 \t{Varmap.eq} &       pointer equality of varmaps ({\it not} general equality) \\ \hline
 \t{Varmap.size} &     number of entries \\ \hline
 \t{Varmap.extends} &  test if first argument included in second argument\\ \hline
+\t{Varmap.unify} &  compute smallest varmap that extends both arguments\\ \hline
 \end{tabular}
 
 \section{The structure \ml{PrintBdd}}\label{PrintBdd}

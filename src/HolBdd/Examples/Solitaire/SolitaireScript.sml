@@ -208,7 +208,7 @@ val SolitaireTrace =
 
 
 val Solution = 
- TraceBack 
+ traceBack 
   solitaire_varmap 
   SolitaireTrace 
   SolitaireFinish_def 
@@ -293,7 +293,7 @@ fun PrintState tm =
 
 
 (*****************************************************************************)
-(* Print out a trace as found by TraceBack                                   *)
+(* Print out a trace as found by traceBack                                   *)
 (*****************************************************************************)
 
 fun PrintTrace tr =

@@ -200,7 +200,7 @@ val HexSolitairePrevThm =
 *)
 
 val HexSolution = 
- TraceBack 
+ traceBack 
   hexsolitaire_varmap 
   HexSolitaireTrace 
   HexSolitaireFinish_def 
@@ -236,7 +236,7 @@ fun PrintState tm =
  end;
 
 (*****************************************************************************)
-(* Print out a trace as found by TraceBack                                   *)
+(* Print out a trace as found by traceBack                                   *)
 (*****************************************************************************)
 
 fun PrintTrace tr =

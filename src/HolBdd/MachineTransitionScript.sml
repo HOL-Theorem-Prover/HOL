@@ -833,7 +833,7 @@ val FinPathChoosePath =
                    ``\m. if m <= n then (f:num->'a) m else ChoosePath R (f n) m``,
                    ``n:num``]FinPathLemma));
 
-(* Next proof got messy when ported to KAnanaskis. Should be cleaned up. *)
+(* Next proof got messy when ported to Kananaskis. Should be cleaned up. *)
 
 val FinPathPathExists =
  store_thm
@@ -938,14 +938,6 @@ val TotalImpTotalise =
     THEN IMP_RES_TAC TotalImpTotaliseLemma
     THEN RW_TAC std_ss []);
 
-(*
-val TotalImpTotalise =
- save_thm
-  ("TotalImpTotalise",
-   DISCH_ALL
-    (PEXT(PGEN ``((s:'a),(s':'a))`` (GSYM(SPEC_ALL(UNDISCH TotalImpTotaliseLemma))))));
-*)
-
 val TotaliseReachBy =
  store_thm
   ("TotaliseReachBy",
@@ -1005,18 +997,6 @@ val MooreTransEq =
     THEN CONV_TAC(DEPTH_CONV PAIRED_BETA_CONV)
     THEN RW_TAC std_ss [MooreTrans_def]);
     
-
-(*
-val MooreTransEq =
- save_thm
-  ("MooreTransEq",
-   CONV_RULE
-    (DEPTH_CONV PETA_CONV)
-    (PABS
-     ``((input:'a,state:'b),input':'a,state':'b)``
-     (SPEC_ALL MooreTrans_def)));
-*)
-
 val MoorePath =
  store_thm
   ("MoorePath",
@@ -1192,7 +1172,5 @@ val MooreReachableCor1 =
       =
       (!s. Reachable (\((i,s),(i',s')). s' = nextfn(i,s)) B s ==> P s)``,
    RW_TAC std_ss [GSYM MooreReachable,GSYM Moore_def,GSYM MooreTransEq]);
-
-
 
 val _ = export_theory();

@@ -656,34 +656,36 @@ val trl = computeTrace report vm pth (th0,thsuc);
 (*                                                                           *)
 (* computes a list of pairs of the form (with j = 0,1,...,i-1)               *)
 (*                                                                           *)
-(* ((vm ``ReachIn R B j s_vec /\ Prev R (Eq c_vec) (v1,...,vn)`` |--> bdd),  *)
-(*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
+(* ((vm ``ReachIn R B j s_vec /\ Prev R (Eq c_vec) s_vec`` |--> bdd),        *)
+(*  [((vm v1 |--> bj1),(vm cj1 |--> bj1')),                                  *)
 (*                   .                                                       *)
 (*                   .                                                       *)
 (*                   .                 ,                                     *)
-(*   ((vm vn |--> bn),(vm cn |--> bn'))])                                    *)
+(*   ((vm vn |--> bjn),(vm cjn |--> bjn'))])                                 *)
 (*                                                                           *)
-(*  where s_vec = (v1,...,vn) and c_vec = (c1,...,cn) where ci is T or F     *)
+(*  where s_vec = (v1,...,vn) and c_vec = (c(j+1)1,...,c(i+1)n)              *)
 (*                                                                           *)
-(* where the second element specifies a state satisfying the first element   *)
-(* and in which state variable vj has value cj (0 <= j <= n).                *)
+(* where ci is T or F and the second element specifies a state satisfying    *)
+(* the first element and in which state variable vj has value cj             *)
+(* (where 0 <= j <= n).                                                      *)
 (*                                                                           *)
 (* The last element of the list has the form                                 *)
 (* (({} vm ``ReachIn R B j s_vec /\ p(v1,...,vn)`` |--> bdd),                *)
-(*  [(({} vm v1 |--> b1),{} vm c1 |--> b1')),                                *)
+(*  [(({} vm v1 |--> bi1),{} vm ci1 |--> bi1')),                             *)
 (*                      .                                                    *)
 (*                      .                                                    *)
 (*                      .                   ,                                *)
-(*   (({} vm vn |--> bn),({} vm cn |--> bn'))])                              *)
+(*   (({} vm vn |--> bin),({} vm cin |--> bin'))])                           *)
 (*                                                                           *)
 (* If [s0,...,si] is the sequence of states, then                            *)
-(* R(s0,s1), R(s1,s2),...,R(s(i-1),sj) and sj satisfies bj (1 <= j <= i)     *)
-(* and p si                                                                  *)
+(* R(s0,s1), R(s1,s2),...,R(s(i-1),si) and for j such that  1 <= j <= i      *)
+(* sj satisfies bj and p si                                                  *)
 (*****************************************************************************)
 
 val traceBackPrevThm = ref TRUTH;
 
-fun traceBack vm trl pth Rth =
+(* Code that follows is gross -- varmap handling needs rethinking *)
+fun traceBack vm trl pth Rth =  
  let val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
      val (s,s') = pairSyntax.dest_pair s_s'
      val _ = print "Computing simplified backward image theorem ...\n"
@@ -694,16 +696,15 @@ fun traceBack vm trl pth Rth =
         [pairTheory.EXISTS_PROD,MachineTransitionTheory.Eq_def,pairTheory.PAIR_EQ,Rth])
        (ISPECL[Rcon,``Eq ^s'``,s]MachineTransitionTheory.Prev_def)
      val _ = (traceBackPrevThm := PrevTh)
-     val vm' = extendVarmap (filter (fn v => type_of v = bool) (all_vars(concl PrevTh))) vm
+     val vl = filter (fn v => type_of v = bool) (all_vars(concl PrevTh))
+     val prime_var = mk_var o (prime ## I) o dest_var
+     val vm' = extendVarmap (vl @ List.map prime_var vl) vm
      val trl' = map (BddExtendVarmap vm') trl
      val ptb = eqToTermBdd (fn tm => raise computeFixedpointError) vm' pth
      val PrevThTb = eqToTermBdd failfn vm' PrevTh
      val _ = print "done.\nSimplified theorem is !traceBackPrevThm\n";
      val lasttb = BddOp(And, hd trl', ptb)
-     val prime_ass =
-      map 
-       (fn (tb,tb')=>
-         (BddVar true vm' ((mk_var o (prime ## I) o dest_var o getTerm) tb), tb'))
+     val prime_ass = List.map (fn (tb,tb') => (BddVar true vm' (prime_var(getTerm tb)), tb'))
      fun stepback(tb, ass) =
       let val tb' = BddOp(And, tb, BddRestrict (prime_ass ass) PrevThTb)
       in
@@ -722,3 +723,4 @@ end;
 
 
 end;
+
