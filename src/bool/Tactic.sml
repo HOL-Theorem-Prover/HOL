@@ -239,7 +239,7 @@ fun X_GEN_TAC x1 : tactic = fn (asl,w) =>
 
 val GEN_TAC:tactic = fn (asl,w) =>
    let val (Bvar,_) = with_exn dest_forall w (ERR "GEN_TAC" "not a forall")
-   in X_GEN_TAC (variant (free_varsl (w::asl)) Bvar) (asl,w)
+   in X_GEN_TAC (prim_variant (free_varsl (w::asl)) Bvar) (asl,w)
    end;
 
 

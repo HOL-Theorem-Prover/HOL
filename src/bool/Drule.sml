@@ -889,9 +889,8 @@ fun CONJ_LIST 1 th = [th]
  * Flattens out all conjuncts, regardless of grouping
  *---------------------------------------------------------------------------*)
 
-fun CONJUNCTS th =
- (CONJUNCTS (CONJUNCT1 th) @ CONJUNCTS(CONJUNCT2 th))
-  handle HOL_ERR _ => [th];
+fun CONJUNCTS th = (CONJUNCTS (CONJUNCT1 th) @ 
+                    CONJUNCTS(CONJUNCT2 th)) handle HOL_ERR _ => [th];
 
 (*---------------------------------------------------------------------------
  * "|- !x. (t1 /\ ...) /\ ... (!y. ... /\ tn)"
@@ -902,7 +901,7 @@ fun CONJUNCTS th =
 
 fun BODY_CONJUNCTS th =
    if is_forall (concl th)
-   then  BODY_CONJUNCTS (SPEC_ALL th)
+   then BODY_CONJUNCTS (SPEC_ALL th)
    else if is_conj (concl th)
         then (BODY_CONJUNCTS (CONJUNCT1 th) @ BODY_CONJUNCTS (CONJUNCT2 th))
         else [th];
