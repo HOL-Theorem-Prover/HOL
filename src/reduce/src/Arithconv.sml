@@ -168,9 +168,14 @@ fun SUC_CONV tm =
 (* PRE_CONV "PRE [n]" = |- PRE [n] = [n-1]                               *)
 (*-----------------------------------------------------------------------*)
 
+val save_zero = prove(Term`NUMERAL ALT_ZERO = 0`,
+                      REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
+                                   arithmeticTheory.ALT_ZERO]);
+
 fun PRE_CONV tm =
   case (dest_op preop tm) of
-    [xn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_pre]) tm
+    [xn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_pre,
+                                     save_zero]) tm
              handle HOL_ERR _ => failwith "PRE_CONV")
   | _ => failwith "PRE_CONV"
 

@@ -197,11 +197,13 @@ fun completeInduct_on qtm g =
  ---------------------------------------------------------------------------*)
 
 local open WFTheory primWFTheory
-      val ind_thm0 = GEN (Term `m:'a -> num`)
+      val mvar = mk_var{Name="m", Ty=Type`:'a -> num`}
+      val measure_m = mk_comb{Rator= #const(const_decl"measure"),Rand=mvar}
+      val ind_thm0 = GEN mvar
           (BETA_RULE
-             (REWRITE_RULE[WF_measure,measure_def,inv_image_def] 
-                 (MATCH_MP (SPEC (Term`measure m`) WF_INDUCTION_THM)
-                           (SPEC_ALL WF_measure))))
+             (REWRITE_RULE[WF_measure,measure_def,inv_image_def]
+                 (MATCH_MP (SPEC measure_m WF_INDUCTION_THM)
+                         (SPEC_ALL WF_measure))))
 in
 fun measureInduct_on q g =
  let val tm = Lib.with_flag
@@ -509,9 +511,17 @@ local
      THEN Rewrite.ASM_REWRITE_TAC[boolTheory.bool_case_DEF]);
   val bool_size_info = (Term`bool_case 0 0`, bool_case_rw)
   val bool_info' = TypeBase.put_size bool_size_info bool_info
+
+  val option_info = Option.valOf(TypeBase.read "option")
+  val option_size_info =
+       (Parse.Term`\f. option_case 0 (\x:'a. SUC (f x))`, 
+        optionTheory.option_case_def)
+  val option_info' = TypeBase.put_size option_size_info option_info
+
 in 
    val _ = TypeBase.write bool_info'
    val _ = TypeBase.write prod_info'
+   val _ = TypeBase.write option_info'
 end
 
 

@@ -31,9 +31,19 @@ val ADD = new_recursive_definition
    {name = "ADD",
     fixity = Infix 500,
     rec_axiom = num_Axiom,
-    def = --`($+ (NUMERAL ZERO) n = n) /\
+    def = --`($+ ZERO n = n) /\
              ($+ (SUC m) n = SUC($+ m n))`--};
 
+(*---------------------------------------------------------------------------*
+ * Define NUMERAL, a tag put on numeric literals, and the basic constructors *
+ * of the "numeral type".                                                    *
+ *---------------------------------------------------------------------------*)
+
+val NUMERAL_DEF = new_definition("NUMERAL_DEF", --`NUMERAL (x:num) = x`--);
+
+val ALT_ZERO = new_definition(
+  "ALT_ZERO",
+  --`ALT_ZERO = ZERO`--);
 val NUMERAL_BIT1 =
   new_definition("NUMERAL_BIT1",
                  --`NUMERAL_BIT1 n = n + n + SUC ZERO`--);
@@ -94,11 +104,8 @@ val num_case_def = new_recursive_definition
    {name = "num_case_def",
     fixity = Prefix,
     rec_axiom = num_Axiom,
-    def = --`(num_case b f (NUMERAL ZERO) = (b:'a)) /\
+    def = --`(num_case b f 0 = (b:'a)) /\
              (num_case b f (SUC n) = f n)`--};
-
-val num_case_def' = REWRITE_RULE [numTheory.NUMERAL_DEF] num_case_def;
-
 
 val INV_SUC_EQ    = prim_recTheory.INV_SUC_EQ
 and LESS_REFL     = prim_recTheory.LESS_REFL
@@ -121,14 +128,11 @@ and PRE           = prim_recTheory.PRE;
 val NOT_SUC     = numTheory.NOT_SUC
 and INV_SUC     = numTheory.INV_SUC
 and INDUCTION   = numTheory.INDUCTION
-and NUMERAL_DEF = numTheory.NUMERAL_DEF;
 
 val ONE = store_thm(
   "ONE",
   Term `1 = SUC 0`,
-  REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1] THEN
-  ONCE_REWRITE_TAC [SYM (SPEC (Term`ZERO`) NUMERAL_DEF)] THEN
-  REWRITE_TAC [ADD]);
+  REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1, ALT_ZERO, ADD]);
 
 
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
@@ -1277,11 +1281,9 @@ val LESS_SUB_ADD_LESS = store_thm("LESS_SUB_ADD_LESS",
      RES_TAC THEN ASM_REWRITE_TAC[]]]);
 
 val TIMES2 = store_thm("TIMES2",
- --`!n. 2 * n = n + n`--,
-   PURE_REWRITE_TAC [MULT_CLAUSES, NUMERAL_DEF, NUMERAL_BIT2] THEN
-   ONCE_REWRITE_TAC [SYM (SPEC (--`ZERO`--) NUMERAL_DEF)] THEN
-   REWRITE_TAC [ADD_CLAUSES] THEN
-   INDUCT_TAC THEN ASM_REWRITE_TAC [ADD_CLAUSES, MULT_CLAUSES]);
+   --`!n. 2 * n = n + n`--,
+   REWRITE_TAC [MULT_CLAUSES, NUMERAL_DEF, NUMERAL_BIT2, ADD_CLAUSES,
+                ALT_ZERO]);
 
 val LESS_MULT_MONO = store_thm("LESS_MULT_MONO",
  --`!m i n. ((SUC n) * m) < ((SUC n) * i) = (m < i)`--,
@@ -1981,25 +1983,75 @@ val LE = save_thm("LE",
 val num_case_cong =
   save_thm("num_case_cong", Prim_rec.case_cong_thm num_CASES num_case_def);
 
+open simpLib boolSimps
+val SUC_ELIM_THM = store_thm(
+  "SUC_ELIM_THM",
+  (--`!P. (!n. P (SUC n) n) = (!n. (0 < n ==> P n (n-1)))`--),
+  GEN_TAC THEN EQ_TAC THENL [
+      REPEAT STRIP_TAC THEN
+      FIRST_ASSUM (MP_TAC o SPEC (--`n-1`--)) THEN
+      SIMP_TAC bool_ss [SUB_LEFT_SUC, ONE, SUB_MONO_EQ, SUB_0,
+                        GSYM NOT_LESS] THEN
+      COND_CASES_TAC THENL [
+        STRIP_ASSUME_TAC (SPECL [--`n:num`--, --`SUC 0`--] LESS_LESS_CASES)
+        THENL [
+          FULL_SIMP_TAC bool_ss [],
+          IMP_RES_TAC LESS_LESS_SUC,
+          RES_TAC
+        ],
+        REWRITE_TAC []
+      ],
+      REPEAT STRIP_TAC THEN
+      FIRST_ASSUM (MP_TAC o SPEC (--`n+1`--)) THEN
+      SIMP_TAC bool_ss [GSYM ADD1, SUC_SUB1, LESS_0]
+    ]);
+
 
 val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in
-    S "val _ = TypeBase.write";             NL();
-    S "  (TypeBase.mk_tyinfo";              NL();
-    S "     {ax=prim_recTheory.num_Axiom,"; NL();
-    S "      case_def=num_case_def,";       NL();
-    S "      case_cong=num_case_cong,";     NL();
-    S "      induction=numTheory.INDUCTION,";  NL();
-    S "      nchotomy=num_CASES,";             NL();
-    S "      size=SOME(Parse.Term`\\x:num. x`, boolTheory.REFL_CLAUSE),"; NL();
-    S "      one_one=SOME prim_recTheory.INV_SUC_EQ,"; NL();
-    S "      distinct=SOME numTheory.NOT_SUC});"; NL();
-    S "val _ = Globals.assert_nums_defined();"; NL()
-  end)};
+{sig_ps = SOME (fn ppstrm =>
+                let val SNL = (fn s => (PP.add_string ppstrm s;
+                                        PP.add_newline ppstrm))
+                in
+                  SNL "val SUC_ELIM_CONV : Term.term -> thm"
+                end),
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "local";
+   S "  open HolKernel basicHol90Lib Psyntax";
+   S "  infix |->";
+   S "  val num_ty = mk_type(\"num\", [])";
+   S "  val SUC = mk_const(\"SUC\", mk_type(\"fun\", [num_ty, num_ty]))";
+   S "  fun mk_SUC t = mk_comb(SUC, t)";
+   S "  fun SEC_ERR m = HOL_ERR {message = m, ";
+   S "                           origin_function = \"SUC_ELIM_CONV\",";
+   S "                           origin_structure = \"arithmeticTheory\"}";
+   S "  fun assert f x = f x orelse raise SEC_ERR \"assertion failed\"";
+   S "in";
+   S "  fun SUC_ELIM_CONV tm =";
+   S "    let val (v,bod) = Psyntax.dest_forall tm";
+   S "        val _ = assert (fn x => type_of x = num_ty) v";
+   S "        val (sn,n) = (genvar num_ty, genvar num_ty)";
+   S "        val suck_suc = Rsyntax.subst [mk_SUC v |-> sn] bod";
+   S "        val suck_n = Rsyntax.subst [v |-> n] suck_suc";
+   S "        val _ = assert (fn x => x <> tm) suck_n";
+   S "    in BETA_RULE (ISPEC (list_mk_abs ([sn,n],suck_n)) SUC_ELIM_THM)";
+   S "    end";
+   S "end;";
+
+   S "val _ = TypeBase.write";
+   S "  (TypeBase.mk_tyinfo";
+   S "     {ax=prim_recTheory.num_Axiom,";
+   S "      case_def=num_case_def,";
+   S "      case_cong=num_case_cong,";
+   S "      induction=numTheory.INDUCTION,";
+   S "      nchotomy=num_CASES,";
+   S "      size=SOME(Parse.Term`\\x:num. x`, boolTheory.REFL_CLAUSE),";
+   S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
+   S "      distinct=SOME numTheory.NOT_SUC});";
+   S "val _ = Globals.assert_nums_defined();"
+ end)};
 
 
 val _ = export_theory();

@@ -265,9 +265,7 @@ val _ = adjoin_to_theory
     S "      case_cong=option_case_cong,"; NL();
     S "      induction=option_induction,"; NL();
     S "      nchotomy=option_nchotomy,";   NL();
-    S "      size=SOME(Parse.Term`\\f. option_case 0 (\\x:'a. SUC (f x))`,";
-    NL();
-    S "                option_case_def),"; NL();
+    S "      size=NONE,";                  NL();
     S "      one_one=SOME SOME_11,";       NL();
     S "      distinct=SOME NOT_NONE_SOME});"; NL();
     NL();

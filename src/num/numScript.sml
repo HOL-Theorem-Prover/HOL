@@ -69,13 +69,6 @@ val ZERO_DEF = new_definition("ZERO_DEF", --`ZERO = ABS_num ZERO_REP`--);
 val SUC_DEF = new_definition("SUC_DEF",
  --`SUC m = ABS_num(SUC_REP(REP_num m))`--);
 
-(*---------------------------------------------------------------------------*
- * Define NUMERAL, a tag put on numeric literals.                            *
- *---------------------------------------------------------------------------*)
-
-val NUMERAL_DEF = new_definition("NUMERAL_DEF", --`NUMERAL (x:num) = x`--);
-
-
 (*---------------------------------------------------------------------------
  * Prove that IS_NUM_REP ZERO_REP.
  *---------------------------------------------------------------------------*)
@@ -130,8 +123,8 @@ val NOT_SUC_ZERO =
 (* Proof of NOT_SUC : |- !n. ~(SUC n = ZERO)				*)
 (* ---------------------------------------------------------------------*)
 val NOT_SUC = store_thm("NOT_SUC",
-    --`!n. ~(SUC n = NUMERAL ZERO)`--,
-     PURE_REWRITE_TAC [SUC_DEF,ZERO_DEF,NUMERAL_DEF] THEN GEN_TAC THEN
+    --`!n. ~(SUC n = ZERO)`--,
+     PURE_REWRITE_TAC [SUC_DEF,ZERO_DEF] THEN GEN_TAC THEN
      MP_TAC (SPECL [--`SUC_REP(REP_num n)`--,--`ZERO_REP`--] A_11) THEN
      REWRITE_TAC [IS_NUM_REP_ZERO,IS_NUM_REP_SUC_REP] THEN
      DISCH_THEN SUBST1_TAC THEN
@@ -185,8 +178,8 @@ val lemma1 =
       ASM_REWRITE_TAC []]);
 
 val INDUCTION = store_thm("INDUCTION",
-    --`!P. P (NUMERAL ZERO) /\ (!n. P n ==> P(SUC n)) ==> !n. P n`--,
-     REWRITE_TAC[NUMERAL_DEF] THEN GEN_TAC THEN STRIP_TAC THEN
+    --`!P. P ZERO /\ (!n. P n ==> P(SUC n)) ==> !n. P n`--,
+     GEN_TAC THEN STRIP_TAC THEN
      MP_TAC (SPEC (--`\i. ((P(ABS_num i)):bool)`--) ind_lemma2) THEN
      CONV_TAC(DEPTH_CONV BETA_CONV) THEN
      REWRITE_TAC [SYM ZERO_DEF,lemma1] THEN
