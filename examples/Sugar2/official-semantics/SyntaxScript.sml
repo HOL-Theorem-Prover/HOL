@@ -22,6 +22,11 @@ open HolKernel Parse boolLib bossLib;
 (*****************************************************************************)
 
 (******************************************************************************
+* Version of Define that doesn't add to the EVAL compset
+******************************************************************************)
+val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;w
+
+(******************************************************************************
 * Start a new theory called SyntaxTheory
 ******************************************************************************)
 val _ = new_theory "Syntax";
@@ -40,21 +45,21 @@ val bexp_def =
 ******************************************************************************)
 
 val B_OR_def =
- Define `B_OR(b1,b2) = B_NOT(B_AND(B_NOT b1, B_NOT b2))`;
+ pureDefine `B_OR(b1,b2) = B_NOT(B_AND(B_NOT b1, B_NOT b2))`;
 
 (******************************************************************************
 * Definition of truth
 ******************************************************************************)
 
 val B_TRUE_def =
- Define `B_TRUE = B_OR(B_PROP ARB, B_NOT(B_PROP ARB))`;
+ pureDefine `B_TRUE = B_OR(B_PROP ARB, B_NOT(B_PROP ARB))`;
 
 (******************************************************************************
 * Definition of falsity
 ******************************************************************************)
 
 val B_FALSE_def =
- Define `B_FALSE = B_NOT B_TRUE`;
+ pureDefine `B_FALSE = B_NOT B_TRUE`;
 
 (******************************************************************************
 * Sugar Extended Regular Expressions (SEREs) 
