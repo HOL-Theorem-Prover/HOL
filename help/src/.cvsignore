@@ -1,4 +1,5 @@
 Doc2Html
+Doc2Tex
 Lexer.sml
 Parser.sig
 Parser.sml
@@ -7,3 +8,4 @@ index.tex
 index.txt
 makebase
 makebase.sml
+Holmakefile

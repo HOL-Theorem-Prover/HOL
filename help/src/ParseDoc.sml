@@ -2,6 +2,7 @@ structure ParseDoc :> ParseDoc =
 struct
 
 open Substring;
+exception ParseError of string
 
 fun I x = x;
 
@@ -56,14 +57,12 @@ datatype section
    | SEEALSO of substring list;
 
 
-fun divide ss =
-  if isEmpty ss
-    then []
-    else let val (ss1,ss2) = position "\n\\" ss
-         in
-           if isEmpty ss1 then divide (triml 2 ss2)
-           else ss1::divide (triml 2 ss2)
-         end;
+val valid_keywords =
+    Binaryset.addList(Binaryset.empty String.compare,
+                      ["DOC", "ELTYPE", "BLTYPE", "TYPE", "SYNOPSIS",
+                       "COMMENTS", "USES", "SEEALSO", "KEYWORDS", "DESCRIBE",
+                       "FAILURE", "EXAMPLE", "ENDDOC", "LIBRARY",
+                       "STRUCTURE"])
 
 local val noindent = Substring.all "noindent"
       val noindent_size = Substring.size noindent
@@ -76,6 +75,15 @@ fun noindent_elim (ss1::ss2::rst) =
      end
   | noindent_elim l = l
 end;
+
+fun divide ss =
+  if isEmpty ss
+    then []
+    else let val (ss1,ss2) = position "\n\\" ss
+         in
+           if isEmpty ss1 then divide (triml 2 ss2)
+           else ss1::divide (triml 2 ss2)
+         end;
 
 local val BLTYPE = Substring.all "BLTYPE"
       val ELTYPE = Substring.all "ELTYPE"
@@ -92,7 +100,6 @@ fun longtype_elim (l as (doc::ss1::ss2::rst)) =
   | longtype_elim l = l
 end;
 
-exception ParseError of string
 fun warn s = TextIO.output(TextIO.stdErr, s)
 
 fun find_doc ss = let
@@ -113,25 +120,29 @@ fun to_sections ss =
       (* butlast below drops final \enddoc *)
       val sslist1 = noindent_elim (longtype_elim (butlast sslist))
   in
-   map ((string##I) o splitl (not o Char.isSpace)) sslist1
+   map ((string##dropl Char.isSpace) o splitl (not o Char.isSpace)) sslist1
   end;
 
 (*---------------------------------------------------------------------------
         Divide into maximal chunks of text enclosed by braces.
  ---------------------------------------------------------------------------*)
 
-fun braces ss n =
-  case getc ss
-   of SOME(#"{", ss1) => braces ss1 (n+1)
-    | SOME(#"}", ss1) => if n=1 then ss1 else braces ss1 (n-1)
-    | SOME(_,    ss1) => braces ss1 n
-    | NONE            => raise ParseError "braces: expecting closing brace(s)"
+fun braces ss =
+  case getc ss of
+    SOME(#"}", ss1) => let
+    in
+      case getc ss1 of
+        SOME(#"}", ss2) => braces ss2
+      | _ => ss1
+    end
+  | SOME(_, ss1) => braces ss1
+  | NONE => raise ParseError "No closing brace"
 
 
 fun markup ss =
  let val (ssa,ssb) = position "{" ss
  in if isEmpty ssb then [TEXT ss]
-    else let val ssc = braces ssb 0
+    else let val ssc = braces ssb
              val (s,i,n) = base ssa
              val (_,j,_) = base ssc
              val chunk = substring (s,i+n+1,j-(i+n+2))
@@ -190,6 +201,10 @@ fun parse_type ss =
   in elim_double_braces ss'
   end
 
+fun trimws [] = []
+  | trimws [TEXT ss] = [TEXT (dropr Char.isSpace ss)]
+  | trimws (x::xs) = x :: trimws xs
+
 fun parse_file docfile =
  let fun db_out (BRKT ss) = BRKT (elim_double_braces ss)
        | db_out (XMPL ss) = XMPL (elim_double_braces ss)
@@ -201,9 +216,11 @@ fun parse_file docfile =
          | "SEEALSO" => SEEALSO
                           (tokens (Char.isSpace \/ equal #",")
                              (dropr (Char.isSpace \/ equal #".") ss))
-         | otherwise => FIELD (tag, List.map db_out (paragraphs (markup ss)))
+         | otherwise =>
+           FIELD (tag, trimws (List.map db_out (paragraphs (markup ss))))
   in
      List.map section (to_sections (fetch_contents docfile))
   end handle ParseError s => raise ParseError (docfile^": "^s)
+           | x => (warn ("Exception raised in "^docfile^"\n"); raise x)
 
 end; (* struct *)
