@@ -956,10 +956,7 @@ fun define_rep th =
      val rep_fun_name = "rep_" ^ tyname
      val range = List.tabulate(m,word_rep(bits_needed m))
      val th1 = ISPECL range th
-     val th2 = CONJUNCT1
-                (Ho_rewrite.PURE_REWRITE_RULE 
-                  [Ho_theorems.EXISTS_UNIQUE_THM] 
-                  th1)
+     val th2 = CONJUNCT1(Ho_rewrite.PURE_REWRITE_RULE [EXISTS_UNIQUE_THM] th1)
      val rep_spec = Rsyntax.new_specification
                      {name    = rep_fun_name ^ "_def", 
                       sat_thm = th2,
