@@ -48,8 +48,8 @@ necessary, but serves to make some of the proofs typeset more nicely.
 - val ARW_TAC = RW_TAC arith_ss;
 > val ARW_TAC =
     fn
-    : Thm.thm list -> Term.term list * Term.term ->
-      (Term.term list * Term.term) list * (Thm.thm list -> Thm.thm)
+    : thm list -> term list * term ->
+      (term list * term) list * (thm list -> thm)
 \end{verbatim}
 \end{session}
 The ML type of \ml{ARW\_TAC} is $\mbox{\it thm list} \longrightarrow
@@ -67,8 +67,8 @@ We now begin the formalization. In order to define the concept of  \emph
 \begin{session}\begin{verbatim}
 - val divides = Define `divides a b = ?x. b = a * x`;
 
-> Definition stored under "divides_def".
-> val divides = |- !a b. divides a b = ?x. b = a * x : Thm.thm
+Definition has been stored under "divides_def".
+> val divides = |- !a b. divides a b = ?x. b = a * x : thm
 \end{verbatim}\end{session}
     The definition is added to the current theory with the name
     \ml{divides\_def}, and also returned from the invocation of
@@ -91,10 +91,10 @@ than $1$ and itself:
 - val prime =
     Define `prime p = ~(p=1) /\ !x. x divides p ==> (x=1) \/ (x=p)`;
 
-Definition stored under "prime_def".
+Definition has been stored under "prime_def".
 > val prime =
     |- !p. prime p = ~(p = 1) /\ !x. x divides p ==> (x = 1) \/ (x = p)
-    : Thm.thm
+    : thm
 \end{verbatim}\end{session}
 
 That concludes the definitions to be made. Now we ``just'' have to prove
@@ -162,12 +162,12 @@ to the proof manager via ``{\tt g}'', which starts a fresh goalstack:
 - g `!x. x divides 0`;
 
 > val it =
->    Proof manager status: 1 proof.
->    1. Incomplete:
->         Initial goal:
->         !x. x divides 0
->
->    : GoalstackPure.proofs
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         !x. x divides 0
+
+     : proofs
 \end{verbatim}\end{session}
 The proof manager tells us that it has only one proof to manage, and
 echoes the given goal.  Now we expand the definition of
@@ -177,35 +177,34 @@ keep distinct the $x$ of the goal and the $x$ in the definition of
 \begin{session}\begin{verbatim}
 - e (ARW_TAC [divides]);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->    ?x'. (x = 0) \/ (x' = 0)
+    ?x'. (x = 0) \/ (x' = 0)
 \end{verbatim}\end{session}
 It is of course quite easy to instantiate the existential quantifier by
 hand.
 \begin{session}\begin{verbatim}
 - e (EXISTS_TAC ``0``);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     (x = 0) \/ (0 = 0)
+    (x = 0) \/ (0 = 0)
 \end{verbatim}\end{session}
 Then a simplification step finishes the proof.
 \begin{session}\begin{verbatim}
 - e (ARW_TAC []);
+OK..
 
-> OK..
->
-> Goal proved.
-> |- (x = 0) \/ (0 = 0)
->
-> Goal proved.
-> |- ?x'. (x = 0) \/ (x' = 0)
+Goal proved.
+|- (x = 0) \/ (0 = 0)
+
+Goal proved.
+|- ?x'. (x = 0) \/ (x' = 0)
 > val it =
->     Initial goal proved.
->     |- !x. x divides 0
+    Initial goal proved.
+    |- !x. x divides 0
 \end{verbatim}\end{session}
 
 What just happened here? The application of \ml{ARW\_TAC} to the goal
@@ -231,10 +230,10 @@ take just one step:
 
 - e (ARW_TAC [divides] THEN EXISTS_TAC ``0`` THEN ARW_TAC[]);
 
-> OK..
+OK..
 > val it =
->     Initial goal proved.
->     |- !x. x divides 0
+    Initial goal proved.
+    |- !x. x divides 0
 \end{verbatim}\end{session}
 We have seen one way to prove the theorem. However, as mentioned
 earlier, there is another: one can let \ml{PROVE\_TAC} expand the
@@ -248,11 +247,11 @@ definition of \ml{divides} and find the required instantiation for
 
 - e (PROVE_TAC [divides, MULT_CLAUSES]);
 
-> OK..
-> Meson search level: .....
+OK..
+Meson search level: .....
 > val it =
->     Initial goal proved.
->     |- !x. x divides 0
+    Initial goal proved.
+    |- !x. x divides 0
 \end{verbatim}\end{session}
     In any case, having done our proof inside the goalstack package,
     we now want to have access to the theorem value that we have
@@ -261,11 +260,11 @@ definition of \ml{divides} and find the required instantiation for
 \begin{session}\begin{verbatim}
 - val DIVIDES_0 = top_thm();
 
-> val DIVIDES_0 = |- !x. x divides 0 : Thm.thm
+> val DIVIDES_0 = |- !x. x divides 0 : thm
 
 - drop();
-> OK..
-> val it = There are currently no proofs. : GoalstackPure.proofs
+OK..
+> val it = There are currently no proofs. : proofs
 \end{verbatim}\end{session}
 
 We have used \ml{PROVE\_TAC} in this way to prove the following
@@ -359,9 +358,9 @@ with the definition of \ml{divides}:
 
 - e (ARW_TAC [divides]);
 
-> 1 subgoal:
+1 subgoal:
 > val it =
->     m <= m * x \/ (m * x = 0)
+    m <= m * x \/ (m * x = 0)
 \end{verbatim}\end{session}
 
 Considering the goal, we basically have three choices: (1) find a
@@ -378,35 +377,35 @@ be whether $m$ is $0$ or a successor.
 \begin{session}\begin{verbatim}
 - e (Cases_on `m`);
 
-> OK..
-> 2 subgoals:
+OK..
+2 subgoals:
 > val it =
->     SUC n <= SUC n * x \/ (SUC n * x = 0)
->
->    0 <= 0 * x \/ (0 * x = 0)
+    SUC n <= SUC n * x \/ (SUC n * x = 0)
+
+    0 <= 0 * x \/ (0 * x = 0)
 \end{verbatim}\end{session}
 \noindent The first subgoal (the last one printed) is trivial:
 
 \begin{session}\begin{verbatim}
 - e (ARW_TAC []);
 
-> OK..
->
-> Goal proved.
->   ...
->
-> Remaining subgoals:
+OK..
+
+Goal proved.
+  ...
+
+Remaining subgoals:
 > val it =
->     SUC n <= SUC n * x \/ (SUC n * x = 0)
+    SUC n <= SUC n * x \/ (SUC n * x = 0)
 \end{verbatim}\end{session}
 \noindent Let's try \ml{ARW\_TAC} again:
 \begin{session}\begin{verbatim}
 - e (ARW_TAC []);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     SUC n <= SUC n * x \/ (x = 0)
+    SUC n <= SUC n * x \/ (x = 0)
 \end{verbatim}\end{session}
 The right disjunct has been simplified; however, the left disjunct has
 failed to expand the definition of multiplication in the expression
@@ -420,7 +419,7 @@ add in the definition of multiplication. This uncovers a new problem: how
 to locate this definition. The function
 \begin{boxed}\begin{verbatim}
    DB.match : string list -> term
-                -> ((string * string) * (thm * DB.class)) list
+                -> ((string * string) * (thm * class)) list
 \end{verbatim}\end{boxed}
 
 \noindent
@@ -435,22 +434,23 @@ subterm to be rewritten.
 - DB.match ["arithmetic"] (Term`SUC n * x`);
 
 > val it =
->    [(("arithmetic", "FACT"),
->      (|- (FACT 0 = 1) /\ !n. FACT (SUC n) = SUC n * FACT n, DB.Def)),
->     (("arithmetic", "LESS_MULT_MONO"),
->      (|- !m i n. SUC n * m < SUC n * i = m < i, DB.Thm)),
->     (("arithmetic", "MULT"),
->      (|- (!n. 0 * n = 0) /\ !m n. SUC m * n = m * n + n, DB.Def)),
->     (("arithmetic", "MULT_CLAUSES"),
->      (|- !m n.
->            (0 * m = 0) /\ (m * 0 = 0) /\ (1 * m = m) /\ (m * 1 = m) /\
->            (SUC m * n = m * n + n) /\ (m * SUC n = m + m * n), DB.Thm)),
->     (("arithmetic", "MULT_LESS_EQ_SUC"),
->      (|- !m n p. m <= n = SUC p * m <= SUC p * n, DB.Thm)),
->     (("arithmetic", "MULT_MONO_EQ"),
->      (|- !m i n. (SUC n * m = SUC n * i) = m = i, DB.Thm)),
->     (("arithmetic", "ODD_OR_EVEN"),
->      (|- !n. ?m. (n = SUC (SUC 0) * m) \/ (n = SUC (SUC 0) * m + 1), DB.Thm))]
+   [(("arithmetic", "FACT"),
+     (|- (FACT 0 = 1) /\ !n. FACT (SUC n) = SUC n * FACT n, Def)),
+    (("arithmetic", "LESS_MULT_MONO"),
+     (|- !m i n. SUC n * m < SUC n * i = m < i, Thm)),
+    (("arithmetic", "MULT"),
+     (|- (!n. 0 * n = 0) /\ !m n. SUC m * n = m * n + n, Def)),
+    (("arithmetic", "MULT_CLAUSES"),
+     (|- !m n.
+           (0 * m = 0) /\ (m * 0 = 0) /\ (1 * m = m) /\ (m * 1 = m) /\
+           (SUC m * n = m * n + n) /\ (m * SUC n = m + m * n), Thm)),
+    (("arithmetic", "MULT_LESS_EQ_SUC"),
+     (|- !m n p. m <= n = SUC p * m <= SUC p * n, Thm)),
+    (("arithmetic", "MULT_MONO_EQ"),
+     (|- !m i n. (SUC n * m = SUC n * i) = m = i, Thm)),
+    (("arithmetic", "ODD_OR_EVEN"),
+     (|- !n. ?m. (n = SUC (SUC 0) * m) \/ (n = SUC (SUC 0) * m + 1), Thm))]
+   : ...
 \end{verbatim}\end{session}
 
 For some, this returns slightly too much information; however, we can
@@ -461,14 +461,14 @@ rule:
 - DB.match [] (Term`SUC n * x = M`);
 
 > val it =
->     [(("arithmetic", "MULT"),
->       (|- (!n. 0 * n = 0) /\ !m n. SUC m * n = m * n + n, DB.Def)),
->      (("arithmetic", "MULT_CLAUSES"),
->       (|- !m n.
->             (0 * m = 0) /\ (m * 0 = 0) /\ (1 * m = m) /\ (m * 1 = m) /\
->             (SUC m * n = m * n + n) /\ (m * SUC n = m + m * n), DB.Thm)),
->      (("arithmetic", "MULT_MONO_EQ"),
->       (|- !m i n. (SUC n * m = SUC n * i) = m = i, DB.Thm))]
+    [(("arithmetic", "MULT"),
+      (|- (!n. 0 * n = 0) /\ !m n. SUC m * n = m * n + n, Def)),
+     (("arithmetic", "MULT_CLAUSES"),
+      (|- !m n.
+            (0 * m = 0) /\ (m * 0 = 0) /\ (1 * m = m) /\ (m * 1 = m) /\
+            (SUC m * n = m * n + n) /\ (m * SUC n = m + m * n), Thm)),
+     (("arithmetic", "MULT_MONO_EQ"),
+      (|- !m i n. (SUC n * m = SUC n * i) = m = i, Thm))] : ...
 \end{verbatim}\end{session}
 
 Either {\small\verb+arithmeticTheory.MULT+} or
@@ -478,10 +478,10 @@ choose the latter.
 \begin{session}\begin{verbatim}
 - e (ARW_TAC [MULT_CLAUSES]);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     SUC n <= x + n * x \/ (x = 0)
+    SUC n <= x + n * x \/ (x = 0)
 \end{verbatim}\end{session}
 Now we see that, in order to make progress in the proof, we will have to
 do a case split on $x$ anyway, and that we should have split on it
@@ -518,13 +518,13 @@ Now we can go forward and do case analysis on $x$. We will
 \begin{session}\begin{verbatim}
 - e (Cases_on `x` THEN ARW_TAC [MULT_CLAUSES]);
 
-> OK..
->
-> Goal proved.
-> |- m <= m * x \/ (m * x = 0)
+OK..
+
+Goal proved.
+|- m <= m * x \/ (m * x = 0)
 > val it =
->     Initial goal proved.
->     |- !m n. m divides n ==> m <= n \/ (n = 0)
+    Initial goal proved.
+    |- !m n. m divides n ==> m <= n \/ (n = 0)
 \end{verbatim}\end{session}
     That was easy! Obviously making a case split on $x$ was the right
     choice. The process of {\it finding\/} the proof has now finished,
@@ -542,7 +542,7 @@ Now we can go forward and do case analysis on $x$. We will
        THEN Cases_on `x`
        THEN ARW_TAC [MULT_CLAUSES]);
 
-> val DIVIDES_LE = |- !m n. m divides n ==> m <= n \/ (n = 0) : Thm.thm
+> val DIVIDES_LE = |- !m n. m divides n ==> m <= n \/ (n = 0) : thm
 \end{verbatim}\end{session}
     Storing theorems in our script record of the session in this style
     (rather than with the goalstack) results in a more concise script,
@@ -596,52 +596,52 @@ not what we expect, we will have to re-think our approach.
 - g `!m n. 0 < m /\ m <= n ==> m divides (FACT n)`;
 
 > val it =
->    Proof manager status: 1 proof.
->    1. Incomplete:
->         Initial goal:
->         !m n. 0 < m /\ m <= n ==> m divides FACT n
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         !m n. 0 < m /\ m <= n ==> m divides FACT n
 \end{verbatim}\end{session}
 Instead of directly inducting on $n-m$, we will induct on a witness
 variable, obtained by use of the theorem \verb+LESS_EQ_EXISTS+.
 \begin{session}\begin{verbatim}
 - LESS_EQ_EXISTS;
-> val it = |- !m n. m <= n = (?p. n = m + p) : Thm.thm
+> val it = |- !m n. m <= n = (?p. n = m + p) : thm
 
 - e (ARW_TAC [LESS_EQ_EXISTS]);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->    m divides FACT (m + p)
->    ------------------------------------
->       0 < m
+    m divides FACT (m + p)
+    ------------------------------------
+       0 < m
 \end{verbatim}\end{session}
 \noindent Now we induct on $p$:
 \begin{session}\begin{verbatim}
 - e (Induct_on `p`);
 
-> OK..
-> 2 subgoals:
+OK..
+2 subgoals:
 > val it =
->     m divides FACT (m + SUC p)
->     ------------------------------------
->       0.  0 < m
->       1.  m divides FACT (m + p)
->
->     m divides FACT (m + 0)
->    ------------------------------------
->       0 < m
+    m divides FACT (m + SUC p)
+    ------------------------------------
+      0.  0 < m
+      1.  m divides FACT (m + p)
+
+    m divides FACT (m + 0)
+   ------------------------------------
+      0 < m
 \end{verbatim}\end{session}
 \noindent The first goal can obviously be simplified:
 \begin{session}\begin{verbatim}
 - e (ARW_TAC []);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     m divides FACT m
->     ------------------------------------
->       0 < m
+    m divides FACT m
+    ------------------------------------
+      0 < m
 \end{verbatim}\end{session}
 \noindent Now we can do a case analysis on $m$: if it is $0$, we have a
 trivial goal; if it is a successor, then we can use the definition of
@@ -650,16 +650,16 @@ trivial goal; if it is a successor, then we can use the definition of
 \begin{session}\begin{verbatim}
 - e (Cases_on `m`);
 
-> OK..
-> 2 subgoals:
+OK..
+2 subgoals:
 > val it =
->     SUC n divides FACT (SUC n)
->     ------------------------------------
->       0 < SUC n
->
->     0 divides FACT 0
->     ------------------------------------
->       0 < 0
+    SUC n divides FACT (SUC n)
+    ------------------------------------
+      0 < SUC n
+
+    0 divides FACT 0
+    ------------------------------------
+      0 < 0
 \end{verbatim}\end{session}
 
     Here the first sub-goal goal has an assumption that is false.  We
@@ -675,17 +675,17 @@ trivial goal; if it is a successor, then we can use the definition of
 \begin{session}\begin{verbatim}
 - e (PROVE_TAC [DECIDE `!x. ~(x < x)`]);
 
-> OK..
-> Meson search level: ..
->
-> Goal proved.
->  [.] |- 0 divides FACT 0
->
-> Remaining subgoals:
+OK..
+Meson search level: ..
+
+Goal proved.
+ [.] |- 0 divides FACT 0
+
+Remaining subgoals:
 > val it =
->     SUC n divides FACT (SUC n)
->     ------------------------------------
->       0 < SUC n
+    SUC n divides FACT (SUC n)
+    ------------------------------------
+      0 < SUC n
 \end{verbatim}\end{session}
 Using the theorems identified above, this, the second sub-goal, can
 be proved with \ml{ARW\_TAC}.
@@ -693,16 +693,16 @@ be proved with \ml{ARW\_TAC}.
 \begin{session}\begin{verbatim}
 - e (ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
 
-> OK..
->
-> Goal proved.   ...
->
-> Remaining subgoals:
+OK..
+
+Goal proved.   ...
+
+Remaining subgoals:
 > val it =
->     m divides FACT (m + SUC p)
->     ------------------------------------
->       0.  0 < m
->       1.  m divides FACT (m + p)
+    m divides FACT (m + SUC p)
+    ------------------------------------
+      0.  0 < m
+      1.  m divides FACT (m + p)
 \end{verbatim}\end{session}
 Note that this last step (the invocation of \ml{ARW\_TAC})
 could also have been accomplished with \ml{PROVE\_TAC}:
@@ -712,9 +712,9 @@ could also have been accomplished with \ml{PROVE\_TAC}:
 > ...
 
 - e (PROVE_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
-> OK..
->
-> Goal proved.  ...
+OK..
+
+Goal proved.  ...
 \end{verbatim}\end{session}
 Now we have finished the base case of the induction and can move to the
 step case. An obvious thing to try is simplification with the
@@ -722,26 +722,26 @@ definitions of addition and factorial:
 \begin{session}\begin{verbatim}
 - e (ARW_TAC [FACT, ADD_CLAUSES]);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     m divides SUC (m + p) * FACT (m + p)
->     ------------------------------------
->       0.  0 < m
->       1.  m divides FACT (m + p)
+    m divides SUC (m + p) * FACT (m + p)
+    ------------------------------------
+      0.  0 < m
+      1.  m divides FACT (m + p)
 \end{verbatim}\end{session}
 \noindent And now, by \ml{DIVIDES\_LMUL} and the inductive hypothesis, we are
 done:
 \begin{session}\begin{verbatim}
 - e (PROVE_TAC [DIVIDES_LMUL]);
 
-> OK..
-> Meson search level: ...
-> Goal proved.
->   ...
+OK..
+Meson search level: ...
+Goal proved.
+  ...
 > val it =
->     Initial goal proved.
->     |- !m n. 0 < m /\ m <= n ==> m divides FACT n
+    Initial goal proved.
+    |- !m n. 0 < m /\ m <= n ==> m divides FACT n
 \end{verbatim}\end{session}
 We have finished the search for the proof, and now turn to the task of
 making a single tactic out of the sequence of tactic invocations we have
@@ -790,12 +790,12 @@ tactic:
               THENL [PROVE_TAC [DECIDE `!x. ~(x < x)`],
                      ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
               ARW_TAC [FACT, ADD_CLAUSES] THEN PROVE_TAC [DIVIDES_LMUL]]);
-> OK..
-> Meson search level: ...
-> Meson search level: ..
+OK..
+Meson search level: ...
+Meson search level: ..
 > val it =
->     Initial goal proved.
->     |- !m n. 0 < m /\ m <= n ==> m divides FACT n
+    Initial goal proved.
+    |- !m n. 0 < m /\ m <= n ==> m divides FACT n
 \end{verbatim}\end{session}
     For many users, this would be the end of dealing with this proof:
     the tactic can now be packaged into an invocation of
@@ -871,14 +871,14 @@ it leads to somewhat less natural goals.
 
 - e (Induct_on `n - m`);
 
-> OK..
+OK..
 2 subgoals:
 > val it =
->     !n m. (SUC v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
->     ------------------------------------
->       !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
->
->     !n m. (0 = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+    !n m. (SUC v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+    ------------------------------------
+      !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+
+    !n m. (0 = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
 \end{verbatim}\end{session}
     This is slighly hard to read, so we use \ml{STRIP\_TAC} and
     \ml{REPEAT} to move the antecedents of the goals to the
@@ -890,21 +890,21 @@ it leads to somewhat less natural goals.
 
 - e (Induct_on `n - m` THEN REPEAT STRIP_TAC);
 
-> OK..
-> 2 subgoals:
+OK..
+2 subgoals:
 > val it =
->     m divides FACT n
->     ------------------------------------
->       0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
->       1.  SUC v = n - m
->       2.  0 < m
->       3.  m <= n
->
->     m divides FACT n
->     ------------------------------------
->       0.  0 = n - m
->       1.  0 < m
->       2.  m <= n
+    m divides FACT n
+    ------------------------------------
+      0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+      1.  SUC v = n - m
+      2.  0 < m
+      3.  m <= n
+
+    m divides FACT n
+    ------------------------------------
+      0.  0 = n - m
+      1.  0 < m
+      2.  m <= n
 \end{verbatim}\end{session}
 Looking at the first goal, we reason that if $0 = n - m$ and $m
 \leq n$, then $m = n$. We can prove this fact, and add it to the
@@ -927,14 +927,14 @@ throughout the goal.
 \begin{session}\begin{verbatim}
 - e (ARW_TAC []);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     m divides FACT m
->     ------------------------------------
->       0.  0 = m - m
->       1.  0 < m
->       2.  m <= m
+    m divides FACT m
+    ------------------------------------
+      0.  0 = m - m
+      1.  0 < m
+      2.  m <= m
 \end{verbatim}\end{session}
     At this point in the previous proof we did a case analysis on $m$.
     However, we already have the hypothesis that $m$ is positive. Thus
@@ -959,22 +959,22 @@ printed:
 - g `!m. 0 < m ==> ?k. m = SUC k`;
 
 > val it =
->     Proof manager status: 2 proofs.
->     2. Incomplete:
->          Initial goal:
->          !m n. 0 < m /\ m <= n ==> m divides FACT n
->
->
->          Current goal:
->          m divides FACT m
->          ------------------------------------
->            0.  0 = m - m
->            1.  0 < m
->            2.  m <= m
->
->     1. Incomplete:
->          Initial goal:
->          !m. 0 < m ==> ?k. m = SUC k
+    Proof manager status: 2 proofs.
+    2. Incomplete:
+         Initial goal:
+         !m n. 0 < m /\ m <= n ==> m divides FACT n
+
+
+         Current goal:
+         m divides FACT m
+         ------------------------------------
+           0.  0 = m - m
+           1.  0 < m
+           2.  m <= m
+
+    1. Incomplete:
+         Initial goal:
+         !m. 0 < m ==> ?k. m = SUC k
 \end{verbatim}\end{session}
     Our new goal can be proved quite quickly. Once we have proved it,
     we can bind it to an ML name and use it in the previous proof, by
@@ -984,15 +984,15 @@ printed:
 \begin{session}\begin{verbatim}
 - e (Cases THEN ARW_TAC []);
 
-> OK..
+OK..
 > val it =
->     Initial goal proved.
->     |- !m. 0 < m ==> ?k. m = SUC k
+    Initial goal proved.
+    |- !m. 0 < m ==> ?k. m = SUC k
 
 - val lem = top_thm() before drop();
 
-> OK..
-> val lem = |- !m. 0 < m ==> ?k. m = SUC k : Thm.thm
+OK..
+> val lem = |- !m. 0 < m ==> ?k. m = SUC k : thm
 \end{verbatim}\end{session}
 
 Now we can return to the main thread of the proof.  The state of the
@@ -1003,11 +1003,11 @@ current sub-goal of the proof can be displayed using the function
 - p ();
 
 > val it =
->     m divides FACT m
->     ------------------------------------
->       0.  0 = m - m
->       1.  0 < m
->       2.  m <= m
+    m divides FACT m
+    ------------------------------------
+      0.  0 = m - m
+      1.  0 < m
+      2.  m <= m
 \end{verbatim}\end{session}
     Now we can use \ml{lem} in the proof. Somewhat opportunistically,
     we will tack on the invocation used in the earlier proof at
@@ -1016,19 +1016,19 @@ current sub-goal of the proof can be displayed using the function
 - e (`?k. m = SUC k` by
       PROVE_TAC [lem] THEN ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
 
-> OK..
-> Meson search level: ...
->
-> Goal proved.   ...
->
-> Remaining subgoals:
+OK..
+Meson search level: ...
+
+Goal proved.   ...
+
+Remaining subgoals:
 > val it =
->     m divides FACT n
->     ------------------------------------
->       0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
->       1.  SUC v = n - m
->       2.  0 < m
->       3.  m <= n
+    m divides FACT n
+    ------------------------------------
+      0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+      1.  SUC v = n - m
+      2.  0 < m
+      3.  m <= n
 \end{verbatim}\end{session}
     It does! That takes care of the base case. For the induction step,
     things look a bit more difficult than in the earlier proof.
@@ -1039,29 +1039,29 @@ current sub-goal of the proof can be displayed using the function
 \begin{session}\begin{verbatim}
 - e (`0 < n` by DECIDE_TAC THEN `?k. n = SUC k` by PROVE_TAC [lem]);
 
-> OK..
-> Meson search level: ...
-> 1 subgoal:
+OK..
+Meson search level: ...
+1 subgoal:
 > val it =
->     m divides FACT n
->     ------------------------------------
->       0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
->       1.  SUC v = n - m
->       2.  0 < m
->       3.  m <= n
->       4.  0 < n
->       5.  n = SUC k
+    m divides FACT n
+    ------------------------------------
+      0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+      1.  SUC v = n - m
+      2.  0 < m
+      3.  m <= n
+      4.  0 < n
+      5.  n = SUC k
 \end{verbatim}\end{session}
 \noindent The proof now finishes in much the same manner as the previous one:
 \begin{session}\begin{verbatim}
 - e (ARW_TAC [FACT, DIVIDES_LMUL]);
 
-> OK..
->
-> Goal proved.  ...
+OK..
+
+Goal proved.  ...
 > val it =
->     Initial goal proved.
->     |- !m n. 0 < m /\ m <= n ==> m divides FACT n
+    Initial goal proved.
+    |- !m n. 0 < m /\ m <= n ==> m divides FACT n
 \end{verbatim}\end{session}
 \noindent We leave the details of stitching the proof together to the interested
 reader.
@@ -1138,12 +1138,12 @@ hypothesis that holds at every number $m$ strictly smaller than $n$:
 
 - e (completeInduct_on `n`);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     ~(n = 1) ==> ?p. prime p /\ p divides n
->     ------------------------------------
->       !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+    ~(n = 1) ==> ?p. prime p /\ p divides n
+    ------------------------------------
+      !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
 \end{verbatim}\end{session}
 We can move the antecedent to the hypotheses and make our case
 split. Notice that the term given to \ml{Cases\_on} need not occur in
@@ -1170,10 +1170,10 @@ divisibility:
 \begin{session}\begin{verbatim}
 - e (PROVE_TAC [DIVIDES_REFL]);
 
-> OK..
-> Meson search level: ...
->
-> Goal proved.  ...
+OK..
+Meson search level: ...
+
+Goal proved.  ...
 \end{verbatim}\end{session}
 \noindent
 In the second case, we can get a divisor of $n$ that isn't $1$ or $n$
@@ -1181,18 +1181,18 @@ In the second case, we can get a divisor of $n$ that isn't $1$ or $n$
 \begin{session}\begin{verbatim}
 - e (`?x. x divides n /\ ~(x=1) /\ ~(x=n)` by PROVE_TAC [prime]);
 
-> OK..
-> Meson search level: ............
-> 1 subgoal:
+OK..
+Meson search level: ............
+1 subgoal:
 > val it =
->     ?p. prime p /\ p divides n
->     ------------------------------------
->       0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
->       1.  ~(n = 1)
->       2.  ~prime n
->       3.  x divides n
->       4.  ~(x = 1)
->       5.  ~(x = n)
+    ?p. prime p /\ p divides n
+    ------------------------------------
+      0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(n = 1)
+      2.  ~prime n
+      3.  x divides n
+      4.  ~(x = 1)
+      5.  ~(x = n)
 \end{verbatim}\end{session}
 At this point, the polished tactic simply invokes \ml{PROVE\_TAC} with
 a collection of theorems. We will attempt a more detailed
@@ -1201,29 +1201,29 @@ assert $x < n \lor n = 0$ and thus split the proof into two cases:
 \begin{session}\begin{verbatim}
 - e (`x < n \/ (n=0)` by PROVE_TAC [DIVIDES_LE,LESS_OR_EQ]);
 
-> OK..
-> Meson search level: ......
-> 2 subgoals:
+OK..
+Meson search level: ......
+2 subgoals:
 > val it =
->     ?p. prime p /\ p divides n
->     ------------------------------------
->       0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
->       1.  ~(n = 1)
->       2.  ~prime n
->       3.  x divides n
->       4.  ~(x = 1)
->       5.  ~(x = n)
->       6.  n = 0
->
->     ?p. prime p /\ p divides n
->     ------------------------------------
->       0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
->       1.  ~(n = 1)
->       2.  ~prime n
->       3.  x divides n
->       4.  ~(x = 1)
->       5.  ~(x = n)
->       6.  x < n
+    ?p. prime p /\ p divides n
+    ------------------------------------
+      0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(n = 1)
+      2.  ~prime n
+      3.  x divides n
+      4.  ~(x = 1)
+      5.  ~(x = n)
+      6.  n = 0
+
+    ?p. prime p /\ p divides n
+    ------------------------------------
+      0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(n = 1)
+      2.  ~prime n
+      3.  x divides n
+      4.  ~(x = 1)
+      5.  ~(x = n)
+      6.  x < n
 \end{verbatim}\end{session}
 In the first subgoal, we can see that the antecedents of the inductive
 hypothesis are met and so $x$ has a prime divisor. We can then use the
@@ -1232,56 +1232,56 @@ also a divisor of $n$, thus finishing this branch of the proof:
 \begin{session}\begin{verbatim}
 - e (PROVE_TAC [DIVIDES_TRANS]);
 
-> OK..
-> Meson search level: .........
-> Goal proved.
+OK..
+Meson search level: .........
+Goal proved.
 \end{verbatim}\end{session}
 \noindent The remaining goal can be clarified by simplification:
 \begin{session}\begin{verbatim}
 - e (ARW_TAC []);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     ?p. prime p /\ p divides 0
->     ------------------------------------
->       0.  !m. m < 0 ==> ~(m = 1) ==> ?p. prime p /\ p divides m
->       1.  ~(0 = 1)
->       2.  ~prime 0
->       3.  x divides 0
->       4.  ~(x = 1)
->       5.  ~(x = 0)
+    ?p. prime p /\ p divides 0
+    ------------------------------------
+      0.  !m. m < 0 ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(0 = 1)
+      2.  ~prime 0
+      3.  x divides 0
+      4.  ~(x = 1)
+      5.  ~(x = 0)
 
 - DIVIDES_0;
 
-> val it = |- !x. x divides 0 : Thm.thm
+> val it = |- !x. x divides 0 : thm
 
 - e (ARW_TAC [it]);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     ?p. prime p
->     ------------------------------------
->       0.  !m. m < 0 ==> ~(m = 1) ==> ?p. prime p /\ p divides m
->       1.  ~(0 = 1)
->       2.  ~prime 0
->       3.  x divides 0
->       4.  ~(x = 1)
->       5.  ~(x = 0)
+    ?p. prime p
+    ------------------------------------
+      0.  !m. m < 0 ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(0 = 1)
+      2.  ~prime 0
+      3.  x divides 0
+      4.  ~(x = 1)
+      5.  ~(x = 0)
 \end{verbatim}\end{session}
 The two steps of exploratory simplification have led us to a state where
 all we have to do is exhibit a prime. And we already have one to hand:
 \begin{session}\begin{verbatim}
 - e (PROVE_TAC [PRIME_2]);
 
-> OK..
-> Meson search level: ..
->
-> Goal proved.   ...
+OK..
+Meson search level: ..
+
+Goal proved.   ...
 > val it =
->     Initial goal proved.
->     |- !n. ~(n = 1) ==> ?p. prime p /\ p divides n
+    Initial goal proved.
+    |- !n. ~(n = 1) ==> ?p. prime p /\ p divides n
 \end{verbatim}\end{session}
 Again, work now needs to be done to compose and perhaps polish a single
 tactic from the individual proof steps, but we will not describe
@@ -1326,12 +1326,12 @@ quantification on $n$.
 
 - e (SPOSE_NOT_THEN STRIP_ASSUME_TAC);
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     F
->     ------------------------------------
->       !p. n < p ==> ~prime p
+    F
+    ------------------------------------
+      !p. n < p ==> ~prime p
 \end{verbatim}\end{session}
 Thus we have the hypothesis that all $p$ beyond a certain unspecified
 $n$ are not prime, and our task is to show that this cannot be. At this
@@ -1347,12 +1347,12 @@ function {\tt SPEC} implements the rule of universal specialization.}
 \begin{session}\begin{verbatim}
 - PRIME_FACTOR;
 
-> val it = |- !n. ~(n = 1) ==> (?p. prime p /\ p divides n) : Thm.thm
+> val it = |- !n. ~(n = 1) ==> (?p. prime p /\ p divides n) : thm
 
 - val th = SPEC ``FACT n + 1`` PRIME_FACTOR;
 
 > val th =
->     |- ~(FACT n + 1 = 1) ==> (?p. prime p /\ p divides FACT n + 1)
+    |- ~(FACT n + 1 = 1) ==> (?p. prime p /\ p divides FACT n + 1)
 \end{verbatim}\end{session}
 It is evident that the antecedent of \ml{th} can be eliminated. In
 \holn{}, one could do this in a so-called {\it forward\/} proof style (by
@@ -1363,12 +1363,12 @@ situ}. We choose the latter approach.
 \begin{session}\begin{verbatim}
 - e (MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR));
 
-> OK..
-> 1 subgoal:
+OK..
+1 subgoal:
 > val it =
->     (~(FACT n + 1 = 1) ==> ?p. prime p /\ p divides FACT n + 1) ==> F
->     ------------------------------------
->       !p. n < p ==> ~prime p
+    (~(FACT n + 1 = 1) ==> ?p. prime p /\ p divides FACT n + 1) ==> F
+    ------------------------------------
+      !p. n < p ==> ~prime p
 \end{verbatim}\end{session}
     The invocation \ml{MP\_TAC} ($\vdash M$) applied to a goal
     $(\Delta, g)$ returns the goal $(\Delta, M \supset g)$. Now we
@@ -1376,17 +1376,17 @@ situ}. We choose the latter approach.
 \begin{session}\begin{verbatim}
 - e (ARW_TAC []);
 
-> OK..
-> 2 subgoals:
+OK..
+2 subgoals:
 > val it =
->     ~(p divides FACT n + 1)
->     ------------------------------------
->       0.  !p. n < p ==> ~prime p
->       1.  prime p
->
->     ~(FACT n = 0)
->     ------------------------------------
->       !p. n < p ==> ~prime p
+    ~(p divides FACT n + 1)
+    ------------------------------------
+      0.  !p. n < p ==> ~prime p
+      1.  prime p
+
+    ~(FACT n = 0)
+    ------------------------------------
+      !p. n < p ==> ~prime p
 \end{verbatim}\end{session}
     We recall that zero is less than every factorial, a fact found in
     \ml{arithmeticTheory} under the name \ml{FACT\_LESS}. Thus we can
@@ -1394,8 +1394,8 @@ situ}. We choose the latter approach.
 \begin{session}\begin{verbatim}
 - e (ARW_TAC [FACT_LESS, DECIDE `!x. ~(x=0) = 0 < x`]);
 
-> OK..
-> Goal proved.  ...
+OK..
+Goal proved.  ...
 \end{verbatim}\end{session}
 Notice the `on-the-fly' use of \verb+DECIDE+ to provide an {\it ad hoc\/}
 rewrite. Looking at the remaining goal, one might think that our aim, to
@@ -1407,21 +1407,21 @@ can all be packaged into a single invocation of \ml{PROVE\_TAC}:
 \begin{session}\begin{verbatim}
 - e (PROVE_TAC [PRIME_POS, NOT_LESS, DIVIDES_FACT,
                 DIVIDES_ADDL, DIVIDES_ONE, NOT_PRIME_1]);
-> OK..
-> Meson search level: ............
->
-> Goal proved.
->  [..] |- ~(p divides FACT n + 1)
->
-> Goal proved.
->  [.]
-> |- (~(FACT n + 1 = 1) ==> ?p. prime p /\ p divides FACT n + 1) ==> F
->
-> Goal proved.
->  [.] |- F
+OK..
+Meson search level: ............
+
+Goal proved.
+ [..] |- ~(p divides FACT n + 1)
+
+Goal proved.
+ [.]
+|- (~(FACT n + 1 = 1) ==> ?p. prime p /\ p divides FACT n + 1) ==> F
+
+Goal proved.
+ [.] |- F
 > val it =
->     Initial goal proved.
->     |- !n. ?p. n < p /\ prime p
+    Initial goal proved.
+    |- !n. ?p. n < p /\ prime p
 \end{verbatim}\end{session}
     Euclid's theorem is now proved, and we can rest. However, this
     presentation of the final proof will be unsatisfactory to some,
@@ -1489,25 +1489,12 @@ as input to \textsf{hol.unquote} thus:
 \begin{verbatim}
 $ cd examples/
 $ ../bin/hol.unquote < euclid.sml
-Moscow ML version 1.44 (August 1999)
-Enter `quit();' to quit.
-For HOL help, type: help "hol";
   ...
 
-> val EUCLID_AGAIN = |- !n. ?p. n < p /\ prime p : Thm.thm
-- Theory: scratch
+> val EUCLID = |- !n. ?p. n < p /\ prime p : thm
   ...
 
-Theorems:
-    DIVIDES_0 |- !x. x divides 0
-    DIVIDES_ZERO |- !x. 0 divides x = x = 0
-    DIVIDES_ONE |- !x. x divides 1 = x = 1
-  ...
-    PRIME_POS |- !p. prime p ==> 0 < p
-    PRIME_FACTOR |- !n. ~(n = 1) ==> ?p. prime p /\ p divides n
-    EUCLID |- !n. ?p. n < p /\ prime p
-
-Theory "scratch" is inconsistent with disk.
+> val EUCLID_AGAIN = |- !n. ?p. n < p /\ prime p : thm
 -
 \end{verbatim}
 \end{session}
@@ -1559,16 +1546,14 @@ $ ../../bin/Holmake
 Analysing euclidScript.sml
 Trying to create directory .HOLMK for dependency files
 Compiling euclidScript.sml
-Linking euclidScript.uo to produce theory building executable
-<<HOL message: inventing new type variable names: 'a, 'b.>>
+Linking euclidScript.uo to produce theory-builder executable
 <<HOL message: Created theory "euclid".>>
-Definition stored under "divides_def".
-Definition stored under "prime_def".
+Definition has been stored under "divides_def".
+Definition has been stored under "prime_def".
 Meson search level: .....
 Meson search level: .................
  ...
-Theory "euclid" is inconsistent with disk.
-Exporting theory ... done.
+Exporting theory "euclid" ... done.
 Analysing euclidTheory.sml
 Analysing euclidTheory.sig
 Compiling euclidTheory.sig
@@ -1586,17 +1571,17 @@ directory that we created, we can demonstrate:
 \$ ../../bin/hol.unquote
 [...]
 
-[closing file "/local/scratch/mn200/Work/hol98/tools/end-init.sml"]
+[closing file "/local/scratch/mn200/Work/hol98/tools/end-init-boss.sml"]
 - load "euclidTheory";
 > val it = () : unit
 - open euclidTheory;
-> type thm = Thm.thm
+> type thm = thm
   val DIVIDES_TRANS =
     |- !a b c. a divides b /\ b divides c ==> a divides c
-    : Thm.thm
+    : thm
   ...
-  val DIVIDES_REFL = |- !x. x divides x : Thm.thm
-  val DIVIDES_0 = |- !x. x divides 0 : Thm.thm
+  val DIVIDES_REFL = |- !x. x divides x : thm
+  val DIVIDES_0 = |- !x. x divides 0 : thm
 \end{alltt}
 \end{session}
 
