@@ -441,6 +441,7 @@ val _ = Theory.save_thm ("INT_10",INT_10)
 val _ = Theory.save_thm ("INT_ADD_SYM",INT_ADD_SYM)
 val INT_ADD_COMM = Theory.save_thm("INT_ADD_COMM", INT_ADD_SYM);
 val _ = Theory.save_thm ("INT_MUL_SYM",INT_MUL_SYM)
+val INT_MUL_COMM = Theory.save_thm("INT_MUL_COMM", INT_MUL_SYM);
 val _ = Theory.save_thm ("INT_ADD_ASSOC",INT_ADD_ASSOC)
 val _ = Theory.save_thm ("INT_MUL_ASSOC",INT_MUL_ASSOC)
 val _ = Theory.save_thm ("INT_LDISTRIB",INT_LDISTRIB)
@@ -2259,6 +2260,11 @@ val INT_DIVIDES_TRANS = store_thm(
   "INT_DIVIDES_TRANS",
   Term`!x y z. x int_divides y /\ y int_divides z ==> x int_divides z`,
   PROVE_TAC [INT_DIVIDES, INT_MUL_ASSOC]);
+
+val INT_DIVIDES_MUL = store_thm(
+  "INT_DIVIDES_MUL",
+  Term`!p q. p int_divides p * q /\ p int_divides q * p`,
+  PROVE_TAC [INT_DIVIDES, INT_MUL_COMM]);
 
 val INT_DIVIDES_LMUL = store_thm(
   "INT_DIVIDES_LMUL",
