@@ -2313,6 +2313,57 @@ val LET_RATOR = save_thm("LET_RATOR",
  in TRANS LET_THM1 (SYM LET_THM2)
  end);
 
+
+(* TO BE ADDED.
+val P = mk_var("P",bool)
+val P
+val COND_CONG = prove(
+--`!P P' (x:'a) x' y y'.
+      (P = P') /\
+      (P'  ==> (x = x')) /\
+      (~P' ==> (y = y'))
+         ==>
+      ((if P then x else y) = (if P' then x' else y'))`--,
+ REPEAT STRIP_TAC THEN
+ REPEAT COND_CASES_TAC THEN
+ REPEAT RES_TAC);
+
+
+val LET_CONG = prove(
+--`!f (g:'a->'b) M M'.
+   (M = M') /\
+   (!x:'a. (x = M') ==> (f x = g x))
+   ==>
+  (LET f M = LET g M')`--,
+REPEAT STRIP_TAC
+ THEN REWRITE_TAC[boolTheory.LET_DEF]
+ THEN BETA_TAC
+ THEN RES_TAC
+ THEN ASM_REWRITE_TAC[]);
+
+
+val WIMP_CONG = prove(
+--`!x y y'. (x=x) /\
+            (x ==> (y = y'))
+            ==>
+            (x ==> y = x ==> y')`--,
+REPEAT GEN_TAC
+ THEN ASM_CASES_TAC(--`x:bool`--)
+ THEN ASM_REWRITE_TAC[]);
+
+
+val IMP_CONG = prove(
+--`!x x' y y'. (x=x') /\
+               (x' ==> (y = y'))
+               ==>
+               (x ==> y = x' ==> y')`--,
+REPEAT GEN_TAC
+ THEN BOOL_CASES_TAC(--`x':bool`--)
+ THEN BOOL_CASES_TAC(--`x:bool`--)
+ THEN REWRITE_TAC[]);
+
+*)
+
 val _ = export_theory();
 
 end; (* boolScript *)

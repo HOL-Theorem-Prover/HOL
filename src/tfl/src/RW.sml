@@ -33,13 +33,6 @@ infix ##;
 infix |->;
 infix THEN;
 
-(*
-val destAbs = pairTools.dest_aabs
-val stripAbs = pairTools.strip_aabs
-val list_mkAbs = pairTools.list_mk_aabs
-val betaConv = Conv.DEPTH_CONV pairTools.betaConv
-val GEN = pairTools.PGEN
-*)
 
 fun RW_ERR{func,mesg} =
    HOL_ERR{origin_structure = "RW",
@@ -521,7 +514,7 @@ let val ant_frees = free_vars ant
     val outcome =
      if (aconv lhs rhs) then NO_CHANGE (L,lhs)
      else let val lhs_beta_maybe =
-                  Conv.DEPTH_CONV pairTools.betaConv lhs
+                  Conv.DEPTH_CONV Let_conv.GEN_BETA_CONV lhs
                   handle HOL_ERR _ => REFL lhs
               val lhs' = Dsyntax.rhs(concl lhs_beta_maybe)
               val cps' =
@@ -540,7 +533,7 @@ in case outcome
     let val Mnew = Dsyntax.rhs(concl th)
         val g = pairTools.list_mk_aabs(vstrl1,Mnew)
         val gvstrl1 = list_mk_comb(g,vstrl1)
-        val eq = SYM(DEPTH_CONV pairTools.betaConv gvstrl1
+        val eq = SYM(DEPTH_CONV pairTools.GEN_BETA_CONV gvstrl1
                      handle HOL_ERR _ => REFL gvstrl1)
         val thm = TRANS th eq (* f vstrl1 = g vstrl1 *)
     in (CHANGE (itlist2 pairTools.PGEN args vstrl1 (itlist DISCH L thm)),
