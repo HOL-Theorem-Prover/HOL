@@ -56,7 +56,8 @@ fun pretypeToType pty =
   | dAQ pty => pty
 
 fun ident0 s = let
-  open HOLtokens infix OR
+  open HOLtokens
+  infix OR
 in
   (itemP Char.isAlpha >-                         (fn char1 =>
    many_charP (Char.isAlphaNum OR ITEMS "_'") >- (fn rest =>
