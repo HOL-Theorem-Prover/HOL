@@ -307,9 +307,8 @@ end;
 (*    |- (t = F) = ~t                                                        *)
 (*---------------------------------------------------------------------------*)
 
-local
-val th1 = INST_TYPE [{redex =  ==`:'a`==, residue = ==`:bool`==}] REFL_CLAUSE
-and [th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL EQ_CLAUSES))
+local val th1 = INST_TYPE [Type.alpha |-> Type.bool] REFL_CLAUSE
+      and [th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL EQ_CLAUSES))
 in
 fun EQ_CONV tm =
    let val {lhs,rhs} = dest_eq tm
@@ -459,9 +458,8 @@ fun IMP_THEN_NOT_CONV tm =
 (*    |- (F => t1 | t2) = t2                                                 *)
 (*---------------------------------------------------------------------------*)
 
-local
-val theta = [{redex= ==`:'a`==,residue = ==`:bool`==}]
-val [th1,th2] = map (GENL [--`t1:bool`--, --`t2:bool`--])
+local val theta = [Type.alpha |-> Type.bool]
+      val [th1,th2] = map (GENL [--`t1:bool`--, --`t2:bool`--])
                     (CONJUNCTS (SPEC_ALL (INST_TYPE theta COND_CLAUSES)))
 in
 fun IF_CONV tm =
@@ -565,13 +563,11 @@ fun FORALL_T [] = T_REFL
 (*---------------------------------------------------------------------------*)
 
 local
-val forall_simp = SPEC F (INST_TYPE [{redex = ==`:'a`==,residue = ==`:bool`==}]
-                                    FORALL_SIMP)
+val forall_simp = SPEC F (INST_TYPE [Type.alpha |-> Type.bool] FORALL_SIMP)
 in
 fun FORALL_F [] = F_REFL
   | FORALL_F (h::t) = TRANS (FORALL_EQ h (FORALL_F t)) forall_simp
-                      handle _ => raise TAUT_ERR{function = "FORALL_F",
-                                                 message = ""}
+      handle _ => raise TAUT_ERR{function = "FORALL_F", message = ""}
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -771,4 +767,3 @@ fun TAUT_PROVE tm = EQT_ELIM (TAUT_CONV tm)
 
 
 end; (* tautLib *)
-
