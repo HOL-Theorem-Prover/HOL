@@ -30,6 +30,8 @@ val _ = Hol_datatype `psr = PSR of word32=>(spsr->word32)`;
 val _ = type_abbrev("mem", ``:word30->word32``);
 val _ = Hol_datatype `state_ARM = ARM of mem=>reg=>psr`;
 
+val _ = Hol_datatype `condition = EQ | CS | MI | VS | HI | GE | GT | AL`;
+
 val _ = Hol_datatype `iclass = swp | mrs_msr | data_proc | reg_shift |
                                ldr | str | br | swi_ex | undef | unexec`;
 
@@ -519,24 +521,22 @@ val SWI_def = Define`
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
+val CONDITION_PASSED2_def = Define`
+  CONDITION_PASSED2 N Z C V cond =
+    case cond of
+       EQ -> Z
+    || CS -> C
+    || MI -> N
+    || VS -> V
+    || HI -> C /\ ~Z
+    || GE -> N = V
+    || GT -> ~Z /\ (N = V)
+    || _ -> T`;
+ 
 val CONDITION_PASSED_def = Define`
-  CONDITION_PASSED N Z C V cond =
-    if      cond = 0  (* EQ *) then Z
-    else if cond = 1  (* NE *) then ~Z
-    else if cond = 2  (* CS *) then C
-    else if cond = 3  (* CC *) then ~C
-    else if cond = 4  (* MI *) then N
-    else if cond = 5  (* PL *) then ~N
-    else if cond = 6  (* VS *) then V
-    else if cond = 7  (* VC *) then ~V
-    else if cond = 8  (* HI *) then C /\ ~Z
-    else if cond = 9  (* LS *) then ~C \/ Z
-    else if cond = 10 (* GE *) then N = V
-    else if cond = 11 (* LT *) then ~(N = V)
-    else if cond = 12 (* GT *) then ~Z /\ (N = V)
-    else if cond = 13 (* LE *) then Z \/ ~(N = V)
-    else if cond = 14 (* AL *) then T
-    else F`;
+  CONDITION_PASSED N Z C V n =
+    let pass = CONDITION_PASSED2 N Z C V (num2condition (BITS 31 29 n)) in
+      if BIT 28 n then ~pass else pass`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -574,7 +574,7 @@ val NEXT_ARM_def = Define`
     let n = w2n (MEM_READ_WORD mem (WORD_ALIGN (FETCH_PC reg))) in
     let ic = DECODE_INST n
     and (N,Z,C,V,mode) = DECODE_PSR (CPSR_READ psr) in
-      if ~(CONDITION_PASSED N Z C V (BITS 31 28 n)) then
+      if ~CONDITION_PASSED N Z C V n then
         ARM mem (INC_PC reg) psr
       else if ic = mrs_msr then
         if BIT 21 n then

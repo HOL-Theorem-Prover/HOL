@@ -74,7 +74,7 @@ val INTSEQ_def = Define`
 
 val ABORTINST_def = Define`
   ABORTINST iregval onewinst ointstart ireg n z c v =
-    ~iregval \/ (onewinst /\ ~ointstart /\ ~CONDITION_PASSED n z c v (BITSw 31 28 ireg))`;
+    ~iregval \/ (onewinst /\ ~ointstart /\ ~CONDITION_PASSED n z c v (w2n ireg))`;
 
 (* --------------- *)
 

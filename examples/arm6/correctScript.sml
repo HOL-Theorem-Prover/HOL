@@ -87,7 +87,7 @@ val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
     THEN ABBREV_TAC `i = MEMREAD mem pc`
     THEN ABBREV_TAC `cpsr = w2n (CPSR_READ psr)`
     THEN Cases_on `~CONDITION_PASSED (BIT 31 cpsr) (BIT 30 cpsr)
-                                     (BIT 29 cpsr) (BIT 28 cpsr) (BITSw 31 28 i)`
+                                     (BIT 29 cpsr) (BIT 28 cpsr) (w2n i)`
     THENL [ (* unexecuted *)
       ASM_SIMP_TAC std_ss [iclass_distinct,IC_def,ABORTINST_def,DUR_ARM6_def,DECODE_PSR_def]
         THEN UNFOLD_STATE
@@ -363,7 +363,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
     THEN SIMP_TAC bool_ss [ABS_ARM6_def]
     THEN UNFOLD_SPEC
     THEN Cases_on `~CONDITION_PASSED (BIT 31 cpsr) (BIT 30 cpsr)
-                                     (BIT 29 cpsr) (BIT 28 cpsr) (BITSw 31 28 i)`
+                                     (BIT 29 cpsr) (BIT 28 cpsr) (w2n i)`
     THENL [ (* unexecuted *)
       ASM_SIMP_TAC std_ss [iclass_distinct,IC_def,ABORTINST_def,DUR_ARM6_def,DECODE_PSR_def]
         THEN UNFOLD_STATE
