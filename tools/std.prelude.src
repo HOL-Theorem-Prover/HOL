@@ -8,48 +8,31 @@ local open Path
       val SIGOBJ = __
 in
 val _ = Meta.loadPath := SIGOBJ :: !Meta.loadPath
-val _ = load "HolKernel"
 end;
 
 (*---------------------------------------------------------------------------*
  *       Establish the basic environment.                                    *
  *---------------------------------------------------------------------------*)
 
-open HolKernel Globals;
-infix ## |->;
+val _ = app load ["HolKernel", "boolLib", "goalstackLib"];
+
+open HolKernel boolLib goalstackLib Psyntax;
+
+infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 infixr 3 -->;
-
-
-(*---------------------------------------------------------------------------*
- * Often, people want to use "standard" HOL tools: tactics, conversions,     *
- * rewriting, etc. That's what the next few lines achieve.                   *
- *---------------------------------------------------------------------------*)
-
-val _ = app load ["Parse", "basicHol90Lib",
-                  "goalstackLib", "Psyntax", "Rsyntax"];
-
-open Parse basicHol90Lib goalstackLib Psyntax;
-
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-infix 8 via;
+infix 8 via by;
 
 
 (*---------------------------------------------------------------------------*
  *   Install prettyprinters                                                  *
  *---------------------------------------------------------------------------*)
 
-local fun capture_errors ppfn pps x =
-             ppfn pps x
-             handle (e as HOL_ERR _) => (print "Pretty-printer error:\n";
-                                         print_HOL_ERR e)
-                  | e => (print "Pretty-printer error:\n";
-                          print (exnMessage e);
-                          print "\n")
+local fun with_pp ppfn pps x = ppfn pps x handle e => Raise e
 in
-  val _ = installPP (capture_errors (term_pp_with_delimiters pp_term))
-  val _ = installPP (capture_errors (type_pp_with_delimiters pp_type))
-  val _ = installPP (capture_errors pp_thm)
-  val _ = installPP (capture_errors term_grammar.prettyprint_grammar)
+  val _ = installPP (with_pp (Parse.term_pp_with_delimiters Parse.pp_term))
+  val _ = installPP (with_pp (Parse.type_pp_with_delimiters Parse.pp_type))
+  val _ = installPP (with_pp Parse.pp_thm)
+  val _ = installPP (with_pp term_grammar.prettyprint_grammar)
 
   val _ = installPP goalstackLib.pp_proofs
   val _ = installPP goalstackLib.pp_goalstack
