@@ -1,24 +1,3 @@
-(***
-(* ------------------------------------------------------------------------- *)
-(* A patch for mlton-20030716.                                               *)
-(* ------------------------------------------------------------------------- *)
-
-structure OS =
-   struct
-      open OS
-         
-      structure Path =
-         struct
-            open Path
-
-            val mkAbsolute = fn (path, relativeTo) =>
-               mkAbsolute {path = path, relativeTo = relativeTo}
-            val mkRelative = fn (path, relativeTo) =>
-               mkRelative {path = path, relativeTo = relativeTo}
-         end
-   end
-***)
-
 (* ------------------------------------------------------------------------- *)
 (* Bring certain declarations to the top-level.                              *)
 (* ------------------------------------------------------------------------- *)
@@ -33,24 +12,29 @@ exception Interrupt = SML90.Interrupt;
 exception Io = IO.Io;
 
 (* ------------------------------------------------------------------------- *)
-(* Sort out infixities.                                                      *)
+(* Sort out infixities                                                       *)
 (* ------------------------------------------------------------------------- *)
 
 infix 0 before;
 
 (* ------------------------------------------------------------------------- *)
-(* Quotations a la Mosml.                                                    *)
+(* Quotations a la Mosml                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a;
 
 (* ------------------------------------------------------------------------- *)
-(* Dummy versions of Mosml declarations to stop MLton barfing.               *)
+(* A quit function                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val quotation = ref false;
-val quietdec  = ref false;
+fun quit () : unit = OS.Process.exit OS.Process.success;
+
+(* ------------------------------------------------------------------------- *)
+(* Dummy versions of Mosml declarations to stop MLton barfing                *)
+(* ------------------------------------------------------------------------- *)
+
+val quotation = ref true;
+val quietdec  = ref true;
 val loadPath  = ref ([] : string list);
 val load      = fn (_ : string) => ();
 val installPP = fn (_ : ppstream -> 'a -> unit) => ();
-val printVal  = fn x => x;
