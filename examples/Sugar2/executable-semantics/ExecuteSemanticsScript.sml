@@ -421,6 +421,10 @@ val F_ALWAYS_def =
 val F_NEVER_def =
  pureDefine `F_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
 
+(******************************************************************************
+* Beginning of some stuff that turned out to be useless for execution.
+* Leaving it here as just conceivably a future use might appear!
+******************************************************************************)
 
 (******************************************************************************
 * Formula version of an operator due to Dana Fisman
@@ -473,6 +477,10 @@ val UF_ABORT_REC =
       UF_SEM w f \/ UF_SEM w (F_BOOL b) \/ ABORT_AUX w f b 1``,
      RW_TAC std_resq_ss [UF_SEM_def,F_PREF_def,ABORT_AUX_def]
     THEN PROVE_TAC[]);
+
+(******************************************************************************
+* End of useless stuff.
+******************************************************************************)
 
 
 val _ = export_theory();

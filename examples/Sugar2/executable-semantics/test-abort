@@ -67,8 +67,6 @@ val _ = computeLib.add_funs
            UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP,
            S_CLOCK_COMP_ELIM,
            F_TRUE_CLOCK_COMP_ELIM,
-           ABORT_AUX_REC,
-           UF_ABORT_REC,
            DECIDE ``SUC n > 0 = T``]);
 
 
@@ -139,28 +137,52 @@ val Fig8_def =
            {interrupt};{interrupt};{req};{req};{};{}]`;
 
 
-val Fig8_abort =
+val UF_SEM_Fig8_abort =
  time
   EVAL
   ``UF_SEM
      (FINITE Fig8)
-     (always 
-      (F_BOOL(B_PROP start) 
-       -> 
+     (always
+      (F_BOOL(B_PROP start)
+       ->
        ((F_BOOL(B_PROP req) -> eventually_bang (F_BOOL(B_PROP ack)))
         abort
         (B_PROP interrupt))))``;
 
-
-val Fig8_until =
+val UF_SEM_Fig8_until =
  time
   EVAL
   ``UF_SEM
      (FINITE Fig8)
-     (always 
-      (F_BOOL(B_PROP start) 
-       -> 
+     (always
+      (F_BOOL(B_PROP start)
+       ->
        ((F_BOOL(B_PROP req) -> eventually_bang (F_BOOL(B_PROP ack)))
         until
         (F_BOOL(B_PROP interrupt)))))``;
 
+val F_SEM_Fig8_abort =
+ time
+  EVAL
+  ``F_SEM
+     (FINITE Fig8)
+     B_TRUE
+     (always
+      (F_BOOL(B_PROP start)
+       ->
+       ((F_BOOL(B_PROP req) -> eventually_bang (F_BOOL(B_PROP ack)))
+        abort
+        (B_PROP interrupt))))``;
+
+val F_SEM_Fig8_until =
+ time
+  EVAL
+  ``F_SEM
+     (FINITE Fig8)
+     B_TRUE
+     (always
+      (F_BOOL(B_PROP start)
+       ->
+       ((F_BOOL(B_PROP req) -> eventually_bang (F_BOOL(B_PROP ack)))
+        until
+        (F_BOOL(B_PROP interrupt)))))``;
