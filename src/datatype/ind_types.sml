@@ -1425,7 +1425,7 @@ local
     val n = length(itlist (curry op@) (map (map fst o snd) def) [])
     val newtys = map fst def
     val utys = Lib.U (itlist (union o map snd o snd) def [])
-    val utyvars = Lib.mk_set (List.filter is_vartype utys)
+    val utyvars = type_varsl utys
     val rectys = filter (is_nested newtys) utys
   in
     if rectys = [] then let
