@@ -10,19 +10,13 @@ struct
 
 local
   open HolKernel boolLib Parse pairSyntax numSyntax
-  infix THEN THENC THENL |-> ORELSE;
-  infixr -->;
+  infix |->; infixr -->;
 
   local open pairTheory sumTheory optionTheory arithmeticTheory in end;
 
   val bool_info = Option.valOf(TypeBase.read "bool")
-  val bool_case_rw = prove(Term`!x b. bool$bool_case x x b = (x:'a)`,
-    REPEAT GEN_TAC
-      THEN BOOL_CASES_TAC (Term`b:bool`)
-     THEN Rewrite.ASM_REWRITE_TAC[bool_case_DEF] THEN BETA_TAC
-     THEN Rewrite.ASM_REWRITE_TAC[COND_CLAUSES]);
-  val bool_size_info = (Term`bool$bool_case 0n 0n`, 
-                        TypeBase.ORIG bool_case_rw)
+  val bool_size_info = (rator(mk_bool_case(zero_tm,zero_tm,mk_var("b",bool))),
+                        TypeBase.ORIG boolTheory.bool_case_ID)
   val bool_info' = TypeBase.put_size bool_size_info bool_info
 
   val prod_size_info =
