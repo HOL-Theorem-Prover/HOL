@@ -19,7 +19,7 @@ toplevel () {
 simple_example () {
   pushd $1
   $holmake cleanAll
-  if $holmake
+  if $holmake --qof
   then
     echo Done Example $1
     popd
