@@ -42,7 +42,7 @@ fun ERR msg func =
 val tag = Tag.read "BDD";
 
 val EX_OR_CONV     = Conv.EXISTS_OR_CONV;  
-val term_to_string = Hol_pp.term_to_string;
+val term_to_string = Parse.term_to_string;
 
 
 fun TERNOP_CONV cnv = 
