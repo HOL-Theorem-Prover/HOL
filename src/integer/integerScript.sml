@@ -1503,6 +1503,21 @@ val int_eq_calculate = prove(
     ]
   ]);
 
+val INT_LT_CALCULATE = store_thm(
+  "INT_LT_CALCULATE",
+  Term`!n m.  (&n:int < &m = n < m) /\ (~&n < ~&m = m < n) /\
+              (~&n < &m = ~(n = 0) \/ ~(m = 0)) /\ (&n < ~&m = F)`,
+  SIMP_TAC int_ss [INT_LT, INT_LT_NEG] THEN
+  SingleStep.Induct THENL [
+    SIMP_TAC int_ss [INT_NEG_0, INT_LT, INT_NEG_GT0],
+    GEN_TAC THEN CONJ_TAC THENL [
+      SIMP_TAC int_ss [INT, INT_NEG_ADD, INT_LT_ADDNEG2] THEN
+      ASM_SIMP_TAC int_ss [INT_ADD],
+      SIMP_TAC int_ss [INT, INT_LT_ADD_SUB, int_sub, GSYM INT_NEG_ADD] THEN
+      ASM_SIMP_TAC int_ss [INT_ADD]
+    ]
+  ]);
+
 (*--------------------------------------------------------------------------*)
 (* Some nasty hacking round to show that the positive integers are a copy   *)
 (* of the natural numbers.                                                  *)
@@ -1936,6 +1951,46 @@ val INT_ABS_EQ0 = store_thm(
   Term`!p. (ABS p = 0) = (p = 0)`,
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
   ASM_SIMP_TAC int_ss [INT_ABS_NEG, INT_ABS_NUM, INT_NEG_EQ0]);
+
+val INT_ABS_LT = store_thm(
+  "INT_ABS_LT",
+  ``!p q. (ABS p < q = p < q /\ ~q < p) /\
+          (q < ABS p = q < p \/ p < ~q) /\
+          (~ABS p < q = ~q < p \/ p < q) /\
+          (q < ~ABS p = p < ~q /\ q < p)``,
+  REPEAT GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_ABS_NUM, INT_ABS_NEG, INT_NEG_LT0,
+                       INT_NEG_0, INT_NEGNEG, INT_NEG_GT0,
+                       INT_LT_CALCULATE]);
+
+val INT_ABS_LE = store_thm(
+  "INT_ABS_LE",
+  ``!p q. (ABS p <= q = p <= q /\ ~q <= p) /\
+          (q <= ABS p = q <= p \/ p <= ~q) /\
+          (~ABS p <= q = ~q <= p \/ p <= q) /\
+          (q <= ~ABS p = p <= ~q /\ q <= p)``,
+  REPEAT GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_ABS_NUM, INT_ABS_NEG, INT_NEG_LT0,
+                       INT_NEG_0, INT_NEGNEG, INT_NEG_GT0, int_le,
+                       INT_LT_CALCULATE])
+
+val INT_ABS_EQ = store_thm(
+  "INT_ABS_EQ",
+  ``!p q. ((ABS p = q) = (p = q) /\ (0 < q) \/ (p = ~q) /\ (0 <= q)) /\
+          ((q = ABS p) = (p = q) /\ (0 < q) \/ (p = ~q) /\ (0 <= q))``,
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) THEN
+  REWRITE_TAC [] THEN
+  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_ABS_NUM, INT_ABS_NEG, INT_NEG_0, INT_NEGNEG,
+                       int_eq_calculate, INT_EQ_NEG, INT_INJ,
+                       INT_LT_CALCULATE, INT_LE_REFL, INT_LE, INT_NOT_LE]);
+
 
 val INT_ABS_DIV = store_thm(
   "INT_ABS_DIV",
@@ -2684,21 +2739,6 @@ val INT_EXP_REDUCE = store_thm(
           (~&(NUMERAL n) ** NUMERAL (NUMERAL_BIT2 m) =
              &(NUMERAL (n EXP NUMERAL_BIT2 m)))`,
   SIMP_TAC int_ss [INT_EXP_CALCULATE, NUMERAL_DEF]);
-
-val INT_LT_CALCULATE = store_thm(
-  "INT_LT_CALCULATE",
-  Term`!n m.  (&n:int < &m = n < m) /\ (~&n < ~&m = m < n) /\
-              (~&n < &m = ~(n = 0) \/ ~(m = 0)) /\ (&n < ~&m = F)`,
-  SIMP_TAC int_ss [INT_LT, INT_LT_NEG] THEN
-  Induct THENL [
-    SIMP_TAC int_ss [INT_NEG_0, INT_LT, INT_NEG_GT0],
-    GEN_TAC THEN CONJ_TAC THENL [
-      SIMP_TAC int_ss [INT, INT_NEG_ADD, INT_LT_ADDNEG2] THEN
-      ASM_SIMP_TAC int_ss [INT_ADD],
-      SIMP_TAC int_ss [INT, INT_LT_ADD_SUB, int_sub, GSYM INT_NEG_ADD] THEN
-      ASM_SIMP_TAC int_ss [INT_ADD]
-    ]
-  ]);
 
 val INT_LT_REDUCE = store_thm(
   "INT_LT_REDUCE",

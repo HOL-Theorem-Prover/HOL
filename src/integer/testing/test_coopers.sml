@@ -50,6 +50,8 @@ val terms_to_test =
            !x1.
              (if 100 < x then x1 = x - 10 else x1 = 91) ==>
              (if 100 < y0 then x1 = y0 - 10 else x1 = 91))`),
+   ("DIV1", Term`!x. 0 <= x = x / 2 <= x`),
+   ("DIV2", Term`!x. (x / 2 = x) = (x = 0)`),
    ("10000.9391",
     Term`~(v <
         SUC

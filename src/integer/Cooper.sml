@@ -20,6 +20,10 @@ fun is_linear_mult tm =
   not (contains_var (rand tm) andalso contains_var (rand (rator tm)))
 fun land tm = rand (rator tm)
 
+fun non_zero tm =
+    if is_negated tm then non_zero (rand tm)
+    else tm <> zero_tm
+
 (* returns a list of pairs, where the first element of each pair is a non-
    Presburger term that occurs in tm, and where the second is a boolean
    that is true if none of the variables that occur in the term are
@@ -49,6 +53,10 @@ fun non_presburger_subterms0 ctxt tm =
               (non_presburger_subterms0 ctxt (rand tm))
   else if (is_divides tm andalso is_int_literal (land tm)) then
     non_presburger_subterms0 ctxt (rand tm)
+  else if ((is_div tm orelse is_mod tm) andalso
+           is_int_literal (rand tm) andalso
+           non_zero (rand tm)) then
+    non_presburger_subterms0 ctxt (land tm)
   else if is_int_literal tm then []
   else if is_var tm andalso type_of tm = int_ty then []
   else if (tm = true_tm orelse tm = false_tm) then []

@@ -664,14 +664,82 @@ in
   | SOME ((th,()),_) => th
 end
 
+fun UNBETA_CONV to_elim t = let
+  (* find all instances of to_elim in t, and convert t
+     to (\v. t[v/to_elim]) to_elim
+     v can be a genvar because we expect to get rid of it later. *)
+  val gv = genvar (type_of to_elim)
+  val newbody = Term.subst [to_elim |-> gv] t
+in
+  SYM (BETA_CONV (mk_comb(mk_abs(gv,newbody), to_elim)))
+end
 
-fun decide_pure_presburger_term tm0 = let
+fun find_free_terms P t = let
+  fun recurse binders acc tm = let
+    val newset =
+        if P tm then let
+            val tm_frees = FVL [tm]
+          in
+            if HOLset.isEmpty (HOLset.intersection(tm_frees, binders)) then
+              HOLset.add(acc, tm)
+            else acc
+          end
+        else acc
+  in
+    case dest_term tm of
+      LAMB(v, body) => recurse (HOLset.add(binders, v)) newset body
+    | COMB(f,x) => recurse binders (recurse binders newset f) x
+    | _ => newset
+  end
+in
+  recurse empty_tmset empty_tmset t
+end
+
+
+val x_var = mk_var("x", int_ty)
+val c_var = mk_var("c", int_ty)
+fun elim_div_mod0 t = let
+  val divmods =
+      HOLset.listItems (find_free_terms (fn t => is_mod t orelse is_div t) t)
+  fun elim_t to_elim = let
+    val ((num,divisor), thm) = (dest_div to_elim, INT_DIV_P)
+        handle HOL_ERR _ => (dest_mod to_elim, INT_MOD_P)
+    val div_nzero = EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(divisor, zero_tm))))
+    val abs_div = REDUCE_CONV (mk_absval divisor)
+    val rwt = MP (Thm.INST [x_var |-> num, c_var |-> divisor] (SPEC_ALL thm))
+                 div_nzero
+  in
+    UNBETA_CONV to_elim THENC REWR_CONV rwt THENC
+    REWRITE_CONV [abs_div] THENC REWRITE_CONV [INT_ABS_LT, INT_ABS_LE] THENC
+    STRIP_QUANT_CONV (RAND_CONV (RAND_CONV (RAND_CONV BETA_CONV))) THENC
+    push_in_exists
+  end
+in
+  EVERY_QCONV (map elim_t divmods) t
+end
+
+fun elim_div_mod t = let
+  (* can't just apply elim_div_mod to a term with quantifiers because the
+     elimination of x/c relies on x being free.  So we need to traverse
+     the term underneath the quantifiers.  It may also help to get the
+     quantifiers to have scope over as little of the term as possible. *)
+  fun recurse tm = let
+  in
+    if is_exists tm orelse is_forall tm then BINDER_CONV recurse
+    else
+      elim_div_mod0 THENQC
+      SUB_QCONV recurse
+  end tm
+in
+  recurse t
+end
+
+fun decide_pure_presburger_term tm = let
   (* no free variables allowed *)
   val phase0_CONV =
     (* rewrites out conditional expression and absolute value terms *)
-    REWRITE_CONV [INT_ABS] THENC Sub_and_cond.COND_ELIM_CONV
-  val initial_thm = (phase0_CONV THENC phase1_CONV) tm0
-  val tm = rhs (concl initial_thm)
+    elim_div_mod THENQC REWRITE_CONV [INT_ABS] THENQC
+    Sub_and_cond.COND_ELIM_CONV
 
   fun mainwork tm = let
   in
@@ -692,8 +760,8 @@ fun decide_pure_presburger_term tm0 = let
            RAND_CONV pure_goal THENC REDUCE_CONV))) tm
     | qsEXISTS => (move_quants_up THENC pure_goal) tm
 in
-  TRANS initial_thm (strategy tm)
-end
+  phase0_CONV THENQC phase1_CONV THENQC strategy
+end tm
 
 (* the following is useful in debugging the above; given an f, the
    function term_at_f will return the term "living" at f, as long as there
