@@ -235,8 +235,10 @@ local val genvar_prefix = "%%genvar%%"
 in
 fun genvar ty = Fv(state(next nameStrm), ty)
 
-fun genvars  _ 0 = []
-  | genvars ty n = genvar ty::genvars ty (n-1);
+fun genvars ty =
+ let fun gen acc n = if n <= 0 then rev acc else gen (genvar ty::acc) (n-1)
+ in gen []
+ end
 
 fun is_genvar (Fv(Name,_)) = String.isPrefix genvar_prefix Name
   | is_genvar _ = false;
@@ -572,7 +574,8 @@ fun rename_bvar s t =
     case t of
       Abs(Fv(_, Ty), Body) => Abs(Fv(s,Ty), Body)
     | Clos(_, Abs _) => rename_bvar s (push_clos t)
-    | _ => raise ERR "rename_bvar" "not an abstraction"
+    | _ => raise ERR "rename_bvar" "not an abstraction";
+
 
 local val EQ = Portable.pointer_eq
 in
@@ -676,9 +679,7 @@ fun inst [] tm = tm
          of SAME => c
           | DIFF ty => Const(r,(if Type.polymorphic ty then POLY else GRND)ty))
      | inst1 (v as Fv(Name,Ty)) =
-       (case Type.ty_sub theta Ty
-         of SAME => v
-          | DIFF ty => Fv(Name, ty))
+         (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
      | inst1 (Comb(Rator,Rand)) = Comb(inst1 Rator, inst1 Rand)
      | inst1 (Abs(Bvar,Body))   = Abs(inst1 Bvar, inst1 Body)
      | inst1 (t as Clos _)      = inst1(push_clos t)

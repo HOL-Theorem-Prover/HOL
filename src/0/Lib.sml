@@ -261,8 +261,6 @@ fun for base top f =
 fun for_se base top f =
  let fun For i = if i>top then () else (f i; For(i+1)) in For base end;
 
-fun list_of_array A = for 0 (Array.length A - 1) (fn i => Array.sub(A,i));
-
 (*---------------------------------------------------------------------------*
  * Assoc lists.                                                              *
  *---------------------------------------------------------------------------*)

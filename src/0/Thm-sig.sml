@@ -1,26 +1,10 @@
-(* ===================================================================== *)
-(* FILE          : Thm.sig                                               *)
-(* DESCRIPTION   : Signature for the abstract data type of theorems.     *)
-(*                                                                       *)
-(* AUTHORS       : (c) Mike Gordon, University of Cambridge              *)
-(*                     Konrad Slind, University of Calgary               *)
-(* DATE          : September 10, 1991                                    *)
-(* Modified      : September 23, 1997, Ken Larsen                        *)
-(*               : June 16, 1998, Konrad Slind                           *)
-(*               : 1999, Bruno Barras, University of Cambridge and INRIA *)
-(*               : July 2000, Konrad Slind, University of Cambridge      *)
-(* ===================================================================== *)
-
-
 signature Thm =
 sig
-
   type thm
   type tag      = Tag.tag
   type term     = Term.term
   type hol_type = Type.hol_type
   type 'a set   = 'a HOLset.set
-
 
 
   (* Simple operations on the type of theorems *)
@@ -111,7 +95,7 @@ sig
   val Eta           : thm -> thm
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
-  val Spec          : term -> thm -> thm
+  val Specialize    : term -> thm -> thm
 
 
   (* Oracle invocation *)

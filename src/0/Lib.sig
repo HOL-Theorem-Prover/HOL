@@ -1,13 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : Lib.sig                                               *)
-(* DESCRIPTION   : Signature for library of useful SML functions.        *)
-(*                                                                       *)
-(* AUTHOR        : (c) Konrad Slind, University of Calgary               *)
-(* DATE          : August 26, 1991                                       *)
-(* Modified      : September 22, 1997, Ken Larsen                        *)
-(* ===================================================================== *)
-
-
 signature Lib =
 sig
   val curry         : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
@@ -89,7 +79,6 @@ sig
   val op_set_diff   : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
   val for           : int -> int -> (int -> 'a) -> 'a list
   val for_se        : int -> int -> (int -> 'a) -> unit
-  val list_of_array : 'a array -> 'a list
   val int_to_string : int -> string
   val string_to_int : string -> int
   val sort          : ('a -> 'a -> bool) -> 'a list -> 'a list
@@ -105,13 +94,11 @@ sig
   val state         : ('a,'b) istream -> 'b
   val reset         : ('a,'b) istream -> ('a,'b) istream
 
-  val say           : string -> unit
-
   val quote         : string -> string
   val mlquote       : string -> string
-
   val words2        : string -> string -> string list
   val commafy       : string list -> string list
+  val say           : string -> unit
   val prime         : string -> string
 
   val front_last    : 'a list -> 'a list * 'a

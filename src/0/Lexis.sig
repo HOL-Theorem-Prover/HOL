@@ -1,14 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : Lexis.sig                                             *)
-(* DESCRIPTION   : Signature for functions defining lexical structure    *)
-(*                 of hol90 types and terms.                             *)
-(*                                                                       *)
-(* AUTHOR        : Konrad Slind, University of Calgary                   *)
-(* DATE          : August 26, 1991                                       *)
-(* Modified      : September 22, 1997, Ken Larsen                        *)
-(* ===================================================================== *)
-
-
 signature Lexis =
 sig
   val alphanumerics         : Word8Array.array

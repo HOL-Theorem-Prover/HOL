@@ -940,8 +940,12 @@ fun CCONTR w fth =
 
 fun INST [] th = th
   | INST theta th =
-      make_thm Count.Inst (tag th, hypset_map (subst theta) (hypset th),
-         subst theta (concl th) handle HOL_ERR _ => ERR "INST" "")
+      case subst_assoc (not o is_var) theta
+       of NONE => (make_thm Count.Inst 
+                       (tag th, hypset_map (subst theta) (hypset th),
+                        subst theta (concl th))
+                     handle HOL_ERR _ => ERR "INST" "")
+        | SOME _ => raise ERR "INST" "can only instantiate variables"
 
 
 (*---------------------------------------------------------------------------*
@@ -1060,7 +1064,7 @@ fun Mk_abs thm =
  * Same as SPEC, but without propagating the substitution.  Spec = SPEC.     *
  *---------------------------------------------------------------------------*)
 
-fun Spec t th =
+fun Specialize t th =
    let val (Rator,Rand) = dest_comb(concl th)
        val {Name,Thy,...} = dest_thy_const Rator
    in
@@ -1068,7 +1072,7 @@ fun Spec t th =
      make_thm Count.Spec
         (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)))
    end
-   handle HOL_ERR _ => ERR "Spec" "";
+   handle HOL_ERR _ => ERR "Specialize" "";
 
 (*---------------------------------------------------------------------------*
  * Construct a theorem directly and attach the given tag to it.              *

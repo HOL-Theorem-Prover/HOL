@@ -1,16 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : Type.sig                                              *)
-(* DESCRIPTION   : HOL types.                                            *)
-(*                                                                       *)
-(* AUTHOR        : (c) Konrad Slind, University of Calgary               *)
-(* DATE          : August 26, 1991                                       *)
-(* UPDATE        : October 94. Type signature implementation moved from  *)
-(*                 symtab.sml, which is now gone.                        *)
-(* Modified      : September 22, 1997, Ken Larsen                        *)
-(*                 April 12, 1998, Konrad Slind                          *)
-(*                 July, 2000, Konrad Slind                              *)
-(* ===================================================================== *)
-
 signature Type =
 sig
 
@@ -50,11 +37,11 @@ sig
  val ftyvar        : hol_type
 
  val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
- val raw_match_type: hol_type list -> hol_type -> hol_type ->
-                     ((hol_type,hol_type)Lib.subst * hol_type list) ->
-                     ((hol_type,hol_type)Lib.subst * hol_type list)
+ val raw_match_type : hol_type list -> hol_type -> hol_type ->
+                      ((hol_type,hol_type)Lib.subst * hol_type list) ->
+                      ((hol_type,hol_type)Lib.subst * hol_type list)
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
  val match_typel   : hol_type list -> hol_type -> hol_type ->
                      (hol_type,hol_type) Lib.subst
 
-end;
+end
