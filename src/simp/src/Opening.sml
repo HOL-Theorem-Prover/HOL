@@ -191,7 +191,9 @@ in fn {relation,solver,depther,freevars} =>
 
   in
     if (rand (rator (concl final_thm)) = rand (concl final_thm))
-      then failwith "unchanged"
+      then raise HOL_ERR { origin_structure = "Opening",
+                           origin_function = "CONGPROC",
+                           message = "Congruence gives no change" }
     else (trace(3,PRODUCE(tm,"congruence rule",final_thm)); final_thm)
   end
 end;
