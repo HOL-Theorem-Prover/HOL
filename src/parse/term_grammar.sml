@@ -1,5 +1,53 @@
 open HOLgrammars
-datatype rule_element = TOK of string | TM
+  type block_info = PP.break_style * int
+  datatype rule_element = TOK of string | TM
+  datatype pp_element =
+    PPBlock of pp_element list * block_info |
+    EndInitialBlock of block_info | BeginFinalBlock of block_info |
+    HardSpace of int | BreakSpace of (int * int) |
+    RE of rule_element | LastTM | FirstTM
+  (* these last two only used internally *)
+
+    datatype PhraseBlockStyle =
+      AroundSameName | AroundSamePrec | AroundEachPhrase
+    datatype ParenStyle =
+      Always | OnlyIfNecessary | ParoundName | ParoundPrec
+
+  fun rule_elements0 acc pplist =
+    case pplist of
+      [] => acc
+    | ((RE x) :: xs) => rule_elements0 (acc @ [x]) xs
+    | (PPBlock(pels, _) :: xs) => rule_elements0 (rule_elements0 acc pels) xs
+    | ( _ :: xs) => rule_elements0 acc xs
+  val rule_elements = rule_elements0 []
+
+
+  fun rels_ok [TOK _] = true
+    | rels_ok (TOK _ :: TM :: xs) = rels_ok xs
+    | rels_ok (TOK _ :: xs) = rels_ok xs
+    | rels_ok _ = false
+
+  fun pp_elements_ok pplist = let
+    fun check_em toplevel eibs_ok els =
+      case els of
+        [] => true
+      | (x::xs) => let
+        in
+          case x of
+            LastTM => false
+          | FirstTM => false
+          | EndInitialBlock _ =>
+              toplevel andalso eibs_ok andalso check_em true true xs
+          | BeginFinalBlock _ => toplevel andalso check_em true false xs
+          | PPBlock(els, _) =>
+              check_em false false els andalso check_em toplevel eibs_ok xs
+          | _ => check_em toplevel eibs_ok xs
+        end
+  in
+    rels_ok (rule_elements pplist) andalso check_em true true pplist
+  end
+
+
 
 val fnapp_special = "_ fnapp"
 val bracket_special = "_ bracket"
@@ -11,11 +59,15 @@ fun reltoString (TOK s) = s
   | reltoString TM = "TM"
 
 type rule_record = {term_name : string,
-                    elements : rule_element list,
-                    preferred : bool}
+                    elements : pp_element list,
+                    preferred : bool,
+                    block_style : PhraseBlockStyle * block_info,
+                    paren_style : ParenStyle}
 
-fun update_rr_pref b {term_name, elements, preferred} =
-  {term_name = term_name, elements = elements, preferred = b}
+fun update_rr_pref b
+  {term_name, elements, preferred, block_style, paren_style} =
+  {term_name = term_name, elements = elements, preferred = b,
+   block_style = block_style, paren_style = paren_style}
 
 datatype binder = LAMBDA | BinderString of string
 datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
@@ -86,14 +138,13 @@ end
 fun fupdate_rule_by_termtok {term_name, tok} f r = let
   fun over_rr (rr:rule_record) =
     if #term_name rr = term_name andalso
-      List.exists (fn e => e = TOK tok) (#elements rr) then
+      List.exists (fn e => e = TOK tok) (rule_elements (#elements rr)) then
       f rr
     else
       rr
 in
   map_rrfn_rule over_rr r
 end
-
 
 fun fupdate_rulelist f rules = map (fn (p,r) => (p, f r)) rules
 fun fupdate_prulelist f rules = map f rules
@@ -159,9 +210,14 @@ val stdhol : grammar =
             (SOME 5, VSCONS),
             (SOME 1000, SUFFIX TYPE_annotation),
             (SOME 2000, FNAPP),
-            (NONE, CLOSEFIX [{term_name = bracket_special,
-                              elements = [TOK "(", TM, TOK ")"],
-                              preferred = false}])],
+            (NONE,
+             CLOSEFIX [{term_name = bracket_special,
+                        elements = [RE (TOK "("), RE TM, RE (TOK ")")],
+                        preferred = false,
+                        (* these two elements here will not actually
+                         ever be looked at by the printer *)
+                        block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                        paren_style = Always}])],
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
    numeral_info = []}
@@ -174,18 +230,18 @@ fun grammar_tokens G = let
     | specials_from_elm ((TOK x)::xs) = add x >> specials_from_elm xs
     | specials_from_elm (TM::xs) = specials_from_elm xs
   fun rule_specials (PREFIX(STD_prefix rules)) =
-        mmap (specials_from_elm o #elements) rules
+        mmap (specials_from_elm o rule_elements o #elements) rules
     | rule_specials (PREFIX (BINDER b)) =
         mmap add (map (binder_to_string G) b) >>
         add (#endbinding (#specials G))
     | rule_specials (SUFFIX(STD_suffix rules)) =
-        mmap (specials_from_elm o #elements) rules
+        mmap (specials_from_elm o rule_elements o #elements) rules
     | rule_specials (SUFFIX TYPE_annotation) = add (#type_intro (#specials G))
     | rule_specials (INFIX(STD_infix (rules, _))) =
-        mmap (specials_from_elm o #elements) rules
+        mmap (specials_from_elm o rule_elements o #elements) rules
     | rule_specials (INFIX RESQUAN_OP) = ok
     | rule_specials (CLOSEFIX rules) =
-        mmap (specials_from_elm o #elements) rules
+        mmap (specials_from_elm o rule_elements o #elements) rules
     | rule_specials (LISTRULE rlist) = let
         fun process r =
           add (#separator r) >> add (#leftdelim r) >> add (#rightdelim r)
@@ -209,9 +265,10 @@ fun find_suffix_rhses (G : grammar) = let
   fun select (SUFFIX TYPE_annotation) = [[TypeTok]]
     | select (SUFFIX (STD_suffix rules)) = let
       in
-        map (rel_list_to_toklist o #elements) rules
+        map (rel_list_to_toklist o rule_elements o #elements) rules
         end
-    | select (CLOSEFIX rules) = map (rel_list_to_toklist o #elements) rules
+    | select (CLOSEFIX rules) =
+        map (rel_list_to_toklist o rule_elements o #elements) rules
     | select (LISTRULE rlist) =
         map (fn r => [STD_HOL_TOK (#rightdelim r)]) rlist
     | select _ = []
@@ -224,10 +281,12 @@ fun find_prefix_lhses (G : grammar) = let
   fun select x = let
   in
     case x of
-      PREFIX (STD_prefix rules) => map (rel_list_to_toklist o #elements) rules
+      PREFIX (STD_prefix rules) =>
+        map (rel_list_to_toklist o rule_elements o #elements) rules
     | PREFIX (BINDER sl) =>
         map (fn b => [STD_HOL_TOK (binder_to_string G b)]) sl
-    | CLOSEFIX rules => map (rel_list_to_toklist o #elements) rules
+    | CLOSEFIX rules =>
+        map (rel_list_to_toklist o rule_elements o #elements) rules
     | (LISTRULE rlist) =>
         map (fn r => [STD_HOL_TOK (#leftdelim r)]) rlist
     | _ => []
@@ -348,6 +407,8 @@ in
   fupdate_rules recurse G
 end
 
+
+
 fun remove_form s rule = let
   fun rr_ok (r:rule_record) = #term_name r <> s
   fun stringbinder LAMBDA = false | stringbinder (BinderString s0) = s0 = s
@@ -367,7 +428,7 @@ end
 fun remove_tok {term_name, tok} r = let
   fun rels_safe rels = not (List.exists (fn e => e = TOK tok) rels)
   fun rr_safe {term_name = s, elements,...} =
-    s <> term_name orelse rels_safe elements
+    s <> term_name orelse rels_safe (rule_elements elements)
 in
   case r of
     SUFFIX (STD_suffix slist) =>
@@ -391,10 +452,6 @@ end
 fun remove_standard_form G s = map_rules (remove_form s) G
 fun remove_form_with_tok G r = map_rules (remove_tok r) G
 
-fun rels_ok [TOK _] = true
-  | rels_ok (TOK _ :: TM :: xs) = rels_ok xs
-  | rels_ok (TOK _ :: xs) = rels_ok xs
-  | rels_ok _ = false
 
 datatype rule_fixity =
   Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
@@ -411,10 +468,13 @@ fun clear_prefs_for s =
   (fupdate_rulelist (fupdate_rule_by_term s (update_rr_pref false)))
 
 
-fun add_rule G0 (s, f, rels) = let
-  val _ = rels_ok rels orelse raise GrammarError "token list no good"
+fun add_rule G0 {term_name = s, fixity = f, pp_elements,
+                 paren_style, block_style} = let
+  val _ =  pp_elements_ok pp_elements orelse
+                 raise GrammarError "token list no good"
   val G1 = clear_prefs_for s G0
-  val rr = {term_name = s, elements = rels, preferred = true}
+  val rr = {term_name = s, elements = pp_elements, preferred = true,
+            paren_style = paren_style, block_style = block_style}
   val new_rule =
     case f of
       Infix (a,p) => (SOME p, INFIX(STD_infix([rr], a)))
@@ -463,7 +523,7 @@ fun get_precedence ({rules,...}:grammar) s = let
   fun check_rule (p, r) = let
     fun elmem s [] = false
       | elmem s ({elements, ...}::xs) =
-      Lib.mem (TOK s) elements orelse elmem s xs
+      Lib.mem (TOK s) (rule_elements elements) orelse elmem s xs
   in
     case r of
       INFIX(STD_infix (elms, assoc)) =>

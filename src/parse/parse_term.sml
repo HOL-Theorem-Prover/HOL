@@ -81,6 +81,7 @@ fun mk_prec_matrix G = let
     ResquanOpTok :: VS_cons :: STD_HOL_TOK fnapp_special :: all_tokens specs
   val matrix:(stack_terminal * stack_terminal, order) Polyhash.hash_table =
     Polyhash.mkPolyTable (length specs * length specs, NotFound)
+  val rule_elements = term_grammar.rule_elements o #elements
   fun insert k v = let
     val insert_result = Polyhash.peekinsert matrix (k, v)
   in
@@ -105,15 +106,15 @@ fun mk_prec_matrix G = let
     end
   in
     case rule of
-      PREFIX (STD_prefix rules) => app (insert_oplist o #elements) rules
+      PREFIX (STD_prefix rules) => app (insert_oplist o rule_elements) rules
     | PREFIX (BINDER slist) =>
         app (fn b => insert (STD_HOL_TOK (binder_to_string G b),
                              EndBinding) EQUAL) slist
-    | SUFFIX (STD_suffix rules) => app (insert_oplist o #elements) rules
+    | SUFFIX (STD_suffix rules) => app (insert_oplist o rule_elements) rules
     | SUFFIX TYPE_annotation => ()
-    | INFIX (STD_infix (rules, _)) => app (insert_oplist o #elements) rules
+    | INFIX (STD_infix (rules, _)) => app (insert_oplist o rule_elements) rules
     | INFIX RESQUAN_OP => ()
-    | CLOSEFIX rules => app (insert_oplist o #elements) rules
+    | CLOSEFIX rules => app (insert_oplist o rule_elements) rules
     | LISTRULE rlist => let
         fun process r = let
           val left = STD_HOL_TOK (#leftdelim r)
@@ -155,10 +156,10 @@ fun mk_prec_matrix G = let
         val rest = map_rule f xs
         val here =
           case x of
-            INFIX (STD_infix (rules, _)) => map (f o #elements) rules
-          | SUFFIX (STD_suffix rules) => map (f o #elements) rules
-          | PREFIX (STD_prefix rules) => map (f o #elements) rules
-          | CLOSEFIX rules => map (f o #elements) rules
+            INFIX (STD_infix (rules, _)) => map (f o rule_elements) rules
+          | SUFFIX (STD_suffix rules) => map (f o rule_elements) rules
+          | PREFIX (STD_prefix rules) => map (f o rule_elements) rules
+          | CLOSEFIX rules => map (f o rule_elements) rules
           | LISTRULE rlist => let
               fun process r =
                 [f (map TOK [#leftdelim r, #separator r, #rightdelim r])]
@@ -198,11 +199,12 @@ fun mk_prec_matrix G = let
      then add
         rule's right hand token < x
           for all x on left hand side of suffixes and infixes below *)
-  fun rule_left ({elements = TOK s :: _, ...}:rule_record) = STD_HOL_TOK s
-    | rule_left {term_name, ...} =
-    raise Fail ("rule list is bogus for "^term_name)
+  fun rule_left (rr: rule_record) =
+    case hd (rule_elements rr) of
+      TOK s => STD_HOL_TOK s
+    | _ => raise Fail ("rule list is bogus for "^ #term_name rr)
   fun rule_right (rr:rule_record) =
-    case List.last (#elements rr) of
+    case List.last (rule_elements rr) of
       TOK s => STD_HOL_TOK s
       | _ => raise Fail ("rule list is bogus for "^ #term_name rr)
   fun right_grabbing_elements rule =
@@ -362,7 +364,8 @@ fun mk_ruledb (G:grammar) = let
   val table:(rule_element list, rule_summary)Polyhash.hash_table =
        Polyhash.mkPolyTable (2 * length Grules, Fail "")
   fun insert_rule f g rr =
-    Polyhash.insert table (g (#elements rr), f (#term_name rr))
+    Polyhash.insert table (g (term_grammar.rule_elements (#elements rr)),
+                           f (#term_name rr))
   fun infix_f elms = elms @ [TM]
   fun suffix_f elms = elms
   fun closefix_f elms = elms
@@ -376,10 +379,8 @@ fun mk_ruledb (G:grammar) = let
     | SUFFIX (STD_suffix rules) => app (insert_rule suffix_rule suffix_f) rules
     | SUFFIX TYPE_annotation => ()
     | CLOSEFIX rules => app (insert_rule closefix_rule closefix_f) rules
-    | FNAPP =>
-        insert_rule infix_rule infix_f {term_name = fnapp_special,
-                                        elements = [TOK fnapp_special],
-                                        preferred = false}
+    | FNAPP => Polyhash.insert table (infix_f [TOK fnapp_special],
+                                      infix_rule fnapp_special)
     | VSCONS => ()
     | LISTRULE rlist => let
         fun process r = let
@@ -969,10 +970,6 @@ fun remove_specials t =
 
 infix Gmerge
 
-val stdhol = add_binder term_grammar.stdhol ("!", 0)
-val stdhol = add_rule stdhol (",", Infix(RIGHT, 60), [TOK ","])
-val stdhol = associate_restriction stdhol (LAMBDA, "RES_ABSTRACT")
-val stdhol = associate_restriction stdhol (BinderString "!", "RES_FORALL")
 
 fun do_parse0 G ty = let
   val pt = parse_term G ty

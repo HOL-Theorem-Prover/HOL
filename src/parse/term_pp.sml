@@ -43,10 +43,19 @@ fun PP_ERR f mesg = HOL_ERR {origin_structure = "term_pp",
                              origin_function = f,
                              message = mesg}
 
-
+fun string_of_nspaces n = String.concat (List.tabulate(n, (fn _ => " ")))
 
 
 datatype grav = Top | RealTop | Prec of (int * string)
+fun grav_name (Prec(n, s)) = s | grav_name _ = ""
+fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
+
+fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
+  case #paren_style rr of
+    Always => true
+  | OnlyIfNecessary => false
+  | ParoundName => grav_name pgrav <> fname
+  | ParoundPrec => grav_prec pgrav <> fprec
 
 fun countP P [] = 0
   | countP P (x::xs) = if P x then 1 + countP P xs else countP P xs
@@ -224,7 +233,7 @@ fun pp_term (G : grammar) TyG = let
       Polyhash.insert t (k, newvalue)
     end
   in
-    app (fn (s,rule) => myinsert rule_table (s, (n, grule))) keys_n_rules;
+    app (fn (s,rule) => myinsert rule_table (s, (n, rule))) keys_n_rules;
     n + 1
   end
   val _ = foldl insert 0 (grammar_rules G)
@@ -244,14 +253,22 @@ fun pp_term (G : grammar) TyG = let
     case resquan_op_prec of
       NONE => false
     | SOME p => p < vscons_prec
-  fun assoc s [] = raise PP_ERR "assoc" "element not found"
-    | assoc s (r::rs) = if #term_name r = s then #elements r else assoc s rs
-  fun pr_term binderp showtypes vars_seen pps tm lgrav rgrav depth = let
+  fun pr_term binderp showtypes vars_seen pps tm pgrav lgrav rgrav depth = let
     val {fvars_seen, bvars_seen} = vars_seen
     val full_pr_term = pr_term
     val pr_term = pr_term binderp showtypes vars_seen pps
     val {add_string, add_break, begin_block, end_block,...} =
       with_ppstream pps
+    fun block_by_style (rr, pgrav, fname, fprec) = let
+      val needed =
+        case #1 (#block_style rr) of
+          AroundSameName => grav_name pgrav <> fname
+        | AroundSamePrec => grav_prec pgrav <> fprec
+        | AroundEachPhrase => true
+      fun bblock() = uncurry begin_block (#2 (#block_style rr))
+    in
+      if needed then (bblock, end_block) else (I, I)
+    end
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
     fun spacep b = if b then add_break(1, 0) else ()
@@ -265,7 +282,7 @@ fun pp_term (G : grammar) TyG = let
         Simple tm => let
         in
           if (is_pair tm orelse is_var tm) then
-            pr_t tm Top Top (depth - 1)
+            pr_t tm Top Top Top (depth - 1)
           else
             raise PP_ERR "pr_vstruct"
               "Can only handle pairs and vars as vstructs"
@@ -277,7 +294,7 @@ fun pp_term (G : grammar) TyG = let
           pr_vstruct (Simple Bvar);
           add_string (res_quanop);
           add_break(0,2);
-          pr_term Restrictor Top Top (depth - 1);
+          pr_term Restrictor Top Top Top (depth - 1);
           add_string ")";
           end_block ()
         end
@@ -300,7 +317,7 @@ fun pp_term (G : grammar) TyG = let
       pr_list pr_vstruct (fn () => ()) (fn () => add_break(1,0)) simples;
       end_block();
       add_string res_op;
-      pr_term restrictor Top Top (depth - 1);
+      pr_term restrictor Top Top Top (depth - 1);
       end_block ()
     end
     fun can_print_vstructl vsl = let
@@ -343,7 +360,7 @@ fun pp_term (G : grammar) TyG = let
       pr_vstructl bvars;
       add_string endbinding; add_break (1,0);
       bvars_seen := bvars_seen_here @ old_seen;
-      pr_term body Top Top (depth - 1);
+      pr_term body Top Top Top (depth - 1);
       bvars_seen := old_seen;
       pend addparens; end_block()
     end
@@ -390,9 +407,9 @@ fun pp_term (G : grammar) TyG = let
           in
             begin_block CONSISTENT 0;
             add_string "{"; begin_block CONSISTENT 0;
-            pr_term l Top Top (depth - 1);
+            pr_term l Top Top Top (depth - 1);
             spacep true; add_string "|"; spacep true;
-            pr_term r Top Top (depth - 1);
+            pr_term r Top Top Top (depth - 1);
             end_block(); add_string "}"; end_block(); raise SimpleExit
           end handle HOL_ERR _ => ()
         else ()
@@ -402,9 +419,9 @@ fun pp_term (G : grammar) TyG = let
     in
       begin_block INCONSISTENT 2;
       if addparens then add_string "(" else ();
-      pr_term t1 lprec prec (depth - 1);
+      pr_term t1 prec lprec prec (depth - 1);
       add_break (1, 0);
-      pr_term t2 prec rprec (depth - 1);
+      pr_term t2 prec prec rprec (depth - 1);
       if addparens then add_string ")" else ();
       end_block()
     end handle SimpleExit => ()
@@ -433,95 +450,117 @@ fun pp_term (G : grammar) TyG = let
 
     fun pr_comb_with_rule frule fterm args Rand = let
       val {fname,fprec,f} = fterm
-      fun recurse_els (els, args) =
+      fun block_up_els acc els =
         case els of
-          [TOK s] => add_string s
-        | TOK s :: rest => (add_string s; add_break (1, 0);
-                            recurse_els (rest, args))
-        | TM :: rest => (pr_term (hd args) Top Top (depth - 1);
-                         add_break(1, 0);
-                         recurse_els (rest, tl args))
-        | [] => raise Fail "should never happen - assertion failed"
+          [] => List.rev acc
+        | (e::es) => let
+          in
+            case e of
+              EndInitialBlock bi =>
+                block_up_els [PPBlock(List.rev acc, bi)] es
+            | BeginFinalBlock bi => let
+                val block_of_rest = block_up_els [] es
+              in
+                List.rev (PPBlock(block_of_rest, bi)::acc)
+              end
+            | x => block_up_els (x::acc) es
+          end
+      fun recurse_els (lprec, cprec, rprec) (els, args) = let
+        val recurse = recurse_els (lprec, cprec, rprec)
+      in
+        case els of
+          [] => args
+        | (e :: es) => let
+          in
+            case e of
+              PPBlock(more_els, (sty, ind)) => let
+                val _ = begin_block sty ind
+                val rest = recurse (more_els, args)
+                val _ = end_block()
+              in
+                recurse (es, rest)
+              end
+            | HardSpace n => (add_string (string_of_nspaces n);
+                              recurse (es, args))
+            | BreakSpace (n, m) => (add_break(n,m); recurse (es, args))
+            | RE (TOK s) => (add_string s; recurse (es, args))
+            | RE TM => (pr_term (hd args) Top Top Top (depth - 1);
+                        recurse (es, tl args))
+            | FirstTM => (pr_term (hd args) cprec lprec cprec (depth - 1);
+                          recurse (es, tl args))
+            | LastTM => (pr_term (hd args) cprec cprec rprec (depth - 1);
+                         recurse (es, tl args))
+            | EndInitialBlock _ => raise Fail "term_pp - encountered EIB"
+            | BeginFinalBlock _ => raise Fail "term_pp - encountered BFB"
+          end
+      end
     in
       case frule of
         INFIX(STD_infix(lst, fassoc)) => let
-          val elements = assoc fname lst
+          val rr = hd lst
+          val elements = #elements rr
           fun check_grav a grav =
             case grav of
-              Prec(n, upper_name) =>
-                (n > fprec) orelse
-                (n = fprec andalso a <> fassoc) orelse
-                (fname = "," andalso upper_name <> "," andalso
-                 (!parenthesise_pairs))
+              Prec(n, _) =>
+                (n > fprec) orelse (n = fprec andalso a <> fassoc)
             | _ => false
-          val addparens =
-            check_grav RIGHT lgrav orelse check_grav LEFT rgrav orelse
-            (fname = "," andalso lgrav = rgrav andalso
-             (lgrav = RealTop andalso (!parenthesise_pairs) orelse
-              lgrav = Top andalso
-              (!parenthesise_pairs orelse binderp)))
-          val postfix_break =
-            if fname = "," andalso not (!space_in_pairs) then 0
-            else 1
-          val consistency =
-            if (!(#stack_infixes(Globals.pp_flags))) then CONSISTENT
-            else INCONSISTENT
-          fun hardspace b = if b then add_string " " else ();
-          val front_infix = !(#infix_at_front(Globals.pp_flags))
+          val parens_needed_outright =
+            check_grav RIGHT lgrav orelse check_grav LEFT rgrav
+          val parens_needed_by_style =
+            pneeded_by_style(rr, pgrav, fname, fprec)
+          val addparens = parens_needed_outright orelse parens_needed_by_style
           val prec = Prec(fprec, fname)
           val lprec = if addparens then Top else lgrav
           val rprec = if addparens then Top else rgrav
+          val arg_terms = args @ [Rand]
+          val pp_elements = block_up_els [] ((FirstTM::elements) @ [LastTM])
+          val (begblock, endblock) = block_by_style(rr, pgrav, fname, fprec)
         in
-          pbegin addparens; begin_block consistency 0;
-          pr_term (hd args) lprec prec (depth - 1);
-          hardspace (not front_infix andalso fname <> ",");
-          spacep (front_infix andalso fname <> ",");
-          recurse_els (elements, tl args);
-          if front_infix then add_string " "
-          else sizedbreak postfix_break;
-          pr_term Rand prec rprec (depth - 1);
-          end_block (); pend addparens
+          pbegin addparens; begblock();
+          recurse_els (lprec, prec, rprec) (pp_elements, arg_terms);
+          endblock (); pend addparens
         end
       | INFIX RESQUANOP => raise Fail "Res. quans shouldn't arise"
       | SUFFIX (STD_suffix lst) => let
-          val elements = assoc fname lst
-          val addparens =
+          val rr = hd lst
+          val elements = #elements rr
+          val parens_needed_outright =
             case lgrav of
               Prec(n, _) => n > fprec
             | _ => false
+          val parens_needed_by_style =
+            pneeded_by_style (rr, pgrav, fname, fprec)
+          val addparens = parens_needed_outright orelse parens_needed_by_style
           val lprec = if addparens then Top else lgrav
           val prec = Prec(fprec, fname)
           val real_args = args @ [Rand]
+          val pp_elements = block_up_els [] (FirstTM :: elements)
+          val (begblock, endblock) = block_by_style(rr, pgrav, fname, fprec)
         in
-          begin_block INCONSISTENT 2; pbegin addparens;
-          pr_term (hd real_args) lprec prec (depth - 1);
-          add_break(1, 0);
-          recurse_els (elements, tl real_args);
-          pend addparens; end_block()
+          begblock(); pbegin addparens;
+          recurse_els (lprec, prec, Top) (pp_elements, real_args);
+          pend addparens; endblock()
         end
       | SUFFIX TYPE_annotation =>
         raise Fail "Type annotation shouldn't arise"
       | PREFIX (STD_prefix lst) => let
-          val elements = assoc fname lst
-          val args_needed = countP (fn x => x = TM) elements
-          val space =
-            args_needed <> 0 orelse !consume_prefix_spaces orelse
-            not (symbolic fname)
-          val precparens =
+          val rr = hd lst
+          val elements = #elements rr
+          val parens_needed_outright =
             case rgrav of
               Prec(n, _) => n > fprec
             | _ => false
-          val addparens =
-            precparens orelse
-            (args_needed <> 0 andalso
-             (lgrav <> RealTop orelse rgrav <> RealTop))
+          val addparens = parens_needed_outright orelse
+            pneeded_by_style(rr, pgrav, fname, fprec)
           val rprec = if addparens then Top else rgrav
+          val pp_elements = block_up_els [] (elements @ [LastTM])
+          val real_args = args @ [Rand]
+          val prec = Prec(fprec, fname)
+          val (begblock, endblock) = block_by_style(rr, pgrav, fname, fprec)
         in
-          begin_block INCONSISTENT 2; pbegin addparens;
-          recurse_els (elements, args);
-          spacep space;
-          pr_term Rand (Prec(fprec, fname)) rprec (depth - 1);
-          pend addparens; end_block()
+          begblock(); pbegin addparens;
+          recurse_els (Top, prec, rprec) (pp_elements, real_args);
+          pend addparens; endblock()
         end
       | PREFIX (BINDER _) => let
           fun find (BinderString bs, s) = if bs = fname then SOME s else NONE
@@ -542,17 +581,18 @@ fun pp_term (G : grammar) TyG = let
           add_string endbinding; spacep true;
           begin_block CONSISTENT 0;
           bvars_seen := bvars_seen_here @ old_seen;
-          pr_term body Top Top (depth - 1);
+          pr_term body Top Top Top (depth - 1);
           bvars_seen := old_seen;
           end_block ();
           pend addparens;
           end_block()
         end
       | CLOSEFIX lst => let
-          val elements = assoc fname lst
+          val rr = hd lst
+          val elements = #elements rr
         in
-          begin_block CONSISTENT 0;
-          recurse_els (elements, args @ [Rand]);
+          uncurry begin_block (#2 (#block_style rr)) ;
+          recurse_els (Top, Top, Top) (elements, args @ [Rand]);
           end_block()
         end
       | LISTRULE lrules => let
@@ -570,10 +610,10 @@ fun pp_term (G : grammar) TyG = let
             in
               if has_name nilstr tail then
                 (* last element *)
-                pr_term head Top Top (depth - 1)
+                pr_term head Top Top Top (depth - 1)
               else let
               in
-                pr_term head Top Top (depth - 1);
+                pr_term head Top Top Top (depth - 1);
                 add_string sep; spacep true;
                 recurse tail
               end
@@ -608,7 +648,7 @@ fun pp_term (G : grammar) TyG = let
         bvars_seen := bvars_seen_here @ old_seen;
         spacep (not (null args));
         add_string "="; spacep true;
-        pr_term rhs_t Top Top (depth - 1);
+        pr_term rhs_t Top Top Top (depth - 1);
         bvars_seen := old_seen
       end
       val (values, abstraction) = find_base [] tm
@@ -627,7 +667,7 @@ fun pp_term (G : grammar) TyG = let
         end_block();
         spacep true; add_string "in"; spacep true;
         (* a lie! but it works *)
-        pr_term body RealTop RealTop (depth - 1);
+        pr_term body RealTop RealTop RealTop (depth - 1);
         bvars_seen := old_bvars_seen;
         end_block(); pend addparens
       end
@@ -757,16 +797,20 @@ fun pp_term (G : grammar) TyG = let
                 fun suitable_rule rule =
                   case rule of
                     INFIX(STD_infix(rrlist, _)) =>
-                      numTMs (#elements (hd rrlist)) + 1 = length args
+                      numTMs (rule_elements (#elements (hd rrlist))) + 1 =
+                      length args
                   | INFIX RESQUAN_OP => raise Fail "Can't happen 90212"
                   | PREFIX (STD_prefix list) =>
-                      numTMs (#elements (hd list)) = length args
+                      numTMs (rule_elements (#elements (hd list))) =
+                      length args
                   | PREFIX (BINDER _) => my_is_abs Rand andalso length args = 0
                   | SUFFIX (STD_suffix list) =>
-                      numTMs (#elements (hd list)) = length args
+                      numTMs (rule_elements (#elements (hd list))) =
+                      length args
                   | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
                   | CLOSEFIX list =>
-                      numTMs (#elements (hd list)) - 1 = length args
+                      numTMs (rule_elements (#elements (hd list))) - 1 =
+                      length args
                   | FNAPP => raise Fail "Can't happen 90211"
                   | VSCONS => raise Fail "Can't happen 90213"
                   | LISTRULE list => is_list (hd list) tm
@@ -814,7 +858,7 @@ in
   in
     Portable.begin_block pps CONSISTENT 0;
     pr_term false (!Globals.show_types) (start_names())
-    pps t RealTop RealTop (!Globals.max_print_depth);
+    pps t RealTop RealTop RealTop (!Globals.max_print_depth);
     Portable.end_block pps
   end)
 end

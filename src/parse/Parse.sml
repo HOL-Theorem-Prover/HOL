@@ -395,7 +395,11 @@ in
   fun temp_add_infix(s, prec, associativity) = let
   in
     the_term_grammar :=
-    add_rule (!the_term_grammar) (s, Infix(associativity, prec), [TOK s]);
+    add_rule (!the_term_grammar)
+    {term_name = s, block_style = (AroundSamePrec, (PP.INCONSISTENT, 0)),
+     fixity = Infix(associativity, prec),
+     pp_elements = [HardSpace 1, RE (TOK s), BreakSpace(1,0)],
+     paren_style = OnlyIfNecessary};
     term_grammar_changed := true
   end handle GrammarError s => raise ERROR "add_infix" ("Grammar Error: "^s)
 
@@ -409,10 +413,62 @@ in
   end
 
   fun relToString TM = "term_grammar.TM"
-    | relToString (TOK s) = "term_grammar.TOK \""^s^"\""
+    | relToString (TOK s) = "(term_grammar.TOK "^quote s^")"
   fun rellistToString [] = ""
     | rellistToString [x] = relToString x
     | rellistToString (x::xs) = relToString x ^ ", " ^ rellistToString xs
+  fun block_infoToString (PP.CONSISTENT, n) =
+    "(PP.CONSISTENT, "^Int.toString n^")"
+    | block_infoToString (PP.INCONSISTENT, n) =
+    "(PP.INCONSISTENT, "^Int.toString n^")"
+
+  fun ParenStyleToString Always = "term_grammar.Always"
+    | ParenStyleToString OnlyIfNecessary = "term_grammar.OnlyIfNecessary"
+    | ParenStyleToString ParoundName = "term_grammar.ParoundName"
+    | ParenStyleToString ParoundPrec = "term_grammar.ParoundPrec"
+
+  fun BlockStyleToString AroundSameName = "term_grammar.AroundSameName"
+    | BlockStyleToString AroundSamePrec = "term_grammar.AroundSamePrec"
+    | BlockStyleToString AroundEachPhrase = "term_grammar.AroundEachPhrase"
+
+
+
+  fun ppToString pp =
+    case pp of
+      PPBlock(ppels, bi) =>
+        "term_grammar.PPBlock(["^pplistToString ppels^"], "^
+        block_infoToString bi^")"
+    | EndInitialBlock bi =>
+        "(term_grammar.EndInitialBlock "^block_infoToString bi^")"
+    | BeginFinalBlock bi =>
+        "(term_grammar.BeginFinalBlock "^block_infoToString bi^")"
+    | HardSpace n => "(term_grammar.HardSpace "^Int.toString n^")"
+    | BreakSpace(n,m) =>
+        "(term_grammar.BreakSpace("^Int.toString n^", "^
+        Int.toString m^"))"
+    | RE rel => "(term_grammar.RE "^relToString rel^")"
+    | _ => raise Fail "Don't want to print out First or Last TM values"
+  and pplistToString [] = ""
+    | pplistToString [x] = ppToString x
+    | pplistToString (x::xs) = ppToString x ^ ", " ^ pplistToString xs
+
+
+  fun standard_spacing name fixity = let
+    val bstyle = (AroundSamePrec, (PP.INCONSISTENT, 0))
+    val pstyle = OnlyIfNecessary
+    val pels =
+      case fixity of
+        RF (Infix _) => [HardSpace 1, RE (TOK name), BreakSpace(1,0)]
+      | RF (TruePrefix _) => [RE(TOK name), HardSpace 1]
+      | RF (Suffix _) => [HardSpace 1, RE(TOK name)]
+      | RF Closefix => [RE(TOK name)] (* not sure if this will ever arise,
+                                         or if it should be allowed to do so *)
+      | Prefix => []
+      | Binder => []
+  in
+    {term_name = name, fixity = fixity, pp_elements = pels,
+     paren_style = pstyle, block_style = bstyle}
+  end
 
   fun temp_add_binder(name, prec) = let
   in
@@ -429,27 +485,34 @@ in
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
-  fun temp_add_rule (tname, f, toks) =
-    case f of
+  fun temp_add_rule {term_name, fixity, pp_elements, paren_style,
+                     block_style} =
+    case fixity of
       Prefix => ()
     | Binder => let
       in
-        temp_add_binder(tname, term_grammar.std_binder_precedence);
+        temp_add_binder(term_name, term_grammar.std_binder_precedence);
         term_grammar_changed := true
       end
     | RF rf => let
       in
         the_term_grammar := term_grammar.add_rule (!the_term_grammar)
-        (tname, rf, toks);
+        {term_name = term_name, fixity = rf, pp_elements = pp_elements,
+         paren_style = paren_style, block_style = block_style};
         term_grammar_changed := true
       end
 
-  fun add_rule (s,f,rels) = let
+  fun add_rule (r as {term_name, fixity, pp_elements,
+                      paren_style, block_style = (bs,bi)}) = let
     val cmdstring =
-      "val _ = Parse.temp_add_rule("^quote s^", "^fixityToString f^ ", ["^
-      rellistToString rels^"]);"
+      "val _ = Parse.temp_add_rule{term_name = "^quote term_name^
+      ", fixity = "^fixityToString fixity^ ",\n"^
+      "pp_elements = ["^ pplistToString pp_elements^"],\n"^
+      "paren_style = "^ParenStyleToString paren_style^",\n"^
+      "block_style = ("^BlockStyleToString bs^", "^
+      block_infoToString bi^")};"
   in
-    temp_add_rule (s,f,rels);
+    temp_add_rule r;
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
@@ -556,7 +619,7 @@ in
   fun temp_set_fixity s f = let
   in
     remove_termtok {term_name = s, tok = s};
-    temp_add_rule(s, f, [term_grammar.TOK s])
+    temp_add_rule (standard_spacing s f)
   end
   fun set_fixity s f = let
     val cmdstring =
@@ -705,7 +768,7 @@ fun new_gen_definition (s, t, f) = let
   val t_name = atom_name (get_head_tm t)
 in
   new_definition(s,t) before
-  add_rule(t_name, f, [term_grammar.TOK t_name])
+  add_rule(standard_spacing t_name f)
 end
 
 fun new_specification {name,sat_thm,consts} = let
@@ -715,8 +778,7 @@ fun new_specification {name,sat_thm,consts} = let
   val res =
     Const_spec.new_specification
     {name = name, sat_thm = sat_thm, consts = List.rev newconsts}
-  fun do_parse_stuff (name, fixity) =
-    add_rule(name, fixity, [term_grammar.TOK name])
+  fun do_parse_stuff (name, fixity) = add_rule(standard_spacing name fixity)
 in
   app do_parse_stuff consts_with_fixities;
   res
@@ -739,3 +801,20 @@ fun typedTerm qtm ty =
 val hide = Parse_support.hide
 val reveal = Parse_support.reveal
 val hidden = Parse_support.hidden
+
+(* pp_element values that are brought across from term_grammar *)
+val TM = term_grammar.RE term_grammar.TM
+val TOK = term_grammar.RE o term_grammar.TOK
+
+val BreakSpace = term_grammar.BreakSpace
+val HardSpace = term_grammar.HardSpace
+val PPBlock = term_grammar.PPBlock
+
+val OnlyIfNecessary = term_grammar.OnlyIfNecessary
+val ParoundName = term_grammar.ParoundName
+
+val AroundSamePrec = term_grammar.AroundSamePrec
+val AroundSameName = term_grammar.AroundSameName
+val AroundEachPhrase = term_grammar.AroundEachPhrase
+val BeginFinalBlock = term_grammar.BeginFinalBlock
+val EndInitialBlock = term_grammar.EndInitialBlock

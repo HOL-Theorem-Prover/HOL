@@ -12,6 +12,26 @@ in
 
   val fixity : string -> fixity
 
+  (* more constructors/values that come across from term_grammar *)
+  val TM : term_grammar.pp_element
+  val TOK : string -> term_grammar.pp_element
+  val BreakSpace : (int * int) -> term_grammar.pp_element
+  val HardSpace : int -> term_grammar.pp_element
+  val BeginFinalBlock : term_grammar.block_info -> term_grammar.pp_element
+  val EndInitialBlock : term_grammar.block_info -> term_grammar.pp_element
+  val PPBlock :
+    (term_grammar.pp_element list * term_grammar.block_info) ->
+    term_grammar.pp_element
+
+  val OnlyIfNecessary : term_grammar.ParenStyle
+  val ParoundName : term_grammar.ParenStyle
+
+  val AroundEachPhrase : term_grammar.PhraseBlockStyle
+  val AroundSamePrec : term_grammar.PhraseBlockStyle
+  val AroundSameName : term_grammar.PhraseBlockStyle
+
+
+
   val fromTGfixity : term_grammar.rule_fixity -> fixity
   val LEFT : associativity
   val RIGHT : associativity
@@ -75,7 +95,9 @@ in
     (* the following functions modify the grammar, and do so in such a
        way that the exported theory will have the same grammar *)
     val add_infix : string * int * associativity -> unit
-    val add_rule : (string * fixity * rule_element list) -> unit
+    val add_rule : {term_name : string, fixity : fixity,
+                    pp_elements: pp_element list, paren_style : ParenStyle,
+                    block_style : PhraseBlockStyle * block_info} -> unit
     val add_binder : (string * int) -> unit
     val add_listform : {separator : string, leftdelim : string,
                         rightdelim : string, cons : string,
@@ -94,7 +116,10 @@ in
     (* the following functions affect the grammar, but not so that the
        grammar exported to disk will be modified *)
     val temp_add_binder : (string * int) -> unit
-    val temp_add_rule :  (string * fixity * rule_element list) -> unit
+    val temp_add_rule :
+      {term_name : string, fixity : fixity,
+       pp_elements: pp_element list, paren_style : ParenStyle,
+       block_style : PhraseBlockStyle * block_info}  -> unit
     val temp_add_infix : (string * int * associativity) -> unit
     val temp_add_listform : {separator : string, leftdelim : string,
                              rightdelim : string, cons : string,

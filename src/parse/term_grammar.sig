@@ -1,7 +1,23 @@
 local
   open HOLgrammars
 in
-datatype rule_element = TOK of string | TM
+
+  type block_info = PP.break_style * int
+  datatype rule_element = TOK of string | TM
+  datatype pp_element =
+    PPBlock of pp_element list * block_info |
+    EndInitialBlock of block_info | BeginFinalBlock of block_info |
+    HardSpace of int | BreakSpace of (int * int) |
+    RE of rule_element | LastTM | FirstTM
+  (* these last two only used internally *)
+
+    datatype PhraseBlockStyle =
+      AroundSameName | AroundSamePrec | AroundEachPhrase
+    datatype ParenStyle =
+      Always | OnlyIfNecessary | ParoundName | ParoundPrec
+
+  val rule_elements : pp_element list -> rule_element list
+  val pp_elements_ok : pp_element list -> bool
 
 val fnapp_special : string
 val bracket_special : string
@@ -13,8 +29,10 @@ val std_binder_precedence : int
 val reltoString : rule_element -> string
 
 type rule_record = {term_name : string,
-                    elements : rule_element list,
-                    preferred : bool}
+                    elements : pp_element list,
+                    preferred : bool,
+                    block_style : PhraseBlockStyle * block_info,
+                    paren_style : ParenStyle}
 
 datatype binder = LAMBDA | BinderString of string
 datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
@@ -76,7 +94,10 @@ datatype rule_fixity =
   Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
 
 val rule_fixityToString : rule_fixity -> string
-val add_rule : grammar -> (string * rule_fixity * rule_element list) -> grammar
+val add_rule :
+  grammar -> {term_name : string, fixity : rule_fixity,
+              pp_elements: pp_element list, paren_style : ParenStyle,
+              block_style : PhraseBlockStyle * block_info} -> grammar
 val add_grule : grammar -> (int option * grammar_rule) -> grammar
 
 val add_numeral_form : grammar -> (char * string option) -> grammar
