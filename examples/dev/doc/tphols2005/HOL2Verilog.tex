@@ -154,7 +154,7 @@ refined \DEF{Dev~FactIter}) or they can be converted to
 combinational logic (assuming we have a combinational circuit to
 compute $f$ in our library of components).
 
-Suppose we wanted to use a sequential implimentation of multiplication,
+Suppose we wanted to use a sequential implementation of multiplication,
 then we would synthesise a theorem:
 
 \vspace*{-2mm}
@@ -204,14 +204,14 @@ combinational and comprise boolean functions \DEF{NOT},
 and functional blocks
 $\DEF{COMB}~f$ that compute the function $f$. These components are
 described in more detail in Section~\ref{secImplementation}. To
-create a netlist that can be converted to hardware, the occurences of
+create a netlist that can be converted to hardware, the occurrences of
 \DEF{DEL} and \DEF{DFF} need to be implemented using standard
 clocked registers. This invoves converting from an abstract `cycle
-based' model to a clocked synchronous model. The particular theory of doing this that we use
-was developed by Melham \cite{Mel93}. We have incorporated
-his theory (and even some of his old HOL88 code) to
-implement a synthesis script. Applied to our factorial implementation, this yields
-a theorem of the form:
+based' model to a clocked synchronous model. The particular theory of
+doing this that we use was developed by Melham \cite{Mel93}. We have
+incorporated his theory (and even some of his old HOL88 code) to
+implement a synthesis script. Applied to our factorial implementation,
+this yields a theorem of the form:
 
 \vspace*{-1mm}
 

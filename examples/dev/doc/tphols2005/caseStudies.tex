@@ -1,0 +1,46 @@
+We are in the midst of two case-studies: a Booth multiplier, and an implementation
+of the AES encryption algorithm.
+
+\paragraph{Booth Multiplier}
+\paragraph{AES}
+
+AES is a recent encryption standard \cite{AES}, chosen to replace the
+aging Digital Encryption Standard (DES). Building on a functional
+correctness proof of AES \cite{slind:aes}, we are working on applying
+the hardware synthesis infrastructure described in the previous
+sections to produce a hardware implementation of AES. Although this
+work is still underway, interesting observations can still be
+made. Currently, all the major components of a `round' of encryption
+are synthesized. In particular, in a round, the following sub-routines
+are invoked: (a) application of an \emph{sbox}; (b) xor-ing the state
+with a key from the key schedule; (c) shifting of rows, and (d) column
+multiplication.  The application of the sbox is, so far, being treated
+as combinational.  Xor-ing of the state synthesizes to a combinational
+circuit, as does row shifting, which is quite nicely synthesized to a
+circuit that merely does some rewiring. The most interesting component
+so far has been column multiplication, which relies on a special
+Galois Field multiplication.  In the following, the function
+\verb+xtime+, which operates over eight-bit bytes, is used to
+implement the (recursive) multiplication function which is written
+infix \verb+b1 ** b2+. Left shift (\verb+<<+), right shift
+(\verb+>>>+), and least-and-most significant bit operations
+(\verb+MSB+,\verb+LSB+) are also used.
+
+\begin{verbatim}
+ xtime w = w << 1 # (if MSB w then 0x1Bw else 0w
+
+ b_1 ** b_2 =
+    if b_1 = 0w then 0w else 
+    if LSB b_1 then b2 # ((b_1 >>> 1) ** xtime b_2)
+              else       ((b_1 >>> 1) ** xtime b_2)
+\end{verbatim}
+
+There are at least five different ways this function could be presented:
+\begin{enumerate}
+\item Direct translation of the recursive algorithm
+\item Tail recursive algorithm
+\item Partial evaluation with respect to the first argument
+\item The result of the previous partially evaluated with respect to all
+second arguments. The results of this can be represented in tabular form,
+or as a balanced \verb+if+-tree.
+\end{enumerate}
