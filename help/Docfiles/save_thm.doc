@@ -1,36 +1,25 @@
 \DOC save_thm
 
-\TYPE {save_thm : ((string # thm) -> thm)}
+\TYPE {save_thm : (string * thm) -> thm}
 
 \SYNOPSIS
 Stores a theorem in the current theory segment.
 
 \DESCRIBE
-The call {save_thm(`name`, th)} adds the theorem {th} to the current theory
-segment under the name {name}. The theorem is returned as a value. The call
-can be made in both proof and draft mode. The name {name} must be a distinct
-name within the theory segment, but may be the same as for items within other
-theory segments of the theory. If the current theory segment is named {thy},
-the theorem will be written to the file {thy.th} in the directory from which
-HOL was called. If the system is in draft mode, other changes made to the
-current theory segment  during the session will also be written to the theory
-file. If the theory file does not exist, it will be created.
+The call {save_thm("name", th)} adds the theorem {th} to the current
+theory segment under the name {name}. The theorem is returned as a
+value.  If there is an existing theorem saved under this name for
+export in the current theory,
 
 \FAILURE
-A call to {save_thm} will fail if  the name given is the same as
-the name of an existing fact in the current theory segment.
-Saving the theorem involves writing to the file system. If the write fails for
-any reason {save_thm} will fail. For example, on start up the initial
-theory is {HOL}. The associated theory files are read-only so an attempt to
-save a theorem in that theory segment will fail.
+Never fails.
 
 \USES
 Adding theorems to the current theory. Saving theorems for retrieval
-in  later sessions. The theorem may be retrieved using the function
-{theorem}. Binding the result of {save_thm} to an ML variable makes it easy to
-access the theorem in the current terminal session.
+in later sessions.  Binding the result of {save_thm} to an ML variable
+makes it easy to access the theorem in the current terminal session.
 
 \SEEALSO
-new_theory, prove_thm, save_top_thm, theorem.
+new_theory, prove_thm, save_top_thm, store_thm, theorem.
 
 \ENDDOC
