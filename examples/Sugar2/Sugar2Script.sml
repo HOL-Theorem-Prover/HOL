@@ -431,37 +431,14 @@ val F_SEM_TRUE_EQ_LEMMA =
            intLib.COOPER_PROVE ``(?k. !l. ~(l > k))=F``,NEXT_RISE_TRUE_EXISTS]
     THEN PROVE_TAC[]);
 
-(*
-val F_SEM_TRUE_EQ_LEMMA =
+val F_SEM_TRUE_EQ =
  store_thm
-  ("F_SEM_TRUE_EQ_LEMMA",
-   ``!M p v1 f v2.
-       (v1 = STRONG_CLOCK B_TRUE) /\
-       (v2 = WEAK_CLOCK B_TRUE)
+  ("F_SEM_TRUE_EQ",
+   ``!M p v1 f v2. 
+       F_NEG_FREE f
        ==>
-       (F_SEM M p v1 f = F_SEM M p v2 f)``,
-   recInduct (fetch "Sugar2Semantics" "F_SEM_ind")
-    THEN REPEAT CONJ_TAC
-    THEN RW_TAC std_ss 
-          [F_SEM_def,FIRST_RISE_TRUE,B_SEM_def,
-           intLib.COOPER_PROVE ``(?k. !l. ~(l > k))=F``,NEXT_RISE_TRUE_EXISTS]
-    THEN PROVE_TAC[]);
-
-val F_SEM_TRUE_EQ =
- store_thm
-  ("F_SEM_TRUE_EQ",
-   ``!M p v1 f v2.
-       (F_SEM M p (STRONG_CLOCK B_TRUE) f =
-        F_SEM M p (WEAK_CLOCK B_TRUE) f)``,
+       (F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f)``,
    RW_TAC std_ss [F_SEM_TRUE_EQ_LEMMA]);
-
-val F_SEM_TRUE_EQ =
- store_thm
-  ("F_SEM_TRUE_EQ",
-   ``F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f``,
-   Cases_on `M` THEN Cases_on `r` THEN Cases_on `r'` THEN Cases_on `r`
-    THEN RW_TAC std_ss [F_SEM_TRUE_EQ_LEMMA]);
-*)
 
 (******************************************************************************
 * US_SEM M w r means "w is in the language of r" in the unclocked semantics
