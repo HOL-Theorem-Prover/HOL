@@ -124,13 +124,19 @@ val EXISTS = Thm.EXISTS o (btm##btm);
 fun EXISTS_TAC q (g as (asl, w)) = let
   val ctxt = free_varsl (w::asl)
   val exvartype = type_of (#Bvar (Rsyntax.dest_exists w))
+    handle HOL_ERR _ => raise Q_ERR "EXISTS_TAC" "goal not an exists"
 in
   Tactic.EXISTS_TAC (ptm_with_ctxtty ctxt exvartype q) g
 end
-fun ID_EX_TAC(g as (_,w)) = Tactic.EXISTS_TAC (#Bvar(Dsyntax.dest_exists w)) g;
+fun ID_EX_TAC(g as (_,w)) =
+  Tactic.EXISTS_TAC (#Bvar(Dsyntax.dest_exists w)
+                     handle HOL_ERR _ =>
+                       raise Q_ERR "ID_EX_TAC" "goal not an exists") g;
 
 fun X_CHOOSE_THEN q ttac thm (g as (asl,w))= let
   val ty = type_of (#Bvar (dest_exists (concl thm)))
+    handle HOL_ERR _ =>
+      raise Q_ERR "X_CHOOSE_THEN" "provided thm not an exists"
   val ctxt = free_varsl (w::asl)
 in
   Thm_cont.X_CHOOSE_THEN (ptm_with_ctxtty ctxt ty q) ttac thm g
