@@ -49,6 +49,25 @@ Behaviours changed:
     with only nullary constructors) is now a lot more efficient than
     it used to be.
 
+  * We have rationalised the ML API.  By default, just about all
+    functions use "paired" syntax, rather than "record" syntax.  So,
+    mk_var has type
+
+      (string * hol_type) -> term
+
+    rather than
+
+      {Name : string, Ty : hol_type} -> term
+
+    A consistently "record-ised" view of the world is still available
+    if the structure Rsyntax is opened.  Even in the default view of
+    the world, some functions still take records.  These exceptions
+    are for functions where we feel that the order of arguments of the
+    same type is not always obvious.  This is exemplified by the
+    universal adoption of the {redex,residue} datatype for
+    substitutions and instantiations.  (Remember also that the infix
+    |-> function can be used to construct such records.)
+
 New features:
 -------------
 
@@ -63,6 +82,31 @@ New features:
     Holmake is very much like that of standard make-files, but there
     is no support for patterns.  For more documentation of this, see
     the Holmake section of the DESCRIPTION.
+
+  * Term and type constants in the logic now enjoy per-theory
+    name-spaces.  This means that multiple theories can share
+    constants with the same names.  If two term constants of the same
+    name are part of the logical context, the parser treats that name
+    as if it were overloaded to both constants.  Constants can be
+    unambigously specified by prepending the theory name and "$".
+    Thus
+
+       ``bool$/\``
+
+    is the conjunction operator in boolTheory, and
+
+       ``:num$num``
+
+    is the num type from numTheory.  There are also new functions in
+    the kernel's ML API for building and pulling apart constants with
+    theory information included.  For example, the function
+    mk_thy_const has the following type
+
+        {Name : string, Thy : string, Ty : hol_type} -> term
+
+    and the function dest_thy_const inverts this.  mk_const remains in
+    the system, but its behaviour is unspecified when two or more
+    constants have the same name.
 
 New theories:
 -------------
@@ -101,8 +145,8 @@ New tools:
     the integers and natural numbers, the Omega Test, has been
     implemented.  It is usually faster than Cooper's algorithm, but
     problems that require significant work in converting the input
-    problem to DNF can cause it to take much longer.
-
+    problem to DNF can cause it to take much longer.  The Omega Test
+    is available in intLib as intLib.ARITH_CONV.
 
   * The Hol98 library HolSatLib (http://www.cl.cam.ac.uk/~mjcg/HolSatLib/)
     provides a very simple harness for invoking SAT solvers on HOL
