@@ -24,6 +24,6 @@ Never fails.
 }
 
 \SEEALSO
-Type.type_subst, Term.subst, Term.inst, Thm.SUBST.
+Lib.subst, Type.type_subst, Term.subst, Term.inst, Thm.SUBST.
 
 \ENDDOC

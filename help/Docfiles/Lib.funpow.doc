@@ -30,4 +30,7 @@ Apply {tl} three times to a list:
    ! Uncaught exception:
    ! List.Empty
 }
+
+\SEEALSO Lib.repeat.
+
 \ENDDOC

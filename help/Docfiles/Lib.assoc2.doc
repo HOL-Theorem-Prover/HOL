@@ -10,7 +10,6 @@ value.
 list.
 
 \DESCRIBE 
-
 An invocation {assoc2 y [(x1,y1),...,(xn,yn)]} returns {SOME (xi,yi)}
 for the first {(xi,yi)} in the list such that {yi} equals
 {y}. Otherwise, {NONE} is returned. The lookup is done on an eqtype,
@@ -18,7 +17,6 @@ i.e., the SML implementation must be able to decide equality for the
 type of {y}.
 
 \FAILURE
-
 Never fails.
 
 \EXAMPLE

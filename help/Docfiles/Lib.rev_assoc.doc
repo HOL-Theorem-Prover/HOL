@@ -16,7 +16,6 @@ done on an eqtype, i.e., the SML implementation must be able to decide
 equality for the type of {y}.
 
 \FAILURE
-
 Fails if no matching pair is found. This will always be the case if the
 list is empty. 
 

@@ -6,7 +6,7 @@
 Computes the intersection of two `sets'.
 
 \KEYWORDS
-list, set.
+list, set, eqtype.
 
 \DESCRIBE
 {intersect l1 l2} returns a list consisting of those elements of {l1} that
@@ -22,10 +22,21 @@ Never fails.
 }
 
 \COMMENTS
-Several high performance implementations of finite sets may be found in
-the SML Standard Library.
+Do not make the assumption that the order of items in the list 
+returned by {intersect} is fixed. Later implementations may use 
+different algorithms, and return a different concrete result
+while still meeting the specification.
+
+High performance finite set operations may be found in the ML Standard
+Basis Library.
+
+ML equality types are used in the implementation of {intersect}
+and its kin. This limits its applicability to types that
+allow equality. For other types, typically abstract ones, 
+use the `op_' variants.
 
 \SEEALSO
-Lib.mk_set, Lib.insert, Lib.set_eq, Lib.union, Lib.set_diff.
+Lib.op_intersect, Lib.union, Lib.U, Lib.mk_set, 
+Lib.mem, Lib.insert, Lib.set_eq, Lib.set_diff.
 
 \ENDDOC
