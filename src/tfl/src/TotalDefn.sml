@@ -170,8 +170,10 @@ fun proveTotal0 tac def =
 end;
 
 (*---------------------------------------------------------------------------
-      TC prover. Terribly naive, but it still gets a lot.
+      TC prover. Terribly terribly naive, but it still gets a lot.
  ---------------------------------------------------------------------------*)
+fun get_orig (TypeBase.ORIG th) = th
+  | get_orig _ = raise ERR "get_orig" "not the original"
 
 fun TC_SIMP_CONV simps tm =
  (REPEATC
@@ -182,7 +184,7 @@ fun TC_SIMP_CONV simps tm =
        THENC REDEPTH_CONV Let_conv.GEN_BETA_CONV))
   THENC Rewrite.REWRITE_CONV
           (pairTheory.pair_rws @
-           mapfilter (#2 o valOf o TypeBase.size_of)
+           mapfilter (get_orig o #2 o valOf o TypeBase.size_of0)
                (TypeBase.listItems (TypeBase.theTypeBase())))
   THENC REDEPTH_CONV BETA_CONV
   THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES]) tm;
@@ -338,9 +340,8 @@ fun xDefine bindstem qtm =
        then let val ind = Option.valOf (Defn.ind_of defn')
             in
                Lib.say (String.concat
-                ["Equations stored under ",
-                 Lib.quote defname, ".\nInduction stored under ",
-                 Lib.quote indname, ".\n"]);
+                ["Equations stored under ",    Lib.quote defname,
+                 ".\nInduction stored under ", Lib.quote indname, ".\n"]);
                save_thm(indname, ind);
                save_thm(defname, Defn.eqns_of defn')
             end

@@ -85,7 +85,7 @@ fun atom_name tm = #Name(dest_var tm handle HOL_ERR _ => dest_const tm);
  *---------------------------------------------------------------------------*)
 
 fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
-  | pairf (true,f,stem,args,eqs0) =
+  | pairf (true, f,stem,args,eqs0) =
      let val argtys    = map type_of args
          val unc_argty = prod_tyl argtys
          val range_ty  = type_of (list_mk_comb (f,args))
@@ -213,40 +213,36 @@ fun define stem eqs0 =
  let val _ = if Lexis.ok_identifier stem then ()
              else raise ERR "define"
                    (String.concat[Lib.quote stem," is not alphanumeric"])
-     val eql = map (#2 o strip_forall) (strip_conj eqs0)
+     val eql         = map (#2 o strip_forall) (strip_conj eqs0)
      val (lhsl,rhsl) = unzip (map Psyntax.dest_eq eql)
-     val fns       = op_mk_set aconv (map (fst o strip_comb) lhsl)
-     val mutual    = 1<length fns
-     val facts     = TypeBase.theTypeBase()
+     val fns         = op_mk_set aconv (map (fst o strip_comb) lhsl)
+     val mutual      = 1<length fns
+     val facts       = TypeBase.theTypeBase()
  in
-  if mutual then (let
-    (* following is a temporary hack to allow for some nested recursive
-       definitions in the absence of proper size information being
-       available for these types. *)
-    val (f,args)  = strip_comb (hd lhsl)
-    val fname     = atom_name f
-    val tyinfo    =
-      valOf (TypeBase.read
-             (#Tyop (Type.dest_type (type_of (first is_constructor args)))))
-      handle Option.Option => raise ERR "" "" (* this to be caught *)
-    val def = new_recursive_definition {name = stem, def = eqs0,
-                                        rec_axiom = TypeBase.axiom_of tyinfo}
-    val ind = TypeBase.induction_of tyinfo
-  in
-    PRIMREC{eqs = def, ind = ind}
-  end handle HOL_ERR _ =>
-  let val {rules, ind, SV, R, union as {rules=r,ind=i,aux,...},...}
-              = Tfl.mutual_function facts stem eqs0
+  if mutual 
+  then (let val (f,args) = strip_comb (hd lhsl)
+           val fname = atom_name f
+           val tyop = #Tyop (dest_type (type_of (first is_constructor args)))
+           val tyinfo = valOf (TypeBase.read tyop)
+                        handle Option.Option => raise ERR "" ""
+           val def = new_recursive_definition 
+                     {name=stem, def=eqs0, rec_axiom=TypeBase.axiom_of tyinfo}
+           val ind = TypeBase.induction_of tyinfo
        in
-        MUTREC {eqs=rules, ind=ind, R=R, SV=SV,
-          union =
-             case aux
-              of NONE => STDREC{eqs=r,ind=i,R=R,SV=SV}
-               | SOME{rules=raux,ind=iaux} =>
-                    NESTREC{eqs=r,ind=i,R=R,SV=SV,
-                        aux=STDREC{eqs=raux,ind=iaux,R=R,SV=SV}}
-          }
-       end)
+         PRIMREC{eqs=def, ind=ind}
+       end 
+       handle HOL_ERR _ 
+       => let val {rules, ind, SV, R, union as {rules=r,ind=i,aux,...},...}
+                 = Tfl.mutual_function facts stem eqs0
+          in
+            MUTREC {eqs=rules, ind=ind, R=R, SV=SV,
+                    union = case aux
+                             of NONE => STDREC{eqs=r,ind=i,R=R,SV=SV}
+                              | SOME{rules=raux,ind=iaux} 
+                                   => NESTREC{eqs=r,ind=i,R=R,SV=SV,
+                                       aux=STDREC{eqs=raux,ind=iaux,R=R,SV=SV}}
+                   }
+          end)
   else
    let val (f,args)  = strip_comb (hd lhsl)
        val fname     = atom_name f
