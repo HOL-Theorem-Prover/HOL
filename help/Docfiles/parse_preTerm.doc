@@ -12,10 +12,16 @@ Parsing
 
 \DESCRIBE
 The ``let'' expression {`let x = e1 in e2`} will turn into
-{APP(APP(IDENT "LET", LAM(VIDENT "x", IDENT "e2")), IDENT "e1")}.  The
-record syntax {`rec.fld1`} is converted into something of the form
-{APP(IDENT "....fld1", IDENT "rec")} where the dots will actually be
-equal to the value of {GrammarSpecials.recsel_special} (a string).
+{
+   APP(APP(IDENT "LET", LAM(VIDENT "x", IDENT "e2")), IDENT "e1")
+}  
+\noindent The record syntax {`rec.fld1`} is converted into something of
+the form
+{
+   APP(IDENT "....fld1", IDENT "rec")
+} 
+\noindent where the dots will actually be equal to the value of 
+{GrammarSpecials.recsel_special} (a string).
 
 \FAILURE
 Fails if the quotation provided includes a syntax error.  This phase
