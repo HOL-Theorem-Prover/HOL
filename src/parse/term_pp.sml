@@ -968,12 +968,14 @@ fun pp_term (G : grammar) TyG = let
             end
             fun print_updlist updates = let
               fun recurse depth upds =
-                  case upds of
-                    [] => () (* should never happen *)
-                  | [u] => print_update (decdepth depth) u
-                  | u::us => (print_update (decdepth depth) u;
-                              print_ellist(Top,Top,Top) (sep, []);
-                              recurse (decdepth depth) us)
+                  if depth = 0 then add_string "..."
+                  else
+                    case upds of
+                      [] => () (* should never happen *)
+                    | [u] => print_update (decdepth depth) u
+                    | u::us => (print_update (decdepth depth) u;
+                                print_ellist(Top,Top,Top) (sep, []);
+                                recurse (decdepth depth) us)
             in
               print_ellist (Top,Top,Top) (ldelim, []);
               begin_block INCONSISTENT 0;
