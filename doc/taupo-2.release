@@ -31,15 +31,17 @@ Bugs fixed:
   * Type inference failed if it was required to guess more than 26
     type variables.
 
+  * Size functions are now defined for mutual and nested datatypes.
+
   * The definitions of a new record type's functional update functions
     (those that allow terms such as ``r with fld1 updated_by SUC``)
     are now added to the set of simplification theorems in the
     TypeBase.  These theorems are used by tools such as RW_TAC.
 
-  * Definitions of type size functions are made for nested recursive
-    types.
-
 New theories:
 -------------
+
   * A theory of lazy lists
-  * A collection of theories about temporal logic.
+
+  * A thorough treatment of temporal logic, as well as omega-automata.
+    Includes SMV as a decision procedure.
