@@ -128,13 +128,23 @@ local
            THENC RAND_CONV (ALPHA_CONV v)
          end
        else c) tm
-    end
+    end;
 in
-  val RES_FORALL_CONV        = RES_QUAN_CONV (REWR_CONV RES_FORALL)
-  val RES_EXISTS_CONV        = RES_QUAN_CONV (REWR_CONV RES_EXISTS)
-  val RES_EXISTS_UNIQUE_CONV = RES_QUAN_CONV (REWR_CONV RES_EXISTS_UNIQUE)
-  val RES_SELECT_CONV        = RES_QUAN_CONV (REWR_CONV RES_SELECT)
+  val RES_FORALL_CONV        = RES_QUAN_CONV (REWR_CONV RES_FORALL);
+  val RES_EXISTS_CONV        = RES_QUAN_CONV (REWR_CONV RES_EXISTS);
+  val RES_SELECT_CONV        = RES_QUAN_CONV (REWR_CONV RES_SELECT);
 end;
+
+val RES_EXISTS_UNIQUE_CONV =
+  REWR_CONV RES_EXISTS_UNIQUE THENC
+  TRY_CONV
+  (LAND_CONV (RAND_CONV (ABS_CONV BETA_CONV)) THENC
+   RAND_CONV
+   (RAND_CONV
+    (ABS_CONV
+     (RAND_CONV
+      (ABS_CONV
+       (LAND_CONV ((LAND_CONV BETA_CONV) THENC (RAND_CONV BETA_CONV))))))));
 
 (* ---------------------------------------------------------------------     *)
 (* If conversion c maps term (--`\i.t1`--) to theorem |- (\i.t1) = (\i'.t1'),*)
