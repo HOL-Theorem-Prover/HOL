@@ -100,6 +100,7 @@ val div_def = Define
                      in (y <= SUC r => (SUC q,0) 
                         | (*otherwise*) (q, SUC r)))`;
 
+(* Test and nested ifs *)
 val smaller_def = Define
   `(smaller((0,i), z) = (i:num))    /\
    (smaller((SUC x, i), (0,j)) = j) /\
@@ -109,11 +110,16 @@ val smaller_def = Define
         else smaller((x,i), (y,j)))`;
 
 
+val min_def = Define
+    `(min (SUC x) (SUC y) = min x y + 1)
+ /\  (min x y = 0)`;
+
+
 (*---------------------------------------------------------------------------*
  * Dutch National Flag by functional programming. Similar to bubble sort.    *
  *---------------------------------------------------------------------------*)
 
-bossLib.Hol_datatype `colour = Red | White | Blue`;
+Hol_datatype `colour = Red | White | Blue`;
 
 val Swap_def =
  Define 
@@ -134,7 +140,7 @@ val Swap_def' =
 (* Note that eta-expansion "\l. Flag l" needed in definition of Flag.  *)
 
 val Flag = 
- Hol_fun "Flag" 
+ Defn.hol_defn "Flag" 
          `Flag list = option_case list (\l. Flag l) (Swap list)`;
 
 Defn.eqns_of Flag;
@@ -290,14 +296,14 @@ Define `(g4(0,x,y,z) = 1) /\
  ---------------------------------------------------------------------------*)
 
 val qsort_def = 
- Hol_fun "qsort"
+ Defn.Hol_defn "qsort"
    `(qsort(ord,[]) = []) /\
     (qsort(ord, x::rst) = 
       APPEND (qsort(ord,FILTER ($~ o ord x) rst))
              (x :: qsort(ord,FILTER(ord x) rst)))`;
 
 val fqsort_def = 
- Hol_fun "fqsort"
+ Defn.Hol_defn "fqsort"
    `(fqsort ord [] = []) /\
     (fqsort ord (x::rst) = 
        let (l1,l2) = part (ord x) rst [] []
@@ -305,7 +311,7 @@ val fqsort_def =
         APPEND (fqsort ord l1)  (x::fqsort ord l2))`;
 
 val variant_def = 
-  Hol_fun "variant" 
+  Defn.Hol_defn "variant" 
      `variant x L = if MEM x L then variant (x+1) L else x`;
 
 (*---------------------------------------------------------------------------
@@ -313,11 +319,18 @@ val variant_def =
  ---------------------------------------------------------------------------*)
 
 Defn.tgoal variant_def;  
-e (Q.EXISTS_TAC `measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`);
-e (CONV_TAC Halts.TC_SIMP_CONV);
+
+e (WF_REL_TAC variant_def 
+       `measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`);
+
+(* Step-by-step way
+b();
+e (TotalDefn.TC_INTRO_TAC variant_def 
+     THEN Q.EXISTS_TAC`measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
+     THEN TotalDefn.TC_SIMP_TAC);
+*)
 e (RW_TAC base_ss []   (* Blasted eta-conv. to be done before induction *)
-   THEN Induct_on `L` 
-   THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]);
+   THEN Induct_on `L` THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]);
 
 (* Need a lemma *)
 
@@ -325,26 +338,23 @@ val LENGTH_FILTER_SUBSET = Q.prove(
 `(!y. P y ==> Q y) ==> !L. LENGTH(FILTER P L) <= LENGTH (FILTER Q L)`,
 DISCH_TAC THEN Induct THEN ZAP_TAC (list_ss && [listTheory.FILTER]) []);
 
-(* Resume proof *)
+(* Finish proof *)
 e (RW_TAC arith_ss [DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
-
-(* Done, make ML bindings, and should also add into theory *)
-
 val [variant_eqns,variant_ind] = CONJUNCTS (top_thm());
+
 
 (*---------------------------------------------------------------------------
      All wrapped up after proof found.
  ---------------------------------------------------------------------------*)
 
 val (variant_eqn, variant_ind) = 
- Defn.tprove 
-   (variant_def,
-     Q.EXISTS_TAC `measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
-       THEN CONV_TAC Halts.TC_SIMP_CONV
-       THEN RW_TAC base_ss []
-       THEN Induct_on `L` 
-       THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM,
-                            DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
+Defn.tprove 
+  (variant_def, WF_REL_TAC variant_def 
+      `measure \(x,L). LENGTH(FILTER (\y. x<=y) L)`
+     THEN RW_TAC base_ss []
+     THEN Induct_on `L` 
+     THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM,
+                          DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
 
 (*---------------------------------------------------------------------------
        Properties.
@@ -377,31 +387,51 @@ recInduct variant_ind
  ---------------------------------------------------------------------------*)
 load "computeLib";  open computeLib;
 
+(*---------------------------------------------------------------------------
+    First, build a standard computing base, one that knows basic 
+    facts about booleans and numbers (and numerals).
+
+    Note that ">" and ">=" are not defined for numerals, so 
+    we convert to "<" and "<=" via arithmeticTheory.{GREATER_EQ, GREATER_DEF}.
+ ---------------------------------------------------------------------------*)
+
+val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES]);
+
+fun norm q = Count.apply (CBV_CONV rws) (--q--);
+
 val num_rws = 
   let open numeralTheory Rsyntax
       val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
       val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
                          REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
-                          arithmeticTheory.ALT_ZERO])
+                        arithmeticTheory.ALT_ZERO])
+      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
+      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
  in 
-  [ numeral_distrib, REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
+  [ drws', REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
     numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
     numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
-    numeral_exp, iSQR ]
+    numeral_exp, iSQR, 
+    arithmeticTheory.GREATER_EQ, arithmeticTheory.GREATER_DEF
+  ]
 end;
 
-val rws = from_list (false,[COND_CLAUSES]);
+val _ = add_thms (true,num_rws) rws;
 
-val MEM_IF = prove
-(Term`!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
- RW_TAC list_ss [listTheory.MEM]);
+(*---------------------------------------------------------------------------
+        recast MEM definition as if-then-else
+ ---------------------------------------------------------------------------*)
 
-val MEM_DEF' = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF;
-
-val _ = add_thms (true,([variant_eqn,MEM_DEF']@num_rws)) rws;
-fun norm q = time (CBV_CONV rws) (--q--);
+local val MEM_IF = Q.prove(
+           `!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
+            RW_TAC list_ss [listTheory.MEM]);
+      val MEM_DEF' = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF
+in
+val _ = add_thms (true,[variant_eqn,MEM_DEF']) rws
+end;
 
 norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;
+norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;16;16;16;165]`;
 norm `variant (SUC 0) []`;
 norm `variant (SUC 0) [SUC(SUC 0)]`;
 
@@ -410,8 +440,7 @@ norm `variant (SUC 0) [SUC(SUC 0)]`;
  ---------------------------------------------------------------------------*)
 
 Defn.tgoal qsort_def;  
-e (Q.EXISTS_TAC `measure (LENGTH o SND)`);
-e (CONV_TAC Halts.TC_SIMP_CONV);
+e (WF_REL_TAC qsort_def `measure (LENGTH o SND)`);
 e (RW_TAC list_ss [combinTheory.o_DEF,DECIDE `x<SUC y = x <= y`]);
 
 val FILTER_KT = Q.prove(`!l. FILTER (K T) l = l`,
@@ -428,14 +457,13 @@ val (qsort_eqns,qsort_ind) =
   let val th = top_thm() in (CONJUNCT1 th, CONJUNCT2 th) end;
 
 (*---------------------------------------------------------------------------
-     All wrapped up after proof found.
+       All wrapped up after proof found.
  ---------------------------------------------------------------------------*)
 
 val (qsort_eqn,qsort_ind) = 
- Defn.tprove 
-   (qsort_def,
-     Q.EXISTS_TAC `measure (LENGTH o SND)`
-       THEN CONV_TAC Halts.TC_SIMP_CONV
+Defn.tprove 
+   (qsort_def, 
+     WF_REL_TAC qsort_def `measure (LENGTH o SND)`
        THEN RW_TAC list_ss 
              [combinTheory.o_DEF,combinTheory.K_DEF,
               DECIDE `x<SUC y = x <= y`,
@@ -444,7 +472,7 @@ val (qsort_eqn,qsort_ind) =
 
 
 (*---------------------------------------------------------------------------
-     Wang's algorithm for propositional logic.
+        Wang's algorithm for propositional logic.
  ---------------------------------------------------------------------------*)
 
 Hol_datatype `prop = VAR of 'a
@@ -452,7 +480,7 @@ Hol_datatype `prop = VAR of 'a
                    | AND of prop => prop
                    | OR  of prop => prop`;
 val Pr_def = 
- Hol_fun "Pr"
+ Defn.Hol_defn "Pr"
     `(Pr vl [] (VAR v::r)   vr = Pr vl [] r (v::vr))
  /\  (Pr vl [] (NOT x::r)   vr = Pr vl [x] r vr)
  /\  (Pr vl [] (OR x y::r)  vr = Pr vl [] (x::y::r) vr)
@@ -463,7 +491,7 @@ val Pr_def =
  /\  (Pr vl (AND x y::l)  r vr = Pr vl (x::y::l) r vr)
  /\  (Pr vl (OR x y::l)   r vr = Pr vl (x::l) r vr /\ Pr vl (y::l) r vr)
 
- /\  (Pr vl [] [] vr           = ?y. MEM y vl /\ MEM y vr)`;
+ /\  (Pr vl [] [] vr           = EXISTS (\y. MEM y vl) vr)`;
 
 
 val Prove_def = Define `Prove P = Pr [] [] [P] []`;
@@ -485,13 +513,12 @@ val Meas_def =
  *  Termination of Pr.                                                       *
  *---------------------------------------------------------------------------*)
 
-val (Pr_eqns, Pr_ind) = 
- Defn.tprove (Pr_def,
-   Q.EXISTS_TAC 
-       `measure \(w:'a list, x:'a prop list, y:'a prop list, z:'a list). 
+val (Pr_eqns, Pr_ind) = Defn.tprove 
+(Pr_def,
+ WF_REL_TAC Pr_def
+    `measure \(w:'a list, x:'a prop list, y:'a prop list, z:'a list). 
                       list_size Meas x + list_size Meas y`
-     THEN CONV_TAC Halts.TC_SIMP_CONV
-     THEN RW_TAC arith_ss [Meas_def,listTheory.list_size_def]);
+  THEN RW_TAC arith_ss [Meas_def,listTheory.list_size_def]);
 
 (*---------------------------------------------------------------------------
       The following definition is in destructor style, and fails 
@@ -609,7 +636,7 @@ Define
  ---------------------------------------------------------------------------*)
 
 val N = Define `N x = if x>100 then x-10 else N(N(x+11))`;
-val Ndef = Hol_fun "ninety1"
+val Ndef = Defn.Hol_defn "ninety1"
             `N x = if x>100 then x-10 else N(N(x+11))`;
 
 (* Fails (as it should) and doesn't clean up properly (as it shouldn't) *)
@@ -662,14 +689,13 @@ end;
  ---------------------------------------------------------------------------*)
  
 val ltree_map_def =
-  Hol_fun "ltree_map"
+  Defn.Hol_defn "ltree_map"
     `ltree_map f (Node v tl) = Node (f v) (MAP (ltree_map f) tl)`;
 
 val (ltree_map_eqn, ltree_map_ind) =
  Defn.tprove
- (ltree_map_def,
-  EXISTS_TAC (hd(tl (Halts.guessR ltree_map_def)))
-    THEN CONV_TAC Halts.TC_SIMP_CONV
+ (ltree_map_def, 
+   QuoteDef.WF_REL_TAC ltree_map_def `^(hd(tl (Halts.guessR ltree_map_def)))`
     THEN Induct 
     THEN RW_TAC list_ss [listTheory.MEM,listTheory.list_size_def,
                          ltreeTheory.ltree_size_def]
@@ -684,31 +710,29 @@ recInduct ltree_map_ind
          Induct_on `tl` THEN ZAP_TAC list_ss [listTheory.MEM]]);
 
 val ltree_occurs_def =
- Hol_fun "ltree_occurs"
+ Defn.Hol_defn "ltree_occurs"
     `ltree_occurs x (Node v tl) = (x=v) \/ EXISTS (ltree_occurs x) tl`;
 
 val collect_def =
- Hol_fun "collect"
+ Defn.Hol_defn "collect"
     `collect f (Node v tl) 
        = FOLDR (\h a. APPEND (collect f h) a) [f v] tl`;
 
 val (collect_eqn, collect_ind) =
  Defn.tprove
  (collect_def,
-  EXISTS_TAC (Lib.el 2 (Halts.guessR ltree_map_def))
-    THEN CONV_TAC Halts.TC_SIMP_CONV
+  QuoteDef.WF_REL_TAC collect_def `^(Lib.el 2 (Halts.guessR ltree_map_def))`
     THEN Induct 
     THEN RW_TAC list_ss [listTheory.MEM,listTheory.list_size_def,
                          ltreeTheory.ltree_size_def]
     THENL [CONV_TAC arithLib.ARITH_CONV,
            PROVE_TAC [DECIDE `x < y+1 ==> x < y + (z + 2)`]]);
 
-
 val ltree_size_def2 =
- Hol_fun "ltree_size2"
+ Defn.Hol_defn "ltree_size2"
     `ltree_size2 f (Node v tl) = 1 + f v + SUM (MAP (ltree_size2 f) tl)`;
 
 val ltree_SIZE_def =
- Hol_fun 
+ Defn.Hol_defn 
      "ltree_SIZE"
      `ltree_SIZE f (Node v tl) = 1 + f v + sumf (ltree_SIZE f) tl`;

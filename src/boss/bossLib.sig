@@ -15,10 +15,11 @@ in
   (* Make definitions *)
 
   val Hol_datatype : hol_type quotation -> unit
-  val Hol_fun      : string -> term quotation -> defn
-  val xDefine      : string -> term quotation -> thm
   val Define       : term quotation -> thm
-
+  val xDefine      : string -> term quotation -> thm
+  val Hol_defn     : string -> term quotation -> defn
+  val WF_REL_TAC   : defn -> term quotation -> tactic
+ 
   val ind_suffix : string ref
   val def_suffix : string ref
 
@@ -28,13 +29,13 @@ in
 
   (* Case-splitting and induction operations *)
 
-  val Cases     : tactic
-  val Induct    : tactic
-  val Cases_on  : term quotation -> tactic
-  val Induct_on : term quotation -> tactic
+  val Cases             : tactic
+  val Induct            : tactic
+  val recInduct         : thm -> tactic
+  val Cases_on          : term quotation -> tactic
+  val Induct_on         : term quotation -> tactic
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
-  val recInduct         : thm -> tactic
 
   (* Support for proof by contradiction *)
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic

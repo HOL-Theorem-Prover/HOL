@@ -45,12 +45,14 @@ val Hol_datatype = Datatype.Hol_datatype;
             Function definition
  ---------------------------------------------------------------------------*)
 
-val Hol_fun = QuotedDef.Hol_fun;
-val xDefine = QuotedDef.xDefine
-val Define  = QuotedDef.Define
+val xDefine    = TotalDefn.xDefine
+val Define     = TotalDefn.Define
+val Hol_defn   = Defn.Hol_defn;
+val WF_REL_TAC = TotalDefn.WF_REL_TAC;
 
-val ind_suffix = QuotedDef.ind_suffix
-val def_suffix = QuotedDef.def_suffix;
+val ind_suffix = TotalDefn.ind_suffix
+val def_suffix = TotalDefn.def_suffix;
+
 
 (*---------------------------------------------------------------------------
      Support for higher-order recursion. There should be a better 
@@ -70,9 +72,8 @@ end;
  ---------------------------------------------------------------------------*)
 
 fun PROVE thl q = BasicProvers.PROVE thl (Parse.Term q);
-val PROVE_TAC = BasicProvers.PROVE_TAC
-
-val RW_TAC  = BasicProvers.RW_TAC
+val PROVE_TAC   = BasicProvers.PROVE_TAC
+val RW_TAC      = BasicProvers.RW_TAC
 
 val && = BasicProvers.&&;
 infix &&;
@@ -80,7 +81,7 @@ infix &&;
 (*---------------------------------------------------------------------------
      The following simplification sets will be applied in a context
      that extends that loaded by bossLib. They are intended to be used
-     by RW_TAC. The way to choose which simpset to use depends on factors
+     by RW_TAC. The choice of which simpset to use depends on factors
      such as running time.  For example, RW_TAC with arith_ss (and thus 
      with list_ss) may take a long time on some goals featuring arithmetic 
      terms (since the arithmetic decision procedure may be invoked). In 
@@ -113,8 +114,8 @@ fun ZAP_TAC ss thl =
  ---------------------------------------------------------------------------*)
 
 
-val Cases  = SingleStep.Cases
-val Induct = SingleStep.Induct
+val Cases     = SingleStep.Cases
+val Induct    = SingleStep.Induct
 val recInduct = SingleStep.recInduct
 
 val Cases_on          = SingleStep.Cases_on
@@ -124,6 +125,6 @@ val measureInduct_on  = SingleStep.measureInduct_on;
 
 val SPOSE_NOT_THEN    = SingleStep.SPOSE_NOT_THEN
 
-val by = SingleStep.by; (* infix 8 by *)
+val by                = SingleStep.by; (* infix 8 by *)
 
 end;
