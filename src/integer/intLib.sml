@@ -6,7 +6,6 @@ fun ERR f s = HOL_ERR {origin_structure = "intLib",
                        origin_function = f,
                        message = s};
 
-infix THEN THENC
 infixr -->
 
 val (Type,Term) = parse_from_grammars integerTheory.integer_grammars;
