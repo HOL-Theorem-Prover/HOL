@@ -1,4 +1,3 @@
-val _ = print "For HOL help, type: help \"hol\";\n"
 val _ = quietdec := true;
 
 (*---------------------------------------------------------------------------*
@@ -10,7 +9,7 @@ local open Path
 in
 val _ = Meta.loadPath := SIGOBJ :: !Meta.loadPath
 val _ = load "HolKernel"
-val _ = print "Loaded Hol Kernel.\n"
+(* val _ = print "Loaded Hol Kernel.\n" *)
 end;
 
 (*---------------------------------------------------------------------------*
@@ -77,21 +76,14 @@ end
 (*---------------------------------------------------------------------------*
  * Print a banner.                                                           *
  *---------------------------------------------------------------------------*)
+
 val _ =
-( TextIO.output(TextIO.stdOut, "\n");
-   TextIO.output(TextIO.stdOut,
-"        HHH                 LL\n \
-\       HHH                  LL\n \
-\       HHH                   LL\n \
-\       HHH                    LL\n \
-\       HHH          OOOO       LL\n \
-\       HHHHHHH     OO  OO       LL\n \
-\       HHHHHHH     OO  OO       LLL\n \
-\       HHH          OOOO        LLLL\n \
-\       HHH                     LL  LL\n \
-\       HHH                    LL    LL\n \
-\       HHH                   LL      LL\n \
-\       HHH                  LL        LL98"
-^" ["^Globals.release^" "^Lib.int_to_string(Globals.version)^"]\n\n"));
+TextIO.output(TextIO.stdOut,
+  "---------------------------------------------------------\n"
+  ^"   HOL ["
+  ^Globals.release^" "^Lib.int_to_string(Globals.version)
+  ^"]  ... for HOL help, type: help \"hol\";\n"
+  ^"---------------------------------------------------------\n");
+
 
 val _ = quietdec := false;
