@@ -123,12 +123,13 @@ mv ../bin-README bin/README
 
 
 cd /tmp
+mv hol98 hol
 
 echo "Creating tar file"
-tar czf $name.tar.gz hol98
+tar czf $name.tar.gz hol
 
 if [ "$name" != "today" ]
 then
-  mv hol98/doc/$name.release .
+  mv hol/doc/$name.release .
 fi
 
