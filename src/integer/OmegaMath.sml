@@ -606,21 +606,23 @@ local
   val eq_elim = prove(``(x:int = y) = (x <= y /\ y <= x)``, tac)
 in
 
+val sum_normalise =
+    REWRITE_CONV [INT_NEG_ADD, INT_LDISTRIB, INT_RDISTRIB,
+                  INT_NEG_LMUL, INT_NEGNEG, INT_NEG_0,
+                  int_sub] THENC
+    EVERY_SUMMAND (TRY_CONV NORMALISE_MULT) THENC
+    REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
+                  INT_NEGNEG] THENC
+    REWRITE_CONV [INT_NEG_LMUL] THENC
+    SORT_AND_GATHER_CONV
+
 fun normalise_numbers tm = let
   val MK_LEQ =
     TRY_CONV (FIRST_CONV (map REWR_CONV [lt_elim, not_le, not_lt, not_gt,
                                          not_ge, ge_elim, gt_elim])) THENC
     (REWR_CONV int_arithTheory.le_move_all_right ORELSEC
      REWR_CONV int_arithTheory.eq_move_all_right)
-  val base_normaliser =
-    RAND_CONV (REWRITE_CONV [INT_NEG_ADD, INT_LDISTRIB, INT_RDISTRIB,
-                             INT_NEG_LMUL, INT_NEGNEG, INT_NEG_0,
-                             int_sub] THENC
-               EVERY_SUMMAND (TRY_CONV NORMALISE_MULT) THENC
-               REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
-                             INT_NEGNEG] THENC
-               REWRITE_CONV [INT_NEG_LMUL] THENC
-               SORT_AND_GATHER_CONV)
+  val base_normaliser = RAND_CONV sum_normalise THENC gcd_check
 in
   if (is_leq tm orelse is_eq tm) andalso lhand tm = zero_tm then
     if is_plus (rand tm) then let

@@ -33,6 +33,10 @@ fun EVERY_CONJ_CONV c t =
     if is_conj t then BINOP_CONV (EVERY_CONJ_CONV c) t
     else c t
 
+fun EVERY_DISJ_CONV c t =
+    if is_disj t then BINOP_CONV (EVERY_DISJ_CONV c) t
+    else c t
+
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaSymbolic",
                           origin_function = f,
                           message = msg}
@@ -216,7 +220,7 @@ val alt_rrow = munge_to_altform "rs" rshadow_row_def
 fun calculate_shadow (sdef, rowdef) = let
   val (s1, scons) = sdef
   val (r1, rcons) = rowdef
-  val mathnorm = OmegaMath.leaf_normalise THENC OmegaMath.gcd_check
+  val mathnorm = OmegaMath.leaf_normalise
   fun calculate_row t =
       ((REWR_CONV r1 THENC mathnorm) ORELSEC
        (REWR_CONV rcons THENC FORK_CONV (mathnorm, calculate_row))) t
@@ -230,7 +234,7 @@ end
 (* ----------------------------------------------------------------------
     expand_evals tm
 
-    tm is of form p /\ (evalupper x list1 /\ evallower x list2)
+    tm is of form evalupper x list1 /\ evallower x list2
     rewrite away the evallower and evalupper terms, keeping everything
     right associated
    ---------------------------------------------------------------------- *)
@@ -240,9 +244,8 @@ val (evallo1, evallo_cons) = munge_to_altform "cs" evallower_def
 
 val evalhi1 = AP_THM (AP_TERM conjunction evalhi10) qvar
 val evalhi_cons =
-    CONV_RULE (RAND_CONV (RAND_CONV (REWR_CONV (GSYM CONJ_ASSOC))))
-              (AP_TERM (mk_comb(conjunction, pvar))
-                       (AP_THM (AP_TERM conjunction evalhi_cons0) qvar))
+    CONV_RULE (RAND_CONV (REWR_CONV (GSYM CONJ_ASSOC)))
+              (AP_THM (AP_TERM conjunction evalhi_cons0) qvar)
 
 
 val expand_evals = let
@@ -250,7 +253,7 @@ val expand_evals = let
       (REWR_CONV evallo1 ORELSEC
        (REWR_CONV evallo_cons THENC RAND_CONV reclos)) tm
   fun rechis tm =
-      ((RAND_CONV (REWR_CONV evalhi1 THENC RAND_CONV reclos)) ORELSEC
+      ((REWR_CONV evalhi1 THENC RAND_CONV reclos) ORELSEC
        (REWR_CONV evalhi_cons THENC RAND_CONV rechis)) tm
 in
   rechis
@@ -258,13 +261,12 @@ end
 
 
 (* ----------------------------------------------------------------------
-    calculate_range_disjunct c tm
+    calculate_range_disjunct tm
 
     tm is of form ?i. (0 <= i /\ i <= u) /\ ...
     transform this into an appropriate number of disjuncts (or possibly
     false, if u < 0), of the form
        P(0) \/ P(1) \/ ... \/ P(u)
-    and apply conversion c to each disjunct
    ---------------------------------------------------------------------- *)
 
 val refl_case = prove(
@@ -296,15 +298,15 @@ val nonrefl_case = prove(
   ]);
 
 
-fun calculate_range_disjunct c tm = let
+fun calculate_range_disjunct tm = let
   val (i, body) = dest_exists tm
   fun recurse tm =
-      ((REWR_CONV refl_case THENC BETA_CONV THENC c) ORELSEC
+      ((REWR_CONV refl_case THENC BETA_CONV) ORELSEC
        (REWR_CONV nonrefl_case THENC
         LAND_CONV CooperMath.REDUCE_CONV THENC
         (REWR_CONV CooperThms.F_and_l ORELSEC
          (REWR_CONV CooperThms.T_and_l THENC
-          FORK_CONV(BETA_CONV THENC c,
+          FORK_CONV(BETA_CONV,
                     BINDER_CONV (LAND_CONV
                                    (LAND_CONV CooperMath.REDUCE_CONV)) THENC
                     recurse))))) tm
@@ -313,12 +315,114 @@ in
 end tm
 
 (* ----------------------------------------------------------------------
-    calculate_nightmare t
+    do_divisibility_analysis v ctxt tm
 
-    t is a term of the form nightmare m ups lows tlist.
+    tm is of the form   ?x. (c * x = e) /\ c1 /\ c2 /\ c3
+    where each ci is either of the form  d * x <= U  or  L <= e * x.
+    If e contains any variables that appear in ctxt, then
+    leaf_normalise all of the ci's and the equality term and then rename
+    x to be v (which is its correct name).
+
+    Otherwise, multiply the ci's through so as to make them include
+    c * x as a subterm, then rewrite with the first conjunct, and then
+    leaf normalise.  The variable x will have been eliminated from all
+    but the first conjunct.  Then push the ?x inwards, and turn that
+    first conjunct into a divides term (c int_divides e).
+   ---------------------------------------------------------------------- *)
+
+fun lcmify v c c_i tm = let
+  (* tm either d * v <= U or L <= e * v, need c * v to be present *)
+  val (l,r) = dest_leq tm
+  val (accessor, cval) =
+      if rand r = v then (rand, RAND_CONV) else (lhand, LAND_CONV)
+  val d = lhand (accessor tm)
+in
+  if  d = c then ALL_CONV
+  else let
+      open CooperMath
+      val d_i = int_of_term d
+      val lc = lcm(c_i, d_i)
+      fun multiply_through tm =
+          if lc <> d_i then let
+              val f_i = Arbint.div(lc, d_i)
+              val f = term_of_int f_i
+              val zero_lt_f =
+                  EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, f)))
+              val finisher =
+                  if f = c then
+                    REWR_CONV INT_MUL_ASSOC THENC
+                    LAND_CONV (REWR_CONV INT_MUL_COMM) THENC
+                    REWR_CONV (GSYM INT_MUL_ASSOC)
+                  else
+                    REWR_CONV INT_MUL_ASSOC THENC LAND_CONV REDUCE_CONV
+            in
+              (K (SYM (MP (SPECL [f, l, r] INT_LE_MONO) zero_lt_f)) THENC
+               cval finisher) tm
+            end
+          else ALL_CONV tm
+      fun divide_out tm =
+          if lc <> c_i andalso rand (accessor tm) = v then let
+              val f_i = Arbint.div(lc, c_i)
+              val f = term_of_int f_i
+              val fc_eq_l = CooperMath.REDUCE_CONV(mk_mult(f, c))
+            in
+              (cval (LAND_CONV (K (SYM fc_eq_l)) THENC
+                     REWR_CONV (GSYM INT_MUL_ASSOC))) tm
+            end
+          else ALL_CONV tm
+    in
+      multiply_through THENC divide_out
+    end
+end tm
+
+fun do_divisibility_analysis v ctxt tm = let
+  val (x, body) = dest_exists tm
+  val (eqterm, rest) = dest_conj body
+in
+  if not (null (intersect (free_vars (rand eqterm)) ctxt)) then
+    (* leave it as an equality *)
+    BINDER_CONV (EVERY_CONJ_CONV OmegaMath.leaf_normalise) THENC
+    RAND_CONV (ALPHA_CONV v)
+  else let
+      val c = lhand (lhand eqterm)
+      val c_i = int_of_term c
+      fun ctxt_rwt tm = let
+        val (c1, c2) = dest_conj tm
+        val thm0 = DISCH_ALL (REWRITE_CONV [ASSUME c1] c2)
+      in
+        MATCH_MP CooperThms.simple_conj_congruence thm0
+      end
+    in
+      BINDER_CONV (RAND_CONV (EVERY_CONJ_CONV (lcmify x c c_i)) THENC
+                   ctxt_rwt) THENC
+      EXISTS_AND_CONV THENC
+      LAND_CONV (BINDER_CONV (LAND_CONV (REWR_CONV INT_MUL_COMM)) THENC
+                 REWR_CONV (GSYM INT_DIVIDES) THENC
+                 RAND_CONV OmegaMath.sum_normalise THENC
+                 CooperMath.minimise_divides) THENC
+      RAND_CONV (EVERY_CONJ_CONV OmegaMath.leaf_normalise) THENC
+      REWRITE_CONV []
+    end
+end tm
+
+
+
+
+(* ----------------------------------------------------------------------
+    calculate_nightmare ctxt t
+
+    t is a term of the form ?x. nightmare x m ups lows tlist.
     This function expands it into an equation of the form
-       |- t = (?x. ...) \/ (?x. ...) \/ ... \/ (?x. ...)
+       |- t =  D1 \/ D2 \/ D3 \/ .. Dn
+    Each Di is either free of x entirely (but with a divides term present
+    as the first conjunct) or is of the form
+       ?x. (c * x = R) /\ C1 /\ C2 /\ .. Cn
+    where x is absent in all of the Ci, and where R includes at least
+    one variable y, which is present in the list of variables ctxt.
 
+    In this latter situation, the equality and one of the x or y will
+    be eliminated through OmegaEq.  In the former situation, the divides
+    term will need special treatment later.
    ---------------------------------------------------------------------- *)
 
 val (cnightmare10, cnightmare_cons0) = munge_to_altform "rs" calc_nightmare_def
@@ -333,21 +437,23 @@ val cnightmare_cons =
                           LAND_CONV reassoc_internals))
               (AP_THM (AP_TERM conjunction cnightmare_cons0) pvar)
 
-val calculate_nightmare = let
+fun calculate_nightmare ctxt tm = let
+  val (v, body) = dest_exists tm
   val reducer =
       BINDER_CONV (LAND_CONV (RAND_CONV
                                 (RAND_CONV CooperMath.REDUCE_CONV))) THENC
-      calculate_range_disjunct ALL_CONV (* should be a conversion to do
-                                           divides elimination *)
+      calculate_range_disjunct
   fun recurse t =
       ((REWR_CONV cnightmare1 THENC reducer) ORELSEC
        (REWR_CONV cnightmare_cons THENC LAND_CONV reducer THENC
         RAND_CONV recurse)) t
 in
-  REWR_CONV calculational_nightmare THENC
-  expand_evals THENC
-  recurse
-end
+  BINDER_CONV (REWR_CONV calculational_nightmare THENC
+               RAND_CONV expand_evals THENC
+               recurse) THENC
+  CooperSyntax.push_in_exists THENC
+  EVERY_DISJ_CONV (do_divisibility_analysis v ctxt)
+end tm
 
 
 (* ----------------------------------------------------------------------
@@ -363,10 +469,13 @@ end
    ---------------------------------------------------------------------- *)
 
 datatype ctype = VACUOUS_LOW | VACUOUS_UP | EXACT_LOW | EXACT_UP
-               | NIGHTMARE of term
-(* the nightmare constructor takes a term of type ``:num`` corresponding to
-   the maximum coefficient of the variable to be eliminated in an upper
-   bound constraint *)
+               | NIGHTMARE of (term * term list)
+(* the nightmare constructor takes a pair as an argument:
+     * the term is of type ``:num``, corresponding to
+       the maximum coefficient of the variable to be eliminated in an
+       upper bound constraint
+     * the list of terms is a list of other existentially quantified
+       variables that have scope over this clause  *)
 
 fun apply_fmve ctype = let
   fun initially t = let
@@ -404,15 +513,15 @@ fun apply_fmve ctype = let
       in
         K th THENC calculate_shadow (alt_rshadow, alt_rrow)
       end
-    | NIGHTMARE m => let
+    | NIGHTMARE (m,ctxt) => let
         val uppers_lt_m = prove_every_fst_lt_m m ups
       in
         K (MATCH_MP alternative_equivalence
                     (LIST_CONJ [ups_nzero, lows_nzero, uppers_lt_m])) THENC
         RAND_CONV (RAND_CONV (ALPHA_CONV v)) THENC
-        LAND_CONV (calculate_shadow (alt_dshadow, alt_drow)) THENC
-        RAND_CONV (BINDER_CONV calculate_nightmare THENC
-                   CooperSyntax.push_one_exists_over_many_disjs)
+        LAND_CONV (calculate_shadow (alt_dshadow, alt_drow) THENC
+                   REWRITE_CONV []) THENC
+        RAND_CONV (calculate_nightmare ctxt)
       end
   end t
   fun elim_rT tm = (if rand tm = boolSyntax.T then REWR_CONV CooperThms.T_and_r
@@ -491,7 +600,7 @@ in
           fun f (_, {maxloc, maxupc, ...}) = Arbint.max(!maxloc, !maxupc)
           val ((v, {maxupc, ...}), _) = findleast Arbint.> f items
         in
-          (v, NIGHTMARE (rand (term_of_int (!maxupc))))
+          (v, NIGHTMARE (rand (term_of_int (!maxupc)), set_diff vs [v]))
         end
       else let
           fun f (_, {numups, numlos,...}) = !numups * !numlos
@@ -521,9 +630,25 @@ fun eliminate_an_existential t = let
   val (vs, body) = strip_exists t
   val (eliminate, category) = best_variable_to_eliminate vs body
   val v_n = index (fn v => v = eliminate) vs
+  fun check_for_eqs tm = let
+    val (lvs, body) = strip_exists tm
+  in
+    if length lvs = length vs then
+      Profile.profile "eq" OmegaEq.OmegaEq
+    else
+      ALL_CONV
+  end tm
+  fun mypush_in_exs tm = let
+    val (vs, body) = strip_exists tm
+  in
+    CooperSyntax.push_in_exists THENC
+    EVERY_DISJ_CONV (RENAME_VARS_CONV (map (#1 o dest_var) vs) THENC
+                     check_for_eqs)
+  end tm
 in
   push_nthvar_to_bot v_n THENC
-  LAST_EXISTS_CONV (apply_fmve category)
+  LAST_EXISTS_CONV (apply_fmve category) THENC
+  mypush_in_exs
 end t
 
 

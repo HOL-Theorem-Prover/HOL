@@ -24,4 +24,7 @@ signature CooperThms = sig
   val DISJ_NEQ_ELIM : thm
   val cpEU_THM : thm
 
+  val simple_disj_congruence : thm
+  val simple_conj_congruence : thm
+
 end

@@ -23,6 +23,7 @@ sig
   val NORMALISE_MULT        : conv
 
   val leaf_normalise        : conv
+  val sum_normalise         : conv
 end;
 
 (*
@@ -108,6 +109,11 @@ end;
    operator over integer values) to either an equality, a <= or a
    disjunction of two normalised <= leaves.  (The latter happens if
    called onto normalise ~(x = y)).
+
+   [sum_normalise t] normalises a term of type :int into the standard
+   Omega normal form, where the resulting term is of the form
+       c1 * v1 + c2 * v2 + c3 * v3 + ... + cn * vn + c
+   where the c is always present and maybe 0.
 
 *)
 

@@ -5,12 +5,6 @@ open HolKernel boolLib CooperThms QConv
 
 val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
 
-val simple_disj_congruence =
-  tautLib.TAUT_PROVE (Term`!p q r. (~p ==> (q = r)) ==>
-                                   (p \/ q = p \/ r)`)
-val simple_conj_congruence =
-  tautLib.TAUT_PROVE (Term`!p q r. (p ==> (q = r)) ==>
-                                   (p /\ q = p /\ r)`)
 infix THENC ORELSEC |->
 
 val lhand = rand o rator
