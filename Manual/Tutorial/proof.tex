@@ -349,7 +349,7 @@ more concisely as:
 - fun ADD_ASSUM t th = MP (DISCH t th) (ASSUME t);
 > val ADD_ASSUM = fn : term -> thm -> thm
 
-- ADD_ASSUM t3 Th6;
+- ADD_ASSUM ``t3:bool`` Th6;
 val it = [t1 ==> t2, t1, t3] |- t2 : thm
 \end{verbatim}\end{session}
 
