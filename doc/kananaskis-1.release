@@ -29,6 +29,10 @@ Behaviours changed:
       ``\r. r.fld``
     which eta-converts to the above.
 
+  * Hol_datatype's definition of large "enumerated types" (data types
+    with only nullary constructors) is now a lot more efficient than
+    it used to be.
+
 New features:
 -------------
 
