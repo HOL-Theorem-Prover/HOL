@@ -745,8 +745,6 @@ val _ =
       ::
      OPEN ["combin"]
       ::
-     MLSTRUCT "nonfix o;"
-      ::
     (DEFN NUMERAL_DEF ::
       map (DEFN o PURE_REWRITE_RULE [NUMERAL_DEF])
          [numeral_suc,iZ,iiSUC,addition_thms,
@@ -759,18 +757,23 @@ val _ =
      [MLSIG "val ONE :num",
       MLSIG "val TWO :num",
       MLSIG "val BASE : num -> num -> num list",
+      MLSIG "val fromInt       : int -> num",
+      MLSIG "val toInt         : num -> int option",
       MLSIG "val toBinString   : num -> string",
       MLSIG "val toOctString   : num -> string",
       MLSIG "val toDecString   : num -> string",
       MLSIG "val toHexString   : num -> string",
+      MLSIG "val toString      : num -> string",
       MLSIG "val fromBinString : string -> num",
       MLSIG "val fromOctString : string -> num",
       MLSIG "val fromDecString : string -> num",
       MLSIG "val fromHexString : string -> num",
-      MLSIG "val ppBin : ppstream -> num -> unit",
-      MLSIG "val ppOct : ppstream -> num -> unit",
-      MLSIG "val ppDec : ppstream -> num -> unit",
-      MLSIG "val ppHex : ppstream -> num -> unit",
+      MLSIG "val fromString    : string -> num",
+      MLSIG "val ppBin  : ppstream -> num -> unit",
+      MLSIG "val ppOct  : ppstream -> num -> unit",
+      MLSIG "val ppDec  : ppstream -> num -> unit",
+      MLSIG "val ppHex  : ppstream -> num -> unit",
+      MLSIG "val pp_num : ppstream -> num -> unit",
       MLSTRUCT "\n\
 \ (*---------------------------------------------------------------------------*) \n\
 \ (* Supplementary ML, not generated from HOL theorems, aimed at supporting    *) \n\
@@ -923,7 +926,13 @@ val _ =
 \  fun ppBin ppstrm n = PP.add_string ppstrm (toBinString n); \n\
 \  fun ppOct ppstrm n = PP.add_string ppstrm (toOctString n); \n\
 \  fun ppDec ppstrm n = PP.add_string ppstrm (toDecString n); \n\
-\  fun ppHex ppstrm n = PP.add_string ppstrm (toHexString n); \n\n"]))
+\  fun ppHex ppstrm n = PP.add_string ppstrm (toHexString n); \n\
+\  val toString = toDecString; \n\
+\  val fromString = fromDecString; \n\
+\  val pp_num = ppDec;\n\
+\ \n\
+\  fun fromInt i = fromDecString (Int.toString i)\n\
+\  fun toInt n  = Int.fromString (toDecString n); \n\n"]))
 
 end;
      
