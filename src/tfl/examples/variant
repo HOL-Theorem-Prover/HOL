@@ -1,7 +1,4 @@
-app load ["bossLib", "QLib"];
-open bossLib;
-infix 8 by; infix &&;
-
+app load ["bossLib"]; open bossLib;
 
 (*---------------------------------------------------------------------------
      Find an element not in a given list.
@@ -34,8 +31,10 @@ e (Q.EXISTS_TAC`measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
      THEN TotalDefn.TC_SIMP_TAC [] []);
 *)
 e (RW_TAC std_ss []   (* ETA-conv. to be done before induction *)
-   THEN Induct_on `L` THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]
-   THEN RW_TAC arith_ss [DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
+   THEN Induct_on `L` 
+   THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]
+   THEN RW_TAC arith_ss [DECIDE (Term `x<SUC y = x <= y`),
+                         LENGTH_FILTER_SUBSET]);
 
 val [variant_eqns,variant_ind] = CONJUNCTS (top_thm());
 
@@ -51,7 +50,8 @@ Defn.tprove
      THEN RW_TAC std_ss []
      THEN Induct_on `L` 
      THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM,
-                          DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
+                          DECIDE (Term `x<SUC y = x <= y`),
+                          LENGTH_FILTER_SUBSET]);
 
 (*---------------------------------------------------------------------------
        Properties.
@@ -83,12 +83,7 @@ recInduct variant_ind
          Evaluation of variant with computeLib
  ---------------------------------------------------------------------------*)
 
-local open computeLib
-  val compset = bossLib.initial_rws()
-  val _ = add_thms [variant_eqn] compset
-in
-val Eval = Count.apply (CBV_CONV compset) o Term
-end;
+val Eval = EVAL o Term;
 
 Eval `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;
 Eval `variant 1 [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;16;16;16;165]`;

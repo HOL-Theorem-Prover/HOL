@@ -265,8 +265,8 @@ fun recInduct thm =
           end
       fun tac (asl,w) =
        let val (V,body) = ndest_forall w
-(*           val P = list_mk_pabs(mk_vstrl parg_tyl V [],body) *)
-           val P = list_mk_abs(V,body)
+           val P = (list_mk_pabs(mk_vstrl parg_tyl V [],body)
+                    handle HOL_ERR _ => list_mk_abs(V,body))
            val thm' = GEN_BETA_RULE (ISPEC P thm)
        in MATCH_MP_TAC thm' (asl,w)
        end

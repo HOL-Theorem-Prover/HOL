@@ -1,6 +1,8 @@
 signature bossLib =
 sig
   include Abbrev
+  type ssdata = simpLib.ssdata
+  type simpset = simpLib.simpset
 
   (* Make definitions *)
 
@@ -10,10 +12,6 @@ sig
   val Hol_defn     : string -> term quotation -> defn
   val Hol_reln     : term quotation -> thm * thm * thm
   val WF_REL_TAC   : term quotation -> tactic
-
-  (* Fetch the rewrite rules for a type. *)
-
-  val type_rws : string -> thm list
 
   (* Case-splitting and induction operations *)
 
@@ -25,57 +23,43 @@ sig
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
 
-  (* Support for proof by contradiction *)
+  (* Proof automation *)
 
-  val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
-
-  (* Support for assertional-style proofs *)
-
-  val by : term quotation * tactic -> tactic   (* infix *)
-
-
-  (* First order proof automation *)
-
-  val PROVE     : thm list -> term -> thm
-  val PROVE_TAC : thm list -> tactic
-
-  (* Cooperating decision procedures *)
-
-  val DECIDE     : term -> thm
-  val DECIDE_TAC : tactic
+  val PROVE          : thm list -> term -> thm   (* First order *)
+  val DECIDE         : term -> thm               (* Cooperating dec. procs *)
+  val PROVE_TAC      : thm list -> tactic
+  val DECIDE_TAC     : tactic
 
   (* Simplification *)
-  type ssdata = simpLib.ssdata
-  type simpset = simpLib.simpset
 
+  val ++             : simpset * ssdata -> simpset    (* infix *)
+  val &&             : simpset * thm list -> simpset  (* infix *)
   val bool_ss        : simpset
-  val std_ss         : simpset   (* bool + option + pair + sum *)
+  val std_ss         : simpset                (* bool + option + pair + sum *)
   val arith_ss       : simpset
   val list_ss        : simpset
-
-  val ARITH_ss       : ssdata    (* arithmetic d.p. + some rewrites *)
+  val srw_ss         : unit -> simpset
+  val ARITH_ss       : ssdata            (* arithmetic d.p. + some rewrites *)
+  val type_rws       : string -> thm list
   val rewrites       : thm list -> ssdata
-  val ++             : simpset * ssdata -> simpset    (* infix ++ *)
+  val augment_srw_ss : ssdata list -> unit
 
   val SIMP_CONV      : simpset -> thm list -> conv
+  val SIMP_RULE      : simpset -> thm list -> thm -> thm
   val SIMP_TAC       : simpset -> thm list -> tactic
   val ASM_SIMP_TAC   : simpset -> thm list -> tactic
   val FULL_SIMP_TAC  : simpset -> thm list -> tactic
-  val SIMP_RULE      : simpset -> thm list -> thm -> thm
-
-  val &&             : simpset * thm list -> simpset  (* infix && *)
   val RW_TAC         : simpset -> thm list -> tactic
   val SRW_TAC        : ssdata list -> thm list -> tactic
-  val srw_ss         : unit -> simpset
-  val augment_srw_ss : ssdata list -> unit
 
-  val EVAL           : term -> thm
+  val EVAL           : term -> thm   (* Call-by-value evaluation *)
   val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
 
-  (* A compound automated reasoner. *)
+  (* Miscellaneous *)
 
   val ZAP_TAC        : simpset -> thm list -> tactic
-
+  val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
+  val by             : term quotation * tactic -> tactic   (* infix *)
 
 end

@@ -12,7 +12,7 @@
 
  ---------------------------------------------------------------------------*)
 
-load "bossLib"; open bossLib; infix 8 by;
+load "bossLib"; open bossLib;
 
 
 Hol_datatype `arith = Con of num                   (* constant *)

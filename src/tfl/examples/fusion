@@ -47,7 +47,7 @@ val btreeRec_def =
  ---------------------------------------------------------------------------*)
 
 val unfold_def = 
- Define
+ DefineSchema
      `unfold (x:'a) = 
         if more x 
           then let (y1,b,y2) = dest x 
@@ -78,7 +78,7 @@ val unfold_ind = theorem "unfold_ind";
  ---------------------------------------------------------------------------*)
 
 val fusion_def = 
- Define
+ DefineSchema
      `fusion (x:'a) = 
          if more x 
            then let (y,i,z) = dest x
@@ -99,7 +99,7 @@ val LET3_RAND = Q.prove
 (`!(P:'d->'e) (M:'a#'b#'c) N.
        P (let (x,y,z) = M in N x y z) = (let (x,y,z) = M in P (N x y z))`,
 REWRITE_TAC[boolTheory.LET_DEF] 
- THEN CONV_TAC (DEPTH_CONV pairTools.GEN_BETA_CONV)
+ THEN CONV_TAC (DEPTH_CONV pairLib.GEN_BETA_CONV)
  THEN REWRITE_TAC[]);
 
 
@@ -107,7 +107,7 @@ val LET3_RATOR = Q.prove
 (`!(M:'a1#'a2#'a3) (N:'a1->'a2->'a3->'b->'c) (b:'b). 
       (let (x,y,z) = M in N x y z) b = let (x,y,z) = M in N x y z b`,
 REWRITE_TAC[boolTheory.LET_DEF] 
- THEN CONV_TAC (DEPTH_CONV pairTools.GEN_BETA_CONV)
+ THEN CONV_TAC (DEPTH_CONV pairLib.GEN_BETA_CONV)
  THEN REWRITE_TAC[]);
 
 

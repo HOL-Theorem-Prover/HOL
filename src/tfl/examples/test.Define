@@ -3,8 +3,6 @@
  ---------------------------------------------------------------------------*)
 
 app load ["bossLib"]; open TotalDefn bossLib;
-infix &&; 
-
 
 (*---------------------------------------------------------------------------
         First, a few straightforward recursions, some with 

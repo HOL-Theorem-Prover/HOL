@@ -262,6 +262,17 @@ fun nstrip_prod_type n ty =
       in strip n ty
       end;
 
+fun detuple newvar =
+  let fun detup M = 
+     if pairLib.is_pair M
+     then let val (M1,M2) = pairLib.dest_pair M
+              val ((M1',vars1), (M2',vars2)) = (detup M1, detup M2)
+          in (pairLib.mk_pair(M1',M2'), vars1@vars2)
+          end
+     else let val v = newvar (type_of M) in (v,[v]) end
+ in detup
+ end;
+
 (*---------------------------------------------------------------------------*
  * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
  *                                                                           *
@@ -290,10 +301,13 @@ let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val abs_cases = map Rules.LEFT_ABS_VSTRUCT proved_cases1
     val dant = GEN v (DISJ_CASESL (ISPEC v case_thm) abs_cases)
     val dc = MP Sinduct dant
+    val (vstruct,vars) = detuple (wfrecUtils.vary[P]) (hd pats)
+(*
     val Parg_ty = type_of(fst(dest_forall(concl dc)))
     val vars = map (wfrecUtils.vary[P]) (nstrip_prod_type args Parg_ty)
-(*     val dc' = itlist GEN vars (SPEC (fst(mk_vstruct Parg_ty vars)) dc) *)
-    val dc' = itlist GEN vars (SPEC (pairLib.list_mk_pair vars) dc)
+    val dc' = itlist GEN vars (SPEC (fst(mk_vstruct Parg_ty vars)) dc) 
+*)
+    val dc' = itlist GEN vars (SPEC vstruct dc)
 in
    GEN P (DISCH (concl Rinduct_assum) dc')
 end

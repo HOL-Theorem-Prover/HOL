@@ -1,11 +1,10 @@
 (* ===================================================================== 
- * FILE       : $Id$
- * DESCRIPTION: A programmable, contextual, conditional simplifier for hol90
+ * FILE        : simpLib.sig
+ * DESCRIPTION : A programmable, contextual, conditional simplifier 
  *                                                                       
- * AUTHOR     : Donald Syme
- *              Based loosely on original HOL rewriting by 
- *              Larry Paulson et al,
- *              and loosely on the Isabelle simplifier.
+ * AUTHOR      : Donald Syme
+ *               Based loosely on original HOL rewriting by 
+ *               Larry Paulson et al, and on the Isabelle simplifier.
  * ===================================================================== *)
 
 (* =====================================================================

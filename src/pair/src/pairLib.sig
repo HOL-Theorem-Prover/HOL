@@ -48,6 +48,7 @@ sig
  val list_mk_pforall  : term list * term -> term
  val list_mk_pexists  : term list * term -> term
  val strip_pair       : term -> term list
+ val spine_pair       : term -> term list
  val unstrip_pair     : hol_type -> term list -> term * term list
  val strip_pabs       : term -> term list * term
  val strip_pforall    : term -> term list * term

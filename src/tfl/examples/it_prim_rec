@@ -3,8 +3,7 @@
      We start with Ackermann's function.
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib", "QLib"];
-open bossLib;
+load "bossLib"; open bossLib;
 
 val Ack_def = 
  Hol_defn "Ack" 
@@ -18,14 +17,13 @@ val pred = Term `\x y. y = SUC x`;
 val (Ack_eqns,Ack_ind) = 
 Defn.tprove
   (Ack_def, 
-   WF_REL_TAC Ack_def `^pred LEX ^pred`);
-
+   WF_REL_TAC `^pred LEX ^pred`);
 
 val Ack_positive = Q.prove
 (`!x y. 0 < Ack(x,y)`,
   recInduct Ack_ind 
     THEN ONCE_REWRITE_TAC[Ack_eqns] 
-    THEN PROVE_TAC [DECIDE `0 < x + 1`]);
+    THEN PROVE_TAC [DECIDE (Term`0 < x + 1`)]);
 
 
 val Ack_grows_faster_than_plus = Q.prove
@@ -51,9 +49,7 @@ val Sudan_def =
 
 
 val (Sudan_eqns, Sudan_ind) = 
-Defn.tprove
-  (Sudan_def, 
-   WF_REL_TAC Sudan_def `^pred LEX (inv_image ^pred SND)`);
+  Defn.tprove(Sudan_def, WF_REL_TAC `^pred LEX (inv_image ^pred SND)`);
 
 
 (*---------------------------------------------------------------------------
@@ -68,7 +64,5 @@ val V_def =
                                                 V(SUC(SUC k),n,SUC m)+1))`;
 
 val (V_eqns, V_ind) = 
-Defn.tprove
-  (V_def, 
-   WF_REL_TAC V_def `^pred LEX ^pred LEX ^pred`);
+  Defn.tprove (V_def, WF_REL_TAC `^pred LEX ^pred LEX ^pred`);
 

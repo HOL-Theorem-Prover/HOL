@@ -2,9 +2,8 @@
            Transformations for linear recursion.
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib", "Q"]; open bossLib; 
+app load ["bossLib"]; open bossLib TotalDefn;
 
-infix 8 by; infix &&;
 show_assums := true;
 
 (*---------------------------------------------------------------------------
@@ -13,19 +12,19 @@ show_assums := true;
  ---------------------------------------------------------------------------*)
 
 val linRec_eqn = 
- Define
+ DefineSchema
     `linRec (x:'a) = if atomic x then A x 
                      else join (linRec (dest x)) (D x:'b)`;
 
 val cpRec_def0 = 
- Define
+ DefineSchema
     `cpRec (x:'a, (f:'b -> 'c)) = 
         if atomic x then f (A x) 
         else cpRec (dest x, \u:'b. f (join u (D x:'b)))`;
 
 val accRec_def0 = 
- Define
-    `accRec (x:'a, (u:'b)) = 
+ DefineSchema
+    `accRec (x:'a, u:'b) = 
         if atomic x then join (A x) u
         else accRec (dest x, join (D x:'b) u)`;
 
@@ -42,7 +41,7 @@ val [cpRec_eqn, cpRec_ind] = CONJUNCTS
    (BETA_RULE (REWRITE_RULE[relationTheory.inv_image_def]
       (REWRITE_RULE[UNDISCH (ISPEC (Term`FST:'a#('b->'c)->'a`)
                               (ID_SPEC relationTheory.WF_inv_image))]
-        (Rsyntax.INST [Term`R :'a # ('b -> 'c) -> 'a # ('b -> 'c) -> bool`
+        (INST [Term`R :'a # ('b -> 'c) -> 'a # ('b -> 'c) -> bool`
                 |->
                Term`inv_image R (FST :'a # ('b -> 'c) -> 'a)`]
          (DISCH_ALL (CONJ cpRec_def0 (fetch "-" "cpRec_ind")))))))));
@@ -53,7 +52,7 @@ val [accRec_eqn, accRec_ind] = CONJUNCTS
    (BETA_RULE (REWRITE_RULE[relationTheory.inv_image_def]
       (REWRITE_RULE[UNDISCH (ISPEC (Term`FST:'a#'b->'a`)
                               (ID_SPEC relationTheory.WF_inv_image))]
-        (Rsyntax.INST [Term`R :'a#'b -> 'a#'b -> bool`
+        (INST [Term`R :'a#'b -> 'a#'b -> bool`
                  |->
                Term`inv_image R (FST :'a#'b -> 'a)`]
          (DISCH_ALL (CONJ accRec_def0 (theorem "accRec_ind")))))))));

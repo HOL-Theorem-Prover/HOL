@@ -1,7 +1,4 @@
-app load ["bossLib", "Q"];
-open bossLib;
-infix 8 by;
-
+app load ["bossLib"];  open bossLib;
 
 (*---------------------------------------------------------------------------
             An APL-style "iota" function.
@@ -13,7 +10,9 @@ val iota_def =
 
 
 val (iota_eqn, iota_ind) =
-Defn.tprove (iota_def, WF_REL_TAC `measure \(b,t). SUC t - b` THEN DECIDE_TAC);
+  Defn.tprove 
+    (iota_def, 
+     WF_REL_TAC `measure \(b,t). SUC t - b` THEN DECIDE_TAC);
 
 
 (*---------------------------------------------------------------------------*

@@ -150,7 +150,7 @@ abstype simpset =
             initial_net : net,
             dprocs: reducer list,
             travrules: travrules}
- with
+with
 
  val empty_ss = SS {mk_rewrs=fn x => [x],
                     initial_net=empty_net,
@@ -220,11 +220,11 @@ abstype simpset =
 	  let val net = (raise context) handle CONVNET net => net
           in CONVNET (net_add_convs net (map mk_rewr_convdata
 					 (flatten (map mk_rewrs thms))))
-	  end;
+	  end
           fun apply {solver,context,stack} tm =
-	      let val net = (raise context) handle CONVNET net => net
-	      in tryfind (fn conv => conv solver stack tm) (lookup tm net)
-	      end
+          let val net = (raise context) handle CONVNET net => net
+          in tryfind (fn conv => conv solver stack tm) (lookup tm net)
+          end
       in REDUCER {addcontext=addcontext,
 		  initial=CONVNET initial_net,
 		  apply=apply}

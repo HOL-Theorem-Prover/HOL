@@ -2,9 +2,9 @@
  * CONDITIONAL EXPRESSIONS AND THEIR NORMALIZATION (Boyer and Moore).        *
  *---------------------------------------------------------------------------*)
 
-app load ["bossLib","QLib"];
+app load ["bossLib"];
 open bossLib arithmeticTheory;
-infix &&;
+
 
 (*---------------------------------------------------------------------------*
  * Define the datatype of conditional expressions.                           *

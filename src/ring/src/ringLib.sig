@@ -1,8 +1,7 @@
 signature ringLib =
 sig
 
-  type thm = Thm.thm
-  type term = Term.term
+  include Abbrev
 
   val mk_ring_thm   : string -> thm -> thm
 
@@ -22,9 +21,9 @@ sig
    * new constants, and its only goal is to produce rewrite thms.
    * The actual declaration is then very fast.
    *)
-  val store_ring : { Name : string, Theory : thm } -> thm
-  val declare_ring :
-    { RingThm : thm, IsConst : term -> bool, Rewrites : thm list} -> unit
+  val store_ring   : { Name : string, Theory : thm } -> thm
+  val declare_ring : { RingThm : thm, IsConst : term -> bool, 
+                       Rewrites : thm list} -> unit
 
   (*  - RING_NORM_CONV is a conversion to simplify a ring term (i.e. its
    *    type has been declared as a ring structure).
@@ -33,9 +32,9 @@ sig
    *    equivalent polynomial expressions sharing the same valuation.
    *    Not useful for the casual user.
    *)
-  val RING_NORM_CONV : Abbrev.conv
-  val RING_CONV      : Abbrev.conv
-  val reify : term list -> {Metamap : term, Poly : term list}
+  val RING_NORM_CONV : conv
+  val RING_CONV      : conv
+  val reify          : term list -> {Metamap : term, Poly : term list}
 
 
 end;
