@@ -6,7 +6,7 @@
 Substitutes terms in a term.
 
 \DESCRIBE
-Given a "(term,term) subst" (a list of {{redex, residue}} records) and a
+Given a "(term,term) subst" (a list of {{{redex, residue}}} records) and a
 term {tm}, {subst} attempts to replace each free occurrence of a
 {redex} in {tm} by its associated {residue}. The substitution is done in
 parallel, i.e., once a redex has been replaced by its residue, at some
@@ -16,7 +16,7 @@ variables in {tm} is done to avoid capturing the free variables of an
 incoming residue.
 
 \FAILURE
-Failure occurs if there exists a {{redex, residue}} record in the
+Failure occurs if there exists a {{{redex, residue}}} record in the
 substitution such that the types of the {redex} and {residue} are not
 equal.
 

@@ -24,7 +24,7 @@ One could define {dest_forall} as follows:
     in
     fun dest_forall M = 
       let val (c, Rand) = with_exn dest_comb M err
-          val {Name="!",Thy="bool",...} = with_exn dest_thy_const c err
+          val {{Name="!",Thy="bool",...}} = with_exn dest_thy_const c err
       in with_exn dest_abs Rand err
       end
     end

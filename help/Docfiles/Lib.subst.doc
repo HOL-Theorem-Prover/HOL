@@ -9,9 +9,9 @@ Type abbreviation for substitutions.
 substitutions.
 
 \DESCRIBE
-The type {('a,'b) subst} abbreviates the type {{redex,residue} list}, 
+The type {('a,'b) subst} abbreviates the type {{{redex,residue}} list}, 
 in which {redex} has type {'a} and {residue} has type {'b}. Usually,
-a {{redex,residue}} pair in a substition is interpreted as `replace
+a {{{redex,residue}}} pair in a substition is interpreted as `replace
 occurrences of {redex} by {residue}'. 
 
 \COMMENTS

@@ -22,7 +22,7 @@ Never fails.
 > val it = [`$+`] : term list
 
 - map dest_thy_const it;
-> val it = [{Name = "+", Thy = "arithmetic", Ty = `:num -> num -> num`}] : ...
+> val it = [{{Name = "+", Thy = "arithmetic", Ty = `:num -> num -> num`}}] : ...
 }
 
 \COMMENTS
