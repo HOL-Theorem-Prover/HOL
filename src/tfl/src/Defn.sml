@@ -20,7 +20,7 @@ fun == q x = Type q
    type conv = Abbrev.conv
    type tactic = Abbrev.tactic
    type proofs   = GoalstackPure.proofs
-
+   type 'a quotation = 'a Portable.frag list
 
 fun ERR func mesg =
   HOL_ERR
@@ -72,7 +72,7 @@ fun variants FV vlist =
            in (v'::V, v'::W)
            end) vlist ([],FV));
 
-fun dest_atom a = (dest_var a handle HOL_ERR _ => dest_const a);
+fun atom_name tm = #Name(dest_var tm handle HOL_ERR _ => dest_const tm);
 
 
 (*---------------------------------------------------------------------------
@@ -89,7 +89,7 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
      let val argtys    = map type_of args
          val unc_argty = prod_tyl argtys
          val range_ty  = type_of (list_mk_comb (f,args))
-         val fname     = #Name (dest_atom f)
+         val fname     = atom_name f
          val stem'name = stem^"_tupled"
          val stem'     = mk_var {Name=stem'name, Ty = unc_argty --> range_ty}
      fun rebuild tm =
@@ -207,7 +207,6 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
 
 local fun is_constructor tm = not (is_var tm orelse is_pair tm);
       fun basic_defn (fname,tm) = new_definition(fname, tm)
-      fun dest_atom ac = dest_const ac handle HOL_ERR _ => dest_var ac
       fun occurs f = can (find_term (aconv f))
 in
 fun define stem eqs0 =
@@ -216,10 +215,6 @@ fun define stem eqs0 =
                    (String.concat[Lib.quote stem," is not alphanumeric"])
      val eql = map (#2 o strip_forall) (strip_conj eqs0)
      val (lhsl,rhsl) = unzip (map Psyntax.dest_eq eql)
-     val (f,args)  = strip_comb (hd lhsl)
-     val fname     = #Name(dest_atom f)
-     val curried   = not(length args = 1)
-     val recursive = exists (occurs f) rhsl
      val fns       = op_mk_set aconv (map (fst o strip_comb) lhsl)
      val mutual    = 1<length fns
      val facts     = TypeBase.theTypeBase()
@@ -238,6 +233,11 @@ fun define stem eqs0 =
           }
        end
   else
+   let val (f,args)  = strip_comb (hd lhsl)
+       val fname     = atom_name f
+       val curried   = not(length args = 1)
+       val recursive = exists (occurs f) rhsl
+   in
    (ABBREV (basic_defn (stem,eqs0))  (* try an abbreviation *)
      handle HOL_ERR _
      =>
@@ -270,8 +270,7 @@ fun define stem eqs0 =
             case inverses (rules, SOME ind)
              of (rules', SOME ind') =>
                   NESTREC {eqs=rules',ind=ind',R=R,SV=SV,
-                           aux=STDREC{eqs=aux_rules,ind=aux_ind,
-                                      R=R,SV=SV}}
+                           aux=STDREC{eqs=aux_rules,ind=aux_ind,R=R,SV=SV}}
               | _ => raise ERR"define" "bad inverses in nested case"
           end
      else
@@ -297,15 +296,16 @@ fun define stem eqs0 =
                           R=rand(concl Empty_thm), SV=SV}
                end
               | _ => raise ERR "" ""
-             end
-             handle HOL_ERR _ => raise ERR"define" "non-rec. TFL call failed")
+           end
+           handle HOL_ERR _ => raise ERR"define" "non-rec. TFL call failed"
+          )
        | _  => (* recursive, not prim.rec., not mutual, not nested *)
            (case inverses (rules, SOME ind)
              of (rules', SOME ind') =>
                    STDREC {eqs=rules',ind=ind', R=R, SV=SV}
               | _ => raise ERR "define" "bad inverses in std. case")
      end
-  end
+  end end
  end
 end;
 
@@ -556,29 +556,141 @@ fun prove_tcs (STDREC {eqs, ind, R, SV}) tac =
 
 
 (*---------------------------------------------------------------------------
-        Goalstack-based interface to termination proof.
+     Quotation interface to define.
  ---------------------------------------------------------------------------*)
 
-fun TC_TAC defn =
- let val E = eqns_of defn
-     val I = Option.valOf (ind_of defn)
- in MATCH_MP_TAC 
-       (REWRITE_RULE [AND_IMP_INTRO] 
-             (GEN_ALL(DISCH_ALL (CONJ E I))))
+(*---------------------------------------------------------------------------*
+ * Try to find the names of to-be-defined constants from a quotation.        *
+ * First, parse into type "parse_term", then look for names on the lhs       *
+ * of the definition.                                                        *
+ *---------------------------------------------------------------------------*)
+
+local open parse_term
+in
+fun dest_binop str =
+  let fun dest (COMB(COMB(VAR s, l),r)) 
+           = if s=str then (l,r) 
+             else raise ERR "dest_binop" ("Expected a "^Lib.quote str)
+        | dest  _ = raise ERR "dest_binop"  ""
+  in dest end
+fun dest_binder str =
+  let fun dest (COMB(VAR s, ABS p)) 
+           = if s=str then p
+             else raise ERR "dest_binder" ("Expected a "^Lib.quote str)
+        | dest  _ = raise ERR "dest_binder"  ""
+  in dest end
+fun ptm_dest_conj ptm   = dest_binop  "/\\" ptm
+fun ptm_dest_eq ptm     = dest_binop  "=" ptm
+fun ptm_dest_forall ptm = dest_binder "!" ptm
+
+fun ptm_dest_var(VAR s) = s
+  | ptm_dest_var _ =  raise ERR "ptm_dest_comb" "Expected a VAR"
+
+fun ptm_dest_comb (COMB(l,r)) = (l,r)
+  | ptm_dest_comb   _ = raise ERR "ptm_dest_comb" "Expected a COMB"
+end;
+
+fun ptm_is_eq tm = Lib.can ptm_dest_eq tm;
+
+
+fun ptm_strip dest =
+  let fun strip ptm =
+       let val (l,r) = dest ptm 
+       in l::strip r
+       end handle HOL_ERR _ => [ptm];
+  in strip
+  end;
+
+fun ptm_strip_conj ptm = ptm_strip ptm_dest_conj ptm;
+
+fun ptm_strip_comb ptm =
+   let fun strip ptm A =
+         let val (l,r) = ptm_dest_comb ptm 
+         in strip l (r::A)
+         end handle HOL_ERR _ => (ptm,A)
+  in strip ptm []
+  end;
+
+
+fun ptm_strip_binder dest =
+  let fun strip ptm =
+       let val (l,r) = dest ptm 
+           val (L,M) = strip r
+       in (l::L,M)
+       end handle HOL_ERR _ => ([],ptm)
+  in strip
+  end;
+fun ptm_strip_forall ptm = ptm_strip_binder ptm_dest_forall ptm;
+
+
+fun dollar s = "$"^s;
+fun drop_dollar s =
+   (if String.sub(s,0) = #"$"
+    then String.substring(s,1,String.size s)
+    else s)
+  handle _ => raise ERR "drop_dollar" "unexpected string"
+
+fun preview qthing =
+ let fun preev (q as [QUOTE _]) =
+         let val ptm = Parse.parse_preTerm q
+             val eqs = ptm_strip_conj ptm
+             val L = map (fst o ptm_dest_eq o snd o ptm_strip_forall) eqs
+         in
+           map (ptm_dest_var o fst o ptm_strip_comb) L
+         end
+       | preev qtm =  (* not clear that this is useful *)
+          let val tm = Parse.Term qtm
+              val eqs = strip_conj tm
+              open Psyntax
+              val L = map (fst o dest_eq o snd o strip_forall) eqs
+          in
+            map (atom_name o fst o strip_comb) L
+          end
+ in 
+    mk_set (map drop_dollar (preev qthing))
+     handle HOL_ERR _ 
+     => raise ERR  "preview" 
+             "unable to find name of function(s) to be defined"
+end;
+
+(*---------------------------------------------------------------------------
+      MoscowML returns lists of QUOTE'd strings when a quote is spread 
+      over more than one line. "norm_quotel" concatenates all adjacent
+      QUOTE elements in this list. 
+ ---------------------------------------------------------------------------*)
+
+fun norm_quote [] = []
+  | norm_quote [x] = [x]
+  | norm_quote (QUOTE s1::QUOTE s2::rst) = norm_quote (QUOTE(s1^s2)::rst)
+  | norm_quote (h::rst) = h::norm_quote rst;
+
+fun Hol_defn bindstem q = 
+ let fun eqs qtm =
+           let val names = preview qtm
+               val allnames = map dollar names @ names
+               val _ = List.app Parse.hide allnames
+               val eqs = Parse.Term qtm 
+                     handle e => (List.app Parse.reveal allnames; raise e)
+               val _ = List.app Parse.reveal allnames
+           in 
+             eqs
+           end 
+ in
+    define bindstem (eqs (norm_quote q))
  end;
 
+
+(*---------------------------------------------------------------------------
+        Goalstack-based interface to termination proof.
+ ---------------------------------------------------------------------------*)
 
 fun tgoal0 defn =
    if null (tcs_of defn)
    then raise ERR "tgoal" "no termination conditions"
    else let val E = eqns_of defn
             val I = Option.valOf (ind_of defn)
-            val gstack0 = GoalstackPure.set_goal
-                            ([],Psyntax.mk_conj(concl E, concl I))
-            val gstack1 = GoalstackPure.expand (TC_TAC defn) gstack0
         in
-          goalstackLib.add gstack1;
-          goalstackLib.status()
+          goalstackLib.set_goal ([],Psyntax.mk_conj(concl E, concl I))
         end
         handle HOL_ERR _ => raise ERR "tgoal" "";
 
@@ -599,5 +711,19 @@ fun tprove0 (defn,tactic) =
 fun tprove p = 
   Lib.with_flag (goalstackLib.chatting,false) 
        tprove0 p;
+
+
+(*---------------------------------------------------------------------------
+          Exposes the termination conditions from a goal set with
+          tgoal.
+ ---------------------------------------------------------------------------*)
+
+fun TC_INTRO_TAC defn =
+ let val E = eqns_of defn
+     val I = Option.valOf (ind_of defn)
+ in MATCH_MP_TAC 
+       (REWRITE_RULE [AND_IMP_INTRO] 
+             (GEN_ALL(DISCH_ALL (CONJ E I))))
+ end;
 
 end;
