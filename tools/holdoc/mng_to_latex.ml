@@ -1,36 +1,5 @@
-(* holdoc_munge.ml -- process HOL LTS or TeX or HOL into LaTeX code (library) *)
+(* mng_to_latex.ml -- turn .mng file into LaTeX code (with embedded typeset HOL) *)
 (* Keith Wansbrough 2001 *)
-
-(* TO DO:
-
-- could autogenerate various sets used in is_foo checking.
-
-- do quoted strings
-
-- do indentation (taking open delimiters into account)
-
-- all sorts of spacing issues
-
-- do transition labels more nicely
-
-- add spacing after (some) constructors; or if not followed by ( or separator.
-
-- ditto for library functions
-
-- fancy typesetting for context conditions like F_context FC
-
-- Charter has a particularly ugly underscore, eg in print_endline_flush.
-
-- allow empty side conditions; don't force T.
-
-- compute binders in set comprehension somehow (see note below).
-
-- convert ~(m.src IN MARTIAN) to m.src \notin MARTIAN.
-
-- spacing in curried functions, eg append in delivery_loopback_udp_2,
-  between first and second args.
-
- *)
 
 open Hollex
 
@@ -768,5 +737,10 @@ let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
 
 let latex_render () =
   ignore (parse_rules_and_process latex_rule holtokstream)
+
+(* main program *)
+
+let _ =
+  latex_render ()
 
 

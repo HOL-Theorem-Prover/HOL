@@ -17,7 +17,7 @@ SIMPLEDUMP_OBJS=hollex.cmo simpledump.cmo
 simpledump : $(SIMPLEDUMP_OBJS)
 	$(OCAMLC) $(SIMPLEDUMP_OBJS) -o simpledump
 
-LTS_TO_LATEX_OBJS=hollex.cmo lts_to_latex.cmo
+LTS_TO_LATEX_OBJS=hollex.cmo holdoc_munge.cmo lts_to_latex.cmo
 
 lts_to_latex : $(LTS_TO_LATEX_OBJS)
 	$(OCAMLC) str.cma $(LTS_TO_LATEX_OBJS) -o lts_to_latex
@@ -37,8 +37,7 @@ clean:
               .depend Net_hostLTSScript.tex hostlts.{dvi,ps}
 
 depend:
-	$(OCAMLDEP) *.mli *.mll *.ml > .depend
-
+	.depend
 
 # implicit rules:
 
@@ -59,6 +58,9 @@ depend:
 	$(OCAMLLEX) $<
 
 # extra dependencies:
+
+.depend:
+	$(OCAMLDEP) *.mli *.ml *.mll > $@
 
 -include .depend
 
