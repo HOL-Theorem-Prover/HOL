@@ -9,7 +9,7 @@ struct
 
 
 open refuteLib ; (* ancestor libraries *)
-open HolKernel Parse basicHol90Lib liteLib AC Ho_rewrite Ho_resolve Psyntax;
+open HolKernel Parse boolLib liteLib AC Ho_Rewrite Psyntax;
 
 infix |->;
 infix THEN THENC
@@ -168,7 +168,7 @@ val EXISTS_EQUATION =
      (--`!P t. (!x:'a. (x = t) ==> P x) ==> $? P`--,
       REPEAT GEN_TAC THEN DISCH_TAC THEN
       SUBST1_TAC(SYM (ETA_CONV (--`\x. (P:'a->bool) x`--))) THEN
-      EXISTS_TAC (--`t:'a`--) THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC)
+      EXISTS_TAC (--`t:'a`--) THEN FIRST_ASSUM HO_MATCH_MP_TAC THEN REFL_TAC)
     in fn tm => fn th =>
         let val (l,r) = dest_eq tm
             val P = mk_abs(l,concl th)
@@ -324,7 +324,7 @@ fun mySPEC_ALL thm =
      constant names - this was causing grief when attempting to define
      inductive relations with constant names that already existed. *)
   if is_forall (concl thm) then
-    mySPEC_ALL (SPEC (#Bvar (Dsyntax.dest_forall (concl thm))) thm)
+    mySPEC_ALL (SPEC (#Bvar (Rsyntax.dest_forall (concl thm))) thm)
   else
     thm
 
@@ -458,11 +458,11 @@ fun MONO_ABS_TAC (asl,w) =
 (* ------------------------------------------------------------------------- *)
 
 fun BACKCHAIN_TAC th =
-    let val match_fn = PART_MATCH (snd o dest_imp) th
+    let val match_fn = HO_PART_MATCH (snd o dest_imp) th
     in fn (asl,w) =>
         let val th1 = match_fn w
             val (ant,con) = dest_imp(concl th1)
-        in ([(asl,ant)],fn [t] => MATCH_MP th1 t)
+        in ([(asl,ant)],fn [t] => HO_MATCH_MP th1 t)
         end
     end;;
 
@@ -477,20 +477,14 @@ type monoset = (string * tactic) list;
  * MONO_EXISTS = |- (!x. P x ==> Q x) ==> ((?x. P x) ==> (?x. Q x))
  *---------------------------------------------------------------------------*)
 
-val MONO_AND = Ho_boolTheory.MONO_AND;
-val MONO_OR  = Ho_boolTheory.MONO_OR;
-val MONO_IMP = Ho_boolTheory.MONO_IMP;
-val MONO_NOT = Ho_boolTheory.MONO_NOT;
-val MONO_ALL = Ho_boolTheory.MONO_ALL;
-val MONO_EXISTS = Ho_boolTheory.MONO_EXISTS;
 
 local val pth = prove
  (--`(!x:'a. P x ==> Q x) ==> ($? P ==> $? Q)`--,
-  DISCH_THEN(MP_TAC o MATCH_MP MONO_EXISTS) THEN
+  DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_EXISTS) THEN
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
 in
 val MONO_EXISTS_TAC =
-  MATCH_MP_TAC pth THEN
+  HO_MATCH_MP_TAC pth THEN
   CONV_TAC(RAND_CONV(ABS_CONV
    (RAND_CONV(TRY_CONV BETA_CONV) THENC
     RATOR_CONV(RAND_CONV(TRY_CONV BETA_CONV)))))
@@ -498,11 +492,11 @@ end;
 
 local val pth = prove
  (--`(!x:'a. P x ==> Q x) ==> ($! P ==> $! Q)`--,
-  DISCH_THEN(MP_TAC o MATCH_MP MONO_ALL) THEN
+  DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_ALL) THEN
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
 in
 val MONO_FORALL_TAC =
-  MATCH_MP_TAC pth THEN
+  HO_MATCH_MP_TAC pth THEN
   CONV_TAC(RAND_CONV(ABS_CONV
    (RAND_CONV(TRY_CONV BETA_CONV) THENC
     RATOR_CONV(RAND_CONV(TRY_CONV BETA_CONV)))))
@@ -519,7 +513,7 @@ val bool_monoset =
   ("~",BACKCHAIN_TAC MONO_NOT)];;
 
 val APPLY_MONOTAC =
-    let val IMP_REFL = TAUT (--`!p. p ==> p`--)
+    let val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
     in fn monoset => fn (asl,w) =>
         let val (a,c) = dest_imp w
         in if aconv a c then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w) else
@@ -629,7 +623,7 @@ fun make_definitions th =
 
 val unschematize_clauses =
   let fun pare_comb qvs tm =
-        if null (intersect (free_vars tm) qvs) 
+        if null (intersect (free_vars tm) qvs)
            andalso all is_var (snd(strip_comb tm))
         then tm
         else pare_comb qvs (rator tm)
@@ -708,7 +702,7 @@ handle Interrupt => raise Interrupt
 
 fun RULE_INDUCT_THEN indthm ttac =
     let val th = GEN_ALL(DISCH_ALL(SPEC_ALL(UNDISCH(SPEC_ALL indthm))))
-    in MATCH_MP_TAC th THEN REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
+    in HO_MATCH_MP_TAC th THEN REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
         TRY(DISCH_THEN ttac)
     end;;
 
