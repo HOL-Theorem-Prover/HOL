@@ -48,8 +48,18 @@ fun toLower s =
 structure Map = Redblackmap
 (* the keys are lower-cased, but the data also stores the keys, and there
    the key infomration is kept in its original case *)
+
+(* the submap is a map from lowercased item-name to those items with the
+   same name.  There is a list of them because item-names are really
+   case-sensitive *)
 type submap = (string, data list) Map.dict
-type dbmap = (string, submap) Map.dict
+val empty_sdata_map = Map.mkDict String.compare
+
+(* the dbmap is a map from lowercased theory-name to a submap (as above)
+   and a map from exact theory name to a list of items.  These items are
+   stored in the order they were made.  For the sake of clarity, call the
+   latter sort of map an ordermap. *)
+type dbmap = (string, submap * submap) Map.dict
 
 local val DBref = ref (Map.mkDict String.compare) : dbmap ref
       fun lemmas() = !DBref
@@ -61,25 +71,55 @@ local val DBref = ref (Map.mkDict String.compare) : dbmap ref
           in
             Map.insert(m, s2key, newdata :: oldvalue)
           end
+      fun add_to_ordermap om thyname blist =
+          let val oldvalue = case Map.peek(om, thyname) of
+                               NONE => []
+                             | SOME items => items
+          in
+            Map.insert(om, thyname, blist @ oldvalue)
+          end
       fun functional_bindl db thy blist =
+          (* used when a theory is loaded from disk *)
           let val thykey = toLower thy
-              val submap = case Map.peek(db, thykey) of
-                             NONE => Map.mkDict String.compare
-                           | SOME m => m
+              val (submap, ordermap) =
+                  case Map.peek(db, thykey) of
+                    NONE => (empty_sdata_map, empty_sdata_map)
+                  | SOME m => m
               fun foldthis ((n,th,cl), m) = add_to_submap m ((thy,n), (th,cl))
               val submap' = List.foldl foldthis submap blist
+              val ordermap' =
+                  add_to_ordermap
+                    ordermap thy
+                    (map (fn (n,th,cl) => ((thy,n), (th, cl))) blist)
           in
-            Map.insert(db, thykey, submap')
+            Map.insert(db, thykey, (submap', ordermap'))
           end
       fun bind_with_classfn thy cl thlist db =
+          (* used to update a database with all of the current segment's
+             theorems.  The latter are a moving target, so needs to be done
+             multiple times.  Note that the result of this operation is
+             not stored back into the reference cell, so there aren't
+             multiple copies of the current segment in what DB stores.
+
+             An alternative approach would be to augment the Theory module
+             with a "theorem registration scheme", so that later modules
+             could be informed whenever a new theorem was added to the current
+             segment.  A function to clear things out would also need to
+             be registered with after_new_theory so that theorems could be
+             dropped if a segment was restarted. *)
           let val thykey = toLower thy
-              val submap = case Map.peek(db, thykey) of
-                             NONE => Map.mkDict String.compare
-                           | SOME m => m
+              val (submap, ordermap) =
+                  case Map.peek(db, thykey) of
+                    NONE => (empty_sdata_map, empty_sdata_map)
+                  | SOME m => m
               fun foldthis ((n, th), m) = add_to_submap m ((thy,n),(th, cl))
               val submap' = List.foldl foldthis submap thlist
+              val ordermap' =
+                  add_to_ordermap
+                    ordermap thy
+                    (map (fn (n, th) => ((thy,n), (th, cl))) thlist)
           in
-            Map.insert(db, thykey, submap')
+            Map.insert(db, thykey, (submap', ordermap'))
           end
 in
 fun bindl thy blist = DBref := functional_bindl (lemmas()) thy blist
@@ -92,9 +132,9 @@ fun bindl thy blist = DBref := functional_bindl (lemmas()) thy blist
 fun CT() =
   let val thyname = Theory.current_theory()
   in
-    (bind_with_classfn thyname Def (Theory.current_definitions ()) o
-     bind_with_classfn thyname Axm (Theory.current_axioms ()) o
-     bind_with_classfn thyname Thm (Theory.current_theorems ()))
+    (bind_with_classfn thyname Def (rev (Theory.current_definitions ())) o
+     bind_with_classfn thyname Axm (rev (Theory.current_axioms ())) o
+     bind_with_classfn thyname Thm (rev (Theory.current_theorems ())))
     (lemmas())
   end
 end (* local *)
@@ -119,16 +159,17 @@ fun norm_thyname "-" = current_theory()
 fun thy s =
     case Map.peek(CT(), toLower (norm_thyname s)) of
       NONE => []
-    | SOME m =>
-      let fun foldthis (k, v, acc) = v @ acc
+    | SOME (m, om) => let
       in
-        Map.foldr foldthis [] m
+        case Map.peek (om, norm_thyname s) of
+          NONE => []
+        | SOME x => x
       end
 
 fun find s =
     let val s = toLower s
         fun subfold (k, v, acc) = if occurs s k then v @ acc else acc
-        fun fold (thy, m, acc) = Map.foldr subfold acc m
+        fun fold (thy, (m, _), acc) = Map.foldr subfold acc m
     in
       Map.foldr fold [] (CT())
     end
@@ -143,7 +184,7 @@ fun matchp P thylist =
         fun subfold (k, v, acc) = List.filter data_P v @ acc
     in
       case thylist of
-        [] => let fun fold (k, m, acc) = Map.foldr subfold acc m
+        [] => let fun fold (k, (m, _), acc) = Map.foldr subfold acc m
               in
                 Map.foldr fold [] (CT())
               end
@@ -151,7 +192,7 @@ fun matchp P thylist =
                  fun fold (thyn, acc) =
                      case Map.peek(db, toLower (norm_thyname thyn)) of
                        NONE => acc
-                     | SOME m => Map.foldr subfold acc m
+                     | SOME (m, _) => Map.foldr subfold acc m
              in
                List.foldr fold [] thylist
              end
@@ -167,7 +208,7 @@ val apropos = match [];
 
 fun listDB () =
     let fun subfold (k,v,acc) = v @ acc
-        fun fold (_, m, acc) = Map.foldr subfold acc m
+        fun fold (_, (m, _), acc) = Map.foldr subfold acc m
     in
       Map.foldr fold [] (CT())
     end
@@ -178,7 +219,7 @@ fun listDB () =
 
 fun thm_class thy name =
     let val db = CT()
-        val thymap = Map.find(db, toLower (norm_thyname thy))
+       val thymap = #1 (Map.find(db, toLower (norm_thyname thy)))
                      handle Map.NotFound =>
                             raise ERR "thm_class" "no such theory"
         val result = Map.find(thymap, toLower name)
@@ -196,10 +237,10 @@ fun fetch s1 s2 = fst (thm_class s1 s2);
 fun thm_of ((_,n),(th,_)) = (n,th);
 fun is x (_,(_,cl)) = (cl=x)
 
-val thms        = rev o List.map thm_of o thy
-val theorems    = rev o List.map thm_of o Lib.filter (is Thm) o thy
-val definitions = rev o List.map thm_of o Lib.filter (is Def) o thy
-val axioms      = rev o List.map thm_of o Lib.filter (is Axm) o thy
+val thms        = List.map thm_of o thy
+val theorems    = List.map thm_of o Lib.filter (is Thm) o thy
+val definitions = List.map thm_of o Lib.filter (is Def) o thy
+val axioms      = List.map thm_of o Lib.filter (is Axm) o thy
 
 fun theorem s = let
   val (thm,c) = thm_class "-" s
