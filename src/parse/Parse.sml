@@ -251,21 +251,21 @@ in
 fn q => let
      val ((qb,p), _) = pt (new_buffer q, initial_pstack)
          handle base_tokens.LEX_ERR s =>
-                raise ERROR "term parser" ("Lexical error - "^s)
+                Raise (ERROR "Absyn" ("Lexical error - "^s))
    in
      if is_final_pstack p then
        case current qb of
          BT_EOI => (top_nonterminal p handle ParseTermError s =>
-                                             raise ERROR "Term" s)
-       | _ => raise ERROR "term parser"
-                          (String.concat
-                             ["Can't make sense of remaining: ",
-                              Lib.quote (toString qb)])
+                                             Raise (ERROR "Term" s))
+       | _ => Raise (ERROR "Absyn"
+                           (String.concat
+                              ["Can't make sense of remaining: ",
+                               Lib.quote (toString qb)]))
      else
-       raise ERROR "term parser"
-                   (String.concat
-                      ["Parse failed with ", Lib.quote(toString qb),
-                       " remaining"])
+       Raise (ERROR "Absyn"
+                    (String.concat
+                       ["Parse failed with ", Lib.quote(toString qb),
+                        " remaining"]))
    end
 end;
 
