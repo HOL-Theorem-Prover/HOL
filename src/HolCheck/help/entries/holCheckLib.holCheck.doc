@@ -1,0 +1,91 @@
+\DOC holCheck
+
+\TYPE {holCheck : term * (string * term) list * bool * string option * string list option *
+  term option -> term list -> term list option ->
+  (hcinit option * hcinit option) option ->
+  (term_bdd * thm option * term list option) list * (thm option * thm option) *
+  (hcinit option * hcinit option) option}
+
+\SYNOPSIS
+
+Basic symbolic model checker. User specifies a model by giving initial states and a labelled transition system as propositional logic terms, and then provides a list of CTL of mu-calculus propertes to the model checker, which returns the BDD representation of the property, a theorem if the property holds in the model, and a counterexample or witness trace if appropriate.
+
+\EXAMPLE
+
+{
+Load the library and initialise the bdd engine
+
+- app [load "holCheckLib"];
+> val it = () : unit
+- bdd.init 100000 10000;
+> val it = () : unit
+
+Specify the labelled transition system as a list of (string, term) pairs, where each string is a transition label and each term represents a transition relation (this is for a mod-8 counter; 3 booleans required to encode numbers 0-7; next-state variable values indicated by priming ):
+- val T1 = [(".", ``(v0' = ~v0) /\ (v1' = xor v0 v1) /\ (v2' = xor (v0 /\ v1) v2)``)]
+> val T1 =
+    [(".", ``(v0' = ~v0) /\ (v1' = xor v0 v1) /\ (v2' = xor (v0 /\ v1) v2)``)]
+     : (string * term) list
+
+Specify the initial states (counter starts at 0):
+- val S0 = ``~v0 /\ ~v1 /\ ~v2``; 
+> val S0 = ``~v0 /\ ~v1 /\ ~v2`` : term
+
+Specify whether the transitions happen synchronously:
+- val Ric = true;
+> val Ric = true : bool
+
+Calculate the state tuple:
+- val state = holCheckLib.mk_state S0 T1;
+> val state = ``(v0,v1,v2)`` : term
+
+Specify a property (there exists a future in which the most significant bit will go high) :
+- val ctlf = ``C_EF (C_BOOL (B_PROP ^(pairSyntax.mk_pabs(state,``v2:bool``))))``;
+> val ctlf = ``C_EF (C_BOOL (B_PROP (\(v0,v1,v2). v2)))`` : term
+
+Call the model checker
+- val (res,ksd,ic) = holCheckLib.holCheck (S0,T1,Ric,NONE,NONE,NONE) [ctlf] NONE NONE
+> val res =
+    [(<term_bdd>,
+      SOME|- CTL_MODEL_SAT ctlKS (C_EF (C_BOOL (B_PROP (\(v0,v1,v2). v2)))),
+      SOME [``(F,F,F)``, ``(T,F,F)``, ``(F,T,F)``, ``(T,T,F)``, ``(F,F,T)``])]
+     : (term_bdd * thm option * term list option) list
+  val ksd =
+    (SOME|- ctl2muks ctlKS =
+            <|S := UNIV; S0 := (\(v0,v1,v2). ~v0 /\ ~v1 /\ ~v2);
+              T :=
+                (\q ((v0,v1,v2),v0',v1',v2'). ctlKS.R ((v0,v1,v2),v0',v1',v2'));
+              ap := {(\(v0,v1,v2). v2); (\(v0,v1,v2). v1); (\(v0,v1,v2). v0)};
+              L := (\(v0,v1,v2) p. p (v0,v1,v2))|>, NONE) :
+  thm option * thm option
+  val ic =
+    SOME(SOME(holCheck.CTL_INIT(SOME(SOME(|- !f. C_SEM ctlKS f = MU_SAT (CTL2MU f) (ctl2muks ctlKS) EMPTY_ENV,
+                                          |- !f.
+                                               CTL_MODEL_SAT ctlKS f =
+                                               MU_MODEL_SAT (CTL2MU f) (ctl2muks ctlKS) EMPTY_ENV),
+                                     SOME(SOME([``\(v0,v1,v2). v0``,
+                                                ``\(v0,v1,v2). v1``,
+                                                ``\(v0,v1,v2). v2``],
+                                               |- ctl2muks ctlKS =
+                                                  <|S := UNIV; S0 := (\(v0,v1,v2). ~v0 /\ ~v1 /\ ~v2);
+                                                    T :=
+                                                      (\q ((v0,v1,v2),v0',v1',v2'). ctlKS.R ((v0,v1,v2),v0',v1',v2'));
+                                                    ap := {(\(v0,v1,v2). v2); (\(v0,v1,v2). v1); (\(v0,v1,v2). v0)};
+                                                    L := (\(v0,v1,v2) p. p (v0,v1,v2))|>,
+                                               |- wfKS (ctl2muks ctlKS),
+                                               <dict>), NONE)))),
+         SOME(holCheck.ABS_INIT NONE)) : (hcinit option * hcinit option) option
+
+res, the result , is a list of triples, one triple per property checked. 
+First component contains the BDD representation of the set of states satisfying the property.
+Second component contains a theorem certifying that the property holds in the model i.e. it holds in the initial states.
+Third contains a witness trace that counts up to 4.
+
+ksd contains the formal definition of the model used. This can be useful in further proof involving the theorem generated.
+
+ic contains information about the model that can be passed back to the next invocation as long as the model remains the same, to avoid model reconstruction.
+}
+
+\COMMENTS
+For more detail read the holCheck tutorial at hol98/src/holCheck/Manual/holCheck.ps.
+
+\ENDDOC

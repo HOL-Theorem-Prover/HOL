@@ -1,0 +1,385 @@
+\documentclass{article}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{theorem}
+\usepackage[dvips]{graphicx}
+\usepackage{comment}
+\usepackage{color}
+\usepackage{url}
+
+\newcommand{\tsu}[1]{\textsf{\textup{#1}}}
+\newcommand{\semb}[1]{\ensuremath{[\![#1]\!]}}
+\newcommand{\rvset}{\ensuremath{V\!\!AR}}
+\newcommand{\wff}{\ensuremath{w\!f\!\!f}}
+\newcommand{\nnf}{\ensuremath{N\!N\!F\,}}
+\newcommand{\ctl}{\textsf{CTL}\,}
+\newcommand{\hc}{\textsc{holcheck\,}}
+\newcommand{\hol}{\textsc{hol\,}}
+
+% ---------------------------------------------------------------------
+% Macros for little HOL sessions displayed in boxes.
+%
+% Usage: (1) \setcounter{sessioncount}{1} resets the session counter
+%
+%        (2) \begin{session}\begin{verbatim}
+%             .
+%              < lines from hol session >
+%             .
+%            \end{verbatim}\end{session}   
+%
+%            typesets the session in a numbered box.
+% ---------------------------------------------------------------------
+
+\newlength{\hsbw}
+\setlength{\hsbw}{\textwidth}
+\addtolength{\hsbw}{-\arrayrulewidth}
+\addtolength{\hsbw}{-\tabcolsep}
+
+\newcounter{sessioncount}
+\setcounter{sessioncount}{1}
+
+\newcommand\MLSpacing{13pt}
+\newenvironment{session}{\begin{flushleft}
+ \begin{tabular}{@{}|c@{}|@{}}\hline 
+ \begin{minipage}[b]{\hsbw}
+ \vspace*{-.5pt}
+ \begin{flushright}
+ \rule{0.01in}{.15in}\rule{0.3in}{0.01in}\hspace{-0.35in}
+ \raisebox{0.04in}{\makebox[0.3in][c]{\footnotesize\sl \thesessioncount}}
+ \end{flushright}
+ \vspace*{-.45in}
+ \begingroup\small\baselineskip\MLSpacing}{\endgroup\end{minipage}\\ \hline 
+ \end{tabular}
+ \end{flushleft}
+ \stepcounter{sessioncount}}
+
+\begin{document}
+\title{\textsc{holcheck} Tutorial}
+\author{Hasan Amjad}
+\maketitle
+\bibliographystyle{plain}
+
+This tutorial is a primer on how to use the \hc model checker. It assumes the reader is familiar with model checking \cite{Clarke1999}, with \hol \cite{HOL}, and with the \hol interface to BDDs \cite{Gordon2002}.
+
+\section{Introduction}\label{sec:intro}
+
+\hc is a BDD-based model checker embedded in the \hol theorem prover, interfaced to a high-performance BDD engine for efficiency. It currently has the following features:
+
+\begin{itemize}
+\item All steps of the algorithm are proved in \hol, with BDD operations considered atomic.
+\item Results are returned as \hol theorems that seamlessly incorporate into \hol.
+\item Model checking for the modal \(\mu\)-calculus and \ctl temporal logics is supported.
+\item Counterexamples and witnesses are generated when appropriate.
+\item A fully-automatic counterexample-guided abstraction refinement framework is included.  
+\end{itemize}
+
+The user inputs a model and a list of properties to be checked, and the model checker returns theorems, counterexamples and/or witnesses for each property with respect to the model. Models are formally treated as labelled transition system described by the quintuple \( (S, S_0, T, P, L) \) where 
+
+\begin{itemize}
+\item \( S \) is the set of states of the model. Each state is modelled as a tuple of state variables. Currently only boolean state variables are supported.
+\item \( S_0\) is the set of initial states.
+\item \( T \) is the set of actions or program letters, such that for each \( a \in T \), we have \( R_a \subseteq S \times S\). This says that the model has a transition labelled \( a \) from a state \( s \) to a state \( s' \) if and only if \( R_a(s,s') \). Next state variables are distinguished from current state variables by priming. 
+\item \( P \) is the set of atomic propositions. Since only boolean state variables are currently supported, \( P \) is simply the set of state variables.
+\item \( L:S\rightarrow 2^P \) labels each state with those propositions that are true in it.   
+\end{itemize}
+
+Currently the user is required to supply only \( S_0 \) and \( T \) as the remaining components can be calculated from these. Properties are input as \hol terms of type \(\mathtt{mu}\) or \(\mathtt{ctl}\), \hol datatypes for which have been defined. A property is satisfied by a model if the set of initial states of the model is a subset of the set of states satisfying the property. 
+
+The next section describes the usage of \hc in more detail. As a running example we will take the children's game of tic-tac-toe or noughts-and-crosses, usually played on a 3-by-3 grid. For simplicity and to keep the formulas under consideration manageable, we consider the trivial 1-by-1 variant. Thus, the grid starts off empty, the player to go first makes a move and immediately wins, ending the game.
+
+For this model, we need one state variable to track whose move it is, and we shall call this \(m\), which is true if the first player (call her U) is to move and false if the second player (call him V) is to move. We also need two state variables to keep track of the moves already played. The state variable \(u_{0,0}\) is true if U has claimed grid cell \((0,0)\) and false otherwise, and similarly the state variable \(v_{0,0}\) tracks V's moves. It is easy to see how this scheme can be generalised to arbitrary grids.
+
+Thus the state is described by the tuple \( (m,u_{0,0},v_{0,0}) \). \(S_0\) is \( \{ (T,F,F) \} \) and \( T \) is 
+
+\begin{eqnarray*}
+ [&(&''{u_{0,0}}'',(\lnot u_{0,0} \land \lnot v_{0,0} \land m) \land \lnot((\lnot m \land u_{0,0}) \lor (m \land v_{0,0}))\\
+       &&\land (u_{0,0}' \land \lnot m' \land (v_{0,0}' = v_{0,0}))),\\
+     &(&''{v_{0,0}}'',(\lnot v_{0,0} \land \lnot u_{0,0} \land \lnot m) \land \lnot((\lnot m \land u_{0,0}) \lor (m \land v_{0,0}))\\
+        &&\land (v_{0,0}' \land m' \land (u_{0,0}' = u_{0,0})))]
+\end{eqnarray*}
+
+This says for instance that the move \(''{u_{0,0}}''\) may be played if and only if the board is empty and it is U's turn AND the game is not already over AND in the next state U will have claimed \((0,0)\) and it will be V's turn, whose status will remained unchanged. And similarly for the move \(''{v_{0,0}}''\). 
+
+Note that although there are eight possible states, only two (\((T,F,F)\) and \((F,T,F) \)) are actually reachable.
+
+\section{Usage}
+
+The first step after loading \hol is to initialise the BDD engine.
+
+\begin{session}\begin{verbatim}
+- load "holCheckLib";
+> val it = () : unit
+- bdd.init 100000 10000;
+> val it = () : unit
+\end{verbatim}\end{session}
+
+The user interacts with \hc through a single ML function \texttt{holCheck}, found in the library \texttt{holCheckLib}. 
+
+\begin{session}\begin{verbatim}
+- holCheckLib.holCheck;
+> val holCheck = fn :
+  term * (string * term) list * bool * string option * 
+  string list option * term option -> term list -> term list option ->
+  (hcinit option * hcinit option) option ->
+  (term_bdd * thm option * term list option) list * 
+  (thm option * thm option) * (hcinit option * hcinit option) option
+\end{verbatim}\end{session}
+
+\hol messages have been elided. The function takes two mandatory and two optional arguments, and returns a triple. We describe these in turn. 
+
+\subsection{Arguments}
+
+The first argument to the \texttt{holCheck} function is a hextuple of the form 
+
+\begin{eqnarray*} 
+&&(S_0:\mathtt{term}, T:\mathtt{(string * term) list}, Ric:\mathtt{bool}, \\
+&&nm:\mathtt{string\,\,option}, vars:\mathtt{string\,\,list\,\,option}, state:\mathtt{term\,\,option}) 
+\end{eqnarray*}
+ 
+The first three components are mandatory and the rest are optional. We shall load the corresponding values for the tic-tac-toe example and consider them in turn.
+
+\begin{session}\begin{verbatim}
+- load "ttt";
+> val it = () : unit
+- val ((S0,T1,Ric,nm,vars,state),fl) = ttt.makeTTT 1;
+\end{verbatim}\end{session}
+ 
+The numeric argument to \(\mathtt{ttt.makeTTT}\) gives the size of grid required.  Now we consider each component of the first part of the pair returned by \(\mathtt{ttt.makeTTT}\):
+
+\begin{session}\begin{verbatim}
+- S0;
+> val it = ``~u0_0 /\ ~v0_0 /\ m`` : term
+\end{verbatim}\end{session}
+
+\(\mathtt{S0}\) is a term over the state variables of the model, such that only those assignments to the variables that satisfy the initial states of the model also satisfy \(\mathtt{S0}\). Thus \(\mathtt{S0}\) denotes the initial states. Note that since only boolean variables are supported, \(\mathtt{S0}\) must be a purely propositional term.
+
+\begin{session}\begin{verbatim}
+- T1;
+> val it =
+    [("u0_0",
+      ``~u0_0 /\ ~v0_0 /\ m /\
+        ~(~m /\ (u0_0 \/ u0_0 \/ u0_0 \/ u0_0) \/
+          m /\ (v0_0 \/ v0_0 \/ v0_0 \/ v0_0)) /\ u0_0' /\ ~m' /\
+        (v0_0' = v0_0)``),
+     ("v0_0",
+      ``~v0_0 /\ ~u0_0 /\ ~m /\
+        ~(~m /\ (u0_0 \/ u0_0 \/ u0_0 \/ u0_0) \/
+          m /\ (v0_0 \/ v0_0 \/ v0_0 \/ v0_0)) /\ v0_0' /\ m' /\
+        (u0_0' = u0_0)``)] : (string * term) list
+\end{verbatim}\end{session}
+
+\(\mathtt{T1}\) is a list of pairs of the form \( (a,R_a)\), where the string \(a\) is an action name and the \hol term \(R_a\) is a relation over current and next states such that the model has a transition labelled \(a\) from a state \( s \) to a state \(s'\) if and only if the corresponding valuations of current and next state variables satisfy \( R_a \). 
+
+Thus \(\mathtt{S0}\) and \(\mathtt{T1}\) are just \hol equivalents of \(S_0\) and \(T\) as described in section \ref{sec:intro}. \( \mathtt{T1} \) is named as such to avoid clashing with the global \hol constant \( \mathtt{T} \). The redundancy in \(\mathtt{T1}\) is an artifact of how  \(\mathtt{ttt.makeTTT}\) generates the grid.
+
+\begin{session}\begin{verbatim}
+- Ric;
+> val it = false : bool
+\end{verbatim}\end{session}
+
+\(\mathtt{Ric}\) is a boolean which is true if the transition system described by \(\mathtt{T1}\) is synchronous, and false otherwise. In a synchronous transition system, all actions much occur simultaneously. Otherwise \(\mathtt{T1}\) is asynchronous i.e. the actions are interleaved. In the case of our runing example for instance, \( \mathtt{T1} \) should be asynchronous since the players do not move together but interleave moves. The definition of \( \mathtt{T1} \) ensures that they do not play out of turn, or make illegal moves. 
+
+\begin{session}\begin{verbatim}
+- nm;
+> val it = SOME "ttt" : string option
+\end{verbatim}\end{session}
+
+\(\mathtt{nm}\) is an optional argument. It is a string that names the formal model that is generated internally by \hc. Since the resulting theorems are stated in terms of this model, it is useful to have an abbreviation for the term representing the model to keep the theorem statement readable. \hc has a default name for models, but if the user expects to be using more than one model in the same session, then \(\mathtt{nm}\) is required to avoid name clashes.
+
+\begin{session}\begin{verbatim}
+- vars;
+> val it = SOME ["m", "m'", "u0_0", "u0_0'", "v0_0", "v0_0'"] :
+\end{verbatim}\end{session}
+
+\(\mathtt{vars}\) is an optional argument. It is a list of current- and next-state variables names, given as strings without any type information. \(\mathtt{vars}\) is used to manually supply a variable ordering to the BDD engine. \hc has a default ordering heuristic but it is rather primitive at present.
+
+\begin{session}\begin{verbatim}
+- state;
+> val it = SOME``(m,u0_0,v0_0)`` : term option
+\end{verbatim}\end{session}
+
+\(\mathtt{state}\) is an optional argument. It is a \hol tuple that explicitly describes the order in which state variables appear in the state tuple. \hc can automatically calculate the state from \(\mathtt{S0}\) and \(\mathtt{T1}\), but in some cases the user may wish to use the resulting theorems in other work where the state tuple has already been defined in a certain manner. \(\mathtt{state}\) is used in such cases.
+
+At present the user must take care that \(\mathtt{vars}\) and \(\mathtt{state}\) are consistent with the rest of the arguments e.g. there are no missing variables. 
+
+So the first component of the pair returned by \(\mathtt{ttt.makeTTT}\) can be supplied as the first argument to \(\mathtt{holCheck}\). Likewise, the second component \(\mathtt{fl}\) becomes the second argument to  \(\mathtt{holCheck}\).
+
+\(\mathtt{fl}\) is simply a list of \ctl or \(\mu\)-calculus formulas (they can be in the same list because both have ML type \(\mathtt{term}\)). Since the formulas contain atomic propositions, which are modelled as functions on the state, the user inputting the formulas needs to know what the state is going to be. \hc provides a function \(\mathtt{mk_state}\) for this purpose.
+
+\begin{session}
+\begin{verbatim} 
+- holCheckLib.mk_state;
+> val it = fn : term -> (string * term) list -> term
+- holCheckLib.mk_state S0 T1;
+> val it = ``(m,u0_0,v0_0)`` : term
+\end{verbatim}
+\end{session}
+
+In the case of our running example, the properties come pre-genereated, so we will not be using \(\mathtt{mk_state}\) as such. \(\mathtt{fl}\) contains five \ctl properties. We consider these in turn.
+
+\begin{session}
+\begin{verbatim} 
+- List.nth(fl,0);
+> val it =
+    ``~C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) /\
+      ~C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)) /\
+      C_BOOL (B_PROP (\(m,u0_0,v0_0). m))`` : term
+\end{verbatim}
+\end{session}
+
+Th first property describes the initial state of the system. Note how atomic propositions are formally modelled as boolean functions on the state. As noted earlier, all atomic propositions are current just boolean variables.
+
+\begin{session}
+\begin{verbatim} 
+- List.nth(fl,1);
+> val it =
+    ``~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+      (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+       C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+       C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+       C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))`` : term
+\end{verbatim}
+\end{session}
+
+This property describes a winning position for U. As with \(\mathtt{T1}\) there is some redundancy here.
+
+\begin{session} 
+\begin{verbatim} 
+- List.nth(fl,2);
+> val it =
+    ``C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+      (C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)) \/
+       C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)) \/
+       C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)) \/
+       C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)))`` : term
+\end{verbatim}
+\end{session}
+
+This property describes a winning position for V.
+
+\begin{session}\begin{verbatim} 
+- List.nth(fl,3);
+> val it =
+    ``C_EG
+        (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+         (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+          C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+          C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+          C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0))) \/
+         C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+         C_EF
+           (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+            (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+             C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+             C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+             C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))) \/
+         ~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+         C_AF
+           (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+            (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+             C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+             C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+             C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))))`` : term
+
+\end{verbatim}\end{session}
+
+This property says that U has a winning strategy from the current state. Since we define success if the set of states satisfying the property contains the set of initial states, this suffices to check that U has a winning strategy. Cleaned up, this is the \ctl property \[ \mathbf{EG} (\textup{(U wins)} \lor (\textup{V to move} \land \mathbf{AF} (\textup{U wins})) \lor (\textup{U to move} \land \mathbf{EF} (\textup{U wins})))\] Intuitively, the property says that there exists a path from the current state such that at each step on that path either U has won the game, or it is U's turn and there exists at least one path in which U eventually wins the game, or it is not U's turn and on all paths U eventually wins the game. 
+
+The last property similarly says the V has a winning strategy. 
+
+The next argument to \(\mathtt{holCheck}\) is optional. It consists of a list of boolean functions on the state that the user wishes \(\mathtt{holCheck}\) to consider as atomic propositions. This is currently needed if abstraction is required since the abstraction mechanism of \hc relies on atomic propositions being unable to distinguish between sets of states. This does not happen with the current setup because all propositions are the state variables themselves, and hence a given valuation of propositions results in exactly one state. This argument allows the user to ``cheat'' by supplying non-atomic propositional formulas as atomic propositions. The only caveat is that any properties then checked may only use the propositions supplied. This argument will not be necessary for abstraction once \hc supports non-boolean state variables.
+
+The final argument to  \(\mathtt{holCheck}\) is optional. This is a complex data structure that contains calculations made during previous runs of  \(\mathtt{holCheck}\) in the same session.  \(\mathtt{holCheck}\) will return this structure as part of its return values (discussed in the next section) and as long as the model has not changed, this structure can be passed in to the next invocation of  \(\mathtt{holCheck}\) to save on model construction and abstraction calculations. Property-dependent data is of course recalculated every time.    
+\subsection{Return Values}
+
+We are now ready to call \(\mathtt{holCheck}\) with the supplied values.
+
+\begin{session}\begin{verbatim} 
+val (res,ksd,ic) = holCheck.holCheck (fst tll) (snd tll) NONE NONE;
+\end{verbatim}\end{session}
+ 
+\(\mathtt{holCheck}\) returns a triple. We consider each component in turn.
+
+The first component \( \mathtt{res}\) is the results. This is a list of triples of the form \( (term\_bdd,thm,trace) \), where each element of the list is the result of model checking for the corresponding item in the property list \(\mathtt{fl}\). We consider them in turn. 
+
+\begin{session}\begin{verbatim} 
+- List.nth(res,0);
+> val it =
+    (<term_bdd>,
+     SOME|- CTL_MODEL_SAT ttt
+              (~C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) /\
+               ~C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)) /\
+               C_BOOL (B_PROP (\(m,u0_0,v0_0). m))), NONE) :
+  term_bdd * thm option * term list option
+\end{verbatim}\end{session}
+
+This is the result corresponding to the first property (which described the set of initial states).  The first component is the \(textup{term\_bdd}\) that corresponds to the set of states of the model satsified by this property. As expected, the set of initial states is contained in the set of initial states and thus the second component is a success theorem attesting to this. The predicate \( \mathtt{CTL_MODEL_SAT} \) says that the property holds in the model \( \mathtt{ttt}\) (which was the name was supplied for this model). If the property had not held, the theorem derivation would have failed and the component would have been \( \mathtt{NONE}\). The third component is used to return the counterexample or witness associated with the property. Since we succeeded there is no counterexample, and witnesses are only returned for properties talking about paths, so this component is \( \mathtt{NONE}\). 
+
+\begin{session}\begin{verbatim}
+ List.nth(res,1);
+> val it = (<term_bdd>, NONE, SOME []) :
+  term_bdd * thm option * term list option
+\end{verbatim}\end{session}
+
+The second result corresponds to a win position for U. Since the initial state is not a win position for U, there is no success theorem and as before counterexamples are only provided for properties talking about paths. The third result is exacly the same, since the initial state is not a win position for V either.
+ 
+\begin{session}\begin{verbatim}
+- List.nth(res,3);
+> val it =
+    (<term_bdd>,
+     SOME|- CTL_MODEL_SAT ttt
+              (C_EG
+                 (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                  (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+                   C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+                   C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+                   C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0))) \/
+                  C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                  C_EF
+                    (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                     (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+                      C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+                      C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+                      C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))) \/
+                  ~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                  C_AF
+                    (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                     (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+                      C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+                      C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) \/
+                      C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))))),
+     SOME [``(F,T,F)``]) : term_bdd * thm option * term list option
+\end{verbatim}\end{session}
+
+This result corresponds to the fourth property, that stated that U has a winning strategy. This is true, and we get the success theorem, as well as a witness, which shows that the state \((F,T,F)\) following from the initial state is a win for U. 
+
+The last element of \(\mathtt{res}\) is the same as the second and third, since V does not have a winning strategy, and counterexamples cannot be calculated for properties that assert the existence of specific paths (since the ``counterexample'' would effectively be the entire set of reachable states).
+
+The second component of the triple returned by \(\mathtt{holCheck}\) is a pair of formal model definitions as generated internally within \hc for model checking. 
+
+\begin{session}\begin{verbatim}
+- ksd;
+> val it =
+    (SOME|- ctl2muks ttt =
+            <|S := UNIV; 
+              S0 := (\(m,u0_0,v0_0). ~u0_0 /\ ~v0_0 /\ m);
+              T :=
+                (\q ((m,u0_0,v0_0),m',u0_0',v0_0').
+                   ttt.R ((m,u0_0,v0_0),m',u0_0',v0_0'));
+              ap :=
+                {(\(m,u0_0,v0_0). v0_0); (\(m,u0_0,v0_0). u0_0);
+                 (\(m,u0_0,v0_0). m)}; 
+              L := (\(m,u0_0,v0_0) p. p (m,u0_0,v0_0))|>,
+     NONE) : thm option * thm option
+\end{verbatim}\end{session}
+
+A pair is returned since model checking \ctl and \(\mu\)-calculus formulae requires slightly different models. In our example there were no \(\mu\)-calculus formulae so the second component is empty. These model definitions are returned since the success theorems are stated in terms of them, so they may required for further manipulation. As can be seen, the formal definition corresponds to the informal description of models in section \ref{sec:intro}.
+
+The last component \(\mathtt{ic}\) of the returned triple stands for \emph{initialisation cache} and is the data structure described at the end of the previous section. 
+ 
+\subsection{A Bigger Example: A 3-stage pipelined ALU}
+
+Coming soon...
+
+\bibliography{ha}
+\end{document}
