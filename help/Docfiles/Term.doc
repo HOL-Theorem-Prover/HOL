@@ -70,8 +70,11 @@ still be completely determined by the interaction of the possible
 types for the overloaded possibilities.
 
 Finally, depending on the value of the global flags {guessing_tyvars}
-and {guessing_overloads}, the parser will choices about how to resolve
-any remaining ambiguities.
+and {guessing_overloads}, the parser will make choices about how to
+resolve any remaining ambiguities.
+
+The parsing process is driven in most respects by the global grammar.
+This value can be inspected with the {term_grammar} function.
 
 \FAILURE
 All over place, and for all sorts of reasons.
@@ -81,6 +84,6 @@ Turns strings into terms.
 
 \SEEALSO
 parse_preTerm, preTerm, Type, allow_for_overloading_on, overload_on,
-guessing_overloads, guessing_tyvars
+guessing_overloads, guessing_tyvars, term_grammar.
 
 \ENDDOC
