@@ -1,6 +1,6 @@
 \DOC EXT
 
-\TYPE {EXT : (thm -> thm)}
+\TYPE {EXT : thm -> thm}
 
 \SYNOPSIS
 Derives equality of functions from extentional equivalence.
@@ -19,6 +19,10 @@ When applied to a theorem {A |- !x. t1 x = t2 x}, the inference rule
 \FAILURE
 Fails if the theorem does not have the form indicated above, or
 if the variable {x} is free either of the functions {t1} or {t2}.
+
+\COMMENTS
+This rule is expressed as an equivalence in the theorem
+{boolTheory.FUN_EQ_THM}.
 
 \SEEALSO
 AP_THM, ETA_CONV, FUN_EQ_CONV.

@@ -15,7 +15,8 @@ The parsing process for terms divides into four distinct phases.
 
 The first phase converts the quotation argument into abstract syntax,
 a relatively simple parse tree datatype, with the following datatype
-definition (from {Absyn}): {
+definition (from {Absyn}):
+{
    datatype vstruct
        = VAQ    of term
        | VIDENT of string

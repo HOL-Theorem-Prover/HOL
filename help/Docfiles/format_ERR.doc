@@ -7,24 +7,22 @@
 \KEYWORDS error, exception
 
 \DESCRIBE
-
 The {format_ERR} function maps the argument of an application of {HOL_ERR}
 to a string. It is the default function used by {ERR_to_string}.
 
 \FAILURE
-
 Never fails.
 
 \EXAMPLE
 {
-    - print
-       (format_ERR {origin_structure = "Foo",
-                    origin_function = "bar",
-                    message = "incomprehensible input"});
+- print
+   (format_ERR {{origin_structure = "Foo",
+                origin_function = "bar",
+                message = "incomprehensible input"}});
 
-    Exception raised at Foo.bar:
-    incomprehensible input
-    > val it = () : unit
+Exception raised at Foo.bar:
+incomprehensible input
+> val it = () : unit
 }
 
 \SEEALSO Feedback, ERR_to_string, format_MESG, format_WARNING

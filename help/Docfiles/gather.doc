@@ -3,7 +3,6 @@
 \TYPE {gather : ('a -> bool) -> 'a list -> 'a list)}
 
 \SYNOPSIS
-
 Filters a list to the sublist of elements satisfying a predicate.
 
 \KEYWORDS
@@ -17,7 +16,6 @@ that satisfy {P}, in the order they appeared in the original list.
 If {P x} fails for some element {x} of {l}.
 
 \COMMENTS
-
 Identical to {filter}.
 
 \SEEALSO

@@ -21,9 +21,9 @@ additional rewrites when the conclusion of the goal is simplified.
 In addition, simplified assumptions are added back onto the goal using
 the equivalent of {STRIP_ASSUME_TAC} and this causes automatic
 skolemization of existential assumptions, case splits on disjunctions,
-and the separate assumption of conjunctions.   If an assumption is
+and the separate assumption of conjunctions.  If an assumption is
 simplified to {TRUTH}, then this is left on the assumption list.  If
-it an assumption is simplified to falsity, this proves the goal.
+an assumption is simplified to falsity, this proves the goal.
 
 \FAILURE
 {FULL_SIMP_TAC} never fails, but it may diverge.
@@ -31,7 +31,7 @@ it an assumption is simplified to falsity, this proves the goal.
 \EXAMPLE
 Here {FULL_SIMP_TAC} is used to prove a goal:
 {
-   > FULL_SIMP_TAC hol_ss [] (map Term [`x = 3`, `x < 2`],
+   > FULL_SIMP_TAC arith_ss [] (map Term [`x = 3`, `x < 2`],
                               Term `?y. x * y = 51`)
    - val it = ([], fn) : tactic_result
 }

@@ -5,7 +5,6 @@
 \SYNOPSIS
 The empty database of rewrite rules.
 
-\DESCRIBE
 \USES
 Used to build other rewrite sets.
 

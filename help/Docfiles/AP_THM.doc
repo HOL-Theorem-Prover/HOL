@@ -22,6 +22,6 @@ of which are functions whose domain type is the same as that of the
 supplied term.
 
 \SEEALSO
-AP_TERM, ETA_CONV, EXT, MK_COMB.
+AP_TERM, ETA_CONV, EXT, FUN_EQ_CONV, MK_COMB.
 
 \ENDDOC
