@@ -1053,75 +1053,67 @@ the set of axioms of ${\cal T}$;
 theorems of ${\cal T}$.
 \end{myenumerate}
 
-In Hol98, there is a distinction between building a theory and using
-it. Theories are built in an interactive manner: axioms,
-definitions and theorems can be entered into, or deleted from, the
-theory under construction at any time. Once the user has built the
-theory to his or her satisfaction, it can be exported to disk, to be
-imported in later sessions, without having to load the tools and replay
-the proofs that created the theory in the first place. 
+Theories are structured hierarchically to represent sequences of
+extensions called \emph{segments}\index{theory segments} of an initial
+theory (see Section~\ref{extensions}) called
+\ml{min}\index{min@\ml{min}}. A theory segment is not really a logical
+concept, but rather a concept of the representation of theories in the
+\HOL\ system. Each segment records some types, constants, axioms and
+theorems, together with pointers to other segments called its {\it
+parents\/}\index{parents, of HOL theories@parents, of \HOL\ theories}.
+The theory represented by a segment is obtained by taking the
+union of all the types, constants, axioms and theorems in the segment,
+together with the types, constants, axioms and theorems in all the
+segments reachable by following pointers to parents. This collection
+of reachable segments is called the {\it ancestry\/}\index{ancestry,
+of HOL system theories@ancestry, of \HOL\ system
+theories}\index{theories, in HOL logic@theories, in \HOL\
+logic!hierarchies of} of the segment.
 
-A theory suitable for importing into a session is represented in the
-\HOL\ system as a compiled ML module with a name  of the  form
-$name$\ml{Theory}, where $name$ is a string supplied by the user when
-the theory is created.  Various additional pieces of 
-information are stored in the theory structure, including the parsing
-status of the constants (\eg\ whether they are infixes or
-binders). 
+A typical\index{HOL system@\HOL\ system!typical work in} piece of work
+with the \HOL\ system consists in a number of sessions\index{sessions
+with HOL system@sessions, with \HOL\ system}.  In the first of these, a
+new theory, ${\cal T}$ say, is created by importing some existing theory
+segments, making a number of definitions, and perhaps proving and
+storing some theorems in the current segment. Then the current segment
+(named $name$ say) is exported. The concrete result will be an \ML\
+module $name$\ml{Theory} whose contents is the current theory segment
+created during the session and whose ancestry represents the desired
+logical theory ${\cal T}$. Subsequent work sessions can access the
+definitions and theorems of ${\cal T}$ by importing $name$\ml{Theory};
+this avoids having to load the tools and replay
+the proofs that created $name$\ml{Theory} in the first place.
 
-Theory files are structured hierarchically to represent sequences of
-extensions of an initial theory (see Section~\ref{extensions}) called
-\ml{min}\index{min@\ml{min}}. Each theory file making up a theory records some types, constants,
-axioms and theorems, together with pointers to other theory files called its
-{\it parents\/}\index{parents, of HOL theories@parents, of \HOL\ theories}.  The theory represented by such a theory file is obtained by
-taking the union of all the types, constants, axioms and theorems in the file,
-together with the types, constants, axioms and theorems in all the theory
-files reachable by following pointers to parents. This collection of
-reachable files is called the {\it ancestry\/}\index{ancestry, of HOL
-system theories@ancestry, of \HOL\ system theories}\index{theories, in
-HOL logic@theories, in \HOL\ logic!hierarchies of} of the theory file. 
+The naming of data in theories is based on the names given to segments.
+Specifically an axiom, definition, specification or theorem is
+accessed\index{theories, in HOL logic@theories, in \HOL\ logic!naming of}
+by an \ML\ long identifier $thy${\small\verb+Theory.+}$name$, where
+$thy$ is the name of the theory segment current when the item was
+declared and $name$ is a specific name supplied by the user (see the
+functions \ml{new\_axiom}, \ml{new\_definition}, below). Different items
+can have the same specific name if the associated segment is different.
+Thus each theory segment provides a separate namespace of ML bindings of
+\HOL\ items. 
 
-The data stored in a single theory file is called a {\it theory
-segment\/}\index{theory segments}; this is not really a logical concept,
-but rather a concept of the representation of theories in the \HOL\
-system. It is necessary to distinguish theories from their constituent
-theory segments because the naming of data in theories is based on the
-names given to segments.  Specifically, axioms, definitions,
-specifications and theorems are named\index{theories, in HOL
-logic@theories, in \HOL\ logic!naming of} by an \ML\ long identifier
-$thy${\small\verb+Theory.+}$name$, where $thy$ is the name of the theory
-segment current when the item was declared and $name$ is a specific name
-supplied by the user (see the functions \ml{new\_axiom}, \ml{new\_definition},
-below). Different items can have the same specific name if the
-associated segment is different.  
+Various additional pieces of information are stored in a theory
+segment, including the parsing status of the constants (\eg\ whether
+they are infixes or binders).
 
-A typical\index{HOL system@\HOL\ system!typical work in} piece of work with the \HOL\ system consists in a number of
-sessions\index{sessions with HOL system@sessions, with \HOL\ system}.
-In the first of these, a new theory, ${\cal T}$ say, is created by
-extending existing theories with a number of definitions. The concrete result
-of the session will be a theory file ${\cal T}$\ml{.th} whose contents is the
-segment created during the session and whose ancestry represents the desired
-logical theory.  In subsequent sessions this theory is extended by proving new
-theorems that will be stored in the file ${\cal T}$\ml{.th}. The logical
-meaning of these sessions is that a new extension to ${\cal T}$ is created
-which replaces the old version.  Subsequent pieces of work can build on (\ie\
-extend) the definitions and theorems of ${\cal T}$ by making it a parent of
-new theories.
-
-There is always a {\it current theory\/} which is the theory represented by
-the current theory segment together with its ancestry. The name of the current
-theory is returned by the \ML\ function:
+There is always a \emph{current theory} which is the theory
+represented by the current theory segment together with its
+ancestry. The name of the current theory segment is returned by the \ML\
+function: 
 
 \begin{boxed}\index{current_theory@\ml{current\_theory}|pin}
 \begin{verbatim}
    current_theory : unit -> string
 \end{verbatim}\end{boxed}
 
-On startup, the current theory of \HOL\ is \ml{scratch}, which is an
-empty theory, having the theory {\small\verb+bool+} as its sole
-parent. This is a very simple logical setting, for example, common types
-such as those for numbers and pairs are not present, and users typically load
-in whatever logical context they desire.
+On startup, the current theory segment of \HOL\ is named \ml{scratch},
+which is an empty theory, having the theory {\small\verb+bool+} as its sole
+parent. This is a very simple logical setting; for example, common types
+such as numbers and pairs are not present. Typically, a user would begin
+by loading whatever specific logical context is required.
 
 \subsection{Primitive ML functions for creating theories}
 \label{theoryprims}
@@ -1136,17 +1128,16 @@ are listed below.
    new_theory : string -> unit
 \end{verbatim}\end{boxed}
 
-\noindent One makes a theory by a call to \verb+new_theory+.  This
-allocates a new `area' where subsequent theory operations take effect.
-
-If the current theory ($thy_1$ say) at the time of a call to
-{\small\verb+new_theory +}$thy_2$ is non-empty, \ie, has had an axiom, 
-definition, or theorem stored in it, then $thy_1$ is exported before $thy_2$
-is allocated. Furthermore, $thy_2$ will have $thy_1$ as a parent.
-
-If {\small\verb+new_theory +}$thy$ is called when the current theory is
- already named $thy$, then that is interpreted as a request to clear the
-theory area for $thy$.
+\noindent One creates a new theory segment by a call to
+\verb+new_theory+.  This allocates a new `area' where subsequent theory
+operations take effect. If the current theory ($thy_1$ say) at the time
+of a call to {\small\verb+new_theory +}$thy_2$ is non-empty, \ie, has
+had an axiom, definition, or theorem stored in it, then $thy_1$ is
+exported before $thy_2$ is allocated. Furthermore, $thy_2$ will obtain
+$thy_1$ as a parent. If {\small\verb+new_theory +}$thy$ is called when
+the current theory segment is already named $thy$, then that is
+interpreted as a request merely to clear the current theory segment
+(nothing will be exported). 
 
 A call to {\small\verb+new_theory "+}$name${\small\verb+"+} fails if:
 \begin{itemize}
@@ -1154,20 +1145,38 @@ A call to {\small\verb+new_theory "+}$name${\small\verb+"+} fails if:
 \item $name$ is not an alphanumeric starting with a letter.
 
 \item there is a theory already named $name$ in the ancestry of the
-current theory.
+current segment.
 
-\item if it is necessary to export the current theory before creating
+\item if it is necessary to export the current segment before creating
 the new theory and the export attempt fails.
 
 \end{itemize}
 
-\noindent{\bf Remark} Elements stored in the current theory may be
-overwritten by subsequent additions, or deleted outright. Any theory
-elements that were built from overwritten or deleted elements are now
-held to be {\it out-of-date}, and will not be included in the theory
-when it is finally exported.  Out-of-date constants and types are
-detected by the \HOL\ printer, which will print them surrounded by
-odd-looking syntax to alert the user.
+The current theory segment acts as a kind of scratchpad. Elements stored
+in the current segment may be overwritten by subsequent additions, or
+deleted outright. Any theory elements that were built from overwritten
+or deleted elements are now held to be {\it out-of-date}, and will not
+be included in the theory when it is finally exported.  Out-of-date
+constants and types are detected by the \HOL\ printer, which will print
+them surrounded by odd-looking syntax to alert the user. 
+
+In contrast to the current segment, (proper) ancestor segments may not
+be altered.
+
+Since \HOL\ theories are represented by \ML\ modules, one imports an
+existing theory segment by simply importing the corresponding module.
+
+\begin{boxed}
+\index{load@\ml{load|pin}}
+\begin{verbatim}
+   load : string -> unit
+\end{verbatim}\end{boxed}
+
+Executing {\small\verb+load +}$name${\small\verb+Theory+} imports the
+first file named $name${\small\verb+Theory.uo+} found along the
+{\small\verb+loadPath+} into the session. Any unloaded ancestors of
+$name$ will be loaded before loading of $name${\small\verb+Theory+} 
+continues.
 
 \begin{boxed}
 \index{new_type@\ml{new\_type}|pin}
@@ -1182,7 +1191,7 @@ operators, in \HOL\ logic!declaration} in the current theory.
 Failure if:
 \begin{myenumerate}
 \item there already exists a type operator named $\ty{op}$ in an ancestor
-      theory.
+      theory segment.
 \item \ty{op} is not an allowed name for a type.
 \end{myenumerate}
 
@@ -1199,7 +1208,7 @@ for all $c_{\sigma'}$ where $\sigma'$ is an instance of $\sigma$.
 The type $\sigma$ is
 called the {\it generic type\/}\index{generic types, in HOL logic@generic types, in \HOL\ logic} of $c$. Failure if:
 \begin{myenumerate}
-\item there already exists a constant named $c$ in an ancestor theory.
+\item there already exists a constant named $c$ in an ancestor theory segment.
 \end{myenumerate}
 
 \begin{boxed}
@@ -1214,7 +1223,7 @@ declares $ix$ to be a new constant with generic type $\sigma$ and
 infix status.
 Failure if:
 \begin{myenumerate}
-\item there already exists a constant named $ix$ in an ancestor theory;
+\item there already exists a constant named $ix$ in an ancestor theory segment;
 \item $\sigma$ not of the form \ml{$\sigma_1$->$\sigma_2$->$\sigma_3$}.
 \end{myenumerate}
 
@@ -1231,7 +1240,7 @@ declares $b$ to be a new constant with generic type $\sigma$ and
 binder status.
 Failure if:
 \begin{myenumerate}
-\item there already exists a constant named $b$ an ancestor theory;
+\item there already exists a constant named $b$ an ancestor theory segment;
 \item $\sigma$ not of the form \ml{($\sigma_1$->$\sigma_2$)->$\sigma_3$}.
 \end{myenumerate}
 
@@ -1259,32 +1268,29 @@ Once a theorem has been proved, it can be saved with the function
    save_thm : (string * thm) -> thm
 \end{verbatim}\end{boxed}
 
-\noindent
-Evaluating \ml{save\_thm("}$name$\ml{",}$th$\ml{)} will save the theorem\index{theorems, in HOL logic@theorems, in \HOL\ logic!saving of}\index{saving theorems}
-$th$ with name $name$ in the current theory segment.
+\noindent Evaluating \ml{save\_thm("}$name$\ml{",}$th$\ml{)} will save
+the theorem\index{theorems, in HOL logic@theorems, in \HOL\ logic!saving
+of}\index{saving theorems} $th$ with name $name$ in the current theory
+segment.
 
+Once a theory segment has been constructed, it can be written out to a
+file, which, after compilation, can be imported into future sessions.
 
-\subsection{Theories and the file system}
-
-Hol98 provides persistent theories: once a user has finished working on
-a theory, it can be written out to a file, to be used in future
-formalization efforts. Before the current theory is written out, all
-out-of-date entities are scrubbed out. Also the parenthood of the theory
-is computed: it is the fringe of the theory graph at the time
-\verb+export_theory+ is called.
+\begin{boxed}
+\index{export_theory@\ml{export\_theory}|pin}
 \begin{verbatim}
     export_theory : unit -> unit
-\end{verbatim}
-There is also a more general export operation---\verb+prim_export_theory+ ---
-which invokes user-supplied prettyprinters just before printing the end
-of the theory signature and structure. This can be used to, for example,
-store theory-specific proof tools with the theory.
+\end{verbatim}\end{boxed}
 
-When \verb+export_theory+ is invoked from an interactive session, the
-theory is exported, but not compiled. This makes it difficult to
-\verb+load+ the theory in a later session. Currently,
-\verb+export_theory+ is only useful when invoked under the control of
-\verb+Holmake+.
+When {\small\verb+export_theory+} is called, all out-of-date entities
+are removed from the current segment. Also, the parenthood of the theory
+is computed. The current theory segment is written to file
+$name${\small{\tt Theory.sml}} in the current working directory.  The
+file $name${\small{\tt Theory.sig}}, which documents the contents of
+$name$, is also written to the current working directory.  Notice that
+the exported theory is not compiled by \HOL. That is left to an external
+tool, {\small\verb+Holmake+}, which maintains dependencies among
+collections of \HOL\ theory segments.
 
 \subsection{Functions for creating definitional extensions}\index{extension, of HOL logic@extension, of \HOL\ logic!definitional}\index{definitional extension, of HOL logic@definitional extension, of \HOL\ logic}\index{theories, in HOL logic@theories, in \HOL\ logic!extension of|(}
 \label{avra_definitional}
@@ -1832,11 +1838,11 @@ are declared in the theory {\small\verb%min%}: equality, implication, and a choi
 \index{ equality, in HOL logic@\ml{=} (equality, in
  \HOL\ logic)}\index{equality, in HOL logic@equality, in \HOL\ logic} 
 
-Equality ({\small\verb+$= : 'a -> 'a -> bool+}) parses as an infix, with binding
-precedence, 100 (which is low).  
+Equality ({\small\verb+$= : 'a -> 'a -> bool+}) parses as an infix with
+low binding precedence (100).  
 
-Implication ({\small\verb+$==> : bool -> bool -> bool+}) parsese as an
-infix with binding precedence 200, associating to the right. 
+Implication ({\small\verb+$==> : bool -> bool -> bool+}) parses as an
+right-associative infix with binding precedence 200. 
 
 
  Equality\index{equality, in HOL logic@equality, in \HOL\
@@ -2139,12 +2145,12 @@ right form.
 
 \section{Oracles}
 
-Hol98 extends the \LCF\ tradition by allowing the use of an \emph {oracle}
-mechanism which enables arbitrary formulas to become elements of the
-\verb+thm+ type. By use of this mechanism, Hol98 can utilize the results
-of arbitrary proof procedures. In spite of such liberalness, one
+Hol98 extends the \LCF\ tradition by allowing the use of an \emph
+{oracle} mechanism, enabling arbitrary formulas to become elements of
+the \verb+thm+ type. By use of this mechanism, Hol98 can utilize the
+results of arbitrary proof procedures. In spite of such liberalness, one
 can still make strong assertions about the security of ML objects of
-type \verb+thm+. 
+type \verb+thm+.
 
 To avoid unsoundness, a \emph{tag} is attached to any theorem
 coming from an oracle. This tag is propagated through every
@@ -2158,21 +2164,19 @@ have been proved solely by deductive steps in the HOL logic.
 A tagged theorem can be created via
 
 \begin{boxed}
-\begin{hol}
 \index{mk_oracle_thm@\ml{mk\_oracle\_thm}!type of}
 \begin{verbatim}
-    val mk_oracle_thm : tag -> term list * term -> thm
-\end{verbatim}\end{hol}\end{boxed}
+   mk_oracle_thm : tag -> term list * term -> thm
+\end{verbatim}\end{boxed}
 
 which directly creates the requested theorem and attaches the given tag to
 it. Tags may be created with
 
 \begin{boxed}
-\begin{hol}
 \index{Tag.read@\ml{Tag.read}!making tags}
 \begin{verbatim}
-     Tag.read : string -> tag.
-\end{verbatim}\end{hol}\end{boxed}
+   Tag.read : string -> tag.
+\end{verbatim}\end{boxed}
 
 As well as providing principled access to the results of external
 reasoners, tags are used to implement some useful `system' operations on
@@ -2183,8 +2187,8 @@ theorems, \eg, to use as test data for derived rules of inference.
 Another tag is used to implement so-called `validity checking' for tactics.
 
 The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
-true. For example, we have\footnote{Hol98 currently also uses tags for
-tracking the use of axioms in proofs.}
+true. 
+
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
 - Globals.show_tags := true;
@@ -2195,35 +2199,20 @@ tracking the use of axioms in proofs.}
 \end{verbatim}\end{session}\index{mk_thm@mk_thm)}
 
 There are three elements to the left of the turnstile in the fully printed
-representation of a theorem: the first two comprise the tags component and the
+representation of a theorem: the first two\footnote{Tags are also used for
+tracking the use of axioms in proofs.} comprise the tags component and the
 third is the standard assumption list. The tag component of a theorem
 can be extracted by
-\begin{boxed}
- \begin{verbatim}
+
+\begin{boxed} \begin{verbatim}
      Thm.tag : thm -> tag
- \end{verbatim}\end{boxed}
+\end{verbatim}\end{boxed}
 
 \noindent and prettyprinted by
 
 \begin{boxed} \begin{verbatim}
      Tag.pp : ppstream -> tag -> unit.
 \end{verbatim}\end{boxed}
-
-\noindent{\bf Remark}
-
-No serious attempt is made to prevent spoofing: a person may attach tag
-\verb+X+ on an assertion coming from a proof procedure named \verb+Y+ if
-desired. However, the tags for \verb+mk_thm+ and validity checking
-cannot be spoofed. 
-
-\noindent{\bf Remark}
-
-Some care should be taken with using oracles to bring in results of
-proof procedures for theories lacking a formalization in the \HOL\
-logic. The product of such procedures can be used in \HOL\ without damage;
-however, in the end it won't be clear --- at least in \HOL\ --- what has
-been proven.
-
 
 \section{The theory {\tt bool}}\label{boolfull}
 
@@ -2445,8 +2434,76 @@ t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
 \noindent Note that the system alway prints out conditionals in the "if $t_1$ then
 $t_2$ else $t_3$" form. 
 
-
-Discuss \verb+TYPE_DEFINITION+ here?
-
 A large number of theorems involving the logical constants are
-pre-proved in the theory {\small\verb+bool+}. 
+pre-proved in the theory {\small\verb+bool+}. The following are only a
+selection.
+
+\begin{boxed}\begin{verbatim}
+BOTH_EXISTS_AND_THM  |- !P Q. (?x. P /\ Q) = (?x. P) /\ ?x. Q
+
+BOTH_EXISTS_IMP_THM  |- !P Q. (?x. P ==> Q) = (!x. P) ==> ?x. Q
+
+BOTH_FORALL_IMP_THM  |- !P Q. (!x. P ==> Q) = (?x. P) ==> !x. Q
+    
+BOTH_FORALL_OR_THM   |- !P Q. (!x. P \/ Q) = (!x. P) \/ !x. Q
+    
+COND_ABS        |- !b f g. (\x. (if b then f x else g x)) = if b then f else g
+    
+COND_EXPAND     |- !b t1 t2. (if b then t1 else t2) = (~b \/ t1) /\ (b \/ t2)
+    
+COND_ID         |- !b t. (if b then t else t) = t
+    
+COND_RAND       |- !f b x y. f (if b then x else y) = if b then f x else f y
+    
+COND_RATOR      |- !b f g x. (if b then f else g) x = if b then f x else g x
+    
+DE_MORGAN_THM        |- !A B. (~(A /\ B) = ~A \/ ~B) /\ (~(A \/ B) = ~A /\ ~B)
+    
+ETA_THM              |- !M. (\x. M x) =  M
+
+EXISTS_OR_THM        |- !P Q. (?x. P x \/ Q x) = (?x. P x) \/ ?x. Q x
+
+FORALL_AND_THM       |- !P Q. (!x. P x /\ Q x) = (!x. P x) /\ !x. Q x
+    
+LEFT_AND_FORALL_THM  |- !P Q. (!x. P x) /\ Q = !x. P x /\ Q
+
+LEFT_EXISTS_AND_THM  |- !P Q. (?x. P x /\ Q) = (?x. P x) /\ Q
+    
+LEFT_EXISTS_IMP_THM  |- !P Q. (?x. P x ==> Q) = (!x. P x) ==> Q
+    
+LEFT_FORALL_IMP_THM  |- !P Q. (!x. P x ==> Q) = (?x. P x) ==> Q
+    
+LEFT_FORALL_OR_THM   |- !Q P. (!x. P x \/ Q) = (!x. P x) \/ Q
+    
+LEFT_OR_EXISTS_THM   |- !P Q. (?x. P x) \/ Q = ?x. P x \/ Q
+    
+NOT_EXISTS_THM       |- !P. ~(?x. P x) = !x. ~P x
+    
+NOT_FORALL_THM       |- !P. ~(!x. P x) = ?x. ~P x
+\end{verbatim}\end{boxed}
+
+\begin{boxed}\begin{verbatim}
+RIGHT_AND_FORALL_THM |- !P Q. P /\ (!x. Q x) = !x. P /\ Q x
+    
+RIGHT_AND_OVER_OR    |- !A B C. (B \/ C) /\ A = B /\ A \/ C /\ A
+    
+RIGHT_EXISTS_AND_THM |- !P Q. (?x. P /\ Q x) = P /\ ?x. Q x
+    
+RIGHT_EXISTS_IMP_THM |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
+    
+RIGHT_FORALL_IMP_THM |- !P Q. (!x. P ==> Q x) = P ==> !x. Q x
+    
+RIGHT_FORALL_OR_THM  |- !P Q. (!x. P \/ Q x) = P \/ !x. Q x
+    
+RIGHT_OR_EXISTS_THM  |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
+    
+RIGHT_FORALL_IMP_THM |- !P Q. (!x. P ==> Q x) = P ==> !x. Q x
+    
+RIGHT_FORALL_OR_THM  |- !P Q. (!x. P \/ Q x) = P \/ !x. Q x
+    
+RIGHT_OR_EXISTS_THM  |- !P Q. P \/ (?x. Q x) = ?x. P \/ Q x
+    
+SELECT_REFL          |- !x. (@y. y = x) = x
+
+SELECT_UNIQUE        |- !P x. (!y. P y = y = x) ==> ($@ P = x)
+\end{verbatim}\end{boxed}
