@@ -271,14 +271,9 @@ fun gen_variant P caller =
       fun vary vlist (Fv(Name,Ty)) =
           let val next = Lexis.nameStrm Name
               val L = map (var_name caller) vlist
-              fun away A [] s = s
-                | away A (h::t) s =
-                   case String.compare(h,s)
-                    of LESS => away A t s
-                     | EQUAL => away [] (A@t) (next())
-                     | GREATER => away (h::A) t s
+              fun away s = if mem s L then away (next()) else s
               fun loop name =
-                 let val s = away [] L name
+                 let val s = away name
                  in if P s then loop (next()) else s
                  end
           in mk_var(loop Name, Ty)
@@ -780,19 +775,21 @@ fun raw_match tyavoids avoidset =
                               else MERR"double bind on variable"),
              tymatch Ty (type_of tm) tyS)
        | RM (Const(c1, ty1)) (Const(c2, ty2)) (tmS,tyS)
-          = (if c1 <> c2 then MERR "4" else 
+          = (if c1 <> c2 then MERR "different constants" else 
              case (ty1,ty2)
               of (GRND _, POLY _) => MERR"ground const vs. polymorphic const"
-               | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) else MERR"6"
+               | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) 
+                           else MERR"const-const with different (ground) types"
                | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
                | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
        | RM (Abs(Fv(_,ty1),M)) 
             (Abs(Fv(_,ty2),N)) (tmS,tyS) = RM M N (tmS, tymatch ty1 ty2 tyS)
-       | RM (Comb(M,N)) (Comb(P,Q)) S = RM M P (RM N Q S)
-       | RM (Bv i) (Bv j) S         = if i=j then S else MERR"Bound var. depth"
-       | RM (pat as Clos _) ob S    = RM (push_clos pat) ob S
-       | RM pat (ob as Clos _) S    = RM pat (push_clos ob) S
-       | RM all other things        = MERR "different constructors"
+       | RM (Comb(M,N)) 
+            (Comb(P,Q)) S        = RM M P (RM N Q S)
+       | RM (Bv i) (Bv j) S      = if i=j then S else MERR"Bound var. depth"
+       | RM (pat as Clos _) ob S = RM (push_clos pat) ob S
+       | RM pat (ob as Clos _) S = RM pat (push_clos ob) S
+       | RM all other things     = MERR "different constructors"
  in
     fn pat => fn ob => fn ((S,Ids),(tyS,tyIds)) =>
        RM pat ob ((S,HOLset.union(Ids,avoidset)),

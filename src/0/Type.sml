@@ -173,17 +173,6 @@ end;
 
 
 (*---------------------------------------------------------------------------
-     Does a type variable occur in a type
- ---------------------------------------------------------------------------*)
-
-fun type_var_in v =
- if is_vartype v
- then let fun occ (Tyapp(_,Args)) = Lib.exists occ Args
-            | occ w = (v=w)
-      in occ end
- else raise ERR "type_var_occurs" "not a type variable";
-
-(*---------------------------------------------------------------------------
     Does there exist a type variable v in a type such that P(v) holds.
     Returns false if there are no type variables in the type.
  ---------------------------------------------------------------------------*)
@@ -192,6 +181,14 @@ fun exists_tyvar P =
  let fun occ (w as Tyv _) = P w
        | occ (Tyapp(_,Args)) = Lib.exists occ Args
  in occ end;
+
+(*---------------------------------------------------------------------------
+     Does a type variable occur in a type
+ ---------------------------------------------------------------------------*)
+
+fun type_var_in v =
+  if is_vartype v then exists_tyvar (equal v)
+                  else raise ERR "type_var_occurs" "not a type variable"
 
 (*---------------------------------------------------------------------------*
  * Substitute in a type, trying to preserve existing structure.              *
@@ -207,7 +204,7 @@ fun ty_sub [] _ = SAME
        of NONE    => SAME
         | SOME ty => DIFF ty
 
-fun type_subst theta = delta_apply (ty_sub theta);
+fun type_subst theta = delta_apply (ty_sub theta)
 
 
 (*---------------------------------------------------------------------------*
@@ -262,7 +259,7 @@ fun compare (Tyv s1, Tyv s2) = String.compare (s1,s2)
         |   x   => x;
 
 (*---------------------------------------------------------------------------
-     Automatically generated type variables. The goofy names make
+     Automatically generated type variables. The unusual names make
      it unlikely that the names will clash with user-created
      type variables.
  ---------------------------------------------------------------------------*)
