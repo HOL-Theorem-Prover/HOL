@@ -4724,7 +4724,7 @@ F`}
 
 fun Nonequality p = extract (nonequality ()) p;
 fun Equality    p = extract (equality ())    p;
-fun UNLINK        p = extract (tptp ())        p;
+fun mlibTptp        p = extract (tptp ())        p;
 
 fun exclude l =
   List.filter (fn {name, ...} : 'a problem => not (mlibUseful.mem name l));
@@ -4816,12 +4816,12 @@ Equality "P48",
 Equality "P49",
 Equality "AGATHA",
 
-UNLINK "LCL009-1",
-UNLINK "COL060-3",
-UNLINK "COL058-2",
-UNLINK "LCL107-1",
-UNLINK "BOO021-1",
-UNLINK "GRP128-4.003"
+mlibTptp "LCL009-1",
+mlibTptp "COL060-3",
+mlibTptp "COL058-2",
+mlibTptp "LCL107-1",
+mlibTptp "BOO021-1",
+mlibTptp "GRP128-4.003"
 
 ];
 

@@ -62,4 +62,7 @@ val FOL_NORM      : thm list -> string list * thm list  (* Definitional CNF *)
 val FOL_NORM_TAC  : tactic                  (* Stripping + Elimination of @ *)
 val FOL_NORM_TTAC : (string list * thm list -> tactic) -> thm list -> tactic
 
+(* Reading in TPTP problems *)
+val tptp_read : {filename : string} -> term
+
 end

@@ -14,7 +14,7 @@ app load
 structure mlibMetis :> mlibMetis =
 struct
 
-open mlibUseful mlibTerm mlibThm mlibMeter mlibCanon mlibSolver;
+open mlibUseful mlibTerm mlibThm mlibMeter mlibSolver;
 
 infix |-> ::> @> oo ## ::* ::@;
 
@@ -184,30 +184,16 @@ val settings = ref defaults;
 
 val limit : limit ref = ref {time = NONE, infs = NONE};
 
-local
-  fun eq_axs g = if eq_occurs g then eq_axioms g else [];
-  fun raw a b = (axiomatize a, axiomatize b, I);
-  fun semi g a b = (eq_axs g @ axiomatize a, axiomatize (Not b), I);
-  fun full g = ([], eq_axiomatize (Not g), I);
-  fun is_raw a b = is_cnf a andalso is_cnf b;
-  fun is_semi a b = is_cnf a andalso is_clause b andalso b <> False;
-in
-  fun prove g =
+fun prove goal =
     let
-      val g = generalize g
-      val (thms,hyps,sos) =
-        case g of
-          Imp (a, Imp (b, False)) => if is_raw a b then raw a b else full g
-        | Imp (a,b) => if is_semi a b then semi g a b else full g
-        | _ => full g
-      val solv = sos (metis' (!settings))
+      val {thms,hyps} = mlibCanon.clauses goal
+      val solv = metis' (!settings)
     in
       refute (initialize solv {limit = !limit, thms = thms, hyps = hyps})
     end;
-end;
 
 fun query database =
   initialize M.prolog
-  {thms = axiomatize database, hyps = [], limit = unlimited};
+  {thms = mlibCanon.axiomatize database, hyps = [], limit = unlimited};
 
 end

@@ -560,4 +560,42 @@ fun FOL_NORM_TTAC tac ths =
     THEN POP_ASSUM_LIST (tac o timed_fn "theorem normalization" f)
   end;
 
+(* ------------------------------------------------------------------------- *)
+(* Reading in TPTP problems                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+(* Mapping first-order formulas to HOL terms *)
+
+local
+  open mlibTerm boolSyntax;
+
+  fun h v = Term.mk_var (v, Type.alpha);
+
+  fun g _ (Var v) = h v
+    | g ty (Fn (f,a)) =
+      let
+        val a' = map (g Type.alpha) a
+        val ty = Lib.funpow (length a) (fn x => Type.--> (Type.alpha,x)) ty
+        val f' = Term.mk_var (f,ty)
+      in
+        Term.list_mk_comb (f',a')
+      end;
+
+  fun f True = T
+    | f False = F
+    | f (Atom (Fn ("=",[x,y]))) = mk_eq (g Type.alpha x, g Type.alpha y)
+    | f (Atom tm) = g Type.bool tm
+    | f (Not fm) = mk_neg (f fm)
+    | f (And (p,q)) = mk_conj (f p, f q)
+    | f (Or (p,q)) = mk_disj (f p, f q)
+    | f (Imp (p,q)) = mk_imp (f p, f q)
+    | f (Iff (p,q)) = mk_eq (f p, f q)
+    | f (Forall (v,p)) = mk_forall (h v, f p)
+    | f (Exists (v,p)) = mk_exists (h v, f p);
+
+  val fol_to_hol = f;
+in
+  val tptp_read = fol_to_hol o mlibTptp.read;
+end;
+
 end

@@ -38,8 +38,14 @@ fun chat s = (trace s; true)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun drop_after _ S.NIL = S.NIL
-  | drop_after p (S.CONS (x,xs)) = S.CONS (x, if p x then K S.NIL else xs);
+fun drop_after p =
+    let
+      fun f S.NIL = S.NIL
+        | f (S.CONS (x,xs)) = S.CONS (x, if p x then K S.NIL else g xs)
+      and g xs () = f (xs ())
+    in
+      f
+    end;
 
 fun time_to_string t =
   let val dp = if t < 9.95 then 1 else 0
@@ -235,12 +241,11 @@ fun schedule check slice read stat =
              val node =
                Subnode {name = name, used = used, cost = cost, solns = solns}
              val nodes = update_nth (K node) n nodes
-             val _ =
-               Option.isSome res andalso
-               (chatting 3 andalso chat (stat true nodes);
-                chatting 1 andalso chat "#\n")
            in
-             S.CONS (res, fn () => sched nodes)
+             if not (Option.isSome res) then sched nodes else
+               (chatting 3 andalso chat (stat true nodes);
+                chatting 1 andalso chat "#\n";
+                S.CONS (res, fn () => sched nodes))
            end)
   in
     sched

@@ -226,8 +226,26 @@ val eq_axioms =
     fn fm => eqs @ funs fm @ rels fm
   end;
 
-fun eq_axiomatize fm =
-  (if eq_occurs fm then append (eq_axioms fm) else I) (axiomatize fm);
+local
+  fun eq_axs g = if eq_occurs g then eq_axioms g else [];
+  fun raw a b = (axiomatize a, axiomatize b);
+  fun semi g a b = (eq_axs g @ axiomatize a, axiomatize (Not b));
+  fun full g = ([], eq_axs g @ axiomatize (Not g));
+  fun is_raw a b = is_cnf a andalso is_cnf b;
+  fun is_semi a b = is_cnf a andalso is_clause b andalso b <> False;
+in
+  fun clauses g =
+      let
+        val g = generalize g
+        val (thms,hyps) =
+            case g of
+              Imp (a, Imp (b, False)) => if is_raw a b then raw a b else full g
+            | Imp (a,b) => if is_semi a b then semi g a b else full g
+            | _ => full g
+      in
+        {thms = thms, hyps = hyps}
+      end;
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Categorizing sets of clauses.                                             *)
@@ -238,7 +256,7 @@ datatype equal = Non_equality | Equality | Pure_equality;
 datatype horn = Trivial | Unit | Both_horn | Horn | Negative_horn | Non_horn;
 type category = {prop : prop, equal : equal, horn : horn};
 
-fun categorize_cnf fms =
+fun categorize_clauses fms =
   let
     val cls = map (strip_disj o snd o strip_forall) fms
     val fm = list_mk_conj fms
@@ -273,8 +291,6 @@ fun categorize_cnf fms =
   in
     {prop = prop, equal = eq, horn = horn}
   end;
-
-val categorize_goal = categorize_cnf o strip_conj o cnf o generalize o Not;
 
 local
   fun prop Propositional = "propositional"

@@ -336,11 +336,13 @@ val FULL_METIS_TAC = X_METIS_TAC FULL_METIS_TTAC;
 (* Simple user interface to the metis prover.                                *)
 (* ------------------------------------------------------------------------- *)
 
-fun FO_METIS_PROVE   ths goal = prove (goal, FO_METIS_TAC   ths);
-fun FOT_METIS_PROVE  ths goal = prove (goal, FOT_METIS_TAC  ths);
-fun HO_METIS_PROVE   ths goal = prove (goal, HO_METIS_TAC   ths);
-fun HOT_METIS_PROVE  ths goal = prove (goal, HOT_METIS_TAC  ths);
-fun FULL_METIS_PROVE ths goal = prove (goal, FULL_METIS_TAC ths);
+fun prover ttac ths goal = Tactical.default_prover (goal, ttac ths);
+
+val FO_METIS_PROVE   = prover FO_METIS_TAC;
+val FOT_METIS_PROVE  = prover FOT_METIS_TAC;
+val HO_METIS_PROVE   = prover HO_METIS_TAC;
+val HOT_METIS_PROVE  = prover HOT_METIS_TAC;
+val FULL_METIS_PROVE = prover FULL_METIS_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Uses heuristics to apply one of FO_, HO_ or FULL_.                        *)
@@ -427,6 +429,6 @@ fun METIS_TTAC (cs,ths) =
 
 val METIS_TAC = X_METIS_TAC METIS_TTAC;
 
-fun METIS_PROVE ths goal = prove (goal, METIS_TAC ths);
+val METIS_PROVE = prover METIS_TAC;
 
 end

@@ -41,7 +41,8 @@ sub avoid_file {
     return ($file =~ /selftest(\.sml)?$/ or
             $file =~ /holmake_interactive(\.sml)?$/ or
             $file =~ /mkword(\.sml)?$/ or
-            $file =~ /Script(\.sml)?$/);
+            $file =~ /Script(\.sml)?$/ or
+            $file =~ /trace_checker(\.sml)?$/);
 }
 
 sub check {
@@ -130,6 +131,15 @@ sub process_files {
         }
     }
     close DEPS;
+
+    # extra dependencies
+    foreach $module (keys %files) {
+        if ($module =~ /word(\d+)Lib/) {
+            $dep = "word$1Theory";
+            $d = $deps{$module};
+            $deps{$module} = (defined $d) ? ($d . " " . $dep) : $dep;
+        }
+    }
 
     while (0 < scalar (keys %files)) {
         foreach $module (sort { $a cmp $b; } keys %files) {

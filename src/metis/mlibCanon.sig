@@ -34,10 +34,10 @@ val is_clause : formula -> bool
 val is_cnf    : formula -> bool
 
 (* Converting to clauses *)
-val clausal       : formula -> formula list list
-val axiomatize    : formula -> thm list
-val eq_axioms     : formula -> thm list
-val eq_axiomatize : formula -> thm list    (* Adds equality axioms if needed *)
+val clausal    : formula -> formula list list
+val axiomatize : formula -> thm list
+val eq_axioms  : formula -> thm list
+val clauses    : formula -> {thms : thm list, hyps : thm list}
 
 (* Categorizing sets of clauses *)
 datatype prop = Propositional | Effectively_propositional | Non_propositional
@@ -45,8 +45,7 @@ datatype equal = Non_equality | Equality | Pure_equality
 datatype horn = Trivial | Unit | Both_horn | Horn | Negative_horn | Non_horn
 type category = {prop : prop, equal : equal, horn : horn}
 
-val categorize_cnf     : formula list -> category
-val categorize_goal    : formula -> category
+val categorize_clauses : formula list -> category
 val category_to_string : category -> string
 
 end

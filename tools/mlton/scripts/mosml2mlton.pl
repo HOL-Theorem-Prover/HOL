@@ -1,9 +1,11 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 use IO::Handle;
 STDOUT->autoflush(1);
 
 sub unquotify {
+    (scalar @_ == 0) or die;
+
     if (scalar @quotes == 0) { return; }
 
     $pre = "[";
@@ -47,6 +49,23 @@ sub unquotify {
     @quotes = ();
 }
 
+sub check_state {
+    (scalar @_ == 0) or die;
+
+    if ($state eq "quote") {
+        die "$PROG: EOF inside \` quote";
+    }
+    elsif ($state eq "dquote") {
+        die "$PROG: EOF inside \" quote";
+    }
+    elsif ($state eq "comment") {
+        die "$PROG: EOF inside comment";
+    }
+    else {
+        ($state eq "normal") or die;
+    }
+}
+
 $PROG = "mosml2mlton.pl";
 $state = "normal";
 $comment = 0;
@@ -58,6 +77,14 @@ while ($line = <STDIN>) {
         or warn "$PROG: no terminating newline\nline = '$line'\n";
 
     $line =~ s/General\.//g;
+
+    if ($line =~ /\(\*\#line 0\.0/) { check_state (); }
+
+    if ($state eq "dquote") {
+        ($line =~ s/^(\s*\\)//)
+            or die "no \\ at start of line in string literal";
+        print $1;
+    }
 
     while (1) {
         if ($state eq "quote") {
@@ -112,7 +139,7 @@ while ($line = <STDIN>) {
                     }
                     else {
                         ($escapes eq "\\") or die;
-                        ($state eq "dquote") or die;
+                        ($state eq "dquote") or die "bad line: $line";
                     }
                 }
             }
@@ -121,21 +148,14 @@ while ($line = <STDIN>) {
             }
         }
         else {
+            if ($state eq "dquote") {
+                ($line =~ /\\\s*$/)
+                    or die "no \\ at end of line in string literal";
+            }
             print "$line\n";
             last;
         }
     }
 }
 
-if ($state eq "quote") {
-    warn "$PROG: EOF inside \` quote\n";
-}
-elsif ($state eq "dquote") {
-    warn "$PROG: EOF inside \" quote\n";
-}
-elsif ($state eq "comment") {
-    warn "$PROG: EOF inside comment\n";
-}
-else {
-    ($state eq "normal") or die;
-}
+check_state ();

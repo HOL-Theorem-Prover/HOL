@@ -43,7 +43,7 @@ val metis  : solver_node                (* Uses defaults *)
 (* A user-friendly interface *)
 val settings : parameters ref           (* Initially defaults *)
 val limit    : limit ref                (* Initially unlimited *)
-val prove    : formula -> thm option    (* Adds eq axioms, converts to CNF *)
-val query    : formula -> solver        (* Prolog query engine *)
+val prove    : formula -> thm option    (* Axiomatizes, then runs metis *)
+val query    : formula -> solver        (* Axiomatizes, then runs prolog *)
 
 end

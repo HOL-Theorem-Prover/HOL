@@ -5,8 +5,8 @@ STDOUT->autoflush(1);
 
 sub mblock {
     foreach $file (@_) {
-        print "(*#line 0.0 \"$file\"*)\n";
-        system "cat $file";
+        print "\n(*#line 0.0 \"$file\"*)\n";
+        system "cat $file | ../../bin/unquote";
         print STDERR ".";
     }
 }

@@ -5,10 +5,10 @@
 
 .PHONY: all clean reallyclean world
 
-all: basic metis psl
+all: basic metis psl netsem
 
 clean:
-	rm -f bin/basic* bin/metis* bin/psl*
+	rm -f bin/basic* bin/metis* bin/psl* bin/netsem*
 
 reallyclean: clean
 	rm -f Makefile.*
@@ -20,9 +20,12 @@ world: clean all
 
 # Compiling to native code
 
+MOSMLC = mosmlc -standalone -I ../../sigobj
+
 MLPREP = scripts/milton.pl
 
 UNQUOTE = ../../bin/unquote
+UNQUOTE = cat
 
 MOSML2MLTON = scripts/mosml2mlton.pl
 
@@ -45,7 +48,7 @@ PRE = \
 
 include Makefile.src
 
-POST = src/std.prelude
+PRELUDE = src/std.prelude
 
 # Basic HOL tests
 
@@ -61,7 +64,7 @@ BASIC1 = test/basic-test1.sml
 bin/basic1: bin/basic1.sml
 	$(MLC) $+
 
-bin/basic1.sml: $(PRE) $(BASIC) $(POST) $(BASIC1)
+bin/basic1.sml: $(PRE) $(BASIC) $(PRELUDE) $(BASIC1)
 	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
 	wc $@
 
@@ -73,50 +76,85 @@ BASIC2 = test/basic-test2.sml
 bin/basic2: bin/basic2.sml
 	$(MLC) $+
 
-bin/basic2.sml: $(PRE) $(BASIC) $(POST) $(BASIC2)
+bin/basic2.sml: $(PRE) $(BASIC) $(PRELUDE) $(BASIC2)
 	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
 	wc $@
 
 bin/basic2.out: bin/basic2
 	$+ | tee $@
 
-# Metis test problems
+# Metis
 
-metis: bin/metis1.out
+metis: bin/metis-test.out bin/metis-tptp bin/metis-itptp
 
 Makefile.metis:
-	scripts/deps.pl METIS ../../src/portableML ../../src/experimental-kernel ../../src/parse ../../src/bool ../../src/goalstack ../../src/taut ../../src/compute/src ../../src/q ../../src/combin ../../src/marker ../../src/labels ../../src/lite ../../src/refute ../../src/simp/src ../../src/metis ../../src/meson/src ../../src/basicProof ../../src/relation ../../src/pair/src ../../src/sum ../../src/one ../../src/option ../../src/num/theories ../../src/num/reduce/src ../../src/num/arith/src ../../src/num ../../src/IndDef ../../src/datatype/parse ../../src/datatype/equiv ../../src/datatype/record ../../src/datatype ../../src/list/src ../../src/tfl/src ../../src/unwind ../../src/boss ../../src/llist ../../src/pred_set/src >Makefile.metis
+	scripts/deps.pl METIS_SRC ../../src/portableML ../../src/experimental-kernel ../../src/parse ../../src/bool ../../src/goalstack ../../src/taut ../../src/compute/src ../../src/q ../../src/combin ../../src/marker ../../src/labels ../../src/lite ../../src/refute ../../src/simp/src ../../src/metis >Makefile.metis
+	scripts/deps.pl METIS_THEORIES ../../src/meson/src ../../src/basicProof ../../src/relation ../../src/pair/src ../../src/sum ../../src/one ../../src/option ../../src/num/theories ../../src/num/reduce/src ../../src/num/arith/src ../../src/num ../../src/IndDef ../../src/datatype/parse ../../src/datatype/equiv ../../src/datatype/record ../../src/datatype ../../src/list/src ../../src/tfl/src ../../src/unwind ../../src/boss ../../src/llist ../../src/pred_set/src >>Makefile.metis
 
 include Makefile.metis
 
-METIS1 = test/mlibProblem.sig test/mlibProblem.sml test/metis-test.sml
+METIS_TEST = test/mlibProblem.sig test/mlibProblem.sml test/metis-test.sml
 
-bin/metis1: bin/metis1.sml
-	$(MLC) $+
-
-bin/metis1.sml: $(PRE) $(METIS) $(POST) $(METIS1)
+bin/metis-test.sml: $(PRE) $(METIS_SRC) $(METIS_THEORIES) $(PRELUDE) $(METIS_TEST)
 	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
 	wc $@
 
-bin/metis1.out: bin/metis1
+bin/metis-test: bin/metis-test.sml
+	$(MLC) $+
+
+bin/metis-test.out: bin/metis-test
 	$+ | tee $@
+
+METIS_TPTP = test/metis-tptp.sml
+
+bin/metis-tptp.sml: $(PRE) $(METIS_SRC) $(METIS_TPTP)
+	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
+	wc $@
+
+bin/metis-tptp: bin/metis-tptp.sml
+	$(MLC) $+
+
+bin/metis-itptp: $(METIS_TPTP)
+	$(MOSMLC) -o $@ -toplevel $(METIS_TPTP)
 
 # PSL formulas
 
-psl: bin/psl1.out
+psl: bin/psl.out
 
 Makefile.psl:
 	scripts/deps.pl PSL ../../examples/PSL/regexp ../../examples/PSL/path ../../examples/PSL/1.01/official-semantics ../../examples/PSL/1.01/executable-semantics >Makefile.psl
 
 include Makefile.psl
 
-PSL1 = ../../examples/PSL/1.01/executable-semantics/test
+PSL = ../../examples/PSL/1.01/executable-semantics/test
 
-bin/psl1: bin/psl1.sml
-	$(MLC) $+
-
-bin/psl1.sml: $(PRE) $(SRC) $(PSL) $(POST) $(PSL1)
+bin/psl.sml: $(PRE) $(SRC) $(PSL) $(PRELUDE) $(PSL)
 	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
 
-bin/psl1.out: bin/psl1
+bin/psl: bin/psl.sml
+	$(MLC) $+
+
+bin/psl.out: bin/psl
 	$+ | tee $@
+
+# Checking TCP traces with netsem
+
+netsem: bin/netsem
+
+Makefile.netsem:
+	scripts/deps.pl NETSEM_SRC ../../src/portableML ../../src/experimental-kernel ../../src/parse ../../src/bool ../../src/goalstack ../../src/taut ../../src/compute/src ../../src/q ../../src/combin ../../src/marker ../../src/labels ../../src/lite ../../src/refute ../../src/simp/src ../../src/metis ../../src/meson/src ../../src/basicProof ../../src/relation ../../src/pair/src ../../src/sum ../../src/one ../../src/option ../../src/num/theories ../../src/num/reduce/src ../../src/num/arith/src ../../src/num ../../src/IndDef ../../src/datatype/parse ../../src/datatype/equiv ../../src/datatype/record ../../src/datatype ../../src/list/src ../../src/tfl/src ../../src/unwind ../../src/boss ../../src/n_bit ../../src/string ../../src/pred_set/src ../../src/ring/src ../../src/integer ../../src/finite_map ../../src/hol88 ../../src/real ../../src/bag >Makefile.netsem
+	scripts/deps.pl NETSEM netsem >>Makefile.netsem
+
+include Makefile.netsem
+
+bin/netsem.sml: $(PRE) $(NETSEM_SRC) $(NETSEM)
+	@wc $(PRE)
+	@echo
+	@wc $(NETSEM_SRC)
+	@echo
+	@wc $(NETSEM)
+	@echo
+	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
+
+bin/netsem: bin/netsem.sml
+	$(MLC) $+
