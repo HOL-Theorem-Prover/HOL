@@ -453,20 +453,17 @@ val ALU6_def = Define`
      ALU_logic (if BIT 0 opc then alub else alua)
    else if (ic = ldr) \/ (ic = str) then
      let P = BIT 3 opc and U = BIT 2 opc in
-       if is = t3 then
-         if ~P then ALU_logic alua  else
-         if U  then ADD alua alub F else SUB alua alub T
-       else if is = t4 then
+       if (is = t3) /\ ~P then
+         ALU_logic alua
+       else if (is = t3) \/ (is = t4) then
          if U then ADD alua alub F else SUB alua alub T
        else if (is = t5) /\ (ic = ldr) then
          ALU_logic alub
-       else 
+       else
          ARB
-   else if ic = br then
-     if is = t3 then ADD alua alub F               else
-     if is = t4 then ALU_logic alua                else
-     if is = t5 then ADD (NOT alua) alub F  else ARB
-   else if ic = swi_ex then
+   else if (is = t3) /\ (ic = br) then
+     ADD alua alub F
+   else if (ic = br) \/ (ic = swi_ex) then
      if is = t4 then ALU_logic alua                else
      if is = t5 then ADD (NOT alua) alub F  else ARB
    else if ic = swp then
