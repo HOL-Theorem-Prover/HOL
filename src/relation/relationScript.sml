@@ -1298,6 +1298,16 @@ val RUNION = new_definition(
   ``(RUNION) R1 R2 x y = R1 x y \/ R2 x y``);
 val _ = set_fixity "RUNION" (Infixl 500)
 
+val RUNION_COMM = store_thm(
+  "RUNION_COMM",
+  ``R1 RUNION R2 = R2 RUNION R1``,
+  SRW_TAC [][RUNION, FUN_EQ_THM] THEN PROVE_TAC []);
+
+val RUNION_ASSOC = store_thm(
+  "RUNION_ASSOC",
+  ``R1 RUNION (R2 RUNION R3) = (R1 RUNION R2) RUNION R3``,
+  SRW_TAC [][RUNION, FUN_EQ_THM] THEN PROVE_TAC []);
+
 (* ----------------------------------------------------------------------
     relational intersection
    ---------------------------------------------------------------------- *)
@@ -1306,6 +1316,17 @@ val RINTER = new_definition(
   "RINTER",
   ``(RINTER) R1 R2 x y = R1 x y /\ R2 x y``);
 val _ = set_fixity "RINTER" (Infixl 600)
+
+val RINTER_COMM = store_thm(
+  "RINTER_COMM",
+  ``R1 RINTER R2 = R2 RINTER R1``,
+  SRW_TAC [][RINTER, FUN_EQ_THM] THEN PROVE_TAC []);
+
+val RINTER_ASSOC = store_thm(
+  "RINTER_ASSOC",
+  ``R1 RINTER (R2 RINTER R3) = (R1 RINTER R2) RINTER R3``,
+  SRW_TAC [][RINTER, FUN_EQ_THM] THEN PROVE_TAC []);
+
 
 (* ----------------------------------------------------------------------
     relational complement
