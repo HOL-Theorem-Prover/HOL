@@ -479,9 +479,8 @@ generate.
 
 \subsection{Parser tricks and magic}
 
-Here we describe how to achieve some useful effects with the new
-``Taupo'' parser in \holn{} available in releases from \mbox{Taupo-1}
-onwards.
+Here we describe how to achieve some useful effects with the
+parser in \holn{}.
 
 \begin{description}
 \item [Mix-fix syntax for {\it if-then-else}:] The first step in
@@ -546,14 +545,9 @@ val _ = add_rule {term_name = "SUB", fixity = Closefix,
   one-for-one substitution of one string for another, one can't use
   the grammar/syntax phase of parsing to do this.  Instead, one can
   use the overloading mechanism.  For example, let us alias
-  \texttt{MEM} for \texttt{IS\_EL}.  First we should allow for
-  overloading on the new name at the exact type of the old.  Thus:
-  \begin{verbatim}
-val _ = allow_for_overloading_on ("MEM",
-                                  Type`:'a -> 'a list -> bool`);
-\end{verbatim}
-  \noindent The next step is to overload the original constant for the
-  new name:
+  \texttt{MEM} for \texttt{IS\_EL}.  We need to use the function
+  \texttt{overload\_on} to overload the original constant for the new
+  name:
   \begin{verbatim}
 val _ = overload_on ("MEM", Term`IS_EL`);
 \end{verbatim}

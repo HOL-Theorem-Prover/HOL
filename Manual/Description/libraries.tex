@@ -599,14 +599,13 @@ infix parsing status of \verb+&&+ and ``{\tt by}'' must be re-asserted
 by the user.
 \section{Record types}
 
-Record types are convenient ways of bundling together a number of component
-types, and giving those components names so as to facilitate access to
-them.  Record types are semantically equivalent to big pair
-(cross-product) types, but the ability to label the fields with names of
-one's own choosing is a great convenience.  Record types as implemented
-in \holn{} are similar to C's {\tt struct} types and to Pascal's records.
-However, the current HOL implementation doesn't allow the equivalent of
-variant records, nor for records to be recursive.
+Record types are convenient ways of bundling together a number of
+component types, and giving those components names so as to facilitate
+access to them.  Record types are semantically equivalent to big pair
+(cross-product) types, but the ability to label the fields with names
+of one's own choosing is a great convenience.  Record types as
+implemented in \holn{} are similar to C's {\tt struct} types and to
+Pascal's records.
 
 Done correctly, record types provide useful maintainability features.
 If one can always access the {\tt fieldn} field of a record type by
