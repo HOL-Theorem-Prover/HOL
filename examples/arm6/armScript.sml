@@ -1,4 +1,4 @@
-(* app load ["prim_recTheory","combinTheory","onestepTheory","bitsTheory","word32Theory"]; *)
+(* app load ["onestepTheory","bitsTheory","word32Theory"]; *)
 open HolKernel boolLib Q Parse bossLib prim_recTheory combinTheory
      onestepTheory bitsTheory word32Theory;
 
@@ -13,25 +13,28 @@ val _ = overload_on("w32",``n2w``);
 (* -------------------------------------------------------- *)
 
 val _ = Hol_datatype `word30 = w30 of num`;
+val _ = Hol_datatype `register =
+ r0     | r1     | r2      | r3      | r4      | r5      | r6      | r7  |
+ r8     | r9     | r10     | r11     | r12     | r13     | r14     | r15 |
+ r8_fiq | r9_fiq | r10_fiq | r11_fiq | r12_fiq | r13_fiq | r14_fiq |
+                                                 r13_irq | r14_irq |
+                                                 r13_svc | r14_svc |
+                                                 r13_abt | r14_abt |
+                                                 r13_und | r14_und`;
+val _ = Hol_datatype `spsr = spsr_fiq | spsr_irq | spsr_svc | spsr_abt | spsr_und`;
+ 
+val _ = type_abbrev("mem", ``:word30->word32``);
+val _ = type_abbrev("reg", ``:register->word32``);
+val _ = Hol_datatype `psr = PSR of word32=>(spsr->word32)`;
+ 
+val _ = Hol_datatype `state_ARM = ARM of mem=>reg=>psr`;
+ 
+(* -------------------------------------------------------- *)
+ 
+val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | safe`;
+val _ = Hol_datatype `condition = EQ | CS | MI | VS | HI | GE | GT | AL `;
 val _ = Hol_datatype `exception = reset | undefined | software | address |
                                   pabort | dabort | interrupt | fast`;
-val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | safe`;
-val _ = Hol_datatype `spsr = spsr_fiq | spsr_irq | spsr_svc | spsr_abt | spsr_und`;
-val _ = Hol_datatype `reg_usr = w4 of num`;
-val _ = Hol_datatype `reg_fiq = r8_fiq | r9_fiq | r10_fiq | r11_fiq | r12_fiq |
-                                r13_fiq | r14_fiq`;
-val _ = Hol_datatype `reg_irq = r13_irq | r14_irq`;
-val _ = Hol_datatype `reg_svc = r13_svc | r14_svc`;
-val _ = Hol_datatype `reg_abt = r13_abt | r14_abt`;
-val _ = Hol_datatype `reg_und = r13_und | r14_und`;
-val _ = Hol_datatype `reg = REG of (reg_usr->word32)=>(reg_fiq->word32)=>(reg_irq->word32)=>
-                                   (reg_svc->word32)=>(reg_abt->word32)=>(reg_und->word32)`;
-val _ = Hol_datatype `psr = PSR of word32=>(spsr->word32)`;
-val _ = type_abbrev("mem", ``:word30->word32``);
-val _ = Hol_datatype `state_ARM = ARM of mem=>reg=>psr`;
-
-val _ = Hol_datatype `condition = EQ | CS | MI | VS | HI | GE | GT | AL`;
-
 val _ = Hol_datatype `iclass = swp | mrs_msr | data_proc | reg_shift |
                                ldr | str | br | swi_ex | undef | unexec`;
 
@@ -121,42 +124,28 @@ val SPSR_WRITE_def = Define`
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-val NUM_REG_fiq_def = Define `NUM_REG_fiq n = num2reg_fiq (n - 8)`;
-val NUM_REG_irq_def = Define `NUM_REG_irq n = num2reg_irq (n - 13)`;
-val NUM_REG_svc_def = Define `NUM_REG_svc n = num2reg_svc (n - 13)`;
-val NUM_REG_abt_def = Define `NUM_REG_abt n = num2reg_abt (n - 13)`;
-val NUM_REG_und_def = Define `NUM_REG_und n = num2reg_und (n - 13)`;
-
-(* -------------------------------------------------------- *)
-(* -------------------------------------------------------- *)
-
+val mode_num2register_def = Define`
+  mode_num2register m n =
+    num2register
+      (if (n = 15) \/ USER m \/ (m = fiq) /\ n < 8 \/ ~(m = fiq) /\ n < 13 then
+         n
+       else case m of
+          fiq -> n + 8
+       || irq -> n + 10
+       || svc -> n + 12
+       || abt -> n + 14
+       || und -> n + 16
+       || _ -> ARB)`;
+ 
 val REG_READ_def = Define`
-  REG_READ (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) mode n =
+  REG_READ reg m n =
     if n = 15 then
-      reg_usr (w4 15) + w32 8
-    else if USER mode \/ (mode = fiq) /\ n < 8 \/ ~(mode = fiq) /\ n < 13 then
-      reg_usr (w4 n)
+      reg r15 + w32 8
     else
-      case mode of
-         fiq -> reg_fiq (NUM_REG_fiq n)
-      || irq -> reg_irq (NUM_REG_irq n)
-      || svc -> reg_svc (NUM_REG_svc n)
-      || abt -> reg_abt (NUM_REG_abt n)
-      || und -> reg_und (NUM_REG_und n)
-      || _ -> ARB`;
-
+      reg (mode_num2register m n)`;
+ 
 val REG_WRITE_def = Define`
-  REG_WRITE (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) mode n d =
-    if (n = 15) \/ USER mode \/ (mode = fiq) /\ n < 8 \/ ~(mode = fiq) /\ n < 13 then
-      REG (SUBST reg_usr (w4 n,d)) reg_fiq reg_irq reg_svc reg_abt reg_und
-    else
-      case mode of
-         fiq -> REG reg_usr (SUBST reg_fiq (NUM_REG_fiq n,d)) reg_irq reg_svc reg_abt reg_und
-      || irq -> REG reg_usr reg_fiq (SUBST reg_irq (NUM_REG_irq n,d)) reg_svc reg_abt reg_und
-      || svc -> REG reg_usr reg_fiq reg_irq (SUBST reg_svc (NUM_REG_svc n,d)) reg_abt reg_und
-      || abt -> REG reg_usr reg_fiq reg_irq reg_svc (SUBST reg_abt (NUM_REG_abt n,d)) reg_und
-      || und -> REG reg_usr reg_fiq reg_irq reg_svc reg_abt (SUBST reg_und (NUM_REG_und n,d))
-      || _ -> ARB`;
+  REG_WRITE reg m n d = SUBST reg (mode_num2register m n,d)`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -199,15 +188,10 @@ val MEM_WRITE_def = Define`
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-val INC_PC_def = Define`
-  INC_PC (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) =
-    REG (SUBST reg_usr (w4 15,reg_usr (w4 15) + w32 4))
-         reg_fiq reg_irq reg_svc reg_abt reg_und`;
+val INC_PC_def   = Define `INC_PC reg = SUBST reg (r15,reg r15 + w32 4)`;
+val FETCH_PC_def = Define `FETCH_PC reg = reg r15`;
 
-val FETCH_PC_def = Define`
-  FETCH_PC (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) = reg_usr (w4 15)`;
-
-(* FETCH_PC needed because (REG_READ reg usr PC) gives PC+8 *)
+(* FETCH_PC needed because (REG_READ reg usr 15) gives PC+8 *)
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)

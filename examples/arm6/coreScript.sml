@@ -404,7 +404,7 @@ val BUSB_def = Define`
 (* aregn is vector address for exception/interrupt *)
 
 val AREG_def = Define`
-  AREG ic is ireg aregn inc r15 aluout =
+  AREG ic is ireg aregn inc reg15 aluout =
     let bits1916 = BITSw 19 16 ireg
     and bits1512 = BITSw 15 12 ireg
     and bit21 = BITw 21 ireg
@@ -415,18 +415,18 @@ val AREG_def = Define`
       if (~bit24 \/ bit23) /\ (bits1512 = 15) then
         aluout
       else
-        r15
+        reg15
     else if (is = t4) /\ ((ic = ldr) \/ (ic = str)) then
       if (~bit24 \/ bit21) /\ (bits1916 = 15) then
         aluout
       else
-        r15
+        reg15
     else if (is = t5) /\ (ic = ldr) \/
             (is = t6) /\ (ic = swp) then
       if bits1512 = 15 then
         aluout
       else
-        r15
+        reg15
     else if (is = t3) /\ ((ic = data_proc) /\ (~bit24 \/ bit23) /\ (bits1512 = 15) \/
                           (ic = mrs_msr) /\ ~bit21 /\ (bits1512 = 15) \/
                           (ic = ldr) \/ (ic = str) \/ (ic = br)) \/ (ic = swp) then
@@ -595,15 +595,8 @@ val STATE_ARM6_def = Define`
  
 (* -------------------------------------------------------- *)
 
-val SUB8_PC_def = Define`
-  SUB8_PC (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) =
-    let pc = reg_usr (w4 15) in
-      REG (SUBST reg_usr (w4 15,pc - w32 8)) reg_fiq reg_irq reg_svc reg_abt reg_und`;
-
-val ADD8_PC_def = Define`
-  ADD8_PC (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) =
-    let pc = reg_usr (w4 15) in
-      REG (SUBST reg_usr (w4 15,pc + w32 8)) reg_fiq reg_irq reg_svc reg_abt reg_und`;
+val SUB8_PC_def = Define `SUB8_PC reg = SUBST reg (r15,reg r15 - w32 8)`;
+val ADD8_PC_def = Define `ADD8_PC reg = SUBST reg (r15,reg r15 + w32 8)`;
 
 val ABS_ARM6_def = Define`
    ABS_ARM6 (ARM6 mem (DP reg psr areg din alua alub) ctrl) = ARM mem (SUB8_PC reg) psr`;
