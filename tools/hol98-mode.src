@@ -281,6 +281,7 @@ that the buffer has already had HOL terms, comments and strings removed."
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local"))))
 
+(setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
 (defun send-string-to-hol (string)
   "Send a string to HOL process."
@@ -298,7 +299,8 @@ that the buffer has already had HOL terms, comments and strings removed."
       ;; first thing to do is to search through buffer looking for
       ;; identifiers of form id.id.  When spotted such identifiers need
       ;; to have the first component of the name loaded.
-      (while (re-search-forward "\\([A-Za-z_][A-Za-z0-9_]*\\)\\.\\w+"
+      (while (re-search-forward (concat "\\(" sml-struct-id-regexp
+                                        "\\)\\.\\w+")
                                 (point-max) t)
         (hol-load-string (match-string 1)))
       ;; next thing to do is to look for open declarations
@@ -384,17 +386,18 @@ that the buffer has already had HOL terms, comments and strings removed."
   (send-raw-string-to-hol (concat "use \"" filename "\";")))
 
 (defun hol-load-string (s &optional really-load)
-  (let ((buf (ensure-hol-buffer-ok))
-        (commandstring
-         (concat "val _ = (print  \"Loading " s
-                 "\\n\"; " "load \"" s "\");\n")))
+  (let* ((buf (ensure-hol-buffer-ok))
+         (mys (format "%s" s)) ;; gets rid of text properties
+         (commandstring
+          (concat "val _ = (print  \"Loading " mys
+                  "\\n\"; " "load \"" mys "\");\n")))
     (save-excursion
       (set-buffer buf)
-      (let ((already-loaded (member s hol-loaded-modules)))
+      (let ((already-loaded (member mys hol-loaded-modules)))
         (if (or (not already-loaded) really-load)
             (progn
               (if (not already-loaded)
-                  (setq hol-loaded-modules (cons s hol-loaded-modules)))
+                  (setq hol-loaded-modules (cons mys hol-loaded-modules)))
               (comint-send-string buf commandstring)))))))
 
 (defun hol-load-modules-in-region (start end arg)
@@ -402,7 +405,7 @@ that the buffer has already had HOL terms, comments and strings removed."
   (interactive "rP")
   (save-excursion
     (goto-char start)
-    (while (re-search-forward "\\b\\w+\\b" end t)
+    (while (re-search-forward (concat "\\b" sml-struct-id-regexp "\\b") end t)
       (hol-load-string (match-string 0) arg))))
 
 (defun hol-load-file (arg)
@@ -422,7 +425,8 @@ mode thinks it already has been."
     (cond (arg
            (hol-load-string (read-string "Library to load: ") last-argument))
           ((and mark-active transient-mark-mode
-                (string-match "^(\\s-*\\w+)+\\s-*$" txt))
+                (string-match (concat "^\\(\\s-*" sml-struct-id-regexp
+                                      "\\)+\\s-*$") txt))
            (hol-load-modules-in-region (region-beginning) (region-end) `
                                        last-argument))
           ((and wap (string-match "^\\w+$" wap))
