@@ -103,23 +103,23 @@ val unfold_as_bfs =
 
 val tsize_def =  (* Need a bespoke termination measure *)
  Define
-  `(tsize f (Node x tlist) = 1 + f x + ltsize f tlist) /\
-   (ltsize f [] = 0) /\
-   (ltsize f (h::t) = tsize f h + ltsize f t)`;
+  `(tsize (Node x tlist) = 1 + ltsize tlist) /\
+   (ltsize [] = 0) /\
+   (ltsize (h::t) = tsize h + ltsize t)`;
 
 val SUBTREES_SMALLER = Q.prove
-(`!t f. ltsize f (subtrees t) < tsize f t`,
+(`!t. ltsize (subtrees t) < tsize t`,
  Cases THEN RW_TAC list_ss [subtrees_def, tsize_def]);
 
 val ltsize_append = Q.prove
-(`!L1 L2. ltsize f (L1 ++ L2) = ltsize f L1 + ltsize f L2`,
+(`!L1 L2. ltsize (L1 ++ L2) = ltsize L1 + ltsize L2`,
  Induct THEN RW_TAC list_ss [tsize_def]);
 
 val [bfs_eqn, bfs_ind] = CONJUNCTS
  (REWRITE_RULE [GSYM bfs_def]
  (prove (snd(dest_imp(concl unfold_as_bfs)),
  MATCH_MP_TAC (GEN_ALL unfold_as_bfs)
-  THEN WF_REL_TAC `measure (ltsize (K 0))`
+  THEN WF_REL_TAC `measure ltsize`
   THEN Induct THEN RW_TAC list_ss [tsize_def,ltsize_append]
   THEN Cases_on `null x` THEN FULL_SIMP_TAC list_ss [NULL_ELIM]
   THEN PROVE_TAC [DECIDE(Term`a<b /\ c<d ==> a+c < b+d`),SUBTREES_SMALLER])));
@@ -138,7 +138,7 @@ val bfsq_defn =
 val (bfsq_eqn, bfsq_ind) = 
  Defn.tprove 
   (bfsq_defn,
-   WF_REL_TAC `measure (ltsize (K 0))` THEN
+   WF_REL_TAC `measure ltsize` THEN
    RW_TAC list_ss [tsize_def, ltsize_append]);
 
 (*---------------------------------------------------------------------------*)
