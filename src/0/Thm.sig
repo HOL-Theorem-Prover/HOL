@@ -16,6 +16,7 @@ signature Thm =
 sig
   type tag = Tag.tag
   type thm
+  datatype thmclass = Thm | Axm | Def
 
   val tag      : thm -> tag
   val hyp      : thm -> Term.term list

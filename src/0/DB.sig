@@ -4,24 +4,34 @@ sig
  type term = Term.term
  type thm = Thm.thm
 
- datatype class = Def | Axm | Thm
- type data = (string * string) * (thm * class)
+ type data = AncestorDB.data
 
-  val lemmas : unit -> (string * string, data) Binarymap.dict
+ (* returns data for every theory which has a name in which the given string
+    occurs, ignoring case *)
+ val thy    : string -> data list
 
-  val thy    : string -> data list
-  val find   : string -> data list
-  val match  : string list -> Term.term -> data list (* first order matches *)
+ (* returns those data elements that have names in which the given string
+    occurs, again ignoring case *)
+ val find   : string -> data list
 
-  val theorem : string -> string -> thm
-  val theorems : string -> (string * thm) list
-  val gen_theorem : string -> string -> thm * class
-  val gen_theorems : string -> (string * thm * class) list
+ (* Given a list of theories to use (again, any theory that has a string
+    from the list occurring as a substring), returns those data elements
+    whose conclusions satisfy the predicate.  If the list is empty, all
+    theories are examined (including the current one). *)
+ val rawfind : string list -> (Term.term -> bool) -> data list
 
-  val rawmatch  : (term -> term -> bool)
-                  -> string list -> Term.term -> data list
+ (* First argument as above, second is a term that must match a sub-term
+    in the returned element's conclusion *)
+ val match  : string list -> Term.term -> data list (* first order matches *)
 
-  (* For system use *)
-  val bindl : string -> (string * thm * class) list -> unit
+ (* functions to access all of the stored theorems, where the first string
+    parameter to all four is the string of the theory name, allowing
+    "-" as an abbreviation for the current theory. *)
+ val theorem : string -> string -> thm
+ val theorems : string -> (string * thm) list
+ val gen_theorem : string -> string -> thm * Thm.thmclass
+ val gen_theorems : string -> (string * thm * Thm.thmclass) list
+
+ val all_thms : unit -> data list
 
 end;

@@ -18,94 +18,100 @@ struct
  type term = Term.term
  type thm = Thm.thm
 
- open Binarymap;
+ type data = AncestorDB.data
 
- datatype class = Def | Axm | Thm
- type data = (string * string) * (thm * class)
+ val ct = Theory.current_theory
 
- fun comp ((s1,s2),(t1,t2)) =
-   case String.compare(s1,t1)
-    of EQUAL => String.compare(s2,t2)
-     | x => x;
+ fun get_ctstuff () = let
+   val defns = Theory.definitions ()
+   val axms = Theory.axioms()
+   val thms = Theory.theorems()
+   val thyname = Theory.current_theory()
+ in
+   map (fn (s, thm) => ((thyname, s), (thm, Thm.Def))) defns @
+   map (fn (s, thm) => ((thyname, s), (thm, Thm.Axm))) axms @
+   map (fn (s, thm) => ((thyname, s), (thm, Thm.Thm))) thms
+ end
 
- val empty =
-   mkDict comp: (string*string, (string*string)*(thm*class)) dict;
-
- val dBref = ref empty
- fun lemmas() = !dBref;
-
-(* Map keys to canonical case *)
+ fun occurs s1 s2 =
+   not(Substring.isEmpty (#2(Substring.position s1 (Substring.all s2))))
 
  fun toLower s =
    let open Char CharVector
    in tabulate(size s, fn i => toLower(sub(s, i))) end
 
- fun add ((p as (s1,s2)),x) db =
-    let val key = (toLower s1, toLower s2)
-    in insert (db,key,(p,x))
-    end;
+ fun thy s =
+   if s = "-" then get_ctstuff()
+   else
+     AncestorDB.thy s @
+     (if occurs (toLower s) (toLower (ct())) then get_ctstuff() else [])
 
-
- local
-   fun occurs s1 s2 =
-     not(Substring.isEmpty (#2(Substring.position s1 (Substring.all s2))))
+ fun find s = let
+   val s' = toLower s
+   val ctstuff = get_ctstuff()
  in
-   fun thy s = let
-     val s' = toLower s
-   in
-     foldr (fn ((s1,_),x,A) => if occurs s' s1 then x::A else A) [] (lemmas())
-   end
+   AncestorDB.find s @
+   List.filter (fn ((_, thmname), _) => occurs s' (toLower thmname)) ctstuff
+ end
 
-   fun find s = let
-     val s' = toLower s
-   in
-     foldr (fn ((_,s2),x,A) => if occurs s' s2 then x::A else A) [] (lemmas())
-   end
+ fun rawfind thys P = let
+   val include_ct =
+     Lib.mem "-" thys orelse null thys orelse
+     List.exists (fn s => occurs (toLower s) (toLower (ct()))) thys
+   val ct_contribution =
+     if include_ct then
+       List.filter (fn (_, (thm,_)) => P (Thm.concl thm))
+       (get_ctstuff())
+     else
+       []
+   val ancestor_contrib =
+     if thys = ["-"] then []
+     else
+       case (Lib.set_diff thys ["-"]) of
+         [] => Binarymap.foldr (fn (_, rc as (_, (thm,_)), A) =>
+                                if P (Thm.concl thm) then rc::A else A)
+               [] (AncestorDB.lemmas())
+       | strl => let
+         in
+           Lib.filter (fn (_, (thm, _)) => P (Thm.concl thm))
+           (List.concat (List.map AncestorDB.thy strl))
+         end
+ in
+   ct_contribution @ ancestor_contrib
  end
 
 
- local
-   fun thmfind P thm = Lib.can (Dsyntax.find_term P) (Thm.concl thm)
+ fun match thys tm = let
+   val matches = Lib.can (Term.match_term tm)
+   val subterm_matches = Lib.can (Dsyntax.find_term matches)
  in
-   fun rawmatch P thylist pat =
-     case thylist of
-       [] => let
-         val Q = thmfind (P pat)
-       in
-         foldr (fn (_,rc as (_,(thm,_)),A) => (if Q thm then rc::A else A))
-         [] (lemmas())
-       end
-     | strl => let
-         val Q = thmfind (P pat)
-       in
-         Lib.filter (fn (_,(thm,_)) => Q thm) (Lib.flatten (List.map thy strl))
-       end
- end;
+   rawfind thys subterm_matches
+ end
 
- val match = rawmatch (fn tm => Lib.can(Term.match_term tm));
+ fun gen_theorems thyname =
+   if thyname = "-" orelse toLower thyname = toLower (ct()) then
+     map (fn ((_, thmname), (thm, c)) => (thmname, thm, c)) (get_ctstuff())
+   else
+     AncestorDB.gen_theorems thyname
+
+ fun theorems thyname =
+   map (fn (thname, thm, c) => (thname, thm)) (gen_theorems thyname)
 
  fun gen_theorem thyname thmname = let
-   val key = (toLower thyname, toLower thmname)
+   val thms = gen_theorems thyname
  in
-   #2 (Binarymap.find (lemmas(), key))
+   case List.find (fn (name, thm, c) => name = thmname) thms of
+     SOME (n,t,c) => (t,c)
+   | NONE => raise Exception.HOL_ERR {origin_structure = "DB",
+                                      origin_function = "gen_theorem",
+                                      message = "No theorem with that name"}
  end
+
  fun theorem thyname thmname = #1 (gen_theorem thyname thmname)
 
- fun gen_theorems thyname0 = let
-   val thyname = toLower thyname0
- in
-   Binarymap.foldl (fn ((poss_thyname, _), ((_, thmname), (thm, c)), acc) =>
-                    if poss_thyname = thyname then (thmname, thm, c)::acc
-                    else acc) []
-   (lemmas())
- end
- fun theorems thyname =
-   List.map (fn (thmname, thm, c) => (thmname, thm)) (gen_theorems thyname)
+ fun all_thms () =
+   Binarymap.foldr (fn (_, rc, A) => rc::A) (get_ctstuff())
+   (AncestorDB.lemmas())
 
-fun bindl thyname blist =
-  let fun addb (thname,th,cl) = add ((thyname,thname),(th,cl))
-  in
-     dBref := Lib.rev_itlist addb blist (lemmas())
-  end;
 
-end;
+end
