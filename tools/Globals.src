@@ -78,13 +78,6 @@ val output_HOL_ERR =
 	  Portable.flush_out std_out));
 
 (*---------------------------------------------------------------------------*
- * Gives some ability to tweak the lexis. It is initially being used         *
- * to make "~" more widely accessible in symbolic identifiers.               *
- *---------------------------------------------------------------------------*)
-
-val tilde_symbols = ref []:string list ref;
-
-(*---------------------------------------------------------------------------*
  * Prettyprinting flags                                                      *
  *---------------------------------------------------------------------------*)
 
@@ -106,18 +99,11 @@ val linewidth = Portable.linewidth;
 
 val max_print_depth = ref ~1;
 
-val pp_flags = {show_dB        = ref false,
-                show_restrict  = ref true,
+val pp_flags = {show_restrict  = ref true,
                 show_types     = ref false,
                 infix_at_front = ref false,
                 stack_infixes  = ref true,
                 in_at_end      = ref false};
-
-(*---------------------------------------------------------------------------*
- * For showing the deBruijn structure of a term                              *
- *---------------------------------------------------------------------------*)
-
-val show_dB = #show_dB pp_flags;
 
 (*---------------------------------------------------------------------------*
  * For showing the representation of a term having restricted quantifiers    *
@@ -149,14 +135,6 @@ val stack_infixes = #stack_infixes pp_flags;
  *---------------------------------------------------------------------------*)
 
 val in_at_end = #in_at_end pp_flags;
-
-(*---------------------------------------------------------------------------*
- * This is mainly for documentation purposes.                                *
- *---------------------------------------------------------------------------*)
-
-val reserved_identifiers = {symbolic = ["\\", ";", "=>", "|", ":" ],
-                            alphanumeric = ["let", "in", "and", "of"]}
-
 
 val goal_line = ref "------------------------------------";
 
