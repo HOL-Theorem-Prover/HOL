@@ -202,12 +202,6 @@ val _ = PRINT_VERILOG FACT_cir;  (* N.B. FACT.vl overwritten by stuff below! *)
 (* Run using: iverilog -o FACT.vvp FACT.vl; vvp FACT.vvp                     *)
 (*****************************************************************************)
 val _ = (dump_all_flag:=true);(* dump changes of all variables into VCD file *)
-val _ =
- PRINT_SIMULATION
-  FACT_cir
-   1000
-   5 
-   [(10, 10, [("inp", "5")], 15)];
 
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)

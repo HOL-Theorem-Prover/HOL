@@ -345,6 +345,45 @@ where <size> is the appropriate width computed from the types.  The
 internal variables v0, ... ,vn are declared to be wires of appropriate
 widths (computed from their types).
 
+SIMULATE : thm -> (string * string) list -> unit
+------------------------------------------------
+
+If thm is:
+
+  |- InRise clk 
+      ==>
+      (?v0 .... vn. <circuit>)
+      ==>
+      DEV fun (load at clk,
+               (inp1 <> ... <> inpu) at clk,
+               done at clk,
+               (out1 <> ... <> outv) at clk)
+
+the evaluating:
+
+ SIMULATE thm [("inp1","val1"),...,("inpn","valn")]
+
+dumps Verilog using 
+
+ PRINT_SIMULATION thm (!maxtime_default) (!period_default) ((!stimulus_default) inputs)
+
+(see below). It then runs Icarus Verilog on fun.vl and then calls
+gtkwave on fun.vcd. It assumes the following are where iverilog, vvp
+and gtk are located:
+
+ val iverilog_path = ref "/usr/bin/iverilog";
+ val vvp_path      = ref "/usr/bin/vvp";
+ val gtkwave_path  = ref "/usr/bin/gtkwave";
+
+Update these references if your versions are installed at different
+places. You can also change the references maxtime_default,
+period_default and stimulus_default, which are initially set by:
+
+ val maxtime_default  = ref 1000
+ and period_default   = ref 5
+ and stimulus_default = ref(fn (inputs:(string * string) list)
+                            => [(10, 10, inputs, 15)]);
+
 
 MAKE_SIMULATION : thm -> int -> int -> (int*int*(string*string)list*int)list -> unit
 ------------------------------------------------------------------------------------
@@ -595,4 +634,5 @@ ML reference "if_print_flag" to false.
 == [14.02.05: MJCG added vsynth (defines MAKE_VERILOG)                       ==
 == [15.02.05: MJCG revised MAKE_NETLIST and MAKE_CIRCUIT                     ==
 == [18.02.05: MJCG revised MAKE_VERILOG in vsynth; added MAKE_SIMULATION     ==
+== [28.02.05: MJCG revised added SIMULATE to run iverilog and gtkwave        ==
 ===============================================================================

@@ -1235,3 +1235,61 @@ fun PRINT_NET_SIMULATION thm maxtime period stimulus =
    (name ^ ".vl")
    (MAKE_NET_SIMULATION name thm maxtime period stimulus (!dump_all_flag))
  end;
+
+(*****************************************************************************)
+(* User resettable paths of Icaraus Verilog and GTKWave                      *)
+(*****************************************************************************)
+
+val iverilog_path = ref "/usr/bin/iverilog";
+val vvp_path      = ref "/usr/bin/vvp";
+val gtkwave_path  = ref "/usr/bin/gtkwave";
+
+(*
+** Test for success of the result of Process.system
+** N.B. isSuccess was expected to primitive in next release of
+** Moscow ML, and Process.status will then lose eqtype status
+** (not happened yet apparently)
+*)
+
+fun isSuccess s = (s = Process.success);
+
+
+(* Example for testing
+use "Ex3.ml";
+
+val thm    = DoubleDouble_cir
+and inputs = [("inp", "5")];
+*)
+
+(*****************************************************************************)
+(* Default values for simulation                                             *)
+(*****************************************************************************)
+
+val maxtime_default  = ref 1000
+and period_default   = ref 5
+and stimulus_default = ref(fn (inputs:(string * string) list)
+                           => [(10, 10, inputs, 15)]);
+
+fun SIMULATE thm inputs =
+ let val name = fst(dest_const(#1(dest_cir thm)))
+     val vvp_file = (name ^ ".vvp")
+     val vcd_file = (name ^ ".vcd")
+     val _ = PRINT_SIMULATION thm (!maxtime_default) (!period_default) ((!stimulus_default) inputs)
+     val iverilog_command = ((!iverilog_path) ^ " -o " ^ vvp_file ^ " " ^ name ^ ".vl")
+     val code1 = Process.system iverilog_command
+     val _ = if isSuccess code1
+              then ()
+              else print("Warning:\n Process.system reports failure signal returned by\n " ^ iverilog_command ^ "\n")
+     val vvp_command = ((!vvp_path) ^ " " ^ vvp_file)
+     val code2 = Process.system vvp_command
+     val _ = if isSuccess code2
+              then ()
+              else print("Warning:\n Process.system reports failure signal returned by\n " ^ vvp_command ^ "\n")
+     val gtkwave_command = ((!gtkwave_path) ^ " -a " ^ vcd_file)
+     val code3 = Process.system gtkwave_command
+     val _ = if isSuccess code3
+              then ()
+              else print("Warning:\n Process.system reports failure signal returned by\n " ^ gtkwave_command ^ "\n")
+ in
+  ()
+ end;
