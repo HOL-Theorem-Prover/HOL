@@ -434,7 +434,8 @@ fun TAUT_CHECK_CONV tm =
        else let val tmF = subst [Bvar |-> F] Body
                 val thF1 = QCONV (DEPTH_FORALL_QCONV SIMP_PROP_CONV) tmF
                 val tmF' = rhs (concl thF1)
-                val thF2 = if tmF' = tmT' then thT2 else TAUT_CHECK_CONV tmF'
+                val thF2 = if aconv tmF' tmT' then thT2
+                           else TAUT_CHECK_CONV tmF'
                 val thF3 = TRANS thF1 thF2
             in if is_F (rhs (concl thF3))
                then BOOL_CASES_F_F_RULE thF3 tm
@@ -523,24 +524,34 @@ fun PTAUT_PROVE tm =
 (* Tautology checking including instances of propositional tautologies       *)
 (*===========================================================================*)
 
-(*---------------------------------------------------------------------------*)
-(* non_prop_terms : term -> term list                                        *)
-(*                                                                           *)
-(* Computes a list of subterms of a term that are either variables or Boolean*)
-(* valued non-propositional terms. The result list may contain duplicates.   *)
-(*---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    non_prop_terms : term -> term set
 
-fun non_prop_terms tm =
- let fun non_prop_args tm =
-      let val (opp,args) = ((#Name o dest_const) ## I) (strip_comb tm)
-      in if (mem opp ["T","F","~","=","/\\","\\/","==>","COND"])
-         then flatten (map non_prop_terms args)
-         else raise ERR "" ""
-      end
- in non_prop_args tm handle HOL_ERR _
-     => if type_of tm = bool then [tm]
-        else raise ERR "non_prop_terms" ""
- end;
+    Computes a set of subterms of a term that are either variables or
+    Boolean valued non-propositional terms.
+   ---------------------------------------------------------------------- *)
+
+fun non_prop_terms tm = let
+  fun non_prop_args acc tmlist =
+      case tmlist of
+        [] => acc
+      | tm::ts => let
+          val (opp,args) = ((#Name o dest_const) ## I) (strip_comb tm)
+                           handle HOL_ERR _ => ("", [])
+        in
+          if mem opp ["T","F","~","/\\","\\/","==>"] then
+            non_prop_args acc (args @ ts)
+          else if mem opp ["=","COND"] andalso
+                  all (fn t => type_of t = bool) args
+          then
+            non_prop_args acc (args @ ts)
+          else if type_of tm = bool then
+            non_prop_args (HOLset.add(acc, tm)) ts
+          else raise ERR "non_prop_terms" "Not a boolean term"
+        end
+in
+  non_prop_args empty_tmset [tm]
+end
 
 (*---------------------------------------------------------------------------*)
 (* TAUT_CONV : conv                                                          *)
@@ -557,8 +568,8 @@ fun non_prop_terms tm =
 
 fun TAUT_CONV tm =
   let val (univs,tm') = strip_forall tm
-      val insts = mk_set (non_prop_terms tm')
-      val vars = map (genvar o type_of) insts
+      val insts = HOLset.listItems (non_prop_terms tm')
+      val vars = map (fn t => genvar bool) insts
       val theta = map2 (curry (op |->)) insts vars
       val tm'' = list_mk_forall (vars,subst theta tm')
   in EQT_INTRO (GENL univs (SPECL insts (PTAUT_PROVE tm'')))
