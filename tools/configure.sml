@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
+val mosmldir = "<path-to-mosml-dir>";
+val holdir   = "<path-to-hol-dir>";
 val OS       = "linux"           (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -62,7 +62,7 @@ val SRCDIRS =
   "src/tree", "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/basicrec",
   "src/utils", "src/datatype/mutrec", "src/datatype/nestrec",
-  "src/datatype/mutual", "src/datatype", "src/datatype/record",
+  "src/datatype/mutual", "src/datatype/record", "src/datatype", 
   "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
   "src/pred_set/src", "src/string/theories", "src/string/src",
