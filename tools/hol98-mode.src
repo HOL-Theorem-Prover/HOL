@@ -392,12 +392,14 @@ that the buffer has already had HOL terms, comments and strings removed."
 (defun send-string-to-hol (string &optional echoit)
   "Send a string to HOL process."
   (let ((buf (ensure-hol-buffer-ok))
+        (hol-ok hol-buffer-ready)
         (tmpbuf (generate-new-buffer "*HOL temporary*"))
         (old-mark-active mark-active))
     (unwind-protect
         (save-excursion
           (set-buffer tmpbuf)
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
+          (setq hol-buffer-ready hol-ok) ; version of this variable in tmpbuf
           (setq case-fold-search nil) ; buffer-local version
           (insert string)
           (goto-char (point-min))
@@ -448,7 +450,8 @@ that the buffer has already had HOL terms, comments and strings removed."
 file to \"use\" first."
   (if (< 500 (buffer-size))
           (let ((fname (make-temp-file "hol")))
-            (write-file fname nil)
+            ; below, use visit parameter = 1 to stop message in mini-buffer
+            (write-region (point-min) (point-max) fname nil 1)
             (send-raw-string-to-hol (format "use \"%s\"" fname)))
     (send-raw-string-to-hol (buffer-string) echoit)))
 
