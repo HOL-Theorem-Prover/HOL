@@ -1,40 +1,160 @@
 structure numSyntax :> numSyntax =
 struct
-  open HolKernel
+  open HolKernel Abbrev;
+
   local open arithmeticTheory in end;
 
+  infix |->
   infixr -->
-  val num_ty = mk_thy_type{Thy="num", Tyop="num", Args=[]}
-  val n_n_ty = num_ty --> num_ty
-  val n3_ty = num_ty --> n_n_ty
 
-  val zero_t = mk_thy_const{Name="0", Ty = num_ty, Thy = "num"};
-  val SUC_t = mk_thy_const{Name="SUC", Ty = n_n_ty, Thy = "num"};
-  val plus_t = mk_thy_const{Name="+", Ty = n3_ty, Thy = "arithmetic"};
-  val NUMERAL_t = mk_thy_const{Name="NUMERAL", Ty = n_n_ty,
-                               Thy="arithmetic"}
-  val ALT_ZERO_t = mk_thy_const{Name = "ALT_ZERO", Ty = num_ty,
-                                Thy = "arithmetic"}
+  val ERR = mk_HOL_ERR "numSyntax";
+
+(*---------------------------------------------------------------------------
+          Constants
+ ---------------------------------------------------------------------------*)
+
+  val num = mk_thy_type{Thy="num", Tyop="num", Args=[]}
+
+  val zero_tm      = prim_mk_const {Name="0",            Thy="num"}
+  val suc_tm       = prim_mk_const {Name="SUC",          Thy="num"}
+  val pre_tm       = prim_mk_const {Name="PRE",          Thy="prim_rec"}
+  val numeral_tm   = prim_mk_const {Name="NUMERAL",      Thy="arithmetic"}
+  val alt_zero_tm  = prim_mk_const {Name="ALT_ZERO",     Thy="arithmetic"}
+  val numeral_bit1 = prim_mk_const {Name="NUMERAL_BIT1", Thy="arithmetic"}
+  val numeral_bit2 = prim_mk_const {Name="NUMERAL_BIT2", Thy="arithmetic"}
+  val plus_tm      = prim_mk_const {Name="+",            Thy="arithmetic"}
+  val minus_tm     = prim_mk_const {Name="-",            Thy="arithmetic"}
+  val mult_tm      = prim_mk_const {Name="*",            Thy="arithmetic"}
+  val exp_tm       = prim_mk_const {Name="EXP",          Thy="arithmetic"}
+  val div_tm       = prim_mk_const {Name="DIV",          Thy="arithmetic"}
+  val mod_tm       = prim_mk_const {Name="MOD",          Thy="arithmetic"}
+  val less_tm      = prim_mk_const {Name="<",            Thy="prim_rec"}
+  val greater_tm   = prim_mk_const {Name=">",            Thy="arithmetic"}
+  val geq_tm       = prim_mk_const {Name=">=",           Thy="arithmetic"}
+  val leq_tm       = prim_mk_const {Name="<=",           Thy="arithmetic"}
+  val even_tm      = prim_mk_const {Name="EVEN",         Thy="arithmetic"}
+  val odd_tm       = prim_mk_const {Name="ODD",          Thy="arithmetic"}
+  val num_case_tm  = prim_mk_const {Name="num_case",     Thy="arithmetic"}
+  val fact_tm      = prim_mk_const {Name="FACT",         Thy="arithmetic"}
+  val funpow_tm    = prim_mk_const {Name="FUNPOW",       Thy="arithmetic"};
+
+
+(*---------------------------------------------------------------------------
+          Constructors
+ ---------------------------------------------------------------------------*)
+
+  fun mk_monop c tm = mk_comb(c,tm)
+  fun mk_binop c (tm1,tm2) = mk_comb(mk_comb(c,tm1),tm2);
+
+  val mk_suc       = mk_monop suc_tm
+  val mk_pre       = mk_monop pre_tm
+  val mk_plus      = mk_binop plus_tm
+  val mk_minus     = mk_binop minus_tm
+  val mk_mult      = mk_binop mult_tm
+  val mk_exp       = mk_binop exp_tm
+  val mk_div       = mk_binop div_tm
+  val mk_mod       = mk_binop mod_tm
+  val mk_less      = mk_binop less_tm
+  val mk_greater   = mk_binop greater_tm
+  val mk_geq       = mk_binop geq_tm
+  val mk_leq       = mk_binop leq_tm
+  val mk_even      = mk_monop even_tm
+  val mk_odd       = mk_monop odd_tm
+  val mk_fact      = mk_monop fact_tm
+
+  fun mk_num_case(b,f,n) =
+      list_mk_comb(inst[alpha |-> type_of b] num_case_tm, [b,f,n]);
+
+  fun mk_funpow(f,n,x) = 
+      list_mk_comb(inst [alpha |-> type_of x] funpow_tm, [f,n,x]);
+
+(*---------------------------------------------------------------------------
+          Destructors
+ ---------------------------------------------------------------------------*)
+
+  val dest_suc     = dest_monop ("SUC","num")         (ERR "dest_suc" "")
+  val dest_pre     = dest_monop ("PRE","prim_rec")    (ERR "dest_pre" "")
+  val dest_plus    = dest_binop ("+","arithmetic")    (ERR "dest_plus" "")
+  val dest_minus   = dest_binop ("-","arithmetic")    (ERR "dest_minus" "")
+  val dest_mult    = dest_binop ("*","arithmetic")    (ERR "dest_mult" "")
+  val dest_exp     = dest_binop ("EXP","arithmetic")  (ERR "dest_exp" "")
+  val dest_div     = dest_binop ("DIV","arithmetic")  (ERR "dest_div" "")
+  val dest_mod     = dest_binop ("MOD","arithmetic")  (ERR "dest_mod" "")
+  val dest_less    = dest_binop ("<","prim_rec")      (ERR "dest_less" "")
+  val dest_greater = dest_binop (">","arithmetic")    (ERR "dest_greater" "")
+  val dest_geq     = dest_binop (">=","arithmetic")   (ERR "dest_geq" "")
+  val dest_leq     = dest_binop ("<=","arithmetic")   (ERR "dest_leq" "")
+  val dest_even    = dest_monop ("EVEN","arithmetic") (ERR "dest_even" "")
+  val dest_odd     = dest_monop ("ODD","arithmetic")  (ERR "dest_odd" "");
+  val dest_fact    = dest_monop ("FACT","arithmetic") (ERR "dest_fact" "");
+
+  fun dest_num_case tm = 
+    case strip_comb tm
+     of (ncase,[b,f,n]) => 
+         if can (match_term num_case_tm) ncase
+         then (b,f,n) 
+         else raise ERR "dest_num_case" "not an application of \"num_case\""
+      | _ => raise ERR "dest_num_case" "not an application of \"num_case\""
+
+  fun dest_funpow tm =
+    case strip_comb tm
+     of (funpow,[f,n,x]) =>
+         if can (match_term funpow_tm) funpow
+         then (f,n,x) 
+         else raise ERR "dest_funpow" "not an application of \"funpow\""
+      | _ => raise ERR "dest_funpow" "not an application of \"funpow\"";
+
+
+(*---------------------------------------------------------------------------
+          Query operations
+ ---------------------------------------------------------------------------*)
+
+  val is_suc      = can dest_suc
+  val is_pre      = can dest_pre
+  val is_plus     = can dest_plus
+  val is_minus    = can dest_minus
+  val is_mult     = can dest_mult
+  val is_exp      = can dest_exp
+  val is_div      = can dest_div
+  val is_mod      = can dest_mod
+  val is_less     = can dest_less
+  val is_greater  = can dest_greater
+  val is_geq      = can dest_geq
+  val is_leq      = can dest_leq
+  val is_even     = can dest_even
+  val is_odd      = can dest_odd
+  val is_num_case = can dest_num_case
+  val is_fact     = can dest_fact
+  val is_funpow   = can dest_funpow
+
+
+(*---------------------------------------------------------------------------
+     Numerals are treated specially 
+ ---------------------------------------------------------------------------*)
 
   val mk_numeral = Numeral.gen_mk_numeral {
-    mk_comb = Term.mk_comb,
-    ALT_ZERO = ALT_ZERO_t,
-    ZERO = zero_t,
-    NUMERAL = NUMERAL_t,
-    BIT1 = mk_thy_const{Name = "NUMERAL_BIT1", Ty = n_n_ty,
-                        Thy = "arithmetic"},
-    BIT2 = mk_thy_const{Name = "NUMERAL_BIT2", Ty = n_n_ty,
-                        Thy = "arithmetic"}
+    mk_comb  = Term.mk_comb,
+    ALT_ZERO = alt_zero_tm,
+    ZERO     = zero_tm,
+    NUMERAL  = numeral_tm,
+    BIT1     = numeral_bit1,
+    BIT2     = numeral_bit2
   };
 
   val dest_numeral = Numeral.dest_numeral
-  val is_numeral = Numeral.is_numeral
+  val is_numeral   = Numeral.is_numeral
 
-  fun mk_binop t (t1, t2) = list_mk_comb(t, [t1, t2])
-  val mk_plus = mk_binop plus_t
+(*---------------------------------------------------------------------------
+     Dealing with lists of things to be added or multiplied.
+ ---------------------------------------------------------------------------*)
 
-  fun mk_SUC t = Term.mk_comb(SUC_t, t);
-  fun is_SUC t = Term.is_comb t andalso rator t = SUC_t
+  fun list_mk_plus (h::t) = rev_itlist (C (curry mk_plus)) t h
+    | list_mk_plus [] = raise ERR "list_mk_plus" "empty list";
 
+  fun list_mk_mult (h::t) = rev_itlist (C (curry mk_mult)) t h
+    | list_mk_mult [] = raise ERR "list_mk_mult" "empty list";
+
+  val strip_plus = strip_binop (total dest_plus)
+  val strip_mult = strip_binop (total dest_mult)
 
 end;
