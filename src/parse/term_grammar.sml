@@ -817,25 +817,23 @@ fun prettyprint_grammar pstrm (G :grammar) = let
     pprint_grule rule;
     end_block()
   end
-  fun uninteresting_overload (r:Overload.overloaded_op_info) =
+  fun uninteresting_overload (k,r:Overload.overloaded_op_info) =
     length (#actual_ops r) = 1 andalso
-    #Name (hd (#actual_ops r)) = #overloaded_op r andalso
-    length (Term.decls (#overloaded_op r)) = 1
+    #Name (hd (#actual_ops r)) = k andalso
+    length (Term.decls k) = 1
   fun print_overloading oinfo0 =
     if List.all uninteresting_overload oinfo0 then ()
     else let
       open Lib infix ##
       fun nblanks n = String.implode (List.tabulate(n, (fn _ => #" ")))
       val oinfo1 = List.filter (not o uninteresting_overload) oinfo0
-      val oinfo = Listsort.sort (String.compare o (#overloaded_op ##
-                                                   #overloaded_op))
-                  oinfo1
+      val oinfo = Listsort.sort (String.compare o (#1 ## #1)) oinfo1
       val max =
-        List.foldl (fn (oi,n) => Int.max(String.size (#overloaded_op oi),
+        List.foldl (fn (oi,n) => Int.max(String.size (#1 oi),
                                          n))
         0
         oinfo
-      fun pr_ov (r as {overloaded_op,actual_ops,...}) = let
+      fun pr_ov (overloaded_op, r as {actual_ops,...}) = let
         fun pr_name r =
           case Term.decls (#Name r) of
             [] => raise Fail "term_grammar.prettyprint: should never happen"

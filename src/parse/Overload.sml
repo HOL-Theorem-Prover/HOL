@@ -15,14 +15,14 @@ type const_rec = {Name : string, Ty : hol_type, Thy : string}
 fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
 
 type overloaded_op_info =
-  {overloaded_op: string, base_type : Type.hol_type,
+  {base_type : Type.hol_type,
    actual_ops : const_rec list}
-type overload_info = (overloaded_op_info list *
+type overload_info = ((string,overloaded_op_info) Binarymap.dict *
                       ({Name:string,Thy:string} * string) list)
 
-val null_oinfo = ([],[])
+val null_oinfo = (Binarymap.mkDict String.compare, [])
 
-fun oinfo_ops (oi,_) = oi
+fun oinfo_ops (oi,_) = Binarymap.listItems oi
 
 fun update_assoc k v [] = [(k,v)]
   | update_assoc k v ((k',v')::kvs) = if k = k' then (k,v)::kvs
@@ -103,24 +103,22 @@ in
   end
 end
 
-fun fupd_actual_ops f {overloaded_op, base_type, actual_ops} =
-  {overloaded_op = overloaded_op, base_type = base_type,
-   actual_ops = f actual_ops}
+fun fupd_actual_ops f {base_type, actual_ops} =
+  {base_type = base_type, actual_ops = f actual_ops}
 
-fun fupd_base_type f {overloaded_op, base_type, actual_ops} =
-  {overloaded_op = overloaded_op, base_type = f base_type,
-   actual_ops = actual_ops}
+fun fupd_base_type f {base_type, actual_ops} =
+  {base_type = f base_type, actual_ops = actual_ops}
 
-fun fupd_list_at_P P f list =
-  case list of
-    [] => NONE
-  | x::xs => if P x then SOME (f x :: xs)
-             else Option.map (fn xs' => x::xs') (fupd_list_at_P P f xs)
+fun fupd_dict_at_key k f dict = let
+  val (newdict, kitem) = Binarymap.remove(dict,k)
+in
+  Binarymap.insert(newdict,k,f kitem)
+end
 
 fun info_for_name (overloads:overload_info) s =
-  List.find (fn x => #overloaded_op x = s) (#1 overloads)
+  Binarymap.peek (#1 overloads, s)
 fun is_overloaded (overloads:overload_info) s =
-  List.exists (fn x => #overloaded_op x = s) (#1 overloads)
+  isSome (info_for_name overloads s)
 
 fun type_compare (ty1, ty2) = let
   val ty1_gte_ty2 = Lib.can (Type.match_type ty1) ty2
@@ -135,19 +133,18 @@ end
 
 fun remove_overloaded_form s (oinfo:overload_info) = let
   val (op2cnst, cnst2op) = oinfo
-  val (okopc, badopc) = Lib.partition (fn x => #overloaded_op x <> s) op2cnst
+  val (okopc, badopc) = Binarymap.remove(op2cnst, s)
   (* will keep okopc, but should now remove from cnst2op all pairs of the form
        (c, s)
      where c is an actual op from one of the badopc and s is the s above *)
-  val allbad_ops =
-    List.concat (map (map lose_constrec_ty o #actual_ops) badopc)
+  val allbad_ops = map lose_constrec_ty (#actual_ops badopc)
   fun goodcop (crec, str) =
     str <> s orelse
     Lib.mem crec allbad_ops
   val okcop = List.filter goodcop cnst2op
 in
   (okopc, okcop)
-end
+end handle Binarymap.NotFound => oinfo
 
 (* a predicate on pairs of operations and types that returns true if
    they're equal, given that two types are equal if they can match
@@ -173,17 +170,16 @@ fun add_actual_overloading {opname, realname, realthy} oinfo = let
       val {base_type, ...} = valOf (info_for_name oinfo opname)
       val newbase = anti_unify base_type (#Ty newrec)
     in
-      valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
-             ((fupd_actual_ops
-               (fn ops =>
-                newrec :: Lib.op_set_diff ntys_equal ops [newrec])) o
-              (fupd_base_type (fn b => newbase)))
-             opc0)
+      fupd_dict_at_key opname
+      ((fupd_actual_ops
+        (fn ops =>
+         newrec :: Lib.op_set_diff ntys_equal ops [newrec])) o
+       (fupd_base_type (fn b => newbase)))
+      opc0
     end
     else
-      {actual_ops = [newrec], overloaded_op = opname,
-       base_type = #Ty newrec} ::
-      opc0
+      Binarymap.insert(opc0, opname,
+                       {actual_ops = [newrec], base_type = #Ty newrec})
   val cop = if opname <> realname then update_assoc newrec' opname cop0
             else (* opname = realname - possible that newrec binds to some
                                         other in the map; need to remove
@@ -216,31 +212,30 @@ fun compare_crec ({Name = n1, Thy = thy1},
   | x => x
 
 fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
-  fun cmp (op1:overloaded_op_info, op2:overloaded_op_info) =
-    String.compare(#overloaded_op op1, #overloaded_op op2)
-  val O1ops_sorted = Listsort.sort cmp (#1 O1)
-  val O2ops_sorted = Listsort.sort cmp (#1 O2)
+  val O1ops_sorted = Binarymap.listItems (#1 O1)
+  val O2ops_sorted = Binarymap.listItems (#1 O2)
   fun merge acc op1s op2s =
     case (op1s, op2s) of
       ([], x) => rev_append acc x
     | (x, []) => rev_append acc x
-    | (op1::op1s', op2::op2s') => let
+    | ((k1,op1)::op1s', (k2,op2)::op2s') => let
       in
-        case String.compare (#overloaded_op op1, #overloaded_op op2) of
-          LESS => merge (op1::acc) op1s' op2s
+        case String.compare (k1, k2) of
+          LESS => merge ((k1,op1)::acc) op1s' op2s
         | EQUAL => let
-            val name = #overloaded_op op1
+            val name = k1
             val ty1 = #base_type op1
             val ty2 = #base_type op2
             val newty = anti_unify ty1 ty2
             val newopinfo =
-              {overloaded_op = name, base_type = newty,
-               actual_ops =
-               Lib.op_union ntys_equal (#actual_ops op1) (#actual_ops op2)}
+              (name,
+               {base_type = newty,
+                actual_ops =
+                Lib.op_union ntys_equal (#actual_ops op1) (#actual_ops op2)})
           in
             merge (newopinfo::acc) op1s' op2s'
           end
-        | GREATER => merge (op2::acc) op1s op2s'
+        | GREATER => merge ((k2, op2)::acc) op1s op2s'
       end
     infix ##
     val O1cops_sorted = Listsort.sort (compare_crec o (#1 ## #1)) (#2 O1)
@@ -265,24 +260,24 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
             end
         end
 in
-  (merge [] O1ops_sorted O2ops_sorted,
+  (List.foldr (fn ((k,v),dict) => Binarymap.insert(dict,k,v))
+   (Binarymap.mkDict String.compare)
+   (merge [] O1ops_sorted O2ops_sorted),
    merge_cops [] O1cops_sorted O2cops_sorted)
 end
 
-fun known_constants (oi:overload_info) = map #overloaded_op (#1 oi)
+fun keys dict = Binarymap.foldr (fn (k,v,l) => k::l) [] dict
 
-fun remove_omapping crec str oplist =
-  case oplist of
-    [] => []
-  | (r::rs) =>
-      if #overloaded_op r = str then let
-        fun ok_actual oprec = lose_constrec_ty oprec <> crec
-        val new_rec0 = fupd_actual_ops (List.filter ok_actual) r
-      in
-        if (null (#actual_ops new_rec0)) then rs
-        else new_rec0::rs
-      end
-      else r::remove_omapping crec str rs
+fun known_constants (oi:overload_info) = keys (#1 oi)
+
+fun remove_omapping crec str opdict = let
+  val (dictlessk, kitem) = Binarymap.remove(opdict, str)
+  fun ok_actual oprec = lose_constrec_ty oprec <> crec
+  val new_rec = fupd_actual_ops (List.filter ok_actual) kitem
+in
+  if (null (#actual_ops new_rec)) then dictlessk
+  else Binarymap.insert(dictlessk, str, new_rec)
+end
 
 
 fun remove_mapping str crec (oi:overload_info) =
