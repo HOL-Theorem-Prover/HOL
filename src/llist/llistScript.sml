@@ -1509,7 +1509,7 @@ val LFLATTEN_THM = store_thm(
   ONCE_REWRITE_TAC [LFLATTEN] THEN ASM_SIMP_TAC hol_ss []);
 
 val LFLATTEN_EQ_NIL = store_thm(
-  "LFATTEN_EQ_NIL",
+  "LFLATTEN_EQ_NIL",
   ``!ll. (LFLATTEN ll = LNIL) = LL_ALL ($= LNIL) ll``,
   GEN_TAC THEN EQ_TAC THENL [
     SIMP_TAC hol_ss [LL_ALL, never] THEN
