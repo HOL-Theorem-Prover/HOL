@@ -375,11 +375,11 @@ denotes exactly the same value (of \ML\ type {\small\verb%type%}) as
 \end{verbatim}
 
 \index{function abstraction, in HOL
-logic@function abstraction, in \HOL\ logic} 
+logic@function abstraction, in \HOL\ logic}
 \noindent can be used
 instead of\footnote{In order to be processed successfully, the latter
 quotation (which features a numeral) requires the theory of arithmetic
-to have already been loaded. This can be accomplished by 
+to have already been loaded. This can be accomplished by
 {\tt load "arithmeticTheory"}.}
 
 \newpage %PBHACK
@@ -575,7 +575,7 @@ The following session illustrates antiquotation.
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-- load "arithmeticTheory"; 
+- load "arithmeticTheory";
 > val it = () : unit
 
 - val y = Term `x+1`;
@@ -1093,7 +1093,7 @@ declared and $name$ is a specific name supplied by the user (see the
 functions \ml{new\_axiom}, \ml{new\_definition}, below). Different items
 can have the same specific name if the associated segment is different.
 Thus each theory segment provides a separate namespace of ML bindings of
-\HOL\ items. 
+\HOL\ items.
 
 Various additional pieces of information are stored in a theory
 segment, including the parsing status of the constants (\eg\ whether
@@ -1102,7 +1102,7 @@ they are infixes or binders).
 There is always a \emph{current theory} which is the theory
 represented by the current theory segment together with its
 ancestry. The name of the current theory segment is returned by the \ML\
-function: 
+function:
 
 \begin{boxed}\index{current_theory@\ml{current\_theory}|pin}
 \begin{verbatim}
@@ -1120,7 +1120,7 @@ by loading whatever specific logical context is required.
 
 The \ML\ functions for creating theories and manipulating
 \index{theories, in HOL logic@theories, in \HOL\ logic!creation of|(}
-are listed below.  
+are listed below.
 
 \begin{boxed}
 \index{new_theory@\ml{new\_theory}|pin}
@@ -1137,7 +1137,7 @@ exported before $thy_2$ is allocated. Furthermore, $thy_2$ will obtain
 $thy_1$ as a parent. If {\small\verb+new_theory +}$thy$ is called when
 the current theory segment is already named $thy$, then that is
 interpreted as a request merely to clear the current theory segment
-(nothing will be exported). 
+(nothing will be exported).
 
 A call to {\small\verb+new_theory "+}$name${\small\verb+"+} fails if:
 \begin{itemize}
@@ -1158,7 +1158,7 @@ deleted outright. Any theory elements that were built from overwritten
 or deleted elements are now held to be {\it out-of-date}, and will not
 be included in the theory when it is finally exported.  Out-of-date
 constants and types are detected by the \HOL\ printer, which will print
-them surrounded by odd-looking syntax to alert the user. 
+them surrounded by odd-looking syntax to alert the user.
 
 In contrast to the current segment, (proper) ancestor segments may not
 be altered.
@@ -1175,7 +1175,7 @@ existing theory segment by simply importing the corresponding module.
 Executing {\small\verb+load +}$name${\small\verb+Theory+} imports the
 first file named $name${\small\verb+Theory.uo+} found along the
 {\small\verb+loadPath+} into the session. Any unloaded ancestors of
-$name$ will be loaded before loading of $name${\small\verb+Theory+} 
+$name$ will be loaded before loading of $name${\small\verb+Theory+}
 continues.
 
 \begin{boxed}
@@ -1187,7 +1187,7 @@ continues.
 
 \noindent Executing \ml{new\_type}$\ n\ \ml{"\ty{op}"}$ makes \ty{op}
 a new $n$-ary type operator\index{type operators, in HOL logic@type
-operators, in \HOL\ logic!declaration} in the current theory. 
+operators, in \HOL\ logic!declaration} in the current theory.
 Failure if:
 \begin{myenumerate}
 \item there already exists a type operator named $\ty{op}$ in an ancestor
@@ -1712,7 +1712,7 @@ The contents of the current theory can be printed in a readable format using the
 {\small\verb%print_theory%}\index{printing, in HOL logic@printing, in \HOL\ logic!of theories}\index{print_theory@\ml{print\_theory}}.
 \index{axioms!retrieval of, in HOL system@retrieval of, in \HOL\
 system|)}\index{theories, in HOL logic@theories, in \HOL\
-logic!functions for accessing|)} 
+logic!functions for accessing|)}
 
 
 %\subsection{Type abbreviations}\label{typeabbrev}\index{types, in HOL logic@types, in \HOL\ logic!abbreviation of}\index{type abbreviations!in HOL logic@in \HOL\ logic}\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|(}
@@ -1831,23 +1831,23 @@ The theory \ml{min}\index{min, the HOL theory@\ml{min}, the \HOL\
 theory|(} declares the type constant {\small\verb+bool+} of booleans,
 the binary type operator {\small\verb+fun+} of functions, and the type
 constant {\small\verb+ind+} of individuals.  Building on this, three
-primitive constants\index{constants, in HOL 
+primitive constants\index{constants, in HOL
  logic@constants, in \HOL\ logic!primitive logical}\index{primitive
  constants, of HOL logic@primitive constants, of \HOL\ logic}
 are declared in the theory {\small\verb%min%}: equality, implication, and a choice operator.
 \index{ equality, in HOL logic@\ml{=} (equality, in
- \HOL\ logic)}\index{equality, in HOL logic@equality, in \HOL\ logic} 
+ \HOL\ logic)}\index{equality, in HOL logic@equality, in \HOL\ logic}
 
 Equality ({\small\verb+$= : 'a -> 'a -> bool+}) parses as an infix with
-low binding precedence (100).  
+low binding precedence (100).
 
 Implication ({\small\verb+$==> : bool -> bool -> bool+}) parses as a
-right-associative infix with binding precedence 200. 
+right-associative infix with binding precedence 200.
 
  Equality\index{equality, in HOL logic@equality, in \HOL\
- logic}\index{implication, in HOL logic@implication, in \HOL\ logic} 
+ logic}\index{implication, in HOL logic@implication, in \HOL\ logic}
  and implication are standard predicate calculus notions, but choice is
- more exotic: 
+ more exotic:
 if $t$ is a term having type $\sigma${\small\verb%->bool%},
 then {\small\verb%@x.%}$t${\small\verb% x%} (or, equivalently,
 {\small\verb%$@%}$t$) denotes {\it some\/} member of the set whose
@@ -1900,7 +1900,7 @@ is used for the logical constants.
 
 \subsection{Assumption introduction}\index{assumption introduction,
 in HOL logic@assumption introduction, in \HOL\ logic!ML function
-for@\ML\ function for} 
+for@\ML\ function for}
 
 \begin{boxed}
 \index{ASSUME@\ml{ASSUME}|pin}
@@ -2186,7 +2186,7 @@ theorems, \eg, to use as test data for derived rules of inference.
 Another tag is used to implement so-called `validity checking' for tactics.
 
 The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
-true. 
+true.
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
@@ -2218,7 +2218,7 @@ can be extracted by
 \index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|(}
 At start-up,  the  initial  theory  for  users  of  the \HOL\  system is called
 \ml{bool}\index{HOL@\ml{HOL}}, which is constructed when the \HOL\
-system is built. The theory {\small\verb%bool%} 
+system is built. The theory {\small\verb%bool%}
 contains the five axioms\index{axioms!in bool theory@in \ml{bool} theory}
 for higher order logic. These axioms, together with the rules
 of inference described in Section~\ref{rules}, constitute the core of the
@@ -2232,7 +2232,7 @@ axiomatization due to Church\index{Church, A.} \cite{Church}.  The
 biggest difference is that in Church's formulation type
 variables\index{type variables, in HOL  logic@type variables, in \HOL\
 logic!differences from classical} are in  the meta-language, whereas in
-the \HOL\ logic they are part of the object language. 
+the \HOL\ logic they are part of the object language.
 
 The logical constants\index{logical constants, in HOL logic@logical constants, in \HOL\ logic} {\small\verb%T%}\index{truth values, in HOL logic@truth values, in \HOL\ logic!constants for}\index{T@\ml{T}!defined in terms of primitives} (truth), {\small\verb%F%}\index{F@\ml{F}!defined in terms of primitives} (falsity),
 {\small\verb%~%} (negation)\index{ negation, in HOL logic@{\small\verb+~+} (negation, in \HOL\ logic)}, {\small\verb%/\%} (conjunction)\index{ conjunction, in HOL logic@{\small\verb+/\+} (conjunction, in \HOL\ logic)}\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!defined in terms of primitives},
@@ -2291,10 +2291,10 @@ listed below are fairly standard; each one is preceded by its \ML\ name.
 
 
 There are five
-\index{universal quantifier, in HOL logic@universalquantifier, 
+\index{universal quantifier, in HOL logic@universalquantifier,
        in \HOL\ logic!in four primitive axioms}
 axioms in the theory {\small\verb%bool%}\index{bool, the HOL
-theory@\ml{bool}, the \HOL\ theory}; the first four are the following: 
+theory@\ml{bool}, the \HOL\ theory}; the first four are the following:
 
 \begin{hol}
 \index{BOOL_CASES_AX@\ml{BOOL\_CASES\_AX}}
@@ -2319,7 +2319,7 @@ theory@\ml{bool}, the \HOL\ theory}; the first four are the following:
 The fifth and last axiom of the \HOL\ logic is the Axiom of
 Infinity\index{axiom of infinity}. Its statement is phrased in terms of
 the function properties {\small\verb%ONE_ONE%} and {\small\verb%ONTO%}. The
-definitions are:  
+definitions are:
 
 \begin{hol}
 \index{ONE_ONE_DEF@\ml{ONE\_ONE\_DEF}}
@@ -2358,7 +2358,7 @@ deriving them from definitions can be tedious---proving that `axioms'
 follow from definitions amounts to proving their consistency.
 
 The theory {\small\verb%bool%} also supplies the definitions of a number of
-useful constants. 
+useful constants.
 \begin{hol}
 \index{LET_DEF@\ml{LET\_DEF}}
 \index{COND_DEF@\ml{COND\_DEF}}
@@ -2387,11 +2387,11 @@ expressions. The concrete syntax \index{terms, in HOL logic@terms,
 in \HOL\ logic!conditional}\index{conditional
 predicate, in HOL logic@conditional predicate,
 in \HOL\ logic}\index{conditionals, in HOL
-logic@conditionals, in \HOL\ logic} 
+logic@conditionals, in \HOL\ logic}
 \ml{`if $t_1\ $then$\ t_2\ $else$\ t_3$`} abbreviates the application
 \ml{COND\ $t_1\ t_2\ t_3$}. The syntax \ml{$t_1\;
 $=>$\;t_2\;$|$\;t_3$} is also permitted. The system alway prints out
-conditionals in the "if $t_1$ then $t_2$ else $t_3$" form. 
+conditionals in the "if $t_1$ then $t_2$ else $t_3$" form.
 
 The polymorphic constant {\small\verb+ARB+} is used to denote a fixed
 but arbitrary element in a type, which is occasionally useful when
@@ -2399,7 +2399,7 @@ attempting to deal with the issue of partiality.
 
 %\subsection{Conditionals}\label{conditionals}
 %
-%An iterated conditional 
+%An iterated conditional
 %
 %\[
 %t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
@@ -2422,7 +2422,7 @@ attempting to deal with the issue of partiality.
 %\[\ml{COND}\ t_{11}\ t_{12}\ \ml{(COND}\ t_{21}\ t_{22}\ \ldots\
 %\ml{(COND}\ t_{n1}\ t_{n2}\ t_{n3}\ml{)}\ \ldots\ \ml{)}\]
 %
-%\noindent For example, 
+%\noindent For example,
 %
 %\begin{session}\begin{verbatim}
 %- Term `if b then if c then if d then e else f else g else h`;
@@ -2453,66 +2453,71 @@ BOTH_EXISTS_AND_THM  |- !P Q. (?x. P /\ Q) = (?x. P) /\ ?x. Q
 BOTH_EXISTS_IMP_THM  |- !P Q. (?x. P ==> Q) = (!x. P) ==> ?x. Q
 
 BOTH_FORALL_IMP_THM  |- !P Q. (!x. P ==> Q) = (?x. P) ==> !x. Q
-    
+
 BOTH_FORALL_OR_THM   |- !P Q. (!x. P \/ Q) = (!x. P) \/ !x. Q
-    
+
 COND_ABS        |- !b f g. (\x. (if b then f x else g x)) = if b then f else g
-    
+
 COND_EXPAND     |- !b t1 t2. (if b then t1 else t2) = (~b \/ t1) /\ (b \/ t2)
-    
+
 COND_ID         |- !b t. (if b then t else t) = t
-    
+
 COND_RAND       |- !f b x y. f (if b then x else y) = if b then f x else f y
-    
+
 COND_RATOR      |- !b f g x. (if b then f else g) x = if b then f x else g x
-    
+
 DE_MORGAN_THM        |- !A B. (~(A /\ B) = ~A \/ ~B) /\ (~(A \/ B) = ~A /\ ~B)
-    
+
 ETA_THM              |- !M. (\x. M x) =  M
 
 EXISTS_OR_THM        |- !P Q. (?x. P x \/ Q x) = (?x. P x) \/ ?x. Q x
 
 FORALL_AND_THM       |- !P Q. (!x. P x /\ Q x) = (!x. P x) /\ !x. Q x
-    
+
 LEFT_AND_FORALL_THM  |- !P Q. (!x. P x) /\ Q = !x. P x /\ Q
 
 LEFT_EXISTS_AND_THM  |- !P Q. (?x. P x /\ Q) = (?x. P x) /\ Q
-    
+
 LEFT_EXISTS_IMP_THM  |- !P Q. (?x. P x ==> Q) = (!x. P x) ==> Q
-    
+
 LEFT_FORALL_IMP_THM  |- !P Q. (!x. P x ==> Q) = (?x. P x) ==> Q
-    
+
 LEFT_FORALL_OR_THM   |- !Q P. (!x. P x \/ Q) = (!x. P x) \/ Q
-    
+
 LEFT_OR_EXISTS_THM   |- !P Q. (?x. P x) \/ Q = ?x. P x \/ Q
-    
+
 NOT_EXISTS_THM       |- !P. ~(?x. P x) = !x. ~P x
-    
+
 NOT_FORALL_THM       |- !P. ~(!x. P x) = ?x. ~P x
 \end{verbatim}\end{boxed}
 
 \begin{boxed}\begin{verbatim}
 RIGHT_AND_FORALL_THM |- !P Q. P /\ (!x. Q x) = !x. P /\ Q x
-    
+
 RIGHT_AND_OVER_OR    |- !A B C. (B \/ C) /\ A = B /\ A \/ C /\ A
-    
+
 RIGHT_EXISTS_AND_THM |- !P Q. (?x. P /\ Q x) = P /\ ?x. Q x
-    
+
 RIGHT_EXISTS_IMP_THM |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
-    
+
 RIGHT_FORALL_IMP_THM |- !P Q. (!x. P ==> Q x) = P ==> !x. Q x
-    
+
 RIGHT_FORALL_OR_THM  |- !P Q. (!x. P \/ Q x) = P \/ !x. Q x
-    
+
 RIGHT_OR_EXISTS_THM  |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
-    
+
 RIGHT_FORALL_IMP_THM |- !P Q. (!x. P ==> Q x) = P ==> !x. Q x
-    
+
 RIGHT_FORALL_OR_THM  |- !P Q. (!x. P \/ Q x) = P \/ !x. Q x
-    
+
 RIGHT_OR_EXISTS_THM  |- !P Q. P \/ (?x. Q x) = ?x. P \/ Q x
-    
+
 SELECT_REFL          |- !x. (@y. y = x) = x
 
 SELECT_UNIQUE        |- !P x. (!y. P y = y = x) ==> ($@ P = x)
 \end{verbatim}\end{boxed}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
