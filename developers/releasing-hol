@@ -1,10 +1,16 @@
 # this shell script can be used to create a hol98 tar ball.
 
+if [ $# -ne 1 ]
+then
+        echo "Must provide one argument -- the name of the release"
+        exit 1
+fi
+name=$1
+
 mosmldir=/local/scratch/kxs/144
-name=for-konrad
 cd /tmp
 # use -r release-name for known release
-CVSROOT=/usr/groups/hol/repository cvs export -D today hol98
+CVSROOT=/usr/groups/hol/repository cvs export -r $name hol98
 sed "s|^val mosmldir.*\$|val mosmldir = \"$mosmldir\"|" \
    < hol98/tools/configure.sml | \
    sed 's|^val holdir.*$|val holdir = "/tmp/hol98"|' > new-config
@@ -36,8 +42,6 @@ fi
 echo Now building help index
 cd developers/help
 make
-cat /tmp/hol98/tools/documentation-directories | \
- while read foo ; do echo $foo ; /bin/rm /tmp/hol98/$foo/*.doc ; done
 
 echo Now building documentation
 cd /tmp/hol98/Manual/Reference
@@ -53,6 +57,9 @@ mv tutorial.dvi /tmp
 
 echo Now starting to clean up and make tar ball
 cd /tmp/hol98
+cat /tmp/hol98/tools/documentation-directories | \
+ while read foo ; do echo "Removing .doc files from $foo" ; \
+                     /bin/rm /tmp/hol98/$foo/*.doc ; done
 /bin/rm build-log
 bin/build -cleanAll
 /bin/rm -rf developers
@@ -66,4 +73,5 @@ mv ../bin-README bin/README
 mv ../sigobj-README sigobj/README
 
 cd /tmp
-tar czf hol98-$name.tar.gz hol98
+echo "Creating tar file"
+tar cvzf $name.tar.gz hol98
