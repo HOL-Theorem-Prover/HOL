@@ -39,7 +39,7 @@ load "PathTheory"; load "rich_listTheory"; load "intLib";
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open Globals HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
 * Open theories of paths and lists

@@ -16,6 +16,9 @@ load "rich_listTheory"; load "intLib";
 ******************************************************************************)
 open HolKernel Parse boolLib bossLib listTheory rich_listTheory intLib;
 
+(******************************************************************************
+* Versions of simpsets that deal properly with theorems containing SUC
+******************************************************************************)
 val arith_ss' = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 
 (******************************************************************************
@@ -32,7 +35,7 @@ val _ = new_theory "Path";
 * Infix list concatenation
 ******************************************************************************)
 val _ = set_fixity "<>" (Infixl 500);
-val APPEND_INFIX_def =  xDefine "APPEND_INFIX" `$<>  = APPEND`;
+val _ = overload_on ("<>", Term`APPEND`);
 
 (******************************************************************************
 * Concatenate a list of lists
@@ -308,7 +311,7 @@ val ALL_EL_CONCAT =
    ``!P. ALL_EL (\l. (LENGTH l = 1) /\ P(EL(LENGTH l - 1)l)) ll 
           ==> ALL_EL P (CONCAT ll)``,
    Induct_on `ll`
-    THEN RW_TAC list_ss [CONCAT_def,APPEND_INFIX_def]
+    THEN RW_TAC list_ss [CONCAT_def]
     THEN RW_TAC list_ss [EVERY_EL,DECIDE``n<1 ==> (n=0)``]
     THEN ASSUM_LIST(fn thl => ACCEPT_TAC(SIMP_RULE arith_ss [el 4 thl,EL] (el 3 thl))));
 
@@ -317,7 +320,7 @@ val CONCAT_MAP_SINGLETON =
   ("CONCAT_MAP_SINGLETON",
    ``!ll. CONCAT (MAP (\l. [l]) ll) = ll``,
    Induct
-    THEN RW_TAC list_ss [CONCAT_def,MAP,APPEND_INFIX_def]);
+    THEN RW_TAC list_ss [CONCAT_def,MAP]);
 
 val LENGTH_EL_MAP_SINGLETON =
  store_thm
