@@ -1,6 +1,6 @@
 #! /bin/sh -x
 #
-# Shell script to find, sort and translate all .doc files in a given 
+# Shell script to find, sort and translate all .doc files in a given
 # directory into LaTeX sources.  Executing:
 #
 #	/bin/sh doc-to-tex <sed> <dir> <file>
@@ -12,8 +12,8 @@
 # Modified 28.02.91 by JVT to take care of strange file names.
 # Original code:
 #
-#   for file in `cd $1; ls -1 *.doc | sed 's/.doc$//g' | sort -f` 
-#       do 
+#   for file in `cd $1; ls -1 *.doc | sed 's/.doc$//g' | sort -f`
+#       do
 #         sed -f doc-to-tex.sed $1/$file.doc >> $2
 #       done
 #
@@ -36,10 +36,10 @@
 #
 # Modified 91.06.17 to take a pathname to the sed script as an argument.
 
-(cd $2;ls -A1 | grep '\.doc$' | sort -f | sed "s/.doc$/.doc'/g" | sed "s/^/'/g") > .files
+(cd $2;ls -A1 | grep '\.doc$' | sort -f -t . +1 | sed "s/.doc$/.doc'/g" | sed "s/^/'/g") > .files
 
 for file in `cat .files | sed "s/^'//g" | sed "s/.doc'/.doc/g"`
-     do 
+     do
        sed -f $1 $2/"$file" >> $3
      done
 rm .files
