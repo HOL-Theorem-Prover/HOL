@@ -32,18 +32,20 @@ src/basicProof
 src/relation
 src/pair/src
 src/sum
+src/tfl/src
 src/one
 src/option
 src/num/theories
 src/num/reduce/src
 src/num/arith/src
+src/num/termination
+src/num/extra_theories
 src/num
 src/IndDef
 src/datatype/equiv
 src/datatype/record
 src/datatype
 src/list/src
-src/tfl/src
 src/unwind
 src/boss
 # Up to this point is needed for hol.unquote (which loads bossLib).
