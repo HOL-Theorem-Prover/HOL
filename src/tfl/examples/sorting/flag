@@ -35,7 +35,7 @@ val Swap_def =
  /\ (Swap (B::W::rst) = SOME(W::B::rst))
  /\ (Swap (x::rst)    = option_APPLY (CONS x) (Swap rst))`;
 
-val Swap_def' = 
+val Swap_eqns = 
   let val Swap_NIL = CONJUNCT1 Swap_def
   in 
     CONJ Swap_NIL 
@@ -103,7 +103,7 @@ Defn.tprove
 (Flag_defn,
  WF_REL_TAC Flag_defn `measure Weight`
   THEN recInduct Swap_ind_thm
-  THEN RW_TAC std_ss [Swap_def',Weight_def] 
+  THEN RW_TAC std_ss [Swap_eqns,Weight_def] 
   THENL [ALL_TAC,ALL_TAC,ALL_TAC,
          option_APPLY_eq_SOME_TAC,option_APPLY_eq_SOME_TAC,
          option_APPLY_eq_SOME_TAC,option_APPLY_eq_SOME_TAC]
@@ -144,7 +144,7 @@ REPEAT GEN_TAC
 val Swap_SOME = Q.prove
 (`!l1 l2. (Swap l1 = SOME l2) ==> PERM l1 l2`,
  recInduct Swap_ind_thm
-  THEN RW_TAC std_ss [Swap_def']
+  THEN RW_TAC std_ss [Swap_eqns]
   THEN ((RW_TAC list_ss [PERM_def,FILTER] THEN RW_TAC list_ss [] THEN NO_TAC)
        ORELSE
        (option_APPLY_eq_SOME_TAC THEN PROVE_TAC [PERM_mono])));
@@ -160,7 +160,7 @@ val Swap_NONE = Q.prove
       (L = APPEND (FILTER ($= R) L) 
              (APPEND (FILTER ($= W) L) 
                        (FILTER ($= B) L)))`,
-recInduct Swap_ind_thm THEN RW_TAC std_ss [Swap_def']
+recInduct Swap_ind_thm THEN RW_TAC std_ss [Swap_eqns]
  THEN ((RW_TAC list_ss [FILTER,APPEND] THEN NO_TAC)
        ORELSE IMP_RES_TAC option_APPLY_lem2 THEN RES_THEN MP_TAC)
  THEN IMP_RES_TAC option_APPLY_lem2 THEN RES_THEN MP_TAC THENL 
