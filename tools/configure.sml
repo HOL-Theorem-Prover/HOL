@@ -31,7 +31,6 @@ val CC       = "gcc";      (* C compiler                                   *)
 val GNUMAKE  = "make";     (* for bdd library and SMV                      *)
 
 val DEPDIR   = ".HOLMK";   (* local dir. where Holmake dependencies kept   *)
-val LN_S     = "ln -s";    (* only change if you are a HOL developer.      *)
 
 (*---------------------------------------------------------------------------
           END user-settable parameters
@@ -49,92 +48,10 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
+fun quote s = String.concat ["\"",String.toString s,"\""]
+
 val holmakedir = fullPath [holdir, "tools", "Holmake"];
 val compiler = fullPath [mosmldir, "bin", "mosmlc"];
-
-fun copy src dest =  (* Dead simple file copy *)
- let open TextIO
-     val (istrm,ostrm) = (openIn src, openOut dest)
-     fun loop() =
-       case input1 istrm
-        of SOME ch => (output1(ostrm,ch) ; loop())
-         | NONE    => (closeIn istrm; flushOut ostrm; closeOut ostrm)
-  in loop()
-  end;
-
-(*---------------------------------------------------------------------------
-     Load in systeml structure (with OS-specific stuff available)
- ---------------------------------------------------------------------------*)
-
-(* default values ensure that later things fail if Systeml doesn't compile *)
-fun systeml x = (print "Systeml not correctly loaded.\n";
-                 Process.exit Process.failure);
-val mk_xable = systeml;
-val xable_string = systeml;
-
-val OSkind = if OS="linux" orelse OS="solaris" then "unix" else OS
-val _ = let
-  (* copy system-specific implementation of Systeml into place *)
-  val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
-  val destfile = fullPath [holmakedir, "Systeml.sml"]
-in
-  print "\nCompiling system specific functions\n";
-  copy srcfile destfile;
-  use destfile
-end;
-
-open Systeml;
-
-(*---------------------------------------------------------------------------
-     Now compile Systeml.sml
- ---------------------------------------------------------------------------*)
-
-let
-  val dir_0 = FileSys.getDir()
-in
-  FileSys.chDir holmakedir;
-  if systeml [compiler, "-c", "Systeml.sml"] <> Process.success then
-    (print "Failed to compile system-specific code\n";
-     Process.exit Process.failure)
-  else ();
-  FileSys.chDir dir_0
-end;
-
-
-(*---------------------------------------------------------------------------
-     Source directories.
- ---------------------------------------------------------------------------*)
-
-val SRCDIRS =
- ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack",
-  "src/taut", "src/compute/src", "src/q", "src/combin", "src/marker",
-  "src/lite", "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
-  "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
-  "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
-  "src/IndDef",
-  "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
-  "src/datatype",  "src/list/src", "src/tfl/src", "src/unwind", "src/boss",
-  "src/word32", "src/string", "src/llist",   "src/pred_set/src",
-  "src/ring/src", "src/integer",
-  "src/res_quan/src", "src/word/theories", "src/word/src",
-  "src/finite_map", "src/hol88", "src/real", "src/bag",
-  "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob", "src/HolSat",
-  "src/muddy/muddyC", "src/muddy", "src/HolBdd"];
-
-(*---------------------------------------------------------------------------
-          String and path operations.
- ---------------------------------------------------------------------------*)
-
-fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
-              TextIO.flushOut TextIO.stdOut);
-
-local fun expChar #"\\" = "\\\\"
-        | expChar #"\"" = "\\\""
-        | expChar ch    = String.str ch
-      val exp_bslash = String.translate expChar
-in
-fun quote s = String.concat["\"", exp_bslash s, "\""]
-end;
 
 (*---------------------------------------------------------------------------
       File handling. The following implements a very simple line
@@ -175,6 +92,89 @@ fun fill_holes (src,target) repls =
 infix -->
 fun (x --> y) = (x,y);
 
+fun text_copy src dest = fill_holes(src, dest) [];
+fun bincopy src dest = let
+  val instr = BinIO.openIn src
+  val outstr = BinIO.openOut dest
+  fun loop () = let
+    val v = BinIO.inputN(instr, 1024)
+  in
+    if Word8Vector.length v = 0 then (BinIO.flushOut outstr;
+                                      BinIO.closeOut outstr;
+                                      BinIO.closeIn instr)
+    else (BinIO.output(outstr, v); loop())
+  end
+in
+  loop()
+end;
+
+
+(*---------------------------------------------------------------------------
+     Load in systeml structure (with OS-specific stuff available)
+ ---------------------------------------------------------------------------*)
+
+(* default values ensure that later things fail if Systeml doesn't compile *)
+fun systeml x = (print "Systeml not correctly loaded.\n";
+                 Process.exit Process.failure);
+val mk_xable = systeml;
+val xable_string = systeml;
+
+val OSkind = if OS="linux" orelse OS="solaris" then "unix" else OS
+val _ = let
+  (* copy system-specific implementation of Systeml into place *)
+  val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
+  val destfile = fullPath [holmakedir, "Systeml.sml"]
+  val sigfile = fullPath [holmakedir, "Systeml.sig"]
+in
+  print "\nLoading system specific functions\n";
+  use sigfile;
+  fill_holes (srcfile, destfile)
+  ["val HOLDIR =" --> ("val HOLDIR = "^quote holdir^"\n"),
+   "val MOSMLDIR =" --> ("val MOSMLDIR = "^quote mosmldir^"\n"),
+   "val OS =" --> ("val OS = "^quote OS^"\n"),
+   "val DEPDIR =" --> ("val DEPDIR = "^quote DEPDIR^"\n"),
+   "val GNUMAKE =" --> ("val GNUMAKE = "^quote GNUMAKE^"\n")];
+  use destfile
+end;
+
+open Systeml;
+
+(*---------------------------------------------------------------------------
+     Now compile Systeml.sml
+ ---------------------------------------------------------------------------*)
+
+let
+  val _ = print "Compiling system specific functions ("
+  val modTime = FileSys.modTime
+  val dir_0 = FileSys.getDir()
+  val sigfile = fullPath [holmakedir, "Systeml.sig"]
+  val uifile = fullPath [holmakedir, "Systeml.ui"]
+  val sigfile_newer = not (FileSys.access(uifile, [FileSys.A_READ])) orelse
+                      Time.>(modTime sigfile, modTime uifile)
+  fun die () = (print ")\nFailed to compile system-specific code\n";
+                Process.exit Process.failure)
+  val systeml = fn l => if systeml l <> Process.success then die() else ()
+  fun to_sigobj s = bincopy s (fullPath [holdir, "sigobj", s])
+in
+  FileSys.chDir holmakedir;
+  if sigfile_newer then (systeml [compiler, "-c", "Systeml.sig"];
+                         app to_sigobj ["Systeml.sig", "Systeml.ui"];
+                         print "sig ") else ();
+  systeml [compiler, "-c", "Systeml.sml"];
+  to_sigobj "Systeml.uo";
+  print "sml)\n";
+  FileSys.chDir dir_0
+end;
+
+
+
+(*---------------------------------------------------------------------------
+          String and path operations.
+ ---------------------------------------------------------------------------*)
+
+fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
+              TextIO.flushOut TextIO.stdOut);
+
 val _ = echo "\nBeginning configuration.";
 
 (*---------------------------------------------------------------------------
@@ -188,8 +188,6 @@ val _ =
      val cdir      = FileSys.getDir()
      val hmakedir  = normPath(Path.concat(holdir, "tools/Holmake"))
      val _         = FileSys.chDir hmakedir
-     val src       = "Holmake.src"
-     val target    = "Holmake.sml"
      val bin       = fullPath [holdir,   "bin/Holmake"]
      val lexer     = fullPath [mosmldir, "bin/mosmllex"]
      val yaccer    = fullPath [mosmldir, "bin/mosmlyac"]
@@ -197,13 +195,6 @@ val _ =
                                    raise Fail ""
                                  else ()
   in
-    fill_holes (src,target)
-       ["val HOLDIR0 ="
-          --> String.concat["val HOLDIR0 = ", quote holdir,";\n"],
-        "val MOSMLDIR0 ="
-          -->  String.concat["val MOSMLDIR0 = ", quote mosmldir, ";\n"],
-        "val DEFAULT_OVERLAY = _;\n"
-          --> "val DEFAULT_OVERLAY = SOME \"Overlay.ui\"\n"];
     systeml [yaccer, "Parser.grm"];
     systeml [lexer, "Lexer.lex"];
     systeml [compiler, "-c", "Parser.sig"];
@@ -220,9 +211,9 @@ val _ =
     systeml [compiler, "-c", "Holmake_rules.sig"];
     systeml [compiler, "-c", "Holmake_rules.sml"];
     if OS <> "winNT" then
-      systeml [compiler, "-standalone", "-o", bin, target]
+      systeml [compiler, "-standalone", "-o", bin, "Holmake.sml"]
     else
-      systeml [compiler, "-o", bin, target];
+      systeml [compiler, "-o", bin, "Holmake.sml"];
     mk_xable bin;
     FileSys.chDir cdir
   end
@@ -230,13 +221,12 @@ handle _ => (print "*** Couldn't build Holmake\n";
              Process.exit Process.failure)
 
 (*---------------------------------------------------------------------------
-    Instantiate tools/build.src, compile it, and put it in bin/build.
+    Compile build.sml, and put it in bin/build.
  ---------------------------------------------------------------------------*)
 
 val _ =
  let open TextIO
      val _ = echo "Making bin/build."
-     val src    = fullPath [holdir, "tools/build.src"]
      val target = fullPath [holdir, "tools/build.sml"]
      val bin    = fullPath [holdir, "bin/build"]
      val full_paths =
@@ -247,16 +237,6 @@ val _ =
       in String.concat o plist
       end
   in
-   fill_holes (src,target)
-    ["val OS =" --> String.concat["val OS = ", quote OS, ";\n"],
-     "val HOLDIR = _;\n" --> String.concat["val HOLDIR = ",quote holdir,";\n"],
-     "val DEPDIR = _;\n" --> String.concat["val DEPDIR = ",quote DEPDIR,";\n"],
-     "val SRCDIRS = _;\n" --> String.concat["val SRCDIRS = \n","    [",
-                                          full_paths SRCDIRS],
-     "val GNUMAKE = _;\n" --> String.concat["val GNUMAKE = ",
-                                              quote GNUMAKE,";\n"],
-     "val EXECUTABLE = _;\n" --> String.concat["val EXECUTABLE = ",
-                                          quote(xable_string bin),";\n"]];
    if systeml [fullPath [mosmldir, "bin/mosmlc"], "-o", bin,
                "-I", holmakedir, target] = Process.success then ()
    else (print "*** Failed to build build executable.\n";
@@ -304,22 +284,6 @@ val _ =
                      ",", quote"sigobj",")))\n"]
      ]
  end;
-
-(*---------------------------------------------------------------------------
-     Set the location of HOLDIR in Globals.src and write it to
-     src/0/Globals.sml
- ---------------------------------------------------------------------------*)
-
-val _ =
- let open TextIO
-     val _ = echo "Setting up src/0/Globals.sml."
-     val src    = fullPath [holdir, "tools/Globals.src"]
-     val target = fullPath [holdir, "src/0/Globals.sml"]
-  in
-   fill_holes (src,target)
-    ["val HOLDIR =" -->
-     String.concat["val HOLDIR = ",quote holdir,";\n"]]
-  end;
 
 (*---------------------------------------------------------------------------
       Generate shell scripts for running HOL.
@@ -407,28 +371,25 @@ val _ =
      val _ = echo "Setting up the muddy library Makefile."
      val src    = fullPath [holdir, "tools/makefile.muddy.src"]
      val target = fullPath [holdir, "src/muddy/muddyC/Makefile"]
-     val (cflags, dllibcomp, all) =
-       case (CFLAGS, DLLIBCOMP, ALL) of
-         (SOME s1, SOME s2, SOME s3) => (s1, s2, s3)
-       | _ => let
-         in
-           print (String.concat
-                  ["   Warning! (non-fatal):\n    The muddy package is not ",
-                   "expected to build in OS flavour ", quote OS, ".\n",
-                   "   On winNT, muddy will be installed from binaries.\n",
-                   "   End Warning.\n"]);
-           ("unknownOS", "unknownOS", "unknownOS")
-         end
-  in
-     fill_holes (src,target)
+ in
+   case (CFLAGS, DLLIBCOMP, ALL) of
+     (SOME s1, SOME s2, SOME s3) => let
+       val (cflags, dllibcomp, all) = (s1, s2, s3)
+     in
+       fill_holes (src,target)
        ["MOSMLHOME=\n"  -->  String.concat["MOSMLHOME=", mosmldir,"\n"],
         "CC=\n"         -->  String.concat["CC=", CC, "\n"],
         "CFLAGS="       -->  String.concat["CFLAGS=",cflags,"\n"],
         "all:\n"        -->  String.concat["all: ",all,"\n"],
-        "DLLIBCOMP"     -->  String.concat["\t", dllibcomp, "\n"]
-        ]
-  end
-end;
+        "DLLIBCOMP"     -->  String.concat["\t", dllibcomp, "\n"]]
+     end
+   | _ =>  print (String.concat
+                  ["   Warning! (non-fatal):\n    The muddy package is not ",
+                   "expected to build in OS flavour ", quote OS, ".\n",
+                   "   On winNT, muddy will be installed from binaries.\n",
+                   "   End Warning.\n"])
+ end
+end; (* local *)
 
 (*---------------------------------------------------------------------------
            Configure the help database
@@ -436,19 +397,12 @@ end;
 
 val _ =
  let val _ = echo "Setting up the help source directory."
-     val src     = fullPath [holdir, "tools", "makebase.src"]
-     val target  = fullPath [holdir, "help", "src", "makebase.sml"]
      val src1    = fullPath [holdir, "tools", "Holmakefile.help.src"]
      val target1 = fullPath [holdir, "help", "src", "Holmakefile"]
  in
-  fill_holes (src,target)
-   ["(* Developers: you may edit this file *)\n"
-      --> "(* DO NOT EDIT THIS FILE; it's automatically generated *)\n",
-    "val HOLpath = __;\n"
-      --> String.concat["val HOLpath = ", quote holdir, ";\n"]];
   fill_holes (src1,target1)
    ["(0)\n" --> "# Do NOT edit this file; it's automatically generated!!\n",
-    "(1)\n" --> String.concat["\tMOSMLC -o ",
+    "(1)\n" --> String.concat["\tHOLMOSMLC -o ",
                               xable_string "makebase", " makebase.uo\n"],
     "(2)\n" --> String.concat["\tMOSMLC -o ",
                               xable_string "Doc2Html", " Doc2Html.uo\n"],

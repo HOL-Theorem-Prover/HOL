@@ -3,8 +3,10 @@
 (* A list of the signatures that we think users will be interested in.       *)
 (*---------------------------------------------------------------------------*)
 
-val keepers = 
-  [ (* portableML *)
+val keepers =
+  [ "Systeml.sig",
+
+    (* portableML *)
      "Arbnum.sig", "Arbint.sig", "Portable.sig",
 
      (*0*)
@@ -13,12 +15,12 @@ val keepers =
       "Lib.sig", "Globals.sig",
 
      (* parse *)
-     "Parse.sig",  "Hol_pp.sig", "Absyn.sig", "Preterm.sig", 
+     "Parse.sig",  "Hol_pp.sig", "Absyn.sig", "Preterm.sig",
 
      (* boolLib *)
      "Abbrev.sig", "DB.sig", "boolSyntax.sig", "boolTheory.sig",
      "Drule.sig", "Tactical.sig", "Tactic.sig", "Thm_cont.sig",
-     "Conv.sig", "QConv.sig", "Ho_Net.sig", "Ho_Rewrite.sig", 
+     "Conv.sig", "QConv.sig", "Ho_Net.sig", "Ho_Rewrite.sig",
      "Rewrite.sig", "Rsyntax.sig", "Psyntax.sig",
      "TypeBase.sig", "DefnBase.sig", "Prim_rec.sig",
 
@@ -26,7 +28,7 @@ val keepers =
      "IndDefLib.sig", "InductiveDefinition.sig", "IndDefRules.sig",
 
      (* HolBdd *)
-     "MachineTransitionTheory.sig", 
+     "MachineTransitionTheory.sig",
      "PrimitiveBddRules.sig", "DerivedBddRules.sig",
      "PrintBdd.sig", "Varmap.sig",
 
@@ -51,7 +53,7 @@ val keepers =
      "RecordType.sig", "EquivType.sig",
 
      (* finite maps *)
-     "finite_mapTheory.sig", 
+     "finite_mapTheory.sig",
 
      (* goalstackLib *)
      "goalstackLib.sig",
@@ -78,10 +80,10 @@ val keepers =
 
 
      (* num *)
-     "numSyntax.sig", 
+     "numSyntax.sig",
      "numTheory.sig", "prim_recTheory.sig", "arithmeticTheory.sig",
      "numeralTheory.sig", "numLib.sig", "numSimps.sig",
-     "reduceLib.sig", 
+     "reduceLib.sig",
 
      (* one *)
      "oneTheory.sig",
@@ -100,12 +102,12 @@ val keepers =
 
      (* probability *)
      "probLib.sig", "probTheory.sig",
-     "boolean_sequenceTheory.sig", 
-     "prob_algebraTheory.sig",     "prob_indepTheory.sig", 
-     "prob_canonTheory.sig",       
-     "prob_extraTheory.sig",       
-     "prob_pseudoTheory.sig",      
-     "prob_uniformTheory.sig",     
+     "boolean_sequenceTheory.sig",
+     "prob_algebraTheory.sig",     "prob_indepTheory.sig",
+     "prob_canonTheory.sig",
+     "prob_extraTheory.sig",
+     "prob_pseudoTheory.sig",
+     "prob_uniformTheory.sig",
      "state_transformerTheory.sig",
 
      (* Quotations *)
@@ -140,7 +142,7 @@ val keepers =
      "simpLib.sig", "boolSimps.sig",
 
      (* string *)
-     "stringLib.sig", "stringTheory.sig", "stringSyntax.sig", 
+     "stringLib.sig", "stringTheory.sig", "stringSyntax.sig",
      "stringSimps.sig",
 
      (* disjoint union *)

@@ -1,4 +1,8 @@
-structure Systeml = struct
+structure Systeml :> Systeml = struct
+
+(* This is the UNIX implementation of the Systeml functionality.  It is the
+   very first thing compiled by the HOL build process so it absolutely
+   can not depend on any other HOL source code. *)
 
 local
   open Process
@@ -49,5 +53,14 @@ in
         mk_xable target
       end
 end (* local *)
+
+val HOLDIR =
+val MOSMLDIR =
+val OS =
+
+val DEPDIR =
+val GNUMAKE =
+
+
 
 end; (* struct *)

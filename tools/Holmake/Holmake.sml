@@ -17,10 +17,10 @@ fun warn s = (TextIO.output(TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 open Systeml;
 
 (* Global parameters, which get set at configuration time *)
-val HOLDIR0 = _;
-val MOSMLDIR0 = _;
+val HOLDIR0 = Systeml.HOLDIR;
+val MOSMLDIR0 = Systeml.MOSMLDIR;
 val DEPDIR = ".HOLMK";
-val DEFAULT_OVERLAY = _;
+val DEFAULT_OVERLAY = SOME "Overlay.ui";
 
 val SYSTEML = Systeml.systeml
 

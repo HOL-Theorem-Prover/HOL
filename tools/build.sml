@@ -15,12 +15,35 @@ fun quote s = String.concat["\"", s, "\""];
      The following lines are written at configuration time.
  ---------------------------------------------------------------------------*)
 
-val OS = _;
-val HOLDIR = _;
-val DEPDIR = _;
-val SRCDIRS = _;
-val GNUMAKE = _;
-val EXECUTABLE = _;
+val OS = Systeml.OS;
+val HOLDIR = Systeml.HOLDIR
+val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
+val DEPDIR = Systeml.DEPDIR
+val GNUMAKE = Systeml.GNUMAKE
+
+(*---------------------------------------------------------------------------
+     Source directories.
+ ---------------------------------------------------------------------------*)
+
+val SRCDIRS0 =
+ ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack",
+  "src/taut", "src/compute/src", "src/q", "src/combin", "src/marker",
+  "src/lite", "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
+  "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
+  "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
+  "src/IndDef",
+  "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
+  "src/datatype",  "src/list/src", "src/tfl/src", "src/unwind", "src/boss",
+  "src/word32", "src/string", "src/llist",   "src/pred_set/src",
+  "src/ring/src", "src/integer",
+  "src/res_quan/src", "src/word/theories", "src/word/src",
+  "src/finite_map", "src/hol88", "src/real", "src/bag",
+  "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob", "src/HolSat",
+  "src/muddy/muddyC", "src/muddy", "src/HolBdd"];
+
+val SRCDIRS = map (fn s => fullPath [HOLDIR, s]) SRCDIRS0
+
+
 
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -191,11 +214,29 @@ fun rem_file f =
    handle _ => (print ("Trouble with removing file "^f^"?\n"); ());
 
 
-fun clean_sigobj() =
-  let val _ = print ("Cleaning out "^SIGOBJ^"\n")
+fun clean_sigobj() = let
+  val _ = print ("Cleaning out "^SIGOBJ^"\n")
+  (* need to avoid removing the systeml stuff that will have been put into
+     sigobj by the action of configure.sml *)
+  val lowcase = String.map Char.toLower
+  fun sigobj_rem_file s = let
+    val f = Path.file s
   in
-     map_dir (rem_file o normPath o Path.concat) SIGOBJ
-  end;
+    if lowcase (hd (String.tokens (fn c => c = #".") f)) <> "systeml" then
+      rem_file s
+    else ()
+  end
+  fun write_initial_srcfiles () = let
+    val outstr = TextIO.openOut (fullPath [HOLDIR, "sigobj", "SRCFILES"])
+  in
+    TextIO.output(outstr, fullPath [HOLDIR, "tools", "Holmake", "Systeml"]);
+    TextIO.output(outstr, "\n");
+    TextIO.closeOut(outstr)
+  end
+in
+  map_dir (sigobj_rem_file o normPath o Path.concat) SIGOBJ;
+  write_initial_srcfiles ()
+end;
 
 fun build_adoc_files () = let
   val docdirs = let
@@ -348,8 +389,8 @@ in
 end;
 
 val _ = check_against "tools/configure.sml"
-val _ = check_against "tools/build.src"
-val _ = check_against "tools/Globals.src"
+val _ = check_against "tools/build.sml"
+val _ = check_against "tools/Holmake/Systeml.sig"
 
 val _ =
   case Mosml.argv ()

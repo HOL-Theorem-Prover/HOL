@@ -4,8 +4,6 @@
  * Hacked for HOL help system, Konrad Slind, Nov. 2001.
  *)
 
-(* Developers: you may edit this file *)
-
 fun curry f x y = f (x,y);
 fun single x = [x];
 
@@ -48,7 +46,7 @@ val version =
  "<A HREF=\"http://www.cl.cam.ac.uk/Research/HVG/FTP/\">HOL Kananaskis 1";
 
 (* HOL distribution directory: *)
-val HOLpath = __;
+val HOLpath = Systeml.HOLDIR;
 
 (* Default directory containing the signature files: *)
 val libdirDef = normPath[HOLpath,"sigobj"]

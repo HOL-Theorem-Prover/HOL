@@ -1,4 +1,8 @@
-structure Systeml = struct
+structure Systeml : Systeml = struct
+
+(* This is the WINDOWS implementation of the Systeml functionality.
+   It is the very first thing compiled by the HOL build process so it
+   absolutely can not depend on any other HOL source code. *)
 
 local
   fun dquote s = concat ["\"", s, "\""];
@@ -55,6 +59,13 @@ fun emit_hol_unquote_script target qfilter mosml std_prelude qinit qend =
 end
 
 end (* local *)
+
+val HOLDIR =
+val MOSMLDIR =
+val OS =
+val DEPDIR =
+val GNUMAKE =
+
 
 end; (* struct *)
 
