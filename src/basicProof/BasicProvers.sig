@@ -18,6 +18,7 @@ sig
   val bool_ss         : simpset
   val srw_ss          : unit -> simpset
   val Abbr            : term quotation -> thm
+  val LEAVE_LETS      : thm
 
   val RW_TAC          : simpset -> thm list -> tactic
   val NORM_TAC        : simpset -> thm list -> tactic

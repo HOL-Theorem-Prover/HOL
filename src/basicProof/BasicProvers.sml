@@ -163,7 +163,8 @@ fun ABBREV_CONV tm = let
   val (l, r) = dest_eq t
 in
   if not (is_var l) orelse is_var r then
-    REWR_CONV markerTheory.Abbrev_def
+    REWR_CONV markerTheory.Abbrev_def THENC
+    REWR_CONV EQ_SYM_EQ
   else ALL_CONV
 end tm
 
@@ -179,10 +180,13 @@ fun LET_ELIM_TAC goal = let
   (* two successive calls to SIMP_TAC ensure that the LET_FORALL_ELIM
      theorem is applied after all the movement is possible *)
 in
-  SIMP_TAC pure_ss (!let_movement_thms) THEN
-  SIMP_TAC pure_ss (combinTheory.LET_FORALL_ELIM :: !let_movement_thms) THEN
-  SIMP_TAC (pure_ss ++ ABBREV_ss ++ UNWIND_ss) [Cong IMP_CONG'] THEN
-  REPEAT STRIP_TAC
+  CONV_TAC
+    (QCHANGED_CONV
+       (SIMP_CONV pure_ss (!let_movement_thms) THENC
+        SIMP_CONV pure_ss (combinTheory.LET_FORALL_ELIM ::
+                           !let_movement_thms) THENC
+        SIMP_CONV (pure_ss ++ ABBREV_ss ++ UNWIND_ss) [Cong IMP_CONG'])) THEN
+  REPEAT BOSS_STRIP_TAC
 end goal
 
 fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
@@ -219,10 +223,13 @@ fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
          * break up an equation between constructors in the goal
 
          * break up conjunctions, disjunctions, existentials, or
-           double negations occurring in the assumptions.
+           double negations occurring in the assumptions
 
          * eliminate occurrences of T (toss it away) and F (prove the goal)
-           in the assumptions.
+           in the assumptions
+
+         * eliminate lets in the goal, by lifting into the assumptions as
+           abbreviations (using LET_ELIM_TAC)
 
     7. Apply the finishing tactic.
 
@@ -253,9 +260,32 @@ fun mkCSET () =
     Lib.can (find_term constructed)
  end;
 
+val leave_lets_var = mk_var("__leave_lets_alone__", bool)
+val LEAVE_LETS = ASSUME leave_lets_var
+
 fun PRIM_STP_TAC ss finisher =
  let val has_constr_eqn = mkCSET ()
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
+     (* we don't have access to any theorem list that might have been passed
+        to RW_TAC or SRW_TAC at this point, but we can look for the effect of
+        the LEAVE_LETS theorem by attempting to rewrite something that only it
+        should affect; if the simplifier doesn't change the leave_lets_var,
+        then LEAVE_LETS is not part of the ss, so we should do LET_ELIM_TAC,
+        otherwise, we shouldn't.
+
+        Also, if there are no lets about then
+        don't attempt LET_ELIM_TAC at all.  This is because LET_ELIM_TAC
+        includes rewrites like |- f o (\x. g x) = \x. f (g x) and these
+        can alter goals that don't have any lets in them at all, possibly
+        against user expectations.  A less sledge-hammer implementation of
+        LET_ELIM_TAC might not have this problem... *)
+     val do_lets = (simpLib.SIMP_CONV ss [] leave_lets_var ; false)
+                   handle Conv.UNCHANGED => true
+     val LET_ELIM_TAC = if do_lets then
+                          (fn g as (asl, w) => if can (find_term is_let) w then
+                                                 LET_ELIM_TAC g
+                                               else NO_TAC g)
+                        else NO_TAC
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT VAR_EQ_TAC
@@ -266,7 +296,8 @@ fun PRIM_STP_TAC ss finisher =
             (VAR_EQ_TAC
                ORELSE ASSUMS_TAC (LIFT_SIMP ss) has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
-               ORELSE CONCL_TAC ASM_SIMP has_constr_eqn))
+               ORELSE CONCL_TAC ASM_SIMP has_constr_eqn
+               ORELSE LET_ELIM_TAC))
      THEN TRY finisher
   end
 
