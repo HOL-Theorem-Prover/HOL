@@ -15,33 +15,27 @@
 structure Travrules :> Travrules =
 struct
 
-open HolKernel Parse Drule Conv Psyntax
-      liteLib Trace Resolve Opening;
+open HolKernel Drule Psyntax liteLib Trace Opening;
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
+infix 8 |>
+fun WRAP x = STRUCT_WRAP "Travrules" x;
+fun ERR x = STRUCT_ERR "Travrules" x;
 
-
-    infix 8 |>
-    fun WRAP x = STRUCT_WRAP "Travrules" x;
-    fun ERR x = STRUCT_ERR "Travrules" x;
-
-type term = Term.term
-type thm = Thm.thm;
 
    (* ---------------------------------------------------------------------
     * preorders
     * ---------------------------------------------------------------------*)
 
-   val equality = (--`$= : 'a ->'a -> bool`--);
+  val equality = boolSyntax.equality;
 
-  datatype preorder = PREORDER of string * (thm -> thm -> thm) * (term -> thm);
+  datatype preorder = PREORDER of (string * string)
+                                  * (thm -> thm -> thm) 
+                                  * (term -> thm);
 
    fun find_relation rel  =
-       let val relcid = (name_of_const rel)
+       let val relcid = name_of_const rel
 	   fun f ((h as PREORDER (cid,_,_))::t) =
-	       if relcid = cid then h else f t
+	            if relcid = cid then h else f t
 	     | f [] = ERR("find_relation","relation not found")
        in f
        end;
@@ -83,7 +77,7 @@ type thm = Thm.thm;
  * equality_travrules
  * ---------------------------------------------------------------------*)
 
-val equality = [PREORDER("=",TRANS,REFL)];
+val equality = [PREORDER(("=","min"),TRANS,REFL)];
 val EQ_tr = gen_mk_travrules
   {relations=equality,
    congprocs=[Opening.EQ_CONGPROC],

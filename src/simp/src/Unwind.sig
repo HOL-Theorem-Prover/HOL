@@ -68,9 +68,7 @@
 
 signature Unwind =
 sig
-  type thm = Thm.thm
-  type conv = Abbrev.conv
-  type tactic = Abbrev.tactic
+   include Abbrev
 
    val UNWIND_EXISTS_CONV : conv
    val UNWIND_EXISTS_TAC : tactic

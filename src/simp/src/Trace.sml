@@ -1,17 +1,12 @@
 structure Trace :> Trace =
 struct
+open Feedback boolSyntax Rsyntax Abbrev;
 
- type term = Term.term
- type thm = Thm.thm
+val print_term = Lib.say o Parse.term_to_string
+val print_thm = Parse.print_thm
+val concl = Thm.concl
+val say = Lib.say
 
-local open Exception;
-      val print_term = Lib.say o Parse.term_to_string;
-      val print_thm = Parse.print_thm;
-      val concl = Thm.concl;
-      val rhs = Dsyntax.rhs;
-      val say = Lib.say;
-
-in
    (* ---------------------------------------------------------------------
     * Tracing utilities
     * ---------------------------------------------------------------------*)
@@ -31,7 +26,7 @@ in
    fun trace x = (!trace_hook) x
 
 val trace_level = ref 0;
-val _ = Lib.register_trace "simplifier" trace_level;
+val _ = Feedback.register_trace "simplifier" trace_level;
 
 fun tty_trace (TEXT s) = (say "  "; say s; say "\n")
   | tty_trace (REDUCE (s,tm)) = (say "  "; say s; say " "; print_term tm; say "\n")
@@ -56,5 +51,4 @@ fun tty_trace (TEXT s) = (say "  "; say s; say "\n")
 val _ = trace_hook := (fn (n,a) => if (n <= !trace_level)
                                    then tty_trace a else ());
 
-end (*local*)
 end (* struct *)

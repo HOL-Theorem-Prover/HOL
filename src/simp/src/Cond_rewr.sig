@@ -27,9 +27,7 @@
 
 signature Cond_rewr = sig
 
-  type term = Term.term
-  type thm  = Thm.thm
-  type conv = Abbrev.conv
+  include Abbrev
 
     val mk_cond_rewrs  : thm -> thm list
     val IMP_EQ_CANON   : thm -> thm list

@@ -16,17 +16,12 @@ type thm = Thm.thm;
 type conv = Abbrev.conv;
 type tactic = Abbrev.tactic;
 
-open HolKernel Parse Drule Tactical Tactic Thm_cont Conv Psyntax
-open liteLib Trace Cond_rewr Travrules Traverse Ho_net;
+open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net;
 
 infix |>;
 infix THEN
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-fun ERR x = STRUCT_ERR "simpLib" x ;
+fun ERR x      = STRUCT_ERR "simpLib" x ;
 fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
 
    (* ---------------------------------------------------------------------
@@ -52,7 +47,7 @@ fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
      dprocs: Traverse.reducer list,
      congs: thm list};
 
-   val equality = (--`$= : 'a -> 'a -> bool`--);
+   val equality = boolSyntax.equality
 
    (* ---------------------------------------------------------------------
     * net_add_convs (internal function)

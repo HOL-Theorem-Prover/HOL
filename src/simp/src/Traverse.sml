@@ -19,21 +19,13 @@
 structure Traverse :> Traverse =
 struct
 
-open HolKernel Parse Drule Conv Psyntax liteLib Trace Travrules Opening;
-
-type term = Term.term
-type thm = Thm.thm;
-type conv = Abbrev.conv;
+open HolKernel Drule Conv Psyntax Abbrev liteLib Trace Travrules Opening;
 
 infix THENQC THENCQC ORELSEC IFCQC
 fun WRAP x = STRUCT_WRAP "Traverse" x;
-fun ERR x = STRUCT_ERR "Traverse" x;
+fun ERR x  = STRUCT_ERR "Traverse" x;
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-val equality = (--`$= :'a -> 'a ->bool`--);
+val equality = boolSyntax.equality;
 
 (* ---------------------------------------------------------------------
  * reducers and contexts

@@ -18,11 +18,10 @@
 
 signature Cache =
 sig
-  type term = Term.term
-  type thm = Thm.thm
-  type conv = Abbrev.conv;
+  include Abbrev
+
   type cache
   val CACHE :(term -> bool) * (thm list->conv) -> (thm list -> conv) * cache
   val clear_cache : cache -> unit;
   val print_cache : cache -> unit
-end (* sig *)
+end

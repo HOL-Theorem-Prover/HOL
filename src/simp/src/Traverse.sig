@@ -7,9 +7,7 @@
 
 signature Traverse =
 sig
-type term = Term.term
-type thm = Thm.thm;
-type conv = Abbrev.conv;
+  include Abbrev
   
    (* ---------------------------------------------------------------------
     * type context

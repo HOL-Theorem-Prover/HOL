@@ -1,22 +1,12 @@
-structure Cond_rewr :> Cond_rewr = struct
+structure Cond_rewr :> Cond_rewr = 
+struct
 
-open HolKernel Parse Drule Conv boolTheory
-     Psyntax liteLib Trace Ho_match Ho_rewrite;
-
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-
-
-type term = Term.term
-type thm  = Thm.thm
-type conv = Abbrev.conv;
+open HolKernel boolLib liteLib Trace;
 
 infix |-> ##
 
 fun WRAP_ERR x = STRUCT_WRAP "Cond_rewr" x;
-fun ERR x = STRUCT_ERR "Cond_rewr" x;
+fun ERR x      = STRUCT_ERR "Cond_rewr" x;
 
 val stack_limit = ref 4;
 
@@ -37,44 +27,46 @@ val stack_limit = ref 4;
  * -----------------------------------------------------------------------*)
 
 fun size_of_term tm =
-       case (dest_term tm) of
-          LAMB{Bvar,Body} => 1 + size_of_term Body
-        | COMB{Rator,Rand} => size_of_term Rator + size_of_term Rand
-        | _ => 1
+     case dest_term tm 
+      of LAMB(Bvar,Body) => 1 + size_of_term Body
+       | COMB(Rator,Rand) => size_of_term Rator + size_of_term Rand
+       | _ => 1
 
 
    fun ac_term_ord(tm1,tm2) =
-   (case (dest_term tm1, dest_term tm2) of
+   case (dest_term tm1, dest_term tm2) of
       (VAR _,CONST _) => GREATER
-    | (VAR _, COMB {Rator,Rand}) => if is_comb Rator then LESS else GREATER
+    | (VAR _, COMB (Rator,Rand)) => if is_comb Rator then LESS else GREATER
     | (CONST _, VAR _) => LESS
-    | (COMB {Rator,Rand}, VAR _) => if is_comb Rator then GREATER else LESS
-    | (VAR v1, VAR v2) => String.compare(#Name v1,#Name v2)
-    | (CONST c1, CONST c2) => String.compare(#Name c1,#Name c2)
+    | (COMB (Rator,Rand), VAR _) => if is_comb Rator then GREATER else LESS
+    | (VAR v1, VAR v2) => String.compare(fst v1, fst v2)
+    | (CONST c1, CONST c2) => 
+        (case String.compare(#Name c1,#Name c2)
+          of EQUAL => String.compare(#Thy c1,#Thy c2)
+           | other => other)
     | (dt1,dt2) =>
       (case Int.compare (size_of_term tm1,size_of_term tm2) of
        EQUAL =>
          (case (dt1,dt2) of
-            (LAMB l1,LAMB l2) => ac_term_ord(#Body l1,#Body l2)
+            (LAMB l1,LAMB l2) => ac_term_ord(snd l1, snd l2)
           | _ => let val (con,args) = strip_comb tm1
                      val (con2,args2) = strip_comb tm2
                  in case ac_term_ord (con,con2) of
                     EQUAL => list_ord ac_term_ord (args,args2)
                   | ord => ord
                  end)
-       | ord => ord))
+       | ord => ord)
 
    (* ---------------------------------------------------------------------
     * COND_REWR_CONV
     * ---------------------------------------------------------------------*)
 
    fun vperm(tm1,tm2) =
-      case (dest_term tm1, dest_term tm2) of
-         (VAR v1,VAR v2)   => (#Ty v1= #Ty v2)
-       | (LAMB t1,LAMB t2) => vperm(#Body t1,#Body t2)
-       | (COMB t1,COMB t2) => vperm(#Rator t1,#Rator t2)
-                      andalso vperm(#Rand t1, #Rand t2)
-       | (x,y) => (x = y)
+    case (dest_term tm1, dest_term tm2) 
+     of (VAR v1,VAR v2)   => (snd v1 = snd v2)
+      | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
+      | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
+      | (x,y) => (x = y)
 
    fun is_var_perm(tm1,tm2) =
        vperm(tm1,tm2) andalso set_eq (free_vars tm1) (free_vars tm2)
@@ -82,7 +74,7 @@ fun size_of_term tm =
    fun COND_REWR_CONV th =
       let val eqn = snd (strip_imp (concl th))
           val isperm = is_var_perm (dest_eq eqn)
-          val instth = PART_MATCH (lhs o snd o strip_imp) th
+          val instth = HO_PART_MATCH (lhs o snd o strip_imp) th
                        handle HOL_ERR _ => ERR("COND_REWR_CONV",
                          "bad theorem argument (not an conditional equation)")
       in
@@ -125,14 +117,14 @@ fun size_of_term tm =
         in trace(if isperm then 3 else 2,PRODUCE(tm,"rewrite",final_thm));
 	    final_thm
         end
-        handle e as (HOL_ERR _) => WRAP_ERR("COND_REWR_CONV (application)",e))
+        handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
       end
-      handle e as (HOL_ERR _) => WRAP_ERR("COND_REWR_CONV (construction) ",e);
+      handle e  => WRAP_ERR("COND_REWR_CONV (construction) ",e);
 
 
 fun loops th =
    let val (l,r) = dest_eq (concl th)
-   in (can (find_term (fn tm => l = tm)) r)
+   in can (find_term (equal l)) r
    end handle HOL_ERR _ => failwith "loops"
 
 
@@ -151,16 +143,15 @@ fun loops th =
  *------------------------------------------------------------------------*)
 
 
+
 val CONJ_DISCH =
   let val IMP_CONJ_RULE =
-      let val IMP_CONJ_THM = TAUT (--`(P ==> Q ==> R) ==> (P /\ Q ==> R)`--);
-          val P = mk_var("P",Type.bool)
-          and Q = mk_var("Q",Type.bool)
-          and R = mk_var("R",Type.bool)
+      let val [t1,t2,t3] = fst(strip_forall(concl AND_IMP_INTRO))
+          val IMP_CONJ_THM = fst(EQ_IMP_RULE (SPEC_ALL AND_IMP_INTRO))
       in fn th =>
         let val (p,qr) = dest_imp(concl th)
             val (q,r) = dest_imp qr
-        in MP (INST [P |-> p, Q |-> q, R |-> r] IMP_CONJ_THM) th
+        in MP (INST [t1 |-> p, t2 |-> q, t3 |-> r] IMP_CONJ_THM) th
         end
       end;
   in fn asms => fn th =>
@@ -197,13 +188,15 @@ val CONJ_DISCH =
    * IMP_EQ_CANON (mk_thm([],`foo (s1,s2) ==> (v1 = v2)`));
    * ----------------------------------------------------------------------*)
 (* new version of this due to is_imp/negation problem in hol90 *)
+
 fun UNDISCH_ALL th =
   if is_imp (concl th) then UNDISCH_ALL (UNDISCH th)
   else th;;
 
 
-val truth_tm = (--`T`--);
-val false_tm = (--`F`--);
+val truth_tm = boolSyntax.T
+val false_tm = boolSyntax.F
+
 fun IMP_EQ_CANON thm =
    let val conditions = #1 (strip_imp (concl thm))
        val undisch_thm = UNDISCH_ALL thm
@@ -232,43 +225,44 @@ fun IMP_EQ_CANON thm =
    in
       map (CONJ_DISCH conditions) undisch_rewrites
    end
-handle e as HOL_ERR _ => WRAP_ERR("IMP_EQ_CANON",e);
+handle e => WRAP_ERR("IMP_EQ_CANON",e);
 
 
 fun QUANTIFY_CONDITIONS thm =
-  if is_imp (concl thm)
-  then let val free_in_eqn = (free_vars (snd(dest_imp (concl thm))))
-           val free_in_thm = (free_vars (concl thm))
-           val free_in_hyp = free_varsl (hyp thm)
-           val free_in_conditions =
-                 subtract (subtract free_in_thm free_in_eqn) free_in_hyp
-           fun quantify fv = CONV_RULE (REWR_CONV LEFT_FORALL_IMP_THM) o GEN fv
-           val quan_thm = itlist quantify free_in_conditions thm
-       in [quan_thm]
-       end
-  else [thm] handle e as HOL_ERR _ => WRAP_ERR("QUANTIFY_CONDITIONS",e);
+ if is_imp (concl thm) then 
+   let val free_in_eqn = (free_vars (snd(dest_imp (concl thm))))
+       val free_in_thm = (free_vars (concl thm))
+       val free_in_hyp = free_varsl (hyp thm)
+       val free_in_conditions =
+             subtract (subtract free_in_thm free_in_eqn) free_in_hyp
+       fun quantify fv = CONV_RULE (HO_REWR_CONV LEFT_FORALL_IMP_THM) o GEN fv
+       val quan_thm = itlist quantify free_in_conditions thm
+   in [quan_thm]
+   end
+ else [thm] 
+ handle e => WRAP_ERR("QUANTIFY_CONDITIONS",e);
 
 
 fun IMP_CANON th =
  let val w = concl th
  in if (is_conj w)
     then IMP_CANON (CONJUNCT1 th) @ IMP_CANON (CONJUNCT2 th) else
-    if (is_imp w)
+    if is_imp w
     then
     let val (ant,_) = dest_imp w
-    in if (is_conj ant)
+    in if is_conj ant
        then let val (conj1,conj2) = dest_conj ant
             in IMP_CANON
                 (DISCH conj1 (DISCH conj2
                     (MP th (CONJ (ASSUME conj1) (ASSUME conj2)))))
             end else
-       if (is_disj ant)
+       if is_disj ant
        then let val (disj1,disj2) = dest_disj ant
             in IMP_CANON (DISCH disj1 (MP th (DISJ1 (ASSUME disj1) disj2)))
                @
                IMP_CANON (DISCH disj2 (MP th (DISJ2 disj1 (ASSUME disj2))))
             end else
-       if (is_exists ant)
+       if is_exists ant
        then let val (Bvar,Body) = dest_exists ant
                 val bv' = variant (thm_free_vars th) Bvar
                 val body' = subst [Bvar |-> bv'] Body
@@ -288,7 +282,7 @@ fun mk_cond_rewrs l =
     (QUANTIFY_CONDITIONS oo IMP_EQ_CANON oo IMP_CANON) l
     handle e as HOL_ERR _ => WRAP_ERR("mk_cond_rewrs",e);
 
-end (* struct *)
+end;
 
 
 (* TESTS:

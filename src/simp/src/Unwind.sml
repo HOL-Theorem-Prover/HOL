@@ -69,6 +69,7 @@ structure Unwind :> Unwind =
 struct
 
 open refuteLib HolKernel liteLib boolLib Trace AC Ho_Rewrite;
+
 infix THEN THENC ##;
 
 fun WRAP_ERR x = STRUCT_WRAP "Unwind" x;
@@ -230,20 +231,20 @@ fun CONJ_TO_FRONT_CONV conj term =
    possibility of implications as "encoded" forms of disjunctions. *)
 fun strip_univ_neg acc tm =
   if is_conj tm then let
-    val (c1, c2) = Psyntax.dest_conj tm
+    val (c1, c2) = dest_conj tm
   in
     strip_univ_neg (strip_univ_neg acc c2) c1
   end else tm :: acc
 
 fun strip_univ_pos acc tm =
   if is_disj tm then let
-    val (d1, d2) = Psyntax.dest_disj tm
+    val (d1, d2) = dest_disj tm
   in
     strip_univ_pos (strip_univ_pos acc d2) d1
   end
   else if is_neg tm then strip_univ_neg acc (dest_neg tm)
   else if is_imp tm then let
-    val (h,c) = Psyntax.dest_imp tm
+    val (h,c) = dest_imp tm
   in
     strip_univ_neg (strip_univ_pos acc c) h
   end
@@ -272,10 +273,10 @@ fun elim_term_neg et tm =
         case elim_term_neg et c2 of
           NONE => NONE
         | SOME NONE => SOME (SOME c1)
-        | SOME (SOME t) => SOME (SOME (Psyntax.mk_conj(c1, t)))
+        | SOME (SOME t) => SOME (SOME (mk_conj(c1, t)))
       end
     | SOME NONE => SOME (SOME c2)
-    | SOME (SOME t) => SOME (SOME (Psyntax.mk_conj(t, c2)))
+    | SOME (SOME t) => SOME (SOME (mk_conj(t, c2)))
   end
   else if et = tm then
     SOME NONE
@@ -283,45 +284,46 @@ fun elim_term_neg et tm =
 
 fun elim_term et tm =
   if is_imp tm   (* want ~P to be considered an implication *)
-  then let val (h,c) = Psyntax.dest_imp tm
-           val (mk_imp, new_c) =
+  then let val (h,c) = dest_imp tm
+           val (mk_imp, new_c) = 
                   if is_neg tm then ((fn (t1, c) => mk_neg t1), NONE)
-                               else (Psyntax.mk_imp, SOME c)
-       in case elim_term_neg et h
+                               else (mk_imp, SOME c)
+       in case elim_term_neg et h 
            of NONE => let in
-                case elim_term et c
+                case elim_term et c 
                  of NONE => NONE
                   | SOME NONE => SOME (SOME (mk_neg h))
-                  | SOME (SOME t) => SOME (SOME (Psyntax.mk_imp(h,t)))
+                  | SOME (SOME t) => SOME (SOME (mk_imp(h,t)))
                 end
             | SOME NONE => SOME new_c
             | SOME (SOME t) => SOME (SOME (mk_imp(t, c)))
        end
-  else
-  if is_disj tm
-  then let val (d1, d2) = Psyntax.dest_disj tm
-       in case elim_term et d1
+  else 
+  if is_disj tm 
+  then let val (d1, d2) = dest_disj tm
+       in case elim_term et d1 
            of NONE => let in
-                 case elim_term et d2
+                 case elim_term et d2 
                   of NONE => NONE
                    | SOME NONE => SOME (SOME d1)
-                   | SOME (SOME t) => SOME (SOME (Psyntax.mk_disj(d1,t)))
+                   | SOME (SOME t) => SOME (SOME (mk_disj(d1,t)))
                  end
             | SOME NONE => SOME (SOME d2)
-            | SOME (SOME t) => SOME (SOME (Psyntax.mk_disj(t,d2)))
+            | SOME (SOME t) => SOME (SOME (mk_disj(t,d2)))
        end
   else NONE
 
 val CONJ_IMP_THM = GSYM AND_IMP_INTRO
-val NOT_CONJ_THM =
+
+val NOT_CONJ_THM = 
   let val th = boolTheory.DE_MORGAN_THM
       val (l,_) = strip_forall (concl th)
       val th1 = CONJUNCT1 (SPEC_ALL th)
   in GENL l th1
   end;
 
-val NOT_IMP_THM =
-  let val A = Term.mk_var{Name="A",Ty=bool}
+val NOT_IMP_THM = 
+  let val A = Term.mk_var("A",bool)
   in GEN A (RIGHT_BETA (AP_THM NOT_DEF A))
   end;
 
@@ -336,7 +338,7 @@ fun disjunctify tm =
     else ALL_CONV tm
   end
   else if is_imp tm then let
-    val (h,c) = Psyntax.dest_imp tm
+    val (h,c) = dest_imp tm
   in
     if is_conj h then (REWR_CONV CONJ_IMP_THM THENC disjunctify) tm
     else (REWR_CONV IMP_DISJ_THM THENC RAND_CONV disjunctify) tm
@@ -349,15 +351,15 @@ fun IMP_TO_FRONT_CONV ante tm =
     SOME tt => let
       val newtm =
         case tt of
-          SOME t => Psyntax.mk_imp (ante, t)
+          SOME t => mk_imp (ante, t)
         | NONE => mk_neg ante
       val dtm = disjunctify tm
       val dnewtm = SYM (disjunctify newtm)
-      val eq3 = AC_CONV(DISJ_ASSOC, DISJ_COMM)
+      val eq3 = AC_CONV(DISJ_ASSOC, DISJ_COMM) 
                    (mk_eq(rhs (concl dtm), lhs (concl dnewtm)))
       val eq4 = TRANS dtm (TRANS (EQT_ELIM eq3) dnewtm)
     in
-      if is_neg newtm
+      if is_neg newtm 
         then TRANS eq4 (SPEC (dest_neg newtm) NOT_IMP_THM)
         else eq4
     end
@@ -370,8 +372,8 @@ fun IMP_TO_FRONT_CONV ante tm =
  *     P = P /\ T
  *------------------------------------------------------------------------*)
 
-val TRUTH_CONJ_INTRO_THM =
- let val P = Term.mk_var{Name="P", Ty=bool}
+val TRUTH_CONJ_INTRO_THM = 
+ let val P = Term.mk_var("P", bool)
  in GEN P (SYM (el 2 (CONJUNCTS (SPEC P AND_CLAUSES))))
  end;
 
@@ -395,17 +397,17 @@ fun ENSURE_CONJ_CONV tm =
  *------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
-     !P. ~P = (P = F)
+     !P. ~P = (P = F) 
      !P. P = (P = T)
  ---------------------------------------------------------------------------*)
 
-val EQF_INTRO_THM =
-let val P = Term.mk_var{Name="P", Ty=bool}
+val EQF_INTRO_THM = 
+let val P = Term.mk_var("P", bool)
  in GEN P (SYM (el 4 (CONJUNCTS (SPEC P EQ_CLAUSES))))
  end;
 
-val EQT_INTRO_THM =
-let val P = Term.mk_var{Name="P", Ty=bool}
+val EQT_INTRO_THM = 
+let val P = Term.mk_var("P", bool)
  in GEN P (SYM (el 2 (CONJUNCTS (SPEC P EQ_CLAUSES))))
  end;
 

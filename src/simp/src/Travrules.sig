@@ -9,8 +9,8 @@
 
 signature Travrules = 
 sig
-   type term = Term.term
-   type thm = Thm.thm
+   include Abbrev
+
    (* ---------------------------------------------------------------------
     * preorders
     *
@@ -23,7 +23,9 @@ sig
     * key preorders.
     * ---------------------------------------------------------------------*)
 
-  datatype preorder = PREORDER of string * (thm -> thm -> thm) * (term -> thm)
+  datatype preorder = PREORDER of (string*string)
+                                   * (thm -> thm -> thm) 
+                                   * (term -> thm)
 
   val mk_preorder : (thm * thm) -> preorder;
   val find_relation : term -> preorder list -> preorder;

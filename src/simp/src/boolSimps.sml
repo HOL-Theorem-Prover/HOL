@@ -1,12 +1,11 @@
 structure boolSimps :> boolSimps =
 struct
 
-open HolKernel Parse simpLib basicHol90Lib liteLib pureSimps 
-     Ho_rewrite Ho_boolTheory;
+open HolKernel boolLib liteLib simpLib pureSimps Ho_Rewrite tautLib;
 
 infix THEN ORELSE THENL THENQC ++;
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
@@ -27,10 +26,9 @@ fun == q x = Type q
 fun BETA_CONVS tm = (RATOR_CONV BETA_CONVS THENQC BETA_CONV) tm
 
 fun comb_ETA_CONV t =
-    (if (not (Dsyntax.is_exists t orelse Dsyntax.is_forall t
-              orelse Dsyntax.is_select t)) then
-         RAND_CONV ETA_CONV
-     else NO_CONV) t
+    (if not (is_exists t orelse is_forall t orelse is_select t)
+       then RAND_CONV ETA_CONV
+       else NO_CONV) t
 
 val COND_BOOL_CLAUSES = 
   prove(Term`(!b e. (if b then T else e) = (b \/ e)) /\
@@ -116,7 +114,7 @@ val NOT_ss = rewrites [NOT_IMP,
                        DE_MORGAN_THM,
                        NOT_FORALL_THM,
                        NOT_EXISTS_THM,
-                       TAUT (--`(~p = ~q) = (p = q)`--)];
+                       TAUT `(~p = ~q) = (p = q)`];
 
 (*------------------------------------------------------------------------
  * UNWIND_ss
@@ -163,9 +161,11 @@ val COND_COND_SAME = prove(
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
 
 fun celim_rand_CONV tm = let
-  val {Rand, Rator} = dest_comb tm
+  val (Rator, Rand) = Term.dest_comb tm
   val (f, _) = strip_comb Rator
-  val proceed = #Name (dest_const f) <> "COND" handle HOL_ERR _ => true
+  val proceed = let val {Name,Thy,...} = Term.dest_thy_const f
+                in not (Name="COND" andalso Thy="bool")
+                end handle HOL_ERR _ => true
 in
   (if proceed then REWR_CONV boolTheory.COND_RAND else NO_CONV) tm
 end
@@ -192,8 +192,7 @@ val COND_elim_ss =
 
 val CONJ_ss = SIMPSET {
   ac = [],
-  congs = [TAUT ``(P ==> (Q = Q')) ==> (Q' ==> (P = P')) ==>
-                  ((P /\ Q) = (P' /\ Q'))``],
+  congs = [SPEC_ALL boolTheory.AND_CONG],
   convs = [], dprocs = [], filter = NONE, rewrs = []}
 
 

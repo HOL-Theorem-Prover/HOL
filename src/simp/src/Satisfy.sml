@@ -1,20 +1,7 @@
-
-
 structure Satisfy :> Satisfy =
 struct
-  type term = Term.term
-  type thm = Thm.thm
-  type conv = Abbrev.conv
-  type tactic = Abbrev.tactic
 
-
-open HolKernel Parse Drule Tactical Tactic Conv;
-open Sequence Psyntax liteLib Unify Ho_rewrite Resolve Trace;
-
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
+open HolKernel Parse boolLib Sequence liteLib Unify Trace;
 
 infix THEN;
 
@@ -68,8 +55,6 @@ fun satisfy consts tms1 tms2 =
 
 type factdb = (term list * thm list)  (* this may change *)
 
-val truth_tm = (--`T`--);
-
 fun satisfy1 (consts,facts) gl =
   let val (vars,g) = strip_exists gl
       val _ = if null vars then failwith "satisfy1" else ()
@@ -79,7 +64,7 @@ fun satisfy1 (consts,facts) gl =
       val goals = strip_conj g'
       val facts' = map (snd o strip_forall) facts
       fun choose choices v =
-        deref_tmenv choices v handle HOL_ERR _ => mk_select(v,truth_tm)
+        deref_tmenv choices v handle HOL_ERR _ => mk_select(v,T)
       val choices = satisfy (union consts (free_vars gl)) goals facts'
   in map (choose choices) gvars
   end;

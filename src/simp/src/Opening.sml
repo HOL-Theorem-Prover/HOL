@@ -1,14 +1,10 @@
 structure Opening :>  Opening =
 struct
 
-open HolKernel Parse Drule Conv liteLib Trace Psyntax;
+open HolKernel boolLib liteLib Trace;
 
-val match_term = Ho_match.match_term;
+type tmcid = string * string;
 
-type term = Term.term
-type thm = Thm.thm
-type conv = Abbrev.conv
-type tmcid = string;
 type congproc  = {relation:tmcid,
 		  solver : term -> thm,
 		  freevars: term list,
@@ -55,7 +51,8 @@ fun is_congruence tm =
    let val (rel,[left,right]) = strip_comb tm
        val (lop,largs) = strip_comb left
        val (rop,rargs) = strip_comb right
-   in (can (match_term [] left) right) andalso (can (match_term [] right) left)
+   in (can (ho_match_term [] left) right) andalso 
+      (can (ho_match_term [] right) left)
    end
    handle HOL_ERR _ => false;
 fun rel_of_congrule thm =
@@ -64,14 +61,12 @@ fun rel_of_congrule thm =
                     else aux (snd (dest_imp tm))
    in aux (snd(strip_forall (concl thm)))
    end
-   handle e as HOL_ERR _ => WRAP_ERR("rel_of_congrule",e);
+   handle e => WRAP_ERR("rel_of_congrule",e);
 fun nconds_of_congrule thm =
-   let fun aux tm = if (is_congruence tm)
-                    then 0
-                    else aux (snd (dest_imp tm)) + 1
+   let fun aux tm = if is_congruence tm then 0 else aux (snd(dest_imp tm)) + 1
    in aux (snd(strip_forall(concl thm)))
    end
-   handle e as HOL_ERR _ => WRAP_ERR("nconds_of_congrule",e);
+   handle e => WRAP_ERR("nconds_of_congrule",e);
    
 (* ---------------------------------------------------------------------
  * CONGPROC : REFL -> congrule -> congproc
@@ -109,7 +104,8 @@ fun strip_imp_until_rel genvars tm =
  * CONGPROC : REFL -> congrule -> congproc
  *                                                                   
  * ---------------------------------------------------------------------*)
-val equality = Term`$= :'a -> 'a -> bool`;
+
+val equality = boolSyntax.equality
 
 fun CONGPROC refl congrule = 
 let
@@ -124,7 +120,8 @@ let
    val rel = name_of_const(rel_of_congrule congrule')
   
    val (conditions,conc) = strip_n_imp nconds (concl congrule')
-   val matcher = PART_MATCH (rand o rator o snd o strip_n_imp nconds) congrule'
+   val matcher = 
+      HO_PART_MATCH (rand o rator o snd o strip_n_imp nconds) congrule'
 
  (* work out whether context assumptions need to be reprocessed *)
  (* e.g "~g" in the "else" branch of COND_CONG needs to be.     *)
@@ -207,33 +204,34 @@ end;
  * ---------------------------------------------------------------------*)
 
 fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
-  if relation <> "=" then failwith "not applicable" else
-  case (dest_term tm) of
-    (COMB{Rator,Rand}) =>
+ if relation <> ("=","min") then failwith "not applicable" 
+ else
+ case dest_term tm 
+  of COMB(Rator,Rand) =>
       (let val th = depther ([],equality) Rator
       in  MK_COMB (th, depther ([],equality)  Rand)
         handle HOL_ERR _ => AP_THM th Rand
       end
        handle HOL_ERR _ => AP_TERM Rator (depther ([],equality)  Rand))
-  | (LAMB{Bvar,Body}) =>
-      if mem Bvar freevars then 
-      let val v = variant (freevars@free_vars Body) Bvar
-          val th1 = ALPHA_CONV v tm handle e as HOL_ERR _
-            => (trace(0,REDUCE("SIMPLIFIER ERROR: bug when alpha converting",tm));
-                trace(0,REDUCE("trying to alpha convert to",v));
-		Raise e)
-          val rhs' = rhs(concl th1)
-          val Body' = body rhs' (* v = Bvar *)
-          val body_thm = depther ([],equality) Body'
-          val eq_thm' = ABS v body_thm
-      in 
+   | LAMB(Bvar,Body) =>
+     if mem Bvar freevars then 
+     let val v = variant (freevars@free_vars Body) Bvar
+         val th1 = ALPHA_CONV v tm handle e as HOL_ERR _
+         => (trace(0,REDUCE("SIMPLIFIER ERROR: bug when alpha converting",tm));
+             trace(0,REDUCE("trying to alpha convert to",v));
+             Raise e)
+         val rhs' = rhs(concl th1)
+         val Body' = body rhs' (* v = Bvar *)
+         val body_thm = depther ([],equality) Body'
+         val eq_thm' = ABS v body_thm
+     in 
         TRANS th1 eq_thm'
-      end
+     end
      else let val _ = trace(4,TEXT "no alpha conversion")
               val Bth = depther ([],equality) Body
           in ABS Bvar Bth
           end
-  | _ => failwith "unchanged";
+   | _ => failwith "unchanged";
    
 
 end (* struct *)

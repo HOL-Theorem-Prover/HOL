@@ -69,16 +69,14 @@ signature Opening = sig
     * 
     * ---------------------------------------------------------------------*)
 
-   type term = Term.term
-   type thm = Thm.thm
-   type conv = Abbrev.conv
-   type tmcid = string
+   include Abbrev
+   type tmcid = string * string   (* (name,theory) *)
    type congproc = {relation: tmcid,
-                       solver : term -> thm,
-                       freevars: term list,
-		       depther : (thm list * term) -> conv} -> conv
-   val CONGPROC :  conv ->  thm -> congproc
-   val rel_of_congrule : thm -> term  
+                    solver : term -> thm,
+                    freevars: term list,
+		    depther : (thm list * term) -> conv} -> conv
+   val CONGPROC           :  conv ->  thm -> congproc
+   val rel_of_congrule    : thm -> term  
    val nconds_of_congrule : thm -> int
   
    (* ---------------------------------------------------------------------

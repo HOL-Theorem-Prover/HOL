@@ -1,4 +1,5 @@
 (* copyright Univ. Cambridge/ Larry Paulson *)
+
 structure Sequence :> Sequence = 
 struct
 
