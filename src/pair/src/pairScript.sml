@@ -142,6 +142,18 @@ val FST = save_thm("FST", itlist Q.GEN [`x`,`y`] th2);
 val SND = save_thm("SND", itlist Q.GEN [`x`,`y`] th3);
 end;
 
+val PAIR_FST_SND_EQ = store_thm(
+  "PAIR_FST_SND_EQ",
+  ``!(p:'a # 'b) q. (p = q) = (FST p = FST q) /\ (SND p = SND q)``,
+  REPEAT GEN_TAC THEN
+  X_CHOOSE_THEN ``p1:'a`` (X_CHOOSE_THEN ``p2:'b`` SUBST_ALL_TAC)
+                (SPEC ``p:'a # 'b`` ABS_PAIR_THM) THEN
+  X_CHOOSE_THEN ``q1:'a`` (X_CHOOSE_THEN ``q2:'b`` SUBST_ALL_TAC)
+                (SPEC ``q:'a # 'b`` ABS_PAIR_THM) THEN
+  REWRITE_TAC [PAIR_EQ, FST, SND]);
+
+
+
 
 (*---------------------------------------------------------------------------*
  * CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *
