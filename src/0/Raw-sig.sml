@@ -204,6 +204,7 @@ sig
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
   val Specialize    : term -> thm -> thm
+  val GEN_ABS       : (term -> term) -> term list -> thm -> thm
   val mk_oracle_thm : tag -> term list * term -> thm
   val mk_thm        : term list * term -> thm
   val mk_axiom_thm  : string ref * term -> thm

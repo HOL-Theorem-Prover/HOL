@@ -164,7 +164,7 @@ fun var_compare (Fv(s1,ty1), Fv(s2,ty2)) =
        (case String.compare (s1,s2)
          of EQUAL => Type.compare (ty1,ty2)
           | x => x)
-  | var_compare _ = raise ERR "FVL" "variable comparison";
+  | var_compare _ = raise ERR "var_compare" "variables required";
 
 val empty_varset = HOLset.empty var_compare
 

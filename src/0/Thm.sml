@@ -228,10 +228,32 @@ fun ABS v (THM(ocl,asl,c)) =
                       => ERR "ABS" "first argument is not a variable"
  in if var_occursl v asl
      then ERR "ABS" "The variable is free in the assumptions"
-     else make_thm Count.Abs (ocl,asl,
-           mk_eq_nocheck (vty --> ty) (mk_abs(v,lhs)) (mk_abs(v,rhs)))
+     else make_thm Count.Abs 
+            (ocl, asl, mk_eq_nocheck (vty --> ty) 
+                                     (mk_abs(v,lhs)) 
+                                     (mk_abs(v,rhs)))
  end;
 
+(*---------------------------------------------------------------------------*
+ *   A |- t1 = t2                                                            *
+ *  ------------------------------------  GEN_ABS f [v1,...,vn]              *
+ *   A |- (Q v1...vn.t1) = (Q v1...vn.t2)    (where no vi is free in A)      *
+ *---------------------------------------------------------------------------*)
+
+fun GEN_ABS f vlist (th as THM(ocl,asl,c)) =
+ let open HOLset
+     val vset = addList(Term.empty_varset,vlist)
+     val hset = hypset th
+ in if isEmpty (intersection(vset,hset))
+    then let val (lhs,rhs,ty) = with_exn Term.dest_eq_ty c 
+                                  (thm_err "GEN_ABS" "not an equality")
+             val lhs' = list_mk_binder f (vlist,lhs)
+             val rhs' = list_mk_binder f (vlist,rhs)
+         in make_thm Count.GenAbs
+               (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs')
+         end
+    else ERR "GEN_ABS" "variable(s) free in the assumptions"
+ end
 
 (*---------------------------------------------------------------------------
  *         A |- M

@@ -17,7 +17,7 @@ sig
                 | Exists | Choose 
                 | Conj | Conjunct1 | Conjunct2
                 | Disj1 | Disj2 | DisjCases
-                | NotIntro | NotElim  | Ccontr 
+                | NotIntro | NotElim  | Ccontr | GenAbs
                 | Definition | Axiom | Disk | Oracle;
 
   val counting_thms   : bool -> unit
@@ -39,7 +39,8 @@ sig
     CONJ : int, CONJUNCT1 : int, 
     CONJUNCT2 : int, DISJ1 : int, 
     DISJ2 : int, DISJ_CASES : int, 
-    NOT_INTRO : int, NOT_ELIM : int, CCONTR : int, 
+    NOT_INTRO : int, NOT_ELIM : int, 
+    CCONTR : int, GEN_ABS : int,
     definition : int, axiom : int, 
     from_disk : int, oracle :int,  
     total :int }

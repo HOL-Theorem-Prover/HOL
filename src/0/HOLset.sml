@@ -1,4 +1,5 @@
-structure HOLset :> HOLset = struct
-  exception NotFound = Splayset.NotFound
-  open Splayset
+structure HOLset :> HOLset = 
+struct
+  exception NotFound = Redblackset.NotFound
+  open Redblackset
 end;

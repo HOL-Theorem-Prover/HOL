@@ -1,1 +1,1 @@
-signature HOLset = Splayset;
+signature HOLset = Redblackset

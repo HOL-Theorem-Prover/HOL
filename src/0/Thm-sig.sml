@@ -97,6 +97,9 @@ sig
   val Mk_abs        : thm -> term * thm * (thm -> thm)
   val Specialize    : term -> thm -> thm
 
+  (* Multiple binders *)
+
+  val GEN_ABS       : (term -> term) -> term list -> thm -> thm
 
   (* Oracle invocation *)
 
