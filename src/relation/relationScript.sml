@@ -117,6 +117,31 @@ val RC_RTC = store_thm(
   ``!R (x:'a) y. RC R x y ==> RTC R x y``,
   MESON_TAC [RC_DEF, RTC_RULES]);
 
+val nice_tc_asm =
+  ``tc = \R a b. !P. (!x y. R x y ==> P x y) /\
+                     (!x y z. R x y /\ P y z ==> P x z) ==>
+                     P a b``;
+
+val tc_rules0 = prove(
+  ``^nice_tc_asm ==> (!x y. R x y ==> tc R x y) /\
+                     (!x y z. R x y /\ tc R y z ==> tc R x z)``,
+  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []);
+val tc_rules = UNDISCH tc_rules0
+
+val tc_ind0 = prove(
+  ``^nice_tc_asm ==>
+    !R P. (!x y. R x y ==> P x y) /\
+          (!x y z. R x y /\ P y z ==> P x z) ==>
+          (!x y. tc R x y ==> P x y)``,
+  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []);
+val tc_ind = UNDISCH tc_ind0
+
+val tc_twice0 = prove(
+  ``^nice_tc_asm ==>
+    !R x y. tc R x y ==> !z. tc R y z ==> tc R x z``,
+  STRIP_TAC THEN GEN_TAC THEN HO_MATCH_MP_TAC tc_ind THEN
+  MESON_TAC [tc_rules]);
+val tc_twice = UNDISCH tc_twice0
 
 val TC_INDUCT = Q.store_thm("TC_INDUCT",
 `!(R:'a->'a->bool) P.
@@ -124,6 +149,24 @@ val TC_INDUCT = Q.store_thm("TC_INDUCT",
    (!x y z. P x y /\ P y z ==> P x z)
    ==> !u v. (TC R) u v ==> P u v`,
 REWRITE_TAC[TC_DEF] THEN MESON_TAC[]);
+
+val tc_TC0 = prove(
+  ``^nice_tc_asm ==> !R x y. tc R x y = TC R x y``,
+  STRIP_TAC THEN GEN_TAC THEN
+  SIMP_TAC bool_ss [FORALL_AND_THM, EQ_IMP_THM] THEN CONJ_TAC THENL [
+    HO_MATCH_MP_TAC tc_ind THEN MESON_TAC [TC_RULES],
+    HO_MATCH_MP_TAC TC_INDUCT THEN MESON_TAC [tc_twice, tc_rules]
+  ]);
+val tc_TC = UNDISCH tc_TC0
+
+val tc_exists = SIMP_PROVE bool_ss [] ``?tc. ^nice_tc_asm``;
+
+val TC_INDUCT_LEFT1_0 = REWRITE_RULE [tc_TC] tc_ind
+
+val TC_INDUCT_LEFT1 = save_thm(
+  "TC_INDUCT_LEFT1",
+  CHOOSE(``tc:('a -> 'a -> bool) -> 'a -> 'a -> bool``, tc_exists)
+        TC_INDUCT_LEFT1_0);
 
 val TC_INDUCT_TAC =
  let val tc_thm = TC_INDUCT
@@ -145,6 +188,33 @@ val TC_INDUCT_TAC =
  in tac
  end;
 
+val TC_STRONG_INDUCT0 = prove(
+  ``!R P. (!x y. R x y ==> P x y) /\
+          (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
+          (!u v. TC R u v ==> P u v /\ TC R u v)``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN TC_INDUCT_TAC THEN
+  ASM_MESON_TAC [TC_RULES]);
+
+val TC_STRONG_INDUCT = store_thm(
+  "TC_STRONG_INDUCT",
+  ``!R P. (!x y. R x y ==> P x y) /\
+          (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
+          (!u v. TC R u v ==> P u v)``,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT0);
+
+val TC_STRONG_INDUCT_LEFT1_0 = prove(
+  ``!R P. (!x y. R x y ==> P x y) /\
+          (!x y z. R x y /\ P y z /\ TC R y z ==> P x z) ==>
+          (!u v. TC R u v ==> P u v /\ TC R u v)``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT_LEFT1 THEN
+  ASM_MESON_TAC [TC_RULES]);
+
+val TC_STRONG_INDUCT_LEFT1 = store_thm(
+  "TC_STRONG_INDUCT_LEFT1",
+  ``!R P. (!x y. R x y ==> P x y) /\
+          (!x y z. R x y /\ P y z /\ TC R y z ==> P x z) ==>
+          (!u v. TC R u v ==> P u v)``,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT_LEFT1_0);
 
 val TC_RTC = store_thm(
   "TC_RTC",
