@@ -78,28 +78,36 @@ end;
  ---------------------------------------------------------------------------*)
 
 (*1,2*)
+
 val N_defn_1 = Defn.set_reln N_defn (Term `measure \x. 101 - x`);
 
 (*3*)
+
 val tcs as [nested, tc1,tc2] = Defn.tcs_of N_defn_1;
 
 (*4*)
+
 val non_nested_tcs = prove
 (mk_conj(tc1,tc2),
  TotalDefn.TC_SIMP_TAC [] []);
 
 (*5*)
+
 val N_defn_2 = Defn.elim_tcs N_defn_1 (CONJUNCTS non_nested_tcs);
 
 (*6*)
+
 val SOME aux_defn_2 = Defn.aux_defn N_defn_2;
+
 (*7*)
+
 val E0  = DISCH_ALL (hd (Defn.eqns_of aux_defn_2));
 val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
 val lem1 = Q.prove(`measure f x y = f x < f y`, 
             RW_TAC std_ss [prim_recTheory.measure_def, 
                            relationTheory.inv_image_def]);
 (*8*)
+
 val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
 
 (*---------------------------------------------------------------------------
@@ -114,13 +122,13 @@ val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
         Induct on the termination relation, then tidy up the goal 
         with [lem,lem1]. The goal is now to show
 
-          `x < NA (x+11)`
+            x < NA (x+11)
 
         - Unroll the function at x+11. The first step requires manually 
           instantiating the rec. eqn. with `x+11`. As this is constrained
           by the the nested t.c.
 
-           `x+11 < NA (x+22)`,
+            x+11 < NA (x+22),
 
           we need to prove the nested t.c. This is accomplished by applying
           the ind. hyp. After being proved, the nested t.c. is also added 
@@ -129,18 +137,19 @@ val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
           exposing the nested call of the function. The goal is now to 
           prove 
 
-           `x < NA(NA(x+22))
+            x < NA(NA(x+22))
 
         - At this point we know, by simple arithmetic,
 
-           `x < NA (x+22) -11`
+            x < NA (x+22) -11
 
         - A case split is now made, on 
 
-            `NA (x+22) -11 > 100`
+            NA (x+22) -11 > 100
 
-          The motivation for this is rather mysterious. Consider the 
-          two branches coming from the case split. 
+          The motivation for this is rather mysterious, but let's see
+          how the proof proceeds. Consider the two branches coming from
+          the case split.  
 
           A. NA (x+22) -11 > 100, so NA (x+22) > 100 so, by using
              the rec. eqn. at NA(x+22) the goal NA(NA(x+22)) reduces
@@ -152,12 +161,12 @@ val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
                                   = NA(NA(x+22))
              After that, the proof of this branch is also easy.
 
-          That finishes the whole proof. Revisiting the case-split, 
-          we see that part A does not use the i.h. since it unrolls 
-          NA to the non-recursive case. Part B, in contrast, uses
-          the induction hypothesis instead of unrolling NA to the 
-          recursive case, which would lead to madness. We see that
-          the case split was aimed at making the conclusion of the 
+          That finishes the whole proof. Revisiting the mysterious 
+          case-split, we see that part A does not use the i.h. since 
+          it unrolls NA to the non-recursive case. Part B, in contrast,
+          uses the induction hypothesis instead of unrolling NA to the 
+          recursive case, which would lead to madness. We see that the
+          case split was aimed at making the conclusion of the 
           inductive hypothesis work out, so part B is very smooth. 
    
  ---------------------------------------------------------------------------*)
@@ -175,7 +184,8 @@ val (N,N_INDUCT) = Defn.tprove
       THEN MP_TAC (Q.SPEC `N_aux(measure ($- 101)) (x+11+11)` E1)
       THEN RW_TAC std_ss [] THEN DECIDE_TAC,
     PROVE_TAC [arithmeticTheory.LESS_TRANS, 
-           ARITH `x+y < p ==> x < p-y`, ARITH `x+y < p ==> ((p-y)+y = p)`]]);
+               ARITH `x+y < p ==> x < p-y`, 
+               ARITH `x+y < p ==> ((p-y)+y = p)`]]);
 
  
 (*---------------------------------------------------------------------------
