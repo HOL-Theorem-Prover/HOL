@@ -3,6 +3,7 @@ sig
   include Abbrev
   type compset
 
+  val monitoring    : (term -> bool) option ref
   val new_compset   : thm list -> compset
   val bool_compset  : unit -> compset
   val add_thms      : thm list -> compset -> unit

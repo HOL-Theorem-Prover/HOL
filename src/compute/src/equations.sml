@@ -71,7 +71,7 @@ fun try_rwn ibds lt =
 
 
 (*---------------------------------------------------------------------------
- * Instantiating the rule according to the ouptut of the matching.
+ * Instantiating the rule according to the output of the matching.
  *---------------------------------------------------------------------------*)
 
 fun comb_ct {Head,Args,Rws=NeedArg tail, Skip} arg =
@@ -98,14 +98,19 @@ fun mk_clos(env,t) =
 local fun inst_one_var (SOME(tm,v),(thm,lv)) = (Specialize tm thm, v :: lv)
         | inst_one_var (NONE,_) = raise DEAD_CODE "inst_rw"
 in
-fun inst_rw (th,{Rule=RW{thm,rhs,...}, Inst=(bds,tysub)}) =
+fun inst_rw (th,monitoring,{Rule=RW{thm,rhs,...}, Inst=(bds,tysub)}) =
   let val tirhs = inst_type_dterm (tysub,rhs)
       val tithm = INST_TYPE tysub thm
-      val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds in
+      val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds 
+      val _ = if monitoring 
+               then (Hol_pp.print_term(concl spec_thm); print"\n")
+               else ()
+  in
   (trans_thm th spec_thm, mk_clos(venv,tirhs))
   end
 end;
 
+val monitoring = ref NONE : (term -> bool) option ref;
 
 (*---------------------------------------------------------------------------
  * Reducing a constant
@@ -115,7 +120,18 @@ fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
       (let val (_,tytheta) = match_term Hcst Head 
                              handle HOL_ERR _ => raise No_match
            val rule_inst = try_rwn tytheta Args rls
-       in (true, inst_rw (th,rule_inst))
+           val mon = case !monitoring 
+                    of NONE => false
+                     | SOME f => f Head
+           val insted = inst_rw(th,mon,rule_inst)
+(*           val _ = case !monitoring 
+                    of NONE => ()
+                     | SOME f => if f Head
+                                 then (Hol_pp.print_term(concl (fst insted)); 
+                                       print"\n")
+                                 else ()
+*)
+       in (true, insted)
        end handle No_match
        => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
   | reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Conv fconv,Tail},Skip}) =
