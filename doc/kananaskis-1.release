@@ -1,0 +1,21 @@
+Bugs fixed:
+-----------
+
+New features:
+-------------
+  * Addition of Q.SPEC_THEN (and others in the same line, such as
+    Q.ISPECL_THEN), allows better use of "parsing in goal context"
+    when specialising goals.  Where before you might have had to
+    write
+       SUBST1_TAC (Q.SPEC `x:num` thm)
+    you can now write
+       Q.SPEC_THEN `x` SUBST1_TAC thm
+    and the `x` will be parsed in the context of the current goal,
+    something not possible in the first example because the call to
+    Q.SPEC happened completely independently of the goal.
+
+New theories:
+-------------
+
+New tools:
+----------
