@@ -1,6 +1,6 @@
 \chapter{Advanced Definition Principles}\label{HOLdefinitions}
 
-\section{Datatype definition}
+\section{Datatype Definition}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!algebraic types}
 
 There are several useful consequences of an object logic datatype
@@ -365,7 +365,7 @@ given, the \ml{'a} of \ml{('a,'b)sum} will be the \ml{Left} argument
 because \ml{left} comes before \ml{right} in the standard (ASCII)
 dictionary ordering.
 
-\section{Record types}
+\section{Record Types}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!record types}
 
 Record types are convenient ways of bundling together a number of
@@ -538,7 +538,7 @@ The pretty-printing of big records can be controlled with the
 \texttt{pp\_bigrecs} trace-flag.
 
 
-\section{Function definition}\label{TFL}
+\section{Function Definition}\label{TFL}
 
 \HOL{} provides a function definition mechanism based on the
 wellfounded recursion theorem which is proved in \theoryimp{relation},
@@ -762,6 +762,8 @@ equations and the induction theorem.
         ==> !v v1. P v v1  : thm
 \end{verbatim}
 \end{session}
+
+\section{Defining Inductive Relations}
 
 %%% Local Variables:
 %%% mode: latex
