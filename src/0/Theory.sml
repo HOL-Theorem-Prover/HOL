@@ -293,10 +293,11 @@ fun add_type_entry {name, theory, arity}
              TYPE{occ={name=n1,revision=revision+1},
                  theory=thy1, arity=a1,witness=NONE,utd=utd}::rst)
        else if (name=n1) andalso (theory<>thy1)
-            then raise THEORY_ERR"add_entry"
-                           ("attempt to redeclare type "
-                                     ^Lib.quote name^" from theory "
-                                     ^Lib.quote thy1)
+            then let val err = String.concat ["attempt to redeclare type ",
+                              Lib.quote name," from theory ", Lib.quote thy1]
+                 in print (err^"\n");
+                    raise THEORY_ERR"add_type_entry" err
+                 end
             else e::del rst  (* name <> name1 *)
  in
     Array.update(ST, i, del L);
@@ -323,10 +324,13 @@ fun add_term_entry {name,theory,htype}
                 n1 := !Globals.old (!n1);
                 entry::rst)
           else if (name = !n1) andalso (theory<>thy1)
-               then raise THEORY_ERR"add_entry"
-                          ("attempt to redeclare constant "
-                                ^Lib.quote name^" from theory "
-                                ^Lib.quote thy1)
+               then let val err = String.concat
+                                   ["attempt to redeclare constant ",
+                                    Lib.quote name," from theory ",
+                                    Lib.quote thy1]
+                    in print (err^"\n");
+                      raise THEORY_ERR"add_term_entry" err
+                    end
                else e::del rst
  in
    Array.update(ST, i, del L);
@@ -1018,6 +1022,8 @@ local fun check_name (fname,s) = ()
       fun empty_hyp th =
          if (List.null (Thm.hyp th)) then ()
          else raise THEORY_ERR "save_thm" "non empty assumption set"
+      fun DATED_ERR fname bindname =
+         THEORY_ERR fname (Lib.quote bindname^"is out-of-date!");
 in
 fun new_axiom (name,tm) =
    let val rname = ref name
@@ -1025,7 +1031,7 @@ fun new_axiom (name,tm) =
        val  _ = check_name ("new_axiom",name)
    in
      if (uptodate_term tm) then add_axiomCT(rname,ax)
-     else raise THEORY_ERR "new_axiom" "out-of-date!";
+     else raise DATED_ERR "new_axiom" name;
      ax
    end
 
@@ -1040,7 +1046,7 @@ fun store_definition(name, consts, wthm, tm) =
       val tag = Thm.tag wthm
       val def = mk_defn_thm tag tm
       val _ = if (uptodate_thm def) then ()
-              else raise THEORY_ERR "store_definition" "out-of-date!"
+              else raise DATED_ERR "store_definition" name
   in
     case consts
       of LEFT s => (add_ty_witness (theCT()) s wthm; ())
@@ -1053,7 +1059,7 @@ fun store_definition(name, consts, wthm, tm) =
 fun save_thm (name,th) =
    ( check_name ("save_thm",name);
      if (uptodate_thm th) then add_thmCT(name,th)
-     else raise THEORY_ERR "save_thm" "out-of-date!";
+     else raise DATED_ERR "save_thm" name;
      th )
 end;
 
