@@ -54,8 +54,8 @@ fun Def tm =
  *****************************************************************************)
 
 
-local open simpLib boolSimps pureSimps SatisfySimps UnwindSimps pairSimps
-      val data = merge_ss[PURE_ss,BOOL_ss,CONG_ss,SATISFY_ss,UNWIND_ss,PAIR_ss]
+local open simpLib boolSimps pureSimps SatisfySimps pairSimps
+      val data = merge_ss[PURE_ss,BOOL_ss,CONG_ss,SATISFY_ss,PAIR_ss]
 in
   val my_ss = mk_simpset [data]
   val MY_SIMP_RULE = simpLib.SIMP_RULE my_ss  (* partial evaluation here *)
