@@ -84,9 +84,11 @@ val _ = FileSys.chDir holdir
 
 val header = "\
 \[Setup]\n\
-\AppName            = hol98\n\
-\AppVerName         = hol98 - "^sysname^"\n\
+\AppName            = HOL\n\
+\AppVerName         = HOL 4 - "^sysname^"\n\
 \AppVersion         = "^sysname^"\n\
+\AppUpdatesURL      = http://hol.sf.net\n\
+\AppPublisher       = HOL Developers\n\
 \DefaultDirName     = {pf}\\Hol\n\
 \DefaultGroupName   = HOL\n\
 \Compression        = bzip\n\
