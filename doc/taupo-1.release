@@ -1,5 +1,5 @@
-Release notes for the Taupo-1 release of Hol98
-==============================================
+Notes for the Taupo-1 release of Hol98
+======================================
 
 ----------------------------------------------------------------------
 Konrad Slind writes:
@@ -48,8 +48,8 @@ New object language support:
     * First class grammars
         Grammar values, encoding all of the information about infixes,
         overloading and other syntactic matters are first class values
-        in the system and can be manipulated with a large suite of
-        exported functions.
+        in the system, can be manipulated with a large suite of
+        exported functions, and are stored in theory files.
     * New syntax
         Arithmetic operators are now left associative where
         appropriate (i.e., +, -, *, DIV).  There is new syntax for
