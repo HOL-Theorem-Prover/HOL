@@ -1004,11 +1004,11 @@ Remaining subgoals:
 \section{Tacticals}
 \label{tacticals}
 
-A {\it tactical\/} is an \ML{} function that returns a tactic (or
-tactics) as result.  Tacticals may take various parameters; this is
+A {\it tactical\/} is an \ML{} function that takes one or more tactics
+as arguments, possibly with other arguments as well, and returns a
+tactic as its result.  The various parameters passed to tacticals are
 reflected in the various \ML{} types that the built-in tacticals have.
 Some important tacticals in the \HOL{} system are listed below.
-
 
 \subsection{\tt THENL : tactic -> tactic list -> tactic}
 
