@@ -2,9 +2,9 @@
 (* Keith Wansbrough 2001 *)
 
 {
-exception Eof
-exception BadChar
-exception Finished
+exception Eof         (* raised by relheader if no body found *)
+exception BadChar     (* raised by reltoken if unrecognised char scanned *)
+exception Finished    (* raised by reltoken when end of body reached *)
 
 let comments = ref []
 
@@ -23,7 +23,7 @@ let indent_width s =
       (match String.get s n with
         '\n'   -> 0
       | ' '    -> w+1
-      | '\t'   -> w-(w mod 8)+8
+      | '\t'   -> w-(w mod 8)+8  (* account for tabs *)
       | '\r'   -> 0
       | '\012' -> 0)
             in
@@ -31,6 +31,11 @@ let indent_width s =
 
 } 
 
+(* these patterns delimit the scanned "body" area *)
+let startpat = "Net_Hol_reln" white'* backtick
+let stoppat  = newline backtick
+
+(* the character classes of HOL *)
 let idchar = ['A'-'Z' 'a'-'z' '0'-'9' '_' '\'']
 let nonagg = ['~' '(' ')' '[' ']' '{' '}' '.' ',']
 let dollar = '$'
@@ -40,25 +45,28 @@ let idorpunctchar = idchar | punctchar
 
 let white    = [' ' '\r' '\t' '\012']
 let newline  = '\n'
-let white'   = [' ' '\r' '\n' '\t' '\012']
 
 let backtick = '`'
-
-let startpat = "Net_Hol_reln" white'* backtick
-let stoppat  = newline backtick
 
 let startcom = "(*"
 let incomm   = [^ '(' '*'] | '(' [^ '*'] | '*' [^ ')']
 let stopcom  = "*)"
 
 
+(* now some rules *)
+
 rule
+
+(* relheader returns unit when it reaches the beginning of the body *)
   relheader = parse
     startpat { () }
   | _        { relheader lexbuf }
   | eof      { raise Eof }
 
 and
+
+(* reltoken returns the next token, or raises Finished|BadChar *)
+
   reltoken = parse
     dollar? idchar+        { Ident (Lexing.lexeme lexbuf) }
   | dollar? punctchar+     { Ident (Lexing.lexeme lexbuf) }
