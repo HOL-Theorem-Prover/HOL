@@ -1,0 +1,39 @@
+\DOC
+
+\TYPE {AC : thm -> thm -> thm}
+
+\SYNOPSIS
+Packages associativity and commutativity theorems for use in the simplifier.
+
+\KEYWORDS
+Simplification.
+
+\DESCRIBE
+The {AC} function combines an associativity and commutativity theorem.
+The resulting theorem can be passed to the simplifier as if a rewrite,
+but will rather be used by the simplifier as the basis for performing
+AC-normalisation.
+
+The theorems can be combined in either order, can be partly
+generalised, and need not express associativity in any particular
+direction from left to right.
+
+\FAILURE
+{AC} never fails, but if applied to theorems that are not of the
+required form, the simplifier will raise an exception when it attempts
+to use the result.
+
+\EXAMPLE
+{
+There would be a proper example here, but the code for AC-rewriting
+is currently broken, and
+
+  SIMP_CONV bool_ss [AC ADD_ASSOC ADD_COMM] ``3 + x + y``
+
+goes into an infinite loop.
+}
+
+\SEEALSO
+simpLib.SIMPSET.
+
+\ENDDOC

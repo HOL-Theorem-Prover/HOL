@@ -1,6 +1,6 @@
 \DOC associate_restriction
 
-\TYPE {associate_restriction : ((string * string) -> unit)}
+\TYPE {associate_restriction : (string * string) -> unit}
 
 \SYNOPSIS
 Associates a restriction semantics with a binder.
@@ -17,17 +17,9 @@ will cause the parser and pretty-printer to support:
               <---- print ----
 }
 
-Anything can be written between the binder and {`::`} that could be
-written between the binder and {`.`} in the old notation. See the
+Anything can be written between the binder and {"::"} that could be
+written between the binder and {"."} in the old notation. See the
 examples below.
-
-Associations between user defined binders and their restrictions are not
-stored in the theory, so they have to be set up for each hol session
-(e.g. with a {hol-init.ml} file).
-
-The flag {`#restrict(Globals.pp_flags)`} has default {true}, but if set to 
-{false} will disable the pretty printing. This is useful for seeing what the
-semantics of particular restricted abstractions are.
 
 The following associations are predefined:
 {
@@ -37,21 +29,21 @@ The following associations are predefined:
    @v::P. B    <---->   RES_SELECT   P (\v. B)
 }
 
-Where the constants {RES_ABSTRACT}, {RES_FORALL}, {RES_EXISTS} and
-{RES_SELECT} are defined in the theory {`restr_binder`} by:
+Where the constants {RES_FORALL}, {RES_EXISTS} and {RES_SELECT} are
+defined in the theory {bool}, such that :
 {
-   |- RES_ABSTRACT P B =  \x:'a. (P x => B x | ARB:'b)
-
    |- RES_FORALL P B   =  !x:'a. P x ==> B x
 
    |- RES_EXISTS P B   =  ?x:'a. P x /\ B x
 
    |- RES_SELECT P B   =  @x:'a. P x /\ B x
 }
-
-where {ARB} is defined in the theory {`restr_binder`} by:
+The constant {RES_ABSTRACT} has the following characterisation
 {
-   |- ARB  =  @x:'a. T
+   |- (!p m x. x IN p ==> (RES_ABSTRACT p m x = m x)) /\
+      !p m1 m2.
+        (!x. x IN p ==> (m1 x = m2 x)) ==>
+        (RES_ABSTRACT p m1 = RES_ABSTRACT p m2)
 }
 
 
@@ -60,33 +52,27 @@ Never fails.
 
 \EXAMPLE
 {
-  - new_binder_definition("DURING", --`DURING(p:num#num->bool) = $!p`--);
-    |- !p. $DURING p = $! p
+- new_binder_definition("DURING", ``DURING(p:num#num->bool) = $!p``);
+> val it = |- !p. $DURING p = $! p : thm
 
-  - --`DURING x::(m,n). p x`--;
-    
-    Exception raised at Parse_support.restr_binder:
-    no restriction associated with "DURING"
+- ``DURING x::(m,n). p x``;
+<<HOL warning: parse_term.parse_term: on line 2, characters 4-23:
+parse_term: No restricted quantifier associated with DURING>>
 
-  - new_definition("RES_DURING", 
-                   --`RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x`--);
+[...]
 
-    |- !m n p. RES_DURING (m,n) p = (!x. m <= x /\ x <= n ==> p x) : thm
+- new_definition("RES_DURING",
+                 ``RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x``);
+> val it = |- !m n p. RES_DURING (m,n) p = !x. m <= x /\ x <= n ==> p x : thm
 
-  - associate_restriction("DURING","RES_DURING");
-    () : unit
+- associate_restriction("DURING","RES_DURING");
+> val it = () : unit
 
-  -  --`DURING x::(m,n). p x`--;
-    (--`DURING x ::(m,n). p x`--) : term
+- ``DURING x::(m,n). p x``;
+> val it = ``DURING x::(m,n). p x`` : term
 
-  - Globals.show_restrict := false;
-    () : unit
-
-  - --`DURING x::(m,n). p x`--;
-    (--`RES_DURING (m,n) (\x. p x)`--) : term
+- dest_comb it;
+> val it = (``RES_DURING (m,n)``, ``\x. p x``) : term * term
 }
 
-
-\SEEALSO
-binder_restrictions, delete_restriction.
 \ENDDOC

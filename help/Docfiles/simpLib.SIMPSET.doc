@@ -59,6 +59,24 @@ doesn't involve the relation in question (here, equality) then it is
 treated as a side-condition, and the simplifier will be recursively
 invoked to try and solve it.
 
+Higher-order congruence rules are also possible.  These provide a
+method for dealing with bound variables.  The following is a rule for
+the restricted universal quantifier, for example:
+{
+   |- (P = Q) ==> (!v. v IN Q ==> (f v = g v)) ==>
+      (RES_FORALL P f = RES_FORALL Q g)
+}
+
+(If {f} is an abstraction, {\x. t}, then {RES_FORALL P f} is
+pretty-printed as {!x::P. t}) Terms in the conclusions of higher-order
+congruence rules that might be abstractions (such as {f} above) should
+be kept as variables, rather than written out as abstractions.  In
+other words, the conclusion of the congruence rule above should not be
+written as
+{
+   RES_FORALL P (\v. f v) = RES_FORALL Q (\v. g v)
+}
+
 The {convs} field is a list of conversions that the simplifier will
 apply.  Each conversion added to an {ssdata} value is done so in a
 record consisting of four fields.
@@ -149,5 +167,6 @@ we can construct a normaliser for additive terms.
 value.
 
 \SEEALSO
-simpLib.++, boolSimps.bool_ss, simpLib.mk_simpset, simpLib.rewrites, simpLib.SIMP_CONV.
+simpLib.++, boolSimps.bool_ss, simpLib.Cong, simpLib.mk_simpset,
+simpLib.rewrites, simpLib.SIMP_CONV.
 \ENDDOC
