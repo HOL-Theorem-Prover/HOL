@@ -11,12 +11,6 @@ val compatible_def =
     Define`compatible R = !x y c. R x y /\ one_hole_context c ==>
                                   R (c x) (c y)`;
 
-val symmetric_def =
-    Define`symmetric R = !x y. R x y ==> R y x`;
-
-val equivalence_def =
-    Define`equivalence R = reflexive R /\ symmetric R /\ transitive R`;
-
 val congruence_def = Define`congruence R = equivalence R /\ compatible R`;
 
 val is_reduction_def =
