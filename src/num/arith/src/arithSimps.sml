@@ -214,6 +214,7 @@ fun contains_forall sense tm =
    added to have any positive universals, because these will translate
    into negative ones in the context of the wider goal, and thus cause
    the goal to be rejected.  *)
+
 fun is_arith_thm thm =
   not (null (hyp thm)) andalso is_arith (concl thm) andalso
    (not (contains_forall true (concl thm)));
@@ -326,12 +327,6 @@ in
            initial = CTXT []}
 end;
 
-val a_v = --`NUMERAL a`--
-val b_v = --`NUMERAL b`--
-val SUC = --`SUC`--
-val x = Psyntax.mk_var("x", num_ty)
-val y = Psyntax.mk_var("y", num_ty)
-
 fun reducer t =
  let open numSyntax
      val (_, args) = strip_comb t
@@ -341,10 +336,17 @@ fun reducer t =
    if List.all reducible args then reduceLib.REDUCE_CONV t else NO_CONV t
  end
 
-fun mk_redconv0 pat = {name = "REDUCE_CONV (arithmetic reduction)", trace = 2,
-                       key = SOME([], pat), conv = K (K reducer)}
+fun mk_redconv0 pat = 
+   {name = "REDUCE_CONV (arithmetic reduction)", 
+    trace = 2,
+    key = SOME([], pat), conv = K (K reducer)}
+
+local val x = Psyntax.mk_var("x", num_ty)
+      val y = Psyntax.mk_var("y", num_ty)
+in
 fun mk_unary_rconv op_t = mk_redconv0 (mk_comb(op_t, x))
 fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
+end;
 
 val ARITH_ss = simpLib.SIMPSET
     {convs = [], rewrs = arithmetic_rewrites, congs = [],
@@ -361,6 +363,5 @@ val REDUCE_ss = simpLib.SIMPSET
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
 fun clear_arith_caches() = clear_cache arith_cache;
-
 
 end (* struct *)

@@ -23,4 +23,5 @@ sig
  val ARITH_PROVE          : conv
  val ARITH_TAC            : tactic
 
+ val num_ss               : simpLib.simpset
 end;

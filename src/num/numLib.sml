@@ -177,4 +177,15 @@ val ARITH_CONV  = arithLib.ARITH_CONV
 val ARITH_PROVE = arithLib.ARITH_PROVE
 val ARITH_TAC   = CONV_TAC ARITH_CONV;
 
+
+(*---------------------------------------------------------------------------
+    Simplification set for numbers (and booleans).
+ ---------------------------------------------------------------------------*)
+
+local open simpLib sumTheory
+      infix ++
+in
+val num_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss
+end;
+
 end; (* numLib *)

@@ -1,4 +1,4 @@
-structure stmonad =
+structure stmonad :> stmonad =
 struct
 type ('a, 'b) stmonad = 'a -> ('a * 'b)
 

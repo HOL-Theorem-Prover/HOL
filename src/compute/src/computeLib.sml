@@ -184,5 +184,4 @@ fun write_datatype_info tyinfo =
     add_funs (mapfilter Option.valOf compset_addns)
  end;
 
-
-end;
+end
