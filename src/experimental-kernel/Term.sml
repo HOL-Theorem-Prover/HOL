@@ -720,11 +720,13 @@ fun subst theta =
           val _ = type_of redex = type_of residue
                   orelse raise ERR "vsubst" "Bad substitution list"
         in
-          vsub_insert(acc, redex, residue)
+          if redex = residue then acc
+          else vsub_insert(acc, redex, residue)
         end
         val atheta = List.foldl foldthis emptyvsubst theta
       in
-        (fn tm => vsubst atheta tm handle Unchanged => tm)
+        if numItems atheta = 0 then I
+        else (fn tm => vsubst atheta tm handle Unchanged => tm)
       end
     else let
         fun foldthis ({redex,residue}, (theta1, theta2)) = let
