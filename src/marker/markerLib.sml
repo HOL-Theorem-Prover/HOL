@@ -58,6 +58,10 @@ fun move_conj_right P = stmark_conjunct P THENC move_stmarked_conj_right
 fun move_disj_left P = stmark_disjunct P THENC move_stmarked_disj_left
 fun move_disj_right P = stmark_disjunct P THENC move_stmarked_disj_right
 
+(*---------------------------------------------------------------------------*)
+(* Dealing with simplifier directives encoded as tags on theorems.           *)
+(*---------------------------------------------------------------------------*)
+
 fun AC th1 th2 = 
   EQ_MP (SYM (SPECL [concl th1, concl th2] markerTheory.AC_DEF))
         (CONJ th1 th2);

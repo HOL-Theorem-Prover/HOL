@@ -29,9 +29,7 @@ fun stringulate _ [] = []
 (* Datatype for controlling the application of individual rewrite rules      *)
 (*---------------------------------------------------------------------------*)
 
-datatype control 
-     = UNBOUNDED
-     | BOUNDED of int ref
+datatype control = UNBOUNDED | BOUNDED of int ref
 
 
 (*---------------------------------------------------------------------------*
@@ -79,8 +77,7 @@ val _ = register_btrace ("Rewrite", monitoring) ;
 (* Abstract datatype of rewrite rule sets.                                   *)
 (*---------------------------------------------------------------------------*)
 
-abstype rewrites = RW of {thms : thm list,  
-                           net : conv Net.net}
+abstype rewrites = RW of {thms : thm list, net : conv Net.net}
 with
  fun dest_rewrites(RW{thms, ...}) = thms
  fun net_of(RW{net,...})          = net

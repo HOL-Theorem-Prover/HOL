@@ -12,6 +12,7 @@ type ppstream = Portable.ppstream
 val ERR = mk_HOL_ERR "TypeBasePure";
 
 type simpfrag = simpfrag.simpfrag
+
 datatype shared_thm
     = ORIG of thm
     | COPY of string * thm;
