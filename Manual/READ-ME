@@ -1,0 +1,40 @@
++ ===================================================================== +
+| HOL DISTRIBUTION DIRECTORY: Manual					|
++ ===================================================================== +
+
+This directory contains the HOL manual. The contents are:
+
+SUB-DIRECTORY    DESCRIPTION
+-------------------------------------------------------------------------
+
+Description	 : LaTeX source files for the manual volume containing
+		   a systematic description of the HOL system
+
+Tutorial	 : LaTeX sources for the HOL tutorial and case studies  
+
+Reference	 : LaTeX sources for the HOL reference manual.
+
+Covers		 : LaTeX and PostScript sources for the fancy cover
+		   pages for the maual.  These require a PostScript printer
+		   and the psfig macros.  See the file Covers/READ-ME for
+		   further details.
+
+LaTeX	 	 : layout files and LaTeX macros for the manual.
+
+Makefile	 : makefile for the manual
+
+bin		 : sed and shell scripts needed to build the manual
+
+Guide		 : style manual for writing HOL documentation.  
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+IMPORTANT NOTE.
+
+This directory is included in the hol90 distribution for the sole reason
+that it provides important typesetting support for the hol90
+libraries. Its contents are therefore, apt not to be wholly accurate in
+the context of hol90.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
