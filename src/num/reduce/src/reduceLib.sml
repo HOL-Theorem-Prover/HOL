@@ -97,11 +97,7 @@ val _ = let open computeLib
 (* reduction.                                                            *)
 (*-----------------------------------------------------------------------*)
 
-local open computeLib
-      val numcomps = num_compset() 
-in 
-val REDUCE_CONV = CBV_CONV numcomps
-end;
+val REDUCE_CONV = computeLib.CBV_CONV (num_compset());
 
 val REDUCE_RULE = CONV_RULE REDUCE_CONV;
 
