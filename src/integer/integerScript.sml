@@ -1135,9 +1135,6 @@ val INT_EQ_RMUL =
 	      MATCH_ACCEPT_TAC INT_EQ_LMUL);
 
 
-
-
-
 (*--------------------------------------------------------------------------*)
 (* Prove homomorphisms for the inclusion map                                *)
 (*--------------------------------------------------------------------------*)
@@ -1212,6 +1209,7 @@ val INT_MUL =
 (*--------------------------------------------------------------------------*)
 (* Now more theorems                                                        *)
 (*--------------------------------------------------------------------------*)
+
 
 val INT_LT_NZ =
     store_thm("INT_LT_NZ",
@@ -1496,6 +1494,19 @@ val INT_EQ_NEG =
 	      REWRITE_TAC[GSYM INT_LE_ANTISYM, INT_LE_NEG] THEN
 	      MATCH_ACCEPT_TAC CONJ_SYM);
 
+val int_eq_calculate = prove(
+  Term`!n m. ((&n = ~&m) = (n = 0) /\ (m = 0)) /\
+             ((~&n = &m) = (n = 0) /\ (m = 0))`,
+  SingleStep.Induct THENL [
+    SIMP_TAC int_ss [INT_NEG_0, INT_INJ, GSYM INT_NEG_EQ],
+    SIMP_TAC int_ss [INT] THEN GEN_TAC THEN CONJ_TAC THENL [
+      SIMP_TAC int_ss [GSYM INT_EQ_SUB_LADD, int_sub, GSYM INT_NEG_ADD] THEN
+      ASM_SIMP_TAC int_ss [INT_ADD],
+      SIMP_TAC int_ss [INT_NEG_ADD, GSYM INT_EQ_SUB_LADD, int_sub] THEN
+      ASM_SIMP_TAC int_ss [INT_NEGNEG, INT_ADD]
+    ]
+  ]);
+
 (*--------------------------------------------------------------------------*)
 (* Some nasty hacking round to show that the positive integers are a copy   *)
 (* of the natural numbers.                                                  *)
@@ -1620,6 +1631,25 @@ val INT_NUM_CASES = store_thm(
     FULL_SIMP_TAC int_ss [INT_EQ_NEG, INT_INJ, INT_NEG_GE0, NOT_LESS_EQUAL,
                           INT_LE]
   ]);
+
+(* ------------------------------------------------------------------------ *)
+(* More random theorems about "stuff"                                       *)
+(* ------------------------------------------------------------------------ *)
+
+val INT_MUL_EQ_1 = store_thm(
+  "INT_MUL_EQ_1",
+  ``!x y. (x * y = 1) = (x = 1) /\ (y = 1) \/ (x = ~1) /\ (y = ~1)``,
+  REPEAT GEN_TAC THEN
+  Q.SPEC_THEN `x` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+  FIRST_X_ASSUM SUBST_ALL_TAC THEN
+  SIMP_TAC (bool_ss ++ arithSimps.ARITH_ss) [INT_MUL_LZERO, INT_INJ,
+                                             int_eq_calculate] THEN
+  Q.SPEC_THEN `y` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+  FIRST_X_ASSUM SUBST_ALL_TAC THEN
+  SIMP_TAC (bool_ss ++ arithSimps.ARITH_ss) [
+    INT_MUL_LZERO, INT_INJ, INT_MUL_RZERO, int_eq_calculate,
+    GSYM INT_NEG_RMUL, INT_MUL, GSYM INT_NEG_LMUL,
+    INT_NEGNEG, INT_EQ_NEG]);
 
 (*--------------------------------------------------------------------------*)
 (* Theorems about mapping both ways between :num and :int                   *)
@@ -2247,42 +2277,12 @@ val INT_DIVIDES_0 = store_thm(
   Term`(!x. x int_divides 0) /\ (!x. 0 int_divides x = (x = 0))`,
   PROVE_TAC [INT_DIVIDES, INT_MUL_RZERO, INT_MUL_LZERO]);
 
-val int_eq_calculate = prove(
-  Term`!n m. ((&n = ~&m) = (n = 0) /\ (m = 0)) /\
-             ((~&n = &m) = (n = 0) /\ (m = 0))`,
-  Induct THENL [
-    SIMP_TAC int_ss [INT_NEG_0, INT_INJ, GSYM INT_NEG_EQ],
-    SIMP_TAC int_ss [INT] THEN GEN_TAC THEN CONJ_TAC THENL [
-      SIMP_TAC int_ss [GSYM INT_EQ_SUB_LADD, int_sub, GSYM INT_NEG_ADD] THEN
-      ASM_SIMP_TAC int_ss [INT_ADD],
-      SIMP_TAC int_ss [INT_NEG_ADD, GSYM INT_EQ_SUB_LADD, int_sub] THEN
-      ASM_SIMP_TAC int_ss [INT_NEGNEG, INT_ADD]
-    ]
-  ]);
-
 val INT_DIVIDES_1 = store_thm(
   "INT_DIVIDES_1",
   Term`!x. 1 int_divides x /\
            (x int_divides 1 = (x = 1) \/ (x = ~1))`,
-  REPEAT STRIP_TAC THENL [
-    PROVE_TAC [INT_DIVIDES, INT_MUL_RID],
-    SIMP_TAC bool_ss [INT_DIVIDES] THEN EQ_TAC THEN STRIP_TAC THENL [
-      ALL_TAC,
-      ASM_SIMP_TAC bool_ss [INT_MUL_RID],
-      ASM_SIMP_TAC bool_ss [INT_NEG_EQ, GSYM INT_NEG_RMUL, INT_MUL_RID]
-    ] THEN
-    Q.SPEC_THEN `m` STRIP_ASSUME_TAC INT_NUM_CASES THEN
-    FIRST_X_ASSUM SUBST_ALL_TAC THENL [
-      ALL_TAC,
-      ALL_TAC,
-      FULL_SIMP_TAC int_ss [INT_MUL_LZERO, INT_INJ]
-    ] THEN
-    Q.SPEC_THEN `x` STRIP_ASSUME_TAC INT_NUM_CASES THEN
-    FIRST_X_ASSUM SUBST_ALL_TAC THEN
-    FULL_SIMP_TAC int_ss [INT_MUL_RZERO, INT_MUL, GSYM INT_NEG_LMUL,
-                          GSYM INT_NEG_RMUL, INT_NEGNEG, int_eq_calculate,
-                          INT_INJ, INT_EQ_NEG]
-  ]);
+  REPEAT STRIP_TAC THEN
+  PROVE_TAC [INT_DIVIDES, INT_MUL_RID, INT_MUL_EQ_1]);
 
 val INT_DIVIDES_REFL = store_thm(
   "INT_DIVIDES_REFL",
