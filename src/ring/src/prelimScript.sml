@@ -44,13 +44,10 @@ val list_compare_def = Define `
 val compare_equal = store_thm("compare_equal",
   --` (!x y. (cmp x y = EQUAL) = (x = y))
       ==> !l1 l2. (list_compare cmp l1 l2 = EQUAL) = (l1 = l2)`--,
-DISCH_THEN (fn tha =>
-(Induct THENL [ALL_TAC,GEN_TAC]) THEN
-(Induct THENL [ALL_TAC,GEN_TAC]) THEN
-TRY (REWRITE_TAC[GSYM tha] THEN Cases_on `(cmp (h:'a) (h':'a)):ordering`) THEN
-RW_TAC bool_ss [list_compare_def, compare_def, GSYM tha, thms]));
-
-
+ DISCH_THEN (ASSUME_TAC o GSYM)  
+   THEN NTAC 2 (Induct THENL [ALL_TAC,GEN_TAC]) 
+   THEN TRY (ASM_REWRITE_TAC[] THEN Cases_on `cmp h h'`) 
+   THEN RW_TAC bool_ss [list_compare_def, compare_def]);
 
 val list_merge_def = Define `
    (list_merge a_lt l1 [] = l1)

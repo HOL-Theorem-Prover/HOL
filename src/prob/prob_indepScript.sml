@@ -604,18 +604,15 @@ val INDEP_BIND_SDEST = store_thm
    ++ Q.EXISTS_TAC `APPEND (MAP (CONS T) l') (MAP (CONS F) l)`
    ++ Q.EXISTS_TAC `\l. if HD l then r' (TL l) else r (TL l)`
    ++ RW_TAC std_ss [] <<
-   [ONCE_REWRITE_TAC [ALG_COVER_SET_CASES_THM]
-    ++ PROVE_TAC [],
+   [ONCE_REWRITE_TAC [ALG_COVER_SET_CASES_THM] ++ PROVE_TAC [],
     SEQ_CASES_TAC `s`
     ++ POP_ASSUM MP_TAC
     ++ RW_TAC std_ss [ALG_COVER_STEP, HD]
-    ++ POP_ASSUM (K ALL_TAC)
     ++ RW_TAC std_ss [BIND_DEF, o_DEF, TL, LENGTH, SDROP_def, STL_SCONS,
                       SHD_SCONS],
     SEQ_CASES_TAC `s`
     ++ POP_ASSUM MP_TAC
     ++ RW_TAC std_ss [ALG_COVER_STEP, HD]
-    ++ POP_ASSUM (K ALL_TAC)
     ++ RW_TAC std_ss [BIND_DEF, o_DEF, TL, LENGTH, SDROP_def, STL_SCONS,
                       SHD_SCONS]]);
 
