@@ -287,7 +287,7 @@ fun extra_deps t =
 fun extra_commands t =
   Option.map #commands (List.find (fn  r => #target r = t) extra_rules)
 
-
+val extra_targets = map #target extra_rules
 
 val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
 val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
@@ -501,8 +501,9 @@ fun runholdep arg destination_file = let
   open Mosml
   val _ = print ("Analysing "^fromFile arg^"\n")
   val result =
-    Success(Holdep.main debug (std_include_flags @ additional_includes @
-                               [fromFile arg]))
+    Success(Holdep.main extra_targets debug
+                        (std_include_flags @ additional_includes @
+                         [fromFile arg]))
     handle _ => (print "Holdep failed.\n"; Failure "")
   fun myopen s =
     if FileSys.access(DEPDIR, []) then

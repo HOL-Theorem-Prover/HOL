@@ -66,16 +66,18 @@ fun parseComLine l =
     s
   end
 
-fun access cdir s ext =
-  let val sext = addExt s ext
-      fun inDir dir = FileSys.access (addDir dir sext, [])
-  in if inDir cdir then SOME s
-     else case List.find inDir (!path)
-           of SOME dir => SOME(addDir dir s)
-            | NONE     => NONE
-  end
+fun access assumes cdir s ext = let
+  val sext = addExt s ext
+  fun inDir dir = FileSys.access (addDir dir sext, [])
+in
+  if inDir cdir orelse List.exists (fn nm => nm = sext) assumes then SOME s
+  else
+    case List.find inDir (!path) of
+      SOME dir => SOME(addDir dir s)
+    | NONE     => NONE
+end
 
-end;
+end (* local *)
 
 local val res = ref [];
 in
@@ -86,19 +88,19 @@ fun isTheory s =
   | _ => NONE
 
 fun addThExt s s' ext = addExt (addDir (Path.dir s') s) ext
-fun outname cdir s =
+fun outname assumes cdir s =
   case isTheory s of
     SOME n => let
     in
-      case access cdir (n^"Script") "sig" of
+      case access assumes cdir (n^"Script") "sig" of
         SOME s' => res := addThExt s s' "ui" :: !res
       | _  => let
         in
-          case access cdir (n^"Script") "sml" of
+          case access assumes cdir (n^"Script") "sml" of
             SOME s' => res := addThExt s s' "uo" :: !res
           | NONE => let
             in
-              case access cdir (n^"Theory") "uo" of
+              case access assumes cdir (n^"Theory") "uo" of
                 SOME s' => res := addThExt s s' "uo" :: !res
               | NONE => ()
             end
@@ -106,11 +108,11 @@ fun outname cdir s =
     end
   | _ => let
     in
-      case access cdir s "sig" of
+      case access assumes cdir s "sig" of
         SOME s' => res := addExt s' "ui" :: !res
       | _       => let
         in
-          case access cdir s "sml" of
+          case access assumes cdir s "sml" of
             SOME s' => res := addExt s' "uo" :: !res
           | _       => let
             in
@@ -122,7 +124,7 @@ fun outname cdir s =
                  so making the dependency analysis ignore foo.  We cover
                  this possibility by looking to see if we can see a .uo
                  file; if so, we can retain the dependency *)
-              case access cdir s "uo" of
+              case access assumes cdir s "uo" of
                 SOME s' => res := addExt s' "uo" :: !res
               | NONE => ()
             end
@@ -144,7 +146,7 @@ fun endentry() = (* for non-file-based Holdep *)
    else ""
 end;
 
-fun read srcext objext filename =
+fun read assumes srcext objext filename =
  let val is       = BasicIO.open_in (addExt filename srcext)
      val lexbuf   = createLexerStream is
      val mentions = Polyhash.mkPolyTable (37, Subscript)
@@ -155,25 +157,27 @@ fun read srcext objext filename =
  in
    beginentry objext (manglefilename filename);
    app insert names;
-   Polyhash.apply (outname curr_dir o manglefilename o #1) mentions;
+   Polyhash.apply (outname assumes curr_dir o manglefilename o #1) mentions;
    endentry ()
  end
   handle (e as Parsing.ParseError _) => (print "Parse error!\n"; raise e)
 
 
-fun processfile filename =
+fun processfile assumes filename =
     let (* val _ = output(std_err, "Processing " ^ filename ^ "\n"); *)
 	val {base, ext} = Path.splitBaseExt filename
     in
 	case ext of
-	    SOME "sig" => read "sig" "ui" base
-	  | SOME "sml" => read "sml" "uo" base
+	    SOME "sig" => read assumes "sig" "ui" base
+	  | SOME "sml" => read assumes "sml" "uo" base
 	  | _          => ""
     end
 
-fun main debug sl =
+(* assumes parameter is a list of files that we assume can be built in this
+   directory *)
+fun main assumes debug sl =
   let val cl_args = parseComLine sl
-      val results = List.map processfile cl_args
+      val results = List.map (processfile assumes) cl_args
       val final = String.concat results
   in
     if debug then print ("Holdep: "^final^"\n") else ();
