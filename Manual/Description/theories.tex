@@ -24,7 +24,7 @@ quantifiers. On this platform, quite a bit of theorem-proving
 infrastructure can already be built. Further basic types are developed
 in the theory of pairs (\theoryimp{prod}), disjoint sums
 (\theoryimp{sum}), the one-element type (\theoryimp{one}), and the
-{\theoryimp{option}) type.
+(\theoryimp{option}) type.
 
 
 \subsection{The theory \theoryimp{bool}}\label{boolfull}
@@ -239,7 +239,7 @@ but arbitrary element. {\small\verb+ARB+} is occasionally useful when
 attempting to deal with the issue of partiality.
 
 \subsubsection{Restricted quantifiers}\label{res-quant}
- 
+
 \index{restricted quantification}
 %
 The theory \theoryimp{bool} also defines constants that implement
@@ -270,7 +270,7 @@ than a direct equation.  There are two important properties
 For completeness, restricted versions of unique existence and
 indefinite description are provided, although hardly used.
 \begin{verbatim}
-  RES_EXISTS_UNIQUE_DEF 
+  RES_EXISTS_UNIQUE_DEF
     |- RES_EXISTS_UNIQUE = \P m. (?x :: P. m x) /\
                                  (!x y :: P. m x /\ m y ==> (x = y))
 
@@ -512,20 +512,20 @@ The theory \theoryimp{combin}
 \index{combinators, in HOL logic@combinators, in \HOL{} logic}
 contains the definitions of function composition (infixed \ml{o})
 \index{function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|(}
-and the combinators 
+and the combinators
 \ml{S},
 \index{S, constant in HOL logic@\ml{S}, constant in \HOL{} logic}
 \ml{K},
 \index{K, constant in HOL logic@\ml{K}, constant in \HOL{} logic}
 \ml{I},
 \index{I, constant in HOL logic@\ml{I}, constant in \HOL{} logic}
-\ml{W}, 
+\ml{W},
 \index{W, constant in HOL logic@\ml{W}, constant in \HOL{} logic}
 and \ml{C},
 \index{C, constant in HOL logic@\ml{C}, constant in \HOL{} logic}
 
-\begin{hol} 
-\index{K_DEF@\ml{K\_DEF}} 
+\begin{hol}
+\index{K_DEF@\ml{K\_DEF}}
 \index{S_DEF@\ml{S\_DEF}}
 \index{I_DEF@\ml{I\_DEF}}
 \index{W_DEF@\ml{W\_DEF}}
@@ -549,10 +549,10 @@ and \ml{C},
 \noindent The following elementary properties are proved in the theory
 \ml{combin}:
 
-\begin{hol} 
-\index{K_THM@\ml{K\_THM}} 
+\begin{hol}
+\index{K_THM@\ml{K\_THM}}
 \index{S_THM@\ml{S\_THM}}
-\index{I_THM@\ml{I\_THM}} 
+\index{I_THM@\ml{I\_THM}}
 \index{I_o_ID@\ml{I\_o\_ID}} %
 \begin{verbatim}
   o_THM   |- !f g x. (f o g) x = f(g x)
@@ -562,7 +562,7 @@ and \ml{C},
   S_THM   |- !f g x. S f g x = f x (g x)
   I_THM   |- !x. I x = x
   W_THM   |- !f x. W f x = f x x
-  C_THM   |- !f x y. C f x y = f y x 
+  C_THM   |- !f x y. C f x y = f y x
 
   I_o_ID  |- !f. (I o f = f) /\ (f o I = f)
 
@@ -590,7 +590,7 @@ these names can be used in the current system if \ml{o}, \ml{S}, \ml{K},
 The Cartesian  product  type  operator
 \index{type operators, in HOL logic@type operators, in \HOL{} logic!for pairs}
 \ml{prod}
-\index{prod@\ml{prod}} 
+\index{prod@\ml{prod}}
 is  defined  in  the  theory \ml{pair}. Values of type
 {\small\verb%(%}$\sigma_1${\small\verb%,%}$\sigma_2${\small\verb%)prod%} are
 ordered pairs  whose  first  component  has  type  $\sigma_1$  and whose second
@@ -600,9 +600,9 @@ converts type expressions of the
 form \ml{`:}$\sigma_1${\small\verb%#%}$\sigma_2$\ml{`}
 \index{ product type operator, in HOL logic@{\small\verb+#+} (product type operator, in \HOL{} logic)}
  into\ml{(}$\sigma_1$\ml{,}$\sigma_2$\ml{)prod}
-\index{ pair constructor, in HOL logic@\ml{,} (pair constructor, in \HOL{} logic)}, 
+\index{ pair constructor, in HOL logic@\ml{,} (pair constructor, in \HOL{} logic)},
 and the printer inverts this transformation. Pairs
-\index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic} 
+\index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic}
 are constructed with an infixed comma symbol
 
 \begin{hol}
@@ -626,7 +626,7 @@ means
 \paragraph {Defining the product type}
 
 The type of Cartesian products is defined by representing a pair
-{\small\verb%(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%} 
+{\small\verb%(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%}
 by the function
 %
 \begin{hol}
@@ -637,8 +637,8 @@ by the function
 %
 \noindent The representing type of
 $\sigma_1${\small\verb%#%}$\sigma_2$ is thus
-$\sigma_1${\small\verb%->%}$\sigma_2${\small\verb%->bool%}. 
-It is easy to prove the following theorem.\footnote{This theorem has 
+$\sigma_1${\small\verb%->%}$\sigma_2${\small\verb%->bool%}.
+It is easy to prove the following theorem.\footnote{This theorem has
 an un-reduced $\beta$-redex in order to meet the interface
 required by the type definition principle.}
 %
@@ -659,7 +659,7 @@ by invoking \verb+new_type_definition+ with this theorem
 \begin{hol}
 {\small
 \begin{verbatim}
-  prod_TY_DEF  
+  prod_TY_DEF
     |- ?rep. TYPE_DEFINITION (\p. ?x y. p = (\a b. (a = x) /\ (b = y))) rep
 \end{verbatim}}
 \end{hol}
@@ -681,8 +681,8 @@ the following characterizing theorem, by use of the function
 
 \paragraph {Pairs and projections}
 
-The infix constructor `{\small\verb%,%}' is then defined 
-to be an application of the abstraction function. Subsequently, two 
+The infix constructor `{\small\verb%,%}' is then defined
+to be an application of the abstraction function. Subsequently, two
 crucial theorems are proved: {\small\verb+PAIR_EQ+} asserts that equal
 pairs have equal components and {\small\verb+ABS_PAIR_THM+} shows that
 every term having a product type can be decomposed into a pair of terms.
@@ -701,7 +701,7 @@ every term having a product type can be decomposed into a pair of terms.
 \end{verbatim}}
 \end{hol}
 %
-By Skolemizing {\small\verb+ABS_PAIR_THM+} and making constant specifications 
+By Skolemizing {\small\verb+ABS_PAIR_THM+} and making constant specifications
 for {\small\verb+FST+} and {\small\verb+SND+}, the following theorems
 are proved.
 %
@@ -725,7 +725,7 @@ are proved.
 \paragraph{Pairs and functions}
 
 In \HOL{}, a function of type $\alpha \# \beta\to\gamma$ always has a
-counterpart of type $\alpha\to\beta\to\gamma$, and \emph{vice versa}. 
+counterpart of type $\alpha\to\beta\to\gamma$, and \emph{vice versa}.
 This conversion is accomplished by the functions {\small\verb+CURRY+}
 and {\small\verb+CURRY+}. These functions are inverses.
 %
@@ -739,8 +739,8 @@ and {\small\verb+CURRY+}. These functions are inverses.
 
   UNCURRY_DEF  |- !f x y. UNCURRY f (x,y) = f x y
 
-  CURRY_UNCURRY_THM |- !f. CURRY (UNCURRY f) = f 
-  UNCURRY_CURRY_THM |- !f. UNCURRY (CURRY f) = f 
+  CURRY_UNCURRY_THM |- !f. CURRY (UNCURRY f) = f
+  UNCURRY_CURRY_THM |- !f. UNCURRY (CURRY f) = f
 \end{verbatim}}
 \end{hol}
 
@@ -748,7 +748,7 @@ and {\small\verb+CURRY+}. These functions are inverses.
 \paragraph {Mapping functions over a pair}
 
 Functions $f : \alpha \to \gamma_1$ and $g : \beta\to\gamma_2$ can be
-applied component-wise ({\small\verb+##+}, infix) over a pair of type 
+applied component-wise ({\small\verb+##+}, infix) over a pair of type
 $\alpha \# \beta$ to obtain a pair of type $\gamma_1 \# \gamma_2$.
 %
 \begin{hol}
@@ -763,7 +763,7 @@ $\alpha \# \beta$ to obtain a pair of type $\gamma_1 \# \gamma_2$.
 
 When doing proofs, statements involving tuples may take the form of a
 binding (quantification or $\lambda$-abstraction) of a variable with a
-product type. It may be convenient in subsequent reasoning steps to 
+product type. It may be convenient in subsequent reasoning steps to
 replace the variables with tuples of variables. The following theorems
 support this.
 %
@@ -795,12 +795,12 @@ prove.
 \begin{verbatim}
  LEX_DEF =
     |- !R1 R2. R1 LEX R2 = (\(s,t) (u,v). R1 s u \/ (s = u) /\ R2 t v)
- WF_LEX 
+ WF_LEX
     |- !R Q. WF R /\ WF Q ==> WF (R LEX Q)
 \end{verbatim}}
 \end{hol}
 
-\subsubsection{Paired abstractions} 
+\subsubsection{Paired abstractions}
 \label{HOL-varstruct}
 \index{pairs, in HOL logic@pairs, in \HOL{} logic!in abstractions|(}
 \index{terms, in HOL logic@terms, in \HOL{} logic!pair|(}
@@ -888,9 +888,9 @@ position of a lambda abstraction fails:
 
 If $b$ is a binder, then \ml{$b$($x_1$,$x_2$).$t$} is parsed as
 \ml{$b$(\bs($x_1$,$x_2$).$t$)}, and hence transformed as above.  For
-example, 
+example,
 \ml{!(x,y). x > y}
-parses to 
+parses to
 \ml{ \$!(UNCURRY(\bs{}x.\bs{}y.\ x > y))}.
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!paired|)}
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!uncurrying, in paired|)}
@@ -1110,11 +1110,11 @@ range of the function $\beta\konst{option}$, and mapping the
 undefined $\alpha$ values to {\small\verb+NONE+}.
 
 An inductive type, options have a recursion theorem supporting the
-definition of primitive recursive functions over option values. 
+definition of primitive recursive functions over option values.
 %
 {\small
 \begin{verbatim}
-  option_Axiom 
+  option_Axiom
     |- !e f.
         ?h:'a option -> 'b.
           (!x. h (SOME x) = f x) /\
@@ -1147,7 +1147,7 @@ Another useful function maps a function over an option:
 }
 Finally, the {\small\verb+THE+} function takes a {\small\verb+SOME+}
 value to that constructor's argument, and is unspecified on
-{\small\verb+NONE+}: 
+{\small\verb+NONE+}:
 {\small
 \begin{verbatim}
    THE_DEF   |- THE (SOME x) = x
@@ -1237,7 +1237,7 @@ The primitive recursion theorem, named  {\small\verb+num_Axiom+} in
 %
 \index{Peano's axioms}
 %
-axioms. 
+axioms.
 
 \begin{hol}\index{num_Axiom@\ml{num\_Axiom}}
 \index{characterizing theorem!for numbers}
@@ -1255,7 +1255,7 @@ the primitive recursive definition whose form is determined by \ml{x} and
 \paragraph{The less-than relation}
 
 The less-than relation `{\small{\tt\verb+<+}}'
-\index{less than, in HOL logic@\ml{<} (less than, in \HOL{} logic)} 
+\index{less than, in HOL logic@\ml{<} (less than, in \HOL{} logic)}
 is most naturally defined by primitive recursion. However, in our
 development it is needed for the proof of the
   primitive recursion theorem, so it must be defined before definition
@@ -1369,13 +1369,13 @@ that denotes such a function:
 
 \noindent In fact, {\verb+new_recursive_definition+} handles
 primitive recursive definitions over a range of types, not just the
-natural numbers. For details, see the \REFERENCE\ documentation.  
+natural numbers. For details, see the \REFERENCE\ documentation.
 
 More conveniently still, the \verb+Define+ function (see
 Section~\ref{sec:high-level-proof-steps}) supports primitive
 recursion, along with other styles of recursion, and does not require the
 user to quote the primitive recursion axiom. It does, however, require
-termination proofs to be performed; fortunately, these need not be 
+termination proofs to be performed; fortunately, these need not be
 done for primitive recursions.
 
 \subsubsection{Dependent Choice and wellfoundedness}
@@ -1383,7 +1383,7 @@ done for primitive recursions.
 
 The primitive recursion theorem is useful beyond its main purpose of
 justifying recursive definitions. For example, the theory
-\theoryimp{prim\_rec} proves the Axiom of Dependent Choice ({\small\verb+DC+}). 
+\theoryimp{prim\_rec} proves the Axiom of Dependent Choice ({\small\verb+DC+}).
 
 \begin{hol}
 \index{Axiom of Dependent Choice@\ml{DC}}
@@ -1396,7 +1396,7 @@ justifying recursive definitions. For example, the theory
 \end{verbatim}}
 \end{hol}
 
-The proof uses {\small\verb+SELECT_AX+. The theorem {\small\verb+DC+}
+The proof uses {\small\verb+SELECT_AX+}. The theorem {\small\verb+DC+}
 is useful when one wishes to build a function having a certain
 property from a relation. For example, one way to define the
 wellfoundedness of a relation $R$ is to say that it has no infinite
@@ -1405,17 +1405,17 @@ decreasing $R$ chains.
 \begin{hol}
 \index{wellfounded@\ml{wellfounded}}
 \begin{verbatim}
-  wellfounded_def    
+  wellfounded_def
     |- wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)
 
-  WF_IFF_WELLFOUNDED 
+  WF_IFF_WELLFOUNDED
     |- !R. WF R = wellfounded R
 \end{verbatim}
 \end{hol}
 By use of {\small\verb+DC+}, this statement can be proved
-to be equal to the notion of wellfoundedness {\small\verb+WF+} 
+to be equal to the notion of wellfoundedness {\small\verb+WF+}
 (namely, that every set has an $R$-minimal element) defined in the theory
-\theoryimp{relation}. 
+\theoryimp{relation}.
 
 Theorems asserting the wellfoundedness of the predecessor relation and
 the less-than relation, as well as the wellfoundedness of measure
@@ -1443,7 +1443,7 @@ The built-in theory {\small\verb%arithmetic%}
 \index{number theory, in HOL logic@number theory, in \HOL{} logic}
 \index{arithmetic@\ml{arithmetic}}
 contains primitive recursive definitions of the following standard
-arithmetic operators. 
+arithmetic operators.
 
 \begin{hol}
 \index{ADD@\ml{ADD}}
@@ -1548,7 +1548,7 @@ The iterated application $f^n x$ of a function $f : \konst{num} \to
 \konst{num}$ is defined by primitive recursion. The definition
 ({\small\verb+FUNPOW+}) is tail-recursive. A alternative presentation
 of the recursion ({\small\verb+FUNPOW_SUC+}) may be simpler to reason
-about in some cases. 
+about in some cases.
 %
 \begin{hol}
 {\small
@@ -1557,7 +1557,7 @@ about in some cases.
      |- (!f x. FUNPOW f 0 x = x) /\
         (!f n x. FUNPOW f (SUC n) x = FUNPOW f n (f x))
    FUNPOW_SUC
-     |- !f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x) 
+     |- !f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)
 \end{verbatim}}
 \end{hol}
 
@@ -1910,14 +1910,14 @@ list is empty or not.
 
 The theorem {\small\verb+CONS_11+} shows that {\small\verb+CONS+} is injective;
 the theorems {\small\verb+NOT_NIL_CONS+} and {\small\verb+NOT_CONS_NIL+} show that
-{\small\verb+NIL+} and {\small\verb+CONS+} are distinct, \ie, 
+{\small\verb+NIL+} and {\small\verb+CONS+} are distinct, \ie,
 cannot give rise to the same structure. Together, these three theorems
 are used for equational reasoning about lists.
 
 The predicate \ml{NULL} and the selectors \ml{HD} and \ml{TL} are
 defined
 \index{list definitions, in HOL logic@list definitions, in \HOL{} logic}
-in the theory \ml{list} by 
+in the theory \ml{list} by
 %
 \begin{hol}
 \index{NULL, the definition in HOL logic@\ml{NULL}, the definition in \HOL{} logic}
@@ -1963,7 +1963,7 @@ in the theory \ml{list} by
 \paragraph{Case expressions}
 
 Compound \HOL{} expressions that branch based on
-whether a term is an empty or non-empty list have the 
+whether a term is an empty or non-empty list have the
 surface syntax (borrowed from ML)
 \[
 \begin{array}{l}
@@ -1973,13 +1973,13 @@ surface syntax (borrowed from ML)
 \end{array}
 \]
 %
-Such an expression is translated to 
+Such an expression is translated to
 $\konst{list\_case}\ e_2\ (\lambda h\; t.\ e_3)\ e_1$ where the constant
 {\small\verb+list_case+} is defined as follows:
 {\small
 \begin{verbatim}
   list_case_def
-    |- (!v f. case v f [] = v) /\ 
+    |- (!v f. case v f [] = v) /\
        (!v f a0 a1. case v f (a0::a1) = f a0 a1)
 \end{verbatim}}
 
@@ -1995,18 +1995,18 @@ Membership in a list {\small\verb+MEM+} is defined as follows:
 
 \paragraph {Concatenation of lists}
 
-Binary list concatenation ({\small\verb+APPEND+}) may also be denoted by 
-the infix operator {\small\verb|++|}; thus the expression 
+Binary list concatenation ({\small\verb+APPEND+}) may also be denoted by
+the infix operator {\small\verb|++|}; thus the expression
 {\small\verb|L1 ++ L2|} is translated into {\small\verb+APPEND L1 L2+}.
 The concatenation of a list of lists into a list is achieved by
-{\small\verb+FLAT+}. 
+{\small\verb+FLAT+}.
 %
 {\small
 \begin{verbatim}
-  APPEND  
+  APPEND
     |- (!l. APPEND [] l = l) /\
        (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)
-  FLAT 
+  FLAT
     |- (FLAT [] = []) /\ (!h t. FLAT(h::t) = h ++ FLAT t)
 \end{verbatim}}
 
@@ -2031,19 +2031,20 @@ size of each list element. The alternate length definition
   EL
     |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n) l = EL n (TL l))
 \end{verbatim}}
-%
-Note that The extraction of the $n$th element ({\small\verb+EL+}) of a list 
-starts its indexing from 0. 
+
+\noindent
+Note that the extraction of the $n$th element ({\small\verb+EL+}) of a
+list starts its indexing from 0.
 
 \paragraph {Mapping functions over lists}
 
 There are functions for mapping a function $f : \alpha \to \beta$ over
-a single list ({\small\verb+MAP+}) or a function $f : \alpha \to \beta \to \gamma$ 
-over two lists ({\small\verb+MAP2+}). 
+a single list ({\small\verb+MAP+}) or a function $f : \alpha \to \beta \to \gamma$
+over two lists ({\small\verb+MAP2+}).
 %
 {\small
 \begin{verbatim}
-  MAP 
+  MAP
     |- (!f. MAP f [] = []) /\
        (!f h t. MAP f (h::t) = f h::MAP f t)
   MAP2
@@ -2060,15 +2061,15 @@ Predicates can be applied to lists in a universal sense (the predicate
 must hold of every element in the list) or an existential sense (the
 predicate must hold of some element in the list). This functionality
 is supported by {\small\verb+EVERY+} and {\small\verb+EXISTS+},
-respectively. The elimination of all elements in list not satisfying 
+respectively. The elimination of all elements in list not satisfying
 a given predicate is performed by {\small\verb+FILTER+}.
 %
 {\small
 \begin{verbatim}
-  EVERY_DEF  
+  EVERY_DEF
     |- (!P. EVERY P [] = T) /\
        (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
-  EXISTS_DEF 
+  EXISTS_DEF
     |- (!P. EXISTS P [] = F) /\
        (!P h t. EXISTS P (h::t) = P h \/ EXISTS P t)
   FILTER
@@ -2084,11 +2085,11 @@ in case no element in the list is equal to any other.
 
 \paragraph {Folding}
 
-Applying a binary function $f : \alpha\to\beta\to\beta$ pairwise 
+Applying a binary function $f : \alpha\to\beta\to\beta$ pairwise
 through a list and accumulating the result is known as
-\emph{folding}. At times, it is necessary to do this operation 
-from left-to-right ({\small\verb+FOLDL+}), and at others the 
-right-to-left direction ({\small\verb+FOLDR+}) is required.  
+\emph{folding}. At times, it is necessary to do this operation
+from left-to-right ({\small\verb+FOLDL+}), and at others the
+right-to-left direction ({\small\verb+FOLDR+}) is required.
 %
 {\small
 \begin{verbatim}
@@ -2102,24 +2103,24 @@ right-to-left direction ({\small\verb+FOLDR+}) is required.
 
 \paragraph {List reversal}
 
-The reversal of a list ({\small\verb+REVERSE+}) and its tail recursive counterpart 
+The reversal of a list ({\small\verb+REVERSE+}) and its tail recursive counterpart
 {\small\verb+REV+} are defined in {\small\verb+list+}.
 {\small
 \begin{verbatim}
   REVERSE_DEF
-    |- (REVERSE [] = []) /\ 
+    |- (REVERSE [] = []) /\
        (!h t. REVERSE (h::t) = REVERSE t ++ [h])
   REV_DEF
-    |- (!acc. REV [] acc = acc) /\ 
+    |- (!acc. REV [] acc = acc) /\
        (!h t acc. REV (h::t) acc = REV t (h::acc))
 \end{verbatim}}
 
 \paragraph {Conversion to sets}
 
-Lists can be converted to sets ({\small\verb+LIST_TO_SET+}) by 
+Lists can be converted to sets ({\small\verb+LIST_TO_SET+}) by
 partial application of {\small\verb+MEM+}. The somewhat
-terse definition is used to derive the theorem 
-{\small\verb+IN_LIST_TO_SET+}. 
+terse definition is used to derive the theorem
+{\small\verb+IN_LIST_TO_SET+}.
 %
 {\small
 \begin{verbatim}
@@ -2130,14 +2131,14 @@ terse definition is used to derive the theorem
 \end{verbatim}}
 %
 Further support for translating between different kinds of
-collections may be found in the {\small\verb+container+} theory. 
+collections may be found in the {\small\verb+container+} theory.
 
 \paragraph {Pairs and lists}
 
 Two lists of equal length may be component-wise paired by
-the {\small\verb+ZIP+} operation. The result is unspecified 
+the {\small\verb+ZIP+} operation. The result is unspecified
 when the lists are not the same length. The inverse operation,
-{\small\verb+UNZIP+}, translates a list of pairs into a pair of 
+{\small\verb+UNZIP+}, translates a list of pairs into a pair of
 lists.
 %
 {\small
@@ -2154,12 +2155,12 @@ lists.
 
 Lists are essentially treated in a stack-like manner. However, at
 times it is convenient to access the last element
-({\small\verb+LAST+}) of a non-empty list directly. The last element 
+({\small\verb+LAST+}) of a non-empty list directly. The last element
 of a non-empty list is dropped by {\small\verb+FRONT+}.
 %
 {\small
 \begin{verbatim}
-  LAST_DEF 
+  LAST_DEF
     |- !h t. LAST (h::t) = if t = [] then h else LAST t
   FRONT_DEF
     |- !h t. FRONT (h::t) = if t = [] then [] else h::FRONT t
@@ -2172,7 +2173,7 @@ Both {\small\verb+LAST+} and {\small\verb+FRONT+} are unspecified on empty lists
 
 
 \noindent For a complete list of available theorems in
-{\small\verb+list+}, see \REFERENCE.  urther development of list
+{\small\verb+list+}, see \REFERENCE.  Further development of list
 theory can be found in {\small\verb+rich_list+}.
 
 \index{list theorems, in HOL logic@list theorems, in \HOL{} logic|)}
@@ -2190,15 +2191,15 @@ lists'' of programming languages like Haskell, hence the name of the
 theory.  The \theoryimp{llist} theory has a number of constants that
 are analogous to constants in the theory of (necessarily finite)
 lists.  The \theoryimp{llist} versions of these constants have the
-same names, but with a capital `L' prepended.  Thus, some of the core
+same names, but with a capital `L\/' prepended.  Thus, some of the core
 constants in this theory are:
 
-\begin{verbatim}
+{\small \begin{verbatim}
    LNIL  : 'a llist
    LCONS : 'a -> 'a llist -> 'a llist
    LHD   : 'a llist -> 'a option
    LTL   : 'a llist -> 'a llist option
-\end{verbatim}
+\end{verbatim}}
 
 The \ml{LHD} and \ml{LTL} constants return \ml{NONE} when applied to
 the empty sequence, \ml{LNIL}.  This use of an option type is another
@@ -2212,30 +2213,34 @@ domains of type \ml{llist}.  Rather, \ml{llist} is a coinductive type,
 and has an axiom that justifies the definition of (co-)recursive
 functions that map into the \ml{llist} type.  This axiom has the name
 \ml{llist\_Axiom}, and states
-\begin{verbatim}
+{\small \begin{verbatim}
    !f : 'a -> ('a # 'b) option.
       ?g : 'a -> 'b llist.
          (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
          (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))
-\end{verbatim}
-An equivalent form of the above is
+\end{verbatim}}
+\noindent An equivalent form of the above is
+{\small
 \begin{verbatim}
    !f. ?g.
       !x. g x = case f x of
                    NONE -> LNIL
                 || SOME (x',y) -> LCONS y (g x')
 \end{verbatim}
+}
+
 Other constants in the theory \theoryimp{llist} include \texttt{LTAKE},
 \texttt{LDROP}, \texttt{LMAP}, \texttt{LFINITE} and
 \texttt{LFILTER}. Their types are
-\begin{verbatim}
+{\small \begin{verbatim}
    LTAKE   : num -> 'a llist -> 'a list
    LDROP   : num -> 'a llist -> 'a llist
    LMAP    : ('a -> 'b) -> 'a llist -> 'b llist
    LFINITE : 'a llist -> bool
    LFILTER : ('a -> bool) -> 'a llist -> 'a llist
-\end{verbatim}
-They are characterised by the following theorems
+\end{verbatim}}
+\noindent They are characterised by the following theorems
+{\small
 \begin{verbatim}
    LTAKE_THM
       |- (LTAKE 0 l = SOME []) /\
@@ -2260,6 +2265,7 @@ They are characterised by the following theorems
          (LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
                                   else LFILTER P t)
 \end{verbatim}
+}
 
 \paragraph{Proof principles}
 
@@ -2267,11 +2273,15 @@ Finally, there are two very important proof principles for proving
 that two \texttt{llist} values are equal.  The first states that two
 sequences are equal if they return the same prefixes of length $n$ for
 all possible values of $n$:
+{\small
 \begin{verbatim}
    LTAKE_EQ |- (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)
 \end{verbatim}
-This theorem is subsequently used to derive the bisimulation
+}
+\noindent This theorem is subsequently used to derive the bisimulation
 principle:
+{
+\small
 \begin{verbatim}
    LLIST_BISIMULATION
             |- (ll1 = ll2) =
@@ -2281,6 +2291,7 @@ principle:
                              (LHD ll3 = LHD ll4) /\
                              R (THE (LTL ll3)) (THE (LTL ll4))
 \end{verbatim}
+}
 The principle of bisimulation states that two \ml{llist} values $l_1$
 and $l_2$ are equal if (and only if) it is possible to find a
 relation $R$ such that
@@ -2300,9 +2311,12 @@ used.
 
 \subsection{Labelled paths (\theoryimp{path})}
 
-The theory \theoryimp{path} defines a binary type operator
-$(\alpha,\beta)\texttt{path}$, which stands for possibly infinite
-paths of the following form\[
+The theory \theoryimp{path}
+\index{labelled paths!\HOL{} theory of|(}
+\index{reduction sequences!\HOL{} theory of|(}
+defines a binary type operator $(\alpha,\beta)\texttt{path}$, which
+stands for possibly infinite paths of the following form
+\[
   \alpha_1 \stackrel{\beta_1}{\longrightarrow}
   \alpha_2 \stackrel{\beta_2}{\longrightarrow}
   \alpha_3 \stackrel{\beta_3}{\longrightarrow} \cdots
@@ -2316,10 +2330,12 @@ the $\beta$ parameter corresponds to the labels on the arrows.
 The model of $(\alpha,\beta)\texttt{path}$ is $\alpha \times
 ((\alpha\times\beta)\texttt{llist})$.  The type of paths has two
 constructors:
+{\small
 \begin{verbatim}
    stopped_at : 'a -> ('a,'b) path
    pcons      : 'a -> 'b -> ('a,'b) path -> ('a,'b) path
 \end{verbatim}
+}
 The \ml{stopped\_at} constructor returns a path containing just one
 state, and no transitions.  (Thus, the reduction sequence has
 ``stopped at'' this state.)  The \ml{pcons} constructor takes a state,
@@ -2332,6 +2348,7 @@ x \stackrel{l}{\longrightarrow}
   \stackrel{l_2}{\longrightarrow} \cdots\quad}_p
 \]
 Other constants defined in theory \theoryimp{path} include
+{\small
 \begin{verbatim}
    finite  : ('a,'b) path -> bool
    first   : ('a,'b) path -> 'a
@@ -2342,51 +2359,65 @@ Other constants defined in theory \theoryimp{path} include
    pconcat : ('a,'b) path -> 'b -> ('a,'b) path -> ('a,'b) path
    pmap    : ('a -> 'c) -> ('b -> 'd) -> ('a,'b)path -> ('c,'d)path
 \end{verbatim}
+}
 
 The \texttt{first} function returns the first element of a path.
 There always is such an element, and the defining equations are
+{\small
 \begin{verbatim}
    first_thm  |- (first (stopped_at x) = x) /\
                  (first (pcons x l p) = x)
 \end{verbatim}
+}
 
 On the other hand, the \texttt{last} function does not always have a
 well-specified value, though it still has nice characterising
 equations:
+{\small
 \begin{verbatim}
    last_thm   |- (last (stopped_at x) = x) /\
                  (last (pcons x l p) = last p)
 \end{verbatim}
+}
 
 The theorem for \texttt{finite} has a similar feel, but has a definite
 value (\texttt{F}, or \emph{false}) on infinite paths), whereas the
 value of \texttt{last} on such paths is unspecified:
+{\small
 \begin{verbatim}
    finite_thm |- (finite (stopped_at x) = T) /\
                  (finite (pcons x l p) = finite p)
 \end{verbatim}
+}
 
 The function \texttt{pconcat} concatenates two paths, linking them
 with a provided label.  If the first path is infinite, then the result
 is equal to that first path.  The defining equation is
+{\small
 \begin{verbatim}
   pconcat_thm |- (pconcat (stopped_at x) lab p2 = pcons x lab p2) /\
                  (pconcat (pcons x r p) lab p2 =
                       pcons x r (pconcat p lab p2)
 \end{verbatim}
-These equations are true even when the first argument to \texttt{pconcat}
-is an infinite path.
+}
+\noindent
+These equations are true even when the first argument to
+\texttt{pconcat} is an infinite path.
 
 The \texttt{okpath} predicate tests whether or not a path is a valid
 transition given a ternary transition relation.  Its characterising
 theorem is
+{\small
 \begin{verbatim}
   okpath_thm |-
      (okpath R (stopped_at x)) /\
      (okpath R (pcons x r p) = R x r (first p) /\ okpath R p)
 \end{verbatim}
-There is an induction principle that simplifies reasoning about finite
-$R$-paths:
+}
+
+There is also an induction principle that simplifies reasoning about
+finite $R$-paths:
+{\small
 \begin{verbatim}
   finite_okpath_ind |-
       (!x. P (stopped_at x)) /\
@@ -2394,6 +2425,9 @@ $R$-paths:
                P (pcons x r p)) ==>
       !p. okpath R p /\ finite p ==> P p
 \end{verbatim}
+}
+\index{labelled paths!\HOL{} theory of|)}
+\index{reduction sequences!\HOL{} theory of|)}
 
 
 \subsection{Character strings}
@@ -2407,7 +2441,7 @@ Anthony's package.
 \section{Collections}
 
 Several different notions of a collection of elements are available in
-\HOL: sets, multisets, relations, and finite maps. 
+\HOL: sets, multisets, relations, and finite maps.
 
 \subsection{Sets (\theoryimp{pred\_set})}
 
@@ -2498,7 +2532,7 @@ defined by a set comprehension. Based on that, the deletion of a
 single element ({\small\verb+DELETE+}, infix) from a set is
 straightforward. Since the universe of a type is always available via
 {\small\verb+UNIV+}, the complement ({\small\verb+COMPL+}) of a set
-may be taken. 
+may be taken.
 {\small
 \begin{verbatim}
   DIFF_DEF    |- !s t. s DIFF t = {x | x IN s /\ ~(x IN t)}
@@ -2551,13 +2585,13 @@ induction theorem :
 \begin{verbatim}
  FINITE_INDUCT
    |- !P. P {} /\
-         (!s. FINITE s /\ P s ==> !e. ~(e IN s) ==> P (e INSERT s)) 
+         (!s. FINITE s /\ P s ==> !e. ~(e IN s) ==> P (e INSERT s))
          ==>  !s. FINITE s ==> P s
 \end{verbatim}}
 %
 As mentioned, set operations apply to both finite and infinite
 sets. However, some operations, such as cardinality
-({\small\verb+CARD+}), are only defined for finite sets.  The 
+({\small\verb+CARD+}), are only defined for finite sets.  The
 cardinality of an infinite set is not specified.
 %
 {\small
@@ -2576,7 +2610,7 @@ for finite sets.
 %
 {\small
 \begin{verbatim}
- CARD_PSUBSET 
+ CARD_PSUBSET
    |- !s. FINITE s ==> !t. t PSUBSET s ==> CARD t < CARD s
 \end{verbatim}}
 %
@@ -2629,8 +2663,8 @@ in a tail-recursive fashion.
 \end{verbatim}}
 %
 For the full derivation, see the sources of {\small\verb+pred_set+}.
-The definition of {\small\verb+ITSET+} allows, for example, the 
-definition of summing the results of a function on a finite set of numbers, 
+The definition of {\small\verb+ITSET+} allows, for example, the
+definition of summing the results of a function on a finite set of numbers,
 from which a recursive characterization and other useful theorems are derived.
 %
 {\small
@@ -2693,7 +2727,7 @@ is the set of all $t$s such that $p$. For example,
 \noindent Similarly, {\small\verb%{%}$t${\small\verb%|%}$p${\small\verb%}%}
 parses to:
 %
-\noindent {\small{\verb%GSPEC(\(%}$x_1${\verb%,%}$\ldots${\verb%,%}$x_n${\verb%).(%}$t${\verb%,%}$p${\verb%))%}
+\texttt{GSPEC(\bs($x_1$,$\ldots$,$x_n$).($t$,$p$))}
 %
 \noindent where $x_1, \ldots, x_n$ are the free variables occurring in both $t$
 and $p$.  If there are no such free variables then an error results.
@@ -2748,7 +2782,7 @@ Other examples are:
 Multisets (also known as \emph{bags}) are similar to sets, except that
 they allow repeat occurrences of an element. Whereas sets are
 represented by functions of type $\alpha\to\konst{bool}$, which signal
-the presence, or not, of an element, multisets are represented 
+the presence, or not, of an element, multisets are represented
 by function of type $\alpha\to\konst{num}$, which give the
 multiplicity of each element in the multiset.
 
