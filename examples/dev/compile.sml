@@ -375,7 +375,7 @@ fun dest_exp tm =
 (*****************************************************************************)
 val combinational_constants = 
  ref["T","F","/\\","\\/","~",",","o","CURRY","UNCURRY","COND",
-     "FST","SND","=","Seq","Par","Ite","NUMERAL","BIT1","BIT2","ZERO",
+     "FST","SND","=","Seq","Par","Ite","0","NUMERAL","BIT1","BIT2","ZERO",
      "+","-"];
 
 fun COMBINATIONAL tm =
