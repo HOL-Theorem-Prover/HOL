@@ -1,3 +1,4 @@
+(* Copyright (C) 1997-2000 by Ken Friis Larsen and Jakob Lichtenberg. *)
 structure bdd :> bdd =
 struct
 	
@@ -88,6 +89,9 @@ struct
 
     val printset : bdd -> unit             = app1 (symb "mlbdd_bdd_printset")
     val fnprintset : string -> bdd -> unit = app2 (symb "mlbdd_bdd_fnprintset")
+
+    val bddSave : string -> bdd -> unit    = app2 (symb "mlbdd_bdd_fnsave")
+    val bddLoad : string -> bdd            = app1 (symb "mlbdd_bdd_fnload")
 
 
     val satcount : bdd -> real = app1 (symb "mlbdd_bdd_satcount")
@@ -225,6 +229,17 @@ struct
 	    (rootno r,
 	     Vector.tabulate(nc, fn i => valOf(Array.sub(tab,i))))
 	end	
+
+    (* BuDDy tuning stuff *)
+    val setMaxincrease : int -> int = app1 (symb "mlbdd_bdd_setmaxincrease")
+    val setCacheratio  : int -> int = app1 (symb "mlbdd_bdd_setcacheratio")
+
+    val joingc : bool -> unit = app1 (symb "mlbdd_joingc")
+    val setprintgc : bool -> string -> string -> string -> unit =
+	app4 (symb "mlbdd_setprintgc")
+
+    fun verbosegc NONE               = setprintgc false "" "" ""
+      | verbosegc (SOME(s1, s2, s3)) = setprintgc true s1 s2 s3
 
 
     (* Variable reordering stuff *)

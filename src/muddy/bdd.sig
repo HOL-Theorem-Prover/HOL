@@ -1,3 +1,4 @@
+(* Copyright (C) 1997-2000 by Ken Friis Larsen and Jakob Lichtenberg. *)
 signature bdd =
 sig
     type bdd
@@ -105,12 +106,20 @@ sig
     val fnprintset : string -> bdd -> unit
     val printset   : bdd -> unit
 
+    val bddSave : string -> bdd -> unit
+    val bddLoad : string -> bdd
+
     val satcount : bdd -> real
     
     type nodetable = int * (varnum * int * int) Vector.vector
     val nodetable  : bdd -> nodetable 
 
     val nodecount : bdd -> int
+
+    val setMaxincrease : int -> int
+    val setCacheratio  : int -> int
+    val joingc         : bool -> unit
+    val verbosegc      : (string * string * string) option -> unit
 
     val stats    : unit -> {produced     : int,
 			    nodenum      : int,
@@ -298,7 +307,23 @@ end
 
    [nodetable r] returns the nodetable for r.
 
-   [nodecount r] returns the number of nodes used in r.
+   [setMaxincrease n] tells BuDDy that the maximum of new nodes added
+   when doing an expansion of the nodetable should be n.  Return the
+   old maximum.
+
+   [setCacheratio n] sets the cache ratio to n.  For example, if n is
+   four then the internal caches will be 1/4th the size of the
+   nodetable.
+
+   [joingc joined] decides whether Moscow ML GC and BuDDy GC should be
+   joined.  That is, if joined is true then whenever BuDDy starts a GC
+   then Moscow ML will perform a major GC; otherwise the two GC works
+   asynchronous.
+
+   [verbosegc(SOME(start,postmos,postgc))] instructs BuDDy to print
+   start when a BuDDy GC is initiated; print postmos when the Moscow
+   ML GC is completed (if joingc is true); and print postgc when the
+   BuDDy GC is completed.
 
    [stats()] gives various statstistical information from the
    underlying C library:
