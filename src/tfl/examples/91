@@ -176,13 +176,13 @@ val (N,N_INDUCT) = Defn.tprove
  GEN_TAC THEN measureInduct_on `(\m. 101 - m) x`
   THEN DISCH_TAC THEN Q.PAT_ASSUM`!y. Q y` MP_TAC THEN RW_TAC std_ss[lem,lem1]
   THEN MP_TAC (Q.SPEC `x+11` E1) THEN RW_TAC std_ss [ARITH `x < x+11-10`]
-  THEN `x+11 < N_aux(measure($- 101)) (x+11+11)` by PROVE_TAC[ARITH`x<x+11`]
+  THEN `x+11 < N_aux(measure(\x.101-x)) (x+11+11)` by PROVE_TAC[ARITH`x<x+11`]
   THEN RW_TAC std_ss [] 
   THEN WEAKEN_TAC is_imp (* g.c. *)
-  THEN Cases_on `N_aux(measure ($- 101)) (x+11+11) -11 > 100` THENL
+  THEN Cases_on `N_aux(measure (\x.101-x)) (x+11+11) -11 > 100` THENL
    [WEAKEN_TAC is_forall (* i.h. not used in this branch *)
-      THEN `N_aux(measure($- 101)) (x+11+11) > 100` by DECIDE_TAC
-      THEN MP_TAC (Q.SPEC `N_aux(measure ($- 101)) (x+11+11)` E1)
+      THEN `N_aux(measure(\x.101-x)) (x+11+11) > 100` by DECIDE_TAC
+      THEN MP_TAC (Q.SPEC `N_aux(measure (\x.101-x)) (x+11+11)` E1)
       THEN RW_TAC std_ss [] THEN DECIDE_TAC,
     PROVE_TAC [arithmeticTheory.LESS_TRANS, 
                ARITH `x+y < p ==> x < p-y`, 

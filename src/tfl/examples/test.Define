@@ -3,7 +3,7 @@
  ---------------------------------------------------------------------------*)
 
 app load ["bossLib"]; open TotalDefn bossLib;
-infix &&; infix 8 by;
+infix &&; 
 
 
 (*---------------------------------------------------------------------------
@@ -71,6 +71,7 @@ val percent2 =
      (%% (SUC x) 0  = SUC x)  /\
      (%% (SUC x) (SUC y) = if y <= x then %% (x-y) (SUC y) 
                                      else %% (SUC x) (y-x))`;
+
 val percent2 = 
   xDefine "percentpercent"
     `(%% 0 y        = y)      /\
@@ -419,7 +420,7 @@ Define
  /\ (V (Leaf s::rst) acc        = V rst ([Leaf s]::acc)) 
  /\ (V (Brh x tm1 tm2::rst) acc = V (tm1::tm2::rst) acc)`;
 
-TypeBase.type_size (TypeBase.theTypeBase()) (Type`:'a Btree list`);
+TypeBasePure.type_size (TypeBase.theTypeBase()) (Type`:'a Btree list`);
 
 (*---------------------------------------------------------------------------*
  * This one fails because the size of the tree is not changed.               *

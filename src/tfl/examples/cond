@@ -42,12 +42,12 @@ val Meas_POSITIVE = Q.prove
 val (Norm_eqns,Norm_ind) = 
  Defn.tprove
   (Norm_def,
-   WF_REL_TAC Norm_def `measure Meas`
+   WF_REL_TAC `measure Meas`
      THEN RW_TAC arith_ss 
            [Meas_def,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,
             GSYM ADD_ASSOC, GSYM MULT_ASSOC]
      THEN PROVE_TAC [LESS_MULT2, Meas_POSITIVE, 
-                     DECIDE `!y m. 0<y ==> m < n+(y+m)`]);
+                     DECIDE (Term `!y m. 0<y ==> m < n+(y+m)`)]);
 
 
 (*---------------------------------------------------------------------------*
@@ -70,13 +70,13 @@ val Weight_positive = Q.prove
  Induct 
     THEN ZAP_TAC (arith_ss && [Weight_def,GSYM ADD_ASSOC, GSYM MULT_ASSOC,
                     LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB])
-       [LESS_MULT2, DECIDE `!x y z. x < y ==> x < y + z`]);
+       [LESS_MULT2, DECIDE (Term`!x y z. x < y ==> x < y + z`)]);
 
 val (Norm_eqns,Norm_ind) = 
 Defn.tprove
  (Norm_def,
-  WF_REL_TAC Norm_def `inv_image ($< LEX $<) (\x. (Weight x, Tdepth x))`
+  WF_REL_TAC `inv_image ($< LEX $<) (\x. (Weight x, Tdepth x))`
      THEN ZAP_TAC (arith_ss && [Weight_def,Tdepth_def,
             LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB, 
             GSYM ADD_ASSOC, GSYM MULT_ASSOC, ADD_CLAUSES, MULT_CLAUSES])
-           [Weight_positive, DECIDE `!y z. 0 < y ==> z < y+z`, ADD_SYM]);
+           [Weight_positive, DECIDE (Term`!y z. 0 < y ==> z < y+z`), ADD_SYM]);
