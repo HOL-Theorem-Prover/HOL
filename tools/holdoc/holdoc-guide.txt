@@ -15,6 +15,7 @@ Contents
 - Syntax
 - Directives
 - Known bugs
+- Wish list
 
 
 Makefile magic
@@ -233,6 +234,24 @@ Known bugs
 * a space is required between \[ and <[, because Keith didn't subtract
   his regular expressions correctly in Hollex.tnormal.  Assistance
   welcomed.
+
+
+Wish list
+~~~~~~~~~
+
+- ability to typeset arbitrary HOL definition etc from files (name it,
+  pick it out) (*[ BIND_TO_TEX foobar ]*) followed by the define.
+
+- can we have field names in roman?  (anything preceding := or following . ?)
+  (imagine the reader parsing the s's in sendto_4, eg)
+
+- could autogenerate various sets used in is_foo checking.
+
+- fancy typesetting for context conditions like F_context FC
+
+- allow empty side conditions; don't force T.
+
+- compute binders in set comprehension somehow (see note below).
 
 
  --==[ THE END ]==--

@@ -1,52 +1,7 @@
 (* holdoc_munge.ml -- process HOL LTS or TeX or HOL into LaTeX code (library) *)
 (* Keith Wansbrough 2001 *)
 
-(* TO DO:
-
-IMPORTANT
-~~~~~~~~~
-
-- can we have field names in roman?  (anything preceding := or following . ?)
-(imagine the reader parsing the s's in sendto_4, eg)
-
-- labels need Lh_Call(  ) etc omitting
-
-- Fail/FAIL and space following
-
-- some space between s and h.s in select.2, select_3
-
-REMAINDER
-
-~~~~~~~~~
-
-- could autogenerate various sets used in is_foo checking.
-
-- do quoted strings
-
-- do indentation (taking open delimiters into account)
-
-- all sorts of spacing issues
-
-- do transition labels more nicely
-
-- add spacing after (some) constructors; or if not followed by ( or separator.
-
-- ditto for library functions
-
-- fancy typesetting for context conditions like F_context FC
-
-- Charter has a particularly ugly underscore, eg in print_endline_flush.
-
-- allow empty side conditions; don't force T.
-
-- compute binders in set comprehension somehow (see note below).
-
-- convert ~(m.src IN MARTIAN) to m.src \notin MARTIAN.
-
-- spacing in curried functions, eg append in delivery_loopback_udp_2,
-  between first and second args.
-
- *)
+(* TO DO list now moved to holdoc-guide.txt, wish list section. *)
 
 open Hollex
 open Holdoc_init
