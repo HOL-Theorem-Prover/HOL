@@ -23,10 +23,6 @@ val false_tm = boolSyntax.F
 
 val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 
-fun countP0 acc P [] = acc
-  | countP0 acc P (h::t) = countP0 (if P h then acc + 1 else acc) P t
-val countP = countP0 0
-
 fun mk_abs_CONV var term = let
   val rhs = Rsyntax.mk_abs {Body = term, Bvar = var}
   val newrhs = Rsyntax.mk_comb {Rator = rhs, Rand = var}
@@ -394,11 +390,11 @@ in
   in
     if is_disj tm orelse is_conj tm then
       BINOP_CONV (phase2_CONV var) tm
-    else if free_in var tm andalso (is_less tm orelse is_eq tm) then let
+    else if free_in var tm then let
+      val ((l,r),tt) = (dest_less tm, LT) handle HOL_ERR _ => (dest_eq tm, EQ)
       open Arbint
-      val tt = if is_eq tm then EQ else LT
-      val var_onL = sum_var_coeffs var (land tm)
-      val var_onR = sum_var_coeffs var (rand tm)
+      val var_onL = sum_var_coeffs var l
+      val var_onR = sum_var_coeffs var r
       val (dir1, dir2) = if var_onL < var_onR then (Left, Right)
                          else (Right, Left)
       (* dir2 is the side where x will be ending up *)
@@ -457,8 +453,14 @@ in
         val gnum_t = rand g_t
         val gnum_nonzero =
           EQF_ELIM (REDUCE_CONV (mk_eq(gnum_t, numSyntax.zero_tm)))
+        val dir1_numeral =
+          List.find is_int_literal (strip_plus (dir_of_pair dir1 (l,r)))
+        val negative_numeral =
+          case dir1_numeral of
+            NONE => false
+          | SOME t => is_negated t
         val elim_coeffs_thm =
-          case (tt, dir2, is_negated (dir_of_pair dir1 (l,r))) of
+          case (tt, dir2, negative_numeral) of
             (LT, Left, false) => MATCH_MP elim_lt_coeffs2 gnum_nonzero
           | (LT, Left, true) => MATCH_MP negated_elim_lt_coeffs1 gnum_nonzero
           | (LT, Right, false) => MATCH_MP elim_lt_coeffs1 gnum_nonzero
@@ -481,13 +483,15 @@ in
        REWRITE_CONV [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID] THENC
        TRY_CONV (reduce_by_gcd THENC TRY_CONV move_CONV) THENC
        normalise_eqs var) tm
-    end else if is_neg tm then RAND_CONV (phase2_CONV var) tm
-    else if is_divides tm then
-      (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
-       RAND_CONV (collect_in_sum var) THENC
-       dealwith_negative_divides THENC
-       REWRITE_CONV [INT_MUL_LZERO] THENC REDUCE_CONV) tm
-    else ALL_CONV tm
+    end handle HOL_ERR _ =>
+      if is_neg tm then RAND_CONV (phase2_CONV var) tm
+      else if is_divides tm then
+        (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
+         RAND_CONV (collect_in_sum var) THENC
+         dealwith_negative_divides THENC
+         REWRITE_CONV [INT_MUL_LZERO] THENC REDUCE_CONV) tm
+      else ALL_CONV tm
+   else ALL_CONV tm
   end
 end
 (* phase three takes all of the coefficients of the variable we're
@@ -688,8 +692,6 @@ val move_add =
   (EQT_ELIM (AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM)
             ``(x + y) + z = (x + z) + y:int``))
 
-
-
 fun phase4_CONV tm = let
   (* have a formula of the form
        ?x. t1 <op> t2 <op> t3 <op> .... <tn>
@@ -763,7 +765,7 @@ fun phase4_CONV tm = let
   in
     Lib.mk_set (recurse false [] Body)
   end
-  val use_bis = false (* let
+  val use_bis = let
     fun recurse a b l =
       case l of
         [] => (a,b)
@@ -772,7 +774,7 @@ fun phase4_CONV tm = let
       | _ :: t => recurse a b t
   in
     Int.>(recurse 0 0 leaf_arguments)
-  end *)
+  end
 
   (* need prove either that ?y. !x. x < y ==> (neginf x = F x)  or
      that                   ?y. !x. y < x ==> (posinf x = F x)
@@ -1687,7 +1689,8 @@ val phase5_CONV = let
        (TOP_DEPTH_CONV EXISTS_OR_CONV THENC
         EVERY_DISJ_CONV (BINDER_CONV under_two_quantifiers THENC
                          under_single_quantifier THENC
-                         RAND_CONV (TRY_CONV collect_additive_consts) THENC
+                         RAND_CONV (REWRITE_CONV [int_sub] THENC
+                                    TRY_CONV collect_additive_consts) THENC
                          BETA_CONV)))
   in
     f c tm
@@ -1702,7 +1705,8 @@ val obvious_improvements =
                             INT_ADD_LID, INT_ADD_RID, INT_LT_ADD_NUMERAL,
                             INT_LT_LADD, INT_DIVIDES_1,
                             INT_DIVIDES_RADD, INT_DIVIDES_LMUL,
-                            INT_DIVIDES_LADD]
+                            INT_DIVIDES_LADD, INT_DIVIDES_LSUB,
+                            INT_DIVIDES_RSUB]
 
 
 fun optpluck P l = SOME (Lib.pluck P l) handle HOL_ERR _ => NONE
