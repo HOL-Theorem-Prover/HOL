@@ -4,6 +4,8 @@
  * Hacked for HOL help system, Konrad Slind, Nov. 2001.
  *)
 
+(* Developers: you may edit this file *)
+
 fun curry f x y = f (x,y);
 fun single x = [x];
 
@@ -43,7 +45,7 @@ fun isSigId {comp=Database.Term(_,SOME"HOL"),file,line} = false
 
 (* The version number inserted in generated files: *)
 val version =
- "<A HREF=\"http://www.cl.cam.ac.uk/Research/HVG/FTP/\">HOL Kananaskis 0";
+ "<A HREF=\"http://www.cl.cam.ac.uk/Research/HVG/FTP/\">HOL Kananaskis 1";
 
 (* HOL distribution directory: *)
 val HOLpath = __;
