@@ -230,12 +230,23 @@ val expect1_max = store_thm
 (* More complicated operations on expectations                               *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_def = Define
-  `prob p (a : 'a expect) b s =
+val Lin_def = Define
+  `Lin p (a : 'a expect) b s =
    let x = bound1 (p s) in x * a s + (1 - x) * b s`;
 
-val cond_def = Define
-  `cond c (a : 'a expect) b s = if c s then a s else b s`;
+val Cond_def = Define
+  `Cond c (a : 'a expect) b s = if c s then a s else b s`;
+
+val lin_eta = store_thm
+  ("lin_eta",
+   ``!p a b.
+       Lin p a b = \s. let x = bound1 (p s) in x * a s + (1 - x) * b s``,
+   METIS_TAC [Lin_def]);
+
+val cond_eta = store_thm
+  ("cond_eta",
+   ``!c a b. Cond c a b = \s. if c s then a s else b s``,
+   METIS_TAC [Cond_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* Fundamental properties of expectation transformers                        *)

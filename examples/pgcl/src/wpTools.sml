@@ -89,7 +89,7 @@ local
 
   val vc_solve = prolog
     [wlp_abort_vc, wlp_skip_vc, wlp_assign_vc, wlp_seq_vc, wlp_demon_vc,
-     wlp_prob_vc, wlp_while_vc, wlp_cond_vc, wlp_assert_vc];
+     wlp_prob_vc, wlp_while_vc, wlp_if_vc, wlp_assert_vc];
 in
   fun vc_tac (asl,goal) =
     let
@@ -188,7 +188,7 @@ end;
 
 local
   fun simps ths = ths @
-    [wlp_min_def, prob_def, cond_def, o_THM, magic_alt, assign_def];
+    [wlp_min_def, Lin_def, Cond_def, o_THM, magic_alt, assign_def];
 in
   val leq_tac =
     CONV_TAC (REWR_CONV Leq_def)

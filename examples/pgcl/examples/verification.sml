@@ -37,7 +37,7 @@ val prob_then_demon = Count.apply prove
   (``wp (Seq (Probchoice "i" [0; 1]) (Demonchoice "j" [0; 1]))
      (\v. if v"i" = v"j" then 1 else 0) = \v. 0``,
    RW_TAC arith_ss
-   [wp_def, Probchoice_def, Probs_def, Demonchoice_def,
+   [wp_def, Probchoice_def, Probs_def, Demonchoice_def, assign_eta, lin_eta,
     Demons_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
    ++ FULL_SIMP_TAC int_ss []
    ++ FULL_SIMP_TAC posreal_reduce_ss [bound1_def]);
@@ -46,7 +46,7 @@ val demon_then_prob = Count.apply prove
   (``wp (Seq (Demonchoice "j" [0; 1]) (Probchoice "i" [0; 1]))
      (\v. if v"i" = v"j" then 1 else 0) = \v. 1 / 2``,
    RW_TAC arith_ss
-   [wp_def, Probchoice_def, Probs_def, Demonchoice_def,
+   [wp_def, Probchoice_def, Probs_def, Demonchoice_def, assign_eta, lin_eta,
     Demons_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
    ++ FULL_SIMP_TAC int_ss []
    ++ FULL_SIMP_TAC posreal_reduce_ss [bound1_def]);
@@ -68,7 +68,7 @@ val partial_demon_then_prob = Count.apply prove
 
 val wp_loop = Count.apply prove
   (``!post. wp (While (\s. T) Skip) post = Zero``,
-   RW_TAC std_ss [wp_def]
+   RW_TAC std_ss [wp_def, cond_eta]
    ++ Know `monotonic (expect,Leq) (\e s : state. e s)`
    >> (RW_TAC std_ss [monotonic_def]
        ++ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -85,7 +85,7 @@ val wp_loop = Count.apply prove
 
 val wlp_loop = Count.apply prove
   (``!post. wlp (While (\s. T) Skip) post = Magic``,
-   RW_TAC std_ss [wlp_def]
+   RW_TAC std_ss [wlp_def, cond_eta]
    ++ Know `monotonic (expect,Leq) (\e s : state. e s)`
    >> (RW_TAC std_ss [monotonic_def]
        ++ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -147,19 +147,19 @@ val montyhall = Count.apply prove
    CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
    ++ RW_TAC std_ss [montyhall_def, seq_assoc, Program_def]
    ++ RW_TAC std_ss [wp_incognito]
-   ++ RW_TAC std_ss [monty_switch_def, wp_def, CHR_11]
+   ++ RW_TAC std_ss [monty_switch_def, wp_def, CHR_11, assign_def]
    ++ RW_TAC std_ss [wp_incognito_def] ++ RW_TAC std_ss [wp_incognito]
-   ++ RW_TAC int_ss [wp_def, Guards_def, guards_def, wp_cond, Demons_def,
-                     monty_reveal_def, Min_def]
+   ++ RW_TAC int_ss [wp_def, Guards_def, guards_def, wp_if, Demons_def,
+                     monty_reveal_def, Min_def, cond_eta, assign_def]
    ++ RW_TAC posreal_ss [CHR_11]
    ++ RW_TAC std_ss [wp_incognito_def] ++ RW_TAC std_ss [wp_incognito]
    ++ RW_TAC list_ss [monty_choose_def, wp_def, Probchoice_def, Probs_def,
-                      CHR_11]
+                      CHR_11, assign_def, lin_eta]
    ++ RW_TAC int_ss []
    ++ RW_TAC posreal_ss [bound1_basic, Zero_def]
    ++ RW_TAC std_ss [wp_incognito_def]
    ++ RW_TAC int_ss [monty_hide_def, MAP, wp_def, Demonchoice_def,
-                     Demons_def, Min_def]
+                     Demons_def, Min_def, assign_def]
    ++ RW_TAC posreal_reduce_ss [bound1_def]);
   
 (* ------------------------------------------------------------------------- *)
@@ -178,7 +178,8 @@ val lurch_once = Count.apply prove
        (\v.
           (1 / 2) * r (\w. if w = "n" then v"n" - 1 else v w) +
           (1 / 2) * r (\w. if w = "n" then v"n" + 1 else v w))``,
-   RW_TAC posreal_ss [wp_def, lurch_def, bound1_basic, COND_RAND]
+   RW_TAC posreal_ss
+   [wp_def, lurch_def, bound1_basic, COND_RAND, assign_eta, lin_eta]
    ++ RW_TAC posreal_reduce_ss []);
 
 val lurch_once_home = Count.apply prove

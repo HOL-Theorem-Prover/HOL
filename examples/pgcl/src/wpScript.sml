@@ -47,7 +47,7 @@ val op || = op ORELSE;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;
-val lemma = prove;
+val lemma = I prove;
 
 (* ------------------------------------------------------------------------- *)
 (* The HOL type we use to model states                                       *)
@@ -84,8 +84,8 @@ val Program_def = Define
    (Program [c] = c) /\
    (Program (c :: c' :: cs) = Seq c (Program (c' :: cs)))`;
 
-val Cond_def = Define
-  `Cond c a b = Prob (\s. if c s then 1 else 0) a b`;
+val If_def = Define
+  `If c a b = Prob (\s. if c s then 1 else 0) a b`;
 
 (* Demons [] should evaluate to the identity for Demon, which is Magic.     *)
 (* But we don't allow magic (i.e., miraculous) programs, so we underspecify *)
@@ -100,7 +100,7 @@ val Demonchoice_def = Define
 val guards_def = Define
   `(guards cs [] = if cs = [] then Abort else Demons cs) /\
    (guards cs ((p, c) :: rest) =
-    Cond p (guards (c :: cs) rest) (guards cs rest))`;
+    If p (guards (c :: cs) rest) (guards cs rest))`;
 
 val Guards_def = Define `Guards l = guards [] l`;
 
@@ -125,12 +125,11 @@ val Probchoice_def = Define
 val wp_def = Define
   `(wp Abort = \r. Zero) /\
    (wp Skip = \r. r) /\
-   (wp (Assign v e) = \r s. r (\w. if w = v then e s else s w)) /\
+   (wp (Assign v e) = \r s. r (assign v e s)) /\
    (wp (Seq a b) = \r. wp a (wp b r)) /\
    (wp (Demon a b) = \r. Min (wp a r) (wp b r)) /\
-   (wp (Prob p a b) =
-    \r s. let x = bound1 (p s) in x * wp a r s + (1 - x) * wp b r s) /\
-   (wp (While c b) = \r. expect_lfp (\e s. if c s then wp b e s else r s))`;
+   (wp (Prob p a b) = \r. Lin p (wp a r) (wp b r)) /\
+   (wp (While c b) = \r. expect_lfp (\e. Cond c (wp b e) r))`;
 
 val wp_incognito_def = Define `wp_incognito = wp`;
 
@@ -150,7 +149,7 @@ val sublinear_necessary = store_thm
    ++ Q.EXISTS_TAC `\v. if v "n" = 0 then 1 else 0`
    ++ Q.EXISTS_TAC `\v. if v "n" = 1 then 1 else 0`
    ++ Q.EXISTS_TAC `\v. 0`
-   ++ REWRITE_TAC [wp_def]
+   ++ REWRITE_TAC [wp_def, assign_eta]
    ++ SIMP_TAC int_ss [Min_def]
    ++ SIMP_TAC posreal_ss [preal_min_def]);
 
@@ -173,7 +172,8 @@ val healthy_wp_skip = lemma
 val healthy_wp_assign = lemma
   (``!v e. healthy (wp (Assign v e))``,
    RW_TAC posreal_ss
-   [wp_def, healthy_def, sublinear_def, feasible_def, Zero_def, sub_mono]
+   [wp_def, healthy_def, sublinear_def, feasible_def, Zero_def, sub_mono,
+    assign_eta]
    ++ RW_TAC real_ss [up_continuous_def, lub_def, Leq_def, expect_def]
    >> (BETA_TAC ++ PROVE_TAC [])
    ++ Know
@@ -370,7 +370,7 @@ val healthy_wp_prob = lemma
   (``!f prog prog'.
         healthy (wp prog) /\ healthy (wp prog') ==>
         healthy (wp (Prob f prog prog'))``,
-   RW_TAC real_ss [wp_def]
+   RW_TAC real_ss [wp_def, lin_eta]
    ++ RW_TAC real_ss [healthy_def]
    << [RW_TAC posreal_ss [feasible_def]
        ++ Know `wp prog Zero = Zero` >> METIS_TAC [healthy_def, feasible_def]
@@ -528,9 +528,9 @@ val healthy_wp_prob = lemma
            ++ METIS_TAC []]]);
 
 val wp_while_monotonic = lemma
-  (``!trans cnd l.
+  (``!trans cond l.
        healthy trans /\
-       (!r. expect_lfp (\e s. (if cnd s then trans e s else r s)) = l r) ==>
+       (!r. expect_lfp (\e s. (if cond s then trans e s else r s)) = l r) ==>
        monotonic (expect,Leq) l``,
    RW_TAC std_ss []
    ++ RW_TAC std_ss [monotonic_def, expect_def, lub_def]
@@ -546,12 +546,12 @@ val wp_while_monotonic = lemma
        FULL_SIMP_TAC std_ss [Leq_def]]);
 
 val wp_while_upcontinuous = lemma
-  (``!trans cnd l.
+  (``!trans cond l.
        healthy trans /\
-       (!r. expect_lfp (\e s. (if cnd s then trans e s else r s)) = l r) ==>
-       (!r. (\s. (if cnd s then trans (l r) s else r s)) = l r) /\
+       (!r. expect_lfp (\e s. (if cond s then trans e s else r s)) = l r) ==>
+       (!r. (\s. (if cond s then trans (l r) s else r s)) = l r) /\
        (!r y.
-          Leq (\s. (if cnd s then trans y s else r s)) y ==> Leq (l r) y) ==>
+          Leq (\s. (if cond s then trans y s else r s)) y ==> Leq (l r) y) ==>
        up_continuous (expect,Leq) l``,
    RW_TAC std_ss []
    ++ RW_TAC std_ss [up_continuous_def, expect_def, lub_def]
@@ -597,7 +597,7 @@ val wp_while_upcontinuous = lemma
            ++ METIS_TAC [])
        ++ Q.PAT_ASSUM `chain X Y` MP_TAC
        ++ RW_TAC posreal_ss [chain_def, expect_def]
-       ++ MP_TAC (Q.SPECL [`trans`, `cnd`, `l`] wp_while_monotonic)
+       ++ MP_TAC (Q.SPECL [`trans`, `cond`, `l`] wp_while_monotonic)
        ++ RW_TAC std_ss [monotonic_def, expect_def]
        ++ METIS_TAC [])
    ++ RW_TAC std_ss [lub_def, expect_def]
@@ -610,11 +610,11 @@ val wp_while_upcontinuous = lemma
    ++ METIS_TAC []);
 
 val wp_while_sublinear1 = lemma
-  (``!cnd prog l.
+  (``!cond prog l.
        healthy (wp prog) /\
-       (!r. (\s. (if cnd s then wp prog (l r) s else r s)) = l r) /\
+       (!r. (\s. (if cond s then wp prog (l r) s else r s)) = l r) /\
        (!r y.
-          Leq (\s. (if cnd s then wp prog y s else r s)) y ==> Leq (l r) y) ==>
+          Leq (\s. (if cond s then wp prog y s else r s)) y ==> Leq (l r) y) ==>
        (!r c s. ~(c = infty) ==> l r s - c <= l (\s'. r s' - c) s)``,
    RW_TAC posreal_ss []
    ++ MATCH_MP_TAC sub_le_imp
@@ -639,14 +639,14 @@ val wp_while_sublinear1 = lemma
    ++ METIS_TAC []);
 
 val healthy_wp_while = lemma
-  (``!cnd prog. healthy (wp prog) ==> healthy (wp (While cnd prog))``,
-   RW_TAC real_ss [wp_def]
+  (``!cond prog. healthy (wp prog) ==> healthy (wp (While cond prog))``,
+   RW_TAC real_ss [wp_def, cond_eta]
    ++ Know
       `!r.
-         (expect_lfp (\e s. (if cnd s then wp prog e s else r s)) =
-          (\r. expect_lfp (\e s. (if cnd s then wp prog e s else r s))) r) /\
-         lfp (expect,Leq) (\e s. if cnd s then wp prog e s else r s)
-         ((\r. expect_lfp (\e s. (if cnd s then wp prog e s else r s))) r)`
+         (expect_lfp (\e s. (if cond s then wp prog e s else r s)) =
+          (\r. expect_lfp (\e s. (if cond s then wp prog e s else r s))) r) /\
+         lfp (expect,Leq) (\e s. if cond s then wp prog e s else r s)
+         ((\r. expect_lfp (\e s. (if cond s then wp prog e s else r s))) r)`
    >> (RW_TAC std_ss []
        ++ MATCH_MP_TAC expect_lfp_def
        ++ RW_TAC std_ss [monotonic_def, expect_def]
@@ -659,11 +659,11 @@ val healthy_wp_while = lemma
        ++ CONV_TAC (DEPTH_CONV ETA_CONV)
        ++ METIS_TAC [healthy_mono])
    ++ Q.SPEC_TAC
-      (`\r. expect_lfp (\e s. (if cnd s then wp prog e s else r s))`, `l`)
+      (`\r. expect_lfp (\e s. (if cond s then wp prog e s else r s))`, `l`)
    ++ SIMP_TAC std_ss [lfp_def, expect_def, FORALL_AND_THM]
    ++ RW_TAC std_ss []
-   ++ MP_TAC (Q.SPECL [`cnd`, `l`] (Q.ISPEC `wp prog` wp_while_monotonic))
-   ++ MP_TAC (Q.SPECL [`cnd`, `l`] (Q.ISPEC `wp prog` wp_while_upcontinuous))
+   ++ MP_TAC (Q.SPECL [`cond`, `l`] (Q.ISPEC `wp prog` wp_while_monotonic))
+   ++ MP_TAC (Q.SPECL [`cond`, `l`] (Q.ISPEC `wp prog` wp_while_upcontinuous))
    ++ RW_TAC std_ss []
    ++ ASM_SIMP_TAC real_ss [healthy_def]
    ++ MATCH_MP_TAC (PROVE [] ``a /\ (a ==> b) ==> a /\ b``)
@@ -681,7 +681,7 @@ val healthy_wp_while = lemma
        ++ RW_TAC std_ss [leq_zero]
        ++ METIS_TAC [feasible_def, healthy_feasible])
    ++ RW_TAC real_ss [sublinear_alt]
-   << [MP_TAC (Q.SPECL [`cnd`, `prog`, `l`] wp_while_sublinear1)
+   << [MP_TAC (Q.SPECL [`cond`, `prog`, `l`] wp_while_sublinear1)
        ++ RW_TAC std_ss [],
        Suff `Leq (\s. c * l r s) (l (\s'. c * r s'))` >> RW_TAC std_ss [Leq_def]
        ++ Q.SPEC_TAC (`c`, `c`)
@@ -873,7 +873,7 @@ val healthy_wp_while = lemma
        ++ STRIP_TAC
        ++ Know `!s. l r s <= & n`
        >> (GEN_TAC
-           ++ MP_TAC (Q.SPECL [`cnd`, `prog`, `l`] wp_while_sublinear1)
+           ++ MP_TAC (Q.SPECL [`cond`, `prog`, `l`] wp_while_sublinear1)
            ++ ASM_SIMP_TAC std_ss []
            ++ DISCH_THEN (MP_TAC o Q.SPECL [`r`, `& n`, `s`])
            ++ ASM_SIMP_TAC posreal_ss [sub_le_eq]
@@ -909,7 +909,7 @@ val healthy_wp_while = lemma
        ++ Q.PAT_ASSUM `!r. P r = Q r`
           (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM th])))       
        ++ RW_TAC posreal_ss [Leq_def]
-       ++ REVERSE (Cases_on `cnd s` ++ ASM_SIMP_TAC posreal_ss [add_sub])
+       ++ REVERSE (Cases_on `cond s` ++ ASM_SIMP_TAC posreal_ss [add_sub])
        ++ POP_ASSUM (K ALL_TAC)
        ++ MP_TAC (Q.SPECL [`\s. l (\s' : state. r1 s' + r s' : posreal) s`,
                            `l (r:state expect)`, `& n`]
@@ -970,11 +970,10 @@ val seq_assoc = store_thm
    ``!p q r. wp (Seq p (Seq q r)) = wp (Seq (Seq p q) r)``,
    RW_TAC std_ss [wp_def]);
 
-val wp_cond = store_thm
-  ("wp_cond",
-   ``!c a b r.
-       wp (Cond c a b) r = \s. if c s then wp a r s else wp b r s``,
-   RW_TAC std_ss [wp_def, Cond_def]
+val wp_if = store_thm
+  ("wp_if",
+   ``!c a b r. wp (If c a b) r = Cond c (wp a r) (wp b r)``,
+   RW_TAC std_ss [wp_def, If_def, cond_eta, lin_eta]
    ++ CONV_TAC FUN_EQ_CONV
    ++ RW_TAC posreal_ss [bound1_basic]);
 
@@ -994,7 +993,7 @@ val refines_abort = store_thm
 val refines_demon_prob = store_thm
   ("refines_demon_prob",
    ``!f p q. refines (wp (Demon p q)) (wp (Prob f p q))``,
-   RW_TAC std_ss [refines_def, wp_def, Min_def, Leq_def, min_le_lin]);
+   RW_TAC std_ss [refines_def, wp_def, Min_def, Leq_def, min_le_lin, Lin_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* wlp is the partial-correctness analogue of wp.                            *)
@@ -1003,12 +1002,11 @@ val refines_demon_prob = store_thm
 val wlp_def = Define
   `(wlp Abort = \r. Magic) /\
    (wlp Skip = \r. r) /\
-   (wlp (Assign v e) = \r s. r (\w. if w = v then e s else s w)) /\
+   (wlp (Assign v e) = \r s. r (assign v e s)) /\
    (wlp (Seq a b) = \r. wlp a (wlp b r)) /\
    (wlp (Demon a b) = \r. Min (wlp a r) (wlp b r)) /\
-   (wlp (Prob p a b) =
-    \r s. let x = bound1 (p s) in x * wlp a r s + (1 - x) * wlp b r s) /\
-   (wlp (While c b) = \r. expect_gfp (\e s. if c s then wlp b e s else r s))`;
+   (wlp (Prob p a b) = \r. Lin p (wlp a r) (wlp b r)) /\
+   (wlp (While c b) = \r. expect_gfp (\e. Cond c (wlp b e) r))`;
 
 (* ------------------------------------------------------------------------- *)
 (* wlp is not healthy, but it does satisfy some nice properties.             *)
@@ -1019,13 +1017,13 @@ val wlp_mono = store_thm
   ("wlp_mono",
    ``!p r1 r2. Leq r1 r2 ==> Leq (wlp p r1) (wlp p r2)``,
    (Induct ++ RW_TAC std_ss [wlp_def, leq_refl])
-   << [FULL_SIMP_TAC std_ss [Leq_def],
+   << [FULL_SIMP_TAC std_ss [Leq_def, assign_eta],
        METIS_TAC [min_leq2_imp],
-       RW_TAC std_ss [Leq_def]
+       RW_TAC std_ss [Leq_def, lin_eta]
        ++ MATCH_MP_TAC le_add2
        ++ METIS_TAC [Leq_def, le_lmul_imp, le_add2],
        MATCH_MP_TAC refines_gfp
-       ++ RW_TAC std_ss [monotonic_def, refines_def, Leq_def]
+       ++ RW_TAC std_ss [monotonic_def, refines_def, Leq_def, cond_eta]
        ++ RW_TAC posreal_ss []
        ++ METIS_TAC [Leq_def]]);
 
@@ -1037,16 +1035,16 @@ val wlp_mono = store_thm
 
 val wlp_while = store_thm
   ("wlp_while",
-   ``!cnd body pre post.
-       Leq pre (\s. if cnd s then wlp body pre s else post s) ==>
-       Leq pre (wlp (While cnd body) post)``,
-   RW_TAC std_ss [wlp_def]
+   ``!cond body pre post.
+       Leq pre (Cond cond (wlp body pre) post) ==>
+       Leq pre (wlp (While cond body) post)``,
+   RW_TAC std_ss [wlp_def, cond_eta]
    ++ Know
       `!r.
-         (expect_gfp (\e s. (if cnd s then wlp body e s else r s)) =
-          (\r. expect_gfp (\e s. (if cnd s then wlp body e s else r s))) r) /\
-         gfp (expect,Leq) (\e s. if cnd s then wlp body e s else r s)
-         ((\r. expect_gfp (\e s. (if cnd s then wlp body e s else r s))) r)`
+         (expect_gfp (\e s. (if cond s then wlp body e s else r s)) =
+          (\r. expect_gfp (\e s. (if cond s then wlp body e s else r s))) r) /\
+         gfp (expect,Leq) (\e s. if cond s then wlp body e s else r s)
+         ((\r. expect_gfp (\e s. (if cond s then wlp body e s else r s))) r)`
    >> (RW_TAC std_ss []
        ++ MATCH_MP_TAC expect_gfp_def
        ++ RW_TAC std_ss [monotonic_def, expect_def]
@@ -1059,7 +1057,7 @@ val wlp_while = store_thm
    ++ DISCH_THEN (MP_TAC o Q.SPEC `post`)
    ++ SIMP_TAC std_ss []
    ++ Q.SPEC_TAC
-      (`expect_gfp (\e s. (if cnd s then wlp body e s else post s))`, `g`)
+      (`expect_gfp (\e s. (if cond s then wlp body e s else post s))`, `g`)
    ++ RW_TAC std_ss [gfp_def, expect_def]);
 
 (* ------------------------------------------------------------------------- *)
@@ -1119,37 +1117,37 @@ val wlp_prob_vc = store_thm
   ("wlp_prob_vc",
    ``!pre1 pre2 post p c1 c2.
        Leq pre1 (wlp c1 post) /\ Leq pre2 (wlp c2 post) ==>
-       Leq (prob p pre1 pre2) (wlp (Prob p c1 c2) post)``,
+       Leq (Lin p pre1 pre2) (wlp (Prob p c1 c2) post)``,
    RW_TAC std_ss [wlp_def, Leq_def]
    ++ MATCH_MP_TAC le_trans
-   ++ Q.EXISTS_TAC `prob p pre1 pre2 s`
+   ++ Q.EXISTS_TAC `Lin p pre1 pre2 s`
    ++ RW_TAC std_ss []
-   ++ RW_TAC std_ss [prob_def, le_refl]
+   ++ RW_TAC std_ss [Lin_def, le_refl]
    ++ METIS_TAC [le_add2, le_lmul_imp]);
 
 val wlp_while_vc = store_thm
   ("wlp_while_vc",
    ``!pre post mid b c.
-       Leq mid (wlp c pre) /\ Leq pre (cond b mid post) ==>
+       Leq mid (wlp c pre) /\ Leq pre (Cond b mid post) ==>
        Leq pre (wlp (Assert pre (While b c)) post)``,
    RW_TAC std_ss []
    ++ MATCH_MP_TAC wlp_assert_vc
    ++ Q.EXISTS_TAC `pre`
    ++ RW_TAC std_ss [leq_refl]
    ++ MATCH_MP_TAC wlp_while
-   ++ FULL_SIMP_TAC std_ss [Leq_def, cond_def]
+   ++ FULL_SIMP_TAC std_ss [Leq_def, Cond_def]
    ++ METIS_TAC [le_trans]);
 
-val wlp_cond_vc = store_thm
-  ("wlp_cond_vc",
+val wlp_if_vc = store_thm
+  ("wlp_if_vc",
    ``!pre1 pre2 post b c1 c2.
        Leq pre1 (wlp c1 post) /\ Leq pre2 (wlp c2 post) ==>
-       Leq (cond b pre1 pre2) (wlp (Cond b c1 c2) post)``,
-   RW_TAC std_ss [Cond_def]
+       Leq (Cond b pre1 pre2) (wlp (If b c1 c2) post)``,
+   RW_TAC std_ss [If_def]
    ++ MATCH_MP_TAC leq_trans
-   ++ Q.EXISTS_TAC `prob (\s. if b s then 1 else 0) pre1 pre2`
+   ++ Q.EXISTS_TAC `Lin (\s. if b s then 1 else 0) pre1 pre2`
    ++ REVERSE CONJ_TAC >> METIS_TAC [wlp_prob_vc]
-   ++ RW_TAC std_ss [Leq_def, bound1_def, prob_def, cond_def]
+   ++ RW_TAC std_ss [Leq_def, bound1_def, Lin_def, Cond_def]
    ++ RW_TAC posreal_ss []
    ++ FULL_SIMP_TAC posreal_ss []);
 

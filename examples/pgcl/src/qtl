@@ -44,12 +44,7 @@ val op || = op ORELSE;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;
-
-val real_ss = simpLib.++
-  (realLib.real_ss,
-   simpLib.SIMPSET
-   {ac = [], congs = [], convs = [], dprocs = [], filter = NONE,
-    rewrs = []});
+val lemma = I prove;
 
 (* ------------------------------------------------------------------------- *)
 (* Temporal logic formulas: syntax                                           *)
@@ -420,7 +415,7 @@ val refines_gfp = store_thm
 (* that everything interprets to a well-formed probability                   *)
 (* ------------------------------------------------------------------------- *)
 
-val eventually_lfp_lemma =prove
+val eventually_lfp_lemma = lemma
   (``!step a.
         wf_trans step /\ wf_prob (sem step a) ==>
         lfp (wf_prob,Leq) (\e. Max (sem step a) (step e))
@@ -435,7 +430,7 @@ val eventually_lfp_lemma =prove
        ++ RW_TAC std_ss [monotonic_def]
        ++ PROVE_TAC [wf_trans_mono, wf_prob_expect, leq_refl]]);
 
-val unless_gfp_lemma =prove
+val unless_gfp_lemma = lemma
   (``!step a b.
         wf_trans step /\ wf_prob (sem step a) /\ wf_prob (sem step b) ==>
         gfp (wf_prob,Leq) (\e. Max (sem step b) (Min (sem step a) (step e)))
