@@ -118,7 +118,9 @@ rule
 (* holtoken returns the next token, or raises Finished|BadChar *)
 
   holtoken = parse
-    dollar? idchar+        { Ident (Lexing.lexeme lexbuf,true) }
+    '"' [^ '"']* '"'       { let s = Lexing.lexeme lexbuf in
+                             Str (String.sub s 1 (String.length s - 2)) }
+  | dollar? idchar+        { Ident (Lexing.lexeme lexbuf,true) }
   | dollar? (punctchar+
              | specnonagg) { Ident (Lexing.lexeme lexbuf,false) }
   | newline white*         { Indent (indent_width (Lexing.lexeme lexbuf)) }
@@ -134,8 +136,6 @@ rule
   | tendhol                { TeXEndHol }
   | tendhol0               { TeXEndHol0 }
   | starttex               { HolStartTeX }
-  | '"' [^ '"']* '"'       { let s = Lexing.lexeme lexbuf in
-                             Str (String.sub s 1 (String.length s - 2)) }
   | eof                    { raise Eof }
   | _                      { raise BadChar }
 
@@ -156,6 +156,8 @@ and
   | tstarthol0     { TeXStartHol0 }
   | endtex         { HolEndTeX }
   | tstartdir      { DirBeg }
+  | startdir       { DirBeg }   (* recognised also, for .mni files that may
+                                   be included in either HOL or TeX. *)
   | eof            { raise Eof }
 
 {

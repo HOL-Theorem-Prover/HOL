@@ -31,7 +31,8 @@ mng_to_latex : $(MNG_TO_LATEX_OBJS)
 # document targets:
 
 Net_hostLTSScript.tex : ../HOL-model/Net_hostLTSScript.sml lts_to_latex
-	./lts_to_latex < $< > $@
+	cat ../HOL-model/Net.mni $< | ./lts_to_latex 2>&1 > $@ \
+		| sort -u | tee Net_hostLTSScript.errs
 
 hostlts.dvi : hostlts.tex Net_hostLTSScript.tex ltsmunge.sty
 	latex hostlts.tex
@@ -53,7 +54,7 @@ depend:	.depend
 	$(OCAMLC) -c $<
 
 %.tex : %.mng mng_to_latex
-	./mng_to_latex < $< > $@
+	./mng_to_latex < $< 2>&1 > $@ | sort -u | tee $*.errs
 
 %.dvi : %.tex
 	$(LATEX) $<
