@@ -15,7 +15,7 @@ structure pairScript =
 struct
 
 (*  interactive use:
- app load ["Q", "relationTheory", "mesonLib"]; 
+ app load ["Q", "relationTheory", "mesonLib"];
  open Parse relationTheory mesonLib;
 *)
 open HolKernel Parse boolLib QLib relationTheory mesonLib Rsyntax;
@@ -56,7 +56,7 @@ val ABS_REP_prod =
   {ABS="ABS_prod",REP="REP_prod", name="ABS_REP_prod", tyax=prod_TY_DEF};
 
 
-val IS_PAIR_MK_PAIR = Q.prove 
+val IS_PAIR_MK_PAIR = Q.prove
 (`!x y. IS_PAIR (MK_PAIR x y)`,
 REWRITE_TAC[IS_PAIR_DEF, MK_PAIR_DEF]
  THEN GEN_TAC THEN GEN_TAC
@@ -71,7 +71,7 @@ val REP_ABS_PAIR = Q.prove
   THEN REWRITE_TAC[IS_PAIR_MK_PAIR]);
 
 
-val COMMA_DEF = 
+val COMMA_DEF =
  Q.new_definition("COMMA_DEF", `$, x y = ABS_prod(MK_PAIR x y)`);
 
 val _ = add_rule {term_name = ",", fixity = Infixr 50,
@@ -122,7 +122,7 @@ val ABS_PAIR_THM = Q.store_thm
  * Useful rewrite rules.
  *---------------------------------------------------------------------------*)
 
-val FST = Q.store_thm("FST",  
+val FST = Q.store_thm("FST",
  `!x y. FST(x,y) = x`,
 REPEAT GEN_TAC
  THEN REWRITE_TAC[FST_DEF]
@@ -161,7 +161,7 @@ GEN_TAC
  * UNCURRY is needed for terms of the form `\(x,y).t`
  *---------------------------------------------------------------------------*)
 
-val UNCURRY = 
+val UNCURRY =
  Q.new_definition
   ("UNCURRY",
    `UNCURRY f (v:'a#'b) = f (FST v) (SND v)`);
@@ -305,20 +305,15 @@ val _ = save_thm("PFORALL_THM",PFORALL_THM);
 
 val PEXISTS_THM = Q.prove
 (`!P. (?(x:'a) (y:'b). P x y) = ?(x,y):'a#'b. P x y`,
-GEN_TAC THEN EQ_TAC THENL
- [STRIP_TAC THEN ASM_REWRITE_TAC[EXISTS_DEF] THEN BETA_TAC
-  THEN REWRITE_TAC[UNCURRY_VAR] THEN BETA_TAC THEN
-  SUBGOAL_THEN(Term`?v:'a#'b. UNCURRY (\x y. P x y) v`) MP_TAC THENL
-  [EXISTS_TAC(Term`x,y`) THEN REWRITE_TAC[UNCURRY_DEF] THEN BETA_TAC
-   THEN ASM_REWRITE_TAC[],
-   STRIP_TAC THEN IMP_RES_TAC SELECT_AX
-   THEN POP_ASSUM (K ALL_TAC) THEN POP_ASSUM MP_TAC
-   THEN REWRITE_TAC[UNCURRY_VAR] THEN BETA_TAC THEN STRIP_TAC],
-  DISCH_THEN (fn th => MP_TAC(BETA_RULE(REWRITE_RULE[EXISTS_DEF]th)))
-   THEN REWRITE_TAC[UNCURRY_VAR] THEN BETA_TAC THEN DISCH_TAC
-   THEN EXISTS_TAC (Term`FST (@(x,y):'a#'b. P x y)`)
-   THEN EXISTS_TAC (Term`SND (@(x,y):'a#'b. P x y)`)
-   THEN ASM_REWRITE_TAC[]]);
+GEN_TAC THEN EQ_TAC THEN
+SUBST1_TAC (SYM (ETA_CONV
+                 (Term`\p. UNCURRY (\x:'a y:'b. P x y:bool) p`))) THENL [
+  STRIP_TAC THEN
+  Q.EXISTS_TAC `(x,y)` THEN REWRITE_TAC [UNCURRY_VAR, FST, SND] THEN
+  BETA_TAC THEN ASM_REWRITE_TAC [],
+  REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC THEN STRIP_TAC THEN
+  mesonLib.ASM_MESON_TAC []
+]);
 
 val _ = save_thm("PEXISTS_THM",PEXISTS_THM);
 
@@ -337,7 +332,7 @@ val UNCURRY_CONG =
  ---------------------------------------------------------------------------*)
 
 val PROD_FUN = Q.new_infixr_definition
- ("PROD_FUN", 
+ ("PROD_FUN",
   `## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 500);
 
 val PROD_FUN_THM = Q.store_thm
