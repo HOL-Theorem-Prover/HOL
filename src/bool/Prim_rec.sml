@@ -451,6 +451,11 @@ fun define_case_constant ax =
   map mk_defn usethese
 end
 
+(*---------------------------------------------------------------------------*)
+(*       INDUCT_THEN                                                         *)
+(*---------------------------------------------------------------------------*)
+
+
 (* ---------------------------------------------------------------------*)
 (* Internal function: 							*)
 (*									*)
@@ -485,8 +490,8 @@ fun BETAS fnn body =
 
 fun GTAC y (A,g) =
    let val {Bvar,Body} = dest_forall g
-       and y' = variant (free_varsl (g::A)) y
-   in ([(A,subst[Bvar |-> y'] Body)],
+       and y' = Term.variant (free_varsl (g::A)) y
+   in ([(A, subst[Bvar |-> y'] Body)],
        fn [th] => GEN Bvar (INST [y' |-> Bvar] th))
    end;
 
@@ -528,7 +533,7 @@ local fun ctacs tm =
        then let val tac2 = ctacs (#conj2(dest_conj tm))
             in fn ttac => CONJUNCTS_THEN2 ttac (tac2 ttac)
             end
-       else fn ttac => ttac
+       else I
 in
 fun TACF tm =
  let val (vs,body) = strip_forall tm
@@ -547,12 +552,12 @@ end;
 (* TACS uses TACF to generate a parameterized list of tactics, one for  *)
 (* each conjunct in the hypothesis of an induction theorem.		*)
 (*									*)
-(* For example, if tm is the hypothesis of the induction thoerem for the*)
+(* For example, if tm is the hypothesis of the induction theorem for the*)
 (* natural numbers---i.e. if:						*)
 (*									*)
 (*   tm = "P 0 /\ (!n. P n ==> P(SUC n))"				*)
 (*									*)
-(* then TACS tm yields the paremterized list of tactics:		*)
+(* then TACS tm yields the parameterized list of tactics:		*)
 (*									*)
 (*   \x ttac. [TACF "P 0" x ttac; TACF "!n. P n ==> P(SUC n)" x ttac]   *)
 (*									*)
@@ -561,9 +566,8 @@ end;
 
 fun f {conj1,conj2} = (TACF conj1, TACS conj2)
 and TACS tm =
-  let val (cf,csf) =
-        f(dest_conj tm) handle HOL_ERR _ => (TACF tm, Lib.K(Lib.K[]))
-  in fn x => fn ttac => (cf x ttac)::(csf x ttac)
+  let val (cf,csf) = f(dest_conj tm) handle HOL_ERR _ => (TACF tm, K(K[]))
+  in fn x => fn ttac => cf x ttac::csf x ttac
   end;
 
 (* ---------------------------------------------------------------------*)
@@ -634,37 +638,35 @@ fun mapshape [] _ _ =  [] |
 (* --------------------------------------------------------------------- *)
 (* INDUCT_THEN : general induction tactic for concrete recursive types.	 *)
 (* --------------------------------------------------------------------- *)
-local val bool = genvar Type.bool
+
+local val boolvar = genvar Type.bool
 in
 fun INDUCT_THEN th =
-   let val {Bvar,Body} = dest_forall(concl th)
-       val {ant = hy, ...} = dest_imp Body
-       val bconv = BETAS Bvar hy
-       and tacsf = TACS hy
-       val v = genvar (type_of Bvar)
-       val eta_th = CONV_RULE(RAND_CONV ETA_CONV) (UNDISCH(SPEC v th))
-       val ([asm],con) = dest_thm eta_th
-       val dis = DISCH asm eta_th
-       val ind = GEN v (SUBST [bool |-> GALPHA asm]
-                          (mk_imp{ant=bool, conseq=con}) dis)
-   in
-   fn ttac => fn (A,t) =>
-      let val lam = #Rand(dest_comb t)
-          val spec = SPEC lam (INST_TYPE (Lib.snd(Term.match_term v lam)) ind)
-          val {ant,conseq} = dest_imp(concl spec)
-          val beta = SUBST [bool |-> bconv ant]
-                           (mk_imp{ant=bool, conseq=conseq}) spec
-          val tacs = tacsf (#Bvar(dest_abs lam)) ttac
-          val (gll,pl) = GOALS A tacs (#ant(dest_imp(concl beta)))
-          val pf = ((MP beta) o LIST_CONJ) o mapshape(map length gll)pl
-      in
-        (Lib.flatten gll, pf)
-      end
-      handle HOL_ERR_ => raise ERR "INDUCT_THEN" "tactic application error"
-   end
-   handle (e as HOL_ERR {origin_structure = "Induct_then",
-		    origin_function = "INDUCT_THEN",...}) => raise e
-        | HOL_ERR _ => raise ERR "INDUCT_THEN" "ill-formed induction theorem"
+ let val {Bvar,Body} = dest_forall(concl th)
+     val {ant=hy, ...} = dest_imp Body
+     val bconv = BETAS Bvar hy
+     val tacsf = TACS hy
+     val v = genvar (type_of Bvar)
+     val eta_th = CONV_RULE (RAND_CONV ETA_CONV) (UNDISCH(SPEC v th))
+     val ([asm],con) = dest_thm eta_th
+     val ind = GEN v (SUBST [boolvar |-> GALPHA asm]
+                            (mk_imp{ant=boolvar, conseq=con}) 
+                            (DISCH asm eta_th))
+ in fn ttac => fn (A,t) =>
+     let val lam = #Rand(dest_comb t)
+         val spec = SPEC lam (INST_TYPE (Lib.snd(Term.match_term v lam)) ind)
+         val {ant,conseq} = dest_imp(concl spec)
+         val beta = SUBST [boolvar |-> bconv ant]
+                          (mk_imp{ant=boolvar, conseq=conseq}) spec
+         val tacs = tacsf (#Bvar(dest_abs lam)) ttac
+         val (gll,pl) = GOALS A tacs (#ant(dest_imp(concl beta)))
+         val pf = ((MP beta) o LIST_CONJ) o mapshape(map length gll)pl
+     in
+       (Lib.flatten gll, pf)
+     end
+     handle e => raise wrap_exn "Prim_rec" "INDUCT_THEN" e
+ end
+ handle e => raise wrap_exn "Prim_rec" "INDUCT_THEN" e
 end;
 
 (*--------------------------------------------------------------------------

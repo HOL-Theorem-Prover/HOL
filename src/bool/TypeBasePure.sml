@@ -259,46 +259,50 @@ val listItems = Binaryset.listItems;
 
 
 (*---------------------------------------------------------------------------
-       Computing the size of a type as a term. "tysize" is the more
-       general function. It takes a couple of environments
-       (theta,gamma); theta maps type variables to size functions, and
-       gamma maps type operators to size functions.
+      General facility for interpreting types as terms. It takes a 
+      couple of environments (theta,gamma); theta maps type variables 
+      to (term) functions on those type variables, and gamma maps 
+      type operators to (term) functions on elements of the given type.
+      The interpretation is partial: for types that are not mapped, 
+      the supplied function undef is applied.
  ---------------------------------------------------------------------------*)
 
 local fun drop [] ty = fst(dom_rng ty)
-        | drop (_::t) ty = drop t (snd(dom_rng ty));
-      fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+        | drop (_::t) ty = drop t (snd(dom_rng ty))
+in
+fun typeValue (theta,gamma,undef) =
+ let fun tyValue ty = 
+      case theta ty
+       of SOME fvar => fvar
+        | NONE =>
+          let val {Tyop,Args} = dest_type ty
+          in case gamma Tyop
+              of SOME f =>
+                  let val vty = drop Args (type_of f)
+                      val sigma = match_type vty ty
+                  in list_mk_comb(inst sigma f, map tyValue Args)
+                  end
+               | NONE => undef ty
+          end
+  in tyValue
+  end
+end
+
+(*---------------------------------------------------------------------------
+    Map a HOL type (ty) into a term having type :ty -> num.
+ ---------------------------------------------------------------------------*)
+
+local fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
       fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
         handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
       fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()};
-      fun join f g x =
-        case g x
-         of NONE => NONE
-          | SOME y => (case f y
-                        of NONE => NONE
-                         | SOME(x,_) => SOME x)
-      fun tysize_env db = join size_of (get db)
+      fun tysize_env db = Option.map fst o 
+                          Option.composePartial (size_of,get db)
 in
-fun tysize (theta,gamma) ty  =
-   case theta ty
-    of SOME fvar => fvar
-     | NONE =>
-        let val {Tyop,Args} = dest_type ty
-        in case gamma Tyop
-            of SOME f =>
-                let val vty = drop Args (type_of f)
-                    val sigma = match_type vty ty
-                in list_mk_comb(inst sigma f,
-                                map (tysize (theta,gamma)) Args)
-                end
-             | NONE => K0 ty
-        end
-
 fun type_size db ty =
-  let fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
-  in tysize (theta,tysize_env db) ty
-  end
-end  (* local *);
+   let fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
+   in typeValue (theta,tysize_env db,K0) ty
+   end
+end
 
-
-end;
+end

@@ -130,11 +130,15 @@ val CONJUNCTS_THEN :thm_tactical = fn ttac => CONJUNCTS_THEN2 ttac ttac;;
 (*            DISJ_CASES disth (prf1 thl1) (prf2 thl2);;		    *)
 (* -------------------------------------------------------------------------*)
 
-(* foo needs to return a theorem with disj as conclusion, and disj as one
-   of the assumptions, and all of the assumptions of disth as well *)
-fun foo disth disj =
-    MP (DISCH (concl disth) (ASSUME disj)) disth
-       (* mk_thm(disj::Thm.hyp disth, disj) *)
+(*---------------------------------------------------------------------------
+  foo needs to return a theorem with M as conclusion, and M as one
+   of the assumptions, and all of the assumptions of th as well:
+
+     foo th M = mk_thm(M::Thm.hyp th, M)
+ ---------------------------------------------------------------------------*)
+
+fun foo th M = MP (DISCH (concl th) (ASSUME M)) th
+
 
 fun DISJ_CASES_THEN2 ttac1 ttac2 = fn disth =>
    let val (disj1,disj2) = dest_disj (Thm.concl disth)
@@ -215,13 +219,12 @@ fun UNDISCH_THEN tm ttac (asl, w) =
  *    ==================    ttac A(y)
  *	   ...
  * explicit version for tactic programming
- ---------------------------------------------------------------------------*)
+ *---------------------------------------------------------------------------*)
 
 fun X_CHOOSE_THEN y (ttac:thm_tactic) : thm_tactic = fn xth =>
    let val (Bvar,Body) = dest_exists (Thm.concl xth)
    in fn (asl,w) =>
       let val th = foo xth (subst[Bvar |-> y] Body)
-
 (* itlist ADD_ASSUM (hyp xth)
                           (ASSUME (subst[Bvar |-> y] Body)) *)
         val (gl,prf) = ttac th (asl,w)
@@ -418,4 +421,4 @@ fun RES_THEN ttac (asl,g) =
  end
 end;
 
-end; (* Thm_cont *)
+end

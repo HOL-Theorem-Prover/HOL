@@ -7,7 +7,7 @@ sig
 
    type tyinfo
    type typeBase
-   datatype shared_thm = ORIG of thm
+   datatype shared_thm = ORIG of thm 
                        | COPY of string * thm
 
    val gen_tyinfo      : {ax  : thm, 
@@ -47,18 +47,23 @@ sig
    val put_induction   : shared_thm -> tyinfo -> tyinfo
    val put_size        : term * shared_thm -> tyinfo -> tyinfo
 
-   (* Functional databases of datatype facts and associated operations. *)
+   (* Functional databases of datatype facts and associated operations *)
 
    val empty           : typeBase
    val add             : typeBase -> tyinfo -> typeBase
    val get             : typeBase -> string -> tyinfo option
    val listItems       : typeBase -> tyinfo list
 
-   (* Size of a type *)
+  (* Support for polytypism *)
 
-   val tysize 
-      : (hol_type -> term option) * (string -> term option) 
-        -> hol_type 
-         -> term
+   val typeValue
+      : (hol_type -> term option) * 
+        (string -> term option)   *
+        (hol_type -> term)
+        -> hol_type -> term
+
+  (* Size of a type *)
+
    val type_size : typeBase -> hol_type -> term
+
 end

@@ -40,8 +40,6 @@ struct
 open HolKernel Parse boolLib Prim_rec ParseDatatype;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-fun -- q x = Term q
-fun == q x = Type q
 
 infix ## |-> THEN THENC THENL;
 infixr -->;
@@ -76,13 +74,6 @@ val defn_const =
 
 val head = Lib.repeat rator;
 
-local fun find_dup [] = NONE
-        | find_dup [x] = NONE
-        | find_dup (x::y::xs) = if x=y then SOME x else find_dup (y::xs)
-in
-val duplicate_names = find_dup o Listsort.sort String.compare
-end;
-
 local open Portable
       fun num_variant vlist v =
         let val counter = ref 0
@@ -102,15 +93,10 @@ fun mk_tyvar_size vty (V,away) =
   end
 end;
 
-local fun join f g x =
-        case g x
-         of NONE => NONE
-          | SOME y => (case f y
-                        of NONE => NONE
-                         | SOME(x,_) => SOME x)
-in
-fun tysize_env db = join TypeBasePure.size_of (TypeBasePure.get db)
-end;
+fun tysize_env db = 
+     Option.map fst o 
+     Option.composePartial (TypeBasePure.size_of, TypeBasePure.get db)
+
 
 (*---------------------------------------------------------------------------*
  * Term size, as a function of types. The function gamma maps type           *
@@ -125,9 +111,7 @@ end;
 
 local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty));
-      fun Zero() = mk_thy_const{Name="0",Thy="num",Ty=num}
-        handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
-      fun Kzero ty = mk_abs(mk_var("v",ty), Zero())
+      fun Kzero ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm)
       fun OK f ty M =
          let val (Rator,Rand) = dest_comb M
          in (Rator=f) andalso is_var Rand andalso (type_of Rand = ty)
@@ -163,36 +147,20 @@ fun type_size db ty =
   end
 end;
 
-fun rem1 x (h::t) = if x=h then t else h::rem1 x t
-  | rem1 x [] = [];
-
-fun diff X (h::t) = diff (rem1 h X) t
-  | diff X [] = X;
-
-
 fun dupls [] (C,D) = (rev C, rev D)
   | dupls (h::t) (C,D) = dupls t (if mem h t then (C,h::D) else (h::C,D));
 
-fun part P [] = ([],[])
-  | part P (h::t) =
-     let val (pass,fail) = part P t
-     in if P h then (h::pass,fail)
-        else (pass,h::fail)
-     end;
-
 fun crunch [] = []
   | crunch ((x,y)::t) =
-     let val key = #1(dom_rng(type_of x))
-         val (pass,fail) = part (fn (x,_) => (#1(dom_rng(type_of x))=key)) t
-     in (key, (x,y)::pass)::crunch fail
-     end;
+    let val key = #1(dom_rng(type_of x))
+        val (yes,no) = partition (fn(x,_) => (#1(dom_rng(type_of x))=key)) t
+    in (key, (x,y)::yes)::crunch no
+    end;
 
 local open arithmeticTheory
       val zero_rws = [Rewrite.ONCE_REWRITE_RULE [ADD_SYM] ADD_0, ADD_0]
       val Zero  = numSyntax.zero_tm
       val One   = Term `1n`
-  val Plus = mk_thy_const{Name="+", Thy="arithmetic", Ty=num-->num-->num}
-   fun mk_plus x y = list_mk_comb(Plus,[x,y])
 in
 fun define_size ax db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
@@ -228,7 +196,7 @@ fun define_size ax db =
      (* now the ugly nested map *)
      val head_of_clause = head o lhs o snd o strip_forall
      fun is_dty M = mem(#1(dom_rng(type_of(head_of_clause M)))) dtys
-     val (dty_clauses,non_dty_clauses) = part is_dty bare_conjl
+     val (dty_clauses,non_dty_clauses) = partition is_dty bare_conjl
      val dty_fns = fst(dupls (map head_of_clause dty_clauses) ([],[]))
      fun dty_size ty =
         let val (d,r) = dom_rng ty
@@ -249,13 +217,13 @@ fun define_size ax db =
      fun mk_app cl v = mk_comb(sizer cl (type_of v), v)
      val fn_i_map = dty_map @ nested_map0
      fun clause cl =
-         let val fcapp = lhs cl
-             val (fn_i, capp) = dest_comb fcapp
+         let val (fn_i, capp) = dest_comb (lhs cl)
          in
          mk_eq(mk_comb(assoc fn_i fn_i_map, capp),
                case snd(strip_comb capp)
                 of [] => Zero
-                 | L  => end_itlist mk_plus (One::map (mk_app cl) L))
+                 | L  => end_itlist (curry numSyntax.mk_plus)
+                                    (One::map (mk_app cl) L))
          end
      val pre_defn0 = list_mk_conj (map clause bare_conjl)
      val pre_defn1 = rhs(concl   (* remove zero additions *)
@@ -274,9 +242,23 @@ fun define_size ax db =
  handle HOL_ERR _ => NONE
 end;
 
-
+(*---------------------------------------------------------------------------
+           Basic datatype definition support
+ ---------------------------------------------------------------------------*)
 
 val define_type = ind_types.define_type;
+
+
+(*---------------------------------------------------------------------------
+      Support for quoted input
+ ---------------------------------------------------------------------------*)
+       
+local fun find_dup [] = NONE
+        | find_dup [x] = NONE
+        | find_dup (x::y::xs) = if x=y then SOME x else find_dup (y::xs)
+in
+val duplicate_names = find_dup o Listsort.sort String.compare
+end;
 
 local fun tyname_as_tyvar n = mk_vartype ("'" ^ n)
       fun stage1 (s,Constructors l) = (s,l)

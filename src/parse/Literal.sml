@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------*
- *    Literals (numerals and string literals).
+ *    Literals for numbers and strings.
  *
  * A numeral is a nest of NUMERAL_BIT{1,2}s built up from ALT_ZERO wrapped
  * inside the NUMERAL tag, or it is a straight ZERO constant.  This
@@ -128,8 +128,8 @@ fun dest_string_lit tm =
 val is_string_lit = can dest_string_lit
 
 fun mk_string_lit {mk_string,fromMLchar,emptystring} s =
-  let val sl = String.explode s
-  in itlist (curry mk_string) (List.map fromMLchar sl) emptystring
-  end
+  itlist (curry mk_string) 
+         (List.map fromMLchar (String.explode s)) emptystring
+
 
 end (* Literal *)
