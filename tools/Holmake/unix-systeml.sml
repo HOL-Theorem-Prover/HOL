@@ -16,8 +16,18 @@ local
     | (x::xs) => concat_wspaces munge (" " :: munge x :: acc) xs
 in
 
-  val systeml = system o concat_wspaces unix_quote []
-  val protect = unix_quote
+  val unix_meta_chars = [#"'", #"\"", #"|", #" ", #">", #"\t", #"\n", #"<",
+                         #"\\"]
+  fun protect s = let
+    val scs = String.explode s
+    fun member x els = List.exists (fn y => x = y) els
+  in
+    if List.exists (fn uc => member uc scs) unix_meta_chars then
+      unix_quote s
+    else s
+  end
+
+  val systeml = system o concat_wspaces protect []
 
   fun xable_string s = s
 
