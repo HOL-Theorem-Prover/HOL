@@ -1,6 +1,6 @@
 \DOC Q_TAC
 
-\TYPE {Q_TAC : tactic -> tactic}
+\TYPE {Q_TAC : (term -> tactic) -> term frag list -> tactic}
 
 \SYNOPSIS
 A tactical that parses in the context of a goal, a la the Q library.
