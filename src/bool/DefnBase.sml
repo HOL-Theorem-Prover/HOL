@@ -13,7 +13,7 @@ val ERR = mk_HOL_ERR "DefnBase";
 datatype defn
    = ABBREV  of {eqn:thm, bind:string}
    | PRIMREC of {eqs:thm, ind:thm, bind:string}
-   | NONREC  of {eqs:thm, ind:thm, stem:string}
+   | NONREC  of {eqs:thm, ind:thm, SV:term list, stem:string}
    | STDREC  of {eqs:thm list, ind:thm, R:term,SV:term list,stem:string}
    | MUTREC  of {eqs:thm list, ind:thm, R:term, SV:term list,
                  stem:string,union:defn}
@@ -69,7 +69,7 @@ fun pp_defn ppstrm =
            add_string "Equation(s) :"; 
            add_break(1,0);
            pp_thm eqs; end_block())
-     | pp (NONREC {eqs, ind, stem}) = 
+     | pp (NONREC {eqs, ind, SV, stem}) = 
           (begin_block CONSISTENT 0;
            add_string "Equation(s) :"; 
            add_break(1,0);

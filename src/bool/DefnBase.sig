@@ -6,7 +6,7 @@ sig
  datatype defn
    = ABBREV  of {eqn:thm, bind:string}
    | PRIMREC of {eqs:thm, ind:thm, bind:string}
-   | NONREC  of {eqs:thm, ind:thm, stem:string}
+   | NONREC  of {eqs:thm, ind:thm, SV:term list, stem:string}
    | STDREC  of {eqs:thm list, ind:thm, R:term,SV:term list,stem:string}
    | MUTREC  of {eqs:thm list, ind:thm, R:term,SV:term list,
                  stem:string,union:defn}
