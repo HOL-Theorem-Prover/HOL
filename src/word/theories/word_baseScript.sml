@@ -232,7 +232,7 @@ val WSEG_DEF = new_recursive_definition {
  rec_axiom = word_Ax,
  def =
  --`
-   WSEG m k ((WORD l):'a word) = WORD (LASTN m (BUTLASTN k l))
+   !m k l. WSEG m k ((WORD l):'a word) = WORD (LASTN m (BUTLASTN k l))
  `--
  };
 
