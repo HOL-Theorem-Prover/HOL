@@ -6,53 +6,25 @@
 (* For interactive work
   app load ["word8Theory", "metisLib", "word8CasesLib"];
   quietdec := true;
-  open word8Theory (*tablesTheory*) bitsTheory
+  open word8Theory bitsTheory
      word8Lib arithmeticTheory metisLib word8CasesLib;
   quietdec := false;
 *)
 
 open HolKernel Parse boolLib bossLib 
-     word8Theory (*tablesTheory*) bitsTheory
+     word8Theory bitsTheory
      word8Lib arithmeticTheory metisLib word8CasesLib;
 
 val _ = new_theory "Mult";
 
-fun n2w_TAC v = ASSUME_TAC (Q.SPEC v word_nchotomy) THEN RW_TAC std_ss []
+fun n2w_TAC v = STRIP_ASSUME_TAC (Q.SPEC v word_nchotomy) THEN
+                ASM_REWRITE_TAC []
 
 val EQ_BIT_THM = Q.prove (
 `!a b. (a = b) = (!n. n < 8 ==> (BIT n (w2n a) = BIT n (w2n b)))`,
 REPEAT STRIP_TAC THEN n2w_TAC `a` THEN n2w_TAC `b` THEN
 RW_TAC arith_ss [n2w_11, w2n_EVAL, MOD_WL_THM, GSYM BIT_BITS_THM, HB_def,
                  LE_LT1, BIT_OF_BITS_THM])
-
-val EOR_AC = Q.store_thm
-("EOR_AC",
-`!a b c. ((a # b) # c = a # (b # c)) /\ (a # b = b # a)`,
-REPEAT STRIP_TAC THEN
-n2w_TAC `a` THEN n2w_TAC `b` THEN n2w_TAC `c` THEN
-RW_TAC arith_ss [EQ_BIT_THM, EOR_EVAL, EOR_def, w2n_EVAL, MOD_WL_THM,
-                 BIT_OF_BITS_THM, HB_def, WL_def, BITWISE_THM] THEN
-METIS_TAC []);
-
-(* Should prove this without brute force, so the proof would work for other 
-   bit widths *)
-val EOR_ID = Q.store_thm ("EOR_ID",
-`!x. x # 0w = x`,
-STRIP_TAC THEN word8Cases_on `x` THEN POP_ASSUM SUBST_ALL_TAC THEN WORD_TAC);
-
-val [a, c] = map GEN_ALL (CONJUNCTS (SPEC_ALL EOR_AC))
-
-val EOR_INV = Q.store_thm 
-("EOR_INV",
- `!x. x # x = 0w`,
- STRIP_TAC THEN word8Cases_on `x` THEN POP_ASSUM SUBST_ALL_TAC THEN WORD_TAC);
-
-(*
-val LSR1_LESS = Q.prove (
-`!n. 0w < n ==> n >>> 1 < n`,
-REPEAT STRIP_TAC THEN n2w_TAC `n` THEN WORD_TAC THEN EVAL_TAC THEN
-RW_TAC arith_ss []
-*)
 
 (*---------------------------------------------------------------------------
     Multiply a byte (representing a polynomial) by x. 
@@ -87,7 +59,6 @@ val xtime_distrib = Q.store_thm
  FULL_SIMP_TAC arith_ss [BIT_SHIFT_THM3, NOT_LESS, BIT_SHIFT_THM2, BITWISE_THM] THEN
  METIS_TAC []);
 
-
 (*---------------------------------------------------------------------------*)
 (* Multiplication by a constant                                              *)
 (*---------------------------------------------------------------------------*)
@@ -118,7 +89,8 @@ val ConstMultDistrib = Q.store_thm
  recInduct ConstMult_ind
    THEN REPEAT STRIP_TAC
    THEN ONCE_REWRITE_TAC [ConstMult_def]
-   THEN RW_TAC std_ss [xtime_distrib, AC a c] THEN WORD_TAC);
+   THEN RW_TAC std_ss [xtime_distrib, AC WORD_EOR_ASSOC WORD_EOR_COMM]
+   THEN WORD_TAC);
 
 (*---------------------------------------------------------------------------*)
 (* Iterative version                                                         *)
@@ -151,8 +123,8 @@ val ConstMultEq = Q.store_thm
  `!b1 b2 acc. (b1 ** b2) # acc = SND(SND(IterConstMult (b1,b2,acc)))`,
  recInduct IterConstMult_ind THEN RW_TAC std_ss []
    THEN ONCE_REWRITE_TAC [ConstMult_def,IterConstMult_def]
-   THEN RW_TAC std_ss [AC a c]
-   THEN FULL_SIMP_TAC std_ss [AC a c, EOR_ID]);
+   THEN RW_TAC std_ss [AC WORD_EOR_ASSOC WORD_EOR_COMM]
+   THEN FULL_SIMP_TAC std_ss [AC WORD_EOR_ASSOC WORD_EOR_COMM, WORD_EOR_ID]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -178,7 +150,7 @@ fun UNROLL_RULE 0 def = def
      (GEN_REWRITE_RULE (RHS_CONV o DEPTH_CONV) empty_rewrites [def]
                        (UNROLL_RULE (n - 1) def))
 val instantiate =
- SIMP_RULE arith_ss [EOR_ID, GSYM xtime_distrib] o 
+ SIMP_RULE arith_ss [WORD_EOR_ID, GSYM xtime_distrib] o 
  WORD_RULE o
  ONCE_REWRITE_CONV [UNROLL_RULE 4 ConstMult_def]
 

@@ -26,9 +26,9 @@ open metisLib pairTheory word8Theory MultTheory word8Lib;
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
 val Sbox_Inversion = tablesTheory.Sbox_Inversion;
-val XOR8_AC = EOR_AC
-val XOR8_ZERO = EOR_ID
-val XOR8_INV = EOR_INV
+val XOR8_AC = AC WORD_EOR_ASSOC WORD_EOR_COMM
+val XOR8_ZERO = WORD_EOR_ID
+val XOR8_INV = WORD_EOR_INV
 
 (*---------------------------------------------------------------------------*)
 (* Create the theory.                                                        *)
@@ -96,8 +96,6 @@ val XOR_BLOCK_AC = Q.store_thm
  `(!x y z:block. XOR_BLOCK (XOR_BLOCK x y) z = XOR_BLOCK x (XOR_BLOCK y z)) /\
   (!x y:block. XOR_BLOCK x y = XOR_BLOCK y x)`, 
  SIMP_TAC std_ss [FORALL_BLOCK,XOR_BLOCK_def, XOR8_AC]);
-
-val [a,c] = CONJUNCTS (SPEC_ALL XOR8_AC);
 
 val XOR_BLOCK_IDEM = Q.store_thm
 ("XOR_BLOCK_IDEM",
@@ -361,7 +359,7 @@ val rearrange_xors = Q.prove
   (b1 # b2 # b3 # b4) #
   (c1 # c2 # c3 # c4) #
   (d1 # d2 # d3 # d4)`,
- RW_TAC std_ss [AC a c]);
+ RW_TAC std_ss [XOR8_AC]);
 
 val mix_lemma1 = Q.prove
 (`!a b c d. 
@@ -465,7 +463,7 @@ val InvMixColumns_Distrib = Q.store_thm
         AddRoundKey (InvMixColumns s) (InvMixColumns k)`,
  SIMP_TAC std_ss [FORALL_BLOCK] THEN
  RW_TAC std_ss [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,
-                genMixColumns_def, InvMultCol_def, ConstMultDistrib, AC a c]);
+                genMixColumns_def, InvMultCol_def, ConstMultDistrib, XOR8_AC]);
 
 
 val _ = export_theory();
