@@ -97,6 +97,7 @@ val chatting = ref 1;           (* Gives intermediate info as proof runs.
                                    is given. When the number is 0, no output
                                    is given. Otherwise, jrh's original output
                                    is given.                                 *)
+val _ = register_trace "meson" chatting;
 
 
 
