@@ -677,10 +677,10 @@ fun define_bigrec_functions (tyname, fldlist) = let
     val acc_defn_const = defn_hd acc_defn_th
     val _ = add_record_field (fld, acc_defn_const)
     (* update function *)
-    val subrec_updname =
-        tyname ^ "_" ^ subrecord_fldname tyname subn ^ "_update"
-    val subrec_update = prim_mk_const { Name = subrec_updname,
-                                        Thy = current_theory()}
+    val subrec_fupdname =
+        tyname ^ "_" ^ subrecord_fldname tyname subn ^ "_fupd"
+    val subrec_fupd = prim_mk_const { Name = subrec_fupdname,
+                                      Thy = current_theory()}
     val leaf_updname = leaf_accname ^ "_update"
     val leaf_upd = prim_mk_const {Name = leaf_updname, Thy = current_theory()}
     val upd_const_name = acc_const_name ^ "_update"
@@ -689,19 +689,12 @@ fun define_bigrec_functions (tyname, fldlist) = let
     val field_valvar = mk_var("x", field_ty)
     val upd_defn =
         mk_eq(list_mk_comb(upd_const, [field_valvar, rvar]),
-              list_mk_comb(subrec_update,
-                           [list_mk_comb(leaf_upd,
-                                         [field_valvar,
-                                          mk_comb(subrec_accessor, rvar)]),
-                            rvar]))
+              list_mk_comb(subrec_fupd,
+                           [mk_comb(leaf_upd, field_valvar), rvar]))
     val upd_defn_th = new_definition(upd_const_name, upd_defn)
     val upd_defn_const = defn_hd upd_defn_th
     val _ = add_record_update(fld, upd_defn_const)
     (* fupdate function *)
-    val subrec_fupdname =
-        tyname ^ "_" ^ subrecord_fldname tyname subn ^ "_fupd"
-    val subrec_fupd = prim_mk_const {Name = subrec_fupdname,
-                                     Thy = current_theory()}
     val leaf_fupdname = leaf_accname ^ "_fupd"
     val leaf_fupd = prim_mk_const{Name = leaf_fupdname, Thy = current_theory()}
     val fupd_const_name = acc_const_name ^ "_fupd"

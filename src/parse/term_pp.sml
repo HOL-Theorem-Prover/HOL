@@ -748,6 +748,7 @@ fun pp_term (G : grammar) TyG = let
         end
         else ()
 
+      exception NotReallyARecord
       val _ = (* check for record update *)
         if isSome recwith_info andalso isSome reclist_info then let
           open Overload
@@ -785,14 +786,22 @@ fun pp_term (G : grammar) TyG = let
                               else NONE
                   | NONE => NONE
                 else NONE
-            fun strip_bigrec_updates acc t = let
-              (* don't look at end of update chain; maybe dodgy *)
-              val (f, x) = dest_comb t
+            fun strip_o acc tlist =
+                case tlist of
+                  [] => acc
+                | t::ts => let
+                    val (f, args) = strip_comb t
+                    val {Name,Thy,...} = dest_thy_const f
+                  in
+                    if Name = "o" andalso Thy = "combin" then
+                      strip_o acc (hd (tl args) :: hd args :: ts)
+                    else strip_o (t::acc) ts
+                  end handle HOL_ERR _ => strip_o (t::acc) ts
+            fun strip_bigrec_updates t = let
+              val internal_upds = strip_o [] [t]
             in
-              case bigrec_update f of
-                SOME p => strip_bigrec_updates (p::acc) x
-              | NONE => List.rev acc
-            end handle HOL_ERR _ => List.rev acc
+              List.mapPartial bigrec_update internal_upds
+            end
             fun categorise_bigrec_update (s, value) = let
               (* first strip suffix, and decide if a normal update *)
               val (s, value_upd) =
@@ -811,9 +820,9 @@ fun pp_term (G : grammar) TyG = let
                   Substring.slice(ss, 1, NONE)
             in
               (Substring.string ss, value, value_upd)
-            end
+            end handle Subscript => raise NotReallyARecord
           in
-            map categorise_bigrec_update (strip_bigrec_updates [] v)
+            map categorise_bigrec_update (strip_bigrec_updates v)
           end
           fun categorise_update t = let
             (* t is an update, possibly a bigrec monster.  Here we generate
@@ -887,7 +896,7 @@ fun pp_term (G : grammar) TyG = let
               pend addparens;
               raise SimpleExit
             end
-          end
+          end handle NotReallyARecord => ()
           else ()
         end
         else ()
