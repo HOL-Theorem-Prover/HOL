@@ -120,9 +120,16 @@ for that field.
 of "infix auxiliary function" identifiers, typeset with
 \tsauxinfix{}. [roman, spacing]
 
-(*[ VAR_PREFIX_LIST id id id *]) adds the named identifiers to the list
-of variable prefixes; identifiers with these names or appended numbers
-or primes will be typeset with \tsvar{}.  [italic]
+(*[ VAR_PREFIX_LIST id id id *]) adds the named identifiers to the
+list of variable prefixes; identifiers with these names, possibly with
+appended numbers, primes, or underscore-followed-by-variable, will be
+typeset with \tsvar{}.  [italic]
+
+(*[ VAR_PREFIX_ALIST id "str" id "str" *]) adds the named identifiers
+to the list of variable prefixes; identifiers with these names,
+possibly with appended numbers, primes, or
+underscore-followed-by-variable will be typeset by the given TeX
+strings.
 
 (*[ HOL_OP_LIST id id id *]) adds the named identifiers to the list of
 "HOL operators", typeset with \tsholop{}.  [bold lowercase]
@@ -215,10 +222,18 @@ normally just "$" and "$", but can be changed, e.g., to colourise the
 output of HOL strings.
 
 
+(*[ RULES ]*) turns on rules mode (this is on by default for
+lts_to_latex, and off by default otherwise).  This means that
+identifiers ending in numbers will be treated as \tsrule{} rather than
+\tsvar{}.
+
+(*[ NORULES ]*) turns off rules mode.
+
+
 HOLDoc supports "modes".  All the various lists defined above, and
-also [NO]INDENT and [NO_]SMART_PREFIX are not global; they apply to
-the current mode.  The default mode is called "0".  New modes can be
-created, and the mode can be changed, by means of the following
+also [NO]INDENT, [NO_]SMART_PREFIX, and [NO]RULES are not global; they
+apply to the current mode.  The default mode is called "0".  New modes
+can be created, and the mode can be changed, by means of the following
 directives.
 
 (*[ NEWMODE source ]*) creates a new mode called "source", which

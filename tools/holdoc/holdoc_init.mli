@@ -9,12 +9,14 @@ type modalsettings = {
   aUX_LIST : string list ref;
   aUX_INFIX_LIST : string list ref;
   vAR_PREFIX_LIST : string list ref;
+  vAR_PREFIX_ALIST : (string * string) list ref;
   hOL_OP_LIST : string list ref;
   hOL_SYM_ALIST : (string * string) list ref;
   hOL_ID_ALIST : (string * string) list ref;
   hOL_CURRIED_ALIST : (string * (string * int * bool * bool)) list ref;
   sMART_PREFIX : bool ref;
   iNDENT : bool ref;
+  rULES : bool ref;
 }
 
 val curmodals : modalsettings ref

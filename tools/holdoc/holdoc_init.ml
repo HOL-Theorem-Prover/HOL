@@ -13,12 +13,14 @@ type modalsettings = {
   aUX_LIST : string list ref;
   aUX_INFIX_LIST : string list ref;
   vAR_PREFIX_LIST : string list ref;
+  vAR_PREFIX_ALIST : (string * string) list ref;
   hOL_OP_LIST : string list ref;
   hOL_SYM_ALIST : (string * string) list ref;
   hOL_ID_ALIST : (string * string) list ref;
   hOL_CURRIED_ALIST : (string * (string * int * bool * bool)) list ref;
   sMART_PREFIX : bool ref;
   iNDENT : bool ref;
+  rULES : bool ref;
 }
 
 (* current modal settings *)
@@ -30,12 +32,14 @@ let curmodals = ref {
   aUX_LIST = ref [];
   aUX_INFIX_LIST = ref [];
   vAR_PREFIX_LIST = ref [];
+  vAR_PREFIX_ALIST = ref [];
   hOL_OP_LIST = ref [];
   hOL_SYM_ALIST = ref [];
   hOL_ID_ALIST = ref [];
   hOL_CURRIED_ALIST = ref [];
   sMART_PREFIX = ref true;
   iNDENT = ref true;
+  rULES = ref false;
 }
 
 (* list of all modes and corresponding settings *)
@@ -56,12 +60,14 @@ let new_mode name = (if List.mem_assoc name !modes then
                                        aUX_LIST = ref !(!curmodals.aUX_LIST);
                                        aUX_INFIX_LIST = ref !(!curmodals.aUX_INFIX_LIST);
                                        vAR_PREFIX_LIST = ref !(!curmodals.vAR_PREFIX_LIST);
+                                       vAR_PREFIX_ALIST = ref !(!curmodals.vAR_PREFIX_ALIST);
                                        hOL_OP_LIST = ref !(!curmodals.hOL_OP_LIST);
                                        hOL_SYM_ALIST = ref !(!curmodals.hOL_SYM_ALIST);
                                        hOL_ID_ALIST = ref !(!curmodals.hOL_ID_ALIST);
                                        hOL_CURRIED_ALIST = ref !(!curmodals.hOL_CURRIED_ALIST);
                                        sMART_PREFIX = ref !(!curmodals.sMART_PREFIX);
                                        iNDENT = ref !(!curmodals.iNDENT);
+                                       rULES = ref !(!curmodals.rULES);
                                      };
                        modes := (name,!curmodals)::!modes)
                     )
@@ -164,6 +170,7 @@ let dir_proc n ts =
   | "AUX_LIST"        -> !curmodals.aUX_LIST        := (go ts)  @ !(!curmodals.aUX_LIST)
   | "AUX_INFIX_LIST"  -> !curmodals.aUX_INFIX_LIST  := (go ts)  @ !(!curmodals.aUX_INFIX_LIST)
   | "VAR_PREFIX_LIST" -> !curmodals.vAR_PREFIX_LIST := (go ts)  @ !(!curmodals.vAR_PREFIX_LIST)
+  | "VAR_PREFIX_ALIST" -> !curmodals.vAR_PREFIX_ALIST := (go2 ts)  @ !(!curmodals.vAR_PREFIX_ALIST)
   | "HOL_OP_LIST"     -> !curmodals.hOL_OP_LIST     := (go ts)  @ !(!curmodals.hOL_OP_LIST)
   | "HOL_SYM_ALIST"   -> !curmodals.hOL_SYM_ALIST   := (go2 ts) @ !(!curmodals.hOL_SYM_ALIST)
   | "HOL_ID_ALIST"    -> !curmodals.hOL_ID_ALIST    := (go2 ts) @ !(!curmodals.hOL_ID_ALIST)
@@ -173,6 +180,8 @@ let dir_proc n ts =
   | "NO_SMART_PREFIX" -> !curmodals.sMART_PREFIX := false
   | "INDENT"          -> !curmodals.iNDENT := true
   | "NOINDENT"        -> !curmodals.iNDENT := false
+  | "RULES"           -> !curmodals.rULES := true
+  | "NORULES"         -> !curmodals.rULES := false
   (* other *)
   | "ECHO"            -> eCHO := true
   | "NOECHO"          -> eCHO := false

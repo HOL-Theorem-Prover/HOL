@@ -224,6 +224,7 @@ let texifys sep ss =
 (* recognisers for various syntactic categories *)
 
 let is_rule s =
+  !(!curmodals.rULES) &&
   Str.string_match
      (Str.regexp ".*_[0-9]+")
      s
@@ -279,6 +280,35 @@ let do_sub s =
   else
     (texify s,"")
 
+let rec do_var v s =
+  (* return fully texified variable or number, or raise Not_found if it's not a var *)
+(*  let _ = print_string ("[dovar: >"^s^"<]") in *)
+  let _ = (Str.search_forward
+             (Str.regexp "\([0-9]*\)\([']*\)\($\|_\)")  (* always matches *)
+             s
+             1 ) in  (* must have at least one non-suffix character *)
+  let (s0,s1,s2,s3,s4) = (Str.string_before s (Str.match_beginning ()),
+                          Str.matched_group 1 s,
+                          Str.matched_group 2 s,
+                          Str.matched_group 3 s,
+                          Str.string_after s (Str.match_end ())) in
+  if    List.mem s0 !(!curmodals.vAR_PREFIX_LIST)
+     || List.mem_assoc s0 !(!curmodals.vAR_PREFIX_ALIST)
+     || ((List.mem s0 v || is_field s0) && !(!curmodals.sMART_PREFIX)) then (* treat as prefix *)
+                                              (* if smart, always do foo1 -> foo_1;
+                                                 otherwise, only if foo is specified as a prefix *)
+    (try List.assoc s0 !(!curmodals.vAR_PREFIX_ALIST)
+     with Not_found -> "\\tsvar{"^texify s0^"}")
+    ^(if s2 <> "" then s2 else "")           (* primes *)
+    ^(if s1 <> "" then "_{"^s1^"}" else "")  (* digits *)
+    ^(if s3 = "_" then "_{"^do_var v s4^"}" else "")  (* recurse on subscript; TeX error if combined with digits *)
+  else if List.mem s v || is_field s then  (* field names often reused as var names *)
+    "\\tsvar{"^texify s^"}"
+  else if Str.string_match (Str.regexp "[0-9]+") s 0 then  (* digits *)
+    s
+  else
+    raise Not_found (* not a variable *)
+
 let is_holop s = List.mem s !(!curmodals.hOL_OP_LIST)
 
 (* translations for symbols and particular identifiers; these take precedence over is_foo *)
@@ -296,24 +326,21 @@ let mident v s = (* munge alphanumeric identifier *)
   try List.assoc s !(!curmodals.hOL_ID_ALIST)
   with Not_found ->
     if (is_num s) then texify s else
-    let (c,sub)  = if (is_rule s)        then ("tsrule"    ,false) else
-                   if (is_con s)         then ("tscon"     ,false) else
-                   if (is_aux s)         then ("tsaux"     ,false) else
-                   if (is_aux_infix s)   then ("tsauxinfix",false) else
-                   if (is_lib s)         then ("tslib"     ,true ) else
-                   if (is_field s)     (* treat as var, because name often shared *)
-                      || (is_var v s)    then ("tsvar"     ,!(!curmodals.sMART_PREFIX)
-                                                            || is_pref_var s) else
-                                              (* if smart, always do foo1 -> foo_1;
-                                                 otherwise, only if foo is specified as a prefix *)
-                     if (is_holop s)     then ("tsholop"   ,false) else
-                   if (is_type s)        then ("tstype"    ,false) else
-                   (write_unseen_string s;    ("tsunknown" ,false)) in
-    if sub then
-      let (sb,ss) = do_sub s in
-      "\\"^c^"{"^sb^"}"^ss
-    else
-      "\\"^c^"{"^texify s^"}"
+    let normal c s = "\\"^c^"{"^texify s^"}" in
+    let under  c s = (let (sb,ss) = do_sub s in "\\"^c^"{"^sb^"}"^ss) in
+    let copy   c s = c in
+    let (c,sub)  = if (is_rule s)        then ("tsrule"    ,normal) else
+                   if (is_con s)         then ("tscon"     ,normal) else
+                   if (is_aux s)         then ("tsaux"     ,normal) else
+                   if (is_aux_infix s)   then ("tsauxinfix",normal) else
+                   if (is_lib s)         then ("tslib"     ,under ) else
+                   try let c = do_var v s
+                       in (c, copy)
+                   with Not_found ->
+                   if (is_holop s)       then ("tsholop"   ,normal) else
+                   if (is_type s)        then ("tstype"    ,normal) else
+                   (write_unseen_string s;    ("tsunknown" ,normal)) in
+    sub c s
 
   (* would be good to check is_* for overlaps *)
 
