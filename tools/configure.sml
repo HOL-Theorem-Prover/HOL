@@ -54,24 +54,20 @@ end;
  ---------------------------------------------------------------------------*)
 
 val SRCDIRS =
- ["src/portableML", "src/0", "src/parse",
-  "src/bool", "src/basicHol90", "src/taut", "src/compute/src",
-  "src/goalstack", "src/q",
-  "src/combin", "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
+ ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack",
+  "src/taut", "src/compute/src", "src/q", "src/combin", "src/lite",
+  "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
   "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
-  "src/hol88", "src/ind_def/src", "src/IndDef",
+  (*"src/ind_def/src",*)"src/IndDef",
   "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
-  "src/datatype",  "src/list/src", "src/tree",
-  "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
-  "src/datatype/basicrec", "src/datatype/mutrec/utils", "src/datatype/mutrec",
-  "src/datatype/nestrec", "src/datatype/mutual",
+  "src/datatype",  "src/list/src", (* "src/tree", *)
+  (* "src/decision/src", *) "src/tfl/src", "src/unwind", "src/boss",
   "src/llist", "src/integer", "src/res_quan/src",
-  "src/set/src", "src/pred_set/src",  "src/string/theories", "src/string/src",
+  "src/pred_set/src",  "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src",
-  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
-  "src/temporal/src", "src/temporal/smv.2.4.3", "src/BoyerMoore",
-  "src/prob"]
+  "src/finite_map", "src/real", "src/bag", "src/ring/src",
+  "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob"]
   @
   (if OS="linux" orelse OS="solaris"
    then ["src/muddy/muddyC", "src/muddy", "src/HolBdd"]
@@ -85,13 +81,12 @@ val space  = " ";
 fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
               TextIO.flushOut TextIO.stdOut);
 
-local val expand_backslash =
-            String.translate
-                (fn #"\\" => "\\\\"
-                  | #"\"" => "\\\""
-                  | ch => String.str ch)
+local fun expChar #"\\" = "\\\\"
+        | expChar #"\"" = "\\\""
+        | expChar ch    = String.str ch
+      val exp_bslash = String.translate expChar
 in
-fun quote s = String.concat["\"", expand_backslash s, "\""]
+fun quote s = String.concat["\"", exp_bslash s, "\""]
 end;
 
 (*---------------------------------------------------------------------------
@@ -179,13 +174,24 @@ val _ =
         "val DEPDIR = _;\n"
           -->  String.concat["val DEPDIR = ",   quote DEPDIR, ";\n"],
         "fun MK_XABLE file = _;\n"
-          -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"]];
+          -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"],
+        "val DEFAULT_OVERLAY = _;\n"
+          --> "val DEFAULT_OVERLAY = SOME \"Overlay.ui\"\n"];
     systeml [yaccer, space, "Parser.grm"];
     systeml [lexer, space, "Lexer.lex"];
     systeml [compiler, " -c ", "Parser.sig"];
     systeml [compiler, " -c ", "Parser.sml"];
     systeml [compiler, " -c ", "Lexer.sml" ];
     systeml [compiler, " -c ", "Holdep.sml"];
+    systeml [yaccer, space, "Holmake_parse.grm"];
+    systeml [lexer, space, "Holmake_tokens.lex"];
+    systeml [compiler, " -c ", "Holmake_types.sig"];
+    systeml [compiler, " -c ", "Holmake_types.sml"];
+    systeml [compiler, " -c ", "Holmake_parse.sig"];
+    systeml [compiler, " -c ", "Holmake_parse.sml"];
+    systeml [compiler, " -c ", "Holmake_tokens.sml"];
+    systeml [compiler, " -c ", "Holmake_rules.sig"];
+    systeml [compiler, " -c ", "Holmake_rules.sml"];
     if OS <> "winNT" then
       systeml [compiler, " -standalone -o ", bin, space, target]
     else
@@ -194,7 +200,6 @@ val _ =
     FileSys.chDir current_dir
   end
 handle _ => (print "Couldn't build Holmake\n"; Process.exit Process.failure)
-
 
 (*---------------------------------------------------------------------------
     Instantiate tools/build.src, compile it, and put it in bin/build.
