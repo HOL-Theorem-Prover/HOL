@@ -541,35 +541,34 @@ fun build_command c arg = let
   exception FileNotFound
 in
   case c of
-    MOSMLC => let
-      val file = fromFile arg
-      val _ = FileSys.access(file, [FileSys.A_READ]) orelse
-        (print ("Wanted to compile "^file^", but it wasn't there\n");
-         raise FileNotFound)
-      val _ = print ("Compiling "^file^"\n")
-      open Process
-      val res =
-        if has_dq (normPath file) (* handle double-backquotes *) then let
-          val clone = variant file
-          val _ = FileSys.rename {old=file, new=clone}
-        in
-          if unquote_to clone file = Process.success then let
-            val res = compile debug ("-q"::(include_flags@["-c",file]))
-            val _ = FileSys.remove file
-            val _ = FileSys.rename{old=clone, new=file}
-          in
-            res
-          end
-          else
-            (FileSys.remove file handle _ => ();
-              FileSys.rename{old=clone, new=file};
-              raise Fail("Quote filter failed on: "^file^"\n"))
-        end
-        else
-          compile debug ("-q"::(include_flags@["-c",file]))
-    in
-      res = success
-    end
+    MOSMLC => 
+     let val file = fromFile arg
+         val _ = FileSys.access(file, [FileSys.A_READ]) orelse
+                  (print ("Wanted to compile "^file^", but it wasn't there\n");
+                   raise FileNotFound)
+         val _ = print ("Compiling "^file^"\n")
+         open Process
+         val res =
+          if has_dq (normPath file) (* handle double-backquotes *) 
+          then let val clone = variant file
+                   val _ = FileSys.rename {old=file, new=clone}
+                   fun revert() = (FileSys.remove file handle _ => ();
+                                   FileSys.rename{old=clone, new=file})
+               in
+                 if unquote_to clone file = Process.success 
+                 then let val res = 
+                            compile debug ("-q"::(include_flags@["-c",file]))
+                             handle e => (revert(); 
+                                       print("Unable to compile: "^file^"\n");
+                                      raise CompileFailed)
+                      in revert(); res 
+                      end
+                 else (revert(); raise CompileFailed)
+               end
+          else compile debug ("-q"::(include_flags@["-c",file]))
+     in
+        res = success
+     end
   | BuildScript s => let
       val scriptsml_file = SML (Script s)
       val scriptsml = fromFile scriptsml_file
