@@ -123,9 +123,8 @@ fun foldl f zero []      = zero
 (* an imperative style, as its result is not as important as the side *)
 (* effect it brings about in the state.                               *)
 in
-  fun create_record typename fieldtypelist = let
+  fun core_rec_defn typename fieldtypelist = let
     open Psyntax
-    val app2 = C (curry op^)
     val (fields, types) = split fieldtypelist
     val typthm =
       Define_type.dtype {save_name = typename^"_Axiom",
@@ -135,6 +134,17 @@ in
                                      fixity = Prefix}]}
     val type_case_def = Prim_rec.define_case_constant typthm
     val tyinfo = TypeBase.gen_tyinfo {ax = typthm, case_def = type_case_def}
+  in
+    (tyinfo, typthm, fields, types)
+  end
+
+  fun prove_rectype_thms typename fieldtypelist = let
+
+    open Psyntax
+    fun store_thm (n, t, tac) = save_thm(n, prove(t,tac))
+
+    val app2 = C (curry op^)
+    val (tyinfo, typthm, fields, types) = core_rec_defn typename fieldtypelist
 
     (* we now have the type actually defined in typthm *)
     fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
@@ -323,13 +333,14 @@ in
       fun create_goal (f1,f2) =
         (--`^f1 x (^f2 z ^var) = ^f2 z (^f1 x ^var)`--)
       val goals = map create_goal lower_triangle
-      val thms = map (C (curry prove) tactic) goals
+      val upd_canon_thms = map (C (curry prove) tactic) goals
       (* in the case where there is only one constructor, goals and thms
        will both be empty.  In this case, we don't want to apply LIST_CONJ
        to them *)
       val updcanon_thm =
         if (List.length thms > 0) then
-          save_thm(typename^"_updcanon", (LIST_CONJ (map GEN_ALL thms)))
+          save_thm(typename^"_updcanon",
+                   (LIST_CONJ (map GEN_ALL upd_canon_thms)))
         else
           TRUTH
 
@@ -404,8 +415,6 @@ in
         val literal_equality = store_thm(thmname, goal, tactic)
       end
 
-
-
       (* add to the TypeBase's simpls entry for the record type *)
       val existing_simpls = TypeBase.simpls_of tyinfo
       val new_simpls = [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
@@ -413,7 +422,6 @@ in
                         literal_equality]
       val new_tyinfo =
         TypeBase.put_simpls (existing_simpls @ new_simpls) tyinfo
-      val _ = TypeBase.write new_tyinfo
 
       (* set up parsing for the record type *)
       (* want to overload fieldnames as synonyms for the field functions,
@@ -446,6 +454,13 @@ in
       val _ = ListPair.app add_record_fupdate (fields, fupdfn_terms)
 
     in
+      (new_tyinfo,
+
+       (map (fn s => typename ^ s)
+        (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
+          "_accupds", "_accfupds", "_updupds"] @
+         (if not (null upd_canon_thms) then ["_updcanon"] else []))),
+
       {type_axiom = typthm,
        accessor_fns = accessor_thm,
        update_fns = updfn_thm,
@@ -456,8 +471,22 @@ in
        upd_upd_thm = updupd_thm,
        upd_canon_thm = updcanon_thm,
        cons_11_thm = oneone_thm,
-       create_fn = create_term}
+       create_fn = create_term})
     end;
+
+  fun create_record typename fieldtypelist = let
+    val (tyinfo, _, results) =
+      prove_rectype_thms typename fieldtypelist
+  in
+    TypeBase.write tyinfo;
+    results
+  end
+
+  fun prim_define_recordtype typename fieldtypelist = let
+    val (tyinfo, simplnames, _) = prove_rectype_thms typename fieldtypelist
+  in
+    (tyinfo, simplnames)
+  end
 
   fun create_term_fn_base arb str accthm = let
     (* str is the name of a type in theory, we can pull out the appropriate

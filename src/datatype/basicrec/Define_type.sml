@@ -1325,11 +1325,13 @@ fun make_type_clause tyname (i,(constructor, args)) =
  end;
 
 fun parse_tyspec q =
-   case ParseDatatype.parse q
-    of [(name,clauses)] =>
-           {ty_name=name, clauses=map_enum (make_type_clause name) clauses}
-     | [] => raise ERR "parse_tyspec" "empty type specification"
-     | _ => raise ERR "parse_tyspec" "more than one type specified";
+   case ParseDatatype.parse q of
+     [(name, ParseDatatype.WithConstructors clauses)] =>
+       {ty_name=name, clauses=map_enum (make_type_clause name) clauses}
+   | [(_, ParseDatatype.RecordType _)] =>
+       raise ERR "parse_tyspec" "Can't handle record definitions"
+   | [] => raise ERR "parse_tyspec" "empty type specification"
+   | _ => raise ERR "parse_tyspec" "more than one type specified";
 
 fun define_type {name=save_name, type_spec, fixities} =
    let val {ty_name,clauses} = parse_tyspec type_spec

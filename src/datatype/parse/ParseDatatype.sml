@@ -12,9 +12,12 @@ fun ERR s1 s2 =
    message = s2};
 
 (* grammar we're parsing is:
-    G ::=         id "=" <phrase> ( "|" <phrase> ) *
-    phrase ::=    id  | id "of" <ptype> ( "=>" <ptype> ) *
-    ptype ::=     <type> | "(" <type> ")"
+    G ::=              id "=" <form>
+    form ::=           <phrase> ( "|" <phrase> ) *  |  <record_defn>
+    record_defn ::=    "<|"  <idtype_pairs> "|>"
+    idtype_pairs ::=   id ":=" <type> | id := <type> "," <idtype_pairs>
+    phrase ::=         id  | id "of" <ptype> ( "=>" <ptype> ) *
+    ptype ::=          <type> | "(" <type> ")"
  *
  * It had better be the case that => is not a type infix.  This is true of
  * the standard HOL distribution.  In the event that => is an infix, this
@@ -30,13 +33,32 @@ datatype pretype =
   dVartype of string | dTyop of (string * pretype list) |
   dAQ of Type.hol_type
 
+fun pretypeToType pty =
+  case pty of
+    dVartype s => Type.mk_vartype s
+  | dTyop (s, args) => Type.mk_type{Tyop = s, Args = map pretypeToType args}
+  | dAQ pty => pty
+
+datatype datatypeForm =
+  WithConstructors of ((string * pretype list) list) |
+  RecordType of (string * pretype) list
+type datatypeAST = string (* type name *) * datatypeForm
+
+
+fun ident0 s =
+  (itemP Char.isAlpha >-                                      (fn char1 =>
+   many_charP (fn c => Char.isAlphaNum c orelse c = #"_")  >- (fn rest =>
+   return (str char1 ^ rest)))) s
+fun ident s = token ident0 s
+
+
 fun parse_type strm =
   parse_type.parse_type {vartype = dVartype, tyop = dTyop, antiq = dAQ} true
   (Parse.type_grammar()) strm
 fun parse_constructor_id s =
   (token (many1_charP (fn c => Lexis.in_class (Lexis.hol_symbols, Char.ord c)))
    ++
-   token normal_alpha_ident) s
+   ident) s
 
 val parse_phrase =
   parse_constructor_id >-                            (fn constr_id =>
@@ -46,12 +68,22 @@ val parse_phrase =
     NONE => return (constr_id, [])
   | SOME tylist => return (constr_id, tylist)))
 
-val parse_G =
-  token normal_alpha_ident >-                        (fn tyname =>
-  symbol "=" >> sepby1 (symbol "|") parse_phrase >-  (fn phrlist =>
-  return (tyname, phrlist)))
+val parse_record_fld =
+  ident >-
+  (fn fldname => symbol ":" >>
+   parse_type >-
+   (fn pty => return (fldname, pty)))
 
-type datatypeAST = string * ((string * pretype list) list)
+
+val parse_form =
+  (symbol "<|" >> sepby1 (symbol ";") parse_record_fld >-
+   (fn flds => symbol "|>" >> return (RecordType flds))) ++
+  (sepby1 (symbol "|") parse_phrase >-  return o WithConstructors)
+
+val parse_G =
+  ident >-                                           (fn tyname =>
+  symbol "=" >> parse_form >-                        (fn form =>
+  return (tyname, form)))
 
 fun fragtoString (QUOTE s) = s
   | fragtoString (ANTIQUOTE _) = " ^... "

@@ -137,33 +137,50 @@ end;
      declared datatype from an external theory.
  ---------------------------------------------------------------------------*)
 
-fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
-  = adjoin_to_theory
+fun adjoin base_names extras = let
+  val {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct} =
+    base_names
+in
+  adjoin_to_theory
     {sig_ps = NONE,
-     struct_ps = SOME (fn ppstrm =>
-       let val S = PP.add_string ppstrm
-           fun NL() = PP.add_newline ppstrm
-           fun do_size(c,s) =
-              let open Globals
-                  val strc = with_flag(show_types,true) term_to_string c
-                  val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
-              in
-                 S ("      size="^line);
-                 NL();
-                 S ("                "^s^"),")
-              end
+     struct_ps = SOME
+     (fn ppstrm => let
+       val S = PP.add_string ppstrm
+       fun NL() = PP.add_newline ppstrm
+       fun do_size(c,s) = let
+         open Globals
+         val strc = with_flag(show_types,true) term_to_string c
+         val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
        in
-           S "val _ = TypeBase.write";            NL();
-           S "  (TypeBase.mk_tyinfo";             NL();
-           S ("     {ax="^ax^",");                NL();
-           S ("      case_def="^case_def^",");    NL();
-           S ("      case_cong="^case_cong^",");  NL();
-           S ("      induction="^induction^",");  NL();
-           S ("      nchotomy="^nchotomy^",");    NL();
-           do_size size;                          NL();
-           S ("      one_one="^one_one^",");  NL();
-           S ("      distinct="^distinct^"});")
-       end)};
+         S ("      size="^line);
+         NL();
+         S ("                "^s^"),")
+       end
+       fun do_simpls () = (S "["; app S (Lib.commafy extras); S "]")
+     in
+       S "val _ =";                           NL();
+       S "   let val tyinfo0 = ";             NL();
+       S "     TypeBase.mk_tyinfo";           NL();
+       S ("     {ax="^ax^",");                NL();
+       S ("      case_def="^case_def^",");    NL();
+       S ("      case_cong="^case_cong^",");  NL();
+       S ("      induction="^induction^",");  NL();
+       S ("      nchotomy="^nchotomy^",");    NL();
+       do_size size;                          NL();
+       S ("      one_one="^one_one^",");      NL();
+       S ("      distinct="^distinct^"}");    NL();
+       S "   in";                             NL();
+       S "    TypeBase.write ";               NL();
+       if (not (null extras)) then
+         (S "    (TypeBase.put_simpls (";
+          do_simpls();
+          S " @ TypeBase.simpls_of tyinfo0) tyinfo0)")
+       else
+         (S "    tyinfo0");
+       NL();
+       S "   end;";                           NL()
+     end)}
+end
 
 
 fun join f g x =
@@ -174,6 +191,45 @@ fun join f g x =
                    | SOME(x,_) => SOME x);
 
 fun tysize_env db = join TypeBase.size_of (TypeBase.get db);
+
+(* ----------------------------------------------------------------------
+   Primitive function for defining a type, based on the form of the
+   datatypeAST returned from parsing a quotation
+   ---------------------------------------------------------------------- *)
+
+fun deftype_from_parse dtastl =
+  case dtastl of
+    [] => raise ERR "deftype_from_parse" "No type forms specificed"
+  | [(tyname, dtform)] => let
+    in
+      case dtform of
+        ParseDatatype.WithConstructors Cspecs => let
+          val numbered_clauses = Lib.enumerate 1 Cspecs
+          val type_clauses =
+            map (Define_type.make_type_clause tyname) numbered_clauses
+          fun prefix{constructor,args} =
+            {constructor=constructor, args=args, fixity=Prefix}
+          val ax = Define_type.dtype {clauses = map prefix type_clauses,
+                                      save_name = tyname ^"_Axiom",
+                                      ty_name = tyname}
+        in
+          (tyname,
+           TypeBase.gen_tyinfo {ax=ax,
+                                case_def = Prim_rec.define_case_constant ax},
+           [])
+        end
+      | ParseDatatype.RecordType flds0 => let
+          val flds =
+            map (fn (n,pty) => (n, ParseDatatype.pretypeToType pty)) flds0
+          val (tyinfo, simpl_names) =
+            RecordType.prim_define_recordtype tyname flds
+        in
+          (tyname, tyinfo, simpl_names)
+        end
+    end
+  | _ =>
+    raise ERR "deftype_from_parse" "More than one type form not yet supported"
+
 
 (*---------------------------------------------------------------------------
 
@@ -197,48 +253,42 @@ fun tysize_env db = join TypeBase.size_of (TypeBase.get db);
 
  ---------------------------------------------------------------------------*)
 
-fun primHol_datatype db q =
-  let open Define_type
-      val {ty_name, clauses} = Define_type.parse_tyspec q
-      fun prefix{constructor,args} =
-          {constructor=constructor, args=args, fixity=Prefix}
-      fun name s = (ty_name^s)
-      val axname = name "_Axiom"
-      val ax = dtype{clauses=map prefix clauses,
-                     save_name=axname,ty_name=ty_name}
-      val tyinfo =
-        TypeBase.gen_tyinfo {ax=ax,
-                             case_def = Prim_rec.define_case_constant ax}
-      val one_one = TypeBase.one_one_of tyinfo
-      val distinct = TypeBase.distinct_of tyinfo
-      val size_def = define_size (TypeBase.axiom_of tyinfo) (tysize_env db)
-      val tyinfo'  = TypeBase.put_size (defn_const size_def,size_def) tyinfo
-      val _ = save_thm (name"_case_cong",TypeBase.case_cong_of tyinfo')
-      val _ = save_thm (name"_induction",TypeBase.induction_of tyinfo')
-      val _ = save_thm (name"_nchotomy",TypeBase.nchotomy_of tyinfo')
-      val _ =
-        case one_one of
-          NONE => ()
-        | SOME th => (save_thm(name "_11", th); ())
-      val _ =
-        case distinct of
-          NONE => ()
-        | SOME th => (save_thm(name "_distinct", th); ())
-  in
-     adjoin{ax=axname,case_def=name"_case_def",
-            case_cong=name "_case_cong",
-            induction=name "_induction",
-            nchotomy=name "_nchotomy",
-            size=(#const(const_decl(name "_size")),name "_size_def"),
-            one_one=case one_one
-                     of NONE => "NONE"
-                      | _ => ("SOME "^name"_11"),
-            distinct=case distinct
-                     of NONE => "NONE"
-                      | _ => ("SOME "^name"_distinct")};
-     tyinfo'
-  end
-  handle e as HOL_ERR _ => Raise e;
+fun primHol_datatype db q = let
+  val parse_result = ParseDatatype.parse q
+  val (ty_name, tyinfo, extras) = deftype_from_parse parse_result
+  fun name s = (ty_name^s)
+  val one_one = TypeBase.one_one_of tyinfo
+  val distinct = TypeBase.distinct_of tyinfo
+  val size_def = define_size (TypeBase.axiom_of tyinfo) (tysize_env db)
+  val tyinfo'  = TypeBase.put_size (defn_const size_def,size_def) tyinfo
+  val _ = save_thm (name"_case_cong",TypeBase.case_cong_of tyinfo')
+  val _ = save_thm (name"_induction",TypeBase.induction_of tyinfo')
+  val _ = save_thm (name"_nchotomy",TypeBase.nchotomy_of tyinfo')
+  val _ =
+    case one_one of
+      NONE => ()
+    | SOME th => (save_thm(name "_11", th); ())
+  val _ =
+    case distinct of
+      NONE => ()
+    | SOME th => (save_thm(name "_distinct", th); ())
+in
+  adjoin{ax= name"_Axiom",
+         case_def= name"_case_def",
+         case_cong= name "_case_cong",
+         induction= name "_induction",
+         nchotomy= name "_nchotomy",
+         size=(#const(const_decl(name "_size")),name "_size_def"),
+         one_one= case one_one of
+                    NONE => "NONE"
+                  | _ => ("SOME "^name"_11"),
+         distinct=case distinct of
+                    NONE => "NONE"
+                  | _ => ("SOME "^name"_distinct")}
+        extras;
+   tyinfo'
+end
+handle e as HOL_ERR _ => Raise e;
 
 
 fun Hol_datatype q =

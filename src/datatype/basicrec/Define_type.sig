@@ -18,6 +18,12 @@ sig
            clauses:{constructor:string, args:Type.hol_type option list} list
           }
 
+  val make_type_clause :
+    string ->                                        (* name of the type *)
+    (int * (string * ParseDatatype.pretype list)) ->
+    {constructor : string, args : Type.hol_type option list}
+
+
   val dtype : {save_name:string,ty_name:string,
                clauses:{constructor:string,
                         args:Type.hol_type option list,

@@ -465,9 +465,13 @@ in
   end
 end;
 
-fun transAST tynames (tyn,cargs) =
-  {type_name = tyn,
-   constructors = map (make_type_clause tynames) cargs};
+fun transAST tynames (tyn,dtform) =
+  case dtform of
+    ParseDatatype.WithConstructors cargs =>
+      {type_name = tyn, constructors = map (make_type_clause tynames) cargs}
+  | ParseDatatype.RecordType _ =>
+      raise ERR "transAST"
+        "Can't handle record forms in middle of mutual and/or nested type defn"
 
 
 fun prepare_quote q =
