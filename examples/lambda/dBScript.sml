@@ -15,12 +15,12 @@ structure dBScript =
 struct
 
 open HolKernel Parse basicHol90Lib;
-
-open bossLib pred_setTheory;
-
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+
+open bossLib pred_setTheory;
 infix &&; infix 8 by;
+
 
 val _ = new_theory"dB";
 
@@ -517,8 +517,7 @@ Induct
     THEN ZAP_TAC (list_ss && [NTH])
           [DECIDE `(n-d = SUC m) ==> (n-SUC d = m)`,NTH],
   `n - d = 0` by (REPEAT (POP_ASSUM MP_TAC) THEN CONV_TAC arithLib.ARITH_CONV)
-    THEN RW_TAC list_ss [NTH],
-  REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC arith_ss []]);
+    THEN RW_TAC list_ss [NTH]]);
 
 
 val PSUB_dCON = Q.store_thm("PSUB_dCON",
