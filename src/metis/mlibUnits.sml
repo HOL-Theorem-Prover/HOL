@@ -108,17 +108,15 @@ fun contr (INL th) _ = SOME th
   if is_contradiction th then SOME th
   else Option.mapPartial (ucontr uns) (total UNIT_SQUASH th);
 
-fun prove (INL th) = SOME o map (fn False => th | lit => CONTR lit th)
-  | prove (INR uns) = uprove uns;
+fun prove (INL th) lits = SOME (map (fn lit => CONTR lit th) lits)
+  | prove (INR uns) lits = uprove uns lits;
 
-fun demod (INL th) = K th
-  | demod (INR uns) = udemod uns;
-
-fun strengthen units th =
+fun demod (INL th) _ = th
+  | demod (INR uns) th =
     let
-      val th = demod units th
+      val th = udemod uns th
     in
-      case first (fn lit => prove units [lit]) (clause th) of
+      case first (fn lit => uprove uns [lit]) (clause th) of
         SOME [th] => th
       | _ => th
     end;

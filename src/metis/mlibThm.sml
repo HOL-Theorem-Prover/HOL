@@ -389,7 +389,8 @@ val is_unit_eq = can dest_unit_eq;
 (* Derived rules                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-fun CONTR lit th = RESOLVE (negate lit) (ASSUME lit) th;
+fun CONTR False th = th
+  | CONTR lit th = RESOLVE (negate lit) (ASSUME lit) th;
 
 fun WEAKEN lits th = foldl (uncurry CONTR) th (rev lits);
 

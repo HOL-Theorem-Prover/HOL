@@ -19,7 +19,6 @@ val subsumes   : units -> formula -> thm option
 val contr      : units -> thm -> thm option
 val prove      : units -> formula list -> thm list option
 val demod      : units -> thm -> thm
-val strengthen : units -> thm -> thm
 val info       : units -> string
 val pp_units   : units pp
 

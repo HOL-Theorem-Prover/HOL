@@ -37,7 +37,7 @@ fun AXIOM cl =
   if List.all is_literal cl then mlibThm (cl, (Axiom, []))
   else raise ERR "AXIOM" "argument not a list of literals";
 
-fun REFL tm = mlibThm ([mk_eq (tm, tm)], (Refl, []));
+fun REFL tm = mlibThm ([mk_eq (tm,tm)], (Refl, []));
 
 fun ASSUME fm =
   if is_literal fm then mlibThm ([fm, negate fm], (Assume, []))
