@@ -294,13 +294,13 @@ fun ho_match_term lconsts =
                     else safe_inserta (list_mk_abs(vargs',ctm), vhop) sofar
                  end
            ) handle HOL_ERR _ 
-             => itlist2 (match_term' env) vargs cargs 
-                        (match_term' env vhop chop sofar)
-                handle HOL_ERR{message="lists of different length",...}
-                 => let val (lv,rv) = dest_comb vtm
-                        val (lc,rc) = dest_comb ctm
-                    in match_term' env rv rc (match_term' env lv lc sofar)
-                    end
+              => itlist2 (match_term' env) vargs cargs 
+                         (match_term' env vhop chop sofar)
+             handle HOL_ERR _
+              => let val (lv,rv) = dest_comb vtm
+                     val (lc,rc) = dest_comb ctm
+                 in match_term' env rv rc (match_term' env lv lc sofar)
+                 end
         end
  in 
  fn vtm => fn ctm =>
