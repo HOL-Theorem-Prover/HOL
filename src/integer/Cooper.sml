@@ -45,6 +45,14 @@ in
   DEPTH_CONV remove_negated
 end
 
+fun ADDITIVE_TERMS_CONV c tm =
+  if is_disj tm orelse is_conj tm then
+    BINOP_CONV (ADDITIVE_TERMS_CONV c) tm
+  else if is_neg tm then RAND_CONV (ADDITIVE_TERMS_CONV c) tm
+  else if is_less tm orelse is_divides tm then
+    BINOP_CONV c tm
+  else ALL_CONV tm
+
 fun remove_bare_vars tm =
   if is_conj tm orelse is_disj tm orelse is_less tm orelse is_plus tm orelse
      is_divides tm
@@ -509,7 +517,7 @@ in
      REWR_CONV lcm_eliminate THENC
      RENAME_VARS_CONV [#Name (Term.dest_var var)] THENC
      BINDER_CONV (RATOR_CONV (RAND_CONV BETA_CONV)) THENC
-     DEPTH_CONV collect_additive_consts)
+     ADDITIVE_TERMS_CONV (TRY_CONV collect_additive_consts))
     term
   end
 end
@@ -1137,13 +1145,36 @@ val phase5_CONV = let
   fun expand tm =
     ((REWR_CONV RIGHT_AND_OVER_OR THENC BINOP_CONV expand) ORELSEC
      ALL_CONV) tm
+  fun EVERY_DISJ_CONV c tm =
+    if is_disj tm then
+      BINOP_CONV (EVERY_DISJ_CONV c) tm
+    else c tm
+  fun under_single_quantifier tm = let
+    val (bvar, body) = dest_exists tm
+  in
+    BINDER_CONV (RAND_CONV (mk_abs_CONV bvar)) THENC
+    REWR_CONV Ho_boolTheory.UNWIND_THM2 THENC BETA_CONV
+  end tm
+
   val do_lhs =
     LAND_CONV (BINDER_CONV (LAND_CONV resquan_remove THENC expand) THENC
-               SIMP_CONV int_ss [EXISTS_OR_THM]) THENC
-    TRY_CONV (REWR_CONV simple_bool_2 ORELSEC REWR_CONV simple_bool_3)
+               TOP_DEPTH_CONV EXISTS_OR_CONV THENC
+               EVERY_DISJ_CONV (under_single_quantifier THENC BETA_CONV)) THENC
+    REWRITE_CONV []
   val prc_conv = PURE_REWRITE_CONV [RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
                                     listTheory.MEM, OR_CLAUSES, AND_CLAUSES,
-                                    NOT_CLAUSES, INT_DIVIDES_1]
+                                    NOT_CLAUSES]
+
+  fun under_two_quantifiers tm = let
+    val (bvar, body) = dest_exists tm
+    val c =
+      LAND_CONV (REWR_CONV CONJ_COMM) THENC REWR_CONV (GSYM CONJ_ASSOC) THENC
+      RAND_CONV (mk_abs_CONV bvar)
+  in
+    BINDER_CONV c THENC REWR_CONV Ho_boolTheory.UNWIND_THM2 THENC
+    BETA_CONV
+  end tm
+
   fun do_rhs tm = let
     val f = if is_disj tm then RAND_CONV
             else if is_exists tm then I
@@ -1151,14 +1182,23 @@ val phase5_CONV = let
     val c =
       STRIP_QUANT_CONV
       (LAND_CONV (RAND_CONV resquan_remove THENC prc_conv) THENC expand) THENC
-      SIMP_CONV int_ss [EXISTS_OR_THM]
+      ((STRIP_QUANT_CONV (REWR_CONV F_and_l) THENC REWRITE_CONV []) ORELSEC
+       (TOP_DEPTH_CONV EXISTS_OR_CONV THENC
+        EVERY_DISJ_CONV (BINDER_CONV under_two_quantifiers THENC
+                         under_single_quantifier THENC BETA_CONV)))
   in
     f c tm
   end
 in
   do_lhs THENC do_rhs THENC
-  DEPTH_CONV collect_additive_consts
+  ADDITIVE_TERMS_CONV (TRY_CONV collect_additive_consts)
 end
+
+val obvious_improvements =
+  simpLib.SIMP_CONV int_ss [INT_LT_REFL, INT_NEG_0, INT_DIVIDES_MUL,
+                            INT_ADD_LID, INT_ADD_RID, INT_LT_ADD_NUMERAL,
+                            INT_LT_LADD, INT_DIVIDES_1]
+
 
 local
   val prc_conv = PURE_REWRITE_CONV [AND_CLAUSES, OR_CLAUSES]
@@ -1169,9 +1209,11 @@ in
         raise ERR "eliminate_existential" "term not an exists"
     val base_case =
       BINDER_CONV (phase1_CONV THENC phase2_CONV bvar THENC
-                   congruential_simplification THENC prc_conv) THENC
+                   REPEATC (CHANGED_CONV congruential_simplification) THENC
+                   prc_conv) THENC
       ((REWR_CONV EXISTS_SIMP THENC REWRITE_CONV []) ORELSEC
-       (phase3_CONV THENC phase4_CONV THENC phase5_CONV))
+       (phase3_CONV THENC phase4_CONV THENC phase5_CONV THENC
+        obvious_improvements))
   in
     if is_disj body then
       EXISTS_OR_CONV THENC (RAND_CONV eliminate_existential) THENC
@@ -1225,10 +1267,6 @@ in
     NONE
 end
 
-val obvious_improvements =
-  simpLib.SIMP_CONV int_ss [INT_LT_REFL, INT_NEG_0, INT_DIVIDES_MUL,
-                            INT_ADD_LID, INT_ADD_RID, INT_LT_ADD_NUMERAL,
-                            INT_LT_LADD]
 
 val boolcases_elim_thm = tautLib.TAUT_PROVE
   (Term`!p Q Q1 Q2. (p ==> (Q = Q1)) /\ (~p ==> (Q = Q2)) ==>
@@ -1302,7 +1340,7 @@ val decide_pure_presburger_term = let
       NONE => REDUCE_CONV
     | SOME f =>
         f (eliminate_quantifier THENC obvious_improvements) THENC
-        mainwork
+        REWRITE_CONV [] THENC mainwork
   end tm
 in
   phase0_CONV THENC mainwork
