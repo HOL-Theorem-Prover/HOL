@@ -348,32 +348,46 @@ Here the predicate $P$ restricts all of $x$, $y$ and $z$.
 
 \subsubsection{Derived syntactic forms}\label{derived-terms}
 
-\index{type checking, in HOL logic@type checking, in \HOL\
-  logic!special forms in|(} \index{quotation, in HOL logic@quotation,
-  in \HOL\ logic!of non-primitive terms|(} The \HOL{} quotation
-parser\index{quotation, in HOL logic@quotation, in \HOL\ logic!parser
-  for} can translate various standard logical notations\index{parsing,
-  of HOL logic@parsing, of \HOL\ logic!of standard notations} into
-primitive terms. For example, if \ml{+} has been declared an
-infix\index{infixes, in HOL logic@infixes, in \HOL\ logic} (as
-explained in Section~\ref{theoryfns}) (as it is when
+\index{type checking, in HOL logic@type checking, in \HOL{} logic!special forms in|(}
+\index{quotation, in HOL logic@quotation, in \HOL{} logic!of non-primitive terms|(}
+% don't refill the \index entries above, it's important to keep each
+% entry on one line
+The \HOL{} quotation parser
+%
+\index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}
+%
+can translate various standard logical
+notations
+%
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of standard notations}
+%
+into primitive terms. For example, if \ml{+} has been declared an
+infix
+%
+\index{infixes, in HOL logic@infixes, in \HOL{} logic}
+%
+(as explained in Section~\ref{theoryfns}) (as it is when
 \ml{arithmeticTheory} has been loaded), then \ml{``x+1``} is
-translated to \ml{``\$+~x~1``}. The escape character \ml{\$}\index{
-  escape, in HOL logic parser@\ml{\$} (escape, in \HOL\ logic
-  parser)}\index{declared constants, in HOL logic@declared constants,
-  in \HOL\ logic}\index{infixes, in HOL logic@infixes, in \HOL\ logic}
+translated to \ml{``\$+~x~1``}. The escape character \ml{\$}
+%
+\index{escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}
+\index{declared constants, in HOL logic@declared constants, in \HOL{} logic}
+\index{infixes, in HOL logic@infixes, in \HOL{} logic}
+%
 suppresses the infix behaviour of \ml{+} and prevents the quotation
 parser getting confused.  In general, \ml{\$} can be used to suppress
 any special syntactic behaviour a token (such as \texttt{if},
-\texttt{+} or \texttt{let}) \index{tokens@tokens!supressing parsing
-  behaviour of} might have. This is illustrated in the table below, in
-which the terms in the column headed \textit{`\ML{} quotation'} are
-translated by the quotation parser to the corresponding terms in the
-column headed \textit{`Primitive term'}.  Conversely, the terms in the
-latter column are always printed in the form shown in the former one.
-The \ML{} constructor expressions in the rightmost column evaluate to
-the same values (of type \ml{term}) as the other quotations in the
-same row.
+\texttt{+} or \texttt{let})
+%
+\index{tokens!supressing parsing behaviour of}
+%
+might have. This is illustrated in the table below, in which the terms
+in the column headed \textit{`\ML{} quotation'} are translated by the
+quotation parser to the corresponding terms in the column headed
+\textit{`Primitive term'}.  Conversely, the terms in the latter column
+are always printed in the form shown in the former one.  The \ML{}
+constructor expressions in the rightmost column evaluate to the same
+values (of type \ml{term}) as the other quotations in the same row.
 
 \bigskip
 
@@ -1674,12 +1688,12 @@ introduced by the following definitions:
    BIT1        |- !x. BIT1 n = n + (n + SUC 0)
    BIT2        |- !x. BIT2 n = n + (n + SUC(SUC 0))
 
-   ALT_ZERO    |- ALT_ZERO = 0
+   ALT_ZERO    |- ZERO = 0
 \end{verbatim}
 
 \noindent For example, the numeral $5$ is represented by the term
 \[
-   \ml{NUMERAL}(\ml{BIT1}(\ml{BIT2}(\ml{ALT\_ZERO})))
+   \ml{NUMERAL}(\ml{BIT1}(\ml{BIT2}\;\ml{ZERO}))
 \]
 and the \HOL{} parser and pretty-printer make such terms appear as
 numerals. This binary representation for numerals allows for
@@ -1717,15 +1731,52 @@ operations, using the usual names for the operations, \eg \verb|+|,
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
-  - numSyntax.mk_numeral
-       (Arbnum.fromString "3432432423423423234");
-  > val it = ``3432432423423423234`` : term
+   - numSyntax.mk_numeral
+        (Arbnum.fromString "3432432423423423234");
+   > val it = ``3432432423423423234`` : term
 
-  - numSyntax.dest_numeral it;
-  > val it = 3432432423423423234 : num
+   - numSyntax.dest_numeral it;
+   > val it = 3432432423423423234 : num
 
-  - Arbnum.+(it,it);
-  > val it = 6864864846846846468 : num
+   - Arbnum.+(it,it);
+   > val it = 6864864846846846468 : num
+\end{verbatim}
+\end{session}
+
+\paragraph{Numerals and the parser}
+%
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of numerals}
+\index{tokens!parsing numerals}
+%
+Simple digit sequences are parsed as decimal numbers, but the parser
+also supports the input of numbers in binary, octal and hexadecimal
+notation.  Numbers may be written in binary and hexadecimal form by
+prefixing them with the strings \ml{0b} and \ml{0x} respectively.  The
+`digits' A--F in hexadecimal numbers may be written in upper or lower
+case.  Binary numbers have their most significant digits left-most. In
+the interests of backwards compatibility, octal numbers are not
+enabled by default, but if the reference
+\ml{base\_tokens.allow\_octal\_input} is set to \ml{true}, then octal
+numbers are those that appear with leading zeroes.
+
+Finally, all numbers may be padded with underscore characters
+(\ml{\_}).  These can be used to groups digits for added legibility
+and have no semantic effect.
+
+Thus
+\begin{session}
+\begin{verbatim}
+   - ``0xAA``;
+   > val it = ``170`` : term
+
+   - ``0b1010_1011``;
+   > val it = ``171`` : term
+
+   - base_tokens.allow_octal_input := true;
+   > val it = () : unit
+
+   - ``067``;
+   > val it = ``55`` : term
 \end{verbatim}
 \end{session}
 
@@ -3627,7 +3678,7 @@ alternative to $(\alpha,\beta)$\verb+fmap+.
 The empty map ({\small\verb+FEMPTY+}), the updating of a map
 ({\small\verb+FUPDATE+}), the application of a map to an argument
 ({\small\verb+FAPPLY+}), and the domain of a map
-({\small\verb+FDOM+}) are the main notions in the theory. 
+({\small\verb+FDOM+}) are the main notions in the theory.
 %
 {\small
 \begin{verbatim}
@@ -3649,7 +3700,7 @@ map update with map application.  {\small\verb+fmap_EXT+} is an
 extensionality result: two maps are equal if they have the same domain
 and agree when applied to arguments in that domain. One can prove
 properties of finite maps by induction on the construction of the map
-({\small\verb+fmap_INDUCT+}).  The cardinality of a finite map is 
+({\small\verb+fmap_INDUCT+}).  The cardinality of a finite map is
 just the cardinality of its domain ({\small\verb+FCARD_DEF+}); from
 this a recursive characterization ({\small\verb+FCARD_FUPDATE+}) is
 derived.
@@ -3659,14 +3710,14 @@ derived.
   FAPPLY_FUPDATE_THM
     |- !f a b x. (f |+ (a,b)) ' x = (if x = a then b else f'x)
   fmap_EQ_THM
-    |- !f g. (f = g) = 
+    |- !f g. (f = g) =
              (FDOM f = FDOM g) /\ (!x. x IN FDOM f ==> (f'x = g'x))
   fmap_INDUCT
     |- !P. P FEMPTY /\
            (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (f |+ (x,y))) ==> !f. P f
   FCARD_DEF  |- FCARD fm = CARD (FDOM fm)
   FCARD_FUPDATE
-    |- !fm a b. FCARD(fm |+ (a,b)) = 
+    |- !fm a b. FCARD(fm |+ (a,b)) =
                   if a IN FDOM fm then FCARD fm else 1 + FCARD fm
 \end{verbatim}}
 
@@ -3686,10 +3737,10 @@ to {\small\verb#(fm |+ (k1,v1)) |+ (k2,v2)#}.
 
 \paragraph {Domain and range}
 
-The domain of a finite map is the set of elements that it applies to; 
+The domain of a finite map is the set of elements that it applies to;
 this can be characterized recursively
 ({\small\verb+FDOM_FUPDATE+}). The range of a map is defined in the
-usual way. 
+usual way.
 {\small
 \begin{verbatim}
   FDOM_FUPDATE
@@ -3707,7 +3758,7 @@ set. These notions have recursive versions as well
 \begin{verbatim}
   DRESTRICT_DEF
     |- !f r. (FDOM (DRESTRICT f r) = (FDOM f) INTER r) /\
-             (!x. DRESTRICT f r ' x = 
+             (!x. DRESTRICT f r ' x =
                     (if x IN ((FDOM f) INTER r) then f'x else FEMPTY'x))
   RRESTRICT_DEF
     |- !f r. (FDOM (RRESTRICT f r) = {x | x IN FDOM f /\ f ' x IN r}) /\
@@ -3734,13 +3785,13 @@ definition. Again, this concept has a alternate recursive presentation
   fmap_domsub
     |- (fm \\ k) = DRESTRICT fm (COMPL {k})
   DOMSUB_FUPDATE_THM
-    |- !fm k1 k2 v. (fm |+ (k1,v)) \\ k2 = 
+    |- !fm k1 k2 v. (fm |+ (k1,v)) \\ k2 =
                      if (k1 = k2) then (fm \\ k2) else (fm \\ k2) |+ (k1, v)
 \end{verbatim}}
 
 \paragraph {Union and sub-maps}
 
-Unlike the union of sets, the union of two finite maps 
+Unlike the union of sets, the union of two finite maps
 ({\small\verb+FUNION_DEF+}) is not symmetric: the domain of the first
 map takes precedence. The notion of a finite map being a submap of another
 ({\small\verb+SUBMAP+}, infix) is an extension of how subsets are formalized.
@@ -3835,3 +3886,8 @@ Three large developments: Klaus Schneider's development of temporal logic and $\
 The $\mu$-calculus. See Hasan Amjad's thesis.
 \subsubsection{Computation Tree Logic (CTL)}
 The $\mu$-calculus. See Hasan Amjad's thesis.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
