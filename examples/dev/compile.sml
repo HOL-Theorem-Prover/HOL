@@ -1079,14 +1079,18 @@ fun BUS_MATCH vst bus =
  handle HOL_ERR _ => [];
 
 (*****************************************************************************)
-(* A pure abstraction has the form ``\<varstruct>.<body>`` where             *)
-(* <body> is built out of variables in <varstruct> using pairing.            *)
+(* A pure abstraction has the form ``\<varstruct>. <body>`` where            *)
+(* <body> is built out of variables in <varstruct> and combinational         *)
+(* constants using pairing.                                                  *)
 (*****************************************************************************)
 fun is_pure_abs tm =
  is_pabs tm
-  andalso (subtract 
-            (strip_pair(snd(dest_pabs tm)))
-            (strip_pair(fst(dest_pabs tm))) = []);
+  andalso 
+   all
+    is_combinational_const
+    (subtract 
+     (strip_pair(snd(dest_pabs tm)))
+     (strip_pair(fst(dest_pabs tm))));
 
 (*****************************************************************************)
 (* Synthesise combinational circuits.                                        *)
@@ -1122,7 +1126,7 @@ fun is_pure_abs tm =
 val if_print_flag = ref true;
 fun if_print s = if !if_print_flag then print s else ();
 fun if_print_term tm = if !if_print_flag then print_term tm else ();
-fun COMB_SYNTH_CONV tm =
+fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
  if is_comb tm
      andalso is_comb(rator tm)
      andalso is_const(rator(rator tm))
@@ -1134,34 +1138,21 @@ fun COMB_SYNTH_CONV tm =
        val (args,bdy) = dest_pabs abstr
        val (in_bus,out_bus) = dest_pair(rand tm)
        val time_ty = hd(snd(dest_type(type_of in_bus)))
-       val args_match = 
-            BUS_MATCH args in_bus
-            handle HOL_ERR _ => raise ERR "SYNTH_COMB" "input match failure"
+       val args_match = BUS_MATCH args in_bus
    in
-    if is_pure_abs abstr
-     then let val bdy_match =
-               BUS_MATCH bdy out_bus
-               handle HOL_ERR _ 
-               => raise ERR "SYNTH_COMB" "output match failure"
-              val goal =
-               mk_eq
-                (tm,
-                 list_mk_conj
-                  (map
-                   (fn (t1,t2) => mk_eq(t2,assoc t1 args_match)) 
-                   bdy_match))
+    if is_combinational_const bdy
+     then let val goal = ``^tm = CONSTANT ^bdy ^out_bus``
           in
            prove
             (goal,
-             REWRITE_TAC[COMB_def,BUS_CONCAT_def] 
-             THEN GEN_BETA_TAC 
-             THEN Ho_Rewrite.REWRITE_TAC[PAIR_EQ,FORALL_AND_THM]
-             THEN Ho_Rewrite.REWRITE_TAC[GSYM FUN_EQ_THM])
+             REWRITE_TAC[COMB_def,CONSTANT_def,FUN_EQ_THM] 
+              THEN GEN_BETA_TAC 
+              THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
-    else if is_var bdy andalso can (assoc bdy) args_match
+     else if is_var bdy andalso can (assoc bdy) args_match
      then let val goal = ``^tm = (^out_bus = ^(assoc bdy args_match))``
           in
            prove
@@ -1173,14 +1164,45 @@ fun COMB_SYNTH_CONV tm =
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
-     else if is_combinational_const bdy
-     then let val goal = ``^tm = CONSTANT ^bdy ^out_bus``
+     else if is_pure_abs abstr
+     then let val bdy_match = BUS_MATCH bdy out_bus
+              val goal =
+               mk_eq
+                (tm,
+                 list_mk_conj
+                  (map
+                   (fn (t1,t2) => 
+                     if is_combinational_const t1
+                      then ``CONSTANT ^t1 ^(assoc t1 bdy_match)``
+                      else mk_eq(t2,assoc t1 args_match)) 
+                   bdy_match))
           in
            prove
             (goal,
-             REWRITE_TAC[COMB_def,CONSTANT_def,FUN_EQ_THM] 
-              THEN GEN_BETA_TAC 
-              THEN REWRITE_TAC[])
+             REWRITE_TAC[COMB_def,BUS_CONCAT_def,CONSTANT_def] 
+             THEN GEN_BETA_TAC 
+             THEN Ho_Rewrite.REWRITE_TAC[PAIR_EQ,FORALL_AND_THM]
+             THEN Ho_Rewrite.REWRITE_TAC[GSYM FUN_EQ_THM])
+           handle HOL_ERR _ =>
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+          end
+     else if is_pair bdy andalso is_BUS_CONCAT out_bus
+     then let val (bdy1,bdy2) = dest_pair bdy
+              val (out_bus1,out_bus2) = dest_BUS_CONCAT out_bus
+              val goal = 
+                   ``^tm = 
+                     COMB ^(mk_pabs(args, bdy1)) (^in_bus,^out_bus1) /\
+                     COMB ^(mk_pabs(args, bdy2)) (^in_bus,^out_bus2)``
+          in
+          prove
+           (goal,
+            REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
+             THEN GEN_BETA_TAC 
+             THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
+             THEN REWRITE_TAC[PAIR_EQ]
+             THEN EQ_TAC
+             THEN RW_TAC bool_ss [])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
@@ -1203,26 +1225,6 @@ fun COMB_SYNTH_CONV tm =
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n";
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
-          end
-     else if is_pair bdy andalso is_BUS_CONCAT out_bus
-     then let val (bdy1,bdy2) = dest_pair bdy
-              val (out_bus1,out_bus2) = dest_BUS_CONCAT out_bus
-              val goal = 
-                   ``^tm = 
-                     COMB ^(mk_pabs(args, bdy1)) (^in_bus,^out_bus1) /\
-                     COMB ^(mk_pabs(args, bdy2)) (^in_bus,^out_bus2)``
-          in
-          prove
-           (goal,
-            REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
-             THEN GEN_BETA_TAC 
-             THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
-             THEN REWRITE_TAC[PAIR_EQ]
-             THEN EQ_TAC
-             THEN RW_TAC bool_ss [])
-           handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
-            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_cond bdy
      then let val (test_tm,then_tm,else_tm) = dest_cond bdy
@@ -1634,7 +1636,18 @@ val MAKE_NETLIST =
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
-(*
+
+(* This needs fixing, so have put backer older version *)
+val MAKE_CIRCUIT =
+ DISCH_ALL                                                                 o
+ LIST_ANTE_EXISTS_INTRO                                                    o 
+ (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL at_thms)))                o
+ (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                 o
+ at_SPEC_ALL ``clk:num->bool``                                             o
+ Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
+ DEV_IMP_FORALL                                                            o
+ MAKE_NETLIST;
+
 val MAKE_CIRCUIT =
  DISCH_ALL                                                                 o
  LIST_ANTE_EXISTS_INTRO                                                    o 
@@ -1667,19 +1680,6 @@ val MAKE_CIRCUIT =
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
    GSYM DEL_IMP_THM,DEL_IMP_def,
    Ite_def,Par_def,Seq_def,o_THM];
-*)
-
-val MAKE_CIRCUIT =
- DISCH_ALL                                                                 o
- LIST_ANTE_EXISTS_INTRO                                                    o 
- (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL at_thms)))                o
- (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                 o
- at_SPEC_ALL ``clk:num->bool``                                             o
- Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
- DEV_IMP_FORALL                                                            o
- CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
- MAKE_NETLIST;
-
 
 
 
