@@ -300,7 +300,8 @@ fun mk_redconv op_t =
    list_mk_comb(op_t, [zero, b_v]), list_mk_comb(op_t, [zero, zero])]
 
 val ARITH_ss = simpLib.SIMPSET
-    {convs = flatten (map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
+    {convs = mk_redconv0 (--`SUC 0`--) :: mk_redconv0 (--`SUC ^a_v`--) ::
+             flatten (map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
                                       --`$DIV`--, --`$MOD`--, --`$EXP`--,
                                       --`$<`--, --`$<=`--, --`$>`--,
                                       --`$>=`--,
