@@ -1,6 +1,8 @@
 
-BODY
- {background-color: white}
+BODY {
+  background-color: white;
+  padding: 0.5em 1em 0.5em 1em;
+}
 
 DIV.TYPE
  {padding-left: 0.5em;
@@ -8,7 +10,6 @@ DIV.TYPE
   border: solid;
   border-color : black;
   color: crimson;
-  width : 95%;
   font-weight: bold;
   font-family: Courier, monospace;
   font-size: large}

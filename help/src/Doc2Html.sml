@@ -78,10 +78,10 @@ fun html (name,sectionl) ostrm =
                                         out","; out "&nbsp;&nbsp;\n";
                                         outlinks t)
              in
-               (out "<DT><SPAN class = \"FIELD-NAME\"><DT>SEEALSO</DT></SPAN>\n";
-                out "<SPAN class = \"FIELD-BODY\"><DD>";
+               (out "<dt><span class = \"FIELD-NAME\">SEEALSO</span></dt>\n";
+                out "<span class = \"FIELD-BODY\"><dd>";
                 outlinks sslist;
-                out "</DD></SPAN>\n")
+                out "</dd></span>\n")
              end
        | markout_section (TYPE _) = raise Fail "markout_section: TYPE"
 
@@ -112,7 +112,7 @@ fun html (name,sectionl) ostrm =
      out "<DL>\n";
      List.app markout_section (tl sectionl);
      out "</DL>\n\n";
-     back_matter ("http://hol.sourceforge.net", "Kananaskis-1")
+     back_matter ("http://hol.sourceforge.net", "Kananaskis-3")
   end;
 
 fun trans htmldir docdir docname = let
