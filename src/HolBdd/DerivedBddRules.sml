@@ -7,12 +7,13 @@
 (* (builds on some of Ken Larsen's code)                                     *)
 (*****************************************************************************)
 (*                                                                           *)
-(* Revision history:                                                         *)
+(* Revision history (major events only):                                     *)
 (*                                                                           *)
 (*   Mon Oct  8 10:27:40 BST 2001 -- created file                            *)
 (*   Thu Nov  1 21:04:27 GMT 2001 -- updated for judgement assumptions       *)
 (*   Mon Nov  5 11:15:51 GMT 2001 -- updated documentation in comments       *)
 (*   Wed Nov  7 11:38:19 GMT 2001 -- changed to MachineTransitionTheory      *)
+(*   Tue Nov 27 15:42:00 GMT 2001 -- added findTrace and BddRhsOracle        *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -46,7 +47,6 @@ fun hol_err msg func =
  (print "DerivedBddRules: hol_err \""; print msg; 
   print "\" \""; print func; print "\"\n";
   raise mk_HOL_ERR "HolBdd" func msg);
-
 
 (*****************************************************************************)
 (* Ken Larsen writes:                                                        *)
@@ -262,7 +262,7 @@ fun termToTermBdd tm =
 fun MkPrevThm Rth =
  let val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
      val (s,s') = pairSyntax.dest_pair s_s'
-     val _ = print "Computing simplified backward image theorem ...\n"
+     val _ = print "Proving simplified backward image theorem ...\n"
      val PrevTh =
        (simpLib.SIMP_RULE
         boolSimps.bool_ss

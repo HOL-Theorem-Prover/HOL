@@ -103,9 +103,9 @@ val SolitaireInit_def =
 (* Final goal state                                                          *)
 (*****************************************************************************)
 
-val SolitaireFinish_def =
+val SolitaireFinal_def =
  Define 
-   `SolitaireFinish ^st = 
+   `SolitaireFinal ^st = 
      ^(list_mk_conj
         (map (fn v => if v="v17" then mk_bool_var v 
                                  else mk_neg(mk_bool_var v)) var_list))`;
@@ -173,89 +173,10 @@ val SolitaireTrans_def =
  Define  
   `SolitaireTrans(^st,^st') = ^(list_mk_disj(map make_move_trans moves))`;
 
-(*****************************************************************************)
-(* Compute set of reachable states                                           *)
-(*****************************************************************************)
-
-fun report n tb =
- let val (_,_,t,b) = dest_term_bdd tb
- in
- (print "\n";
-  print_term(getTerm tb);
-  app print ["\nDepth: ", Int.toString n, ", ",
-              Int.toString(bdd.nodecount b), " nodes, ",
-              Real.toString(statecount b), " states\n"])
- end;
-
-(*****************************************************************************)
-(* Use MachineTransitionTheory.ReachIn_rec                                   *)
-(*****************************************************************************)
-
-val (in_th0,in_thsuc) = 
+val (initth,transthl,finalth) =
  time
-  (REWRITE_RULE[SolitaireInit_def] ## REWRITE_RULE[SolitaireTrans_def])
-  (MkIterThms 
-    MachineTransitionTheory.ReachIn_rec 
-    (lhs(concl(SPEC_ALL SolitaireTrans_def)))
-    (lhs(concl(SPEC_ALL SolitaireInit_def))));
-
-val SolitaireTrace = 
- computeTrace 
-  report 
-  solitaire_varmap 
-  SolitaireFinish_def 
-  (in_th0,in_thsuc);
-
-
-val Solution = 
- traceBack 
-  solitaire_varmap 
-  SolitaireTrace 
-  SolitaireFinish_def 
-  SolitaireTrans_def;
-
-(******************************************************************************
-
-(* runtime: 5223.510s,    gctime: 158.180s,     systime: 2.400s. *)
-val solitaireReachInTermBdd = 
- time
-  (computeFixedpoint report solitaire_varmap)
-  (in_th0,in_thsuc);
-
-val simp_in_thsuc = MakeSimpRecThm in_thsuc;
-
-val solitaireSimpReachInTermBdd = 
- time
-  (computeFixedpoint report solitaire_varmap)
-  (in_th0,simp_in_thsuc);
-
-
-(*****************************************************************************)
-(* Use MachineTransitionTheory.ReachBy_rec                                   *)
-(*****************************************************************************)
-
-val (by_th0,by_thsuc) = 
- time
-  (REWRITE_RULE[SolitaireInit_def] ## REWRITE_RULE[SolitaireTrans_def])
-  (MkIterThms 
-    MachineTransitionTheory.ReachBy_rec 
-    (lhs(concl(SPEC_ALL SolitaireTrans_def)))
-    (lhs(concl(SPEC_ALL SolitaireInit_def))));
-
-val solitaireReachByTermBdd = 
- time
-  (computeFixedpoint report solitaire_varmap)
-  (by_th0,by_thsuc);
-
-val simp_by_thsuc = MakeSimpRecThm by_thsuc;
-
-val solitaireSimpReachByTermBdd = 
- time
-  (computeFixedpoint report solitaire_varmap)
-  (by_th0,simp_by_thsuc);
-
-******************************************************************************)
-
+  (findTrace solitaire_varmap SolitaireTrans_def SolitaireInit_def)
+  SolitaireFinal_def;
 
 (*****************************************************************************)
 (* Print out a picture of a Solitaire board from a tuple                     *)
@@ -291,20 +212,13 @@ fun PrintState tm =
    print"  ";p 13;p 20;p 22;nl();nl()) 
  end;
 
-
 (*****************************************************************************)
-(* Print out a trace as found by traceBack                                   *)
+(* Print out a trace as found by findTrace                                   *)
 (*****************************************************************************)
 
-fun PrintTrace tr =
- let val cl = 
-      List.map 
-       (fn(_,tbl)=> list_mk_pair(rev(List.map (fn(_,tb)=> getTerm tb) tbl))) 
-       tr
- in
-  map PrintState cl
- end;
-
-val _ = PrintTrace Solution;
+val _ = 
+ List.map 
+  PrintState 
+  (List.map (fst o dest_pair o rand o concl) transthl @ [rand(concl finalth)]);
 
 val _ = export_theory();

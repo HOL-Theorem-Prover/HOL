@@ -142,7 +142,6 @@ val HexSolitaireTrans_def =
 (* Final goal state                                                          *)
 (*****************************************************************************)
 
-(* Old version
 val HexSolitaireFinish_def =
  bossLib.Define 
   `HexSolitaireFinish ^s = 
@@ -150,8 +149,8 @@ val HexSolitaireFinish_def =
         (map (fn n => if (n=10 orelse n=18)
                        then mk_v n 
                        else mk_neg(mk_v n)) vl))`;
-*)
 
+(* This has no solution
 val HexSolitaireFinish_def =
  bossLib.Define 
   `HexSolitaireFinish ^s = 
@@ -159,61 +158,14 @@ val HexSolitaireFinish_def =
         (map (fn n => if (n=10)
                        then mk_v n 
                        else mk_neg(mk_v n)) vl))`;
-
-(*****************************************************************************)
-(* Compute set of reachable states                                           *)
-(*****************************************************************************)
-
-fun report n tb =
- let val (_,_,t,b) = dest_term_bdd tb
- in
- (print "\n";
-  print_term(getTerm tb);
-  app print ["\nDepth: ", Int.toString n, ", ",
-              Int.toString(bdd.nodecount b), " nodes, ",
-              Real.toString(statecount b), " states\n"])
- end;
-
-(*****************************************************************************)
-(* Use MachineTransitionTheory.ReachIn_rec                                   *)
-(*****************************************************************************)
-
-val (in_th0,in_thsuc) = 
- time
-  (REWRITE_RULE[HexSolitaireInit_def] ## REWRITE_RULE[HexSolitaireTrans_def])
-  (MkIterThms 
-    MachineTransitionTheory.ReachIn_rec 
-    (lhs(concl(SPEC_ALL HexSolitaireTrans_def)))
-    (lhs(concl(SPEC_ALL HexSolitaireInit_def))));
-
-(* runtime: 8.820s,    gctime: 3.620s,     systime: 0.010s. *)
-val HexSolitaireReachInTermBdd = 
- time
-  (computeFixedpoint report hexsolitaire_varmap)
-  (in_th0,in_thsuc);
-
-val HexSolitaireTrace = 
- computeTrace 
-  report 
-  hexsolitaire_varmap 
-  HexSolitaireFinish_def 
-  (in_th0,in_thsuc);
-
-(* Now computed inside TraceBack
-val HexSolitairePrevThm =
- time
- (simpLib.SIMP_RULE
-   boolSimps.bool_ss
-   [pairTheory.EXISTS_PROD,Eq_def,pairTheory.PAIR_EQ,HexSolitaireTrans_def])
-  (ISPECL[``HexSolitaireTrans``,``Eq ^s'``,s](Prev_def));
 *)
 
-val HexSolution = 
- traceBack 
+val (initth,transthl,finalth) =
+ findTrace 
   hexsolitaire_varmap 
-  HexSolitaireTrace 
-  HexSolitaireFinish_def 
-  HexSolitaireTrans_def;
+  HexSolitaireTrans_def 
+  HexSolitaireInit_def 
+  HexSolitaireFinish_def;
 
 (*****************************************************************************)
 (* Print out a picture of a HexSolitaire board from a tuple                  *)
@@ -245,18 +197,12 @@ fun PrintState tm =
  end;
 
 (*****************************************************************************)
-(* Print out a trace as found by traceBack                                   *)
+(* Print out a trace as found by findTrace                                   *)
 (*****************************************************************************)
 
-fun PrintTrace tr =
- let val cl = 
-      List.map 
-       (fn(_,tbl)=> list_mk_pair(rev(List.map (fn(_,tb)=> getTerm tb) tbl))) 
-       tr
- in
-  map PrintState cl
- end;
-
-val _ = PrintTrace HexSolution;
+val _ = 
+ List.map 
+  PrintState 
+  (List.map (fst o dest_pair o rand o concl) transthl @ [rand(concl finalth)]);
 
 val _ = export_theory();
