@@ -45,21 +45,40 @@ fun print_type_to_SML mvartype mtype pps ty = let
   val print_type_to_SML = print_type_to_SML mvartype mtype pps
 in
   if (is_vartype ty) then
-    add_string pps (mvartype^quote (dest_vartype ty))
+    case dest_vartype ty of
+      "'a" => add_string pps "Type.alpha"
+    | "'b" => add_string pps "Type.beta"
+    | s => add_string pps (mvartype^quote s)
   else let
     val {Tyop, Args} = dest_type ty
   in
-    add_string pps mtype;
-    begin_block pps CONSISTENT 0;
-    add_string pps (quote Tyop);
-    add_break pps (1,0);
-    add_string pps "[";
-    begin_block pps CONSISTENT 0;
-    pr_list print_type_to_SML (fn () => add_string pps ",")
-    (fn () => add_break pps (1,0)) Args;
-    end_block pps;
-    add_string pps "]";
-    end_block pps
+    case Tyop of
+      "fun" => let
+      in
+        add_string pps "Type.-->(";
+        begin_block pps CONSISTENT 0;
+        print_type_to_SML (hd Args);
+        add_string pps ",";
+        add_break pps (1,0);
+        print_type_to_SML (hd (tl Args));
+        end_block pps;
+        add_string pps ")"
+      end
+    | "bool" => add_string pps "Type.bool"
+    | _ => let
+      in
+        add_string pps mtype;
+        begin_block pps CONSISTENT 0;
+        add_string pps (quote Tyop);
+        add_break pps (1,0);
+        add_string pps "[";
+        begin_block pps CONSISTENT 0;
+        pr_list print_type_to_SML (fn () => add_string pps ",")
+        (fn () => add_break pps (1,0)) Args;
+        end_block pps;
+        add_string pps "]";
+        end_block pps
+      end
   end
 end
 
