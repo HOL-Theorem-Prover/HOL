@@ -216,7 +216,7 @@ fun measureInduct_on q g =
      val st = find_subterm arg g
      val st_type = cat_tyof st
      val meas' = inst (match_type d st_type) meas
-     val ind_thm1 = INST_TYPE [Type`:'a` |-> st_type] ind_thm0
+     val ind_thm1 = INST_TYPE [Type.alpha |-> st_type] ind_thm0
      val ind_thm2 = CONV_RULE (DEPTH_CONV Let_conv.GEN_BETA_CONV)
                               (SPEC meas' ind_thm1)
      val ind_tac = INDUCT_THEN ind_thm2 ASSUME_TAC

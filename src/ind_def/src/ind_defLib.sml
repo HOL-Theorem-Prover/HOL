@@ -1392,12 +1392,11 @@ fun derive_cases_thm (rules,ind) =
        val theta = map2 (fn r1 => fn r2 => {redex=r1,residue=r2}) cvs avs
        val asmp = subst theta (rator con)
        val pred = list_mk_abs (avs,mk_neg(mk_comb{Rator=asmp,Rand=eqns}))
-       val thm2 = UNDISCH (UNDISCH (INST [{redex=P,residue=pred}] thm1))
+       val thm2 = UNDISCH (UNDISCH (INST [P |-> pred] thm1))
        val thm3 = CONV_RULE LIST_BETA_CONV thm2
        val HY = rand(rator con)
        val contr = DISCH HY (ADD_ASSUM HY (LIST_CONJ (map REFL cvs)))
-       val fthm = NOT_INTRO (DISCH (subst [{redex=P,residue=pred}] ant)
-                                          (MP thm3 contr))
+       val fthm = NOT_INTRO (DISCH (subst [P |-> pred] ant) (MP thm3 contr))
        fun sfn eqs = SUBST(map2 (fn th => fn v => (v |-> th))
                                 (map SYM (CONJUNCTS eqs)) cvs) HY
        val set = fst(strip_comb HY)
