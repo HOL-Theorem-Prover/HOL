@@ -1,6 +1,6 @@
 \DOC list_mk_binder
 
-\TYPE {list_mk_binder : (term -> term) -> term list * term -> term}
+\TYPE {list_mk_binder : term option -> term list * term -> term}
 
 \SYNOPSIS
 Performs a sequence of variable binding operations on a term
@@ -9,34 +9,23 @@ Performs a sequence of variable binding operations on a term
 variable, binding, abstraction.
 
 \DESCRIBE
-An application {list_mk_binder f ([v1,...,vn],M)} builds the term
-{f (\v1. ... f (\vn. M) ...)}. The argument {f} is a function that
-takes a lambda abstraction and returns a bound term. Thus {list_mk_binder}
-can be seen as implementing Church's reduction of all variable binding 
-operations to lambda-binding.
+An application {list_mk_binder (SOME c) ([v1,...,vn],M)} builds the term
+{c (\v1. ... (c (\vn. M) ...))}. The term {c} should be a binder, that is, a 
+constant that takes a lambda abstraction and returns a bound term. Thus 
+{list_mk_binder} implements Church's view that variable binding operations 
+should be reduced to lambda-binding.
+
+An application {list_mk_binder NONE ([v1,...,vn],M)} builds the term
+{\v1...vn. M}. 
 
 \FAILURE
-{list_mk_binder f ([v1,...,vn],M)} fails if some {vi} {1 <= i <= n} is
+{list_mk_binder opt ([v1,...,vn],M)} fails if some {vi} {1 <= i <= n} is
 not a variable. It also fails if the constructed term 
-{f (\v1. ... f (\vn. M) ...)} is not well typed.
+{c (\v1. ... (c (\vn. M) ...))} is not well typed.
 
 \EXAMPLE
-The simplest application of {list_mk_binder} is to implement a 
-sequence of lambda binding operations. Thus 
-{list_mk_binder I ([v1,...,vn],M)} yields {\v1. ... \vn. M}. Implementing
-iterated quantification is a little more involved. 
-
-For example, we will implement repeated existential quantification with 
-{list_mk_binder}. We first implement a function that takes a lambda
-abstraction and makes a suitably instantiated existential term.
-{
-   - fun exapp abs = 
-      let val exists_tm' = 
-               inst[alpha |-> fst(dom_rng(type_of abs))]existential
-      in mk_comb (exists_tm', abs)
-      end;
-}
-For testing, we make a list of boolean variables.
+Repeated existential quantification is easy to code up using
+{list_mk_binder}. For testing, we make a list of boolean variables.
 {
    - fun upto b t acc = if b >= t then rev acc else upto (b+1) t (b::acc)
 
@@ -56,9 +45,10 @@ For testing, we make a list of boolean variables.
      `v82`, `v83`, `v84`, `v85`, `v86`, `v87`, `v88`, `v89`, `v90`, `v91`,
      `v92`, `v93`, `v94`, `v95`, `v96`, `v97`, `v98`, `v99`] : term list
 }
-Finally we can exercise {list_mk_binder}.
+Now we exercise {list_mk_binder}.
 {
-   - val exl_tm = list_mk_binder exapp (vars, list_mk_conj vars)
+   - val exl_tm = list_mk_binder (SOME boolSyntax.existential) 
+                                 (vars, list_mk_conj vars);
    > val exl_tm =
     `?v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16 v17 v18 v19 v20
       v21 v22 v23 v24 v25 v26 v27 v28 v29 v30 v31 v32 v33 v34 v35 v36 v37 v38
@@ -76,7 +66,6 @@ Finally we can exercise {list_mk_binder}.
        v71 /\ v72 /\ v73 /\ v74 /\ v75 /\ v76 /\ v77 /\ v78 /\ v79 /\ v80 /\
        v81 /\ v82 /\ v83 /\ v84 /\ v85 /\ v86 /\ v87 /\ v88 /\ v89 /\ v90 /\
        v91 /\ v92 /\ v93 /\ v94 /\ v95 /\ v96 /\ v97 /\ v98 /\ v99` : term
-
 }
 
 

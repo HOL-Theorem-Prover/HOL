@@ -1,6 +1,6 @@
 \DOC strip_binder
 
-\TYPE {strip_binder : (term -> term option) -> term -> term list * term}
+\TYPE {strip_binder : term option -> term -> term list * term}
 
 \SYNOPSIS
 Break apart consecutive binders.
@@ -9,11 +9,11 @@ Break apart consecutive binders.
 variable, binding.
 
 \DESCRIBE
-An application {strip_binder f M} iteratively uses {f} to break 
-apart a consecutive sequence of applications of a particular 
-binder. The function {f} expects a binder term as an argument. If it doesn't 
-get a binder, it returns {NONE}. Otherwise, it breaks the binder apart 
-(if necessary) in order get its lambda abstraction {N}, and returns {SOME N}. 
+An application {strip_binder (SOME c) (c(\v1. ... (c(\vn.M))...))} 
+returns {([v1,...,vn],M)}. The constant {c} should represent a term
+binding operation.
+
+An application {strip_binder NONE (\v1...vn. M)} returns {([v1,...,vn],M)}.
 
 \FAILURE
 Never fails.
@@ -21,8 +21,7 @@ Never fails.
 \EXAMPLE
 {strip_abs} could be defined as follows.
 {
-   - val strip_abs = strip_binder 
-                        (fn tm => if is_abs tm then SOME tm else NONE)
+   - val strip_abs = strip_binder NONE;
    > val strip_abs = fn : term -> term list * term
 
    - strip_abs (Term `\x y z. x /\ y ==> z`);
@@ -30,7 +29,7 @@ Never fails.
 }
 Defining {strip_forall} is similar.
 {
-   strip_binder (fn t => if is_forall t then SOME (rand t) else NONE)
+   strip_binder (SOME boolSyntax.universal)
 }
 
 
