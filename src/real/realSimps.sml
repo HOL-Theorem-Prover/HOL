@@ -199,7 +199,8 @@ fun to_numeraln th = INST [n |-> mk_comb(numSyntax.numeral_tm, n),
                            m |-> mk_comb(numSyntax.numeral_tm, m)] th
 
 
-val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, REAL_DIV_LZERO] @
+val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, REAL_DIV_LZERO,
+               REAL_NEGNEG] @
               neg_ths @
               add_rats @ add_ratls @ add_ratrs @
               mult_rats @ mult_ratls @ mult_ratrs @
