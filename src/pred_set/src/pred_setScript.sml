@@ -553,6 +553,8 @@ val IN_DIFF = store_thm
      CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
      REFL_TAC);
 
+val _ = export_rewrites ["IN_DIFF"]
+
 val DIFF_EMPTY =
     store_thm
     ("DIFF_EMPTY",
