@@ -738,7 +738,7 @@ fun mk_DEV tm = ``DEV ^tm``;
 (*****************************************************************************)
 (* Refine a device to a combinational circuit (i.e. an ATM):                 *)
 (*                                                                           *)
-(* ATM_REFINE ``DEV f``  =  |- ATM f ===> DEV f : thm                      *)
+(* ATM_REFINE ``DEV f``  =  |- ATM f ===> DEV f : thm                        *)
 (*                                                                           *)
 (*****************************************************************************)
 fun ATM_REFINE tm =
@@ -903,29 +903,6 @@ infixr 3 ORELSER;
 
 fun (refine1 ORELSER refine2) tm = 
  refine1 tm handle HOL_ERR _ => refine2 tm;
-
-(* Not sure if stuff below is needed, and it's not tested, 
-   so is commented out for now
-
-(*---------------------------------------------------------------------------
- * Cause the refinement to fail if it does not change its input.
- *---------------------------------------------------------------------------*)
-fun CHANGED_REFINE refine tm =
-   let val th = refine tm
-           handle UNCHANGED_REFINE 
-           => raise ERR "CHANGED_REFINE" "Input term unchanged"
-       val (ante,conc) = dest_dev_imp(concl th)
-   in if aconv ante conc then raise ERR "CHANGED_REFINE" "Input term unchanged"
-      else th
-   end;
-
-(*---------------------------------------------------------------------------
- * Apply a conversion zero or more times.
- *---------------------------------------------------------------------------*)
-fun REPEATR refine tm =
-    ((CHANGED_REFINE refine THENC (REPEATR refine)) ORELSER ALL_REFINE) tm;
- 
-*)
 
 (*****************************************************************************)
 (* Some ancient code for normalising circuits (will need to be updated!)     *)
@@ -1283,7 +1260,6 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
    end
   else raise ERR "COMB_SYNTH_COMB" "not an application of COMB to args";
 
-
 (*****************************************************************************)
 (* If                                                                        *)
 (*                                                                           *)
@@ -1317,28 +1293,10 @@ fun AP_ANTE_IMP_TRANS f th =
  IMP_TRANS (f(fst(dest_imp(concl th)))) th;
 
 (*****************************************************************************)
-(* ABS_DEV_IMP f (|- (\p. tm) ===> d) applies f to tm to generate            *)
-(* an implication |- tm' ==> tm and then returns |- (\p. tm') ===> d         *)
+(* DEV_IMP f (|- tm ==> d) applies f to tm to generate an implication        *)
+(* |- tm' ==> tm and then returns |- tm' ==> d                               *)
 (*****************************************************************************)
-fun ABS_DEV_IMP f th =
- let val (d1,d2) = dest_dev_imp(concl th)
-     val (args,bdy) = dest_pabs d1
-     val impth = f bdy 
-     val (t1,t2) = dest_imp(concl impth)
-     val (abs1,abs2) = (mk_pabs(args,t1),mk_pabs(args,t2))
-     val th1 = GEN_BETA_CONV(mk_comb(abs1,args))
-     val th2 = GEN_BETA_CONV(mk_comb(abs2,args))
-     val th3 = CONV_RULE
-                (RAND_CONV(REWR_CONV(GSYM th2))
-                  THENC RATOR_CONV(RAND_CONV(REWR_CONV(GSYM th1))))
-                impth
-     val th4 = PGEN args th3
-     val th5 = GSYM(ISPECL[abs1,abs2]DEV_IMP_def)
-     val th6 = CONV_RULE (GEN_PALPHA_CONV (mk_var("x",type_of args))) th4
-     val th7 = EQ_MP th5 th6
-  in
-   MATCH_MP DEV_IMP_TRANS (CONJ th7 th)
-  end;
+fun DEV_IMP f th = IMP_TRANS (f(fst(dest_imp(concl th)))) th;
 
 (*****************************************************************************)
 (* DFF_IMP_INTRO ``DFF p`` --> |- DFF_IMP p => DFF p                         *)
@@ -1384,22 +1342,6 @@ fun IMP_REFINEL [] tm = DISCH tm (ASSUME tm)
  |  IMP_REFINEL (th::thl) tm = 
      IMP_REFINE th tm handle _
      => IMP_REFINEL thl tm;
-
-(*****************************************************************************)
-(*         |- (\(v1,...vn). tm) ===> DEV f                                   *)
-(*     ---------------------------------------                               *)
-(*     |- !v1 ... vn. tm ==> DEV f (v1,...,vn)                               *)
-(*****************************************************************************)
-fun DEV_IMP_FORALL th =
- let val (d1,d2) = dest_dev_imp(concl th)
-     val (args,bdy) = dest_pabs d1
-     val th1 = CONV_RULE (REWR_CONV DEV_IMP_def) th
-     val th2 = PSPEC args th1
-     val th3 = CONV_RULE (RATOR_CONV(RAND_CONV PBETA_CONV)) th2
- in
-  GENL (strip_pair args) th3
- end;
-
 
 (*****************************************************************************)
 (*               |- !s1 ... sn. P s1 ... sn                                  *)
@@ -1452,170 +1394,57 @@ fun mapcount f l = mapcount_aux 1 f l
 end;
 
 (*****************************************************************************)
-(* ``s : ty -> ty1 # ... # tyn``  -->  |- ?s1 ... sn. s = s1 <> ... <> sn    *)
+(* ``s : ty -> ty1#...#tyn``  -->  ``(s1:ty->ty1) <> ... <> (sn:ty->tyn)``   *)
 (*****************************************************************************)
-fun BUS_SPLIT tm =                           (* Pretty gross implementation! *)
+fun bus_split tm =
  (let val (name,ty) = dest_var tm
       val ("fun",[ty1,ty2]) = dest_type ty
       val tyl = strip_prodtype ty2
-      val vl1 = mapcount 
-                 (fn n => fn vty => 
-                   mk_var((name^Int.toString n),``:^ty1->^vty``)) 
-                 tyl
-      val (v1::vl2) = rev vl1
-      val bus = foldl (fn (v,vtm) => ``^v <> ^vtm``) v1 vl2
-      val (tm1::tml) = foldl (fn (_,(x::l)) => ``SND o ^x`` :: x :: l) [tm] vl2
-      val sels = rev(tm1 :: map (fn t => ``FST o ^t``) tml)
   in
-   prove
-    (list_mk_exists(vl1,mk_eq(tm,bus)),
-     MAP_EVERY EXISTS_TAC sels
-      THEN RW_TAC std_ss [BUS_CONCAT_def,ETA_AX])
+   if (length tyl = 1)
+    then tm
+    else
+     let val vl1 = mapcount 
+                    (fn n => fn vty => 
+                      mk_var((name^Int.toString n),``:^ty1->^vty``)) 
+                    tyl
+         val (v1::vl2) = rev vl1
+     in
+      foldl (fn (v,vtm) => ``^v <> ^vtm``) v1 vl2
+     end
   end)
-  handle HOL_ERR _ => raise ERR "BUS_SPLIT" "not a bus";
+  handle HOL_ERR _ => raise ERR "bus_split" "not a bus";
 
 (*****************************************************************************)
-(* ``(\(load,inp,done,out). P load inp done out)``                           *)
-(* -->                                                                       *)
-(* |- (\(load,inp,done,out). P load inp done out)                            *)
-(*    =                                                                      *)
-(*    (\(load,inp,done,out).                                                 *)
-(*     ?inp1 ... inpm. (inp = inp1 <> ... <> inpm) /\                        *)
-(*     ?out1 ... outn. (out = out1 <> ... <> outn) /\                        *)
-(*     P load inp done out)                                                  *)
-(*****************************************************************************)
-fun ABS_IN_OUT_SPLIT_CONV tm =
- (let val (args,bdy) = dest_pabs tm
-      val [ld,inp,done,out] = strip_pair args
-      val inpth = BUS_SPLIT inp
-      val (inpvars,inpbdy) = strip_exists(concl inpth)
-      val outth = BUS_SPLIT out
-      val (outvars,outbdy) = strip_exists(concl outth)
-      val goal = 
-           mk_eq
-            (bdy,
-             list_mk_exists
-              (inpvars,
-               mk_conj
-                (inpbdy,
-                 list_mk_exists(outvars,mk_conj(outbdy,bdy)))))
-      val th1 = prove
-                 (goal,
-                  RW_TAC std_ss [LEFT_EXISTS_AND_THM,inpth,outth])
-                handle HOL_ERR _ 
-                => (if_print "ABS_IN_OUT_SPLIT_CONV fails to prove:\n";
-                    if_print_term goal;print"\n";
-                    raise ERR "ABS_IN_OUT_SPLIT_CONV" "proof failure")
-      val th2 = RIGHT_CONV_RULE
-                 (STRIP_QUANT_CONV
-                  (RAND_CONV
-                   (STRIP_QUANT_CONV
-                    (Ho_Rewrite.ONCE_REWRITE_CONV[UNWIND_THM]))
-                   THENC STRIP_QUANT_CONV
-                          (Ho_Rewrite.ONCE_REWRITE_CONV[UNWIND_THM]))) th1
- 
-  in
-   MK_PABS(PGEN args th2)
-  end)
- handle HOL_ERR _ => REFL tm;
-
-(******************** New code from KXS (not fully tested) ********************
-(*---------------------------------------------------------------------------*)
-(*     (?a. P a /\ Q) --> |- (?a. P a /\ Q) = (?a. P a) /\ Q                 *)
-(*---------------------------------------------------------------------------*)
-
-fun LEAND_CONV M =
-  let val (x,N) = dest_exists M
-      val (N1,N2) = dest_conj N
-      val P = mk_abs(x,N1)
-      val thm1 = Specialize N2 (Specialize P
-                (INST_TYPE [alpha |-> type_of x] LEFT_EXISTS_AND_THM))
-      val (ltm,rtm) = dest_eq (concl thm1)
-      val (ex,abstr) = dest_comb ltm
-      val ltma = mk_comb(ex,mk_abs(x,beta_conv (mk_comb(abstr,x))))
-      val thm2 = ALPHA ltm ltma
-      val (c1,c2) = dest_conj rtm
-      val (ex,abstr) = dest_comb c1
-      val c1a = mk_comb(ex,mk_abs(x,beta_conv (mk_comb(abstr,x))))
-      val rtma = mk_conj(c1a,c2)
-      val thm3 = ALPHA rtm rtma
-      val thm4 = MK_COMB
-                  (MK_COMB(REFL (inst [alpha |-> bool] boolSyntax.equality),thm2),
-                   thm3)
-      val thm5 = EQ_MP thm4 thm1  (* lot of work to get renaming! *)
-      val thm6 = CONV_RULE
-                   (RHS_CONV (RATOR_CONV (RAND_CONV (QUANT_CONV BETA_CONV)))) thm5
-      val thm7 = CONV_RULE
-                   (LHS_CONV (QUANT_CONV (RATOR_CONV (RAND_CONV BETA_CONV)))) thm6
-  in thm7
-  end;
-
-(*****************************************************************************)
-(* ``(\(load,inp,done,out). P load inp done out)``                           *)
-(* -->                                                                       *)
-(* |- (\(load,inp,done,out). P load inp done out)                            *)
-(*    =                                                                      *)
-(*    (\(load,inp,done,out).                                                 *)
-(*     ?inp1 ... inpm. (inp = inp1 <> ... <> inpm) /\                        *)
-(*     ?out1 ... outn. (out = out1 <> ... <> outn) /\                        *)
-(*     P load inp done out)                                                  *)
+(*                  |- Cir ===> DEV f                                        *)
+(*  ------------------------------------------------------                   *)
+(*  |- Cir (load,(inp1<>...<>inpm),done,(out1<>...<>outn))                   *)
+(*     ==>                                                                   *)
+(*     DEV f (load,(inp1<>...<>inpm),done,(out1<>...<>outn))                 *)
 (*****************************************************************************)
 
-fun ABS_IN_OUT_SPLIT_CONV tm =
-  (let val (args,bdy) = dest_pabs tm
-       val [ld,inp,done,out] = strip_pair args
-       val inpth = BUS_SPLIT inp
-       val (inpvars,inpbdy) = strip_exists(concl inpth)
-       val outth = BUS_SPLIT out
-       val (outvars,outbdy) = strip_exists(concl outth)
-       val goal =
-            mk_eq
-             (bdy,
-              list_mk_exists
-               (inpvars,
-                mk_conj
-                 (inpbdy,
-                  list_mk_exists(outvars,mk_conj(outbdy,bdy)))))
-       val th1 = prove(goal,
-          GEN_BETA_TAC THEN
-          CONV_TAC (RHS_CONV (STRIP_QUANT_CONV
-                    (RAND_CONV (REPEATC (LAST_EXISTS_CONV LEAND_CONV))))) THEN
-          CONV_TAC (RHS_CONV (REPEATC (LAST_EXISTS_CONV LEAND_CONV))) THEN
-          CONV_TAC(RHS_CONV (RATOR_CONV(RAND_CONV (REWRITE_CONV [inpth])))) THEN
-          CONV_TAC(RHS_CONV (REWRITE_CONV [AND_CLAUSES])) THEN
-          CONV_TAC(RHS_CONV (RATOR_CONV(RAND_CONV (REWRITE_CONV [outth])))) THEN
-          CONV_TAC(RHS_CONV (REWRITE_CONV [AND_CLAUSES]))
-          THEN REFL_TAC)
-          handle HOL_ERR _
-              => (if_print "ABS_IN_OUT_SPLIT_CONV fails to prove:\n";
-                  if_print_term goal;print"\n";
-                  raise ERR "ABS_IN_OUT_SPLIT_CONV" "proof failure")
-       val th2 = RIGHT_CONV_RULE
-                  (STRIP_QUANT_CONV
-                   (RAND_CONV
-                    (STRIP_QUANT_CONV
-                     (Ho_Rewrite.ONCE_REWRITE_CONV[UNWIND_THM]))
-                    THENC STRIP_QUANT_CONV
-                           (Ho_Rewrite.ONCE_REWRITE_CONV[UNWIND_THM]))) th1
-   in
-    MK_PABS(PGEN args th2)
-   end)
-  handle HOL_ERR _ => REFL tm;
-******************************************************************************)
-
-val at_thms =
- [UNDISCH REG_IMP,UNDISCH REGF_IMP,
-  EQ_at,COMB_at,CONSTANT_at,TRUE_at,
-  NOT_at,AND_at,OR_at,MUX_at];
+fun IN_OUT_SPLIT th =
+ let val (tm1,tm2) = dest_dev_imp(concl th)
+     val ("fun",[ty1,ty2]) = dest_type(type_of tm2)
+     val [load_ty,inp_ty,done_ty,out_ty] = strip_prodtype ty1
+     val args_tm = 
+          list_mk_pair
+           [mk_var("load",load_ty),
+            bus_split(mk_var("inp",inp_ty)),
+            mk_var("done",done_ty),
+            bus_split(mk_var("out",out_ty))]
+ in
+  SPEC args_tm (CONV_RULE(REWR_CONV DEV_IMP_def)th)
+ end;
 
 (*****************************************************************************)
 (* Compile a device implementation into a netlist represented in HOL         *)
 (*****************************************************************************)
 val MAKE_NETLIST =
- CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                          o
  Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
  CONV_RULE
-  (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
+  (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                   o
  SIMP_RULE std_ss [UNCURRY]                                                o
  Ho_Rewrite.REWRITE_RULE [BUS_CONCAT_ELIM]                                 o
  Ho_Rewrite.REWRITE_RULE
@@ -1626,74 +1455,49 @@ val MAKE_NETLIST =
     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
     POSEDGE_IMP_def,LATCH_def,
     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                        o
- CONV_RULE(RATOR_CONV(RAND_CONV ABS_IN_OUT_SPLIT_CONV))                    o
  GEN_BETA_RULE                                                             o
+ IN_OUT_SPLIT                                                              o
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
    Ite_def,Par_def,Seq_def,o_THM];
-     
 
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* The first definition of MAKE_CIRCUIT below invokes EXISTS_OUT_CONV twice  *)
-(* (once in MAKE_NETLIST then once after expanding DEL and DFF).             *)
-(*                                                                           *)
-(* The monolitlic version after it is a bit faster by folding together       *)
-(* stages (e.g. only one invocation of EXISTS_OUT_CONV) and it seems to      *)
-(* sometimes make smaller circuits (fewer variables, e.g. for MULTd_cir      *)
-(* in booth/boothDevScript.sml -- I'm not sure why: needs investigation).    *)
-(*****************************************************************************)
+val at_thms =
+ [UNDISCH REG_IMP,UNDISCH REGF_IMP,
+  EQ_at,COMB_at,CONSTANT_at,TRUE_at,
+  NOT_at,AND_at,OR_at,MUX_at];
 
-(*********************** Next definition commented out ***********************
 val MAKE_CIRCUIT =
  DISCH_ALL                                                                 o
  LIST_ANTE_EXISTS_INTRO                                                    o 
  (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL at_thms)))                o
  (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                 o
  at_SPEC_ALL ``clk:num->bool``                                             o
+ GEN_ALL                                                                   o
  Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
- DEV_IMP_FORALL                                                            o
- CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
- Ho_Rewrite.REWRITE_RULE
-  [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
-   DEL_IMP_def,GSYM DEL_IMP_THM]                                           o
- ABS_DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                     o
- REWRITE_RULE[DFF_IMP_def,GSYM DEL_IMP_THM,DEL_IMP_def]                    o
- MAKE_NETLIST;
-******************************************************************************)
-
-(**************** Monolithic version, slightly more efficient ****************)
-val MAKE_CIRCUIT =
- DISCH_ALL                                                                 o
- LIST_ANTE_EXISTS_INTRO                                                    o 
- (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL at_thms)))                o
- (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                 o
- at_SPEC_ALL ``clk:num->bool``                                             o
- Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
- DEV_IMP_FORALL                                                            o
- CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                          o
  Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
  CONV_RULE
-  (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
+  (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                   o
  SIMP_RULE std_ss [UNCURRY]                                                o
  Ho_Rewrite.REWRITE_RULE
   [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
    DEL_IMP_def,GSYM DEL_IMP_THM]                                           o
- ABS_DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                     o
+ DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                         o
  Ho_Rewrite.REWRITE_RULE
    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
     COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
-    (*COMP_SEL_CLAUSES,SEL_CONCAT_CLAUSES,*)BUS_CONCAT_PAIR,BUS_CONCAT_o,
+    BUS_CONCAT_PAIR,BUS_CONCAT_o,
     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
     DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                        o
- CONV_RULE(RATOR_CONV(RAND_CONV ABS_IN_OUT_SPLIT_CONV))                    o
  GEN_BETA_RULE                                                             o
+ IN_OUT_SPLIT                                                              o
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,

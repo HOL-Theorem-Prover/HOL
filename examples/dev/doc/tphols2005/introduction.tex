@@ -2,16 +2,19 @@
 We describe a correct-by-construction flow from function definitions
 in higher order logic to hardware implementations.  Each synthesised
 implementation of a function $f$ is created in the form of a theorem
-$\vdash {\it{Imp}}\Rightarrow\texttt{DEV}~f$, where {\it{Imp}} is a
-term describing a circuit that implements a four-phase handshake
+$\vdash {\it{Imp}}\Longrightarrow\texttt{DEV}~f$, where {\it{Imp}} is
+a term describing a circuit that implements a four-phase handshake
 computing $f$, and the handshake is specified in higher oder logic by
-$\texttt{DEV}~f$. The synthesis process is implemented using proof
+$\texttt{DEV}~f$. The operator $\Longrightarrow$ is intuitively
+implication, but is actually lifted implication between functions (see
+Section~\ref{secSpecification} for an explanation).
+
+The synthesis process is implemented using proof
 scripts and goes through several phases, each refining the
 implementation to a more concrete form, until a representation that
 can be output as Verilog is created. We intend that future synthesis
 routes will provide the option of refining the intermediate
-representations to other formats, for example to ARM
-assembler.
+representations to other formats, for example to ARM assembler.
 
 We have in mind two uses of the work described here: (i) generating
 implementations and (ii) generating testbench monitors.
@@ -43,3 +46,10 @@ are typically in temporal logic (e.g.{} PSL), but if the specification
 were in HOL than our compiler could be used to make
 testbench monitors to test (rather than to be) real implementations.
 
+In the next section we give a quick overview of the currently
+implemented system using a simple (but unrealistic) example chosen to
+illustrate the synthesis flow.  Next we describe the models in higher
+order logic that underlie the work. We then describe how synthesis is
+implemented by proof scripts. Some unfinished case studies that are in
+progress are then discussed. Next we survey related work by
+others. Finally, our plans for the future are outlined.

@@ -471,7 +471,8 @@ val MULTd_dev = save_thm("MULTd",
 val MULTd_net = time MAKE_NETLIST MULTd_dev;
 
 (* Takes rather a long time:
-   runtime: 552.044s,    gctime: 211.142s,     systime: 1.755s.
+val MULTd_cir = time MAKE_CIRCUIT MULTd_dev;
+   runtime: 626.740s,    gctime: 233.581s,     systime: 1.850s.
 val MULTd_cir = time MAKE_CIRCUIT MULTd_dev;
 *)
 

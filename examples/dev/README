@@ -282,7 +282,9 @@ unfolds <device> using the definitions of ATM, SEQ, PAR, ITE and REC
 and normalises the resulting term into a form, <netlist> say,
 corresponding to a netlist, and returns
 
- |- (\(load,inp,done,out). <netlist> ===> DEV f
+ |- <netlist> 
+    ==> 
+    DEV f (load,(inp1<>...<>inpm),done,(out1<>...<>outn))
 
 See FactScript.sml for examples (e.g. FACT_net).
 
@@ -303,7 +305,10 @@ clocked Dtype and Dff, and returns:
     ==>
     <circuit> 
     ==> 
-    DEV f (load at clk,inp at clk,done at clk,out at clk)
+    DEV f (load at clk,
+           (inp1<>...<>inpm) at clk,
+           done at clk,
+           (out1<>...<>outn) at clk)
 
 See FactScript.sml for examples (e.g. FACT_cir).
 
@@ -562,4 +567,5 @@ ML reference "if_print_flag" to false.
 == [10.02.05: MJCG split input and output busses                             ==
 == [11.02.05: Holmakefile (thanks to MN) + code improvements (thanks to KXS) ==
 == [14.02.05: MJCG added vsynth (defines MAKE_VERILOG)                       ==
+== [15.02.05: MJCG revised MAKE_NETLIST and MAKE_CIRCUIT                     ==
 ===============================================================================

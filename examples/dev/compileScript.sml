@@ -554,137 +554,6 @@ val ID_CONST =
    ``((\x. c) o f) = \t. c``,
    RW_TAC std_ss [FUN_EQ_THM]);
 
-(***** Disabled, pending a more general approach that works for all sizes ****
-(*****************************************************************************)
-(* Bus selector operators                                                    *)
-(*****************************************************************************)
-
-val SEL_2_1_def =
- Define
-  `SEL_2_1 (inp,out) = (out = FST o inp)`;
-
-val SEL_2_2_def =
- Define
-  `SEL_2_2 (inp,out) = (out = SND o inp)`;
-
-val SEL_3_1_def =
- Define
-  `SEL_3_1 (inp,out) = (out = FST o inp)`;
-
-val SEL_3_2_def =
- Define
-  `SEL_3_2 (inp,out) = (out = FST o SND o inp)`;
-
-val SEL_3_3_def =
- Define
-  `SEL_3_3 (inp,out) = (out = SND o SND o inp)`;
-
-val SEL_DEFS =
- save_thm
-  ("SEL_DEFS",
-   LIST_CONJ[SEL_2_1_def,SEL_2_2_def,
-             SEL_3_1_def,SEL_3_2_def,SEL_3_3_def]);
-
-val COMP_SEL_2_1 =
- store_thm
-  ("COMP_SEL_2_1",
-   ``COMB (\(x,y). x) = SEL_2_1``,
-   RW_TAC std_ss [FUN_EQ_THM]
-    THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss 
-          [COMB_def,SEL_2_1_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
-    THEN GEN_BETA_TAC
-    THEN PROVE_TAC[]);
-
-val COMP_SEL_2_2 =
- store_thm
-  ("COMP_SEL_2_2",
-   ``COMB (\(x,y). y) = SEL_2_2``,
-   RW_TAC std_ss [FUN_EQ_THM]
-    THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss 
-          [COMB_def,SEL_2_2_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
-    THEN GEN_BETA_TAC
-    THEN PROVE_TAC[]);
-
-val COMP_SEL_3_1 =
- store_thm
-  ("COMP_SEL_3_1",
-   ``COMB (\(x,y,z). x) = SEL_3_1``,
-   RW_TAC std_ss [FUN_EQ_THM]
-    THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss 
-          [COMB_def,SEL_3_1_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
-    THEN GEN_BETA_TAC
-    THEN PROVE_TAC[]);
-
-val COMP_SEL_3_2 =
- store_thm
-  ("COMP_SEL_3_2",
-   ``COMB (\(x,y,z). y) = SEL_3_2``,
-   RW_TAC std_ss [FUN_EQ_THM]
-    THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss 
-          [COMB_def,SEL_3_2_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
-    THEN GEN_BETA_TAC
-    THEN PROVE_TAC[]);
-
-val COMP_SEL_3_3 =
- store_thm
-  ("COMP_SEL_3_3",
-   ``COMB (\(x,y,z). z) = SEL_3_3``,
-   RW_TAC std_ss [FUN_EQ_THM]
-    THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss 
-          [COMB_def,SEL_3_3_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
-    THEN GEN_BETA_TAC
-    THEN PROVE_TAC[]);
-
-val COMP_SEL_CLAUSES =
- save_thm
-  ("COMP_SEL_CLAUSES",
-   LIST_CONJ
-    [COMP_SEL_2_1,COMP_SEL_2_2,
-     COMP_SEL_3_1,COMP_SEL_3_2,COMP_SEL_3_3]);
-
-val SEL_2_1_CONCAT =
- store_thm
-  ("SEL_2_1_CONCAT",
-   ``SEL_2_1(inp1 <> inp2, out) = (out = inp1)``,
-   RW_TAC std_ss [SEL_2_1_def,FUN_EQ_THM,BUS_CONCAT_def]);
-
-val SEL_2_2_CONCAT =
- store_thm
-  ("SEL_2_2_CONCAT",
-   ``SEL_2_2(inp1 <> inp2, out) = (out = inp2)``,
-   RW_TAC std_ss [SEL_2_2_def,FUN_EQ_THM,BUS_CONCAT_def]);
-
-val SEL_3_1_CONCAT =
- store_thm
-  ("SEL_3_1_CONCAT",
-   ``SEL_3_1(inp1 <> (inp2 <> inp3), out) = (out = inp1)``,
-   RW_TAC std_ss [SEL_3_1_def,FUN_EQ_THM,BUS_CONCAT_def]);
-
-val SEL_3_2_CONCAT =
- store_thm
-  ("SEL_3_2_CONCAT",
-   ``SEL_3_2(inp1 <> (inp2 <> inp3), out) = (out = inp2)``,
-   RW_TAC std_ss [SEL_3_2_def,FUN_EQ_THM,BUS_CONCAT_def])
-
-val SEL_3_3_CONCAT =
- store_thm
-  ("SEL_3_3_CONCAT",
-   ``SEL_3_3(inp1 <> (inp2 <> inp3), out) = (out = inp3)``,
-   RW_TAC std_ss [SEL_3_3_def,FUN_EQ_THM,BUS_CONCAT_def]);
-
-val SEL_CONCAT_CLAUSES =
- save_thm
-  ("SEL_CONCAT_CLAUSES",
-   LIST_CONJ
-    [SEL_2_1_CONCAT,SEL_2_2_CONCAT,
-     SEL_3_1_CONCAT,SEL_3_2_CONCAT,SEL_3_3_CONCAT]);
-******************************************************************************)
-
 (*****************************************************************************)
 (* Constant combinational device                                             *)
 (*****************************************************************************)
@@ -1045,7 +914,7 @@ val Dff_def =
 (*****************************************************************************)
 (* Abstract on rising edge ("s at clk" analogous to PSL's "s@clk")           *)
 (*****************************************************************************)
-val _ = set_fixity "at" (Infixl 350);
+val _ = set_fixity "at" (Infixl 650);
 val at_def =
  Define
   `$at s clk = s when Rise clk`;
