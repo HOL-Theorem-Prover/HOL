@@ -204,7 +204,8 @@ fun define_inductive_type cdefs exth = let
   val th2 = TRANS th1 (SUBS_CONV cdefs (rand(concl th1)))
   val th3 = EQ_MP (AP_THM th2 (rand extm)) exth
   val th4 = itlist SCRUB_EQUATION (hyp th3) th3
-  val mkname = "mk_"^ename and destname = "dest_"^ename
+  val mkname = "ii_internal_mk_"^ename
+  and destname = "ii_internal_dest_"^ename
   val (bij1,bij2) = new_basic_type_definition ename (mkname,destname) th4
   val bij2a = AP_THM th2 (rand(rand(concl bij2)))
   val bij2b = TRANS bij2a bij2
