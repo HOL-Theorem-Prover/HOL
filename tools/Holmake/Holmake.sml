@@ -1060,8 +1060,9 @@ in
                      cache_insert(target, true))
                   else
                     cache_insert(target,
-                                 run_extra_commands tgt_str commands =
-                                 Process.success)
+                                 (done_some_work := true;
+                                  run_extra_commands tgt_str commands =
+                                  Process.success))
                 else (* target is up-to-date wrt its dependencies already *)
                   (if null ctxt then
                      if null commands then
