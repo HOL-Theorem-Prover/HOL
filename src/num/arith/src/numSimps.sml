@@ -271,18 +271,43 @@ fun CTXT_ARITH thms tm =
       end
     else failwith "CTXT_ARITH: not applicable";
 
-val (CACHED_ARITH,arith_cache) = let
-  fun check tm =
-    let val ty = type_of tm
-    in ty = num_ty orelse
-       (ty=Type.bool andalso (is_arith tm orelse tm = F))
-  end;
+val boring_ts = [numSyntax.bit1_tm, numSyntax.bit2_tm, numSyntax.numeral_tm]
+fun is_boring t = let
+  val (f,x) = dest_comb t
 in
-  CACHE (check,CTXT_ARITH)
+  List.exists (same_const f) boring_ts
+end handle HOL_ERR _ => is_const t
+
+val (CACHED_ARITH,arith_cache) = let
+  fun check tm = let
+    val ty = type_of tm
+  in
+    ty = num_ty andalso not (is_boring tm) orelse
+    (ty=Type.bool andalso (is_arith tm orelse tm = F))
+  end
+in
+  RCACHE (check, CTXT_ARITH)
   (* the check function determines whether or not a term might be handled
      by the decision procedure -- we want to handle F, because it's possible
      that we have accumulated a contradictory context. *)
 end;
+
+val hack = ref false
+val _ = register_btrace ("hack", hack)
+val CACHED_ARITH = fn thl => fn t => let
+                                  val result = CACHED_ARITH thl t
+                                in
+                                  if !hack then (
+                                  print "RCACHE success [";
+                                  app (fn th => (print_thm th; print " "))
+                                      thl;
+                                  print "], ";
+                                  print_term t;
+                                  print " -- ";
+                                  print_thm result;
+                                  print "\n") else ();
+                                  result
+                                end
 
 (* This needs to be done more systematically! *)
 local open arithmeticTheory
