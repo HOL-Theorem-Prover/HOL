@@ -316,11 +316,10 @@ fun run_extra_command c =
         | "MOSMLLEX" => [fullPath [MOSMLDIR, "bin/mosmllex"]]
         | "MOSMLYAC" => [fullPath [MOSMLDIR, "bin/mosmlyac"]]
         | _ => [w0]
-      val command = spacify (w_list @ ws)
     in
       TextIO.output(TextIO.stdOut, spacify c ^ "\n");
       TextIO.flushOut TextIO.stdOut;
-      Process.system command
+      SYSTEML (w_list @ ws)
     end
 
 
