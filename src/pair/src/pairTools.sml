@@ -3,9 +3,6 @@ struct
 
 open HolKernel Parse boolLib pairSyntax pairTheory;
 
-
-infix |-> ## THEN THENC;  infixr -->;
-
 val PERR = mk_HOL_ERR "pairTools";
 
 (*---------------------------------------------------------------------------
@@ -21,7 +18,7 @@ fun VSTRUCT_ABS bind th =
         let val ex_tm = mk_exists(v,tm)
         in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
         end
-      val L = rev (free_vars (rhs bind))
+      val L = strip_pair (rand bind)
   in snd(itlist CHOOSER L (bind, SUBS[SYM(ASSUME bind)] th))
   end;
 
@@ -49,7 +46,7 @@ fun PAIR_EX x vstruct =
           val (node1, node2) = dest_pair(rhs(concl expansion))
           val (value1,value2) = dest_pair value
       in pair_exists node1 value1 (pair_exists node2 value2 pthm')
-      end 
+      end
       handle HOL_ERR _ => raise PERR "PAIR_EX" ""
  in
    pair_exists x vstruct (REFL x)
@@ -75,7 +72,7 @@ fun PGEN_TAC vars (asl:Term.term list,tm) =
  let val (v,_) = dest_forall tm
      val tm'   = beta_conv(mk_comb(rand tm,vars))
  in
-   ([(asl,tm')], fn [th] => PGEN v vars th 
+   ([(asl,tm')], fn [th] => PGEN v vars th
                      | _ => raise PERR "PGEN_TAC" "validation")
  end;
 
@@ -88,8 +85,8 @@ fun PGEN_TAC vars (asl:Term.term list,tm) =
 local val expected = PERR "PFUN_EQ_RULE" "expected f <vstruct> = g <vstruct>"
       val SIMP = Rewrite.PURE_ONCE_REWRITE_RULE[GSYM FUN_EQ_THM]
 in
-fun PFUN_EQ_RULE th = 
- let val ((_,v1),(_,v2)) 
+fun PFUN_EQ_RULE th =
+ let val ((_,v1),(_,v2))
        = with_exn ((dest_comb##dest_comb) o dest_eq o concl) th expected
  in if v1=v2
       then SIMP (PGEN (genvar (type_of v1)) v1 th)
@@ -104,7 +101,7 @@ end;
  *              !v. M[FST v, FST(SND v), ... SND(SND ... v)]                 *
  *---------------------------------------------------------------------------*)
 
-local fun trav tm A = 
+local fun trav tm A =
          trav (mk_fst tm) (trav (mk_snd tm) A) handle HOL_ERR _ => (tm::A)
 in
 fun TUPLE v thm = GEN v (SPECL (trav v []) thm)
@@ -121,12 +118,12 @@ end;
 
 (*---------------------------------------------------------------------------
  * Builds a list of projection terms for "rhs", based on structure
- * of "tuple". 
+ * of "tuple".
 
        fun flat_vstruct0 tuple rhs =
           if (is_var tuple) then [rhs]
           else let val {fst,snd} = dest_pair tuple
-               in flat_vstruct0 fst (mk_fst rhs) @ 
+               in flat_vstruct0 fst (mk_fst rhs) @
                   flat_vstruct0 snd (mk_snd rhs)
                end;
 
@@ -139,7 +136,7 @@ fun flat_vstruct tuple rhs =
   let fun flat tuple (v,rhs) =
       if is_var tuple then [(tuple, rhs)]
       else let val (fst,snd) = dest_pair tuple
-           in  flat fst (v, mk_fst rhs) @ 
+           in  flat fst (v, mk_fst rhs) @
                flat snd (v, mk_snd rhs)
            end
   in map mk_eq (flat tuple (genvar alpha,rhs))
@@ -234,20 +231,20 @@ end;
  *---------------------------------------------------------------------------*)
 
 
-fun LET_EQ_TAC thml = 
+fun LET_EQ_TAC thml =
   Ho_Rewrite.PURE_REWRITE_TAC thml
   THEN REPEAT (LET_INTRO_TAC THEN DISCH_TAC);
 
 (*---------------------------------------------------------------------------
    Eliminate tupled quantification
-     
+
        -----------------------------------  TUPLED_QUANT_CONV `<Q><vstr>. P`
-       |- <Q><vstr>. P = <Q> v1 ... vn. P 
+       |- <Q><vstr>. P = <Q> v1 ... vn. P
 
    where <Q> is one of {?,!} and <vstruct> is a varstruct made
    from the variables v1,...,vn.
 
-   This is slightly imprecise: some of the rewrites done by CONV will 
+   This is slightly imprecise: some of the rewrites done by CONV will
    be attempted everywhere in the term. To make them happen just in
    the quantifier prefix is a little more work (but not much).
  ---------------------------------------------------------------------------*)
@@ -258,7 +255,7 @@ val is_universal   = same_const boolSyntax.universal
 val is_existential = same_const boolSyntax.existential;
 
 
-local 
+local
   val CONV = Ho_Rewrite.REWRITE_CONV [ELIM_UNCURRY] THENC
              DEPTH_CONV BETA_CONV THENC
              Ho_Rewrite.REWRITE_CONV [ELIM_PEXISTS,ELIM_PFORALL]
@@ -275,13 +272,13 @@ in
 fun ELIM_TUPLED_QUANT_CONV tm =
  case dest_tupled_quant tm
   of NONE => raise Fail "TUPLED_QUANT_CONV"
-   | SOME (strip_quant, list_mk_quant) => 
+   | SOME (strip_quant, list_mk_quant) =>
      let val V = strip_pair(fst(dest_pabs(rand tm)))
          val thm = CONV tm
          val rside = rhs (concl thm)
          val (W,body) = strip_quant rside
-     in TRANS thm 
-          (ALPHA rside 
+     in TRANS thm
+          (ALPHA rside
               (list_mk_quant(V, subst(map2 (curry op|->) W V) body)))
  end
 end ;
