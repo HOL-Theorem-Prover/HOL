@@ -153,6 +153,8 @@ fun extract_thm (GSTK{prop=PROVED(th,_), ...}) = th
 (* Prettyprinting *)
 
 local
+val print_fvs = ref false
+val _ = register_btrace ("goalstack fvs", print_fvs)
 fun ppgoal ppstrm (asl,w) =
    let open Portable
        val {add_string, add_break,
@@ -177,6 +179,28 @@ fun ppgoal ppstrm (asl,w) =
                    add_newline ();
                    pr_indexes asl; end_block ()));
      add_newline ();
+     if !print_fvs then let
+         val fvs = Listsort.sort Term.compare (free_varsl (w::asl))
+         fun pr_v v = let
+           val (n, ty) = dest_var v
+         in
+           begin_block INCONSISTENT 2;
+           add_string n; add_break(1,0);
+           Parse.pp_type ppstrm ty;
+           end_block()
+         end
+       in
+         if (not (null fvs)) then
+           (if (not (null asl)) then add_newline() else ();
+            add_string "Free variables"; add_newline();
+            add_string "  ";
+            begin_block CONSISTENT 0;
+            pr_list pr_v (fn () => ()) (fn () => add_break(5,0)) fvs;
+            end_block ();
+            add_newline(); add_newline())
+         else ()
+       end
+     else ();
      end_block ()
    end
    handle e => (Lib.say "\nError in attempting to print a goal!\n";  raise e);
