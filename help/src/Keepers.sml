@@ -127,7 +127,7 @@ val keepers =
      "relationTheory.sig",
 
      (* res_quan *)
-     "Res_quan.sig", "res_quanLib.sig", "res_quanTheory.sig",
+     "res_quanLib.sig", "res_quanTheory.sig",
 
      (* Rings *)
 
@@ -171,7 +171,7 @@ val keepers =
      "bitsTheory.sig", "word32Theory.sig", "word32Lib.sig",
 
      (* HolSat *)
-     "HolSatLib.sig", "canon_supportTheory.sig", "canonTools.sig",
+     "HolSatLib.sig",
 
      (* simpsets *)
      "optionSimps.sig", "numSimps.sig", "intSimps"
