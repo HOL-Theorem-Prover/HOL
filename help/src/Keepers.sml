@@ -168,7 +168,10 @@ val keepers =
      "bword_numTheory.sig","word_bitopTheory.sig",
 
      (* word32 *)
-     "bitsTheory.sig", "word32Theory.sig", "word32Lib.sig",
+     "bitsTheory.sig",
+     "word16Theory.sig", "word16Lib.sig",
+     "word32Theory.sig", "word32Lib.sig",
+     "word64Theory.sig", "word64Lib.sig",
 
      (* HolSat *)
      "HolSatLib.sig",

@@ -112,7 +112,9 @@ HOL currently offers the following libraries.
     | listLib         | extensive development of lists              |
     | stringLib       | characters and strings                      |
     | wordLib         | theories and proof support for bitstrings   |
+    | word16Lib       | theories of 16-bit words                    |
     | word32Lib       | theories of 32-bit words                    |
+    | word64Lib       | theories of 64-bit words                    |
     | unwindLib       | unwinding existential quantifiers           |
     | res_quanLib     | bounded quantification                      |
     | refuteLib       | support for refutation procedures           |
