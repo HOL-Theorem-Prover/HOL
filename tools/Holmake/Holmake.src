@@ -93,8 +93,7 @@ fun includify [] = []
   | includify (h::t) = "-I" :: h :: includify t
 
 fun parse_command_line list = let
-  fun find_pairs0 tag remainder includes [] =
-    (List.rev remainder, List.rev includes)
+  fun find_pairs0 tag rem inc [] = (List.rev rem, List.rev inc)
     | find_pairs0 tag rem inc [x] = (List.rev (x::rem), List.rev inc)
     | find_pairs0 tag rem inc (x::(ys as (y::xs))) = let
       in
@@ -154,7 +153,7 @@ fun parse_command_line list = let
 in
   {targets=rem14, debug=debug, show_usage=help, show_version=show_version,
    always_rebuild_deps=rebuild_deps,
-   additional_includes=includify includes,
+   additional_includes=includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
    quit_on_failure = qofp, no_hmakefile = no_hmakefile,
    allfast = allfast, fastfiles = fastfiles,
@@ -169,7 +168,8 @@ end
 val {targets, debug, dontmakes, show_usage, show_version, allfast, fastfiles,
      always_rebuild_deps,
      additional_includes = cline_additional_includes,
-     actual_HOLDIR, no_sigobj,
+     actual_HOLDIR,
+     no_sigobj = cline_no_sigobj,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      user_overlay} =
   parse_command_line (CommandLine.arguments())
@@ -207,12 +207,13 @@ val hmakefile_doc =
      Holmake_rules.parse_from_file hmakefile)
   else Holmake_types.empty_doc
 
-val hmake_includes = includify (#includes hmakefile_doc)
+val hmake_includes = #includes hmakefile_doc
 val additional_includes =
-  remove_duplicates (cline_additional_includes @ hmake_includes)
+  includify (remove_duplicates (cline_additional_includes @ hmake_includes))
 
 val hmake_preincludes = includify (#pre_includes hmakefile_doc)
 val hmake_no_overlay = member "NO_OVERLAY" (#options hmakefile_doc)
+val hmake_no_sigobj = member "NO_SIGOBJ" (#options hmakefile_doc)
 
 val actual_overlay =
   if no_overlay orelse hmake_no_overlay then NONE
@@ -237,6 +238,7 @@ fun extra_commands t =
   Option.map #commands (List.find (fn  r => #target r = t) extra_rules)
 
 
+val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
 val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
 (*
   if not use_sigobj then
