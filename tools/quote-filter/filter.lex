@@ -51,6 +51,7 @@ parse `"` { ECHO lexbuf; STRING lexbuf  }
 and STRING =
 parse "\\\"" { ECHO lexbuf }
     | "\""   { ECHO lexbuf; INITIAL lexbuf }
+    | newline { print "\n"; TextIO.flushOut (!output_stream); STRING lexbuf }
     | _      { ECHO lexbuf; STRING lexbuf }
     | eof    { () }
 
@@ -59,6 +60,7 @@ parse "(*"   { ECHO lexbuf; inc comdepth; COMMENT lexbuf }
     | "*)"   { ECHO lexbuf; dec comdepth;
                if !comdepth < 1 then INITIAL lexbuf
                else COMMENT lexbuf }
+    | newline { print "\n"; TextIO.flushOut (!output_stream); COMMENT lexbuf }
     | _      { ECHO lexbuf; COMMENT lexbuf }
     | eof    { () }
 
@@ -68,7 +70,7 @@ parse "`"    { print "\"]"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; QUOTE lexbuf }
     | `"`   { print "\\\""; QUOTE lexbuf }
     | `\t`   { print "\\t"; QUOTE lexbuf }
-    | `\n`   { print " \",\nQUOTE \""; QUOTE lexbuf }
+    | newline{ print " \",\nQUOTE \""; QUOTE lexbuf }
     | _      { ECHO lexbuf; QUOTE lexbuf }
     | eof    { () }
 
@@ -78,7 +80,7 @@ parse "``"   { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; TMQUOTE lexbuf }
     | `"`   { print "\\\""; TMQUOTE lexbuf }
     | `\t`   { print "\\t"; TMQUOTE lexbuf }
-    | `\n`   { print " \",\nQUOTE \""; TMQUOTE lexbuf }
+    | newline{ print " \",\nQUOTE \""; TMQUOTE lexbuf }
     | _      { ECHO lexbuf; TMQUOTE lexbuf }
     | eof    { () }
 
@@ -88,7 +90,7 @@ parse "``"   { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; TYQUOTE lexbuf }
     | `"`   { print "\\\""; TYQUOTE lexbuf }
     | `\t`   { print "\\t"; TYQUOTE lexbuf }
-    | `\n`   { print " \",\nQUOTE \""; TYQUOTE lexbuf }
+    | newline{ print " \",\nQUOTE \""; TYQUOTE lexbuf }
     | _      { ECHO lexbuf; TYQUOTE lexbuf }
     | eof    { () }
 
@@ -100,7 +102,7 @@ parse "`" ws * "--"  { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; OLDTMQUOTE lexbuf }
     | `"`   { print "\\\""; OLDTMQUOTE lexbuf }
     | `\t`   { print "\\t"; OLDTMQUOTE lexbuf }
-    | `\n`   { print " \",\nOLDTMQUOTE \""; OLDTMQUOTE lexbuf }
+    | newline{ print " \",\nOLDTMQUOTE \""; OLDTMQUOTE lexbuf }
     | _      { ECHO lexbuf; OLDTMQUOTE lexbuf }
     | eof    { () }
 
@@ -112,7 +114,7 @@ parse "`" ws * "=="  { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; OLDTYQUOTE lexbuf }
     | `"`   { print "\\\""; OLDTYQUOTE lexbuf }
     | `\t`   { print "\\t"; OLDTYQUOTE lexbuf }
-    | `\n`   { print " \",\nOLDTYQUOTE \""; OLDTYQUOTE lexbuf }
+    | newline{ print " \",\nOLDTYQUOTE \""; OLDTYQUOTE lexbuf }
     | _      { ECHO lexbuf; OLDTYQUOTE lexbuf }
     | eof    { () }
 
@@ -123,6 +125,7 @@ parse id { ECHO lexbuf; print "),QUOTE \"" }
               print "),QUOTE \""; antiquote := oldanti
             end }
     | ws + { ANTIQUOTE lexbuf }
+    | newline{ECHO lexbuf; TextIO.flushOut(!output_stream); ANTIQUOTE lexbuf}
     | _    { ECHO lexbuf }
     | eof  { () }
 

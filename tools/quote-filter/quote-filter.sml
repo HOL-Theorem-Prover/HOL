@@ -1,12 +1,15 @@
 open OS.Process
 
+(* magic to ensure that interruptions (SIGINTs) are actually seen by the
+   linked executable as Interrupt exceptions *)
+prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
+val _ = catch_interrupt true;
+
 fun createLexerStream (is : BasicIO.instream) =
   Lexing.createLexer (fn buff => fn n => Nonstdio.buff_input is buff 0 n)
 
-val argv = CommandLine.arguments()
-
 val (instream, outstream) =
-    case argv of
+    case CommandLine.arguments() of
       [] => (BasicIO.std_in, TextIO.stdOut)
     | [ifile, ofile] => let
         open TextIO
@@ -29,6 +32,14 @@ val (instream, outstream) =
             exit failure)
 
 val _ = filter.output_stream := outstream
-val _ = filter.INITIAL (createLexerStream instream)
+val instr = createLexerStream instream
 
+(* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
+   Kenn Heinrich who helped me see the light with respect to this code *)
+
+fun loop() = filter.INITIAL instr
+    handle Interrupt => (filter.comdepth := 0; filter.pardepth := 0;
+                         filter.antiquote := false; loop())
+
+val _ = loop()
 val _ = exit success
