@@ -459,59 +459,86 @@ fun RecConvertCompile lib defth totalth =
   (DISCH_ALL(Compile lib [RecConvert defth totalth] func))
  end;
 
-(*****************************************************************************)
-(* Single entry point idea from KXS                                          *)
-(*****************************************************************************)
-fun xDev_defn lib name defq =
- let val defth = xDefine name defq
-     val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] (ConvertCompile lib defth)
- in
-  (defth,devth)
- end;
 
-fun xRecDev_defn lib name defq measureq =
- let val [QUOTE measurestring] = measureq (* barf - how should we do this ? *)
-     val (defth,ind) =
-      Defn.tprove
-       (Hol_defn name defq,
-        WF_REL_TAC [QUOTE ("measure" ^ measurestring)])       (* barf x 100 *)
-     val (lt,rt) = dest_eq(concl defth)
-     val (func,args) = dest_comb lt
-     val (b,t1,t2) = dest_cond rt
-     val fb = mk_pabs(args,b)
-     val f1 = mk_pabs(args,t1)
-     val f2 = mk_pabs(args,rand t2)
-     val totalth = prove
-                    (``TOTAL(^fb,^f1,^f2)``,
+fun mk_measure tm = 
+   let open numSyntax
+       val measure_tm = prim_mk_const{Name="measure",Thy="prim_rec"}
+       val theta = match_type (alpha --> num) (type_of tm)
+   in mk_comb(inst theta measure_tm, tm)
+   end;
+
+(*---------------------------------------------------------------------------*)
+(* For termination prover.                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val default_simps =
+    [combinTheory.o_DEF,
+     combinTheory.I_THM,
+     prim_recTheory.measure_def,
+     relationTheory.inv_image_def,
+     pairTheory.LEX_DEF]
+
+(*---------------------------------------------------------------------------*)
+(* Single entrypoint for definitions where proof of termination will succeed *)
+(* Allows measure function to be indicated in same quotation as definition,  *)
+(* or not.                                                                   *)
+(*                                                                           *)
+(*     hwDefine lib `(eqns) measuring f`                                     *)
+(*                                                                           *)
+(* will use f as the measure function and attempt automatic termination      *)
+(* proof. If successful, returns (|- eqns, |- ind, |- dev)                   *)
+(* NB. the recursion equations must be parenthesized; otherwise, strange     *)
+(* parse errors result. Also, the name of the defined function must be       *)
+(* alphanumeric.                                                             *)
+(*                                                                           *)
+(* One can also not mention the measure function, as in Define:              *)
+(*                                                                           *)
+(*     hwDefine lib `eqns`                                                   *)
+(*                                                                           *)
+(* which will accept either non-recursive or recursive specifications. It    *)
+(* returns a triple (|- eqns, |- ind, |- dev) where the ind theorem should   *)
+(* be ignored (it will be numTheory.INDUCTION.                               *)
+(*---------------------------------------------------------------------------*)
+
+fun hwDefine lib defq =
+ let val absyn0 = Parse.Absyn defq
+     open Absyn pairSyntax
+ in 
+   case absyn0
+    of APP(_,APP(_,IDENT(loc,"measuring"),def),f) =>
+        let val (deftm,names) = Defn.parse_defn def
+            val hdeqn = hd (boolSyntax.strip_conj deftm)
+            val (l,r) = boolSyntax.dest_eq hdeqn
+            val domty = pairSyntax.list_mk_prod 
+                          (map type_of (snd (boolSyntax.strip_comb l)))
+            val fty = Pretype.fromType (domty --> numSyntax.num)
+            val typedf = Parse.absyn_to_term 
+                             (Parse.term_grammar())
+                             (TYPED(loc,f,fty))
+            val defn = Defn.mk_defn (hd names) deftm
+            val tac = EXISTS_TAC (mk_measure typedf)
+                       THEN TotalDefn.TC_SIMP_TAC [] default_simps
+            val (defth,ind) = Defn.tprove(defn, tac)
+            val (lt,rt) = boolSyntax.dest_eq(concl defth)
+            val (func,args) = dest_comb lt
+            val (b,t1,t2) = dest_cond rt
+            val fb = mk_pabs(args,b)
+            val f1 = mk_pabs(args,t1)
+            val f2 = mk_pabs(args,rand t2)
+            val totalth = prove
+                    (Term`TOTAL(^fb,^f1,^f2)`,
                      RW_TAC std_ss [TOTAL_def]
-                      THEN Q.EXISTS_TAC measureq
-                      THEN GEN_BETA_TAC
-                      THEN RW_TAC arith_ss []
-                      THEN DECIDE_TAC)
-    val devth = PURE_REWRITE_RULE
-                 [GSYM DEV_IMP_def]
-                 (RecConvertCompile lib defth totalth)
- in
-  (defth,ind,devth)
+                      THEN EXISTS_TAC typedf
+                      THEN TotalDefn.TC_SIMP_TAC [] default_simps)
+            val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
+                          (RecConvertCompile lib defth totalth)
+        in
+         (defth,ind,devth)
+        end
+     | otherwise => 
+        let val defth = Define defq
+            val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+                          (ConvertCompile lib defth)
+        in (defth,numTheory.INDUCTION,devth)
+        end
  end;
-
-(* Examples
-xDev_defn
- []
- "IncMult"
- `IncMult(m,n) = (m*n)+1`;
-
-xRecDev_defn
- []
- "FactIter"
- `FactIter (n,acc) =
-    (if n = 0 then (n,acc) else FactIter (n - 1,n * acc))`
- `\(n:num,acc:num). n`;
-
-xRecDev_defn
- []
- "MultIter"
- `MultIter (m,n,acc) =
-    (if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc))`
- `\(m:num,n:num,acc:num). m`;
-*)

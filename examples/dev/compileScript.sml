@@ -236,4 +236,11 @@ val TOTAL_THM =
     THEN Cases_on `f1 x`
     THEN PROVE_TAC[]);
 
+(*---------------------------------------------------------------------------*)
+(* Tag constant for the measure function. Used infix.                        *)
+(*---------------------------------------------------------------------------*)
+
+val _ = new_constant ("measuring", bool --> alpha --> bool);
+val _ = add_infix ("measuring", 90, NONASSOC);
+
 val _ = export_theory();

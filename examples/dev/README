@@ -4,8 +4,9 @@
 == [Revised version incorporating Juliano's new treatment of recursion]      ==
 == [Revised version incorporating liveness]                                  ==
 == [04.01.05: improved proofs from KXS in composeScript.sml & devScript.sml] ==
-== [09.01.05: MJCG added converter to combinators Atm, Seq, Par, Ite, Rec]   ==
+== [09.01.05: MJCG added converter to combinators Seq, Par, Ite, Rec]        ==
 == [13.01.05: major tidy and update by MJCG]                                 ==
+== [17.01.05: MJCG installed dwDefine and improved examples from KXS]        ==
 ===============================================================================
 
 composeScript.sml ......... definition of devices and their composition
@@ -13,6 +14,12 @@ devScript.sml.............. definition and theorems on liveness
 compileScript.sml ......... definitions and theorems to support compiler
 compile.sml ............... convert to combinators and compile to devices
 FactScript.sml ............ an example
+
+To make generated hardware a bit more readable, the following
+(experimental) infixes are now defined in composeScript.sml
+
+ set_fixity ";;" (Infixl 750); overload_on (";;", ``SEQ``)
+ set_fixity "||" (Infixl 650); overload_on ("||", ``PAR``)
 
 The main functions provided in compile.sml are
 
@@ -45,38 +52,15 @@ constant defined in the program
            -------     --------    ----
            library     program   constant
 
-The theorems in the Library are things like:
-
-      |- SEQ
-          (SEQ
-             (SEQ
-                (PAR (ATM (\(m,n). m))
-                   (PAR (ATM (\(m,n). n)) (ATM (\(m,n). 0))))
-                (REC
-                   (SEQ (PAR (ATM (\(m,n,acc). m)) (ATM (\(m,n,acc). 0)))
-                      (ATM (UNCURRY $=)))
-                   (PAR (ATM (\(m,n,acc). 0))
-                      (PAR (ATM (\(m,n,acc). n)) (ATM (\(m,n,acc). acc))))
-                   (PAR
-                      (SEQ (PAR (ATM (\(m,n,acc). m)) (ATM (\(m,n,acc). 1)))
-                         (ATM (UNCURRY $-)))
-                      (PAR (ATM (\(m,n,acc). n))
-                         (SEQ
-                            (PAR (ATM (\(m,n,acc). n))
-                               (ATM (\(m,n,acc). acc)))
-                            (ATM (UNCURRY $+))))))) (ATM SND)) (ATM SND) 
-         ===>
-         DEV (UNCURRY $*)
-
 where |= P ===> Q = !x. P x ==> Q x
 
 When the compiler encounters a function that isn't an application of
-Seq, Par or Ite it searches the library for a theorem of the form
+Seq, Par or Ite, the library is searched for a theorem of the form
 
  |- C ===> DEV f
 
-and uses the first one it finds. It no library implementation is
-found, then the compiler generates
+The first one found is used (``P ===> Q`` means ``!x. P x ==> Q x``). 
+If no library implementation is found, then the compiler generates:
 
  |- ATM f ===> DEV f
 
@@ -132,68 +116,30 @@ Example:
        DEV FactIter
 
 
-xDev_defn : thm list -> string -> term frag list -> thm * thm
--------------------------------------------------------------
+hwDefine : thm list -> term frag list -> thm * thm * thm
+--------------------------------------------------------
 
-Tales a library, a name (string "f") of a function to be defined an
-equation of the form `f x = <expression>` and then creates a
-definition of f (using TFL) and then an implementation using
-ConvertCompile.
+Single entrypoint for definitions where proof of termination will
+succeed. Allows measure function to be indicated in same quotation as
+definition, or not.
+                                                                         
+    hwDefine lib `(eqns) measuring f`                                    
+                                                                         
+will use f as the measure function and attempt automatic termination
+proof. If successful, returns (|- eqns, |- ind, |- dev) 
 
-Example:
+NB. the recursion equations must be parenthesized; otherwise, strange
+    parse errors result. Also, the name of the defined function must be
+    alphanumeric.
+                                                                         
+One can also not mention the measure function, as in Define:             
+                                                                         
+    hwDefine lib `eqns`                                                  
+                                                                         
+which will accept either non-recursive or recursive specifications. It
+returns a triple (|- eqns, |- ind, |- dev) where the ind theorem
+should be ignored (it will be numTheory.INDUCTION.
 
- - xDev_defn [] "Suc" `Suc n = n + 1`;
- Definition has been stored under "Suc_def".
- > val it =
-     (|- !n. Suc n = n + 1,
-      |- SEQ (PAR (ATM (\n. n)) (ATM (\n. 1))) (ATM (UNCURRY $+)) ===> DEV Suc)
-      : thm * thm
-
-See FactScript.sml for more examples.
-
-
-xRecDev_defn : thm list -> string -> term frag list -> term frag list -> thm * thm * thm
------------------------------------------------------------------------------------------
-
-Tales a library, a name (string "f") of a function to be defined an
-equation of the form `f x = if f1 x then f2 x else f (f3 x)` and a
-measure function `\x. <expression>` and then creates a definition of f
-(using TFL) and then an implementation using RecConvertCompile.
-
-Example:
-
-  xRecDev_defn
-   []
-   "MultIter"
-   `MultIter (m,n,acc) =
-     if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc)`
-   `\(m,n,acc). m`;
- > val it =
-     (|- MultIter (m,n,acc) =
-         (if m = 0 then (0,n,acc) else MultIter (m - 1,n,n + acc)),
-      |- !P.
-           (!m n acc. (~(m = 0) ==> P (m - 1,n,n + acc)) ==> P (m,n,acc)) ==>
-           !v v1 v2. P (v,v1,v2),
-      |- REC
-           (SEQ (PAR (ATM (\(m,n,acc). m)) (ATM (\(m,n,acc). 0)))
-              (ATM (UNCURRY $=)))
-           (PAR (ATM (\(m,n,acc). 0))
-              (PAR (ATM (\(m,n,acc). n)) (ATM (\(m,n,acc). acc))))
-           (PAR
-              (SEQ (PAR (ATM (\(m,n,acc). m)) (ATM (\(m,n,acc). 1)))
-                 (ATM (UNCURRY $-)))
-              (PAR (ATM (\(m,n,acc). n))
-                 (SEQ (PAR (ATM (\(m,n,acc). n)) (ATM (\(m,n,acc). acc)))
-                    (ATM (UNCURRY $+))))) ===> DEV MultIter) : thm * thm * thm
-
-See FactScript.sml for more examples.
+See FactScript.sml for examples.
 
 =============================================================================== 
-MJCG
-Thu Jul 15 2004
-
-JMI
-Mon Sep 27 2004
-
-MJCG
-Mon Jan 13 2005

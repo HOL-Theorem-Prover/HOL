@@ -329,6 +329,8 @@ val SEQ_def =
      d2(c1,data,c2,out) /\
      AND(c1,c2,done)`;
 
+val _ = set_fixity ";;" (Infixl 750);
+val _ = overload_on (";;", ``SEQ``);
 
 (*****************************************************************************)
 (* Data flip-flop                                                            *)
@@ -340,7 +342,6 @@ val DFF_def = Define `DFF (d,clk,q) = (!t. q (t+1) = (POSEDGE clk (t+1) =>
 (*****************************************************************************)
 (* The parallel composition                                                  *)
 (*****************************************************************************)
-
 val PAR_def = Define `PAR f g (load,inp,done,out) =
          ?c0 c1 start done' done'' data' data'' out' out''.
            POSEDGE_IMP(load,c0) /\ DEL(done,c1) /\
@@ -349,6 +350,9 @@ val PAR_def = Define `PAR f g (load,inp,done,out) =
            DFF (data',done',out') /\ DFF (data'',done'',out'') /\
            AND (done',done'',done) /\
            (out = (\t. (out' t, out'' t)))`;
+
+val _ = set_fixity "||" (Infixl 650);
+val _ = overload_on ("||", ``PAR``)
 
 
 (*
