@@ -5,6 +5,18 @@
 
 load "bossLib"; open bossLib;
 
+(* Based on iteration alone *)
+val Ackermann_Existence = Q.prove
+(`?f. (!n. f 0 n = n + 1) /\ 
+      (!m. f (m + 1) 0 = f m 1) /\
+      (!m n. f (m + 1) (n + 1) = f m (f (m + 1) n))`,
+ Q.EXISTS_TAC `SIMP_REC SUC (\f x. SIMP_REC (f 1) f x)`
+   THEN RW_TAC arith_ss [prim_recTheory.SIMP_REC_THM, 
+                         GSYM arithmeticTheory.ADD1]);
+
+
+(* Using WFREC *)
+
 val Ack_def = 
  Hol_defn "Ack" 
   `(Ack (0,n) =  n+1) /\
@@ -46,7 +58,6 @@ val Sudan_def =
  /\ (Sudan (SUC n) (x,0)     = x)
  /\ (Sudan (SUC n) (x,SUC y) = Sudan n (Sudan (SUC n) (x,y), 
                                         Sudan (SUC n) (x,y) + SUC y))`;
-
 
 val (Sudan_eqns, Sudan_ind) = 
   Defn.tprove(Sudan_def, WF_REL_TAC `^pred LEX (inv_image ^pred SND)`);
