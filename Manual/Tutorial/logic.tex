@@ -87,13 +87,13 @@ splits a conjunction into its two conjuncts.
 \begin{session}
 \begin{verbatim}
 - ``x /\ y ==> z``;
-> val it = `x /\ y ==> z` : term
+> val it = ``x /\ y ==> z`` : term
 
 - dest_imp it;
-> val it = (`x /\ y`, `z`) : term * term
+> val it = (``x /\ y``, ``z``) : term * term
 
 - dest_conj(#1 it);
-> val it = (`x`, `y`) : term * term
+> val it = (``x``, ``y``) : term * term
 \end{verbatim}
 \end{session}
 
@@ -116,16 +116,16 @@ The built-in function {\small\verb|type_of|} has \ML\ type
 \begin{session}
 \begin{verbatim}
 - ``(1,2)``;
-> val it = `(1,2)` : term
+> val it = ``(1,2)`` : term
 
 - type_of it;
-> val it = `:num # num` : hol_type
+> val it = ``:num # num`` : hol_type
 
 - (``1``, ``2``);
-> val it = (`1`, `2`) : term * term
+> val it = (``1``, ``2``) : term * term
 
 - type_of(#1 it);
-> val it = `:num` : hol_type
+> val it = ``:num`` : hol_type
 \end{verbatim}
 \end{session}
 
@@ -140,10 +140,10 @@ language types\/} and the latter as {\it meta-language types\/}.  For example,
 \begin{session}
 \begin{verbatim}
 - ``(1,T)``;
-> val it = `(1,T)` : term
+> val it = ``(1,T)`` : term
 
 - type_of it;
-> val it = `:num * bool` : hol_type
+> val it = ``:num * bool`` : hol_type
 \end{verbatim}
 \end{session}
 
@@ -158,9 +158,9 @@ constructed.  These are used later.
 - val x = mk_var("x", ``:bool``)
   and y = mk_var("y", ``:bool``)
   and z = mk_var("z", ``:bool``);
-> val x = `x` : term
-  val y = `y` : term
-  val z = `z` : term
+> val x = ``x`` : term
+  val y = ``y`` : term
+  val z = ``z`` : term
 \end{verbatim}
 \end{session}
 
@@ -170,7 +170,7 @@ conjunctions and implications respectively.
 \begin{session}
 \begin{verbatim}
 - val t = mk_imp(mk_conj(x,y),z);
-> val t = `x /\ y ==> z` : term
+> val t = ``x /\ y ==> z`` : term
 \end{verbatim}
 \end{session}
 
@@ -193,13 +193,13 @@ be guessed:
 
 \begin{session}\begin{verbatim}
 - ``~x``;
-val it = `~x` : term
+val it = ``~x`` : term
 
 - ``x``;
 <<HOL message: inventing new type variable names: 'a.>>
-> val it = `x` : Term.term
+> val it = ``x`` : Term.term
 - type_of it;
-> val it = `:'a` : hol_type
+> val it = ``:'a`` : hol_type
 \end{verbatim}\end{session}
 
     In the first case, the \HOL\ type checker used the known type
@@ -218,14 +218,14 @@ val it = `~x` : term
 \begin{session}\begin{verbatim}
 - ``(x,y)``;
 <<HOL message: inventing new type variable names: 'a, 'b.>>
-> val it = `(x,y)` : term
+> val it = ``(x,y)`` : term
 - type_of it;
-> val it = `:'a # 'b` : hol_type
+> val it = ``:'a # 'b`` : hol_type
 
 - ``x:num``;
-> val it = `x` : term
+> val it = ``x`` : term
 - type_of it;
-> val it = `:num` : hol_type
+> val it = ``:num`` : hol_type
 \end{verbatim}\end{session}
 
     Functions have types of the form \ml{$\sigma_1$->$\sigma_2$},
@@ -234,10 +234,10 @@ val it = `~x` : term
 
 \begin{session}\begin{verbatim}
 - type_of ``$==>``;
-> val it = `:bool -> bool -> bool` : hol_type
+> val it = ``:bool -> bool -> bool`` : hol_type
 
 - type_of ``$+``;
-> val it = `:num -> num -> num` : hol_type
+> val it = ``:num -> num -> num`` : hol_type
 \end{verbatim}\end{session}
 
 \noindent Both \ml{+} and \ml{==>} are infixes, so their use in
@@ -249,16 +249,16 @@ versus meta-language types.
 
 \begin{session}\begin{verbatim}
 - ``(x + 1, t1 ==> t2)``;
-> val it = `(x + 1,t1 ==> t2)` : term
+> val it = ``(x + 1,t1 ==> t2)`` : term
 
 - type_of it;
-> val it = `:num # bool` : hol_type
+> val it = ``:num # bool`` : hol_type
 
 - (``x=1``, ``t1==>t2``);
-> val it = (`x = 1`, `t1 ==> t2`) : term * term
+> val it = (``x = 1``, ``t1 ==> t2``) : term * term
 
 - (type_of (#1 it), type_of (#2 it));
-> val it = (`:bool`, `:bool`) : hol_type * hol_type
+> val it = (``:bool``, ``:bool``) : hol_type * hol_type
 \end{verbatim}\end{session}
 
 \noindent The types of constants are declared in {\it theories}.  This is
@@ -308,9 +308,9 @@ unification failure message: unify failed
 
 \begin{session}\begin{verbatim}
 - ``$==> t1 t2``;
-> val it = `t1 ==> t2` : term
+> val it = ``t1 ==> t2`` : term
 - ``$/\ t1 t2``;
-> val it = `t1 /\ t2` : term
+> val it = ``t1 /\ t2`` : term
 \end{verbatim}\end{session}
 
     Lambda-terms, or $\lambda$-terms, denote functions. The symbol
@@ -321,10 +321,10 @@ unification failure message: unify failed
 
 \begin{session}\begin{verbatim}
 - ``\x. x + 1``;
-> val it = `\x. x + 1` : term
+> val it = ``\x. x + 1`` : term
 
 - type_of it;
-> val it = `:num -> num` : hol_type
+> val it = ``:num -> num`` : hol_type
 \end{verbatim}\end{session}
 
 The two most important quantifiers are \ml{!} and \ml{?}, universal
