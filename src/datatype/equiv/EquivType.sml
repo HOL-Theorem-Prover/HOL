@@ -212,12 +212,10 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
     end
 
    fun dest_funtype ty =
-      if (ty = repty)
-      then [ty]
-      else let val (_,[l,r]) = (assert(curry op ="fun") ## I) (dest_type ty)
-           in [l]@(dest_funtype r)
-           end
-           handle _ => [ty]
+      if ty=repty then [ty]
+      else let val (l,r) = dom_rng ty
+           in [l]@dest_funtype r
+           end handle HOL_ERR _ => [ty]
 
   fun define_fun {def_name,fname,func=tm,fixity} =
      let val tyl = dest_funtype(type_of tm)
@@ -230,17 +228,17 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
                          args
           val l = list_mk_comb(mk_var(fname,rty),args)
           val r = let val r0 = list_mk_comb(tm,rargs)
-                  in if (type_of r0 = repty)
-                     then (--`^abs (^eqv ^r0)`--)
-                     else r0
+                  in if type_of r0 = repty
+                        then (--`^abs (^eqv ^r0)`--)
+                        else r0
                   end
-          val def = mk_eq(l,r)
       in
         if fixity <> Prefix then
           Parse.add_rule (Parse.standard_spacing fname fixity)
         else ();
-        new_definition(def_name, def)
+        new_definition(def_name, mk_eq(l,r))
      end
+
   val newdefs = map define_fun fnlist
 
   val newthms = map (REWRITE_RULE(map GSYM newdefs) o

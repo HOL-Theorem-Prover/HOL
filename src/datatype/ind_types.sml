@@ -1041,6 +1041,8 @@ fun find P l =
    of NONE => raise ERR "find" "No element satisfying predicate"
     | SOME x => x;
 
+fun pair2recd (M,v) = {redex=v, residue=M}
+fun hol98_subst_of s = map pair2recd s;
 
 fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   val sth0 = SPEC_ALL rth0
@@ -1049,7 +1051,7 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   and (pevs1,pbod1) = strip_exists (concl sth1)
   val (pcjs0,qcjs0) = chop_list k (conjuncts pbod0)
   and (pcjs1,qcjs1) = chop_list k (snd(chop_list n (conjuncts pbod1)))
-  val tyal0 = Hol88Subst.subst_of 
+  val tyal0 = hol98_subst_of 
                (mk_set (zip (map grab_type pcjs1) (map grab_type pcjs0)))
   val tyal1 = map (fn {redex,residue} => {redex=residue,residue=redex}) tyal0
   val tyins0 = map (fn f => 
@@ -1067,7 +1069,7 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   val (lcjs0,rcjs0) = chop_list k (map (snd o strip_forall) (conjuncts bod0))
   and (lcjs1,rcjsx) = chop_list k (map (snd o strip_forall)
                                    (snd(chop_list n (conjuncts bod1))))
-  val rcjs1 =  map (fn t => find (clause_corresponds t) rcjsx) rcjs0
+  val rcjs1 = map (fn t => find (clause_corresponds t) rcjsx) rcjs0
   fun proc_clause tm0 tm1 = let
     val (l0,r0) = dest_eq tm0
     and (l1,r1) = dest_eq tm1
