@@ -2,9 +2,9 @@
            An example from Peter Homeier.
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib", "stringTheory", "pred_setTheory"];
+app load ["stringTheory", "pred_setTheory"];
 
-open bossLib pred_setTheory;
+open pred_setTheory;
 
 (*=======================================================================*)
 (* First we define the datatypes for assertion expressions.              *)
@@ -101,7 +101,7 @@ val FINITE_FVav =
 (* First we define << as a lexicographic ordering between lists of numbers.  *)
 (*---------------------------------------------------------------------------*)
 
-set_fixity ("<<", Infixr 501);
+set_fixity "<<" (Infixr 501);
 
 val LEXI_DEF =
  xDefine "LEXI"
@@ -174,6 +174,5 @@ val AV_EQUIVALENCE =
  Induct
   THEN RW_TAC std_ss 
        [AV_DEF,FREE_VARS_def,NOT_IN_EMPTY,IN_INSERT,IN_UNION,IN_DELETE]
-  THEN ((AP_TERM_TAC THEN CONV_TAC FUN_EQ_CONV THEN RW_TAC std_ss [])
-         ORELSE PROVE_TAC []));
+  THEN ((AP_TERM_TAC THEN RW_TAC std_ss [FUN_EQ_THM]) ORELSE PROVE_TAC []));
 
