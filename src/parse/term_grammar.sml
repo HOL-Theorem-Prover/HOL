@@ -278,7 +278,7 @@ val stdhol : grammar =
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
             (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, VSCONS),
-            (SOME 6,
+            (SOME 150,
              INFIX (STD_infix([{term_name = recupd_special,
                                 elements = [RE (TOK ":=")],
                                 preferred = false,
