@@ -1187,7 +1187,7 @@ val INT_INJ =
 
 val INT_ADD =
     store_thm("INT_ADD",
-	      Term `!m n. &m:int + &n = &(m + n)`,
+	      Term `!m n. &m + &n = &(m + n)`,
 	      INDUCT_TAC THEN REWRITE_TAC[INT, ADD, INT_ADD_LID]
 	      THEN
 	      RULE_ASSUM_TAC GSYM THEN GEN_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -1195,7 +1195,7 @@ val INT_ADD =
 
 val INT_MUL =
     store_thm("INT_MUL",
-	      Term `!m n. &m:int * &n = &(m * n)`,
+	      Term `!m n. &m * &n = &(m * n)`,
 	      INDUCT_TAC THEN REWRITE_TAC[INT_MUL_LZERO, MULT_CLAUSES, INT,
 					  GSYM INT_ADD, INT_RDISTRIB] THEN
 	      FIRST_ASSUM(fn th => REWRITE_TAC[GSYM th]) THEN
