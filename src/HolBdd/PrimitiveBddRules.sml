@@ -267,7 +267,7 @@ exception BddComposeError;
 
 fun BddCompose (TermBdd(vm,v,b)) (TermBdd(vm1,tm1,b1)) (TermBdd(vm2,tm2,b2)) =
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
-  then TermBdd(vm, subst[v |-> tm2]tm1, compose b1 b2 (var b))
+  then TermBdd(vm, subst[v |-> tm2]tm1, compose (var b, b2) b1)
   else (print "different varmaps"; raise BddComposeError);
 
 (*****************************************************************************)
@@ -306,7 +306,7 @@ fun BddRestrict tbcl tb =
         ([vm],[],[])
         tbcl
  in
-  TermBdd(vm, subst substl tm, bdd.restrict b (bdd.makeRestriction restrictl))
+  TermBdd(vm, subst substl tm, bdd.restrict b (bdd.assignment restrictl))
  end
 
 end;

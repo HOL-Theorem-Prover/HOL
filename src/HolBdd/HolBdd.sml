@@ -425,9 +425,9 @@ and combExp var_map bdd_map comb args =
     in
      if free_in v bdy
       then compose 
+           (valOf(Binarymap.peek(var_map, fst(Psyntax.dest_var v))),
+            (fromTerm_aux var_map bdd_map arg))
             (fromTerm_aux var_map bdd_map bdy)
-            (fromTerm_aux var_map bdd_map arg)
-            (valOf(Binarymap.peek(var_map, fst(Psyntax.dest_var v))))
       else fromTerm_aux var_map bdd_map bdy
     end
   | combExp _ _ _ _ = error()
