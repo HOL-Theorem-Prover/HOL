@@ -1,5 +1,5 @@
 # =====================================================================
-# Makefile for the res_quan library documentation 
+# Makefile for the res_quan library documentation
 # =====================================================================
 
 # ---------------------------------------------------------------------
@@ -8,7 +8,7 @@
 Help=../help
 LATEX=latex
 # ---------------------------------------------------------------------
-# Pathname to the doc-to-tex script and doc-to-tex.sed file 
+# Pathname to the doc-to-tex script and doc-to-tex.sed file
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
@@ -19,7 +19,7 @@ DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
 MAKEINDEX=../../../Manual/LaTeX/makeindex ../../../
 #MAKEINDEX=makeindex
 
-default:	
+default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
 
 # ---------------------------------------------------------------------
@@ -43,14 +43,15 @@ functions:
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
 	@echo "\input{theorems-intro}" >> theorems.tex
+	@echo "\vskip 2mm">> theorems.tex
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms theorems.tex
 
-index: 
+index:
 	${MAKEINDEX} res_quan.idx index.tex
 
-res_quan: 
-	$(LATEX) res_quan.tex 
+res_quan:
+	$(LATEX) res_quan.tex
 
-all: 
+all:
 	make clean; make tex; make res_quan; make index; make res_quan
 
