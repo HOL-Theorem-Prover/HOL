@@ -237,11 +237,17 @@ local val num_ty = Pretype.Tyop{Thy="num", Tyop = "num", Args = []}
                                 Thy="arithmetic",Ty=funty num_ty num_ty}}
 in
 fun make_string_literal s =
- Literal.mk_string_lit
-     {mk_string = mk_string,
-      emptystring = EMPTY,
-      fromMLchar = fn ch => mk_chr(mk_numeral(Arbnum.fromInt (Char.ord ch)))}
-  (String.substring(s,1,String.size s - 2))
+    if not (mem "string" (ancestry "-")) then
+      Raise (ERROR "make_string_literal"
+                   ("String literals not allowed - "^
+                    "load \"stringTheory\" first."))
+    else
+      Literal.mk_string_lit
+        {mk_string = mk_string,
+         emptystring = EMPTY,
+         fromMLchar = fn ch =>
+                         mk_chr(mk_numeral(Arbnum.fromInt (Char.ord ch)))}
+        (String.substring(s,1,String.size s - 2))
 end;
 
 (*---------------------------------------------------------------------------
@@ -260,16 +266,12 @@ fun make_atom oinfo s E =
   else
   case List.find (fn rfn => String.isPrefix rfn s)
                  [recsel_special, recupd_special, recfupd_special]
-   of NONE =>
-       if Lexis.is_string_literal s
-       then (make_string_literal s, E) handle HOL_ERR _
-             => raise ERROR "make_atom"
-                       ("Unable to make the string literal: "^s)
-       else make_free_var (s, E)
+   of NONE => if Lexis.is_string_literal s then (make_string_literal s, E)
+              else make_free_var (s, E)
     | SOME rfn =>
-        raise ERROR "make_atom"
-               ("Record field "^String.extract(s, size rfn, NONE)^
-                " not registered")
+        Raise (ERROR "make_atom"
+                     ("Record field "^String.extract(s, size rfn, NONE)^
+                      " not registered"))
 
 (*---------------------------------------------------------------------------
  * Combs
