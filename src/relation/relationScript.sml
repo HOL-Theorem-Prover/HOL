@@ -8,9 +8,8 @@
 structure relationScript =
 struct
 
-open HolKernel Parse boolLib QLib tautLib mesonLib Rsyntax simpLib boolSimps;
-
-open BasicProvers
+open HolKernel Parse boolLib QLib tautLib mesonLib metisLib
+     simpLib boolSimps BasicProvers;
 
 local open combinTheory in end;
 
@@ -258,20 +257,19 @@ val TC_INDUCT_RIGHT1 = save_thm(
 val TC_INDUCT_TAC =
  let val tc_thm = TC_INDUCT
      fun tac (asl,w) =
-      let val {Bvar=u,Body} = dest_forall w
-          val {Bvar=v,Body} = dest_forall Body
-          val {ant,conseq} = dest_imp Body
+      let val (u,Body) = dest_forall w
+          val (v,Body) = dest_forall Body
+          val (ant,conseq) = dest_imp Body
           val (TC,[R,u',v']) = strip_comb ant
-          val {Name = "TC",...} = dest_const TC
+          val ("TC",_) = dest_const TC
           val _ = assert (aconv u) u'
           val _ = assert (aconv v) v'
           val P = list_mk_abs([u,v], conseq)
           val tc_thm' = BETA_RULE(ISPEC P (ISPEC R tc_thm))
       in MATCH_MP_TAC tc_thm' (asl,w)
       end
-      handle _ => raise HOL_ERR{origin_structure = "<top-level>",
-                     origin_function = "TC_INDUCT_TAC",
-                     message = "Unanticipated term structure"}
+      handle _ => raise mk_HOL_ERR "<top-level>" "TC_INDUCT_TAC"
+                                   "Unanticipated term structure"
  in tac
  end;
 
@@ -525,47 +523,6 @@ val EQC_INDUCTION = store_thm(
   HO_MATCH_MP_TAC TC_INDUCT THEN REWRITE_TAC [SC_DEF] THEN
   ASM_MESON_TAC []);
 
-val EQC_REFL = store_thm(
-  "EQC_REFL",
-  ``!R x. EQC R x x``,
-  SRW_TAC [][EQC_DEF, RC_DEF]);
-val _ = export_rewrites ["EQC_REFL"]
-
-val EQC_R = store_thm(
-  "EQC_R",
-  ``!R x y. R x y ==> EQC R x y``,
-  SRW_TAC [][EQC_DEF, RC_DEF] THEN
-  DISJ2_TAC THEN MATCH_MP_TAC TC_SUBSET THEN
-  SRW_TAC [][SC_DEF]);
-
-val EQC_SYM = store_thm(
-  "EQC_SYM",
-  ``!R x y. EQC R x y ==> EQC R y x``,
-  SRW_TAC [][EQC_DEF, RC_DEF] THEN
-  Q.SUBGOAL_THEN `symmetric (TC (SC R))` ASSUME_TAC THEN1
-     SRW_TAC [][SC_SYMMETRIC, symmetric_TC] THEN
-  PROVE_TAC [symmetric_def]);
-
-val EQC_TRANS = store_thm(
-  "EQC_TRANS",
-  ``!R x y z. EQC R x y /\ EQC R y z ==> EQC R x z``,
-  REPEAT GEN_TAC THEN
-  Q_TAC SUFF_TAC `transitive (EQC R)` THEN1 PROVE_TAC [transitive_def] THEN
-  SRW_TAC [][EQC_DEF, transitive_RC, TC_TRANSITIVE])
-
-val STRONG_EQC_INDUCTION = store_thm(
-  "STRONG_EQC_INDUCTION",
-  ``!R P. (!x y. R x y ==> P x y) /\
-          (!x. P x x) /\
-          (!x y. EQC R x y /\ P x y ==> P y x) /\
-          (!x y z. P x y /\ P y z /\ EQC R x y /\ EQC R y z ==> P x z) ==>
-          !x y. EQC R x y ==> P x y``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Q_TAC SUFF_TAC `!x y. EQC R x y ==> EQC R x y /\ P x y`
-        THEN1 PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC EQC_INDUCTION THEN
-  PROVE_TAC [EQC_R, EQC_REFL, EQC_SYM, EQC_TRANS]);
-
 val ALT_equivalence = store_thm(
   "ALT_equivalence",
   ``!R. equivalence R = !x y. R x y = (R x = R y)``,
@@ -658,17 +615,15 @@ val WF_INDUCT_TAC =
       val [R,P] = fst(strip_forall(concl wf_thm0))
       val wf_thm1 = GENL [P,R](SPEC_ALL wf_thm0)
    fun tac (asl,w) =
-    let val {Rator,Rand} = dest_comb w
-        val {Name = "!",...} = dest_const Rator
+    let val (Rator,Rand) = dest_comb w
+        val ("!",_) = dest_const Rator
         val thi = ISPEC Rand wf_thm1
         fun eqRand t = Term.compare(Rand,t) = EQUAL
         val thf = CONV_RULE(ONCE_DEPTH_CONV
                               (BETA_CONV o assert (eqRand o rator))) thi
     in MATCH_MP_TAC thf (asl,w)
     end
-    handle _ => raise HOL_ERR{origin_structure = "<top-level>",
-                    origin_function = "WF_INDUCT_TAC",
-                    message = "Unanticipated term structure"}
+    handle _ => raise mk_HOL_ERR "" "WF_INDUCT_TAC" "Unanticipated term structure"
  in tac
  end;
 
@@ -682,7 +637,9 @@ REWRITE_TAC[WF_DEF]
   THEN REPEAT GEN_TAC
   THEN DISCH_THEN (MP_TAC o Q.SPEC`\x. x=y`)
   THEN BETA_TAC THEN REWRITE_TAC[ex_lem]
-  THEN PROVE_TAC []);
+  THEN STRIP_TAC
+  THEN Q.UNDISCH_THEN `x=y` SUBST_ALL_TAC
+  THEN DISCH_TAC THEN RES_TAC);
 
 
 (*---------------------------------------------------------------------------
@@ -991,7 +948,7 @@ REPEAT GEN_TAC THEN STRIP_TAC
   THEN Q.EXISTS_TAC`\p. R p x => M (the_fun R M p) p | ARB` (* witness *)
   THEN REWRITE_TAC[approx_ext] THEN BETA_TAC THEN GEN_TAC
   THEN COND_CASES_TAC
-  THEN ASM_REWRITE_TAC[boolTheory.ARB_DEF]
+  THEN ASM_REWRITE_TAC[]
   THEN EXPOSE_CUTS_TAC
   THEN RES_THEN (SUBST1_TAC o REWRITE_RULE[approx_def])     (* use IH *)
   THEN REWRITE_TAC[CUTS_EQ]
@@ -1150,6 +1107,96 @@ val WF_EQ_WFP = Q.store_thm
   DISCH_TAC THEN MATCH_MP_TAC (SPEC_ALL INDUCTION_WF_THM)
     THEN GEN_TAC THEN MP_TAC (SPEC_ALL WFP_STRONG_INDUCT)
     THEN ASM_REWRITE_TAC []]);
+
+(*---------------------------------------------------------------------------*)
+(* A formalization of some of the results in                                 *)
+(*                                                                           *)
+(*   "Inductive Invariants for Nested Recursion",                            *)
+(*    Sava Krsti\'{c} and John Matthews,                                     *)
+(*    TPHOLs 2003, LNCS vol. 2758, pp. 253-269.                              *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+
+(*---------------------------------------------------------------------------*)
+(* Definition. P is an "inductive invariant" of the functional M with        *)
+(* respect to the wellfounded relation R.                                    *)
+(*---------------------------------------------------------------------------*)
+
+val INDUCTIVE_INVARIANT_DEF = 
+ Q.new_definition
+ ("INDUCTIVE_INVARIANT_DEF",
+  `INDUCTIVE_INVARIANT R P M = 
+      !f x. (!y. R y x ==> P y (f y)) ==> P x (M f x)`);
+
+(*---------------------------------------------------------------------------*)
+(* Definition. P is an inductive invariant of the functional M on set D with *)
+(* respect to the wellfounded relation R.                                    *)
+(*---------------------------------------------------------------------------*)
+
+val INDUCTIVE_INVARIANT_ON_DEF = 
+ Q.new_definition
+ ("INDUCTIVE_INVARIANT_ON_DEF",
+  `INDUCTIVE_INVARIANT_ON R D P M = 
+      !f x. D x /\ (!y. D y ==> R y x ==> P y (f y)) ==> P x (M f x)`);
+
+(*---------------------------------------------------------------------------*)
+(* The key theorem, corresponding to theorem 1 of the paper.                 *)
+(*---------------------------------------------------------------------------*)
+
+val INDUCTIVE_INVARIANT_WFREC = Q.store_thm
+("INDUCTIVE_INVARIANT_WFREC",
+ `!R P M. WF R /\ INDUCTIVE_INVARIANT R P M ==> !x. P x (WFREC R M x)`,
+ REPEAT GEN_TAC THEN STRIP_TAC
+   THEN IMP_RES_THEN HO_MATCH_MP_TAC WF_INDUCTION_THM
+   THEN FULL_SIMP_TAC bool_ss [INDUCTIVE_INVARIANT_DEF]
+   THEN METIS_TAC [WFREC_THM,RESTRICT_DEF]);
+
+val TFL_INDUCTIVE_INVARIANT_WFREC = Q.store_thm
+("TFL_INDUCTIVE_INVARIANT_WFREC",
+ `!f R P M x. (f = WFREC R M) /\ WF R /\ INDUCTIVE_INVARIANT R P M ==> P x (f x)`,
+ PROVE_TAC [INDUCTIVE_INVARIANT_WFREC]);
+
+val lem = BETA_RULE (REWRITE_RULE[INDUCTIVE_INVARIANT_DEF]
+             (Q.SPEC `\x y. D x ==> P x y` (Q.SPEC `R` INDUCTIVE_INVARIANT_WFREC)));
+
+val INDUCTIVE_INVARIANT_ON_WFREC = Q.store_thm
+("INDUCTIVE_INVARIANT_ON_WFREC",
+ `!R P M D x. WF R /\ INDUCTIVE_INVARIANT_ON R D P M /\ D x ==> P x (WFREC R M x)`,
+ SIMP_TAC bool_ss [INDUCTIVE_INVARIANT_ON_DEF] THEN PROVE_TAC [lem]);
+
+
+val TFL_INDUCTIVE_INVARIANT_ON_WFREC = Q.store_thm
+("TFL_INDUCTIVE_INVARIANT_ON_WFREC",
+ `!f R D P M x. 
+     (f = WFREC R M) /\ WF R /\ INDUCTIVE_INVARIANT_ON R D P M /\ D x ==> P x (f x)`,
+ PROVE_TAC [INDUCTIVE_INVARIANT_ON_WFREC]);
+
+local val lem = 
+  GEN_ALL 
+    (REWRITE_RULE []
+      (BETA_RULE
+           (Q.INST [`P` |-> `\a b. (M (WFREC R M) a = b) /\ 
+                                   (WFREC R M a = b) /\ P a b`]
+            (SPEC_ALL INDUCTIVE_INVARIANT_ON_WFREC))))
+in
+val IND_FIXPOINT_ON_LEMMA = Q.prove
+(`!R D M P x.
+  WF R /\ D x /\
+  (!f x. D x /\ (!y. D y /\ R y x ==> P y (WFREC R M y) /\ (f y = WFREC R M y))
+         ==> P x (WFREC R M x) /\ (M f x = WFREC R M x))
+  ==> 
+   (M (WFREC R M) x = WFREC R M x) /\ P x (WFREC R M x)`,
+ REPEAT GEN_TAC THEN STRIP_TAC
+   THEN MATCH_MP_TAC lem
+   THEN Q.ID_EX_TAC
+   THEN ASM_REWRITE_TAC [INDUCTIVE_INVARIANT_ON_DEF]
+   THEN METIS_TAC [])
+end;
+
+(*---------------------------------------------------------------------------*)
+(* End of Krstic/Matthews results                                            *)
+(*---------------------------------------------------------------------------*)
 
 
 (* ----------------------------------------------------------------------
@@ -1311,7 +1358,7 @@ val inv_INVOL = store_thm(
 
 val O_DEF = new_definition(
   "O_DEF",
-  ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R2 x y /\ R1 y z``);
+  ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R1 x y /\ R2 y z``);
 val _ = set_fixity "O" (Infixr 800)
 
 val inv_O = store_thm(
