@@ -61,6 +61,26 @@ val CONTR_TAC :thm_tactic = fn cth => fn (asl,w) =>
    handle HOL_ERR _ => raise ERR "CONTR_TAC" ""
 
 
+(* --------------------------------------------------------------------------*)
+(* OPPOSITE_TAC: proves the goal using the theorem p and an assumption ~p.   *)
+(* --------------------------------------------------------------------------*)
+
+local
+  fun resolve th th' = MP (MP (SPEC (concl th) F_IMP) th') th;
+
+  fun target_rule tm =
+    if is_neg tm then (dest_neg tm, Lib.C resolve) else (mk_neg tm, resolve);
+in
+  fun OPPOSITE_TAC th (asl,w) =
+    let
+      val (opp,rule) = target_rule (concl th)
+    in
+      case List.find (aconv opp) asl of
+        NONE => raise ERR "OPPOSITE_TAC" ""
+      | SOME asm => CONTR_TAC (rule th (ASSUME asm)) (asl,w)
+    end;
+end;
+
 (*---------------------------------------------------------------------------*
  * Classical contradiction rule                                              *
  *                                                                           *
@@ -349,8 +369,8 @@ fun RULE_ASSUM_TAC rule :tactic =
 fun SUBST_ALL_TAC rth = SUBST1_TAC rth THEN RULE_ASSUM_TAC (SUBS [rth]);
 
 val CHECK_ASSUME_TAC :thm_tactic = fn gth =>
-  FIRST [CONTR_TAC gth,  ACCEPT_TAC gth, DISCARD_TAC gth, ASSUME_TAC gth];
-
+  FIRST [CONTR_TAC gth, ACCEPT_TAC gth, OPPOSITE_TAC gth,
+         DISCARD_TAC gth, ASSUME_TAC gth];
 
 val STRIP_ASSUME_TAC = REPEAT_TCL STRIP_THM_THEN CHECK_ASSUME_TAC;
 
