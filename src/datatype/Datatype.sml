@@ -157,10 +157,10 @@ in
                        ((DEPTH_CONV BETA_CONV
                            THENC Rewrite.PURE_REWRITE_CONV zero_rws) defn)))
  in
-    new_recursive_definition
-        {name= #1 (hd vs)^"_size_def", rec_axiom = ax, def = red_defn}
+    SOME (new_recursive_definition
+          {name= #1 (hd vs)^"_size_full_def", rec_axiom = ax, def = red_defn})
  end
- handle HOL_ERR _ => raise ERR "define_size" "failed"
+ handle HOL_ERR _ => NONE
 end;
 
 
@@ -179,15 +179,18 @@ in
      (fn ppstrm => let
        val S = PP.add_string ppstrm
        fun NL() = PP.add_newline ppstrm
-       fun do_size(c,s) = let
-         open Globals
-         val strc = "(" ^ term_to_string c ^ ") "^type_to_string (type_of c)
-         val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
-       in
-         S ("      size="^line);
-         NL();
-         S ("                "^s^"),")
-       end
+       fun do_size sizeopt  =
+         case sizeopt of
+           SOME (c,s) => let
+             val strc =
+               "(" ^ term_to_string c ^ ") "^type_to_string (type_of c)
+             val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
+           in
+             S ("      size="^line);
+             NL();
+             S ("                "^s^"),")
+           end
+         | NONE => (S "NONE,"; NL())
        fun do_simpls () = (S "["; app S (Lib.commafy extras); S "]")
      in
        S "val _ =";                           NL();
@@ -338,23 +341,24 @@ fun make_tyinfo_persist (tyinfo, extras) = let
     case distinct of
       NONE => "NONE"
     | SOME th => (save_thm(name "_distinct", th); "SOME "^name "_distinct")
+  val size_info =
+    case TypeBase.size_of tyinfo of
+      SOME (tm, def) => (save_thm(name "_size_def", def);
+                         SOME (tm, name "_size_def"))
+    | NONE => NONE
 in
   adjoin{ax= name"_Axiom",
          case_def= name"_case_def",
          case_cong= name "_case_cong",
          induction= name "_induction",
          nchotomy= name "_nchotomy",
-         size=(#const(const_decl(name "_size")),name "_size_def"),
+         size= size_info,
          one_one= one_one_name,
          distinct= distinct_name}
   extras
 end
 
-fun primHol_datatype db q = let
-  val parse_result = ParseDatatype.parse q
-  val tyinfo_extras = deftype_from_parse parse_result
-  val ax = TypeBase.axiom_of (#1 (hd tyinfo_extras))
-  val size_defn_thm = define_size ax (tysize_env db)
+fun munge_size_thm ax tyinfo_extras size_defn_thm = let
   val conjs = CONJUNCTS size_defn_thm
   (* given an equivalence relation R, partition a list into a list of lists
      such that everything in each list is related to each other *)
@@ -386,8 +390,18 @@ in
                 (TypeBase.put_size (defn_const sz_def, sz_def) tyi, ex))
   (tyinfo_extras, conjed_up)
 end
-handle e as HOL_ERR _ => Raise e;
 
+fun primHol_datatype db q = let
+  val parse_result = ParseDatatype.parse q
+  val tyinfo_extras = deftype_from_parse parse_result
+  val ax = TypeBase.axiom_of (#1 (hd tyinfo_extras))
+  val size_defn_thm_opt = define_size ax (tysize_env db)
+in
+  case size_defn_thm_opt of
+    SOME thm => munge_size_thm ax tyinfo_extras thm
+  | NONE => (Lib.mesg true "Couldn't prove size function for this type";
+             tyinfo_extras)
+end
 
 fun Hol_datatype q = let
   val tyinfos_extras = primHol_datatype (TypeBase.theTypeBase()) q
