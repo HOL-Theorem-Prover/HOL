@@ -263,7 +263,7 @@ fun pp_term (G : grammar) TyG = let
     val pr_term = pr_term binderp showtypes vars_seen pps
     val {add_string, add_break, begin_block, end_block,...} =
       with_ppstream pps
-    fun block_by_style (rr, pgrav, fname, fprec) = let
+    fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
         case #1 (#block_style rr) of
           AroundSameName => grav_name pgrav <> fname
@@ -271,7 +271,7 @@ fun pp_term (G : grammar) TyG = let
         | AroundEachPhrase => true
       fun bblock() = uncurry begin_block (#2 (#block_style rr))
     in
-      if needed then (bblock, end_block) else (I, I)
+      if needed orelse addparens then (bblock, end_block) else (I, I)
     end
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
@@ -403,14 +403,16 @@ fun pp_term (G : grammar) TyG = let
       val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
       val old_seen = !bvars_seen
     in
-      begin_block CONSISTENT 2; pbegin addparens;
+      pbegin addparens;
+      begin_block CONSISTENT 2;
       add_string lambda;
       pr_vstructl bvars;
       add_string endbinding; add_break (1,0);
       bvars_seen := bvars_seen_here @ old_seen;
       pr_term body Top Top Top (depth - 1);
       bvars_seen := old_seen;
-      pend addparens; end_block()
+      end_block();
+      pend addparens
     end
 
     fun atom_name tm =
@@ -596,16 +598,17 @@ fun pp_term (G : grammar) TyG = let
               val lprec = if addparens then Top else lgrav
               val with_grav = Prec(with_prec, recwith_special)
             in
-              begin_block INCONSISTENT 0;
               pbegin addparens;
+              begin_block INCONSISTENT 0;
               pr_term base with_grav lprec with_grav (depth - 1);
               add_string " ";
               add_string with_tok;
               add_break (1,0);
               if length updates = 1 then print_update (hd updates)
               else print_updlist updates;
+              end_block();
               pend addparens;
-              end_block(); raise SimpleExit
+              raise SimpleExit
             end
           end
           else ()
@@ -616,13 +619,13 @@ fun pp_term (G : grammar) TyG = let
       val lprec = if addparens then Top else lgrav
       val rprec = if addparens then Top else rgrav
     in
+      pbegin addparens;
       begin_block INCONSISTENT 2;
-      if addparens then add_string "(" else ();
       pr_term t1 prec lprec prec (depth - 1);
       add_break (1, 0);
       pr_term t2 prec prec rprec (depth - 1);
-      if addparens then add_string ")" else ();
-      end_block()
+      end_block();
+      pend addparens
     end handle SimpleExit => ()
 
     fun pr_sole_name n rules = let
@@ -713,7 +716,8 @@ fun pp_term (G : grammar) TyG = let
           val rprec = if addparens then Top else rgrav
           val arg_terms = args @ [Rand]
           val pp_elements = block_up_els [] ((FirstTM::elements) @ [LastTM])
-          val (begblock, endblock) = block_by_style(rr, pgrav, fname, fprec)
+          val (begblock, endblock) =
+            block_by_style(addparens, rr, pgrav, fname, fprec)
         in
           pbegin addparens; begblock();
           recurse_els (lprec, prec, rprec) (pp_elements, arg_terms);
@@ -734,11 +738,12 @@ fun pp_term (G : grammar) TyG = let
           val prec = Prec(fprec, fname)
           val real_args = args @ [Rand]
           val pp_elements = block_up_els [] (FirstTM :: elements)
-          val (begblock, endblock) = block_by_style(rr, pgrav, fname, fprec)
+          val (begblock, endblock) =
+            block_by_style(addparens, rr, pgrav, fname, fprec)
         in
-          begblock(); pbegin addparens;
+          pbegin addparens; begblock();
           recurse_els (lprec, prec, Top) (pp_elements, real_args);
-          pend addparens; endblock()
+          endblock(); pend addparens
         end
       | SUFFIX TYPE_annotation =>
         raise Fail "Type annotation shouldn't arise"
@@ -755,11 +760,12 @@ fun pp_term (G : grammar) TyG = let
           val pp_elements = block_up_els [] (elements @ [LastTM])
           val real_args = args @ [Rand]
           val prec = Prec(fprec, fname)
-          val (begblock, endblock) = block_by_style(rr, pgrav, fname, fprec)
+          val (begblock, endblock) =
+            block_by_style(addparens, rr, pgrav, fname, fprec)
         in
-          begblock(); pbegin addparens;
+          pbegin addparens; begblock();
           recurse_els (Top, prec, rprec) (pp_elements, real_args);
-          pend addparens; endblock()
+          endblock(); pend addparens
         end
       | PREFIX (BINDER _) => let
           fun find (BinderString bs, s) = if bs = fname then SOME s else NONE
@@ -773,7 +779,7 @@ fun pp_term (G : grammar) TyG = let
               Prec(n, _) => n > fprec
             | _ => false
         in
-          begin_block INCONSISTENT 2; pbegin addparens;
+          pbegin addparens; begin_block INCONSISTENT 2;
           add_string fname;
           spacep (not (symbolic fname));
           pr_vstructl bvs;
@@ -783,8 +789,8 @@ fun pp_term (G : grammar) TyG = let
           pr_term body Top Top Top (depth - 1);
           bvars_seen := old_seen;
           end_block ();
-          pend addparens;
-          end_block()
+          end_block();
+          pend addparens
         end
       | CLOSEFIX lst => let
           val rr = hd lst
