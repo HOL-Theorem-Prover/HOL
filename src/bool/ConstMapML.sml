@@ -20,17 +20,17 @@ end;
 (* The initial constant map has only equality in it                          *)
 (*---------------------------------------------------------------------------*)
 
-val ConstMapRef = ref(Redblackmap.insert(initConstMap,("bool","="),("","=")));
+val ConstMapRef = ref(Redblackmap.insert(initConstMap,("min","="),("","=")));
 fun theConstMap () = !ConstMapRef;
 
 fun insert (c,p) = 
  let val {Name,Thy,...} = dest_thy_const c
- in ConstMapRef := Redblackmap.insert(theConstMap(),(Name,Thy),p)
+ in ConstMapRef := Redblackmap.insert(theConstMap(),(Thy,Name),p)
  end;
 
 fun apply c =
  let val {Name,Thy,...} = dest_thy_const c
- in case Redblackmap.peek(theConstMap(),(Name,Thy))
+ in case Redblackmap.peek(theConstMap(),(Thy,Name))
    of SOME (str,name) => (str,name)
     | NONE => if Thy=current_theory() then ("",Name) 
                  else raise ERR "apply" 

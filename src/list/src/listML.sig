@@ -1,7 +1,7 @@
 signature listML =
 sig
 
-  val cons    : 'a * 'a list -> 'a list
+  val cons    : 'a -> 'a list -> 'a list
   val null    : 'a list -> bool
   val hd      : 'a list -> 'a
   val tl      : 'a list -> 'a list

@@ -1,7 +1,7 @@
 structure listML :> listML =
 struct
 
-  fun cons (h,t) = h::t
+  fun cons h t = h::t
   val null = List.null
   val hd = List.hd
   val tl = List.tl
@@ -53,8 +53,8 @@ struct
 
 
 val _ = app ConstMapML.insert
-           [(listSyntax.nil_tm,    ("List","nil")),
-            (listSyntax.cons_tm,   ("listML","cons")),
+           [(listSyntax.nil_tm,    ("","[]")),
+            (listSyntax.cons_tm,   ("","::")),
             (listSyntax.null_tm,   ("listML","null")),
             (listSyntax.hd_tm,     ("listML","hd")),
             (listSyntax.tl_tm,     ("listML","tl")),

@@ -203,6 +203,7 @@ fun lift_list ty =
 (* For support of ML execution                                               *)
 (*---------------------------------------------------------------------------*)
 
+val _ = Drop.is_cons_hook := is_cons
 val _ = Drop.is_list_hook := is_list
 val _ = Drop.dest_list_hook := (fst o dest_list)
 
