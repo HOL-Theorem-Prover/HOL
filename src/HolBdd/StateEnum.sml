@@ -799,7 +799,7 @@ fun FindRefutationTrace(Rthm,Bthm,Qthm) =
           in
            get_sts trace s' ((s',nxt_thm)::acc)
           end
-     val sl = get_sts trace s_0 []
+     val sl = time (get_sts trace s_0) []
      val s_n_thm = bddOracle(mk_comb(B,fst(hd sl)))
  in
   [s_n_thm]@(map snd sl)@[s_0_thm]
