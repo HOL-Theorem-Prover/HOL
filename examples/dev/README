@@ -8,6 +8,7 @@
 == [13.01.05: major tidy and update by MJCG]                                 ==
 == [17.01.05: MJCG installed hwDefine and improved examples from KXS]        ==
 == [18.01.05: MJCG added Refine and revised FactScript.sml]                  ==
+== [19.01.05: MJCG changed to use refinement combinators]                    ==
 ===============================================================================
 
 composeScript.sml ......... definition of devices and their composition
@@ -22,8 +23,8 @@ N.B. To make generated hardware a bit more readable, the following
         set_fixity ";;" (Infixl 750); overload_on (";;", ``SEQ``)
         set_fixity "||" (Infixl 650); overload_on ("||", ``PAR``)
 
-The main user-level functions are hwDefine and Refine,
-for creating hardware and refinement.
+The main user-level functions are hwDefine and REFINE,
+for creating hardware and then refining it.
 
 hwDefine : term frag list -> thm * thm * thm
 --------------------------------------------
@@ -51,42 +52,119 @@ should be ignored (it will be numTheory.INDUCTION.
 
 See FactScript.sml for examples.
 
-Refine: (term -> thm) -> thm -> thm
+
+REFINE: (term -> thm) -> thm -> thm
 -----------------------------------
  
-The first argument of Refine is a "refine function", refinefn say,
-which maps a term ``DEV g`` to a theorem |- DEV h ===> DEV g,
-where |= P ===> Q = !x. P x ==> Q x. 
+The first argument of REFINE is a "refine function", refine say,
+which maps a term representing a circuit, <circuit> say, to a theorem
 
-"Refine refinefn (|- <circuit> ===> Dev f)" recursively scans
-<circuit> replacing ``DEV g`` by ``DEV h`` (where refinefn applied to
-``DEV g`` yields |- DEV h ===> DEV h) and returns a theorem
+   |- <circuit'> ===> <circuit>
+
+where ``===>`` is defined by:
+
+   |- P ===> Q  =  !x. P x ==> Q x.
+
+and <circuit'> is a term representing the result of refining <circuit>
+with the function refine.
+
+Evaluating
+
+   REFINE refine (|- <circuit> ===> Dev f)
+
+applies refine to <circuit> to get
+
+   |- <circuit'> ===> <circuit>
+
+and then uses transitivity of ===> (DEV_IMP_TRANS) to deduce:
 
    |- <circuit'> ===> Dev f
 
-where <circuit'> is the result of the scan.
-
 See FactScript.sml for examples.
 
-Two useful refine functions are ATMfn and Lib
 
-ATMfn : term -> thm
-------------------
+Two useful refine functions are ATM_REFINE and LIB_REFINE.
+
+
+ATM_REFINE : term -> thm
+------------------------
 
 This maps ``DEV f`` to |- ATM f ===> DEV f
 
-Lib : thm list -> term -> thm
------------------------------
 
-Lib                                                                       *)
- [|- <circuit> ===> DEV f1,
-  |- <circuit> ===> DEV f2
-  ...
-  |- <circuit> ===> DEV fn]
- ``DEV fi``
+LIB_REFINE : thm list -> term -> thm
+------------------------------------
 
-returns the first theorem <circuit> ===> DEV fi that it finds in the
-supplied list (i.e. library)
+Evaluating
+
+   LIB_REFINE
+    [|- <circuit> ===> DEV f1,
+     |- <circuit> ===> DEV f2
+     ...
+     |- <circuit> ===> DEV fn]
+    ``DEV fi``
+
+returns the first theorem |- <circuit> ===> DEV fi that it finds in the
+supplied list (i.e. the supplied library).
+
+Refinement functions (analogously to conversions and tactics) can be combined using
+combinators THENR, ORELSER, DEPTHR. See FactScript.sml for examples.
+
+
+THENR : (term -> thm) * (term -> thm) -> (term -> thm)
+------------------------------------------------------
+
+Combines refinements sequentially.
+
+
+ORELSER : (term -> thm) * (term -> thm) -> (term -> thm)
+--------------------------------------------------------
+
+Tries first refinement and if that fails tries the second one.
+
+
+DEPTHR : (term -> thm) -> (term -> thm)
+---------------------------------------------
+
+Scans through a term representing a circuit applying the supplied
+refinement function to each subterm of the form ``DEV f`` and 
+either generating
+
+ |- DEV g ===> DEVf
+
+if the refinement function returns this, or, if the refinement
+function fails:
+
+ |- DEV f ===> DEV f
+
+A refined circuit is then build up using the "monotonicity" theorems:
+
+  SEQ_DEV_IMP =
+   |- !P1 P2 Q1 Q2.
+       P1 ===> Q1 /\ P2 ===> Q2
+       ==>
+       (SEQ P1 P2 ===> SEQ Q1 Q2)
+
+  PAR_DEV_IMP =
+   |- !P1 P2 Q1 Q2.
+       P1 ===> Q1 /\ P2 ===> Q2
+       ==>
+       (PAR P1 P2 ===> PAR Q1 Q2)
+
+  ITE_DEV_IMP =
+   |- !P1 P2 P3 Q1 Q2 Q3.
+       P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3
+       ==>
+       (ITE P1 P2 P3 ===> ITE Q1 Q2 Q3)
+
+  REC_DEV_IMP =
+   |- !P1 P2 P3 Q1 Q2 Q3.
+       P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3
+       ==>
+       (REC P1 P2 P3 ===> REC Q1 Q2 Q3)
+
+Note that "DEPTHR refine" should never fail.
+
 
 *******************************************************************************
 

@@ -44,6 +44,17 @@ val ERR = mk_HOL_ERR "compile";
 val SimpThms = [Seq_def,Par_def,Ite_def,Rec_def];
 
 (*****************************************************************************)
+(* Destruct ``d1 ===> d2`` into (``d1``,``d2``)                              *)
+(*****************************************************************************)
+fun dest_dev_imp tm = 
+ if is_comb tm
+     andalso is_comb(rator tm) 
+     andalso is_const(rator(rator tm))
+     andalso (fst(dest_const(rator(rator tm))) = "===>")
+  then (rand(rator tm), rand tm)
+  else raise ERR "dest_dev_imp" "attempt to dest a non-DEV";
+
+(*****************************************************************************)
 (* An expression is just a HOL term built using expressions defined earlier  *)
 (* in a program (see description of programs below) and Seq, Par,            *)
 (* Ite and Rec:                                                              *)
@@ -620,18 +631,18 @@ fun mk_DEV tm = ``DEV ^tm``;
 (*****************************************************************************)
 (* Refine a device to a combinational circuit (i.e. an ATM):                 *)
 (*                                                                           *)
-(* ATMfn ``DEV f``  =  |- ATM f ===> DEV f : thm                             *)
+(* ATM_REFINE ``DEV f``  =  |- ATM f ===> DEV f : thm                      *)
 (*                                                                           *)
 (*****************************************************************************)
-fun ATMfn tm =
+fun ATM_REFINE tm =
  if not(is_comb tm 
          andalso is_const(rator tm)
          andalso (fst(dest_const(rator tm)) = "DEV"))
-  then raise ERR "ATMfn" "argument not a DEV"
+  then raise ERR "ATM_REFINE" "argument not a DEV"
   else ISPEC (rand tm) ATM_INTRO;
 
 (*****************************************************************************)
-(* Lib                                                                       *)
+(* LIB_REFINE                                                                *)
 (*  [|- <circuit> ===> DEV f1,                                               *)
 (*   |- <circuit> ===> DEV f2                                                *)
 (*   ...                                                                     *)
@@ -641,20 +652,20 @@ fun ATMfn tm =
 (* returns the first theorem <circuit> ===> DEV fi                           *)
 (* that it finds in the supplied list (i.e. library)                         *)
 (*****************************************************************************)
-fun Lib lib tm =
+fun LIB_REFINE lib tm =
  if is_DEV tm
   then
    case
      List.find 
-      (aconv tm o rand o concl o SPEC_ALL)
+      (aconv tm o snd o dest_dev_imp o concl o SPEC_ALL)
       lib
    of SOME th => th
     | NONE    => ISPEC tm DEV_IMP_REFL
-  else raise ERR "Lib" "attempt to lookup a non-DEV";
+  else raise ERR "LIB_REFINE" "attempt to lookup a non-DEV";
 
 (*****************************************************************************)
-(* RefineExp refinefn tm scans through a combinatory expression tm built     *)
-(* from ATM, SEQ, PAR, ITE, REC and DEV and applies the refinefn to all      *)
+(* DEPTHR refine tm scans through a combinatory expression tm built          *)
+(* from ATM, SEQ, PAR, ITE, REC and DEV and applies the refine to all        *)
 (* arguments of DEV using                                                    *)
 (*                                                                           *)
 (*  |- !P1 P2 Q1 Q2. P1 ===> Q1 /\ P2 ===> Q2 ==> P1 ;; P2 ===> Q1 ;; Q2     *)
@@ -673,53 +684,54 @@ fun Lib lib tm =
 (*                                                                           *)
 (*  |- tm' ===> tm                                                           *)
 (*                                                                           *)
-(* (if refinefn fails, then no action is taken, i.e. |- tm ===> tm used)     *)
+(* (if refine fails, then no action is taken, i.e. |- tm ===> tm used)       *)
 (*****************************************************************************)
-fun RefineExp refinefn tm =
+fun DEPTHR refine tm =
  if is_DEV tm
-  then (refinefn tm
+  then (refine tm
         handle _ => ISPEC tm DEV_IMP_REFL)
  else if is_ATM tm
   then ISPEC tm DEV_IMP_REFL
  else if is_SEQ tm
   then
    let val (tm1,tm2) = dest_SEQ tm
-       val th1 = RefineExp refinefn tm1
-       val th2 = RefineExp refinefn tm2 
+       val th1 = DEPTHR refine tm1
+       val th2 = DEPTHR refine tm2 
    in
     MATCH_MP SEQ_DEV_IMP (CONJ th1 th2)
    end
  else if is_PAR tm
   then
    let val (tm1,tm2) = dest_PAR tm
-       val th1 = RefineExp refinefn tm1
-       val th2 = RefineExp refinefn tm2 
+       val th1 = DEPTHR refine tm1
+       val th2 = DEPTHR refine tm2 
    in
     MATCH_MP PAR_DEV_IMP (CONJ th1 th2)
    end
  else if is_ITE tm
   then
    let val (tm1,tm2,tm3) = dest_ITE tm
-       val th1 = RefineExp refinefn tm1
-       val th2 = RefineExp refinefn tm2 
-       val th3 = RefineExp refinefn tm3 
+       val th1 = DEPTHR refine tm1
+       val th2 = DEPTHR refine tm2 
+       val th3 = DEPTHR refine tm3 
    in
     MATCH_MP ITE_DEV_IMP (LIST_CONJ[th1,th2,th3])
    end
  else if is_REC tm
   then
    let val (tm1,tm2,tm3) = dest_REC tm
-       val th1 = RefineExp refinefn tm1
-       val th2 = RefineExp refinefn tm2 
-       val th3 = RefineExp refinefn tm3 
+       val th1 = DEPTHR refine tm1
+       val th2 = DEPTHR refine tm2 
+       val th3 = DEPTHR refine tm3 
    in
     MATCH_MP REC_DEV_IMP (LIST_CONJ[th1,th2,th3])
    end
  else (print_term tm; print"\n";
-       raise ERR "RefineExp" "bad argument");
+       raise ERR "DEPTHR" "bad argument");
 
 (*****************************************************************************)
-(* Refine refinefn (|- <circuit> ===> Dev f) uses RefineExp to generate      *)
+(* REFINE refine (|- <circuit> ===> Dev f) applies refine to <circuit>       *)
+(* to generate                                                               *)
 (*                                                                           *)
 (*  |- <circuit'> ===> <circuit>                                             *)
 (*                                                                           *)
@@ -727,10 +739,71 @@ fun RefineExp refinefn tm =
 (*                                                                           *)
 (*  |- <circuit'> ===> Dev f                                                 *)
 (*****************************************************************************)
-fun Refine refinefn th =
+fun REFINE refine th =
  MATCH_MP 
   DEV_IMP_TRANS 
-  (CONJ (RefineExp refinefn (rand(rator(concl th)))) th)
- handle _ => raise ERR "Refine" "bad argument";
+  (CONJ (refine (fst(dest_dev_imp(concl th)))) th)
+ handle _ => raise ERR "REFINE" "bad argument";
 
+(*****************************************************************************)
+(* Some refinement combinators made by tweaking code from Conv.sml           *)
+(* N.B. Not yet working -- needs rethinking a bit                            *)
+(*****************************************************************************)
+
+(* ----------------------------------------------------------------------
+    Refinement that always succeeds, but does nothing.
+    Indicates this by raising the UNCHANGEDR exception.
+   ---------------------------------------------------------------------- *)
+
+exception UNCHANGED_REFINE;
+
+fun ALL_REFINE t = raise UNCHANGED_REFINE;
+
+(* ----------------------------------------------------------------------
+    Apply two conversions in succession;  fail if either does.  Handle
+    UNCHANGED_REFINE appropriately.
+   ---------------------------------------------------------------------- *)
+infixr 3 THENR;
+
+fun (refine1 THENR refine2) tm = 
+ let val th1 = refine1 tm
+ in
+  MATCH_MP DEV_IMP_TRANS (CONJ (refine2 (fst(dest_dev_imp(concl th1)))) th1)
+  handle UNCHANGED_REFINE => th1
+ end 
+ handle UNCHANGED_REFINE => refine2 tm;
+
+(* ----------------------------------------------------------------------
+    Apply refine1;  if it raises a HOL_ERR then apply refine2. Note that
+    interrupts and other exceptions (including UNCHANGED_REFINE) will sail 
+    on through.
+   ---------------------------------------------------------------------- *)
+infixr 3 ORELSER;
+
+fun (refine1 ORELSER refine2) tm = 
+ refine1 tm handle HOL_ERR _ => refine2 tm;
+
+(* Not sure if stuff below is needed, and it's not tested, 
+   so is commented out for now
+
+(*---------------------------------------------------------------------------
+ * Cause the refinement to fail if it does not change its input.
+ *---------------------------------------------------------------------------*)
+fun CHANGED_REFINE refine tm =
+   let val th = refine tm
+           handle UNCHANGED_REFINE 
+           => raise ERR "CHANGED_REFINE" "Input term unchanged"
+       val (ante,conc) = dest_dev_imp(concl th)
+   in if aconv ante conc then raise ERR "CHANGED_REFINE" "Input term unchanged"
+      else th
+   end;
+
+(*---------------------------------------------------------------------------
+ * Apply a conversion zero or more times.
+ *---------------------------------------------------------------------------*)
+fun REPEATR refine tm =
+    ((CHANGED_REFINE refine THENC (REPEATR refine)) ORELSER ALL_REFINE) tm;
  
+*)
+
+

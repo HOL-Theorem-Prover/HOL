@@ -14,6 +14,8 @@ quietdec := true;
 map load  ["compile"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory
      composeTheory compileTheory compile;
+infixr 3 THENR;
+infixr 3 ORELSER;
 quietdec := false;
 *)
 
@@ -27,6 +29,8 @@ open HolKernel Parse boolLib bossLib;
 ******************************************************************************)
 open arithmeticTheory pairLib pairTheory PairRules combinTheory 
      composeTheory compile;
+infixr 3 THENR;
+infixr 3 ORELSER;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -89,13 +93,13 @@ val MultThm =
 (* Use Mult_dev to refine ``DEV (UNCURRY $* )`` in FactIter_dev              *)
 (*****************************************************************************)
 val FactIter1_dev =
- Refine (Lib[SUBS [MultThm] Mult_dev]) FactIter_dev;
+ REFINE (DEPTHR(LIB_REFINE[SUBS [MultThm] Mult_dev])) FactIter_dev;
 
 (*****************************************************************************)
 (* Use MultIter_dev to refine ``DEV MultIter`` in FactIter1_dev              *)
 (*****************************************************************************)
 val FactIter2_dev =
- Refine (Lib[MultIter_dev]) FactIter1_dev;
+ REFINE (DEPTHR(LIB_REFINE[MultIter_dev])) FactIter1_dev;
 
 (*****************************************************************************)
 (* Lemma showing how FactIter computes factorial                             *)
@@ -130,21 +134,32 @@ val FactThm =
 (* Use FactIter2_dev to refine ``DEV FactIter`` in Fact_dev                  *)
 (*****************************************************************************)
 val Fact1_dev =
- Refine (Lib[FactIter2_dev]) Fact_dev;
+ REFINE (DEPTHR(LIB_REFINE[FactIter2_dev])) Fact_dev;
 
 (*****************************************************************************)
-(* Refine all remaining DEVs to ATM                                          *)
+(* REFINE all remaining DEVs to ATM                                          *)
 (*****************************************************************************)
 val Fact2_dev =
- Refine ATMfn Fact1_dev;
+ REFINE (DEPTHR ATM_REFINE) Fact1_dev;
 
 (*****************************************************************************)
-(* Create implementation of FACT (HOL's built-in factorial function)         *)
+(* Alternative derivation using refinement combining combinators             *)
+(*****************************************************************************)
+val Fact3_dev =
+ REFINE
+  (DEPTHR(LIB_REFINE[FactIter_dev])
+    THENR DEPTHR(LIB_REFINE[SUBS [MultThm] Mult_dev])
+    THENR DEPTHR(LIB_REFINE[MultIter_dev])
+    THENR DEPTHR ATM_REFINE)
+  Fact_dev;
+
+(*****************************************************************************)
+(* Finally, create implementation of FACT (HOL's native factorial function)  *)
 (*****************************************************************************)
 val FACT_dev =
  save_thm
   ("FACT_dev",
-   REWRITE_RULE [FactThm] Fact2_dev);
+   REWRITE_RULE [FactThm] Fact3_dev);
 
 
 (*****************************************************************************)
