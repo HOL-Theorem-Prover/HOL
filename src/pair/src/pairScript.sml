@@ -24,57 +24,50 @@ open HolKernel Parse boolLib relationTheory mesonLib Rsyntax;
 
 val _ = new_theory "pair";
 
-(*---------------------------------------------------------------------------
- * Define the type of pairs.
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Define the type of pairs and tell the grammar about it.                   *)
+(*---------------------------------------------------------------------------*)
 
-val MK_PAIR_DEF = Q.new_definition
- ("MK_PAIR_DEF",
-  `MK_PAIR x y = \a b. (a=x) /\ (b=y)`);
-
-val IS_PAIR_DEF = Q.new_definition
- ("IS_PAIR_DEF",
-  `IS_PAIR P = ?x y. P = MK_PAIR x y`);
+val pairfn = Term `\a b. (a=x) /\ (b=y)`;
 
 val PAIR_EXISTS = Q.prove
-(`?P. IS_PAIR P`,
-  REWRITE_TAC[IS_PAIR_DEF]
-  THEN MAP_EVERY Q.EXISTS_TAC [`MK_PAIR p q`, `p`,  `q`]
+(`?p:'a -> 'b -> bool. (\p. ?x y. p = ^pairfn) p`,
+ BETA_TAC 
+  THEN Ho_Rewrite.ONCE_REWRITE_TAC [SWAP_EXISTS_THM] THEN Q.EXISTS_TAC `x`
+  THEN Ho_Rewrite.ONCE_REWRITE_TAC [SWAP_EXISTS_THM] THEN Q.EXISTS_TAC `y`
+  THEN EXISTS_TAC pairfn
   THEN REFL_TAC);
 
-val prod_TY_DEF = new_type_definition("prod", PAIR_EXISTS);
+val ABS_REP_prod =
+ let val tydef = new_type_definition("prod", PAIR_EXISTS)
+ in 
+   define_new_type_bijections
+      {ABS="ABS_prod", REP="REP_prod",
+       name="ABS_REP_prod", tyax=tydef}
+ end;
 
 val _ = add_infix_type
          {Prec = 70,
-          ParseName = SOME "#",
-          Name = "prod",
+          ParseName = SOME "#", Name = "prod",
           Assoc = HOLgrammars.RIGHT};
 
-val ABS_REP_prod =
- define_new_type_bijections
-  {ABS="ABS_prod", REP="REP_prod",
-   name="ABS_REP_prod", tyax=prod_TY_DEF};
-
-val IS_PAIR_MK_PAIR = Q.prove
-(`!x y. IS_PAIR (MK_PAIR x y)`,
-REWRITE_TAC[IS_PAIR_DEF, MK_PAIR_DEF]
- THEN GEN_TAC THEN GEN_TAC
- THEN Q.EXISTS_TAC `x` THEN Q.EXISTS_TAC `y`
- THEN REFL_TAC);
-
 val REP_ABS_PAIR = Q.prove
-(`!x y. REP_prod (ABS_prod (MK_PAIR x y)) = MK_PAIR x y`,
+(`!x y. REP_prod (ABS_prod ^pairfn) = ^pairfn`,
  REPEAT GEN_TAC
-  THEN MP_TAC (Q.SPEC `MK_PAIR x y` (CONJUNCT2 ABS_REP_prod))
-  THEN REWRITE_TAC[IS_PAIR_MK_PAIR]);
+  THEN REWRITE_TAC [SYM (SPEC pairfn (CONJUNCT2 ABS_REP_prod))]
+  THEN BETA_TAC 
+  THEN MAP_EVERY Q.EXISTS_TAC [`x`, `y`]
+  THEN REFL_TAC);
 
 
-(*---------------------------------------------------------------------------*
- *  Define the constructor for pairs.                                        *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(*  Define the constructor for pairs, and install grammar rule for it.       *)
+(*---------------------------------------------------------------------------*)
 
-val COMMA_DEF =
- Q.new_definition("COMMA_DEF", `$, x y = ABS_prod(MK_PAIR x y)`);
+val COMMA_DEF = 
+ Q.new_definition
+  ("COMMA_DEF", 
+   `$, x y = ABS_prod ^pairfn`);
 
 val _ = add_rule {term_name = ",", fixity = Infixr 50,
                   pp_elements = [TOK ",", BreakSpace(0,0)],
@@ -93,8 +86,7 @@ val PAIR_EQ = Q.store_thm
  [REWRITE_TAC[COMMA_DEF]
    THEN DISCH_THEN(MP_TAC o Q.AP_TERM `REP_prod`)
    THEN REWRITE_TAC [REP_ABS_PAIR]
-   THEN REWRITE_TAC [MK_PAIR_DEF]
-   THEN CONV_TAC (REDEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
+   THEN Ho_Rewrite.REWRITE_TAC [FUN_EQ_THM]
    THEN DISCH_THEN (MP_TAC o Q.SPECL [`x`,  `y`])
    THEN REWRITE_TAC[],
   STRIP_TAC THEN ASM_REWRITE_TAC[]]);
@@ -112,7 +104,7 @@ val ABS_PAIR_THM = Q.store_thm
  `!x. ?q r. x = (q,r)`,
  GEN_TAC THEN REWRITE_TAC[COMMA_DEF]
   THEN MP_TAC(Q.SPEC `REP_prod x` (CONJUNCT2 ABS_REP_prod))
-  THEN REWRITE_TAC[CONJUNCT1 ABS_REP_prod,IS_PAIR_DEF]
+  THEN REWRITE_TAC[CONJUNCT1 ABS_REP_prod] THEN BETA_TAC
   THEN DISCH_THEN(Q.X_CHOOSE_THEN `a` (Q.X_CHOOSE_THEN `b` MP_TAC))
   THEN DISCH_THEN(MP_TAC o Q.AP_TERM `ABS_prod`)
   THEN REWRITE_TAC[CONJUNCT1 ABS_REP_prod]
@@ -129,7 +121,8 @@ val ABS_PAIR_THM = Q.store_thm
  *        SND  = |- !x y. SND (x,y) = y                                      *
  *---------------------------------------------------------------------------*)
 
-val PAIR = Definition.new_specification
+val PAIR = 
+ Definition.new_specification
   ("PAIR", ["FST","SND"],
    Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM));
 
@@ -152,12 +145,13 @@ val PAIR_FST_SND_EQ = store_thm(
 
 
 
+(*---------------------------------------------------------------------------*)
+(* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
+(*---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------*
- * CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *
- *---------------------------------------------------------------------------*)
-
-val CURRY_DEF = Q.new_definition ("CURRY_DEF", `CURRY f x y :'c = f (x,y)`);
+val CURRY_DEF = Q.new_definition 
+  ("CURRY_DEF", 
+   `CURRY f x y :'c = f (x,y)`);
 
 val UNCURRY = Q.new_definition
   ("UNCURRY",
