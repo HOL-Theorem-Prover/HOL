@@ -40,65 +40,22 @@ fun gnumake dir =
 
 (*---------------------------------------------------------------------------
            Compile a HOL directory in place. Some libraries,
-           e.g., the robdd libraries, need special treatment.
+           e.g., the robdd libraries, need special treatment because
+           they come with external tools or C libraries.
  ---------------------------------------------------------------------------*)
-
-(*
-fun build_dir dir =
-  let val _ = FileSys.chDir dir
-      val _ = print ("Working in directory "^dir^"\n")
-      val d = #file(Path.splitDirFile dir)
-  in
-   if (d = "robdd" orelse d = "muddy")
-   then let val buddy_dir = Path.concat(dir,
-                  if d="robdd" then "buddy16" else "buddy17")
-        in
-             FileSys.chDir buddy_dir;
-             print ("Working in directory "^buddy_dir^"\n");
-             gnumake buddy_dir;
-             FileSys.chDir dir;
-             print ("Working in directory "^dir^"\n");
-             Holmake dir;
-             gnumake dir
-        end handle _ => print(String.concat["\n", d,
-                 "Lib has NOT been built!! (continuing anyway).\n\n"])
-   else Holmake dir
-  end handle OS.SysErr(s, erropt) =>
-    (print ("OS error: "^s^" - "^
-            (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
-     Process.exit Process.failure)
-*)
 
 fun build_dir dir =
   let val _ = FileSys.chDir dir
       val _ = print ("Working in directory "^dir^"\n")
   in
    case #file(Path.splitDirFile dir)
-    of "muddy"
-          => (let val buddy_dir = Path.concat(dir,"buddy17")
-             in
-                FileSys.chDir buddy_dir;
-                print ("Working in directory "^buddy_dir^"\n");
-                gnumake buddy_dir;
-                FileSys.chDir dir;
-                print ("Returning to directory "^dir^"\n");
-                Holmake dir;
-                gnumake dir
-             end handle _ => print(String.concat["\n", "muddy",
-                 "Lib has NOT been built!! (continuing anyway).\n\n"]))
-     | "temporal"
-         => (let val src_dir = fullPath[dir,"src"]
-                val SMV_dir = fullPath[dir,"smv.2.4.3"]
-             in
-                FileSys.chDir src_dir;
-                print ("Working in directory "^src_dir^"\n");
-                Holmake dir;
-                FileSys.chDir SMV_dir;
-                print ("Working in directory "^SMV_dir^"\n");
-                gnumake SMV_dir
-             end handle _ => print(String.concat
-                ["\n", "Compilation of SMV fails!! ",
-                 "temporal Lib has NOT been built!! (continuing anyway).\n\n"]))
+    of "muddyC"    => (gnumake dir handle _ => print(String.concat
+                         ["\nmuddyLib has NOT been built!! ",
+                          "(continuing anyway).\n\n"]))
+     | "smv.2.4.3" => (gnumake dir handle _ => print(String.concat
+                         ["\nCompilation of SMV fails!!",
+                          " temporal Lib has NOT been built!! ",
+                          "(continuing anyway).\n\n"]))
      | _ => Holmake dir
   end 
   handle OS.SysErr(s, erropt) 

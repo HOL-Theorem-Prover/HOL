@@ -69,9 +69,11 @@ val SRCDIRS =
   "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/BoyerMoore",
   "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src", 
-  "src/temporal"] @
- (if OS = "linux" orelse OS = "solaris" then ["src/muddy", "src/HolBdd"]
-  else []);
+  "src/temporal/src", "src/temporal/smv.2.4.3"]
+  @
+  (if OS="linux" orelse OS="solaris" 
+   then ["src/muddy/muddyC", "src/muddy", "src/HolBdd"]
+   else []);
 
 
 (*---------------------------------------------------------------------------
@@ -345,8 +347,7 @@ val _ =
 
 
 (*---------------------------------------------------------------------------
-    Configure the muddy library. This is only temporary, until I know
-    more about how it should configure on other systems than linux.
+    Configure the muddy library. 
  ---------------------------------------------------------------------------*)
 
 val _ = use (fullPath [holdir, "tools", "config-muddy.sml"]);
@@ -355,7 +356,7 @@ val _ =
  let open TextIO
      val _ = echo "Setting up the muddy library Makefile."
      val src    = fullPath [holdir, "tools/makefile.muddy.src"]
-     val target = fullPath [holdir, "src/muddy/Makefile"]
+     val target = fullPath [holdir, "src/muddy/muddyC/Makefile"]
      val (cflags, dllibcomp, all) =
        case (CFLAGS, DLLIBCOMP, ALL) of
          (SOME s1, SOME s2, SOME s3) => (s1, s2, s3)
@@ -371,7 +372,7 @@ val _ =
   in
      fill_holes (src,target)
        ["MOSMLHOME=\n"  -->  String.concat["MOSMLHOME=", mosmldir,"\n"],
-        "CC=\n"         -->  String.concat["CC=", CC,"\n"],
+        "CC=\n"         -->  String.concat["CC=", CC, "\n"],
         "CFLAGS="       -->  String.concat["CFLAGS=",cflags,"\n"],
         "all:\n"        -->  String.concat["all: ",all,"\n"],
         "DLLIBCOMP"     -->  String.concat["\t", dllibcomp, "\n"]
