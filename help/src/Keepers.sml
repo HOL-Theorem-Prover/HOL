@@ -189,6 +189,12 @@ val keepers =
 
      (* Fixed point and floating point arithmetic *)
      "floatTheory.sig", "ieeeTheory.sig",
-     "fxpTheory.sig"
-
+     "fxpTheory.sig",
+ 
+     (* HolCheck model checker *)
+     "ctlTheory.sig", "muTheory.sig",
+     "muSyntaxTheory.sig", "ctl2muTheory.sig",
+     "cacheTheory.sig", "decompTheory.sig", "envTheory.sig",
+     "ksTheory.sig", "reachTheory.sig", "envTheory.sig",
+     "cearTheory.sig"
   ];
