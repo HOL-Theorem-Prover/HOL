@@ -5,8 +5,6 @@ app load ["listSyntax", "combinSyntax", "rich_listTheory"];
 open HolKernel boolLib Parse bossLib pairTheory pairTools
      arithmeticTheory listTheory rich_listTheory optionTheory;
 
-val REVERSE = Tactical.REVERSE;
-
 val _ = new_theory "Encode";
 
 infixr 0 ++ || <<;
@@ -20,9 +18,72 @@ val op || = op ORELSE;
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
 
+val REVERSE = Tactical.REVERSE;
+
 (*---------------------------------------------------------------------------
         Theorems that should be somewhere else.
  ---------------------------------------------------------------------------*)
+
+val IS_PREFIX_NIL = store_thm
+  ("IS_PREFIX_NIL",
+   ``!(x:'a list). IS_PREFIX x [] /\ (IS_PREFIX [] x = (x = []))``,
+   STRIP_TAC
+   ++ Cases_on `x`
+   ++ RW_TAC list_ss [IS_PREFIX]);
+
+val IS_PREFIX_REFL = store_thm
+  ("IS_PREFIX_REFL",
+   ``!(x:'a list). IS_PREFIX x x``,
+   Induct ++ RW_TAC list_ss [IS_PREFIX]);
+
+val IS_PREFIX_ANTISYM = store_thm
+  ("IS_PREFIX_ANTISYM",
+   ``!(x:'a list) y. IS_PREFIX y x /\ IS_PREFIX x y ==> (x = y)``,
+    Induct >> RW_TAC list_ss [IS_PREFIX_NIL]
+    ++ Cases_on `y` >> RW_TAC list_ss [IS_PREFIX_NIL]
+    ++ ONCE_REWRITE_TAC [IS_PREFIX]
+    ++ PROVE_TAC []);
+
+val IS_PREFIX_TRANS = store_thm
+  ("IS_PREFIX_TRANS",
+   ``!(x:'a list) y z. IS_PREFIX x y /\ IS_PREFIX y z ==> IS_PREFIX x z``,
+   Induct >> PROVE_TAC [IS_PREFIX_NIL]
+   ++ Cases_on `y` >> RW_TAC list_ss [IS_PREFIX_NIL, IS_PREFIX]
+   ++ Cases_on `z` >> RW_TAC list_ss [IS_PREFIX_NIL, IS_PREFIX]
+   ++ RW_TAC list_ss [IS_PREFIX]
+   ++ PROVE_TAC []);
+
+val IS_PREFIX_BUTLAST = store_thm
+  ("IS_PREFIX_BUTLAST",
+   ``!x:'a y. IS_PREFIX (x::y) (BUTLAST (x::y))``,
+   Induct_on `y`
+     >> RW_TAC list_ss [BUTLAST_CONS, IS_PREFIX]
+   ++ RW_TAC list_ss [BUTLAST_CONS, IS_PREFIX]);
+
+val IS_PREFIX_LENGTH = store_thm
+  ("IS_PREFIX_LENGTH",
+   ``!(x:'a list) y. IS_PREFIX y x ==> LENGTH x <= LENGTH y``,
+   Induct >> RW_TAC list_ss [LENGTH]
+   ++ Cases_on `y` >> RW_TAC list_ss [IS_PREFIX_NIL]
+   ++ RW_TAC list_ss [IS_PREFIX, LENGTH]);
+
+val IS_PREFIX_LENGTH_ANTI = store_thm
+  ("IS_PREFIX_LENGTH_ANTI",
+   ``!(x:'a list) y. IS_PREFIX y x /\ (LENGTH x = LENGTH y) ==> (x = y)``,
+   Induct >> PROVE_TAC [LENGTH_NIL]
+   ++ Cases_on `y` >> RW_TAC list_ss [LENGTH_NIL]
+   ++ RW_TAC list_ss [IS_PREFIX, LENGTH]);
+
+val IS_PREFIX_SNOC = store_thm
+  ("IS_PREFIX_SNOC",
+   ``!(x:'a) y z. IS_PREFIX (SNOC x y) z = IS_PREFIX y z \/ (z = SNOC x y)``,
+   Induct_on `y`
+     >> (Cases_on `z`
+	 ++ RW_TAC list_ss [SNOC, IS_PREFIX_NIL, IS_PREFIX]
+	 ++ PROVE_TAC [])
+   ++ Cases_on `z` >> RW_TAC list_ss [IS_PREFIX]
+   ++ RW_TAC list_ss [SNOC, IS_PREFIX]
+   ++ PROVE_TAC []);
 
 val IS_PREFIX_APPEND1 = store_thm
   ("IS_PREFIX_APPEND1",
@@ -54,9 +115,32 @@ val IS_PREFIX_APPENDS = store_thm
         A well-formed encoder is prefix-free and injective.
  ---------------------------------------------------------------------------*)
 
-val wf_encoder_def = Define
-  `wf_encoder e = !x y. IS_PREFIX (e x) (e y) ==> (x = y)`;
+local
+  val th =prove
+    (``?p. !x. x IN p``,
+     Q.EXISTS_TAC `\x. T` ++
+     RW_TAC std_ss [IN_DEF]);
+in
+  val tot_def = Definition.new_specification ("tot_def", ["tot"], th);
+  val () = add_const "tot";
+end;
 
+val wf_pencoder_def = Define
+  `wf_pencoder p (e : 'a -> bool list) =
+   !x y :: p. IS_PREFIX (e x) (e y) ==> (x = y)`;
+
+val wf_encoder_def = Define `wf_encoder = wf_pencoder tot`;
+
+val wf_encoder_alt = store_thm
+  ("wf_encoder_alt",
+   ``wf_encoder e = !x y. IS_PREFIX (e x) (e y) ==> (x = y)``,
+   RW_TAC std_ss [wf_encoder_def, wf_pencoder_def, RES_FORALL_DEF, tot_def]);
+
+val wf_encoder = store_thm
+  ("wf_encoder",
+   ``!p e. wf_encoder e ==> wf_pencoder p e``,
+   RW_TAC std_ss [wf_encoder_def, wf_pencoder_def, tot_def, RES_FORALL_DEF]);
+               
 (*---------------------------------------------------------------------------
       The unit type is cool because it consumes no space in the
       target list: the type has all the information!
@@ -140,11 +224,12 @@ val _ = save_thm ("encode_num_ind", encode_num_ind);
    ----------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*)
-(* An alternative definition of encode_prod.                                 *)
+(* Alternative definition of encode_prod.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val encode_prod_alt = prove
-  (``!xb yb p. encode_prod xb yb p = APPEND (xb (FST p)) (yb (SND p))``,
+val encode_prod_alt = store_thm
+  ("encode_prod_alt",
+   ``!xb yb p. encode_prod xb yb p = APPEND (xb (FST p)) (yb (SND p))``,
    GEN_TAC ++ GEN_TAC ++ Cases ++
    RW_TAC std_ss [encode_prod_def]);
 
@@ -155,43 +240,43 @@ val encode_prod_alt = prove
 val wf_encode_unit = store_thm
   ("wf_encode_unit",
    ``wf_encoder encode_unit``,
-   RW_TAC std_ss [wf_encoder_def, encode_unit_def, IS_PREFIX, oneTheory.one]);
+   RW_TAC std_ss [wf_encoder_alt, encode_unit_def, IS_PREFIX, oneTheory.one]);
 
-val wf_encoder_bool = store_thm
-  ("wf_encoder_bool",
+val wf_encode_bool = store_thm
+  ("wf_encode_bool",
    ``wf_encoder encode_bool``,
-   RW_TAC std_ss [wf_encoder_def, encode_bool_def, IS_PREFIX]);
+   RW_TAC std_ss [wf_encoder_alt, encode_bool_def, IS_PREFIX]);
    
-val wf_encoder_prod = store_thm
-  ("wf_encoder_prod",
+val wf_encode_prod = store_thm
+  ("wf_encode_prod",
    ``!f g. wf_encoder f /\ wf_encoder g ==> wf_encoder (encode_prod f g)``,
-   RW_TAC std_ss [wf_encoder_def, encode_prod_alt] ++
+   RW_TAC std_ss [wf_encoder_alt, encode_prod_alt] ++
    Cases_on `x` ++
    Cases_on `y` ++
    FULL_SIMP_TAC std_ss [] ++
    Suff `q = q'` >> PROVE_TAC [IS_PREFIX_APPENDS] ++
    PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
 
-val wf_encoder_sum = store_thm
-  ("wf_encoder_sum",
+val wf_encode_sum = store_thm
+  ("wf_encode_sum",
    ``!f g. wf_encoder f /\ wf_encoder g ==> wf_encoder (encode_sum f g)``,
-   RW_TAC std_ss [wf_encoder_def] ++
+   RW_TAC std_ss [wf_encoder_alt] ++
    Cases_on `x` ++
    Cases_on `y` ++
    FULL_SIMP_TAC std_ss [encode_sum_def, IS_PREFIX]);
 
-val wf_encoder_option = store_thm
-  ("wf_encoder_option",
+val wf_encode_option = store_thm
+  ("wf_encode_option",
    ``!f. wf_encoder f ==> wf_encoder (encode_option f)``,
-   RW_TAC std_ss [wf_encoder_def] ++
+   RW_TAC std_ss [wf_encoder_alt] ++
    Cases_on `x` ++
    Cases_on `y` ++
    FULL_SIMP_TAC std_ss [encode_option_def, IS_PREFIX]);
 
-val wf_encoder_num = store_thm
-  ("wf_encoder_num",
+val wf_encode_num = store_thm
+  ("wf_encode_num",
    ``wf_encoder encode_num``,
-   SIMP_TAC std_ss [wf_encoder_def] ++
+   SIMP_TAC std_ss [wf_encoder_alt] ++
    recInduct encode_num_ind ++
    GEN_TAC ++
    Cases_on `n = 0` >>
@@ -238,10 +323,10 @@ val wf_encoder_num = store_thm
     ONCE_REWRITE_TAC [MULT_COMM] ++
     RW_TAC arith_ss [MULT_DIV]]);
 
-val wf_encoder_list = store_thm
-  ("wf_encoder_list",
+val wf_encode_list = store_thm
+  ("wf_encode_list",
    ``!f. wf_encoder f ==> wf_encoder (encode_list f)``,
-   RW_TAC std_ss [wf_encoder_def] ++
+   RW_TAC std_ss [wf_encoder_alt] ++
    POP_ASSUM MP_TAC ++
    Q.SPEC_TAC (`y`, `y`) ++
    Q.SPEC_TAC (`x`, `x`) ++
