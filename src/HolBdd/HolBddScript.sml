@@ -26,15 +26,15 @@ load "BasicProvers";
 load "SingleStep";
 load "TotalDefn";
 load "arithSimps";
-load "Ho_rewrite";
+load "Ho_Rewrite";
 load "listTheory";
 load "numLib";
 load "unwindLib";
-load "pairTools";
 load "HolBdd";
+load "pairLib";
 *)
 
-open Globals HolKernel Parse basicHol90Lib;
+open Globals HolKernel Parse boolLib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
@@ -42,8 +42,8 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 open BasicProvers TotalDefn SingleStep;
 open arithmeticTheory;
 open listTheory;
-open pairTheory pairTools
-open Ho_rewrite;
+open pairTheory;
+open Ho_Rewrite;
 open numLib;
 open HolBdd;
 
@@ -588,9 +588,9 @@ val EXISTS_IMP_lemma =
 
 val ABS_EXISTS_THM = (* Adapted from Hol sources *)
    let val th1 = ASSUME (--`?rep:'b->'a. TYPE_DEFINITION P rep`--)
-       and th2 = MK_EXISTS (SPEC (--`P:'a->bool`--) TYPE_DEFINITION)
+       and th2 = MK_EXISTS (SPEC (--`P:'a->bool`--) TYPE_DEFINITION_THM)
        val def = EQ_MP th2 th1
-       val asm = ASSUME (#Body(Rsyntax.dest_exists(concl def)))
+       val asm = ASSUME (snd(dest_exists(concl def)))
        val (asm1,asm2)  = CONJ_PAIR asm
        val rep_eq =
          let val th1 = DISCH (--`a:'b=a'`--)
@@ -613,7 +613,7 @@ val ABS_EXISTS_THM = (* Adapted from Hol sources *)
                         (EQ_MP (SYM (SPEC (--`r:'a`--) asm2)) t2)
        val TH2 = GEN (--`r:'a`--) (IMP_ANTISYM_RULE imp1 imp2)
        val CTH = CONJ TH1 TH2
-       val ath = Rsyntax.subst [ABS |-> Term`abs:'a->'b`] (concl CTH)
+       val ath = subst [ABS |-> Term`abs:'a->'b`] (concl CTH)
        val eth1 = EXISTS ((--`?abs:'a->'b. ^ath`--), ABS) CTH
    in
     save_thm

@@ -3,8 +3,7 @@ load "HolBdd";
 load "StateEnum";
 *)
 
-open HolBdd;
-open StateEnum;
+open HolBdd StateEnum;
 
 
 (*****************************************************************************)
