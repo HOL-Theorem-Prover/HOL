@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "<path-to-mosml-dir>";
-val holdir   = "<path-to-hol-dir>";
+val mosmldir = "/home/kxs/144";
+val holdir   = "/home/kxs/working";
 val OS       = "linux"           (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -56,12 +56,12 @@ end;
 val SRCDIRS =
  ["src/portableML", "src/0", "src/parse",
   "src/bool", "src/basicHol90", "src/compute/src", "src/goalstack", "src/q",
-  "src/combin", "src/refute", "src/simp/src",
-  "src/meson/src", "src/relation", "src/pair/src", "src/sum", "src/one",
+  "src/combin", "src/refute", "src/simp/src", "src/meson/src", 
+  "src/basicProof", "src/relation", "src/pair/src", "src/sum", "src/one",
   "src/option", "src/num", "src/reduce/src", "src/arith/src", "src/list/src",
   "src/tree", "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/basicrec",
-  "src/utils", "src/datatype/mutrec", "src/datatype/nestrec",
+  "src/datatype/mutrec/utils", "src/datatype/mutrec", "src/datatype/nestrec",
   "src/datatype/mutual", "src/datatype/record", "src/datatype", 
   "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
