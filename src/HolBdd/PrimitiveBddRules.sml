@@ -62,6 +62,16 @@ open HolKernel Parse boolLib BasicProvers
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
+(*****************************************************************************)
+(* Ken Larsen writes:                                                        *)
+(* In the current mosml release List.foldl is tail recursive but             *)
+(* List.foldr isn't.  In the upcomming mosml release foldr might be tail     *)
+(* recursive.  But a tail recursive version of foldr is easy to uptain       *)
+(* (as Michael notes):                                                       *)
+(*****************************************************************************)
+
+fun foldr f start ls = List.foldl f start (rev ls);
+
 in
 
 (*****************************************************************************)
@@ -71,15 +81,11 @@ in
 (* TermBdd should not be exported from this module.                          *)
 (*****************************************************************************)
 
-(*
 local
-*)
 
 datatype term_bdd = TermBdd of varmap * term * bdd.bdd;
 
-(*
 in
-*)
 
 (*****************************************************************************)
 (* Destructors for term_bdd                                                  *)
@@ -199,7 +205,7 @@ exception BddReplaceError;
 
 fun BddReplace tbl (TermBdd(vm,tm,b)) =
  let val ((l,l'),replacel) = 
-       List.foldr
+       foldr
         (fn(((TermBdd(vm1,v,b)),(TermBdd(vm2,v',b'))), ((l,l'),replacel))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
@@ -283,7 +289,7 @@ exception BddListComposeError;
 
 fun BddListCompose tbl (TermBdd(vm,tm,b)) =
  let val ((l,l'),composel) = 
-       List.foldr
+       foldr
         (fn(((TermBdd(vm1,v,b)),(TermBdd(vm2,tm,b'))), ((l,l'),composel))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
@@ -371,7 +377,7 @@ in
 fun BddRestrict tbl tb =
  let val TermBdd(vm,tm,b) = tb
      val (substl,restrictl) = 
-       List.foldr
+       foldr
         (fn((TermBdd(vm1,v,b),TermBdd(vm2,c,_)), (substl,restrictl))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
@@ -592,6 +598,4 @@ fun BddAppex vl (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
 
 end;
 
-(*
 end;
-*)

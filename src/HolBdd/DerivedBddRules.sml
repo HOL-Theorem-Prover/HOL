@@ -44,6 +44,17 @@ fun hol_err msg func =
   print "\" \""; print func; print "\"\n";
   raise mk_HOL_ERR "HolBdd" func msg);
 
+
+(*****************************************************************************)
+(* Ken Larsen writes:                                                        *)
+(* In the current mosml release List.foldl is tail recursive but             *)
+(* List.foldr isn't.  In the upcomming mosml release foldr might be tail     *)
+(* recursive.  But a tail recursive version of foldr is easy to uptain       *)
+(* (as Michael notes):                                                       *)
+(*****************************************************************************)
+
+fun foldr f start ls = List.foldl f start (rev ls);
+
 in
 
 
@@ -51,7 +62,7 @@ in
 (* Test equality of BDD component of two term_bdds and return true or false  *)
 (*****************************************************************************)
 
-fun BddEqualTest (TermBdd(_,_,b1)) (TermBdd(_,_,b2)) = bdd.equal b1 b2;
+fun BddEqualTest tb1 tb2 = bdd.equal (getBdd tb1) (getBdd tb2);
 
 (*****************************************************************************)
 (* Test if the BDD part is TRUE or FALSE                                     *)
