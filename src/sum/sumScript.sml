@@ -33,9 +33,6 @@ structure sumScript =
 struct
 
 open HolKernel Parse boolLib;
-infix THEN THENL ORELSEC THENC |->;
-
-type thm = Thm.thm;
 
 val _ = new_theory "sum";
 
@@ -359,6 +356,12 @@ val sum_case_def = Prim_rec.new_recursive_definition{
 val sum_case_cong = save_thm("sum_case_cong",
                              Prim_rec.case_cong_thm sum_CASES sum_case_def);
 
+val LET_SUM = store_thm(
+  "LET_SUM",
+  ``(LET f (INL a) = LET (\v. f (INL v)) a) /\
+    (LET f (INR b) = LET (\u. f (INR u)) b)``,
+  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME(fn ppstrm =>
@@ -387,7 +390,7 @@ val _ = adjoin_to_theory
 
 val _ = BasicProvers.export_rewrites ["ISL", "ISR", "OUTL", "OUTR",
                                       "sum_distinct", "INR_INL_11",
-                                      "sum_case_def", "INL", "INR"]
+                                      "sum_case_def", "INL", "INR", "LET_SUM"]
 
 
 val _ = export_theory();

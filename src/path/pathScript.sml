@@ -6,6 +6,8 @@ local open pred_setLib fixedPointTheory in end
 
 val _ = new_theory "path";
 
+val _ = augment_srw_ss [simpLib.rewrites [LET_THM]]
+
 val path_TY_DEF = new_type_definition (
   "path",
   prove(``?x :('a # ('b # 'a) llist). (\x. T) x``,
@@ -659,7 +661,10 @@ val drop_def = Define`
   (drop 0 p = p) /\
   (drop (SUC n) p = drop n (tail p))
 `;
-val _ = BasicProvers.export_rewrites ["drop_def"]
+val numeral_drop = save_thm(
+  "numeral_drop",
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV (CONJUNCT2 drop_def));
+val _ = BasicProvers.export_rewrites ["drop_def", "numeral_drop"]
 
 
 val finite_drop = store_thm(
@@ -1292,6 +1297,14 @@ val SN_finite_paths_EQ = store_thm(
   "SN_finite_paths_EQ",
   ``!R. SN R = !p. okpath R p ==> finite p``,
   PROVE_TAC [finite_paths_SN, SN_finite_paths]);
+
+val LET_PATH = store_thm(
+  "LET_PATH",
+  ``(LET f (stopped_at x) = LET (\v. f (stopped_at v)) x) /\
+    (LET f (pcons x r p) =
+       LET (\v1. LET (\v2. LET (\v3. f (pcons v1 v2 v3)) p) r) x)``,
+  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+val _ = export_rewrites ["LET_PATH"]
 
 val _ = export_theory();
 

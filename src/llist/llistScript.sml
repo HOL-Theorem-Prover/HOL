@@ -21,7 +21,7 @@ val UNCURRY_THM = pairTheory.UNCURRY
 
 val hol_ss = bool_ss ++ optionSimps.OPTION_ss ++ listSimps.LIST_ss ++
                         numSimps.ARITH_ss ++ numSimps.REDUCE_ss ++
-                        pairSimps.PAIR_ss ++ rewrites [UNCURRY_THM] ++
+                        pairSimps.PAIR_ss ++ rewrites [UNCURRY_THM, LET_THM] ++
                         combinSimps.COMBIN_ss
 
 val PAIR_EQ = pairTheory.PAIR_EQ
@@ -1586,8 +1586,15 @@ val LFLATTEN_APPEND = store_thm(
     ]
   ]);
 
+val LET_LLIST = store_thm(
+  "LET_LLIST",
+  ``(LET f LNIL = f LNIL) /\
+    (LET f (LCONS h t) = LET (\v1. LET (\v2. f (LCONS v1 v2)) t) h)``,
+  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+
 val _ = BasicProvers.export_rewrites
-          ["LCONS_NOT_NIL", "LCONS_11", "LMAP", "LAPPEND", "LFILTER_THM"]
+          ["LCONS_NOT_NIL", "LCONS_11", "LMAP", "LAPPEND", "LFILTER_THM",
+           "LET_LLIST"]
 
 
 

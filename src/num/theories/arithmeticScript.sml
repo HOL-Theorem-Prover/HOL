@@ -2713,7 +2713,7 @@ val FORALL_NUM = store_thm(
 val BOUNDED_FORALL_THM = Q.store_thm("BOUNDED_FORALL_THM",
 `!c. 0<c ==> ((!n. n < c ==> P n) = P (c-1) /\ !n. n < (c-1) ==> P n)`,
  RW_TAC boolSimps.bool_ss [] THEN EQ_TAC THENL
-  [REPEAT STRIP_TAC 
+  [REPEAT STRIP_TAC
      THEN FIRST_ASSUM MATCH_MP_TAC THENL
      [METIS_TAC [ONE,LESS_ADD_SUC,ADD_SYM,SUB_RIGHT_LESS],
       MATCH_MP_TAC LESS_LESS_EQ_TRANS
@@ -3026,6 +3026,13 @@ val LEAST_EXISTS_IMP = store_thm
   ("LEAST_EXISTS_IMP",
    ``!p. (?n. p n) ==> (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
    REWRITE_TAC [LEAST_EXISTS]);
+
+val LET_NUM = store_thm(
+  "LET_NUM",
+  ``(LET f 0 = f 0) /\
+    (LET f (SUC x) = LET (\v. f (SUC v)) x) /\
+    (LET f (NUMERAL v) = f (NUMERAL v))``,
+  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

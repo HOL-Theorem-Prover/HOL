@@ -133,16 +133,23 @@ val UNWIND_ss = SIMPSET
     LET_ss
    ---------------------------------------------------------------------- *)
 
+(*
  val let_cong = prove(
    ``(v:'a = v') ==> (LET (f:'a -> 'b) v = LET f (I v'))``,
    DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [LET_THM, combinTheory.I_THM])
 val let_I_thm = prove(
   ``LET (f : 'a -> 'b) (I x) = f x``,
-  REWRITE_TAC [combinTheory.I_THM, LET_THM]);
+  REWRITE_TAC [combinTheory.I_THM, LET_THM]);*)
 
-val LET_ss = simpLib.SIMPSET {ac = [], congs = [let_cong],
-                              convs = [], filter = NONE, dprocs = [],
-                              rewrs = [let_I_thm]}
+val LET_ss = let
+  val sLET = INST_TYPE[Type.alpha |-> bool] (SPEC_ALL LET_THM)
+  val x = mk_var("x",bool)
+  val T_value = INST [x|->boolSyntax.T] sLET
+  val F_value = INST [x|->boolSyntax.F] sLET
+in
+  simpLib.SIMPSET {ac = [], congs = [], convs = [], filter = NONE,
+                   dprocs = [], rewrs = [T_value, F_value]}
+end
 
 (* ----------------------------------------------------------------------
     bool_ss

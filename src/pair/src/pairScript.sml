@@ -401,6 +401,15 @@ REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
   THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
   THEN REWRITE_TAC[]);
 
+(* ----------------------------------------------------------------------
+    LET_PAIR
+   ---------------------------------------------------------------------- *)
+
+val LET_PAIR = store_thm(
+  "LET_PAIR",
+  ``LET f (x,y) = LET (\v1. LET (\v2. f(v1,v2)) y) x``,
+  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+
 
 (*---------------------------------------------------------------------------
        TFL support.
@@ -431,7 +440,7 @@ val pair_rws = [PAIR, FST, SND];
  ---------------------------------------------------------------------------*)
 
 val _ = adjoin_to_theory
-{sig_ps = SOME(fn ppstrm => 
+{sig_ps = SOME(fn ppstrm =>
   let val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
    in S "val pair_rws : thm list"
    end),
@@ -697,7 +706,7 @@ val _ = BasicProvers.export_rewrites
         ["PAIR", "FST", "SND", "CLOSED_PAIR_EQ", "CURRY_UNCURRY_THM",
          "UNCURRY_CURRY_THM", "CURRY_ONE_ONE_THM", "UNCURRY_ONE_ONE_THM",
          "UNCURRY", "CURRY_DEF", "PAIR_MAP_THM", "FST_PAIR_MAP",
-         "SND_PAIR_MAP"]
+         "SND_PAIR_MAP", "LET_PAIR"]
 
 val _ = export_theory();
 

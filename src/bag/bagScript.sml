@@ -1356,6 +1356,7 @@ val _ = export_rewrites ["BAG_IN_BAG_FILTER"]
     take elements that want to be infinite to zero instead.
    ---------------------------------------------------------------------- *)
 
+val _ = augment_srw_ss [simpLib.rewrites [LET_THM]]
 val BAG_IMAGE_DEF = new_definition(
   "BAG_IMAGE_DEF",
   ``BAG_IMAGE f b = \e. let sb = BAG_FILTER (\e0. f e0 = e) b

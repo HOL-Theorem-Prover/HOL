@@ -21,7 +21,7 @@ open HolKernel Parse boolLib pairLib simpLib;
    This is because the listSimps and optionSimps signatures do not change
    in the event of listTheory and optionTheory changing. *)
 
-local open listTheory optionTheory 
+local open listTheory optionTheory
            combinSyntax listSyntax optionSyntax numSyntax oneSyntax sumSyntax
            combinML listML optionML numML oneML sumML boolML pairML
            EvalRef Lift Drop
@@ -87,7 +87,8 @@ val pure_ss = pureSimps.pure_ss
 val bool_ss = boolSimps.bool_ss
 val std_ss =
      (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
-      numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ combinSimps.COMBIN_ss)
+      numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ combinSimps.COMBIN_ss ++
+      rewrites [LET_THM])
 
 val arith_ss = std_ss ++ numSimps.ARITH_ss
 val list_ss  = arith_ss ++ listSimps.LIST_ss

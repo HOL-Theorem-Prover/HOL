@@ -13,7 +13,6 @@
 (* =======================================================================*)
 
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
 (*---------------------------------------------------------------------------
      Make sure that sumTheory and oneTheory is loaded.
@@ -287,6 +286,13 @@ val option_case_cong =
   save_thm("option_case_cong",
       Prim_rec.case_cong_thm option_nchotomy option_case_def);
 
+val OPTION_LET = store_thm(
+  "OPTION_LET",
+  ``(LET f NONE = f NONE) /\
+    (LET f (SOME x) = LET (\v. f (SOME v)) x)``,
+  ASM_REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+
+
 val _ = adjoin_to_theory
 {sig_ps = SOME (fn ppstrm =>
   let val S = PP.add_string ppstrm
@@ -331,6 +337,7 @@ val _ = BasicProvers.export_rewrites
           ["OPTION_MAP_EQ_SOME", "OPTION_MAP_EQ_NONE", "THE_DEF",
            "IS_SOME_DEF", "IS_NONE_EQ_NONE", "NOT_IS_SOME_EQ_NONE",
            "option_case_ID", "option_case_SOME_ID", "option_case_def",
-           "OPTION_MAP_DEF", "OPTION_JOIN_DEF", "SOME_11", "NOT_SOME_NONE"]
+           "OPTION_MAP_DEF", "OPTION_JOIN_DEF", "SOME_11", "NOT_SOME_NONE",
+           "OPTION_LET"]
 
 val _ = export_theory();
