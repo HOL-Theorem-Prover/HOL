@@ -15,7 +15,10 @@ fun has_dq file =
          | SOME #"`" => (case TextIO.input1 istrm 
                           of NONE => false | SOME #"`" => true | _ => loop())
          | _ => loop()
-  in loop()
+      val status = loop()
+  in 
+     TextIO.closeIn instrm;
+     status
   end
 
 
