@@ -138,6 +138,14 @@ fun name v =
   else (print_term v; print " is not a boolean variable\n"; raise nameError);
 
 (*****************************************************************************)
+(* DISCH for term_bdd                                                        *)
+(*****************************************************************************)
+
+fun BddDisch asm (TermBdd(tg,ass,vm,tm,b)) = 
+    (if (type_of asm = bool) then () else failwith ("BddDisch: not a proposition");
+     TermBdd(tg,HOLset.delete(ass,asm) handle HOLset.NotFound => ass,vm,mk_imp(asm,tm),b))
+
+(*****************************************************************************)
 (* Oracle function                                                           *)
 (*                                                                           *)
 (*   ass vm t |--> TRUE                                                      *)

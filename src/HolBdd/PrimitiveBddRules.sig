@@ -24,6 +24,7 @@ signature PrimitiveBddRules = sig
   exception BddFreevarsContractVarmapError
   exception BddListComposeError
 
+  val BddDisch : Term.term -> term_bdd -> term_bdd
   val BddListCompose : (term_bdd * term_bdd) list -> term_bdd -> term_bdd
   val BddVar : bool -> varmap -> Term.term -> term_bdd
   val getTag : term_bdd -> Thm.tag

@@ -366,6 +366,13 @@ val MakeSimpRecThm =
   (simpLib.SIMP_RULE boolSimps.bool_ss [LEFT_AND_OVER_OR,EXISTS_OR_THM]);
 
 (*****************************************************************************)
+(* ASSUME for term_bdd                                                       *)
+(*****************************************************************************)
+
+fun BddAssume tm vm =
+    BddEqMp ((SYM o EQT_INTRO o ASSUME) tm) (BddCon true vm)       
+
+(*****************************************************************************)
 (*  asl |- t1 = t2   ass vm t1' |--> b                                       *)
 (*  ----------------------------------                                       *)
 (*      (asl U ass) vm t2' |--> b'                                           *)
