@@ -1,0 +1,5 @@
+(*[ ECHO ]*) turns on echo mode *after the next token* (including
+white space).
+
+(*[ NOECHO ]*) turns off echo mode immediately.
+
