@@ -2451,8 +2451,7 @@ val FINITE_WEAK_ENUMERATE = store_thm(
     Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
     SIMP_TAC bool_ss [IN_INSERT, NOT_IN_EMPTY] THEN
     REPEAT STRIP_TAC THENL [
-      Q.EXISTS_TAC `f` THEN Q.EXISTS_TAC `0` THEN
-      SIMP_TAC arith_ss [],
+      Q.EXISTS_TAC `0` THEN SIMP_TAC arith_ss [],
       Q.EXISTS_TAC `\n. if n = b then e else f n` THEN
       Q.EXISTS_TAC `b + 1` THEN GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
         Q.EXISTS_TAC `b` THEN ASM_SIMP_TAC arith_ss [],

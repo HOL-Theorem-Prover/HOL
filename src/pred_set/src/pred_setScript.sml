@@ -2007,7 +2007,7 @@ val INFINITE_DEF = new_definition ("INFINITE_DEF",
 val NOT_IN_FINITE =
     store_thm
     ("NOT_IN_FINITE",
-     (--`INFINITE (UNIV:^set) 
+     (--`INFINITE (UNIV:^set)
            =
          !s:^set. FINITE s ==> ?x. ~(x IN s)`--),
      PURE_ONCE_REWRITE_TAC [INFINITE_DEF] THEN EQ_TAC THENL
@@ -2508,8 +2508,7 @@ val FINITE_WEAK_ENUMERATE = store_thm(
     Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
     SIMP_TAC bool_ss [IN_INSERT, NOT_IN_EMPTY] THEN
     REPEAT STRIP_TAC THENL [
-      Q.EXISTS_TAC `f` THEN Q.EXISTS_TAC `0` THEN
-      SIMP_TAC arith_ss [],
+      Q.EXISTS_TAC `0` THEN SIMP_TAC arith_ss [],
       Q.EXISTS_TAC `\n. if n = b then e else f n` THEN
       Q.EXISTS_TAC `b + 1` THEN GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
         Q.EXISTS_TAC `b` THEN ASM_SIMP_TAC arith_ss [],
@@ -2756,8 +2755,8 @@ val FINITE_CROSS_EQ_lemma =
 
 val FINITE_CROSS_EQ = store_thm(
   "FINITE_CROSS_EQ",
-  ``!P Q. FINITE (P CROSS Q) 
-             = 
+  ``!P Q. FINITE (P CROSS Q)
+             =
           (P = {}) \/ (Q = {}) \/ FINITE P /\ FINITE Q``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
   MESON_TAC [FINITE_CROSS_EQ_lemma, FINITE_CROSS, FINITE_EMPTY,
