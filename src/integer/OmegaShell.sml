@@ -13,7 +13,8 @@ open HolKernel boolLib intSyntax QConv integerTheory
    used, and also performs the necessary normalisation of the input.
 *)
 
-infix THENC ORELSEC |->
+infix THENC THEN ORELSEC |->
+infixr --> ##
 
 val lhand = rand o rator
 
@@ -103,22 +104,169 @@ end tm
 
 fun ISCONST_CONV tm = if is_const tm then ALL_CONV tm else NO_CONV tm
 
+fun generate_nway_casesplit n = let
+  val _ = n >= 1 orelse raise Fail "generate_nway_casesplit: n < 1"
+  fun genty n = if n = 1 then bool --> bool
+                else bool --> (genty (n - 1))
+  val P_ty = genty n
+  val P_t = mk_var("P", P_ty)
+  fun gen_cases (m, vs, t) =
+      if m < n then let
+          val v = mk_var("v"^Int.toString m, bool)
+          val vT = (m + 1, v::vs, mk_comb(t, T))
+          val vF = (m + 1, (mk_neg v)::vs, mk_comb(t, F))
+        in
+          mk_disj(gen_cases vT, gen_cases vF)
+        end
+      else
+        mk_conj(t, list_mk_conj vs)
+  val RHS = gen_cases (0, [], P_t)
+  fun gen_vars n acc =
+      if n < 0 then acc
+      else gen_vars (n - 1) (mk_var("v"^Int.toString n, bool)::acc)
+  val vars = gen_vars (n - 1) []
+in
+  GEN P_t (GENL vars
+                (prove(mk_eq(list_mk_comb(P_t, vars), RHS),
+                       MAP_EVERY BOOL_CASES_TAC vars THEN REWRITE_TAC [])))
+end
+
+fun UNBETA_LIST tlist =
+    case tlist of
+      [] => ALL_CONV
+    | (t::ts) => CooperSyntax.UNBETA_CONV t THENC RATOR_CONV (UNBETA_LIST ts)
+
+val not_beq = prove(
+  ``~(b1 = b2) = b1 /\ ~b2 \/ ~b1 /\ b2``,
+  BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []);
+val beq = prove(
+  ``(b1 = b2) = b1 /\ b2 \/ ~b1 /\ ~b2``,
+  BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []);
+
+fun reveal_a_disj tm =
+    if is_disj tm then ALL_CONV tm
+    else
+      (FIRST_CONV (map REWR_CONV [beq, not_beq, IMP_DISJ_THM,
+                                  CooperThms.NOT_AND]) ORELSEC
+       (REWR_CONV CooperThms.NOT_NOT_P THENC reveal_a_disj)) tm
+
+val FLIP_COND = prove(
+  ``(if g then t:'a else e) = if ~g then e else t``,
+  COND_CASES_TAC THEN REWRITE_TAC []);
+
+fun normalise_guard t = let
+  val _ = dest_cond t
+  fun make_guard_positive t = let
+    val (g, _, _) = dest_cond t
+  in
+    if is_leq g then let
+        val t1 = hd (strip_plus (rand g))
+      in
+        if is_negated (#1 (dest_mult t1)) handle HOL_ERR _ => false then
+          REWR_CONV FLIP_COND THENC
+          RATOR_CONV (LAND_CONV leaf_normalise)
+        else
+          ALL_CONV
+      end
+    else
+      ALL_CONV
+  end t
+in
+  RATOR_CONV (LAND_CONV leaf_normalise) THENC make_guard_positive
+end t
+
+fun TOP_SWEEP_ONCE_CONV c t =
+    (TRY_CONV c THENC SUB_QCONV (TOP_SWEEP_ONCE_CONV c)) t
+
+val normalise_guards = TOP_SWEEP_ONCE_CONV normalise_guard
+
+
+fun cond_removal0 t = let
+  open Binarymap
+  val condexps = List.map (hd o #2 o strip_comb) (find_terms is_cond t)
+  val empty_map = mkDict Term.compare
+  fun my_insert(g, m) =
+      case peek(m,g) of
+        NONE => insert(m, g, 1)
+      | SOME n => insert(m, g, n + 1)
+  val final_map = List.foldl my_insert empty_map condexps
+  fun find_gt2 (t,n,l) = if n >= 2 then t::l else l
+  val gt2_guards = foldl find_gt2 [] final_map
+  val n = assert (curry op < 0) (length gt2_guards)
+  val case_split = generate_nway_casesplit n
+in
+  UNBETA_LIST (List.rev gt2_guards) THENC
+  REWR_CONV case_split THENC
+  EVERY_DISJ_CONV (LAND_CONV LIST_BETA_CONV THENC REWRITE_CONV [])
+end t
+
+fun cond_removal t =
+    ((reveal_a_disj THENC BINOP_CONV cond_removal) ORELSEC
+     (normalise_guards THENC cond_removal0)) t
+
 val simple =
+  TRY_CONV (STRIP_QUANT_CONV cond_removal) THENC
   normalise THENC
   EVERY_DISJ_CONV (REWRITE_CONV [] THENC
                    (ISCONST_CONV ORELSEC
                     (OmegaEq.OmegaEq THENC
                      (ISCONST_CONV ORELSEC OmegaSimple.simple_CONV))))
 
+val tac = COND_CASES_TAC THEN REWRITE_TAC []
+val COND_FA_THEN_THM =
+    prove(``(if p then !x:'a. P x else q) = !x. if p then P x else q``, tac)
+val COND_FA_ELSE_THM =
+    prove(``(if p then q else !x:'a. P x) = !x. if p then q else P x``, tac)
+val COND_EX_THEN_THM =
+    prove(``(if p then ?x:'a. P x else q) = ?x. if p then P x else q``, tac)
+val COND_EX_ELSE_THM =
+    prove(``(if p then q else ?x:'a. P x) = ?x. if p then q else P x``, tac)
+
+fun COND_FA_THEN tm = let
+  val (g, t, e) = dest_cond tm
+  val (v, _) = dest_forall t
+in
+  HO_REWR_CONV COND_FA_THEN_THM THENC RAND_CONV (ALPHA_CONV v)
+end tm
+fun COND_FA_ELSE tm = let
+  val (g, t, e) = dest_cond tm
+  val (v, _) = dest_forall e
+in
+  HO_REWR_CONV COND_FA_ELSE_THM THENC RAND_CONV (ALPHA_CONV v)
+end tm
+fun COND_EX_THEN tm = let
+  val (g, t, e) = dest_cond tm
+  val (v, _) = dest_exists t
+in
+  HO_REWR_CONV COND_EX_THEN_THM THENC RAND_CONV (ALPHA_CONV v)
+end tm
+fun COND_EX_ELSE tm = let
+  val (g, t, e) = dest_cond tm
+  val (v, _) = dest_exists e
+in
+  HO_REWR_CONV COND_EX_ELSE_THM THENC RAND_CONV (ALPHA_CONV v)
+end tm
+
+val myPRENEX_CONV =
+    TOP_DEPTH_CONV
+    (FIRST_CONV [NOT_FORALL_CONV, NOT_EXISTS_CONV,
+                 AND_FORALL_CONV, OR_EXISTS_CONV,
+                 RIGHT_AND_FORALL_CONV, LEFT_AND_FORALL_CONV,
+                 RIGHT_AND_EXISTS_CONV, LEFT_AND_EXISTS_CONV,
+                 RIGHT_IMP_FORALL_CONV, LEFT_IMP_FORALL_CONV,
+                 RIGHT_IMP_EXISTS_CONV, LEFT_IMP_EXISTS_CONV,
+                 RIGHT_OR_FORALL_CONV,  LEFT_OR_FORALL_CONV,
+                 RIGHT_OR_EXISTS_CONV,  LEFT_OR_EXISTS_CONV,
+                 COND_FA_THEN, COND_FA_ELSE, COND_EX_THEN, COND_EX_ELSE])
 
 fun decide_strategy tm = let
   open CooperSyntax
 in
   case goal_qtype tm of
     qsUNIV =>
-      Canon.PRENEX_CONV THENC flip_foralls THENC
+      myPRENEX_CONV THENC flip_foralls THENC
       RAND_CONV simple THENC CooperMath.REDUCE_CONV
-  | qsEXISTS => Canon.PRENEX_CONV THENC simple
+  | qsEXISTS => myPRENEX_CONV THENC simple
   | EITHER => CooperMath.REDUCE_CONV
   | NEITHER =>
       raise ERR "decide_closed_presburger"
@@ -126,9 +274,43 @@ in
 end tm
 
 
+(* in order to do prenexing, we need to remove quantifiers that hide
+   within conditional guards.  There's a lot of faff happening here:
+   why not just do away with conditional expressions from the outset?
+
+   Two reasons:
+  * rewriting the wrong way will double the term size because one
+    rewrite is right for CNF and the other is right for DNF.
+  * conditional expressions that repeat the same guard should have
+    the case-split done on the guard just once. *)
+fun remove_qs_from_guards tm = let
+  val (g, t, e) = dest_cond tm
+in
+  if CooperSyntax.goal_qtype g <> CooperSyntax.EITHER then
+    REWR_CONV COND_EXPAND tm
+  else NO_CONV tm
+end
 
 
-val decide_closed_presburger = decide_strategy
+
+
+
+
+
+
+
+val decide_closed_presburger =
+    TOP_DEPTH_CONV remove_qs_from_guards THENC
+    REWRITE_CONV [IMP_DISJ_THM] THENC decide_strategy
+
+fun dnf_size t =
+    if is_disj t then
+      (op+ o (dnf_size ## dnf_size) o dest_disj) t
+    else if is_conj t then
+      (op* o (dnf_size ## dnf_size) o dest_conj) t
+    else 1
+
+
 
 
 end (* struct *)

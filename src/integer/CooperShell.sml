@@ -752,7 +752,7 @@ fun decide_pure_presburger_term tm = let
   (* no free variables allowed *)
   val phase0_CONV =
     (* rewrites out conditional expression terms *)
-    Sub_and_cond.COND_ELIM_CONV
+    Sub_and_cond.SUB_AND_COND_ELIM_CONV
 
   fun mainwork tm = let
   in

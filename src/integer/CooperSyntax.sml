@@ -142,11 +142,6 @@ and cpis_conj tm =
   end handle HOL_ERR _ => false
 
 
-(* ---------------------------------------------------------------------- *)
-(* determining whether or not terms include quantifiers, and what sort    *)
-(* they might be.                                                         *)
-(* ---------------------------------------------------------------------- *)
-
 val int_exists = mk_thy_const{Name = "?", Thy = "bool",
                               Ty = (int_ty --> bool) --> bool}
 val int_forall = mk_thy_const{Name = "!", Thy = "bool",
@@ -166,11 +161,34 @@ fun has_quant t =
   end
 
 
+(* ----------------------------------------------------------------------
+    goal_qtype t
+
+    returns one of EITHER | NEITHER | qsUNIV | qsEXISTS
+
+    EITHER is returned if t has no quantifiers.
+    NEITHER is returned if t has both sorts
+    qsUNIV is returned if t has only universal quantifiers.
+    qsEXISTS is returned if t has only existential quantifiers.
+
+    Pays attention to negations.  Boolean operators in the term must be
+    no more than
+       /\, \/, ~, = and if-then-else
+   ---------------------------------------------------------------------- *)
+
 datatype qstatus = EITHER | NEITHER | qsUNIV | qsEXISTS
+exception return_NEITHER
 fun negstatus s = case s of qsUNIV => qsEXISTS | qsEXISTS => qsUNIV | x => x
 fun goal_qtype tm = let
   fun recurse acc tm = let
-    val (l, r) = dest_conj tm handle HOL_ERR _ => dest_disj tm
+    val (l, r) = dest_conj tm
+        handle HOL_ERR _ => dest_disj tm
+        handle HOL_ERR _ => let
+                 val (g, t, e) = dest_cond tm
+               in
+                 if recurse EITHER g <> EITHER then raise return_NEITHER
+                 else (t,e)
+               end
   in
     case (acc, recurse acc l) of
       (_, EITHER) => recurse acc r
@@ -187,10 +205,17 @@ fun goal_qtype tm = let
     | ("?", qsUNIV) => NEITHER
     | ("?", _) => recurse qsEXISTS (body (hd args))
     | ("?!", _) => NEITHER
+    | ("=", _) => if type_of (hd args) = bool then
+                    if recurse EITHER (hd args) <> EITHER then
+                      NEITHER
+                    else if recurse EITHER (hd (tl args)) <> EITHER then
+                      NEITHER
+                    else acc
+                  else acc
     | _ => acc
   end handle HOL_ERR _ => acc
 in
-  recurse EITHER tm
+  recurse EITHER tm handle return_NEITHER => NEITHER
 end
 
 (* ----------------------------------------------------------------------

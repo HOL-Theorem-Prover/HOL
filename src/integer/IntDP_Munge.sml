@@ -197,8 +197,8 @@ in
       val inj_bvar = mk_comb(int_injection, bvar)
       val rewrite_qaway =
         REWR_CONV (if is_forall tm then INT_NUM_FORALL
-        else if is_exists tm then INT_NUM_EXISTS
-             else INT_NUM_UEXISTS) THENC
+                   else if is_exists tm then INT_NUM_EXISTS
+                   else INT_NUM_UEXISTS) THENC
         BINDER_CONV (RAND_CONV BETA_CONV)
     in
       BINDER_CONV (abs_inj inj_bvar) THENC rewrite_qaway THENC
@@ -214,6 +214,8 @@ in
              is_imp tm) then
       BINOP_CONV eliminate_nat_quants
     else if is_cond tm then
+      RAND_CONV eliminate_nat_quants THENC
+      LAND_CONV eliminate_nat_quants THENC
       RATOR_CONV (RATOR_CONV (RAND_CONV eliminate_nat_quants))
     else ALL_CONV
 end tm handle HOL_ERR {origin_function = "REWR_CONV", ...} =>
@@ -292,11 +294,55 @@ local
         LESS => GREATER
       | EQUAL => EQUAL
       | GREATER => LESS
+
+
+  (* two functions below derived from RJB's Sub_and_cond.sml *)
+  fun op_of_app tm = op_of_app (rator tm) handle _ => tm
+  fun COND_ABS_CONV tm = let
+    open Rsyntax
+    val {Bvar=v,Body=bdy} = dest_abs tm
+    val {cond,larm=x,rarm=y} = Rsyntax.dest_cond bdy
+    val b = assert (not o Lib.mem v o free_vars) cond
+    val _ = assert (fn t => type_of t <> bool) x
+    val xf = mk_abs{Bvar=v,Body=x}
+    val yf = mk_abs{Bvar=v,Body=y}
+    val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
+    val th2 = SPECL [b,xf,yf] th1
+  in
+    CONV_RULE (RATOR_CONV
+                 (RAND_CONV (ABS_CONV
+                               (RATOR_CONV (RAND_CONV BETA_CONV) THENC
+                                RAND_CONV BETA_CONV) THENC
+                               ALPHA_CONV v))) th2
+  end handle HOL_ERR _ => failwith "COND_ABS_CONV"
+  val NBOOL_COND_RATOR_CONV = REWR_CONV COND_RATOR
+  fun NBOOL_COND_RAND_CONV tm = let
+    val (f, cnd) = dest_comb tm
+  in
+    if same_const f conditional orelse
+       (type_of (rand cnd) <> bool andalso
+        not (same_const (op_of_app f) conditional))
+    then
+      (* guard above allows rewrite of
+           COND (COND p q r) x y
+         which will go to
+           (COND p (COND q) (COND r)) x y
+         COND q and COND r will get exposed to x and y ; term duplicates
+         x and y; hope this doens't happen too often. *)
+      REWR_CONV COND_RAND tm
+    else
+      NO_CONV tm
+  end
+
 in
 val dealwith_nats = let
   val phase1 =
       tacCONV (ONCE_DEPTH_CONV normalise_mult THENC
-               Sub_and_cond.SUB_AND_COND_ELIM_CONV THENC
+               (* eliminate nasty subtractions *)
+               TOP_DEPTH_CONV (Thm_convs.SUB_NORM_CONV ORELSEC
+                               NBOOL_COND_RATOR_CONV ORELSEC
+                               NBOOL_COND_RAND_CONV ORELSEC
+                               COND_ABS_CONV) THENC
                elim_div_mod)
   fun do_pbs tm = let
     val non_pbs =
