@@ -1,6 +1,6 @@
 (*---------------------------------------------------------------------------
        Some proof automation, which moreover has few theory
-       dependencies, and so can be used in places where bossLib 
+       dependencies, and so can be used in places where bossLib
        is overkill.
  ---------------------------------------------------------------------------*)
 
@@ -21,21 +21,18 @@ fun AUTO_ERR func mesg =
              origin_function = func,
              message = mesg};
 
-(* Should go to boolTheory *)
-val COND_COND_SAME = prove(
-  Term`!P (f:'a->'b) g x y. (COND P f g) (COND P x y) = COND P (f x) (g y)`,
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
-
-local val cond_rules = [boolTheory.COND_EXPAND,
-                        boolTheory.COND_RATOR,
-                        COND_COND_SAME]
-      val EXPAND_COND_TAC = REWRITE_TAC cond_rules
-      val EXPAND_COND = REWRITE_RULE cond_rules
+local
+  open simpLib
+  infix ++
+  val EXPAND_COND_CONV =
+    SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) []
+  val EXPAND_COND_TAC = CONV_TAC EXPAND_COND_CONV
+  val EXPAND_COND = CONV_RULE EXPAND_COND_CONV
 in
-fun PROVE thl tm = Tactical.prove (tm, 
+fun PROVE thl tm = Tactical.prove (tm,
  EXPAND_COND_TAC THEN mesonLib.MESON_TAC (map EXPAND_COND thl))
 
-fun PROVE_TAC thl = 
+fun PROVE_TAC thl =
   REPEAT (POP_ASSUM MP_TAC)
     THEN EXPAND_COND_TAC
     THEN mesonLib.ASM_MESON_TAC (map EXPAND_COND thl)
@@ -120,7 +117,7 @@ local fun DTHEN (ttac:Abbrev.thm_tactic) :tactic = fn (asl,w) =>
              in (gl, Thm.DISCH ant o prf)
              end
 in
-val BOSS_STRIP_TAC = 
+val BOSS_STRIP_TAC =
       Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
@@ -143,7 +140,7 @@ fun breakable tm = (is_exists tm orelse is_conj tm orelse is_disj tm);
       STP_TAC (Simplify then Prove)
 
    The following is a straightforward but quite helpful simplification
-   procedure. It treats the rewrite rules for all declared datatypes as 
+   procedure. It treats the rewrite rules for all declared datatypes as
    being built-in, so that the user does not have to mention them.
 
    0. Build a simpset from the given ss and the rewrites coming from
@@ -160,10 +157,10 @@ fun breakable tm = (is_exists tm orelse is_conj tm orelse is_disj tm);
 
    5. Strip as much as possible to the assumptions.
 
-   6. Until there is no change in the complete goal, attempt to do one 
+   6. Until there is no change in the complete goal, attempt to do one
       of the following:
 
-         * eliminate a var-equality 
+         * eliminate a var-equality
 
          * break up an equation between constructors in the assumptions
 
