@@ -407,10 +407,7 @@ in
   Q.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
 end;
 
-fun Abbr q =
-    case q of
-      [QUOTE s] => REFL (mk_var(s, mk_vartype "'abbrev"))
-    | _ => raise mk_HOL_ERR "BasicProvers" "Abbr" "Ill-formed quotation"
+val Abbr = markerLib.Abbr
 
 (*---------------------------------------------------------------------------
        Make some additions to the srw_ss persistent
