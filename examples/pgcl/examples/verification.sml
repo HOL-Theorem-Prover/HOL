@@ -272,6 +272,7 @@ val partial_rabin = Count.apply prove
        >> RW_TAC posreal_ss [GSYM mul_assoc, mul_linv, entire, mul_eq_infty]
        ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
        ++ MATCH_MP_TAC le_lmul_imp
+       ++ RW_TAC std_ss [mul_assoc]
        ++ RW_TAC posreal_ss
           [add_ldistrib, mul_rinv, sub_ldistrib, inv_eq_infty, mul_eq_infty]
        ++ RW_TAC std_ss [GSYM posreal_of_num_mul]
@@ -293,6 +294,7 @@ val partial_rabin = Count.apply prove
            ++ RW_TAC posreal_ss [entire, mul_eq_infty, EXP_EQ_0])
        ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
        ++ MATCH_MP_TAC le_lmul_imp
+       ++ RW_TAC std_ss [mul_assoc]
        ++ RW_TAC posreal_ss
           [sub_ldistrib, inv_eq_infty, mul_eq_infty, add_ldistrib]
        ++ RW_TAC std_ss [GSYM posreal_of_num_mul]

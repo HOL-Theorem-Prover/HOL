@@ -26,7 +26,8 @@ local
 in
   val prolog = fn ths =>
     let
-      val lmap = build_map (prolog_parm, map FOL_NORM_RULE ths)
+      val (cs,ths) = FOL_NORM ths
+      val lmap = build_map (prolog_parm, cs, ths)
       val lmap = add_thm (([``x:bool``], []), ASSUME ``x:bool``) lmap
     in
       FOL_FIND mlibMeson.prolog lmap mlibMeter.unlimited
