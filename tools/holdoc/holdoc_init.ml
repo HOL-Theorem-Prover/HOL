@@ -44,19 +44,20 @@ let new_mode name = (if List.mem_assoc name !modes then
                        (prerr_endline ("Attempt to recreate existing mode "^name);
                         raise BadDirective)
                      else
-                       modes := (name,{
-                                        tYPE_LIST = ref !(!curmodals.tYPE_LIST);
-                                        cON_LIST = ref !(!curmodals.cON_LIST);
-                                        fIELD_LIST = ref !(!curmodals.fIELD_LIST);
-                                        lIB_LIST = ref !(!curmodals.lIB_LIST);
-                                        aUX_LIST = ref !(!curmodals.aUX_LIST);
-                                        aUX_INFIX_LIST = ref !(!curmodals.aUX_INFIX_LIST);
-                                        vAR_PREFIX_LIST = ref !(!curmodals.vAR_PREFIX_LIST);
-                                        hOL_OP_LIST = ref !(!curmodals.hOL_OP_LIST);
-                                        hOL_SYM_ALIST = ref !(!curmodals.hOL_SYM_ALIST);
-                                        hOL_ID_ALIST = ref !(!curmodals.hOL_ID_ALIST);
-                                        hOL_CURRIED_ALIST = ref !(!curmodals.hOL_CURRIED_ALIST);
-                                       })::!modes
+                       (curmodals := {
+                                       tYPE_LIST = ref !(!curmodals.tYPE_LIST);
+                                       cON_LIST = ref !(!curmodals.cON_LIST);
+                                       fIELD_LIST = ref !(!curmodals.fIELD_LIST);
+                                       lIB_LIST = ref !(!curmodals.lIB_LIST);
+                                       aUX_LIST = ref !(!curmodals.aUX_LIST);
+                                       aUX_INFIX_LIST = ref !(!curmodals.aUX_INFIX_LIST);
+                                       vAR_PREFIX_LIST = ref !(!curmodals.vAR_PREFIX_LIST);
+                                       hOL_OP_LIST = ref !(!curmodals.hOL_OP_LIST);
+                                       hOL_SYM_ALIST = ref !(!curmodals.hOL_SYM_ALIST);
+                                       hOL_ID_ALIST = ref !(!curmodals.hOL_ID_ALIST);
+                                       hOL_CURRIED_ALIST = ref !(!curmodals.hOL_CURRIED_ALIST);
+                                     };
+                       modes := (name,!curmodals)::!modes)
                     )
 
 (* changing a mode just means picking out the right modalsettings *)
@@ -128,6 +129,17 @@ let dir_proc n ts =
     | []               -> prerr_endline ("Missing string in string sequence");
                           raise BadDirective
   in
+  let rec goident ts =
+    match ts with
+      (White(_)::ts)   -> goId ts
+    | (Indent(_)::ts)  -> goId ts
+    | (Comment(_)::ts) -> goId ts
+    | (Ident(s,_)::ts) -> s
+    | (t::ts)          -> prerr_endline ("Unexpected token, wanted identifier: "^render_token t);
+                          raise BadDirective
+    | []               -> prerr_endline ("Missing identifier");
+                          raise BadDirective
+  in
   match n with
   (* category lists *)
     "TYPE_LIST"       -> !curmodals.tYPE_LIST       := (go ts)  @ !(!curmodals.tYPE_LIST)
@@ -149,5 +161,7 @@ let dir_proc n ts =
   | "NOINDENT"        -> iNDENT := false
   | "HOLDELIM"        -> let (s1,ts1) = gostr ts in let (s2,_) = gostr ts1 in
                          hOLDELIMOPEN := s1; hOLDELIMCLOSE := s2
+  | "NEWMODE"         -> new_mode (goident ts)
+  | "MODE"            -> change_mode (goident ts)
   | _                 -> ()
 

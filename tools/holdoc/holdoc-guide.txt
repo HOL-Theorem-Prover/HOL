@@ -242,6 +242,22 @@ normally just "$" and "$", but can be changed, e.g., to colourise the
 output of HOL strings.
 
 
+HOLDoc support "modes".  All the various lists defined above are not
+global; they apply to the current mode.  The default mode is called
+"0".  New modes can be created, and the mode can be changed, by means
+of the following directives.
+
+(*[ NEWMODE source ]*) creates a new mode called "source", which
+contains all the definitions of the current mode so far, but to which
+new definitions can be added independently of the current mode.  It
+also changes to the new mode.
+
+(*[ MODE 0 ]*) changes the current mode to the original mode, "0".
+TYPE_LIST directives, and so on, will all now affect the specified
+mode, rather than the previous one; and the specified mode will be
+used for typesetting.
+
+
 One for MNG source:
 
 %(*[ SHOWRULE select.4 ]*)
