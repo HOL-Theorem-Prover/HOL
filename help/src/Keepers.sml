@@ -80,8 +80,8 @@ val keepers =
      (* num *)
      "numSyntax.sig", 
      "numTheory.sig", "prim_recTheory.sig", "arithmeticTheory.sig",
-     "numeralTheory.sig", "numLib.sig", "arithSimps.sig",
-     "reduceLib.sig",  "arithLib.sig",
+     "numeralTheory.sig", "numLib.sig", "numSimps.sig",
+     "reduceLib.sig", 
 
      (* one *)
      "oneTheory.sig",
