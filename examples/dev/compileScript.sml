@@ -471,6 +471,24 @@ val COMB_CONCAT_SPLIT =
    RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
     THEN PROVE_TAC[]);
 
+val COMB_NOT =
+ store_thm
+  ("COMB_NOT",
+   ``COMB $~ (inp,out) = NOT(inp,out)``,
+   RW_TAC std_ss [COMB_def,NOT_def]);
+
+val COMB_AND =
+ store_thm
+  ("COMB_AND",
+   ``COMB (UNCURRY $/\) (in1<>in2,out) = AND(in1,in2,out)``,
+   RW_TAC std_ss [COMB_def,AND_def,BUS_CONCAT_def]);
+
+val COMB_OR =
+ store_thm
+  ("COMB_OR",
+   ``COMB (UNCURRY $\/) (in1<>in2,out) = OR(in1,in2,out)``,
+   RW_TAC std_ss [COMB_def,OR_def,BUS_CONCAT_def]);
+
 val FUN_EXISTS_PROD =
  store_thm
   ("FUN_EXISTS_PROD",

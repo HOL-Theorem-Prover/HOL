@@ -1349,9 +1349,9 @@ fun IMP_REFINEL [] tm = DISCH tm (ASSUME tm)
      => IMP_REFINEL thl tm;
 
 (*****************************************************************************)
-(*     |- (\(v1,...vn). tm) ===> DEV f                                       *)
-(*     -->                                                                   *)
-(*     !v1 ... vn. tm ==> DEV f (v1,...,vn)                                  *)
+(*         |- (\(v1,...vn). tm) ===> DEV f                                   *)
+(*     ---------------------------------------                               *)
+(*     |- !v1 ... vn. tm ==> DEV f (v1,...,vn)                               *)
 (*****************************************************************************)
 fun DEV_IMP_FORALL th =
  let val (d1,d2) = dest_dev_imp(concl th)
@@ -1365,15 +1365,35 @@ fun DEV_IMP_FORALL th =
 
 
 (*****************************************************************************)
-(*           |- !s1 ... sn. P s1 ... sn                                      *)
-(*  -------------------------------------------- at_SPECL ``clk``            *)
-(*        |- P (s1 at clk) ... (sn at clk)                                   *)
+(*               |- !s1 ... sn. P s1 ... sn                                  *)
+(*  ------------------------------------------------------- at_SPECL ``clk`` *)
+(*  ([``s1``,...,``sn``], |- P (s1 at clk) ... (sn at clk))                  *)
 (*****************************************************************************)
 fun at_SPEC_ALL clk th =
  let val (vl,bdy) = strip_forall(concl th)
  in
-  SPECL (map (fn v => ``^v at ^clk``) vl) th
+  (vl, SPECL (map (fn v => ``^v at ^clk``) vl) th)
  end;
+
+(*****************************************************************************)
+(*      |- P ==> Q                                                           *)
+(*   ---------------- (x not free in Q)                                      *)
+(*   |- (?x. P) ==> Q                                                        *)
+(*****************************************************************************)
+fun ANTE_EXISTS_INTRO v th =
+ (let val (t1,t2) = dest_imp(concl th)
+      val exists_tm = mk_exists(v,t1)
+      val th1 = ASSUME exists_tm
+      val th2 = UNDISCH th
+      val th3 = CHOOSE (v,th1) th2
+  in
+   DISCH exists_tm th3
+  end)
+ handle HOL_ERR _ => th;
+ 
+fun LIST_ANTE_EXISTS_INTRO([],th) = th
+ |  LIST_ANTE_EXISTS_INTRO((v::vl),th) = 
+     ANTE_EXISTS_INTRO v (LIST_ANTE_EXISTS_INTRO(vl,th));
 
 val at_thms =
  [UNDISCH REG_IMP,UNDISCH REGF_IMP,
@@ -1385,6 +1405,7 @@ val at_thms =
 (*****************************************************************************)
 val MAKE_NETLIST =
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
  SIMP_RULE std_ss [UNCURRY]                                                o
@@ -1409,12 +1430,14 @@ val MAKE_NETLIST =
 (*****************************************************************************)
 val MAKE_CIRCUIT =
  DISCH_ALL                                                                 o
- AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL at_thms))                       o
- Ho_Rewrite.REWRITE_RULE[at_CONCAT]                                        o
+ LIST_ANTE_EXISTS_INTRO                                                    o 
+ (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL at_thms)))                o
+ (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                 o
  at_SPEC_ALL ``clk:num->bool``                                             o
  Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
  DEV_IMP_FORALL                                                            o
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
  SIMP_RULE std_ss [UNCURRY]                                                o
