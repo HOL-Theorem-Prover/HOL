@@ -77,6 +77,9 @@ in
   val REAL_INV_0 = save_thm("REAL_INV_0",reeducate REAL_INV_0)
 end;
 
+val _ = export_rewrites
+        ["REAL_ADD_LID", "REAL_ADD_LINV", "REAL_LT_REFL", "REAL_MUL_LID"]
+
 (*---------------------------------------------------------------------------*)
 (* Define subtraction, division and the other orderings                      *)
 (*---------------------------------------------------------------------------*)
@@ -119,16 +122,19 @@ val REAL_ADD_RID = prove_thm("REAL_ADD_RID",
   (--`!x. x + 0 = x`--),
   GEN_TAC THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
   MATCH_ACCEPT_TAC REAL_ADD_LID);
+val _ = export_rewrites ["REAL_ADD_RID"]
 
 val REAL_ADD_RINV = prove_thm("REAL_ADD_RINV",
   (--`!x:real. x + ~x = 0`--),
   GEN_TAC THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
   MATCH_ACCEPT_TAC REAL_ADD_LINV);
+val _ = export_rewrites ["REAL_ADD_RINV"]
 
 val REAL_MUL_RID = prove_thm("REAL_MUL_RID",
   (--`!x. x * 1 = x`--),
   GEN_TAC THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
   MATCH_ACCEPT_TAC REAL_MUL_LID);
+val _ = export_rewrites ["REAL_MUL_RID"]
 
 val REAL_MUL_RINV = prove_thm("REAL_MUL_RINV",
   (--`!x. ~(x = 0) ==> (x * inv x = 1)`--),
@@ -146,11 +152,13 @@ val REAL_EQ_LADD = prove_thm("REAL_EQ_LADD",
    [DISCH_THEN(MP_TAC o AP_TERM (--`$+ ~x`--)) THEN
     REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID],
     DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
+val _ = export_rewrites ["REAL_EQ_LADD"]
 
 val REAL_EQ_RADD = prove_thm("REAL_EQ_RADD",
   (--`!x y z. (x + z = y + z) = (x = y)`--),
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
   MATCH_ACCEPT_TAC REAL_EQ_LADD);
+val _ = export_rewrites ["REAL_EQ_RADD"]
 
 val REAL_ADD_LID_UNIQ = prove_thm("REAL_ADD_LID_UNIQ",
   (--`!x y. (x + y = y) = (x = 0)`--),
@@ -186,11 +194,13 @@ val REAL_MUL_LZERO = prove_thm("REAL_MUL_LZERO",
   GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [(--`&0 * x`--), (--`&0 * x`--)] REAL_ADD_LID_UNIQ))
   THEN REWRITE_TAC[GSYM REAL_RDISTRIB, REAL_ADD_LID]);
+val _ = export_rewrites ["REAL_MUL_LZERO"]
 
 val REAL_MUL_RZERO = prove_thm("REAL_MUL_RZERO",
   (--`!x. x * 0 = 0`--),
   GEN_TAC THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
   MATCH_ACCEPT_TAC REAL_MUL_LZERO);
+val _ = export_rewrites ["REAL_MUL_RZERO"]
 
 val REAL_NEG_LMUL = prove_thm("REAL_NEG_LMUL",
   (--`!x y. ~(x * y) = ~x * y`--),
@@ -207,6 +217,7 @@ val REAL_NEGNEG = prove_thm("REAL_NEGNEG",
   (--`!x. ~~x = x`--),
   GEN_TAC THEN CONV_TAC SYM_CONV THEN
   REWRITE_TAC[GSYM REAL_LNEG_UNIQ, REAL_ADD_RINV]);
+val _ = export_rewrites ["REAL_NEGNEG"]
 
 val REAL_NEG_MUL2 = prove_thm("REAL_NEG_MUL2",
   (--`!x y. ~x * ~y = x * y`--),
@@ -221,6 +232,7 @@ val REAL_ENTIRE = prove_thm("REAL_ENTIRE",
     ASM_REWRITE_TAC[REAL_MUL_ASSOC, REAL_MUL_LID, REAL_MUL_RZERO],
     DISCH_THEN(DISJ_CASES_THEN SUBST1_TAC) THEN
     REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_RZERO]]);
+val _ = export_rewrites ["REAL_ENTIRE"]
 
 val REAL_LT_LADD = prove_thm("REAL_LT_LADD",
   (--`!x y z. (x + y) < (x + z) = y < z`--),
@@ -228,11 +240,13 @@ val REAL_LT_LADD = prove_thm("REAL_LT_LADD",
    [DISCH_THEN(MP_TAC o SPEC (--`~x`--) o MATCH_MP REAL_LT_IADD) THEN
     REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID],
     MATCH_ACCEPT_TAC REAL_LT_IADD]);
+val _ = export_rewrites ["REAL_LT_LADD"]
 
 val REAL_LT_RADD = prove_thm("REAL_LT_RADD",
   (--`!x y z. (x + z) < (y + z) = x < y`--),
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
   MATCH_ACCEPT_TAC REAL_LT_LADD);
+val _ = export_rewrites ["REAL_LT_RADD"]
 
 val REAL_NOT_LT = prove_thm("REAL_NOT_LT",
   (--`!x y. ~(x < y) = y <= x`--),
@@ -271,6 +285,7 @@ val REAL_LTE_TOTAL = prove_thm("REAL_LTE_TOTAL",
 val REAL_LE_REFL = prove_thm("REAL_LE_REFL",
   (--`!x. x <= x`--),
   GEN_TAC THEN REWRITE_TAC[real_lte, REAL_LT_REFL]);
+val _ = export_rewrites ["REAL_LE_REFL"]
 
 val REAL_LE_LT = prove_thm("REAL_LE_LT",
   (--`!x y. x <= y = x < y \/ (x = y)`--),
@@ -337,20 +352,24 @@ val REAL_NEG_LT0 = prove_thm("REAL_NEG_LT0",
   GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [(--`~x`--), (--`0`--), (--`x:real`--)] REAL_LT_RADD))
   THEN REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]);
+val _ = export_rewrites ["REAL_NEG_LT0"]
 
 val REAL_NEG_GT0 = prove_thm("REAL_NEG_GT0",
   (--`!x. 0 < ~x = x < 0`--),
   GEN_TAC THEN REWRITE_TAC[GSYM REAL_NEG_LT0, REAL_NEGNEG]);
+val _ = export_rewrites ["REAL_NEG_GT0"]
 
 val REAL_NEG_LE0 = prove_thm("REAL_NEG_LE0",
   (--`!x. ~x <= 0 = 0 <= x`--),
   GEN_TAC THEN REWRITE_TAC[real_lte] THEN
   REWRITE_TAC[REAL_NEG_GT0]);
+val _ = export_rewrites ["REAL_NEG_LE0"]
 
 val REAL_NEG_GE0 = prove_thm("REAL_NEG_GE0",
   (--`!x. 0 <= ~x = x <= 0`--),
   GEN_TAC THEN REWRITE_TAC[real_lte] THEN
   REWRITE_TAC[REAL_NEG_LT0]);
+val _ = export_rewrites ["REAL_NEG_GE0"]
 
 val REAL_LT_NEGTOTAL = prove_thm("REAL_LT_NEGTOTAL",
   (--`!x. (x = 0) \/ (0 < x) \/ (0 < ~x)`--),
@@ -396,11 +415,13 @@ val REAL_LE_LADD = prove_thm("REAL_LE_LADD",
   (--`!x y z. (x + y) <= (x + z) = y <= z`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[real_lte] THEN
   AP_TERM_TAC THEN MATCH_ACCEPT_TAC REAL_LT_LADD);
+val _ = export_rewrites ["REAL_LE_LADD"]
 
 val REAL_LE_RADD = prove_thm("REAL_LE_RADD",
   (--`!x y z. (x + z) <= (y + z) = x <= y`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[real_lte] THEN
   AP_TERM_TAC THEN MATCH_ACCEPT_TAC REAL_LT_RADD);
+val _ = export_rewrites ["REAL_LE_RADD"]
 
 val REAL_LT_ADD2 = prove_thm("REAL_LT_ADD2",
   (--`!w x y z. w < x /\ y < z ==> (w + y) < (x + z)`--),
@@ -459,6 +480,7 @@ val REAL_SUB_ADD2 = prove_thm("REAL_SUB_ADD2",
 val REAL_SUB_REFL = prove_thm("REAL_SUB_REFL",
   (--`!x. x - x = 0`--),
   GEN_TAC THEN REWRITE_TAC[real_sub, REAL_ADD_RINV]);
+val _ = export_rewrites ["REAL_SUB_REFL"]
 
 val REAL_SUB_0 = prove_thm("REAL_SUB_0",
   (--`!x y. (x - y = 0) = (x = y)`--),
@@ -466,6 +488,7 @@ val REAL_SUB_0 = prove_thm("REAL_SUB_0",
    [DISCH_THEN(MP_TAC o C AP_THM (--`y:real`--) o AP_TERM (--`$+`--)) THEN
     REWRITE_TAC[REAL_SUB_ADD, REAL_ADD_LID],
     DISCH_THEN SUBST1_TAC THEN MATCH_ACCEPT_TAC REAL_SUB_REFL]);
+val _ = export_rewrites ["REAL_SUB_0"]
 
 val REAL_LE_DOUBLE = prove_thm("REAL_LE_DOUBLE",
   (--`!x. 0 <= x + x = 0 <= x`--),
@@ -499,6 +522,7 @@ val REAL_NEG_EQ0 = prove_thm("REAL_NEG_EQ0",
 val REAL_NEG_0 = prove_thm("REAL_NEG_0",
   (--`~0 = 0`--),
   REWRITE_TAC[REAL_NEG_EQ0]);
+val _ = export_rewrites ["REAL_NEG_0"]
 
 val REAL_NEG_SUB = prove_thm("REAL_NEG_SUB",
   (--`!x y. ~(x - y) = y - x`--),
@@ -533,11 +557,13 @@ val REAL_EQ_LMUL = prove_thm("REAL_EQ_LMUL",
     REWRITE_TAC[REAL_MUL_LID],
     DISCH_THEN(DISJ_CASES_THEN SUBST1_TAC) THEN
     REWRITE_TAC[REAL_MUL_LZERO]]);
+val _ = export_rewrites ["REAL_EQ_LMUL"]
 
 val REAL_EQ_RMUL = prove_thm("REAL_EQ_RMUL",
   (--`!x y z. (x * z = y * z) = (z = 0) \/ (x = y)`--),
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
   MATCH_ACCEPT_TAC REAL_EQ_LMUL);
+val _ = export_rewrites ["REAL_EQ_RMUL"]
 
 val REAL_SUB_LDISTRIB = prove_thm("REAL_SUB_LDISTRIB",
   (--`!x y z. x * (y - z) = (x * y) - (x * z)`--),
@@ -729,6 +755,7 @@ val REAL_POS = prove_thm("REAL_POS",
   MATCH_MP_TAC REAL_LE_TRANS THEN
   EXISTS_TAC (--`&n`--) THEN ASM_REWRITE_TAC[REAL] THEN
   REWRITE_TAC[REAL_LE_ADDR, REAL_LE_01]);
+val _ = export_rewrites ["REAL_POS"]
 
 val REAL_LE = prove_thm("REAL_LE",
   (--`!m n. &m <= &n = m <= n`--),
@@ -740,12 +767,14 @@ val REAL_LE = prove_thm("REAL_LE",
     DISCH_THEN(MP_TAC o C CONJ (SPEC (--`m:num`--) REAL_POS)) THEN
     DISCH_THEN(MP_TAC o MATCH_MP REAL_LE_TRANS) THEN
     REWRITE_TAC[REAL_NOT_LE, REAL_LT_ADDR, REAL_LT_01]]);
+val _ = export_rewrites ["REAL_LE"]
 
 val REAL_LT = prove_thm("REAL_LT",
   (--`!m n. &m < &n = m < n`--),
   REPEAT GEN_TAC THEN MATCH_ACCEPT_TAC
     ((REWRITE_RULE[] o AP_TERM (--`$~:bool->bool`--) o
     REWRITE_RULE[GSYM NOT_LESS, GSYM REAL_NOT_LT]) (SPEC_ALL REAL_LE)));
+val _ = export_rewrites ["REAL_LT"]
 
 val REAL_INJ = prove_thm("REAL_INJ",
   (--`!m n. (&m = &n) = (m = n)`--),
@@ -754,12 +783,14 @@ val REAL_INJ = prove_thm("REAL_INJ",
                   [DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[LESS_EQ_REFL],
                    MATCH_ACCEPT_TAC LESS_EQUAL_ANTISYM]) in
   REPEAT GEN_TAC THEN REWRITE_TAC[th, GSYM REAL_LE_ANTISYM, REAL_LE] end);
+val _ = export_rewrites ["REAL_INJ"]
 
 val REAL_ADD = prove_thm("REAL_ADD",
   (--`!m n. &m + &n = &(m + n)`--),
   INDUCT_TAC THEN REWRITE_TAC[REAL, ADD, REAL_ADD_LID] THEN
   RULE_ASSUM_TAC GSYM THEN GEN_TAC THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(AC_CONV(REAL_ADD_ASSOC,REAL_ADD_SYM)));
+val _ = export_rewrites ["REAL_ADD"]
 
 val REAL_MUL = prove_thm("REAL_MUL",
   (--`!m n. &m * &n = &(m * n)`--),
@@ -767,6 +798,7 @@ val REAL_MUL = prove_thm("REAL_MUL",
     GSYM REAL_ADD, REAL_RDISTRIB] THEN
   FIRST_ASSUM(fn th => REWRITE_TAC[GSYM th]) THEN
   REWRITE_TAC[REAL_MUL_LID]);
+val _ = export_rewrites ["REAL_MUL"]
 
 (*---------------------------------------------------------------------------*)
 (* Now more theorems                                                         *)
@@ -2433,9 +2465,9 @@ val REAL_POW_INV = Q.store_thm
   Induct_on `n` THEN REWRITE_TAC [pow] THENL
   [REWRITE_TAC [REAL_INV1],
    GEN_TAC THEN Cases_on `x = 0r` THENL
-   [POP_ASSUM SUBST_ALL_TAC 
+   [POP_ASSUM SUBST_ALL_TAC
      THEN REWRITE_TAC [REAL_INV_0,REAL_MUL_LZERO],
-    `~(x pow n = 0)` by PROVE_TAC [POW_NZ] THEN 
+    `~(x pow n = 0)` by PROVE_TAC [POW_NZ] THEN
     IMP_RES_TAC REAL_INV_MUL THEN ASM_REWRITE_TAC []]]);
 
 val REAL_POW_DIV = Q.store_thm
@@ -2446,7 +2478,7 @@ val REAL_POW_DIV = Q.store_thm
 val REAL_POW_ADD = Q.store_thm
 ("REAL_POW_ADD",
  `!x m n. x pow (m + n) = x pow m * x pow n`,
-  Induct_on `m` THEN 
+  Induct_on `m` THEN
   ASM_REWRITE_TAC[ADD_CLAUSES, pow, REAL_MUL_LID, REAL_MUL_ASSOC]);
 
 val REAL_LE_RDIV_EQ = Q.store_thm
