@@ -160,13 +160,6 @@ val INR_neq_INL = store_thm("INR_neq_INL",
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
    DISCH_THEN (CONTR_TAC o SIMP o SPECL [--`T`--,--`v1:'a`--,--`v2:'b`--]));
 
-(* Prove a little lemma about epsilon-terms.				*)
-val EPS_lemma = TAC_PROOF(([],
-   --`(@x:'a. y=x) = y`--),
-   CONV_TAC (SYM_CONV THENC SELECT_CONV) THEN
-   EXISTS_TAC (--`y:'a`--) THEN
-   REFL_TAC);
-
 (* The abstract `axiomatization` of the sum type consists of the single	*)
 (* theorem given below:							*)
 (*									*)
@@ -186,7 +179,7 @@ REPEAT (FILTER_STRIP_TAC (--`x:('a,'b)sum->'c`--)) THENL
 				g(@v2.x = INR v2)):'c`--) THEN
  PURE_REWRITE_TAC [boolTheory.EXISTS_DEF] THEN
  CONV_TAC (REDEPTH_CONV BETA_CONV) THEN
- REWRITE_TAC [INL_11,INR_11,INR_neq_INL,EPS_lemma],
+ REWRITE_TAC [INL_11,INR_11,INR_neq_INL,SELECT_REFL_2],
  REPEAT GEN_TAC THEN DISCH_THEN (CONJUNCTS_THEN2 MP_TAC
  (REWRITE1_TAC o (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)))) THEN
  REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (SPEC (--`s:('a,'b)sum`--) A_ONTO) THEN
