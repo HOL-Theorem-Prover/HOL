@@ -417,6 +417,13 @@ in
            UI x :: file_dependencies
         else
            file_dependencies
+    | SML (Theory x) => let
+        val additionals =
+          List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE)
+          file_dependencies
+      in
+        additionals @ file_dependencies
+      end
     | _ => file_dependencies
   end
   else

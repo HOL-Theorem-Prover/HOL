@@ -40,10 +40,8 @@ val parseFile =
   parsePhraseAndClear Parser.MLtext Lexer.Token;
 
 local val path    = ref [""]
-      val objDir  = ref ""
       fun lpcl []                = (errMsg "No filenames"; fail())
         | lpcl ("-I"::dir::tail) = (path := dir :: !path ; lpcl tail)
-        | lpcl ("-D"::dir::tail) = (objDir := dir        ; lpcl tail)
         | lpcl l                 = l
 in
 fun parseComLine l =
@@ -58,11 +56,10 @@ fun access cdir s ext =
       fun inDir dir = FileSys.access (addDir dir sext, [])
   in if inDir cdir then SOME s
      else case List.find inDir (!path)
-           of SOME dir => SOME(addDir (Path.concat(dir, !objDir)) s)
+           of SOME dir => SOME(addDir dir s)
             | NONE     => NONE
   end
 
-fun mktarget s = addDir (!objDir) s
 end;
 
 local val res = ref [];
@@ -73,7 +70,6 @@ fun isTheory s =
       SOME(String.implode(List.rev (n::ame)))
   | _ => NONE
 
-fun isScript s = String.isPrefix "tpircS" (srev s)
 fun addThExt s s' ext = addExt (addDir (Path.dir s') s) ext
 fun outname cdir s =
   case isTheory s of
@@ -85,7 +81,12 @@ fun outname cdir s =
         in
           case access cdir (n^"Script") "sml" of
             SOME s' => res := addThExt s s' "uo" :: !res
-          | _       => ()
+          | NONE => let
+            in
+              case access cdir (n^"Theory") "uo" of
+                SOME s' => res := addThExt s s' "uo" :: !res
+              | NONE => ()
+            end
         end
     end
   | _ => let
@@ -112,24 +113,15 @@ fun outname cdir s =
             end
         end
     end
-fun scriptout cdir s =
-  case isTheory s
-   of SOME n => (case access cdir (n^"Script") "sml"
-                  of SOME s' => res := addThExt s s' "uo" :: !res
-                   | _       => ())
-    | _      => (case access cdir s "sml"
-                  of SOME s' => res := addExt s' "uo" :: !res
-                   | _       => ())
 
-fun beginentry objext target =
-  let val target' = mktarget target
-      val targetname = addExt target' objext
-  in
-    res := [targetname ^ ":"];
-    if objext = "uo" andalso FileSys.access(addExt target "sig", [])
-    then res := addExt target' "ui" :: !res
-     else ()
-  end;
+fun beginentry objext target = let
+  val targetname = addExt target objext
+in
+  res := [targetname ^ ":"];
+  if objext = "uo" andalso FileSys.access(addExt target "sig", []) then
+    res := addExt target "ui" :: !res
+  else ()
+end;
 
 fun endentry() = (* for non-file-based Holdep *)
   if length (!res) > 1
@@ -145,19 +137,11 @@ fun read srcext objext filename =
      val names    = parseFile lexbuf
      val _        = BasicIO.close_in is
      val curr_dir = Path.dir filename
-     val files0   = (beginentry objext (manglefilename filename);
-                     app insert names;
-                     Polyhash.apply
-                        (outname curr_dir o manglefilename o #1) mentions;
-                     endentry ())
  in
-   if isScript filename
-   then
-      (beginentry "" (manglefilename filename);
-       app insert names;
-       Polyhash.apply (scriptout curr_dir o manglefilename o #1) mentions;
-       files0^endentry ())
-   else files0
+   beginentry objext (manglefilename filename);
+   app insert names;
+   Polyhash.apply (outname curr_dir o manglefilename o #1) mentions;
+   endentry ()
  end
   handle (e as Parsing.ParseError _) => (print "Parse error!\n"; raise e)
 
