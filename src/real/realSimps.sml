@@ -102,9 +102,22 @@ in
   [INST [rv |-> injected] th, INST [rv |-> mk_negated injected] th]
 end
 
+fun posneg0split rv nv th = let
+  val injected = mk_injected (mk_comb(numSyntax.numeral_tm, nv))
+in
+  [INST [rv |-> realSyntax.zero_tm] th,
+   INST [rv |-> injected] th, INST [rv |-> mk_negated injected] th]
+end
+
+datatype splitting = posneg | posneg0 | nb12
+
+fun splitfn posneg = posnegonly
+  | splitfn posneg0 = posneg0split
+  | splitfn nb12 = two_nats
 
 fun transform vs th = let
-  val simp = REWRITE_RULE [REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0]
+  val simp = REWRITE_RULE [REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0,
+                           REAL_LT, REAL_LE, REAL_MUL_RZERO, REAL_MUL_LZERO]
   val nvs = map (fn (t,_) => mk_var(#1 (dest_var t), numSyntax.num)) vs
 
   fun recurse vs nvs th =
@@ -112,8 +125,7 @@ fun transform vs th = let
       else let
           val (v,split) = hd vs
           val nv = hd nvs
-          val f = if split then posnegonly else two_nats
-          val newths = map simp (f v nv th)
+          val newths = map simp (splitfn split v nv th)
         in
           List.concat (map (recurse (tl vs) (tl nvs)) newths)
         end
@@ -127,49 +139,50 @@ val z = mk_var("z", real_ty)
 val u = mk_var("u", real_ty)
 val v = mk_var("v", real_ty)
 
-val add_rats = transform [(x, true), (y, false), (u, true), (v, false)] add_rat
-val add_ratls = transform [(x, true), (y,false), (z, true)] add_ratl
-val add_ratrs = transform [(x, true), (y, true), (z, false)] add_ratr
+val add_rats =
+    transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)] add_rat
+val add_ratls = transform [(x, posneg), (y,nb12), (z, posneg)] add_ratl
+val add_ratrs = transform [(x, posneg), (y, posneg), (z, nb12)] add_ratr
 
 val mult_rats =
-    transform [(x,true), (y, false), (u, true), (v, false)] mult_rat
-val mult_ratls = transform [(x, true), (y, false), (z, true)] mult_ratl
-val mult_ratrs = transform [(x, true), (y, true), (z, false)] mult_ratr
+    transform [(x,posneg), (y, nb12), (u, posneg), (v, nb12)] mult_rat
+val mult_ratls = transform [(x, posneg), (y, nb12), (z, posneg)] mult_ratl
+val mult_ratrs = transform [(x, posneg), (y, posneg), (z, nb12)] mult_ratr
 
-val neg_ths = transform [(y, false)] neg_rat
+val neg_ths = transform [(y, nb12)] neg_rat
 
 val sub1 = SPECL [mk_div(x,y), mk_div(u,v)] real_sub
-val sub1 = transform [(x, true), (y, false), (u, true), (v, false)] sub1
+val sub1 = transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)] sub1
 val sub2 = SPECL [x, mk_div(u,v)] real_sub
-val sub2 = transform [(x, true), (u, true), (v, false)] sub2
+val sub2 = transform [(x, posneg), (u, posneg), (v, nb12)] sub2
 val sub3 = SPECL [mk_div(x,y), z] real_sub
-val sub3 = transform [(x, true), (y, false), (z, true)] sub3
-val sub4 = transform [(x, true), (y, true)] (SPEC_ALL real_sub)
+val sub3 = transform [(x, posneg), (y, nb12), (z, posneg)] sub3
+val sub4 = transform [(x, posneg), (y, posneg)] (SPEC_ALL real_sub)
 
-val div_rats = transform [(x, true), (y, false), (u, true), (v, false)] div_rat
-val div_ratls = transform [(x, true), (y, false), (z, false)] div_ratl
-val div_ratrs = transform [(x, true), (z, false), (y, true)] div_ratr
-val div_eq_1 = transform [(x, false)] (SPEC_ALL REAL_DIV_REFL)
+val div_rats = transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)] div_rat
+val div_ratls = transform [(x, posneg), (y, nb12), (z, nb12)] div_ratl
+val div_ratrs = transform [(x, posneg), (z, nb12), (y, posneg)] div_ratr
+val div_eq_1 = transform [(x, nb12)] (SPEC_ALL REAL_DIV_REFL)
 
-val max_ints = transform [(x, true), (y, true)] (SPEC_ALL max_def)
-val min_ints = transform [(x, true), (y, true)] (SPEC_ALL min_def)
+val max_ints = transform [(x, posneg), (y, posneg)] (SPEC_ALL max_def)
+val min_ints = transform [(x, posneg), (y, posneg)] (SPEC_ALL min_def)
 val max_rats =
-    transform [(x, true), (y, false), (u, true), (v, false)]
+    transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)]
               (SPECL [mk_div(x,y), mk_div(u,v)] max_def)
 val max_ratls =
-    transform [(x, true), (y, false), (u, true)]
+    transform [(x, posneg), (y, nb12), (u, posneg)]
               (SPECL [mk_div(x,y), u] max_def)
 val max_ratrs =
-    transform [(x, true), (y, false), (u, true)]
+    transform [(x, posneg), (y, nb12), (u, posneg)]
               (SPECL [u, mk_div(x,y)] max_def)
 val min_rats =
-    transform [(x, true), (y, false), (u, true), (v, false)]
+    transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)]
               (SPECL [mk_div(x,y), mk_div(u,v)] min_def)
 val min_ratls =
-    transform [(x, true), (y, false), (u, true)]
+    transform [(x, posneg), (y, nb12), (u, posneg)]
               (SPECL [mk_div(x,y), u] min_def)
 val min_ratrs =
-    transform [(x, true), (y, false), (u, true)]
+    transform [(x, posneg), (y, nb12), (u, posneg)]
               (SPECL [u, mk_div(x,y)] min_def)
 
 val n = mk_var("n", numSyntax.num)
@@ -191,30 +204,40 @@ val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, REAL_DIV_LZERO] @
 fun nat2nat th = let
   val simp = REWRITE_RULE [REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0]
   val th0 =
-    map simp ([INST [``n:num`` |-> ``NUMERAL (BIT1 n)``] th,
-               INST [``n:num`` |-> ``NUMERAL (BIT2 n)``] th])
+      if free_in ``n:num`` (concl th) then
+        map simp ([INST [``n:num`` |-> ``NUMERAL (BIT1 n)``] th,
+                   INST [``n:num`` |-> ``NUMERAL (BIT2 n)``] th])
+      else [th]
 in
-  List.concat
-    (map (fn th => map simp
-                       [INST [``m:num`` |-> ``NUMERAL(BIT1 m)``] th,
-                        INST [``m:num`` |-> ``NUMERAL(BIT2 m)``] th])
-         th0)
+  if free_in ``m:num`` (concl th) then
+    List.concat
+      (map (fn th => map simp
+                         [INST [``m:num`` |-> ``NUMERAL(BIT1 m)``] th,
+                          INST [``m:num`` |-> ``NUMERAL(BIT2 m)``] th])
+           th0)
+  else th0
 end
 
-val lt_rats = nat2nat lt_rat
-val lt_ratls = nat2nat lt_ratl
-val lt_ratrs = nat2nat lt_ratr
+val lt_rats =
+    List.concat (map (transform [(x,posneg), (u,posneg)]) (nat2nat lt_rat))
+val lt_ratls =
+    List.concat (map (transform [(x,posneg), (u,posneg0)]) (nat2nat lt_ratl))
+val lt_ratrs =
+    List.concat (map (transform [(x,posneg0), (u,posneg)]) (nat2nat lt_ratr))
 
-val le_rats = nat2nat le_rat
-val le_ratls = nat2nat le_ratl
-val le_ratrs = nat2nat le_ratr
+val le_rats =
+    List.concat (map (transform [(x,posneg), (u,posneg)]) (nat2nat le_rat))
+val le_ratls =
+    List.concat (map (transform [(x,posneg), (u,posneg0)]) (nat2nat le_ratl))
+val le_ratrs =
+    List.concat (map (transform [(x,posneg0), (u,posneg)]) (nat2nat le_ratr))
 
-val eq_rats = transform [(x, true), (y, false), (u, true), (v, false)] eq_rat
-val eq_ratls = transform [(x, true), (y, false), (z, true)] eq_ratl
-val eq_ratrs = transform [(x, true), (y, false), (z, true)] eq_ratr
+val eq_rats = transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)] eq_rat
+val eq_ratls = transform [(x, posneg), (y, nb12), (z, posneg)] eq_ratl
+val eq_ratrs = transform [(x, posneg), (y, nb12), (z, posneg)] eq_ratr
 
-val real_gts = transform [(x, true), (y, true)] (SPEC_ALL real_gt)
-val real_ges = transform [(x, true), (y, true)] (SPEC_ALL real_ge)
+val real_gts = transform [(x, posneg0), (y, posneg0)] (SPEC_ALL real_gt)
+val real_ges = transform [(x, posneg0), (y, posneg0)] (SPEC_ALL real_ge)
 
 val rel_rwts = [eq_ints, le_int, lt_int] @
                eq_rats @ eq_ratls @ eq_ratrs @
