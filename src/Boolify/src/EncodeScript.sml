@@ -237,31 +237,7 @@ in
   val total_def = Definition.new_specification ("total_def", ["total"], th);
   val () = add_const "total";
 end;
-*)
 
-val lift_prod_def = Define `lift_prod p1 p2 x = p1 (FST x) /\ p2 (SND x)`;
-
-val lift_sum_def = Define
-  `lift_sum p1 p2 x = case x of INL x1 -> p1 x1 || INR x2 -> p2 x2`;
-
-val lift_option_def = Define
-  `lift_option p x = case x of NONE -> T || SOME y -> p y`;
-
-val (lift_tree_def, _) =
-  Defn.tprove
-  (Defn.Hol_defn "lift_tree"
-   `lift_tree p (Node a ts) = p a /\ EVERY (lift_tree p) ts`,
-   TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` ++
-   RW_TAC list_ss [tree_size_def, K_THM] ++
-   (Induct_on `ts` ++
-    RW_TAC list_ss [tree_size_def, K_THM]) >> DECIDE_TAC ++
-   RES_THEN (MP_TAC o SPEC_ALL) ++
-   SIMP_TAC arith_ss [K_THM]);
-
-val lift_tree_def =
-  save_thm ("lift_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) lift_tree_def);
-
-(*
 val every_total = store_thm
   ("every_total",
    ``EVERY total = total``,
@@ -298,6 +274,12 @@ val lift_tree_total = store_thm
    CONV_TAC (DEPTH_CONV ETA_CONV) ++
    RW_TAC std_ss [EVERY_MEM]);
 *)
+
+(*---------------------------------------------------------------------------
+        Well-formed predicates are non-empty.            
+ ---------------------------------------------------------------------------*)
+
+val wf_pred_def = Define `wf_pred p = ?x. p x`;
 
 (*---------------------------------------------------------------------------
         A well-formed encoder is prefix-free and injective.
@@ -380,6 +362,8 @@ val encode_prod_def =
   TotalDefn.Define
   `encode_prod xb yb (x : 'a, y : 'b) : bool list = APPEND (xb x) (yb y)`;
 
+val lift_prod_def = Define `lift_prod p1 p2 x = p1 (FST x) /\ p2 (SND x)`;
+
 val encode_prod_alt = store_thm
   ("encode_prod_alt",
    ``!xb yb p. encode_prod xb yb p = APPEND (xb (FST p)) (yb (SND p))``,
@@ -407,6 +391,9 @@ val encode_sum_def =
   `(encode_sum xb yb (INL (x : 'a)) : bool list = T :: xb x) /\
    (encode_sum xb yb (INR (y : 'b)) = F :: yb y)`;
 
+val lift_sum_def = Define
+  `lift_sum p1 p2 x = case x of INL x1 -> p1 x1 || INR x2 -> p2 x2`;
+
 val wf_encode_sum = store_thm
   ("wf_encode_sum",
    ``!p1 p2 e1 e2.
@@ -425,6 +412,9 @@ val encode_option_def =
   TotalDefn.Define
   `(encode_option xb NONE = [F]) /\
    (encode_option xb (SOME x) = T :: xb x)`;
+
+val lift_option_def = Define
+  `lift_option p x = case x of NONE -> T || SOME y -> p y`;
 
 val wf_encode_option = store_thm
   ("wf_encode_option",
@@ -583,7 +573,15 @@ val collision_free_def =
   `collision_free m p =
    !x y. p x /\ p y /\ (x MOD (2 EXP m) = y MOD (2 EXP m)) ==> (x = y)`;
 
-val wf_pred_bnum_def = Define `wf_pred_bnum m p = !x. p x ==> x < 2 ** m`;
+val wf_pred_bnum_def =
+  Define `wf_pred_bnum m p = wf_pred p /\ !x. p x ==> x < 2 ** m`;
+
+val wf_pred_bnum_total = store_thm
+  ("wf_pred_bnum_total",
+   ``!m. wf_pred_bnum m (\x. x < 2 ** m)``,
+   RW_TAC std_ss [wf_pred_bnum_def]
+   ++ Q.EXISTS_TAC `0`
+   ++ REWRITE_TAC [ZERO_LESS_EXP, TWO]);
 
 val wf_pred_bnum_collision_free = store_thm
   ("wf_pred_bnum",
@@ -702,6 +700,20 @@ val (encode_tree_def, _) =
 
 val encode_tree_def =
   save_thm ("encode_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) encode_tree_def);
+
+val (lift_tree_def, _) =
+  Defn.tprove
+  (Defn.Hol_defn "lift_tree"
+   `lift_tree p (Node a ts) = p a /\ EVERY (lift_tree p) ts`,
+   TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` ++
+   RW_TAC list_ss [tree_size_def, K_THM] ++
+   (Induct_on `ts` ++
+    RW_TAC list_ss [tree_size_def, K_THM]) >> DECIDE_TAC ++
+   RES_THEN (MP_TAC o SPEC_ALL) ++
+   SIMP_TAC arith_ss [K_THM]);
+
+val lift_tree_def =
+  save_thm ("lift_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) lift_tree_def);
 
 val wf_encode_tree = store_thm
   ("wf_encode_tree",

@@ -887,7 +887,8 @@ val wf_decode_bnum = store_thm
 val dec2enc_decode_bnum = store_thm
   ("dec2enc_decode_bnum",
    ``!m p x.
-       wf_pred_bnum m p /\ p x ==> (dec2enc (decode_bnum m p) x = encode_bnum m x)``,
+       wf_pred_bnum m p /\ p x ==>
+       (dec2enc (decode_bnum m p) x = encode_bnum m x)``,
    RW_TAC std_ss [decode_bnum_def, dec2enc_enc2dec, wf_encode_bnum]);
 
 val decode_bnum = store_thm
@@ -921,7 +922,7 @@ val decode_bnum = store_thm
        ++ Q.PAT_ASSUM `!x. P x`
           (MP_TAC o
            Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (x DIV 2)) t`])
-       ++ RW_TAC std_ss [wf_pred_bnum_def, decode_bnum_def, enc2dec_none]
+       ++ RW_TAC std_ss [wf_pred_bnum_total, decode_bnum_def, enc2dec_none]
        ++ Q.EXISTS_TAC `x DIV 2`
        ++ Q.EXISTS_TAC `t`
        ++ RW_TAC std_ss [EXP2_LT]
@@ -929,7 +930,7 @@ val decode_bnum = store_thm
        Q.PAT_ASSUM `!x. P x`
           (MP_TAC o
            Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (q DIV 2)) r`])
-       ++ RW_TAC std_ss [wf_pred_bnum_def, decode_bnum_def, enc2dec_none]
+       ++ RW_TAC std_ss [wf_pred_bnum_total, decode_bnum_def, enc2dec_none]
        ++ POP_ASSUM MP_TAC
        ++ REPEAT CASE_TAC
        >> (DISCH_THEN (fn th => CCONTR_TAC ++ MP_TAC th)
@@ -939,11 +940,11 @@ val decode_bnum = store_thm
            ++ FULL_SIMP_TAC arith_ss [EXP2_LT, wf_pred_bnum_def])
        ++ IMP_RES_TAC dec_bnum_lt
        ++ ASM_SIMP_TAC std_ss []
-       ++ RW_TAC std_ss [enc2dec_some, wf_encode_bnum, wf_pred_bnum_def]
+       ++ RW_TAC std_ss [enc2dec_some, wf_encode_bnum, wf_pred_bnum_total]
        ++ Know `q' = q DIV 2`
        >> (MP_TAC (Q.INST [`p` |-> `\x. x < 2 ** m`, `e` |-> `encode_bnum m`]
                    (INST_TYPE [alpha |-> ``:num``] wf_encoder_alt))
-           ++ SIMP_TAC arith_ss [wf_encode_bnum, wf_pred_bnum_def]
+           ++ SIMP_TAC arith_ss [wf_encode_bnum, wf_pred_bnum_total]
            ++ DISCH_THEN MATCH_MP_TAC
            ++ RW_TAC std_ss [EXP2_LT]
            ++ PROVE_TAC [biprefix_append, biprefix_refl])
@@ -970,7 +971,7 @@ val decode_bnum = store_thm
        ++ SIMP_TAC std_ss [MOD_2]
        ++ Suff `q' = x DIV 2` >> PROVE_TAC []
        ++ MP_TAC (Q.SPECL [`m`, `\x. x < 2 ** m`] wf_encode_bnum)
-       ++ RW_TAC std_ss [wf_pred_bnum_def, wf_encoder_alt]
+       ++ RW_TAC std_ss [wf_pred_bnum_total, wf_encoder_alt]
        ++ POP_ASSUM MATCH_MP_TAC
        ++ FULL_SIMP_TAC std_ss [GSYM EXP2_LT]
        ++ Know `q' < 2 ** m` >> PROVE_TAC [dec_bnum_lt]

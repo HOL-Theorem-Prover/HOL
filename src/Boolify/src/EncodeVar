@@ -1,55 +1,37 @@
 (* -*-sml-*- *)
-open HolKernel boolLib Parse pairSyntax numSyntax listSyntax
-  combinSyntax arithmeticTheory mesonLib simpLib boolSimps numLib
-  optionTheory oneTheory listTheory combinTheory state_transformerTheory
-  pairTheory DecodeTheory;
+app load
+["bossLib", "CoderTheory"];
+
+open HolKernel boolLib Parse bossLib simpLib
+     EncodeTheory DecodeTheory CoderTheory;
 
 val _ = new_theory "EncodeVar";
 
 infix 0 THEN |->;
 infixr 1 --> by;
 
-val arith_ss = bool_ss ++ numSimps.ARITH_ss;
-
 (*---------------------------------------------------------------------------
      Fixed size encodings---necessary for encoding variables.
  ---------------------------------------------------------------------------*)
 
-val fixed_width_const_exists = prove
-  (``?fixed_width. !(d : bool list -> ('a # bool list) option) n x.
-       x IN fixed_width d n =
-       ?w. (LENGTH w = n) /\ (d w = SOME (x, []))``,
-   EXISTS_TAC
-   ``\ (d : bool list -> ('a # bool list) option) n x.
-       ?w. (LENGTH w = n) /\ (d w = SOME (x, []))`` THEN
-   SIMP_TAC bool_ss [IN_DEF]);
-
 val fixed_width_def =
-  Definition.new_specification
-  ("fixed_width_def", ["fixed_width"], fixed_width_const_exists);
+  Define `fixed_width n c = !x. domain c x ==> (LENGTH (encoder c x) = n)`;
 
-val _ = add_const "fixed_width";
-
-val fixed_width_type_def = 
-  TotalDefn.Define
-  `fixed_width_type d n = (!x. x IN fixed_width d n)`;
-
-val of_length_const_exists = prove
-  (``?of_length. !(l : 'a list) n. l IN of_length n = (LENGTH l = n)``,
-   EXISTS_TAC ``\n (l : 'a list). LENGTH l = n`` THEN
-   SIMP_TAC bool_ss [IN_DEF]);
-
-val of_length_def =
-  Definition.new_specification
-  ("of_length_def", ["of_length"], of_length_const_exists);
-
-val _ = add_const "of_length";
+local
+  val th = prove
+    (``?of_length. !(l : 'a list) n. l IN of_length n = (LENGTH l = n)``,
+     EXISTS_TAC ``\n (l : 'a list). LENGTH l = n`` THEN
+     SIMP_TAC bool_ss [IN_DEF]);
+in
+  val of_length_def = new_specification ("of_length_def", ["of_length"], th);
+end;
 
 val fixed_width_univ = store_thm
   ("fixed_width_univ",
-   ``!(phi : 'a -> bool) d n.
-       (!x :: fixed_width d n. phi x) =
-       !w :: of_length n. w IN domain d ==> phi (decode d w)``,
+   ``!(phi : 'a -> bool) c n.
+       fixed_width n c ==>
+       (!x :: domain c. phi x) =
+       !w :: of_length n. phi (decoder c w)``,
    SIMP_TAC bool_ss
    [RES_FORALL_DEF, fixed_width_def, of_length_def, domain_def,
     decode_def] THEN
