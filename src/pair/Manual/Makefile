@@ -8,7 +8,7 @@
 Help=../help
 
 # ---------------------------------------------------------------------
-# Pathname to the doc-to-tex script and doc-to-tex.sed file 
+# Pathname to the doc-to-tex script and doc-to-tex.sed file
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
@@ -16,7 +16,7 @@ DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
 # ---------------------------------------------------------------------
 # Pathname to the makeindex program
 # ---------------------------------------------------------------------
-MAKEINDEX=../../../Manual/LaTeX/makeindex ../../../
+MAKEINDEX=makeindex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
@@ -25,10 +25,8 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg entries.tex theorems.tex; \
-	echo "\begin{theindex}" >index.tex;                                 \
-	echo "\mbox{}" >>index.tex;                                         \
-	echo "\end{theindex}" >>index.tex
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
+              entries.tex theorems.tex *.ind
 
 tex: ids theorems
 	@echo "TeX files made"
@@ -45,7 +43,7 @@ theorems:
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms theorems.tex
 
 index:
-	${MAKEINDEX} pair.idx index.tex
+	${MAKEINDEX} pair.idx
 
 pair:
 	latex pair.tex

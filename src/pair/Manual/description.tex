@@ -1,37 +1,37 @@
 \chapter{Statement of Rights}
 
-Jim Grundy, hereafter referred to as `the Author', retains the        
-copyright and all other legal rights to the software contained in     
-the pair library, hereafter referred to as `the Software'.                   
+Jim Grundy, hereafter referred to as `the Author', retains the
+copyright and all other legal rights to the software contained in
+the pair library, hereafter referred to as `the Software'.
 The Software is made available free of charge on an `as is' basis.
 No guarantee, either express or implied, of maintenance, reliability,
 merchantability or suitability for any purpose is made by the Author.
 
-The user is granted the right to make personal or internal use        
-of the Software provided that both:                                   
+The user is granted the right to make personal or internal use
+of the Software provided that both:
 \begin{enumerate}
-    \item   The Software is not used for commercial gain.                   
-    \item   The user shall not hold the Author liable for any consequences 
+    \item   The Software is not used for commercial gain.
+    \item   The user shall not hold the Author liable for any consequences
             arising from use of the Software.
 \end{enumerate}
-The user is granted the right to further distribute the Software      
-provided that both:                                                   
+The user is granted the right to further distribute the Software
+provided that both:
 \begin{enumerate}
-    \item   The Software and this statement of rights is not modified.     
-    \item   The Software does not form part or the whole of a system        
-            distributed for commercial gain.                                   
+    \item   The Software and this statement of rights is not modified.
+    \item   The Software does not form part or the whole of a system
+            distributed for commercial gain.
 \end{enumerate}
-The user is granted the right to modify the Software for personal or  
-internal use provided that all of the following conditions are        
-observed:                                                             
+The user is granted the right to modify the Software for personal or
+internal use provided that all of the following conditions are
+observed:
 \begin{enumerate}
-    \item   The user does not distribute the modified software.             
-    \item   The modified software is not used for commercial gain.          
-    \item   The Author retains all rights to the modified software.         
+    \item   The user does not distribute the modified software.
+    \item   The modified software is not used for commercial gain.
+    \item   The Author retains all rights to the modified software.
 \end{enumerate}
-                                                                      
-Anyone seeking a licence to use this software for commercial purposes 
-is invited to contact the Author.                                     
+
+Anyone seeking a licence to use this software for commercial purposes
+is invited to contact the Author.
 
 \chapter{The pair Library}
 
@@ -162,7 +162,7 @@ pair library provides paired equivalents:
         X\_CHOOSE\_THEN             &   P\_PCHOOSE\_THEN            \\
         X\_FUN\_EQ\_CONV            &   P\_FUN\_EQ\_CONV            \\
         X\_GEN\_TAC                 &   P\_PGEN\_TAC                \\
-        X\_SKOLEM\_CONV             &   P\_PSKOLEM\_CONV            \\  
+        X\_SKOLEM\_CONV             &   P\_PSKOLEM\_CONV            \\
                                     &                               \\  \hline
     \end{tabular}
 \end{center} }
@@ -185,7 +185,7 @@ Two main design decisions should be noted about the pair library.
 These decisions run counter to the usual \HOL\ philosophy that each
 inference rule should perform a single simple inference,
 and should do so only under a particular restricted set of circumstances.
-The philosophy of the pair library is that each 
+The philosophy of the pair library is that each
 inference rule should do whatever is necessary to eliminate the distinctions
 between reasoning about paired and unpaired abstractions and quantifications.
 
@@ -222,20 +222,20 @@ For example:
 \begin{boxed}\begin{verbatim}
    #PALPHA "\(x,y). (f (x,y))" "\xy. (f xy)";;
    |- (\(x,y). f(x,y)) = (\xy. f xy)
-\end{verbatim}\end{boxed}\index{PALPHA@{\ptt PALPHA}}
+\end{verbatim}\end{boxed}\index{PALPHA@{\tt PALPHA}}
 The effect of this decision can be seen in evidence in $\beta$-conversion
 and other inference rules:
 \begin{boxed}\begin{verbatim}
    #PBETA_CONV "(\(x,y). (f x y (x,y))) ab";;
    |- (\(x,y). f x y(x,y))xy = f(FST ab)(SND ab)ab
-\end{verbatim}\end{boxed}\index{PBETA\_CONV@{\ptt PBETA\_CONV}}
+\end{verbatim}\end{boxed}\index{PBETA\_CONV@{\tt PBETA\_CONV}}
 
 \section{Bugs and Future Changes}
 
 At the time of release there were no known bugs in the system.
 However, this is more likely to be a result of poor testing than of good coding.
 If you do find a bug please report it to me, preferably along with a
-short example that exhibits the bug and the version number of the 
+short example that exhibits the bug and the version number of the
 pair library that you are using.
 The constant \mbox{\tt pair\_version} contains the version number of the pair
     library.
@@ -244,13 +244,13 @@ I can be contacted at:
 \begin{center}
     \begin{tabular}{l@{\hspace{10mm}}ll}
         Jim Grundy                  &        &                                \\
-	Defence Science \&
-	    Technology Organisation & phone: & +61$\;$8$\:$259$\,$6162        \\
-	Building 171
-	    Laboratories Area       & fax:   & +61$\;$8$\:$259$\,$5980        \\
-	PO Box 1500                 & telex: & AA82799                        \\
-	Salisbury~~SA~~5108         & email: & Jim.Grundy@dsto.defence.gov.au \\
-	AUSTRALIA                   &        & jim@grundy-j.apana.org.au      \\
+        Defence Science \&
+            Technology Organisation & phone: & +61$\;$8$\:$259$\,$6162        \\
+        Building 171
+            Laboratories Area       & fax:   & +61$\;$8$\:$259$\,$5980        \\
+        PO Box 1500                 & telex: & AA82799                        \\
+        Salisbury~~SA~~5108         & email: & Jim.Grundy@dsto.defence.gov.au \\
+        AUSTRALIA                   &        & jim@grundy-j.apana.org.au      \\
     \end{tabular}
 \end{center}
 I would also welcome any suggestions for improving to the library,

@@ -2,8 +2,10 @@
 % HOL Manual LaTeX Source: pair library (standard latex style)
 % =====================================================================
 
-\documentstyle[12pt,fleqn, ../../../Manual/LaTeX/alltt,
-../../..//Manual/LaTeX/layout]{book}
+\documentclass[12pt]{book}
+\usepackage{fleqn}
+\usepackage{alltt}
+\usepackage{../../..//Manual/LaTeX/layout}
 
 % ---------------------------------------------------------------------
 % Input defined macros and commands
@@ -14,6 +16,7 @@
 % ---------------------------------------------------------------------
 % The document has an index
 % ---------------------------------------------------------------------
+\usepackage{makeidx}
 \makeindex
 
 \begin{document}
@@ -55,6 +58,6 @@
 
    {\def\_{{\char'137}}                  % \tt style `_' character
 
-     \include{index}}
+     \printindex}
 
  \end{document}
