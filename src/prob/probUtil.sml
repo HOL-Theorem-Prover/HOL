@@ -36,7 +36,7 @@ fun D x = (x, x);
 fun Df f = f ## f;
 fun K x y = x;
 fun N 0 _ x = x | N 1 f x = f x | N n f x = N (n - 1) f (f x);
-fun index x = total (Lib.index x);
+fun index x = total (Lib.index (Lib.equal x));
 fun cart al bl = foldl (fn (a,l) => foldl (fn (b,l') => (a,b)::l') l bl) [] al;
 val map_partial = List.mapPartial;
 fun cart_map_partial f (al, bl)
