@@ -107,13 +107,13 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
         in
           if symlink then link s1' s2' else FileSys.rename {old=s1', new=s2'}
         end
-      fun transfer f (dir,file1,file2) = 
+      fun transfer f (dir,file1,file2) =
                f (fullPath [dir,file1])
                  (fullPath [targetdir,file2])
       fun idtransfer f (dir,file) = transfer f (dir,file,file)
       fun digest file =
         let val b = Path.base file
-        in if (String.extract(b,String.size b -4,NONE) = "-sig" 
+        in if (String.extract(b,String.size b -4,NONE) = "-sig"
                handle _ => false)
            then SOME (String.extract(b,0,SOME (String.size b - 4)) ^".sig")
            else NONE
@@ -163,7 +163,7 @@ fun rem_file f =
 
 fun clean_sigobj() =
   let val _ = print ("Cleaning out "^SIGOBJ^"\n")
-  in 
+  in
      map_dir (rem_file o normPath o Path.concat) SIGOBJ
   end;
 
@@ -191,10 +191,20 @@ fun build_help () =
         raise Fail "Couldn't make help database")
  end;
 
+fun make_buildstamp () = let
+  val stamp_filename = Path.concat(HOLDIR, "build-stamp")
+  val stamp_stream = TextIO.openOut stamp_filename
+  val date_string = Date.toString (Date.fromTimeLocal (Time.now()))
+in
+  TextIO.output(stamp_stream, " (built "^date_string^")");
+  TextIO.closeOut stamp_stream
+end
+
 
 fun build_hol symlink =
   let val _ = clean_sigobj()
       val _ = build_src symlink
+      val _ = make_buildstamp()
       val _ = build_help()
   in
     print "\nHol built successfully.\n"

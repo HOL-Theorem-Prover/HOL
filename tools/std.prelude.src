@@ -92,10 +92,18 @@ end
  * Print a banner.                                                           *
  *---------------------------------------------------------------------------*)
 
+val build_stamp = let
+  val stampstr = TextIO.openIn (Path.concat(HOLDIR, "build-stamp"))
+  val stamp = TextIO.inputAll stampstr
+  val _ = TextIO.closeIn stampstr
+in
+  stamp
+end handle _ => ""
+
 val _ =
 TextIO.output(TextIO.stdOut,
   "\n-----------------------------------------------------------------\n"
-  ^"                 HOL98 ["
-  ^Globals.release^" "^Lib.int_to_string(Globals.version)
+  ^"       HOL98 ["
+  ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
   ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
   ^"-----------------------------------------------------------------\n\n");
