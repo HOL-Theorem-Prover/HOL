@@ -40,12 +40,12 @@ sig
   val ftyvar        : hol_type
 
   val match_type    : hol_type -> hol_type -> (hol_type,hol_type)Lib.subst
-  val raw_match_type: hol_type -> hol_type 
+  val raw_match_type: hol_type -> hol_type
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
   val match_type_restr : hol_type list -> hol_type -> hol_type ->
                       (hol_type,hol_type)Lib.subst
-  val match_type_in_context : hol_type -> hol_type 
+  val match_type_in_context : hol_type -> hol_type
                               -> (hol_type,hol_type)Lib.subst
                               -> (hol_type,hol_type)Lib.subst
   val thy_types     : string -> (string * int) list
@@ -112,7 +112,7 @@ sig
   val subst         : (term,term) Lib.subst -> term -> term
 (*  val vsubst        : (term,term) Lib.subst -> term -> term *)
   val inst          : (hol_type,hol_type) subst -> term -> term
-  val raw_match     : hol_type list -> term set  
+  val raw_match     : hol_type list -> term set
                       -> term -> term
                       -> (term,term)subst * (hol_type,hol_type)subst
                       -> ((term,term)subst * term set) *
@@ -125,6 +125,7 @@ sig
                       -> ((term,term)subst * (hol_type,hol_type)subst)
   val thy_consts    : string -> term list
   val compare       : term * term -> order
+  val term_eq       : term -> term -> bool
   val var_compare   : term * term -> order
   val empty_tmset   : term set
   val empty_varset  : term set

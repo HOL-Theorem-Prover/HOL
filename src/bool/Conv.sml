@@ -346,7 +346,7 @@ fun STRIP_QUANT_CONV conv tm =
  (if is_forall tm then STRIP_BINDER_CONV (SOME boolSyntax.universal) else
   if is_exists tm then STRIP_BINDER_CONV (SOME boolSyntax.existential) else
   if is_select tm then STRIP_BINDER_CONV (SOME boolSyntax.select) else
-  if is_exists1 tm then STRIP_BINDER_CONV (SOME boolSyntax.exists1) 
+  if is_exists1 tm then STRIP_BINDER_CONV (SOME boolSyntax.exists1)
   else K conv) conv tm;
 
 fun LAST_EXISTS_CONV c tm = let
@@ -1658,9 +1658,9 @@ fun AC_CONV(associative,commutative) =
        let val {Rator,Rand=r} = dest_comb expr
            val {Rator=xopr, Rand = l} = dest_comb Rator
        in
-       if xopr = opr
-       then if l = head then REFL expr
-            else if r = head then INST [x |-> l, y |-> r] comm
+       if term_eq xopr opr
+       then if term_eq l head then REFL expr
+            else if term_eq r head then INST [x |-> l, y |-> r] comm
               else let val subb = bubble head r
                     val eqv = AP_TERM (mk_comb{Rator=xopr,Rand=l}) subb
                  val {Rator,Rand=r'} = dest_comb(#rhs(dest_eq(concl subb)))
@@ -1672,11 +1672,11 @@ fun AC_CONV(associative,commutative) =
        end
 
      fun asce {lhs,rhs} =
-       if lhs = rhs then REFL lhs
+       if term_eq lhs rhs then REFL lhs
        else let val {Rator,Rand=r'} = dest_comb lhs
                 val {Rator=zopr,Rand=l'} = dest_comb Rator
             in
-            if zopr = opr
+            if term_eq zopr opr
             then let val beq = bubble l' rhs
                      val rt = boolSyntax.rhs (concl beq)
                  in TRANS (AP_TERM (mk_comb{Rator=opr,Rand=l'})

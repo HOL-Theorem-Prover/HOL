@@ -407,8 +407,9 @@ val WF_INDUCT_TAC =
     let val {Rator,Rand} = dest_comb w
         val {Name = "!",...} = dest_const Rator
         val thi = ISPEC Rand wf_thm1
+        fun eqRand t = Term.compare(Rand,t) = EQUAL
         val thf = CONV_RULE(ONCE_DEPTH_CONV
-                            (BETA_CONV o assert (curry(op=) Rand o rator))) thi
+                              (BETA_CONV o assert (eqRand o rator))) thi
     in MATCH_MP_TAC thf (asl,w)
     end
     handle _ => raise HOL_ERR{origin_structure = "<top-level>",

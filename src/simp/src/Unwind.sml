@@ -185,7 +185,7 @@ fun split_at f [] = raise failwith"split_at"
 
 fun CONJ_TO_FRONT_CONV conj term =
     let val conjs = strip_conj term
-        val (front,e,back) = split_at (fn x => conj = x) conjs
+        val (front,e,back) = split_at (term_eq conj) conjs
 	    handle HOL_ERR _ => failwith "CONJ_TO_FRONT_CONV"
 	val rhs = list_mk_conj (e::(front @ back))
     in CONJ_ACI (mk_eq(term,rhs))
@@ -278,19 +278,19 @@ fun elim_term_neg et tm =
     | SOME NONE => SOME (SOME c2)
     | SOME (SOME t) => SOME (SOME (mk_conj(t, c2)))
   end
-  else if et = tm then
+  else if term_eq et tm then
     SOME NONE
   else NONE
 
 fun elim_term et tm =
   if is_imp tm   (* want ~P to be considered an implication *)
   then let val (h,c) = dest_imp tm
-           val (mk_imp, new_c) = 
+           val (mk_imp, new_c) =
                   if is_neg tm then ((fn (t1, c) => mk_neg t1), NONE)
                                else (mk_imp, SOME c)
-       in case elim_term_neg et h 
+       in case elim_term_neg et h
            of NONE => let in
-                case elim_term et c 
+                case elim_term et c
                  of NONE => NONE
                   | SOME NONE => SOME (SOME (mk_neg h))
                   | SOME (SOME t) => SOME (SOME (mk_imp(h,t)))
@@ -298,12 +298,12 @@ fun elim_term et tm =
             | SOME NONE => SOME new_c
             | SOME (SOME t) => SOME (SOME (mk_imp(t, c)))
        end
-  else 
-  if is_disj tm 
+  else
+  if is_disj tm
   then let val (d1, d2) = dest_disj tm
-       in case elim_term et d1 
+       in case elim_term et d1
            of NONE => let in
-                 case elim_term et d2 
+                 case elim_term et d2
                   of NONE => NONE
                    | SOME NONE => SOME (SOME d1)
                    | SOME (SOME t) => SOME (SOME (mk_disj(d1,t)))
@@ -315,14 +315,14 @@ fun elim_term et tm =
 
 val CONJ_IMP_THM = GSYM AND_IMP_INTRO
 
-val NOT_CONJ_THM = 
+val NOT_CONJ_THM =
   let val th = boolTheory.DE_MORGAN_THM
       val (l,_) = strip_forall (concl th)
       val th1 = CONJUNCT1 (SPEC_ALL th)
   in GENL l th1
   end;
 
-val NOT_IMP_THM = 
+val NOT_IMP_THM =
   let val A = Term.mk_var("A",bool)
   in GEN A (RIGHT_BETA (AP_THM NOT_DEF A))
   end;
@@ -355,11 +355,11 @@ fun IMP_TO_FRONT_CONV ante tm =
         | NONE => mk_neg ante
       val dtm = disjunctify tm
       val dnewtm = SYM (disjunctify newtm)
-      val eq3 = AC_CONV(DISJ_ASSOC, DISJ_COMM) 
+      val eq3 = AC_CONV(DISJ_ASSOC, DISJ_COMM)
                    (mk_eq(rhs (concl dtm), lhs (concl dnewtm)))
       val eq4 = TRANS dtm (TRANS (EQT_ELIM eq3) dnewtm)
     in
-      if is_neg newtm 
+      if is_neg newtm
         then TRANS eq4 (SPEC (dest_neg newtm) NOT_IMP_THM)
         else eq4
     end
@@ -372,7 +372,7 @@ fun IMP_TO_FRONT_CONV ante tm =
  *     P = P /\ T
  *------------------------------------------------------------------------*)
 
-val TRUTH_CONJ_INTRO_THM = 
+val TRUTH_CONJ_INTRO_THM =
  let val P = Term.mk_var("P", bool)
  in GEN P (SYM (el 2 (CONJUNCTS (SPEC P AND_CLAUSES))))
  end;
@@ -397,16 +397,16 @@ fun ENSURE_CONJ_CONV tm =
  *------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
-     !P. ~P = (P = F) 
+     !P. ~P = (P = F)
      !P. P = (P = T)
  ---------------------------------------------------------------------------*)
 
-val EQF_INTRO_THM = 
+val EQF_INTRO_THM =
 let val P = Term.mk_var("P", bool)
  in GEN P (SYM (el 4 (CONJUNCTS (SPEC P EQ_CLAUSES))))
  end;
 
-val EQT_INTRO_THM = 
+val EQT_INTRO_THM =
 let val P = Term.mk_var("P", bool)
  in GEN P (SYM (el 2 (CONJUNCTS (SPEC P EQ_CLAUSES))))
  end;

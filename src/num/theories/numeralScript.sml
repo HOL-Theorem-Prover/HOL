@@ -290,8 +290,8 @@ fun AP_TAC (asl, g) =
       val (rf, ra) = dest_comb rhs handle _ =>
                        raise Fail "rhs must be an application"
   in
-      if (lf = rf) then AP_TERM_TAC (asl, g) else
-      if (la = ra) then AP_THM_TAC (asl, g) else
+      if (term_eq lf rf) then AP_TERM_TAC (asl, g) else
+      if (term_eq la ra) then AP_THM_TAC (asl, g) else
       raise Fail "One of function or argument must be equal"
   end
 
@@ -615,7 +615,7 @@ val numeral_fact = store_thm(
 
 val numeral_funpow = store_thm(
   "numeral_funpow",
-  Term `!n. FUNPOW f n x = 
+  Term `!n. FUNPOW f n x =
              if n = 0 then x else FUNPOW f (n-1) (f x)`,
  GEN_TAC
    THEN STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES)

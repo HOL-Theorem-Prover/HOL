@@ -526,11 +526,10 @@ fun REFL_TAC(asl,g) =
  *        [ t1;t2;...;tn;...tz ]  tm ==> t                                   *
  *---------------------------------------------------------------------------*)
 
-fun UNDISCH_TAC wf = fn (asl,w) =>
-  if mem wf asl
-  then ([(set_diff asl [wf], mk_imp (wf,w))],
-        UNDISCH o Lib.trye hd)
-  else raise ERR "UNDISCH_TAC" "";
+fun UNDISCH_TAC wf (asl,w) =
+  if op_mem term_eq wf asl then
+    ([(op_set_diff term_eq asl [wf], mk_imp (wf,w))], UNDISCH o Lib.trye hd)
+  else raise ERR "UNDISCH_TAC" "Specified term not in assumption list";
 
 
 (*---------------------------------------------------------------------------*
@@ -553,7 +552,7 @@ fun AP_TERM_TAC(asl,gl) =
    val (g,x) = with_exn dest_comb lhs (ER"lhs not a comb")
    val (f,y) = with_exn dest_comb rhs (ER"rhs not a comb")
  in
-   if not(f=g) then raise ER "functions on lhs and rhs differ"
+   if not(term_eq f g) then raise ER "functions on lhs and rhs differ"
    else ([(asl, mk_eq(x, y))],
          AP_TERM f o Lib.trye hd)
  end
@@ -577,7 +576,7 @@ fun AP_THM_TAC (asl,gl) =
    val (g,x) = with_exn dest_comb lhs (ER "lhs not a comb")
    val (f,y) = with_exn dest_comb rhs (ER "rhs not a comb")
  in
-   if not(x=y) then raise ER "arguments on lhs and rhs differ"
+   if not(term_eq x y) then raise ER "arguments on lhs and rhs differ"
    else ([(asl, mk_eq(g, f))],
          C AP_THM x o Lib.trye hd)
  end
@@ -673,7 +672,7 @@ local fun efn v (tm,th) =
        let val ntm = mk_exists(v, tm) in (ntm,CHOOSE (v, ASSUME ntm) th) end
 in
 fun MATCH_MP_TAC thm :tactic = let
-  val lconsts      = HOLset.intersection 
+  val lconsts      = HOLset.intersection
                         (FVL [concl thm] empty_tmset, hyp_frees thm)
   val hyptyvars    = HOLset.listItems (hyp_tyvars thm)
   val (gvs,imp)    = strip_forall (concl thm)

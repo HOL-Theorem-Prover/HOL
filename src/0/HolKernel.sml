@@ -40,7 +40,7 @@ fun dest_monop c e M =
  let val (c1,N) = with_exn dest_comb M e
  in if same_const c c1 then N else raise e end
 
-local fun dest tm = 
+local fun dest tm =
        let val (Rator,N) = dest_comb tm
            val (c,M) = dest_comb Rator
        in (c,(M,N)) end
@@ -112,7 +112,7 @@ fun strip_binop dest =
 (* For right-associative binary operators. Tail recursive. *)
 
 fun list_mk_rbinop _ [] = raise ERR "list_mk_rbinop" "empty list"
-  | list_mk_rbinop mk_binop alist = 
+  | list_mk_rbinop mk_binop alist =
        let val (h::t) = List.rev alist
        in rev_itlist mk_binop t h
        end;
@@ -123,9 +123,9 @@ fun mk_binder c f (p as (Bvar,_)) =
 
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
 
-val strip_fun = 
+val strip_fun =
   let val dest = total dom_rng
-      fun strip acc ty = 
+      fun strip acc ty =
           case dest ty
             of SOME (d,r) => strip (d::acc) r
              | NONE => (rev acc, ty)
@@ -215,7 +215,7 @@ local
 fun splice ({redex,...}:{redex:term,residue:term}) v occs tm2 =
    let fun graft (r as {occs=[], ...}) = r
          | graft {tm, occs, count} =
-          if redex = tm
+          if term_eq redex tm
           then if (List.hd occs=count+1)
                then {tm=v, occs=List.tl occs, count=count+1}
                else {tm=tm, occs=occs, count=count+1}

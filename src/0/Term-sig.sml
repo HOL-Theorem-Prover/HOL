@@ -59,7 +59,7 @@ sig
   val subst         : (term,term) subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
 
-  val raw_match     : hol_type list -> term set  
+  val raw_match     : hol_type list -> term set
                       -> term -> term
                       -> (term,term)subst * (hol_type,hol_type)subst
                       -> ((term,term)subst * term set) *
@@ -73,6 +73,7 @@ sig
 
   val var_compare   : term * term -> order
   val compare       : term * term -> order
+  val term_eq       : term -> term -> bool
 
   val empty_tmset   : term set
   val empty_varset  : term set

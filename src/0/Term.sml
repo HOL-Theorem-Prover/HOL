@@ -21,7 +21,7 @@ val WARN = HOL_WARNING "Term";
 
 val --> = Type.-->;   infixr 3 -->;
 
-infix |-> ##; 
+infix |-> ##;
 
 (*---------------------------------------------------------------------------
                Create the signature for HOL terms
@@ -215,6 +215,7 @@ fun compare p =
     | (Abs _, _)             => GREATER;
 
 val empty_tmset = HOLset.empty compare
+fun term_eq t1 t2 = compare(t1,t2) = EQUAL
 
 (*---------------------------------------------------------------------------
         Free variables of a term. Tail recursive. Returns a set.
@@ -228,16 +229,16 @@ fun FVL [] A = A
   | FVL (_::rst) A                = FVL rst A
 
 
-(*---------------------------------------------------------------------------*
- * free_in tm M : does tm occur free in M? This is not defined modulo aconv. *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    free_in tm M : does tm occur free in M?
+   ---------------------------------------------------------------------- *)
 
 fun free_in tm =
    let fun f1 (Comb(Rator,Rand)) = (f2 Rator) orelse (f2 Rand)
          | f1 (Abs(_,Body)) = f2 Body
 	 | f1 (t as Clos _) = f2 (push_clos t)
          | f1 _ = false
-       and f2 t = t=tm orelse f1 t
+       and f2 t = term_eq t tm orelse f1 t
    in f2
    end;
 
@@ -444,7 +445,8 @@ end;
  *        Beta-reduction. Non-renaming.                                      *
  *---------------------------------------------------------------------------*)
 
-fun beta_conv (Comb(Abs(_,Body), Rand)) =
+fun beta_conv (Comb(Abs(_,Body), Bv 0)) = Body
+  | beta_conv (Comb(Abs(_,Body), Rand)) =
      let fun subs((tm as Bv j),i)     = if i=j then Rand else tm
            | subs(Comb(Rator,Rand),i) = Comb(subs(Rator,i),subs(Rand,i))
            | subs(Abs(v,Body),i)      = Abs(v,subs(Body,i+1))
@@ -453,6 +455,8 @@ fun beta_conv (Comb(Abs(_,Body), Rand)) =
      in
        subs (Body,0)
      end
+  | beta_conv (Comb(x as Clos _, Rand)) = beta_conv (Comb(push_clos x, Rand))
+  | beta_conv (x as Clos _) = beta_conv (push_clos x)
   | beta_conv _ = raise ERR "beta_conv" "not a beta-redex";
 
 
@@ -494,17 +498,17 @@ end;
  *---------------------------------------------------------------------------*)
 
 val emptysubst = Binarymap.mkDict compare
-local 
+local
   open Binarymap
   fun addb [] A = A
-    | addb ({redex,residue}::t) (A,b) = 
+    | addb ({redex,residue}::t) (A,b) =
       addb t (if type_of redex = type_of residue
-              then (insert(A,redex,residue), 
+              then (insert(A,redex,residue),
                     is_var redex andalso b)
               else raise ERR "subst" "redex has different type than residue")
 in
-fun subst [] = I 
-  | subst theta = 
+fun subst [] = I
+  | subst theta =
     let val (fmap,b) = addb theta (emptysubst, true)
         fun vsubs (v as Fv _) = (case peek(fmap,v) of NONE => v | SOME y => y)
           | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
@@ -520,7 +524,7 @@ fun subst [] = I
                  | Abs(Bvar,Body) => Abs(Bvar,subs Body)
 	         | Clos _        => subs(push_clos tm)
                  |   _         => tm)
-    in 
+    in
       (if b then vsubs else subs)
     end
 end
@@ -599,14 +603,14 @@ end;
 val list_mk_abs = list_mk_binder NONE;
 
 fun mk_abs(Bvar as Fv _, Body) =
-      let fun bind (v as Fv _) i        = if v=Bvar then Bv i else v
-            | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
-            | bind (Abs(Bvar,Body)) i   = Abs(Bvar, bind Body (i+1))
-            | bind (t as Clos _) i      = bind (push_clos t) i
-            | bind tm _ = tm (* constant *)
-      in
-        Abs(Bvar, bind Body 0)
-      end
+    let fun bind (v as Fv _) i        = if v=Bvar then Bv i else v
+          | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
+          | bind (Abs(Bvar,Body)) i   = Abs(Bvar, bind Body (i+1))
+          | bind (t as Clos _) i      = bind (push_clos t) i
+          | bind tm _ = tm (* constant *)
+    in
+      Abs(Bvar, bind Body 0)
+    end
   | mk_abs _ = raise ERR "mk_abs" "Bvar not a variable"
 
 
@@ -628,9 +632,9 @@ fun mk_abs(Bvar as Fv _, Body) =
 
 local fun peel f (t as Clos _) A = peel f (push_clos t) A
         | peel f tm A =
-            case f tm
-             of SOME(Abs(v,M)) => peel f M (v::A)
-              | otherwise => (A,tm)
+            case f tm of
+              SOME(Abs(v,M)) => peel f M (v::A)
+            | otherwise => (A,tm)
       datatype occtype = PREFIX of int | BODY
       fun array_to_revlist A =
         let val top = Array.length A - 1
@@ -640,13 +644,18 @@ local fun peel f (t as Clos _) A = peel f (push_clos t) A
       val vi_empty = HOLset.empty (fn ((v1,i1),(v2,i2)) => var_compare(v1,v2))
       fun add_vi viset vi =
          if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
+      fun trypush_clos (x as Clos _) = push_clos x
+        | trypush_clos t = t
 in
 fun strip_binder opt =
- let val f = case opt
-              of NONE => (fn (t as Abs _) => SOME t | other => NONE)
+ let val f =
+         case opt of
+           NONE => (fn (t as Abs _) => SOME t
+                     | (t as Clos(_, Abs _)) => SOME (push_clos t)
+                     | other => NONE)
                | SOME c => (fn t => let val (rator,rand) = dest_comb t
                                     in if same_const rator c
-                                       then SOME rand
+                                       then SOME (trypush_clos rand)
                                        else NONE
                                     end handle HOL_ERR _ => NONE)
  in fn tm =>
@@ -711,16 +720,16 @@ val strip_abs = strip_binder NONE;
 local exception CLASH
 in
 fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
-     let fun dest (v as (Bv j), i)     = if i=j then Bvar else v
-           | dest (v as Fv(s,_), _)    = if Name=s then raise CLASH else v
-           | dest (Comb(Rator,Rand),i) = Comb(dest(Rator,i),dest(Rand,i))
-           | dest (Abs(Bvar,Body),i)   = Abs(Bvar, dest(Body,i+1))
-           | dest (t as Clos _, i)     = dest (push_clos t, i)
-           | dest (tm,_) = tm
-     in (Bvar, dest(Body,0))
-        handle CLASH =>
-        dest_abs(Abs(variant (free_vars Body) Bvar, Body))
-     end
+    let fun dest (v as (Bv j), i)     = if i=j then Bvar else v
+          | dest (v as Fv(s,_), _)    = if Name=s then raise CLASH else v
+          | dest (Comb(Rator,Rand),i) = Comb(dest(Rator,i),dest(Rand,i))
+          | dest (Abs(Bvar,Body),i)   = Abs(Bvar, dest(Body,i+1))
+          | dest (t as Clos _, i)     = dest (push_clos t, i)
+          | dest (tm,_) = tm
+    in (Bvar, dest(Body,0))
+       handle CLASH =>
+              dest_abs(Abs(variant (free_vars Body) Bvar, Body))
+    end
   | dest_abs (t as Clos _) = dest_abs (push_clos t)
   | dest_abs _ = raise ERR "dest_abs" "not a lambda abstraction"
 end;
@@ -763,7 +772,7 @@ val body = snd o dest_abs;
     sets of variables and type variables to avoid binding.
  ---------------------------------------------------------------------------*)
 
-local 
+local
   fun MERR s = raise ERR "raw_match_term error" s
   fun free (Bv i) n             = i<n
     | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
@@ -779,8 +788,8 @@ local
 in
 fun RM [] theta = theta
   | RM (((v as Fv(_,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
-     = if bound_by_scope scoped tm 
-       then MERR "variable bound by scope" 
+     = if bound_by_scope scoped tm
+       then MERR "variable bound by scope"
        else RM rst
             ((case lookup v Id tmS
                of NONE => if v=tm then (tmS,HOLset.add(Id,v))
@@ -797,17 +806,17 @@ fun RM [] theta = theta
                        else MERR"const-const with different (ground) types"
            | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
            | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
-  | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS) 
+  | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS)
       = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
-  | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S 
+  | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S
                                  else MERR "Bound var. depth"
   | RM (((pat as Clos _),ob,s)::t) S = RM ((push_clos pat,ob,s)::t) S
   | RM ((pat,(ob as Clos _),s)::t) S = RM ((pat,push_clos ob,s)::t) S
   | RM all others                    = MERR "different constructors"
 end
 
-fun raw_match tyfixed tmfixed pat ob (tmS,tyS) 
+fun raw_match tyfixed tmfixed pat ob (tmS,tyS)
    = RM [(pat,ob,false)] ((tmS,tmfixed), (tyS,tyfixed));
 
 fun norm_subst ((tmS,_),(tyS,_)) =
