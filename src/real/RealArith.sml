@@ -42,8 +42,19 @@ val _ = HOL_MESG "loading RealArith";
 (* ---------------------------------------------------------------------- *)
 
 local
-(* fun trace_pure s = (print s; TextIO.flushOut TextIO.stdOut) *)
-fun trace_pure s = ()
+  fun trace_on s = print s (* print automatically flushes *)
+  fun trace_off s = ()
+  val current_trace = ref trace_off
+  val traceval = ref 0
+
+  fun trace_pure s = (!current_trace) s
+  val _ = register_ftrace ("RealArith dp",
+                           ((fn () => !traceval),
+                            (fn 0 => (traceval := 0;
+                                      current_trace := trace_off)
+                              | _ => (traceval := 1;
+                                      current_trace := trace_on))),
+                           1)
   fun trace_line () = trace_pure "\n"
   local
     fun tl f [] = ()
@@ -1564,19 +1575,21 @@ val PURE_REAL_ARITH_TAC =
           REPEAT GEN_TAC THEN
           CONV_TAC init_CONV THEN
           REPEAT GEN_TAC THEN
-          REFUTE_THEN(MP_TAC o CONV_RULE
-                (PRESIMP_CONV THENC NNF_CONV THENC SKOLEM_CONV THENC
-                 PRENEX_CONV THENC ONCE_DEPTH_CONV atom_CONV THENC
-                 PROP_DNF_CONV)) THEN
+          REFUTE_THEN(MP_TAC o
+                      CONV_RULE
+                        (PRESIMP_CONV THENC NNF_CONV THENC SKOLEM_CONV THENC
+                         PRENEX_CONV THENC ONCE_DEPTH_CONV atom_CONV THENC
+                         PROP_DNF_CONV)) THEN
           DISCH_THEN(REPEAT_TCL
-          (CHOOSE_THEN ORELSE_TCL DISJ_CASES_THEN ORELSE_TCL CONJUNCTS_THEN)
-          ASSUME_TAC) THEN
+                       (CHOOSE_THEN ORELSE_TCL DISJ_CASES_THEN ORELSE_TCL
+                        CONJUNCTS_THEN)
+                       ASSUME_TAC) THEN
           TRY(FIRST_ASSUM CONTR_TAC) THEN
           REPEAT(FIRST_X_ASSUM DISCARD_UNREAL_TAC) THEN
           RULE_ASSUM_TAC(CONV_RULE ZERO_LEFT_CONV) THEN
           REPEAT(FIRST_X_ASSUM ABS_ELIM_TAC1 ORELSE
-          FIRST_ASSUM ABS_ELIM_TAC2 ORELSE
-          FIRST_ASSUM ABS_ELIM_TAC3) THEN
+                 FIRST_ASSUM ABS_ELIM_TAC2 ORELSE
+                 FIRST_ASSUM ABS_ELIM_TAC3) THEN
           POP_ASSUM_LIST(ACCEPT_TAC o REAL_SIMPLE_ARITH_REFUTER)
         val res = tac g
         val _ = trace "done PURE_REAL_ARITH_TAC"
@@ -1590,6 +1603,15 @@ fun REAL_ARITH_TAC g =
     val _ = trace "REAL_ARITH_TAC"
     val res = (POP_ASSUM_LIST(K ALL_TAC) THEN PURE_REAL_ARITH_TAC) g
     val _ = trace "done REAL_ARITH_TAC"
+  in
+    res
+  end;
+
+fun REAL_ASM_ARITH_TAC g =
+  let
+    val _ = trace "REAL_ASM_ARITH_TAC"
+    val res = (REPEAT (POP_ASSUM MP_TAC) THEN PURE_REAL_ARITH_TAC) g
+    val _ = trace "done REAL_ASM_ARITH_TAC"
   in
     res
   end;
