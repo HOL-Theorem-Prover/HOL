@@ -23,8 +23,8 @@ val HOLDIR = _;
  * Version information                                                       *
  *---------------------------------------------------------------------------*)
 
-val release = "Taupo";
-val version = 5;
+val release = "Kananaskis";
+val version = 0;
 
 (*-------------------------------------------------------------------------*
  * Bogus hack for defining strings                                         *
