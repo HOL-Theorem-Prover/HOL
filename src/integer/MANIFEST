@@ -8,7 +8,24 @@ CooperCore      : phases 4 and 5
 jrhCore         : alternative implementation of phases 4 and 5.
 CooperShell     : implementation of decide_pure_presburger, putting
                   together everything preceding.
-Cooper          : top-level interface, includes code for converting
-                  natural number problems, writing out constants such
-                  as ODD or EVEN, guessing generalisations where free
-                  variables exist.
+Cooper          : top-level interface
+
+IntDP_Munge     : Code for converting natural number problems, writing
+                  out constants such as ODD, EVEN, DIV and MOD,
+                  guessing generalisations where free variables exist,
+                  and that sort of thing.  Shared with the Omega
+                  implementation.
+
+Omega           : top-level interface to Omega
+OmegaMath       : analogous to CooperMath; mathematical manipulations
+                  needed by Omega
+OmegaMLShadow   : ML implementation of real and dark shadow chasing
+OmegaSimple     : HOL interface to the above, proof interpretation
+OmegaSymbolic   : "in-the-logic" version of Omega, handles splintering
+
+
+intSyntax       : term manipulation functions for integers.
+intSimps        : simplification routines for integers
+intLib          : combination of everything; note that OMEGA_CONV is
+                  presented as ARITH_CONV.
+

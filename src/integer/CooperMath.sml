@@ -32,20 +32,17 @@ fun == q x = Type q
 (* Function to compute the Greatest Common Divisor of two integers.          *)
 (*---------------------------------------------------------------------------*)
 
-fun gcd (i,j) = let
-  exception non_neg
-  open Arbint
-  fun gcd' (i,j) = let
-    val r = (i mod j)
-  in
-    if (r = zero) then j else gcd' (j,r)
-  end
-in
-  (if ((i < zero) orelse (j < zero)) then raise non_neg
-   else if i = zero then j else if j = zero then i
-   else if (i < j) then gcd' (j,i) else gcd' (i,j))
-  handle non_neg => raise ERR "gcd" "negative arguments to gcd"
-end;
+local open Arbint in
+fun gcd' i j = let
+    val r = i mod j
+in  if r == zero then j else gcd' j r
+end
+
+fun gcd (i,j) =
+    if i < zero orelse j < zero then raise ERR "gcd""negative arguments to gcd"
+    else if i == zero then j else if j == zero then i
+    else if i < j then gcd' j i else gcd' i j
+end (* local *)
 
 fun gcdl l =
   case l of
