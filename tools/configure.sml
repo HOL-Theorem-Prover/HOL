@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
+val mosmldir = ;
+val holdir   = ;
 val OS       = "linux";   (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -66,7 +66,7 @@ val SRCDIRS =
   "src/llist", "src/integer", "src/res_quan/src",
   "src/pred_set/src",  "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src",
-  "src/finite_map", "src/real", "src/bag", "src/ring/src", 
+  "src/finite_map", "src/hol88", "src/real", "src/bag", "src/ring/src", 
   "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob"]
   @
   (if OS="linux" orelse OS="solaris"
