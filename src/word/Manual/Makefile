@@ -6,20 +6,21 @@
 # Pathname to the help files
 # ---------------------------------------------------------------------
 
-HOLDIR=/usr/groups/hol/hol90.9.alpha
+
+HOLMANDIR=/usr/groups/hol/hol90/Manual
 
 Help=../help
 LATEX=latex
 # ---------------------------------------------------------------------
 # Pathname to the doc-to-tex script and doc-to-tex.sed file 
 # ---------------------------------------------------------------------
-DOCTOTEX=$(HOLDIR)/Manual/Reference/bin/doc-to-tex
-DOCTOTEXSED=$(HOLDIR)/Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEX=$(HOLMANDIR)/Manual/Reference/bin/doc-to-tex
+DOCTOTEXSED=$(HOLMANDIR)/Manual/Reference/bin/doc-to-tex.sed
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
 # ---------------------------------------------------------------------
-MAKEINDEX=$(HOLDIR)/Manual/LaTeX/makeindex $(HOLDIR)
+MAKEINDEX=$(HOLMANDIR)/Manual/LaTeX/makeindex $(HOLMANDIR)
 #MAKEINDEX=makeindex
 
 default:	
