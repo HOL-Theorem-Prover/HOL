@@ -51,7 +51,7 @@ val ALG_MEASURE_BASIC = store_thm
   ("ALG_MEASURE_BASIC",
    ``(alg_measure [] = 0) /\ (alg_measure [[]] = 1)
      /\ (!b. alg_measure [[b]] = 1 / 2)``,
-   RW_TAC real_ac_ss [alg_measure_def, LENGTH, pow]);
+   RW_TAC real_ac_ss [alg_measure_def, LENGTH, POW_1, pow]);
 
 val ALG_MEASURE_POS = store_thm
   ("ALG_MEASURE_POS",
