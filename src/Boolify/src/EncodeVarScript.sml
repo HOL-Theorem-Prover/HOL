@@ -1,6 +1,7 @@
-(* -*-sml-*- *)
+(* -*-sml-*-
 app load
 ["bossLib", "CoderTheory"];
+*)
 
 open HolKernel boolLib Parse bossLib simpLib listTheory
      EncodeTheory DecodeTheory CoderTheory;
@@ -155,62 +156,13 @@ val fixed_width_sum = store_thm
    ++ FULL_SIMP_TAC std_ss [lift_sum_def, encode_sum_def, LENGTH]);
 
 (*---------------------------------------------------------------------------
-        Options
+        Bounded numbers
  ---------------------------------------------------------------------------*)
 
-val option_to_bool_def =
-  TotalDefn.Define
-  `(option_to_bool xb NONE = ^encNone) /\
-   (option_to_bool xb (SOME x) = APPEND ^encSome (xb x))`;
-
-(*---------------------------------------------------------------------------
-        Lists
- ---------------------------------------------------------------------------*)
-
-val list_to_bool_def = 
-  TotalDefn.Define
-  `(list_to_bool xb [] = ^encNil) /\
-   (list_to_bool xb (x::xs) =
-    APPEND ^encCons (APPEND (xb x) (list_to_bool xb xs)))`;
-
-(*---------------------------------------------------------------------------
-        Nums (Norrish numeral encoding)
- ---------------------------------------------------------------------------*)
-
-val (num_to_bool_def, num_to_bool_ind) =
-  Defn.tprove
-  (Defn.Hol_defn "num_to_bool"
-   `num_to_bool (n:num) = 
-    if n = 0 then ^encZ
-    else if EVEN n then APPEND ^encB2 (num_to_bool ((n-2) DIV 2))
-    else APPEND ^encB1 (num_to_bool ((n-1) DIV 2))`,
-   TotalDefn.WF_REL_TAC `$<` THEN
-   REPEAT STRIP_TAC THEN
-   (KNOW_TAC (Term`?j. n = SUC j`) THEN1 ASM_MESON_TAC [num_CASES]) THEN
-   STRIP_TAC THEN
-   IMP_RES_TAC EVEN_EXISTS THEN
-   ASM_SIMP_TAC arith_ss
-   [SUC_SUB1,MULT_DIV,DIV_LESS_EQ,
-    EQT_ELIM (ARITH_CONV (Term `2n*m - 2n = (m-1n)*2n`)),
-    EQT_ELIM (ARITH_CONV (Term `x < SUC y = x <= y`))]);
-
-val _ = save_thm ("num_to_bool_def", num_to_bool_def);
-val _ = save_thm ("num_to_bool_ind", num_to_bool_ind);
-  
-  (*--------------------------------------------------------------------
-       Termination proof can also go: 
-
-           WF_REL_TAC `$<` THEN intLib.COOPER_TAC
-
-       but then we'd need integers.
-   ----------------------------------------------------------------------*)
-
-(*---------------------------------------------------------------------------
-      The unit type is cool because it consumes no space in the
-      target list: the type has all the information!
- ---------------------------------------------------------------------------*)
-
-val one_to_bool_def =
-  TotalDefn.Define `one_to_bool (_ : one) : bool list = []`;
+val fixed_width_bnum = store_thm
+  ("fixed_width_bnum",
+   ``!m p. fixed_width m (bnum_coder m p)``,
+   RW_TAC std_ss
+   [fixed_width_def, encode_bnum_length, bnum_coder_def, encoder_def]);
 
 val _ = export_theory ();
