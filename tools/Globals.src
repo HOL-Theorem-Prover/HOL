@@ -28,16 +28,6 @@ val HOLDIR = _;
 val release = "Taupo";
 val version = 0;
 
-(*---------------------------------------------------------------------------*
- * Bogus hack for informing parser whether numbers have been defined.        *
- *---------------------------------------------------------------------------*)
-
-local val defined = ref false
-in
-fun nums_defined() = !defined
-fun assert_nums_defined() = defined := true
-end;
-
 (*-------------------------------------------------------------------------*
  * Bogus hack for defining strings                                         *
  *-------------------------------------------------------------------------*)
