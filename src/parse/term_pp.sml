@@ -804,8 +804,12 @@ fun pp_term (G : grammar) TyG = let
           val (r as {nilstr, cons, ...}) =
             valOf (List.find (fn r => #cons r = fname) lrules)
           val sep = #separator r
-          val rdelim = #rightdelim r
-          val ldelim = #leftdelim r
+          fun spacify front s =
+            if Char.isAlphaNum(String.sub(s,0)) then
+              if front then " "^s else s^" "
+            else s
+          val rdelim = spacify true (#rightdelim r)
+          val ldelim = spacify false (#leftdelim r)
           (* list will never be empty *)
           fun pr_list tm = let
             fun recurse tm = let
