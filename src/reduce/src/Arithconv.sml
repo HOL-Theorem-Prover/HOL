@@ -70,6 +70,8 @@ val ltop     = mk_const{Name= "<", Ty= n_n_b_ty};
 val gtop     = mk_const{Name= ">", Ty= n_n_b_ty};
 val leop     = mk_const{Name= "<=", Ty= n_n_b_ty};
 val geop     = mk_const{Name= ">=", Ty= n_n_b_ty};
+val evenop   = mk_const{Name= "EVEN", Ty = Type.-->(num_ty, bool_ty)}
+val oddop    = mk_const{Name= "ODD", Ty = Type.-->(num_ty, bool_ty)}
 
 val truth    = mk_const{Name = "T", Ty = bool_ty};
 val falsity  = mk_const{Name = "F", Ty = bool_ty};
@@ -158,6 +160,32 @@ fun GE_CONV tm =
    of [xn,yn] => (GE_RW tm handle HOL_ERR _ => failwith "GE_CONV")
     |    _    => failwith "GE_CONV"
 end;
+
+(*-----------------------------------------------------------------------*)
+(* EVEN_CONV "EVEN [x]" = |- EVEN [x] = [ x divisible by 2 -> T | F ]    *)
+(*-----------------------------------------------------------------------*)
+
+local
+  val EC = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_evenodd])
+in
+  fun EVEN_CONV tm =
+    case dest_op evenop tm of
+      [xn] => (EC tm handle HOL_ERR _ => failwith "EVEN_CONV")
+    | _ => failwith "EVEN_CONV"
+end
+
+(*-----------------------------------------------------------------------*)
+(* ODD_CONV "ODD [x]" = |- ODD [x] = [ x divisible by 2 -> F | T ]       *)
+(*-----------------------------------------------------------------------*)
+
+local
+  val OC = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_evenodd])
+in
+  fun ODD_CONV tm =
+    case dest_op oddop tm of
+      [xn] => (OC tm handle HOL_ERR _ => failwith "ODD_CONV")
+    | _ => failwith "ODD_CONV"
+end
 
 (*-----------------------------------------------------------------------*)
 (* SUC_CONV "SUC [x]" = |- SUC [x] = [x+1]                               *)

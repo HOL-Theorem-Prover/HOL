@@ -6,6 +6,8 @@ sig
     val GT_CONV  : Abbrev.conv
     val LE_CONV  : Abbrev.conv
     val GE_CONV  : Abbrev.conv
+    val EVEN_CONV: Abbrev.conv
+    val ODD_CONV : Abbrev.conv
     val SUC_CONV : Abbrev.conv
     val PRE_CONV : Abbrev.conv
     val SBC_CONV : Abbrev.conv

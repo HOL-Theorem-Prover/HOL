@@ -16,6 +16,8 @@ sig
     val GT_CONV   : conv
     val LE_CONV   : conv
     val GE_CONV   : conv
+    val ODD_CONV  : conv
+    val EVEN_CONV : conv
     val SUC_CONV  : conv
     val PRE_CONV  : conv
     val SBC_CONV  : conv
