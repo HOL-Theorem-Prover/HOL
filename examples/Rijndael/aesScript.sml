@@ -1,12 +1,23 @@
-app load ["sboxTheory", "RoundOpTheory", "pairTools"]; 
+(*===========================================================================*)
+(* Definition of the encryption and decryption algorithms plus               *)
+(* proof of correctness.                                                     *)
+(*===========================================================================*)
 
-open RoundOpTheory pairTools;
+structure aesScript =
+struct
+
+open HolKernel boolLib bossLib RoundOpTheory pairTools;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
 (*---------------------------------------------------------------------------*)
 
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
+
+val STATE_VAR_TAC = PGEN_TAC (Term `(b0,b1,b2,b3,b4,b5,b6,b7,b8,
+                                     b9,b10,b11,b12,b13,b14,b15):state`);
+
+val _ = new_theory "aes";
 
 (*---------------------------------------------------------------------------*)
 (* Orchestrate the round computations.                                       *)
@@ -31,6 +42,9 @@ val (Round_def, Round_ind) = Defn.tprove
                              (AddRoundKey k (MixColumns 
                                  (ShiftRows (SubBytes state)))))`,
   WF_REL_TAC `measure FST`);
+
+val _ = save_thm ("Round_def", Round_def);
+val _ = save_thm ("Round_ind", Round_ind);
 
 (*---------------------------------------------------------------------------*)
 (*  (InvRound 0 [key] state = AddRoundKey key                                *)
@@ -58,6 +72,8 @@ val (InvRound_def,InvRound_ind) = Defn.tprove
                                      (InvShiftRows state)))))`,
   WF_REL_TAC `measure FST`);
 
+val _ = save_thm ("InvRound_def", InvRound_def);
+val _ = save_thm ("InvRound_ind", InvRound_ind);
 
 (*---------------------------------------------------------------------------
      Generate the key schedule from key. We work using 4-tuples of
@@ -74,18 +90,18 @@ val XOR8x4_def = Define `(a,b,c,d) XOR8x4 (a1,b1,c1,d1)
                                   d XOR8 d1)`;
 
 val SubWord_def = Define 
- `SubWord(b0,b1,b2,b3) = (Sbox b0, Sbox b1, Sbox b2, Sbox b3)`;
+   `SubWord(b0,b1,b2,b3) = (Sbox b0, Sbox b1, Sbox b2, Sbox b3)`;
 
 val RotWord_def = Define 
- `RotWord(b0,b1,b2,b3) = (b1,b2,b3,b0)`;
+   `RotWord(b0,b1,b2,b3) = (b1,b2,b3,b0)`;
 
 val Rcon_def = Define
- `Rcon i = (PolyExp TWO (i-1), ZERO,ZERO,ZERO)`;
+   `Rcon i = (PolyExp TWO (i-1), ZERO,ZERO,ZERO)`;
 
 val unpack_def = Define
- `(unpack [] A = A) /\
-  (unpack ((a,b,c,d)::(e,f,g,h)::(i,j,k,l)::(m,n,o1,p)::rst) A 
-       = unpack rst ((m,i,e,a,n,j,f,b,o1,k,g,c,p,l,h,d)::A))`;
+  `(unpack [] A = A) /\
+   (unpack ((a,b,c,d)::(e,f,g,h)::(i,j,k,l)::(m,n,o1,p)::rst) A 
+        = unpack rst ((m,i,e,a,n,j,f,b,o1,k,g,c,p,l,h,d)::A))`;
 
 (*---------------------------------------------------------------------------*)
 (* Build the keyschedule from a key. This definition is too specific, but    *)
@@ -105,6 +121,9 @@ Defn.tprove
   WF_REL_TAC `measure ($- 44 o FST)`);
 
 
+val _ = save_thm ("expand_def", expand_def);
+val _ = save_thm ("expand_ind", expand_ind);
+
 val mk_keysched_def = Define
  `mk_keysched ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):key)
     = 
@@ -114,11 +133,12 @@ val mk_keysched_def = Define
 
 (*---------------------------------------------------------------------------*)
 (* Generate key schedule, and its inverse, then build the encryption and     *)
-(* decryption functions.                                                     *)
+(* decryption functions. Called AES, since it wraps everything up into a     *)
+(* single package.                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val preCrypt_def = Define
- `preCrypt key =
+val AES_def = Define
+ `AES key =
    let sched = mk_keysched key in
    let isched = REVERSE sched 
    in
@@ -138,6 +158,8 @@ plaintext = (0wx00,0wx11,0wx22,0wx33,0wx44,0wx55,0wx66,0wx77,
 
 ciphertext = (0wx69, 0wxC4, 0wxE0, 0wxD8, 0wx6A, 0wx7B, 0wx4, 0wx30, 
               0wxD8, 0wxCD, 0wxB7, 0wx80, 0wx70, 0wxB4, 0wxC5, 0wx5A) :state;
+
+load "aesTheory";
 
 val key = Term 
    `((F,F,F,F,F,F,F,F),
@@ -175,9 +197,17 @@ val plaintext = Term
     (T,T,T,F,T,T,T,F),
     (T,T,T,T,T,T,T,T)) : state`;
 
+computeLib.add_funs [aesTheory.expand_def,
+                     aesTheory.Round_def,
+                     aesTheory.InvRound_def,
+                     RoundOpTheory.ConstMult_def];
 
-val tm = Term`let (encrypt,decrypt) = preCrypt ^key 
+val tm = Term`let (encrypt,decrypt) = AES ^key 
               in decrypt(encrypt ^plaintext) = ^plaintext`;
+
+val expand_tm = fst(strip_comb(lhs(concl(aesTheory.expand_def))));
+computeLib.monitoring := SOME (same_const expand_tm);
+computeLib.monitoring := NONE;
 
 val thm = Count.apply EVAL tm;
 
@@ -230,8 +260,8 @@ Q.prove
     h21 h22 h23 h24 h25 h26 h27 h28 h29 h30
     h31 h32 h33 h34 h35 h36 h37 h38 h39 h40. 
      expand 44 [h40;h39;h38;h37;h36;h35;h34;h33;h32;h31;h30;h29;h28;
-                 h27;h26;h25;h24;h23;h22;h21;h20;h19;h18;h17;h16;h15;
-                 h14;h13;h12;h11;h10;h9;h8;h7;h6;h5;h4;h3;h2;h1;a;b;c;d]
+                h27;h26;h25;h24;h23;h22;h21;h20;h19;h18;h17;h16;h15;
+                h14;h13;h12;h11;h10;h9;h8;h7;h6;h5;h4;h3;h2;h1;a;b;c;d]
         = 
      expand 4 [a;b;c;d]`,
   REPEAT GEN_TAC 
@@ -343,8 +373,7 @@ val lemma = Q.prove
        o Round 9 (TL sched) 
        o AddRoundKey (HD sched) 
        o to_state) plaintext = plaintext)`,
- PGEN_TAC(Term`(s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15):state`)
-   THEN RW_TAC std_ss [length_11]
+ STATE_VAR_TAC THEN RW_TAC std_ss [length_11]
    THEN RESTR_EVAL_TAC [MultCol,InvMultCol,genMixColumns]
    THEN RW_TAC std_ss [ShiftRows_Inversion,SubBytes_Inversion,
                        AddRoundKey_Idemp,MixColumns_Inversion,
@@ -355,14 +384,144 @@ val lemma = Q.prove
 (* Basic theorem about encryption/decryption                                 *)
 (*---------------------------------------------------------------------------*)
 
-val Rijndael_Correct = 
- Q.prove
-  (`!key plaintext. 
-       let (encrypt,decrypt) = preCrypt key 
-       in 
-         decrypt (encrypt plaintext) = plaintext`,
-   RW_TAC std_ss [preCrypt_def,GSYM combinTheory.o_ASSOC] THEN
+val AES_Correct = Q.store_thm
+  ("AES_Correct",
+   `!key plaintext. 
+       ((encrypt,decrypt) = AES key)
+       ==>
+       (decrypt (encrypt plaintext) = plaintext)`,
+   RW_TAC std_ss [AES_def,GSYM combinTheory.o_ASSOC] THEN
    RW_TAC std_ss [combinTheory.o_THM] THEN
    PROVE_TAC [SIMP_RULE std_ss [combinTheory.o_THM] lemma, keysched_length]);
 
 
+
+(*===========================================================================*)
+(* Alternative decryption approach and its correctness                       *)
+(*===========================================================================*)
+
+
+(*---------------------------------------------------------------------------*)
+(* Map InvMixColumns over the keyschedule before embarking on the            *)
+(* alternative inverse round computation. However, do not alter the first or *)
+(* last element of the keyschedule.                                          *)
+(*---------------------------------------------------------------------------*)
+
+val InvMix_def = Define 
+   `(InvMix [x] = [x]) /\
+    (InvMix (h::t) = InvMixColumns h::InvMix t)`;
+
+val InvMixify_def = Define 
+   `InvMixify (h::t) = h::InvMix t`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Alternative inverse rounds                                                *)
+(*                                                                           *)
+(*  EqInvRound 0 [key] state = AddRoundKey key                               *)
+(*                               (InvShiftRows                               *)
+(*                                 (InvSubBytes state)))                     *)
+(*  EqInvRound n (key::keys) state =                                         *)
+(*      EqInvRound (n-1) keys                                                *)
+(*         (AddRoundKey key                                                  *)
+(*           (InvMixColumns                                                  *)
+(*             (InvShiftRows                                                 *)
+(*               (InvSubBytes state))))                                      *)
+(*---------------------------------------------------------------------------*)
+
+val (EqInvRound_def,EqInvRound_ind) = Defn.tprove
+ (Hol_defn 
+   "EqInvRound"
+   `EqInvRound n keys state =
+      if n=0 
+       then (case keys 
+              of [key] -> AddRoundKey key 
+                            (InvShiftRows 
+                               (InvSubBytes(state))))
+       else (case keys
+              of k::rst -> EqInvRound (n-1) rst
+                              (AddRoundKey k 
+                                (InvMixColumns 
+                                  (InvShiftRows
+                                     (InvSubBytes state)))))`,
+  WF_REL_TAC `measure FST`);
+
+val _ = save_thm ("EqInvRound_def",EqInvRound_def);
+val _ = save_thm ("EqInvRound_ind",EqInvRound_ind);
+
+(*---------------------------------------------------------------------------*)
+(* Grab some constants (to help control symbolic evaluation)                 *)
+(*---------------------------------------------------------------------------*)
+
+val [InvMixColumns] = decls "InvMixColumns";
+val [InvShiftRows]  = decls "InvShiftRows";
+val [InvSubBytes]   = decls "InvSubBytes";
+val [AddRoundKey]   = decls "AddRoundKey";
+
+(*---------------------------------------------------------------------------*)
+(* Prove the equivalence of the alternative scheme                           *)
+(*---------------------------------------------------------------------------*)
+
+val Equiv_lemma = Q.prove
+(`!sched sched' : state list.
+      (LENGTH sched = 11) /\ (sched' = InvMixify sched)
+      ==> 
+       (EqInvRound 9 (TL sched') o AddRoundKey (HD sched')
+         =
+        InvRound 9 (TL sched) o AddRoundKey (HD sched))`,
+  RW_TAC std_ss [] THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC 
+    THEN POP_ASSUM MP_TAC 
+    THEN RW_TAC std_ss [length_11]
+    THEN RW_TAC list_ss [InvMixify_def]
+    THEN MATCH_MP_TAC (PROVE [combinTheory.o_THM] 
+           (Term `(!s:state. f s = g s) ==> (f (h s) = g (h s))`))
+    THEN RESTR_EVAL_TAC [InvMixColumns,InvShiftRows,AddRoundKey,InvSubBytes]
+    THEN RW_TAC std_ss [InvShiftRows_InvSubBytes_Commute,
+                        GSYM InvMixColumns_Distrib]);
+
+val LENGTH_REVERSE = Q.prove
+(`!l. LENGTH(REVERSE l) = LENGTH l`,
+ Induct THEN RW_TAC list_ss []);
+
+(*---------------------------------------------------------------------------*)
+(* Encrypt as in AES, but use alternative decryptor.                         *)
+(*---------------------------------------------------------------------------*)
+
+val altAES_def = Define
+ `altAES key =
+   let sched = mk_keysched key in
+   let isched = InvMixify (REVERSE sched)
+   in
+     ((from_state o Round 9 (TL sched) 
+                  o AddRoundKey (HD sched) o to_state),
+      (from_state o EqInvRound 9 (TL isched) 
+                  o AddRoundKey (HD isched) o to_state))`;
+
+(*---------------------------------------------------------------------------*)
+(* Equality of AES and altAES                                                *)
+(*---------------------------------------------------------------------------*)
+
+val altAES_eq_AES = Q.prove
+(`!k. altAES k = AES k`,
+ RW_TAC std_ss [altAES_def, AES_def] THEN
+ MATCH_MP_TAC (PROVE [combinTheory.o_THM] 
+                     (Term `(f=g) ==> (h o f = h o g)`)) THEN
+ REWRITE_TAC [combinTheory.o_ASSOC] THEN 
+ MATCH_MP_TAC (PROVE [combinTheory.o_THM] (Term `(f=g) ==> (f o h = g o h)`))
+ THEN RW_TAC std_ss [Equiv_lemma,LENGTH_REVERSE,keysched_length]);
+
+(*---------------------------------------------------------------------------*)
+(* Hence correctness of alternative decryptor                                *)
+(*---------------------------------------------------------------------------*)
+
+val altAES_Correct = Q.store_thm
+ ("altAES_Correct",
+  `!key plaintext. 
+       ((encrypt,decrypt) = altAES key)
+        ==>
+        (decrypt (encrypt plaintext) = plaintext)`,
+   PROVE_TAC [AES_Correct,altAES_eq_AES]);
+
+val _ = export_theory();
+
+end

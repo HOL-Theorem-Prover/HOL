@@ -70,9 +70,9 @@ val E_HEX_def  = Define  `E_HEX = (F,F,F,F,T,T,T,F)`;
 val B2N = Define `(B2N T = 1) /\ (B2N F = 0)`;
 
 val BYTE_TO_NUM = Define 
-  `BYTE_TO_NUM (b7,b6,b5,b4,b3,b2,b1,b0) =
-     128*B2N(b7) + 64*B2N(b6) + 32*B2N(b5) + 
-      16*B2N(b4) + 8*B2N(b3) + 4*B2N(b2) + 2*B2N(b1) + B2N(b0)`;
+   `BYTE_TO_NUM (b7,b6,b5,b4,b3,b2,b1,b0) =
+      128*B2N(b7) + 64*B2N(b6) + 32*B2N(b5) + 
+       16*B2N(b4) +  8*B2N(b3) +  4*B2N(b2) + 2*B2N(b1) + B2N(b0)`;
 
 (*---------------------------------------------------------------------------*)
 (* XOR and AND on bytes                                                      *)
