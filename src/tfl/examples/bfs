@@ -8,17 +8,15 @@
 (*===========================================================================*)
 
 load "metisLib";
-open TotalDefn listTheory metisLib;
+open TotalDefn listTheory listSyntax metisLib;
 
 (*---------------------------------------------------------------------------*)
 (* Syntax fiddling so that HOL identifiers, which are almost all upper-case, *)
 (* are spelt the same as their ML counterparts.                              *)
 (*---------------------------------------------------------------------------*)
 
-val _ = overload_on ("null",  listSyntax.null_tm);
-val _ = overload_on ("map",   listSyntax.map_tm);
-val _ = overload_on ("filter",listSyntax.filter_tm);
-val _ = overload_on ("flat",  listSyntax.flat_tm);
+val _ = map overload_on [("null",  null_tm), ("map",map_tm),
+                         ("filter",filter_tm), ("flat",flat_tm)];
 
 (*---------------------------------------------------------------------------*)
 (* Trivial lemmas, should be in listTheory already                           *)
@@ -27,7 +25,7 @@ val _ = overload_on ("flat",  listSyntax.flat_tm);
 val NULL_ELIM = Q.prove
 (`!l. null l = (l=[])`, Cases THEN RW_TAC list_ss []);
 
-val FLAT_CONS_DISTRIB = Q.prove
+val FLAT_CONS_APPEND = Q.prove
 (`!L1 L2. flat (L1 :: L2) = L1 ++ FLAT L2`,
  Induct THEN RW_TAC list_ss []);
 
@@ -107,7 +105,7 @@ val tsize_def =  (* Need a bespoke termination measure *)
    (ltsize [] = 0) /\
    (ltsize (h::t) = tsize h + ltsize t)`;
 
-val SUBTREES_SMALLER = Q.prove
+val subtrees_smaller = Q.prove
 (`!t. ltsize (subtrees t) < tsize t`,
  Cases THEN RW_TAC list_ss [subtrees_def, tsize_def]);
 
@@ -122,7 +120,7 @@ val [bfs_eqn, bfs_ind] = CONJUNCTS
   THEN WF_REL_TAC `measure ltsize`
   THEN Induct THEN RW_TAC list_ss [tsize_def,ltsize_append]
   THEN Cases_on `null x` THEN FULL_SIMP_TAC list_ss [NULL_ELIM]
-  THEN PROVE_TAC [DECIDE(Term`a<b /\ c<d ==> a+c < b+d`),SUBTREES_SMALLER])));
+  THEN PROVE_TAC [DECIDE(Term`a<b /\ c<d ==> a+c < b+d`),subtrees_smaller])));
 
 (*---------------------------------------------------------------------------*)
 (* Queue-based bfs ... nifty!                                                *)
@@ -154,9 +152,9 @@ val (bfsq_eqn, bfsq_ind) =
 
 val lem = Q.prove
 (`!L1 L2.
-   bfsq P (L1 ++ flat (map subtrees L2)) 
-   =
- filter P (map root L1) ++ bfsq P (flat (map subtrees L2 ++ map subtrees L1))`,
+  bfsq P (L1 ++ flat (map subtrees L2)) 
+     =
+  filter P (map root L1) ++ bfsq P (flat (map subtrees L2 ++ map subtrees L1))`,
  Induct THEN RW_TAC list_ss [] 
    THEN Q.PAT_ASSUM `$!M` (ASSUME_TAC o Q.SPEC `L2 ++ [h]`)
    THEN FULL_SIMP_TAC list_ss []
@@ -185,4 +183,4 @@ val bfs_eq_bfsq = Q.prove
 (`!tlist:'a tree list. flat (bfs P tlist) = bfsq P tlist`,
  recInduct bfs_ind THEN Cases THENL
  [RW_TAC list_ss [Once bfsq_eqn, Once bfs_eqn],
-  METIS_TAC [NULL_DEF, bfs_eqn, FLAT_CONS_DISTRIB, bfsq_lem]]);
+  METIS_TAC [NULL_DEF, bfs_eqn, FLAT_CONS_APPEND, bfsq_lem]]);

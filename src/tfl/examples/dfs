@@ -1,87 +1,95 @@
 (*---------------------------------------------------------------------------*)
-(* Depth first search in directed graphs which can contain cycles.           *)
-(* Termination argument due to Scott Owens.                                  *)
+(* Depth first search in directed graphs that can contain cycles.            *)
 (*---------------------------------------------------------------------------*)
+ 
+app load ["metisLib", "pred_setLib", "containerTheory"];
 
-load "pred_setLib";  open pred_setTheory pred_setLib;
+quietdec := true;
+open pred_setTheory pred_setLib metisLib 
+     relationTheory listTheory containerTheory;
+quietdec := false;
 
-val SET_EQ_THM = EXTENSION;
+val set_ss = list_ss ++ PRED_SET_ss;
+val dnf_ss = bool_ss ++ boolSimps.DNF_ss ++ rewrites [AND_IMP_INTRO];
 
-(*---------------------------------------------------------------------------*)
-(* Not used, but could be useful in pred_setTheory. Maybe.                   *)
-(*---------------------------------------------------------------------------*)
-
-val PSUBSET_DIFF = Q.prove
-(`!U A B. A PSUBSET B /\ B SUBSET U ==> (U DIFF B) PSUBSET (U DIFF A)`,
- SRW_TAC [] [PSUBSET_MEMBER] THENL
- [FULL_SIMP_TAC std_ss [PSUBSET_DEF,DIFF_DEF,SUBSET_DEF]
-  THEN SRW_TAC [] [] THEN PROVE_TAC [],
-  PROVE_TAC [SUBSET_DEF]]);
-
+val FOLDR_UNROLL = Q.prove
+(`!f x b l. FOLDR f (f x b) l = FOLDR f b (l ++ [x])`,
+ Induct_on `l` THEN RW_TAC list_ss []);
 
 (*---------------------------------------------------------------------------*)
-(* DFS is given a somewhat curious definition because of termination reqt.   *)
-(* We enforce that there are only finitely many nodes in the graph by use of *)
-(* "Nodes" (actually parent nodes). The parent nodes of the graph are those  *)
-(* that have a non-empty list of children via G. If the parent nodes are     *)
-(* finite then the entire graph is finite, because there can only be         *)
-(* finitely many children of any parent (because G produces a list).         *)
+(* A graph is a function of type 'a -> 'a list.                              *) 
+(* A node is a parent if it has children.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val Nodes = Define `Nodes G = {x | ~(G x = [])}`;
-
-val DFS_defn = Hol_defn 
- "DFS" 
- `DFS seen to_see (acc:'b) = 
-   if FINITE (Nodes G)
-   then case (to_see:'a list)
-         of [] -> acc 
-         || h::t -> if h IN seen 
-                      then DFS seen t acc 
-                       else DFS (h INSERT seen) (APPEND (G h) t) (f h acc)
-   else acc`;
-
+val Parents = Define `Parents G = {x | ~(G x = [])}`;
 
 (*---------------------------------------------------------------------------*)
-(* Termination proof. In the first recursive call, the to_see list is        *)
-(* shorter. In the second recursive call, the seen and to_see argument can   *)
-(* both increase, but in different circumstances. The head (h)of the to_see  *)
-(* list has not been seen. But we don't know whether it's a parent in the    *)
-(* graph. Suppose it is; then adding it to seen decreases the number of      *)
-(* unseen nodes in the graph. If h is not a parent, then it has no children, *)
-(* and pushing them onto the to_see list decreases its length.               *)
+(* DFS :('a -> 'a list) ->   (* graph *)                                     *)
+(*      ('a -> 'b -> 'b) ->  (* folding function *)                          *)
+(*      'a list ->           (* nodes seen *)                                *)
+(*      'a list ->           (* fringe to visit *)                           *)
+(*      'b ->                (* accumulator *)                               *)
+(*      'b                   (* final result *)                              *)
+(*                                                                           *)
+(* Because of termination requirement, DFS checks that the given graph has   *)
+(* finite Parents.  If the Parents set is finite then the graph has only     *)
+(* finitely many edges (because G produces a list of childern, a node has    *)
+(* only finitely many children) and DFS must terminate.                      *)
 (*---------------------------------------------------------------------------*)
 
-val R = Define 
-    `Rel (G:'a -> 'a list) (seen:'a set, to_see:'a list, acc:'b)
-       = (CARD(Nodes G DIFF seen), LENGTH to_see)`;
+val DFS_defn = Hol_defn "DFS" 
+ `DFS G f seen to_visit acc = 
+   if FINITE (Parents G)
+      then case to_visit
+           of [] -> acc 
+           || (visit_now :: visit_later) ->
+              if MEM visit_now seen 
+                then DFS G f seen visit_later acc 
+                else DFS G f (visit_now :: seen)
+                             (G visit_now ++ visit_later)
+                             (f visit_now acc)
+      else ARB`;
+
+(*---------------------------------------------------------------------------*)
+(* Termination proof. In the first recursive call, the to_visit list is      *)
+(* shorter. In the second recursive call, the seen and to_visit argument can *)
+(* both increase, but in different circumstances.  In this case, visit_now   *)
+(* has not been seen.  If it is a Parent in the graph, then adding it to     *)
+(* seen decreases the number of unseen parents in the graph. If it is not a  *)
+(* parent, then it has no children, and so the to_visit list shrinks.        *)
+(*---------------------------------------------------------------------------*)
+
+val Rel = Define 
+ `Rel(G,f,seen,to_visit,acc) = 
+    (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH to_visit)`;
 
 val (def,ind) = Defn.tprove
 (DFS_defn,
- WF_REL_TAC `inv_image ($< LEX $<) (Rel (G:'a -> 'a list))` 
-   THEN RW_TAC list_ss [R]
-   THEN Cases_on `G v = []` THEN RW_TAC list_ss [] THENL
-   [DISJ2_TAC THEN `~(v IN Nodes G)` by SRW_TAC [] [Nodes] 
-      THEN PROVE_TAC [DELETE_NON_ELEMENT,DIFF_INSERT],
-    DISJ1_TAC THEN `v IN Nodes G` by SRW_TAC [] [Nodes] 
-      THEN MATCH_MP_TAC 
-           (Ho_Rewrite.REWRITE_RULE [GSYM RIGHT_FORALL_IMP_THM,AND_IMP_INTRO] 
-                 CARD_PSUBSET)
-      THEN SRW_TAC [] [FINITE_DIFF,PSUBSET_DEF, SUBSET_DEF,
-                       DIFF_INSERT,DIFF_DEF,IN_DELETE,SET_EQ_THM]
-      THEN PROVE_TAC []]);
+ WF_REL_TAC `inv_image ($< LEX $<) Rel`
+   THEN RW_TAC set_ss [Rel]
+   THEN Cases_on `v IN Parents G` 
+   THENL [DISJ1_TAC, DISJ2_TAC] THENL 
+   [MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET)
+     THEN RW_TAC set_ss [FINITE_DIFF,PSUBSET_DEF, SUBSET_DEF, 
+                         DIFF_INSERT, DIFF_DEF,IN_DELETE,EXTENSION]
+     THEN METIS_TAC [],
+    `G v = []` by FULL_SIMP_TAC set_ss [Parents]
+      THEN RW_TAC set_ss [LIST_TO_SET_THM] 
+      THEN METIS_TAC [DELETE_NON_ELEMENT,DIFF_INSERT]]);
 
 (*---------------------------------------------------------------------------*)
 (* Desired recursion equations, constrained by finiteness of graph.          *)
 (*---------------------------------------------------------------------------*)
 
 val DFS_DEF = Q.prove
-(`FINITE (Nodes G) ==> 
-  (DFS G f (seen:'a set) [] acc = (acc:'b)) /\
-  (DFS G f seen (h::t) acc =
-      if (h:'a) IN seen 
-        then DFS G f seen t acc
-        else DFS G f (h INSERT seen) (APPEND (G h) t) (f h acc))`,
+(`FINITE (Parents G) ==> 
+  (DFS G f seen [] acc = acc) /\
+  (DFS G f seen (visit_now :: visit_later) acc =
+    if MEM visit_now seen 
+       then DFS G f seen visit_later acc
+       else DFS G f (visit_now :: seen)
+                    (G visit_now ++ visit_later)
+                    (f visit_now acc))`,
  RW_TAC std_ss [] THENL
  [RW_TAC list_ss [def],
   GEN_REWRITE_TAC LHS_CONV empty_rewrites [def] THEN RW_TAC list_ss [],
@@ -90,22 +98,195 @@ val DFS_DEF = Q.prove
 
 
 (*---------------------------------------------------------------------------*)
-(* Desired induction theorem. Use of it requires G to be instantiated first. *)
-(* Is there a more convenient way to formulate this, so that G would be      *)
-(* instantiated automatically, say by HO_MATCH_MP_TAC?                       *)
+(* Desired induction theorem for DFS.                                        *)
 (*---------------------------------------------------------------------------*)
 
 val DFS_IND = Q.prove
-(`!P:'a set->'a list->'b->bool. 
-     FINITE (Nodes G) /\
-     (!seen acc. P seen [] acc) /\
-     (!seen h t acc. 
-         (~(h IN seen) ==> P (h INSERT seen) (APPEND (G h) t) (f h acc)) /\
-           (h IN seen ==> P seen t acc) ==> P seen (h::t) acc) 
-      ==>
-        !v v1 v2. P v v1 v2`,
+(`!P.
+    (!G f seen visit_now visit_later acc. 
+       P G f seen [] acc /\
+       ((FINITE (Parents G) /\ ~MEM visit_now seen ==>
+            P G f (visit_now :: seen)
+                  (G visit_now ++ visit_later)
+                  (f visit_now acc)) /\
+        (FINITE (Parents G) /\ MEM visit_now seen ==>
+            P G f seen visit_later acc)
+         ==> P G f seen (visit_now :: visit_later) acc))
+   ==>
+   !v v1 v2 v3 v4. P v v1 v2 v3 v4`,
  NTAC 2 STRIP_TAC 
-  THEN HO_MATCH_MP_TAC ind
-  THEN REPEAT GEN_TAC THEN Cases_on `to_see`
-  THEN RW_TAC list_ss []);
+ THEN HO_MATCH_MP_TAC ind
+ THEN REPEAT GEN_TAC THEN Cases_on `to_visit`
+ THEN RW_TAC list_ss []);
+
+(*---------------------------------------------------------------------------*)
+(* Some basic lemmas about DFS                                               *)
+(*---------------------------------------------------------------------------*)
+
+val DFS_CONS = Q.prove
+(`!G f seen to_visit acc a b.
+    FINITE (Parents G) /\ (f = CONS) /\ (acc = APPEND a b) 
+      ==>
+    (DFS G f seen to_visit acc = DFS G f seen to_visit a ++ b)`,
+ recInduct DFS_IND 
+  THEN RW_TAC list_ss [DFS_DEF] THEN METIS_TAC [APPEND]);
+
+val DFS_FOLD = Q.prove
+(`!G f seen to_visit acc. 
+    FINITE (Parents G) 
+       ==>
+   (DFS G f seen to_visit acc = FOLDR f acc (DFS G CONS seen to_visit []))`,
+ recInduct DFS_IND THEN 
+ RW_TAC list_ss [DFS_DEF] THEN METIS_TAC [FOLDR_UNROLL,DFS_CONS,APPEND]);
+
+val DFS_ALL_DISTINCT_LEM = Q.prove
+(`!G f seen to_visit acc. 
+    FINITE (Parents G) /\ (f = CONS) /\
+    ALL_DISTINCT acc /\ (!x. MEM x acc ==> MEM x seen)
+      ==>
+    ALL_DISTINCT (DFS G f seen to_visit acc)`,
+ recInduct DFS_IND THEN RW_TAC list_ss [DFS_DEF] THEN METIS_TAC []);
+
+val DFS_ALL_DISTINCT = Q.prove
+(`!G seen to_visit. 
+    FINITE (Parents G) ==> ALL_DISTINCT (DFS G CONS seen to_visit [])`,
+ RW_TAC list_ss [DFS_ALL_DISTINCT_LEM]);
+
+(*---------------------------------------------------------------------------*)
+(* Definition of reachability in a graph of the kind we are using here.      *)
+(*---------------------------------------------------------------------------*)
+
+val REACH_DEF = Define `REACH G = RTC (\x y. MEM y (G x))`;
+
+val REACH_LIST_DEF = Define
+ `REACH_LIST G nodes y = ?x. MEM x nodes /\ y IN REACH G x`;
+
+(*---------------------------------------------------------------------------*)
+(* Removing a set of nodes ex from G.                                        *)
+(*---------------------------------------------------------------------------*)
+
+val EXCLUDE_DEF = Define
+ `EXCLUDE G ex node = if node IN ex then [] else G node`;
+
+(*---------------------------------------------------------------------------*)
+(* Lemmas about reachability and restricted graphs.                          *)
+(*---------------------------------------------------------------------------*)
+
+val EXCLUDE_LEM = Q.prove (
+`!G x l. EXCLUDE G (x INSERT l) = EXCLUDE (EXCLUDE G l) {x}`,
+ RW_TAC set_ss [FUN_EQ_THM,EXTENSION, EXCLUDE_DEF, IN_INSERT, NOT_IN_EMPTY]
+  THEN METIS_TAC[]);
+
+val REACH_EXCLUDE = Q.prove (
+`!G x. REACH (EXCLUDE G x) = RTC (\x' y. ~(x' IN x) /\ MEM y (G x'))`,
+ RW_TAC set_ss [REACH_DEF, EXCLUDE_DEF] THEN AP_TERM_TAC 
+  THEN RW_TAC set_ss [FUN_EQ_THM] 
+  THEN RW_TAC set_ss []);
+
+(*---------------------------------------------------------------------------*)
+(* A node is reachable from p iff it is reachable from a child of p on a     *)
+(* path not containing p.                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val REACH_LEM1 = Q.prove (
+`!p G seen. 
+    ~(p IN seen) ==>
+     (REACH (EXCLUDE G seen) p =
+      p INSERT (REACH_LIST (EXCLUDE G (p INSERT seen)) (G p)))`,
+ RW_TAC set_ss [EXTENSION,SPECIFICATION,REACH_EXCLUDE,REACH_LIST_DEF] 
+  THEN Cases_on `p = x` 
+  THEN RW_TAC list_ss [RTC_RULES] THEN EQ_TAC THEN RW_TAC bool_ss [] THENL
+ [Q.PAT_ASSUM `$~a` MP_TAC THEN POP_ASSUM MP_TAC 
+   THEN Q.SPEC_TAC (`x`,`q`) THEN Q.ID_SPEC_TAC `p` 
+   THEN HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 THEN RW_TAC bool_ss [] 
+   THEN Cases_on `p' = x'` THEN FULL_SIMP_TAC bool_ss [] THENL
+   [METIS_TAC [RTC_RULES],
+    Q.EXISTS_TAC `x''` THEN RW_TAC bool_ss [Once RTC_CASES2] THEN METIS_TAC[]],
+  `RTC (\x' y. ~seen x' /\ MEM y (G x')) x' x` by
+    (MATCH_MP_TAC (SIMP_RULE dnf_ss [] RTC_MONOTONE) 
+      THEN Q.EXISTS_TAC `\x' y. (~(x' = p) /\ ~seen x') /\ MEM y (G x')` 
+      THEN RW_TAC list_ss []) THEN
+  RW_TAC bool_ss [Once RTC_CASES1] THEN METIS_TAC []]);
+
+(*---------------------------------------------------------------------------*)
+(* If y is reachable from x, but not z, then y is reachable from x on a path *)
+(* that does not include z.                                                  *) 
+(*---------------------------------------------------------------------------*)
+
+val REACH_LEM2 = Q.prove (
+`!G x y. REACH G x y ==> !z. ~REACH G z y ==> REACH (EXCLUDE G {z}) x y`,
+ STRIP_TAC THEN REWRITE_TAC [REACH_EXCLUDE, REACH_DEF, IN_SING] THEN
+ HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 THEN RW_TAC set_ss [RTC_RULES] THEN
+ POP_ASSUM MP_TAC THEN RW_TAC set_ss [Once RTC_CASES2] THEN
+ POP_ASSUM (MP_TAC o Q.SPEC `x'`) THEN RW_TAC set_ss [] THEN
+ RW_TAC set_ss [Once RTC_CASES2] THEN METIS_TAC [RTC_RULES]);
+
+(*---------------------------------------------------------------------------*)
+(* If DFS visits x, then x is reachable or is in the starting accumulator    *)
+(*---------------------------------------------------------------------------*)
+
+val DFS_REACH_1 = Q.prove
+(`!G f seen to_visit acc. 
+    FINITE (Parents G) /\ (f = CONS) ==>
+    !x. MEM x (DFS G f seen to_visit acc) ==>
+      x IN (REACH_LIST G to_visit) \/ MEM x acc`,
+ recInduct DFS_IND 
+   THEN RW_TAC set_ss [DFS_DEF, REACH_LIST_DEF, REACH_DEF, IN_DEF] 
+   THENL[METIS_TAC [], ALL_TAC] 
+   THEN POP_ASSUM MP_TAC THEN RW_TAC set_ss [] 
+   THEN POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN RW_TAC set_ss [] THENL
+   [IMP_RES_TAC RTC_RULES THEN METIS_TAC[], 
+    METIS_TAC[], METIS_TAC[RTC_RULES], METIS_TAC[]]);
+
+(*---------------------------------------------------------------------------*)
+(* If x is reachable from to_visit on a path that does not include the nodes *)
+(* in seen, then DFS visits x.                                               *) 
+(*---------------------------------------------------------------------------*)
+
+val DFS_REACH_2 = Q.prove
+(`!G f seen to_visit acc x. 
+    FINITE (Parents G) /\ (f = CONS) /\
+    x IN (REACH_LIST (EXCLUDE G (LIST_TO_SET seen)) to_visit) /\ 
+    ~MEM x seen 
+     ==>
+      MEM x (DFS G f seen to_visit acc)`,
+ recInduct DFS_IND THEN RW_TAC set_ss [DFS_DEF] THENL
+ [(* Base Case *)
+  FULL_SIMP_TAC list_ss [IN_DEF, EXCLUDE_DEF, REACH_LIST_DEF],
+  (* The head of to_visit is in seen *)
+  FULL_SIMP_TAC dnf_ss [SPECIFICATION, REACH_LIST_DEF]
+  THEN RW_TAC list_ss [] THEN
+  POP_ASSUM MP_TAC THEN RW_TAC list_ss [] THEN POP_ASSUM MATCH_MP_TAC THEN
+  FULL_SIMP_TAC set_ss [SPECIFICATION, REACH_LIST_DEF] THENL
+  [FULL_SIMP_TAC set_ss [REACH_EXCLUDE,Once RTC_CASES1,SPECIFICATION],ALL_TAC]
+   THEN METIS_TAC [],
+  (* The head of to_visit is not in seen *)
+  POP_ASSUM MP_TAC THEN RW_TAC set_ss [] THEN
+    POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN RW_TAC list_ss [] THEN
+    Cases_on `x = visit_now` THEN FULL_SIMP_TAC set_ss [] THEN
+    RW_TAC set_ss [] THENL
+    [RW_TAC list_ss [Q.SPECL [`G`, `CONS`, `h::seen`,
+                              `G visit_now ++ visit_later`, `visit_now::acc`,
+                              `[]`, `visit_now::acc`] DFS_CONS],
+     FIRST_ASSUM MATCH_MP_TAC THEN RW_TAC set_ss [] THEN
+       Cases_on `x IN REACH (EXCLUDE G (LIST_TO_SET seen)) visit_now` THENL
+       [POP_ASSUM MP_TAC THEN RW_TAC set_ss [REACH_LEM1] 
+         THEN FULL_SIMP_TAC set_ss [SPECIFICATION,REACH_LIST_DEF,LIST_TO_SET_THM]
+         THEN METIS_TAC [],
+        FULL_SIMP_TAC set_ss [SPECIFICATION, REACH_LIST_DEF,LIST_TO_SET_THM] 
+        THENL [METIS_TAC [], METIS_TAC [REACH_LEM2, EXCLUDE_LEM]]]]]);
+
+(*---------------------------------------------------------------------------*)
+(* x is reachable iff DFS finds it.                                          *)
+(*---------------------------------------------------------------------------*)
+
+val DFS_REACH_THM = Q.prove 
+(`!G to_visit. 
+    FINITE (Parents G) 
+      ==> 
+    !x. x IN REACH_LIST G to_visit = MEM x (DFS G CONS [] to_visit [])`,
+ REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
+ [MATCH_MP_TAC DFS_REACH_2, IMP_RES_TAC DFS_REACH_1] THEN 
+  FULL_SIMP_TAC set_ss [REACH_DEF,REACH_EXCLUDE,SPECIFICATION,REACH_LIST_DEF]
+  THEN METIS_TAC [MEM]);
 

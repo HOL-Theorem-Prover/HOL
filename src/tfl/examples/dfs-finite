@@ -1,0 +1,187 @@
+(*---------------------------------------------------------------------------*)
+(* Finiteness requirement on DFS handled in type system by use of a type     *)
+(* 'a finite.                                                                *)
+(*---------------------------------------------------------------------------*)
+
+app load ["metisLib", "pred_setLib", "containerTheory"];
+open pred_setTheory pred_setLib metisLib relationTheory containerTheory;
+
+val dnf_ss = bool_ss ++ boolSimps.DNF_ss ++ rewrites [AND_IMP_INTRO];
+
+(*---------------------------------------------------------------------------*)
+(* Create a type constructor finite that returns a type with a finite        *)
+(* universe.  If the type argument has a finite universe, the two universes  *)
+(* have equal cardinality.  If it has an infinite universe, the new universe *)
+(* is singleton.                                                             *)
+(*---------------------------------------------------------------------------*)
+
+val finite_TY_DEF = new_type_definition
+("finite",
+ Q.prove(`?x. (\p:'a. if FINITE (UNIV:'a -> bool) then T else p = ARB) x`, 
+         METIS_TAC []));
+
+val finite_REP_ABS_DEF = define_new_type_bijections
+{name = "finite_REP_ABS_DEF",
+ ABS = "finite_ABS", REP = "finite_REP",
+ tyax = finite_TY_DEF};
+
+fun reduce thm = REWRITE_RULE[](BETA_RULE thm);
+
+val finite_ABS_ONE_ONE = reduce(prove_abs_fn_one_one finite_REP_ABS_DEF);
+val finite_ABS_ONTO    = reduce(prove_abs_fn_onto finite_REP_ABS_DEF);
+val finite_REP_ONE_ONE = prove_rep_fn_one_one finite_REP_ABS_DEF;
+val finite_REP_ONTO    = reduce(prove_rep_fn_onto finite_REP_ABS_DEF);
+
+
+val finite_AXIOMS = Q.prove (
+`FINITE (UNIV: 'a -> bool) ==> 
+  (!(r:'a) r'. (finite_ABS r = finite_ABS r') = (r = r')) /\
+  (!a. ?(r:'a). (a = finite_ABS r)) /\
+  (!(a:'a finite) a'. (finite_REP a = finite_REP a') = (a = a')) /\
+  (!(r:'a). ?a. r = finite_REP a)`,
+ METIS_TAC [finite_ABS_ONE_ONE, finite_ABS_ONTO,
+            finite_REP_ONE_ONE, finite_REP_ONTO]);
+
+val finite_SING = Q.prove (
+`~FINITE (UNIV: 'a -> bool) ==> SING (UNIV: 'a finite -> bool)`,
+ ASSUME_TAC finite_ABS_ONTO THEN
+ RW_TAC std_ss [] THEN 
+ FULL_SIMP_TAC std_ss [SING_DEF, UNIV_DEF, EXTENSION, IN_SING] THEN
+ RW_TAC std_ss [SPECIFICATION]);
+
+val finite_FINITE = Q.prove (
+`FINITE (UNIV: 'a finite -> bool)`,
+ Cases_on `FINITE (UNIV:'a -> bool)` THENL
+ [ALL_TAC, RW_TAC std_ss [finite_SING, SING_FINITE]] THEN
+ ASSUME_TAC finite_REP_ONE_ONE THEN
+ `IMAGE finite_REP UNIV = UNIV` by
+     (RW_TAC std_ss [IMAGE_DEF, EXTENSION, UNIV_DEF, GSPECIFICATION] THEN
+      RW_TAC std_ss [IN_DEF] THEN
+      METIS_TAC [finite_REP_ONTO]) THEN
+  METIS_TAC [INJECTIVE_IMAGE_FINITE]);
+
+val finite_CARD = Q.prove (
+`FINITE (UNIV: 'a -> bool) ==>
+  (CARD (UNIV: 'a -> bool) = CARD (UNIV: 'a finite -> bool))`, 
+ RW_TAC std_ss [] THEN
+ `BIJ finite_ABS (UNIV: 'a -> bool) (UNIV: 'a finite -> bool)` by 
+     (RW_TAC std_ss [finite_AXIOMS, BIJ_DEF, INJ_DEF, SURJ_DEF, IN_UNIV] THEN
+      METIS_TAC [finite_AXIOMS]) THEN
+ METIS_TAC [FINITE_BIJ_CARD_EQ, finite_FINITE]);
+
+(*---------------------------------------------------------------------------*)
+(* Define DFS using 'a finite. This gives exactly the recursion equations    *)
+(* that one would write in ML, but 'a finite not definable there.            *)
+(*---------------------------------------------------------------------------*)
+
+val DFS_finite_defn = Hol_defn "DFS_finite" 
+`(DFS_finite (G: 'a finite -> 'a finite list) f seen [] acc = acc) /\
+ (DFS_finite (G: 'a finite -> 'a finite list) f seen (visit_now :: visit_later)
+             acc = 
+   if MEM visit_now seen 
+      then DFS_finite G f seen visit_later acc 
+      else DFS_finite G f (visit_now :: seen)
+                          (G visit_now ++ visit_later)
+                          (f visit_now acc))`;
+
+(*---------------------------------------------------------------------------*)
+(* Termination proof.  In the first recursive call, to_visit shrinks.  In    *)
+(* second recursive call, the number of unseen nodes shrinks.                *)
+(*---------------------------------------------------------------------------*)
+
+val R2 = Define 
+    `Rel2 (G, f, seen, to_visit, acc)
+       = (CARD (UNIV DIFF (LIST_TO_SET seen)), LENGTH to_visit)`;
+
+val (DFS_FINITE_DEF, DFS_FINITE_IND) = Defn.tprove
+(DFS_finite_defn,
+ WF_REL_TAC `inv_image ($< LEX $<) Rel2` 
+  THEN ASSUME_TAC finite_FINITE 
+  THEN RW_TAC list_ss [R2,LIST_TO_SET_THM] THEN DISJ1_TAC 
+  THEN MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET)
+  THEN SRW_TAC [] [FINITE_DIFF,PSUBSET_DEF, SUBSET_DEF,
+                   DIFF_INSERT,DIFF_DEF,IN_DELETE,EXTENSION] 
+  THEN PROVE_TAC []);
+
+(*---------------------------------------------------------------------------*)
+(* Equality of the two versions of DFS.                                      *)
+(*---------------------------------------------------------------------------*)
+
+use "dfs";  (* to define DFS *)
+
+val FINITE_PARENTS = Q.prove 
+(`FINITE (UNIV: 'a -> bool) ==> FINITE (Parents (G: 'a -> 'a list))`,
+ METIS_TAC [SUBSET_UNIV, SUBSET_FINITE]);
+
+val DFS_EQ_THM = Q.prove (
+`!(G: 'a finite -> 'a finite list) f seen to_visit acc.
+    (DFS G f seen to_visit acc = DFS_finite G f seen to_visit acc)`,
+ recInduct DFS_FINITE_IND THEN 
+ RW_TAC std_ss [DFS_DEF, DFS_FINITE_DEF, finite_FINITE, FINITE_PARENTS]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Support for defining finite types.                                        *)
+(*---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* make_finite_type n creates a type with n elements.  If n = 12 the,        *)
+(* type is finite12.  The first n numbers are used for the representation    *)
+(* type.  The produced theorems are:                                         *)
+(* the definition for finiteN_REP and finiteN_ABS                            *)
+(* finiteN_REP is a bijection from UNIV onto (count N)                       *)
+(* UNIV is finite                                                            *)
+(* UNIV has cardinality N                                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun make_finite_type n = 
+let val type_name = "finite" ^ int_to_string n
+    val nt = numSyntax.term_of_int n
+    val finite_TY_DEF = 
+          new_type_definition(type_name,
+                              Q.prove(`?x. (\p. p < ^nt) x`,
+                                      RW_TAC arith_ss []))
+    val type_term = mk_type (type_name, [])
+    val finite_REP_ABS_DEF =
+         define_new_type_bijections
+         {name = type_name ^ "_REP_ABS_DEF",
+          ABS = type_name ^ "_ABS", REP = type_name ^ "_REP",
+          tyax = finite_TY_DEF}
+
+    val finite_ABS_ONE_ONE = reduce(prove_abs_fn_one_one finite_REP_ABS_DEF)
+    val finite_ABS_ONTO    = reduce(prove_abs_fn_onto finite_REP_ABS_DEF)
+    val finite_REP_ONE_ONE = prove_rep_fn_one_one finite_REP_ABS_DEF
+    val finite_REP_ONTO    = reduce(prove_rep_fn_onto finite_REP_ABS_DEF)
+
+    val finite_REP_term = 
+          mk_const (type_name ^ "_REP", Type `:^type_term -> num`)
+    val finite_ABS_term =
+          mk_const (type_name ^ "_ABS", Type `:num -> ^type_term`)
+    val x = ty_antiq type_term
+
+    val REP_BIJ_THM = Q.prove (
+      `BIJ ^finite_REP_term UNIV (count ^nt)`,
+        RW_TAC std_ss [BIJ_DEF, SURJ_DEF, INJ_DEF, finite_REP_ONTO,
+                       finite_REP_ONE_ONE, IN_UNIV] THEN
+        RW_TAC std_ss [count_def, finite_REP_ONTO, GSPECIFICATION] THENL
+        [METIS_TAC [], METIS_TAC [], ALL_TAC] THEN
+        Q.EXISTS_TAC `^finite_ABS_term x` THEN
+        FULL_SIMP_TAC std_ss [count_def, GSPECIFICATION] THEN
+        METIS_TAC [finite_REP_ABS_DEF]);
+
+    val finiteN_FINITE = Q.prove (
+     `FINITE (UNIV: ^x -> bool)`, 
+       `SURJ ^finite_REP_term UNIV (count ^nt)` by
+            METIS_TAC [REP_BIJ_THM, BIJ_DEF] THEN
+       FULL_SIMP_TAC std_ss [IMAGE_SURJ] THEN
+       METIS_TAC [INJECTIVE_IMAGE_FINITE, FINITE_COUNT, finite_REP_ONE_ONE]);
+
+    val finiteN_CARD = Q.prove (
+      `CARD (UNIV: ^x -> bool) = ^nt`, 
+        METIS_TAC [finiteN_FINITE, FINITE_COUNT, CARD_COUNT,
+                   FINITE_BIJ_CARD_EQ, REP_BIJ_THM]);   
+in
+(finite_REP_ABS_DEF, REP_BIJ_THM, finiteN_FINITE, finiteN_CARD)
+end
+
+
