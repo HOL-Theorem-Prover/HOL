@@ -729,7 +729,8 @@ fun CHOOSE (v,xth) bth =
        instantiated the occurrence of v in A1 to something else, applied
        the restrictive rule, and then instantiated it back again.
 
-       Credit for pointing out this optimisation to Jim Grundy. *)
+       Credit for pointing out this optimisation to Jim Grundy and
+       Tom Melham. *)
   in make_thm Count.Choose
        (Tag.merge (tag xth) (tag bth), newhyps,  b_c)
   end
