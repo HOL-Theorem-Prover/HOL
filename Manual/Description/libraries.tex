@@ -1,6 +1,7 @@
 \chapter{Libraries}\label{HOLlibraries}
 
 \newcommand{\simpset}{simpset}
+
 {
  \newcommand{\term}      {\mbox{\it term}}
  \newcommand{\IMP}       {\mbox{\tt ==>}}
@@ -34,58 +35,6 @@ types and terms.
 The HOL grammar gets extended when a new constant is introduced. The
 introduction of new constants is discussed in
 Sections~\ref{sec:constant-definitions} and \ref{conspec}. 
-
-The type inference \index{type checker, for HOL logic vs ML@type
-  checker, for \HOL{} logic \emph{vs} \ML} algorithm used for the
-\HOL{} logic is almost identical to that used for \ML. For example,
-the \ML{} expression \ml{fn~x~=>~x} will be ascribed \ML{} type
-\ml{'a~->~'a}, and the \HOL{} term constructed by \verb+``\x.x``+ will
-get an analogous type, as shown in the session below.  This session
-also shows that a \HOL{} term has both an \ML{} type (namely
-\ml{term}) and a \HOL{} type (\ml{:'a~->~'a} in this case).
-
-\begin{session}
-\begin{verbatim}
-- ``\x. x``;
-<<HOL message: inventing new type variable names: 'a.>>
-> val it = ``\x. x`` : term
-
-- type_of it;
-> val it = ``:'a -> 'a`` : hol_type
-\end{verbatim}
-\end{session}
-
-\noindent For terms of polymorphic type, \ie, terms whose types have
-type variables, the type checker will invent names for the type
-variables (as in the above session).  This is further shown in the
-following session (in which we first tell the \HOL\ printer to output
-type information):
-
-\begin{session}
-\begin{verbatim}
-- show_types := true;
-> val it = () : unit
-
-- Term `f x`;
-<<HOL message: inventing new type variable names: 'a, 'b.>>
-> val it = `(f :'a -> 'b) (x :'a)` : term
-\end{verbatim}
-\end{session}
-
-\noindent In this example, {\small\verb+x+} is unconstrained in the term
-{\small\verb+f x+}, since it appears only as an argument. The system assigns
-it the type variable {\small\verb+'a+}. On the other hand, {\small\verb+f+} is a function,
-since it is applied to {\small\verb+x+}. Thus {\small\verb+f+} has a
-function type, the domain of which is {\small\verb+'a+}; moreover, since
-the result of the application is also unconstrained, the range of the
-function type is chosen to be the next type variable different from
-{\small\verb+'a+}, \ie, {\small\verb+'b+}.
-
-Allowing the system to invent type variables introduces a degree of
-non-determinism that may not be suitable for some applications. In such
-cases, explicit type constraints should be used. The system can be
-prevented from inventing type variables by setting the flag
-{\small\verb+Globals.guessing_tyvars+} to {\small\verb+false+}.
 
 \subsection{Type constraints}
 
@@ -552,7 +501,6 @@ The changes which may cause old terms to fail to parse are:
   unless the relevant theories have been loaded.  Nor can these
   literals be used as variables inside binding scopes.
 \end{itemize}
-
 
 
 \section{A simple proof manager}\label{sec:goalstack}

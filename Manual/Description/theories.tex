@@ -258,6 +258,16 @@ are restrictions of the existential and universal quantifiers:
                            (RES_ABSTRACT P m1 = RES_ABSTRACT P m2)
 \end{verbatim}
 %
+The
+definition of \ml{RES\_ABSTRACT} is a characterising formula, rather
+than a direct equation.  There are two important properties
+\begin{itemize}
+\item if $y$ is an element of $P$ then $(${\small\verb+\+}$x :: P.\; M)
+  y = M[y/x]$
+\item If two restricted abstractions agree on all values over their
+  (common) restricting set, then they are equal.
+\end{itemize}
+
 For completeness, restricted versions of unique existence and 
 indefinite description are provided, although hardly used.
 \begin{verbatim}
@@ -270,16 +280,7 @@ indefinite description are provided, although hardly used.
 
 The definition of \ml{RES\_EXISTS\_UNIQUE} uses the restricted
 quantification syntax with the {\small\verb+::+} symbol, referring to
-the earlier definitions \ml{RES\_EXISTS} and \ml{RES\_FORALL}.  The
-definition of \ml{RES\_ABSTRACT} is a characterising formula, rather
-than a direct equation.  There are two important properties
-\begin{itemize}
-\item if $y$ is an element of $P$ then $(${\small\verb+\+}$x :: P.\; M)
-  y = M[y/x]$
-\item If two restricted abstractions agree on all values over their
-  (common) restricting set, then they are equal.
-\end{itemize}
-
+the earlier definitions \ml{RES\_EXISTS} and \ml{RES\_FORALL}.  
 The \texttt{::} syntax is used with restricted quantifiers to allow
 arbitrary predicates to restrict binding variables.  Further to the
 above, the default grammar also allows restricted quantification of
@@ -291,175 +292,6 @@ the end of the sequence, thus with a universal quantification:
 \] 
 %
 Here the predicate $P$ restricts all of $x$, $y$ and $z$.
-
-%
-%\index{types, in HOL logic@types, in \HOL{} logic!dependent}
-%\index{dependent types in HOL logic@dependent types in \HOL{} logic}
-%\index{quantifiers!restricted}
-%
-%The theory \ml{res\_quan} contains the definitions of the constants
-%{\small\verb!RES_FORALL!}, {\small\verb!RES_EXISTS!},
-%{\small\verb!RES_SELECT!}, and {\small\verb!RES_ABSTRACT!},
-%which are used to support restricted
-%quantification\index{quantifiers!restricted} in the \HOL{} logic.  This
-%implements a method of simulating subtypes and dependent types with
-%predicates. The definitions are:
-%
-%\begin{hol}
-%\index{RES_FORALL@\ml{RES\_FORALL}}
-%\index{RES_EXISTS@\ml{RES\_EXISTS}}
-%\index{RES_SELECT@\ml{RES\_SELECT}}
-%\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}
-%\index{ARB@\ml{ARB}}
-%\begin{verbatim}
-%   RES_FORALL   |- !P B. RES_FORALL P B = (!x. P x ==> B x)
-%
-%   RES_EXISTS   |- !P B. RES_EXISTS P B = (?x. P x /\ B x)
-%
-%   RES_SELECT   |- !P B. RES_SELECT P B = (@x. P x /\ B x)
-%
-%   RES_ABSTRACT |- !P B. RES_ABSTRACT P B = (\x. if P x then B x else ARB)
-%\end{verbatim}\end{hol}
-%
-%
-%The new syntax automatically translates as follows:
-%
-%\begin{hol}
-%{\small\verb%   \%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_ABSTRACT %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-%{\small\verb%   !%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_FORALL   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-%{\small\verb%   ?%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_EXISTS   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-%{\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_SELECT   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}
-%\end{hol}
-%
-%Anything can be written between the binder and `\ml{::}' that can be
-%written between the binder and `\ml{.}`. See the examples below.
-%
-%Currently no derived rules are provided to support this notation, so
-%any inferences will need to work on the underlying semantic
-%representation.
-%
-%User-defined binders can also have restricted forms, which are set up
-%with the function:
-%
-%\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}|pin}
-%\begin{verbatim}
-%   associate_restriction : (string * string) -> *
-%\end{verbatim}\end{boxed}
-%
-%
-%\noindent If \m{c} is the name
-%of a binder and \ml{RES\_}\m{c} is the name of a suitable constant (which
-%must be explicitly defined), then executing:
-%
-%\begin{hol}
-%{\small\verb%   associate_restriction(`%}$c${\small\verb%`, `RES_%}$c${\small\verb%`)%}
-%\end{hol}
-%
-%\noindent will cause the parser and pretty-printer to support:
-%
-%\begin{hol}
-%{\small\verb%   %}$c$ $v${\small\verb%::%}$P${\small\verb%. %}$B${\small\verb%    <---->   RES_%}$c$ $P${\small\verb% (\%}$v${\small\verb%. %}$B${\small\verb%)%}
-%\end{hol}
-%
-%Here is an example session:
-%
-%\setcounter{sessioncount}{1}
-%\begin{session}\begin{verbatim}
-%#"!x y::P. x<y";;
-%"!x y :: P. x < y" : term
-%
-%#set_flag(`print_restrict`, false);;
-%true : bool
-%
-%#"!x y::P. x<y";;
-%"RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
-%
-%#"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
-%"RES_EXISTS
-% (\(m,n). m < n)
-% (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
-%: term
-%
-%#"\x y z::P.[0;x;y;z]";;
-%"RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
-%: term
-%\end{verbatim}\end{session}
-%
-%A conversion that rewrites away the constants \ml{RES\_ABSTRACT},
-%\ml{RES\_FORALL}, \ml{RES\_EXISTS} and \ml{RES\_SELECT} is:
-%
-%\begin{hol}\begin{verbatim}
-%   let RESTRICT_CONV =
-%        (PURE_REWRITE_CONV [definition `bool` `RES_ABSTRACT`;
-%                            definition `bool` `RES_FORALL`;
-%                            definition `bool` `RES_EXISTS`;
-%                            definition `bool` `RES_SELECT`])
-%        THENC (DEPTH_CONV BETA_CONV)
-%\end{verbatim}\end{hol}
-%
-%\noindent This is a bit unsatisfactory, as is shown by the artificial
-%example below:
-%
-%\setcounter{sessioncount}{1}
-%\begin{session}\begin{verbatim}
-%#let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
-%t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
-%
-%#RESTRICT_CONV t;;
-%|- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
-%   (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
-%\end{verbatim}\end{session}
-%
-%The variable $x$ in the definitions of the constants
-%\ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
-%\ml{RES\_SELECT} gets confused with the variable in the supplied term.
-%This can be avoided by changing \ml{RESTRICT\_CONV} to perform
-%explicit alpha-conversion. For example, by implementing a conversion:
-%
-%\begin{hol}
-%{\small\verb%   RES_FORALL %}$P${\small\verb% (\%}$v$\ml{.}$B$\ml{[}$v$\ml{])  ---->  !}$v$\ml{. }$P$ $v$\ml{ ==> }$B$\ml{[}$v$\ml{]}
-%\end{hol}
-%
-%\noindent Dealing with the case when
-%$v$ is a variable structure is also desirable. For example:
-%
-%\begin{session}\begin{verbatim}
-%#let t1 = "!(m,n)::P. m<n";;
-%t1 = "!(m,n) :: P. m < n" : term
-%
-%#RESTRICT_CONV t1;;
-%|- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
-%
-%\end{verbatim}\end{session}
-%
-%\noindent If anyone writes the desired conversions please let us know!
-%
-%Here is an example of a user-defined restriction:
-%
-%\begin{session}\begin{verbatim}
-%#new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
-%|- !p. $DURING p = $! p
-%
-%#"DURING x::(m,n). p x";;
-%no restriction constant associated with DURING
-%skipping: x " ;; parse failed
-%
-%#new_definition
-%# (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
-%|- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
-%
-%#associate_restriction(`DURING`,`RES_DURING`);;
-%() : void
-%
-%#"DURING x::(m,n). p x";;
-%"DURING x :: (m,n). p x" : term
-%
-%#set_flag(`print_restrict`,false);;
-%true : bool
-%
-%#"DURING x::(m,n). p x";;
-%"RES_DURING(m,n)(\x. p x)" : term
-%\end{verbatim}\end{session}
 
 \subsection{Derived syntactic forms}\label{derived-terms}
 
@@ -576,17 +408,16 @@ constants {\small\verb+\/+}\index{disjunction, in HOL
 respectively. If $c$ is declared to be an infix, then the \HOL\ parser
 will translate $t_1\ c\ t_2$ to {\small\verb+$+}$c\ t_1\ t_2$.
 
-The constants {\small\verb+!+}, {\small\verb+?+} and {\small\verb+@+} are examples
-of \label{binder} \textit{binders}\index{binders, in HOL logic@binders, in \HOL\ logic}
- and represent $\forall$, $\exists$ and $\hilbert$, respectively.  If $c$
-is declared to be a binder, then the
-\HOL\ parser will translate $c\ x${\small\verb+.+}$t$ to the combination
+The constants {\small\verb+!+}, {\small\verb+?+} and {\small\verb+@+}
+are examples of \label{binder} \textit{binders}\index{binders, in HOL
+logic@binders, in \HOL\ logic} and represent $\forall$, $\exists$ and
+$\hilbert$, respectively.  If $c$ is declared to be a binder, then the
+\HOL\ parser will translate $c\ x${\small\verb+.+}$t$ to the
+combination
 {\small\verb+$+}$c${\small\verb+(\+}$x${\small\verb+.+}$t${\small\verb+)+}
-(\ie\ the application of the constant $c$ to the representation of
-the abstraction $\lquant{x}t$)\index{ function abstraction binder, in HOL logic@{\small\verb+\+} (function abstraction binder, in \HOL\ logic)}.
-
-In addition to the kinds of terms in the tables above,
-the parser also supports the following syntactic abbreviations.
+(\ie\ the application of the constant $c$ to the representation of the
+abstraction $\lquant{x}t$)\index{ function abstraction binder, in HOL
+logic@{\small\verb+\+} (function abstraction binder, in \HOL\ logic)}.
 
 
 \begin{center}
@@ -2369,54 +2200,110 @@ Anthony's package.
 
 \subsection{Sets (\theoryimp{pred\_set})}
 
-An extensive development of set theory is available by loading the
-theory {\small\verb+pred_set+}. Sets are represented by functions of
-the type $\alpha \to \konst{bool}$, \ie, they are so-called
-characteristic functions, and may be finite or infinite. All of the
-elements in a set must have the same type. The basic notion that set
-theory is usually based on is \emph{set membership}. In HOL, this is
-represented by a definition (in theory {\small\verb+bool+}) 
+An extensive development of set theory is available in the theory
+{\small\verb+pred_set+}. Sets are represented by functions of the type
+$\alpha \to \konst{bool}$, \ie, they are so-called characteristic
+functions. One can use the type abbreviation $\alpha\; \konst{set}$
+instead of $\alpha \to \konst{bool}$. Sets may be finite or
+infinite. All of the elements in a set must have the same type.
+
+\emph{Set membership} is the basic notion that formalized set theory
+is based on. In HOL, membership is represented by a the infix constant
+{\small\verb+IN+}, defined in theory {\small\verb+bool+} for
+convenience.
 %
 {\small
 \begin{verbatim}
-  IN_DEF  |- IN = \x f. f x
+    IN_DEF  |- IN = \x f. f x
 \end{verbatim}}
 %
-The operator {\small\verb+IN+} is used as an infix and is merely a way
-of applying the characteristic function to an item:
+The {\small\verb+IN+} operator is merely a way of applying the
+characteristic function to an item, as the following
+trivial consequence of the definition shows:
 %
 {\small
 \begin{verbatim}
   SPECIFICATION  |- !P x. x IN P = P x
 \end{verbatim}}
 %
-The following are standard definitions in set theory. The 
-empty set is the characteristic function that is constantly
-false. The universal set on a type is the characteristic 
-function that is always true. The insertion of an element
-into a set is defined with a set comprehension, as are 
-several other concepts. The definition of set comprehension
-is given in the next subsection.
+\paragraph{Empty and universal sets}
+
+The empty set is the characteristic function that is constantly
+false. The constant {\small\verb+EMPTY+} denotes the empty set; it may
+be written as {\small\verb+{}+}. The universal set {\small\verb+UNIV+}
+on a type is the characteristic function that is always true for
+elements of that type. 
 %
 {\small
 \begin{verbatim}
- EMPTY_DEF   |- {} = (\x. F)
- UNIV_DEF    |- UNIV = (\x. T)
- INSERT_DEF  |- !x s. x INSERT s = {y | (y = x) \/ y IN s}
- UNION_DEF   |- !s t. s UNION t = {x | x IN s \/ x IN t}
- INTER_DEF   |- !s t. s INTER t = {x | x IN s /\ x IN t}
- SUBSET_DEF  |- !s t. s SUBSET t = !x. x IN s ==> x IN t
- PSUBSET_DEF |- !s t. s PSUBSET t = s SUBSET t /\ ~(s = t)
- DIFF_DEF    |- !s t. s DIFF t = {x | x IN s /\ ~(x IN t)}
- DELETE_DEF  |- !s x. s DELETE x = s DIFF {x}
- BIGUNION    |- !P. BIGUNION P = {x | ?p. p IN P /\ x IN p}
- BIGINTER    |- !B. BIGINTER B = {x | !P. P IN B ==> x IN P}
- IMAGE_DEF   |- !f s. IMAGE f s = {f x | x IN s}
- COMPL_DEF   |- !P. COMPL P = UNIV DIFF P
- CROSS_DEF   |- !P Q. P CROSS Q = {p | FST p IN P /\ SND p IN Q}
+  EMPTY_DEF   |- {} = (\x. F)
+  UNIV_DEF    |- UNIV = (\x. T)
 \end{verbatim}}
 %
-Injections, surjections, and bijections between sets are defined
+\paragraph{Insertion, union, and intersection}
+
+The insertion ({\small\verb+INSERT+}, written infix) of an element
+into a set is defined with a set comprehension. Set comprehension is
+discussed in the next subsection. Set union ({\small\verb+UNION+},
+written infix) and intersection ({\small\verb+INTER+}, also infix)
+are given their usual definitions by set comprehension. 
+%
+{\small
+\begin{verbatim}
+  INSERT_DEF  |- !x s. x INSERT s = {y | (y = x) \/ y IN s}
+  UNION_DEF   |- !s t. s UNION t = {x | x IN s \/ x IN t}
+  INTER_DEF   |- !s t. s INTER t = {x | x IN s /\ x IN t}
+\end{verbatim}}
+%
+{\small\verb+UNION+} and {\small\verb+INTER+} are binary
+operations. Indexed union and intersection operations, \ie,
+$\bigcup_{i \in P}$ and $\bigcap_{i \in P}$ are provided by the
+definitions of  {\small\verb+BIGUNION+} and {\small\verb+BIGINTER+}.
+{\small
+\begin{verbatim}
+  BIGUNION    |- !P. BIGUNION P = {x | ?s. s IN P /\ x IN s}
+  BIGINTER    |- !B. BIGINTER P = {x | !s. s IN B ==> x IN s}
+\end{verbatim}}
+%
+Both {\small\verb+BIGUNION+} and {\small\verb+BIGINTER+} reduce 
+a set of sets to a set and thus have the type 
+$((\alpha\to\konst{bool})\to\konst{bool})\to (\alpha\to\konst{bool})$.
+
+\paragraph{Subsets}
+
+Set inclusion ({\small\verb+SUBSET+}, infix) and proper set inclusion 
+({\small\verb+PSUBSET+}, infix) are defined as follows:
+%
+{\small
+\begin{verbatim}
+  SUBSET_DEF  |- !s t. s SUBSET t = !x. x IN s ==> x IN t
+  PSUBSET_DEF |- !s t. s PSUBSET t = s SUBSET t /\ ~(s = t)
+\end{verbatim}}
+
+\paragraph{Set difference and complement}
+
+The difference between two sets ({\small\verb+DIFF+}, infix) is
+defined by a set comprehension. Based on that, the deletion of a
+single element ({\small\verb+DELETE+}, infix) from a set is
+straightforward. Since the universe of a type is always defined, the
+complement ({\small\verb+COMPL+}) of a set is definable.
+{\small
+\begin{verbatim}
+  DIFF_DEF    |- !s t. s DIFF t = {x | x IN s /\ ~(x IN t)}
+  DELETE_DEF  |- !s x. s DELETE x = s DIFF {x}
+  COMPL_DEF   |- !P. COMPL P = UNIV DIFF P
+\end{verbatim}}
+%
+\paragraph{Functions on sets}
+The image of a function $f :\alpha \to \beta$ on
+a set ({\small\verb+IMAGE+}) is defined with a set comprehension.
+{\small
+\begin{verbatim}
+  IMAGE_DEF   |- !f s. IMAGE f s = {f x | x IN s}
+\end{verbatim}}
+%
+Injections, surjections, and bijections between sets are defined 
+as follows:
 %
 {\small
 \begin{verbatim}
@@ -2429,26 +2316,121 @@ Injections, surjections, and bijections between sets are defined
       |- !f s t.
            SURJ f s t =
            (!x. x IN s ==> f x IN t) /\ !x. x IN t ==> ?y. y IN s /\ (f y = x)
+
  BIJ_DEF |- !f s t. BIJ f s t = INJ f s t /\ SURJ f s t
 \end{verbatim}}
 %
-Finiteness is defined inductively. Finite sets have cardinality 
-defined as a natural number. The cardinality of an infinite set
-is not specified.
+\paragraph{Finite sets}
+The finite sets ({\small\verb+FINITE+}) are defined inductively as those
+built from the empty set and created by a finite number of insertions.
 %
 {\small
 \begin{verbatim}
  FINITE_DEF
       |- !s. FINITE s = !P. P {} /\ (!s. P s ==> !e. P (e INSERT s)) ==> P s
- INFINITE_DEF |- !s. INFINITE s = ~FINITE s
+ INFINITE_DEF 
+      |- !s. INFINITE s = ~FINITE s
+\end{verbatim}}
+%
+A set is infinite iff it is not finite. As mentioned, set operations
+apply to both finite and infinite sets. However, some operations, such
+as cardinality, are only defined for finite sets (since, in \HOL{},
+finite sets have cardinality ({\small\verb+CARD+}) defined as a
+natural number). Thus {\small\verb+CARD+} has type
+$(\alpha\to\konst{bool})\to\konst{num}$.
+ The cardinality of an infinite set is not specified.
+{\small
+\begin{verbatim}
  CARD_DEF
       |- (CARD {} = 0) /\
          !s. FINITE s ==>
            !x. CARD (x INSERT s) = (if x IN s then CARD s else SUC (CARD s))
 \end{verbatim}}
 %
-An extensive suite of theorems dealing with finiteness is available. The 
-theory of sets has an analogue 
+An extensive suite of theorems dealing with finiteness and cardinality
+is available in {\small\verb+pred_set+}.
+
+\paragraph{Cross product}
+The product of two sets ({\small\verb+CROSS+}, infix) is defined 
+with a set comprehension.
+%
+{\small
+\begin{verbatim}
+  CROSS_DEF   |- !P Q. P CROSS Q = {p | FST p IN P /\ SND p IN Q}
+\end{verbatim}}
+%
+Cardinality and cross product are related by the following theorem:
+{\small
+\begin{verbatim}
+ CARD_CROSS
+   |- !P Q. FINITE P /\ FINITE Q ==> (CARD (P CROSS Q) = CARD P * CARD Q)
+\end{verbatim}}
+%
+\paragraph{Recursive functions on sets}
+
+Recursive functions on sets may be defined by wellfounded
+recursion. Usually, the totality of such a function is established by
+measuring the cardinality of the (finite) set. However, another
+theorem may be used to justify a fold ({\small\verb+ITSET+}) for finite sets. 
+Provided a function $f:\alpha\to\beta\to\beta$ obeys a condition 
+known as \emph{left-commutativity}, namely, $f\;x\;(f\;y\;z) =
+f\;y\;(f\;x\;z)$, then $f$ can be applied by folding it on the set
+in a tail-recursive fashion.
+%
+{\small
+\begin{verbatim}
+ ITSET_EMPTY
+   |- !f b. ITSET f {} b = b
+ COMMUTING_ITSET_INSERT
+   |- !f s. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
+            !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)
+\end{verbatim}}
+%
+A recursive version is also available:
+{\small
+\begin{verbatim}
+ COMMUTING_ITSET_RECURSES
+   |- !f e s b.
+        (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
+        (ITSET f (e INSERT s) b = f e (ITSET f (s DELETE e) b))
+\end{verbatim}}
+%
+For the full derivation, see the sources of {\small\verb+pred_set+}.
+The definition of {\small\verb+ITSET+} allows, for example, the 
+definition of summing a finite set of numbers.
+%
+{\small
+\begin{verbatim}
+ SUM_IMAGE_DEF
+  |- !f s. SIGMA f s = ITSET (\e acc. f e + acc) s 0
+\end{verbatim}}
+
+\paragraph{Other definitions and theorems}
+
+There are more definitions in {\small\verb+pred_set+}, but they 
+are not as heavily used as the ones presented here. Similarly, most
+theorems in {\small\verb+pred_set+} relate the various standard
+operators to each other. Some notable other theorems are Koenig's
+Lemma, which states that every finitely branching infinite tree has an
+infinite path. There are many ways to formulate this theorem,
+depending on how the notion of tree is formalized. In
+{\small\verb+pred_set+}, finite branching is defined as a predicate on 
+a relation.
+%
+{\small
+\begin{verbatim}
+ finite_branching_def
+  |- !R. finitely_branching R = !x. FINITE {y | R x y}
+\end{verbatim}}
+%
+ From this, we obtain the following version of Koenig's Lemma:
+{\small
+\begin{verbatim}
+ KoenigsLemma
+  |- finitely_branching R ==>
+            !x ~FINITE {y | RTC R x y} ==>
+              ?f :num -> 'a. (f 0 = x) /\ !n. R (f n) (f (SUC n))
+\end{verbatim}}
 
 
 %\subsection{Syntax for sets}\index{set theory notation}
