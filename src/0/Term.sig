@@ -59,8 +59,11 @@ sig
   val aconv : term -> term -> bool
   val subst : (term,term) Lib.subst -> term -> term
   val inst  : (Type.hol_type,Type.hol_type) Lib.subst -> term -> term
-  val beta_conv  : term -> term
-  val match_term : term -> term ->
+  val beta_conv   : term -> term
+  val term_reduce : term -> term ->
+             (term,term)Lib.subst * (Type.hol_type,Type.hol_type)Lib.subst ->
+             (term,term)Lib.subst * (Type.hol_type,Type.hol_type)Lib.subst
+  val match_term  : term -> term ->
                   (term,term)Lib.subst * (Type.hol_type,Type.hol_type)Lib.subst
 
   (* Miscellaneous *)
