@@ -751,6 +751,17 @@ let rec roman n =
 let defctr = ref (1:int);;
 let gendefname () = let n = !defctr in defctr := n+1; "\\defn" ^ roman n;;
 
+let getname ls =
+  let rec go ts =
+    match ts with
+      (Ident(s,_) as t::_) -> Some t
+    | (_::ts)              -> go ts
+    | []                   -> None
+  in
+  match ls with
+    (l::_) -> go l
+  | []     -> None
+
 (* output (munge) a whole rule *)
 
 let latex_rule ruleordefn =
@@ -778,9 +789,13 @@ let latex_rule ruleordefn =
   | Definition(e) ->
       let pvs      = pot_s e
       in
+      let namepart = match getname e with
+                       Some t -> mtok pvs t
+                     | None   -> "{}"
+      in
       let texname = gendefname()
       in
-      print_string ("\\newcommand{"^texname^"}{\\ddefn{"^munges pvs e^"}\n}\n\n");
+      print_string ("\\newcommand{"^texname^"}{\\ddefn{"^namepart^"}{"^munges pvs e^"}\n}\n\n");
       texname
 
 (* ------------------------------------------------------------ *)
