@@ -16,7 +16,4 @@ The dependencies are:
       RoundOpTheory  (basic operations that happen during a round)
          |
          |
-      rijn           (defn of rounds and key schedule, correctness)
-         |
-         |
-      rijn.alt       (alternative decryptor, correctness)
+      RijndaelTheory (defn of rounds and key schedule, correctness)

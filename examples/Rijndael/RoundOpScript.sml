@@ -18,6 +18,9 @@ open HolKernel Parse boolLib bossLib pairTools;
 
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
+val BYTE_EVAL_TAC = PGEN_TAC (Term `(a1,a2,a3,a4,a5,a6,a7,a8):word8`)
+                    THEN EVAL_TAC;
+
 val Sbox_Inversion = sboxTheory.Sbox_Inversion;
 
 (*---------------------------------------------------------------------------*)
@@ -37,10 +40,13 @@ val _ = type_abbrev("state",
                           word8 # word8 # word8 # word8 # 
                           word8 # word8 # word8 # word8`);
 
+val STATE_VAR_TAC = PGEN_TAC (Term `(b0,b1,b2,b3,b4,b5,b6,b7,b8,
+                                     b9,b10,b11,b12,b13,b14,b15):state`);
+val STATE_EVAL_TAC = STATE_VAR_TAC THEN EVAL_TAC;
+
 val _ = type_abbrev("key", Type`:state`);
 
 val _ = type_abbrev("w8x4",Type`:word8 # word8 # word8 # word8`);
-
 
 (*---------------------------------------------------------------------------*)
 (*      Name some constants used in the code and specification               *)
@@ -110,12 +116,12 @@ val AND8_def = Define
 val XOR8_ZERO = Q.store_thm
 ("XOR8_ZERO",
  `!x. x XOR8 ZERO = x`,
- PGEN_TAC (Term `(a1,a2,a3,a4,a5,a6,a7,a8):word8`) THEN EVAL_TAC);
+ BYTE_EVAL_TAC);
 
 val XOR8_INV = Q.store_thm
 ("XOR8_INV",
  `!x. x XOR8 x = ZERO`,
- PGEN_TAC (Term `(a1,a2,a3,a4,a5,a6,a7,a8):word8`) THEN EVAL_TAC);
+ BYTE_EVAL_TAC);
 
 val XOR8_AC = Q.store_thm
 ("XOR8_AC",
@@ -151,16 +157,14 @@ val to_state_Inversion =
   Q.store_thm
   ("to_state_Inversion",
    `!s:state. from_state(to_state s) = s`,
-   PGEN_TAC (Term `(b0,b1,b2,b3,b4,b5,b6,b7,b8,
-                    b9,b10,b11,b12,b13,b14,b15):state`) THEN EVAL_TAC);
+   STATE_EVAL_TAC);
 
 
 val from_state_Inversion = 
   Q.store_thm
   ("from_state_Inversion",
    `!s:state. to_state(from_state s) = s`,
-   PGEN_TAC (Term `(b0,b1,b2,b3,b4,b5,b6,b7,b8,
-                    b9,b10,b11,b12,b13,b14,b15):state`) THEN EVAL_TAC);
+   STATE_EVAL_TAC);
 
 
 (*---------------------------------------------------------------------------*)
@@ -187,10 +191,7 @@ val InvSubBytes_def = Define `InvSubBytes = genSubBytes InvSbox`;
 val SubBytes_Inversion = Q.store_thm
 ("SubBytes_Inversion",
  `!s:state. genSubBytes InvSbox (genSubBytes Sbox s) = s`,
- PGEN_TAC (Term `(b00,b01,b02,b03,b10,b11,b12,b13,
-                  b20,b21,b22,b23, b30,b31,b32,b33):state`)
- THEN EVAL_TAC
- THEN RW_TAC std_ss [Sbox_Inversion]);
+ STATE_EVAL_TAC THEN RW_TAC std_ss [Sbox_Inversion]);
 
 
 (*---------------------------------------------------------------------------
@@ -227,9 +228,7 @@ val InvShiftRows_def = Define
 val ShiftRows_Inversion = Q.store_thm
 ("ShiftRows_Inversion",
  `!s:state. InvShiftRows (ShiftRows s) = s`,
- PGEN_TAC (Term`(b00,b01,b02,b03,b10,b11,b12,b13,
-                 b20,b21,b22,b23,b30,b31,b32,b33):state`)
- THEN EVAL_TAC);
+ STATE_EVAL_TAC);
 
 
 (*---------------------------------------------------------------------------*)
@@ -239,16 +238,13 @@ val ShiftRows_Inversion = Q.store_thm
 val ShiftRows_SubBytes_Commute = Q.store_thm
  ("ShiftRows_SubBytes_Commute",
   `!s. ShiftRows (SubBytes s) = SubBytes (ShiftRows s)`,
-  PGEN_TAC (Term `(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,
-                   v10,v11,v12,v13,v14,v15):state`) THEN EVAL_TAC);
+  STATE_EVAL_TAC);
 
 
 val InvShiftRows_InvSubBytes_Commute = Q.store_thm
  ("InvShiftRows_InvSubBytes_Commute",
   `!s. InvShiftRows (InvSubBytes s) = InvSubBytes (InvShiftRows s)`,
-  PGEN_TAC (Term `(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,
-                   v10,v11,v12,v13,v14,v15):state`) THEN EVAL_TAC);
-
+  STATE_EVAL_TAC);
 
 
 (*---------------------------------------------------------------------------
@@ -390,9 +386,10 @@ val InvMultCol_def = Define
 (*---------------------------------------------------------------------------*)
 
 val BYTE_CASES_TAC = 
- PGEN_TAC (Term `(a0,a1,a2,a3,a4,a5,a6,a7):word8`) THEN EVAL_TAC
+ BYTE_EVAL_TAC
    THEN REWRITE_TAC [REWRITE_RULE [ZERO_def] XOR8_ZERO]
-   THEN MAP_EVERY Cases_on [`a0`, `a1`, `a2`, `a3`, `a4`, `a5`, `a6`, `a7`];
+   THEN MAP_EVERY Cases_on [`a1`, `a2`, `a3`, `a4`, `a5`, `a6`, `a7`,`a8`]
+   THEN EVAL_TAC;
 
 
 (*---------------------------------------------------------------------------*)
@@ -405,56 +402,56 @@ val lemma_a1 = Q.prove
       B_HEX ** a          XOR8 
       D_HEX ** a          XOR8 
       NINE  ** (THREE ** a) = a`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_a2 = Q.prove
 (`!b. E_HEX ** (THREE ** b) XOR8 
       B_HEX ** (TWO ** b)   XOR8 
       D_HEX ** b            XOR8 
       NINE  ** b             = ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_a3 = Q.prove
 (`!c. E_HEX ** c            XOR8 
       B_HEX ** (THREE ** c) XOR8 
       D_HEX ** (TWO ** c)   XOR8 
       NINE ** c               =  ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_a4 = Count.apply Q.prove
 (`!d. E_HEX ** d            XOR8 
       B_HEX ** d            XOR8 
       D_HEX ** (THREE ** d) XOR8 
       NINE ** (TWO ** d)      = ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_b1 = Q.prove
 (`!a. NINE ** (TWO ** a) XOR8 
       E_HEX ** a         XOR8 
       B_HEX ** a         XOR8 
       D_HEX  ** (THREE ** a) = ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_b2 = Q.prove
 (`!b. NINE ** (THREE ** b) XOR8 
       E_HEX ** (TWO ** b)  XOR8 
       B_HEX ** b           XOR8 
       D_HEX ** b             = b`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_b3 = Q.prove
 (`!c. NINE ** c             XOR8 
       E_HEX ** (THREE ** c) XOR8 
       B_HEX ** (TWO ** c)   XOR8 
       D_HEX ** c              = ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_b4 = Count.apply Q.prove
 (`!d. NINE ** d             XOR8 
       E_HEX ** d            XOR8 
       B_HEX ** (THREE ** d) XOR8 
       D_HEX ** (TWO ** d)     = ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_c1 = Q.prove
 (`!a. D_HEX ** (TWO ** a) XOR8 
@@ -468,35 +465,35 @@ val lemma_c2 = Q.prove
       NINE ** (TWO ** b)    XOR8 
       E_HEX ** b            XOR8 
       B_HEX ** b              = ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_c3 = Q.prove
 (`!c. D_HEX ** c           XOR8 
       NINE ** (THREE ** c) XOR8 
       E_HEX ** (TWO ** c)  XOR8 
       B_HEX ** c             = c`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_c4 = Count.apply Q.prove
 (`!d. D_HEX ** d            XOR8 
       NINE ** d             XOR8 
       E_HEX ** (THREE ** d) XOR8 
       B_HEX ** (TWO ** d)     = ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_d1 = Q.prove
 (`!a. B_HEX ** (TWO ** a) XOR8 
       D_HEX ** a          XOR8 
       NINE ** a           XOR8 
       E_HEX  ** (THREE ** a) = ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_d2 = Q.prove
 (`!b. B_HEX ** (THREE ** b) XOR8 
       D_HEX ** (TWO ** b)   XOR8 
       NINE ** b             XOR8 
       E_HEX ** b              = ZERO`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 val lemma_d3 = Q.prove
 (`!c. B_HEX ** c            XOR8 
@@ -510,7 +507,7 @@ val lemma_d4 = Count.apply Q.prove
       D_HEX ** d           XOR8 
       NINE ** (THREE ** d) XOR8 
       E_HEX ** (TWO ** d)     = d`,
- BYTE_CASES_TAC THEN EVAL_TAC);
+ BYTE_CASES_TAC);
 
 (*---------------------------------------------------------------------------*)
 (*  Set up permutative rewriting for XOR8                                    *)
@@ -594,6 +591,10 @@ val [B_HEX]    = decls "B_HEX";
 val [D_HEX]    = decls "D_HEX";
 val [E_HEX]    = decls "E_HEX";
 
+(*---------------------------------------------------------------------------*)
+(* Mixing columns                                                            *)
+(*---------------------------------------------------------------------------*)
+
 val genMixColumns_def = Define
  `genMixColumns MC (b00,b01,b02,b03,
                     b10,b11,b12,b13,
@@ -617,8 +618,7 @@ val InvMixColumns_def = Define `InvMixColumns = genMixColumns InvMultCol`;
 val MixColumns_Inversion = Q.store_thm
 ("MixColumns_Inversion",
  `!s. genMixColumns InvMultCol (genMixColumns MultCol s) = s`,
- PGEN_TAC (Term `(b00,b01,b02,b03,b10,b11,b12,b13,
-                  b20,b21,b22,b23,b30,b31,b32,b33):state`)
+ STATE_VAR_TAC
   THEN RESTR_EVAL_TAC [mult,B_HEX,D_HEX,E_HEX,TWO,THREE,NINE]
   THEN RW_TAC std_ss [mix_lemma1,mix_lemma2,mix_lemma3,mix_lemma4]);
 

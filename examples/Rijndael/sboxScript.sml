@@ -132,7 +132,7 @@ val blist = map word8_to_8tuple wlist;
      This is just a one dimensional array indexed by words up to 256.
  ---------------------------------------------------------------------------*)
 
-val Sbox_def = time Define
+val Sbox_def = Count.apply Define
     `(Sbox (F,F,F,F,F,F,F,F) = (F,T,T,F,F,F,T,T)) /\
      (Sbox (F,F,F,F,F,F,F,T) = (F,T,T,T,T,T,F,F)) /\
      (Sbox (F,F,F,F,F,F,T,F) = (F,T,T,T,F,T,T,T)) /\
@@ -391,7 +391,19 @@ val Sbox_def = time Define
      (Sbox (T,T,T,T,T,T,T,T) = (F,F,F,T,F,T,T,F))`;
 
 
-val InvSbox = time Define
+
+local val byte_nchotomy = DB.fetch "-" "Sbox_ind"
+      val (P,impl) = dest_forall(concl byte_nchotomy)
+      val (ant,_) = dest_imp impl
+in
+val word8_ind = Q.store_thm
+ ("word8_ind",
+  `!^P. ^ant ==> !x:word8. P x`,
+  Ho_Rewrite.REWRITE_TAC [pairTheory.FORALL_PROD,byte_nchotomy])
+end;
+
+
+val InvSbox = Count.apply Define
     `(InvSbox(F,F,F,F,F,F,F,F) = (F,T,F,T,F,F,T,F)) /\
      (InvSbox(F,F,F,F,F,F,F,T) = (F,F,F,F,T,F,F,T)) /\
      (InvSbox(F,F,F,F,F,F,T,F) = (F,T,T,F,T,F,T,F)) /\
@@ -650,12 +662,11 @@ val InvSbox = time Define
      (InvSbox(T,T,T,T,T,T,T,T) = (F,T,T,T,T,T,F,T))`;
 
 
-val byte_nchotomy = DB.fetch "-" "Sbox_ind";
 
 val Sbox_Inversion = Q.store_thm
 ("Sbox_Inversion",
  `!w:word8. InvSbox (Sbox w) = w`,
-  recInduct byte_nchotomy THEN EVAL_TAC);
+ recInduct word8_ind THEN EVAL_TAC);
 
 
 val _ = export_theory();
