@@ -1,6 +1,22 @@
 (* lts_to_latex.ml -- turn LTS (in HOL) into LaTeX code *)
 (* Keith Wansbrough 2001 *)
 
+(* TO DO:
+
+- process [[ .. ]] and <[ .. ]> in comments / "body text".
+  - should do this in the lexer;
+  - comments should be lexed as a list of (text or (list of tokens)) I think
+
+- could autogenerate various sets used in is_foo checking.
+
+- do quoted strings
+
+- do indentation (taking open delimiters into account)
+
+- all sorts of spacing issues
+
+ *)
+
 open Hollex
 
 exception Trailing (* there is trailing info in the file *)
@@ -461,27 +477,21 @@ let is_var v s = (* v is a list of universally-quantified rule variables *)
   [ "s'"
   ] 
 
-(* was: (Str.string_match 
-                  (Str.regexp "\([A-Za-z]+\)[0-9]*[']*")
-                  s
-                  0 ) &&
-               (Str.match_end() = String.length s) && 
-               (is_var_prefix (Str.matched_group 1 s))
- *)
-
-  (* magic for subscripting vars; not presently used *)
-let subscript_var s = 
-  let _ = (Str.string_match 
-             (Str.regexp "\([A-Za-z]+\)\([0-9]*\)\([']*\)")
-             s
-             0 ) in 
-  if "" <> (Str.matched_group 2 s) then 
-    ((Str.matched_group 1 s)^(Str.matched_group 3 s)^"_{"^(Str.matched_group 2 s)^"}")
-  else 
-    (Str.matched_group 1 s)^(Str.matched_group 3 s)
-
 let is_num s =
   Str.string_match (Str.regexp "[0-9]+") s 0
+
+let do_sub s =
+  (* return texified body (will be wrapped in typestyle)
+     and texified suffix (will be appended) *)
+  let _ = (Str.search_forward
+             (Str.regexp "\([0-9]*\)\([']*\)$")
+             s
+             0 ) in 
+  if "" <> (Str.matched_group 1 s) then 
+    (texify (Str.string_before s (Str.match_beginning ())),
+     "_{"^Str.matched_group 1 s^"}"^Str.matched_group 2 s)
+  else 
+    (texify s,"")
 
 let is_holop s = List.mem s
   [ "IMAGE"
@@ -496,37 +506,39 @@ let is_holop s = List.mem s
 (* translations for symbols and particular identifiers; these take precedence over is_foo *)
 
 let holsyms =
-  [ ("/\\","\\wedge ")
-  ; ("\\/","\\vee ")
-  ; ("<|","\\langle\\![")
-  ; ("|>","]\\!\\rangle ")
+  [ ("/\\","\\Mwedge ")
+  ; ("\\/","\\Mvee ")
+  ; ("<|","\\Mlrec ")
+  ; ("|>","\\Mrrec ")
   ; ("!","\\forall ")
   ; ("?","\\exists ")
-  ; ("?!","\\exists!")
-  ; ("==>","\\implies")
-  ; ("<==","\\impliedby")
+  ; ("?!","\\Mexunq ")
+  ; ("==>","\\implies ")
+  ; ("<==","\\impliedby ")
   ; ("<=","\\leq ")
   ; (">=","\\geq ")
   ; ("<>","\\neq ")
                              (* Mquotedstring *)
   ; ("->","\\totype ")
   ; ("<=>","\\iff ")
-  ; (":=","\\mathop{:=}")
-  ; ("::","\\mathbin{::}")
-  ; ("[]","[\,]")  (* DOESN'T WORK BECAUSE NONAGGREGATING *)
+  ; (":=","\\Mass ")
+  ; ("::","\\Mcons ")
+  ; ("[]","[\,]")
+  ; ("()","()")
+  ; ("\\","\\lambda ")
   ]
 
 let holids =
-  [ ("SOME","\\mathord{\\uparrow}")
+  [ ("SOME","\\Msome ")
   ; ("NONE","*")
   ; ("IN","\\in ")
   ; ("INTER","\\cap ")
   ; ("UNION","\\cup ")
   ; ("EMPTY","\\emptyset ")
-(*   ; ("one","()")  *)
+  ; ("one","()")
   ; ("SUBSET","\\subseteq ")
-  ; ("T","\\textbf{T}")
-  ; ("F","\\textbf{F}")
+  ; ("T","\\Mtrue ")
+  ; ("F","\\Mfalse ")
   ] 
 
 (* dump an unrecognised string to stderr *)
@@ -539,19 +551,22 @@ let mident v s = (* munge alphanumeric identifier *)
 (*  "\\tsvar{"^texify s^"}" *)
   try List.assoc s holids
   with Not_found ->
-    let s' = texify s in
-    if (is_num s) then s' else
-    let c  = if (is_rule s)      then "tsrule" else
-             if (is_con s)       then "tscon" else
-             if (is_aux s)       then "tsaux" else
-             if (is_aux_infix s) then "tsauxinfix" else
+    if (is_num s) then texify s else
+    let (c,sub)  = if (is_rule s)        then ("tsrule"    ,false) else
+                   if (is_con s)         then ("tscon"     ,false) else
+                   if (is_aux s)         then ("tsaux"     ,false) else
+                   if (is_aux_infix s)   then ("tsauxinfix",false) else
 (* no types:   if (is_type s)      then "tstype" else *)
-             if (is_lib s)       then "tslib" else
-             if (is_field s)     (* treat as var, because name often shared *)
-               || (is_var v s)   then "tsvar" else
-             if (is_holop s)     then "tsholop" else 
-             (write_unseen_string s;  "tsunknown") in
-    "\\"^c^"{"^s'^"}"
+                   if (is_lib s)         then ("tslib"     ,true ) else
+                   if (is_field s)     (* treat as var, because name often shared *)
+                      || (is_var v s)    then ("tsvar"     ,true ) else
+                     if (is_holop s)     then ("tsholop"   ,false) else 
+                   (write_unseen_string s;    ("tsunknown" ,false)) in
+    if sub then
+      let (sb,ss) = do_sub s in
+      "\\"^c^"{"^sb^"}"^ss
+    else
+      "\\"^c^"{"^texify s^"}"
 
   (* would be good to check is_* for overlaps *)
 
@@ -596,20 +611,62 @@ and mungelab v s = (* munge the label *)
   in
   "\\inp{"^go s^"}"
 
+(* get a list of the potential variables in a rule, ie, all idents
+   that are bound somewhere *)
+
+let hol_binders =
+  [ "!"
+  ; "?"
+  ; "?!"
+  ; "@"
+  ; "\\"
+  ] 
+
+let potential_vars (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
+    let pot_t s = [] in  (* binders in text *)
+    let rec pot_l ts =       (* binders in a line *)
+      match ts with
+        (Ident(s,_)::ts) -> if List.mem s hol_binders then
+                              bdrs ts
+                            else
+                              pot_l ts
+      | (_::ts)          -> pot_l ts
+      | []               -> []
+    and bdrs ts =        (* we've hit a binder; read vars until separator *)
+      match ts with
+        (Ident(s,_)::ts) -> s :: bdrs ts
+      | (White(s)::ts)   -> bdrs ts
+      | (Indent(s)::ts)  -> bdrs ts
+      | (Comment(s)::ts) -> bdrs ts
+      | (Sep(s)::ts)     -> pot_l ts
+      | []               -> [] in
+    let rec pot_s ls =       (* binders in lines *)
+      match ls with
+        (l::ls) -> pot_l l @ pot_s ls
+      | []      -> [] in
+    v
+    @ pot_t desc
+    @ pot_s lhs
+    @ pot_l lab
+    @ pot_s rhs
+    @ pot_s side
+    @ (match comm with Some c -> pot_t c | None -> [])
+
 (* munge a whole rule *)
 
-let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
+let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
+  let pvs = potential_vars r in
   print_string ("\\showrule{\\rrule"^if side == [] then "n" else "c"
                          ^match comm with Some _ -> "c" | None -> "n");
   print_string ("{"^texify n^"}{"^texify cat^"}");
-  print_string ("{"^(match desc with Some d -> texify d | None -> "")^"}\n");
-  print_string ("{"^munges v lhs^"}\n");
-  print_string ("{"^mungelab v lab^"}\n");
-  print_string ("{"^munges v rhs^"}\n");
-  print_string ("{"^munges v side^"}\n");
+  print_string ("{"^(match desc with Some d -> munget pvs d | None -> "")^"}\n");
+  print_string ("{"^munges pvs lhs^"}\n");
+  print_string ("{"^mungelab pvs lab^"}\n");
+  print_string ("{"^munges pvs rhs^"}\n");
+  print_string ("{"^munges pvs side^"}\n");
   print_string "{";
   (match comm with
-     Some c -> print_string (munget v c)
+     Some c -> print_string (munget pvs c)
    | None   -> ());
   print_string "}}\n\n"
 

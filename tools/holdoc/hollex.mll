@@ -45,6 +45,8 @@ let stoppat  = newline backtick
 (* the character classes of HOL *)
 let idchar = ['A'-'Z' 'a'-'z' '0'-'9' '_' '\'']
 let nonagg = ['~' '(' ')' '[' ']' '{' '}' '.' ',']
+let specnonagg = "()" | "[]"  (* built of nonagg, but aggregating for tokenisation purposes;
+                                 this is not HOL but our extension (I think) *)
 let dollar = '$'
 let punctchar = ['!' '"' '#' '%' '&' '*' '+' '-' '/' ':' ';' '<' '=' '>' '?' '@' '\\' '^' '|']
   (* everything else except '`' ; I'm not sure about '\\' and '"' but hey... *)
@@ -71,7 +73,8 @@ and
 
   reltoken = parse
     dollar? idchar+        { Ident (Lexing.lexeme lexbuf,true) }
-  | dollar? punctchar+     { Ident (Lexing.lexeme lexbuf,false) }
+  | dollar? (punctchar+
+             | specnonagg) { Ident (Lexing.lexeme lexbuf,false) }
   | newline white*         { Indent (indent_width (Lexing.lexeme lexbuf)) }
   | white+                 { White (Lexing.lexeme lexbuf) }
   | startcom               { comments := [];
