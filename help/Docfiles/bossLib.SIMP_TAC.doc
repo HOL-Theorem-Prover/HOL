@@ -1,0 +1,14 @@
+\DOC SIMP_TAC
+
+\TYPE {SIMP_TAC : simpset -> thm list -> tactic}
+
+\SYNOPSIS
+Simplify a term with the given simpset and theorems.
+
+\DESCRIBE
+{bossLib.SIMP_TAC} is identical to {simpLib.SIMP_TAC}.
+
+\SEEALSO
+simpLib.SIMP_TAC.
+
+\ENDDOC

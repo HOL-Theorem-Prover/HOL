@@ -1,0 +1,15 @@
+\DOC rewrites
+
+\TYPE {rewrites : thm list -> ssdata}
+
+\SYNOPSIS
+Create an {ssdata} value consisting of the given theorems as
+rewrites.
+
+\DESCRIBE
+{bossLib.rewrites} is identical to {simpLib.rewrites}.
+
+\SEEALSO
+simpLib.rewrites.
+
+\ENDDOC

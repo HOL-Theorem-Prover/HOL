@@ -1,6 +1,6 @@
-\DOC initial_rws
+\DOC bool_compset
 
-\TYPE {initial_rws : unit -> computeLib.comp_rws}
+\TYPE {bool_compset : unit -> compset}
 
 \SYNOPSIS
 Creates a new simplification set to use with {computeLib.CBV_CONV} for
@@ -33,7 +33,7 @@ lemma:
 
 \EXAMPLE
 {
-- CBV_CONV (initial_rws()) (--`EVERY (\n. EVEN n) [4;6;8;10;12;14;16]`--);
+- CBV_CONV (bool_compset()) (--`EVERY (\n. EVEN n) [4;6;8;10;12;14;16]`--);
 > val it = |- EVERY (\n. EVEN n) [4; 6; 8; 10; 12; 14; 16] = T : thm
 }
 

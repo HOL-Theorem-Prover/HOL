@@ -23,9 +23,6 @@ Never fails.
 {
 - hash 13 "ishkabibble" (0,0);
 > val it = 5 : int
-
-- hash 13 "ishkababble" (0,0);
-> val it = 11 : int
 }
 
 

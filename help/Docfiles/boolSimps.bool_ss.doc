@@ -4,7 +4,7 @@
 
 \SYNOPSIS
 Basic simpset containing standard propositional and first order logic
-simplifications, plus beta and eta conversion.
+simplifications, plus beta conversion.
 
 \KEYWORDS
 simplification
@@ -68,10 +68,10 @@ first order terms:
    |- !P a. (?x. (x = a) /\ P x) = P a
    |- !P a. (?x. (a = x) /\ P x) = P a
 }
-Also included in {bool_ss} are conversions to perform eta and 
-beta reduction, as well as the following congruence rules, which
-allow the simplifier to glean additional contextual information as 
-it descends through implications and conditionals.
+Also included in {bool_ss} is a conversion to perform beta reduction, as
+well as the following congruence rules, which allow the simplifier to glean 
+additional contextual information as it descends through implications and 
+conditionals.
 {
    |- !x x' y y'.
        (x = x') ==>
