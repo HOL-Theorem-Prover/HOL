@@ -1,5 +1,5 @@
 (* app load ["onestepTheory","bitsTheory","word32Theory"]; *)
-open HolKernel boolLib bossLib Q Parse prim_recTheory combinTheory
+open HolKernel boolLib bossLib Q Parse combinTheory
      onestepTheory bitsTheory word32Theory;
 
 (* -------------------------------------------------------- *)
@@ -607,7 +607,7 @@ val SUBST_NE_COMMUTES = store_thm("SUBST_NE_COMMUTES",
 val SUBST_COMMUTES = store_thm("SUBST_COMMUTES",
   `!m (a:num) b d e. a < b ==> (SUBST (SUBST m (b,d)) (a,e) = SUBST (SUBST m (a,e)) (b,d))`,
   REPEAT STRIP_TAC
-    THEN IMP_RES_TAC LESS_NOT_EQ
+    THEN IMP_RES_TAC prim_recTheory.LESS_NOT_EQ
     THEN ASM_SIMP_TAC std_ss [SUBST_NE_COMMUTES]
 );
 

@@ -1,5 +1,5 @@
 (* app load ["onestepTheory","word32Theory","armTheory"]; *)
-open HolKernel boolLib Q bossLib arithmeticTheory
+open HolKernel boolLib bossLib Q
      onestepTheory word32Theory armTheory;
 
 (* -------------------------------------------------------- *)

@@ -485,13 +485,15 @@ val STR_IMP_BITS = store_thm("STR_IMP_BITS",
 
 (* -------------------------------------------------------- *)
 
+val MOD_WL_SYM = (GSYM o SIMP_RULE arith_ss [GSYM MOD_2EXP_def,WL_def,HB_def]) MOD_WL_def;
+
 val ALUOUT_ADD = store_thm("ALUOUT_ADD",
   `!a b. ALUOUT (ADD a b F) = a + b`,
   REPEAT STRIP_TAC
     THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
     THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
-    THEN RW_TAC arith_ss [ALUOUT_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,SBIT_def,
-                          GSYM MOD_WL_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MOD_WL_ELIM]
+    THEN SIMP_TAC arith_ss [ALUOUT_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,SBIT_def,ADD_EVAL,
+                            MOD_WL_SYM,w2n_EVAL,GSYM MOD_ADD,MOD_WL_ELIM]
 );
 
 val ALUOUT_SUB = store_thm("ALUOUT_SUB",
@@ -499,8 +501,8 @@ val ALUOUT_SUB = store_thm("ALUOUT_SUB",
   REPEAT STRIP_TAC
     THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
     THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
-    THEN RW_TAC arith_ss [ALUOUT_def,SUB_def,ALU_arith_neg_def,DIVMOD_2EXP,SBIT_def,GSYM MOD_WL_EVAL,
-                          word_sub,TWO_COMP_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MOD_WL_ELIM]
+    THEN SIMP_TAC arith_ss [ALUOUT_def,SUB_def,ALU_arith_neg_def,DIVMOD_2EXP,SBIT_def,MOD_WL_SYM,
+                            word_sub,TWO_COMP_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MOD_WL_ELIM]
 );
 
 (* -------------------------------------------------------- *)
@@ -583,7 +585,7 @@ val MUST_BE_BIT21 = store_thm("MUST_BE_BIT21",
 
 (* -------------------------------------------------------- *)
 
-val ONE_COMPw_THREE_ADD = store_thm("ONE_COMPw_THREE_ADD",
+val ONE_COMP_THREE_ADD = store_thm("ONE_COMP_THREE_ADD",
   `!a. a - w32 8 + w32 4 = NOT (w32 3) + a`,
   GEN_REWRITE_TAC (ONCE_DEPTH_CONV o RAND_CONV) empty_rewrites  [WORD_ADD_COMM]
     THEN RW_TAC bool_ss [WORD_NOT,word_1]

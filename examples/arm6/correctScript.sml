@@ -206,6 +206,7 @@ val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
                  THENL [
                    ASM_SIMP_TAC std_ss []
                      THEN UNFOLD_STATE
+                     THEN ALU_LDR3
                      THEN ALU_LDR4
                      THEN NTAC 5 (UNFOLD_NEXT THEN ASM_SIMP_TAC (std_ss++CORE3_ss) [])
                      THEN POP_ASSUM_LIST (K ALL_TAC)
@@ -853,9 +854,9 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
              THEN ASM_SIMP_TAC std_ss [iseq_distinct,iclass_distinct,RAA_def,RBA_def,SHIFTER_def,FIELD_def,LSL_ZERO,LSL_TWO]
              THEN ASM_SIMP_TAC arith_ss [iseq_distinct,iclass_distinct,FETCH_SUB8,REG_READ_SUB8_PC,REGISTER_RANGES,
                                        REG_WRITE_COMMUTES,ALU6_def,ALUOUT_ALU_logic,ALUOUT_ADD,REG_WRITE_READ_R14]
-             THEN PAT_ASSUM `x = pc` (fn th => REWRITE_TAC [SYM th,ONE_COMPw_THREE_ADD])
+             THEN PAT_ASSUM `x = pc` (fn th => REWRITE_TAC [SYM th,ONE_COMP_THREE_ADD])
              THEN POP_ASSUM_LIST (K ALL_TAC)
-             THEN RW_TAC std_ss [ONE_COMPw_THREE_ADD,GSYM LINK_REG,GSYM BRANCH_REG,PC_READ_MODE_FREE],
+             THEN RW_TAC std_ss [ONE_COMP_THREE_ADD,GSYM LINK_REG,GSYM BRANCH_REG,PC_READ_MODE_FREE],
              (* swi_ex *)
            UNFOLD_STATE
              THEN ALU_SWI3
@@ -870,7 +871,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
              THEN ASM_SIMP_TAC arith_ss [iseq_distinct,iclass_distinct,exception2num_thm,
                                          BIT_W32_NUM,BITS_W32_NUM,PSRA_def,FETCH_SUB8,
                                          RBA_def,SWI_def,EXCEPTION_def,AREGN1_def,SHIFTER_def,LSL_ZERO,
-                                         GSYM ONE_COMPw_THREE_ADD,ALU6_def,ALUOUT_ALU_logic,ALUOUT_ADD]
+                                         GSYM ONE_COMP_THREE_ADD,ALU6_def,ALUOUT_ALU_logic,ALUOUT_ADD]
              THEN NTAC 4 (POP_ASSUM (fn th => SIMP_TAC arith_ss [SYM th,ALUOUT_ALU_logic,REG_WRITE_WRITE_R14,
                                                                  REG_WRITE_READ_R14,DECODE_MODE_THM,CPSR_WRITE_READ]))
              THEN RW_TAC std_ss [PSR_WRITE_COMM,GSYM LINK_REG,PC_READ_MODE_FREE],
@@ -888,7 +889,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
              THEN ASM_SIMP_TAC arith_ss [iseq_distinct,iclass_distinct,exception2num_thm,
                                          BIT_W32_NUM,BITS_W32_NUM,PSRA_def,FETCH_SUB8,
                                          RBA_def,SWI_def,EXCEPTION_def,AREGN1_def,SHIFTER_def,LSL_ZERO,
-                                         GSYM ONE_COMPw_THREE_ADD,ALU6_def,ALUOUT_ALU_logic,ALUOUT_ADD]
+                                         GSYM ONE_COMP_THREE_ADD,ALU6_def,ALUOUT_ALU_logic,ALUOUT_ADD]
              THEN NTAC 4 (POP_ASSUM (fn th => SIMP_TAC arith_ss [SYM th,ALUOUT_ALU_logic,REG_WRITE_WRITE_R14,
                                                                  REG_WRITE_READ_R14,DECODE_MODE_THM,CPSR_WRITE_READ]))
              THEN RW_TAC std_ss [PSR_WRITE_COMM,GSYM LINK_REG,PC_READ_MODE_FREE],
