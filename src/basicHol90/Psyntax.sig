@@ -54,7 +54,7 @@ signature Psyntax =
     val new_binder : (string * hol_type) -> unit
     val new_constant : (string * hol_type) -> unit
     val new_infix : (string * hol_type * int) -> unit
-    val new_recursive_definition : Parse.fixity -> thm -> string -> term -> thm
+    val new_recursive_definition : thm -> string -> term -> thm
     val new_specification : string -> (string * string * int) list
                             -> thm -> thm
     val new_type : int -> string -> unit

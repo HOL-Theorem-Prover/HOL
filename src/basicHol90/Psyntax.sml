@@ -114,9 +114,8 @@ fun new_type_definition (n,p,th) =
    Parse.new_type_definition{name = n, pred = p, inhab_thm = th};
 
 
-fun new_recursive_definition fix ax name tm =
-     Prim_rec.new_recursive_definition
-             {name = name,fixity = fix, rec_axiom = ax, def = tm};
+fun new_recursive_definition ax name tm =
+     Prim_rec.new_recursive_definition {name = name, rec_axiom = ax, def = tm};
 
 fun define_new_type_bijections name ABS REP tyax =
      Type_def_support.define_new_type_bijections

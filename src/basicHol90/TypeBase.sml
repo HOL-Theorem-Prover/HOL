@@ -119,7 +119,7 @@ fun basic_info case_def =
    (#Tyop(dest_type ty), constrs)
  end
  handle HOL_ERR _ => raise ERR "basic_info" "";
-  
+
 
 val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
@@ -152,16 +152,37 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
   end;
 
 
-fun gen_tyinfo {ax, case_def} = 
- let val induct_thm = prove_induction_thm ax
-     val nchotomy   = prove_cases_thm induct_thm
-    val case_cong  = case_cong_thm nchotomy case_def
-   val one_one = SOME (prove_constructors_one_one ax) handle HOL_ERR _ => NONE
-  val distinct = SOME (prove_constructors_distinct ax) handle HOL_ERR _ => NONE
+fun gen_tyinfo {ax, ind, case_defs} = let
+  val induct_thm = ind
+  val nchotomies = prove_cases_thm induct_thm
+  val case_congs  = map2 case_cong_thm nchotomies case_defs
+  val one_ones = prove_constructors_one_one ax
+  val distincts = prove_constructors_distinct ax
+  val _ =
+    (length nchotomies = length case_congs andalso
+     length case_congs = length one_ones andalso
+     length one_ones =   length distincts) orelse
+    raise ERR "gen_tyinfo"
+      "Number of theorems automatically proved doesn't match up"
+  fun mk_ti cases ccs ones dcts ncs =
+    case cases of
+      [] =>
+        if null ccs andalso null ones andalso null dcts andalso null ncs then
+          []
+        else
+          raise ERR "gen_tyinfo" "Too few case definitions"
+    | (c::cs) => let
+        val ti1 =
+          mk_tyinfo {ax = ax, case_def = c, case_cong = hd ccs,
+                     induction = ind, nchotomy = hd ncs, size = NONE,
+                     one_one = hd ones, distinct = hd dcts}
+      in
+        ti1 :: mk_ti cs (tl ccs) (tl ones) (tl dcts) (tl ncs)
+      end handle List.Empty =>
+        raise ERR "gen_tyinfo" "Too many case definitions"
+
 in
-  mk_tyinfo {ax=ax,case_def=case_def,case_cong=case_cong,
-             induction=induct_thm,nchotomy=nchotomy, size = NONE,
-             one_one=one_one,distinct=distinct}
+  mk_ti case_defs case_congs one_ones distincts nchotomies
 end;
 
 
@@ -296,19 +317,18 @@ val elts = listItems o theTypeBase;
  * Install datatype facts for booleans into theTypeBase.                     *
  *---------------------------------------------------------------------------*)
 
-open boolTheory;
+open boolTheory Rewrite;
 
-val boolAxiom = prove(Term`!(e0:'a) e1. ?!fn. (fn T = e0) /\ (fn F = e1)`,
-SUBST_TAC[INST_TYPE[Type.alpha |-> Type`:bool -> 'a`] EXISTS_UNIQUE_DEF]
-  THEN BETA_TAC THEN BETA_TAC THEN REPEAT GEN_TAC THEN CONJ_TAC THENL
-  [EXISTS_TAC(Term`\x. (x=T) => (e0:'a) | e1`) THEN BETA_TAC
-     THEN SUBST_TAC[EQT_INTRO(REFL(Term`T`)),
-                    EQF_INTRO(CONJUNCT2(BOOL_EQ_DISTINCT))]
-     THEN SUBST_TAC(CONJUNCTS (SPECL [Term`e0:'a`, Term`e1:'a`] COND_CLAUSES))
-     THEN CONJ_TAC THEN REFL_TAC,
-   CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN REPEAT STRIP_TAC
-     THEN BOOL_CASES_TAC(Term`b:bool`)
-     THEN REPEAT (POP_ASSUM SUBST1_TAC) THEN REFL_TAC]);
+val boolAxiom = prove(
+  Term`!(e0:'a) e1. ?fn. (fn T = e0) /\ (fn F = e1)`,
+  REPEAT GEN_TAC THEN
+  EXISTS_TAC(Term`\x. if x then (e0:'a) else e1`) THEN
+  BETA_TAC THEN REWRITE_TAC [COND_CLAUSES]);
+
+val boolInd = prove(
+  Term`!P. P T /\ P F ==> !b. P b`,
+  REPEAT STRIP_TAC THEN BOOL_CASES_TAC (Term`b:bool`) THEN
+  ASM_REWRITE_TAC []);
 
 val bool_case_def =
   let val [x,y,_] = #1(strip_forall(concl boolTheory.bool_case_DEF))
@@ -323,7 +343,8 @@ val bool_case_def =
    CONJ (gen thmT') (gen thmF')
   end;
 
-val bool_info = gen_tyinfo {ax = boolAxiom, case_def = bool_case_def};
+val bool_info = hd (gen_tyinfo {ax = boolAxiom, ind = boolInd,
+                                case_defs = [bool_case_def]});
 
 val _ = write bool_info;
 

@@ -56,7 +56,7 @@ signature Rsyntax =
     val new_constant : {Name:string, Ty:hol_type} -> unit
     val new_infix : {Name:string, Prec:int, Ty:hol_type} -> unit
     val new_recursive_definition
-        : {def:term, fixity:Parse.fixity, name:string, rec_axiom:thm} -> thm
+        : {def:term, name:string, rec_axiom:thm} -> thm
     val new_specification
         : {consts:{const_name:string, fixity:Parse.fixity} list,
            name:string, sat_thm:thm} -> thm

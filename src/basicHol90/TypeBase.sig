@@ -9,7 +9,7 @@ sig
   type tyinfo
   type typeBase
 
-  val gen_tyinfo : {ax:thm, case_def: thm} -> tyinfo
+  val gen_tyinfo : {ax:thm, ind:thm, case_defs: thm list} -> tyinfo list
 
   val mk_tyinfo : {ax:thm, case_def:thm,case_cong:thm,
                    induction:thm,nchotomy:thm, size: (term * thm) option,
