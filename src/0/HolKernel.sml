@@ -219,6 +219,51 @@ fun find_terms P =
  in accum []
  end;
 
+(* ----------------------------------------------------------------------
+    find_maximal_terms[l]
+
+    finds sub-terms within a term, but doesn't look into sub-terms that
+    match the provided predicate.  The find_maximal_termsl version
+    returns the terms as a list rather than a set.
+   ---------------------------------------------------------------------- *)
+
+fun find_maximal_terms P t = let
+  fun recurse acc tlist =
+      case tlist of
+        [] => acc
+      | t::ts =>
+        if P t then recurse (HOLset.add(acc, t)) ts
+        else
+          case dest_term t of
+            COMB(f,x) => recurse acc (f::x::ts)
+          | LAMB(v,b) => recurse acc (b::ts)
+          | _ => recurse acc ts
+in
+  recurse empty_tmset [t]
+end
+
+fun find_maximal_termsl P t = HOLset.listItems (find_maximal_terms P t)
+
+(* ----------------------------------------------------------------------
+    term_size
+
+    Returns a term's size.  There's no logical significance to this
+    number, but it can be useful.
+   ---------------------------------------------------------------------- *)
+
+fun term_size t = let
+  fun recurse acc tlist =
+      case tlist of
+        [] => acc
+      | t::ts =>
+        case dest_term t of
+          COMB(f, x) => recurse (1 + acc) (f::x::ts)
+        | LAMB(v,b) => recurse (1 + acc) (b::ts)
+        | _ => recurse (1 + acc) ts
+in
+  recurse 0 [t]
+end
+
 (*---------------------------------------------------------------------------
  * Subst_occs
  * Put a new variable in tm2 at designated (and free) occurrences of redex.
