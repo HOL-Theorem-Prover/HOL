@@ -52,7 +52,7 @@ done
 
 echo Also removing Buddy documentation from distribution
 cd /tmp/
-mv src/muddy/muddyC/buddy/doc/*.ps .
+mv hol98/src/muddy/muddyC/buddy/doc/*.ps .
 
 
 echo Now starting to clean up and make tar ball
@@ -62,8 +62,8 @@ cd /tmp/hol98
 mv /tmp/configure.sml tools
 
 mv bin/README ../bin-README
-/bin/rm tools/build.sml tools/Holmake/*.{uo,ui} tools/hol98-mode.el
-/bin/rm tools/Holmake/{Holmake,Parser,Lexer}.sml tools/Holmake/Parser.sig
+/bin/rm tools/Holmake/*.{uo,ui} tools/hol98-mode.el
+/bin/rm tools/Holmake/{Parser,Lexer}.sml tools/Holmake/Parser.sig
 /bin/rm tools/Holmake/Holmake_{parse.{sig,sml},tokens.sml}
 (cd tools/quote-filter ; ../../bin/Holmake cleanAll)
 (cd help/src ; ../../bin/Holmake cleanAll)
