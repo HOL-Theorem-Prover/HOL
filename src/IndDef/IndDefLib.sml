@@ -476,6 +476,7 @@ type monoset = (string * tactic) list;
  * MONO_ALL = |- (!x. P x ==> Q x) ==> ((!x. P x) ==> (!x. Q x))
  * MONO_EXISTS = |- (!x. P x ==> Q x) ==> ((?x. P x) ==> (?x. Q x))
  *---------------------------------------------------------------------------*)
+
 val MONO_AND = Ho_boolTheory.MONO_AND;
 val MONO_OR  = Ho_boolTheory.MONO_OR;
 val MONO_IMP = Ho_boolTheory.MONO_IMP;
@@ -541,21 +542,21 @@ fun MONO_STEP_TAC monoset =
 fun MONO_TAC monoset =
   REPEAT (MONO_STEP_TAC monoset) THEN ASM_REWRITE_TAC[];;
 
-(* ========================================================================= *)
-(* Part 3: Utility fnctions to modify the basic theorems in various ways.   *)
-(*                                                                           *)
+(* =========================================================================*)
+(* Part 3: Utility functions to modify the basic theorems in various ways.  *)
+(*                                                                          *)
 (* There are various fnctions that can be applied to a theorem:             *)
-(*                                                                           *)
-(* (1) Attempt to prove the monotonicity hypotheses                          *)
-(*                                                                           *)
-(* (2) Generalize it over schematic variables                                *)
-(*                                                                           *)
-(* (3) Derive a raw existence assertion                                      *)
-(*                                                                           *)
-(* (4) Actually make definitions of the inductive relations.                 *)
-(*                                                                           *)
-(* Generally one applies either or both of (1) and (2), then does (4).       *)
-(* ========================================================================= *)
+(*                                                                          *)
+(* (1) Attempt to prove the monotonicity hypotheses                         *)
+(*                                                                          *)
+(* (2) Generalize it over schematic variables                               *)
+(*                                                                          *)
+(* (3) Derive a raw existence assertion                                     *)
+(*                                                                          *)
+(* (4) Actually make definitions of the inductive relations.                *)
+(*                                                                          *)
+(* Generally one applies either or both of (1) and (2), then does (4).      *)
+(* =========================================================================*)
 
 (* ------------------------------------------------------------------------- *)
 (* Attempt to dispose of the non-equational assumption(s) of a theorem.      *)
@@ -628,10 +629,10 @@ fun make_definitions th =
 
 val unschematize_clauses =
   let fun pare_comb qvs tm =
-      if null (intersect (free_vars tm) qvs) andalso all is_var
-(snd(strip_comb tm))
-          then tm
-      else pare_comb qvs (rator tm)
+        if null (intersect (free_vars tm) qvs) 
+           andalso all is_var (snd(strip_comb tm))
+        then tm
+        else pare_comb qvs (rator tm)
   in fn clauses =>
       let val schem = map (fn cls =>
           let val (avs,bod) = strip_forall cls
@@ -729,7 +730,7 @@ fun new_simple_inductive_definition specs =
 (* [JRH] Wrapper for approximate compatibility with hol90 library.           *)
 (* ------------------------------------------------------------------------- *)
 
-fun new_inductive_definition{fixity = f, name = s, patt = p, rules = r} =
+fun inductive_defn monoset {fixity=f, name=s, patt=p, rules=r} =
   let val svs = (fst(strip_comb(fst p)))::(snd p)
       fun mk_rule{hypotheses=h,conclusion=c,side_conditions=s} =
         let val hyps = h @ s
@@ -737,8 +738,10 @@ fun new_inductive_definition{fixity = f, name = s, patt = p, rules = r} =
             val gvs = subtract (free_vars bod) svs
          in list_mk_forall(gvs,bod) end
       val rtm = list_mk_conj (map mk_rule r)
-      val dth = gen_new_inductive_definition bool_monoset rtm
-   in dth end;
+   in gen_new_inductive_definition monoset rtm
+   end;
+
+fun new_inductive_definition r = inductive_defn bool_monoset r;
 
 (*
 local
