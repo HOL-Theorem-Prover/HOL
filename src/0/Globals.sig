@@ -30,6 +30,7 @@ sig
   val allow_schema_definition : bool ref
 
   val interactive             : bool ref
+  val print_thy_loads         : bool ref
 
   val hol_clock               : Timer.cpu_timer
 end

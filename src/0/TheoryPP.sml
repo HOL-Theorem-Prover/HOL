@@ -25,20 +25,20 @@ fun thm_terms th = Thm.concl th :: Thm.hyp th;
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
 
-fun pp_type mvartype mtype pps ty = 
+fun pp_type mvartype mtype pps ty =
  let open Portable Type
      val pp_type = pp_type mvartype mtype pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
  in
-  if is_vartype ty 
-  then case dest_vartype ty 
+  if is_vartype ty
+  then case dest_vartype ty
         of "'a" => add_string "alpha"
          | "'b" => add_string "beta"
          | "'c" => add_string "gamma"
          | "'d" => add_string "delta"
          |  s   => add_string (mvartype^quote s)
-  else 
+  else
   case dest_thy_type ty
    of {Tyop="bool",Thy="min", Args=[]} => add_string "bool"
     | {Tyop="ind", Thy="min", Args=[]} => add_string "ind"
@@ -70,7 +70,7 @@ fun pp_type mvartype mtype pps ty =
          end
  end
 
-fun with_parens pfn pp x = 
+fun with_parens pfn pp x =
   let open Portable
   in add_string pp "("; pfn pp x; add_string pp ")"
   end
@@ -110,7 +110,7 @@ fun pp_sig pp_thm info_record ppstrm = let
     (begin_block CONSISTENT 3;
      add_string (String.concat ["[", s, "]"]);
      add_string ("  "^class);
-     add_newline(); add_newline(); 
+     add_newline(); add_newline();
      if null (Thm.hyp th) andalso Tag.isEmpty (Thm.tag th)
        then pp_thm th
        else with_flag(Globals.show_tags,true)
@@ -125,14 +125,14 @@ fun pp_sig pp_thm info_record ppstrm = let
          end_block();
          add_newline(); add_newline())
   fun pr_sig_ps NONE = ()  (* won't be fired because of filtering below *)
-    | pr_sig_ps (SOME pp) = (begin_block CONSISTENT 0; 
+    | pr_sig_ps (SOME pp) = (begin_block CONSISTENT 0;
                              pp ppstrm; end_block());
   fun pr_sig_psl [] = ()
     | pr_sig_psl l =
        (add_newline(); add_newline();
         begin_block CONSISTENT 0;
         pr_list pr_sig_ps (fn () => ())
-               (fn () => (add_newline(); add_newline())) l; 
+               (fn () => (add_newline(); add_newline())) l;
         end_block());
 
   fun pr_docs() =
@@ -185,20 +185,20 @@ fun reset_share_table () =
   (taken := 0;
    Lib.for_se 0 (table_size-1) (fn i => Array.update(share_table,i,[])));
 
-fun hash_type ty n = 
+fun hash_type ty n =
   hash(Type.dest_vartype ty) (0,n)
-  handle HOL_ERR _ => 
+  handle HOL_ERR _ =>
      let val {Tyop,Thy,Args} = Type.dest_thy_type ty
-     in itlist hash_type Args (hash Thy (0, hash Tyop (0,n))) 
+     in itlist hash_type Args (hash Thy (0, hash Tyop (0,n)))
      end;
 
 fun hash_atom tm n =
-  let val (Name,Ty) = Term.dest_var tm 
-  in hash_type Ty (hash Name (0,n)) 
+  let val (Name,Ty) = Term.dest_var tm
+  in hash_type Ty (hash Name (0,n))
   end handle HOL_ERR _ =>
        let val {Name,Thy,Ty} = Term.dest_thy_const tm
        in hash_type Ty (hash Thy (0, hash Name (0,n)))
-       end; 
+       end;
 
 
 (*---------------------------------------------------------------------------
@@ -273,12 +273,12 @@ local val backslash = #"\\"
              let val c = String.sub(s,i)
              in (c = backslash) orelse (c = double_quote) orelse loop (i+1)
              end handle Subscript => false
-        in loop 0 
+        in loop 0
         end
       fun add_backslashes s =
         let fun add i A = add (i+1)
               (let val c = String.sub(s,i)
-               in if (c = backslash) orelse (c = double_quote) 
+               in if (c = backslash) orelse (c = double_quote)
                   then  (c:: #"\\" ::A)
                   else c::A end)
                handle Subscript => String.implode(rev(double_quote::A))
@@ -296,7 +296,7 @@ end;
  *  Print a theory as a module.
  *---------------------------------------------------------------------------*)
 
-fun pp_struct info_record ppstrm = 
+fun pp_struct info_record ppstrm =
  let open Term
      val {theory as (name,i1,i2), parents=parents0,
         axioms,definitions,theorems,types,constants,struct_ps} = info_record
@@ -438,23 +438,25 @@ fun pp_struct info_record ppstrm =
 
    in
       begin_block CONSISTENT 0;
-      add_string (String.concat 
+      add_string (String.concat
            ["structure ",Thry name," :> ", ThrySig name," ="]);
       add_newline();
       begin_block CONSISTENT 2;
       add_string "struct"; add_newline();
       begin_block CONSISTENT 0;
+      add_string ("val _ = if !Globals.print_thy_loads then print \"Loading "^
+                  Thry name^" ... \" else ()"); add_newline();
       add_string "open Type Term Thm"; add_newline();
       add_string "infixr -->"; add_newline();
       add_string"fun C s t ty = mk_thy_const{Name=s,Thy=t,Ty=ty}";
       add_newline();
-      add_string"fun T s t A = mk_thy_type{Tyop=s, Thy=t,Args=A}"; 
+      add_string"fun T s t A = mk_thy_type{Tyop=s, Thy=t,Args=A}";
       add_newline();
       add_string"fun V s q = mk_var(s,q)";     add_newline();
       add_string"val U     = mk_vartype";              add_newline();
    (*   add_string("val _ = print \"Loading theory: "^Thry name^"\\n\""); *)
       add_newline();
-      pblock ("Parents", add_string o pparent, 
+      pblock ("Parents", add_string o pparent,
               thid_sort parents1);
       add_newline();
       pp_incorporate theory parents0 types constants; add_newline();
@@ -463,6 +465,7 @@ fun pp_struct info_record ppstrm =
       pr_psl struct_ps;
       end_block();
       end_block();
+      add_string "val _ = if !Globals.print_thy_loads then print \"done\\n\" else ()"; add_newline();
       add_break(0,0); add_string"end"; add_newline();
       end_block();
       flush_ppstream()

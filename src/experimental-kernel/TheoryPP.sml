@@ -366,6 +366,8 @@ fun pp_struct info_record ppstrm =
       begin_block CONSISTENT 2;
       add_string "struct"; add_newline();
       begin_block CONSISTENT 0;
+      add_string ("val _ = if !Globals.print_thy_loads then print \"Loading "^
+                  Thry name^" ... \" else ()"); add_newline();
       add_string "open Type Term Thm"; add_newline();
       add_string "infixr -->"; add_newline();
       add_newline();
@@ -391,7 +393,9 @@ fun pp_struct info_record ppstrm =
       pr_psl struct_ps;
       end_block();
       end_block();
-      add_break(0,0); add_string"end"; add_newline();
+      add_break(0,0);
+      add_string "val _ = if !Globals.print_thy_loads then print \"done\\n\" else ()"; add_newline();
+      add_string"end"; add_newline();
       end_block();
       flush_ppstream()
    end;
