@@ -681,6 +681,29 @@ val LMAP_APPEND = store_thm(
     MESON_TAC []
   ]);
 
+val LMAP_MAP = store_thm(
+  "LMAP_MAP",
+  ``!(f:'a -> 'b) (g:'c -> 'a) (ll:'c llist).
+        LMAP f (LMAP g ll) = LMAP (f o g) ll``,
+  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
+  Q.EXISTS_TAC `\ll1 ll2. ?ll0. (ll1 = LMAP f (LMAP g ll0)) /\
+                                (ll2 = LMAP (f o g) ll0)` THEN
+  SIMP_TAC hol_ss [] THEN REPEAT STRIP_TAC THENL [
+    MESON_TAC [],
+    REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC
+      (Q.ISPEC `ll0:'c llist` llist_CASES) THEN
+    FULL_SIMP_TAC hol_ss [LMAP, LTL_THM, LHD_THM] THEN
+    MESON_TAC []
+  ]);
+
+val LAPPEND_NIL_2ND = store_thm(
+  "LAPPEND_NIL_2ND",
+  ``!ll. LAPPEND ll LNIL = ll``,
+  GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
+  Q.EXISTS_TAC `\ll1 ll2. ll1 = LAPPEND ll2 LNIL` THEN
+  SIMP_TAC hol_ss [] THEN GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `ll4` llist_CASES) THEN
+  SIMP_TAC hol_ss [LAPPEND, LTL_THM, LHD_THM]);
 
 val LFINITE = new_definition(
   "LFINITE",
@@ -740,25 +763,12 @@ val LTAKE_CONS_EQ_SOME = store_thm(
     MESON_TAC []
   ]);
 
-
-val CONJ_ss = SIMPSET {
-  ac = [],
-  congs = [tautLib.TAUT_PROVE
-             ``(P ==> (Q = Q')) ==> (Q' ==> (P = P')) ==>
-               ((P /\ Q) = (P' /\ Q'))``],
-  convs = [], dprocs = [], filter = NONE, rewrs = []}
-
 val SUC_EXISTS_lemma = prove(
   ``!P n. (?m. (n = SUC m) /\ P m n) = 0 < n /\ P (n - 1) n``,
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     ELIM_TAC THEN ASM_SIMP_TAC hol_ss [],
     Q.EXISTS_TAC `n - 1` THEN ASM_SIMP_TAC hol_ss []
   ]);
-
-fun mk_abs_CONV v tm =
-  SYM (BETA_CONV (Psyntax.mk_comb(Psyntax.mk_abs(v,tm), v)))
-fun mk_abslist_CONV vlist tm =
-  GSYM (DEPTH_CONV BETA_CONV (list_mk_comb(list_mk_abs(vlist, tm), vlist)))
 
 val LTAKE_EQ_NONE = store_thm(
   "LTAKE_EQ_NONE",
@@ -879,17 +889,114 @@ val LLENGTH_THM = store_thm(
     ]
   ]);
 
+val LFINITE_HAS_LENGTH = store_thm(
+  "LFINITE_HAS_LENGTH",
+  ``!ll. LFINITE ll ==> ?n. LLENGTH ll = SOME n``,
+  GEN_TAC THEN SIMP_TAC hol_ss [LLENGTH]);
+
+val NOT_LFINITE_NO_LENGTH = store_thm(
+  "NOT_LFINITE_NO_LENGTH",
+  ``!ll. ~LFINITE ll ==> (LLENGTH ll = NONE)``,
+  SIMP_TAC hol_ss [LLENGTH]);
+
+val LFINITE_INDUCTION = store_thm(
+  "LFINITE_INDUCTION",
+  ``!P.  P LNIL /\ (!t. P t ==> !h. P (LCONS h t)) ==>
+         !ll. LFINITE ll ==> P ll``,
+  REPEAT STRIP_TAC THEN
+  Induct_on `THE (LLENGTH ll)` THEN REPEAT STRIP_TAC THEN
+  `?n. LLENGTH ll = SOME n` by ASM_MESON_TAC [LFINITE_HAS_LENGTH] THEN
+  REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll` llist_CASES) THENL [
+    ASM_SIMP_TAC hol_ss [],
+    FULL_SIMP_TAC hol_ss [LLENGTH_THM, optionTheory.option_APPLY_EQ_SOME] THEN
+    FULL_SIMP_TAC hol_ss [],
+    FULL_SIMP_TAC hol_ss [LLENGTH_THM],
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    FULL_SIMP_TAC hol_ss [LLENGTH_THM, LFINITE_THM, AND_IMP_INTRO] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    FULL_SIMP_TAC hol_ss [optionTheory.option_APPLY_EQ_SOME]
+  ]);
+
+
+val LFINITE_STRONG_INDUCTION = save_thm(
+  "LFINITE_STRONG_INDUCTION",
+  SIMP_RULE hol_ss [LFINITE_THM]
+  (Q.SPEC `\ll. LFINITE ll /\ P ll` LFINITE_INDUCTION))
+
+val LFINITE_MAP = store_thm(
+  "LFINITE_MAP",
+  ``!f (ll:'a llist). LFINITE (LMAP f ll) = LFINITE ll``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+    STRIP_TAC THEN Q.ABBREV_TAC `ll1 = LMAP f ll` THEN
+    POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll` THEN
+    POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll1` THEN
+    Ho_resolve.MATCH_MP_TAC LFINITE_INDUCTION THEN REPEAT STRIP_TAC THEN
+    REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll1` llist_CASES) THEN
+    FULL_SIMP_TAC hol_ss [LMAP, LCONS_NOT_NIL, LFINITE_THM, LCONS_11],
+    Q.ID_SPEC_TAC `ll` THEN Ho_resolve.MATCH_MP_TAC LFINITE_INDUCTION THEN
+    SIMP_TAC hol_ss [LFINITE_THM, LMAP]
+  ]);
+
+val LFINITE_APPEND = store_thm(
+  "LFINITE_APPEND",
+  ``!ll1 ll2. LFINITE (LAPPEND ll1 ll2) = LFINITE ll1 /\ LFINITE ll2``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+    STRIP_TAC THEN Q.ABBREV_TAC `ll0 = LAPPEND ll1 ll2` THEN
+    POP_ASSUM MP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`ll1`, `ll2`] THEN
+    POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll0` THEN
+    Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN REPEAT STRIP_TAC THEN
+    REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll1` llist_CASES) THEN
+    FULL_SIMP_TAC hol_ss [LFINITE_THM, LAPPEND, LCONS_NOT_NIL, LCONS_11] THEN
+    ASM_MESON_TAC [],
+    REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
+    Q.ID_SPEC_TAC `ll1` THEN
+    Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+    SIMP_TAC hol_ss [LFINITE_THM, LAPPEND]
+  ]);
+
+val LLENGTH_MAP = store_thm(
+  "LLENGTH_MAP",
+  ``!ll f. LLENGTH (LMAP f ll) = LLENGTH ll``,
+  REPEAT GEN_TAC THEN Cases_on `LFINITE ll` THENL [
+    POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll` THEN
+    Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+    SIMP_TAC hol_ss [LLENGTH_THM, LMAP],
+    ASM_MESON_TAC [NOT_LFINITE_NO_LENGTH, LFINITE_MAP]
+  ]);
+
+val LLENGTH_APPEND = store_thm(
+  "LLENGTH_APPEND",
+  ``!ll1 ll2.
+       LLENGTH (LAPPEND ll1 ll2) =
+         if LFINITE ll1 /\ LFINITE ll2 then
+           SOME (THE (LLENGTH ll1) + THE (LLENGTH ll2))
+         else
+           NONE``,
+  REPEAT GEN_TAC THEN
+  Cases_on `LFINITE (LAPPEND ll1 ll2)` THENL [
+    POP_ASSUM (fn th => `LFINITE ll1 /\ LFINITE ll2` by
+                        MESON_TAC [th, LFINITE_APPEND]) THEN
+    ASM_SIMP_TAC hol_ss [] THEN
+    POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll2` THEN
+    POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll1` THEN
+    Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+    SIMP_TAC hol_ss [LLENGTH_THM, LAPPEND] THEN REPEAT STRIP_TAC THEN
+    IMP_RES_TAC LFINITE_HAS_LENGTH THEN ASM_SIMP_TAC hol_ss [],
+    `LLENGTH (LAPPEND ll1 ll2) = NONE`
+      by ASM_MESON_TAC [NOT_LFINITE_NO_LENGTH] THEN
+    FULL_SIMP_TAC hol_ss [LFINITE_APPEND]
+  ]);
 
 val toList = new_definition(
   "toList",
   ``toList ll = if LFINITE ll then LTAKE ll (THE (LLENGTH ll)) else NONE``);
 
-(*
-val LFINITE_HAS_LENGTH = store_thm(
-  "LFINITE_HAS_LENGTH",
-  ``!ll. LFINITE ll ==> ?n. LLENGTH ll = SOME n``,
-  GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
-*)
+
+val LDROP = new_recursive_definition {
+  def = ``(LDROP 0 ll = SOME ll) /\
+          (LDROP (SUC n) ll = option_JOIN (option_APPLY (LDROP n) (LTL ll)))``,
+  rec_axiom = prim_recTheory.num_Axiom,
+  name = "LDROP"};
 
 (*
 val LFILTER = new_specification {
