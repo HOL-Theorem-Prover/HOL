@@ -20,7 +20,7 @@ infix THEN THENC THENL |-> ORELSE;
 
 (* interactive use:
    app load ["prim_recTheory","primWFTheory", "QLib"];
- *)
+*)
 
 val _ = new_theory "arithmetic";
 
@@ -50,6 +50,7 @@ and PRE           = prim_recTheory.PRE;
 (*---------------------------------------------------------------------------*
  * The basic arithmetic operations.                                          *
  *---------------------------------------------------------------------------*)
+
 val ADD = new_recursive_definition
    {name = "ADD",
     fixity = Infixl 500,
@@ -74,6 +75,7 @@ val NUMERAL_BIT2 =
 (*---------------------------------------------------------------------------*
  * After this call, numerals parse into `NUMERAL( ... )`                     *
  *---------------------------------------------------------------------------*)
+
 val _ = add_numeral_form (#"n", NONE);
 
 val SUB = new_recursive_definition
@@ -134,7 +136,7 @@ val num_case_def = new_recursive_definition
 
 val ONE = store_thm("ONE",
   Term `1 = SUC 0`,
-  REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1, ALT_ZERO, ADD]);
+REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1, ALT_ZERO, ADD]);
 
 val TWO = store_thm("TWO",
   Term`2 = SUC 1`,
@@ -2298,6 +2300,44 @@ val EXP_INJECTIVE = store_thm(
     IMP_RES_TAC NOT_LESS_0,
     ASM_REWRITE_TAC [MULT_MONO_EQ]
   ]);
+
+
+val EXISTS_GREATEST = store_thm("EXISTS_GREATEST",
+--`!P. (?x. P x) /\ (?x:num. !y. y > x ==> ~P y) 
+                 = 
+       ?x. P x /\ !y. y > x ==> ~P y`--,
+GEN_TAC THEN EQ_TAC THENL
+ [REWRITE_TAC[GREATER_DEF] THEN
+   DISCH_THEN (CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
+   SUBGOAL_THEN 
+     (Term`(?x. !y. x < y ==> ~P y) = (?x. (\x. !y. x < y ==> ~P y) x)`)
+        SUBST1_TAC THENL
+    [BETA_TAC THEN REFL_TAC,
+     DISCH_THEN (MP_TAC o MATCH_MP WOP)
+      THEN BETA_TAC THEN CONV_TAC (DEPTH_CONV NOT_FORALL_CONV) 
+      THEN STRIP_TAC THEN EXISTS_TAC (Term`n:num`) THEN ASM_REWRITE_TAC[]
+      THEN NTAC 2 (POP_ASSUM MP_TAC)
+      THEN STRUCT_CASES_TAC (SPEC (Term`n:num`) num_CASES) 
+      THEN REPEAT STRIP_TAC THENL
+      [UNDISCH_THEN (Term`!y. 0 < y ==> ~P y`) 
+            (MP_TAC o CONV_RULE (ONCE_DEPTH_CONV CONTRAPOS_CONV))
+         THEN REWRITE_TAC[] THEN STRIP_TAC THEN RES_TAC 
+         THEN MP_TAC (SPEC (Term`x:num`) LESS_0_CASES) 
+         THEN ASM_REWRITE_TAC[] THEN DISCH_THEN (SUBST_ALL_TAC o SYM)
+         THEN ASM_REWRITE_TAC[],
+       POP_ASSUM (MP_TAC o SPEC (Term`n':num`))
+         THEN REWRITE_TAC [prim_recTheory.LESS_SUC_REFL]
+         THEN DISCH_THEN (CHOOSE_THEN MP_TAC)
+         THEN SUBGOAL_THEN (Term`!x y. ~(x ==> ~y) = x /\ y`)
+               (fn th => REWRITE_TAC[th] THEN STRIP_TAC) THENL 
+         [REWRITE_TAC [NOT_IMP],
+           UNDISCH_THEN (Term`!y. SUC n' < y ==> ~P y`) 
+              (MP_TAC o CONV_RULE (ONCE_DEPTH_CONV CONTRAPOS_CONV) 
+                 o SPEC (Term`y:num`))
+            THEN ASM_REWRITE_TAC[NOT_LESS,LESS_OR_EQ] 
+            THEN DISCH_THEN (DISJ_CASES_THEN2 ASSUME_TAC SUBST_ALL_TAC)
+            THENL [IMP_RES_TAC LESS_LESS_SUC, ASM_REWRITE_TAC[]]]]],
+  REPEAT STRIP_TAC THEN EXISTS_TAC (Term`x:num`) THEN ASM_REWRITE_TAC[]]);
 
 
 val _ = adjoin_to_theory

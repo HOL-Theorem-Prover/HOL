@@ -9,7 +9,8 @@ structure NonRecSize =
 struct
 
 open HolKernel basicHol90Lib Parse;
-local open pairTheory sumTheory optionTheory in end;
+
+local open pairTheory sumTheory optionTheory arithmeticTheory in end;
 
 infix THEN THENC THENL |-> ORELSE;
 infixr -->;

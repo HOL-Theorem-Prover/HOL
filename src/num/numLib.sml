@@ -29,9 +29,9 @@ infix 5 |->
 infix ##;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
 
 val N = Type`:num`
-fun -- q x = Term q
 
 (* --------------------------------------------------------------------- *)
 (* ADD_CONV: addition of natural number constants (numerals).            *)
@@ -147,55 +147,14 @@ end;
 (* [JRH 91.07.17]                                                            *)
 (*---------------------------------------------------------------------------*)
 
-local
-val LESS_EQ' = arithmeticTheory.LESS_EQ
-and LESS_EQUAL_ANTISYM' = arithmeticTheory.LESS_EQUAL_ANTISYM
-and NOT_LESS' = arithmeticTheory.NOT_LESS
-and LESS_SUC_REFL' = prim_recTheory.LESS_SUC_REFL
-and LESS_0_CASES' = arithmeticTheory.LESS_0_CASES
-and NOT_LESS_0' = prim_recTheory.NOT_LESS_0
-and num_CASES' = arithmeticTheory.num_CASES
-and GREATER' = arithmeticTheory.GREATER_DEF
-val EXISTS_GREATEST = prove(
-  Term`!P.
-          (?x. P x) /\ (?x. !y. y > x ==> ~P y) =
-          ?x. P x /\ !y. y > x ==> ~P y`,
-  GEN_TAC THEN EQ_TAC THENL
-  [REWRITE_TAC[GREATER'] THEN
-   DISCH_THEN (CONJUNCTS_THEN2 STRIP_ASSUME_TAC
-                 (X_CHOOSE_THEN (--`g:num`--) MP_TAC o
-                  CONV_RULE EXISTS_LEAST_CONV)) THEN
-   DISCH_THEN (fn th => EXISTS_TAC (--`g:num`--) THEN
-                        REWRITE_TAC[th] THEN MP_TAC th) THEN
-   STRUCT_CASES_TAC (SPEC (--`g:num`--) num_CASES') THENL
-   [REWRITE_TAC[NOT_LESS_0'] THEN DISCH_THEN (MP_TAC o SPEC (--`x:num`--)) THEN
-    DISJ_CASES_TAC (SPEC (--`x:num`--) LESS_0_CASES'),
-    POP_ASSUM (K ALL_TAC) THEN
-    DISCH_THEN (CONJUNCTS_THEN2
-                   (MP_TAC o REWRITE_RULE[] o
-                    CONV_RULE (ONCE_DEPTH_CONV CONTRAPOS_CONV))
-                   (X_CHOOSE_TAC (--`y:num`--) o
-                    REWRITE_RULE[NOT_IMP] o
-                    CONV_RULE NOT_FORALL_CONV o
-                    REWRITE_RULE[LESS_SUC_REFL'] o
-                    SPEC (--`n:num`--))) THEN
-    DISCH_THEN (MP_TAC o SPEC (--`y:num`--)) THEN
-    ASM_REWRITE_TAC[NOT_LESS'] THEN
-    POP_ASSUM (CONJUNCTS_THEN2
-                (fn th => DISCH_THEN
-                           (SUBST1_TAC o
-                            MATCH_MP LESS_EQUAL_ANTISYM' o
-                            CONJ (REWRITE_RULE[LESS_EQ'] th)))
-                ASSUME_TAC)],
-   DISCH_THEN CHOOSE_TAC THEN CONJ_TAC THEN EXISTS_TAC (--`x:num`--)]
-   THEN ASM_REWRITE_TAC[])
-val t = RATOR_CONV
-and n = RAND_CONV
-and b = ABS_CONV
-val red1 = t o n o t o n o n o b
-and red2 = t o n o n o n o b o n o b o n o n
-and red3 = n o n o b o t o n
-and red4 = n o n o b o n o n o b o n o n
+local val EXISTS_GREATEST = arithmeticTheory.EXISTS_GREATEST
+      val t = RATOR_CONV
+      and n = RAND_CONV
+      and b = ABS_CONV
+      val red1 = t o n o t o n o n o b
+      and red2 = t o n o n o n o b o n o b o n o n
+      and red3 = n o n o b o t o n
+      and red4 = n o n o b o n o n o b o n o n
 in
 fun EXISTS_GREATEST_CONV tm =
    let val {conj1=lc,conj2=rc} = dest_conj tm
@@ -215,7 +174,7 @@ fun EXISTS_GREATEST_CONV tm =
 end;
 
 
-val num_CONV = Num_conv.num_CONV
+val num_CONV   = Num_conv.num_CONV
 val INDUCT_TAC = Num_induct.INDUCT_TAC
 
 end; (* numLib *)

@@ -18,9 +18,10 @@ open HolKernel Parse Drule Tactic Prim_rec;
 
 infix |->;
 
-fun NUM_INDUCT_ERR{function,message} = HOL_ERR{origin_structure = "Num_induct",
-					       origin_function = function,
-					       message = message}
+fun NUM_INDUCT_ERR f m =
+   HOL_ERR
+     {origin_structure = "Num_induct",
+      origin_function = f, message = m};
 
 val INDUCTION = numTheory.INDUCTION;
 
@@ -32,11 +33,10 @@ val INDUCTION = numTheory.INDUCTION;
 (*             A1 u A2 |- !n. t[n]                                       *)
 (* --------------------------------------------------------------------- *)
 
-local val bool_ty = ==`:bool`==
-      val v1 = genvar bool_ty
-      and v2 = genvar bool_ty
-      and zero = --`ZERO`--
-      and SUC = --`SUC`--
+local val v1 = genvar Type.bool
+      and v2 = genvar Type.bool
+      and zero = mk_const{Name="0",Ty= Type`:num`}
+      and SUC = mk_const{Name="SUC",Ty= Type`:num->num`}
 in
 fun INDUCT (base,step) =
    let val {Bvar,Body} = dest_forall(concl step)
@@ -44,7 +44,7 @@ fun INDUCT (base,step) =
        val P  = mk_abs{Bvar = Bvar, Body = ant}
        val P0 = mk_comb{Rator = P, Rand = zero}
        val Pv = mk_comb{Rator = P, Rand = Bvar}
-       val PSUC = mk_comb{Rator = P, Rand = mk_comb{Rator = SUC, Rand = Bvar}}
+       val PSUC = mk_comb{Rator=P, Rand=mk_comb{Rator=SUC, Rand=Bvar}}
        val base' = EQ_MP (SYM(BETA_CONV P0)) base
        and step'  = SPEC Bvar step
        and hypth  = SYM(RIGHT_BETA(REFL Pv))
@@ -56,9 +56,9 @@ fun INDUCT (base,step) =
        val th2 = GEN Bvar (EQ_MP th1 step')
        val th3 = SPEC Bvar (MP IND (CONJ base' th2))
    in
-   GEN Bvar (EQ_MP (BETA_CONV(concl th3)) th3)
+     GEN Bvar (EQ_MP (BETA_CONV(concl th3)) th3)
    end
-   handle _ => raise NUM_INDUCT_ERR{function = "INDUCT",message = ""}
+   handle _ => raise NUM_INDUCT_ERR "INDUCT" ""
 end;
 
 (* --------------------------------------------------------------------- *)
@@ -67,8 +67,8 @@ end;
 (*   [A] t[0]  ,  [A,t[n]] t[SUC x]                                      *)
 (* --------------------------------------------------------------------- *)
 
-fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g
-                   handle _ => raise NUM_INDUCT_ERR{function = "INDUCT_TAC",
-						    message = ""};
+fun INDUCT_TAC g = 
+  INDUCT_THEN INDUCTION ASSUME_TAC g
+   handle _ => raise NUM_INDUCT_ERR "INDUCT_TAC" "";
 
 end; (* Num_induction *)
