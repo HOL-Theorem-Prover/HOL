@@ -1,0 +1,4 @@
+OPTIONS = NO_OVERLAY
+
+comparelogs : comparelogs.uo
+	$(MOSMLC) -o $@ $<
