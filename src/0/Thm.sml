@@ -1208,4 +1208,4 @@ fun disk_thm vect =
   end
 end;
 
-end; (* Thm *)
+end (* Thm *)

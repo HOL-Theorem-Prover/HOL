@@ -755,96 +755,65 @@ val empty_tmset = HOLset.empty compare
     sets of variables and type variables to avoid binding. 
  ---------------------------------------------------------------------------*)
 
-local fun MERR s = raise ERR "raw_match_term" s
+local fun MERR s = raise ERR "raw_match_term error" s
       fun free (Bv i) n             = i<n
         | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
         | free (Abs(_,Body)) n      = free Body (n+1)
         | free (t as Clos _) n      = free (push_clos t) n
         | free _ _ = true
+      fun lookup x ids =
+       let fun look [] = if HOLset.member(ids,x) then SOME x else NONE
+             | look ({redex,residue}::t) = 
+                       if x=redex then SOME residue else look t
+       in look end
       fun bound_by_scope M = not (free M 0)
 in
 fun raw_match tyavoids avoidset =
  let val tymatch = Type.raw_match_type tyavoids
      fun dont_bind v = HOLset.member(avoidset,v)
-   fun RM (v as Fv(_,Ty)) tm (S as (tmS,tyS))
-        = if v=tm then S else
-          if dont_bind v then MERR "1" else
-          if bound_by_scope tm then MERR "2" else 
-          ((case Lib.subst_assoc (equal v) tmS 
-             of NONE => (v |-> tm)::tmS
-              | SOME tm' => if aconv tm' tm then tmS else MERR"3"),
-           tymatch Ty (type_of tm) tyS)
-     | RM (Const(c1, ty1)) (Const(c2, ty2)) (tmS,tyS)
-        = (if c1 <> c2 then MERR "4" else 
-           case (ty1,ty2)
-            of (GRND _, POLY _) => MERR"5"
-             | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) else MERR"6"
-             | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
-             | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
-     | RM (Abs(Fv(_,ty1),M)) (Abs(Fv(_,ty2),N)) (tmS,tyS)
-        = RM M N (tmS, tymatch ty1 ty2 tyS)
-     | RM (Comb(M,N)) (Comb(P,Q)) S = RM M P (RM N Q S)
-     | RM (Bv i) (Bv j) S         = if i=j then S else MERR"7"
-     | RM (pat as Clos _) ob S    = RM (push_clos pat) ob S
-     | RM pat (ob as Clos _) S    = RM pat (push_clos ob) S
-     | RM all other things = MERR"8"
- in
-    RM
- end
-end (* local *)
-
-
-(*
-local fun MERR s = raise ERR "raw_match_term" s
-      fun free (Bv i) n             = i<n
-        | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
-        | free (Abs(_,Body)) n      = free Body (n+1)
-        | free (t as Clos _) n      = free (push_clos t) n
-        | free _ _ = true
-      val tymatch = Type.raw_match_type
-in
-fun raw_match tyavoids avoidset pat ob (S as (tmS,tyS)) =
- let val matchr = raw_match tyavoids avoidset
- in
-  case (pat, ob)
-   of (v as Fv(_,Ty), tm) =>
-      if HOLset.member(avoidset,v) andalso v <> tm then MERR "1"
-      else if not(free tm 0) then MERR "2"
-      else ((case Lib.subst_assoc (equal v) tmS of
-               NONE => (v |-> tm)::tmS
-             | SOME tm' => if aconv tm' tm then tmS else MERR"3"),
-            tymatch tyavoids Ty (type_of tm) tyS)
-    | (Const(c1, ty1), Const(c2, ty2)) =>
-       if c1 <> c2 then MERR "4"
-       else (case (ty1,ty2)
-              of (GRND _, POLY _) => MERR"5"
+     fun RM (v as Fv(_,Ty)) tm ((S1 as (tmS,Id)),tyS)
+          = if bound_by_scope tm then MERR "variable bound by scope" else 
+            ((case lookup v Id tmS 
+               of NONE => if v=tm then (tmS,HOLset.add(Id,v)) 
+                                  else ((v |-> tm)::tmS,Id)
+                | SOME tm' => if aconv tm' tm then S1 
+                              else MERR"double bind on variable"),
+             tymatch Ty (type_of tm) tyS)
+       | RM (Const(c1, ty1)) (Const(c2, ty2)) (tmS,tyS)
+          = (if c1 <> c2 then MERR "4" else 
+             case (ty1,ty2)
+              of (GRND _, POLY _) => MERR"ground const vs. polymorphic const"
                | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) else MERR"6"
-               | (POLY pat,GRND obj) => (tmS, tymatch tyavoids pat obj tyS)
-               | (POLY pat,POLY obj) => (tmS, tymatch tyavoids pat obj tyS))
-    | (Abs(Fv(_,ty1),M), Abs(Fv(_,ty2),N))
-         => matchr M N (tmS, tymatch tyavoids ty1 ty2 tyS)
-    | (Comb(M,N),Comb(P,Q)) => matchr M P (matchr N Q S)
-    | (Bv i, Bv j)          => if i=j then S else MERR"7"
-    | (Clos _, _)           => matchr (push_clos pat) ob S
-    | (_, Clos _)           => matchr pat (push_clos ob) S
-    | otherwise             => MERR"8"
+               | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
+               | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
+       | RM (Abs(Fv(_,ty1),M)) 
+            (Abs(Fv(_,ty2),N)) (tmS,tyS) = RM M N (tmS, tymatch ty1 ty2 tyS)
+       | RM (Comb(M,N)) (Comb(P,Q)) S = RM M P (RM N Q S)
+       | RM (Bv i) (Bv j) S         = if i=j then S else MERR"Bound var. depth"
+       | RM (pat as Clos _) ob S    = RM (push_clos pat) ob S
+       | RM pat (ob as Clos _) S    = RM pat (push_clos ob) S
+       | RM all other things        = MERR "different constructors"
+ in
+    fn pat => fn ob => fn ((S,Ids),(tyS,tyIds)) =>
+       RM pat ob ((S,HOLset.union(Ids,avoidset)),
+                  (tyS,Lib.union tyIds tyavoids))
  end
-end (* local *)
-*)
+end
+
 
 fun norm_subst tytheta =
  let val Theta = inst tytheta
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
-              in if residue=redex' then A
-                 else (redex' |-> residue)::A
+              in if residue=redex' then A else (redex' |-> residue)::A
               end) rst
- in del []
+ in del [] o fst
  end
 
 fun match_terml tyavoids avoids pat ob =
- let val (tmS,(tyS,_)) = raw_match tyavoids avoids pat ob ([],([],[]))
+ let val (tmS,(tyS,_)) = raw_match tyavoids avoids pat ob 
+                                   (([],HOLset.empty compare),([],[]))
  in
    (norm_subst tyS tmS, tyS)
  end

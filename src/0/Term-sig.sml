@@ -60,16 +60,16 @@ sig
   val inst          : (hol_type,hol_type) subst -> term -> term
 
   val raw_match     : hol_type list -> term set -> term -> term
-                       -> (term,term)subst
-                           * ((hol_type,hol_type)subst * hol_type list)
-                       -> (term,term)subst
-                            * ((hol_type,hol_type)subst * hol_type list)
+                       -> ((term,term)subst * term set) * 
+                          ((hol_type,hol_type)subst * hol_type list)
+                       -> ((term,term)subst * term set) *
+                          ((hol_type,hol_type)subst * hol_type list)
   val match_term    : term -> term
                         -> (term,term)subst * (hol_type,hol_type)subst
   val match_terml   : hol_type list -> term set -> term -> term
                         -> (term,term)subst * (hol_type,hol_type)subst
   val norm_subst    : (hol_type,hol_type)subst
-                        -> (term,term)subst -> (term,term)subst
+                        -> (term,term)subst * term set -> (term,term)subst
 
   val var_compare   : term * term -> order
   val compare       : term * term -> order

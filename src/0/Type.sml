@@ -222,7 +222,7 @@ fun polymorphic (Tyv _) = true
          This matching algorithm keeps track of identity bindings
          v |-> v in a separate area. This eliminates the need for
          post-match normalization of substitutions coming from the
-         matching algorithm, as was done in earlier implementations.
+         matching algorithm.
  ---------------------------------------------------------------------------*)
 
 local
@@ -236,17 +236,17 @@ fun raw_match_type avoids =
  let fun M (v as Tyv _) ty (Sids as (S,ids)) = 
            (case lookup v ids S 
              of NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
-              | SOME ty1 => if ty1=ty then Sids else MERR "1")
+              | SOME ty1 => if ty1=ty then Sids else MERR "double bind")
        | M (Tyapp(c1,A1)) (Tyapp(c2,A2)) Sids =
             if c1=c2 then rev_itlist2 M A1 A2 Sids else MERR "2"
-       | M _ _ _ =  MERR "3"
+       | M _ _ _ =  MERR "different constructors"
  in
    fn pat => fn ob => fn (S,ids) => M pat ob (S,union avoids ids)
 end
 
 fun match_typel l pat ob = fst (raw_match_type l pat ob ([], []))
 val match_type = match_typel []
-end;
+end
 
 
 (*---------------------------------------------------------------------------
@@ -278,4 +278,4 @@ fun is_gen_tyvar (Tyv name) = String.isPrefix gen_tyvar_prefix name
 end;
 
 
-end; (* Type *)
+end (* Type *)
