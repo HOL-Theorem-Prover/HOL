@@ -1,6 +1,6 @@
 \DOC SELECT_ELIM
 
-\TYPE {SELECT_ELIM : (thm -> (term # thm) -> thm)}
+\TYPE {SELECT_ELIM : thm -> term * thm -> thm}
 
 \SYNOPSIS
 Eliminates an epsilon term, using deduction from a particular instance.
@@ -47,8 +47,8 @@ not surjective (onto).
 \noindent These two results may be combined using {SELECT_ELIM} to
 give a new theorem:
 {
-   #SELECT_ELIM th1 ("g:num->num", th2);;
-   |- ?h. ONE_ONE h /\ ~ONTO h
+   - SELECT_ELIM th1 (Term`g:num->num`, th2);
+   val it = |- ?h. ONE_ONE h /\ ~ONTO h : thm
 }
 \USES
 This rule is rarely used.  The equivalence of {P($@ P)} and {$? P}

@@ -1,6 +1,6 @@
 \DOC prefer_form_with_tok
 
-\TYPE {Parse.prefer_form_with_tok : {{term_name : string, tok : string}} -> unit}
+\TYPE {prefer_form_with_tok : {{term_name : string, tok : string}} -> unit}
 
 \SYNOPSIS
 Sets a grammar rule's preferred flag, causing it to be preferentially printed.
@@ -27,6 +27,7 @@ as follows:
 {
    - prefer_form_with_tok {{term_name = "COND", tok = "=>"}};
    > val it = () : unit
+
    - Term`if p then q else r`;
    <<HOL message: inventing new type variable names: 'a.>>
    > val it = `p => q | r` : term

@@ -1,7 +1,7 @@
 \DOC add_user_printer
 
 \BLTYPE
-Parse.add_user_printer :
+add_user_printer :
   ({{Tyop : string, Thy : string}} * userprinter * string) -> unit
 \ELTYPE
 

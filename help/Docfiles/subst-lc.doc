@@ -32,8 +32,7 @@ equal.
    > val it = ``SUC 1`` : term
 
 
-   - subst [``SUC 0`` |-> ``1``, ``SUC 1`` |-> ``2``]
-           ``SUC(SUC 0) = SUC 1``;
+   - subst [``SUC 0`` |-> ``1``, ``SUC 1`` |-> ``2``] ``SUC(SUC 0) = SUC 1``;
    > val it = ``SUC 1 = 2`` : term
 
 
@@ -45,4 +44,5 @@ equal.
    > val it = ``waddle`` : term
 }
 
+\SEEALSO inst, SUBST, SUBS.
 \ENDDOC

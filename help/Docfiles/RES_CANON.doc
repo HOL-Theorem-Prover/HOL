@@ -67,11 +67,11 @@ possible, and the theorem is an implication:
 \noindent then the theorem {A u {{t1}} |- t2} is transformed by a recursive
 application of {RES_CANON} to get a list of theorems:
 {
-   [A u {{t1}} |- t21 ; ... ; A u {{t1}} |- t2n]
+   [A u {{t1}} |- t21 , ... , A u {{t1}} |- t2n]
 }
 \noindent and the result of discharging {t1} from these theorems:
 {
-   [A |- !x1...xn. t1 ==> t21 ; ... ; A |- !x1...xn. t1 ==> t2n]
+   [A |- !x1...xn. t1 ==> t21 , ... , A |- !x1...xn. t1 ==> t2n]
 }
 \noindent is returned. That is, the transformation rules are recursively
 applied to the conclusions of all implications.
@@ -89,10 +89,11 @@ theorem {MOD_UNIQUE}:
 \noindent For this theorem, the canonical list of implications returned by
 {RES_CANON} is as follows:
 {
-   #RES_CANON MOD_UNIQUE;;
-   [|- !k q n r. (k = (q * n) + r) ==> r < n ==> (k MOD n = r);
-    |- !r n. r < n ==> (!k q. (k = (q * n) + r) ==> (k MOD n = r))]
-   : thm list
+  - RES_CANON MOD_UNIQUE;
+  > val it =
+      [|- !r n q k. (k = q * n + r) ==> r < n ==> (k MOD n = r),
+       |- !n r. r < n ==> !q k. (k = q * n + r) ==> (k MOD n = r)] : thm list
+
 }
 \noindent The existentially-quantified, conjunctive, antecedent has given rise
 to two implications, and the scope of universal quantifiers has been restricted

@@ -6,15 +6,10 @@
 Constructs a {CONS} pair.
 
 \DESCRIBE
-{mk_cons{{hd = t, tl = --`[t1;...;tn]`--}}} returns {--`[t;t1;...;tn]`--}.
+{mk_cons{{hd = t, tl = `[t1;...;tn]`}}} returns {`[t;t1;...;tn]`}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_cons",
-            message = ""}}
-}
-\noindent if {tl} is not a list or if {hd} is not of the same type as
+Fails if {tl} is not a list or if {hd} is not of the same type as
 the elements of the list.
 
 \SEEALSO

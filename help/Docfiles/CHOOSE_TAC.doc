@@ -36,8 +36,10 @@ Suppose we have a goal asserting that the output of an electrical circuit
 }
 \noindent Then the goal can be solved by the application of:
 {
-   CHOOSE_TAC t1 THEN EXISTS_TAC "t+1" THEN
-     UNDISCH_TAC "input (t:num) :bool" THEN MATCH_ACCEPT_TAC t2
+   CHOOSE_TAC th1 
+     THEN EXISTS_TAC (Term `t+1`) 
+     THEN UNDISCH_TAC (Term `input (t:num) :bool`) 
+     THEN MATCH_ACCEPT_TAC th2
 }
 \SEEALSO
 CHOOSE_THEN, X_CHOOSE_TAC.

@@ -1,6 +1,6 @@
 \DOC SELECT_RULE
 
-\TYPE {SELECT_RULE : (thm -> thm)}
+\TYPE {SELECT_RULE : thm -> thm}
 
 \SYNOPSIS
 Introduces an epsilon term in place of an existential quantifier.
@@ -29,7 +29,7 @@ The axiom {INFINITY_AX} in the theory {ind} is of the form:
 }
 \noindent Applying {SELECT_RULE} to this theorem returns the following.
 {
-   #SELECT_RULE INFINITY_AX;;
+   #SELECT_RULE INFINITY_AX;
    |- ONE_ONE(@f. ONE_ONE f /\ ~ONTO f) /\ ~ONTO(@f. ONE_ONE f /\ ~ONTO f)
 }
 \USES

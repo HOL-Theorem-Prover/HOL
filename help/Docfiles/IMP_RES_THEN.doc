@@ -52,18 +52,17 @@ which the theorems {Ai u {{aj}} |- vi} are generated and the
 corresponding tactics applied is unspecified.
 
 \FAILURE
-Evaluating {IMP_RES_THEN ttac th} fails with `{no implication}' if the
+Evaluating {IMP_RES_THEN ttac th} fails if the
 supplied theorem {th} is not an implication, or if no implications can
 be derived from {th} by the transformation process described under the
 entry for {RES_CANON}.  Evaluating {IMP_RES_THEN ttac th (A ?- g)}
-fails with `{no resolvents}' if no assumption of the goal {A ?- g} can
-be resolved with the implication or implications derived from
-{th}. Evaluation also fails, with `{no tactics}', if there are
-resolvents, but for every resolvent {Ai u {{aj}} |- vi} evaluating the
-application {ttac (Ai u {{aj}} |- vi)} fails---that is, if for every
-resolvent {ttac} fails to produce a tactic. Finally, failure is
-propagated if any of the tactics that are produced from the resolvents
-by {ttac} fails when applied in sequence to the goal.
+fails if no assumption of the goal {A ?- g} can be resolved with the
+implication or implications derived from {th}. Evaluation also fails
+if there are resolvents, but for every resolvent {Ai u {{aj}} |- vi}
+evaluating the application {ttac (Ai u {{aj}} |- vi)} fails---that 
+is, if for every resolvent {ttac} fails to produce a tactic. Finally, 
+failure is propagated if any of the tactics that are produced from 
+the resolvents by {ttac} fails when applied in sequence to the goal.
 
 \EXAMPLE
 The following example shows a straightforward use of {IMP_RES_THEN} to

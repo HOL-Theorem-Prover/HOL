@@ -10,12 +10,12 @@ assumptions of a goal.
 theorem-tactical, assumption.
 
 \DESCRIBE
-When applied to a theorem-tactic {f} and a goal {({{A1;...;An}} ?- C)}, the
+When applied to a theorem-tactic {f} and a goal {({{A1,...,An}} ?- C)}, the
 {EVERY_ASSUM} tactical maps {f} over a list of {ASSUME}d assumptions then
 applies the resulting tactics, in sequence, to the goal:
 {
-   EVERY_ASSUM f ({{A1;...;An}} ?- C)
-    = (f(A1 |- A1) THEN ... THEN f(An |- An)) ({{A1;...;An}} ?- C)
+   EVERY_ASSUM f ({{A1,...,An}} ?- C)
+    = (f(A1 |- A1) THEN ... THEN f(An |- An)) ({{A1,...,An}} ?- C)
 }
 \noindent If the goal has no assumptions, then {EVERY_ASSUM} has no effect.
 

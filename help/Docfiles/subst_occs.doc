@@ -19,19 +19,19 @@ when the substitution is applicable.
 
 \EXAMPLE
 {
-   - subst_occs [[1,3]] [{{redex = --`SUC 0`--, residue = --`1`--}}]
-   =            (--`SUC 0 + SUC 0 = SUC(SUC 0)`--);
-   val it = (--`1 + SUC 0 = SUC 1`--) : term
+   - subst_occs [[1,3]] [Term `SUC 0` |-> Term `1`]
+                (Term `SUC 0 + SUC 0 = SUC(SUC 0)`);
+   val it = `1 + SUC 0 = SUC 1` : term
 
-   - subst_occs [[1],[1]] [{{redex = --`SUC 0`--, residue = --`1`--}},
-   =                       {{redex = --`SUC 1`--, residue = --`2`--}}]
-   =            (--`SUC(SUC 0) = SUC 1`--);
-   val it = (--`SUC 1 = 2`--) : term
+   - subst_occs [[1],[1]] [Term `SUC 0` |-> Term `1`,
+                           Term `SUC 1` |-> Term `2`]
+               (Term `SUC(SUC 0) = SUC 1`);
+   val it = `SUC 1 = 2` : term
 
-   - subst_occs [[1],[1]] [{{redex = --`SUC(SUC 0)`--, residue = --`2`--}},
-   =                       {{redex = --`SUC 0`--, residue = --`1`--}}]
-   =            (--`SUC(SUC 0) = SUC 0`--);
-   val it = (--`2 = 1`--) : term
+   - subst_occs [[1],[1]] [Term`SUC(SUC 0)` |-> Term `2`,
+                           Term`SUC 0`      |-> Term `1`]
+               (Term`SUC(SUC 0) = SUC 0`);
+   val it = `2 = 1` : term
 }
 \SEEALSO
 subst

@@ -1,6 +1,6 @@
 \DOC NEG_DISCH
 
-\TYPE {NEG_DISCH : (term -> thm -> thm)}
+\TYPE {NEG_DISCH : term -> thm -> thm}
 
 \SYNOPSIS
 Discharges an assumption, transforming {|- s ==> F} into {|- ~s}.

@@ -27,8 +27,8 @@ where {x}, {y} and {z} have type {:'a},
 the theorem {x = y, y = z |- x = z} can, first, be inferred by
 forward proof
 {
-   let val eq1 = Parse.Term `(x:'a) = y`
-       val eq2 = Parse.Term `(y:'a) = z`
+   let val eq1 = Term `(x:'a) = y`
+       val eq2 = Term `(y:'a) = z`
    in
    TRANS (ASSUME eq1) (ASSUME eq2)
    end;
@@ -37,15 +37,14 @@ forward proof
 the explicit text of the assumptions, as well as invocation of
 the rule {ASSUME}:
 {
-   let val eq1 = Parse.Term `(x:'a) = y`
-       val eq2 = Parse.Term `(y:'a) = z`
+   let val eq1 = Term `(x:'a) = y`
+       val eq2 = Term `(y:'a) = z`
        val goal = ([eq1,eq2],Parse.Term `P:bool`)
    in
    ASSUME_TAC (TRANS (ASSUME eq1) (ASSUME eq2)) goal
    end;
 
-   val it = ([([--`x = z`--, --`x = y`--, --`y = z`--], --`P`--)], fn) 
-     : tactic_result
+   val it = ([([`x = z`, `x = y`, `y = z`], `P`)], fn) : tactic_result
 }
 \noindent This is the naive way of manipulating assumptions; there are more
 advanced proof styles (more elegant and less transparent) that achieve the
@@ -54,20 +53,20 @@ same effect, but this is a perfectly correct technique in itself.
 Alternatively, the axiom {EQ_TRANS} could be added to the
 assumptions of {g}:
 {
-   let val eq1 = Parse.Term `(x:'a) = y`
-       val eq2 = Parse.Term `(y:'a) = z`
-       val goal = ([eq1,eq2],Parse.Term `P:bool`)
+   let val eq1 = Term `(x:'a) = y`
+       val eq2 = Term `(y:'a) = z`
+       val goal = ([eq1,eq2], Term `P:bool`)
    in
    ASSUME_TAC EQ_TRANS goal
    end;
 
    val it =
-     ([([(--`!x y z. (x = y) /\ (y = z) ==> (x = z)`--),(--`x = y`--),
-         (--`y = z`--)],(--`P`--))],fn) : tactic_result
+     ([([`!x y z. (x = y) /\ (y = z) ==> (x = z)`, 
+         `x = y`,`y = z`],`P`)],fn) : tactic_result
 
 }
 \noindent A subsequent resolution (see {RES_TAC}) would then be able to add
-the assumption {"x = z"} to the subgoal shown above. (Aside from purposes of
+the assumption {x = z} to the subgoal shown above. (Aside from purposes of
 example, it would be more usual to use {IMP_RES_TAC} than {ASSUME_TAC}
 followed by {RES_TAC} in this context.)
 

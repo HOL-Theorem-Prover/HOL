@@ -1,6 +1,6 @@
 \DOC remove_termtok
 
-\TYPE {Parse.remove_termtok : {{term_name : string, tok : string}} -> unit}
+\TYPE {remove_termtok : {{term_name : string, tok : string}} -> unit}
 
 \SYNOPSIS
 Removes a rule from the global grammar.
@@ -27,9 +27,11 @@ expressions, this would be achievable as follows:
 {
    - remove_termtok {{term_name = "COND", tok = "if"}};
    > val it = () : unit
+
    - Term`if p then q else r`;
    <<HOL message: inventing new type variable names: 'a, 'b, 'c, 'd, 'e, 'f.>>
    > val it = `if p then q else r` : term
+
    - Term`p => q | r`;
    <<HOL message: inventing new type variable names: 'a.>>
    > val it = `COND p q r` : term
@@ -47,6 +49,7 @@ have its preferred flag set.  This can be accomplished with
 {
    - prefer_form_with_tok {{term_name = "COND", tok = "=>"}};
    > val it = () : unit
+
    - Term`p => q | r`;
    <<HOL message: inventing new type variable names: 'a.>>
    > val it = `p => q | r` : term

@@ -1,13 +1,13 @@
 \DOC is_type
 
-\TYPE {is_type : string -> bool}
+\TYPE {is_type : hol_type -> bool}
 
 \SYNOPSIS
-Tests whether a string is the name of a type.
+Tests whether a hol_type is not a type variable.
 
 \DESCRIBE
-{is_type s} returns {true} if {s} is the name of a type or type operator
-and {false} otherwise.
+{is_type ty} returns {true} if {ty} is a type or application of a
+type operator and {false} otherwise.
 
 \FAILURE
 Never fails.

@@ -1,0 +1,15 @@
+\DOC beta 
+
+\TYPE {beta : hol_type}
+
+\SYNOPSIS
+Common type variable.
+
+\LIBRARY Type
+
+\DESCRIBE
+The ML variable {Type.beta} is bound to the type variable {'b}.
+
+\SEEALSO alpha, gamma, delta, bool.
+
+\ENDDOC

@@ -19,19 +19,19 @@ It fails if no such substitution can be found.
 
 \EXAMPLE
 {
-   - match_type (==`:'a`==) (==`:num`==);
+   - match_type alpha (Type`:num`);
    > val it =
-       [{{redex = (==`:'a`==), residue = (==`:num`==)}}] : hol_type subst
+       [{{redex = `:'a`, residue = `:num`}}] : hol_type subst
 
-   - let val patt = ==`:('a -> bool) -> 'b`==
-   =     val ty =   ==`:(num -> bool) -> bool`==
-   = in
-   = type_subst (match_type patt ty) patt = ty
-   = end;
+   - let val patt = Type`:('a -> bool) -> 'b`
+         val ty =   Type`:(num -> bool) -> bool`
+     in
+       type_subst (match_type patt ty) patt = ty
+     end;
    > val it = true : bool
 }
 
 \SEEALSO
-match_term
+match_term, ho_match_term.
 
 \ENDDOC

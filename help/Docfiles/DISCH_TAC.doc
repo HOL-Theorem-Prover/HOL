@@ -14,14 +14,14 @@ tactic, undischarge, antecedent, implication.
    ==============  DISCH_TAC
     A u {{u}} ?- v
 }
-\noindent Note that {DISCH_TAC} treats {"~u"} as {"u ==> F"}, so will also work
+\noindent Note that {DISCH_TAC} treats {~u} as {u ==> F}, so will also work
 when applied to a goal with a negated conclusion.
 
 \FAILURE
 {DISCH_TAC} will fail for goals which are not implications or negations.
 
 \USES
-Solving goals of the form {"u ==> v"} by rewriting {"v"} with {"u"}, although
+Solving goals of the form {u ==> v} by rewriting {v} with {u}, although
 the use of {DISCH_THEN} is usually more elegant in such cases.
 
 \COMMENTS

@@ -14,7 +14,7 @@ The ML function {new_specification} implements the primitive rule of
 constant specification for the HOL logic.
 Evaluating:
 {
-   new_specification {{name = "name", sat_thm = |- ?x1...xn. t,
+   new_specification {{name=name, sat_thm = |- ?x1...xn. t,
                       consts = [{{const_name = "c1", fixity = f1}}, ...,
                                 {{const_name = "cn", fixity = fn}}]}}
 }
@@ -33,7 +33,7 @@ values are {Prefix}, {Binder}, {Infixl n}, {Infixr n}, {Suffix n},
 \FAILURE
 {new_specification} fails if the theorem argument has assumptions or
 free variables. It also fails if the supplied constant names 
-{"c1"}, ..., {"cn"} are not distinct. Finally, failure occurs if
+{c1}, ..., {cn} are not distinct. Finally, failure occurs if
 some {ci} does not contain all the type variables that occur in 
 the term {?x1...xn. t}. 
 

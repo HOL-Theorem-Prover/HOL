@@ -1,6 +1,6 @@
 \DOC SUBGOAL_THEN
 
-\TYPE {SUBGOAL_THEN : (term -> thm_tactic -> tactic)}
+\TYPE {SUBGOAL_THEN : term -> thm_tactic -> tactic}
 
 \SYNOPSIS
 Allows the user to introduce a lemma.
@@ -25,7 +25,7 @@ That is, if
     A1 ?- u   A2 ?- t2
 }
 \FAILURE
-{SUBGOAL_THEN} will fail with {`ASSUME`} if an attempt is made to use a
+{SUBGOAL_THEN} will fail if an attempt is made to use a
 nonboolean term as a lemma.
 
 \USES
@@ -33,7 +33,7 @@ When combined with {rotate}, {SUBGOAL_THEN} allows the user to defer some
 part of a proof and to continue with another part.
 {SUBGOAL_THEN} is most convenient when the tactic solves the original goal,
 leaving only the subgoal.
-For example, suppose the user wishes top prove the goal
+For example, suppose the user wishes to prove the goal
 {
    {{n = SUC m}} ?- (0 = n) ==> t
 }
@@ -41,7 +41,7 @@ Using {SUBGOAL_THEN} to focus on the case in which {~(n = 0)},
 rewriting establishes it truth, leaving only the proof that {~(n = 0)}.
 That is,
 {
-   SUBGOAL_THEN "~(0 = n)" (\th:thm. REWRITE_TAC [th])
+   SUBGOAL_THEN (Term `~(0 = n)`) (fn th => REWRITE_TAC [th])
 }
 \noindent generates the following subgoals:
 {

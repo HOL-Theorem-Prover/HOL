@@ -1,6 +1,6 @@
 \DOC types
 
-\TYPE {types : string -> {{Arity : int, Name : string}} list}
+\TYPE {types : string -> (string * int) list}
 
 \SYNOPSIS
 Lists the types in the named theory.
@@ -16,24 +16,18 @@ pairs.
 Fails unless the named theory is an ancestor.
 
 \EXAMPLE
-The theory {HOL} has no types declared:
 {
-  - types "HOL";
-  > val it = [] : (int # string) list
-}
-\noindent but its ancestors have the following types declared:
-{
-   - itlist union (map types (ancestry "HOL")) [];
+   - load "rich_listTheory";
+
+   - itlist union (map types (ancestry "-")) [];
    > val it =
-       [{{Arity = 2, Name = "sum"}}, {{Arity = 2, Name = "prod"}},
-        {{Arity = 0, Name = "num"}}, {{Arity = 1, Name = "list"}},
-        {{Arity = 0, Name = "tree"}}, {{Arity = 1, Name = "ltree"}},
-        {{Arity = 0, Name = "bool"}}, {{Arity = 0, Name = "ind"}},
-        {{Arity = 2, Name = "fun"}}, {{Arity = 0, Name = "one"}}]
-       : {{Arity : int, Name : string}} list
-}}
+       [("one", 0), ("option", 1), ("num", 0), ("sum", 2), 
+        ("recspace", 1), ("prod", 2), ("list", 1), ("bool", 0),
+        ("ind", 0), ("fun", 2)]
+     : (string * int) list
+}
 \SEEALSO
-ancestors, axioms, constants, definitions, infixes, new_type, new_type_abbrev,
+ancestry, axioms, constants, definitions, infixes, new_type,
 new_type_definition, parents.
 
 \ENDDOC

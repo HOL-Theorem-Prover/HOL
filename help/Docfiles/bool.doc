@@ -1,8 +1,16 @@
-\DOC bool
+\DOC bool 
 
-\TYPE {Type.bool : hol_type}
+\TYPE {bool : hol_type}
 
 \SYNOPSIS
-Holds the logical type constant {bool}.
+Basic type constant.
+
+\LIBRARY Type
+
+\DESCRIBE
+The ML variable {Type.bool} is bound to the type constant {bool}.
+
+\SEEALSO alpha, beta, gamma, delta.
 
 \ENDDOC
+

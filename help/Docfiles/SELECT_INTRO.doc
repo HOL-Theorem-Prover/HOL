@@ -31,13 +31,13 @@ Given the theorem
 \noindent applying {SELECT_INTRO} replaces the second occurrence of {m} with the
 epsilon abstraction of the operator:
 {
-   #let th2 = SELECT_INTRO th1;;
-   th2 = |- (\n. m = n)(@n. m = n)
+   - val th2 = SELECT_INTRO th1;
+   val th2 = |- (\n. m = n)(@n. m = n) : thm
 }
 \noindent This theorem could now be used to derive a further result:
 {
-   #EQ_MP(BETA_CONV(concl th2))th2;;
-   |- m = (@n. m = n)
+   - EQ_MP (BETA_CONV(concl th2)) th2;
+   val it = |- m = (@n. m = n) : thm
 }
 \SEEALSO
 EXISTS, SELECT_AX, SELECT_CONV, SELECT_ELIM, SELECT_RULE.

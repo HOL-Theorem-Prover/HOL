@@ -1,6 +1,6 @@
 \DOC add_infix
 
-\TYPE {Parse.add_infix : string * int * HOLgrammars.associativity -> unit}
+\TYPE {add_infix : string * int * HOLgrammars.associativity -> unit}
 
 \SYNOPSIS
 Adds a string as an infix with the given precedence and associativity
@@ -46,6 +46,7 @@ it as an infix for the purposes of printing and parsing:
 {
    - add_infix ("+", 500, HOLgrammars.LEFT);
    > val it = () : unit
+
    - val t = Term`x + y`;
    <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
    > val t = `x + y` : term
@@ -54,8 +55,7 @@ it as an infix for the purposes of printing and parsing:
 that way by taking the resulting term apart:
 {
    - dest_comb t;
-   > val it = {{Rand = `y`, Rator = `$+ x`}} :
-         {{Rand : term, Rator : term}}
+   > val it = (`$+ x`, `y`) : term * term 
 }
 \noindent With its new status, {+} has to be ``quoted'' with a
 dollar-sign if we wish to use it in a position where it is not an
@@ -65,8 +65,7 @@ infix, as in the binding list of an abstraction:
    <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
    > val it = `\$+. x + y` : term
    - dest_abs it;
-   > val it = {{Body = `x + y`, Bvar = `$+`}}
-              : {{Body : term, Bvar : term}}
+   > val it = (`$+`,`x + y`) : term * term 
 }
 \noindent The generation of three new type variables in the examples
 above emphasises the fact that the terms in the first example and the
@@ -78,10 +77,9 @@ associative:
    - Term`x + y + z`;
    <<HOL message: inventing new type variable names: 'a, 'b.>>
    > val it = `x + y + z` : term
+
    - dest_comb it;
-   > val it =
-       {{Rand = `z`, Rator = `$+ (x + y)`}}
-       : {{Rand : term, Rator : term}}
+   > val it = (`$+ (x + y)`, `z`) : term * term 
 }
 \noindent It is also more tightly binding than {/\} (which has
 precedence 400 by default):
@@ -89,10 +87,9 @@ precedence 400 by default):
    - Term`p /\ q + r`;
    <<HOL message: inventing new type variable names: 'a, 'b.>>
    > val it = `p /\ q + r` : term
+
    - dest_comb it;
-   > val it =
-       {{Rand = `q + r`, Rator = `$/\ p`}}
-       : {{Rand : term, Rator : term}}
+   > val it = (`$/\ p`, `q + r`) : term * term 
 }
 \noindent An attempt to define a right associative operator at the
 same level fails:
@@ -102,8 +99,6 @@ same level fails:
    Exception raised at Parse.add_infix:
    Grammar Error: Attempt to have differently associated infixes
                   (RIGHT and LEFT) at same level
-   ! Uncaught exception:
-   ! HOL_ERR <poly>
 }
 \noindent Similarly we can't define an infix at level 900, because
 this is where the (true prefix) rule for logical negation ({~}) is.
@@ -112,23 +107,21 @@ this is where the (true prefix) rule for logical negation ({~}) is.
 
    Exception raised at Parse.add_infix:
    Grammar Error: Attempt to have different forms at same level
-   ! Uncaught exception:
-   ! HOL_ERR <poly>
 }
 \noindent Finally, an attempt to have a second {+} infix at a different
 precedence level causes grief when we later attempt to use the parser:
 {
    - add_infix("+", 400, HOLgrammars.RIGHT);
    > val it = () : unit
+
    - Term`p + q`;
    ! Uncaught exception:
    ! HOL_ERR <poly>
+
    - Lib.try Term`p + q`;
 
    Exception raised at Parse.Term:
    Grammar introduces precedence conflict between tokens + and +
-   ! Uncaught exception:
-   ! HOL_ERR <poly>
 }
 
 \USES

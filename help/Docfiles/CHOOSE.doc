@@ -1,6 +1,6 @@
 \DOC CHOOSE
 
-\TYPE {CHOOSE : ((term # thm) -> thm -> thm)}
+\TYPE {CHOOSE : term * thm -> thm -> thm}
 
 \SYNOPSIS
 Eliminates existential quantification using deduction from a

@@ -1,7 +1,7 @@
 \DOC update_overload_maps
 
 \BLTYPE
-Parse.update_overload_maps :
+update_overload_maps :
   string -> ({{Name : string, Thy : string}} list *
              {{Name : string, Thy : string}} list) -> unit
 \ELTYPE

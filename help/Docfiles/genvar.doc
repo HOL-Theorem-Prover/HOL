@@ -1,6 +1,6 @@
 \DOC genvar
 
-\TYPE {genvar : (type -> term)}
+\TYPE {genvar : type -> term}
 
 \SYNOPSIS
 Returns a variable whose name has not been used previously.
@@ -16,20 +16,25 @@ Never fails.
 The following indicates the typical stylized form of the names (this should
 not be relied on, of course):
 {
-   #genvar ":bool";;
-   "GEN%VAR%357" : term
+   - genvar bool;
+   > val it = `%%genvar%%1380` : term
 
-   #genvar ":num";;
-   "GEN%VAR%358" : term
+   - genvar (Type`:num`);
+   > val it = `%%genvar%%1381` : term
 }
-\noindent Trying to anticipate {genvar} doesn't work:
+\noindent Note that one can anticipate {genvar}:
 {
-   #let v = mk_var(`GEN%VAR%359`,":bool");;
-   v = "GEN%VAR%359" : term
+   - mk_var("%%genvar%%1382",bool);
+   > val it = `%%genvar%%1382` : term
 
-   #genvar ":bool";;
-   "GEN%VAR%360" : term
+   - genvar bool;
+   > val it = `%%genvar%%1382` : term
 }
+This shortcoming could be guarded against, but it doesn't seem worth
+it currently. It doesn't seem to affect the soundness of the 
+implementation of HOL; at worst, a proof procedure may fail because 
+it doesn't have a sufficiently fresh variable.
+
 \USES
 The unique variables are useful in writing derived rules, for specializing
 terms without having to worry about such things as free variable capture.

@@ -11,14 +11,14 @@ rule, discharge, assumption, implication.
 \DESCRIBE
 {
        A |- t
---------------------  DISCH "u"
+--------------------  DISCH u
  A - {{u}} |- u ==> t
 }
 \FAILURE
-{DISCH} will fail if {"u"} is not boolean.
+{DISCH} will fail if {u} is not boolean.
 
 \COMMENTS
-The term {"u"} need not be a hypothesis.  Discharging {"u"} will remove all
+The term {u} need not be a hypothesis.  Discharging {u} will remove all
 identical and alpha-equivalent hypotheses.
 
 \SEEALSO

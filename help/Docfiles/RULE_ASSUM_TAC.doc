@@ -9,7 +9,7 @@ Maps an inference rule over the assumptions of a goal.
 tactic, assumption, rule.
 
 \DESCRIBE
-When applied to an inference rule {f} and a goal {({{A1;...;An}} ?- t)},
+When applied to an inference rule {f} and a goal {({{A1,...,An}} ?- t)},
 the {RULE_ASSUM_TAC} tactical applies the inference rule to each of the
 {ASSUME}d assumptions to give a new goal.
 {

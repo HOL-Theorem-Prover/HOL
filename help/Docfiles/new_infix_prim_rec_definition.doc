@@ -5,8 +5,10 @@
 \SYNOPSIS
 Defines an infix primitive recursive function over the type {num}.
 
+\LIBRARY hol88
+
 \DESCRIBE
-Found in the hol88 library. The function {new_infix_prim_rec_definition}
+The function {new_infix_prim_rec_definition}
 provides the facility for defining primitive recursive functions with
 infix status on the type {num}. It takes a pair argument, consisting of
 the name under which the resulting definition will be saved in the
@@ -21,11 +23,11 @@ formal proof from an instance of the theorem {num_Axiom}:
 {
    new_infix_prim_rec_definition
     ("fun_DEF",
-     (--`(fun 0 x = f_1[x]) /\
-         (fun (SUC n) x = f_2[fun n x', n, x])`--));;
+      Term `(fun 0 x = f_1[x]) /\
+            (fun (SUC n) x = f_2[fun n x', n, x])`);
 }
 \noindent where all the free variables in the term {x'} are
-contained in {{{n, x}}}, automatically proves the theorem:
+contained in {{{n,x}}}, automatically proves the theorem:
 {
    |-  ?fun. !x. fun 0 x = f_1[x] /\
              !x. fun (SUC n) x = f_2[fun n x', n, x]
@@ -66,12 +68,12 @@ create the following constant specification in the current theory segment:
 }
 
 \COMMENTS
-{new_infix_prim_rec_definition} is not in hol90; it has been superceded by
-{new_recursive_definition}
+{new_infix_prim_rec_definition} has been superceded by
+{new_recursive_definition} and {Define}.
 
 \SEEALSO
-new_definition, new_infix_definition, new_infix_list_rec_definition,
-new_prim_rec_definition, new_list_rec_definition, new_recursive_definition,
-new_type_definition, new_specification, num_Axiom.
+new_definition, new_infixl_definition, new_infixr_definition, 
+new_recursive_definition, new_type_definition, new_specification, num_Axiom,
+Define.
 
 \ENDDOC

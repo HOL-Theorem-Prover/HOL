@@ -1,0 +1,33 @@
+\DOC mk_thy_type
+
+\TYPE {mk_thy_type : {{Thy:string, Name:string, Args:hol_type list}} -> term}
+
+\SYNOPSIS
+Constructs a type.
+
+\DESCRIBE
+If {s} is a string that has been previously declared to be a type
+with arity type {n} in theory {thy}, and the length of {tyl} is equal
+to {n}, then {mk_thy_type{{Tyop=s, Thy=thy, Args=tyl}}} returns the
+requested compound type.
+
+\FAILURE
+Fails if {s} is not the name of a type in theory {thy}, if {thy} is 
+not in the ancestry of the current theory, or if {n} is not 
+the length of {tyl}.
+
+\EXAMPLE
+{
+   - mk_thy_type {Tyop="fun", Thy="min", Args = [alpha,bool]};
+   > val it = `:'a -> bool` : hol_type
+
+   - try mk_thy_type {Tyop="bar", Thy="foo", Args = []};
+ 
+   Exception raised at Type.mk_thy_type:
+   "foo$bar" not found
+}
+
+\SEEALSO
+mk_type, dest_thy_type, mk_const, mk_thy_const, decls, op_arity.
+
+\ENDDOC

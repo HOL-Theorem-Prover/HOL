@@ -12,10 +12,10 @@ with type {ty} and and {ty1} is an instance of {ty}, then
 
 Note, however, that constants with the same name (and type) may be 
 declared in different theories. If two theories having constants with
-the same name {n}, are in the ancestry of the current theory, then 
+the same name {n} are in the ancestry of the current theory, then 
 {mk_const(n,ty)} will issue a warning before arbitrarily selecting
 which constant to construct. In such situations, {mk_thy_const}
-allows one to specify exactly which constant to construct.
+allows one to specify exactly which constant to use.
 
 \FAILURE
 Fails if {n} is not the name of a known constant, or if {ty} is not an

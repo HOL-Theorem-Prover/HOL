@@ -15,7 +15,7 @@ An invocation {first P [x1,...,xk,...xn]} returns {xk} if {P xk} returns
 If {P xi} is {false} for every element in {l}, then {first P l} raises
 an exception. When searching for an element of {l} that {P} holds of, it
 may happen that an application of {P} to an element of {l} raises an
-exception {e}. In that case, {exists P l} also raises {e}.
+exception {e}. In that case, {first P l} also raises {e}.
 
 \EXAMPLE
 {

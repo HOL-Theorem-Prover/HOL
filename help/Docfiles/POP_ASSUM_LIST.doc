@@ -1,6 +1,6 @@
 \DOC POP_ASSUM_LIST
 
-\TYPE {POP_ASSUM_LIST : ((thm list -> tactic) -> tactic)}
+\TYPE {POP_ASSUM_LIST : (thm list -> tactic) -> tactic}
 
 \SYNOPSIS
 Generates a tactic from the assumptions, discards the assumptions and
@@ -15,7 +15,7 @@ the function to a list of theorems corresponding to the {ASSUME}d
 assumptions of the goal, then applies the resulting tactic to the goal
 with an empty assumption list.
 {
-    POP_ASSUM_LIST f ({{A1;...;An}} ?- t) = f [A1 |- A1; ... ; An |- An] (?- t)
+    POP_ASSUM_LIST f ({{A1,...,An}} ?- t) = f [A1 |- A1, ..., An |- An] (?- t)
 }
 \FAILURE
 Fails if the function fails when applied to the list of {ASSUME}d assumptions,

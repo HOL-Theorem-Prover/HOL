@@ -5,9 +5,11 @@
 \SYNOPSIS
 Checks to see if a given name has been hidden.
 
+\LIBRARY Parse
+
 \DESCRIBE
-A call {hidden "c"} where {c} is the name of a constant, will
-check to see if the given name has been hidden, via a previous call
+A call {hidden c} where {c} is the name of a constant, will
+check to see if the given name had been hidden by a previous call
 to {Parse.hide}.
 
 \FAILURE

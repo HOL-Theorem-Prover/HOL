@@ -1,21 +1,18 @@
 \DOC dest_pair
 
-\TYPE {dest_pair : term -> {{fst :term, snd :term}}}
+\TYPE {dest_pair : term -> term * term}
 
 \SYNOPSIS
 Breaks apart a pair into two separate terms.
 
+\LIBRARY pair
+
 \DESCRIBE
-{dest_pair} is a term destructor for pairs:
-{dest_pair (--`(t1,t2)`--)} returns {{fst = t1, snd = t2}}.
+{dest_pair} is a term destructor for pairs: if {M} is a term of the
+form {(t1,t2)}, then {dest_pair M} returns {(t1,t2)}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_pair",
-            message = "not a pair"}}
-}
-\noindent if term is not a pair.
+Fails if {M} is not a pair.
 
 \SEEALSO
 mk_pair, is_pair, strip_pair.

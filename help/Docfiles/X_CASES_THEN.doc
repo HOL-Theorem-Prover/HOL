@@ -1,6 +1,6 @@
 \DOC X_CASES_THEN
 
-\TYPE {X_CASES_THEN : (term list list -> thm_tactical)}
+\TYPE {X_CASES_THEN : term list list -> thm_tactical}
 
 \SYNOPSIS
 Applies a theorem-tactic to all disjuncts of a theorem, choosing witnesses.
@@ -9,11 +9,11 @@ Applies a theorem-tactic to all disjuncts of a theorem, choosing witnesses.
 theorem-tactic, cases, disjunction, quantifier, existential.
 
 \DESCRIBE
-Let {[yl1;...;yln]} represent a list of variable lists,
+Let {[yl1,...,yln]} represent a list of variable lists,
 each of length zero or more, and {xl1,...,xln} each represent a
 vector of zero or more variables, so that the variables in each of
 {yl1...yln} have the same types as the corresponding {xli}.
-{X_CASES_THEN} expects such a list of variable lists, {[yl1;...;yln]}, a tactic
+{X_CASES_THEN} expects such a list of variable lists, {[yl1,...,yln]}, a tactic
 generating function {f:thm->tactic}, and a disjunctive theorem,
 where each disjunct may be existentially quantified:
 {
@@ -35,11 +35,11 @@ applied to a goal {(A ?- t)}:
    =========  f ({{Bn[yln/xln]}} |- Bn[yln/xln])
     A ?- tn
 }
-\noindent then applying {(X_CHOOSE_THEN [yl1;...;yln] f th)}
+\noindent then applying {(X_CHOOSE_THEN [yl1,...,yln] f th)}
 to the goal {(A ?- t)} produces {n} subgoals.
 {
            A ?- t
-   =======================  X_CHOOSE_THEN [yl1;...;yln] f th
+   =======================  X_CHOOSE_THEN [yl1,...,yln] f th
     A ?- t1  ...  A ?- tn
 }
 
@@ -58,8 +58,11 @@ used to split into 2 cases:
 {
    th = |- (?m. x = 2 * m) \/ (?m. x = (2 * m) + 1)
 }
-\noindent by the tactic {X_CASES_THEN [["n:num"];["n:num"]] ASSUME_TAC th}
-to produce the subgoals:
+\noindent by the tactic 
+{
+   X_CASES_THEN [[Term`n:num`],[Term`n:num]] ASSUME_TAC th
+}
+\noindent to produce the subgoals:
 {
    {{x = (2 * n) + 1}} ?- (x MOD 2) <= 1
 

@@ -1,7 +1,7 @@
 \DOC add_rule
 
 \BLTYPE
-Parse.add_rule :
+add_rule :
   {{term_name : string, fixity : fixity,
    pp_elements: term_grammar.pp_element list,
    paren_style : term_grammar.ParenStyle,
@@ -11,7 +11,6 @@ Parse.add_rule :
 
 \SYNOPSIS
 Adds a parsing/printing rule to the global grammar.
-
 
 \KEYWORDS
 parsing

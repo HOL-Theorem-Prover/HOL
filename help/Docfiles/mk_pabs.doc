@@ -1,16 +1,17 @@
 \DOC mk_pabs
 
-\TYPE {mk_pabs : {{varstruct :term, body :term}} -> term}
+\TYPE {mk_pabs : term * term -> term}
 
 \SYNOPSIS
 Constructs a paired abstraction.
 
 \DESCRIBE
-{mk_pabs {{varstruct = --`(v1,..(..)..,vn)`--, body = t}}} returns the 
-abstraction {--`\(v1,..(..)..,vn). t`--}. 
+If {M} is the tuple {(v1,..(..)..,vn)}, and {N} is an arbitrary term,
+then {mk_pabs (M,N)} returns the paired abstraction {`\(v1,..(..)..,vn).N`}. 
 
 \FAILURE
-Fails unless {varstruct} is an arbitrarily nested pair composed from variables.
+Fails unless {M} is an arbitrarily nested pair composed from variables, 
+with no repetitions of variables.
 
 \SEEALSO
 dest_pabs, is_pabs, mk_abs.

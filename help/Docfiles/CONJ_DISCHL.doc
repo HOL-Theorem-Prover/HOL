@@ -16,7 +16,7 @@ were in the assumption list.
 {
                         A |- s = t
    --------------------------------------------------------  CONJ_DISCHL
-    A - {{t1,...,tn}} |- (t1/\.../\tn/\s) = (t1/\.../\tn/\t)     ["t1";...;"tn"]
+    A - {{t1,...,tn}} |- (t1/\.../\tn/\s) = (t1/\.../\tn/\t)     [t1,...,tn]
 }
 \FAILURE
 Fails unless the theorem is an equation, both sides of which, and all the terms

@@ -13,7 +13,7 @@ When applied to a term {t} and a theorem {A |- F}, the inference rule {CCONTR}
 returns the theorem {A - {{~t}} |- t}.
 {
        A |- F
-   ---------------  CCONTR "t"
+   ---------------  CCONTR t
     A - {{~t}} |- t
 }
 \FAILURE

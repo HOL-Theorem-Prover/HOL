@@ -1,6 +1,6 @@
 \DOC UNDISCH_TAC
 
-\TYPE {UNDISCH_TAC : (term -> tactic)}
+\TYPE {UNDISCH_TAC : term -> tactic}
 
 \SYNOPSIS
 Undischarges an assumption.
@@ -11,14 +11,14 @@ tactic, discharge.
 \DESCRIBE
 {
           A ?- t
-   ====================  UNDISCH_TAC "v"
+   ====================  UNDISCH_TAC v
     A - {{v}} ?- v ==> t
 }
 \FAILURE
 {UNDISCH_TAC} will fail if {"v"} is not an assumption.
 
 \COMMENTS
-{UNDISCH}arging {"v"} will remove all assumptions which are identical to {"v"},
+{UNDISCH}arging {v} will remove all assumptions which are identical to {v},
 but those which are alpha-equivalent will remain.
 
 \SEEALSO

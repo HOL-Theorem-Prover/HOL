@@ -1,6 +1,6 @@
 \DOC PROVE_HYP
 
-\TYPE {PROVE_HYP : (thm -> thm -> thm)}
+\TYPE {PROVE_HYP : thm -> thm -> thm}
 
 \SYNOPSIS
 Eliminates a provable assumption from a theorem.

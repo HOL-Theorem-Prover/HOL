@@ -1,16 +1,16 @@
 \DOC SIMPSET
 
 \BLTYPE
-simpLib.SIMPSET : {{ ac     : (thm * thm) list,
-                    congs  : thm list,
-                    convs  : {{conv  : (term list -> term -> thm) -> term list
-                                       -> conv,
-                              key   : (term list * term) option,
-                              name  : string,
-                              trace : int}} list,
-                    dprocs : Traverse.reducer list,
-                    filter : (thm -> thm list) option,
-                    rewrs  : thm list }} -> ssdata
+SIMPSET : {{ ac     : (thm * thm) list,
+             congs  : thm list,
+             convs  : {{conv  : (term list -> term -> thm) -> term list
+                                -> conv,
+                        key   : (term list * term) option,
+                        name  : string,
+                        trace : int}} list,
+             dprocs : Traverse.reducer list,
+             filter : (thm -> thm list) option,
+             rewrs  : thm list }} -> ssdata
 \ELTYPE
 
 \SYNOPSIS Constructs {ssdata} values.
@@ -147,7 +147,7 @@ following illustrates how this can be added to a simpset:
 }
 \COMMENTS
 {SIMPSET} is not the right name for something that creates an {ssdata}
-value.  We still know too little about how this code works.
+value. 
 
 \SEEALSO ++, bool_ss, mk_simpset, rewrites, SIMP_CONV
 

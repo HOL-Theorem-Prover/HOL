@@ -19,12 +19,10 @@ Never fails.
 A simple case of alpha-convertibility is the renaming of a single quantified
 variable:
 {
-   - let val M = Parse.Term `?x. x = T`
-         val N = Parse.Term `?y. y = T`
-     in
-     aconv M N
-     end;
-   true : bool
+   - aconv (Term `?x. x = T`)
+           (Term `?y. y = T`)
+
+   > val it = true : bool
 }
 \SEEALSO
 ALPHA, ALPHA_CONV.

@@ -24,9 +24,9 @@ Fails if the given theorem does not have a disjunctive conclusion.
 Given the simple fact about arithmetic {th}, {|- (m = 0) \/ (?n. m = SUC n)},
 the tactic {DISJ_CASES_TAC th} can be used to produce a case split:
 {
-   #DISJ_CASES_TAC th ([],"(P:num -> bool) m");;
-   ([(["m = 0"], "P m");
-     (["?n. m = SUC n"], "P m")], -) : subgoals
+   - DISJ_CASES_TAC th ([],Term`(P:num -> bool) m`);
+   ([([`m = 0`], `P m`),
+     ([`?n. m = SUC n`], `P m`)], fn) : tactic_result
 }
 \USES
 Performing a case analysis according to a disjunctive theorem.

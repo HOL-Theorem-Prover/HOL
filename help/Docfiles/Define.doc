@@ -144,9 +144,9 @@ and (4) package everything up with an invocation of {tprove}.
 \EXAMPLE
 We will give a number of examples that display the range of functions
 that may be defined with {Define}. First, we have a recursive function
-that uses "destructors" in the recursive call. Since it is not primitive
-recursive, an induction theorem for {fact} is generated and stored in
-the current theory.
+that uses "destructors" in the recursive call. Since {fact} is not
+primitive recursive, an induction theorem for {fact} is generated and 
+stored in the current theory.
 {
    Define `fact x = if x = 0 then 1 else x * fact(x-1)`
 
@@ -343,8 +343,8 @@ input to {Define} should instead be a term. However, some important
 pre-processing happens in {Define} that would not be possible if the
 input was a term.
 
-{Define} can be thought of as a mechanization of a well-founded
-recursion theorem, which can be found in {relationTheory}.
+{Define} is a a mechanization of a well-founded recursion theorem,
+which can be found in {relationTheory}.
 
 {Define} currently has a rather weak termination prover. For example, it
 always fails to prove the termination of nested recursive functions.
@@ -359,6 +359,6 @@ less baggage---it depends only on {numLib} and {pairLib}---than
 
 
 \SEEALSO
-xDefine, Hol_defn, tgoal, tprove, WF_REL_TAC, recInduct.
+xDefine, Hol_defn, tgoal, tprove, WF_REL_TAC, recInduct, EVAL.
 
 \ENDDOC

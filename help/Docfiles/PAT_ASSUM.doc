@@ -1,6 +1,6 @@
 \DOC PAT_ASSUM
 
-\TYPE {Ho_tactics.PAT_ASSUM : term -> thm_tactic -> tactic}
+\TYPE {PAT_ASSUM : term -> thm_tactic -> tactic}
 
 \SYNOPSIS
 Finds the first assumption that matches the term argument, applies
@@ -12,10 +12,10 @@ theorem-tactical, assumption.
 \DESCRIBE
 The tactic
 {
-   PAT_ASSUM tm ttac ([A1; ...; An], g)
+   PAT_ASSUM tm ttac ([A1, ..., An], g)
 }
 \noindent finds the first {Ai} which matches {tm} using higher-order
-matching in the sense of {Ho_match.match_term}.  Unless there is just
+pattern matching in the sense of {ho_match_term}.  Unless there is just
 one match otherwise, free variables in the pattern that are also free
 in the assumptions or the goal must not be bound by the match.  In
 effect, these variables are being treated as local constants.
@@ -28,7 +28,7 @@ match the term.
 \EXAMPLE
 The tactic
 {
-   PAT_ASSUM ``x:num = y`` SUBST_ALL_TAC
+   PAT_ASSUM (Term`x:num = y`) SUBST_ALL_TAC
 }
 \noindent searches the assumptions for an equality over numbers and
 causes its right hand side to be substituted for its left hand side
@@ -55,6 +55,6 @@ a local constant in the goal to find the correct assumption.
 
 \SEEALSO
 ASSUM_LIST, EVERY, PAT_ASSUM, EVERY_ASSUM, FIRST, MAP_EVERY,
-MAP_FIRST, UNDISCH_THEN, match_term.
+MAP_FIRST, UNDISCH_THEN, match_term, ho_match_term.
 
 \ENDDOC

@@ -25,7 +25,7 @@ the subgoals are just {A ?- P} and {A u {{P}} ?- !h.P}.
 
 \FAILURE
 {LIST_INDUCT_TAC g} fails unless the conclusion of the goal {g} has the form
-{!l.t}, where the variable {l} has type {(ty)list} for some type {ty}.
+{!l.t}, where the variable {l} has type {ty list} for some type {ty}.
 
 \SEEALSO
 LIST_INDUCT.

@@ -1,6 +1,6 @@
 \DOC remove_ovl_mapping
 
-\TYPE {Parse.remove_ovl_mapping: string -> {{Name:string,Thy:string}} -> unit}
+\TYPE {remove_ovl_mapping: string -> {{Name:string,Thy:string}} -> unit}
 
 \SYNOPSIS
 Removes an overloading mapping between the string and constant specified.

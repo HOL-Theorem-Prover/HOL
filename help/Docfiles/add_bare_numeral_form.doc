@@ -1,6 +1,6 @@
 \DOC add_bare_numeral_form
 
-\TYPE {Parse.add_bare_numeral_form : (char * string option) -> unit}
+\TYPE {add_bare_numeral_form : (char * string option) -> unit}
 
 \SYNOPSIS
 Adds support for annotated numerals to the parser/pretty-printer.
@@ -44,11 +44,12 @@ form that could be used by users wanting to deal with binary numbers:
 {
    - add_bare_numeral_form(#"b", SOME "binary_of");
    > val it = () : unit
+
    - Term`1011b`;
    > val it = `1011b` : term
+
    - dest_comb it;
-   > val it = {{Rand = `1011`, Rator = `binary_of`}} :
-        {{Rand : term, Rator : term}}
+   > val it = (`binary_of`, `1011`) : term * term
 }
 
 \USES

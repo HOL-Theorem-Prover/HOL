@@ -26,8 +26,8 @@ goal {(A ?- t)}:
 goal {(A ?- t)} produces the subgoal:
 {
     A ?- t
-   =========  X_CHOOSE_THEN "y" f (A1 |- ?x. w)
-    A ?- t1         ("y" not free anywhere)
+   =========  X_CHOOSE_THEN y f (A1 |- ?x. w)
+    A ?- t1         (y not free anywhere)
 }
 \FAILURE
 Fails if the theorem's conclusion is not existentially quantified, or if
@@ -44,9 +44,9 @@ Given a goal of the form
 }
 \noindent the following theorem may be applied:
 {
-   th = ["n < m"] |- ?p. m = n + p
+   th = [n < m] |- ?p. m = n + p
 }
-\noindent by the tactic {(X_CHOOSE_THEN "q:num" SUBST1_TAC th)} giving
+\noindent by the tactic {(X_CHOOSE_THEN (Term`q:num`) SUBST1_TAC th)} giving
 the subgoal:
 {
    {{n < m}} ?- ?x. n + q = n + (x + 1)

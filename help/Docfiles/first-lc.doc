@@ -8,32 +8,29 @@ Return first element in list that predicate holds of.
 \KEYWORDS list, predicate, search
 
 \DESCRIBE
-
 An invocation {first P [x1,...,xk,...xn]} returns {xk} if {P xk} returns
-{true} and {P xi (1 <= i < k)} equals {false}. 
-
+{true} and {P xi (1 <= i < k)} equals {false}.
 
 \FAILURE
-
 If {P xi} is {false} for every element in {l}, then {first P l} raises
 an exception. When searching for an element of {l} that {P} holds of, it
 may happen that an application of {P} to an element of {l} raises an
-exception. In that case, {exists P l} raises an exception.
+exception {e}. In that case, {first P l} also raises {e}.
 
 \EXAMPLE
 {
-    - first (fn i => i mod 2 = 0) [1,3,4,5];
-    > val it = 4 : int
+- first (fn i => i mod 2 = 0) [1,3,4,5];
+> val it = 4 : int
 
-    - first (fn i => i mod 2 = 0) [1,3,5,7];
-    ! Uncaught exception: 
-    ! HOL_ERR
+- first (fn i => i mod 2 = 0) [1,3,5,7];
+! Uncaught exception:
+! HOL_ERR
 
-    - first (fn _ => raise Fail "") [1];
-    ! Uncaught exception: 
-    ! Fail  ""
+- first (fn _ => raise Fail "") [1];
+! Uncaught exception:
+! Fail  ""
 }
 
-\SEEALSO Lib, exists, tryfind, 
+\SEEALSO Lib, exists, tryfind,
 
 \ENDDOC

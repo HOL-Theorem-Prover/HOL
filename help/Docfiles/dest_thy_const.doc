@@ -15,6 +15,7 @@ instance of {ty}.
 Fails if {M} is not a constant.
 
 \COMMENTS
+A more precise alternative to {dest_const}.
 
 \SEEALSO
 mk_const, dest_thy_const, is_const, dest_abs, dest_comb, dest_var.

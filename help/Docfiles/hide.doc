@@ -10,7 +10,7 @@ hide : string -> ({{Name : string, Thy : string}} list *
 Stops the quotation parser from recognizing a constant.
 
 \DESCRIBE
-A call {hide "c"} where {c} is a string that maps to one or more
+A call {hide c} where {c} is a string that maps to one or more
 constants, will prevent the quotation parser from parsing it as such;
 it will just be parsed as a variable.  (A string maps to a set of
 possible constants because of the possibility of overloading.) The

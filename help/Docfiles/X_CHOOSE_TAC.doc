@@ -1,6 +1,6 @@
 \DOC X_CHOOSE_TAC
 
-\TYPE {X_CHOOSE_TAC : (term -> thm_tactic)}
+\TYPE {X_CHOOSE_TAC : term -> thm_tactic}
 
 \SYNOPSIS
 Assumes a theorem, with existentially quantified variable replaced by a given
@@ -16,8 +16,8 @@ assumption obtained by introducing the variable {y} as a witness for
 the object {x} whose existence is asserted in the theorem.
 {
            A ?- t
-   ===================  X_CHOOSE_TAC "y" (A1 |- ?x. w)
-    A u {{w[y/x]}} ?- t         ("y" not free anywhere)
+   ===================  X_CHOOSE_TAC y (A1 |- ?x. w)
+    A u {{w[y/x]}} ?- t         (y not free anywhere)
 }
 \FAILURE
 Fails if the theorem's conclusion is not existentially quantified, or if
@@ -34,9 +34,9 @@ Given a goal of the form
 }
 \noindent the following theorem may be applied:
 {
-   th = ["n < m"] |- ?p. m = n + p
+   th = [n < m] |- ?p. m = n + p
 }
-\noindent by the tactic {(X_CHOOSE_TAC "q:num" th)} giving
+\noindent by the tactic {(X_CHOOSE_TAC (Term`q:num`) th)} giving
 the subgoal:
 {
    {{n < m, m = n + q}} ?- ?x. m = n + (x + 1)

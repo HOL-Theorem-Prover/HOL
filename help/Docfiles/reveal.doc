@@ -1,14 +1,16 @@
 \DOC reveal
 
-\TYPE {Parse.reveal : string -> unit}
+\TYPE {reveal : string -> unit}
 
 \SYNOPSIS
 Restores recognition of a constant by the quotation parser.
 
+\LIBRARY Parse
+
 \DESCRIBE
-A call {reveal "c"}, where {c} is a (perhaps) hidden constant, will
-unhide the constant, that is, will make the quotation parser map the
-identifier {c} to all current constants with the same name (there may
+A call {reveal c}, where {c} the name of a (perhaps) hidden constant, 
+will `unhide` the constant, that is, will make the quotation parser map
+the identifier {c} to all current constants with the same name (there may
 be more than one such as different theories may re-use the same name).
 
 \FAILURE
