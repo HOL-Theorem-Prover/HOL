@@ -22,7 +22,7 @@ val _ = new_theory "bool";
  *---------------------------------------------------------------------------*)
 
 val EXISTS_DEF = define_exists();  (* Grandfather *)
-val _ = add_binder ("?", term_grammar.std_binder_precedence)
+val _ = add_binder ("?", GrammarSpecials.std_binder_precedence)
 
 val T_DEF =
  new_definition
