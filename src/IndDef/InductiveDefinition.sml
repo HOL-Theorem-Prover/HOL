@@ -1,15 +1,29 @@
 structure InductiveDefinition :> InductiveDefinition =
 struct
 
-open HolKernel Parse boolLib liteLib refuteLib AC Ho_Rewrite;
+open HolKernel Parse boolLib 
+     liteLib refuteLib AC Ho_Rewrite;
 
-infix ## |-> THEN THENC;
-infixr -->
+infix ## |-> THEN THENC; infixr -->;
 
-val (Type,Term) = parse_from_grammars combinTheory.combin_grammars
-fun -- q x = Term q
-fun == q x = Type q
+(*---------------------------------------------------------------------------
+   Variants. We re-define the kernel "variant" function here because
+   of a subtle difference between Hol98 variant and Hol88/light variant
+   functions: the former only looks at strings, while the latter
+   look at variables. For example
 
+      variant [`x:bool`] `x:'a`
+
+   yields x' in Hol98, but `x` in the latter (I think). The following 
+   version of variant also does not vary away from constants with the 
+   same name, maybe it should.
+ ---------------------------------------------------------------------------*)
+
+local fun prime v = 
+        let val (n,ty) = dest_var v in mk_var(n^"'",ty) end
+in
+fun vary V v = if mem v V then vary V (prime v) else v
+end
 
 (* ------------------------------------------------------------------------- *)
 (* Produces a sequence of variants, considering previous inventions.         *)
@@ -17,7 +31,7 @@ fun == q x = Type q
 
 fun variants av [] = []
   | variants av (h::t) =
-      let val vh = variant av h 
+      let val vh = vary av h 
       in vh::variants (vh::av) t
       end;
 
@@ -49,30 +63,11 @@ val strip_ncomb =
 (* Share out list according to pattern in list-of-lists.                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun shareout pat all =
-  if pat = [] then [] else
-      let val (l,r) = split_after (length (hd pat)) all
-      in l::shareout (tl pat) r
-      end;;
-
-(* ------------------------------------------------------------------------- *)
-(* Gets all variables (free and/or bound) in a term.                         *)
-(* ------------------------------------------------------------------------- *)
-
-val variables =
-  let fun vars(acc,tm) =
-    if is_var tm then insert tm acc else 
-    if is_const tm then acc else 
-    if is_abs tm then
-      let val (v,bod) = dest_abs tm
-      in vars(insert v acc,bod)
-      end
-    else
-        let val (l,r) = dest_comb tm
-        in vars(vars(acc,l),r)
-        end
-  in fn tm => vars([],tm)
-  end;;
+fun shareout [] _ = []
+  | shareout (h::t) all =
+      let val (l,r) = split_after (length h) all
+      in l::shareout t r
+      end;
 
 (* ------------------------------------------------------------------------- *)
 (* Produce a set of reasonably readable arguments, using variants if needed. *)
@@ -187,9 +182,7 @@ val EXISTS_EQUATION =
 local fun getequs(avs,[]) = []
         | getequs(avs,(h as {redex=r,residue})::t) = 
             if mem r avs 
-            then let val rst = filter(fn{redex,residue} => not(r=redex)) t
-                 in h::getequs(avs,rst)
-                 end
+            then h::getequs(avs,filter (fn{redex,...} => not(r=redex)) t)
             else getequs(avs,t)
       fun calculate_simp_sequence avs plis =
         let val oks = getequs(avs,plis)
@@ -208,8 +201,7 @@ fun canonicalize_clause clause carg =
         if is_imp bimp then
           let val atm = itlist (curry mk_conj o mk_eq_of_bind) (yes@no) ant
               val (ths,tth) = nsplit CONJ_PAIR plis (ASSUME atm)
-              val thl = map
-                     (fn t => first (fn th => lhs(concl th) = t) ths) carg
+              val thl = map(fn t => first(fn th => lhs(concl th) = t)ths) carg
               val th0 = MP (SPECL avs (ASSUME clause)) tth
               val th1 = rev_itlist (C (curry MK_COMB)) thl (REFL rel)
               val th2 = EQ_MP (SYM th1) th0
@@ -242,13 +234,13 @@ fun canonicalize_clause clause carg =
  in TRANS eth (itlist MK_FORALL carg (FORALL_IMPS_CONV ftm))
  end
  handle e => raise (wrap_exn "InductiveDefinition" "canonicalize_clause" e)
-end;;
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Canonicalizes the set of clauses, disjoining compatible antecedants.      *)
 (* ------------------------------------------------------------------------- *)
 
-local fun assoc2 x (h1::t1,h2::t2) = if (x = h1) then h2 else assoc2 x (t1,t2)
+local fun assoc2 x (h1::t1,h2::t2) = if x = h1 then h2 else assoc2 x (t1,t2)
         | assoc2 x _ = fail()
 in
 fun canonicalize_clauses clauses =
@@ -257,7 +249,7 @@ fun canonicalize_clauses clauses =
       val rels = itlist (insert o fst) uncs []
       val xargs = map (C assoc uncs) rels
       val closed = list_mk_conj clauses
-      val avoids = variables closed
+      val avoids = all_vars closed
       val flargs = make_args avoids (map type_of (end_foldr (op @) xargs))
       val vargs = shareout xargs flargs
       val cargs = map (C assoc2 (rels,vargs) o fst) uncs
@@ -275,21 +267,12 @@ fun canonicalize_clauses clauses =
   in TRANS pth (end_itlist MK_CONJ (map AND_IMPS_CONV cclausel))
   end
   handle e => raise (wrap_exn "InductiveDefinition" "canonicalize_clauses" e)
-end;;
+end;
 
 
 (* ------------------------------------------------------------------------- *)
 (* Prove definitions work for non-schematic relations with canonical rules.  *)
 (* ------------------------------------------------------------------------- *)
-
-fun mySPEC_ALL thm =
-  (* version of SPEC_ALL that does not vary variables chosen to avoid
-     constant names - this was causing grief when attempting to define
-     inductive relations with constant names that already existed. *)
-  if is_forall (concl thm) 
-    then mySPEC_ALL (SPEC (fst (dest_forall (concl thm))) thm)
-    else thm
-
 
 fun derive_canon_inductive_relations pclauses =
     let val closed = list_mk_conj pclauses
@@ -297,7 +280,7 @@ fun derive_canon_inductive_relations pclauses =
         val (vargs,bodies) = split(map strip_forall pclauses)
         val (ants,concs) = split(map dest_imp bodies)
         val rels = map (repeat rator) concs
-        val avoids = variables closed
+        val avoids = all_vars closed
         val rels' = variants avoids rels
         val prime_fn = subst (map2 (curry op |->) rels rels' )
         val closed' = prime_fn closed
@@ -322,7 +305,7 @@ fun derive_canon_inductive_relations pclauses =
         val monothm = ASSUME(list_mk_forall(rels,list_mk_forall(rels',monotm)))
         val closthm = ASSUME closed'
         val monothms = CONJUNCTS
-            (MP (mySPEC_ALL monothm) (MP (SPECL rels' indthm) closthm))
+            (MP (SPEC_ALL monothm) (MP (SPECL rels' indthm) closthm))
         val closthms = CONJUNCTS closthm
         fun prove_rule mth (cth,dth) =
             let val (avs,bod) = strip_forall(concl mth)
@@ -361,7 +344,8 @@ fun derive_canon_inductive_relations pclauses =
                (map2 mk_case (CONJUNCTS fthm) (CONJUNCTS ruvalhm))
     in CONJ ruvalhm (CONJ indthm casethm)
     end
-handle e => raise (wrap_exn "InductiveDefinition" "derive_canon_inductive_relations"e);
+    handle e => raise (wrap_exn "InductiveDefinition" 
+                         "derive_canon_inductive_relations"e);
 
 (* ------------------------------------------------------------------------- *)
 (* General case for nonschematic relations; monotonicity & defn hyps.        *)
@@ -380,8 +364,8 @@ fun derive_nonschematic_inductive_relations tm =
       and indthm'  = CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV canonthm')) indthm
   in CONJ ruvalhm' (CONJ indthm' casethm)
   end
-  handle e => 
-  raise (wrap_exn "InductiveDefinition" "derive_nonschematic_inductive_relations" e);
+  handle e => raise (wrap_exn "InductiveDefinition"
+                       "derive_nonschematic_inductive_relations" e);
 
 
 (* ========================================================================= *)
@@ -522,7 +506,8 @@ fun prove_monotonicity_hyps monoset =
       in itlist PROVE_HYP mths th
       end
   end
-  handle e => raise (wrap_exn "InductiveDefinition" "prove_monotonicity_hyps" e);
+  handle e => raise (wrap_exn "InductiveDefinition" 
+                        "prove_monotonicity_hyps" e);
 
 (* ------------------------------------------------------------------------- *)
 (* Generalize definitions and theorem over given variables (all the same!)   *)
@@ -549,7 +534,7 @@ fun generalize_schematic_variables vs =
         val th1 = itlist generalize_def defs th
     in GENL vs (itlist PROVE_HYP others' th1)
     end
-  end;;
+  end;
 
 (* ------------------------------------------------------------------------- *)
 (* Derive existence.                                                         *)
@@ -573,32 +558,32 @@ fun make_definitions th =
 (* "Unschematize" a set of clauses.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val unschematize_clauses =
-  let fun pare_comb qvs tm =
+local fun pare_comb qvs tm =
         if null (intersect (free_vars tm) qvs)
            andalso all is_var (snd(strip_comb tm))
         then tm
         else pare_comb qvs (rator tm)
-  in fn clauses =>
-      let val schem = map (fn cls =>
-          let val (avs,bod) = strip_forall cls
-          in pare_comb avs (snd(dest_imp bod)
-              handle Interrupt => raise Interrupt
-                   |         _ => bod)
-          end) clauses
-          val schems = mk_set schem
-      in if is_var(hd schem) then (clauses,[]) else
-         if not (length(mk_set (map (snd o strip_comb) schems)) = 1)
-             then failwith "Schematic variables not used consistently" else
-         let val avoids = variables (list_mk_conj clauses)
-             fun hack_fn tm = mk_var(fst(dest_var(repeat rator tm)),type_of tm)
-             val grels = variants avoids (map hack_fn schems)
-             val crels = map2 (curry op |->) grels schems
-             val clauses' = map (subst crels) clauses
-         in (clauses',snd(strip_comb(hd schems)))
+in 
+fun unschematize_clauses clauses =
+ let fun schem_head cls = 
+         let val (avs,bod) = strip_forall cls
+         in pare_comb avs (snd(dest_imp bod) handle HOL_ERR _ => bod)
          end
-      end
-  end;;
+     val schem = map schem_head clauses
+     val schems = mk_set schem
+ in if is_var(hd schem) then (clauses,[]) else
+    if not (length(mk_set (map (snd o strip_comb) schems)) = 1)
+       then failwith "Schematic variables not used consistently" 
+    else
+    let val avoids = all_vars (list_mk_conj clauses)
+        fun hack_fn tm = mk_var(fst(dest_var(repeat rator tm)),type_of tm)
+        val grels = variants avoids (map hack_fn schems)
+        val crels = map2 (curry op |->) schems grels
+        val clauses' = map (subst crels) clauses
+    in (clauses',snd(strip_comb(hd schems)))
+    end
+ end
+end;
 
 (* ========================================================================= *)
 (* Part 4: The final user wrapper.                                           *)
@@ -621,14 +606,13 @@ fun prove_nonschematic_inductive_relations_exist monoset tm =
 (* ------------------------------------------------------------------------- *)
 
 fun prove_inductive_relations_exist monoset tm =
-    let val clauses = strip_conj tm
-        val (clauses',fvs) = unschematize_clauses clauses
-        val th0 = derive_nonschematic_inductive_relations
-                    (list_mk_conj clauses')
-        val th1 = prove_monotonicity_hyps monoset th0
-        val th2 = generalize_schematic_variables fvs th1
-    in derive_existence th2
-    end
+ let val clauses = strip_conj tm
+     val (clauses',fvs) = unschematize_clauses clauses
+     val th0 = derive_nonschematic_inductive_relations (list_mk_conj clauses')
+     val th1 = prove_monotonicity_hyps monoset th0
+     val th2 = generalize_schematic_variables fvs th1
+ in derive_existence th2
+ end
  handle e => raise (wrap_exn "InductiveDefinition" 
                              "prove_inductive_relations_exist" e);
 
@@ -643,7 +627,7 @@ fun new_inductive_definition monoset tm =
      val avs = fst(strip_forall(concl th3))
      val (r,ic) = CONJ_PAIR(SPECL avs th3)
      val (i,c) = CONJ_PAIR ic
- in (GENL avs r,GENL avs i,GENL avs c)
+ in (GENL avs r, GENL avs i, GENL avs c)
  end
  handle e => raise(wrap_exn "InductiveDefinition" "new_inductive_definition" e);
 

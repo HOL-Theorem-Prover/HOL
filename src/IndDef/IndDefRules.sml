@@ -123,7 +123,8 @@ fun simp_rule (rul,tm) =
 fun simp p = simp_rule p handle HOL_ERR _ => simp_axiom p;
 
 fun derive_strong_induction (rules,ind) =
-   let val (vs,(_,conseq)) = (I ## dest_imp) (strip_forall (concl ind))
+   let val rules = map GEN_ALL rules
+       val (vs,(_,conseq)) = (I ## dest_imp) (strip_forall (concl ind))
        val srules = map (SPECL (butlast vs)) rules
        val (cvs,(rel,pred)) = (I ## dest_imp) (strip_forall conseq)
        val newp = list_mk_abs(cvs,mk_conj(rel,pred))
