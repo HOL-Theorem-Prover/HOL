@@ -11,6 +11,8 @@ open ncTheory chap2Theory chap3Theory
 open term_posnsTheory
 open pathTheory
 
+local open containerTheory in end
+
 val _ = new_theory "standardisation"
 
 val RUNION_def = relationTheory.RUNION
@@ -1222,18 +1224,6 @@ val size_LAMl = store_thm(
   Induct THEN SRW_TAC [numSimps.ARITH_ss][size_thm]);
 val _ = export_rewrites ["size_LAMl"]
 
-val IN_LIST_TO_SET = store_thm(
-  "IN_LIST_TO_SET",
-  ``!l e. e IN LIST_TO_SET l = MEM e l``,
-  Induct THEN SRW_TAC [][containerTheory.LIST_TO_SET]);
-val _ = export_rewrites ["IN_LIST_TO_SET"]
-
-val LIST_TO_SET_FINITE = store_thm(
-  "LIST_TO_SET_FINITE",
-  ``!l. FINITE (LIST_TO_SET l)``,
-  Induct THEN SRW_TAC [][containerTheory.LIST_TO_SET]);
-val _ = export_rewrites ["LIST_TO_SET_FINITE"]
-
 val LAMl_vsub = store_thm(
   "LAMl_vsub",
   ``!vs u v M.
@@ -1251,7 +1241,7 @@ val LAMl_vsub = store_thm(
 val FV_LAMl = store_thm(
   "FV_LAMl",
   ``!vs M. FV (LAMl vs M) = FV M DIFF LIST_TO_SET vs``,
-  Induct THEN SRW_TAC [][containerTheory.LIST_TO_SET] THEN
+  Induct THEN SRW_TAC [][] THEN
   SIMP_TAC (srw_ss()) [EXTENSION] THEN PROVE_TAC []);
 
 val LAMl_vsub_disappears = store_thm(
@@ -1276,8 +1266,7 @@ val LAMl_ALPHA = store_thm(
     Cases_on `vs'` THEN FULL_SIMP_TAC (srw_ss()) [ISUB_def],
     SRW_TAC [][] THEN
     Cases_on `vs'` THEN
-    FULL_SIMP_TAC (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM,
-                              containerTheory.LIST_TO_SET] THEN
+    FULL_SIMP_TAC (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM] THEN
     `~(h' IN LIST_TO_SET vs) /\ ~(h' IN FV M) /\
      DISJOINT (LIST_TO_SET vs) (LIST_TO_SET t) /\
      DISJOINT (FV M) (LIST_TO_SET t)`
@@ -1300,12 +1289,12 @@ val FRESH_lists = store_thm(
        FINITE s ==> ?l'. ALL_DISTINCT l' /\ DISJOINT (LIST_TO_SET l') s /\
                          (LENGTH l' = n)``,
   Induct THEN SRW_TAC [][] THENL [
-    Q.EXISTS_TAC `[]` THEN SRW_TAC [][containerTheory.LIST_TO_SET],
+    Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
     RES_TAC THEN
     Q.SPEC_THEN `LIST_TO_SET l' UNION s` MP_TAC dBTheory.FRESH_string THEN
     SRW_TAC [][] THEN
     Q.EXISTS_TAC `x::l'` THEN
-    SRW_TAC [][containerTheory.LIST_TO_SET]
+    SRW_TAC [][]
   ]);
 
 val RENAMING_APPEND = store_thm(
@@ -1429,7 +1418,7 @@ val i1_reduce_to_LAMl = prove(
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, IMP_CONJ_THM, FORALL_AND_THM] THEN
   CONJ_TAC THENL [
     Induct THEN
-    SRW_TAC [][containerTheory.LIST_TO_SET, i_reduce_to_LAM_underneath] THEN
+    SRW_TAC [][i_reduce_to_LAM_underneath] THEN
     `DISJOINT (LIST_TO_SET vs) (FV M0)`
         by (FULL_SIMP_TAC (srw_ss()) [] THEN
             Q.PAT_ASSUM `DISJOINT X Y` MP_TAC THEN
