@@ -112,7 +112,6 @@ val simple_conj_congruence =
 val notnot_P = CONJUNCT1 NOT_CLAUSES
 
 fun congruential_simplification tm = let
-  fun LAND_CONV c = RATOR_CONV (RAND_CONV c)
 in
   if is_disj tm then let
     val (d1, d2) = dest_disj tm
@@ -126,9 +125,9 @@ in
       val notd1_t = mk_neg d1
       val notd1_thm = ASSUME notd1_t
       val notd1 =
-        if is_neg d1 then CONV_RULE (REWR_CONV notnot_P) notd1_thm
-        else notd1_thm
-      val d2_rewritten = DISCH notd1_t  (REWRITE_CONV [notd1] d2)
+        if is_neg d1 then EQT_INTRO (CONV_RULE (REWR_CONV notnot_P) notd1_thm)
+        else EQF_INTRO (notd1_thm)
+      val d2_rewritten = DISCH notd1_t (REWRITE_CONV [notd1] d2)
     in
       K (MATCH_MP simple_disj_congruence d2_rewritten) THENC
       (REWR_CONV T_or_r ORELSEC REWR_CONV F_or_r ORELSEC
@@ -143,7 +142,7 @@ in
       LAND_CONV congruential_simplification THENC
       RAND_CONV congruential_simplification
     else let
-      val c2_rewritten = DISCH c1 (REWRITE_CONV [ASSUME c1] c2)
+      val c2_rewritten = DISCH c1 (REWRITE_CONV [EQT_INTRO (ASSUME c1)] c2)
     in
       K (MATCH_MP simple_conj_congruence c2_rewritten) THENC
       (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r ORELSEC
