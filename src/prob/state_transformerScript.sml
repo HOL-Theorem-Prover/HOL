@@ -1,15 +1,6 @@
-(* non-interactive mode
-*)
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib pairTheory combinTheory;
+
 val _ = new_theory "state_transformer";
-
-(* interactive mode
-show_assums := true;
-loadPath := union ["../formalize"] (!loadPath);
-app load ["pairTheory", "combinTheory", "formalizeUseful"];
-*)
-
-open pairTheory combinTheory;
 
 infixr 0 ++ || ORELSEC;
 infix 1 >>;
