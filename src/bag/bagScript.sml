@@ -156,6 +156,7 @@ val BAG_INSERT_NOT_EMPTY = store_thm (
   CONV_TAC (DEPTH_CONV FUN_EQ_CONV THENC NOT_FORALL_CONV) THEN
   SIMP_TAC hol_ss [EMPTY_BAG_alt, BAG_INSERT, aCOND_OUT_THM,
                    fCOND_OUT_THM] THEN MESON_TAC []);
+val _ = export_rewrites ["BAG_INSERT_NOT_EMPTY"]
 
 val BAG_INSERT_ONE_ONE = store_thm(
   "BAG_INSERT_ONE_ONE",
@@ -390,11 +391,13 @@ val NOT_IN_EMPTY_BAG = store_thm(
   "NOT_IN_EMPTY_BAG",
   (--`!x:'a. ~(BAG_IN x EMPTY_BAG)`--),
   SIMP_TAC hol_ss [BAG_IN, BAG_INN, EMPTY_BAG]);
+val _ = export_rewrites ["NOT_IN_EMPTY_BAG"]
 
 val BAG_INN_EMPTY_BAG = Q.store_thm(
   "BAG_INN_EMPTY_BAG",
   `!e n. BAG_INN e n EMPTY_BAG = (n = 0)`,
   SIMP_TAC hol_ss [BAG_INN, EMPTY_BAG, EQ_IMP_THM]);
+val _ = export_rewrites ["BAG_INN_EMPTY_BAG"]
 
 val MEMBER_NOT_EMPTY = store_thm(
   "MEMBER_NOT_EMPTY",
@@ -491,6 +494,11 @@ val BAG_DIFF_EMPTY = store_thm(
   REPEAT STRIP_TAC THEN FUN_EQ_TAC THEN
   ASSUM_LIST (fn thl => SIMP_TAC hol_ss (map SPEC_ALL thl)));
 
+val BAG_DIFF_EMPTY_simple = save_thm(
+  "BAG_DIFF_EMPTY_simple",
+  LIST_CONJ (List.take(CONJUNCTS BAG_DIFF_EMPTY, 3)))
+val _ = export_rewrites ["BAG_DIFF_EMPTY_simple"]
+
 val BAG_DIFF_INSERT_same = Q.store_thm(
   "BAG_DIFF_INSERT_same",
   `!x b1 b2. BAG_DIFF (BAG_INSERT x b1) (BAG_INSERT x b2) =
@@ -499,6 +507,7 @@ val BAG_DIFF_INSERT_same = Q.store_thm(
                    BAG_INSERT] THEN
   REPEAT GEN_TAC THEN FUN_EQ_TAC THEN SIMP_TAC hol_ss [] THEN
   COND_CASES_TAC THEN ASM_SIMP_TAC hol_ss []);
+val _ = export_rewrites ["BAG_DIFF_INSERT_same"]
 
 val BAG_DIFF_INSERT = Q.store_thm(
   "BAG_DIFF_INSERT",
@@ -1509,6 +1518,86 @@ RW_TAC bool_ss [PSUB_BAG]
         by PROVE_TAC[FINITE_BAG_UNION, BAG_UNION_INSERT, FINITE_BAG_THM]
   THEN PROVE_TAC [BAG_CARD_THM, ARITH `x <y+1n = x <= y`,
                   SUB_BAG_CARD, SUB_BAG_UNION_MONO]);
+
+(* ----------------------------------------------------------------------
+    A "fold"-like operation for bags, ITBAG, by analogy with the set
+    theory's ITSET.
+   ---------------------------------------------------------------------- *)
+
+val ITBAG_defn = Defn.Hol_defn "ITBAG"
+  `ITBAG (b: 'a bag) (acc: 'b) =
+     if FINITE_BAG b then
+        if b = {||} then acc
+        else ITBAG (BAG_REST b) (f (BAG_CHOICE b) acc)
+     else ARB`;
+
+(* Termination of above *)
+val (ITBAG_eqn0, ITBAG_IND) =
+  Defn.tprove(ITBAG_defn,
+    TotalDefn.WF_REL_TAC `measure (BAG_CARD o FST)` THEN
+    PROVE_TAC [PSUB_BAG_CARD, PSUB_BAG_REST]);
+
+(* derive the desired recursion equation:
+     FINITE_BAG b ==>
+        (ITBAG f b a = if b = {||} then a
+                       else ITBAG f (BAG_REST b) (f (BAG_CHOICE b) a))
+*)
+val ITBAG_THM =
+    W (GENL o rev o free_vars o concl)
+      (DISCH_ALL (ASM_REWRITE_RULE [Q.ASSUME `FINITE_BAG b`] ITBAG_eqn0))
+
+val _ = save_thm("ITBAG_IND", ITBAG_IND);
+val _ = save_thm("ITBAG_THM", ITBAG_THM);
+
+val ITBAG_EMPTY = save_thm(
+  "ITBAG_EMPTY",
+  REWRITE_RULE [] (MATCH_MP (Q.SPEC `{||}` ITBAG_THM) FINITE_EMPTY_BAG))
+val _ = export_rewrites ["ITBAG_EMPTY"]
+
+val ITBAG_INSERT = save_thm(
+  "ITBAG_INSERT",
+  SIMP_RULE (srw_ss())[] (Q.SPEC `BAG_INSERT x b` ITBAG_THM))
+
+val COMMUTING_ITBAG_INSERT = store_thm(
+  "COMMUTING_ITBAG_INSERT",
+  ``!f b. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
+          !x a. ITBAG f (BAG_INSERT x b) a = ITBAG f b (f x a)``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  completeInduct_on `BAG_CARD b` THEN
+  FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO] THEN
+  SRW_TAC [][ITBAG_INSERT, BAG_REST_DEF, EL_BAG] THEN
+  Q.ABBREV_TAC `c = BAG_CHOICE (BAG_INSERT x b)` THEN
+  `BAG_IN c (BAG_INSERT x b)`
+     by PROVE_TAC [BAG_CHOICE_DEF, BAG_INSERT_NOT_EMPTY] THEN
+  `(c = x) \/ BAG_IN c b` by PROVE_TAC [BAG_IN_BAG_INSERT] THENL [
+    SRW_TAC [][],
+    `?b0. b = BAG_INSERT c b0`
+        by PROVE_TAC [BAG_IN_BAG_DELETE, BAG_DELETE] THEN
+    `BAG_DIFF (BAG_INSERT x b) {| c |} = BAG_INSERT x b0`
+        by SRW_TAC [][BAG_INSERT_commutes] THEN
+    ASM_REWRITE_TAC [] THEN
+    `FINITE_BAG b0` by FULL_SIMP_TAC (srw_ss()) [] THEN
+    `BAG_CARD b0 < BAG_CARD b`
+       by SRW_TAC [numSimps.ARITH_ss][BAG_CARD_THM] THEN
+    SRW_TAC [][]
+  ]);
+
+val COMMUTING_ITBAG_RECURSES = store_thm(
+  "COMMUTING_ITBAG_RECURSES",
+  ``!f e b a. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
+              (ITBAG f (BAG_INSERT e b) a = f e (ITBAG f b a))``,
+  Q_TAC SUFF_TAC
+     `!f. (!x y z.  f x (f y z) = f y (f x z)) ==>
+          !b. FINITE_BAG b ==>
+              !e a. ITBAG f (BAG_INSERT e b) a = f e (ITBAG f b a)` THEN1
+     PROVE_TAC [] THEN
+  GEN_TAC THEN STRIP_TAC THEN
+  ASM_SIMP_TAC (srw_ss()) [COMMUTING_ITBAG_INSERT] THEN
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN CONJ_TAC THENL [
+    SRW_TAC [][ITBAG_EMPTY],
+    SRW_TAC [][COMMUTING_ITBAG_INSERT]
+  ]);
+
 
 
 val _ = export_theory();
