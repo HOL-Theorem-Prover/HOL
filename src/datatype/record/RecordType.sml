@@ -40,17 +40,17 @@ fun foldl f zero []      = zero
   fun type2string ty =
     let
       fun string_aux ty =
-	let
-	  val (s,terml) = dest_all_type ty in
-	    if null terml then
-	      s
-	    else
-	      let
-		val sl         = map string_aux terml
-		fun comapp x y = x^","^y in
-		  "("^(foldl comapp (hd sl) (tl sl))^")"^s
-	      end
-	end
+        let
+          val (s,terml) = dest_all_type ty in
+            if null terml then
+              s
+            else
+              let
+                val sl         = map string_aux terml
+                fun comapp x y = x^","^y in
+                  "("^(foldl comapp (hd sl) (tl sl))^")"^s
+              end
+        end
     in
       (string_aux ty)
     end;
@@ -73,12 +73,12 @@ fun foldl f zero []      = zero
   (* been replaced by x.                                           *)
   fun gen_update_pairs tls =
     let fun rec_upd_pairs [] front = []
-	  | rec_upd_pairs (hd::tl) front =
-	    let val newvar = variant tls hd
-	      val newhd = (newvar,front@(newvar::tl))
-	    in
-	      newhd :: (rec_upd_pairs tl (front @ [hd]))
-	    end
+          | rec_upd_pairs (hd::tl) front =
+            let val newvar = variant tls hd
+              val newhd = (newvar,front@(newvar::tl))
+            in
+              newhd :: (rec_upd_pairs tl (front @ [hd]))
+            end
     in
       rec_upd_pairs tls []
     end;
@@ -89,10 +89,10 @@ fun foldl f zero []      = zero
   local
     fun nrecfilter fnc [] n       = []
       | nrecfilter fnc (hd::tl) n =
-	if (not (fnc (n,hd))) then
-	  nrecfilter fnc tl (n+1)
-	else
-	  hd::(nrecfilter fnc tl (n+1))
+        if (not (fnc (n,hd))) then
+          nrecfilter fnc tl (n+1)
+        else
+          hd::(nrecfilter fnc tl (n+1))
   in
     fun nfilter fnc l = nrecfilter fnc l 1
   end;
@@ -100,14 +100,14 @@ fun foldl f zero []      = zero
   fun crossprod l1 l2 =
     let
       fun pairer x y = x @ map (fn item => (y,item)) l2 in
-	foldl pairer [] l1
+        foldl pairer [] l1
     end;
 
   fun crosslessdiag l1 l2 =
     let
       val cross = crossprod l1 l2 and
-	diaglength = List.length l1 + 1 in
-	nfilter (fn (n,_) => not (n mod diaglength = 1)) cross
+        diaglength = List.length l1 + 1 in
+        nfilter (fn (n,_) => not (n mod diaglength = 1)) cross
     end;
 
 (* The following function is huge and revolting.  I don't attempt to  *)
@@ -128,9 +128,9 @@ in
       val cons_str = typename
       val initial_string = typename^" = "^cons_str^" of "
       val deftyp_str = initial_string^typestr;
-      val typthm = Define_type.define_type {fixities = [Prefix],
-				name = typename^"_Axiom",
-				type_spec = [QUOTE deftyp_str]}
+      val _ = Datatype.Hol_datatype [QUOTE deftyp_str]
+      val tyinfo = valOf (TypeBase.read typename)
+      val typthm = TypeBase.axiom_of tyinfo
 
       (* we now have the type actually defined in typthm *)
       fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
@@ -143,58 +143,58 @@ in
       val constype = foldr funemup typ types
       val constructor = Psyntax.mk_const(cons_str, constype)
       local
-	fun constructor_args [] =
-	  let fun mkarb typ = Psyntax.mk_const("ARB", typ) in
-	    map mkarb types
-	  end |
-	  constructor_args ((f,t)::xs) =
-	  let val rest = constructor_args xs
-	    val posn = findi f fields handle _ =>
-	      raise Fail "Bad field name"
-	  in
-	    update posn t rest
-	  end
+        fun constructor_args [] =
+          let fun mkarb typ = Psyntax.mk_const("ARB", typ) in
+            map mkarb types
+          end |
+          constructor_args ((f,t)::xs) =
+          let val rest = constructor_args xs
+            val posn = findi f fields handle _ =>
+              raise Fail "Bad field name"
+          in
+            update posn t rest
+          end
       in
-	fun create_term ftl =
-	  list_mk_comb(constructor, constructor_args ftl)
+        fun create_term ftl =
+          list_mk_comb(constructor, constructor_args ftl)
       end
       val cons_comb = list_mk_comb(constructor,  typeletters)
       val access_defn_strs =
-	map2 (fn (fldname,typeletter) => fn accfn_type =>
+        map2 (fn (fldname,typeletter) => fn accfn_type =>
       (--`^(Psyntax.mk_var(fldname,accfn_type)) ^cons_comb = ^typeletter`--))
-	(fields com typeletters) accfn_types
+        (fields com typeletters) accfn_types
       val access_defns =
-	map2 (fn x => fn y =>
-	      Rsyntax.new_recursive_definition
-	      {def = y, fixity = Prefix, name = x, rec_axiom = typthm})
-	fields access_defn_strs
+        map2 (fn x => fn y =>
+              Rsyntax.new_recursive_definition
+              {def = y, fixity = Prefix, name = x, rec_axiom = typthm})
+        fields access_defn_strs
       val accessor_thm =
-	save_thm(typename^"_accessors", LIST_CONJ access_defns)
+        save_thm(typename^"_accessors", LIST_CONJ access_defns)
       val accfn_terms = map2 (fn name => fn typ =>
-			      Psyntax.mk_const (name, typ)) fields accfn_types
+                              Psyntax.mk_const (name, typ)) fields accfn_types
 
       (* now generate update functions *)
       val update_type = mk_type("fun", [typ,typ])
       val update_pairs = gen_update_pairs typeletters
       val updfn_names = map (app2 "_update") fields
       val updfn_terms =
-	map2 (fn n => fn t => Psyntax.mk_var(n,mk_type("fun",[t,update_type])))
-	updfn_names types
+        map2 (fn n => fn t => Psyntax.mk_var(n,mk_type("fun",[t,update_type])))
+        updfn_names types
       val updfn_defn_strs =
-	map2 (fn updfn_term => fn (newvar,newvlist) =>
-	      (--`^updfn_term ^newvar ^cons_comb =
-	       ^(list_mk_comb(constructor, newvlist))`--))
-	updfn_terms update_pairs
+        map2 (fn updfn_term => fn (newvar,newvlist) =>
+              (--`^updfn_term ^newvar ^cons_comb =
+               ^(list_mk_comb(constructor, newvlist))`--))
+        updfn_terms update_pairs
       val updfn_defns =
-	map2 (fn x => fn y =>
-	      Rsyntax.new_recursive_definition
-	      {fixity    = Prefix,
-	       rec_axiom = typthm,
-	       name      = x,
-	       def       = y})
-	updfn_names updfn_defn_strs
+        map2 (fn x => fn y =>
+              Rsyntax.new_recursive_definition
+              {fixity    = Prefix,
+               rec_axiom = typthm,
+               name      = x,
+               def       = y})
+        updfn_names updfn_defn_strs
       val updfn_thm =
-	save_thm(typename^"_updates",  LIST_CONJ updfn_defns)
+        save_thm(typename^"_updates",  LIST_CONJ updfn_defns)
       (* updfn_terms is a list of variables, not constants, so we need to *)
       (* convert them into constants                                      *)
       val updfn_terms = map (Psyntax.mk_const o dest_var) updfn_terms
@@ -206,43 +206,40 @@ in
       val fupd_names = map (app2 "_fupd") fields
       val fupd_fun_types = map (fn t => mk_type("fun",[t,t])) types
       val fupd_types =
-	map (fn t => mk_type("fun", [t,update_type])) fupd_fun_types
+        map (fn t => mk_type("fun", [t,update_type])) fupd_fun_types
       val fupd_terms = map2 (curry Psyntax.mk_var) fupd_names fupd_types
       fun combine fld (fldupd, fldfupd) =
-	(--`^fldfupd f x = ^fldupd (f (^fld x)) x`--)
+        (--`^fldfupd f x = ^fldupd (f (^fld x)) x`--)
       val fupd_def_terms =
-	map2 combine accfn_terms (updfn_terms com fupd_terms)
+        map2 combine accfn_terms (updfn_terms com fupd_terms)
       fun combine fn_name def = new_definition(fn_name,def)
       val fupdfn_thms = map2 combine fupd_names fupd_def_terms
       val fupdfn_thm =
-	save_thm(typename^"_fn_updates", LIST_CONJ fupdfn_thms)
+        save_thm(typename^"_fn_updates", LIST_CONJ fupdfn_thms)
 
 
       (* do cases and induction theorem *)
-      val induction_thm =
-	save_thm(typename^"_induction", prove_induction_thm typthm)
-      val cases_thm =
-	save_thm(typename^"_cases", prove_cases_thm induction_thm)
+      val induction_thm = TypeBase.induction_of tyinfo
+      val cases_thm = TypeBase.nchotomy_of tyinfo
 
       (* do access of updates theorems *)
       val var = Psyntax.mk_var(app_letter typ, typ)
-      val tactic = STRUCT_CASES_TAC (SPEC var cases_thm)
-	THEN
-	REWRITE_TAC [accessor_thm,updfn_thm]
+      val tactic = STRUCT_CASES_TAC (SPEC var cases_thm) THEN
+                REWRITE_TAC [accessor_thm,updfn_thm]
       val accessfn_terms =
-	map2 (fn name => fn t =>
-	      Psyntax.mk_const (name,mk_type("fun",[typ,t])))
-	fields types
+        map2 (fn name => fn t =>
+              Psyntax.mk_const (name,mk_type("fun",[typ,t])))
+        fields types
       val combinations = crosslessdiag accessfn_terms updfn_terms
       fun create_goal (acc, upd) =
-	(--`^acc (^upd x ^var) = ^acc ^var`--)
+        (--`^acc (^upd x ^var) = ^acc ^var`--)
       val goals = map create_goal combinations
       val diag_goals =
-	map2 (fn acc => fn upd => (--`^acc (^upd x ^var) = x`--))
-	accessfn_terms updfn_terms
+        map2 (fn acc => fn upd => (--`^acc (^upd x ^var) = x`--))
+        accessfn_terms updfn_terms
       val thms = map (C (curry prove) tactic) (goals@diag_goals)
       val accupd_thm =
-	save_thm(typename^"_accupds", LIST_CONJ (map GEN_ALL thms))
+        save_thm(typename^"_accupds", LIST_CONJ (map GEN_ALL thms))
 
       (* do updates of access theorems *)
       (* theorems of the form: fld_upd (fld r) r = r *)
@@ -253,7 +250,7 @@ in
       val goals = map (fn t => (--`^t ^var = ^var`--)) lhses
       val thms = map (C (curry prove) tactic) goals
       val updacc_thm =
-	save_thm(typename^"_updaccs", LIST_CONJ (map GEN_ALL thms))
+        save_thm(typename^"_updaccs", LIST_CONJ (map GEN_ALL thms))
 
       (* a more useful form of the same thing, given the conditional *)
       (* rewrite tools available to us is: *)
@@ -264,43 +261,41 @@ in
       fun mk_goal c lhs = (--`^c ==> (^lhs ^var = ^var)`--)
       val goals = map2 mk_goal conditions lhses
       val thms =
-	map (C (curry prove) (DISCH_THEN SUBST1_TAC THEN tactic)) goals
+        map (C (curry prove) (DISCH_THEN SUBST1_TAC THEN tactic)) goals
       val updacc_c_thm =
-	save_thm(typename^"_cupdaccs", LIST_CONJ (map GEN_ALL thms))
+        save_thm(typename^"_cupdaccs", LIST_CONJ (map GEN_ALL thms))
 
       (* do updates of (same) updates *)
       fun create_goal upd =
-	(--`^upd x1 (^upd x2 ^var) = ^upd x1 ^var`--)
+        (--`^upd x1 (^upd x2 ^var) = ^upd x1 ^var`--)
       val goals = map create_goal updfn_terms
       val thms = map (C (curry prove) tactic) goals
       val updupd_thm =
-	save_thm(typename^"_updupds", LIST_CONJ (map GEN_ALL thms))
+        save_thm(typename^"_updupds", LIST_CONJ (map GEN_ALL thms))
 
       (* do updates of (different) updates *)
       (* this is for canonicalisation of update sequences *)
       val combinations = crossprod updfn_terms updfn_terms
       val size = List.length updfn_terms
       val filterfn = (fn (n,_) => let val m = n - 1
-				      val d =  m div size
-				      val m = m - (d * size) in
-					d > m end)
+                                      val d =  m div size
+                                      val m = m - (d * size) in
+                                        d > m end)
       val lower_triangle = nfilter filterfn combinations
       fun create_goal (f1,f2) =
-	(--`^f1 x (^f2 z ^var) = ^f2 z (^f1 x ^var)`--)
+        (--`^f1 x (^f2 z ^var) = ^f2 z (^f1 x ^var)`--)
       val goals = map create_goal lower_triangle
       val thms = map (C (curry prove) tactic) goals
       (* in the case where there is only one constructor, goals and thms
        will both be empty.  In this case, we don't want to apply LIST_CONJ
        to them *)
       val updcanon_thm =
-	if (List.length thms > 0) then
-	  save_thm(typename^"_updcanon", (LIST_CONJ (map GEN_ALL thms)))
-	else
-	  TRUTH
+        if (List.length thms > 0) then
+          save_thm(typename^"_updcanon", (LIST_CONJ (map GEN_ALL thms)))
+        else
+          TRUTH
 
-      val oneone_thm =
-	save_thm(typename^"_one_one",
-		 ConstrProofs.prove_constructors_one_one typthm)
+      val oneone_thm = valOf (TypeBase.one_one_of tyinfo)
 
       fun prove_semi11 str =
         let
@@ -342,25 +337,25 @@ in
       val types = map (el 2 o #Args o Rsyntax.dest_type) types
       val constructor = #const (Term.const_decl str)
       local
-	fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
-	val typeletters = foldl letgen [] types
-	fun constructor_args [] =
-	  let fun mkarb typ = Psyntax.mk_const("ARB", typ)
+        fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
+        val typeletters = foldl letgen [] types
+        fun constructor_args [] =
+          let fun mkarb typ = Psyntax.mk_const("ARB", typ)
           in
-	    if (arb) then map mkarb types
-	             else typeletters
+            if (arb) then map mkarb types
+                     else typeletters
 
-	  end |
-	  constructor_args ((f,t)::xs) =
-	  let val rest = constructor_args xs
-	    val posn = findi f fields handle _ =>
-	      raise Fail "Bad field name"
-	  in
-	    update posn t rest
-	  end
+          end |
+          constructor_args ((f,t)::xs) =
+          let val rest = constructor_args xs
+            val posn = findi f fields handle _ =>
+              raise Fail "Bad field name"
+          in
+            update posn t rest
+          end
       in
-	fun create_term ftl =
-	  list_mk_comb(constructor, constructor_args ftl)
+        fun create_term ftl =
+          list_mk_comb(constructor, constructor_args ftl)
       end
     in
       create_term
