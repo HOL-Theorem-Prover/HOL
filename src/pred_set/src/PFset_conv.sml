@@ -26,7 +26,7 @@ fun check_const cnst = assert (same_const cnst);
 (*									*)
 (* A call to:								*)
 (*									*)
-(*	FINITE_CONV `{x1;...;xn}`                                       *)
+(*	FINITE_CONV `FINITE {x1;...;xn}`                                *)
 (*									*)
 (* returns:								*)
 (*									*)
@@ -37,9 +37,9 @@ fun check_const cnst = assert (same_const cnst);
 
 local exception FAIL
       val finI =
-        let val th = 
+        let val th =
              snd(EQ_IMP_RULE
-                  (SPECL[(--`x:'a`--),(--`s:'a->bool`--)] 
+                  (SPECL[(--`x:'a`--),(--`s:'a->bool`--)]
                         pred_setTheory.FINITE_INSERT))
         in GEN (--`s:'a->bool`--) (DISCH_ALL (GEN (--`x:'a`--) (UNDISCH th)))
         end
@@ -54,7 +54,7 @@ fun FINITE_CONV tm =
        val eth = INST_TYPE theta pred_setTheory.FINITE_EMPTY
        val ith = INST_TYPE theta finI
    in EQT_INTRO (itlist (itfn ith) els eth)
-   end 
+   end
    handle e => raise wrap_exn "PFset_conv" "FINITE_CONV" e
 end;
 
@@ -90,13 +90,13 @@ local val inI = pred_setTheory.IN_INSERT
             val rectm = rand(rand(concl thm))
         in if aconv x y
            then EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (ALPHA x y) rectm))
-           else 
+           else
              let val eql = conv (mk_eq(x, y))
                  val res = rand(concl eql)
              in
              if res=T
                then EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (EQT_ELIM eql) rectm))
-             else 
+             else
              if res=F
              then let val rthm = in_conv conv (eth,ith) x S'
                       val thm2 = MK_COMB (DISJ eql,rthm)
@@ -105,7 +105,7 @@ local val inI = pred_setTheory.IN_INSERT
                   end
               else raise ERR "IN_CONV" ""
              end
-             handle HOL_ERR _ => 
+             handle HOL_ERR _ =>
               let val rthm = in_conv conv (eth,ith) x S'
               in if rand(concl rthm) = T
                  then let val eqn = mk_eq(x,y)
@@ -115,8 +115,8 @@ local val inI = pred_setTheory.IN_INSERT
                       end
                  else raise ERR "IN_CONV" ""
               end
-        end 
-        handle HOL_ERR _ 
+        end
+        handle HOL_ERR _
          => let val _ = check_const empty_tm S in eth end
 in
 fun IN_CONV conv tm =
@@ -124,7 +124,7 @@ fun IN_CONV conv tm =
      val ith = ISPEC x inI
      val eth = ISPEC x inE
  in in_conv conv (eth,ith) x S
- end 
+ end
  handle e => raise wrap_exn "PFset_conv" "IN_CONV" e
 end;
 
@@ -146,7 +146,7 @@ end;
 
 local val bv = genvar bool
       val Dins = GENL [(--`y:'a`--),(--`x:'a`--)]
-                   (SPECL [(--`x:'a`--),(--`y:'a`--)] 
+                   (SPECL [(--`x:'a`--),(--`y:'a`--)]
                           pred_setTheory.DELETE_INSERT)
       fun del_conv conv (eth,ith) x S =
         let val (_,[y,S']) = (check_const insert_tm ## I) (strip_comb S)
@@ -158,8 +158,8 @@ local val bv = genvar bool
             val pat = mk_eq(lhs(concl thm),mk_cond(bv,v,mk_comb(rator S,v)))
             val thm2 = SUBST [v |-> rthm, bv |-> eql] pat thm
        in TRANS thm2 (COND_CONV (rand(concl thm2)))
-       end 
-       handle HOL_ERR _ 
+       end
+       handle HOL_ERR _
         => let val _ = check_const empty_tm S in eth end
 in
 fun DELETE_CONV conv tm =
@@ -167,7 +167,7 @@ fun DELETE_CONV conv tm =
       val ith = ISPEC x Dins
       and eth = ISPEC x pred_setTheory.EMPTY_DELETE
   in del_conv conv (eth,ith) x S
-  end 
+  end
   handle e => raise wrap_exn "PFset_conv" "DELETE_CONV" e
 end;
 
@@ -198,7 +198,7 @@ local val Eu = CONJUNCT1 pred_setTheory.UNION_EMPTY
                val v = genvar (type_of S)
                val pat = mk_eq(lhs,mk_cond(bv,v,mk_comb(ins,v)))
                val thm2 = SUBST [v |-> th, bv |-> eql] pat thm
-           in 
+           in
              TRANS thm2 (COND_CONV (rand(concl thm2)))
            end
            handle HOL_ERR _ =>
@@ -288,9 +288,9 @@ local val Ith = pred_setTheory.IMAGE_INSERT
              val el = rand(rator(rand(concl thm1)))
              val cth = MK_COMB(AP_TERM IN (cnv1 el),
                                iconv IN cnv1 cnv2 ith eth t)
-             val thm2 = TRY_CONV (INSERT_CONV cnv2) (rand(concl cth))
+             val thm2 = QCONV (TRY_CONV (INSERT_CONV cnv2)) (rand(concl cth))
          in TRANS thm1 (TRANS cth thm2)
-         end handle HOL_ERR _ 
+         end handle HOL_ERR _
              => if same_const empty_tm s then eth
                 else raise ERR "IMAGE_CONV.iconv" ""
 in
@@ -300,7 +300,7 @@ fun IMAGE_CONV conv1 conv2 tm =
   in
      iconv (inst [alpha |-> ty] insert_tm)
            conv1 conv2 (ISPEC f Ith) (ISPEC f Eth) s
-  end 
+  end
   handle e => raise wrap_exn "PFset_conv" "IMAGE_CONV" e
 end;
 
