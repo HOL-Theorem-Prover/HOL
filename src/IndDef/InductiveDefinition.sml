@@ -1,3 +1,9 @@
+(* ========================================================================= *)
+(*                                                                           *)
+(*     Inductive Definitions (John Harrison)                                 *)
+(*                                                                           *)
+(* ========================================================================= *)
+
 structure InductiveDefinition :> InductiveDefinition =
 struct
 
@@ -7,20 +13,19 @@ open HolKernel Parse boolLib
 infix ## |-> THEN THENC; infixr -->;
 
 (*---------------------------------------------------------------------------
-   Variants. We re-define the kernel "variant" function here because
-   of a subtle difference between Hol98 variant and Hol88/light variant
-   functions: the former only looks at strings, while the latter
-   look at variables. For example
+    Variants. We re-define the kernel "variant" function here because
+    of a subtle difference between Hol98 variant and Hol88/light 
+    variant functions: the former only looks at strings, while the 
+    latter look at variables. For example
 
-      variant [`x:bool`] `x:'a`
+       variant [`x:bool`] `x:'a`
 
-   yields x' in Hol98, but `x` in the latter (I think). The following 
-   version of variant also does not vary away from constants with the 
-   same name, maybe it should.
+    yields x' in Hol98, but `x` in the latter (I think). The following 
+    version of variant also does not vary away from constants with the 
+    same name, maybe it should.
  ---------------------------------------------------------------------------*)
 
-local fun prime v = 
-        let val (n,ty) = dest_var v in mk_var(n^"'",ty) end
+local fun prime v = let val (n,ty) = dest_var v in mk_var(n^"'",ty) end
 in
 fun vary V v = if mem v V then vary V (prime v) else v
 end
@@ -77,7 +82,7 @@ val make_args =
   let fun margs n avoid tys =
     if null tys then [] else
         let val v = variant avoid (mk_var("a"^(int_to_string n),hd tys))
-        in v::(margs (n + 1) (v::avoid) (tl tys))
+        in v::margs (n + 1) (v::avoid) (tl tys)
         end
   in margs 0 end;;
 
@@ -563,13 +568,13 @@ local fun pare_comb qvs tm =
            andalso all is_var (snd(strip_comb tm))
         then tm
         else pare_comb qvs (rator tm)
+      fun schem_head cls = 
+        let val (avs,bod) = strip_forall cls
+        in pare_comb avs (snd(dest_imp bod) handle HOL_ERR _ => bod)
+        end
 in 
 fun unschematize_clauses clauses =
- let fun schem_head cls = 
-         let val (avs,bod) = strip_forall cls
-         in pare_comb avs (snd(dest_imp bod) handle HOL_ERR _ => bod)
-         end
-     val schem = map schem_head clauses
+ let val schem = map schem_head clauses
      val schems = mk_set schem
  in if is_var(hd schem) then (clauses,[]) else
     if not (length(mk_set (map (snd o strip_comb) schems)) = 1)
@@ -626,9 +631,9 @@ fun new_inductive_definition monoset tm =
      val th3 = make_definitions th2
      val avs = fst(strip_forall(concl th3))
      val (r,ic) = CONJ_PAIR(SPECL avs th3)
-     val (i,c) = CONJ_PAIR ic
+     val (i,c)  = CONJ_PAIR ic
  in (GENL avs r, GENL avs i, GENL avs c)
  end
- handle e => raise(wrap_exn "InductiveDefinition" "new_inductive_definition" e);
+ handle e => raise wrap_exn "InductiveDefinition" "new_inductive_definition" e;
 
 end (* InductiveDefinition *)

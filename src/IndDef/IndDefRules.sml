@@ -138,9 +138,8 @@ fun derive_strong_induction (rules,ind) =
  in
    GENL vs (IMP_TRANS (end_itlist IMP_CONJ ths) thm1)
  end
- handle e => raise (wrap_exn "SimpleIndDefRules" 
-                             "derive_strong_induction_thm" e);
-
+ handle e => raise (wrap_exn "IndDefRules" 
+                             "derive_strong_induction" e);
 
 
 (* ===================================================================== *)
@@ -252,9 +251,11 @@ fun TACF Fn tm =
 (* --------------------------------------------------------------------- *)
 
 fun TACS Fn tm =
- let val (cf,csf) = (TACF Fn ## TACS Fn) (dest_conj tm)
-                    handle HOL_ERR _ => (TACF Fn tm, fn x => fn y => [])
- in fn ttac1 => fn ttac2 => cf ttac1 ttac2 :: csf ttac1 ttac2
+ let val (cf,csf) = 
+       (TACF Fn ## TACS Fn) (dest_conj tm)
+       handle HOL_ERR _ => (TACF Fn tm, fn x => fn y => [])
+ in 
+     fn ttac1 => fn ttac2 => cf ttac1 ttac2 :: csf ttac1 ttac2
  end;
 
 
