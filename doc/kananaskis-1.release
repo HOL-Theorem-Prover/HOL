@@ -213,6 +213,16 @@ New features
     this simpset and also implements RW_TAC's aggressive stripping and
     normalisation strategies.
 
+  * The system now compiles files with the standard ML infix
+    declarations already in scope.  This means that one need no longer
+    write
+
+       infix THEN THENL ...
+
+    at the top of one's files.  Doing so is not an error however.  If
+    this behaviour leads to problems, recall that infix declarations
+    can be cancelled with the "nonfix" directive.
+
 Behaviours changed:
 -------------------
 
