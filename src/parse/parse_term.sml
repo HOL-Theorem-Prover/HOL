@@ -1134,7 +1134,7 @@ fun remove_specials t =
               VAR fldname => APP(#2 t, IDENT (#2 t2, recsel_special ^ fldname),
                                  remove_specials f)
             | _ => raise ParseTermError
-                ("Record selection must have single id to right",#2 t2)
+                ("Record selection must have single id to right (possibly non-integer numeric literal)",#2 t2)
           else if s = reccons_special then
             remove_recupdate (#2 t) f t2 (IDENT (locn.Loc_None,"ARB"))
           else if s = recwith_special then
