@@ -459,10 +459,15 @@ that the buffer has already had HOL terms, comments and strings removed."
   (interactive)
   (send-raw-string-to-hol "goalstackLib.b()" hol-echo-commands-p))
 
-(defun hol-print ()
+(defun hol-print-goal ()
   "Print the current HOL goal."
   (interactive)
   (send-raw-string-to-hol "goalstackLib.p()" hol-echo-commands-p))
+
+(defun hol-print-all-goals ()
+  "Print all the current HOL goals."
+  (interactive)
+  (send-raw-string-to-hol "goalstackLib.status()" hol-echo-commands-p))
 
 (defun hol-interrupt ()
   "Perform a HOL interrupt."
@@ -723,7 +728,8 @@ already loaded.)"
 (define-key hol-map "m"    'hol-db-match)
 (define-key hol-map "n"    'hol-name-top-theorem)
 (define-key hol-map "o"    'hol-open-string)
-(define-key hol-map "p"    'hol-print)
+(define-key hol-map "p"    'hol-print-goal)
+(define-key hol-map "P"    'hol-print-all-goals)
 (define-key hol-map "r"    'hol-rotate)
 (define-key hol-map "R"    'hol-restart-goal)
 (define-key hol-map "t"    'mark-hol-tactic)
