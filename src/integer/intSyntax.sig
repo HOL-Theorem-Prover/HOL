@@ -13,6 +13,8 @@ sig
   val mult_tm        : term
   val div_tm         : term
   val mod_tm         : term
+  val quot_tm        : term
+  val rem_tm         : term
   val exp_tm         : term
   val int_eq_tm      : term
   val less_tm        : term

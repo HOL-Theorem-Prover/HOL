@@ -20,6 +20,8 @@ val minus_tm = Term`$- : int -> int -> int`
 val mult_tm = Term`$* : int -> int -> int`
 val div_tm = Term`$/ : int -> int -> int`
 val mod_tm = Term`$% : int -> int -> int`
+val quot_tm = Term`integer$int_quot`
+val rem_tm = Term`integer$int_rem`
 val exp_tm = Term`$** : int -> num -> int`
 val int_eq_tm = Term`$= : int -> int -> bool`
 val less_tm = Term`$< : int -> int -> bool`

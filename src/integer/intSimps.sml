@@ -23,7 +23,7 @@ val elim_thms = [INT_ADD_REDUCE, INT_SUB_REDUCE, INT_MUL_REDUCE,
                  INT_DIV_REDUCE, INT_MOD_REDUCE, INT_EXP_REDUCE,
                  INT_LT_REDUCE, INT_LE_REDUCE, INT_EQ_REDUCE,
                  INT_GT_REDUCE, INT_GE_REDUCE, INT_DIVIDES_REDUCE,
-                 INT_ABS_NUM, INT_ABS_NEG]
+                 INT_ABS_NUM, INT_ABS_NEG, INT_QUOT_REDUCE, INT_REM_REDUCE]
 
 fun int_compset () = let
   open computeLib
@@ -42,7 +42,7 @@ val n = mk_var{Name = "n", Ty = num_ty}
 
 val basic_op_terms =
   [plus_tm, minus_tm, mult_tm, div_tm, mod_tm, int_eq_tm,
-   less_tm, leq_tm, great_tm, geq_tm, divides_tm]
+   less_tm, leq_tm, great_tm, geq_tm, divides_tm, rem_tm, quot_tm]
 val basic_op_patterns = map (fn t => list_mk_comb(t, [x,y])) basic_op_terms
 val exp_pattern = list_mk_comb(exp_tm, [x,n])
 
