@@ -455,22 +455,18 @@ val _ = Theory.save_thm ("INT_LT_MUL",INT_LT_MUL)
 val int_tybij = definition "int_tybij";
 
 val natplus = Term`$+`;
-val _ = allow_for_overloading_on ("+", Type`:'a -> 'a -> 'a`);
 val _ = overload_on("+", natplus);
 val _ = overload_on ("+", Term`$int_add`);
 
 val natless = Term`$<`;
-val _ = allow_for_overloading_on ("<", Type`:'a -> 'a -> bool`);
 val _ = overload_on ("<", natless);
 val _ = overload_on ("<", Term`$int_lt`);
 
 val bool_not = Term`$~`
-val _ = allow_for_overloading_on ("~", Type`:'a -> 'a`);
 val _ = overload_on ("~", Term`$int_neg`);
 val _ = overload_on ("~", bool_not);
 
 val natmult = Term`$*`;
-val _ = allow_for_overloading_on ("*", Type`:'a -> 'a -> 'a`);
 val _ = overload_on ("*", Term`$int_mul`);
 val _ = overload_on ("*", natmult);
 
@@ -485,7 +481,6 @@ val int_sub =
 			 500);
 
 val natsub = Term`$-`;
-val _ = allow_for_overloading_on ("-", Type`:'a -> 'a -> 'a`);
 val _ = overload_on("-", natsub);
 val _ = overload_on("-", Term`$int_sub`);
 
@@ -495,7 +490,6 @@ val int_le =
 			 450);
 
 val natlte = Term`$<=`;
-val _ = allow_for_overloading_on ("<=", Type`:'a -> 'a -> bool`);
 val _ = overload_on ("<=", natlte);
 val _ = overload_on ("<=", Term`$int_le`);
 
@@ -504,7 +498,6 @@ val int_gt =
 			 Term `$int_gt (x:int) y = y < x`,
 			 450);
 val natgt = Term`$>`;
-val _ = allow_for_overloading_on (">", Type`:'a -> 'a -> bool`);
 val _ = overload_on (">", natgt);
 val _ = overload_on (">", Term`$int_gt`);
 
@@ -513,7 +506,6 @@ val int_ge =
 			 Term `$int_ge x y = y <= x:int`,
 			 450);
 val natge = Term`$>= : num -> num -> bool`
-val _ = allow_for_overloading_on (">=", Type`:'a -> 'a -> bool`);
 val _ = overload_on (">=", natge);
 val _ = overload_on (">=", Term`$int_ge`);
 
@@ -1674,7 +1666,6 @@ val int_div = new_definition(
                           else & (Num(~x) DIV Num(~y))`);
 
 val _ = add_infix("/", 600, HOLgrammars.LEFT);
-val _ = allow_for_overloading_on("/", Type`:'a -> 'a -> 'a`);
 val _ = overload_on("/", Term`int_div`)
 
 val INT_DIV = store_thm(
@@ -1771,7 +1762,6 @@ val int_mod = new_definition(
                      else p - p / q * q`);
 
 val _ = add_infix("%", 650, HOLgrammars.LEFT);
-val _ = allow_for_overloading_on("%", Type`:'a -> 'a -> 'a`);
 val _ = overload_on("%", Term`int_mod`);
 
 val INT_DIVISION = store_thm(
@@ -2336,7 +2326,6 @@ val int_exp = Rsyntax.new_recursive_definition{
 val _ = set_fixity "int_exp" (Infixr 700);
 
 val _ = add_infix("**", 700, HOLgrammars.RIGHT);
-val _ = allow_for_overloading_on("**", Type`:'a -> 'b -> 'a`);
 val _ = overload_on ("**", Term`$EXP`);
 val _ = overload_on ("**", Term`$int_exp`);
 

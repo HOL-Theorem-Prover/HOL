@@ -33,7 +33,6 @@ end;
 (* Hack to avoid (semi_ring 0 1 $+ $* ) to be confused with an end
  * of comment.                      ^^^
  *)
-val _ = temp_allow_for_overloading_on("mult",==`: num->num->num`==)
 val _ = temp_overload_on("mult",--`$* : num->num->num`--);
 
 val _ = export_theory();

@@ -1,9 +1,89 @@
+(* invariant on the type overloaded_op_info;
+     base_type is the anti-unification of all the types in the actual_ops
+     list
+   invariant on the overload_info list:
+     all members of the list have non-empty actual_ops lists
+*)
+
 type overloaded_op_info = {overloaded_op: string,
                            base_type : Type.hol_type,
                            actual_ops : (Type.hol_type * string) list}
 type overload_info = overloaded_op_info list
 
 exception OVERLOAD_ERR of string
+
+local
+  open stmonad Lib Type
+  infix >- >>
+  fun lookup n (env,avds) =
+    case assoc1 n env of
+      NONE => ((env,avds), NONE)
+    | SOME (_,v) => ((env,avds), SOME v)
+  fun extend x (env,avds) = ((x::env,avds), ())
+  (* invariant on type generation part of state:
+       not (next_var MEM sofar)
+  *)
+  fun newtyvar (env, (next_var, sofar)) = let
+    val new_sofar = next_var::sofar
+    val new_next = gen_variant tyvar_vary sofar (tyvar_vary next_var)
+    (* new_next can't be in new_sofar because gen_variant ensures that
+       it won't be in sofar, and tyvar_vary ensures it won't be equal to
+       next_var *)
+  in
+    ((env, (new_next, new_sofar)), mk_vartype next_var)
+  end
+
+  fun au (ty1, ty2) =
+    if ty1 = ty2 then return ty1
+    else
+      lookup (ty1, ty2) >-
+      (fn result =>
+       case result of
+         NONE =>
+           if not (is_vartype ty1) andalso not (is_vartype ty2) then let
+             val {Tyop = tyop1, Args = args1} = dest_type ty1
+             val {Tyop = tyop2, Args = args2} = dest_type ty2
+           in
+             if tyop1 = tyop2 then
+               mmap au (ListPair.zip (args1, args2)) >-
+               (fn tylist => return (mk_type{Tyop = tyop1, Args = tylist}))
+             else
+               newtyvar >- (fn new_ty =>
+                            extend ((ty1, ty2), new_ty) >>
+                            return new_ty)
+           end
+           else
+             newtyvar >- (fn new_ty =>
+                          extend ((ty1, ty2), new_ty) >>
+                          return new_ty)
+        | SOME v => return v)
+
+  fun initial_state (ty1, ty2) = let
+    val avoids = map dest_vartype (type_varsl [ty1, ty2])
+    val first_var = gen_variant tyvar_vary avoids "'a"
+  in
+    ([], (first_var, avoids))
+  end
+  fun generate_iterates n f x =
+    if n <= 0 then []
+    else x::generate_iterates (n - 1) f (f x)
+
+  fun canonicalise ty = let
+    val tyvars = type_vars ty
+    val replacements =
+      map mk_vartype (generate_iterates (length tyvars) Lib.tyvar_vary "'a")
+    val subst =
+      ListPair.map (fn (ty1, ty2) => Lib.|->(ty1, ty2)) (tyvars, replacements)
+  in
+    type_subst subst ty
+  end
+in
+  fun anti_unify ty1 ty2 = let
+    val (_, result) = au (ty1, ty2) (initial_state (ty1, ty2))
+  in
+    canonicalise result
+  end
+end
 
 fun fupd_actual_ops f {overloaded_op, base_type, actual_ops} =
   {overloaded_op = overloaded_op, base_type = base_type,
@@ -35,27 +115,13 @@ in
   | (false, false) => NONE
 end
 
-fun add_overloaded_form opname basety oinfo =
-  if is_overloaded oinfo opname then let
-    val oldtype = #base_type (valOf (info_for_name oinfo opname))
-  in
-    case type_compare (basety, oldtype) of
-      NONE => raise OVERLOAD_ERR "New basetype incomparable with old"
-    | SOME LESS => raise OVERLOAD_ERR "New basetype less general than old"
-    | _ => valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
-                  (fupd_base_type (fn x => basety)) oinfo)
-  end
-  else
-    {overloaded_op = opname, base_type = basety, actual_ops = []}::
-    oinfo
-
 fun remove_overloaded_form s (oinfo:overload_info) =
   List.filter (fn x => #overloaded_op x <> s) oinfo
 
 (* a predicate on pairs of operations and types that returns true if
    they're equal, given that two types are equal if they can match
    each other *)
-fun compare_real_things (ty1,n1:string) (ty2,n2) =
+fun ntys_equal (ty1,n1:string) (ty2,n2) =
   type_compare (ty1, ty2) = SOME EQUAL andalso n1 = n2
 
 
@@ -66,19 +132,22 @@ fun compare_real_things (ty1,n1:string) (ty2,n2) =
 fun add_actual_overloading {opname, realname, realtype} oinfo =
   if is_overloaded oinfo opname then let
     val {base_type, ...} = valOf (info_for_name oinfo opname)
+    val newbase = anti_unify base_type realtype
   in
-    if Lib.can (Type.match_type base_type) realtype then
-      valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
-             (fupd_actual_ops
-              (fn ops =>
-               (realtype, realname) ::
-               Lib.op_set_diff compare_real_things ops [(realtype, realname)]))
-             oinfo)
-    else
-      raise OVERLOAD_ERR "Given type is not instance of type pattern"
+    valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
+           ((fupd_actual_ops
+             (fn ops =>
+              (realtype, realname) ::
+              Lib.op_set_diff ntys_equal ops [(realtype, realname)])) o
+            (fupd_base_type (fn b => newbase)))
+           oinfo)
   end
   else
-    raise OVERLOAD_ERR ("No such op: "^opname)
+    {actual_ops = [(realtype, realname)],
+     overloaded_op = opname,
+     base_type = realtype} ::
+    oinfo
+
 
 fun myfind f [] = NONE
   | myfind f (x::xs) = case f x of (v as SOME _) => v | NONE => myfind f xs
@@ -128,17 +197,11 @@ fun merge_oinfos O1 O2 = let
             val name = #overloaded_op op1
             val ty1 = #base_type op1
             val ty2 = #base_type op2
-            val newty =
-              case type_compare(ty1, ty2) of
-                NONE =>
-                  raise OVERLOAD_ERR ("Incompatible types for operator "^ name)
-              | SOME LESS => ty2
-              | _ => ty1
+            val newty = anti_unify ty1 ty2
             val newopinfo =
               {overloaded_op = name, base_type = newty,
                actual_ops =
-               Lib.op_union compare_real_things
-               (#actual_ops op1) (#actual_ops op2)}
+               Lib.op_union ntys_equal (#actual_ops op1) (#actual_ops op2)}
           in
             merge (newopinfo::acc) op1s' op2s'
           end

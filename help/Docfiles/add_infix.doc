@@ -28,7 +28,7 @@ happens later in the parse, and will result in either a constant or a
 variable with name {s}.  In fact, if this name is overloaded, the
 eventual term generated may have a constant of quite a different name
 again; the resolution of overloading comes as a separate phase (see
-entries for {allow_for_overloading_on} and {overload_on}).
+the entry for {overload_on}).
 
 \FAILURE
 {add_infix} fails if the precedence level chosen for the new infix is

@@ -55,6 +55,12 @@ New features:
     (hol-echo-commands-p), which controls whether or not the text sent
     to the HOL buffer is echoed or not.  The default is for it not to
     be echoed.
+  * Setting up overloading does not now require a preliminary call to
+    allow_for_overloading_on.  In fact, this latter function no longer
+    exists.  Overloading is now done solely with the function
+    overload_on, which has much the same semantics as before, but is
+    not constrained by a "base type" that the user is forced to know
+    about in advance.
 
 New theories:
 -------------

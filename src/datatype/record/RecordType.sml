@@ -451,7 +451,6 @@ in
          resolution prefer the latter option. *)
       fun do_accfn (name, tm) = let
       in
-        Parse.allow_for_overloading_on (name, Type`:'a -> 'b`);
         Parse.overload_on(name, tm)
       end
       val _ = ListPair.app do_accfn (fields, accfn_terms)
@@ -460,7 +459,6 @@ in
       fun do_updfn (name0, tm) = let
         val name = name0 ^ "_update"
       in
-        Parse.allow_for_overloading_on (name, Type`:'a -> 'b -> 'b`);
         Parse.overload_on(name, tm)
       end
       val _ = ListPair.app do_updfn (fields, updfn_terms)
@@ -469,7 +467,6 @@ in
       fun do_fupdfn (name0, tm) = let
         val name = name0 ^ "_fupd"
       in
-        Parse.allow_for_overloading_on (name, Type`:('a -> 'a) -> 'b -> 'b`);
         Parse.overload_on(name, tm)
       end
       val _ = ListPair.app do_fupdfn (fields, fupdfn_terms)

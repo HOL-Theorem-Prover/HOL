@@ -83,7 +83,7 @@ All over place, and for all sorts of reasons.
 Turns strings into terms.
 
 \SEEALSO
-parse_preTerm, preTerm, Type, allow_for_overloading_on, overload_on,
-guessing_overloads, guessing_tyvars, term_grammar.
+parse_preTerm, preTerm, Type, overload_on, guessing_overloads,
+guessing_tyvars, term_grammar.
 
 \ENDDOC

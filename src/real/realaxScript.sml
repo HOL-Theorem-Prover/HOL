@@ -577,11 +577,6 @@ val natless  = Term`$<`;
 val bool_not = Term`$~`
 val natmult  = Term`$*`;
 
-val _ = allow_for_overloading_on ("+", Type`:'a -> 'a -> 'a`);
-val _ = allow_for_overloading_on ("<", Type`:'a -> 'a -> bool`);
-val _ = allow_for_overloading_on ("~", Type`:'a -> 'a`);
-val _ = allow_for_overloading_on ("*", Type`:'a -> 'a -> 'a`);
-
 val _ = overload_on ("~", bool_not);
 
 val _ = overload_on ("+", natplus);

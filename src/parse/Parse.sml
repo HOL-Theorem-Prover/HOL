@@ -756,26 +756,6 @@ end
   end
 
   (* overloading *)
-  fun temp_allow_for_overloading_on (s, ty) = let
-  in
-    the_term_grammar :=
-    term_grammar.fupdate_overload_info (Overload.add_overloaded_form s ty)
-    (term_grammar());
-    term_grammar_changed := true
-  end
-  fun allow_for_overloading_on (s, ty) = let
-    val tystring =
-      Portable.pp_to_string 75 (TheoryPP.print_type_to_SML "mkV" "mkT") ty
-    val cmdstring = String.concat [
-      "val _ = let fun mkV s = Type.mk_vartype s\n",
-      "    fun mkT s args = Type.mk_type{Tyop = s, Args = args}\n",
-      "    val ty = ",tystring,"\n",
-      "in  Parse.temp_allow_for_overloading_on (", quote s, ", ty) end\n"
-                                   ]
-  in
-    temp_allow_for_overloading_on (s, ty);
-    adjoin_to_theory (toThyaddon cmdstring)
-  end
 
   fun temp_overload_on_by_nametype (s, name, ty) = let
   in
@@ -837,45 +817,33 @@ end
   fun temp_add_record_field (fldname, term) = let
     val recfldname = recsel_special^fldname
   in
-    temp_allow_for_overloading_on(recfldname, Type.-->(Type.alpha, Type.beta));
     temp_overload_on(recfldname, term)
   end
   fun add_record_field (fldname, term) = let
     val recfldname = recsel_special^fldname
   in
-    allow_for_overloading_on(recfldname, Type.-->(Type.alpha, Type.beta));
     overload_on(recfldname, term)
   end
 
   fun temp_add_record_update (fldname, term) = let
     val recfldname = recupd_special ^ fldname
-    val pattern = Type.-->(Type.alpha, Type.-->(Type.beta, Type.beta))
   in
-    temp_allow_for_overloading_on(recfldname, pattern);
     temp_overload_on(recfldname, term)
   end
   fun add_record_update (fldname, term) = let
     val recfldname = recupd_special ^ fldname
-    val pattern = Type.-->(Type.alpha, Type.-->(Type.beta, Type.beta))
   in
-    allow_for_overloading_on(recfldname, pattern);
     overload_on(recfldname, term)
   end
 
   fun temp_add_record_fupdate (fldname, term) = let
     val recfldname = recfupd_special ^ fldname
-    val pattern = Type.-->(Type.-->(Type.alpha, Type.alpha),
-                           Type.-->(Type.beta, Type.beta))
   in
-    temp_allow_for_overloading_on(recfldname, pattern);
     temp_overload_on(recfldname, term)
   end
   fun add_record_fupdate (fldname, term) = let
     val recfldname = recfupd_special ^ fldname
-    val pattern = Type.-->(Type.-->(Type.alpha, Type.alpha),
-                           Type.-->(Type.beta, Type.beta))
   in
-    allow_for_overloading_on(recfldname, pattern);
     overload_on(recfldname, term)
   end
 
@@ -887,7 +855,6 @@ end
         ("Natural numbers not defined; try load \"arithmeticTheory\"")
 
     val num_ty = Type.mk_type {Tyop = "num", Args = []}
-    val fromNum_type = Type.-->(num_ty, Type.mk_vartype("'a"))
     val num2num_ty = Type.-->(num_ty, num_ty)
     val (injectionfn_name, ifn_ty) =
       case stropt of
@@ -897,7 +864,6 @@ end
             raise ERROR "add_numeral_form" ("No constant with name "^s)
   in
     temp_add_bare_numeral_form (c, stropt);
-    temp_allow_for_overloading_on (fromNum_str, fromNum_type);
     temp_overload_on_by_nametype (fromNum_str, injectionfn_name, ifn_ty)
   end
 

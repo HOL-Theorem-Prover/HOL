@@ -129,7 +129,6 @@ in
     val remove_rules_for_term : string -> unit
     val remove_termtok : {term_name : string, tok : string} -> unit
     (* overloading and records *)
-    val allow_for_overloading_on : string * Type.hol_type -> unit
     val overload_on : string * term -> unit
     val overload_on_by_nametype : string * string * Type.hol_type -> unit
     val clear_overloads_on : string -> unit
@@ -163,7 +162,6 @@ in
     val temp_remove_termtok : {term_name : string, tok : string} -> unit
     val temp_set_associativity : (int * associativity) -> unit
 
-    val temp_allow_for_overloading_on : string * Type.hol_type -> unit
     val temp_overload_on : string * term -> unit
     val temp_overload_on_by_nametype : string * string * Type.hol_type -> unit
     val temp_clear_overloads_on : string -> unit

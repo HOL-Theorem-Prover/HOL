@@ -12,11 +12,7 @@ Parsing, pretty-printing, overloading.
 
 \DESCRIBE
 This function removes all overloading associated with the given
-string.  Not only are all possible overloading resolutions for that
-string removed, but the string is not even recorded as something that
-might be later overloaded (using {overload_on}).  If a new set of
-overloading possibilities is desired for the string, the function
-{allow_for_overloading_on} will need to be called first.
+string.
 
 \FAILURE
 Never fails.  If a string is not overloaded, this function simply has
@@ -43,6 +39,6 @@ If overloading gets too confusing, this function should help to clear
 away one layer of supposedly helpful obfuscation.
 
 \SEEALSO
-allow_for_overloading_on, overload_on
+overload_on.
 
 \ENDDOC
