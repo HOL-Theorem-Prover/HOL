@@ -1,1 +1,11 @@
-latex $1.tex; dvips -f $1.dvi > $1.ps
+if [ $# -eq 0 ]
+then
+     echo "Usage: $0 <files to make>"
+     echo "  e.g.       $0 man      will make the man.ps file"
+fi
+
+for i in $*
+do
+  latex $i.tex && dvips -f $i.dvi > $i.ps
+done
+
