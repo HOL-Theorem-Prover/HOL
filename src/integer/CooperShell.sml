@@ -158,6 +158,8 @@ in
   p6_recurse THENC PURE_REWRITE_CONV [F_or_r]
 end tm
 
+val phase6_CONV = Profile.profile "phase6" phase6_CONV
+
 fun vphase6_CONV tm = let
   (* as above, but works over the constraint attached to v, not the one
      immediately under the binder *)
@@ -465,6 +467,8 @@ fun find_dup c l =
     | (h1 :: (tail as (h2 :: t))) => if c(h1, h2) = EQUAL then SOME h1
                                      else find_dup c tail
 
+val do_muls = ONCE_DEPTH_CONV LINEAR_MULT
+
 fun finish_pure_goal1 tm = let
   (* tm is of the form
         ?x1 .. xn. K1 /\ K2 /\ .. /\ Kn /\ P (x1..xn) /\
@@ -501,7 +505,8 @@ in
       val v = hd vs
     in
       push_exvar_to_bot v THENC
-      LAST_EXISTS_CONV simplify_constrained_disjunct
+      LAST_EXISTS_CONV simplify_constrained_disjunct THENC
+      do_muls
     end
   | NONE => let
       val vset_compare = listlex_compare Term.compare
@@ -627,6 +632,9 @@ in
                        TRY_CONV push_in_exists)
   end
 end tm
+
+val pure_goal0 = Profile.profile "pure_goal0" pure_goal0
+val finish_pure_goal = Profile.profile "finish_pure_goal" finish_pure_goal
 
 val pure_goal = pure_goal0 THENC EVERY_DISJ_CONV finish_pure_goal THENC
                 REDUCE_CONV

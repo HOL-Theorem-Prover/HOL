@@ -36,8 +36,8 @@ val terms_to_test =
     Term`!z y x v u.
             (3 * u + 6 * v + ~9 * x + ~5 * y + 6 * z = 86) ==>
             (1 * u + 4 * v + 17 * x + ~18 * y + ~5 * z = ~24)`),
-(*   ("PUGH1", Term`?x y:int. 27 <= 11 * x + 13 * y /\ 11 * x + 13 * y <= 45 /\
-                            ~10 <= 7 * x - 9 * y /\ 7 * x - 9 * y <= 4`), *)
+   ("PUGH1", Term`?x y:int. 27 <= 11 * x + 13 * y /\ 11 * x + 13 * y <= 45 /\
+                            ~10 <= 7 * x - 9 * y /\ 7 * x - 9 * y <= 4`),
    ("SUNRISE1", Term`!x0:num x:num y0:num y:num.
       (x0 = x) /\ (y0 = y) ==>
       (if 100 < y then

@@ -2201,6 +2201,30 @@ val INT_ABS_MOD_LT = store_thm(
   ASM_SIMP_TAC int_ss [INT_INJ, INT_NEG_EQ0, INT_MOD_NEG, INT_ABS_NUM,
                        INT_ABS_NEG, INT_MOD, INT_LT, DIVISION]);
 
+val INT_DIV_P = store_thm(
+  "INT_DIV_P",
+  ``!P x c. ~(c = 0) ==>
+            (P (x / c) = ?k r. (x = k * c + r) /\ ABS (k * c) <= ABS x /\
+                               ABS r < ABS c /\ P k)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    MAP_EVERY Q.EXISTS_TAC [`x / c`, `x % c`] THEN
+    ASM_SIMP_TAC bool_ss [INT_ABS_MOD_LT, INT_ABS_DIV] THEN
+    PROVE_TAC [INT_DIVISION],
+    PROVE_TAC [INT_DIV_UNIQUE]
+  ]);
+
+val INT_MOD_P = store_thm(
+  "INT_MOD_P",
+  ``!P x c. ~(c = 0) ==>
+            (P (x % c) = ?k r. (x = k * c + r) /\ ABS (k * c) <= ABS x /\
+                               ABS r < ABS c /\ P r)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    MAP_EVERY Q.EXISTS_TAC [`x / c`, `x % c`] THEN
+    ASM_SIMP_TAC bool_ss [INT_ABS_MOD_LT, INT_ABS_DIV] THEN
+    PROVE_TAC [INT_DIVISION],
+    PROVE_TAC [INT_MOD_UNIQUE]
+  ]);
+
 val INT_MOD_COMMON_FACTOR = store_thm(
   "INT_MOD_COMMON_FACTOR",
   Term`!p. ~(p = 0) ==> !q. (q * p) % p = 0`,

@@ -383,11 +383,24 @@ in
   QConv.QCONV (BINDER_CONV recurse) tm
 end
 
+fun myEXISTS_OR_CONV tm = let
+  (* this version of EXISTS_OR_CONV is quicker than the system default,
+     possibly because it doesn't bother with keeping the variable names
+     the same on the RHS of the theorem returned *)
+  val (v,body) = dest_exists tm
+in
+  BINDER_CONV (BINOP_CONV (mk_abs_CONV v)) THENC
+  REWR_CONV EXISTS_OR_THM THENC
+  BINOP_CONV (BINDER_CONV BETA_CONV)
+end tm
+
+
+
 (* with ?x. p \/ q \/ r...          (with or's right associated)
    expand to (?x. p) \/ (?x.q) \/ (?x.r) ...
 *)
 fun push_one_exists_over_many_disjs tm =
-  ((EXISTS_OR_CONV THENC RAND_CONV push_one_exists_over_many_disjs) ORELSEC
+  ((myEXISTS_OR_CONV THENC RAND_CONV push_one_exists_over_many_disjs) ORELSEC
    ALL_CONV) tm
 
 

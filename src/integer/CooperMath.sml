@@ -300,10 +300,12 @@ end tm
       else REFL tm
 
 
+open QConv
+val THENQC = fn (c1,c2) => THENQC c1 c2
+val ORELSEQC = fn (c1, c2) => ORELSEQC c1 c2
+infix THENQC ORELSEQC
+
 fun check_divides tm = let
-  open QConv
-  val THENQC = fn (c1,c2) => THENQC c1 c2
-  infix THENQC
   val (l,r) = dest_divides tm
   val rterms = strip_plus r
   fun getc t = Arbint.abs (int_of_term (rand (rator t)))
@@ -493,7 +495,6 @@ in
   DEPTH_CONV remove_negated
 end
 
-
 local
   val basic_rewrite_conv =
     REWRITE_CONV [boolTheory.NOT_IMP,
@@ -511,18 +512,18 @@ local
                 (mk_eq(tm, mk_mult(list_mk_mult rest, var))))
     end handle HOL_ERR {origin_structure = "Lib", ...} => ALL_CONV tm
     else if is_comb tm then
-      (RATOR_CONV flip_muls THENC RAND_CONV flip_muls) tm
+      (RATOR_CONV flip_muls THENQC RAND_CONV flip_muls) tm
     else if is_abs tm then
       ABS_CONV flip_muls tm
     else
-      ALL_CONV tm
+      ALL_QCONV tm
 in
   val phase1_CONV =
-    (* to push negations inwards; formula must be quantifier free *)
-    DEPTH_CONV RED_CONV THENC
-    basic_rewrite_conv THENC remove_negated_vars THENC
-    remove_bare_vars THENC flip_muls THENC
-    DEPTH_CONV RED_CONV THENC REWRITE_CONV []
+    (* formula must be quantifier free *)
+    DEPTH_CONV RED_CONV THENQC
+    basic_rewrite_conv THENQC remove_negated_vars THENQC
+    remove_bare_vars THENQC flip_muls THENQC
+    DEPTH_CONV RED_CONV THENQC REWRITE_CONV []
 end
 
 val phase1_CONV = Profile.profile "phase1" phase1_CONV
@@ -577,9 +578,6 @@ val elim_eq_coeffs' =
   elim_eq_coeffs
 
 local
-  open QConv
-  val THENQC = fn (c1, c2) => THENQC c1 c2
-  infix THENQC
   val myrewrite_conv = REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG]
   fun normalise_eqs var tm =
     if is_eq tm andalso free_in var (rhs tm) then
@@ -800,6 +798,7 @@ fun LINEAR_MULT tm = let
   (* tm is of form c * (e1 + e2 + ... en), where each
      ei is either a constant, or  c' * v, with v a variable.
      This conversion distributes the c over all the ei's *)
+  val _ = if not (is_mult tm) then ignore (NO_CONV tm) else ()
 
   (* use this rather than is_mult, because the only binops about are
      multiplications *)
@@ -824,12 +823,6 @@ end
 (* this phase has to be done at the level of the existential quantifier *)
 (* assume that the existential quantifier still has occurrences of the
    bound variable in the body *)
-local
-  open QConv
-  val THENQC = fn (c1, c2) => THENQC c1 c2
-  val ORELSEQC = uncurry ORELSEQC
-  infix ORELSEQC THENQC
-in
   fun phase3_CONV term = let
     val (var, body) = Psyntax.dest_exists term
     (* first calculate the desired LCM *)
@@ -887,7 +880,6 @@ in
      eliminate_1divides)
     term
   end
-end
 
 val phase3_CONV = Profile.profile "phase3" phase3_CONV
 

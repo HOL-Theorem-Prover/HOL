@@ -25,6 +25,8 @@ signature CooperMath = sig
   val collect_terms  : term -> thm
   val collect_in_sum : term -> term -> thm
 
+  val LINEAR_MULT    : conv
+
   (* a useful simplification conversion for division terms *)
   (* these must be in the form
           c | n * x + m * y + p * z ... + d
