@@ -15,7 +15,7 @@ sig
   val matchp        : (thm -> bool) -> string list -> data list
   val matcher       : (term -> term -> 'a) -> string list -> term -> data list
   val match         : string list -> term -> data list 
-  val apropos       : term quotation -> data list 
+  val apropos       : term -> data list 
   val theorem       : string -> string -> thm
   val theorem_class : string -> string -> thm * class
   val all_thms      : unit -> data list
@@ -48,7 +48,9 @@ sig
     subterm of the theorem projection.  If the input list is empty, all
     segments are searched, including the current one.
 
- [match] Instantitation of matcher with a first-order matcher.
+ [match] Instantiation of matcher with standard higher-order matcher.
+
+ [apropos] Calls match with first argument = [].
 
  [theorem] Return the specified theorem in the specified theory segment. 
     The literal "-" may be used as an abbreviation for the current segment.

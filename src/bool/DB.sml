@@ -123,8 +123,8 @@ fun matchp P thylist =
 fun matcher f thyl pat = 
   matchp (fn th => can (find_term (can (f pat))) (concl th)) thyl;
 
-val match = matcher Term.match_term;
-val apropos = matcher (ho_match_term []) [] o Parse.Term;
+val match = matcher (ho_match_term []);
+val apropos = match [];
 
 
 (*---------------------------------------------------------------------------
