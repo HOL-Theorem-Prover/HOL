@@ -241,15 +241,14 @@ fun add_extern (cst,arity,fconv) rws =
 
 fun new_rws () =
   let val rws = empty_rws() 
-  in
-    add_thms [boolTheory.REFL_CLAUSE] rws;
-    rws
+  in add_thms [boolTheory.REFL_CLAUSE] rws
+   ; rws
   end;
 
 fun from_list lthm =
-  let val rws = new_rws() in
-  add_thms lthm rws;
-  rws
+  let val rws = new_rws() 
+  in add_thms lthm rws
+   ; rws
   end;
 
-end;
+end

@@ -73,7 +73,7 @@ fun indSuffix s = (s ^ !ind_suffix);
 fun defSuffix s = (s ^ !def_suffix);
 fun defPrim s   = defSuffix(s^"_primitive");
 fun defExtract(s,n) = defSuffix(s^"_extract"^Lib.int_to_string n);
-fun argMunge s = defSuffix(s^"_CURRIED");
+fun argMunge s = defSuffix(s^"_curried");
 fun auxStem stem   = stem^"_AUX";
 fun unionStem stem = stem^"_UNION";
 
@@ -336,31 +336,34 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
    termination has not been proved for a nested recursion.
 
    Another (easier) way to look at it would be to require termination
-   and suchlike to be taken care of in the theory.
+   and suchlike to be taken care of in the current theory. That is 
+   what is assumed at present.
  ---------------------------------------------------------------------------*)
 
-fun been_stored s =
-  Lib.say ("Definition has been stored under "
-           ^Lib.quote s
-           ^".\n");
+fun been_stored s thm =
+  (Lib.say ("Definition has been stored under "^Lib.quote s^".\n");
+   computeLib.add_persistent_funs [(s,thm)]
+   );
+
 
 fun store(stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
       val ind_bind = indSuffix stem
       val   _  = save_thm(ind_bind, ind)
       val eqns = save_thm(eqs_bind, eqs)
+      val _ = computeLib.add_persistent_funs [(eqs_bind,eqs)]
   in
     Lib.say (String.concat
        [   "Equations stored under ", Lib.quote eqs_bind,
         ".\nInduction stored under ", Lib.quote ind_bind, ".\n"])
   end;
 
-fun save_defn (ABBREV {bind, ...}) = been_stored bind
-  | save_defn (PRIMREC{bind, ...}) = been_stored bind
+fun save_defn (ABBREV {bind,eqn, ...})       = been_stored bind eqn
+  | save_defn (PRIMREC{bind,eqs, ...})       = been_stored bind eqs
   | save_defn (NONREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
   | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ eqs,ind)
-  | save_defn (MUTREC {eqs,ind,stem,union, ...}) = store(stem,LIST_CONJ eqs,ind)
-  | save_defn (NESTREC{eqs,ind,stem, ...}) = store(stem,LIST_CONJ eqs,ind)
+  | save_defn (MUTREC {eqs,ind,stem,...})    = store(stem,LIST_CONJ eqs,ind)
+  | save_defn (NESTREC{eqs,ind,stem, ...})   = store(stem,LIST_CONJ eqs,ind)
 
 
 (*---------------------------------------------------------------------------
@@ -1242,6 +1245,7 @@ fun tgoal0 defn =
 (*---------------------------------------------------------------------------
      The error handling here is pretty coarse.
  ---------------------------------------------------------------------------*)
+
 fun tprove0 (defn,tactic) =
   let val _ = tgoal0 defn
       val _ = goalstackLib.expand tactic  (* should finish proof off *)
@@ -1250,12 +1254,24 @@ fun tprove0 (defn,tactic) =
       val eqns = CONJUNCT1 th
       val ind  = CONJUNCT2 th
   in
-      computeLib.add_funs [eqns]; (eqns, ind)
+     (eqns,ind)
   end
   handle e => (goalstackLib.drop(); raise (wrap_exn "Defn" "tprove" e))
 
 
 fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
-fun tprove p   = Lib.with_flag (goalstackLib.chatting,false) tprove0 p;
 
-end; (* Defn *)
+fun tprove p   = 
+  let val (eqns,ind) = Lib.with_flag (goalstackLib.chatting,false) tprove0 p
+  in computeLib.add_funs [eqns]
+   ; (eqns, ind)
+  end
+
+fun tstore_defn (n,d,t) = 
+  let val (def,ind) = tprove0 (d,t)
+  in store (n,def,ind)
+   ; (def,ind)
+  end;
+
+
+end (* Defn *)

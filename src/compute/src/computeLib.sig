@@ -29,5 +29,6 @@ sig
   val EVAL_CONV     : conv
 
   val write_datatype_info : TypeBasePure.tyinfo -> unit
+  val add_persistent_funs : (string * thm) list -> unit
 
 end

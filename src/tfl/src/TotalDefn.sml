@@ -232,6 +232,41 @@ fun WF_REL_TAC Rquote = PRIM_WF_REL_TAC Rquote [] default_simps;
  ---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
+    Install mechanism for automatically adding definitions to
+    the global compset, and for making them persistent.
+ ---------------------------------------------------------------------------*)
+
+(*
+local val r = ref [] : string list ref
+in
+fun compset_addition s = r := insert s (!r)
+
+val _ = 
+ after_new_theory (fn s =>   (* s is ignored *)
+   let open Portable
+   in r := []
+    ; Theory.adjoin_to_theory 
+        {sig_pp = NONE,
+         struct_pp = SOME(fn ppstrm => 
+            let val names = !r
+            in if null names then ()
+               else 
+               (PP.begin_block ppstrm CONSISTENT;
+                PP.add_string ppstrm "val _ = computeLib.add_funs [";
+                PP.begin_block ppstrm INCONSISTENT 0;
+                pr_list_to_ppstream ppstream
+                   PP.add_string (C PP.add_string ",")
+                   (C PP.add_break (0,0)) names;
+                PP.end_block ppstrm; 
+                PP.add_string ppstrm "];"
+                PP.add_newline ppstream;
+                PP.add_newline ppstream;
+                PP.end_block ppstrm))}
+    end)
+end
+*)
+
+(*---------------------------------------------------------------------------
       The default prover is invoked on goals involving measure
       functions, so the wellfoundedness proofs for the guessed
       termination relations (which are measure functions) are
@@ -284,16 +319,14 @@ fun primDefine defn =
          then Lib.tryfind (try_proof defn) (guessR defn)
                handle HOL_ERR _ => termination_proof_failed()
          else defn
-     val eqns = eqns_of defn'
  in
     save_defn defn'
-  ; if null (params_of defn') then computeLib.add_funs eqns else ()
-  ; LIST_CONJ eqns
+  ; (LIST_CONJ (eqns_of defn'), ind_of defn')
  end
 end;
 
 
-fun xDefine stem = Lib.try (primDefine o Defn.Hol_defn stem);
+fun xDefine stem = Lib.try (fst o primDefine o Defn.Hol_defn stem);
 
 
 (*---------------------------------------------------------------------------
@@ -314,7 +347,7 @@ fun define q =
        val bindstem = mk_bindstem (ERR "Define" "")
             "xDefine <alphanumeric-stem> <eqns-quotation>" names
    in
-       primDefine (Defn.mk_defn bindstem tm)
+       fst (primDefine (Defn.mk_defn bindstem tm))
        handle e => raise (wrap_exn "TotalDefn" "Define" e)
    end
 val Define = Lib.try define
@@ -330,4 +363,4 @@ fun xDefineSchema stem =
 val DefineSchema = 
    with_flag(allow_schema_definition,true) Define;
 
-end;
+end

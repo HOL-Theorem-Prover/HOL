@@ -18,7 +18,7 @@ sig
 
    (* Definitions with automated termination proof support *)
 
-   val primDefine    : defn -> thm
+   val primDefine    : defn -> thm * thm option
    val xDefine       : string -> term quotation -> thm
    val Define        : term quotation -> thm
    val xDefineSchema : string -> term quotation -> thm

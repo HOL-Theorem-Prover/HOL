@@ -151,14 +151,28 @@ fun dest_theory s =
      axioms = axioms thyname,
      definitions = definitions thyname,
      theorems = theorems thyname})
- end;
+ end
+ handle e => raise ERR "dest_theory" (Lib.quote s^" is not a known theory");
 
-fun print_theory str =
- let val ppstrm = Portable.mk_ppstream (Portable.defaultConsumer())
- in Hol_pp.pp_theory ppstrm (dest_theory str)
-  ; Portable.flush_ppstream  ppstrm
-  ; TextIO.output(TextIO.stdOut,"\n")
- end;
+fun outstreamConsumer ostrm =
+    {consumer = fn s => TextIO.output(ostrm,s),
+     flush = fn () => (TextIO.output(ostrm,"\n"); TextIO.flushOut ostrm),
+     linewidth = !Globals.linewidth};
+
+fun print_theory_to_outstream thy ostrm =
+ PP.with_pp (outstreamConsumer ostrm) 
+            (C Hol_pp.pp_theory (dest_theory thy));
+
+fun print_theory thy = print_theory_to_outstream thy TextIO.stdOut;
+
+fun print_theory_to_file thy file = 
+  let open TextIO
+      val ostrm = openOut file
+  in print_theory_to_outstream thy ostrm
+   ; closeOut ostrm
+  end
+  handle e => raise wrap_exn "DB" "print_theory_to_file" e;
+
 
 (*---------------------------------------------------------------------------
     Refugee from Parse structure

@@ -182,6 +182,27 @@ fun write_datatype_info tyinfo =
             size_opt, SOME (lazyfy_thm (case_def_of tyinfo))]
  in
     add_funs (mapfilter Option.valOf compset_addns)
- end;
+ end
+
+fun add_persistent_funs [] = ()
+  | add_persistent_funs alist =
+    let open Portable
+        val (names,thms) = unzip alist
+    in
+       add_funs thms
+     ; Theory.adjoin_to_theory 
+         {sig_ps = NONE,
+          struct_ps = SOME(fn ppstrm => 
+             (PP.begin_block ppstrm CONSISTENT 0;
+              PP.add_string ppstrm "val _ = computeLib.add_funs [";
+              PP.begin_block ppstrm INCONSISTENT 0;
+              pr_list_to_ppstream ppstrm
+                 PP.add_string (C PP.add_string ",")
+                 (C PP.add_break (0,0)) names;
+              PP.end_block ppstrm; 
+              PP.add_string ppstrm "];";
+              PP.add_break ppstrm (2,0);
+              PP.end_block ppstrm))}
+    end
 
 end

@@ -25,6 +25,8 @@ sig
   val dest_theory  : string -> theory
   val print_theory : string -> unit
 
+  val print_theory_to_file      : string -> string -> unit
+  val print_theory_to_outstream : string -> TextIO.outstream -> unit
   val export_theory_as_docfiles : string -> unit
 
   val bindl : string -> (string * thm * class) list -> unit
