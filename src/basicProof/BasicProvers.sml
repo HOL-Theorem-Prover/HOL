@@ -94,7 +94,7 @@ fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
 fun ASSUMS_TAC f P = W (fn (asl,_) =>
   case filter P asl
    of []     => NO_TAC
-    | assums => MAP_EVERY f assums);
+    | assums => MAP_EVERY f (List.rev assums));
 
 fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 
