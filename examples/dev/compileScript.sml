@@ -424,7 +424,7 @@ val BUS_CONCAT_def =
  Define
   `BUS_CONCAT f g = \t. (f t, g t)`;
 
-val _ = set_fixity "<>" (Infixl 500);
+val _ = set_fixity "<>" (Infixr 510);
 val _ = overload_on ("<>", ``BUS_CONCAT``);
 
 val COMB_FST =
@@ -509,6 +509,7 @@ val ID_CONST =
    ``((\x. c) o f) = \t. c``,
    RW_TAC std_ss [FUN_EQ_THM]);
 
+(***** Disabled, pending a more general approach that works for all sizes ****
 (*****************************************************************************)
 (* Bus selector operators                                                    *)
 (*****************************************************************************)
@@ -637,6 +638,7 @@ val SEL_CONCAT_CLAUSES =
    LIST_CONJ
     [SEL_2_1_CONCAT,SEL_2_2_CONCAT,
      SEL_3_1_CONCAT,SEL_3_2_CONCAT,SEL_3_3_CONCAT]);
+******************************************************************************)
 
 (*****************************************************************************)
 (* Identitly device (i.e. piece of wire)                                     *)

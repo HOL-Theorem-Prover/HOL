@@ -12,9 +12,10 @@
 ******************************************************************************)
 (*
 quietdec := true;
-map load  ["composeTheory","compileTheory", "hol88Lib" (*for subst*)];
+map load  
+ ["composeTheory","compileTheory", "hol88Lib" (*for subst*),"unwindLib"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
-     composeTheory compileTheory;
+     unwindLib composeTheory compileTheory;
 quietdec := false;
 *)
 
@@ -27,7 +28,7 @@ open HolKernel Parse boolLib bossLib compileTheory;
 * Open theories
 ******************************************************************************)
 open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
-     composeTheory compileTheory;
+     unwindLib composeTheory compileTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -602,7 +603,7 @@ fun hwDefine defq =
 (*****************************************************************************)
 
 (*****************************************************************************)
-(* PRECEDE                                                                   *)
+(* PRECEDE abstract syntax functions                                         *)
 (*****************************************************************************)
 fun is_PRECEDE tm =
  is_comb tm
@@ -615,7 +616,7 @@ fun dest_PRECEDE tm = (rand(rator tm), rand tm);
 fun mk_PRECEDE(f,d) = ``PRECEDE ^f ^d``;
 
 (*****************************************************************************)
-(* FOLLOW                                                                    *)
+(* FOLLOW abstract syntax functions                                          *)
 (*****************************************************************************)
 fun is_FOLLOW tm =
  is_comb tm
@@ -1024,15 +1025,160 @@ fun EXISTS_OUT_CONV t =
  end;
 
 (*****************************************************************************)
+(* BUS_CONCAT abstract syntax functions                                      *)
+(*****************************************************************************)
+fun is_BUS_CONCAT tm =
+ is_comb tm
+  andalso is_comb(rator tm)
+  andalso is_const(rator(rator tm))
+  andalso (fst(dest_const(rator(rator tm))) = "BUS_CONCAT");
+
+fun dest_BUS_CONCAT tm = (rand(rator tm), rand tm);
+
+fun mk_BUS_CONCAT(b1,b2) = ``BUS_CONCAT ^b1 ^b2``;
+
+(*****************************************************************************)
+(* Match a varstruct with a bus. For example:                                *)
+(*                                                                           *)
+(* BUS_MATCH ``(m,n,acc)`` ``v102 <> v101 <> v100``                          *)
+(* -->                                                                       *)
+(* [(``m``,``v102`), (``n``,``v101``), (``acc``, ``v100``)]                  *)
+(*                                                                           *)
+(*                                                                           *)
+(* BUS_MATCH ``(p1 - 1,p1',p1' + p2)`` ``v165 <> v164 <> v163``              *)
+(* -->                                                                       *)
+(* [(``p1 - 1``,``v165``), (``p1'``,``v164``),(``p1' + p2``,``v163``)        *)
+(*****************************************************************************)
+fun BUS_MATCH vst bus =
+ (if not(is_pair vst) andalso not(is_BUS_CONCAT bus)
+   then [(vst,bus)]
+   else
+    let val (vst1,vst2) = dest_pair vst
+        val (bus1,bus2) = dest_BUS_CONCAT bus
+    in
+     BUS_MATCH vst1 bus1 @ BUS_MATCH vst2 bus2
+    end)
+ handle HOL_ERR _ => [];
+
+(*****************************************************************************)
+(* Synthesise combinational circuits.                                        *)
+(* Examples (derived from FactScript.sml):                                   *)
+(*                                                                           *)
+(*  COMB (\(m,n,acc). m) (v102 <> v101 <> v100, v134)                        *)
+(*  -->                                                                      *)
+(*  (v134 = v102)                                                            *)
+(*                                                                           *)
+(*  COMB (\(m,n,p). op <term>) (v102 <> v101 <> v100, v134)                  *)
+(*  -->                                                                      *)
+(*  ?v. COMB(\(m,n,p). <term>)(v102 <> v101 <> v100,v) /\ COMB op (v,v134)   *)
+(*                                                                           *)
+(*  COMB (\(m,n,p). (op <term1>) <term2>) (v102 <> v101 <> v100, v134)       *)
+(*  -->                                                                      *)
+(*  ?v1 v2. COMB(\(m,n,p). <term1>)(v102 <> v101 <> v100,v1) /\              *)
+(*          COMB(\(m,n,p). <term2>)(v102 <> v101 <> v100,v2) /\              *)
+(*          COMB (UNCURRY op) (v1 <> v2,v134)                                *)
+(*                                                                           *)
+(*  COMB (\(m,n,p). (<term1>, <term2>) (v102 <> v101 <> v100, v134 <> v135)  *)
+(*  -->                                                                      *)
+(*  ?v1 v2. COMB(\(m,n,p). <term1>)(v102 <> v101 <> v100,v1) /\              *)
+(*          COMB(\(m,n,p). <term2>)(v102 <> v101 <> v100,v2) /\              *)
+(*          (v134 = v1) /\ (v135 = v2)                                       *)
+(*                                                                           *)
+(*  COMB (\(p1,p1',p2). (p1 - 1,p1',p1' + p2))                               *)
+(*       (v109 <> v108 <> v107, v165 <> v164 <> v163)                        *)
+(*  -->                                                                      *)
+(*  (?v. (CONSTANT 1 v /\ COMB (UNCURRY $-) (v109 <> v, v165)) /\            *)
+(*  (v164 = v108) /\                                                         *)
+(*  COMB (UNCURRY $+) (v108 <> v107, v163)                                   *)
+(*****************************************************************************)
+fun COMB_SYNTH_CONV tm =
+ if is_comb tm
+     andalso is_comb(rator tm)
+     andalso is_const(rator(rator tm))
+     andalso (fst(dest_const(rator(rator tm))) = "COMB")
+     andalso is_pair(rand tm)
+     andalso is_pabs(rand(rator tm))
+  then
+   let val (args,bdy) = dest_pabs(rand(rator tm))
+       val (in_bus,out_bus) = dest_pair(rand tm)
+       val time_ty = hd(snd(dest_type(type_of in_bus)))
+       val args_match = 
+            BUS_MATCH args in_bus
+            handle HOL_ERR _ => raise ERR "SYNTH_COMB" "input match failure"
+   in
+    if is_var bdy andalso can (assoc bdy) args_match
+     then prove
+           (``^tm = (^out_bus = ^(assoc bdy args_match))``,
+            REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
+             THEN GEN_BETA_TAC 
+             THEN REWRITE_TAC[])
+     else if is_const bdy orelse numSyntax.is_numeral bdy
+     then prove
+           (``^tm = CONSTANT ^bdy ^out_bus``,
+            REWRITE_TAC[COMB_def,CONSTANT_def,FUN_EQ_THM] 
+             THEN GEN_BETA_TAC 
+             THEN REWRITE_TAC[])
+     else if is_comb bdy andalso is_const(rator bdy)
+     then let val arg = rand bdy
+              val v = genvar ``:^time_ty -> ^(type_of arg)``
+          in
+           prove
+             (``^tm = ?^v. COMB ^(mk_pabs(args, arg)) (^in_bus,^v) /\ 
+                           COMB ^(rator bdy) (^v, ^out_bus)``,
+              REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
+               THEN GEN_BETA_TAC 
+               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
+               THEN REWRITE_TAC[])
+          end
+     else if is_pair bdy andalso is_BUS_CONCAT out_bus
+     then let val (bdy1,bdy2) = dest_pair bdy
+              val (out_bus1,out_bus2) = dest_BUS_CONCAT out_bus
+          in
+          prove
+           (``^tm = COMB ^(mk_pabs(args, bdy1)) (^in_bus,^out_bus1) /\ 
+                    COMB ^(mk_pabs(args, bdy2)) (^in_bus,^out_bus2)``,
+            REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
+             THEN GEN_BETA_TAC 
+             THEN REWRITE_TAC[PAIR_EQ]
+             THEN EQ_TAC
+             THEN RW_TAC bool_ss [])
+          end
+     else if is_comb bdy 
+              andalso is_comb(rator bdy) 
+              andalso is_const(rator(rator bdy))
+     then let val opr = rator(rator bdy)
+              val arg1 = rand(rator bdy)
+              val arg2 = rand bdy
+              val v1 = genvar ``:^time_ty -> ^(type_of arg1)``
+              val v2 = genvar ``:^time_ty -> ^(type_of arg2)``
+          in
+           prove
+            (``^tm = ?^v1 ^v2. 
+                      COMB ^(mk_pabs(args, arg1)) (^in_bus,^v1) /\ 
+                      COMB ^(mk_pabs(args, arg2)) (^in_bus,^v2) /\ 
+                      COMB (UNCURRY ^opr) (^v1 <> ^v2, ^out_bus)``,
+             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
+              THEN GEN_BETA_TAC 
+              THEN REWRITE_TAC[UNCURRY]
+              THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
+              THEN REWRITE_TAC[])
+          end
+     else raise ERR "COMB_SYNTH_CONV" "disallowed case"
+   end
+  else raise ERR "SYNTH_COMB" "not an application of COMB to args";
+
+(*****************************************************************************)
 (* Compile a device implementation into a netlist represented in HOL         *)
 (*****************************************************************************)
 val MAKE_NETLIST =
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ CONV_RULE
+  (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV COMB_SYNTH_CONV))))         o
  Ho_Rewrite.REWRITE_RULE[BUS_CONCAT_ELIM]                                  o
  Ho_Rewrite.REWRITE_RULE
    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
     COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
-    COMP_SEL_CLAUSES,SEL_CONCAT_CLAUSES,BUS_CONCAT_PAIR,BUS_CONCAT_o,
+    (*COMP_SEL_CLAUSES,SEL_CONCAT_CLAUSES,*)BUS_CONCAT_PAIR,BUS_CONCAT_o,
     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_CONCAT_SPLIT]                     o

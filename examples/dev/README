@@ -13,6 +13,7 @@
 == [21.01.05: MJCG minor changes and README update]                          ==
 == [27.01.05: MJCG added hw synthesis improvements]                          ==
 == [28.01.05: MJCG more optimisations and updated README]                    ==
+== [29.01.05: MJCG added COMB_SYNTH_CONV removed SEL operators]              ==
 ===============================================================================
 
 composeScript.sml ......... definition of devices and their composition
@@ -45,18 +46,7 @@ The bus concatenation operator <> is defined by:
 
    |- !f g. f <> g = (\t. (f t,g t))
 
-and some bus component selection operators are defined by:
-
-   SEL_2_1_def =  |- SEL_2_1 (inp,out) = (out = FST o inp)
-   SEL_2_2_def =  |- SEL_2_2 (inp,out) = (out = SND o inp)
-   SEL_3_1_def =  |- SEL_3_1 (inp,out) = (out = FST o inp)
-   SEL_3_2_def =  |- SEL_3_2 (inp,out) = (out = FST o SND o inp)
-   SEL_3_3_def =  |- SEL_3_3 (inp,out) = (out = SND o SND o inp)
-
-These operators are introduced when creating netlists using
-MAKE_NETLIST (see example below).
-
-Other operators used in netlists are:
+The function CONSTANT defined below is generated in netlists by MAKE_NETLIST.
 
   |- CONSTANT c out = !t. out t = c
 
@@ -221,6 +211,7 @@ PAR, ITE and REC and normalises the resulting term into a form,
 
 See FactScript.sml for examples (e.g. FACT_cir).
 
+
 *******************************************************************************
 
 Auxiliary functions of interest include the following.
@@ -324,5 +315,55 @@ Example:
         ===>
         DEV FactIter
 
+
+COMB_SYNTH_CONV : term -> thm
+-----------------------------
+
+One step of conversion of
+
+ ``COMB 
+    (\(i1,...,im). (<term1>,...,<termn>) 
+    (inp1 <> ... <> inpm, out1 <> .... outn)``
+
+to a netlist.
+
+Example:
+
+- COMB_SYNTH_CONV 
+   ``COMB (\(m,n,p). (m-p, SUC(m+n+(p-1)))) (in1<>in2<>in3,out1<>out2)``;
+> val it =
+    |- COMB (\(m,n,p). (m - p,SUC (m + n + (p - 1))))
+         (in1 <> in2 <> in3,out1 <> out2) =
+       COMB (\(m,n,p). m - p) (in1 <> in2 <> in3,out1) /\
+       COMB (\(m,n,p). SUC (m + n + (p - 1))) (in1 <> in2 <> in3,out2) : thm
+
+To completely convert to a netlist COMB_SYNTH_CONV needs to be
+iterated. Example:
+
+- REDEPTH_CONV COMB_SYNTH_CONV 
+   ``COMB (\(m,n,p). (m-p, SUC(m+n+(p-1)))) (in1<>in2<>in3,out1<>out2)``;
+> val it =
+    |- COMB (\(m,n,p). (m - p,SUC (m + n + (p - 1))))
+         (in1 <> in2 <> in3,out1 <> out2) =
+       (?v709 v710.
+          (v709 = in1) /\ (v710 = in3) /\
+          COMB (UNCURRY $-) (v709 <> v710,out1)) /\
+       ?v711.
+         (?v712 v713.
+            (?v714 v715.
+               (v714 = in1) /\ (v715 = in2) /\
+               COMB (UNCURRY $+)
+                 (v714 <> v715,v712)) /\
+            (?v716 v717.
+               (v716 = in3) /\ CONSTANT 1 v717 /\
+               COMB (UNCURRY $-)
+                 (v716 <> v717,v713)) /\
+            COMB (UNCURRY $+)
+              (v712 <> v713,v711)) /\
+         COMB SUC (v711,out2) : thm
+
+Note that the redundant variables are pruned by MAKE_NETLIST and also,
+for readability, the example above uses ``v709`` but COMB_SYNTH_CONV
+actually generates ``%%genvar%%709`.
 
 =============================================================================== 
