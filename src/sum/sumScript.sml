@@ -32,7 +32,7 @@
 structure sumScript =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 infix THEN THENL ORELSEC THENC |->;
 
 type thm = Thm.thm;
@@ -74,10 +74,8 @@ val EXISTS_SUM_REP =
 (* The theorem returned is:  |- ?rep. TYPE_DEFINITION IS_SUM_REP rep 	*)
 (* ---------------------------------------------------------------------*)
 
-val sum_TY_DEF = new_type_definition
-    {name = "sum",
-     pred = --`IS_SUM_REP:(bool -> 'a -> 'b -> bool) -> bool`--,
-     inhab_thm = EXISTS_SUM_REP};
+val sum_TY_DEF = Rsyntax.new_type_definition
+  {name = "sum", inhab_thm = EXISTS_SUM_REP};
 val _ = add_infix_type {Prec = 60, ParseName = SOME "+", Name = "sum",
                         Assoc = HOLgrammars.RIGHT}
 
@@ -202,7 +200,8 @@ val sum_Axiom0 = prove(
    MATCH_ACCEPT_TAC rew
    end);
 
-val sum_INDUCT = save_thm("sum_INDUCT", prove_induction_thm sum_Axiom0);
+val sum_INDUCT = save_thm("sum_INDUCT",
+                          Prim_rec.prove_induction_thm sum_Axiom0);
 val sum_Axiom = store_thm(
   "sum_Axiom",
   Term`!(f:'a -> 'c) (g:'b -> 'c).
@@ -210,11 +209,12 @@ val sum_Axiom = store_thm(
   REPEAT GEN_TAC THEN
   STRIP_ASSUME_TAC
     ((SPECL [Term`f:'a -> 'c`, Term`g:'b -> 'c`] o
-         Ho_rewrite.REWRITE_RULE [EXISTS_UNIQUE_THM]) sum_Axiom0) THEN
+         Ho_Rewrite.REWRITE_RULE [EXISTS_UNIQUE_THM]) sum_Axiom0) THEN
   EXISTS_TAC (Term`h:'a + 'b -> 'c`) THEN
   ASM_REWRITE_TAC []);
 
-val sum_CASES = save_thm("sum_CASES", hd (prove_cases_thm sum_INDUCT));
+val sum_CASES = save_thm("sum_CASES",
+                         hd (Prim_rec.prove_cases_thm sum_INDUCT));
 
 val sum_distinct = store_thm("sum_distinct",
   Term`!x:'a y:'b. ~(INL x = INR y)`,
@@ -232,47 +232,45 @@ val sum_distinct = store_thm("sum_distinct",
 
 
 (* Derive the defining property for ISL.				*)
-val ISL_DEF = TAC_PROOF(([],
---`?ISL. (!x:'a. ISL(INL x)) /\ (!y:'b. ~ISL(INR y))`--),
-   let val inst = INST_TYPE [{redex = ==`:'c`==, residue = ==`:bool`==}]
-                            sum_axiom
-       val spec = SPECL [--`\x:'a.T`--, --`\y:'b.F`--] inst
-       val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
-       val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
-   in
-   STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] conv) THEN
-   EXISTS_TAC (--`h:'a+'b->bool`--) THEN ASM_REWRITE_TAC []
-   end);
+val ISL_DEF = TAC_PROOF(
+  ([], --`?ISL. (!x:'a. ISL(INL x)) /\ (!y:'b. ~ISL(INR y))`--),
+  let val inst = Rsyntax.INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
+      val spec = SPECL [--`\x:'a.T`--, --`\y:'b.F`--] inst
+      val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
+      val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
+  in
+      STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] conv) THEN
+      EXISTS_TAC (--`h:'a+'b->bool`--) THEN ASM_REWRITE_TAC []
+  end);
 
 (* Then define ISL with a constant specification.			*)
-val ISL = new_specification
-           {name = "ISL",
-            consts = [{fixity = Prefix,const_name="ISL"}],
-            sat_thm = ISL_DEF};
+val ISL = Rsyntax.new_specification
+  {name = "ISL",
+   consts = [{fixity = Prefix,const_name="ISL"}],
+   sat_thm = ISL_DEF};
 
 (* Derive the defining property for ISR.				*)
-val ISR_DEF = TAC_PROOF(([],
---`?ISR. (!x:'b. ISR(INR x)) /\ (!y:'a. ~ISR(INL y))`--),
-   let val inst = INST_TYPE [{redex = ==`:'c`==, residue = ==`:bool`==}]
-                            sum_axiom
-       val spec = SPECL [--`\x:'a.F`--,  --`\y:'b.T`--] inst
-       val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
-       val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
-   in
-   STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] conv) THEN
-   EXISTS_TAC (--`h:'a+'b->bool`--) THEN ASM_REWRITE_TAC []
-   end);
+val ISR_DEF = TAC_PROOF(
+  ([], --`?ISR. (!x:'b. ISR(INR x)) /\ (!y:'a. ~ISR(INL y))`--),
+  let val inst = Rsyntax.INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
+      val spec = SPECL [--`\x:'a.F`--,  --`\y:'b.T`--] inst
+      val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
+      val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
+  in
+      STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] conv) THEN
+      EXISTS_TAC (--`h:'a+'b->bool`--) THEN ASM_REWRITE_TAC []
+  end);
 
 (* Then define ISR with a constant specification.			*)
-val ISR = new_specification
-          {name = "ISR",
-           consts = [{fixity=Prefix,const_name="ISR"}],
-           sat_thm = ISR_DEF};
+val ISR = Rsyntax.new_specification
+  {name = "ISR",
+   consts = [{fixity=Prefix,const_name="ISR"}],
+   sat_thm = ISR_DEF};
 
 (* Derive the defining property of OUTL.				*)
 val OUTL_DEF = TAC_PROOF(([],
 --`?OUTL. !x. OUTL(INL x:('a,'b)sum) = x`--),
-   let val inst = INST_TYPE [==`:'c`== |-> ==`:'a`==] sum_axiom
+   let val inst = Rsyntax.INST_TYPE [Type.gamma |-> Type.alpha] sum_axiom
        val spec = SPECL [--`\x:'a.x`--, --`\y:'b.@x:'a.F`--] inst
        val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
        val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
@@ -282,16 +280,15 @@ val OUTL_DEF = TAC_PROOF(([],
    end);
 
 (* Then define OUTL with a constant specification.			*)
-val OUTL = new_specification
-            {name = "OUTL",
-             consts = [{fixity = Prefix,const_name = "OUTL"}],
-             sat_thm = OUTL_DEF};
+val OUTL = Rsyntax.new_specification
+  {name = "OUTL",
+   consts = [{fixity = Prefix,const_name = "OUTL"}],
+   sat_thm = OUTL_DEF};
 
 (* Derive the defining property of OUTR.				*)
-val OUTR_DEF = TAC_PROOF(([],
---`?OUTR. !x. OUTR(INR x:'a+'b) = x`--),
-   let val inst = INST_TYPE [{redex = ==`:'c`==, residue = ==`:'b`==}]
-                            sum_axiom
+val OUTR_DEF = TAC_PROOF(
+  ([], --`?OUTR. !x. OUTR(INR x:'a+'b) = x`--),
+   let val inst = Rsyntax.INST_TYPE [Type.gamma |-> Type.beta] sum_axiom
        val spec = SPECL [--`\x:'a.@y:'b.F`--,  --`\y:'b.y`--] inst
        val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
        val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
@@ -301,10 +298,10 @@ val OUTR_DEF = TAC_PROOF(([],
    end);
 
 (* Then define OUTR with a constant specification.			*)
-val OUTR = new_specification
-            {name = "OUTR",
-             consts = [{fixity = Prefix,const_name = "OUTR"}],
-             sat_thm = OUTR_DEF};
+val OUTR = Rsyntax.new_specification
+  {name = "OUTR",
+   consts = [{fixity = Prefix,const_name = "OUTR"}],
+   sat_thm = OUTR_DEF};
 
 
 
@@ -359,7 +356,7 @@ val INR = store_thm("INR",
     STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_CASES) THEN
     ASM_REWRITE_TAC [ISR,OUTR]);
 
-val sum_case_def = new_recursive_definition{
+val sum_case_def = Prim_rec.new_recursive_definition{
   def = Term`(sum_case f g (INL x) = f x) /\
              (sum_case f g (INR y) = g y)`,
   name = "sum_case_def",
