@@ -1,5 +1,5 @@
 (*****************************************************************************)
-(* Create PathTheory to support Sugar2SemanticsTheory                        *)
+(* Create PathTheory to support Sugar2Theory                                 *)
 (*****************************************************************************)
 
 (* Load additional definitions of functions on lists 
@@ -173,7 +173,8 @@ val ALL_EL_F =
 val ALL_EL_CONCAT =
  store_thm
   ("ALL_EL_CONCAT",
-   ``!P. ALL_EL (\l. (LENGTH l = 1) /\ P(EL(LENGTH l - 1)l)) ll ==> ALL_EL P (CONCAT ll)``,
+   ``!P. ALL_EL (\l. (LENGTH l = 1) /\ P(EL(LENGTH l - 1)l)) ll 
+          ==> ALL_EL P (CONCAT ll)``,
    Induct_on `ll`
     THEN RW_TAC list_ss [CONCAT_def,APPEND_INFIX_def]
     THEN RW_TAC list_ss [EVERY_EL,DECIDE``n<1 ==> (n=0)``]
@@ -214,7 +215,8 @@ val EQ_SINGLETON =
 val PATH_SEG_REC_SPLIT =
  store_thm
   ("PATH_SEG_REC_SPLIT",
-   ``!n. PATH_SEG_REC (m+k) n p = APPEND (PATH_SEG_REC k n p) (PATH_SEG_REC m (n+k) p)``,
+   ``!n. PATH_SEG_REC (m+k) n p = 
+          APPEND (PATH_SEG_REC k n p) (PATH_SEG_REC m (n+k) p)``,
     Induct_on `k`
      THEN RW_TAC list_ss [PATH_SEG_def,PATH_SEG_REC_def,arithmeticTheory.ONE]
      THEN RW_TAC std_ss [DECIDE ``m + SUC k = SUC(m+k)``,
@@ -228,7 +230,8 @@ val PATH_SEG_SPLIT =
       ==> 
       (PATH_SEG p (m,n) = APPEND (PATH_SEG p (m,k)) (PATH_SEG p (k+1,n)))``,
    RW_TAC list_ss [PATH_SEG_def]
-    THEN IMP_RES_TAC(DECIDE ``m <= k ==> k < n ==> (n + 1 - m = (n-k) + (k+1-m))``)
+    THEN IMP_RES_TAC
+          (DECIDE ``m <= k ==> k < n ==> (n + 1 - m = (n-k) + (k+1-m))``)
     THEN IMP_RES_TAC(DECIDE ``m <= k ==> (k+ 1 = m + (k + 1 - m))``)
     THEN ASSUM_LIST(fn thl => CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[el 2 thl])))
     THEN ASSUM_LIST(fn thl => CONV_TAC(RHS_CONV(RAND_CONV(ONCE_REWRITE_CONV[el 1 thl]))))
@@ -249,19 +252,19 @@ val APPEND_CANCEL =
    ``(APPEND l1 [x1] = APPEND l2 [x2]) = (l1 = l2) /\ (x1 = x2)``,
    ZAP_TAC list_ss [GSYM SNOC_APPEND,SNOC_11]);
 
-val MAP_PATH_SEG_APPLED_SINGLETON_IMP =
+val MAP_PATH_SEG_APPEND_SINGLETON_IMP =
  store_thm
-  ("MAP_PATH_SEG_APPLED_SINGLETON_IMP",
-   ``i > 0
+  ("MAP_PATH_SEG_APPEND_SINGLETON_IMP",
+   ``j > i
      ==>
-     (MAP f (PATH_SEG p (0,i)) = APPEND w [l])
+     (MAP f (PATH_SEG p (i,j)) = APPEND w [l])
      ==>
-     ((MAP f (PATH_SEG p (0,i-1)) = w)
+     ((MAP f (PATH_SEG p (i,j-1)) = w)
       /\
-      (f(PATH_EL p i) = l))``,
+      (f(PATH_EL p j) = l))``,
    REPEAT DISCH_TAC
-    THEN IMP_RES_TAC(DECIDE ``i > 0 ==> (0 <= (i-1) /\ (i-1) < i)``)
-    THEN IMP_RES_TAC(DECIDE``i > 0 ==> (i - 1 + 1 = i)``)
+    THEN IMP_RES_TAC(DECIDE ``j > i ==> (i <= (j-1) /\ (j-1) < j)``)
+    THEN IMP_RES_TAC(DECIDE``j > i ==> (j - 1 + 1 = j)``)
     THEN IMP_RES_TAC(ISPEC ``p :'b path`` PATH_SEG_SPLIT)
     THEN ASSUM_LIST
           (fn thl => 
@@ -273,9 +276,39 @@ val MAP_PATH_SEG_APPLED_SINGLETON_IMP =
     THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [APPEND_CANCEL,MAP_APPEND,MAP])
     THEN RW_TAC std_ss []);
 
-val MAP_PATH_SEG_APPLED_SINGLETON =
+val MAP_PATH_SEG_APPEND_SINGLETON_IMP0 =
  store_thm
-  ("MAP_PATH_SEG_APPLED_SINGLETON",
+  ("MAP_PATH_SEG_APPEND_SINGLETON_IMP0",
+   ``i > 0
+     ==>
+     (MAP f (PATH_SEG p (0,i)) = APPEND w [l])
+     ==>
+     ((MAP f (PATH_SEG p (0,i-1)) = w)
+      /\
+      (f(PATH_EL p i) = l))``,
+   ZAP_TAC arith_ss [MAP_PATH_SEG_APPEND_SINGLETON_IMP]);
+
+val MAP_PATH_SEG_APPEND_SINGLETON =
+ store_thm
+  ("MAP_PATH_SEG_APPEND_SINGLETON",
+   ``j > i
+     ==>
+     ((MAP f (PATH_SEG p (i,j)) = APPEND w [l])
+      =
+      ((MAP f (PATH_SEG p (i,j-1)) = w)
+       /\
+       (f(PATH_EL p j) = l)))``,
+   REPEAT STRIP_TAC
+    THEN EQ_TAC
+    THEN ZAP_TAC std_ss [MAP_PATH_SEG_APPEND_SINGLETON_IMP]
+    THEN IMP_RES_TAC(DECIDE ``j > i ==> i <= j - 1 /\ j - 1 < j``)
+    THEN IMP_RES_TAC
+          (ISPECL [``p :'b path``,``j-1``,``i:num``,``j:num``] PATH_SEG_SPLIT)
+    THEN RW_TAC arith_ss [MAP_APPEND,APPEND_CANCEL,PATH_SEG_EL,MAP]);
+
+val MAP_PATH_SEG_APPEND_SINGLETON0 =
+ store_thm
+  ("MAP_PATH_SEG_APPEND_SINGLETON0",
    ``i > 0
      ==>
      ((MAP f (PATH_SEG p (0,i)) = APPEND w [l])
@@ -283,12 +316,7 @@ val MAP_PATH_SEG_APPLED_SINGLETON =
       ((MAP f (PATH_SEG p (0,i-1)) = w)
        /\
        (f(PATH_EL p i) = l)))``,
-   REPEAT STRIP_TAC
-    THEN EQ_TAC
-    THEN ZAP_TAC std_ss [MAP_PATH_SEG_APPLED_SINGLETON_IMP]
-    THEN IMP_RES_TAC(DECIDE ``i > 0 ==> 0 <= i - 1 /\ i - 1 < i``)
-    THEN IMP_RES_TAC(ISPECL [``p :'b path``,``i-1``,``0``,``i:num``] PATH_SEG_SPLIT)
-    THEN RW_TAC arith_ss [MAP_APPEND,APPEND_CANCEL,PATH_SEG_EL,MAP]);
+   RW_TAC arith_ss [MAP_PATH_SEG_APPEND_SINGLETON]);
 
 val LENGTH_PATH_SEG_REC =
  store_thm
@@ -297,27 +325,110 @@ val LENGTH_PATH_SEG_REC =
    Induct_on `m`THEN Induct_on `n`
     THEN RW_TAC list_ss [PATH_SEG_REC_def]);
 
+val LENGTH_PATH_SEG =
+ store_thm
+  ("LENGTH_PATH_SEG",
+   ``!m n p. LENGTH(PATH_SEG p (m,n)) = n-m+1``,
+   RW_TAC arith_ss [PATH_SEG_def,PATH_SEG_REC_def,LENGTH_PATH_SEG_REC]);
+   
 val HD_PATH_SEG =
  store_thm
   ("HD_PATH_SEG",
+   ``!i j p. i <= j ==> (HD(PATH_SEG p (i,j)) = PATH_EL p i)``,
+   Induct
+    THEN RW_TAC list_ss 
+          [PATH_SEG_def,PATH_SEG_REC_def,GSYM arithmeticTheory.ADD1,
+           PATH_EL_def,RESTN_def]
+    THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> ((SUC (j - SUC i)) = (j-i))``)
+    THEN RW_TAC arith_ss []
+    THEN ASSUM_LIST
+          (fn thl => 
+           ASSUME_TAC
+            (GSYM
+             (Q.GEN `p`
+              (SIMP_RULE arith_ss thl (Q.SPECL [`p`,`i`,`j-1`] PATH_SEG_def)))))
+    THEN RW_TAC arith_ss [PATH_EL_def]);
+
+val HD_PATH_SEG0 =
+ store_thm
+  ("HD_PATH_SEG0",
    ``HD(PATH_SEG p (0,i)) = HEAD p``,
    RW_TAC list_ss [PATH_SEG_def,PATH_SEG_REC_def,GSYM arithmeticTheory.ADD1]);
+
+val TL_PATH_SEG_SUC =
+ store_thm
+  ("TL_PATH_SEG_SUC",
+   ``!i j p. i <= j ==> (TL(PATH_SEG p (i,SUC j)) = PATH_SEG (REST p) (i,j))``,
+   Induct
+    THEN RW_TAC list_ss 
+          [PATH_SEG_def,PATH_SEG_REC_def,GSYM arithmeticTheory.ADD1,
+           PATH_EL_def,RESTN_def]
+    THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> ((SUC (j - SUC i)) = (j-i))``)
+    THEN RW_TAC arith_ss []
+    THEN ASSUM_LIST
+          (fn thl => 
+           ASSUME_TAC
+            (GSYM
+             (Q.GEN `p`
+              (SIMP_RULE arith_ss thl (Q.SPECL [`p`,`i`,`j`] PATH_SEG_def)))))
+    THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> (SUC (j - i) = j + 1 - i)``)
+    THEN RW_TAC arith_ss []
+    THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> i <= j-1``)
+    THEN RES_TAC
+    THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> (SUC(j-1)=j)``)
+    THEN ASSUM_LIST
+          (fn thl => ASSUME_TAC(SIMP_RULE std_ss [el 1 thl] (el 2 thl)))
+    THEN RW_TAC arith_ss [PATH_SEG_def]);
 
 val TL_PATH_SEG =
  store_thm
   ("TL_PATH_SEG",
+   ``!i j p. i < j ==> (TL(PATH_SEG p (i,j)) = PATH_SEG (REST p) (i,j-1))``,
+   RW_TAC std_ss []
+    THEN IMP_RES_TAC(DECIDE ``i < j ==> i <= j-1``)
+    THEN IMP_RES_TAC TL_PATH_SEG_SUC
+    THEN IMP_RES_TAC(DECIDE ``i < j ==> (SUC(j-1)=j)``)
+    THEN ASSUM_LIST
+          (fn thl => ASSUME_TAC(SIMP_RULE std_ss [el 1 thl] (el 2 thl)))
+    THEN RW_TAC arith_ss []);
+
+val TL_PATH_SEG0 =
+ store_thm
+  ("TL_PATH_SEG0",
    ``TL(PATH_SEG p (0,SUC i)) = PATH_SEG (REST p) (0,i)``,
    RW_TAC list_ss [PATH_SEG_def,PATH_SEG_REC_def,GSYM arithmeticTheory.ADD1]);
-   
-val EL_MAP_PATH_SEG =
+
+val EL_PATH_SEG_LEMMA =
+ prove
+  (``!m i j p. 
+      i <= j /\ m <= j-i ==> (EL m (PATH_SEG p (i,j)) = PATH_EL p (i+m))``,
+   Induct
+    THEN RW_TAC list_ss 
+          [PATH_SEG_REC_def,PATH_EL_def,RESTN_def,
+           HD_PATH_SEG,TL_PATH_SEG,RESTN_def,DECIDE``i + SUC m = SUC(i+m)``]);
+
+val EL_PATH_SEG =
  store_thm
-  ("EL_MAP_PATH_SEG",
+  ("EL_PATH_SEG",
+   ``!i k j p. 
+      i <= k ==> k <= j  ==> (EL (k-i) (PATH_SEG p (i,j)) = PATH_EL p k)``,
+   RW_TAC arith_ss [EL_PATH_SEG_LEMMA]);
+   
+val EL_PATH_SEG0 =
+ store_thm
+  ("EL_PATH_SEG0",
    ``!j i p. j <= i ==> (EL j (PATH_SEG p (0,i)) = PATH_EL p j)``,
    Induct
-    THEN RW_TAC list_ss [PATH_SEG_REC_def,PATH_EL_def,RESTN_def,HD_PATH_SEG]
+    THEN RW_TAC list_ss [PATH_SEG_REC_def,PATH_EL_def,RESTN_def,HD_PATH_SEG0]
     THEN Induct_on `i`
-    THEN RW_TAC list_ss [PATH_SEG_REC_def,PATH_EL_def,RESTN_def,TL_PATH_SEG]);
+    THEN RW_TAC list_ss [PATH_SEG_REC_def,PATH_EL_def,RESTN_def,TL_PATH_SEG0]);
 
+val LENGTH1 =
+ store_thm
+  ("LENGTH1",
+   ``(LENGTH l = 1) = ?x. l=[x]``,
+   EQ_TAC
+    THEN RW_TAC list_ss [LENGTH,LENGTH_NIL,LENGTH_CONS,arithmeticTheory.ONE]);
 
 val _ = export_theory();
 

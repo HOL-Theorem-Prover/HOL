@@ -211,356 +211,9 @@ val L_def    = Define `L M = getL M`;
 val LHAT_def = Define `LHAT M = MAP (getL M)`;
 
 (******************************************************************************
-* F_SEM M p k f means "p |=k= f" 
-* Definition is "unfolded" to get termination to go through TFL automatically,
-* by expanding out the commented out stuff. The desired definition is
-* then derived by rewriting (see proof of F_SEM below).
-******************************************************************************)
-val F_SEM_def =
- Define
-  `(F_SEM M p (STRONG_CLOCK c) (F_BOOL b) = 
-     ?i. FIRST_RISE M p c i /\ B_SEM M (L M (PATH_EL p i)) b)
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_NOT f) = 
-     ~(F_SEM M p (WEAK_CLOCK c) f)) 
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_AND(f1,f2)) = 
-     ?i. FIRST_RISE M p c i                      /\ 
-         F_SEM M (RESTN p i) (STRONG_CLOCK c) f1 /\
-         F_SEM M (RESTN p i) (STRONG_CLOCK c) f2)
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_NEXT f) = 
-     ?i. FIRST_RISE M p c i                           /\ 
-         (IS_FINITE_PATH p ==> i < PATH_LENGTH p - 1) /\
-         F_SEM M (RESTN p (i+1)) (STRONG_CLOCK c) f)
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
-     ?i k. k >= i                                               /\
-           FIRST_RISE M p c i                                   /\
-(*         F_SEM M (RESTN p k) (WEAK_CLOCK B_TRUE) (F_BOOL c)   /\  *)
-           (?i. FIRST_RISE M (RESTN p k) B_TRUE i 
-                ==> 
-                B_SEM M (L M (PATH_EL (RESTN p k) i)) c)     /\
-           F_SEM M (RESTN p k) (STRONG_CLOCK c) f2              /\
-           !j. i <= j /\ j < k /\ 
-(*             F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL c)   *)
-               (?i. FIRST_RISE M (RESTN p j) B_TRUE i 
-                    ==> 
-                    B_SEM M (L M (PATH_EL (RESTN p j) i)) c) 
-               ==>
-               F_SEM M (RESTN p j) (STRONG_CLOCK c) f1)
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
-     ?i. FIRST_RISE M p c i /\ 
-         !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r
-             ==>
-             F_SEM M (RESTN p j) (STRONG_CLOCK c) f)
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_STRONG_IMP(r1,r2)) = 
-     ?i. FIRST_RISE M p c i /\ 
-         !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
-             ==>
-             ?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
-     (* (F_SEM M p (STRONG_CLOCK c) (F_STRONG_IMP(r1,r2)))  \/ *)
-     (?i. FIRST_RISE M p c i /\ 
-          !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
-              ==>
-              ?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
-     \/
-     ((* F_SEM M p (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2)) /\ *)
-      (?i.  FIRST_RISE M p c i
-           ==>
-           !j. S_SEM M (LHAT M (PATH_SEG p (i,j)))c r1
-               ==>
-               ((?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
-                \/
-                !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
-                    ==>
-                    ?w.
-                     S_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) c r2))
-      /\
-      !j. (IS_FINITE_PATH p ==> j < PATH_LENGTH p)
-          ==>
-          ?k. NEXT_RISE M p c (j,k)))
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_ABORT (f,b)) =
-     ?i. FIRST_RISE M p c i /\
-         (F_SEM M (RESTN p i) (STRONG_CLOCK c) f 
-          \/
-          ?j p'. 
-(*          F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b))) /\ *)  
-            (?i. FIRST_RISE M (RESTN p j) B_TRUE i 
-                 ==>
-                 B_SEM M (L M (PATH_EL (RESTN p j) i)) (B_AND(c,b)))
-            /\
-            F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (STRONG_CLOCK c) f))
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
-     F_SEM M p (WEAK_CLOCK c1) f)
-   /\
-   (F_SEM M p (STRONG_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
-     F_SEM M p (STRONG_CLOCK c1) f)
-   /\ (****** Start of weak clock clauses ******)
-   (F_SEM M p (WEAK_CLOCK c) (F_BOOL b) = 
-     ?i. FIRST_RISE M p c i ==> B_SEM M (L M (PATH_EL p i)) b)
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_NOT f) = 
-     ~(F_SEM M p (STRONG_CLOCK c) f)) 
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_AND(f1,f2)) = 
-     ?i. FIRST_RISE M p c i
-         ==>
-         (F_SEM M (RESTN p i) (WEAK_CLOCK c) f1 /\
-          F_SEM M (RESTN p i) (WEAK_CLOCK c) f2))
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_NEXT f) = 
-     ?i. (FIRST_RISE M p c i /\
-          (IS_FINITE_PATH p ==> i < PATH_LENGTH p - 1))
-         ==>
-         F_SEM M (RESTN p (i+1)) (WEAK_CLOCK c) f)
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
-(*  F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2))  *)
-    (?i k. k >= i                                               /\
-           FIRST_RISE M p c i                                   /\
-(*         F_SEM M (RESTN p k) (WEAK_CLOCK B_TRUE) (F_BOOL c)   /\  *)
-           (?i. FIRST_RISE M (RESTN p k) B_TRUE i 
-                ==> 
-                B_SEM M (L M (PATH_EL (RESTN p k) i)) c)     /\
-           F_SEM M (RESTN p k) (STRONG_CLOCK c) f2              /\
-           !j. i <= j /\ j < k /\ 
-(*             F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL c)   *)
-               (?i. FIRST_RISE M (RESTN p j) B_TRUE i 
-                    ==> 
-                    B_SEM M (L M (PATH_EL (RESTN p j) i)) c) 
-               ==>
-               F_SEM M (RESTN p j) (STRONG_CLOCK c) f1)
-    \/
-    (?k. !l. l > k
-             ==>
-(*           F_SEM M (RESTN p l) (WEAK_CLOCK B_TRUE) (F_BOOL(B_NOT c))   /\  *)
-             (?i. FIRST_RISE M (RESTN p l) B_TRUE i 
-                  ==> 
-                  B_SEM M (L M (PATH_EL (RESTN p l) i)) (B_NOT c))     /\
-             !j. j <= k 
-                 ==>
-(*           F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL c)   /\  *)
-             (?i. FIRST_RISE M (RESTN p j) B_TRUE i 
-                  ==> 
-                  B_SEM M (L M (PATH_EL (RESTN p j) i)) c)     
-             ==>
-             F_SEM M (RESTN p j) (WEAK_CLOCK c) f1))
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
-     ?i. FIRST_RISE M p c i ==>
-         !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r
-             ==>
-             F_SEM M (RESTN p j) (WEAK_CLOCK c) f)
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_STRONG_IMP(r1,r2)) = 
-(*   (F_SEM M p (STRONG_CLOCK c) (F_STRONG_IMP(r1,r2))    *)
-     (?i. FIRST_RISE M p c i /\ 
-         !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
-             ==>
-             ?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)   
-     \/
-     (   
-(*    (F_SEM M p (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2))  *)
-      (?i.  FIRST_RISE M p c i
-            ==>
-            !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
-                ==>
-                ((?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
-                 \/
-                 !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
-                     ==>
-                     ?w. S_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) c r2))
-      /\
-      ?k. !l. l > k 
-              ==> 
-   (*         F_SEM M (RESTN p l) (WEAK_CLOCK B_TRUE) (F_BOOL(B_NOT c))  *)
-              (?i. FIRST_RISE M (RESTN p l) B_TRUE i 
-                   ==> 
-                   B_SEM M (L M (PATH_EL (RESTN p l) i)) (B_NOT c)) ))
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
-     ?i.  FIRST_RISE M p c i
-          ==>
-          !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
-              ==>
-              ((?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
-               \/
-               !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
-                   ==>
-                   ?w. S_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) c r2))
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_ABORT (f,b)) =
-     ?i. FIRST_RISE M p c i 
-         ==>
-         (F_SEM M (RESTN p i) (WEAK_CLOCK c) f 
-          \/
-          ?j p'. 
-(*          F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b))) /\ *)
-            (?i. FIRST_RISE M (RESTN p j) B_TRUE i 
-                 ==>
-                 B_SEM M (L M (PATH_EL (RESTN p j) i)) (B_AND(c,b)))
-            /\
-            F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (WEAK_CLOCK c) f))
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
-     F_SEM M p (WEAK_CLOCK c1) f)
-   /\
-   (F_SEM M p (WEAK_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
-     F_SEM M p (STRONG_CLOCK c1) f)`;
-
-(******************************************************************************
-* F_SEM M p k f means "p |=k= f" 
-* This corresponds directly to the Sugar 2.0 official semantics
-* (but TFL won't accept it, so it is derived by proof from F_SEM_def).
-******************************************************************************)
-val F_SEM =
- store_thm
-  ("F_SEM",
-  ``(F_SEM M p (STRONG_CLOCK c) (F_BOOL b) = 
-      ?i. FIRST_RISE M p c i /\ B_SEM M (L M (PATH_EL p i)) b)
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_NOT f) = 
-      ~(F_SEM M p (WEAK_CLOCK c) f)) 
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_AND(f1,f2)) = 
-      ?i. FIRST_RISE M p c i                      /\ 
-          F_SEM M (RESTN p i) (STRONG_CLOCK c) f1 /\
-          F_SEM M (RESTN p i) (STRONG_CLOCK c) f2)
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_NEXT f) = 
-      ?i. FIRST_RISE M p c i                           /\ 
-          (IS_FINITE_PATH p ==> i < PATH_LENGTH p - 1) /\
-          F_SEM M (RESTN p (i+1)) (STRONG_CLOCK c) f)
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
-      ?i k. k >= i                                               /\
-            FIRST_RISE M p c i                                   /\
-            F_SEM M (RESTN p k) (WEAK_CLOCK B_TRUE) (F_BOOL c)   /\  
-            F_SEM M (RESTN p k) (STRONG_CLOCK c) f2              /\
-            !j. i <= j /\ j < k /\ 
-              F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL c) 
-              ==>
-              F_SEM M (RESTN p j) (STRONG_CLOCK c) f1)
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
-      ?i. FIRST_RISE M p c i /\ 
-          !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r
-              ==>
-              F_SEM M (RESTN p j) (STRONG_CLOCK c) f)
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_STRONG_IMP(r1,r2)) = 
-      ?i. FIRST_RISE M p c i /\ 
-          !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
-              ==>
-              ?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
-     F_SEM M p (STRONG_CLOCK c) (F_STRONG_IMP(r1,r2))
-      \/
-     (F_SEM M p (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2))
-      /\
-      !j. (IS_FINITE_PATH p ==> j < PATH_LENGTH p)
-          ==>
-          ?k. NEXT_RISE M p c (j,k)))
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_ABORT (f,b)) =
-      ?i. FIRST_RISE M p c i /\
-          (F_SEM M (RESTN p i) (STRONG_CLOCK c) f 
-           \/
-           ?j p'. 
-             F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b))) /\ 
-             F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (STRONG_CLOCK c) f))
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
-      F_SEM M p (WEAK_CLOCK c1) f)
-    /\
-    (F_SEM M p (STRONG_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
-      F_SEM M p (STRONG_CLOCK c1) f)
-    /\ (****** Start of weak clock clauses ******)
-    (F_SEM M p (WEAK_CLOCK c) (F_BOOL b) = 
-      ?i. FIRST_RISE M p c i ==> B_SEM M (L M (PATH_EL p i)) b)
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_NOT f) = 
-      ~(F_SEM M p (STRONG_CLOCK c) f)) 
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_AND(f1,f2)) = 
-      ?i. FIRST_RISE M p c i
-          ==>
-          (F_SEM M (RESTN p i) (WEAK_CLOCK c) f1 /\
-           F_SEM M (RESTN p i) (WEAK_CLOCK c) f2))
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_NEXT f) = 
-      ?i. (FIRST_RISE M p c i /\
-           (IS_FINITE_PATH p ==> i < PATH_LENGTH p - 1))
-          ==>
-          F_SEM M (RESTN p (i+1)) (WEAK_CLOCK c) f)
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
-      F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2))  
-      \/
-      (?k. !l. l > k
-               ==>
-               F_SEM M (RESTN p l) (WEAK_CLOCK B_TRUE) (F_BOOL(B_NOT c))   /\ 
-               !j. j <= k 
-                   ==>
-                   F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL c)
-                   ==>
-                   F_SEM M (RESTN p j) (WEAK_CLOCK c) f1))
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
-      ?i. FIRST_RISE M p c i ==>
-          !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r
-              ==>
-              F_SEM M (RESTN p j) (WEAK_CLOCK c) f)
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_STRONG_IMP(r1,r2)) = 
-      F_SEM M p (STRONG_CLOCK c) (F_STRONG_IMP(r1,r2))  
-      \/
-      (F_SEM M p (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2)) 
-       /\
-       ?k. !l. l > k 
-               ==> 
-               F_SEM M (RESTN p l) (WEAK_CLOCK B_TRUE) (F_BOOL(B_NOT c))))
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
-      ?i.  FIRST_RISE M p c i
-           ==>
-           !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
-               ==>
-               ((?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
-                \/
-                !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
-                    ==>
-                    ?w. S_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) c r2))
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_ABORT (f,b)) =
-      ?i. FIRST_RISE M p c i 
-          ==>
-          (F_SEM M (RESTN p i) (WEAK_CLOCK c) f 
-           \/
-           ?j p'. 
-            F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b)))
-            /\
-            F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (WEAK_CLOCK c) f))
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
-      F_SEM M p (WEAK_CLOCK c1) f)
-    /\
-    (F_SEM M p (WEAK_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
-      F_SEM M p (STRONG_CLOCK c1) f)``,
-  SIMP_TAC std_ss [F_SEM_def]);
-
-(******************************************************************************
-* Alternative definition due to Konrad Slind that uses
+* Definition due to Konrad Slind that uses
 * cunning feature of TFL to prove that F_SEM is total
-* (commented out in this file)
+******************************************************************************)
 val F_SEM_defn = 
   Hol_defn 
   "F_SEM"
@@ -568,7 +221,7 @@ val F_SEM_defn =
       ?i. FIRST_RISE M p c i /\ B_SEM M (L M (PATH_EL p i)) b)
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_NOT f) = 
-      ~(F_SEM M p (WEAK_CLOCK c) f)) 
+      ~(F_SEM M p (STRONG_CLOCK c) f))(*WEAK_CLOCK -> STRONG_CLOCK for proof*) 
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_AND(f1,f2)) = 
       ?i. FIRST_RISE M p c i                      /\ 
@@ -624,9 +277,13 @@ val F_SEM_defn =
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
       F_SEM M p (STRONG_CLOCK c1) f)
-    /\ (****** Start of weak clock clauses ******)
-    (F_SEM M p (WEAK_CLOCK c) (F_BOOL b) = 
-      ?i. FIRST_RISE M p c i ==> B_SEM M (L M (PATH_EL p i)) b)
+    /\ 
+(******************************************************************************
+* Start of weak clock clauses
+******************************************************************************)
+   (F_SEM M p (WEAK_CLOCK c) (F_BOOL b) =
+     (?i. FIRST_RISE M p c i)
+     ==> (?i. FIRST_RISE M p c i /\ B_SEM M (L M (PATH_EL p i)) b))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_NOT f) = 
       ~(F_SEM M p (STRONG_CLOCK c) f)) 
@@ -671,15 +328,17 @@ val F_SEM_defn =
                F_SEM M (RESTN p l) (WEAK_CLOCK B_TRUE) (F_BOOL(B_NOT c))))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
-      ?i.  FIRST_RISE M p c i
-           ==>
-           !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
-               ==>
-               ((?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
-                \/
-                !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
-                    ==>
-                    ?w. S_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) c r2))
+      (?i. FIRST_RISE M p c i)
+      ==>
+      ?i. FIRST_RISE M p c i
+          /\
+          !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
+              ==>
+              ((?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
+               \/
+               !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
+                   ==>
+                   ?w. S_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) c r2))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_ABORT (f,b)) =
       ?i. FIRST_RISE M p c i 
@@ -717,7 +376,9 @@ val (F_SEM_def, F_SEM_ind) = Count.apply Defn.tprove
    THEN ((Cases_on `f` THEN EVAL_TAC THEN DECIDE_TAC) ORELSE
          (Cases_on `f1` THEN EVAL_TAC THEN DECIDE_TAC) ORELSE
          (Cases_on `f2` THEN EVAL_TAC THEN DECIDE_TAC)));
-******************************************************************************)
+
+val _ = save_thm("F_SEM_def",F_SEM_def);
+val _ = save_thm("F_SEM_ind",F_SEM_ind);
 
 (******************************************************************************
 * PATH M p is true iff p is a path with respect to transition relation getR M
