@@ -426,7 +426,7 @@ fun make_let bindings tm env =
 fun make_set_const fname s E =
  (gen_const s, E)
   handle HOL_ERR _
-    => raise ERROR fname ("The theory "^Lib.quote "set"^" is not loaded");
+    => raise ERROR fname ("The theory "^Lib.quote "pred_set"^" is not loaded");
 
 
 (*---------------------------------------------------------------------------
@@ -435,7 +435,7 @@ fun make_set_const fname s E =
  * compute the free vars for tm1 and tm2 separately.
  *
  * You can't make a set unless the theory of sets is an ancestor.
- *  The calls to make_set_const ensure this.
+ * The calls to make_set_const ensure this.
  *
  * Warning: apt not to work if you want to "antiquote in" free variables that
  * will subsequently get bound in the set abstraction.
@@ -447,10 +447,12 @@ fun make_set_abs (tm1,tm2) (E as {scope=scope0,...}:env) =
        val (_,(e3:env)) = tm2 e1
        val tm1_fv_names = map fst (#free e1)
        val tm2_fv_names = map fst (#free e2)
-       val fv_names = intersect tm1_fv_names tm2_fv_names
+       val fv_names = if null tm1_fv_names then tm2_fv_names else
+                      if null tm2_fv_names then tm1_fv_names else
+                      intersect tm1_fv_names tm2_fv_names
        val init_fv = #free e3
    in
-   case (gather (fn (name,_) => mem name fv_names) init_fv)
+   case gather (fn (name,_) => mem name fv_names) init_fv
      of [] => raise ERROR "make_set_abs" "no free variables in set abstraction"
       | quants =>
          let val quants' = map
