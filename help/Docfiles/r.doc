@@ -1,6 +1,6 @@
 \DOC r
 
-\TYPE {r : (int -> void)}
+\TYPE {r : int -> unit}
 
 \SYNOPSIS
 Reorders the subgoals on top of the subgoal package goal stack.
