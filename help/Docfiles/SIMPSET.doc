@@ -81,11 +81,12 @@ ignore these arguments (as in the example below).
 The {key} field of the subsidiary record type is an optional pattern,
 specifying the places where the conversion should be applied.  If the
 value is {NONE}, then the conversion will be applied to all sub-terms.
-It is not known what the role of the list of terms is.  However, if it
-is the list is left as {[]}, the second component of the pair, the
-bare term is used as a pattern.  The conversion will only be applied
-to sub-terms that match the pattern.  The {name} and {trace} fields
-are only relevant to the debugging facilities of the simplifier.
+If the value is {SOME(lcs, t)}, then the term {t} is used as a pattern
+specifying those terms to which the conversion should be applied.
+Further, the list {lcs} (which must be a list of variables), specifies
+those variables in {t} which shouldn't be generalised against; they
+are effectively local constants.  The {name} and {trace} fields are
+only relevant to the debugging facilities of the simplifier.
 
 The {dprocs} field of the record passed to {SIMPSET} is where decision
 procedures can be specified.  The construction of values of type
