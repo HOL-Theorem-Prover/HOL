@@ -1,0 +1,264 @@
+
+Our system is implemented in HOL4, but we think the ideas could be
+realised in other programmable higher order logic proof systems like
+Isabelle, PVS, NuPrl and Coq. In such systems, functions are defined
+recursively and then proof scripts are executed to prove properties of
+the functions.  Proof scripts are programs that perform sequences of
+deductions to create theorems.
+
+In our system we create theorems of the form $\vdash
+{\it{Imp}}\Longrightarrow\texttt{DEV}~f$, where {\it{Imp}} is a term
+describing a circuit and $\texttt{DEV}~f$ specifies that function $f$
+is computed. The operator $\Longrightarrow$ is intuitively
+implication, but is actually lifted implication between functions (see
+Section~\ref{secSpecification} for an explanation).
+Several different representations of implementations are
+created, with the lowest level currently corresponding to
+synthesisable Verilog.
+
+We illustrate the synthesis flow we have created inside HOL4 on a
+simple toy example: the factorial function. This example is chosen for
+clarity in illustrating our ideas and is not typical of the kind of
+applications were are working on!  For a discussion of the
+applications we are interested in, see Section~\ref{secRelatedWork}.
+
+The factorial function \texttt{FACT} satisfies
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- (FACT 0 = 1) /\ !n. FACT(SUC n) = SUC n * FACT n
+\end{verbatim}}
+
+\vspace*{-2mm}
+As we can only synthesise tail recursions, the first
+step is to define a tail-recursive function \texttt{FactIter} and show
+that it can be used to compute \texttt{Fact}.
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- FactIter(n,acc) = if n=0 then (n,acc) else FactIter(n-1,n*acc))
+ |- FACT n = SND(FactIter(n,1))
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+\noindent In HOL4, \texttt{FactIter} would be defined by executing:
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ Define 
+  `FactIter(n,acc) = if n=0 then (n,acc) else FactIter(n-1,n*acc))`
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+\noindent to synthesise a hardware implementation one simply uses
+\texttt{hwDefine} instead.
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ hwDefine 
+  `FactIter(n,acc) = if n=0 then (n,acc) else FactIter(n-1,n*acc))`
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+\noindent This defines \texttt{FactIter} in the logic (i.e.~does an
+implicit \texttt{Define}), but it also creates a theorem:
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- REC (DEV (\x. FST x = 0)) (DEV (\x. x))
+        (PAR (DEV (\x. FST x - 1))
+        (PRECEDE (\x. x) (DEV (UNCURRY $*)))) 
+    ===> 
+    DEV FactIter
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+\noindent The term to the left of the lifted implication \texttt{===>}
+represents an implementation using
+`circuit combinators' which are described in
+Section~\ref{secSpecification} (\texttt{REC} is a recursion combinator).  The term \texttt{DEV~FactIter}
+describes a behaviour that applies the function \texttt{FactIter}
+under the control of a four-phase handshake, which is specified in the
+definition of the higher order function \texttt{DEV} (also described
+in Section~\ref{secSpecification}). The theorem, which is proved
+automatically by \texttt{hwDefine}, verifies that the circuit is a
+correct implementation of \texttt{FactIter}. As it is \texttt{FACT}, not
+\texttt{FactIter}, that we want to implement, we create an implementation
+of it:
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ hwDefine `Fact n = SND(FactIter (n,1))
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+\noindent The implicit \texttt{Define} creates a
+theorem correxponding to this definition, and from the
+theorem relating \texttt{FACT} and \texttt{FactIter} proved above,
+we get that \texttt{Fact} is equal to \texttt{FACT}:
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- Fact n = SND(FactIter(n,1))
+ |- Fact = FACT
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+\noindent \texttt{hwDefine} also gives us a verified implemention of
+\texttt{Fact}:
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- FOLLOW (PRECEDE (\n. (n,1)) (DEV FactIter)) SND ===> DEV Fact
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+\noindent The circuit here contains \texttt{DEV~FactIter}, but we have
+already constructed an implementation for that, so we can refine the
+implementation of \texttt{DEV~Fact} by replacing the specification
+\texttt{DEV~FactIter} by its implementation (our circuit combinators
+are compositional).
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- FOLLOW
+     (PRECEDE (\n. (n,1))
+        (REC (DEV (\x. FST x = 0)) (DEV (\x. x))
+             (PAR (DEV (\x. FST x - 1))
+             (PRECEDE (\x. x) (DEV (UNCURRY $*)))))) SND 
+    ===> 
+    DEV Fact
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+At this point, we need to decide whether multiplication (\texttt{*})
+has a combinational or sequential implementation. 
+
+Components in a
+circuit of the form \texttt{DEV~f} are specifications to compute
+$f$. They can either be refined to implementations (like we just
+refined \texttt{DEV~FactIter}) or they can be converted to
+combinational logic (assuming we have a combinational circuit to
+compute $f$ in our library of components).
+In \texttt{DEV(UNCURRY~\$*)} the \texttt{\$} tells the parser to
+suppress \texttt{*}'s infix status and \texttt{UNCURRY} creates a
+function taking a pair as an argument (HOL's built-in multiplication infix \texttt{*}
+is a curried function).
+
+
+Suppose we wanted to use a sequential implimentation of multiplication,
+then we would synthesise a theorem:
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- (...) ===> DEV(UNCURRY $*)
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+\noindent and then refine the occurrence of \texttt{DEV(UNCURRY~\$*)}
+to \texttt{(...)}.  In this fashion we can incrementally develop a
+circuit in a top-down fashion. To manage such developments we have
+implemented operators for combining refinements analogous to rewriting
+operators \cite{Paulson}. This is a fairly standard ML programming
+method and we don't give further details here.
+
+For simplicity, let us continue the example using a combinational
+implementation of multiplication. We add \texttt{*} to the list of
+combinationally-implementable functions and then our system will
+automatically prove a theorem of the form shown below (we have omitted
+parts of the circuit to save space, but hope what remains is enough to
+give an idea).
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- (?v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16
+      ...
+      v51 v52 v53 v54 v55.
+     CONSTANT 1 v0 /\ DEL (load,v20) /\ NOT (v20,v19) /\
+     NOT (v50,v37) /\ COMB (UNCURRY $*) (v10 <> v9,v49) /\
+     ...
+     DEL (v49,v35) /\ DFF (v36,v38,v13) /\ DFF (v35,v37,v12) /\
+     AND (v2,v8,v55) /\ AND (v55,v53,done)) 
+    ===> 
+    DEV FACT
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+The circuit to the left of \texttt{===>} is a netlist represented in
+the standard way in higher order logic \cite{Mel93} and built out of
+two kinds of abstract registers: a unit delay \texttt{DEL} and
+edge-triggered register \texttt{DFF}. The other components are
+combinational and comprise boolean functions \texttt{NOT},
+\texttt{AND}, \texttt{OR}, multiplexers \texttt{MUX}, constants
+\texttt{CONSTANT~0}, \texttt{CONSTANT~1} and functional blocks
+\texttt{COMB~$f$} that compute the function $f$. These components are
+described in more detail in Section~\ref{secCompilingByProof}. To
+create a netlist that can be converted to hardware, the occurences of
+\texttt{DEL} and \texttt{DFF} need to be implemented using standard
+clocked registers. This invoves converting from an abstract `cycle
+based' model to a clocked synchronous model. The theory of doing this
+was developed in detail by Melham \cite{Mel93}. We have incorporated
+Melham's theory (and even some of his old HOL88 code) to
+implement a synthesis script. Applied to our factorial implementation, this yields
+a theorem of the form:
+
+\vspace*{-1mm}
+
+{\baselineskip10pt\begin{verbatim}
+|- InfRise clk
+   ==>
+   (?v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16 v17 
+     ....
+     v125 v126 v127 v128 v129.
+     CONSTANT 1 v0 /\ TRUE v23 /\ Dff (clk,v23,v22) /\
+     COMB (UNCURRY $*) (v10 <> v9,v100) /\ TRUE v109 /\
+     ...
+     Dtype (clk,v12,v123) /\ AND (v77,v76,v14) /\ TRUE v129 /\
+     AND (v2,v8,v126) /\ AND (v126,v124,done)) 
+   ==>
+   DEV FACT (load at clk,inp at clk,done at clk,out at clk) 
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+This theorem uses explicitly clocked registers \texttt{Dtype} and
+\texttt{Dff} (defined in Section~\ref{secCompilingByProof}) and states
+that, assuming a live clock (\texttt{InfRise~clk} means \texttt{clk}
+has infinitely many rising edges), then the behaviour of the
+synthesised circuit implements a handshake computing
+\texttt{FACT}. The occurrence of \texttt{==>} rather than
+\texttt{===>} and the explicit parameters to \texttt{DEV~FACT} are
+explained later (for now we just note that \texttt{s~at~clk} is the
+signal \texttt{s} abstracted on rising edges of \texttt{clk}).
+
+We have implemented a program in Standard ML that prints a netlist of
+the sort generated above as Verilog. Although the HDL created is not
+formally verified (it cannot be, as Verilog has no formal semantic
+specification) visual inspection and other tools can yield a high
+degree of confidence that it corresponds to the verified netlist
+represented in higher order logic. The verilog we create is intended
+to be synthesisable, but we have not yet tried any actual synthesis
+experiments.
+
+

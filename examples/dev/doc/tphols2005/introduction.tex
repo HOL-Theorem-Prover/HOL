@@ -1,13 +1,11 @@
 
 We describe a correct-by-construction flow from function definitions
 in higher order logic to hardware implementations.  Each synthesised
-implementation of a function $f$ is created in the form of a theorem
-$\vdash {\it{Imp}}\Longrightarrow\texttt{DEV}~f$, where {\it{Imp}} is
+implementation is created in the form of a theorem
+$\vdash {\it{Imp}}\Rightarrow{\it{Spec}}$, where {\it{Imp}} is
 a term describing a circuit that implements a four-phase handshake
-computing $f$, and the handshake is specified in higher oder logic by
-$\texttt{DEV}~f$. The operator $\Longrightarrow$ is intuitively
-implication, but is actually lifted implication between functions (see
-Section~\ref{secSpecification} for an explanation).
+computing a function, and the handshake is specified in higher order logic by
+{\it{Spec}}. 
 
 The synthesis process is implemented using proof
 scripts and goes through several phases, each refining the
