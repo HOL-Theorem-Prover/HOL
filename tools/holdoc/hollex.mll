@@ -20,6 +20,10 @@ type parser_info = {
 let check_close pi got lexbuf =
   if pi.expected = got then
     From
+  else if !hOLDELIMUNBAL &&
+          ((pi.expected = DelimHolTex && got = DelimHolTexMath) ||
+           (pi.expected = DelimHolTexMath && got = DelimHolTex)) then
+    From
   else
     raise (Mismatch ("Mismatched delimiters: "^(delim_info pi.expected).sopen^" closed by "^(delim_info got).sclose ^ " at " ^ pretty_pos lexbuf))
 
@@ -119,6 +123,8 @@ let directive_alist =
    ("NOECHO"           ,NOECHO           );
    ("RCSID"            ,RCSID            );
    ("HOLDELIM"         ,HOLDELIM         );
+   ("HOLDELIMUNBAL"    ,HOLDELIMUNBAL    );
+   ("NOHOLDELIMUNBAL"  ,NOHOLDELIMUNBAL  );
    ("NEWMODE"          ,NEWMODE          );
    ("MODE"             ,MODE             );
    ("SPECIAL"          ,SPECIAL          );
@@ -386,7 +392,7 @@ let print_token eds t =
   | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | AUTO_BINDERS | NOAUTO_BINDERS | HOL_OP_LIST
   | HOL_SYM_ALIST | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
   | NO_SMART_PREFIX | INDENT | NOINDENT | RULES | NORULES | COMMENTS
-  | NOCOMMENTS | ECHO | NOECHO | RCSID | HOLDELIM | NEWMODE | MODE
+  | NOCOMMENTS | ECHO | NOECHO | RCSID | HOLDELIM | HOLDELIMUNBAL | NOHOLDELIMUNBAL | NEWMODE | MODE
   | SPECIAL | VARS
                -> (List.assoc t (List.map (fun (x,y) -> (y,x)) directive_alist),
                    eds)
@@ -412,7 +418,7 @@ let render_token t =
   | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | AUTO_BINDERS | NOAUTO_BINDERS | HOL_OP_LIST
   | HOL_SYM_ALIST | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
   | NO_SMART_PREFIX | INDENT | NOINDENT | RULES | NORULES | COMMENTS
-  | NOCOMMENTS | ECHO | NOECHO | RCSID | HOLDELIM | NEWMODE | MODE
+  | NOCOMMENTS | ECHO | NOECHO | RCSID | HOLDELIM | HOLDELIMUNBAL | NOHOLDELIMUNBAL | NEWMODE | MODE
   | SPECIAL | VARS
                -> "R:" ^ List.assoc t (List.map (fun (x,y) -> (y,x)) directive_alist)
 

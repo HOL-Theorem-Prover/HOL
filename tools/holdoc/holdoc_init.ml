@@ -94,6 +94,7 @@ let eCHO = ref true
 let rCSID = ref None
 let hOLDELIMOPEN  = ref "$" (* [[ *)
 let hOLDELIMCLOSE = ref "$" (* ]] *)
+let hOLDELIMUNBAL = ref false
 
 
 (* this is a lexer parameter, and is a bit special:

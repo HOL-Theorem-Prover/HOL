@@ -226,6 +226,10 @@ enter-HOL-mode and exit-HOL-mode directives, [[ and ]].  These are
 normally just "$" and "$", but can be changed, e.g., to colourise the
 output of HOL strings.
 
+(*[ HOLDELIMUNBAL ]*) / (*[ NOHOLDELIMUNBAL ]*) allows [[ to be closed
+by ]> and vice versa; this is sometimes useful when mixing mng and
+texmath modes.
+
 
 (*[ RULES ]*) turns on rules mode (this is on by default for
 lts_to_latex, and off by default otherwise).  This means that

@@ -67,7 +67,9 @@ let extractstrs ds =
 %token ECHO            
 %token NOECHO          
 %token RCSID           
-%token HOLDELIM        
+%token HOLDELIM
+%token HOLDELIMUNBAL
+%token NOHOLDELIMUNBAL
 %token NEWMODE         
 %token MODE            
 %token SPECIAL         
@@ -233,9 +235,15 @@ directive0 :
                                { DirThunk (fun () -> hOLDELIMOPEN := $3; hOLDELIMCLOSE := $5) }
 | NEWMODE opt_whitestuff Ident opt_whitestuff { DirThunk (fun () -> new_mode    (fst $3)) }
 | MODE    opt_whitestuff Ident opt_whitestuff { DirThunk (fun () -> change_mode (fst $3)) }
-| SPECIAL string_list          { (* must happen immediately, since it affects lexing *)
-                                 add_to_list Holdoc_init.nonagg_specials $2;
-                                 DirThunk (fun () -> ()) }
+| SPECIAL string_list            { (* must happen immediately, since it affects lexing *)
+                                   add_to_list Holdoc_init.nonagg_specials $2;
+                                   DirThunk (fun () -> ()) }
+| HOLDELIMUNBAL opt_whitestuff   { (* must happen immediately, since it affects lexing *)
+                                   hOLDELIMUNBAL := true;
+                                   DirThunk (fun () -> ()) }
+| NOHOLDELIMUNBAL opt_whitestuff { (* must happen immediately, since it affects lexing *)
+                                   hOLDELIMUNBAL := false;
+                                   DirThunk (fun () -> ()) }
 /* special handling: */
 | VARS ident_list_b  { DirVARS $2 }  /* ignore for now */
 /* unrecognised things: */

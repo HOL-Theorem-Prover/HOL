@@ -43,6 +43,7 @@ val eCHO : bool ref
 val rCSID : string option ref
 val hOLDELIMOPEN : string ref
 val hOLDELIMCLOSE : string ref
+val hOLDELIMUNBAL : bool ref
 
 val nonagg_specials : string list ref
 
