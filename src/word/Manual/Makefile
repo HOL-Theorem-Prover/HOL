@@ -20,8 +20,7 @@ DOCTOTEXSED=$(HOLMANDIR)/Manual/Reference/bin/doc-to-tex.sed
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
 # ---------------------------------------------------------------------
-MAKEINDEX=$(HOLMANDIR)/Manual/LaTeX/makeindex $(HOLMANDIR)
-#MAKEINDEX=makeindex
+MAKEINDEX=makeindex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
@@ -30,7 +29,8 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ps
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ps *.ind \
+         theorems.tex entries.tex
 	@echo "\begin{theindex}" > index.tex
 	@echo "\mbox{}" >> index.tex
 	@echo "\end{theindex}" >> index.tex
@@ -61,7 +61,7 @@ theorems:
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms/bword_arith theorems.tex
 
 index:
-	${MAKEINDEX} word.idx index.tex
+	${MAKEINDEX} word.idx
 
 word:
 	$(LATEX) word.tex

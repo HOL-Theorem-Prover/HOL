@@ -2,18 +2,18 @@
 % HOL Manual LaTeX Source: word library (standard latex style)
 % =====================================================================
 
-\documentstyle[12pt,fleqn,makeidx,
-               /usr/groups/hol/hol90/Manual/LaTeX/alltt,
-               /usr/groups/hol/hol90/Manual/LaTeX/layout]{book}
+\documentclass[12pt]{book}
+
+\usepackage{fleqn}
+\usepackage{makeidx}
+\usepackage{../../../Manual/LaTeX/layout}
 
 % ---------------------------------------------------------------------
 % Input defined macros and commands
 % ---------------------------------------------------------------------
-%\input{../../../Manual/LaTeX/commands}
-%\input{../../../Manual/LaTeX/ref-macros}
 
-\input{/usr/groups/hol/hol90/Manual/LaTeX/commands}
-\input{/usr/groups/hol/hol90/Manual/LaTeX/ref-macros}
+\input{../../../Manual/LaTeX/commands}
+\input{../../../Manual/LaTeX/ref-macros}
 
 \input{macros}
 
