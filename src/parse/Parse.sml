@@ -893,6 +893,20 @@ in
     add_string pp "`"; ppfn pp x; add_string pp "`"
   end
 
+  fun term_pp_with_delimiters ppfn pp tm = let
+    open Portable Globals
+  in
+    add_string pp (!term_pp_prefix);
+    ppfn pp tm;
+    add_string pp (!term_pp_suffix)
+  end
+  fun type_pp_with_delimiters ppfn pp ty = let
+    open Portable Globals
+  in
+    add_string pp (!type_pp_prefix);
+    ppfn pp ty;
+    add_string pp (!type_pp_suffix)
+  end
 
 end
 

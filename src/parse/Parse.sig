@@ -171,6 +171,11 @@ in
   val pp_thm : General.ppstream -> thm -> unit
   val pp_with_bquotes :
     (General.ppstream -> 'a -> unit) -> (General.ppstream -> 'a -> unit)
+  val term_pp_with_delimiters :
+    (General.ppstream -> term -> unit) -> General.ppstream -> term -> unit
+  val type_pp_with_delimiters :
+    (General.ppstream -> hol_type -> unit) ->
+    General.ppstream -> hol_type -> unit
 
   val term_to_string : term -> string
   val type_to_string : hol_type -> string
