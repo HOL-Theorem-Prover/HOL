@@ -1,0 +1,218 @@
+
+LexGenMos: A Lexer Generator based on Moscow ML/Caml Light code
+============================================================
+6/1/98
+
+This is a translation to SML '97 (+ smlnj-lib) of the lexer generator
+from Moscow ML (mosmllex), which in turn is derived from the lexer
+generator used in Caml Light.  From the mosmllex README (Moscow ML 1.43):
+
+    "The source files for mosmllex (in directory mosml/src/lex) are based
+    on those of camllex, distributed with the Caml Light system.  The Caml
+    Light system was developed by Xavier Leroy and Damien Doligez at INRIA
+    Rocquencourt, France."
+
+Moscow ML is the work of 
+
+    Sergei Romanenko (roman@keldysh.ru)
+    Keldysh Institute of Applied Mathematics, Russian Academy of Sciences
+    Miusskaya Pl. 4, 125047 Moscow, Russia.
+
+    Peter Sestoft (sestoft@dina.kvl.dk)
+    Department of Mathematics and Physics, Royal Veterinary and
+    Agricultural University, Thorvaldsensvej 40, DK-1871 Frederiksberg C, 
+    Denmark.
+
+The SML '97 translation was done by Jon Riecke and Dave MacQueen
+of Bell Labs.
+
+----------------------------------------------------------------------
+COPYRIGHT NOTICE FOR MOSCOW ML
+
+    Moscow ML - a lightweight implementation of Core Standard ML.
+    Copyright (C) 1994, 1995, 1996, 1997, 1998  
+    Sergei Romanenko, Moscow, Russia and Peter Sestoft, Copenhagen, Denmark.
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 2
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License in copyrght/gpl2 for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Note that a number of source files are derived from the Caml Light
+distribution, copyright (C) 1993 INRIA, Rocquencourt, France.  Thus
+charging money for redistributing Moscow ML may require prior
+permission from INRIA; see the INRIA copyright notice in file
+copyrght/copyrght.cl.  The Caml Light system itself can be obtained
+from ftp.inria.fr:lang/caml-light.
+----------------------------------------------------------------------
+
+
+Instructions
+============
+
+Chapter 12 of the "Moscow ML Owner's Manual", by Sergei Romanenko and
+Peter Sestoft (available as part of the Moscow ML distribution) covers
+use of the lexer generator and the syntax of lexer definitions (.lex
+files).  Below are additional instructions for using this version
+of the lexer generator with SML/NJ.
+
+
+1. To build the lexgen application:
+
+In the lexgen source directory:
+  (1) run sml
+  (2) CM.make();
+  (3) SMLofNJ.exportFn("lexgen",LexGen.main);
+       produces a heap-image file ./lexgen.arch-opsys for your
+       particular arch(itecture) and opsys (e.g lexgen.sparc-solaris)
+       and then exits sml.
+
+here "lexgen" can be replaced by any name you choose, of course.
+
+
+2. To run the lexgen application:
+
+  sml @SMLload=<lexgen image> <lexer definition>
+
+where <lexer definition> is a file path designating a lexer
+definition file, and <lexgen image> is file path of the lexgen heap
+image produced in step 1 above.  
+
+For example, if the image is ./lexgen.sparc-solaris and ./foo.lex is a
+lexer definition file, then the command would be:
+
+  sml @SMLload=lexgen foo.lex
+
+producing the file ./foo.sml containing the source code of the lexer
+(normally in the form of a structure or functor declaration).  By
+convention, the definition file has extension ".lex", and the SML
+source file has the same base name with extension ".sml".
+
+
+3. At a high level, lexer definition files are composed of five
+sections:
+
+  {  header  }
+  {  footer  }
+  {  lexarg  }
+  let definitions
+  rule defintions
+  
+The header includes all text between the curly braces; newlines and
+other white spaces are allowed, and nested balanced braces, strings,
+and comments will be properly handled.  The header is copied verbatim
+at the beginning of the generated file.  Normally, it should begin
+with a "structure" or "functor" keyword, and a matching "end" should
+be provided in the footer.  For instance, a typical header might look
+like
+
+  { structure Scanner =
+    struct
+      open LexBuffer
+      < declarations used in actions of the lexer >
+  }
+
+The footer is copied verbatim at the end of the generated file.
+For instance, a typical footer might contain only
+
+  { end
+  }
+
+to end the structure or functor declaration begun in the header.
+
+The third section, the "lexarg", is a user-supplied argument (or list
+of arguments) to the main exported function, makeLex.  The definition of
+makeLex makes up the body of the generated file and has the form
+
+  fun makeLex <lexarg> lexer =
+   let
+       <declarations generated from <let definitons> and <rule definitions>>
+    in main
+   end
+
+and the inferred type (if <lexarg> is not empty)
+
+  val makeLex : s -> t LexBuffer.lexbuf -> unit -> t
+
+where "s" is the type of "lexarg", and "t" is typically the type of
+tokens returned by the action definitions.  If <lexarg> is empty,
+the inferred type of makeLex will be:
+
+  val makeLex : t LexBuffer.lexbuf -> unit -> t
+
+When makeLex is partially applied to the first two arguments (or one, if
+<lexarg is empty), it produces a function that can be repeatedly
+applied to "()" to return successive tokens in the buffer.
+
+The formats for "let" and "rule" definitions may be found in the
+"Moscow ML Owner's Manual".  Rule definitions associate actions with
+regular expressions.  By convention, one of the rules must be named
+"main", and it will be translated into a function main that will be
+the return value of makeLex.
+
+Actions are SML expressions.  The text of the actions will typically
+refer to types and values from other application specific modules
+(e.g., a structure that contains the definition of the type of tokens),
+as well as names declared in the header.  Two standard modules,
+LexBuffer and LexError, are provided to support writing actions.
+
+For example, in this directory the Scanner.lex definition used for
+lexing the .lex files imports the modules Fnlib (lib/Fnlib.sml),
+Scan_aux (Scan_aux.sml), and Token (Token.sml), as well as LexBuffer
+and LexError.
+
+In addition, the user may use the following functions and values in
+the definitions:
+
+  val setLastAction  : (unit -> t) -> unit
+  val resetLastPos   : unit -> unit
+  val resetStartPos  : unit -> unit
+  val getLexeme      : unit -> t
+  val getLexemeChar  : int -> char
+  val getLexemeStart : unit -> int
+  val getLexemeEnd   : unit -> int
+  val getNextChar    : unit -> char
+  val backtrack      : unit -> t
+  val lexbuf         : t LexBuffer.lexbuf
+
+All but the last of these correspond to functions found in the
+"LexBuffer.sig" signature, and implicitly operate on the makeLex
+argument "lexbuf".
+
+The file "lexlib.cm" is a CM library description; putting the name of
+this file in your application's "sources.cm" file will include the
+"LEX_BUFFER" signature, the "LexBuffer" structure, and "LexError"
+structure for use by the generated lexer.
+
+
+4. To create a lexer buffer (type LexBuffer.lexbuf) for an input file,
+translate the whole file into a string using TextIO.inputAll, and pass
+the string to LexBuffer.createLexbuf.  To lexically analyze the contents
+of a string, just pass the string itself to LexBuffer.createLexbuf.
+
+
+NOTE: LexBuffer implements the lexer input buffer by reading the whole
+input file (stream) at once and scanning the resulting string.  This
+makes this a batch-oriented lexer, and it would not be suitable as the
+lexer for an interactive language.  Supporting interactive lexing
+could be done by implementing a more sophisticated sliding buffer
+similar to that in the original mosmllex code (see
+mosml/src/mosmllib/Lexing.*) or in ML-Lex.  Such a buffer can
+be implemented using either the unbuffered reader input mechanism
+(TextPrimIO.reader), or the functional stream mechanism
+(TextIO.StreamIO.instream).
+
+
+----------------------------------------------------------------------
+Questions/Suggestions/bugs for this version:
+  Dave MacQueen <dbm@research.bell-labs.com>
+  Jon Riecke <riecke@research.bell-labs.com>

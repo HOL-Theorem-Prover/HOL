@@ -1,0 +1,27 @@
+Group is
+
+	$/basis.cm
+	$/smlnj-lib.cm 
+
+	lib/Fnlib.sig
+	lib/Fnlib.sml
+	lib/Sort.sig
+	lib/Sort.sml
+
+	LexBuffer.sig
+	LexBuffer.sml
+	LexError.sml
+	Syntax.sml
+	DFA.sig
+	DFA.sml
+	Token.sig
+	Token.sml
+	Gram_aux.sml
+	Grammar.sig
+	Grammar.sml
+	Scan_aux.sig
+	Scan_aux.sml
+	Scanner.sig
+	Scanner.sml
+        Output.sml
+        LexGen.sml
