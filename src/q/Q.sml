@@ -279,9 +279,6 @@ fun UNABBREV_TAC [QUOTE s] = let val s' = Lib.deinitcomment s in
          THEN BETA_TAC end
   | UNABBREV_TAC _ = raise Q_ERR "UNABBREV_TAC" "unexpected quote format"
 
-fun find' f [] = NONE
-  | find' f (h::t) = case f h of NONE => find' f t | x => x
-
 fun PAT_ABBREV_TAC q (g as (asl, w)) =
     let val fv_set = FVL (w::asl) empty_tmset
         val ctxt = HOLset.listItems fv_set
@@ -289,7 +286,7 @@ fun PAT_ABBREV_TAC q (g as (asl, w)) =
         fun matchr t = raw_match [] fv_set r t ([],[])
         val l = variant (HOLset.listItems (FVL [r] fv_set)) l
     in
-      case find' (Lib.total (find_term (can matchr))) (w::asl) of
+      case Lib.total (find_term (fn t => not (is_var t orelse is_const t) andalso can matchr t)) w of
         NONE => raise Q_ERR "PAT_ABBREV_TAC" "No matching term found"
       | SOME t =>
         CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
