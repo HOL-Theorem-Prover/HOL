@@ -467,8 +467,8 @@ val _ = overload_on ("~", Term`$int_neg`);
 val _ = overload_on ("~", bool_not);
 
 val natmult = Term`$*`;
-val _ = overload_on ("*", Term`$int_mul`);
 val _ = overload_on ("*", natmult);
+val _ = overload_on ("*", Term`$int_mul`);
 
 
 (*--------------------------------------------------------------------------*)
