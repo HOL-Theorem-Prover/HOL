@@ -4,6 +4,7 @@
 \usepackage{epsfig}
 \usepackage{pstricks}
 \usepackage{xspace}
+\usepackage{url}
 %\usepackage{makeidx}
 %\usepackage{index}
 %\usepackage{multind}
@@ -153,9 +154,9 @@ solvers are supported
 
 \begin{tabular}{ll}
 {\bf Solver} & {\bf Home Page} \\ \hline
-SATO & {\small\verb+http://www.cs.uiowa.edu/~hzhang/sato.html+}\\
-GRASP & {\small\verb+http://sat.inesc.pt/~jpms/grasp+}\\
-ZCHAFF & {\small\verb+http://www.ee.princeton.edu/~chaff/zchaff.html+}
+SATO & {\small\url{http://www.cs.uiowa.edu/~hzhang/sato.html}}\\
+GRASP & {\small\url{http://sat.inesc.pt/~jpms/grasp}}\\
+ZCHAFF & {\small\url{http://www.ee.princeton.edu/~chaff/zchaff.html}}
 \end{tabular}
 
 \medskip
@@ -301,7 +302,7 @@ fun SAT_TAUT_CHECK sat_solver t =
 
 \begin{enumerate}
 
-\item Visit {\tt http://www.cl.cam.ac.uk/~mjcg/HolSatLib} and
+\item Visit \url{http://www.cl.cam.ac.uk/~mjcg/HolSatLib} and
 download the file {\tt HolSatLib.tar.gz}
 
 \item place  {\tt HolSatLib.tar.gz} in a directory {\it dir}
@@ -591,7 +592,7 @@ string indicating end of model \\
 
 Note that if a model is found, it is assumed to be bracketed
 by \t{start\_string} and \t{end\_string}. SAT solvers 
-(like {\tt satz}\footnote{\tt http://www.laria.u-picardie.fr/\mbox{\small$\sim$}cli/EnglishPage.html})
+(like {\tt satz}\footnote{\url{http://www.laria.u-picardie.fr/~cli/EnglishPage.html}})
 for which models are not bracketed by a fixed pair of strings cannot currently
 be specified for use with {\tt HolSatLib}. If access to such solvers is needed, then
 it will be necessary to extend the datatype \t{sat\_solver} to contain
