@@ -2533,6 +2533,12 @@ val MIN_MAX_LT = store_thm(
   SIMP_TAC bool_ss [MAX, MIN] THEN
   PROVE_TAC [LESS_REFL, NOT_LESS, LESS_OR_EQ]);
 
+val MIN_MAX_LE = store_thm(
+  "MIN_MAX_LE",
+  ``!m n. MIN m n <= MAX m n``,
+  SIMP_TAC bool_ss [MAX, MIN] THEN
+  PROVE_TAC [LESS_OR_EQ, NOT_LESS]);
+
 val MIN_MAX_PRED = store_thm(
   "MIN_MAX_PRED",
   ``!P m n. P m /\ P n ==> P (MIN m n) /\ P (MAX m n)``,
@@ -2540,31 +2546,31 @@ val MIN_MAX_PRED = store_thm(
 
 val MIN_LT = store_thm(
   "MIN_LT",
-  ``!n m. (MIN m n < m = ~(m = n) /\ (MIN m n = n)) /\
-          (MIN m n < n = ~(m = n) /\ (MIN m n = m)) /\
-          (m < MIN m n = F) /\ (n < MIN m n = F)``,
+  ``!n m p. (MIN m n < p = m < p \/ n < p) /\
+            (p < MIN m n = p < m /\ p < n)``,
   SIMP_TAC bool_ss [MIN] THEN
-  PROVE_TAC [LESS_REFL, NOT_LESS, LESS_OR_EQ, LESS_ANTISYM]);
+  PROVE_TAC [NOT_LESS, LESS_OR_EQ, LESS_ANTISYM, LESS_TRANS]);
 
 val MAX_LT = store_thm(
   "MAX_LT",
-  ``!n m. (m < MAX m n = ~(m = n) /\ (MAX m n = n)) /\
-          (n < MAX m n = ~(m = n) /\ (MAX m n = m)) /\
-          (MAX m n < m = F) /\ (MAX m n < n = F)``,
+  ``!n m p. (p < MAX m n = p < m \/ p < n) /\
+            (MAX m n < p = m < p /\ n < p)``,
   SIMP_TAC bool_ss [MAX] THEN
-  PROVE_TAC [LESS_REFL, NOT_LESS, LESS_OR_EQ, LESS_ANTISYM]);
+  PROVE_TAC [NOT_LESS, LESS_OR_EQ, LESS_ANTISYM, LESS_TRANS]);
 
 val MIN_LE = store_thm(
   "MIN_LE",
-  ``!n m. MIN m n <= m /\ MIN m n <= n``,
+  ``!n m p. (MIN m n <= p = m <= p \/ n <= p) /\
+            (p <= MIN m n = p <= m /\ p <= n)``,
   SIMP_TAC bool_ss [MIN] THEN
-  PROVE_TAC [LESS_OR_EQ, NOT_LESS]);
+  PROVE_TAC [LESS_OR_EQ, NOT_LESS, LESS_TRANS]);
 
 val MAX_LE = store_thm(
   "MAX_LE",
-  ``!n m. m <= MAX m n /\ n <= MAX m n``,
+  ``!n m p. (p <= MAX m n = p <= m \/ p <= n) /\
+            (MAX m n <= p = m <= p /\ n <= p)``,
   SIMP_TAC bool_ss [MAX] THEN
-  PROVE_TAC [LESS_OR_EQ, NOT_LESS]);
+  PROVE_TAC [LESS_OR_EQ, NOT_LESS, LESS_TRANS]);
 
 val MIN_0 = store_thm(
   "MIN_0",
@@ -2837,6 +2843,8 @@ val cond_lemma = prove(
   Q.ASM_CASES_TAC `p` THEN ASM_REWRITE_TAC []);
 
 val o_THM = combinTheory.o_THM
+
+(* WHILE = |- !P g x. WHILE P g x = if P x then WHILE P g (g x) else x *)
 
 val WHILE = new_specification (
   "WHILE", ["WHILE"],
