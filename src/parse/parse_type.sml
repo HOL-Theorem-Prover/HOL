@@ -8,12 +8,19 @@ infix >- ++ >> >->
 fun parse_type tyfns allow_unknown_suffixes G = let
   val G = rules G and abbrevs = abbreviations G
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop} = tyfns
-  fun structure_to_value args st =
+  fun structure_to_value s args st =
       case st of
         TYOP {Args, Thy, Tyop} =>
-        qtyop {Args = map (structure_to_value args) Args,
+        qtyop {Args = map (structure_to_value s args) Args,
                Thy = Thy, Tyop = Tyop}
       | PARAM n => List.nth(args, n)
+        handle Subscript =>
+               Feedback.Raise
+                 (Feedback.mk_HOL_ERR
+                    "Parse" "parse_type"
+                    ("Insufficient arguments to abbreviated operator " ^
+                     Lib.quote s))
+
   val lex = type_tokens.lex
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)
@@ -31,7 +38,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
       in
         case Binarymap.peek(abbrevs, s) of
           NONE => pType(s,args)
-        | SOME st => structure_to_value args st
+        | SOME st => structure_to_value s args st
       end
     | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Args=args}
     | _ => raise Fail "parse_type.apply_tyop: can't happen"
