@@ -522,11 +522,12 @@ end;
         labelled n-ary trees (built from constructor "Node").
  ---------------------------------------------------------------------------*)
  
+app load ["ltreeTheory", "numLib"]; open numLib listTheory;
+
 val ltree_map_def =
   Defn.Hol_defn "ltree_map"
     `ltree_map f (Node v tl) = Node (f v) (MAP (ltree_map f) tl)`;
 
-load "numLib"; open numLib listTheory;
 
 val (ltree_map_eqn, ltree_map_ind) =
  Defn.tprove

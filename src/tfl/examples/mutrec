@@ -1,0 +1,205 @@
+(*---------------------------------------------------------------------------*
+ *                                                                           *
+ *            Mutual recursion                                               *
+ *                                                                           *
+ *---------------------------------------------------------------------------*)
+
+app load ["bossLib", "ltreeTheory"]; open bossLib; 
+
+
+(*---------------------------------------------------------------------------
+     Start with something simple: even and odd
+ ---------------------------------------------------------------------------*)
+
+val eo_def = 
+ xDefine "eo"  `(even 0 = T) /\
+                (odd  0 = F) /\ 
+                (even (SUC x) = odd x) /\
+                (odd  (SUC x) = even x)`;
+
+
+val APART = prove(Term `!n. even n = ~odd n`,
+  Induct 
+    THEN RW_TAC std_ss [eo_def]);
+
+
+(*---------------------------------------------------------------------------
+    Taking an implication out of the equality makes the proof
+    harder, since the inductive hypothesis is not in shape to be used. 
+    Fortunately, some propositional reasoning puts things right.
+ ---------------------------------------------------------------------------*)
+
+val APART_IMP = prove(Term `!n. even n ==> ~odd n`,
+  Induct 
+    THEN RW_TAC std_ss [eo_def]
+    THEN PROVE_TAC[]);
+
+
+(*---------------------------------------------------------------------------
+      Something a little more complex: dealing with nested
+      datatypes. 
+ ---------------------------------------------------------------------------*)
+
+val fringe_fns_def = 
+ xDefine "fringe_fns"
+    `(fringe (Node v []) = [v])
+ /\  (fringe (Node v l)  = fringes l)
+
+ /\  (fringes []     = [])
+ /\  (fringes (h::t) = APPEND (fringe h) (fringes t))`;
+
+
+(*---------------------------------------------------------------------------
+      This can also be handled with higher-order recursion, but some
+      extra mucking around is needed to prove termination. Can 
+      this be automated?
+ ---------------------------------------------------------------------------*)
+
+val Fringe_def = 
+ Defn.Hol_defn "Fringe"
+    `(Fringe (Node v []) = [v]) /\
+     (Fringe (Node v l)  = FLAT (MAP (\lt. Fringe lt) l))`;
+
+
+(*---------------------------------------------------------------------------
+      Required lemma in termination proof
+ ---------------------------------------------------------------------------*)
+
+val list_contains_ltree_lem = Q.prove
+(`!ltr l f. MEM ltr l ==> ltree_size f ltr <= list_size (ltree_size f) l`,
+ Induct_on `l` 
+   THEN RW_TAC list_ss [listTheory.MEM,listTheory.list_size_def]
+   THENL [DECIDE_TAC, PROVE_TAC [DECIDE `x <= y ==> x <= y+z`]]);
+
+(*---------------------------------------------------------------------------
+      Termination proof for Fringe
+ ---------------------------------------------------------------------------*)
+
+local val [_,guess] = TotalDefn.guessR Fringe_def
+      open listTheory ltreeTheory
+in
+val (Fringe_eqns,Fringe_ind) =
+ Defn.tprove(Fringe_def,
+   WF_REL_TAC Fringe_def `^guess`
+     THEN RW_TAC list_ss [MEM,ltree_size_def,list_size_def]
+     THENL [numLib.ARITH_TAC,
+            PROVE_TAC [list_contains_ltree_lem, 
+                       DECIDE`x<=y ==> x < y + (w+2)`]])
+end;
+
+
+(*---------------------------------------------------------------------------
+    So far, only the domain of the mutual function has had 
+    to be a sum. Here's a situation where the range is also a sum.
+    The example is an evaluation function for a simple first order
+    mutually recursive type of expressions.
+
+    In ML:
+
+       datatype 
+         ('a,'b)exp = VAR of 'a
+                    | IF  of ('a,'b)bexp * ('a,'b)exp * ('a,'b)exp
+                    | APP of 'b * ('a,'b)exp list
+       and 
+        ('a,'b)bexp = EQ   of ('a,'b)exp  * ('a,'b)exp
+                    | LEQ  of ('a,'b)exp  * ('a,'b)exp
+                    | AND  of ('a,'b)bexp * ('a,'b)bexp
+                    | OR   of ('a,'b)bexp * ('a,'b)bexp
+                    | NOT  of ('a,'b)bexp;
+
+
+       fun E env (VAR x)        = fst env x
+         | E env (IF (b,e1,e2)) = if EB env b then E env e1 else E env e2
+         | E env (APP (f,l))    = (snd env f) (EL env l)
+       and
+           EL env []     = []
+         | EL env (a::t) = E env a :: EL env t
+       and
+           EB env (EQ (e1,e2))  = (E env e1 = E env e2)
+         | EB env (LEQ (e1,e2)) = E env e1 <= E env e2
+         | EB env (AND (b1,b2)) = EB env b1 andalso EB env b2
+         | EB env (OR (b1,b2))  = EB env b1 orelse EB env b2
+         | EB env (NOT b)       = not(EB env b);
+
+ ---------------------------------------------------------------------------*)
+
+val _ = Hol_datatype
+           `exp = VAR of 'a
+                | IF  of bexp => exp => exp
+                | APP of 'b => exp list
+             ;
+           bexp = EQ  of exp => exp
+                | LEQ of exp => exp
+                | AND of bexp => bexp
+                | OR  of bexp => bexp
+                | NOT of bexp`;
+
+
+val expty  = Type`:('a,'b)exp`;
+val bexpty = Type`:('a,'b)bexp`;
+val exp  = ty_antiq expty;
+val bexp = ty_antiq bexpty;
+
+
+(*---------------------------------------------------------------------------
+     The following is a bit slow to be processed. The argument "env"
+     comprises two maps: one for variables, and one for functions.
+     Termination should be proved automatically, but it's not (currently),
+     so we have to do a manual proof.
+ ---------------------------------------------------------------------------*)
+
+val ELBdefn = 
+ Count.apply (Hol_defn "ELB")
+    `(E (env, VAR x:^exp)   = FST env x)
+ /\  (E (env, IF b e1 e2)   = if EB (env,b) then E (env,e1) else E (env,e2))
+ /\  (E (env, APP f l)      = (SND env f) (ELL (env, l)))
+ /\  (ELL (env, [])         = [])
+ /\  (ELL (env, a::t)       = E (env, a) :: ELL (env, t))
+ /\  (EB (env, EQ e1 e2)    = (E (env, e1) = E (env, e2)))
+ /\  (EB (env, LEQ e1 e2)   = E (env, e1) <= E (env, e2))
+ /\  (EB (env, NOT b:^bexp) = ~EB (env, b))
+ /\  (EB (env, OR b1 b2)    = EB (env, b1) \/ EB (env, b2))
+ /\  (EB (env, AND b1 b2)   = EB (env, b1) /\ EB (env, b2))`;
+
+
+Defn.eqns_of ELBdefn;
+Defn.ind_of ELBdefn;
+
+val SOME(_,size_def) = TypeBase.size_of(valOf(TypeBase.read "exp"));
+
+val [_,guess] = TotalDefn.guessR ELBdefn;
+Defn.tgoal ELBdefn;
+e (WF_REL_TAC ELBdefn `^guess` THEN RW_TAC arith_ss [size_def]);
+e (Induct_on `l` THEN RW_TAC list_ss [size_def,listTheory.list_size_def]);
+
+
+(*---------------------------------------------------------------------------
+    A version of the same functions, featuring higher-order 
+    recursion and schema variables. The definition process 
+    actually helps write the function, by threading the environment 
+    through all the calls.  Currently fails on re-definition attempt.
+ ---------------------------------------------------------------------------*)
+
+val Evals_defn =
+ Count.apply 
+   (Defn.Hol_defn "Evals")
+     `(Eval (VAR x)      = vEnv x)
+ /\   (Eval (IF b e1 e2) = if Bval b then Eval e1 else Eval e2)
+ /\   (Eval (APP f l)    = fEnv (MAP (\v. Eval v) l))
+ /\   (Bval (EQ e1 e2)   = (Eval e1 = Eval e2))
+ /\   (Bval (LEQ e1 e2)  = Eval e1 <= Eval e2)
+ /\   (Bval (NOT b)      = ~Bval (b:^bexp))
+ /\   (Bval (OR b1 b2)   = Bval b1 \/ Bval b2)
+ /\   (Bval (AND b1 b2)  = Bval b1 /\ Bval b2)`;
+
+
+val (Evals_def,Evals_ind) = 
+ let val [_,guess] = TotalDefn.guessR Evals_defn
+ in Defn.tprove(Evals_defn,
+     WF_REL_TAC Evals_defn `^guess` 
+        THEN RW_TAC arith_ss [size_def]
+        THEN Induct_on `l` 
+        THEN RW_TAC list_ss [size_def,listTheory.MEM]
+        THENL [PROVE_TAC [DECIDE `x < y+(x+2)`],
+               PROVE_TAC [DECIDE `x < y+1 ==> x < y+(z+2)`]])
+ end;
