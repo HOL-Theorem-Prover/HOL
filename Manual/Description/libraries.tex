@@ -199,6 +199,171 @@ the database.
 \item definition of the `size' of the type
 \end{itemize}
 
+
+\subsubsection{Record types}
+
+Record types are convenient ways of bundling together a number of
+component types, and giving those components names so as to facilitate
+access to them.  Record types are semantically equivalent to big pair
+(cross-product) types, but the ability to label the fields with names
+of one's own choosing is a great convenience.  Record types as
+implemented in \holn{} are similar to C's {\tt struct} types and to
+Pascal's records.
+
+Done correctly, record types provide useful maintainability features.
+If one can always access the {\tt fieldn} field of a record type by
+simply writing {\tt record.fieldn}, then changes to the type that
+result in the addition or deletion of other fields will not invalidate
+this reference.  One failing in SML's record types is that they do not
+allow the same maintainability as far as (functional) updates of
+records are concerned.  The HOL implementation allows one to write
+{\tt rec with fieldn := new\_value}, which replaces the old value of
+{\tt fieldn} in the record {\tt rec} with {\tt new\_value}.  This
+expression will not need to be changed if another field is added,
+modified or deleted from the record's original definition.
+
+\paragraph{Defining a record type}
+Record types are defined with the function \texttt{Hol\_datatype}, as
+previously discussed.  For example, to create a record type called
+{\tt person} with boolean, string and number fields called {\tt
+  employed}, {\tt name} and {\tt age}, one would enter:
+\begin{verbatim}
+val _ = Hol_datatype `person = <| employed : bool ; age : num ;
+                                  name : string
+                               |>`;
+\end{verbatim}
+The order in which the fields are entered is not significant. As well
+as defining the type (called {\tt person}), the datatype definition
+function also defines three other sets of constants.  These are the
+field access functions, update functions, and functional update
+functions.  The field access functions have names of the form
+``$\langle$\textsl{record-type\/}$\rangle$\_$\langle$\textsl{field\/}$\rangle$''.
+These functions can be used directly, or one can use standard field
+selection notation to access the values of a record's field.  Thus,
+one would write the expression: \mbox{\tt ``bob.employed``} in order
+to return the value of {\tt bob}'s {\tt employed} field.  The
+alternative, \texttt{``person\_employed bob``}, works, but would be
+printed using the first syntax, with the full-stop.
+
+The update functions are given the names
+\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
+$\langle$\textsl{field\/}$\rangle$\_\texttt{update}''} for each
+field in the type.  They take a value of the type of the field in
+question and a record value to be modified.  They return a new record
+value that is otherwise the same as the old value but with the
+specified field having the new value.  They can be written with the
+keyword \texttt{with} and the \texttt{:=} operator:
+\begin{verbatim}
+  ``bob with employed := T``
+\end{verbatim}
+\noindent If a chain of updates is desired, then multiple updates can
+be specified inside \texttt{<|}-\texttt{|>} pairs, separated by
+semi-colons, thus:
+
+\begin{verbatim}
+  ``bob with <| age := 10; name := "Child labourer" |>``
+\end{verbatim}
+
+\noindent Finally, the second sort of update functions, the so-called
+``functional'' updates have names of the form
+\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
+$\langle$\textsl{field\/}$\rangle$\_\texttt{fupd}''}. Rather than
+specifying a new value for the record, these functions take a function
+as their first parameter, which will be an endomorphism on the field
+type, so that the resulting record is the same as the original, except
+that the specified field has had the given function applied to it to
+generate the new value for that field.  The functional update
+functions allow more concision when writing updates on a record that
+depend on the field's old value.
+
+The special syntax for writing these updates is to again use the
+\texttt{with} keyword, but to use the infix \texttt{updated\_by}
+rather than \texttt{:=}.  Thus
+\begin{alltt}
+  ``bob with employed updated_by \$~``
+\end{alltt} \noindent
+is a record value with the opposite boolean value in the
+\texttt{employed} field as held by \texttt{bob}.
+
+\paragraph{Specifying record literals}
+
+The parser accepts lists of field specifications between
+\texttt{<|}-\texttt{|>} pairs without the \texttt{with} keyword.
+These translate to sequences of updates of an arbitrary value
+(literally, the HOL value \texttt{ARB}), and are treated as literals.
+Thus,
+\begin{verbatim}
+  ``<| age := 21; employed := F; name := "Layabout" |>``
+\end{verbatim}
+
+\paragraph{Using the theorems produced by record definition}
+
+As well as defining the type and the functions described above, record
+type definition also proves a suite of useful theorems.  These are
+all are saved (using {\tt save\_thm}) in the current segment.  Some
+are also added to the \texttt{TypeBase}'s simplifications for the
+type, so they will be automatically applied when simplifying with the
+\texttt{srw\_ss()} simpset, or with the tactics \texttt{RW\_TAC} and
+\texttt{SRW\_TAC}.
+
+All of the theorems are saved under names that begin with the name of
+the type.  The list below is a sample of the theorems proved.  The
+identifying strings are suffixes appended to the name of the type in
+order to generate the final name of the theorem.
+
+\newcommand{\rewruse}{This theorem is installed in the \texttt{TypeBase}.}
+\newcommand{\field}[1]{\mbox{\it field}_{#1}}
+\newcommand{\update}{\mbox{\tt\_update}}
+
+\begin{description}
+\item[\texttt{\_accessors}] The definitions of the accessor functions.
+  \rewruse
+\item[\texttt{\_updates}] The definitions of the update functions.
+  \rewruse
+\item[\texttt{\_fn\_updates}] The definitions of the functional update
+  functions.
+\item[\texttt{\_accupds}] A theorem stating simpler forms for
+  expressions of the form $\field{i}\, (\field{j}\update\;v\; r)$.  If
+  $i = j$, then the RHS is $v$, if not, it is $(\field{i}\;r)$.
+  \rewruse
+\item[\texttt{\_updaccs}] A theorem stating that $\field{i}\update
+  \;(\field{i}\;r)\;r = r$ for all of
+  the fields defined in the type. \rewruse
+\item[\texttt{\_updupds}] A thereom stating that $\field{i}\update
+  \;v_1 \,(\field{i}\update \;v_2\;r) = \field{i}\update\;v_1\;r$.
+  \rewruse
+\item[\texttt{\_updcanon}] A theorem that states commutativity results
+  for all possible pairs of field updates.  They are constructed in
+  such a way that if used as rewrites, they will canonicalise
+  sequences of updates. Thus, for all $i < j$, \[
+  \field{j}\update\;v_1\;(\field{i}\update\;v_2\;r) =
+  \field{i}\update\;v_2\;(\field{j}\update\;v_1\;r)
+  \] is generated.
+ \rewruse
+\end{description}
+
+\paragraph{``Big'' records} The size of certain theorems proved in the
+record type package increases as the square of the number of fields in
+the record.  (In particular, the update canonicalisation and
+\texttt{acc\_upd} theorems have this property.) To avoid inefficieny
+with big records, the implementation of record types uses a more
+efficient underlying representation when the number of fields is eight
+or more.
+
+Unfortunately, this representation has the drawback that every update
+and accessor function has two forms: different terms that are printed
+the same.  One form is a simple constant, and is the form produced
+when a term is parsed.  The other is more complicated, but allows for
+the use of smaller theorems when record values are simplified.
+Therefore, it is recommended that new, user-proved theorems that
+mention big records' fields or field updates be passed through a phase
+of simplification (\texttt{SIMP\_RULE}), applying the
+\texttt{TypeBase}'s rewrites, before they are saved.
+
+The pretty-printing of big records can be controlled with the
+\texttt{pp\_bigrecs} trace-flag.
+
+
 \subsection{Support for high-level proof steps}
 
 The following functions use information in the database to ease the
@@ -598,150 +763,6 @@ build and apply a tactic.
 \noindent{\bf Note.} When the library \verb+bossLib+ is loaded, the
 infix parsing status of \verb+&&+ and ``{\tt by}'' must be re-asserted
 by the user.
-\section{Record types}
-
-Record types are convenient ways of bundling together a number of
-component types, and giving those components names so as to facilitate
-access to them.  Record types are semantically equivalent to big pair
-(cross-product) types, but the ability to label the fields with names
-of one's own choosing is a great convenience.  Record types as
-implemented in \holn{} are similar to C's {\tt struct} types and to
-Pascal's records.
-
-Done correctly, record types provide useful maintainability features.
-If one can always access the {\tt fieldn} field of a record type by
-simply writing {\tt record.fieldn}, then changes to the type that
-result in the addition or deletion of other fields will not invalidate
-this reference.  One failing in SML's record types is that they do not
-allow the same maintainability as far as (functional) updates of
-records are concerned.  The HOL implementation allows one to write
-{\tt rec with fieldn := new\_value}, which replaces the old value of
-{\tt fieldn} in the record {\tt rec} with {\tt new\_value}.  This
-expression will not need to be changed if another field is added,
-modified or deleted from the record's original definition.
-
-\subsection{Defining a record type}
-
-Defining a record type is achieved with the function
-\texttt{Hol\_datatype}, as previously discussed.  For example, to
-create a record type called {\tt person} with boolean, string and
-number fields called {\tt employed}, {\tt name} and {\tt age}, one
-would enter:
-\begin{verbatim}
-val _ = Hol_datatype `person = <| employed : bool ; age : num ;
-                                  name : string
-                               |>`;
-\end{verbatim}
-The order in which the fields are entered is not significant. As well
-as defining the type (called {\tt person}), the datatype definition
-function also defines three other sets of constants.  These are the
-field access functions, update functions, and functional update
-functions.  The field access functions have names of the form
-``$\langle$\textsl{record-type\/}$\rangle$\_$\langle$\textsl{field\/}$\rangle$''.
-These functions can be used directly, or one can use standard field
-selection notation to access the values of a record's field.  Thus,
-one would write the expression: \mbox{\tt ``bob.employed``} in order
-to return the value of {\tt bob}'s {\tt employed} field.  The
-alternative, \texttt{``person\_employed bob``}, works, but would be
-printed using the first syntax, with the full-stop.
-
-The update functions are given the names
-\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
-$\langle$\textsl{field\/}$\rangle$\_\texttt{update}''} for each
-field in the type.  They take a value of the type of the field in
-question and a record value to be modified.  They return a new record
-value that is otherwise the same as the old value but with the
-specified field having the new value.  They can be written with the
-keyword \texttt{with} and the \texttt{:=} operator:
-\begin{verbatim}
-  ``bob with employed := T``
-\end{verbatim}
-\noindent If a chain of updates is desired, then multiple updates can
-be specified inside \texttt{<|}-\texttt{|>} pairs, separated by
-semi-colons, thus:
-
-\begin{verbatim}
-  ``bob with <| age := 10; name := "Child labourer" |>``
-\end{verbatim}
-
-\noindent Finally, the second sort of update functions, the so-called
-``functional'' updates have names of the form
-\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
-$\langle$\textsl{field\/}$\rangle$\_\texttt{fupd}''}. Rather than
-specifying a new value for the record, these functions take a function
-as their first parameter, which will be an endomorphism on the field
-type, so that the resulting record is the same as the original, except
-that the specified field has had the given function applied to it to
-generate the new value for that field.  The functional update
-functions allow more concision when writing updates on a record that
-depend on the field's old value.
-
-The special syntax for writing these updates is to again use the
-\texttt{with} keyword, but to use the infix \texttt{updated\_by}
-rather than \texttt{:=}.  Thus
-\begin{alltt}
-  ``bob with employed updated_by \$~``
-\end{alltt} \noindent
-is a record value with the opposite boolean value in the
-\texttt{employed} field as held by \texttt{bob}.
-
-\subsection{Specifying record literals}
-
-The parser accepts lists of field specifications between
-\texttt{<|}-\texttt{|>} pairs without the \texttt{with} keyword.
-These translate to sequences of updates of an arbitrary value
-(literally, the HOL value \texttt{ARB}), and are treated as literals.
-Thus,
-\begin{verbatim}
-  ``<| age := 21; employed := F; name := "Layabout" |>``
-\end{verbatim}
-
-\subsection{Using the theorems produced by record definition}
-
-As well as defining the type and the functions described above, record
-type definition also proves a suite of useful theorems.  Most of these
-are returned in a big record; all are stored using {\tt save\_thm} so
-that they can be recovered.
-
-The record returned has the following fields:
-\newcommand{\rewruse}{This theorem should be included in rewrites used
-  for this type.}
-\newcommand{\field}[1]{\mbox{\it field}_{#1}}
-\newcommand{\update}{\mbox{\tt\_update}}
-\begin{description}
-\item[{\tt type\_axiom}] The type axiom for the record type, as
-  returned by the standard datatype definition package.
-\item[{\tt accessor\_fns}] The definitions of the accessor functions.
-  \rewruse
-\item[{\tt update\_fns}] The definitions of the update functions.
-  \rewruse
-\item[{\tt cases\_thm}] The usual cases theorem for a type, stating
-  that for all record values, there exist component values making it
-  up.
-\item[{\tt fn\_upd\_thm}] The definitions of the functional update
-  functions.  \rewruse
-\item[{\tt acc\_upd\_thm}] A theorem stating simpler forms for
-  expressions of the form $\field{i}\, (\field{j}\update\;v\; r)$.  If
-  $i = j$, then the RHS is $v$, if not, it is $(\field{i}\;r)$.
-  \rewruse
-\item[{\tt upd\_acc\_thm}] A theorem stating that $\field{i}\update
-  \;(\field{i}\;r)\;r = r$ for all of
-  the fields defined in the type. \rewruse
-\item[{\tt upd\_upd\_thm}] A thereom stating that $\field{i}\update
-  \;v_1 \,(\field{i}\update \;v_2\;r) = \field{i}\update\;v_1\;r$.
-  \rewruse
-\item[{\tt upd\_canon\_thm}] A theorem that states commutativity results
-  for all possible pairs of field updates.  They are constructed in
-  such a way that if used as rewrites, they will canonicalise
-  sequences of updates. \rewruse
-\item[{\tt cons\_11\_thm}] The standard result stating the type
-  constructor is injective.  \rewruse
-\item[{\tt create\_term}] This last component of the record returned
-  is not a theorem, but rather an ML function.  It is identical to the
-  {\tt create\_term\_fn} already defined in {\tt RecordType}, but is
-  pre-applied to the relevant arguments, so that it is of the type
-  string-value list to term.
-\end{description}
 
 
 \section{The {\tt meson} library}
