@@ -299,7 +299,7 @@ val rcc_beta_matched = prove(
                                                     lrcc_beta_lam])) THEN
       Q.EXISTS_TAC `LAMi n v N0 u` THEN
       SRW_TAC [][strip_label_thm, lrcc_rules]
-    ],
+    ] THEN METIS_TAC [],
     POP_ASSUM (MP_TAC o SYM) THEN SRW_TAC [][strip_label_eq] THEN
     PROVE_TAC [strip_label_thm, lrcc_rules],
     POP_ASSUM (MP_TAC o SYM) THEN SRW_TAC [][strip_label_eq] THEN

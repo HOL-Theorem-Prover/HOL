@@ -5,9 +5,6 @@
 
 open HolKernel boolLib integerTheory
 
-infix THEN THENL THENC THEN1 |-> ++
-infix 8 by
-
 local open listTheory in end;
 
 val _ = new_theory "Omega";
@@ -105,7 +102,8 @@ val equality_removal0 = prove(
   ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
   SIMP_TAC (srw_ss()) [GSYM int_sub, INT_EQ_SUB_LADD, GSYM INT_NEG_LMUL] THEN
   CONV_TAC (BINDER_CONV (LHS_CONV (REWR_CONV INT_ADD_COMM))) THEN
-  SIMP_TAC (srw_ss()) [GSYM INT_EQ_SUB_LADD, int_sub] THEN
+  SIMP_TAC (srw_ss()) [GSYM INT_EQ_SUB_LADD] THEN
+  SIMP_TAC (srw_ss()) [int_sub] THEN
   Q_TAC SUFF_TAC
      `(c + 1) int_divides sumc (MAP (\x. modhat x (c + 1)) cs) vs + ~x` THEN1
      PROVE_TAC [INT_DIVIDES, INT_MUL_COMM] THEN

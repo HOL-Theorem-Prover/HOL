@@ -205,10 +205,17 @@ fun IMP_EQ_CANON thm =
         if (is_eq conc)
         then if (loops undisch_thm)
              then (trace(1,IGNORE("looping rewrite",thm)); [])
-             else if null (subtract (free_vars (rhs conc))
-			   (free_varsl (hyp thm)@free_vars(lhs conc)))
-		      then [undisch_thm]
-		  else [EQT_INTRO undisch_thm]
+             else let
+                 val base = if null (subtract (free_vars (rhs conc))
+			                      (free_varsl (hyp thm)@
+                                               free_vars(lhs conc)))
+		            then undisch_thm
+		            else EQT_INTRO undisch_thm
+               in
+                 if is_eq (lhs (concl base)) then
+                   [base, CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ)) base]
+                 else [base]
+               end
         else if (is_conj conc)
         then (op @ o (IMP_EQ_CANON##IMP_EQ_CANON) o CONJ_PAIR) undisch_thm
         else if (is_forall conc)

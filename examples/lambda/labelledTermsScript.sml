@@ -1469,7 +1469,7 @@ val cc_beta_matched = store_thm(
     MAP_EVERY Q.X_GEN_TAC [`x`, `y`, `f`] THEN STRIP_TAC THEN
     Q.X_GEN_TAC `fx'` THEN STRIP_TAC THEN
     POP_ASSUM (MP_TAC o SYM) THEN
-    SIMP_TAC (srw_ss()) [strip_label_eq] THEN
+    CONV_TAC (LAND_CONV (SIMP_CONV (srw_ss()) [strip_label_eq])) THEN
     STRIP_TAC THENL [
       `?N0. lcompat_closure (beta0 RUNION beta1) y' N0 /\
             (y = strip_label N0)` by PROVE_TAC [] THEN
@@ -1484,7 +1484,7 @@ val cc_beta_matched = store_thm(
 
     MAP_EVERY Q.X_GEN_TAC [`f`, `g`, `x`] THEN STRIP_TAC THEN
     Q.X_GEN_TAC `fx'` THEN DISCH_THEN (MP_TAC o SYM) THEN
-    SIMP_TAC (srw_ss()) [strip_label_eq] THEN
+    CONV_TAC (LAND_CONV (SIMP_CONV (srw_ss()) [strip_label_eq])) THEN
     STRIP_TAC THENL [
       `?N0. lcompat_closure (beta0 RUNION beta1) x' N0 /\
             (g = strip_label N0)` by PROVE_TAC [] THEN

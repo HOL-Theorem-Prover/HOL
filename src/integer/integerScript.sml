@@ -19,7 +19,6 @@ struct
 
 
 open HolKernel Parse boolLib
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
 val _ = new_theory "integer";
 
@@ -31,8 +30,6 @@ val _ = new_theory "integer";
 open jrhUtils EquivType liteLib
      arithmeticTheory prim_recTheory numTheory
      simpLib numLib boolTheory liteLib metisLib;
-
-infix ++;
 
 
 val int_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss ++ pairSimps.PAIR_ss;
@@ -1497,7 +1494,8 @@ val int_eq_calculate = prove(
     SIMP_TAC int_ss [INT] THEN GEN_TAC THEN CONJ_TAC THENL [
       SIMP_TAC int_ss [GSYM INT_EQ_SUB_LADD, int_sub, GSYM INT_NEG_ADD] THEN
       ASM_SIMP_TAC int_ss [INT_ADD],
-      SIMP_TAC int_ss [INT_NEG_ADD, GSYM INT_EQ_SUB_LADD, int_sub] THEN
+      SIMP_TAC int_ss [INT_NEG_ADD, GSYM INT_EQ_SUB_LADD] THEN
+      SIMP_TAC int_ss [int_sub] THEN
       ASM_SIMP_TAC int_ss [INT_NEGNEG, INT_ADD]
     ]
   ]);
@@ -1733,7 +1731,7 @@ val INT_DIV_NEG = store_thm(
                        INT_NEG_GT0, INT_LT, INT_NEG_GE0, INT_NEGNEG,
                        NUM_OF_INT] THEN
   STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
-  FULL_SIMP_TAC int_ss [int_div, INT_INJ, INT_NEG_EQ, INT_NEG_0,
+  FULL_SIMP_TAC int_ss [int_div, INT_NEG_EQ0, INT_INJ, INT_NEG_EQ, INT_NEG_0,
                         INT_NEG_GT0, INT_LT, INT_NEG_GE0, INT_NEGNEG,
                         NUM_OF_INT, INT_LE, INT_NEG_LE0, ZERO_DIV,
                         ZERO_MOD, INT_ADD_RID]);
@@ -1881,7 +1879,7 @@ val INT_MOD_NEG = store_thm(
   FULL_SIMP_TAC int_ss [INT_INJ, INT_NEGNEG, int_mod, INT_NEG_EQ,
                         INT_NEG_0, INT_DIV_NEG, INT_NEG_SUB,
                         GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL,
-                        INT_SUB_NEG2, INT_SUB_RNEG] THEN
+                        INT_SUB_NEG2, INT_SUB_RNEG, INT_NEG_EQ0] THEN
   MATCH_ACCEPT_TAC INT_ADD_COMM);
 
 val INT_MOD0 = store_thm(
@@ -1906,7 +1904,6 @@ val INT_DIV_MUL_ID = store_thm(
   `p = p / q * q` by PROVE_TAC [INT_ADD_RID] THEN
   PROVE_TAC []);
 
-infix THEN1
 open dividesTheory
 val lessmult_lemma = prove(
   ``!x y:num. x * y < y ==> (x = 0)``,
@@ -2235,7 +2232,7 @@ val INT_ABS_EQ = store_thm(
     Define integer rem(ainder) and quot(ient) functions.
       These two are analogous to int_mod and int_div respectively, but
       int_quot rounds towards zero, while int_div rounds towards negative
-      infinity.  One int_quot is fixed, the behaviour of int_rem is
+      infinity.  Once int_quot is fixed, the behaviour of int_rem is
       fixed.  The choice of names follows the example of the SML Basis
       Library.
    ---------------------------------------------------------------------- *)
@@ -2473,8 +2470,8 @@ val INT_REM_NEG = store_thm(
                        GSYM INT_NEG_RMUL, INT_ADD_LID, INT_ADD_RID,
                        INT_NEG_0, INT_NEG_ADD, INT_QUOT_0, INT_QUOT_NEG,
                        INT_MUL_LZERO] THEN
-  SIMP_TAC int_ss [GSYM INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_RID] THEN
-  SIMP_TAC int_ss [INT_ADD_ASSOC, INT_ADD_RINV, INT_ADD_LID]);
+  METIS_TAC [INT_ADD_ASSOC, INT_ADD_COMM, INT_ADD_LINV, INT_ADD_RID,
+             INT_ADD_LID, INT_ADD_RINV]);
 
 val INT_REM_ID = store_thm(
   "INT_REM_ID",
