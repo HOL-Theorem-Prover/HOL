@@ -72,10 +72,13 @@ New features:
       $(OBJS)
     Holmake also provides some functions like those in GNU make for
     manipulating text (performing pattern-based substitutions, for
-    example).
+    example).  See the DESCRIPTION for more details.
 
   * Performance when defining large record types (where the number of
-    fields is greater than 10), is now much improved.
+    fields is greater than 10), is now much improved.  Part of this
+    change was to remove update functions as separate constants (they
+    are now encoded using functional update functions), though the
+    concrete syntax remains.  See the DESCRIPTION for more details.
 
   * In addition to the traditional $-prefix for making identifiers
     ignore their status as special forms in the grammar, HOL now
@@ -94,6 +97,11 @@ New features:
 
        mosml < tools/smart-configure.sml
 
+  * Pretty-printing of "list forms" (e.g., lists, sets and bags) is
+    now under more user-control.  See the REFERENCE for add_listform,
+    whose type has changed, for more detail on this.  (Thanks to
+    Lockwood Morris for this feature suggestion.)
+
 New theories:
 -------------
 
@@ -111,6 +119,14 @@ New tools:
   * A 'boolification' tool that automatically defines functions that map
     datatypes to boolean vectors. These kind of functions are needed
     for sending HOL subgoals to a model-checker or SAT solver.
+
+New examples:
+-------------
+
+  * An extension of the existing lambda calculus example
+    (examples/lambda) to include mechanisations of chapters 2 & 3 of
+    Hankin's lambda calculus text, and the standardisation theorem
+    from Barendregt's chapter 11.
 
 Incompatibilities:
 ------------------
