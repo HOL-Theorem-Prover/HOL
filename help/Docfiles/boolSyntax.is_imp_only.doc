@@ -14,5 +14,4 @@ Never fails.
 
 \SEEALSO
 boolSyntax.is_imp, boolSyntax.mk_imp, boolSyntax.dest_imp, boolSyntax.dest_imp_only, boolSyntax.list_mk_imp, boolSyntax.strip_imp.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, epsilon.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Eliminates a paired epsilon term, using deduction from a particular instance.
@@ -19,11 +20,11 @@ which asserts that the epsilon term {$@ P} denotes some value at which
 that of {th2}, and the hypotheses include the union of all hypotheses
 of the premises excepting {P p}.
 {
-    A1 |- P($@ P)     A2 u {{P p}} |- t
+    A1 |- P($@ P)     A2 u {P p} |- t
    -------------------------------------  PSELECT_ELIM th1 (p ,th2)
               A1 u A2 |- t
 }
-\noindent where {p} is not free in {A2}. If {p} appears in the conclusion of
+where {p} is not free in {A2}. If {p} appears in the conclusion of
 {th2}, the epsilon term will NOT be eliminated, and the conclusion will be
 {t[$@ P/p]}.
 
@@ -33,7 +34,5 @@ any of the variables from the variable structure {p} occur free in any
 other assumption of {th2}.
 
 \SEEALSO
-Drule.SELECT_ELIM, PairRules.PCHOOSE, SELECT_AX, 
-PairRules.PSELECT_CONV, PairRules.PSELECT_INTRO, PairRules.PSELECT_RULE.
-
+Drule.SELECT_ELIM, PairRules.PCHOOSE, SELECT_AX, PairRules.PSELECT_CONV, PairRules.PSELECT_INTRO, PairRules.PSELECT_RULE.
 \ENDDOC

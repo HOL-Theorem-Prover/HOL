@@ -1,4 +1,4 @@
-\DOC eta_conv 
+\DOC eta_conv
 
 \TYPE {eta_conv : term -> term}
 
@@ -26,11 +26,11 @@ If {M} is not of the specified form, or if {v} occurs free in {N}.
 > val it = `PRE` : term
 }
 
+
 \COMMENTS
 Eta-reduction embodies the principle of extensionality, which is 
 basic to the HOL logic.
 
 \SEEALSO
 Thm.ETA_CONV.
-
 \ENDDOC

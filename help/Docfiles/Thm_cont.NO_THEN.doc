@@ -21,5 +21,4 @@ Writing compound tactics or tacticals.
 
 \SEEALSO
 Tactical.ALL_TAC, Thm_cont.ALL_THEN, Tactical.FAIL_TAC, Tactical.NO_TAC.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC show_tags 
+\DOC show_tags
 
 \TYPE {show_tags : bool ref}
 
@@ -36,10 +36,10 @@ presence or absence of a tag will be displayed.
 > val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
 }
 
+
 \COMMENTS
 The initial value of {show_tags} is {false}.
 
 \SEEALSO
 Thm.tag, Thm.mk_oracle_thm, Thm.mk_thm, Globals.show_axioms.
-
 \ENDDOC

@@ -1,18 +1,18 @@
-\DOC ind 
+\DOC ind
 
 \TYPE {ind : hol_type}
 
 \SYNOPSIS
 Basic type constant.
 
-\LIBRARY Type
+\LIBRARY
+Type
 
 \DESCRIBE
 The ML variable {Type.ind} is bound to the HOL type constant {ind}.
 The axiom {INFINITY_AX} in {boolTheory} states that {ind} represents 
-an infinite set of individuals. 
+an infinite set of individuals.
 
 \SEEALSO
 Type.bool, Type.-->.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC strip_binder 
+\DOC strip_binder
 
 \TYPE {strip_binder : (term -> term option) -> term -> term list * term}
 
@@ -6,7 +6,7 @@
 Break apart consecutive binders.
 
 \KEYWORDS
-variable, binding. 
+variable, binding.
 
 \DESCRIBE
 An application {strip_binder f M} iteratively uses {f} to break 
@@ -14,6 +14,7 @@ apart a consecutive sequence of applications of a particular
 binder. The function {f} expects a binder term as an argument. If it doesn't 
 get a binder, it returns {NONE}. Otherwise, it breaks the binder apart 
 (if necessary) in order get its lambda abstraction (N), and returns {SOME N}. 
+
 
 
 \FAILURE
@@ -29,10 +30,11 @@ Never fails.
    - strip_abs (Term `\x y z. x /\ y ==> z`);
    > val it = ([`x`, `y`, `z`], `x /\ y ==> z`) : term list * term
 }
-\noindent Defining {strip_forall} is similar.
+Defining {strip_forall} is similar.
 {
    strip_binder (fn t => if is_forall t then SOME (rand t) else NONE)
 }
+
 
 \COMMENTS
 Terms with many consecutive binders should be taken apart using 
@@ -42,6 +44,5 @@ and {strip_exists}. In the current implementation of HOL, iterating
 with many consecutive binders.
 
 \SEEALSO
-Term.list_mk_binder, Term.strip_abs, 
-boolSyntax.strip_forall, boolSyntax.strip_exists. 
+Term.list_mk_binder, Term.strip_abs, boolSyntax.strip_forall, boolSyntax.strip_exists.
 \ENDDOC

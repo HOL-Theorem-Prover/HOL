@@ -6,9 +6,11 @@
 Breaks an equality between applications into two equality goals: one 
 for the functions, and other for the arguments.
 
-\LIBRARY bool
+\LIBRARY
+bool
 
-\STRUCTURE Tactic
+\STRUCTURE
+Tactic
 
 \KEYWORDS
 tactic.
@@ -21,10 +23,11 @@ goals {A ?- f = g} and {A ?- x = y}.
    ===========================  MK_COMB_TAC
      A ?- f = g,   A ?- x = y
 }
+
+
 \FAILURE
 Fails unless the goal is equational, with both sides being applications.
 
 \SEEALSO
 Thm.MK_COMB, Thm.AP_TERM, Thm.AP_THM, Tactic.AP_THM_TAC.
-
 \ENDDOC

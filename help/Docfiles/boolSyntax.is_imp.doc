@@ -20,5 +20,4 @@ this behaviour.
 
 \SEEALSO
 boolSyntax.mk_imp, boolSyntax.dest_imp, boolSyntax.is_imp_only, boolSyntax.dest_imp_only.
-
 \ENDDOC

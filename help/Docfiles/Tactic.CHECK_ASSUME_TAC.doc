@@ -25,9 +25,9 @@ unless it is already there.
 
        A ?- t
    ==============  CHECK_ASSUME_TAC (A' |- s)   [general case]
-    A u {{s}} ?- t
+    A u {s} ?- t
 }
-\noindent Unless {A'} is a subset of {A}, the tactic will be invalid, although
+Unless {A'} is a subset of {A}, the tactic will be invalid, although
 it will not fail.
 
 \FAILURE
@@ -35,5 +35,4 @@ Never fails.
 
 \SEEALSO
 Tactic.ACCEPT_TAC, Tactic.ASSUME_TAC, Tactic.CONTR_TAC, Tactic.DISCARD_TAC, Tactic.MATCH_ACCEPT_TAC.
-
 \ENDDOC

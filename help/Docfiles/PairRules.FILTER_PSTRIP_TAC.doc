@@ -5,7 +5,8 @@
 \KEYWORDS
 tactic, selective.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Conditionally strips apart a goal by eliminating the outermost connective.
@@ -31,7 +32,7 @@ strips off the quantifier:
    ================  FILTER_PSTRIP_TAC "u"       [where p is not u]
      A ?- v[p'/p]
 }
-\noindent where {p'} is a primed variant of the pair {p} that does not contain
+where {p'} is a primed variant of the pair {p} that does not contain
 any variables that appear free in the assumptions {A}.  
 If {t} is a conjunction, no filtering is done and {FILTER_PSTRIP_TAC} simply
 splits the conjunction:
@@ -40,20 +41,20 @@ splits the conjunction:
    =================  FILTER_PSTRIP_TAC "u"
     A ?- v   A ?- w
 }
-\noindent If {t} is an implication and the antecedent does not contain
+If {t} is an implication and the antecedent does not contain
 a free instance of {u}, then {FILTER_PSTRIP_TAC u} moves the antecedent into the
 assumptions and recursively splits the antecedent according to the following
 rules (see {PSTRIP_ASSUME_TAC}):
 {
     A ?- v1 /\ ... /\ vn ==> v            A ?- v1 \/ ... \/ vn ==> v
    ============================        =================================
-       A u {{v1,...,vn}} ?- v             A u {{v1}} ?- v ... A u {{vn}} ?- v
+       A u {v1,...,vn} ?- v             A u {v1} ?- v ... A u {vn} ?- v
 
      A ?- (?p. w) ==> v
    ====================
-    A u {{w[p'/p]}} ?- v
+    A u {w[p'/p]} ?- v
 }
-\noindent where {p'} is a variant of the pair {p}.
+where {p'} is a variant of the pair {p}.
 
 \FAILURE
 {FILTER_PSTRIP_TAC u (A,t)} fails if {t} is not a universally quantified term,
@@ -68,5 +69,4 @@ until one hits the term {u} at which stripping is to stop.
 
 \SEEALSO
 PairRules.PGEN_TAC, PairRules.PSTRIP_GOAL_THEN, PairRules.FILTER_PSTRIP_THEN, PairRules.PSTRIP_TAC, Tactic.FILTER_STRIP_TAC.
-
 \ENDDOC

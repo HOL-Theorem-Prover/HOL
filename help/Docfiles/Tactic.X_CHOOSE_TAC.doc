@@ -17,8 +17,10 @@ the object {x} whose existence is asserted in the theorem.
 {
            A ?- t
    ===================  X_CHOOSE_TAC y (A1 |- ?x. w)
-    A u {{w[y/x]}} ?- t         (y not free anywhere)
+    A u {w[y/x]} ?- t         (y not free anywhere)
 }
+
+
 \FAILURE
 Fails if the theorem's conclusion is not existentially quantified, or if
 the first argument is not a variable.  Failures may arise in the
@@ -30,18 +32,19 @@ goal.
 \EXAMPLE
 Given a goal of the form
 {
-   {{n < m}} ?- ?x. m = n + (x + 1)
+   {n < m} ?- ?x. m = n + (x + 1)
 }
-\noindent the following theorem may be applied:
+the following theorem may be applied:
 {
    th = [n < m] |- ?p. m = n + p
 }
-\noindent by the tactic {(X_CHOOSE_TAC (Term`q:num`) th)} giving
+by the tactic {(X_CHOOSE_TAC (Term`q:num`) th)} giving
 the subgoal:
 {
-   {{n < m, m = n + q}} ?- ?x. m = n + (x + 1)
+   {n < m, m = n + q} ?- ?x. m = n + (x + 1)
 }
+
+
 \SEEALSO
 Thm.CHOOSE, Thm_cont.CHOOSE_THEN, Thm_cont.X_CHOOSE_THEN.
-
 \ENDDOC

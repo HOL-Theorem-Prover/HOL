@@ -1,4 +1,4 @@
-\DOC var_occurs 
+\DOC var_occurs
 
 \TYPE {var_occurs : term -> term -> bool}
 
@@ -10,7 +10,7 @@ variable, occurrence.
 
 \DESCRIBE
 An invocation {var_occurs v M} returns {true} just in case {v} occurs
-free in M. 
+free in M.
 
 \FAILURE
 If the first argument is not a variable.
@@ -24,9 +24,10 @@ If the first argument is not a variable.
 > val it = false : bool
 }
 
+
 \COMMENTS
 Identical to {free_in}, except for the requirement that the first
-argument be a variable. 
+argument be a variable.
 
 \SEEALSO
 Term.free_vars, Term.free_in.

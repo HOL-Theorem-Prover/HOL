@@ -22,7 +22,7 @@ Never fails.
 > val it = true : bool
 }
 
+
 \SEEALSO
 Thm.ALPHA, Drule.ALPHA_CONV.
-
 \ENDDOC

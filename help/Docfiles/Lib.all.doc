@@ -2,7 +2,8 @@
 
 \TYPE {all : ('a -> bool) -> 'a list -> bool}
 
-\SYNOPSIS Tests whether a predicate holds throughout a list.
+\SYNOPSIS
+Tests whether a predicate holds throughout a list.
 
 \DESCRIBE
 {all P [x1,...,xn]} equals {P x1 andalso .... andalso P xn}.
@@ -28,7 +29,7 @@ exception {e}, then {all P [x0,...,x(j-1),xj,...,xn]} raises {e}.
 ! Fail  ""
 }
 
+
 \SEEALSO
 Lib.all2, Lib.exists, Lib.first.
-
 \ENDDOC

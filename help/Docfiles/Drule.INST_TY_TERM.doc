@@ -22,5 +22,4 @@ variables in the resulting theorem, in the same way as {INST}.
 
 \SEEALSO
 Thm.INST, Thm.INST_TYPE, Drule.ISPEC, Thm.SPEC, Drule.SUBS, Thm.SUBST.
-
 \ENDDOC

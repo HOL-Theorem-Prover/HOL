@@ -1,4 +1,4 @@
-\DOC U 
+\DOC U
 
 \TYPE {U : ''a list list -> ''a list}
 
@@ -14,13 +14,14 @@ An application {U [l1, ..., ln]} is equivalent to
 occurs in one of the lists will appear in the result.
 
 \FAILURE
-Never fails. 
+Never fails.
 
 \EXAMPLE
 {
 - U [[1,2,3], [4,5,6], [1,2,5]];
 > val it = [3, 6, 4, 1, 2, 5] : int list
 }
+
 
 \COMMENTS
 The order in which the elements occur in the resulting list should
@@ -34,7 +35,5 @@ This limits its applicability to types that allow equality. For other
 types, typically abstract ones, use the `op_' variants.
 
 \SEEALSO
-Lib.op_U, Lib.union, Lib.mk_set, Lib.mem, Lib.insert, Lib.set_eq, 
-Lib.intersect, Lib.set_diff.
-
+Lib.op_U, Lib.union, Lib.mk_set, Lib.mem, Lib.insert, Lib.set_eq, Lib.intersect, Lib.set_diff.
 \ENDDOC

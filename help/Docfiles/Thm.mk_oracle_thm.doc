@@ -1,4 +1,4 @@
-\DOC mk_oracle_thm 
+\DOC mk_oracle_thm
 
 \TYPE {mk_oracle_thm : tag -> term list * term -> thm}
 
@@ -61,7 +61,7 @@ of inference.
    - (show_tags := true; th1); 
    > val it = [oracles: SimonSays] [axioms: ] [] |- F : thm
 }
-\noindent Tags accumulate in a manner similar to logical hypotheses.
+Tags accumulate in a manner similar to logical hypotheses.
 {
    - CONJ th1 th1;
    > val it = [oracles: SimonSays] [axioms: ] [] |- F /\ F : thm
@@ -73,10 +73,10 @@ of inference.
    > val it = [oracles: Serena, SimonSays] [axioms: ] [] |- F /\ T : thm
 }
 
+
 \COMMENTS
 It is impossible to detach a tag from a theorem.
 
 \SEEALSO
 Thm.mk_thm, Tag.read, Thm.tag, Theory.mk_axiom.
-
 \ENDDOC

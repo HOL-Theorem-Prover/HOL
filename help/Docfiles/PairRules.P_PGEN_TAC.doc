@@ -5,7 +5,8 @@
 \KEYWORDS
 tactic.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Specializes a goal with the given paired structure of variables.
@@ -18,6 +19,8 @@ When applied to a paired structure of variables {p'}, and a goal
    ==============  P_PGEN_TAC "p'"
     A ?- t[p'/x]
 }
+
+
 \FAILURE
 Fails unless the goal's conclusion is a paired universal quantification
 and the term a paired structure of variables of the appropriate type.
@@ -26,5 +29,4 @@ in either the assumptions or (initial) conclusion of the goal.
 
 \SEEALSO
 Tactic.X_GEN_TAC, PairRules.FILTER_PGEN_TAC, PairRules.PGEN, PairRules.PGENL, PGEN_ALL, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC.
-
 \ENDDOC

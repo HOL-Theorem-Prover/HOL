@@ -5,7 +5,8 @@
 \SYNOPSIS
 Call by value rewriting.
 
-\LIBRARY compute
+\LIBRARY
+compute
 
 \DESCRIBE
 The conversion {CBV_CONV} expects an simplification set and a
@@ -38,13 +39,13 @@ prenex universal quantifications. A typical example is {COND_CLAUSES}:
 {
   (COND T a b = a) /\ (COND F a b = b)
 }
-\noindent Using these equations is very inefficient because both {a}
+Using these equations is very inefficient because both {a}
 and {b} are evaluated, regardless of the value of the boolean
 expression. It is better to use {COND_CLAUSES} with the form above
 {
   (COND T = \a b. a) /\ (COND F = \a b. b)
 }
-\noindent The call-by-name evaluation of beta redexes avoids computing
+The call-by-name evaluation of beta redexes avoids computing
 the unused branch of the conditional.
 
 Conversely, {strictify_thm} does the reverse transformation. This is
@@ -52,7 +53,7 @@ particularly relevant for {LET_DEF}:
 {
   LET = \f x. f x   -->   LET f x = f x
 }
-\noindent This forces the evaluation of the argument before reducing the
+This forces the evaluation of the argument before reducing the
 beta-redex. Hence the usual behaviour of {LET}.
 
 It is necessary to provide rules for all the constants appearing in
@@ -74,7 +75,7 @@ needed for basic boolean and arithmetical calculations built in.
               (--`if 100 - 5 * 5 < 80  then 2 EXP 16 else 3`--);
    > val it = |- (if 100 - 5 * 5 < 80 then 2 EXP 16 else 3) = 65536 : thm
 }
-\noindent Failing to give enough rules may make {CBV_CONV} build a
+Failing to give enough rules may make {CBV_CONV} build a
 huge result, or even loop. The same may occur if the initial term to
 reduce contains free variables.
 {
@@ -89,7 +90,7 @@ reduce contains free variables.
    - CBV_CONV rws (--`exp 2 n`--);
    > val it = |- exp 2 n = (if n = 0 then 1 else 2 * exp 2 (n - 1)) : thm
 }
-\noindent The first invocation of {CBV_CONV} loops since the exponent
+The first invocation of {CBV_CONV} loops since the exponent
 never reduces to 0.  Below the first steps are computed:
 {
     exp 2 n
@@ -97,11 +98,12 @@ never reduces to 0.  Below the first steps are computed:
     if n = 0 then 1 else 2 * if (n-1) = 0 then 1 else 2 * exp 2 (n-1-1)
     ...
 }
-\noindent The call to {set_skip} means that if the constants {COND}
+The call to {set_skip} means that if the constants {COND}
 appears applied to one argument and does not create a redex (in the
 example, if the condition does not reduce to {T} or {F}), then the
 forthcoming arguments (the two branches of the conditional) are not
 reduced at all.
+
 
 
 \FAILURE
@@ -114,11 +116,10 @@ example illustrates that issue.
    - val rws = from_list [th];
    - CBV_CONV rws tm;
 }
-\noindent This fails because the 0 is replaced by {x}, making the
+This fails because the 0 is replaced by {x}, making the
 assumption {0=x}. Then, the abstraction cannot be rebuilt since {x}
 appears free in the assumptions.
 
 \SEEALSO
 REDUCE_CONV, reduce_rws, computeLib.initial_rws.
-
 \ENDDOC

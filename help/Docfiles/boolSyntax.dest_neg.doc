@@ -14,5 +14,4 @@ Fails with {dest_neg} if term is not a negation.
 
 \SEEALSO
 boolSyntax.mk_neg, boolSyntax.is_neg.
-
 \ENDDOC

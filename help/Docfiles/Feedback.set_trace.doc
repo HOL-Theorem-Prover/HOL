@@ -9,7 +9,6 @@ Set a tracing level for a registered trace.
 Tracing.
 
 \DESCRIBE
-
 Invoking {set_trace n i} sets the level of the tracing mechanism
 registered under {n} to be {i}. These settings control the verboseness
 of various tools within the system. This can be useful both when
@@ -37,7 +36,7 @@ zero, or if it is greater than the trace's specified maximum value.
    > val it = |- x /\ T /\ y = x /\ y : thm
 }
 
+
 \SEEALSO
 Feedback, Feedback.register_trace, Feedback.reset_trace, Feedback.reset_traces, Feedback.trace, Feedback.traces.
-
 \ENDDOC

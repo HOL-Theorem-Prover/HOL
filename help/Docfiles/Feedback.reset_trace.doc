@@ -20,5 +20,4 @@ variable, or if a {set} function associated with a "functional" trace
 
 \SEEALSO
 Feedback, Feedback.register_trace, Feedback.set_trace, Feedback.reset_traces, Feedback.trace, Feedback.traces.
-
 \ENDDOC

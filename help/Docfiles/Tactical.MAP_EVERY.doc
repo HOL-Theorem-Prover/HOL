@@ -17,7 +17,7 @@ The effect is:
 {
    MAP_EVERY f [x1;...;xn] = (f x1) THEN ... THEN (f xn)
 }
-\noindent If the operand list is empty, then {MAP_EVERY} has no effect.
+If the operand list is empty, then {MAP_EVERY} has no effect.
 
 \FAILURE
 The application of {MAP_EVERY} to a function and operand list fails iff
@@ -29,7 +29,8 @@ A convenient way of doing case analysis over several boolean variables is:
 {
    MAP_EVERY BOOL_CASES_TAC ["var1:bool";...;"varn:bool"]
 }
+
+
 \SEEALSO
 Tactical.EVERY, Tactical.FIRST, Tactical.MAP_FIRST, Tactical.THEN.
-
 \ENDDOC

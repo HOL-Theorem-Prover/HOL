@@ -1,4 +1,4 @@
-\DOC list_mk_binder 
+\DOC list_mk_binder
 
 \TYPE {list_mk_binder : (term -> term) -> term list * term -> term}
 
@@ -35,7 +35,7 @@ abstraction and makes a suitably instantiated existential term.
       in mk_comb (exists_tm', abs)
       end;
 }
-\noindent For testing, we make a list of boolean variables.
+For testing, we make a list of boolean variables.
 {
    - fun upto b t acc = if b >= t then rev acc else upto (b+1) t (b::acc)
 
@@ -55,7 +55,7 @@ abstraction and makes a suitably instantiated existential term.
      `v82`, `v83`, `v84`, `v85`, `v86`, `v87`, `v88`, `v89`, `v90`, `v91`,
      `v92`, `v93`, `v94`, `v95`, `v96`, `v97`, `v98`, `v99`] : term list
 }
-\noindent Finally we can exercise {list_mk_binder}.
+Finally we can exercise {list_mk_binder}.
 {
    - val exl_tm = list_mk_binder exapp (vars, list_mk_conj vars)
    > val exl_tm =
@@ -77,6 +77,8 @@ abstraction and makes a suitably instantiated existential term.
        v91 /\ v92 /\ v93 /\ v94 /\ v95 /\ v96 /\ v97 /\ v98 /\ v99` : term
 
 }
+
+
 \COMMENTS
 Terms with many consecutive binders should be constructed using 
 {list_mk_binder} and its instantiations {list_mk_abs}, {list_mk_forall},
@@ -88,5 +90,4 @@ consecutive binders.
 
 \SEEALSO
 Term.list_mk_abs, boolSyntax.list_mk_forall, boolSyntax.list_mk_exists.
-
 \ENDDOC

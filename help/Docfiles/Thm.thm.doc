@@ -1,4 +1,4 @@
-\DOC thm 
+\DOC thm
 
 \TYPE {type thm}
 
@@ -14,10 +14,8 @@ in the HOL logic. The type of theorems can be viewed as the inductive closure
 of the axioms of the HOL logic by the primitive inference rules of HOL. 
 Robin Milner had the brilliant insight to implement this view by encapsulating
 the primitive rules of inference for a logic as the constructors for 
-an abstract type of theorems. This implementation technique is adopted in HOL. 
+an abstract type of theorems. This implementation technique is adopted in HOL.
 
 \SEEALSO
-Thm.dest_thm, Thm.hyp, Thm.concl, Thm.tag, Thm.ASSUME,
-Thm.REFL, Thm.BETA_CONV, Thm.ABS, Thm.DISCH, Thm.MP, Thm.SUBST, Thm.INST_TYPE.
-
+Thm.dest_thm, Thm.hyp, Thm.concl, Thm.tag, Thm.ASSUME, Thm.REFL, Thm.BETA_CONV, Thm.ABS, Thm.DISCH, Thm.MP, Thm.SUBST, Thm.INST_TYPE.
 \ENDDOC

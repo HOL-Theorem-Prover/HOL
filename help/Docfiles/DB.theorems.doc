@@ -1,4 +1,4 @@
-\DOC theorems 
+\DOC theorems
 
 \TYPE {theorems : string -> (string * thm) list}
 
@@ -28,7 +28,7 @@ the empty list is returned.
      ("o_THM", |- !f g x. (f o g) x = f (g x))] : (string * thm) list
 }
 
+
 \SEEALSO
 DB.thy, DB.fetch, DB.thms, DB.definitions, DB.axioms, DB.listDB.
-
 \ENDDOC

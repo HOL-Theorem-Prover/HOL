@@ -17,6 +17,8 @@ applied. For any variable {"x"} and equation {"f = g"}, where {x} is of type
 {
    |- (f = g) = (!x. f x = g x)
 }
+
+
 \FAILURE
 {X_FUN_EQ_CONV x tm} fails if {x} is not a variable or if {tm} is not an
 equation {f = g} where {f} and {g} are functions.  Furthermore, if {f} and {g}
@@ -26,5 +28,4 @@ either {f} or {g}.
 
 \SEEALSO
 Drule.EXT, Conv.FUN_EQ_CONV.
-
 \ENDDOC

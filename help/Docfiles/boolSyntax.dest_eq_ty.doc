@@ -20,5 +20,4 @@ when optimizing the bejeesus out of an inference rule.
 
 \SEEALSO
 boolSyntax.mk_eq, boolSyntax.is_eq, boolSyntax.lhs, boolSyntax.rhs.
-
 \ENDDOC

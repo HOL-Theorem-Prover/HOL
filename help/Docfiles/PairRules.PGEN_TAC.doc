@@ -5,7 +5,8 @@
 \KEYWORDS
 tactic, quantifier, universal.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Strips the outermost paired universal quantifier from the conclusion of a goal.
@@ -20,10 +21,11 @@ Normally {p'} is just {p}.
    ==============  PGEN_TAC
     A ?- t[p'/p]
 }
+
+
 \FAILURE
 Fails unless the goal's conclusion is a paired universally quantification.
 
 \SEEALSO
 Tactic.GEN_TAC, PairRules.FILTER_PGEN_TAC, PairRules.PGEN, PairRules.PGENL, PGEN_ALL, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC, PairRules.PSTRIP_TAC, PairRules.P_PGEN_TAC.
-
 \ENDDOC

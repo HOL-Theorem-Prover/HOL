@@ -1,4 +1,4 @@
-\DOC is_genvar 
+\DOC is_genvar
 
 \TYPE {is_genvar : term -> bool}
 
@@ -22,6 +22,7 @@ Never fails.
 - is_genvar (mk_var ("%%genvar%%3",bool));
 > val it = true : bool
 }
+
 
 \COMMENTS
 As the second example shows, it is possible to fool {is_genvar}. However,

@@ -18,6 +18,8 @@ contains no equations, it will be returned unchanged.
    --------------------------------  GSYM
     A |- ..(s2 = s1)...(t2 = t1)..
 }
+
+
 \FAILURE
 Never fails, and never loops infinitely.
 
@@ -29,7 +31,8 @@ Never fails, and never loops infinitely.
 - GSYM arithmeticTheory.ADD;
 > val it = |- (!n. n = 0 + n) /\ (!m n. SUC(m + n) = (SUC m) + n) : thm
 }
+
+
 \SEEALSO
 Drule.NOT_EQ_SYM, Thm.REFL, Thm.SYM.
-
 \ENDDOC

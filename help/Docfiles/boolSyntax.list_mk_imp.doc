@@ -25,7 +25,8 @@ evaluation failed     list_mk_imp
 - list_mk_imp ([],mk_var("x",alpha));
 > val it = `x` : term
 }
+
+
 \SEEALSO
 boolSyntax.strip_imp, boolSyntax.mk_imp.
-
 \ENDDOC

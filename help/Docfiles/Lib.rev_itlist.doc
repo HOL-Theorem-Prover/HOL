@@ -21,7 +21,7 @@ Fails if some application of {f} fails.
 > val it = 24 : int
 }
 
+
 \SEEALSO
 Lib.itlist, Lib.itlist2, Lib.rev_itlist2, Lib.end_itlist.
-
 \ENDDOC

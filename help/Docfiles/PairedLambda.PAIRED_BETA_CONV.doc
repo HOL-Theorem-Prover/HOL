@@ -5,7 +5,8 @@
 \SYNOPSIS
 Performs generalized beta conversion for tupled beta-redexes.
 
-\LIBRARY paireLib
+\LIBRARY
+paireLib
 
 \KEYWORDS
 conversion.
@@ -19,35 +20,35 @@ purposes of {PAIRED_BETA_CONV}, the syntax of varstructs is given by:
 {
    <vs>  ::=   (v1,v2)  |  (<vs>,v)  |  (v,<vs>)  |  (<vs>,<vs>)
 }
-\noindent where {v}, {v1}, and {v2} range over variables.  A tupled beta-redex
+where {v}, {v1}, and {v2} range over variables.  A tupled beta-redex
 is an application of the form {(\<vs>.tm) t}, where the term {t} is a
 nested tuple of values having the same structure as the varstruct {<vs>}. For
 example, the term:
 {
    (\((a,b),(c,d)). a + b + c + d)  ((1,2),(3,4))
 }
-\noindent is a tupled beta-redex, but the term:
+is a tupled beta-redex, but the term:
 {
    (\((a,b),(c,d)). a + b + c + d)  ((1,2),p)
 }
-\noindent is not, since {p} is not a pair of terms.
+is not, since {p} is not a pair of terms.
 
 Given a tupled beta-redex {(\<vs>.tm) t}, the conversion {PAIRED_BETA_CONV}
 performs generalized beta-reduction and returns the theorem
 {
    |-  (\<vs>.tm) t = t[t1,...,tn/v1,...,vn]
 }
-\noindent where {ti} is the subterm of the tuple {t} that corresponds to
+where {ti} is the subterm of the tuple {t} that corresponds to
 the variable {vi} in the varstruct {<vs>}. In the simplest case, the
 varstruct {<vs>} is flat, as in the term:
 {
    (\(v1,...,vn).t) (t1,...,tn)
 }
-\noindent When applied to a term of this form, {PAIRED_BETA_CONV} returns:
+When applied to a term of this form, {PAIRED_BETA_CONV} returns:
 {
    |- (\(v1, ... ,vn).t) (t1, ... ,tn) = t[t1,...,tn/v1,...,vn]
 }
-\noindent As with ordinary beta-conversion, bound variables may be renamed to
+As with ordinary beta-conversion, bound variables may be renamed to
 prevent free variable capture.  That is, the term {t[t1,...,tn/v1,...,vn]} in
 this theorem is the result of substituting {ti} for {vi} in parallel in {t},
 with suitable renaming of variables to prevent free variables in {t1}, ...,
@@ -66,7 +67,7 @@ The following is a typical use of the conversion:
         (Term `(\((a,b),(c,d)). a + b + c + d)  ((1,2),(3,4))`);
    > val it = |- (\((a,b),c,d). a+b+c+d) ((1,2),3,4) = 1+2+3+4 : thm
 }
-\noindent Note that the term to which the tupled lambda abstraction
+Note that the term to which the tupled lambda abstraction
 is applied must have the same structure as the varstruct.  For example,
 the following succeeds:
 {
@@ -74,18 +75,15 @@ the following succeeds:
          (Term `(\((a,b),p). a + b)  ((1,2),(3+5,4))`);
    > val it = |- (\((a,b),p). a + b)((1,2),3 + 5,4) = 1 + 2 : thm
 }
-\noindent but the following call fails:
+but the following call fails:
 {
    - PairedLambda.PAIRED_BETA_CONV 
        (Term `(\((a,b),(c,d)). a + b + c + d)  ((1,2),p)`);
    ! Uncaught exception: 
    ! HOL_ERR
 }
-\noindent because {p} is not a pair.
+because {p} is not a pair.
 
 \SEEALSO
-Thm.BETA_CONV, Conv.BETA_RULE, Tactic.BETA_TAC, 
-PairedLambda.GEN_BETA_CONV,
-Drule.LIST_BETA_CONV, Drule.RIGHT_BETA, Drule.RIGHT_LIST_BETA.
-
+Thm.BETA_CONV, Conv.BETA_RULE, Tactic.BETA_TAC, PairedLambda.GEN_BETA_CONV, Drule.LIST_BETA_CONV, Drule.RIGHT_BETA, Drule.RIGHT_LIST_BETA.
 \ENDDOC

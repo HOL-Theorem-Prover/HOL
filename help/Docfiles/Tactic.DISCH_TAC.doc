@@ -12,9 +12,9 @@ tactic, undischarge, antecedent, implication.
 {
     A ?- u ==> v
    ==============  DISCH_TAC
-    A u {{u}} ?- v
+    A u {u} ?- v
 }
-\noindent Note that {DISCH_TAC} treats {~u} as {u ==> F}, so will also work
+Note that {DISCH_TAC} treats {~u} as {u ==> F}, so will also work
 when applied to a goal with a negated conclusion.
 
 \FAILURE
@@ -29,5 +29,4 @@ If the antecedent already appears in the assumptions, it will be duplicated.
 
 \SEEALSO
 Thm.DISCH, Drule.DISCH_ALL, Thm_cont.DISCH_THEN, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Drule.NEG_DISCH, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
-
 \ENDDOC

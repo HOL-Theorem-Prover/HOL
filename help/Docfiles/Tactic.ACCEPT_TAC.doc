@@ -21,19 +21,20 @@ conclusion of the supplied theorem {th}.
 {
    BOOL_CASES_AX = |- !t. (t = T) \/ (t = F)
 }
-\noindent will solve the goal
+will solve the goal
 {
    ?- !x. (x = T) \/ (x = F)
 }
-\noindent but will fail on the goal
+but will fail on the goal
 {
    ?- !x. (x = F) \/ (x = T)
 }
+
+
 \USES
 Used for completing proofs by supplying an existing theorem, such as an axiom,
 or a lemma already proved.
 
 \SEEALSO
 Tactic.MATCH_ACCEPT_TAC.
-
 \ENDDOC

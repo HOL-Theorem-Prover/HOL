@@ -1,6 +1,7 @@
-\DOC norm_subst 
+\DOC norm_subst
 
-\BLTYPE norm_subst : (hol_type,hol_type) subst 
+\BLTYPE
+norm_subst : (hol_type,hol_type) subst 
         -> (term,term) subst -> (term,term)subst
 \ELTYPE
 
@@ -28,18 +29,19 @@ Never fails.
 - val (S,(T,_)) = raw_match [] empty_varset 
                     (Term `\x:'a. x = f (y:'b)`)
                     (Term `\a.    a = ~p`) ([],([],[]));
-> val S = [{{redex = `(f :'b -> 'a)`, residue = `$~`}},
-           {{redex = `(y :'b)`,       residue = `(p :bool)`}}] : ...
+> val S = [{redex = `(f :'b -> 'a)`, residue = `$~`},
+           {redex = `(y :'b)`,       residue = `(p :bool)`}] : ...
 
-  val T = [{{redex = `:'b`, residue = `:bool`}}, 
-           {{redex = `:'a`, residue = `:bool`}}] : ...
+  val T = [{redex = `:'b`, residue = `:bool`}, 
+           {redex = `:'a`, residue = `:bool`}] : ...
 
 - norm_subst T S;
 > val it =
-    [{{redex = `(y :bool)`, residue = `(p :bool)`}},
-     {{redex = `(f :bool -> bool)`, residue = `$~`}}] 
-  : {{redex : term, residue : term}} list
+    [{redex = `(y :bool)`, residue = `(p :bool)`},
+     {redex = `(f :bool -> bool)`, residue = `$~`}] 
+  : {redex : term, residue : term} list
 }
+
 
 \COMMENTS
 Higher level matching routines, like {match_term} and {match_terml}
@@ -47,5 +49,4 @@ already return normalized substitutions.
 
 \SEEALSO
 Term.raw_match, Term.match_term, Term.match_terml.
-
 \ENDDOC

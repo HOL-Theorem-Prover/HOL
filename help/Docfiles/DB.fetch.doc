@@ -1,4 +1,4 @@
-\DOC fetch 
+\DOC fetch
 
 \TYPE {fetch : string -> string -> thm}
 
@@ -19,7 +19,7 @@ If the specified theorem, axiom, or definition cannot be located.
 > val it = |- !P. ~(!x. P x) = ?x. ~P x : thm
 }
 
+
 \SEEALSO
 DB.thms, DB.thy, DB.theorems, DB.axioms, DB.definitions.
-
 \ENDDOC

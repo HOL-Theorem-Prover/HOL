@@ -10,7 +10,7 @@ The call
 {
    constants thy
 }
-\noindent where {thy} is an ancestor theory (the special string {"-"} 
+where {thy} is an ancestor theory (the special string {"-"} 
 means the current theory), returns a list of all the constants in
 that theory.
 
@@ -27,7 +27,7 @@ current theory.
 > val it = [`$o`, `W`, `S`, `K`, `I`, `combin$C`] : term list
 }
 
+
 \SEEALSO
 Theory.types, Theory.current_axioms, Theory.current_defs, Theory.current_thms.
-
 \ENDDOC

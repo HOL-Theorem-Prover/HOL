@@ -15,8 +15,10 @@ the function to a list of theorems corresponding to the {ASSUME}d
 assumptions of the goal, then applies the resulting tactic to the goal
 with an empty assumption list.
 {
-    POP_ASSUM_LIST f ({{A1,...,An}} ?- t) = f [A1 |- A1, ..., An |- An] (?- t)
+    POP_ASSUM_LIST f ({A1,...,An} ?- t) = f [A1 |- A1, ..., An |- An] (?- t)
 }
+
+
 \FAILURE
 Fails if the function fails when applied to the list of {ASSUME}d assumptions,
 or if the resulting tactic fails when applied to the goal with no
@@ -32,22 +34,23 @@ on ordering.
 \EXAMPLE
 Suppose we have a goal of the following form:
 {
-   {{a /\ b, c, (d /\ e) /\ f}} ?- t
+   {a /\ b, c, (d /\ e) /\ f} ?- t
 }
-\noindent Then we can split the conjunctions in the assumption list apart by
+Then we can split the conjunctions in the assumption list apart by
 applying the tactic:
 {
    POP_ASSUM_LIST (MAP_EVERY STRIP_ASSUME_TAC)
 }
-\noindent which results in the new goal:
+which results in the new goal:
 {
-   {{a, b, c, d, e, f}} ?- t
+   {a, b, c, d, e, f} ?- t
 }
+
+
 \USES
 Making more delicate use of the assumption list than simply rewriting or
 using resolution.
 
 \SEEALSO
 Tactical.ASSUM_LIST, Tactical.EVERY_ASSUM, Tactic.IMP_RES_TAC, Tactical.POP_ASSUM, Rewrite.REWRITE_TAC.
-
 \ENDDOC

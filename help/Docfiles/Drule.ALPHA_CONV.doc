@@ -15,7 +15,7 @@ returns the theorem:
 {
    |- (\y.t) = (\x'. t[x'/y])
 }
-\noindent where the variable {x':ty} is a primed variant of {x} chosen so
+where the variable {x':ty} is a primed variant of {x} chosen so
 as not to be free in {\y.t}.
 
 \FAILURE
@@ -25,5 +25,4 @@ abstraction, or if {x} is a variable {v} and {tm} is a lambda abstraction
 
 \SEEALSO
 Thm.ALPHA, Drule.GEN_ALPHA_CONV.
-
 \ENDDOC

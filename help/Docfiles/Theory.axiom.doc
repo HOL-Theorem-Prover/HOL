@@ -23,7 +23,8 @@ name {ax} in theory segment {thy}.
 val it = |- !t. (t = T) \/ (t = F) : thm
 
 }
+
+
 \SEEALSO
 Theory.axioms, definition, Theory.new_axiom, print_theory, theorem.
-
 \ENDDOC

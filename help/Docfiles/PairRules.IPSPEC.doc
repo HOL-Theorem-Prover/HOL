@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, type.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Specializes a theorem, with type instantiation if necessary.
@@ -18,7 +19,7 @@ it differs from it in also instantiating the type if needed:
   -----------------------  IPSPEC "q:ty'"
       A |- tm[q/p]
 }
-\noindent (where {q} is free for {p} in {tm}, and {ty'} is an instance
+(where {q} is free for {p} in {tm}, and {ty'} is an instance
 of {ty}).
 
 \FAILURE
@@ -29,5 +30,4 @@ assumptions.
 
 \SEEALSO
 Drule.ISPEC, Drule.INST_TY_TERM, Thm.INST_TYPE, PairRules.IPSPECL, PairRules.PSPEC, match.
-
 \ENDDOC

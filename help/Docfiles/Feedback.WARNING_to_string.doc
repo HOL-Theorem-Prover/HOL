@@ -2,12 +2,13 @@
 
 \TYPE {WARNING_to_string : (string -> string -> string -> string) ref}
 
-\SYNOPSIS Alterable function for formatting {HOL_WARNING}
+\SYNOPSIS
+Alterable function for formatting {HOL_WARNING}
 
-\KEYWORDS message, formatting
+\KEYWORDS
+message, formatting
 
 \DESCRIBE
-
 {WARNING_to_string} is a reference to a function for formatting the argument 
 to {HOL_WARNING}. 
 
@@ -25,7 +26,7 @@ The default value of {WARNING_to_string} is {format_WARNING}.
     > val it = () : unit
 }
 
+
 \SEEALSO
 Feedback, Feedback.HOL_WARNING, Feedback.format_WARNING, Feedback.ERR_to_string, Feedback.MESG_to_string.
-
 \ENDDOC

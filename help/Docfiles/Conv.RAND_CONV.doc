@@ -15,7 +15,7 @@ theorems of the form:
 {
    |- (t1 t2) = (t1 t2')
 }
-\noindent That is, {RAND_CONV c "t1 t2"} applies {c} to the operand of the
+That is, {RAND_CONV c "t1 t2"} applies {c} to the operand of the
 application {"t1 t2"}.
 
 \FAILURE
@@ -30,7 +30,8 @@ function returned by {RAND_CONV c} may also fail if the ML function
 - RAND_CONV numLib.num_CONV (Term `SUC 2`);
 > val it = |- SUC 2 = SUC(SUC 1) : thm
 }
+
+
 \SEEALSO
 Conv.ABS_CONV, Conv.BINOP_CONV, Conv.LAND_CONV, Conv.RATOR_CONV, Conv.SUB_CONV.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 conversion, quantifier, universal, negation.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Moves negation inwards through a paired universal quantification.
@@ -16,12 +17,11 @@ When applied to a term of the form {~(!p. t)}, the conversion
 {
    |- ~(!p. t) = (?p. ~t)
 }
-\noindent It is irrelevant whether any variables in {p} occur free in {t}.
+It is irrelevant whether any variables in {p} occur free in {t}.
 
 \FAILURE
 Fails if applied to a term not of the form {~(!p. t)}.
 
 \SEEALSO
 Conv.NOT_FORALL_CONV, PairRules.PEXISTS_NOT_CONV, PairRules.PFORALL_NOT_CONV, PairRules.NOT_PEXISTS_CONV.
-
 \ENDDOC

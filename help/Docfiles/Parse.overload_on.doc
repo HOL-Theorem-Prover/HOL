@@ -8,7 +8,8 @@ Establishes a constant as one of the overloading possibilities for a string.
 \KEYWORDS
 Parsing, pretty-printing, overloading.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 Calling {overload_on(name,tm)} establishes {tm} as a possible
@@ -34,7 +35,7 @@ We define the equivalent of intersection over predicates:
    <<HOL message: inventing new type variable names: 'a.>>
    > val inter = |- !p q x. inter p q x = p x /\ q x : thm
 }
-\noindent We overload on our new intersection constant, and can
+We overload on our new intersection constant, and can
 be sure that in ambiguous situations, it will be preferred:
 {
    - overload_on ("/\\", Term`inter`);
@@ -47,7 +48,7 @@ be sure that in ambiguous situations, it will be preferred:
    - type_of it;
    > val it = `:'a -> bool` : hol_type
 }
-\noindent Note that the original constant is considered overloaded to
+Note that the original constant is considered overloaded to
 itself, so that our one call to {overload_on} now allows for two
 possibilities whenever the identifier {/\} is seen.  In order to make
 normal conjunction the preferred choice, we can call {overload_on}
@@ -61,7 +62,7 @@ with the original constant:
    - type_of it;
    > val it = `:bool` : hol_type
 }
-\noindent Note that in order to specify the original conjunction
+Note that in order to specify the original conjunction
 constant, we used the qualified identifier syntax, with the {$}.  If
 we'd used just {/\}, the overloading would have ensured that this was
 parsed as {inter}.  Instead of the qualified identifier syntax, we
@@ -72,11 +73,11 @@ the original constant would be the only possibility.  Thus:
    > val it = () : unit
 }
 
+
 \COMMENTS
 Overloading with abandon can lead to input that is very hard to make
 sense of, and so should be used with caution.
 
 \SEEALSO
 Parse.clear_overloads_on.
-
 \ENDDOC

@@ -13,5 +13,4 @@ Fails if {M} is not an equality.
 
 \SEEALSO
 boolSyntax.mk_eq, boolSyntax.is_eq, boolSyntax.lhs, boolSyntax.rhs.
-
 \ENDDOC

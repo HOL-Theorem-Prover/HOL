@@ -8,7 +8,8 @@ Like {SIMP_CONV}, but converts boolean terms to theorem with same conclusion.
 \KEYWORDS
 simplification.
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \DESCRIBE
 {SIMP_PROVE ss thml} is equivalent to {EQT_ELIM o SIMP_CONV ss thml}.
@@ -29,6 +30,7 @@ useful.
        : tactic_result
 }
 
+
 \USES
 {SIMP_PROVE} is useful when constructing theorems to be passed to
 other tools, where those other tools would prefer not to have
@@ -36,5 +38,4 @@ theorems of the form {|- P = T}.
 
 \SEEALSO
 simpLib.SIMP_CONV, simpLib.SIMP_RULE, simpLib.SIMP_TAC.
-
 \ENDDOC

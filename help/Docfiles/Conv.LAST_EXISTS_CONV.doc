@@ -9,7 +9,8 @@ in a chain.
 \KEYWORDS
 conversion
 
-\LIBRARY Conv
+\LIBRARY
+Conv
 
 \DESCRIBE
 Application of {LAST_EXISTS_CONV c} to the term
@@ -23,5 +24,4 @@ conversion {c} fails when it is applied.
 
 \SEEALSO
 BINDER_CONV, STRIP_QUANT_CONV.
-
 \ENDDOC

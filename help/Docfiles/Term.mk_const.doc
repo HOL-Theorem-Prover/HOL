@@ -36,6 +36,7 @@ instance of the type that the constant has in the signature.
    Exception raised at Term.mk_const:
    test not found
 }
+
 The following example shows a new constant being introduced that 
 has the same name as the standard equality of HOL. Then we attempt
 to make an instance of that constant.
@@ -49,8 +50,7 @@ to make an instance of that constant.
    > val it = `$=` : term
 }
 
-\SEEALSO
-Term.mk_thy_const, Term.dest_const, Term.is_const, 
-Term.mk_var, Term.mk_comb, Term.mk_abs, Type.match_type.
 
+\SEEALSO
+Term.mk_thy_const, Term.dest_const, Term.is_const, Term.mk_var, Term.mk_comb, Term.mk_abs, Type.match_type.
 \ENDDOC

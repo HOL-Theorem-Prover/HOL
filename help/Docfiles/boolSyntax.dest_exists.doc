@@ -13,5 +13,4 @@ Fails if {M} is not a existential quantification.
 
 \SEEALSO
 boolSyntax.mk_exists, boolSyntax.is_exists, boolSyntax.strip_exists.
-
 \ENDDOC

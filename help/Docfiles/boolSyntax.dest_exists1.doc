@@ -13,5 +13,4 @@ Fails if {M} is not a unique existence term.
 
 \SEEALSO
 boolSyntax.mk_exists1, boolSyntax.is_exists1.
-
 \ENDDOC

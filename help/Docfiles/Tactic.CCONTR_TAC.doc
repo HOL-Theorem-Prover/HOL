@@ -16,10 +16,11 @@ This is an invalid tactic unless {A'} is a subset of {A}.
    ========  CCONTR_TAC (A' |- F)
 
 }
+
+
 \FAILURE
 Fails unless the theorem is contradictory, i.e. has {F} as its conclusion.
 
 \SEEALSO
 Tactic.CHECK_ASSUME_TAC, Thm.CCONTR, CCCONTR, Drule.CONTRAPOS, Thm.NOT_ELIM.
-
 \ENDDOC

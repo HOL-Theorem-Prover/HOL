@@ -20,9 +20,10 @@ The theorems returned in these three cases have the forms:
 
    |- (c => u | u) = u
 }
+
+
 \FAILURE
 {COND_CONV tm} fails if {tm} is not a conditional {"c => u | v"}, where
 {c} is {T} or {F}, or {u} and {v} are alpha-equivalent.
 
 \ENDDOC
-

@@ -15,7 +15,7 @@ theorems of the form:
 {
    |- (t1 t2) = (t1' t2)
 }
-\noindent That is, {RATOR_CONV c "t1 t2"} applies {c} to the operand of the
+That is, {RATOR_CONV c "t1 t2"} applies {c} to the operand of the
 application {"t1 t2"}.
 
 \FAILURE
@@ -31,7 +31,7 @@ function returned by {RATOR_CONV c} may also fail if the ML function
 > val it = |- (\x y. x + y)1 2 = (\y. 1 + y) 2 : thm
 }
 
+
 \SEEALSO
 Conv.ABS_CONV, Conv.RAND_CONV, Conv.SUB_CONV.
-
 \ENDDOC

@@ -2,12 +2,14 @@
 
 \TYPE {partition : ('a -> bool) -> 'a list -> 'a list * 'a list}
 
-\SYNOPSIS Split a list by a predicate
+\SYNOPSIS
+Split a list by a predicate
 
-\KEYWORDS list 
+\KEYWORDS
+list
 
 \DESCRIBE
- An invocation {partition P l} divides {l} into a pair of lists {(l1,l2)}.
+An invocation {partition P l} divides {l} into a pair of lists {(l1,l2)}.
 {P} holds of each element of {l1}, and {P} does not hold of any element of 
 {l2}.
 
@@ -30,7 +32,7 @@ If applying {P} to any element of {l} results in failure.
 ! Fail  ""
 }
 
+
 \SEEALSO
 Lib.split_after, Lib.pluck.
-
 \ENDDOC

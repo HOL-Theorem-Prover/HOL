@@ -3,7 +3,6 @@
 \TYPE {mapfilter : ('a -> 'b) -> 'a list -> 'b list}
 
 \SYNOPSIS
-
 Applies a function to every element of a list, returning a list of results
 for those elements for which application succeeds.
 
@@ -20,7 +19,7 @@ If {f x} raises {Interrupt} for some element {x} of {l}, then
 > val it = [1, 4, 6] : int list
 }
 
+
 \SEEALSO
 Lib.filter, Lib.gather.
-
 \ENDDOC

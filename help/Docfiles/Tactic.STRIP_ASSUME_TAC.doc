@@ -17,17 +17,17 @@ rules are applied:
 {
            A ?- t
    ======================  STRIP_ASSUME_TAC (A' |- v1 /\ ... /\ vn)
-    A u {{v1,...,vn}} ?- t
+    A u {v1,...,vn} ?- t
 
                 A ?- t
    =================================  STRIP_ASSUME_TAC (A' |- v1 \/ ... \/ vn)
-    A u {{v1}} ?- t ... A u {{vn}} ?- t
+    A u {v1} ?- t ... A u {vn} ?- t
 
           A ?- t
    ====================  STRIP_ASSUME_TAC (A' |- ?x.v)
-    A u {{v[x'/x]}} ?- t
+    A u {v[x'/x]} ?- t
 }
-\noindent where {x'} is a variant of {x}.
+where {x'} is a variant of {x}.
 
 If the conclusion of {th} is not a conjunction, a disjunction or an
 existentially quantified term, the whole theorem {th} is added to the
@@ -50,16 +50,18 @@ When solving the goal
 {
    ?- m = 0 + m
 }
-\noindent assuming the clauses for addition with
+assuming the clauses for addition with
 {STRIP_ASSUME_TAC ADD_CLAUSES} results in the goal
 {
-  {{m + (SUC n) = SUC(m + n), (SUC m) + n = SUC(m + n),
-   m + 0 = m, 0 + m = m, m = 0 + m}} ?- m = 0 + m
+  {m + (SUC n) = SUC(m + n), (SUC m) + n = SUC(m + n),
+   m + 0 = m, 0 + m = m, m = 0 + m} ?- m = 0 + m
 }
-\noindent while the same tactic directly solves the goal
+while the same tactic directly solves the goal
 {
    ?- 0 + m = m
 }
+
+
 \USES
 {STRIP_ASSUME_TAC} is used when applying a previously proved theorem to solve
 a goal, or
@@ -68,5 +70,4 @@ and other operations involving assumptions have more to work with.
 
 \SEEALSO
 Tactic.ASSUME_TAC, Tactic.CHOOSE_TAC, Thm_cont.CHOOSE_THEN, Thm_cont.CONJUNCTS_THEN, Tactic.DISJ_CASES_TAC, Thm_cont.DISJ_CASES_THEN.
-
 \ENDDOC

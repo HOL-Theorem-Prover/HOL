@@ -12,7 +12,7 @@ is broken down by {strip_disj}, hence
 {
    strip_disj(list_mk_disj [t1,...,tn])
 }
-\noindent will not return {[t1,...,tn]} if any {ti} is a disjunction.
+will not return {[t1,...,tn]} if any {ti} is a disjunction.
 
 \FAILURE
 Never fails.
@@ -22,7 +22,8 @@ Never fails.
 - strip_disj (Term `(a \/ b) \/ c \/ d`);
 > val it = [`a`, `b`, `c`, `d`] : term list
 }
+
+
 \SEEALSO
 boolSyntax.dest_disj, boolSyntax.mk_disj, boolSyntax.list_mk_disj.
-
 \ENDDOC

@@ -21,6 +21,8 @@ antecedent of implications. It applies the following transformation rules:
    -------------------------------        ----------------------
     A |- t1 ==> t   A |- t2 ==> t          A |- t1[x'/x] ==> t2
 }
+
+
 \FAILURE
 Never fails, but if there is no scope for one of the above reductions,
 merely gives a list whose only member is the original theorem.
@@ -30,5 +32,4 @@ This is a rather ad-hoc inference rule, and its use is not recommended.
 
 \SEEALSO
 CONJ1, CONJ2, Drule.CONJUNCTS, Thm.DISJ1, Thm.DISJ2, Thm.EXISTS, Thm.SPEC.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC say 
+\DOC say
 
 \TYPE {say : string -> unit}
 

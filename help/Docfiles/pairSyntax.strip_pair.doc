@@ -2,7 +2,8 @@
 
 \TYPE {strip_pair : term -> term list}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Recursively breaks a paired structure into its constituent pieces.
@@ -13,6 +14,7 @@ Recursively breaks a paired structure into its constituent pieces.
 > val it = [`1`, `2`, `3`, `4`] : term list
 }
 
+
 \COMMENTS
 Note that {strip_pair} is similar, but not identical, to {spine_pair}
 which does not work recursively.
@@ -22,5 +24,4 @@ Never fails.
 
 \SEEALSO
 pairSyntax.spine_pair.
-
 \ENDDOC

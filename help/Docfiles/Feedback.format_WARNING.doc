@@ -2,9 +2,11 @@
 
 \TYPE {format_WARNING : string -> string -> string -> string}
 
-\SYNOPSIS Maps arguments of {HOL_WARNING} to a string
+\SYNOPSIS
+Maps arguments of {HOL_WARNING} to a string
 
-\KEYWORDS message, warning, formatting
+\KEYWORDS
+message, warning, formatting
 
 \DESCRIBE
 The {format_WARNING} function maps three strings to a string. Usually,
@@ -20,7 +22,7 @@ Never fails.
 <<HOL warning: Module.function: Gadzooks!>>
 }
 
+
 \SEEALSO
 Feedback, Feedback.WARNING_to_string, Feedback.format_ERR, Feedback.format_MESG.
-
 \ENDDOC

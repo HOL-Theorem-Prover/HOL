@@ -14,4 +14,5 @@ Never fails.
 > val it = `:('a -> bool) -> bool` : hol_type
 }
 
+
 \ENDDOC

@@ -16,9 +16,9 @@ which is not free in the assumption list; normally {x'} is just {x}.
 {
          A ?- u
    ====================  CHOOSE_TAC (A' |- ?x. t)
-    A u {{t[x'/x]}} ?- u
+    A u {t[x'/x]} ?- u
 }
-\noindent Unless {A'} is a subset of {A}, this is not a valid tactic.
+Unless {A'} is a subset of {A}, this is not a valid tactic.
 
 \FAILURE
 Fails unless the given theorem is existentially quantified.
@@ -29,19 +29,20 @@ Suppose we have a goal asserting that the output of an electrical circuit
 {
    ?- ?t. output(t)
 }
-\noindent and we have the following theorems available:
+and we have the following theorems available:
 {
    t1 = |- ?t. input(t)
    t2 = !t. input(t) ==> output(t+1)
 }
-\noindent Then the goal can be solved by the application of:
+Then the goal can be solved by the application of:
 {
    CHOOSE_TAC th1 
      THEN EXISTS_TAC (Term `t+1`) 
      THEN UNDISCH_TAC (Term `input (t:num) :bool`) 
      THEN MATCH_ACCEPT_TAC th2
 }
+
+
 \SEEALSO
 Thm_cont.CHOOSE_THEN, Tactic.X_CHOOSE_TAC.
-
 \ENDDOC

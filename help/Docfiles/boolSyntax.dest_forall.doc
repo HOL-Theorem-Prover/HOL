@@ -13,5 +13,4 @@ Fails if {M} is not a universal quantification.
 
 \SEEALSO
 boolSyntax.mk_forall, boolSyntax.is_forall, boolSyntax.strip_forall, boolSyntax.list_mk_forall.
-
 \ENDDOC

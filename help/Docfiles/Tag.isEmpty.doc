@@ -1,10 +1,12 @@
-\DOC isEmpty 
+\DOC isEmpty
 
 \TYPE {isEmpty : tag -> bool}
 
-\SYNOPSIS Tells if a tag is empty.
+\SYNOPSIS
+Tells if a tag is empty.
 
-\KEYWORDS tag.
+\KEYWORDS
+tag.
 
 \DESCRIBE
 An invocation {isEmpty t} returns {true} just in case {t} is the empty tag.
@@ -19,7 +21,7 @@ Never fails.
 > val it = true : bool
 }
 
+
 \SEEALSO
 Thm.tag, Thm.mk_oracle_thm.
-
 \ENDDOC

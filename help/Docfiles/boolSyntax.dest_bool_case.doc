@@ -14,5 +14,4 @@ Fails if {M} is not a full application of the {bool_case} constant.
 
 \SEEALSO
 boolSyntax.mk_bool_case, boolSyntax.is_bool_case.
-
 \ENDDOC

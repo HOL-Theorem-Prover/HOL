@@ -22,5 +22,4 @@ may diverge, in which case {PURE_ONCE_ASM_REWRITE_RULE} may be used.
 
 \SEEALSO
 Rewrite.ASM_REWRITE_RULE, Rewrite.GEN_REWRITE_RULE, Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Rewrite.PURE_ONCE_ASM_REWRITE_RULE.
-
 \ENDDOC

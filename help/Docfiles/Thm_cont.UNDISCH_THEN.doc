@@ -16,23 +16,24 @@ the theorem-tactic and then applies the consequent tactic.  Thus:
    UNDISCH_THEN t f ([a1,... ai, t, aj, ... an], goal) =
      f (ASSUME t) ([a1,... ai, aj,... an], goal)
 }
-\noindent For example, if
+For example, if
 {
-    A u {{t1}} ?- t
+    A u {t1} ?- t
    ===============  f (ASSUME t1)
-    B u {{t1}} ?- v
+    B u {t1} ?- v
 }
-\noindent then
+then
 {
-    A u {{t1}} ?- t
+    A u {t1} ?- t
    ===============  UNDISCH_THEN t1 f
        B ?- v
 }
+
+
 \FAILURE
 {UNDISCH_THEN} will fail on goals where the given term is not in the
 assumption list.
 
 \SEEALSO
 Tactical.PAT_ASSUM, Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
-
 \ENDDOC

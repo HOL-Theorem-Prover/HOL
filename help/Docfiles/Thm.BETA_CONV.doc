@@ -13,7 +13,7 @@ The conversion {BETA_CONV} maps a beta-redex {"(\x.u)v"} to the theorem
 {
    |- (\x.u)v = u[v/x]
 }
-\noindent where {u[v/x]} denotes the result of substituting {v} for all free
+where {u[v/x]} denotes the result of substituting {v} for all free
 occurrences of {x} in {u}, after renaming sufficient bound variables to avoid
 variable capture. This conversion is one of the primitive inference rules of
 the HOL system.
@@ -30,8 +30,7 @@ the HOL system.
 > val it = |- (\x y. x + y)y = (\y'. y + y') : thm
 }
 
-\SEEALSO
-Conv.BETA_RULE, Tactic.BETA_TAC, Drule.LIST_BETA_CONV, 
-PairedLambda.PAIRED_BETA_CONV, Drule.RIGHT_BETA, Drule.RIGHT_LIST_BETA.
 
+\SEEALSO
+Conv.BETA_RULE, Tactic.BETA_TAC, Drule.LIST_BETA_CONV, PairedLambda.PAIRED_BETA_CONV, Drule.RIGHT_BETA, Drule.RIGHT_LIST_BETA.
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC exists_tyvar 
+\DOC exists_tyvar
 
 \TYPE {exists_tyvar : (hol_type -> bool) -> hol_type -> bool}
 
@@ -23,9 +23,9 @@ in the course of searching {ty}.
 > val it = true : bool
 }
 
+
 \COMMENTS
 This function is more efficient, in some cases, than {exists P o type_vars}.
 
 \SEEALSO
-
 \ENDDOC

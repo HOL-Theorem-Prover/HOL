@@ -26,6 +26,8 @@ and in the same order.
    --------------------------------------  MATCH_MP
           A1 u A2 |- !xa..xk. t2'
 }
+
+
 \FAILURE
 Fails unless the first theorem is a (possibly repeatedly universally
 quantified) implication whose antecedent can be instantiated to match
@@ -49,7 +51,8 @@ over, since it was universally quantified over in the first argument theorem.
    - MATCH_MP ith th;
    > val it =  [w = z] |- !z'. w' + z' + w = w' + z' + z : thm
 }
+
+
 \SEEALSO
 Thm.EQ_MP, Tactic.MATCH_MP_TAC, Thm.MP, Tactic.MP_TAC.
-
 \ENDDOC

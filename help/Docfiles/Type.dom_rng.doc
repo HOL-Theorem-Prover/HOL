@@ -25,7 +25,7 @@ Exception raised at Type.dom_rng:
 not a function type
 }
 
+
 \SEEALSO
 Type.-->, Type.dest_type, Type.dest_thy_type.
-
 \ENDDOC

@@ -14,5 +14,4 @@ Fails if a {set} function associated with a "functional" trace
 
 \SEEALSO
 Feedback, Feedback.set_trace, Feedback.register_trace, Feedback.reset_trace, Feedback.trace, Feedback.traces.
-
 \ENDDOC

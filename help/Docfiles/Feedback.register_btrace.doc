@@ -8,7 +8,8 @@ Registers a trace variable for a boolean reference.
 \KEYWORDS
 tracing
 
-\LIBRARY Feedback
+\LIBRARY
+Feedback
 
 \DESCRIBE
 A call to {register_btrace(nm, bref)} registers a trace variable
@@ -19,11 +20,11 @@ correspond to the state of the boolean variable {bref}.
 Fails if the given name is already in use as a trace variable.
 
 
+
 \COMMENTS
 This function uses {register_ftrace} to make a boolean variable appear
 as an integer value.
 
 \SEEALSO
 Feedback, Feedback.current_trace, Feedback.register_trace, Feedback.register_ftrace, Feedback.set_trace, Feedback.trace, Feedback.traces.
-
 \ENDDOC

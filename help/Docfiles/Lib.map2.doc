@@ -3,7 +3,6 @@
 \TYPE {map2 : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list}
 
 \SYNOPSIS
-
 Maps a function over two lists to create one new list.
 
 \DESCRIBE
@@ -11,7 +10,7 @@ Maps a function over two lists to create one new list.
 
 \FAILURE
 Fails if the two lists are of different lengths. Also fails if any 
-{f xi yi} fails. 
+{f xi yi} fails.
 
 \EXAMPLE
 {
@@ -19,7 +18,7 @@ Fails if the two lists are of different lengths. Also fails if any
 > val it = [4, 4, 4] : int list
 }
 
+
 \SEEALSO
 Lib.itlist, Lib.rev_itlist, Lib.itlist2, Lib.rev_itlist2.
-
 \ENDDOC

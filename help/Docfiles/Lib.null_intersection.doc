@@ -1,4 +1,4 @@
-\DOC null_intersection 
+\DOC null_intersection
 
 \TYPE {null_intersection : ''a list -> ''a list -> bool}
 
@@ -25,12 +25,11 @@ Never fails.
 > val it = false : bool
 }
 
+
 \COMMENTS
 High performance finite set operations may be found in the ML Standard
 Basis Library.
 
 \SEEALSO
-Lib.intersect, Lib.union, Lib.U, Lib.mk_set, 
-Lib.mem, Lib.insert, Lib.set_eq, Lib.set_diff.
-
+Lib.intersect, Lib.union, Lib.U, Lib.mk_set, Lib.mem, Lib.insert, Lib.set_eq, Lib.set_diff.
 \ENDDOC

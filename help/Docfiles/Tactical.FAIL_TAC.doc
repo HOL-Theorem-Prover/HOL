@@ -24,18 +24,17 @@ to solve the following goal:
 {
    ?- x => T | T
 }
-\noindent the tactic
+the tactic
 {
    REWRITE_TAC[] THEN FAIL_TAC `Simple rewriting failed to solve goal`
 }
-\noindent will fail with the message provided, whereas:
+will fail with the message provided, whereas:
 {
    CONV_TAC COND_CONV THEN FAIL_TAC `Using COND_CONV failed to solve goal`
 }
-\noindent will silently solve the goal because {COND_CONV} reduces it to
+will silently solve the goal because {COND_CONV} reduces it to
 just {?- T}.
 
 \SEEALSO
 Tactical.ALL_TAC, Tactical.NO_TAC.
-
 \ENDDOC

@@ -13,5 +13,4 @@ Fails with {mk_neg} unless {t} is of type {bool}.
 
 \SEEALSO
 boolSyntax.dest_neg, boolSyntax.is_neg.
-
 \ENDDOC

@@ -24,11 +24,11 @@ useful in expression simplification. The current collection is
         : rewrites
 }
 
+
 \USES
 The contents of {bool_rewrites} provide a standard basis upon which to 
 build bespoke rewrite rule sets for use by the functions in {Rewrite}.
 
 \SEEALSO
 Rewrite.GEN_REWRITE_CONV, Rewrite.GEN_REWRITE_RULE, Rewrite.GEN_REWRITE_TAC, Rewrite.REWRITE_RULE, Rewrite.REWRITE_TAC, Rewrite.add_rewrites, Rewrite.add_implicit_rewrites, Rewrite.empty_rewrites, Rewrite.implicit_rewrites, Rewrite.set_implicit_rewrites.
-
 \ENDDOC

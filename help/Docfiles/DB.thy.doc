@@ -1,4 +1,4 @@
-\DOC thy 
+\DOC thy
 
 \TYPE {thy : string -> data list}
 
@@ -18,7 +18,7 @@ classification (one of {Thm} (theorem), {Axm} (axiom), or {Def} (definition)).
 Case distinctions are ignored when determining the segment. The current 
 segment may be specified, either by the distinguished literal "-", 
 or by the name given when creating the segment with {new_theory}.
-       
+
 \FAILURE
 Never fails, but will return an empty list when {s} does not designate
 a currently loaded theory segment.
@@ -38,7 +38,7 @@ a currently loaded theory segment.
          .
 }
 
+
 \SEEALSO
 DB.class, DB.data, DB.listDB, DB.theorems, DB.match, Theory.new_theory.
-
 \ENDDOC

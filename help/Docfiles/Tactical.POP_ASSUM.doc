@@ -14,8 +14,10 @@ the theorem-tactic to the {ASSUME}d first element of the assumption list,
 and applies the resulting tactic to the goal without the first
 assumption in its assumption list:
 {
-    POP_ASSUM f ({{A1,...,An}} ?- t) = f (A1 |- A1) ({{A2,...,An}} ?- t)
+    POP_ASSUM f ({A1,...,An} ?- t) = f (A1 |- A1) ({A2,...,An} ?- t)
 }
+
+
 \FAILURE
 Fails if the assumption list of the goal is empty, or the theorem-tactic
 fails when applied to the popped assumption, or if the resulting tactic
@@ -38,25 +40,28 @@ For example, instead of:
 {
    DISCH_TAC THEN POP_ASSUM (\th. SUBST1_TAC (SYM th))
 }
-\noindent one might use
+one might use
 {
    DISCH_THEN (SUBST1_TAC o SYM)
 }
+
+
 \EXAMPLE
 The goal:
 {
-   {{4 = SUC x}} ?- x = 3
+   {4 = SUC x} ?- x = 3
 }
-\noindent can be solved by:
+can be solved by:
 {
    POP_ASSUM 
     (fn th => REWRITE_TAC[REWRITE_RULE[num_CONV (Term`4`, INV_SUC_EQ] th]])
 }
+
+
 \USES
 Making more delicate use of an assumption than rewriting or resolution
 using it.
 
 \SEEALSO
 Tactical.ASSUM_LIST, Tactical.EVERY_ASSUM, Tactic.IMP_RES_TAC, Tactical.POP_ASSUM_LIST, Rewrite.REWRITE_TAC.
-
 \ENDDOC

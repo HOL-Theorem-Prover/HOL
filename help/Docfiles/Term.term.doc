@@ -1,4 +1,4 @@
-\DOC term 
+\DOC term
 
 \TYPE {eqtype term}
 
@@ -24,5 +24,4 @@ by the interface presented by the {Term} structure.
 
 \SEEALSO
 Type.hol_type.
-
 \ENDDOC

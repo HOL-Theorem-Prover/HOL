@@ -2,7 +2,8 @@
 
 \TYPE {pvariant : (term list -> term -> term)}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Modifies variable and constant names in a paired structure to avoid clashes.
@@ -33,6 +34,7 @@ The following shows a case that exhibits most possible behaviours:
    val it = `(a,b''),c'',b',T',b''` : term
 }
 
+
 \USES
 The function {pvariant} is extremely useful for complicated derived rules which
 need to rename pairs variable to avoid free variable capture while still
@@ -40,5 +42,4 @@ making the role of the pair obvious to the user.
 
 \SEEALSO
 Term.variant, Term.genvar.
-
 \ENDDOC

@@ -15,10 +15,10 @@ rule, truth.
     A |- tm = T
 }
 
+
 \FAILURE
 Never fails.
 
 \SEEALSO
 Drule.EQT_ELIM, Drule.EQF_ELIM, Drule.EQF_INTRO.
-
 \ENDDOC

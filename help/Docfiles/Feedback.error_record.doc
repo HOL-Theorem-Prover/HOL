@@ -1,14 +1,16 @@
 \DOC error_record
 
 \BLTYPE
-type error_record = {{origin_structure : string,
+type error_record = {origin_structure : string,
                      origin_function  : string,
-                     message          : string}}
+                     message          : string}
 \ELTYPE
 
-\SYNOPSIS Type abbreviation for HOL exceptions in Feedback module.
+\SYNOPSIS
+Type abbreviation for HOL exceptions in Feedback module.
 
-\KEYWORDS Type abbreviation, error.
+\KEYWORDS
+Type abbreviation, error.
 
 \DESCRIBE
 The type abbreviation {error_record} declares the standard format of HOL
@@ -19,5 +21,4 @@ field should give an explanation of why the exception has been raised.
 
 \SEEALSO
 Feedback, Feedback.HOL_ERR, Feedback.format_ERR, Feedback.ERR_to_string.
-
 \ENDDOC

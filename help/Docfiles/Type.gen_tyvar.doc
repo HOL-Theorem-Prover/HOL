@@ -1,12 +1,15 @@
-\DOC gen_tyvar 
+\DOC gen_tyvar
 
 \TYPE {gen_tyvar : unit -> hol_type}
 
-\SYNOPSIS Generate a fresh type variable
+\SYNOPSIS
+Generate a fresh type variable
 
-\KEYWORDS variable, type. 
+\KEYWORDS
+variable, type.
 
-\LIBRARY Type
+\LIBRARY
+Type
 
 \DESCRIBE
 An invocation {gen_tyvar()} generates a type variable {tyv} not
@@ -33,6 +36,7 @@ Exception raised at Type.mk_vartype:
 incorrect syntax
 }
 
+
 \COMMENTS
 In general, the actual name returned by {gen_tyvar} should not be 
 relied on.
@@ -42,5 +46,4 @@ Useful for coding some proof procedures.
 
 \SEEALSO
 Term.genvar, Term.variant.
-
 \ENDDOC

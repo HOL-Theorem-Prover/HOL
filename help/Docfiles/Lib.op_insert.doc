@@ -1,4 +1,4 @@
-\DOC op_insert 
+\DOC op_insert
 
 \TYPE {op_insert ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list}
 
@@ -29,6 +29,7 @@ Never fails.
 > val it = [`\x. x /\ y`, `T`, `\z. z /\ a`, `F`] : term list
 }
 
+
 \COMMENTS
 There is no requirement that {eq} be recognizable as a kind of 
 equality (it could be implemented by an order relation, for example).
@@ -40,7 +41,5 @@ High performance finite set operations may be found in the ML Standard
 Basis Library.
 
 \SEEALSO
-Lib.insert, Lib.op_mem, Lib.op_union, Lib.op_mk_set, Lib.op_U, 
-Lib.op_intersect, Lib.op_set_diff.
-
+Lib.insert, Lib.op_mem, Lib.op_union, Lib.op_mk_set, Lib.op_U, Lib.op_intersect, Lib.op_set_diff.
 \ENDDOC

@@ -8,7 +8,8 @@ Prints a term to the screen (standard out).
 \KEYWORDS
 Pretty-printing
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 The function {print_term} prints a term to the screen.  It first
@@ -24,5 +25,4 @@ Should never fail.
 
 \SEEALSO
 Parse.term_to_string.
-
 \ENDDOC

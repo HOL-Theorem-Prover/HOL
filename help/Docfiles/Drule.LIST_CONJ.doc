@@ -14,6 +14,8 @@ rule, conjunction.
    ----------------------------------  LIST_CONJ
     A1 u ... u An |- t1 /\ ... /\ tn
 }
+
+
 \FAILURE
 {LIST_CONJ} fails if applied to an empty list of theorems.
 
@@ -24,7 +26,5 @@ within one of the input theorems assumption lists, then it may
 be duplicated in the resulting assumption list.
 
 \SEEALSO
-Drule.BODY_CONJUNCTS, Thm.CONJ, Thm.CONJUNCT1,
-Thm.CONJUNCT2, Drule.CONJUNCTS, Drule.CONJ_PAIR, Tactic.CONJ_TAC.
-
+Drule.BODY_CONJUNCTS, Thm.CONJ, Thm.CONJUNCT1, Thm.CONJUNCT2, Drule.CONJUNCTS, Drule.CONJ_PAIR, Tactic.CONJ_TAC.
 \ENDDOC

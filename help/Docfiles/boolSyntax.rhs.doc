@@ -13,5 +13,4 @@ Fails if term is not an equality.
 
 \SEEALSO
 boolSyntax.lhs, boolSyntax.dest_eq.
-
 \ENDDOC

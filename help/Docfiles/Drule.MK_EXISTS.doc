@@ -17,10 +17,11 @@ returns the theorem {A |- (?x. t1) = (?x. t2)}.
    --------------------------  MK_EXISTS
     A |- (?x. t1) = (?x. t2)
 }
+
+
 \FAILURE
 Fails unless the theorem is a singly universally quantified equation.
 
 \SEEALSO
 Thm.AP_TERM, Drule.EXISTS_EQ, Thm.GEN, Drule.LIST_MK_EXISTS, Drule.MK_ABS.
-
 \ENDDOC

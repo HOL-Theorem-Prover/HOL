@@ -21,4 +21,3 @@ returns {|- t1 = t(n+1)}. And if {c "t"} fails, them {REPEATC c "t"} returns
 Never fails, but can diverge if the supplied conversion never fails.
 
 \ENDDOC
-

@@ -30,5 +30,4 @@ exception, the operation of {TOP_DEPTH_CONV} will be unpredictable.
 
 \SEEALSO
 Conv.DEPTH_CONV, Conv.ONCE_DEPTH_CONV, Conv.REDEPTH_CONV.
-
 \ENDDOC

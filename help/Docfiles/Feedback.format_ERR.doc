@@ -2,9 +2,11 @@
 
 \TYPE {format_ERR : error_record -> string}
 
-\SYNOPSIS Maps argument record of {HOL_ERR} to a string
+\SYNOPSIS
+Maps argument record of {HOL_ERR} to a string
 
-\KEYWORDS error, exception
+\KEYWORDS
+error, exception
 
 \DESCRIBE
 The {format_ERR} function maps the argument of an application of {HOL_ERR}
@@ -16,16 +18,16 @@ Never fails.
 \EXAMPLE
 {
 - print
-   (format_ERR {{origin_structure = "Foo",
+   (format_ERR {origin_structure = "Foo",
                 origin_function = "bar",
-                message = "incomprehensible input"}});
+                message = "incomprehensible input"});
 
 Exception raised at Foo.bar:
 incomprehensible input
 > val it = () : unit
 }
 
+
 \SEEALSO
 Feedback, Feedback.ERR_to_string, Feedback.format_MESG, Feedback.format_WARNING.
-
 \ENDDOC

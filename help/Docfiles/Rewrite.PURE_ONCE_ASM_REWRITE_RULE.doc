@@ -20,5 +20,4 @@ subterms. For a general introduction to rewriting tools see
 
 \SEEALSO
 Rewrite.ASM_REWRITE_RULE, Rewrite.GEN_REWRITE_RULE, Rewrite.ONCE_ASM_REWRITE_RULE, Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_ASM_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Rewrite.REWRITE_RULE.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC is_gen_tyvar 
+\DOC is_gen_tyvar
 
 \TYPE {is_gen_tyvar : hol_type -> bool}
 
@@ -20,7 +20,7 @@ Never fails.
 > val it = false : bool
 }
 
+
 \SEEALSO
 Type.gen_tyvar.
-
 \ENDDOC

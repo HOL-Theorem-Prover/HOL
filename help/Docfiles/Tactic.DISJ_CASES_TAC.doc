@@ -15,8 +15,10 @@ produces two subgoals, one with {u} as an assumption and one with {v}:
 {
               A ?- t
    ============================  DISJ_CASES_TAC (A |- u \/ v)
-    A u {{u}} ?- t   A u {{v}}?- t
+    A u {u} ?- t   A u {v}?- t
 }
+
+
 \FAILURE
 Fails if the given theorem does not have a disjunctive conclusion.
 
@@ -28,10 +30,11 @@ the tactic {DISJ_CASES_TAC th} can be used to produce a case split:
    ([([`m = 0`], `P m`),
      ([`?n. m = SUC n`], `P m`)], fn) : tactic_result
 }
+
+
 \USES
 Performing a case analysis according to a disjunctive theorem.
 
 \SEEALSO
 Tactic.ASSUME_TAC, Tactic.ASM_CASES_TAC, Tactic.COND_CASES_TAC, Thm_cont.DISJ_CASES_THEN, Tactic.STRUCT_CASES_TAC.
-
 \ENDDOC

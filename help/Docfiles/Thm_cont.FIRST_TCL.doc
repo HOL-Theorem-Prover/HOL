@@ -16,11 +16,12 @@ is the same as:
 {
    FIRST_TCL [ttl1;...;ttln] = ttl1 ORELSE_TCL ... ORELSE_TCL ttln
 }
+
+
 \FAILURE
 {FIRST_TCL} fails iff each tactic in the list fails when applied to the
 theorem-tactic and theorem. This is trivially the case if the list is empty.
 
 \SEEALSO
 Thm_cont.EVERY_TCL, Thm_cont.ORELSE_TCL, Thm_cont.REPEAT_TCL, Thm_cont.THEN_TCL.
-
 \ENDDOC

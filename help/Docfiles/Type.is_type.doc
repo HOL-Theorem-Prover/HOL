@@ -13,7 +13,5 @@ type operator and {false} otherwise.
 Never fails.
 
 \SEEALSO
-Type.op_arity, Type.mk_type, Type.mk_thy_type, 
-Type.dest_type, Type.dest_thy_type.
-
+Type.op_arity, Type.mk_type, Type.mk_thy_type, Type.dest_type, Type.dest_thy_type.
 \ENDDOC

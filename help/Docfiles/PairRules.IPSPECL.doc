@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, type.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Specializes a theorem zero or more times, with type instantiation if necessary.
@@ -17,7 +18,7 @@ Specializes a theorem zero or more times, with type instantiation if necessary.
    ----------------------------  IPSPECL ["q1",...,"qn"]
     A |- t[q1,...qn/p1,...,pn]
 }
-\noindent (where {qi} is free for {pi} in {tm}).
+(where {qi} is free for {pi} in {tm}).
 
 \FAILURE
 {IPSPECL} fails if the list of terms is longer than the number of
@@ -26,5 +27,4 @@ if the type variable being instantiated is free in the assumptions.
 
 \SEEALSO
 Drule.ISPECL, Thm.INST_TYPE, Drule.INST_TY_TERM, PairRules.IPSPEC, MATCH, Thm.SPEC, PairRules.PSPECL.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \SYNOPSIS
 Check if a predicate holds somewhere in a list
 
-\KEYWORDS list, predicate, search
+\KEYWORDS
+list, predicate, search
 
 \DESCRIBE
 An invocation {exists P l} returns true if {P} holds of some element of {l}.
@@ -29,7 +30,7 @@ exception. In that case, {exists P l} raises an exception.
 ! Fail  ""
 }
 
+
 \SEEALSO
 Lib.all, Lib.first, Lib.tryfind.
-
 \ENDDOC

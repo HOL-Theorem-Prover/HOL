@@ -26,7 +26,8 @@ Non-boolean argument
 > val it = `x` : term
 
 }
+
+
 \SEEALSO
 boolSyntax.strip_conj, boolSyntax.mk_conj.
-
 \ENDDOC

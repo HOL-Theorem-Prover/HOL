@@ -15,5 +15,4 @@ of terms is empty the type of {t} can be anything.
 
 \SEEALSO
 boolSyntax.strip_forall, boolSyntax.mk_forall.
-
 \ENDDOC

@@ -17,11 +17,11 @@ If {f x} or {g y} fails.
 > val it = ([`x`, `y`, `z`], (`x /\ y`, `z /\ p`))
 }
 
+
 \COMMENTS
 The {##} combinator can be thought of as a map operation for pairs.
 It is left associative, which seems to be a mistake.
 
 \SEEALSO
 Lib.pair.
-
 \ENDDOC

@@ -41,7 +41,7 @@ earlier.
    goal proved
    () : void
 }
-\noindent The following example shows how the use of an invalid tactic can
+The following example shows how the use of an invalid tactic can
 yield a  theorem which does not correspond to the  goal set.
 {
    - set_goal([], Term `1=2`);
@@ -58,7 +58,7 @@ yield a  theorem which does not correspond to the  goal set.
    goal proved
    () : void
 }
-\noindent The proof assumed something which was not on the assumption list.
+The proof assumed something which was not on the assumption list.
 This assumption appears in the assumption list of the theorem proved, even
 though it was not in the goal. An attempt to perform the proof using {expand}
 fails. The validated version of the tactic detects that the justification
@@ -76,5 +76,4 @@ justifications are applied.
 
 \SEEALSO
 goalstackLib.b, goalstackLib.backup, backup_limit, goalstackLib.e, goalstackLib.expand, goalstackLib.g, get_state, goalstackLib.p, print_state, goalstackLib.r, rotate, save_top_thm, goalstackLib.set_goal, set_state, goalstackLib.top_goal, goalstackLib.top_thm, VALID.
-
 \ENDDOC

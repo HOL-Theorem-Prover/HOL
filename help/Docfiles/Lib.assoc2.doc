@@ -9,7 +9,7 @@ value.
 \KEYWORDS
 list.
 
-\DESCRIBE 
+\DESCRIBE
 An invocation {assoc2 y [(x1,y1),...,(xn,yn)]} returns {SOME (xi,yi)}
 for the first {(xi,yi)} in the list such that {yi} equals
 {y}. Otherwise, {NONE} is returned. The lookup is done on an eqtype,
@@ -25,8 +25,7 @@ Never fails.
 > val it = SOME (3, 2) : (int * int) option
 }
 
-\SEEALSO
-Lib.assoc, Lib.assoc1, Lib.rev_assoc, Lib.find, Lib.mem,
-Lib.tryfind, Lib.exists, Lib.all.
 
+\SEEALSO
+Lib.assoc, Lib.assoc1, Lib.rev_assoc, Lib.find, Lib.mem, Lib.tryfind, Lib.exists, Lib.all.
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, modus ponens, implication.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Modus Ponens inference rule with automatic matching.
@@ -28,6 +29,8 @@ result, and in the same order.
    --------------------------------------  MATCH_MP
           A1 u A2 |- !pa..pk. t2'
 }
+
+
 \FAILURE
 Fails unless the first theorem is a (possibly repeatedly paired universally
 quantified) implication whose antecedent can be instantiated to match
@@ -36,5 +39,4 @@ which are free in {A1}, the first theorem's assumption list.
 
 \SEEALSO
 Drule.MATCH_MP.
-
 \ENDDOC

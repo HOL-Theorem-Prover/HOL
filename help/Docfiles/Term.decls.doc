@@ -1,4 +1,4 @@
-\DOC decls 
+\DOC decls
 
 \TYPE {decls : string -> term list}
 
@@ -22,8 +22,9 @@ Never fails.
 > val it = [`$+`] : term list
 
 - map dest_thy_const it;
-> val it = [{{Name = "+", Thy = "arithmetic", Ty = `:num -> num -> num`}}] : ...
+> val it = [{Name = "+", Thy = "arithmetic", Ty = `:num -> num -> num`}] : ...
 }
+
 
 \COMMENTS
 Useful for untangling confusion arising from overloading and
@@ -31,6 +32,5 @@ also the possibility to declare two different constants with the
 same name in different theories.
 
 \SEEALSO
-Type.decls. Term.dest_thy_const.
-
+Type.decls., Term.dest_thy_const.
 \ENDDOC

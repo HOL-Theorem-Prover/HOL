@@ -2,9 +2,11 @@
 
 \TYPE {A : ('a -> 'b) -> 'a -> 'b}
 
-\SYNOPSIS Combinator for function application
+\SYNOPSIS
+Combinator for function application
 
-\KEYWORDS Combinator
+\KEYWORDS
+Combinator
 
 \DESCRIBE
 The application {A f x} equals {f x}.
@@ -19,7 +21,7 @@ The application {A f x} equals {f x}.
 > val it = [1, 3, 4] : int list
 }
 
+
 \SEEALSO
 Lib, Lib.\#\#, Lib.B, Lib.C, Lib.I, Lib.K, Lib.S, Lib.W.
-
 \ENDDOC

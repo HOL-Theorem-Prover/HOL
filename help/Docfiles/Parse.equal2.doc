@@ -8,7 +8,8 @@ Parses a quotation into a HOL type.
 \KEYWORDS
 Parsing
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 An invocation {==` ... `==} is identical to {Type ` ... `}.
@@ -21,5 +22,4 @@ Turns strings into types.
 
 \SEEALSO
 Parse.Term, Parse.Type, Parse.--.
-
 \ENDDOC

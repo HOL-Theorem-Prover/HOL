@@ -18,6 +18,8 @@ necessary to avoid free variable capture).
    =============  EXISTS_TAC "u"
     A ?- t[u/x]
 }
+
+
 \FAILURE
 Fails unless the goal's conclusion is existentially quantified and the
 term supplied has the same type as the quantified variable in the goal.
@@ -27,11 +29,12 @@ The goal:
 {
    ?- ?x. x=T
 }
-\noindent can be solved by:
+can be solved by:
 {
    EXISTS_TAC "T" THEN REFL_TAC
 }
+
+
 \SEEALSO
 Thm.EXISTS.
-
 \ENDDOC

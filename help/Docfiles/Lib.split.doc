@@ -19,5 +19,4 @@ Identical to the Basis function {ListPair.unzip} and the function {Lib.unzip}.
 
 \SEEALSO
 Lib.unzip, Lib.zip, Lib.combine.
-
 \ENDDOC

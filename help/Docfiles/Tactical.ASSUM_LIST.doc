@@ -8,16 +8,19 @@ Applies a tactic generated from the goal's assumption list.
 \KEYWORDS
 theorem-tactic, assumption.
 
-\LIBRARY bool
+\LIBRARY
+bool
 
 \DESCRIBE
 When applied to a function of type {thm list -> tactic} and a goal,
 {ASSUM_LIST} constructs a tactic by applying {f} to a list of {ASSUME}d
 assumptions of the goal, then applies that tactic to the goal.
 {
-   ASSUM_LIST f ({{A1,...,An}} ?- t)
-         = f [A1 |- A1, ... , An |- An] ({{A1,...,An}} ?- t)
+   ASSUM_LIST f ({A1,...,An} ?- t)
+         = f [A1 |- A1, ... , An |- An] ({A1,...,An} ?- t)
 }
+
+
 \FAILURE
 Fails if the function fails when applied to the list of {ASSUME}d assumptions,
 or if the resulting tactic fails when applied to the goal.
@@ -34,7 +37,7 @@ The tactic:
 {
    ASSUM_LIST SUBST_TAC
 }
-\noindent makes a single parallel substitution using all the assumptions,
+makes a single parallel substitution using all the assumptions,
 which can be useful if the rewriting tactics are too blunt for the required
 task.
 
@@ -44,5 +47,4 @@ using resolution.
 
 \SEEALSO
 Rewrite.ASM_REWRITE_TAC, Tactical.EVERY_ASSUM, Tactic.IMP_RES_TAC, Tactical.POP_ASSUM, Tactical.POP_ASSUM_LIST, Rewrite.REWRITE_TAC.
-
 \ENDDOC

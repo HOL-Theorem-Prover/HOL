@@ -18,12 +18,14 @@ That is, if
    ==========  f (u |- u)
     A2 ?- t2
 }
-\noindent then
+then
 {
          A1 ?- t1
    ====================  SUBGOAL_THEN u f
     A1 ?- u   A2 ?- t2
 }
+
+
 \FAILURE
 {SUBGOAL_THEN} will fail if an attempt is made to use a
 nonboolean term as a lemma.
@@ -35,19 +37,22 @@ part of a proof and to continue with another part.
 leaving only the subgoal.
 For example, suppose the user wishes to prove the goal
 {
-   {{n = SUC m}} ?- (0 = n) ==> t
+   {n = SUC m} ?- (0 = n) ==> t
 }
+
 Using {SUBGOAL_THEN} to focus on the case in which {~(n = 0)},
 rewriting establishes it truth, leaving only the proof that {~(n = 0)}.
 That is,
 {
    SUBGOAL_THEN (Term `~(0 = n)`) (fn th => REWRITE_TAC [th])
 }
-\noindent generates the following subgoals:
+generates the following subgoals:
 {
-   {{n = SUC m}} ?-  ~(0 = n)
+   {n = SUC m} ?-  ~(0 = n)
    ?- T
 }
+
+
 \COMMENTS
 Some users may expect the generated tactic to be {f (A1 |- u)}, rather than
 {f (u |- u)}.

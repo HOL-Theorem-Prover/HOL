@@ -1,10 +1,9 @@
 \DOC hide
 
 \BLTYPE
-hide : string -> ({{Name : string, Thy : string}} list *
-                  {{Name : string, Thy : string}} list)
+hide : string -> ({Name : string, Thy : string} list *
+                  {Name : string, Thy : string} list)
 \ELTYPE
-
 
 \SYNOPSIS
 Stops the quotation parser from recognizing a constant.
@@ -36,5 +35,4 @@ hidden with {hide} will reveal it once more.
 
 \SEEALSO
 Parse.hidden, Parse.known_constants, Parse.reveal, Parse.set_known_constants, Parse.update_overload_maps.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {MESG_outstream : TextIO.outstream ref}
 
-\SYNOPSIS Reference to output stream used when printing {HOL_MESG}
+\SYNOPSIS
+Reference to output stream used when printing {HOL_MESG}
 
-\KEYWORDS I/O, messages, output
+\KEYWORDS
+I/O, messages, output
 
 \DESCRIBE
 The value of reference cell {MESG_outstream} controls where {HOL_MESG}
@@ -33,7 +35,7 @@ The default value of {MESG_outstream} is {TextIO.stdOut}.
 <<HOL message: Nattering nabobs of negativity.>>
 }
 
+
 \SEEALSO
 Feedback, Feedback.HOL_MESG, Feedback.ERR_outstream, Feedback.WARNING_outstream, Feedback.emit_MESG.
-
 \ENDDOC

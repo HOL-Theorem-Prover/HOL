@@ -19,5 +19,4 @@ makes it easy to access the theorem in the current terminal session.
 
 \SEEALSO
 Tactical.prove, Theory.save_thm.
-
 \ENDDOC

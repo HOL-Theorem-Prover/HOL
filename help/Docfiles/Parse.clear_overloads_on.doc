@@ -8,7 +8,8 @@ Clears all overloading on the specified operator.
 \KEYWORDS
 Parsing, pretty-printing, overloading.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 This function removes all overloading associated with the given
@@ -37,6 +38,7 @@ no effect.
 > val it = |- !x. 0r real_lt x /\ x real_lt 1r ==> 1r real_lt inv x : thm
 }
 
+
 \USES
 If overloading gets too confusing, this function should help to clear
 away one layer of supposedly helpful obfuscation.
@@ -48,5 +50,4 @@ is not saved to a theory file.
 
 \SEEALSO
 Parse.overload_on, Parse.remove_ovl_mapping.
-
 \ENDDOC

@@ -15,10 +15,10 @@ returns {(M,N)}.
 > val it = (`\x. x \/ x`, `P /\ Q`) : term * term
 }
 
+
 \FAILURE
 Fails if {M} is not of the form {LET M N}.
 
 \SEEALSO
 boolSyntax.mk_let, boolSyntax.is_let.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC for 
+\DOC for
 
 \TYPE {for : int -> int -> (int -> 'a) -> 'a list}
 
@@ -24,7 +24,7 @@ If {f i} fails for {b <= i <= t}.
      #"y", #"z"] : char list
 }
 
+
 \SEEALSO
 Lib.for_se.
-
 \ENDDOC

@@ -32,7 +32,7 @@ For example, given the goal
 {
    simple_goal /\ complicated_goal
 }
-\noindent the tactic
+the tactic
 {
    (CONJ_TAC THEN1 T0)
    THEN T1
@@ -40,7 +40,7 @@ For example, given the goal
    THEN ...
    THEN Tn
 }
-\noindent avoids the extra indentation of
+avoids the extra indentation of
 {
    CONJ_TAC THENL
    [T0,
@@ -50,7 +50,7 @@ For example, given the goal
     THEN Tn]
 }
 
+
 \SEEALSO
 Tactical.EVERY, Tactical.ORELSE, Tactical.REVERSE, Tactical.THEN, Tactical.THENL.
-
 \ENDDOC

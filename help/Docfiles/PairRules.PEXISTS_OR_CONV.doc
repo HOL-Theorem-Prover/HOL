@@ -5,7 +5,8 @@
 \KEYWORDS
 conversion, quantifier, existential, disjunction.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Moves a paired existential quantification inwards through a disjunction.
@@ -16,10 +17,11 @@ When applied to a term of the form {?p. t \/ u}, the conversion
 {
    |- (?p. t \/ u) = (?p. t) \/ (?p. u)
 }
+
+
 \FAILURE
 Fails if applied to a term not of the form {?p. t \/ u}.
 
 \SEEALSO
 Conv.EXISTS_OR_CONV, PairRules.OR_PEXISTS_CONV, PairRules.LEFT_OR_PEXISTS_CONV, PairRules.RIGHT_OR_PEXISTS_CONV.
-
 \ENDDOC

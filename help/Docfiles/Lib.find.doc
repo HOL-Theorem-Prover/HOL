@@ -10,18 +10,16 @@ list.
 
 \DESCRIBE
 An invocation {find P [x1,...,xn]} returns the first {xi} 
-in {[x1,...,xn]} such that {(P xi)} is {true}. 
+in {[x1,...,xn]} such that {(P xi)} is {true}.
 
 \FAILURE
 Fails if no element satisfies the predicate. This will always be
 the case if the list is empty. Also fails if {P xi} fails for any
-element {xi} of the list. 
+element {xi} of the list.
 
-\COMMENTS 
+\COMMENTS
 {Lib.first} is equivalent.
 
 \SEEALSO
-Lib.first, Lib.tryfind, Lib.mem, Lib.exists, 
-hol88Lib.forall, Lib.assoc, Lib.rev_assoc.
-
+Lib.first, Lib.tryfind, Lib.mem, Lib.exists, hol88Lib.forall, Lib.assoc, Lib.rev_assoc.
 \ENDDOC

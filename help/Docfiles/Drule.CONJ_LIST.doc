@@ -20,6 +20,8 @@ returned.
    ------------------------------------  CONJ_LIST n (A |- t1 /\ ... /\ tn)
     A |- t1   A |- t2   ...   A |- tn
 }
+
+
 \FAILURE
 Fails if the integer argument ({n}) is less than one, or if the input theorem
 has less than {n} conjuncts.
@@ -29,7 +31,7 @@ Suppose the identifier {th} is bound to the theorem:
 {
    A |- (x /\ y) /\ z /\ w
 }
-\noindent Here are some applications of {CONJ_LIST} to {th}:
+Here are some applications of {CONJ_LIST} to {th}:
 {
    - CONJ_LIST 0 th;
    ! Uncaught exception: 
@@ -48,8 +50,8 @@ Suppose the identifier {th} is bound to the theorem:
    ! Uncaught exception: 
    ! HOL_ERR
 }
-\SEEALSO
-Drule.BODY_CONJUNCTS, Drule.LIST_CONJ, Drule.CONJUNCTS, 
-Thm.CONJ, Thm.CONJUNCT1, Thm.CONJUNCT2, Drule.CONJ_PAIR.
 
+
+\SEEALSO
+Drule.BODY_CONJUNCTS, Drule.LIST_CONJ, Drule.CONJUNCTS, Thm.CONJ, Thm.CONJUNCT1, Thm.CONJUNCT2, Drule.CONJ_PAIR.
 \ENDDOC

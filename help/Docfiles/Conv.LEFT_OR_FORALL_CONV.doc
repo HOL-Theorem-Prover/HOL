@@ -15,7 +15,7 @@ When applied to a term of the form {(!x.P) \/ Q}, the conversion
 {
    |- (!x.P) \/ Q = (!x'. P[x'/x] \/ Q)
 }
-\noindent where {x'} is a primed variant of {x} that does not appear free in
+where {x'} is a primed variant of {x} that does not appear free in
 the input term.
 
 \FAILURE
@@ -23,5 +23,4 @@ Fails if applied to a term not of the form {(!x.P) \/ Q}.
 
 \SEEALSO
 Conv.OR_FORALL_CONV, Conv.FORALL_OR_CONV, Conv.RIGHT_OR_FORALL_CONV.
-
 \ENDDOC

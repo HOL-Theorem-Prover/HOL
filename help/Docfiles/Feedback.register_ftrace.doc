@@ -11,7 +11,8 @@ Registers a trace that is accessed by a set/get pair of functions.
 \KEYWORDS
 tracing
 
-\LIBRARY Feedback
+\LIBRARY
+Feedback
 
 \DESCRIBE
 A call to {register_ftrace(nm, (g,s), m)} registers an integer-valued
@@ -32,7 +33,7 @@ that may not be actually be an integer reference, even though this is
 the interface that the various trace functions present.
 
 
+
 \SEEALSO
 Feedback, Feedback.current_trace, Feedback.register_trace, Feedback.register_btrace, Feedback.set_trace, Feedback.trace, Feedback.traces.
-
 \ENDDOC

@@ -12,6 +12,7 @@ The application {uncurry f} returns {fn (x,y) => f x y}, so that
    uncurry f (x,y) = f x y
 }
 
+
 \FAILURE
 Never fails.
 
@@ -24,7 +25,7 @@ Never fails.
 > val it = 7 : int
 }
 
+
 \SEEALSO
 Lib, Lib.curry.
-
 \ENDDOC

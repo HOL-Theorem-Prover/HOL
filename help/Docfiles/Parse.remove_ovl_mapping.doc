@@ -1,6 +1,6 @@
 \DOC remove_ovl_mapping
 
-\TYPE {remove_ovl_mapping: string -> {{Name:string,Thy:string}} -> unit}
+\TYPE {remove_ovl_mapping: string -> {Name:string,Thy:string} -> unit}
 
 \SYNOPSIS
 Removes an overloading mapping between the string and constant specified.
@@ -8,7 +8,8 @@ Removes an overloading mapping between the string and constant specified.
 \KEYWORDS
 Parsing, pretty-printing, overloading.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 Each grammar maintains two maps internally.  One is from strings to
@@ -21,7 +22,7 @@ of the constants in the set that it maps to.  When printing a
 constant, the map in the opposite direction is used to turn a constant
 into a string.
 
-A call to {remove_ovl_mapping s {{Name,Thy}}} removes the given pair
+A call to {remove_ovl_mapping s {Name,Thy}} removes the given pair
 from both maps.
 
 \FAILURE
@@ -43,5 +44,4 @@ is not saved to a theory file.
 
 \SEEALSO
 Parse.clear_overloads_on, Parse.overload_on, Parse.update_overload_maps.
-
 \ENDDOC

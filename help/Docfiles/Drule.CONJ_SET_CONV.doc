@@ -13,13 +13,13 @@ The arguments to {CONJ_SET_CONV} are two ML lists of terms {[t1,...,tn]} and
 {[u1,...,um]}.  If these are equal when considered as sets, that is
 if the sets
 {
-   {{t1,...,tn}} and {{u1,...,um}}
+   {t1,...,tn} and {u1,...,um}
 }
-\noindent are equal, then {CONJ_SET_CONV} returns the theorem:
+are equal, then {CONJ_SET_CONV} returns the theorem:
 {
    |- (t1 /\ ... /\ tn) = (u1 /\ ... /\ um)
 }
-\noindent Otherwise {CONJ_SET_CONV} fails.
+Otherwise {CONJ_SET_CONV} fails.
 
 \FAILURE
 {CONJ_SET_CONV [t1,...,tn] [u1,...,um]} fails if {[t1,...,tn]} and
@@ -35,5 +35,4 @@ This is not a true conversion, so perhaps it ought to be called something else.
 
 \SEEALSO
 Drule.CONJUNCTS_CONV.
-
 \ENDDOC

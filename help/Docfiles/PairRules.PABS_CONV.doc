@@ -5,7 +5,8 @@
 \KEYWORDS
 conversional, abstraction.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Applies a conversion to the body of a paired abstraction.
@@ -17,7 +18,7 @@ of the form:
 {
    |- (\p.t) = (\p.t')
 }
-\noindent That is, {ABS_CONV c "\p.t"} applies {p} to the body of the paired
+That is, {ABS_CONV c "\p.t"} applies {p} to the body of the paired
 abstraction {"\p.t"}.
 
 \FAILURE
@@ -32,7 +33,8 @@ The function returned by {ABS_CONV p} may also fail if the ML function
 - PABS_CONV SYM_CONV (Term `\(x,y). (1,2) = (x,y)`);
 > val it = |- (\(x,y). (1,2) = (x,y)) = (\(x,y). (x,y) = (1,2)) : thm
 }
+
+
 \SEEALSO
 Conv.ABS_CONV, PairRules.PSUB_CONV.
-
 \ENDDOC

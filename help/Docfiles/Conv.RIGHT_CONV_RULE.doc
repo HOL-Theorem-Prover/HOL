@@ -17,7 +17,7 @@ then the rule {RIGHT_CONV_RULE c} infers {|- t1 = t2'} from the theorem
    ---------------------  RIGHT_CONV_RULE c
     A u A' |- t1 = t2'
 }
-\noindent Note that if the conversion {c} returns a theorem with assumptions,
+Note that if the conversion {c} returns a theorem with assumptions,
 then the resulting inference rule adds these to the assumptions of the
 theorem it returns.
 
@@ -30,5 +30,4 @@ a term {t} to a theorem {|- t = t'}).
 
 \SEEALSO
 Conv.CONV_RULE.
-
 \ENDDOC

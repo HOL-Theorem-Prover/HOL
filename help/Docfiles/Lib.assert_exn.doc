@@ -15,6 +15,7 @@ Checks that a value satisfies a predicate.
 an exception {ex}, then {assert_exn p x e} raises {ex}.
 
 
+
 \EXAMPLE
 {
 - null [];
@@ -31,7 +32,7 @@ an exception {ex}, then {assert_exn p x e} raises {ex}.
 ! Fail  "non-empty list"
 }
 
+
 \SEEALSO
 Lib.can, Lib.assert, Feedback.with_exn.
-
 \ENDDOC

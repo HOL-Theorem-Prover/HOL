@@ -50,10 +50,10 @@ to disk.
 > val it = "foo" : string
 }
 
+
 \FAILURE
 Never fails.
 
 \SEEALSO
 Theory.new_theory, Theory.export_theory.
-
 \ENDDOC

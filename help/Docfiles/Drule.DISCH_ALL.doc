@@ -14,6 +14,8 @@ rule, discharge, assumption, implication.
    ----------------------------  DISCH_ALL
     |- A1 ==> ... ==> An ==> t
 }
+
+
 \FAILURE
 {DISCH_ALL} will not fail if there are no hypotheses to discharge, it will
 simply return the theorem unchanged.
@@ -26,5 +28,4 @@ implication.
 
 \SEEALSO
 Thm.DISCH, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
-
 \ENDDOC

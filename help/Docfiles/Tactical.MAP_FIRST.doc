@@ -19,6 +19,8 @@ as applying {f(xm)}. Thus:
 {
    MAP_FIRST f [x1;...;xn] = (f x1) ORELSE ... ORELSE (f xn)
 }
+
+
 \FAILURE
 The application of {MAP_FIRST} to a function and tactic list fails iff
 the function does when applied to any of the elements of the list. The
@@ -27,5 +29,4 @@ applied to the goal.
 
 \SEEALSO
 Tactical.EVERY, Tactical.FIRST, Tactical.MAP_EVERY, Tactical.ORELSE.
-
 \ENDDOC

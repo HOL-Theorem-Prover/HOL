@@ -8,7 +8,8 @@ Specifies the list of names that should be parsed as constants.
 \KEYWORDS
 Parsing.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 One of the final phases of parsing is the resolution of free names in
@@ -44,6 +45,7 @@ ignored.
 > val it = ("/\\", `:'a -> 'b -> 'c`) : string * hol_type
 }
 
+
 \USES
 When writing library code that calls the parser, it can be useful to
 know exactly what constants the parser will "recognise".
@@ -55,5 +57,4 @@ it is just harder to find.
 
 \SEEALSO
 Parse.hidden, Parse.hide, Parse.known_constants, Parse.reveal.
-
 \ENDDOC

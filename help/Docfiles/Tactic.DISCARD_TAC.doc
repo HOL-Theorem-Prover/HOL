@@ -18,11 +18,12 @@ either case, the tactic has no effect. Otherwise, it fails.
    ========  DISCARD_TAC (A' |- s)
     A ?- t
 }
+
+
 \FAILURE
 Fails if the above conditions are not met, i.e. the theorem's conclusion
 is not {T} or already in the assumption list (up to alpha-conversion).
 
 \SEEALSO
 Tactical.POP_ASSUM, Tactical.POP_ASSUM_LIST.
-
 \ENDDOC

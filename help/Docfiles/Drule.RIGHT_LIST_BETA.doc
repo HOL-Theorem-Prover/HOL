@@ -18,11 +18,12 @@ are renamed if necessary to avoid free variable capture.
    ----------------------------------  RIGHT_LIST_BETA
        A |- s = t[t1/x1]...[tn/xn]
 }
+
+
 \FAILURE
 Fails unless the theorem is equational, with its right-hand side being
 a top-level beta-redex.
 
 \SEEALSO
 Thm.BETA_CONV, Conv.BETA_RULE, Tactic.BETA_TAC, Drule.LIST_BETA_CONV, Drule.RIGHT_BETA.
-
 \ENDDOC

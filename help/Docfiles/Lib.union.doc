@@ -30,6 +30,7 @@ val it = [1,2,3,2] : int list
 val it = [3,2,1,1,1] : int list
 }
 
+
 \COMMENTS
 Do not make the assumption that the order of items in the list 
 returned by {union} is fixed. Later implementations may use 
@@ -44,7 +45,5 @@ This limits its applicability to types that allow equality. For other
 types, typically abstract ones, use the `op_' variants.
 
 \SEEALSO
-Lib.op_union, Lib.U, Lib.mk_set, Lib.mem, Lib.insert, Lib.set_eq, 
-Lib.intersect, Lib.set_diff, Lib.subtract.
-
+Lib.op_union, Lib.U, Lib.mk_set, Lib.mem, Lib.insert, Lib.set_eq, Lib.intersect, Lib.set_diff, Lib.subtract.
 \ENDDOC

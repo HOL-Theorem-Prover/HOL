@@ -1,4 +1,4 @@
-\DOC delta 
+\DOC delta
 
 \TYPE {type 'a delta}
 
@@ -10,7 +10,7 @@ The {delta} type is declared as follows:
 {
    datatype 'a delta = SAME | DIFF of 'a
 }
-\noindent The {delta} type may be used in applications where it is 
+The {delta} type may be used in applications where it is 
 important to tell if a function has changed its argument or not. As an
 example of this, consider mapping a function over a large collection of
 elements. If only a few elements are changed, it makes sense to re-use
@@ -23,5 +23,4 @@ The {delta} type is an example of polytypism.
 
 \SEEALSO
 Lib.delta_apply, Lib.delta_map, Lib.delta_pair.
-
 \ENDDOC

@@ -8,7 +8,8 @@ Returns the list of constants known to the parser.
 \KEYWORDS
 Parsing.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 A call to this functions returns the list of constants that will be
@@ -20,5 +21,4 @@ Never fails.
 
 \SEEALSO
 Parse.hide, Parse.reveal, Parse.set_known_constants.
-
 \ENDDOC

@@ -13,5 +13,4 @@ Never fails.
 
 \SEEALSO
 Term.mk_var, Term.dest_var, Term.is_const, Term.is_comb, Term.is_abs.
-
 \ENDDOC

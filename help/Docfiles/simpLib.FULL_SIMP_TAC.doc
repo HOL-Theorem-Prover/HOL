@@ -6,9 +6,11 @@
 Simplifies the goal (assumptions as well as conclusion) with the given
 simpset.
 
-\KEYWORDS simplification, tactic.
+\KEYWORDS
+simplification, tactic.
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \DESCRIBE
 {FULL_SIMP_TAC} is a powerful simplification tactic that simplifies
@@ -35,7 +37,7 @@ Here {FULL_SIMP_TAC} is used to prove a goal:
                               Term `?y. x * y = 51`)
    - val it = ([], fn) : tactic_result
 }
-\noindent Using {LESS_OR_EQ}
+Using {LESS_OR_EQ}
 {|- !m n. m <= n = m < n \/ (m = n)}, a
 useful case split can be induced in the next goal:
 {
@@ -46,7 +48,7 @@ useful case split can be induced in the next goal:
          ([`x = y`, `x < z`], `y + y < z`)], fn)
        : tactic_result
 }
-\noindent Note that the equality {x = y} is not used to simplify the
+Note that the equality {x = y} is not used to simplify the
 subsequent assumptions, but is used to simplify the conclusion of the
 goal.
 
@@ -60,5 +62,4 @@ this occurring, the best approach seems to be the use of
 
 \SEEALSO
 simpLib.ASM_SIMP_TAC, hol_ss, simpLib.SIMP_CONV, simpLib.SIMP_RULE, simpLib.SIMP_TAC.
-
 \ENDDOC

@@ -23,7 +23,8 @@ function type, but its domain does not equal the type of {t2}.
    Exception raised at Term.mk_comb:
    incompatible types
 }
+
+
 \SEEALSO
 Term.dest_comb, Term.is_comb, Term.list_mk_comb, Term.mk_var, Term.mk_const, Term.mk_abs.
-
 \ENDDOC

@@ -61,7 +61,7 @@ declare a new theory segment.
    - parents "-";
    > val it = ["list", "option"] : string list
 }
-\noindent Next we make a definition, prove and store a theorem, and 
+Next we make a definition, prove and store a theorem, and 
 then change our mind about the name of the defined constant. Restarting 
 the current theory keeps the static theory context fixed but clears
 the current segment so that we have a clean slate to work from.
@@ -83,10 +83,11 @@ the current segment so that we have a clean slate to work from.
    > val it = [("twice", |- !x. twice x = x + x)] : (string * thm) list
 }
 
+
 \COMMENTS
 The theory file in which the data of the new theory segment is
 ultimately stored will have name {thyTheory} in the directory 
-in which {export_theory} is called.  
+in which {export_theory} is called.
 
 \USES
 Modularizing large formalizations. By splitting a formalization 
@@ -95,11 +96,5 @@ required if definitions, etc., need to be changed is minimized.
 Only the associated segment and its descendants need be redefined.
 
 \SEEALSO
-Theory.current_theory, Theory.new_axiom, Theory.parents,
-boolSyntax.new_binder, Theory.new_constant, 
-Definition.new_definition, boolSyntax.new_infix, 
-Definition.new_specification, 
-Theory.new_type, print_theory, Theory.save_thm, Theory.export_theory,
-Theory.after_new_theory.
-
+Theory.current_theory, Theory.new_axiom, Theory.parents, boolSyntax.new_binder, Theory.new_constant, Definition.new_definition, boolSyntax.new_infix, Definition.new_specification, Theory.new_type, print_theory, Theory.save_thm, Theory.export_theory, Theory.after_new_theory.
 \ENDDOC

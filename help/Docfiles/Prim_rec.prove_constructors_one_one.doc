@@ -28,16 +28,15 @@ Given the following primitive recursion theorem for labelled binary trees:
         (!x. fn(LEAF x) = f0 x) /\
         (!b1 b2. fn(NODE b1 b2) = f1(fn b1)(fn b2)b1 b2)
 }
-\noindent {prove_constructors_one_one} proves and returns the theorem:
+{prove_constructors_one_one} proves and returns the theorem:
 {
    |- (!x x'. (LEAF x = LEAF x') = (x = x')) /\
       (!b1 b2 b1' b2'.
         (NODE b1 b2 = NODE b1' b2') = (b1 = b1') /\ (b2 = b2'))
 }
-\noindent This states that the constructors {LEAF} and {NODE} are both
+This states that the constructors {LEAF} and {NODE} are both
 injective.
 
 \SEEALSO
 Datatype.define_type, Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition, Prim_rec.prove_cases_thm, Prim_rec.prove_constructors_distinct, Prim_rec.prove_induction_thm, Prim_rec.prove_rec_fn_exists.
-
 \ENDDOC

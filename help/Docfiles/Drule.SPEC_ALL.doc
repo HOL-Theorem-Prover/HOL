@@ -19,6 +19,8 @@ just {xi}, in which case {SPEC_ALL} simply removes all universal quantifiers.
    ---------------------------  SPEC_ALL
     A |- t[x1'/x1]...[xn'/xn]
 }
+
+
 \FAILURE
 Never fails.
 
@@ -27,8 +29,8 @@ Never fails.
 - SPEC_ALL CONJ_ASSOC;
 > val it = |- t1 /\ t2 /\ t3 = (t1 /\ t2) /\ t3 : thm
 }
-\SEEALSO
-Thm.GEN, Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, 
-Thm.SPEC, Drule.SPECL, Tactic.SPEC_TAC.
 
+
+\SEEALSO
+Thm.GEN, Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Tactic.SPEC_TAC.
 \ENDDOC

@@ -22,6 +22,7 @@ Never fails.
 > val it = (`x`, 0) : term * int
 }
 
+
 \COMMENTS
 There is no corresponding entrypoint for building iterated negations.
 If such functionality is desired, {funpow} may be used:
@@ -30,7 +31,7 @@ If such functionality is desired, {funpow} may be used:
     > val it = `~~~T` : term
 }
 
+
 \SEEALSO
 boolSyntax.dest_neg, boolSyntax.mk_neg, Lib.funpow.
-
 \ENDDOC

@@ -2,12 +2,13 @@
 
 \TYPE {fail : unit -> 'a}
 
-\SYNOPSIS Raise a {HOL_ERR}.
+\SYNOPSIS
+Raise a {HOL_ERR}.
 
-\KEYWORDS exception
+\KEYWORDS
+exception
 
 \DESCRIBE
-
 The function {fail} raises a {HOL_ERR} with default values. This is
 useful when detailed error tracking is not necessary.
 
@@ -24,7 +25,7 @@ fail
 ! HOL_ERR
 }
 
+
 \SEEALSO
 Feedback, Feedback.failwith, Feedback.Raise, Feedback.HOL_ERR.
-
 \ENDDOC

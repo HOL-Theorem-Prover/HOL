@@ -1,4 +1,4 @@
-\DOC with_exn 
+\DOC with_exn
 
 \TYPE {with_exn : ('a -> 'b) -> 'a -> exn -> 'b}
 
@@ -8,7 +8,7 @@ Apply a function to an argument, raising supplied exception on failure.
 \KEYWORDS
 exception, application.
 
-\DESCRIBE 
+\DESCRIBE
 An evaluation of {with_exn f x e} applies function {f} to
 argument {x}. If that computation finishes with {y}, then {y} is 
 the result. Otherwise, {f x} raised an exception, and the exception 
@@ -29,6 +29,7 @@ When {f x} fails or is interrupted.
 > Interrupted.
 }
 
+
 \COMMENTS
 Often {with_exn} can be used to clean up programming where lots of
 exceptions may be handled. For example, taking apart a compound term of
@@ -48,7 +49,7 @@ message is desired.
    end
 }
 
+
 \SEEALSO
 Feedback.wrap_exn, Lib.assert_exn, Lib.assert.
-
 \ENDDOC

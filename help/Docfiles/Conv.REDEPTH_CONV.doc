@@ -32,16 +32,16 @@ The following example shows how {REDEPTH_CONV} retraverses subterms:
    - REDEPTH_CONV BETA_CONV (Term `(\f x. (f x) + 1) (\y.y) 2`);
    val it = |- (\f x. (f x) + 1)(\y. y)2 = 2 + 1 : thm
 }
-\noindent Here, {BETA_CONV} is first applied successfully to the (beta-redex)
+Here, {BETA_CONV} is first applied successfully to the (beta-redex)
 subterm:
 {
    (\f x. (f x) + 1) (\y.y)
 }
-\noindent This application reduces this subterm to:
+This application reduces this subterm to:
 {
    (\x. ((\y.y) x) + 1)
 }
-\noindent {REDEPTH_CONV BETA_CONV} is then recursively applied to this
+{REDEPTH_CONV BETA_CONV} is then recursively applied to this
 transformed subterm, eventually reducing it to {(\x. x + 1)}. Finally, a
 beta-reduction of the top-level term, now the simplified beta-redex
 {(\x. x + 1) 2}, produces {2 + 1}.
@@ -56,5 +56,4 @@ exception, the operation of {REDEPTH_CONV} will be unpredictable.
 
 \SEEALSO
 Conv.DEPTH_CONV, Conv.ONCE_DEPTH_CONV, Conv.TOP_DEPTH_CONV.
-
 \ENDDOC

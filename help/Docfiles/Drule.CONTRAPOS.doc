@@ -16,10 +16,11 @@ returns its contrapositive, {A |- ~t ==> ~s}.
    ----------------  CONTRAPOS
     A |- ~t ==> ~s
 }
+
+
 \FAILURE
 Fails unless the theorem is an implication.
 
 \SEEALSO
 Thm.CCONTR, Drule.CONTR, Conv.CONTRAPOS_CONV, Thm.NOT_ELIM.
-
 \ENDDOC

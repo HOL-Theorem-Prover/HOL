@@ -6,7 +6,9 @@
 Tests if a string has a permissible name for a type constant.
 
 
-\LIBRARY Lexis
+
+\LIBRARY
+Lexis
 
 \DESCRIBE
 When applied to a string, {allowed_type_constant} returns {true} if
@@ -24,6 +26,7 @@ type operators:
    > val it = [true, false, true, false, false, true] : bool list
 }
 
+
 \COMMENTS
 Note that this function only performs a lexical test; it does not
 check whether there is already a type operator of that name in the
@@ -33,7 +36,7 @@ This function is not currently enforced by the system, as it was found
 that more flexibilty in naming was preferable.
 
 
+
 \SEEALSO
 Lexis.allowed_term_constant.
-
 \ENDDOC

@@ -17,10 +17,11 @@ Variables are renamed where necessary to avoid free variable capture.
    ==========================  BETA_TAC
      A ?- ...(s1[s2/x])...
 }
+
+
 \FAILURE
 Never fails, but will have no effect if there are no beta-redexes.
 
 \SEEALSO
 Thm.BETA_CONV, Tactic.BETA_TAC, PairedLambda.PAIRED_BETA_CONV.
-
 \ENDDOC

@@ -16,14 +16,14 @@ the theorem:
 {
    |- (\x.t) = (\x.t')
 }
-\noindent That is, {SUB_CONV c "\x.t"} applies {c} to the body of the
+That is, {SUB_CONV c "\x.t"} applies {c} to the body of the
 abstraction {"\x.t"}.  If {c} is a conversion that maps {"t1"} to the theorem
 {|- t1 = t1'} and {"t2"} to the theorem {|- t2 = t2'}, then the conversion
 {SUB_CONV c} maps an application {"t1 t2"} to the theorem:
 {
    |- (t1 t2) = (t1' t2')
 }
-\noindent That is, {SUB_CONV c "t1 t2"} applies {c} to the both the operator
+That is, {SUB_CONV c "t1 t2"} applies {c} to the both the operator
 {t1} and the operand {t2} of the application {"t1 t2"}.  Finally, for any
 conversion {c}, the function returned by {SUB_CONV c} acts as the identity
 conversion on variables and constants.  That is, if {"t"} is a variable or
@@ -39,5 +39,4 @@ in fact, a conversion (i.e. a function that maps a term {t} to a theorem
 
 \SEEALSO
 Conv.ABS_CONV, Conv.RAND_CONV, Conv.RATOR_CONV.
-
 \ENDDOC

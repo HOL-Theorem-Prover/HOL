@@ -32,7 +32,8 @@ start using it as follows:
    - new_axiom("EXT", Term`(!z. mem z x = mem z y) ==> (x = y)`);
    > val it = |- (!z. mem z x = mem z y) ==> (x = y) : thm
 }
+
+
 \SEEALSO
 Theory.types, Theory.new_constant, Theory.new_axiom.
-
 \ENDDOC

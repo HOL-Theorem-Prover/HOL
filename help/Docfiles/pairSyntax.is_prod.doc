@@ -2,7 +2,8 @@
 
 \TYPE {is_prod : hol_type -> bool}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Tests a type to see if it is a product type.
@@ -15,5 +16,4 @@ Never fails.
 
 \SEEALSO
 pairSyntax.dest_prod, pairSyntax.mk_prod.
-
 \ENDDOC

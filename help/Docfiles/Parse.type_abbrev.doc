@@ -5,9 +5,11 @@
 \SYNOPSIS
 Establishes a type abbreviation.
 
-\KEYWORDS Parsing, pretty-printing.
+\KEYWORDS
+Parsing, pretty-printing.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 A call to {type_abbrev(s,ty)} sets up a type abbreviation that will
@@ -25,7 +27,6 @@ abbreviation.
 Never fails.
 
 \EXAMPLE
-
 This is a simple abbreviation.
 {
    - type_abbrev ("set", ``:'a -> bool``);
@@ -34,19 +35,21 @@ This is a simple abbreviation.
    - ``:num set``;
    > val it = ``:num -> bool`` : hol_type
 }
+
 Here, the abbreviation is set up and provided with its own infix
 symbol.
 {
    - type_abbrev ("rfunc", ``:'b -> 'a``);
    > val it = () : unit
 
-   - add_infix_type {{Assoc = RIGHT, Name = "rfunc",
-                     ParseName = SOME "<-", Prec = 50}};
+   - add_infix_type {Assoc = RIGHT, Name = "rfunc",
+                     ParseName = SOME "<-", Prec = 50};
    > val it = () : unit
 
    - ``:num <- bool``;
    > val it = ``:bool -> num`` : hol_type
 }
+
 
 \COMMENTS
 Pretty-printing abbreviations well is complicated, and as yet
@@ -57,5 +60,4 @@ exported.
 
 \SEEALSO
 add_infix_type, add_type.
-
 \ENDDOC

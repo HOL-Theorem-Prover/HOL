@@ -17,7 +17,7 @@ Never fails.
 > val it = ([`p = T`], `p = T`) : term list * term
 }
 
+
 \SEEALSO
 Thm.concl, Thm.hyp.
-
 \ENDDOC

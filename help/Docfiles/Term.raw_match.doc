@@ -22,17 +22,17 @@ succeeds, returns a substitution pair {(S,T)} such that
 {
    aconv (subst S' (inst T pat)) ob.
 }
-\noindent where {S'} is {S} instantiated by {T}. The arguments
+where {S'} is {S} instantiated by {T}. The arguments
 {avoid_tys} and {avoid_tms} specify type and term variables in {pat}
 that are not allowed to become {redex}es in {S} and {T}.
 
 The pair {(tmS,tyS)} is an accumulator argument. This allows {raw_match}
 to be folded through lists of terms to be matched. {(S,T)} must agree
-with {(tmS,tyS)}. This means that if there is a {{{redex,residue}}} in {S}
-and also a {{{redex,residue}}} in {tmS} so that both {redex} fields are
+with {(tmS,tyS)}. This means that if there is a {{redex,residue}} in {S}
+and also a {{redex,residue}} in {tmS} so that both {redex} fields are
 equal, then the {residue} fields must be alpha-convertible. Similarly
-for types: if there is a {{{redex,residue}}} in {T} and also a
-{{{redex,residue}}} in {tyS} so that both {redex} fields are equal, then
+for types: if there is a {{redex,residue}} in {T} and also a
+{{redex,residue}} in {tyS} so that both {redex} fields are equal, then
 the {residue} fields must also be equal. If these conditions hold, then
 the result {(S,T)} includes {(tmS,tyS)}.
 
@@ -51,14 +51,14 @@ also alpha-convertibility.
                     (Term `\x:'a. x = f (y:'b)`)
                     (Term `\a.    a = ~p`) ([],([],[]));
    > val S =
-       [{{redex = `(f :'b -> 'a)`, residue = `$~`}},
-        {{redex = `(y :'b)`,       residue = `(p :bool)`}}] : ...
+       [{redex = `(f :'b -> 'a)`, residue = `$~`},
+        {redex = `(y :'b)`,       residue = `(p :bool)`}] : ...
 
      val T =
-       ([{{redex = `:'b`, residue = `:bool`}},
-         {{redex = `:'a`, residue = `:bool`}}], []) : ...
+       ([{redex = `:'b`, residue = `:bool`},
+         {redex = `:'a`, residue = `:bool`}], []) : ...
 }
-\noindent One of the main differences between {raw_match} and more
+One of the main differences between {raw_match} and more
 refined derivatives of it, is that the returned substitutions are
 un-normalized by {raw_match}. If one naively applied {(S,T)} to
 {\x:'a. x = f (y:'b)}, type instantiation with {T} would be applied
@@ -83,7 +83,5 @@ Higher level matchers are generally preferable, but {raw_match} is
 occasionally useful when programming inference rules.
 
 \SEEALSO
-Term.match_term, Term.match_terml, Term.norm_subst, Term.subst, Term.inst,
-Type.raw_match_type, Type.match_type, Type.match_typel, Type.type_subst.
-
+Term.match_term, Term.match_terml, Term.norm_subst, Term.subst, Term.inst, Type.raw_match_type, Type.match_type, Type.match_typel, Type.type_subst.
 \ENDDOC

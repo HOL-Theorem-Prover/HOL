@@ -1,4 +1,4 @@
-\DOC start_time 
+\DOC start_time
 
 \TYPE {start_time : unit -> Timer.cpu_timer}
 
@@ -22,6 +22,7 @@ Never fails.
 > val clock = <cpu_timer> : cpu_timer
 }
 
+
 \COMMENTS
 Multiple timers may be started without any interfering with the others.
 
@@ -30,5 +31,4 @@ in the ML Standard Basis Library structures {Timer} and {Time}.
 
 \SEEALSO
 Lib.end_time, Lib.time.
-
 \ENDDOC

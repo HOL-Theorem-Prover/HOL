@@ -19,6 +19,8 @@ of {MP} inferences to deduce {A u A1 u ... u An |- t}.
    ---------------------------------------------------------  LIST_MP
                     A u A1 u ... u An |- t
 }
+
+
 \FAILURE
 Fails unless the theorem is a chain of implications whose consequents are the
 same as the conclusions of the list of theorems (up to alpha-conversion), in
@@ -26,5 +28,4 @@ sequence.
 
 \SEEALSO
 Thm.EQ_MP, Drule.MATCH_MP, Tactic.MATCH_MP_TAC, Thm.MP, Tactic.MP_TAC.
-
 \ENDDOC

@@ -19,6 +19,8 @@ been loaded.
   - tyvarsl [--`!x. x = 1`--, --`!x:'a. x = x`--];
   [(==`:'a`==)] : hol_type list
 }
+
+
 \USES
 Finding all the free type variables in the assumptions of a theorem, as a check
 on the validity of certain inferences.
@@ -29,5 +31,4 @@ binding operation for types, so `is free in' is synonymous with `appears in'.
 
 \SEEALSO
 hol88Lib.tyvars.
-
 \ENDDOC

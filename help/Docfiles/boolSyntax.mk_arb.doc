@@ -7,9 +7,10 @@ Creates a type instance of the {ARB} constant.
 
 \LIBRARY
 
+
 \DESCRIBE
 For any HOL type {ty}, {mk_arb ty} creates a type instance of the {ARB}
-constant. 
+constant.
 
 \FAILURE
 Never fails.
@@ -20,5 +21,4 @@ creating pseudo-partial functions.
 
 \SEEALSO
 boolSyntax.dest_arb, boolSyntax.is_arb, boolSyntax.arb.
-
 \ENDDOC

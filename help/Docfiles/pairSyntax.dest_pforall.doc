@@ -2,7 +2,8 @@
 
 \TYPE {dest_pforall : term -> term * term}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Breaks apart paired universal quantifiers into the bound pair and the body.
@@ -16,5 +17,4 @@ Fails with {dest_pforall} if term is not a paired universal quantification.
 
 \SEEALSO
 boolSyntax.dest_forall, pairSyntax.mk_pforall, pairSyntax.is_pforall, pairSyntax.strip_pforall.
-
 \ENDDOC

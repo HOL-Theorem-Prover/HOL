@@ -19,18 +19,19 @@ Apply {tl} three times to a list:
    - funpow 3 tl [1,2,3,4,5];
    > [4, 5] : int list
 }
-\noindent Apply {tl} zero times:
+Apply {tl} zero times:
 {
    - funpow 0 tl [1,2,3,4,5];
    > [1; 2; 3; 4; 5] : int list
 }
-\noindent Apply {tl} six times to a list of only five elements:
+Apply {tl} six times to a list of only five elements:
 {
    - funpow 6 tl [1,2,3,4,5];
    ! Uncaught exception:
    ! List.Empty
 }
 
-\SEEALSO Lib.repeat.
 
+\SEEALSO
+Lib.repeat.
 \ENDDOC

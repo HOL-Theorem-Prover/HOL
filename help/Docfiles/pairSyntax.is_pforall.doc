@@ -2,7 +2,8 @@
 
 \TYPE {is_pforall : (term -> bool)}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Tests a term to see if it is a paired universal quantification.
@@ -16,5 +17,4 @@ Never fails.
 
 \SEEALSO
 boolSyntax.is_forall, pairSyntax.mk_pforall, pairSyntax.dest_pforall.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, quantifier, existential, implication.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Existentially quantifies both the antecedent and consequent of an implication.
@@ -20,6 +21,8 @@ provided no variable in {p} is free in the assumptions.
    --------------------------  EXISTS_IMP "x"   [where x is not free in A]
     A |- (?x.t1) ==> (?x.t2)
 }
+
+
 \FAILURE
 Fails if the theorem is not implicative, or if the term is not a paired 
 structure of variables, of if any variable in the pair is free in the
@@ -27,5 +30,4 @@ assumption list.
 
 \SEEALSO
 Drule.EXISTS_IMP, PairRules.PEXISTS_EQ.
-
 \ENDDOC

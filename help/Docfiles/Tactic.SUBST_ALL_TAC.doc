@@ -17,11 +17,11 @@ are kept fixed.  Given a theorem {A|-u=v} and a goal {([t1;...;tn], t)},
 for each free occurrence of {u} in both the assumptions and the conclusion of
 the goal.
 {
-           {{t1,...,tn}} ?- t
+           {t1,...,tn} ?- t
    =================================  SUBST_ALL_TAC (A|-u=v)
-    {{t1[v/u],...,tn[v/u]}} ?- t[v/u]
+    {t1[v/u],...,tn[v/u]} ?- t[v/u]
 }
-\noindent The assumptions of the theorem used to substitute with are not added
+The assumptions of the theorem used to substitute with are not added
 to the assumptions of the goal, but they are recorded in the proof.  If {A} is
 not a subset of the assumptions of the goal (up to alpha-conversion), then
 {SUBST_ALL_TAC (A|-u=v)} results in an invalid tactic.
@@ -37,17 +37,18 @@ No change is made to the goal if no occurrence of the left-hand side of
 \EXAMPLE
 Simplifying both the assumption and the term in the goal
 {
-   {{0 + m = n}} ?- 0 + (0 + m) = n
+   {0 + m = n} ?- 0 + (0 + m) = n
 }
-\noindent by substituting with the theorem {|- 0 + m = m} for addition
+by substituting with the theorem {|- 0 + m = m} for addition
 {
    SUBST_ALL_TAC (CONJUNCT1 ADD_CLAUSES)
 }
-\noindent results in the goal
+results in the goal
 {
-   {{m = n}} ?- 0 + m = n
+   {m = n} ?- 0 + m = n
 }
+
+
 \SEEALSO
 Rewrite.ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC, Tactic.SUBST1_TAC, Tactic.SUBST_TAC.
-
 \ENDDOC

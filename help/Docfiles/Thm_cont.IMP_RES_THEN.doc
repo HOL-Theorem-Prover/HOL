@@ -22,11 +22,11 @@ implications from {th}, each of which has the form:
 {
    Ai |- !x1...xn. ui ==> vi
 }
-\noindent {IMP_RES_THEN} then produces a tactic that, when applied to
+{IMP_RES_THEN} then produces a tactic that, when applied to
 a goal {A ?- g} attempts to match each antecedent {ui} to each
 assumption {aj |- aj} in the assumptions {A}.  If the antecedent {ui}
 of any implication matches the conclusion {aj} of any assumption, then
-an instance of the theorem {Ai u {{aj}} |- vi}, called a `resolvent',
+an instance of the theorem {Ai u {aj} |- vi}, called a `resolvent',
 is obtained by specialization of the variables {x1}, ..., {xn} and
 type instantiation, followed by an application of modus ponens.  There
 may be more than one canonical implication and each implication is
@@ -40,15 +40,15 @@ That is,
 {
    IMP_RES_THEN ttac th  (A ?- g)
 }
-\noindent has the effect of:
+has the effect of:
 {
-   MAP_EVERY (mapfilter ttac [... , (Ai u {{aj}} |- vi) , ...]) (A ?- g)
+   MAP_EVERY (mapfilter ttac [... , (Ai u {aj} |- vi) , ...]) (A ?- g)
 }
-\noindent where the theorems {Ai u {{aj}} |- vi} are all the
+where the theorems {Ai u {aj} |- vi} are all the
 consequences that can be drawn by a (single) matching modus-ponens
 inference from the assumptions of the goal {A ?- g} and the
 implications derived from the supplied theorem {th}.  The sequence in
-which the theorems {Ai u {{aj}} |- vi} are generated and the
+which the theorems {Ai u {aj} |- vi} are generated and the
 corresponding tactics applied is unspecified.
 
 \FAILURE
@@ -58,8 +58,8 @@ be derived from {th} by the transformation process described under the
 entry for {RES_CANON}.  Evaluating {IMP_RES_THEN ttac th (A ?- g)}
 fails if no assumption of the goal {A ?- g} can be resolved with the
 implication or implications derived from {th}. Evaluation also fails
-if there are resolvents, but for every resolvent {Ai u {{aj}} |- vi}
-evaluating the application {ttac (Ai u {{aj}} |- vi)} fails---that 
+if there are resolvents, but for every resolvent {Ai u {aj} |- vi}
+evaluating the application {ttac (Ai u {aj} |- vi)} fails---that 
 is, if for every resolvent {ttac} fails to produce a tactic. Finally, 
 failure is propagated if any of the tactics that are produced from 
 the resolvents by {ttac} fails when applied in sequence to the goal.
@@ -72,25 +72,24 @@ away'.  Suppose the goal is:
 {
    a + n = a  ?- !k. k - n = k
 }
-\noindent By the built-in theorem:
+By the built-in theorem:
 {
    ADD_INV_0 = |- !m n. (m + n = m) ==> (n = 0)
 }
-\noindent the assumption of this goal implies that {n} equals {0}.  A
+the assumption of this goal implies that {n} equals {0}.  A
 single-step resolution with this theorem followed by substitution:
 {
    IMP_RES_THEN SUBST1_TAC ADD_INV_0
 }
-\noindent can therefore be used to reduce the goal to:
+can therefore be used to reduce the goal to:
 {
    a + n = a  ?- !k. k - 0 = m
 }
-\noindent Here, a single resolvent {a + n = a |- n = 0} is obtained by
+Here, a single resolvent {a + n = a |- n = 0} is obtained by
 matching the antecedent of {ADD_INV_0} to the assumption of the goal.
 This is then used to substitute {0} for {n} in the conclusion of the
 goal.
 
 \SEEALSO
 Tactic.IMP_RES_TAC, Drule.MATCH_MP, Drule.RES_CANON, Tactic.RES_TAC, Thm_cont.RES_THEN.
-
 \ENDDOC

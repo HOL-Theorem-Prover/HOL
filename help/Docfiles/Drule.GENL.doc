@@ -18,12 +18,12 @@ any or all of the {xi} should be free in {t}.
    ------------------  GENL [x1,...,xn]       [where no xi is free in A]
     A |- !x1...xn. t
 }
+
+
 \FAILURE
 Fails unless all the terms in the list are variables, none of which are
 free in the assumption list.
 
 \SEEALSO
-Thm.GEN, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, 
-Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
-
+Thm.GEN, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
 \ENDDOC

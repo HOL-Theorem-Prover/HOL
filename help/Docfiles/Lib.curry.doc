@@ -11,6 +11,7 @@ The application {curry f} returns {fn x => fn y => f(x,y)}, so that
    curry f x y = f(x,y)
 }
 
+
 \FAILURE
 A call {curry f} never fails; however, {curry f x y} fails if {f (x,y)}
 fails.
@@ -24,7 +25,7 @@ fails.
 > val it = 7 : int
 }
 
+
 \SEEALSO
 Lib, Lib.uncurry.
-
 \ENDDOC

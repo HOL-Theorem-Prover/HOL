@@ -1,4 +1,4 @@
-\DOC reset 
+\DOC reset
 
 \TYPE {reset : ('a,'b) istream -> ('a,'b) istream}
 
@@ -25,10 +25,10 @@ Never fails.
 > val it = "gsym0" : string
 }
 
+
 \COMMENTS
 Perhaps the type of {reset} should be {('a,'b) istream -> unit}.
 
 \SEEALSO
 Lib.mk_istream, Lib.next, Lib.state.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {try : ('a -> 'b) -> 'a -> 'b}
 
-\SYNOPSIS Apply a function and print any exceptions
+\SYNOPSIS
+Apply a function and print any exceptions
 
-\KEYWORDS exception, error, application
+\KEYWORDS
+exception, error, application
 
 \DESCRIBE
 The application {try f x} evaluates {f x}; if this evaluation raises an
@@ -32,7 +34,7 @@ incompatible types
 ! Uncaught exception: 
 ! HOL_ERR
 }
-\noindent Evaluation order can be significant. ML evaluates {try M N} by
+Evaluation order can be significant. ML evaluates {try M N} by
 evaluating {M} (yielding {f} say) and {N} (yielding {x} say), and then
 {f} is applied to {x}. Any exceptions raised in the course of evaluating
 {M} or {N} will not be detected by {try}. In such cases it is better to
@@ -52,6 +54,7 @@ the way to the top level; however, {Raise} does handle the exception.
     ! HOL_ERR
 }
 
-\SEEALSO Feedback.Raise, Lib.trye.
 
+\SEEALSO
+Feedback.Raise, Lib.trye.
 \ENDDOC

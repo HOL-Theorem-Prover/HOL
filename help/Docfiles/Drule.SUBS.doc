@@ -18,7 +18,7 @@ simultaneously replaces each free occurrence of {ti} in {t} with {vi}:
    ---------------------------------------------  SUBS[A1|-t1=v1;...;An|-tn=vn]
     A1 u ... u An u A |- t[v1,...,vn/t1,...,tn]       (A|-t)
 }
-\noindent No matching is involved; the occurrence of each {ti} being
+No matching is involved; the occurrence of each {ti} being
 substituted for must be a free in {t} (see {SUBST_MATCH}).  An occurrence which
 is not free can be substituted by using rewriting rules such as {REWRITE_RULE},
 {PURE_REWRITE_RULE} and {ONCE_REWRITE_RULE}.
@@ -36,7 +36,7 @@ Substitutions are made with the theorems
    > val thm1 = |- m + n = n + m : thm
      val thm2 = |- 0 + m = m : thm
 }
-\noindent depending on the occurrence of free subterms
+depending on the occurrence of free subterms
 {
    - SUBS [thm1, thm2] (ASSUME (Term `(n + 0) + (0 + m) = m + n`));
    > val it =  [.] |- n + 0 + m = n + m : thm
@@ -45,13 +45,12 @@ Substitutions are made with the theorems
    > val it =  [.] |- !n. n + 0 + m = m + n : thm
 }
 
+
 \USES
 {SUBS} can sometimes be used when rewriting (for example, with {REWRITE_RULE})
 would diverge and term instantiation is not needed.  Moreover, applying the
 substitution rules is often much faster than using the rewriting rules.
 
 \SEEALSO
-Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, 
-Rewrite.REWRITE_RULE, Thm.SUBST, Rewrite.SUBST_MATCH, Drule.SUBS_OCCS.
-
+Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Rewrite.REWRITE_RULE, Thm.SUBST, Rewrite.SUBST_MATCH, Drule.SUBS_OCCS.
 \ENDDOC

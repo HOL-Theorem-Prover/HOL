@@ -28,5 +28,4 @@ than one pass is not required or would result in divergence.
 
 \SEEALSO
 Rewrite.ASM_REWRITE_RULE, Rewrite.FILTER_ASM_REWRITE_RULE, Rewrite.FILTER_ONCE_ASM_REWRITE_RULE, Rewrite.GEN_REWRITE_RULE, Conv.ONCE_DEPTH_CONV, Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_ASM_REWRITE_RULE, Rewrite.PURE_ONCE_ASM_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Rewrite.REWRITE_RULE.
-
 \ENDDOC

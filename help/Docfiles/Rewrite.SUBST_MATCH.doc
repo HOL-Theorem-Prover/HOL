@@ -18,7 +18,7 @@ of {v}.
    --------------------  SUBST_MATCH (A|-u=v) (A'|-t)
      A u A' |- t[v/u]
 }
-\noindent {SUBST_MATCH} allows only a free instance of {u} to be substituted
+{SUBST_MATCH} allows only a free instance of {u} to be substituted
 for in {t}. An instance which contain bound variables can be substituted for by
 using rewriting rules such as {REWRITE_RULE}, {PURE_REWRITE_RULE} and
 {ONCE_REWRITE_RULE}.
@@ -36,7 +36,7 @@ The commutative law for addition
    - val thm1 = SPECL [Term `m:num`, Term `n:num`] arithmeticTheory.ADD_SYM;
    > val thm1 = |- m + n = n + m : thm
 }
-\noindent is used to apply substitutions, depending on the occurrence of free
+is used to apply substitutions, depending on the occurrence of free
 instances
 {
    - SUBST_MATCH thm1 (ASSUME (Term `(n + 1) + (m - 1) = m + n`));
@@ -45,13 +45,13 @@ instances
    - SUBST_MATCH thm1 (ASSUME (Term `!n. (n + 1) + (m - 1) = m + n`));
    > val it =  [.] |- !n. n + 1 + (m - 1) = m + n : thm
 }
+
+
 \USES
 {SUBST_MATCH} is used when rewriting with the rules such as {REWRITE_RULE},
 using a single theorem is too extensive or would diverge.  Moreover, applying
 {SUBST_MATCH} can be much faster than using the rewriting rules.
 
 \SEEALSO
-Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, 
-Rewrite.REWRITE_RULE, Drule.SUBS, Thm.SUBST.
-
+Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Rewrite.REWRITE_RULE, Drule.SUBS, Thm.SUBST.
 \ENDDOC

@@ -16,10 +16,11 @@ alpha-equivalent, {ALPHA} returns the theorem {|- t1 = t1'}.
    -------------  ALPHA  t1  t1'
     |- t1 = t1'
 }
+
+
 \FAILURE
 Fails unless the terms provided are alpha-equivalent.
 
 \SEEALSO
 Term.aconv, Drule.ALPHA_CONV, Drule.GEN_ALPHA_CONV.
-
 \ENDDOC

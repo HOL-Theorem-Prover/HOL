@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, unique, existential.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Deduces paired existence from paired unique existence.
@@ -19,11 +20,12 @@ existential quantification over the same pair.
    -------------  PEXISTENCE
     A |- ?p. t
 }
+
+
 \FAILURE
 Fails unless the conclusion of the theorem is a paired unique-existential
 quantification.
 
 \SEEALSO
 Conv.EXISTENCE, PairRules.PEXISTS_UNIQUE_CONV.
-
 \ENDDOC

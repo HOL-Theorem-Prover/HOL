@@ -15,7 +15,7 @@ The tactic
 {
    FIRST_X_ASSUM ttac ([A1; ...; An], g)
 }
-\noindent has the effect of applying the first tactic which can be
+has the effect of applying the first tactic which can be
 produced by {ttac} from the {ASSUME}d assumptions {(A1 |- A1)}, ...,
 {(An |- An)} and which succeeds when applied to the goal.  The
 assumption which produced the successful theorem-tactic is removed
@@ -32,7 +32,7 @@ The tactic
 {
    FIRST_X_ASSUM SUBST_ALL_TAC
 }
-\noindent searches the assumptions for an equality and causes its
+searches the assumptions for an equality and causes its
 right hand side to be substituted for its left hand side throughout
 the goal and assumptions.  It also removes the equality from the
 assumption list.  Using {FIRST_ASSUM} above would leave an equality on
@@ -40,7 +40,7 @@ the assumption list of the form {x = x}.  The tactic
 {
    FIRST_X_ASSUM MATCH_MP_TAC
 }
-\noindent searches the assumption list for an implication whose conclusion
+searches the assumption list for an implication whose conclusion
 matches the goal, reducing the goal to the antecedent of the corresponding
 instance of this implication and removing the implication from the
 assumption list.
@@ -51,5 +51,4 @@ out'' or removal of the assumption found.
 
 \SEEALSO
 Tactical.ASSUM_LIST, Tactical.EVERY, Tactical.PAT_ASSUM, Tactical.EVERY_ASSUM, Tactical.FIRST, Tactical.MAP_EVERY, Tactical.MAP_FIRST, Thm_cont.UNDISCH_THEN.
-
 \ENDDOC

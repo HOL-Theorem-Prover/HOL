@@ -1,4 +1,4 @@
-\DOC type_varsl 
+\DOC type_varsl
 
 \TYPE {type_varsl : hol_type list -> hol_type list}
 
@@ -22,12 +22,11 @@ Never fails.
 > val it = [`:'a`, `:'b`] : hol_type list
 }
 
+
 \COMMENTS
 Code should not depend on how elements are arranged in the
 result of {type_varsl}.
 
 \SEEALSO
-Type.type_vars, Type.type_var_in, Type.exists_tyvars, Type.polymorphic,
-Term.free_vars.
-
+Type.type_vars, Type.type_var_in, Type.exists_tyvars, Type.polymorphic, Term.free_vars.
 \ENDDOC

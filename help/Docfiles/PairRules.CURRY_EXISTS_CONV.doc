@@ -2,7 +2,8 @@
 
 \TYPE {CURRY_EXISTS_CONV : conv}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Currys paired existential quantifications into
@@ -19,12 +20,10 @@ consecutive existential quantifications.
        ?(w,x) (y,z). w + x + y + z = z + y + x + w : thm
 }
 
+
 \FAILURE
 {CURRY_EXISTS_CONV tm} fails if {tm} is not a paired existential quantification.
 
 \SEEALSO
-PairRules.CURRY_CONV, PairRules.UNCURRY_CONV, 
-PairRules.UNCURRY_EXISTS_CONV, PairRules.CURRY_FORALL_CONV, 
-PairRules.UNCURRY_FORALL_CONV.
-
+PairRules.CURRY_CONV, PairRules.UNCURRY_CONV, PairRules.UNCURRY_EXISTS_CONV, PairRules.CURRY_FORALL_CONV, PairRules.UNCURRY_FORALL_CONV.
 \ENDDOC

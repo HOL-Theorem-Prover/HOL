@@ -2,7 +2,8 @@
 
 \TYPE {is_pvar : (term -> bool)}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Tests a term to see if it is a paired structure of variables.
@@ -17,5 +18,4 @@ Never fails.
 
 \SEEALSO
 Term.is_var.
-
 \ENDDOC

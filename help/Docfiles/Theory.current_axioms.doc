@@ -16,8 +16,5 @@ asserted in the current theory segment.
 Never fails. If no axioms have been asserted, the empty list is returned.
 
 \SEEALSO
-Theory.current_theory, Theory.new_theory, 
-Theory.current_defs, Theory.current_thms, 
-Theory.constants, Theory.types, Theory.parents.
-
+Theory.current_theory, Theory.new_theory, Theory.current_defs, Theory.current_thms, Theory.constants, Theory.types, Theory.parents.
 \ENDDOC

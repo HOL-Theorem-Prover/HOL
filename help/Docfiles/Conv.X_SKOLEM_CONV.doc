@@ -16,7 +16,7 @@ the theorem:
 {
    |- (!x1...xn. ?y. P) = (?f. !x1...xn. tm[f x1 ... xn/y])
 }
-\noindent which expresses the fact that a skolem function {f} of the
+which expresses the fact that a skolem function {f} of the
 universally quantified variables {x1...xn} may be introduced in place of the
 the existentially quantified value {y}.
 
@@ -29,5 +29,4 @@ as {y}.
 
 \SEEALSO
 Conv.SKOLEM_CONV.
-
 \ENDDOC

@@ -2,7 +2,8 @@
 
 \TYPE {MK_PAIR : thm -> thm -> thm}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Proves equality of pairs constructed from equal components.
@@ -18,6 +19,8 @@ rule {MK_PAIR} returns the theorem {A1 u A2 |- (a,b) = (x,y)}.
    ---------------------------  MK_PAIR
     A1 u A2 |- (a,b) = (x,y)
 }
+
+
 \FAILURE
 Fails unless both theorems are equational.
 

@@ -17,10 +17,11 @@ quantification over the same variable.
    -------------  EXISTENCE
     A |- ?x. p
 }
+
+
 \FAILURE
 Fails unless the conclusion of the theorem is unique-existentially quantified.
 
 \SEEALSO
 Conv.EXISTS_UNIQUE_CONV.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 conversion, quantifier, universal, negation.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Moves a paired universal quantification inwards through a negation.
@@ -16,10 +17,11 @@ returns the theorem:
 {
    |- (!p. ~t) = ~(?p. t)
 }
+
+
 \FAILURE
 Fails if applied to a term not of the form {!p. ~t}.
 
 \SEEALSO
 Conv.FORALL_NOT_CONV, PairRules.PEXISTS_NOT_CONV, PairRules.NOT_PEXISTS_CONV, PairRules.NOT_PFORALL_CONV.
-
 \ENDDOC

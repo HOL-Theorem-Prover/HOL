@@ -15,7 +15,7 @@ When applied to a term of the form {(?p. t) ==> u}, the conversion
 {
    |- (?p. t) ==> u = (!p'. t[p'/p] ==> u)
 }
-\noindent where {p'} is a primed variant of the pair {p} that does not
+where {p'} is a primed variant of the pair {p} that does not
 contain any variables that appear free in the input term.
 
 \FAILURE
@@ -23,5 +23,4 @@ Fails if applied to a term not of the form {(?p. t) ==> u}.
 
 \SEEALSO
 Conv.LEFT_IMP_EXISTS_CONV, PairRules.PFORALL_IMP_CONV, PairRules.RIGHT_IMP_PFORALL_CONV.
-
 \ENDDOC

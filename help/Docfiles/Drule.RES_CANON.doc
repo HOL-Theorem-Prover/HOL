@@ -35,45 +35,45 @@ both directions:
    --------------------           ----------------------------------
     A |- t1    A |- t2             A |- t1 ==> t2    A |- t2 ==> t1
 }
-\noindent Conjunctive antecedents are transformed by:
+Conjunctive antecedents are transformed by:
 {
                 A |- (t1 /\ t2) ==> t
    ---------------------------------------------------
     A |- t1 ==> (t2 ==> t)     A |- t2 ==> (t1 ==> t)
 }
-\noindent and disjunctive antecedents by:
+and disjunctive antecedents by:
 {
         A |- (t1 \/ t2) ==> t
    --------------------------------
     A |- t1 ==> t    A |- t2 ==> t
 }
-\noindent The scope of universal quantifiers is restricted, if possible:
+The scope of universal quantifiers is restricted, if possible:
 {
     A |- !x. t1 ==> t2
    --------------------         [if x is not free in t1]
     A |- t1 ==> !x. t2
 }
-\noindent and existentially-quantified antecedents are eliminated by:
+and existentially-quantified antecedents are eliminated by:
 {
       A |- (?x. t1) ==> t2
    ---------------------------  [x' chosen so as not to be free in t2]
     A |- !x'. t1[x'/x] ==> t2
 }
-\noindent Finally, when no further applications of the above rules are
+Finally, when no further applications of the above rules are
 possible, and the theorem is an implication:
 {
    A |- !x1...xn. t1 ==> t2
 }
-\noindent then the theorem {A u {{t1}} |- t2} is transformed by a recursive
+then the theorem {A u {t1} |- t2} is transformed by a recursive
 application of {RES_CANON} to get a list of theorems:
 {
-   [A u {{t1}} |- t21 , ... , A u {{t1}} |- t2n]
+   [A u {t1} |- t21 , ... , A u {t1} |- t2n]
 }
-\noindent and the result of discharging {t1} from these theorems:
+and the result of discharging {t1} from these theorems:
 {
    [A |- !x1...xn. t1 ==> t21 , ... , A |- !x1...xn. t1 ==> t2n]
 }
-\noindent is returned. That is, the transformation rules are recursively
+is returned. That is, the transformation rules are recursively
 applied to the conclusions of all implications.
 
 \FAILURE
@@ -86,7 +86,7 @@ theorem {MOD_UNIQUE}:
 {
    |- !n k r. (?q. (k = (q * n) + r) /\ r < n) ==> (k MOD n = r)
 }
-\noindent For this theorem, the canonical list of implications returned by
+For this theorem, the canonical list of implications returned by
 {RES_CANON} is as follows:
 {
   - RES_CANON MOD_UNIQUE;
@@ -95,7 +95,7 @@ theorem {MOD_UNIQUE}:
        |- !n r. r < n ==> !q k. (k = q * n + r) ==> (k MOD n = r)] : thm list
 
 }
-\noindent The existentially-quantified, conjunctive, antecedent has given rise
+The existentially-quantified, conjunctive, antecedent has given rise
 to two implications, and the scope of universal quantifiers has been restricted
 to the conclusions of the resulting implications wherever possible.
 
@@ -108,5 +108,4 @@ resolution in any particular case.
 
 \SEEALSO
 Tactic.IMP_RES_TAC, Thm_cont.IMP_RES_THEN, Tactic.RES_TAC, Thm_cont.RES_THEN.
-
 \ENDDOC

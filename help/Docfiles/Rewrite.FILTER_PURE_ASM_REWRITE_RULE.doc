@@ -32,5 +32,4 @@ the pattern matching and the number of primitive inferences involved.
 
 \SEEALSO
 Rewrite.ASM_REWRITE_RULE, Rewrite.FILTER_ASM_REWRITE_RULE, Rewrite.FILTER_ONCE_ASM_REWRITE_RULE, Rewrite.FILTER_PURE_ONCE_ASM_REWRITE_RULE, Rewrite.GEN_REWRITE_RULE, Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Rewrite.REWRITE_RULE.
-
 \ENDDOC

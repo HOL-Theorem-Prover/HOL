@@ -1,4 +1,4 @@
-\DOC delta_map 
+\DOC delta_map
 
 \TYPE {delta_map : ('a -> 'a delta) -> 'a list -> 'a list delta}
 
@@ -22,5 +22,4 @@ See the example in the documentation for {delta_apply}.
 
 \SEEALSO
 Lib.delta, Lib.delta_apply, Lib.delta_pair.
-
 \ENDDOC

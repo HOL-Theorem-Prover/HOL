@@ -2,25 +2,26 @@
 
 \TYPE {tgoal : defn -> proofs}
 
-\SYNOPSIS Set up a termination proof
+\SYNOPSIS
+Set up a termination proof
 
-\KEYWORDS termination, goalstack.
+\KEYWORDS
+termination, goalstack.
+
 
 
 \DESCRIBE
-
 {tgoal defn} sets up a termination proof for the function represented by
 {defn}. It creates a new goalstack and makes it the focus of subsequent
 goalstack operations.
 
 \FAILURE
-
 {tgoal defn} fails if {defn} represents a non-recursive or primitive
 recursive function. 
 
 
-\EXAMPLE
 
+\EXAMPLE
 { 
     - val qsort_defn = 
         Hol_defn "qsort"
@@ -39,7 +40,7 @@ recursive function.
                 !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
 }
 
+
 \SEEALSO
 TotalDefn.WF_REL_TAC, Defn.tprove, Defn.Hol_defn.
-
 \ENDDOC

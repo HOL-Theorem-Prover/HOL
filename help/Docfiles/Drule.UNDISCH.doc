@@ -14,7 +14,7 @@ rule, undischarge, antecedent.
    ----------------  UNDISCH
      A, t1 |- t2
 }
-\noindent Note that {UNDISCH} treats {"~u"} as {"u ==> F"}.
+Note that {UNDISCH} treats {"~u"} as {"u ==> F"}.
 
 \FAILURE
 {UNDISCH} will fail on theorems which are not implications or negations.
@@ -27,5 +27,4 @@ it will still be added to the hypotheses.
 
 \SEEALSO
 Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Drule.NEG_DISCH, Tactic.STRIP_TAC, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
-
 \ENDDOC

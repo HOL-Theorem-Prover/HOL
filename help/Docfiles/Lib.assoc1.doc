@@ -9,11 +9,11 @@ specified value.
 \KEYWORDS
 list.
 
-\DESCRIBE 
+\DESCRIBE
 {assoc1 x [(x1,y1),...,(xn,yn)]} returns {SOME (xi,yi)} for the first
 pair {(xi,yi)} in the list such that {xi} equals {x}. Otherwise, {NONE}
 is returned. The lookup is done on an eqtype, i.e., the SML
-implementation must be able to decide equality for the type of {x}. 
+implementation must be able to decide equality for the type of {x}.
 
 \FAILURE
 Never fails.
@@ -24,8 +24,7 @@ Never fails.
 > val it = SOME (2, 5) : (int * int)option
 }
 
-\SEEALSO
-Lib.assoc, Lib.assoc2, Lib.rev_assoc, Lib.find, Lib.mem, 
-Lib.tryfind, Lib.exists, Lib.all.
 
+\SEEALSO
+Lib.assoc, Lib.assoc2, Lib.rev_assoc, Lib.find, Lib.mem, Lib.tryfind, Lib.exists, Lib.all.
 \ENDDOC

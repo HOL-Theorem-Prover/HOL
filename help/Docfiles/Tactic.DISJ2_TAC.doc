@@ -14,10 +14,11 @@ tactic, disjunction.
    ===============  DISJ2_TAC
        A ?- t2
 }
+
+
 \FAILURE
 Fails if the goal is not a disjunction.
 
 \SEEALSO
 Thm.DISJ1, Tactic.DISJ1_TAC, Thm.DISJ2.
-
 \ENDDOC

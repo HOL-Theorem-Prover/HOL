@@ -13,5 +13,4 @@ Fails if the type of {t1} is not equal to that of {t2}.
 
 \SEEALSO
 boolSyntax.dest_eq, boolSyntax.is_eq.
-
 \ENDDOC

@@ -2,13 +2,15 @@
 
 \TYPE {index : ('a -> bool) -> 'a list -> int}
 
-\SYNOPSIS Finds index of first list element for which predicate holds.
+\SYNOPSIS
+Finds index of first list element for which predicate holds.
 
-\KEYWORDS searching.
+\KEYWORDS
+searching.
 
 \DESCRIBE
 An application {index P l} returns the index (0-based) to the first
-element (in a left-to-right scan) of {l} that {P} holds of.  
+element (in a left-to-right scan) of {l} that {P} holds of.
 
 \FAILURE
 If {P} doesn't hold of any element of {l}, then {index P l} fails. 
@@ -34,7 +36,7 @@ no such element
 ! Empty
 }
 
+
 \SEEALSO
 Lib.el.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC hash 
+\DOC hash
 
 \TYPE {hash : int -> string -> int * int -> int}
 
@@ -27,6 +27,7 @@ Never fails.
 - hash 13 "ishkababble" (0,0);
 > val it = 11 : int
 }
+
 
 \COMMENTS
 For better results, the {i} parameter should be a prime.

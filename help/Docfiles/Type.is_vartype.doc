@@ -19,7 +19,8 @@ Never fails.
 - is_vartype (Type `:'a  -> bool`);
 > val it = false : bool
 }
+
+
 \SEEALSO
 Type.mk_vartype, Type.dest_vartype.
-
 \ENDDOC

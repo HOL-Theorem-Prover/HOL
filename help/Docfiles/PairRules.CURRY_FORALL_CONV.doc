@@ -2,7 +2,8 @@
 
 \TYPE {CURRY_FORALL_CONV : conv}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Currys paired universal quantifications into
@@ -19,12 +20,10 @@ consecutive universal quantifications.
        !(w,x) (y,z). w + x + y + z = z + y + x + w : thm
 }
 
+
 \FAILURE
 {CURRY_FORALL_CONV tm} fails if {tm} is not a paired universal quantification.
 
 \SEEALSO
-PairRules.CURRY_CONV, PairRules.UNCURRY_CONV, 
-PairRules.UNCURRY_FORALL_CONV, PairRules.CURRY_EXISTS_CONV, 
-PairRules.UNCURRY_EXISTS_CONV.
-
+PairRules.CURRY_CONV, PairRules.UNCURRY_CONV, PairRules.UNCURRY_FORALL_CONV, PairRules.CURRY_EXISTS_CONV, PairRules.UNCURRY_EXISTS_CONV.
 \ENDDOC

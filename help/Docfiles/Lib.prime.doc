@@ -1,4 +1,4 @@
-\DOC prime 
+\DOC prime
 
 \TYPE {prime : string -> string}
 
@@ -15,7 +15,5 @@ A call {prime s} is equal to {s ^ "'"}.
 Never fails.
 
 \SEEALSO
-Term.variant. 
-
+Term.variant.
 \ENDDOC
-

@@ -5,7 +5,8 @@
 \KEYWORDS
 tactic, modus ponens, implication.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Reduces the goal using a supplied implication, with matching.
@@ -15,7 +16,7 @@ When applied to a theorem of the form
 {
    A' |- !p1...pn. s ==> !q1...qm. t
 }
-\noindent {PMATCH_MP_TAC} produces a tactic that reduces a goal whose
+{PMATCH_MP_TAC} produces a tactic that reduces a goal whose
 conclusion {t'} is a substitution and/or type instance of {t} to the
 corresponding instance of {s}. Any variables free in {s} but not in {t} will
 be existentially quantified in the resulting subgoal:
@@ -24,7 +25,7 @@ be existentially quantified in the resulting subgoal:
   ======================  PMATCH_MP_TAC (A' |- !p1...pn. s ==> !q1...qm. t)
      A ?- ?w1...wp. s'
 }
-\noindent where {w1}, ..., {wp} are (type instances of) those pairs among
+where {w1}, ..., {wp} are (type instances of) those pairs among
 {p1}, ..., {pn} having variables that do not occur free in {t}.
 Note that this is not a valid tactic unless {A'} is a subset of {A}.
 
@@ -36,5 +37,4 @@ conclusion {t} of the supplied theorem to match {t'}.
 
 \SEEALSO
 Tactic.MATCH_MP_TAC.
-
 \ENDDOC

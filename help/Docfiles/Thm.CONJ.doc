@@ -14,6 +14,8 @@ rule, conjunction.
    ------------------------  CONJ
      A1 u A2 |- t1 /\ t2
 }
+
+
 \FAILURE
 Never fails.
 
@@ -21,7 +23,5 @@ Never fails.
 The theorem {AND_INTRO_THM} can be instantiated to similar effect.
 
 \SEEALSO
-Drule.BODY_CONJUNCTS, Thm.CONJUNCT1, Thm.CONJUNCT2, 
-Drule.CONJ_PAIR, Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
-
+Drule.BODY_CONJUNCTS, Thm.CONJUNCT1, Thm.CONJUNCT2, Drule.CONJ_PAIR, Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
 \ENDDOC

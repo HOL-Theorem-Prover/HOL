@@ -8,7 +8,8 @@ Parses a quotation into a term value
 \KEYWORDS
 Parsing
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 The parsing process for terms divides into four distinct phases.
@@ -29,7 +30,7 @@ definition (from {Absyn}):
        | LAM   of vstruct * absyn
        | TYPED of absyn * pretype
 }
-\noindent This phase of parsing is concerned with the treatment of the
+This phase of parsing is concerned with the treatment of the
 rawest concrete syntax.  It has no notion of whether or not a term
 corresponds to a constant or a variable, so all {preterm} leaves are
 ultimately either {IDENT}s or {AQ}s (anti-quotations).
@@ -41,12 +42,12 @@ is an infix) will turn into
 {
    APP(APP(IDENT "op", IDENT "x"), IDENT "y")
 }
-\noindent and {`tok1 x tok2 y`} (where {tok1 _ tok2} has been declared as a
+and {`tok1 x tok2 y`} (where {tok1 _ tok2} has been declared as a
 {TruePrefix} form for the term {f}) will turn into
 {
    APP(APP(IDENT "f", IDENT "x"), IDENT "y")
 }
-\noindent The special syntaxes for ``let'' and record expressions are also
+The special syntaxes for ``let'' and record expressions are also
 handled at this stage.  For more details on how this is done see the
 reference entry for {Absyn}, which function can be used in
 isolation to see what is done at this phase.
@@ -84,5 +85,4 @@ Turns strings into terms.
 
 \SEEALSO
 Absyn, Preterm, Type, Parse.overload_on, guessing_overloads, guessing_tyvars, Parse.term_grammar.
-
 \ENDDOC

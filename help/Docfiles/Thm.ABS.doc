@@ -14,6 +14,8 @@ rule, abstraction.
    ------------------------  ABS x            [Where x is not free in A]
     A |- (\x.t1) = (\x.t2)
 }
+
+
 \FAILURE
 If the theorem is not an equation, or if the variable {x} is free in the
 assumptions {A}.
@@ -28,7 +30,7 @@ assumptions {A}.
 > val it = |- (\m. m) = (\m. m) : thm
 }
 
+
 \SEEALSO
 Thm.ETA_CONV, Drule.EXT, Drule.MK_ABS.
-
 \ENDDOC

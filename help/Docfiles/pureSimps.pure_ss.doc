@@ -6,9 +6,11 @@
 A simpset containing only the conditional rewrite generator and no
 additional rewrites.
 
-\KEYWORDS simplification.
+\KEYWORDS
+simplification.
 
-\LIBRARY pureSimps
+\LIBRARY
+pureSimps
 
 \DESCRIBE
 This simpset sits at the root of the simpset hierarchy.  It contains
@@ -32,14 +34,14 @@ The theorem {ADD_EQ_SUB} from {arithmeticTheory} states that
 {
    |- !m n p. n <= p ==> ((m + n = p) = m = p - n)
 }
-\noindent We can use this result to make progress with the following goal in
+We can use this result to make progress with the following goal in
 conjunction with {pure_ss} in a way that no form of {REWRITE_TAC}
 could:
 {
    - ASM_SIMP_TAC pure_ss [ADD_EQ_SUB] ([--`x <= y`--], --`z + x = y`--);
    > val it = ([([`x <= y`], `z = y - x`)], fn) : tactic_result
 }
-\noindent This example illustrates the way in which the simplifier can do
+This example illustrates the way in which the simplifier can do
 conditional rewriting.  However, the lack of the congruence for
 implications, means that using {pure_ss} will not be able to discharge
 the side condition in the goal below:
@@ -47,12 +49,13 @@ the side condition in the goal below:
    - SIMP_TAC pure_ss [ADD_EQ_SUB] ([], --`x <= y ==> (z + x = y)`--);
    > val it = ([([], `x <= y ==> (z + x = y)`)], fn) : tactic_result
 }
-\noindent As {bool_ss} has the relevant congruence included, it does make
+As {bool_ss} has the relevant congruence included, it does make
 progress in the same situation:
 {
    - SIMP_TAC bool_ss [ADD_EQ_SUB] ([], --`x <= y ==> (z + x = y)`--);
    > val it = ([([], `x <= y ==> (z = y - x)`)], fn) : tactic_result
 }
+
 
 \USES
 The {pure_ss} simpset might be used in the most delicate
@@ -67,5 +70,4 @@ entry.  It plausibly doesn't need to be there at all.
 
 \SEEALSO
 boolSimps.bool_ss, hol_ss, Rewrite.PURE_REWRITE_TAC, simpLib.SIMP_CONV, simpLib.SIMP_TAC.
-
 \ENDDOC

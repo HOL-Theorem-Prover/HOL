@@ -21,5 +21,4 @@ then use {dest_imp_only}.
 
 \SEEALSO
 boolSyntax.mk_imp, boolSyntax.dest_imp_only, boolSyntax.is_imp, boolSyntax.is_imp_only, boolSyntax.strip_imp, boolSyntax.list_mk_imp.
-
 \ENDDOC

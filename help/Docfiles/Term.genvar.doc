@@ -22,7 +22,7 @@ not be relied on, of course):
    - genvar (Type`:num`);
    > val it = `%%genvar%%1381` : term
 }
-\noindent Note that one can anticipate {genvar}:
+Note that one can anticipate {genvar}:
 {
    - mk_var("%%genvar%%1382",bool);
    > val it = `%%genvar%%1382` : term
@@ -30,6 +30,7 @@ not be relied on, of course):
    - genvar bool;
    > val it = `%%genvar%%1382` : term
 }
+
 This shortcoming could be guarded against, but it doesn't seem worth
 it currently. It doesn't seem to affect the soundness of the 
 implementation of HOL; at worst, a proof procedure may fail because 
@@ -43,5 +44,4 @@ provide rather more meaningful names.
 
 \SEEALSO
 Drule.GSPEC, Term.variant.
-
 \ENDDOC

@@ -10,12 +10,13 @@ If {B} is a binder and {RES_B} a constant then
 {
    associate_restriction("B", "RES_B")
 }
-\noindent will cause the parser and pretty-printer to support:
+will cause the parser and pretty-printer to support:
 {
                ---- parse ---->
    Bv::P. B                       RES_B  P (\v. B)
               <---- print ----
 }
+
 Anything can be written between the binder and {`::`} that could be
 written between the binder and {`.`} in the old notation. See the
 examples below.
@@ -35,6 +36,7 @@ The following associations are predefined:
    ?v::P. B    <---->   RES_EXISTS   P (\v. B)
    @v::P. B    <---->   RES_SELECT   P (\v. B)
 }
+
 Where the constants {RES_ABSTRACT}, {RES_FORALL}, {RES_EXISTS} and
 {RES_SELECT} are defined in the theory {`restr_binder`} by:
 {
@@ -46,10 +48,13 @@ Where the constants {RES_ABSTRACT}, {RES_FORALL}, {RES_EXISTS} and
 
    |- RES_SELECT P B   =  @x:'a. P x /\ B x
 }
+
 where {ARB} is defined in the theory {`restr_binder`} by:
 {
    |- ARB  =  @x:'a. T
 }
+
+
 \FAILURE
 Never fails.
 
@@ -80,7 +85,8 @@ Never fails.
   - --`DURING x::(m,n). p x`--;
     (--`RES_DURING (m,n) (\x. p x)`--) : term
 }
+
+
 \SEEALSO
 binder_restrictions, delete_restriction.
-
 \ENDDOC

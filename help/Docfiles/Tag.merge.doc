@@ -1,8 +1,9 @@
-\DOC merge 
+\DOC merge
 
 \TYPE {merge : tag -> tag -> tag}
 
-\SYNOPSIS Combine two tags into one.
+\SYNOPSIS
+Combine two tags into one.
 
 \KEYWORDS
 tag, oracle, inference.
@@ -24,11 +25,11 @@ Never fails.
 > val it = Kerneltypes.TAG(["bar", "foo"], []) : tag
 }
 
+
 \COMMENTS
 Although it is not harmful to use this entrypoint, there is little reason
 to, since the merge operation is only used inside the HOL kernel.
 
 \SEEALSO
 Tag.read, Thm.mk_oracle_thm, Thm.tag.
-
 \ENDDOC

@@ -17,10 +17,11 @@ When applied to the theorem {A' |- s} and the goal {A ?- t}, the tactic
    ==============  MP_TAC (A' |- s)
     A ?- s ==> t
 }
+
+
 \FAILURE
 Never fails.
 
 \SEEALSO
 Tactic.MATCH_MP_TAC, Thm.MP, Tactic.UNDISCH_TAC.
-
 \ENDDOC

@@ -1,8 +1,9 @@
-\DOC delta_pair 
+\DOC delta_pair
 
-\BLTYPE {delta_pair : ('a -> 'a delta) -> 
+\BLTYPE
+delta_pair : ('a -> 'a delta) -> 
              ('b -> 'b delta) -> 
-             'a * 'b -> ('a * 'b) delta}
+             'a * 'b -> ('a * 'b) delta
 \ELTYPE
 
 \SYNOPSIS
@@ -29,5 +30,4 @@ See the example in the documentation for {delta_apply}.
 
 \SEEALSO
 Lib.delta, Lib.delta_apply, Lib.delta_pair.
-
 \ENDDOC

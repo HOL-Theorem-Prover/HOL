@@ -2,18 +2,19 @@
 
 \BLTYPE
 add_listform :
-  {{separator : string, leftdelim : string, rightdelim : string,
-   cons : string, nilstr : string}} -> unit
+  {separator : string, leftdelim : string, rightdelim : string,
+   cons : string, nilstr : string} -> unit
 \ELTYPE
 
 \SYNOPSIS
 Adds a ``list-form'' to the built-in grammar, allowing the parsing of
-strings such as {[a; b; c]} and {{{}}}.
+strings such as {[a; b; c]} and {{}}.
 
 \KEYWORDS
 parsing, prettyprinting
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 The {add_listform} function allows the user to augment the HOL parser
@@ -21,11 +22,11 @@ with rules so that it can turn a string of the form
 {
    <ld> str1 <sep> str2 <sep> ... strn <rd>
 }
-\noindent into the term
+into the term
 {
    <cons> t1 (<cons> t2 ... (<cons> tn <nilstr>))
 }
-\noindent where {<ld>} is the left delimiter string, {<rd>} the right
+where {<ld>} is the left delimiter string, {<rd>} the right
 delimiter, and {<sep>} is the separator string from the fields of the
 record argument to the function.  The various {stri} are strings
 representing the {ti} terms.  Further, the grammar will also parse
@@ -51,14 +52,15 @@ closefix.
 The definition of the ``list-form'' for lists in the HOL distribution
 is:
 {
-   add_listform {{separator = ";", leftdelim = "[", rightdelim = "]",
-                 cons = "CONS", nilstr = "NIL"}};
+   add_listform {separator = ";", leftdelim = "[", rightdelim = "]",
+                 cons = "CONS", nilstr = "NIL"};
 }
-\noindent while the set syntax is defined similarly:
+while the set syntax is defined similarly:
 {
-   add_listform {{leftdelim = "{{", rightdelim = "}}", separator = ";",
-                 cons = "INSERT", nilstr = "EMPTY"}};
+   add_listform {leftdelim = "{", rightdelim = "}", separator = ";",
+                 cons = "INSERT", nilstr = "EMPTY"};
 }
+
 
 \USES
 Used to make sequential term structures print and parse more
@@ -72,5 +74,4 @@ current theory is exported.
 
 \SEEALSO
 Parse.add_rule.
-
 \ENDDOC

@@ -18,21 +18,21 @@ in a disjunct may be zero. If the theorem {th} has the form:
 {
    A' |- ?x11..x1m. t1 \/ ... \/ ?xn1..xnp. tn
 }
-\noindent where the number of existential quantifiers may be zero,
+where the number of existential quantifiers may be zero,
 and for all {i} from {1} to {n}:
 {
      A ?- s
    ========== ttaci (|- ti[xi1'/xi1]..[xim'/xim])
     Ai ?- si
 }
-\noindent where the primed variables have the same type as their unprimed
+where the primed variables have the same type as their unprimed
 counterparts, then:
 {
              A ?- s
    =========================  CASES_THENL [ttac1;...;ttacn] th
     A1 ?- s1  ...  An ?- sn
 }
-\noindent Unless {A'} is a subset of {A}, this is an invalid tactic.
+Unless {A'} is a subset of {A}, this is an invalid tactic.
 
 \FAILURE
 Fails if the given theorem does not, at the top level,
@@ -46,5 +46,4 @@ Performing very general disjunctive case splits.
 
 \SEEALSO
 Thm_cont.DISJ_CASES_THENL, Thm_cont.X_CASES_THENL.
-
 \ENDDOC

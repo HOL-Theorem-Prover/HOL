@@ -2,12 +2,13 @@
 
 \TYPE {failwith : string -> 'a}
 
-\SYNOPSIS Raise a {HOL_ERR}.
+\SYNOPSIS
+Raise a {HOL_ERR}.
 
-\KEYWORDS exception
+\KEYWORDS
+exception
 
 \DESCRIBE
-
 The function {failwith} raises a {HOL_ERR} with default values. This is
 useful when detailed error tracking is not necessary.
 
@@ -28,7 +29,7 @@ foo
 ! HOL_ERR
 }
 
+
 \SEEALSO
 Feedback, Feedback.fail, Feedback.Raise, Feedback.HOL_ERR.
-
 \ENDDOC

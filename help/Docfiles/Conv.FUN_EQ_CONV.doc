@@ -16,7 +16,7 @@ applied. When supplied with a term argument of the form {f = g}, where {f} and
 {
    |- (f = g) = (!x. f x = g x)
 }
-\noindent where {x} is a variable of type {ty1} chosen by the conversion.
+where {x} is a variable of type {ty1} chosen by the conversion.
 
 \FAILURE
 {FUN_EQ_CONV tm} fails if {tm} is not an equation {f = g}, where {f} and {g}
@@ -27,5 +27,4 @@ Used for proving equality of functions.
 
 \SEEALSO
 Drule.EXT, Conv.X_FUN_EQ_CONV.
-
 \ENDDOC

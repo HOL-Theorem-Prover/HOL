@@ -9,7 +9,7 @@ Returns the (proper) ancestry of a theory in a list.
 A call to {ancestry thy} returns a list of all the proper 
 ancestors (i.e. parents, parents of parents, etc.) of the theory {thy}.
 The shorthand {"-"} may be used to denote the name of the current 
-theory segment. 
+theory segment.
 
 \FAILURE
 Fails if {thy} is not an ancestor of the current theory.
@@ -29,7 +29,7 @@ Fails if {thy} is not an ancestor of the current theory.
   string list
 }
 
+
 \SEEALSO
 Theory.parents.
-
 \ENDDOC

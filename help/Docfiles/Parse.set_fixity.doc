@@ -5,9 +5,11 @@
 \SYNOPSIS
 Allows the fixity of tokens to be updated.
 
-\KEYWORDS Parsing, pretty-printing.
+\KEYWORDS
+Parsing, pretty-printing.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 The {set_fixity} function is used to change the fixity of single
@@ -44,7 +46,7 @@ appropriate fixities:
    > val it =
        |- (!n. 0 f n = n) /\ !n m. SUC n f m = SUC (SUC (n f m)) : thm
 }
-\noindent The same function can be used to alter the fixities of existing
+The same function can be used to alter the fixities of existing
 constants:
 {
    - val t = Term`2 + 3 + 4 - 6`;
@@ -56,6 +58,7 @@ constants:
    - dest_comb (Term`3 - 1 + 2`);
    > val it = (`$- 3`, `1 + 2`) : term * term
 }
+
 
 \COMMENTS
 This function is of no use if multiple-token rules (such as those for
@@ -70,5 +73,4 @@ current theory is exported.
 
 \SEEALSO
 Parse.add_rule, Parse.add_infix, Parse.remove_rules_for_term, Parse.remove_termtok.
-
 \ENDDOC

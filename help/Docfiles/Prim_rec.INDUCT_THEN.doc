@@ -31,7 +31,7 @@ to the tactic:
    ======================  MAP_EVERY ttac hypi
          A1 ?- Gi
 }
-\noindent then {INDUCT_THEN th ttac} is an induction tactic that decomposes
+then {INDUCT_THEN th ttac} is an induction tactic that decomposes
 the goal {A ?- !x.P} into a set of {n} subgoals, one for each constructor,
 as follows:
 {
@@ -39,7 +39,7 @@ as follows:
   ================================  INDUCT_THEN th ttac
      A1 ?- G1  ...   An ?- Gn
 }
-\noindent The resulting subgoals correspond to the cases in a structural
+The resulting subgoals correspond to the cases in a structural
 induction on the variable {x} of type {ty}, with induction hypotheses treated
 as determined by {ttac}.
 
@@ -54,13 +54,13 @@ The built-in structural induction theorem for lists is:
 {
    |- !P. P[] /\ (!t. P t ==> (!h. P(CONS h t))) ==> (!l. P l)
 }
-\noindent When {INDUCT_THEN} is applied to this theorem, it constructs
+When {INDUCT_THEN} is applied to this theorem, it constructs
 and returns a specialized induction tactic (parameterized by a theorem-tactic)
 for doing induction on lists:
 {
    - val LIST_INDUCT_THEN = INDUCT_THEN listTheory.list_INDUCT;
 }
-\noindent The resulting function, when supplied with the {thm_tactic}
+The resulting function, when supplied with the {thm_tactic}
 {ASSUME_TAC}, returns a tactic that decomposes a goal {?- !l.P[l]} into the
 base case {?- P[NIL]} and a step case {P[l] ?- !h. P[CONS h l]}, where the
 induction hypothesis {P[l]} in the step case has been put on the assumption
@@ -68,31 +68,30 @@ list.  That is, the tactic:
 {
    LIST_INDUCT_THEN ASSUME_TAC
 }
-\noindent does structural induction on lists, putting any induction hypotheses
+does structural induction on lists, putting any induction hypotheses
 that arise onto the assumption list:
 {
                       A ?- !l. P
    =======================================================
-    A |- P[NIL/l]   A u {{P[l'/l]}} ?- !h. P[(CONS h l')/l]
+    A |- P[NIL/l]   A u {P[l'/l]} ?- !h. P[(CONS h l')/l]
 }
-\noindent Likewise {LIST_INDUCT_THEN STRIP_ASSUME_TAC} will also do induction
+Likewise {LIST_INDUCT_THEN STRIP_ASSUME_TAC} will also do induction
 on lists, but will strip induction hypotheses apart before adding them to the
 assumptions (this may be useful if P is a conjunction or a disjunction, or is
 existentially quantified).  By contrast, the tactic:
 {
    LIST_INDUCT_THEN MP_TAC
 }
-\noindent will decompose the goal as follows:
+will decompose the goal as follows:
 {
                       A ?- !l. P
    =====================================================
     A |- P[NIL/l]   A ?- P[l'/l] ==> !h. P[CONS h l'/l]
 }
-\noindent That is, the induction hypothesis becomes the antecedent of an
+That is, the induction hypothesis becomes the antecedent of an
 implication expressing the step case in the induction, rather than an
 assumption of the step-case subgoal.
 
 \SEEALSO
 Datatype.define_type, Prim_rec.new_recursive_definition, Prim_rec.prove_cases_thm, Prim_rec.prove_constructors_distinct, Prim_rec.prove_constructors_one_one, Prim_rec.prove_induction_thm, Prim_rec.prove_rec_fn_exists.
-
 \ENDDOC

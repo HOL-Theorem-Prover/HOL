@@ -27,7 +27,7 @@ subterms to which it applies:
    - DEPTH_CONV BETA_CONV (Term `(\x. (\y. y + x) 1) 2`);
    > val it = |- (\x. (\y. y + x)1)2 = 1 + 2 : thm
 }
-\noindent Here, there are two beta-redexes in the input term, one of which
+Here, there are two beta-redexes in the input term, one of which
 occurs within the other. {DEPTH_CONV BETA_CONV} applies beta-conversion to
 innermost beta-redex {(\y. y + x) 1} first.  The outermost beta-redex is then
 {(\x. 1 + x) 2}, and beta-conversion of this redex gives {1 + 2}.
@@ -38,7 +38,7 @@ contain subterms to which the supplied conversion applies.  For example, in:
    - DEPTH_CONV BETA_CONV (Term `(\f x. (f x) + 1) (\y.y) 2`);
    > val it = |- (\f x. (f x) + 1)(\y. y)2 = ((\y. y)2) + 1 : thm
 }
-\noindent the right-hand side of the result still contains a beta-redex,
+the right-hand side of the result still contains a beta-redex,
 because the redex {(\y.y)2} is introduced by virtue of an application of 
 {BETA_CONV} higher-up in the structure of the input term.  By contrast, 
 in the example:
@@ -46,7 +46,7 @@ in the example:
    - DEPTH_CONV BETA_CONV (Term `(\f x. (f x)) (\y.y) 2`);
    > val it = |- (\f x. f x)(\y. y)2 = 2 : thm
 }
-\noindent all beta-redexes are eliminated, because {DEPTH_CONV} repeats the
+all beta-redexes are eliminated, because {DEPTH_CONV} repeats the
 supplied conversion (in this case, {BETA_CONV}) at each subterm (in this case,
 at the top-level term).
 
@@ -59,7 +59,7 @@ constants within the logic. Thus, the effect of:
    - DEPTH_CONV reduceLib.ADD_CONV (Term `(1 + 2) + (3 + 4 + 5)`);
    > val it = |- (1 + 2) + (3 + (4 + 5)) = 15 : thm
 }
-\noindent is to compute the sum represented by the input term.
+is to compute the sum represented by the input term.
 
 \COMMENTS
 The implementation of this function uses failure to avoid rebuilding
@@ -71,5 +71,4 @@ exception, the operation of {DEPTH_CONV} will be unpredictable.
 
 \SEEALSO
 Conv.ONCE_DEPTH_CONV, Conv.REDEPTH_CONV, Conv.TOP_DEPTH_CONV.
-
 \ENDDOC

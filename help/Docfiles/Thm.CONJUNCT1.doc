@@ -14,6 +14,8 @@ rule, conjunction.
    ---------------  CONJUNCT1
        A |- t1
 }
+
+
 \FAILURE
 Fails unless the input theorem is a conjunction.
 
@@ -21,7 +23,5 @@ Fails unless the input theorem is a conjunction.
 The theorem {AND1_THM} can be instantiated to similar effect.
 
 \SEEALSO
-Drule.BODY_CONJUNCTS, Thm.CONJUNCT2, Drule.CONJ_PAIR, 
-Thm.CONJ, Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
-
+Drule.BODY_CONJUNCTS, Thm.CONJUNCT2, Drule.CONJ_PAIR, Thm.CONJ, Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
 \ENDDOC

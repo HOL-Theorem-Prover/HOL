@@ -18,7 +18,6 @@ in a theorem.
      |- 
     t[t1,...,tn/x1,...,xn]
 }
-\noindent 
 
 
 \FAILURE
@@ -39,8 +38,7 @@ In the following example a theorem is instantiated for a specific term:
    val it = |- 0 + (2 * x) = 2 * x : thm
 }
 
-\SEEALSO
-Drule.INST_TY_TERM, Thm.INST_TYPE, Drule.ISPEC, Drule.ISPECL, 
-Thm.SPEC, Drule.SPECL, Drule.SUBS, Term.subst, Thm.SUBST, Lib.|->.
 
+\SEEALSO
+Drule.INST_TY_TERM, Thm.INST_TYPE, Drule.ISPEC, Drule.ISPECL, Thm.SPEC, Drule.SPECL, Drule.SUBS, Term.subst, Thm.SUBST, Lib.|->.
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC 
+\DOC listDB
 
 \TYPE {listDB : unit -> data list}
 
@@ -16,7 +16,7 @@ all theory segments currently loaded.
 > val it = 736 : int
 }
 
+
 \SEEALSO
 DB.thy, DB.theorems, DB.definitions, DB.axioms, DB.find, DB.match.
-
 \ENDDOC

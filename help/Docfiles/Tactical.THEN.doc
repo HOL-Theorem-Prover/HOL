@@ -25,11 +25,12 @@ to multiple subgoals; sequences like the following:
 {
    EQ_TAC THENL [ASM_REWRITE_TAC[], ASM_REWRITE_TAC[]]
 }
-\noindent can be replaced by the briefer:
+can be replaced by the briefer:
 {
    EQ_TAC THEN ASM_REWRITE_TAC[]
 }
+
+
 \SEEALSO
 Tactical.EVERY, Tactical.ORELSE, Tactical.THENL.
-
 \ENDDOC

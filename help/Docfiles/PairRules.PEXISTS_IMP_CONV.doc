@@ -5,7 +5,8 @@
 \KEYWORDS
 conversion, quantifier, existential, implication.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Moves a paired existential quantification inwards through an implication.
@@ -18,16 +19,18 @@ If variables from {p} are free in {t} but none are in {u}, then the theorem:
 {
    |- (?p. t ==> u) = (!p. t) ==> u
 }
-\noindent is returned.  If variables from {p} are free in {u} but none are in
+is returned.  If variables from {p} are free in {u} but none are in
 {t}, then the result is:
 {
    |- (?p. t ==> u) = t ==> (?p. u)
 }
-\noindent And if no variable from {p} is free in either {t} nor {u},
+And if no variable from {p} is free in either {t} nor {u},
 then the result is:
 {
    |- (?p. t ==> u) = (!p. t) ==> (?p. u)
 }
+
+
 \FAILURE
 {PEXISTS_IMP_CONV} fails if it is applied to a term not of the form
 {?p. t ==> u}, or if it is applied to a term {?p. t ==> u} in which the
@@ -35,5 +38,4 @@ variables from {p} are free in both {t} and {u}.
 
 \SEEALSO
 Conv.EXISTS_IMP_CONV, PairRules.LEFT_IMP_PFORALL_CONV, PairRules.RIGHT_IMP_PEXISTS_CONV.
-
 \ENDDOC

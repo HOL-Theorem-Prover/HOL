@@ -19,7 +19,7 @@ length of the list.
 > val it = 7 : int
 }
 
+
 \SEEALSO
 Lib.index.
-
 \ENDDOC

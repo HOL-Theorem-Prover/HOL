@@ -12,10 +12,11 @@ being a binder, {bnd} will apply to an abstraction; for example
 {
    !x:bool. (x=T) \/ (x=F)
 }
-\noindent is actually a prettyprinting of 
+is actually a prettyprinting of 
 {
    $! (\x. (x=T) \/ (x=F))
 }
+
 
 \FAILURE
 Fails if the type does not correspond to the above pattern.
@@ -31,7 +32,8 @@ Fails if the type does not correspond to the above pattern.
    - Term `!!x. T`;
    > val it = `!! x. T` : term
 }
+
+
 \SEEALSO
 Theory.constants, Theory.new_constant, boolSyntax.new_infix, Definition.new_definition, boolSyntax.new_infixl_definition, boolSyntax.new_infixr_definition, boolSyntax.new_binder_definition.
-
 \ENDDOC

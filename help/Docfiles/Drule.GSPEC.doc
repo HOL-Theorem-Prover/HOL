@@ -18,6 +18,8 @@ where the {gi} are distinct variable names of the appropriate type, chosen by
    -------------------------  GSPEC
     A |- t[g1/x1]...[gn/xn]
 }
+
+
 \FAILURE
 Never fails.
 
@@ -27,5 +29,4 @@ theorems while avoiding using any variables that may be present elsewhere.
 
 \SEEALSO
 Thm.GEN, Drule.GENL, Term.genvar, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
-
 \ENDDOC

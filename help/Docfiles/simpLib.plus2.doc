@@ -5,9 +5,11 @@
 \SYNOPSIS
 Infix operator for augmenting simpsets with {ssdata} values.
 
-\KEYWORDS simplification
+\KEYWORDS
+simplification
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \DESCRIBE
 The {++} function combines its two arguments and creates a new
@@ -27,8 +29,7 @@ exploit the former's point-wise elimination conversions.
 > val it = |- (!x. x ==> (?y. P (x,y) /\ (y = 5))) = P (T,5) : thm
 }
 
-\SEEALSO
-simpLib.mk_simpset, simpLib.rewrites, simpLib.SIMP_CONV, 
-pureSimps.pure_ss, boolSimps.UNWIND_ss.
 
+\SEEALSO
+simpLib.mk_simpset, simpLib.rewrites, simpLib.SIMP_CONV, pureSimps.pure_ss, boolSimps.UNWIND_ss.
 \ENDDOC

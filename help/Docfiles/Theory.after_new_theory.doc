@@ -54,6 +54,7 @@ Ancestors of bar:
 > val it = () : unit
 }
 
+
 \COMMENTS
 Perhaps there should be a {before_export_theory} call as well?
 
@@ -62,5 +63,4 @@ Fairly low level system support tasks.
 
 \SEEALSO
 Theory.adjoin_to_theory.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC data 
+\DOC data
 
 \TYPE {type data}
 
@@ -12,6 +12,7 @@ type, which is a type abbreviation declared as
 {
    type data = (string * string) * (thm * class)
 }
+
 An element {((thy,name), (th,cl))} means that {th} is a theorem 
 with classification {class}, stored in theory segment {thy} under {name}.
 
@@ -23,7 +24,7 @@ with classification {class}, stored in theory segment {thy} under {name}.
    : ((string * string) * (thm * class)) list
 }
 
+
 \SEEALSO
 DB.class, DB.thy, DB.find, DB.match, DB.apropos, DB.listDB.
-
 \ENDDOC

@@ -16,10 +16,11 @@ returns the theorem {A |- ~(t2 = t1)}.
    -----------------  NOT_EQ_SYM
     A |- ~(t2 = t1)
 }
+
+
 \FAILURE
 Fails unless the theorem's conclusion is a negated equation.
 
 \SEEALSO
 Conv.DEPTH_CONV, Thm.REFL, Thm.SYM.
-
 \ENDDOC

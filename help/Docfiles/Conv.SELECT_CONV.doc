@@ -23,6 +23,8 @@ Fails if applied to a term that is not of the form {P[@x.P[x]/x]}.
 SELECT_CONV (Term `(@n. n < m) < m`);
 val it = |- (@n. n < m) < m = (?n. n < m) : thm
 }
+
+
 \USES
 Particularly useful in conjunction with {CONV_TAC} for proving properties
 of values denoted by epsilon terms.  For example, suppose that one wishes
@@ -30,23 +32,22 @@ to prove the goal
 {
    ([0 < m], (@n. n < m) < SUC m)
 }
-\noindent Using the built-in arithmetic theorem
+Using the built-in arithmetic theorem
 {
    LESS_SUC  |- !m n. m < n ==> m < (SUC n)
 }
-\noindent this goal may be reduced by the tactic {MATCH_MP_TAC LESS_SUC} to
+this goal may be reduced by the tactic {MATCH_MP_TAC LESS_SUC} to
 the subgoal
 {
    ([0 < m], (@n. n < m) < m)
 }
-\noindent This is now in the correct form for using {CONV_TAC SELECT_CONV} to
+This is now in the correct form for using {CONV_TAC SELECT_CONV} to
 eliminate the epsilon term, resulting in the existentially quantified goal
 {
    ([0 < m], ?n. n < m)
 }
-\noindent which is then straightforward to prove.
+which is then straightforward to prove.
 
 \SEEALSO
 Drule.SELECT_ELIM, Drule.SELECT_INTRO, Drule.SELECT_RULE.
-
 \ENDDOC

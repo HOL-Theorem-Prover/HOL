@@ -9,7 +9,7 @@ Lists the parent theories of a named theory.
 If {s} is the name of the current theory or an ancestor of the
 current theory, the call {parents s} returns a list of strings that
 identify the parent theories of {s}. The shorthand {"-"} may be 
-used to denote the name of the current theory segment. 
+used to denote the name of the current theory segment.
 
 \FAILURE
 Fails if the named theory is not an ancestor of the current theory.
@@ -29,7 +29,7 @@ Fails if the named theory is not an ancestor of the current theory.
 > val it = ["list", "option"] : string list
 }
 
+
 \SEEALSO
 Theory.ancestry, Theory.current_theory.
-
 \ENDDOC

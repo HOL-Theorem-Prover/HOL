@@ -5,7 +5,8 @@
 \KEYWORDS
 tactic, existential.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Adds the body of a paired existentially quantified theorem to the assumptions
@@ -19,14 +20,13 @@ normally {p'} is just {p}.
 {
          A ?- u
    ====================  CHOOSE_TAC (A' |- ?q. t)
-    A u {{t[p'/p]}} ?- u
+    A u {t[p'/p]} ?- u
 }
-\noindent Unless {A'} is a subset of {A}, this is not a valid tactic.
+Unless {A'} is a subset of {A}, this is not a valid tactic.
 
 \FAILURE
 Fails unless the given theorem is a paired existential quantification.
 
 \SEEALSO
 Tactic.CHOOSE_TAC, PairRules.PCHOOSE_THEN, PairRules.P_PCHOOSE_TAC.
-
 \ENDDOC

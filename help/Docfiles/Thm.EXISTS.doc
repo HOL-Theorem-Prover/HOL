@@ -18,6 +18,8 @@ the same as the conclusion of the theorem, {EXISTS} gives the desired theorem.
    -------------  EXISTS (?x. p, u)
     A |- ?x. p
 }
+
+
 \FAILURE
 Fails unless the substituted pattern is the same as the conclusion of the
 theorem.
@@ -33,7 +35,7 @@ things from the same theorem:
    > val it = |- ?x. x = x : thm
 }
 
+
 \SEEALSO
 Thm.CHOOSE, Tactic.EXISTS_TAC.
-
 \ENDDOC

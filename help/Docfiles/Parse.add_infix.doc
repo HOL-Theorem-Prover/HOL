@@ -9,7 +9,8 @@ to the term grammar.
 \KEYWORDS
 parsing, prettyprinting
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 This function adds the given string to the global term grammar such
@@ -17,11 +18,11 @@ that the string
 {
    <str1> s <str2>
 }
-\noindent will be parsed as
+will be parsed as
 {
    s <t1> <t2>
 }
-\noindent where {<str1>} and {<str2>} have been parsed to two terms
+where {<str1>} and {<str2>} have been parsed to two terms
 {<t1>} and {<t2>}.  The parsing process does not pay any attention to
 whether or not {s} corresponds to a constant or not.  This resolution
 happens later in the parse, and will result in either a constant or a
@@ -51,13 +52,13 @@ it as an infix for the purposes of printing and parsing:
    <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
    > val t = `x + y` : term
 }
-\noindent We can confirm that this new infix has indeed been parsed
+We can confirm that this new infix has indeed been parsed
 that way by taking the resulting term apart:
 {
    - dest_comb t;
    > val it = (`$+ x`, `y`) : term * term 
 }
-\noindent With its new status, {+} has to be ``quoted'' with a
+With its new status, {+} has to be ``quoted'' with a
 dollar-sign if we wish to use it in a position where it is not an
 infix, as in the binding list of an abstraction:
 {
@@ -67,7 +68,7 @@ infix, as in the binding list of an abstraction:
    - dest_abs it;
    > val it = (`$+`,`x + y`) : term * term 
 }
-\noindent The generation of three new type variables in the examples
+The generation of three new type variables in the examples
 above emphasises the fact that the terms in the first example and the
 body of the second are really no different from {f x y} (where {f} is
 a variable), and don't have anything to do with the constant for
@@ -81,7 +82,7 @@ associative:
    - dest_comb it;
    > val it = (`$+ (x + y)`, `z`) : term * term 
 }
-\noindent It is also more tightly binding than {/\} (which has
+It is also more tightly binding than {/\} (which has
 precedence 400 by default):
 {
    - Term`p /\ q + r`;
@@ -91,7 +92,7 @@ precedence 400 by default):
    - dest_comb it;
    > val it = (`$/\ p`, `q + r`) : term * term 
 }
-\noindent An attempt to define a right associative operator at the
+An attempt to define a right associative operator at the
 same level fails:
 {
    Lib.try add_infix("-", 500, HOLgrammars.RIGHT);
@@ -100,7 +101,7 @@ same level fails:
    Grammar Error: Attempt to have differently associated infixes
                   (RIGHT and LEFT) at same level
 }
-\noindent Similarly we can't define an infix at level 900, because
+Similarly we can't define an infix at level 900, because
 this is where the (true prefix) rule for logical negation ({~}) is.
 {
    - Lib.try add_infix("-", 900, HOLgrammars.RIGHT);
@@ -108,7 +109,7 @@ this is where the (true prefix) rule for logical negation ({~}) is.
    Exception raised at Parse.add_infix:
    Grammar Error: Attempt to have different forms at same level
 }
-\noindent Finally, an attempt to have a second {+} infix at a different
+Finally, an attempt to have a second {+} infix at a different
 precedence level causes grief when we later attempt to use the parser:
 {
    - add_infix("+", 400, HOLgrammars.RIGHT);
@@ -124,6 +125,7 @@ precedence level causes grief when we later attempt to use the parser:
    Grammar introduces precedence conflict between tokens + and +
 }
 
+
 \USES
 Most use of infixes will want to have them associated with a
 particular constant in which case the definitional principles
@@ -138,7 +140,7 @@ grammar, but which does not cause this effect to persist when the
 current theory is exported.
 
 
+
 \SEEALSO
 add_binder, Parse.add_rule, Parse.add_listform, Parse.Term.
-
 \ENDDOC

@@ -2,7 +2,8 @@
 
 \TYPE {dest_pabs : term -> term * term}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Breaks apart a paired abstraction into abstracted pair and body.
@@ -16,5 +17,4 @@ Fails with {dest_pabs} if term is not a paired abstraction.
 
 \SEEALSO
 Term.dest_abs, pairSyntax.mk_pabs, pairSyntax.is_pabs, pairSyntax.strip_pabs.
-
 \ENDDOC

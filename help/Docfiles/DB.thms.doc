@@ -1,4 +1,4 @@
-\DOC thms 
+\DOC thms
 
 \TYPE {thms : string -> (string * thm) list}
 
@@ -33,7 +33,7 @@ the empty list is returned.
   (string * thm) list
 }
 
+
 \SEEALSO
 DB.thy, DB.theorems, DB.axioms, DB.definitions, DB.fetch, DB.listDB.
-
 \ENDDOC

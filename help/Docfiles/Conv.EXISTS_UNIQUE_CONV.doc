@@ -16,17 +16,18 @@ there is at most one value {x} for which {P[x]} holds. The theorem returned is:
 {
    |- (?! x. P[x]) = (?x. P[x]) /\ (!x x'. P[x] /\ P[x'] ==> (x = x'))
 }
-\noindent where {x'} is a primed variant of {x} that does not appear free in
+where {x'} is a primed variant of {x} that does not appear free in
 the input term.  Note that the quantified variable {x} need not in fact appear
 free in the body of the input term.  For example, {EXISTS_UNIQUE_CONV "?!x.T"}
 returns the theorem:
 {
    |- (?! x. T) = (?x. T) /\ (!x x'. T /\ T ==> (x = x'))
 }
+
+
 \FAILURE
 {EXISTS_UNIQUE_CONV tm} fails if {tm} does not have the form {"?!x.P"}.
 
 \SEEALSO
 Conv.EXISTENCE.
-
 \ENDDOC

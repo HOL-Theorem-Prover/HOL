@@ -1,23 +1,26 @@
 \DOC SIMPSET
 
 \BLTYPE
-SIMPSET : {{ ac     : (thm * thm) list,
+SIMPSET : { ac     : (thm * thm) list,
              congs  : thm list,
-             convs  : {{conv  : (term list -> term -> thm) -> term list
+             convs  : {conv  : (term list -> term -> thm) -> term list
                                 -> conv,
                         key   : (term list * term) option,
                         name  : string,
-                        trace : int}} list,
+                        trace : int} list,
              dprocs : Traverse.reducer list,
              filter : (thm -> thm list) option,
-             rewrs  : thm list }} -> ssdata
+             rewrs  : thm list } -> ssdata
 \ELTYPE
 
-\SYNOPSIS Constructs {ssdata} values.
+\SYNOPSIS
+Constructs {ssdata} values.
 
-\KEYWORDS simplification.
+\KEYWORDS
+simplification.
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \DESCRIBE
 The {ssdata} type is the way in which simplification components are
@@ -35,12 +38,12 @@ be
 {
    |- x op (y op z) = (x op y) op z
 }
-\noindent and the commutative theorem (the second element of the pair)
+and the commutative theorem (the second element of the pair)
 must be of the form
 {
    |- x op y = y op x
 }
-\noindent Note that neither theorem can have any universal
+Note that neither theorem can have any universal
 quantification.
 
 The {congs} field is a list of congruence theorems justifying the
@@ -49,7 +52,7 @@ congruence theorem for implication is
 {
    |- (P = P') ==> (P' ==> (Q = Q')) ==> (P ==> Q = P' ==> Q')
 }
-\noindent This theorem encodes a rewriting strategy.  The consequent
+This theorem encodes a rewriting strategy.  The consequent
 of the chain of implications is the form of term in question, where
 the appropriate components have been rewritten.  Then, in
 left-to-right order, the various antecedents of the implication
@@ -60,7 +63,7 @@ proceeds, producing {Q'}.  Another example is a rule for conjunction:
 {
    |- (P ==> (Q = Q')) ==> (Q' ==> (P = P')) ==> ((P /\ Q) = (P' /\ Q'))
 }
-\noindent Here {P} is assumed while {Q} is simplified to {Q'}.  Then,
+Here {P} is assumed while {Q} is simplified to {Q'}.  Then,
 {Q'} is assumed while {P} is simplified to {P'}.  If a antecedent
 doesn't involve the relation in question (here, equality) then it is
 treated as a side-condition, and the simplifier will be recursively
@@ -112,44 +115,45 @@ documentation to the contrary notwithstanding.
 Given a conversion {MUL_CONV} to calculate multiplications, the
 following illustrates how this can be added to a simpset:
 {
-   - val ssd = SIMPSET {{ac = [], congs = [],
-                        convs = [{{conv = K (K MUL_CONV),
+   - val ssd = SIMPSET {ac = [], congs = [],
+                        convs = [{conv = K (K MUL_CONV),
                                   key= SOME ([], Term`x * y`),
                                   name = "MUL_CONV",
-                                  trace = 2}}],
-                        dprocs = [], filter = NONE, rewrs = []}};
+                                  trace = 2}],
+                        dprocs = [], filter = NONE, rewrs = []};
    > val ssd =
-       SIMPSET{{ac = [], congs = [],
+       SIMPSET{ac = [], congs = [],
                convs =
-                 [{{conv = fn, key = SOME([], `x * y`), name = "MUL_CONV",
-                   trace = 2}}], dprocs = [], filter = NONE, rewrs = []}}
+                 [{conv = fn, key = SOME([], `x * y`), name = "MUL_CONV",
+                   trace = 2}], dprocs = [], filter = NONE, rewrs = []}
        : ssdata
    - SIMP_CONV bool_ss [] (Term`3 * 4`);
    > val it = |- 3 * 4 = 3 * 4 : thm
    - SIMP_CONV (bool_ss ++ ssd) [] (Term`3 * 4`);
    > val it = |- 3 * 4 = 12 : thm
 }
-\noindent Given the theorems {ADD_SYM} and {ADD_ASSOC} from
+Given the theorems {ADD_SYM} and {ADD_ASSOC} from
 {arithmeticTheory}, we can construct a normaliser for additive terms.
 {
-   - val ssd2 = SIMPSET {{ac = [(SPEC_ALL ADD_ASSOC, SPEC_ALL ADD_SYM)],
+   - val ssd2 = SIMPSET {ac = [(SPEC_ALL ADD_ASSOC, SPEC_ALL ADD_SYM)],
                          congs = [], convs = [], dprocs = [],
-                         filter = NONE, rewrs = []}};
+                         filter = NONE, rewrs = []};
    > val ssd2 =
-       SIMPSET{{ac = [(|- m + n + p = (m + n) + p, |- m + n = n + m)],
+       SIMPSET{ac = [(|- m + n + p = (m + n) + p, |- m + n = n + m)],
                congs = [], convs = [], dprocs = [], filter = NONE,
-               rewrs = []}}
+               rewrs = []}
        : ssdata
    - SIMP_CONV (bool_ss ++ ssd2) [] (Term`(y + 3) + x + 4`);
      (* note that the printing of + in this example is that of a
         right associative operator.*)
    > val it = |- (y + 3) + x + 4 = 3 + 4 + x + y : thm
 }
+
+
 \COMMENTS
 {SIMPSET} is not the right name for something that creates an {ssdata}
-value. 
+value.
 
 \SEEALSO
 simpLib.++, boolSimps.bool_ss, simpLib.mk_simpset, simpLib.rewrites, simpLib.SIMP_CONV.
-
 \ENDDOC

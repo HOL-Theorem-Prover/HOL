@@ -10,5 +10,4 @@ Behaves exactly like {set_diff}.
 
 \SEEALSO
 Lib.set_diff.
-
 \ENDDOC

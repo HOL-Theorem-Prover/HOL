@@ -2,7 +2,8 @@
 
 \TYPE {genvarstruct : hol_type -> term}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Returns a pair structure of variables whose names have not been previously used.
@@ -25,6 +26,7 @@ The following example illustrates the behaviour of {genvarstruct}:
       : term
 }
 
+
 \USES
 Unique variables are useful in writing derived rules, for specializing
 terms without having to worry about such things as free variable capture.
@@ -35,5 +37,4 @@ provide rather more meaningful names.
 
 \SEEALSO
 Term.genvar, PairRules.GPSPEC, pairSyntax.pvariant.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 theorem-tactic, selective.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Conditionally strips a goal, handing an antecedent to the theorem-tactic.
@@ -36,5 +37,4 @@ from a goal in a more delicate way than {PSTRIP_GOAL_THEN}.
 
 \SEEALSO
 PairRules.PGEN_TAC, PairRules.PSTRIP_GOAL_THEN, Thm_cont.FILTER_STRIP_THEN, PairRules.PSTRIP_TAC, PairRules.FILTER_PSTRIP_TAC.
-
 \ENDDOC

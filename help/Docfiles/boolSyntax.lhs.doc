@@ -13,5 +13,4 @@ Fails if the term is not an equation.
 
 \SEEALSO
 boolSyntax.rhs, boolSyntax.dest_eq, boolSyntax.mk_eq.
-
 \ENDDOC

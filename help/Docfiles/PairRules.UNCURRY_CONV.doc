@@ -2,7 +2,8 @@
 
 \TYPE {UNCURRY_CONV : conv}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Uncurrys an application of an abstraction.
@@ -13,11 +14,11 @@ Uncurrys an application of an abstraction.
 > val it = |- (\x y. x + y) 1 2 = (\(x,y). x + y) (1,2) : thm
 }
 
+
 \FAILURE
 {UNCURRY_CONV tm} fails if {tm} is not double abstraction applied to two 
 arguments
 
 \SEEALSO
 PairRules.CURRY_CONV.
-
 \ENDDOC

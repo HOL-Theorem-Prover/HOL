@@ -15,7 +15,8 @@ alpha equivalent to {"t"}.
 disch (Term`\x:bool.T`, [Term`A = T`,Term`B = 3`,Term`\y:bool.T`]);
 [`A = T`,`B = 3`] : term list
 }
+
+
 \SEEALSO
 Lib.filter.
-
 \ENDDOC

@@ -8,7 +8,8 @@ Controls how variables get renamed.
 \KEYWORDS
 variable, renaming
 
-\LIBRARY Globals
+\LIBRARY
+Globals
 
 \DESCRIBE
 The flag {Globals.priming} controls how certain system function perform
@@ -27,6 +28,7 @@ The default value of {priming} is {NONE}.
 > val it = `T_1` : term
 }
 
+
 \COMMENTS
 Proofs should be re-run in the same priming regime as they were 
 originally performed in, since different styles of renaming can 
@@ -34,5 +36,4 @@ break proofs.
 
 \SEEALSO
 Term.variant, Term.subst, Term.inst, Term.mk_primed_var, Lib.with_flag.
-
 \ENDDOC

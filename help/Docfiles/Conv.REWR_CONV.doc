@@ -23,21 +23,21 @@ theorem is:
 {
    A |- t[x1,...,xn] = u[x1,...,xn]
 }
-\noindent where {x1}, ..., {xn} are all the variables that occur free in the
+where {x1}, ..., {xn} are all the variables that occur free in the
 left-hand side of the conclusion of the theorem but do not occur free in the
 assumptions. Any of these variables may also be universally quantified at the
 outermost level of the equation, as for example in:
 {
    A |- !x1...xn. t[x1,...,xn] = u[x1,...,xn]
 }
-\noindent Note that {REWR_CONV} will also work, but will give a generally
+Note that {REWR_CONV} will also work, but will give a generally
 undesirable result (see below), if the right-hand side of the equation contains
 free variables that do not also occur free on the left-hand side, as for
 example in:
 {
    A |- t[x1,...,xn] = u[x1,...,xn,y1,...,ym]
 }
-\noindent where the variables {y1}, ..., {ym} do not occur free in
+where the variables {y1}, ..., {ym} do not occur free in
 {t[x1,...,xn]}.
 
 If {th} is an equational theorem of the kind shown above, then
@@ -47,7 +47,7 @@ If {th} is an equational theorem of the kind shown above, then
 {
    A |- t[e1,...,en/x1,...,xn] = u[e1,...,en/x1,...,xn]
 }
-\noindent That is, {REWR_CONV th tm} attempts to match the left-hand side of
+That is, {REWR_CONV th tm} attempts to match the left-hand side of
 the rewrite rule {th} to the term {tm}.  If such a match is possible, then
 {REWR_CONV} returns the corresponding substitution instance of {th}.
 
@@ -55,13 +55,13 @@ If {REWR_CONV} is given a theorem {th}:
 {
    A |- t[x1,...,xn] = u[x1,...,xn,y1,...,ym]
 }
-\noindent where the variables {y1}, ..., {ym} do not occur free in the
+where the variables {y1}, ..., {ym} do not occur free in the
 left-hand side, then the result of applying the conversion {REWR_CONV th} to
 a term {t[e1,...,en/x1,...,xn]} will be:
 {
    A |- t[e1,...,en/x1,...,xn] = u[e1,...,en,v1,...,vm/x1,...,xn,y1,...,ym]
 }
-\noindent where {v1}, ..., {vm} are variables chosen so as to be free nowhere
+where {v1}, ..., {vm} are variables chosen so as to be free nowhere
 in {th} or in the input term.  The user has no control over the choice of the
 variables {v1}, ..., {vm}, and the variables actually chosen may well be
 inconvenient for other purposes.  This situation is, however, relatively rare;
@@ -75,17 +75,17 @@ rule {th} to the term argument {tm}.  If, for example, {th} is the theorem:
 {
    A |- t[x1,...,xn] = u[x1,...,xn]
 }
-\noindent and the input term {tm} is (a substitution instance of) an instance
+and the input term {tm} is (a substitution instance of) an instance
 of {t[x1,...,xn]} in which the types {ty1}, ..., {tyi} are substituted for the
 type variables {vty1}, ..., {vtyi}, that is if:
 {
    tm = t[ty1,...,tyn/vty1,...,vtyn][e1,...,en/x1,...,xn]
 }
-\noindent then {REWR_CONV th tm} returns:
+then {REWR_CONV th tm} returns:
 {
    A |- (t = u)[ty1,...,tyn/vty1,...,vtyn][e1,...,en/x1,...,xn]
 }
-\noindent Note that, in this case, the type variables {vty1}, ..., {vtyi} must
+Note that, in this case, the type variables {vty1}, ..., {vtyi} must
 not occur anywhere in the hypotheses {A}.  Otherwise, the conversion will fail.
 
 \FAILURE
@@ -94,7 +94,7 @@ quantified at the outermost level.  If {th} is such an equation:
 {
   th = A |- !v1....vi. t[x1,...,xn] = u[x1,...,xn,y1,...,yn]
 }
-\noindent then {REWR_CONV th tm} fails unless the term {tm} is
+then {REWR_CONV th tm} fails unless the term {tm} is
 alpha-equivalent to an instance of the left-hand side {t[x1,...,xn]} which
 can be obtained by instantiation of free type variables (i.e. type variables
 not occurring in the assumptions {A}) and substitution for the free variables
@@ -107,7 +107,7 @@ variables and type instantiation may take place.  {EQ_SYM_EQ} is the theorem:
 {
    |- !x:'a. !y. (x = y) = (y = x)
 }
-\noindent and {REWR_CONV EQ_SYM_EQ} behaves as follows:
+and {REWR_CONV EQ_SYM_EQ} behaves as follows:
 {
    - REWR_CONV EQ_SYM_EQ (Term `1 = 2`);
    > val it = |- (1 = 2) = (2 = 1) : thm
@@ -116,7 +116,7 @@ variables and type instantiation may take place.  {EQ_SYM_EQ} is the theorem:
    ! Uncaught exception: 
    ! HOL_ERR
 }
-\noindent The second application fails because the left-hand side {x = y} of
+The second application fails because the left-hand side {x = y} of
 the rewrite rule does not match the term to be rewritten, namely {1 < 2}.
 
 In the following example, one might expect the result to be the theorem
@@ -126,7 +126,7 @@ In the following example, one might expect the result to be the theorem
    ! Uncaught exception: 
    ! HOL_ERR
 }
-\noindent The application fails, however, because the type variable
+The application fails, however, because the type variable
 {'a} appears in the assumption of the theorem returned by 
 {ASSUME (Term `!x:'a. f x = x`)}.
 
@@ -136,11 +136,10 @@ Failure will also occur in situations like:
    ! Uncaught exception: 
    ! HOL_ERR
 }
-\noindent where the left-hand side of the supplied equation contains a free
+where the left-hand side of the supplied equation contains a free
 variable (in this case {n}) which is also free in the assumptions, but which
 must be instantiated in order to match the input term.
 
 \SEEALSO
 Rewrite.REWRITE_CONV.
-
 \ENDDOC

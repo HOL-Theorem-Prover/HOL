@@ -18,6 +18,8 @@ loaded.
   - setify [1,2,3,1,4,3];
   [2,1,4,3] : int list
 }
+
+
 \COMMENTS
 Perhaps the first occurrence of each duplicate should be left in the list, not
 the last? However, other functions may rely on the ordering currently used.
@@ -26,5 +28,4 @@ instead.)
 
 \SEEALSO
 distinct.
-
 \ENDDOC

@@ -2,7 +2,8 @@
 
 \TYPE {all2 : : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool}
 
-\SYNOPSIS Tests whether a predicate holds pairwise throughout two lists.
+\SYNOPSIS
+Tests whether a predicate holds pairwise throughout two lists.
 
 \DESCRIBE
 {all2 P [x1,...,xn] [y1,...,yn]} equals
@@ -34,6 +35,7 @@ different length lists
 ! Fail  ""
 }
 
-\SEEALSO Lib.all.
 
+\SEEALSO
+Lib.all.
 \ENDDOC

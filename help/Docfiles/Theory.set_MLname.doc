@@ -23,11 +23,11 @@ all names binding axioms, definitions, and theorems are examined
 to see if they are valid ML identifiers. If not, an informative 
 error message is generated, and it is up to the user to change the
 names in the offending bindings. The function {set_MLname s1 s2} will 
-replace a binding with name {s1} by one with name {s2}.   
+replace a binding with name {s1} by one with name {s2}.
 
 \FAILURE
 Never fails, although will give a warning if {s1} is not the name
-of a binding in the current theory segment. 
+of a binding in the current theory segment.
 
 \EXAMPLE
 We inductively define a predicate telling if a number is odd in the
@@ -58,6 +58,7 @@ Exporting theory "scratch" ... done.
 > val it = () : unit
 }
 
+
 \COMMENTS
 The definition principles that currently have the potential to make
 problematic bindings are {Hol_datatype} and {Hol_reln}.
@@ -67,8 +68,5 @@ It is probably simpler to proceed by using alphanumeric names when
 defining constants, and to use overloading to get the desired name.
 
 \SEEALSO
-bossLib.Hol_reln, bossLib.Hol_datatype, Theory.export_theory,
-Theory.current_defs, Theory.current_thms, Theory.current_axioms,
-DB.thy.
-
+bossLib.Hol_reln, bossLib.Hol_datatype, Theory.export_theory, Theory.current_defs, Theory.current_thms, Theory.current_axioms, DB.thy.
 \ENDDOC

@@ -9,7 +9,8 @@ goal's assumptions.
 \KEYWORDS
 simplification, rewriting, tactic.
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \DESCRIBE
 {ASM_SIMP_TAC} does a simplification of the goal, adding both the
@@ -31,7 +32,7 @@ proof of a simple arithmetic fact:
    > val it = ([], fn) : tactic_result
 }
 
+
 \SEEALSO
 simpLib.++, boolSimps.bool_ss, simpLib.FULL_SIMP_TAC, hol_ss, simpLib.mk_simpset, simpLib.SIMP_CONV, simpLib.SIMP_TAC.
-
 \ENDDOC

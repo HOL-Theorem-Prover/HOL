@@ -2,9 +2,11 @@
 
 \TYPE {format_MESG : string -> string}
 
-\SYNOPSIS Maps argument of {HOL_MESG} to a string
+\SYNOPSIS
+Maps argument of {HOL_MESG} to a string
 
-\KEYWORDS message, formatting
+\KEYWORDS
+message, formatting
 
 \DESCRIBE
 The {format_MESG} function maps a string to a string. Usually, the input
@@ -12,7 +14,6 @@ string is the argument of an invocation of {HOL_MESG}. {format_MESG} is
 the default function used by {MESG_to_string}.
 
 \FAILURE
-
 Never fails.
 
 \EXAMPLE
@@ -21,7 +22,7 @@ Never fails.
 <<HOL message: Hello world.>>
 }
 
+
 \SEEALSO
 Feedback, Feedback.MESG_to_string, Feedback.format_ERR, Feedback.format_WARNING.
-
 \ENDDOC

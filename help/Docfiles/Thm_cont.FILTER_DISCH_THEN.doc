@@ -18,13 +18,13 @@ first argument, which is subsequently expanded. For example, if
    ========  f (ASSUME u)
     B ?- v
 }
-\noindent then
+then
 {
     A ?- u ==> t
    ==============  FILTER_DISCH_THEN f
        B ?- v
 }
-\noindent Note that {FILTER_DISCH_THEN} treats {~u} as {u ==> F}.
+Note that {FILTER_DISCH_THEN} treats {~u} as {u ==> F}.
 
 \FAILURE
 {FILTER_DISCH_THEN} will fail if a term which is identical, or alpha-equivalent
@@ -40,8 +40,5 @@ For preprocessing an antecedent before moving it to the assumptions, or for
 using antecedents and then throwing them away.
 
 \SEEALSO
-Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, 
-Tactic.FILTER_DISCH_TAC, Drule.NEG_DISCH, Tactic.STRIP_TAC, 
-Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
-
+Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.FILTER_DISCH_TAC, Drule.NEG_DISCH, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
 \ENDDOC

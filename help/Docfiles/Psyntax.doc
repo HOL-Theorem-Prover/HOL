@@ -88,7 +88,8 @@ online.
      val define_new_type_bijections = fn
        : string -> string -> string -> thm -> thm
 }
+
+
 \SEEALSO
 Rsyntax.
-
 \ENDDOC

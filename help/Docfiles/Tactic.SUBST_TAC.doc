@@ -9,7 +9,6 @@ Makes term substitutions in a goal using a list of theorems.
 tactic.
 
 \DESCRIBE
-
 Given a list of theorems {A1|-u1=v1,...,An|-un=vn} and a goal {(A,t)},
 {SUBST_TAC} rewrites the term {t} into the term {t[v1,...,vn/u1,...,un]} by
 simultaneously substituting {vi} for each occurrence of {ui} in {t} with {vi}:
@@ -18,7 +17,7 @@ simultaneously substituting {vi} for each occurrence of {ui} in {t} with {vi}:
    =============================  SUBST_TAC [A1|-u1=v1,...,An|-un=vn]
     A ?- t[v1,...,vn/u1,...,un]
 }
-\noindent The assumptions of the theorems used to substitute with are not added
+The assumptions of the theorems used to substitute with are not added
 to the assumptions {A} of the goal, while they are recorded in the proof.  If
 any {Ai} is not a subset of {A} (up to alpha-conversion), then
 {SUBST_TAC [A1|-u1=v1,...,An|-un=vn]} results in an invalid tactic.
@@ -36,23 +35,23 @@ When trying to solve the goal
 {
    ?- (n + 0) + (0 + m) = m + n
 }
-\noindent by substituting with the theorems
+by substituting with the theorems
 {
    - val thm1 = SPEC_ALL arithmeticTheory.ADD_SYM
      val thm2 = CONJUNCT1 arithmeticTheory.ADD_CLAUSES;
    thm1 = |- m + n = n + m
    thm2 = |- 0 + m = m
 }
-\noindent applying {SUBST_TAC [thm1, thm2]} results in the goal
+applying {SUBST_TAC [thm1, thm2]} results in the goal
 {
    ?- (n + 0) + m = n + m
 }
+
+
 \USES
 {SUBST_TAC} is used when rewriting (for example, with {REWRITE_TAC}) is
 extensive or would diverge.  Substituting is also much faster than rewriting.
 
 \SEEALSO
-Rewrite.ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC,
-Rewrite.REWRITE_TAC, Tactic.SUBST1_TAC, Tactic.SUBST_ALL_TAC.
-
+Rewrite.ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC, Tactic.SUBST1_TAC, Tactic.SUBST_ALL_TAC.
 \ENDDOC

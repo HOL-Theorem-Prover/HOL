@@ -57,7 +57,7 @@ below to advance a goal:
    - REWRITE_TAC [GREATER_DEF] ([],``5 > 4``);
    > ([([], ``4 < 5``)], -) : subgoals
 }
-\noindent It is used below with the theorem {LESS_0},
+It is used below with the theorem {LESS_0},
 {|- !n. 0 < (SUC n)}, to solve a goal:
 {
    - val (gl,p) =
@@ -68,6 +68,8 @@ below to advance a goal:
    - p[];
    > val it = |- (SUC n) > 0 : thm
 }
+
+
 \USES
 Rewriting is a powerful and general mechanism in HOL, and an important
 part of many proofs.  It relieves the user of the burden of directing
@@ -84,5 +86,4 @@ simplification functions ({SIMP_TAC} and others) may be appropriate.
 
 \SEEALSO
 Rewrite.ASM_REWRITE_TAC, Rewrite.GEN_REWRITE_TAC, Rewrite.FILTER_ASM_REWRITE_TAC, Rewrite.FILTER_ONCE_ASM_REWRITE_TAC, Rewrite.ONCE_ASM_REWRITE_TAC, Rewrite.ONCE_REWRITE_TAC, Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Conv.REWR_CONV, Rewrite.REWRITE_CONV, simpLib.SIMP_TAC, Tactic.SUBST_TAC.
-
 \ENDDOC

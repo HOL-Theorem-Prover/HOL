@@ -23,5 +23,4 @@ is, {EVERY_CONV [] "t"} returns {|- t=t}.
 
 \SEEALSO
 Conv.THENC.
-
 \ENDDOC

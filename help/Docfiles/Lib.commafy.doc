@@ -1,4 +1,4 @@
-\DOC commafy 
+\DOC commafy
 
 \TYPE {commafy : string list -> string list}
 
@@ -28,5 +28,6 @@ donkey, mule, horse, camel, llama
 - commafy ["foo"];
 > val it = ["foo"] : string list
 }
+
 
 \ENDDOC

@@ -62,11 +62,8 @@ Remaining subgoals:
 ! Uncaught exception: 
 ! CANT_BACKUP_ANYMORE
 }
-\SEEALSO
-goalstackLib.b, goalstackLib.backup, 
-goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, 
-goalstackLib.g, goalstackLib.p, 
-goalstackLib.r, goalstackLib.rotate, 
-goalstackLib.set_goal, goalstackLib.top_goal, goalstackLib.top_thm.
 
+
+\SEEALSO
+goalstackLib.b, goalstackLib.backup, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, goalstackLib.p, goalstackLib.r, goalstackLib.rotate, goalstackLib.set_goal, goalstackLib.top_goal, goalstackLib.top_thm.
 \ENDDOC

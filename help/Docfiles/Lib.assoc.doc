@@ -25,8 +25,7 @@ the list is empty.
 > val it = (2, 5) : (int * int)
 }
 
-\SEEALSO
-Lib.assoc1, Lib.assoc2, Lib.rev_assoc, Lib.find, 
-Lib.mem, Lib.tryfind, Lib.exists, Lib.all.
 
+\SEEALSO
+Lib.assoc1, Lib.assoc2, Lib.rev_assoc, Lib.find, Lib.mem, Lib.tryfind, Lib.exists, Lib.all.
 \ENDDOC

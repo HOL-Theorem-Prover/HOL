@@ -23,5 +23,4 @@ fails if the hol88 library has not been loaded.
 
 \SEEALSO
 Tactical.TAC_PROOF, Tactical.prove, hol88Lib.prove_thm, Tactical.VALID.
-
 \ENDDOC

@@ -14,10 +14,11 @@ When applied to an equational term {t1 = t2}, the conversion
 {
    |- (t1 = t2) = (t2 = t1)
 }
+
+
 \FAILURE
 Fails if applied to a term that is not an equation.
 
 \SEEALSO
 Thm.SYM.
-
 \ENDDOC

@@ -25,7 +25,7 @@ the first suitable subterm(s) found in a top-down search:
    - ONCE_DEPTH_CONV BETA_CONV (Term `(\x. (\y. y + x) 1) 2`);
    > val it = |- (\x. (\y. y + x)1)2 = (\y. y + 2) 1 : thm
 }
-\noindent Here, there are two beta-redexes in the input term. One of these
+Here, there are two beta-redexes in the input term. One of these
 occurs within the other, so {BETA_CONV} is applied only to the outermost one.
 
 Note that the supplied conversion is applied by {ONCE_DEPTH_CONV} to all
@@ -36,7 +36,7 @@ conversions also succeeds, as illustrated by the following example:
    - ONCE_DEPTH_CONV numLib.num_CONV (Term `(\x. (\y. y + x) 1) 2`);
    > val it = |- (\x. (\y. y + x)1)2 = (\x. (\y. y + x)(SUC 0))(SUC 1) : thm
 }
-\noindent Here {num_CONV} is applied to both {1} and {2}, since neither term
+Here {num_CONV} is applied to both {1} and {2}, since neither term
 occurs within a larger subterm for which the conversion {num_CONV} succeeds.
 
 \USES
@@ -49,10 +49,11 @@ the tactic
 {
    CONV_TAC (ONCE_DEPTH_CONV BETA_CONV)
 }
-\noindent may, depending on where the beta-redex occurs, be much faster than
+may, depending on where the beta-redex occurs, be much faster than
 {
    CONV_TAC (TOP_DEPTH_CONV BETA_CONV)
 }
+
 {ONCE_DEPTH_CONV c} may also be used when the supplied conversion {c} never
 fails, in which case using a conversion such as {DEPTH_CONV c}, which
 applies {c} repeatedly would never terminate.
@@ -67,5 +68,4 @@ exception, the operation of {ONCE_DEPTH_CONV} will be unpredictable.
 
 \SEEALSO
 Conv.DEPTH_CONV, Conv.REDEPTH_CONV, Conv.TOP_DEPTH_CONV.
-
 \ENDDOC

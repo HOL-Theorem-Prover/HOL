@@ -5,7 +5,8 @@
 \KEYWORDS
 theorem-tactic, quantifier, existential.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Replaces existentially quantified pair with given witness,
@@ -21,16 +22,18 @@ applied to this theorem produces results as follows when applied to a
 goal {(A ?- u)}:
 {
     A ?- t
-   =========  f ({{u[q/p]}} |- u[q/p])
+   =========  f ({u[q/p]} |- u[q/p])
     A ?- t1
 }
-\noindent then applying {(P_PCHOOSE_THEN "q" f (A1 |- ?p. u))} to the
+then applying {(P_PCHOOSE_THEN "q" f (A1 |- ?p. u))} to the
 goal {(A ?- t)} produces the subgoal:
 {
     A ?- t
    =========  P_PCHOOSE_THEN "q" f (A1 |- ?p. u)
     A ?- t1         ("q" not free anywhere)
 }
+
+
 \FAILURE
 Fails if the theorem's conclusion is not existentially quantified, or if
 the first argument is not a paired structure of variables.  
@@ -41,5 +44,4 @@ assumption of the goal.
 
 \SEEALSO
 Thm_cont.X_CHOOSE_THEN, PairRules.PCHOOSE, PairRules.PCHOOSE_THEN, PairRules.P_PCHOOSE_TAC.
-
 \ENDDOC

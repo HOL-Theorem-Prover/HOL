@@ -15,6 +15,8 @@ tupled abstractions.
    PAIRED_ETA_CONV   \(v1..(..)..vn). f (v1..(..)..vn)
     = |- \(v1..(..)..vn). f (v1..(..)..vn) = f
 }
+
+
 \FAILURE
 Fails unless the given term is a paired eta-redex as illustrated above.
 
@@ -27,6 +29,8 @@ apart reveals the true form of a paired eta redex:
    - dest_comb (Term `\(x:num,y:num). FST (x,y)`)
    > val it = (`UNCURRY`, `\x y. FST (x,y)`) : term * term
 }
+
+
 \EXAMPLE
 The following is a typical use of the conversion:
 {
@@ -36,7 +40,7 @@ The following is a typical use of the conversion:
      ACCEPT_TAC (SYM (MATCH_MP SELECT_AX (REFL (Term `(a:'a,b:'b)`)))));
 }
 
+
 \SEEALSO
 Thm.ETA_CONV.
-
 \ENDDOC

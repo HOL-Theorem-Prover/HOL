@@ -21,6 +21,7 @@ Clearly in the following term, {x} and {y} are free, whereas {z} is bound:
    > val it = [(--`x`--),(--`y`--)] : term list
 }
 
+
 \COMMENTS
 The function {frees} is not in the standard hol98 kernel; the function
 {free_vars} is used instead.  WARNING: the order of the list returned
@@ -33,7 +34,7 @@ by {frees} and {free_vars} is different.
     - frees tm;
     > val it = [(--`x`--),(--`y`--)] : term list
 }
-\noindent It ought to be the case that the result of a call to {frees}
+It ought to be the case that the result of a call to {frees}
 (or {free_vars}) is treated as a set, that is, the order of the free
 variables should be immaterial. This is sometimes not possible; for
 example the result of {gen_all} (and hence the results of {GEN_ALL}
@@ -44,9 +45,8 @@ expectations, it is not the case that ({tm} being a closed term already)
 {
     GEN_ALL (SPEC_ALL tm) = tm
 }
-\noindent where ``{=}'' is interpreted as identity or alpha-convertibility.
+where ``{=}'' is interpreted as identity or alpha-convertibility.
 
 \SEEALSO
 hol88Lib.freesl, Term.free_in, thm_frees.
-
 \ENDDOC

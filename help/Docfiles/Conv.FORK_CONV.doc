@@ -21,13 +21,14 @@ applied to {t2}, or if {c1} or {c2} aren't really conversions, and
 thereby fail to return appropriate equational theorems.
 
 
+
 \EXAMPLE
 {
 - FORK_CONV (BETA_CONV,REDUCE_CONV) (Term`(\x. x + 1)y * (10 DIV 3)`);
 > val it = |- (\x. x + 1) y * (10 DIV 3) = (y + 1) * 3 : thm
 }
 
+
 \SEEALSO
 Conv.BINOP_CONV, Conv.LAND_CONV, Conv.RAND_CONV, Conv.RATOR_CONV.
-
 \ENDDOC

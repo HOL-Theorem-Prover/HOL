@@ -1,7 +1,6 @@
 \DOC match_term
 
-\BLTYPE match_term : term -> term -> (term,term) subst * (hol_type,hol_type) subst
-\ELTYPE
+\TYPE {match_term : term -> term -> (term,term) subst * (hol_type,hol_type) subst}
 
 \SYNOPSIS
 Finds instantiations to match one term to another.
@@ -17,6 +16,7 @@ in returning a value {(S,T)}, then
    aconv (subst S (inst T pat)) ob.
 }
 
+
 \FAILURE
 Fails if the term cannot be matched by one-way instantiation.
 
@@ -28,18 +28,18 @@ conclusion of a theorem to a term.
     val th = |- x = x : thm
 
    - match_term (concl th) (Term `1 = 1`);
-   val it = ([{{redex = `x`, residue = `1`}}],
-             [{{redex = `:'a`, residue = `:num`}}])
+   val it = ([{redex = `x`, residue = `1`}],
+             [{redex = `:'a`, residue = `:num`}])
      : term subst * hol_type subst
 
   - INST_TY_TERM it th;
   val it = |- 1 = 1
 }
 
+
 \COMMENTS
 For instantiating theorems {PART_MATCH} is usually easier to use.
 
 \SEEALSO
 Type.match_type, Drule.INST_TY_TERM, Drule.PART_MATCH.
-
 \ENDDOC

@@ -27,6 +27,7 @@ Furthermore, if a type or term is defined, and its witness theorem is
 suspect, then that type or term is suspect.
 
 
+
 \FAILURE
 If a type constant named {s} has not been declared in the current segment,
 a warning will be issued, but an exception will not be raised.
@@ -53,12 +54,11 @@ Exception raised at type_pp.pp_type:
 old->foo<-old: no such type operator in grammar
 }
 
+
 \COMMENTS
 It's rather dodgy to withdraw constants from the HOL signature. This
 entrypoint and its relatives are occasionally useful however.
 
 \SEEALSO
-Theory.delete_const, Theory.delete_axiom, Theory.delete_definition,
-Theory.delete_thm. 
-
+Theory.delete_const, Theory.delete_axiom, Theory.delete_definition, Theory.delete_thm.
 \ENDDOC

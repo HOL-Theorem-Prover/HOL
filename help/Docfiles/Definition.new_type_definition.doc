@@ -13,14 +13,14 @@ then evaluating:
 {
    new_type_definition (tyop, |- ?x. t x)
 }
-\noindent results in {tyop} being declared as a new {n}-ary type
+results in {tyop} being declared as a new {n}-ary type
 operator in the current theory and returned by the call to 
 {new_type_definition}. This new type operator is characterized by 
 a definitional axiom of the form:
 {
    |- ?rep:('a,...,'n)op->tyop. TYPE_DEFINITION t rep
 }
-\noindent which is stored as a definition in the current theory segment
+which is stored as a definition in the current theory segment
 under the automatically-generated name {op_TY_DEF}. The constant
 {TYPE_DEFINITION} in this axiomatic characterization of {tyop} is
 defined by:
@@ -29,7 +29,7 @@ defined by:
          (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
          (!x. P x = (?x'. x = rep x'))
 }
-\noindent Thus {|- ?rep. TYPE_DEFINITION P rep} asserts that there is a
+Thus {|- ?rep. TYPE_DEFINITION P rep} asserts that there is a
 bijection between the newly defined type {('a,...,'n)tyop} and the set
 of values of type {ty} that satisfy {P}.
 
@@ -40,5 +40,4 @@ if the type of {t} is not of the form {ty->bool}.
 
 \SEEALSO
 Drule.define_new_type_bijections, Prim_rec.prove_abs_fn_one_one, Prim_rec.prove_abs_fn_onto, Drule.prove_rep_fn_one_one, Drule.prove_rep_fn_onto.
-
 \ENDDOC

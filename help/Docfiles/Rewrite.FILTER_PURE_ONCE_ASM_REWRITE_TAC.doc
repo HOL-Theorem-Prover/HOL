@@ -1,7 +1,6 @@
 \DOC FILTER_PURE_ONCE_ASM_REWRITE_TAC
 
-\TYPE
-{FILTER_PURE_ONCE_ASM_REWRITE_TAC : ((term -> bool) -> thm list -> tactic)}
+\TYPE {FILTER_PURE_ONCE_ASM_REWRITE_TAC : ((term -> bool) -> thm list -> tactic)}
 
 \SYNOPSIS
 Rewrites a goal once using some of its assumptions.
@@ -26,5 +25,4 @@ a goal, allowing control of the number of rewriting passes.
 
 \SEEALSO
 Rewrite.ASM_REWRITE_TAC, Rewrite.FILTER_ASM_REWRITE_TAC, Rewrite.FILTER_ONCE_ASM_REWRITE_TAC, Rewrite.FILTER_PURE_ASM_REWRITE_TAC, Rewrite.GEN_REWRITE_TAC, Rewrite.ONCE_ASM_REWRITE_TAC, Conv.ONCE_DEPTH_CONV, Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_ASM_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC.
-
 \ENDDOC

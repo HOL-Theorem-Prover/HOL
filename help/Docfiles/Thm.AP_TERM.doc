@@ -16,11 +16,12 @@ inference rule {AP_TERM} returns the theorem {A |- f x = f y}.
    ----------------  AP_TERM f
     A |- f x = f y
 }
+
+
 \FAILURE
 Fails unless the theorem is equational and the supplied term is a function
 whose domain type is the same as the type of both sides of the equation.
 
 \SEEALSO
 Tactic.AP_TERM_TAC, Thm.AP_THM, Tactic.AP_THM_TAC, Thm.MK_COMB.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \SYNOPSIS
 Restores recognition of a constant by the quotation parser.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 A call {reveal c}, where {c} the name of a (perhaps) hidden constant, 
@@ -25,5 +26,4 @@ are not altered.
 
 \SEEALSO
 Parse.hide, Parse.hidden, Parse.remove_ovl_mapping, Parse.update_overload_maps.
-
 \ENDDOC

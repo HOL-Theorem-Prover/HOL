@@ -1,4 +1,4 @@
-\DOC matcher 
+\DOC matcher
 
 \TYPE {matcher : (term -> term -> 'a) -> string list -> term -> data list}
 
@@ -55,10 +55,10 @@ Never fails, but may return an empty list.
        Def))] : ((string * string) * (thm * class)) list
 }
 
+
 \COMMENTS
 Usually, {pm} will be a pattern-matcher, but it need not be.
 
 \SEEALSO
 DB.match, DB.apropos, DB.matchp, DB.find.
-
 \ENDDOC

@@ -25,5 +25,4 @@ rewriting is not desired.
 
 \SEEALSO
 Rewrite.ASM_REWRITE_RULE, Rewrite.GEN_REWRITE_RULE, Rewrite.ONCE_ASM_REWRITE_RULE, Rewrite.PURE_ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Rewrite.REWRITE_RULE.
-
 \ENDDOC

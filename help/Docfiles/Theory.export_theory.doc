@@ -26,6 +26,7 @@ for use. It can be brought into an interactive proof session via
 {
    load "thyTheory";
 }
+
 When the segment is loaded, its parents, axioms, theorems, and
 definitions are incorporated into the current theory (recall that this
 notion is different than the current theory segment).
@@ -47,6 +48,7 @@ Exporting theory "scratch" ... done.
 > val it = () : unit
 }
 
+
 \COMMENTS
 Note that {export_theory} exports the state of the 
 theory, and not that of the ML environment. If one wants to restore 
@@ -56,5 +58,4 @@ see {adjoin_to_theory}.
 
 \SEEALSO
 Theory.new_theory, Theory.adjoin_to_theory, Theory.set_MLname, Holmake.
-
 \ENDDOC

@@ -21,5 +21,4 @@ and the tactic can solve the goal.
 
 \SEEALSO
 BasicProvers.PROVE, hol88Lib.prove_thm, VALID.
-
 \ENDDOC

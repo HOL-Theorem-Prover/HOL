@@ -9,7 +9,6 @@ Makes term substitutions in a goal using a supplied substitution function.
 tactic, genvars.
 
 \DESCRIBE
-
 {GSUBST_TAC} is the basic substitution tactic by means of which other
 tactics such as {SUBST_OCCS_TAC} and {SUBST_TAC} are defined.  Given a
 list {[(v1,w1),...,(vk,wk)]} of pairs of terms and a term {w}, a
@@ -26,7 +25,7 @@ replaces occurrences of {ti} in {t} with {ui} according to {sfn}.
    =============================  GSUBST_TAC sfn [A1|-t1=u1,...,An|-tn=un]
     A ?- t[u1,...,un/t1,...,tn]
 }
-\noindent The assumptions of the theorems used to substitute with are not added
+The assumptions of the theorems used to substitute with are not added
 to the assumptions {A} of the goal, while they are recorded in the proof.  If
 any {Ai} is not a subset of {A} (up to alpha-conversion), then
 {GSUBST_TAC sfn [A1|-t1=u1,...,An|-tn=un]} results in an invalid tactic.
@@ -47,5 +46,4 @@ substitution tactics.
 
 \SEEALSO
 Tactic.SUBST1_TAC, Tactic.SUBST_OCCS_TAC, Tactic.SUBST_TAC.
-
 \ENDDOC

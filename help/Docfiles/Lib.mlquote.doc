@@ -1,4 +1,4 @@
-\DOC mlquote 
+\DOC mlquote
 
 \TYPE {mlquote : string -> string}
 
@@ -28,7 +28,7 @@ bar"
 > val it = () : unit
 }
 
+
 \SEEALSO
 Lib.quote.
-
 \ENDDOC

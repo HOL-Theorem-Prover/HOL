@@ -8,7 +8,8 @@ Converts a term to a string.
 \KEYWORDS
 Pretty-printing
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 Uses the global term grammar and pretty-printing flags to turn a term
@@ -21,5 +22,4 @@ Should never fail.
 
 \SEEALSO
 Parse.print_term.
-
 \ENDDOC

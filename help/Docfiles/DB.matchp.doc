@@ -1,4 +1,4 @@
-\DOC matchp 
+\DOC matchp
 
 \TYPE {matchp : (thm -> bool) -> string list -> data list}
 
@@ -75,7 +75,7 @@ in the theory {pair}.
  : ((string * string) * (thm * class)) list
 }
 
+
 \SEEALSO
 DB.match, DB.matcher, DB.apropos, DB.find.
-
 \ENDDOC

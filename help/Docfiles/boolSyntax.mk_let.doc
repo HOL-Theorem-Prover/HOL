@@ -21,6 +21,8 @@ the type of {N} must equal the domain of the type of {M}.
 - mk_let(Term`\x. x \/ x`, Term`Q /\ R`);
 > val it = `let x = Q /\ R in x \/ x` : term
 }
+
+
 \COMMENTS
 {let} expressions may be nested.
 
@@ -30,5 +32,4 @@ has been loaded. The library {pairLib} provides support for manipulating
 
 \SEEALSO
 boolSyntax.dest_let, boolSyntax.is_let, pairLib.
-
 \ENDDOC

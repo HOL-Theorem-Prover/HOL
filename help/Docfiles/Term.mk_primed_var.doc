@@ -29,7 +29,7 @@ Never fails.
 > val it = `x'` : term
 }
 
+
 \SEEALSO
 Term.genvar, Term.variant, Globals.priming.
-
 \ENDDOC

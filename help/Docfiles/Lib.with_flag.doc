@@ -2,9 +2,11 @@
 
 \TYPE {with_flag : 'a ref * 'a -> ('b -> 'c) -> 'b -> 'c}
 
-\SYNOPSIS Apply a function under a particular flag setting.
+\SYNOPSIS
+Apply a function under a particular flag setting.
 
-\LIBRARY Lib
+\LIBRARY
+Lib
 
 \DESCRIBE
 An invocation {with_flag (r,v) f x} sets the reference variable {r} to 
@@ -29,5 +31,7 @@ T = ((\(x. x) = (\x. x))
 > val it = () : unit
 }
 
-\SEEALSO Feedback.traces, Feedback.register_btrace, Feedback.trace, Lib.time. 
+
+\SEEALSO
+Feedback.traces, Feedback.register_btrace, Feedback.trace, Lib.time.
 \ENDDOC

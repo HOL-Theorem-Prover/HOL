@@ -12,7 +12,5 @@ list.
 Identical to {Lib.first}.
 
 \SEEALSO
-Lib.first, Lib.tryfind, Lib.mem, Lib.exists, 
-hol88Lib.forall, Lib.assoc, Lib.rev_assoc.
-
+Lib.first, Lib.tryfind, Lib.mem, Lib.exists, hol88Lib.forall, Lib.assoc, Lib.rev_assoc.
 \ENDDOC

@@ -22,6 +22,7 @@ Fails if an application of {eq} fails.
 > val it = [`\x. x`] : term list
 }
 
+
 \COMMENTS
 The order of items in the list returned by {op_intersect} is not dependable.
 
@@ -32,8 +33,5 @@ There is no requirement that {eq} be recognizable as a kind of
 equality (it could be implemented by an order relation, for example).
 
 \SEEALSO
-Lib.intersect, Lib.op_mem, Lib.op_insert, Lib.op_mk_set, 
-Lib.op_union, Lib.op_U, Lib.op_set_diff.
-
-
+Lib.intersect, Lib.op_mem, Lib.op_insert, Lib.op_mk_set, Lib.op_union, Lib.op_U, Lib.op_set_diff.
 \ENDDOC

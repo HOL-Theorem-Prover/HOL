@@ -1,4 +1,4 @@
-\DOC type_var_in 
+\DOC type_var_in
 
 \TYPE {type_var_in : hol_type -> hol_type -> bool}
 
@@ -24,10 +24,10 @@ Fails if {tyv} is not a type variable.
 > val it = false : bool
 }
 
+
 \COMMENTS
 Can be useful in enforcing side conditions on inference rules.
 
 \SEEALSO
 Type.type_vars, Type.type_varsl, Type.exists_tyvar.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {flatten : 'a list list -> 'a list}
 
-\SYNOPSIS Removes one level of bracketing from a list.
+\SYNOPSIS
+Removes one level of bracketing from a list.
 
-\KEYWORDS list.
+\KEYWORDS
+list.
 
 \DESCRIBE
 An invocation {flatten [[x11,...,x1k1],...,[xn1,...,xnkn]]} yields
@@ -21,5 +23,6 @@ Never fails.
 - flatten ([[[]]] : int list list list);
 > val it =  [[]]  : int list list
 }
+
 
 \ENDDOC

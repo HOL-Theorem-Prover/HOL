@@ -25,5 +25,4 @@ Applying different tactics to different subgoals.
 
 \SEEALSO
 Tactical.EVERY, Tactical.ORELSE, Tactical.THEN.
-
 \ENDDOC

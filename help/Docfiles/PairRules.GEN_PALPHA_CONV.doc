@@ -2,7 +2,8 @@
 
 \TYPE {GEN_PALPHA_CONV : term -> conv}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \KEYWORDS
 conversion, alpha.
@@ -26,5 +27,4 @@ but types of the variables {p} and {q} differ.
 
 \SEEALSO
 Drule.GEN_ALPHA_CONV, PairRules.PALPHA, PairRules.PALPHA_CONV.
-
 \ENDDOC

@@ -14,5 +14,4 @@ Fails if {v} is not a variable or if {t} is not of type {bool}.
 
 \SEEALSO
 boolSyntax.dest_select, boolSyntax.is_select.
-
 \ENDDOC

@@ -19,11 +19,12 @@ any variables free in the goal's assumption list. Normally {x'} is just {x}.
    ==============  FILTER_GEN_TAC "s"
     A ?- t[x'/x]
 }
+
+
 \FAILURE
 Fails if the goal's conclusion is not universally quantified or the
 quantified variable is equal to the given term.
 
 \SEEALSO
 Thm.GEN, Tactic.GEN_TAC, Drule.GENL, Drule.GEN_ALL, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC, Tactic.STRIP_TAC.
-
 \ENDDOC

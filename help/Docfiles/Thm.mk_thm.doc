@@ -10,10 +10,10 @@ The function {mk_thm} can be used to construct an arbitrary theorem. It is
 applied to a pair consisting of the desired assumption list (possibly empty)
 and conclusion. All the terms therein should be of type {bool}.
 {
-   mk_thm([a1,...,an],c) = ({{a1,...,an}} |- c)
+   mk_thm([a1,...,an],c) = ({a1,...,an} |- c)
 }
-\noindent {mk_thm} is an application of {mk_oracle_thm}, and every application
-of it tags the resulting theorem with {MK_THM}. 
+{mk_thm} is an application of {mk_oracle_thm}, and every application
+of it tags the resulting theorem with {MK_THM}.
 
 \FAILURE
 Fails unless all the terms provided for assumptions and conclusion 
@@ -31,6 +31,8 @@ The following shows how to create a simple contradiction:
    - falsity;
    > val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
 }
+
+
 \COMMENTS
 Although {mk_thm} can be useful for experimentation or temporarily plugging
 gaps, its use should be avoided if at all possible in important proofs, because
@@ -50,5 +52,4 @@ with the aid of {mk_thm} is detectable by examining its tag.
 
 \SEEALSO
 Theory.new_axiom, Thm.mk_oracle_thm, Thm.tag, Globals.show_tags.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, existential.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Introduces paired existential quantification given a particular witness.
@@ -21,6 +22,8 @@ term which is the same as the conclusion of the theorem,
    -------------  EXISTS ("?p. t","q")
     A |- ?p. t
 }
+
+
 \FAILURE
 Fails unless the substituted pattern is the same as the conclusion of the
 theorem.
@@ -41,7 +44,8 @@ The following examples illustrate the various uses of {PEXISTS}:
              (REFL (Term `ab:'a#'a`));
    > val it = |- ?(a,b). (a,b) = (a,b) : thm
 }
+
+
 \SEEALSO
 Thm.EXISTS, PairRules.PCHOOSE, PairRules.PEXISTS_TAC.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {trye : ('a -> 'b) -> 'a -> 'b}
 
-\SYNOPSIS Maps exceptions into {HOL_ERR}
+\SYNOPSIS
+Maps exceptions into {HOL_ERR}
 
-\KEYWORDS exception, error handling.
+\KEYWORDS
+exception, error handling.
 
 \DESCRIBE
 The standard exception for HOL applications to raise is {HOL_ERR}. The
@@ -38,7 +40,7 @@ Fails if the function application fails.
 > Interrupted
 }
 
+
 \SEEALSO
 Lib, Feedback.Raise, Lib.try.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC
+\DOC adjoin_to_theory
 
 \TYPE {adjoin_to_theory : thy_addon -> unit}
 
@@ -26,7 +26,7 @@ However, it is sometimes more appropriate to actually include
 the support code directly in {thyTheory}. The function {adjoin_to_theory}
 performs this operation.
 
-A call {adjoin_to_theory {{sig_pp, struct_pp}}} adds a signature
+A call {adjoin_to_theory {sig_pp, struct_pp}} adds a signature
 prettyprinter {sig_pp} and a structure prettyprinter {struct_pp} to
 an internal queue of prettyprinters. When {export_theory ()} is
 eventually called two things happen: (a) the signature file
@@ -55,13 +55,14 @@ a fairly typical use of {adjoin_to_theory}. It adds the declaration
 of an ML variable {pair_rws} to the structure {pairTheory}.
 {
    val _ = adjoin_to_theory
-   {{sig_ps =
+   {sig_ps =
       SOME(fn ppstrm => PP.add_string ppstrm "val pair_rws : thm list"),
     struct_ps =
       SOME(fn ppstrm => PP.add_string ppstrm
                                       "val pair_rws = [PAIR, FST, SND];")
-   }}
+   }
 }
+
 
 \COMMENTS
 The {PP} structure is documented in the MoscowML library documentation.

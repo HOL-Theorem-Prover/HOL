@@ -1,4 +1,4 @@
-\DOC mk_set 
+\DOC mk_set
 
 \TYPE {mk_set : ''a list -> ''a list}
 
@@ -22,6 +22,7 @@ Never fails.
 > val it = [1, 2, 3, 4] : int list
 }
 
+
 \COMMENTS
 In some programming situations, it is convenient to implement sets
 by lists, in which case {mk_set} may be helpful. However, such 
@@ -33,8 +34,5 @@ This limits its applicability to types that allow equality. For other
 types, typically abstract ones, use the `op_' variants.
 
 \SEEALSO
-Lib.op_mk_set, Lib.mem, Lib.insert, Lib.union, Lib.U, 
-Lib.set_diff, Lib.subtract, Lib.intersect, Lib.null_intersection, 
-Lib.set_eq.
-
+Lib.op_mk_set, Lib.mem, Lib.insert, Lib.union, Lib.U, Lib.set_diff, Lib.subtract, Lib.intersect, Lib.null_intersection, Lib.set_eq.
 \ENDDOC

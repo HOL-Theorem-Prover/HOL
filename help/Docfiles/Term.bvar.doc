@@ -14,5 +14,4 @@ Fails unless {M} is an abstraction.
 
 \SEEALSO
 Term.body, Term.dest_abs.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC match 
+\DOC match
 
 \TYPE {match : string list -> term -> data list}
 
@@ -16,7 +16,7 @@ that matches {M}. If there are no matches, the empty list is returned.
 The strings {s1},...,{sn} should be a subset of the currently loaded
 theory segments. The string {"-"} may be used to designate the
 current theory segment. If the list of theories is empty, then all 
-currently loaded theories are searched. 
+currently loaded theories are searched.
 
 \FAILURE
 Never fails.
@@ -47,6 +47,7 @@ Never fails.
   ((string * string) * (thm * class)) list
 }
 
+
 \COMMENTS
 The notion of matching is a restricted version of higher-order matching.
 
@@ -55,5 +56,4 @@ For locating theorems when doing interactive proof.
 
 \SEEALSO
 DB.matcher, DB.matchp, DB.find, DB.theorems, Db.thy, Db.listDB.
-
 \ENDDOC

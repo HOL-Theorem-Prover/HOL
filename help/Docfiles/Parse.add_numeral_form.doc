@@ -8,7 +8,8 @@ Adds support for numerals of differing types to the parser/pretty-printer.
 \KEYWORDS
 Parsing, pretty-printing.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 This function allows the user to extend HOL's parser and
@@ -42,14 +43,14 @@ The natural numbers are given numeral forms as follows:
 {
    val _ = add_numeral_form (#"n", NONE);
 }
-\noindent This is done in {arithmeticTheory} so that after it is
+This is done in {arithmeticTheory} so that after it is
 loaded, one can write numerals and have them parse (and print) as
 natural numbers.  However, later in the development, in
 {integerTheory}, numeral forms for integers are also introduced:
 {
    val _ = add_numeral_form(#"i", SOME "int_of_num");
 }
-\noindent Here {int_of_num} is the name of the function which injects
+Here {int_of_num} is the name of the function which injects
 natural numbers into integers.  After this call is made, numeral strings
 can be treated as integers or natural numbers, depending on the
 context.
@@ -62,7 +63,7 @@ context.
    - type_of it;
    > val it = `:int` : hol_type
 }
-\noindent The parser has chosen to give the string ``3'' integer type
+The parser has chosen to give the string ``3'' integer type
 (it will prefer the most recently specified possibility, in common
 with overloading in general).  However, numerals can appear with
 natural number type in appropriate contexts:
@@ -72,7 +73,7 @@ natural number type in appropriate contexts:
    - type_of it;
    > val it = `:num # int` : hol_type
 }
-\noindent Moreover, one can always use the character suffixes to
+Moreover, one can always use the character suffixes to
 absolutely specify the type of the numeral form:
 {
    - Term`f 3 /\ p`;
@@ -83,11 +84,12 @@ absolutely specify the type of the numeral form:
    > val it = `f 3 /\ p` : term
 }
 
+
 \COMMENTS
 Overloading on too many numeral forms is a sure recipe for confusion.
 
 
+
 \SEEALSO
 Parse.add_bare_numeral_form, Parse.show_numeral_types.
-
 \ENDDOC

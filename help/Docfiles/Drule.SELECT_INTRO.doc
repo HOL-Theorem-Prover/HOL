@@ -17,7 +17,7 @@ of the original operand {x}.
    --------------  SELECT_INTRO
     A |- P($@ P)
 }
-\noindent The returned theorem asserts that {$@ P} denotes some value
+The returned theorem asserts that {$@ P} denotes some value
 at which {P} holds.
 
 \FAILURE
@@ -28,18 +28,19 @@ Given the theorem
 {
    th1 = |- (\n. m = n)m
 }
-\noindent applying {SELECT_INTRO} replaces the second occurrence of {m} with the
+applying {SELECT_INTRO} replaces the second occurrence of {m} with the
 epsilon abstraction of the operator:
 {
    - val th2 = SELECT_INTRO th1;
    val th2 = |- (\n. m = n)(@n. m = n) : thm
 }
-\noindent This theorem could now be used to derive a further result:
+This theorem could now be used to derive a further result:
 {
    - EQ_MP (BETA_CONV(concl th2)) th2;
    val it = |- m = (@n. m = n) : thm
 }
+
+
 \SEEALSO
 Thm.EXISTS, SELECT_AX, Conv.SELECT_CONV, Drule.SELECT_ELIM, Drule.SELECT_RULE.
-
 \ENDDOC

@@ -2,9 +2,12 @@
 
 \TYPE {Hol_defn : string -> term quotation -> defn}
 
-\SYNOPSIS General-purpose function definition facility.
+\SYNOPSIS
+General-purpose function definition facility.
 
-\KEYWORDS definition, recursive definition.
+\KEYWORDS
+definition, recursive definition.
+
 
 
 \DESCRIBE
@@ -32,6 +35,7 @@ the results of {Hol_defn}, has been installed in the interactive system.
 {Hol_defn} may be found in {bossLib} and also in {Defn}.
 
 
+
 \FAILURE
 {Hol_defn s q} fails if {s} is not an alphanumeric identifier.
 
@@ -41,6 +45,7 @@ the results of {Hol_defn}, has been installed in the interactive system.
 to define a higher-order recursion involving a higher-order function
 that the termination condition extraction mechanism of {Hol_defn} is
 unaware of.
+
 
 
 \EXAMPLE
@@ -78,6 +83,7 @@ Here we attempt to define a quick-sort function {qsort}:
          2. !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
 }
 
+
 In the following we give an example of how to use {Hol_defn} to define a
 nested recursion.  In processing this definition, an auxiliary function
 {N_aux} is defined.  The termination conditions of {N} are phrased in
@@ -109,6 +115,8 @@ terms of {N_aux} for technical reasons.
 }
 
 
+
+
 \COMMENTS
 An invocation of {Hol_defn} is usually the first step in a multi-step
 process that ends with unconstrained recursion equations for a
@@ -118,7 +126,6 @@ next, one invokes {tgoal} to set up a goal to prove termination of the
 function.  The termination proof usually starts with an invocation of
 {WF_REL_TAC}. After the proof is over, the desired recursion equations
 and induction theorem are available for further use.
-
 
 It is occasionally important to understand, at least in part, how
 {Hol_defn} constructs termination constraints. In some cases, it is
@@ -130,12 +137,14 @@ factorial function over natural numbers:
 {
    fact n = if n=0 then 1 else n * fact (n-1).
 }
+
 In the absence of a congruence theorem for the `if-then-else` construct,
 {Hol_defn} would extract the termination constraints
 {
    0. WF R
    1. !n. R (n - 1) n
 }
+
 which are unprovable, because the context of the recursive call has not
 been taken account of. This example is in fact not a problem for HOL,
 since the following congruence theorem is known to {Hol_defn}:
@@ -146,6 +155,7 @@ since the following congruence theorem is known to {Hol_defn}:
          (~b' ==> (y = y')) ==>
          ((if b then x else y) = (if b' then x' else y'))
 }
+
 This theorem is interpreted by {Hol_defn} as an ordered sequence of
 instructions to follow when the termination condition extractor hits an
 `if-then-else`. The theorem is read as follows:
@@ -175,6 +185,7 @@ instructions to follow when the termination condition extractor hits an
 
      5. Replace "if B then X else Y" by "if B' then X' else Y'".
 }
+
 The accumulated termination conditions are propagated until the
 extraction process finishes, and appear as hypotheses in the final
 result. In our example, context is properly accounted for in recursive
@@ -184,6 +195,7 @@ termination conditions for {fact} are
    0. WF R
    1. !n. ~(n = 0) ==> R (n - 1) n.
 }
+
 A `higher-order` recursion is one in which a higher-order function is
 used to apply the recursive function to arguments. In order for the
 correct termination conditions to be proved, congruence rules for the
@@ -222,6 +234,7 @@ function on a type of arbitrarily (finitely) branching trees.
          0. WF R
          1. !tl v f a. R (f,a) (f,Node v tl) : defn
 }
+
 The termination conditions for {ltree_sigma} seem to require finding a
 wellfounded relation {R} such that the pair {(f,a)} is {R}-less than
 {(f, Node v tl)}. However, this is a hopeless task, since there is no
@@ -235,6 +248,7 @@ congruence theorem is the following:
          (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x)) ==>
          (SIGMA f l1 = SIGMA g l2)
 }
+
 After telling {Hol_defn} about this theorem, the termination conditions
 extracted for the definition are provable, since {a} is a proper subterm
 of {Node v tl}.
@@ -258,6 +272,7 @@ of {Node v tl}.
          0. WF R
          1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
 }
+
 For every HOL datatype defined by application of {Hol_datatype}, a
 congruence theorem is automatically proved for the `case` constant for
 that type, and stored in the {TypeBase}. For example, the following
@@ -271,7 +286,7 @@ congruence theorem for {num_case} is stored in the {TypeBase}:
          (num_case b f M = num_case b' f' M')
 }
 
+
 \SEEALSO
 Defn.tgoal, Defn.tprove, TotalDefn.WF_REL_TAC, TotalDefn.Define, TotalDefn.xDefine, read_congs, write_congs, Hol_datatype.
-
 \ENDDOC

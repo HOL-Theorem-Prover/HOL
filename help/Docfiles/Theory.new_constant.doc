@@ -17,5 +17,4 @@ the current theory.
 
 \SEEALSO
 Theory.constants, boolSyntax.new_infix, boolSyntax.new_binder, Definition.new_definition, Definition.new_definition, Definition.new_specification, Theory.new_axiom, boolSyntax.new_infixl_definition, boolSyntax.new_infixr_definition, boolSyntax.new_binder_definition.
-
 \ENDDOC

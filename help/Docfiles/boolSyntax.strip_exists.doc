@@ -11,7 +11,7 @@ returns {([x1,...,xn],t)}. Note that
 {
    strip_exists(list_mk_exists(["x1";...;"xn"],"t"))
 }
-\noindent will not return {([x1,...,xn],t)} if {t} is an existential
+will not return {([x1,...,xn],t)} if {t} is an existential
 quantification.
 
 \FAILURE
@@ -19,5 +19,4 @@ Never fails.
 
 \SEEALSO
 boolSyntax.list_mk_exists, boolSyntax.dest_exists.
-
 \ENDDOC

@@ -2,16 +2,18 @@
 
 \BLTYPE
 update_overload_maps :
-  string -> ({{Name : string, Thy : string}} list *
-             {{Name : string, Thy : string}} list) -> unit
+  string -> ({Name : string, Thy : string} list *
+             {Name : string, Thy : string} list) -> unit
 \ELTYPE
 
 \SYNOPSIS
 Adds to the parser's overloading maps.
 
-\KEYWORDS parsing, pretty-printing, overloading.
+\KEYWORDS
+parsing, pretty-printing, overloading.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 The parser/pretty-printer for terms maintains two maps between
@@ -38,5 +40,4 @@ constant.
 
 \SEEALSO
 Parse.clear_overloads_on, Parse.hide, Parse.overload_on, Parse.remove_ovl_mapping, Parse.reveal.
-
 \ENDDOC

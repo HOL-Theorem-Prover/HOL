@@ -1,4 +1,4 @@
-\DOC strip_abs 
+\DOC strip_abs
 
 \TYPE {strip_abs : term -> term list * term}
 
@@ -25,11 +25,11 @@ Never fails.
 > val it = ([], `T`) : term list * term
 }
 
+
 \COMMENTS
 In the current implementation of HOL, {strip_abs} is far faster
 than iterating {dest_abs} for terms with many consecutive binders.
 
 \SEEALSO
-Term.strip_binder, Term.dest_abs, 
-boolSyntax.strip_forall, boolSyntax.strip_exists.
+Term.strip_binder, Term.dest_abs, boolSyntax.strip_forall, boolSyntax.strip_exists.
 \ENDDOC

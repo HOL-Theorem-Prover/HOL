@@ -2,11 +2,11 @@
 
 \BLTYPE
 add_rule :
-  {{term_name : string, fixity : fixity,
+  {term_name : string, fixity : fixity,
    pp_elements: term_grammar.pp_element list,
    paren_style : term_grammar.ParenStyle,
    block_style : term_grammar.PhraseBlockStyle *
-                 term_grammar.block_info}}  -> unit
+                 term_grammar.block_info}  -> unit
 \ELTYPE
 
 \SYNOPSIS
@@ -15,7 +15,8 @@ Adds a parsing/printing rule to the global grammar.
 \KEYWORDS
 parsing
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 The function {add_rule} is a fundamental method for adding parsing
@@ -46,7 +47,6 @@ constructing fixity values:
    val TruePrefix : int -> fixity
    val Suffix     : int -> fixity
 }
-\noindent
 The {Prefix} fixity has an unfortunate name, as it is a fixity
 corresponding to no special treatment.  In fact, when a {Prefix}
 fixity is specified, the {add_rule} function performs no action.
@@ -75,7 +75,7 @@ are {TOK} and {TM} values, of the following types:
    val TM  : term_grammar.pp_element
    val TOK : string -> term_grammar.pp_element
 }
-\noindent The {TM} value corresponds to a ``hole'' where a sub-term is
+The {TM} value corresponds to a ``hole'' where a sub-term is
 possible.  The {TOK} value corresponds to a piece of concrete syntax,
 a string that is required when parsing, and which will appear when
 printing.   The sequence of {pp_elements} specified in the record
@@ -88,7 +88,6 @@ sub-terms depending on the fixity type, thus:
    Suffix      :    _ [Kernel]     (* an argument to the left *)
    Infix       :    _ [Kernel] _   (* arguments on both sides *)
 }
-\noindent
 Thus simple infixes, suffixes and prefixes would have singleton
 {pp_element} lists, consisting of just the symbol desired.  More
 complicated mix-fix syntax can be constructed by identifying whether
@@ -123,7 +122,7 @@ standard Oppen-style pretty-printing package.) They are
    val AroundSameName   : term_grammar.PhraseBlockStyle
    val NoPhrasing       : term_grammar.PhraseBlockStyle
 }
-\noindent The two spacing values provide ways of specifying
+The two spacing values provide ways of specifying
 white-space should be added when terms are printed.  Use of
 {HardSpace n} results in {n} spaces being added to the term whatever
 the context.  On the other hand, {BreakSpace(m,n)} results in a break
@@ -138,7 +137,7 @@ of {add_rule} in such a way that a single token infix {s}, has a
    [HardSpace 1, TOK s, BreakSpace(1,0)]
 }
 
-\noindent This results in chains of infixes (such as those that occur
+This results in chains of infixes (such as those that occur
 with conjunctions) that break so as to leave the infix on the right
 hand side of the line.  Under this constraint, printing can't break so
 as to put the infix symbol on the start of a line, because that would
@@ -197,7 +196,7 @@ There are two conditional expression syntaxes defined in the theory
 syntax involves ``dangling'' terms to the left and right, it is
 an infix (and one of very weak precedence at that).
 {
-   val _ = add_rule{{term_name = "COND",
+   val _ = add_rule{term_name = "COND",
                     fixity = Infix (HOLgrammars.RIGHT, 3),
                     pp_elements = [HardSpace 1, TOK "=>",
                                    BreakSpace(1,0), TM,
@@ -205,9 +204,9 @@ an infix (and one of very weak precedence at that).
                                    HardSpace 1],
                     paren_style = OnlyIfNecessary,
                     block_style = (AroundEachPhrase,
-                                   (PP.INCONSISTENT, 0))}};
+                                   (PP.INCONSISTENT, 0))};
 }
-\noindent The second rule added uses the more familiar {if-then-else}
+The second rule added uses the more familiar {if-then-else}
 syntax.  Here there is only a ``dangling'' term to the right of the
 construction, so this rule's fixity is of type {TruePrefix}. (If the
 rule was made a {Closefix}, strings such as {`if P then Q else R`}
@@ -215,7 +214,7 @@ would still parse, but so too would {`if P then Q else`}.)  This
 example also illustrates the use of blocks within rules to improve
 pretty-printing.
 {
-   val _ = add_rule{{term_name = "COND", fixity = TruePrefix 70,
+   val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
                     pp_elements = [PPBlock([TOK "if", BreakSpace(1,2),
                                             TM, BreakSpace(1,0),
                                             TOK "then"], (PP.CONSISTENT, 0)),
@@ -224,16 +223,16 @@ pretty-printing.
                                    TOK "else", BreakSpace(1,0)],
                     paren_style = OnlyIfNecessary,
                     block_style = (AroundEachPhrase,
-                                   (PP.INCONSISTENT, 0))}};
+                                   (PP.INCONSISTENT, 0))};
 }
-\noindent Note that the above form is not that actually used in the
+Note that the above form is not that actually used in the
 system.  As written, it allows for pretty-printing some expressions
 as:
 {
    if P then
       <very long term> else Q
 }
-\noindent because the {block_style} is {INCONSISTENT}.
+because the {block_style} is {INCONSISTENT}.
 
 The pretty-printer prefers later rules over earlier rules by
 default (though this choice can be changed with {prefer_form_with_tok}
@@ -267,5 +266,4 @@ users.
 
 \SEEALSO
 Parse.add_listform, Parse.add_infix, Parse.prefer_form_with_tok, Parse.remove_rules_for_term.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 conversion, extensionality.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Performs a top-level paired eta-conversion.
@@ -19,4 +20,3 @@ to the theorem {|- (\p. t p) = t}.
 Fails if the input term is not a paired eta-redex.
 
 \ENDDOC
-

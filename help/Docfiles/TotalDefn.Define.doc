@@ -2,9 +2,11 @@
 
 \TYPE {Define : term quotation -> thm}
 
-\SYNOPSIS General-purpose function definition facility.
+\SYNOPSIS
+General-purpose function definition facility.
 
-\KEYWORDS definition, abbreviation, recursive function,
+\KEYWORDS
+definition, abbreviation, recursive function,
           mutual recursion, recursion schemas.
 
 \DESCRIBE
@@ -40,7 +42,7 @@ following grammar:
    wildcard ::= _
             |   _<wildcard>
 }
-\noindent When processing the specification of a recursive function,
+When processing the specification of a recursive function,
 {Define} must perform a termination proof. It automatically constructs
 termination conditions for the function, and invokes a termination
 prover in an attempt to prove the termination conditions.
@@ -68,7 +70,7 @@ some ambiguity. For example, the input
     Define `(f 0 _ = 1)
       /\    (f _ 0 = 2)`
 }
-\noindent is ambiguous at {f 0 0}: should the result be {1} or {2}?
+is ambiguous at {f 0 0}: should the result be {1} or {2}?
 The system attempts to resolve this ambiguity in the same way as
 compilers and interpreters for functional languages. Namely, a
 conjunction of equations is treated as being processed left-conjunct
@@ -97,7 +99,7 @@ equations
         (f (SUC v2) 0 = 2)
         (f (SUC v2) (SUC v4) = ARB)
 }
-\noindent from the above ambiguous and incomplete equations. The odd-looking
+from the above ambiguous and incomplete equations. The odd-looking
 variable names are due to the pre-processing steps described above. The
 above result is only an intermediate value: in the final result returned
 by {Define}, the last equation is droppped:
@@ -106,6 +108,7 @@ by {Define}, the last equation is droppped:
         (f 0 0 = 1) /\
         (f (SUC v2) 0 = 2)
 }
+
 {Define} automatically generates names with which to store the
 definition and, (if it exists) the associated induction theorem, in the
 current theory. The name for storing the definition is built by
@@ -122,6 +125,7 @@ required that every invocation of {Define} generates names that will
 be valid ML identifiers. For this reason, {Define} requires alphanumeric
 function names. If one wishes to define symbolic identifiers, the
 ML function {xDefine} should be used.
+
 
 
 \FAILURE
@@ -143,6 +147,7 @@ termination conditions, starting with an invocation of {WF_REL_TAC};
 and (4) package everything up with an invocation of {tprove}.
 
 
+
 \EXAMPLE
 We will give a number of examples that display the range of functions
 that may be defined with {Define}. First, we have a recursive function
@@ -161,7 +166,7 @@ stored in the current theory.
    > val it =
      |- !P. (!x. (~(x = 0) ==> P (x - 1)) ==> P x) ==> !v. P v : thm
 }
-\noindent Next we have a recursive function with relatively complex
+Next we have a recursive function with relatively complex
 pattern-matching. We omit to examine the generated induction
 theorem.
 {
@@ -179,7 +184,7 @@ theorem.
           (flatten ([]::rst) = flatten rst) /\
           (flatten ((h::t)::rst) = h::flatten (t::rst)) : thm
 }
-\noindent Next we define a curried recursive function, which uses
+Next we define a curried recursive function, which uses
 wildcard expansion and pattern-matching pre-processing.
 {
    Define `(min (SUC x) (SUC y) = min x y + 1)
@@ -193,7 +198,7 @@ wildcard expansion and pattern-matching pre-processing.
           (min (SUC v2) 0 = 0) /\
           (min 0 v1 = 0) : thm
 }
-\noindent Next we make a primitive recursive definition. Note that no
+Next we make a primitive recursive definition. Note that no
 induction theorem is generated in this case.
 {
    Define `(filter P [] = [])
@@ -208,7 +213,7 @@ induction theorem is generated in this case.
          !P h t. filter P (h::t) =
                   (if P h then h::filter P t else filter P t) : thm
 }
-\noindent {Define} may be used to define mutually recursive functions. 
+{Define} may be used to define mutually recursive functions. 
 We can define a datatype of propositions and a function for putting a
 proposition into negation normal form as follows.  First we define a
 datatype for boolean formulae ({prop}):
@@ -221,7 +226,7 @@ datatype for boolean formulae ({prop}):
 
    > val it = () : unit
 }
-\noindent Then two mutually recursive functions {nnfpos} and {nnfneg}
+Then two mutually recursive functions {nnfpos} and {nnfneg}
 are defined:
 {
    - Define
@@ -235,7 +240,7 @@ are defined:
     /\   (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
     /\   (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`;
 }
-\noindent The system returns:
+The system returns:
 {
    <<HOL message: inventing new type variable names: 'a>>
 
@@ -252,7 +257,7 @@ are defined:
           (nnfneg (AND p q) = OR (nnfneg p) (nnfneg q)) /\
           (nnfneg (OR p q) = AND (nnfneg p) (nnfneg q)) : thm
 }
-\noindent {Define} may also be used to define non-recursive functions.
+{Define} may also be used to define non-recursive functions.
 {
    Define `f x (y,z) = (x + 1 = y DIV z)`;
 
@@ -260,7 +265,7 @@ are defined:
 
    > val it = |- !x y z. f x (y,z) = (x + 1 = y DIV z) : thm
 }
-\noindent {Define} may also be used to define non-recursive functions
+{Define} may also be used to define non-recursive functions
 with complex pattern-matching. The pattern-matching pre-processing of
 {Define} can be convenient for this purpose, but can also generate a
 large number of equations. For example:
@@ -271,7 +276,7 @@ large number of equations. For example:
            (g (_,_,_,0,_) = 4) /\
            (g (_,_,_,_,0) = 5)`
 }
-\noindent yields a definition with thirty-one clauses.
+yields a definition with thirty-one clauses.
 
 \COMMENTS
 In an {eqn}, no variable can occur more than once on the left hand side
@@ -316,9 +321,7 @@ less baggage---it depends only on {numLib} and {pairLib}---than
 `compset` accessed by {bossLib.EVAL}.
 
 
-\SEEALSO
-TotalDefn.xDefine, TotalDefn.DefineSchema, Defn.Hol_defn, 
-Defn.tgoal, Defn.tprove, TotalDefn.WF_REL_TAC, 
-SingleStep.recInduct, bossLib.EVAL_CONV, bossLib.EVAL_TAC.
 
+\SEEALSO
+TotalDefn.xDefine, TotalDefn.DefineSchema, Defn.Hol_defn, Defn.tgoal, Defn.tprove, TotalDefn.WF_REL_TAC, SingleStep.recInduct, bossLib.EVAL_CONV, bossLib.EVAL_TAC.
 \ENDDOC

@@ -31,6 +31,7 @@ performed is illustrated below:
    > val it = ([([`a = b`, `b = c`], `P b`)], fn) 
       : (term list * term) list * (thm list -> thm)
 }
+
 {
    - (ONCE_ASM_REWRITE_TAC [] THEN ONCE_ASM_REWRITE_TAC [])
      ([Term`(a:'a) = b`, Term`(b:'a) = c`], Term `P (a:'a): bool`);
@@ -39,17 +40,12 @@ performed is illustrated below:
       : (term list * term) list * (thm list -> thm)
 }
 
+
 \USES
 {ONCE_ASM_REWRITE_TAC} can be applied once or iterated as required to
 give the effect of {ASM_REWRITE_TAC}, either to avoid divergence or to
 save inference steps.
 
 \SEEALSO
-Rewrite.ASM_REWRITE_TAC, Rewrite.FILTER_ASM_REWRITE_TAC, 
-Rewrite.FILTER_ONCE_ASM_REWRITE_TAC, Rewrite.GEN_REWRITE_TAC, 
-Rewrite.ONCE_ASM_REWRITE_TAC, Rewrite.ONCE_REWRITE_TAC, 
-Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_ASM_REWRITE_TAC, 
-Rewrite.PURE_ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, 
-Rewrite.REWRITE_TAC, Tactic.SUBST_TAC.
-
+Rewrite.ASM_REWRITE_TAC, Rewrite.FILTER_ASM_REWRITE_TAC, Rewrite.FILTER_ONCE_ASM_REWRITE_TAC, Rewrite.GEN_REWRITE_TAC, Rewrite.ONCE_ASM_REWRITE_TAC, Rewrite.ONCE_REWRITE_TAC, Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC, Tactic.SUBST_TAC.
 \ENDDOC

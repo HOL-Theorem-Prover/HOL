@@ -17,6 +17,8 @@ of {p} chosen to avoid free variable capture.
    --------------  PSPEC_PAIR
     A |- t[q'/q]
 }
+
+
 \FAILURE
 Fails unless the theorem's conclusion is a paired universal quantification.
 
@@ -25,7 +27,5 @@ This rule is very similar to plain {PSPEC}, except that it returns the
 variant chosen, which may be useful information under some circumstances.
 
 \SEEALSO
-Drule.SPEC_VAR, PairRules.PGEN, PairRules.PGENL, 
-PairRules.PGEN_TAC, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL.
-
+Drule.SPEC_VAR, PairRules.PGEN, PairRules.PGENL, PairRules.PGEN_TAC, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL.
 \ENDDOC

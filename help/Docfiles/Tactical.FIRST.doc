@@ -16,6 +16,8 @@ Thus {FIRST} effectively behaves as follows:
 {
    FIRST [T1;...;Tn] = T1 ORELSE ... ORELSE Tn
 }
+
+
 \FAILURE
 The application of {FIRST} to a tactic list never fails. The resulting
 tactic fails iff all the component tactics do when applied to the goal,
@@ -23,5 +25,4 @@ or if the tactic list is empty.
 
 \SEEALSO
 Tactical.EVERY, Tactical.ORELSE.
-
 \ENDDOC

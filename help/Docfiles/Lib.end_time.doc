@@ -1,4 +1,4 @@
-\DOC end_time 
+\DOC end_time
 
 \TYPE {end_time : Timer.cpu_timer -> unit}
 
@@ -11,7 +11,7 @@ time.
 \DESCRIBE
 An application {end_time timer}	looks to see how long {timer} has been 
 running, and prints out the elapsed runtime, garbage collection time, 
-and system time. 
+and system time.
 
 \FAILURE
 Never fails.
@@ -29,6 +29,7 @@ runtime: 525.996s,    gctime: 0.000s,     systime: 525.996s.
 > val it = () : unit
 }
 
+
 \COMMENTS
 A {start_time} ... {end_time} pair is for use when calling {time} 
 would be clumsy, e.g., when multiple function applications are to 
@@ -36,5 +37,4 @@ be timed.
 
 \SEEALSO
 Lib.start_time, Lib.time.
-
 \ENDDOC

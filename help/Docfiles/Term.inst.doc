@@ -3,14 +3,14 @@
 \TYPE {inst : (hol_type,hol_type)subst -> term -> term}
 
 \SYNOPSIS
-Performs type instantiations in a term. 
+Performs type instantiations in a term.
 
 \DESCRIBE
 The function {inst} should be used as follows:
 {
-   inst [{{redex_1, residue_1}},...,{{redex_n, residue_n}}] tm
+   inst [{redex_1, residue_1},...,{redex_n, residue_n}] tm
 }
-\noindent where each `redex' is a {hol_type} variable, and each `residue'
+where each `redex' is a {hol_type} variable, and each `residue'
 is a {hol_type} and {tm} a term to be type-instantiated. This call will
 replace each occurrence of a {redex} in {tm} by its associated
 {residue}. Replacement is done in parallel, i.e., once a {redex} has been
@@ -36,7 +36,7 @@ Never fails. A {redex} that is not a variable is simply ignored.
 > val it = `\(x' :bool). (x :bool)` : term
 }
 
+
 \SEEALSO
 Type.type_subst, Lib.|->.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC prim_variant 
+\DOC prim_variant
 
 \TYPE {prim_variant : term list -> term -> term}
 
@@ -25,6 +25,7 @@ or if {t} is not a variable.
 > val it = `T` : term
 }
 
+
 \COMMENTS
 The extra amount of renaming that {variant} does is useful when generating
 new constant names (even though it returns a variable) inside high-level
@@ -32,5 +33,4 @@ definition mechanisms. Otherwise, {prim_variant} seems preferable.
 
 \SEEALSO
 Term.variant, Term.mk_var, Term.genvar, Term.mk_primed_var.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {HOL_WARNING : string -> string -> string -> unit}
 
-\SYNOPSIS Prints out a message in a special format.
+\SYNOPSIS
+Prints out a message in a special format.
 
-\KEYWORDS I/O, message
+\KEYWORDS
+I/O, message
 
 \DESCRIBE
 There are three kinds of informative messages that the {Feedback}
@@ -28,6 +30,7 @@ from which the warning is emitted. The string {s3} is the actual
 warning message.
 
 
+
 \FAILURE
 The invocation fails if the formatting or output routines fail.
 
@@ -37,7 +40,7 @@ The invocation fails if the formatting or output routines fail.
 <<HOL warning: Module.function: stern message.>>
 }
 
+
 \SEEALSO
 Feedback, Feedback.HOL_ERR, Feedback.Raise, Feedback.HOL_MESG, Feedback.WARNING_to_string, Feedback.format_WARNING, Feedback.WARNING_outstream.
-
 \ENDDOC

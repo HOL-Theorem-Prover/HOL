@@ -6,9 +6,11 @@
 Basic simpset containing standard propositional calculus rewrites,
 beta conversion, and eta conversion.
 
-\KEYWORDS simplification
+\KEYWORDS
+simplification
 
-\LIBRARY boolSimps
+\LIBRARY
+boolSimps
 
 \DESCRIBE
 The {bool_ss} simpset is almost at the base of the system-provided
@@ -30,5 +32,4 @@ system rewriting is desired, the {pure_ss} value can be used.
 
 \SEEALSO
 hol_ss, pureSimps.pure_ss, simpLib.SIMP_CONV, simpLib.SIMP_TAC.
-
 \ENDDOC

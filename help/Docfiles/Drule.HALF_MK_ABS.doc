@@ -17,6 +17,8 @@ universally quantified equation, {HALF_MK_ABS} returns the theorem
    --------------------  HALF_MK_ABS            [where x is not free in t1]
     A |- t1 = (\x. t2)
 }
+
+
 \FAILURE
 Fails unless the theorem is a singly universally quantified equation whose
 left-hand side is a function applied to the quantified variable, or if the
@@ -24,5 +26,4 @@ variable is free in that function.
 
 \SEEALSO
 Thm.ETA_CONV, Drule.MK_ABS, Thm.MK_COMB, Drule.MK_EXISTS.
-
 \ENDDOC

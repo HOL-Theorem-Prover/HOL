@@ -16,10 +16,11 @@ two subgoals corresponding to each conjunct separately.
    ======================  CONJ_TAC
     A ?- t1      A ?- t2
 }
+
+
 \FAILURE
 Fails unless the conclusion of the goal is a conjunction.
 
 \SEEALSO
 Tactic.STRIP_TAC.
-
 \ENDDOC

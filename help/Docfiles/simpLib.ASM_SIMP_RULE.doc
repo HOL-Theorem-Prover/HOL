@@ -6,9 +6,11 @@
 Simplifies a theorem, using the theorem's assumptions as rewrites in
 addition to the provided rewrite theorems and simpset.
 
-\KEYWORDS simplification
+\KEYWORDS
+simplification
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \FAILURE
 Never fails, but may diverge.
@@ -19,12 +21,12 @@ Never fails, but may diverge.
 > val it =  [.] |- T : thm
 }
 
-\USES 
+
+\USES
 The assumptions can be used to simplify the conclusion of the theorem.
 For example, if the conclusion of a theorem is an implication, the
 antecedent together with the hypotheses may help simplify the conclusion.
 
 \SEEALSO
 simpLib.SIMP_CONV, simpLib.SIMP_RULE.
-
 \ENDDOC

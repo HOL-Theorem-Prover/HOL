@@ -2,9 +2,11 @@
 
 \TYPE {emit_ERR : bool ref}
 
-\SYNOPSIS Flag controlling output of {HOL_ERR} exceptions.
+\SYNOPSIS
+Flag controlling output of {HOL_ERR} exceptions.
 
-\KEYWORDS error, exception, output
+\KEYWORDS
+error, exception, output
 
 \DESCRIBE
 The boolean flag {emit_ERR} tells whether an application of {HOL_ERR}
@@ -31,7 +33,7 @@ message
 ! HOL_ERR
 }
 
+
 \SEEALSO
 Feedback, Feedback.Raise, Feedback.emit_MESG, Feedback.emit_WARNING.
-
 \ENDDOC

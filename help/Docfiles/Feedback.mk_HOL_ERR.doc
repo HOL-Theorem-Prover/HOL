@@ -2,9 +2,11 @@
 
 \TYPE {mk_HOL_ERR : string -> string -> string -> exn}
 
-\SYNOPSIS Creates an application of {HOL_ERR}.
+\SYNOPSIS
+Creates an application of {HOL_ERR}.
 
-\KEYWORDS error, exception
+\KEYWORDS
+error, exception
 
 \DESCRIBE
 {mk_HOL_ERR} provides a curried interface to the standard {HOL_ERR}
@@ -12,6 +14,7 @@ exception; experience has shown that this is often more convenient.
 
 \FAILURE
 Never fails.
+
 
 
 \EXAMPLE
@@ -27,7 +30,7 @@ message
 > val it = () : unit
 }
 
+
 \SEEALSO
 Feedback, Feedback.HOL_ERR, Feedback.error_record.
-
 \ENDDOC

@@ -27,9 +27,7 @@ Fails unless the named theory is an ancestor.
   (string * int) list
 }
 
-\SEEALSO
-Theory.current_axioms, Theory.current_defs, Theory.current_thms,
-Theory.new_type, Theory.constants, Definition.new_type_definition, 
-Theory.parents, Theory.ancestry.
 
+\SEEALSO
+Theory.current_axioms, Theory.current_defs, Theory.current_thms, Theory.new_type, Theory.constants, Definition.new_type_definition, Theory.parents, Theory.ancestry.
 \ENDDOC

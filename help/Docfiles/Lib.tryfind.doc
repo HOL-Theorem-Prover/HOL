@@ -3,7 +3,6 @@
 \TYPE {tryfind : ('a -> 'b) -> 'a list -> 'b}
 
 \SYNOPSIS
-
 Returns the result of the first successful application of a function to
 the elements of a list.
 
@@ -21,7 +20,5 @@ Fails if the application of {f} fails for all elements in the list. This
 will always be the case if the list is empty.
 
 \SEEALSO
-Lib.first, Lib.mem, Lib.exists, Lib.all, 
-Lib.assoc, Lib.rev_assoc, Lib.assoc1, Lib.assoc2.
-
+Lib.first, Lib.mem, Lib.exists, Lib.all, Lib.assoc, Lib.rev_assoc, Lib.assoc1, Lib.assoc2.
 \ENDDOC

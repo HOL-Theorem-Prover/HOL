@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, epsilon.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Introduces an epsilon term.
@@ -19,7 +20,7 @@ of the original operand {x}.
    --------------  PSELECT_INTRO
     A |- P($@ P)
 }
-\noindent The returned theorem asserts that {$@ P} denotes some value
+The returned theorem asserts that {$@ P} denotes some value
 at which {P} holds.
 
 \FAILURE
@@ -31,5 +32,4 @@ the pair library for completeness.
 
 \SEEALSO
 Drule.SELECT_INTRO, PairRules.PEXISTS, SELECT_AX, PairRules.PSELECT_CONV, PairRules.PSELECT_ELIM, PairRules.PSELECT_RULE.
-
 \ENDDOC

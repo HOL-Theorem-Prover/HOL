@@ -10,5 +10,4 @@ Used to build other rewrite sets.
 
 \SEEALSO
 Rewrite.bool_rewrites, Rewrite.implicit_rewrites, Rewrite.add_rewrites, Rewrite.add_implicit_rewrites, Rewrite.set_implicit_rewrites.
-
 \ENDDOC

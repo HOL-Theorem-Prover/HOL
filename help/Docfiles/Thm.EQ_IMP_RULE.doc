@@ -17,11 +17,12 @@ theorems {A |- t1 ==> t2} and {A |- t2 ==> t1}.
    -----------------------------------  EQ_IMP_RULE
     A |- t1 ==> t2     A |- t2 ==> t1
 }
+
+
 \FAILURE
 Fails unless the conclusion of the given theorem is an equation between
 boolean terms.
 
 \SEEALSO
 Thm.EQ_MP, Tactic.EQ_TAC, Drule.IMP_ANTISYM_RULE.
-
 \ENDDOC

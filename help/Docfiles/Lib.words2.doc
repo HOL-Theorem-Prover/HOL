@@ -29,6 +29,7 @@ Never fails.
 > val it = ["/the/cat//sat/on//the/mat/"] : string list
 }
 
+
 \COMMENTS
 The SML Library functions {String.tokens} and {String.fields} offer
 similar functionality.

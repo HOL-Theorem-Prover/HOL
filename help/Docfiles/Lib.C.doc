@@ -5,7 +5,8 @@
 \KEYWORDS
 Combinator.
 
-\SYNOPSIS Permutes first two arguments to curried function: {C f x y}
+\SYNOPSIS
+Permutes first two arguments to curried function: {C f x y}
 equals {f y x}.
 
 \FAILURE
@@ -18,7 +19,7 @@ fails.
 > val it = [[1], [2], [3]] : int list list
 }
 
+
 \SEEALSO
 Lib.\#\#, Lib.A, Lib.B, Lib.I, Lib.K, Lib.S, Lib.W.
-
 \ENDDOC

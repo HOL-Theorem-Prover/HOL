@@ -14,15 +14,15 @@ composes their effects on the theorem. The effect is:
 {
    EVERY_TCL [ttl1;...;ttln] = ttl1 THEN_TCL ... THEN_TCL ttln
 }
-\noindent In other words, if:
+In other words, if:
 {
    ttl1 ttac th1 = ttac th2  ...  ttln ttac thn = ttac thn'
 }
-\noindent then:
+then:
 {
    EVERY_TCL [ttl1;...;ttln] ttac th1 = ttac thn'
 }
-\noindent If the theorem-tactical list is empty, the resulting theorem-tactical
+If the theorem-tactical list is empty, the resulting theorem-tactical
 behaves in the same way as {ALL_THEN}, the identity theorem-tactical.
 
 \FAILURE
@@ -30,5 +30,4 @@ The application to a list of theorem-tacticals never fails.
 
 \SEEALSO
 Thm_cont.FIRST_TCL, Thm_cont.ORELSE_TCL, Thm_cont.REPEAT_TCL, Thm_cont.THEN_TCL.
-
 \ENDDOC

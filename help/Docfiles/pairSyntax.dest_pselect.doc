@@ -2,7 +2,8 @@
 
 \TYPE {dest_pselect : term -> term * term}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Breaks apart a paired choice-term into the selected pair and the body.
@@ -16,5 +17,4 @@ Fails with {dest_pselect} if term is not a paired choice-term.
 
 \SEEALSO
 boolSyntax.dest_select, pairSyntax.mk_pselect, pairSyntax.is_pselect.
-
 \ENDDOC

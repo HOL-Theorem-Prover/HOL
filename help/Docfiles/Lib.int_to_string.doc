@@ -1,4 +1,4 @@
-\DOC int_to_string 
+\DOC int_to_string
 
 \TYPE {int_to_string : int -> string}
 
@@ -20,11 +20,11 @@ Never fails.
 > val it = "~1" : string
 }
 
+
 \COMMENTS
 Equivalent functionality can be found in the ML Standard Basis 
 Library function {Int.toString}.
 
 \SEEALSO
 Lib.string_to_int.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 alpha.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Tests for alpha-equivalence of terms.
@@ -22,5 +23,4 @@ Never fails.
 
 \SEEALSO
 PairRules.PALPHA, Term.aconv.
-
 \ENDDOC

@@ -2,7 +2,8 @@
 
 \TYPE {is_pabs : term -> bool}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Tests a term to see if it is a paired abstraction.
@@ -16,5 +17,4 @@ Never fails.
 
 \SEEALSO
 Term.is_abs, pairSyntax.mk_pabs, pairSyntax.dest_pabs.
-
 \ENDDOC

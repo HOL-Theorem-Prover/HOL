@@ -13,5 +13,4 @@ Fails if {M} is not a conjunction.
 
 \SEEALSO
 boolSyntax.mk_conj, boolSyntax.is_conj, boolSyntax.list_mk_conj, boolSyntax.strip_conj.
-
 \ENDDOC

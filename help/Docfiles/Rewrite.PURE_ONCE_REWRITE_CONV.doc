@@ -21,5 +21,4 @@ This rule does not fail, and it does not diverge.
 
 \SEEALSO
 Rewrite.GEN_REWRITE_CONV, Conv.ONCE_DEPTH_CONV, Rewrite.ONCE_REWRITE_CONV, Rewrite.PURE_REWRITE_CONV, Rewrite.REWRITE_CONV.
-
 \ENDDOC

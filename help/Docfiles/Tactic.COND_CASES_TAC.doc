@@ -15,9 +15,9 @@ is more than one. It then induces a case split over {p} as follows:
 {
                              A ?- t
     =======================================================  COND_CASES_TAC
-     A u {{p}} ?- t[u/(p=>u|v)]   A u {{~p}} ?- t[v/(p=>u|v)]]
+     A u {p} ?- t[u/(p=>u|v)]   A u {~p} ?- t[v/(p=>u|v)]]
 }
-\noindent where {p} is not a constant, and the term {p=>u|v} is free in {t}.
+where {p} is not a constant, and the term {p=>u|v} is free in {t}.
 Note that it both enriches the assumptions and inserts the assumed value into
 the conditional.
 
@@ -30,19 +30,21 @@ For {"x"}, {"y"}, {"z1"} and {"z2"} of type {":*"}, and {"P:*->bool"},
    COND_CASES_TAC ([], "x = (P y => z1 | z2)");;
    ([(["P y"], "x = z1"); (["~P y"], "x = z2")], -) : subgoals
 }
-\noindent but it fails, for example, if {"y"} is not free in the
+but it fails, for example, if {"y"} is not free in the
 term part of the goal:
 {
    COND_CASES_TAC ([], "!y. x = (P y => z1 | z2)");;
    evaluation failed     COND_CASES_TAC
 }
-\noindent In contrast, {ASM_CASES_TAC} does not perform the replacement:
+In contrast, {ASM_CASES_TAC} does not perform the replacement:
 {
    ASM_CASES_TAC "P y" ([], "x = (P y => z1 | z2)");;
    ([(["P y"], "x = (P y => z1 | z2)"); (["~P y"], "x = (P y => z1 | z2)")],
     -)
    : subgoals
 }
+
+
 \USES
 Useful for case analysis and replacement in one step, when there is a
 conditional sub-term in the term part of the goal.  When there is more than
@@ -52,5 +54,4 @@ repeatedly to analyze all conditional sub-terms of a goal.
 
 \SEEALSO
 Tactic.ASM_CASES_TAC, Tactic.DISJ_CASES_TAC, Tactic.STRUCT_CASES_TAC.
-
 \ENDDOC

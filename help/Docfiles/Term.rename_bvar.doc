@@ -1,4 +1,4 @@
-\DOC rename_bvar 
+\DOC rename_bvar
 
 \TYPE {rename_bvar : string -> term -> term}
 
@@ -6,12 +6,12 @@
 Performs one step of alpha conversion.
 
 \KEYWORDS
-conversion, alpha. 
+conversion, alpha.
 
 \DESCRIBE
 If {M} is a lambda abstraction, i.e., has the form {\v.N}, an
 invocation {rename_bvar s M} performs one step of alpha conversion to 
-obtain {\s. N[s/v]}. 
+obtain {\s. N[s/v]}.
 
 \FAILURE
 If {M} is not a lambda abstraction.
@@ -25,10 +25,10 @@ If {M} is not a lambda abstraction.
 > val it = `\x'. x' /\ x` : term
 }
 
+
 \COMMENTS
-{rename_bvar} takes constant time in the current implementation. 
+{rename_bvar} takes constant time in the current implementation.
 
 \SEEALSO
 Term.aconv, Drule.ALPHA_CONV.
-
 \ENDDOC

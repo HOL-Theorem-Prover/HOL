@@ -1,4 +1,4 @@
-\DOC hol_type 
+\DOC hol_type
 
 \TYPE {eqtype hol_type}
 
@@ -17,5 +17,4 @@ can be tested for equality by {ty1 = ty2}.
 
 \SEEALSO
 Term.term.
-
 \ENDDOC

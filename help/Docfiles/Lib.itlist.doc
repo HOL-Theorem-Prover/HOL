@@ -14,7 +14,7 @@ list.
 {
    f x1 (f x2 ... (f xn b)...)
 }
-\noindent An invocation {itlist f list b} returns {b} if {list} is empty.
+An invocation {itlist f list b} returns {b} if {list} is empty.
 
 \FAILURE
 Fails if some application of {f} fails.
@@ -25,7 +25,8 @@ Fails if some application of {f} fails.
 val it = 10 : int
 
 }
+
+
 \SEEALSO
 Lib.itlist2, Lib.rev_itlist, Lib.rev_itlist2, Lib.end_itlist.
-
 \ENDDOC

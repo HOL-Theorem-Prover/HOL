@@ -5,9 +5,11 @@
 \SYNOPSIS
 Strips a function application from both sides of an equational goal.
 
-\LIBRARY bool
+\LIBRARY
+bool
 
-\STRUCTURE Tactic
+\STRUCTURE
+Tactic
 
 \KEYWORDS
 tactic.
@@ -20,11 +22,12 @@ the function applications, giving the new goal {A ?- x = y}.
    ================  AP_TERM_TAC
      A ?- x = y
 }
+
+
 \FAILURE
 Fails unless the goal is equational, with both sides being applications
 of the same function.
 
 \SEEALSO
 Thm.AP_TERM, Thm.AP_THM, Tactic.AP_THM_TAC.
-
 \ENDDOC

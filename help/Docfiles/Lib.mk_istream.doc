@@ -1,4 +1,4 @@
-\DOC mk_istream 
+\DOC mk_istream
 
 \TYPE {mk_istream : ('a -> 'a) -> 'a -> ('a -> 'b) -> ('a,'b) istream}
 
@@ -24,6 +24,7 @@ The following creates a stream of distinct strings.
    > val it = <istream> : (int, string) istream
 }
 
+
 \COMMENTS
 It is aesthetically unpleasant that the underlying implementation 
 type is visible.
@@ -32,5 +33,4 @@ See any book on ML programming to see how functional streams are built.
 
 \SEEALSO
 Lib.next, Lib.state, Lib.reset.
-
 \ENDDOC

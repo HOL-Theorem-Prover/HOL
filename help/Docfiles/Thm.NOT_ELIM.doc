@@ -16,10 +16,11 @@ theorem {A |- t ==> F}.
    --------------  NOT_ELIM
     A |- t ==> F
 }
+
+
 \FAILURE
 Fails unless the theorem has a negated conclusion.
 
 \SEEALSO
 Drule.IMP_ELIM, Thm.NOT_INTRO.
-
 \ENDDOC

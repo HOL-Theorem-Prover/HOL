@@ -21,6 +21,8 @@ whereas the only instances of {z} are bound:
    - freesl [(--`x+y=2`--), (--`!z. z >= (x-y)`--)];
    val it = [(--`x`--),(--`y`--)] : term list
 }
+
+
 \COMMENTS
 {freesl} is not in hol90; use {free_varsl} instead. WARNING: One can not
 depend on the order of the list returned by {freesl} to be identical to that 
@@ -29,5 +31,4 @@ and thus the discussion in the documentation for {frees} applies by extension.
 
 \SEEALSO
 hol88Lib.frees, Term.free_in, thm_frees.
-
 \ENDDOC

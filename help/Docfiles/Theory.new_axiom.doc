@@ -6,18 +6,17 @@
 Install a new axiom in the current theory.
 
 \DESCRIBE
-
 If {tm} is a term of type {bool}, a call {new_axiom("name",tm)} 
 creates a theorem
 {
    |- !x1..xn. tm
 }
-\noindent and stores it away in the theory file. Note that all free
+and stores it away in the theory file. Note that all free
 variables in {tm} are generalized automatically before the axiom is 
 created.
 
 \FAILURE
-Fails if the given term does not have type {bool}. 
+Fails if the given term does not have type {bool}.
 
 \EXAMPLE
 {
@@ -27,6 +26,8 @@ Fails if the given term does not have type {bool}.
   - new_axiom("untrue",--`x = 1`--));
   |- !x. x = 1
 }
+
+
 \COMMENTS
 For most purposes, it is unnecessary to declare new axioms: all of classical
 mathematics can be derived by definitional extension alone. Proceeding
@@ -37,5 +38,4 @@ such as higher transfinite ordinals.
 
 \SEEALSO
 Thm.mk_thm, Definition.new_definition, Definition.new_specification.
-
 \ENDDOC

@@ -32,5 +32,4 @@ it has been replaced by {store_thm}.
 
 \SEEALSO
 Tactical.prove, BasicProvers.PROVE, Tactical.TAC_PROOF, VALID.
-
 \ENDDOC

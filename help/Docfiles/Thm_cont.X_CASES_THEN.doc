@@ -19,29 +19,30 @@ where each disjunct may be existentially quantified:
 {
    th = |-(?xl1.B1)  \/...\/  (?xln.Bn)
 }
-\noindent each disjunct having the form {(?xi1 ... xim. Bi)}. If
+each disjunct having the form {(?xi1 ... xim. Bi)}. If
 applying {f} to the theorem obtained by introducing witness variables {yli}
 for the objects {xli} whose existence is asserted by each disjunct, typically
-{({{Bi[yli/xli]}} |- Bi[yli/xli])}, produce the following results when
+{({Bi[yli/xli]} |- Bi[yli/xli])}, produce the following results when
 applied to a goal {(A ?- t)}:
 {
     A ?- t
-   ========= f ({{B1[yl1/xl1]}} |- B1[yl1/xl1])
+   ========= f ({B1[yl1/xl1]} |- B1[yl1/xl1])
     A ?- t1
 
     ...
 
     A ?- t
-   =========  f ({{Bn[yln/xln]}} |- Bn[yln/xln])
+   =========  f ({Bn[yln/xln]} |- Bn[yln/xln])
     A ?- tn
 }
-\noindent then applying {(X_CHOOSE_THEN [yl1,...,yln] f th)}
+then applying {(X_CHOOSE_THEN [yl1,...,yln] f th)}
 to the goal {(A ?- t)} produces {n} subgoals.
 {
            A ?- t
    =======================  X_CHOOSE_THEN [yl1,...,yln] f th
     A ?- t1  ...  A ?- tn
 }
+
 
 \FAILURE
 Fails (with {X_CHOOSE_THEN}) if any {yli} has more variables than the
@@ -58,18 +59,18 @@ used to split into 2 cases:
 {
    th = |- (?m. x = 2 * m) \/ (?m. x = (2 * m) + 1)
 }
-\noindent by the tactic 
+by the tactic 
 {
    X_CASES_THEN [[Term`n:num`],[Term`n:num]] ASSUME_TAC th
 }
-\noindent to produce the subgoals:
+to produce the subgoals:
 {
-   {{x = (2 * n) + 1}} ?- (x MOD 2) <= 1
+   {x = (2 * n) + 1} ?- (x MOD 2) <= 1
 
-   {{x = 2 * n}} ?- (x MOD 2) <= 1
+   {x = 2 * n} ?- (x MOD 2) <= 1
 }
+
 
 \SEEALSO
 Thm_cont.DISJ_CASES_THENL, Thm_cont.X_CASES_THENL, Thm_cont.X_CHOOSE_THEN.
-
 \ENDDOC

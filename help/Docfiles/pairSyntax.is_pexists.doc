@@ -2,7 +2,8 @@
 
 \TYPE {is_pexists : (term -> bool)}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Tests a term to see if it as a paired existential quantification.
@@ -16,5 +17,4 @@ Never fails.
 
 \SEEALSO
 boolSyntax.is_exists, pairSyntax.mk_pexists, pairSyntax.dest_pexists.
-
 \ENDDOC

@@ -1,16 +1,16 @@
-\DOC etyvar 
+\DOC etyvar
 
 \TYPE {etyvar : hol_type}
 
 \SYNOPSIS
 Common type variable.
 
-\LIBRARY Type
+\LIBRARY
+Type
 
 \DESCRIBE
 The ML variable {Type.etyvar} is bound to the type variable {'e}.
 
 \SEEALSO
 Type.alpha, Type.beta, Type.gamma, Type.delta, Type.ftyvar, Type.bool.
-
 \ENDDOC

@@ -9,7 +9,7 @@ Ordering on terms.
 term, order.
 
 \DESCRIBE
-An invocation {compare (M,N)} will return one of {{{LESS, EQUAL, GREATER}}},
+An invocation {compare (M,N)} will return one of {{LESS, EQUAL, GREATER}},
 according to an ordering on terms. The ordering is transitive and
 total, and equates alpha-convertible terms.
 
@@ -24,6 +24,7 @@ Never fails.
 - compare (Term `\x y. x /\ y`, Term `\y z. y /\ z`);
 > val it = EQUAL : order
 }
+
 
 \COMMENTS
 Used to build high performance datastructures for dealing with sets

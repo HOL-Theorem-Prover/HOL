@@ -18,5 +18,4 @@ tactic fails if the basic tactic either fails or has no effect.
 
 \SEEALSO
 Tactical.TRY, VALID.
-
 \ENDDOC

@@ -1,12 +1,12 @@
 \DOC mk_cons
 
-\TYPE {mk_cons : {{hd :term, tl :term}} -> term}
+\TYPE {mk_cons : {hd :term, tl :term} -> term}
 
 \SYNOPSIS
 Constructs a {CONS} pair.
 
 \DESCRIBE
-{mk_cons{{hd = t, tl = `[t1;...;tn]`}}} returns {`[t;t1;...;tn]`}.
+{mk_cons{hd = t, tl = `[t1;...;tn]`}} returns {`[t;t1;...;tn]`}.
 
 \FAILURE
 Fails if {tl} is not a list or if {hd} is not of the same type as
@@ -14,5 +14,4 @@ the elements of the list.
 
 \SEEALSO
 listSyntax.dest_cons, listSyntax.is_cons, listSyntax.mk_list, listSyntax.dest_list, listSyntax.is_list.
-
 \ENDDOC

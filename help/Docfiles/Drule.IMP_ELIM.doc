@@ -16,10 +16,11 @@ returns the theorem {A |- ~s \/ t}.
    --------------  IMP_ELIM
     A |- ~s \/ t
 }
+
+
 \FAILURE
 Fails unless the theorem is implicative.
 
 \SEEALSO
 Thm.NOT_INTRO, Thm.NOT_ELIM.
-
 \ENDDOC

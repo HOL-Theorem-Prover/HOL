@@ -10,11 +10,11 @@ The call
 {
    g `tm`
 }
-\noindent is equivalent to
+is equivalent to
 {
    set_goal([],Term`tm`)
 }
-\noindent and clearly more convenient if a goal has no assumptions.
+and clearly more convenient if a goal has no assumptions.
 For a description of the subgoal package, see  {set_goal}.
 
 \FAILURE
@@ -34,7 +34,7 @@ Fails unless the argument term has type {bool}.
     : GoalstackPure.proofs
 }
 
+
 \SEEALSO
 goalstackLib.b, goalstackLib.backup, backup_limit, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, get_state, goalstackLib.p, print_state, goalstackLib.r, rotate, save_top_thm, goalstackLib.set_goal, set_state, goalstackLib.top_goal, goalstackLib.top_thm.
-
 \ENDDOC

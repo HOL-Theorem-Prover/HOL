@@ -16,5 +16,4 @@ Fails if the term is an empty list.
 
 \SEEALSO
 listSyntax.mk_cons, listSyntax.is_cons, listSyntax.mk_list, listSyntax.dest_list, listSyntax.is_list.
-
 \ENDDOC

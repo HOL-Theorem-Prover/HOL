@@ -5,7 +5,8 @@
 \SYNOPSIS
 Tests a term to see if it's an instance of {ARB}.
 
-\LIBRARY boolSyntax
+\LIBRARY
+boolSyntax
 
 \DESCRIBE
 Returns {true} if and only if {M} has the form {ARB}.
@@ -15,5 +16,4 @@ None known.
 
 \SEEALSO
 boolSyntax.mk_arb, boolSyntax.dest_arb.
-
 \ENDDOC

@@ -16,7 +16,8 @@ Never fails.
 - list_mk_fun ([alpha,bool],beta);
 > val it = `:'a -> bool -> 'b` : hol_type
 }
+
+
 \SEEALSO
 boolSyntax.strip_fun, Type.mk_type, Type.-->.
-
 \ENDDOC

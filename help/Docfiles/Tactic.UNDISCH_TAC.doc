@@ -12,8 +12,10 @@ tactic, discharge.
 {
           A ?- t
    ====================  UNDISCH_TAC v
-    A - {{v}} ?- v ==> t
+    A - {v} ?- v ==> t
 }
+
+
 \FAILURE
 {UNDISCH_TAC} will fail if {"v"} is not an assumption.
 
@@ -23,5 +25,4 @@ but those which are alpha-equivalent will remain.
 
 \SEEALSO
 Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL.
-
 \ENDDOC

@@ -6,9 +6,11 @@
 Performs first order proof search to prove the goal, using the given
 theorems as additional assumptions in the search.
 
-\KEYWORDS decision procedure, tactic.
+\KEYWORDS
+decision procedure, tactic.
 
-\LIBRARY mesonLib
+\LIBRARY
+mesonLib
 
 \DESCRIBE
 {MESON_TAC} performs first order proof using the model elimination
@@ -42,12 +44,14 @@ changeable by the user) without finding a proof.  Shouldn't fail
 otherwise.
 
 
+
 \USES
 {MESON_TAC} can only progress the goal to a successful proof of the
 (whole) goal or not at all.  In this respect it differs from tactics
 such as simplification and rewriting.  Its ability to solve
 existential goals and to make effective use of transitivity theorems
 make it a particularly powerful tactic.
+
 
 
 \COMMENTS
@@ -58,5 +62,4 @@ include assumptions use {ASM_MESON_TAC}.
 
 \SEEALSO
 mesonLib.ASM_MESON_TAC, mesonLib.GEN_MESON_TAC.
-
 \ENDDOC

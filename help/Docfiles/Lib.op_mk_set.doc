@@ -1,4 +1,4 @@
-\DOC op_mk_set 
+\DOC op_mk_set
 
 \TYPE {op_mk_set : ('a -> 'a -> bool) -> 'a list -> 'a list}
 
@@ -26,6 +26,7 @@ If an application of {eq} fails when applied to two elements of {list}.
 > val it = [`\z a. z /\ a`] : term list
 }
 
+
 \COMMENTS
 The order of items in the list returned by {op_mk_set}
 is not dependable.
@@ -37,7 +38,5 @@ There is no requirement that {eq} be recognizable as a kind of
 equality (it could be implemented by an order relation, for example).
 
 \SEEALSO
-Lib.mk_set, Lib.op_mem, Lib.op_insert, Lib.op_union, Lib.op_U, 
-Lib.op_intersect, Lib.op_set_diff.
-
+Lib.mk_set, Lib.op_mem, Lib.op_insert, Lib.op_union, Lib.op_U, Lib.op_intersect, Lib.op_set_diff.
 \ENDDOC

@@ -12,7 +12,7 @@ is broken down by {strip_conj}, hence
 {
    strip_conj(list_mk_conj [t1,...,tn])
 }
-\noindent will not return {[t1,...,tn]} if any {ti} is a conjunction.
+will not return {[t1,...,tn]} if any {ti} is a conjunction.
 
 \FAILURE
 Never fails.
@@ -22,7 +22,8 @@ Never fails.
 - strip_conj (Term `(a /\ b) /\ c /\ d`);
 > val it = [`a`, `b`, `c`, `d`] : term list
 }
+
+
 \SEEALSO
 boolSyntax.dest_conj, boolSyntax.mk_conj, boolSyntax.list_mk_conj.
-
 \ENDDOC

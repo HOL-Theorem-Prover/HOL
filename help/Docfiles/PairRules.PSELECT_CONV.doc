@@ -5,7 +5,8 @@
 \KEYWORDS
 conversion, epsilon.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Eliminates a paired epsilon term by introducing a existential quantifier.
@@ -22,5 +23,4 @@ Fails if applied to a term that is not of the form {"p[@p.t[p]/p]"}.
 
 \SEEALSO
 Conv.SELECT_CONV, PairRules.PSELECT_ELIM, PairRules.PSELECT_INTRO, PairRules.PSELECT_RULE.
-
 \ENDDOC

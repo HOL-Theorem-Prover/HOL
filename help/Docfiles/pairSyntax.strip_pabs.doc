@@ -2,7 +2,8 @@
 
 \TYPE {strip_pabs : term -> term list * term}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Iteratively breaks apart paired abstractions.
@@ -12,7 +13,7 @@ Iteratively breaks apart paired abstractions.
 {
    strip_pabs(list_mk_abs([p1,...,pn],t))
 }
-\noindent will not return {([p1,...,pn],t)} if {t} is
+will not return {([p1,...,pn],t)} if {t} is
 a paired abstraction.
 
 \FAILURE
@@ -20,5 +21,4 @@ Never fails.
 
 \SEEALSO
 boolSyntax.strip_abs, pairSyntax.list_mk_pabs, pairSyntax.dest_pabs.
-
 \ENDDOC

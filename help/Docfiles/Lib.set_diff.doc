@@ -24,6 +24,7 @@ Never fails.
 > val it = [3] : int list
 }
 
+
 \COMMENTS
 The order in which the elements occur in the resulting list should
 not be depended upon.
@@ -36,7 +37,5 @@ This limits its applicability to types that allow equality. For other
 types, typically abstract ones, use the `op_' variants.
 
 \SEEALSO
-Lib.op_set_diff, Lib.subtract, Lib.mk_set, 
-Lib.set_eq, Lib.union, Lib.intersect.
-
+Lib.op_set_diff, Lib.subtract, Lib.mk_set, Lib.set_eq, Lib.union, Lib.intersect.
 \ENDDOC

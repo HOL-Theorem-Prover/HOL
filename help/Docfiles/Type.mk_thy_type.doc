@@ -1,7 +1,8 @@
 \DOC mk_thy_type
 
-\BLTYPE {mk_thy_type 
-       : {{Thy:string, Name:string, Args:hol_type list}} -> hol_type}
+\BLTYPE
+mk_thy_type 
+       : {Thy:string, Name:string, Args:hol_type list} -> hol_type
 \ELTYPE
 
 \SYNOPSIS
@@ -10,7 +11,7 @@ Constructs a type.
 \DESCRIBE
 If {s} is a string that has been previously declared to be a type
 with arity type {n} in theory {thy}, and the length of {tyl} is equal
-to {n}, then {mk_thy_type{{Tyop=s, Thy=thy, Args=tyl}}} returns the
+to {n}, then {mk_thy_type{Tyop=s, Thy=thy, Args=tyl}} returns the
 requested compound type.
 
 \FAILURE
@@ -20,14 +21,15 @@ the length of {tyl}.
 
 \EXAMPLE
 {
-- mk_thy_type {{Tyop="fun", Thy="min", Args = [alpha,bool]}};
+- mk_thy_type {Tyop="fun", Thy="min", Args = [alpha,bool]};
 > val it = `:'a -> bool` : hol_type
 
-- try mk_thy_type {{Tyop="bar", Thy="foo", Args = []}};
+- try mk_thy_type {Tyop="bar", Thy="foo", Args = []};
  
 Exception raised at Type.mk_thy_type:
 "foo$bar" not found
 }
+
 
 \COMMENTS
 In general, {mk_thy_type} is to be preferred over {mk_type} because 
@@ -36,5 +38,4 @@ from a time when there was only one namespace shared by all theories).
 
 \SEEALSO
 Type.mk_type, Type.dest_thy_type, Term.mk_const, Term.mk_thy_const, decls, op_arity.
-
 \ENDDOC

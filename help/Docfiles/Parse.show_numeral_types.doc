@@ -8,7 +8,8 @@ A flag which causes numerals to be printed with suffix annotation when true.
 \KEYWORDS
 Pretty-printing
 
-\LIBRARY Globals
+\LIBRARY
+Globals
 
 \DESCRIBE
 This flag controls the pretty-printing of numeral forms that have been
@@ -33,10 +34,11 @@ Never fails, as it is just an SML value.
 - Term`~3`;
 > val it = `~3i` : term
 }
+
+
 \USES
 Can help to disambiguate terms involving numerals.
 
 \SEEALSO
 Parse.add_numeral_form, Globals.show_types.
-
 \ENDDOC

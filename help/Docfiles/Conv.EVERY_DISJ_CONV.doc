@@ -40,6 +40,8 @@ top-level disjuncts in the term.
 - EVERY_DISJ_CONV REDUCE_CONV ``3 < x \/ 2 < 3 \/ 2 EXP 1000 < 10``;
 > val it = |- 3 < x \/ 2 < 3 \/ 2 EXP 1000 < 10 = T : thm
 }
+
+
 \USES
 Useful for applying a conversion to all of the ``significant''
 sub-terms within a term without having to worry about the exact
@@ -47,5 +49,4 @@ structure of its disjunctive skeleton.
 
 \SEEALSO
 Conv.EVERY_CONJ_CONV, Conv.RATOR_CONV, Conv.RAND_CONV, Conv.LAND_CONV.
-
 \ENDDOC

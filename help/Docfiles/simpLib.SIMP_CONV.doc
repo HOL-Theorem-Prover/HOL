@@ -8,7 +8,8 @@ Applies a simpset and a list of rewrite rules to simplify a term.
 \KEYWORDS
 conv, simplification.
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \DESCRIBE
 {SIMP_CONV} is the fundamental engine of the HOL simplification
@@ -82,7 +83,7 @@ valid is ({Ho_theorems.IMP_CONG}):
 {
    |- (P = P') ==> (P' ==> (Q = Q')) ==> ((P ==> Q) = (P' ==> Q'))
 }
-\noindent Other congruence theorems can be part of simpsets.  The
+Other congruence theorems can be part of simpsets.  The
 system provides {IMP_CONG} above and {COND_CONG} as part of the
 {CONG_ss} {ssdata} value.  (These {ssdata} values can be incorporated
 into simpsets with the {++} function.)  Other congruence theorems are
@@ -106,6 +107,7 @@ decision procedure implemented in this way.
 > val it = |- (\x. x + 3) 4 = 7 : thm
 }
 
+
 \USES
 {SIMP_CONV} is a powerful way of manipulating terms.  Other functions
 in the simplification library provide the same facilities when in the
@@ -120,5 +122,4 @@ the author's part of another's code.
 
 \SEEALSO
 simpLib.++, simpLib.ASM_SIMP_TAC, simpLib.FULL_SIMP_TAC, hol_ss, simpLib.mk_simpset, simpLib.rewrites, simpLib.SIMP_RULE, simpLib.SIMP_TAC, simpLib.SIMPSET.
-
 \ENDDOC

@@ -21,7 +21,7 @@ Fails if the list is empty.
 > val it = ([1,2],3) : int list * int
 }
 
+
 \SEEALSO
 Lib.butlast, Lib.last.
-
 \ENDDOC

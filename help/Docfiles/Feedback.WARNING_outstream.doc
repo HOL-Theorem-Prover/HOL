@@ -2,9 +2,11 @@
 
 \TYPE {WARNING_outstream : TextIO.outstream ref}
 
-\SYNOPSIS Controlling output stream used when printing {HOL_WARNING}
+\SYNOPSIS
+Controlling output stream used when printing {HOL_WARNING}
 
-\KEYWORDS I/O, messages, output
+\KEYWORDS
+I/O, messages, output
 
 \DESCRIBE
 The value of reference cell {WARNING_outstream} controls where {HOL_WARNING}
@@ -33,8 +35,7 @@ The default value of {WARNING_outstream} is {TextIO.stdOut}.
 <<HOL warning: Module.Function: Sufferin' Succotash!>>
 }
 
-\SEEALSO
-Feedback, Feedback.HOL_WARNING, Feedback.ERR_outstream, 
-Feedback.MESG_outstream, Feedback.emit_WARNING.
 
+\SEEALSO
+Feedback, Feedback.HOL_WARNING, Feedback.ERR_outstream, Feedback.MESG_outstream, Feedback.emit_WARNING.
 \ENDDOC

@@ -2,7 +2,8 @@
 
 \TYPE {dest_prod : hol_type -> hol_type * hol_type}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Breaks a product type into its two component types.
@@ -16,5 +17,4 @@ Fails with {dest_prod} if the argument is not a product type.
 
 \SEEALSO
 pairSyntax.is_prod, pairSyntax.mk_prod.
-
 \ENDDOC

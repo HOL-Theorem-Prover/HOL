@@ -2,7 +2,8 @@
 
 \TYPE {W : ('a -> 'a -> 'b) -> 'a -> 'b}
 
-\KEYWORDS Combinator.
+\KEYWORDS
+Combinator.
 
 \SYNOPSIS
 Duplicates function argument : {W f x} equals {f x x}.
@@ -12,7 +13,7 @@ The {W} combinator can be understood as a planner: in the application
 {f x x}, the function {f} can scrutinize {x} and generate a function
 that then gets applied to {x}.
 
-\FAILURE 
+\FAILURE
 {W f} never fails. {W f x} fails if {f x} fails or if {f x x} fails.
 
 \EXAMPLE
@@ -25,7 +26,7 @@ that then gets applied to {x}.
 > val it = |- !b a. (a = b) = (~a = ~b) : thm
 }
 
+
 \SEEALSO
 Lib.\#\#, Lib.A, Lib.B, Lib.C, Lib.I, Lib.K, Lib.S.
-
 \ENDDOC

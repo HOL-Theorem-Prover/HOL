@@ -14,12 +14,10 @@ returns {(c,ty)}.
 Fails if {M} is not a constant.
 
 \COMMENTS
-
 In Hol98, constants also carry the theory they are declared in. A 
 more precise and robust way to analyze a constant is with 
 {dest_thy_const}.
 
 \SEEALSO
 Term.mk_const, Term.mk_thy_const, Term.dest_thy_const, Term.is_const, Term.dest_abs, Term.dest_comb, Term.dest_var.
-
 \ENDDOC

@@ -1,6 +1,7 @@
-\DOC match_terml 
+\DOC match_terml
 
-\BLTYPE match_terml 
+\BLTYPE
+match_terml 
      : hol_type list -> term set -> term -> term 
        -> (term,term) subst * (hol_type,hol_type) subst
 \ELTYPE
@@ -18,9 +19,9 @@ such that
 {
    aconv (subst S (inst T pat)) ob.
 }
-\noindent The arguments {avoid_tys} and {avoid_tms} specify type
+The arguments {avoid_tys} and {avoid_tms} specify type
 and term variables in {pat} that are not allowed to become {redex}es 
-in {S} and {T}. 
+in {S} and {T}.
 
 \FAILURE
 {match_terml} will fail if no {S} and {T} meeting the above requirements
@@ -34,11 +35,11 @@ elements of {avoid_tms} would appear as redexes in {S}, then
 - val (S,T) = match_terml [] empty_varset 
                   (Term `\x:'a. x = f (y:'b)`)
                   (Term `\a.    a = ~p`);
-> val S = [{{redex = `(f :'b -> 'a)`, residue = `$~`}},
-           {{redex = `(y :'b)`,       residue = `(p :bool)`}}] : ...
+> val S = [{redex = `(f :'b -> 'a)`, residue = `$~`},
+           {redex = `(y :'b)`,       residue = `(p :bool)`}] : ...
 
-  val T = [{{redex = `:'b`, residue = `:bool`}}, 
-           {{redex = `:'a`, residue = `:bool`}}] : ...
+  val T = [{redex = `:'b`, residue = `:bool`}, 
+           {redex = `:'a`, residue = `:bool`}] : ...
 
 - match_terml [alpha] empty_varset  (* forbid instantiation of 'a *)
           (Term `\x:'a. x = f (y:'b)`)
@@ -53,8 +54,7 @@ elements of {avoid_tms} would appear as redexes in {S}, then
 ! HOL_ERR
 }
 
-\SEEALSO
-Term.match_term, Term.raw_match, Term.subst, Term.inst,
-Type.match_typel, Type.type_subst.
 
+\SEEALSO
+Term.match_term, Term.raw_match, Term.subst, Term.inst, Type.match_typel, Type.type_subst.
 \ENDDOC

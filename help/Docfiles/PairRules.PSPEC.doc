@@ -5,7 +5,8 @@
 \KEYWORDS
 rule.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Specializes the conclusion of a theorem.
@@ -21,6 +22,8 @@ no variables free in {q} become bound after substitution.
    --------------  PSPEC "q"
     A |- t[q/p]
 }
+
+
 \FAILURE
 Fails if the theorem's conclusion is not a paired universal quantification,
 or if {p} and {q} have different types.
@@ -31,6 +34,7 @@ or if {p} and {q} have different types.
    - PSPEC (Term `(1,2)`) (ASSUME (Term`!(x,y). (x + y) = (y + x)`));
    > val it =  [.] |- 1 + 2 = 2 + 1 : thm
 }
+
 {PSPEC} treats paired structures of variables as variables and 
 preserves structure accordingly.
 {
@@ -38,9 +42,7 @@ preserves structure accordingly.
    > val it =  [.] |- x = x : thm
 }
 
-\SEEALSO
-Thm.SPEC, PairRules.IPSPEC, PairRules.PSPECL, 
-PairRules.PSPEC_ALL, PSPEC_VAR, PairRules.PGEN, 
-PairRules.PGENL.
 
+\SEEALSO
+Thm.SPEC, PairRules.IPSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PSPEC_VAR, PairRules.PGEN, PairRules.PGENL.
 \ENDDOC

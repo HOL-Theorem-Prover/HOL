@@ -22,6 +22,7 @@ names:
    > val it = [true, true, false, true, false] : bool list
 }
 
+
 \COMMENTS
 Note that this function only performs a lexical test; it does not
 check whether there is already a constant of that name in the current
@@ -29,5 +30,4 @@ theory.
 
 \SEEALSO
 Theory.constants, is_constant, new_alphanum, new_special_symbol, special_symbols, Lexis.allowed_type_constant.
-
 \ENDDOC

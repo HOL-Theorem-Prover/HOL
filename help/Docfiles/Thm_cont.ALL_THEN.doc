@@ -24,5 +24,4 @@ of theorem-tacticals.
 
 \SEEALSO
 Tactical.ALL_TAC, Tactical.FAIL_TAC, Tactical.NO_TAC, Thm_cont.NO_THEN, Thm_cont.THEN_TCL, Thm_cont.ORELSE_TCL.
-
 \ENDDOC

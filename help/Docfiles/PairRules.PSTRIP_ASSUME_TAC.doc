@@ -5,7 +5,8 @@
 \KEYWORDS
 tactic.
 
-\LIBRARY pair 
+\LIBRARY
+pair
 
 \SYNOPSIS
 Splits a theorem into a list of theorems and then adds them to the assumptions.
@@ -19,17 +20,17 @@ the following rules are applied:
 {
            A ?- t
    ======================  PSTRIP_ASSUME_TAC (A' |- v1 /\ ... /\ vn)
-    A u {{v1,...,vn}} ?- t
+    A u {v1,...,vn} ?- t
 
                 A ?- t
    =================================  PSTRIP_ASSUME_TAC (A' |- v1 \/ ... \/ vn)
-    A u {{v1}} ?- t ... A u {{vn}} ?- t
+    A u {v1} ?- t ... A u {vn} ?- t
 
           A ?- t
    ====================  PSTRIP_ASSUME_TAC (A' |- ?p. v)
-    A u {{v[p'/p]}} ?- t
+    A u {v[p'/p]} ?- t
 }
-\noindent where {p'} is a variant of the pair {p}.
+where {p'} is a variant of the pair {p}.
 
 If the conclusion of {th} is not a conjunction, a disjunction or a paired
 existentially quantified term, the whole theorem {th} is added to the
@@ -55,5 +56,4 @@ more to work with.
 
 \SEEALSO
 PairRules.PSTRIP_THM_THEN, PairRules.PSTRIP_ASSUME_TAC, PairRules.PSTRIP_GOAL_THEN, PairRules.PSTRIP_TAC.
-
 \ENDDOC

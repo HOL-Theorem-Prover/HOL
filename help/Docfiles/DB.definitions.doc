@@ -1,4 +1,4 @@
-\DOC definitions 
+\DOC definitions
 
 \TYPE {definitions : string -> (string * thm) list}
 
@@ -27,7 +27,7 @@ the empty list is returned.
      ("W_DEF", |- W = (\f x. f x x))] : (string * thm) list
 }
 
+
 \SEEALSO
 DB.thy, DB.fetch, DB.thms, DB.theorems, DB.axioms, DB.listDB.
-
 \ENDDOC

@@ -14,5 +14,4 @@ Fails if {M} is not a conditional.
 
 \SEEALSO
 boolSyntax.mk_cond, boolSyntax.is_cond.
-
 \ENDDOC

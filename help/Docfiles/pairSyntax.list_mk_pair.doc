@@ -1,4 +1,4 @@
-\DOC list_mk_pair 
+\DOC list_mk_pair
 
 \TYPE {list_mk_pair : term list -> term}
 
@@ -20,7 +20,7 @@ Fails if the list is empty.
 > val it = `1` : term
 }
 
+
 \SEEALSO
 pairSyntax.strip_pair, pairSyntax.mk_pair.
-
 \ENDDOC

@@ -8,7 +8,8 @@ Parses a quotation into a term, using the terms as typing context.
 \KEYWORDS
 Parsing
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 Where the {Term} function parses a quotation in isolation of all
@@ -38,6 +39,7 @@ quotation was {x + y}.
    << There should be an example here >>
 }
 
+
 \USES
 Used in many of the {Q} module's variants of the standard tactics in
 order to have a goal provide contextual information to the parsing of
@@ -45,5 +47,4 @@ arguments to tactics.
 
 \SEEALSO
 Parse.Term.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC string_to_int 
+\DOC string_to_int
 
 \TYPE {string_to_int : string -> int}
 
@@ -25,11 +25,11 @@ If the string cannot be translated to an integer.
 ! HOL_ERR
 }
 
+
 \COMMENTS
 Similar functionality can be obtained from the Standard Basis Library 
 function {Int.fromString}.
 
 \SEEALSO
 Lib.int_to_string.
-
 \ENDDOC

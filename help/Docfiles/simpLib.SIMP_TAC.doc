@@ -9,7 +9,8 @@ theorems listed.
 \KEYWORDS
 simplification, tactic.
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \DESCRIBE
 {SIMP_TAC} adds the theorems of the second argument to the simpset
@@ -40,13 +41,15 @@ seeming goals:
    - p [];
    > val it = |- P x /\ (x = y + 3) ==> P x /\ y < x : thm
 }
-\noindent {SIMP_TAC} is similar to {REWRITE_TAC} if used with just the
+{SIMP_TAC} is similar to {REWRITE_TAC} if used with just the
 {bool_ss} simpset.  Here it is used in conjunction with the arithmetic
 theorem {GREATER_DEF}, {|- !m n. m > n = n < m}, to advance a goal:
 {
    - SIMP_TAC bool_ss [GREATER_DEF]  ([], Term`T /\ 5 > 4 \/ F`);
    > val it = ([([], `4 < 5`)], fn) : subgoals
 }
+
+
 \COMMENTS
 The simplification library is described further in other
 documentation, but its full capabilities are still rather opaque.
@@ -58,7 +61,7 @@ progress with them.  However, poor simpsets or a poor choice of
 rewrites can still result in divergence, or poor performance.
 
 
+
 \SEEALSO
 simpLib.++, simpLib.ASM_SIMP_TAC, boolSimps.bool_ss, simpLib.FULL_SIMP_TAC, hol_ss, simpLib.mk_simpset, Rewrite.REWRITE_TAC, simpLib.SIMP_CONV, simpLib.SIMP_PROVE, simpLib.SIMP_RULE.
-
 \ENDDOC

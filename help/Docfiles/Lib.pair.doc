@@ -2,7 +2,7 @@
 
 \TYPE {pair : 'a -> 'b -> 'a * 'b}
 
-\SYNOPSIS 
+\SYNOPSIS
 Makes two values into a pair.
 
 \DESCRIBE
@@ -13,5 +13,4 @@ Never fails.
 
 \SEEALSO
 Lib.fst, Lib.snd, Lib.curry, Lib.uncurry.
-
 \ENDDOC

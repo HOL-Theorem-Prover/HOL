@@ -8,7 +8,8 @@ Removes pretty-printing preference information from the global grammar.
 \KEYWORDS
 Pretty-printing
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 The {clear_prefs_for_term} function removes the information stored in
@@ -29,7 +30,7 @@ syntax is used for input, the term is printed out in the
    <<HOL message: inventing new type variable names: 'a.>>
    > val it = `(if p then q else r)` : term
 }
-\noindent If {clear_prefs_for_term} is applied, neither syntax will print:
+If {clear_prefs_for_term} is applied, neither syntax will print:
 {
    - clear_prefs_for_term "COND";
    > val it = () : unit
@@ -38,7 +39,7 @@ syntax is used for input, the term is printed out in the
    > val it = `COND p q r` : term
 }
 
+
 \SEEALSO
 Parse.prefer_form_with_tok.
-
 \ENDDOC

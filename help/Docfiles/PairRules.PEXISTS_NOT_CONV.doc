@@ -5,7 +5,8 @@
 \KEYWORDS
 conversion, quantifier, existential, negation.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Moves a paired existential quantification inwards through a negation.
@@ -16,10 +17,11 @@ returns the theorem:
 {
    |- (?p. ~t) = ~(!p. t)
 }
+
+
 \FAILURE
 Fails if applied to a term not of the form {?p. ~t}.
 
 \SEEALSO
 Conv.EXISTS_NOT_CONV, PairRules.PFORALL_NOT_CONV, PairRules.NOT_PEXISTS_CONV, PairRules.NOT_PFORALL_CONV.
-
 \ENDDOC

@@ -19,9 +19,10 @@ instantiation of type variables.
     |- 
    t[ty1,...,tyn/vty1,...,vtyn]
 }
-\noindent Type substitution is performed throughout the hypotheses
+Type substitution is performed throughout the hypotheses
 and the conclusion,. Variables will be renamed if necessary to prevent
 distinct variables becoming identical after the instantiation.
+
 
 
 \FAILURE
@@ -39,7 +40,7 @@ follows:
    uncaught exception HOL_ERR
 
 }
-\noindent The failure occurred because {EQ_SYM_EQ} contains polymorphic types.
+The failure occurred because {EQ_SYM_EQ} contains polymorphic types.
 The desired specialization can be obtained by using {INST_TYPE}:
 {
    - load "numTheory";
@@ -49,7 +50,8 @@ The desired specialization can be obtained by using {INST_TYPE}:
 
    > val it = |- (a = b) = (b = a) : thm
 }
+
+
 \SEEALSO
 Term.inst, Thm.INST, Drule.INST_TY_TERM, Lib.|->.
-
 \ENDDOC

@@ -17,11 +17,12 @@ provided {x} is not free in the assumptions.
    --------------------------  EXISTS_IMP "x"   [where x is not free in A]
     A |- (?x.t1) ==> (?x.t2)
 }
+
+
 \FAILURE
 Fails if the theorem is not implicative, or if the term is not a variable, or
 if the term is a variable but is free in the assumption list.
 
 \SEEALSO
 Drule.EXISTS_EQ.
-
 \ENDDOC

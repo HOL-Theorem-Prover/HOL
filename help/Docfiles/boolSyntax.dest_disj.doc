@@ -14,5 +14,4 @@ Fails if {M} is not a disjunction.
 
 \SEEALSO
 boolSyntax.mk_disj, boolSyntax.is_disj, boolSyntax.strip_disj, boolSyntax.list_mk_disj.
-
 \ENDDOC

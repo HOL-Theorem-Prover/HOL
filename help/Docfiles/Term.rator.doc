@@ -14,5 +14,4 @@ Fails if {M} is not a combination.
 
 \SEEALSO
 Term.rand, Term.dest_comb.
-
 \ENDDOC

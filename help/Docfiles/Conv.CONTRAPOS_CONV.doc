@@ -14,10 +14,11 @@ returns the theorem:
 {
    |- (P ==> Q) = (~Q ==> ~P)
 }
+
+
 \FAILURE
 Fails if applied to a term that is not an implication.
 
 \SEEALSO
 Drule.CONTRAPOS.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {emit_WARNING : bool ref}
 
-\SYNOPSIS Flag controlling output of {HOL_WARNING} function.
+\SYNOPSIS
+Flag controlling output of {HOL_WARNING} function.
 
-\KEYWORDS messages, output
+\KEYWORDS
+messages, output
 
 \DESCRIBE
 The boolean flag {emit_WARNING} is consulted by {HOL_WARNING} when it
@@ -26,7 +28,7 @@ The default value of {emit_WARNING} is {true}.
 > val it = () : unit
 }
 
+
 \SEEALSO
 Feedback, Feedback.HOL_WARNING, Feedback.emit_ERR, Feedback.emit_MESG.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC read 
+\DOC read
 
 \TYPE {read : string -> tag}
 
@@ -22,7 +22,7 @@ and thereafter consist only of alphabetic or numeric characters.
 > val it = Kerneltypes.TAG(["Shamboozled"], []) : tag
 }
 
+
 \SEEALSO
 Thm.mk_oracle_thm, Thm.tag.
-
 \ENDDOC

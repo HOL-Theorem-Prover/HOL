@@ -2,7 +2,7 @@
 
 \BLTYPE
 remove_user_printer : 
-    {{Thy:string, Tyop:string}} -> term_pp_types.userprinter option
+    {Thy:string, Tyop:string} -> term_pp_types.userprinter option
 \ELTYPE
 
 \SYNOPSIS
@@ -11,7 +11,8 @@ Removes a user-defined pretty-printing function for a given type.
 \KEYWORDS
 Pretty-printing.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 This removes a user-defined pretty-printing function for a given type
@@ -30,5 +31,4 @@ to disk.
 
 \SEEALSO
 Parse.add_user_printer.
-
 \ENDDOC

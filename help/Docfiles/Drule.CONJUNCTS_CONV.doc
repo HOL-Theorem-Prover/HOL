@@ -23,6 +23,8 @@ Fails if {t1} and {t2} are not equivalent, as described above.
 - CONJUNCTS_CONV (Term `(P /\ Q) /\ R`, Term `R /\ (Q /\ R) /\ P`);
 > val it = |- (P /\ Q) /\ R = R /\ (Q /\ R) /\ P : thm
 }
+
+
 \USES
 Used to reorder a conjunction.  First sort the conjuncts in a term
 {t1} into the desired order (e.g. lexicographic order, for
@@ -35,5 +37,4 @@ something else.
 
 \SEEALSO
 Drule.CONJ_SET_CONV.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 conversion, epsilon.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Eliminates paired existential quantifier by introducing a paired choice-term.
@@ -19,10 +20,10 @@ and converts it to the form {(t [@p. t[p]])}.
     (|- (?p. t[p]) = (t [@p. t[p]])
 }
 
+
 \FAILURE
 Fails if applied to a term that is not a paired existential quantification.
 
 \SEEALSO
 PairRules.PSELECT_RULE, PairRules.PSELECT_CONV, PairRules.PEXISTS_RULE, PairRules.PSELECT_INTRO, PairRules.PSELECT_ELIM.
-
 \ENDDOC

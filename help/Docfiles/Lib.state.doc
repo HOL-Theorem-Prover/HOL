@@ -1,4 +1,4 @@
-\DOC state 
+\DOC state
 
 \TYPE {state : ('a,'b) istream -> 'b}
 
@@ -31,7 +31,7 @@ on the current element of the state.
 > val it = "gsym2" : string
 }
 
+
 \SEEALSO
 Lib.mk_istream, Lib.next, Lib.reset.
-
 \ENDDOC

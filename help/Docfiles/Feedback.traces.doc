@@ -1,8 +1,8 @@
 \DOC traces
 
 \BLTYPE
-traces : unit -> {{name : string, current_value : int,
-                  default_value : int, maximum : int}} list
+traces : unit -> {name : string, current_value : int,
+                  default_value : int, maximum : int} list
 \ELTYPE
 
 \SYNOPSIS
@@ -12,7 +12,6 @@ Returns a list of registered tracing variables.
 Tracing.
 
 \DESCRIBE
-
 The function {traces} is part of the interface to a collection of
 variables that control the verboseness of various tools within the
 system. Tracing can be useful both when debugging proofs (with the
@@ -26,12 +25,12 @@ Never fails.
 {
 - traces();
 > val it =
-    [{{default = 10, name = "Subgoal number", trace_level = 10}},
-     {{default = 0, name = "Rewrite", trace_level = 0}},
-     {{default = 0, name = "Ho_Rewrite", trace_level = 0}}]
+    [{default = 10, name = "Subgoal number", trace_level = 10},
+     {default = 0, name = "Rewrite", trace_level = 0},
+     {default = 0, name = "Ho_Rewrite", trace_level = 0}]
 }
+
 
 \SEEALSO
 Feedback.register_trace, Feedback.set_trace, Feedback.reset_trace, Feedback.reset_traces, Feedback.trace.
-
 \ENDDOC

@@ -14,6 +14,8 @@ in neither {P} nor {Q}, {OR_FORALL_CONV} returns the theorem:
 {
    |- (!x. P) \/ (!x. Q) = (!x. P \/ Q)
 }
+
+
 \FAILURE
 {OR_FORALL_CONV} fails if it is applied to a term not of the form
 {(!x.P) \/ (!x.Q)}, or if it is applied to a term {(!x.P) \/ (!x.Q)}
@@ -21,5 +23,4 @@ in which the variable {x} is free in either {P} or {Q}.
 
 \SEEALSO
 Conv.FORALL_OR_CONV, Conv.LEFT_OR_FORALL_CONV, Conv.RIGHT_OR_FORALL_CONV.
-
 \ENDDOC

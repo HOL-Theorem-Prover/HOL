@@ -5,7 +5,8 @@
 \KEYWORDS
 conversion, extensionality.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Performs extensionality conversion for functions (function equality).
@@ -19,6 +20,8 @@ a call to {P_FUN_EQ_CONV "p" "f = g"} returns the theorem:
 {
    |- (f = g) = (!p. f p = g p)
 }
+
+
 \FAILURE
 {P_FUN_EQ_CONV p tm} fails if {p} is not a paired structure of variables
 or if {tm} is not an equation {f = g} where {f} and {g} are functions.  
@@ -29,5 +32,4 @@ Finally, failure also occurs if any of the variables in {p} is free in either
 
 \SEEALSO
 Conv.FUN_EQ_CONV, PairRules.PEXT.
-
 \ENDDOC

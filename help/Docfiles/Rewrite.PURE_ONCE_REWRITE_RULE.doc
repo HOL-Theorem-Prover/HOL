@@ -21,5 +21,4 @@ This rule does not fail, and it does not diverge.
 
 \SEEALSO
 Rewrite.ASM_REWRITE_RULE, Rewrite.GEN_REWRITE_RULE, Conv.ONCE_DEPTH_CONV, Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Rewrite.REWRITE_RULE.
-
 \ENDDOC

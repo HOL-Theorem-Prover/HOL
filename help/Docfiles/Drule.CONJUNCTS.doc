@@ -16,6 +16,8 @@ if the input theorem is not a conjunction.
    -----------------------------------  CONJUNCTS
     A |- t1   A |- t2   ...   A |- tn
 }
+
+
 \FAILURE
 Never fails.
 
@@ -24,12 +26,13 @@ Suppose the identifier {th} is bound to the theorem:
 {
    A |- (x /\ y) /\ z /\ w
 }
-\noindent Application of {CONJUNCTS} to {th} returns the following list of
+Application of {CONJUNCTS} to {th} returns the following list of
 theorems:
 {
    [A |- x; A |- y; A |- z; A |- w] : thm list
 }
+
+
 \SEEALSO
 Drule.BODY_CONJUNCTS, Drule.CONJ_LIST, Drule.LIST_CONJ, Thm.CONJ, Thm.CONJUNCT1, Thm.CONJUNCT2, Drule.CONJ_PAIR.
-
 \ENDDOC

@@ -14,7 +14,7 @@ in the list, {FRONT_CONJ_CONV} returns:
 {
    |- (t1 /\ ... /\ t /\ ... /\ tn) = (t /\ t1 /\ ... /\ tn)
 }
-\noindent That is, {FRONT_CONJ_CONV} proves that {t} can be moved to the
+That is, {FRONT_CONJ_CONV} proves that {t} can be moved to the
 `front' of a conjunction of several terms.
 
 \FAILURE

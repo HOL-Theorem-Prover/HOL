@@ -14,5 +14,4 @@ Never fails.
 
 \SEEALSO
 listSyntax.mk_list, listSyntax.dest_list, listSyntax.mk_cons, listSyntax.dest_cons, listSyntax.is_cons.
-
 \ENDDOC

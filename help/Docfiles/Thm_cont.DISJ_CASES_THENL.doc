@@ -14,20 +14,20 @@ theorem
 {
    |- d1 \/ d2 \/...\/ dn
 }
-\noindent produce results as follows when applied to a goal {(A ?- t)}:
+produce results as follows when applied to a goal {(A ?- t)}:
 {
     A ?- t                                A ?- t
    =========  f1 (d1 |- d1) and ... and =========  fn (dn |- dn)
     A ?- t1                              A ?- tn
 }
-\noindent then applying {DISJ_CASES_THENL [f1;...;fn] (|- d1 \/...\/ dn)}
+then applying {DISJ_CASES_THENL [f1;...;fn] (|- d1 \/...\/ dn)}
 to the goal {(A ?- t)} produces n subgoals.
 {
            A ?- t
    =======================  DISJ_CASES_THENL [f1;...;fn] (|- d1 \/...\/ dn)
     A ?- t1  ...  A ?- tn
 }
-\noindent {DISJ_CASES_THENL} is defined using iteration, hence for
+{DISJ_CASES_THENL} is defined using iteration, hence for
 theorems with more than {n} disjuncts, {dn} would itself be disjunctive.
 
 \FAILURE
@@ -42,5 +42,4 @@ different tactic-generating function is to be applied to each case.
 
 \SEEALSO
 Thm_cont.CHOOSE_THEN, Thm_cont.CONJUNCTS_THEN, Thm_cont.CONJUNCTS_THEN2, Thm_cont.DISJ_CASES_THEN, Thm_cont.DISJ_CASES_THEN2, Thm_cont.STRIP_THM_THEN.
-
 \ENDDOC

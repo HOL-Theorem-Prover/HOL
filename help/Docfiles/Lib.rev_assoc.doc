@@ -17,7 +17,7 @@ equality for the type of {y}.
 
 \FAILURE
 Fails if no matching pair is found. This will always be the case if the
-list is empty. 
+list is empty.
 
 \EXAMPLE
 {
@@ -25,8 +25,7 @@ list is empty.
 > val it = (3, 2) : (int * int)
 }
 
-\SEEALSO
-Lib.assoc, Lib.assoc1, Lib.assoc2, Lib.find, Lib.mem, Lib.tryfind, 
-Lib.exists, Lib.all.
 
+\SEEALSO
+Lib.assoc, Lib.assoc1, Lib.assoc2, Lib.find, Lib.mem, Lib.tryfind, Lib.exists, Lib.all.
 \ENDDOC

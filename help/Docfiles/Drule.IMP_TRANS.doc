@@ -16,11 +16,12 @@ the inference rule {IMP_TRANS} returns the theorem {A1 u A2 |- t1 ==> t3}.
    -----------------------------------  IMP_TRANS
          A1 u A2 |- t1 ==> t3
 }
+
+
 \FAILURE
 Fails unless the theorems are both implicative, with the consequent of the
 first being the same as the antecedent of the  second (up to alpha-conversion).
 
 \SEEALSO
 Drule.IMP_ANTISYM_RULE, Thm.SYM, Thm.TRANS.
-
 \ENDDOC

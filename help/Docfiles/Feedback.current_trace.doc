@@ -14,5 +14,4 @@ variable.
 
 \SEEALSO
 Feedback.register_trace, Feedback.reset_trace, Feedback.reset_traces, Feedback.trace, Feedback.traces.
-
 \ENDDOC

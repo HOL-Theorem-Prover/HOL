@@ -1,4 +1,4 @@
-\DOC same_const 
+\DOC same_const
 
 \TYPE {same_const : term -> term -> bool}
 
@@ -32,7 +32,7 @@ expected two constants
 ! HOL_ERR
 }
 
+
 \SEEALSO
 Term.aconv, Term.dest_thy_const, Term.match_term.
-
 \ENDDOC

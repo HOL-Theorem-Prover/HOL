@@ -17,10 +17,11 @@ universally quantified equation, {MK_ABS} returns the theorem
    --------------------------  MK_ABS
     A |- (\x. t1) = (\x. t2)
 }
+
+
 \FAILURE
 Fails unless the theorem is a (singly) universally quantified equation.
 
 \SEEALSO
 Thm.ABS, Drule.HALF_MK_ABS, Thm.MK_COMB, Drule.MK_EXISTS.
-
 \ENDDOC

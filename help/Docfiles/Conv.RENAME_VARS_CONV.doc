@@ -8,7 +8,8 @@ Renames variables underneath a binder.
 \KEYWORDS
 Alpha-conversion.
 
-\LIBRARY Conv
+\LIBRARY
+Conv
 
 \DESCRIBE
 {RENAME_VARS_CONV} takes a list of strings specifying new names for
@@ -42,6 +43,7 @@ if all of the names in the list are not distinct.
   > val it = |- (!x. ?y. P x /\ P y) = !a. ?b. P a /\ P b : thm
 }
 
+
 \USES
 Post-processing mangling of names in code implementing derived logical
 procedures to make names look more appropriate.  Changing names can
@@ -49,5 +51,4 @@ only affect the presentation of terms, not their semantics.
 
 \SEEALSO
 Term.aconv, Thm.ALPHA, SWAP_VARS_CONV.
-
 \ENDDOC

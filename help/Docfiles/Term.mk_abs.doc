@@ -13,7 +13,5 @@ of {v} in {t} thereby become bound.
 Fails if {v} is not a variable.
 
 \SEEALSO
-Term.dest_abs, Term.is_abs, boolSyntax.list_mk_abs, 
-Term.mk_var, Term.mk_const, Term.mk_comb.
-
+Term.dest_abs, Term.is_abs, boolSyntax.list_mk_abs, Term.mk_var, Term.mk_const, Term.mk_comb.
 \ENDDOC

@@ -14,6 +14,8 @@ When applied to a term of the form {(!x.P) /\ (!x.Q)}, the conversion
 {
    |- (!x.P) /\ (!x.Q) = (!x. P /\ Q)
 }
+
+
 \FAILURE
 Fails if applied to a term not of the form {(!x.P) /\ (!x.Q)}.
 
@@ -22,5 +24,4 @@ It may be easier to use higher order rewriting with {FORALL_AND_THM}.
 
 \SEEALSO
 Conv.FORALL_AND_CONV, Conv.LEFT_AND_FORALL_CONV, Conv.RIGHT_AND_FORALL_CONV.
-
 \ENDDOC

@@ -27,7 +27,7 @@ Exception raised at Term.list_mk_comb:
 incompatible types
 }
 
+
 \SEEALSO
 boolSyntax.strip_comb, Term.mk_comb.
-
 \ENDDOC

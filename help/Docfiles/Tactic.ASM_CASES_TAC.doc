@@ -9,9 +9,11 @@ term is true.
 \KEYWORDS
 tactic, case analysis.
 
-\LIBRARY bool
+\LIBRARY
+bool
 
-\STRUCTURE Tactic
+\STRUCTURE
+Tactic
 
 \DESCRIBE
 Given a term {u}, {ASM_CASES_TAC} applied to a goal produces two
@@ -19,9 +21,9 @@ subgoals, one with {u} as an assumption and one with {~u}:
 {
                A ?-  t
    ================================  ASM_CASES_TAC u
-    A u {{u}} ?- t   A u {{~u}} ?- t
+    A u {u} ?- t   A u {~u} ?- t
 }
-\noindent {ASM_CASES_TAC u} is implemented by
+{ASM_CASES_TAC u} is implemented by
 {DISJ_CASES_TAC(SPEC u EXCLUDED_MIDDLE)}, where {EXCLUDED_MIDDLE} is
 the axiom {|- !u. u \/ ~u}.
 
@@ -43,10 +45,11 @@ on {u}:
     ([([`u`],  `P u`), 
       ([`~u`], `P u`)], fn) : tactic_result
 }
+
+
 \USES
 Performing a case analysis according to whether a given term is true or false.
 
 \SEEALSO
 Tactic.BOOL_CASES_TAC, Tactic.COND_CASES_TAC, Tactic.DISJ_CASES_TAC, Thm.SPEC, Tactic.STRUCT_CASES_TAC, SingleStep.Cases, Cases_on.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC DefineSchema 
+\DOC DefineSchema
 
 \TYPE {DefineSchema : term quotation -> thm}
 
@@ -22,7 +22,7 @@ the hypotheses of the definition, and also on the hypotheses of the
 automatically proved induction theorem, but a termination proof is only
 attempted when the termination conditions have no occurrences of 
 parameters. This is because, in general, termination can only be proved
-after some of the parameters of the scheme have been instantiated. 
+after some of the parameters of the scheme have been instantiated.
 
 \FAILURE
 {DefineSchema} fails in many of the same ways as {Define}. However, it 
@@ -51,7 +51,7 @@ The following defines a schema for binary recursion.
              join (binRec A atomic join left right (left x))
                   (binRec A atomic join left right (right x)) : thm
 }
-\noindent The following defines a schema in which a termination proof is
+The following defines a schema in which a termination proof is
 attempted successfully. 
 {
    - DefineSchema `(map [] = []) /\ (map (h::t) = f h :: map t)`;
@@ -65,7 +65,7 @@ attempted successfully.
 
    > val it =  [] |- (map f [] = []) /\ (map f (h::t) = f h::map f t) : thm
 }
-\noindent The easy termination proof is attempted because the
+The easy termination proof is attempted because the
 schematic variable {f} doesn't occur in the termination conditions.
 
 \COMMENTS
@@ -75,9 +75,8 @@ arguments to the function being defined. This is the expected
 behaviour. If an argument intended as a parameter occurs on the left
 hand side in the original recursion equations, it becomes universally
 quantified in the termination conditions, which is not desirable for a
-schema. 
+schema.
 
 \SEEALSO
 TotalDefn.xDefineSchema, TotalDefn.Define, Defn.Hol_defn.
-
 \ENDDOC

@@ -18,7 +18,7 @@ tactic {CONV_TAC c} reduces a goal {g} to the subgoal {g'}.  More precisely, if
      ===============  CONV_TAC c
          A ?- g'
 }
-\noindent Note that the conversion {c} should return a theorem whose
+Note that the conversion {c} should return a theorem whose
 assumptions are also among the assumptions of the goal (normally, the
 conversion will returns a theorem with no assumptions). {CONV_TAC} does not
 fail if this is not the case, but the resulting tactic will be invalid, so the
@@ -38,12 +38,12 @@ beta-reduction, which is not expressible as a single equation, using the tactic
 {
    CONV_TAC(DEPTH_CONV BETA_CONV)
 }
-\noindent The conversion {BETA_CONV} maps a beta-redex {"(\x.u)v"} to the
+The conversion {BETA_CONV} maps a beta-redex {"(\x.u)v"} to the
 theorem
 {
    |- (\x.u)v = u[v/x]
 }
-\noindent and the ML expression {(DEPTH_CONV BETA_CONV)} evaluates to a
+and the ML expression {(DEPTH_CONV BETA_CONV)} evaluates to a
 conversion that maps a term {"t"} to the theorem {|- t=t'} where {t'} is
 obtained from {t} by beta-reducing all beta-redexes in {t}. Thus
 {CONV_TAC(DEPTH_CONV BETA_CONV)} is a tactic which reduces beta-redexes
@@ -51,5 +51,4 @@ anywhere in a goal.
 
 \SEEALSO
 Conv.CONV_RULE.
-
 \ENDDOC

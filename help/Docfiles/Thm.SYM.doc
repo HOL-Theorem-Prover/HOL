@@ -16,10 +16,11 @@ When applied to a theorem {A |- t1 = t2}, the inference rule {SYM} returns
    --------------  SYM
     A |- t2 = t1
 }
+
+
 \FAILURE
 Fails unless the theorem is equational.
 
 \SEEALSO
 Conv.GSYM, Drule.NOT_EQ_SYM, Thm.REFL.
-
 \ENDDOC

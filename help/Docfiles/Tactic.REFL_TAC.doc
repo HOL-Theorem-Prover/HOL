@@ -16,10 +16,11 @@ When applied to a goal {A ?- t = t'}, where {t} and {t'} are alpha-equivalent,
    =============  REFL_TAC
 
 }
+
+
 \FAILURE
 Fails unless the goal is an equation between alpha-equivalent terms.
 
 \SEEALSO
 Tactic.ACCEPT_TAC, Tactic.MATCH_ACCEPT_TAC, Rewrite.REWRITE_TAC.
-
 \ENDDOC

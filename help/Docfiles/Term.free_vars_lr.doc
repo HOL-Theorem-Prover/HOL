@@ -24,6 +24,7 @@ Never fails.
 > val it = [`x`, `y`, `z`] : term list
 }
 
+
 \COMMENTS
 {free_vars_lr} is not efficient for large terms with many free variables.
 More strenuous applications should use high performance set implementations
@@ -34,5 +35,4 @@ available in the Standard ML Basis Library.
 
 \SEEALSO
 Term.FVL, Term.free_vars, Term.empty_varset, Type.type_vars.
-
 \ENDDOC

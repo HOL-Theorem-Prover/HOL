@@ -10,13 +10,13 @@ rule, assumption.
 
 \DESCRIBE
 When applied to a boolean term {s} and a theorem {A |- t}, the inference
-rule {ADD_ASSUM} returns the theorem {A u {{s}} |- t}.
+rule {ADD_ASSUM} returns the theorem {A u {s} |- t}.
 {
        A |- t
    --------------  ADD_ASSUM s
-    A u {{s}} |- t
+    A u {s} |- t
 }
-\noindent {ADD_ASSUM} performs straightforward set union with the new
+{ADD_ASSUM} performs straightforward set union with the new
 assumption; it checks for identical assumptions, but not for alpha-equivalent
 ones. The position at which the new assumption is inserted into the assumption
 list should not be relied on.
@@ -26,5 +26,4 @@ Fails unless the given term has type {bool}.
 
 \SEEALSO
 Thm.ASSUME, Drule.UNDISCH.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, epsilon.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Introduces a paired epsilon term in place of a paired existential quantifier.
@@ -20,11 +21,12 @@ which {t} holds is returned as a theorem.
    ------------------  PSELECT_RULE
     A |- t[(@p.t)/p]
 }
+
+
 \FAILURE
 Fails if applied to a theorem the conclusion of which is not
 a paired existential quantifier.
 
 \SEEALSO
 Drule.SELECT_RULE, PairRules.PCHOOSE, SELECT_AX, PairRules.PSELECT_CONV, PairRules.PEXISTS_CONV, PairRules.PSELECT_ELIM, PairRules.PSELECT_INTRO.
-
 \ENDDOC

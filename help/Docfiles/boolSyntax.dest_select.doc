@@ -13,5 +13,4 @@ Fails if {M} is not an epsilon-term.
 
 \SEEALSO
 boolSyntax.mk_select, boolSyntax.is_select.
-
 \ENDDOC

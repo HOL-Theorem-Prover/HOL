@@ -16,7 +16,7 @@ from it in also instantiating the type if needed:
   -----------------------  ISPEC "t:ty'"
       A |- tm[t/x]
 }
-\noindent (where {t} is free for {x} in {tm}, and {ty'} is an instance
+(where {t} is free for {x} in {tm}, and {ty'} is an instance
 of {ty}).
 
 \FAILURE
@@ -27,5 +27,4 @@ assumptions.
 
 \SEEALSO
 Drule.INST_TY_TERM, Thm.INST_TYPE, Drule.ISPECL, Thm.SPEC, Term.match_term.
-
 \ENDDOC

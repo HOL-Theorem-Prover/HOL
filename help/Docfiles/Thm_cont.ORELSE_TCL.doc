@@ -19,5 +19,4 @@ given theorem-tactic and theorem.
 
 \SEEALSO
 Thm_cont.EVERY_TCL, Thm_cont.FIRST_TCL, Thm_cont.THEN_TCL.
-
 \ENDDOC

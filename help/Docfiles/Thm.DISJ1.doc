@@ -14,6 +14,8 @@ rule, disjunction.
    ---------------  DISJ1 (A |- t1) t2
     A |- t1 \/ t2
 }
+
+
 \FAILURE
 Fails unless the term argument is boolean.
 
@@ -23,7 +25,7 @@ Fails unless the term argument is boolean.
 > val it = |- T \/ F : thm
 }
 
+
 \SEEALSO
 Tactic.DISJ1_TAC, Thm.DISJ2, Tactic.DISJ2_TAC, Thm.DISJ_CASES.
-
 \ENDDOC

@@ -19,7 +19,7 @@ Fails if list is empty, or if an application of {f} raises an exception.
 > val it = 10 : int
 }
 
+
 \SEEALSO
 Lib.itlist, Lib.rev_itlist, Lib.itlist2, Lib.rev_itlist2.
-
 \ENDDOC

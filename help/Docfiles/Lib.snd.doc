@@ -10,10 +10,9 @@ Extracts the second component of a pair.
 
 \FAILURE
 Never fails. However, notice that {snd (x,y,z)} fails to typecheck, since
-{(x,y,z)} is not a pair. 
+{(x,y,z)} is not a pair.
 
 \EXAMPLE
-
 {
     - snd (1, "foo");
     > val it = "foo" : string
@@ -32,7 +31,7 @@ Never fails. However, notice that {snd (x,y,z)} fails to typecheck, since
     > val it = ("foo", ()) : string * unit
 }
 
+
 \SEEALSO
 Lib, Lib.fst.
-
 \ENDDOC

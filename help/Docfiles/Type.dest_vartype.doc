@@ -18,7 +18,8 @@ Fails with {dest_vartype} if the type is not a type variable.
 Exception raised at Type.dest_vartype:
 not a type variable
 }
+
+
 \SEEALSO
 Type.mk_vartype, Type.is_vartype, Type.dest_type.
-
 \ENDDOC

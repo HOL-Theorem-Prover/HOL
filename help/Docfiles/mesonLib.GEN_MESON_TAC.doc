@@ -6,9 +6,11 @@
 Performs first order proof search to prove the goal, using both the
 given theorems and the assumptions in the search.
 
-\KEYWORDS decision procedure, tactic.
+\KEYWORDS
+decision procedure, tactic.
 
-\LIBRARY mesonLib
+\LIBRARY
+mesonLib
 
 \DESCRIBE
 {GEN_MESON_TAC} is the function which provides the underlying
@@ -35,7 +37,7 @@ The approach used is iterative deepening, so with a call to
 {
   GEN_MESON_TAC mn mx inc
 }
-\noindent the algorithm looks for a proof of depth {mn}, then for one
+the algorithm looks for a proof of depth {mn}, then for one
 of depth {mn + inc}, then at depth {mn + 2 * inc} etc.  Once the depth
 gets greater than {mx}, the proof search stops.
 
@@ -44,10 +46,10 @@ gets greater than {mx}, the proof search stops.
 integer parameter without finding a proof.  Shouldn't fail otherwise.
 
 
+
 \USES
 The construction of tailored versions of {MESON_TAC} and {ASM_MESON_TAC}.
 
 \SEEALSO
 mesonLib.ASM_MESON_TAC, mesonLib.MESON_TAC.
-
 \ENDDOC

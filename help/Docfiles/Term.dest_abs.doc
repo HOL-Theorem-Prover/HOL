@@ -14,5 +14,4 @@ Fails if it is not given a lambda abstraction.
 
 \SEEALSO
 Term.mk_abs, Term.is_abs, Term.dest_var, Term.dest_const, Term.dest_comb, boolSyntax.strip_abs.
-
 \ENDDOC

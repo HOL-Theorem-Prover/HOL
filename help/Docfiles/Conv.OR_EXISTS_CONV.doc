@@ -14,10 +14,11 @@ When applied to a term of the form {(?x.P) \/ (?x.Q)}, the conversion
 {
    |- (?x.P) \/ (?x.Q) = (?x. P \/ Q)
 }
+
+
 \FAILURE
 Fails if applied to a term not of the form {(?x.P) \/ (?x.Q)}.
 
 \SEEALSO
 Conv.EXISTS_OR_CONV, Conv.LEFT_OR_EXISTS_CONV, Conv.RIGHT_OR_EXISTS_CONV.
-
 \ENDDOC

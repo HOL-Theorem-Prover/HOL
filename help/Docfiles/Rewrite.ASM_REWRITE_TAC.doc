@@ -8,7 +8,8 @@ Rewrites a goal using built-in rewrites and the goal's assumptions.
 \KEYWORDS
 tactic.
 
-\LIBRARY bool
+\LIBRARY
+bool
 
 \DESCRIBE
 {ASM_REWRITE_TAC} generates rewrites with the tautologies in {basic_rewrites},
@@ -47,7 +48,8 @@ obvious equational form, is illustrated below:
 
    val it = ([([`~P x`], `~Q x`)], fn) : tactic_result
 }
+
+
 \SEEALSO
 basic_rewrites, Rewrite.FILTER_ASM_REWRITE_TAC, Rewrite.FILTER_ONCE_ASM_REWRITE_TAC, Rewrite.GEN_REWRITE_TAC, Rewrite.ONCE_ASM_REWRITE_TAC, Rewrite.ONCE_REWRITE_TAC, Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_ASM_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC, Tactic.SUBST_TAC.
-
 \ENDDOC

@@ -18,13 +18,13 @@ theorem {A' |- ?x. t}, and a goal, {CHOOSE_THEN} applies the tactic
    =========  ttac (t[x'/x] |- t[x'/x])
     B ?- s2
 }
-\noindent then
+then
 {
     A ?- s1
    ==========  CHOOSE_THEN ttac (A' |- ?x. t)
     B ?- s2
 }
-\noindent This is invalid unless {A'} is a subset of {A}.
+This is invalid unless {A'} is a subset of {A}.
 
 \FAILURE
 Fails unless the given theorem is existentially quantified, or if the
@@ -36,24 +36,25 @@ quantified theorems. For example one might use the inbuilt theorem
 {
    LESS_ADD_1 = |- !m n. n < m ==> (?p. m = n + (p + 1))
 }
-\noindent to help solve the goal
+to help solve the goal
 {
    ?- x < y ==> 0 < y * y
 }
-\noindent by starting with the following tactic
+by starting with the following tactic
 {
    DISCH_THEN (CHOOSE_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1)
 }
-\noindent which reduces the goal to
+which reduces the goal to
 {
    ?- 0 < ((x + (p + 1)) * (x + (p + 1)))
 }
-\noindent which can then be finished off quite easily, by, for example:
+which can then be finished off quite easily, by, for example:
 {
    REWRITE_TAC[ADD_ASSOC, SYM (SPEC_ALL ADD1),
                MULT_CLAUSES, ADD_CLAUSES, LESS_0]
 }
+
+
 \SEEALSO
 Tactic.CHOOSE_TAC, Thm_cont.X_CHOOSE_THEN.
-
 \ENDDOC

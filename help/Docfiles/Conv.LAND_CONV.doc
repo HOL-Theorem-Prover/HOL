@@ -16,6 +16,7 @@ theorems of the form:
    |- f t1 t2 = f t1' t2
 }
 
+
 \FAILURE
 {LAND_CONV c tm} fails if {tm} is not an application where the rator
 of the application is in turn another application, or if {tm} has this
@@ -30,7 +31,7 @@ a term {t} to a theorem {|- t = t'}).
 > val it = |- (3 + 5) * 7 = 8 * 7 : thm
 }
 
+
 \SEEALSO
 Conv.ABS_CONV, Conv.BINOP_CONV, Conv.RAND_CONV, Conv.RATOR_CONV.
-
 \ENDDOC

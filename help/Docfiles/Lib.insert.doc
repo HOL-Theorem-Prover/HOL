@@ -1,4 +1,4 @@
-\DOC insert 
+\DOC insert
 
 \TYPE {insert ''a -> ''a list -> ''a list}
 
@@ -24,6 +24,7 @@ Never fails.
 > val it = [1, 3, 2] : int list
 }
 
+
 \COMMENTS
 In some programming situations, it is convenient to implement sets
 by lists, in which case {insert} may be helpful. However, such 
@@ -36,11 +37,8 @@ types, typically abstract ones, use the `op_' variants.
 
 One should not write code that depends on where the `list-as-set' 
 algorithms place elements in the list which is being considered as a
-set. 
+set.
 
 \SEEALSO
-Lib.op_insert, Lib.mem, Lib.mk_set, Lib.union, Lib.U, 
-Lib.set_diff, Lib.subtract, Lib.intersect, Lib.null_intersection, 
-Lib.set_eq.
-
+Lib.op_insert, Lib.mem, Lib.mk_set, Lib.union, Lib.U, Lib.set_diff, Lib.subtract, Lib.intersect, Lib.null_intersection, Lib.set_eq.
 \ENDDOC

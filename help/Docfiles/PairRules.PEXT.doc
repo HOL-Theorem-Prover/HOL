@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, extensionality.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Derives equality of functions from extensional equivalence.
@@ -19,6 +20,7 @@ the inference rule {PEXT} returns the theorem {A |- t1 = t2}.
         A |- t1 = t2
 }
 
+
 \FAILURE
 Fails if the theorem does not have the form indicated above, or
 if any of the component variables in the paired variable structure {p}
@@ -30,8 +32,7 @@ is free either of the functions {t1} or {t2}.
 > val it =  [.] |- f = g : thm
 }
 
-\SEEALSO
-Drule.EXT, Thm.AP_THM, PairRules.PETA_CONV, Conv.FUN_EQ_CONV, 
-PairRules.P_FUN_EQ_CONV.
 
+\SEEALSO
+Drule.EXT, Thm.AP_THM, PairRules.PETA_CONV, Conv.FUN_EQ_CONV, PairRules.P_FUN_EQ_CONV.
 \ENDDOC

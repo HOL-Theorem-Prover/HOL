@@ -1,4 +1,4 @@
-\DOC var_compare 
+\DOC var_compare
 
 \TYPE {var_compare : term * term -> order}
 
@@ -10,7 +10,7 @@ variable, order.
 
 \DESCRIBE
 An invocation {var_compare (v1,v2)} will return one of 
-{{{LESS, EQUAL, GREATER}}}, according to an ordering on term
+{{LESS, EQUAL, GREATER}}, according to an ordering on term
 variables. The ordering is transitive and total.
 
 \FAILURE
@@ -22,11 +22,11 @@ If {v1} and {v2} are not both variables.
 > val it = LESS : order
 }
 
+
 \COMMENTS
 Used to build high performance datastructures for dealing with sets 
 having many variables.
 
 \SEEALSO
 Term.empty_varset, Term.compare.
-
 \ENDDOC

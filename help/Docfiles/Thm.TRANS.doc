@@ -16,6 +16,8 @@ inference rule {TRANS} returns the theorem {A1 u A2 |- t1 = t3}.
    -------------------------------  TRANS
          A1 u A2 |- t1 = t3
 }
+
+
 \FAILURE
 Fails unless the theorems are equational, with the right side of the first
 being the same as the left side of the second.
@@ -29,7 +31,8 @@ being the same as the left side of the second.
    - TRANS t1 t2;
    val it = [..] |- a = c : thm
 }
+
+
 \SEEALSO
 Thm.EQ_MP, Drule.IMP_TRANS, Thm.REFL, Thm.SYM.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {emit_MESG : bool ref}
 
-\SYNOPSIS Flag controlling output of {HOL_MESG} function.
+\SYNOPSIS
+Flag controlling output of {HOL_MESG} function.
 
-\KEYWORDS messages, output
+\KEYWORDS
+messages, output
 
 \DESCRIBE
 The boolean flag {emit_MESG} is consulted by {HOL_MESG} when it attempts to
@@ -25,7 +27,7 @@ The default value of {emit_MESG} is {true}.
 > val it = () : unit
 }
 
+
 \SEEALSO
 Feedback, Feedback.HOL_MESG, Feedback.emit_ERR, Feedback.emit_WARNING.
-
 \ENDDOC

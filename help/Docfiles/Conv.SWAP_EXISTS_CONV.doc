@@ -14,6 +14,8 @@ When applied to a term argument of the form {?x y. P}, the conversion
 {
    |- (?x y. P) = (?y x. P)
 }
+
+
 \FAILURE
 {SWAP_EXISTS_CONV} fails if applied to a term that is not of the form
 {?x y. P}.

@@ -13,5 +13,4 @@ Fails if the terms in the list are not variables.
 
 \SEEALSO
 boolSyntax.strip_abs, Term.mk_abs.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {exn_to_string : exn -> string}
 
-\SYNOPSIS Map an exception into a string
+\SYNOPSIS
+Map an exception into a string
 
-\KEYWORDS exception, formatting
+\KEYWORDS
+exception, formatting
 
 \DESCRIBE
 The function {exn_to_string} maps an exception to a string. However,
@@ -31,7 +33,7 @@ incomprehensible input
 > val it = () : unit
 }
 
+
 \SEEALSO
 Feedback, Feedback.HOL_ERR, Feedback.ERR_to_string.
-
 \ENDDOC

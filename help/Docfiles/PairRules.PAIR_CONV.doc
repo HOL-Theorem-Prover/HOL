@@ -5,7 +5,8 @@
 \KEYWORDS
 conversional.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Applies a conversion to all the components of a pair structure.
@@ -23,5 +24,4 @@ if the conversion {c} would fail for any of the components of {t}.
 
 \SEEALSO
 Conv.RAND_CONV, Conv.RATOR_CONV.
-
 \ENDDOC

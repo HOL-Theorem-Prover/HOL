@@ -1,4 +1,4 @@
-\DOC tag 
+\DOC tag
 
 \TYPE {tag : thm -> tag}
 
@@ -25,6 +25,7 @@ Never fails.
 - Thm.tag NOT_FORALL_THM;
 > val it = Kerneltypes.TAG([], []) : tag
 }
+
 
 \SEEALSO
 Thm.mk_oracle_thm, Tag.read, Tag.merge, Tag.pp_tag.

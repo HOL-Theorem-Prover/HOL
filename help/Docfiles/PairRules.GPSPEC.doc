@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, genvars.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Specializes the conclusion of a theorem with unique pairs.
@@ -20,6 +21,8 @@ made up of distinct variables , chosen by {genvar}.
    -------------------------  GPSPEC
     A |- t[g1/p1]...[gn/pn]
 }
+
+
 \FAILURE
 Never fails.
 
@@ -29,5 +32,4 @@ theorems while avoiding using any variables that may be present elsewhere.
 
 \SEEALSO
 Drule.GSPEC, PairRules.PGEN, PairRules.PGENL, Term.genvar, PGEN_ALL, PairRules.PGEN_TAC, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC, PairRules.PSPEC_PAIR.
-
 \ENDDOC

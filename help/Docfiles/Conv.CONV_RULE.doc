@@ -18,7 +18,7 @@ theorem {|- t}.  More precisely, if {c "t"} returns {A' |- t = t'}, then:
    --------------  CONV_RULE c
     A u A' |- t'
 }
-\noindent Note that if the conversion {c} returns a theorem with assumptions,
+Note that if the conversion {c} returns a theorem with assumptions,
 then the resulting inference rule adds these to the assumptions of the
 theorem it returns.
 
@@ -30,5 +30,4 @@ function returned by {CONV_RULE c} will also fail if the ML function
 
 \SEEALSO
 Tactic.CONV_TAC, Conv.RIGHT_CONV_RULE.
-
 \ENDDOC

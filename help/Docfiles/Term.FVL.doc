@@ -1,4 +1,4 @@
-\DOC FVL 
+\DOC FVL
 
 \TYPE {FVL : term list -> term set -> term set}
 
@@ -24,11 +24,11 @@ Never fails.
 > val it = [`v1`, `v2`, `v3`] : term list
 }
 
+
 \COMMENTS
 Preferable to {free_varsl} when the number of free variables
 becomes large.
 
 \SEEALSO
 HOLset, Term.empty_varset, Term.free_varsl, Term.free_vars.
-
 \ENDDOC

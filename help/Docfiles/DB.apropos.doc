@@ -1,4 +1,4 @@
-\DOC apropos 
+\DOC apropos
 
 \TYPE {apropos : term -> data list}
 
@@ -27,6 +27,7 @@ Never fails.
   ((string * string) * (thm * class)) list
 }
 
+
 \COMMENTS
 The notion of matching is a restricted version of higher-order matching.
 
@@ -34,5 +35,4 @@ For finer control over the theories searched, use {DB.match}.
 
 \SEEALSO
 DB.match, DB.find.
-
 \ENDDOC

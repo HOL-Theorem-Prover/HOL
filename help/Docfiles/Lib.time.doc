@@ -1,4 +1,4 @@
-\DOC time 
+\DOC time
 
 \TYPE {time : ('a -> 'b) -> 'a -> 'b}
 
@@ -37,7 +37,7 @@ runtime: 0.771s,    gctime: 0.121s,     systime: 0.771s.
    199, ...] : int list
 }
 
+
 \SEEALSO
 Lib.start_time, Lib.end_time.
-
 \ENDDOC

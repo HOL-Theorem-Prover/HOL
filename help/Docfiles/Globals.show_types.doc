@@ -28,6 +28,7 @@ Never fails.
 > val it = |- !(t :bool). (t = T) \/ (t = F) : thm
 }
 
+
 \COMMENTS
 It is possible to construct an abstraction in which the bound variable
 has the same name but a different type to a variable in the body. In
@@ -38,5 +39,4 @@ not printing of types is enabled.
 
 \SEEALSO
 Parse.print_term.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC genvars 
+\DOC genvars
 
 \TYPE {genvars : hol_type -> int -> term list}
 
@@ -21,7 +21,7 @@ Never fails. If {n} is less-than-or-equal to zero, the empty list is returned.
 > val it = [`%%genvar%%1558`, `%%genvar%%1559`, `%%genvar%%1560`] : term list
 }
 
+
 \SEEALSO
 Term.genvar, Term.mk_var.
-
 \ENDDOC

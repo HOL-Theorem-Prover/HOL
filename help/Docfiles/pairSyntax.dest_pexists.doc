@@ -2,7 +2,8 @@
 
 \TYPE {dest_pexists : term -> term * term}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Breaks apart paired existential quantifiers into the bound pair and the body.
@@ -15,7 +16,5 @@ The application of {dest_pexists} to {?pair. t} returns {(pair,t)}.
 Fails with {dest_pexists} if term is not a paired existential quantification.
 
 \SEEALSO
-boolSyntax.dest_exists, pairSyntax.mk_pexists, pairSyntax.is_pexists, 
-pairSyntax.strip_pexists.
-
+boolSyntax.dest_exists, pairSyntax.mk_pexists, pairSyntax.is_pexists, pairSyntax.strip_pexists.
 \ENDDOC

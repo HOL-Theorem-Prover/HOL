@@ -27,7 +27,7 @@ Given the following primitive recursion theorem for labelled binary trees:
           (!a. fn (LEAF a) = f0 a) /\
           !a0 a1. fn (NODE a0 a1) = f1 a0 a1 (fn a0) (fn a1) : thm
 }
-\noindent {prove_rec_fn_exists} can be used to prove the existence of primitive
+{prove_rec_fn_exists} can be used to prove the existence of primitive
 recursive functions over binary trees.  Suppose the value of {th} is this
 theorem.  Then the existence of a recursive function {Leaves}, which computes
 the number of leaves in a binary tree, can be proved as shown below:
@@ -40,10 +40,9 @@ the number of leaves in a binary tree, can be proved as shown below:
             (!x. Leaves (LEAF x) = 1) /\
             !t1 t2. Leaves (NODE t1 t2) = Leaves t1 + Leaves t2 : thm
 }
-\noindent The result should be compared with the example given under
+The result should be compared with the example given under
 {new_recursive_definition}.
 
 \SEEALSO
 Datatype.define_type, Prim_rec.new_recursive_definition.
-
 \ENDDOC

@@ -8,7 +8,8 @@ Removes parsing/pretty-printing rules from the global grammar.
 \KEYWORDS
 Parsing, pretty-printing
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 Calling {remove_rules_for_term s} removes all those rules (if any) in
@@ -31,7 +32,7 @@ this function:
    - t;
    > val it = `! (\x. P x /\ ~Q x)` : term
 }
-\noindent Similarly, one can remove the two rules for conditional
+Similarly, one can remove the two rules for conditional
 expressions and see the raw syntax as follows:
 {
    - val t = Term`if p then q else r`;
@@ -43,6 +44,7 @@ expressions and see the raw syntax as follows:
    > val it = `COND p q r` : term
 }
 
+
 \COMMENTS
 There is a companion {temp_remove_rules_for_term} function,
 which has the same effect on the global grammar, but which does not
@@ -52,5 +54,4 @@ cause this effect to persist when the current theory is exported.
 
 \SEEALSO
 Parse.remove_termtok.
-
 \ENDDOC

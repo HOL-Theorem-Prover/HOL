@@ -1,4 +1,4 @@
-\DOC pp_tag 
+\DOC pp_tag
 
 \TYPE {pp_tag : ppstream -> tag -> unit}
 
@@ -28,11 +28,11 @@ Never fails.
 > val it = () : unit
 }
 
+
 \COMMENTS
 In MoscowML, {Meta.installPP} won't install {pp_tag} in the top-level
 loop.
 
 \SEEALSO
 Parse.pp_thm.
-
 \ENDDOC

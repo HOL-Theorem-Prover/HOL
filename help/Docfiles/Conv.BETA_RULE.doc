@@ -17,6 +17,8 @@ where necessary to avoid free variable capture.
    ----------------------------  BETA_RULE
       A |- ....(s1[s2/x])....
 }
+
+
 \FAILURE
 Never fails, but will have no effect if there are no beta-redexes.
 
@@ -36,7 +38,8 @@ renaming:
    - BETA_RULE x;
    val it = [f = (\x y. x + y)y] |- f = (\y'. y + y') : thm
 }
+
+
 \SEEALSO
 Thm.BETA_CONV, Tactic.BETA_TAC, PairedLambda.PAIRED_BETA_CONV, Drule.RIGHT_BETA.
-
 \ENDDOC

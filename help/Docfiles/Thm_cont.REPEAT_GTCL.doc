@@ -13,7 +13,7 @@ When applied to a theorem-tactical, a theorem-tactic, a theorem and a goal:
 {
    REPEAT_GTCL ttl ttac th goal
 }
-\noindent {REPEAT_GTCL} repeatedly modifies the theorem according to
+{REPEAT_GTCL} repeatedly modifies the theorem according to
 {ttl} till the result of handing it to {ttac} and applying it to the goal
 fails (this may be no times at all).
 
@@ -28,7 +28,8 @@ onto the assumption list:
 {
    REPEAT_GTCL (IMP_RES_THEN ASSUME_TAC) th
 }
+
+
 \SEEALSO
 Thm_cont.REPEAT_TCL, Thm_cont.THEN_TCL.
-
 \ENDDOC

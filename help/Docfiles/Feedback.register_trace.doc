@@ -22,5 +22,4 @@ less than zero.
 
 \SEEALSO
 Feedback, Feedback.register_btrace, Feedback.register_ftrace, Feedback.reset_trace, Feedback.reset_traces, Feedback.trace, Feedback.traces.
-
 \ENDDOC

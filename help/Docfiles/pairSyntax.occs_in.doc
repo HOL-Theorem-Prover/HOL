@@ -2,7 +2,8 @@
 
 \TYPE {occs_in : (term -> term -> bool)}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Occurrence check for bound variables.
@@ -19,5 +20,4 @@ Fails of {p} is not a paired structure of variables.
 
 \SEEALSO
 Term.free_in, hol88Lib.frees, hol88Lib.freesl, thm_frees.
-
 \ENDDOC

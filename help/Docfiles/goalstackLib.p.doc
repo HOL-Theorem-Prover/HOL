@@ -18,5 +18,4 @@ Examining the proof state during an interactive proof session.
 
 \SEEALSO
 goalstackLib.b, goalstackLib.backup, backup_limit, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, get_state, print_state, goalstackLib.r, rotate, save_top_thm, goalstackLib.set_goal, set_state, goalstackLib.top_goal, goalstackLib.top_thm.
-
 \ENDDOC

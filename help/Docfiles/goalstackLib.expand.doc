@@ -88,7 +88,7 @@ Goal proved.
     Initial goal proved.
     |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3]) : goalstack
 }
-\noindent In the following example an invalid tactic is used. It is invalid
+In the following example an invalid tactic is used. It is invalid
 because it assumes something that is not on the assumption list of the goal.
 The justification adds this assumption to the assumption list so the
 justification would not prove the goal that was set.
@@ -110,15 +110,11 @@ Invalid tactic
 ! Uncaught exception: 
 ! HOL_ERR
 }
+
+
 \USES
 Doing a step in an interactive goal-directed proof.
 
 \SEEALSO
-goalstackLib.b, goalstackLib.backup, 
-goalstackLib.e, goalstackLib.expandf, 
-goalstackLib.g, goalstackLib.set_goal, 
-goalstackLib.p, 
-goalstackLib.r, goalstackLib.rotate,
-goalstackLib.top_goal, goalstackLib.top_thm, Tactical.VALID.
-
+goalstackLib.b, goalstackLib.backup, goalstackLib.e, goalstackLib.expandf, goalstackLib.g, goalstackLib.set_goal, goalstackLib.p, goalstackLib.r, goalstackLib.rotate, goalstackLib.top_goal, goalstackLib.top_thm, Tactical.VALID.
 \ENDDOC

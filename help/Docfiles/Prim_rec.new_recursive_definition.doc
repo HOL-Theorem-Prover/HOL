@@ -2,14 +2,13 @@
 
 \BLTYPE
 new_recursive_definition :
-{{name:string,def:term,rec_axiom:thm}} -> thm
+{name:string,def:term,rec_axiom:thm} -> thm
 \ELTYPE
 
 \SYNOPSIS
 Defines a primitive recursive function over a concrete recursive type.
 
 \DESCRIBE
-
 {new_recursive_definition} provides a facility for defining primitive
 recursive functions on arbitrary concrete recursive types. {name} is a
 name under which the resulting definition will be saved in the current
@@ -34,20 +33,20 @@ conjunction of (optionally universally-quantified) clauses of the form:
                              .
    fn v1 ... (Cn vsn) ... vm  =  bodyn
 }
-\noindent where the variables {v1}, ..., {vm}, {vs} are distinct in each
+where the variables {v1}, ..., {vm}, {vs} are distinct in each
 clause, and where in the {i}th clause {fn} appears (free) in {bodyi} only
 as part of an application of the form:
 {
    fn t1 ... v ... tm
 }
-\noindent in which the variable {v} of type {ty} also occurs among the
+in which the variable {v} of type {ty} also occurs among the
 variables {vsi}.
 
 If {tm} is a conjunction of clauses, as described above, then evaluating:
 {
-   new_recursive_definition{{name=name, rec_axiom=th,def=tm}}
+   new_recursive_definition{name=name, rec_axiom=th,def=tm}
 }
-\noindent automatically proves the existence of a function {fn} that satisfies
+automatically proves the existence of a function {fn} that satisfies
 the defining equations supplied as the fourth argument, and then declares a new
 constant in the current theory with this definition as its specification. This
 constant specification is returned as a theorem and is saved in the current
@@ -59,7 +58,7 @@ constructor is omitted, then the value of {fn} at that constructor:
 {
    fn v1 ... (Ci vsi) ... vn
 }
-\noindent is left unspecified ({fn}, however, is still a total function).
+is left unspecified ({fn}, however, is still a total function).
 
 \FAILURE
 A call to {new_recursive_definition} fails if the supplied theorem is not a
@@ -76,21 +75,21 @@ Given the following primitive recursion theorem for labelled binary trees:
         (!x. fn(LEAF x) = f0 x) /\
         (!b1 b2. fn(NODE b1 b2) = f1(fn b1)(fn b2)b1 b2)
 }
-\noindent {new_recursive_definition} can be used to define primitive recursive
+{new_recursive_definition} can be used to define primitive recursive
 functions over binary trees.  Suppose the value of {th} is this theorem.  Then
 a recursive function {Leaves}, which computes the number of leaves in a
 binary tree, can be defined recursively as shown below:
 {
    - val Leaves = new_recursive_definition
-           {{name = "Leaves",
+           {name = "Leaves",
             rec_axiom = th,
             def= --`(Leaves (LEAF (x:'a)) = 1) /\
-                    (Leaves (NODE t1 t2) = (Leaves t1) + (Leaves t2))`--}};
+                    (Leaves (NODE t1 t2) = (Leaves t1) + (Leaves t2))`--};
     > val Leaves =
         |- (!x. Leaves (LEAF x) = 1) /\
            !t1 t2. Leaves (NODE t1 t2) = Leaves t1 + Leaves t2 : thm
 }
-\noindent The result is a theorem which states that the constant {Leaves}
+The result is a theorem which states that the constant {Leaves}
 satisfies the primitive-recursive defining equations supplied by the user.
 
 The function defined using {new_recursive_definition} need not, in fact, be
@@ -99,14 +98,14 @@ binary trees which are leaves, but is false of the internal nodes in a binary
 tree:
 {
    - val IsLeaf = new_recursive_definition
-           {{name = "IsLeaf",
+           {name = "IsLeaf",
             rec_axiom = th,
             def = --`(IsLeaf (NODE t1 t2) = F) /\
-                     (IsLeaf (LEAF (x:'a)) = T)`--}};
+                     (IsLeaf (LEAF (x:'a)) = T)`--};
 > val IsLeaf = |- (!t1 t2. IsLeaf (NODE t1 t2) = F) /\ 
                   !x. IsLeaf (LEAF x) = T : thm
 }
-\noindent Note that the equations defining a (recursive or non-recursive)
+Note that the equations defining a (recursive or non-recursive)
 function on binary trees by cases can be given in either order.  Here, the
 {NODE} case is given first, and the {LEAF} case second.  The reverse order was
 used in the above definition of {Leaves}.
@@ -118,35 +117,34 @@ of a function {Label} which extracts the label from a leaf node.  The value of
 {Label} applied to an internal node is left unspecified:
 {
    - val Label = new_recursive_definition
-                   {{name = "Label",
+                   {name = "Label",
                     rec_axiom = th,
-                     def = --`Label (LEAF (x:'a)) = x`--}};
+                     def = --`Label (LEAF (x:'a)) = x`--};
    > val Label = |- !x. Label (LEAF x) = x : thm
 }
-\noindent Curried functions can also be defined, and the recursion can be on
+Curried functions can also be defined, and the recursion can be on
 any argument.  The next definition defines an infix function {<<} which
 expresses the idea that one tree is a proper subtree of another.
 {
    - val _ = set_fixity ("<<", Infixl 231);
 
    - val Subtree = new_recursive_definition
-           {{name = "Subtree",
+           {name = "Subtree",
             rec_axiom = th,
             def = --`($<< (t:'a bintree) (LEAF (x:'a)) = F) /\
                      ($<< t (NODE t1 t2) = (t = t1) \/
                                            (t = t2) \/
                                            ($<< t t1) \/
-                                           ($<< t t2))`--}};
+                                           ($<< t t2))`--};
    > val Subtree =
        |- (!t x. t << LEAF x = F) /\
           !t t1 t2.
             t << NODE t1 t2 = (t = t1) \/ (t = t2) \/ 
                               (t << t1) \/ (t << t2) : thm
 }
-\noindent Note that the fixity of the identifier {<<} is set independently of
+Note that the fixity of the identifier {<<} is set independently of
 the definition.
 
 \SEEALSO
 Hol_datatype, Prim_rec.prove_rec_fn_exists, TotalDefn.Define, Parse.set_fixity.
-
 \ENDDOC

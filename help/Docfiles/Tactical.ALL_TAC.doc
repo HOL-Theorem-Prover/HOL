@@ -20,17 +20,16 @@ The tactic
 {
    INDUCT_THEN numTheory.INDUCTION THENL [ALL_TAC, tac]
 }
-\noindent applied to a goal {g}, applies {INDUCT_THEN numTheory.INDUCTION}
+applied to a goal {g}, applies {INDUCT_THEN numTheory.INDUCTION}
 to {g} to give a basis and step subgoal; it then returns the
 basis unchanged, along with the subgoals produced by applying {tac} to the
 step.
 
-\USES 
+\USES
 Used to write tacticals such as {REPEAT}. Also, it is often used
 as a place-holder in building compound tactics using tacticals such as
 {THENL}.
 
 \SEEALSO
 Prim_rec.INDUCT_THEN, Tactical.NO_TAC, Tactical.REPEAT, Tactical.THENL.
-
 \ENDDOC

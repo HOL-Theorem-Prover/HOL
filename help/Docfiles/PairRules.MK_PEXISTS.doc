@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, quantifier, existential, equality.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Existentially quantifies both sides of a universally quantified
@@ -19,10 +20,11 @@ returns the theorem {A |- (?x. t1) = (?x. t2)}.
    --------------------------  MK_PEXISTS
     A |- (?p. t1) = (?p. t2)
 }
+
+
 \FAILURE
 Fails unless the theorem is a singly paired universally quantified equation.
 
 \SEEALSO
 PairRules.PEXISTS_EQ, PairRules.PGEN, PairRules.LIST_MK_PEXISTS, PairRules.MK_PABS.
-
 \ENDDOC

@@ -14,7 +14,7 @@ The tactic
 {
    PAT_ASSUM tm ttac ([A1, ..., An], g)
 }
-\noindent finds the first {Ai} which matches {tm} using higher-order
+finds the first {Ai} which matches {tm} using higher-order
 pattern matching in the sense of {ho_match_term}.  Unless there is just
 one match otherwise, free variables in the pattern that are also free
 in the assumptions or the goal must not be bound by the match.  In
@@ -30,7 +30,7 @@ The tactic
 {
    PAT_ASSUM (Term`x:num = y`) SUBST_ALL_TAC
 }
-\noindent searches the assumptions for an equality over numbers and
+searches the assumptions for an equality over numbers and
 causes its right hand side to be substituted for its left hand side
 throughout the goal and assumptions.  It also removes the equality
 from the assumption list.  Trying to use {FIRST_ASSUM} above (i.e.,
@@ -41,19 +41,18 @@ assumption list of the form {x = x}.
 
 If one is trying to solve the goal
 {
-   {{ !x. f x = g (x + 1), !x. g x = f0 (f x)}} ?- f x = g y
+   { !x. f x = g (x + 1), !x. g x = f0 (f x)} ?- f x = g y
 }
-\noindent rewriting with the assumptions directly will cause a loop.
+rewriting with the assumptions directly will cause a loop.
 Instead, one might want to rewrite with the formula for {f}.  This can
 be done in an assumption-order-indepedent way with
 {
    PAT_ASSUM (Term`!x. f x = f' x`) (fn th => REWRITE_TAC [th])
 }
-\noindent This use of the tactic exploits higher order matching to
+This use of the tactic exploits higher order matching to
 match the RHS of the assumption, and the fact that {f} is effectively
 a local constant in the goal to find the correct assumption.
 
 \SEEALSO
 Tactical.ASSUM_LIST, Tactical.EVERY, Tactical.PAT_ASSUM, Tactical.EVERY_ASSUM, Tactical.FIRST, Tactical.MAP_EVERY, Tactical.MAP_FIRST, Thm_cont.UNDISCH_THEN, Term.match_term, ho_match_term.
-
 \ENDDOC

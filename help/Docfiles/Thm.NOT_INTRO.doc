@@ -16,11 +16,12 @@ returns the theorem {A |- ~t}.
    --------------  NOT_INTRO
       A |- ~t
 }
+
+
 \FAILURE
 Fails unless the theorem has an implicative conclusion with {F}
 as the consequent.
 
 \SEEALSO
 Drule.IMP_ELIM, Thm.NOT_ELIM.
-
 \ENDDOC

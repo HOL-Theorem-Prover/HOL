@@ -17,6 +17,8 @@ and a goal {A ?- t}, the tactic {SPEC_TAC} generalizes the goal to
    =================  SPEC_TAC (u,x)
     A ?- !x. t[x/u]
 }
+
+
 \FAILURE
 Fails unless {x} is a variable with the same type as {u}.
 
@@ -25,7 +27,5 @@ Removing unnecessary speciality in a goal, particularly as a prelude to
 an inductive proof.
 
 \SEEALSO
-Thm.GEN, Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, 
-Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.STRIP_TAC.
-
+Thm.GEN, Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.STRIP_TAC.
 \ENDDOC

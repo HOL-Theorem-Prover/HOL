@@ -24,5 +24,4 @@ theorem {|- t = t'}).
 
 \SEEALSO
 Conv.EVERY_CONV.
-
 \ENDDOC

@@ -14,9 +14,9 @@ assumptions, provided its parameter does not occur in the antecedent.
 {
     A ?- u ==> v
    ==============  FILTER_DISCH_TAC w
-    A u {{u}} ?- v
+    A u {u} ?- v
 }
-\noindent Note that {DISCH_TAC} treats {~u} as {u ==> F}. Unlike
+Note that {DISCH_TAC} treats {~u} as {u ==> F}. Unlike
 {DISCH_TAC}, the antecedent will be {STRIP}ed into its various components
 before being {ASSUME}d. This stripping includes generating multiple goals for
 case-analysis of disjunctions. Also, unlike {DISCH_TAC}, should any component
@@ -34,5 +34,4 @@ or a negation.
 
 \SEEALSO
 Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Thm_cont.FILTER_DISCH_THEN, Drule.NEG_DISCH, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
-
 \ENDDOC

@@ -18,6 +18,8 @@ the variable {x} is not free in any of the assumptions.
    ------------------------  EXISTS_EQ "x"      [where x is not free in A]
     A |- (?x.t1) = (?x.t2)
 }
+
+
 \FAILURE
 Fails unless the theorem is equational with both sides having type {bool},
 or if the term is not a variable, or if the variable to be quantified
@@ -25,5 +27,4 @@ over is free in any of the assumptions.
 
 \SEEALSO
 Thm.AP_TERM, Drule.EXISTS_IMP, Drule.FORALL_EQ, Drule.MK_EXISTS, Drule.SELECT_EQ.
-
 \ENDDOC

@@ -19,7 +19,7 @@ Exception raised at Type.mk_vartype:
 incorrect syntax
 }
 
+
 \SEEALSO
 Type.dest_vartype, Type.is_vartype, Type.mk_type.
-
 \ENDDOC

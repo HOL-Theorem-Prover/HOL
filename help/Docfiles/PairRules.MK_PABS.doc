@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, abstraction, equality.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Abstracts both sides of an equation.
@@ -19,10 +20,11 @@ paired universally quantified equation, {MK_PABS} returns the theorem
    --------------------------  MK_PABS
     A |- (\p. t1) = (\p. t2)
 }
+
+
 \FAILURE
 Fails unless the theorem is a (singly) paired universally quantified equation.
 
 \SEEALSO
 Drule.MK_ABS, PairRules.PABS, PairRules.HALF_MK_PABS, PairRules.MK_PEXISTS.
-
 \ENDDOC

@@ -1,9 +1,9 @@
-\DOC set_eq 
+\DOC set_eq
 
 \TYPE {set_eq : ''a list -> ''a list -> bool}
 
 \SYNOPSIS
-Tells whether two lists have the same elements. 
+Tells whether two lists have the same elements.
 
 \KEYWORDS
 set, list, eqtype.
@@ -25,7 +25,8 @@ Never fails.
 > val it = true : bool
 }
 
-\COMMENTS 
+
+\COMMENTS
 High performance finite set operations may be found in the ML Standard
 Basis Library.
 
@@ -35,7 +36,5 @@ allow equality. For other types, typically abstract ones,
 use the `op_' variants.
 
 \SEEALSO
-Lib.op_set_eq, Lib.intersect, Lib.union, Lib.U, Lib.mk_set, 
-Lib.mem, Lib.insert, Lib.set_diff.
-
+Lib.op_set_eq, Lib.intersect, Lib.union, Lib.U, Lib.mk_set, Lib.mem, Lib.insert, Lib.set_diff.
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {partial : exn -> ('a -> 'b option) -> 'a -> 'b}
 
-\SYNOPSIS Converts a total function to a partial function.
+\SYNOPSIS
+Converts a total function to a partial function.
 
-\KEYWORDS Exception, error handling, partial function.
+\KEYWORDS
+Exception, error handling, partial function.
 
 \DESCRIBE
 In ML, there are two main ways for a function to signal that it has been
@@ -23,7 +25,7 @@ to {f}.
 \FAILURE
 When application of the second argument to the third argument returns {NONE}.
 
-\EXAMPLE 
+\EXAMPLE
 {
 - Int.fromString "foo";
 > val it = NONE : int option
@@ -36,7 +38,7 @@ When application of the second argument to the third argument returns {NONE}.
 > val it = NONE : int option
 }
 
+
 \SEEALSO
 Lib.total.
-
 \ENDDOC

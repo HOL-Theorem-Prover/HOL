@@ -13,5 +13,4 @@ Fails if the list is empty.
 
 \SEEALSO
 Lib.last, Lib.el, Lib.front_last.
-
 \ENDDOC

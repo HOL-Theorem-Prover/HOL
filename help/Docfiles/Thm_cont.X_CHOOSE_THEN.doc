@@ -19,16 +19,18 @@ applied to this theorem produces results as follows when applied to a
 goal {(A ?- t)}:
 {
     A ?- t
-   =========  f ({{w[y/x]}} |- w[y/x])
+   =========  f ({w[y/x]} |- w[y/x])
     A ?- t1
 }
-\noindent then applying {(X_CHOOSE_THEN "y" f (A1 |- ?x. w))} to the
+then applying {(X_CHOOSE_THEN "y" f (A1 |- ?x. w))} to the
 goal {(A ?- t)} produces the subgoal:
 {
     A ?- t
    =========  X_CHOOSE_THEN y f (A1 |- ?x. w)
     A ?- t1         (y not free anywhere)
 }
+
+
 \FAILURE
 Fails if the theorem's conclusion is not existentially quantified, or if
 the first argument is not a variable.  Failures may arise in the
@@ -40,18 +42,19 @@ goal.
 \EXAMPLE
 Given a goal of the form
 {
-   {{n < m}} ?- ?x. m = n + (x + 1)
+   {n < m} ?- ?x. m = n + (x + 1)
 }
-\noindent the following theorem may be applied:
+the following theorem may be applied:
 {
    th = [n < m] |- ?p. m = n + p
 }
-\noindent by the tactic {(X_CHOOSE_THEN (Term`q:num`) SUBST1_TAC th)} giving
+by the tactic {(X_CHOOSE_THEN (Term`q:num`) SUBST1_TAC th)} giving
 the subgoal:
 {
-   {{n < m}} ?- ?x. n + q = n + (x + 1)
+   {n < m} ?- ?x. n + q = n + (x + 1)
 }
+
+
 \SEEALSO
 Thm.CHOOSE, Thm_cont.CHOOSE_THEN, Thm_cont.CONJUNCTS_THEN, Thm_cont.CONJUNCTS_THEN2, Thm_cont.DISJ_CASES_THEN, Thm_cont.DISJ_CASES_THEN2, Thm_cont.DISJ_CASES_THENL, Thm_cont.STRIP_THM_THEN, Tactic.X_CHOOSE_TAC.
-
 \ENDDOC

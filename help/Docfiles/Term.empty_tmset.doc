@@ -1,4 +1,4 @@
-\DOC empty_tmset 
+\DOC empty_tmset
 
 \TYPE {empty_tmset : term set}
 
@@ -17,6 +17,4 @@ Used as a starting point for building sets of terms.
 
 \SEEALSO
 Term.compare, Term.empty_varset.
-
-
 \ENDDOC

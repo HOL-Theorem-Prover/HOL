@@ -5,7 +5,8 @@
 \KEYWORDS
 tactic.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Splits a goal by eliminating one outermost connective.
@@ -20,7 +21,7 @@ quantifier. Note that {PSTRIP_TAC} will strip off paired quantifications.
    ==============  PSTRIP_TAC
     A ?- u[p'/p]
 }
-\noindent where {p'} is a primed variant of the pair {p} that does not contain
+where {p'} is a primed variant of the pair {p} that does not contain
 any variables that appear free in the assumptions {A}.  If {t} is a
 conjunction, then {PSTRIP_TAC} simply splits the conjunction into two subgoals:
 {
@@ -28,19 +29,19 @@ conjunction, then {PSTRIP_TAC} simply splits the conjunction into two subgoals:
    =================  PSTRIP_TAC
     A ?- v   A ?- w
 }
-\noindent If {t} is an implication, {PSTRIP_TAC} moves the antecedent into the
+If {t} is an implication, {PSTRIP_TAC} moves the antecedent into the
 assumptions, stripping conjunctions, disjunctions and existential
 quantifiers according to the following rules:
 {
     A ?- v1 /\ ... /\ vn ==> v            A ?- v1 \/ ... \/ vn ==> v
    ============================        =================================
-       A u {{v1,...,vn}} ?- v             A u {{v1}} ?- v ... A u {{vn}} ?- v
+       A u {v1,...,vn} ?- v             A u {v1} ?- v ... A u {vn} ?- v
 
      A ?- (?p. w) ==> v
    =====================
-    A u {{w[p'/p]}} ?- v
+    A u {w[p'/p]} ?- v
 }
-\noindent where {p'} is a primed variant of the pair {p} that does not appear
+where {p'} is a primed variant of the pair {p} that does not appear
 free in {A}. Finally, a negation {~t} is treated as the implication {t ==> F}.
 
 \FAILURE
@@ -53,5 +54,4 @@ is {REPEAT PSTRIP_TAC} to split the goal up into manageable pieces.
 
 \SEEALSO
 PairRules.PGEN_TAC, PairRules.PSTRIP_GOAL_THEN, PairRules.FILTER_PSTRIP_THEN, Tactic.STRIP_TAC, PairRules.FILTER_PSTRIP_TAC.
-
 \ENDDOC

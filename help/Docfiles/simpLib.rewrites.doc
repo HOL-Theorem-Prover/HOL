@@ -6,9 +6,11 @@
 Creates an {ssdata} value consisting of the given theorems as
 rewrites.
 
-\KEYWORDS simplification
+\KEYWORDS
+simplification
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \FAILURE
 Never fails.
@@ -19,12 +21,11 @@ write
 {
    SIMP_CONV (hol_ss ++ rewrites thmlist) []
 }
-\noindent More plausibly, {rewrites} can be used to create commonly
+More plausibly, {rewrites} can be used to create commonly
 used {ssdata} values containing a great number of rewrites.  This is
 how the basic system's various {ssdata} values are constructed where
 those values consist only of rewrite theorems.
 
 \SEEALSO
 simpLib.++, simpLib.mk_simpset, simpLib.SIMPSET, simpLib.SIMP_CONV.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC delta_apply 
+\DOC delta_apply
 
 \TYPE {delta_apply : ('a -> 'a delta) -> 'a -> 'a}
 
@@ -23,7 +23,7 @@ replacement function is therefore
 {
    - fun ireplace i = if i mod 2 = 0 then DIFF (i+1) else SAME
 }
-\noindent Applying {ireplace} to an arbitrary integer would yield
+Applying {ireplace} to an arbitrary integer would yield
 an element of the {int delta} type. It's not seemingly useful, but it
 becomes useful when used with similar functions for type operators.
 Then a delta function for pairs of integers is built by 
@@ -38,7 +38,7 @@ pairs of integers is built by applying {delta_map}.
                [(1,3), (3,5), (5,7), (7,9)];
    > val it = SAME : (int * int) list delta
 }
-\noindent Finally, we can move the result from the {delta} type 
+Finally, we can move the result from the {delta} type 
 to the actual type we are interested in.
 {
    - delta_apply (delta_map (delta_pair ireplace ireplace))
@@ -46,11 +46,11 @@ to the actual type we are interested in.
    > val it = [(1,3), (3,5), (5,7), (5,9)] : (int * int) list
 }
 
+
 \COMMENTS
 Used to change a function from one that returns an {'a delta} element to
 one that returns an {'a} element.
 
 \SEEALSO
 Lib.delta, Lib.delta_map, Lib.delta_pair.
-
 \ENDDOC

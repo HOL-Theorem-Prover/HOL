@@ -15,19 +15,19 @@ argument. The consequent tactic is then applied. Thus:
 {
    DISCH_THEN f (asl, t1 ==> t2) = f(ASSUME t1) (asl,t2)
 }
-\noindent For example, if
+For example, if
 {
     A ?- t
    ========  f (ASSUME u)
     B ?- v
 }
-\noindent then
+then
 {
     A ?- u ==> t
    ==============  DISCH_THEN f
        B ?- v
 }
-\noindent Note that {DISCH_THEN} treats {~u} as {u ==> F}.
+Note that {DISCH_THEN} treats {~u} as {u ==> F}.
 
 \FAILURE
 {DISCH_THEN} will fail for goals which are not implications or negations.
@@ -38,18 +38,17 @@ before adding it to the assumptions.
 {
     A ?- (x = y) ==> t
    ====================  DISCH_THEN (ASSUME_TAC o SYM)
-     A u {{y = x}} ?- t
+     A u {y = x} ?- t
 }
-\noindent In many cases, it is possible to use an antecedent and then throw it
+In many cases, it is possible to use an antecedent and then throw it
 away:
 {
     A ?- (x = y) ==> t x
    ======================  DISCH_THEN (\th. PURE_REWRITE_TAC [th])
           A ?- t y
 }
-\SEEALSO
-Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Drule.NEG_DISCH, 
-Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, 
-Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
 
+
+\SEEALSO
+Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
 \ENDDOC

@@ -14,5 +14,4 @@ Fails if the argument is not a function application.
 
 \SEEALSO
 Term.mk_comb, Term.is_comb, Term.dest_var, Term.dest_const, Term.dest_abs, boolSyntax.strip_comb.
-
 \ENDDOC

@@ -2,7 +2,8 @@
 
 \TYPE {CURRY_CONV : conv}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Currys an application of a paired abstraction.
@@ -16,10 +17,10 @@ Currys an application of a paired abstraction.
 > val it = |- (\(x,y). x + y) z = (\x y. x + y) (FST z) (SND z) : thm
 }
 
+
 \FAILURE
 {CURRY_CONV tm} fails if {tm} is not an application of a paired abstraction.
 
 \SEEALSO
 PairRules.UNCURRY_CONV.
-
 \ENDDOC

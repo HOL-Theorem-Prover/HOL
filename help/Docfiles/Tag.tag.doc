@@ -1,4 +1,4 @@
-\DOC tag 
+\DOC tag
 
 \TYPE {type tag}
 
@@ -18,5 +18,4 @@ inference.
 
 \SEEALSO
 Tag.read, Thm.mk_oracle_thm.
-
 \ENDDOC

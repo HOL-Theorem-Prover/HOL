@@ -5,7 +5,8 @@
 \SYNOPSIS
 Return first element in list that predicate holds of.
 
-\KEYWORDS list, predicate, search
+\KEYWORDS
+list, predicate, search
 
 \DESCRIBE
 An invocation {first P [x1,...,xk,...xn]} returns {xk} if {P xk} returns
@@ -31,7 +32,7 @@ exception {e}. In that case, {first P list} also raises {e}.
 ! Fail  ""
 }
 
+
 \SEEALSO
 Lib.exists, Lib.tryfind, Lib.all, Lib.exists.
-
 \ENDDOC

@@ -12,7 +12,5 @@ Constructs a conjunction.
 Fails if {t1} and {t2} do not both have type {bool}.
 
 \SEEALSO
-boolSyntax.dest_conj, boolSyntax.is_conj, boolSyntax.list_mk_conj, 
-boolSyntax.strip_conj.
-
+boolSyntax.dest_conj, boolSyntax.is_conj, boolSyntax.list_mk_conj, boolSyntax.strip_conj.
 \ENDDOC

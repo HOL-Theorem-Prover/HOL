@@ -24,7 +24,7 @@ returns one of the theorems:
    |- (\y.t)  = (\x'. t[x'/y])   
    |- (B y.t)  = (B x'. t[x'/y])
 }
-\noindent depending on whether the input term is {\y.t} or {B y.t}
+depending on whether the input term is {\y.t} or {B y.t}
 respectively.  The variable {x':ty} in the resulting theorem is a primed
 variant of {x} chosen so as not to be free in the term provided as the second
 argument to {GEN_ALPHA_CONV}.
@@ -33,9 +33,8 @@ argument to {GEN_ALPHA_CONV}.
 {GEN_ALPHA_CONV x tm} fails if {x} is not a variable, or if {tm} does not have
 one of the forms {\y.t} or {B y.t}, where {B} is a binder. 
 {GEN_ALPHA_CONV x tm} also fails if {tm} does have one of these 
-forms, but types of the variables {x} and {y} differ. 
+forms, but types of the variables {x} and {y} differ.
 
 \SEEALSO
 Thm.ALPHA, Drule.ALPHA_CONV, boolSyntax.new_binder_definition.
-
 \ENDDOC

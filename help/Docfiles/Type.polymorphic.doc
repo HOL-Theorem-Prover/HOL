@@ -1,4 +1,4 @@
-\DOC polymorphic 
+\DOC polymorphic
 
 \TYPE {polymorphic : hol_type -> bool}
 
@@ -23,10 +23,10 @@ Never fails.
 > val it = true : bool
 }
 
+
 \COMMENTS
 {polymorphic} is also equivalent to {exists_tyvar (K true)}, and no faster.
 
 \SEEALSO
 Type.type_vars, Type.type_var_in, Type.exists_tyvar.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC for_se 
+\DOC for_se
 
 \TYPE {for_se : int -> int -> (int -> unit) -> unit}
 
@@ -14,7 +14,7 @@ If {b} is greater than {t}, then {for_se b t f} does no evaluation,
 in particular {f b} is not evaluated.
 
 \FAILURE
-If {f i} fails for {b <= i <= t}. 
+If {f i} fails for {b <= i <= t}.
 
 \EXAMPLE
 {
@@ -29,7 +29,7 @@ abcdefghijklmnopqrstuvwxyz
 > val it = () : unit
 }
 
+
 \SEEALSO
 Lib.for.
-
 \ENDDOC

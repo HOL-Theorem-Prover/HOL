@@ -19,5 +19,4 @@ tactic never fails.
 
 \SEEALSO
 Tactical.CHANGED_TAC, VALID.
-
 \ENDDOC

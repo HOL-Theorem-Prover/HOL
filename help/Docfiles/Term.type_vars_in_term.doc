@@ -1,4 +1,4 @@
-\DOC type_vars_in_term 
+\DOC type_vars_in_term
 
 \TYPE {type_vars_in_term : term -> hol_type list}
 
@@ -21,7 +21,7 @@ Never fails.
 > val it = [`:'b`, `:'a`] : hol_type list
 }
 
+
 \SEEALSO
 Term.free_vars, Type.type_vars.
-
 \ENDDOC

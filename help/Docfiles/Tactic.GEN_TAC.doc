@@ -17,6 +17,8 @@ variables free in the goal's assumption list. Normally {x'} is just {x}.
    ==============  GEN_TAC
     A ?- t[x'/x]
 }
+
+
 \FAILURE
 Fails unless the goal's conclusion is universally quantified.
 
@@ -26,5 +28,4 @@ is commonly used before tactics relying on the  underlying term structure.
 
 \SEEALSO
 Tactic.FILTER_GEN_TAC, Thm.GEN, Drule.GENL, Drule.GEN_ALL, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC, Tactic.STRIP_TAC, Tactic.X_GEN_TAC.
-
 \ENDDOC

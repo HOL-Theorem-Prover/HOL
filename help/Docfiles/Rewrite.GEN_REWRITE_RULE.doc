@@ -56,24 +56,23 @@ Suppose we have a theorem of the form:
 {
    thm = |- (1 + 2) + 3 = (3 + 1) + 2
 }
-\noindent and we would like to rewrite the left-hand side with the
+and we would like to rewrite the left-hand side with the
 theorem {ADD_SYM} without changing the right hand side. This can be
 done by using:
 {
    GEN_REWRITE_RULE (RATOR_CONV o ONCE_DEPTH_CONV) []  [ADD_SYM] mythm
 }
-\noindent Other rules, such as {ONCE_REWRITE_RULE}, would match and
+Other rules, such as {ONCE_REWRITE_RULE}, would match and
 substitute on both sides, which would not be the desirable result.
 
 As another example, {REWRITE_RULE} could be implemented as
 {
     GEN_REWRITE_RULE TOP_DEPTH_CONV basic_rewrites
 }
-\noindent which specifies that matches should be searched recursively
+which specifies that matches should be searched recursively
 starting from the whole term of the theorem, and {basic_rewrites} must
 be added to the user defined set of theorems employed in rewriting.
 
 \SEEALSO
 Rewrite.ASM_REWRITE_RULE, Rewrite.FILTER_ASM_REWRITE_RULE, Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Conv.REWR_CONV, Rewrite.REWRITE_RULE.
-
 \ENDDOC

@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, quantifier, universal.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Multiply universally quantifies both sides of an equation using the given
@@ -22,6 +23,8 @@ should be free in the assumption list.
    --------------------------------------  LIST_MK_PFORALL ["x1";...;"xn"]
     A |- (!x1...xn. t1) = (!x1...xn. t2)
 }
+
+
 \FAILURE
 Fails if any term in the list is not a paired structure of variables,
 or if any variable is free in the assumption list,
@@ -29,5 +32,4 @@ or if the theorem is not equational.
 
 \SEEALSO
 Drule.LIST_MK_EXISTS, PairRules.PFORALL_EQ, PairRules.MK_PFORALL.
-
 \ENDDOC

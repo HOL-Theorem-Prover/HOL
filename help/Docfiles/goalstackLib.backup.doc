@@ -61,14 +61,10 @@ OK..
     |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3]) : goalstack
 }
 
+
 \USES
 Back tracking in a goal-directed proof to undo errors or try different tactics.
 
 \SEEALSO
-goalstackLib.b, goalstackLib.e, goalstackLib.expand, 
-goalstackLib.expandf, goalstackLib.g, goalstackLib.p, 
-goalstackLib.r, goalstackLib.rotate, 
-goalstackLib.set_goal, goalstackLib.top_goal, goalstackLib.top_thm,
-goalstackLib.restart, goalstackLib.drop, goalstackLib.dropn.
-
+goalstackLib.b, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, goalstackLib.p, goalstackLib.r, goalstackLib.rotate, goalstackLib.set_goal, goalstackLib.top_goal, goalstackLib.top_thm, goalstackLib.restart, goalstackLib.drop, goalstackLib.dropn.
 \ENDDOC

@@ -16,11 +16,12 @@ the inference rule {MP} returns the theorem {A1 u A2 |- t2}.
    ----------------------------  MP
           A1 u A2 |- t2
 }
+
+
 \FAILURE
 Fails unless the first theorem is an implication whose antecedent is the
 same as the conclusion of the second theorem (up to alpha-conversion).
 
 \SEEALSO
 Thm.EQ_MP, Drule.LIST_MP, Drule.MATCH_MP, Tactic.MATCH_MP_TAC, Tactic.MP_TAC.
-
 \ENDDOC

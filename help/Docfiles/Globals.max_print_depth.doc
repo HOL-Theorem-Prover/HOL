@@ -1,4 +1,4 @@
-\DOC max_print_depth 
+\DOC max_print_depth
 
 \TYPE {max_print_depth : int ref}
 
@@ -6,23 +6,23 @@
 Sets depth bound on prettyprinting.
 
 \DESCRIBE
-The reference variable {max_print_depth} is used to define the 
-maximum depth of printing for the pretty printer. If the number of 
+The reference variable {max_print_depth} is used to define the
+maximum depth of printing for the pretty printer. If the number of
 blocks (an internal notion used by the prettyprinter) becomes greater
-than the value set by {max_print_depth} then the blocks are 
-abbreviated by the holophrast {...}. By default, the value of 
+than the value set by {max_print_depth} then the blocks are
+abbreviated by the holophrast {...}. By default, the value of
 {max_print_depth} is {~1}. This is interpreted to mean `print everything'.
 
 \FAILURE
 Never fails.
 
 \EXAMPLE
-\noindent To change the maximum depth setting to {10}, the command will be:
+To change the maximum depth setting to {10}, the command will be:
 {
    - max_print_depth := 10;
    > val it = () : unit
 }
-\noindent The theorem {numeralTheory.numeral_distrib} then prints as
+The theorem {numeralTheory.numeral_distrib} then prints as
 follows:
 {
 - numeralTheory.numeral_distrib;
@@ -34,5 +34,6 @@ follows:
        (!n. ... - ... = 0) /\ (!n. ... = ...) /\ (!... .... ...) /\ ... /\ ...
      : thm
 }
+
 
 \ENDDOC

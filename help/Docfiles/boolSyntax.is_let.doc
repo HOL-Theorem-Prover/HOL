@@ -24,7 +24,8 @@ Never fails.
 - is_let (Term `let x = P /\ Q in x \/ x`);
 > val it = true : bool
 }
+
+
 \SEEALSO
 boolSyntax.mk_let, boolSyntax.dest_let.
-
 \ENDDOC

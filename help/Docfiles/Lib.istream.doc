@@ -1,4 +1,4 @@
-\DOC istream 
+\DOC istream
 
 \TYPE {type ('a,'b) istream}
 
@@ -20,5 +20,4 @@ imperative `gensym'-like algorithms used in HOL.
 
 \SEEALSO
 Lib.mk_istream, Lib.next, Lib.state, Lib.reset.
-
 \ENDDOC

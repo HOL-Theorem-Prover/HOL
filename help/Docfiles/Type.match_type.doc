@@ -12,13 +12,14 @@ If {match_type ty1 ty2} succeeds, then
     type_subst (match_type ty1 ty2) ty1 = ty2
 }
 
+
 \FAILURE
 If no such substitution can be found.
 
 \EXAMPLE
 {
 - match_type alpha (Type`:num`);
-> val it = [{{redex = `:'a`, residue = `:num`}}] : hol_type subst
+> val it = [{redex = `:'a`, residue = `:num`}] : hol_type subst
 
 - let val patt = Type`:('a -> bool) -> 'b`
       val ty =   Type`:(num -> bool) -> bool`
@@ -33,7 +34,7 @@ If no such substitution can be found.
 ! HOL_ERR
 }
 
+
 \SEEALSO
 Term.match_term, HolKernel.ho_match_term, Type.type_subst.
-
 \ENDDOC

@@ -1,4 +1,4 @@
-\DOC beta_conv 
+\DOC beta_conv
 
 \TYPE {beta_conv : term -> term}
 
@@ -30,6 +30,7 @@ If {M} is not the application of an abstraction to an argument.
 > val it = `\y'. y` : term
 }
 
+
 \COMMENTS
 More complex strategies for coding up full beta-reduction can be 
 coded up in ML. The {conversions} of Larry Paulson support this
@@ -39,8 +40,5 @@ activity as inference steps.
 For programming derived rules of inference.
 
 \SEEALSO
-Thm.BETA_CONV, Drule.RIGHT_BETA, Drule.LIST_BETA_CONV, 
-Drule.RIGHT_LIST_BETA, Conv.DEPTH_CONV, Conv.TOP_DEPTH_CONV,
-Conv.REDEPTH_CONV.
-
+Thm.BETA_CONV, Drule.RIGHT_BETA, Drule.LIST_BETA_CONV, Drule.RIGHT_LIST_BETA, Conv.DEPTH_CONV, Conv.TOP_DEPTH_CONV, Conv.REDEPTH_CONV.
 \ENDDOC

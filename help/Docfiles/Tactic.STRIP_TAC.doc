@@ -18,7 +18,7 @@ quantifier:
    ==============  STRIP_TAC
      A ?- u[x'/x]
 }
-\noindent where {x'} is a primed variant that does not appear free in the
+where {x'} is a primed variant that does not appear free in the
 assumptions {A}.  If {t} is a conjunction, then {STRIP_TAC} simply splits the
 conjunction into two subgoals:
 {
@@ -26,19 +26,19 @@ conjunction into two subgoals:
    =================  STRIP_TAC
     A ?- v   A ?- w
 }
-\noindent If {t} is an implication, {STRIP_TAC} moves the antecedent into the
+If {t} is an implication, {STRIP_TAC} moves the antecedent into the
 assumptions, stripping conjunctions, disjunctions and existential
 quantifiers according to the following rules:
 {
     A ?- v1 /\ ... /\ vn ==> v            A ?- v1 \/ ... \/ vn ==> v
    ============================        =================================
-       A u {{v1,...,vn}} ?- v             A u {{v1}} ?- v ... A u {{vn}} ?- v
+       A u {v1,...,vn} ?- v             A u {v1} ?- v ... A u {vn} ?- v
 
      A ?- ?x.w ==> v
    ====================
-    A u {{w[x'/x]}} ?- v
+    A u {w[x'/x]} ?- v
 }
-\noindent where {x'} is a primed variant of {x} that does not appear free in
+where {x'} is a primed variant of {x} that does not appear free in
 {A}. Finally, a negation {~t} is treated as the implication {t ==> F}.
 
 \FAILURE
@@ -50,15 +50,16 @@ Applying {STRIP_TAC} twice to the goal:
 {
     ?- !n. m <= n /\ n <= m ==> (m = n)
 }
-\noindent results in the subgoal:
+results in the subgoal:
 {
-   {{n <= m, m <= n}} ?- m = n
+   {n <= m, m <= n} ?- m = n
 }
+
+
 \USES
 When trying to solve a goal, often the best thing to do first
 is {REPEAT STRIP_TAC} to split the goal up into manageable pieces.
 
 \SEEALSO
 Tactic.CONJ_TAC, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.GEN_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_GOAL_THEN.
-
 \ENDDOC

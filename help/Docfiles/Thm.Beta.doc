@@ -1,4 +1,4 @@
-\DOC Beta 
+\DOC Beta
 
 \TYPE {Beta : thm -> thm}
 
@@ -18,6 +18,7 @@ of an equational theorem.
    A |- t = M [N/x]
 }
 
+
 \FAILURE
 If the theorem is not an equation, or if the right hand side of the
 equation is not a beta-redex.
@@ -34,10 +35,10 @@ val th = REFL (Term `(K:'a ->'b->'a) x`);
 > val it = |- K x = (\y. x) : thm
 }
 
+
 \COMMENTS
 {Beta} is equivalent to {RIGHT_BETA} but faster.
 
 \SEEALSO
 Drule.RIGHT_BETA, Thm.Eta.
-
 \ENDDOC

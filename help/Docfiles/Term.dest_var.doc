@@ -14,5 +14,4 @@ Fails if {M} is not a variable.
 
 \SEEALSO
 Term.mk_var, Term.is_var, Term.dest_const, Term.dest_comb, Term.dest_abs.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {HOL_MESG : string -> unit}
 
-\SYNOPSIS Prints out a message in a special format.
+\SYNOPSIS
+Prints out a message in a special format.
 
-\KEYWORDS I/O, message
+\KEYWORDS
+I/O, message
 
 \DESCRIBE
 {HOL_MESG} prints out its argument after formatting it a bit. The
@@ -30,7 +32,7 @@ The invocation fails if the formatting or output routines fail.
     <<HOL message: Ack.>>
 }
 
+
 \SEEALSO
 Feedback, Feedback.HOL_ERR, Feedback.Raise, Feedback.HOL_WARNING, Feedback.MESG_to_string, Feedback.format_MESG, Feedback.MESG_outstream.
-
 \ENDDOC

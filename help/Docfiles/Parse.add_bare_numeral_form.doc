@@ -8,7 +8,8 @@ Adds support for annotated numerals to the parser/pretty-printer.
 \KEYWORDS
 Parsing, pretty-printing.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 The function {add_bare_numeral_form} allows the user to give special
@@ -35,7 +36,7 @@ The following function, {binary_of}, defined with equations:
      |- binary_of n = if n = 0 then 0
                       else n MOD 10 + 2 * binary_of (n DIV 10) : thm
 }
-\noindent can be used to convert numbers whose decimal notation is
+can be used to convert numbers whose decimal notation is
 {x}, to numbers whose binary notation is {x} (as long as {x} only
 involves zeroes and ones).
 
@@ -52,6 +53,7 @@ form that could be used by users wanting to deal with binary numbers:
    > val it = (`binary_of`, `1011`) : term * term
 }
 
+
 \USES
 If one has a range of values that are usefully indexed by natural
 numbers, the function {add_bare_numeral_form} provides a syntactically
@@ -62,5 +64,4 @@ be used, and the appropriate operators ({+}, {*} etc) overloaded.
 
 \SEEALSO
 Parse.add_numeral_form.
-
 \ENDDOC

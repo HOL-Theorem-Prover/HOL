@@ -1,12 +1,12 @@
 \DOC mk_list
 
-\TYPE {mk_list : {{els : term list, ty : hol_type}} -> term}
+\TYPE {mk_list : {els : term list, ty : hol_type} -> term}
 
 \SYNOPSIS
 Constructs an object-level (HOL) list from an ML list of terms.
 
 \DESCRIBE
-{mk_list{{els = [t1, ..., tn], ty = ty}}} returns {[t1;...;tn]:ty list}.
+{mk_list{els = [t1, ..., tn], ty = ty}} returns {[t1;...;tn]:ty list}.
 The type argument is required so that empty lists can be constructed.
 
 \FAILURE
@@ -15,5 +15,4 @@ second argument.
 
 \SEEALSO
 listSyntax.dest_list, listSyntax.is_list, listSyntax.mk_cons, listSyntax.dest_cons, listSyntax.is_cons.
-
 \ENDDOC

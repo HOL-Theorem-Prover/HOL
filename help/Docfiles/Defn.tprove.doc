@@ -2,9 +2,11 @@
 
 \TYPE {tprove : defn * tactic -> thm * thm}
 
-\SYNOPSIS Prove termination of a {defn}.
+\SYNOPSIS
+Prove termination of a {defn}.
 
-\KEYWORDS recursive definition, termination.
+\KEYWORDS
+recursive definition, termination.
 
 \DESCRIBE
 {tprove} takes a {defn} and a {tactic}, and uses the tactic to prove the
@@ -18,6 +20,7 @@ in the specialized domain of proving termination of recursive functions.
 
 It is up to the user to store the results of {tprove} in the current
 theory segment.
+
 
 
 \FAILURE
@@ -37,7 +40,7 @@ Suppose that we have defined a version of Quicksort as follows:
                APPEND (qsort ord (FILTER ($~ o ord x) rst))
                  (x :: qsort ord (FILTER (ord x) rst)))`
 }
-\noindent Also suppose that a tactic {tac} proves termination of
+Also suppose that a tactic {tac} proves termination of
 {qsort}. (This tactic has probably been built by interactive proof
 after starting a goalstack with {tgoal qsort_defn}.) Then
 {
@@ -59,11 +62,11 @@ after starting a goalstack with {tgoal qsort_defn}.) Then
            !v v1. P v v1 : thm
 }
 
+
 \COMMENTS
 The recursion equations returned by a successful invocation of {tprove}
 are automatically added to the global {compset} accessed by {EVAL}.
 
 \SEEALSO
 Defn.tgoal, Defn.Hol_defn, EVAL.
-
 \ENDDOC

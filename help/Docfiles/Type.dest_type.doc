@@ -22,11 +22,11 @@ Fails if {ty} is a type variable.
 > val it = ("fun", [`:'a`, `:bool`]) : string * hol_type list
 }
 
+
 \COMMENTS
 A more precise alternative is {dest_thy_type}, which tells which theory 
 the type operator was declared in.
 
 \SEEALSO
 Type.mk_type, Type.dest_thy_type, Type.dest_vartype.
-
 \ENDDOC

@@ -57,22 +57,23 @@ Given a goal such as:
 {
    ?- a - (b + c) = a - (c + b)
 }
-\noindent we may want to rewrite only one side of it with a theorem,
+we may want to rewrite only one side of it with a theorem,
 say {ADD_SYM}. Rewriting tactics which operate recursively result in
 divergence; the tactic {ONCE_REWRITE_TAC [ADD_SYM]} rewrites on both
 sides to produce the following goal:
 {
    ?- a - (c + b) = a - (b + c)
 }
-\noindent as {ADD_SYM} matches at two positions. To rewrite on
+as {ADD_SYM} matches at two positions. To rewrite on
 only one side of the equation, the following tactic can be used:
 {
    GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [] [ADD_SYM]
 }
-\noindent which produces the desired goal:
+which produces the desired goal:
 {
    ?- a - (c + b) = a - (c + b)
 }
+
 As another example, one can write a tactic which will behave similarly
 to {REWRITE_TAC} but will also include {ADD_CLAUSES} in the set of
 theorems to use always:
@@ -80,7 +81,8 @@ theorems to use always:
    let ADD_REWRITE_TAC = GEN_REWRITE_TAC TOP_DEPTH_CONV
                              (ADD_CLAUSES . basic_rewrites) ;;
 }
+
+
 \SEEALSO
 Rewrite.ASM_REWRITE_TAC, Rewrite.GEN_REWRITE_RULE, Rewrite.ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Conv.REWR_CONV, Rewrite.REWRITE_TAC.
-
 \ENDDOC

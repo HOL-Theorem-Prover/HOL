@@ -1,4 +1,4 @@
-\DOC Eta 
+\DOC Eta
 
 \TYPE {Eta : thm -> thm}
 
@@ -16,6 +16,7 @@ conversion, reduction, eta.
     A |- M = N
 }
 
+
 \FAILURE
 If the right hand side of the equation is not an eta-redex, or if the
 theorem is not an equation.
@@ -29,7 +30,7 @@ theorem is not an equation.
 > val it = |- INC = $+ 1 : thm
 }
 
+
 \SEEALSO
 Thm.Beta, Term.eta_conv, Thm.ETA_CONV.
-
 \ENDDOC

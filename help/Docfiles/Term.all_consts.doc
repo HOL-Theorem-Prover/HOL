@@ -45,7 +45,7 @@ Never fails.
      `$,`, `FLAT`, `$+`, `$*`, `$!`] : term list
 }
 
+
 \SEEALSO
 Parse.term_grammar.
-
 \ENDDOC

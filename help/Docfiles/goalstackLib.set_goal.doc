@@ -27,6 +27,7 @@ Fails unless all terms in the goal are of type {bool}.
      : proofs
 }
 
+
 \USES
 Starting  an interactive proof session with the subgoal package.
 
@@ -60,10 +61,7 @@ of the theorem proved by the justifications. This theorem may be accessed and
 saved.
 
 
-\SEEALSO
-goalstackLib.b, goalstackLib.backup, goalstackLib.set_backup,
-goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, 
-goalstackLib.g, goalstackLib.p, goalstackLib.r, goalstackLib.rotate, 
-goalstackLib.top_goal, goalstackLib.top_thm.
 
+\SEEALSO
+goalstackLib.b, goalstackLib.backup, goalstackLib.set_backup, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, goalstackLib.p, goalstackLib.r, goalstackLib.rotate, goalstackLib.top_goal, goalstackLib.top_thm.
 \ENDDOC

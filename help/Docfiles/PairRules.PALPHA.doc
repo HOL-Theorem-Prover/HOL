@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, alpha.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Proves equality of paired alpha-equivalent terms.
@@ -18,6 +19,7 @@ alpha-equivalent, {ALPHA} returns the theorem {|- t1 = t1'}.
    -------------  PALPHA "t1" "t1'"
     |- t1 = t1'
 }
+
 The difference between {PALPHA} and {ALPHA} is that 
 {PALPHA} is prepared to consider pair structures of different
 structure to be alpha-equivalent.
@@ -32,6 +34,7 @@ Fails unless the terms provided are alpha-equivalent.
 - PALPHA (Term `\(x:'a,y:'a). (x,y)`) (Term`\xy:'a#'a. xy`);
 > val it = |- (\(x,y). (x,y)) = (\xy. xy) : thm
 }
+
 
 \COMMENTS
 Alpha-converting a paired abstraction to a nonpaired abstraction 
@@ -58,7 +61,7 @@ For example:
    ! HOL_ERR
 }
 
+
 \SEEALSO
 Thm.ALPHA, Term.aconv, PairRules.PALPHA_CONV, PairRules.GEN_PALPHA_CONV.
-
 \ENDDOC

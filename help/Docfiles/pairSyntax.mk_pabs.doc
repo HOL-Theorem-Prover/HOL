@@ -7,7 +7,7 @@ Constructs a paired abstraction.
 
 \DESCRIBE
 If {M} is the tuple {(v1,..(..)..,vn)}, and {N} is an arbitrary term,
-then {mk_pabs (M,N)} returns the paired abstraction {`\(v1,..(..)..,vn).N`}. 
+then {mk_pabs (M,N)} returns the paired abstraction {`\(v1,..(..)..,vn).N`}.
 
 \FAILURE
 Fails unless {M} is an arbitrarily nested pair composed from variables, 
@@ -15,5 +15,4 @@ with no repetitions of variables.
 
 \SEEALSO
 pairSyntax.dest_pabs, pairSyntax.is_pabs, Term.mk_abs.
-
 \ENDDOC

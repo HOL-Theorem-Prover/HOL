@@ -21,5 +21,4 @@ note that {zip} is a curried version of {combine}
 
 \SEEALSO
 Lib.zip, Lib.unzip, Lib.split.
-
 \ENDDOC

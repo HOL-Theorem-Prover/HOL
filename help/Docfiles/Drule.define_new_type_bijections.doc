@@ -2,7 +2,7 @@
 
 \BLTYPE
 define_new_type_bijections :
-  {{name:string, ABS:string, REP:string, tyax:thm}} -> thm
+  {name:string, ABS:string, REP:string, tyax:thm} -> thm
 \ELTYPE
 
 \SYNOPSIS
@@ -14,7 +14,7 @@ theorem of the following form:
 {
    |- ?rep:nty->ty. TYPE_DEFINITION P rep
 }
-\noindent which asserts only the existence of a bijection from the type it
+which asserts only the existence of a bijection from the type it
 defines (in this case, {nty}) to the corresponding subset of an existing type
 (here, {ty}) whose characteristic function is specified by {P}.  To
 automatically introduce constants that in fact denote this bijection and its
@@ -33,29 +33,27 @@ If {th} is a theorem of the form returned by {new_type_definition}:
 {
    |- ?rep:newty->ty. TYPE_DEFINITION P rep
 }
-\noindent then evaluating:
+then evaluating:
 {
-   define_new_type_bijections{{name="name",ABS="abs",REP="rep",tyax=th}} th
+   define_new_type_bijections{name="name",ABS="abs",REP="rep",tyax=th} th
 }
-\noindent automatically defines two new constants {abs:ty->newty} and
+automatically defines two new constants {abs:ty->newty} and
 {rep:newty->ty} such that:
 {
    |- (!a. abs(rep a) = a) /\ (!r. P r = (rep(abs r) = r))
 }
-\noindent This theorem, which is the defining property for the constants {abs}
+This theorem, which is the defining property for the constants {abs}
 and {rep}, is stored under the name {name} in the current theory segment.  It
 is also the value returned by {define_new_type_bijections}.  The theorem states
 that {abs} is the left inverse of {rep} and, for values satisfying {P}, that
 {rep} is the left inverse of {abs}.
 
 
+
 \FAILURE
-A call {define_new_type_bijections{{name,ABS,REP,tyax}}} fails
+A call {define_new_type_bijections{name,ABS,REP,tyax}} fails
 if {tyax} is not a theorem of the form returned by {new_type_definition}.
 
 \SEEALSO
-Definition.new_type_definition, Prim_rec.prove_abs_fn_one_one, 
-Prim_rec.prove_abs_fn_onto, Drule.prove_rep_fn_one_one, 
-Drule.prove_rep_fn_onto.
-
+Definition.new_type_definition, Prim_rec.prove_abs_fn_one_one, Prim_rec.prove_abs_fn_onto, Drule.prove_rep_fn_one_one, Drule.prove_rep_fn_onto.
 \ENDDOC

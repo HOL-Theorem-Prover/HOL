@@ -14,10 +14,11 @@ returns the theorem:
 {
    |- (?x.~P) = ~(!x. P)
 }
+
+
 \FAILURE
 Fails if applied to a term not of the form {?x.~P}.
 
 \SEEALSO
 Conv.FORALL_NOT_CONV, Conv.NOT_EXISTS_CONV, Conv.NOT_FORALL_CONV.
-
 \ENDDOC

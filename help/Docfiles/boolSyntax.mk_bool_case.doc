@@ -21,7 +21,8 @@ have the same type.
 
 > val it = `case x of T -> f x || F -> b` : term
 }
+
+
 \SEEALSO
 boolSyntax.dest_bool_case, boolSyntax.is_bool_case.
-
 \ENDDOC

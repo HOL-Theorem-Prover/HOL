@@ -15,13 +15,13 @@ Implements the following rule of simultaneous substitution
    -------------------------------------------------------------
         A u A1 u ... u An |- t[u1,...,un]
 }
-\noindent Evaluating
+Evaluating
 {
    SUBST [x1 |-> (A1 |- t1=u1) ,..., xn |-> (An |- tn=un)]
          t[x1,...,xn]
          (A |- t[t1,...,tn])
 }
-\noindent returns the theorem {A1 u ... An |- t[u1,...,un]}.  The term
+returns the theorem {A1 u ... An |- t[u1,...,un]}.  The term
 argument {t[x1,...,xn]} is a template which should match the conclusion
 of the theorem being substituted into, with the variables {x1}, ... ,
 {xn} marking those places where occurrences of {t1}, ... , {tn} are to
@@ -70,6 +70,7 @@ equations (i.e. the terms {t1}, ... , {tn}).
 > val it = [.] |- (0 + 1) + 1 + 1 > 0 + 1 : thm
 }
 
+
 \COMMENTS
 {SUBST} is perhaps overly complex for a primitive rule of inference.
 
@@ -79,5 +80,4 @@ special purpose derived inference rules.
 
 \SEEALSO
 Drule.SUBS, Drule.SUBST_CONV, Lib.|->.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {append : 'a list -> 'a list -> 'a list}
 
-\KEYWORDS Curry
+\KEYWORDS
+Curry
 
-\SYNOPSIS Curried form of list append
+\SYNOPSIS
+Curried form of list append
 
 \DESCRIBE
 The function {append} is a curried form of the standard operation for 
@@ -18,5 +20,6 @@ Never fails.
 - append [1] [2,3] = [1] @ [2,3];
 > val it = true : bool
 }
+
 
 \ENDDOC

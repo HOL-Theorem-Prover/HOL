@@ -14,5 +14,4 @@ Fails if {t1} or {t2} does not have type {bool}.
 
 \SEEALSO
 boolSyntax.dest_disj, boolSyntax.is_disj, boolSyntax.list_mk_disj, boolSyntax.strip_disj.
-
 \ENDDOC

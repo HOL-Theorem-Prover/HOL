@@ -5,7 +5,8 @@
 \KEYWORDS
 rule, quantifier, select, equality.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Quantifies both sides of a universally quantified equational theorem with
@@ -19,10 +20,11 @@ returns the theorem {A |- (@x. t1) = (@x. t2)}.
    --------------------------  MK_PSELECT
     A |- (@p. t1) = (@p. t2)
 }
+
+
 \FAILURE
 Fails unless the theorem is a singly paired universally quantified equation.
 
 \SEEALSO
 PairRules.PSELECT_EQ, PairRules.MK_PABS.
-
 \ENDDOC

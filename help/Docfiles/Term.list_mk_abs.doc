@@ -1,4 +1,4 @@
-\DOC list_mk_abs 
+\DOC list_mk_abs
 
 \TYPE {list_mk_abs : term list * term -> term}
 
@@ -23,11 +23,11 @@ Fails if if some {vi} (1 <= i <= n) is not a variable.
 > val it = `\v1 v2 v3. v1 /\ v2 /\ v3` : term
 }
 
+
 \COMMENTS
 In the current implementation, {list_mk_abs} is more efficient than 
 iteration of {mk_abs} for larger tasks.
 
 \SEEALSO
 Term.mk_abs, boolSyntax.list_mk_forall, boolSyntax.list_mk_exists.
-
 \ENDDOC

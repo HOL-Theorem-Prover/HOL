@@ -23,6 +23,7 @@ of {tyop}.
 > val it = `:'a -> bool` : hol_type
 }
 
+
 \COMMENTS
 Note that type operators with the same name (and arity) may
 be declared in different theories. If two theories having type 
@@ -33,6 +34,5 @@ preferable to use {mk_thy_type} since it allows one to specify
 exactly which type operator to use.
 
 \SEEALSO
-Type.mk_thy_type, Type.dest_type, Type.mk_vartype, Type.-->
-
+Type.mk_thy_type, Type.dest_type, Type.mk_vartype, Type.-->.
 \ENDDOC

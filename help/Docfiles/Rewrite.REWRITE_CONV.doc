@@ -42,5 +42,4 @@ instead to improve efficiency.
 
 \SEEALSO
 basic_rewrites, Rewrite.GEN_REWRITE_CONV, Rewrite.ONCE_REWRITE_CONV, Rewrite.PURE_REWRITE_CONV, Conv.REWR_CONV, Drule.SUBST_CONV.
-
 \ENDDOC

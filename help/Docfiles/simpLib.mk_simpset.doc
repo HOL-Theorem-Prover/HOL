@@ -5,9 +5,11 @@
 \SYNOPSIS
 Creates a simpset by combining a list of {ssdata} values.
 
-\KEYWORDS simplification.
+\KEYWORDS
+simplification.
 
-\LIBRARY simpLib
+\LIBRARY
+simpLib
 
 \FAILURE
 Never fails.
@@ -18,5 +20,4 @@ function.
 
 \SEEALSO
 simpLib.++, simpLib.rewrites, simpLib.SIMP_CONV.
-
 \ENDDOC

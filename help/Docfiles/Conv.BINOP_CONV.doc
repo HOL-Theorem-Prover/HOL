@@ -10,6 +10,7 @@ conversional.
 
 \LIBRARY
 
+
 \DESCRIBE
 If {c} is a conversion that when applied to {t1} returns the theorem
 {|- t1 = t1'} and when applied to {t2} returns the theorem
@@ -18,6 +19,7 @@ theorem
 {
    |- f t1 t2 = f t1' t2'
 }
+
 
 \FAILURE
 {BINOP_CONV c t} will fail if {t} is not of the general form
@@ -32,7 +34,7 @@ when applied to those arguments.  (The latter case would imply that
 > val it = |- 3 * 4 + 6 * 7 = 12 + 42 : thm
 }
 
+
 \SEEALSO
 Conv.FORK_CONV, Conv.LAND_CONV, Conv.RAND_CONV, Conv.RATOR_CONV.
-
 \ENDDOC

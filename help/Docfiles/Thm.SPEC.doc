@@ -18,6 +18,8 @@ no variables free in {u} become bound after substitution.
    --------------  SPEC u
     A |- t[u/x]
 }
+
+
 \FAILURE
 Fails if the theorem's conclusion is not universally quantified, or if {x} and
 {u} have different types.
@@ -37,8 +39,8 @@ clearly invalid theorem {|- ~y ==> (!y. y ==> ~y)}.
    - SPEC (Term `~y`) it;
    > val it = |- ~y ==> !y'. y' ==> ~y : thm
 }
-\SEEALSO
-Drule.ISPEC, Drule.SPECL, Drule.SPEC_ALL, Drule.SPEC_VAR, 
-Thm.GEN, Drule.GENL, Drule.GEN_ALL.
 
+
+\SEEALSO
+Drule.ISPEC, Drule.SPECL, Drule.SPEC_ALL, Drule.SPEC_VAR, Thm.GEN, Drule.GENL, Drule.GEN_ALL.
 \ENDDOC

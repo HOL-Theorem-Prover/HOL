@@ -5,7 +5,8 @@
 \SYNOPSIS
 Checks to see if a given name has been hidden.
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \DESCRIBE
 A call {hidden c} where {c} is the name of a constant, will
@@ -21,5 +22,4 @@ still there in a theory.
 
 \SEEALSO
 Parse.hide, Parse.reveal.
-
 \ENDDOC

@@ -34,6 +34,7 @@ system are:
         $EXP  ---> 700    RIGHT
         $o    ---> 800    RIGHT
 }
+
 Note that the arithmetic operators {+}, {-}, {*}, {DIV} and {MOD} are
 left associative in hol98 releases from Taupo onwards.
 Non-associative infixes ({=} above, for example) will cause parse
@@ -60,7 +61,7 @@ precedence.
    > val it = (`$orelse (T \/ T)`,  `F`) : term * term
 }
 
+
 \SEEALSO
 Parse.add_infix, precedence, Theory.constants, infixes, binders, is_constant, Theory.new_constant, boolSyntax.new_binder, Definition.new_definition, new_infix_definition, boolSyntax.new_binder_definition.
-
 \ENDDOC

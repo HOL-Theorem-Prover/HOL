@@ -29,13 +29,13 @@ The following shows a couple of typical cases:
    - variant [Term`x:bool`, Term`x':num`, Term`x'':num`] (Term `x:bool`);
    > val it = `x'''` : term
 }
-\noindent while the following shows that clashes with the names of constants
+while the following shows that clashes with the names of constants
 are also avoided:
 {
    - variant [] (mk_var("T",bool));
    > val it = `T'` : term
 }
-\noindent The style of renaming can be altered by modifying the reference
+The style of renaming can be altered by modifying the reference
 variable {Globals.priming}:
 {
    - with_flag (priming,SOME "_") 
@@ -44,6 +44,8 @@ variable {Globals.priming}:
 
    > val it = `x_1` : term
 }
+
+
 \USES
 The function {variant} is extremely useful for complicated derived rules which
 need to rename variables to avoid free variable capture while still making the
@@ -51,5 +53,4 @@ role of the variable obvious to the user.
 
 \SEEALSO
 Term.genvar, Term.prim_variant, Globals.priming.
-
 \ENDDOC

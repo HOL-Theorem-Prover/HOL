@@ -9,13 +9,15 @@ outermost universally quantified variable.
 \KEYWORDS
 tactic, induction
 
-\LIBRARY bossLib
+\LIBRARY
+bossLib
 
 \DESCRIBE
 Given a universally quantified goal, {Induct} attempts to perform an
 induction on the variable that is universally quantified.  The
 induction theorem to be used is looked up in the {TypeBase} database
 of theorems about the system's defined types.
+
 
 
 \FAILURE
@@ -25,12 +27,13 @@ theorem in the {TypeBase} database (as necessarily happens, for
 example, with all variable types).
 
 
+
 \EXAMPLE
 If attempting to prove that
 {
    ``!list. LENGTH (REVERSE list) = LENGTH list``
 }
-\noindent one can begin the proof by doing an induction on the list,
+one can begin the proof by doing an induction on the list,
 thus:
 {
    - Induct ([], ``!list. LENGTH (REVERSE list) = LENGTH list``);
@@ -42,7 +45,7 @@ thus:
          fn)
      : goal list * validation
 }
-\noindent where the two subgoals in the list above are the base case
+where the two subgoals in the list above are the base case
 and step case respectively of the induction theorem for lists.
 
 The same tactic can be used for induction over numbers, thus:
@@ -58,7 +61,7 @@ The same tactic can be used for induction over numbers, thus:
       : goal list * validation
 }
 
+
 \SEEALSO
 Induct_on, completeInduct_on, measureInduct_on.
-
 \ENDDOC

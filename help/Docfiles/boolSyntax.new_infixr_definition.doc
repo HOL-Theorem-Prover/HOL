@@ -7,9 +7,12 @@ Declares a new right associative infix constant and installs a
 definition in the current theory.
 
 
-\KEYWORDS definition, parsing, infix
 
-\LIBRARY Parse
+\KEYWORDS
+definition, parsing, infix
+
+\LIBRARY
+Parse
 
 \DESCRIBE
 The function {new_infixr_definition} has exactly the same effect as
@@ -18,5 +21,4 @@ associate to the right.
 
 \SEEALSO
 Definition.new_definition, Definition.new_specification, boolSyntax.new_infix, boolSyntax.new_infixl_definition.
-
 \ENDDOC

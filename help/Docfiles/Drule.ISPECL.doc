@@ -15,7 +15,7 @@ rule, type.
    ----------------------------  ISPECL [t1,...,tn]
     A |- t[t1,...tn/x1,...,xn]
 }
-\noindent (where {ti} is free for {xi} in {tm}).
+(where {ti} is free for {xi} in {tm}).
 
 \FAILURE
 {ISPECL} fails if the list of terms is longer than the number of
@@ -23,7 +23,5 @@ quantified variables in the term, if the type instantiation fails, or
 if the type variable being instantiated is free in the assumptions.
 
 \SEEALSO
-Thm.INST_TYPE, Drule.INST_TY_TERM, Drule.ISPEC, 
-Drule.PART_MATCH, Thm.SPEC, Drule.SPECL.
-
+Thm.INST_TYPE, Drule.INST_TY_TERM, Drule.ISPEC, Drule.PART_MATCH, Thm.SPEC, Drule.SPECL.
 \ENDDOC

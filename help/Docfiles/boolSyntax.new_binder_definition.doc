@@ -18,7 +18,7 @@ variables {x1,...,xm}.  A binder is defined by evaluating
 {
 new_binder_definition (name, `b v1 ... vn = t`)
 }
-\noindent where {b} does not occur in {t}, all the free variables that 
+where {b} does not occur in {t}, all the free variables that 
 occur in {t} are a subset of {x1,...,xn}, and the type 
 of {b} has the form {(ty1->ty2)->ty3}.  This declares {b} to be a new
 constant with the syntactic status of a binder in the current theory, and with
@@ -26,7 +26,7 @@ the definitional theorem
 {
    |- !x1...xn. b v1 ... vn = t
 }
-\noindent as its specification.  This constant specification for {b} is saved
+as its specification.  This constant specification for {b} is saved
 in the current theory under the name {name} and is returned as a theorem.
 
 The equation supplied to {new_binder_definition} may optionally have any of its
@@ -51,6 +51,7 @@ The unique-existence quantifier {?!} is defined as follows.
 > val it = |- $?! = (\P. $? P /\ (!x y. P x /\ P y ==> (x = y))) : thm
 }
 
+
 \COMMENTS
 It is a common practice among HOL users to write a {$} before the constant
 being defined as a binder to indicate that it will have a special syntactic
@@ -58,11 +59,10 @@ status after the definition is made:
 {
 new_binder_definition(name, Term `$b = ... `);
 }
-\noindent This use of {$} is not necessary; but after the definition
+This use of {$} is not necessary; but after the definition
 has been made {$} must, of course, be used if the syntactic status of {b}
 needs to be suppressed.
 
 \SEEALSO
 Definition.new_definition, boolSyntax.new_infixl_definition, boolSyntax.new_infixr_definition, Prim_rec.new_recursive_definition, TotalDefn.Define.
-
 \ENDDOC

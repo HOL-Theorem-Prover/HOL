@@ -14,7 +14,7 @@ When applied to a theorem-tactical, a theorem-tactic and a theorem:
 {
    REPEAT_TCL ttl ttac th
 }
-\noindent {REPEAT_TCL} repeatedly modifies the theorem according to {ttl}
+{REPEAT_TCL} repeatedly modifies the theorem according to {ttl}
 until it fails when given to the theorem-tactic {ttac}.
 
 \FAILURE
@@ -31,12 +31,13 @@ example the following goal:
 {
    ?- ((0 = w) /\ (0 = x)) /\ (0 = y) /\ (0 = z) ==> (w + x + y + z = 0)
 }
-\noindent might be solved by
+might be solved by
 {
    DISCH_THEN (REPEAT_TCL CONJUNCTS_THEN (SUBST1_TAC o SYM)) THEN
    REWRITE_TAC[ADD_CLAUSES]
 }
+
+
 \SEEALSO
 Thm_cont.REPEAT_GTCL, Thm_cont.THEN_TCL.
-
 \ENDDOC

@@ -2,9 +2,11 @@
 
 \TYPE {Raise : exn -> 'a}
 
-\SYNOPSIS Print an exception before re-raising it
+\SYNOPSIS
+Print an exception before re-raising it
 
-\KEYWORDS I/O, exception
+\KEYWORDS
+I/O, exception
 
 \DESCRIBE
 The {Raise} function prints out information about its argument exception
@@ -25,7 +27,7 @@ incomprehensible input
 ! HOL_ERR
 }
 
+
 \SEEALSO
 Feedback, Feedback.ERR_to_string, Feedback.ERR_outstream, Lib.try, Lib.trye.
-
 \ENDDOC

@@ -8,9 +8,11 @@ Add theorems to a collection of rewrite rules.
 \KEYWORDS
 rewriting, simplification
 
-\LIBRARY bool
+\LIBRARY
+bool
 
-\STRUCTURE Rewrite
+\STRUCTURE
+Rewrite
 
 \DESCRIBE
 The function {add_rewrites} processes each element in a list of
@@ -34,12 +36,10 @@ Never fails.
      : rewrites
 }
 
+
 \USES
 For building bespoke rewrite rule sets.
 
 \SEEALSO
-Rewrite.bool_rewrites, Rewrite.empty_rewrites, 
-Rewrite.implicit_rewrites, Rewrite.GEN_REWRITE_CONV, 
-Rewrite.GEN_REWRITE_RULE, Rewrite.GEN_REWRITE_TAC.
-
+Rewrite.bool_rewrites, Rewrite.empty_rewrites, Rewrite.implicit_rewrites, Rewrite.GEN_REWRITE_CONV, Rewrite.GEN_REWRITE_RULE, Rewrite.GEN_REWRITE_TAC.
 \ENDDOC

@@ -27,6 +27,7 @@ false.  Alternatively, conjuncts that are converted to true will not
 appear in the final result at all.
 
 
+
 \FAILURE
 Fails if the conversion argument fails when applied to one of the
 top-level conjuncts in a term.
@@ -39,6 +40,7 @@ top-level conjuncts in a term.
 > val it = |- (\y. y /\ p) q /\ (\z. z) r = (q /\ p) /\ r : thm
 }
 
+
 \USES
 Useful for applying a conversion to all of the ``significant''
 sub-terms within a term without having to worry about the exact
@@ -46,5 +48,4 @@ structure of its conjunctive skeleton.
 
 \SEEALSO
 Conv.EVERY_DISJ_CONV, Conv.RATOR_CONV, Conv.RAND_CONV, Conv.LAND_CONV.
-
 \ENDDOC

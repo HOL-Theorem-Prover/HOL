@@ -18,7 +18,7 @@ instantiation, {MATCH_ACCEPT_TAC} completely solves the goal.
    =========  MATCH_ACCEPT_TAC (A' |- t)
 
 }
-\noindent Unless {A'} is a subset of {A}, this is an invalid tactic.
+Unless {A'} is a subset of {A}, this is an invalid tactic.
 
 \FAILURE
 Fails unless the theorem has a conclusion which is instantiable to match that
@@ -30,15 +30,16 @@ the polymorphic list theorem {HD}:
 {
    HD = |- !h t. HD(CONS h t) = h
 }
-\noindent to solve the goal:
+to solve the goal:
 {
    ?- HD [1;2] = 1
 }
-\noindent simply by:
+simply by:
 {
    MATCH_ACCEPT_TAC HD
 }
+
+
 \SEEALSO
 Tactic.ACCEPT_TAC.
-
 \ENDDOC

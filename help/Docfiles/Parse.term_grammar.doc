@@ -8,7 +8,8 @@ Returns the current global term grammar.
 \KEYWORDS
 Parsing, pretty-printing
 
-\LIBRARY Parse
+\LIBRARY
+Parse
 
 \FAILURE
 Never fails.
@@ -22,5 +23,4 @@ pretty-printers.
 
 \SEEALSO
 Parse.parse_from_grammars, Parse.Term.
-
 \ENDDOC

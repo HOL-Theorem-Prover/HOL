@@ -31,11 +31,13 @@ When solving the goal
 {
    ?- (n = 1) ==> (n * n = n)
 }
-\noindent the application of {FILTER_STRIP_THEN SUBST1_TAC "m:num"}
+the application of {FILTER_STRIP_THEN SUBST1_TAC "m:num"}
 results in the goal
 {
    ?- 1 * 1 = 1
 }
+
+
 \USES
 {FILTER_STRIP_THEN} is used when manipulating intermediate results
 using theorem-tactics, after stripping outer connectives
@@ -43,5 +45,4 @@ from a goal in a more delicate way than {STRIP_GOAL_THEN}.
 
 \SEEALSO
 Tactic.CONJ_TAC, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.FILTER_GEN_TAC, Tactic.FILTER_STRIP_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_GOAL_THEN.
-
 \ENDDOC

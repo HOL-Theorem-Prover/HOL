@@ -11,7 +11,7 @@ If {M} has the form {t t1 ... tn} then {strip_comb M} returns
 {
    strip_comb(list_mk_comb(t,[t1,...,tn]))
 }
-\noindent will not be {(t,[t1,...,tn])} if {t} is a combination.
+will not be {(t,[t1,...,tn])} if {t} is a combination.
 
 \FAILURE
 Never fails.
@@ -24,7 +24,8 @@ Never fails.
 - strip_comb T;
 > val it = (`T`, []) : term * term list
 }
+
+
 \SEEALSO
 Term.list_mk_comb, Term.dest_comb.
-
 \ENDDOC

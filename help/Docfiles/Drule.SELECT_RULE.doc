@@ -18,6 +18,8 @@ which {P} holds is returned as a theorem.
    ------------------  SELECT_RULE
     A |- P[(@x.P)/x]
 }
+
+
 \FAILURE
 Fails if applied to a theorem the conclusion of which is not
 existentially quantified.
@@ -27,7 +29,7 @@ The axiom {INFINITY_AX} in the theory {ind} is of the form:
 {
    |- ?f. ONE_ONE f /\ ~ONTO f
 }
-\noindent Applying {SELECT_RULE} to this theorem returns the following.
+Applying {SELECT_RULE} to this theorem returns the following.
 {
    - SELECT_RULE INFINITY_AX;
    > val it =
@@ -35,11 +37,12 @@ The axiom {INFINITY_AX} in the theory {ind} is of the form:
      : thm
 
 }
+
+
 \USES
 May be used to introduce an epsilon term to permit rewriting with a
 constant defined using the epsilon operator.
 
 \SEEALSO
 Thm.CHOOSE, SELECT_AX, Conv.SELECT_CONV, Drule.SELECT_ELIM, Drule.SELECT_INTRO.
-
 \ENDDOC

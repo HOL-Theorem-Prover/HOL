@@ -23,7 +23,7 @@ in the second term is bound:
              (Term `!x. SUC x = x + 1`);
    > val it = false : bool
 }
-\noindent whereas the following call returns {true} because the first instance
+whereas the following call returns {true} because the first instance
 of {x} in the second term is free, even though there is also a bound instance:
 {
    - free_in (Term `x:bool`)
@@ -31,7 +31,7 @@ of {x} in the second term is free, even though there is also a bound instance:
    > val it = true : bool
 }
 
+
 \SEEALSO
 Term.free_vars, Term.FVL.
-
 \ENDDOC

@@ -11,7 +11,7 @@ simplification.
 \DESCRIBE
 It is occasionally necessary to extend an existing simpset {ss} with a  
 collection of new rewrite rules {rwlist}. To achieve this, one 
-applies the {&&} function via {ss && rwlist}. 
+applies the {&&} function via {ss && rwlist}.
 
 \FAILURE
 Never fails.
@@ -24,10 +24,11 @@ Never fails.
 > val ss = <simpset> : simpset
 }
 
+
 \COMMENTS
 Of limited applicability since most of the tactics for rewriting 
 already include this functionality. However, applications of {ZAP_TAC} 
-can benefit. 
+can benefit.
 
 \SEEALSO
 simpLib.++, simpLib.SIMP_CONV, bossLib.RW_TAC, bossLib.ZAP_TAC.

@@ -8,7 +8,8 @@ Defines inductive relations.
 \KEYWORDS
 Definition, inductive relations.
 
-\LIBRARY IndDefLib
+\LIBRARY
+IndDefLib
 
 \DESCRIBE
 The {Hol_reln} function is used to define inductively characterised
@@ -22,7 +23,7 @@ a term that conforms to the following grammar:
    <hypothesis>   ::= any term
    <con>          ::= a new relation constant
 }
-\noindent The {sv1} terms that appear after a constant name are
+The {sv1} terms that appear after a constant name are
 so-called "schematic variables".  The same variables must always
 follow the same constant name throughout the definition.  These
 variables and the names of the constants-to-be must not be quantified
@@ -53,6 +54,7 @@ third is the cases theorem for the relations, saved under the name
                    /\
    ..
 }
+
 
 \FAILURE
 The {Hol_reln} function will fail if the provided quotation does not
@@ -88,7 +90,7 @@ Defining {ODD} and {EVEN}:
            !a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
       : thm * thm * thm
 }
-\noindent Defining reflexive and transitive closure, using a schematic
+Defining reflexive and transitive closure, using a schematic
 variable.  This is appropriate because it is {RTC R} that has the
 inductive characterisation, not {RTC} itself.
 {
@@ -107,12 +109,13 @@ inductive characterisation, not {RTC} itself.
      : thm * thm * thm
 }
 
+
 \COMMENTS
 Being a definition principle, the {Hol_reln} function takes a
 quotation rather than a term.
 
 
+
 \SEEALSO
 TotalDefn.Define, Hol_datatype.
-
 \ENDDOC

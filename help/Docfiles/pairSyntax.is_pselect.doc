@@ -2,7 +2,8 @@
 
 \TYPE {is_pselect : (term -> bool)}
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Tests a term to see if it is a paired choice-term.
@@ -16,5 +17,4 @@ Never fails.
 
 \SEEALSO
 boolSyntax.is_select, pairSyntax.mk_pselect, pairSyntax.dest_pselect.
-
 \ENDDOC

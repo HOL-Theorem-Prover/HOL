@@ -21,6 +21,7 @@ Never fails.
 > val it = [`y`, `x`] : term list
 }
 
+
 \COMMENTS
 Code should not depend on how elements are arranged in the
 result of {free_vars}.
@@ -29,8 +30,7 @@ result of {free_vars}.
 Demanding applications should be coded with {FVL}.
 
 
-\SEEALSO
-Term.FVL, Term.free_vars_lr, Term.free_varsl,
-Term.empty_varset, Type.type_vars.
 
+\SEEALSO
+Term.FVL, Term.free_vars_lr, Term.free_varsl, Term.empty_varset, Type.type_vars.
 \ENDDOC

@@ -2,7 +2,8 @@
 
 \TYPE {concat : string -> string -> string}
 
-\KEYWORDS Curry
+\KEYWORDS
+Curry
 
 \SYNOPSIS
 Concatenates two ML strings.
@@ -21,6 +22,7 @@ Never fails.
 - concat "hello" (concat " " "world");
 > val it = "hello world" : string
 }
+
 
 \COMMENTS
 This function is open at the top level and is not the same as the

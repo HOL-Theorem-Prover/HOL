@@ -5,7 +5,8 @@
 \KEYWORDS
 rule.
 
-\LIBRARY pair
+\LIBRARY
+pair
 
 \SYNOPSIS
 Specializes the conclusion of a theorem with its own quantified pairs.
@@ -21,10 +22,11 @@ just {pi}, in which case {PSPEC_ALL} simply removes all universal quantifiers.
    ---------------------------  PSPEC_ALL
     A |- t[p1'/x1]...[pn'/xn]
 }
+
+
 \FAILURE
 Never fails.
 
 \SEEALSO
 Drule.SPEC_ALL, PairRules.PGEN, PairRules.PGENL, PGEN_ALL, PairRules.PGEN_TAC, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_TAC.
-
 \ENDDOC
