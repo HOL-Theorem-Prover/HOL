@@ -19,6 +19,11 @@ be parsed into a term in more than one way, and this is the only
 effect if this combination is already recorded as a possible
 overloading.
 
+Finally, when printing, this call causes {tm} to be seen as the
+operator {name}.  The string {name} may prompt further pretty-printing
+if it is involved in any of the relevant grammar's rules for concrete
+syntax.
+
 \FAILURE
 Fails if the term argument is not a constant.
 
