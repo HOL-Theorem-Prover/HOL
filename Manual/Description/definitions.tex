@@ -538,6 +538,194 @@ The pretty-printing of big records can be controlled with the
 \texttt{pp\_bigrecs} trace-flag.
 
 
+\section{Quotient Type Definition}\label{quotients}
+
+\HOL{} provides a library for defining new types which are quotients
+of existing types, with respect to partial equivalence relations.
+This library is described in {\it ``Higher Order Quotients in Higher
+Order Logic''} [HOQ], from which the following description is taken.
+
+The quotient library is accessed by opening {\tt quotientLib},
+which makes all its tools and theorems accessable.
+
+The definition of new types corresponding to the quotients of
+existing types by equivalence relations is called ``lifting''
+the types from a lower, more representational level to a higher,
+more abstract level.  Both levels describe similar objects, but
+some details which are apparent at the lower level are no longer
+visible at the higher level.  The logic is simplified.
+
+However, simply forming a new type does not complete the quotient operation.
+Rather, one wishes to recreate the
+%significant parts of the
+pre-existing logical environment at the new,
+higher, and more abstract level.  This includes not only the new
+types, but also new versions of the constants that form and
+manipulate values of those types, and also new versions of the
+theorems that describe properties of those constants.  All of these
+%must be recreated at the higher level, in order to
+form a logical layer, above which all the lower representational details
+may be safely and forever forgotten.
+
+This can be done in a single call of the
+main tool of this package.
+
+\begin{verbatim}
+define_quotient_types :
+        {types: {name: string,
+                 equiv: thm} list,
+         defs: {def_name: string,
+                fname: string,
+                func: Term.term,
+                fixity: Parse.fixity} list,
+         tyop_equivs : thm list,
+         tyop_quotients : thm list,
+         tyop_simps : thm list,
+         respects : thm list,
+         poly_preserves : thm list,
+         poly_respects : thm list,
+         old_thms : thm list} ->
+        thm list
+\end{verbatim}
+
+{\tt define\_quotient\_types} takes a single argument which is a
+record with the following fields.
+
+{\it types\/} is a list of records, each of which contains two fields:
+{\it name}, which is the name of a new quotient type to be created, and
+{\it equiv}, which is
+either 1)
+a theorem that a binary relation {\it R\/}
+is an equivalence relation
+(see [HOQ] \S 4)
+of the form
+$$
+\mbox{\tt |-}\
+\forall x\ y.\ R\ x\ y \ \Leftrightarrow \
+                (R\ x = R\ y),
+$$
+or 2)
+a theorem that {\it R\/} is a nonempty partial equivalence relation,
+(see [HOQ] \S 5)
+of the form
+$$
+\mbox{\tt |-}\
+(\exists x.\ R\ x\ x) \ \wedge \
+(\forall x\ y.\ R\ x\ y \ \Leftrightarrow \
+                R\ x\ x \wedge R\ y\ y \wedge (R\ x = R\ y)).
+$$
+The process of forming the new quotient types is described
+in [HOQ] \S 8.
+
+{\it defs\/} is a list of records specifying the constants to be lifted.
+Each record contains the following four fields:
+{\it func\/} is an HOL term, which must be a single constant, which is the
+constant to be lifted.
+{\it fname\/} is the name of the new constant being defined as the lifted version of {\it func}.
+{\it fixity\/} is the HOL fixity of the new constant being created,
+as specified in the HOL structure {\tt Parse}.
+{\it def\_name} is the name under which the new constant definition is to
+be stored in the current theory.
+The
+process of defining lifted constants
+is described in [HOQ] \S 9.
+
+{\it tyop\_equivs\/} is a list of conditional equivalence theorems
+for type operators (see [HOQ] \S 4.1). 
+These are used for bringing into regular form
+theorems on new type operators, so that they can be lifted
+(see [HOQ] \S 11 and \S 12).
+
+{\it tyop\_quotients\/} is a list of conditional quotient theorems
+for type operators (see [HOQ] \S 5.2).
+These are used for lifting both constants and theorems.
+
+{\it tyop\_simps\/} is a list of theorems used to simplify type operator
+relations and map functions, e.g.,
+for pairs,
+{\tt |- (\$= \#\#\# \$=) = \$=} and
+{\tt |- (I \#\# I) = I}.
+
+The rest of the arguments refer to the general process of lifting theorems
+over the quotients being defined,
+as described in [HOQ] \S 10.
+
+{\it respects\/} is a list of theorems about the respectfulness of the
+constants being lifted.
+These theorems are described in
+[HOQ] \S 10.1.
+
+{\it poly\_preserves\/} is a list of theorems about the preservation of
+polymorphic constants in the HOL logic
+across a quotient operation.
+%as if they were definitions across the quotient operation.
+In other words, they state that any quotient operation preserves these
+constants as a homomorphism.
+These theorems are described in
+[HOQ] \S 10.2.
+
+{\it poly\_respects\/} is a list of theorems showing the respectfulness
+of the polymorphic constants mentioned in {\it poly\_preserves}.
+These are
+described in
+[HOQ] \S 10.3.
+
+{\it old\_thms\/} is a list of theorems concerning the lower, representative
+types and contants, which are to be automatically lifted and proved at the
+higher, more abstract quotient level.
+These theorems are described in
+[HOQ] \S 10.4.
+
+{\tt define\_quotient\_types} returns a list of theorems, which are the
+lifted versions of the {\it old\_thms}.
+
+A similar function,
+{\tt define\_quotient\_types\_rule}, takes a single argument which is a
+record with the same fields as above except for {\it old\_thms},
+and returns an SML function of type {\tt thm -> thm}.
+This result, typically called {\tt LIFT\_RULE},
+is then used to lift the old theorems individually, one at a time.
+
+For backwards compatibility with
+the excellent quotients package
+{\tt EquivType}
+created by
+John Harrison
+%to whom much credit is due, and
+(which provided much inspiration),
+the following function is also provided:
+
+\begin{verbatim}
+define_equivalence_type :
+        {name: string,
+         equiv: thm,
+         defs: {def_name: string,
+                fname: string,
+                func: Term.term,
+                fixity: Parse.fixity} list,
+         welldefs : thm list,
+         old_thms : thm list} ->
+        thm list
+\end{verbatim}
+
+\noindent
+This function is limited to a single quotient type, but may be
+more convenient when the generality of {\tt define\_quotient\_types}
+is not needed.
+This function is defined in terms of {\tt define\_quotient\_types} as
+
+\begin{verbatim}
+fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
+    define_quotient_types
+     {types=[{name=name, equiv=equiv}], defs=defs, tyop_equivs=[],
+      tyop_quotients=[FUN_QUOTIENT],
+      tyop_simps=[FUN_REL_EQ,FUN_MAP_I], respects=welldefs,
+      poly_preserves=[FORALL_PRS,EXISTS_PRS],
+      poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
+      old_thms=old_thms};
+\end{verbatim}
+
+
 \section{Function Definition}\label{TFL}
 
 \HOL{} provides a function definition mechanism based on the
