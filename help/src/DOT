@@ -150,7 +150,7 @@ fun gen_map_file dot node_info name =
              out "<HTML>";
              out "<HEAD><TITLE>HOL Theory Hierarchy</TITLE></HEAD>";
              out "<BODY bgcolor=linen text=crimson>";
-             out "<H1>HOL Theory Hierarchy</H1>";
+             out "<H1>HOL Theory Hierarchy (clickable)</H1>";
              out (String.concat 
                   ["<IMG src = \"",jpegfile,"\"",
                       " usemap=\"#theorymap\"", 
