@@ -8,20 +8,26 @@
 structure NonRecSize =
 struct
 
-open HolKernel basicHol90Lib Parse;
-
-local open pairTheory sumTheory optionTheory arithmeticTheory in end;
-
-infix THEN THENC THENL |-> ORELSE;
-infixr -->;
 
 
 local
+  open HolKernel basicHol90Lib Parse;
+
+  val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+  fun -- q x = Term q
+  fun == q x = Type q
+
+  local open pairTheory sumTheory optionTheory arithmeticTheory in
+  end;
+
+  infix THEN THENC THENL |-> ORELSE;
+  infixr -->;
   val prod_size_info =
-       (Parse.Term`\f g. UNCURRY(\(x:'a) (y:'b). f x + g y)`,
-        pairTheory.UNCURRY_DEF)
-  val prod_info' = TypeBase.put_size prod_size_info 
-                      (Option.valOf(TypeBase.read"prod"))
+    (Term`\f g. UNCURRY(\(x:'a) (y:'b). f x + g y)`,
+     pairTheory.UNCURRY_DEF)
+  val prod_info' =
+    TypeBase.put_size prod_size_info
+    (Option.valOf(TypeBase.read"prod"))
 
   val bool_info = Option.valOf(TypeBase.read "bool")
   val bool_case_rw = prove(Term`!x y. bool_case x x y = (x:'a)`,
