@@ -1,4 +1,3 @@
-
 open HolKernel Parse boolLib
      TotalDefn Datatype BasicProvers SingleStep;
 
@@ -10,10 +9,9 @@ open prelimTheory;
 
 
 val _ = Hol_datatype
- ` index=
-     Left_idx of index
-   | Right_idx of index
-   | End_idx `;
+ ` index = Left_idx of index
+         | Right_idx of index
+         | End_idx `;
 
 val index_compare_def = Define `
    (index_compare End_idx End_idx = EQUAL)

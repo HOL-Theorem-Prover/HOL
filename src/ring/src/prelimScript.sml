@@ -7,6 +7,7 @@ val _ = new_theory "prelim";
 
 
 (* ternary comparisons *)
+
 val _ = Hol_datatype `ordering = LESS | EQUAL | GREATER`;
 
 val _ = set_MLname "LESS" "LESS_def";
