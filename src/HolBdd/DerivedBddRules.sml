@@ -14,8 +14,11 @@
 (*   Mon Nov  5 11:15:51 GMT 2001 -- updated documentation in comments       *)
 (*   Wed Nov  7 11:38:19 GMT 2001 -- changed to MachineTransitionTheory      *)
 (*   Tue Nov 27 15:42:00 GMT 2001 -- added findTrace and BddRhsOracle        *)
+(*   Thu Mar 28 09:40:05 GMT 2002 -- added signature file                    *)
 (*                                                                           *)
 (*****************************************************************************)
+
+structure DerivedBddRules :> DerivedBddRules = struct
 
 (*
 load "pairLib";
@@ -27,7 +30,9 @@ load "MachineTransitionTheory";
 val _ = if not(bdd.isRunning()) then bdd.init 1000000 10000 else ();
 *)
 
+(*
 local
+*)
 
 open pairSyntax;
 open pairTools;
@@ -36,7 +41,7 @@ open numLib;
 open PrimitiveBddRules;
 open bdd;
 open Varmap;
-
+open Thm;
 open PrimitiveBddRules;
 
 open HolKernel Parse boolLib;
@@ -58,8 +63,9 @@ fun hol_err msg func =
 
 fun foldr f start ls = List.foldl f start (rev ls);
 
+(*
 in
-
+*)
 
 (*****************************************************************************)
 (* Test equality of BDD component of two term_bdds and return true or false  *)
@@ -893,6 +899,9 @@ fun findModel tb =
      (SUBST_CONV (List.map (fn(l,r) => (l |-> ASSUME(mk_eq(l,r)))) setl) t t))
  end
 end;
- 
-end;
 
+(* 
+end;
+*)
+
+end

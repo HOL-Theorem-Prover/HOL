@@ -251,3 +251,48 @@ val _ =
   (List.map (fst o dest_pair o rand o concl) transthl @ [rand(concl finalth)]);
 
 val _ = export_theory();
+
+
+(* Reachable state with/without disjunctive partitioning
+
+fun computeSimpReachable vm Rth Bth =
+ let val (by_th0,by_thsuc) = 
+          (REWRITE_RULE[Bth,pairTheory.PAIR_EQ] ## REWRITE_RULE[Rth])
+           (MkIterThms 
+             MachineTransitionTheory.ReachBy_rec 
+             (lhs(concl(SPEC_ALL Rth)))
+             (lhs(concl(SPEC_ALL Bth))))
+     val _ = print "Starting disjunctive partitioning ...\n"
+     val by_thsuc_simp = time MakeSimpRecThm by_thsuc
+     val _ = print "disjunctive partitioning complete.\n"
+     val _ = print "Computing reachable states ...\n"
+ in
+  time (computeFixedpoint (fn n=>fn tb=>print".") vm) (by_th0,by_thsuc_simp)
+ end;
+
+val SimpReachable = 
+ computeSimpReachable solitaire_varmap SolitaireTrans_def SolitaireInit_def;
+
+(*
+Starting disjunctive partitioning ...
+runtime: 1112.520s,    gctime: 512.900s,     systime: 1.750s.
+disjunctive partitioning complete.
+Computing reachable states ...
+
+*)
+
+fun computeReachable vm Rth Bth =
+ let val (by_th0,by_thsuc) = 
+          (REWRITE_RULE[Bth,pairTheory.PAIR_EQ] ## REWRITE_RULE[Rth])
+           (MkIterThms 
+             MachineTransitionTheory.ReachBy_rec 
+             (lhs(concl(SPEC_ALL Rth)))
+             (lhs(concl(SPEC_ALL Bth))))
+ in
+  time (computeFixedpoint (fn n=>fn tb=>print".") vm) (by_th0,by_thsuc)
+ end;
+
+val Reachable = 
+ computeSimpReachable solitaire_varmap SolitaireTrans_def SolitaireInit_def;
+
+*)

@@ -12,8 +12,11 @@
 (*                                                                           *)
 (*   Tue Oct  9 08:53:21 BST 2001 -- created file                            *)
 (*   Thu Nov  1 21:04:27 GMT 2001 -- updated for judgement assumptions       *)
+(*   Thu Mar 28 09:40:05 GMT 2002 -- added signature file                    *)
 (*                                                                           *)
 (*****************************************************************************)
+
+structure PrintBdd :> PrintBdd = struct
 
 (*
 load "muddyLib";
@@ -141,4 +144,5 @@ fun dotTermBdd tb =
  ()
  end;
 
+end
 end

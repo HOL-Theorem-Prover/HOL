@@ -37,8 +37,11 @@
 (*   Fri Oct  5 17:23:09 BST 2001 -- revised file                            *)
 (*   Thu Nov  1 14:18:41 GMT 2001 -- added assumptions to term_bdd values    *)
 (*   Mon Mar 11 11:01:53 GMT 2002 -- added BddFindModel                      *)
+(*   Thu Mar 28 09:40:05 GMT 2002 -- added signature file                    *)
 (*                                                                           *)
 (*****************************************************************************)
+
+structure PrimitiveBddRules :> PrimitiveBddRules = struct
 
 (*
 load "bdd";
@@ -85,12 +88,17 @@ in
 (* TermBdd should not be exported from this module.                          *)
 (*****************************************************************************)
 
+(*
 local
+*)
 
 type assums = term HOLset.set;
-datatype term_bdd = TermBdd of (term HOLset.set) * varmap * term * bdd.bdd;
+type varmap = Varmap.varmap;
+datatype term_bdd = TermBdd of assums * varmap * term * bdd.bdd;
 
+(*
 in
+*)
 
 (*****************************************************************************)
 (* Destructors for term_bdd                                                  *)
@@ -776,4 +784,8 @@ fun BddfindModel (TermBdd(ass,vm,t,b)) =
 
 end;
 
+(*
 end;
+*)
+
+end

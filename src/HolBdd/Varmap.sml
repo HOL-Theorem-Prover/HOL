@@ -10,8 +10,11 @@
 (*                                                                           *)
 (*   Thu Oct  4 15:45:52 BST 2001 -- created file                            *)
 (*   Thu Nov 15 17:07:37 GMT 2001 -- added unify                             *)
+(*   Thu Mar 28 09:40:05 GMT 2002 -- added signature file                    *)
 (*                                                                           *)
 (*****************************************************************************)
+
+structure Varmap :> Varmap = struct
 
 (*
 load "Binarymap";
@@ -125,3 +128,5 @@ fun remove s (vm:varmap) =
 (*****************************************************************************)
 
 end;
+
+end
