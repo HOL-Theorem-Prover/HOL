@@ -47,6 +47,7 @@ int anti(void);
 %}
 
 %option noyywrap
+%option always-interactive
 
 %s STRING COMMENT QUOTE TMQUOTE OLDTMQUOTE TYQUOTE OLDTYQUOTE ANTIQUOTE
 
