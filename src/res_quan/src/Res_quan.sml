@@ -12,6 +12,7 @@ struct
 
 open HolKernel Drule Conv Tactic Tactical Resolve Thm_cont Rewrite;
 infix ## THEN THENL THENC;
+infixr -->;
 
  type term     = Term.term
  type thm      = Thm.thm
@@ -31,33 +32,32 @@ open Cond_rewrite;
 (* These ought to be generalised to all kinds of restrictions,           *)
 (* but one thing at a time.                                              *)
 (* --------------------------------------------------------------------- *)
-val bool_ty = Type.bool;
 
 val (mk_resq_forall,mk_resq_exists,mk_resq_select,mk_resq_abstract) =
-    let fun mk_resq_quan cons s (x,t1,t2) =
-       let val ty = type_of x
-    	val predty = mk_type{Tyop="fun",Args=[ty,bool_ty]}
-        val resty = mk_type{Tyop="fun",
-                            Args=[predty,
-                                  mk_type{Tyop="fun",Args=[predty,bool_ty]}]}
+ let fun mk_resq_quan cons s (x,t1,t2) =
+      let val xty = type_of x
+          val t2_ty = type_of t2
+          val ty = (xty --> Type.bool) --> (xty --> t2_ty)
+                    --> 
+                   (if cons="RES_ABSTRACT" then (xty --> t2_ty) else
+                    if cons="RES_SELECT"   then xty else Type.bool)
         in
-    	    mk_comb{Rator=mk_comb{Rator=mk_const{Name=cons,Ty=resty},
-                                  Rand=t1},
-                    Rand=mk_abs{Bvar=x,Body=t2}}
+          mk_comb{Rator=mk_comb{Rator=mk_const{Name=cons,Ty=ty},Rand=t1},
+                  Rand=mk_abs{Bvar=x,Body=t2}}
         end
-           handle _ => raise RES_QUAN_ERR {function="mk_resq_quan",message = s}
+        handle _ => raise RES_QUAN_ERR {function="mk_resq_quan",message = s}
     in
-    ((mk_resq_quan "RES_FORALL" "mk_resq_forall"),
-     (mk_resq_quan "RES_EXISTS" "mk_resq_exists"),
-     (mk_resq_quan "RES_SELECT" "mk_resq_select"),
-     (mk_resq_quan "RES_ABSTRACT" "mk_resq_abstract"))
+    (mk_resq_quan "RES_FORALL"   "mk_resq_forall",
+     mk_resq_quan "RES_EXISTS"   "mk_resq_exists",
+     mk_resq_quan "RES_SELECT"   "mk_resq_select",
+     mk_resq_quan "RES_ABSTRACT" "mk_resq_abstract")
     end;
+
 
 fun list_mk_resq_forall (ress,body) =
    (itlist (fn (v,p) => fn  b => mk_resq_forall(v,p,b)) ress body)
            handle _ => raise RES_QUAN_ERR {function="list_mk_resq_forall",
                                            message = ""};
-
 
 fun list_mk_resq_exists (ress,body) =
    (itlist (fn (v,p) => fn  b => mk_resq_exists(v,p,b)) ress body)
@@ -79,27 +79,25 @@ val (dest_resq_forall,dest_resq_exists,dest_resq_select,dest_resq_abstract) =
            handle _ => raise RES_QUAN_ERR {function="dest_resq_quan",
                                             message = s}
     in
-    ((dest_resq_quan "RES_FORALL" "dest_resq_forall"),
-     (dest_resq_quan "RES_EXISTS" "dest_resq_exists"),
-     (dest_resq_quan "RES_SELECT" "dest_resq_select"),
-     (dest_resq_quan "RES_ABSTRACT" "dest_resq_abstract"))
+    (dest_resq_quan "RES_FORALL"   "dest_resq_forall",
+     dest_resq_quan "RES_EXISTS"   "dest_resq_exists",
+     dest_resq_quan "RES_SELECT"   "dest_resq_select",
+     dest_resq_quan "RES_ABSTRACT" "dest_resq_abstract")
     end ;
 
 fun strip_resq_forall fm =
-    let val (bv,pred,body) = dest_resq_forall fm
-    val (prs, core) = strip_resq_forall body
-    in
-     ((bv, pred)::prs, core)
-    end
-    handle _ => ([],fm);
+  let val (bv,pred,body) = dest_resq_forall fm
+      val (prs, core) = strip_resq_forall body
+  in ((bv, pred)::prs, core)
+  end
+  handle _ => ([],fm);
 
 fun strip_resq_exists fm =
-     let val (bv,pred,body) = dest_resq_exists fm
-     val (prs, core) = strip_resq_exists body
-     in
-     ((bv, pred)::prs, core)
-    end
-    handle _ => ([],fm);
+  let val (bv,pred,body) = dest_resq_exists fm
+      val (prs, core) = strip_resq_exists body
+  in ((bv, pred)::prs, core)
+  end
+  handle _ => ([],fm);
 
 
 val is_resq_forall = can dest_resq_forall;
