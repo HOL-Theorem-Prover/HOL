@@ -261,7 +261,7 @@ val valid_state_def =
  * set.                                                                      *
  *---------------------------------------------------------------------------*)
 
-val ap_ss = bool_ss && [nextstate_def, valid_state_def];
+val ap_ss = base_ss && [nextstate_def, valid_state_def];
 
 val st0_initial = prove (Term`is_initial st0`,
  ZAP_TAC 
@@ -310,7 +310,7 @@ val reachable_in_def =
 val reachable_valid_state = prove
  (Term`!n st. reachable_in n st ==> valid_state st`,
   Induct THEN 
-   ZAP_TAC (bool_ss && [reachable_in_def])
+   ZAP_TAC (base_ss && [reachable_in_def])
      [is_initial_valid_state,nextstate_valid_state]);
 
 
@@ -323,7 +323,7 @@ val is_reachable_def = Define  `is_reachable st = ?n. reachable_in n st`;
  
 val is_reachable_valid_state = prove
 (Term`!st. is_reachable st ==> valid_state st`,
-  ZAP_TAC bool_ss 
+  ZAP_TAC base_ss 
     [is_reachable_def,reachable_valid_state]);
 
 
@@ -360,7 +360,7 @@ val reachable_induct = prove
           (!st st' e. is_reachable st ==> P (nextstate st e))
           ==>
           !st. is_reachable st ==> P st`,
- RW_TAC bool_ss [is_reachable_def]
+ RW_TAC base_ss [is_reachable_def]
   THEN Cases_on `n` 
   THEN PROVE_TAC [reachable_in_def]);
 

@@ -4,7 +4,7 @@
 
 app load ["unwindLib", "arithmeticTheory", "pairTheory",
           "Num_conv", "Rewrite0"];
-open Prim_rec Num_conv unwindLib;
+open Prim_rec Num_conv unwindLib Rsyntax;
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
