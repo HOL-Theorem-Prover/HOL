@@ -2043,7 +2043,10 @@ in
       (RENAME_VARS_CONV (map (#Name o dest_var) [snd_var,fst_var])
        (rhs (concl inst_thm)))
   in
-    BETA_RULE (SUBS [final_thm] ex_rewrite)
+    (* must do precisely two beta reductions on the right hand side of the
+       theorem *)
+    CONV_RULE (RAND_CONV (BINDER_CONV (BINDER_CONV LIST_BETA_CONV)))
+              (SUBS [final_thm] ex_rewrite)
   end
 
 
