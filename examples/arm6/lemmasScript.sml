@@ -167,18 +167,17 @@ val NOT_FA_EQ_FB = prove(
 
 val WORD_ALIGN_LEM = store_thm("WORD_ALIGN_LEM",
   `!a b. ~(WORD_ALIGN a = WORD_ALIGN b) ==> ~(TO_W30 a = TO_W30 b)`,
-  RW_TAC bool_ss [WORD_ALIGN_def,TO_W30_def,SLICEw_THM]
-    THEN POP_ASSUM (fn th => ASSUME_TAC (REDUCE_RULE (MATCH_MP NOT_FA_EQ_FB th)))
-    THEN RW_TAC arith_ss []
+  RW_TAC arith_ss [WORD_ALIGN_def,TO_W30_def,SLICEw_THM]
 );
 
 val MEM_WRITE_READ = store_thm("MEM_WRITE_READ",
   `!m d a1 a2 b.  ~(WORD_ALIGN a1 = WORD_ALIGN a2) ==>
-      (MEMREAD (MEMWRITE m d a1 b) a2 = MEMREAD m a2)`,
-  RW_TAC std_ss [WORD_ALIGN_def,MEMREAD_def,MEMWRITE_def,
+      (MEMREAD (MEM_WRITE b m d a1) a2 = MEMREAD m a2)`,
+  RW_TAC std_ss [WORD_ALIGN_def,MEMREAD_def,MEM_WRITE_def,
                  WORD_ALIGN_LEM,MEM_WRITE_WORD_def,MEM_WRITE_BYTE_def,SUBST_def]
 );
 
+(*
 val MEMREAD_ALIGNED = store_thm("MEMREAD_ALIGNED",
   `!m a. MEM_READ_WORD m (WORD_ALIGN a) = MEMREAD m a`,
   SIMP_TAC arith_ss [MEM_READ_WORD_def,MEMREAD_def,WORD_ALIGN_def,TO_W30_def,
@@ -186,6 +185,7 @@ val MEMREAD_ALIGNED = store_thm("MEMREAD_ALIGNED",
     THEN SIMP_TAC arith_ss [SLICEw_THM,BITSw_COMP_THM,MOD_EQ_0,ZERO_SHIFT2,
                             SIMP_RULE arith_ss [DIV1] (SPECL [`1`,`0`] BITS2_THM)]
 );
+*)
 
 (* -------------------------------------------------------- *)
 

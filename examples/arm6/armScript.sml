@@ -37,7 +37,7 @@ val _ = Hol_datatype `iclass = swp | mrs_msr | data_proc | reg_shift |
 
 (* -------------------------------------------------------- *)
 
-val SUBST_def = Define`SUBST m (a,w) b = if (a = b) then w else m b`;
+val SUBST_def = Define`SUBST m (a,w) b = if a = b then w else m b`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -163,7 +163,7 @@ val REG_WRITE_def = Define`
 
 val TO_W30_def = Define`TO_W30 n = w30 (BITSw 31 2 n)`;
 
-val WORD_ALIGN_def = Define`WORD_ALIGN n = w32 (SLICEw 31 2 n)`;
+val MEMREAD_def = Define `MEMREAD mem addr = mem (TO_W30 addr)`;
 
 val MEM_READ_WORD_def = Define`
   MEM_READ_WORD mem addr = mem (TO_W30 addr) #>> (8 * BITSw 1 0 addr)`;
@@ -172,6 +172,9 @@ val MEM_READ_BYTE_def = Define`
   MEM_READ_BYTE mem addr =
     let align = 8 * BITSw 1 0 addr in
       w32 (BITSw (align+7) align (mem (TO_W30 addr)))`;
+
+val MEM_READ_def = Define`
+  MEM_READ b = if b then MEM_READ_BYTE else MEM_READ_WORD`;
 
 val SET_BYTE_def = Define`
   SET_BYTE align byte word =
@@ -188,6 +191,8 @@ val MEM_WRITE_BYTE_def = Define`
 val MEM_WRITE_WORD_def = Define`
   MEM_WRITE_WORD mem word addr = SUBST mem (TO_W30 addr,word)`;
 
+val MEM_WRITE_def = Define`
+  MEM_WRITE b = if b then MEM_WRITE_BYTE else MEM_WRITE_WORD`;
 (* Memory read/write never gives an abort error *)
 (* Can be adapted to give more realistic MMU behaviour *)
 
@@ -465,6 +470,8 @@ val DECODE_LDR_STR_def = Define`
      (BIT 25 n,BIT 24 n,BIT 23 n,BIT 22 n,BIT 21 n,BIT 20 n,
       BITS 19 16 n,BITS 15 12 n,BITS 11 0 n)`;
 
+val WORD_ALIGN_def = Define`WORD_ALIGN n = SLICEw 31 2 n`;
+
 val PIPE_OKAY_def = Define`
   PIPE_OKAY addr pc =
      let aaddr = WORD_ALIGN addr in
@@ -481,12 +488,12 @@ val LDR_STR_def = Define`
       if (Rn = 15) /\ (W \/ ~P) then
         ARM mem (INC_PC wb_reg) psr
       else
-        let data = if B then MEM_READ_BYTE mem addr else MEM_READ_WORD mem addr in
+        let data = MEM_READ B mem addr in
           ARM mem (REG_WRITE wb_reg mode Rd data) psr
     else (* STR *)
       let rd = REG_READ reg' mode Rd in
       let mem' = if (Rn = 15) /\ (W \/ ~P) \/ PIPE_OKAY addr (FETCH_PC reg) then
-                    if B then MEM_WRITE_BYTE mem rd addr else MEM_WRITE_WORD mem rd addr
+                    MEM_WRITE B mem rd addr
                  else mem in
         ARM mem' wb_reg psr`;
 
@@ -502,12 +509,10 @@ val SWP_def = Define`
     let (B,Rn,Rd,Rm) = DECODE_SWP n in
     let rn = REG_READ reg mode Rn
     and reg' = INC_PC reg in
-    let (MEM_READ,MEM_WRITE) = if B then (MEM_READ_BYTE,MEM_WRITE_BYTE)
-                                    else (MEM_READ_WORD,MEM_WRITE_WORD)
-    and rm = REG_READ reg' mode Rm in
-    let word = MEM_READ mem rn
-    and mem' = if PIPE_OKAY rn (FETCH_PC reg) then
-                 MEM_WRITE mem rm rn
+    let rm = REG_READ reg' mode Rm
+    and word = MEM_READ B mem rn in
+    let mem' = if PIPE_OKAY rn (FETCH_PC reg) then
+                 MEM_WRITE B mem rm rn
                else
                  mem in
       ARM mem' (REG_WRITE reg' mode Rd word) psr`;
@@ -571,7 +576,7 @@ val DECODE_INST_def = Define`
 
 val NEXT_ARM_def = Define`
   NEXT_ARM (ARM mem reg psr) =
-    let n = w2n (MEM_READ_WORD mem (WORD_ALIGN (FETCH_PC reg))) in
+    let n = w2n (MEMREAD mem (FETCH_PC reg)) in
     let ic = DECODE_INST n
     and (N,Z,C,V,mode) = DECODE_PSR (CPSR_READ psr) in
       if ~CONDITION_PASSED N Z C V n then

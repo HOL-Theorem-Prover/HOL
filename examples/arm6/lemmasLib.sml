@@ -65,9 +65,6 @@ val CORE3_ss = simpLib.SIMPSET
    rewrs = [iclass_distinct,iseq_distinct,REG_WRITE_WRITE_PC,TEST_OR_COMP_THM2],
    congs = [], filter = NONE, ac = [], dprocs = []};
 
-val finish_rws = [INIT_ARM6_def,DECODE_PSR_def,NXTIC_def,MEM_WRITE_READ,REG_WRITE_READ_PC,
-                  REG_WRITE_COMMUTES,ADD_SUBw,ADD4_SUB8_THM];
-
 val SWP_ALU3 = ABBREV_TAC `alu3 = ALU6 swp t3 i ARB
                             (SND
                                (SHIFTER swp t3 i oareg sctrl
@@ -397,6 +394,9 @@ val UNFOLD_STATE = ONCE_REWRITE_TAC [STATE_ARM6_COR]
                                    iclass_distinct,IC_def,ABORTINST_def,DECODE_PSR_def];
 
 val UNFOLD_NEXT = ONCE_REWRITE_TAC [FUNPOW_EVAL] THEN SIMP_TAC arith_ss [FUNPOW];
+
+val finish_rws = [INIT_ARM6_def,DECODE_PSR_def,NXTIC_def,MEM_WRITE_READ,REG_WRITE_READ_PC,
+                  REG_WRITE_COMMUTES,ADD_SUBw,ADD4_SUB8_THM];
 
 val FINISH_OFF = STRIP_TAC
         THEN POP_ASSUM (fn th => REWRITE_TAC [SYM th])

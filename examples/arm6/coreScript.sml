@@ -475,16 +475,6 @@ val REG_READ6_def = Define`
       FETCH_PC reg
     else REG_READ reg mode n`;
 
-val MEMWRITE_def = Define`
-  MEMWRITE mem word areg nbw =
-    if nbw then
-      MEM_WRITE_WORD mem word areg
-    else
-      MEM_WRITE_BYTE mem word areg`;
-
-val MEMREAD = Define`
-  MEMREAD mem areg = mem (TO_W30 areg)`;
-
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
@@ -548,7 +538,7 @@ val NEXT_ARM6_def = Define`
      and data = if nrw then ARB else MEMREAD mem areg
      in
      let mem' = if nrw /\ (pcchange \/ ~(PIPECHANGE areg apipea apipeb))
-                   then MEMWRITE mem busb areg nbw else mem
+                   then MEM_WRITE (~nbw) mem busb areg else mem
      and reg' = if pcwa then REG_WRITE reg nbs 15 inc else reg
      and psr' = if FST psrwa then
                    if SND psrwa then CPSR_WRITE psr psrdat else SPSR_WRITE psr nbs psrdat
