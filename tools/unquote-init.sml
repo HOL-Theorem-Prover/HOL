@@ -23,7 +23,7 @@ local fun has_dq file =
 in
 fun use s =
   if has_dq s
-  then let val filename = FileSys.tmpName()^".hol98"
+  then let val filename = FileSys.tmpName()^".hol"
        in
          if unquote_to s filename = Process.success
          then
@@ -39,6 +39,6 @@ end;
  *  Make the pretty-printer print terms and types with `` .... `` syntax.    *
  *---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
   (term_pp_prefix := "``";   term_pp_suffix := "``";
   type_pp_prefix  := "``";   type_pp_suffix := "``");
