@@ -961,8 +961,6 @@ val MODEL_COMPUTATION_TO_MODEL =
 (* cindy.                                                                    *)
 (*****************************************************************************)
 
-(*
-
 val FST_LEMMA =
  prove
   (``!Q x. (\(s,t). Q s) x = Q(FST x)``,
@@ -972,7 +970,7 @@ val FST_LEMMA =
 val OPEN_MODEL_PROD_INFINITE =
  store_thm
   ("OPEN_MODEL_PROD_INFINITE",
-   ``UF_VALID (MODEL_AUTOMATON_PROD (OPEN_MODEL P) A) f
+   ``AUTOMATON A /\ UF_VALID (MODEL_AUTOMATON_PROD (OPEN_MODEL P) A) f
      ==>
      !pi. COMPUTATION (OPEN_MODEL P) (INFINITE pi)
           ==>
@@ -980,19 +978,27 @@ val OPEN_MODEL_PROD_INFINITE =
            (MODEL_AUTOMATON_PROD (COMPUTATION_TO_MODEL(INFINITE pi)) A)
            f``,
     RW_TAC (srw_ss()++resq_SS)
-     [UF_VALID_def,UF_INFINITE_VALID_def,MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def, 
-      COMPUTATION_def,IN_COMPUTATION,COMPUTATION_TO_MODEL_def,PATH_def]
+     [AUTOMATON_def,UF_VALID_def,UF_INFINITE_VALID_def,MODEL_AUTOMATON_PROD_def,
+      OPEN_MODEL_def,COMPUTATION_def,IN_COMPUTATION,COMPUTATION_TO_MODEL_def,PATH_def]
      THEN FULL_SIMP_TAC list_ss 
            [FST_LEMMA,PROVE[]``(!v. (?s. P s v) ==> Q v) = !v s. P s v ==> Q v``,
             MAP_PATH_def]
+     THEN `(!n. (?s t. (pi' n = (s,t)) /\ t IN A.Q)) /\
+           (!n. ?s t t'.
+                 ((pi' n = (s,t)) /\ (pi' (SUC n) = (s + 1,t'))) /\
+                 (t,pi s,t') IN A.Delta)`
+          by PROVE_TAC[]
+     THEN POP_ASSUM(fn th => STRIP_ASSUME_TAC(CONV_RULE SKOLEM_CONV th))
+     THEN POP_ASSUM(fn th => STRIP_ASSUME_TAC(CONV_RULE SKOLEM_CONV th))
+     THEN POP_ASSUM(fn th => STRIP_ASSUME_TAC(CONV_RULE SKOLEM_CONV th))
+     THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(CONV_RULE SKOLEM_CONV (el 2 thl)))
+     THEN POP_ASSUM(fn th => STRIP_ASSUME_TAC(CONV_RULE SKOLEM_CONV th))
      THEN ASSUM_LIST
            (fn thl => ASSUME_TAC
                        (SPECL 
-                         [``INFINITE(\n. (pi(FST(pi' n)), t)):(('a -> bool) # 'b) path``,
-                          ``(pi 0,t):('a -> bool) # 'b``] 
-                         (el 6 thl)))
-     THEN FULL_SIMP_TAC list_ss [MAP_PATH_def]
-
+                         [``INFINITE(\n. (pi(FST(pi' n)), t''' n)):(('a -> bool) # 'b) path``,
+                          ``(pi:num -> 'a -> bool 0,t):('a -> bool) # 'b``] 
+                         (el 9 thl)))
      THEN `PATH
             <|S := {(s,t) | s SUBSET P /\ t IN A.Q};
               S0 := {(s,t) | s SUBSET P /\ t IN A.Q0};
@@ -1000,24 +1006,12 @@ val OPEN_MODEL_PROD_INFINITE =
                 {((s,t),s',t') |
                  (s SUBSET P /\ s' SUBSET P) /\ (t,s,t') IN A.Delta};
               P := P; L := (\(s,t). s)|> (pi 0,t)
-            (INFINITE (\n. (pi (FST (pi' n)),t))) 
+            (INFINITE (\n. (pi:num -> 'a -> bool (FST (pi':num -> num # 'b n)),t''' n))) 
             ==>
             UF_SEM
               (MAP_PATH (\s'. STATE (FST s'))
-                        (INFINITE (\n. (pi (FST (pi' n)),t)))) f`
-          by PROVE_TAC[]
-
-
-
-
-
-
-
-     THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(Q.SPEC `INFINITE p'` (el 6 thl)))
-     THEN FULL_SIMP_TAC (srw_ss()++resq_SS) [PATH_def,MAP_PATH_def,IN_COMPUTATION]
-
-     THEN Induct_on `n`
-     THEN RW_TAC list_ss []
-*)
+               (INFINITE (\n. (pi (FST (pi' n)),t''' n)))) f`
+           by PROVE_TAC[]
+     THEN FULL_SIMP_TAC (srw_ss()++resq_SS) [PATH_def,MAP_PATH_def]);
 
 val _ = export_theory();
