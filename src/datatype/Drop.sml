@@ -48,67 +48,10 @@ fun partitions P [] = []
      case partition (P h) t 
       of (L1,L2) => (h::L1) :: partitions P L2;
 
-fun lex_compare c1 c2 ((x1,x2),(y1,y2)) =
-  case c1 (x1,y1)
-   of EQUAL => c2 (x2,y2)
-    | other => other;
-
-local open Redblackmap 
-in
-val initial_const_map : (string * string, string * string)dict = 
-     mkDict (lex_compare String.compare String.compare)
-end;
-
-val basic_const_map = 
-  itlist (fn (x,y) => fn m => Redblackmap.insert (m,x,y))
-    [(("min","="),            ("","=")),
-     (("bool","~"),           ("Bool","not")),
-     (("bool","/\\"),         ("","andalso")),
-     (("bool","\\/"),         ("","orelse")),
-     (("bool","T"),           ("Bool","true")),
-     (("bool","F"),           ("Bool","false")),
-     (("pair",","),           ("",",")),
-     (("pair","FST"),         ("pairML","fst")),
-     (("pair","SND"),         ("pairML","snd")),
-     (("pair","CURRY"),       ("pairML","curry")),
-     (("pair","UNCURRY"),     ("pairML","uncurry")),
-     (("pair","PAIR_MAP"),    ("pairML","pairmap")),
-     (("one","one"),          ("","()")),
-     (("num","0"),            ("numML","zero")), 
-     (("prim_rec","<"),       ("numML","<")),
-     (("arithmetic","<="),    ("numML","<=")),
-     (("arithmetic",">"),     ("numML",">")),
-     (("arithmetic",">="),    ("numML",">=")),
-     (("arithmetic","+"),     ("numML","+")),
-     (("arithmetic","-"),     ("numML","-")),
-     (("arithmetic","*"),     ("numML","*")),
-     (("integer","int_add"),  ("intML","+")),
-     (("integer","int_sub"),  ("intML","-")),
-     (("integer","int_mul"),  ("intML","*")),
-     (("integer","<"),        ("intML","<")),
-     (("integer","<="),       ("intML","<=")),
-     (("integer",">"),        ("intML",">")),
-     (("integer",">="),       ("intML",">=")),
-     (("list","NIL"),         ("List","nil")),
-     (("list","CONS"),        ("List","::")),
-     (("list","FILTER"),      ("List","filter"))
-    ]
-    initial_const_map;
-
 fun full_name("",s2) = s2
   | full_name(s1,s2) = s1^"."^s2;
 
-fun const_map (p as (s1,s2)) =
-  case Redblackmap.peek(basic_const_map, p)
-   of SOME (thy,name) => full_name (thy,name)
-    | NONE => if s1=current_theory()
-              then s2 else full_name (s1^"ML",s2)
-
-fun is_constructor c =
-  let val (_,ty) = strip_fun (type_of c)
-      val {Tyop,...} = dest_thy_type ty
-  in op_mem same_const c (TypeBase.constructors_of Tyop)
-  end handle HOL_ERR _ => false;
+fun const_map c = full_name (ConstMapML.apply c);
 
 fun prec_of c =
   if same_const c boolSyntax.equality then 100 else
@@ -133,44 +76,6 @@ val dest_list_hook  = ref (fn _ => raise ERR "dest_list" "undefined")
 (* lists, and case expressions.                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun build_case_clause(constr,rhs) =
- let open pairSyntax
-     val (args,r) = strip_fun (type_of constr)
-     fun peel [] N = ([],N)
-       | peel (_::tys) N = 
-           let val (v,M) = dest_abs N
-               val (V,M') = peel tys M
-           in (v::V,M')
-           end
-     val (V,rhs') = peel args rhs
-     val theta = match_type (list_mk_fun (args,ind))
-                            (list_mk_fun (map type_of V, ind))
-     val constr' = inst theta constr
-  in (list_mk_comb(constr',V), rhs')
-  end;
-
-fun dest_case M = 
-  let val (c,args) = strip_comb M
-      val (cases,arg) = front_last args
-      val tyop = fst(dest_type (type_of arg))
-  in case total TypeBase.case_const_of tyop
-      of NONE => raise ERR "dest_case" "unable to destruct case expression"
-       | SOME d => 
-           if same_const c d
-           then let val constrs = TypeBase.constructors_of tyop
-                in (c, arg, map build_case_clause (zip constrs cases))
-                end
-           else raise ERR "dest_case" "unable to destruct case expression"
-  end
-
-fun is_case M = 
-  let val (c,args) = strip_comb M
-      val tyop = fst(dest_type (type_of (last args)))
-  in same_const c (TypeBase.case_const_of tyop) 
-  end 
-  handle HOL_ERR _ => false;
-
-
 fun term_to_ML ppstrm = 
  let open Portable
      val {add_break,add_newline,
@@ -192,7 +97,7 @@ fun term_to_ML ppstrm =
      if pairSyntax.is_pair tm then pp_pair i tm else
      if pairSyntax.is_plet tm then pp_let i tm else
      if pairSyntax.is_pabs tm then pp_abs i tm else
-     if is_case tm then pp_case i (dest_case tm) else
+     if TypeBase.is_case tm then pp_case i (TypeBase.dest_case tm) else
      if is_comb tm then pp_comb i tm 
      else raise ERR "term_to_ML" "Unknown syntax"
 
@@ -306,14 +211,11 @@ fun term_to_ML ppstrm =
          ; end_block()
         )
   and pp_var tm = add_string(fst(dest_var tm))
-  and pp_const tm = 
-       let val {Name,Thy,Ty} = dest_thy_const tm
-       in add_string (const_map(Thy,Name))
-       end
+  and pp_const tm = add_string (const_map tm)
   and pp_comb i tm = 
        let val (f,args) = strip_comb tm
        in lparen i maxprec
-        ; if is_constructor f 
+        ; if TypeBase.is_constructor f 
             then 
               (pp maxprec f; add_string "(";
                pr_list (pp minprec) 
