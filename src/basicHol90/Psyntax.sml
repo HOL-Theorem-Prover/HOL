@@ -91,7 +91,7 @@ val INST_TYPE = Thm.INST_TYPE o mk_subst;
 val INST_TY_TERM = Conv.INST_TY_TERM o (mk_subst##mk_subst);
 
 fun new_type i s = Parse.new_type{Name = s, Arity = i};
-fun new_constant(s,ty) = Theory.new_constant{Name = s, Ty = ty};
+fun new_constant(s,ty) = Parse.new_constant{Name = s, Ty = ty};
 fun new_infix(s,ty,i) = Parse.new_infix{Name = s, Ty = ty,Prec=i};
 fun new_binder(s,ty) = Parse.new_binder{Name = s, Ty = ty};
 

@@ -62,7 +62,7 @@ val INST_TY_TERM = Conv.INST_TY_TERM;
 
 
 val new_type = Parse.new_type;
-val new_constant = Theory.new_constant;
+val new_constant = Parse.new_constant;
 val new_infix = Parse.new_infix;
 val new_binder = Parse.new_binder;
 

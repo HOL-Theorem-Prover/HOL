@@ -43,8 +43,8 @@ fun ERR function message =
 val lhand = rand o rator
 val conjuncts = strip_conj
 
-fun strip_vars tm = 
-   let fun pull_off_var tm acc = 
+fun strip_vars tm =
+   let fun pull_off_var tm acc =
          let val {Rator, Rand} = dest_comb tm
          in if is_var Rand then pull_off_var Rator (Rand::acc) else (tm, acc)
          end handle HOL_ERR _ => (tm, acc)
@@ -54,9 +54,9 @@ fun strip_vars tm =
 
 fun REPEATNC n c = if n < 1 then REFL else c THENC REPEATNC (n - 1) c
 
-fun HEAD_BETA_CONV tm = 
+fun HEAD_BETA_CONV tm =
   let fun gotoheadpair c tm =
-         if is_comb tm andalso is_comb (rator tm) 
+         if is_comb tm andalso is_comb (rator tm)
             then RATOR_CONV (gotoheadpair c) tm
             else c tm
   in
@@ -68,9 +68,9 @@ fun CONJS_CONV c tm =
 
 
 local fun SIMPLE_EXISTS v th = EXISTS (mk_exists{Bvar=v, Body=concl th},v) th
-      fun SIMPLE_CHOOSE v th = 
+      fun SIMPLE_CHOOSE v th =
             CHOOSE(v,ASSUME (mk_exists{Bvar=v, Body=hd(hyp th)})) th
-      val RIGHT_BETAS = rev_itlist 
+      val RIGHT_BETAS = rev_itlist
                         (fn a => CONV_RULE (RAND_CONV BETA_CONV) o C AP_THM a)
 in
 fun mymatch_and_instantiate axth pattern instance = let
@@ -91,7 +91,7 @@ fun mymatch_and_instantiate axth pattern instance = let
     val forall_env = ListPair.map op|-> (patvars, instvars)
     val pateqn = Term.subst forall_env pateqn0
     val _ = lhs pateqn = lhs insteqn orelse
-      raise HOL_ERR {origin_function = 
+      raise HOL_ERR {origin_function =
                 "prove_raw_recursive_functions_exist.mymatch_and_instantiate",
               origin_structure = "Prim_rec",
               message = ("Failed to match LHSes in clause "^Int.toString cnum)}
@@ -128,8 +128,8 @@ in
   axth2
 end
 
-fun findax c ((p,ax)::rst) = 
-      ((match_term p c; (ax,rst)) 
+fun findax c ((p,ax)::rst) =
+      ((match_term p c; (ax,rst))
         handle HOL_ERR _ => let val (a,l) = findax c rst in (a,(p,ax)::l) end)
   | findax c [] = raise ERR "prove_raw_recursive_functions_exist" "findax";
 
@@ -143,7 +143,7 @@ fun prove_raw_recursive_functions_exist ax tm = let
   val axcls = conjuncts axbody
   val f = repeat rator o rand o lhand o snd o strip_forall
   val table = map (fn t => (f t,t)) axcls
-  fun gax c (axs,tabl) = 
+  fun gax c (axs,tabl) =
        let val (axcl,tabl') = findax c tabl
        in (axcl::axs, tabl')
        end
@@ -210,28 +210,28 @@ in
   list_mk_conj gcls
 end
 
-val prove_recursive_functions_exist = 
- let fun reshuffle fnn args acc = 
+val prove_recursive_functions_exist =
+ let fun reshuffle fnn args acc =
       let val args' = uncurry (C (curry op@)) (partition is_var args)
       in if args = args' then acc
-         else 
+         else
           let val gvs = map (genvar o type_of) args
               val gvs' = map (C assoc (zip args gvs)) args'
               val lty = itlist (curry (op -->) o type_of) gvs'
-                         (funpow (length gvs) 
+                         (funpow (length gvs)
                                  (hd o tl o #Args o dest_type) (type_of fnn))
               val fn' = genvar lty
-              val def = mk_eq{lhs = fnn, 
+              val def = mk_eq{lhs = fnn,
                               rhs = list_mk_abs(gvs,list_mk_comb(fn',gvs'))}
           in
             (ASSUME def)::acc
           end
       end
-     fun scrub_def t th = 
+     fun scrub_def t th =
       let val {lhs=l, rhs=r} = dest_eq t
       in MP (Thm.INST [l |-> r] (DISCH t th)) (REFL r)
       end
-     fun prove_once_universalised ax tm = 
+     fun prove_once_universalised ax tm =
       let val rawcls = conjuncts tm
           val spcls = map (snd o strip_forall) rawcls
           val lpats = map (strip_comb o lhand) spcls
@@ -239,7 +239,7 @@ val prove_recursive_functions_exist =
           val uxargs = map (C assoc lpats) ufns
           val oxargs = map (uncurry (C (curry op@)) o partition is_var) uxargs
           val trths = itlist2 reshuffle ufns uxargs []
-          val tth = REPEATC (CHANGED_CONV 
+          val tth = REPEATC (CHANGED_CONV
                       (PURE_REWRITE_CONV trths THENC DEPTH_CONV BETA_CONV)) tm
           val eth = prove_canon_recursive_functions_exist ax (rand(concl tth))
           val (evs,ebod) = strip_exists(concl eth)
@@ -258,12 +258,14 @@ val prove_rec_fn_exists = prove_recursive_functions_exist
 (* Version that defines function(s).                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun new_recursive_definition0 ax name tm = 
+fun new_recursive_definition0 ax name tm =
  let val eth = prove_recursive_functions_exist ax tm
      val (evs,bod) = strip_exists(concl eth)
- in 
-  Const_spec.new_specification 
-    {consts = map (#Name o dest_var) evs, sat_thm=eth, name=name}
+ in
+  Parse.new_specification
+    {consts = map (fn t => {const_name = #Name (dest_var t),
+                            fixity = Parse.Prefix}) evs,
+     sat_thm=eth, name=name}
  end
 
 end
@@ -355,9 +357,9 @@ fun new_recursive_definition {name,rec_axiom,def} =
    corresponding to that type's constructors with their arguments.
  ---------------------------------------------------------------------------*)
 
-fun type_constructors_with_args ax name = 
+fun type_constructors_with_args ax name =
   let val (_, body) = strip_exists (#2 (strip_forall (concl ax)))
-      fun extract_constructor tm = 
+      fun extract_constructor tm =
          let val (_, eqn) = strip_forall tm
              val {lhs,...} = dest_eq eqn
              val arg = rand lhs
@@ -378,7 +380,7 @@ fun type_constructors ax name =
 fun doms_of_tyaxiom ax =
  let val (evs, _) = strip_exists (#2 (strip_forall (concl ax)))
      val candidate_types = map (#1 o dom_rng o type_of) evs
-     fun isop_applied_to_other ty = List.exists 
+     fun isop_applied_to_other ty = List.exists
            (fn ty' => Lib.mem ty' candidate_types) (#Args (dest_type ty))
  in
     List.filter (not o isop_applied_to_other) candidate_types
@@ -393,10 +395,10 @@ fun doms_of_tyaxiom ax =
    Formerly "new_types_from_ind"
  ---------------------------------------------------------------------------*)
 
-fun doms_of_ind_thm ind = 
+fun doms_of_ind_thm ind =
  let val conclusions = strip_conj(#2(strip_imp(#2(strip_forall(concl ind)))))
      val candidate_types = map (type_of o #Bvar o dest_forall) conclusions
-     fun isop_applied_to_other ty = List.exists 
+     fun isop_applied_to_other ty = List.exists
             (fn ty' => Lib.mem ty' candidate_types) (#Args (dest_type ty))
  in
    List.filter (not o isop_applied_to_other) candidate_types
@@ -1196,22 +1198,22 @@ fun DISJS_CHAIN rule th =
 
 local fun dest_eq tm = let val {lhs,rhs} = Dsyntax.dest_eq tm in (lhs,rhs) end
       fun mk_eq (t1, t2) = Dsyntax.mk_eq {lhs = t1, rhs = t2}
-      fun dest_disj tm = 
+      fun dest_disj tm =
          let val {disj1, disj2} = Dsyntax.dest_disj tm in (disj1, disj2) end
-      fun dest_comb tm = 
+      fun dest_comb tm =
          let val {Rator,Rand} = Term.dest_comb tm in (Rator,Rand) end
-      fun dest_imp tm = 
+      fun dest_imp tm =
          let val {ant, conseq} = Dsyntax.dest_imp tm in (ant,conseq) end
 
-      val make_args = 
+      val make_args =
           let fun margs n s avoid [] = []
                 | margs n s avoid (h::t) =
-                    let val v = variant avoid 
+                    let val v = variant avoid
                                  (mk_var{Name = s^(Int.toString n), Ty=h})
                     in v::margs (n + 1) s (v::avoid) t
                     end
           in fn s => fn avoid => fn tys =>
-              if length tys = 1 
+              if length tys = 1
               then [variant avoid (mk_var{Name = s, Ty = hd tys})]
               else margs 0 s avoid tys
           end handle _ => raise ERR "make_args" ""
@@ -1233,14 +1235,14 @@ local fun dest_eq tm = let val {lhs,rhs} = Dsyntax.dest_eq tm in (lhs,rhs) end
         end
     end;
 
- val prove_cases_thm0 = 
- let fun mk_exclauses x rpats = 
-       let val xts = map 
+ val prove_cases_thm0 =
+ let fun mk_exclauses x rpats =
+       let val xts = map
            (fn t => list_mk_exists(List.rev (free_vars t), mk_eq(x, t))) rpats
        in
          mk_abs{Bvar=x, Body=list_mk_disj xts}
        end
-     fun prove_triv tm = 
+     fun prove_triv tm =
        let val (evs,bod) = strip_exists tm
            val (l,r) = dest_eq bod
            val (lf,largs) = strip_comb l
@@ -1252,13 +1254,13 @@ local fun dest_eq tm = let val {lhs,rhs} = Dsyntax.dest_eq tm in (lhs,rhs) end
          itlist EXISTS_EQUATION (map concl ths) (SYM th1)
        end
      fun prove_disj tm =
-        if is_disj tm 
+        if is_disj tm
          then let val (l,r) = dest_disj tm
-              in DISJ1 (prove_triv l) r handle HOL_ERR _ => 
+              in DISJ1 (prove_triv l) r handle HOL_ERR _ =>
                  DISJ2 l (prove_disj r)
               end
          else prove_triv tm
-     fun prove_eclause tm = 
+     fun prove_eclause tm =
        let val (avs,bod) = strip_forall tm
            val ctm = if is_imp bod then rand bod else bod
            val cth = prove_disj ctm
@@ -1267,7 +1269,7 @@ local fun dest_eq tm = let val {lhs,rhs} = Dsyntax.dest_eq tm in (lhs,rhs) end
          GENL avs dth
        end
  in
-  fn th => 
+  fn th =>
    let val (avs,bod) = strip_forall(concl th)
        val cls = map (snd o strip_forall) (conjuncts(lhand bod))
        val pats = map (fn t => if is_imp t then rand t else t) cls
@@ -1277,7 +1279,7 @@ local fun dest_eq tm = let val {lhs,rhs} = Dsyntax.dest_eq tm in (lhs,rhs) end
             (fn pr => map snd (filter (fn (p,x) => p = pr) spats)) preds
        val xs = make_args "x" (free_varsl pats) (map (type_of o hd) rpatlist)
        val xpreds = map2 mk_exclauses xs rpatlist
-       val ith = BETA_RULE 
+       val ith = BETA_RULE
                  (Thm.INST (ListPair.map (fn (x,p) => p |-> x) (xpreds, preds))
                           (SPEC_ALL th))
        val eclauses = conjuncts(fst(dest_imp(concl ith)))
@@ -1286,10 +1288,10 @@ local fun dest_eq tm = let val {lhs,rhs} = Dsyntax.dest_eq tm in (lhs,rhs) end
    end
  end (* prove_cases_thm0 *)
 in
-fun prove_cases_thm ind0 = 
+fun prove_cases_thm ind0 =
  let fun CONJUNCTS_CONV c tm =
         if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
-      val ind = CONV_RULE 
+      val ind = CONV_RULE
          (STRIP_QUANT_CONV (RATOR_CONV (RAND_CONV
             (CONJUNCTS_CONV (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
       val basic_thm = prove_cases_thm0 ind

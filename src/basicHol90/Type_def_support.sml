@@ -72,8 +72,10 @@ fun define_new_type_bijections{name,ABS,REP,tyax} =
            val {Args=[a,r],...} = Type.dest_type (type_of rep)
            val eth = MP (SPEC P (INST_TYPE (ty_subst a r) ABS_REP_THM)) tyax
        in
-        Const_spec.new_specification
-                {name=name, sat_thm=eth, consts = [REP, ABS]}
+        Parse.new_specification
+                {name=name, sat_thm=eth,
+                 consts = [{const_name = REP, fixity = Prefix},
+                           {const_name = ABS, fixity = Prefix}]}
       end
  handle HOL_ERR _ => raise TYPE_DEF_SUPPORT_ERR "define_new_type_bijections" ""
 end;
