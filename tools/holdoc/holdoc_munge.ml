@@ -82,12 +82,12 @@ and parse_longchunk = parser (* parse a chunk delimited by two blank lines *)
     [< 'Indent(n1); c = parse_longchunk0 n1 >] -> c
 
 and parse_longchunk0 n1 = parser
-    [< 'Indent(n2); c = parse_longchunk1 [Indent(n1);Indent(n2)] >] -> c
-  | [<              c = parse_longchunk1 [Indent(n1)]            >] -> c
+    [< 'Indent(n2); c = parse_longchunk1 n1 n2 >] -> c
+  | [< e = parse_line1 ; c = parse_longchunk   >] -> (Indent(n1) :: e) :: c
 
-and parse_longchunk1 n = parser
+and parse_longchunk1 n1 n2 = parser
     [< 't when not (isIndent t) ; e = parse_line1 ;
-       c = parse_longchunk >] -> (n @ (t :: e)) :: c
+       c = parse_longchunk >] -> [Indent(n1)] :: (Indent(n2) :: t :: e) :: c
   | [<>]                  -> []
 
 and optcomm = parser
@@ -515,6 +515,7 @@ type rule =
 let print_tokenline toks =
     let f t = print_string ((render_token t)^" ")
     in
+(* DEBUG: print_string "TOKEN LINE: "; *)
     ignore (List.map f toks);
     print_newline()
 
@@ -687,6 +688,7 @@ let potential_vars (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
 (* output (munge) a whole rule *)
 
 let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
+(* DEBUG:  let _ = print_rule r in *)
   let pvs      = potential_vars r
   in
   let texname  = texify_command n
