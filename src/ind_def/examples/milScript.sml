@@ -9,7 +9,7 @@
 (* =====================================================================*)
 
 (*
-app load ["ind_defLib", "Define_type", "ConstrProofs", "clTheory"] ;
+app load ["IndDefLib", "Datatype", "ConstrProofs", "clTheory"] ;
 *)
 
 structure milScript =

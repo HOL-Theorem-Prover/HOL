@@ -13,30 +13,19 @@
 (* ---------------------------------------------------------------------*)
 
 (* Interactive mode prelude:
-
-   app load ["ind_defLib", "Define_type", "ConstrProofs"] ;
+   app load ["IndDefLib", "Datatype", "Q"] ;
 *)
 
 structure clScript =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib
+     IndDefLib IndDefRules Datatype;
+
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-open ind_defLib Define_type ConstrProofs;
 
-(*---------------------------------------------------------------------------*
- * Presentation support for rule sets.                                       *
- *---------------------------------------------------------------------------*)
-
-infix -------------------------------------------------------------------;
-fun (x ------------------------------------------------------------------- y)
-   = (x,y)
-
-val TY_ANTIQ = Term.ty_antiq o Type;
-val relation = TY_ANTIQ`:'a -> 'a -> bool`;
-
-val _ = new_theory"cl";
+val _ = new_theory "cl";
 
 (* =====================================================================*)
 (* Syntax of the combinatory logic.					*)
@@ -46,58 +35,28 @@ val _ = new_theory"cl";
 (* The recursive types package is used to define the syntax of terms in *)
 (* combinatory logic. The syntax is:					*)
 (*									*)
-(*    U ::=   s  |  k  |  U1 # U2					*)
+(*    U ::=   S  |  K  |  U1 # U2					*)
 (*                                                                      *)
 (* where U, U1, and U2 range over terms. In higher order logic, terms of*)
 (* combinatory logic are represented by the following constructors of a	*)
 (* recursive type cl:							*)
 (*						                        *)
-(*    s:cl,  k:cl, and #:cl -> cl -> cl                                 *)
+(*    S:cl,  K:cl, and #:cl -> cl -> cl                                 *)
 (*									*)
-(* We are unfortunately prevented from the using upper-case letter S, as*)
-(* this is already a constant in the built-in HOL theory hierarchy.     *)
 (* ---------------------------------------------------------------------*)
 
-val cl = define_type{name="cl",
-                     type_spec = `cl = s | k | # of cl => cl`,
-                     fixities = [Prefix, Prefix, Infix 800]};
+val _ = Hol_datatype `cl = S | K | # of cl => cl`;
 
+val _ = set_fixity("#", Infixl 801);
+val _ = set_MLname "#" "HASH_DEF";
 
-val _ = set_MLname "#_DEF" "HASH_DEF";
-
-(* =====================================================================*)
-(* Standard syntactic theory, derived by the recursive types package.	*)
-(* =====================================================================*)
-
-(* ---------------------------------------------------------------------*)
-(* Structural induction theorem for terms of combinatory logic .	*)
-(* ---------------------------------------------------------------------*)
-
-val induct = save_thm ("induct",prove_induction_thm cl);
-
-(* ---------------------------------------------------------------------*)
-(* Exhaustive case analysis theorem for terms of combinatory logic.	*)
-(* ---------------------------------------------------------------------*)
-
-val cases = save_thm ("cases", prove_cases_thm induct);
-
-(* ---------------------------------------------------------------------*)
-(* Prove that the application constructor is one-to-one.		*)
-(* ---------------------------------------------------------------------*)
-
-val ap11 = save_thm("ap11", prove_constructors_one_one cl);
-
-(* ---------------------------------------------------------------------*)
-(* Prove that the constructors yield syntactically distinct values. One	*)
-(* typically needs all symmetric forms of the inequalities.		*)
-(* ---------------------------------------------------------------------*)
-
-val distinct =
-    let val ths = CONJUNCTS (prove_constructors_distinct cl)
-        val rths = map (GEN_ALL o NOT_EQ_SYM o SPEC_ALL) ths 
-    in save_thm("distinct", LIST_CONJ (ths @ rths))
-    end;
-
+val (distinct,ap11) = 
+  let val (SOME facts) = TypeBase.read "cl"
+      val (SOME thm1) = TypeBase.distinct_of facts
+      val (SOME thm2) = TypeBase.one_one_of facts
+  in 
+    (CONJ thm1 (GSYM thm1),thm2)
+  end;
 
 (* =====================================================================*)
 (* Inductive definition of reduction of CL terms.			*)
@@ -116,39 +75,15 @@ val distinct =
 (* of redexes, the second two rules define the contraction of subterms.	*)
 (* ---------------------------------------------------------------------*)
 
+val _ = set_fixity("--->",Infixr 700);
 
-val {rules=Crules,induction=Cind} =
-let val CTR = Term`---> :cl->cl->bool`
-in
-  indDefine "contract" 
-   [
+val (Crules, Cind, Ccases) = new_inductive_definition
+  (Term `(!x y.               (K#x#y) ---> x)
+     /\  (!x y z.             (S#x#y#z) ---> (x#z#(y#z)))
+     /\  (!x y z. x ---> y ==> (x#z) ---> (y#z))
+     /\  (!x y z. x ---> y ==> (z#x) ---> (z#y))`);
 
-
-      ([],                                                            [])
-      -------------------------------------------------------------------
-                          `^CTR ((k # x) # y) x`                        ,
-
-
-      ([],                                                            [])
-      -------------------------------------------------------------------
-                `^CTR (((s # x) # y) # z)  ((x # z) # (y # z))`         ,
-
-
-
-      ([                       `^CTR x y`                           ],[])
-      -------------------------------------------------------------------
-                         `^CTR (x # z) (y # z)`                         ,
-
-
-
-      ([                       `^CTR x y`                           ],[])
-      -------------------------------------------------------------------
-                          `^CTR (z # x) (z # y)`                       
-   ]
-
-(Infix 700)  (`^CTR U V`, [])
-end;
-
+val Crules = CONJUNCTS Crules;
 
 
 (* ---------------------------------------------------------------------*)
@@ -167,14 +102,9 @@ val C_INDUCT_TAC =
     RULE_INDUCT_THEN Cind STRIP_ASSUME_TAC STRIP_ASSUME_TAC;
 
 (* ---------------------------------------------------------------------*)
-(* Prove the case analysis theorem for the contraction rules.		*)
-(* ---------------------------------------------------------------------*)
-
-val Ccases = derive_cases_thm (Crules,Cind);
-
-(* ---------------------------------------------------------------------*)
 (* Tactics for each of the contraction rules.				*)
 (* ---------------------------------------------------------------------*)
+
 val [Ck_TAC,Cs_TAC,LCap_TAC,RCap_TAC] = map RULE_TAC Crules;
 
 
@@ -185,32 +115,12 @@ val [Ck_TAC,Cs_TAC,LCap_TAC,RCap_TAC] = map RULE_TAC Crules;
 (* relation --->* to be RTC --->.					*)
 (* ---------------------------------------------------------------------*)
 
-val {rules=RTCrules, induction=RTCind} =
-let val RTC = Term`RTC:('a->'a->bool)->'a->'a->bool` 
-in
-indDefine "RTC"
-   [
+val (RTCrules, RTCind, RTCcases) = new_inductive_definition
+  (Term `(!x y. R x y ==> RTC R x y)
+     /\  (!x. RTC R x x)
+     /\  (!x y. (?z. RTC R x z /\ RTC R z y) ==> RTC R x y)`);
 
-      ([],[                 `(R:^relation) x y`                        ])
-      -------------------------------------------------------------------
-                               `^RTC R x y`                             ,
-
-
-      ([],                                                            [])
-      -------------------------------------------------------------------
-                               `^RTC R x x`                             ,
-
-
-
-      ([         `^RTC R x z`,             `^RTC R z y`],             [])
-      -------------------------------------------------------------------
-                              `^RTC R x y`                             
-   ]
-
-Prefix (`^RTC R x y`, [`R:^relation`])
-end;
-
-
+val RTCrules = map GEN_ALL (CONJUNCTS (SPEC_ALL RTCrules));
 
 (* ---------------------------------------------------------------------*)
 (* Standard rule induction tactic for RTC.				*)
@@ -225,19 +135,12 @@ val RTC_INDUCT_TAC =
 
 val [RTC_IN_TAC,RTC_REFL_TAC,RTC_TRANS_TAC] = map RULE_TAC RTCrules;
 
-
-(* ---------------------------------------------------------------------*)
-(* Case analysis theorem for RTC.					*)
-(* ---------------------------------------------------------------------*)
-
-val RTCcases = derive_cases_thm (RTCrules,RTCind);
-
-
 (* ---------------------------------------------------------------------*)
 (* Definition of weak reduction.					*)
 (* ---------------------------------------------------------------------*)
 
-val reduce = new_infix_definition("reduce", (--`--->* = RTC $--->`--),700);
+val reduce = Q.new_definition("reduce", `$--->* = RTC $--->`);
+val _ = set_fixity ("--->*", Infixr 700);
 
 
 (* =====================================================================*)
@@ -266,10 +169,12 @@ val reduce = new_infix_definition("reduce", (--`--->* = RTC $--->`--),700);
 (* =====================================================================*)
 
 (* ---------------------------------------------------------------------*)
-(* We first define i to be skk.						*)
+(* We first define I to be SKK.						*)
 (* ---------------------------------------------------------------------*)
 
-val iDEF = new_definition ("iDEF", (--`i = (s # k) # k`--));
+val _ = hide "I";   (* I is already defined, in combinTheory *)
+
+val IDEF = Q.new_definition ("IDEF", `I = S#K#K`);
 
 (* ---------------------------------------------------------------------*)
 (* Given the tactics defined above for each rule, it is straightforward *)
@@ -289,24 +194,16 @@ fun CONT_TAC g =
 (* ---------------------------------------------------------------------*)
 (* We can now use this tactic to show the following lemmas:		*)
 (*									*)
-(*    1) ki(ii) ---> i 							*)
-(*    2) ki(ii) ---> ki((ki)(ki))					*)
-(*    3) ki((ki)(ki)) ---> i						*)
+(*    1) KI(II) ---> I 							*)
+(*    2) KI(II) ---> KI((KI)(KI))					*)
+(*    3) KI((KI)(KI)) ---> I						*)
 (* ---------------------------------------------------------------------*)
 
-val lemma1 = prove
-    ((--`((k # i) # (i # i)) ---> i`--),
-     CONT_TAC);
-
-val lemma2 =
-    prove
-    ((--`((k # i) # (i # i)) ---> (k # i) # ((k # i) # (k # i))`--),
-     SUBST1_TAC iDEF THEN CONT_TAC);
-
-val lemma3 =
-    prove
-    ((--`((k # i) # ((k # i) # (k # i))) ---> i`--),
-     SUBST1_TAC iDEF THEN CONT_TAC);
+val lemma1 = Q.prove(`K#I#(I#I) ---> I`, CONT_TAC);
+val lemma2 = Q.prove(`K#I#(I#I) ---> K#I#(K#I#(K#I))`, SUBST1_TAC IDEF 
+                                                       THEN CONT_TAC);
+val lemma3 = Q.prove(`K#I#(K#I#(K#I)) ---> I`,          SUBST1_TAC IDEF 
+                                                       THEN CONT_TAC);
 
 (* ---------------------------------------------------------------------*)
 (* For the proof that ~?U. i ---> U, we construct some infrastructure 	*)
@@ -316,7 +213,7 @@ val lemma3 =
 (* 									*)
 (*   |- !U V.								*)
 (*       U ---> V =							*)
-(*       (?y. U = (k # V) # y) \/					*)
+(*       (?y. U = (K # V) # y) \/					*)
 (*       (?x y z. (U = ((s # x) # y) # z) /\ (V = (x # z) # (y # z))) \/ *)
 (*       (?x y z. (U = x # z) /\ (V = y # z) /\ x ---> y) \/		*)
 (*       (?x y z. (U = z # x) /\ (V = z # y) /\ x ---> y)		*)
@@ -367,10 +264,8 @@ val EXPAND_CASES_TAC =
 (* Hence we may use REPEAT here.					*)
 (* ---------------------------------------------------------------------*)
 
-val lemma4 =
-    prove
-    ((--`~?U. i ---> U`--),
-     SUBST_TAC [iDEF] THEN REPEAT EXPAND_CASES_TAC);
+val lemma4 = Q.prove(`~?U. I ---> U`,
+     SUBST_TAC [IDEF] THEN REPEAT EXPAND_CASES_TAC);
 
 
 (* ---------------------------------------------------------------------*)
@@ -382,7 +277,7 @@ val lemma4 =
 val CR =
     new_definition
     ("CR",
-      (--`CR (R: 'a -> 'a -> bool) =
+      (--`CR (R:'a -> 'a -> bool) =
        !a b. R a b ==> !c. R a c ==> ?d. R b d /\ R c d`--));
 
 (* ---------------------------------------------------------------------*)
@@ -403,10 +298,10 @@ val NOT_C_CR =
      (--`~CR($--->)`--),
      PURE_REWRITE_TAC [CR,IMP_DISJ_THM] THEN
      CONV_TAC NOT_CONV THEN
-     EXISTS_TAC (--`(k # i) # (i # i)`--) THEN
-     EXISTS_TAC (--`(k # i) # ((k # i) # (k # i))`--) THEN
+     EXISTS_TAC (--`(K#I) # (I # I)`--) THEN
+     EXISTS_TAC (--`(K#I) # ((K#I) # (K#I))`--) THEN
      REWRITE_TAC [lemma2] THEN
-     EXISTS_TAC (--`i`--) THEN
+     EXISTS_TAC (--`I`--) THEN
      REWRITE_TAC [lemma1,CONV_RULE NOT_EXISTS_CONV lemma4]);
 
 (* =====================================================================*)
@@ -425,37 +320,15 @@ val NOT_C_CR =
 (* of a term to be contracted in a single step.				 *)
 (* --------------------------------------------------------------------- *)
 
+val _ = set_fixity("===>",Infixr 700);
 
-val {rules=PCrules,induction=PCind} =
-let val PCTR = Term`===> :cl->cl->bool` 
-in
-  indDefine "pcontract"
-   [
+val (PCrules, PCind, PCcases) = new_inductive_definition
+ (Term `(!x. x ===> x)
+   /\   (!x y. K#x#y ===> x)
+   /\   (!x y z. S#x#y#z ===> x#z#(y#z))
+   /\   (!w x y z. w ===> x /\ y ===> z ==> (w#y ===> x#z))`);
 
-      ([],                                                            [])
-      -------------------------------------------------------------------
-                                 `^PCTR x x`                            ,
-
-
-
-      ([],                                                            [])
-      -------------------------------------------------------------------
-                          `^PCTR ((k # x) # y) x`                       ,
-
-
-      ([],                                                            [])
-      -------------------------------------------------------------------
-               `^PCTR (((s # x) # y) # z)  ((x # z) # (y # z))`         ,
-
-
-      ([          `^PCTR w x`,             `^PCTR y z`              ],[])
-      -------------------------------------------------------------------
-                         `^PCTR (w # y) (x # z)`                        
-   ]
-
- (Infix 700)  (`^PCTR U V`, [])
-end;
-
+val PCrules = CONJUNCTS PCrules;
 
 
 (* --------------------------------------------------------------------- *)
@@ -473,15 +346,9 @@ val PC_INDUCT_TAC =
     RULE_INDUCT_THEN PCind STRIP_ASSUME_TAC STRIP_ASSUME_TAC;
 
 (* ---------------------------------------------------------------------*)
-(* Case analysis theorem for ===>.					*)
-(* ---------------------------------------------------------------------*)
-
-val PCcases = derive_cases_thm (PCrules,PCind);
-
-
-(* ---------------------------------------------------------------------*)
 (* Tactics for each of the parallel contraction rules.			*)
 (* ---------------------------------------------------------------------*)
+
 val [PC_REFL_TAC,PCk_TAC,PCs_TAC,PCap_TAC] = map RULE_TAC PCrules;
 
 (* ---------------------------------------------------------------------*)
@@ -495,7 +362,7 @@ fun PC_TAC g =
    FIRST [PC_REFL_TAC,
           PCk_TAC,
           PCs_TAC,
-          PCap_TAC THEN PC_TAC] g handle _ => ALL_TAC g;
+          PCap_TAC THEN PC_TAC] g handle HOL_ERR _ => ALL_TAC g;
 
 
 (* --------------------------------------------------------------------- *)
@@ -521,25 +388,19 @@ fun PC_TAC g =
 (* relation ===>* can just be defined to be TC ===>.			*)
 (* ---------------------------------------------------------------------*)
 
-val {rules=TCrules, induction=TCind} =
-let val TC = Term`TC:('a->'a->bool)->'a->'a->bool` 
-in
- indDefine "TC" 
-   [
+val _ = hide "TC";  (* TC already defined in relationTheory *)
 
-      ([],[                    `(R:^relation) x y`                     ])
-      -------------------------------------------------------------------
-                                  `^TC R x y`                           ,
+val (TCrules, TCind, TCcases) = new_inductive_definition
+ (Term `(!x y. R x y ==> TC R x y)
+    /\  (!x y. (?z. TC R x z /\ R z y) ==> TC R x y)`);
 
+val TCrules = map GEN_ALL (CONJUNCTS (SPEC_ALL TCrules));
 
-      ([             `^TC R x z`],           [`(R:^relation) z y`      ])
-      -------------------------------------------------------------------
-                                  `^TC R x y`                           
+(* ---------------------------------------------------------------------*)
+(* Strong form of rule induction for TC.				*)
+(* ---------------------------------------------------------------------*)
 
-  ]
-      Prefix (`^TC R x y`, [`R:^relation`])
-end;
-
+val TCsind = derive_strong_induction (TCrules,TCind);
 
 (* ---------------------------------------------------------------------*)
 (* Standard rule induction tactic for TC.				*)
@@ -557,17 +418,12 @@ val [TC_IN_TAC,TC_TRANS_TAC] = map RULE_TAC TCrules;
 
 
 (* ---------------------------------------------------------------------*)
-(* Strong form of rule induction for TC.				*)
-(* ---------------------------------------------------------------------*)
-
-val TCsind = derive_strong_induction (TCrules,TCind);
-
-
-(* ---------------------------------------------------------------------*)
 (* Now, define parallel reduction for terms of CL.			*)
 (* ---------------------------------------------------------------------*)
 
-val preduce = new_infix_definition("preduce", (--`===>* = TC $===>`--),700);
+val preduce = Q.new_definition("preduce", `$===>* = TC $===>`);
+
+val _ = set_fixity ("===>*", Infixr 700);
 
 (* =====================================================================*)
 (* Theorem: ===>* and --->* are the same relation.			*)
@@ -583,13 +439,13 @@ val preduce = new_infix_definition("preduce", (--`===>* = TC $===>`--),700);
 
 val Rk_THM =
     prove
-    ((--`!a b. ((k # a) # b) --->* a`--),
+    ((--`!a b. K#a#b --->* a`--),
      SUBST1_TAC reduce THEN
      RTC_IN_TAC THEN Ck_TAC);
 
 val Rs_THM =
     prove
-    ((--`!a b c. (((s # a) # b) # c) --->* ((a # c) # (b # c))`--),
+    ((--`!a b c. (((S # a) # b) # c) --->* ((a # c) # (b # c))`--),
      SUBST1_TAC reduce THEN
      RTC_IN_TAC THEN Cs_TAC);
 
@@ -644,7 +500,6 @@ val RED_TRANS =
 (* a subset of --->*.							  *)
 (* ---------------------------------------------------------------------  *)
 
-
 val PCONT_SUB_RED =
     prove
     ((--`!U V. U ===> V ==> U --->* V`--),
@@ -653,7 +508,7 @@ val PCONT_SUB_RED =
       MATCH_ACCEPT_TAC Rk_THM,
       MATCH_ACCEPT_TAC Rs_THM,
       MATCH_MP_TAC RED_TRANS THEN
-      EXISTS_TAC (--`(x # y)`--) THEN CONJ_TAC THENL
+      Q.EXISTS_TAC `x#y` THEN CONJ_TAC THENL
       [IMP_RES_THEN (TRY o MATCH_ACCEPT_TAC) LRap_THM,
        IMP_RES_THEN (TRY o MATCH_ACCEPT_TAC) RRap_THM]]);
 
@@ -683,13 +538,13 @@ val PRED_SUB_RED =
 
 val PRk_THM =
     prove
-    ((--`!a b. ((k # a) # b) ===>* a`--),
+    ((--`!a b. ((K # a) # b) ===>* a`--),
      SUBST1_TAC preduce THEN
      TC_IN_TAC THEN PC_TAC);
 
 val PRs_THM =
     prove
-    ((--`!a b c. (((s # a) # b) # c) ===>* ((a # c) # (b # c))`--),
+    ((--`!a b c. S#a#b#c ===>* a#c#(b#c)`--),
      SUBST1_TAC preduce THEN
      TC_IN_TAC THEN PC_TAC);
 
@@ -877,15 +732,13 @@ val TC_PRESERVES_CR =
 (* halt.                                                                 *)
 (* --------------------------------------------------------------------- *)
 
-val ERR = HOL_ERR{origin_structure="",origin_function="",message=""};
-
 val EXPAND_PC_CASES_CONV =
    let val outc = LEFT_AND_EXISTS_CONV ORELSEC RIGHT_AND_EXISTS_CONV
        fun guard tm = 
-         case (strip_comb tm)
-          of (_,[x,y]) => if (is_var x andalso is_var y) then raise ERR
+         case strip_comb tm
+          of (_,[x,y]) => if is_var x andalso is_var y then fail()
                           else REWR_CONV PCcases tm
-           | _ => raise ERR
+           | _ => fail()
    in CHANGED_CONV (ONCE_DEPTH_CONV guard) THENC
       REWRITE_CONV [distinct,ap11,GSYM CONJ_ASSOC, 
                     LEFT_AND_OVER_OR,RIGHT_AND_OVER_OR] THENC
@@ -907,7 +760,7 @@ val EXPAND_PC_CASES_CONV =
 (*  2) (--`(((s # x) # y) # z) ===> c ==>				*)
 (*      (?d. ((x # z) # (y # z)) ===> d /\ c ===> d)`--)		*)
 (*									*)
-(*  3) (--`((k # x) # y) ===> c ==> (?d. x ===> d /\ c ===> d)`--)	*)
+(*  3) (--`((K # x) # y) ===> c ==> (?d. x ===> d /\ c ===> d)`--)	*)
 (*									*)
 (*  4) (--`x ===> c ==> (?d. x ===> d /\ c ===> d)`--)			*)
 (*                                                                      *)
@@ -919,13 +772,14 @@ val EXPAND_PC_CASES_CONV =
 (* on the strong induction assumption.  See the proof below for details.*)
 (* ---------------------------------------------------------------------*)
 
-val CR_THEOREM = prove (--`CR $===>`--,
+val CR_THEOREM = 
    let val ecnv = REPEATC EXPAND_PC_CASES_CONV 
        fun ttac th g = SUBST_ALL_TAC th g  handle HOL_ERR _ => ASSUME_TAC th g 
        val mkcases = REPEAT_TCL STRIP_THM_THEN ttac 
        val STRIP_PC_TAC = REPEAT STRIP_TAC THEN PC_TAC THEN
                           TRY(FIRST_ASSUM MATCH_ACCEPT_TAC) 
-   in PURE_ONCE_REWRITE_TAC [CR] THEN
+   in prove (--`CR $===>`--,
+      PURE_ONCE_REWRITE_TAC [CR] THEN
       RULE_INDUCT_THEN PCsind STRIP_ASSUME_TAC STRIP_ASSUME_TAC THEN
       REPEAT GEN_TAC THENL
       [DISCH_TAC THEN EXISTS_TAC (--`c:cl`--) THEN STRIP_PC_TAC,
@@ -940,18 +794,18 @@ val CR_THEOREM = prove (--`CR $===>`--,
                        (--`((z'''#z')#(z''#z'))`--)] THEN STRIP_PC_TAC,
        DISCH_THEN (mkcases o CONV_RULE ecnv) THENL
        [EXISTS_TAC (--`x#z`--) THEN STRIP_PC_TAC,
-        let val cth = UNDISCH (fst(EQ_IMP_RULE (ecnv (--`(k#c) ===> x`--)))) 
+        let val cth = UNDISCH (fst(EQ_IMP_RULE (ecnv (--`(K#c) ===> x`--)))) 
         in DISJ_CASES_THEN (REPEAT_TCL STRIP_THM_THEN ttac) cth 
         end THENL map EXISTS_TAC [(--`c:cl`--),(--`z':cl`--)] THEN 
         STRIP_PC_TAC,
-        let val cth = UNDISCH(fst(EQ_IMP_RULE(ecnv(--`(s#x')#y' ===> x`--)))) 
+        let val cth = UNDISCH(fst(EQ_IMP_RULE(ecnv(--`(S#x')#y' ===> x`--)))) 
         in DISJ_CASES_THEN (REPEAT_TCL STRIP_THM_THEN ttac) cth 
         end THENL map EXISTS_TAC [(--`((x'#z)#(y'#z))`--),
                                   (--`((x'#z)#(z'#z))`--),
                                   (--`((z''#z)#(z'#z))`--)] THEN 
         STRIP_PC_TAC,
-        RES_TAC THEN EXISTS_TAC (--`d''#d`--) THEN STRIP_PC_TAC]]
-   end);
+        RES_TAC THEN EXISTS_TAC (--`d''#d`--) THEN STRIP_PC_TAC]])
+   end;
 
 (* --------------------------------------------------------------------- *)
 (* We now do the following trivial proof.				 *)
