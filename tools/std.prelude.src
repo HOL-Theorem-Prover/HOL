@@ -56,6 +56,7 @@ val _ = installPP goalstackLib.pp_proofs
 val _ = installPP goalstackLib.pp_goalstack
 val _ = installPP Rewrite.pp_rewrites;
 val _ = installPP TypeBase.pp_tyinfo;
+val _ = installPP Defn0.pp_defn;
 
 (*---------------------------------------------------------------------------*
  * Set up the the help paths.                                                *
