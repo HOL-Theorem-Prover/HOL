@@ -68,10 +68,14 @@ val REP_ABS_PAIR = prove(
   THEN REWRITE_TAC[IS_PAIR_MK_PAIR]);
 
 
-val COMMA_DEF =
- new_infixr_definition
-     ("COMMA_DEF",   --`$, x y = ABS_prod(MK_PAIR x y)`--, 50);
+val COMMA_DEF = new_definition (
+  "COMMA_DEF",
+  --`$, x y = ABS_prod(MK_PAIR x y)`--);
 
+val _ = add_rule {term_name = ",", fixity = Infixr 50,
+                  pp_elements = [TOK ","],
+                  paren_style = ParoundName,
+                  block_style = (AroundSameName, (PP.INCONSISTENT, 0))};
 
 (*---------------------------------------------------------------------------*
  * Projections.                                                              *
