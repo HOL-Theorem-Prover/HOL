@@ -167,11 +167,11 @@ fun ind_of (ABBREV _)           = NONE
 
 
 fun params_of (ABBREV _)  = []
-  | params_of (NONREC _)  = []
   | params_of (PRIMREC _) = []
-  | params_of (STDREC  {SV, ...}) = SV
-  | params_of (NESTREC {SV, ...}) = SV
-  | params_of (MUTREC  {SV, ...}) = SV;
+  | params_of (NONREC {SV, ...}) = SV
+  | params_of (STDREC {SV, ...}) = SV
+  | params_of (NESTREC{SV, ...}) = SV
+  | params_of (MUTREC {SV, ...}) = SV;
 
 fun schematic defn = not(List.null (params_of defn));
 
@@ -223,9 +223,10 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
   | inst_defn (PRIMREC{eqs,ind,bind}) theta =
       PRIMREC{eqs=INST_THM theta eqs,
               ind=INST_THM theta ind, bind=bind}
-  | inst_defn (NONREC {eqs,ind,stem}) theta =
+  | inst_defn (NONREC {eqs,ind,SV,stem}) theta =
       NONREC {eqs=INST_THM theta eqs,
-              ind=INST_THM theta ind, stem=stem}
+              ind=INST_THM theta ind, 
+              SV=map (isubst theta) SV,stem=stem}
   | inst_defn (ABBREV {eqn,bind}) theta =
       ABBREV {eqn=INST_THM theta eqn,bind=bind}
 
@@ -359,7 +360,7 @@ fun handle_nested (stem,eqs,ind) =
 
 fun save_defn (ABBREV {bind, ...}) = been_stored bind
   | save_defn (PRIMREC{bind, ...}) = been_stored bind
-  | save_defn (NONREC {eqs, ind, stem}) = store(stem,eqs,ind)
+  | save_defn (NONREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
   | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ eqs,ind)
   | save_defn (MUTREC {eqs, ind, stem, union, ...})
       = (case union
@@ -1009,7 +1010,7 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
             val r2        = MATCH_MP (DISCH_ALL (LIST_CONJ r1)) Empty_thm
             val i2        = MATCH_MP (DISCH_ALL i1) Empty_thm
         in
-           NONREC {eqs=r2, ind=i2, stem=stem}
+           NONREC {eqs=r2, ind=i2, SV=SV, stem=stem}
         end handle HOL_ERR _ => raise ERR "stdrec_defn" "")
   | otherwise =>
         let val (rules', ind') = untuple (rules, ind)

@@ -276,7 +276,7 @@ fun primDefine defn =
      val _ = if null (params_of defn')
            then computeLib.add_funs eqns
          else WARN "primDefine"
-          "Extra free vars in right-hand side!! Making schematic definition!!"
+     "\n    Extra free vars in right-hand side!! Making schematic definition!!"
  in
     LIST_CONJ eqns
  end
