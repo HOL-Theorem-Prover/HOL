@@ -78,6 +78,8 @@ val keepers =
      (* meson *)
      "Canon_Port.sig","jrhTactics.sig","mesonLib.sig",
 
+     (* n_bit *)
+     "bitsTheory.sig",
 
      (* num *)
      "numSyntax.sig",
@@ -166,12 +168,6 @@ val keepers =
      "bword_arithTheory.sig","wordTheory.sig","word_numTheory.sig",
      "bword_bitopTheory.sig","word_baseTheory.sig",
      "bword_numTheory.sig","word_bitopTheory.sig",
-
-     (* word32 *)
-     "bitsTheory.sig",
-     "word16Theory.sig", "word16Lib.sig",
-     "word32Theory.sig", "word32Lib.sig",
-     "word64Theory.sig", "word64Lib.sig",
 
      (* HolSat *)
      "HolSatLib.sig",
