@@ -39,7 +39,7 @@ val CONCAT_def =
  Define `(CONCAT [] = []) /\ (CONCAT(l::ll) = l <> CONCAT ll)`;
 
 (******************************************************************************
-* A path is is finite ot infinite
+* A path is finite or infinite
 * Finite paths are non-empty and so are represented by a pair (x,xl) 
 * where x is the head and xl the tail
 ******************************************************************************)
