@@ -7,6 +7,8 @@ struct
 
 open HolKernel boolLib realTheory simpLib
 
+val (Type,Term) = parse_from_grammars realTheory.real_grammars
+
 val arith_ss = boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ numSimps.ARITH_ss ++
                numSimps.REDUCE_ss
 
