@@ -13,6 +13,7 @@ val munge_texify_text : string -> unit
 val munge_texify_math : string -> unit
 val munge_indent : int -> unit
 val munge_hol_content : pvars -> Holdocmodel.hol_content -> unit
+val render_HolTex_hook : (pvars -> Holdocmodel.texdoc -> unit) ref
 val munge_curried :
   pvars ->
   Holdocmodel.hol_content ->

@@ -431,10 +431,16 @@ let munge_indent : int -> unit
 (*  Munging the whole document                                          *)
 (* -------------------------------------------------------------------- *)
 
+(* hook for preprocessing the content of TeX comments embedded in HOL *)
+let rec render_HolTex_hook : (pvars -> texdoc -> unit) ref
+    = ref begin
+      fun pvs d ->
+        wrap "\\tsholcomm{" "}" (rendertexdoc_pvs pvs) d
+    end
 
 (* output a single HOL token *)
 (* boolean flag: was previous token an alphanumeric ident? *)
-let rec munge_hol_content0 : pvars -> bool -> hol_content -> bool
+and munge_hol_content0 : pvars -> bool -> hol_content -> bool
     = fun pvs adjid (t,_) ->
       let render_it =
         match t with
@@ -453,7 +459,7 @@ let rec munge_hol_content0 : pvars -> bool -> hol_content -> bool
                                      else
                                        "\\tscomm{") "}"
                                     munge_texify_text s)
-        | HolTex d          -> (fun () -> wrap "\\tsholcomm{" "}" rendertexdoc d)
+        | HolTex d          -> (fun () -> !render_HolTex_hook pvs d)
         | HolDir (DirVARS _ ,_) -> (fun () -> ())    (* ignore *)
         | HolDir (dir       ,_) -> do_directive dir (* do it now, even if not echoing *);
                                    (fun () -> ())
