@@ -603,6 +603,43 @@ or at level 10 with a bare prefix. "
                    "Bool.toString (!%s)^\" ***\\n\"))")
            s s s s)))
 
+(defun hol-toggle-trace (s &optional arg)
+  "Toggles the trace variable STRING between zero and non-zero.  With prefix
+argument N, sets the trace to that value in particular."
+  (interactive "sTrace name: \nP")
+  (if (null arg)
+      (progn
+        (message (concat "Toggling " s))
+        (send-raw-string-to-hol
+         (format "val _ = let val nm = \"%s\"
+                      fun findfn r = #name r = nm
+                      val old =
+                            #trace_level (valOf (List.find findfn (traces())))
+                  in
+                      print (\"** \"^nm^\" trace now \");
+                      if 0 < old then (set_trace nm 0; print \"off\\n\")
+                      else (set_trace nm 1; print \"on\\n\")
+                  end handle Option =>
+                        print \"** No such trace var: \\\"%s\\\"\\n\""
+                 s s)))
+    (let ((n (prefix-numeric-value arg)))
+      (message (format "Setting %s to %d" s n))
+      (send-raw-string-to-hol
+       (format "val _ = (set_trace \"%s\" %d; print \"** %s trace now %d\\n\")
+                        handle HOL_ERR _ =>
+                           print \"** No such trace var: \\\"%s\\\"\\n\""
+               s n s n s)))))
+
+(defun hol-toggle-goalstack-fvs ()
+  "Toggles the trace \"goalstack fvs\"."
+  (interactive)
+  (hol-toggle-trace "goalstack fvs"))
+
+(defun hol-toggle-simplifier-trace (arg)
+  "Toggles the trace \"simplifier\".  With ARG sets trace to this value."
+  (interactive "P")
+  (hol-toggle-trace "simplifier" arg))
+
 (defun hol-toggle-show-types (arg)
   "Toggles the global show_types variable. With prefix ARG toggles the related
 variable show_types_verbosely instead."
@@ -714,9 +751,11 @@ already loaded.)"
 
 (define-key hol-map "\C-a" 'hol-toggle-show-assums)
 (define-key hol-map "\C-c" 'hol-interrupt)
+(define-key hol-map "\C-f" 'hol-toggle-goalstack-fvs)
 (define-key hol-map "\C-l" 'hol-recentre)
 (define-key hol-map "\C-n" 'hol-toggle-show-numeral-types)
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)
+(define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-t" 'hol-toggle-show-types)
 (define-key hol-map "\C-v" 'hol-scroll-up)
 (define-key hol-map "\M-f" 'forward-hol-tactic)
