@@ -12,6 +12,6 @@
 signature Const_spec =
 sig
 
-val new_specification :
+val prim_new_specification :
   {name :string, consts : string list, sat_thm : Thm.thm} -> Thm.thm
 end;

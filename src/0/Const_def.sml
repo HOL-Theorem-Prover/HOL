@@ -146,7 +146,8 @@ fun define_exists() =
   then raise ERR"define_exists" "called >1 time"
   else let val alpha = mk_vartype "'a"
          val x = mk_var{Name="x",Ty=alpha}
-         val _ = Theory.new_constant{Name="?", Ty = (alpha --> bool) --> bool}
+         val _ = Theory.prim_new_constant{Name="?",
+                                          Ty = (alpha --> bool) --> bool}
          val P = mk_var{Name="P",Ty=alpha --> bool}
          val sel = mk_const{Name="@",Ty=(alpha --> bool)-->alpha}
          val exdef = mk_eq{lhs=mk_const{Name="?", Ty=(alpha-->bool) --> bool},
@@ -164,10 +165,10 @@ fun new_gen_definition{name,def} = let
   val def_thm = DEF_EXISTS_RULE def
   val cname = (#Name o dest_var o #Bvar o dest_exists o Thm.concl) def_thm
 in
-  Const_spec.new_specification
+  Const_spec.prim_new_specification
   {name = name, consts = [cname], sat_thm = def_thm}
 end;
 
-fun new_definition(name,def) = new_gen_definition{name=name, def=def};
+fun prim_new_definition(name,def) = new_gen_definition{name=name, def=def};
 
 end; (* CONST_DEF *)

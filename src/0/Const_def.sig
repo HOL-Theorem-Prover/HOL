@@ -12,7 +12,7 @@
 signature Const_def =
 sig
 
-  val new_definition        : string * Term.term -> Thm.thm
+  val prim_new_definition        : string * Term.term -> Thm.thm
 
   val define_exists : unit -> Thm.thm
 end

@@ -101,7 +101,7 @@ fun no_free_vars th =
 fun check_name const_name =
   if not(Lexis.allowed_term_constant const_name)
   then Lib.mesg true (String.concat
-       [Lib.quote const_name, 
+       [Lib.quote const_name,
          " is not a standard constant name (continuing anyway)"])
   else ();
 
@@ -137,12 +137,12 @@ fun check_specification name_fixl th =
    (vars, body)
  end;
 
-fun const_intro const_name var = 
-    Theory.new_constant{Name=const_name, Ty=Term.type_of var}
+fun const_intro const_name var =
+    Theory.prim_new_constant{Name=const_name, Ty=Term.type_of var}
 
 fun cnst s v = v |-> mk_const{Name=s,Ty=Term.type_of v};
 
-fun new_specification{name, consts, sat_thm} =
+fun prim_new_specification{name, consts, sat_thm} =
    let val (vars,body) = check_specification consts sat_thm
        val _ = Lib.map2 const_intro consts vars
        val theta = Lib.map2 cnst consts vars

@@ -928,7 +928,7 @@ fun prim_mk_const name =
    let val {name,htype,...} = lookup_const (theCT()) name
                (THEORY_ERR "mk_const" (Lib.quote name^" has not been defined"))
        val c = Const(name,htype)
-   in 
+   in
     if Type.polymorphic htype
     then (fn theta => Const(name, Type.type_subst theta htype))
     else (fn _ => c)
@@ -994,7 +994,7 @@ fun install_type(s,a,thy) = add_typeCT {name=s, arity=a, theory=thy};
  * Installing term constants.                                                *
  *---------------------------------------------------------------------------*)
 
-fun new_constant (c as {Name,Ty}) =
+fun prim_new_constant (c as {Name,Ty}) =
   (if (Lexis.allowed_term_constant Name) then ()
     else Lib.mesg true
           ("new_constant: "^Lib.quote Name

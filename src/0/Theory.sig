@@ -18,10 +18,10 @@ datatype 'a failed = SYSTEM   of exn     (* OS/network not right *)
 
 (* Adding to the current theory *)
 
-  val new_type     : {Name:string, Arity:int} -> unit
-  val new_constant : {Name:string, Ty:hol_type} -> unit
-  val new_axiom    : string * term -> thm
-  val save_thm     : string * thm -> thm
+  val new_type          : {Name:string, Arity:int} -> unit
+  val prim_new_constant : {Name:string, Ty:hol_type} -> unit
+  val new_axiom         : string * term -> thm
+  val save_thm          : string * thm -> thm
 
 (* Information on constants *)
 
