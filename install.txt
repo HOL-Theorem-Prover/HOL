@@ -15,11 +15,12 @@ Building the Hol98 system.
 
 A. First, install Moscow ML. This is usually straightforward. The
    directory where it lives will be called <mosml-dir> in the following.
+
    [Notice that, if you intend to use ML embeddings of C libraries, 
-   like the Robdd library, you are so far restricted to running on Linux,
-   Solaris, and OSF/1. Furthermore, you may have to set a few shell
-   variables in order to use C libraries; this is explained in the
-   MoscowML installation directions.]
+    like the Robdd library, you are so far restricted to running on Linux,
+    Solaris, and OSF/1. Furthermore, you may have to set a few shell
+    variables in order to use C libraries; this is explained in the
+    MoscowML installation directions.]
 
 
 B. Unpack Hol98 with the commands
@@ -48,9 +49,13 @@ C. Enter the "tools" directory and edit the file "configure.sml".
     (2) The following parameter tells the build procedure what operating
         system is being used. 
 
-            val OS = "unix";
+            val OS = 
 
-        Alternative choices for this are: "winNT". 
+        The current choices for this are: "linux", "solaris", and "winNT".  
+        If you are on a unix operating system that is not Linux or
+        Solaris, it is OK to just put "unix"; however, this will imply
+        that the robdd library will not be usable (it currently only
+        builds on linux and solaris).
 
     (3) The following parameter gives the path to a C compiler, which is
         used to compile the quotation preprocessor.
@@ -60,9 +65,19 @@ C. Enter the "tools" directory and edit the file "configure.sml".
         This parameter may need to be changed, if "gcc" is not on your
         machine, or can't be found along your path.
 
-    (4) The following parameter gives the name of the local directory
+    (4) The following parameter gives the path to the "gnumake" program,
+        which is required to build the robdd library. 
+
+           val GNUMAKE = "gnumake";
+
+        If you are building Hol98 on an OS that is *not* Solaris or
+        Linux, the robdd library is not currently accessible. In such a
+        case, the value of GNUMAKE does not matter. 
+ 
+
+    (5) The following parameter gives the name of the local directory
         that Holmake uses to store its dependencies in. On Unix and
-        WindowNT, this name does not have to be changed.
+        WindowsNT, this name does not have to be changed.
 
            val DEPDIR = ".HOLMK";
 
@@ -73,15 +88,17 @@ D. Perform the following 2 shell commands:
 
        <hol-dir>/bin/build
 
-   In case of difficulties the above steps can be gone through by hand,
-   by starting <mosmldir>/bin/mosml and stepping through
-   tools/configure.sml. Similarly, the execution of build.sml can also
-   be stepped through in MoscowML. This can be somewhat time-consuming,
-   but will help pinpoint the problem. 
+   The first command establishes some pathnames and the like; the
+   second actually builds the system. In case of difficulty, the
+   configuration can be gone through by hand, by starting 
+   <mosmldir>/bin/mosml and stepping through tools/configure.sml. 
+   Similarly, the execution of build.sml can also be stepped through 
+   in MoscowML. This can be somewhat time-consuming, but will help
+   pinpoint any problems. 
 
 
 E. If bin/build completes, successfully, you are done. From <hol-dir>
-   you can access 
+   you can now access 
 
       bin/hol           * The standard Hol98 interactive system; 
       bin/hol.unquote   * The interactive system with quote preprocessing;
@@ -100,28 +117,6 @@ Dealing with failure.
 
    * If a build attempt fails for some reason, you should attempt to invoke 
 
-        bin/build cleanAll
+        bin/build -cleanAll
 
      before a new build attempt.
-
-
-Other.
-------
-
-(The following is untested under the new scheme, so the following might
- be erroneous!)  
-
-The `robdd' library must be built specially. (It contains a library of C
-functions.)  Once the main HOL system has been built, go into src/robdd
-and invoke  
-
-    (cd buddy16; gnumake)
-    ../../bin/Holmake
-    gnumake
-				    
-After this, you will have to manually copy the object code for the
-library to <holdir>/sigobj. The following incantation should work:
-
-   cp *.ui ../../sigobj
-   cp *.uo ../../sigobj
-
