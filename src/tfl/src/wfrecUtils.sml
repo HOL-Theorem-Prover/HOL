@@ -42,7 +42,7 @@ val list_mk_fun_type  = end_itlist (curry(op -->));
 val list_mk_prod_type = list_mk_prod;
 
 val strip_fun_type = HolKernel.strip_fun;
-val strip_prod_type = strip_prod;
+val strip_prod_type = pairSyntax.spine_prod;
 
 fun atom_name tm = fst(dest_var tm handle HOL_ERR _ => dest_const tm);
 

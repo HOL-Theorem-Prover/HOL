@@ -1,24 +1,17 @@
 structure Induction :> Induction =
 struct
 
-open HolKernel
-
-open boolLib Rules wfrecUtils;
+open HolKernel boolLib Rules wfrecUtils;
 
 type thry = TypeBasePure.typeBase
-
-infixr 3 -->;
-infix 3 |->;
-infix 4 ##;
 
 val ERR = mk_HOL_ERR "Induction";
 
 
 fun induct_info db s =
  Option.map (fn facts => {nchotomy = TypeBasePure.nchotomy_of facts,
-                          constructors =
-                          TypeBasePure.constructors_of facts})
-      (TypeBasePure.get db s);
+                          constructors = TypeBasePure.constructors_of facts})
+           (TypeBasePure.get db s);
 
 (* -----------------------  Miscellaneous function  --------------------------
  *
@@ -258,6 +251,17 @@ fun prove_case f thy (tm,TCs_locals,thm) =
  end;
 
 
+(* Special purpose *)
+fun nstrip_prod_type n ty = 
+ if n < 1 then raise ERR "nstrip_prod_type" "first arg. too small"
+ else let fun strip 1 ty = [ty]
+            | strip m ty = 
+               let val (ty1,ty2) = pairSyntax.dest_prod ty
+              in ty1::nstrip_prod_type (n-1) ty2
+               end
+      in strip n ty
+      end;
+
 (*---------------------------------------------------------------------------*
  * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
  *                                                                           *
@@ -266,7 +270,7 @@ fun prove_case f thy (tm,TCs_locals,thm) =
  * the antecedent of Rinduct.                                                *
  *---------------------------------------------------------------------------*)
 
-fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
+fun mk_induction thy {fconst, R, SV, pat_TCs_list, args} =
 let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val (pats,TCsl) = unzip pat_TCs_list
     val case_thm = complete_cases thy pats
@@ -287,12 +291,13 @@ let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val dant = GEN v (DISJ_CASESL (ISPEC v case_thm) abs_cases)
     val dc = MP Sinduct dant
     val Parg_ty = type_of(fst(dest_forall(concl dc)))
-    val vars = map (wfrecUtils.vary[P]) (strip_prod_type Parg_ty)
-    val dc' = itlist GEN vars (SPEC (fst(mk_vstruct Parg_ty vars)) dc)
+    val vars = map (wfrecUtils.vary[P]) (nstrip_prod_type args Parg_ty)
+(*     val dc' = itlist GEN vars (SPEC (fst(mk_vstruct Parg_ty vars)) dc) *)
+    val dc' = itlist GEN vars (SPEC (pairLib.list_mk_pair vars) dc)
 in
    GEN P (DISCH (concl Rinduct_assum) dc')
 end
-handle HOL_ERR _ => raise ERR "mk_induction" "failed derivation";
+handle e => raise wrap_exn "Induction" "mk_induction" e;
 
 
 
