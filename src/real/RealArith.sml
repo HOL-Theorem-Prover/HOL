@@ -1623,7 +1623,7 @@ fun REAL_ASM_ARITH_TAC g =
 fun REAL_ARITH tm =
   let
     val _ = trace "REAL_ARITH"
-    val res = prove (tm,REAL_ARITH_TAC)
+    val res = Tactical.default_prover (tm,REAL_ARITH_TAC)
     val _ = trace "done REAL_ARITH"
   in
     res
