@@ -23,13 +23,6 @@ val thid_sort = Lib.sort (fn (s1:string,_,_) => fn (s2,_,_) => s1<=s2);
 fun thm_terms th = Thm.concl th :: Thm.hyp th;
 
 (*---------------------------------------------------------------------------*)
-(* Hook for altering the grammar before the signature of a theory is printed *)
-(* Allows some customization of how things look.                             *)
-(*---------------------------------------------------------------------------*)
-
-val pp_sig_hook = ref (fn () => ());
-
-(*---------------------------------------------------------------------------*)
 (* Print a type                                                              *)
 (*---------------------------------------------------------------------------*)
 
@@ -148,8 +141,7 @@ fun pp_sig pp_thm info_record ppstrm = let
         end_block());
 
   fun pr_docs() =
-    (!pp_sig_hook();
-     begin_block CONSISTENT 3;
+    (begin_block CONSISTENT 3;
      add_string "(*"; add_newline();
      pr_parents parents';
      pr_thms "Axiom" axioms';

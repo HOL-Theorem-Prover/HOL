@@ -4,9 +4,6 @@ struct
 
   local open arithmeticTheory whileTheory numeralTheory in end;
 
-  infix |->
-  infixr -->
-
   val ERR = mk_HOL_ERR "numSyntax";
 
 (*---------------------------------------------------------------------------
@@ -212,25 +209,5 @@ struct
 
 fun lift_num ty arbnum = mk_numeral arbnum
 
-
-(*---------------------------------------------------------------------------*)
-(* For HTML symbols dealing with arithmetic                                  *)
-(*---------------------------------------------------------------------------*)
-
-val _ = 
- let open TheoryPP Parse
-     val in_tm = prim_mk_const {Name="IN", Thy="bool"}
-     fun f() = 
-      (temp_overload_on ("&lt;", less_tm);
-       temp_overload_on ("&gt;", greater_tm);
-       temp_overload_on ("&le;", leq_tm);
-       temp_overload_on ("&ge;", geq_tm);
-       set_fixity "&lt;" (Infixr 450);
-       set_fixity "&gt;" (Infixr 450);
-       set_fixity "&le;" (Infixr 450);
-       set_fixity "&ge;" (Infixr 450))
- in 
-   pp_sig_hook := (f o !pp_sig_hook)
- end
 
 end

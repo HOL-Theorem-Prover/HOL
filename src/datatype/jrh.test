@@ -3,7 +3,7 @@
 (* by jrh, and expanded on over the years.                                   *)
 (* ========================================================================= *)
 
-app load ["bossLib", "setTheory", "stringTheory"];
+app load ["bossLib", "pred_setTheory", "stringTheory"];
 open bossLib;
 
 val Hol_datatype = Lib.try (Count.apply Hol_datatype);

@@ -25,10 +25,8 @@
 structure Prim_rec :> Prim_rec =
 struct
 
-open HolKernel Parse boolTheory boolSyntax Rsyntax
+open HolKernel Parse boolTheory boolSyntax 
      Drule Tactical Tactic Conv Thm_cont Rewrite Abbrev;
-
-infix THEN THENL ORELSE ## |-> --> THENC;
 
 val ERR = mk_HOL_ERR "Prim_rec";
 
@@ -42,7 +40,7 @@ val conjuncts = strip_conj
 
 fun strip_vars tm =
   let fun pull_off_var tm acc =
-        let val {Rator, Rand} = dest_comb tm
+        let val (Rator, Rand) = dest_comb tm
         in if is_var Rand then pull_off_var Rator (Rand::acc) else (tm, acc)
         end handle HOL_ERR _ => (tm, acc)
   in pull_off_var tm []
@@ -162,14 +160,14 @@ val prove_canon_recursive_functions_exist = let
       rev_itlist (fn a => CONV_RULE (RAND_CONV BETA_CONV) o C AP_THM a)
   fun canonize t = let
     val (avs,bod) = strip_forall t
-    val {lhs = l, rhs = r} = dest_eq bod
+    val (l,r) = dest_eq bod
     val (fnn,args) = strip_comb l
     val rarg = hd args
     and vargs = tl args
-    val l' = mk_comb{Rator = fnn, Rand = rarg}
+    val l' = mk_comb(fnn,rarg)
     and r' = list_mk_abs(vargs,r)
     val fvs = #2 (strip_comb rarg)
-    val def = ASSUME(list_mk_forall(fvs,mk_eq{lhs = l', rhs = r'}))
+    val def = ASSUME(list_mk_forall(fvs,mk_eq(l', r')))
   in
     GENL avs (RIGHT_BETAS vargs (SPECL fvs def))
   end
@@ -210,16 +208,15 @@ val prove_recursive_functions_exist =
               val gvs' = map (C assoc (zip args gvs)) args'
               val lty = itlist (curry (op -->) o type_of) gvs'
                          (funpow (length gvs)
-                                 (hd o tl o #Args o dest_type) (type_of fnn))
+                                 (hd o tl o snd o dest_type) (type_of fnn))
               val fn' = genvar lty
-              val def = mk_eq{lhs = fnn,
-                              rhs = list_mk_abs(gvs,list_mk_comb(fn',gvs'))}
+              val def = mk_eq(fnn,list_mk_abs(gvs,list_mk_comb(fn',gvs')))
           in
             (ASSUME def)::acc
           end
       end
      fun scrub_def t th =
-      let val {lhs, rhs} = dest_eq t
+      let val (lhs, rhs) = dest_eq t
       in MP (Thm.INST [lhs |-> rhs] (DISCH t th)) (REFL rhs)
       end
      fun prove_once_universalised ax tm =
@@ -257,7 +254,7 @@ fun new_recursive_definition0 ax name tm =
  in
   Rsyntax.new_specification
     {sat_thm=eth, name=name,
-     consts = map (fn t => {const_name = #Name (dest_var t),
+     consts = map (fn t => {const_name = fst(dest_var t),
                             fixity = Parse.Prefix}) evs }
  end;
 
@@ -352,10 +349,10 @@ fun type_constructors_with_args ax name =
   let val (_, body) = strip_exists (#2 (strip_forall (concl ax)))
       fun extract_constructor tm =
          let val (_, eqn) = strip_forall tm
-             val {lhs,...} = dest_eq eqn
+             val (lhs,_) = dest_eq eqn
              val arg = rand lhs
          in
-            if #Tyop (dest_type (type_of arg)) = name then SOME arg
+            if fst (dest_type (type_of arg)) = name then SOME arg
             else NONE
          end
   in
@@ -372,7 +369,7 @@ fun doms_of_tyaxiom ax =
  let val (evs, _) = strip_exists (#2 (strip_forall (concl ax)))
      val candidate_types = map (#1 o dom_rng o type_of) evs
      fun isop_applied_to_other ty = List.exists
-           (fn ty' => Lib.mem ty' candidate_types) (#Args (dest_type ty))
+           (fn ty' => Lib.mem ty' candidate_types) (snd (dest_type ty))
  in
     List.filter (not o isop_applied_to_other) candidate_types
  end
@@ -388,9 +385,9 @@ fun doms_of_tyaxiom ax =
 
 fun doms_of_ind_thm ind =
  let val conclusions = strip_conj(#2(strip_imp(#2(strip_forall(concl ind)))))
-     val candidate_types = map (type_of o #Bvar o dest_forall) conclusions
+     val candidate_types = map (type_of o fst o dest_forall) conclusions
      fun isop_applied_to_other ty = List.exists
-            (fn ty' => Lib.mem ty' candidate_types) (#Args (dest_type ty))
+            (fn ty' => Lib.mem ty' candidate_types) (snd (dest_type ty))
  in
    List.filter (not o isop_applied_to_other) candidate_types
  end
@@ -403,33 +400,33 @@ fun doms_of_ind_thm ind =
 
 fun num_variant vlist v =
   let val counter = ref 0
-      val {Name,Ty} = dest_var v
-      val slist = ref (map (#Name o dest_var) vlist)
+      val (Name,Ty) = dest_var v
+      val slist = ref (map (fst o dest_var) vlist)
       fun pass str =
          if (mem str (!slist))
          then ( counter := !counter + 1;
                 pass (Lib.concat Name (Lib.int_to_string(!counter))))
          else (slist := str :: !slist; str)
   in
-  mk_var{Name=pass Name,  Ty=Ty}
+  mk_var(pass Name, Ty)
   end;
 
 fun generate_case_constant_eqns ty clist =
  let val (dty,rty) = Type.dom_rng ty
-     val {Tyop,Args} = dest_type dty
+     val (Tyop,Args) = dest_type dty
      fun mk_cfun ctm (nv,away) =
        let val (c,args) = strip_comb ctm
            val fty = itlist (curry (op -->)) (map type_of args) rty
            val vname = if (length args = 0) then "v" else "f"
-           val v = num_variant away (mk_var{Name = vname, Ty = fty})
+           val v = num_variant away (mk_var(vname, fty))
        in (v::nv, v::away)
        end
      val arg_list = rev(fst(rev_itlist mk_cfun clist ([],free_varsl clist)))
-     val v = mk_var{Name = Tyop^"_case",
-                    Ty = list_mk_fun(map type_of arg_list, ty)}
+     val v = mk_var(Tyop^"_case",
+                    list_mk_fun(map type_of arg_list, ty))
      val preamble = list_mk_comb(v,arg_list)
-     fun clause (a,c) = mk_eq{lhs = mk_comb{Rator=preamble,Rand=c},
-                              rhs = list_mk_comb(a, #2 (strip_comb c))}
+     fun clause (a,c) = mk_eq(mk_comb(preamble,c),
+                              list_mk_comb(a, #2 (strip_comb c)))
  in
    list_mk_conj (ListPair.map clause (arg_list, clist))
  end
@@ -443,7 +440,7 @@ fun define_case_constant ax =
            (List.filter (fn ty => Lib.mem (#1 (dom_rng ty)) oktypes) newtypes)
      fun mk_defn ty =
       let val (dty,rty) = dom_rng ty
-          val name = #Tyop (dest_type dty)
+          val name = fst (dest_type dty)
           val cs = type_constructors_with_args ax name
           val eqns = generate_case_constant_eqns ty cs
       in new_recursive_definition
@@ -470,12 +467,12 @@ end
 
 fun BETAS fnn body =
  if is_var body orelse is_const body then REFL else
- if is_abs body then ABS_CONV (BETAS fnn (#Body(dest_abs body)))
- else let val {Rator,Rand} = dest_comb body
+ if is_abs body then ABS_CONV (BETAS fnn (#2(dest_abs body)))
+ else let val (Rator,Rand) = dest_comb body
       in if Rator = fnn then BETA_CONV
          else let val cnv1 = BETAS fnn Rator
                   and cnv2 = BETAS fnn Rand
-                  fun f {Rator,Rand} = (cnv1 Rator, cnv2 Rand)
+                  fun f (Rator,Rand) = (cnv1 Rator, cnv2 Rand)
               in MK_COMB o (f o dest_comb)
               end
       end;
@@ -491,7 +488,7 @@ fun BETAS fnn body =
 (* ---------------------------------------------------------------------*)
 
 fun GTAC y (A,g) =
-   let val {Bvar,Body} = dest_forall g
+   let val (Bvar,Body) = dest_forall g
        and y' = Term.variant (free_varsl (g::A)) y
    in ([(A, subst[Bvar |-> y'] Body)],
        fn [th] => GEN Bvar (INST [y' |-> Bvar] th))
@@ -532,7 +529,7 @@ fun GTAC y (A,g) =
 
 local fun ctacs tm =
        if is_conj tm
-       then let val tac2 = ctacs (#conj2(dest_conj tm))
+       then let val tac2 = ctacs (snd(dest_conj tm))
             in fn ttac => CONJUNCTS_THEN2 ttac (tac2 ttac)
             end
        else I
@@ -540,7 +537,7 @@ in
 fun TACF tm =
  let val (vs,body) = strip_forall tm
  in if is_imp body
-    then let val TTAC = ctacs (#ant(dest_imp body))
+    then let val TTAC = ctacs (fst(dest_imp body))
          in fn x => fn ttac =>
               MAP_EVERY (GTAC o Lib.K x) vs THEN DISCH_THEN (TTAC ttac)
          end
@@ -566,7 +563,7 @@ end;
 (* TACS is a strictly local function, used only in INDUCT_THEN.		*)
 (* ---------------------------------------------------------------------*)
 
-fun f {conj1,conj2} = (TACF conj1, TACS conj2)
+fun f (conj1,conj2) = (TACF conj1, TACS conj2)
 and TACS tm =
   let val (cf,csf) = f(dest_conj tm) handle HOL_ERR _ => (TACF tm, K(K[]))
   in fn x => fn ttac => cf x ttac::csf x ttac
@@ -586,7 +583,7 @@ and TACS tm =
 fun GOALS A [] tm = raise ERR "GOALS" "empty list"
   | GOALS A [t] tm = let val (sg,pf) = t (A,tm) in ([sg],[pf]) end
   | GOALS A (h::t) tm =
-      let val {conj1,conj2} = dest_conj tm
+      let val (conj1,conj2) = dest_conj tm
           val (sgs,pfs) = GOALS A t conj2
           val (sg,pf) = h (A,conj1)
       in (sg::sgs, pf::pfs)
@@ -617,7 +614,7 @@ end;
 (* Applies the conversion GALPH to each conjunct in a sequence.		*)
 (* ---------------------------------------------------------------------*)
 
-fun f {conj1,conj2} = (GALPH conj1, GALPHA conj2)
+fun f (conj1,conj2) = (GALPH conj1, GALPHA conj2)
 and GALPHA tm =
    let val (c,cs) = f(dest_conj tm)
    in MK_COMB(AP_TERM boolSyntax.conjunction c, cs)
@@ -644,24 +641,24 @@ fun mapshape [] _ _ =  [] |
 local val boolvar = genvar Type.bool
 in
 fun INDUCT_THEN th =
- let val {Bvar,Body} = dest_forall(concl th)
-     val {ant=hy, ...} = dest_imp Body
+ let val (Bvar,Body) = dest_forall(concl th)
+     val (hy,_) = dest_imp Body
      val bconv = BETAS Bvar hy
      val tacsf = TACS hy
      val v = genvar (type_of Bvar)
      val eta_th = CONV_RULE (RAND_CONV ETA_CONV) (UNDISCH(SPEC v th))
      val ([asm],con) = dest_thm eta_th
      val ind = GEN v (SUBST [boolvar |-> GALPHA asm]
-                            (mk_imp{ant=boolvar, conseq=con})
+                            (mk_imp(boolvar, con))
                             (DISCH asm eta_th))
  in fn ttac => fn (A,t) =>
-     let val lam = #Rand(dest_comb t)
+     let val lam = snd(dest_comb t)
          val spec = SPEC lam (INST_TYPE (Lib.snd(Term.match_term v lam)) ind)
-         val {ant,conseq} = dest_imp(concl spec)
+         val (ant,conseq) = dest_imp(concl spec)
          val beta = SUBST [boolvar |-> bconv ant]
-                          (mk_imp{ant=boolvar, conseq=conseq}) spec
-         val tacs = tacsf (#Bvar(dest_abs lam)) ttac
-         val (gll,pl) = GOALS A tacs (#ant(dest_imp(concl beta)))
+                          (mk_imp(boolvar, conseq)) spec
+         val tacs = tacsf (fst(dest_abs lam)) ttac
+         val (gll,pl) = GOALS A tacs (fst(dest_imp(concl beta)))
          val pf = ((MP beta) o LIST_CONJ) o mapshape(map length gll)pl
      in
        (Lib.flatten gll, pf)
@@ -683,10 +680,10 @@ infixr 3 -->;
 infixr 3 THENC;
 infixr 3 ORELSEC;
 
-fun (x == y)  = mk_eq{lhs=x,    rhs=y};
-fun (x ==> y) = mk_imp{ant=x, conseq=y}
-fun (x /\ y)  = mk_conj{conj1=x, conj2=y};
-fun (x \/ y)  = mk_disj{disj1=x, disj2=y};
+fun (x == y)  = mk_eq(x,y);
+fun (x ==> y) = mk_imp(x, y)
+fun (x /\ y)  = mk_conj(x,y);
+fun (x \/ y)  = mk_disj(x,y);
 
 
 (* =====================================================================*)
@@ -707,24 +704,24 @@ fun (x \/ y)  = mk_disj{disj1=x, disj2=y};
 
 val AP_AND = AP_TERM boolSyntax.conjunction
 
-local val P = mk_var{Name="P", Ty = alpha --> bool}
+local val P = mk_var("P", alpha --> bool)
       val v = genvar Type.bool
       and v1 = genvar alpha
       and v2 = genvar alpha
-      val ex1P = mk_comb{Rator=boolSyntax.exists1, Rand=P}
+      val ex1P = mk_comb(boolSyntax.exists1,P)
       val th1 = SPEC P (CONV_RULE (X_FUN_EQ_CONV P) EXISTS_UNIQUE_DEF)
       val th2 = CONJUNCT2(UNDISCH(fst(EQ_IMP_RULE(RIGHT_BETA th1))))
       val imp = GEN P (DISCH ex1P (SPECL [v1, v2] th2))
       fun AND (e1,e2) = MK_COMB(AP_AND e1, e2)
-      fun beta_conj{conj1,conj2} = (BETA_CONV conj1, BETA_CONV conj2)
+      fun beta_conj(conj1,conj2) = (BETA_CONV conj1, BETA_CONV conj2)
       fun conv tm = AND (beta_conj (dest_conj tm))
 in
 fun UNIQUENESS th =
   let val _ = assert boolSyntax.is_exists1 (concl th)
-      val {Rator,Rand} = dest_comb(concl th)
+      val (Rator,Rand) = dest_comb(concl th)
       val theta = [alpha |-> type_of (bvar Rand)]
       val uniq = MP (SPEC Rand (INST_TYPE theta imp)) th
-      val red = conv (#ant(dest_imp(concl uniq)))
+      val red = conv (fst(dest_imp(concl uniq)))
       val (V1,V2) = let val i = Term.inst theta in (i v1,i v2) end
   in
     GEN V1 (GEN V2 (SUBST[v |-> red] (v ==> (V1 == V2)) uniq))
@@ -757,7 +754,7 @@ fun DEPTH_FORALL_CONV conv tm =
 (* ---------------------------------------------------------------------*)
 
 fun CONJS_CONV conv tm =
-   let val {conj1,conj2} = dest_conj tm
+   let val (conj1,conj2) = dest_conj tm
    in MK_COMB(AP_AND (conv conj1), CONJS_CONV conv conj2)
    end handle HOL_ERR _ => conv tm;
 
@@ -776,7 +773,7 @@ local val T_AND_T = CONJUNCT1 (SPEC boolSyntax.T AND_CLAUSES)
 in
 val CONJS_SIMP  =
    let fun simp conv tm =
-          let val {conj1,conj2} = dest_conj tm
+          let val (conj1,conj2) = dest_conj tm
           in TRANS (MK_COMB(AP_AND (conv conj1), simp conv conj2))
                    (T_AND_T)
           end handle HOL_ERR _ => conv tm
@@ -793,7 +790,7 @@ end;
 
 local val T_AND = GEN_ALL (CONJUNCT1 (SPEC_ALL AND_CLAUSES))
 in
-fun T_AND_CONV tm = SPEC (#conj2(dest_conj tm)) T_AND
+fun T_AND_CONV tm = SPEC (snd(dest_conj tm)) T_AND
 end;
 
 (* ---------------------------------------------------------------------*)
@@ -835,14 +832,14 @@ local val v = genvar Type.bool
       val T_EQ_T = EQT_INTRO(REFL T)
       val T_OR = GEN v (CONJUNCT1 (SPEC v OR_CLAUSES))
       fun DISJ_SIMP tm =
-         let val {disj1,disj2} = dest_disj tm
+         let val (disj1,disj2) = dest_disj tm
              val eqn = SYM(CONJS_SIMP BETA_CONV disj1)
          in SUBST[v |-> eqn] ((v \/ disj2) == T) (SPEC disj2 T_OR)
          end
 
 in
 fun SIMP_CONV tm =
-   let val (vs,{lhs,rhs}) = (I ## dest_eq) (strip_forall tm)
+   let val (vs,(lhs,rhs)) = (I ## dest_eq) (strip_forall tm)
        val rsimp = (LIST_BETA_CONV THENC (DISJ_SIMP ORELSEC REFL)) rhs
        and lsimp = AP_TERM eq (BETA_CONV lhs)
        and gent  = GENL_T vs
@@ -877,16 +874,15 @@ local val v = genvar Type.bool
       val eq = inst [alpha |-> bool] boolSyntax.equality
       val EQ_T = GEN v (CONJUNCT1 (CONJUNCT2 (SPEC v EQ_CLAUSES)))
       fun R_SIMP tm =
-         let val {lhs,rhs} = dest_eq tm
+         let val (lhs,rhs) = dest_eq tm
          in if rhs = T
             then SPEC lhs EQ_T
-            else SPECL [lhs, #disj1(dest_disj rhs)] OR_IMP_THM
+            else SPECL [lhs, fst(dest_disj rhs)] OR_IMP_THM
          end
 in
 fun HYP_SIMP tm =
-   let val (vs,{lhs,rhs}) = (I##dest_eq) (strip_forall tm)
-       val eqsimp = AP_TERM (mk_comb{Rator=eq, Rand=lhs})
-                            (LIST_BETA_CONV rhs)
+   let val (vs,(lhs,rhs)) = (I##dest_eq) (strip_forall tm)
+       val eqsimp = AP_TERM (mk_comb(eq,lhs)) (LIST_BETA_CONV rhs)
        val rsimp = CONV_RULE (RAND_CONV R_SIMP) eqsimp
    in itlist FORALL_EQ vs rsimp
    end
@@ -900,7 +896,7 @@ end;
 (* ---------------------------------------------------------------------*)
 
 fun ANTE_ALL_CONV tm =
-   let val (vs,{ant,...}) = (I ## dest_imp) (strip_forall tm)
+   let val (vs,(ant,_)) = (I ## dest_imp) (strip_forall tm)
        val (ov,iv) = partition (C free_in ant) vs
        val thm1 = GENL iv (UNDISCH (SPECL vs (ASSUME tm)))
        val thm2 = GENL ov (DISCH ant thm1)
@@ -923,7 +919,7 @@ local val v = genvar Type.bool
 in
 fun CONCL_SIMP tm =
    let val eq = FUN_EQ_CONV tm
-       val {Bvar,Body} = dest_forall(rhs(concl eq))
+       val (Bvar,Body) = dest_forall(rhs(concl eq))
        val eqn = RATOR_CONV(RAND_CONV BETA_CONV) Body
        and simp = SPEC (rhs Body) T_EQ
    in
@@ -951,14 +947,14 @@ local val B = Type.bool
       fun gen 0 = []
         | gen n = genvar B::gen (n-1)
       fun mk_fn P ty tm =
-         let val {lhs,rhs} = dest_eq(snd(strip_forall tm))
+         let val (lhs,rhs) = dest_eq(snd(strip_forall tm))
              val c = rand lhs
              val args = snd(strip_comb rhs)
              val vars = filter is_var args
              val n = length(filter (fn t => type_of t = ty) vars)
          in if (n=0) then list_mk_abs (vars, T)
             else let val bools = gen n
-                     val term = list_mk_conj bools \/ mk_comb{Rator=P, Rand=c}
+                     val term = list_mk_conj bools \/ mk_comb(P,c)
                  in list_mk_abs((bools@vars),term)
                  end
          end
@@ -967,15 +963,15 @@ local val B = Type.bool
       and conv2 = CONJS_CONV (HYP_SIMP THENC TRY_CONV ANTE_ALL_CONV)
 in
 fun prove_induction_thm th =
-   let val {Bvar,Body} = dest_abs(rand(snd(strip_forall(concl th))))
-       val {Args = [ty, rty],...} = dest_type (type_of Bvar)
+   let val (Bvar,Body) = dest_abs(rand(snd(strip_forall(concl th))))
+       val (_,[ty, rty]) = dest_type (type_of Bvar)
        val inst = INST_TYPE [rty |-> B] th
-       val P = mk_primed_var{Name = "P", Ty = ty --> B}
+       val P = mk_primed_var("P", ty --> B)
        and v = genvar ty
        and cases = strip_conj Body
        val uniq = let val (vs,tm) = strip_forall(concl inst)
                       val thm = UNIQUENESS(SPECL vs inst)
-                  in GENL vs (SPECL [mk_abs{Bvar=v, Body=T}, P] thm)
+                  in GENL vs (SPECL [mk_abs(v,T), P] thm)
                   end
       val spec = SPECL (map (mk_fn P ty) cases) uniq
       val simp =  CONV_RULE (LCONV(conv1 THENC conv2)) spec
@@ -1043,7 +1039,7 @@ local val v1 = genvar Type.bool
       and v2 = genvar Type.bool
 in
 fun STEP_CONV tm =
-   let val {ant,conseq} = dest_imp(dest_neg tm)
+   let val (ant,conseq) = dest_imp(dest_neg tm)
        val th1 = SPEC conseq (SPEC ant NOT_IMP)
        val simp = NOT_ALL_THENC BASE_CONV (mk_neg conseq)
    in
@@ -1066,15 +1062,15 @@ end;
 (* It then applies either BASE_CONV or STEP_CONV to each subterm ~ci.	*)
 (* ---------------------------------------------------------------------*)
 
-local val A = mk_var{Name="A",Ty = Type.bool}
-      val B = mk_var{Name="B",Ty = Type.bool}
+local val A = mk_var("A",Type.bool)
+      val B = mk_var("B",Type.bool)
       val DE_MORG = GENL [A,B] (CONJUNCT1(SPEC_ALL DE_MORGAN_THM))
       and cnv = BASE_CONV ORELSEC STEP_CONV
       and v1 = genvar Type.bool
       and v2 = genvar Type.bool
 in
 fun NOT_IN_CONV tm =
-   let val {conj1,conj2} = dest_conj(dest_neg tm)
+   let val (conj1,conj2) = dest_conj(dest_neg tm)
        val thm = SPEC conj2 (SPEC conj1 DE_MORG)
        val cth = NOT_ALL_THENC cnv (mk_neg conj1)
        and csth = NOT_IN_CONV (mk_neg conj2)
@@ -1101,8 +1097,8 @@ end;
 (*   STEP_RULE "tm" ---> tm |- tm					*)
 (* ---------------------------------------------------------------------*)
 
-local fun EX tm th = EXISTS (mk_exists{Bvar = tm, Body = concl th},tm) th
-      fun CH tm th = CHOOSE (tm,ASSUME(mk_exists{Bvar=tm, Body=hd(hyp th)})) th
+local fun EX tm th = EXISTS (mk_exists(tm,concl th),tm) th
+      fun CH tm th = CHOOSE (tm,ASSUME(mk_exists(tm,hd(hyp th)))) th
 in
 fun STEP_SIMP tm =
    let val (vs,body) = strip_exists tm
@@ -1127,7 +1123,7 @@ end;
 
 fun DISJS_CHAIN rule th =
    let val concl_th = concl th
-   in let val {disj1,disj2} = dest_disj concl_th
+   in let val (disj1,disj2) = dest_disj concl_th
           val i1 = rule disj1
           and i2 = DISJS_CHAIN rule (ASSUME disj2)
       in DISJ_CASES th (DISJ1 i1 (concl i2)) (DISJ2 (concl i1) i2)
@@ -1157,12 +1153,12 @@ local val make_args =
           let fun margs n s avoid [] = []
                 | margs n s avoid (h::t) =
                     let val v = variant avoid
-                                 (mk_var{Name = s^(Int.toString n), Ty=h})
+                                 (mk_var(s^(Int.toString n),h))
                     in v::margs (n + 1) s (v::avoid) t
                     end
           in fn s => fn avoid => fn tys =>
               if length tys = 1
-              then [variant avoid (mk_var{Name=s, Ty=hd tys})]
+              then [variant avoid (mk_var(s, hd tys))]
               else margs 0 s avoid tys
           end handle _ => raise ERR "make_args" ""
 
@@ -1174,8 +1170,8 @@ local val make_args =
       EXISTS_TAC (--`t:'a`--) THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC)
     in fn tm => fn th =>
         let val (l,r) = boolSyntax.dest_eq tm
-            val P = mk_abs{Bvar=l, Body=concl th}
-            val th1 = BETA_CONV(mk_comb{Rator=P, Rand=l})
+            val P = mk_abs(l, concl th)
+            val th1 = BETA_CONV(mk_comb(P,l))
             val th2 = ISPECL [P, r] pth
             val th3 = EQ_MP (SYM th1) th
             val th4 = GEN l (DISCH tm th3)
@@ -1187,25 +1183,25 @@ local val make_args =
  let fun mk_exclauses x rpats = let
        (* order of existentially quantified variables is same order
           as they appear as arguments to the constructor *)
-       val xts = map (fn t => list_mk_exists(#2 (strip_comb t),
-                                             boolSyntax.mk_eq(x,t))) rpats
+       val xts = map (fn t => 
+                  list_mk_exists(#2 (strip_comb t), mk_eq(x,t))) rpats
      in
-       mk_abs{Bvar=x, Body=list_mk_disj xts}
+       mk_abs(x,list_mk_disj xts)
      end
      fun prove_triv tm =
        let val (evs,bod) = strip_exists tm
-           val (l,r) = boolSyntax.dest_eq bod
+           val (l,r) = dest_eq bod
            val (lf,largs) = strip_comb l
            and (rf,rargs) = strip_comb r
            val _ = (lf=rf) orelse raise ERR "prove_triv" ""
-           val ths = map (ASSUME o boolSyntax.mk_eq) (zip rargs largs)
+           val ths = map (ASSUME o mk_eq) (zip rargs largs)
            val th1 = rev_itlist (C (curry MK_COMB)) ths (REFL lf)
        in
          itlist EXISTS_EQUATION (map concl ths) (SYM th1)
        end
      fun prove_disj tm =
         if is_disj tm
-         then let val (l,r) = boolSyntax.dest_disj tm
+         then let val (l,r) = dest_disj tm
               in DISJ1 (prove_triv l) r handle HOL_ERR _ =>
                  DISJ2 l (prove_disj r)
               end
@@ -1223,7 +1219,7 @@ local val make_args =
    let val (avs,bod) = strip_forall(concl th)
        val cls = map (snd o strip_forall) (conjuncts(lhand bod))
        val pats = map (fn t => if is_imp t then rand t else t) cls
-       val spats = map Psyntax.dest_comb pats
+       val spats = map dest_comb pats
        val preds = itlist (insert o fst) spats []
        val rpatlist = map
             (fn pr => map snd (filter (fn (p,x) => p = pr) spats)) preds
@@ -1232,7 +1228,7 @@ local val make_args =
        val ith = BETA_RULE
                  (Thm.INST (ListPair.map (fn (x,p) => p |-> x) (xpreds, preds))
                           (SPEC_ALL th))
-       val eclauses = conjuncts(fst(boolSyntax.dest_imp(concl ith)))
+       val eclauses = conjuncts(fst(dest_imp(concl ith)))
    in
      MP ith (end_itlist CONJ (map prove_eclause eclauses))
    end
@@ -1248,7 +1244,7 @@ fun prove_cases_thm ind0 =
       val oktypes = doms_of_ind_thm ind
  in
     List.filter
-      (fn th => Lib.mem (type_of (#Bvar (dest_forall (concl th)))) oktypes)
+      (fn th => Lib.mem (type_of (fst(dest_forall (concl th)))) oktypes)
       (CONJUNCTS basic_thm)
  end
 
@@ -1269,30 +1265,30 @@ end; (* prove_cases_thm *)
 fun case_cong_term case_def =
  let val clauses = (strip_conj o concl) case_def
      val clause1 = Lib.trye hd clauses
-     val left = (#lhs o dest_eq o #2 o strip_forall) clause1
+     val left = (#1 o dest_eq o #2 o strip_forall) clause1
      val ty = type_of (rand left)
      val allvars = all_varsl clauses
-     val M = variant allvars (mk_var{Name = "M", Ty = ty})
-     val M' = variant (M::allvars) (mk_var{Name = "M", Ty = ty})
-     val lhsM = mk_comb{Rator=rator left, Rand=M}
+     val M = variant allvars (mk_var("M", ty))
+     val M' = variant (M::allvars) (mk_var("M",ty))
+     val lhsM = mk_comb(rator left, M)
      val c = #1(strip_comb left)
      fun mk_clause clause =
-       let val {lhs,rhs} = (dest_eq o #2 o strip_forall) clause
+       let val (lhs,rhs) = (dest_eq o #2 o strip_forall) clause
            val func = (#1 o strip_comb) rhs
-           val {Name,Ty} = dest_var func
-           val func' = variant allvars (mk_var{Name=Name^"'", Ty=Ty})
+           val (Name,Ty) = dest_var func
+           val func' = variant allvars (mk_var(Name^"'", Ty))
            val capp = rand lhs
            val (constr,xbar) = strip_vars capp
        in (func',
            list_mk_forall
-           (xbar, mk_imp{ant = mk_eq{lhs=M',rhs=capp},
-                         conseq = mk_eq{lhs=list_mk_comb(func,xbar),
-                                        rhs=list_mk_comb(func',xbar)}}))
+           (xbar, mk_imp(mk_eq(M',capp),
+                         mk_eq(list_mk_comb(func,xbar),
+                               list_mk_comb(func',xbar)))))
        end
      val (funcs',clauses') = unzip (map mk_clause clauses)
  in
- mk_imp{ant = list_mk_conj(mk_eq{lhs=M, rhs=M'}::clauses'),
-        conseq = mk_eq{lhs=lhsM, rhs=list_mk_comb(c,(funcs'@[M']))}}
+ mk_imp(list_mk_conj(mk_eq(M, M')::clauses'),
+        mk_eq(lhsM, list_mk_comb(c,(funcs'@[M']))))
  end;
 
 (*---------------------------------------------------------------------------*
@@ -1309,7 +1305,7 @@ fun EQ_EXISTS_LINTRO (thm,(vlist,theta)) =
         let val w = (case (subst_assoc (fn w => v=w) theta)
                       of SOME w => w
                        | NONE => v)
-            val ex_tm = mk_exists{Bvar=w, Body=tm}
+            val ex_tm = mk_exists(w,tm)
         in (ex_tm, CHOOSE(w, ASSUME ex_tm) thm)
         end
   in snd(itlist CHOOSER vlist (veq,thm))
@@ -1318,7 +1314,7 @@ fun EQ_EXISTS_LINTRO (thm,(vlist,theta)) =
 
 fun OKform case_def =
   let val clauses = (strip_conj o concl) case_def
-      val left = (rator o #lhs o dest_eq o #2 o strip_forall)
+      val left = (rator o fst o dest_eq o #2 o strip_forall)
                  (Lib.trye hd clauses)
       val opvars = #2 (strip_comb left)
       fun rhs_head c = fst(strip_comb(rhs(snd(strip_forall c))))
@@ -1436,7 +1432,7 @@ fun mk_subst2 [] [] = []
 *)
 
 fun prove_const_one_one th tm = let
-  val (vs,{lhs,...}) = (I ## dest_eq)(strip_forall tm)
+  val (vs,(lhs,_)) = (I ## dest_eq)(strip_forall tm)
   val C = rand lhs
   val funtype =
     List.foldr (fn (tm, ty) => Type.-->(type_of tm, ty))
@@ -1447,9 +1443,9 @@ fun prove_const_one_one th tm = let
   val f_ap_vs = list_mk_comb(f, vs)
   val C' = subst (mk_subst2 vvs vs) C
   val eqn =
-    list_mk_forall(vs @ vvs, mk_comb{Rator = f_ap_vs, Rand = C'} == fn_body)
+    list_mk_forall(vs @ vvs, mk_comb(f_ap_vs, C') == fn_body)
   val fn_exists_thm = prove_recursive_functions_exist th eqn
-  val eqn_thm = ASSUME (#Body (dest_exists (concl fn_exists_thm)))
+  val eqn_thm = ASSUME (snd (dest_exists (concl fn_exists_thm)))
   val C_eq_C'_t = C == C'
   val C_eq_C' = ASSUME C_eq_C'_t
   val fC_eq_fC' = AP_TERM f_ap_vs C_eq_C'
@@ -1573,16 +1569,16 @@ in
 *)
 
 local
-  val bn0 = mk_var{Name = "b0", Ty = Type.bool}
-  val bn1 = mk_var{Name = "b1", Ty = Type.bool}
-  val bn2 = mk_var{Name = "b2", Ty = Type.bool}
-  val bn3 = mk_var{Name = "b3", Ty = Type.bool}
-  val bn4 = mk_var{Name = "b4", Ty = Type.bool}
-  val bn5 = mk_var{Name = "b5", Ty = Type.bool}
-  val bn6 = mk_var{Name = "b6", Ty = Type.bool}
-  val bn7 = mk_var{Name = "b7", Ty = Type.bool}
-  val bn8 = mk_var{Name = "b8", Ty = Type.bool}
-  val bn9 = mk_var{Name = "b9", Ty = Type.bool}
+  val bn0 = mk_var("b0", Type.bool)
+  val bn1 = mk_var("b1", Type.bool)
+  val bn2 = mk_var("b2", Type.bool)
+  val bn3 = mk_var("b3", Type.bool)
+  val bn4 = mk_var("b4", Type.bool)
+  val bn5 = mk_var("b5", Type.bool)
+  val bn6 = mk_var("b6", Type.bool)
+  val bn7 = mk_var("b7", Type.bool)
+  val bn8 = mk_var("b8", Type.bool)
+  val bn9 = mk_var("b9", Type.bool)
 in
   fun bn n =
     case n of
@@ -1596,7 +1592,7 @@ in
     | 7 => bn7
     | 8 => bn8
     | 9 => bn9
-    | x => mk_var{Name = "b"^Int.toString x, Ty = Type.bool}
+    | x => mk_var("b"^Int.toString x, Type.bool)
 end
 
 
@@ -1660,7 +1656,7 @@ val notT = prove(mk_neg T == F, REWRITE_TAC []);
    then doing the two rewrites required to push this to the top. *)
 fun simp_conjs t =
   if is_conj t then let
-    val {conj1, conj2} = dest_conj t
+    val (conj1, conj2) = dest_conj t
   in
     if is_neg conj1 then
       if is_neg (dest_neg conj1) then
@@ -1708,7 +1704,7 @@ fun generate_fn_term nb ty = genvar (ty --> numtype nb)
 fun generate_eqns nb ctrs f =
  let fun recurse n [] = []
        | recurse n (x::xs) =
-         (mk_comb{Rator=f, Rand=x} == mk_num nb n):: recurse (n + 1) xs
+         (mk_comb(f, x) == mk_num nb n):: recurse (n + 1) xs
  in recurse 0 ctrs
  end
 
@@ -1743,7 +1739,7 @@ fun prove_constructors_distinct thm = let
       val eqns = generate_eqns nb ctrs f
       val fn_defn = list_mk_conj eqns
       val fn_exists = prove_recursive_functions_exist thm fn_defn
-      val fn_thm = ASSUME (#Body (dest_exists (concl fn_exists)))
+      val fn_thm = ASSUME (snd (dest_exists (concl fn_exists)))
       val eqn_thms = CONJUNCTS fn_thm
       val ctrs_with_eqns_and_numbers =
         number nb (ListPair.zip (ctrs, eqn_thms))
