@@ -177,7 +177,7 @@ or at the level above, the \texttt{configure.sml} script must be piped
 into the MoscowML interpreter (called \texttt{mosml}).  This process
 creates a suite of useful tools that will be used to build the full
 system.  In particular, it will compile \textsf{Holmake} and
-\textsf{build}.
+\textsf{build} and put them in the \texttt{bin} directory.
 
 \begin{session}
 \begin{verbatim}
@@ -210,11 +210,9 @@ $
 \noindent The next step is to run the \textsf{build} program.  This should
 result in a great deal of output as all of the system code is compiled
 and the theories built.  Eventually, a \HOL{} system\footnote{Two
-  executables are produced \textsf{hol} and \textsf{hol.unquote}.  The
+  executables are produced: \textsf{hol} and \textsf{hol.unquote}.  The
   latter will be used for most examples in the \TUTORIAL{}.} is
-produced in the \texttt{bin/} directory.  The \textsf{build}
-executable is in the \texttt{bin/} directory already, so should be run
-as follows:
+produced in the \texttt{bin/} directory.
 
 \begin{session}
 \begin{verbatim}

@@ -64,7 +64,9 @@ Rebinding "use" for quotation pre-processing.
 
 Then we load and open \ml{bossLib}. This library provides high-level
 support for interactive proof.  We also open the theory of arithmetic,
-since we will use some of its theorems.
+since we will use some of its theorems.  Finally, the function \ml{by}
+from \ml{bossLib} needs to be declared as infix before it can be used
+as such.
 
 \begin{session}
 \begin{verbatim}
@@ -76,7 +78,7 @@ since we will use some of its theorems.
 > ...
 - open bossLib;
 > ...
-- infix &&; infix 8 by;
+- infix 8 by;
 \end{verbatim}
 \end{session}
 We specialize the rewriter provided by \ml{bossLib} to a
@@ -515,8 +517,8 @@ Goal proved.
 \end{verbatim}\end{session}
     Storing theorems in our script record of the session in this style
     (rather than with the goalstack) results in a more concise script,
-    and also makes it easier to turn our script into a theory file, of
-    which more later.
+    and also makes it easier to turn our script into a theory file, as
+    we do in section~\ref{sec:script-to-theory}.
 
 \subsection{Divisibility and factorial}
 
@@ -698,7 +700,7 @@ Goal proved.
     Initial goal proved.
     |- !m n. 0 < m /\ m <= n ==> m divides FACT n
 \end{verbatim}\end{session}
-We have finished the search for the proof, and turn to the task of
+We have finished the search for the proof, and now turn to the task of
 making a single tactic out of the sequence of tactic invocations we have
 just made. We assume that the sequence of invocations has been kept
 track of in a file or a text editor buffer. We would thus have something
@@ -1399,6 +1401,7 @@ Goal proved.
 \end{description}
 
 \section{Turning the script into a theory}
+\label{sec:script-to-theory}
 
 Having proved our result, we probably want to package it up in a way
 that makes it available to future sessions, but which doesn't require
@@ -1537,8 +1540,8 @@ suitable for human consumption.  While still in the \ml{euclid}
 directory that we created, we can demonstrate:
 
 \begin{session}
-\begin{verbatim}
-$ ../../bin/hol.unquote
+\begin{alltt}
+\$ ../../bin/hol.unquote
 Moscow ML version 1.44 (August 1999)
 Enter `quit();' to quit.
 For HOL help, type: help "hol";
@@ -1571,7 +1574,7 @@ Rebinding "use" for quotation pre-processing.
   ...
   val DIVIDES_REFL = |- !x. x divides x : Thm.thm
   val DIVIDES_0 = |- !x. x divides 0 : Thm.thm
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 \section{Summary}

@@ -45,8 +45,8 @@ $\exists$-quantification & {\small\verb|?|}$x${\small\verb|.|}$t$ &
 $\equant{x}\ t$ & {\it for\ some\ }$x: t$ \\ \hline
 $\hilbert$-term & {\small\verb|@|}$x${\small\verb|.|}$t$ &
 $\hquant{x}t$ & {\it an}$\ x\ ${\it such\ that:}$\ t$ \\ \hline
-Conditional & {\small\verb|(if|} $t$ {\small\verb|then|} $t_1$
-              {\small\verb|else|} $t_2${\small\verb|)|} &
+Conditional & {\small\verb|if|} $t$ {\small\verb|then|} $t_1$
+              {\small\verb|else|} $t_2$ &
 $(t\rightarrow t_1, t_2)$ & {\it if\ }$t${\it \ then\ }$t_1${\it\ else\ }$t_2$
  \\ \hline
 \end{tabular}
@@ -60,19 +60,21 @@ to execute the following commands before starting the sessions below:
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
-- app load ["arithmeticTheory", "pairTheory", "Psyntax"];
+- load "arithmeticTheory";
 > val it = () : unit
-- open Psyntax;
+- load "pairTheory";
+> val it = () : unit
 \end{verbatim}
 \end{session}
-
+\noindent These commands load the \HOL{} theories supporting pairs and
+arithmetic.  When \HOL{} starts up, it only knows about the basic
+boolean operators and quantifiers, so we augment it with these two
+theories to allow us more interesting examples.
 \bigskip
 
 Terms of the \HOL\ logic are represented in \ML\ by an {\it abstract
-  type\/}\footnote{Abstract types appear to the user as primitive
-  types with a collection of operations; they are described in
-  \DESCRIPTION} called {\small\verb|term|}. They are normally input
-between double back-quote marks.  For example, the expression
+  type\/} called {\small\verb|term|}. They are normally input between
+double back-quote marks.  For example, the expression
 {\small\verb|``x /\ y ==> z``|} evaluates in \ML\ to a term representing
 {\small\verb|x|}$\wedge${\small\verb|y|}$\Rightarrow${\small\verb|z|}.
 Terms can be manipulated by various built-in \ML\ functions. For
@@ -106,11 +108,9 @@ similar to those of \ML\ expressions.  For example,
 {\small\verb|(``1``, ``2``)|} has type {\small\verb|term * term|}.
 
 The types of \HOL\ terms form an \ML\ type called
-{\small\verb|hol_type|}.  Types are usually input by applying the
-parsing functionExpressions having the form
+{\small\verb|hol_type|}.  Expressions having the form
 {\small\verb|``: |}$\cdots${\small\verb| ``|} evaluate to logical
-types.
-The built-in function {\small\verb|type_of|} has \ML\ type
+types.  The built-in function {\small\verb|type_of|} has \ML\ type
 {\small\verb|term->type|} and returns the logical type of a term.
 
 \begin{session}
@@ -143,7 +143,7 @@ language types\/} and the latter as {\it meta-language types\/}.  For example,
 > val it = ``(1,T)`` : term
 
 - type_of it;
-> val it = ``:num * bool`` : hol_type
+> val it = ``:num # bool`` : hol_type
 \end{verbatim}
 \end{session}
 
@@ -316,7 +316,7 @@ unification failure message: unify failed
     Lambda-terms, or $\lambda$-terms, denote functions. The symbol
     `{\small\verb|\|}' is used as an {\small ASCII} approximation to
     $\lambda$.  Thus `{\small\verb|\|}$x$\ml{.}$t$' should be read as
-    `$\lquant{x}t$'. For example, {\small\verb|"\x. x+1"|} is a term
+    `$\lquant{x}t$'. For example, {\small\verb|``\x. x+1``|} is a term
     that denotes the function $n\mapsto n{+}1$.
 
 \begin{session}\begin{verbatim}
@@ -327,12 +327,55 @@ unification failure message: unify failed
 > val it = ``:num -> num`` : hol_type
 \end{verbatim}\end{session}
 
-The two most important quantifiers are \ml{!} and \ml{?}, universal
-and existential quantifiers.  The logical statement that every number
-is either even or odd might be phrased as
-{\small\verb|!n. (n MOD 2 = 1) \/ (n MOD 2 = 0)|}, while the statement
-of Euclid's result about the infinitude of primes is:
-{\small\verb|!n. ?p. prime p /\ p > n|}
+    Other binding symbols in the logic are its two most important
+    quantifiers: \ml{!} and \ml{?}, universal and existential
+    quantifiers.  For example, the logical statement that every number
+    is either even or odd might be phrased as
+    {\small\verb|!n. (n MOD 2 = 1) \/ (n MOD 2 = 0)|}, while a version
+    of Euclid's result about the infinitude of primes is:
+    {\small\verb|!n. ?p. prime p /\ p > n|}
+
+    Binding symbols such as these can be used over multiple symbols
+    thus:
+
+\begin{session}\begin{verbatim}
+- ``\x y. (x, y * x)``;
+> val it = ``\x y. (x,y * x)`` : term
+- type_of it;
+> val it = ``:num -> num -> num # num`` : hol_type
+
+- ``!x y. x <= x + y``;
+> val it = ``!x y. x <= x + y`` : term
+\end{verbatim}\end{session}
+
+
+\section{Exceptions}
+\label{sec:exceptions}
+
+Almost all of the \HOL{} system's functions raise special
+\ml{HOL\_ERR} exceptions to signal abnormal or erroneous conditions.
+These exceptions do not print well by default, so the special
+\ml{Raise} function is provided to make dealing with these exceptions
+easier:
+
+\begin{session}\begin{verbatim}
+- dest_conj ``p ==> q``;
+! Uncaught exception:
+! HOL_ERR <poly>
+
+- dest_conj ``p ==> q`` handle e => Raise e;
+
+Exception raised at Dsyntax.dest_conj:
+not a conj
+! Uncaught exception:
+! HOL_ERR <poly>
+\end{verbatim}\end{session}
+
+\noindent The \ml{Raise} function passes on all of the exceptions it
+sees; it does not affect the semantics of the computation at all.
+However, when passed a \ml{HOL\_ERR} exceptions, it prints out some
+useful information before passing it on to the next level.
+
 
 
 

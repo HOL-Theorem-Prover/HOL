@@ -43,15 +43,19 @@ position in the complete session).
 The interactions in these boxes should be understood as occurring in
 sequence.  For example, variable bindings made in earlier boxes are
 assumed to persist to later ones.  To enter the \HOL\ system one types
-{\small\verb|hol|} to Unix.\footnote{The Unix prompt is {\small\tt
-    \$}.}  The \HOL\ system then prints a sign-on message and puts one
-into \ML.  The \ML\ prompt is {\small\verb|-|}, so lines beginning
-with {\small\verb|-|} are typed by the user and other lines are the
-system's responses.
+{\small\verb|hol|} or {\small\verb|hol.unquote|} to Unix, possibly
+  preceded by path information if the \HOL\ system's \texttt{bin}
+  directory is not in one's path.  The \HOL\ system then prints a
+  sign-on message and puts one into \ML.  The \ML\ prompt is
+  {\small\verb|-|}, so lines beginning with {\small\verb|-|} are typed
+  by the user and other lines are the system's responses.
+
+  Here, as elsewhere in the \TUTORIAL{}, we will be assuming use of
+  {\small\verb|hol.unquote|}.
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-$ hol
+\begin{session}\begin{alltt}
+\$ bin/hol.unquote
 Moscow ML version 1.44 (August 1999)
 Enter `quit();' to quit.
 For HOL help, type: help "hol";
@@ -71,28 +75,30 @@ Loaded Hol Kernel.
         HHH                  LL        LL98 [Taupo 1]
 
 [closing file "/local/scratch/mn200/Work/hol98/std.prelude"]
+[opening file "/local/scratch/mn200/Work/hol98/tools/unquote-init.sml"]
+Rebinding "use" for quotation pre-processing.
+[closing file "/local/scratch/mn200/Work/hol98/tools/unquote-init.sml"]
 - 1 :: [2,3,4,5];
 > val it = [1, 2, 3, 4, 5] : int list
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 The \ML\ expression {\small\verb|1 :: [2,3,4,5]|} has the form $e_1\
 op\ e_2$ where $e_1$ is the expression {\small\verb|1|} (whose value
-is the integer $1$), $e_2$ is
-the expression {\small\verb%[2,3,4,5]%} (whose value is a list of four
-  integers)
-  and $op$ is the infixed operator `{\small\verb%::%}' which is like Lisp's {\it cons}
-    function. Other list processing functions include {\small\verb%hd%} ($car$ in
-      Lisp), {\small\verb%tl%} ($cdr$ in Lisp) and {\small\verb%null%} ($null$ in Lisp).
-The semicolon `{\small\verb%;%}' terminates a top-level phrase.  The
-system's response is shown on the line starting with the
-{\small\verb|>|} prompt.  It consists of the value of the expression
-followed, after a colon, by its type. The \ML\ type checker infers
-the type of expressions using methods invented by Robin Milner
-\cite{Milner-types}. The type {\small\verb%int list%} is the type of
-`lists of integers'; {\small\verb|list|} is a unary type operator.  The type system of \ML\
-              is very similar to the type system of the \HOL\ logic
-              which is explained in Chapter~\ref{HOLlogic}.
+is the integer $1$), $e_2$ is the expression {\small\verb|[2,3,4,5]|}
+(whose value is a list of four integers) and $op$ is the infixed
+operator `{\small\verb|::|}' which is like Lisp's {\it cons} function.
+Other list processing functions include {\small\verb|hd|} ($car$ in
+Lisp), {\small\verb|tl|} ($cdr$ in Lisp) and {\small\verb|null|}
+($null$ in Lisp).  The semicolon `{\small\verb|;|}' terminates a
+top-level phrase.  The system's response is shown on the line starting
+with the {\small\verb|>|} prompt.  It consists of the value of the
+expression followed, after a colon, by its type. The \ML\ type checker
+infers the type of expressions using methods invented by Robin Milner
+\cite{Milner-types}. The type {\small\verb|int list|} is the type of
+`lists of integers'; {\small\verb|list|} is a unary type operator.
+The type system of \ML\ is very similar to the type system of the
+\HOL\ logic which is explained in Chapter~\ref{HOLlogic}.
 
 The value of the last expression evaluated at top-level in \ML\ is always
 remembered in a variable called {\small\verb|it|}.
@@ -113,10 +119,11 @@ remembered in a variable called {\small\verb|it|}.
 \end{verbatim}
 \end{session}
 
-Following standard $\lambda$-calculus usage, the application of a function
-$f$ to an argument $x$ can be written without brackets as $f\ x$ (although
-the more conventional $f${\small\verb|(|}$x${\small\verb|)|} is also
-allowed).  The expression $f\ x_1\ x_2\ \cdots\ x_n$ abbreviates the less
+Following standard $\lambda$-calculus usage, the application of a
+function $f$ to an argument $x$ can be written without brackets as $f\
+x$ (although the more conventional
+$f${\small\verb|(|}$x${\small\verb|)|} is also allowed).  The
+expression $f\ x_1\ x_2\ \cdots\ x_n$ abbreviates the less
 intelligible expression {\small\verb|(|}$\cdots${\small\verb|((|}$f\ x_1$%
 {\small\verb|)|}$x_2${\small\verb|)|}$\cdots${\small\verb|)|}$x_n$
 (function application is left associative).
@@ -216,7 +223,7 @@ instead of as a tuple.  This is illustrated with the function
 \begin{session}
 \begin{verbatim}
 - fun curried_zip l1 l2 = zip(l1,l2);
-> val curried_zip = fn : 'a list -> 'b list -> ('a * 'b) list)
+> val curried_zip = fn : 'a list -> 'b list -> ('a * 'b) list
 
 - fun zip_num l2 = curried_zip [0,1,2] l2;
 > val zip_num = fn : 'a list -> (int * 'a) list
