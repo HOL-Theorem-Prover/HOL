@@ -15,17 +15,6 @@ hol_to_latex                    }
 lts_to_latex                    } - see below
 mng_to_latex                    }
 
-extractDatatypes                a helper Perl script to build .imn
-                                files from *Theory.sig files.  It
-                                identifies types, constructors, and
-                                fields from Hol_datatype-defined
-                                datatypes.
-
-extractDefinitions              a helper Perl script to build .imn
-                                files from *Theory.sig files.  It
-                                identifies auxiliary functions from
-                                Define-defined constants.
-
 countClauses                    a helper Perl script to compute the
                                 number of clauses defined in a
                                 Net_Hol_reln definition, by reading
