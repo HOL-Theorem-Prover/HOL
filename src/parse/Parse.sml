@@ -403,9 +403,15 @@ in
   end handle GrammarError s => raise ERROR "add_infix" ("Grammar Error: "^s)
 
   fun add_infix (s, prec, associativity) = let
+    val handler =
+      "handle Exception.HOL_ERR{origin_function = \"add_infix\", "^
+      "origin_structure = \"Parse\", message = msg} => \n"^
+      "Lib.say (\"!!Warning!!\\n  Grammar rule for \"^(Lib.quote "^quote s^
+      ")^\" from theory "^current_theory()^" not added -\\n  "^
+      "message was:\\n  \"^msg^\"\\n\\n\");"
     val cmdstring =
       "val _ = Parse.temp_add_infix("^quote s^", "^Int.toString prec^", "^
-      assocToString associativity^");"
+      assocToString associativity^") " ^ handler
   in
     temp_add_infix(s,prec,associativity);
     adjoin_to_theory (toThyaddon cmdstring)
@@ -492,8 +498,9 @@ in
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
-  fun temp_add_rule {term_name, fixity, pp_elements, paren_style,
-                     block_style} =
+  fun temp_add_rule r = let
+    val {term_name, fixity, pp_elements, paren_style, block_style} = r
+  in
     case fixity of
       Prefix => ()
     | Binder => let
@@ -508,16 +515,26 @@ in
          paren_style = paren_style, block_style = block_style};
         term_grammar_changed := true
       end
+    end handle GrammarError s =>
+      raise ERROR "add_rule" ("Grammar error: "^s)
 
   fun add_rule (r as {term_name, fixity, pp_elements,
                       paren_style, block_style = (bs,bi)}) = let
+    val handler =
+      "handle Exception.HOL_ERR{origin_function = \"add_rule\", "^
+      "origin_structure = \"Parse\", message = msg} => "^
+      "Lib.say (\"!!Warning!!\\n  Grammar rule for \"^(Lib.quote "^
+      quote term_name^
+      ")^\" from theory "^current_theory()^" not added - \\n  "^
+      "message was:\\n  \"^msg^\"\\n\\n\");"
+
     val cmdstring =
       "val _ = Parse.temp_add_rule{term_name = "^quote term_name^
       ", fixity = "^fixityToString fixity^ ",\n"^
       "pp_elements = ["^ pplistToString pp_elements^"],\n"^
       "paren_style = "^ParenStyleToString paren_style^",\n"^
       "block_style = ("^BlockStyleToString bs^", "^
-      block_infoToString bi^")};"
+      block_infoToString bi^")}" ^ handler
   in
     temp_add_rule r;
     adjoin_to_theory (toThyaddon cmdstring)
