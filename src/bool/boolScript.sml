@@ -2717,6 +2717,125 @@ val COND_CONG =
 
 val _ = save_thm("COND_CONG", COND_CONG);
 
+(* results about Unique exists *)
+local
+  val LAND_CONV = RATOR_CONV o RAND_CONV
+  val P = mk_var{Name = "P", Ty = Type.alpha --> Type.bool}
+  val p = mk_var{Name = "p", Ty = bool}
+  val q = mk_var{Name = "q", Ty = bool}
+  val Q = mk_var{Name = "Q", Ty = Type.alpha --> Type.bool}
+  val x = mk_var{Name = "x", Ty = Type.alpha}
+  val y = mk_var{Name = "y", Ty = Type.alpha}
+  val Px = mk_comb{Rator = P, Rand = x}
+  val Py = mk_comb{Rator = P, Rand = y}
+  val Qx = mk_comb{Rator = Q, Rand = x}
+  val Qy = mk_comb{Rator = Q, Rand = y}
+  val uex_t = mk_const{Name = "?!", Ty = (alpha --> bool) --> bool}
+  val exP = mk_exists{Bvar = x, Body = Px}
+  val exQ = mk_exists{Bvar = x, Body = Qx}
+  val uexP = mk_uexists{Bvar = x, Body = Px}
+  val uexQ = mk_uexists{Bvar = x, Body = Qx}
+  val pseudo_mp = let
+    val lhs_t = mk_conj(p, mk_imp{ant = p, conseq = q})
+    val rhs_t = mk_conj(p, q)
+    val lhs_thm = ASSUME lhs_t
+    val (p_thm, pimpq) = CONJ_PAIR lhs_thm
+    val dir1 = DISCH_ALL (CONJ p_thm (MP pimpq p_thm))
+    val rhs_thm = ASSUME rhs_t
+    val (p_thm, q_thm) = CONJ_PAIR rhs_thm
+    val dir2 = DISCH_ALL (CONJ p_thm (DISCH p q_thm))
+  in
+    IMP_ANTISYM_RULE dir1 dir2
+  end
+in
+  val UEXISTS_OR_THM = let
+    val subdisj_t = mk_abs{Bvar = x, Body = mk_disj(Px, Qx)}
+    val lhs_t = mk_comb{Rator = uex_t, Rand = subdisj_t}
+    val lhs_thm = ASSUME lhs_t
+    val lhs_eq = AP_THM EXISTS_UNIQUE_DEF subdisj_t
+    val lhs_expanded = CONV_RULE BETA_CONV (EQ_MP lhs_eq lhs_thm)
+    val (expq0, univ) =  CONJ_PAIR lhs_expanded
+    val expq = EQ_MP (SPEC_ALL EXISTS_OR_THM) expq0
+    val univ1 = SPEC_ALL univ
+    val univ2 = CONV_RULE (LAND_CONV (LAND_CONV BETA_CONV)) univ1
+    val univ3 = CONV_RULE (LAND_CONV (RAND_CONV BETA_CONV)) univ2
+    val P_half = let
+      val asm = ASSUME (mk_conj(Px,Py))
+      val (Px_thm, Py_thm) = CONJ_PAIR asm
+      val PxQx_thm = DISJ1 Px_thm Qx
+      val PyQy_thm = DISJ1 Py_thm Qy
+      val resolvent = CONJ PxQx_thm PyQy_thm
+      val rhs =
+        GENL [x,y]
+        (DISCH (mk_conj(Px,Py)) (PROVE_HYP resolvent (UNDISCH univ3)))
+    in
+      DISJ1 (EQ_MP (SYM EXISTS_UNIQUE_THM) (CONJ (ASSUME exP) rhs)) uexQ
+    end
+    val Q_half = let
+      val asm = ASSUME (mk_conj(Qx,Qy))
+      val (Qx_thm, Qy_thm) = CONJ_PAIR asm
+      val PxQx_thm = DISJ2 Px Qx_thm
+      val PyQy_thm = DISJ2 Py Qy_thm
+      val resolvent = CONJ PxQx_thm PyQy_thm
+      val rhs =
+        GENL [x,y]
+        (DISCH (mk_conj(Qx,Qy)) (PROVE_HYP resolvent (UNDISCH univ3)))
+      val uex_expanded = SYM (INST [P |-> Q] EXISTS_UNIQUE_THM)
+    in
+      DISJ2 uexP (EQ_MP uex_expanded (CONJ (ASSUME exQ) rhs))
+    end
+  in
+    save_thm("UEXISTS_OR_THM",
+             GENL [P, Q] (DISCH_ALL (DISJ_CASES expq P_half Q_half)))
+  end;
+
+  val UEXISTS_SIMP = let
+    fun mCONV_RULE c thm = TRANS thm (c  (rhs (concl thm)))
+    val xeqy = mk_eq{lhs = x, rhs = y}
+    val t = mk_var{Name = "t", Ty = bool}
+    val abst = mk_abs{Bvar = x, Body = t}
+    val uext_t = mk_uexists{Bvar = x, Body = t}
+    val exp0 = AP_THM EXISTS_UNIQUE_DEF abst
+    val exp1 = mCONV_RULE BETA_CONV exp0
+    val exp2 = mCONV_RULE (LAND_CONV (K (SPEC t EXISTS_SIMP))) exp1
+    val exp3 =
+      mCONV_RULE (RAND_CONV
+                  (QUANT_CONV
+                   (QUANT_CONV (LAND_CONV (LAND_CONV BETA_CONV))))) exp2
+    val exp4 =
+      mCONV_RULE (RAND_CONV
+                  (QUANT_CONV
+                   (QUANT_CONV (LAND_CONV (RAND_CONV BETA_CONV))))) exp3
+    val exp5 =
+      mCONV_RULE (RAND_CONV
+                  (QUANT_CONV
+                   (QUANT_CONV (LAND_CONV (K (SPEC t AND_CLAUSE5)))))) exp4
+    val pushy0 =
+      SPECL [t, mk_abs{Bvar = y, Body = xeqy}]
+      RIGHT_FORALL_IMP_THM
+    val pushy1 =
+      CONV_RULE (LAND_CONV (QUANT_CONV (RAND_CONV BETA_CONV))) pushy0
+    val pushy2 =
+      CONV_RULE (RAND_CONV (RAND_CONV (QUANT_CONV BETA_CONV))) pushy1
+    val exp6 =
+      mCONV_RULE (RAND_CONV (QUANT_CONV (K pushy2))) exp5
+    val pushx0 =
+      SPECL [t, mk_abs{Bvar = x,
+                       Body = mk_forall{Bvar = y, Body = xeqy}}]
+      RIGHT_FORALL_IMP_THM
+    val pushx1 =
+      CONV_RULE (LAND_CONV (QUANT_CONV (RAND_CONV BETA_CONV))) pushx0
+    val pushx2 =
+      CONV_RULE (RAND_CONV (RAND_CONV (QUANT_CONV BETA_CONV))) pushx1
+    val exp7 =
+      mCONV_RULE (RAND_CONV (K pushx2)) exp6
+    val mp' = INST [(p |-> t), (q |-> list_mk_forall([x,y], xeqy))] pseudo_mp
+  in
+    save_thm("UEXISTS_SIMP", mCONV_RULE (K mp') exp7)
+  end
+end
+
+
 
 val _ = export_theory();
 
