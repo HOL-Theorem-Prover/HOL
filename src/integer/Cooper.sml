@@ -23,6 +23,10 @@ val false_tm = boolSyntax.F
 
 val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 
+fun countP0 acc P [] = acc
+  | countP0 acc P (h::t) = countP0 (if P h then acc + 1 else acc) P t
+val countP = countP0 0
+
 fun mk_abs_CONV var term = let
   val rhs = Rsyntax.mk_abs {Body = term, Bvar = var}
   val newrhs = Rsyntax.mk_comb {Rator = rhs, Rand = var}
@@ -640,6 +644,13 @@ in
   recurse [] NONE tmlist
 end
 
+val move_add =
+  GENL (map (fn n => mk_var(n, int_ty)) ["x", "y", "z"])
+  (EQT_ELIM (AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM)
+            ``(x:int + y) + z = (x + z) + y``))
+
+
+
 fun phase4_CONV tm = let
   (* have a formula of the form
        ?x. t1 <op> t2 <op> t3 <op> .... <tn>
@@ -658,68 +669,122 @@ fun phase4_CONV tm = let
      Want to calculate F_neginf such that each term of the first type is
      replaced by TRUE and each of the second replaced by FALSE.
   *)
+  val lhand = rand o rator
   val {Bvar, Body} = Rsyntax.dest_exists tm
   val F = rand tm
   val Fx = mk_comb(F, Bvar)
-  (* need prove that ?y. !x. x < y ==> (neginf x = F x) *)
-  val lemma = let
-    val eqlt_terms = let
-      (* collect up all of the terms that appear on either side of a < with
-         x on the other side *)
-      fun recurse acc tm =
-        if is_disj tm orelse is_conj tm then
-          recurse (recurse acc (rand tm)) (rand (rator tm))
-        else if is_less tm then
-          if rand tm = Bvar then rand (rator tm)::acc
-          else if rand (rator tm) = Bvar then rand tm :: acc
-          else acc
-        else if is_eq tm then
-          if rand (rator tm) = Bvar then rand tm :: acc
-          else acc
-        else if is_neg tm then recurse acc (rand tm)
-        else acc
+  datatype relntype =
+    x_LT of term
+  | LT_x of term
+  | x_EQ of term
+  | x_NEQ of term
+  | DIVIDES of (term * term option)
+  | NDIVIDES of (term * term option)
+  infix DIVIDES NDIVIDES
+  fun rtype_to_term rt =
+    case rt of
+      x_LT t => SOME t
+    | LT_x t => SOME t
+    | x_EQ t => SOME t
+    | x_NEQ t => SOME t
+    | _ => NONE
+  val leaf_arguments = let
+    (* traverse the leaves of the term; classifying all those where the
+       Bvar is involved in a < or = relation.  If
+          x < t    then     add x_LT t
+          t < x    then     add LT_x t
+          x = t    then     add x_EQ t
+        ~(x = t)   then     add x_NEQ t
+       Note that t = x never occur because of normalisation carried out
+       at the end of phase2. *)
+    fun recurse underneg acc tm = let
+      val (l,r) = dest_disj tm
+        handle HOL_ERR _ => dest_conj tm
     in
-      Lib.mk_set (recurse [] Body)
-    end
-    val y = genvar int_ty
+      recurse underneg (recurse underneg acc r) l
+    end handle HOL_ERR _ => let
+      val (l,r) = dest_less tm
+    in
+      if l = Bvar then x_LT r :: acc
+      else if r = Bvar then LT_x l :: acc else acc
+    end handle HOL_ERR _ => let
+      val (l,r) = dest_eq tm
+    in
+      if l = Bvar then (if underneg then x_NEQ else x_EQ) r :: acc else acc
+    end handle HOL_ERR _ => let
+      val (l,r) = dest_divides tm
+      val (first_rhs_arg, rest_rhs) = (I ## SOME) (dest_plus r)
+        handle HOL_ERR _ => (r, NONE)
+    in
+      if first_rhs_arg = Bvar then
+        (if underneg then op NDIVIDES else op DIVIDES) (l, rest_rhs) :: acc
+      else acc
+    end handle HOL_ERR _ =>
+      recurse (not underneg) acc (dest_neg tm) handle HOL_ERR _ => acc
   in
-    if null eqlt_terms then let
+    Lib.mk_set (recurse false [] Body)
+  end
+  val use_bis = true (* let
+    fun recurse a b l =
+      case l of
+        [] => (a,b)
+      | (x_LT _)::t => recurse (a+1) b t
+      | (LT_x _)::t => recurse a (b+1) t
+      | _ :: t => recurse a b t
+  in
+    Int.>(recurse 0 0 leaf_arguments)
+  end *)
+
+  (* need prove either that ?y. !x. x < y ==> (neginf x = F x)  or
+     that                   ?y. !x. y < x ==> (posinf x = F x)
+     depending on the relative numbers of x_LT and LT_x leaves, i.e.
+     our use_bis variable *)
+  val lemma = let
+    val y = genvar int_ty
+    val all_terms = List.mapPartial rtype_to_term leaf_arguments
+    val MK_LESS = if use_bis then mk_less else (fn (x,y) => mk_less(y,x))
+  in
+    if null all_terms then let
       (* neginf and F are the same *)
-      val without_ex = GEN Bvar (DISCH (mk_less(Bvar, y)) (REFL Fx))
+      val without_ex = GEN Bvar (DISCH (MK_LESS(Bvar, y)) (REFL Fx))
     in
       EXISTS (mk_exists(y, concl without_ex), y) without_ex
     end
     else let
+      val (minmax_op, minmax_thm, arg_accessor, eqthm_transform) =
+        if use_bis then (min_tm, INT_MIN_LT, rand, I)
+        else            (max_tm, INT_MAX_LT, lhand, GSYM)
       val witness = let
         infixr -->
         fun recurse acc tms =
           case tms of
             [] => acc
-          | (x::xs) => recurse (list_mk_comb(min_tm, [acc, x])) xs
+          | (x::xs) => recurse (list_mk_comb(minmax_op, [acc, x])) xs
       in
-        recurse (hd eqlt_terms) (tl eqlt_terms)
+        recurse (hd all_terms) (tl all_terms)
       end
       fun gen_rewrites acc thm =
         if is_conj (concl thm) then
           gen_rewrites (gen_rewrites acc (CONJUNCT1 thm)) (CONJUNCT2 thm)
         else let
-          val rhs = rand (concl thm)
-          val (hd, _) = strip_comb rhs
+          val arg = arg_accessor (concl thm)
+          val (hdt, _) = strip_comb arg
         in
-          if hd = min_tm then
-            gen_rewrites acc (MATCH_MP INT_MIN_LT thm)
+          if hdt = minmax_op then
+            gen_rewrites acc (MATCH_MP minmax_thm thm)
           else
             EQT_INTRO thm :: EQF_INTRO (MATCH_MP INT_LT_GT thm) ::
-            EQF_INTRO (MATCH_MP INT_LT_IMP_NE thm) :: acc
+            EQF_INTRO (eqthm_transform (MATCH_MP INT_LT_IMP_NE thm)) :: acc
         end
-      val rewrites = gen_rewrites [] (ASSUME (mk_less (Bvar, witness)))
+      val rewrites =
+        gen_rewrites [] (ASSUME (MK_LESS (Bvar, witness)))
       val thm0 =
         (BETA_CONV THENC REWRITE_CONV rewrites THENC mk_abs_CONV Bvar) Fx
       val thm1 = GEN Bvar (DISCH_ALL thm0)
       val exform = let
         val (x, body) = dest_forall (concl thm1)
         val (_,c) = dest_imp body
-        val newh = mk_less(x, y)
+        val newh = MK_LESS(x, y)
       in
         mk_exists(y, mk_forall(x, mk_imp(newh, c)))
       end
@@ -727,7 +792,7 @@ fun phase4_CONV tm = let
       EXISTS (exform, witness) thm1
     end
   end
-  val neginf =
+  val neginf = (* call it neginf, though it will be "posinf" if ~ use_bis *)
     rator (rhs (#2 (dest_imp (#2 (dest_forall
                                   (#2 (dest_exists (concl lemma))))))))
 
@@ -735,22 +800,11 @@ fun phase4_CONV tm = let
      the above forms, call it delta *)
 
   val all_delta_tms = let
-    fun recurse acc tm =
-      if is_disj tm orelse is_conj tm then
-        recurse (recurse acc (rand tm)) (rand (rator tm))
-      else if is_neg tm then recurse acc (rand tm)
-      else if is_divides tm then let
-        val x_on_rhs =
-          (is_plus (rand tm) andalso (rand (rator (rand tm)) = Bvar)) orelse
-          (rand tm = Bvar)
-      in
-        if x_on_rhs then rand (rator tm) :: acc
-        else acc
-      end
-      else
-        acc
+    fun collect (c DIVIDES _) = SOME c
+      | collect (c NDIVIDES _) = SOME c
+      | collect _ = NONE
   in
-    Lib.mk_set (recurse [] Body)
+    Lib.mk_set (List.mapPartial collect leaf_arguments)
   end
   val all_deltas = map int_of_term all_delta_tms
   val delta = if null all_deltas then Arbint.one else calc_lcm all_deltas
@@ -759,45 +813,64 @@ fun phase4_CONV tm = let
     map (fn ld_tm =>
          (ld_tm, EQT_ELIM (REDUCE_CONV (mk_divides(ld_tm, delta_tm)))))
     all_delta_tms
-  (* further need that !x y. neginf x = neginf (x - y * delta_tm) *)
 
+  (* further need that !x y. neginf x = neginf (x +/- y * delta_tm) *)
   (* The argument to neginf only appears as argument to divides terms.
      We must be able to reduce
-       c int_divides (x - y * delta + e)   to
+       c int_divides (x +/- y * delta + e)   to
        c int_divides (x + e)
      given that c is a divisor of delta.  We first reduce
-       (x - y + e) to (x + e - y)  using theorem move_sub (proved above)
-     then we have
-       c int_divides y ==> (c int_divides (x - y) = c int_divides x)  and
+       (x +/- y + e) to (x + e +/- y)
+     using either the theorem move_sub or move_add (proved above).
+     Then we have
+       c int_divides y ==> (c int_divides (x +/- y) = c int_divides x)  and
        c int_divides x ==> c int_divides (x * y)
      which we specialise with the appropriate values for x and y, and then
      use rewriting to do the right reductions
   *)
   val lemma2 = let
     val y = genvar int_ty
-    val tm0 = mk_comb (neginf,
-                       list_mk_comb(minus_tm, [Bvar, mk_mult(y, delta_tm)]))
+    val (tm0, move_thm, divides_thm) =
+      if use_bis then (mk_comb (neginf, mk_minus(Bvar, mk_mult(y, delta_tm))),
+                       move_sub, INT_DIVIDES_RSUB)
+      else (mk_comb (neginf, mk_plus(Bvar, mk_mult(y, delta_tm))),
+            move_add, INT_DIVIDES_RADD)
     fun recurse tm =
       if is_conj tm orelse is_disj tm then
         BINOP_CONV recurse tm
       else if is_neg tm then
         RAND_CONV recurse tm
-      else if
-        is_divides tm andalso #1 (strip_comb (rand tm)) = minus_tm
-      then let
-        val local_delta = rand(rator tm)
-        val ldel_divides = Lib.assoc local_delta divides_info
-        val ldel_divides_dely =
-          SPEC y (MATCH_MP INT_DIVIDES_RMUL ldel_divides)
-        val ldel_simpler = MATCH_MP INT_DIVIDES_RSUB ldel_divides_dely
+      else let
+        val (local_delta, arg2) = dest_divides tm
+        val (l,r) = dest_plus arg2
+          handle (e as HOL_ERR _) => if use_bis then dest_minus arg2
+                                     else raise e
       in
-        REWR_CONV ldel_simpler tm
-      end
-      else ALL_CONV tm
-
+        if l = Bvar then let
+          (* the original divides term is of form c | x *)
+          val ldel_divides = Lib.assoc local_delta divides_info
+          val ldel_divides_dely =
+            SPEC y (MATCH_MP INT_DIVIDES_RMUL ldel_divides)
+          val ldel_simpler = MATCH_MP divides_thm ldel_divides_dely
+        in
+          REWR_CONV ldel_simpler tm
+        end
+        else let
+          val (ll, lr) = (if use_bis then dest_minus else dest_plus) l
+          val _ = ll = Bvar orelse raise ERR "" ""
+          (* the original divides term of form c | x + e            *)
+          (* we're rewriting something like c | (x +/- y * d) + e   *)
+          val ldel_divides = Lib.assoc local_delta divides_info
+          val ldel_divides_dely =
+            SPEC y (MATCH_MP INT_DIVIDES_RMUL ldel_divides)
+          val ldel_simpler = MATCH_MP divides_thm ldel_divides_dely
+        in
+          (RAND_CONV (REWR_CONV move_thm) THENC
+           REWR_CONV ldel_simpler) tm
+        end
+      end handle HOL_ERR _ => ALL_CONV tm
     val c =
-      BETA_CONV THENC REWRITE_CONV [move_sub] THENC recurse THENC
-      mk_abs_CONV Bvar
+      BETA_CONV THENC recurse THENC mk_abs_CONV Bvar
   in
     GENL [y, Bvar] (c tm0)
   end
@@ -815,20 +888,16 @@ fun phase4_CONV tm = let
     val intlist_ty = mk_thy_type{Args=[int_ty], Tyop="list",Thy="list"}
     val MEM_tm = mk_thy_const{Name = "MEM", Thy="list",
                                Ty = int_ty --> intlist_ty --> Type.bool}
-    fun find_bis acc tm =
-      if is_disj tm orelse is_conj tm then
-        find_bis (find_bis acc (rand tm)) (rand (rator tm))
-      else if is_less tm andalso rand tm = Bvar then
-        rand (rator tm) :: acc
-      else if is_eq tm andalso rand (rator tm) = Bvar then
-        mk_plus(rand tm, mk_negated one_tm) :: acc
-      else if is_neg tm andalso is_eq (rand tm) andalso
-              rand (rator (rand tm)) = Bvar
-      then
-        rand (rand tm) :: acc
-      else
-        acc
-    val bis = Lib.mk_set (find_bis [] Body)
+    fun find_bi (LT_x t) = SOME t
+      | find_bi (x_EQ t) = SOME (mk_plus(t, mk_negated one_tm))
+      | find_bi (x_NEQ t) = SOME t
+      | find_bi _ = NONE
+    fun find_ai (x_LT t) = SOME t
+      | find_ai (x_EQ t) = SOME (mk_plus(t, one_tm))
+      | find_ai (x_NEQ t) = SOME t
+      | find_ai _ = NONE
+    val find_xi = if use_bis then find_bi else find_ai
+    val bis = Lib.mk_set (List.mapPartial find_xi leaf_arguments)
     val bis_list_tm = listSyntax.mk_list(bis, int_ty)
     val b = genvar int_ty
     val j = genvar int_ty
