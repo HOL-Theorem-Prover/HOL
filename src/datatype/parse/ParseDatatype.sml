@@ -25,7 +25,7 @@ struct
 
 
 fun ERR s1 s2 =
- Exception.HOL_ERR
+ Feedback.HOL_ERR
   {origin_structure = "ParseDatatype",
    origin_function = s1,
    message = s2};

@@ -15,7 +15,7 @@
 structure ind_types :> ind_types =
 struct
 
-open HolKernel basicHol90Lib Parse Psyntax
+open HolKernel boolLib Parse Psyntax
 open numTheory arithmeticTheory prim_recTheory simpLib boolSimps
 open ind_typeTheory
 
@@ -70,12 +70,12 @@ val make_args =
    end handle _ => raise ERR "make_args" "";
 
 fun mk_binop op_t tm1 tm2 = list_mk_comb(op_t, [tm1, tm2])
-fun mk_const (n, theta) =
-  let val c = #const (const_decl n)
-      val ty = type_of c
-  in
-    Term.mk_const{Name = n, Ty = Type.type_subst theta ty}
-  end;
+fun mk_const (thy, n, theta) = let
+  val c0 = prim_mk_const{Name = n, Thy = thy}
+  val ty = type_of c0
+in
+  Term.mk_thy_const{Name = n, Thy = thy, Ty = Type.type_subst theta ty}
+end;
 
 fun mk_icomb(tm1,tm2) =
    let val (ty, _) = Type.dom_rng (type_of tm1)
@@ -84,8 +84,8 @@ fun mk_icomb(tm1,tm2) =
       mk_comb(Term.inst tyins tm1, tm2)
    end;
 
-fun list_mk_icomb cname =
-  let val cnst = mk_const(cname,[])
+fun list_mk_icomb (thy,cname) =
+  let val cnst = mk_const(thy,cname,[])
   in fn args => rev_itlist (C (curry mk_icomb)) args cnst
   end;
 
@@ -137,8 +137,8 @@ fun new_basic_type_definition tyname (mkname, destname) thm =
       val x = mk_var{Name="x", Ty=dom_ty}
       val witness_exists = EXISTS
             (mk_exists{Bvar=x, Body=mk_comb{Rator=pred, Rand=x}},witness) thm
-      val tyax = new_type_definition{name=tyname, pred=pred,
-                                          inhab_thm=witness_exists}
+      val tyax = new_type_definition{name=tyname,
+                                     inhab_thm=witness_exists}
       val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections
               {name=(tyname^"_repfns"), ABS=mkname, REP=destname, tyax=tyax})
   in
@@ -181,9 +181,9 @@ in
       end_itlist (fn ty1 => fn ty2 => mk_type("prod",[ty1,ty2])) alltys
       handle HOL_ERR _ => Type.bool
     val recty = mk_type("recspace",[pty])
-    val constr = mk_const("CONSTR",[aty |-> pty])
-    val fcons = mk_const("FCONS",[aty |-> recty])
-    val bot = mk_const("BOTTOM",[aty |-> pty])
+    val constr = mk_const("ind_type","CONSTR",[aty |-> pty])
+    val fcons = mk_const("ind_type", "FCONS",[aty |-> recty])
+    val bot = mk_const("ind_type", "BOTTOM",[aty |-> pty])
     val  bottail = mk_abs(n_tm,bot)
     fun mk_constructor n (cname,cargs) = let
       val ttys = map (fn ty => if mem ty newtys then recty else ty) cargs
@@ -202,7 +202,7 @@ in
             (hd epstms)::(mk_injector (tl epstms) (tl alltys) iargs)
         end
       val iarg =
-        end_itlist (curry mk_pair) (mk_injector epstms alltys iargs)
+        end_itlist (curry pairSyntax.mk_pair) (mk_injector epstms alltys iargs)
         handle HOL_ERR _ => beps_tm
       val rarg = itlist (mk_binop fcons) rargs bottail
       val conty = itlist (curry Type.-->) (map type_of args) recty
@@ -410,7 +410,7 @@ in
     else let
       val con = bimp
       val conth2 = BETA_CONV con
-      val tth = Ho_match.PART_MATCH I rthm (lhand(rand(concl conth2)))
+      val tth = HO_PART_MATCH I rthm (lhand(rand(concl conth2)))
       val conth3 = PRERULE conth2
       val asmgen = rand(rand(concl conth3))
       val asmquant = list_mk_forall(snd(strip_comb(rand asmgen)),asmgen)
@@ -556,7 +556,7 @@ local
   fun extract_arg tup v =
     if v = tup then REFL tup
     else let
-      val (t1,t2) = dest_pair tup
+      val (t1,t2) = pairSyntax.dest_pair tup
       val PAIR_th = ISPECL [t1,t2] (if free_in v t1 then pairTheory.FST
                                     else pairTheory.SND)
       val tup' = rand(concl PAIR_th)
@@ -630,8 +630,8 @@ in
   fun  derive_recursion_theorem tybijpairs consindex conthms rath = let
     val isocons = map (create_recursion_iso_constructor consindex) conthms
     val ty = type_of(hd isocons)
-    val fcons = mk_const("FCONS",[Type.alpha |-> ty])
-    and fnil = mk_const("FNIL",[Type.alpha |-> ty])
+    val fcons = mk_const("ind_type", "FCONS",[Type.alpha |-> ty])
+    and fnil = mk_const("ind_type", "FNIL",[Type.alpha |-> ty])
     val bigfun = itlist (mk_binop fcons) isocons fnil
     val eth = ISPEC bigfun CONSTR_REC
     val fnn = rator(rand(hd(conjuncts(concl rath))))
@@ -767,11 +767,14 @@ val generalize_recursion_theorem = let
     fun mk_inls ty =
       if is_vartype ty then [mk_var("x",ty)]
       else let
+
         val (_,[ty1,ty2]) = dest_type ty
         val inls1 = mk_inls ty1
         and inls2 = mk_inls ty2
-        val inl = mk_const("INL",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
-        and inr = mk_const("INR",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
+        val inl =
+          mk_const("sum", "INL",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
+        and inr =
+          mk_const("sum", "INR",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
       in
         map (curry mk_comb inl) inls1 @ map (curry mk_comb inr) inls2
       end
@@ -787,8 +790,10 @@ val generalize_recursion_theorem = let
       if is_vartype ty then [sof]
       else let
         val (_,[ty1,ty2]) = dest_type ty
-        val outl = mk_const("OUTL",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
-        and outr = mk_const("OUTR",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
+        val outl =
+          mk_const("sum", "OUTL",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
+        and outr =
+          mk_const("sum", "OUTR",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
       in
         mk_inls (mk_comb(outl,sof)) ty1 @ mk_inls (mk_comb(outr,sof)) ty2
       end
@@ -1138,7 +1143,7 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
          efvs1)
     efvs0
   val isotms = map2 (fn ff => fn gg =>
-                     list_mk_icomb "ISO" [ff,gg])
+                     list_mk_icomb ("ind_type", "ISO") [ff,gg])
     efvs0 efvs2
   val ctm = list_mk_conj isotms
   val cth1 = ISO_EXPAND_CONV ctm
@@ -1151,12 +1156,15 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   val cth2 = CONJ_ACI_CONV (mk_eq(ctm1,ctm2))
   val cth3 = TRANS cth1 cth2
   val DETRIV_RULE = TRIV_ANTE_RULE o REWRITE_RULE[sth0, sth1]
+  fun instfixup (ty,tm) = (map (fn {redex, residue} => (residue, redex)) ty,
+                           map (fn {redex, residue} => (residue, redex)) tm)
   val jth0 = let
     val itha = SPEC_ALL ith0
     val icjs = conjuncts(rand(concl itha))
-    val cinsts =
-      map (fn tm => tryfind (fn vtm => Ho_match.match_term [] vtm tm) icjs)
+    val cinsts0 =
+      map (fn tm => tryfind (fn vtm => ho_match_term [] vtm tm) icjs)
       (conjuncts (rand ctm2))
+    val cinsts = map instfixup cinsts0
     val tvs = subtract (fst(strip_forall(concl ith0)))
                 (itlist (fn (x,_) => union (map snd x)) cinsts [])
     val ctvs =
@@ -1168,9 +1176,10 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   and jth1 = let
     val itha = SPEC_ALL ith1
     val icjs = conjuncts(rand(concl itha))
-    val cinsts = map (fn tm => tryfind
-                      (fn vtm => Ho_match.match_term [] vtm tm) icjs)
+    val cinsts0 = map (fn tm => tryfind
+                      (fn vtm => ho_match_term [] vtm tm) icjs)
                      (conjuncts (lhand ctm2))
+    val cinsts = map instfixup cinsts0
     val tvs = subtract (fst(strip_forall(concl ith1)))
       (itlist (fn (x,_) => union (map snd x)) cinsts [])
     val ctvs =
@@ -1209,8 +1218,8 @@ val safeid_genvar = let
   fun vary_to_avoid_constants () = let
     val nm = "ii_internal" ^ current_theory() ^ Int.toString (!count)
   in
-    if (can const_decl nm) then (count := !count + 100;
-                                   vary_to_avoid_constants())
+    if (not (null (decls nm))) then (count := !count + 100;
+                                     vary_to_avoid_constants())
     else (count := !count + 1; nm)
   end
 in
@@ -1341,7 +1350,7 @@ fun canonicalise_tyvars def thm = let
     case tyvs of
       [] => []
     | (tyv::tyvs) => let
-        val newtyname = Lib.gen_variant Lib.tyvar_vary avoids "'a"
+        val newtyname = Lexis.gen_variant Lexis.tyvar_vary avoids "'a"
       in
         (tyv |-> mk_vartype newtyname) ::
         gen_canonicals tyvs (newtyname :: avoids)
@@ -1382,7 +1391,7 @@ local
       | (tyv1::tyvs) =>
           if Lib.mem tyv1 avoids then let
             val newtyv =
-              Lib.gen_variant Lib.tyvar_vary (check_these @ avoids) "'a"
+              Lexis.gen_variant Lexis.tyvar_vary (check_these @ avoids) "'a"
           in
             (mk_vartype tyv1 |-> mk_vartype newtyv) ::
             recurse tyvs (newtyv::avoids)

@@ -43,8 +43,8 @@ structure EquivType :> EquivType =
 struct
 
 (* The Standard Header *)
-open HolKernel Parse basicHol90Lib;
-open Psyntax hol88Lib boolTheory;
+open HolKernel Parse boolLib;
+open Psyntax liteLib boolTheory;
 
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
@@ -92,13 +92,16 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
   val repty = (hd o snd o dest_type o type_of) eqv
   val tydef =
     let val rtm = (--`\c. ?x. c = ^eqv x`--) in
-    new_type_definition(tyname,rtm,
+    new_type_definition(tyname,
       PROVE((--`?c. ^rtm c`--),
             BETA_TAC THEN
             MAP_EVERY EXISTS_TAC [(--`^eqv x`--), (--`x:^(ty_antiq(repty))`--)]
             THEN REFL_TAC)) end
   val tybij = BETA_RULE
-    (define_new_type_bijections (tyname^"_tybij") absname repname tydef)
+    (define_new_type_bijections {name = tyname^"_tybij",
+                                 ABS = absname,
+                                 REP = repname,
+                                 tyax = tydef})
   val absty = mk_type(tyname,[])
   val (abs,rep) = ((I ## rator) o dest_comb o lhs o snd o dest_forall o hd o
                  conjuncts o concl) tybij
@@ -234,7 +237,8 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
                   end
           val def = mk_eq(l,r)
       in
-        new_gen_definition(def_name, def, fixity)
+        Parse.add_rule (Parse.standard_spacing fname fixity);
+        new_definition(def_name, def)
      end
   val newdefs = map define_fun fnlist
 

@@ -38,6 +38,7 @@ structure Datatype :> Datatype =
 struct
 
 open HolKernel Parse Drule Tactical Tactic Conv Prim_rec ParseDatatype;
+open boolSyntax
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
@@ -60,7 +61,7 @@ type tyspec       = hol_type * constructor list
 type record_rw_names = string list
 
 (*---------------------------------------------------------------------------
-   A tyspec is a type specification.  The first component is a type 
+   A tyspec is a type specification.  The first component is a type
    variable whose name (less the leading quote) is the name of the new
    type.  Each such is accompanied by a list of constructor specifications.
    Such a spec. is a string (the constructor name) and a list of types that
@@ -140,14 +141,14 @@ in
 fun tysize (theta,omega,gamma) clause ty =
  case theta ty
   of SOME fvar => fvar
-   | NONE => 
-      case omega ty 
+   | NONE =>
+      case omega ty
        of SOME (_,[]) => raise ERR "tysize" "bug: no assoc for nested"
         | SOME (_,[(f,szfn)]) => szfn
         | SOME (_,alist) => snd
              (first (fn (f,sz) => Lib.can (find_term(OK f ty)) (rhs clause))
                   alist)
-        | NONE => 
+        | NONE =>
            let val {Tyop,Args} = dest_type ty
            in case gamma Tyop
                of SOME f =>
@@ -180,12 +181,12 @@ fun dupls [] (C,D) = (rev C, rev D)
 fun part P [] = ([],[])
   | part P (h::t) =
      let val (pass,fail) = part P t
-     in if P h then (h::pass,fail) 
+     in if P h then (h::pass,fail)
         else (pass,h::fail)
      end;
 
 fun crunch [] = []
-  | crunch ((x,y)::t) = 
+  | crunch ((x,y)::t) =
      let val key = #1(dom_rng(type_of x))
          val (pass,fail) = part (fn (x,_) => (#1(dom_rng(type_of x))=key)) t
      in (key, (x,y)::pass)::crunch fail
@@ -198,7 +199,7 @@ local open arithmeticTheory
       val Plus  = mk_const{Name="+", Ty=numty-->numty-->numty}
       fun mk_plus x y = list_mk_comb(Plus,[x,y])
 in
-fun define_size ax db = 
+fun define_size ax db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
      val tyvars = Lib.U (map (#Args o dest_type) dtys)
      val (_, abody) = strip_forall(concl ax)
@@ -209,20 +210,20 @@ fun define_size ax db =
      val capplist = map (rand o lhs) bare_conjl
      val def_name = #Tyop(dest_type(type_of(hd capplist)))
      (* 'a -> num variables : size functions for type variables *)
-     val fparams = rev(fst(rev_itlist mk_tyvar_size tyvars 
+     val fparams = rev(fst(rev_itlist mk_tyvar_size tyvars
                              ([],free_varsl capplist)))
      val fparams_tyl = map type_of fparams
-     fun proto_const n ty = 
+     fun proto_const n ty =
          mk_var{Name=n, Ty=itlist (curry op-->) fparams_tyl (ty --> numty)}
-     fun tyop_binding ty = 
+     fun tyop_binding ty =
        let val root_tyop = #Tyop(dest_type ty)
        in (root_tyop, (ty, proto_const(root_tyop^"_size") ty))
        end
      val tyvar_map = zip tyvars fparams
      val tyop_map = map tyop_binding dtys
-     fun theta tyv = 
-          case assoc1 tyv tyvar_map 
-           of SOME(_,f) => SOME f 
+     fun theta tyv =
+          case assoc1 tyv tyvar_map
+           of SOME(_,f) => SOME f
             | NONE => NONE
      val type_size_env = tysize_env db
      fun gamma str =
@@ -234,13 +235,13 @@ fun define_size ax db =
      fun is_dty M = mem(#1(dom_rng(type_of(head_of_clause M)))) dtys
      val (dty_clauses,non_dty_clauses) = part is_dty bare_conjl
      val dty_fns = fst(dupls (map head_of_clause dty_clauses) ([],[]))
-     fun dty_size ty = 
+     fun dty_size ty =
         let val (d,r) = dom_rng ty
         in list_mk_comb(proto_const(#Tyop(dest_type d)^"_size") d,fparams)
         end
      val dty_map = zip dty_fns (map (dty_size o type_of) dty_fns)
      val non_dty_fns = fst(dupls (map head_of_clause non_dty_clauses) ([],[]))
-     fun nested_binding (n,f) = 
+     fun nested_binding (n,f) =
         let val name = String.concat[def_name,Lib.int_to_string n,"_size"]
             val (d,r) = dom_rng (type_of f)
             val proto_const = proto_const name d
@@ -257,16 +258,16 @@ fun define_size ax db =
              val {Rator=fn_i, Rand=capp} = dest_comb fcapp
          in
          mk_eq{lhs=mk_comb{Rator=assoc fn_i fn_i_map, Rand=capp},
-               rhs = case snd(strip_comb capp) 
+               rhs = case snd(strip_comb capp)
                       of [] => Zero
                        | L  => end_itlist mk_plus (One::map (mk_app cl) L)}
          end
      val pre_defn0 = list_mk_conj (map clause bare_conjl)
      val pre_defn1 = #rhs(dest_eq(concl   (* remove zero additions *)
-                      ((DEPTH_CONV BETA_CONV THENC 
+                      ((DEPTH_CONV BETA_CONV THENC
                         Rewrite.PURE_REWRITE_CONV zero_rws) pre_defn0)))
-     val defn = new_recursive_definition 
-                 {name=def_name^"_size_def", 
+     val defn = new_recursive_definition
+                 {name=def_name^"_size_def",
                   rec_axiom=ax, def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
      val ctyl = Lib.mk_set (map cty (strip_conj (concl defn)))
@@ -286,14 +287,14 @@ local fun tyname_as_tyvar n = mk_vartype ("'" ^ n)
       fun stage1 (s,Constructors l) = (s,l)
         | stage1 (s,Record fields)  = (s,[(s,map snd fields)])
       fun check_fields (s,Record fields) =
-          (case duplicate_names (map fst fields) 
+          (case duplicate_names (map fst fields)
            of NONE => ()
             | SOME n => raise ERR "check_fields" ("Duplicate field name: "^n))
         | check_fields _ = ()
       fun cnames (s,Record _) A = s::A
         | cnames (_,Constructors l) A = map fst l @ A
-      fun check_constrs asts = 
-            case duplicate_names (itlist cnames asts []) 
+      fun check_constrs asts =
+            case duplicate_names (itlist cnames asts [])
              of NONE => ()
               | SOME n => raise ERR "check_constrs"
                        ("Duplicate constructor name: "^n)
@@ -305,8 +306,8 @@ fun to_tyspecs ASTs =
      val new_type_names = map #1 asts
      fun mk_hol_type (dAQ ty) = ty
        | mk_hol_type (dVartype s) = mk_vartype s
-       | mk_hol_type (dTyop(s, args)) = 
-            if Lib.mem s new_type_names 
+       | mk_hol_type (dTyop(s, args)) =
+            if Lib.mem s new_type_names
             then if null args then tyname_as_tyvar s
                  else raise ERR "to_tyspecs"
                      "Can't use new types as operators - leave them nullary"
@@ -326,42 +327,42 @@ fun new_datatype q     = new_asts_datatype (ParseDatatype.parse q);
  ---------------------------------------------------------------------------*)
 
 (*
-fun build_tyinfos db {induction,recursion} = 
+fun build_tyinfos db {induction,recursion} =
  let val case_defs = Prim_rec.define_case_constant recursion
-     val tyinfol = TypeBase.gen_tyinfo 
+     val tyinfol = TypeBase.gen_tyinfo
                       {ax=recursion, ind=induction, case_defs=case_defs}
  in case define_size recursion db
      of NONE => (Lib.mesg true "Couldn't define size function"; tyinfol)
-      | SOME {def,const_tyopl} => 
+      | SOME {def,const_tyopl} =>
           map (fn tyinfo =>
                 let val tyname = TypeBase.ty_name_of tyinfo
                 in case assoc2 tyname const_tyopl
                     of SOME(c,tyop) => TypeBase.put_size (c,def) tyinfo
                      | NONE => (Lib.mesg true
-                                  ("Can't find size constant for"^tyname); 
+                                  ("Can't find size constant for"^tyname);
                                 raise ERR "build_tyinfos" "")
                 end)
             tyinfol handle HOL_ERR _ => tyinfol
  end;
 *)
 
-fun build_tyinfos db {induction,recursion} = 
+fun build_tyinfos db {induction,recursion} =
  let val case_defs = Prim_rec.define_case_constant recursion
-     val tyinfol = TypeBase.gen_tyinfo 
+     val tyinfol = TypeBase.gen_tyinfo
                       {ax=recursion, ind=induction, case_defs=case_defs}
  in case define_size recursion db
-     of NONE => (Lib.mesg true "Couldn't define size function"; tyinfol)
+     of NONE => (HOL_MESG "Couldn't define size function"; tyinfol)
       | SOME {def,const_tyopl} =>
-        (case tyinfol 
+        (case tyinfol
          of [] => raise ERR "build_tyinfos" "empty tyinfo list"
-          | tyinfo::rst => 
+          | tyinfo::rst =>
              let val first_tyname = TypeBase.ty_name_of tyinfo
-                 fun insert_size info size_eqs = 
+                 fun insert_size info size_eqs =
                     let val tyname = TypeBase.ty_name_of info
                     in case assoc2 tyname const_tyopl
                        of SOME(c,tyop) => TypeBase.put_size(c,size_eqs) info
-                        | NONE => (Lib.mesg true 
-                                     ("Can't find size constant for"^tyname); 
+                        | NONE => (HOL_MESG
+                                     ("Can't find size constant for"^tyname);
                                     raise ERR "build_tyinfos" "")
                     end
              in insert_size tyinfo (TypeBase.ORIG def)
@@ -371,7 +372,7 @@ fun build_tyinfos db {induction,recursion} =
  end;
 
 local fun add_record_facts (tyinfo, NONE) = (tyinfo, [])
-        | add_record_facts (tyinfo, SOME fields) = 
+        | add_record_facts (tyinfo, SOME fields) =
                RecordType.prove_recordtype_thms (tyinfo, fields);
       fun field_names_of (_,Record l) = SOME (map fst l)
         | field_names_of _ = NONE
@@ -410,15 +411,15 @@ end;
  ---------------------------------------------------------------------------*)
 
 fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
-           record_rw_names = 
+           record_rw_names =
  adjoin_to_theory
    {sig_ps = NONE,
     struct_ps = SOME
-     (fn ppstrm => 
+     (fn ppstrm =>
       let val S = PP.add_string ppstrm
           fun NL() = PP.add_newline ppstrm
           fun do_size NONE = (S "         size = NONE,"; NL())
-            | do_size (SOME (c,s)) = 
+            | do_size (SOME (c,s)) =
                let val strc = String.concat
                      ["(", term_to_string c, ") ",type_to_string (type_of c)]
                    val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
@@ -447,7 +448,7 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
         S "   end;";                              NL()
       end)};
 
-fun write_tyinfo (tyinfo, record_rw_names) = 
+fun write_tyinfo (tyinfo, record_rw_names) =
  let open TypeBase
      fun name s = ty_name_of tyinfo ^ s
      val one_one_name =
@@ -455,29 +456,29 @@ fun write_tyinfo (tyinfo, record_rw_names) =
         of NONE => "NONE"
          | SOME th => (save_thm(name "_11", th); "SOME "^name"_11")
      val distinct_name =
-       case distinct_of tyinfo 
+       case distinct_of tyinfo
         of NONE => "NONE"
          | SOME th => (save_thm(name "_distinct",th); "SOME "^name"_distinct")
-     val case_cong_name = 
+     val case_cong_name =
         let val ccname = name"_case_cong"
         in save_thm (ccname,case_cong_of tyinfo);
            ccname
         end
-     val nchotomy_name = 
+     val nchotomy_name =
        let val nchname = name"_nchotomy"
        in save_thm (nchname,nchotomy_of tyinfo);
           nchname
        end
-     val axiom_name = 
+     val axiom_name =
         let val axname = name"_Axiom"
-        in 
+        in
         case axiom_of0 tyinfo
          of ORIG th => (save_thm (axname, th); "ORIG "^axname)
           | COPY (s,th) => "COPY ("^Lib.quote s^","^s^"_Axiom)"
         end
-     val induction_name = 
+     val induction_name =
         let val indname = name"_induction"
-        in 
+        in
         case induction_of0 tyinfo
          of ORIG th => (save_thm (indname, th); "ORIG "^indname)
           | COPY (s,th) => "COPY ("^Lib.quote s^","^s^"_induction)"
@@ -485,7 +486,7 @@ fun write_tyinfo (tyinfo, record_rw_names) =
      val size_info =
        let val sd_name = name"_size_def"
        in
-       case size_of0 tyinfo 
+       case size_of0 tyinfo
         of NONE => NONE
          | SOME (tm, ORIG def) => SOME (tm, "ORIG "^sd_name)
          | SOME (tm, COPY(s,def))

@@ -8,7 +8,7 @@
 structure RecordType :> RecordType =
 struct
 
-local open HolKernel Parse basicHol90Lib
+local open HolKernel Parse boolLib
       infix THEN
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
@@ -31,7 +31,6 @@ fun delete n l =
 fun update n e = (insert n e) o (delete n);
 fun findi e [] = raise Fail "Couldn't find element"
   | findi e (x::xs) = if e = x then 1 else 1 + findi e xs;
-fun get_const_type str = type_of (#const (Term.const_decl str));
 fun foldr f zero []      = zero
   | foldr f zero (x::xs) = f x (foldr f zero xs);
 fun foldl f zero []      = zero
@@ -74,7 +73,7 @@ fun foldl f zero []      = zero
     val avoidstrs = List.mapPartial name_of tml
     val {Name, Ty} = Term.dest_var tm
   in
-    Term.mk_var{Name = Lib.gen_variant Lib.tmvar_vary avoidstrs Name,
+    Term.mk_var{Name = Lexis.gen_variant Lexis.tmvar_vary avoidstrs Name,
                 Ty = Ty}
   end
 
@@ -199,7 +198,7 @@ in
       (access_fn_names, typeletters, accfn_types)
     val access_defns =
       ListPair.map
-      (fn (name, tm) => Rsyntax.new_recursive_definition
+      (fn (name, tm) => Prim_rec.new_recursive_definition
        {def = tm, name = name, rec_axiom = typthm})
       (access_fn_names, access_defn_terms)
     val accessor_thm =
@@ -222,7 +221,7 @@ in
     val updfn_defns =
       ListPair.map
       (fn (name, tm) =>
-       Rsyntax.new_recursive_definition
+       Prim_rec.new_recursive_definition
        {rec_axiom = typthm, name = name, def = tm})
       (updfn_names, updfn_defn_terms)
     val updfn_thm =

@@ -1,8 +1,8 @@
 structure ind_typeScript =
 struct
 
-open HolKernel basicHol90Lib Parse Psyntax simpLib boolSimps
-open numTheory arithmeticTheory prim_recTheory 
+open HolKernel boolLib Parse Psyntax simpLib boolSimps
+open numTheory arithmeticTheory prim_recTheory
 
 infix THEN THENC THENL |-> ++
 
@@ -10,7 +10,7 @@ val hol_ss = bool_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
 
 val lhand = rand o rator
 val AND_FORALL_THM = GSYM FORALL_AND_THM;
-val GEN_REWRITE_TAC = fn c => fn thl => 
+val GEN_REWRITE_TAC = fn c => fn thl =>
    Rewrite.GEN_REWRITE_TAC c Rewrite.empty_rewrites thl
 
 
@@ -183,23 +183,23 @@ val (ZRECSPACE_RULES,ZRECSPACE_INDUCT,ZRECSPACE_CASES) =
    ``ZRECSPACE (ZBOT:num->'a->bool) /\
     (!c i r. (!n. ZRECSPACE (r n)) ==> ZRECSPACE (ZCONSTR c i r))``;
 
-local fun new_basic_type_definition tyname (mkname, destname) thm = 
+local fun new_basic_type_definition tyname (mkname, destname) thm =
        let open Rsyntax
            val {Rator=pred, Rand=witness} = dest_comb(concl thm)
            val predty = type_of pred
            val dom_ty = #1 (dom_rng predty)
            val x = mk_var{Name="x", Ty=dom_ty}
-           val witness_exists = EXISTS 
+           val witness_exists = EXISTS
               (mk_exists{Bvar=x, Body=mk_comb{Rator=pred, Rand=x}},witness) thm
-           val tyax = new_type_definition{name=tyname, pred=pred,
+           val tyax = new_type_definition{name=tyname,
                                           inhab_thm=witness_exists}
-           val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections 
+           val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections
                {name=(tyname^"_repfns"), ABS=mkname, REP=destname, tyax=tyax})
        in
          (SPEC_ALL mk_dest, SPEC_ALL dest_mk)
        end
 in
-val recspace_tydef = 
+val recspace_tydef =
       new_basic_type_definition "recspace" ("mk_rec","dest_rec")
                      (CONJUNCT1 ZRECSPACE_RULES)
 end;
@@ -280,7 +280,7 @@ val CONSTR_IND = store_thm(
     REPEAT STRIP_TAC THENL [
       MATCH_MP_TAC(CONJUNCT2 ZRECSPACE_RULES) THEN ASM_REWRITE_TAC[],
       FIRST_ASSUM (fn implhs =>
-        FIRST_ASSUM (fn imp => (MP_TAC (Ho_resolve.MATCH_MP imp implhs)))) THEN
+        FIRST_ASSUM (fn imp => (MP_TAC (HO_MATCH_MP imp implhs)))) THEN
       REWRITE_TAC[CONSTR] THEN
       RULE_ASSUM_TAC(REWRITE_RULE[snd recspace_tydef]) THEN
       ASM_SIMP_TAC bool_ss []
@@ -309,14 +309,14 @@ val CONSTR_REC = store_thm(
   DISCH_THEN(CHOOSE_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (ASSUME_TAC o GSYM)) THEN
   Q.SUBGOAL_THEN `!x. ?!y. (Z:'a recspace->'b->bool) x y` MP_TAC THENL [
-    W(MP_TAC o Ho_match.PART_MATCH rand CONSTR_IND o snd) THEN
+    W(MP_TAC o HO_PART_MATCH rand CONSTR_IND o snd) THEN
     DISCH_THEN MATCH_MP_TAC THEN CONJ_TAC THEN REPEAT GEN_TAC THENL [
       FIRST_ASSUM
         (fn t => GEN_REWRITE_TAC BINDER_CONV [GSYM t]) THEN
-      REWRITE_TAC[GSYM CONSTR_BOT, Ho_boolTheory.EXISTS_UNIQUE_REFL],
+      REWRITE_TAC[GSYM CONSTR_BOT, EXISTS_UNIQUE_REFL],
       DISCH_THEN(MP_TAC o SIMP_RULE bool_ss [EXISTS_UNIQUE_THM,FORALL_AND_THM])
       THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
-      DISCH_THEN(MP_TAC o SIMP_RULE bool_ss [Ho_boolTheory.SKOLEM_THM]) THEN
+      DISCH_THEN(MP_TAC o SIMP_RULE bool_ss [SKOLEM_THM]) THEN
       DISCH_THEN(Q.X_CHOOSE_THEN `y:num->'b` ASSUME_TAC) THEN
       REWRITE_TAC[EXISTS_UNIQUE_THM] THEN
       FIRST_ASSUM(fn th => CHANGED_TAC(ONCE_REWRITE_TAC[GSYM th])) THEN
@@ -334,7 +334,7 @@ val CONSTR_REC = store_thm(
         Q.EXISTS_TAC `w` THEN ASM_REWRITE_TAC[]
       ]
     ],
-    REWRITE_TAC[Ho_boolTheory.UNIQUE_SKOLEM_ALT] THEN
+    REWRITE_TAC[UNIQUE_SKOLEM_ALT] THEN
     DISCH_THEN(Q.X_CHOOSE_THEN `fn:'a recspace->'b` (ASSUME_TAC o GSYM)) THEN
     Q.EXISTS_TAC `fn:'a recspace->'b` THEN ASM_REWRITE_TAC[] THEN
     REPEAT GEN_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN GEN_TAC THEN
@@ -346,9 +346,11 @@ val CONSTR_REC = store_thm(
 (* The following is useful for coding up functions casewise.                 *)
 (* ------------------------------------------------------------------------- *)
 
-val FCONS = new_recursive_definition num_Axiom "FCONS"
- ``(!a f. FCONS (a:'a) f 0 = a) /\
-   (!a f n. FCONS (a:'a) f (SUC n) = f n)``;
+val FCONS = Prim_rec.new_recursive_definition {
+  rec_axiom = num_Axiom,
+  name = "FCONS",
+  def = ``(!a f. FCONS (a:'a) f 0 = a) /\
+          (!a f n. FCONS (a:'a) f (SUC n) = f n)``};
 
 val FCONS_UNDO = prove(
   ``!f:num->'a. f = FCONS (f 0) (f o SUC)``,
