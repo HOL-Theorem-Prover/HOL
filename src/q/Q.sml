@@ -279,4 +279,19 @@ fun UNABBREV_TAC [QUOTE s] = let val s' = Lib.deinitcomment s in
          THEN BETA_TAC end
   | UNABBREV_TAC _ = raise Q_ERR "UNABBREV_TAC" "unexpected quote format"
 
+fun find' f [] = NONE
+  | find' f (h::t) = case f h of NONE => find' f t | x => x
+
+fun PAT_ABBREV_TAC q (g as (asl, w)) =
+    let val ctxt = free_varsl(w::asl)
+        val (l,r) = dest_eq(Parse.parse_in_context ctxt q)
+    in
+      case find' (Lib.total (find_term (can (match_term r)))) (w::asl) of
+        NONE => raise Q_ERR "PAT_ABBREV_TAC" "No matching term found"
+      | SOME t =>
+        CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
+                    (Thm.EXISTS (mk_exists(l, mk_eq(t, l)), t)
+                                (Thm.REFL t)) g
+    end
+
 end; (* Q *)

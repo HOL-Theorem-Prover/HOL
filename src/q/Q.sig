@@ -43,6 +43,7 @@ sig
   val prove             : term quotation * tactic -> thm
   val ABBREV_TAC        : term quotation -> tactic
   val UNABBREV_TAC      : term quotation -> tactic
+  val PAT_ABBREV_TAC    : term quotation -> tactic
   val INST              : (term quotation,term quotation) subst -> thm -> thm
   val new_definition    : string * term quotation -> thm
   val new_infixl_definition : string * term quotation * int -> thm
