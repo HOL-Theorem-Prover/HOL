@@ -16,7 +16,7 @@
 structure ExistsFuns :> ExistsFuns =
 struct
 
-open utilsLib HolKernel Parse basicHol90Lib;
+open elsaUtils HolKernel Parse basicHol90Lib;
 infix THEN THENL THENC |->;
 
 type term = Term.term;
