@@ -13,13 +13,12 @@ type associativity = HOLgrammars.associativity
 val ERROR = mk_HOL_ERR "Parse";
 val WARN  = HOL_WARNING "Parse"
 
-
 val quote = Lib.mlquote
 
 datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder
 
 fun acc_strip_comb M rands =
-  let val {Rator,Rand} = dest_comb M
+  let val (Rator,Rand) = dest_comb M
   in acc_strip_comb Rator (Rand::rands)
   end
   handle HOL_ERR _ => (M,rands);
@@ -29,7 +28,7 @@ fun strip_comb tm = acc_strip_comb tm [];
 val dest_forall = dest_binder ("!","bool") (ERROR"dest_forall" "");
 
 fun strip_forall fm =
- let val {Bvar,Body} = dest_forall fm
+ let val (Bvar,Body) = dest_forall fm
      val (bvs,core) = strip_forall Body
  in (Bvar::bvs, core)
  end handle HOL_ERR _ => ([],fm);
@@ -458,7 +457,7 @@ end
 
 local
   open Preterm Pretype
-  fun name_eq s M = ((s = #Name(dest_var M)) handle HOL_ERR _ => false)
+  fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
   fun has_any_uvars pty =
     case pty
      of UVar (ref NONE)        => true
@@ -895,7 +894,7 @@ fun temp_add_numeral_form (c, stropt) = let
     orelse
       raise ERROR "add_numeral_form"
       ("Numeral support not present; try load \"arithmeticTheory\"")
-  val num = Type.mk_type {Tyop="num", Args = []}
+  val num = Type.mk_thy_type {Tyop="num", Thy="num",Args = []}
   val fromNum_type = num --> alpha
   val const_record =
     case stropt of
@@ -916,7 +915,7 @@ fun add_numeral_form (c, stropt) = let in
                ["(#", quote (str c), ", ",
                 case stropt of NONE => "NONE" | SOME s => "SOME "^quote s, ")"
                ])
-end
+ end
 
 
 (*---------------------------------------------------------------------------
@@ -925,6 +924,7 @@ end
 
 fun hide s =
   the_term_grammar := term_grammar.hide_constant s (!the_term_grammar)
+
 fun reveal s =
   case Term.decls s of
     [] => WARN "reveal" (s^" not a constant; reveal ignored")
@@ -937,7 +937,7 @@ fun known_constants() = term_grammar.known_constants (term_grammar())
 
 fun hidden s =
   let val declared = Term.all_consts()
-      val names = map (#Name o Term.dest_const) declared
+      val names = map (fst o Term.dest_const) declared
   in
     Lib.mem s (Lib.subtract names (known_constants()))
   end
@@ -961,6 +961,7 @@ end
 
    This function is called by new_definition and friends, so it shouldn't
    be necessary for users to call it in most circumstances. *)
+
 fun remember_const s = update_grms ("reveal", mlquote s);
 fun add_const s      = (reveal s; remember_const s);
 
@@ -1000,8 +1001,6 @@ in
   the_type_grammar := tyG;             (* restore global grm. values *)
   the_term_grammar := tmG
 end
-
-
 
 fun merge_grm (gname, (tyG0, tmG0)) (tyG1, tmG1) =
   (parse_type.merge_grammars (tyG0, tyG1),

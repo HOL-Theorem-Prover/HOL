@@ -1,7 +1,11 @@
-signature Pretype = sig
-datatype pretype =
-  Vartype of string | Tyop of string * pretype list |
-  UVar of pretype option ref
+signature Pretype = 
+sig
+
+ datatype pretype 
+    = Vartype of string
+    | Tyop of string * pretype list
+    | UVar of pretype option ref
+
 val tyvars : pretype -> string list
 val new_uvar : unit -> pretype
 val ref_occurs_in : pretype option ref * pretype -> bool

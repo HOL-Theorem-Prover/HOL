@@ -4,13 +4,11 @@ struct
 open Feedback HolKernel;
 infix ##;
 
-type term = Term.term
-type pretype = Pretype.pretype
+type term         = Term.term
+type pretype      = Pretype.pretype
 type 'a quotation = 'a Portable.quotation
 
-fun ERR f s = HOL_ERR
-   {origin_structure="Absyn",
-    origin_function=f, message=s};
+val ERR = mk_HOL_ERR "Absyn";
 
    datatype vstruct
        = VAQ    of term
@@ -19,33 +17,21 @@ fun ERR f s = HOL_ERR
        | VTYPED of vstruct * pretype
 
    datatype absyn
-       = AQ    of term
-       | IDENT of string
+       = AQ     of term
+       | IDENT  of string
        | QIDENT of string * string
-       | APP   of absyn * absyn
-       | LAM   of vstruct * absyn
-       | TYPED of absyn * pretype
+       | APP    of absyn * absyn
+       | LAM    of vstruct * absyn
+       | TYPED  of absyn * pretype
 
 
 (*---------------------------------------------------------------------------
         Useful absyn operations.
  ---------------------------------------------------------------------------*)
 
-fun pdest_comb t = 
- let val {Rator,Rand} = Term.dest_comb t
- in (Rator, Rand)
- end
+fun atom_name tm = fst(dest_var tm handle HOL_ERR _ => dest_const tm);
 
-fun atom_name tm = #Name(dest_var tm handle HOL_ERR _ => dest_const tm);
-
-fun dest_pair tm =
- let val {Rator,Rand=snd} = dest_comb tm
-     val {Rator=c,Rand=fst} = dest_comb Rator
- in case dest_thy_const c
-     of {Name=",",Thy="pair",...} => (fst,snd)
-      | otherwise => raise ERR"" ""
- end handle HOL_ERR _ => raise ERR "dest_pair" "";
-
+val dest_pair = dest_binop (",", "pair") (ERR "dest_pair" "")
 val is_pair = Lib.can dest_pair;
 
 fun mk_pair (fst,snd) =
@@ -53,15 +39,16 @@ fun mk_pair (fst,snd) =
      val fsty = type_of fst
      val sndty = type_of snd
      val c = mk_thy_const{Name=",",Thy="pair",
-              Ty=fsty --> sndty --> mk_type{Tyop="prod",Args=[fsty,sndty]}}
+              Ty=fsty --> sndty 
+                   --> mk_thy_type{Tyop="prod",Thy="pair",Args=[fsty,sndty]}}
  in list_mk_comb(c,[fst,snd])
  end;
 
-local val ucheck = Lib.assert (Lib.curry (op =) "UNCURRY" o #Name o dest_const)
+local val ucheck = Lib.assert (Lib.curry (op =) "UNCURRY" o fst o dest_const)
 fun dpa tm =
-  let val {Bvar,Body} = dest_abs tm in (Bvar, Body) end 
+  dest_abs tm
   handle HOL_ERR _
-  => let val {Rator,Rand} = dest_comb tm
+  => let val (Rator,Rand) = dest_comb tm
          val _ = ucheck Rator
          val (lv, body) = dpa Rand
          val (rv, body) = dpa body
@@ -93,7 +80,7 @@ fun dest_ident (IDENT s) = s
   | dest_ident _ =  raise ERR "dest_ident" "Expected an identifier";
 
 fun dest_app (APP(M,N)) = (M,N)
-  | dest_app (AQ x)     = binAQ pdest_comb x (ERR "dest_app" "AQ")
+  | dest_app (AQ x)     = binAQ dest_comb x (ERR "dest_app" "AQ")
   | dest_app  _         = raise ERR "dest_app" "Expected an application";
 
 fun dest_AQ (AQ x) = x
@@ -104,11 +91,10 @@ fun dest_typed (TYPED p) = p
 
 fun tuple_to_vstruct tm =
   if Term.is_var tm
-  then VIDENT(#Name(Term.dest_var tm))
-  else let val (M,N) = pdest_comb tm
-           val (M1,M2) = pdest_comb M
-           val {Name,...} = Term.dest_const M1
-       in if Name = ","
+  then VIDENT(fst(Term.dest_var tm))
+  else let val (M,N) = dest_comb tm
+           val (M1,M2) = dest_comb M
+       in if fst(Term.dest_const M1) = ","
             then VPAIR(tuple_to_vstruct M2, tuple_to_vstruct N)
             else raise ERR "tuple_to_vstruct" ""
        end;
@@ -116,8 +102,8 @@ fun tuple_to_vstruct tm =
 fun dest_lam (LAM p) = p
   | dest_lam (AQ x) =
       if is_abs x
-      then let val {Bvar,Body} = Term.dest_abs x
-               val {Name=id,...} = Term.dest_var Bvar
+      then let val (Bvar,Body) = Term.dest_abs x
+               val (id,_) = Term.dest_var Bvar
            in (VIDENT id, AQ Body)
            end
       else let val (vstr,body) = dest_pabs x
@@ -133,10 +119,9 @@ fun mk_binop s (M,N) = mk_app(mk_app(mk_ident s,M),N);
 fun list_mk_binop s = end_itlist (curry (mk_binop s));
 
 local fun dest_binop_term s tm =
-        let val (M,N) = pdest_comb tm
-            val (M1,M2) = pdest_comb M
-            val {Name,...} = Term.dest_const M1
-        in if Name=s then (M2,N)
+        let val (M,N) = dest_comb tm
+            val (M1,M2) = dest_comb M
+        in if fst(Term.dest_const M1) = s then (M2,N)
            else raise ERR "dest_binop.dest" "unexpected term"
         end
 in
@@ -198,9 +183,10 @@ val list_mk_select  = list_mk_binder mk_select;
 
 local fun err0 str = ERR "dest_binder" ("Expected a "^Lib.quote str)
       fun dest_term_binder s tm ex =
-       let val (c,lam) = pdest_comb tm
-           val {Name,...} = Term.dest_const c
-       in if Name <> s then raise ex else dest_lam (AQ lam)
+       let val (c,lam) = dest_comb tm
+       in if fst(Term.dest_const c) <> s 
+            then raise ex 
+            else dest_lam (AQ lam)
        end handle HOL_ERR _ => raise ex
 in
 fun dest_binder str =

@@ -29,15 +29,15 @@ datatype preterm = Var   of {Name:string,  Ty:pretype}
      by the time clean is called.
  ---------------------------------------------------------------------------*)
 
-fun clean shr =
- let fun
-   cl(Var{Name,Ty})       = Term.mk_var{Name=Name,  Ty=shr Ty}
+fun clean shr = 
+ let fun 
+   cl(Var{Name,Ty})       = Term.mk_var(Name, shr Ty)
  | cl(Const{Name,Thy,Ty}) = Term.mk_thy_const{Name=Name,Thy=Thy,Ty=shr Ty}
- | cl(Comb{Rator,Rand})   = Term.mk_comb{Rator=cl Rator,Rand=cl Rand}
- | cl(Abs{Bvar,Body})     = Term.mk_abs{Bvar=cl Bvar,Body=cl Body}
+ | cl(Comb{Rator,Rand})   = Term.mk_comb(cl Rator,cl Rand)
+ | cl(Abs{Bvar,Body})     = Term.mk_abs(cl Bvar, cl Body)
  | cl(Antiq tm)           = tm
  | cl(Constrained(tm,_))  = cl tm
- | cl(Overloaded{Name,Ty,...}) = Term.mk_const{Name=Name, Ty=shr Ty}
+ | cl(Overloaded{Name,Ty,...}) = Term.mk_const(Name, shr Ty)
  in cl
  end;
 
@@ -73,17 +73,17 @@ fun to_term tm =
  let fun cleanup tm =
        let open optmonad infix >> >-
            val clean = Pretype.clean o Pretype.remove_made_links
-       in case tm
-           of Var{Name,Ty} => Pretype.replace_null_links Ty >- (fn _
-               => return (Term.mk_var{Name=Name, Ty=clean Ty}))
-            | Const{Name,Thy,Ty} => Pretype.replace_null_links Ty >- (fn _
+       in case tm 
+           of Var{Name,Ty} => Pretype.replace_null_links Ty >- (fn _ 
+               => return (Term.mk_var(Name, clean Ty)))
+            | Const{Name,Thy,Ty} => Pretype.replace_null_links Ty >- (fn _ 
                => return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty}))
-            | Comb{Rator, Rand} => cleanup Rator >- (fn Rator'
-                                => cleanup Rand  >- (fn Rand'
-                  => return (Term.mk_comb{Rator=Rator', Rand=Rand'})))
-            | Abs{Bvar, Body} => cleanup Bvar >- (fn Bvar'
-                              => cleanup Body >- (fn Body'
-                  => return (Term.mk_abs{Bvar=Bvar', Body=Body'})))
+            | Comb{Rator, Rand} => cleanup Rator >- (fn Rator' 
+                                => cleanup Rand  >- (fn Rand'  
+                  => return (Term.mk_comb(Rator', Rand'))))
+            | Abs{Bvar, Body} => cleanup Bvar >- (fn Bvar' 
+                              => cleanup Body >- (fn Body' 
+                  => return (Term.mk_abs(Bvar', Body'))))
             | Antiq t => return t
             | Constrained(tm, ty) => cleanup tm
             | Overloaded _ => raise ERR "to_term" "applied to Overloaded"

@@ -17,10 +17,7 @@ open Feedback HolKernel;
 
 type num = Arbnum.num;
 
-fun ERR f s = HOL_ERR
- {origin_structure="Numeral",
-  origin_function=f, message=s};
-
+val ERR = mk_HOL_ERR "Numeral";
 
 fun is_numtype ty =
    if Type.is_vartype ty then false
@@ -43,7 +40,7 @@ fun is_nb t =
    then let val {Name, Thy, Ty} = dest_thy_const t
         in Name = "ALT_ZERO" andalso Thy="arithmetic" andalso is_numtype Ty
         end
-   else let val {Rand, Rator} = dest_comb t
+   else let val (Rand, Rator) = dest_comb t
             val {Name, Thy, Ty} = dest_thy_const Rator
         in (Name="NUMERAL_BIT1" orelse Name="NUMERAL_BIT2") 
             andalso Thy = "arithmetic"
@@ -55,14 +52,12 @@ fun is_numeral t =
   then let val {Name,Thy,Ty} = dest_thy_const t
        in is_numtype Ty andalso Name = "0" andalso Thy="num"
        end
-  else let val {Rator,Rand} = dest_comb t
+  else let val (Rator,Rand) = dest_comb t
            val {Name,Thy,Ty} = dest_thy_const Rator
        in Name="NUMERAL" andalso Thy="arithmetic" 
           andalso is_num2num_type Ty andalso is_nb Rand
        end handle HOL_ERR _ => false;
 
-
-(* Seems wrong - does recurse check that the nest ends in ALT_ZERO? *)
 
 fun dest_numeral t =
   if not(is_numeral t) then raise ERR "dest_numeral" "Term is not a numeral"
@@ -72,8 +67,8 @@ fun dest_numeral t =
   let open Arbnum
       fun dest t =
          if is_comb t 
-         then let val {Rator, Rand} = dest_comb t
-              in case #Name(dest_const Rator) 
+         then let val (Rator, Rand) = dest_comb t
+              in case fst(dest_const Rator) 
                   of "NUMERAL_BIT1" => two * dest Rand + one
                    | "NUMERAL_BIT2" => two * dest Rand + two
                    | _ => raise ERR "dest_numeral" 
@@ -82,17 +77,17 @@ fun dest_numeral t =
          else zero
   in
      dest (rand t)
-   end;
+  end;
 
 fun gen_mk_numeral {mk_comb, ZERO, ALT_ZERO, NUMERAL, BIT1, BIT2} n =
  let open Arbnum
      fun positive x =
        if x = zero then ALT_ZERO else 
        if x mod two = one 
-         then mk_comb{Rator=BIT1, Rand=positive ((x-one) div two)}
-         else mk_comb{Rator=BIT2, Rand=positive ((x-two) div two)}
+         then mk_comb(BIT1, positive ((x-one) div two))
+         else mk_comb(BIT2, positive ((x-two) div two))
  in
-  if n=zero then ZERO else mk_comb{Rator=NUMERAL, Rand=positive n}
+  if n=zero then ZERO else mk_comb(NUMERAL,positive n)
  end;
 
 

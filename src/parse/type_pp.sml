@@ -1,17 +1,19 @@
 structure type_pp :> type_pp =
 struct
 
-open Type Portable parse_type
-open HOLgrammars
+open Feedback Type Portable parse_type HOLgrammars
 
-datatype mygrav =
-  Sfx of int | Lfx of (int * string) | Rfx of (int * string) | Top
+datatype mygrav 
+   = Sfx of int 
+   | Lfx of int * string
+   | Rfx of int * string 
+   | Top
 
-datatype single_rule = SR | IR of (associativity * string)
+datatype single_rule 
+   = SR 
+   | IR of associativity * string
 
-fun Fail s = Feedback.HOL_ERR {origin_function = "pp_type",
-                               origin_structure = "type_pp",
-                               message = s};
+val ERR = mk_HOL_ERR "type_pp" "pp_type";
 
 fun pp_type0 (G:grammar) = let
   fun lookup_tyop s = let
@@ -42,7 +44,7 @@ fun pp_type0 (G:grammar) = let
     else
       if is_vartype ty then add_string (dest_vartype ty)
       else let
-        val {Tyop, Args} = dest_type ty
+        val (Tyop, Args) = dest_type ty
         fun print_args grav0 args = let
           val parens_needed = case Args of [_] => false | _ => true
           val grav = if parens_needed then Top else grav0
@@ -60,7 +62,7 @@ fun pp_type0 (G:grammar) = let
         | [arg1, arg2] => let
             val (prec, rule) = valOf (lookup_tyop Tyop)
               handle Option =>
-                raise Fail (Tyop^": no such type operator in grammar")
+                raise ERR (Tyop^": no such type operator in grammar")
           in
             case rule of
               SR => let
@@ -104,7 +106,7 @@ fun pp_type0 (G:grammar) = let
         | _ => let
             val (prec, _) = valOf (lookup_tyop Tyop)
               handle Option =>
-                raise Fail (Tyop^": no such type constructor in grammar")
+                raise ERR (Tyop^": no such type constructor in grammar")
             val addparens =
               case grav of
                 Rfx (n, _) => (n > prec)

@@ -18,28 +18,22 @@ fun is_let tm =
       | otherwise => false
  end handle HOL_ERR _ => false;
 
-fun dest_pair tm =
- let val {Rator,Rand=snd} = dest_comb tm
-     val {Rator=c,Rand=fst} = dest_comb Rator
- in case dest_thy_const c
-     of {Name=",",Thy="pair",...} => (fst,snd)
-      | otherwise => raise PP_ERR"" ""
- end handle HOL_ERR _ => raise PP_ERR "dest_pair" "";
-
+val dest_pair = dest_binop (",", "pair") (PP_ERR "dest_pair" "")
 val is_pair = Lib.can dest_pair;
 
 fun mk_pair (fst,snd) = let
   infixr -->
   val fsty = type_of fst
   val sndty = type_of snd
-  val commaty = fsty --> sndty --> mk_type{Tyop="prod",Args=[fsty,sndty]}
-  val c = mk_thy_const{Name = ",", Thy = "pair", Ty = commaty}
+  val commaty = fsty --> sndty --> 
+                mk_thy_type{Tyop="prod",Thy="pair",Args=[fsty,sndty]}
+  val c = mk_thy_const{Name=",", Thy="pair", Ty = commaty}
 in
   list_mk_comb(c,[fst,snd])
 end;
 
 fun acc_strip_comb M rands =
- let val {Rator,Rand} = dest_comb M
+ let val (Rator,Rand) = dest_comb M
  in acc_strip_comb Rator (Rand::rands)
  end
  handle HOL_ERR _ => (M,rands);
@@ -119,20 +113,24 @@ exception DoneExit
 fun symbolic s = List.all HOLsym (String.explode s)
 
 fun has_name s tm =
-  (is_const tm andalso #Name (dest_const tm) = s) orelse
-  (is_var tm andalso #Name (dest_var tm) = s)
+  (is_const tm andalso fst(dest_const tm) = s) orelse
+  (is_var tm andalso fst(dest_var tm) = s)
 
 
-datatype bvar = Simple of term | Restricted of {Bvar : term, Restrictor : term}
-fun bv2term (Simple t) = t | bv2term (Restricted {Bvar,...}) = Bvar
+datatype bvar 
+    = Simple of term 
+    | Restricted of {Bvar : term, Restrictor : term}
+
+fun bv2term (Simple t) = t 
+  | bv2term (Restricted {Bvar,...}) = Bvar
 
 
 fun my_dest_abs tm =
   case dest_term tm of
-    LAMB{Bvar, Body} => (Bvar, Body)
-  | COMB{Rator, Rand} => let
+    LAMB p => p
+  | COMB(Rator,Rand) => let
       val _ =
-        #Name (dest_const Rator)= "UNCURRY" orelse
+        fst (dest_const Rator)= "UNCURRY" orelse
         raise PP_ERR "my_dest_abs" "term not an abstraction"
       val (v1, body0) = my_dest_abs Rand
       val (v2, body) = my_dest_abs body0
@@ -158,10 +156,10 @@ fun strip_vstructs bnder res tm =
           | SOME s => let
             in
               case dest_term t of
-                COMB{Rator, Rand} => let
+                COMB(Rator, Rand) => let
                 in
                   case dest_term Rator of
-                    COMB{Rator = rator1, Rand = rand1} =>
+                    COMB(rator1, rand1) =>
                       if has_name s rator1 andalso my_is_abs Rand then let
                         val (bv, body) = my_dest_abs Rand
                       in
@@ -180,7 +178,7 @@ fun strip_vstructs bnder res tm =
   | SOME s => let
       fun strip vs t =
         case (dest_term t) of
-          COMB{Rator,Rand} => let
+          COMB(Rator,Rand) => let
           in
             if has_name s Rator andalso my_is_abs Rand then let
               val (bv, body) = my_dest_abs Rand
@@ -193,7 +191,7 @@ fun strip_vstructs bnder res tm =
               | SOME s => let
                 in
                   case (dest_term Rator) of
-                    COMB{Rator = rator1, Rand = rand1} =>
+                    COMB(rator1, rand1) =>
                       if has_name s rator1 andalso my_is_abs Rand then let
                         val (bv, body) = my_dest_abs Rand
                       in
@@ -221,13 +219,12 @@ fun rule_to_rr rule =
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val overload_info = overload_info G
-  val spec_table = let
-    val toks = grammar_tokens G
-    val table = Polyhash.mkPolyTable(50, Fail "")
-  in
-    app (fn s => Polyhash.insert table (s, ())) toks;
-    table
-  end
+  val spec_table = 
+       let val toks = grammar_tokens G
+           val table = Polyhash.mkPolyTable(50, Fail "")
+       in app (fn s => Polyhash.insert table (s, ())) toks;
+          table
+       end
   val num_info = numeral_info G
   val rule_table = Polyhash.mkPolyTable(50, Fail "")
   fun insert (grule, n) = let
@@ -393,9 +390,9 @@ fun pp_term (G : grammar) TyG = let
 
     fun tm might_print str =
       case (dest_term tm) of
-        COMB{Rator, Rand} => Rator might_print str orelse Rand might_print str
-      | LAMB{Body,...} => Body might_print str
-      | VAR{Name,Ty} => Name = str
+        COMB(Rator, Rand) => Rator might_print str orelse Rand might_print str
+      | LAMB(_,Body) => Body might_print str
+      | VAR(Name,Ty) => Name = str
       | CONST x => (lose_constrec_ty x) nmight_print str
 
 
@@ -461,14 +458,13 @@ fun pp_term (G : grammar) TyG = let
     end
 
     fun atom_name tm =
-      #Name (dest_var tm) handle HOL_ERR _ => #Name (dest_const tm)
+      fst (dest_var tm handle HOL_ERR _ => dest_const tm)
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
     fun pr_numeral injtermopt tm = let
       open Overload
-      val numty = Type.mk_type {Tyop = "num", Args = []}
-      infixr -->
+      val numty = Type.mk_thy_type {Tyop="num", Thy="num", Args=[]}
       val num2numty = numty --> numty
-      val numinfo_search_string = Option.map (#Name o dest_const) injtermopt
+      val numinfo_search_string = Option.map (fst o dest_const) injtermopt
       val inj_record =
         case injtermopt of
           NONE => {Name = nat_elim_term, Thy = "arithmetic",
@@ -526,7 +522,7 @@ fun pp_term (G : grammar) TyG = let
         else ()
       val _ = (* check for set comprehensions *)
         if
-          is_const t1 andalso #Name (dest_const t1) = "GSPEC" andalso
+          is_const t1 andalso fst (dest_const t1) = "GSPEC" andalso
           my_is_abs t2 then let
             val (_, body) = my_dest_abs t2
             val (l, r) = dest_pair body
@@ -605,7 +601,7 @@ fun pp_term (G : grammar) TyG = let
             val (with_prec, with_tok) = valOf recwith_info
             val (ldelim, rdelim, sep) = valOf reclist_info
             fun print_update t = let
-              val {Rator = fld, Rand = value} = dest_comb t
+              val (fld,value) = dest_comb t
               val rname =
                 valOf (Overload.overloading_of_term overload_info fld)
               val (fld_tok, (upd_prec, updtok)) =
@@ -634,7 +630,7 @@ fun pp_term (G : grammar) TyG = let
               add_string rdelim
             end
           in
-            if is_const base andalso #Name (dest_const base) = "ARB" then
+            if is_const base andalso fst (dest_const base) = "ARB" then
               (print_updlist updates; raise SimpleExit)
             else let
               val add_l =
@@ -928,7 +924,7 @@ fun pp_term (G : grammar) TyG = let
         end_block(); pend addparens
       end
       else
-        uncurry (pr_comb tm) ((fn {Rator,Rand} => (Rator,Rand)) (dest_comb tm))
+        uncurry (pr_comb tm) (dest_comb tm)
     end
     fun print_ty_antiq tm = let
       val ty = dest_ty_antiq tm
@@ -948,7 +944,7 @@ fun pp_term (G : grammar) TyG = let
     if depth = 0 then add_string "..."
     else
       case (dest_term tm) of
-        VAR{Name = vname, Ty} => let
+        VAR(vname, Ty) => let
           val vrule = lookup_term vname
           fun add_type () = let
           in
@@ -983,7 +979,7 @@ fun pp_term (G : grammar) TyG = let
             | NONE => cname0
           val crules = lookup_term cname
           val is_string_literal =
-            (#Tyop(dest_type Ty) = "string" handle HOL_ERR _ => false) andalso
+            (fst(dest_type Ty) = "string" handle HOL_ERR _ => false) andalso
             (cname = "emptystring" orelse Lexis.is_string_literal cname)
           fun print_string_literal s = let
             fun tr #"\\" = "\\\\"
@@ -1007,7 +1003,7 @@ fun pp_term (G : grammar) TyG = let
               if is_string_literal then print_string_literal cname
               else add_string cname
         end
-      | COMB{Rator, Rand} => let
+      | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
           fun is_atom tm = is_const tm orelse is_var tm
           fun pr_atomf fname = let
@@ -1016,10 +1012,10 @@ fun pp_term (G : grammar) TyG = let
               (has_name nilstr tm) orelse
               is_comb tm andalso
               let
-                val {Rator = t0, Rand = tail} = dest_comb tm
+                val (t0, tail) = dest_comb tm
               in
                 is_list r tail andalso is_comb t0 andalso
-                has_name cons (#Rator (dest_comb t0))
+                has_name cons (rator t0)
               end
             val restr_binder =
               find_partial (fn (b,s) => if s = fname then SOME b else NONE)
@@ -1058,7 +1054,7 @@ fun pp_term (G : grammar) TyG = let
                         pr_comb_with_rule (#2 (valOf restr_binder_rule))
                         {fprec = #1 (valOf restr_binder_rule),
                          fname = binder_to_string G (valOf restr_binder),
-                         f = f} args Rand
+                         f=f} args Rand
                       else pr_comb tm Rator Rand
                 end
             | SOME crules0 => let
@@ -1121,14 +1117,14 @@ fun pp_term (G : grammar) TyG = let
                 SOME s =>
                   if not (String.isPrefix recsel_special s) then
                     s
-                  else #Name (dest_atom f)
-              | NONE => #Name (dest_atom f)
+                  else fst (dest_atom f)
+              | NONE => fst (dest_atom f)
           in
             pr_atomf name_to_use
           end
           else pr_comb tm Rator Rand
         end
-      | LAMB{Bvar, Body} => pr_abs tm
+      | LAMB(Bvar, Body) => pr_abs tm
   end handle SimpleExit => ()
   fun start_names() = {fvars_seen = ref [], bvars_seen = ref []}
 in

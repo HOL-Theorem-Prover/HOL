@@ -59,12 +59,12 @@ local
        case result of
          NONE =>
            if not (is_vartype ty1) andalso not (is_vartype ty2) then let
-             val {Tyop = tyop1, Args = args1} = dest_type ty1
-             val {Tyop = tyop2, Args = args2} = dest_type ty2
+             val (tyop1,args1) = dest_type ty1
+             val (tyop2,args2) = dest_type ty2
            in
              if tyop1 = tyop2 then
                mmap au (ListPair.zip (args1, args2)) >-
-               (fn tylist => return (mk_type{Tyop = tyop1, Args = tylist}))
+               (fn tylist => return (mk_type(tyop1, tylist)))
              else
                newtyvar >- (fn new_ty =>
                             extend ((ty1, ty2), new_ty) >>

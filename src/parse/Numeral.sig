@@ -5,7 +5,7 @@ sig
 
  val is_numeral     : term -> bool
  val dest_numeral   : term -> Arbnum.num
- val gen_mk_numeral : {mk_comb : {Rator:'a, Rand:'a} -> 'a,
+ val gen_mk_numeral : {mk_comb : 'a * 'a -> 'a,
                        ZERO    : 'a,
                        ALT_ZERO: 'a,
                        NUMERAL : 'a,
