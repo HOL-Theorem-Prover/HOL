@@ -1,0 +1,19 @@
+all: test_coopers tcooper genproblem testdp
+
+test_coopers: test_coopers.uo ../Cooper.uo
+	HOLMOSMLC -o test_coopers test_coopers.uo
+
+tcooper: tcooper.c
+	gcc -o tcooper tcooper.c
+
+genproblem: genproblem.uo
+	HOLMOSMLC -o genproblem genproblem.uo
+
+testdp: testdp.uo ../Cooper.uo
+	HOLMOSMLC -o testdp testdp.uo
+
+testdp2: testdp2.uo ../Cooper.uo
+	HOLMOSMLC -o testdp2 testdp2.uo
+
+really_clean:
+	/bin/rm test_coopers tcooper genproblem testdp
