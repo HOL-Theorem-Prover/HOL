@@ -15,10 +15,6 @@ open HolKernel boolLib Parse
 
 local open listTheory optionTheory pairTheory in end;
 
-infix THEN THENL THENC ++
-infix 8 by
-
-
 val is_pair = pairSyntax.is_pair
 
 val UNCURRY_THM = pairTheory.UNCURRY
