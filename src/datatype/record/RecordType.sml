@@ -451,16 +451,14 @@ in
       TypeBase.TypeInfo.put_simpls (existing_simpls @ new_simpls) tyinfo
 
     (* set up parsing for the record type *)
-    (* want to overload fieldnames as synonyms for the field functions,
-       by doing this before the add_record, this will make the overloading
-       resolution prefer the latter option. *)
-    fun do_accfn (name, tm) = let
-    in
-      Parse.overload_on(name, tm)
-    end
-    val _ = ListPair.app do_accfn (fields, accfn_terms)
     val _ = ListPair.app add_record_field (fields, accfn_terms)
 
+    (* overload strings of the form fld_update to refer to the real update *)
+    (* functions, which have names of the form type_fld_update.  Make sure *)
+    (* that this overloading is done before the add_record_update function *)
+    (* is called because this will also overload this constant to the *)
+    (* "artificial" constant for special printing of record syntax, and we *)
+    (* want this to be preferred where possible. *)
     fun do_updfn (name0, tm) = let
       val name = name0 ^ "_update"
     in
@@ -469,6 +467,7 @@ in
     val _ = ListPair.app do_updfn (fields, updfn_terms)
     val _ = ListPair.app add_record_update (fields, updfn_terms)
 
+    (* Similarly for functional update functions *)
     fun do_fupdfn (name0, tm) = let
       val name = name0 ^ "_fupd"
     in
