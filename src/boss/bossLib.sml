@@ -93,7 +93,7 @@ fun DECIDE tm =
 
 
 fun DECIDE_TAC (g as (asl,_)) =
-((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith asl)
+((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith_asm asl)
       THEN numLib.ARITH_TAC)
  ORELSE
  tautLib.TAUT_TAC

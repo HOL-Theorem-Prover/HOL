@@ -220,6 +220,8 @@ fun is_arith_thm thm =
   not (null (hyp thm)) andalso is_arith (concl thm) andalso
    (not (contains_forall true (concl thm)));
 
+val is_arith_asm = is_arith_thm o ASSUME
+
 type ctxt = thm list;
 
 
