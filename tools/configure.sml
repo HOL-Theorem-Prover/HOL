@@ -13,9 +13,9 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
-val OS       = "linux"       (* Operating system; choices are:
+val mosmldir =
+val holdir   =
+val OS       =            (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
@@ -161,10 +161,7 @@ val _ =
         "val DEPDIR = _;\n"
           -->  String.concat["val DEPDIR = ",   quote DEPDIR, ";\n"],
         "fun MK_XABLE file = _;\n"
-          -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"],
-        "val SRCDIRS = _;\n"
-          --> String.concat["val SRCDIRS = \n","    [",
-                             full_paths("     ",holdir) SRCDIRS]];
+          -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"]];
     systeml [compiler, " -c ", atDir "Parser.sig"];
     systeml [compiler, " -c ", atDir "Parser.sml"];
     systeml [compiler, " -c ", atDir "Lexer.sml" ];
