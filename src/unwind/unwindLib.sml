@@ -20,20 +20,13 @@
 structure unwindLib :> unwindLib =
 struct
 
-open HolKernel Parse boolTheory Drule Conv Rewrite;
+open HolKernel Parse boolLib Rsyntax ;
 
 infix THENC ##;
 
-type term = Term.term
-type thm = Thm.thm
-type conv = Abbrev.conv;
+val UNWIND_ERR = mk_HOL_ERR "Unwind";
 
-fun UNWIND_ERR function message = 
-   HOL_ERR{origin_structure = "Unwind",
-           origin_function = function,
-                   message = message};
-
-val AND = #const(const_decl "/\\");
+val AND = boolSyntax.conjunction;
 
 (*===========================================================================*)
 (* Tools for manipulating device implementations `by hand'                   *)
