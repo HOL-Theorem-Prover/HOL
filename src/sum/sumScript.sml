@@ -177,9 +177,9 @@ REPEAT (FILTER_STRIP_TAC (--`x:('a,'b)sum->'c`--)) THENL
 [EXISTS_TAC (--`\(x:('a,'b)sum).((?v1. x = INL v1) =>
                                 f(@v1.x = INL v1) |
 				g(@v2.x = INR v2)):'c`--) THEN
- PURE_REWRITE_TAC [boolTheory.EXISTS_DEF] THEN
- CONV_TAC (REDEPTH_CONV BETA_CONV) THEN
- REWRITE_TAC [INL_11,INR_11,INR_neq_INL,SELECT_REFL_2],
+ simpLib.SIMP_TAC boolSimps.bool_ss [
+   INL_11,INR_11,INR_neq_INL,SELECT_REFL_2
+ ],
  REPEAT GEN_TAC THEN DISCH_THEN (CONJUNCTS_THEN2 MP_TAC
  (REWRITE1_TAC o (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)))) THEN
  REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (SPEC (--`s:('a,'b)sum`--) A_ONTO) THEN
