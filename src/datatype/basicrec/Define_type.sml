@@ -1277,35 +1277,37 @@ fun ERR1 i s =
 fun info {origin_structure, origin_function,message}
   = String.concat [origin_function,": ",message];
 
-local open Pretype
-in
-fun make_type i pty = SOME (pretype2type name_of pty)
+fun make_type i pty = SOME (Parse.pretype2type pty)
    handle Exception.HOL_ERR triple => ERR1 i (info triple)
-end;
 
 (* Does a name occur in a pretype or a type *)
-local open Pretype
+local
+  open parse_type
 in
-fun tyocc n ty =
-  if is_vartype ty then (dest_vartype ty=n)
-  else let val {Tyop,Args} = dest_type ty
-       in Tyop=n orelse exists (tyocc n) Args
-       end
-fun occurs name_of n (tyVar s) = (n=name_of s)
-  | occurs name_of n (tyAntiq ty) = tyocc n ty
-  | occurs name_of n (tyApp(x,l)) =
-      (n=name_of x) orelse exists (occurs name_of n) l
+  fun tyocc n ty =
+    if is_vartype ty then (dest_vartype ty=n)
+    else let
+      val {Tyop,Args} = dest_type ty
+    in
+      Tyop=n orelse exists (tyocc n) Args
+    end
+  fun occurs n (pVartype s) = (n = s)
+    | occurs n (pAQ ty) = tyocc n ty
+    | occurs n (pType(x,l)) = (n = x) orelse exists (occurs n) l
 end;
 
 fun make_type_clause tyname (i,(constructor, args)) =
- let open Pretype
-     fun munge (pty as tyApp(gr,args)) =
-            if name_of gr=tyname
-            then if null args then NONE  (* found OK occ. of tyname *)
-                 else ERR1 i "explicit argument(s) to proposed type"
-            else if occurs name_of tyname pty
-                 then ERR1 i ("nested occurrence of "^Lib.quote tyname)
-                 else make_type i pty
+ let open parse_type
+     fun munge (pty as pType(gr,args)) =
+       if gr=tyname then
+         if null args then NONE  (* found OK occ. of tyname *)
+         else
+           ERR1 i "explicit argument(s) to proposed type"
+       else
+         if occurs tyname pty then
+           ERR1 i ("nested occurrence of "^Lib.quote tyname)
+         else
+           make_type i pty
         | munge pty = make_type i pty  (* type vars and antiquotes *)
  in
     {constructor=constructor, args = map munge args}

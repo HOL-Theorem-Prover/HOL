@@ -96,7 +96,7 @@ type 'a quotation = 'a frag list
 type hol_type = Type.hol_type
 type thm = Thm.thm
 
-fun ERR func mesg = 
+fun ERR func mesg =
  Exception.HOL_ERR
     {origin_structure = "DefNestType",
      origin_function = func,
@@ -433,34 +433,36 @@ fun prim_define_type desc axioms =
     Parsing of type specifications
  ---------------------------------------------------------------------------*)
 
-local open DefTypeInfo Pretype
-      fun dexl [] A = SOME(rev A) (* all in list were existing *)
-        | dexl (existing ty::t) A = dexl t (ty::A)
-        | dexl _ _ = NONE
+local
+  open DefTypeInfo parse_type
+  fun dexl [] A = SOME(rev A) (* all in list were existing *)
+    | dexl (existing ty::t) A = dexl t (ty::A)
+    | dexl _ _ = NONE
 in
-fun make_type_clause tynames (constructor, args) =
- let fun munge (tyVar s) = existing(mk_vartype (name_of s))
-       | munge (tyAntiq ty) = existing ty
-       | munge (tyApp(gr, [])) =
-           let val name = name_of gr
-           in if mem name tynames 
-              then being_defined name
-              else existing(mk_type{Tyop=name, Args=[]})
-           end 
-       | munge (tyApp(gr,A)) =
-          let val name = name_of gr
-              val A1 = map munge A
-          in case dexl A1 []
-              of SOME A2 => existing(mk_type{Tyop=name, Args = A2})
-               | NONE    => type_op{Tyop=name, Args = A1}
-          end
- in 
+  fun make_type_clause tynames (constructor, args) = let
+    fun munge (pVartype s) = existing(mk_vartype s)
+      | munge (pAQ ty) = existing ty
+      | munge (pType(gr, [])) = let
+          val name = gr
+        in
+          if mem name tynames then being_defined name
+          else existing(mk_type{Tyop=name, Args=[]})
+        end
+      | munge (pType(gr,A)) = let
+          val name = gr
+          val A1 = map munge A
+        in
+          case dexl A1 [] of
+            SOME A2 => existing(mk_type{Tyop=name, Args = A2})
+          | NONE    => type_op{Tyop=name, Args = A1}
+        end
+  in
     {name=constructor, arg_info = map munge args}
- end
+  end
 end;
 
-fun transAST tynames (tyn,cargs) = 
-  {type_name = tyn, 
+fun transAST tynames (tyn,cargs) =
+  {type_name = tyn,
    constructors = map (make_type_clause tynames) cargs};
 
 
