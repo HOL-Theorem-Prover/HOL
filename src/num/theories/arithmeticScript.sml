@@ -2237,6 +2237,50 @@ val MOD_P = store_thm(
     MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `k` THEN ASM_REWRITE_TAC []
   ]);
 
+(* Could generalise this to work over arbitrary operators by making the
+   commutativity and associativity theorems parameters.   It seems OTT
+   enough as it is. *)
+fun move_var_left s = let
+  val v = mk_var(s, ``:num``)
+  val th1 = GSYM (SPEC v MULT_COMM)    (*    xv = vx    *)
+  val th2 = GSYM (SPEC v MULT_ASSOC)   (* (vx)y = v(xy) *)
+  val th3 = CONV_RULE                  (* x(vy) = v(xy) *)
+              (STRIP_QUANT_CONV
+                 (LAND_CONV (LAND_CONV (REWR_CONV MULT_COMM) THENC
+                             REWR_CONV (GSYM MULT_ASSOC)))) th2
+in
+  (* The complicated conversion at the heart of this could be replaced with
+     REWRITE_CONV if that procedure was modified to dynamically throw
+     away rewrites that on instantiation turn out to be loops, which it
+     could do by wrapping its REWR_CONVs in CHANGED_CONVs.  Perhaps this
+     would be inefficient.  *)
+  FREEZE_THEN
+  (fn th1 => FREEZE_THEN
+             (fn th2 => FREEZE_THEN
+                        (fn th3 => CONV_TAC
+                                     (REDEPTH_CONV
+                                      (FIRST_CONV
+                                       (map (CHANGED_CONV o REWR_CONV)
+                                            [th1, th2, th3])))) th3) th2) th1
+end
+
+val MOD_TIMES2 = store_thm(
+  "MOD_TIMES2",
+  ``!n. 0 < n ==>
+        !j k. (j MOD n * k MOD n) MOD n = (j * k) MOD n``,
+  REPEAT STRIP_TAC THEN
+  IMP_RES_THEN (Q.SPEC_THEN `j` STRIP_ASSUME_TAC) DIVISION THEN
+  IMP_RES_THEN (Q.SPEC_THEN `k` STRIP_ASSUME_TAC) DIVISION THEN
+  Q.ABBREV_TAC `q = j DIV n` THEN POP_ASSUM SUBST_ALL_TAC THEN
+  Q.ABBREV_TAC `r = j MOD n` THEN POP_ASSUM SUBST_ALL_TAC THEN
+  Q.ABBREV_TAC `u = k DIV n` THEN POP_ASSUM SUBST_ALL_TAC THEN
+  Q.ABBREV_TAC `v = k MOD n` THEN POP_ASSUM SUBST_ALL_TAC THEN
+  NTAC 2 (FIRST_X_ASSUM SUBST_ALL_TAC) THEN
+  REWRITE_TAC [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB, ADD_ASSOC] THEN
+  move_var_left "n" THEN REWRITE_TAC [GSYM LEFT_ADD_DISTRIB] THEN
+  ONCE_REWRITE_TAC [MULT_COMM] THEN
+  IMP_RES_THEN (fn th => REWRITE_TAC [th]) MOD_TIMES);
+
 (* ----------------------------------------------------------------------
     Some additional theorems (nothing to do with DIV and MOD)
    ---------------------------------------------------------------------- *)
