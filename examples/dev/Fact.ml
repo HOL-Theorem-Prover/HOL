@@ -126,14 +126,19 @@ val FACT_cir =
   ("Fact_cir",
    time MAKE_CIRCUIT FACT_dev);
 
-(*
-period_default  := 10;
-maxtime_default := 1300;
-*)
-
-(*
+(*****************************************************************************)
+(* This dumps changes to all variables. Set to false to dump just the        *)
+(* changes to module FACT.                                                   *)
+(*****************************************************************************)
 dump_all_flag := true; 
-*)
+
+(*****************************************************************************)
+(* Change these variables to select simulator and viewer. Commenting out the *)
+(* three assignments below will revert to the defaults: cver/dinotrace.      *)
+(*****************************************************************************)
+vlogger_path      := "/homes/mjcg/bin/verilog/vlogger/vlogcm";
+verilog_simulator := vlogger;
+waveform_viewer   := gtkwave;
 
 SIMULATE FACT_cir [("inp","4")];
 

@@ -1251,9 +1251,11 @@ fun MAKE_NET_VERILOG name thm out =
 val iverilog_path   = ref "/usr/bin/iverilog";
 val vvp_path        = ref "/usr/bin/vvp";
 val gtkwave_path    = ref "/usr/bin/gtkwave -a";
+
 val cver_path       = ref "./gplcver-2.10c.linux.bin/bin/cver";
 val dinotrace_path  = ref "./gplcver-2.10c.linux.bin/bin/dinotrace";
 
+val vlogger_path    = ref "/usr/bin/vlogcmd";
 
 (*
 ** Test for success of the result of Process.system
@@ -1315,6 +1317,21 @@ fun gtkwave name =
               else print
                     ("Warning:\n Process.system reports failure signal returned by\n "
                      ^ gtkwave_command ^ "\n")
+ in
+  ()
+ end;
+
+(*****************************************************************************)
+(* Run vlogger on name.vl                                                    *)
+(*****************************************************************************)
+fun vlogger name =
+ let val vlogger_command = ((!vlogger_path) ^ " " ^ name ^ ".vl")
+     val code = Process.system vlogger_command
+     val _ = if isSuccess code
+              then print(vlogger_command ^ "\n")
+              else print
+                    ("Warning:\n Process.system reports failure signal returned by\n "
+                     ^ vlogger_command ^ "\n")
  in
   ()
  end;
