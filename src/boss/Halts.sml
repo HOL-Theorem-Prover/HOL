@@ -157,7 +157,7 @@ fun prover g =
   THEN CONV_TAC (REDEPTH_CONV Let_conv.GEN_BETA_CONV)
   THEN Rewrite.REWRITE_TAC 
           (pairTheory.pair_rws @
-           map (#2 o valOf o TypeBase.size_of) 
+           mapfilter (#2 o valOf o TypeBase.size_of) 
                (TypeBase.listItems (TypeBase.theTypeBase())))
   THEN BETA_TAC
   THEN Rewrite.REWRITE_TAC [arithmeticTheory.ADD_CLAUSES]
@@ -399,6 +399,20 @@ Define
        Maj t (leader, (h=leader => SUC(SUC m) | m)))`;
 
 
+(* Chokes on defn of SM
+- Define`step x = x`;
+<<HOL message: inventing new type variable names: 'a.>>
+> val it = |- !x. step x = x : Thm.thm
+- Define
+  `SM s n = if n=0 then s else SM (step s) (n-1)`;
+<<HOL message: inventing new type variable names: 'a.>>
+<<HOL message: "SM" defined: side-conditions remain in hypotheses.>>
+> val it =
+     [..]
+    |- (SM s n = (if n = 0 then s else SM (step s) (n - 1))) /\
+       !P. (!s n. P (step s) (n - 1) ==> P s n) ==> !v v1. P v v1
+    : Thm.thm
+*)
 *)
 
 end;
