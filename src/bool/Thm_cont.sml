@@ -130,14 +130,20 @@ val CONJUNCTS_THEN :thm_tactical = fn ttac => CONJUNCTS_THEN2 ttac ttac;;
 (*            DISJ_CASES disth (prf1 thl1) (prf2 thl2);;		    *)
 (* -------------------------------------------------------------------------*)
 
+(* foo needs to return a theorem with disj as conclusion, and disj as one
+   of the assumptions, and all of the assumptions of disth as well *)
+fun foo disth disj =
+    MP (DISCH (concl disth) (ASSUME disj)) disth
+       (* mk_thm(disj::Thm.hyp disth, disj) *)
+
 fun DISJ_CASES_THEN2 ttac1 ttac2 = fn disth =>
    let val (disj1,disj2) = dest_disj (Thm.concl disth)
    in fn (g as (asl,w))
      =>
-    let val (gl1,prf1) =
-              ttac1 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj1)) g
-          and (gl2,prf2) =
-              ttac2 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj2)) g
+    let val (gl1,prf1) = ttac1 (foo disth disj1) g
+(*               ttac1 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj1)) g *)
+          and (gl2,prf2) = ttac2 (foo disth disj2) g
+(*              ttac2 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj2)) g *)
       in
       ((gl1 @ gl2),
        (fn thl =>
@@ -193,9 +199,9 @@ fun DISCH_THEN ttac (asl,w) =
  *        -- Michael Norrish 30 June 1999                                    *
  *---------------------------------------------------------------------------*)
 
-fun UNDISCH_THEN tm ttac (asl, w) = 
- let val (_, asl') = 
-       Lib.pluck (equal tm) asl handle HOL_ERR _ 
+fun UNDISCH_THEN tm ttac (asl, w) =
+ let val (_, asl') =
+       Lib.pluck (equal tm) asl handle HOL_ERR _
        => raise ERR "UNDISCH_THEN" "Term given not an assumption"
  in
    ttac (ASSUME tm) (asl', w)
@@ -216,8 +222,10 @@ fun UNDISCH_THEN tm ttac (asl, w) =
 fun X_CHOOSE_THEN y (ttac:thm_tactic) : thm_tactic = fn xth =>
    let val (Bvar,Body) = dest_exists (Thm.concl xth)
    in fn (asl,w) =>
-      let val th = itlist ADD_ASSUM (hyp xth)
-                          (ASSUME (subst[Bvar |-> y] Body))
+      let val th = foo xth (subst[Bvar |-> y] Body)
+
+(* itlist ADD_ASSUM (hyp xth)
+                          (ASSUME (subst[Bvar |-> y] Body)) *)
         val (gl,prf) = ttac th (asl,w)
     in
         (gl, (CHOOSE (y,xth)) o prf)
@@ -359,8 +367,8 @@ fun ANTE_RES_THEN ttac ante : tactic =
 (* ---------------------------------------------------------------------*)
 
 local fun MATCH_MP impth =
-        let val sth = SPEC_ALL impth 
-            val matchfn = match_term (fst(dest_imp(concl sth))) 
+        let val sth = SPEC_ALL impth
+            val matchfn = match_term (fst(dest_imp(concl sth)))
         in fn th => MP (INST_TY_TERM (matchfn (concl th)) sth) th
         end;
 
@@ -376,15 +384,15 @@ fun check ex [] = raise ex
 (* ---------------------------------------------------------------------*)
 in
 fun IMP_RES_THEN ttac impth =
- let val ths = RES_CANON impth 
+ let val ths = RES_CANON impth
       handle HOL_ERR _ => raise ERR "IMP_RES_THEN" "No implication"
  in
-  Tactical.ASSUM_LIST 
-   (fn asl => 
-     let val l = itlist (fn th => append (mapfilter(MATCH_MP th) asl)) ths [] 
-         val res  = check (ERR "IMP_RES_THEN" "No resolvents") l 
+  Tactical.ASSUM_LIST
+   (fn asl =>
+     let val l = itlist (fn th => append (mapfilter(MATCH_MP th) asl)) ths []
+         val res  = check (ERR "IMP_RES_THEN" "No resolvents") l
          val tacs = check (ERR "IMP_RES_THEN" "No tactics")
-                          (Lib.mapfilter ttac res) 
+                          (Lib.mapfilter ttac res)
      in
         Tactical.EVERY tacs
      end)
@@ -395,13 +403,13 @@ fun IMP_RES_THEN ttac impth =
 (* ---------------------------------------------------------------------*)
 
 fun RES_THEN ttac (asl,g) =
- let val aas  = map ASSUME asl 
-     val ths  = itlist append (mapfilter RES_CANON aas) [] 
-     val imps = check (ERR "RES_THEN" "No implication") ths 
-     val l    = itlist (fn th => append (mapfilter (MATCH_MP th) aas)) imps [] 
-     val res  = check (ERR "RES_THEN" "No resolvents") l 
+ let val aas  = map ASSUME asl
+     val ths  = itlist append (mapfilter RES_CANON aas) []
+     val imps = check (ERR "RES_THEN" "No implication") ths
+     val l    = itlist (fn th => append (mapfilter (MATCH_MP th) aas)) imps []
+     val res  = check (ERR "RES_THEN" "No resolvents") l
      val tacs = check (ERR "RES_THEN" "No tactics")
-                         (Lib.mapfilter ttac res) 
+                         (Lib.mapfilter ttac res)
  in
    Tactical.EVERY tacs (asl,g)
  end
