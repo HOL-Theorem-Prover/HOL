@@ -365,6 +365,18 @@ val LESSX_def =
 
 val _ = overload_on ("LESS", Term`LESSX`);   
 
+val IN_LESS =
+ store_thm
+  ("IN_LESS",
+   ``!m n:num. m IN LESS n = m < n``,
+   RW_TAC arith_ss [IN_DEF,LESS_def]);
+
+val IN_LESSX =
+ store_thm
+  ("IN_LESSX",
+   ``!m:num. (m IN LESSX INFINITY) /\ !n:num. m IN LESSX (XNUM n) = m < n``,
+   RW_TAC arith_ss [IN_DEF,LESSX_def,LS]);
+
 (******************************************************************************
 * LENGTH(FINITE l)   = XNUM(LENGTH l)
 * LENGTH(INFINITE l) = INFINITY
