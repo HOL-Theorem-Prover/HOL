@@ -2643,6 +2643,8 @@ val _ =
 \  \n\
 \ val toNum = w2n; \n\
 \  \n\
+\ infix o; \n\
+\ \n\
 \ val fromBinString = fromNum o numML.fromBinString  \n\
 \ val fromOctString = fromNum o numML.fromOctString  \n\
 \ val fromDecString = fromNum o numML.fromDecString  \n\

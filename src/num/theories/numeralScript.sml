@@ -680,7 +680,7 @@ val DIVMOD_POS = Q.store_thm
  RW_TAC bool_ss [Once DIVMOD_THM,NOT_ZERO_LT_ZERO,prim_recTheory.LESS_REFL])
 
 val DIVMOD_NUMERAL_CALC = Q.store_thm
-("divmod_NUMERAL_CALC",
+("DIVMOD_NUMERAL_CALC",
  `(!m n. m DIV (BIT1 n) = FST(DIVMOD (ZERO,m,BIT1 n))) /\
   (!m n. m DIV (BIT2 n) = FST(DIVMOD (ZERO,m,BIT2 n))) /\
   (!m n. m MOD (BIT1 n) = SND(DIVMOD (ZERO,m,BIT1 n))) /\
@@ -707,9 +707,18 @@ val (even,odd) =
      (LIST_CONJ [a',b',c'], LIST_CONJ [d',e',f'])
   end;
 
+val DIV_FAIL = Q.prove
+(`!m.  m DIV ZERO = FAIL $DIV ^(mk_var("zero denominator",bool)) m ZERO`,
+REWRITE_TAC [combinTheory.FAIL_THM]);
+
+val MOD_FAIL = Q.prove
+(`!m.  m MOD ZERO = FAIL $MOD ^(mk_var("zero denominator",bool)) m ZERO`,
+REWRITE_TAC [combinTheory.FAIL_THM]);
+
 val (div_eqns, mod_eqns) = 
  let val [a,b,c,d] = CONJUNCTS DIVMOD_NUMERAL_CALC
- in (CONJ a b, CONJ c d)
+ in (CONJ DIV_FAIL (CONJ a b), 
+     CONJ MOD_FAIL (CONJ c d))
  end;
 
 (*---------------------------------------------------------------------------*)
@@ -717,7 +726,6 @@ val (div_eqns, mod_eqns) =
 (*---------------------------------------------------------------------------*)
 
 val _ = ConstMapML.prim_insert(Term`0n`,("num","ZERO",Type`:num`));
-
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
@@ -736,7 +744,7 @@ val _ = adjoin_to_theory
 (*---------------------------------------------------------------------------*)
 
 val _ = 
-  let open Drop whileTheory pairSyntax
+  let open Drop whileTheory pairSyntax combinSyntax
   in 
     exportML("num",
      DATATYPE (ParseDatatype.parse `num = ZERO

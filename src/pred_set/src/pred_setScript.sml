@@ -3928,8 +3928,17 @@ fun scoped_parse q =
  end;
 
 val BIGINTER_EMPTY = Q.prove
-(`BIGINTER EMPTY = FAIL BIGINTER ^(mk_var("Empty set",bool)) EMPTY`,
+(`BIGINTER EMPTY = FAIL BIGINTER ^(mk_var("empty set",bool)) EMPTY`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
+
+val MAX_SET_EMPTY = Q.prove
+(`MAX_SET EMPTY = FAIL MAX_SET ^(mk_var("empty set",bool)) EMPTY`,
+ REWRITE_TAC [combinTheory.FAIL_THM]);
+
+val MIN_SET_EMPTY = Q.prove
+(`MIN_SET EMPTY = FAIL MIN_SET ^(mk_var("empty set",bool)) EMPTY`,
+ REWRITE_TAC [combinTheory.FAIL_THM]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Export an ML model of (finite) sets. Although the representation used in  *)
@@ -3990,8 +3999,8 @@ val _ =
       let val [c1,c2] = CONJUNCTS SUM_SET_THM
       in CONJ c1 (UNDISCH (SPEC_ALL c2)) end,
       let val [c1,c2] = CONJUNCTS MAX_SET_THM
-      in CONJ c1 (UNDISCH (SPEC_ALL c2)) end,
-      MIN_SET_THM, count_EQN]
+      in CONJ MAX_SET_EMPTY (CONJ c1 (UNDISCH (SPEC_ALL c2))) end,
+      CONJ MIN_SET_EMPTY MIN_SET_THM, count_EQN]
     @
      [MLSIG "val fromList : 'a list -> 'a set",
       MLSIG "val toList   : 'a set -> 'a list",

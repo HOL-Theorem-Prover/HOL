@@ -378,9 +378,16 @@ val _ = adjoin_to_theory
 (* Export ML versions of option functions                                    *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Drop.exportML("option",
-        map Drop.DEFN
-         [OPTION_MAP_DEF, IS_SOME_DEF, IS_NONE_DEF, THE_DEF, OPTION_JOIN_DEF]);
+val THE_NONE = Q.prove
+(`THE NONE = FAIL THE ^(mk_var("applied to NONE",bool)) NONE`,
+  REWRITE_TAC [combinTheory.FAIL_THM]);
 
+val _ = 
+ let open Drop combinSyntax
+ in exportML("option",
+        map DEFN
+         [OPTION_MAP_DEF, IS_SOME_DEF, IS_NONE_DEF, 
+          CONJ THE_NONE THE_DEF, OPTION_JOIN_DEF])
+ end;
 
 val _ = export_theory();
