@@ -479,7 +479,7 @@ in
       (new_tyinfo,
        map (fn s => typename ^ s)
        (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
-         "_accupds", "_accfupds", "_updupds"] @
+         "_accupds", "_accfupds", "_updupds", "_fn_updates"] @
         (if not (null upd_canon_thms) then ["_updcanon"] else [])))
     end
 
