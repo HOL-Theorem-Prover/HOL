@@ -1,1 +1,0 @@
-latex HolBdd;makeindex -o HolBdd.bnd HolBdd.bnx;makeindex -o HolBdd.tnd HolBdd.tnx;latex HolBdd;dvips HolBdd
