@@ -4,17 +4,19 @@ load "integerTheory";
 load "bossLib";
 *)
 local
-open HolKernel Parse basicHol90Lib integerTheory bossLib ringTheory;
+open HolKernel Parse basicHol90Lib bossLib  integerTheory ringTheory;
 in
 infix THEN THENL THENC o;
 infix 8 by;
 
 
+val ARW_TAC = RW_TAC arith_ss;
+
 val int_is_ring = prove(--`is_ring (ring int_0 int_1 $+ $* $~)`--,
-RW_TAC base_ss [is_ring_def, ring_accessors] THEN
-MAP_FIRST MATCH_ACCEPT_TAC
-  [ INT_ADD_SYM, INT_ADD_ASSOC, INT_MUL_ASSOC, INT_ADD_LID, INT_MUL_LID,
-    REWRITE_RULE[int_of_num]INT_ADD_RINV, INT_RDISTRIB, INT_MUL_SYM ]);
+ARW_TAC [ is_ring_def, ring_accessors, INT_0, INT_1,
+          INT_ADD_RINV, INT_RDISTRIB,
+          INT_ADD_ASSOC, INT_MUL_ASSOC, INT_ADD_LID, INT_MUL_LID] THEN
+MAP_FIRST MATCH_ACCEPT_TAC [ INT_ADD_SYM, INT_MUL_SYM ]);
 
 val num_to_int = --`&`--;
 val int_0 = --`int_0`--;
@@ -26,22 +28,21 @@ fun is_closed_int t =
 
 
 val INT_ADD_NEG2 = 
-  GSYM(REWRITE_RULE[int_sub,INT_ADD_LID]
-	 (SPECL[--`int_0`--,--`int_0`--]INT_ADD2_SUB2));
+  GSYM(REWRITE_RULE[int_sub,INT_ADD_LID] (SPECL[int_0,int_0]INT_ADD2_SUB2));
 
 
 val NAT_RDIFF = prove(--`!n m. &n + ~&m = if n<m then ~&(m-n) else &(n-m) `--,
 REPEAT GEN_TAC THEN
-RW_TAC base_ss [GSYM int_sub,INT_EQ_SUB_RADD,INT_ADD,INT_INJ]THENL
-[ONCE_REWRITE_TAC[INT_ADD_SYM] THEN
-MATCH_MP_TAC EQ_SYM,ALL_TAC] THEN
-RW_TAC arith_ss [GSYM int_sub,INT_EQ_SUB_RADD,INT_ADD,INT_INJ]);
+ARW_TAC [GSYM int_sub,INT_EQ_SUB_RADD,INT_ADD,INT_INJ] THEN
+ONCE_REWRITE_TAC[INT_ADD_SYM] THEN
+MATCH_MP_TAC EQ_SYM THEN
+ARW_TAC [GSYM int_sub,INT_EQ_SUB_RADD,INT_ADD,INT_INJ]);
 
-val NAT_LDIFF = ONCE_REWRITE_RULE[INT_ADD_SYM](NAT_RDIFF);
+val NAT_LDIFF = ONCE_REWRITE_RULE[INT_ADD_SYM] NAT_RDIFF;
 
 
 val INT_EQ_OPP = prove(--`!n m. (&n = ~&m) = (n+m = 0)`--,
-RW_TAC base_ss [GSYM INT_SUB_LZERO, INT_EQ_SUB_LADD, INT_ADD, INT_INJ]);
+ARW_TAC [GSYM INT_SUB_LZERO, INT_EQ_SUB_LADD, INT_ADD, INT_INJ]);
 
 
 (* equations to put any expression build on + * ~ & int_0 int_1
@@ -51,7 +52,7 @@ val intr_plus = prove(
     /\ (~&n +  &m = if m<n then ~&(n-m) else &(m-n))
     /\ ( &n + ~&m = if n<m then ~&(m-n) else &(n-m))
     /\ (~&n + ~&m = ~&(n+m)) `--,
-RW_TAC base_ss [INT_ADD,NAT_RDIFF,NAT_LDIFF, GSYM INT_NEG_ADD])
+ARW_TAC [INT_ADD,NAT_RDIFF,NAT_LDIFF, GSYM INT_NEG_ADD])
 ;
 
 val intr_mult = prove(
@@ -59,42 +60,39 @@ val intr_mult = prove(
     /\ (~&n *  &m = ~&(n*m))
     /\ ( &n * ~&m = ~&(n*m))
     /\ (~&n * ~&m =  &(n*m)) `--,
-RW_TAC base_ss [INT_MUL,GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL,INT_NEGNEG])
+ARW_TAC [INT_MUL,GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL,INT_NEGNEG])
 ;
 
 val intr_opp = prove(
 --` (~~n = n:int) /\ (~0 = 0) `--,
-RW_TAC base_ss [INT_NEGNEG, INT_NEG_0]);
+ARW_TAC [INT_NEGNEG, INT_NEG_0]);
 
 
 val intr_eq = prove(
---`   (( &n =  &m) = n=m) 
+--`   (( &n =  &m) = (n=m)) 
    /\ (( &n = ~&m) = (n+m=0))
    /\ ((~&n =  &m) = (n+m=0))
-   /\ ((~&n = ~&m) = n=m) `--,
-RW_TAC base_ss [INT_INJ,INT_NEG_EQ, INT_EQ_OPP, INT_NEGNEG]);
+   /\ ((~&n = ~&m) = (n=m)) `--,
+ARW_TAC [INT_INJ,INT_NEG_EQ, INT_EQ_OPP, INT_NEGNEG]);
 
 
 (* from num_ring... *)
 local open numeralTheory
 in
 val REFL_EQ_0 = prove(--` ((ALT_ZERO = ALT_ZERO)=T) /\ ((0 = 0:num) = T) `--,
-RW_TAC arith_ss []);
+ARW_TAC []);
 
 val numeral_rewrites =
   [ REFL_EQ_0, numeral_distrib, numeral_eq, numeral_suc, numeral_iisuc,
     numeral_add, numeral_mult, iDUB_removal ];
 
-end;
-
-local open numeralTheory in
 val int_rewrites =
     [ intr_plus, intr_mult, intr_opp, INT_0, INT_1,
       numeral_lt, numeral_sub, iSUB_THM, (* to simplify plus *)
       intr_eq ];
 end;
 
-val {EqConv=INT_RING_CONV, NormConv=INT_NORM_CONV,...} =
+val {EqConv=INT_RING_CONV_raw, NormConv=INT_NORM_CONV_raw,...} =
   ringLib.declare_ring { Name = "int",
                          Theory = int_is_ring,
 			 Const = is_closed_int,
@@ -110,14 +108,14 @@ val POST_CONV =
   REWRITE_CONV[GSYM INT_NEG_LMUL, GSYM int_sub]
 ;
 
-val INT_RING_CONV2 = PRE_CONV THENC INT_RING_CONV THENC POST_CONV;
-val INT_NORM_CONV2 = PRE_CONV THENC INT_NORM_CONV THENC POST_CONV;
+val INT_RING_CONV = PRE_CONV THENC INT_RING_CONV_raw THENC POST_CONV;
+val INT_NORM_CONV = PRE_CONV THENC INT_NORM_CONV_raw THENC POST_CONV;
 
 end;
 
 (*
-val ring_conv = INT_RING_CONV2;
-val norm_conv = INT_NORM_CONV2;
+val ring_conv = INT_RING_CONV;
+val norm_conv = INT_NORM_CONV;
 
 norm_conv(--` ~( 3 * (9 - 7)) `--);
 *)
@@ -130,8 +128,8 @@ norm_conv(--`(a+b)*(a+b)*(a+b):int`--);
 ring_conv(--`(a+b)*(a+b) = (b+a)*(b+a):int`--);
 
 
-INT_NORM_CONV(--` (a-b)*(a+b):int `--);
-INT_NORM_CONV2(--` (a-b)*(a+b):int `--);
+INT_NORM_CONV_raw(--` (a-b)*(a+b):int `--);
+INT_NORM_CONV    (--` (a-b)*(a+b):int `--);
 
 
 *)
