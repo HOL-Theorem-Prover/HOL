@@ -12,11 +12,6 @@ val FUNPOW_THM = store_thm("FUNPOW_THM",
   Induct_on `n` THEN ASM_REWRITE_TAC [FUNPOW]
 );
 
-val FUNPOW_THM2 = store_thm("FUNPOW_THM2",
-  `!f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)`,
-  Induct_on `n` THEN RW_TAC bool_ss [FUNPOW,FUNPOW_THM]
-);
-
 val FUNPOW_EVAL = store_thm("FUNPOW_EVAL",
   `!f n x. FUNPOW f n x = if n = 0 then x else FUNPOW f (n-1) (f x)`,
   Induct_on `n` THEN RW_TAC arith_ss [FUNPOW]

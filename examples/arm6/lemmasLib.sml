@@ -1,6 +1,6 @@
-(* app load ["bossLib","combinTheory","pairTheory","onestepTheory",
+(* app load ["pairTheory","onestepTheory",
              "word32Theory","armTheory","coreTheory","lemmasTheory"]; *)
-open HolKernel boolLib Q Parse bossLib simpLib computeLib combinTheory
+open HolKernel boolLib bossLib Q Parse computeLib
      arithmeticTheory pairTheory onestepTheory word32Theory
      armTheory coreTheory lemmasTheory;
 
@@ -13,13 +13,14 @@ fun core_rws () =
    let val rws = computeLib.bool_compset()
        val _ = add_thms [
                 iclass_distinct,iseq_distinct,GSYM iclass_distinct,GSYM iseq_distinct,
-                PCCHANGE_def,RWA_def,DECODE_PSR_def,
-                IS_def,ABORTINST_def,IC_def,FST,SND,LET_THM,UNCURRY_DEF,PCWA_def,
-                INTSEQ_def,PIPEALL_def,PIPEBLL_def,NEWINST_def,NXTIS_def,DIN_def,
-                PIPEAWRITE_def,PIPEBWRITE_def,PIPECWRITE_def,AREG_def,
-                PIPEAVAL_def,IREGVAL_def,NBW_def,NRW_def,DINWRITE_def,
-                PIPESTATIREGWRITE_def,PIPESTATAWRITE_def,PIPESTATBWRITE_def,
-                NEXT_ARM6_def] rws
+                PCCHANGE_def,DECODE_PSR_def,
+                IS_def,ABORTINST_def,IC_def,FST,SND,LET_THM,UNCURRY_DEF,
+                RWA_def,PCWA_def,NBW_def,NRW_def,AREG_def,
+                INTSEQ_def,PIPEBLL_def,NEWINST_def,NXTIS_def,DIN_def,
+                REWRITE_RULE [PIPEAWRITE_def,PIPEBWRITE_def,PIPECWRITE_def,
+                  PIPEALL_def,PIPEAVAL_def,IREGVAL_def,DINWRITE_def,
+                  PIPESTATIREGWRITE_def,PIPESTATAWRITE_def,PIPESTATBWRITE_def] NEXT_ARM6_def
+                ] rws
    in
      rws
 end;
@@ -39,13 +40,9 @@ fun core3_rws () =
      rws
 end;
 
-val thecore_rws = core_rws ();
-val thecore2_rws = core2_rws ();
-val thecore3_rws = core3_rws ();
-
-val CORE_CONV = CBV_CONV thecore_rws;
-val CORE2_CONV = CBV_CONV thecore2_rws;
-val CORE3_CONV = CBV_CONV thecore3_rws;
+val CORE_CONV = CBV_CONV (core_rws ());
+val CORE2_CONV = CBV_CONV (core2_rws ());
+val CORE3_CONV = CBV_CONV (core3_rws ());
 
 val CORE_ss = simpLib.SIMPSET
   {convs = [{name = "CORE_CONV", trace = 3,
