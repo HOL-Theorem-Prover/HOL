@@ -19,13 +19,7 @@ DIV.FIELD-BODY
 
 DIV.XMPL
  {font-family: Courier, monospace;
-  margin-top: -1em;
-  text-indent: 1em;
   margin-bottom:1em}
-
-
-SPAN.TEXT
- {}
 
 SPAN.BRKT
  {color: blue;
@@ -35,7 +29,7 @@ SPAN.FIELD-NAME
  {color: black;
   font-weight: bold}
 
-SPAN.HOL
+div.HOL
  {font-style : italic}
 
 

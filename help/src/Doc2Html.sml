@@ -24,11 +24,55 @@ fun (f /\ g) x = f x andalso g x;
 
 open ParseDoc
 
-(* Snarfed from Htmlsigs.sml *)
-fun encode #"<" = "&lt;"
-  | encode #">" = "&gt;"
-  | encode #"&" = "&amp;"
-  | encode c    = String.str c;
+fun txt_helper #"<" = SOME "&lt;"
+  | txt_helper #">" = SOME "&gt;"
+  | txt_helper #"&" = SOME "&amp;"
+  | txt_helper c = NONE
+
+fun encode c = Option.getOpt(txt_helper c, String.str c)
+fun brkt_encode #" " = "&nbsp;"
+  | brkt_encode c = encode c
+
+fun text_encode ss = let
+  (* passes over a substring, replacing single apostrophes with &rsquo;
+     backquotes with &lsquo; and the "latex" encodings of nice double-quotes:
+     `` with &ldquo; and '' with &rdquo;
+     Also encodes the < > and & characters into HTML appropriate forms. *)
+  open Substring
+  datatype state = backquote | apostrophe | normal of int * substring
+  fun recurse acc s ss =
+      case (s, getc ss) of
+        (backquote, NONE) => ("&lsquo;" :: acc)
+      | (apostrophe, NONE) => ("&rsquo;" :: acc)
+      | (normal(n,ss0), NONE) => (string ss0 :: acc)
+      | (normal (n,ss0), SOME(#"'", ss')) =>
+          recurse (string (slice(ss0,0,SOME n)) :: acc) apostrophe ss'
+      | (normal(n,ss0), SOME(#"`", ss')) =>
+          recurse (string (slice(ss0,0,SOME n))::acc) backquote ss'
+      | (normal(n,ss0), SOME(c, ss')) => let
+        in
+          case txt_helper c of
+            SOME s => recurse (s :: string (slice(ss0,0,SOME n)) :: acc)
+                              (normal(0,ss'))
+                              ss'
+          | NONE => recurse acc (normal(n + 1, ss0)) ss'
+        end
+      | (apostrophe, SOME(#"'", ss')) =>
+          recurse ("&rdquo;" :: acc) (normal(0,ss')) ss'
+      | (apostrophe, SOME(#"`", ss')) =>
+          recurse ("&rsquo;" :: acc) backquote ss'
+      | (apostrophe, SOME _) =>
+          recurse ("&rsquo;" :: acc) (normal(0,ss)) ss
+      | (backquote, SOME(#"`", ss')) =>
+          recurse ("&ldquo;" :: acc) (normal(0,ss')) ss'
+      | (backquote, SOME(#"'", ss')) =>
+          recurse ("&lsquo;" :: acc) apostrophe ss'
+      | (backquote, SOME _) =>
+          recurse ("&lsquo;" :: acc) (normal(0,ss)) ss
+in
+  String.concat (List.rev (recurse [] (normal(0,ss)) ss))
+end
+
 
 fun del_bslash #"\\" = ""
   | del_bslash c     = String.str c;
@@ -39,19 +83,20 @@ val cssURL = "doc.css";
 fun html (name,sectionl) ostrm =
  let fun outss ss = TextIO.output(ostrm, Substring.translate encode ss)
      fun out s = TextIO.output(ostrm,s)
+     val bracket_trans = Substring.translate brkt_encode
      fun markout PARA = out "\n<P>\n"
        | markout (TEXT ss) =
             (out "<SPAN class = \"TEXT\">";
-             outss ss;
+             out  (text_encode ss);
              out "</SPAN>")
        | markout (BRKT ss) =
            (out "<SPAN class = \"BRKT\">";
-            outss ss;
+            out (bracket_trans ss);
             out "</SPAN>")
        | markout (XMPL ss) =
-           (out "<PRE><DIV class = \"XMPL\">";
+           (out "<DIV class = \"XMPL\"><pre>";
             outss ss;
-            out "</DIV></PRE>\n")
+            out "</pre></DIV>\n")
 
      fun markout_section (FIELD ("KEYWORDS", _)) = ()
        | markout_section (FIELD ("DOC", _)) = ()
@@ -74,20 +119,22 @@ fun html (name,sectionl) ostrm =
                      out (drop_qual s); out "</A>")
                  fun outlinks [] = ()
                    | outlinks [s] = link s
-                   | outlinks (h::t) = (link h;
-                                        out","; out "&nbsp;&nbsp;\n";
-                                        outlinks t)
+                   | outlinks (h::t) = (link h; out",\n"; outlinks t)
              in
                (out "<dt><span class = \"FIELD-NAME\">SEEALSO</span></dt>\n";
-                out "<dd><div class = \"FIELD-BODY\"><dd>";
+                out "<dd><div class = \"FIELD-BODY\">";
                 outlinks sslist;
                 out "</div></dd>\n")
              end
        | markout_section (TYPE _) = raise Fail "markout_section: TYPE"
 
      fun front_matter name (TYPE ss) =
-           (out "<HTML>\n";
+           (out "<!DOCTYPE HTML PUBLIC \"-//W32//DTD HTML 4.01//EN\"\
+                 \ \"http://www.w3.org/TR/html4/strict.dtd\">\n";
+            out "<HTML>\n";
             out "<HEAD>\n";
+            out "<meta http-equiv=\"content-type\" content=\"text/html ; \
+                \charset=US-ASCII\">\n";
             out "<TITLE>"; out name; out "</TITLE>\n";
             out "<LINK REL = \"STYLESHEET\" HREF = \"../";
             out cssURL;
@@ -100,10 +147,10 @@ fun html (name,sectionl) ostrm =
        | front_matter _ _ = raise Fail "front_matter: expected TYPE"
 
      fun back_matter (www,release) =
-      (out "<BR>\n";
-       out "<SPAN class = \"HOL\"><A HREF=\""; out www;
+      (out "<div class = \"HOL\"><A HREF=\""; out www;
        out"\">HOL</A>&nbsp;&nbsp;";
-       out release; out "</BODY></HTML>\n")
+       out release;
+       out "</div></BODY></HTML>\n")
 
      val sectionl = tl sectionl
 
