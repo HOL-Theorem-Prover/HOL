@@ -751,9 +751,10 @@ val _ = save_thm("DE_MORGAN_THMw",DE_MORGAN_THMw);
 
 val THE_WL = SIMP_RULE arithr_ss [HB_def,ADD1] WL_def;
 
+val w_T_def = definition "w_T_def";
 val w_0 = save_thm("w_0",REWRITE_RULE [GSYM wn_def] (definition "w_0_def"));
 val w_1 = save_thm("w_1",REWRITE_RULE [GSYM wn_def,AONE_def] (definition "w_1_def"));
-val w_T = save_thm("w_T",SIMP_RULE arithr_ss [GSYM wn_def,COMP0_def,ONE_COMP_def,MODw_def,THE_WL] (definition "w_T_def"));
+val w_T = save_thm("w_T",SIMP_RULE arithr_ss [GSYM wn_def,COMP0_def,ONE_COMP_def,MODw_def,THE_WL] w_T_def);
 
 val ADD_TWO_COMP = save_thm("ADD_TWO_COMP",REWRITE_RULE [TOw_ELIM] ADD_TWO_COMP);
 val ADD_TWO_COMP2 = save_thm("ADD_TWO_COMP2",ONCE_REWRITE_RULE [ADD_COMMw] ADD_TWO_COMP);
@@ -1033,16 +1034,16 @@ val LSR_EVAL = store_thm("LSR_EVAL",
     ]
 );
 
-val LSR_MIN_THM = store_thm("LSR_MIN_THM",
-  `!a n.  LSRw n a = FUNPOW LSR_ONEw (MIN n WL) a`,
+val LSR_THM = store_thm("LSR_THM",
+  `!x n. LSRw x (wn n) = wn (BITS HB (MIN WL x) n)`,
+  A_RW_TAC [LSR_EVAL,MODw_THM,BITS_DIV_THM,MIN_DEF,WL_def,BITS_ZERO]
+);
+
+val LSR_LIMIT = store_thm("LSR_LIMIT",
+  `!x w. HB < x ==> (LSRw x w = w_0)`,
   REPEAT STRIP_TAC
-    THEN REWRITE_TAC [GSYM LSRw_def]
-    THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
-    THEN B_RW_TAC [LSR_EVAL,MIN_DEF]
-    THEN RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS])
-    THEN IMP_RES_TAC LESS_EQUAL_ADD
-    THEN A_RW_TAC [REWRITE_RULE [INw_def] INw_MODw,LESS_DIV_EQ_ZERO,
-                   GSYM DIV_DIV_DIV_MULT,EXP_ADD,ZERO_LT_TWOEXP]
+    THEN STRUCT_CASES_TAC (SPEC `w` word_nchotomy)
+    THEN A_RW_TAC [LSR_THM,MIN_DEF,WL_def,BITS_ZERO,w_0]
 );
 
 (* -------------------------------------------------------- *)
@@ -1297,6 +1298,25 @@ val ASR_THM = store_thm("ASR_THM",
             THEN REWRITE_TAC [ADD_SUB]
         ]
     ]
+);
+
+val MIN_LEM = prove(
+  `!a b. a <= b ==> (MIN a b = a)`,
+  A_RW_TAC [MIN_DEF]
+);
+
+val ASR_LIMIT = store_thm("ASR_LIMIT",
+  `!x w. HB <= x ==> (ASRw x w = if MSBw w then w_T else w_0)`,
+  REPEAT STRIP_TAC
+    THEN STRUCT_CASES_TAC (SPEC `w` word_nchotomy)
+    THEN A_RW_TAC [ASR_THM,MSB_EVAL,MSB_def,BIT_def,MIN_LEM,NOT_BITS2,WL_SUB_HB,SUB_RIGHT_ADD,w_0,
+                   REWRITE_RULE [ONE_COMP_def,COMP0_def,GSYM wn_def,MODw_THM,BITS_ZERO2,SUB_0] w_T_def]
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [(SYM o REWRITE_RULE [GSYM (CONJUNCT2 EXP),SYM WL_def]
+                                            o REWRITE_RULE [MULT_RIGHT_1,SYM TWO]
+                                            o SPECL [`2 EXP HB`,`1`,`1`]) MULT_LESS_EQ_SUC])
+    THEN ASSUME_TAC (SPEC `HB` ZERO_LT_TWOEXP)
+    THEN `2 EXP HB = 1` by DECIDE_TAC
+    THEN ASM_A_SIMP_TAC [WL_def,EXP]
 );
 
 (* ------------
