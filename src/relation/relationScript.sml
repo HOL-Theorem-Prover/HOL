@@ -361,6 +361,13 @@ val TC_lifts_equalities = store_thm(
   ``(!x y. R x y ==> (f x = f y)) ==> (!x y. TC R x y ==> (f x = f y))``,
   STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN METIS_TAC []);
 
+(* generalisation of equalities/monotonicities result *)
+val TC_lifts_transitive_relations = store_thm(
+  "TC_lifts_transitive_relations",
+  ``(!x y. R x y ==> Q (f x) (f y)) /\ transitive Q ==>
+    (!x y. TC R x y ==> Q (f x) (f y))``,
+  STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN METIS_TAC [transitive_def]);
+
 val TC_RTC = store_thm(
   "TC_RTC",
   ``!R (x:'a) y. TC R x y ==> RTC R x y``,
