@@ -1,7 +1,7 @@
 EXTRA_CLEANS = word32Script.exe
 
 wordFunctor.uo: wordFunctor.sml selectUtil.ui bitsTheory.uo
-	HOLMOSMLC -c -toplevel wordFunctor.sml
+	HOLMOSMLC -c -toplevel Overlay.ui wordFunctor.sml
 
 word32Theory.sml: word32Script.sml wordFunctor.uo selectUtil.uo
 	HOLMOSMLC -c wordFunctor.ui word32Script.sml
