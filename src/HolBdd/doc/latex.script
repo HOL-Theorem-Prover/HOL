@@ -4,4 +4,6 @@ makeindex -o HolBdd.bnd HolBdd.bnx;
 makeindex -o HolBdd.tnd HolBdd.tnx;
 latex HolBdd;
 latex HolBdd;
-dvips HolBdd
+dvips HolBdd;
+gzip -c HolBdd.ps > HolBdd.ps.gz
+

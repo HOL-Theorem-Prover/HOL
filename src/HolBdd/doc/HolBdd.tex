@@ -10,7 +10,8 @@
 
 \makeindex
 
-\newindex{MLbn}{bnx}{bnd}{Index of ML bindings}
+\newindex{MLbn}{bnx}{bnd}{Index of ML bindings\\[-1mm]
+(excluding \t{DerivedBddRules})}
 \newindex{MLty}{tnx}{tnd}{Index of ML types}
 
 \newcommand{\bnind}[1]{\index[MLbn]{#1}}
@@ -197,8 +198,8 @@ In {\tt{HolBddLib}} Version~1 there was a function, called
 using a dynamically extendable global table mapping \HOL{} terms to
 BDDs.  $\t{TermToBdd}$ constructed the BDD of a term $t$ using any
 BDDs of subterms of $t$ that were stored in the global table.
-{\tt{HolBddLib}} Version~2 has jettisoned this imperative style based
-on a global BDD state in favour of a purely functional rules. Some of
+{\tt{HolBddLib}} Version~2 has jettisoned this imperative style
+in favour of purely functional rules. Some of
 the ideas of BDD tables are likely to return in the future, but as
 contexts, similar to HOL simpsets, that are passed functionally,
 rather than as a single global state held in references.
@@ -233,11 +234,43 @@ obsolete material and methodology deriving for early experiments
 pre-dating the release of {\tt HolBddLib} Version~1.
 
 
-\subsection*{History and related work\footnote{Adapted from 
+\subsection*{Overview}
+
+
+In the LCF approach, theorems are represented by an abstract type
+whose primitive operations are the axioms and inference rules of a
+logic.  Theorem proving tools are implemented by composing together
+the inference rules using ML programs.
+
+This idea can be generalised to computing valid judgements that
+represent other kinds of information. In particular, consider
+judgements $(a,\rho,t,b)$, where $a$ is a set of boolean terms
+(assumptions) that are assumed true, $\rho$ represents a variable
+order, $t$ is a boolean term all of whose free variables are boolean
+and $b$ is a BDD. Such a judgement is valid if under the assumptions
+$a$, the BDD representing $t$ with respect to $\rho$ is $b$, and we
+will write \termbdd{a}{\rho}{t}{b} when this is the case.
+
+The derivation of `theorems' like \termbdd{a}{\rho}{t}{b} can be viewed
+as `proof' in the style of LCF by defining an abstract type \termbddty{}
+that models
+judgements $\termbdd{a}{\rho}{t}{b}$ analogously
+to the way the type $\ty{thm}$ models theorems $\vdash t$.
+
+\t{HolBddLib} currently contains two main structures: \t{PrimitiveBddRules}
+which defines a protected type \termbddty and rules for generating
+values of this type, and \t{DerivedBddRules} that contains derived
+rules for performing simple fixed-point calculations.  There is also a
+theory \t{DerivedBddRulesTheory} containing the theorems on
+reachability and fixed points needed by the derived rules,
+and two small subsidiary structures \t{Varmap} and \t{PrintBdd}.
+
+
+\subsection*{Relation to the Voss system\footnote{Adapted from 
 {\it Reachability programming in HOL using BDDs}
 \cite{tphols2000-Gordon}}}\label{related}
 
-The Voss system \cite{SegerVoss} has strongly influenced
+The Voss system \cite{SegerVoss} has strongly influenced and inspired
 the ideas described here. Voss consists of a lazy
 ML-like functional language, called FL, with BDDs as a built-in datatype.
 Quantified boolean formulae can be input and are parsed to BDDs.
@@ -305,38 +338,8 @@ own `fully-expansive' combinations of model checking and theorem
 proving. Such a combination could be a Voss-like verification
 platform.
 
-\subsection*{Overview}
-
-
-In the LCF approach, theorems are represented by an abstract type
-whose primitive operations are the axioms and inference rules of a
-logic.  Theorem proving tools are implemented by composing together
-the inference rules using ML programs.
-
-This idea can be generalised to computing valid judgements that
-represent other kinds of information. In particular, consider
-judgements $(a,\rho,t,b)$, where $a$ is a set of boolean terms
-(assumptions) that are assumed true, $\rho$ represents a variable
-order, $t$ is a boolean term all of whose free variables are boolean
-and $b$ is a BDD. Such a judgement is valid if under the assumptions
-$a$, the BDD representing $t$ with respect to $\rho$ is $b$, and we
-will write \termbdd{a}{\rho}{t}{b} when this is the case.
-
-The derivation of `theorems' like \termbdd{a}{\rho}{t}{b} can be viewed
-as `proof' in the style of LCF by defining an abstract type \termbddty{}
-whose primitive operations correspond to the BDD functions provided by \Buddy.
-The type $\termbddty$ models judgements $\termbdd{a}{\rho}{t}{b}$ analogously
-to the way the type $\ty{thm}$ models theorems $\vdash t$.
-
-\t{HolBddLib} currently contains two structures: \t{PrimitiveBddRules}
-which defines a protected type \termbddty and rules for generating
-values of this type, and \t{DerivedBddRules} that contains derived
-rules for performing simple fixed-point calculations.  There is also a
-theory \t{DerivedBddRulesTheory} containing the theorems on
-reachability and fixed points needed by the derived rules.
-
 \newpage
-\tableofcontents
+{\baselineskip6pt \tableofcontents}
 
 \pagenumbering{arabic}
 \newpage
@@ -375,7 +378,7 @@ Initialisation is done with the ML function
 
 Evaluating $\t{init}~m~n$ initialises \Buddy{} with $m$ nodes in the
 nodetable and a cachesize of $n$.  
-The library \t{HolBddLib} (Section~\ref{HolBddLib}) 
+The library \t{HolBddLib} (Part~\ref{HolBddLib}) 
 initialises the nodetable to 1000000 and cachesize to
 be 10000. The following is a quotation from the \Buddy{} documentation \cite{BuDDy}.
 
@@ -426,7 +429,7 @@ The function
 
 tests whether
 \Buddy{} is running (i.e.~\t{init} has been called and \t{done} has not been called). It is
-useful for checking if initialialisation is needed -- see Section~\ref{HolBddLib}.
+useful for checking if initialialisation is needed.
 
 The functions \t{init} and \t{done} should only be called once in a session.
 
@@ -476,7 +479,7 @@ Evaluating \t{setMaxincrease~$n$} tells \Buddy that the maximum of new nodes add
 when doing an expansion of the nodetable should be $n$.  The previous maximum is returned.
 
 Evaluating \t{setCacheratio~$n$} sets the cache ratio to $n$.  
-For example, if $n$ is $4$ then the internal caches will be $\frac{1}{4}$ the size of the
+For example, if $n$ is $4$ then the internal caches will a quarter the size of the
 nodetable.
 
 
@@ -544,7 +547,7 @@ corresponding to the integer and
 \end{verbatim}\bnind{\ml{nithvar}}
 
 maps
-an integer to BDD representing the negation of the variable.
+an integer to the BDD representing the negation of the variable.
 
 Note that evaluating $\t{ithvar}~n$ or $\t{nithvar}~n$ will raise the exception
 \t{Fail} (with string argument \texttt{"Unknown variable"})
@@ -576,22 +579,22 @@ The following functions quantify BDDs with respect to sets of variables:
    exist  : varSet -> bdd -> bdd
 \end{verbatim}\bnind{\ml{forall}}\bnind{\ml{exist}}
 
-\t{forall} universally quantifies a BDD and \t{exist} existentially quantify a BDD.
-
 \section{Assignments, composition, replacement and restriction}\label{replace}
 
-\Muddy provides a general purpose simultaneouse substitution function 
-and several optimised functions for the special cases of substituting for a single variable,
-renaming variables and substituting with boolean constants.
+\Muddy provides a function for general purpose simultaneous
+substitution of arbitrary BDDs for variables in a given BDD (\t{veccompose}). It also
+provides and three optimised special cases: substituting for a single
+variable (\t{compose}), renaming variables (\t{replace}) and
+substituting with boolean constants (\t{restrict}).
 
 The operation \t{veccompose} performs the simultaneous substitution 
 of BDDs for variables in a BDD. The argument of \t{veccompose}
 is a value of type \t{composeSet}\tyind{\ml{composeSet}} 
 (created with a constructor \t{composeSet})
-that specifies the substitution.
+that specifies a list if pairs \t[(($n_1$,$b_1$),$\ldots$,, where BDD variable $n$ is to be pre
 
 \begin{verbatim}
-   composeSet : (varnum * bdd) list -> composeSet
+   composeSet : (int * bdd) list -> composeSet
    veccompose : composeSet -> bdd -> bdd
 \end{verbatim}\bnind{\ml{composeSet}}\bnind{\ml{veccompose}}
 
@@ -644,6 +647,7 @@ An assignment satisfying a BDD can be computed via \Buddy using
 
 The exception \t{Domain} is raised if the argument to \t{satone} is unsatisfiable.
 
+\newpage
 Alternatively, a model can be computed by an ML program such as:
 
 \begin{verbatim}
@@ -855,10 +859,7 @@ notes on BDDs \cite{HenrikNotes}, where
 the algorithm underlying \t{simplify} is described and attributed to a paper by
 Coudert, Berthet and Madre \cite{CoudertBerthetMadre}.
 
-It is not clear how to provide a BDD representation judgement rule
-corresponding to \t{simplify}.
-
-\section{Saving, hashing and printing BDDs}
+\section{Saving, hashing and printing BDDs}\label{printing}
 
 BDDs can be saved on disk with the functions
 
@@ -944,7 +945,7 @@ the following Postscript diagram of a BDD
 See the \Buddy{} documentation \cite{BuDDy} for further details. The dynamic reordering
 types and functions provided in ML via \Muddy{} are in the structure \t{bdd} and are
 
-{\tiny\begin{verbatim}
+{\footnotesize\begin{verbatim}
     eqtype fixed
     FIXED            : fixed
     FREE             : fixed
@@ -987,7 +988,7 @@ $v_0=0$, $v_1=0$, $v_2=1$ and $v_3=1$.
 See the \Buddy{} documentation \cite{BuDDy} for further details. See the ML structure \t{fdd}
 for the \Buddy{} facilities provides in ML via \Muddy:
 
-{\tiny\begin{verbatim}
+{\footnotesize\begin{verbatim}
    type fddvar
 
    extDomain  : int list -> fddvar list
@@ -1009,7 +1010,7 @@ of BDDs, where each BDD represents one bit of an expression.
 See the \Buddy{} documentation \cite{BuDDy} for further details. See the ML structure \t{bvec}
 for the \Buddy{} facilities provides in ML via \Muddy{}.
 
-{\tiny
+{\footnotesize
 \begin{verbatim}
    type bvec
 
@@ -1086,16 +1087,19 @@ $pregc$ when a BuDDy GC is initiated and print $postgc$ when the
 
 \part{Description of \t{HolBddLib}}\label{HolBddLib}
 
-\t{HolBddLib} consists of four modules
+\t{HolBddLib} currently consists of five modules
 
 \begin{enumerate}
 \item \t{Varmap} defines the ML type \t{varmap} that represents mappings,
 often denoted by $\rho$,
 from HOL variables to BDD variables;
 
+\item \t{PrintBdd} provides rudimentary facilities for printing
+BDDs with respect to a varmap;
+
 \item \t{PrimitiveBddRules} defines the protected type \termbddty
 representing BDD representation judgements \termbdd{a}{\rho}{t}{b}
-that assert that under assumptions $a$, term $t$ is represented by BDD $b$ with respect to
+with the semantics that under assumptions $a$, term $t$ is represented by BDD $b$ with respect to
 varmap $\rho$;
 
 \item \t{DerivedBddRules} defines some derived rules for computing
@@ -1119,7 +1123,7 @@ Executing
 
 \vspace*{-2mm}
 
-loades these four modules and
+loades these five modules and
 initialises \Buddy{} with a nodesize of 1000000
 and cachesize of 10000.  
 
@@ -1137,14 +1141,12 @@ The type \t{varmap} is defined by
 
 \begin{verbatim}
    type varmap = (string, int) Binarymap.dict
-\end{verbatim}
+\end{verbatim}\tyind{\texttt{varmap}}
 
 \vspace*{-2mm}
 
 Strings are the names of HOL boolean variables and the integers associated with them
 are the corresponding BDD variables.
-
-\newpage
 
 The following operations and predicates on varmaps are provided:
 
@@ -1157,9 +1159,18 @@ The following operations and predicates on varmaps are provided:
    eq      : varmap * varmap -> bool
    size    : varmap -> int
    extends : varmap -> varmap -> bool
-\end{verbatim}
+\end{verbatim}%
+\bnind{\texttt{Varmap.empty}}%
+\bnind{\texttt{Varmap.insert}}%
+\bnind{\texttt{Varmap.remove}}%
+\bnind{\texttt{Varmap.peek}}%
+\bnind{\texttt{Varmap.dest}}%
+\bnind{\texttt{Varmap.eq}}
+\bnind{\texttt{Varmap.size}}%
+\bnind{\texttt{Varmap.extends}}%
 
-with the following semantics
+
+with the semantics
 
 \bigskip
 
@@ -1174,8 +1185,45 @@ with the following semantics
 \t{Varmap.extends} &  test if first argument included in second argument\\ \hline
 \end{tabular}
 
-\section{The structure \t{PrimitiveBddRules}}\label{PrimitiveBddRules}
+\section{The structure \ml{PrintBdd}}\label{PrintBdd}
 
+\t{PrintBdd} builds on top of \Muddy's support for drawing BDDs using the \t{dot}
+program (see Section~\ref{printing}). Three functions are provided.
+
+\begin{verbatim}
+   dotBdd             : string -> string -> bdd -> bdd
+   dotLabelledTermBdd : string -> string -> term_bdd -> unit
+   dotTermBdd         : term_bdd -> unit
+\end{verbatim}%
+\bnind{\texttt{dotBdd}}%
+\bnind{\texttt{dotLabelledTermBdd}}%
+\bnind{\texttt{dotTermBdd}}%
+
+\begin{description}
+\item[$\t{dotBdd}~file~label~bdd$]\mbox{}\\
+prints the BDD $bdd$ to $file$\t{.dot} with
+the label being the string $label$. The BDD variables are printed as the numbers used by \Buddy.
+The \t{dot} program is then invoked to create 
+a postscript file $file$\t{.ps}. The argument BDD is returned.
+
+\item[$\t{dotLabelledTermBdd}~file~label~tb$]\mbox{}\\
+prints the
+BDD part of \termbddty $tb$ with the nodes labelled with
+the variables specified in the varmap part of $tb$. A file $file$\t{.ps}
+is created, and the BDD is labelled with the string $label$.
+
+
+\item[$\t{dotTermBdd}~tb$]\mbox{}\\
+prints the
+BDD part of \termbddty $tb$ with the nodes labelled with
+the variables specified in the varmap part of $tb$. A file \t{ScratchBdd.ps}
+is created, and the BDD is labelled by default with a representation
+of the term part of $tb$. The default labels
+can be suppressed (i.e. set to be always the empty string) by assigning \t{false}
+to the global reference \t{dotTermBddFlag}.
+\end{description}
+
+\section{The structure \t{PrimitiveBddRules}}\label{PrimitiveBddRules}
 
 The structure \ml{PrimitiveBddRules} defines the type \termbddty{} by
 
@@ -1184,13 +1232,13 @@ The structure \ml{PrimitiveBddRules} defines the type \termbddty{} by
 \begin{verbatim}
    type assums = term HOLset.set;
    datatype term_bdd = TermBdd of assums * varmap * term * bdd;
-\end{verbatim}
+\end{verbatim}\tyind{\texttt{term\_bdd}}\tyind{\texttt{assums}}
 
 \vspace*{-2mm}
 
 The constructor \t{TermBdd} is not exported, so the only way to construct
 values of type \termbddty is using the following inference rules
-(which are described in more detrail in the rest of this section).
+(which are described in more detail in the rest of this section).
 
 {\footnotesize\begin{verbatim}
    BddExtendVarmap           : term_bdd->varmap->term_bdd
@@ -1213,13 +1261,32 @@ values of type \termbddty is using the following inference rules
    BddSimplify               : term_bdd*term_bdd->term_bdd
 \end{verbatim}}
 
-Destructor functions \t{dest\_term\_bdd}, \t{getAssums} \t{getVarmap}, \t{getTerm}
+Destructor functions \t{dest\_term\_bdd}, \t{getAssums}, \t{getVarmap}, \t{getTerm}
 and \t{getBdd} for values of type \termbddty are described in Section~\ref{misc}
 
 There is also a single oracle function
 \t{BddThmOracle} that derives the HOL theorem $a \vdash t$
 from the representation judgement \termbdd{a}{\rho}{t}{\ml{TRUE}}
 (details are in Section~\ref{oracle}).
+
+Many of the rules assume that the varmaps in their \termbddty
+arguments are all equal. To apply these rules to hypotheses with
+different varmaps it may be possible to use \t{BddExtendVarmap},
+\t{BddFreevarsContractVarmap} or \t{BddSupportContractVarmap} to make
+the varmaps equal.  It is expected that derived rules to enable
+judgements with different varmaps to be combined will be implemented,
+however, as the soundness conditions for these are potentially subtle,
+such rules have not been included in the `trusted kernel'.
+
+Currently we have no formal treatment of notions of soundness or
+completeness for the rules in \t{PrimitiveBddRules}, though this is
+being thought about. We think the rules are `obviously sound', but
+such intuitions are known to be unreliable! Our intuition about
+completeness is weaker: it is probable that as more experience with
+derived rules is obtained, the need for additional primitive rules
+will appear. Support for `local scopes' (combining judgements with
+different variable orders) is an area that may reveal incompleteness
+in the current rules.
 
 \subsection{Rules for generating representation judgements}\label{term-bdd-rules}
 
@@ -1263,7 +1330,7 @@ Raises \t{BddExtendVarmapError} if $\rho_2$ doesn not extend $\rho_1$
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddExtendVarmap}}
+\fbox{\usebox{\BddExtendVarmap}}\bnind{\texttt{BddExtendVarmap}}
 
 \bigskip
 
@@ -1293,7 +1360,7 @@ Raises \t{BddFreevarsContractVarmapError} if $v$ not free in $t$
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddFreevarsContractVarmap}}
+\fbox{\usebox{\BddFreevarsContractVarmap}}\bnind{\texttt{BddFreevarsContractVarmap}}
 
 
 
@@ -1325,7 +1392,7 @@ Raises \t{BddSupportContractVarmapError} if $\rho(v)$ not in the support of $b$
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddSupportContractVarmap}}
+\fbox{\usebox{\BddSupportContractVarmap}}\bnind{\texttt{BddSupportContractVarmap}}
 
 
 \subsubsection*{Variables and constants}
@@ -1367,7 +1434,7 @@ Raises \t{BddVarError} if $v$ not in the domain of $\rho$
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddVar}}
+\fbox{\usebox{\BddVar}}\bnind{\texttt{BddVar}}
 
 \bigskip
 
@@ -1407,7 +1474,7 @@ Always succeeds
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddCon}}
+\fbox{\usebox{\BddCon}}\bnind{\texttt{BddCon}}
 
 \subsubsection*{Boolean operations}
 
@@ -1439,7 +1506,7 @@ Always succeeds
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddNot}}
+\fbox{\usebox{\BddNot}}\bnind{\texttt{BddNot}}
 
 \bigskip
 
@@ -1470,7 +1537,7 @@ pointer equal
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddIte}}
+\fbox{\usebox{\BddIte}}\bnind{\texttt{BddIte}}
 
 
 \bigskip
@@ -1505,7 +1572,7 @@ corresponding to the \Buddy BDD operation $bddop$ to terms $t_1$ and $t_2$
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddOp}}
+\fbox{\usebox{\BddOp}}\bnind{\texttt{BddOp}}
 
 
 \subsubsection*{Quantification}
@@ -1539,7 +1606,7 @@ or occur free in any assumption
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddForall}}
+\fbox{\usebox{\BddForall}}\bnind{\texttt{BddForall}}
 
 \bigskip
 
@@ -1573,7 +1640,7 @@ or occur free in any assumption
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddExists}}
+\fbox{\usebox{\BddExists}}\bnind{\texttt{BddExists}}
 
 \bigskip
 
@@ -1615,7 +1682,7 @@ or occur free in any assumption
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddAppall}}
+\fbox{\usebox{\BddAppall}}\bnind{\texttt{BddAppall}}
 
 
 \bigskip
@@ -1658,7 +1725,7 @@ or occur free in any assumption
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddAppex}}
+\fbox{\usebox{\BddAppex}}\bnind{\texttt{BddAppex}}
 
 \subsubsection*{Composition, repacement and restriction}
 
@@ -1694,7 +1761,7 @@ or the term $v_1$ is not a variable
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddCompose}}
+\fbox{\usebox{\BddCompose}}\bnind{\texttt{BddCompose}}
 
 \bigskip
 
@@ -1736,7 +1803,7 @@ or if any of the terms $v_1,\ldots,v_i$ are repeated or are not variables
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddListCompose}}
+\fbox{\usebox{\BddListCompose}}\bnind{\texttt{BddListCompose}}
 
 
 \bigskip
@@ -1783,7 +1850,7 @@ or if any of $c_1,\ldots,c_i$ are not equal to \t{T} or \t{F}
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddRestrict}}
+\fbox{\usebox{\BddRestrict}}\bnind{\texttt{BddRestrict}}
 
 
 \bigskip
@@ -1827,7 +1894,7 @@ or if any of the terms $v_1',\ldots,v_i'$ are repeated or are not variables
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddReplace}}
+\fbox{\usebox{\BddReplace}}\bnind{\texttt{BddReplace}}
 
 \subsubsection*{Coudert, Berthet \& Madre simplification}\label{BddSimplify}
 
@@ -1854,15 +1921,12 @@ $$\begin{array}{c}
 \noindent \rule\minipagewidth{0.1pt}
 
 \begin{footnotesize}
-\t{termApply~$t_1$~$t_2$~$bddop$} applies
-the HOL operation
-corresponding to the \Buddy BDD operation $bddop$ to terms $t_1$ and $t_2$
-(see Section~\ref{misc}). The exception 
+The exception 
 {\footnotesize\t{BddSimplifyError}} is raised if the varmaps in the hypotheses are not pointer equal
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddSimplify}}
+\fbox{\usebox{\BddSimplify}}\bnind{\texttt{BddSimplify}}
 
 
 
@@ -1895,7 +1959,7 @@ Such theorems, and any theorems deduced from them, are tagged with
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddThmOracle}}
+\fbox{\usebox{\BddThmOracle}}\bnind{\texttt{BddThmOracle}}
 
 \bigskip
 
@@ -1923,550 +1987,12 @@ a_1 \vdash t_1=t_2 \qquad \termbdd{a_2}{\rho}{t_1}{b} \qquad
 \begin{footnotesize}
 Enables the term part of a representation judgement to be replaced
 by a logically equivalent term. Raises \t{BddEqMpError}
-if the theorem has any assumptions, or if the left hand side of the equation
+if the left hand side of the equation
 isn't $\alpha$-convertable to the term part of the representation judgement
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\BddEqMp}}
-
-\subsection{Computing reachable states using representation judgements}\label{reach2}
-
-Suppose \ml{th} is an equational theorem $\vdash t_1=t_2$, e.g.~a definition.
-If the right hand side $t_2$ can be represented as a BDD $b$ using
-\ml{termToBdd}, then a BDD representation $\ml{tb}~=~\globtermbdd{t_1}{b}$
-can be created by evaluating
-
-\vspace*{-1mm}
-
-\begin{verbatim}
- val tb0 = BddEqMp (SYM th) (termToTermBdd(rhs(concl th)))
-\end{verbatim}
-
-\vspace*{-1mm}
-
-\noindent Define $\ml{BddDef}\bnind{\ml{BddDef}}:\ty{thm}\fun\termbddty$ by
-
-\vspace*{-1mm}
-
-\begin{verbatim}
- fun BddDef th = BddEqMp (SYM th) (termToTermBdd(rhs(concl th)))
-\end{verbatim}
-
-\vspace*{-1mm}
-
-Suppose constants \con{B} and \con{R} have been defined by theorems \ml{B\_def}
-and \ml{R\_def}, respectively, then BDD representation judgements
-
-\smallskip
-$\begin{array}{l}
-\ml{tbB}~~=~~\globtermbdd{\con{B}~(v_1,\ldots,v_n)}{b_{\con{B}}}\\
-\ml{tbR}~~=~~\globtermbdd{\con{R}((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))}{b_{\con{R}}}
-\end{array}$
-\smallskip
-
-\noindent are defined in ML by
-
-\vspace*{-1mm}
-
-\begin{verbatim}
- val tbB = BddDef B_def
- and tbR = BddDef R_def;
-\end{verbatim}
-
-\vspace*{-1mm}
-
-Suppose that \con{S} has been defined by \ml{S\_def} and for some
-particular value of \con{i} the BDD representation
-$\ml{tbi}~=~\globtermbdd{\con{S}~\con{i}~(v_1,\ldots,v_n)}{b_{\con{i}}}$
-has been computed, for example, for \ml{\con{i} = 0}, \ml{tb0} is defined by
-
-\vspace*{-1mm}
-
-\begin{verbatim}
- val tb0 = BddEqMp (SYM S_0) tbB
-\end{verbatim}
-
-\vspace*{-1mm}
-
-An important BDD to calculate is 
-the image of $\con{S}~\con{i}$ under \con{R}:
-
-
-\smallskip
-
-~$\begin{array}{l}
-\exists u_1~\cdots~u_n.~\con{S}~\con{i}~(u_1,\ldots,u_n)~\wedge~\con{R}((u_1,\ldots,u_n),(v_1,\ldots,v_n))
-\end{array}
-$
-
-\smallskip
-
-If this is directly converted to a BDD representation judgement, new BDD variables for
-$u_1$, $\ldots$, $u_n$ may be created, which could be inefficient. A better strategy is
-first compute the BDD of
-
-\smallskip
-
-~$\exists v_1~\cdots~v_n.
-    ~\con{S}~\con{i}~(v_1,\ldots,v_n)~\wedge~\con{R}((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))$
-
-\smallskip
-
-and then rename the variables $v'_1$, $\ldots$, $v'_n$ to $v_1$,
-$\ldots$, $v_n$, respectively. A subtlety arises when creating a
-representation judgement rule corresponding to this image
-calculation. Names for the existentially quantified variables are
-needed in the term part of the judgement, but ``$\exists v_1~\cdots~v_n$''
-cannot be used, because the renaming of $v'_1$, $\ldots$, $v'_n$ to
-$v_1$, $\ldots$, $v_n$ would then result in a clash. Note that the BDD
-operation eliminates the nodes corresponding to $v_1$, $\ldots$, $v_n$
-in the BDD, so the renaming doesn't cause a clash in the BDD. However,
-in the term part of the judgement the quantified variables need to be
-renamed -- but what names should be used? In the rule \ml{BddImage}
-described below $v'_1$, $\ldots$, $v'_n$ are used since these are
-guaranteed to be safe as they have just been replaced, but note that
-this is potentially a bit confusing because of the convention that
-priming indicates next-state variables. The ML funtion
-\ml{replace} renames variables in a BDD (see Section~\ref{replace}).
-
-
-\smallskip
-
-
-$\raisebox{3mm}{\ml{BddImage}\bnind{\ml{BddImage}}}~\begin{array}{c}
-\begin{array}{l}
-\termbdd{a}{\rho}{P(v_1,\ldots,v_n)}{b_P} \\
-\termbdd{a}{\rho}{R((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))}{b_R}\\
-\rho(v_1)=n_1 \quad \cdots \quad \rho(v_n)=n_n\\
-\rho(v'_1)=n'_1 \quad \cdots \quad \rho(v'_n)=n'_n
-\end{array}
-\\ \hline
-\begin{array}{l}
-{\rho}~
-{\exists v'_1~\cdots~v'_n.~ P(v'_1,\ldots,v'_n) \wedge R((v'_1,\ldots,v'_n),(v_1,\ldots,v_n))}\\
-\mapsto\\
-\ml{replace}\\
-~(\ml{appex}~b_P~b_R~\ml{And}~\ml{(makeset[}n_1\ml{,}\ldots\ml{,}n_n\ml{])})\\
-~(\ml{makepairSet[(}n'_1\ml{,}n_1\ml{),}\ldots\ml{,(}n'_n\ml{,}n_n\ml{)]})
-\end{array}
-\end{array}$
-
-\smallskip
-
-\vspace*{-4mm}
-\begin{flushleft}
-\begin{tabular}{|c|}\hline
-\begin{minipage}{\minipagewidth}
-\smallskip
-\begin{footnotesize}
-\begin{description}
-
-\item $\ml{BddImage} : \termbddty\fun\termbddty\fun\termbddty$\\
-\ml{BddImage}~
-($\globtermbdd{P(v_1,\ldots,v_n)}{b_P})~ 
-(\globtermbdd{R((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))}{b_R}$)\\
-returns
-
-\smallskip
-
-\mbox{}~ $\begin{array}{l}
-{\rho}~
-{\exists v'_1~\cdots~v'_n.~ P(v'_1,\ldots,v'_n) \wedge R((v'_1,\ldots,v'_n),(v_1,\ldots,v_n))}\\
-\mapsto\\
-\ml{replace}\\
-~(\ml{appex}~b_P~b_R~\ml{And}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])})\\
-~(\ml{makepairSet[(}\rho_G(v'_1)\ml{,}\rho_G(v_1)\ml{),}\ldots\ml{,(}\rho_G(v'_n)\ml{,}\rho_G(v_n)\ml{)]})
-\end{array}$
-
-%\vspace*{-3.6mm}
-
-\end{description}
-\end{footnotesize}
-\smallskip
-\end{minipage}\\ \hline
-\end{tabular}
-\end{flushleft}
-
-
-\noindent Example: since $\con{S}~(\con{i}{+}1)~(v_1,\ldots,v_n)$ is
-
-
-\smallskip
-
-$\con{S}~\con{i}~(v_1,\ldots,v_n)~\vee~
-\exists v'_1~\cdots~v'_n.~\con{S}~\con{i}~(v'_1,\ldots,v'_n)~\wedge~\con{R}((v'_1,\ldots,v'_n),(v_1,\ldots,v_n))
-$
-
-\smallskip
-
-\noindent the BDD representation of this is computed by
-$\ml{BddOr}(\ml{tbi},\ml{BddImage}~\ml{tbi}~\ml{tbR})$.
-
-The ML function \ml{iterateToFixedPoint2}\bnind{\ml{iterateToFixedPoint2}} defined below takes the
-transitive closure of \con{R} until a fixed-point is reached,
-returning a triple \ml{(th,tb,i\_tm)} where  \ml{th}
-is $\vdash \con{S}~(\con{i}{+}1)~(v_1,\ldots,v_n)~=~\con{S}~\con{i}~(v_1,\ldots,v_n)$,
-\ml{tb} is $\globtermbdd{\con{S}~\con{i}~(v_1,\ldots,v_n)}{b_{\con{i}}}$ (where
-$b_{\con{i}}$ is the BDD computed) and \ml{i\_tm}
-is $\qq{\con{i}}$
-
-\begin{verbatim}
- fun iterateToFixedPoint2 S_suc tbR tb i =
-  let val i_tm = intToTerm i
-      val tb'  = BddEqMp
-                  (SYM(SimpNum(SPEC i_tm S_suc)))
-                  (BddOr(tb, BddImage tb tbR))
-  in
-   (TermBddOracle(BddEq(tb,tb')), tb, i_tm)
-    handle oracleError => iterateToFixedPoint2 S_suc tbR tb' (i+1)
-  end
-\end{verbatim}
-
-\vspace*{-1mm}
-
-\noindent The representation 
-judgement $\globtermbdd{(\exists i.~\con{S}~i~(v_1,...,v_n))}{b_{\con{i}}}$
-is computed by
-
-\vspace*{-1mm}
-
-\begin{verbatim}
- let val (th,tb,i_tm) = 
-      iterateToFixedPoint2 S_suc (BddDef R_def) (BddDef S_0) 0
-     val FpThi = SimpNum(SPEC i_tm FpTh)
- in
-  BddEqMp (SPEC_ALL(MP FpThi (GEN_ALL th))) tb
- end 
-\end{verbatim}
-
-\vspace*{-1mm}
-
-\noindent where \ml{SPEC\_ALL}\bnind{\ml{SPEC\_ALL}} strips off all outmost universal
-quantifiers (inverse of \ml{GEN\_ALL}\bnind{\ml{GEN\_ALL}}). Note the combination of \HOL{} deduction (\ml{SPEC},
-\ml{SPEC\_ALL}, \ml{GEN\_ALL}, \ml{MP}) and BDD calculation (\ml{BddEqMp}).
-
-The function \ml{iterateToFixedPoint2} is much more efficient on large
-examples than \ml{iterateToFixedPoint}. For example, with
-\ml{iterateToFixedPoint}, the calculation of the BDDs of the sets of
-reachable states of peg solitaire brings my 500MB Linux box to a halt
-thrashing after a couple of days, and only reaches about 15 steps.
-Using \ml{iterateToFixedPoint2} instead, all 32 steps are completed in a few
-hours.
-
-\subsection{Future possibilities}\label{future}
-
-The rules given above all have the same variable map $\rho$ in the
-hypotheses and conclusion. The following experimental rules, which are currently
-not implemented (and so are not given ML names), are not of this form.
-
-Let $\ml{Frees}(t)$ denote the set of free variables in $t$.  
-Let 
-$\ml{Domain}(\rho)$ denote the set of variables $\rho$ is defined on
-(i.e.~$\ml{Domain}(\rho)~=~\{v\mid \exists n.~\rho(v)=n\}$).
-Write
-$\rho_1\subseteq\rho_2$ if $\rho_1$ is a restriction of $\rho_2$
-(i.e.~$\ml{Domain}(\rho_1)\subseteq\ml{Domain}(\rho_2)$).  
-The following rule then holds.
-
-\smallskip
-
-
-$\begin{array}{c}
-\termbdd{a}{\rho_1}{t}{b} \qquad \rho_2\subseteq\rho_1 \qquad \ml{Frees}(t)\subseteq\ml{Domain}(\rho_2)
-\\ \hline
-\termbdd{a}{\rho_2}{t}{b}
-\end{array}$
-
-\smallskip
-
-It may be the case that the BDD representing a term doesn't depend on
-some variables in the term. For example, if $\{\}$ denotes the
-undefined-everywhere function, then $\termbdd{a}{\{\}}{t\vee\neg
-t}{\ml{TRUE}}$ holds for any term $t$. Thus any entries in the
-variable map that map variables to numbers not occuring in the support
-of the BDD can be pruned.  Let $\ml{Support}(b)$ be the set of BDD
-variables (i.e.~numbers) in $b$ and let $\ml{Range}(\rho)$ denote the
-range of $\rho$ (i.e.~$\ml{Range}(\rho)~=~\{n\mid \exists
-v.~\rho(v)=n\}$). Then
-
-\smallskip
-
-$\begin{array}{c}
-\termbdd{a}{\rho_1}{t}{b} \qquad \rho_2\subseteq\rho_1 \qquad \ml{Support}(b)\subseteq\ml{Range}(\rho_2)
-\\ \hline
-\termbdd{a}{\rho_2}{t}{b}
-\end{array}$
-
-\smallskip
-
-Judgements with different variable maps can be combined if the maps are compatible.
-Define 
-
-\smallskip
-
-~$\ml{Compatible}(\rho_1,\rho_2)~=~\forall v~n_1~n_2.~(\rho_1(v)=n_1)\wedge(\rho_2(v)=n_2)\imp(n_1=n_2)$
-
-\smallskip
-
-\noindent Compatible maps $\rho_1$ and $\rho_2$ can be unambiguosly
-joined to form a map $\rho_1\cup \rho_2$. Rules for combining
-judgements with compatible maps can be formulated, for example
-
-\smallskip
-
-$\begin{array}{c}
-\termbdd{a}{\rho_1}{t_1}{b_1} \qquad \termbdd{a}{\rho_2}{t_2}{b_2} \qquad \ml{Compatible}(\rho_1,\rho_2)
-\\ \hline
-\termbdd{a}{\rho_1\cup\rho_2}{t_1\wedge t_2}{b_1~\ml{AND}~ b_2}
-\end{array}$
-
-
-\smallskip
-
-\noindent The rules for other binary operators are similar.
-
-The next major stage in the development of \ml{HolBddLib} will be to
-support judgements with different variable orders: i.e.~calculation
-with $\termbdd{a}{\rho}{t}{b}$ with several different $\rho$s in play,
-rather than just $\termbdd{a}{\rho_G}{t}{b}$. This will enable different
-variable orderings to be used within a single session. It is also
-planned to extend the \Hol{} theory management system so that
-judgements $\termbdd{a}{\rho}{t}{b}$ can be saved to disk and later
-reloaded, just like theorems of higher order logic.
-
-\ml{BddRules} provides the following rules for reasoning
-about BDD representation judgements. Many of these have already been described in
-Section~\ref{second}.
-
-\begin{description}
-
-\item[$\ml{BddVar}\bnind{\ml{BddVar}}:\ty{term}\fun\termbddty$]\mbox{}\\
-\ml{BddVar($v$)} returns $\termbdd{a}{\rho_G}{t}{b}$, where if $v$ already has an associated BDD 
-in the global map $\rho_G$, 
-then $b = \ml{Var}(\rho_G(v))$  and if $v$ is not in the map, then $\rho_G$ is extended
-so that $\rho_G(v)=n$, where $n$ is the
-first unused BDD variable, and then
-$b=\ml{Var}(n)$. In this case \ml{BddVar($v$)} has a side-effect
-on $\rho_G$.
-
-\item[$\ml{BddT}\bnind{\ml{BddT}}, \ml{BddF}\bnind{\ml{BddF}}:\termbddty$]\mbox{}\\
-$\ml{BddT}$ and  $\ml{BddF}$ are predefined to be $\globtermbdd{\con{T}}{\ml{TRUE}}$ and
-$\globtermbdd{\con{F}}{\ml{FALSE}}$, respectively.
-
-
-\item[$\ml{BddAnd}\bnind{\ml{BddAnd}},\ml{BddOr}\bnind{\ml{BddOr}},\ml{BddImp}\bnind{\ml{BddImp}},\ml{BddEq}\bnind{\ml{BddEq}}:\termbddty\prod\termbddty\fun\termbddty$]\mbox{}\\
-$\ml{BddAnd}(\globtermbdd{t_1}{b_1},\globtermbdd{t_2}{b_2})$  returns
-$\globtermbdd{t_1\wedge t_2}{b_1~\ml{AND}~b_2}$;\\
-$\ml{BddOr}(\globtermbdd{t_1}{b_1},\globtermbdd{t_2}{b_2})$   returns
-$\globtermbdd{t_1\vee t_2}{b_1~\ml{OR}~b_2}$;\\
-$\ml{BddImp}(\globtermbdd{t_1}{b_1},\globtermbdd{t_2}{b_2})$  returns
-$\globtermbdd{t_1\imp t_2}{b_1~\ml{IMP}~b_2}$;\\
-$\ml{BddEq}(\globtermbdd{t_1}{b_1},\globtermbdd{t_2}{b_2})$   returns
-$\globtermbdd{t_1=t_2}{b_1~\ml{BIIMP}~b_2}$.
-
-\item[$\ml{BddCond}\bnind{\ml{BddCond}}:\termbddty\prod\termbddty\prod\termbddty\fun\termbddty$]\mbox{}\\
-$\ml{BddCond}(\globtermbdd{t}{b},\globtermbdd{t_1}{b_1},\globtermbdd{t_2}{b_3})$  returns\\
-$\globtermbdd{\ml{if~}t\ml{~then~}t_1\ml{~else~}t_2}{(b~\ml{AND}~b_1)~\ml{OR}~((\ml{NOT}~b)~\ml{AND}~b_2)}$
-
-
-\item[$\ml{BddForall}\bnind{\ml{BddForall}}, \ml{BddExists}\bnind{\ml{BddExists}} : \ty{term list}\prod\termbddty\fun\termbddty$]\mbox{}\\
-\ml{BddForall([$v_1$,$\ldots$,$v_n$], $\globtermbdd{t}{b}$)} returns\\
-\mbox{}~ $\globtermbdd{\forall v_1\cdots v_n.~t}{\ml{forall(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])} b}$;\\
-\ml{BddExists([$v_1$,$\ldots$,$v_n$], $\globtermbdd{t}{b}$)} returns\\
-\mbox{}~ $\globtermbdd{\exists v_1\cdots v_n.~t}{\ml{exists([}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])} b}$.\\
-If any of the variables $v_1$, $\ldots$ , $v_n$ are not in the global variable map, then the map
-is extended. Thus \ml{BddForall} and \ml{BddExists} might side-effect $\rho_G$.
-
-\item[$\ml{BddForallAnd}\bnind{\ml{BddForallAnd}},\ml{BddExistsAnd}\bnind{\ml{BddExistsAnd}}:\ty{term list}\fun(\termbddty\prod\termbddty)\fun\termbddty$]
-\ml{BddForallAnd~[$v_1$,$\ldots$,$v_n$]~($\globtermbdd{t_1}{b_1}, \globtermbdd{t_2}{b_2}$)} returns\\
-\mbox{}~ $\globtermbdd{\forall v_1\cdots v_n.~t_1 \wedge t_2}{\ml{appall}~b_1~b_2~\ml{And}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])}}$;\\
-\ml{BddExistsAnd~[$v_1$,$\ldots$,$v_n$]~($\globtermbdd{t_1}{b_1}, \globtermbdd{t_2}{b_2}$)} returns\\
-\mbox{}~ $\globtermbdd{\exists v_1\cdots v_n.~t_1 \wedge t_2}{\ml{appex}~b_1~b_2~\ml{And}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])}}$.\\
-If any of the variables $v_1$, $\ldots$ , $v_n$ are not in the global variable map, then the map
-is extended. Thus \ml{BddForallAnd} and \ml{BddExistsAnd} might side-effect~$\rho_G$.
-
-
-\item[$\ml{BddForallOr}\bnind{\ml{BddForallOr}},\ml{BddExistsOr}\bnind{\ml{BddExistsOr}}:\ty{term list}\fun(\termbddty\prod\termbddty)\fun\termbddty$]
-\ml{BddForallOr~[$v_1$,$\ldots$,$v_n$]~($\globtermbdd{t_1}{b_1}, \globtermbdd{t_2}{b_2}$)} returns\\
-\mbox{}~ $\globtermbdd{\forall v_1\cdots v_n.~t_1 \vee t_2}{\ml{appall}~b_1~b_2~\ml{Or}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])}}$;\\
-\ml{BddExistsOr~[$v_1$,$\ldots$,$v_n$]~($\globtermbdd{t_1}{b_1}, \globtermbdd{t_2}{b_2}$)} returns\\
-\mbox{}~ $\globtermbdd{\exists v_1\cdots v_n.~t_1 \vee t_2}{\ml{appex}~b_1~b_2~\ml{Or}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])}}$.\\
-If any of the variables $v_1$, $\ldots$ , $v_n$ are not in the global variable map, then the map
-is extended. Thus \ml{BddForallOr} and \ml{BddExistsOr} might side-effect~$\rho_G$.
-
-
-\item[$\ml{BddForallImp}\bnind{\ml{BddForallImp}},\ml{BddExistsImp}\bnind{\ml{BddExistsImp}}:\ty{term list}\fun(\termbddty\prod\termbddty)\fun\termbddty$]
-\ml{BddForallImp~[$v_1$,$\ldots$,$v_n$]~($\globtermbdd{t_1}{b_1}, \globtermbdd{t_2}{b_2}$)} returns\\
-\mbox{}~ $\globtermbdd{\forall v_1\cdots v_n.~t_1 \imp t_2}{\ml{appall}~b_1~b_2~\ml{Imp}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])}}$;\\
-\ml{BddExistsImp~[$v_1$,$\ldots$,$v_n$]~($\globtermbdd{t_1}{b_1}, \globtermbdd{t_2}{b_2}$)} returns\\
-\mbox{}~ $\globtermbdd{\exists v_1\cdots v_n.~t_1 \imp t_2}{\ml{appex}~b_1~b_2~\ml{Imp}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])}}$.\\
-If any of the variables $v_1$, $\ldots$ , $v_n$ are not in the global variable map, then the map
-is extended. Thus \ml{BddForallImp} and \ml{BddExistsImp} might side-effect~$\rho_G$.
-
-
-\item[$\ml{BddForallEq}\bnind{\ml{BddForallEq}},\ml{BddExistsEq}:\ty{term list}\fun(\termbddty\prod\termbddty)\fun\termbddty$]
-\ml{BddForallEq~[$v_1$,$\ldots$,$v_n$]~($\globtermbdd{t_1}{b_1}, \globtermbdd{t_2}{b_2}$)} returns\\
-\mbox{}~ $\globtermbdd{\forall v_1\cdots v_n.~t_1=t_2}{\ml{appall}~b_1~b_2~\ml{Eq}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])}}$;\\
-\ml{BddExistsEq~[$v_1$,$\ldots$,$v_n$]~($\globtermbdd{t_1}{b_1}, \globtermbdd{t_2}{b_2}$)} returns\\
-\mbox{}~ $\globtermbdd{\exists v_1\cdots v_n.~t_1=t_2}{\ml{appex}~b_1~b_2~\ml{Eq}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])}}$.\\
-If any of the variables $v_1$, $\ldots$ , $v_n$ are not in the global variable map, then the map
-is extended. Thus \ml{BddForallEq} and \ml{BddExistsEq} might side-effect~$\rho_G$.
-
-
-
-\item[$\ml{BddEqMp}\bnind{\ml{BddEqMp}}:\ty{thm}\fun\termbddty\fun\termbddty$]\mbox{}\\
-$\ml{BddEqMp}~(\vdash t_1=t_2)~(\globtermbdd{t_1}{b})$ returns
-$\globtermbdd{t_2}{b}$.
-
-
-\item[$\ml{BddEqMpSYM}\bnind{\ml{BddEqMpSYM}}:\ty{thm}\fun\termbddty\fun\termbddty$]\mbox{}\\
-$\ml{BddEqMp}~(\vdash t_1=t_2)~(\globtermbdd{t_2}{b})$ returns
-$\globtermbdd{t_1}{b}$.
-
-
-\item[$\ml{BddMatch}\bnind{\ml{BddMatch}} : \termbddty\fun\ty{term}\fun\termbddty$]\mbox{}\\
-\ml{BddMatch}~$(\globtermbdd{t_1}{b_1})~t_2$
-matches $t_1$ to $t_2$ and if the match succeeds with a variable-to-variable substitution
-(i.e. variable renaming) then returns $\globtermbdd{t_2}{b_2}$,
-where $b_2$ is the BDD obtained by renaming the corresponding BDD variables
-in $b_1$.
-
-\item[$\ml{TermBddOracle}\bnind{\ml{TermBddOracle}}:\termbddty\fun\ty{thm}$]\mbox{}\\
-\ml{TermBddOracle($\globtermbdd{t}{b}$)} returns the theorem $\vdash t$ if
-$b$ is \ml{TRUE}, otherwise an exception is raised.
-
-\item[$\ml{termToTermBdd}\bnind{\ml{termToTermBdd}}:\ty{term}\fun\termbddty$]\mbox{}\\
-\ml{termToTermBdd($t$)} applies \ml{termToBdd} to $t$ to get
-$b$ and then returns $\globtermbdd{t}{b}$.
-
-\item[$\ml{BddImage}\bnind{\ml{BddImage}} : \termbddty\fun\termbddty\fun\termbddty$]\mbox{}\\
-\ml{BddImage}~
-($\globtermbdd{P(v_1,\ldots,v_n)}{b_P})~ 
-(\globtermbdd{R((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))}{b_R}$)\\
-returns
-
-\smallskip
-
-\mbox{}~ $\begin{array}{l}
-%{\rho}~
-{\exists v'_1~\cdots~v'_n.~ P(v'_1,\ldots,v'_n) \wedge R((v'_1,\ldots,v'_n),(v_1,\ldots,v_n))}\\
-\mapsto\\
-\ml{replace}\\
-~(\ml{appex}~b_P~b_R~\ml{And}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])})\\
-~(\ml{makepairSet[(}\rho_G(v'_1)\ml{,}\rho_G(v_1)\ml{),}\ldots\ml{,(}\rho_G(v'_n)\ml{,}\rho_G(v_n)\ml{)]})
-\end{array}$
-
-
-\item[$\ml{BddPairedImage}\bnind{\ml{BddPairedImage}} : \termbddty\fun\termbddty\fun\termbddty$]\mbox{}\\
-\ml{BddPairedImage}~
-($\globtermbdd{P(v_1,\ldots,v_n)}{b_P})~ 
-(\globtermbdd{R((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))}{b_R}$)\\
-returns
-
-\smallskip
-
-\mbox{}~ $\begin{array}{l}
-%{\rho}~
-{\exists(v'_1~\cdots~v'_n).~ P(v'_1,\ldots,v'_n) \wedge R((v'_1,\ldots,v'_n),(v_1,\ldots,v_n))}\\
-\mapsto\\
-\langle\mbox{\it see source file \ml{BddRules.sml} for the BDD construction}\rangle
-\end{array}$
-
-\end{description}
-
-
-The following are also provided.
-
-\bigskip
-
-\begin{description}
-
-\item[$\ml{ReachByStep}\bnind{\ml{ReachByStep}}:\ty{thm}\fun\termbddty\fun\termbddty\fun\termbddty$]\mbox{}\\
-%
-\vspace*{-8mm}
-\begin{alltt}
-ReachByStep
- (\(\hspace*{0.5mm}\)\Turn \(t\) = ReachBy R B n (v1,...,vn) \Or
-          \Exists(v1',...,vn'). ReachBy R B n (v1',...,vn')
-                          \And
-                          R((v1',...,vn'),(v1,...,vn)))
- (ReachBy R B n (v1,...,vn) \Mapsto b1)
- (R(v1,...,vn,v1',...,vn') \Mapsto b2)
-\end{alltt}
-
-\vspace*{-5mm}
-
-returns \ml{($t~\mapsto~b$)}, where $b$ is the BDD of $t$.
-
-\item[$\begin{array}{l}
-\ml{ComputeReachByFixedpoint}\bnind{\ml{ComputeReachByFixedpoint}}:\\
-~(\ty{int}\fun\termbddty\fun\alpha)\fun\termbddty\fun\termbddty\fun(\termbddty\prod\termbddty)
-\end{array}$]\mbox{}\\
-%
-\vspace*{-5mm}
-\begin{alltt}
-ComputeReachByFixedpoint
- \({\it{report}}\)
- (R(v1,...,vn,v1',...,vn'), b2)
- (B(v1,...,vn), b1)
-\end{alltt}
-
-\vspace*{-3mm}
-
-returns
-
-\ml{
- ((ReachBy R B \(p\) (v1,...,vn)~\Mapsto~ \(b\sb{1}\)),\\
-\mbox{} (ReachBy R B \(p\)+1 (v1,...,vn)~ \Mapsto ~\(b\sb{2}\))
-}
-
-where $p$ is the first number reached such that
-
-~\ml{ReachBy R B $p$ (v1,...,vn) = ReachBy R B ($p$+1) (v1,...,vn)}
-
-and $b_1$, $b_2$ are appropriate BDDs. 
-
-The ML function {\it report\/} is applied at each iteration to the
-iteration counter $i$ ($i=0,1,2,\ldots$) and to the BDD of \ml{ReachBy
-R B $i$ (v1,...,vn)} (see the source code in \ml{BddRules.sml} for
-more details). The purpose of the parameter {\it report\/} is to
-provide a hook for tracing and extracting and/or saving intermediate
-results of the computation (note that storing intermediate BDDs might
-result in high memory usage, as the saved results won't be garbage
-collected).
-
-
-\item[$\begin{array}{l}
-\ml{ComputeReachableBdd}\bnind{\ml{ComputeReachableBdd}}:\\
-~(\ty{int}\fun\termbddty\fun\alpha)\fun(\ty{thm}\prod\ty{thm})\fun(\ty{thm}\prod\termbddty)
-\end{array}$]\mbox{}\\
-%
-\vspace*{-5mm}
-\begin{alltt}
-ComputeReachableBdd
- \({\it{report}}\)
- (\(\hspace*{0.5mm}\)\Turn R(v1,...,vn,v1',...,vn') = R\(\sb{def}\), 
-  \(\hspace*{0.5mm}\)\Turn B(v1,...,vn) = B\(\sb{def}\))
-\end{alltt}
-
-\vspace*{-3mm}
-
-returns the pair
-
-~\ml{(\hspace*{1.5mm}\Turn\hspace*{0.5mm}Reachable R B (v1,...,vn) = ReachBy R B $p$ (v1,...,vn)),\\
-\mbox{}\hspace*{1mm} (Reachable R B (v1,...,vn)~$\mapsto~b$))}
-
-where $p$ is the first number reached such that
-
-~\ml{ReachBy R B $p$ (v1,...,vn) = ReachBy R B ($p$+1) (v1,...,vn)}
-
-The ML function {\it report\/} is applied at each iteration to the
-iteration counter $i$ ($i=0,1,2,\ldots$) and to the BDD of \ml{ReachBy
-R B $i$ (v1,...,vn)} (see the source code in \ml{BddRules.sml} for
-more details). 
-
-\end{description}
+\fbox{\usebox{\BddEqMp}}\bnind{\texttt{BddEqMp}}
 
 \subsection{Miscellaneous functions}\label{misc}
 
@@ -2478,7 +2004,8 @@ more details).
 
 \begin{footnotesize}
 \begin{verbatim}
-dest_term_bdd : term_bdd -> varmap * term * bdd
+dest_term_bdd : term_bdd -> assums * varmap * term * bdd
+getAssums     : term_bdd -> assums
 getVarmap     : term_bdd -> varmap
 getTerm       : term_bdd -> term
 getBdd        : term_bdd -> bdd
@@ -2500,7 +2027,7 @@ getBdd        : term_bdd -> bdd
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\destructors}}
+\fbox{\usebox{\destructors}}\bnind{\texttt{destructors}}
 
 \bigskip
 
@@ -2520,7 +2047,7 @@ getBdd        : term_bdd -> bdd
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\inSupport}}
+\fbox{\usebox{\inSupport}}\bnind{\texttt{inSupport}}
 
 \bigskip
 
@@ -2558,11 +2085,467 @@ corresponding to $bddop$ to $t_1$ and $t_2$.
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
-\fbox{\usebox{\termApply}}
+\fbox{\usebox{\termApply}}\bnind{\texttt{termApply}}
 
 \section{The structure \t{DerivedBddRules}}\label{DerivedBddRules}
 
+The documentation is this section is preliminary, reflecting the
+current status of the module \t{PrimitiveBddRules}. What follows is an edited
+copy of the source file \t{PrimitiveBddRules.sml} in which the comments
+are preserved, but most of the ML source code has been eliminated
+(some is left, if it is thought to be of
+pedagogical or documentation value).
+
+{\footnotesize\begin{verbatim}
+
+(*****************************************************************************)
+(* Test equality of BDD component of two term_bdds and return true or false  *)
+(*****************************************************************************)
+
+fun BddEqualTest tb1 tb2 = bdd.equal (getBdd tb1) (getBdd tb2);
+
+(*****************************************************************************)
+(* Test if the BDD part is TRUE or FALSE                                     *)
+(*****************************************************************************)
+
+fun isTRUE  tb = bdd.equal (getBdd tb) bdd.TRUE
+and isFALSE tb = bdd.equal (getBdd tb) bdd.FALSE;
+
+(*****************************************************************************)
+(* Count number of states (code from Ken Larsen)                             *)
+(*****************************************************************************)
+
+statecount : bdd -> real
+
+(*****************************************************************************)
+(* Destruct a term corresponding to a BuDDY BDD binary operation (bddop).    *)
+(* Fail if not such a term.                                                  *)
+(*****************************************************************************)
+
+exception dest_BddOpError;
+
+dest_BddOp : term -> bddop * term * term
+
+(*****************************************************************************)
+(* Scan a term and construct a term_bdd using the primitive operations       *)
+(* when applicable, and a supplied function on leaves when all else fails    *)
+(*****************************************************************************)
+
+GenTermToTermBdd : (term -> term_bdd) -> varmap -> term -> term_bdd
+
+(*****************************************************************************)
+(* Extend a varmap with a list of variables                                  *)
+(* (allocating new BDD variables, if necessary)                              *)
+(*****************************************************************************)
+
+extendVarmap : term list -> varmap -> varmap
+
+
+
+
+
+(*****************************************************************************)
+(* Convert a BDD to a nested conditional term with respect to a varmap       *)
+(*****************************************************************************)
+
+exception bddToTermError;
+
+bddToTerm : varmap -> bdd -> term
+
+(*****************************************************************************)
+(*               ass vm tm |--> b                                            *)
+(*  -----------------------------------------------                          *)
+(*  [oracles: HolBdd] ass |- tm = ^(bddToTerm vm b)                          *)
+(*****************************************************************************)
+
+TermBddToEqThm : term_bdd -> thm
+
+(*****************************************************************************)
+(* Global assignable varmap                                                  *)
+(*****************************************************************************)
+
+val global_varmap = ref(Varmap.empty);
+
+fun showVarmap () = Varmap.dest(!global_varmap);
+
+(*****************************************************************************)
+(* Add variables to global_varmap and then call GenTermToTermBdd             *)
+(* using the global function !termToTermBddFun on leaves                     *)
+(*****************************************************************************)
+
+exception termToTermBddError;
+
+val termToTermBddFun = 
+ ref(fn (tm:term) => (raise termToTermBddError));
+
+fun termToTermBdd tm =
+ let val vl = rev(all_vars tm)     (* all_vars returns vars in reverse order *)
+     val vm = extendVarmap vl (!global_varmap)
+     val _  = global_varmap := vm
+ in
+  GenTermToTermBdd (!termToTermBddFun) vm tm
+ end;
+
+
+
+(*****************************************************************************)
+(* MkIterThms ReachBy_rec``R((v1,...,vn),(v1',...,vn'))`` ``B(v1,...,vn)`` = *)
+(*  ([|- ReachBy R B 0 (v1,...,vn) = B(v1,...,vn),                           *)
+(*    |- !n. ReachBy R B (SUC n) (v1,...,vn) =                               *)
+(*                ReachBy R B n (v1,...,vn)                                  *)
+(*                \/                                                         *)
+(*                ?v1'...vn'. ReachBy R B n (v1',...,vn')                    *)
+(*                            /\                                             *)
+(*                            R ((v1',...,vn'),(v1,...,vn))]                 *)
+(*                                                                           *)
+(* MkIterThms ReachIn_rec``R((v1,...,vn),(v1',...,vn'))`` ``B(v1,...,vn)`` = *)
+(*  ([|- ReachIn R B 0 (v1,...,vn) = B(v1,...,vn),                           *)
+(*    |- !n. ReachIn R B (SUC n) (v1,...,vn) =                               *)
+(*                ?v1'...vn'. ReachIn R B n (v1',...,vn')                    *)
+(*                            /\                                             *)
+(*                            R ((v1',...,vn'),(v1,...,vn))]                 *)
+(*****************************************************************************)
+
+MkIterThms : thm -> term -> term -> thm * thm
+
+(*****************************************************************************)
+(* Perform disjunctive partitioning. Assume R is of the form                 *)
+(*                                                                           *)
+(*  R((x,y,z),(x',y',z'))=                                                   *)
+(*       ((x' = E1(x,y,z)) /\ (y' = y)         /\ (z' = z))                  *)
+(*    \/ ((x' = x)         /\ (y' = E2(x,y,z)) /\ (z' = z))                  *)
+(*    \/ ((x' = x)         /\ (y' = y)         /\ (z' = E3(x,y,z)))          *)
+(*                                                                           *)
+(* Then, for example, the equation:                                          *)
+(*                                                                           *)
+(*   ReachBy R B (SUC n) (x,y,z) =                                           *)
+(*     ReachBy R B n (x,y,z)                                                 *)
+(*     \/                                                                    *)
+(*     (?x_ y_ z_. ReachBy n R B (x_,y_,z_) /\ R((x_,y_,z_),(x,y,z))))       *)
+(*                                                                           *)
+(* is simplified to:                                                         *)
+(*                                                                           *)
+(*   ReachBy R B (SUC n) (x,y,z) =                                           *)
+(*     ReachBy R B n (x,y,z)                                                 *)
+(*     \/ (?x_. ReachBy R B n (x_,y,z) /\ (x = E1(x_,y,z))                   *)
+(*     \/ (?y_. ReachBy R B n (x,y_,z) /\ (y = E2(x,y_,z))                   *)
+(*     \/ (?z_. ReachBy R B n (x,y,z_) /\ (z = E3(x,y,z_))                   *)
+(*****************************************************************************)
+
+val MakeSimpRecThm = SIMP_RULE bool_ss [LEFT_AND_OVER_OR,EXISTS_OR_THM]);
+
+(*****************************************************************************)
+(*  asl |- t1 = t2   ass vm t1' |--> b                                       *)
+(*  ----------------------------------                                       *)
+(*      (asl U ass) vm t2' |--> b'                                           *)
+(*                                                                           *)
+(* where t1 can be instantiated to t1' and t2' is the corresponding          *)
+(* instance of t2                                                            *)
+(*****************************************************************************)
+
+fun BddApThm th tb =
+ let val (_,vm,t1',b) = dest_term_bdd tb
+ in
+  BddEqMp (REWR_CONV th t1') tb 
+   handle HOL_ERR _ => hol_err "REWR_CONV failed" "BddApthm"
+ end;
+
+(*****************************************************************************)
+(*  ass vm t |--> b                                                          *)
+(*  ----------------                                                         *)
+(*  ass vm tm |--> b'                                                        *)
+(*                                                                           *)
+(* where boolean variables in t can be renamed to get tm and b' is           *)
+(* the corresponding replacement of BDD variables in b                       *)
+(*****************************************************************************)
+
+exception BddApReplaceError;
+
+BddApReplace : term_bdd -> term -> term_bdd
+
+(*****************************************************************************)
+(* BddSubst applies a substitution [(oldtb1,newtb1),...,(oldtni,newtbi)]     *)
+(* to a term_bdd, where oldtbp (1 <= p <= i) must be of the form             *)
+(* ass vm vp |--> bp where vp is a variable, and the varmaps are distinct    *)
+(*                                                                           *)
+(* The preliminary version below separates the substitution into a           *)
+(* restriction (variables mapped to T or F) followed by a variable           *)
+(* renaming (replacement).  A more elaborate scheme will be implemented      *)
+(* using BuDDy's bdd_veccompose.                                             *)
+(*****************************************************************************)
+
+
+
+
+
+(*****************************************************************************)
+(* Split a substitution                                                      *)
+(*                                                                           *)
+(*   [(oldtb1,newtb1),...,(oldtni,newtbi)]                                   *)
+(*                                                                           *)
+(* into a restriction and variable renaming, failing if this isn't possible  *)
+(*****************************************************************************) 
+
+val split_subst =
+ List.partition 
+  (fn (tb,tb')=>
+    let val tm' = getTerm tb'
+    in (tm'=T) orelse (tm'=F) end);
+
+(*****************************************************************************)
+(*                    [(ass1 vm v1 |--> b1 , ass1' vm tm1 |--> b1'),         *)
+(*                                    .                                      *)
+(*                                    .                                      *)
+(*                                    .                                      *)
+(*                     (assi vm vi |--> bi , assi' vm tmi |--> bi')]         *)
+(*                    ass vm tm |--> b                                       *)
+(*  ------------------------------------------------------------------------ *)
+(*   (as1 U ass1' U ... U assi U assi' U ass)                                *)
+(*   vm                                                                      *)
+(*   (subst[v1 |-> tm1, ... , vi |-> tmi]tm)                                 *)
+(*   |-->                                                                    *)
+(*   <BDD resulting from restrict followed by replace>                       *)
+(*****************************************************************************)
+
+fun BddSubst tbl tb =
+ let val (res,rep) = split_subst tbl
+ in BddReplace rep (BddRestrict res tb) end;
+
+(*****************************************************************************)
+(*  ass vm t |--> b                                                          *)
+(*  -----------------                                                        *)
+(*  ass vm tm |--> b'                                                        *)
+(*                                                                           *)
+(* where boolean variables in t can be instantiated to get tm and b' is      *)
+(* the corresponding replacement of BDD variables in b                       *)
+(*****************************************************************************)
+
+exception BddApSubstError;
+
+BddApSubst = fn : term_bdd -> term -> term_bdd
+
+(*****************************************************************************)
+(*          asl |- t1 = t2                                                   *)
+(*   ------------------------------                                          *)
+(*   (addList ass [])  vm t1 |--> b                                          *)
+(*                                                                           *)
+(* Fails if t2 is not built from variables using bddops                      *)
+(*****************************************************************************)
+
+fun eqToTermBdd leaffn vm th =
+ let val th' = SPEC_ALL th
+     val tm  = rhs(concl th')
+ in BddEqMp (SYM th') (GenTermToTermBdd leaffn vm tm) end;
+
+(*****************************************************************************)
+(* Convert an ml positive integer to a HOL numeral                           *)
+(*****************************************************************************)
+
+fun intToTerm n = numSyntax.mk_numeral(Arbnum.fromInt n);
+
+(*****************************************************************************)
+(*  ass vm tm |--> b   conv tm  =  asl |- tm = tm'                           *)
+(*  ----------------------------------------------                           *)
+(*         (addList ass asl) vm tm' |--> b                                   *)
+(*****************************************************************************)
+
+fun BddApConv conv tb = BddEqMp (conv(getTerm tb)) tb;
+
+(*****************************************************************************)
+(* Iterate a function f : int -> 'a -> 'a                                    *)
+(* from an initial value, applying it successively to 0,1,2,... until        *)
+(*                                                                           *)
+(*   p : 'a -> bool                                                          *)
+(*                                                                           *)
+(* is true (at least one iteration is always performed)                      *)
+(*****************************************************************************)
+
+fun iterate p f =
+ let fun iter n x =
+      let val x'  = f n x
+      in if p x' then x' else iter (n+1) x' end
+ in iter 0 end;
+
+
+
+(*****************************************************************************)
+(*   |- f 0 s = ... s ...     |- !n. f (SUC n) s = ... f n ... s ...         *)
+(*   ---------------------------------------------------------------         *)
+(*                     vm ``f i s`` |--> bi                                  *)
+(*                                                                           *)
+(* where i is the first number such that |- f (SUC i) s = f i s              *)
+(* and the function report is applied to the iteration level and current     *)
+(* term_bdd and can be used for tracing.                                     *)
+(*                                                                           *)
+(* A state of the iteration is a pair (tb,tb') consisting of the             *)
+(* previous term_bdd tb and the current one tb'. The initial state           *)
+(* is (somewhat arbitarily) taken to be (tb0,tb0).                           *)
+(*****************************************************************************)
+
+exception computeFixedpointError;
+
+computeFixedpoint : (int -> term_bdd -> 'a) -> varmap -> thm * thm -> term_bdd
+
+(*****************************************************************************)
+(*              ass vm tm |--> b                                             *)
+(*  ----------------------------------------------                           *)
+(*  [((ass1 vm v1 |--> b1),(ass1' vm c1 |--> b1')),                          *)
+(*                        .                                                  *)
+(*                        .                                                  *)
+(*                        .                                                  *)
+(*   ((assi vm vi |--> bi),(assi' vm ci |--> bi')]                           *)
+(*                                                                           *)
+(* with the property that                                                    *)
+(*                                                                           *)
+(* BddRestrict [((ass1 vm v1 |--> b1),(ass1' vm c1 |--> b1')),               *)
+(*                                   .                                       *)
+(*                                   .                                       *)
+(*                                   .                       ,               *)
+(*              ((assi vm vi |--> bi),(assi' vm ci |--> bi'))]               *)
+(*             (ass vm tm |--> b)                                            *)
+(* =                                                                         *)
+(* (ass1 U ass1' U ... U assi U assi' U ass)                                 *)
+(* vm                                                                        *)
+(* (subst[v1|->ci,...,vi|->ci]tm)                                            *)
+(* |--> TRUE                                                                 *)
+(*****************************************************************************)
+
+exception BddSatoneError;
+
+BddSatone : term_bdd -> (term_bdd * term_bdd) list
+
+(*****************************************************************************)
+(*         |- p s = ... s ...                                                *)
+(*         |- f 0 s  = ... s ...                                             *)
+(*         |- f (SUC n) s = ... f n ... s ...                                *)
+(*  ---------------------------------------------------------                *)
+(*  [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 1 s`` |--> b1]                *)
+(*                                                                           *)
+(* where i is the first number such that |- f i s ==> p s                    *)
+(*****************************************************************************)
+
+exception computeTraceError;
+
+computeTrace : (int -> term_bdd -> 'a) 
+                -> varmap -> thm -> thm * thm -> term_bdd list
+
+(*****************************************************************************)
+(*  TraceBack vm                                                             *)
+(*   [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 0 s`` |--> b0]               *)
+(*   (|- p s = ... s ...)                                                    *)
+(*   (|- R((v1,...,vn),(v1',...,vn')) = ...)                                 *)
+(*                                                                           *)
+(* computes a list of pairs of the form (with j = 0,1,...,i-1)               *)
+(*                                                                           *)
+(* ((vm ``ReachIn R B j s_vec /\ Prev R (Eq c_vec) (v1,...,vn)`` |--> bdd),  *)
+(*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
+(*                   .                                                       *)
+(*                   .                                                       *)
+(*                   .                 ,                                     *)
+(*   ((vm vn |--> bn),(vm cn |--> bn'))])                                    *)
+(*                                                                           *)
+(* where s_vec = (v1,...,vn) and c_vec = (c1,...,cn) where ci is T or F      *)
+(* and the second element specifies a state satisfying the first element     *)
+(* and in which state variable vj has value cj (0 <= j <= n).                *)
+(* The last element of the list has the form                                 *)
+(* (({} vm ``ReachIn R B j s_vec /\ p(v1,...,vn)`` |--> bdd),                *)
+(*  [(({} vm v1 |--> b1),{} vm c1 |--> b1')),                                *)
+(*                      .                                                    *)
+(*                      .                                                    *)
+(*                      .                   ,                                *)
+(*   (({} vm vn |--> bn),({} vm cn |--> bn'))])                              *)
+(*                                                                           *)
+(* If [s0,...,si] is the sequence of states, then                            *)
+(* R(s0,s1), R(s1,s2),...,R(s(i-1),sj) and sj satisfies bj and p si          *)
+(*****************************************************************************)
+
+TraceBack : varmap 
+             -> term_bdd list 
+             -> thm -> thm -> (term_bdd * (term_bdd * term_bdd) list) list
+\end{verbatim}}
+
 \section{The structure \t{DerivedBddRulesTheory}}\label{DerivedBddRulesTheory}
+
+The theory \t{DerivedBddRulesTheory} contained the HOL theoremes used
+by the derived rules in \t{DerivedBddRules}. The signature file
+(slightly edited) is given below.
+
+{\footnotesize
+\begin{verbatim}
+  (*  Definitions  *)
+    val Eq_def : thm
+    val Next_def : thm
+    val Prev_def : thm
+    val ReachBy_def : thm
+    val ReachIn_def : thm
+    val Reachable_def : thm
+  
+  (*  Theorems  *)
+    val ReachBy_ReachIn : thm
+    val ReachBy_fixedpoint : thm
+    val ReachBy_rec : thm
+    val ReachIn_rec : thm
+    val Reachable_ReachBy : thm
+
+   [list] Parent theory of "DerivedBddRules"
+   
+   [Eq_def]
+   Definition
+   |- !state0 state. Eq state0 state = (state0 = state)
+   
+   [Next_def]
+   Definition
+   |- !R B state. Next R B state = ?state_. B state_ /\ R (state_,state)
+   
+   [Prev_def]
+   Definition
+   |- !R Q state. Prev R Q state = ?state'. R (state,state') /\ Q state'
+   
+   [ReachBy_def]
+   Definition
+   |- !R B n state. ReachBy R B n state = ?m. m <= n /\ ReachIn R B m state
+   
+   [ReachIn_def]
+   Definition
+   |- (!R B. ReachIn R B 0 = B) /\
+      !R B n. ReachIn R B (SUC n) = Next R (ReachIn R B n)
+   
+   [Reachable_def]
+   Definition
+   |- !R B state. Reachable R B state = ?n. ReachIn R B n state
+   
+   [ReachBy_ReachIn]
+   Theorem
+   |- (!R B state. ReachBy R B 0 state = B state) /\
+      !R B n state.
+        ReachBy R B (SUC n) state =
+        ReachBy R B n state \/ ReachIn R B (SUC n) state
+   
+   [ReachBy_fixedpoint]
+   Theorem
+   |- !R B n.
+        (ReachBy R B n = ReachBy R B (SUC n)) ==>
+        (Reachable R B = ReachBy R B n)
+   
+   [ReachBy_rec]
+   Theorem
+   |- (!R B state. ReachBy R B 0 state = B state) /\
+      !R B n state.
+        ReachBy R B (SUC n) state =
+        ReachBy R B n state \/
+        ?state_. ReachBy R B n state_ /\ R (state_,state)
+   
+   [ReachIn_rec]
+   Theorem
+   |- (!R B state. ReachIn R B 0 state = B state) /\
+      !R B n state.
+        ReachIn R B (SUC n) state =
+        ?state_. ReachIn R B n state_ /\ R (state_,state)
+   
+   [Reachable_ReachBy]
+   Theorem
+   |- Reachable R B state = ?n. ReachBy R B n state
+\end{verbatim}}
 
 \section*{Acknowledgements}\addcontentsline{toc}{section}{Acknowledgements}
 
@@ -2589,7 +2572,7 @@ Michael Norrish and Konrad Slind have provided invaluable help with
 
 Mark Aagaard provided some
 of the information on Voss and its successors described in
-Section~\ref{related}.
+the preface.
 
 Paul Jackson, Jesper M\o{}ller and Konrad Slind provided detailed
 comments and suggestions on a first draft of the University of
