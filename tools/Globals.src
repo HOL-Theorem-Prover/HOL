@@ -102,9 +102,7 @@ val max_print_depth = ref ~1;
 
 val pp_flags = {show_restrict  = ref true,
                 show_types     = ref false,
-                infix_at_front = ref false,
-                stack_infixes  = ref true,
-                in_at_end      = ref false};
+                show_numeral_types = ref false};
 
 
 (*---------------------------------------------------------------------------*
@@ -119,24 +117,13 @@ val show_restrict = #show_restrict pp_flags;
 
 val show_types = #show_types pp_flags;
 
-(*---------------------------------------------------------------------------*
- * For printing HOL infixes at beginning or end of lines.                    *
- *---------------------------------------------------------------------------*)
-
-val infix_at_front = #infix_at_front pp_flags;
 
 (*---------------------------------------------------------------------------*
- * Controls whether each argument of an infix goes on a new line.            *
+ * To make the system print out character suffixes on numerals to identify   *
+ * them as belonging to particular types.                                    *
  *---------------------------------------------------------------------------*)
 
-val stack_infixes = #stack_infixes pp_flags;
-
-(*---------------------------------------------------------------------------*
- * Controls whether the "in" of a let expression is printed at the           *
- * end of the line.                                                          *
- *---------------------------------------------------------------------------*)
-
-val in_at_end = #in_at_end pp_flags;
+val show_numeral_types = #show_numeral_types pp_flags;
 
 val goal_line = ref "------------------------------------";
 
@@ -147,6 +134,14 @@ val goal_line = ref "------------------------------------";
  *---------------------------------------------------------------------------*)
 
 val guessing_tyvars = ref true;
+
+(*---------------------------------------------------------------------------*
+ * At the end of type inference, HOL will guess which instance of an         *
+ * overloaded constant to pick if there there is more than one choice, if    *
+ * this flag is set.                                                         *
+ *---------------------------------------------------------------------------*)
+
+val guessing_overloads = ref true;
 
 (*---------------------------------------------------------------------------*
  * If this flag is set, then the system will print a message when such       *
