@@ -419,6 +419,11 @@ fun foldl f zero []      = zero
               (!v1 v2 v3. P <| fld1 := v1; fld2 := v2; fld3 := v3 |>)
 
        4.  likewise, an EXISTS_RECD
+
+       5.  one-one ness for literals
+              (<| fld1 := v11; fld2 := v21; fld3 := v31 |> =
+               <| fld1 := v12; fld2 := v22; fld3 := v32 |>) =
+              (v11 = v12) /\ (v21 = v22) /\ (v31 = v32)
     *)
     local
       fun mk_var_avds (nm, ty, avoids) = let
@@ -433,11 +438,23 @@ fun foldl f zero []      = zero
                         mk_var_avds(app_letter ty, ty, var::sofar)::sofar)
                     [var] types,
                   length fields)
+      fun augvar n v = let
+        val (nm, ty) = dest_var v
+      in
+        mk_var(nm ^ Int.toString n, ty)
+      end
+      val vvars1 = map (augvar 1) value_vars
+      val vvars2 = map (augvar 2) value_vars
       val arb = mk_const("ARB", typ)
       val updfns =
         map2 (fn upd => fn v => mk_comb(upd, v)) updfn_terms value_vars
       val lhs = List.foldr mk_comb var updfns
       val rhs = List.foldr mk_comb arb updfns
+
+      val lit1 =
+          List.foldr mk_comb arb (map2 (curry mk_comb) updfn_terms vvars1)
+      val lit2 =
+          List.foldr mk_comb arb (map2 (curry mk_comb) updfn_terms vvars2)
 
       val literal_equality =
           GENL (var::value_vars)
@@ -478,6 +495,12 @@ fun foldl f zero []      = zero
                                          ASSUME_TAC) THEN
                    EXISTS_TAC rhs THEN ASM_REWRITE_TAC []
                  ]))
+
+      val literal_11 =
+          GENL (vvars1 @ vvars2)
+               (REWRITE_RULE [accupd_thm]
+                             (SPECL [lit1, lit2] component_wise_equality))
+
     in
       val literal_equality =
           save_thm(typename ^ "_updates_eq_literal", literal_equality)
@@ -485,13 +508,15 @@ fun foldl f zero []      = zero
           save_thm(typename ^ "_literal_nchotomy", literal_nchotomy)
       val forall_thm = save_thm("FORALL_" ^ typename, forall_thm)
       val exists_thm = save_thm("EXISTS_"^ typename, exists_thm)
+      val literal_11 = save_thm(typename ^ "_literal_11", literal_11)
     end
 
     (* add to the TypeBase's simpls entry for the record type *)
     val existing_simpls = TypeBasePure.simpls_of tyinfo
     val new_simpls = let
       val new_simpls0 =  [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
-                          updupd_thm, accfupd_thm, literal_equality]
+                          updupd_thm, accfupd_thm, literal_equality,
+                          literal_11]
     in
       if not (null upd_canon_thms) then updcanon_thm :: new_simpls0
       else new_simpls0
@@ -529,7 +554,8 @@ fun foldl f zero []      = zero
       (new_tyinfo,
        map (concat typename)
           (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
-            "_accupds", "_accfupds", "_updupds", "_fn_updates"] @
+            "_accupds", "_accfupds", "_updupds", "_fn_updates",
+            "_literal_11"] @
           (if not (null upd_canon_thms) then ["_updcanon"] else [])))
     end
 
