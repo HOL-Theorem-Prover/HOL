@@ -8,14 +8,18 @@ MOSMLC=$(MOSMLBIN)/mosmlc -c
 # Your C compiler
 CC=
 
-CINCLUDE=-I$(MOSMLRUNTIME) -I./buddy17/src
-CFLAGS=
-LIBS=-L./buddy17/src -lbdd
+BUDDYDIR=buddy
+OPTS=-Wall -O3
+CINCLUDE=-I$(MOSMLRUNTIME) -I./$(BUDDYDIR)/src
+#CFLAGS=
+CFLAGS= -Dunix $(OPTS) $(CINCLUDE)
+LIBS=-L./$(BUDDYDIR)/src -lbdd
 
 CFILES=muddy.c
 COBJS=muddy.o
 
-BUDDYLIB=./buddy17/src/libbdd.a
+BUDDYLIB=./$(BUDDYDIR)/src/libbdd.a
+
 
 .SUFFIXES :
 .SUFFIXES : .c .o
@@ -26,13 +30,14 @@ muddy.so: $(COBJS) $(BUDDYLIB)
 	DLLIBCOMP
 
 $(BUDDYLIB):
-	cd buddy17; make
+	cd $(BUDDYDIR); make
+
 
 .c.o:
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 clean:
-	cd buddy17; make clean; rm src/libbdd.a
-	rm -f *.u?
+	rm -f *.u? 
 	rm -f *.o *.so
 	rm -f Makefile.bak
+	cd $(BUDDYDIR); make clean
