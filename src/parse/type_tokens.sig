@@ -1,9 +1,13 @@
 signature type_tokens = sig
 
-  datatype 'a type_token =
-    TypeIdent of string | TypeSymbol of string | TypeVar of string |
-    Comma | LParen | RParen |
-    AQ of 'a
+  datatype 'a type_token 
+      = TypeIdent of string
+      | TypeSymbol of string 
+      | TypeVar of string
+      | Comma 
+      | LParen 
+      | RParen
+      | AQ of 'a
 
   val lex : ('a type_token, 'a frag) monadic_parse.Parser
 

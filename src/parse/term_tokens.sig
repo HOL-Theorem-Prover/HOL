@@ -1,4 +1,5 @@
-signature term_tokens = sig
+signature term_tokens = 
+sig
 
   datatype 'a term_token =
     Ident of string

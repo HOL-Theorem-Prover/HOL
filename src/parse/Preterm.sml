@@ -293,8 +293,8 @@ fun is_atom (Var _) = true
   | is_atom (Constrained(tm,_)) = is_atom tm
   | is_atom (Overloaded _) = true
   | is_atom (t as Comb{Rator,Rand}) =
-      Numeral.is_numeral (to_term (overloading_resolution t)) orelse
-      Numeral.is_numeral (to_term (overloading_resolution Rand)) andalso
+      Literal.is_numeral (to_term (overloading_resolution t)) orelse
+      Literal.is_numeral (to_term (overloading_resolution Rand)) andalso
         (case Rator
           of Overloaded{Name,...} => Name = fromNum_str
            | Const{Name,...} => Name = nat_elim_term

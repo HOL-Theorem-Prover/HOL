@@ -1,4 +1,5 @@
-signature parse_type = sig
+signature parse_type = 
+sig
   type 'a token = 'a type_tokens.type_token
   datatype grammar_rule =
     SUFFIX of string list
@@ -41,4 +42,3 @@ signature parse_type = sig
   val merge_grammars : grammar * grammar -> grammar
 
 end
-

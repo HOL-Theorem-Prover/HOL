@@ -3,6 +3,7 @@ sig
   type pretype = Pretype.pretype
   type preterm = Preterm.preterm
   type term    = Term.term
+
   type env
   type preterm_in_env = env -> preterm * env
   type bvar_in_env    = env -> (preterm -> preterm) * env
@@ -34,4 +35,4 @@ sig
   val associate_restriction :string * string -> unit
   val delete_restriction    :string -> unit
 
-end;
+end

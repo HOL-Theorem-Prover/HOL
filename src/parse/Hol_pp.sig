@@ -1,5 +1,5 @@
 (* ===================================================================== *)
-(* FILE          : hol_pp.sig                                            *)
+(* FILE          : Hol_pp.sig                                            *)
 (* DESCRIPTION   : Signature for the prettyprinting of HOL terms and     *)
 (*                 types.                                                *)
 (*                                                                       *)
@@ -12,10 +12,14 @@
 
 signature Hol_pp =
 sig
-  val pp_type : Portable.ppstream -> Type.hol_type -> unit
-  val pp_term : Portable.ppstream -> Term.term -> unit
-  val type_to_string : Type.hol_type -> string
-  val term_to_string : Term.term -> string
-  val print_type : Type.hol_type -> unit
-  val print_term : Term.term -> unit
+  type ppstream = Portable.ppstream
+  type term = Term.term
+  type hol_type = Type.hol_type
+
+  val pp_type        : ppstream -> hol_type -> unit
+  val pp_term        : ppstream -> term -> unit
+  val type_to_string : hol_type -> string
+  val term_to_string : term -> string
+  val print_type     : hol_type -> unit
+  val print_term     : term -> unit
 end;

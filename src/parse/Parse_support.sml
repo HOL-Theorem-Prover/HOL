@@ -5,7 +5,7 @@ type pretype = Pretype.pretype
 type preterm = Preterm.preterm
 type term    = Term.term
 
-open Lib Feedback HolKernel GrammarSpecials;
+open HolKernel GrammarSpecials;
 
 val ERROR = mk_HOL_ERR "Parse_support";
 
@@ -105,7 +105,7 @@ fun gen_const s =
              in Preterm.Const
                   {Name=Name, Thy=Thy,
                    Ty=Pretype.rename_typevars (Pretype.fromType Ty)}
-             end;
+             end
 
 
 
@@ -167,22 +167,21 @@ fun make_bvar (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E)}, E);
      Treatment of overloaded identifiers
  ---------------------------------------------------------------------- *)
 
-fun gen_overloaded_const oinfo s = let
-  open Overload
-  val opinfo = valOf (info_for_name oinfo s)
-    handle Option => raise Fail "gen_overloaded_const: invariant failure"
-in
-  case #actual_ops opinfo of
-    [{Ty,Name,Thy}] =>
-      Preterm.Const{Name = Name, Thy=Thy,
-                    Ty=Pretype.rename_typevars (Pretype.fromType Ty)}
-  | _ => let
-      val base_pretype0 = Pretype.fromType (#base_type opinfo)
-      val new_pretype = Pretype.rename_typevars base_pretype0
-    in
-      Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo}
+fun gen_overloaded_const oinfo s = 
+ let open Overload
+     val opinfo = valOf (info_for_name oinfo s)
+         handle Option => raise Fail "gen_overloaded_const: invariant failure"
+ in
+  case #actual_ops opinfo 
+   of [{Ty,Name,Thy}] =>
+         Preterm.Const{Name=Name, Thy=Thy,
+                   Ty=Pretype.rename_typevars (Pretype.fromType Ty)}
+  | otherwise => 
+     let val base_pretype0 = Pretype.fromType (#base_type opinfo)
+         val new_pretype = Pretype.rename_typevars base_pretype0
+     in Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo}
     end
-end
+ end
 
 
 (*---------------------------------------------------------------------------
@@ -209,17 +208,49 @@ end
 fun make_const s E = (gen_const s, E)
 
 (*---------------------------------------------------------------------------
+    Making preterm string literals. 
+ ---------------------------------------------------------------------------*)
+
+local val num_ty = Pretype.Tyop("num",[])
+      val char_ty = Pretype.Tyop("char",[])
+      val string_ty = Pretype.Tyop("string",[])
+      fun funty ty1 ty2 = Pretype.Tyop("fun",[ty1,ty2])
+      fun mk_comb(ptm1,ptm2) = Preterm.Comb{Rator=ptm1,Rand=ptm2}
+      val CHAR = Preterm.Const
+                   {Name="CHAR",Thy="string",Ty=funty num_ty char_ty}
+      val STRING = Preterm.Const {Name="STRING",Thy="string",
+                      Ty=funty char_ty (funty string_ty string_ty)}
+      val EMPTY = Preterm.Const
+                      {Name="EMPTYSTRING",Thy="string",Ty=string_ty}
+      fun mk_char ptm = Preterm.Comb{Rator=CHAR,Rand=ptm}
+      fun mk_string (ptm1,ptm2) = 
+          Preterm.Comb{Rator=Preterm.Comb{Rator=STRING,Rand=ptm1},Rand=ptm2}
+      val mk_numeral = Literal.gen_mk_numeral
+          {mk_comb = mk_comb,
+          ZERO = Preterm.Const {Name="0",Thy="num",Ty=num_ty},
+          ALT_ZERO = Preterm.Const{Name="ALT_ZERO",Thy="arithmetic",Ty=num_ty},
+          NUMERAL = Preterm.Const 
+                     {Name="NUMERAL",Thy="arithmetic",Ty=funty num_ty num_ty},
+          BIT1 = Preterm.Const {Name="NUMERAL_BIT1",
+                                Thy="arithmetic",Ty=funty num_ty num_ty},
+          BIT2 = Preterm.Const {Name="NUMERAL_BIT2",
+                                Thy="arithmetic",Ty=funty num_ty num_ty}}
+in
+fun make_string_literal s =
+ Literal.mk_string_lit
+     {mk_string = mk_string,
+      emptystring = EMPTY,
+      fromMLchar = fn ch => mk_char(mk_numeral(Arbnum.fromInt (Char.ord ch)))}
+  (String.substring(s,1,String.size s - 2))
+end;
+
+(*---------------------------------------------------------------------------
     "make_qconst" ignores overloading and visibility information. The
     idea is that if we ask to make a long identifier, it should be
     treated as visible.
  ---------------------------------------------------------------------------*)
 
-fun make_qconst _ (p as (thy,s)) E =
-  if Lexis.is_string_literal s andalso thy="string"
-  then (gen_const s, E) handle HOL_ERR _
-        => raise ERROR "make_qconst"
-                "string literals not lexically OK until stringTheory loaded"
-  else (gen_thy_const p, E);
+fun make_qconst _ (p as (thy,s)) E = (gen_thy_const p, E);
 
 fun make_atom oinfo s E =
  make_bvar(s,E) handle HOL_ERR _
@@ -231,10 +262,10 @@ fun make_atom oinfo s E =
                  [recsel_special, recupd_special, recfupd_special]
    of NONE =>
        if Lexis.is_string_literal s
-       then (gen_const s, E) handle HOL_ERR _
+       then (make_string_literal s, E) handle HOL_ERR _
              => raise ERROR "make_atom"
-                "string literals not lexically OK until stringTheory loaded"
-       else make_free_var  (s, E)
+                       ("Unable to make the string literal: "^s)
+       else make_free_var (s, E)
     | SOME rfn =>
         raise ERROR "make_atom"
                ("Record field "^String.extract(s, size rfn, NONE)^
@@ -420,8 +451,7 @@ fun make_set_abs (tm1,tm2) (E as {scope=scope0,...}:env) =
        val init_fv = #free e3
    in
    case (gather (fn (name,_) => mem name fv_names) init_fv)
-     of [] => raise ERROR"make_set_abs"
-                                "no free variables in set abstraction"
+     of [] => raise ERROR "make_set_abs" "no free variables in set abstraction"
       | quants =>
          let val quants' = map
                 (fn (bnd as (Name,Ty)) =>

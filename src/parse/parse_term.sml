@@ -1,3 +1,6 @@
+structure parse_term :> parse_term = 
+struct
+
 open Lib
 open monadic_parse optmonad term_tokens term_grammar HOLgrammars
 open GrammarSpecials
@@ -718,7 +721,7 @@ fun parse_term (G : grammar) typeparser = let
               end
             | (_, Numeral(dp, copt)) => let
                 val numeral_part =
-                  Numeral.gen_mk_numeral
+                  Literal.gen_mk_numeral
                        {mk_comb = COMB,
                         ZERO = QIDENT ("num", "0"),
                         ALT_ZERO = QIDENT ("arithmetic", "ALT_ZERO"),
@@ -1221,3 +1224,6 @@ val tests : (unit frag list * unit preterm) list =
 app do_test tests;
 
 *)
+
+
+end

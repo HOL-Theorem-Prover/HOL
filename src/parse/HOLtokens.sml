@@ -1,3 +1,6 @@
+structure HOLtokens :> HOLtokens = 
+struct
+
 type charclass = char -> bool
 
 infix ANDNOT OR
@@ -14,3 +17,4 @@ val HOLsym = fromLex Lexis.hol_symbols
 
 val HOLspecials = ITEMS "(){}[]."
 
+end;

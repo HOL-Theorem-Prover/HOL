@@ -1,8 +1,14 @@
+structure type_tokens :> type_tokens =
+struct
 
-datatype 'a type_token =
-  TypeIdent of string | TypeSymbol of string | TypeVar of string |
-  Comma | LParen | RParen |
-  AQ of 'a
+datatype 'a type_token 
+     = TypeIdent of string
+     | TypeSymbol of string
+     | TypeVar of string
+     | Comma 
+     | LParen 
+     | RParen
+     | AQ of 'a
 
 
 open optmonad monadic_parse
@@ -39,3 +45,4 @@ fun is_typesymbol (TypeSymbol _) = true
 fun is_aq (AQ _) = true
   | is_aq _ = false
 
+end

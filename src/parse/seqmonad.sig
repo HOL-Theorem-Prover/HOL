@@ -1,3 +1,6 @@
+signature seqmonad = 
+sig
+
 type ('a, 'b) seqmonad = 'a -> ('a * 'b) seq.seq
 
 val fail : ('a, 'b) seqmonad
@@ -18,4 +21,4 @@ val tryall : ('a -> ('b, 'c) seqmonad) -> 'a list -> ('b, 'c) seqmonad
 val optional : ('a, 'b) seqmonad -> ('a, 'b option) seqmonad
 val mmap : ('a -> ('b, 'c) seqmonad) -> 'a list -> ('b, 'c list) seqmonad
 
-
+end

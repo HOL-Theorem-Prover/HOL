@@ -1,7 +1,7 @@
 structure term_pp :> term_pp =
 struct
 
-open Portable Feedback Term HolKernel term_grammar
+open Portable HolKernel term_grammar
      HOLtokens HOLgrammars GrammarSpecials;
 
 
@@ -480,7 +480,7 @@ fun pp_term (G : grammar) TyG = let
         | SOME s => s
     in
       pbegin (!Globals.show_types);
-      add_string (Arbnum.toString (Numeral.dest_numeral tm));
+      add_string (Arbnum.toString (Literal.dest_numeral tm));
       if
         injname <> fromNum_str orelse
         !Globals.show_numeral_types
@@ -508,13 +508,16 @@ fun pp_term (G : grammar) TyG = let
           Prec (n, _) => (n > comb_prec)
         | _ => false
       val addparens = add_l orelse add_r
+      val _ = case total Literal.dest_string_lit tm
+               of NONE => ()
+                | SOME s => (add_string (Lib.mlquote s); raise SimpleExit)
       val _ =
-        if Numeral.is_numeral tm andalso can_pr_numeral NONE then
+        if Literal.is_numeral tm andalso can_pr_numeral NONE then
           (pr_numeral NONE tm; raise SimpleExit)
         else
           ()
       val _ =
-        (if Numeral.is_numeral t2
+        (if Literal.is_numeral t2
             andalso can_pr_numeral (SOME (atom_name t1))
          then (pr_numeral (SOME t1) t2; raise SimpleExit)
          else ()) handle SimpleExit => raise SimpleExit | _ => ()
@@ -939,12 +942,24 @@ fun pp_term (G : grammar) TyG = let
       end_block()
     end
 
+    fun print_string_literal s = 
+      let fun tr #"\\" = "\\\\"
+            | tr #"\"" = "\\\""
+            | tr #"\n" = "\\n"
+            | tr c = str c
+          val contents =
+            if String.sub(s,0) = #"\"" 
+             then String.translate tr (String.substring(s,1,size s - 2))
+             else ""
+      in add_string "\""; add_string contents; add_string "\""
+      end
+
     val _ = if is_ty_antiq tm then (print_ty_antiq tm; raise SimpleExit)
             else ()
   in
     if depth = 0 then add_string "..."
     else
-      case (dest_term tm) of
+      case dest_term tm of
         VAR(vname, Ty) => let
           val vrule = lookup_term vname
           fun add_type () = let
@@ -969,97 +984,72 @@ fun pp_term (G : grammar) TyG = let
           if print_type then add_type() else ();
           pend print_type; end_block()
         end
-      | CONST{Name = cname0, Thy, Ty} => let
-          val cname =
-            case Overload.overloading_of_term overload_info tm of
-              SOME s =>
-                if
-                  isPrefix recsel_special s orelse isPrefix recupd_special s
-                  orelse isPrefix recfupd_special s
-                then cname0 else s
-            | NONE => cname0
-          val crules = lookup_term cname
-          val is_string_literal =
-            (fst(dest_type Ty) = "string" handle HOL_ERR _ => false) andalso
-            (cname = "emptystring" orelse Lexis.is_string_literal cname)
-          fun print_string_literal s = let
-            fun tr #"\\" = "\\\\"
-              | tr #"\"" = "\\\""
-              | tr #"\n" = "\\n"
-              | tr c = str c
-            val contents =
-              if String.sub(s,0) = #"\"" then
-                String.translate tr (String.substring(s, 1, size s - 2))
-              else
-                ""
-          in
-            add_string "\""; add_string contents; add_string "\""
-          end
-        in
+      | CONST{Name, Thy, Ty} => 
+         let val cname =
+               case Overload.overloading_of_term overload_info tm
+                of NONE => Name
+                 | SOME s => if isPrefix recsel_special s orelse 
+                                isPrefix recupd_special s orelse 
+                                isPrefix recfupd_special s
+                             then Name else s
+             val crules = lookup_term cname
+         in
           if isSome crules then pr_sole_name cname (map #2 (valOf crules))
-          else
-            if cname = "0" andalso can_pr_numeral NONE then
-              pr_numeral NONE tm
-            else
-              if is_string_literal then print_string_literal cname
-              else add_string cname
+          else if cname = "0" andalso can_pr_numeral NONE 
+                then pr_numeral NONE tm
+                else add_string cname
         end
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
           fun is_atom tm = is_const tm orelse is_var tm
-          fun pr_atomf fname = let
-            val candidate_rules = lookup_term fname
-            fun is_list (r as {nilstr, cons, ...}) tm =
-              (has_name nilstr tm) orelse
-              is_comb tm andalso
-              let
-                val (t0, tail) = dest_comb tm
-              in
-                is_list r tail andalso is_comb t0 andalso
-                has_name cons (rator t0)
-              end
-            val restr_binder =
-              find_partial (fn (b,s) => if s = fname then SOME b else NONE)
-              restr_binders
-            val restr_binder_rule = let
-              val condition =
-                isSome restr_binder andalso length args = 1 andalso
-                my_is_abs Rand
-            in
-              if condition then let
-                val optrule =
-                  lookup_term (binder_to_string G (valOf restr_binder))
-                fun ok_rule (_, r) =
-                  case r of PREFIX(BINDER _) => true | _ => false
-              in
-                case optrule of
-                  SOME rule_list => List.find ok_rule rule_list
-                | _ => NONE
-              end
-              else
-                NONE
-            end
-          in
-            case candidate_rules of
-              NONE =>
-                if is_let tm then pr_let lgrav rgrav tm
-                else let
-                in
-                  case restr_binder of
-                    NONE => pr_comb tm Rator Rand
-                  | SOME LAMBDA =>
-                      if isSome restr_binder_rule then pr_abs tm
-                      else pr_comb tm Rator Rand
-                  | SOME (BinderString bs) =>
-                      if isSome restr_binder_rule then
-                        pr_comb_with_rule (#2 (valOf restr_binder_rule))
-                        {fprec = #1 (valOf restr_binder_rule),
-                         fname = binder_to_string G (valOf restr_binder),
-                         f=f} args Rand
-                      else pr_comb tm Rator Rand
+          fun pr_atomf fname =
+           let val candidate_rules = lookup_term fname
+               fun is_list (r as {nilstr, cons, ...}) tm =
+                    (has_name nilstr tm) 
+                    orelse
+                    is_comb tm andalso
+                      let val (t0, tail) = dest_comb tm
+                      in is_list r tail andalso is_comb t0 
+                         andalso has_name cons (rator t0)
+                      end
+               val restr_binder =
+                  find_partial (fn (b,s) => if s=fname then SOME b else NONE)
+                          restr_binders
+               val restr_binder_rule = 
+                let val condition = isSome restr_binder andalso 
+                                    length args = 1 andalso my_is_abs Rand
+                in if condition 
+                   then let val optrule = lookup_term 
+                                  (binder_to_string G (valOf restr_binder))
+                            fun ok_rule (_, r) =
+                                case r of PREFIX(BINDER _) => true 
+                                        | otherwise => false
+                        in
+                           case optrule 
+                            of SOME rule_list => List.find ok_rule rule_list
+                             | otherwise => NONE
+                        end
+                   else NONE
                 end
-            | SOME crules0 => let
-                fun suitable_rule rule =
+           in case candidate_rules 
+              of NONE =>
+                  if is_let tm then pr_let lgrav rgrav tm
+                  else let in
+                       case restr_binder 
+                       of NONE => pr_comb tm Rator Rand
+                        | SOME LAMBDA =>
+                            if isSome restr_binder_rule then pr_abs tm
+                            else pr_comb tm Rator Rand
+                        | SOME (BinderString bs) =>
+                           if isSome restr_binder_rule 
+                           then pr_comb_with_rule(#2(valOf restr_binder_rule))
+                                 {fprec = #1 (valOf restr_binder_rule),
+                                 fname=binder_to_string G (valOf restr_binder),
+                                 f=f} args Rand
+                           else pr_comb tm Rator Rand
+                       end
+            | SOME crules0 => 
+              let fun suitable_rule rule =
                   case rule of
                     INFIX(STD_infix(rrlist, _)) =>
                       numTMs (rule_elements (#elements (hd rrlist))) + 1 =
@@ -1087,15 +1077,12 @@ fun pp_term (G : grammar) TyG = let
                 val (brules, others) = splitP (is_binder_rule o #2) others0
               in
                 if not (null brules) then
-                  pr_comb_with_rule (#2 (hd brules)) {fprec = #1 (hd brules),
-                                                      fname = fname,
-                                                      f = f}
-                  args Rand
+                  pr_comb_with_rule (#2 (hd brules)) 
+                    {fprec = #1 (hd brules), fname=fname, f=f} args Rand
                 else
                   if not (null lrules) then
-                    pr_comb_with_rule (#2 (hd lrules)) {fprec = #1 (hd lrules),
-                                                        fname = fname, f = f}
-                    args Rand
+                    pr_comb_with_rule (#2 (hd lrules)) 
+                      {fprec = #1 (hd lrules), fname=fname, f=f} args Rand
                   else
                     if not (null others) then let
                       val preferred =
@@ -1103,23 +1090,21 @@ fun pp_term (G : grammar) TyG = let
                     in
                       case preferred of
                         SOME (p,r) =>
-                          pr_comb_with_rule r {fprec = p, fname = fname, f = f}
+                          pr_comb_with_rule r {fprec=p, fname=fname, f=f}
                           args Rand
                       | NONE => pr_comb tm Rator Rand
                     end
                     else
                       pr_comb tm Rator Rand
               end
-          end
+           end (* pr_atomf *)
         in
-          if (is_atom f) then let
-            val name_to_use =
-              case (Overload.overloading_of_term overload_info f) of
-                SOME s =>
-                  if not (String.isPrefix recsel_special s) then
-                    s
-                  else fst (dest_atom f)
-              | NONE => fst (dest_atom f)
+          if is_atom f then 
+          let val name_to_use =
+              case Overload.overloading_of_term overload_info f
+               of SOME s => if not (String.isPrefix recsel_special s) then s
+                            else fst (dest_atom f)
+                | NONE => fst (dest_atom f)
           in
             pr_atomf name_to_use
           end
@@ -1129,13 +1114,13 @@ fun pp_term (G : grammar) TyG = let
   end handle SimpleExit => ()
   fun start_names() = {fvars_seen = ref [], bvars_seen = ref []}
 in
-  (fn pps => fn t => let
-  in
-    Portable.begin_block pps CONSISTENT 0;
-    pr_term false (!Globals.show_types) (start_names())
-    pps t RealTop RealTop RealTop (!Globals.max_print_depth);
-    Portable.end_block pps
-  end)
+  fn pps => fn t => 
+    let in
+       Portable.begin_block pps CONSISTENT 0;
+       pr_term false (!Globals.show_types) (start_names())
+       pps t RealTop RealTop RealTop (!Globals.max_print_depth);
+       Portable.end_block pps
+    end
 end
 
 (* testing

@@ -1,5 +1,8 @@
 (* Author: Michael Norrish *)
 
+structure optmonad :> optmonad =
+struct
+
 type ('a, 'b) optmonad = 'a -> ('a * 'b option)
 
 fun fail env = (env, NONE)
@@ -57,3 +60,5 @@ fun many p =
 
 fun many1 p =
   p >- (fn i => many p >- (fn rest => return (i::rest)))
+
+end

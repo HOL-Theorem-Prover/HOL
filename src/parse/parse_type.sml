@@ -1,6 +1,8 @@
-open type_tokens HOLgrammars
+structure parse_type :> parse_type =
+struct
 
-open monadic_parse optmonad
+open type_tokens HOLgrammars monadic_parse optmonad
+
 infix >- ++ >> >->
 
 datatype grammar_rule =
@@ -176,4 +178,4 @@ in
   merge_acc [] (G1, G2)
 end
 
-
+end;

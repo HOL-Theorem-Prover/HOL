@@ -1,3 +1,6 @@
+signature optmonad =
+sig
+
 type ('a, 'b) optmonad = 'a -> ('a * 'b option)
 
 val fail : ('a, 'b) optmonad
@@ -21,3 +24,4 @@ val mmap : ('a -> ('b, 'c) optmonad) -> 'a list -> ('b, 'c list) optmonad
 val many : ('b, 'a) optmonad -> ('b, 'a list) optmonad
 val many1 : ('b, 'a) optmonad -> ('b, 'a list) optmonad
 
+end
