@@ -40,7 +40,7 @@ fun Declare q =
 (*---------------------------------------------------------------------------*)
 
 fun Weak_Declare s q =
- let val def = bossLIb.Hol_defn s q
+ let val def = bossLib.Hol_defn s q
      val clauses = list_mk_conj(map concl (Defn.eqns_of def))
      val asMLstring = PP.pp_to_string 70 Drop.pp_defn_as_ML clauses
      val _ = if !checkingML then 

@@ -127,7 +127,7 @@ fun term_to_ML ppstrm =
             add_string")"
          end
   and pp_int_literal tm = 
-         let val s = intML.toString(!dest_int_literal_hook tm)
+         let val s = Arbint.toString(!dest_int_literal_hook tm)
          in add_string"("; add_break(0,0);
             add_string "intML.fromString";
             add_break(0,0);
