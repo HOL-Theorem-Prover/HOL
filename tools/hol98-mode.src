@@ -32,6 +32,10 @@
 (defvar hol-generate-locpragma-p t
   "*Whether or not to generate (*#loc row col *) pragmas for HOL.")
 
+(defvar hol-emit-time-elapsed-p nil
+  "*Whether or not to print time elapsed messages after causing HOL
+evaluations.")
+
 (put 'hol-term 'end-op
      (function (lambda () (skip-chars-forward "^`"))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
@@ -216,14 +220,35 @@ process in it."
       (goto-char initial-point)
       (format " (*#loc %d %d *)" row col))))
 
+(defun send-timed-string-to-hol (string echo-p)
+  "Send STRING to HOL (with send-string-to-hol), and emit information about
+how long this took."
+  (interactive)
+  (send-string-to-hol
+   "val _ = quietdec := true;
+    val hol_mode_time0 = #usr (Timer.checkCPUTimer Globals.hol_clock);
+    val _ = quietdec := false")
+  (send-string-to-hol string echo-p)
+  (send-string-to-hol
+       "val _ = let val t = #usr (Timer.checkCPUTimer Globals.hol_clock)
+                      val elapsed = Time.-(t, hol_mode_time0)
+                in
+                      print (\"\\n*** Time taken: \"^
+                             Time.toString elapsed^\"s\\n\")
+                  end"))
+
+
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
   (interactive "r\nP")
   (let* ((region-string (with-hol-locpragma start (buffer-substring start end)))
          (e-string (concat "goalstackLib." (if arg "expandf" "e")))
          (tactic-string
-          (format "%s (%s) handle e => Raise e" e-string region-string)))
-    (send-string-to-hol tactic-string hol-echo-commands-p)))
+          (format "%s (%s) handle e => Raise e" e-string region-string))
+         (sender (if hol-emit-time-elapsed-p
+                     'send-timed-string-to-hol
+                   'send-string-to-hol)))
+    (funcall sender tactic-string hol-echo-commands-p)))
 
 (defun send-string-as-hol-goal (s)
   (let ((goal-string
@@ -251,8 +276,11 @@ the region contains no backquotes, then send region instead."
   (let* ((buffer-string (with-hol-locpragma start (buffer-substring start end)))
          (send-string (if arg
                          (concat "(" buffer-string ") handle e => Raise e")
-                       buffer-string)))
-    (send-string-to-hol send-string hol-echo-commands-p)
+                       buffer-string))
+         (sender (if hol-emit-time-elapsed-p
+                     'send-timed-string-to-hol
+                   'send-string-to-hol)))
+    (funcall sender send-string hol-echo-commands-p)
     (if (> (length send-string) 300)
         (send-string-to-hol
          "val _ = print \"\\n*** Emacs/HOL command completed ***\\n\\n\""))))
@@ -579,6 +607,13 @@ variable show_types_verbosely instead."
   (interactive)
   (hol-toggle-var "show_assums"))
 
+(defun hol-toggle-show-times()
+  "Toggles the elisp variable 'hol-emit-time-elapsed-p."
+  (interactive)
+  (setq hol-emit-time-elapsed-p (not hol-emit-time-elapsed-p))
+  (message (if hol-emit-time-elapsed-p "Elapsed times WILL be displayed"
+             "Elapsed times WON'T be displayed")))
+
 
 (defun set-hol-executable (filename)
   "Sets the HOL executable variable to be equal to FILENAME."
@@ -637,6 +672,7 @@ already loaded.)"
 (define-key hol-map "\M-f" 'forward-hol-tactic)
 (define-key hol-map "\M-b" 'backward-hol-tactic)
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
+(define-key hol-map "\M-t" 'hol-toggle-show-times)
 (define-key hol-map "\M-s" 'hol-subgoal-tactic)
 (define-key hol-map "\M-v" 'hol-scroll-down)
 (define-key hol-map "b"    'hol-backup)
