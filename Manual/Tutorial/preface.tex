@@ -6,148 +6,72 @@ documents making up the documentation for \HOL:
 
 \begin{myenumerate}
 \item \TUTORIAL: a tutorial introduction to \HOL.
-\item \DESCRIPTION: a description of higher order logic,
-the \ML\ programming language, and theorem proving methods in the \HOL\ system;
-\item \REFERENCE: the reference documentation of the tools available in \HOL.
+\item \DESCRIPTION: a description of higher order logic, the \ML\
+  programming language, and theorem proving methods in the \HOL\
+  system;
+\item \REFERENCE: the reference documentation of the tools available
+  in \HOL.
 \end{myenumerate}
 
 \noindent These three documents will be referred to by the short names (in
 small slanted capitals) given above.
 
-This document, \TUTORIAL, is intended to be the first item read by new users of
-\HOL.  It provides a self-study introduction to the structure and use of the
-system.  The tutorial is intended to give a `hands-on' feel for the way \HOL\
-is used, but it does not systematically explain all the underlying principles
-(\DESCRIPTION, explains these).  After working through \TUTORIAL\ the reader
-should be capable of using \HOL\ for simple tasks, and should also be in a
-position to consult the other two documents.
+This document, \TUTORIAL, is intended to be the first item read by new
+users of \HOL.  It provides a self-study introduction to the structure
+and use of the system.  The tutorial is intended to give a `hands-on'
+feel for the way \HOL\ is used, but it does not systematically explain
+all the underlying principles (\DESCRIPTION, explains these).  After
+working through \TUTORIAL\ the reader should be capable of using \HOL\
+for simple tasks, and should also be in a position to consult the
+other two documents.
 
 \section*{Getting started}
 
-Chapter~\ref{install} explains how to get and install \HOL.  Once this is done,
-the potential \HOL\ user should become familiar with the following subjects:
+Chapter~\ref{install} explains how to get and install \HOL.  Once this
+is done, the potential \HOL\ user should become familiar with the
+following subjects:
 
 \begin{enumerate}
-\item The programming meta-language \ML, and how to interact
-with it through an editor.
-\item The formal logic supported by
-the \HOL\ system (higher order logic) and its manipulation via \ML.
+\item The programming meta-language \ML, and how to interact with it
+  through an editor.
+\item The formal logic supported by the \HOL\ system (higher order
+  logic) and its manipulation via \ML.
 \item Forward proof and derived rules of inference.
 \item Goal directed proof, tactics and tacticals.
 \end{enumerate}
 
 Chapters 1--6 introduce these topics. The remaining three chapters
-contain examples of complete pieces of work.
+contain further examples of complete pieces of work.
 \begin{itemize}
-\item Chapter~\ref{parity}
-consists of a worked example: the specification and
-verification of a simple sequential parity checker.  The intention is
-to   accomplish two things:
-(i) to present a complete piece of work with \HOL; and
-(ii) to give an idea of what it is like to use the \HOL\
-system for a tricky proof.
+\item Chapter~\ref{parity} consists of a worked example: the
+  specification and verification of a simple sequential parity
+  checker.  The intention is to accomplish two things: (i) to present
+  a complete piece of work with \HOL; and (ii) to give an idea of what
+  it is like to use the \HOL\ system for a tricky proof.
 
-\item Chapter~\ref{tool} shows how a special purpose proof tool (a conjunction
-normaliser) can be implemented and optimised. It illustrates methods for
-`tuning' proof generating programs and discusses trade-offs between generality
-and efficiency.
+\item Chapter~\ref{tool} shows how a special purpose proof tool (a
+  conjunction normaliser) can be implemented and optimised. It
+  illustrates methods for `tuning' proof generating programs and
+  discusses trade-offs between generality and efficiency.
 
-\item Chapter~\ref{binomial} is a proof of the Binomial Theorem in a ring.  It
-is a medium sized worked example whose subject matter is probably more widely
-known than any specific piece of hardware or software. The small amount of
-algebra and mathematical notation needed to state and prove the Binomial
-Theorem is presented; the notation is expressed in \HOL{}, and the
-structure of the proof is outlined.
+\item Chapter~\ref{binomial} is a proof of the Binomial Theorem in a
+  ring.  It is a medium sized worked example whose subject matter is
+  probably more widely known than any specific piece of hardware or
+  software. The small amount of algebra and mathematical notation
+  needed to state and prove the Binomial Theorem is presented; the
+  notation is expressed in \HOL{}, and the structure of the proof is
+  outlined.
 
 \end{itemize}
 
-\noindent \TUTORIAL\ has been kept short so that new users of \HOL\ can get
-going as fast as possible. Sometimes details have been simplified. It is
-recommended that as soon as a topic in \TUTORIAL\ has been digested, the
-relevant bits of \DESCRIPTION\ and \REFERENCE\ be studied.
+\noindent
+\TUTORIAL\ has been kept short so that new users of \HOL\ can get
+going as fast as possible. Sometimes details have been simplified. It
+is recommended that as soon as a topic in \TUTORIAL\ has been
+digested, the relevant bits of \DESCRIPTION\ and \REFERENCE\ be
+studied.
 
-\section*{Exercises}
-
-The directory:
-
-\begin{hol}\begin{verbatim}
-   hol/Training/exercises
-\end{verbatim}\end{hol}
-
-\noindent contains exercises (with solutions) in the use of \HOL. It is
-recommended that these exercises be studied in conjunction with reading
-\TUTORIAL\ and \DESCRIPTION.
-
-\section*{Courseware}
-
-The  directory:
-
-\begin{hol}\begin{verbatim}
-   hol/Training/course
-\end{verbatim}\end{hol}
-
-\noindent contains the \LaTeX\ sources for an intensive course on \HOL\
-developed by Tom Melham. These are intended to be a resource for anyone who
-wishes to teach \HOL.
-
-\section*{Case studies}
-
-The previous version of \TUTORIAL\ contained a number of advanced case
-studies. These are now separate documents in the directory:
-
-\begin{hol}\begin{verbatim}
-   hol/Training/studies
-\end{verbatim}\end{hol}
-
-\noindent The case studies in this directory are:
-
-\begin{enumerate}
-\item {\tt microprocessor}:  the specification and verification of a simple
-microprocessor, due to Jeff Joyce ({\verb+joyce@cs.ubc.ca+}).
-This case study illustrates the
-state-of-the-art in an already mature area. Several new techniques are
-illustrated, including the use of temporal logic embedded in \HOL\ for
-reasoning about asynchronous processes.
-\item {\tt protocols}: the specification and verification of a sliding window
-protocol, due to Rachel Cardell-Oliver ({\verb+rco@cam.sri.com+}).
-This case study shows a new and
-rapidly evolving application of the \HOL\ system that is currently an
-active area of research at Cambridge. There have been significant developments
-in this field since this study was written.
-\item {\tt int\_mod}: modular arithmetic of integers
-developed as an application of the group
-theory library, due to Elsa Gunter ({\verb+elsa@research.att.com+}).
-This case study
-is a comprehensive
-tutorial on how one might conduct mathematical proof in type theory.
-It shows how to apply the abstract group theory library, which she
-wrote, to the development of a particular mathematical theory (modular
-arithmetic).  Her paper {\sl Doing Algebra in Simple Type Theory} is
-included with the case study for the reader's convenience (it is also
-to be published elsewhere).
-\end{enumerate}
-
-The case studies use different styles of proof in \HOL, different ways of
-laying out \ML\ code, etc. These reflect the differing aesthetic tastes and
-backgrounds of the authors. It is not intended that any of the styles is to be
-considered `standard'.  There may eventually emerge a `Manual of Proof Style
-for \HOL', but it would be premature to try to write one now. It is a
-considerable virtue of Milner's \LCF\ approach to theorem proving that it so
-smoothly accommodates such a wide variety of styles, and yet maintains complete
-logical security.
-
-The reader is warned that the case studies were developed for \HOL 88 Version
-1.10 and it is possible that they will need to be modified to run in later
-versions of \HOL.
-
-
-
-
-
-
-
-
-
-
-
-
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:
