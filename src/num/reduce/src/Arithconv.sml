@@ -25,11 +25,11 @@ structure Arithconv :> Arithconv =
 struct
 
 fun failwith function = raise
- Exception.HOL_ERR{origin_structure = "Arithconv",
+ Feedback.HOL_ERR{origin_structure = "Arithconv",
                    origin_function = function,
                            message = ""};
 
-open HolKernel boolTheory basicHol90Lib Parse
+open HolKernel boolTheory boolLib Parse
 open Num_conv;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
@@ -40,10 +40,11 @@ infix THEN |-> THENC;
 
 val prove = Tactical.prove;
 val num_CONV = Num_conv.num_CONV;
-val MATCH_MP = Conv.MATCH_MP;
+val MATCH_MP = Drule.MATCH_MP;
 
-val num_ty   = mk_type{Tyop="num",  Args=[]};
-val bool_ty  = mk_type{Tyop="bool", Args=[]};
+open Rsyntax
+val num_ty   = Rsyntax.mk_type{Tyop="num",  Args=[]};
+val bool_ty  = Type.bool
 val fun_ty   = fn (op_ty,arg_ty) => mk_type{Tyop="fun", Args=[op_ty,arg_ty]};
 val b_b_ty   = fun_ty(bool_ty,bool_ty);
 val b_b_b_ty = fun_ty(bool_ty,b_b_ty);
@@ -83,7 +84,7 @@ open numeralTheory
 (*-----------------------------------------------------------------------*)
 
 fun dest_op opr tm =
-    let val (opr',arg) = Dsyntax.strip_comb tm
+    let val (opr',arg) = strip_comb tm
     in
 	if (opr=opr') then arg else failwith "dest_op"
     end;
@@ -94,7 +95,9 @@ fun TFN_CONV c t = let
   val result = c t
   val result_t = rhs (concl result)
 in
-  if result_t = truth orelse result_t = falsity orelse is_numeral result_t then
+  if result_t = truth orelse result_t = falsity orelse
+     Numeral.is_numeral result_t
+  then
     result
   else
     failwith "TFN_CONV"
@@ -282,8 +285,15 @@ end;
 (* DIV_CONV "[x] DIV [y]" = |- [x] DIV [y] = [x div y]                   *)
 (*-----------------------------------------------------------------------*)
 
-val int_of_term = Term.dest_numeral
-val term_of_int = Term.mk_numeral
+val int_of_term = Numeral.dest_numeral
+val term_of_int = Numeral.gen_mk_numeral {
+  mk_comb = Term.mk_comb,
+  ALT_ZERO = mk_thy_const{Name = "ALT_ZERO", Ty = num_ty, Thy = "arithmetic"},
+  ZERO = mk_thy_const{Name = "0", Ty = num_ty, Thy = "num"},
+  NUMERAL = numeral,
+  BIT1 = mk_thy_const{Name = "NUMERAL_BIT1", Ty = n_n_ty, Thy = "arithmetic"},
+  BIT2 = mk_thy_const{Name = "NUMERAL_BIT2", Ty = n_n_ty, Thy = "arithmetic"}
+};
 
 fun provelt x y =
   EQT_ELIM (LT_CONV (list_mk_comb(ltop, [term_of_int x, term_of_int y])))

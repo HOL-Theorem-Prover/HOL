@@ -43,7 +43,7 @@ and beqop = Term`$= :bool->bool->bool`;
 
 
 fun failwith function =
- raise Exception.HOL_ERR{origin_structure = "Boolconv",
+ raise Feedback.HOL_ERR{origin_structure = "Boolconv",
                          origin_function = function,
                          message = ""};
 
@@ -52,7 +52,7 @@ fun failwith function =
 (*-----------------------------------------------------------------------*)
 
 fun dest_op opr tm =
-    let val (opr',arg) = Dsyntax.strip_comb tm
+    let val (opr',arg) = boolLib.strip_comb tm
     in
 	if (opr=opr') then arg else failwith "dest_op"
     end;
@@ -219,7 +219,7 @@ val COND_CONV =
 	       REWRITE_TAC[COND_CLAUSES, COND_ID]))
  in
  fn tm =>
-  case (dest_cond tm handle HOL_ERR _ => failwith "COND_CONV")
+  case (Rsyntax.dest_cond tm handle HOL_ERR _ => failwith "COND_CONV")
    of {cond=b, larm=t1, rarm=t2} =>
       if b = T then SPECL [t1,t2] (INST_TYPE[alpha |-> type_of t1] c1) else
       if b = F then SPECL [t1,t2] (INST_TYPE[alpha |-> type_of t1] c2) else

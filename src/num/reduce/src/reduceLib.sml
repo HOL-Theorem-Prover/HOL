@@ -1,7 +1,7 @@
 structure reduceLib :> reduceLib =
 struct
 
-  open HolKernel Parse basicHol90Lib Boolconv Arithconv
+  open HolKernel Parse boolLib Boolconv Arithconv
        arithmeticTheory numeralTheory computeLib;
   infix THEN |-> ;
 
@@ -10,7 +10,7 @@ type tactic = Abbrev.tactic
 type thm    = Thm.thm
 
 fun failwith function = raise
- Exception.HOL_ERR{origin_structure = "reduceLib",
+ Feedback.HOL_ERR{origin_structure = "reduceLib",
                    origin_function = function,
                            message = ""};
 
@@ -58,7 +58,7 @@ val div_thm =
 
 val mod_thm =
     prove
-      (Term ` !x y q r. x MOD y = 
+      (Term ` !x y q r. x MOD y =
               if (x = q * y + r) /\ (r < y) then r else x MOD y `,
        REPEAT STRIP_TAC THEN COND_CASES_TAC THEN REWRITE_TAC [] THEN
        MATCH_MP_TAC MOD_UNIQUE THEN EXISTS_TAC (Term `q:num`) THEN
@@ -66,7 +66,7 @@ val mod_thm =
 
 
 fun dest_op opr tm =
-    let val (opr',arg) = Dsyntax.strip_comb tm in
+    let val (opr',arg) = boolLib.strip_comb tm in
     if (opr=opr') then arg else raise Fail "dest_op"
     end;
 
@@ -76,8 +76,9 @@ val modop = Term `$MOD`;
 fun cbv_DIV_CONV tm =
   case (dest_op divop tm) of
     [x,y] => (let
-      open Arbnum
-      val (q,r) = divmod (dest_numeral x, dest_numeral y) in
+      open Arbnum numSyntax
+      val (q,r) = divmod (dest_numeral x, dest_numeral y)
+    in
       SPECL [x, y, mk_numeral q, mk_numeral r] div_thm
     end handle HOL_ERR _ => failwith "cbv_DIV_CONV")
   | _ => raise Fail "cbv_DIV_CONV";
@@ -85,7 +86,7 @@ fun cbv_DIV_CONV tm =
 fun cbv_MOD_CONV tm =
   case (dest_op modop tm) of
     [x,y] => (let
-      open Arbnum
+      open Arbnum numSyntax
       val (q,r) = divmod (dest_numeral x, dest_numeral y) in
       SPECL [x, y, mk_numeral q, mk_numeral r] mod_thm
     end handle HOL_ERR _ => failwith "cbv_MOD_CONV")
@@ -110,7 +111,7 @@ end;
 
 val REDUCE_RULE = Conv.CONV_RULE REDUCE_CONV;
 
-val REDUCE_TAC = Conv.CONV_TAC REDUCE_CONV;
+val REDUCE_TAC = Tactic.CONV_TAC REDUCE_CONV;
 
 
 end;
