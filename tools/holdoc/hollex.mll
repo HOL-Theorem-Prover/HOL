@@ -19,7 +19,7 @@ let check_close expected got lexbuf =
     raise (Mismatch ("Mismatched delimiters: "^(delim_info expected).sopen^" closed by "^(delim_info got).sclose ^ " at " ^ pretty_pos lexbuf))
 
 let bad_char mode lexbuf =
-  raise (BadChar ("didn't expect char '"^Lexing.lexeme lexbuf^"' at " ^ pretty_pos lexbuf ^ " in " ^ render_mode mode ^ " mode."))
+  raise (BadChar ("didn't expect char '"^Lexing.lexeme lexbuf^"' at " ^ pretty_pos lexbuf ^ " in " ^ render_mode mode ^ " mode (or illegal character in lexeme beginning here)."))
   
 let indent_width s =
   let l = String.length s in
@@ -141,7 +141,7 @@ let symbol = ['|' '!' '#' '%' '&' ')' '-' '=' '+' '[' ']' '{'
 let mosmlsym = [ '!' '%' '&' '$' '#' '+' '-' '/' ':' '<' '=' '>' '?' '@' '\\' '~' '^' '|' '*' ]  (* and '`', but obviously we can't leave that in *)
 
 let mosmlstr =
-  '"' ([^ '"' '\\']
+  '"' ([^ '"' '\\' '`']
       | '\\' ( [ 'a'-'z' ]
              | '^' _ 
              | digit digit digit
@@ -162,7 +162,7 @@ let anysymb = idchar* | nonparen* '(' |  ( nonparen | '(' nonstar )+
 let dollar = '$'
 
 let startcom = "(*"
-let incomm   = [^ '(' '*'] | '(' [^ '*'] | '*' [^ ')']
+let incomm   = [^ '(' '*' '`'] | '(' [^ '*' '`'] | '*' [^ ')']
 let stopcom  = "*)"
 
 let startdir = "(*["
@@ -245,7 +245,7 @@ rule
 and
 
   holtoken = parse
-    '"' ([^ '"' '\\'] | '\\' _ )* '"'
+    '"' ([^ '"' '\\' '`'] | '\\' _ )* '"'
                            { let s = Lexing.lexeme lexbuf in
                              register_newlines lexbuf s;
                              fun _  -> Str (String.sub s 1 (String.length s - 2)) }
@@ -271,6 +271,7 @@ and
   | startcom       { fun _  -> ToText(DelimText) }
   | stopcom        { fun ed -> check_close ed DelimText lexbuf }
   | eof            { fun ed -> check_close ed DelimEOF lexbuf }
+  | backtick       { fun _  -> bad_char ModeText lexbuf }
   | _              { fun _  -> bad_char ModeText lexbuf }
 
 and
@@ -292,22 +293,23 @@ and
   (* see comment above for these three rules *)
   (* but I've added an exclusion for '%', permission for '\%',
      and a new rule in the middle, to deal with comments *)
-  | ([^ '[' '<' ':' '*' '(' ')' '%'] | '\\' '%')+
+  | ([^ '[' '<' ':' '*' '(' ')' '%' '`'] | '\\' '%')+
                    { let s = Lexing.lexeme lexbuf in
                      register_newlines lexbuf s;
                      fun _  -> Content s }
-  | '%' [^ '\n']* '\n'
+  | '%' [^ '\n' '`']* '\n'
                    { let s = Lexing.lexeme lexbuf in
                      register_newlines lexbuf s;
                      fun _  -> Content s }
   | eof            { fun ed -> check_close ed DelimEOF lexbuf }
+  | backtick       { fun _ -> bad_char ModeTex lexbuf }
   | _              { let s = Lexing.lexeme lexbuf in
                      register_newlines lexbuf s;
                      fun _  -> Content s }
 
 and
     dirtoken = parse
-    '"' ([^ '"' '\\'] | '\\' _ )* '"'
+    '"' ([^ '"' '\\' '`'] | '\\' _ )* '"'
                            { let s = Lexing.lexeme lexbuf in
                              register_newlines lexbuf s;
                              fun _  -> Str (String.sub s 1 (String.length s - 2)) }
@@ -321,6 +323,7 @@ and
   | newline white*         { register_newline lexbuf;
                              fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
   | eof                    { fun ed -> check_close ed DelimEOF lexbuf }
+  | backtick               { fun _  -> bad_char ModeDir lexbuf }
   | _                      { fun _  -> bad_char ModeDir lexbuf }
 
 
