@@ -13,8 +13,11 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/home/mn200/mosml"
-val holdir   = "/home/mn200/hol98"
+fun mustspecify s =
+    (print "\n*** Must specify "; print s; print "! ***\n"; quit())
+
+val mosmldir = mustspecify "mosmldir"
+val holdir   = mustspecify "holdir"
 
 (* note, if you are specifying directories under Windows, we recommend you
    use forward slashes (the "/" character) as a directory separator,
@@ -24,7 +27,8 @@ val holdir   = "/home/mn200/hol98"
    SML.  For example, write "c:/dir1/dir2/mosml", rather than
    "c:\\dir1\\dir2\\mosml", and certainly DON'T write "c:\dir1\dir2\mosml". *)
 
-val OS       = "linux"            (* Operating system; choices are:
+val OS       = mustspecify "OS"
+                           (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT"        *)
 val CC       = "gcc";      (* C compiler                                   *)
 val GNUMAKE  = "make";     (* for bdd library and SMV                      *)
@@ -37,6 +41,20 @@ val DEPDIR   = ".HOLMK";   (* local dir. where Holmake dependencies kept   *)
 val _ = Meta.quietdec := true;
 app load ["FileSys", "Process", "Path",
           "Substring", "BinIO", "Lexing", "Nonstdio"];
+
+fun check_is_dir role dir =
+    (FileSys.isDir dir handle e => false) orelse
+    (print "\n*** Bogus directory ("; print dir; print ") given for ";
+     print role; print "! ***\n";
+     Process.exit Process.failure)
+
+val _ = check_is_dir "mosmldir" mosmldir
+val _ = check_is_dir "holdir" holdir
+val _ =
+    if List.exists (fn s => s = OS) ["linux", "solaris", "unix", "winNT"] then
+      ()
+    else (print ("\n*** Bad OS specified: "^OS^" ***\n");
+          Process.exit Process.failure)
 
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
