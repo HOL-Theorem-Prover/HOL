@@ -24,9 +24,6 @@ val _ = new_theory "bool";
 val EXISTS_DEF = define_exists();  (* Grandfather *)
 val _ = add_binder ("?", term_grammar.std_binder_precedence)
 
-val TOK = term_grammar.TOK
-val TM = term_grammar.TM
-
 val T_DEF =
  new_definition
    ("T_DEF", Term `T = ((\x:bool. x) = \x:bool. x)`);
@@ -49,8 +46,10 @@ val F_DEF =
  new_definition
    ("F_DEF", Term `F = !t. t`);
 
-val NOT_DEF = new_gen_definition ("NOT_DEF", Term `~ = \t. t ==> F`,
-                                  TruePrefix 900);
+val NOT_DEF = new_definition("NOT_DEF", Term `~ = \t. t ==> F`);
+val _ = add_rule {term_name = "~", fixity = TruePrefix 900,
+                  pp_elements = [TOK "~"], paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
 
 val EXISTS_UNIQUE_DEF =
  new_binder_definition
@@ -61,17 +60,34 @@ val LET_DEF =
  new_definition ("LET_DEF",  Term `LET = \(f:'a->'b) (x:'a). f x`);
 (* the magic in Parse, will turn the "let" term produced into one that
    actually uses "LET", similarly for and *)
-val _ = add_rule ("let", TruePrefix 10, [TOK "let", TM, TOK "in"]);
+
+val _ = add_rule {term_name = "let", fixity = TruePrefix 10,
+                  pp_elements = [TOK "let", BreakSpace(1,0), TM,
+                                 BreakSpace(1, 0), TOK "in",
+                                 BreakSpace(1, 0)],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))};
 val _ = add_infix ("and", 9, HOLgrammars.LEFT)
 
 val COND_DEF =
  new_definition
    ("COND_DEF", Term `COND = \t t1 t2. @x:'a. ((t=T) ==> (x=t1)) /\
                                               ((t=F) ==> (x=t2))`);
-val _ = add_rule("COND", Infix (HOLgrammars.RIGHT, 3),
-                 [TOK "=>", TM, TOK "|"]);
-val _ = add_rule("COND", TruePrefix 70,
-                 [TOK "if", TM, TOK "then", TM, TOK "else"]);
+val _ = add_rule{term_name = "COND", fixity = Infix (HOLgrammars.RIGHT, 3),
+                 pp_elements = [HardSpace 1, TOK "=>", BreakSpace(1,0), TM,
+                                BreakSpace(1,0), TOK "|", HardSpace 1],
+                 paren_style = OnlyIfNecessary,
+                 block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))};
+
+val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
+                 pp_elements = [PPBlock([TOK "if", BreakSpace(1,0), TM,
+                                         BreakSpace(1,0),
+                                         TOK "then"], (PP.CONSISTENT, 0)),
+                                BreakSpace(1,0), TM, BreakSpace(1,0),
+                                BeginFinalBlock(PP.CONSISTENT, 2),
+                                TOK "else", BreakSpace(1,0)],
+                 paren_style = OnlyIfNecessary,
+                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
 
 val ONE_ONE_DEF =
  new_definition
