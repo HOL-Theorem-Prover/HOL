@@ -654,8 +654,8 @@ let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
   in
   let texname  = texify_command n
   in
-  print_string ("\\newcommand{"^texname^"}{\\rrule"^if side == [] then "n" else "c"
-                         ^match comm with Some _ -> "c" | None -> "n");
+  print_string ("\\newcommand{"^texname^"}{\\rrule"^(if side == [] then "n" else "c")
+                         ^(match comm with Some _ -> "c" | None -> "n"));
   print_string ("{"^texify n^"}{"^texify cat^"}");
   print_string ("{"^(match desc with Some d -> munge pvs d | None -> "")^"}\n");
   print_string ("{"^munges pvs lhs^"}\n");
