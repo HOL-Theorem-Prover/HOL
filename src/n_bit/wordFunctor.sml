@@ -2586,6 +2586,7 @@ val _ =
      val Hstr  = term_to_string (rhs(concl wH_thma))
      val TOPstr = term_to_string (rhs(concl TOPNUM_THMa))
      val MAXstr = term_to_string (rhs(concl MAXNUM_THMa))
+     val deNUMERAL = PURE_REWRITE_RULE[NUMERAL_DEF]
  in exportML(wordn,
     OPEN ["num", "bits", "numeral_bits"]
     :: EQDATATYPE ([],ParseDatatype.parse [QUOTE (wordn^" = n2w of num")])
@@ -2601,8 +2602,10 @@ val _ =
          "     MAXNUM = ", MAXstr, "\n",
          "  ---------------------------------------------------------------------------*)\n"])
     :: DEFN HB_THM :: DEFN WL_def
-    :: DEFN TOPNUM_THM :: DEFN MAXNUM_THM 
-    :: DEFN wL_thm :: DEFN wH_thm
+    :: DEFN (deNUMERAL TOPNUM_DEF) 
+    :: DEFN (deNUMERAL MAXNUM_DEF) 
+    :: DEFN (deNUMERAL wL_def) 
+    :: DEFN (deNUMERAL wH_def)
     :: map (DEFN o PURE_REWRITE_RULE [SYM HB_THM, SYM THE_WL_THM, SYM wL_thm, SYM wH_thm]
                  o PURE_REWRITE_RULE [NUMERAL_DEF, SYM TOPNUM_THM, SYM MAXNUM_THM])
        [word_T_thm, word_0, word_1, 
