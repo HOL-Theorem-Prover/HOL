@@ -42,4 +42,6 @@ sig
 
   val merge_grammars : grammar * grammar -> grammar
 
+  val prettyprint_grammar : ppstream -> grammar -> unit
+
 end

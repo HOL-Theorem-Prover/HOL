@@ -779,7 +779,8 @@ datatype ruletype_info = add_prefix | add_suffix | add_both | add_nothing
 
 fun prettyprint_grammar pstrm (G :grammar) = let
   open Portable
-  val {add_string, add_break, begin_block, end_block,...} = with_ppstream pstrm
+  val {add_string, add_break, begin_block, end_block,
+       add_newline,...} = with_ppstream pstrm
 
   fun pprint_rr m rr = let
     val rels = rule_elements (#elements rr)
@@ -933,18 +934,37 @@ fun prettyprint_grammar pstrm (G :grammar) = let
         end_block()
       end
     in
-      add_newline pstrm;
+      add_newline();
       add_string "Overloading:";
       add_break(1,2);
       begin_block CONSISTENT 0;
-      pr_list pr_ov (fn () => ()) (fn () => add_newline pstrm) oinfo;
+      pr_list pr_ov (fn () => ()) add_newline oinfo;
       end_block ()
     end
+  fun print_user_printers {printers, parsers} = let
+    fun sort ({Name = n1, Thy = t1}, {Name = n2, Thy = t2}) =
+        case String.compare (t1,t2) of
+          EQUAL => String.compare (n1, n2)
+        | x => x
+    fun print_type {Name,Thy} = add_string (Thy^"$"^Name)
+  in
+    if Binarymap.numItems printers = 0 then ()
+    else
+      (add_newline();
+       add_string "User printing functions exist for:";
+       add_newline();
+       add_string "  ";
+       begin_block INCONSISTENT 0;
+       pr_list print_type (fn () => ()) (fn () => add_break(1,0))
+               (Listsort.sort sort (map #1 (Binarymap.listItems printers)));
+       end_block())
+  end
+
 in
   begin_block CONSISTENT 0;
   (* rules *)
   pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) (rules G);
-  add_newline pstrm;
+  add_newline();
   (* known constants *)
   add_string "Known constants:";
   add_break(1,2);
@@ -954,6 +974,7 @@ in
   end_block ();
   (* overloading *)
   print_overloading (Overload.oinfo_ops (overload_info G));
+  print_user_printers (user_additions G);
   end_block ()
 end
 

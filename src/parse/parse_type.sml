@@ -197,4 +197,71 @@ in
   merge_acc [] (G1, G2)
 end
 
+fun prettyprint_grammar pps (g:grammar) = let
+  open Portable Lib
+  val {add_break,add_newline,add_string,begin_block,end_block,...} =
+      with_ppstream pps
+  fun print_suffix s = let
+    val oarity = valOf (Type.op_arity (hd (Type.decls s)))
+    fun print_ty_n_tuple n =
+        case n of
+          0 => ()
+        | 1 => add_string "TY "
+        | n => (add_string "(";
+                pr_list (fn () => add_string "TY") (fn () => add_string ", ")
+                        (fn () => ()) (List.tabulate(n,K ()));
+                add_string ")")
+  in
+    print_ty_n_tuple oarity;
+    add_string s
+  end
+
+  fun print_infix {opname,parse_string} = let
+  in
+    add_string "TY ";
+    add_string parse_string;
+    add_string " TY";
+    if opname <> parse_string then
+      add_string (" ["^opname^"]")
+    else
+      ()
+  end
+
+  fun print_rule0 r =
+    case r of
+      SUFFIX sl => let
+      in
+        add_string "TY  ::=  ";
+        begin_block INCONSISTENT 0;
+        pr_list print_suffix (fn () => add_string " |")
+                (fn () => add_break(1,0)) sl;
+        end_block ()
+      end
+    | INFIX(oplist, assoc) => let
+        val assocstring =
+            case assoc of
+              LEFT => "L-"
+            | RIGHT => "R-"
+            | NONASSOC => "non-"
+      in
+        add_string "TY  ::=  ";
+        begin_block INCONSISTENT 0;
+        pr_list print_infix (fn () => add_string " |")
+                (fn () => add_break(1,0)) oplist;
+        add_string (" ("^assocstring^"associative)");
+        end_block()
+      end;
+  fun print_rule (n, r) = let
+    val precstr = StringCvt.padRight #" " 7 ("("^Int.toString n^")")
+  in
+    add_string precstr;
+    print_rule0 r;
+    add_newline()
+  end
+in
+  begin_block CONSISTENT 0;
+  app print_rule g;
+  end_block()
 end;
+
+end; (* struct *)
