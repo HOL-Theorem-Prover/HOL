@@ -1,9 +1,5 @@
 OPTIONS = NO_OVERLAY
 
-all: Globals.uo Sig.uo Raw-sig.uo Type.uo Term.uo Tag.uo Thm.uo \
-     TheoryPP.uo Theory.uo Definition.uo Net.uo Type-sig.uo Term-sig.uo \
-     Tag-sig.uo Thm-sig.uo TheoryPP-sig.uo Theory-sig.uo Definition-sig.uo \
-     Net-sig.uo Overlay.uo HolKernel.uo
 
 Sig.uo: Sig.sml KernelTypes.ui Feedback.ui
 	HOLMOSMLC -c -toplevel Sig.sml

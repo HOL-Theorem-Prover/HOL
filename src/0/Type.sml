@@ -131,6 +131,8 @@ end;
 
 val alpha = mk_vartype "'a"
 val beta  = mk_vartype "'b";
+val gamma = mk_vartype "'c"
+val delta = mk_vartype "'d"
 
 fun dest_vartype (Tyv s) = s
   | dest_vartype _ = raise ERR "dest_vartype" "not a type variable";

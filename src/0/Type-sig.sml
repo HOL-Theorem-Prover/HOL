@@ -39,6 +39,8 @@ sig
  val ind           : hol_type
  val alpha         : hol_type
  val beta          : hol_type
+ val gamma         : hol_type
+ val delta         : hol_type
 
  val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst

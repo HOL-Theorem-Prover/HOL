@@ -24,6 +24,7 @@ sig
   val delete_type        : string -> unit
   val delete_const       : string -> unit
   val delete_axiom       : string -> unit
+  val delete_definition  : string -> unit
   val delete_theorem     : string -> unit
 
 (* Information on the current theory segment *)

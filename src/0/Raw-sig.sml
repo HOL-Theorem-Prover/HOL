@@ -30,6 +30,8 @@ sig
   val bool          : hol_type
   val alpha         : hol_type 
   val beta          : hol_type
+  val gamma         : hol_type
+  val delta         : hol_type
   val tymatch       : hol_type -> hol_type 
                         -> (hol_type,hol_type) Lib.subst * hol_type list
                          -> (hol_type,hol_type) Lib.subst * hol_type list
@@ -236,6 +238,7 @@ sig
   val save_thm     : string * thm -> thm
   val delete_type    : string -> unit
   val delete_const   : string -> unit
+  val delete_definition : string -> unit
   val delete_axiom   : string -> unit
   val delete_theorem : string -> unit
   val current_theory : unit -> string
