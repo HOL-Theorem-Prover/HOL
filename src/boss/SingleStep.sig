@@ -17,7 +17,9 @@ sig
   val on                : (thm -> tactic) * (term quotation * tactic) -> tactic
                           (* infix *)
 
-  val PURE_CASE_TAC     : tactic      (* An intelligent case split *)
+  val PURE_TOP_CASE_TAC : tactic      (* The top-most case-split *)
+  val PURE_CASE_TAC     : tactic      (* The smallest case-split *)
+  val CASE_SIMP_CONV    : conv        (* The case rewrites in the typebase *)
   val CASE_TAC          : tactic      (* PURE_CASE_TAC THEN simplification *)
 
 end

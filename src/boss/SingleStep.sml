@@ -361,7 +361,7 @@ fun exists_p [] _ = false
 
 fun find_subterm p =
   let
-    val f = find_term (can p)
+    val f = find_term p
     fun g t =
       if is_comb t then
         g (f (rator t))
@@ -370,8 +370,12 @@ fun find_subterm p =
         g (f (body t)) handle HOL_ERR _ => t
       else t
   in
-    fn t => p (g (f t))
+    fn t => g (f t)
   end;
+
+fun first_term f tm = f (find_term (can f) tm);
+
+fun first_subterm f tm = f (find_subterm (can f) tm);
 
 local
   fun rator_n 0 f tm = f tm
@@ -388,28 +392,29 @@ local
 
   fun free_thing tm = 
     let
-      val free_case =
-        let
-          val cp = cases_p ()
-          fun test t = is_comb t andalso cp t andalso free_in t tm
-        in
-          fn t => if test t then SOME (rand t) else NONE
+      val cp = cases_p ()
+
+      fun free_case t =
+        let val (_, a) = dest_comb t
+        in if cp t andalso free_in a tm then a else raise ERR "free_case" ""
         end
 
-      val free_cond =
-        let fun test t = is_cond t andalso free_in t tm
-        in fn t => if test t then SOME (rand (rator (rator t))) else NONE
+      fun free_cond t =
+        let val (a, _, _) = dest_cond t
+        in if free_in a tm then a else raise ERR "free_cond" ""
         end
     in
-      fn t =>
-      (case free_case t of SOME x => x
-       | NONE =>
-         (case free_cond t of SOME x => x
-          | NONE => raise ERR "CASE_TAC" ""))
+      fn t => free_case t handle HOL_ERR _ => free_cond t
     end;
-    
-  fun find_free_thing tm = find_subterm (free_thing tm) tm;
+in
+  fun PURE_TOP_CASE_TAC (g as (_, tm)) =
+    let val t = first_term (free_thing tm) tm in Cases_on `^t` g end;
 
+  fun PURE_CASE_TAC (g as (_, tm)) =
+    let val t = first_subterm (free_thing tm) tm in Cases_on `^t` g end;
+end
+
+local    
   fun case_rws tyi =
     List.mapPartial I
     [SOME (TypeBasePure.case_def_of tyi),
@@ -419,12 +424,11 @@ local
   val all_case_rws =
     flatten o map case_rws o TypeBasePure.listItems o TypeBase.theTypeBase;
 in
-  fun PURE_CASE_TAC g =
-    let val t = find_free_thing (snd g) in Cases_on `^t` g end;
-
-  fun CASE_TAC g =
-    (PURE_CASE_TAC THEN
-     simpLib.ASM_SIMP_TAC boolSimps.bool_ss (all_case_rws ())) g;
+  fun CASE_SIMP_CONV tm =
+    simpLib.SIMP_CONV boolSimps.bool_ss (all_case_rws ()) tm;
 end;
+
+val CASE_TAC =
+  PURE_CASE_TAC THEN ASM_REWRITE_TAC [] THEN CONV_TAC CASE_SIMP_CONV;
 
 end;
