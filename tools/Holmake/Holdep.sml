@@ -5,7 +5,8 @@
    DOES NOT normalize file names under DOS. (yet)
 
   This has been adapted from the mosmldep in the MoscowML compiler
-  sources, first by Ken Larsen and later by Konrad Slind.
+  sources, first by Ken Larsen and later by Konrad Slind and
+  Michael Norrish.
 *)
 
 
