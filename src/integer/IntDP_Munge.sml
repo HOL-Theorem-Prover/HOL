@@ -441,9 +441,13 @@ in
   natvalidation (stage2 natgoal)
 end
 
-fun ok_asm th =
-    List.all (C mem [intSyntax.int_ty, numSyntax.num] o type_of)
-             (non_presburger_subterms (concl th))
+fun ok_asm th = let
+  fun check(t, free_p) =
+      mem (type_of t) [intSyntax.int_ty, numSyntax.num] andalso
+      (free_p orelse goal_qtype t = qsEXISTS)
+in
+  List.all check (non_presburger_subterms0 [] (concl th))
+end
 
 fun conv_tac c =
     REPEAT (FIRST_X_ASSUM (MP_TAC o assert ok_asm)) THEN

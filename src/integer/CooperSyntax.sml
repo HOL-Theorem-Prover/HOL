@@ -155,7 +155,7 @@ fun has_quant t =
 
     Pays attention to negations.  Boolean operators in the term must be
     no more than
-       /\, \/, ~, = and if-then-else
+       /\, \/, ~, =, ==> and if-then-else
    ---------------------------------------------------------------------- *)
 
 datatype qstatus = EITHER | NEITHER | qsUNIV | qsEXISTS
@@ -170,6 +170,12 @@ fun goal_qtype tm = let
                in
                  if recurse EITHER g <> EITHER then raise return_NEITHER
                  else (t,e)
+               end
+        handle HOL_ERR _ => let
+                 val _ = assert (not o is_neg) tm
+                 val (l, r) = dest_imp tm
+               in
+                 (mk_neg l, r)
                end
   in
     case (acc, recurse acc l) of

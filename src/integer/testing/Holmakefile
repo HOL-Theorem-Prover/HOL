@@ -1,17 +1,19 @@
 PRE_INCLUDES = ..
-EXTRA_CLEANS = test_coopers test_omega tcooper genproblem gen_bc_problem \
+TEST_PROGS = test_coopers.exe test_omega.exe
+
+EXTRA_CLEANS = $(TEST_PROGS) tcooper genproblem gen_bc_problem \
                testdp
 
-all: test_coopers test_omega
+all: $(TEST_PROGS)
 
-test_coopers: test_coopers.uo ../Cooper.uo ../CooperShell.uo \
+test_coopers.exe: test_coopers.uo ../Cooper.uo ../CooperShell.uo \
               ../CooperMath.uo ../CooperSyntax.uo ../CooperCore.uo \
               ../jrhCore.uo ../IntDP_Munge.uo test_cases.uo
-	HOLMOSMLC -o test_coopers test_coopers.uo
+	HOLMOSMLC -o $@ test_coopers.uo
 
-test_omega: test_omega.uo ../Omega.uo ../OmegaShell.uo ../OmegaSimple.uo \
+test_omega.exe: test_omega.uo ../Omega.uo ../OmegaShell.uo ../OmegaSimple.uo \
             ../IntDP_Munge.uo test_cases.uo ../OmegaMath.uo ../CSimp.uo
-	HOLMOSMLC -o test_omega test_omega.uo
+	HOLMOSMLC -o $@ test_omega.uo
 
 tcooper: tcooper.c
 	gcc -o tcooper tcooper.c

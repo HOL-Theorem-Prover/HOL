@@ -1,7 +1,12 @@
-val progs = ["test_omega", "test_coopers"]
+val progs = ["test_omega.exe", "test_coopers.exe"]
 
-val _ = (FileSys.chDir "testing";
-         Systeml.systeml (Globals.HOLDIR^"/bin/Holmake" :: progs))
+val _ = FileSys.chDir "testing"
+
+val () =
+    if Systeml.systeml (Globals.HOLDIR^"/bin/Holmake" :: progs) = Process.success then
+      ()
+    else (print "Couldn't compile test programs!\n" ; Process.exit Process.failure)
+
 
 fun can_run s = FileSys.access (s, [FileSys.A_EXEC])
 

@@ -12,7 +12,7 @@ fun test_term c (n,t,b) = let
     handle Interrupt => SOME NONE
          | _ => NONE
   val {usr,sys,gc} = Timer.checkCPUTimer timer
-  val verdict =
+  val (verdictmsg, verdict) =
     case result of
       SOME (SOME th) => let
       in
@@ -21,13 +21,13 @@ fun test_term c (n,t,b) = let
           if b andalso r = boolSyntax.T orelse
              not b andalso r = boolSyntax.F
           then
-            "OK"
-          else "Bad EQN"
-        | NONE => "Not an EQN"
+            ("OK", true)
+          else ("Bad EQN", false)
+        | NONE => ("Not an EQN", false)
       end
-    | SOME NONE => "Interrupted"
-    | NONE => "Raised exception"
-  val _ = print (StringCvt.padRight #" " 17 verdict)
+    | SOME NONE => ("Interrupted", false)
+    | NONE => ("Raised exception", false)
+  val _ = print (StringCvt.padRight #" " 17 verdictmsg)
   val pl = StringCvt.padLeft #" " 6
   val _ = print (pl (Time.toString usr)^" "^pl (Time.toString sys)^" "^
                  pl (Time.toString gc))
@@ -42,7 +42,7 @@ fun test_term c (n,t,b) = let
                                   (100.0 * (pushms / usrms)) handle Div => "?")
   val _ = print (" (" ^ pl (Time.toString pushtime) ^ " " ^percent^"%)\n")
 in
-  ()
+  verdict
 end
 
 fun A s = ("at."^s, concl (DB.fetch "arithmetic" s), true)
@@ -228,7 +228,35 @@ val terms_to_test =
 
 ];
 
-fun perform_tests c = app (test_term c) terms_to_test
+val goals_to_test = [
+  ("van Leeuwen",
+   ([``0i <= i``, ``i :int < maxchar``,
+     ``!n. 0i <= n /\ n < i ==> (skips ArrayApp n = 0i)``],
+    ``maxchar - i > 0i``))
+]
+
+fun test_goal tac (name, g) = let
+  val _ = print (StringCvt.padRight #" " 25 name)
+  val result = SOME (SOME (tac g)) handle Interrupt => SOME NONE
+                                        | _ => NONE
+  val (verdictmsg, verdict) =
+      case result of
+        SOME (SOME (subgoals, _)) => if null subgoals then ("OK", true)
+                                     else ("Subgoals remain", false)
+      | SOME NONE => ("Interrupted", false)
+      | NONE => ("Raised exception", false)
+  val _ = print (verdictmsg ^  "\n")
+in
+  verdict
+end
+
+
+fun perform_tests conv tactic =
+    (print "Testing terms\n";
+     List.all (test_term conv) terms_to_test) andalso
+    (print "Testing goals\n";
+     List.all (test_goal tactic) goals_to_test)
+
 
 
 end; (* struct *)
