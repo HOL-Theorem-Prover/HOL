@@ -1,4 +1,4 @@
-(* app load ["word32Theory","word32Lib","armTheory","coreTheory","metisLib"]; *)
+(* app load ["word32Theory","word32Lib","armTheory","coreTheory","intLib"]; *)
 open HolKernel boolLib bossLib Q Parse numLib
      arithmeticTheory bitsTheory word32Theory word32Lib
      armTheory coreTheory;
@@ -6,6 +6,10 @@ open HolKernel boolLib bossLib Q Parse numLib
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "lemmas";
+
+(* -------------------------------------------------------- *)
+
+val _ = prefer_num();
 
 (* -------------------------------------------------------- *)
 
@@ -79,14 +83,9 @@ val TEST_OR_COMP_THM = store_thm("TEST_OR_COMP_THM",
     THEN SIMP_TAC arith_ss [TEST_OR_COMP_def,BITS_THM]
     THEN op_range 0 15 case_i 
     THEN op_range 1 15 num_CONV_i
-    THEN FULL_SIMP_TAC bool_ss [NOT_ZERO_LT_ZERO]
-    THEN IMP_RES_TAC LESS_NOT_SUC
-    THEN REPEAT (PAT_ASSUM `~(a = b)` (K ALL_TAC))
     THEN RULE_ASSUM_TAC REDUCE_RULE
-    THEN `15 < opc` by metisLib.METIS_TAC []
-    THEN PAT_ASSUM `opc < 16` ASSUME_TAC
-    THEN POP_ASSUM_LIST (fn thl => MAP_EVERY ASSUME_TAC (List.take (thl,2)))
-    THEN DECIDE_TAC
+    THEN SPOSE_NOT_THEN (K ALL_TAC) THEN REPEAT (POP_ASSUM MP_TAC)
+    THEN intLib.COOPER_TAC
 );
 
 val BV_TWO = store_thm("BV_TWO",
@@ -127,14 +126,9 @@ val ARITHMETIC_THM = store_thm("ARITHMETIC_THM",
     THEN SIMP_TAC arith_ss [ARITHMETIC_def,BIT_def,BITS_THM]
     THEN op_range 0 15 case_i 
     THEN op_range 1 15 num_CONV_i
-    THEN FULL_SIMP_TAC bool_ss [NOT_ZERO_LT_ZERO]
-    THEN IMP_RES_TAC LESS_NOT_SUC
-    THEN REPEAT (PAT_ASSUM `~(a = b)` (K ALL_TAC))
     THEN RULE_ASSUM_TAC REDUCE_RULE
-    THEN `15 < opc` by metisLib.METIS_TAC []
-    THEN PAT_ASSUM `opc < 16` ASSUME_TAC
-    THEN POP_ASSUM_LIST (fn thl => MAP_EVERY ASSUME_TAC (List.take (thl,2)))
-    THEN DECIDE_TAC
+    THEN SPOSE_NOT_THEN (K ALL_TAC) THEN REPEAT (POP_ASSUM MP_TAC)
+    THEN intLib.COOPER_TAC
 );
 
 val ARITHMETIC_THM2 = store_thm("ARITHMETIC_THM2",

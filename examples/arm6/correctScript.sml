@@ -10,6 +10,7 @@ val _ = new_theory "correct";
 
 (* -------------------------------------------------------- *)
 (* val _ = Count.counting_thms true; *)
+val _ = numLib.prefer_num();
 (* -------------------------------------------------------- *)
 
 val lem = prove(
