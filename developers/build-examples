@@ -35,6 +35,7 @@ RSA ()      { simple_example RSA; }
 ind_def ()  { simple_example ind_def; }
 lambda ()   { simple_example lambda; }
 sunrise ()  { simple_example sunrise/src; }
+arm6 ()     { simple_example arm6; }
 
 bmark () {
   cd bmark
@@ -89,7 +90,7 @@ fi
 if [ $# -eq 0 ]
 then
     echo Building all examples
-    for i in toplevel MLsyntax RSA ind_def lambda bmark parity miller
+    for i in toplevel MLsyntax RSA ind_def lambda bmark parity miller arm6
     do
         buildit $i
     done
