@@ -28,19 +28,18 @@ val GNUMAKE = Systeml.GNUMAKE
 val SRCDIRS0 =
  ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack",
   "src/taut", "src/compute/src", "src/q", "src/combin", "src/marker",
-  "src/labels",
-  "src/lite", "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
-  "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
-  "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
-  "src/IndDef",
-  "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
-  "src/datatype",  "src/list/src", "src/tfl/src", "src/Boolify/src",
+  "src/labels", "src/lite", "src/refute", "src/simp/src", "src/metis",
+  "src/meson/src","src/basicProof", "src/relation", "src/pair/src",
+  "src/sum", "src/one", "src/option", "src/num/theories",
+  "src/num/reduce/src", "src/num/arith/src","src/num", "src/IndDef",
+  "src/datatype/parse", "src/datatype/equiv", "src/datatype/record",
+  "src/datatype", "src/list/src", "src/tfl/src", "src/Boolify/src",
   "src/unwind", "src/boss", "src/word32", "src/string", "src/llist",
   "src/pred_set/src", "src/ring/src", "src/integer",
   "src/res_quan/src", "src/word/theories", "src/word/src",
   "src/finite_map", "src/hol88", "src/real", "src/bag",
-  "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob", "src/HolSat",
-  "src/muddy/muddyC", "src/muddy", "src/HolBdd"];
+  "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob",
+  "src/HolSat", "src/muddy/muddyC", "src/muddy", "src/HolBdd"];
 
 val SRCDIRS = map (fn s => fullPath [HOLDIR, s]) SRCDIRS0
 

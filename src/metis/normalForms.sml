@@ -188,7 +188,7 @@ fun COMBIN_CONV ths =
          CONST _ => ALL_CONV
        | VAR _ => ALL_CONV
        | COMB _ => RATOR_CONV conv THENC RAND_CONV conv
-       | LAMB _ => ABS_CONV conv THENC mk_combin) tm
+       | LAMB _ => ABS_CONV conv THENC mk_combin THENC conv) tm
   in
     conv
   end;
@@ -223,17 +223,15 @@ val SKI_CONV = COMBIN_CONV [MK_K, MK_I, MK_S];
 (*   $? ($! o C (S o $o $= o I) (C $+ 1))                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val MK_C = store_thm
-  ("MK_C",
-   ``!x y. (\v. (x v) y) = C (x:'a->'b->'c) y``,
+val MK_C = prove
+  (``!x y. (\v. (x v) y) = C (x:'a->'b->'c) y``,
    REPEAT STRIP_TAC THEN
    CONV_TAC (FUN_EQ_CONV) THEN
    SIMP_TAC boolSimps.bool_ss
    [combinTheory.S_DEF, combinTheory.K_DEF, combinTheory.C_DEF]);
 
-val MK_o = store_thm
-  ("MK_o",
-   ``!x y. (\v:'a. x (y v)) = (x:'b->'c) o y``,
+val MK_o = prove
+  (``!x y. (\v:'a. x (y v)) = (x:'b->'c) o y``,
    REPEAT STRIP_TAC THEN
    CONV_TAC (FUN_EQ_CONV) THEN
    SIMP_TAC boolSimps.bool_ss
@@ -280,6 +278,14 @@ val NEQ_EXPAND = prove
   (``!x y. ~(x = y) = (x \/ y) /\ (~x \/ ~y)``,
    tautLib.TAUT_TAC);
 
+val COND_EXPAND' = prove
+  (``!c a b. (if c then a else b) = ((~c \/ a) /\ (c \/ b))``,
+   tautLib.TAUT_TAC);
+
+val NCOND_EXPAND = prove
+  (``!c a b. ~(if c then a else b) = ((~c \/ ~a) /\ (c \/ ~b))``,
+   tautLib.TAUT_TAC);
+
 val DE_MORGAN_THM1 = prove
   (``!x y. (~(x /\ y) = ~x \/ ~y)``,
    tautLib.TAUT_TAC);
@@ -300,7 +306,7 @@ local
   val push_neg = FIRST_CONV
     (map REWR_CONV
      [IMP_DISJ_THM', NIMP_CONJ_THM, EQ_EXPAND', NEQ_EXPAND,
-      DE_MORGAN_THM1, DE_MORGAN_THM2] @
+      COND_EXPAND', NCOND_EXPAND, DE_MORGAN_THM1, DE_MORGAN_THM2] @
      [NOT_FORALL_CONV, NOT_EXISTS_CONV]);
   val q_neg = REPEATQC (MK_QCONV zap_neg) THENQC TRY_QCONV (MK_QCONV push_neg);
 in
@@ -683,25 +689,27 @@ val ORACLE_DEF_CNF_CONV =
   DEF_NNF_CONV THENC ORACLE_PURE_DEF_CNF_CONV THENC CLEANUP_DEF_CNF_CONV;
 
 (* ------------------------------------------------------------------------- *)
-(* Removes leading existential quantifiers from a theorem.                   *)
+(* Removes leading existential quantifiers from a theorem, by introducing a  *)
+(* new skolem constant with an appropriate assumption.                       *)
 (*                                                                           *)
 (* Examples:                                                                 *)
-(*   EXISTENTIAL_CONST_RULE   ``a``   |- ?x. P x y z                         *)
+(*   SKOLEM_CONST_RULE   ``a``   |- ?x. P x y z                              *)
 (*   ---->  [a = @x. P x y z] |- P a y                                       *)
 (*                                                                           *)
-(*   EXISTENTIAL_CONST_RULE   ``a y z``   |- ?x. P x y                       *)
+(*   SKOLEM_CONST_RULE   ``a y z``   |- ?x. P x y                            *)
 (*   ---->  [a = \y z. @x. P x y z] |- P (a y z) y                           *)
 (*                                                                           *)
-(* NEW_CONST_RULE creates a new variable as the argument to                  *)
-(* EXISTENTIAL_CONST_RULE, and CLEANUP_CONSTS_RULE tries to eliminate        *)
-(* as many of these new equality assumptions as possible.                    *)
+(* NEW_SKOLEM_CONST generates an argument for SKOLEM_CONST_RULE, and         *)
+(* NEW_SKOLEM_CONST_RULE puts the two functions together.                    *)
+(* CLEANUP_SKOLEM_CONSTS_RULE tries to eliminate as many 'skolem             *)
+(* assumptions' as possible.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 local
   fun comb_beta (x, eq_th) =
     CONV_RULE (RAND_CONV BETA_CONV) (MK_COMB (eq_th, REFL x))
 in
-  fun EXISTENTIAL_CONST_RULE c_vars th =
+  fun SKOLEM_CONST_RULE c_vars th =
     let
       val (c, vars) = strip_comb c_vars
       val sel_th =
@@ -715,16 +723,18 @@ in
     end
 end;
 
-fun NEW_CONST_RULE th =
+fun NEW_SKOLEM_CONST th =
   let
     val tm = concl th
-    val fvs = free_vars tm
+    val fvs = subtract (free_vars tm) (free_varsl (hyp th))
     val (v, _) = dest_exists tm
     val c_type = foldl (fn (h, t) => type_of h --> t) (type_of v) fvs
     val c_vars = list_mk_comb (genvar c_type, rev fvs)
   in
-    EXISTENTIAL_CONST_RULE c_vars th
+    c_vars
   end;
+
+val NEW_SKOLEM_CONST_RULE = W (SKOLEM_CONST_RULE o NEW_SKOLEM_CONST);
 
 local
   fun zap _ _ [] = raise ERR "zap" "fresh out of asms"
@@ -737,9 +747,9 @@ local
           MP (SPEC def (GEN v (DISCH asm th))) (REFL def)
         else zap th (asm::checked) rest
       end
-    else zap th (asm::checked) rest
+    else zap th (asm::checked) rest;
 in
-  val CLEANUP_CONSTS_RULE = repeat (fn th => zap th [concl th] (hyp th))
+  val CLEANUP_SKOLEM_CONSTS_RULE = repeat (fn th => zap th [concl th] (hyp th));
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -925,8 +935,8 @@ val Term = Parse.Term;
 val Type = Parse.Type;
 show_assums := true;
 Globals.guessing_tyvars := true;
-app load ["normalFormsTest", "numLib", "arithmeticTheory", "bossLib"];
-open normalFormsTest numLib arithmeticTheory bossLib;
+app load ["UNLINK", "numLib", "arithmeticTheory", "bossLib"];
+open UNLINK numLib arithmeticTheory bossLib;
 Parse.reveal "C";
 
 PRETTIFY_VARS_CONV (rhs (concl (DEF_CNF_CONV ``~(p = q) ==> q /\ r``)));
@@ -995,11 +1005,11 @@ try (DEF_CNF_CONV THENC PRETTIFY_VARS_CONV)
 CLEANUP_DEF_CNF_CONV ``?v. (v 0 = (x /\ y) /\ (v 1 = (v 0 = x))) /\ v 0``;
 try PURE_DEF_CNF_CONV ``(p /\ (q \/ r /\ s)) /\ (~p \/ ~q \/ ~s)``;
 
-EXISTENTIAL_CONST_RULE ``a:'a`` (ASSUME ``?x. (P:'a->'b->'c->bool) x y z``);
-EXISTENTIAL_CONST_RULE ``(a:'b->'c->'a) y z``
+SKOLEM_CONST_RULE ``a:'a`` (ASSUME ``?x. (P:'a->'b->'c->bool) x y z``);
+SKOLEM_CONST_RULE ``(a:'b->'c->'a) y z``
   (ASSUME ``?x. (P:'a->'b->'c->bool) x y z``);
-NEW_CONST_RULE (ASSUME ``?x. (P:'a->'b->'c->bool) x y z``);
-CLEANUP_CONSTS_RULE it;
+NEW_SKOLEM_CONST_RULE (ASSUME ``?x. (P:'a->'b->'c->bool) x y z``);
+CLEANUP_SKOLEM_CONSTS_RULE it;
 
 DELAMB_CONV ``(\x. f x z) = g z``;
 

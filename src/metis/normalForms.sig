@@ -164,23 +164,26 @@ val ORACLE_PURE_DEF_CNF_CONV : conv     (* Simply asserts the conversion thm *)
 val ORACLE_DEF_CNF_CONV      : conv     (* NNF + ORACLE_PURE + CLEANUP *)
 
 (* ------------------------------------------------------------------------- *)
-(* Removes leading existential quantifiers from a theorem.                   *)
+(* Removes leading existential quantifiers from a theorem, by introducing a  *)
+(* new skolem constant with an appropriate assumption.                       *)
 (*                                                                           *)
 (* Examples:                                                                 *)
-(*   EXISTENTIAL_CONST_RULE   ``a``   |- ?x. P x y z                         *)
+(*   SKOLEM_CONST_RULE   ``a``   |- ?x. P x y z                              *)
 (*   ---->  [a = @x. P x y z] |- P a y                                       *)
 (*                                                                           *)
-(*   EXISTENTIAL_CONST_RULE   ``a y z``   |- ?x. P x y                       *)
+(*   SKOLEM_CONST_RULE   ``a y z``   |- ?x. P x y                            *)
 (*   ---->  [a = \y z. @x. P x y z] |- P (a y z) y                           *)
 (*                                                                           *)
-(* NEW_CONST_RULE creates a new variable as the argument to                  *)
-(* EXISTENTIAL_CONST_RULE, and CLEANUP_CONSTS_RULE tries to eliminate        *)
-(* as many of these new equality assumptions as possible.                    *)
+(* NEW_SKOLEM_CONST generates an argument for SKOLEM_CONST_RULE, and         *)
+(* NEW_SKOLEM_CONST_RULE puts the two functions together.                    *)
+(* CLEANUP_SKOLEM_CONSTS_RULE tries to eliminate as many 'skolem             *)
+(* assumptions' as possible.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val EXISTENTIAL_CONST_RULE : term -> rule
-val NEW_CONST_RULE         : rule
-val CLEANUP_CONSTS_RULE    : rule
+val SKOLEM_CONST_RULE          : term -> rule
+val NEW_SKOLEM_CONST           : thm -> term
+val NEW_SKOLEM_CONST_RULE      : rule
+val CLEANUP_SKOLEM_CONSTS_RULE : rule
 
 (* ------------------------------------------------------------------------- *)
 (* Eliminates some lambdas to make terms "as first-order as possible".       *)

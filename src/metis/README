@@ -1,0 +1,112 @@
+This README file is the documentation for the Metis first-order prover
+library in HOL.
+
+
+Quick Guide to Using the Metis Library
+--------------------------------------
+
+At the top of your proof script, write
+
+  open metisLib;
+
+Then you can use
+
+     METIS_TAC  to prove first-order goals; and
+  HO_METIS_TAC  to prove (some) higher-order goals.
+
+Both of these tactics take a list of theorems that are used to prove
+the goal.
+
+
+Inside the Metis Library
+------------------------
+
+The *METIS_TAC tactics prove a HOL goal hol_goal as follows:
+
+1. HOL tactics simplify hol_goal and convert it to CNF
+   - modules folTools and normalForms
+
+2. A first-order goal fol_goal is derived from hol_goal
+   - module folMapping
+
+3. The first-order calculi attack fol_goal, hopefully deriving a
+   first-order theorem fol_th
+   - modules mlibMetis, mlibMeson, mlibResolution, and mlib*
+
+4. A logical kernel keeps track of a first-order proof for every
+   first-order theorem that is derived
+   - module mlibKernel
+
+5. The first-order proof corresponding to fol_th is lifted to HOL,
+   producing a HOL theorem hol_th
+   - module folMapping
+
+6. hol_th is used to prove the original HOL goal hol_goal
+   - module folTools
+
+
+Comparison with MESON_TAC
+-------------------------
+
++ The Metis library has better treatment of boolean variables and
+  lambda terms. For example, MESON_TAC cannot prove the following two
+  goals:
+
+  metisLib.METIS_PROVE    [] ``p (\x. x) /\ q ==> q /\ p (\y. y)``;
+  metisLib.HO_METIS_PROVE [] ``?x. x``;
+
++ The combination of model elimination and resolution calculi in
+  HO_METIS_TAC allows some hard goals to be proved that are too deep
+  for MESON_TAC, such as the GILMORE_9 and STEAM_ROLLER problems.
+
++ The Metis library gives an easy interface to tools that solve goals
+  as well as prove them, including the user-friendly
+
+  metisLib.PROLOG_SOLVE : thm list -> Query -> Result stream
+
+= MESON_TAC automatically spots higher-order goals and sets up the
+  proof translation accordingly, but in the Metis library you have to
+  do this manually by selecting either METIS_TAC or HO_METIS_TAC.
+
+- The resolution component in HO_METIS_TAC occasionally goes
+  completely haywire and eats all the memory :-(
+
+- HO_METIS_TAC combines resolution and model elimination calculi by
+  time-slicing between them, so in principle it could successfully
+  prove a goal on one occasion but diverge on another. Fortunately, in
+  practice this situation isn't likely to arise.
+
+- When HOL is built, 1435 goals are submitted to MESON_TAC.
+
+  MESON_TAC ....................... proves 1435 [1]
+  METIS_TAC ....................... proves 1240 within 10 seconds
+  HO_METIS_TAC .................... proves 1346 within 10 seconds
+  One of METIS_TAC and HO_METIS_TAC proves 1389 within 10 seconds
+
+  MESON_TAC is typically faster on these goals than both METIS_TAC and
+  HO_METIS_TAC. The HOL goals that could be successfully proved by a
+  Metis prover are available in first-order format at
+
+  http://www.cl.cam.ac.uk/~jeh1004/research/problems/hol.sml.gz
+
+  [1] So the tactic proofs in the HOL distribution contain no instances
+      of idioms such as MESON_TAC [] ORELSE ...
+
+
+History and Credit
+------------------
+
+This library was written by Joe Hurd, with the intention of evolving a
+replacement to John Harrison's MESON_TAC that is commonly used for
+first-order proof in HOL.
+
+The model elimination and resolution calculi were based on code in
+mesonLib and John Harrison's forthcoming book about theorem proving.
+
+Release 1.0 was integrated into the HOL sources on 18 July 2002.
+
+Metis is a Greek word referring to a concept similar to cunning,
+technology, and craft. METIS_TAC seemed like a better name for the
+successor of MESON_TAC than MEGRANDSON_TAC :-)
+
+Joe Hurd, July 2002.
