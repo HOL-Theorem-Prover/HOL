@@ -767,7 +767,7 @@ fun HO_MATCH_ACCEPT_TAC thm =
       fun atac (asl,w) = ([], K (fmatch w))
   in REPEAT GEN_TAC THEN atac
   end
-  handle HOL_ERR _ => raise ERR "MATCH_ACCEPT_TAC" "";
+  handle HOL_ERR _ => raise ERR "HO_MATCH_ACCEPT_TAC" "";
 
 (* ------------------------------------------------------------------------- *)
 (* Simplified version of HO_MATCH_MP_TAC to avoid quantifier troubles.       *)
@@ -786,23 +786,22 @@ fun HO_BACKCHAIN_TAC th =
 
 fun HO_MATCH_MP_TAC th = 
  let val sth =
-     let val tm = concl th
-         val (avs,bod) = strip_forall tm
-         val (ant,conseq) = dest_imp_only bod
-         val th1 = SPECL avs (ASSUME tm)
-         val th2 = UNDISCH th1
-         val evs = filter(fn v => free_in v ant andalso 
-                                  not(free_in v conseq)) avs
-         val th3 = itlist SIMPLE_CHOOSE evs (DISCH tm th2)
-         val tm3 = Lib.trye hd(hyp th3)
-     in MP (DISCH tm (GEN_ALL (DISCH tm3 (UNDISCH th3)))) th
-     end handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "Bad theorem"
-     val match_fun = HO_PART_MATCH (snd o dest_imp_only) sth
+   let val tm = concl th
+       val (avs,bod) = strip_forall tm
+       val (ant,conseq) = dest_imp_only bod
+       val th1 = SPECL avs (ASSUME tm)
+       val th2 = UNDISCH th1
+       val evs = filter(fn v => free_in v ant andalso not(free_in v conseq)) avs
+       val th3 = itlist SIMPLE_CHOOSE evs (DISCH tm th2)
+       val tm3 = Lib.trye hd(hyp th3)
+   in MP (DISCH tm (GEN_ALL (DISCH tm3 (UNDISCH th3)))) th
+   end handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "Bad theorem"
+   val match_fun = HO_PART_MATCH (snd o dest_imp_only) sth
  in fn (asl,w) => 
       let val xth = match_fun w
           val lant = fst(dest_imp_only(concl xth))
       in ([(asl,lant)],MP xth o Lib.trye hd)
-      end handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
+      end handle e => raise (wrap_exn "Tactic" "HO_MATCH_MP_TAC" e)
  end;
 
 end; (* Tactic *)

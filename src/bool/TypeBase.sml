@@ -274,7 +274,7 @@ local fun drop [] ty = fst(dom_rng ty)
         handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
       fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()};
       fun join f g x =
-        case (g x)
+        case g x
          of NONE => NONE
           | SOME y => (case f y
                         of NONE => NONE

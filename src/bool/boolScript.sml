@@ -3397,19 +3397,19 @@ end
  ---------------------------------------------------------------------------*)
 
 val BOOL_FUN_CASES_THM = 
- let val x = mk_var("x",bool)
-     val f = mk_var("f",bool-->bool)
-     val KF    = Term `\b:bool.F`
-     val KT    = Term `\b:bool.T`
-     val Ibool = Term `\b:bool.b`
-     val dual  = Term `\b. ~b`
-     val fT    = mk_comb(f,T)
-     val fF    = mk_comb(f,F)
+ let val x       = mk_var("x",bool)
+     val f       = mk_var("f",bool-->bool)
+     val KF      = Term `\b:bool.F`
+     val KT      = Term `\b:bool.T`
+     val Ibool   = Term `\b:bool.b`
+     val dual    = Term `\b. ~b`
+     val fT      = mk_comb(f,T)
+     val fF      = mk_comb(f,F)
      val fT_eq_T = mk_eq(fT,T)
      val fF_eq_T = mk_eq(fF,T)
      val fT_eq_F = mk_eq(fT,F)
      val fF_eq_F = mk_eq(fF,F)
-     val final = Term `(f = ^KT) \/ (f = ^KF) \/ (f = ^Ibool) \/ (f = ^dual)`
+     val final   = Term `(f = ^KT) \/ (f = ^KF) \/ (f = ^Ibool) \/ (f = ^dual)`
      val a0 = TRANS (ASSUME fT_eq_T) (SYM (BETA_CONV (mk_comb(KT,T))))
      val a1 = TRANS (ASSUME fF_eq_T) (SYM (BETA_CONV (mk_comb(KT,F))))
      val a2 = BOOL_CASE (Term`f x = ^KT x`) x x a0 a1

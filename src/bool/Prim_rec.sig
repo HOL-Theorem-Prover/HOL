@@ -13,7 +13,7 @@ signature Prim_rec =
 sig
 
    type term = Term.term
-   type thm = Thm.thm
+   type thm  = Thm.thm
    type tactic = Abbrev.tactic
 
    (*-----------------------------------------------------------------------
@@ -29,6 +29,7 @@ sig
       Given a type axiom and the type name, returns the constructors
       associated with that type in the axiom.
     -------------------------------------------------------------------------*)
+
    val type_constructors : thm -> string -> term list
    val type_constructors_with_args : thm -> string -> term list
 
@@ -40,8 +41,8 @@ sig
       once, this function returns the definitions of the case constants for
       each type introduced by an axiom.
     -------------------------------------------------------------------------*)
-   val define_case_constant : thm -> thm list
 
+   val define_case_constant : thm -> thm list
 
    val INDUCT_THEN                 : thm -> (thm -> tactic) -> tactic
    val prove_rec_fn_exists         : thm -> term -> thm
@@ -51,6 +52,7 @@ sig
       Similarly, this function returns a list of theorems where each theorem
       in the list is the cases theorem for a type characterised in the axiom.
     -------------------------------------------------------------------------*)
+
    val prove_cases_thm             : thm -> thm list
    val case_cong_thm               : thm -> thm -> thm
    val prove_constructors_distinct : thm -> thm option list

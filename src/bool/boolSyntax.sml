@@ -24,20 +24,21 @@ infix 5 |->;
        Basic constants
  ---------------------------------------------------------------------------*)
 
-val equality    = prim_mk_const {Name="=",    Thy="min"};
-val implication = prim_mk_const {Name="==>",  Thy="min"};
-val select      = prim_mk_const {Name="@",    Thy="min"};
-val T           = prim_mk_const {Name="T",    Thy="bool"};
-val F           = prim_mk_const {Name="F",    Thy="bool"};
-val universal   = prim_mk_const {Name="!",    Thy="bool"};
-val existential = prim_mk_const {Name="?",    Thy="bool"};
-val exists1     = prim_mk_const {Name="?!",   Thy="bool"};
-val conjunction = prim_mk_const {Name="/\\",  Thy="bool"};
-val disjunction = prim_mk_const {Name="\\/",  Thy="bool"};
-val negation    = prim_mk_const {Name="~",    Thy="bool"};
-val conditional = prim_mk_const {Name="COND", Thy="bool"};
-val let_tm      = prim_mk_const {Name="LET",  Thy="bool"};
-val arb         = prim_mk_const {Name="ARB",  Thy="bool"};
+val equality    = prim_mk_const {Name="=",         Thy="min"};
+val implication = prim_mk_const {Name="==>",       Thy="min"};
+val select      = prim_mk_const {Name="@",         Thy="min"};
+val T           = prim_mk_const {Name="T",         Thy="bool"};
+val F           = prim_mk_const {Name="F",         Thy="bool"};
+val universal   = prim_mk_const {Name="!",         Thy="bool"};
+val existential = prim_mk_const {Name="?",         Thy="bool"};
+val exists1     = prim_mk_const {Name="?!",        Thy="bool"};
+val conjunction = prim_mk_const {Name="/\\",       Thy="bool"};
+val disjunction = prim_mk_const {Name="\\/",       Thy="bool"};
+val negation    = prim_mk_const {Name="~",         Thy="bool"};
+val conditional = prim_mk_const {Name="COND",      Thy="bool"};
+val let_tm      = prim_mk_const {Name="LET",       Thy="bool"};
+val arb         = prim_mk_const {Name="ARB",       Thy="bool"};
+val bool_case   = prim_mk_const {Name="bool_case", Thy="bool"};
 
 
 (*---------------------------------------------------------------------------
