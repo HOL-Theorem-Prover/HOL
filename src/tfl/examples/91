@@ -2,23 +2,22 @@
            McCarthy's 91 function.
  ---------------------------------------------------------------------------*)
 
-app load ["TotalDefn", "BasicProvers", "SingleStep"];
+app load ["TotalDefn", "BasicProvers", "SingleStep", "numLib"];
 
-open TotalDefn BasicProvers SingleStep;
+open TotalDefn BasicProvers SingleStep numLib;
 infix 8 by;
 
 (*---------------------------------------------------------------------------
          Miscellaneous support
  ---------------------------------------------------------------------------*)
 
-val arith_ss  = simpLib.++(bool_ss,arithSimps.ARITH_ss);
-fun ARITH q  = EQT_ELIM(arithLib.ARITH_CONV (Term q));
-val ARITH_TAC = CONV_TAC arithLib.ARITH_CONV;
-
-val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
-
 val measure_def   = prim_recTheory.measure_def;
 val inv_image_def = relationTheory.inv_image_def;
+
+val arith_ss  = simpLib.++(bool_ss,arithSimps.ARITH_ss);
+fun ARITH q  = ARITH_PROVE (Term q);
+
+val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
 
 
 (*---------------------------------------------------------------------------

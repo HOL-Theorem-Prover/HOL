@@ -8,14 +8,14 @@ infix 8 by;
  ---------------------------------------------------------------------------*)
 
 val iota_def = 
-  Defn.Hol_defn "iota" 
-    `iota bot top = if bot > top then [] else bot::iota (bot+1) top`;
+  Hol_defn "iota" 
+           `iota bot top = if bot > top then [] else bot::iota (bot+1) top`;
 
 
 val (iota_eqn, iota_ind) =
 TotalDefn.tprove 
  (iota_def,
-  WF_REL_TAC iota_def `measure \(b,t). SUC t - b`
+  WF_REL_TAC iota_def `measure \(b,t). SUC t - b` 
     THEN DECIDE_TAC);
 
 
@@ -40,12 +40,12 @@ val iota_length = Q.prove
  recInduct iota_ind
   THEN REPEAT GEN_TAC THEN NTAC 2 STRIP_TAC
   THEN ONCE_REWRITE_TAC [iota_eqn]
-  THEN RW_TAC base_ss [listTheory.LENGTH]
+  THEN RW_TAC std_ss [listTheory.LENGTH]
   THENL [DECIDE_TAC,
-         RW_TAC base_ss [arithmeticTheory.ONE,arithmeticTheory.ADD_CLAUSES] 
-           THEN RW_TAC base_ss [arithmeticTheory.ADD1] THEN
+         RW_TAC std_ss [arithmeticTheory.ONE,arithmeticTheory.ADD_CLAUSES] 
+           THEN RW_TAC std_ss [arithmeticTheory.ADD1] THEN
            Cases_on `bot = top` 
-           THENL [RW_TAC base_ss [] 
+           THENL [RW_TAC std_ss [] 
                     THEN ONCE_REWRITE_TAC [iota_eqn]
                     THEN RW_TAC list_ss [],
                   `bot+1 <= top` by DECIDE_TAC THEN

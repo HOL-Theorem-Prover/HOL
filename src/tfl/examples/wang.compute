@@ -1,0 +1,441 @@
+app load ["bossLib", "computeLib"]; 
+open computeLib bossLib;
+
+Hol_datatype `prop = VAR of 'a
+                   | NOT of prop
+                   | AND of prop => prop
+                   | OR  of prop => prop`;
+
+val Pr_def = 
+ Hol_defn "Pr"
+    `(Pr vl [] (VAR v::r)   vr = Pr vl [] r (v::vr))
+ /\  (Pr vl [] (NOT x::r)   vr = Pr vl [x] r vr)
+ /\  (Pr vl [] (OR x y::r)  vr = Pr vl [] (x::y::r) vr)
+ /\  (Pr vl [] (AND x y::r) vr = Pr vl [] (x::r) vr /\ Pr vl [] (y::r) vr)
+
+ /\  (Pr vl (VAR v::l)    r vr = Pr (v::vl) l r vr)
+ /\  (Pr vl (NOT x::l)    r vr = Pr vl l (x::r) vr)
+ /\  (Pr vl (AND x y::l)  r vr = Pr vl (x::y::l) r vr)
+ /\  (Pr vl (OR x y::l)   r vr = Pr vl (x::l) r vr /\ Pr vl (y::l) r vr)
+
+ /\  (Pr vl [] [] vr           = EXISTS (\y. MEM y vl) vr)`;
+
+
+val Prove_def = Define `Prove P = Pr [] [] [P] []`;
+
+(*---------------------------------------------------------------------------
+     Termination of Pr. We need a subsidiary measure function on 
+     propositions which makes a 2-argument proposition bigger than a 
+     list of 2 propositions. 
+ ---------------------------------------------------------------------------*)
+
+val Meas_def =
+ Define 
+    `(Meas (VAR v)   = 0)
+ /\  (Meas (NOT x)   = SUC (Meas x))
+ /\  (Meas (AND x y) = Meas x + Meas y + 2)
+ /\  (Meas (OR x y)  = Meas x + Meas y + 2)`;
+
+(*---------------------------------------------------------------------------*
+ *  Termination of Pr.                                                       *
+ *---------------------------------------------------------------------------*)
+
+val (Pr_eqns, Pr_ind) = 
+ Defn.tprove (Pr_def,
+   WF_REL_TAC Pr_def
+       `measure \(w:'a list, x:'a prop list, y:'a prop list, z:'a list). 
+                      list_size Meas x + list_size Meas y`
+     THEN RW_TAC arith_ss [Meas_def,listTheory.list_size_def]);
+
+
+
+(*---------------------------------------------------------------------------
+    Build a computing base that knows basic facts about 
+    booleans, plus whatever list operations are used in Pr.
+ ---------------------------------------------------------------------------*)
+
+val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES,AND_CLAUSES]);
+
+(*---------------------------------------------------------------------------
+       Recast MEM and EXISTS definitions in terms of if-then-else
+ ---------------------------------------------------------------------------*)
+
+local val MEM_IF = Q.prove(
+           `!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
+            RW_TAC list_ss [listTheory.MEM])
+      val EXISTS_IF = Q.prove(
+           `!P h t. EXISTS P (h::t) = if P h then T else EXISTS P t`,
+            RW_TAC list_ss [listTheory.EXISTS_DEF])
+      val MEM_DEF'    = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF
+      val EXISTS_DEF' = CONJ (CONJUNCT1 listTheory.EXISTS_DEF) EXISTS_IF
+in
+val _ = add_thms (true,
+           [Pr_eqns,Prove_def,MEM_DEF',EXISTS_DEF',REFL_CLAUSE, COND_ID]) rws
+end;
+
+fun Hol_eval q = Count.apply (CBV_CONV rws) (--q--);
+
+(*---------------------------------------------------------------------------
+      Examples.
+ ---------------------------------------------------------------------------*)
+
+val x = Term`VAR x`;
+val y = Term`VAR y`;
+val z = Term`VAR z`;
+val p = Term`VAR p`;
+val q = Term`VAR q`;
+val r = Term`VAR r`;
+val s = Term`VAR s`;
+
+fun imp x y = Term`OR (NOT ^x) ^y`;
+fun iff x y = Term`AND ^(imp x y) ^(imp y x)`;
+
+val BOOL_CASES = Hol_eval `Prove (OR ^x (NOT ^x))`;
+val NOT_BCASES = Hol_eval `Prove (OR ^x (NOT ^y))`;
+val IMP_REFL   = Hol_eval `Prove (OR (NOT ^x) ^x)`;
+val DISTRIB    = Hol_eval `Prove ^(iff (Term`AND ^x (OR ^y ^z)`)
+                                       (Term`OR (AND ^x ^y) (AND ^x ^z)`))`;
+
+val PEIRCE = Hol_eval `Prove ^(imp (imp (imp p q) p) p)`;
+
+val ANDREWS = Hol_eval `Prove
+ ^(imp (Term`AND ^(imp p (Term`AND ^q (OR ^r ^s)`))
+                (OR (NOT ^q) (NOT ^r))`)
+     (imp p s))`;
+
+
+(*---------------------------------------------------------------------------
+      The following are adapted from jrh's tautology collection
+      in the examples directory.
+ ---------------------------------------------------------------------------*)
+
+val v0 = Term`VAR v0`;
+val v1 = Term`VAR v1`;
+val v2 = Term`VAR v2`;
+val v3 = Term`VAR v3`;
+val v4 = Term`VAR v4`;
+val v5 = Term`VAR v5`;
+val v6 = Term`VAR v6`;
+val v7 = Term`VAR v7`;
+val v8 = Term`VAR v8`;
+val v9 = Term`VAR v9`;
+
+set_fixity "OR" (Infixr 300);
+set_fixity "AND" (Infixr 400);
+
+val syn323_1 = Hol_eval 
+`Prove (NOT((^v0 OR ^v1) AND 
+            (NOT ^v0 OR ^v1) AND 
+            (NOT ^v1 OR ^v0) AND 
+            (NOT ^v0 OR NOT ^v1)))`;
+
+
+val syn029_1 = Hol_eval
+`Prove
+   (NOT((NOT ^v2 OR NOT ^v1) AND
+        ^v0 AND 
+        (NOT ^v0 OR NOT ^v1 OR ^v2) AND 
+        (NOT ^v2 OR ^v1) AND (^v1 OR ^v2)))`;
+
+
+val syn052_1 = Hol_eval
+`Prove
+   (NOT((NOT ^v1 OR ^v0) AND 
+        (NOT ^v0 OR ^v1) AND 
+        (^v1 OR ^v0) AND (NOT ^v1 OR ^v1) AND (NOT ^v0 OR NOT ^v1)))`;
+
+val syn051_1 = Hol_eval
+`Prove
+  (NOT(( ^v1 OR ^v0) AND
+       (^v1 OR ^v2) AND
+       (NOT ^v0 OR NOT ^v1) AND
+       (NOT ^v2 OR NOT ^v1) AND
+       (NOT ^v0 OR ^v1) AND
+       (NOT ^v1 OR ^v2)))`;
+
+val syn044_1 = Hol_eval
+`Prove
+  (NOT((^v0 OR ^v1) AND
+       (NOT ^v0 OR NOT ^v1) AND
+       (NOT ^v0 OR ^v1 OR ^v2) AND
+       (NOT ^v2 OR ^v1) AND
+       (NOT ^v2 OR ^v0) AND
+       (NOT ^v1 OR ^v2)))`;
+
+val syn011_1 = Hol_eval
+`Prove
+  (NOT(^v6 AND
+       (NOT ^v0 OR NOT ^v2) AND
+       (^v0 OR ^v1 OR ^v5) AND
+       (NOT ^v2 OR NOT ^v1) AND
+       (NOT ^v4 OR ^v2) AND
+       (NOT ^v3 OR ^v2) AND
+       (^v3 OR ^v4 OR ^v5) AND
+       (NOT ^v5 OR NOT ^v6)))`;
+
+val syn032_1 = Hol_eval
+`Prove
+  (NOT((NOT ^v5 OR NOT ^v1) AND
+       (NOT ^v4 OR NOT ^v0) AND
+       (NOT ^v4 OR ^v0) AND
+       (NOT ^v5 OR ^v1) AND
+       (NOT ^v2 OR ^v4 OR ^v3) AND
+       (^v4 OR ^v2 OR ^v3) AND
+       (NOT ^v3 OR ^v4 OR ^v5)))`;
+
+val syn030_1 = Hol_eval
+`Prove
+   (NOT((NOT ^v4 OR NOT ^v0 OR NOT ^v1) AND
+        (NOT ^v3 OR NOT ^v4 OR ^v0) AND
+        (NOT ^v1 OR ^v0) AND
+        (^v0 OR ^v1) AND
+        (NOT ^v0 OR ^v1) AND
+        (NOT ^v1 OR NOT ^v0 OR ^v2) AND
+        (NOT ^v2 OR ^v1) AND
+        (NOT ^v1 OR ^v3) AND
+        (NOT ^v2 OR NOT ^v3 OR ^v4)))`;
+
+val syn054_1 =  Hol_eval
+`Prove
+  (NOT((NOT ^v1 OR NOT ^v7) AND
+       (NOT ^v2 OR NOT ^v0) AND
+       (NOT ^v3 OR ^v7 OR ^v4) AND
+       (NOT ^v6 OR ^v0 OR ^v5) AND
+       (NOT ^v7 OR ^v1) AND
+       (NOT ^v0 OR ^v2) AND
+       (NOT ^v4 OR ^v1) AND
+       (NOT ^v5 OR ^v2) AND
+       (NOT ^v3 OR NOT ^v4) AND
+       (NOT ^v6 OR NOT ^v5) AND
+       (^v6 OR ^v7)))`;
+
+(* Takes a while ... is it looping? *)
+val gra001_1 = Hol_eval
+`Prove
+  (NOT((NOT ^v1 OR ^v0) AND
+       (NOT ^v0 OR ^v1) AND
+       (NOT ^v4 OR NOT ^v2 OR NOT ^v0) AND
+       (NOT ^v4 OR ^v2 OR ^v0) AND
+       (NOT ^v2 OR ^v4 OR ^v0) AND
+       (NOT ^v0 OR ^v4 OR ^v2) AND
+       (NOT ^v3 OR NOT ^v2 OR NOT ^v1) AND
+       (NOT ^v3 OR ^v2 OR ^v1) AND
+       (NOT ^v2 OR ^v3 OR ^v1) AND
+       (NOT ^v1 OR ^v3 OR ^v2) AND
+       (NOT ^v3 OR NOT ^v4) AND
+       (^v3 OR ^v4)))`;
+
+val syn321_1 =  Hol_eval
+`Prove
+  (NOT((NOT ^v0 OR ^v9) AND
+       (NOT ^v0 OR ^v6) AND
+       (NOT ^v0 OR ^v7) AND
+       (NOT ^v8 OR ^v9) AND
+       (NOT ^v8 OR ^v6) AND
+       (NOT ^v8 OR ^v7) AND
+       (NOT ^v1 OR ^v9) AND
+       (NOT ^v1 OR ^v6) AND
+       (NOT ^v1 OR ^v7) AND
+       (NOT ^v2 OR ^v3) AND
+       (NOT ^v4 OR ^v5) AND
+       (NOT ^v7 OR ^v8) AND
+       (^v8 OR ^v9) AND
+       (^v8 OR ^v6) AND
+       (^v8 OR ^v7) AND
+       (NOT ^v8 OR NOT ^v9)))` ;
+
+(*---------------------------------------------------------------------------
+ The SML version
+
+fun mem x [] = false
+  | mem x (h::t) = (x=h) orelse mem x t;
+
+datatype 'a prop = VAR of 'a
+                 | NOT of 'a prop
+                 | AND of 'a prop * 'a prop
+                 | OR  of 'a prop * 'a prop;
+
+fun Prv vl [] (VAR v::r) vr    = Prv vl [] r (v::vr)
+  | Prv vl [] (NOT x::r) vr    = Prv vl [x] r vr
+  | Prv vl [] (OR(x,y)::r) vr  = Prv vl [] (x::y::r) vr
+  | Prv vl [] (AND(x,y)::r) vr = Prv vl [] (x::r) vr
+                                      andalso
+                                  Prv vl [] (y::r) vr
+  | Prv vl (VAR v::l) r vr     = Prv (v::vl) l r vr
+  | Prv vl (NOT x::l) r vr     = Prv vl l (x::r) vr
+  | Prv vl (AND(x,y)::l) r vr  = Prv vl (x::y::l) r vr
+  | Prv vl (OR(x,y)::l) r vr   = Prv vl (x::l) r vr
+                                    andalso
+                                Prv vl (y::l) r vr
+
+  | Prv vl [] [] vr = List.exists (fn y => mem y vl) vr;
+
+infixr 5 AND;
+infixr 4 OR;
+
+fun prove M = Prv [] [] [M] [];
+
+val x = VAR "x";
+val y = VAR "y";
+val z = VAR "z";
+val p = VAR "p";
+val q = VAR "q";
+val r = VAR "r";
+val s = VAR "s";
+
+fun imp x y = NOT x OR y;
+fun iff x y = (imp x y) AND (imp y x);
+
+val BOOL_CASES = time prove (x OR (NOT x));
+val NOT_BCASES = time prove (x OR (NOT y));
+val IMP_REFL   = time prove (imp x x);
+val DISTRIB    = time prove (iff (x AND (y OR z))
+                            ((x AND y) OR (x AND z)));
+
+val PEIRCE     = time prove (imp (imp (imp p q) p) p);
+
+val ANDREWS    = time prove
+ (imp ((imp p (q AND (r OR s))) AND ((NOT q) OR (NOT r)))
+     (imp p s));
+
+
+(*---------------------------------------------------------------------------
+      The following are adapted from jrh's tautology collection
+      in the examples directory.
+ ---------------------------------------------------------------------------*)
+
+val v0 = VAR "v0";
+val v1 = VAR "v1";
+val v2 = VAR "v2";
+val v3 = VAR "v3";
+val v4 = VAR "v4";
+val v5 = VAR "v5";
+val v6 = VAR "v6";
+val v7 = VAR "v7";
+val v8 = VAR "v8";
+val v9 = VAR "v9";
+
+val syn323_1 = time prove 
+  (NOT((v0 OR v1) AND 
+       (NOT v0 OR v1) AND 
+       (NOT v1 OR v0) AND 
+       (NOT v0 OR NOT v1)));
+
+
+val syn029_1 = 
+time prove
+   (NOT((NOT v2 OR NOT v1) AND
+        v0 AND 
+        (NOT v0 OR NOT v1 OR v2) AND 
+        (NOT v2 OR v1) AND (v1 OR v2)));
+
+
+val syn052_1 = 
+time prove
+   (NOT((NOT v1 OR v0) AND 
+        (NOT v0 OR v1) AND 
+        (v1 OR v0) AND (NOT v1 OR v1) AND (NOT v0 OR NOT v1)));
+
+val syn051_1 = 
+time prove
+  (NOT((v1 OR v0) AND
+       (v1 OR v2) AND
+       (NOT v0 OR NOT v1) AND
+       (NOT v2 OR NOT v1) AND
+       (NOT v0 OR v1) AND
+       (NOT v1 OR v2)));
+
+val syn044_1 = 
+time prove
+  (NOT((v0 OR v1) AND
+       (NOT v0 OR NOT v1) AND
+       (NOT v0 OR v1 OR v2) AND
+       (NOT v2 OR v1) AND
+       (NOT v2 OR v0) AND
+       (NOT v1 OR v2)));
+
+val syn011_1 = 
+time prove
+  (NOT(v6 AND
+       (NOT v0 OR NOT v2) AND
+       (v0 OR v1 OR v5) AND
+       (NOT v2 OR NOT v1) AND
+       (NOT v4 OR v2) AND
+       (NOT v3 OR v2) AND
+       (v3 OR v4 OR v5) AND
+       (NOT v5 OR NOT v6)));
+
+val syn032_1 = 
+time prove
+  (NOT((NOT v5 OR NOT v1) AND
+       (NOT v4 OR NOT v0) AND
+       (NOT v4 OR v0) AND
+       (NOT v5 OR v1) AND
+       (NOT v2 OR v4 OR v3) AND
+       (v4 OR v2 OR v3) AND
+       (NOT v3 OR v4 OR v5)));
+
+val syn030_1 = 
+time prove
+   (NOT((NOT v4 OR NOT v0 OR NOT v1) AND
+        (NOT v3 OR NOT v4 OR v0) AND
+        (NOT v1 OR v0) AND
+        (v0 OR v1) AND
+        (NOT v0 OR v1) AND
+        (NOT v1 OR NOT v0 OR v2) AND
+        (NOT v2 OR v1) AND
+        (NOT v1 OR v3) AND
+        (NOT v2 OR NOT v3 OR v4)));
+
+val syn054_1 =  
+time prove
+  (NOT((NOT v1 OR NOT v7) AND
+       (NOT v2 OR NOT v0) AND
+       (NOT v3 OR v7 OR v4) AND
+       (NOT v6 OR v0 OR v5) AND
+       (NOT v7 OR v1) AND
+       (NOT v0 OR v2) AND
+       (NOT v4 OR v1) AND
+       (NOT v5 OR v2) AND
+       (NOT v3 OR NOT v4) AND
+       (NOT v6 OR NOT v5) AND
+       (v6 OR v7)));
+
+(* Takes much longer, but it is not looping *)
+val gra001_1 = 
+time prove
+  (NOT((NOT v1 OR v0) AND
+       (NOT v0 OR v1) AND
+       (NOT v4 OR NOT v2 OR NOT v0) AND
+       (NOT v4 OR v2 OR v0) AND
+       (NOT v2 OR v4 OR v0) AND
+       (NOT v0 OR v4 OR v2) AND
+       (NOT v3 OR NOT v2 OR NOT v1) AND
+       (NOT v3 OR v2 OR v1) AND
+       (NOT v2 OR v3 OR v1) AND
+       (NOT v1 OR v3 OR v2) AND
+       (NOT v3 OR NOT v4) AND
+       (v3 OR v4)));
+
+val syn321_1 = 
+time prove 
+  (NOT((NOT v0 OR v9) AND
+       (NOT v0 OR v6) AND
+       (NOT v0 OR v7) AND
+       (NOT v8 OR v9) AND
+       (NOT v8 OR v6) AND
+       (NOT v8 OR v7) AND
+       (NOT v1 OR v9) AND
+       (NOT v1 OR v6) AND
+       (NOT v1 OR v7) AND
+       (NOT v2 OR v3) AND
+       (NOT v4 OR v5) AND
+       (NOT v7 OR v8) AND
+       (v8 OR v9) AND
+       (v8 OR v6) AND
+       (v8 OR v7) AND
+       (NOT v8 OR NOT v9))) ;
+
+
+ End of SML version.
+ ---------------------------------------------------------------------------*)
