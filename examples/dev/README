@@ -14,6 +14,7 @@
 == [27.01.05: MJCG added hw synthesis improvements]                          ==
 == [28.01.05: MJCG more optimisations and updated README]                    ==
 == [29.01.05: MJCG added COMB_SYNTH_CONV removed SEL operators]              ==
+== [30.01.05: MJCG added dff: Melham's temporal abstraction theory]          ==
 ===============================================================================
 
 composeScript.sml ......... definition of devices and their composition
@@ -21,6 +22,11 @@ devScript.sml.............. definition and theorems on liveness
 compileScript.sml ......... definitions and theorems to support compiler
 compile.sml ............... convert to combinators and compile to devices
 FactScript.sml ............ an example
+dff ....................... Melham's temporal abstraction theory
+
+Compile using:
+
+ Holmake -I dff
 
 *******************************************************************************
 There are four levels of abstraction:

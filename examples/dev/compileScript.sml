@@ -11,9 +11,10 @@
 ******************************************************************************)
 (*
 quietdec := true;
-map load  ["metisLib","composeTheory","devTheory"];
+loadPath :="dff" :: !loadPath;
+map load  ["metisLib","composeTheory","devTheory","dffTheory"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory 
-     composeTheory devTheory metisLib;
+     composeTheory devTheory dffTheory metisLib;
 quietdec := false;
 *)
 
@@ -26,7 +27,7 @@ open HolKernel Parse boolLib bossLib;
 * Open theories
 ******************************************************************************)
 open metisLib arithmeticTheory pairLib pairTheory PairRules combinTheory 
-     composeTheory devTheory;
+     composeTheory dffTheory devTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -684,7 +685,7 @@ val DEL_CONCAT =
  store_thm
   ("DEL_CONCAT",
    ``DEL(inp1 <> inp2, out1 <> out2) = DEL(inp1,out1) /\ DEL(inp2,out2)``,
-   RW_TAC std_ss [DEL_def,BUS_CONCAT_def]
+   RW_TAC std_ss [DEL_THM,BUS_CONCAT_def]
     THEN PROVE_TAC[]);
 
 val DFF_CONCAT =
@@ -838,4 +839,13 @@ val REC =
            FINISH (done_e,done_f,done_g,done)``,
    RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,REC_def]);
 
+(*****************************************************************************)
+(* Temporal refinement using Melham's theory                                 *)
+(*****************************************************************************)
+val DEL_Del =
+ store_thm
+  ("DEL_Del",
+   ``DEL(inp,out) = (out 0 = inp 0) /\ Del(inp,out)``,
+   PROVE_TAC[DEL_THM,Del]);
+     
 val _ = export_theory();

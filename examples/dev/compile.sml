@@ -1115,7 +1115,7 @@ fun COMB_SYNTH_CONV tm =
               THEN GEN_BETA_TAC 
               THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (print "Can't prove:\n";print_term goal;
+           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_const bdy orelse numSyntax.is_numeral bdy
@@ -1127,7 +1127,7 @@ fun COMB_SYNTH_CONV tm =
               THEN GEN_BETA_TAC 
               THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (print "Can't prove:\n";print_term goal;
+           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_comb bdy andalso is_const(rator bdy)
@@ -1145,7 +1145,7 @@ fun COMB_SYNTH_CONV tm =
                THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
                THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (print "Can't prove:\n";print_term goal;
+           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_pair bdy andalso is_BUS_CONCAT out_bus
@@ -1164,7 +1164,7 @@ fun COMB_SYNTH_CONV tm =
              THEN EQ_TAC
              THEN RW_TAC bool_ss [])
            handle HOL_ERR _ =>
-           (print "Can't prove:\n";print_term goal;
+           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_comb bdy 
@@ -1189,7 +1189,7 @@ fun COMB_SYNTH_CONV tm =
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
               THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (print "Can't prove:\n";print_term goal;
+           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else raise ERR "COMB_SYNTH_CONV" "disallowed case"
