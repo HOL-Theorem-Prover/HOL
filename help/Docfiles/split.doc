@@ -15,9 +15,9 @@ list.
 Never fails.
 
 \COMMENTS
-Identical to the Basis function {ListPair.unzip}.
+Identical to the Basis function {ListPair.unzip} and the function {Lib.unzip}.
 
 \SEEALSO
-combine.
+Lib, unzip, zip, combine.
 
 \ENDDOC

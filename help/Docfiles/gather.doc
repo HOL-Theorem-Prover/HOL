@@ -1,6 +1,6 @@
-\DOC filter
+\DOC gather
 
-\TYPE {filter : ('a -> bool) -> 'a list -> 'a list)}
+\TYPE {gather : ('a -> bool) -> 'a list -> 'a list)}
 
 \SYNOPSIS
 
@@ -10,7 +10,7 @@ Filters a list to the sublist of elements satisfying a predicate.
 list.
 
 \DESCRIBE
-{filter P l} applies {P} to every element of {l}, returning a list of those
+{gather P l} applies {P} to every element of {l}, returning a list of those
 that satisfy {P}, in the order they appeared in the original list.
 
 \FAILURE
@@ -18,9 +18,9 @@ If {P x} fails for some element {x} of {l}.
 
 \COMMENTS
 
-Identical to {gather}.
+Identical to {filter}.
 
 \SEEALSO
-Lib, gather, mapfilter, partition.
+Lib, filter, mapfilter, partition.
 
 \ENDDOC

@@ -1,8 +1,9 @@
 \DOC itlist
 
-\TYPE {itlist : ((* -> ** -> **) -> * list -> ** -> **)}
+\TYPE {itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b}
 
 \SYNOPSIS
+
 List iteration function. Applies a binary function between adjacent elements
 of a list.
 
@@ -10,21 +11,23 @@ of a list.
 list.
 
 \DESCRIBE
-{itlist f [x1;...;xn] y} returns
+{itlist f [x1,...,xn] b} returns
 {
-   f x1 (f x2 ... (f xn y)...)
+   f x1 (f x2 ... (f xn b)...)
 }
-\noindent It returns {y} if list is empty.
+\noindent It returns {b} if list is empty.
 
 \FAILURE
-Never fails.
+
+Fails if some application of {f} fails.
 
 \EXAMPLE
 {
-#itlist (\x y. x + y) [1;2;3;4] 0;;
-10 : int
+    - itlist (curry op+) [1,2,3,4] 0;
+    val it = 10 : int
+
 }
 \SEEALSO
-rev_itlist, end_itlist.
+Lib, itlist2, rev_itlist, rev_itlist2, end_itlist.
 
 \ENDDOC
