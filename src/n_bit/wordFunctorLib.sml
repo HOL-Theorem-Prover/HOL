@@ -43,6 +43,10 @@ functor wordFunctorLib (structure wordTheory : sig
   val LS_EVAL : Thm.thm
   val HI_EVAL : Thm.thm
   val HS_EVAL : Thm.thm
+  val FORALL_WORD : Thm.thm
+  val EQUIV_def : Thm.thm
+  val ONE_COMP_THM : Thm.thm
+  val BITWISE_THM2 : Thm.thm
 end) : sig
   include Abbrev
 
@@ -178,11 +182,11 @@ fun pp_word_off() = Parse.remove_user_printer ({Tyop = thyname, Thy = thyname});
 (* should reduce to a boolean expression suitable for a decision procedure.  *)
 (*---------------------------------------------------------------------------*)
 
-val NORM_TAC = 
- SIMP_TAC std_ss [FORALL_WORD] THEN 
+val NORM_TAC =
+ SIMP_TAC std_ss [FORALL_WORD] THEN
  SIMP_TAC std_ss [ONE_COMP_EVAL, AND_EVAL, OR_EVAL, EOR_EVAL] THEN
- SIMP_TAC std_ss [n2w_11,GSYM EQUIV_def] THEN 
- RW_TAC bool_ss 
+ SIMP_TAC std_ss [n2w_11,GSYM EQUIV_def] THEN
+ RW_TAC bool_ss
     [EOR_def, AND_def, OR_def, ONE_COMP_THM, GSYM BITWISE_THM2, BITWISE_THM];
 
 val WORD_EQ_TAC = NORM_TAC THEN tautLib.TAUT_TAC;
