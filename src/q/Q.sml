@@ -144,7 +144,7 @@ fun UNDISCH_THEN q ttac = PAT_UNDISCH_TAC q THEN DISCH_THEN ttac;
 fun PAT_ASSUM q ttac (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)
 in
-  Ho_tactics.PAT_ASSUM (ptm_with_ctxtty ctxt Type.bool q) ttac g
+  Tactical.PAT_ASSUM (ptm_with_ctxtty ctxt Type.bool q) ttac g
 end
 val UNDISCH_TAC = Tactic.UNDISCH_TAC o btm;
 
