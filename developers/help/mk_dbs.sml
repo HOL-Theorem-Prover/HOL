@@ -98,8 +98,7 @@ fun buildDb holpath = let
      "goalstackLib.sig",
 
      (* hol_match *)
-     "Ho_match.sig","Ho_resolve.sig","Ho_theorems.sig",
-     "Ho_net.sig","Ho_rewrite.sig",
+     "Ho_match.sig","Ho_resolve.sig", "Ho_net.sig","Ho_rewrite.sig",
 
      (* hol88 *)
      "hol88Lib.sig",
