@@ -362,16 +362,12 @@ fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
 fun exists_p [] _ = false
   | exists_p (p :: ps) x = p x orelse exists_p ps x;
 
-fun strip_dom_rng ty =
-  (case total dom_rng ty of NONE => ([], ty)
-   | SOME (d, r) => (cons d ## I) (strip_dom_rng r));
-
 local
   fun rator_n 0 f tm = f tm
     | rator_n n f tm = is_comb tm andalso rator_n (n - 1) f (rator tm);
 
   fun case_p c =
-    let val (doms, _) = strip_dom_rng (type_of c)
+    let val (doms, _) = strip_fun (type_of c)
     in rator_n (length doms) (same_const c)
     end;
 
