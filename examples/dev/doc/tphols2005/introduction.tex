@@ -1,35 +1,32 @@
 
 We describe correct-by-construction compilation of
 function definitions in higher order logic to hardware.  
-Implementations are created in the form of theorems $\vdash
+Implementations are created by automated theorem proving in the form of theorems $\vdash
 {\it{Imp}}\Rightarrow{\it{Spec}}$, where {\it{Imp}} is a term
 describing a circuit that implements a four-phase handshake computing
 a function, and the handshake is specified in higher order logic by
 {\it{Spec}}.
 
-Compilation is implemented using proof
-scripts and goes through several phases, each refining the
+The compiler is a specialised theorem prover
+that goes through several phases, each refining the
 implementation to a more concrete form, until a representation that
-can be output as Verilog is created.
+can be output as Verilog is deduced.
 
 %We have in mind two uses of the work described here: generating
 %implementations and generating testbench monitors.
 
-Our system can generate synthesisable Verilog, and is intended to be
-used with a Verilog synthesis tool to make implementations (though we
-have not tried this yet). However, the hardware designs we construct
-are not likely to have high performance. This may not matter for some
-applications, and we anticipate that having guaranteed-correct
-implementations will interest some clients. For example, a case study
-at Utah aims to produce implementations of components useful for
-building cryptographic hardware.  This will result in a reference
-library of ``golden'' implementations. Although our compilation to
-hardware designs is naive, it is transparent and programmable. Users
-can tune the generated hardware either by pre-optimising the higher
-order logic definitions that are used, or by adding optimisations to
-the compilation process. Thus the flow from mathematical
-specification to hardware can consist in deductive optimisation of the
-source functions prior to input to the compiler.
+Our goal is to generate synthesisable Verilog suitable for input to a
+synthesis tool. The hardware designs we construct may not have high
+performance, but we anticipate that having
+guaranteed-correct implementations will interest some clients. For
+example, a case study at Utah aims to produce implementations of
+components useful for building cryptographic hardware.  This will
+result in a reference library of ``golden'' implementations. 
+
+The compilation to hardware is transparent and programmable. Users can
+tune the generated hardware either by pre-optimising the higher order
+logic specifications, or by adding optimisations to the theorem
+proving script that performs compilation.
 
 %The second use of our work is to automatically generate testbench
 %infrastructure. The idea here is that one synthesises a
@@ -45,12 +42,12 @@ source functions prior to input to the compiler.
 %testbench monitors to test (rather than to be) real implementations.
 
 In the next section we give a quick overview of the currently
-implemented system using a simple (but unrealistic) example. Next we
+implemented system using a simple (but unrealistic) example. We then
 describe the specification of components in higher order logic that
-underlies the work. We then describe how function definitions in
+underlies the work. Next we describe how function definitions in
 higher order logic are translated to hardware via a sequence of steps,
 ending with Verilog.  Some unfinished case studies that are in
-progress are discussed, we we survey related work by others, and
-finally, our plans for the future are outlined. An appendix contains
-the definitions of the circuit constructors that we use to build
+progress are then discussed. Finally, we survey related work by
+others, and outline our plans for the future. An appendix contains the
+definitions of the circuit constructors that we use to build
 implementations.

@@ -50,10 +50,10 @@ from:
 
 \vspace*{-2mm}
 
-\begin{verbatim}
- |- FactIter (n,acc) =
-     (if n = 0 then (n,acc) else FactIter (n - 1,n * acc))
-\end{verbatim}
+\begin{alltt}
+\( \vdash \DEF{FactIter} (n,acc) =                                                               \)
+\(     (\texttt{if} n = 0 \texttt{then} (n,acc) \texttt{else} \DEF{FactIter} (n-1,n{\times}acc)) \)
+\end{alltt}
 
 \vspace*{-1mm}
 
@@ -61,13 +61,13 @@ from:
 
 \vspace*{-1mm}
 
-{\baselineskip10pt\begin{verbatim}
- |- FactIter =
-     Rec (Seq (Par (\(n,acc). n) (\(n,acc). 0)) (UNCURRY $=))
-         (Par (\(n,acc). n) (\(n,acc). acc))
-         (Par (Seq (Par (\(n,acc). n) (\(n,acc). 1)) (UNCURRY $-))
-              (Seq (Par (\(n,acc). n) (\(n,acc). acc)) (UNCURRY $*)))
-\end{verbatim}}
+{\baselineskip10pt\begin{alltt}
+\( \vdash \DEF{FactIter} =                                                                        \)
+\(     \DEF{Rec} (\DEF{Seq} (\DEF{Par} ({\lambda}(n,acc). n) ({\lambda}(n,acc). 0)) ({=}))        \)
+\(         (\DEF{Par} ({\lambda}(n,acc). n) ({\lambda}(n,acc). acc))                              \)
+\(         (\DEF{Par} (\DEF{Seq} (\DEF{Par} ({\lambda}(n,acc). n) ({\lambda}(n,acc). 1)) ({-}))   \)
+\(              (\DEF{Seq} (\DEF{Par} ({\lambda}(n,acc). n) ({\lambda}(n,acc). acc)) ({\times}))) \)
+\end{alltt}}
 
 \subsection*{Step 2: implementation using circuit constructors}
 
@@ -205,12 +205,11 @@ combinational circuits. For example:
 
 \vspace*{-2mm}
 
-{\baselineskip10pt\begin{verbatim}
- |- COMB (\(m,n). (m < n,m + 1)) (inp1 <> inp2,out1 <> out2) =
-     ?v0.
-       COMB (UNCURRY $<) (inp1 <> inp2,out1) /\ CONSTANT 1 v0 /\
-       COMB (UNCURRY $+) (inp1 <> v0,out2)
-\end{verbatim}}
+{\begin{alltt}
+\( \vdash \DEF{COMB}({\lambda}(m,n). (m<n, m+1))(inp1<>inp2,out1<>out2) =              \)
+\(     {\exists}v0. \DEF{COMB}({<})(inp1<>inp2,out1) \wedge \DEF{CONSTANT} 1 v0 \wedge \)
+\(          \DEF{COMB}({+})(inp1<>v0,out2)                                              \)
+\end{alltt}}
 \vspace*{-2mm}
 
 \noindent where {\verb+<>+} is bus concatenation,
@@ -224,12 +223,12 @@ the circuit constructs are defined by:
 
 \vspace*{-2mm}
 
-{\baselineskip10pt\begin{verbatim}
- |- DEL (inp,out) = (out 0 = inp 0) /\ !t. out (t + 1) = inp t 
+{\begin{alltt}
+\( \vdash \DEF{DEL}(inp,out) = (out 0 = inp 0) \wedge {\forall}t. out(t+1) = inp t                       \)
 
- |- DFF (d,clk,q) =
-     !t. q (t + 1) = (if POSEDGE clk (t + 1) then d (t + 1) else q t)
-\end{verbatim}}
+\( \vdash \DEF{DFF}(d,clk,q) =                                                                           \)
+\(     {\forall}t. q(t+1) = (\texttt{if} \DEF{POSEDGE} clk (t+1) \texttt{then} d(t+1) \texttt{else} q t) \)
+\end{alltt}}
 
 \vspace*{-2mm}
 
@@ -243,11 +242,10 @@ no delay from \texttt{d} to
 However, we can easily implement \DEF{DEL} and \DEF{DFF} in terms of off-the-shelf
 standard components,  \DEF{REG} and \DEF{REGF}, where:
 
-\begin{verbatim}
- |- REG (inp,out) = !t. out (t + 1) = inp t 
-
- |- REGF (inp,out) = (out 0 = F) /\ REG (inp,out)
-\end{verbatim}
+{\baselineskip16pt\begin{alltt}
+\( \vdash \DEF{REG}(inp,out) = {\forall}t. out(t+1) = inp t          \)
+\( \vdash \DEF{REGF}(inp,out) = (out 0 = F) \wedge \DEF{REG}(inp,out)\)
+\end{alltt}}
 
 Both \DEF{DEL} and \DEF{DFF} can be realised by combinations of
 \DEF{REG} and \DEF{REGF} (and some combinational logic). We omit
@@ -293,11 +291,10 @@ Melham has described in his monograph (and previously proved mechanically in HOL
 
 
 
-{\baselineskip10pt\begin{verbatim}
-|- InfRise clk ==> !d q. Dtype (clk,d,q) ==> REG (d at clk,q at clk)
-
-|- InfRise clk ==> !d q. Dff (clk,d,q) ==> REGF (d at clk,q at clk)
-\end{verbatim}}
+{\baselineskip14pt\begin{alltt}
+\( \vdash \DEF{InfRise} clk \Rightarrow {\forall}d q. \DEF{Dtype}(clk,d,q) \Rightarrow \DEF{REG}(d \DEF{at} clk, q \DEF{at} clk) \)
+\( \vdash \DEF{InfRise} clk \Rightarrow {\forall}d q. \DEF{Dff}(clk,d,q) \Rightarrow \DEF{REGF}(d \DEF{at} clk, q \DEF{at} clk)  \)
+\end{alltt}}
 
 
 
@@ -325,11 +322,11 @@ represented in a standard way (as described, for example, in Melham's book)
 as a conjunction of predicates representing primitive components,
 with internal lines existentially quantified.
 
-This can be `pretty printed' directly into Verilog. Unfortunately Verilog is not a semantically formal notation,
-so we cannot deduce Verilog by proof. However, there is a direct and transparent correspondence
-between the structure of ${\it{Imp}}$ and the Verilog text that is printed.
+This can be `pretty printed' directly into Verilog. Unfortunately
+Verilog is not a semantically formal notation, so we cannot deduce
+Verilog by proof. However, there is a direct and transparent
+correspondence between the structure of ${\it{Imp}}$ and the Verilog
+text that is printed.  Currently be have a translator to Verilog
+implemented, but we are still testing and validating it.
 
-\bigskip
-{\it Hope to add an example as soon as printing is working}
-\bigskip
 

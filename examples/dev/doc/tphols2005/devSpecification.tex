@@ -54,6 +54,8 @@ The term \mE{\DEF{HoldF}\ (t_1,t_2)\ s} says that a
 signal \VAR{s} holds a low value \DEF{F} during a half-open interval
 starting at \sVAR{t}{1} to just before \sVAR{t}{2}. The formal definitions are:
 
+\vspace*{-1mm}
+
 \[
 \begin{array}{ll}
 \TURNST\ \DEF{Posedge}\ s\ t~ &      = ~ \IF{~t{=}0~}{~\DEF{F}~}{~(\NOT\hspace*{0.8mm} s(t{-}1)\ \AND\ s\ t~})\\
