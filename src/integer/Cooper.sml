@@ -2,6 +2,9 @@ structure Cooper :> Cooper =
 struct
 
 open HolKernel boolLib integerTheory Parse
+     arithmeticTheory intSyntax int_arithTheory intSimps;
+
+local open listTheory in end;
 
 infix THEN THENC THENL |-> ## ORELSEC
 infixr -->
@@ -10,18 +13,14 @@ val (Type,Term) = parse_from_grammars integerTheory.integer_grammars;
 fun -- q x = Term q
 fun == q x = Type q
 
-open arithmeticTheory Psyntax intSyntax int_arithTheory intSimps;
 
-fun ERR f msg = HOL_ERR {origin_function = f,
-                         message = msg,
-                         origin_structure = "int_arith"};
+val ERR = mk_HOL_ERR "int_arith";
 
-val not_tm = Term.mk_const{Name = "~", Ty = Type.bool --> Type.bool}
-val num_ty = Type.mk_type{Tyop = "num", Args = []}
-val true_tm = Term.mk_const {Name = "T", Ty = Type.bool}
-val false_tm = Term.mk_const {Name = "F", Ty = Type.bool}
+val not_tm = boolSyntax.negation;
+val num_ty = numSyntax.num
+val true_tm = boolSyntax.T
+val false_tm = boolSyntax.F
 
-local open listTheory in end;
 
 fun mk_abs_CONV var term = let
   val rhs = Rsyntax.mk_abs {Body = term, Bvar = var}
@@ -468,7 +467,7 @@ in
     (BINDER_CONV (LCMify THENC myrewrite_conv THENC
                   REDUCE_CONV THENC absify_CONV) THENC
      REWR_CONV lcm_eliminate THENC
-     RENAME_VARS_CONV [#Name (Term.dest_var var)] THENC
+     RENAME_VARS_CONV [fst (dest_var var)] THENC
      BINDER_CONV (LAND_CONV BETA_CONV) THENC
      ADDITIVE_TERMS_CONV (TRY_CONV collect_additive_consts))
     term
@@ -682,8 +681,8 @@ fun phase4_CONV tm = let
 
   val (disj2, bis_list_tm) = let
     (* need all of the bi *)
-    val intlist_ty = Type.mk_type{Args = [int_ty], Tyop = "list"};
-    val MEM_tm = Term.mk_const{Name = "MEM",
+    val intlist_ty = mk_thy_type{Args=[int_ty], Tyop="list",Thy="list"}
+    val MEM_tm = mk_thy_const{Name = "MEM", Thy="list",
                                Ty = int_ty --> intlist_ty --> Type.bool}
     fun find_bis acc tm =
       if is_disj tm orelse is_conj tm then
@@ -754,7 +753,7 @@ fun phase4_CONV tm = let
     val thm1 = let
       val (exvar, lemma_body) = dest_exists (concl lemma)
     in
-      ASSUME (Term.subst [exvar |-> lemma_var] lemma_body)
+      ASSUME (subst [exvar |-> lemma_var] lemma_body)
     end
     val c = rand (concl assumption)
     val spec_cgs = SPECL [lemma_var, c, delta_tm] can_get_small
@@ -763,7 +762,7 @@ fun phase4_CONV tm = let
     val thm2 = let
       val (v, body) = dest_exists (concl thm0)
     in
-      CONJUNCT2 (ASSUME (Term.subst [v |-> e] body))
+      CONJUNCT2 (ASSUME (subst [v |-> e] body))
     end
     val thm3 = SPECL [e,c] lemma2
     val thm4 = MATCH_MP thm1 thm2
@@ -1115,7 +1114,7 @@ fun phase4_CONV tm = let
     val choose_lemma = let
       val (exvar, exbody) = dest_exists (concl lemma)
     in
-      ASSUME (Term.subst [exvar |-> y] exbody)
+      ASSUME (subst [exvar |-> y] exbody)
     end
     (*
        specialise can_get_small with [y, x0, d] and MP with zero_lt_delta
@@ -1134,7 +1133,7 @@ fun phase4_CONV tm = let
     val choose_u = let
       val (exvar, exbody) = dest_exists (concl little_c_ex)
     in
-      ASSUME (Term.subst [exvar |-> u] exbody)
+      ASSUME (subst [exvar |-> u] exbody)
     end
     val zero_lt_u = CONJUNCT1 choose_u
     val x0_less_ud = CONJUNCT2 choose_u
@@ -1171,7 +1170,7 @@ fun phase4_CONV tm = let
     val choose_k = let
       val (exvar, exbody) = dest_exists (concl exists_small_k)
     in
-      ASSUME (Term.subst [exvar |-> k] exbody)
+      ASSUME (subst [exvar |-> k] exbody)
     end
     val u0_less_crap = rand (rand (rator (concl choose_k)))
     val neginf_crap_eq = SPECL [k, x0_less_ud_tm] lemma2
@@ -1448,7 +1447,7 @@ fun decide_fv_presburger tm = let
     else let
       val gv = genvar int_ty
     in
-      mk_forall(gv, Term.subst [bv |-> gv] t)
+      mk_forall(gv, subst [bv |-> gv] t)
     end
 in
   if null fvs then
@@ -1468,7 +1467,7 @@ end
 
 fun abs_inj inj_n tm = let
   val gv = genvar int_ty
-  val tm1 = Term.subst [inj_n |-> gv] tm
+  val tm1 = subst [inj_n |-> gv] tm
 in
   GSYM (BETA_CONV (mk_comb(mk_abs(gv,tm1), inj_n)))
 end
@@ -1542,7 +1541,7 @@ fun decide_nonpbints_presburger subterms tm = let
     else let
       val gv = genvar int_ty
     in
-      (mk_forall(gv, Term.subst [subtm |-> gv] tm),
+      (mk_forall(gv, subst [subtm |-> gv] tm),
        EQT_INTRO o SPEC subtm o EQT_ELIM)
     end
   fun gen_overall_tactic tmlist =

@@ -1,3 +1,6 @@
+structure integerScript = 
+struct
+
 (*==========================================================================*)
 (* Theory of integers. (John Harrison)                                      *)
 (*                                                                          *)
@@ -7,11 +10,13 @@
 (* This theory was constructed for use in the HOL-ELLA system, using many of*)
 (* the principles, and some of the code, used in the reals library. It is my*)
 (* eventual intention to produce a more unified library of number systems.  *)
+(*                                                                          *)
+(* October/November 1999.                                                   *)
+(* Extensions by Michael Norrish to define exponentiation, division and     *)
+(* modulus.                                                                 *)
+(*                                                                          *)
 (*==========================================================================*)
 
-
-(* Extensions by Michael Norrish to define exponentiation, division and
-   modulus.                                       October/November 1999  *)
 
 open HolKernel Parse boolLib
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
@@ -19,13 +24,13 @@ infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 val _ = new_theory "integer";
 
 (* interactive mode
-  app load ["jrhUtils", "EquivType", "hol88Lib", "liteLib", "QLib",
+  app load ["jrhUtils", "EquivType", "liteLib", "QLib",
         "SingleStep", "BasicProvers", "boolSimps", "pairSimps", "arithSimps",
-        "numLib"];
+        "numLib", "PairedDefinition"];
 *)
-open jrhUtils EquivType liteLib arithLib Psyntax
+open jrhUtils EquivType liteLib arithLib
      arithmeticTheory prim_recTheory numTheory
-     simpLib numLib boolTheory liteLib;
+     simpLib numLib boolTheory liteLib PairedDefinition;
 
 infix ++;
 
@@ -33,7 +38,7 @@ fun new_prim_rec_definition(s,tm) =
   Prim_rec.new_recursive_definition {
     name = s, rec_axiom = prim_recTheory.num_Axiom, def = tm
   };
-val PROVE = prove
+
 
 val int_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss;
 
@@ -87,9 +92,6 @@ val LT_ADD2 =
 (* will be flattened to right-associated form.                              *)
 (*--------------------------------------------------------------------------*)
 
-fun failwith s = raise HOL_ERR{message=s,origin_structure="INT",
-			       origin_function=""}
-
 fun CANCEL_CONV (assoc,sym,lcancelthms) tm =
   let val lcthms =
       map ((fn th => (assert (is_eq o concl)) th
@@ -128,7 +130,6 @@ fun CANCEL_CONV (assoc,sym,lcancelthms) tm =
 				  (map REWR_CONV lcthms))) eqv
 	  end
   end handle _ => failwith "CANCEL_CONV";
-
 
 
 
@@ -206,7 +207,6 @@ val TINT_EQ_TRANS =
 	      Term `!x y z. x tint_eq y /\ y tint_eq z ==> x tint_eq z`,
 		  REPEAT GEN_PAIR_TAC THEN REWRITE_TAC[tint_eq]
 	                          THEN ARITH_TAC)
-
 
 val TINT_EQ_EQUIV = store_thm("TINT_EQ_EQUIV",
   Term `!p q. p tint_eq q = ($tint_eq p = $tint_eq q)`,
@@ -468,6 +468,7 @@ val _ = overload_on ("*", Term`$int_mul`);
 (* this is a slightly tricky case; we don't have to call overload_on
    on the boolean negation, but we're doing so to put it back at the
    top of the list of possible resolutions. *)
+
 val bool_not = Term`$~`
 val _ = overload_on ("~", Term`$int_neg`);
 val _ = overload_on ("~", bool_not);
@@ -1182,7 +1183,7 @@ val INT_LT =
 val INT_INJ =
     store_thm("INT_INJ",
 	      Term `!m n. (&m:int = &n) = (m = n)`,
-	      let val th = PROVE(Term `(m:num = n) = m <= n /\ n <= m`,
+	      let val th = prove(Term `(m:num = n) = m <= n /\ n <= m`,
 				 EQ_TAC
 				 THENL [DISCH_THEN SUBST1_TAC
 					THEN REWRITE_TAC[LESS_EQ_REFL],
@@ -2576,3 +2577,5 @@ val INT_DISCRETE = store_thm(
   ]);
 
 val _ = export_theory();
+
+end

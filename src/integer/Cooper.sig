@@ -1,9 +1,6 @@
 signature Cooper =
 sig
-  type term = Term.term
-  type thm = Thm.thm
-  type conv = Abbrev.conv
-  type tactic = Abbrev.tactic
+  include Abbrev 
 
   val COOPER_CONV                 : conv
   val COOPER_PROVE                : conv

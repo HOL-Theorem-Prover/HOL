@@ -2,19 +2,13 @@ structure jrhUtils :> jrhUtils=
 struct
 
 (* Standard libs *)
-open HolKernel boolLib liteLib
-     Psyntax numLib reduceLib
+open HolKernel boolLib liteLib numLib reduceLib
      pairTheory prim_recTheory numTheory arithmeticTheory;
-
-type term = Term.term
-type thm = Thm.thm
-type tactic = Abbrev.tactic;
 
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
 
-fun ERR f s = HOL_ERR{origin_structure="jrhUtils",
-                      origin_function=f,message=s};
+val ERR = mk_HOL_ERR "jrhUtils";
 
 (*---------------------------------------------------------------------------*)
 (* Various utilities useful in building the theories.                        *)
@@ -45,19 +39,7 @@ val LAND_CONV = RATOR_CONV o RAND_CONV;
 (* Proves tautologies: handy for propositional lemmas                        *)
 (*---------------------------------------------------------------------------*)
 
-val TAUT_CONV =
-  let fun vl w t = type_of t = Type.bool
-                   andalso
-                   can (find_term is_var) t
-                   andalso
-                   free_in t w
-  in
-    C (curry prove)
-     (REPEAT GEN_TAC THEN (REPEAT o CHANGED_TAC o W)
-     (C (curry op THEN) (REWRITE_TAC[]) o BOOL_CASES_TAC o
-      Lib.trye hd o
-     sort free_in o W(find_terms o vl) o snd))
-  end;
+val TAUT_CONV = tautLib.TAUT_PROVE;
 
 (*---------------------------------------------------------------------------*)
 (* More concise way to get an AC rewrite lemma                               *)
@@ -111,10 +93,10 @@ fun IMP_SUBST_TAC th (asl,w) =
             val (a,conseq) = dest_imp (concl th1)
             val (l,r) = dest_eq conseq
             val gv = genvar (type_of l)
-            val pat = subst[(gv,l)] w
+            val pat = subst[l |-> gv] w
         in
-          ([(asl,a), (asl,subst[(r,gv)] pat)],
-           fn [t1,t2] => SUBST[(SYM(MP th1 t1),gv)] pat t2)
+          ([(asl,a), (asl,subst[gv |-> r] pat)],
+           fn [t1,t2] => SUBST[gv |-> SYM(MP th1 t1)] pat t2)
        end;
 
 (*---------------------------------------------------------------------------*)
@@ -146,8 +128,8 @@ fun ABS_TAC (asl,w) =
   let val (l,r) = dest_eq w
       val (v1,b1) = dest_abs l
       val (v2,b2) = dest_abs r
-      val v = variant (freesl (w::asl)) v1
-      val subg = mk_eq(subst[(v,v1)] b1,subst[(v,v2)] b2) in
+      val v = variant (free_varsl (w::asl)) v1
+      val subg = mk_eq(subst[v1 |-> v] b1,subst[v2 |-> v] b2) in
    ([(asl,subg)],CONV_RULE(LAND_CONV(ALPHA_CONV v1)) o
                CONV_RULE(RAND_CONV(ALPHA_CONV v2)) o ABS v o hd) end;
 
@@ -161,8 +143,7 @@ val EQUAL_TAC = REPEAT(FIRST [AP_TERM_TAC, AP_THM_TAC, ABS_TAC]);
 (* X_BETA_CONV "v" "tm[v]" = |- tm[v] = (\v. tm[v]) v                        *)
 (*---------------------------------------------------------------------------*)
 
-fun X_BETA_CONV v tm =
-  SYM(BETA_CONV(mk_comb(mk_abs(v,tm),v)));
+fun X_BETA_CONV v tm = SYM(BETA_CONV(mk_comb(mk_abs(v,tm),v)));
 
 (*---------------------------------------------------------------------------*)
 (* EXACT_CONV - Rewrite with theorem matching exactly one in a list          *)
@@ -196,6 +177,7 @@ fun EXPAND_TAC s = FIRST_ASSUM(SUBST1_TAC o SYM o
  * Added by Konrad, to make his life easier when installing the rewriting
  * upgrade 27.7.94.
  *---------------------------------------------------------------------------*)
+
 val GEN_REWR_TAC = Lib.C Rewrite.GEN_REWRITE_TAC Rewrite.empty_rewrites;
 
 end

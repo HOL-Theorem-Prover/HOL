@@ -1,11 +1,9 @@
 structure intSyntax :> intSyntax =
 struct
 
-open HolKernel boolLib Parse integerTheory Psyntax;
+open HolKernel boolLib Parse integerTheory;
 
-fun ERR f s = HOL_ERR {origin_structure = "intSyntax",
-                       origin_function = f,
-                       message = s};
+val ERR = mk_HOL_ERR "intSyntax";
 
 infixr -->
 infix THENC
@@ -14,8 +12,9 @@ val (Type,Term) = parse_from_grammars integerTheory.integer_grammars;
 fun -- q x = Term q
 fun == q x = Type q
 
-val num_ty = Rsyntax.mk_type{Tyop = "num", Args = []}
-val int_ty = Rsyntax.mk_type{Tyop = "int", Args = []}
+val num_ty = numSyntax.num
+val int_ty = mk_thy_type{Tyop = "int", Thy="integer", Args = []}
+
 val plus_tm = Term`$+ : int -> int -> int`
 val minus_tm = Term`$- : int -> int -> int`
 val mult_tm = Term`$* : int -> int -> int`
@@ -25,14 +24,17 @@ val great_tm = Term`$> : int -> int -> bool`
 val geq_tm = Term`$>= : int -> int -> bool`
 val divides_tm = Term`$int_divides : int -> int -> bool`;
 val absval_tm = Term`ABS : int -> int`;
-val min_tm = Term.mk_const{Name = "int_min", Ty = int_ty --> int_ty --> int_ty}
+val min_tm = 
+ Term.mk_thy_const {Name = "int_min", Thy="integer",
+                    Ty = int_ty --> int_ty --> int_ty}
 
-fun is_plus tm = let
-  val (hd, args) = strip_comb tm
-in
-  length args = 2 andalso hd = plus_tm
-end
+fun is_plus tm = 
+ let val (hd, args) = strip_comb tm
+ in length args = 2 andalso hd = plus_tm
+ end
+
 fun mk_plus (arg1, arg2) = list_mk_comb(plus_tm, [arg1, arg2])
+
 fun list_mk_plus summands = let
   fun recurse acc [] = acc
     | recurse acc (x::xs) = recurse (mk_plus(acc, x)) xs
@@ -40,6 +42,7 @@ in
   recurse (hd summands) (tl summands)
   handle List.Empty => raise ERR "list_mk_plus" "empty summand list"
 end
+
 fun strip_plus tm = let
   fun recurse acc tm =
     if is_plus tm then
@@ -103,12 +106,11 @@ val is_geq = is_bin_relop geq_tm
 fun mk_geq (tm1, tm2) = list_mk_comb(geq_tm, [tm1, tm2])
 
 
+fun is_divides tm = 
+ let val (hd, args) = strip_comb tm
+ in length args = 2 andalso hd = divides_tm
+ end
 
-fun is_divides tm = let
-  val (hd, args) = strip_comb tm
-in
-  length args = 2 andalso hd = divides_tm
-end
 fun mk_divides (tm1, tm2) = list_mk_comb(divides_tm, [tm1, tm2])
 
 
@@ -143,7 +145,6 @@ in
 end
 
 val zero_tm = term_of_int Arbint.zero
-val one_tm = term_of_int Arbint.one
-
+val one_tm  = term_of_int Arbint.one
 
 end (* struct *)
