@@ -33,7 +33,7 @@ RW_TAC arith_ss [fetch "arithmetic" "DIVISION",
                  w2n_ELIM, SIMP_RULE arith_ss [WL_def, HB_def] w2n_LT])
 
 val pr_body_eqns = map2 (fn c => fn v => ``fn ^c = ^v``) 
-                        (rev consts) (rev vars)
+                        consts vars
 fun mk_witness low hi = 
   if low = hi then
     List.nth (vars, low)
@@ -45,12 +45,15 @@ fun mk_witness low hi =
     end
 val pr_witness = ``\x. ^(mk_witness 0 255)``
 
+val lem = Q.prove (
+ `!c.(0 < c /\ P (c - 1) /\ !n. n < c - 1 ==> P n) ==>(!n. n < c ==> P n)`,
+RW_TAC arith_ss [arithmeticTheory.BOUNDED_FORALL_THM]);
+
 val use_top_assum = POP_ASSUM (fn thm => PURE_ONCE_REWRITE_TAC [GSYM thm])
-val use_top_assum2 = POP_ASSUM (fn thm => SIMP_TAC arith_ss [thm])
 
 val prim_rec = prove (
 foldr mk_forall ``?!fn. (\fn. ^(fold_term mk_conj pr_body_eqns)) fn`` 
-      (rev vars),
+      vars,
 REPEAT GEN_TAC THEN REWRITE_TAC [EXISTS_UNIQUE_THM] THEN BETA_TAC THEN
 REPEAT STRIP_TAC
 THENL
@@ -62,13 +65,11 @@ REPEAT STRIP_TAC THEN
 CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
 `?n. n < 256 /\ (w = n2w n)` by RW_TAC std_ss [bound_thm] THEN
 RW_TAC std_ss [] THEN (POP_ASSUM MP_TAC) THEN
+Q.SPEC_TAC (`n`, `n`) THEN
 REPEAT
-     (Cases_on `n` THENL
-        [use_top_assum2 THEN DISCH_TAC THEN REFL_TAC, POP_ASSUM (K ALL_TAC)]
-      THEN
-      Cases_on `n'` THENL
-        [use_top_assum2 THEN DISCH_TAC THEN REFL_TAC, POP_ASSUM (K ALL_TAC)])
-THEN FULL_SIMP_TAC arith_ss [])
+   (HO_MATCH_MP_TAC lem THEN SIMP_TAC arith_ss [] THEN CONJ_TAC THENL
+    [POP_ASSUM (ACCEPT_TAC o GSYM), POP_ASSUM (K ALL_TAC)]) THEN
+Cases_on `n` THEN RW_TAC arith_ss [])
 
 in 
 
