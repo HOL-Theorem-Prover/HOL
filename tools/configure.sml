@@ -60,17 +60,16 @@ val SRCDIRS =
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
   "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
   "src/hol88", "src/taut", "src/ind_def/src", "src/IndDef",
-  "src/datatype/parse", "src/datatype/equiv",
-  "src/datatype/record", "src/datatype",
-  "src/list/src", "src/tree",
-  "src/datatype/basicrec", "src/datatype/mutrec/utils", "src/datatype/mutrec",
+  "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record", 
+  "src/datatype",  "src/list/src", "src/tree", "src/datatype/basicrec", 
+  "src/datatype/mutrec/utils", "src/datatype/mutrec",
   "src/datatype/nestrec", "src/datatype/mutual",
   "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
   "src/integer", "src/res_quan/src", "src/set/src", "src/pred_set/src", 
   "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/BoyerMoore",
   "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
-  "src/robdd","src/muddy", "src/HolBdd"];
+  "src/muddy", "src/HolBdd"];
 
 
 (*---------------------------------------------------------------------------
@@ -347,34 +346,6 @@ fun help mosmldir holdir =
 *)
 
 
-(*---------------------------------------------------------------------------
-    Configure the robdd library.
-    Note that CFLAGS, DLLIBCOMP, and ALL are bound in config-robdd.sml.
- ---------------------------------------------------------------------------*)
-
-val _ =
- let open TextIO
-     val _ = echo "Setting up the robdd library Makefile."
-     val src    = fullPath [holdir, "tools/makefile.robdd.src"]
-     val target = fullPath [holdir, "src/robdd/GNUmakefile"]
-     val (cflags,dllibcomp,all) =
-        case (CFLAGS,DLLIBCOMP,ALL)
-         of (SOME s1, SOME s2, SOME s3) => (s1,s2,s3)
-          | _ => (print (String.concat
-                   ["   Warning! (non-fatal):\n    The robdd package is not ",
-                    "expected to build in OS flavour ", quote OS,
-                ".\n   Only linux and solaris are currently supported.\n",
-                "   End Warning.\n"]);
-                  ("unknownOS","unknownOS","unknownOS"))
-
-  in
-     fill_holes (src,target)
-       ["MOSMLHOME:=\n"  -->  String.concat["MOSMLHOME:=", mosmldir,"\n"],
-        "CC=\n"          -->  String.concat["CC=", CC,"\n"],
-        "CFLAGS=\n"      -->  String.concat["CFLAGS=",cflags,"\n"],
-        "all:\n"         -->  String.concat["all: ",all,"\n"],
-        "DLLIBCOMP\n"    -->  String.concat["\t",dllibcomp,"\n"]]
-  end;
 
 (*---------------------------------------------------------------------------
     Configure the muddy library. This is only temporary, until I know
