@@ -87,7 +87,8 @@ fun parseAndProcess dir str res =
 	close_in is; res
     end
     handle Interrupt => raise Interrupt
-         | _ => (print ("Failed to parse "^str^".sig (continuing anyway).\n");
+         | _ => (print ("Failed to parse (or find?) "^str^
+                        ".sig (continuing anyway).\n");
                  res)
 
 (* To parse the signature of unit `filename' and prepend the
