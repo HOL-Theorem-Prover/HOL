@@ -1,0 +1,72 @@
+\DOC ABBREV_TAC
+
+\TYPE {Q.ABBREV_TAC : term quotation -> tactic}
+
+\SYNOPSIS
+Introduces an abbreviation into a goal.
+
+\DESCRIBE
+
+The tactic {Q.ABBREV_TAC q} parses the quotation {q} in the context of
+the goal to which it is applied.  The result must be a term of the
+form {v = e} with {v} a variable.  The effect of the tactic is to
+replace the term {e} wherever it occurs in the goal by {v} (or a
+primed variant of {v} if {v} already occurs in the goal), and to add
+the assumption {e = v} to the goal's assumptions.  Again, if {v}
+already occurs free in the goal, then the new assumption will be
+{e = v'}, with {v'} a suitably primed version of {v}.
+
+It is not an error if the expression {e} does not occur anywhere
+within the goal.  In this situation, the effect of the tactic is
+simply to add the assumption {e = v}.
+
+The orientation of the assumption is chosen so that rewriting or
+simplifying with the assumptions will not undo the effect of
+abbreviation.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+Substitution in the goal:
+{
+   - Q.ABBREV_TAC `n = 10` ([], ``10 < 9 * 10``);
+   > val it = ([([``10 = n``], ``n < 9 * n``)], fn) :
+     (term list * term) list * (thm list -> thm)
+}
+and the assumptions:
+{
+   - Q.ABBREV_TAC `m = n + 2` ([``f (n + 2) < 6``], ``n < 7``);
+   > val it = ([([``n + 2 = m``, ``f m < 6``], ``n < 7``)], fn) :
+     (term list * term) list * (thm list -> thm)
+}
+and both
+{
+   - Q.ABBREV_TAC `u = x ** 32` ([``x ** 32 = f z``],
+                                  ``g (x ** 32 + 6) - 10 < 65``);
+   > val it =
+       ([([``x ** 32 = u``, ``u = f z``], ``g (u + 6) - 10 < 65``)],
+        fn) :
+       (term list * term) list * (thm list -> thm)
+}
+
+\COMMENTS
+Though most of the rewriting and simplification tools leave
+abbreviations undisturbed in the assumptions, both {RW_TAC} and
+{SRW_TAC} will eliminate them.
+
+Though it is possible to abbreviate functions, using quotations such
+as {`f = \n. n + 3`}, in this case {ABBREV_TAC} will not do anything
+more than replace exact copies of the abstraction.  Following
+{ABBREV_TAC} with
+{
+   POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss [FUN_EQ_THM]) THEN
+   ASM_REWRITE_TAC []
+}
+will turn the assumption {`(\n. n + 3) = f`} into {`!n. n + 3 = f n`}
+which may find more instances of the desired pattern.
+
+\SEEALSO
+Q.HO_MATCH_ABBREV_TAC, Q.MATCH_ABBREV_TAC, Q.PAT_ABBREV_TAC.
+
+\ENDDOC
