@@ -141,7 +141,11 @@ val DISCH = Thm.DISCH o btm;
 val PAT_UNDISCH_TAC = fn q =>
      W(Tactic.UNDISCH_TAC o first (can (Term.match_term (ptm q))) o fst);
 fun UNDISCH_THEN q ttac = PAT_UNDISCH_TAC q THEN DISCH_THEN ttac;
-fun PAT_ASSUM q ttac = Ho_tactics.PAT_ASSUM (ptm q) ttac;
+fun PAT_ASSUM q ttac (g as (asl,w)) = let
+  val ctxt = free_varsl (w::asl)
+in
+  Ho_tactics.PAT_ASSUM (ptm_with_ctxtty ctxt Type.bool q) ttac g
+end
 val UNDISCH_TAC = Tactic.UNDISCH_TAC o btm;
 
 fun SUBGOAL_THEN q ttac (g as (asl,w)) = let
