@@ -1,5 +1,5 @@
 (* ===================================================================== *)
-(* FILE          : mk_combin.sml                                         *)
+(* FILE          : combinScript.sml                                      *)
 (* DESCRIPTION   : Basic combinator definitions and some theorems about  *)
 (*                 them. Translated from hol88.                          *)
 (*                                                                       *)
@@ -12,9 +12,6 @@
 
 structure combinScript =
 struct
-
-(* Parent theory *)
-local open boolTheory in end;
 
 open HolKernel boolLib;
 
