@@ -79,6 +79,8 @@ signature Parse = sig
       (type_grammar.grammar * term_grammar.grammar) ->
       ((Portable.ppstream -> hol_type -> unit) *
        (Portable.ppstream -> term -> unit))
+    val print_term_by_grammar :
+        (type_grammar.grammar * term_grammar.grammar) -> term -> unit
 
     val term_grammar : unit -> term_grammar.grammar
 

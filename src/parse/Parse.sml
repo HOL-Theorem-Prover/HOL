@@ -180,6 +180,20 @@ fun pp_with_bquotes ppfn pp x =
 fun print_from_grammars (tyG, tmG) =
   (type_pp.pp_type tyG, term_pp.pp_term tmG tyG)
 
+fun print_term_by_grammar Gs = let
+  open TextIO PP
+  val con = {consumer = (fn s => output(stdOut, s)),
+             linewidth = !Globals.linewidth,
+             flush = (fn () => flushOut stdOut)}
+  val (_, termprinter) = print_from_grammars Gs
+  fun pprint t pps = (begin_block pps CONSISTENT 0;
+                      termprinter pps t;
+                      add_newline pps;
+                      end_block pps)
+in
+  fn t => with_pp con (pprint t)
+end
+
 
 (*---------------------------------------------------------------------------
               Parsing types
