@@ -30,6 +30,16 @@ let extractstrs ds =
   in
   go [] [] ds
 
+(* apply location of LHS symbol to value x *)
+let loc : 'a -> 'a located
+   = fun x ->
+   (x,(symbol_start_pos (), symbol_end_pos ()))
+
+(* apply location of RHS item n to value x *)
+let loc_n : int -> 'a -> 'a located
+   = fun n x ->
+   (x,(rhs_start_pos n, rhs_end_pos n))
+
 %}
 
 /* content */
@@ -120,13 +130,13 @@ tex_parse_rev :
 | tex_parse_rev tex_content  { $2 :: $1 }
 
 tex_content :
-  Content                 { TexContent $1 }
-| ToHol hol_parse From    { TexHol ((match $1 with
-                                      DelimHolTex     -> TexHolLR
-                                    | DelimHolTexMath -> TexHolMath
-                                    | _ -> raise (NeverHappen "tex_content")),
-                                    $2) }
-| ToDir directive From    { TexDir $2 }
+  Content                 { loc (TexContent $1) }
+| ToHol hol_parse From    { loc (TexHol ((match $1 with
+                                           DelimHolTex     -> TexHolLR
+                                         | DelimHolTexMath -> TexHolMath
+                                         | _ -> raise (NeverHappen "tex_content")),
+                                         $2)) }
+| ToDir directive From    { loc (TexDir $2) }
 
 mosml_parse :
   mosml_parse_rev             { List.rev $1 }
@@ -136,24 +146,24 @@ mosml_parse_rev :
 | mosml_parse_rev mosml_token { $2 :: $1 }
 
 mosml_token :
-  Str                      { MosmlStr $1 }
-| Dot                      { MosmlContent "." }
-| Int                      { MosmlContent $1 }
-| Real                     { MosmlContent $1 }
-| Word                     { MosmlContent $1 }
-| Char                     { MosmlContent ("#\"" ^ $1 ^ "\"") }
-| Sep                      { MosmlContent $1 }
-| Ident                    { MosmlIdent(snd $1, fst $1) }
-| White                    { MosmlWhite $1 }
-| Indent                   { MosmlIndent $1 }
-| ToHol hol_parse From     { MosmlHol((match $1 with
-                                         DelimHolMosml  -> MosmlHolBT
-                                       | DelimHolMosmlD -> MosmlHolBTBT
-                                       | _ -> raise (NeverHappen "mosml_token_rev")),
-                                      $2) }
-| ToTex tex_parse From     { MosmlTex $2 }
-| ToText text_parse From   { MosmlText $2 }
-| ToDir directive From     { MosmlDir $2 }
+  Str                      { loc (MosmlStr $1) }
+| Dot                      { loc (MosmlContent ".") }
+| Int                      { loc (MosmlContent $1) }
+| Real                     { loc (MosmlContent $1) }
+| Word                     { loc (MosmlContent $1) }
+| Char                     { loc (MosmlContent ("#\"" ^ $1 ^ "\"")) }
+| Sep                      { loc (MosmlContent $1) }
+| Ident                    { loc (MosmlIdent(snd $1, fst $1)) }
+| White                    { loc (MosmlWhite $1) }
+| Indent                   { loc (MosmlIndent $1) }
+| ToHol hol_parse From     { loc (MosmlHol((match $1 with
+                                              DelimHolMosml  -> MosmlHolBT
+                                            | DelimHolMosmlD -> MosmlHolBTBT
+                                            | _ -> raise (NeverHappen "mosml_token_rev")),
+                                           $2)) }
+| ToTex tex_parse From     { loc (MosmlTex $2) }
+| ToText text_parse From   { loc (MosmlText $2) }
+| ToDir directive From     { loc (MosmlDir $2) }
 
 hol_parse :
   hol_parse_rev            { List.rev $1 }
@@ -163,14 +173,14 @@ hol_parse_rev :
 | hol_parse_rev hol_token  { $2 :: $1 }
 
 hol_token :
-  Ident                   { HolIdent(snd $1, fst $1) }
-| Str                     { HolStr $1 }
-| White                   { HolWhite $1 }
-| Indent                  { HolIndent $1 }
-| Sep                     { HolSep $1 }
-| ToText text_parse From  { HolText $2 }
-| ToTex tex_parse From    { HolTex $2 }
-| ToDir directive From    { HolDir $2 }
+  Ident                   { loc (HolIdent(snd $1, fst $1)) }
+| Str                     { loc (HolStr $1) }
+| White                   { loc (HolWhite $1) }
+| Indent                  { loc (HolIndent $1) }
+| Sep                     { loc (HolSep $1) }
+| ToText text_parse From  { loc (HolText $2) }
+| ToTex tex_parse From    { loc (HolTex $2) }
+| ToDir directive From    { loc (HolDir $2) }
 
 text_parse :
   text_parse_rev          { List.rev $1 }
@@ -180,63 +190,63 @@ text_parse_rev :
 | text_parse_rev text_chunk   { $2 :: $1 }
 
 text_chunk :
-  Content                 { TextContent $1 }
-| ToText text_parse From  { TextText $2 }
-| ToDir directive From    { TextDir $2 }
+  Content                 { loc (TextContent $1) }
+| ToText text_parse From  { loc (TextText $2) }
+| ToDir directive From    { loc (TextDir $2) }
 
 directive :
   opt_whitestuff directive0 { $2 }
 
 directive0 :
 /* category lists: */
-| CLASS_LIST        opt_whitestuff Ident ident_list { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) $3 $4) }
-| TYPE_LIST         ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("TYPE"     ,true) $2) }
-| CON_LIST          ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("CON"      ,true) $2) }
-| FIELD_LIST        ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("FIELD"    ,true) $2) }
-| LIB_LIST          ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("LIB"      ,true) $2) }
-| AUX_LIST          ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("AUX"      ,true) $2) }
-| AUX_INFIX_LIST    ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("AUX_INFIX",true) $2) }
-| HOL_OP_LIST       ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("HOL_OP"   ,true) $2) }
-| VAR_PREFIX_LIST   ident_list      { DirThunk (fun () -> add_to_list (!curmodals.vAR_PREFIX_LIST  ) $2) }
-| VAR_PREFIX_ALIST  ident_alist     { DirThunk (fun () -> add_to_list (!curmodals.vAR_PREFIX_ALIST ) $2) }
-| HOL_SYM_ALIST     ident_alist     { DirThunk (fun () -> add_to_list (!curmodals.hOL_SYM_ALIST    ) $2) }
-| HOL_ID_ALIST      ident_alist     { DirThunk (fun () -> add_to_list (!curmodals.hOL_ID_ALIST     ) $2) }
-| HOL_CURRIED_ALIST curryspec_alist { DirThunk (fun () -> add_to_list (!curmodals.hOL_CURRIED_ALIST) $2) }
+| CLASS_LIST        opt_whitestuff Ident ident_list { loc (DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) $3 $4)) }
+| TYPE_LIST         ident_list      { loc (DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("TYPE"     ,true) $2)) }
+| CON_LIST          ident_list      { loc (DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("CON"      ,true) $2)) }
+| FIELD_LIST        ident_list      { loc (DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("FIELD"    ,true) $2)) }
+| LIB_LIST          ident_list      { loc (DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("LIB"      ,true) $2)) }
+| AUX_LIST          ident_list      { loc (DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("AUX"      ,true) $2)) }
+| AUX_INFIX_LIST    ident_list      { loc (DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("AUX_INFIX",true) $2)) }
+| HOL_OP_LIST       ident_list      { loc (DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("HOL_OP"   ,true) $2)) }
+| VAR_PREFIX_LIST   ident_list      { loc (DirThunk (fun () -> add_to_list (!curmodals.vAR_PREFIX_LIST  ) $2)) }
+| VAR_PREFIX_ALIST  ident_alist     { loc (DirThunk (fun () -> add_to_list (!curmodals.vAR_PREFIX_ALIST ) $2)) }
+| HOL_SYM_ALIST     ident_alist     { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_SYM_ALIST    ) $2)) }
+| HOL_ID_ALIST      ident_alist     { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_ID_ALIST     ) $2)) }
+| HOL_CURRIED_ALIST curryspec_alist { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_CURRIED_ALIST) $2)) }
 /* other modals: */
-| CLASS             opt_whitestuff Ident opt_whitestuff Str opt_whitestuff { DirThunk (fun () -> new_class (!curmodals.cLASSES) $3 $5) }
-| AUTO_BINDERS      opt_whitestuff { DirThunk (fun () -> !curmodals.aUTO_BINDERS := true ) }
-| NOAUTO_BINDERS    opt_whitestuff { DirThunk (fun () -> !curmodals.aUTO_BINDERS := false) }
-| SMART_PREFIX      opt_whitestuff { DirThunk (fun () -> !curmodals.sMART_PREFIX := true ) }
-| NO_SMART_PREFIX   opt_whitestuff { DirThunk (fun () -> !curmodals.sMART_PREFIX := false) }
-| INDENT            opt_whitestuff { DirThunk (fun () -> !curmodals.iNDENT       := true ) }
-| NOINDENT          opt_whitestuff { DirThunk (fun () -> !curmodals.iNDENT       := false) }
-| RULES             opt_whitestuff { DirThunk (fun () -> !curmodals.rULES        := true ) }
-| NORULES           opt_whitestuff { DirThunk (fun () -> !curmodals.rULES        := false) }
-| COMMENTS          opt_whitestuff { DirThunk (fun () -> !curmodals.cOMMENTS     := true ) }
-| NOCOMMENTS        opt_whitestuff { DirThunk (fun () -> !curmodals.cOMMENTS     := false) }
+| CLASS             opt_whitestuff Ident opt_whitestuff Str opt_whitestuff { loc (DirThunk (fun () -> new_class (!curmodals.cLASSES) $3 $5)) }
+| AUTO_BINDERS      opt_whitestuff { loc (DirThunk (fun () -> !curmodals.aUTO_BINDERS := true )) }
+| NOAUTO_BINDERS    opt_whitestuff { loc (DirThunk (fun () -> !curmodals.aUTO_BINDERS := false)) }
+| SMART_PREFIX      opt_whitestuff { loc (DirThunk (fun () -> !curmodals.sMART_PREFIX := true )) }
+| NO_SMART_PREFIX   opt_whitestuff { loc (DirThunk (fun () -> !curmodals.sMART_PREFIX := false)) }
+| INDENT            opt_whitestuff { loc (DirThunk (fun () -> !curmodals.iNDENT       := true )) }
+| NOINDENT          opt_whitestuff { loc (DirThunk (fun () -> !curmodals.iNDENT       := false)) }
+| RULES             opt_whitestuff { loc (DirThunk (fun () -> !curmodals.rULES        := true )) }
+| NORULES           opt_whitestuff { loc (DirThunk (fun () -> !curmodals.rULES        := false)) }
+| COMMENTS          opt_whitestuff { loc (DirThunk (fun () -> !curmodals.cOMMENTS     := true )) }
+| NOCOMMENTS        opt_whitestuff { loc (DirThunk (fun () -> !curmodals.cOMMENTS     := false)) }
 /* other non-modals: */
 | ECHO dirstuff /* used as comment in existing files sadly */
-                                              { DirThunk (fun () -> eCHO  := true ) }
-| NOECHO opt_whitestuff                       { DirThunk (fun () -> eCHO  := false) }
-| RCSID opt_whitestuff Str opt_whitestuff     { DirThunk (fun () -> rCSID := Some $3) }
+                                              { loc (DirThunk (fun () -> eCHO  := true )) }
+| NOECHO opt_whitestuff                       { loc (DirThunk (fun () -> eCHO  := false)) }
+| RCSID opt_whitestuff Str opt_whitestuff     { loc (DirThunk (fun () -> rCSID := Some $3)) }
 | HOLDELIM opt_whitestuff Str opt_whitestuff Str opt_whitestuff
-                               { DirThunk (fun () -> hOLDELIMOPEN := $3; hOLDELIMCLOSE := $5) }
-| NEWMODE opt_whitestuff Ident opt_whitestuff { DirThunk (fun () -> new_mode    (fst $3)) }
-| MODE    opt_whitestuff Ident opt_whitestuff { DirThunk (fun () -> change_mode (fst $3)) }
+                               { loc (DirThunk (fun () -> hOLDELIMOPEN := $3; hOLDELIMCLOSE := $5)) }
+| NEWMODE opt_whitestuff Ident opt_whitestuff { loc (DirThunk (fun () -> new_mode    (fst $3))) }
+| MODE    opt_whitestuff Ident opt_whitestuff { loc (DirThunk (fun () -> change_mode (fst $3))) }
 | SPECIAL string_list            { (* must happen immediately, since it affects lexing *)
                                    add_to_list Holdoc_init.nonagg_specials $2;
-                                   DirThunk (fun () -> ()) }
+                                   loc (DirThunk (fun () -> ())) }
 | HOLDELIMUNBAL opt_whitestuff   { (* must happen immediately, since it affects lexing *)
                                    hOLDELIMUNBAL := true;
-                                   DirThunk (fun () -> ()) }
+                                   loc (DirThunk (fun () -> ())) }
 | NOHOLDELIMUNBAL opt_whitestuff { (* must happen immediately, since it affects lexing *)
                                    hOLDELIMUNBAL := false;
-                                   DirThunk (fun () -> ()) }
+                                   loc (DirThunk (fun () -> ())) }
 /* special handling: */
-| VARS ident_list_b  { DirVARS $2 }  /* ignore for now */
+| VARS ident_list_b  { loc (DirVARS $2) }  /* ignore for now */
 /* unrecognised things: */
 | Ident dirstuff     { if fst $1 = "C" then
-                         DirThunk (fun () -> ())  (* ignore comment *)
+                         loc (DirThunk (fun () -> ()))  (* ignore comment *)
                        else
                          raise Parse_error  (* unrecognised directive *) }
                          

@@ -29,13 +29,13 @@ all: simplemngdump simplemosmldump mng_to_latex
 
 # program targets:
 
-simplemngdump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx simplemngdump.cmx
+simplemngdump : holdocmodel.cmx holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx simplemngdump.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
-simplemosmldump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx simplemosmldump.cmx
+simplemosmldump : holdocmodel.cmx holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx simplemosmldump.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
-mng_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx mngdump.cmx mng_to_latex.cmx
+mng_to_latex : holdocmodel.cmx holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx mngdump.cmx mng_to_latex.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
 # other targets:

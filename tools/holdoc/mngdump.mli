@@ -1,5 +1,6 @@
-exception BadArg of string
-val write_warning : string -> unit
+exception BadArg of string Holdocmodel.located
+val format_badarg : string Holdocmodel.located -> string
+val write_warning : string Holdocmodel.located -> unit
 val wrap : string -> string -> ('a -> unit) -> 'a -> unit
 val replicate : int -> 'a -> 'a list
 val texify_math : string -> string

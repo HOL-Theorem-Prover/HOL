@@ -13,12 +13,16 @@ open Simpledump
 (*  Diagnostics                                                         *)
 (* -------------------------------------------------------------------- *)
 
-exception BadArg of string
+exception BadArg of string located
+
+let format_badarg : string located -> string
+    = fun (s,l) ->
+      format_location l ^ ": " ^ s
 
 (* non-fatal error condition *)
-let write_warning s =
-  print_string ("% WARNING: "^s^".\n");
-  prerr_endline ("WARNING: " ^ s ^ ".")
+let write_warning (s,l) =
+  print_string ("% "^format_location l^" WARNING: "^s^".\n");
+  prerr_endline (format_location l ^ ":WARNING: " ^ s ^ ".")
 
 (* log an unrecognised string *)
 let unseen_strings = Hashtbl.create 100
@@ -107,17 +111,17 @@ type pvars = string list
 let potential_vars : holdoc -> pvars
     = fun d ->
       let rec go vs = function
-          (HolIdent(b,s)::ts) when List.mem s hol_binders
-                  -> bdrs vs ts
+          ((HolIdent(b,s),l)::ts) when List.mem s hol_binders
+                  -> bdrs l vs ts
         | (_::ts) -> go vs ts
         | []      -> vs
-      and bdrs vs = function
-          (HolIdent(b,s)::ts) -> bdrs (s::vs) ts
-        | (HolDir (DirVARS bis) ::ts) -> bdrs (List.map snd bis @ vs) ts
-        | (HolDir (DirThunk f)  ::ts) -> bdrs vs ts  (* don't do the directive here! *)
-        | (HolSep s     ::ts) -> go vs ts
-        | (_ ::ts)            -> bdrs vs ts
-        | []                  -> write_warning "unexpected end of binder list"; go vs []
+      and bdrs l vs = function
+          ((HolIdent(b,s)         ,_)::ts) -> bdrs l (s::vs) ts
+        | ((HolDir (DirVARS bis,_),_)::ts) -> bdrs l (List.map snd bis @ vs) ts
+        | ((HolDir (DirThunk f ,_),_)::ts) -> bdrs l vs ts  (* don't do the directive here! *)
+        | ((HolSep s              ,_)::ts) -> go vs ts
+        | (_ ::ts)  -> bdrs l vs ts
+        | []        -> write_warning ("unexpected end of binder list",l); go vs []
       in
       go [] d
 
@@ -283,14 +287,14 @@ let readbal : hol_content list        (* input stream *)
     let n = List.length ps
     in
     match ts with
-      (HolSep(s) as t::ts) when List.mem_assoc s balanced  (* open *)
+      ((HolSep(s),_) as t::ts) when List.mem_assoc s balanced  (* open *)
         -> let ds' = if n=0 && cf then
                        ds
                      else
                        t::ds
            in
            bal (List.assoc s balanced::ps) ds' dss ts
-    | (HolSep(s) as t::ts) when n>0 && s = List.hd ps      (* close *)
+    | ((HolSep(s),_) as t::ts) when n>0 && s = List.hd ps      (* close *)
         -> let ds' = if n=1 && cf then
                        ds
                      else
@@ -300,26 +304,26 @@ let readbal : hol_content list        (* input stream *)
              (List.rev (List.rev ds' :: dss),ts)  (* we're done *)
            else
              bal (List.tl ps) ds' dss ts  (* pop *)
-    | (HolSep(s) as t::ts) when List.mem_assoc s flip_balanced && n>0 && s <> List.hd ps      (* close *)
-        -> raise (BadArg ("6: expected closing delimiter "^List.hd ps^" but encountered "^s^" instead"))
-    | (HolSep(",") as t::ts)
+    | ((HolSep(s),l) as t::ts) when List.mem_assoc s flip_balanced && n>0 && s <> List.hd ps      (* close *)
+        -> raise (BadArg ("6: expected closing delimiter "^List.hd ps^" but encountered "^s^" instead",l))
+    | ((HolSep(","),_) as t::ts)
         -> if n=1 && cf then
              bal ps [] (List.rev ds::dss) ts
            else
              bal ps (t::ds) dss ts
-    | (HolIndent(_) as t::ts) ->
+    | ((HolIndent(_),l) as t::ts) ->
         if ml then
           bal ps (if n=1 then ds else t::ds) dss ts  (* strip first-level indentation of multiline *)
         else
-          raise (BadArg ("7: line break not allowed in non-multiline curried op"))
+          raise (BadArg ("7: line break not allowed in non-multiline curried op",l))
     | (t::ts)        -> bal ps (t::ds) dss ts
-    | []             -> raise (BadArg ("1: unexpected end of input"))
+    | []             -> raise (BadArg ("1: unexpected end of input",zero_loc))
   in
   bal [] [] [] ts
 
 let safedumphol_content =
   function
-      HolIndent n -> "<indent>"
+      (HolIndent n,_) -> "<indent>"
     | t -> dumphol_content t
 
 let rec readarg cf ml ts = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
@@ -327,25 +331,25 @@ let rec readarg cf ml ts = (* read a single arg: spaces then (id.id.id or matche
      multiple TeX arguments if cy_commas is in force *)
   let rec sp ts =  (* skip spaces (and newlines if allowed) *)
     match ts with
-      (HolWhite(_)::ts)          -> sp ts
-    | (HolIndent(_)::ts) when ml -> sp ts
+      ((HolWhite(_),_)::ts)          -> sp ts
+    | ((HolIndent(_),_)::ts) when ml -> sp ts
     | _                          -> ts
   in
   let rec dotted ds ts =  (* read a dotted arg *)
     match ts with
-      ((HolSep(".") as t1)::(HolIdent(true,s) as t2)::ts)
+      (((HolSep("."),_) as t1)::((HolIdent(true,s),_) as t2)::ts)
                                     -> dotted (t2::t1::ds) ts
-    | (HolStr(_)::_)                -> raise (BadArg "2: string unexpected")
-    | (HolIdent(_,_)::_)            -> raise (BadArg "3: expected dot between idents")
+    | ((HolStr(_),l)::_)            -> raise (BadArg ("2: string unexpected",l))
+    | ((HolIdent(_,_),l)::_)        -> raise (BadArg ("3: expected dot between idents",l))
     | _                             -> ([List.rev ds],ts)
   in
   match sp ts with
-    ((HolIdent(true ,s) as t)::ts)  -> dotted [t] ts
-  | ((HolIdent(false,s) as t)::ts)  -> ([[t]],ts)  (* no fields in a symbolic ident *)
-  | ((HolSep(s) as t)::ts) when List.mem_assoc s balanced
+    (((HolIdent(true ,s),_) as t)::ts)  -> dotted [t] ts
+  | (((HolIdent(false,s),_) as t)::ts)  -> ([[t]],ts)  (* no fields in a symbolic ident *)
+  | (((HolSep(s)        ,_) as t)::ts) when List.mem_assoc s balanced
                           -> readbal (t::ts) cf ml
-  | (t::ts)               -> raise (BadArg ("4: bad token "^safedumphol_content t^" follows curried op"))
-  | []                    -> raise (BadArg "5: unexpected end of input")
+  | ((t,l)::ts)               -> raise (BadArg ("4: bad token "^safedumphol_content (t,l)^" follows curried op",l))
+  | []                    -> raise (BadArg ("5: unexpected end of input",zero_loc))
 
 
 (* -------------------------------------------------------------------- *)
@@ -430,7 +434,7 @@ let munge_indent : int -> unit
 
 (* output a single HOL token *)
 let rec munge_hol_content : pvars -> hol_content -> unit
-    = fun pvs t ->
+    = fun pvs (t,_) ->
       let render_it =
         match t with
           HolIdent(true ,s) -> (fun () -> munge_ident pvs s)
@@ -441,15 +445,15 @@ let rec munge_hol_content : pvars -> hol_content -> unit
         | HolSep s          -> (fun () -> munge_texify_math s)
         | HolText d         -> (fun () ->
                                let s = dumptextdoc d in
-                               wrap (if String.contains s '\n' then  (* "long" if split ove r a line *)
+                               wrap (if String.contains s '\n' then  (* "long" if split over a line *)
                                        "\\tslongcomm{"
                                      else
                                        "\\tscomm{") "}"
                                     munge_texify_text s)
         | HolTex d          -> (fun () -> wrap "\\tsholcomm{" "}" rendertexdoc d)
-        | HolDir (DirThunk f) -> f () (* do it now, even if not echoing *);
-                                 (fun () -> ())
-        | HolDir (DirVARS _)  -> (fun () -> ())    (* ignore *)
+        | HolDir (DirThunk f,_) -> f () (* do it now, even if not echoing *);
+                                   (fun () -> ())
+        | HolDir (DirVARS _ ,_) -> (fun () -> ())    (* ignore *)
       in
       if !eCHO then
         render_it ()
@@ -472,10 +476,10 @@ and munge_curried : pvars -> hol_content -> curried_info -> hol_content list -> 
   try
     go info.cy_arity [] ts
   with
-    BadArg(s) -> (* abort curry parse; do it uncurried *)
+    BadArg(s,l) -> (* abort curry parse; do it uncurried *)
               let w = "curry parse failed: "^dumphol_content x^" ==> "^info.cy_cmd^" "^s
               in
-              write_warning w;
+              write_warning (w,l);
               munge_hol_content pvs x;
               ts
 
@@ -487,7 +491,7 @@ and munge_holdoc : pvars -> holdoc -> unit
         []
           -> ()
 
-      | ((HolIdent(b,s) as t)::ts) when (match is_curried s with Some _ -> true | None -> false)
+      | (((HolIdent(b,s),_) as t)::ts) when (match is_curried s with Some _ -> true | None -> false)
           -> (match is_curried s with
                 Some info
                   -> let ts' = munge_curried pvs t info ts
@@ -513,7 +517,7 @@ and rendertexdoc_content : texdoc_content -> unit
     = fun d -> rendertexdoc_content_pvs [] d
 
 and rendertexdoc_content_pvs : pvars -> texdoc_content -> unit
-    = fun pvs0 -> function
+    = fun pvs0 (t,_) -> match t with
     TexContent s -> print_string s
   | TexHol(TexHolLR,d) ->
       local_set !curmodals.iNDENT false
@@ -527,7 +531,7 @@ and texrenderdirective : directive -> unit
     = fun d -> texrenderdirective_content d
 
 and texrenderdirective_content : directive_content -> unit
-    = function
+    = fun (d,_) -> match d with
         DirThunk f -> f ()
       | DirVARS bis -> ()   (* ignore VARS in TeX mode *)
 

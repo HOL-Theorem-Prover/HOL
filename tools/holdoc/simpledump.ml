@@ -13,7 +13,8 @@ let dolist f cs =
 
 let rec dumptexdoc cs = dolist dumptexdoc_content cs
     
-and dumptexdoc_content = function
+and dumptexdoc_content = fun (x,_) ->
+  match x with
     TexContent s -> s
   | TexHol(TexHolLR,d) -> "[[" ^ dumpholdoc d ^ "]]"
   | TexHol(TexHolMath,d) -> "<[" ^ dumpholdoc d ^ "]>"
@@ -21,14 +22,16 @@ and dumptexdoc_content = function
 
 and dumptextdoc cs = dolist dumptextdoc_content cs
 
-and dumptextdoc_content = function
+and dumptextdoc_content = fun (x,_) ->
+  match x with
     TextContent s -> s
   | TextText d -> "(*" ^ dumptextdoc d ^ "*)"
   | TextDir d -> dumpdirective d
 
 and dumpmosmldoc cs = dolist dumpmosml_content cs
 
-and dumpmosml_content = function
+and dumpmosml_content = fun (x,_) ->
+  match x with
     MosmlContent s -> s
   | MosmlWhite s -> s
   | MosmlStr s -> "\"" ^ s ^ "\""
@@ -43,7 +46,8 @@ and dumpmosml_content = function
 
 and dumpholdoc cs = dolist dumphol_content cs
 
-and dumphol_content = function
+and dumphol_content = fun (x,_) ->
+  match x with
     HolIdent(b,s) -> s
   | HolStr s -> "\"" ^ s ^ "\""
   | HolWhite s -> s
@@ -55,7 +59,8 @@ and dumphol_content = function
 
 and dumpdirective d = dumpdirective_content d
 
-and dumpdirective_content = function
+and dumpdirective_content = fun (x,_) ->
+  match x with
     DirThunk f -> (f (); "")  (* do it now! (side-effecting) *)
   | DirVARS bis -> ""  (* ignore! *)
 
