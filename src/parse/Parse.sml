@@ -370,10 +370,15 @@ in
   t1
 end
 
+(*---------------------------------------------------------------------------
+     Parse into absyn type
+ ---------------------------------------------------------------------------*)
+
 fun Absyn q = let in
   update_term_fns();
   remove_lets (!the_absyn_parser q)
 end
+
 
 local open Parse_support Absyn
   fun binder(VIDENT s)      = make_binding_occ s
@@ -404,6 +409,10 @@ in
   Parse_support.make_preterm (absyn_to_preterm_in_env oinfo absyn)
 end;
 
+(*---------------------------------------------------------------------------
+     Parse into preterm type
+ ---------------------------------------------------------------------------*)
+
 fun Preterm q =
  let val absyn = Absyn q
      val oinfo = term_grammar.overload_info (term_grammar())
@@ -421,12 +430,7 @@ fun absyn_to_term G =
  end;
 
 (*---------------------------------------------------------------------------
-    not good enough to have
-
-            Term = absyn_to_term (term_grammar()) o Absyn
-
-    as term_grammar may be updated as a result of evaluating
-    parse_ptie.
+     Parse into term type.
  ---------------------------------------------------------------------------*)
 
 fun Term q = absyn_to_term (term_grammar()) (Absyn q)
@@ -503,6 +507,7 @@ in
                   (parse_in_context0 FVs) q
 end
 
+
 (*---------------------------------------------------------------------------
      Making temporary and persistent changes to the grammars.
  ---------------------------------------------------------------------------*)
@@ -554,12 +559,13 @@ fun temp_set_associativity (i,a) = let in
 fun temp_add_infix(s, prec, associativity) =
  let open term_grammar Portable
  in
-   the_term_grammar :=
-   add_rule (!the_term_grammar)
-    {term_name = s, block_style = (AroundSamePrec, (INCONSISTENT, 0)),
-     fixity = Infix(associativity, prec),
-     pp_elements = [HardSpace 1, RE (TOK s), BreakSpace(1,0)],
-     paren_style = OnlyIfNecessary};
+   the_term_grammar 
+    := add_rule (!the_term_grammar)
+          {term_name=s, block_style=(AroundSamePrec, (INCONSISTENT,0)),
+           fixity=Infix(associativity, prec),
+           pp_elements = [HardSpace 1, RE(TOK s), BreakSpace(1,0)],
+           paren_style = OnlyIfNecessary}
+   ;
    term_grammar_changed := true
   end handle GrammarError s => raise ERROR "add_infix" ("Grammar Error: "^s)
 
@@ -633,6 +639,7 @@ in
    paren_style = pstyle, block_style = bstyle}
 end
 
+
 fun temp_set_grammars(tyG, tmG) = let
 in
   the_term_grammar := tmG;
@@ -642,12 +649,12 @@ in
 end
 
 
+val std_binder_precedence = 0;
+
 fun temp_add_binder(name, prec) = let in
    the_term_grammar := add_binder (!the_term_grammar) (name, prec);
    term_grammar_changed := true
  end
-
-val std_binder_precedence = 0;
 
 fun add_binder (name, prec) = let in
     temp_add_binder(name, prec);
@@ -773,7 +780,7 @@ fun remove_termtok (r as {term_name, tok}) = let in
  end
 
 fun temp_set_fixity (s,f) = let in
-  remove_termtok {term_name=s, tok=s};
+  temp_remove_termtok {term_name=s, tok=s};
   case f of Prefix => () | _ => temp_add_rule (standard_spacing s f)
  end
 
@@ -956,13 +963,8 @@ fun hidden s =
 
 fun set_known_constants sl = let
   val (ok_names, bad_names) = partition (not o null o Term.decls) sl
-  val _ =
-    case bad_names of
-      [] => ()
-    | _ =>
-        List.app (fn s => WARN"set_known_constants"
-                  (s^" not a constant; ignored"))
-        bad_names
+  val _ = List.app (fn s => WARN "set_known_constants" 
+                               (s^" not a constant; ignored")) bad_names
 in
   app reveal ok_names
 end
@@ -1061,11 +1063,10 @@ fun setup_grammars thyname =
          val IB = begin_block INCONSISTENT
          val EB = end_block
          fun pr_sml_list pfun L =
-           (begin_block CONSISTENT 0; add_string "[";
-            begin_block INCONSISTENT 0;
+           (B 0; add_string "["; IB 0;
                pr_list pfun (fn () => add_string ",")
                             (fn () => add_break(0,0))  L;
-            end_block(); add_string "]"; end_block())
+            EB(); add_string "]"; EB())
          fun pp_update(f,x) =
             (B 5;
                add_string "val _ = update_grms"; add_break(1,0);
