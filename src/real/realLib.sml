@@ -18,6 +18,5 @@ struct
 
   open RealArith RealSS Diff;
 
-   val _ = Parse.reveal "B";
 
 end;
