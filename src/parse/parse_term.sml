@@ -143,6 +143,8 @@ fun mk_prec_matrix G = let
     | SUFFIX TYPE_annotation => ()
     | INFIX (STD_infix (rules, _)) => app (insert_oplist o rule_elements) rules
     | INFIX RESQUAN_OP => ()
+    | INFIX (FNAPP lst) => app (insert_oplist o rule_elements) lst
+    | INFIX VSCONS => ()
     | CLOSEFIX rules => app (insert_oplist o rule_elements) rules
     | LISTRULE rlist => let
         fun process r = let
@@ -158,8 +160,6 @@ fun mk_prec_matrix G = let
       in
         app process rlist
       end
-    | FNAPP => ()
-    | VSCONS => ()
   end
 
   (* the right hand end of a suffix or a closefix is greater than
@@ -186,6 +186,7 @@ fun mk_prec_matrix G = let
         val here =
           case x of
             INFIX (STD_infix (rules, _)) => map (f o rule_elements) rules
+          | INFIX (FNAPP rules) => map (f o rule_elements) rules
           | SUFFIX (STD_suffix rules) => map (f o rule_elements) rules
           | PREFIX (STD_prefix rules) => map (f o rule_elements) rules
           | CLOSEFIX rules => map (f o rule_elements) rules
@@ -240,19 +241,19 @@ fun mk_prec_matrix G = let
     case rule of
       INFIX(STD_infix(rules, _)) => map rule_right rules
     | INFIX RESQUAN_OP => [ResquanOpTok]
+    | INFIX(FNAPP rules) => (STD_HOL_TOK fnapp_special) :: map rule_right rules
+    | INFIX VSCONS => [VS_cons]
     | PREFIX (BINDER _) => [EndBinding]
     | PREFIX (STD_prefix rules) => map rule_right rules
-    | FNAPP => [STD_HOL_TOK fnapp_special]
-    | VSCONS => [VS_cons]
     | _ => []
   fun left_grabbing_elements rule =
     case rule of
       INFIX (STD_infix(rules, _)) => map rule_left rules
     | INFIX RESQUAN_OP => [ResquanOpTok]
+    | INFIX (FNAPP rules) => STD_HOL_TOK fnapp_special :: map rule_left rules
+    | INFIX VSCONS => [VS_cons]
     | SUFFIX (STD_suffix rules) => map rule_left rules
     | SUFFIX TYPE_annotation => [TypeColon]
-    | FNAPP => [STD_HOL_TOK fnapp_special]
-    | VSCONS => [VS_cons]
     | _ => []
   fun process_rule rule remainder =
     case rule of
@@ -330,24 +331,30 @@ fun mk_prec_matrix G = let
              lower_rights)
         lefts
       end
-    | FNAPP => let
+    | INFIX (FNAPP rules) => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
+        val this_level_lefts = map rule_left rules
+        val this_level_rights = map rule_right rules
         val fnapp = STD_HOL_TOK fnapp_special
       in
         app (fn lower_left => insert (fnapp, lower_left) LESS) lower_lefts;
         app (fn lower_right => insert (lower_right, fnapp) GREATER)
         lower_rights;
          (* function application left associative *)
-        insert (fnapp, fnapp) GREATER
+        insert (fnapp, fnapp) GREATER;
+        app (fn other => insert (other, fnapp) GREATER) this_level_rights;
+        app (fn other => insert (fnapp, other) GREATER) this_level_lefts;
+        process_rule (INFIX(STD_infix (rules, LEFT))) remainder
       end
-    | VSCONS => let
+    | INFIX VSCONS => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
         app (fn lower_left => insert (VS_cons, lower_left) LESS) lower_lefts;
         app (fn lower_right => insert (lower_right, VS_cons) GREATER)
-        lower_rights;
+            lower_rights;
+        (* kind of non-associative *)
         insert (VS_cons, VS_cons) EQUAL
       end
     | _ => ()
@@ -405,14 +412,18 @@ fun mk_ruledb (G:grammar) = let
     case rule of
       INFIX (STD_infix(rules, _)) => app (insert_rule infix_rule infix_f) rules
     | INFIX RESQUAN_OP => ()
+    | INFIX VSCONS => ()
+    | INFIX (FNAPP rules) => let
+      in
+        Polyhash.insert table (infix_f [TOK fnapp_special],
+                               infix_rule fnapp_special);
+        app (insert_rule infix_rule infix_f) rules
+      end
     | PREFIX (STD_prefix rules) => app (insert_rule prefix_rule prefix_f) rules
     | PREFIX (BINDER s) => ()
     | SUFFIX (STD_suffix rules) => app (insert_rule suffix_rule suffix_f) rules
     | SUFFIX TYPE_annotation => ()
     | CLOSEFIX rules => app (insert_rule closefix_rule closefix_f) rules
-    | FNAPP => Polyhash.insert table (infix_f [TOK fnapp_special],
-                                      infix_rule fnapp_special)
-    | VSCONS => ()
     | LISTRULE rlist => let
         fun process r = let
           val nil_pattern = [TOK (#leftdelim r), TOK (#rightdelim r)]

@@ -58,6 +58,8 @@ sig
   datatype infix_rule
      = STD_infix of rule_record list * associativity
      | RESQUAN_OP
+     | VSCONS
+     | FNAPP of rule_record list
 
   type listspec =
      {separator  : string,
@@ -71,8 +73,6 @@ sig
      | SUFFIX of suffix_rule
      | INFIX of infix_rule
      | CLOSEFIX of rule_record list
-     | FNAPP
-     | VSCONS
      | LISTRULE of listspec list
 
   type grammar

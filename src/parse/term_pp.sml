@@ -186,9 +186,10 @@ in
   | SUFFIX TYPE_annotation => []
   | INFIX (STD_infix(list, a)) => map (mkifix a) list
   | INFIX RESQUAN_OP => [(resquan_special, grule)]
+  | INFIX (FNAPP lst) =>
+      (fnapp_special, INFIX (FNAPP [])) :: map (mkifix LEFT) lst
+  | INFIX VSCONS => [(vs_cons_special, INFIX VSCONS)]
   | CLOSEFIX lst => map closefix lst
-  | FNAPP => [(fnapp_special, FNAPP)]
-  | VSCONS => [(vs_cons_special, VSCONS)]
   | LISTRULE lspeclist => let
       fun process lspec = [(#cons lspec, LISTRULE [lspec]),
                            (#nilstr lspec, LISTRULE [lspec])]
@@ -931,7 +932,9 @@ fun pp_term (G : grammar) TyG = let
           recurse_els (lprec, prec, rprec) (pp_elements, arg_terms);
           endblock (); pend addparens
         end
-      | INFIX RESQUANOP => raise Fail "Res. quans shouldn't arise"
+      | INFIX RESQUAN_OP => raise Fail "Res. quans shouldn't arise"
+      | INFIX (FNAPP _) => raise PP_ERR "pr_term" "fn apps can't arise"
+      | INFIX VSCONS => raise PP_ERR "pr_term" "vs cons can't arise"
       | SUFFIX (STD_suffix lst) => let
           val rr = hd lst
           val elements = #elements rr
@@ -1039,8 +1042,6 @@ fun pp_term (G : grammar) TyG = let
         in
           pr_list tm
         end
-      | FNAPP => raise PP_ERR "pr_term" "fn apps can't arise"
-      | VSCONS => raise PP_ERR "pr_term" "vs cons can't arise"
     end
 
     fun pr_let lgrav rgrav tm = let
@@ -1294,8 +1295,8 @@ fun pp_term (G : grammar) TyG = let
                   | CLOSEFIX list =>
                       numTMs (rule_elements (#elements (hd list))) - 1 =
                       length args
-                  | FNAPP => raise Fail "Can't happen 90211"
-                  | VSCONS => raise Fail "Can't happen 90213"
+                  | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
+                  | INFIX VSCONS => raise Fail "Can't happen 90213"
                   | LISTRULE list => is_list (hd list) tm
                 val crules = List.filter (suitable_rule o #2) crules0
                 fun is_lrule (LISTRULE _) = true | is_lrule _ = false

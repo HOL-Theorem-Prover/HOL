@@ -75,20 +75,21 @@ datatype binder = LAMBDA | BinderString of string
 datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
 datatype suffix_rule = STD_suffix of rule_record list | TYPE_annotation
 datatype infix_rule =
-  STD_infix of rule_record list * associativity |
-  RESQUAN_OP
+         STD_infix of rule_record list * associativity
+       | RESQUAN_OP
+       | VSCONS
+       | FNAPP of rule_record list
 
 type listspec =
   {separator : string, leftdelim : string, rightdelim : string,
    cons : string, nilstr : string}
 
 datatype grammar_rule =
-  PREFIX of prefix_rule
-| SUFFIX of suffix_rule
-| INFIX of infix_rule
-| CLOSEFIX of rule_record list
-| FNAPP | VSCONS
-| LISTRULE of listspec list
+         PREFIX of prefix_rule
+       | SUFFIX of suffix_rule
+       | INFIX of infix_rule
+       | CLOSEFIX of rule_record list
+       | LISTRULE of listspec list
 
 type overload_info = Overload.overload_info
 type parser_info = (string,unit) Binarymap.dict
@@ -187,13 +188,16 @@ fun map_rrfn_rule f r =
   case r of
     PREFIX (STD_prefix rlist) => PREFIX (STD_prefix (map f rlist))
   | PREFIX (BINDER _) => r
+
   | INFIX (STD_infix (rlist, a)) => INFIX (STD_infix (map f rlist, a))
   | INFIX RESQUAN_OP => r
+  | INFIX (FNAPP rlist) => INFIX (FNAPP (map f rlist))
+  | INFIX VSCONS => r
+
   | SUFFIX (STD_suffix rlist) => SUFFIX (STD_suffix (map f rlist))
   | SUFFIX TYPE_annotation => r
+
   | CLOSEFIX rlist => CLOSEFIX (map f rlist)
-  | FNAPP => r
-  | VSCONS => r
   | LISTRULE _ => r
 
 fun fupdate_rule_by_term t f r = let
@@ -277,7 +281,7 @@ val stdhol : grammar =
   GCONS
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
             (SOME 4, INFIX RESQUAN_OP),
-            (SOME 5, VSCONS),
+            (SOME 5, INFIX VSCONS),
             (SOME 450,
              INFIX (STD_infix([{term_name = recupd_special,
                                 elements = [RE (TOK ":=")],
@@ -298,7 +302,7 @@ val stdhol : grammar =
                                                 (PP.CONSISTENT, 0)),
                                 paren_style = OnlyIfNecessary}], RIGHT))),
             (SOME 1000, SUFFIX TYPE_annotation),
-            (SOME 2000, FNAPP),
+            (SOME 2000, INFIX (FNAPP [])),
             (SOME 2500,
              INFIX (STD_infix ([{term_name = recsel_special,
                                  elements = [RE (TOK ".")],
@@ -347,6 +351,9 @@ local
     | INFIX(STD_infix (rules, _)) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
     | INFIX RESQUAN_OP => ok
+    | INFIX (FNAPP rlst) =>
+        mmap (specials_from_elm o rule_elements o #elements) rlst
+    | INFIX VSCONS => ok
     | CLOSEFIX rules =>
         mmap (specials_from_elm o rule_elements o #elements) rules
     | LISTRULE rlist => let
@@ -355,8 +362,6 @@ local
       in
         mmap process rlist
       end
-    | FNAPP => ok
-    | VSCONS => ok
   end
 in
   fun grammar_tokens G = let
@@ -460,6 +465,7 @@ fun merge_rules (r1, r2) =
       PREFIX (STD_prefix (Lib.union pl1 pl2))
   | (PREFIX (BINDER b1), PREFIX (BINDER b2)) =>
       PREFIX (BINDER (Lib.union b1 b2))
+  | (INFIX VSCONS, INFIX VSCONS) => INFIX VSCONS
   | (INFIX(STD_infix (i1, a1)), INFIX(STD_infix(i2, a2))) =>
       if a1 <> a2 then
         raise GrammarError
@@ -468,9 +474,15 @@ fun merge_rules (r1, r2) =
       else
         INFIX(STD_infix(Lib.union i1 i2, a1))
   | (INFIX RESQUAN_OP, INFIX RESQUAN_OP) => INFIX(RESQUAN_OP)
+  | (INFIX (FNAPP rl1), INFIX (FNAPP rl2)) => INFIX (FNAPP (Lib.union rl1 rl2))
+  | (INFIX (STD_infix(i1, a1)), INFIX (FNAPP rl1)) =>
+      if a1 <> LEFT then
+        raise GrammarError
+                ("Attempting to merge function application with non-left" ^
+                 " associated infix")
+      else INFIX (FNAPP (Lib.union i1 rl1))
+  | (INFIX (FNAPP _), INFIX (STD_infix _)) => merge_rules (r2, r1)
   | (CLOSEFIX c1, CLOSEFIX c2) => CLOSEFIX (Lib.union c1 c2)
-  | (FNAPP, FNAPP) => FNAPP
-  | (VSCONS, VSCONS) => VSCONS
   | (LISTRULE lr1, LISTRULE lr2) => LISTRULE (Lib.union lr1 lr2)
   | _ => raise GrammarError "Attempt to have different forms at same level"
 
@@ -796,7 +808,7 @@ fun prettyprint_grammar pstrm (G :grammar) = let
       else if s = recupd_special then "record field update"
       else if s = recfupd_special then "functional record update"
       else if s = recwith_special then "record update"
-           else s
+      else s
 
     val tmid_suffix0 = "  ["^ special_case (#term_name rr)^"]"
     val tmid_suffix =
@@ -873,8 +885,17 @@ fun prettyprint_grammar pstrm (G :grammar) = let
                     "\" TM (restricted quantification operator)")
       end
     | CLOSEFIX rrl => pprint_rrl add_nothing rrl
-    | FNAPP => add_string "TM TM  (function application)"
-    | VSCONS => add_string "TM TM  (binder argument concatenation)"
+    | INFIX (FNAPP rrl) => let
+      in
+        begin_block CONSISTENT 0;
+        add_string "TM TM  (function application) |";
+        add_break(1,0);
+        pprint_rrl add_both rrl;
+        add_break(3,0);
+        add_string ("(L-associative)");
+        end_block()
+      end
+    | INFIX VSCONS => add_string "TM TM  (binder argument concatenation)"
     | LISTRULE lrs => let
         fun pr_lrule {leftdelim, rightdelim, separator, ...} =
           add_string ("\""^leftdelim^"\" ... \""^rightdelim^
