@@ -21,7 +21,7 @@ app load ["numLib",
           "arithSimps",
           "Ho_rewrite",
           "AC",
-          "useful",
+          "jrhUtils",
           "realaxTheory"];
  *)
 
@@ -46,7 +46,7 @@ open Psyntax
      simpLib
      Ho_rewrite
      Arithconv
-     useful
+     jrhUtils
      Canon_Port
      AC
      hratTheory

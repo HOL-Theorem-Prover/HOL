@@ -17,7 +17,7 @@ app load ["numLib",
           "pairSimps",
           "UnwindSimps",
           "Ho_rewrite",
-          "useful",
+          "jrhUtils",
           "limTheory", 
           "listTheory",
           "pred_setTheory",
@@ -44,7 +44,7 @@ open Psyntax
      arithSimps
      RealSS
      Ho_rewrite
-     useful
+     jrhUtils
      Canon_Port
      AC
      realTheory

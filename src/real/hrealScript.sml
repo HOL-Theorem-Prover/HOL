@@ -15,7 +15,7 @@ app load ["Psyntax",
           "Num_conv",
           "Num_induct",
           "EquivType",
-          "useful",
+          "jrhUtils",
           "hratTheory"];
 *)
 
@@ -32,7 +32,7 @@ open Psyntax
      prim_recTheory
      Num_conv
      Num_induct
-     useful
+     jrhUtils
      hratTheory;
 
 val _ = new_theory "hreal";

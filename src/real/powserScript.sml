@@ -13,7 +13,7 @@ app load ["numLib",
           "pairTheory",
           "numLib",
           "Let_conv",
-          "useful",
+          "jrhUtils",
           "topologyTheory",
           "netsTheory",
           "seqTheory",
@@ -34,7 +34,7 @@ open Psyntax
      Num_conv
      Num_induct
      Let_conv
-     useful
+     jrhUtils
      realTheory
      topologyTheory
      netsTheory

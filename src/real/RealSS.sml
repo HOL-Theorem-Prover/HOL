@@ -8,10 +8,9 @@ struct
 
 open Drule realTheory;
 
-val bool_ss = simpLib.++
-                 (simpLib.++(simpLib.++(boolSimps.bool_ss,boolSimps.NOT_ss),
-                             pairSimps.PAIR_ss), UnwindSimps.UNWIND_ss);
-val arith_ss = simpLib.++(bool_ss, arithSimps.ARITH_ss)
+val arith_ss = 
+  simpLib.++
+    (simpLib.++(boolSimps.bool_ss, pairSimps.PAIR_ss),arithSimps.ARITH_ss);
 
 
 val real_ss = simpLib.++(arith_ss, simpLib.SIMPSET {

@@ -21,7 +21,7 @@ app load ["Arbint",
           "Let_conv",
           "tautLib",
           "Ho_rewrite",
-          "useful",
+          "jrhUtils",
           "Canon_Port",
           "liteLib", "AC", "arithLib" (*goofy*)];
 *)
@@ -41,7 +41,7 @@ open Psyntax
      reduceLib
      tautLib
      Ho_rewrite
-     useful
+     jrhUtils
      Canon_Port
      AC Arbint;
 

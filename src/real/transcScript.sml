@@ -12,7 +12,7 @@ app load ["numLib",
           "reduceLib",
           "pairTheory",
           "Let_conv",
-          "useful",
+          "jrhUtils",
           "powserTheory",
           "Diff",
           "mesonLib",
@@ -39,7 +39,7 @@ open Psyntax
      Num_conv
      Num_induct
      Let_conv
-     useful
+     jrhUtils
      Diff
      mesonLib
      RealArith;

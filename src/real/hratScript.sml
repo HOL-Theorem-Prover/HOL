@@ -18,7 +18,7 @@ app load ["Psyntax",
           "Num_conv",
           "Num_induct",
           "EquivType",
-          "useful"];
+          "jrhUtils"];
 *)
 
 open Parse Psyntax
@@ -31,7 +31,7 @@ open Parse Psyntax
      prim_recTheory
      Num_conv
      Num_induct
-     useful;
+     jrhUtils;
 
 val _ = new_theory "hrat";
 

@@ -5,7 +5,7 @@ open HolKernel Parse
      basicHol90Lib
      Psyntax
      hol88Lib
-     useful
+     jrhUtils
      limTheory;
 
 

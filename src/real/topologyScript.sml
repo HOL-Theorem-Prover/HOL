@@ -10,14 +10,14 @@ app load ["Psyntax",
           "hol88Lib",
           "numLib",
           "Let_conv",
-          "useful",
+          "jrhUtils",
           "realTheory"];
 *)
 
 (*
 *)
 open HolKernel Parse basicHol90Lib;
-open Psyntax hol88Lib Let_conv useful realTheory;
+open Psyntax hol88Lib Let_conv jrhUtils realTheory;
 
 infix THEN THENL ORELSE ORELSEC ##;
 
