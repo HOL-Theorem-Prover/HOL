@@ -335,7 +335,7 @@ val ELIM_PFORALL = Q.store_thm
 val PFORALL_THM = Q.store_thm
 ("PFORALL_THM",
  `!P:'a -> 'b -> bool. (!x y. P x y) = !(x,y). P x y`,
- REWRITE_TAC [ELIM_UNCURRY] THEN BETA_TAC THEN 
+ REWRITE_TAC [ELIM_UNCURRY] THEN BETA_TAC THEN
  MATCH_ACCEPT_TAC (GSYM ELIM_PFORALL));
 
 (* ------------------------------------------------------------------------- *)
@@ -345,7 +345,7 @@ val PFORALL_THM = Q.store_thm
 val PEXISTS_THM = Q.store_thm
 ("PEXISTS_THM",
  `!P:'a -> 'b -> bool. (?x y. P x y) = ?(x,y). P x y`,
- REWRITE_TAC [ELIM_UNCURRY] THEN BETA_TAC THEN 
+ REWRITE_TAC [ELIM_UNCURRY] THEN BETA_TAC THEN
  MATCH_ACCEPT_TAC (GSYM ELIM_PEXISTS));
 
 (*---------------------------------------------------------------------------
@@ -354,12 +354,22 @@ val PEXISTS_THM = Q.store_thm
 
 val PAIR_MAP = Q.new_infixr_definition
  ("PAIR_MAP",
-  `## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 50);
+  `$## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 50);
 
 val PAIR_MAP_THM = Q.store_thm
 ("PAIR_MAP_THM",
  `!f g x y. (f##g) (x,y) = (f x, g y)`,
  REWRITE_TAC [PAIR_MAP,FST,SND]);
+
+val FST_PAIR_MAP = store_thm(
+  "FST_PAIR_MAP",
+  ``!p f g. FST ((f ## g) p) = f (FST p)``,
+  REWRITE_TAC [PAIR_MAP, FST]);
+
+val SND_PAIR_MAP = store_thm(
+  "SND_PAIR_MAP",
+  ``!p f g. SND ((f ## g) p) = g (SND p)``,
+  REWRITE_TAC [PAIR_MAP, SND]);
 
 (*---------------------------------------------------------------------------
         Distribution laws for paired lets. Only will work for the
@@ -669,7 +679,8 @@ S "val _ = Definition.new_definition_hook := (dest, post)"; NL()
 val _ = BasicProvers.export_rewrites
         ["PAIR", "FST", "SND", "CLOSED_PAIR_EQ", "CURRY_UNCURRY_THM",
          "UNCURRY_CURRY_THM", "CURRY_ONE_ONE_THM", "UNCURRY_ONE_ONE_THM",
-         "UNCURRY", "CURRY_DEF", "PAIR_MAP_THM"]
+         "UNCURRY", "CURRY_DEF", "PAIR_MAP_THM", "FST_PAIR_MAP",
+         "SND_PAIR_MAP"]
 
 val _ = export_theory();
 
