@@ -367,7 +367,7 @@ fun IMP_TO_FRONT_CONV ante tm =
           SOME t => mk_imp (ante, t)
         | NONE => mk_neg ante
       val dtm = QCONV disjunctify tm
-      val dnewtm = SYM (disjunctify newtm)
+      val dnewtm = SYM (QCONV disjunctify newtm)
       val eq3 = AC_CONV(DISJ_ASSOC, DISJ_COMM)
                    (mk_eq(rhs (concl dtm), lhs (concl dnewtm)))
       val eq4 = TRANS dtm (TRANS (EQT_ELIM eq3) dnewtm)
