@@ -3,7 +3,7 @@
 \TYPE {pp_word_signed_oct : unit -> unit}
 
 \SYNOPSIS
-Pretty print words as signed (two's complement) octal numbers.
+Print words as signed (two's complement) octal numbers.
 
 \EXAMPLE
 
@@ -16,7 +16,7 @@ Pretty print words as signed (two's complement) octal numbers.
 
 \COMMENTS
 Only available after running {mkword.exe}.
-HOL will fail to parse the pretty printed output.
+The output will only parse properly if {base_tokens.allow_octal_input:=true}.
 
 \SEEALSO
 pp_word_unsigned_bin, pp_word_unsigned_oct, pp_word_unsigned_hex,

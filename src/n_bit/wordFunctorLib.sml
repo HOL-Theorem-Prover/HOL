@@ -132,14 +132,14 @@ val n2w_term =
 
 datatype nbase = binary | octal | decimal | hexadecimal;
 
-fun word_n_print ln twos base sys gravs d pps t = let
+fun word_n_print tc base sys gravs d pps t = let
    open Portable term_pp_types
    val (l,r) = dest_comb t
    val n = numSyntax.dest_numeral r
-   val exph = Arbnum.pow(Arbnum.two,Arbnum.less1 ln)
+   val exph = Arbnum.pow(Arbnum.two,Arbnum.less1 wl)
    val expl = Arbnum.*(Arbnum.two,exph)
    val un = Arbnum.mod(n,expl)
-   val neg = twos andalso Arbnum.div(n,exph) = Arbnum.one
+   val neg = tc andalso Arbnum.div(n,exph) = Arbnum.one
    val sn = if neg then Arbnum.-(expl,un) else un
 in
   if l = n2w_term then
@@ -155,7 +155,7 @@ in
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 fun pp_word tc base =
-   Parse.temp_add_user_printer ({Tyop = thyname, Thy = thyname}, word_n_print wl tc base);
+   Parse.temp_add_user_printer ({Tyop = thyname, Thy = thyname}, word_n_print tc base);
 
 fun pp_word_signed_bin() = pp_word true binary;
 fun pp_word_signed_oct() = pp_word true octal;

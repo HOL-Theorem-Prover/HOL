@@ -3,7 +3,7 @@
 \TYPE {pp_word_unsigned_bin : unit -> unit}
 
 \SYNOPSIS
-Pretty print words as unsigned binary numbers.
+Print words as unsigned binary numbers.
 
 \EXAMPLE
 
@@ -16,7 +16,6 @@ Pretty print words as unsigned binary numbers.
 
 \COMMENTS
 Only available after running {mkword.exe}.
-HOL will fail to parse the pretty printed output.
 
 \SEEALSO
 pp_word_unsigned_oct, pp_word_unsigned_hex, pp_word_signed_bin,

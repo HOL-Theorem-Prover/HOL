@@ -3,7 +3,7 @@
 \TYPE {pp_word_signed_dec : unit -> unit}
 
 \SYNOPSIS
-Pretty print words as signed (two's complement) decimal numbers.
+Print words as signed (two's complement) decimal numbers.
 
 \EXAMPLE
 
