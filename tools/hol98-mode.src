@@ -9,6 +9,7 @@
 ;;; lives.
 
 (require 'thingatpt)
+(require 'cl)
 
 (define-prefix-command 'hol-map)
 (define-prefix-command 'hol-d-map)
@@ -605,14 +606,13 @@ already loaded.)"
 (define-key hol-map "\M-s" 'hol-subgoal-tactic)
 (define-key hol-map "\M-v" 'hol-scroll-down)
 (define-key hol-map "b"    'hol-backup)
-(define-key hol-map "d"    'hol-d-map)
-  (define-key hol-d-map "r"  'hol-drop-goal)
-  (define-key hol-d-map "m"  'hol-db-match)
+(define-key hol-map "d"    'hol-drop-goal)
 (define-key hol-map "D"    'hol-drop-all-goals)
 (define-key hol-map "e"    'copy-region-as-hol-tactic)
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "h"    'hol98)
 (define-key hol-map "l"    'hol-load-file)
+(define-key hol-map "m"    'hol-db-match)
 (define-key hol-map "n"    'hol-name-top-theorem)
 (define-key hol-map "o"    'hol-open-string)
 (define-key hol-map "p"    'hol-print)
