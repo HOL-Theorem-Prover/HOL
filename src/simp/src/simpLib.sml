@@ -91,7 +91,7 @@ fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
        itlist net_add_conv convs net;
 
    fun mk_rewr_convdata th =
-        {name="<rewrite>",
+        {name=("<rewrite> with "^Parse.thm_to_string th),
          key=SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
          trace=3,
          conv=COND_REWR_CONV th};
