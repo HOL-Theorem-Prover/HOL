@@ -586,8 +586,22 @@ exception HolDepFailed
 fun runholdep arg destination_file = let
   open Mosml
   val _ = print ("Analysing "^fromFile arg^"\n")
+  fun buildables s = let
+    val f = toFile s
+    val files =
+        case f of
+          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t),
+                                   SIG (Theory t), UI (Theory t),
+                                   UO (Theory t), f]
+        | SML ss => [UI ss, UO ss, f]
+        | SIG ss => [UI ss, f]
+        | x => [x]
+  in
+    map fromFile files
+  end
+  val buildable_extras = List.concat (map buildables extra_targets)
   val result =
-    Success(Holdep.main extra_targets debug
+    Success(Holdep.main buildable_extras debug
                         (std_include_flags @ additional_includes @
                          [fromFile arg]))
     handle _ => (print "Holdep failed.\n"; Failure "")
