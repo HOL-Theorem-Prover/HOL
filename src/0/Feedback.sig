@@ -5,8 +5,8 @@ sig
                          message          : string}
 
     exception HOL_ERR of error_record
-
     val mk_HOL_ERR        : string -> string -> string -> exn
+    val mk_HOL_ERRloc     : string -> string -> locn.locn -> string -> exn
     val wrap_exn          : string -> string -> exn -> exn
 
     val emit_ERR          : bool ref
@@ -31,6 +31,7 @@ sig
     val failwith          : string -> 'a
     val HOL_MESG          : string -> unit
     val HOL_WARNING       : string -> string -> string -> unit
+    val HOL_WARNINGloc    : string -> string -> locn.locn -> string -> unit
 
     val traces            : unit -> {name:string, max : int,
                                      trace_level:int, default:int} list

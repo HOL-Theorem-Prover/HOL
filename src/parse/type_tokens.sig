@@ -11,7 +11,7 @@ signature type_tokens = sig
       | AQ of 'a
       | Error of 'a base_tokens.base_token
 
-  val typetok_of : 'a qbuf.qbuf -> ((unit -> unit) * 'a type_token)
+  val typetok_of : 'a qbuf.qbuf -> ((unit -> unit) * 'a type_token locn.located)
 
   val token_string : 'a type_token -> string
   val dest_aq : 'a type_token -> 'a

@@ -7,9 +7,13 @@ open GrammarSpecials
 infix >> >- ++ >->
 
 val WARN = Feedback.HOL_WARNING "parse_term";
+val WARNloc = Feedback.HOL_WARNINGloc "parse_term";
 
+fun FAILloc locn s = raise Fail (locn.toString locn^":\n"^s)
 
-exception ParseTermError of string
+fun liftlocn f (x,locn) = (f x,locn)
+
+exception ParseTermError of string locn.located
 type 'a token = 'a term_tokens.term_token
 type 'a qbuf = 'a qbuf.qbuf
 
@@ -41,38 +45,19 @@ fun quotetoString [] = ""
 
 datatype 'a varstruct
   = SIMPLE of string
-  | VPAIR of ('a varstruct * 'a varstruct)
-  | TYPEDV of 'a varstruct * Pretype.pretype
-  | RESTYPEDV of 'a varstruct * 'a preterm
+  | VPAIR of ('a varstruct locn.located * 'a varstruct locn.located)
+  | TYPEDV of 'a varstruct locn.located * Pretype.pretype locn.located
+  | RESTYPEDV of 'a varstruct locn.located * 'a preterm locn.located
   | VS_AQ of 'a
 and 'a preterm
-  = COMB of ('a preterm * 'a preterm)
+  = COMB of ('a preterm locn.located * 'a preterm locn.located)
   | VAR of string
   | QIDENT of string * string
-  | ABS of ('a varstruct * 'a preterm)
+  | ABS of ('a varstruct locn.located * 'a preterm locn.located)
   | AQ of 'a
-  | TYPED of ('a preterm * Pretype.pretype)
+  | TYPED of ('a preterm locn.located * Pretype.pretype locn.located)
 
-fun strip_comb0 acc (COMB(t1, t2)) = strip_comb0 (t2::acc) t1
-  | strip_comb0 acc t = (t, acc)
-fun strip_comb t = strip_comb0 [] t
-
-fun list_mk_comb (t, []) = t
-  | list_mk_comb (t, (x::xs)) = list_mk_comb(COMB(t,x), xs)
-
-(* checks that there are never two adjacent TM elements and further that
-   no TM element is either the first or last element of the list *)
-(* also disallows the empty list *)
-fun e_list_ok [] = false
-  | e_list_ok [TOK _] = true
-  | e_list_ok (TM :: _) = false
-  | e_list_ok (TOK _::(rest as (TOK _ :: _))) = e_list_ok rest
-  | e_list_ok (TOK _:: TM :: rest) = e_list_ok rest
-
-fun apply_flist [] x = x
-  | apply_flist (f::fs) x = apply_flist fs (f x)
-
-fun CCOMB(x,y) = COMB(y,x)
+fun CCOMB(x,y) = (COMB(y,x),locn.between (#2 y) (#2 x))
 
 infix --
 fun (l1 -- []) = l1
@@ -454,11 +439,11 @@ fun mif B C = B >- (fn b => if b then C else ok)
 datatype 'a stack_item =
   Terminal of stack_terminal |
   NonTerminal of 'a preterm |
-  NonTermVS of 'a varstruct list
+  NonTermVS of 'a varstruct locn.located list
 
-fun is_terminal (Terminal _) = true
+fun is_terminal (Terminal _,_) = true
   | is_terminal _ = false
-fun dest_terminal (Terminal x) = x
+fun dest_terminal (Terminal x,_) = x
   | dest_terminal _ = raise Fail "dest_terminal not called on terminal"
 fun is_nonterm t = not (is_terminal t)
 
@@ -470,10 +455,12 @@ datatype 'a lookahead_item =
 datatype vsres_state = VSRES_Normal | VSRES_VS | VSRES_RESTM
 
 datatype 'a PStack =
-  PStack of {stack : ('a stack_item * 'a lookahead_item) list,
-             lookahead : 'a lookahead_item list,
+  PStack of {stack : ('a stack_item locn.located * 'a lookahead_item) list,
+             lookahead : 'a lookahead_item locn.located list,
              in_vstruct : (vsres_state * int) list}
 
+(* dummy lookahead token *)
+val XXX = Token (Ident "XXX")
 
 
 fun pstack (PStack {stack, ...}) = stack
@@ -558,71 +545,78 @@ fun parse_term (G : grammar) typeparser = let
   val keyword_table = Polyhash.mkPolyTable (50, Fail "")
   val _ = app (fn v => Polyhash.insert keyword_table (v, ())) grammar_tokens
 
-  fun transform (in_vs as (vs_state, nparens)) (t:'a lookahead_item option) =
+  fun transform (in_vs as (vs_state, nparens)) (t:'a lookahead_item locn.located option) =
     case t of
-      NONE => (EOS, t)
-    | SOME (Token x) => let
+      NONE => (EOS, locn.Loc_None, NONE)
+    | SOME (tt as Token x,locn) => let
       in
         case x of
           Ident s =>
-            if String.sub(s,0) = #"$" then
-              (Id, SOME (Token (Ident (String.extract(s,1,NONE)))))
+            if String.sub(s,0) = #"$" then let
+                val locn = locn.move_start 1 locn
+              in
+              (Id, locn, SOME (Token (Ident (String.extract(s,1,NONE))))) end
             else if s = res_quanop andalso vs_state = VSRES_VS then
-              (ResquanOpTok, t)
-            else if s = type_intro then (TypeColon, t)
-            else if s = vs_cons_special then (VS_cons, t)
+              (ResquanOpTok, locn, SOME tt)
+            else if s = type_intro then (TypeColon, locn, SOME tt)
+            else if s = vs_cons_special then (VS_cons, locn, SOME tt)
             else if s = endbinding andalso nparens = 0 andalso
-              vs_state <> VSRES_Normal then (EndBinding, t)
+              vs_state <> VSRES_Normal then (EndBinding, locn, SOME tt)
             else if isSome (Polyhash.peek keyword_table s) then
-              (STD_HOL_TOK s, t)
-            else (Id, t)
-        | Antiquote _ => (Id, t)
-        | Numeral _ => (Id, t)
-        | QIdent _ => (Id, t)
+              (STD_HOL_TOK s, locn, SOME tt)
+            else (Id, locn, SOME tt)
+        | Antiquote _ => (Id, locn, SOME tt)
+        | Numeral _ => (Id, locn, SOME tt)
+        | QIdent _ => (Id, locn, SOME tt)
       end
-    | SOME (PreType ty) => (TypeTok, t)
-    | SOME (LA_Symbol st) => (st, t)
+    | SOME (tt as PreType ty,locn) => (TypeTok, locn, SOME tt)
+    | SOME (tt as LA_Symbol st,locn) => (st, locn, SOME tt)
 
   (* find the initial segment of the stack such that all of the segment
      has the equality relation between components and such that the first
      element not in the segment is less than than the last one in the
      segment *)
+  (* NB: the FAILloc invocations in this function raise untrapped Fail exceptions *)
   fun find_reduction stack =
     case stack of
       [] => raise Fail "find_reduction: stack empty!"
     | [_] => raise Fail "find_reduction: stack singleton!"
-    | ((t1 as (Terminal x1, _))::rest) => let
+    | ((t1 as ((Terminal x1,x1locn), _))::rest) => let
       in
         case rest of
-          [] => raise Fail "find_reduction : impossible"
-        | ((Terminal x2, _)::_) => let
+          [] => FAILloc x1locn "find_reduction : impossible"
+        | (((Terminal x2,x2locn), _)::_) => let
             val res = valOf (Polyhash.peek prec_matrix (x2,x1))
               handle Option =>
-                raise Fail ("No relation between "^STtoString G x2^" and "^
-                            STtoString G x1);
+                FAILloc (locn.between x2locn x1locn)
+                        ("No relation between "^STtoString G x2^" and "^
+                         STtoString G x1)
           in
             case res of
               LESS => [t1]
             | EQUAL =>  (t1::find_reduction rest)
-            | GREATER => raise Fail "find_reduction: found a greater on stack"
+            | GREATER => FAILloc (locn.between x2locn x1locn)
+                                 "find_reduction: found a greater on stack"
           end
-        | (t2::rest2) => let
+        | ((t2 as ((_,t2locn),_))::rest2) => let
             (* t2 is a non-terminal, whether VS or not *)
           in
             case rest2 of
-              [] => raise Fail "find_reduction : nonterminal at stack base!"
-            | ((Terminal x2, _)::_) => let
+              [] => FAILloc t2locn "find_reduction : nonterminal at stack base!"
+            | (((Terminal x2,x2locn), _)::_) => let
                 val res = valOf (Polyhash.peek prec_matrix (x2, x1))
                   handle Option =>
-                    raise Fail ("No relation between "^STtoString G x2^" and "^
-                                STtoString G x1)
+                    FAILloc (locn.between x2locn t2locn)
+                            ("No relation between "^STtoString G x2^" and "^
+                             STtoString G x1)
               in
                 case res of
                   LESS => [t1,t2]
                 | EQUAL => t1::t2::find_reduction rest2
-                | GREATER => raise Fail "find_reduction: greater on stack!"
+                | GREATER => FAILloc (locn.between x2locn t2locn)
+                                     "find_reduction: greater on stack!"
               end
-            | (_::_) => raise Fail "find_reduction 2 NTs!"
+            | (((_,locn),_)::_) => FAILloc (locn.between locn t2locn) "find_reduction 2 NTs!"
           end
       end
     | (t1::rest) => t1::find_reduction rest (* t1 a non-terminal *)
@@ -632,8 +626,8 @@ fun parse_term (G : grammar) typeparser = let
      pull the tokens of the stack and replace them with the right
      non-terminal *)
   fun perform_reduction rhs = let
-    fun ok_item (Terminal (STD_HOL_TOK _), _) = true
-      | ok_item (NonTerminal _, _) = true
+    fun ok_item ((Terminal (STD_HOL_TOK _),_), _) = true
+      | ok_item ((NonTerminal _,_), _) = true
       | ok_item _ = false
 
     (* what follows is only called on what will be list RHSes of
@@ -681,30 +675,33 @@ fun parse_term (G : grammar) typeparser = let
 
          Below, the variable top_was_tm is true if a TM was popped in this
          way. *)
-      fun stack_item_to_rule_element (Terminal (STD_HOL_TOK s)) = TOK s
-        | stack_item_to_rule_element (NonTerminal _) = TM
-        | stack_item_to_rule_element _ = raise Fail "perform_reduction: gak!"
+      fun stack_item_to_rule_element (Terminal (STD_HOL_TOK s),_) = TOK s
+        | stack_item_to_rule_element (NonTerminal _,_) = TM
+        | stack_item_to_rule_element (_,locn) = FAILloc locn "perform_reduction: gak!"
+      val ((_,rlocn),_) = List.hd rhs
       val rhs = List.rev rhs
       val translated_rhs0 = map (stack_item_to_rule_element o #1) rhs
       val (translated_rhs, top_was_tm) =
         case translated_rhs0 of
           (TM::rest) => (rest, true)
         | _ => (translated_rhs0, false)
+      val ((_,llocn),_) = List.hd (if top_was_tm then List.tl rhs else rhs)
+      val locn = locn.between llocn rlocn
       val rule = valOf (Polyhash.peek rule_db translated_rhs)
         handle Option => let
           val errmsg = "No rule for "^listtoString reltoString translated_rhs
         in
           valOf (handle_list_reduction translated_rhs)
-          handle Option => raise Fail errmsg
+          handle Option => FAILloc locn errmsg
         end
       val _ =
         case rule of
           infix_rule s => top_was_tm orelse
-            raise Fail ("missing left argument to "^s)
+            FAILloc locn ("missing left argument to "^s)
         | suffix_rule s => top_was_tm orelse
-              raise Fail ("missing first argument to "^s)
+              FAILloc locn ("missing first argument to "^s)
         | _ => true
-      fun item_to_pterm (NonTerminal p, _) = SOME p
+      fun item_to_pterm ((NonTerminal p,locn), _) = SOME (p,locn)
         | item_to_pterm _ = NONE
       val lrhs = length rhs
       val mapP = List.mapPartial
@@ -713,8 +710,8 @@ fun parse_term (G : grammar) typeparser = let
         case rule of
           listfix_rule r => let
             val args = mapP item_to_pterm rhs
-            fun mk_list [] = VAR (#nilstr r)
-              | mk_list (x::xs) = COMB(COMB(VAR (#cons r), x), mk_list xs)
+            fun mk_list [] = (VAR (#nilstr r),rlocn)
+              | mk_list (x::xs) = (COMB((COMB((VAR (#cons r),#2 x), x),#2 x), mk_list xs),locn.between llocn (#2 x))
           in
             (lrhs - n, mk_list args)
           end
@@ -725,26 +722,26 @@ fun parse_term (G : grammar) typeparser = let
               | prefix_rule s => (mapP item_to_pterm (tl rhs), lrhs - n, s)
               | suffix_rule s => (mapP item_to_pterm rhs, lrhs, s)
               | closefix_rule s => (mapP item_to_pterm (tl rhs), lrhs - n, s)
-              | _ => raise Fail "parse_term : can't happen"
+              | _ => FAILloc locn "parse_term : can't happen"
           in
-            (numtopop, List.foldl CCOMB (VAR head) args)
+            (numtopop, List.foldl CCOMB (VAR head,llocn) args)
           end
     in
-      repeatn numtopop pop >> push (NonTerminal newterm, Token (Ident "XXX"))
+      repeatn numtopop pop >> push (liftlocn NonTerminal newterm, XXX)
     end
   else
     case rhs of
-      ((Terminal Id, tt as Token (Antiquote a))::_) => let
+      (((Terminal Id,locn), tt as Token (Antiquote a))::_) => let
       in
         pop >> invstructp >-
         (fn inv =>
          if #1 (hd inv) = VSRES_VS then
-           push (NonTermVS [VS_AQ a], tt)
+           push ((NonTermVS [(VS_AQ a,locn)],locn), tt)
          else
-           push (NonTerminal (AQ a), tt))
+           push ((NonTerminal (AQ a),locn), tt))
       end
-    | ((Terminal Id, Token tt)::_) => let
-        exception Temp
+    | (((Terminal Id,locn), Token tt)::_) => let
+        exception Temp of string
       in
         pop >> invstructp >-
         (fn inv => let
@@ -752,21 +749,20 @@ fun parse_term (G : grammar) typeparser = let
             case (#1 (hd inv), tt) of
               (VSRES_VS, Numeral _) => let
               in
-                WARN "term_parser" "can't have numerals in binding positions";
-                raise Temp
+                raise Temp "can't have numerals in binding positions"
               end
             | (_, Numeral(dp, copt)) => let
                 val numeral_part =
                   Literal.gen_mk_numeral
-                       {mk_comb = COMB,
-                        ZERO = QIDENT ("num", "0"),
-                        ALT_ZERO = QIDENT ("arithmetic", "ALT_ZERO"),
-                        NUMERAL  = QIDENT ("arithmetic", "NUMERAL"),
-                        BIT1     = QIDENT ("arithmetic", "NUMERAL_BIT1"),
-                        BIT2     = QIDENT ("arithmetic", "NUMERAL_BIT2")}
+                       {mk_comb  = fn (x,y) => (COMB(x,y),locn),
+                        ZERO     = (QIDENT ("num"       , "0"           ),locn),
+                        ALT_ZERO = (QIDENT ("arithmetic", "ALT_ZERO"    ),locn),
+                        NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"     ),locn),
+                        BIT1     = (QIDENT ("arithmetic", "NUMERAL_BIT1"),locn),
+                        BIT2     = (QIDENT ("arithmetic", "NUMERAL_BIT2"),locn)}
                     (Arbnum.fromString dp)
                 fun inject_np NONE = numeral_part
-                  | inject_np (SOME s) = COMB(VAR s, numeral_part)
+                  | inject_np (SOME s) = (COMB((VAR s,locn), numeral_part),locn)
               in
                 case copt of
                   SOME c => let
@@ -775,11 +771,9 @@ fun parse_term (G : grammar) typeparser = let
                     case injector of
                       NONE => let
                       in
-                        WARN "term_parser"
-                         ("Invalid suffix "^str c^ " for numeral");
-                        raise Temp
+                        raise Temp ("Invalid suffix "^str c^ " for numeral")
                       end
-                    | SOME (_, strop) => NonTerminal (inject_np strop)
+                    | SOME (_, strop) => liftlocn NonTerminal (inject_np strop)
                   end
                 | NONE =>
                   if null num_info then
@@ -787,60 +781,57 @@ fun parse_term (G : grammar) typeparser = let
                       (WARN "term_parser"
                        ("\n   0 treated specially and allowed - "^
                         "no other numerals permitted");
-                      NonTerminal (inject_np NONE))
+                      liftlocn NonTerminal (inject_np NONE))
                     else
-                      (WARN "term_parser"  "No numerals currently allowed";
-                       raise Temp)
+                       raise Temp "No numerals currently allowed"
                   else let
                     val fns = fromNum_str
                   in
                     if Overload.is_overloaded overload_info fns then
-                      NonTerminal (inject_np (SOME fns))
+                      liftlocn NonTerminal (inject_np (SOME fns))
                     else
-                      (WARN "term_parser"
-                       ("No overloadings exist for "^fns^
-                        ": use character suffix for numerals");
-                       raise Temp)
+                       raise Temp ("No overloadings exist for "^fns^
+                                   ": use character suffix for numerals")
                       (* NonTerminal (inject_np (#2 (hd num_info))) *)
                   end
               end
-            | (VSRES_VS, _) => NonTermVS [SIMPLE (token_string tt)]
-            | (_, QIdent x) => NonTerminal (QIDENT x)
-            | _ => NonTerminal (VAR (token_string tt))
+            | (VSRES_VS, _) => (NonTermVS [(SIMPLE (token_string tt),locn)],locn)
+            | (_, QIdent x) => (NonTerminal (QIDENT x),locn)
+            | _ => (NonTerminal (VAR (token_string tt)),locn)
               (* tt is not an antiquote because of the wider context;
                  antiquotes are dealt with in the wider case statement
                  above *)
         in
            push (thing_to_push, Token tt)
-        end handle Temp => fail)
+        end handle Temp s => (WARNloc "parse_term" locn s; fail))
       end
-    | ((Terminal TypeTok, PreType ty)::(Terminal TypeColon, _)::
-       (NonTerminal t, _)::rest) => let
+    | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
+       ((NonTerminal t,llocn), _)::rest) => let
       in
-        repeatn 3 pop >> push (NonTerminal (TYPED (t, ty)),
-                               Token (Ident "XXX"))
+        repeatn 3 pop >> push ((NonTerminal (TYPED ((t,llocn), (ty,locn.Loc_Unknown(*TODO*)))),locn.between llocn rlocn),
+                               XXX)
       end
-    | ((Terminal TypeTok, PreType ty)::(Terminal TypeColon, _)::
-       (NonTermVS vsl, _)::rest) => let
+    | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
+       ((NonTermVS vsl,llocn), _)::rest) => let
        in
-         repeatn 3 pop >> push (NonTermVS (map (fn v => TYPEDV(v,ty)) vsl),
-                                Token (Ident "XXX"))
+         repeatn 3 pop >> push ((NonTermVS (map (fn (v as (_,locn)) => (TYPEDV(v,(ty,locn.Loc_Unknown(*TODO*))),locn)) vsl),locn.between llocn rlocn),
+                                XXX)
        end
-    | ((NonTerminal t, _)::(Terminal EndBinding, _)::
-       (NonTermVS vsl, _)::(Terminal (STD_HOL_TOK binder), _)::rest) => let
+    | (((NonTerminal t,rlocn), _)::((Terminal EndBinding,_), _)::
+       ((NonTermVS vsl,_), _)::((Terminal (STD_HOL_TOK binder),llocn), _)::rest) => let
        exception Urk of string in let
-        fun has_resq v =
+        fun has_resq (v,_) =
           case v of
-            VPAIR(v1,v2) => has_resq v1 orelse has_resq v2
+            VPAIR(v1, v2) => has_resq v1 orelse has_resq v2
           | TYPEDV(v0, ty) => has_resq v0
           | RESTYPEDV _ => true
           | _ => false
-        fun has_tupled_resq (VPAIR(v1, v2)) = has_resq v1 orelse has_resq v2
-          | has_tupled_resq (TYPEDV(v0, _)) = has_tupled_resq v0
-          | has_tupled_resq (RESTYPEDV(v0, _)) = has_tupled_resq v0
+        fun has_tupled_resq (VPAIR(v1, v2),_) = has_resq v1 orelse has_resq v2
+          | has_tupled_resq (TYPEDV(v0, _),_) = has_tupled_resq v0
+          | has_tupled_resq (RESTYPEDV(v0, _),_) = has_tupled_resq v0
           | has_tupled_resq _ = false
         fun ERROR s1 s2 = Urk (s1^": "^s2)
-        fun extract_resq v =
+        fun extract_resq (v,_) =
           case v of
             TYPEDV (v0, _) => extract_resq v0
           | RESTYPEDV(v0, t) => let
@@ -859,11 +850,13 @@ fun parse_term (G : grammar) typeparser = let
               "Can't have restricted quantification on nested arguments"
           else
             case extract_resq v of
-              NONE => COMB(VAR binder, ABS(v, t))
+              NONE => (COMB((VAR binder,llocn), (ABS(v, t),locn.between (#2 v) (#2 t))),
+                       locn.between llocn rlocn)
             | SOME (v',P) =>
-                COMB(COMB(VAR (Lib.assoc (BinderString binder) restr_binders),
-                          P),
-                     ABS(v', t))
+                (COMB((COMB((VAR (Lib.assoc (BinderString binder) restr_binders),llocn),
+                            P),locn.between llocn (#2 P)),
+                      (ABS(v', t),locn.between (#2 v') (#2 t))),
+                 locn.between llocn rlocn)
                 handle Feedback.HOL_ERR _ =>
                   raise ERROR "parse_term"
                     ("No restricted quantifier associated with "^binder)
@@ -873,58 +866,63 @@ fun parse_term (G : grammar) typeparser = let
               "Can't have restricted quantification on nested arguments"
           else
             case extract_resq v of
-              NONE => ABS(v,t)
+              NONE => (ABS(v,t),locn.between llocn rlocn)
             | SOME(v', P) =>
-                COMB(COMB(VAR (Lib.assoc LAMBDA restr_binders), P), ABS(v', t))
+                (COMB((COMB((VAR (Lib.assoc LAMBDA restr_binders),llocn),
+                            P), locn.between llocn (#2 P)),
+                      (ABS(v', t),locn.between (#2 v') (#2 t))),
+                 locn.between llocn rlocn)
                 handle Feedback.HOL_ERR _ =>
                   raise ERROR "parse_term"
                     "No restricted quantifier associated with lambda"
         val vsl = List.rev vsl
         val abs_t =
-          List.foldr (if binder = lambda then abs_fn else comb_abs_fn) t vsl
+          List.foldr (if binder = lambda then abs_fn else comb_abs_fn) (t,rlocn) vsl
       in
-        repeatn 4 pop >> push (NonTerminal abs_t, Token (Ident "XXX"))
-      end handle Urk s => (print (s^"\n"); fail) end
-    | ((Terminal(STD_HOL_TOK ")"), _)::(vsl as (NonTermVS _,_))::
-       (Terminal(STD_HOL_TOK "("), _)::rest) => let
+        repeatn 4 pop >> push (liftlocn NonTerminal abs_t, XXX)
+      end handle Urk s => (WARNloc "parse_term" (locn.between llocn rlocn) s; fail) end
+    | (((Terminal(STD_HOL_TOK ")"),rlocn), _)::(vsl as ((NonTermVS _,_),_))::
+       ((Terminal(STD_HOL_TOK "("),llocn), _)::rest) => let
       in
-        repeatn 3 pop >> push vsl
+        repeatn 3 pop >> push vsl  (* don't bother expanding locn; would add no useful info *)
       end
-    | ((NonTermVS vsl1, _)::(Terminal(STD_HOL_TOK ","), _)::
-       (NonTermVS vsl2, _)::rest) => let
+    | (((NonTermVS vsl1,rlocn), _)::((Terminal(STD_HOL_TOK ","),_), _)::
+       ((NonTermVS vsl2,llocn), _)::rest) => let val lrlocn = locn.between llocn rlocn
        in
          if length vsl1 <> 1 orelse length vsl2 <> 1 then
-           (print "Can't have lists of atoms as arguments to , in binder";
-            fail)
+           (WARNloc "parse_term" lrlocn "Can't have lists of atoms as arguments to , in binder"; fail)
            else
-             repeatn 3 pop >> push (NonTermVS [VPAIR(hd vsl2, hd vsl1)],
-                                    Token (Ident "XXX"))
+             repeatn 3 pop >> push ((NonTermVS [(VPAIR(hd vsl2, hd vsl1),lrlocn)],lrlocn),
+                                    XXX)
        end
-    | ((NonTerminal t, _)::(Terminal ResquanOpTok, _)::
-       (NonTermVS vsl, _)::rest) => let
+    | (((NonTerminal t,rlocn), _)::((Terminal ResquanOpTok,_), _)::
+       ((NonTermVS vsl,llocn), _)::rest) => let
       in
-         repeatn 3 pop >> push (NonTermVS (map (fn v => RESTYPEDV(v,t)) vsl),
-                                Token (Ident "XXX")) >>
+         repeatn 3 pop >> push ((NonTermVS (map (fn (v as (_,locn))=> (RESTYPEDV(v,(t,rlocn)),locn)) vsl),locn.between llocn rlocn),
+                                XXX) >>
          leave_restm
       end
     | _ => let
       fun is_vcons_list [] = false
         | is_vcons_list [x] = false
-        | is_vcons_list ((NonTermVS _, _)::(Terminal VS_cons, _)::rest) = let
+        | is_vcons_list (((NonTermVS _,_), _)::((Terminal VS_cons,_), _)::rest) = let
           in
             case rest of
-              [(NonTermVS _,_)] => true
+              [((NonTermVS _,_),_)] => true
             | _ => is_vcons_list rest
           end
         | is_vcons_list _ = false
-      fun get_vsls (NonTermVS vsl, _) = SOME vsl | get_vsls _ = NONE
+      fun get_vsls ((NonTermVS vsl,_), _) = SOME vsl | get_vsls _ = NONE
+      val ((_,rlocn),_) = List.hd rhs
+      val ((_,llocn),_) = List.last rhs
+      val lrlocn = locn.between llocn rlocn
     in
       if is_vcons_list rhs then
         repeatn (length rhs) pop >>
-        push (NonTermVS(List.concat (List.mapPartial get_vsls rhs)),
-              Token(Ident "XXX"))
+        push ((NonTermVS(List.concat (List.mapPartial get_vsls rhs)),lrlocn),
+              XXX)
       else
-        (print "Can't do this sort of reduction\n"; fail)
+        (WARNloc "parse_term" lrlocn "Can't do this sort of reduction"; fail)
     end
   end handle Fail s => (print s; print "\n"; fail)
 
@@ -935,7 +933,7 @@ fun parse_term (G : grammar) typeparser = let
 
   fun el2list x = [x]
   (* calls the lexer and puts the result onto the lookahead list *)
-  val get_item = (lex >- set_la o el2list o Token) ++ (set_la [])
+  val get_item = (lex >- set_la o el2list o liftlocn Token) ++ (set_la [])
 
   (* takes the top (first) terminal from the lookahead list (there is
      assumed to be one), and transfers it to the stack.  If this
@@ -949,9 +947,9 @@ fun parse_term (G : grammar) typeparser = let
       case la of
         [] => fail
       | (x0::xs) => let
-          val (terminal,x) = transform in_vs (SOME x0)
+          val (terminal,locn,x) = transform in_vs (SOME x0)
         in
-          push (Terminal terminal, valOf x) >>
+          push ((Terminal terminal,locn), valOf x) >>
           (if null xs then get_item else set_la xs) >>
              (case terminal of
                 STD_HOL_TOK s =>
@@ -968,7 +966,7 @@ fun parse_term (G : grammar) typeparser = let
 
 
   fun doit (tt, (top_item, top_token), in_vs) = let
-    val (input_term, _) = transform (hd in_vs) tt
+    val (input_term, itlocn, _) = transform (hd in_vs) tt
     val top = dest_terminal top_item
     val ttt = Terminal input_term
     fun less_action stack =
@@ -976,16 +974,16 @@ fun parse_term (G : grammar) typeparser = let
          i.e. is a closed lhs, and the top thing on the stack is a non-terminal
          then we should insert the magical function application operator *)
       case stack of
-        (NonTerminal _, _)::_ => let
-          val fnt = LA_Symbol (STD_HOL_TOK fnapp_special)
+        ((NonTerminal _,locn), _)::_ => let
+          val fnt = (LA_Symbol (STD_HOL_TOK fnapp_special),locn.Loc_Near locn)
         in
           if mem input_term closed_lefts then
             current_la >- (fn oldla => set_la (fnt::oldla))
           else
             shift
         end
-      | (NonTermVS _, _) :: _ => let
-          val fnt = LA_Symbol VS_cons
+      | ((NonTermVS _,locn), _) :: _ => let
+          val fnt = (LA_Symbol VS_cons,locn.Loc_Near locn)
         in
           if mem input_term closed_lefts then
             current_la >- (fn oldla => set_la (fnt::oldla))
@@ -1005,26 +1003,29 @@ fun parse_term (G : grammar) typeparser = let
           (fn [] => fail
             | (tt :: _ ) =>
               (case tt of
-                 (Terminal (STD_HOL_TOK s'), _) =>
-                 (case s of NONE => pop >> return s'
+                 ((Terminal (STD_HOL_TOK s'),locn), _) =>
+                 (case s of NONE => pop >> return (s',locn)
                           | SOME s'' => if s' = s'' then
-                                          pop >> return s'
+                                          pop >> return (s',locn)
                                         else fail)
                | _ => fail))
     in
       if input_term = STD_HOL_TOK ")" then
           require NONE >-
-          (fn s =>
+          (fn (s,_) =>
               if s = ")" orelse s = "(" then
                 fail  (* don't want to paren-escape "())" or  "(()" *)
               else
-                require (SOME "(") >>
-                shift >> pop >> invstructp >- (return o #1 o hd) >-
-                (fn vstate =>
-                    if vstate <> VSRES_VS then
-                      push (NonTerminal (VAR s), Token (Ident "XXX"))
-                    else
-                      push (NonTermVS [SIMPLE s], Token (Ident "XXX"))))
+                require (SOME "(") >-
+                (fn (_,locn) => let val lrlocn = locn.between locn itlocn
+                  in
+                  shift >> pop >> invstructp >- (return o #1 o hd) >-
+                  (fn vstate =>
+                      if vstate <> VSRES_VS then
+                        push ((NonTerminal (VAR s),lrlocn), XXX)
+                      else
+                        push ((NonTermVS [(SIMPLE s,lrlocn)],lrlocn), XXX))
+                  end ))
       else fail
     end
     val usual_action =
@@ -1059,8 +1060,9 @@ fun parse_term (G : grammar) typeparser = let
        *)
         fun action_on_la la =
           case la of
-            [x] =>
-              lifted_typeparser >-  (fn ty => set_la [x, PreType ty])
+            [x as (_,locn)] =>
+              lifted_typeparser >-  (fn ty => set_la [x, (PreType ty,locn.Loc_Near locn)])
+              (* TODO: if lifted_typeparser returned a location, use that *)
           | _ => usual_action
       in
         current_la >- action_on_la
@@ -1080,11 +1082,11 @@ fun parse_term (G : grammar) typeparser = let
     invstructp >-                   (fn invs =>
     doit (tt, top, invs))))
 in
-  push (Terminal BOS, Token (Ident "XXX")) >> get_item >>
+  push ((Terminal BOS,locn.Loc_None), XXX) >> get_item >>
   mwhile (current_input >-
           (fn optt => if (isSome optt) then return true
                       else
-                        (topterm >- (fn t => return (#1 t <> Terminal BOS)))))
+                        (topterm >- (fn t => return (#1 (#1 t) <> Terminal BOS)))))
   basic_action
 end
 
@@ -1093,7 +1095,7 @@ val initial_pstack = PStack {stack = [], lookahead = [],
 
 fun is_final_pstack p =
   case p of
-    PStack {stack = [(NonTerminal pt, _), (Terminal BOS, _)],
+    PStack {stack = [((NonTerminal pt,_), _), ((Terminal BOS,_), _)],
             lookahead = [], in_vstruct = [(VSRES_Normal, 0)]} => true
   | _ => false
 
@@ -1102,31 +1104,31 @@ val recupd_errstring =
 
 fun to_vabsyn vs =
   case vs of
-    SIMPLE x => Absyn.VIDENT x
-  | VPAIR(v1,v2) => Absyn.VPAIR(to_vabsyn v1, to_vabsyn v2)
-  | TYPEDV(v,ty) => Absyn.VTYPED(to_vabsyn v, ty)
-  | VS_AQ x => Absyn.VAQ x
-  | RESTYPEDV _ =>
+    (SIMPLE x,_) => Absyn.VIDENT x
+  | (VPAIR(v1,v2),_) => Absyn.VPAIR(to_vabsyn v1, to_vabsyn v2)
+  | (TYPEDV(v,(ty,_)),_) => Absyn.VTYPED(to_vabsyn v, ty)
+  | (VS_AQ x,_) => Absyn.VAQ x
+  | (RESTYPEDV _,locn) =>
       raise ParseTermError
-        "Attempt to convert a vstruct still containing a RESTYPEDV"
+        ("Attempt to convert a vstruct still containing a RESTYPEDV",locn)
 
 fun remove_specials t =
-  case t of
+  case #1 t of
     COMB (t1, t2) => let
       open Absyn
     in
-      case t1 of
+      case #1 t1 of
         VAR s => if s = bracket_special then remove_specials t2
                  else APP(IDENT s, remove_specials t2)
-      | COMB (VAR s, f) => let
+      | COMB ((VAR s,slocn), f) => let
         in
           if s = fnapp_special then APP(remove_specials f, remove_specials t2)
           else if s = recsel_special then
-            case t2 of
+            case #1 t2 of
               VAR fldname => APP(IDENT (recsel_special ^ fldname),
                                  remove_specials f)
             | _ => raise ParseTermError
-                "Record selection must have single id to right"
+                ("Record selection must have single id to right",#2 t2)
           else if s = reccons_special then
             remove_recupdate f t2 (IDENT "ARB")
           else if s = recwith_special then
@@ -1134,59 +1136,62 @@ fun remove_specials t =
           else
             if s = recupd_special orelse s = recfupd_special then
               raise ParseTermError
-                "May not use record update functions at top level"
+                ("May not use record update functions at top level",slocn)
             else
               APP(remove_specials t1, remove_specials t2)
         end
       | _ => APP(remove_specials t1, remove_specials t2)
     end
   | ABS(v, t2) => Absyn.LAM(to_vabsyn v, remove_specials t2)
-  | TYPED(t, ty) => Absyn.TYPED(remove_specials t, ty)
+  | TYPED(t, (ty,_)) => Absyn.TYPED(remove_specials t, ty)
   | VAR s => Absyn.IDENT s
   | QIDENT x => Absyn.QIDENT x
   | AQ x => Absyn.AQ x
 and remove_recupdate upd1 updates bottom = let
   open Absyn
 in
-  case upd1 of
-    COMB(COMB(VAR s, VAR fld), newvalue) => let
+  case #1 upd1 of
+    COMB((COMB((VAR s,slocn), (VAR fld,_)),_), newvalue) => let
     in
       if s = recupd_special orelse s = recfupd_special then
         APP(APP(IDENT (s^fld), remove_specials newvalue),
              remove_recupdate' updates bottom)
-      else raise ParseTermError recupd_errstring
+      else raise ParseTermError (recupd_errstring,slocn)
     end
   | _ =>
-    raise ParseTermError recupd_errstring
+    raise ParseTermError (recupd_errstring,#2 upd1)
 end
 and remove_recupdate' updatelist bottom = let
   open Absyn
 in
-  case updatelist of
+  case #1 updatelist of
     VAR s => if s = recnil_special then bottom
-             else raise ParseTermError recupd_errstring
-  | COMB(COMB(VAR s, upd1), updates) => let
+             else raise ParseTermError (recupd_errstring,#2 updatelist)
+  | COMB((COMB((VAR s,slocn), upd1),_), updates) => let
     in
       if s = reccons_special then remove_recupdate upd1 updates bottom
       else
         if s = recupd_special orelse s = recfupd_special then
-          case upd1 of
+          case #1 upd1 of
             VAR fldname => APP(APP(IDENT (s^fldname),
                                      remove_specials updates),
                                 bottom)
           | _ => raise ParseTermError
-              "Must have field name as first argument to update operator"
+              ("Must have field name as first argument to update operator",#2 upd1)
         else
-          raise ParseTermError recupd_errstring
+          raise ParseTermError (recupd_errstring,slocn)
     end
-  | _ => raise ParseTermError recupd_errstring
+  | _ => raise ParseTermError (recupd_errstring,#2 updatelist)
 end
 
 
 fun top_nonterminal pstack =
   case pstack of
-    PStack {stack = (NonTerminal pt, _)::_, ...} => remove_specials pt
-  | _ => raise ParseTermError "No non-terminal on top of stack"
+    PStack {stack = ((NonTerminal pt,locn), _)::_, ...} => remove_specials (pt,locn)
+  | PStack {stack = ((_,locn),_)::_, ...} =>
+      raise ParseTermError ("No non-terminal on top of stack",locn)
+  | _ =>
+      raise ParseTermError ("No non-terminal on top of stack",locn.Loc_Unknown(*TODO*))
 
 (*
 infix Gmerge
@@ -1221,7 +1226,7 @@ fun ppt (v: ''a) = let
   fun fix_stack stack =
     case stack of
       ((NonTerminal t, _)::rest) =>
-        pop >> push (NonTerminal(remove_specials t), Token (Ident "XXX"))
+        pop >> push (NonTerminal(remove_specials t), XXX)
     | x => ok
   val p:''a frag list -> ((''a frag list * ''a PStack) * unit option) =
     fn q =>

@@ -35,7 +35,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
   fun is_RParen t = case t of RParen => true | _ => false
   fun is_Comma t = case t of Comma => true | _ => false
   fun itemP P fb = let
-    val (adv, t) = typetok_of fb
+    val (adv, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
   in
     if P t then adv() else raise InternalFailure
   end
@@ -80,7 +80,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
 
 
   fun parse_base_level f fb = let
-    val (advance, t) = typetok_of fb
+    val (advance, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
   in
     case t  of
       TypeVar s => (advance(); pVartype s)
@@ -99,7 +99,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
   end
 
   fun parse_op slist fb = let
-    val (adv, t) = typetok_of fb
+    val (adv, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
   in
     case t of
       TypeIdent s => if allow_unknown_suffixes orelse Lib.mem s slist then
@@ -110,7 +110,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
   end
 
   fun parse_binop stlist fb = let
-    val (adv, t) = typetok_of fb
+    val (adv, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
     fun doit t =
       case List.find (fn r => (#parse_string r = token_string t)) stlist of
         NONE => raise InternalFailure
@@ -127,7 +127,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     val _ = itemP is_LParen fb
     val ty1 = prse fb
     fun recurse acc = let
-      val (adv,t) = typetok_of fb
+      val (adv,(t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
     in
       case t of
         RParen => (adv(); List.rev acc)

@@ -7,9 +7,9 @@ sig
   | Numeral of (string * char option)
   | QIdent of (string * string)
 
-  val lex : string list -> 'a qbuf.qbuf -> 'a term_token option
+  val lex : string list -> 'a qbuf.qbuf -> 'a term_token locn.located option
       (* NONE indicates end of input; this function *always* advances over
-         what it fulls out of the qbuf.   *)
+         what it pulls out of the qbuf.   *)
 
   val token_string : 'a term_token -> string
   val dest_aq      : 'a term_token -> 'a

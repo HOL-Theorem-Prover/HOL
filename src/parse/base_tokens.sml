@@ -1,7 +1,7 @@
 structure base_tokens :> base_tokens =
 struct
 
-  exception LEX_ERR of string
+  exception LEX_ERR of string * locn.locn
 
   datatype 'a base_token =
     BT_Ident of string

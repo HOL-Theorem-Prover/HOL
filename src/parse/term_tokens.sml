@@ -1,7 +1,7 @@
 structure term_tokens :> term_tokens =
 struct
 
-  open qbuf base_tokens
+  open qbuf base_tokens locn
 
   val WARN = Feedback.HOL_WARNING "term lexer" ""
 
@@ -50,16 +50,18 @@ in
 end
 
 open qbuf
-fun split_ident nonagg_specs s qb = let
+fun split_ident nonagg_specs s locn qb = let
   val s0 = String.sub(s, 0)
 in
   if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" then
-    (advance qb; s)
+    (advance qb; (s,locn))
   else if s0 = #"'" then
-    if str_all (fn c => c = #"'") s then (advance qb; s)
-    else raise LEX_ERR "Term idents can't begin with prime characters"
+    if str_all (fn c => c = #"'") s then (advance qb; (s,locn))
+    else raise LEX_ERR ("Term idents can't begin with prime characters",locn)
   else if s0 = #"$" then
-      "$" ^ split_ident nonagg_specs (String.extract(s, 1, NONE)) qb
+      let val (s',locn') = split_ident nonagg_specs (String.extract(s, 1, NONE))
+                                       (locn.move_start 1 locn) qb in
+      ("$" ^ s', locn.move_start ~1 locn') end
   else (* have a symbolic identifier *)
     let
       val possible_nonaggs =
@@ -72,23 +74,26 @@ in
           if size s1 = 0 then
             (* first character is a non-aggregating character *)
             if size s > 1 then
-              (replace_current (BT_Ident (String.extract(s, 1, NONE))) qb;
-               String.extract (s, 0, SOME 1))
-            else (advance qb; s)
+              let val (locn',locn'') = locn.split_at 1 locn in
+              (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'') qb;
+               (String.extract (s, 0, SOME 1),locn')) end
+            else (advance qb; (s,locn))
           else if size s2 <> 0 then
+            let val (locn',locn'') = locn.split_at (size s1) locn in
             (* s2 is non-empty and begins with a non-aggreating character *)
-            (replace_current (BT_Ident s2) qb; s1)
+            (replace_current (BT_Ident s2,locn'') qb; (s1,locn')) end
           else
-            (advance qb; s)
+            (advance qb; (s,locn))
         end
       else let
           fun compare(s1, s2) = flip_cmpresult (Int.compare(size s1, size s2))
           val best = hd (Listsort.sort compare possible_nonaggs)
           val sz = size best
         in
-          if sz = size s then (advance qb; s)
-          else (replace_current (BT_Ident (String.extract(s, sz, NONE))) qb;
-                best)
+          if sz = size s then (advance qb; (s,locn))
+          else let val (locn',locn'') = locn.split_at sz locn in
+               (replace_current (BT_Ident (String.extract(s, sz, NONE)),locn'') qb;
+                (best,locn')) end
         end
     end
 end
@@ -98,14 +103,18 @@ fun lex keywords0 = let
   val non_agg_specials = List.filter s_has_nonagg_char keywords0
   val split = split_ident non_agg_specials
 in
-fn qb =>
-   case current qb of
-     BT_Numeral p => (advance qb; SOME (Numeral p))
-   | BT_AQ x => (advance qb; SOME (Antiquote x))
-   | BT_QIdent p => (advance qb; SOME (QIdent p))
-   | BT_EOI => NONE
-   | BT_Ident s => SOME (Ident (split s qb))
-   | BT_InComment _ => raise Fail "qbuf returned BT_InComment"
+fn qb => let
+   val (bt,locn) = current qb
+   in
+     case bt of
+         BT_Numeral p   => (advance qb; SOME (Numeral p,locn))
+       | BT_AQ x        => (advance qb; SOME (Antiquote x,locn))
+       | BT_QIdent p    => (advance qb; SOME (QIdent p,locn))
+       | BT_EOI         => NONE
+       | BT_Ident s     => let val (s',locn') = split s locn qb in
+                           SOME (Ident s',locn') end
+       | BT_InComment _ => raise Fail "qbuf returned BT_InComment"
+   end
 end
 
 fun token_string (Ident s) = s

@@ -27,6 +27,17 @@ fun mk_HOL_ERR s1 s2 s3 =
           origin_function = s2,
           message = s3};
 
+(* Errors with a known location. *)
+
+fun mk_HOL_ERRloc s1 s2 locn s3 =
+  HOL_ERR{origin_structure = s1,
+          origin_function = s2,
+          message = locn.toString locn^":\n"^s3}
+  (* Would like to be much cleverer, adding a field
+     source_location:locn to error_record, but the pain of fixing all
+     occurrences of HOL_ERR would be too great. *)
+
+
 val ERR = mk_HOL_ERR "Feedback";  (* local to this file *)
 
 
@@ -62,10 +73,12 @@ val WARNING_outstream = ref TextIO.stdOut;
  * Formatting and output for exceptions, messages, and warnings.             *
  *---------------------------------------------------------------------------*)
 
-fun format_ERR {message,origin_function,origin_structure} =
-     String.concat["\nException raised at ",
-                   origin_structure,".", origin_function,
-                   ":\n",message,"\n"];
+fun format_err_rec {message,origin_function,origin_structure} =
+     String.concat["at ",origin_structure,".", origin_function,
+                   ":\n",message];
+
+fun format_ERR err_rec =
+     String.concat["\nException raised ",format_err_rec err_rec,"\n"];
 
 fun format_MESG s = String.concat["<<HOL message: ", s, ">>\n"];
 
@@ -107,8 +120,8 @@ end;
  ---------------------------------------------------------------------------*)
 
 fun wrap_exn s f General.Interrupt = raise General.Interrupt
-  | wrap_exn s f (HOL_ERR{origin_structure,origin_function,message}) =
-        mk_HOL_ERR s f (origin_structure^"."^origin_function^" - "^message)
+  | wrap_exn s f (HOL_ERR err_rec) =
+        mk_HOL_ERR s f (format_err_rec err_rec)
   | wrap_exn s f exn = mk_HOL_ERR s f (General.exnMessage exn);
 
 fun HOL_MESG s =
@@ -122,6 +135,9 @@ fun HOL_WARNING s1 s2 s3 =
   then (output(!WARNING_outstream, !WARNING_to_string s1 s2 s3);
         flush_out (!WARNING_outstream))
   else ()
+
+fun HOL_WARNINGloc s1 s2 locn s3 =
+  HOL_WARNING s1 s2 (locn.toString locn^":\n"^s3)
 
 
 (*---------------------------------------------------------------------------*

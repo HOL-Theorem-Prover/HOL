@@ -7,7 +7,7 @@ signature parse_term = sig
 
     exception PrecConflict of
       term_grammar.stack_terminal * term_grammar.stack_terminal
-    exception ParseTermError of string
+    exception ParseTermError of string locn.located
 
     val mk_prec_matrix :
         term_grammar.grammar ->

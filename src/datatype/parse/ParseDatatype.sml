@@ -22,6 +22,7 @@ struct
  type tyname   = string
 
 val ERR = Feedback.mk_HOL_ERR "ParseDatatype";
+val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
 
     open Abbrev
 datatype pretype
@@ -52,12 +53,12 @@ fun pretypeToType pty =
 
 val bads = CharSet.addString(CharSet.empty, "()\"")
 
-fun ident_munge dollared qb s = let
+fun ident_munge dollared qb s locn = let
   val s0 = String.sub(s, 0)
 in
   if Char.isAlpha s0 then
     if s <> "of" orelse dollared then (qbuf.advance qb; s)
-    else raise ERR "ident" "Expected an identifier, got (reserved word) \"of\""
+    else raise ERRloc "ident" locn "Expected an identifier, got (reserved word) \"of\""
   else if s0 = #"$" then
     (* Allow leading dollar signs as quoting mechanism (for "of", but to
        also cope with potential user paranoia over names of infix
@@ -65,29 +66,29 @@ in
        Note that the base_lexer ensures that only one dollar sign is possible
        at the head of a BT_Ident string, and that it is followed by a
        non-empty string *)
-    ident_munge true qb (String.extract(s, 1, NONE))
+    ident_munge true qb (String.extract(s, 1, NONE)) (locn.move_start 1 locn)
   else let
       val s_chars = CharSet.addString(CharSet.empty, s)
       val overlap = CharSet.intersect(bads, s_chars)
     in
       if CharSet.isEmpty overlap then (qbuf.advance qb; s)
-      else raise ERR "ident" (s ^ " not a valid constructor/field/type name")
+      else raise ERRloc "ident" locn (s ^ " not a valid constructor/field/type name")
     end
 end
 
 fun ident qb =
     case qbuf.current qb of
-      base_tokens.BT_Ident s => ident_munge false qb s
-    | bt => raise ERR "ident" ("Expected an identifier, got "^
-                               base_tokens.toString bt)
+      (base_tokens.BT_Ident s,locn) => ident_munge false qb s locn
+    | (bt,locn) => raise ERRloc "ident" locn ("Expected an identifier, got "^
+                                              base_tokens.toString bt)
 
 fun pdtok_of qb = let
   open base_tokens CharSet
   fun advance () = qbuf.advance qb
 in
   case qbuf.current qb of
-    t as BT_Ident s =>
-    if Char.isAlpha (String.sub(s, 0)) then (advance, t)
+    (t as BT_Ident s,locn) =>
+    if Char.isAlpha (String.sub(s, 0)) then (advance, t, locn)
     else let
         (* use of CharSet bads here is really a check for just the parentheses
            as the other characters in bads shouldn't be occurring in
@@ -97,23 +98,24 @@ in
         val s1 = Substring.string ss1
         val s2 = Substring.string ss2
       in
-        if s1 = "" orelse s2 = "" then (advance, t)
-        else ((fn () => qbuf.replace_current (BT_Ident s2) qb), BT_Ident s1)
+        if s1 = "" orelse s2 = "" then (advance, t, locn)
+        else let val (locn',locn'') = locn.split_at (size s1) locn in
+             ((fn () => qbuf.replace_current (BT_Ident s2,locn'') qb), BT_Ident s1, locn') end
       end
-  | t => (advance, t)
+  | (t,locn) => (advance, t, locn)
 end;
 
 
 fun scan s qb = let
-  val (adv, t) = pdtok_of qb
+  val (adv, t, locn) = pdtok_of qb
 in
   case t of
     base_tokens.BT_Ident s' => if s <> s' then
-                                 raise ERR "scan"
+                                 raise ERRloc "scan" locn
                                            ("Wanted \""^s^"\"; got \""^s'^"\"")
                                else adv()
-  | x => raise ERR "scan" ("Wanted \""^s^"\"; got \""^
-                           base_tokens.toString x^"\"")
+  | x => raise ERRloc "scan" locn ("Wanted \""^s^"\"; got \""^
+                                   base_tokens.toString x^"\"")
 end
 
 fun qtyop {Tyop, Thy, Args} = dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
@@ -156,7 +158,7 @@ fun parse_phrase qb = let
   val constr_id = parse_constructor_id qb
 in
   case qbuf.current qb of
-    base_tokens.BT_Ident "of" => let
+    (base_tokens.BT_Ident "of",_) => let
       val _ = qbuf.advance qb
       val optargs = sepby1 "=>" parse_type qb
     in
@@ -167,7 +169,7 @@ end
 
 fun parse_form qb =
     case qbuf.current qb of
-      base_tokens.BT_Ident "<|" => Record (parse_record_defn qb)
+      (base_tokens.BT_Ident "<|",_) => Record (parse_record_defn qb)
     | _ => Constructors (sepby1 "|" parse_phrase qb)
 
 fun parse_G qb = let
@@ -188,9 +190,9 @@ fun parse q = let
   val result = sepby1 ";" parse_G strm
 in
   case qbuf.current strm of
-    base_tokens.BT_EOI => result
-  | _ => raise ERR "parse"
-                   ("Parse failed with "^qbuf.toString strm^"\nremaining")
+    (base_tokens.BT_EOI,_) => result
+  | (_,locn) => raise ERRloc "parse" locn
+                             ("Parse failed with "^qbuf.toString strm^"\nremaining")
 end
 
 

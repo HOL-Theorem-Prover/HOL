@@ -11,6 +11,7 @@ type block_info = term_grammar.block_info
 type associativity = HOLgrammars.associativity
 
 val ERROR = mk_HOL_ERR "Parse";
+val ERRORloc = mk_HOL_ERRloc "Parse";
 val WARN  = HOL_WARNING "Parse"
 
 val quote = Lib.mlquote
@@ -206,22 +207,22 @@ fun parse_Type parser q = let
   val qb = new_buffer q
 in
   case qbuf.current qb of
-    BT_Ident s =>
+    (BT_Ident s,locn) =>
     if String.sub(s, 0) <> #":" then
-      raise ERROR "parse_Type" "types must begin with a colon"
+      raise ERRORloc "parse_Type" locn "types must begin with a colon"
     else let
         val _ = if size s = 1 then advance qb
-                else replace_current (BT_Ident (String.extract(s, 1, NONE))) qb
+                else let val (locn',locn'') = locn.split_at 1 locn in
+                     replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'') qb end
         val pt = parser qb
       in
-        if current qb <> BT_EOI then
-          raise ERROR "parse_Type"
-                      ("Couldn't make any sense of remaining input: "^
-                       toString qb)
-        else
-          Pretype.toType pt
+        case current qb of
+            (BT_EOI,_) => Pretype.toType pt
+          | (_,locn) => raise ERRORloc "parse_Type" locn
+                                       ("Couldn't make any sense of remaining input: "^
+                                        toString qb)
       end
-  | _ => raise ERROR "parse_Type" "types must begin with a colon"
+  | (_,locn) => raise ERRORloc "parse_Type" locn "types must begin with a colon"
 end
 end (* local *)
 
@@ -250,17 +251,17 @@ fun do_parse G ty = let
 in
 fn q => let
      val ((qb,p), _) = pt (new_buffer q, initial_pstack)
-         handle base_tokens.LEX_ERR s =>
-                Raise (ERROR "Absyn" ("Lexical error - "^s))
+         handle base_tokens.LEX_ERR (s,locn) =>
+                Raise (ERRORloc "Absyn" locn ("Lexical error - "^s))
    in
      if is_final_pstack p then
        case current qb of
-         BT_EOI => (top_nonterminal p handle ParseTermError s =>
-                                             Raise (ERROR "Term" s))
-       | _ => Raise (ERROR "Absyn"
-                           (String.concat
-                              ["Can't make sense of remaining: ",
-                               Lib.quote (toString qb)]))
+         (BT_EOI,locn) => (top_nonterminal p handle ParseTermError (s,locn) =>
+                                                    Raise (ERRORloc "Term" locn s))
+       | (_,locn) => Raise (ERRORloc "Absyn" locn
+                                     (String.concat
+                                          ["Can't make sense of remaining: ",
+                                           Lib.quote (toString qb)]))
      else
        Raise (ERROR "Absyn"
                     (String.concat
