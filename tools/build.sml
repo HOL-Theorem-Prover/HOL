@@ -3,7 +3,7 @@
  ---------------------------------------------------------------------------*)
 
 
-(* utitlities *)
+(* utilities *)
 
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
@@ -144,6 +144,7 @@ fun Gnumake dir =
    Some useful file-system utility functions
    ---------------------------------------------------------------------- *)
 
+(*
 fun map_dir f dir =  (* map a function over the files in a directory *)
   let val dstrm = FileSys.openDir dir
       fun loop() =
@@ -151,9 +152,31 @@ fun map_dir f dir =  (* map a function over the files in a directory *)
          of NONE => FileSys.closeDir dstrm
           | SOME file => (f (dir,file) ; loop())
   in loop()
-  end handle OS.SysErr(s, erropt) =>
-    die ("OS error: "^s^" - "^
-         (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
+     handle OS.SysErr(s, erropt) 
+       => (FileSys.closeDir dstrm;
+           die ("OS error: "^s^" - "^
+              (case erropt of SOME s' => OS.errorMsg s' | _ => "")^"\n"))
+       | otherexn => (FileSys.closeDir dstrm;
+                      die "map_dir: unknown exception")
+  end 
+*)
+
+fun map_dir f dir = 
+  let val dstrm = FileSys.openDir dir
+      fun loop () = 
+        case FileSys.readDir dstrm
+         of NONE => []
+          | SOME file => (dir,file)::loop()
+      val files = loop()
+      val _ = FileSys.closeDir dstrm
+  in List.app f files
+     handle OS.SysErr(s, erropt) 
+       => die ("OS error: "^s^" - "^
+              (case erropt of SOME s' => OS.errorMsg s' | _ => "")^"\n")
+       | otherexn => die ("map_dir: "^General.exnMessage otherexn^"\n")
+  end;
+      
+  
 
 fun copy file path =  (* Dead simple file copy *)
  let open TextIO
@@ -304,33 +327,41 @@ fun buildDir symlink s = (build_dir s; upload(s,SIGOBJ,symlink));
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 
 fun rem_file f =
- FileSys.remove f
+  FileSys.remove f
    handle _ => (print ("Trouble with removing file "^f^"?\n"); ());
 
+(*---------------------------------------------------------------------------*)
+(* In clean_sigobj, we need to avoid removing the systeml stuff that will    *)
+(* have been put into sigobj by the action of configure.sml                  *)
+(*---------------------------------------------------------------------------*)
 
-fun clean_sigobj() = let
-  val _ = print ("Cleaning out "^SIGOBJ^"\n")
-  (* need to avoid removing the systeml stuff that will have been put into
-     sigobj by the action of configure.sml *)
-  val lowcase = String.map Char.toLower
-  fun sigobj_rem_file s = let
-    val f = Path.file s
-    val n = lowcase (hd (String.fields (fn c => c = #".") f))
-  in
-    if List.exists (fn x => x = n) ["systeml", "cvs", "", "readme"] then ()
-    else rem_file s
-  end
-  fun write_initial_srcfiles () = let
-    val outstr = TextIO.openOut (fullPath [HOLDIR, "sigobj", "SRCFILES"])
-  in
-    TextIO.output(outstr, fullPath [HOLDIR, "tools", "Holmake", "Systeml"]);
-    TextIO.output(outstr, "\n");
-    TextIO.closeOut(outstr)
-  end
-in
+fun equal x y = (x=y);
+fun mem x l = List.exists (equal x) l;
+
+fun clean_sigobj() = 
+ let val _ = print ("Cleaning out "^SIGOBJ^"\n")
+     val lowcase = String.map Char.toLower
+     fun sigobj_rem_file s = 
+      let val f = Path.file s
+          val n = lowcase (hd (String.fields (equal #".") f))
+      in
+         if mem n ["systeml", "cvs", "", "readme"] 
+          then ()
+          else rem_file s
+      end
+     fun write_initial_srcfiles () = 
+      let open TextIO
+          val outstr = openOut (fullPath [HOLDIR,"sigobj","SRCFILES"])
+      in
+        output(outstr, fullPath [HOLDIR, "tools", "Holmake", "Systeml"]);
+        output(outstr, "\n");
+        closeOut(outstr)
+      end
+ in
   map_dir (sigobj_rem_file o normPath o Path.concat) SIGOBJ;
-  write_initial_srcfiles ()
-end;
+  write_initial_srcfiles ();
+  print (SIGOBJ ^ " cleaned\n")
+ end;
 
 fun build_adoc_files () = let
   val docdirs = let
@@ -353,9 +384,6 @@ fun build_adoc_files () = let
 in
   List.all make_adocs docdirs
 end
-
-
-
 
 fun build_help () =
  let val dir = Path.concat(Path.concat (HOLDIR,"help"),"src")
@@ -483,8 +511,6 @@ fun symlink_check() =
     if OS = "winNT" then
       die "Sorry; symbolic linking isn't available under Windows NT"
     else link
-
-
 
 val _ =
     case cmdline of
