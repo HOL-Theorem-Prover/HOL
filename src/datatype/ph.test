@@ -1,8 +1,10 @@
 (*---------------------------------------------------------------------------
-    Another example from Peter Homeier.
+           An example from Peter Homeier.
  ---------------------------------------------------------------------------*)
-app load ["bossLib", "stringTheory", "setTheory", "MutualIndThen"];
-open bossLib setTheory;
+
+app load ["bossLib", "stringTheory", "pred_setTheory", "Mutual"];
+
+open bossLib pred_setTheory Mutual;
 
 (*=======================================================================*)
 (* First we define the datatypes for assertion expressions.              *)
@@ -79,8 +81,7 @@ val FREE_VARS_def =
     (FVa (AEXISTS x a)    = (FVa a) DELETE x)`;
 
 
-val induct = TypeBase.induction_of (valOf (TypeBase.read "vexp"));
-val vexp_INDUCT_TAC = MutualIndThen.MUTUAL_INDUCT_THEN induct ASSUME_TAC;
+val exp_induct = TypeBase.induction_of (valOf (TypeBase.read "vexp"));
 
 (*===========================================================================*)
 (* We now prove that each of the sets returned by the above free variable    *)
@@ -93,7 +94,7 @@ val FINITE_FVav =
    Term `(!v.   FINITE (FVv v)) /\
          (!vs.  FINITE (FVvs vs)) /\
          (!a.   FINITE (FVa a))`,
- vexp_INDUCT_TAC THEN 
+ MUTUAL_INDUCT_TAC exp_induct THEN 
  ASM_REWRITE_TAC[FREE_VARS_def, FINITE_EMPTY,
                  FINITE_INSERT, FINITE_UNION, FINITE_DELETE]);
 
@@ -102,13 +103,14 @@ val FINITE_FVav =
 (* First we define << as a lexicographic ordering between lists of numbers.  *)
 (*---------------------------------------------------------------------------*)
 
+set_fixity ("<<", Infixr 501);
+
 val LEXI_DEF =
  xDefine "LEXI"
-    `($<< [] (h::t) = T)
- /\  ($<< x  []     = F)
- /\  ($<< (h1::t1) (h2::t2) = h1 < h2 \/ (h1=h2) /\ $<< t1 t2)`;
+    `([] << (_::_) = T)
+ /\  (__ << []     = F)
+ /\  ((h1::t1) << (h2::t2) = h1 < h2 \/ (h1=h2) /\ t1 << t2)`;
 
-set_fixity "<<" (Infixr 501);
 
 
 (*---------------------------------------------------------------------------
@@ -171,7 +173,7 @@ val AV_EQUIVALENCE =
      (!x. x IN (FVvs vs) ==> (s1 x = s2 x)) ==> (VS vs f s1 = VS vs f s2)) /\
    (!a f s1 s2. 
        (!x. x IN (FVa a) ==> (s1 x = s2 x)) ==> (A a f s1 = A a f s2))`,
-vexp_INDUCT_TAC 
+ MUTUAL_INDUCT_TAC exp_induct
   THEN RW_TAC std_ss 
        [AV_DEF,FREE_VARS_def,NOT_IN_EMPTY,IN_INSERT,IN_UNION,IN_DELETE]
   THEN ((AP_TERM_TAC THEN CONV_TAC FUN_EQ_CONV THEN RW_TAC std_ss [])
