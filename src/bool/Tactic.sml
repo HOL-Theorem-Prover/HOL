@@ -112,7 +112,7 @@ val FREEZE_THEN :thm_tactical = fn (ttac:thm_tactic) => fn bth => fn g =>
  *---------------------------------------------------------------------------*)
 
 val CONJ_TAC:tactic = fn (asl,w) =>
-   let val {conj1,conj2} = dest_conj w 
+   let val (conj1,conj2) = dest_conj w 
    in ([(asl,conj1), (asl,conj2)], 
        fn [th1,th2] => CONJ th1 th2)
    end
@@ -129,7 +129,7 @@ val CONJ_TAC:tactic = fn (asl,w) =>
  *---------------------------------------------------------------------------*)
 
 fun DISJ1_TAC(asl,w) = 
-  let val {disj1,disj2} = dest_disj w 
+  let val (disj1,disj2) = dest_disj w 
   in ([(asl,disj1)], 
       fn [th] => DISJ1 th disj2)
   end
@@ -144,7 +144,7 @@ fun DISJ1_TAC(asl,w) =
  *---------------------------------------------------------------------------*)
 
 fun DISJ2_TAC(asl,w) =
-   let val {disj1,disj2} = dest_disj w
+   let val (disj1,disj2) = dest_disj w
    in ([(asl,disj2)], 
        fn [thb] => DISJ2 disj1 thb)
    end
@@ -161,7 +161,7 @@ fun DISJ2_TAC(asl,w) =
  *---------------------------------------------------------------------------*)
 
 fun MP_TAC thb (asl,w) =
-   ([(asl, mk_imp{ant=concl thb, conseq=w})],
+   ([(asl, mk_imp(concl thb, w))],
     fn [thimp] => MP thimp thb);
 
 
@@ -176,9 +176,9 @@ fun MP_TAC thb (asl,w) =
  *---------------------------------------------------------------------------*)
 
 val EQ_TAC:tactic = fn (asl,t) =>
-   let val {lhs,rhs} = dest_eq t
-   in ([(asl, mk_imp{ant=lhs, conseq=rhs}),
-       (asl, mk_imp{ant=rhs, conseq=lhs})],
+   let val (lhs,rhs) = dest_eq t
+   in ([(asl, mk_imp(lhs, rhs)),
+       (asl, mk_imp(rhs, lhs))],
        fn [th1,th2] => IMP_ANTISYM_RULE th1 th2)
    end
    handle HOL_ERR _ => raise ERR "EQ_TAC" "";
@@ -222,13 +222,13 @@ val EQ_TAC:tactic = fn (asl,t) =>
 
 fun X_GEN_TAC x1 : tactic = fn (asl,w) =>
  if is_var x1 
- then (let val {Bvar,Body} = dest_forall w
-       in if (Bvar=x1) then ([(asl,Body)], fn [th] => GEN x1 th)
+ then (let val (Bvar,Body) = dest_forall w
+       in if Bvar=x1 then ([(asl,Body)], fn [th] => GEN x1 th)
           else ([(asl,subst [Bvar |-> x1] Body)],
                 fn [th] => 
-                 let val th' = GEN x1 th
-                 in EQ_MP (GEN_ALPHA_CONV Bvar (concl th')) th'
-                 end)
+                   let val th' = GEN x1 th
+                   in EQ_MP (GEN_ALPHA_CONV Bvar (concl th')) th'
+                   end)
        end 
        handle HOL_ERR _ => raise ERR "X_GEN_TAC" "")
  else raise ERR "X_GEN_TAC"  "need a variable";
@@ -238,8 +238,7 @@ fun X_GEN_TAC x1 : tactic = fn (asl,w) =>
  *---------------------------------------------------------------------------*)
 
 val GEN_TAC:tactic = fn (asl,w) =>
-   let val {Bvar,...} = dest_forall w handle HOL_ERR _ 
-        => raise ERR "GEN_TAC" "not a forall"
+   let val (Bvar,_) = with_exn dest_forall w (ERR "GEN_TAC" "not a forall")
    in X_GEN_TAC (variant (free_varsl (w::asl)) Bvar) (asl,w)
    end;
 
@@ -255,12 +254,12 @@ val GEN_TAC:tactic = fn (asl,w) =>
  *---------------------------------------------------------------------------*)
 
 fun SPEC_TAC (t,x) :tactic = fn (asl,w) =>
-    ([(asl, mk_forall{Bvar=x, Body = subst[t |-> x] w})],
+    ([(asl, mk_forall(x, subst[t |-> x] w))],
      fn [th] => SPEC t th)
     handle HOL_ERR _ => raise ERR "SPEC_TAC" "";
 
 fun ID_SPEC_TAC x :tactic = fn (asl,w) =>
-    ([(asl, mk_forall{Bvar=x, Body=w})], 
+    ([(asl, mk_forall(x, w))], 
      fn [th] => SPEC x th)
     handle HOL_ERR _ => raise ERR "SPEC_TAC" "";
 
@@ -274,7 +273,7 @@ fun ID_SPEC_TAC x :tactic = fn (asl,w) =>
  *---------------------------------------------------------------------------*)
 
 fun EXISTS_TAC t :tactic = fn (asl,w) =>
- let val {Bvar,Body} = dest_exists w 
+ let val (Bvar,Body) = dest_exists w 
  in ([(asl, subst [Bvar |-> t] Body)],
      fn [th] => EXISTS (w,t) th)
  end
@@ -292,7 +291,7 @@ fun EXISTS_TAC t :tactic = fn (asl,w) =>
 fun GSUBST_TAC substfn ths (asl,w) =
       let val (theta1,theta2,theta3) =
           itlist (fn th => fn (theta1,theta2,theta3) =>
-                    let val {lhs,rhs} = dest_eq(concl th)
+                    let val (lhs,rhs) = dest_eq(concl th)
                         val v = Term.genvar (type_of lhs)
                     in ((lhs |-> v)::theta1,
                           (v |-> rhs)::theta2,
@@ -394,13 +393,12 @@ val STRUCT_CASES_TAC =
  *---------------------------------------------------------------------------*)
 
 local fun ok_cond tm = 
-        not(is_const(#cond(dest_cond tm))) handle HOL_ERR _ => false
-
+       not(is_const(#1(dest_cond tm))) handle HOL_ERR _ => false
 in
 val COND_CASES_TAC :tactic = fn (asl,w) =>
  let val cond = find_term (fn tm => ok_cond tm andalso free_in tm w) w
                 handle HOL_ERR _ => raise ERR "COND_CASES_TAC" ""
-     val {cond,larm,rarm} = dest_cond cond
+     val (cond,larm,rarm) = dest_cond cond
      val inst = INST_TYPE[Type.alpha |-> type_of larm] COND_CLAUSES
      val (ct,cf) = CONJ_PAIR (SPEC rarm (SPEC larm inst))
  in
@@ -431,7 +429,7 @@ fun STRIP_GOAL_THEN ttac =  FIRST [GEN_TAC, CONJ_TAC, DISCH_THEN ttac];
  *---------------------------------------------------------------------------*)
 
 fun FILTER_GEN_TAC tm : tactic = fn (asl,w) =>
-    if (is_forall w andalso not (tm = (#Bvar(dest_forall w))))
+    if (is_forall w andalso not (tm = fst(dest_forall w)))
     then GEN_TAC (asl,w)
     else raise ERR"FILTER_GEN_TAC" "";
 
@@ -441,7 +439,7 @@ fun FILTER_GEN_TAC tm : tactic = fn (asl,w) =>
  *---------------------------------------------------------------------------*)
 
 fun FILTER_DISCH_THEN ttac tm = fn (asl,w) =>
-  if is_imp w andalso not(free_in tm (#ant(dest_imp w)))
+  if is_imp w andalso not(free_in tm (fst(dest_imp w)))
     then DISCH_THEN ttac (asl,w)
     else raise ERR "FILTER_DISCH_THEN" "";
 
@@ -462,7 +460,7 @@ val DISJ_CASES_TAC = DISJ_CASES_THEN ASSUME_TAC;
 
 val CHOOSE_TAC = CHOOSE_THEN ASSUME_TAC;
 
-fun X_CHOOSE_TAC x = X_CHOOSE_THEN  x  ASSUME_TAC;
+fun X_CHOOSE_TAC x = X_CHOOSE_THEN x ASSUME_TAC;
 
 fun STRIP_TAC g = 
   STRIP_GOAL_THEN STRIP_ASSUME_TAC g 
@@ -488,8 +486,7 @@ fun ASM_CASES_TAC t = DISJ_CASES_TAC (SPEC t EXCLUDED_MIDDLE);
  *---------------------------------------------------------------------------*)
 
 fun REFL_TAC(asl,g) =
-   let val {lhs,rhs} = dest_eq g handle HOL_ERR _ 
-           => raise ERR"REFL_TAC" "not an equation"
+   let val (lhs,rhs) = with_exn dest_eq g  (ERR"REFL_TAC" "not an equation")
        val asms = itlist ADD_ASSUM asl 
    in if lhs=rhs then ([], K (asms (REFL lhs)))
       else if aconv lhs rhs then ([], K (asms (ALPHA lhs rhs)))
@@ -511,7 +508,7 @@ fun REFL_TAC(asl,g) =
 
 fun UNDISCH_TAC wf = fn (asl,w) =>
   if mem wf asl
-  then ([(set_diff asl [wf], mk_imp {ant=wf,conseq=w})], 
+  then ([(set_diff asl [wf], mk_imp (wf,w))], 
         UNDISCH o Lib.trye hd)
   else raise ERR "UNDISCH_TAC" "";
 
@@ -529,15 +526,15 @@ fun UNDISCH_TAC wf = fn (asl,w) =>
  * Revised: TFM 91.02.02						     *
  *---------------------------------------------------------------------------*)
 
-local fun ER s = raise ERR "AP_TERM_TAC" s
+local fun ER s = ERR "AP_TERM_TAC" s
 in
 fun AP_TERM_TAC(asl,gl) =
- let val {lhs,rhs} = dest_eq gl handle HOL_ERR _ => ER "not an equation"
-   val {Rator=g,Rand=x} = dest_comb lhs handle HOL_ERR _ => ER"lhs not a comb"
-   val {Rator=f,Rand=y} = dest_comb rhs handle HOL_ERR _ => ER"rhs not a comb"
+ let val (lhs,rhs) = with_exn dest_eq gl (ER "not an equation")
+   val (g,x) = with_exn dest_comb lhs (ER"lhs not a comb")
+   val (f,y) = with_exn dest_comb rhs (ER"rhs not a comb")
  in 
-   if not(f=g) then ER"functions on lhs and rhs differ"
-   else ([(asl, mk_eq{lhs=x, rhs=y})], 
+   if not(f=g) then raise ER "functions on lhs and rhs differ"
+   else ([(asl, mk_eq(x, y))], 
          AP_TERM f o Lib.trye hd)
  end
 end;
@@ -553,15 +550,15 @@ end;
  * Added: TFM 91.02.02							     *
  *---------------------------------------------------------------------------*)
 
-local fun ER s = raise ERR "AP_THM_TAC" s
+local fun ER s = ERR "AP_THM_TAC" s
 in 
 fun AP_THM_TAC (asl,gl) =
- let val {lhs,rhs} = dest_eq gl handle HOL_ERR _ => ER "not an equation"
-   val {Rator=g,Rand=x} = dest_comb lhs handle HOL_ERR _ => ER "lhs not a comb"
-   val {Rator=f,Rand=y} = dest_comb rhs handle HOL_ERR _ => ER "rhs not a comb"
+ let val (lhs,rhs) = with_exn dest_eq gl (ER "not an equation")
+   val (g,x) = with_exn dest_comb lhs (ER "lhs not a comb")
+   val (f,y) = with_exn dest_comb rhs (ER "rhs not a comb")
  in 
-   if not(x=y) then ER "arguments on lhs and rhs differ"
-   else ([(asl, mk_eq{lhs=g, rhs=f})], 
+   if not(x=y) then raise ER "arguments on lhs and rhs differ"
+   else ([(asl, mk_eq(g, f))], 
          C AP_THM x o Lib.trye hd)
  end 
 end;
@@ -571,14 +568,17 @@ end;
 (* MK_COMB_TAC - reduces ?- f x = g y to ?- f = g and ?- x = y     (JRH)     *)
 (*---------------------------------------------------------------------------*)
 
+local fun ER s = ERR "MK_COMB_TAC" s
+in 
 fun MK_COMB_TAC (asl,w) =
-  let val {lhs,rhs} = dest_eq w
-      val {Rator=l1,Rand=l2} = dest_comb lhs
-      val {Rator=r1,Rand=r2} = dest_comb rhs
+  let val (lhs,rhs) = with_exn dest_eq w (ER "not an equation")
+      val (l1,l2) = with_exn dest_comb lhs (ER "lhs not a comb")
+      val (r1,r2) = with_exn dest_comb rhs (ER "rhs not a comb")
   in
-    ([(asl,mk_eq{lhs=l1,rhs=r1}), (asl,mk_eq{lhs=l2,rhs=r2})],
+    ([(asl,mk_eq(l1,r1)), (asl,mk_eq(l2,r2))],
      end_itlist (curry MK_COMB)) 
-  end;
+  end
+end;
 
 
 (*---------------------------------------------------------------------------*)
@@ -650,14 +650,14 @@ fun MATCH_ACCEPT_TAC thm : tactic =
 (* ---------------------------------------------------------------------*)
 
 local fun efn v (tm,th) =
-         let val ntm = mk_exists{Bvar=v, Body=tm} 
+         let val ntm = mk_exists(v, tm)
          in (ntm,CHOOSE (v, ASSUME ntm) th)
          end
 in
 fun MATCH_MP_TAC thm :tactic =
  let val (gvs,imp)    = strip_forall (concl thm) 
-     val {ant,conseq} = dest_imp imp handle HOL_ERR _ => 
-                        raise ERR "MATCH_MP_TAC" "Not an implication"
+     val (ant,conseq) = with_exn dest_imp imp 
+                          (ERR "MATCH_MP_TAC" "Not an implication")
      val (cvs,con)    = strip_forall conseq
      val th1          = SPECL cvs (UNDISCH (SPECL gvs thm))
      val (vs,evs)     = partition (C Term.free_in con) gvs 
@@ -666,11 +666,11 @@ fun MATCH_MP_TAC thm :tactic =
  fn (A,g) => 
   let val (vs,gl) = strip_forall g
       val ins     = match_term con gl handle HOL_ERR _ 
-                     => raise ERR "MATCH_MP_TAC" "No match"
+                      => raise ERR "MATCH_MP_TAC" "No match"
       val ith     = INST_TY_TERM ins th2 
       val gth     = GENL vs (UNDISCH ith) handle HOL_ERR _ 
                      => raise ERR "MATCH_MP_TAC" "Generalized var(s)."
-      val ant     = #ant(dest_imp(concl ith)) 
+      val ant     = fst(dest_imp(concl ith)) 
   in
      ([(A,ant)], fn thl => MP (DISCH ant gth) (hd thl))
   end
@@ -717,8 +717,7 @@ end;
 fun mapshape [] _ _ =  []
   | mapshape (n::nums) (f::funcs) all_args =
      let val (fargs,rst) = split_after n all_args
-     in
-      f fargs :: mapshape nums funcs rst
+     in f fargs :: mapshape nums funcs rst
      end
   | mapshape _ _ _ = raise ERR "mapshape" "irregular lists";
 
@@ -746,7 +745,7 @@ fun (tm via tac) =
 
 fun CONV_TAC (conv:conv) :tactic = fn (asl,w) =>
  let val th = conv w
-     val {rhs,...} = dest_eq(concl th)
+     val (_,rhs) = dest_eq(concl th)
  in if rhs = T
     then ([], fn [] => EQ_MP (SYM th) TRUTH)
     else ([(asl,rhs)], fn [th'] => EQ_MP (SYM th) th')
@@ -775,10 +774,10 @@ fun HO_MATCH_ACCEPT_TAC thm =
 (* ------------------------------------------------------------------------- *)
 
 fun HO_BACKCHAIN_TAC th =
-  let val match_fn = HO_PART_MATCH (#conseq o dest_imp_only) th
+  let val match_fn = HO_PART_MATCH (snd o dest_imp_only) th
   in fn (asl,w) =>
        let val th1 = match_fn w
-           val {ant,...} = dest_imp_only(concl th1)
+           val (ant,_) = dest_imp_only(concl th1)
        in ([(asl,ant)],
            fn [t] => HO_MATCH_MP th1 t)
        end
@@ -789,7 +788,7 @@ fun HO_MATCH_MP_TAC th =
  let val sth =
      let val tm = concl th
          val (avs,bod) = strip_forall tm
-         val {ant,conseq} = dest_imp_only bod
+         val (ant,conseq) = dest_imp_only bod
          val th1 = SPECL avs (ASSUME tm)
          val th2 = UNDISCH th1
          val evs = filter(fn v => free_in v ant andalso 
@@ -798,10 +797,10 @@ fun HO_MATCH_MP_TAC th =
          val tm3 = Lib.trye hd(hyp th3)
      in MP (DISCH tm (GEN_ALL (DISCH tm3 (UNDISCH th3)))) th
      end handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "Bad theorem"
-     val match_fun = HO_PART_MATCH (#conseq o dest_imp_only) sth
+     val match_fun = HO_PART_MATCH (snd o dest_imp_only) sth
  in fn (asl,w) => 
       let val xth = match_fun w
-          val lant = #ant(dest_imp_only(concl xth))
+          val lant = fst(dest_imp_only(concl xth))
       in ([(asl,lant)],MP xth o Lib.trye hd)
       end handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
  end;

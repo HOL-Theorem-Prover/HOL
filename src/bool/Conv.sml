@@ -18,7 +18,7 @@
 structure Conv :> Conv =
 struct
 
-open HolKernel Parse boolTheory Drule boolSyntax Abbrev QConv;
+open HolKernel Parse boolTheory Drule boolSyntax Rsyntax Abbrev QConv;
 
 infix 3 ##
 infix 5 |->
@@ -593,14 +593,15 @@ fun OR_EXISTS_CONV tm =
 (* 									*)
 (* Where x' is a primed variant of x not free in the input term		*)
 (* ---------------------------------------------------------------------*)
+
 fun LEFT_OR_EXISTS_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_exists disj1
        val x' = variant (free_vars tm) Bvar
-       val newp = subst[{redex = Bvar, residue = x'}] Body
+       val newp = subst[Bvar |-> x'] Body
        val newp_thm = ASSUME newp
-       val new_disj = mk_disj {disj1 = newp, disj2 = disj2}
-       val otm = mk_exists {Bvar = x', Body = new_disj}
+       val new_disj = mk_disj {disj1=newp, disj2=disj2}
+       val otm = mk_exists {Bvar=x', Body=new_disj}
        and Qth = ASSUME disj2
        val t1 = DISJ1 newp_thm disj2
        and t2 = DISJ2 newp (ASSUME disj2)
@@ -628,7 +629,7 @@ fun RIGHT_OR_EXISTS_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_exists disj2
        val x' = variant (free_vars tm) Bvar
-       val newq = subst[{redex = Bvar, residue = x'}] Body
+       val newq = subst[Bvar |-> x'] Body
        val newq_thm = ASSUME newq
        and Pth = ASSUME disj1
        val P_or_newq = mk_disj{disj1 = disj1, disj2 = newq}
@@ -728,7 +729,7 @@ fun LEFT_AND_EXISTS_CONV tm =
    let val {conj1,conj2} = dest_conj tm
        val {Bvar,Body} = dest_exists conj1
        val x' = variant (free_vars tm) Bvar
-       val newp = subst[{redex = Bvar, residue = x'}] Body
+       val newp = subst[Bvar |-> x'] Body
        val new_conj = mk_conj {conj1 = newp, conj2 = conj2}
        val otm = mk_exists{Bvar = x', Body = new_conj}
        val (EP,Qth) = CONJ_PAIR(ASSUME tm)
@@ -754,7 +755,7 @@ fun RIGHT_AND_EXISTS_CONV tm =
    let val {conj1,conj2} = dest_conj tm
        val {Bvar,Body} = dest_exists conj2
        val x' = variant (free_vars tm) Bvar
-       val newq = subst[{redex = Bvar, residue = x'}]Body
+       val newq = subst[Bvar |-> x'] Body
        val new_conj = mk_conj{conj1 = conj1,conj2 = newq}
        val otm = mk_exists{Bvar = x',Body = new_conj}
        val (Pth,EQ) = CONJ_PAIR(ASSUME tm)
@@ -868,7 +869,7 @@ fun LEFT_OR_FORALL_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_forall disj1
        val x' = variant (free_vars tm) Bvar
-       val newp = subst[{redex = Bvar, residue = x'}] Body
+       val newp = subst[Bvar |-> x'] Body
        val aQ = ASSUME disj2
        val Pth = DISJ1 (SPEC x' (ASSUME disj1)) disj2
        val Qth = DISJ2 newp aQ
@@ -897,7 +898,7 @@ fun RIGHT_OR_FORALL_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_forall disj2
        val x' = variant (free_vars tm) Bvar
-       val newq = subst[{redex = Bvar, residue = x'}] Body
+       val newq = subst[Bvar |-> x'] Body
        val Qth = DISJ2 disj1 (SPEC x' (ASSUME disj2))
        val Pthm = ASSUME disj1
        val Pth = DISJ1 Pthm newq
@@ -1238,21 +1239,19 @@ fun RIGHT_CONV_RULE conv th = TRANS th (conv(rhs(concl th)));
 (* New version: TFM 88.03.31						*)
 (* ---------------------------------------------------------------------*)
 fun FUN_EQ_CONV tm =
-  case (Type.dest_type(type_of (lhs tm)))
-   of {Tyop="fun", Args=[ty1,_]} =>
-        (let val vars = free_vars tm
-             val varnm = if Type.is_vartype ty1 then "x"
-                else Char.toString (Lib.trye hd
-                       (String.explode (#Tyop(Type.dest_type ty1))))
-             val x = variant vars (mk_var{Name=varnm, Ty=ty1})
-             val imp1 = DISCH_ALL (GEN x (AP_THM (ASSUME tm) x))
-             val asm = ASSUME (concl (GEN x (AP_THM (ASSUME tm) x)))
-         in
-           IMP_ANTISYM_RULE imp1 (DISCH_ALL (EXT asm))
-         end
-         handle HOL_ERR _ => raise ERR "FUN_EQ_CONV" ""
-        )
-    | _ => raise ERR "FUN_EQ_CONV" "";
+ let val (ty1,_) = dom_rng(type_of (lhs tm))
+     val vars = free_vars tm
+     val varnm = if Type.is_vartype ty1 then "x"
+                  else Char.toString (Lib.trye hd
+                       (String.explode (fst(Type.dest_type ty1))))
+     val x = variant vars (mk_var{Name=varnm, Ty=ty1})
+     val imp1 = DISCH_ALL (GEN x (AP_THM (ASSUME tm) x))
+     val asm = ASSUME (concl (GEN x (AP_THM (ASSUME tm) x)))
+ in
+   IMP_ANTISYM_RULE imp1 (DISCH_ALL (EXT asm))
+ end
+ handle HOL_ERR _ => raise ERR "FUN_EQ_CONV" "";
+
 
 (* --------------------------------------------------------------------- *)
 (* X_FUN_EQ_CONV "x" "f = g"                                             *)
@@ -1261,27 +1260,25 @@ fun FUN_EQ_CONV tm =
 (*                                                                       *)
 (* fails if x free in f or g, or x not of the right type.                *)
 (* --------------------------------------------------------------------- *)
+
 fun X_FUN_EQ_CONV x tm =
  if not(is_var x)
  then raise ERR "X_FUN_EQ_CONV" "first arg is not a variable"
  else
- if (mem x (free_vars tm))
+ if mem x (free_vars tm)
  then raise ERR"X_FUN_EQ_CONV" (#Name(dest_var x)^" is a free variable")
  else
- let val ty = case Type.dest_type(type_of(lhs tm))
-               of {Tyop="fun", Args = [ty1,_]} => ty1
-               | _ => raise ERR"X_FUN_EQ_CONV" "lhs and rhs not functions"
+ let val (ty,_) = with_exn dom_rng(type_of(lhs tm))
+                   (ERR "X_FUN_EQ_CONV" "lhs and rhs not functions")
  in
-  if (ty = type_of x)
-  then let val imp1 = DISCH_ALL (GEN x (AP_THM (ASSUME tm) x))
-           val asm  = ASSUME (concl (GEN x (AP_THM (ASSUME tm) x)))
-       in
-         IMP_ANTISYM_RULE imp1 (DISCH_ALL (EXT asm))
-       end
-  else raise ERR"X_FUN_EQ_CONV" (#Name(dest_var x)^" has the wrong type")
+   if ty = type_of x
+   then let val imp1 = DISCH_ALL (GEN x (AP_THM (ASSUME tm) x))
+            val asm  = ASSUME (concl (GEN x (AP_THM (ASSUME tm) x)))
+        in IMP_ANTISYM_RULE imp1 (DISCH_ALL (EXT asm))
+        end
+   else raise ERR "X_FUN_EQ_CONV" (#Name(dest_var x)^" has the wrong type")
  end
- handle (e as HOL_ERR{origin_function = "X_FUN_EQ_CONV",...}) => raise e
-      | HOL_ERR _ => raise ERR "X_FUN_EQ_CONV" "";
+ handle e => raise (wrap_exn "Conv" "X_FUN_EQ_CONV" e);
 
 (* ---------------------------------------------------------------------*)
 (* SELECT_CONV: a conversion for introducing "?" when P [@x.P[x]].	*)
@@ -1305,14 +1302,14 @@ fun X_FUN_EQ_CONV x tm =
 **   handle _ => raise ERR{function = "SELECT_CONV", message = ""};
 *)
 
-local val f = mk_var{Name="f",Ty= ==`:'a->bool`==}
+local val f = mk_var{Name="f",Ty=alpha-->bool}
       val th1 = AP_THM EXISTS_DEF f
       val th2 = CONV_RULE (RAND_CONV BETA_CONV) th1
       val tyv = Type.mk_vartype "'a"
       fun EXISTS_CONV{Bvar,Body} =
         let val ty = type_of Bvar
             val ins = INST_TYPE [tyv |-> ty] th2
-            val theta = [inst[tyv |-> ty] f |-> mk_abs{Bvar=Bvar,Body=Body}]
+            val theta = [inst [tyv |-> ty] f |-> mk_abs{Bvar=Bvar,Body=Body}]
             val th = INST theta ins
         in
           CONV_RULE (RAND_CONV BETA_CONV) th
@@ -1331,8 +1328,7 @@ in
 fun SELECT_CONV tm =
    let fun right t =
           let val {Bvar,Body} = dest_select t
-          in
-            Term.aconv (subst[Bvar |-> t] Body) tm
+          in Term.aconv (subst[Bvar |-> t] Body) tm
           end handle HOL_ERR _ => false
        val epi = find_first right tm
    in
@@ -1349,6 +1345,7 @@ end;
 (* Added: TFM 88.03.31							*)
 (* Revised: TFM 90.07.13						*)
 (* ---------------------------------------------------------------------*)
+
 fun CONTRAPOS_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val negc = mk_neg conseq
@@ -1369,6 +1366,7 @@ fun CONTRAPOS_CONV tm =
 (*									*)
 (* Added: TFM 88.03.31							*)
 (* ---------------------------------------------------------------------*)
+
 fun ANTE_CONJ_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val {conj1,conj2} = dest_conj ant
@@ -1392,6 +1390,7 @@ fun ANTE_CONJ_CONV tm =
 (*									*)
 (* AUTHOR: Paul Loewenstein 3 May 1988                             	*)
 (* ---------------------------------------------------------------------*)
+
 fun SWAP_EXISTS_CONV xyt =
    let val {Bvar=x, Body=yt} = dest_exists xyt
        val {Bvar=y, Body=t} = dest_exists yt
@@ -1420,21 +1419,20 @@ fun SWAP_EXISTS_CONV xyt =
 (* Added TFM 88.03.31							*)
 (* Revised TFM 90.07.24							*)
 (* ---------------------------------------------------------------------*)
+
 local val (Tb::bT::_) = map (GEN (--`b:bool`--))
                             (CONJUNCTS (SPEC (--`b:bool`--) EQ_CLAUSES))
 in
 fun bool_EQ_CONV tm =
-   let val {lhs,rhs} = (dest_eq tm)
-       val _ = if (type_of rhs = Type.bool) then ()
+   let val {lhs,rhs} = dest_eq tm
+       val _ = if type_of rhs = Type.bool then ()
                else raise ERR"bool_EQ_CONV" "does not have boolean type"
-   in if (lhs=rhs) then EQT_INTRO (REFL lhs)
-      else if (lhs=T) then SPEC rhs Tb
-           else if (rhs=T) then SPEC lhs bT
-                else raise ERR"bool_EQ_CONV" "inapplicable"
+   in if lhs=rhs then EQT_INTRO (REFL lhs) else 
+      if lhs=T then SPEC rhs Tb else 
+      if rhs=T then SPEC lhs bT 
+      else raise ERR"bool_EQ_CONV" "inapplicable"
    end
-   handle (e as HOL_ERR{origin_structure = "Conv",
-			origin_function = "bool_EQ_CONV",...}) => raise e
-        | HOL_ERR _ => raise ERR "bool_EQ_CONV" ""
+   handle e => raise (wrap_exn "Conv" "bool_EQ_CONV" e)
 end;
 
 (* ---------------------------------------------------------------------*)
@@ -1453,7 +1451,6 @@ end;
 local val v = genvar Type.bool
       val AND = boolSyntax.conjunction
       val IMP = boolSyntax.implication
-      fun alpha_subst ty = [alpha |-> ty]
       val check = assert boolSyntax.is_exists1
       fun MK_BIN f (e1,e2) = MK_COMB((AP_TERM f e1),e2)
       val rule = CONV_RULE o RAND_CONV o GEN_ALPHA_CONV
@@ -1473,7 +1470,7 @@ fun EXISTS_UNIQUE_CONV tm =
    let val _ = check tm
        val {Rator,Rand} = dest_comb tm
        val (ab as {Bvar,Body}) = dest_abs Rand
-       val def = INST_TYPE (alpha_subst (type_of Bvar)) EXISTS_UNIQUE_DEF
+       val def = INST_TYPE [alpha |-> type_of Bvar] EXISTS_UNIQUE_DEF
        val exp = RIGHT_BETA(AP_THM def Rand)
        and y = variant (all_vars Body) Bvar
    in
@@ -1504,30 +1501,26 @@ end;
 (* COND_CONV "P=>u|v" fails if P is neither "T" nor "F" and u =/= v.	*)
 (* ---------------------------------------------------------------------*)
 
-local val T = --`T`--
-      and F = --`F`--
-      and vt = genvar (==`:'a`==)
-      and vf =  genvar (==`:'a`==)
+local val vt = genvar alpha
+      and vf =  genvar alpha
       val gen = GENL [vt,vf]
       val (CT,CF) = (gen ## gen) (CONJ_PAIR (SPECL [vt,vf] COND_CLAUSES))
-      val alpha = ==`:'a`==
 in
 fun COND_CONV tm =
-   let val {cond,larm,rarm} = dest_cond tm
-       val INST_TYPE' = INST_TYPE [alpha |-> type_of larm]
-   in
-   if (cond=T) then SPEC rarm (SPEC larm (INST_TYPE' CT))
-   else if (cond=F) then SPEC rarm (SPEC larm (INST_TYPE' CF))
-        else if (larm=rarm) then SPEC larm (SPEC cond (INST_TYPE' COND_ID))
-             else if (aconv larm rarm)
-                  then let val cnd = AP_TERM (rator tm) (ALPHA rarm larm)
-                           val th = SPEC larm (SPEC cond (INST_TYPE' COND_ID))
-                       in
-                         TRANS cnd th
-                       end
-                  else raise ERR "" ""
-   end
-   handle HOL_ERR _ => raise ERR "COND_CONV" ""
+ let val {cond,larm,rarm} = dest_cond tm
+     val INST_TYPE' = INST_TYPE [alpha |-> type_of larm]
+ in
+   if (cond=T) then SPEC rarm (SPEC larm (INST_TYPE' CT)) else 
+   if (cond=F) then SPEC rarm (SPEC larm (INST_TYPE' CF)) else 
+   if (larm=rarm) then SPEC larm (SPEC cond (INST_TYPE' COND_ID)) else 
+   if (aconv larm rarm)
+     then let val cnd = AP_TERM (rator tm) (ALPHA rarm larm)
+              val th = SPEC larm (SPEC cond (INST_TYPE' COND_ID))
+          in TRANS cnd th
+          end
+     else raise ERR "" ""
+ end
+ handle HOL_ERR _ => raise ERR "COND_CONV" ""
 end;
 
 
@@ -1577,7 +1570,7 @@ end;
 
 fun AC_CONV(associative,commutative) =
  let val opr = (rator o rator o lhs o snd o strip_forall o concl) commutative
-     val ty = (hd o #Args o Type.dest_type o type_of) opr
+     val ty = (hd o #Args o dest_type o type_of) opr
      val x = mk_var{Name="x",Ty=ty}
      and y = mk_var{Name="y",Ty=ty}
      and z = mk_var{Name="z",Ty=ty}
@@ -1588,16 +1581,15 @@ fun AC_CONV(associative,commutative) =
      and ass = PART_MATCH I (SYM (SPEC_ALL associative))
                (mk_eq{lhs=mk_comb{Rator=mk_comb{Rator=opr,Rand=xy},Rand=z},
                       rhs=mk_comb{Rator=mk_comb{Rator=opr,Rand=x},Rand=yz}})
-     val asc = TRANS (SUBS [comm] (SYM ass)) (INST[{redex=y,residue=x},
-                                                   {redex=x,residue=y}] ass)
+     val asc = TRANS (SUBS [comm] (SYM ass)) (INST [y |-> x, x |-> y] ass)
 
      fun bubble head expr =
        let val {Rator,Rand=r} = dest_comb expr
            val {Rator=xopr, Rand = l} = dest_comb Rator
        in
-       if (xopr = opr)
-       then if (l = head) then REFL expr
-            else if (r = head) then INST [x |-> l, y |-> r] comm
+       if xopr = opr
+       then if l = head then REFL expr
+            else if r = head then INST [x |-> l, y |-> r] comm
               else let val subb = bubble head r
                     val eqv = AP_TERM (mk_comb{Rator=xopr,Rand=l}) subb
                  val {Rator,Rand=r'} = dest_comb(#rhs(dest_eq(concl subb)))
@@ -1609,11 +1601,11 @@ fun AC_CONV(associative,commutative) =
        end
 
      fun asce {lhs,rhs} =
-       if (lhs = rhs) then REFL lhs
+       if lhs = rhs then REFL lhs
        else let val {Rator,Rand=r'} = dest_comb lhs
                 val {Rator=zopr,Rand=l'} = dest_comb Rator
             in
-            if (zopr = opr)
+            if zopr = opr
             then let val beq = bubble l' rhs
                      val rt = boolSyntax.rhs (concl beq)
                  in TRANS (AP_TERM (mk_comb{Rator=opr,Rand=l'})
@@ -1626,16 +1618,10 @@ fun AC_CONV(associative,commutative) =
   fn tm => 
     let val init = TOP_DEPTH_CONV (REWR_CONV ass) tm
         val gl = rhs (concl init)
-    in
-      EQT_INTRO (EQ_MP (SYM init) (asce (dest_eq gl)))
+    in EQT_INTRO (EQ_MP (SYM init) (asce (dest_eq gl)))
     end
  end
- handle (x as HOL_ERR{origin_function,origin_structure,message}) 
- =>
-     if origin_structure = "Conv" andalso origin_function = "AC_CONV" then
-       raise x
-     else
-       raise ERR "AC_CONV" (origin_function^": "^message);
+ handle e => raise (wrap_exn "Conv" "AC_CONV" e);
 
 (*-----------------------------------------------------------------------*)
 (* GSYM - General symmetry rule                                          *)

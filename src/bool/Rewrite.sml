@@ -234,7 +234,7 @@ fun SUBST_MATCH eqth th =
              matchr t              handle HOL_ERR _ =>
              find_match(rator t)   handle HOL_ERR _ =>
              find_match(rand t)    handle HOL_ERR _ =>
-             find_match(#Body(dest_abs t))
+             find_match(body t)
       val (tm_inst,ty_inst) = find_match (concl th)
   in
      SUBS [INST tm_inst (INST_TYPE ty_inst eqth)] th

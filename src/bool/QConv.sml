@@ -81,7 +81,7 @@ local val CQERR = ERR "CHANGED_QCONV" ""
 in
 fun CHANGED_QCONV conv (tm:term) =
    let val th = conv tm handle UNCHANGED => raise CQERR
-       val {lhs,rhs} = dest_eq (concl th)
+       val (lhs,rhs) = dest_eq (concl th)
    in
      if aconv lhs rhs then raise CQERR else th
    end
@@ -108,22 +108,22 @@ fun TRY_QCONV conv = ORELSEQC conv ALL_QCONV;
 
 fun SUB_QCONV conv tm =
  case dest_term tm
-  of COMB{Rator,Rand} =>
+  of COMB(Rator,Rand) =>
         (let val th = conv Rator
          in MK_COMB (th, conv Rand) handle UNCHANGED => AP_THM th Rand
          end
          handle UNCHANGED => AP_TERM Rator (conv Rand))
-   | LAMB{Bvar,Body} =>
+   | LAMB(Bvar,Body) =>
          let val Bth = conv Body  (* UNCHANGED will propagate, as it should *)
          in ABS Bvar Bth
             handle HOL_ERR _ =>
               let val v = genvar (type_of Bvar)
                    val th1 = ALPHA_CONV v tm
-                   val {rhs,...} = dest_eq(concl th1)
-                   val {Body=Body',...} = dest_abs rhs (* v = Bvar *)
+                   val (_,rhs) = dest_eq(concl th1)
+                   val (_,Body') = dest_abs rhs (* v = Bvar *)
                    val eq_thm' = ABS v (conv Body')
                    (* The next 3 lines are new *)
-                   val at = #rhs(dest_eq(concl eq_thm'))
+                   val at = boolSyntax.rhs(concl eq_thm')
                    val v' = variant (free_vars at) Bvar
                    val th2 = ALPHA_CONV v' at
                in

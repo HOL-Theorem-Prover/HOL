@@ -54,9 +54,9 @@ fun stored_label (fvars,tm) =
       val args' = map (fn x => (fvars,x)) args
   in case dest_term oper 
       of CONST {Name,Thy,...} => (Cnet(Name,Thy,length args),args')
-       | LAMB {Body,Bvar} => (Lnet(length args),
+       | LAMB (Body,Bvar) => (Lnet(length args),
                               (subtract fvars [Bvar],Body)::args')
-       | VAR {Name,...} => 
+       | VAR (Name,_) => 
           if mem oper fvars then (FVnet(Name,length args),args') else (Vnet,[])
        | _ => fail()
     end;
@@ -65,8 +65,8 @@ fun label_for_lookup tm =
   let val (oper,args) = strip_comb tm 
   in case dest_term oper 
       of CONST {Name,Thy,...} => (Cnet(Name,Thy,length args),args)
-       | LAMB {Body,Bvar} => (Lnet(length args),Body::args)
-       | VAR {Name,...} => (FVnet(Name,length args),args)
+       | LAMB (Body,Bvar) => (Lnet(length args),Body::args)
+       | VAR (Name,_) => (FVnet(Name,length args),args)
        | _ => fail()
   end;
 

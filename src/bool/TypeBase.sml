@@ -5,7 +5,7 @@
 structure TypeBase :> TypeBase =
 struct
 
-open HolKernel boolSyntax Drule Conv Prim_rec;
+open HolKernel boolSyntax Rsyntax Drule Conv Prim_rec;
 
 type ppstream = Portable.ppstream
 

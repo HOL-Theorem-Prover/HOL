@@ -37,36 +37,36 @@ sig
 
   (* Construction routines *)
 
-  val mk_eq          : {lhs:term, rhs:term} -> term
-  val mk_imp         : {ant:term, conseq:term} -> term
-  val mk_select      : {Bvar:term, Body:term} -> term
-  val mk_forall      : {Bvar:term, Body:term} -> term
-  val mk_exists      : {Bvar:term, Body:term} -> term
-  val mk_exists1     : {Bvar:term, Body:term} -> term
-  val mk_conj        : {conj1:term, conj2:term} -> term
-  val mk_disj        : {disj1:term, disj2:term} -> term
+  val mk_eq          : term * term -> term
+  val mk_imp         : term * term -> term
+  val mk_select      : term * term -> term
+  val mk_forall      : term * term -> term
+  val mk_exists      : term * term -> term
+  val mk_exists1     : term * term -> term
+  val mk_conj        : term * term -> term
+  val mk_disj        : term * term -> term
   val mk_neg         : term -> term
-  val mk_cond        : {cond:term, larm:term, rarm:term} -> term
-  val mk_let         : {func:term, arg:term} -> term
+  val mk_cond        : term * term * term -> term
+  val mk_let         : term * term -> term
   val mk_arb         : hol_type -> term
 
   (* Destruction routines *)
 
-  val dest_eq        : term -> {lhs:term, rhs:term}
-  val dest_eq_ty     : term -> {lhs:term, rhs:term, ty:hol_type}
+  val dest_eq        : term -> term * term
+  val dest_eq_ty     : term -> term * term * hol_type
   val lhs            : term -> term
   val rhs            : term -> term
-  val dest_imp       : term -> {ant:term, conseq:term}
-  val dest_imp_only  : term -> {ant:term, conseq:term}
-  val dest_select    : term -> {Bvar:term, Body:term}
-  val dest_forall    : term -> {Bvar:term, Body:term}
-  val dest_exists    : term -> {Bvar:term, Body:term}
-  val dest_exists1   : term -> {Bvar:term, Body:term}
-  val dest_conj      : term -> {conj1:term, conj2:term}
-  val dest_disj      : term -> {disj1:term, disj2:term}
+  val dest_imp       : term -> term * term
+  val dest_imp_only  : term -> term * term
+  val dest_select    : term -> term * term
+  val dest_forall    : term -> term * term
+  val dest_exists    : term -> term * term
+  val dest_exists1   : term -> term * term
+  val dest_conj      : term -> term * term
+  val dest_disj      : term -> term * term
   val dest_neg       : term -> term
-  val dest_cond      : term -> {cond:term, larm:term, rarm:term}
-  val dest_let       : term -> {func:term, arg:term}
+  val dest_cond      : term -> term * term * term
+  val dest_let       : term -> term * term
   val dest_arb       : term -> hol_type
 
   (* Query routines *)
@@ -110,19 +110,20 @@ sig
 
   (* Connecting signature operations with grammar operations. *)
 
-  val new_type              : {Name:string, Arity:int} -> unit
+  val new_type              : string * int -> unit
   val new_infix_type        : {Name:string, Arity:int, 
                                ParseName:string option, Prec:int,
                                Assoc:Parse.associativity} -> unit
 
-  val new_constant          : {Name:string, Ty:hol_type} -> unit
-  val new_infix             : {Name:string, Ty:hol_type, Prec:int} -> unit
-  val new_binder            : {Name:string, Ty:hol_type} -> unit
+  val new_constant          : string * hol_type -> unit
+  val new_infix             : string * hol_type * int -> unit
+  val new_binder            : string * hol_type -> unit
+  val delete_const          : string -> unit
   val new_type_definition   : string * thm -> thm
   val new_infixl_definition : string * term * int -> thm
   val new_infixr_definition : string * term * int -> thm
   val new_binder_definition : string * term -> thm
   val new_specification     : {name:string, sat_thm:thm,
-                               consts:{fixity:Parse.fixity, 
-                                       const_name:string} list} -> thm
+                               consts:{const_name : string,
+                                       fixity : Parse.fixity} list} -> thm
 end

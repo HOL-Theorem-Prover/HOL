@@ -131,7 +131,7 @@ val CONJUNCTS_THEN :thm_tactical = fn ttac => CONJUNCTS_THEN2 ttac ttac;;
 (* -------------------------------------------------------------------------*)
 
 fun DISJ_CASES_THEN2 ttac1 ttac2 = fn disth =>
-   let val {disj1,disj2} = dest_disj (Thm.concl disth)
+   let val (disj1,disj2) = dest_disj (Thm.concl disth)
    in fn (g as (asl,w))
      =>
     let val (gl1,prf1) =
@@ -179,7 +179,7 @@ val DISJ_CASES_THENL : thm_tactic list -> thm_tactic
 
 
 fun DISCH_THEN ttac (asl,w) =
-   let val {ant,conseq} = dest_imp w
+   let val (ant,conseq) = dest_imp w
        val (gl,prf) = ttac (ASSUME ant) (asl,conseq)
    in
    (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
@@ -215,7 +215,7 @@ end
  ---------------------------------------------------------------------------*)
 
 fun X_CHOOSE_THEN y (ttac:thm_tactic) : thm_tactic = fn xth =>
-   let val {Bvar,Body} = dest_exists (Thm.concl xth)
+   let val (Bvar,Body) = dest_exists (Thm.concl xth)
    in fn (asl,w) =>
       let val th = itlist ADD_ASSUM (hyp xth)
                           (ASSUME (subst[Bvar |-> y] Body))
@@ -233,7 +233,7 @@ fun X_CHOOSE_THEN y (ttac:thm_tactic) : thm_tactic = fn xth =>
 
 val CHOOSE_THEN :thm_tactical = fn ttac => fn xth =>
    let val (hyp,conc) = dest_thm xth
-       val {Bvar,...} = dest_exists conc
+       val (Bvar,_) = dest_exists conc
    in fn (asl,w) =>
      let val y = variant (free_varsl ((conc::hyp)@(w::asl))) Bvar
      in X_CHOOSE_THEN y ttac xth (asl,w)
@@ -361,7 +361,7 @@ fun ANTE_RES_THEN ttac ante : tactic =
 
 local fun MATCH_MP impth =
         let val sth = SPEC_ALL impth 
-            val matchfn = match_term (#ant(dest_imp(concl sth))) 
+            val matchfn = match_term (fst(dest_imp(concl sth))) 
         in fn th => MP (INST_TY_TERM (matchfn (concl th)) sth) th
         end;
 
@@ -407,4 +407,5 @@ fun RES_THEN ttac (asl,g) =
    Tactical.EVERY tacs (asl,g)
  end
 end;
+
 end; (* Thm_cont *)

@@ -25,7 +25,7 @@
 structure Prim_rec :> Prim_rec =
 struct
 
-open HolKernel Parse boolTheory boolSyntax 
+open HolKernel Parse boolTheory boolSyntax Rsyntax
      Drule Tactical Tactic Conv Thm_cont Rewrite Abbrev;
 
 infix THEN THENL ORELSE ## |-> --> THENC;
@@ -445,7 +445,7 @@ fun define_case_constant ax =
            (List.filter (fn ty => Lib.mem (#1 (dom_rng ty)) oktypes) newtypes)
      fun mk_defn ty = 
       let val (dty,rty) = dom_rng ty
-          val name = #Tyop (Type.dest_type dty)
+          val name = #Tyop (dest_type dty)
           val cs = type_constructors_with_args ax name
           val eqns = generate_case_constant_eqns ty cs
       in new_recursive_definition 
@@ -1153,16 +1153,7 @@ fun DISJS_CHAIN rule th =
 (* 									 *)
 (* --------------------------------------------------------------------- *)
 
-local fun dest_eq M = let val {lhs,rhs} = boolSyntax.dest_eq M in (lhs,rhs) end
-      fun mk_eq (t1, t2) = boolSyntax.mk_eq {lhs=t1, rhs=t2}
-      fun dest_disj tm =
-         let val {disj1, disj2} = boolSyntax.dest_disj tm in (disj1, disj2) end
-      fun dest_comb tm =
-         let val {Rator,Rand} = Term.dest_comb tm in (Rator,Rand) end
-      fun dest_imp tm =
-         let val {ant, conseq} = boolSyntax.dest_imp tm in (ant,conseq) end
-
-      val make_args =
+local val make_args =
           let fun margs n s avoid [] = []
                 | margs n s avoid (h::t) =
                     let val v = variant avoid
@@ -1171,7 +1162,7 @@ local fun dest_eq M = let val {lhs,rhs} = boolSyntax.dest_eq M in (lhs,rhs) end
                     end
           in fn s => fn avoid => fn tys =>
               if length tys = 1
-              then [variant avoid (mk_var{Name = s, Ty = hd tys})]
+              then [variant avoid (mk_var{Name=s, Ty=hd tys})]
               else margs 0 s avoid tys
           end handle _ => raise ERR "make_args" ""
 
@@ -1182,7 +1173,7 @@ local fun dest_eq M = let val {lhs,rhs} = boolSyntax.dest_eq M in (lhs,rhs) end
       SUBST1_TAC(SYM (ETA_CONV (--`\x. (P:'a->bool) x`--))) THEN
       EXISTS_TAC (--`t:'a`--) THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC)
     in fn tm => fn th =>
-        let val (l,r) = dest_eq tm
+        let val (l,r) = boolSyntax.dest_eq tm
             val P = mk_abs{Bvar=l, Body=concl th}
             val th1 = BETA_CONV(mk_comb{Rator=P, Rand=l})
             val th2 = ISPECL [P, r] pth
@@ -1195,24 +1186,24 @@ local fun dest_eq M = let val {lhs,rhs} = boolSyntax.dest_eq M in (lhs,rhs) end
  val prove_cases_thm0 =
  let fun mk_exclauses x rpats =
        let val xts = map
-           (fn t => list_mk_exists(List.rev (free_vars t), mk_eq(x, t))) rpats
-       in
-         mk_abs{Bvar=x, Body=list_mk_disj xts}
+           (fn t => list_mk_exists(List.rev (free_vars t), 
+                                   boolSyntax.mk_eq(x,t))) rpats
+       in mk_abs{Bvar=x, Body=list_mk_disj xts}
        end
      fun prove_triv tm =
        let val (evs,bod) = strip_exists tm
-           val (l,r) = dest_eq bod
+           val (l,r) = boolSyntax.dest_eq bod
            val (lf,largs) = strip_comb l
            and (rf,rargs) = strip_comb r
            val _ = (lf=rf) orelse raise ERR "prove_triv" ""
-           val ths = map (ASSUME o mk_eq) (zip rargs largs)
+           val ths = map (ASSUME o boolSyntax.mk_eq) (zip rargs largs)
            val th1 = rev_itlist (C (curry MK_COMB)) ths (REFL lf)
        in
          itlist EXISTS_EQUATION (map concl ths) (SYM th1)
        end
      fun prove_disj tm =
         if is_disj tm
-         then let val (l,r) = dest_disj tm
+         then let val (l,r) = boolSyntax.dest_disj tm
               in DISJ1 (prove_triv l) r handle HOL_ERR _ =>
                  DISJ2 l (prove_disj r)
               end
@@ -1230,7 +1221,7 @@ local fun dest_eq M = let val {lhs,rhs} = boolSyntax.dest_eq M in (lhs,rhs) end
    let val (avs,bod) = strip_forall(concl th)
        val cls = map (snd o strip_forall) (conjuncts(lhand bod))
        val pats = map (fn t => if is_imp t then rand t else t) cls
-       val spats = map dest_comb pats
+       val spats = map Psyntax.dest_comb pats
        val preds = itlist (insert o fst) spats []
        val rpatlist = map
             (fn pr => map snd (filter (fn (p,x) => p = pr) spats)) preds
@@ -1239,7 +1230,7 @@ local fun dest_eq M = let val {lhs,rhs} = boolSyntax.dest_eq M in (lhs,rhs) end
        val ith = BETA_RULE
                  (Thm.INST (ListPair.map (fn (x,p) => p |-> x) (xpreds, preds))
                           (SPEC_ALL th))
-       val eclauses = conjuncts(fst(dest_imp(concl ith)))
+       val eclauses = conjuncts(fst(boolSyntax.dest_imp(concl ith)))
    in
      MP ith (end_itlist CONJ (map prove_eclause eclauses))
    end

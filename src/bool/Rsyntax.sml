@@ -1,68 +1,72 @@
 structure Rsyntax :> Rsyntax =
 struct
 
-    type term     = Term.term;
-    type thm      = Thm.thm;
-    type hol_type = Type.hol_type;
-    type fixity   = Parse.fixity;
+ type term     = Term.term;
+ type hol_type = Type.hol_type;
 
-val mk_var = Term.mk_var;
-val mk_primed_var = Term.mk_primed_var;
-val mk_const = Term.mk_const;
-val mk_thy_const = Term.mk_thy_const;
-val mk_comb = Term.mk_comb;
-val mk_abs = Term.mk_abs;
-val mk_eq = boolSyntax.mk_eq;
-val mk_imp = boolSyntax.mk_imp;
-val mk_select = boolSyntax.mk_select;
-val mk_forall = boolSyntax.mk_forall;
-val mk_exists = boolSyntax.mk_exists;
-val mk_exists1 = boolSyntax.mk_exists1;
-val mk_conj = boolSyntax.mk_conj;
-val mk_disj = boolSyntax.mk_disj;
-val mk_cond = boolSyntax.mk_cond;
-val mk_let= boolSyntax.mk_let;
 
-val dest_var = Term.dest_var;
-val dest_const = Term.dest_const;
-val dest_thy_const = Term.dest_thy_const;
-val dest_comb = Term.dest_comb
-val dest_abs = Term.dest_abs;
-val dest_eq = boolSyntax.dest_eq;
-val dest_imp = boolSyntax.dest_imp
-val dest_imp_only = boolSyntax.dest_imp_only
-val dest_select = boolSyntax.dest_select;
-val dest_forall = boolSyntax.dest_forall;
-val dest_exists = boolSyntax.dest_exists;
-val dest_exists1 = boolSyntax.dest_exists1;
-val dest_conj = boolSyntax.dest_conj
-val dest_disj = boolSyntax.dest_disj
-val dest_cond = boolSyntax.dest_cond;
-val dest_let = boolSyntax.dest_let;
+fun mk_type{Tyop,Args}      = Type.mk_type(Tyop,Args)
+fun mk_var{Name,Ty}         = Term.mk_var(Name,Ty)
+fun mk_primed_var{Name,Ty}  = Term.mk_primed_var(Name,Ty)
+fun mk_const{Name,Ty}       = Term.mk_const(Name,Ty)
+fun mk_comb{Rator,Rand}     = Term.mk_comb(Rator,Rand)
+fun mk_abs{Bvar,Body}       = Term.mk_abs(Bvar,Body)
+fun mk_eq{lhs,rhs}          = boolSyntax.mk_eq(lhs,rhs)
+fun mk_imp{ant,conseq}      = boolSyntax.mk_imp(ant,conseq)
+fun mk_forall{Bvar,Body}    = boolSyntax.mk_forall(Bvar,Body)
+fun mk_exists{Bvar,Body}    = boolSyntax.mk_exists(Bvar,Body)
+fun mk_exists1{Bvar,Body}   = boolSyntax.mk_exists1(Bvar,Body)
+fun mk_select{Bvar,Body}    = boolSyntax.mk_select(Bvar,Body)
+fun mk_conj{conj1,conj2}    = boolSyntax.mk_conj(conj1,conj2)
+fun mk_disj{disj1,disj2}    = boolSyntax.mk_disj(disj1,disj2)
+fun mk_let{func,arg}        = boolSyntax.mk_let(func,arg)
+fun mk_cond{cond,larm,rarm} = boolSyntax.mk_cond(cond,larm,rarm);
 
-val mk_type = Type.mk_type;
-val dest_type = Type.dest_type;
+fun dest_type ty = let val (s,l) = Type.dest_type ty in {Tyop=s,Args=l} end
+fun dest_var M   = let val (s,ty) = Term.dest_var M in {Name=s,Ty=ty} end
+fun dest_const M = let val (s,ty) = Term.dest_const M in {Name=s,Ty=ty} end
+fun dest_comb M  = let val (f,x) = Term.dest_comb M in {Rator=f,Rand=x} end
+fun dest_abs M   = let val (v,N) = Term.dest_abs M in {Bvar=v,Body=N} end;
 
-val type_subst = Type.type_subst;
-val subst = Term.subst;
-val subst_occs = HolKernel.subst_occs;
-val inst = Term.inst;
+fun dest_eq M  = let val (l,r) = boolSyntax.dest_eq M in {lhs=l,rhs=r} end;
+fun dest_imp M = let val (l,r) = boolSyntax.dest_imp M in {ant=l,conseq=r} end;
+fun dest_imp_only M = 
+   let val (l,r) = boolSyntax.dest_imp_only M in {ant=l,conseq=r} end;
+fun dest_select M = 
+   let val (v,N) = boolSyntax.dest_select M in {Bvar=v,Body=N} end;
+fun dest_forall M = 
+   let val (v,N) = boolSyntax.dest_forall M in {Bvar=v,Body=N} end;
+fun dest_exists M = 
+   let val (v,N) = boolSyntax.dest_exists M in {Bvar=v,Body=N} end;
+fun dest_exists1 M = 
+   let val (v,N) = boolSyntax.dest_exists1 M in {Bvar=v,Body=N} end;
+fun dest_conj M = 
+   let val (l,r) = boolSyntax.dest_conj M in {conj1=l,conj2=r} end;
+fun dest_disj M = 
+   let val (l,r) = boolSyntax.dest_disj M in {disj1=l,disj2=r} end;
+fun dest_cond M = 
+   let val (b,l,r) = boolSyntax.dest_cond M in {cond=b,larm=l,rarm=r} end
+fun dest_let M = let val (f,a) = boolSyntax.dest_let M in {func=f,arg=a} end;
 
-val match_type = Type.match_type
-val match_term = Term.match_term;
+fun new_type{Name,Arity}    = boolSyntax.new_type(Name,Arity);
+fun new_constant{Name,Ty}   = boolSyntax.new_constant(Name,Ty);
+fun new_infix{Name,Prec,Ty} = boolSyntax.new_infix(Name,Ty,Prec);
+fun new_binder{Name,Ty}     = boolSyntax.new_binder(Name,Ty);
 
-val SUBST = Thm.SUBST
-val INST_TYPE = Thm.INST_TYPE;
-val SUBST_CONV = Drule.SUBST_CONV;
-val INST = Thm.INST;
-val INST_TY_TERM = Drule.INST_TY_TERM;
 
-val new_type = boolSyntax.new_type;
-val new_constant = boolSyntax.new_constant;
-val new_infix = boolSyntax.new_infix;
-val new_binder = boolSyntax.new_binder;
-val new_specification = boolSyntax.new_specification;
-fun new_type_definition{name,inhab_thm} = 
-    boolSyntax.new_type_definition(name,inhab_thm);
+datatype lambda 
+   = VAR   of {Name:string, Ty:hol_type}
+   | CONST of {Name:string, Thy:string, Ty:hol_type}
+   | COMB  of {Rator:term, Rand:term}
+   | LAMB  of {Bvar:term, Body:term};
+
+local open Feedback
+in
+fun dest_term M = 
+  COMB(dest_comb M) handle HOL_ERR _ =>
+  LAMB(dest_abs M)  handle HOL_ERR _ =>
+  VAR (dest_var M)  handle HOL_ERR _ =>
+  CONST(Term.dest_thy_const M)
+end;
 
 end; (* Rsyntax *)

@@ -199,9 +199,6 @@ end;
  * ------------------------------------------------------------------------- *)
 
 
-local fun pair_dest_comb M = 
-          let val {Rator,Rand} = Term.dest_comb M in (Rator,Rand) end
-in
 val HIGHER_REWRITE_CONV =
   let fun GINST th =
       let val fvs = subtract (free_vars(concl th)) (free_varsl (hyp th))
@@ -212,7 +209,7 @@ val HIGHER_REWRITE_CONV =
       let val thl = map (GINST o SPEC_ALL) ths
           val concs = map concl thl
           val lefts = map lhs concs
-          val (preds,pats) = unzip(map pair_dest_comb lefts)
+          val (preds,pats) = unzip(map dest_comb lefts)
           val beta_fns = map2 BETA_VAR preds concs
           val ass_list = zip pats (zip preds (zip thl beta_fns))
           fun insert p = Ho_Net.enter ([],p,p)
@@ -228,13 +225,12 @@ val HIGHER_REWRITE_CONV =
               val (tmin,tyin) = ho_match_term [] pat stm
               val (pred,(th,beta_fn)) = assoc pat ass_list
               val gv = genvar(type_of stm)
-              val abs = mk_abs{Bvar=gv,Body=subst[stm |-> gv] tm}
+              val abs = mk_abs(gv,subst[stm |-> gv] tm)
               val (tmin0,tyin0) = ho_match_term [] pred abs
           in CONV_RULE beta_fn (INST tmin (INST tmin0 (INST_TYPE tyin0 th)))
           end
       end
       handle e => raise (wrap_exn "Ho_Rewrite" "HIGHER_REWRITE_CONV" e)
-  end
-end;
+  end;
 
 end (* Ho_Rewrite *)
