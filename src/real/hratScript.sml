@@ -14,8 +14,6 @@ app load ["hol88Lib",
           "reduceLib",
           "pairLib";
           "arithmeticTheory",
-          "Num_conv",
-          "Num_induct",
           "EquivType",
           "jrhUtils"];
 *)

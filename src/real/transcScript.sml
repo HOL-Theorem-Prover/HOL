@@ -35,8 +35,7 @@ open hol88Lib
      seqTheory
      limTheory
      powserTheory
-     Num_conv
-     Num_induct
+     numLib
      PairedLambda
      jrhUtils
      Diff
