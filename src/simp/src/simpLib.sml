@@ -90,11 +90,14 @@ fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
    fun net_add_convs net convs =
        itlist net_add_conv convs net;
 
-   fun mk_rewr_convdata th =
+   fun mk_rewr_convdata thm =
+      let val th = SPEC_ALL thm
+      in
         {name=("<rewrite> with "^Parse.thm_to_string th),
          key=SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
          trace=3,
-         conv=COND_REWR_CONV th};
+         conv=COND_REWR_CONV th}
+       end;
 
    (* ---------------------------------------------------------------------
     * mk_simpset
