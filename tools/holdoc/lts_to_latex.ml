@@ -440,8 +440,11 @@ let is_aux s = List.mem s  (* based on Net_auxfnsScript.sml *)
   ; "sockfds"
   ; "sock_with_fd"
   ; "host_ok"
+  ; "valid_ip_string"
+  ; "ipstr_to_ip"
   (* added by hand *)
   ; "string_size"
+  ; "OP"
   ] 
 
 let is_aux_infix s = List.mem s 
@@ -477,12 +480,17 @@ let subscript_var s =
   else 
     (Str.matched_group 1 s)^(Str.matched_group 3 s)
 
+let is_num s =
+  Str.string_match (Str.regexp "[0-9]+") s 0
+
 let is_holop s = List.mem s
   [ "IMAGE"
   ; "APPEND"
   ; "FILTER"
   ; "MEM"
   ; "LIST_TO_SET"
+  ; "CARD"
+  ; "LENGTH"
   ] 
 
 (* translations for symbols and particular identifiers; these take precedence over is_foo *)
@@ -515,7 +523,7 @@ let holids =
   ; ("INTER","\\cap ")
   ; ("UNION","\\cup ")
   ; ("EMPTY","\\emptyset ")
-  ; ("one","()")
+(*   ; ("one","()")  *)
   ; ("SUBSET","\\subseteq ")
   ; ("T","\\textbf{T}")
   ; ("F","\\textbf{F}")
@@ -531,8 +539,9 @@ let mident v s = (* munge alphanumeric identifier *)
 (*  "\\tsvar{"^texify s^"}" *)
   try List.assoc s holids
   with Not_found ->
-    let s' = texify s and
-        c  = if (is_rule s)      then "tsrule" else
+    let s' = texify s in
+    if (is_num s) then s' else
+    let c  = if (is_rule s)      then "tsrule" else
              if (is_con s)       then "tscon" else
              if (is_aux s)       then "tsaux" else
              if (is_aux_infix s) then "tsauxinfix" else
@@ -590,7 +599,7 @@ and mungelab v s = (* munge the label *)
 (* munge a whole rule *)
 
 let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
-  print_string ("\\rrule"^if side == [] then "n" else "c"
+  print_string ("\\showrule{\\rrule"^if side == [] then "n" else "c"
                          ^match comm with Some _ -> "c" | None -> "n");
   print_string ("{"^texify n^"}{"^texify cat^"}");
   print_string ("{"^(match desc with Some d -> texify d | None -> "")^"}\n");
@@ -602,7 +611,7 @@ let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
   (match comm with
      Some c -> print_string (munget v c)
    | None   -> ());
-  print_string "}\n\n"
+  print_string "}}\n\n"
 
 (* render the whole input stream *)
 
