@@ -45,14 +45,15 @@ and o_THM = combinTheory.o_THM;
 
 (* ---------------------------------------------------------------------*)
 (* Introduce the new type.						*)
-(* ---------------------------------------------------------------------*)
-
+(*                                                                      *)
 (* The sum of types `:'a` and `:'b` will be represented by a certain	*)
 (* subset of type `:bool->'a->'b->bool`.  A left injection of value     *)
 (* `p:'a` will be represented by:  `\b x y. x=p /\ b`. A right injection*)
 (* of value `q:'b` will be represented by:  `\b x y. x=q /\ ~b`.        *)
 (* The predicate IS_SUM_REP is true of just those objects of the type	*)
 (* `:bool->'a->'b->bool` which are representations of some injection.	*)
+(* ---------------------------------------------------------------------*)
+
 
 val IS_SUM_REP =
     new_definition
@@ -160,6 +161,7 @@ val INR_neq_INL = store_thm("INR_neq_INL",
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
    DISCH_THEN (CONTR_TAC o SIMP o SPECL [--`T`--,--`v1:'a`--,--`v2:'b`--]));
 
+(*----------------------------------------------------------------------*)
 (* The abstract `axiomatization` of the sum type consists of the single	*)
 (* theorem given below:							*)
 (*									*)
@@ -167,6 +169,8 @@ val INR_neq_INL = store_thm("INR_neq_INL",
 (*									*)
 (* The definitions of the usual operators ISL, OUTL, etc. follow from 	*)
 (* this axiom.								*)
+(*----------------------------------------------------------------------*)
+
 val sum_axiom = store_thm("sum_axiom",
     --`!(f:'a->'c).
        !(g:'b->'c).
