@@ -79,7 +79,7 @@ fun tac1 THEN tac2 = fn g =>
             ([], let val th = vf (map (fn f => f[]) V) in fn [] => th end)
        | (G,V,lengths) => (G, (vf o mapshape lengths V))
    end
-   handle e => raise (wrap_exn "Tactical" "THEN" e);
+   handle e as HOL_ERR _ => raise (wrap_exn "Tactical" "THEN" e);
 
 
 (*---------------------------------------------------------------------------
@@ -104,7 +104,7 @@ fun (tac1:tactic) THENL (tacl:tactic list) :tactic = fn g =>
      of [] => ([], let val th = vf (map (fn f => f[]) V) in fn [] => th end)
       | _  => (G, (vf o mapshape lengths V))
  end
- handle e => raise (wrap_exn "Tactical" "THENL" e);
+ handle e as HOL_ERR _ => raise (wrap_exn "Tactical" "THENL" e);
 
 
 fun (tac1 ORELSE tac2) g = tac1 g handle HOL_ERR _ => tac2 g;
@@ -130,7 +130,7 @@ fun op THEN1 (tac1 : tactic, tac2 : tactic) : tactic =
   in
     (t_gl, fn thl => jf (h_jf [] :: thl))
   end
-  handle e => raise wrap_exn "Tactical" "THEN1" e;
+  handle e as HOL_ERR _ => raise wrap_exn "Tactical" "THEN1" e;
 
 (*---------------------------------------------------------------------------
  * REVERSE tac: A tactical that reverses the list of subgoals of tac.
@@ -145,7 +145,7 @@ fun REVERSE tac g
   = let val (gl, jf) = tac g
     in (rev gl, jf o rev)
     end
-    handle e => raise wrap_exn "Tactical" "REVERSE" e;
+    handle e as HOL_ERR _ => raise wrap_exn "Tactical" "REVERSE" e;
 
 (*---------------------------------------------------------------------------
  * Fail with the given token.  Useful in tactic programs to check that a
