@@ -1419,7 +1419,7 @@ val at_thms =
 (*****************************************************************************)
 val MAKE_NETLIST =
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
- Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
+ Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR,COMB_ID]               o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
  SIMP_RULE std_ss [UNCURRY]                                                o
@@ -1451,7 +1451,7 @@ val MAKE_CIRCUIT =
  Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
  DEV_IMP_FORALL                                                            o
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
- Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
+ Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR,COMB_ID]               o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
  SIMP_RULE std_ss [UNCURRY]                                                o
