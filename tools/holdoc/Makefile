@@ -16,7 +16,7 @@ DVIPS=dvips
 # files:
 
 MLSOURCES=hol_to_latex.ml holdoc_init.ml holdoc_munge.ml holparsesupp.ml \
-	lts_to_latex.ml mng_to_latex.ml simpledump.ml simpletexdump.ml
+	lts_to_latex.ml mng_to_latex.ml simpledump.ml simpletexdump.ml simplemosmldump.ml simplemngdump.ml
 MLISOURCES=holdoc_init.mli holdoc_munge.mli holparsesupp.mli hollex.mli
 OTHERSOURCES=hollex.mll holparse.mly
 GENMLSOURCES=hollex.ml holparse.ml
@@ -24,7 +24,7 @@ GENMLISOURCES=holparse.mli
 
 # main target:
 
-all: simpledump simpletexdump lts_to_latex mng_to_latex hol_to_latex
+all: simpledump simpletexdump simplemngdump simplemosmldump lts_to_latex mng_to_latex hol_to_latex
 
 # program targets:
 
@@ -35,6 +35,9 @@ simpletexdump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simplet
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
 simplemngdump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simplemngdump.cmx
+	$(OCAMLOPT) str.cmxa $+ -o $@
+
+simplemosmldump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simplemosmldump.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
 lts_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx lts_to_latex.cmx

@@ -60,8 +60,33 @@ let rewind_partial lexbuf len =
   lexbuf.Lexing.lex_curr_p <- { lexbuf.Lexing.lex_curr_p
                                 with Lexing.pos_cnum = lexbuf.Lexing.lex_abs_pos + lexbuf.Lexing.lex_curr_pos }
 
+let register_newline lexbuf =
+  let pos = lexbuf.Lexing.lex_curr_p in
+  lexbuf.Lexing.lex_curr_p <- { pos with
+                                Lexing.pos_lnum = pos.Lexing.pos_lnum + 1;
+                                Lexing.pos_bol = pos.Lexing.pos_cnum }
+
+let register_newlines lexbuf s =
+  let rec count_newlines i s n =
+    try
+      count_newlines (String.index_from s i '\n' + 1) s (n+1)
+    with
+      Not_found -> (n,String.length s - i)
+  in
+  let (lines,off) = count_newlines 0 s 0 in
+  if lines > 0 then begin
+    let pos = lexbuf.Lexing.lex_curr_p in
+    lexbuf.Lexing.lex_curr_p <- { pos with
+                                  Lexing.pos_lnum = pos.Lexing.pos_lnum + lines;
+                                  Lexing.pos_bol = pos.Lexing.pos_cnum - off }
+  end
+  else
+    ()
+  
+
 let directive_alist =
   [
+   (* normal holdoc_init directives *)
    ("TYPE_LIST"        ,TYPE_LIST        );
    ("CON_LIST"         ,CON_LIST         );
    ("FIELD_LIST"       ,FIELD_LIST       );
@@ -89,6 +114,8 @@ let directive_alist =
    ("NEWMODE"          ,NEWMODE          );
    ("MODE"             ,MODE             );
    ("SPECIAL"          ,SPECIAL          );
+   (* special handling *)
+   ("VARS"             ,VARS             );
  ]
 
 }
@@ -187,8 +214,9 @@ let tstartdir  = "%(*["
 rule
 
   mosmltoken = parse
-    mosmlstr               { fun _  -> let s = Lexing.lexeme lexbuf in
-                             Str (String.sub s 1 (String.length s - 2)) }
+    mosmlstr               { let s = Lexing.lexeme lexbuf in
+                             register_newlines lexbuf s;
+                             fun _  -> Str (String.sub s 1 (String.length s - 2)) }
   | iidchar idchar*        { fun _  -> Ident (Lexing.lexeme lexbuf, true) }
   | mosmlsym+              { fun _  -> Ident (Lexing.lexeme lexbuf, false) }
   | '.'                    { fun _  -> Dot }
@@ -198,10 +226,12 @@ rule
                            { fun _  -> Real (Lexing.lexeme lexbuf) }
   | '0' 'w' (digit+ | 'x' hexdigit+)
                            { fun _  -> Word (Lexing.lexeme lexbuf) }
-  | '#' mosmlstr           { fun _  -> let s = Lexing.lexeme lexbuf in
-                             Char (String.sub s 2 (String.length s - 3)) }
+  | '#' mosmlstr           { let s = Lexing.lexeme lexbuf in
+                             register_newlines lexbuf ("#"^s);
+                             fun _  -> Char (String.sub s 2 (String.length s - 3)) }
   | mosmlres               { fun _  -> Sep (Lexing.lexeme lexbuf) }
-  | newline white*         { fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
+  | newline white*         { register_newline lexbuf;
+                             fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
   | white+                 { fun _  -> White (Lexing.lexeme lexbuf) }
   | backtick               { fun _  -> ToHol(DelimHolMosml) }
   | backtick backtick      { fun _  -> ToHol(DelimHolMosmlD) }
@@ -214,15 +244,17 @@ and
 
   holtoken = parse
     '"' ([^ '"' '\\'] | '\\' _ )* '"'
-                           { fun _  -> let s = Lexing.lexeme lexbuf in
-                             Str (String.sub s 1 (String.length s - 2)) }
+                           { let s = Lexing.lexeme lexbuf in
+                             register_newlines lexbuf s;
+                             fun _  -> Str (String.sub s 1 (String.length s - 2)) }
   | startdir               { fun _  -> ToDir(DelimDir) }
   | tendhol                { fun ed -> check_close ed DelimHolTex }
   | tendhol0               { fun ed -> check_close ed DelimHolTexMath }
   | starttex               { fun _  -> ToTex(DelimTex) }
   | startcom               { fun _  -> ToText(DelimText) }
   | dollar? anysymb        { fun _  -> Ident (Lexing.lexeme lexbuf,true) }
-  | newline white*         { fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
+  | newline white*         { register_newline lexbuf;
+                             fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
   | white+                 { fun _  -> White (Lexing.lexeme lexbuf) }
   | backtick               { fun ed -> check_close ed DelimHolMosml }
   | backtick backtick      { fun ed -> check_close ed DelimHolMosmlD }
@@ -231,7 +263,9 @@ and
 
 and
   texttoken = parse
-    incomm+        { fun _  -> Content (Lexing.lexeme lexbuf) }
+    incomm+        { let s = Lexing.lexeme lexbuf in
+                     register_newlines lexbuf s;
+                     fun _  -> Content s }
   | startcom       { fun _  -> ToText(DelimText) }
   | stopcom        { fun ed -> check_close ed DelimText }
   | eof            { fun ed -> check_close ed DelimEOF }
@@ -258,17 +292,24 @@ and
   (* but I've added an exclusion for '%', permission for '\%',
      and a new rule in the middle, to deal with comments *)
   | ([^ '[' '<' ':' '*' '(' ')' '%'] | '\\' '%')+
-                   { fun _  -> Content (Lexing.lexeme lexbuf) }
+                   { let s = Lexing.lexeme lexbuf in
+                     register_newlines lexbuf s;
+                     fun _  -> Content s }
   | '%' [^ '\n']* '\n'
-                   { fun _  -> Content (Lexing.lexeme lexbuf) }
+                   { let s = Lexing.lexeme lexbuf in
+                     register_newlines lexbuf s;
+                     fun _  -> Content s }
   | eof            { fun ed -> check_close ed DelimEOF }
-  | _              { fun _  -> Content (Lexing.lexeme lexbuf) }
+  | _              { let s = Lexing.lexeme lexbuf in
+                     register_newlines lexbuf s;
+                     fun _  -> Content s }
 
 and
     dirtoken = parse
     '"' ([^ '"' '\\'] | '\\' _ )* '"'
-                           { fun _  -> let s = Lexing.lexeme lexbuf in
-                             Str (String.sub s 1 (String.length s - 2)) }
+                           { let s = Lexing.lexeme lexbuf in
+                             register_newlines lexbuf s;
+                             fun _  -> Str (String.sub s 1 (String.length s - 2)) }
   | enddir                 { fun ed -> check_close ed DelimDir }
   | startcom               { fun _  -> ToText(DelimText) }
   | dollar? anysymb        { fun _  ->
@@ -276,6 +317,8 @@ and
                              try List.assoc s directive_alist with
                                Not_found -> Ident (s,true) }
   | white+                 { fun _  -> White (Lexing.lexeme lexbuf) }
+  | newline white*         { register_newline lexbuf;
+                             fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
   | eof                    { fun ed -> check_close ed DelimEOF }
   | _                      { fun _  -> bad_char ModeDir lexbuf }
 
@@ -322,9 +365,9 @@ let nonagg_re = Str.regexp "[]()[{}~.,;]"
 
 let rec split_ident ed nonagg_specs s
     = match String.get s 0 with
-        '"'  -> (Ident(s,true),1)
-      | '_'  -> (Ident(s,true),1)
-      | '\'' -> (Ident(s,true),1)  (* be liberal in what you accept *)
+        '"'  -> (Ident(s,true),String.length s)
+      | '_'  -> (Ident(s,true),String.length s)
+      | '\'' -> (Ident(s,true),String.length s)  (* this is a type token *)
       | '$'  -> let rest = Str.string_after s 1 in
                 (if rest = "" then
                   raise (BadChar "expected ident after $")

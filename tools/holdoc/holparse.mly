@@ -62,6 +62,7 @@ let print_string s = (Pervasives.print_string s; flush stdout)
 %token NEWMODE         
 %token MODE            
 %token SPECIAL         
+%token VARS
 
 
 %start main
@@ -69,6 +70,9 @@ let print_string s = (Pervasives.print_string s; flush stdout)
 
 %start tex_main
 %type < unit > tex_main
+
+%start mosml_main
+%type < unit > mosml_main
 
 %%
 
@@ -78,6 +82,9 @@ main :
 tex_main :
   tex_render From         { print_string $1 }
 
+mosml_main :
+  mosml_render From       { print_string $1 }
+
 tex_render :
   /* empty */             { "" }
 | tex_render tex_content  { $1 ^ $2 }
@@ -85,6 +92,32 @@ tex_render :
 tex_content :
   Content                 { $1 }
 | ToHol hol_render From   { delim_wrap $1 $2 }
+| ToDir directive From    { "" }
+
+mosml_render :
+  mosml_line0             { $1 }
+| mosml_render mosml_line { $1 ^ $2 }
+
+mosml_line :
+  Indent mosml_line0      { make_indent $1 ^ $2 }
+
+mosml_line0 :
+  /* empty */             { "" }
+| mosml_line0 mosml_token { $1 ^ $2 }
+
+mosml_token :
+  Ident                   { fst $1 }
+| Str                     { "\"" ^ $1 ^ "\"" }
+| Dot                     { "." }
+| Int                     { $1 }
+| Real                    { $1 }
+| Word                    { $1 }
+| Char                    { "#\"" ^ $1 ^ "#" }
+| White                   { $1 }
+| Sep                     { $1 }
+| ToHol hol_render From   { delim_wrap $1 $2 }
+| ToText text_render From { delim_wrap $1 $2 }
+| ToTex tex_render From   { delim_wrap $1 $2 }
 | ToDir directive From    { "" }
 
 hol_render :
@@ -109,7 +142,10 @@ hol_token :
 
 text_render :
   /* empty */             { "" }
-| text_render Content     { $1 ^ $2 }
+| text_render text_chunk  { $1 ^ $2 }
+
+text_chunk :
+  Content                 { $1 }
 | ToText text_render From { delim_wrap $1 $2 }
 | ToDir directive From    { "" }
 
@@ -148,6 +184,8 @@ directive0 :
 | NEWMODE opt_whitestuff Ident { new_mode    (fst $3) }
 | MODE    opt_whitestuff Ident { change_mode (fst $3) }
 | SPECIAL string_list          { add_to_list Holdoc_init.nonagg_specials $2 }
+/* special handling: */
+| VARS ident_list   { () }  /* ignore for now */
 
 ident_list :
   ident_list0 { List.rev $1 }

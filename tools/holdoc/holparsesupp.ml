@@ -45,5 +45,5 @@ let delim_info d =
      (DelimEOF       ,{imode=ModeNone;sopen="<bof>";sclose="<eof>"});
    ]
 
-let make_indent n = String.make n ' '
+let make_indent n = "\n" ^ String.make n ' '
 
