@@ -57,6 +57,13 @@ miller () {
   cd ..
 }
 
+Rijndael () {
+  cd Rijndael
+  $holmake cleanAll
+  $holmake && ../../bin/hol.unquote < rijn
+  cd ..
+}
+
 fast () {
     for i in toplevel MLsyntax RSA ind_def lambda bmark parity Sugar2
     do
@@ -93,7 +100,7 @@ if [ $# -eq 0 ]
 then
     echo Building all examples
     for i in toplevel MLsyntax RSA Sugar2 ind_def lambda bmark parity \
-             miller arm6
+             miller arm6 Rijndael
     do
         buildit $i
     done
@@ -102,7 +109,8 @@ then
     echo "Must have 0 or 1 argument" >&2
     exit 1
 else
-    buildit $1
+    buildit `basename $1`   # use of basename strips trailing slashes from
+                            # inputs of the form   dirname/
 fi
 
 
