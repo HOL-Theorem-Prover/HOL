@@ -115,9 +115,11 @@ fun variants away0 vlist =
  *---------------------------------------------------------------------------*)
 val COND_CONG = prove(
 --`!P P' (x:'a) x' y y'.
-      (P = P') /\ (P'  ==> (x = x')) /\
-                  (~P' ==> (y = y'))
-      ==> ((P => x | y) = (P' => x' | y'))`--,
+      (P = P') /\ 
+      (P'  ==> (x = x')) /\
+      (~P' ==> (y = y'))
+         ==> 
+      ((if P then x else y) = (if P' then x' else y'))`--,
  REPEAT STRIP_TAC THEN
  REPEAT COND_CASES_TAC THEN
  REPEAT RES_TAC);
