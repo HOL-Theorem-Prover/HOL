@@ -1061,7 +1061,22 @@ fun mk_defn stem eqns =
   => if 1 < length(all_fns eqns)
      then mutrec_defn (facts,stem,eqns)
      else
-     let val (tup_eqs,stem',untuple) = pairf(stem,eqns)
+     let
+       val ((f, args), rhs) = dest_hd_eqn eqns
+       val _ =
+           length args > 0 orelse
+           (free_in f rhs andalso
+            raise ERR "mk_defn" "Simple nullary definition recurses") orelse
+           (let val fvs = free_vars rhs
+            in
+              not (null fvs) andalso
+              raise ERR "mk_defn"
+                    ("Free variables (" ^
+                     String.concat (Lib.commafy (map (#1 o dest_var) fvs)) ^
+                     ") on RHS of nullary definition")
+            end) orelse
+           raise ERR "mk_defn" "Nullary definition failed - giving up"
+       val (tup_eqs,stem',untuple) = pairf(stem,eqns)
           handle HOL_ERR _ => raise ERR "mk_defn"
                "failure in internal translation to tupled format"
          val wfrec_res = wfrec_eqns facts tup_eqs
