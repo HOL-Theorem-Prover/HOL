@@ -756,13 +756,8 @@ val elim_lt_coeffs1 = store_thm(
       ALL_TAC
     ] THEN
     MP_TAC (Q.ASSUME `r:num < m`) THEN
-    SIMP_TAC arith_ss [LEFT_ADD_DISTRIB] THEN
-    REPEAT STRIP_TAC THEN
-    MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN
-    Q.EXISTS_TAC `m * 1 + m * i` THEN
-    (CONJ_TAC THEN1 ASM_SIMP_TAC arith_ss []) THEN
-    REWRITE_TAC [GSYM LEFT_ADD_DISTRIB] THEN
-    PROVE_TAC [LE_MULT_LCANCEL, ADD_COMM]
+    SIMP_TAC bool_ss [LEFT_ADD_DISTRIB, MULT_CLAUSES] THEN
+    numLib.ARITH_TAC
   ]);
 
 val elim_lt_coeffs2 = store_thm(
