@@ -162,9 +162,10 @@
 \newcommand\HOLSpacing{13pt}
 
 \newcounter{sessioncount}
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 
 \newenvironment{session}{\begin{flushleft}
+ \refstepcounter{sessioncount}
  \begin{tabular}{@{}|c@{}|@{}}\hline
  \begin{minipage}[b]{\hsbw}
  \vspace*{-.5pt}
@@ -175,8 +176,7 @@
  \vspace*{-.55in}
  \begingroup\small\baselineskip\HOLSpacing}{\endgroup\end{minipage}\\ \hline
  \end{tabular}
- \end{flushleft}
- \stepcounter{sessioncount}}
+ \end{flushleft}}
 
 % ---------------------------------------------------------------------
 % Macro for boxed ML functions, etc.
