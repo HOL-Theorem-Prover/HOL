@@ -51,7 +51,8 @@ hostlts.dvi : hostlts.tex Net_hostLTSScript.tex ltsmunge.sty
 
 clean:
 	rm -f simpledump simpletexdump lts_to_latex hollex.ml *.cm[iox] *~ '#*#' \
-              .depend Net_hostLTSScript.tex hostlts.{dvi,ps}
+              .depend Net_hostLTSScript.tex hostlts.{dvi,ps} \
+              *.{aux,log} hol_to_latex mng_to_latex 
 
 depend:	.depend
 
