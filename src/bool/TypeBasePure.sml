@@ -489,8 +489,8 @@ fun mk_case tybase (exp, plist) =
        in list_mk_comb(inst theta c,fns@[exp])
        end;
                          
-
-local fun build_case_clause(constr,rhs) =
+(*
+fun build_case_clause(constr,rhs) =
  let val (args,r) = strip_fun (type_of constr)
      fun peel [] N = ([],N)
        | peel (_::tys) N = 
@@ -504,6 +504,21 @@ local fun build_case_clause(constr,rhs) =
      val constr' = inst theta constr
   in (list_mk_comb(constr',V), rhs')
   end
+*)
+local fun build_case_clause((ty,constr),rhs) =
+ let val (args,tau) = strip_fun (type_of constr)
+     fun peel  [] N = ([],N)
+       | peel (_::tys) N = 
+           let val (v,M) = dest_abs N
+               val (V,M') = peel tys M
+           in (v::V,M')
+           end
+     val (V,rhs') = peel args rhs
+     val theta = match_type (type_of constr) (list_mk_fun (map type_of V, ty))
+     val constr' = inst theta constr
+ in 
+   (list_mk_comb(constr',V), rhs')
+  end
 in
 fun dest_case tybase M = 
   let val (c,args) = strip_comb M
@@ -515,7 +530,8 @@ fun dest_case tybase M =
           let val d = case_const_of tyinfo
           in if same_const c d
            then let val constrs = constructors_of tyinfo
-                in (c, arg, map build_case_clause (zip constrs cases))
+                    val constrs_type = map (pair (type_of arg)) constrs
+                in (c, arg, map build_case_clause (zip constrs_type cases))
                 end
            else raise ERR "dest_case" "unable to destruct case expression"
           end
@@ -530,6 +546,27 @@ fun is_case tybase M =
        | SOME tyinfo => same_const c (case_const_of tyinfo) 
   end 
   handle HOL_ERR _ => false;
+
+fun foo tybase (pat,rhs) = 
+  let val patvars = free_vars pat
+  in if is_case tybase rhs
+       then let val (case_tm,exp,clauses) = dest_case tybase rhs
+                val (pats,rhsides) = unzip clauses
+            in if mem exp patvars andalso
+                  null_intersection [exp] (free_varsl rhsides)
+                then flatten
+                       (map (foo tybase)
+                         (zip (map (fn p => subst [exp |-> p] pat) pats) rhsides))
+                else [(pat,rhs)]
+             end
+       else [(pat,rhs)]
+  end;
+
+fun strip_case tybase M = 
+  case total (dest_case tybase) M
+   of NONE => (M,[])
+    | SOME(case_tm,exp,cases) => (exp, flatten (map (foo tybase) cases));
+        
 
 fun is_constructor tybase c =
   let val (_,ty) = strip_fun (type_of c)

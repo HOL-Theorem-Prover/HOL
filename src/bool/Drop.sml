@@ -140,7 +140,7 @@ fun term_to_ML openthys ppstrm =
      if !is_let_hook tm then pp_lets i tm else
      if !is_pabs_hook tm then pp_abs i tm else
      if !is_one_hook tm  then pp_one tm else
-     if TypeBase.is_case tm then pp_case i (TypeBase.dest_case tm) else
+     if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
      if is_const tm then pp_const i tm else
      if is_comb tm then pp_comb i tm 
      else raise ERR "term_to_ML" 
@@ -270,7 +270,7 @@ fun term_to_ML openthys ppstrm =
         ; rparen i 5000
         ; end_block()
       end
-  and pp_case i (c,a,cases) =
+  and pp_case i (a,cases) =
       ( begin_block CONSISTENT 0
         ; lparen i 5000
         ; begin_block INCONSISTENT 1
@@ -650,7 +650,7 @@ fun pp_struct strm (s,elems,cnames) =
    begin_block CONSISTENT 2;
    add_string"struct"; add_newline();
    begin_block CONSISTENT 0;
-   begin_block INCONSISTENT 8;
+   begin_block INCONSISTENT 7;
       add_string"nonfix ";
       pr_list add_string (fn()=>()) (fn()=> add_break(1,0)) cnames;
       add_string ";";

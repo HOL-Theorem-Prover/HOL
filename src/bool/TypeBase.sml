@@ -106,6 +106,7 @@ val _ =
 
 fun mk_case x   = TypeBasePure.mk_case (theTypeBase()) x
 fun dest_case x = TypeBasePure.dest_case (theTypeBase()) x
+fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
 fun is_case x   = TypeBasePure.is_case (theTypeBase()) x;
 
 fun is_constructor x = TypeBasePure.is_constructor (theTypeBase()) x;

@@ -79,6 +79,7 @@ sig
 
    val mk_case         : typeBase -> term * (term * term) list -> term
    val dest_case       : typeBase -> term -> term * term * (term * term) list
+   val strip_case      : typeBase -> term -> term * (term * term) list
    val is_case         : typeBase -> term -> bool
 
    val is_constructor  : typeBase -> term -> bool
