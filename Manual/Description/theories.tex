@@ -1,6 +1,8 @@
 \chapter{Theories}\label{HOLtheories}
 
 \newcommand{\konst}[1]{\ensuremath{\mbox{\small{\textbf{\sf{#1}}}}}}
+\newcommand{\nil}{\mathbf{[} \;\mathbf{]}}
+\newcommand{\cons}[2]{{#1}\mathbf{:}\mathbf{:}{#2}}
 
 \index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies
 of} The \HOL{} system provides a collection of theories to base
@@ -200,13 +202,11 @@ useful constants.
 \index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic!definitional axiom for}
 \index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
 \begin{verbatim}
-   LET_DEF      |- LET    = \f x. f x
+   LET_DEF  |- LET  = \f x. f x
 
-   COND_DEF     |- COND   = \t t1 t2.@x.((t=T)==>(x=t1))/\((t=F)==>(x=t2))
+   COND_DEF |- COND = \t t1 t2.@x.((t=T)==>(x=t1))/\((t=F)==>(x=t2))
 
-   ARB_DEF      |- ARB    = @x. T
-
-   IN_DEF       |- IN     = \x (f:'a -> bool). f x
+   IN_DEF   |- IN   = \x (f:'a -> bool). f x
 \end{verbatim}
 \end{hol}
 
@@ -228,18 +228,18 @@ expressions. The concrete syntax \index{terms, in HOL logic@terms, in
 permitted. The system prints out conditionals in the "if $t_1$ then
 $t_2$ else $t_3$" form.
 
-The polymorphic constant {\small\verb+ARB+} is used to denote a fixed
-but arbitrary element in a type, which is occasionally useful when
-attempting to deal with the issue of partiality.
-
 The constant {\small\verb+IN+} (written as an infix) is the basis of
 the modelling of sets by their characteristic functions.  The term
 $x\texttt{ IN }P$ can be read as ``$x$ is an element of the set
 $P$'', or (more in line with its definition) as ``the predicate $P$ is
 true of $x$''.
 
-\subsection{Restricted quantifiers}\label{res-quant}
+The polymorphic constant {\small\verb+ARB+} is used to denote a fixed
+but arbitrary element. {\small\verb+ARB+} is occasionally useful when
+attempting to deal with the issue of partiality.
 
+\subsubsection{Restricted quantifiers}\label{res-quant}
+ 
 \index{restricted quantification}
 %
 The theory \theoryimp{bool} also defines constants that implement
@@ -258,8 +258,7 @@ are restrictions of the existential and universal quantifiers:
                            (RES_ABSTRACT P m1 = RES_ABSTRACT P m2)
 \end{verbatim}
 %
-The
-definition of \ml{RES\_ABSTRACT} is a characterising formula, rather
+The definition of \ml{RES\_ABSTRACT} is a characterising formula, rather
 than a direct equation.  There are two important properties
 \begin{itemize}
 \item if $y$ is an element of $P$ then $(${\small\verb+\+}$x :: P.\; M)
@@ -271,11 +270,12 @@ than a direct equation.  There are two important properties
 For completeness, restricted versions of unique existence and
 indefinite description are provided, although hardly used.
 \begin{verbatim}
-  RES_EXISTS_UNIQUE_DEF |- RES_EXISTS_UNIQUE =
-                            \P m. (?x :: P. m x) /\
-                                  !x y :: P. m x /\ m y ==> (x = y)
+  RES_EXISTS_UNIQUE_DEF 
+    |- RES_EXISTS_UNIQUE = \P m. (?x :: P. m x) /\
+                                 (!x y :: P. m x /\ m y ==> (x = y))
 
-   RES_SELECT_DEF   |- RES_SELECT = \P m. @x. x IN P /\ m x
+   RES_SELECT_DEF
+     |- RES_SELECT = \P m. @x. x IN P /\ m x
 \end{verbatim}
 
 The definition of \ml{RES\_EXISTS\_UNIQUE} uses the restricted
@@ -293,7 +293,7 @@ the end of the sequence, thus with a universal quantification:
 %
 Here the predicate $P$ restricts all of $x$, $y$ and $z$.
 
-\subsection{Derived syntactic forms}\label{derived-terms}
+\subsubsection{Derived syntactic forms}\label{derived-terms}
 
 \index{type checking, in HOL logic@type checking, in \HOL\
   logic!special forms in|(} \index{quotation, in HOL logic@quotation,
@@ -465,7 +465,7 @@ The corresponding destructor functions are called \ml{strip\_comb}, \etc,
 \index{term constructors, in HOL logic@term constructors, in \HOL\ logic|)}
 \index{terms, in HOL logic@terms, in \HOL\ logic!constructors for|)}
 
-\subsection{Theorems}
+\subsubsection{Theorems}
 
 A large number of theorems involving the logical constants are
 pre-proved in the theory \theoryimp{bool}. The following theorems
@@ -500,15 +500,14 @@ theorems supporting quantifier movement.
 \end{verbatim}
 \end{boxed}
 
-Many other theorems may be found in \theoryimp{bool} theory.
+\noindent Many other theorems may be found in \theoryimp{bool} theory.
 
 \subsection{Combinators}
 
 \index{function composition, in HOL logic@function composition, in \HOL\
 logic|(}
 
-The theory
-\theoryimp{combin}
+The theory \theoryimp{combin}
 \index{combin@\theoryimp{combin}}
 \index{combinators, in HOL logic@combinators, in \HOL{} logic}
 contains the definitions of function composition (infixed \ml{o})
@@ -540,8 +539,7 @@ and
 \end{verbatim}}
 \end{hol}
 
-
-\noindent The following elementary properties are pre-proved in the theory
+\noindent The following elementary properties are proved in the theory
 \ml{combin}:
 
 \begin{hol} \index{K_THM@\ml{K\_THM}} \index{S_THM@\ml{S\_THM}}
@@ -1100,11 +1098,13 @@ fixed point numbers.
 
 \subsection{Natural numbers}
 
-The natural numbers are developed in a series of theories. First, the
-type of numbers is defined from the Axiom of Infinity, and Peano's
-axioms are derived. Then the primitive recursion theorem is
-proved. Based on that, a large theory treating the standard arithmetic
-operations is developed. Lastly, a theory of numerals is provided.
+The natural numbers are developed in a series of theories:
+\theoryimp{num},\theoryimp{prim\_rec},\theoryimp{arithmetic}, and
+\theoryimp{numeral}. In \theoryimp{num}, the type of numbers is
+defined from the Axiom of Infinity, and Peano's axioms are derived. In
+\theoryimp{prim\_rec} the Primitive Recursion theorem is proved. Based
+on that, a large theory treating the standard arithmetic operations is
+developed in \theoryimp{arithmetic}. Lastly, a theory of numerals is developed.
 
 \subsubsection{The theory \theoryimp{num}}
 
@@ -1190,6 +1190,30 @@ definitions on the natural numbers: for any \ml{x} and \ml{f} there exists a
 corresponding total function \ml{fn} which satisfies
 the primitive recursive definition whose form is determined by \ml{x} and
 \ml{f}.
+
+\subsubsection{The less-than relation}
+
+The less-than relation `{\small{\tt\verb+<+}}'\index{less than, in HOL
+  logic@\ml{<} (less than, in \HOL{} logic)} is most naturally defined by
+  primitive recursion. However, it is needed for the proof of the
+  primitive recursion theorem, so it must be defined before definition
+  by primitive recursion is available. The theory \theoryimp{prim\_rec}
+  therefore contains the following non-recursive definition\index{less
+  than, in HOL logic@less than, in \HOL{} logic} of \ml{<}:
+
+\begin{hol}
+\index{LESS@\ml{LESS}}
+\begin{verbatim}
+   LESS  |- !m n. m < n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~P n
+\end{verbatim}
+\end{hol}
+
+\noindent
+This definition says that {\small\verb%m < n%} if there exists a set (with
+characteristic function {\small\verb%P%}) that is downward
+closed\footnote{A set of numbers is \textit{downward closed} if whenever it
+contains the successor of a number, it also contains the number.} and
+contains {\small\verb%m%} but not {\small\verb%n%}.
 
 \subsubsection{Primitive recursive definitions}\label{num-prim-rec}
 
@@ -1287,30 +1311,6 @@ conveniently still, the \texttt{Define} function (see
 Section~\ref{sec:high-level-proof-steps}) supports primitive
 recursion, among other styles of definition, and does not require the
 user to quote the primitive recursion axiom.
-
-\subsubsection{The less-than relation}
-
-The less-than relation `{\small{\tt\verb+<+}}'\index{less than, in HOL
-  logic@\ml{<} (less than, in \HOL{} logic)} is most naturally defined by
-  primitive recursion. However, it is needed for the proof of the
-  primitive recursion theorem, so it must be defined before definition
-  by primitive recursion is available. The theory \theoryimp{prim\_rec}
-  therefore contains the following non-recursive definition\index{less
-  than, in HOL logic@less than, in \HOL{} logic} of \ml{<}:
-
-\begin{hol}
-\index{LESS@\ml{LESS}}
-\begin{verbatim}
-   LESS  |- !m n. m < n = (?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~P n)
-\end{verbatim}
-\end{hol}
-
-\noindent
-This definition says that {\small\verb%m < n%} if there exists a set (with
-characteristic function {\small\verb%P%}) that is downward
-closed\footnote{A set of numbers is \textit{downward closed} if whenever it
-contains the successor of a number, it also contains the number.} and
-contains {\small\verb%m%} but not {\small\verb%n%}.
 
 \subsubsection{Consequences of primitive recursion}
 
@@ -1687,25 +1687,25 @@ paths, finite strings, and $n$-bit words.
 \index{lists, in HOL logic@lists, in \HOL{} logic|(}
 \index{list theory, in HOL logic@\ml{list} theory, in \HOL{} logic|(}
 \index{lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL{} logic)|(}
-The theory \ml{list} introduces the unary type operator
-\ml{list} by a type definition. The standard list processing functions
-are then defined on this type:
 
+\HOL{} lists are inductively defined finite sequences where each
+element in a list has the same type. The theory \ml{list} introduces
+the unary type operator $\alpha \; \konst{list}$ by a type definition
+and a standard collection of list processing functions are
+defined. The primitive constructors {\small\verb+NIL+} and {\small\verb+CONS+}
+%
 \begin{hol}
 \index{NIL@\ml{NIL}}
 \index{CONS@\ml{CONS}}
-\index{HD, the constant in HOL logic@\ml{HD}, the constant in \HOL{} logic}
-\index{TL, the constant in HOL logic@\ml{TL}, the constant in \HOL{} logic}
-\index{NULL, the constant in HOL logic@\ml{NULL}, the constant in \HOL{} logic}
+{\small
 \begin{verbatim}
    NIL  : 'a list
    CONS : 'a -> 'a list -> 'a list
-   HD   : 'a list -> 'a
-   TL   : 'a list -> 'a list
-   NULL : 'a list -> bool
-\end{verbatim}\end{hol}
-
-The \HOL{} parser
+\end{verbatim}
+}\end{hol}
+%
+are used to build lists and have been defined from the representing type for
+lists. The \HOL{} parser
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of list expressions}
 has been specially  modified to  parse the expression
 {\small\verb%[]%} into {\small\verb%NIL%}, to parse the expression
@@ -1717,9 +1717,8 @@ The \HOL{} printer
 \index{printing, in HOL logic@printing, in \HOL{} logic!of list expressions}
 reverses these transformations.
 
-The functions \ml{NIL} and \ml{CONS} are defined in terms of the representing
-type of lists. From their definitions, the following fundamental theorems about
-lists
+Based on the inductive characterization of the type, the following
+fundamental theorems about lists
 \index{list theorems, in HOL logic@list theorems, in \HOL{} logic|(}
 are proved and stored in the theory \ml{list}.
 
@@ -1733,80 +1732,63 @@ are proved and stored in the theory \ml{list}.
 \index{NOT_NIL_CONS@\ml{NOT\_NIL\_CONS}}
 \index{NOT_CONS_NIL@\ml{NOT\_CONS\_NIL}}
 \index{characterizing theorem!for lists}
+{\small
 \begin{verbatim}
-   list_Axiom    |- !x f. ?!fn.(fn[] = x) /\ (!h t. fn(h::t) = f(fn t)h t)
+  list_Axiom   |- !x f. ?fn. (fn [] = x) /\ (!h t. fn (h::t) = f(fn t)h t)
 
-   list_INDUCT   |- !P. P[] /\ (!t. P t ==> (!h. P(h::t))) ==> (!l. P l)
+  list_INDUCT  |- !P. P [] /\ (!t. P t ==> (!h. P(h::t))) ==> (!l. P l)
 
-   list_CASES    |- !l. (l = []) \/ (?t h. l = h::t)
+  list_CASES   |- !l. (l = []) \/ (?t h. l = h::t)
 
-   CONS_11       |- !h t h' t'. (h::t = h'::t') = (h = h') /\ (t = t')
+  CONS_11      |- !h t h' t'. (h::t = h'::t') = (h = h') /\ (t = t')
 
-   NOT_NIL_CONS  |- !h t. ~([] = h::t)
+  NOT_NIL_CONS |- !h t. ~([] = h::t)
 
-   NOT_CONS_NIL  |- !h t. ~(h::t = [])
-\end{verbatim}
+  NOT_CONS_NIL |- !h t. ~(h::t = [])
+\end{verbatim}}
 \end{hol}
 
-The theorem  \ml{list\_Axiom}  shown  above  is  analogous   to  the  primitive
+The theorem \ml{list\_Axiom} shown above is analogous to the primitive
 recursion theorem\index{primitive recursion theorem!for lists} on the
 natural numbers discussed above in Section~\ref{num-prim-rec}.  It
-states  the  validity  of  primitive recursive definitions on lists, and
-can be used to justify any such definition.  The \ML\
-function {\small\verb+new_recursive_definition+}
-uses this theorem to do automatic
-\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL{} system|)}
-proofs of the existence of primitive recursive functions on lists and
-then make constant specifications to introduce constants that denote
-such functions.  For example, the \HOL{} system defines a length
-function, \ml{LENGTH}, on lists by the primitive recursive definition
-on lists shown below:
+states the validity of primitive recursive definitions on lists, and
+can be used to justify any such definition.  The \ML\ function
+{\small\verb+new_recursive_definition+} uses this theorem to do
+automatic \index{primitive recursion theorem!automated use of, in HOL
+system@automated use of, in \HOL{} system|)} proofs of the existence
+of primitive recursive functions on lists and then make constant
+specifications to introduce constants that denote such functions.
 
-\begin{hol}
-\begin{verbatim}
-   new_recursive_definition Prefix list_Axiom "LENGTH"
-      (Term `(LENGTH NIL = 0) /\
-             (!h t. LENGTH (h::t) = SUC (LENGTH t))`)
-\end{verbatim}
-\end{hol}
+The induction theorem for lists, \ml{list\_INDUCT}, provides the main
+proof tool used to reason about operations that manipulate lists. The
+theorem \ml{list\_CASES} is used to perform case analysis on whether a
+list is empty or not.
 
-\noindent
-When this \ML{} expression is evaluated, \HOL{} uses \ml{list\_Axiom}
-to prove existence of a function that satisfies the given primitive
-recursive definition, introduces a constant to name this function
-using a constant specification, and stores the resulting theorem:
-
-\begin{hol}
-\begin{verbatim}
-    LENGTH   |- (LENGTH [] = 0) /\ (!h t. LENGTH(h::t) = SUC(LENGTH t))
-\end{verbatim}
-\end{hol}
-
-\noindent in the current theory (in this case, the theory \ml{list}).
+The theorem {\small\verb+CONS_11+} shows that {\small\verb+CONS+} is injective;
+the theorems {\small\verb+NOT_NIL_CONS+} and {\small\verb+NOT_CONS_NIL+} show that
+{\small\verb+NIL+} and {\small\verb+CONS+} are distinct, \ie, 
+cannot give rise to the same structure. Together, these three theorems
+are used for equational reasoning about lists.
 
 The predicate \ml{NULL} and the selectors \ml{HD} and \ml{TL} are
 defined
 \index{list definitions, in HOL logic@list definitions, in \HOL{} logic}
-in the theory \ml{list} by the specifications:
-
+in the theory \ml{list} by 
+%
 \begin{hol}
 \index{NULL, the definition in HOL logic@\ml{NULL}, the definition in \HOL{} logic}
 \index{HD, the definition in HOL logic@\ml{HD}, the definition in \HOL{} logic}
 \index{TL, the definition in HOL logic@\ml{TL}, the definition in \HOL{} logic}
+{\small
 \begin{verbatim}
-   NULL |- NULL[] /\ (!h t. ~NULL(h::t))
-
+   NULL |- NULL [] /\ (!h t. ~NULL(h::t))
    HD   |- !h t. HD(h::t) = h
-
    TL   |- !h t. TL(h::t) = t
-\end{verbatim}
+\end{verbatim}}
 \end{hol}
 
-\noindent The following primitive recursive definitions of functions on lists
-are also made in the theory \ml{list}:
-
-
-\begin{hol}
+\noindent The following functions on lists are also defined in the theory \ml{list}.
+%
 \index{SUM, the theorem in HOL logic@\ml{SUM}, the theorem in \HOL{} logic}
 \index{APPEND, the theorem in HOL logic@\ml{APPEND}, the theorem in \HOL{} logic}
 \index{concatenation, of lists!in HOL logic@in \HOL{} logic}
@@ -1814,7 +1796,6 @@ are also made in the theory \ml{list}:
 \index{LENGTH, the theorem in HOL logic@\ml{LENGTH}, the theorem in \HOL{} logic}
 \index{MAP, the theorem in HOL logic@\ml{MAP}, the theorem in \HOL{} logic}
 \index{EL, the theorem in HOL logic@\ml{EL}, the theorem in \HOL{} logic}
-
 \index{SUM, the constant in HOL logic@\ml{SUM}, the constant in \HOL{} logic}
 \index{APPEND, the constant in HOL logic@\ml{APPEND}, the constant in \HOL{} logic}
 \index{FLAT, the constant in HOL logic@\ml{FLAT}, the constant in \HOL{} logic}
@@ -1834,165 +1815,221 @@ are also made in the theory \ml{list}:
 \index{FOLDR, the HOL constant@\ml{FOLDR}, the \HOL{} constant}
 \index{MEM@\ml{MEM}}
 \index{MEM, the HOL constant@\ml{MEM}, the \HOL{} constant}
+%
+\paragraph{Case expressions}
+
+Compound \HOL{} expressions that branch based on
+whether a term is an empty or non-empty list have the 
+surface syntax (borrowed from ML)
+\[
+\begin{array}{l}
+\konst{case}\ e_1 \ \konst{of} \\
+{~~~~~~~}  \nil \longrightarrow e_2 \\
+{~~~}  \mid\mid \cons{h}{t} \longrightarrow e_3
+\end{array}
+\]
+%
+Such an expression is translated to 
+$\konst{list\_case}\ e_2\ (\lambda h\; t.\ e_3)\ e_1$ where the constant
+{\small\verb+list_case+} is defined as follows:
+{\small
 \begin{verbatim}
-   SUM        |- (SUM [] = 0) /\ (!h t. SUM(h::t) = h + SUM t)
+  list_case_def
+    |- (!v f. case v f [] = v) /\ 
+       (!v f a0 a1. case v f (a0::a1) = f a0 a1)
+\end{verbatim}}
 
-   APPEND     |- (!l. APPEND [] l = l) /\
-                 (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)
+\paragraph{List membership}
 
-   FLAT       |- (FLAT[] = []) /\ (!h t. FLAT(h::t) = APPEND h (FLAT t))
+Membership in a list {\small\verb+MEM+} is defined as follows:
+%
+{\small
+\begin{verbatim}
+  MEM |- (!x. MEM x [] = F) /\
+         (!x h t. MEM x (h::t) = (x = h) \/ MEM x t)
+\end{verbatim}}
 
-   LENGTH     |- (LENGTH [] = 0) /\ (!h t. LENGTH (h::t) = SUC(LENGTH t))
+\paragraph {Concatenation of lists}
 
-   MAP        |- (!f. MAP f [] = []) /\
-                 (!f h t. MAP f (h::t) = f h::MAP f t)
+Binary list concatenation ({\small\verb+APPEND+}) may also be denoted by 
+the infix operator {\small\verb|++|}; thus the expression 
+{\small\verb|L1 ++ L2|} is translated into {\small\verb+APPEND L1 L2+}.
+The concatenation of a list of lists into a list is achieved by
+{\small\verb+FLAT+}. 
+%
+{\small
+\begin{verbatim}
+  APPEND  
+    |- (!l. APPEND [] l = l) /\
+       (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)
+  FLAT 
+    |- (FLAT [] = []) /\ (!h t. FLAT(h::t) = h ++ FLAT t)
+\end{verbatim}}
 
-   EL         |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n)l = EL n (TL l))
+\paragraph {Numbers and lists}
 
-   EVERY_DEF  |- (!P. EVERY P [] = T) /\
-                 (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
+The length ({\small\verb+LENGTH+}) and size ({\small\verb+list_size+})
+of a list are suported notions. The size of a list takes account of
+the size of each element of the list (given by parameter
+$f:\alpha\to\konst{num}$), while the length of the list ignores the
+size of each list element. The alternate length definition
+({\small\verb+LEN+}) is tail-recursive.
+%
+{\small
+\begin{verbatim}
+  LENGTH
+    |- (LENGTH [] = 0) /\ (!h t. LENGTH (h::t) = SUC(LENGTH t))
+  LEN_DEF
+    |- (!n. LEN [] n = n) /\ !h t n. LEN (h::t) n = LEN t (n + 1)
+  list_size_def
+    |- (!f. list_size f [] = 0) /\
+       !f a0 a1. list_size f (a0::a1) = 1 + (f a0 + list_size f a1))
+  EL
+    |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n) l = EL n (TL l))
+\end{verbatim}}
+%
+Note that The extraction of the $n$th element ({\small\verb+EL+}) of a list 
+starts its indexing from 0. 
 
-   EXISTS_DEF |- (!P. EXISTS P [] = F) /\
-                 (!P h t. EXISTS P (h::t) = P h \/ EXISTS P t)
+\paragraph {Mapping functions over lists}
 
-   FILTER     |- (!P. FILTER P [] = []) /\
-                 (!P h t. FILTER P (h::t)
-                           = if P h then h::FILTER P t else FILTER P t)
+There are functions for mapping a function $f : \alpha \to \beta$ over
+a single list ({\small\verb+MAP+}) or a function $f : \alpha \to \beta \to \gamma$ 
+over two lists ({\small\verb+MAP2+}). 
+%
+{\small
+\begin{verbatim}
+  MAP 
+    |- (!f. MAP f [] = []) /\
+       (!f h t. MAP f (h::t) = f h::MAP f t)
+  MAP2
+    |- (!f. MAP2 f [] [] = []) /\
+       !f h1 t1 h2 t2. MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2
+\end{verbatim}}
+%
+The behaviour of {\small\verb+MAP2+} in the two cases when it is given
+one empty list and one non-empty list is unspecified.
 
-   FOLDL      |- (!f e. FOLDL f e [] = e) /\
-                 (!f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l)
+\paragraph {Predicates over lists}
 
-   FOLDR      |- (!f e. FOLDR f e [] = e) /\
-                 (!f e x l. FOLDR f e (x::l) = f x (FOLDR f e l))
+Predicates can be applied to lists in a universal sense (the predicate
+must hold of every element in the list) or an existential sense (the
+predicate must hold of some element in the list). This functionality
+is supported by {\small\verb+EVERY+} and {\small\verb+EXISTS+},
+respectively. The elimination of all elements in list not satisfying 
+a given predicate is performed by {\small\verb+FILTER+}.
+%
+{\small
+\begin{verbatim}
+  EVERY_DEF  
+    |- (!P. EVERY P [] = T) /\
+       (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
+  EXISTS_DEF 
+    |- (!P. EXISTS P [] = F) /\
+       (!P h t. EXISTS P (h::t) = P h \/ EXISTS P t)
+  FILTER
+    |- (!P. FILTER P [] = []) /\
+       (!P h t. FILTER P (h::t) = if P h then h::FILTER P t else FILTER P t)
+  ALL_DISTINCT
+    |- (ALL_DISTINCT [] = T) /\
+       (!h t. ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t)
+\end{verbatim}}
+%
+The predicate {\small\verb+ALL_DISTINCT+} holds on a list  just
+in case no element in the list is equal to any other.
 
-   MEM        |- (!x. MEM x [] = F) /\
-                 (!x h t. MEM x (h::t) = (x = h) \/ MEM x t)
-\end{verbatim}
-\end{hol}
+\paragraph {Folding}
+
+Applying a binary function $f : \alpha\to\beta\to\beta$ pairwise 
+through a list and accumulating the result is known as
+\emph{folding}. At times, it is necessary to do this operation 
+from left-to-right ({\small\verb+FOLDL+}), and at others the 
+right-to-left direction ({\small\verb+FOLDR+}) is required.  
+%
+{\small
+\begin{verbatim}
+  FOLDL
+    |- (!f e. FOLDL f e [] = e) /\
+       (!f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l)
+  FOLDR
+    |- (!f e. FOLDR f e [] = e) /\
+       (!f e x l. FOLDR f e (x::l) = f x (FOLDR f e l))
+\end{verbatim}}
+
+\paragraph {List reversal}
+
+The reversal of a list ({\small\verb+REVERSE+}) and its tail recursive counterpart 
+{\small\verb+REV+} are defined in {\small\verb+list+}.
+{\small
+\begin{verbatim}
+  REVERSE_DEF
+    |- (REVERSE [] = []) /\ 
+       (!h t. REVERSE (h::t) = REVERSE t ++ [h])
+  REV_DEF
+    |- (!acc. REV [] acc = acc) /\ 
+       (!h t acc. REV (h::t) acc = REV t (h::acc))
+\end{verbatim}}
+
+\paragraph {Conversion to sets}
+
+Lists can be converted to sets ({\small\verb+LIST_TO_SET+}) by 
+partial application of {\small\verb+MEM+}. The somewhat
+terse definition is used to derive the theorem 
+{\small\verb+IN_LIST_TO_SET+}. 
+%
+{\small
+\begin{verbatim}
+  LIST_TO_SET
+    |- LIST_TO_SET = combin$C MEM
+  IN_LIST_TO_SET
+    |- x IN LIST_TO_SET l = MEM x l
+\end{verbatim}}
+%
+Further support for translating between different kinds of
+collections may be found in the {\small\verb+container+} theory. 
+
+\paragraph {Pairs and lists}
+
+Two lists of equal length may be component-wise paired by
+the {\small\verb+ZIP+} operation. The result is unspecified 
+when the lists are not the same length. The inverse operation,
+{\small\verb+UNZIP+}, translates a list of pairs into a pair of 
+lists.
+%
+{\small
+\begin{verbatim}
+  ZIP
+    |- (ZIP ([],[]) = []) /\
+       (!x1 l1 x2 l2. ZIP (x1::l1,x2::l2) = (x1,x2)::ZIP (l1,l2))
+  UNZIP_THM
+    |- (UNZIP [] = ([],[])) /\
+       (UNZIP ((x,y)::t) = let (L1,L2) = UNZIP t in (x::L1,y::L2))
+\end{verbatim}}
+
+\paragraph {Alternate access}
+
+Lists are essentially treated in a stack-like manner. However, at
+times it is convenient to access the last element
+({\small\verb+LAST+}) of a non-empty list directly. The last element 
+of a non-empty list is dropped by {\small\verb+FRONT+}.
+%
+{\small
+\begin{verbatim}
+  LAST_DEF 
+    |- !h t. LAST (h::t) = if t = [] then h else LAST t
+  FRONT_DEF
+    |- !h t. FRONT (h::t) = if t = [] then [] else h::FRONT t
+  APPEND_FRONT_LAST
+    |- !l. ~(l = []) ==> (FRONT l ++ [LAST l] = l)
+\end{verbatim}}
+%
+Joining the front part and the last element of a non-empty list yields the original list.
+Both {\small\verb+LAST+} and {\small\verb+FRONT+} are unspecified on empty lists.
+
 
 \noindent For a complete list of available theorems in
-{\small\verb+listTheory+}, see \REFERENCE.  The theory
-{\small\verb+list+} is relatively compact, largely because of
-how the \HOL{} system has evolved. A more extensive theory of lists can
-be found in {\small\verb+rich_listTheory+}.
-
-%\subsection{The theory {\tt rich\_list}}\label{rich_list}
-%
-%The theory {\small\verb+list+} is relatively compact, largely because of
-%how the \HOL{} system has evolved. A more extensive theory of lists can be
-%found in {\small\verb+rich_listTheory+}, in which the following
-%list operations are defined:
-%
-%\begin{hol}
-%\begin{verbatim}
-%  [ALL_EL]
-%  |- (!P. ALL_EL P [] = T) /\
-%     !P x l. ALL_EL P (x::l) = P x /\ ALL_EL P l
-%
-%  [BUTFIRSTN]
-%  |- (!l. BUTFIRSTN 0 l = l) /\
-%     !n x l. BUTFIRSTN (SUC n) (x::l) = BUTFIRSTN n l
-%
-%  [BUTLASTN]
-%  |- (!l. BUTLASTN 0 l = l) /\
-%     !n x l. BUTLASTN (SUC n) (SNOC x l) = BUTLASTN n l
-%
-%  [BUTLAST_DEF] |- !l. BUTLAST l = SEG (PRE (LENGTH l)) 0 l
-%
-%  [ELL]
-%  |- (!l. ELL 0 l = LAST l) /\
-%     !n l. ELL (SUC n) l = ELL n (BUTLAST l)
-%
-%  [FIRSTN]
-%  |- (!l. FIRSTN 0 l = []) /\
-%     !n x l. FIRSTN (SUC n) (x::l) = x::FIRSTN n l
-%
-%  [GENLIST]
-%  |- (!f. GENLIST f 0 = []) /\
-%     !f n. GENLIST f (SUC n) = SNOC (f n) (GENLIST f n)
-%
-%  [IS_EL_DEF]
-%  |- !x l. IS_EL x l = SOME_EL ($= x) l
-%
-%  [IS_PREFIX]
-%  |- (!l. IS_PREFIX l [] = T) /\
-%     (!x l. IS_PREFIX [] (x::l) = F) /\
-%     !x1 l1 x2 l2. IS_PREFIX (x1::l1) (x2::l2) = (x1 = x2) /\ IS_PREFIX l1 l2
-%
-%  [IS_SUBLIST]
-%  |- (!l. IS_SUBLIST l [] = T) /\
-%     (!x l. IS_SUBLIST [] (x::l) = F) /\
-%     !x1 l1 x2 l2.
-%       IS_SUBLIST (x1::l1) (x2::l2) =
-%       (x1 = x2) /\ IS_PREFIX l1 l2 \/ IS_SUBLIST l1 (x2::l2)
-%
-%  [IS_SUFFIX]
-%  |- (!l. IS_SUFFIX l [] = T) /\
-%     (!x l. IS_SUFFIX [] (SNOC x l) = F) /\
-%     !x1 l1 x2 l2.
-%       IS_SUFFIX (SNOC x1 l1) (SNOC x2 l2) = (x1 = x2) /\ IS_SUFFIX l1 l2
-%
-%  [LASTN]
-%  |- (!l. LASTN 0 l = []) /\
-%     !n x l. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
-%
-%  [LAST_DEF]
-%  |- !l. LAST l = HD (SEG 1 (PRE (LENGTH l)) l)
-%
-%  [OR_EL_DEF] |- OR_EL = SOME_EL I
-%
-%  [PREFIX_DEF] |- !P l. PREFIX P l = FST (SPLITP ($~ o P) l)
-%
-%  [REPLICATE]
-%  |- (!x. REPLICATE 0 x = []) /\
-%     !n x. REPLICATE (SUC n) x = x::REPLICATE n x
-%
-%  [REVERSE]
-%  |- (REVERSE [] = []) /\
-%     !x l. REVERSE (x::l) = SNOC x (REVERSE l)
-%
-%  [SCANL]
-%  |- (!f e. SCANL f e [] = [e]) /\
-%     !f e x l. SCANL f e (x::l) = e::SCANL f (f e x) l
-%
-%  [SCANR]
-%  |- (!f e. SCANR f e [] = [e]) /\
-%     !f e x l. SCANR f e (x::l) = f x (HD (SCANR f e l))::SCANR f e l
-%
-%  [SEG]
-%  |- (!k l. SEG 0 k l = []) /\
-%     (!m x l. SEG (SUC m) 0 (x::l) = x::SEG m 0 l) /\
-%     !m k x l. SEG (SUC m) (SUC k) (x::l) = SEG (SUC m) k l
-%
-%  [SNOC]
-%  |- (!x. SNOC x [] = [x]) /\
-%     !x x' l. SNOC x (x'::l) = x'::SNOC x l
-%
-%  [SOME_EL]
-%  |- (!P. SOME_EL P [] = F) /\
-%     !P x l. SOME_EL P (x::l) = P x \/ SOME_EL P l
-%
-%  [SPLITP]
-%  |- (!P. SPLITP P [] = ([],[])) /\
-%     !P x l.
-%       SPLITP P (x::l) =
-%       (if P x then ([],x::l) else (x::FST (SPLITP P l),SND (SPLITP P l)))
-%
-%  [SUFFIX_DEF]
-%  |- !P l. SUFFIX P l = FOLDL (\l' x. (if P x then SNOC x l' else [])) [] l
-%
-%  [UNZIP]
-%  |- (UNZIP [] = ([],[])) /\
-%     !x l. UNZIP (x::l) = (FST x::FST (UNZIP l),SND x::SND (UNZIP l))
-%
-%  [ZIP]
-%   |- (ZIP ([],[]) = []) /\
-%       !x1 l1 x2 l2. ZIP (x1::l1,x2::l2) = (x1,x2)::ZIP (l1,l2)
-%\end{verbatim}\end{hol}
-%
-%A large number of theorems about these constants can be found in
-%{\small\verb+rich_listTheory+}.
-
+{\small\verb+list+}, see \REFERENCE.  urther development of list
+theory can be found in {\small\verb+rich_list+}.
 
 \index{list theorems, in HOL logic@list theorems, in \HOL{} logic|)}
 \index{lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL{} logic)|)}
@@ -2223,6 +2260,9 @@ Anthony's package.
 
 \section{Collections}
 
+Several different notions of a collection of elements are available in
+\HOL: sets, multisets, relations, and finite maps. 
+
 \subsection{Sets (\theoryimp{pred\_set})}
 
 An extensive development of set theory is available in the theory
@@ -2287,7 +2327,7 @@ definitions of  {\small\verb+BIGUNION+} and {\small\verb+BIGINTER+}.
 {\small
 \begin{verbatim}
   BIGUNION    |- !P. BIGUNION P = {x | ?s. s IN P /\ x IN s}
-  BIGINTER    |- !B. BIGINTER P = {x | !s. s IN B ==> x IN s}
+  BIGINTER    |- !P. BIGINTER P = {x | !s. s IN P ==> x IN s}
 \end{verbatim}}
 %
 Both {\small\verb+BIGUNION+} and {\small\verb+BIGINTER+} reduce
@@ -2310,8 +2350,9 @@ Set inclusion ({\small\verb+SUBSET+}, infix) and proper set inclusion
 The difference between two sets ({\small\verb+DIFF+}, infix) is
 defined by a set comprehension. Based on that, the deletion of a
 single element ({\small\verb+DELETE+}, infix) from a set is
-straightforward. Since the universe of a type is always defined, the
-complement ({\small\verb+COMPL+}) of a set is definable.
+straightforward. Since the universe of a type is always available via
+{\small\verb+UNIV+}, the complement ({\small\verb+COMPL+}) of a set
+may be taken. 
 {\small
 \begin{verbatim}
   DIFF_DEF    |- !s t. s DIFF t = {x | x IN s /\ ~(x IN t)}
@@ -2347,7 +2388,7 @@ as follows:
 %
 \paragraph{Finite sets}
 The finite sets ({\small\verb+FINITE+}) are defined inductively as those
-built from the empty set and created by a finite number of insertions.
+built from the empty set by a finite number of insertions.
 %
 {\small
 \begin{verbatim}
@@ -2357,19 +2398,40 @@ built from the empty set and created by a finite number of insertions.
       |- !s. INFINITE s = ~FINITE s
 \end{verbatim}}
 %
-A set is infinite iff it is not finite. As mentioned, set operations
-apply to both finite and infinite sets. However, some operations, such
-as cardinality, are only defined for finite sets (since, in \HOL{},
-finite sets have cardinality ({\small\verb+CARD+}) defined as a
-natural number). Thus {\small\verb+CARD+} has type
-$(\alpha\to\konst{bool})\to\konst{num}$.
- The cardinality of an infinite set is not specified.
+A set is infinite iff it is not finite. The finite sets have an
+induction theorem :
+%
+{\small
+\begin{verbatim}
+ FINITE_INDUCT
+   |- !P. P {} /\
+         (!s. FINITE s /\ P s ==> !e. ~(e IN s) ==> P (e INSERT s)) 
+         ==>  !s. FINITE s ==> P s
+\end{verbatim}}
+%
+As mentioned, set operations apply to both finite and infinite
+sets. However, some operations, such as cardinality
+({\small\verb+CARD+}), are only defined for finite sets.  The 
+cardinality of an infinite set is not specified.
+%
 {\small
 \begin{verbatim}
  CARD_DEF
-      |- (CARD {} = 0) /\
-         !s. FINITE s ==>
-           !x. CARD (x INSERT s) = (if x IN s then CARD s else SUC (CARD s))
+    |- (CARD {} = 0) /\
+       !s. FINITE s ==>
+           !x. CARD (x INSERT s) = if x IN s then CARD s else SUC (CARD s)
+\end{verbatim}}
+%
+Since the finite and infinite sets are dealt with uniformly in
+ {\small\verb+pred_set+}, properties of operations on finite sets must
+explicitly include constraints about finiteness. For example the
+following theorem relating cardinality and subsets is only true
+for finite sets.
+%
+{\small
+\begin{verbatim}
+ CARD_PSUBSET 
+   |- !s. FINITE s ==> !t. t PSUBSET s ==> CARD t < CARD s
 \end{verbatim}}
 %
 An extensive suite of theorems dealing with finiteness and cardinality
@@ -2384,7 +2446,7 @@ with a set comprehension.
   CROSS_DEF   |- !P Q. P CROSS Q = {p | FST p IN P /\ SND p IN Q}
 \end{verbatim}}
 %
-Cardinality and cross product are related by the following theorem:
+\noindent Cardinality and cross product are related by the following theorem:
 {\small
 \begin{verbatim}
  CARD_CROSS
@@ -2411,7 +2473,7 @@ in a tail-recursive fashion.
             !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)
 \end{verbatim}}
 %
-A recursive version is also available:
+\noindent A recursive version is also available:
 {\small
 \begin{verbatim}
  COMMUTING_ITSET_RECURSES
@@ -2421,26 +2483,31 @@ A recursive version is also available:
 \end{verbatim}}
 %
 For the full derivation, see the sources of {\small\verb+pred_set+}.
-The definition of {\small\verb+ITSET+} allows, for example, the
-definition of summing a finite set of numbers.
+The definition of {\small\verb+ITSET+} allows, for example, the 
+definition of summing the results of a function on a finite set of numbers, 
+from which a recursive characterization and other useful theorems are derived.
 %
 {\small
 \begin{verbatim}
  SUM_IMAGE_DEF
-  |- !f s. SIGMA f s = ITSET (\e acc. f e + acc) s 0
+   |- !f s. SIGMA f s = ITSET (\e acc. f e + acc) s 0
+ SUM_IMAGE_THM
+   |- !f. (SIGMA f {} = 0) /\
+          !e s. FINITE s ==> (SIGMA f (e INSERT s) = f e + SIGMA f (s DELETE e))
 \end{verbatim}}
 
 \paragraph{Other definitions and theorems}
 
 There are more definitions in {\small\verb+pred_set+}, but they
 are not as heavily used as the ones presented here. Similarly, most
-theorems in {\small\verb+pred_set+} relate the various standard
-operators to each other. Some notable other theorems are Koenig's
-Lemma, which states that every finitely branching infinite tree has an
-infinite path. There are many ways to formulate this theorem,
-depending on how the notion of tree is formalized. In
-{\small\verb+pred_set+}, finite branching is defined as a predicate on
-a relation.
+theorems in {\small\verb+pred_set+} relate the various common set operations
+to each other, but do not express any deep theorems of set theory.
+
+However, one notable theorem is Koenig's Lemma, which states that every
+finitely branching infinite tree has an infinite path. There are many
+ways to formulate this theorem, depending on how the notion of tree is
+formalized. In {\small\verb+pred_set+}, finite branching is defined as
+a predicate on a relation.
 %
 {\small
 \begin{verbatim}
@@ -2448,103 +2515,96 @@ a relation.
   |- !R. finitely_branching R = !x. FINITE {y | R x y}
 \end{verbatim}}
 %
- From this, we obtain the following version of Koenig's Lemma:
+\noindent From this, the following version of Koenig's Lemma is stated and
+proved:
 {\small
 \begin{verbatim}
  KoenigsLemma
   |- finitely_branching R ==>
-            !x ~FINITE {y | RTC R x y} ==>
-              ?f :num -> 'a. (f 0 = x) /\ !n. R (f n) (f (SUC n))
+       !x. ~FINITE {y | RTC R x y} ==> ?f. (f 0 = x) /\ !n. R (f n) (f (SUC n))
 \end{verbatim}}
 
 
-%\subsection{Syntax for sets}\index{set theory notation}
+\subsubsection{Syntax for sets}\index{set theory notation}
+
+The special purpose set-theoretic notations
+{\small\verb%{%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%}%} and
+{\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} are available.
+The normal interpretation of the former is the finite set containing
+just $t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
+is the set of all $t$s such that $p$. For example,
 %
-%The special purpose set-theoretic notations
-%{\small\verb%"{%}$t_1,t_2,\ldots,t_n${\small\verb%}"%} and
-%{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%} are available.
-%The normal interpretation of the former is the finite set containing
-%$t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
-%is the set of all $t$s such that $p$.
+\begin{hol}\begin{verbatim}
+   {1;2;3;4}
+\end{verbatim}\end{hol}
 %
-%For example,
-%\begin{hol}\begin{verbatim}
-%   "{1,2,3,4}"
-%\end{verbatim}\end{hol}
+\noindent parses to
 %
-%\noindent parses to
+\begin{hol}\begin{verbatim}
+   1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))
+\end{verbatim}\end{hol}
 %
-%\begin{hol}\begin{verbatim}
-%   "1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))"
-%\end{verbatim}\end{hol}
+\noindent Similarly, {\small\verb%{%}$t${\small\verb%|%}$p${\small\verb%}%}
+parses to:
 %
-%\noindent Similarly, {\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%}
-%parses to:
+\noindent {\small{\verb%GSPEC(\(%}$x_1${\verb%,%}$\ldots${\verb%,%}$x_n${\verb%).(%}$t${\verb%,%}$p${\verb%))%}
 %
-%\medskip
-%
-%\noindent{\small
-%{\verb%   `%}}{\small{\verb%GSPEC(\(%}$x_1${\verb%,%}$\ldots${\verb%,%}$x_n${\verb%).(%}$t${\verb%,%}$p${\verb%))"%}
-%}
-%
-%\medskip
-%
-%\noindent where $x_1$, $\ldots$ , $x_n$ are the free variables occurring in both $t$
-%and $p$.  If there are no such free variables then an error results.
-%The order in which the variables are listed in the variable structure
-%of the paired abstraction is an unspecified function of the structure
-%of $t$ (it is approximately left to right).
-%
-%For example,
-%
-%\begin{hol}\begin{verbatim}
-%   "{x+y | (x < y) /\ (y < z)}"
-%\end{verbatim}\end{hol}
-%
+\noindent where $x_1, \ldots, x_n$ are the free variables occurring in both $t$
+and $p$.  If there are no such free variables then an error results.
+The order in which the variables are listed in the variable structure
+of the paired abstraction is an unspecified function of the structure
+of $t$ (it is approximately left to right).
+
+For example,
+
+\begin{hol}\begin{verbatim}
+   {x+y | (x < y) /\ (y < z)}
+\end{verbatim}\end{hol}
+
 %\noindent parses to:
-%
-%\begin{hol}\begin{verbatim}
-%   "GSPEC(\(x,y). ((x+y), (x < y) /\ (y < z)))"
-%\end{verbatim}\end{hol}
-%
-%\noindent where \ml{GSPEC} is defined by:
-%
-%\begin{hol}\begin{verbatim}
-%   |- !f. GSPEC f = SPEC(\x. ?y. x,T = f y)
-%\end{verbatim}\end{hol}
-%
-%\noindent and \ml{SPEC} abstracts a predicate to a set (it is the abstraction
-%bijection used in the definition of the type operator \ml{set}).
-%Other examples are:
-%
-%\begin{hol}\begin{verbatim}
-%   "{x+y+z | (x < y) /\ (y < z)}"
-%\end{verbatim}\end{hol}
-%
-%\noindent will parse to:
-%
-%\begin{hol}\begin{verbatim}
-%   "GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))"
-%\end{verbatim}\end{hol}
-%
-%\noindent and
-%
-%\begin{hol}\begin{verbatim}
-%   "{x+y+w | (x < y) /\ (y < z)}"
-%\end{verbatim}\end{hol}
-%
-%\noindent will parse to:
-%
-%\begin{hol}\begin{verbatim}
-%   "GSPEC(\(x,y). (x+(y+w), (x < y /\ y < z)))"
-%\end{verbatim}\end{hol}
-%
-%%\section{Multisets}
-%
 
-\subsection{Multisets (\theoryimp{bag})}
+\begin{hol}\begin{verbatim}
+   GSPEC(\(x,y). ((x+y), (x < y) /\ (y < z)))
+\end{verbatim}\end{hol}
 
-Multisets.
+\noindent where \ml{GSPEC} is characterized by:
+
+\begin{hol}\begin{verbatim}
+   GSECIFICATION |- !f v. (v IN GSPEC f) = ?x. (v,T) = f x
+\end{verbatim}\end{hol}
+%
+Other examples are:
+
+\begin{hol}\begin{verbatim}
+   {x+y+z | (x < y) /\ (y < z)}
+\end{verbatim}\end{hol}
+
+\noindent will parse to:
+
+\begin{hol}\begin{verbatim}
+   GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))
+\end{verbatim}\end{hol}
+
+\noindent and
+
+\begin{hol}\begin{verbatim}
+   {x+y+w | (x < y) /\ (y < z)}
+\end{verbatim}\end{hol}
+
+\noindent will parse to:
+
+\begin{hol}\begin{verbatim}
+   GSPEC(\(x,y). (x+y+w, (x < y /\ y < z)))
+\end{verbatim}\end{hol}
+
+\subsection{Multisets (\theoryimp{bag})}\label{multiset}
+
+Multisets (also known as \emph{bags}) are similar to sets, except that
+they allow repeat occurrences of an element. Whereas sets are
+represented by functions of type $\alpha\to\konst{bool}$, which signal
+the presence, or not, of an element, multisets are represented 
+by function of type $\alpha\to\konst{num}$, which give the
+multiplicity of each element in the multiset.
 
 \subsection{Relations (\theoryimp{relation})}\label{relation}
 
