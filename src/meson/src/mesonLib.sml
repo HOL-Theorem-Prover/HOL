@@ -43,8 +43,12 @@ fun allpairs f l1 l2 = itlist (union o C map l2 o f) l1 [];;
 fun thm_eq th1 th2 = let
   val (h1, c1) = dest_thm th1
   val (h2, c2) = dest_thm th2
+  fun all_aconv [] [] = true
+    | all_aconv [] _ = false
+    | all_aconv _ [] = false
+    | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
 in
-  ListPair.all (uncurry aconv) (h1, h2) andalso aconv c1 c2
+  all_aconv h1 h2 andalso aconv c1 c2
 end
 
 val the_true = T
