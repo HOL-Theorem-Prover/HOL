@@ -66,7 +66,7 @@ fun partial e f x =
 
 local val default_exn = ERR "trye" "original exn. not a HOL_ERR"
 in
-fun trye f x = 
+fun trye f x =
   f x handle e as HOL_ERR _ => raise e
            | Interrupt      => raise Interrupt
            | otherwise      => raise default_exn
@@ -180,7 +180,7 @@ fun end_itlist f =
 
 fun gather P L = itlist (fn x => fn y => if P x then x::y else y) L []
 
-val filter = gather;  
+val filter = gather;
 
 fun partition P alist =
    itlist (fn x => fn (L,R) => if P x then (x::L, R) else (L, x::R))
@@ -196,7 +196,7 @@ fun combine(l1,l2) = zip l1 l2
 val split = unzip
 
 fun mapfilter f list =
-  itlist(fn i => fn L => 
+  itlist(fn i => fn L =>
           (f i::L) handle Interrupt => raise Interrupt | _ => L) list [];
 
 fun flatten [] = []
@@ -210,7 +210,7 @@ fun front_last l =
   in fl [] l
   end;
 
-fun butlast l = 
+fun butlast l =
   fst (front_last l) handle HOL_ERR _ => raise ERR "butlast" "empty list";
 
 fun last []     = raise ERR "last" "empty list"
@@ -231,11 +231,11 @@ fun funpow n f x =
 
 fun repeat f =
  let exception LAST of 'a
-     fun loop x = 
-       let val y = (f x handle 
+     fun loop x =
+       let val y = (f x handle
                         Interrupt => raise Interrupt
                       | otherwise => raise (LAST x))
-       in loop y 
+       in loop y
        end
   in fn x => loop x handle (LAST y) => y
   end;
@@ -243,7 +243,7 @@ fun repeat f =
 fun enumerate i [] = []
   | enumerate i (h::t) = (i,h)::enumerate (i+1) t
 
-fun upto b t = 
+fun upto b t =
   let fun up i A = if i>t then A else up (i+1) (i::A)
   in List.rev (up b [])
   end;
@@ -252,7 +252,7 @@ fun list_compare cfn =
  let fun comp ([],[]) = EQUAL
        | comp ([], _) = LESS
        | comp (_, []) = GREATER
-       | comp (h1::t1, h2::t2) = 
+       | comp (h1::t1, h2::t2) =
           case cfn (h1,h2) of EQUAL => comp (t1,t2) | x => x
   in comp end;
 
@@ -335,9 +335,9 @@ fun (r1 |-> r2) = {redex=r1, residue=r2};
  * Sets as lists                                                             *
  *---------------------------------------------------------------------------*)
 
-fun mem i = 
- let fun itr [] = false 
-       | itr (a::rst) = i=a orelse itr rst 
+fun mem i =
+ let fun itr [] = false
+       | itr (a::rst) = i=a orelse itr rst
  in itr end;
 
 fun insert i L = if mem i L then L else i::L
@@ -362,7 +362,7 @@ fun intersect [] _ = []
 
 fun null_intersection _  [] = true
   | null_intersection [] _ = true
-  | null_intersection (a::rst) S = 
+  | null_intersection (a::rst) S =
       if mem a S then false else null_intersection rst S
 
 fun set_eq S1 S2 = (set_diff S1 S2 = []) andalso (set_diff S2 S1 = []);
@@ -429,13 +429,20 @@ val say = TextIO.print;
 
 (*---------------------------------------------------------------------------
    quote puts double quotes around a string. mlquote does this as well,
-   but also quotes all of the characters in the string so that the 
-   resulting string could be printed out in a way that would make it a 
+   but also quotes all of the characters in the string so that the
+   resulting string could be printed out in a way that would make it a
    valid ML lexeme  (e.g., newlines turn into \n)
  ---------------------------------------------------------------------------*)
 
 fun mlquote s = String.concat ["\"",String.toString s,"\""]
 fun quote s = String.concat ["\"",s,"\""]
+
+fun is_substring s1 s2 = let
+  val ss = Substring.all s2
+  val (pref, suff) = Substring.position s1 ss
+in
+  Substring.size suff >= String.size s1
+end
 
 fun prime s = s^"'";
 
@@ -464,9 +471,9 @@ fun words2 sep string =
 
 local open Char String
 in
-fun hash size = 
+fun hash size =
  fn s =>
-  let fun hsh(i,A) = hsh(i+1, (A*4 + ord(sub(s,i))) mod size) 
+  let fun hsh(i,A) = hsh(i+1, (A*4 + ord(sub(s,i))) mod size)
                      handle Subscript => A
   in hsh end
 end;
@@ -540,7 +547,7 @@ fun delta_apply f x = case f x of SAME => x | DIFF y => y;
 
 fun delta_map f =
  let fun map [] = SAME
-       | map (h::t) = 
+       | map (h::t) =
           case (f h, map t)
            of (SAME, SAME)       => SAME
             | (SAME, DIFF t')    => DIFF(h  :: t')
