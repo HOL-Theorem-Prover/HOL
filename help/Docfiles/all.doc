@@ -12,7 +12,7 @@
 \FAILURE
 
 If {P x0,...,P x(j-1}} all evaluate to {true} and {P xj} raises an
-exception, then {all P [x0,...,x(j-1),xj,...,xn]} raises an exception. 
+exception {e}, then {all P [x0,...,x(j-1),xj,...,xn]} raises {e}. 
 
 \EXAMPLE
 {

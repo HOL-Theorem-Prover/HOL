@@ -17,7 +17,7 @@ Since there are no elements of {[]}, {exists P []} always returns {false}.
 
 When searching for an element of {l} that {P} holds of, it may happen
 that an application of {P} to an element of {l} raises an
-exception. In that case, {exists P l} raises an exception.
+exception {e}. In that case, {exists P l} also raises {e}.
 
 \EXAMPLE
 {

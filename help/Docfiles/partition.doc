@@ -8,10 +8,9 @@
 
 \DESCRIBE
 
- An invocation {partition P l} returns a pair of lists {(l1,l2)}. {P}
-holds of each element of {l1}, and {P} does not hold of any element of
+ An invocation {partition P l} divides {l} into a pair of lists {(l1,l2)}.
+{P} holds of each element of {l1}, and {P} does not hold of any element of 
 {l2}.
-
 
 \FAILURE
 

@@ -1,6 +1,6 @@
 \DOC aconv
 
-\TYPE {aconv : (term -> term -> bool)}
+\TYPE {aconv : term -> term -> bool}
 
 \SYNOPSIS
 Tests for alpha-convertibility of terms.
