@@ -34,24 +34,18 @@
 structure ListConv1 :> ListConv1 =
 struct
 
-open HolKernel Parse boolLib Num_conv;
-open Rsyntax Prim_rec listSyntax
+open HolKernel Parse boolLib Num_conv Rsyntax Prim_rec listSyntax;
 infix ## |-> THEN THENL THENC;
 
 fun mk_list {els,ty} = listSyntax.mk_list(els,ty)
+
 fun LIST_CONV_ERR{function,message} =
    HOL_ERR{origin_structure="List_conv",
            origin_function = function,
            message = message};
 
- type term = Term.term
- type thm = Thm.thm
- type tactic = Abbrev.tactic
- type conv   = Abbrev.conv
-
-
 val % = Parse.Term;
-val alpha_ty = ==`:'a`==
+val alpha_ty = Type.alpha
 val bool_ty = Type.bool;
 
 val list_INDUCT = rich_listTheory.list_INDUCT
@@ -116,8 +110,7 @@ val LIST_INDUCT_TAC  = INDUCT_THEN list_INDUCT ASSUME_TAC;
 
 val SNOC_INDUCT_TAC =
   let val SNOC_INDUCT = rich_listTheory.SNOC_INDUCT
-  in
-   INDUCT_THEN SNOC_INDUCT ASSUME_TAC
+  in INDUCT_THEN SNOC_INDUCT ASSUME_TAC
   end;
 
 

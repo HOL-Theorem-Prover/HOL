@@ -32,10 +32,9 @@ val list_Axiom_old = listTheory.list_Axiom_old;
 
 val _ = new_theory "rich_list";
 
-val let_CONV = pairSyntax.let_CONV
-val new_specification = Rsyntax.new_specification
+val let_CONV = PairedLambda.let_CONV;
 
-(* abbreviation for list definitions - from src/3/list_conv.sml         *)
+
 fun new_list_rec_definition (name,tm) =
   new_recursive_definition {name=name,rec_axiom=list_Axiom,def=tm};
 
@@ -400,7 +399,7 @@ val FIRSTN =
         STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`firstn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[HD,TL])
    in
-    Rsyntax.new_specification{name = "FIRSTN",
+    new_specification{name = "FIRSTN",
                       sat_thm = thm,
                       consts =  [{const_name = "FIRSTN", fixity = Prefix}]
                      }
@@ -416,7 +415,7 @@ val BUTFIRSTN =
         STRIP_ASSUME_TAC thm2 THEN EXISTS_TAC (--`butfirstn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[HD,TL])
    in
-    Rsyntax.new_specification{name = "BUTFIRSTN",
+    new_specification{name = "BUTFIRSTN",
                       sat_thm = thm,
                       consts =  [{const_name = "BUTFIRSTN", fixity = Prefix}]
                      }
@@ -436,7 +435,7 @@ val SEG =
         ((BUTFIRSTN:num -> 'a list -> 'a list) k l)`--)
     THEN BETA_TAC THEN REWRITE_TAC[FIRSTN,BUTFIRSTN])
     in
-    Rsyntax.new_specification{name = "SEG",
+    new_specification{name = "SEG",
                       sat_thm = SEG_exists,
                       consts =  [{const_name = "SEG", fixity = Prefix}]
                      }
@@ -489,7 +488,7 @@ val LASTN =
         STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`lastn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[LAST,BUTLAST])
    in
-    Rsyntax.new_specification{name = "LASTN",
+    new_specification{name = "LASTN",
                       sat_thm = thm,
                       consts =  [{const_name = "LASTN", fixity = Prefix}]
                      }
@@ -505,7 +504,7 @@ val BUTLASTN =
         STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`butlastn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[BUTLAST])
     in
-    Rsyntax.new_specification{name = "BUTLASTN",
+    new_specification{name = "BUTLASTN",
                       sat_thm = thm,
                       consts =  [{const_name = "BUTLASTN", fixity = Prefix}]
                      }
@@ -564,7 +563,7 @@ val IS_PREFIX =
         THEN ASM_REWRITE_TAC[HD,TL,NULL_DEF]
         end)
    in
-    Rsyntax.new_specification
+    new_specification
         {consts = [{const_name = "IS_PREFIX", fixity = Prefix}],
          name = "IS_PREFIX",
          sat_thm = lemma
@@ -682,7 +681,7 @@ val IS_SUFFIX = let
         THEN ASM_REWRITE_TAC[BUTLAST,LAST,NULL_DEF,NOT_NULL_SNOC]
     end)
   in
-    Rsyntax.new_specification
+    new_specification
         {consts = [{const_name = "IS_SUFFIX", fixity = Prefix}],
          name = "IS_SUFFIX",
          sat_thm = lemma

@@ -1,10 +1,10 @@
 (* ===================================================================== *)
-(* FILE          : mk_list.sml                                           *)
+(* FILE          : listScript.sml                                        *)
 (* DESCRIPTION   : The logical definition of the list type operator. The *)
 (*                 type is defined and the following "axiomatization" is *)
 (*                 proven from the definition of the type:               *)
 (*                                                                       *)
-(*                    |- !x f. ?!fn. (fn [] = x) /\                      *)
+(*                    |- !x f. ?fn. (fn [] = x) /\                       *)
 (*                             (!h t. fn (h::t) = f (fn t) h t)          *)
 (*                                                                       *)
 (*                 Translated from hol88.                                *)
@@ -224,7 +224,7 @@ val MAP2 =
       THEN ASM_REWRITE_TAC [HD,TL]
       end)
   in
-      Rsyntax.new_specification{
+      new_specification{
         name = "MAP2", sat_thm = lemma,
         consts = [{const_name="MAP2", fixity=Prefix}]
       }
@@ -663,7 +663,7 @@ val ZIP =
     THEN ASM_REWRITE_TAC[pairTheory.UNCURRY_DEF,HD,TL]
      end)
     in
-    Rsyntax.new_specification
+    new_specification
         {consts = [{const_name = "ZIP", fixity = Prefix}],
          name = "ZIP",
          sat_thm = lemma
@@ -712,6 +712,7 @@ val UNZIP_ZIP = store_thm("UNZIP_ZIP",
 open simpLib boolSimps pairTheory;
 infix ++;
 val arith_ss = bool_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
+
 val ZIP_MAP = store_thm(
   "ZIP_MAP",
   ``!l1 l2 f1 f2.
