@@ -106,7 +106,7 @@ val EXP = new_recursive_definition
              ($EXP m (SUC n) = m * ($EXP m n))`--};
 
 val _ = set_fixity "EXP" (Infixr 700);
-val _ = add_infix("**", 700, HOLgrammars.RIGHT); 
+val _ = add_infix("**", 700, HOLgrammars.RIGHT);
 val _ = overload_on ("**", Term`$EXP`);
 
 val GREATER_DEF = new_infixr_definition
@@ -2983,7 +2983,7 @@ val EXP2_LT = store_thm
 val SUB_LESS = Q.store_thm
 ("SUB_LESS",
  `!m n. 0 < n /\ n <= m ==> m-n < m`,
- REPEAT STRIP_TAC THEN 
+ REPEAT STRIP_TAC THEN
    ``?p. m = p+n`` via METIS_TAC [LESS_EQ_EXISTS,ADD_SYM]
    THEN RW_TAC bool_ss [ADD_SUB]
    THEN METIS_TAC [LESS_ADD_NONZERO,NOT_ZERO_LT_ZERO]);
@@ -3011,66 +3011,206 @@ val SUB_MOD = Q.store_thm
 (*                if m<n then (a,m) else DIVMOD (m-n) n (a+1)                *)
 (*---------------------------------------------------------------------------*)
 
-val DIVMOD_DEF =
- let open relationTheory pairTheory
-     val M = Term `\f m n a. if n=0 then (0,0) else
-                             if m<n then (a,m) else
-                             f (m-n) n (a+1)`
-     val DM_DEF = new_definition("DIVMOD_PRIM_DEF", Term`DIVMOD = WFREC $< ^M`)
-     val th = MP (MP (ISPEC (Term`DIVMOD`) 
-                     (ISPEC (Term `$<`) (ISPEC M WFREC_COROLLARY))) DM_DEF)
-                 prim_recTheory.WF_LESS
-     val th1 = BETA_RULE (REWRITE_RULE [RESTRICT_DEF] (BETA_RULE th))
-     val th2 = SIMP_RULE bool_ss [SUB_LESS,NOT_LESS,NOT_ZERO_LT_ZERO] th1
- in
-   save_thm("DIVMOD_DEF",
-            BETA_RULE (Q.AP_THM (Q.AP_THM (Q.SPEC `m` th2) `n`) `a`))
- end;
+val findq_lemma = prove(
+  ``~(n = 0) /\ ~(m < 2 * n) ==> m - 2 * n < m - n``,
+  REPEAT STRIP_TAC THEN
+  POP_ASSUM (ASSUME_TAC o REWRITE_RULE [NOT_LESS])  THEN
+  SRW_TAC [][SUB_LEFT_LESS, SUB_RIGHT_ADD, SUB_RIGHT_LESS, ADD_CLAUSES,
+             SUB_LEFT_ADD]
+  THENL [
+    MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN Q.EXISTS_TAC `n` THEN
+    ASM_REWRITE_TAC [] THEN
+    CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_LEFT_1))) THEN
+    REWRITE_TAC [LT_MULT_RCANCEL] THEN
+    REWRITE_TAC [TWO,ONE,LESS_MONO_EQ,prim_recTheory.LESS_0] THEN
+    PROVE_TAC [NOT_ZERO_LT_ZERO],
 
-(*---------------------------------------------------------------------------*)
-(* DIVMOD_IND =                                                              *)
-(* |- !P.                                                                    *)
-(*      (!m n a. (~(n = 0) /\ ~(m < n) ==> P (m - n) n (a + 1)) ==> P m n a) *)
-(*      ==> !v v1 v2. P v v1 v2                                              *)
-(*---------------------------------------------------------------------------*)
+    Q.SUBGOAL_THEN `2 * n <= 1 * n` MP_TAC
+      THEN1 PROVE_TAC [LESS_EQ_TRANS, MULT_LEFT_1] THEN
+    ASM_REWRITE_TAC [LE_MULT_RCANCEL, TWO, ONE, LESS_EQ_MONO,
+                     NOT_SUC_LESS_EQ_0],
 
-local 
-  open relationTheory prim_recTheory
-  val th0 = MP (SPEC (Term `$<`) 
-               (INST_TYPE [alpha |-> Type`:num`] WF_INDUCTION_THM)) WF_LESS
-  val th1 = BETA_RULE (SPEC (Term `\m:num. !n:num. !a:num. P m n a`) th0)
+    Q_TAC SUFF_TAC `n < 2 * n` THEN1
+          PROVE_TAC [ADD_COMM, LT_ADD_LCANCEL] THEN
+    Q_TAC SUFF_TAC `1 * n < 2 * n` THEN1 SRW_TAC [][MULT_CLAUSES] THEN
+    SRW_TAC [][LT_MULT_RCANCEL] THENL [
+      PROVE_TAC [NOT_ZERO_LT_ZERO],
+      SRW_TAC [][ONE,TWO, LESS_MONO_EQ, prim_recTheory.LESS_0]
+    ],
+
+    PROVE_TAC [NOT_LESS_EQUAL]
+  ]);
+
+val findq_thm = let
+  open pairTheory relationTheory
+  val M = ``\f (a,m,n). if n = 0 then a
+                        else let d = 2 * n
+                             in
+                               if m < d then a else f (2 * a, m, d)``
+  val measure = ``measure (\ (a:num,m:num,n:num). m - n)``
+  val defn = new_definition("findq_def", ``findq = WFREC ^measure ^M``)
+  val th0 = MP (MATCH_MP WFREC_COROLLARY defn)
+               (ISPEC (rand measure) prim_recTheory.WF_measure)
+  val lemma = prove(
+    ``~(n = 0) ==> ((let d = 2 * n in if m < d then x
+                                      else if m - d < m - n then f d else z) =
+                    (let d = 2 * n in if m < d then x else f d))``,
+    LET_ELIM_TAC THEN Q.ASM_CASES_TAC `m < d` THEN ASM_REWRITE_TAC [] THEN
+    Q.UNABBREV_TAC `d` THEN SRW_TAC [][findq_lemma])
 in
-val DIVMOD_IND = Q.store_thm
-("DIVMOD_IND",
- `!P. (!m n a. (~(n = 0) /\ ~(m < n) ==> P (m - n) n (a + 1)) ==> P m n a) 
-      ==> !v v1 v2. P v v1 v2`,
- GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC th1
-   THEN GEN_TAC THEN DISCH_THEN 
-     (fn th => REPEAT GEN_TAC THEN POP_ASSUM MATCH_MP_TAC THEN ASSUME_TAC th)
-   THEN DISCH_THEN (fn th => POP_ASSUM MATCH_MP_TAC THEN ASSUME_TAC th)
-   THEN METIS_TAC [SUB_LESS,NOT_LESS,NOT_ZERO_LT_ZERO])
-end;
+  save_thm("findq_thm",
+           SIMP_RULE (srw_ss()) [RESTRICT_DEF, prim_recTheory.measure_thm,
+                                 lemma]
+                     (Q.SPEC `(a,m,n)` th0))
+end
+
+val findq_eq_0 = store_thm(
+  "findq_eq_0",
+  ``!a m n. (findq (a, m, n) = 0) = (a = 0)``,
+  REPEAT GEN_TAC THEN
+  Q_TAC SUFF_TAC
+        `!x a m n. (x = m - n) ==> ((findq (a, m, n) = 0) = (a = 0))` THEN1
+        SRW_TAC [][] THEN
+  HO_MATCH_MP_TAC COMPLETE_INDUCTION THEN REPEAT STRIP_TAC THEN
+  ONCE_REWRITE_TAC [findq_thm] THEN SRW_TAC [][LET_THM] THEN
+  RULE_ASSUM_TAC (SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) []) THEN
+  FIRST_X_ASSUM (Q.SPECL_THEN [`2 * a`, `m`, `2 * n`] MP_TAC) THEN
+  SRW_TAC [][findq_lemma, MULT_EQ_0, TWO, ONE, NOT_SUC]);
+
+val findq_divisor = store_thm(
+  "findq_divisor",
+  ``n <= m ==> findq (a, m, n) * n <= a * m``,
+  Q_TAC SUFF_TAC
+        `!x a m n. (x = m - n) /\ n <= m ==>
+                   findq (a, m, n) * n <= a * m` THEN1
+        SRW_TAC [][] THEN
+  HO_MATCH_MP_TAC COMPLETE_INDUCTION THEN SRW_TAC [boolSimps.DNF_ss][] THEN
+  ONCE_REWRITE_TAC [findq_thm] THEN
+  SRW_TAC [][LET_THM, MULT_CLAUSES, ZERO_LESS_EQ, LE_MULT_LCANCEL,
+             LESS_IMP_LESS_OR_EQ] THEN
+  FIRST_X_ASSUM (Q.SPECL_THEN [`2 * a`, `m`, `2 * n`] MP_TAC) THEN
+  ASM_SIMP_TAC (srw_ss())[findq_lemma, GSYM NOT_LESS] THEN
+  Q.SUBGOAL_THEN `findq (2 * a,m,2 * n) * (2 * n) =
+                  2 * (findq (2 * a, m, 2 * n) * n)` SUBST_ALL_TAC THEN1
+    SRW_TAC [][AC MULT_COMM MULT_ASSOC] THEN
+  Q.SUBGOAL_THEN `2 * a * m = 2 * (a * m)` SUBST_ALL_TAC THEN1
+    SRW_TAC [][AC MULT_COMM MULT_ASSOC] THEN
+  SRW_TAC [][LT_MULT_LCANCEL, TWO, ONE, prim_recTheory.LESS_0]);
+
+val divmod_lemma = prove(
+  ``~(n = 0) /\ ~(m < n) ==> m - n * findq (1, m, n) < m``,
+  SRW_TAC [][NOT_LESS, SUB_RIGHT_LESS, NOT_ZERO_LT_ZERO] THENL [
+    ONCE_REWRITE_TAC [ADD_COMM] THEN MATCH_MP_TAC LESS_ADD_NONZERO THEN
+    SRW_TAC [][MULT_EQ_0, ONE, NOT_SUC, findq_eq_0] THEN
+    SRW_TAC [][NOT_ZERO_LT_ZERO],
+    PROVE_TAC [LESS_LESS_EQ_TRANS]
+  ]);
+
+val divmod_thm = let
+  open relationTheory pairTheory
+  val M = ``\f (a,m,n). if n = 0 then (0,0)
+                        else if m < n then (a, m)
+                        else let q = findq (1, m, n)
+                             in
+                               f (a + q, m - n * q, n)``
+  val measure = ``measure ((FST o SND) : num#num#num -> num)``
+  val defn = new_definition("divmod_def", ``divmod = WFREC ^measure ^M``)
+  val th0 = REWRITE_RULE [prim_recTheory.WF_measure]
+                         (MATCH_MP WFREC_COROLLARY defn)
+  val th1 = SIMP_RULE (srw_ss()) [RESTRICT_DEF, prim_recTheory.measure_thm]
+                      (Q.SPEC `(a,m,n)` th0)
+  val lemma = prove(
+    ``~(n = 0) /\ ~(m < n) ==>
+      ((let q = findq (1,m,n) in if m - n * q < m then f q else z) =
+       (let q = findq (1,m,n) in f q))``,
+    SRW_TAC [][LET_THM, divmod_lemma])
+in
+  save_thm("divmod_thm", SIMP_RULE (srw_ss()) [lemma] th1)
+end
 
 (*---------------------------------------------------------------------------*)
 (* Correctness of DIVMOD                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val DIVMOD_THM = Q.store_thm
-("DIVMOD_THM",
- `!m n a. 0<n ==> (DIVMOD m n a = (a + (m DIV n), m MOD n))`,
- HO_MATCH_MP_TAC DIVMOD_IND 
-   THEN REPEAT STRIP_TAC 
-   THEN PURE_ONCE_REWRITE_TAC [DIVMOD_DEF]
-   THEN RW_TAC bool_ss [] THENL
-   [METIS_TAC [LESS_REFL],
+val core_divmod_sub_lemma = prove(
+  ``0 < n /\ n * q <= m ==>
+    (m - n * q = if m < (q + 1) * n then m MOD n
+                 else m DIV n * n + m MOD n - q * n)``,
+  REPEAT STRIP_TAC THEN COND_CASES_TAC THENL [
+    ASM_SIMP_TAC (srw_ss()) [SUB_RIGHT_EQ] THEN DISJ1_TAC THEN
+    Q_TAC SUFF_TAC `m DIV n = q` THEN1 PROVE_TAC [DIVISION, MULT_COMM] THEN
+    MATCH_MP_TAC DIV_UNIQUE THEN
+    Q.EXISTS_TAC `m - n * q` THEN
+    SRW_TAC [][SUB_LEFT_ADD] THENL [
+      PROVE_TAC [LESS_EQUAL_ANTISYM, MULT_COMM],
+      METIS_TAC [ADD_COMM, MULT_COMM, ADD_SUB],
+      SRW_TAC [][SUB_RIGHT_LESS] THEN
+      FULL_SIMP_TAC (srw_ss()) [RIGHT_ADD_DISTRIB, MULT_CLAUSES,
+                                AC MULT_COMM MULT_ASSOC,
+                                AC ADD_COMM ADD_ASSOC]
+    ],
+
+    ASM_SIMP_TAC (srw_ss()) [GSYM DIVISION] THEN
+    SIMP_TAC (srw_ss()) [AC MULT_COMM MULT_ASSOC]
+  ]);
+
+val DIV_SUB = store_thm(
+  "DIV_SUB",
+  ``0 < n /\ n * q <= m ==> ((m - n * q) DIV n = m DIV n - q)``,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `m MOD n` THEN
+  Q.SUBGOAL_THEN `~(n = 0)` ASSUME_TAC THEN1 SRW_TAC [][NOT_ZERO_LT_ZERO] THEN
+  ASM_SIMP_TAC (srw_ss()) [DIVISION, RIGHT_SUB_DISTRIB, SUB_RIGHT_ADD,
+                           LE_MULT_RCANCEL, DIV_LE_X, core_divmod_sub_lemma]);
+
+val MOD_SUB = store_thm(
+  "MOD_SUB",
+  ``0 < n /\ n * q <= m ==> ((m - n * q) MOD n = m MOD n)``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC MOD_UNIQUE THEN
+  Q.EXISTS_TAC `m DIV n - q` THEN
+  Q.SUBGOAL_THEN `~(n = 0)` ASSUME_TAC THEN1 SRW_TAC [][NOT_ZERO_LT_ZERO] THEN
+  ASM_SIMP_TAC (srw_ss()) [RIGHT_SUB_DISTRIB, DIVISION, SUB_RIGHT_ADD,
+                           LE_MULT_RCANCEL, DIV_LE_X, core_divmod_sub_lemma]);
+
+
+val divmod_correct = Q.store_thm (
+  "divmod_correct",
+  `!m n a. 0<n ==> (divmod (a,m,n) = (a + (m DIV n), m MOD n))`,
+  HO_MATCH_MP_TAC COMPLETE_INDUCTION THEN
+  SRW_TAC [DNF_ss][AND_IMP_INTRO] THEN
+  PURE_ONCE_REWRITE_TAC [divmod_thm] THEN
+  RW_TAC bool_ss [] THENL [
+    METIS_TAC [LESS_REFL],
     METIS_TAC [LESS_REFL],
     METIS_TAC [LESS_DIV_EQ_ZERO,ADD_CLAUSES],
     METIS_TAC [LESS_MOD,ADD_CLAUSES],
-    ``?p. m = p+n`` via METIS_TAC [NOT_LESS,LESS_EQ_EXISTS,ADD_SYM]
-    THEN RW_TAC bool_ss [GSYM ADD_ASSOC,EQ_ADD_LCANCEL,ADD_SUB]
-    THEN RW_TAC bool_ss [DIVMOD_ID,ADD_DIV_RWT]
-    THEN METIS_TAC [ADD_SYM],
-    METIS_TAC [SUB_MOD,NOT_LESS]]);
+
+    LET_ELIM_TAC THEN
+    FIRST_X_ASSUM (Q.SPECL_THEN [`m - n * q`, `n`, `a + q`] MP_TAC) THEN
+    ASM_SIMP_TAC (srw_ss()) [SUB_RIGHT_LESS] THEN
+    Q.SUBGOAL_THEN `m < n * q + m` ASSUME_TAC THENL [
+      CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [ADD_COMM])) THEN
+      MATCH_MP_TAC LESS_ADD_NONZERO THEN
+      SRW_TAC [][MULT_EQ_0, Abbr`q`, findq_eq_0, ONE, NOT_SUC],
+      ALL_TAC
+    ] THEN ASM_REWRITE_TAC [] THEN
+    Q.SUBGOAL_THEN `0 < m` ASSUME_TAC THEN1
+      PROVE_TAC [NOT_LESS, LESS_LESS_EQ_TRANS] THEN
+    ASM_REWRITE_TAC [] THEN
+    DISCH_THEN SUBST_ALL_TAC THEN
+    Q.SUBGOAL_THEN `n * q <= m` ASSUME_TAC THEN1
+      METIS_TAC [findq_divisor, NOT_LESS, MULT_LEFT_1, MULT_COMM] THEN
+    Q.SUBGOAL_THEN `q <= m DIV n` ASSUME_TAC THEN1
+      SRW_TAC [][X_LE_DIV, MULT_COMM] THEN
+    SRW_TAC [][] THENL [
+      ONCE_REWRITE_TAC [GSYM ADD_ASSOC] THEN
+      REWRITE_TAC [EQ_ADD_LCANCEL] THEN
+      ASM_SIMP_TAC (srw_ss()) [DIV_SUB] THEN
+      SRW_TAC [][SUB_LEFT_ADD] THEN1 METIS_TAC [LESS_EQUAL_ANTISYM] THEN
+      METIS_TAC [ADD_SUB, ADD_COMM],
+      ASM_SIMP_TAC (srw_ss()) [MOD_SUB]
+    ]
+  ]);
 
 (*---------------------------------------------------------------------------*)
 (* For calculation                                                           *)
@@ -3078,9 +3218,9 @@ val DIVMOD_THM = Q.store_thm
 
 val DIVMOD_CALC = Q.store_thm
 ("DIVMOD_CALC",
- `(!m n. 0<n ==> (m DIV n = FST(DIVMOD m n 0))) /\
-  (!m n. 0<n ==> (m MOD n = SND(DIVMOD m n 0)))`,
- METIS_TAC [DIVMOD_THM,ADD_CLAUSES,pairTheory.FST,pairTheory.SND]);
+ `(!m n. 0<n ==> (m DIV n = FST(divmod(0, m, n)))) /\
+  (!m n. 0<n ==> (m MOD n = SND(divmod(0, m, n))))`,
+ SRW_TAC [][divmod_correct,ADD_CLAUSES]);
 
 
 val _ = adjoin_to_theory

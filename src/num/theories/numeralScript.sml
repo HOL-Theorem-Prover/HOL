@@ -129,19 +129,19 @@ val numeral_add = store_thm(
   "numeral_add",
   Term
   `!n m.
-   (iZ (ZERO + n) = n) /\ 
+   (iZ (ZERO + n) = n) /\
    (iZ (n + ZERO) = n) /\
    (iZ (BIT1 n + BIT1 m) = BIT2 (iZ (n + m))) /\
    (iZ (BIT1 n + BIT2 m) = BIT1 (SUC (n + m))) /\
    (iZ (BIT2 n + BIT1 m) = BIT1 (SUC (n + m))) /\
    (iZ (BIT2 n + BIT2 m) = BIT2 (SUC (n + m))) /\
-   (SUC (ZERO + n) = SUC n) /\ 
+   (SUC (ZERO + n) = SUC n) /\
    (SUC (n + ZERO) = SUC n) /\
    (SUC (BIT1 n + BIT1 m) = BIT1 (SUC (n + m))) /\
    (SUC (BIT1 n + BIT2 m) = BIT2 (SUC (n + m))) /\
    (SUC (BIT2 n + BIT1 m) = BIT2 (SUC (n + m))) /\
    (SUC (BIT2 n + BIT2 m) = BIT1 (iiSUC (n + m))) /\
-   (iiSUC (ZERO + n) = iiSUC n) /\ 
+   (iiSUC (ZERO + n) = iiSUC n) /\
    (iiSUC (n + ZERO) = iiSUC n) /\
    (iiSUC (BIT1 n + BIT1 m) = BIT2 (SUC (n + m))) /\
    (iiSUC (BIT1 n + BIT2 m) = BIT1 (iiSUC (n + m))) /\
@@ -169,9 +169,9 @@ val _ = print "Developing numeral rewrites for relations\n"
 val numeral_eq = store_thm(
   "numeral_eq",
   Term`!n m.
-    ((ZERO = BIT1 n) = F) /\ 
+    ((ZERO = BIT1 n) = F) /\
     ((BIT1 n = ZERO) = F) /\
-    ((ZERO = BIT2 n) = F) /\ 
+    ((ZERO = BIT2 n) = F) /\
     ((BIT2 n = ZERO) = F) /\
     ((BIT1 n = BIT2 m) = F) /\
     ((BIT2 n = BIT1 m) = F) /\
@@ -221,7 +221,7 @@ val numeral_lt = store_thm(
   "numeral_lt",
   Term
   `!n m.
-    (ZERO < BIT1 n = T) /\ 
+    (ZERO < BIT1 n = T) /\
     (ZERO < BIT2 n = T) /\
     (n < ZERO = F) /\
     (BIT1 n < BIT1 m = n < m) /\
@@ -236,7 +236,7 @@ val numeral_lt = store_thm(
 val numeral_lte = store_thm(
   "numeral_lte", Term
   `!n m. (ZERO <= n = T) /\
-         (BIT1 n <= ZERO = F) /\ 
+         (BIT1 n <= ZERO = F) /\
          (BIT2 n <= ZERO = F) /\
          (BIT1 n <= BIT1 m = n <= m) /\
          (BIT1 n <= BIT2 m = n <= m) /\
@@ -415,11 +415,11 @@ val iSUB_DEF = new_recursive_definition {
   rec_axiom = bit_initiality};
 
 val bit_induction = save_thm
-  ("bit_induction", 
+  ("bit_induction",
    Prim_rec.prove_induction_thm old_style_bit_initiality);
 
 val iSUB_ZERO = prove(
-  Term`(!n b. iSUB b ZERO n = ZERO) /\ 
+  Term`(!n b. iSUB b ZERO n = ZERO) /\
        (!n.   iSUB T n ZERO = n)`,
   SIMP_TAC bool_ss [iSUB_DEF] THEN GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `n` bit_cases) THEN
@@ -435,7 +435,7 @@ val iSUB_ZERO = prove(
 val iSUB_THM = store_thm(
   "iSUB_THM",
   Term
-  `!b n m. (iSUB b ZERO x = ZERO) /\ 
+  `!b n m. (iSUB b ZERO x = ZERO) /\
            (iSUB T n ZERO = n) /\
            (iSUB F (BIT1 n) ZERO = iDUB n) /\
            (iSUB T (BIT1 n) (BIT1 m) = iDUB (iSUB T n m)) /\
@@ -558,7 +558,7 @@ val _ = print "Developing numeral rewrites for multiplication\n"
 val numeral_mult = store_thm(
   "numeral_mult", Term
   `!n m.
-     (ZERO * n = ZERO) /\ 
+     (ZERO * n = ZERO) /\
      (n * ZERO = ZERO) /\
      (BIT1 n * m = iZ (iDUB (n * m) + m)) /\
      (BIT2 n * m = iDUB (iZ (n * m + m)))`,
@@ -641,7 +641,7 @@ val numeral_MAX = store_thm(
 (* Filter out the definitions and theorems needed to generate ML.            *)
 (*---------------------------------------------------------------------------*)
 
-val addition_thms = 
+val addition_thms =
  let val (a::b::c::d::e::f::rst) = CONJUNCTS(SPEC_ALL numeral_add)
  in REWRITE_RULE [iZ] (LIST_CONJ [a,b,c,d,e,f])
  end;
@@ -649,22 +649,22 @@ val addition_thms =
 val T_INTRO = Q.prove(`!x. x = (x = T)`, REWRITE_TAC []);
 val F_INTRO = Q.prove(`!x. ~x = (x = F)`, REWRITE_TAC []);
 
-val (even,odd) = 
+val (even,odd) =
   let val [a,b,c,d,e,f] = CONJUNCTS (SPEC_ALL numeral_evenodd)
       val [a',b',f'] = map (PURE_ONCE_REWRITE_RULE [T_INTRO]) [a,b,f]
       val [c',d',e'] = map (PURE_REWRITE_RULE [F_INTRO]) [c,d,e]
-  in 
+  in
      (LIST_CONJ [a',b',c'], LIST_CONJ [d',e',f'])
   end;
 
 val _ = ConstMapML.prim_insert(Term`0n`,("num","ZERO",Type`:num`));
 
-val _ = 
+val _ =
   let open Drop arithmeticTheory whileTheory pairSyntax
-  in 
+  in
     exportML("num",
-     DATATYPE (ParseDatatype.parse `num = ZERO 
-                                        | BIT1 of num 
+     DATATYPE (ParseDatatype.parse `num = ZERO
+                                        | BIT1 of num
                                         | BIT2 of num`)
       ::
      DEFN NUMERAL_DEF ::
@@ -674,9 +674,9 @@ val _ =
           numeral_pre,iDUB_removal,iSUB_THM, numeral_sub,
           numeral_mult,iSQR,numeral_exp,even,odd,
           numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
-          WHILE,LEAST_DEF,DIVMOD_DEF])
+          WHILE,LEAST_DEF,findq_thm,divmod_thm])
   end;
-     
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME (fn ppstrm =>
@@ -687,5 +687,5 @@ val _ = adjoin_to_theory
      S "          (\"num\",\"ZERO\",Type.mk_type(\"num\",[])));";
      NL(); NL()
   end)};
-         
+
 val _ = export_theory();
