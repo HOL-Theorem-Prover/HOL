@@ -24,17 +24,24 @@ val _ = new_theory "integer";
 
 (* interactive mode
   app load ["jrhUtils", "EquivType", "liteLib", "QLib",
-     "SingleStep", "BasicProvers", "boolSimps", "pairSimps",
-     "numSimps", "numLib"];
+            "SingleStep", "BasicProvers", "boolSimps", "pairSimps",
+            "numSimps", "numLib", "metisLib"];
 *)
 open jrhUtils EquivType liteLib
      arithmeticTheory prim_recTheory numTheory
-     simpLib numLib boolTheory liteLib metisLib;
-
-open BasicProvers
+     simpLib numLib boolTheory liteLib metisLib BasicProvers;
 
 
 val int_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss ++ pairSimps.PAIR_ss;
+
+(*---------------------------------------------------------------------------*)
+(* Following incantation needed since pairLib is now loaded, and that adds   *)
+(* pairTheory.pair_rws to the implicit set of rewrites for REWRITE_TAC.      *)
+(* Usually that is good, but for some of the proofs below, that makes things *)
+(* worse.                                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Rewrite.set_implicit_rewrites Rewrite.bool_rewrites;
 
 (*--------------------------------------------------------------------------*)
 (* Required lemmas about the natural numbers - mostly to drive CANCEL_TAC   *)
@@ -287,7 +294,6 @@ val TINT_MUL_LID =
      REPEAT GEN_PAIR_TAC
      THEN REWRITE_TAC[tint_mul,tint_1,tint_eq]
      THEN ARITH_TAC)
-
 
 val TINT_ADD_LINV =
     store_thm

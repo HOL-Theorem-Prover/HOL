@@ -180,7 +180,7 @@ val one_tm  = term_of_int Arbint.one
 (* For support of ML execution                                               *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Drop.is_int_literal_hook := is_int_literal;
-val _ = Drop.dest_int_literal_hook := int_of_term;
+val _ = EmitML.is_int_literal_hook := is_int_literal;
+val _ = EmitML.dest_int_literal_hook := int_of_term;
 
 end
