@@ -1,6 +1,6 @@
-(* app load ["bossLib","abbrevUtil"]; *)
-open HolKernel boolLib abbrevUtil Q bossLib Parse simpLib
-     numLib pairTheory numeralTheory arithmeticTheory prim_recTheory;
+(* load "abbrevUtil"; *)
+open HolKernel boolLib bossLib Q simpLib numLib
+     arithmeticTheory prim_recTheory abbrevUtil;
 
 (* -------------------------------------------------------- *)
 
@@ -37,6 +37,12 @@ val BITWISE_def =
          BITWISE n op x y + SBIT (op (BIT n x) (BIT n y)) n)`;
 
 (* -------------------------------------------------------- *)
+(* -------------------------------------------------------- *)
+
+val DIVMOD_2EXP = save_thm("DIVMOD_2EXP",
+  REWRITE_RULE [GSYM DIV_2EXP_def,GSYM MOD_2EXP_def] DIVMOD_2EXP_def
+);
+
 (* -------------------------------------------------------- *)
 
 val MOD1 = MOD_1
@@ -674,12 +680,9 @@ val BITWISE_BITS = store_thm("BITWISE_BITS",
 
 (* -------------------------------------------------------- *)
 
-(* |- !n h. SLICE h 0 n = BITS h 0 n *)
-val SLICE_COR = (GEN_ALL o SIMP_RULE arith_ss [] o SPECL [`n`,`h`,`0`]) SLICE_THM;
- 
 val BITS_SUC2 = prove(
   `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
-  A_RW_TAC [GSYM SLICE_COR,SLICE_COMP_THM]
+  A_RW_TAC [GSYM SLICE_ZERO_THM,SLICE_COMP_THM]
 );
  
 val lem = prove(

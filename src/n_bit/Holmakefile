@@ -5,7 +5,7 @@ all: mkword.exe
 wordFunctor.uo: wordFunctor.sml selectUtil.uo bitsTheory.uo
 	HOLMOSMLC -c -toplevel Overlay.ui wordFunctor.sml
 
-wordFunctorLib.uo: wordFunctorLib.sml bitsTheory.uo
+wordFunctorLib.uo: wordFunctorLib.sml bitsTheory.uo numeral_bitsTheory.uo
 	HOLMOSMLC -c -toplevel Overlay.ui wordFunctorLib.sml
 
 mkword.uo: wordFunctor.uo mkword.sml

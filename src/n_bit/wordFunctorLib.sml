@@ -8,17 +8,16 @@ functor wordFunctorLib (structure wordTheory : sig
   val word_T : Thm.thm
   val MOD_WL_EVAL : Thm.thm
   val MSBn_def : Thm.thm
-  val ADD_EVAL2 : Thm.thm
+  val ADD_EVAL : Thm.thm
   val MUL_EVAL2 : Thm.thm
   val ONE_COMP_EVAL2 : Thm.thm
   val TWO_COMP_EVAL2 : Thm.thm
   val word_sub : Thm.thm
-  val BITWISE_EVAL2 : Thm.thm
   val AND_EVAL2 : Thm.thm
   val OR_EVAL2 : Thm.thm
   val EOR_EVAL2 : Thm.thm
-  val word_lsl : Thm.thm
-  val LSR_EVAL : Thm.thm
+  val LSL_EVAL : Thm.thm
+  val LSR_THM : Thm.thm
   val ASR_THM : Thm.thm
   val ROR_THM : Thm.thm
   val RRX_EVAL2 : Thm.thm
@@ -48,8 +47,8 @@ end) : sig
 end =
 struct
 
-open HolKernel boolLib computeLib bossLib
-     simpLib numLib bitsTheory wordTheory;
+open HolKernel boolLib bossLib computeLib
+     arithmeticTheory bitsTheory numeral_bitsTheory wordTheory;
 
 (* -------------------------------------------------------- *)
 
@@ -64,29 +63,26 @@ val sn = Arbnum.toString wl;
 fun word_compset () =
   let val rws = reduceLib.num_compset()
       val _ = add_thms
-     [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
+     [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF, LET_THM,
+      LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
       LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
       THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
       MOD_WL_EVAL, w2n_EVAL, n2w_11,
-      ADD_EVAL2, MUL_EVAL2, word_sub,
-      REDUCE_RULE ONE_COMP_EVAL2,
-      REDUCE_RULE TWO_COMP_EVAL2,
-      BITWISE_EVAL2,
+      ADD_EVAL, MUL_EVAL2, word_sub,
+      ONE_COMP_EVAL2, TWO_COMP_EVAL2,
       AND_EVAL2, OR_EVAL2, EOR_EVAL2,
-      word_lsl, LSR_EVAL, ASR_THM, ROR_THM,
-      REDUCE_RULE RRX_EVAL2,
+      LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL2,
       WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
       MSB_EVAL2, LSB_EVAL2,
-      numeralTheory.numeral_funpow,
-      pairTheory.UNCURRY_DEF,
-      TIMES_2EXP_def, DIV_2EXP_def, MOD_2EXP_def, DIVMOD_2EXP_def,
-      MSBn_def, SBIT_def, BITS_THM, BIT_def, SLICE_def, LET_THM
+      NUMERAL_BITWISE, NUMERAL_DIV2,
+      DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP, TIMES_2EXP_def,
+      MSBn_def, LSBn_def, BITV_def, SBIT_def, BITS_def, BIT_def, SLICE_def
       ] rws
 in
    rws
 end;
 
-val WORD_CONV = CBV_CONV (word_compset());
+val WORD_CONV = WEAK_CBV_CONV (word_compset());
 val WORD_RULE = CONV_RULE WORD_CONV;
 val WORD_TAC = CONV_TAC WORD_CONV;
 

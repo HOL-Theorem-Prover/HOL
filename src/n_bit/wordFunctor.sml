@@ -970,6 +970,17 @@ val TWO_COMP_EVAL = store_thm("TWO_COMP_EVAL",
   `~(n2w a) = n2w (TWO_COMP a)`,
   SELECT_WORD_TAC word_2comp_def TWO_COMP_WELLDEF);
 
+val WORD_SUB_LT_EQ = store_thm("WORD_SUB_LT_EQ",
+  `!a b. b <= a /\ LT_WL b ==> (n2w a - n2w b = n2w (a - b))`,
+  RW_TAC bool_ss [word_sub_def,TWO_COMP_EVAL,TWO_COMP_def,ADD_EVAL,SUB_LEFT_ADD,MOD_WL_IDEM]
+    THEN FULL_SIMP_TAC arith_ss [LT_WL_def,n2w_11]
+    THEN ONCE_REWRITE_TAC [ADD_COMM]
+    THEN ASM_SIMP_TAC bool_ss [LESS_EQ_ADD_SUB]
+    THEN ONCE_REWRITE_TAC [MOD_ADD]
+    THEN REWRITE_TAC [MOD_WL_IDEM2,ADD,
+           SIMP_CONV bool_ss [ZERO_LT_TWOEXP,DIVMOD_ID,MOD_WL_def] (Term `MOD_WL (2 ** WL)`)]
+);
+
 val LSR_ONE_EVAL = store_thm("LSR_ONE_EVAL",
   `word_lsr1 (n2w a) = n2w (LSR_ONE a)`,
   SELECT_WORD_TAC word_lsr1_def LSR_ONE_WELLDEF);
@@ -1081,6 +1092,11 @@ val LSL_LIMIT = store_thm("LSL_LIMIT",
     THEN RULE_ASSUM_TAC (REWRITE_RULE [GSYM ADD1,GSYM WL_def] o SIMP_RULE arith_ss [])
     THEN ASM_A_SIMP_TAC [(REWRITE_RULE [ADD_0,SYM word_0] o SPECL [`2 EXP p`,`0`]) n2w_TIMES,
                          EXP_ADD,WORD_MULT_CLAUSES]
+);
+
+val LSL_EVAL = store_thm("LSL_EVAL",
+  `!w n. w << n = if HB < n then n2w 0 else w * n2w (2 ** n)`,
+  RW_TAC bool_ss [LSL_LIMIT,GSYM word_0] THEN REWRITE_TAC [word_lsl_def]
 );
 
 (* -------------------------------------------------------- *)
@@ -1459,7 +1475,7 @@ val ROR_word_T = store_thm("ROR_word_T",
 (* -------------------------------------------------------- *)
 
 val MOD_WL_EVAL = save_thm("MOD_WL_EVAL",
-  GEN_ALL (SIMP_RULE arith_ss [THE_WL] MOD_WL_def)
+  REWRITE_RULE [THE_WL,GSYM MOD_2EXP_def] MOD_WL_def
 );
 
 val ADD_EVAL2 = save_thm("ADD_EVAL2",
@@ -1471,12 +1487,11 @@ val MUL_EVAL2 = save_thm("MUL_EVAL2",
 );
 
 val ONE_COMP_EVAL2 = save_thm("ONE_COMP_EVAL2",
-  GEN_ALL (REWRITE_RULE [ONE_COMP_def,THE_WL] ONE_COMP_EVAL)
+  GEN_ALL (SIMP_RULE arith_ss [ONE_COMP_def,THE_WL] ONE_COMP_EVAL)
 );
 
 val TWO_COMP_EVAL2 = save_thm("TWO_COMP_EVAL2",
-  GEN_ALL (REWRITE_RULE [TWO_COMP_def,THE_WL]
-     (ONCE_REWRITE_RULE [GSYM (SPEC `TWO_COMP a` MOD_WL_ELIM)] TWO_COMP_EVAL))
+  GEN_ALL (SIMP_RULE arith_ss [TWO_COMP_def,THE_WL] TWO_COMP_EVAL)
 );
 
 val LSR_ONE_EVAL2 = save_thm("LSR_ONE_EVAL2",
@@ -1492,7 +1507,7 @@ val ROR_ONE_EVAL2 = save_thm("ROR_ONE_EVAL2",
 );
 
 val RRX_EVAL2 = save_thm("RRX_EVAL2",
-  GEN_ALL (REWRITE_RULE [RRXn_def,LSR_ONE_def,HB_def] RRX_EVAL)
+  GEN_ALL (REWRITE_RULE [GSYM DIV2_def,RRXn_def,LSR_ONE_def,HB_def] RRX_EVAL)
 );
 
 val LSB_EVAL2 = save_thm("LSB_EVAL2",GEN_ALL (REWRITE_RULE [LSB_ODD] LSB_EVAL));
@@ -1501,20 +1516,6 @@ val MSB_EVAL2 = save_thm("MSB_EVAL2",GEN_ALL (REWRITE_RULE [MSBn_def,HB_def] MSB
 val OR_EVAL2  = save_thm("OR_EVAL2",GEN_ALL (SIMP_RULE bool_ss [OR_def,THE_WL] OR_EVAL));
 val AND_EVAL2 = save_thm("AND_EVAL2",GEN_ALL (SIMP_RULE bool_ss [AND_def,THE_WL] AND_EVAL));
 val EOR_EVAL2 = save_thm("EOR_EVAL2",GEN_ALL (SIMP_RULE bool_ss [EOR_def,THE_WL] EOR_EVAL));
-
-(* -------------------------------------------------------- *)
-
-val BITWISE_EVAL2 = store_thm("BITWISE_EVAL2",
-  `!n op x y. BITWISE n op x y =
-                 if n = 0 then 0
-                 else 2 * BITWISE (n - 1) op (x DIV 2) (y DIV 2) +
-                      (if op (ODD x) (ODD y) then 1 else 0)`,
-  REPEAT STRIP_TAC
-    THEN Cases_on `n = 0`
-    THEN ASM_REWRITE_TAC [BITWISE_def]
-    THEN IMP_RES_TAC NOT_ZERO_ADD1
-    THEN A_FULL_SIMP_TAC [BITWISE_EVAL,SBIT_def,EXP,LSB_ODD]
-);
 
 (* -------------------------------------------------------- *)
 
