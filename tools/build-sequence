@@ -18,7 +18,6 @@ src/bool
 src/goalstack
 
 src/taut
-src/dep_rewrite
 src/compute/src
 src/marker
 src/q
