@@ -20,7 +20,13 @@ sig
   val toBinString: num -> string
   val toOctString: num -> string
   val toHexString: num -> string
-  val fromString : string -> num
+
+  val fromString : string -> num (* decimal *)
+  val genFromString : StringCvt.radix -> string -> num
+  val fromHexString : string -> num
+  val fromOctString : string -> num
+  val fromBinString : string -> num
+
   val fromInt    : int -> num    (* raises Overflow if i < 0 *)
   val toInt      : num -> int    (* raises Overflow if n > maxInt *)
 

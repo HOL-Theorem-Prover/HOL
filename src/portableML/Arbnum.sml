@@ -383,21 +383,37 @@ fun gcd(i,j) = if i = zero then j
                else gcd' i j
 end
 
-fun fromSubstring s = let
-  open Substring
-  val sz = size s
-in
-  if Int.<(sz, 5) then fromInt (valOf (Int.fromString (string s)))
-  else let
-    val (pfx, sfx) = splitAt(s, Int.-(sz, 4))
-    val sfx_n = fromInt (valOf (Int.fromString (string sfx)))
-    val pfx_n = fromInt 10000 * fromSubstring pfx
+fun genFromString rdx = let
+  open StringCvt
+  val (chunksize, chunkshift) =
+      case rdx of
+        BIN => (10, fromInt 1024)
+      | OCT => (5, fromInt 32768)
+      | DEC => (5, fromInt 100000)
+      | HEX => (5, fromInt 1048576)
+  val scanner = Int.scan rdx
+  fun readchunk s = StringCvt.scanString scanner s
+  fun recurse acc s = let
+    val sz = size s
   in
-    pfx_n + sfx_n
+    if Int.<=(sz, chunksize) then
+      chunkshift * acc + fromInt (valOf (readchunk s))
+    else let
+        val sz_less_cs = Int.-(sz, chunksize)
+        val pfx = substring(s, 0, sz_less_cs)
+        val sfx = substring(s, sz_less_cs, chunksize)
+      in
+        recurse (chunkshift * acc + fromInt (valOf (readchunk pfx))) sfx
+      end
   end
+in
+  recurse zero
 end handle Option => raise Fail "String not numeric"
+val fromHexString = genFromString StringCvt.HEX
+val fromOctString = genFromString StringCvt.OCT
+val fromBinString = genFromString StringCvt.BIN
+val fromString = genFromString StringCvt.DEC
 
-fun fromString s = fromSubstring (Substring.all s)
 
 fun toString n =
   if n = zero then "0"
