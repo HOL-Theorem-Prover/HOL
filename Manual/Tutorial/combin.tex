@@ -1,49 +1,29 @@
-\documentclass[12pt]{article}
-%poor man's infer
-% \newcommand{\infer}[2]{\begin{array}{c}#2\\ \hline #1\end{array}}
-\usepackage{proof}
 \newcommand{\eos}{\hfill{}$\cdots\diamond\cdots$\hfill{}\vspace{5mm}}
 
 \newcommand{\mathpredn}{\mathbin{-\!\!\!\mid\mid\!\rightarrow}}
-\usepackage{charter}
-\usepackage{pstricks}
-\usepackage{pst-node}
-\usepackage{alltt}
-\input{../LaTeX/commands}
-
-\title{Combinatory Logic}
-\author{Michael Norrish}
-\date{}
 
 \newcommand{\KC}{\con{K}}
 \newcommand{\SC}{\con{S}}
 \newcommand{\bk}{\char'134}
 
-\begin{document}
-\maketitle
 
-\begin{abstract}
-  A formalisation of combinatory logic, building principally on a
-  development done by Tom Melham.  The complete script for the
-  development is available as \texttt{clScript.sml} in the
-  \texttt{examples/ind\_def} directory of the distribution.  It is
-  self-contained and so includes the answers to the exercises set at
-  the end of this document.
-\end{abstract}
-
+\chapter{Example: combinatory logic}
+\label{chap:combin}
 
 \section{Introduction}
 \label{sec:Introduction}
 
 This small case study is a formalisation of combinatory logic.  This
 logic is of foundational importance in theoretical computer science,
-and has a very rich theory.  We aim to put HOL through its paces more
-than we intend to explore what is such a big field.  Nonetheless, we
-hope that as the formalisation proceeds, the nature of the object of
-study is reasonably clear.
+and has a very rich theory.  The example builds principally on a
+development done by Tom Melham.  The complete script for the
+development is available as \texttt{clScript.sml} in the
+\texttt{examples/ind\_def} directory of the distribution.  It is
+self-contained and so includes the answers to the exercises set at the
+end of this document.
 
 
-\section{The Type of Combinators}
+\section{The type of combinators}
 \label{sec:Type-Combinators}
 
 The first thing we need to do is define the type of
@@ -51,6 +31,7 @@ The first thing we need to do is define the type of
 we also need to be able to \emph{combine} them, and for this we need
 to introduce the notion of application.  For lack of a better ASCII
 symbol, we will use the hash (\#) to represent this in the logic:
+\setcounter{sessioncount}{0}
 \begin{session}\begin{verbatim}
 - Hol_datatype `cl = K | S | # of cl => cl`;
 > val it = () : unit
@@ -78,7 +59,7 @@ left-associative infix:
 % C = S (S (K S) (S (K K) S)) (K K)
 
 
-\section{Combinator Reductions}
+\section{Combinator reductions}
 \label{sec:Comb-Reduct}
 
 Combinatory logic is the study of how values of this type can evolve
@@ -169,7 +150,9 @@ val (redn_rules, redn_ind, redn_cases) =
     \texttt{-->\_cases}.\footnote{Normally, \texttt{-->} would be a
       fine name for an ML identifier, but the problem here is that
       when the theory is compiled, the identifier \texttt{-->} is
-      already declared as an infix.}
+      already declared as an infix.  Names like \texttt{-->\_rules} are
+      always bad because they attempt to mix symbolic and
+    alpha-numeric characters.}
 \begin{session}\begin{verbatim}
 - app (uncurry set_MLname) [
     ("-->", "redn"), ("-->_rules", "redn_rules"),
@@ -199,7 +182,7 @@ Meson search level: ...
     confluent means that the answer to this question is \emph{no}.
 
 
-\section{Transitive Closure and Confluence}
+\section{Transitive closure and confluence}
 \label{sec:Transitive-Clos-Conf}
 
 A notion crucial to that of confluence is that of \emph{transitive
@@ -230,11 +213,12 @@ take zero or more steps to get $y$ to $z$, then it's possible to take
 zero or more steps to get between $x$ and $z$.  The realisation of
 these rules in HOL is again straightforward.
 
-(In fact, \con{RTC} is already a defined constant in the context we're
-working in, so we'll hide it from view before we begin.  We thus avoid
-messages telling us that we are inputting ambiguous terms.  The
-ambiguities would always be resolved in the favour of more recent
-definition, but the warnings are annoying.)
+(As it happens, \con{RTC} is already a defined constant in the context
+we're working in (it is found in \texttt{relationTheory}), so we'll
+hide it from view before we begin.  We thus avoid messages telling us
+that we are inputting ambiguous terms.  The ambiguities would always
+be resolved in the favour of more recent definition, but the warnings
+are annoying.)
 \begin{session}\begin{verbatim}
 val _ = hide "RTC";
 
@@ -740,7 +724,7 @@ val diamond_RTC = store_thm(
   PROVE_TAC [diamond_def,diamond_RTC_lemma]);
 \end{verbatim}\end{session}
 
-\section{Return to the Land of the Combinators}
+\section{Back to combinators}
 \label{sec:Return-to-Land}
 
 Now, we are in a position to return to the real object of study and
@@ -786,7 +770,7 @@ Then, because they are the same relation, we will have that the
 reflexive, transitive closure of our original relation has the diamond
 property, and therefore, our original relation will be confluent.
 
-\subsection{Parallel Reduction}
+\subsection{Parallel reduction}
 \label{sec:Parallel-Reduction}
 
 Our new relation allows for any number of reductions to occur in
@@ -864,7 +848,7 @@ choice of variable name, so we rename the bound variables.
 
 Now we can define the reflexive and transitive closures of our two
 relations.  We will use ASCII symbols for both that consist of the
-original symbol followed by an asterisk.  Note also how,in
+original symbol followed by an asterisk.  Note also how, in
 defining the two relations, we have to use the \texttt{\$} character
 to ``escape'' the symbols' usual fixities.  This is exactly analogous
 to the way in which ML's \texttt{op} keyword is used.  Finally,
@@ -1255,15 +1239,16 @@ $\SC\;x\;y\;z$.
 
 To do this, we will also need the datatype theorems for our
 \texttt{cl} type that tell us that the constructors are distinct and
-injective:
+injective.  These theorems are stored in an internal database known as
+the \texttt{TypeBase}, so it's straightforward to retrieve them:
 \begin{session}\begin{verbatim}
-- val cl_11 = theorem "cl_11";
+- val cl_11 = TypeBase.one_one_of "cl";
 > val cl_11 =
     |- !a0 a1 a0' a1'. (a0 # a1 = a0' # a1') =
                        (a0 = a0') /\ (a1 = a1') : thm
 
-- val cl_distinct0 = theorem "cl_distinct";
-> val cl_disttinct0 =
+- val cl_distinct0 = TypeBase.distinct_of "cl";
+> val cl_distinct0 =
     |- ~(S = K) /\ (!a1 a0. ~(S = a0 # a1)) /\
        !a1 a0. ~(K = a0 # a1) : thm
 \end{verbatim}\end{session}
@@ -1288,13 +1273,11 @@ a copy of itself with the equalities reversed:
 For example,
 \begin{session}\begin{verbatim}
 - val K_predn = characterise ``K``;
-<<HOL message:
-    more than one resolution of overloading was possible>>
+<<HOL message: more than one resolution of overloading was possible>>
 > val K_predn = |- !a1. K -||-> a1 = (a1 = K) : thm
 
 - val S_predn = characterise ``S``;
-<<HOL message:
-    more than one resolution of overloading was possible>>
+<<HOL message: more than one resolution of overloading was possible>>
 > val S_predn = |- !a1. S -||-> a1 = (a1 = S) : thm
 \end{verbatim}\end{session}
 Unfortunately, what we get back from other inputs is not so good:
@@ -1391,8 +1374,7 @@ induction principle.
 Thus:
 \begin{session}\begin{verbatim}
 val predn_strong_ind =
-  IndDefRules.derive_strong_induction (CONJUNCTS predn_rules,
-                                       predn_ind);
+  IndDefRules.derive_strong_induction (CONJUNCTS predn_rules, predn_ind);
 > val predn_strong_ind =
     |- !P.
          (!x. P x x) /\
@@ -1405,7 +1387,7 @@ val predn_strong_ind =
 \end{verbatim}\end{session}
 \eos{}
 
-Now we are ready to prove the final goal.  It is
+\noindent Now we are ready to prove the final goal.  It is
 \begin{session}\begin{verbatim}
 - g `!x y. x -||-> y ==>
            !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u`;
@@ -1682,7 +1664,10 @@ val confluent_redn = store_thm(
 
 
 
-\section*{Exercises}
+\section{Exercises}
+
+If necessary, answers to the first three exercises can be found by
+examining the source file in \texttt{examples/ind\_def/clScript.sml}.
 
 \begin{enumerate}
 \item Prove that \[\con{RTC}\;R \;x\; y \;\;\land \;\;
@@ -1717,9 +1702,6 @@ z\;x \rightarrow^* z\;y
   \end{array}
   \]
 \end{enumerate}
-
-\end{document}
-
 
 %%% Local Variables:
 %%% mode: latex
