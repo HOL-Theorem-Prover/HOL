@@ -55,29 +55,29 @@ fun make_aq tm {scope,free} = let
   open Term Preterm
   fun from ltm (E as (lscope,scope,free)) =
     case ltm of
-      VAR (v as {Name,Ty}) => 
+      VAR (v as {Name,Ty}) =>
        let val pty = Pretype.fromType Ty
            val v' = {Name=Name, Ty=pty}
        in if mem v' lscope then (Var v', E)
           else
-          case assoc1 Name scope 
+          case assoc1 Name scope
            of SOME(_,ntv) => (Constrained(Var{Name=Name,Ty=ntv}, pty), E)
             | NONE => let in
-               case assoc1 Name free 
+               case assoc1 Name free
                 of NONE => (Var v', (lscope,scope, (Name,pty)::free))
                  | SOME(_,ntv) => (Constrained(Var{Name=Name,Ty=ntv},pty), E)
                end
        end
     | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty},E)
-    | COMB{Rator,Rand}   => 
+    | COMB{Rator,Rand}   =>
        let val (ptm1,E1) = from (dest_term Rator) E
            val (ptm2,E2) = from (dest_term Rand) E1
        in (Comb{Rator=ptm1, Rand=ptm2}, E2)
        end
-    | LAMB{Bvar,Body} => 
+    | LAMB{Bvar,Body} =>
        let val v = dest_var Bvar
            val v' = {Name= #Name v, Ty = Pretype.fromType (#Ty v)}
-           val (Body',(_,_,free')) = from (dest_term Body) 
+           val (Body',(_,_,free')) = from (dest_term Body)
                                           (v'::lscope, scope, free)
        in (Abs{Bvar=Var v', Body=Body'}, (lscope,scope,free'))
        end
@@ -94,15 +94,15 @@ end;
 fun gen_thy_const (thy,s) =
   let val c = Term.prim_mk_const{Name=s, Thy=thy}
   in Preterm.Const {Name=s, Thy=thy,
-        Ty=Pretype.rename_typevars 
+        Ty=Pretype.rename_typevars
                  (Pretype.fromType (Term.type_of c))}
   end
 
-fun gen_const s = 
+fun gen_const s =
  case Term.decls s
   of [] => raise ERROR "gen_const" ("unable to find constant "^Lib.quote s)
    | h::_ => let val {Name,Thy,Ty} = Term.dest_thy_const h
-             in Preterm.Const 
+             in Preterm.Const
                   {Name=Name, Thy=Thy,
                    Ty=Pretype.rename_typevars (Pretype.fromType Ty)}
              end;
@@ -172,11 +172,12 @@ fun make_bvar (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E)}, E);
 fun gen_overloaded_const oinfo s = let
   open Overload
   val opinfo = valOf (info_for_name oinfo s)
+    handle Option => raise Fail "gen_overloaded_const: invariant failure"
 in
   case #actual_ops opinfo of
-    [(ty, thy,s)] =>
-      Preterm.Const{Name = s, Thy=thy,
-                    Ty=Pretype.rename_typevars (Pretype.fromType ty)}
+    [{Ty,Name,Thy}] =>
+      Preterm.Const{Name = Name, Thy=Thy,
+                    Ty=Pretype.rename_typevars (Pretype.fromType Ty)}
   | _ => let
       val base_pretype0 = Pretype.fromType (#base_type opinfo)
       val new_pretype = Pretype.rename_typevars base_pretype0
@@ -189,16 +190,17 @@ end
 (*---------------------------------------------------------------------------
  * Identifiers work as follows: look for the string in the scope;
  * if it's there, put the bound var.
- * Failing that, check to see if the string might be overloaded.
+ * Failing that, check to see if the string is a known constant.
  *
- * If the string isn't overloaded, but wants to be a (necessarily
- * overloaded) record function, then raise an error.
+ * If so, it will have an "overloading" entry.  Look this up and proceed.
  *
- * If the string might be a string constant, try to make it as such, and
- * if this fails, say that string literals are not OK
+ * If not, it might be trying to be a record selection; these are
+ * necessarily constants (and overloaded) so we can complain at this point.
  *
- * If the string is a known constant, make it as such, otherwise it's a
- * free variable.
+ * Otherwise, it might be a string literal.  Try and make one, if this
+ * fails because stringTheory is not loaded, fail.
+ *
+ * If none of the above, then it's a free variable.
  *
  * Free vars are placed in the "free" part of the environment; this is a
  * set. Bound vars are placed at the front of the "scope". When we come out
@@ -210,34 +212,31 @@ fun make_const s E = (gen_const s, E)
 
 (*---------------------------------------------------------------------------
     "make_qconst" ignores overloading and visibility information. The
-    idea is that if we ask to make a long identifier, it should be 
+    idea is that if we ask to make a long identifier, it should be
     treated as visible.
  ---------------------------------------------------------------------------*)
 
-fun make_qconst _ (p as (thy,s)) E = 
+fun make_qconst _ (p as (thy,s)) E =
   if Lexis.is_string_literal s andalso thy="string"
-  then (gen_const s, E) handle HOL_ERR _ 
+  then (gen_const s, E) handle HOL_ERR _
         => raise ERROR "make_qconst"
                 "string literals not lexically OK until stringTheory loaded"
   else (gen_thy_const p, E);
 
-
-fun make_atom (oinfo, kcs) s E = 
- make_bvar(s,E) handle HOL_ERR _ 
+fun make_atom (oinfo, kcs) s E =
+ make_bvar(s,E) handle HOL_ERR _
   =>
-  if Overload.is_overloaded oinfo s 
-  then (gen_overloaded_const oinfo s, E)
-  else 
+  if Lib.mem s kcs then (gen_overloaded_const oinfo s, E)
+  else
   case List.find (fn rfn => String.isPrefix rfn s)
                  [recsel_special, recupd_special, recfupd_special]
    of NONE =>
-       if Lexis.is_string_literal s 
-       then (gen_const s, E) handle HOL_ERR _ 
+       if Lexis.is_string_literal s
+       then (gen_const s, E) handle HOL_ERR _
              => raise ERROR "make_atom"
                 "string literals not lexically OK until stringTheory loaded"
-       else if Lib.mem s kcs then (gen_const s, E)
-            else make_free_var  (s, E)
-    | SOME rfn => 
+       else make_free_var  (s, E)
+    | SOME rfn =>
         raise ERROR "make_atom"
                ("Record field "^String.extract(s, size rfn, NONE)^
                 " not registered")

@@ -842,13 +842,15 @@ fun prettyprint_grammar pstrm (G :grammar) = let
         0
         oinfo
       fun pr_ov {overloaded_op,actual_ops,...} =
+        if length actual_ops <= 1 then ()
+        else
         (begin_block INCONSISTENT 0;
          add_string (overloaded_op^
                      nblanks (max - String.size overloaded_op)^
                      " -> ");
          add_break(1,2);
          begin_block INCONSISTENT 0;
-         pr_list (add_string o #2) (fn () => ()) (fn () => add_break (1,0))
+         pr_list (add_string o #Name) (fn () => ()) (fn () => add_break (1,0))
                  actual_ops;
          end_block();
          end_block())

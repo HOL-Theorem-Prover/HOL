@@ -10,10 +10,10 @@ open HolKernel Lexis
      all members of the list have non-empty actual_ops lists
 *)
 
-type overloaded_op_info = {
-  overloaded_op: string,
-  base_type : Type.hol_type,
-  actual_ops : (Type.hol_type * string * string) list}
+type const_rec = {Name : string, Ty : hol_type, Thy : string}
+type overloaded_op_info =
+  {overloaded_op: string, base_type : Type.hol_type,
+   actual_ops : const_rec list}
 type overload_info = overloaded_op_info list
 
 exception OVERLOAD_ERR of string
@@ -127,7 +127,8 @@ fun remove_overloaded_form s (oinfo:overload_info) =
 (* a predicate on pairs of operations and types that returns true if
    they're equal, given that two types are equal if they can match
    each other *)
-fun ntys_equal (ty1,n1,thy1) (ty2,n2,thy2) =
+fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
+               {Ty = ty2, Name = n2, Thy = thy2} =
   type_compare (ty1, ty2) = SOME EQUAL andalso n1 = n2 andalso thy1 = thy2
 
 
@@ -135,7 +136,9 @@ fun ntys_equal (ty1,n1,thy1) (ty2,n2,thy2) =
    there for a given operator, don't mind.  In either case, make sure that
    it's at the head of the list, meaning that it will be the first choice
    in ambigous resolutions. *)
-fun add_actual_overloading {opname, realname, realtype, realthy} oinfo =
+fun add_actual_overloading {opname, realname, realtype, realthy} oinfo = let
+  val newrec = {Ty = realtype, Name = realname, Thy = realthy}
+in
   if is_overloaded oinfo opname then let
     val {base_type, ...} = valOf (info_for_name oinfo opname)
     val newbase = anti_unify base_type realtype
@@ -143,16 +146,16 @@ fun add_actual_overloading {opname, realname, realtype, realthy} oinfo =
     valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
            ((fupd_actual_ops
              (fn ops =>
-              (realtype, realname, realthy) ::
-              Lib.op_set_diff ntys_equal ops [(realtype,realname,realthy)])) o
+              newrec :: Lib.op_set_diff ntys_equal ops [newrec])) o
             (fupd_base_type (fn b => newbase)))
            oinfo)
   end
   else
-    {actual_ops = [(realtype, realname, realthy)],
+    {actual_ops = [newrec],
      overloaded_op = opname,
      base_type = realtype} ::
     oinfo
+end
 
 
 fun myfind f [] = NONE
@@ -164,7 +167,7 @@ fun overloading_of_term (oinfo:overload_info) t =
     val {Name,Ty,Thy} = Term.dest_thy_const t
   in
     myfind (fn {actual_ops,overloaded_op,...} =>
-            myfind (fn (t,s,thy) =>
+            myfind (fn {Name = s, Thy = thy, Ty = t} =>
                     if s = Name andalso thy = Thy andalso
                        Lib.can (Type.match_type t) Ty
                     then
@@ -177,7 +180,7 @@ fun overloading_of_term (oinfo:overload_info) t =
 
 fun overloading_of_nametype oinfo {Name = n, Thy = th, Ty = ty} =
   myfind (fn {actual_ops, overloaded_op, ...} =>
-          myfind (fn (t, s, th') =>
+          myfind (fn {Ty = t, Name = s, Thy = th'} =>
                   if s = n andalso th' = th andalso
                      Lib.can (Type.match_type t) ty
                   then

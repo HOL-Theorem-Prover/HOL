@@ -22,15 +22,15 @@ datatype preterm = Var   of {Name:string,  Ty:pretype}
 
 (*---------------------------------------------------------------------------
      Simple map from a preterm to a term. The argument "shr" maps from
-     pretypes to types. Should Overloaded nodes be translated, or 
+     pretypes to types. Should Overloaded nodes be translated, or
      should the process fail if one is encountered? Currently, we
      attempt to make some sort of constant (non-deterministic), but we
      could just as well fail, since Overloaded nodes should be gone
      by the time clean is called.
  ---------------------------------------------------------------------------*)
 
-fun clean shr = 
- let fun 
+fun clean shr =
+ let fun
    cl(Var{Name,Ty})       = Term.mk_var{Name=Name,  Ty=shr Ty}
  | cl(Const{Name,Thy,Ty}) = Term.mk_thy_const{Name=Name,Thy=Thy,Ty=shr Ty}
  | cl(Comb{Rator,Rand})   = Term.mk_comb{Rator=cl Rator,Rand=cl Rand}
@@ -61,28 +61,28 @@ fun tyVars ptm =  (* the pretype variables in a preterm *)
 
 
 (*---------------------------------------------------------------------------
-    Translate a preterm to a term. Will "guess type variables" 
+    Translate a preterm to a term. Will "guess type variables"
     (assign names to type variables created during type inference),
     if a flag is set. No "Overloaded" nodes are allowed in the preterm:
     overloading resolution should already have gotten rid of them.
  ---------------------------------------------------------------------------*)
 
 fun to_term tm =
- if !Globals.guessing_tyvars 
- then 
- let fun cleanup tm = 
+ if !Globals.guessing_tyvars
+ then
+ let fun cleanup tm =
        let open optmonad infix >> >-
            val clean = Pretype.clean o Pretype.remove_made_links
-       in case tm 
-           of Var{Name,Ty} => Pretype.replace_null_links Ty >- (fn _ 
+       in case tm
+           of Var{Name,Ty} => Pretype.replace_null_links Ty >- (fn _
                => return (Term.mk_var{Name=Name, Ty=clean Ty}))
-            | Const{Name,Thy,Ty} => Pretype.replace_null_links Ty >- (fn _ 
+            | Const{Name,Thy,Ty} => Pretype.replace_null_links Ty >- (fn _
                => return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty}))
-            | Comb{Rator, Rand} => cleanup Rator >- (fn Rator' 
-                                => cleanup Rand  >- (fn Rand'  
+            | Comb{Rator, Rand} => cleanup Rator >- (fn Rator'
+                                => cleanup Rand  >- (fn Rand'
                   => return (Term.mk_comb{Rator=Rator', Rand=Rand'})))
-            | Abs{Bvar, Body} => cleanup Bvar >- (fn Bvar' 
-                              => cleanup Body >- (fn Body' 
+            | Abs{Bvar, Body} => cleanup Bvar >- (fn Bvar'
+                              => cleanup Body >- (fn Body'
                   => return (Term.mk_abs{Bvar=Bvar', Body=Body'})))
             | Antiq t => return t
             | Constrained(tm, ty) => cleanup tm
@@ -100,9 +100,9 @@ fun to_term tm =
  in
     valOf result
  end
- else 
+ else
  let fun shr ty =
-      if has_free_uvar ty 
+      if has_free_uvar ty
       then raise ERR"typecheck.to_term"
          "Unconstrained type variable (and Globals.guessing_tyvars is false)"
       else Pretype.clean (Pretype.remove_made_links ty)
@@ -120,10 +120,10 @@ fun is_atom (Var _) = true
   | is_atom (Const _) = true
   | is_atom (Constrained(tm,_)) = is_atom tm
   | is_atom (Overloaded _) = true
-  | is_atom (t as Comb{Rator,Rand}) = 
-      Numeral.is_numeral (to_term t) orelse 
+  | is_atom (t as Comb{Rator,Rand}) =
+      Numeral.is_numeral (to_term t) orelse
       Numeral.is_numeral (to_term Rand) andalso
-        (case Rator 
+        (case Rator
           of Overloaded{Name,...} => Name = fromNum_str
            | Const{Name,...} => Name = nat_elim_term
            | _ => false)
@@ -147,13 +147,13 @@ local fun -->(ty1,ty2) = Pretype.Tyop("fun", [ty1, ty2])
       fun default_typrinter x = "<hol_type>"
       fun default_tmprinter x = "<term>"
 in
-fun TC printers = 
+fun TC printers =
  let val (ptm, pty) =
-      case printers 
-       of SOME (x,y) => 
+      case printers
+       of SOME (x,y) =>
            let val typrint = Lib.say o y o Pretype.toType
                fun tmprint tm =
-                  if Term.is_const tm 
+                  if Term.is_const tm
                      then (Lib.say (x tm ^ " " ^ y (Term.type_of tm)))
                      else Lib.say (x tm)
            in
@@ -228,27 +228,27 @@ fun remove_overloading_phase1 ptm =
   | Abs{Bvar, Body} => Abs{Bvar = remove_overloading_phase1 Bvar,
                            Body = remove_overloading_phase1 Body}
   | Constrained(tm,ty) => Constrained(remove_overloading_phase1 tm, ty)
-  | Overloaded{Name,Ty,Info} => 
-     let fun testfn possty = 
+  | Overloaded{Name,Ty,Info} =>
+     let fun testfn possty =
            let val pty0 = Pretype.fromType possty
                val pty = Pretype.rename_typevars pty0
            in Pretype.can_unify Ty pty
            end
-         val possible_ops = 
-           List.filter (fn (ty,n,thy) => testfn ty) (#actual_ops Info)
+         val possible_ops =
+           List.filter (testfn o #Ty) (#actual_ops Info)
      in
       case possible_ops of
         [] =>
           (Lib.say ("\nNo possible type for overloaded constant "^Name^"\n");
            raise ERR "typecheck" "failed")
-      | [(ty,n,thyn)] => let
+      | [{Ty = ty,Name,Thy}] => let
           val pty = Pretype.rename_typevars (Pretype.fromType ty)
           val _ = Pretype.unify pty Ty
         in
-          Const{Name=n, Thy=thyn, Ty=pty}
+          Const{Name=Name, Thy=Thy, Ty=pty}
         end
       | _ =>
-        Overloaded{Name=Name, Ty=Ty, 
+        Overloaded{Name=Name, Ty=Ty,
                    Info=Overload.fupd_actual_ops (fn _ => possible_ops) Info}
      end
   | _ => ptm;
@@ -289,14 +289,14 @@ fun remove_overloading ptm = let
       [] => return []
     | {Name,Ty,Info,...}::xs => let
         val actual_ops = #actual_ops Info
-        fun tryit (ty, n,thy) = 
+        fun tryit {Ty = ty, Name = n, Thy = thy} =
           let val pty0 = Pretype.fromType ty
               val pty = Pretype.rename_typevars pty0
           in unify pty Ty >> return (Const{Name=n, Ty=Ty, Thy=thy})
           end
       in
-        tryall tryit actual_ops >- (fn c => 
-        workfunction xs >- (fn cs => 
+        tryall tryit actual_ops >- (fn c =>
+        workfunction xs >- (fn cs =>
         return (c::cs)))
       end
 in
@@ -342,11 +342,11 @@ in
   case cases result of
     NONE => raise ERR "do_overloading_removal"
       "Couldn't find a sensible resolution for overloaded constants"
-  | SOME ((env,clist),xs) => 
-      if not (!Globals.guessing_overloads) 
+  | SOME ((env,clist),xs) =>
+      if not (!Globals.guessing_overloads)
          orelse !Globals.notify_on_tyvar_guess
       then
-        case cases xs 
+        case cases xs
          of NONE => (apply_subst env; #1 (do_csubst clist ptm))
           | SOME _ => let in
               if not (!Globals.guessing_overloads)
@@ -358,7 +358,7 @@ in
               apply_subst env;
               #1 (do_csubst clist ptm)
             end
-      else 
+      else
         (apply_subst env; #1 (do_csubst clist ptm))
 end
 

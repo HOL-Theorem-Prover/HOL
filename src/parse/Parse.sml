@@ -415,7 +415,7 @@ fun Preterm q =
 
 fun absyn_to_term G =
  let val oinfo = term_grammar.overload_info G
-     val kcs = term_grammar.known_constants (term_grammar())
+     val kcs = term_grammar.known_constants G
  in
    fn absyn =>
      Preterm.typecheck (SOME(term_to_string, type_to_string))
@@ -802,43 +802,42 @@ fun clear_prefs_for_term s = let in
         Overloading
  -------------------------------------------------------------------------*)
 
-fun temp_overload_on_by_nametype (s, name, thy, ty) =
+fun temp_overload_on_by_nametype s {Name, Thy, Ty} =
  let open term_grammar
  in the_term_grammar
        := fupdate_overload_info
           (Overload.add_actual_overloading
-              {opname=s, realname=name, realthy=thy, realtype=ty})
+              {opname=s, realname=Name, realthy=Thy, realtype=Ty})
              (term_grammar());
     term_grammar_changed := true
  end
 
-fun overload_on_by_nametype (s, name, thy, ty) = let in
-   temp_overload_on_by_nametype (s, name, thy, ty);
+fun overload_on_by_nametype s (r as {Name, Thy, Ty}) = let in
+   temp_overload_on_by_nametype s r;
    update_grms ("temp_overload_on_by_nametype", String.concat
-     ["(", quote s, ", ", quote name, ", ", quote thy, ", ",
-           Portable.pp_to_string 75 (TheoryPP.pp_type "U" "T") ty, ")"])
+     [quote s, "{Name = ", quote Name, ", ", "Thy = ", quote Thy, ", ",
+      "Ty = ", Portable.pp_to_string 75 (TheoryPP.pp_type "U" "T") Ty, ")"])
  end
 
 fun temp_overload_on (s, t) =
-  if not (is_const t)
-  then print "Can't have non-constants as targets of overloading."
-  else let val {Name,Thy,Ty} = dest_thy_const t
-       in temp_overload_on_by_nametype (s, Name, Thy, Ty)
-          handle Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
-       end
+  temp_overload_on_by_nametype s (dest_thy_const t)
+  handle HOL_ERR _ => raise ERROR "overload_on"
+    "Can't have non-constants as targets of overloading"
+       | Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
 
 fun overload_on (s, t) =
- let val {Name, Thy, Ty} = dest_thy_const t
-      handle HOL_ERR _ => raise ERROR "overload_on"
-          "Can't have non-constants as targets of overloading"
- in overload_on_by_nametype (s, Name, Thy, Ty)
-     handle Overload.OVERLOAD_ERR s => raise ERROR "overload_on" s
- end
+  overload_on_by_nametype s (dest_thy_const t)
+  handle HOL_ERR _ => raise ERROR "overload_on"
+    "Can't have non-constants as targets of overloading"
+       | Overload.OVERLOAD_ERR s => raise ERROR "overload_on" s
 
 fun temp_clear_overloads_on s = let open term_grammar in
   the_term_grammar :=
     fupdate_overload_info
     (Overload.remove_overloaded_form s) (term_grammar());
+  case Term.decls s of
+    [] => ()
+  | (c::_) => temp_overload_on(s,c);
   term_grammar_changed := true
 end
 
@@ -891,17 +890,16 @@ fun temp_add_numeral_form (c, stropt) = let
       ("Numeral support not present; try load \"arithmeticTheory\"")
   val num = Type.mk_type {Tyop="num", Args = []}
   val fromNum_type = num --> alpha
-  val (injectionfn_name, thy, ifn_ty) =
+  val const_record =
     case stropt of
-      NONE => (nat_elim_term, "arithmetic", num --> num)
+      NONE => {Name = nat_elim_term, Thy = "arithmetic", Ty = num --> num}
     | SOME s =>
         case Term.decls s of
           [] => raise ERROR "add_numeral_form" ("No constant with name "^s)
-        | h::_ =>
-            let val {Thy,Ty,...} = dest_thy_const h in (s, Thy, Ty) end
+        | h::_ => dest_thy_const h
 in
   temp_add_bare_numeral_form (c, stropt);
-  temp_overload_on_by_nametype(fromNum_str,injectionfn_name,thy,ifn_ty)
+  temp_overload_on_by_nametype (fromNum_str) const_record
 end
 
 fun add_numeral_form (c, stropt) = let in
@@ -921,9 +919,13 @@ end
 fun hide s =
   the_term_grammar := term_grammar.hide_constant s (!the_term_grammar)
 fun reveal s =
-  if null(Term.decls s)
-  then WARN "reveal" (s^" not a constant; reveal ignored")
-  else the_term_grammar := term_grammar.show_constant s (!the_term_grammar)
+  case Term.decls s of
+    [] => WARN "reveal" (s^" not a constant; reveal ignored")
+  | (c::_) => let
+    in
+      the_term_grammar := term_grammar.show_constant s (!the_term_grammar);
+      temp_overload_on (s, c)
+    end
 
 fun known_constants() = term_grammar.known_constants (term_grammar())
 

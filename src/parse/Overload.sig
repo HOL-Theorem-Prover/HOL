@@ -3,17 +3,18 @@ sig
  type hol_type = HolKernel.hol_type
  type term     = HolKernel.term
 
+ type const_rec = {Name : string, Ty : hol_type, Thy : string}
  type overloaded_op_info =
     {overloaded_op : string,
      base_type : hol_type,
-     actual_ops : (hol_type * string * string) list}
+     actual_ops : const_rec list}
+
 
   type overload_info = overloaded_op_info list
 
-  val fupd_actual_ops
-    : ((hol_type * string * string) list -> (hol_type * string * string) list)
-       -> overloaded_op_info
-        -> overloaded_op_info
+  val fupd_actual_ops :
+    (const_rec list -> const_rec list) -> overloaded_op_info ->
+    overloaded_op_info
 
   exception OVERLOAD_ERR of string
 
