@@ -39,28 +39,41 @@ val x = mk_var{Name = "x", Ty = int_ty}
 and y = mk_var{Name = "y", Ty = int_ty}
 val n = mk_var{Name = "n", Ty = num_ty}
 
-val basic_op_patterns =
-  map (fn s => list_mk_comb(mk_const{Name = s, Ty = int_2op}, [x,y]))
-  ["int_add", "int_sub", "int_mul", "int_div", "int_mod"]
-val basic_rel_patterns =
-  map (fn s => list_mk_comb(mk_const{Name = s, Ty = int_rel}, [x,y]))
-  ["=", "int_lt", "int_le", "int_ge", "int_gt", "int_divides"]
-val exp_pattern = list_mk_comb(mk_const{Name = "int_exp",
-                                        Ty = int_ty --> (num_ty --> int_ty)},
-                               [x,n])
+val basic_op_terms =
+  [plus_tm, minus_tm, mult_tm, div_tm, mod_tm, int_eq_tm,
+   less_tm, leq_tm, great_tm, geq_tm, divides_tm]
+val basic_op_patterns = map (fn t => list_mk_comb(t, [x,y])) basic_op_terms
+val exp_pattern = list_mk_comb(exp_tm, [x,n])
 
+fun reducible t = is_int_literal t orelse numSyntax.is_numeral t
 fun reducer t = let
   val (_, args) = strip_comb t
-  fun reducible t = is_int_literal t orelse numSyntax.is_numeral t
 in
   if List.all reducible args then REDUCE_CONV t else Conv.NO_CONV t
+end
+
+val rederr = HOL_ERR {origin_structure = "intSimps",
+                      origin_function = "RED_CONV",
+                      message = "Term not reducible"}
+fun is_funtype ty = let
+  val {Tyop,Thy,...} = dest_thy_type ty
+in
+  Tyop = "fun" andalso Thy = "min"
+end
+fun RED_CONV t = let
+  val (f, args) = strip_comb t
+  val _ = f = exp_tm orelse mem f basic_op_terms orelse raise rederr
+  val _ = List.all reducible args orelse raise rederr
+  val _ = not (is_funtype (type_of t)) orelse raise rederr
+in
+  REDUCE_CONV t
 end
 
 fun mk_conv pat = {name = "Integer calculation", key = SOME([], pat),
                    trace = 2, conv = K (K reducer)}
 
 val INT_REDUCE_ss = simpLib.SIMPSET
-  {convs = map mk_conv (exp_pattern::(basic_op_patterns @ basic_rel_patterns)),
+  {convs = map mk_conv (exp_pattern::basic_op_patterns),
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val int_ss = simpLib.++(boolSimps.bool_ss, INT_REDUCE_ss)

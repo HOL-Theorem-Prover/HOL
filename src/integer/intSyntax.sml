@@ -18,6 +18,10 @@ val int_ty = mk_thy_type{Tyop = "int", Thy="integer", Args = []}
 val plus_tm = Term`$+ : int -> int -> int`
 val minus_tm = Term`$- : int -> int -> int`
 val mult_tm = Term`$* : int -> int -> int`
+val div_tm = Term`$/ : int -> int -> int`
+val mod_tm = Term`$% : int -> int -> int`
+val exp_tm = Term`$** : int -> num -> int`
+val int_eq_tm = Term`$= : int -> int -> bool`
 val less_tm = Term`$< : int -> int -> bool`
 val leq_tm = Term`$<= : int -> int -> bool`
 val great_tm = Term`$> : int -> int -> bool`

@@ -11,6 +11,10 @@ sig
   val plus_tm        : term
   val minus_tm       : term
   val mult_tm        : term
+  val div_tm         : term
+  val mod_tm         : term
+  val exp_tm         : term
+  val int_eq_tm      : term
   val less_tm        : term
   val leq_tm         : term
   val great_tm       : term

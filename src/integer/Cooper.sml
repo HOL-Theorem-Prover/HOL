@@ -174,10 +174,11 @@ local
       ALL_CONV tm
 in
   val phase1_CONV =
-  (* to push negations inwards; formula must be quantifier free *)
-    REDUCE_CONV THENC basic_rewrite_conv THENC
-    remove_negated_vars THENC remove_bare_vars THENC flip_muls THENC
-    REDUCE_CONV
+    (* to push negations inwards; formula must be quantifier free *)
+    DEPTH_CONV (RED_CONV ORELSEC reduceLib.RED_CONV) THENC
+    basic_rewrite_conv THENC remove_negated_vars THENC
+    remove_bare_vars THENC flip_muls THENC
+    DEPTH_CONV (RED_CONV ORELSEC reduceLib.RED_CONV)
 end
 
 val simple_disj_congruence =
@@ -2164,6 +2165,32 @@ in
   end
 end tm
 
+val tm100 = term_of_int (Arbint.fromInt 100)
+fun counter_example tm = let
+  open seqmonad
+  infix >- >> ++
+  fun rule f th = (seq.result (f th, ())) handle HOL_ERR _ => seq.empty
+  fun test th =
+    if (concl th = false_tm) then
+      seq.result(EQF_INTRO (NOT_INTRO (DISCH tm th)),())
+    else seq.empty
+  fun spec n th = let
+  in
+    if is_forall (concl th) then
+      if n > 0 then
+        ((rule (SPEC zero_tm) ++ rule (SPEC tm100)) >>
+         spec (n - 1))
+      else rule (SPEC one_tm) >> spec 0
+    else
+      rule (CONV_RULE REDUCE_CONV) >> test
+  end th
+in
+  case seq.cases (spec 5 (ASSUME tm)) of
+    NONE => NO_CONV tm
+  | SOME ((th,()),_) => th
+end
+
+
 fun decide_pure_presburger_term tm0 = let
   (* no free variables allowed *)
   val phase0_CONV =
@@ -2185,7 +2212,9 @@ fun decide_pure_presburger_term tm0 = let
       NEITHER => (mainwork THENC strategy) tm
     | EITHER => REDUCE_CONV tm
     | qsUNIV =>
-        (move_quants_up THENC flip_foralls THENC
+        (move_quants_up THENC
+         TRY_CONV counter_example THENC
+         flip_foralls THENC
          RAND_CONV pure_goal THENC REDUCE_CONV) tm
     | qsEXISTS => (move_quants_up THENC pure_goal) tm
 in

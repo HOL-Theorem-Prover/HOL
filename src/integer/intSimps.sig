@@ -8,6 +8,7 @@ sig
   val int_ss : simpLib.simpset
 
   val REDUCE_CONV : Term.term -> Thm.thm
+  val RED_CONV : Term.term -> Thm.thm
 
   val collect_additive_consts : Term.term -> Thm.thm
   (* collects all integer literals in an additive term and sums them;
