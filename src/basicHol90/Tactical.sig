@@ -44,4 +44,8 @@ sig
   val POP_ASSUM_LIST : (Thm.thm list -> tactic) -> tactic
   val SUBGOAL_THEN   : Term.term -> thm_tactic -> tactic
   val CHANGED_TAC    : tactic -> tactic
+
+  val set_prover     : (term * tactic -> Thm.thm) -> unit
+  val restore_prover : unit -> unit
+
 end;

@@ -37,7 +37,12 @@ fun TAC_PROOF (g,tac) =
       |     _  => raise TACTICAL_ERR "TAC_PROOF" "unsolved goals";
 
 
-fun prove(t,tac) = TAC_PROOF(([],t), tac);
+fun default_prover (t, tac) = TAC_PROOF(([],t), tac);
+val internal_prover = ref (default_prover : Term.term * tactic -> Thm.thm)
+fun set_prover f = internal_prover := f;
+fun restore_prover () = internal_prover := default_prover;
+
+fun prove(t,tac) = !internal_prover(t,tac)
 
 fun store_thm (name, tm, tac) =
   Theory.save_thm (name, prove (tm, tac)) handle e =>
@@ -210,14 +215,14 @@ fun POP_ASSUM_LIST asltac (asl,w) = asltac (map ASSUME asl) ([],w);
  * and give it to a function (tactic).
  *---------------------------------------------------------------------------*)
 
-local fun match_with_constants constants pat ob = 
+local fun match_with_constants constants pat ob =
        let val (tm_inst, ty_inst) = Ho_match.match_term [] pat ob
            val bound_vars = map #2 tm_inst
        in
           null (intersect constants bound_vars)
        end handle HOL_ERR _ => false
 in
-fun PAT_ASSUM pat thfun (asl, w) = 
+fun PAT_ASSUM pat thfun (asl, w) =
   case List.filter (can (Ho_match.match_term [] pat)) asl
    of [] => raise TACTICAL_ERR "PAT_ASSUM" "No assumptions match pattern"
     | [x] => let val (ob, asl') = Lib.pluck (fn t => t = x) asl
@@ -277,7 +282,7 @@ fun FIRST_ASSUM ttac (A,g) =
  * at all, and shouldn't be here along with THEN etc.
  ---------------------------------------------------------------------------*)
 
-local fun UNDISCH_THEN tm ttac (asl, w) = 
+local fun UNDISCH_THEN tm ttac (asl, w) =
        let val (_, asl') = Lib.pluck (fn a => a = tm) asl
        in
          ttac (ASSUME tm) (asl', w)
