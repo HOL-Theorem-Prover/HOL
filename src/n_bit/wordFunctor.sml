@@ -288,6 +288,9 @@ val COMP0_def = Define `COMP0 = ONE_COMP 0`;
 val BITWISE_THM2 = (GEN `y` o GEN `op` o GEN `a` o GEN `b`)
   (SIMP_RULE bool_ss [BITWISE_THM] (SPECL [`BITWISE WL op a b`,`y`] BIT_EQUIV_THM));
 
+val _ = save_thm("BITWISE_THM2",BITWISE_THM2);
+
+
 val OR_ASSOC_QT = (GEN `a` o GEN `b` o GEN `c`)
   (SIMP_RULE bool_ss [BITWISE_THM,DISJ_ASSOC,GSYM OR_def]
   (SPECL [`BITWISE WL $\/ (BITWISE WL $\/ a b) c`,`$\/`,`a`,`BITWISE WL $\/ b c`] BITWISE_THM2));
@@ -325,6 +328,11 @@ RW_TAC bool_ss [EOR_def, GSYM BITWISE_THM2, BITWISE_THM] THEN METIS_TAC []);
 val EOR_COMM_QT = prove (
 `!a b. EOR a b == EOR b a`,
 RW_TAC bool_ss [EOR_def, GSYM BITWISE_THM2, BITWISE_THM] THEN METIS_TAC []);
+
+val EOR_AND_OR_QT = prove (
+`!a b. EOR a b == OR (AND a (ONE_COMP b)) (AND b (ONE_COMP a))`,
+RW_TAC bool_ss [EOR_def, AND_def, OR_def, ONE_COMP_THM, GSYM BITWISE_THM2, BITWISE_THM] 
+THEN METIS_TAC []);
 
 val EOR_ID_QT = prove (
 `(!a. EOR a 0 == a) /\ (!a. EOR 0 a == a)`,
@@ -537,7 +545,7 @@ val word_thms = define_equivalence_type
                MULT_COMM_QT, MULT_CLAUSES_QT,MOD_WL_QT,WORD_ADD_RINV_QT,
                WORD_NEG_QT,WORD_NEG_1_QT,OR_ASSOC_QT,OR_COMM_QT,OR_IDEM_QT,
                OR_ABSORB_QT,OR_COMP_QT,AND_ASSOC_QT,AND_COMM_QT,AND_IDEM_QT,
-               AND_ABSORB_QT,EOR_ASSOC_QT,EOR_COMM_QT,EOR_ID_QT,EOR_INV_QT,
+               AND_ABSORB_QT,EOR_ASSOC_QT,EOR_COMM_QT,EOR_AND_OR_QT,EOR_ID_QT,EOR_INV_QT,
                AND_COMP_QT,ONE_COMP_QT,RIGHT_AND_OVER_OR_QT,
                RIGHT_OR_OVER_AND_QT,DE_MORGAN_THM_QT]
   };
@@ -590,7 +598,7 @@ val [WORD_ADD, WORD_ADD_0, WORD_ADD1, WORD_ADD_ASSOC, WORD_ADD_CLAUSES,
      MOD_WL_ELIM, WORD_ADD_RINV, WORD_NEG, WORD_NEG_1,
      WORD_OR_ASSOC, WORD_OR_COMM, WORD_OR_IDEM, WORD_OR_ABSORB, WORD_OR_COMP,
      WORD_AND_ASSOC, WORD_AND_COMM, WORD_AND_IDEM, WORD_AND_ABSORB,
-     WORD_EOR_ASSOC, WORD_EOR_COMM, WORD_EOR_ID, WORD_EOR_INV,  WORD_AND_COMP,
+     WORD_EOR_ASSOC, WORD_EOR_COMM, WORD_EOR_AND_OR,WORD_EOR_ID, WORD_EOR_INV,  WORD_AND_COMP,
      WORD_NOT_NOT, WORD_RIGHT_AND_OVER_OR, WORD_RIGHT_OR_OVER_AND, WORD_DE_MORGAN_THM] =
    map (REWRITE_RULE [word_0,word_1]) word_thms;
 
@@ -621,6 +629,7 @@ val _ = save_thm("WORD_AND_ABSORB",WORD_AND_ABSORB);
 val _ = save_thm("WORD_AND_COMP",WORD_AND_COMP);
 val _ = save_thm("WORD_EOR_ASSOC",WORD_EOR_ASSOC);
 val _ = save_thm("WORD_EOR_COMM",WORD_EOR_COMM);
+val _ = save_thm("WORD_EOR_AND_OR",WORD_EOR_AND_OR);
 val _ = save_thm("WORD_EOR_ID",WORD_EOR_ID);
 val _ = save_thm("WORD_EOR_INV",WORD_EOR_INV);
 val _ = save_thm("WORD_NOT_NOT",WORD_NOT_NOT);
@@ -887,6 +896,15 @@ val word_nchotomy = store_thm("word_nchotomy",
   `!w. ?n. w = n2w n`,
   PROVE_TAC [n2w_def,word_abs_fn_onto]
 );
+
+(*---------------------------------------------------------------------------*)
+(* Alternative way to do case analysis                                       *)
+(*---------------------------------------------------------------------------*)
+
+val FORALL_WORD = store_thm("FORALL_WORD",
+`(!w. P w) = !n. P (n2w n)`,
+ EQ_TAC THEN RW_TAC std_ss [] THEN 
+  STRIP_ASSUME_TAC (SPEC_ALL word_nchotomy) THEN RW_TAC std_ss []);
 
 val EQUIV_EXISTS = prove(`!y. ?x. $== y = $== x`, PROVE_TAC []);
 
