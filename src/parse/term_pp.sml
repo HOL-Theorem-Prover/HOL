@@ -1256,11 +1256,11 @@ fun pp_term (G : grammar) TyG = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val old_bvars_seen = !bvars_seen
     in
-      begin_block CONSISTENT 0;
       pbegin addparens;
+      begin_block CONSISTENT 0;
       pr_let0 tm;
-      pend addparens;
       end_block();
+      pend addparens;
       bvars_seen := old_bvars_seen
     end
 
