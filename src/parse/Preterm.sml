@@ -109,7 +109,7 @@ fun TC printers = let
       | check (Abs{Bvar, Body}) = (check Bvar; check Body)
       | check (Constrained(tm,ty)) =
           (check tm; TCPretype.unify (type_of tm) ty
-            handle (e as Exception.HOL_ERR{origin_structure="Type",
+            handle (e as Exception.HOL_ERR{origin_structure="TCPretype",
                                            origin_function="unify",message})
             => let val tmp = !Globals.show_types
                    val _ = Globals.show_types := true
