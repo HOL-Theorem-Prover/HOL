@@ -40,21 +40,22 @@ type thm_printer = ppstream -> thm -> unit
 type type_printer = ppstream -> hol_type -> unit
 type HOLprinters = {pp_thm : thm_printer, pp_type : type_printer}
 
-fun print_type_to_SML pps ty = let
+fun print_type_to_SML mvartype mtype pps ty = let
   open Portable Type
+  val print_type_to_SML = print_type_to_SML mvartype mtype pps
 in
   if (is_vartype ty) then
-    add_string pps ("U"^quote (dest_vartype ty))
+    add_string pps (mvartype^quote (dest_vartype ty))
   else let
     val {Tyop, Args} = dest_type ty
   in
-    add_string pps "T";
+    add_string pps mtype;
     begin_block pps CONSISTENT 0;
     add_string pps (quote Tyop);
     add_break pps (1,0);
     add_string pps "[";
     begin_block pps CONSISTENT 0;
-    pr_list (print_type_to_SML pps) (fn () => add_string pps ",")
+    pr_list print_type_to_SML (fn () => add_string pps ",")
     (fn () => add_break pps (1,0)) Args;
     end_block pps;
     add_string pps "]";
@@ -298,7 +299,7 @@ fun pp_theory_struct ppstrm info_record = let
      val {add_string,add_break,begin_block,end_block, add_newline,
           flush_ppstream,...} = Portable.with_ppstream ppstrm
      val pp_tm = pp_raw ppstrm
-     val pp_ty = with_parens print_type_to_SML ppstrm
+     val pp_ty = with_parens (print_type_to_SML "U" "T") ppstrm
      val pp_tag = Tag.pp_to_disk ppstrm
      fun pblock(header, ob_pr, obs) =
          case obs
