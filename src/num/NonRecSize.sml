@@ -9,21 +9,22 @@ structure NonRecSize =
 struct
 
 local
-  open HolKernel boolLib Parse
-
-  val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-  fun -- q x = Term q
-  fun == q x = Type q
-
-  local open pairTheory sumTheory optionTheory arithmeticTheory in
-  end;
-
+  open HolKernel boolLib Parse pairSyntax numSyntax
   infix THEN THENC THENL |-> ORELSE;
   infixr -->;
+
+  local open pairTheory sumTheory optionTheory arithmeticTheory in end;
+
   val prod_size_info =
-    (Term`\f g. UNCURRY(\(x:'a) (y:'b). f x + g y)`,
+    (let val f = mk_var("f", alpha --> num)
+         val g = mk_var("g", beta --> num)
+         val x = mk_var("x", alpha)
+         val y = mk_var("y", beta)
+     in list_mk_abs([f,g],
+          mk_pabs(mk_pair(x,y),mk_plus(mk_comb(f,x),mk_comb(g,y))))
+     end,
      TypeBase.ORIG pairTheory.UNCURRY_DEF)
-  val prod_info' =
+   val prod_info' =
     TypeBase.put_size prod_size_info
     (Option.valOf(TypeBase.read"prod"))
 
@@ -49,8 +50,13 @@ local
   val sum_info' = TypeBase.put_size sum_size_info sum_info
 
   val option_info = Option.valOf(TypeBase.read "option")
+  val option_case_tm = prim_mk_const{Name="option_case",Thy="option"}
   val option_size_info =
-       (Term`\f. option_case 0 (\x:'a. SUC (f x))`,
+       (let val f = mk_var("f",alpha --> num)
+            val x = mk_var("x",alpha)
+        in mk_abs(f,list_mk_comb(inst [beta|->num] option_case_tm,
+                    [zero_tm,mk_abs(x,mk_suc(mk_comb(f,x)))]))
+        end,
         TypeBase.ORIG optionTheory.option_case_def)
   val option_info' = TypeBase.put_size option_size_info option_info
 
