@@ -261,18 +261,21 @@ With prefix argument, drop the goal afterwards."
   (let ((start (point)))
     (if (re-search-forward "`" end-marker t)
         (delete-region (- start 1) (point))
-      (message "Incomplete HOL term/quotation in region given"))))
+      (error
+       "Incomplete HOL quotation in region given; starts >`%s<"
+       (buffer-substring (point) (+ (point) 10))))))
 
 (defun remove-dq-hol-term (end-marker)
   (let ((start (point)))
     (if (re-search-forward "``" end-marker t)
         (delete-region (- start 2) (point))
-      (message
-       "Incomplete (doubly quoted) HOL term/quotation in region given"))))
+      (error
+       "Incomplete (``-quoted) HOL term in region given; starts >``%s<"
+       (buffer-substring (point) (+ (point) 10))))))
 
 (defun remove-hol-string (end-marker)
   (let ((start (point)))
-    (if (re-search-forward "\n\\|[^\\]\"" end-marker t)
+    (if (re-search-forward "\n\\|[^\\]?\"" end-marker t)
         (if (string= (match-string 0) "\n")
             (message "String literal terminated by newline - not allowed!")
           (delete-region (- start 1) (point))))))
