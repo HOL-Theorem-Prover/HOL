@@ -131,5 +131,4 @@ val set_associativity_at_level : grammar -> (int * associativity) -> grammar
 val get_precedence : grammar -> string -> rule_fixity option
 
 
-val Gmerge : (grammar * (int option * grammar_rule) list) -> grammar
 end

@@ -22,3 +22,5 @@ val overloading_of_nametype :
 val add_actual_overloading:
   {opname: string, realname: string, realtype: Type.hol_type} ->
   overload_info -> overload_info
+
+val merge_oinfos : overload_info -> overload_info -> overload_info

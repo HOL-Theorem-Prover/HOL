@@ -388,10 +388,10 @@ fun priv_a2string a =
 fun merge_rules (r1, r2) =
   case (r1, r2) of
     (SUFFIX (STD_suffix sl1), SUFFIX (STD_suffix sl2)) =>
-      SUFFIX (STD_suffix (sl1 @ sl2))
+      SUFFIX (STD_suffix (Lib.union sl1 sl2))
   | (SUFFIX TYPE_annotation, SUFFIX TYPE_annotation) => r1
   | (PREFIX (STD_prefix pl1), PREFIX (STD_prefix pl2)) =>
-      PREFIX (STD_prefix (pl1 @ pl2))
+      PREFIX (STD_prefix (Lib.union pl1 pl2))
   | (PREFIX (BINDER b1), PREFIX (BINDER b2)) => PREFIX (BINDER (b1 @ b2))
   | (INFIX(STD_infix (i1, a1)), INFIX(STD_infix(i2, a2))) =>
       if a1 <> a2 then
@@ -401,9 +401,9 @@ fun merge_rules (r1, r2) =
       else
         INFIX(STD_infix(Lib.union i1 i2, a1))
   | (INFIX RESQUAN_OP, INFIX RESQUAN_OP) => INFIX(RESQUAN_OP)
-  | (CLOSEFIX c1, CLOSEFIX c2) => CLOSEFIX (c1 @ c2)
+  | (CLOSEFIX c1, CLOSEFIX c2) => CLOSEFIX (Lib.union c1 c2)
   | (FNAPP, FNAPP) => FNAPP
-  | (LISTRULE lr1, LISTRULE lr2) => LISTRULE (lr1 @ lr2)
+  | (LISTRULE lr1, LISTRULE lr2) => LISTRULE (Lib.union lr1 lr2)
   | _ => raise GrammarError "Attempt to have different forms at same level"
 
 
@@ -612,3 +612,33 @@ end
 
 fun remove_numeral_form G c =
   fupdate_numinfo (List.filter (fn (k,v) => k <> (check c))) G
+
+fun merge_specials S1 S2 = let
+  val {type_intro = typ1, lambda = lam1, endbinding = end1,
+       restr_binders = res1, res_quanop = resq1} = S1
+  val {type_intro = typ2, lambda = lam2, endbinding = end2,
+       restr_binders = res2, res_quanop = resq2} = S2
+in
+  if typ1 = typ2 andalso lam1 = lam2 andalso end1 = end2 andalso resq1 = resq2
+  then
+    {type_intro = typ1, lambda = lam1, endbinding = end1,
+     restr_binders = Lib.union res1 res2, res_quanop = resq1}
+  else
+    raise GrammarError "Specials in two grammars don't agree"
+end
+
+
+
+fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
+  val g0_rules =
+    Listsort.sort (fn (e1,e2) => aug_compare(#1 e1, #1 e2))
+    (#rules G1 @ #rules G2)
+  val newrules = resolve_same_precs g0_rules
+  val newspecials = merge_specials (#specials G1) (#specials G2)
+  val new_numinfo = Lib.union (#numeral_info G1) (#numeral_info G2)
+  val new_oload_info =
+    Overload.merge_oinfos (#overload_info G1) (#overload_info G2)
+in
+  {rules = newrules, specials = newspecials, numeral_info = new_numinfo,
+   overload_info = new_oload_info}
+end
