@@ -85,6 +85,7 @@ val TC_TRANSITIVE = Q.store_thm("TC_TRANSITIVE",
 REWRITE_TAC[transitive_def,TC_DEF]
  THEN REPEAT STRIP_TAC
  THEN RES_TAC THEN ASM_MESON_TAC[]);
+val _ = export_rewrites ["TC_TRANSITIVE"]
 
 val RTC_INDUCT = store_thm(
   "RTC_INDUCT",
@@ -361,7 +362,7 @@ val TC_lifts_equalities = store_thm(
   ``(!x y. R x y ==> (f x = f y)) ==> (!x y. TC R x y ==> (f x = f y))``,
   STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN METIS_TAC []);
 
-(* generalisation of equalities/monotonicities result *)
+(* generalisation of above results *)
 val TC_lifts_transitive_relations = store_thm(
   "TC_lifts_transitive_relations",
   ``(!x y. R x y ==> Q (f x) (f y)) /\ transitive Q ==>
