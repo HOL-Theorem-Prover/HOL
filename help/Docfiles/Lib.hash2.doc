@@ -20,12 +20,7 @@ If {f x} or {g y} fails.
 
 \COMMENTS
 The {##} combinator can be thought of as a map operation for pairs.
-In the interactive system it is declared as a right associative
-infix.  In source files that are to be compiled, its fixity needs to
-be declared, thus:
-{
-   infixr ##
-}
+It is declared as a right associative infix.
 
 \SEEALSO
 Lib.pair.
