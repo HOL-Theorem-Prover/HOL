@@ -11,7 +11,7 @@ open HolKernel boolLib Parse bossLib pairTheory pairTools
      arithmeticTheory listTheory rich_listTheory EncodeTheory
      metisLib optionTheory normalForms combinTheory;
 
-val _ = new_theory "Decode";
+val () = new_theory "Decode";
 
 infixr 0 ++ || <<;
 infix 1 >>;
@@ -206,7 +206,7 @@ val enc2dec_dec2enc = store_thm
     RW_TAC std_ss [APPEND_NIL]]);
 
 (*---------------------------------------------------------------------------
-     Unit decoders
+     Units
  ---------------------------------------------------------------------------*)
 
 val decode_unit_def = Define `decode_unit p = enc2dec p encode_unit`;
@@ -229,7 +229,7 @@ val decode_unit = store_thm
     APPEND, wf_encode_unit, oneTheory.one]);
 
 (*---------------------------------------------------------------------------
-     Boolean decoders
+     Booleans
  ---------------------------------------------------------------------------*)
 
 val decode_bool_def = Define `decode_bool p = enc2dec p encode_bool`;
@@ -254,7 +254,7 @@ val decode_bool = store_thm
     APPEND, wf_encode_bool]);
 
 (*---------------------------------------------------------------------------
-     Pair decoders
+     Pairs
  ---------------------------------------------------------------------------*)
 
 val decode_prod_def = Define
@@ -278,7 +278,7 @@ val dec2enc_decode_prod = store_thm
    [decode_prod_def, dec2enc_enc2dec, wf_encode_prod, wf_dec2enc]);
 
 val encode_then_decode_prod = store_thm
-  ("decode_encode_prod",
+  ("encode_then_decode_prod",
    ``!p1 p2 e1 e2 l t.
        wf_encoder p1 e1 /\ wf_encoder p2 e2 /\ lift_prod p1 p2 l ==>
        (decode_prod (lift_prod p1 p2) (enc2dec p1 e1) (enc2dec p2 e2)
@@ -364,7 +364,7 @@ val decode_prod = store_thm
     ++ RW_TAC std_ss [APPEND_11]]);
 
 (*---------------------------------------------------------------------------
-     Sum decoders
+     Sums
  ---------------------------------------------------------------------------*)
 
 val decode_sum_def = Define
@@ -388,7 +388,7 @@ val dec2enc_decode_sum = store_thm
    [decode_sum_def, dec2enc_enc2dec, wf_encode_sum, wf_dec2enc]);
 
 val encode_then_decode_sum = store_thm
-  ("decode_encode_sum",
+  ("encode_then_decode_sum",
    ``!p1 p2 e1 e2 l t.
        wf_encoder p1 e1 /\ wf_encoder p2 e2 /\ lift_sum p1 p2 l ==>
        (decode_sum (lift_sum p1 p2) (enc2dec p1 e1) (enc2dec p2 e2)
@@ -485,7 +485,7 @@ val decode_sum = store_thm
     ++ RW_TAC std_ss [APPEND_11]]);
 
 (*---------------------------------------------------------------------------
-     Option decoders
+     Options
  ---------------------------------------------------------------------------*)
 
 val decode_option_def = Define
@@ -509,7 +509,7 @@ val dec2enc_decode_option = store_thm
    [decode_option_def, dec2enc_enc2dec, wf_encode_option, wf_dec2enc]);
 
 val encode_then_decode_option = store_thm
-  ("decode_encode_option",
+  ("encode_then_decode_option",
    ``!p e l t.
        wf_encoder p e /\ lift_option p l ==>
        (decode_option (lift_option p) (enc2dec p e)
@@ -582,7 +582,7 @@ val decode_option = store_thm
        [enc2dec_some, encode_option_def, APPEND, lift_option_def]]);
 
 (*---------------------------------------------------------------------------
-     List decoders
+     Lists
  ---------------------------------------------------------------------------*)
 
 val decode_list_def = Define
@@ -604,7 +604,7 @@ val dec2enc_decode_list = store_thm
    [decode_list_def, dec2enc_enc2dec, wf_encode_list, wf_dec2enc]);
 
 val encode_then_decode_list = store_thm
-  ("decode_encode_list",
+  ("encode_then_decode_list",
    ``!p e l t.
        wf_encoder p e /\ EVERY p l ==>
        (decode_list (EVERY p) (enc2dec p e) (APPEND (encode_list e l) t) =
@@ -707,7 +707,126 @@ val decode_list = store_thm
     ASM_SIMP_TAC std_ss [enc2dec_some, encode_list_def, APPEND, EVERY_DEF]]);
 
 (*---------------------------------------------------------------------------
-     Num decoders
+     Bounded lists
+ ---------------------------------------------------------------------------*)
+
+val decode_blist_def = Define
+  `decode_blist p m d = enc2dec p (encode_blist m (dec2enc d))`;
+
+val wf_decode_blist = store_thm
+  ("wf_decode_blist",
+   ``!m p d.
+       wf_decoder p d ==>
+       wf_decoder (lift_blist m p) (decode_blist (lift_blist m p) m d)``,
+   RW_TAC std_ss [decode_blist_def]
+   ++ PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_blist]);
+
+val dec2enc_decode_blist = store_thm
+  ("dec2enc_decode_blist",
+   ``!m p d l.
+       wf_decoder p d /\ lift_blist m p l ==>
+       (dec2enc (decode_blist (lift_blist m p) m d) l =
+        encode_blist m (dec2enc d) l)``,
+   RW_TAC std_ss [decode_blist_def]
+   ++ PROVE_TAC [dec2enc_enc2dec, wf_encode_blist, wf_dec2enc]);
+
+val encode_then_decode_blist = store_thm
+  ("encode_then_decode_blist",
+   ``!m p e l t.
+       wf_encoder p e /\ lift_blist m p l ==>
+       (decode_blist (lift_blist m p) m (enc2dec p e)
+        (APPEND (encode_blist m e l) t) = SOME (l, t))``,
+   RW_TAC std_ss [decode_blist_def]
+   ++ MP_TAC
+      (Q.SPECL [`lift_blist m p`, `encode_blist m (dec2enc (enc2dec p e))`,
+                `APPEND (encode_blist m e l) t`, `l`, `t`]
+       (INST_TYPE [alpha |-> ``:'a list``] enc2dec_some))
+   ++ MATCH_MP_TAC (PROVE [] ``x /\ (y ==> z) ==> (x ==> y) ==> z``)
+   ++ CONJ_TAC >> PROVE_TAC [wf_encode_blist, wf_dec2enc, wf_enc2dec]
+   ++ RW_TAC std_ss [APPEND_11]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM MP_TAC 
+   ++ Q.SPEC_TAC (`l`, `l`)
+   ++ Induct_on `m`
+   ++ RW_TAC std_ss [lift_blist_def, encode_blist_def, APPEND_11]
+   ++ Cases_on `l` >> FULL_SIMP_TAC std_ss [LENGTH, SUC_NOT]
+   ++ FULL_SIMP_TAC std_ss [HD, TL, EVERY_DEF, LENGTH]
+   ++ RW_TAC std_ss [dec2enc_enc2dec, APPEND_11]
+   ++ Q.PAT_ASSUM `!l. P l` MATCH_MP_TAC
+   ++ RW_TAC std_ss [lift_blist_def]);
+
+val decode_blist = store_thm
+  ("decode_blist",
+   ``wf_decoder (p : 'a -> bool) d ==>
+     (decode_blist (lift_blist m p) m d l =
+      case m of 0 -> SOME ([], l)
+      || SUC n ->
+         (case d l of NONE -> NONE
+          || SOME (x, t) ->
+          (case decode_blist (lift_blist n p) n d t of NONE -> NONE
+           || SOME (xs, t') -> SOME (x :: xs, t'))))``,
+   (REPEAT CASE_TAC ++
+    RW_TAC std_ss [decode_blist_def, enc2dec_none, lift_blist_def, LENGTH_NIL])
+   << [MP_TAC
+       (Q.SPECL
+        [`lift_blist 0 p`, `encode_blist 0 (dec2enc d)`, `l`, `[]`, `l`]
+        (INST_TYPE [alpha |-> ``:'a list``] enc2dec_some))
+       ++ MATCH_MP_TAC (PROVE [] ``x /\ (y ==> z) ==> (x ==> y) ==> z``)
+       ++ CONJ_TAC >> PROVE_TAC [wf_dec2enc, wf_encode_blist]
+       ++ DISCH_THEN (fn th => REWRITE_TAC [th])
+       ++ RW_TAC std_ss
+          [lift_blist_def, EVERY_DEF, LENGTH, encode_blist_def, APPEND],
+       STRIP_TAC
+       ++ Cases_on `x`
+       ++ FULL_SIMP_TAC std_ss [LENGTH, SUC_NOT, EVERY_DEF]
+       ++ RW_TAC std_ss []
+       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ RW_TAC std_ss [encode_blist_def, GSYM APPEND_ASSOC, HD, TL]
+       ++ PROVE_TAC [decode_dec2enc_append, NOT_SOME_NONE],
+       STRIP_TAC
+       ++ Cases_on `x`
+       ++ FULL_SIMP_TAC std_ss [LENGTH, SUC_NOT, EVERY_DEF]
+       ++ RW_TAC std_ss []
+       ++ Q.PAT_ASSUM `X = SOME Y` MP_TAC
+       ++ RW_TAC std_ss [encode_blist_def, GSYM APPEND_ASSOC, HD, TL]
+       ++ MP_TAC (Q.SPECL [`p`, `d`, `h`] decode_dec2enc_append)
+       ++ ASM_REWRITE_TAC []
+       ++ Cases_on `h = q`
+       ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
+       ++ STRIP_TAC
+       ++ RW_TAC std_ss []
+       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ MP_TAC
+          (Q.SPECL [`LENGTH t'`, `p`, `dec2enc d`, `t'`, `t`]
+           encode_then_decode_blist)
+       ++ MATCH_MP_TAC (PROVE [] ``x /\ (y ==> z) ==> (x ==> y) ==> z``)
+       ++ CONJ_TAC >> RW_TAC std_ss [wf_dec2enc, lift_blist_def]
+       ++ Suff `enc2dec p (dec2enc d) = d` >> RW_TAC std_ss []
+       ++ PROVE_TAC [enc2dec_dec2enc],
+       Know `wf_encoder p (dec2enc d)` >> PROVE_TAC [wf_dec2enc]
+       ++ STRIP_TAC
+       ++ ASM_SIMP_TAC std_ss [enc2dec_some, wf_encode_blist, lift_blist_suc]
+       ++ MATCH_MP_TAC (PROVE [] ``x /\ (x ==> y) ==> x /\ y``)
+       ++ CONJ_TAC
+       >> (CONJ_TAC >> PROVE_TAC [wf_decoder_def, APPEND_NIL]
+           ++ Q.PAT_ASSUM `X = Y` MP_TAC
+           ++ RW_TAC std_ss [decode_blist_def, enc2dec_some, wf_encode_blist])
+       ++ RW_TAC std_ss [encode_blist_def, GSYM APPEND_ASSOC, HD, TL]
+       ++ Q.UNDISCH_TAC `d l = SOME (q,r)`
+       ++ Know `wf_decoder p d` >> RW_TAC std_ss []
+       ++ SIMP_TAC std_ss [wf_decoder_def]
+       ++ DISCH_THEN (MP_TAC o Q.SPEC `q`)
+       ++ ASM_SIMP_TAC std_ss []
+       ++ STRIP_TAC
+       ++ RW_TAC std_ss []
+       ++ Know `dec2enc d q = a` >> PROVE_TAC [APPEND_NIL, dec2enc_some]
+       ++ RW_TAC std_ss [APPEND_11]
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ RW_TAC std_ss [decode_blist_def, enc2dec_some, wf_encode_blist]]);
+
+(*---------------------------------------------------------------------------
+     Nums
  ---------------------------------------------------------------------------*)
 
 val decode_num_def = Define `decode_num p = enc2dec p encode_num`;
@@ -832,7 +951,7 @@ val decode_num = store_thm
     ++ RW_TAC arith_ss [MULT_DIV, Q.SPECL [`2`, `m`] MULT_COMM, ADD1]]);
 
 (*---------------------------------------------------------------------------
-     Bounded number decoders
+     Bounded numbers
  ---------------------------------------------------------------------------*)
 
 val decode_bnum_def = Define `decode_bnum m p = enc2dec p (encode_bnum m)`;

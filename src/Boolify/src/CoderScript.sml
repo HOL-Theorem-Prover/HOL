@@ -244,6 +244,35 @@ val wf_coder_list = store_thm
    ++ RW_TAC std_ss [encode_list_def, EVERY_DEF, dec2enc_enc2dec]);
 
 (*---------------------------------------------------------------------------
+     Bounded lists
+ ---------------------------------------------------------------------------*)
+
+val blist_coder_def = Define
+  `blist_coder m (p, e, d) =
+   (lift_blist m p, encode_blist m e, decode_blist (lift_blist m p) m d)`;
+
+val wf_coder_blist = store_thm
+  ("wf_coder_blist",
+   ``!m c. wf_coder c ==> wf_coder (blist_coder m c)``,
+   REPEAT GEN_TAC
+   ++ Know `?p e d. c = (p, e, d)` >> PROVE_TAC [pairTheory.ABS_PAIR_THM]
+   ++ RW_TAC std_ss []
+   ++ RW_TAC std_ss [decode_blist_def, blist_coder_def]
+   ++ MATCH_MP_TAC wf_coder_op
+   ++ FULL_SIMP_TAC std_ss [wf_coder_def, wf_encode_blist, wf_pred_def]
+   ++ Induct_on `m`
+   >> (REVERSE CONJ_TAC
+       >> RW_TAC std_ss [encode_blist_def]
+       ++ Q.EXISTS_TAC `[]`
+       ++ RW_TAC std_ss [lift_blist_def, LENGTH, EVERY_DEF])
+   ++ POP_ASSUM STRIP_ASSUME_TAC
+   ++ CONJ_TAC
+   >> (Q.EXISTS_TAC `x :: x'` ++ RW_TAC std_ss [lift_blist_suc])
+   ++ Cases >> RW_TAC std_ss [lift_blist_def, LENGTH]
+   ++ RW_TAC std_ss
+      [lift_blist_suc, encode_blist_def, dec2enc_enc2dec, HD, TL]);
+
+(*---------------------------------------------------------------------------
      Nums (Norrish numerals)
  ---------------------------------------------------------------------------*)
 

@@ -213,6 +213,11 @@ val biprefix_refl = store_thm
    ``!x. biprefix x x``,
    RW_TAC std_ss [biprefix_def, IS_PREFIX_REFL]);
 
+val biprefix_sym = store_thm
+  ("biprefix_sym",
+   ``!x y. biprefix x y ==> biprefix y x``,
+   PROVE_TAC [biprefix_def]);
+
 val biprefix_append = store_thm
   ("biprefix_append",
    ``!a b c d. biprefix (APPEND a b) (APPEND c d) ==> biprefix a c``,
@@ -238,8 +243,7 @@ val biprefix_appends = store_thm
 local
   val th =prove (``?p. !x. p x``, Q.EXISTS_TAC `\x. T` ++ RW_TAC std_ss []);
 in
-  val total_def = Definition.new_specification ("total_def", ["total"], th);
-  val () = add_const "total";
+  val total_def = new_specification ("total_def", ["total"], th);
 end;
 
 val every_total = store_thm
@@ -458,6 +462,43 @@ val _ = adjoin_to_theory
   S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());";
   NL()
   end)};
+
+(*---------------------------------------------------------------------------
+        Bounded lists
+ ---------------------------------------------------------------------------*)
+
+val encode_blist_def = 
+  Define
+  `(encode_blist 0 e l = []) /\
+   (encode_blist (SUC m) e l = APPEND (e (HD l)) (encode_blist m e (TL l)))`;
+
+val lift_blist_def = Define `lift_blist m p x = EVERY p x /\ (LENGTH x = m)`;
+
+val lift_blist_suc = store_thm
+  ("lift_blist_suc",
+   ``!n p h t. lift_blist (SUC n) p (h :: t) = p h /\ lift_blist n p t``,
+   RW_TAC std_ss [lift_blist_def, EVERY_DEF, LENGTH, CONJ_ASSOC]);
+
+val wf_encode_blist = store_thm
+  ("wf_encode_blist",
+   ``!m p e.
+       wf_encoder p e ==> wf_encoder (lift_blist m p) (encode_blist m e)``,
+   RW_TAC std_ss [wf_encoder_alt, lift_blist_def]
+   ++ NTAC 4 (POP_ASSUM MP_TAC)
+   ++ REWRITE_TAC [AND_IMP_INTRO]
+   ++ Q.SPEC_TAC (`y`, `y`)
+   ++ Q.SPEC_TAC (`x`, `x`)
+   ++ (Induct_on `x` ++ Cases_on `y` ++ FULL_SIMP_TAC std_ss [LENGTH, SUC_NOT])
+   ++ SIMP_TAC std_ss [EVERY_DEF, prim_recTheory.INV_SUC_EQ,
+                       encode_blist_def, HD, TL]
+   ++ REPEAT STRIP_TAC
+   ++ Suff `h = h'`
+   >> (RW_TAC std_ss [] ++ FULL_SIMP_TAC std_ss [biprefix_appends])
+   ++ Q.PAT_ASSUM `!y. P y` (K ALL_TAC)
+   ++ Q.PAT_ASSUM `!x. P x` MATCH_MP_TAC
+   ++ RW_TAC std_ss []
+   ++ MATCH_MP_TAC biprefix_append
+   ++ PROVE_TAC [biprefix_sym]);
 
 (*---------------------------------------------------------------------------
         Nums (Norrish numeral encoding)
