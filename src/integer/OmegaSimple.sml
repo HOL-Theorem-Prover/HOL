@@ -1,4 +1,4 @@
-structure OmegaSimple =
+structure OmegaSimple :> OmegaSimple =
 struct
 (* ----------------------------------------------------------------------
     Takes a closed existentially quantified formula where the body of
@@ -30,6 +30,8 @@ val ALL_CONV = ALL_QCONV
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaSimple",
                           origin_function = f,
                           message = msg}
+
+val (Type,Term) = parse_from_grammars integer_grammars
 
 
 (* ----------------------------------------------------------------------
