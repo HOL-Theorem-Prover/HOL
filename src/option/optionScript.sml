@@ -125,12 +125,12 @@ val option_case_def = Prim_rec.new_recursive_definition
    def = Term`(option_case u f NONE = u) /\
               (option_case (u:'b) f (SOME (x:'a)) = f x)`};
 
-val option_APPLY_DEF = Prim_rec.new_recursive_definition
- {name="option_APPLY_DEF",
+val OPTION_MAP_DEF = Prim_rec.new_recursive_definition
+ {name="OPTION_MAP_DEF",
   rec_axiom=option_Axiom,
   def =
-  Term`(option_APPLY (f:'a->'b) (SOME x) = SOME (f x)) /\
-       (option_APPLY f NONE = NONE)`};
+  Term`(OPTION_MAP (f:'a->'b) (SOME x) = SOME (f x)) /\
+       (OPTION_MAP f NONE = NONE)`};
 
 val IS_SOME_DEF = Prim_rec.new_recursive_definition
   {name="IS_SOME_DEF",
@@ -147,16 +147,16 @@ val THE_DEF = Prim_rec.new_recursive_definition
    rec_axiom=option_Axiom,
    def = Term `THE (SOME x) = x`};
 
-val option_JOIN_DEF = Prim_rec.new_recursive_definition
-  {name = "option_JOIN_DEF",
+val OPTION_JOIN_DEF = Prim_rec.new_recursive_definition
+  {name = "OPTION_JOIN_DEF",
    rec_axiom = option_Axiom,
-   def = Term`(option_JOIN NONE = NONE) /\
-              (option_JOIN (SOME x) = x)`};
+   def = Term`(OPTION_JOIN NONE = NONE) /\
+              (OPTION_JOIN (SOME x) = x)`};
 
 val option_rws =
     [IS_SOME_DEF, THE_DEF, IS_NONE_DEF, option_nchotomy,
      NOT_NONE_SOME,NOT_SOME_NONE, SOME_11, option_case_def,
-     option_APPLY_DEF, option_JOIN_DEF];
+     OPTION_MAP_DEF, OPTION_JOIN_DEF];
 
 val ex1_rw = prove(Term`!x. (?y. x = y) /\ (?y. y = x)`,
    GEN_TAC THEN CONJ_TAC THEN EXISTS_TAC (Term`x`) THEN REFL_TAC);
@@ -240,8 +240,8 @@ val option_CLAUSES = save_thm("option_CLAUSES",
                  IS_SOME_option_case,
                  IS_SOME_option_case_SOME]@
                  CONJUNCTS option_case_def@
-                 CONJUNCTS option_APPLY_DEF@
-                 CONJUNCTS option_JOIN_DEF));
+                 CONJUNCTS OPTION_MAP_DEF@
+                 CONJUNCTS OPTION_JOIN_DEF));
 
 val option_case_compute = store_thm("option_case_compute",
   --`option_case (e:'b) f (x:'a option) =
@@ -249,19 +249,19 @@ val option_case_compute = store_thm("option_case_compute",
     OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws);
 
-val option_APPLY_EQ_SOME = store_thm(
-  "option_APPLY_EQ_SOME",
+val OPTION_MAP_EQ_SOME = store_thm(
+  "OPTION_MAP_EQ_SOME",
   Term`!f (x:'a option) y.
-         (option_APPLY f x = SOME y) = ?z. (x = SOME z) /\ (y = f z)`,
+         (OPTION_MAP f x = SOME y) = ?z. (x = SOME z) /\ (y = f z)`,
   REPEAT GEN_TAC THEN OPTION_CASES_TAC (--`x:'a option`--) THEN
   simpLib.SIMP_TAC boolSimps.bool_ss
-    [SOME_11, NOT_NONE_SOME, NOT_SOME_NONE, option_APPLY_DEF] THEN
+    [SOME_11, NOT_NONE_SOME, NOT_SOME_NONE, OPTION_MAP_DEF] THEN
   mesonLib.MESON_TAC []);
 
-val option_JOIN_EQ_SOME = store_thm(
-  "option_JOIN_EQ_SOME",
+val OPTION_JOIN_EQ_SOME = store_thm(
+  "OPTION_JOIN_EQ_SOME",
   Term`!(x:'a option option) y.
-          (option_JOIN x = SOME y) = (x = SOME (SOME y))`,
+          (OPTION_JOIN x = SOME y) = (x = SOME (SOME y))`,
   GEN_TAC THEN
   Q.SUBGOAL_THEN `(x = NONE) \/ (?z. x = SOME z)` STRIP_ASSUME_TAC THENL [
     MATCH_ACCEPT_TAC option_nchotomy,
@@ -307,9 +307,9 @@ val _ = adjoin_to_theory
     S "val _ = let open computeLib";                            NL();
     S "        in add_funs (map lazyfy_thm";                    NL();
     S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,";   NL();
-    S "                option_case_compute,option_APPLY_DEF,";  NL();
+    S "                option_case_compute,OPTION_MAP_DEF,";  NL();
     S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,";       NL();
-    S "                option_JOIN_DEF])";                      NL();
+    S "                OPTION_JOIN_DEF])";                      NL();
     S "        end;"
   end)};
 

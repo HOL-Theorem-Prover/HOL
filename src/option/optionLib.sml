@@ -1,7 +1,7 @@
 structure optionLib :> optionLib = 
 struct
 
-  open Parse optionTheory;
+ open Parse optionTheory;
 
 val option_rws = option_CLAUSES
 
@@ -21,7 +21,7 @@ end;
 val OPTION_rewrites =
   [ THE_DEF, IS_SOME_DEF, IS_NONE_DEF,
     SOME_11, NOT_NONE_SOME, NOT_SOME_NONE,
-    option_case_compute, option_APPLY_DEF ];
+    option_case_compute, OPTION_MAP_DEF ];
 
 val OPTION_rws =
   computeLib.add_thms (List.map computeLib.lazyfy_thm OPTION_rewrites);
