@@ -571,7 +571,7 @@ A polished proof of {\small{\it DIVIDES\_FACT\/}} is the following:
 \verb+ THEN Induct_on `p`+ \\
 \verb+ THEN ARW_TAC [FACT,ADD_CLAUSES]+ \\
 \verb+ THENL [Cases_on `m`, ALL_TAC]+ \\
-\verb+ THEN PROVE_TAC [FACT, DECIDE `!x. ~(x < x)`,+ \\
+\verb+ THEN PROVE_TAC [FACT, DECIDE ``!x. ~(x < x)``,+ \\
 \verb+             DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
 \end{tabular}
 \end{description}
@@ -673,7 +673,7 @@ OK..
     assumption (the false $0 < 0$ in this case).}
 
 \begin{session}\begin{verbatim}
-- e (PROVE_TAC [DECIDE `!x. ~(x < x)`]);
+- e (PROVE_TAC [DECIDE ``!x. ~(x < x)``]);
 
 OK..
 Meson search level: ..
