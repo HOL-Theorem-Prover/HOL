@@ -9,14 +9,15 @@
 (* REVISED: Tom Melham (extensively revised and extended)		*)
 (* DATE:    January 1992						*)
 (* =====================================================================*)
+
 structure pred_setScript =
 struct
 
 (* interactive use
-app load ["pairLib", "numLib", "PGspec"];
+app load ["pairLib", "numLib", "PGspec", "PSet_ind"];
 *)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
-     numTheory prim_recTheory arithmeticTheory;
+     numTheory prim_recTheory arithmeticTheory BasicProvers;
 
 infix THEN THENL THENC ORELSE ORELSEC |->;
 
@@ -2808,6 +2809,50 @@ val INTER_UNION_COMPL = store_thm
                       = COMPL (COMPL s UNION COMPL t)``,
    SIMP_TAC bool_ss [EXTENSION, IN_COMPL, IN_INTER, IN_UNION, NOT_IN_EMPTY,
                      IN_UNIV]);
+
+val COMPL_EMPTY = store_thm
+  ("COMPL_EMPTY",
+   ``COMPL {} = UNIV``,
+   SIMP_TAC bool_ss [EXTENSION, IN_COMPL, NOT_IN_EMPTY, IN_UNIV]);
+
+(* ====================================================================== *)
+(* Sets of size n.                                                        *)
+(* ====================================================================== *)
+
+val count_def = new_definition ("count_def", ``count (n:num) = {m | m < n}``);
+
+val IN_COUNT = store_thm
+  ("IN_COUNT",
+   ``!m n. m IN count n = m < n``,
+   RW_TAC bool_ss [GSPECIFICATION, count_def]);
+
+val COUNT_ZERO = store_thm
+  ("COUNT_ZERO",
+   ``count 0 = {}``,
+   RW_TAC bool_ss [EXTENSION, IN_COUNT, NOT_IN_EMPTY]
+   THEN CONV_TAC Arith.ARITH_CONV);
+
+val COUNT_SUC = store_thm
+  ("COUNT_SUC",
+   ``!n. count (SUC n) = n INSERT count n``,
+   RW_TAC bool_ss [EXTENSION, IN_INSERT, IN_COUNT]
+   THEN CONV_TAC Arith.ARITH_CONV);
+
+val FINITE_COUNT = store_thm
+  ("FINITE_COUNT",
+   ``!n. FINITE (count n)``,
+   Induct THENL
+   [RW_TAC bool_ss [COUNT_ZERO, FINITE_EMPTY],
+    RW_TAC bool_ss [COUNT_SUC, FINITE_INSERT]]);
+
+val CARD_COUNT = store_thm
+  ("CARD_COUNT",
+   ``!n. CARD (count n) = n``,
+   Induct THENL
+   [RW_TAC bool_ss [COUNT_ZERO, CARD_EMPTY],
+    RW_TAC bool_ss [COUNT_SUC, CARD_INSERT, FINITE_COUNT, IN_COUNT]
+    THEN POP_ASSUM MP_TAC
+    THEN CONV_TAC Arith.ARITH_CONV]);
 
 (*---------------------------------------------------------------------------
     A "fold" operation for sets
