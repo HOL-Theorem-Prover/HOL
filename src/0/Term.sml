@@ -1317,6 +1317,7 @@ fun trans_name ("NIL", "list",_,_)      = "[]"
   | trans_name ("EMPTY","pred_set",_,_) = "{}"
   | trans_name ("EMPTY",_,_,_)          = "EMPTY"
   | trans_name ("emptystring",_,_,_)    = "\"\""
+  | trans_name ("ZERO",_,_,_)           = "0"
   | trans_name (name,_,Prefix,_)        = name
   | trans_name (name,_,_,no)            = name
   | trans_name (name,_,_,maybe)         = dollar^name;
@@ -1549,7 +1550,6 @@ and
     pr_term _ _ _ 0 = add_string " ... "
   | pr_term (v as Fv _) grav E n = pr_var n E v
   | pr_term (v as Bv _) grav E n = pr_var n E v
-  | pr_term (Const(ref"ZERO", _)) _ _ _ = add_string "0"
   | pr_term (c as Const p) _ _ n = pr_const p n maybe
   | pr_term (tm as Abs _) grav E n =         (* simple abstractions *)
            let val (F,body,e) = strip_varstruct tm
@@ -1810,8 +1810,15 @@ and
   (*-----------------------------------------------------------------------*
    * Numeral case.                                                         *
    *-----------------------------------------------------------------------*)
-  | pr_term (tm as Comb{Rator as Const(ref"NUMERAL",_), Rand}) grav E n =
-       (add_string (n2i tm) handle _ => pr_comb Rator Rand grav E n)
+  | pr_term (tm as Comb{Rator as Const(ref"NUMERAL", _), Rand}) grav E n = (let
+      val nstr = n2i tm
+    in
+      if !Globals.show_types then add_string "(" else ();
+      add_string (n2i tm);
+      if !Globals.show_types then
+        (add_string " :"; pp_type (type_of Rand) (n-1); add_string ")")
+      else ()
+    end handle _ => pr_comb Rator Rand grav E n)
 
 
   (*------------------------------------------------------------------------
