@@ -1,5 +1,5 @@
 (* ===================================================================== *)
-(* FILE          : mk_.sml                                               *)
+(* FILE          : sumScript.sml                                         *)
 (* DESCRIPTION   : Creates a theory containing the logical definition of *)
 (*                 the sum type operator.  The sum type is defined and   *)
 (*                 the following `axiomatization` is proven from the     *)
@@ -209,6 +209,18 @@ val sum_Axiom = store_thm("sum_Axiom",
    MATCH_ACCEPT_TAC rew
    end);
 
+val sum_INDUCT = save_thm("sum_INDUCT", prove_induction_thm sum_Axiom)
+val sum_CASES = save_thm("sum_CASES", prove_cases_thm sum_INDUCT);
+val sum_distinct = store_thm(
+  "sum_distinct",
+  Term`!x:'a y:'b. ~(INL x = INR y)`,
+  REPEAT STRIP_TAC THEN
+  STRIP_ASSUME_TAC ((BETA_RULE o REWRITE_RULE [EXISTS_UNIQUE_DEF] o
+                     ISPECL [``\x:'a. T``, ``\y:'b. F``]) sum_Axiom) THEN
+  FIRST_X_ASSUM (MP_TAC o AP_TERM (Term`h:'a + 'b -> bool`)) THEN
+  ASM_REWRITE_TAC []);
+
+
 
 (* ---------------------------------------------------------------------*)
 (* The definitions of ISL, ISR, OUTL, OUTR follow.			*)
@@ -321,52 +333,56 @@ val [sum_EXISTS,sum_UNIQUE] =
        [ a, BETA_RULE (CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) b) ]
    end;
 
-(* Prove the following key lemma by contradiction.			*)
-
-val sum_lemma =
-   let val lemma = TAC_PROOF (([],
-       --`~~!(v:'a+'b). (?x. v = INL x) \/ (?x. v = INR x)`--),
-       CONV_TAC (DEPTH_CONV NOT_FORALL_CONV) THEN
-       PURE_REWRITE_TAC [DE_MORGAN_THM] THEN
-       DISCH_THEN (STRIP_ASSUME_TAC o
-                   (CONV_RULE (DEPTH_CONV NOT_EXISTS_CONV))) THEN
-       MP_TAC (SPECL [--`\x:'a.T`--, --`\x:'b.F`--,
-	              --`\v':('a,'b)sum. ((v = v') => T | ISL v')`--,
-		      --`ISL:('a,'b)sum->bool`--]
-		       (INST_TYPE [{redex = ==`:'c`==, residue = ==`:bool`==}]
-                                  sum_UNIQUE)) THEN
-        MP_TAC (SPECL [--`\x:'a.T`--,  --`\x:'b.F`--,
-		       --`\v':('a,'b)sum. ((v = v') => F | ISL v')`--,
-		       --`ISL:('a,'b)sum->bool`--]
-		       (INST_TYPE [Type`:'c` |-> Type.bool] sum_UNIQUE)) THEN
-        CONV_TAC (DEPTH_CONV BETA_CONV) THEN ASM_REWRITE_TAC [ISR,ISL] THEN
-        DISCH_THEN (fn th => PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL th)]) THEN
-        DISCH_THEN (MP_TAC o SPEC (--`v :'a + 'b`--)) THEN
-        REWRITE_TAC[])
-   in
-   REWRITE_RULE [] lemma
-   end;
-
 (* Prove that: !x. ISL(x) \/ ISR(x)					*)
 val ISL_OR_ISR = store_thm("ISL_OR_ISR",
     --`!x:('a,'b)sum. ISL(x) \/ ISR(x)`--,
     STRIP_TAC THEN
-    STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_lemma) THEN
+    STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_CASES) THEN
     ASM_REWRITE_TAC [ISL,ISR]);
 
 (* Prove that: |- !x. ISL(x) ==> INL (OUTL x) = x			*)
 val INL = store_thm("INL",
     --`!x:('a,'b)sum. ISL(x) ==> (INL (OUTL x) = x)`--,
     STRIP_TAC THEN
-    STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_lemma) THEN
+    STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_CASES) THEN
     ASM_REWRITE_TAC [ISL,OUTL]);
 
 (* Prove that: |- !x. ISR(x) ==> INR (OUTR x) = x			*)
 val INR = store_thm("INR",
     --`!x:('a,'b)sum. ISR(x) ==> (INR (OUTR x) = x)`--,
     STRIP_TAC THEN
-    STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_lemma) THEN
+    STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_CASES) THEN
     ASM_REWRITE_TAC [ISR,OUTR]);
+
+val sum_case_def = new_recursive_definition{
+  def = Term`(sum_case f g (INL x) = f x) /\
+             (sum_case f g (INR y) = g y)`,
+  fixity = Prefix,
+  name = "sum_case_def",
+  rec_axiom = sum_Axiom};
+
+val sum_case_cong = save_thm("sum_case_cong",
+                             Prim_rec.case_cong_thm sum_CASES sum_case_def);
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME(fn ppstrm =>
+   let val S = PP.add_string ppstrm
+       fun NL() = PP.add_newline ppstrm
+   in
+      S "val _ = TypeBase.write";             NL();
+      S "  (TypeBase.mk_tyinfo";              NL();
+      S "     {ax=sum_Axiom,";                NL();
+      S "      case_def=sum_case_def,";       NL();
+      S "      case_cong=sum_case_cong,";     NL();
+      S "      induction=sum_INDUCT,";        NL();
+      S "      nchotomy=sum_CASES,";          NL();
+      S "      size=NONE,";                   NL();
+      S "      one_one=SOME INR_INL_11,";     NL();
+      S "      distinct=SOME sum_distinct});"
+  end)};
+
+
 
 val _ = export_theory();
 
