@@ -53,14 +53,13 @@ val F = Susp.delay (fn () => mk_thy_const{Name="F", Thy="bool", Ty=bool});
 
 val mk_neg = Susp.delay (fn () => 
   let val notc = mk_thy_const{Name="~",Thy="bool",Ty=bool --> bool}
-  in fn M => mk_comb{Rator=notc, Rand=M}
+  in fn M => mk_comb(notc,M)
   end);
 
 val mk_forall = Susp.delay (fn () =>
  let val forallc = prim_mk_const{Name="!", Thy="bool"}
  in fn v => fn tm =>
-      mk_comb{Rator=inst[alpha |-> type_of v] forallc,
-         Rand=mk_abs{Bvar=v, Body=tm}}
+      mk_comb(inst[alpha |-> type_of v] forallc, mk_abs(v,tm))
  end);
 
 val mk_conj = Susp.delay (fn () =>
@@ -77,9 +76,9 @@ val mk_disj = Susp.delay (fn () =>
 local val DEST_IMP_ERR = thm_err "dest_imp" ""
 in
 fun dest_imp M =
- let val {Rator,Rand=conseq} = with_exn dest_comb M DEST_IMP_ERR
+ let val (Rator,conseq) = with_exn dest_comb M DEST_IMP_ERR
  in if is_comb Rator
-    then let val {Rator,Rand=ant} = dest_comb Rator
+    then let val (Rator,ant) = dest_comb Rator
          in if Rator=Term.imp then (ant,conseq) else raise DEST_IMP_ERR 
          end
     else case with_exn dest_thy_const Rator DEST_IMP_ERR
@@ -91,7 +90,7 @@ end;
 local val err = thm_err "dest_exists" ""
 in
 fun dest_exists tm = 
- let val {Rator,Rand} = with_exn dest_comb tm err
+ let val (Rator,Rand) = with_exn dest_comb tm err
  in case with_exn dest_thy_const Rator err
      of {Name="?", Thy="bool",...} => with_exn dest_abs Rand err
       | otherwise => raise err
@@ -204,14 +203,12 @@ fun SUBST replacements template (th as THM(O,asl,c)) =
 fun ABS v (THM(ocl,asl,c)) =
  let val (lhs,rhs,ty) = Term.dest_eq_ty c handle HOL_ERR _ 
                       => ERR "ABS" "not an equality"
-     val {Ty=vty,...} = dest_var v handle HOL_ERR _ 
+     val vty = snd(dest_var v) handle HOL_ERR _ 
                       => ERR "ABS" "first argument is not a variable"
  in if var_occursl v asl
      then ERR "ABS" "The variable is free in the assumptions"
      else make_thm Count.Abs (ocl,asl,
-             mk_eq_nocheck (vty --> ty)
-                           (mk_abs{Bvar=v, Body=lhs})
-                           (mk_abs{Bvar=v, Body=rhs}))
+           mk_eq_nocheck (vty --> ty) (mk_abs(v,lhs)) (mk_abs(v,rhs)))
  end;
 
 
@@ -418,9 +415,7 @@ fun MK_COMB (funth,argth) =
      make_thm Count.MkComb
          (Tag.merge (tag funth) (tag argth),
           union_hyp (hyp funth) (hyp argth),
-          mk_eq_nocheck (rng ty)
-                (mk_comb{Rator=f, Rand=x})
-                (mk_comb{Rator=g, Rand=y}))
+          mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)))
    end
    handle HOL_ERR _ => ERR "MK_COMB" "";
 
@@ -446,9 +441,7 @@ fun AP_TERM f th =
  let val (lhs,rhs,_) = Term.dest_eq_ty (concl th)
  in make_thm Count.ApTerm
        (tag th, hyp th,
-        mk_eq_nocheck (rng (type_of f))
-                      (mk_comb{Rator=f, Rand=lhs})
-                      (mk_comb{Rator=f, Rand=rhs}))
+        mk_eq_nocheck (rng (type_of f)) (mk_comb(f,lhs)) (mk_comb(f,rhs)))
  end
  handle HOL_ERR _ => ERR "AP_TERM" "";
 
@@ -475,9 +468,7 @@ fun AP_THM th tm =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
  in make_thm Count.ApThm
        (tag th, hyp th,
-        mk_eq_nocheck (rng ty)
-                      (mk_comb{Rator=lhs, Rand=tm})
-                      (mk_comb{Rator=rhs, Rand=tm}))
+        mk_eq_nocheck (rng ty) (mk_comb(lhs,tm)) (mk_comb(rhs,tm)))
  end
  handle HOL_ERR _ => ERR "AP_THM" "";
 
@@ -576,12 +567,12 @@ fun EQ_IMP_RULE th =
  *---------------------------------------------------------------------------*)
 
 fun SPEC t th =
- let val {Rator,Rand} = dest_comb(concl th)
+ let val (Rator,Rand) = dest_comb(concl th)
      val {Thy,Name,...} = dest_thy_const Rator
  in
    Assert (Name="!" andalso Thy="bool") "" "";
    make_thm Count.Spec 
-       (tag th, hyp th, beta_conv(mk_comb{Rator=Rand, Rand=t}))
+       (tag th, hyp th, beta_conv(mk_comb(Rand, t)))
  end
  handle HOL_ERR _ => ERR "SPEC" "";
 
@@ -652,13 +643,12 @@ fun GEN x th =
 local val err = thm_err "EXISTS" ""
 in
 fun EXISTS (w,t) th =
- let val {Rator=ex,Rand} = with_exn dest_comb w err
+ let val (ex,Rand) = with_exn dest_comb w err
      val {Name,Thy,...}  = with_exn dest_thy_const ex err
      val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" "not an existential"
-     val _ = Assert (aconv (beta_conv(mk_comb{Rator=Rand, Rand=t}))
-                           (concl th)) "EXISTS" "incompatible structure"
-   in
-     make_thm Count.Exists (tag th, hyp th, w)
+     val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th)) 
+                    "EXISTS" "incompatible structure"
+   in make_thm Count.Exists (tag th, hyp th, w)
    end
 end;
 
@@ -695,7 +685,7 @@ fun disch(w,wl) = Lib.gather (not o aconv w) wl;
 fun CHOOSE (v,xth) bth =
   let val (x_asl, x_c) = dest_thm xth
       val (b_asl, b_c) = dest_thm bth
-      val {Bvar,Body}  = dest_exists x_c
+      val (Bvar,Body)  = dest_exists x_c
       val newhyps = union_hyp x_asl (disch (subst [Bvar |-> v] Body, b_asl))
       val occursv = var_occurs v
       val _ = Assert (not(occursv x_c) andalso 
@@ -745,8 +735,7 @@ fun CONJ th1 th2 =
  *---------------------------------------------------------------------------*)
 
 fun conj1 tm =
-  let val {Rator,...} = dest_comb tm
-      val {Rator=c,Rand=M} = dest_comb Rator
+  let val (c,M) = dest_comb (rator tm)
       val {Name,Thy,...} = dest_thy_const c
   in 
     if Name="/\\" andalso Thy="bool" then M else ERR "" ""
@@ -774,9 +763,8 @@ fun CONJUNCT1 th =
  *---------------------------------------------------------------------------*)
 
 fun conj2 tm =
-  let val {Rator,Rand=M} = dest_comb tm
-      val {Rator=c, ...} = dest_comb Rator
-      val {Name,Thy,...} = dest_thy_const c
+  let val (Rator,M) = dest_comb tm
+      val {Name,Thy,...} = dest_thy_const (rator Rator)
   in 
      if Name="/\\" andalso Thy="bool" then M else ERR "" ""
   end
@@ -836,8 +824,8 @@ fun DISJ2 w th = make_thm Count.Disj2
  *---------------------------------------------------------------------------*)
 
 fun dest_disj tm =
-  let val {Rator,Rand=N}   = dest_comb tm
-      val {Rator=c,Rand=M} = dest_comb Rator
+  let val (Rator,N) = dest_comb tm
+      val (c,M)     = dest_comb Rator
       val {Name,Thy,...}   = dest_thy_const c
   in 
     if Name="\\/" andalso Thy="bool" then (M,N) else ERR "" ""
@@ -894,7 +882,7 @@ fun NOT_INTRO th =
  *---------------------------------------------------------------------------*)
 
 local fun dest M = 
-        let val {Rator,Rand}  = dest_comb M
+        let val (Rator,Rand)  = dest_comb M
         in (dest_thy_const Rator, Rand)
         end
 in
@@ -941,7 +929,7 @@ fun CCONTR w fth =
  * Instantiate free variables in a theorem
  *---------------------------------------------------------------------------*)
 
-local fun var_compare ({Name,Ty}, {Name=s,Ty=ty}) = 
+local fun var_compare ((Name,Ty), (s,ty)) = 
           (case String.compare(Name,s)
             of EQUAL => Type.compare (Ty,ty)
              | x => x)
@@ -1025,7 +1013,7 @@ fun Eta th =
 
 fun Mk_comb thm =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl thm)
-       val {Rator,Rand} = dest_comb rhs
+       val (Rator,Rand) = dest_comb rhs
        fun mkthm th1' th2' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
              val _ = Assert (EQ(lhs1,Rator)) "" ""
@@ -1033,7 +1021,7 @@ fun Mk_comb thm =
              val _ = Assert (EQ(lhs2,Rand)) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
-	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb{Rator=rhs1,Rand=rhs2}))
+	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))
          end
 	 handle HOL_ERR _ => ERR "Mk_comb" "";
        val aty = type_of Rand    (* typing! *)
@@ -1059,14 +1047,14 @@ fun Mk_comb thm =
 
 fun Mk_abs thm =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl thm)
-       val {Bvar,Body} = dest_abs rhs
+       val (Bvar,Body) = dest_abs rhs
        fun mkthm th1' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
              val _ = Assert (EQ(lhs1,Body)) "" ""
              val _ = Assert (not (var_occursl Bvar (hyp th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.Abs
-	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs{Bvar=Bvar, Body=rhs1}))
+	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)))
          end
 	 handle HOL_ERR _ => ERR "Mk_abs" ""
        val th1 = refl_nocheck (rng ty) Body
@@ -1079,12 +1067,12 @@ fun Mk_abs thm =
  *---------------------------------------------------------------------------*)
 
 fun Spec t th =
-   let val {Rator,Rand} = dest_comb(concl th)
+   let val (Rator,Rand) = dest_comb(concl th)
        val {Name,Thy,...} = dest_thy_const Rator
    in
      Assert (Thy="bool" andalso Name="!") "" "";
      make_thm Count.Spec 
-        (tag th, hyp th, Term.lazy_beta_conv(mk_comb{Rator=Rand, Rand=t}))
+        (tag th, hyp th, Term.lazy_beta_conv(mk_comb(Rand,t)))
    end
    handle HOL_ERR _ => ERR "Spec" "";
 
@@ -1128,7 +1116,7 @@ datatype lexeme
    | ident of int
    | bvar  of int;
 
-local val numeric = Char.contains "0123456789";
+local val numeric = Char.contains "0123456789"
 in
 fun take_numb ss0 =
   let val (ns, ss1) = Substring.splitl numeric ss0
@@ -1138,10 +1126,8 @@ fun take_numb ss0 =
   end
 end;
 
-fun lexer ss0 =
- let val ss1 = Substring.dropl Char.isSpace ss0
- in
-  case Substring.getc ss1
+fun lexer ss1 =
+  case Substring.getc (Substring.dropl Char.isSpace ss1)
    of NONE         => NONE
     | SOME (c,ss2) =>
        case c
@@ -1151,8 +1137,7 @@ fun lexer ss0 =
          | #")"  => SOME(rparen,ss2)
          | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, ss3) end
          | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  ss3) end
-         |   _   => ERR "raw lexer" "bad character"
-  end;
+         |   _   => ERR "raw lexer" "bad character";
 
 fun eat_rparen ss =
   case lexer ss
@@ -1178,14 +1163,14 @@ fun parse_raw table =
      and
      parsel (stk,ss) =
         case parse (stk,ss)
-         of (h1::h2::t, ss') => (Comb{Rator=h2,Rand=h1}::t, eat_rparen ss')
+         of (h1::h2::t, ss') => (Comb(h2,h1)::t, eat_rparen ss')
           |   _              => ERR "raw.parsel" "impossible"
      and
      glamb(stk,ss) =
       case lexer ss
        of SOME (ident n, rst) =>
             (case parse (stk, eat_dot rst)
-              of (h::t,rst1) => (Abs{Bvar=index n,Body=h}::t, eat_rparen rst1)
+              of (h::t,rst1) => (Abs(index n,h)::t, eat_rparen rst1)
                |   _         => ERR "glamb" "impossible")
         | _ => ERR "glamb" "expected an identifier"
  in

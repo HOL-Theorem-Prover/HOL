@@ -72,7 +72,7 @@ fun first_decl fname Tyop =
    | [{const,...}]  => const
    | {const,...}::_ => (WARN fname "more than one possibility"; const)
 
-fun mk_type {Tyop,Args} =
+fun mk_type (Tyop,Args) =
   make_type (first_decl "mk_type" Tyop) Args ("mk_type",Tyop);
 
 (* currently unused *)
@@ -91,7 +91,7 @@ fun break_type (Tyapp p) = p | break_type _ = raise ERR "break_type" "";
 fun dest_thy_type (Tyapp((tyc,_),A)) = {Thy=seg_of tyc,Tyop=name_of tyc,Args=A}
   | dest_thy_type _ = raise ERR "dest_thy_type" "";
 
-fun dest_type (Tyapp((tyc,_),A)) = {Tyop=name_of tyc, Args=A} 
+fun dest_type (Tyapp((tyc,_),A)) = (name_of tyc, A)
   | dest_type _ = raise ERR "dest_type" ""
 end;
 

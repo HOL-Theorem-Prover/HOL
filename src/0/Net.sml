@@ -83,12 +83,11 @@ local
              of V => []
               | Cnst _ => [net_assoc label net] 
               | Lam    => mtch (break_abs tm) (net_assoc Lam net)
-              | Cmb    => let val {Rator,Rand} = Term.dest_comb tm
+              | Cmb    => let val (Rator,Rand) = Term.dest_comb tm
                           in itlist(append o mtch Rand)
                                    (mtch Rator (net_assoc Cmb net)) [] 
                            end
-       in 
-          itlist (fn NODE [] => I | net => cons net) nets [Vnet]
+       in itlist (fn NODE [] => I | net => cons net) nets [Vnet]
        end
 in 
 fun match tm net =
@@ -111,7 +110,7 @@ fun index x net = let
            | SOME (_,net) => 
               case label
                of Lam => appl defd (break_abs tm) net
-                | Cmb => let val {Rator,Rand} = Term.dest_comb tm
+                | Cmb => let val (Rator,Rand) = Term.dest_comb tm
                          in appl (Rand::defd) Rator net end
                 |  _  => let fun exec_defd [] (NODE _) = raise ERR "appl" 
                                   "NODE: should be at a LEAF instead"
@@ -146,7 +145,7 @@ let fun enter _ _  (LEAF _) = raise ERR "insert" "LEAF: cannot insert"
              case assoc1 label subnets of NONE => empty | SOME (_,net) => net
           val new_child = 
             case label
-             of Cmb => let val {Rator,Rand} = Term.dest_comb tm
+             of Cmb => let val (Rator,Rand) = Term.dest_comb tm
                        in enter (Rand::defd) Rator child end
               | Lam => enter defd (break_abs tm) child
               | _   => let fun exec [] (LEAF L)  = LEAF(p::L)
@@ -188,7 +187,7 @@ let fun del [] = []
          val childnet' = 
            case label
             of Lam => remv defd (break_abs tm) childnet
-             | Cmb => let val {Rator,Rand} = Term.dest_comb tm
+             | Cmb => let val (Rator,Rand) = Term.dest_comb tm
                       in remv (Rand::defd) Rator childnet end
              |  _  => let fun exec_defd [] (NODE _) = raise ERR "remv" 
                                 "NODE: should be at a LEAF instead"
@@ -259,7 +258,7 @@ let fun update _ _ (LEAF _) = raise ERR "net_update" "cannot update a tip"
                val child = get_edge label net
                val new_child = 
                  case label
-                   of Cmb => let val {Rator, Rand} = Term.dest_comb tm
+                   of Cmb => let val (Rator,Rand) = Term.dest_comb tm
                              in update (Rator::defd) Rand child
                              end
                     | Lam => update defd (break_abs tm) child
@@ -277,7 +276,7 @@ fun follow tm net =
        of (label as Cnst _) => [get_edge label net] 
         | V   => [] 
         | Lam => follow (break_abs tm) (get_edge Lam net)
-        | Cmb => let val {Rator,Rand} = Term.dest_comb tm
+        | Cmb => let val (Rator,Rand) = Term.dest_comb tm
                  in Lib.itlist(fn i => fn A => (follow Rator i @ A))
                               (follow Rand (get_edge Cmb net)) []
                  end

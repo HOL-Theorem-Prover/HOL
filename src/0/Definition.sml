@@ -42,13 +42,12 @@ val current_theory = Theory.current_theory;
 
 fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm)
 
-fun mk_exists (absrec as {Bvar,Body}) = 
-  mk_comb{Rator=mk_thy_const
-                  {Name="?",Thy="bool", Ty=(type_of Bvar-->bool)-->bool},
-          Rand=mk_abs absrec}
+fun mk_exists (absrec as (Bvar,_)) = 
+  mk_comb(mk_thy_const{Name="?",Thy="bool", Ty= (type_of Bvar-->bool)-->bool},
+          mk_abs absrec)
 
 fun dest_exists M = 
- let val {Rator,Rand} = with_exn dest_comb M (TYDEF_ERR"dest_exists")
+ let val (Rator,Rand) = with_exn dest_comb M (TYDEF_ERR"dest_exists")
  in case total dest_thy_const Rator
      of SOME{Name="?",Thy="bool",...} => dest_abs Rand 
       | otherwise => raise TYDEF_ERR"dest_exists"
@@ -56,22 +55,22 @@ fun dest_exists M =
  
 fun nstrip_exists 0 t = ([],t) 
   | nstrip_exists n t =
-     let val {Bvar, Body} = dest_exists t
+     let val (Bvar, Body) = dest_exists t
          val (l,t'') = nstrip_exists (n-1) Body
      in (Bvar::l, t'')
      end;
 
-fun mk_eq {lhs,rhs} = 
+fun mk_eq (lhs,rhs) = 
  let val ty = type_of lhs
      val eq = mk_thy_const{Name="=",Thy="min",Ty=ty-->ty-->bool}
  in list_mk_comb(eq,[lhs,rhs])
  end;
 
 fun dest_eq M = 
-  let val {Rator,Rand=r} = dest_comb M
-      val {Rator=eq,Rand=l} = dest_comb Rator
+  let val (Rator,r) = dest_comb M
+      val (eq,l) = dest_comb Rator
   in case dest_thy_const eq
-      of {Name="=",Thy="min",...} => {lhs=l,rhs=r}
+      of {Name="=",Thy="min",...} => (l,r)
        | _ => raise ERR "dest_eq" "not an equality"
   end;
 
@@ -84,7 +83,7 @@ fun check_free_vars tm f =
    of [] => ()
     | V  => raise f (String.concat
             ("Free variables in rhs of definition: "
-             :: commafy (map (Lib.quote o #Name o dest_var) V)));
+             :: commafy (map (Lib.quote o fst o dest_var) V)));
 
 fun check_tyvars body_tyvars ty f =
  case Lib.set_diff body_tyvars (type_vars ty)
@@ -95,7 +94,7 @@ fun check_tyvars body_tyvars ty f =
            :: commafy (map (Lib.quote o dest_vartype) extras)));
 
 fun bind s ty =
-  (Theory.new_constant {Name=s,Ty=ty}; 
+  (Theory.new_constant (s,ty); 
    mk_thy_const {Name=s,Ty=ty,Thy=current_theory()}
   );
 
@@ -113,24 +112,24 @@ val new_definition_hook = ref
 (*---------------------------------------------------------------------------*)
 
 fun new_type_definition (name,thm) =
- let val {Bvar,Body} = with_exn dest_exists (Thm.concl thm) TYDEF_FORM_ERR
-     val P           = with_exn rator Body TYDEF_FORM_ERR 
-     val Pty         = type_of P
-     val (dom,rng)   = with_exn dom_rng Pty TYDEF_FORM_ERR 
-     val tyvars      = type_vars_in_term P
-     val checked     = check_null_hyp thm TYDEF_ERR
-     val checked     = assert_exn null (free_vars P)
+ let val (_,Body)  = with_exn dest_exists (Thm.concl thm) TYDEF_FORM_ERR
+     val P         = with_exn rator Body TYDEF_FORM_ERR 
+     val Pty       = type_of P
+     val (dom,rng) = with_exn dom_rng Pty TYDEF_FORM_ERR 
+     val tyvars    = type_vars_in_term P
+     val checked   = check_null_hyp thm TYDEF_ERR
+     val checked   = assert_exn null (free_vars P)
                        (TYDEF_ERR "subset predicate must be a closed term")
-     val checked     = assert_exn (op=) (rng,bool)
-                       (TYDEF_ERR "subset predicate has the wrong type")
-     val   _         = Theory.new_type{Name=name, Arity=List.length tyvars}
-     val newty       = mk_thy_type{Tyop=name,Thy=current_theory(),Args=tyvars}
-     val repty       = newty --> dom
-     val rep         = mk_primed_var{Name="rep", Ty=repty}
-     val TYDEF       = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
+     val checked   = assert_exn (op=) (rng,bool)
+                      (TYDEF_ERR "subset predicate has the wrong type")
+     val   _       = Theory.new_type(name, List.length tyvars)
+     val newty     = mk_thy_type{Tyop=name,Thy=current_theory(),Args=tyvars}
+     val repty     = newty --> dom
+     val rep       = mk_primed_var("rep", repty)
+     val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
                                     Ty = Pty --> (repty-->bool)}
-     val (wit,def)   = mk_def (THEOREM thm,
-                        mk_exists{Bvar=rep, Body=list_mk_comb(TYDEF,[P,rep])})
+     val (wit,def) = mk_def (THEOREM thm,
+                        mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
  in 
    Theory.store_type_definition (name^"_TY_DEF", name, wit, def)
  end
@@ -140,11 +139,11 @@ fun new_type_definition (name,thm) =
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
      val (V,eq)      = dest M
-     val {lhs,rhs}   = with_exn dest_eq eq DEF_FORM_ERR
-     val {Name,Ty}   = with_exn dest_atom lhs DEF_FORM_ERR
+     val (lhs,rhs)   = with_exn dest_eq eq DEF_FORM_ERR
+     val (Name,Ty)   = with_exn dest_atom lhs DEF_FORM_ERR
      val checked     = check_free_vars rhs DEF_ERR 
      val checked     = check_tyvars (type_vars_in_term rhs) Ty DEF_ERR 
-     val (wit,def)   = mk_def(TERM rhs, mk_eq{lhs=bind Name Ty, rhs=rhs})
+     val (wit,def)   = mk_def(TERM rhs, mk_eq(bind Name Ty, rhs))
  in
    Theory.store_definition (name, [Name], wit, post(V,def))
  end
@@ -160,7 +159,7 @@ fun new_specification (name, cnames, th) =
                      (SPEC_ERR "too few existentially quantified variables")
      fun vOK V v   = check_tyvars V (type_of v) SPEC_ERR
      val checked   = List.app (vOK (type_vars_in_term body)) V
-     fun addc v s  = let val {Ty,...} = dest_var v in v |-> bind s Ty end
+     fun addc v s  = v |-> bind s (snd(dest_var v))
      val (wit,def) = mk_def (THEOREM th, subst (map2 addc V cnames) body)
  in 
     Theory.store_definition (name, cnames, wit, def)

@@ -52,12 +52,12 @@ fun to_hol_type (GRND ty) = ty
 
 type tmconst = id * holty
 
-datatype term = Fv of {Name:string, Ty:hol_type}
+datatype term = Fv of string * hol_type
               | Bv of int
               | Const of tmconst
-              | Comb  of {Rator:term, Rand:term}
-              | Abs   of {Bvar:term,  Body:term}
-              | Clos  of {Env:term Subst.subs, Body:term};
+              | Comb  of term * term
+              | Abs   of term * term
+              | Clos  of term Subst.subs * term;
 
 
 (*---------------------------------------------------------------------------

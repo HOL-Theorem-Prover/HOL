@@ -408,12 +408,12 @@ end;
  *            INSTALLING CONSTANTS IN THE CURRENT SEGMENT                    *
  *---------------------------------------------------------------------------*)
 
-fun new_type {Name,Arity} =
+fun new_type (Name,Arity) =
  (if Lexis.allowed_type_constant Name then ()
   else WARN "new_type" (Lib.quote Name^" is not a standard type name")
   ; add_typeCT {name=Name, arity=Arity, theory = CTname()};());
 
-fun new_constant {Name,Ty} =
+fun new_constant (Name,Ty) =
   (if Lexis.allowed_term_constant Name then ()
    else WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
    ; add_termCT {name=Name, theory=CTname(), htype=Ty}; ())
@@ -680,8 +680,6 @@ fun theory_out f {name,style} ostrm =
     Portable.close_out ostrm
  end;
 
-fun dconst tm = let val {Name,Ty} = Term.dest_const tm in (Name,Ty) end;
-
 fun unkind facts =
   List.foldl (fn ((s,Axiom (_,th)),(A,D,T)) => ((s,th)::A,D,T)
                | ((s,Defn th),(A,D,T))     => (A,(s,th)::D,T)
@@ -727,7 +725,7 @@ fun export_theory () =
      = {theory = dest_thyid thid,
         parents = map dest_thyid (Graph.fringe()),
         types = thy_types thyname,
-        constants = Lib.mapfilter dconst (thy_constants thyname),
+        constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
         axioms = A,
         definitions = D,
         theorems = T,

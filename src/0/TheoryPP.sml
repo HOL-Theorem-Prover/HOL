@@ -183,19 +183,20 @@ fun reset_share_table () =
   (taken := 0;
    Lib.for_se 0 (table_size-1) (fn i => Array.update(share_table,i,[])));
 
-fun hash_type ty n = hash(Type.dest_vartype ty) (0,n)
-  handle HOL_ERR _ => let val {Tyop,Args} = Type.dest_type ty
-              in itlist hash_type Args (hash Tyop (0,n))  end;
-
-
-fun dest_atom tm =
- let open Term 
- in (dest_var tm handle HOL_ERR _ => dest_const tm)
-    handle HOL_ERR _ => raise ERR"dest_atom" "not a variable or a constant"
- end;
+fun hash_type ty n = 
+  hash(Type.dest_vartype ty) (0,n)
+  handle HOL_ERR _ => 
+     let val {Tyop,Thy,Args} = Type.dest_thy_type ty
+     in itlist hash_type Args (hash Thy (0, hash Tyop (0,n))) 
+     end;
 
 fun hash_atom tm n =
-  let val {Name,Ty} = dest_atom tm in hash_type Ty (hash Name (0,n)) end;
+  let val (Name,Ty) = Term.dest_var tm 
+  in hash_type Ty (hash Name (0,n)) 
+  end handle HOL_ERR _ =>
+       let val {Name,Thy,Ty} = Term.dest_thy_const tm
+       in hash_type Ty (hash Thy (0, hash Name (0,n)))
+       end; 
 
 
 (*---------------------------------------------------------------------------
@@ -355,7 +356,7 @@ fun pp_struct info_record ppstrm =
           end_block())
      fun pparent (s,i,j) = Thry s
      fun pr_var v =
-         let val {Name,Ty} = dest_var v
+         let val (Name,Ty) = dest_var v
          in add_string "V";
             begin_block INCONSISTENT 0;
             add_string(stringify Name); add_break(1,0);
@@ -447,7 +448,7 @@ fun pp_struct info_record ppstrm =
       add_newline();
       add_string"fun T s t A = mk_thy_type{Tyop=s, Thy=t,Args=A}"; 
       add_newline();
-      add_string"fun V s q = mk_var{Name=s,Ty=q}";     add_newline();
+      add_string"fun V s q = mk_var(s,q)";     add_newline();
       add_string"val U     = mk_vartype";              add_newline();
    (*   add_string("val _ = print \"Loading theory: "^Thry name^"\\n\""); *)
       add_newline();

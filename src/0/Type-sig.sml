@@ -20,8 +20,8 @@ sig
  val dest_vartype  : hol_type -> string
  val is_vartype    : hol_type -> bool
 
- val mk_type       : {Tyop: string, Args:hol_type list} -> hol_type
- val dest_type     : hol_type -> {Tyop:string, Args:hol_type list}
+ val mk_type       : string * hol_type list -> hol_type
+ val dest_type     : hol_type -> string * hol_type list
  val is_type       : hol_type -> bool
  val mk_thy_type   : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
  val dest_thy_type : hol_type -> {Thy:string, Tyop:string, Args:hol_type list}
