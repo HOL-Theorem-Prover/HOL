@@ -33,7 +33,7 @@ fun bincopy file path =  (* Dead simple file copy - binary version *)
          | NONE    => (closeIn istrm; flushOut ostrm; closeOut ostrm)
   in loop()
   end;
- 
+
 (* f is either bincopy or copy *)
 fun update_copy src dest = let
   val t0 = FileSys.modTime src
@@ -50,8 +50,10 @@ val MOSMLC = fullPath [Systeml.MOSMLDIR,"bin","mosmlc"];
 val thy_file = "word" ^ sn ^ "Theory";
 val lib_file = "word" ^ sn ^ "Lib";
 
-val _ = Process.system(MOSMLC ^ " -q -c -I " ^ SIGOBJ_DIR ^ " Overlay.ui " ^ thy_file ^ ".sig");
-val _ = Process.system(MOSMLC ^ " -q -c -I " ^ SIGOBJ_DIR ^ " Overlay.ui " ^ thy_file ^ ".sml");
+val _ = Systeml.systeml[MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui",
+                thy_file^ ".sig"];
+val _ = Systeml.systeml[MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui",
+                        thy_file ^ ".sml"];
 
 (* --------------------------------------------------------------------- *)
 
@@ -63,8 +65,8 @@ val _ =
       flushOut ostrm ; closeOut ostrm)
   end;
 
-val _ = Process.system(MOSMLC ^ " -q -c -I " ^ SIGOBJ_DIR ^
-                       " Overlay.ui wordFunctorLib.ui " ^ lib_file ^ ".sml");
+val _ = Systeml.systeml[MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui",
+                        "wordFunctorLib.ui", lib_file ^ ".sml"];
 
 (* --------------------------------------------------------------------- *)
 
