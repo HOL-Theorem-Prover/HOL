@@ -91,21 +91,17 @@ infix &&;
  ---------------------------------------------------------------------------*)
 
 (* val bool_ss = boolSimps.bool_ss *)
-local
-  open simpLib
-  infix ++
-in
-  val std_ss =
-    (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss) &&
-    let
-      open sumTheory
-    in
-      type_rws "sum" @ [ISL,ISR,OUTL,OUTR,INL,INR]
-    end
-end
 
-val arith_ss = simpLib.++(std_ss, arithSimps.ARITH_ss)
-val list_ss  = simpLib.++(arith_ss, listSimps.list_ss);
+local open simpLib sumTheory
+      infix ++
+in
+val std_ss =
+     (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss) 
+       && (type_rws "sum" @ [ISL,ISR,OUTL,OUTR,INL,INR])
+
+val arith_ss = std_ss ++ arithSimps.ARITH_ss
+val list_ss  = arith_ss ++ listSimps.list_ss
+end
 
 
 val DECIDE     = decisionLib.DECIDE o Parse.Term
