@@ -1,0 +1,18 @@
+athabasca-4:
+   * "Norrish" numerals implemented.  These allow numerals in the
+     logic to be arbitrarily large, with the various operations on
+     them dramatically improved in efficiency.  (Standard arithmetic
+     operations now take time that is polynomial in the number of
+     digits rather than the size of the number.)
+
+   * The build process has been made a great deal more independent of
+     Unix, and it is possible to build hol98 on Windows NT.
+
+taupo-0:  (* not released *)
+   * New extensible parser implemented
+
+taupo-1:
+   * Overloaded operators implemented
+   * TFL and bossLib completely redesigned.
+
+
