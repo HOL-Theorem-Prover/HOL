@@ -8,6 +8,7 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 open arithLib Let_conv NonRecSize;
 
 type thm    = Thm.thm;
+type conv     = Abbrev.conv
 type tactic = Abbrev.tactic;
 type defn   = Defn.defn;
 
@@ -125,53 +126,61 @@ fun list_mk_prod_tyl L =
  * The second measure is just the total size of the arguments.               *
  *---------------------------------------------------------------------------*)
 
-fun guess_termination_relation domty tcs0 =
-  let val (_,tcs) = Lib.pluck isWFR tcs0
-      val matrix = map dest tcs
-      val check1 = map (map (uncurry proper_subterm)) matrix 
-      val chf = projects check1
-      val domtyl = strip_prod_ty chf domty
-      val domty0 = list_mk_prod_tyl domtyl
-  in
-    [Term`measure ^domty0`,
-     Term`measure ^(TypeBase.type_size (TypeBase.theTypeBase()) domty)`]
-  end;
+local open Defn 
+in
+fun guessR defn =
+ if null (tcs_of defn) then []
+  else 
+  case reln_of defn
+   of NONE => []
+    | SOME R => 
+       let val domty = fst(dom_rng(type_of R))
+           val (_,tcs) = Lib.pluck isWFR (tcs_of defn)
+           val matrix = map dest tcs
+           val check1 = map (map (uncurry proper_subterm)) matrix 
+           val chf = projects check1
+           val domtyl = strip_prod_ty chf domty
+           val domty0 = list_mk_prod_tyl domtyl
+       in
+          [Term`measure ^domty0`,
+           Term`measure ^(TypeBase.type_size (TypeBase.theTypeBase()) domty)`]
+       end
+end;
 
 local open Defn
 in
+fun try_proof def tac r =
+   let val def' = set_reln def r
+       val tcs = tcs_of def'
+       val thm = prove(list_mk_conj tcs, tac)
+       val thml = CONJUNCTS thm
+    in 
+       elim_tcs def' thml
+    end
 fun proveTotal0 tac def =
-  case reln_of def
-   of NONE => def
-    | SOME R => 
-       let val domty = fst(dom_rng(type_of R))
-           val cands = guess_termination_relation domty (tcs_of def)
-           fun try_proof r =
-             let val def' = set_reln def r
-                 val tcs = tcs_of def'
-                 val thm = prove(list_mk_conj tcs, tac)
-                 val thml = CONJUNCTS thm
-             in 
-                elim_tcs def' thml
-             end
-       in
-          Lib.tryfind try_proof cands
-       end
-       handle HOL_ERR _ => 
-         (print "Unable to prove totality,\
-                 \ constraints remain on definition.\n"; def)
+  case guessR def
+    of [] => def
+     | cands => Lib.tryfind (try_proof def tac) cands
 end;
 
-fun prover g =
-(Rewrite.REWRITE_TAC
-    [prim_recTheory.WF_measure, 
+(*---------------------------------------------------------------------------
+      Terribly naive, but it still gets a lot.
+ ---------------------------------------------------------------------------*)
+
+fun simplify_conv tm =
+ (Rewrite.REWRITE_CONV
+    [prim_recTheory.WF_measure, prim_recTheory.WF_LESS,
      prim_recTheory.measure_def, relationTheory.inv_image_def]
-  THEN CONV_TAC (REDEPTH_CONV Let_conv.GEN_BETA_CONV)
-  THEN Rewrite.REWRITE_TAC 
+  THENC REDEPTH_CONV Let_conv.GEN_BETA_CONV
+  THENC Rewrite.REWRITE_CONV 
           (pairTheory.pair_rws @
            mapfilter (#2 o valOf o TypeBase.size_of) 
                (TypeBase.listItems (TypeBase.theTypeBase())))
-  THEN BETA_TAC
-  THEN Rewrite.REWRITE_TAC [arithmeticTheory.ADD_CLAUSES]
+  THENC REDEPTH_CONV BETA_CONV
+  THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES])  tm;
+
+fun prover g =
+(CONV_TAC simplify_conv
   THEN REPEAT STRIP_TAC
   THEN REPEAT (POP_ASSUM (fn th => 
        if arithSimps.is_arith (concl th)
@@ -185,7 +194,6 @@ val proveTotal = proveTotal0 prover;
  Examples.
 
 val Define = Count.apply bossLib.Define;
-val Define = Count.apply Fun;
 
 val gcd_def = 
   Define 

@@ -16,7 +16,7 @@ sig
 
    (* What kind of definition is it? *)
 
-   val nonrec  : defn -> bool
+   val abbrev  : defn -> bool
    val primrec : defn -> bool
    val nestrec : defn -> bool
    val mutrec  : defn -> bool
@@ -77,50 +77,66 @@ sig
 (*
 Examples.
 
-app load ["tflLib", "Defn"]; open Defn;
+app load ["Defn"]; 
 
-val D = define o Term;
+fun D s q = Defn.define s (Term q);
 
 val Fact = 
-D `(Fact 0 = 1) /\
+D "Fact"
+  `(Fact 0 = 1) /\
    (Fact (SUC n) = Fact n * SUC n)`;
 
 val fact = 
-D `fact(n) = if n=0 then 1 else n * fact(n-1)`;
+D "fact" 
+  `fact(n) = if n=0 then 1 else n * fact(n-1)`;
 
 val While = 
-D `While s = if B s then While (C s) else s`;
+D "While" 
+  `While s = if B s then While (C s) else s`;
 
 val N = 
-D `N x = if x>100 then x-10 else N(N(x+11))`;
+D "N1"
+  `N x = if x>100 then x-10 else N(N(x+11))`;
 
 val even_odd =
-D `(even 0 = T)           /\
+D "EO"
+  `(even 0 = T)           /\
    (even (SUC n) = odd n) /\
    (odd 0 = F)            /\
    (odd (SUC n) = even n)`;
 
 val gcd = 
-D `(gcd 0 y = y)           /\
+D "gcd"
+  `(gcd 0 y = y)           /\
    (gcd (SUC x) 0 = SUC x) /\
    (gcd (SUC x) (SUC y) = 
          if y <= x then gcd(x-y)   (SUC y) 
                    else gcd(SUC x) (y-x))`;
 
 val g5 =
-D `(g5(0,x,y,z) = 1) /\
+D "g5"
+  `(g5(0,x,y,z) = 1) /\
    (g5(w,0,y,z) = 2) /\
    (g5(w,x,0,z) = 3) /\
    (g5(w,x,y,0) = 4)`;
 
 val g4 = 
-D `(g4 0 x y = 1) /\
+D "g4"
+  `(g4 0 x y = 1) /\
    (g4 w 0 y = 2) /\
    (g4 w x 0 = 3)`;
 
 
-Lib.try D `% x = if x>100 then x-10 else %(%(x+11))`;  (* fails *)
+val Nine1 =
+ D "Nine1"
+   `% x = if x>100 then x-10 else %(%(x+11))`;  (* fails *)
 
+val even_odd =
+D "OE"
+  `(&& 0 = T)          /\
+   (&& (SUC n) = !! n) /\
+   (!! 0 = F)          /\
+   (!! (SUC n) = && n)`;
 *)
 
 end
