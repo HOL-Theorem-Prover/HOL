@@ -9,7 +9,7 @@ app load ["numLib"];
 
 (*
 *)
-structure canonTest :> canonTest =
+structure normalFormsTest :> normalFormsTest =
 struct
 
 open HolKernel Parse boolLib numLib;
@@ -449,14 +449,11 @@ val valid_1 =
       (O_11_ =  HULP11)`;
 
 (* Quick testing
-app load ["canonTools", "HolSatLib"];
+app load ["normalForms", "HolSatLib"];
 open canonTools;
 
 val N = mk_neg;
 
-(* Large formulas *)
-
-val valid1 = time Term valid_1;
 val DN_valid1 = time DEF_CNF_CONV (N valid1);
 val DNS_valid1 = time (snd o strip_exists o rhs o concl) DN_valid1;
 val DNS_SAT_valid1 = time (HolSatLib.satOracle HolSatLib.zchaff) DNS_valid1;

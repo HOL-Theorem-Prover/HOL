@@ -3,7 +3,7 @@
 (* Created by Joe Hurd, October 2001                                         *)
 (* ========================================================================= *)
 
-signature canonTools =
+signature normalForms =
 sig
 
 include Abbrev

@@ -3,7 +3,7 @@
 (* Created by Joe Hurd, October 2001                                         *)
 (* ========================================================================= *)
 
-signature canonTest =
+signature normalFormsTest =
 sig
 
   type 'a quotation = 'a Portable.quotation
