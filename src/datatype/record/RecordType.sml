@@ -345,10 +345,72 @@ in
         end
       val _ = map prove_semi11 updfn_terms
 
+      (* prove that equality of values is equivalent to equality of fields:
+           i.e. for a record type with two fields:
+          !r1 r2. (r1 = r2) = (r1.fld1 = r2.fld1) /\ (r1.fld2 = r2.fld2)
+      *)
+      local
+        open Psyntax
+        val var1 = mk_var(app_letter typ ^ "1", typ)
+        val var2 = mk_var(app_letter typ ^ "2", typ)
+        val lhs = mk_eq(var1, var2)
+        val rhs_tms =
+          map (fn tm => mk_eq(mk_comb(tm, var1), mk_comb(tm, var2)))
+          accfn_terms
+        val rhs = list_mk_conj rhs_tms
+        val thmname = typename ^ "_component_equality"
+        val goal = list_mk_forall([var1, var2], mk_eq(lhs, rhs))
+        val tactic =
+          REPEAT GEN_TAC THEN
+          MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm) [var1, var2] THEN
+          REWRITE_TAC [oneone_thm, accessor_thm]
+      in
+        val component_wise_equality = store_thm(thmname, goal, tactic)
+      end
+
+      (* prove that a complete chain of updates over any value is
+         equivalent to a chain of updates over ARB.  This particular
+         formulation is chosen to help the pretty-printer, which will
+         print such updates over ARB as record literals.
+         e.g.
+            r1 with <| fld1 := v1 ; fld2 := v2 |> =
+            <| fld1 := v1; fld2 := v2 |>
+         (In the form that it will be printed in.)
+      *)
+      local
+        open Psyntax
+        fun mk_var_avds (nm, ty, avoids) = let
+          val v0 = mk_var(nm, ty)
+        in
+          variant avoids v0
+        end
+
+        val value_vars =
+          List.foldr(fn (ty, sofar) =>
+                     mk_var_avds(app_letter ty, ty, var::sofar)::sofar)
+          [] types
+        val arb = mk_const("ARB", typ)
+        val updfns =
+          map2 (fn upd => fn v => mk_comb(upd, v)) updfn_terms value_vars
+        val lhs = List.foldr mk_comb var updfns
+        val rhs = List.foldr mk_comb arb updfns
+        val goal = gen_all (mk_eq(lhs, rhs))
+        val tactic =
+          REPEAT GEN_TAC THEN
+          MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm) [var, arb] THEN
+          REWRITE_TAC [updfn_thm]
+        val thmname = typename ^ "_updates_eq_literal"
+      in
+        val literal_equality = store_thm(thmname, goal, tactic)
+      end
+
+
+
       (* add to the TypeBase's simpls entry for the record type *)
       val existing_simpls = TypeBase.simpls_of tyinfo
       val new_simpls = [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
-                        updupd_thm, updcanon_thm, accfupd_thm]
+                        updupd_thm, updcanon_thm, accfupd_thm,
+                        literal_equality]
       val new_tyinfo =
         TypeBase.put_simpls (existing_simpls @ new_simpls) tyinfo
       val _ = TypeBase.write new_tyinfo
