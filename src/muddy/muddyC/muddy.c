@@ -65,9 +65,9 @@ value mlbdd_alloc_final(mlsize_t len, final_fun fun)
  */
 #ifndef SMLEXN_DOMAIN
 #include <globals.h>
-#define RAISE_DOMAIN mlraise(Atom(SYS__EXN_DOMAIN))
+#define RAISE_DOMAIN raiseprimitive0(SYS__EXN_DOMAIN)
 #else
-#define RAISE_DOMAIN mlraise(Atom(SMLEXN_DOMAIN))
+#define RAISE_DOMAIN raiseprimitive0(SYS__EXN_DOMAIN)
 #endif
 
 void mlbdd_errorhandler(int errorcode)
