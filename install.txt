@@ -118,7 +118,7 @@ and invoke
     (cd buddy16; gnumake)
     ../../bin/Holmake
     gnumake
-
+				    
 After this, you will have to manually copy the object code for the
 library to <holdir>/sigobj. The following incantation should work:
 
