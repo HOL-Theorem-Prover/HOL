@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir =
-val holdir   =
+val mosmldir = 
+val holdir   = 
 val OS       =            (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -292,8 +292,9 @@ val _ =
      val mosml       = fullPath [mosmldir, "bin/mosml"]
      val std_prelude = fullPath [holdir, "std.prelude"]
      val target      = fullPath [holdir, "bin/hol"]
+     val qend        = fullPath [holdir, "tools/end-init.sml"]
  in
-   emit_hol_script target mosml std_prelude
+   emit_hol_script target mosml std_prelude qend
  end;
 
 (*---------------------------------------------------------------------------
@@ -305,7 +306,6 @@ val _ =
   let val _ = print "Attempting to compile quote filter ... "
       val src    = fullPath [holdir, "src/quote-filter/filter.c"]
       val target = fullPath [holdir, "bin/unquote"]
-
       open Process
   in
     if system (String.concat [CC," ", src," -o ", target]) = success
@@ -322,19 +322,14 @@ val _ =
 
 val _ =
  let val _ = echo "Generating bin/hol.unquote."
-     val qfilter  = fullPath [holdir, "bin/unquote"]
-     val hol      = fullPath [holdir, "bin/hol"]
-     val qinitsrc = fullPath [holdir, "tools", "unquote-init.src"]
-     val qinit    = fullPath [holdir, "tools", "unquote-init.sml"]
-     val target   = fullPath [holdir, "bin/hol.unquote"]
-     (* also need to generate quote-init.sml from quote-init.src *)
-     val _ =
-       fill_holes (qinitsrc, qinit)
-       ["val holdir = _" -->
-        String.concat ["val holdir = ", quote holdir, "\n"]
-       ]
+     val qfilter     = fullPath [holdir, "bin/unquote"]
+     val target      = fullPath [holdir, "bin/hol.unquote"]
+     val mosml       = fullPath [mosmldir, "bin/mosml"]
+     val std_prelude = fullPath [holdir, "std.prelude"]
+     val qinit       = fullPath [holdir, "tools/unquote-init.sml"]
+     val qend        = fullPath [holdir, "tools/end-init.sml"]
  in
-   emit_hol_unquote_script target qfilter hol qinit
+   emit_hol_unquote_script target qfilter mosml std_prelude qinit qend
  end;
 
 (*

@@ -1,5 +1,3 @@
-val _ = quietdec := true;
-
 (*---------------------------------------------------------------------------*
  * Bring in the HOL kernel.                                                  *
  *---------------------------------------------------------------------------*)
@@ -9,7 +7,6 @@ local open Path
 in
 val _ = Meta.loadPath := SIGOBJ :: !Meta.loadPath
 val _ = load "HolKernel"
-(* val _ = print "Loaded Hol Kernel.\n" *)
 end;
 
 (*---------------------------------------------------------------------------*
@@ -79,11 +76,8 @@ end
 
 val _ =
 TextIO.output(TextIO.stdOut,
-  "---------------------------------------------------------\n"
-  ^"   HOL ["
+  "\n-----------------------------------------------------------\n"
+  ^"           HOL98 ["
   ^Globals.release^" "^Lib.int_to_string(Globals.version)
-  ^"]  ... for HOL help, type: help \"hol\";\n"
-  ^"---------------------------------------------------------\n");
-
-
-val _ = quietdec := false;
+  ^"]\n\n   For introductory HOL help, type: help \"hol\";\n"
+  ^"-----------------------------------------------------------\n\n");

@@ -27,22 +27,24 @@ local fun fopen file =
        in TextIO.openOut file
        end
 in
-fun emit_hol_script target mosml std_prelude =
+fun emit_hol_script target mosml std_prelude qend =
    let val ostrm = fopen(target^".bat")
        fun output s = TextIO.output(ostrm, s)
    in
       output  "rem The bare hol98 script\n\n";
-      output (String.concat[mosml," -P full ",std_prelude," %*\n"]);
+      output (String.concat[mosml," -quietdec -P full ", std_prelude,
+                            " %* ", qend, "\n"]);
       TextIO.closeOut ostrm
    end;
 
 
-fun emit_hol_unquote_script target qfilter hol quse qinit =
+fun emit_hol_unquote_script target qfilter mosml std_prelude qinit qend =
    let val ostrm = fopen(target^".bat")
        fun output s = TextIO.output(ostrm, s)
    in
       output  "rem The hol98 script (with quote preprocessing)\n\n";
-      output  (String.concat [qfilter, " | ", hol, " ", qinit, " %*\n"]);
+      output  (String.concat [qfilter, " | ", mosml," -quietdec -P full ",
+                              std_prelude, " ", qinit, " %* ", qend, "\n"]);
       TextIO.closeOut ostrm
    end
 end;
