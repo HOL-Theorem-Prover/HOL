@@ -3,6 +3,8 @@ struct
 
 open HolKernel boolLib numSyntax reduceLib stringTheory stringSyntax;
 
+infix ##;
+
 val ERR = mk_HOL_ERR "stringLib";
 
 
@@ -22,23 +24,35 @@ val char_eq_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
 val string_eq_thms = STRING_11::STRING_DISTINCT::char_eq_thms
 
 
+val dest_char_eq = (dest_chr ## dest_chr) o dest_eq;
+val is_char_eq = can dest_char_eq;
+
 val char_EQ_CONV = 
    let open computeLib reduceLib
        val compset = num_compset ()
        val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
        val _ = add_thms char_eq_thms compset
+       val conv = CBV_CONV compset
    in 
-      CBV_CONV compset
+     fn tm =>
+     if is_char_eq tm then conv tm
+     else raise ERR "char_EQ_CONV" "not a char eq"
    end;
 
+
+val dest_string_eq = (dest_string ## dest_string) o dest_eq;
+val is_string_eq = can dest_string_eq;
 
 val string_EQ_CONV = 
    let open computeLib reduceLib
        val compset = num_compset ()
        val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
        val _ = add_thms string_eq_thms compset
+       val conv = CBV_CONV compset
    in 
-      CBV_CONV compset
+     fn tm =>
+     if is_string_eq tm then conv tm
+     else raise ERR "string_EQ_CONV" "not a string eq"
    end;
 
 val string_rewrites = STRLEN_DEF::STRING_CASE_DEF::
