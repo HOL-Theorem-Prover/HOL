@@ -104,7 +104,7 @@ val one_Axiom = store_thm("one_Axiom",
    ---------------------------------------------------------------------- *)
 
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
-                  fixity = CloseFix,
+                  fixity = Closefix,
                   paren_style = OnlyIfNecessary,
                   pp_elements = [TOK "(", TOK ")"],
                   term_name = "one"};
