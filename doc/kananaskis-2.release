@@ -46,8 +46,12 @@ Bugs fixed:
     in a rule's statement could cause the rule to fail to fire.
 
   * The simplifier's AC-rewriting could cause it to go into an
-    infinite loop.  The new behaviour is not necessarily the same as
-    the old one on examples which used to work.
+    infinite loop.  While the new behaviour does AC-normalise
+    everywhere (we hope!), it is not necessarily the same as the old
+    behaviour on examples which used to work.
+
+  * pairLib.PAIRED_ETA_CONV was broken.  Thanks to Viktor Sabelfeld
+    for the bug report.
 
 New features:
 -------------
