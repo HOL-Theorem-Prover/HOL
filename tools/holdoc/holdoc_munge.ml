@@ -179,8 +179,8 @@ let texify_text_list =
   ;('{', "\\{")
   ;('}', "\\}")
   ;('#', "\\#")
-  ;('<', "\\textless ")
-  ;('>', "\\textgreater ")
+  ;('<', "\\textless{} ")  (* {} to work around a bug in LaTeX / fontenc *)
+  ;('>', "\\textgreater{} ")  (* {} to work around a bug in LaTeX / fontenc *)
   ]
 
 let texify_command s =
