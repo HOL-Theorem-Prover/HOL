@@ -24,9 +24,9 @@ val (redn_rules, redn_ind, redn_cases) =
 val redn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) redn_ind
 
 val _ = app (uncurry set_MLname) [
-          ("-->",       "redn"), 
+          ("-->",       "redn"),
           ("-->_rules", "redn_rules"),
-          ("-->_ind",   "redn_ind"), 
+          ("-->_ind",   "redn_ind"),
           ("-->_cases", "redn_cases")
         ];
 
@@ -47,8 +47,8 @@ val confluent_def = Define`
 val confluent_normforms_unique = store_thm(
   "confluent_normforms_unique",
   ``!R. confluent R ==>
-        !x y z. RTC R x y /\ normform R y /\ RTC R x z /\ normform R z  
-                  ==> 
+        !x y z. RTC R x y /\ normform R y /\ RTC R x z /\ normform R z
+                  ==>
                 (y = z)``,
   RW_TAC std_ss [confluent_def] THEN
   `?u. RTC R y u /\ RTC R z u` by PROVE_TAC [] THEN
@@ -124,7 +124,7 @@ val (predn_rules, predn_ind, predn_cases) =
 val predn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) predn_ind;
 
 val _ = app (uncurry set_MLname) [
-          ("-||->_rules", "predn_rules"), 
+          ("-||->_rules", "predn_rules"),
           ("-||->_ind",   "predn_ind"),
           ("-||->_cases", "predn_cases")
   ];
@@ -187,9 +187,9 @@ val RTCpredn_EQ_RTCredn = store_thm(
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
   PROVE_TAC [RTCpredn_RTCredn, RTCredn_RTCpredn]);
 
-val cl_11 = DB.fetch "-" "cl_11";
-val cl_distinct0 = DB.fetch "-" "cl_distinct";
-val cl_distinct = 
+val cl_11 = TypeBase.one_one_of "cl";
+val cl_distinct0 = TypeBase.distinct_of "cl";
+val cl_distinct =
  CONJ cl_distinct0 (ONCE_REWRITE_RULE [EQ_SYM_EQ] cl_distinct0);
 
 fun characterise t = SIMP_RULE std_ss [cl_11,cl_distinct] (SPEC t predn_cases);
