@@ -50,6 +50,7 @@ The ``X'' in the name of this tactic is a mnemonic for the ``crossing
 out'' or removal of the assumption found.
 
 \SEEALSO
-ASSUM_LIST, EVERY, EVERY_ASSUM, FIRST, MAP_EVERY, MAP_FIRST, UNDISCH_THEN.
+ASSUM_LIST, EVERY, PAT_ASSUM, EVERY_ASSUM, FIRST, MAP_EVERY,
+MAP_FIRST, UNDISCH_THEN.
 
 \ENDDOC
