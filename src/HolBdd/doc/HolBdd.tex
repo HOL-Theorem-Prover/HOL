@@ -1321,7 +1321,7 @@ $\termbdd{}{\rho}{t}{b}$.
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
-{\verb+BddExtendVarmap : term_bdd -> varmap -> term_bdd +}
+{\verb+BddExtendVarmap : varmap -> term_bdd -> term_bdd +}
 \end{footnotesize}
 \vspace*{-3mm}
 
@@ -1330,7 +1330,7 @@ $\termbdd{}{\rho}{t}{b}$.
 \vspace*{-2mm}
 
 $$\begin{array}{c}
-\termbdd{a}{\rho_1}{t}{b} \qquad {\footnotesize\t{Varmap.extends}}~\rho_1~\rho_2
+{\footnotesize\t{Varmap.extends}}~\rho_1~\rho_2 \qquad \termbdd{a}{\rho_1}{t}{b} 
 \\ \hline
 \termbdd{a}{\rho_2}{t}{b}
 \end{array}$$
@@ -2433,7 +2433,7 @@ BddSatone : term_bdd -> (term_bdd * term_bdd) list
 (*         |- f 0 s  = ... s ...                                             *)
 (*         |- f (SUC n) s = ... f n ... s ...                                *)
 (*  ---------------------------------------------------------                *)
-(*  [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 1 s`` |--> b1]                *)
+(*  [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 0 s`` |--> b0]                *)
 (*                                                                           *)
 (* where i is the first number such that |- f i s ==> p s                    *)
 (*****************************************************************************)

@@ -130,14 +130,14 @@ fun BddThmOracle(TermBdd(ass,_,tm,bdd)) =
   else raise BddThmOracleError;
 
 (*****************************************************************************)
-(*   ass vm1 tm |--> b   Varmap.extends vm1 vm2                              *)
+(*   Varmap.extends vm1 vm2   ass vm1 tm |--> b                              *)
 (*   ------------------------------------------                              *)
 (*             ass vm2 tm |--> b                                             *)
 (*****************************************************************************)
 
 exception BddExtendVarmapError;
 
-fun BddExtendVarmap (TermBdd(ass,vm1,tm,b)) vm2 =
+fun BddExtendVarmap vm2 (TermBdd(ass,vm1,tm,b)) =
  if Varmap.extends vm1 vm2 
   then TermBdd(ass,vm2,tm,b) 
   else raise BddExtendVarmapError;
