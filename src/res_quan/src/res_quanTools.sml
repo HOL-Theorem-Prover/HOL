@@ -17,6 +17,10 @@ open HolKernel Drule Conv Tactic Tactical Thm_cont Rewrite boolSyntax
 infix ## THEN THENL THENC THENR ORELSER THEN_TCL ORELSE_TCL ++ ||;
 infixr -->;
 
+val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars;
+fun -- q x = Term q
+fun == q x = Type q
+
 val bool_ss = boolSimps.bool_ss;
 val op++ = op THEN;
 val op|| = op ORELSE;
@@ -54,7 +58,6 @@ val (mk_res_forall, mk_res_exists, mk_res_exists_unique,
      mk_res_quan "RES_SELECT"         "mk_res_select",
      mk_res_quan "RES_ABSTRACT"       "mk_res_abstract")
     end;
-
 
 fun list_mk_res_forall (ress,body) =
    (itlist (fn (v,p) => fn  b => mk_res_forall(v,p,b)) ress body)
@@ -130,9 +133,9 @@ local
        else c) tm
     end;
 in
-  val RES_FORALL_CONV        = RES_QUAN_CONV (REWR_CONV RES_FORALL);
-  val RES_EXISTS_CONV        = RES_QUAN_CONV (REWR_CONV RES_EXISTS);
-  val RES_SELECT_CONV        = RES_QUAN_CONV (REWR_CONV RES_SELECT);
+  val RES_FORALL_CONV = RES_QUAN_CONV (REWR_CONV RES_FORALL);
+  val RES_EXISTS_CONV = RES_QUAN_CONV (REWR_CONV RES_EXISTS);
+  val RES_SELECT_CONV = RES_QUAN_CONV (REWR_CONV RES_SELECT);
 end;
 
 val RES_EXISTS_UNIQUE_CONV =
@@ -480,24 +483,29 @@ fun RESQ_REWRITE1_TAC th' =
 (* Restricted quantifier elimination using the simplifier.               *)
 (* --------------------------------------------------------------------- *)
 
-val DISCH_CONJ_CONV = REWR_CONV AND_IMP_INTRO;
+val resq_SS =
+  simpLib.SIMPSET
+  {ac = [], congs = [],
+   convs =
+   [{conv = K (K RES_FORALL_CONV),
+     key = SOME ([], Term `RES_FORALL p m`),
+     name = "RES_FORALL_CONV", trace = 2},
+    {conv = K (K RES_EXISTS_CONV),
+     key = SOME ([], Term `RES_EXISTS p m`),
+     name = "RES_EXISTS_CONV", trace = 2},
+    {conv = K (K RES_SELECT_CONV),
+     key = SOME ([], Term `RES_SELECT p m`),
+     name = "RES_SELECT_CONV", trace = 2},
+    {conv = K (K RES_EXISTS_UNIQUE_CONV),
+     key = SOME ([], Term `RES_EXISTS_UNIQUE p m`),
+     name = "RES_EXISTS_UNIQUE_CONV", trace = 2}],
+   dprocs = [], filter = NONE, rewrs = []};
 
-val UNDISCH_CONJUNCTS_TAC =
-  POP_ASSUM MP_TAC ++ REPEAT (POP_ASSUM MP_TAC ++ CONV_TAC DISCH_CONJ_CONV);
-
-fun ASMLIST_CASES (t1:tactic) _ (g as ([], _)) = t1 g
-  | ASMLIST_CASES _ t2 (g as (x::_, _)) = t2 x g;
-
-fun POP_ASSUM_TAC tac =
-  ASMLIST_CASES tac
-  (K (UNDISCH_CONJUNCTS_TAC
-      ++ tac
-      ++ TRY (DISCH_THEN (EVERY o map ASSUME_TAC o CONJUNCTS))));
+val resq_ss = simpLib.++ (bool_ss, resq_SS);
 
 val RESQ_TAC =
-  POP_ASSUM_TAC
-  (SIMP_TAC bool_ss
-   [RES_EXISTS_UNIQUE_ALT, RES_FORALL, RES_EXISTS, RES_SELECT]);
+  FULL_SIMP_TAC resq_ss [] THEN
+  POP_ASSUM_LIST (EVERY o map STRIP_ASSUME_TAC o rev);
 
 (* ===================================================================== *)
 (* Functions for making definition with restrict universal quantified	 *)

@@ -69,6 +69,8 @@ sig
   val RESQ_REWRITE1_TAC      : thm_tactic
 
   (* Restricted quantifier elimination using the simplifier *)
+  val resq_SS                : simpLib.ssdata
+  val resq_ss                : simpLib.simpset
   val RESQ_TAC               : tactic
 
   (* Versions of some restricted quantifier tools using term quotations *)
