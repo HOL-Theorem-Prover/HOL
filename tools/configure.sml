@@ -56,10 +56,11 @@ end;
 val SRCDIRS =
  ["src/portableML", "src/0", "src/parse",
   "src/bool", "src/basicHol90", "src/compute/src", "src/goalstack", "src/q",
-  "src/combin", "src/refute", "src/simp/src", "src/meson/src", 
-  "src/basicProof", "src/relation", "src/pair/src", "src/sum", "src/one",
-  "src/option", "src/num", "src/reduce/src", "src/arith/src", "src/list/src",
-  "src/tree", "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
+  "src/combin", "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
+  "src/relation", "src/pair/src", "src/sum", "src/one", "src/option", 
+  "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
+  "src/list/src", "src/tree", "src/taut", "src/hol88", 
+  "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/basicrec",
   "src/datatype/mutrec/utils", "src/datatype/mutrec", "src/datatype/nestrec",
   "src/datatype/mutual", "src/datatype/record", "src/datatype", 
@@ -68,7 +69,7 @@ val SRCDIRS =
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
   "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
-  "src/robdd","src/muddy", "src/HolBdd"];
+  "src/robdd","src/muddy"];
 
 
 (*---------------------------------------------------------------------------
