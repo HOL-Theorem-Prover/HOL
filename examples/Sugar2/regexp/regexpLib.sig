@@ -4,4 +4,4 @@
 (* An automata-based matcher added by Joe Hurd                               *)
 (*---------------------------------------------------------------------------*)
 
-signature regexpLib = sig end
+signature regexpLib = sig include regexpTools end

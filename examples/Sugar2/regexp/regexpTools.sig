@@ -4,4 +4,9 @@
 (* An automata-based matcher added by Joe Hurd                               *)
 (*---------------------------------------------------------------------------*)
 
-signature regexpTools = sig end
+signature regexpTools =
+sig
+
+val EVAL_BIGLIST : Thm.thm -> Thm.thm list
+
+end

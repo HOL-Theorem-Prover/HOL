@@ -26,13 +26,7 @@ fun chatting n = n <= !trace_level;
 fun chat n s = if chatting n then Lib.say s else ();
 
 (*---------------------------------------------------------------------------*)
-(* Needed to execute the naive matcher.                                      *)
-(*---------------------------------------------------------------------------*)
-
-val () = computeLib.add_funs [LAST_DEF];
-
-(*---------------------------------------------------------------------------*)
-(* Caches.                                                                   *)
+(* Function caches.                                                          *)
 (*---------------------------------------------------------------------------*)
 
 fun cache order f =
@@ -52,7 +46,13 @@ fun cache order f =
   end;
 
 (*---------------------------------------------------------------------------*)
-(* A conversion to execute the automata matcher.                             *)
+(* Executing the semantic-driven matcher.                                    *)
+(*---------------------------------------------------------------------------*)
+
+val () = computeLib.add_funs [LAST_DEF];
+
+(*---------------------------------------------------------------------------*)
+(* Executing the automata matcher.                                           *)
 (*---------------------------------------------------------------------------*)
 
 fun cache_conv m conv =
@@ -81,10 +81,10 @@ val transition_regexp2na_conv =
 val eval_transitions_conv =
   cache_conv 1 (ONCE_REWRITE_CONV [eval_transitions_def] THENC EVAL);
 
-(* Prefer the cached versions
 val () = computeLib.add_funs
-  [initial_regexp2na, accept_regexp2na, transition_regexp2na];
-*)
+  [(* Prefer the cached conversions
+      initial_regexp2na, accept_regexp2na, transition_regexp2na, *)
+   matcherTheory.astep_def];
 
 val () = computeLib.add_convs
   [(``initial_regexp2na : 'a regexp -> num``, 1, initial_regexp2na_conv),
@@ -93,5 +93,37 @@ val () = computeLib.add_convs
     transition_regexp2na_conv),
    (``eval_transitions : 'a regexp -> num list -> 'a -> num list``, 3,
     eval_transitions_conv)];
+
+(*---------------------------------------------------------------------------*)
+(* Speed up the evaluation of very long lists.                               *)
+(*---------------------------------------------------------------------------*)
+
+local
+  val dropize =
+    (CONV_RULE o LAND_CONV o ONCE_REWRITE_CONV) [GSYM (CONJUNCT1 drop_def)];
+
+  fun dest_single l =
+    let
+      val (h,t) = listSyntax.dest_cons l
+      val _ = listSyntax.is_nil t orelse raise ERR "dest_single" ""
+    in
+      h
+    end;
+
+  val is_single = can dest_single;
+
+  val reduce = CONV_RULE (LAND_CONV reduceLib.REDUCE_CONV);
+
+  fun loop acc th =
+    let
+      val acc = MATCH_MP head_drop th :: acc
+    in
+      if is_single (snd (dest_eq (concl th))) then
+        CONV_RULE reduceLib.REDUCE_CONV (MATCH_MP length_drop th) :: acc
+      else loop acc (reduce (MATCH_MP tail_drop th))
+    end;
+in
+  fun EVAL_BIGLIST def = let val def = dropize def in loop [def] def end;
+end;
 
 end

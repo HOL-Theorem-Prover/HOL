@@ -5,7 +5,8 @@
 (*---------------------------------------------------------------------------*)
 
 (*
-app load ["bossLib", "rich_listTheory", "metisLib", "pred_setTheory"];
+app load
+["bossLib", "rich_listTheory", "metisLib", "pred_setTheory", "regexpTheory"];
 *)
 
 open HolKernel Parse boolLib;
@@ -71,6 +72,61 @@ val set_of_list_def = Define
 val set_of_list = prove
   (``!l x. x IN set_of_list l = MEM x l``,
    Induct ++ RW_TAC std_ss [set_of_list_def, MEM, NOT_IN_EMPTY, IN_INSERT]);
+
+(*---------------------------------------------------------------------------*)
+(* BIGLIST is designed to speed up evaluation of very long lists.            *)
+(*---------------------------------------------------------------------------*)
+
+val drop_def = pureDefine
+  `(drop 0 l = l) /\
+   (drop (SUC i) l = if NULL l then [] else drop i (TL l))`;
+
+val BIGLIST_def = Define `BIGLIST l = drop 0 l`;
+
+val drop_nil = prove
+  (``!i. drop i [] = []``,
+   Induct ++ RW_TAC std_ss [NULL_DEF, drop_def]);
+
+val null_drop = store_thm
+  ("null_drop",
+   ``!i l. NULL (drop i l) = LENGTH l <= i``,
+   Induct
+   >> (RW_TAC arith_ss [drop_def] ++ METIS_TAC [LENGTH_NIL, NULL_EQ_NIL])
+   ++ Cases_on `l`
+   ++ RW_TAC arith_ss [drop_def, LENGTH, NULL_DEF, TL]);
+
+val tl_drop = store_thm
+  ("tl_drop",
+   ``!i l.
+       TL (drop i l) = if i < LENGTH l then drop (SUC i) l else TL (drop i l)``,
+   Induct
+   >> (RW_TAC arith_ss [drop_def, NULL_EQ_NIL]
+       ++ FULL_SIMP_TAC arith_ss [LENGTH])
+   ++ Cases_on `l`
+   ++ RW_TAC arith_ss [drop_def, LENGTH, NULL_EQ_NIL, TL]
+   ++ Q.PAT_ASSUM `!l. P l` (fn th => ONCE_REWRITE_TAC [th])
+   ++ FULL_SIMP_TAC arith_ss [LENGTH, drop_def, NULL_EQ_NIL]);
+
+val head_drop = store_thm
+  ("head_drop",
+   ``!i l h t. (drop i l = h :: t) ==> (HD (drop i l) = h)``,
+   RW_TAC std_ss [HD]);
+
+val tail_drop = store_thm
+  ("tail_drop",
+   ``!l i h t. (drop i l = h :: t) ==> (drop (SUC i) l = t)``,
+   Induct >> RW_TAC bool_ss [drop_def, drop_nil]
+   ++ RW_TAC std_ss [drop_def, TL, NULL, drop_nil]
+   ++ POP_ASSUM MP_TAC
+   ++ Cases_on `i`
+   ++ RW_TAC std_ss [drop_def, NULL_EQ_NIL, TL]);
+
+val length_drop = store_thm
+  ("length_drop",
+   ``!i l h. (drop i l = [h]) ==> (LENGTH l = SUC i)``,
+   Induct >> RW_TAC arith_ss [drop_def, LENGTH]
+   ++ Cases
+   ++ RW_TAC std_ss [drop_def, TL, NULL_EQ_NIL, drop_nil, LENGTH]);
 
 (*---------------------------------------------------------------------------*)
 (* Non-deterministic and deterministic automata.                             *)
@@ -906,9 +962,17 @@ val eval_transitions_def = pureDefine
   `eval_transitions r l c =
    calc_transitions r l c (SUC (initial_regexp2na r)) []`;
 
-val astep_def = Define
-  `(astep r l [] = EXISTS (accept_regexp2na r) l) /\
-   (astep r l (c :: cs) = astep r (eval_transitions r l c) cs)`;
+val (astep_def, astep_ind) = Defn.tprove
+  (Hol_defn "astep"
+   `astep r l cs =
+    if NULL cs then EXISTS (accept_regexp2na r) l
+    else astep r (eval_transitions r l (HD cs)) (TL cs)`,
+   WF_REL_TAC `measure (LENGTH o SND o SND)`
+   ++ Cases
+   ++ RW_TAC arith_ss [NULL_DEF, TL, LENGTH]);
+
+val _ = save_thm ("astep_def", astep_def);
+val _ = save_thm ("astep_ind", astep_ind);
 
 val amatch_def = Define
   `amatch r l = let i = initial_regexp2na r in astep r [i] l`;
@@ -965,8 +1029,9 @@ val amatch = store_thm
    ++ Induct_on `l`
    >> RW_TAC std_ss
       [astep_def, da_step_def, na2da_def, EXISTS_MEM, set_of_list,
-       accept_regexp2na_def]
-   ++ SIMP_TAC std_ss [astep_def, da_step_regexp2na, eval_transitions_def]
-   ++ RW_TAC std_ss [initial_regexp2na_def]);
+       accept_regexp2na_def, NULL_DEF, TL]
+   ++ ONCE_REWRITE_TAC [astep_def]
+   ++ SIMP_TAC std_ss [da_step_regexp2na, eval_transitions_def, NULL_DEF, TL]
+   ++ RW_TAC std_ss [initial_regexp2na_def, HD]);
 
 val () = export_theory ();

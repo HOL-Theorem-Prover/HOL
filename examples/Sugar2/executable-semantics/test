@@ -6,12 +6,12 @@
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 app 
  load 
- ["bossLib","ExecuteSemanticsTheory","intLib", "stringLib",
-  "regexpLib","pred_setLib"];
+ ["bossLib","metisLib","intLib","stringLib","pred_setLib",
+  "regexpLib","ExecuteSemanticsTheory"];
 
 quietdec := true;
-open bossLib intLib stringLib FinitePathTheory UnclockedSemanticsTheory 
-     ExecuteSemanticsTheory;
+open bossLib metisLib intLib stringLib rich_listTheory
+open regexpLib FinitePathTheory UnclockedSemanticsTheory ExecuteSemanticsTheory;
 quietdec := false;
 
 (******************************************************************************
@@ -19,6 +19,23 @@ quietdec := false;
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
+(******************************************************************************
+* Version of Define that doesn't add to the EVAL compset
+******************************************************************************)
+val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
+
+(******************************************************************************
+* Evaluating expressions of the form x IN {y1; y2; ...; yn}
+******************************************************************************)
+val _ = 
+ computeLib.add_convs
+  [(``$IN``,
+    2,
+    (pred_setLib.SET_SPEC_CONV ORELSEC pred_setLib.IN_CONV EVAL))];
+
+(******************************************************************************
+* Evaluating Sugar2 formulas
+******************************************************************************)
 val _ = computeLib.add_funs 
          ([PathTheory.SEL_REC_AUX,
            UF_SEM_F_UNTIL_REC,
@@ -28,12 +45,9 @@ val _ = computeLib.add_funs
            B_SEM,
            EVAL_US_SEM]);
 
-val _ = 
- computeLib.add_convs
-  [(``$IN``,
-    2,
-    (pred_setLib.SET_SPEC_CONV ORELSEC pred_setLib.IN_CONV EVAL))];
-
+(******************************************************************************
+* Examples
+******************************************************************************)
 EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(f1,f2))``;
 EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL b1, F_BOOL b2))``;
 EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL(B_PROP p1), F_BOOL(B_PROP p2)))``;
@@ -62,328 +76,360 @@ EVAL ``US_SEM
 ** Chapter 4 of FoCs User's Manual 
 ** (www.haifa.il.ibm.com/projects/verification/focs/)
 *)
+
+(* String version
+val StoB_REQ = ``"StoB_REQ"``;
+val BtoS_ACK = ``"BtoS_ACK"``;
+val BtoR_REQ = ``"BtoR_REQ"``;
+val RtoB_ACK = ``"RtoB_ACK"``;
+*)
+
+(* Int version
+*)
+val StoB_REQ = ``0``;
+val BtoS_ACK = ``1``;
+val BtoR_REQ = ``2``;
+val RtoB_ACK = ``3``;
+
+quietdec := true;
 val SimRun =
-    ``[{}; {"StoB_REQ"}; {"BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
-       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
-       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"}]``;
+    ``[{}; {^StoB_REQ}; {^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ};
+       {^StoB_REQ; ^BtoS_ACK; ^BtoR_REQ; ^RtoB_ACK};
+       {^StoB_REQ; ^BtoS_ACK}; {^StoB_REQ}; {^BtoS_ACK}]``;
+val SimRun_def = Define `SimRun = ^SimRun`;
+quietdec := false;
+
+(* A pure computeLib version *)
+time
+ EVAL
+ ``US_SEM
+    SimRun
+    (S_CAT(S_REPEAT S_TRUE,
+           S_CAT(S_BOOL(B_PROP ^StoB_REQ), 
+                 S_REPEAT S_TRUE)))``;
+
+(* A version using BIGLIST to keep terms small
+   (however, it doesn't seem to have much effect)
+val SimRun_def = pureDefine `SimRun = ^SimRun`;
+val () = computeLib.add_funs (time EVAL_BIGLIST SimRun_def);
+time
+ EVAL
+ ``US_SEM
+    (BIGLIST SimRun)
+    (S_CAT(S_REPEAT S_TRUE,
+           S_CAT(S_BOOL(B_PROP ^StoB_REQ), 
+                 S_REPEAT S_TRUE)))``;
+*)
 
 time
  EVAL 
  ``US_SEM 
-    ^SimRun
+    SimRun
     (S_CAT(S_REPEAT S_TRUE, 
-           S_CAT(S_BOOL(B_PROP "StoB_REQ"), 
+           S_CAT(S_CAT(S_BOOL(B_PROP ^StoB_REQ),S_BOOL(B_PROP ^StoB_REQ)),
                  S_REPEAT S_TRUE)))``;
 
 time
  EVAL 
  ``US_SEM 
-    ^SimRun
+    SimRun
     (S_CAT(S_REPEAT S_TRUE, 
-           S_CAT(S_CAT(S_BOOL(B_PROP "StoB_REQ"),S_BOOL(B_PROP "StoB_REQ")),
-                 S_REPEAT S_TRUE)))``;
-
-time
- EVAL 
- ``US_SEM 
-    ^SimRun
-    (S_CAT(S_REPEAT S_TRUE, 
-           S_CAT(S_CAT(S_BOOL(B_PROP "StoB_REQ"),S_BOOL(B_PROP "BtoR_REQ")),
+           S_CAT(S_CAT(S_BOOL(B_PROP ^StoB_REQ),S_BOOL(B_PROP ^BtoR_REQ)),
                  S_REPEAT S_TRUE)))``;
 
 
