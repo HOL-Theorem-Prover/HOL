@@ -22,14 +22,13 @@ sig
   val show_axioms      : bool ref
   val show_scrub       : bool ref
 
-  val show_types       : bool ref
-  val show_restrict    : bool ref
-  val infix_at_front   : bool ref
-  val stack_infixes    : bool ref
-  val in_at_end        : bool ref
+  val show_types         : bool ref
+  val show_restrict      : bool ref
+  val show_numeral_types : bool ref
 
-  val priming          : string option ref
-  val guessing_tyvars  : bool ref
+  val priming               : string option ref
+  val guessing_tyvars       : bool ref
+  val guessing_overloads    : bool ref
   val notify_on_tyvar_guess : bool ref
 
   val linewidth        : int ref
@@ -49,9 +48,7 @@ sig
 
   val pp_flags : {show_restrict:bool ref,
                   show_types: bool ref,
-                  infix_at_front:bool ref,
-                  stack_infixes :bool ref,
-                  in_at_end : bool ref}
+                  show_numeral_types : bool ref}
 
   val strings_defined        : unit -> bool
   val assert_strings_defined : unit -> unit
