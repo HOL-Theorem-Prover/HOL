@@ -10,13 +10,13 @@
 \DESCRIBE
 
 {tgoal defn} sets up a termination proof for the function represented by
-{defn}. It creates a new goalstack and makes it the focus of further
+{defn}. It creates a new goalstack and makes it the focus of subsequent
 goalstack operations.
 
 \FAILURE
 
-If {defn} represents a non-recursive or primitive recursive function,
-then {tgoal defn} will fail.
+{tgoal defn} fails if {defn} represents a non-recursive or primitive
+recursive function. 
 
 
 \EXAMPLE

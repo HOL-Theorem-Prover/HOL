@@ -178,10 +178,10 @@ list. We then use {SIGMA} in the definition of a similar function on the
 The termination conditions for {ltree_sigma} seem to require finding a
 wellfounded relation {R} such that the pair {(f,a)} is {R}-less than
 {(f, Node v tl)}. However, this is a hopeless task, since there is no
-apparent relation between {a} and {Node v tl}, besides the fact that
-they are both {ltree}s. The termination condition extractor has not
-performed properly, because it didn't have a congruence rule for
-{SIGMA}. Such a congruence theorem is the following:
+relation between {a} and {Node v tl}, besides the fact that they are
+both {ltree}s. The termination condition extractor has not performed
+properly, because it didn't have a congruence rule for {SIGMA}. Such a
+congruence theorem is the following:  
 
 {
     !l1 l2 f g. 
