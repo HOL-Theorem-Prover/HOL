@@ -22,13 +22,13 @@ void kill_child_exit(int ignored)
 int main(int argc, char *argv[])
 {
   char *logfile;
-  int timeout = argc > 2 ? atoi(argv[2]) : 5;
+  int timeout = argc > 3 ? atoi(argv[3]) : 5;
   int pipe_fds[2];
-  if (argc < 2) {
-    fprintf(stderr, "Usage: %s logfile [timeout]\n", argv[0]);
+  if (argc < 3) {
+    fprintf(stderr, "Usage: %s dp-program logfile [timeout]\n", argv[0]);
     exit(1);
   }
-  logfile = argv[1];
+  logfile = argv[2];
   if (timeout <= 0) {
     fprintf(stderr, "Timeout must be positive non-zero\n");
     exit(1);
@@ -47,15 +47,10 @@ int main(int argc, char *argv[])
     /* in child */
     /* want to write stdout to pipe, stderr to log file */
     /* stdin must be the file test_coopers.sml */
-    int smlfile_fd, logfile_fd;
-    char *child_args[2] = {"./test_coopers", 0};
+    int logfile_fd;
+    char *child_args[2] = {argv[1], 0};
     if (dup2(pipe_fds[1], STDOUT_FILENO) == -1) {
       perror("dup2 for stdout in child");
-      exit(1);
-    }
-    smlfile_fd = open("./test_coopers.sml", O_RDONLY);
-    if (smlfile_fd == -1) {
-      perror("child - opening test_coopers");
       exit(1);
     }
     close(STDIN_FILENO);
@@ -77,7 +72,7 @@ int main(int argc, char *argv[])
     fd_set to_watch;
     struct timeval tv;
     char buffer[80];
-    int numread;
+    int numread, read_anything = 0;
     signal(SIGINT, kill_child_exit);
     FD_ZERO(&to_watch);
     FD_SET(pipe_fds[0], &to_watch);
@@ -100,10 +95,12 @@ int main(int argc, char *argv[])
         int status, wait_retval;
         wait_retval = waitpid(childpid, &status, WNOHANG);
         if (wait_retval == 0) {
-          /* child still fine, interrupt it to wake it up */
-          if (kill(childpid, SIGINT) == -1) {
-            perror("kill in parent");
-            exit(1);
+          if (read_anything) {
+            /* child still fine, interrupt it to wake it up */
+            if (kill(childpid, SIGINT) == -1) {
+              perror("kill in parent");
+              exit(1);
+            }
           }
           continue;
         } else if (wait_retval < 0) {
@@ -127,6 +124,7 @@ int main(int argc, char *argv[])
         exit(1);
       }
       if (numread == 0) { exit(0); }
+      read_anything = 1;
       write(STDOUT_FILENO, buffer, numread);
     }
   }
