@@ -133,7 +133,7 @@ fun new_type_definition (name,thm) =
  in 
    Theory.store_type_definition (name^"_TY_DEF", name, wit, def)
  end
- handle e => raise (wrap_exn  "Definition" "new_type_definition" e);
+ handle e => raise (wrap_exn "Definition" "new_type_definition" e);
       
 
 fun new_definition(name,M) =
@@ -147,7 +147,7 @@ fun new_definition(name,M) =
  in
    Theory.store_definition (name, [Name], wit, post(V,def))
  end
- handle e => raise (wrap_exn  "Definition" "new_definition" e);
+ handle e => raise (wrap_exn "Definition" "new_definition" e);
 
 
 fun new_specification (name, cnames, th) =
@@ -164,6 +164,6 @@ fun new_specification (name, cnames, th) =
  in 
     Theory.store_definition (name, cnames, wit, def)
  end
- handle e => raise (wrap_exn  "Definition" "new_specification" e);
+ handle e => raise (wrap_exn "Definition" "new_specification" e);
 
 end; (* Definition *)
