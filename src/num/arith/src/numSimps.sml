@@ -65,7 +65,7 @@ val mk_lin =
               | x => x
       val tmlt = lt_of_ord tmord;
       fun shrink_likes ((tm1,k1)::(tm2,k2)::rest) =
-        if (tm1 = tm2) then
+        if aconv tm1 tm2 then
           if (k1+k2 = zero) then shrink_likes rest
           else shrink_likes ((tm1,k1+k2)::rest)
         else (tm1,k1)::shrink_likes((tm2,k2)::rest)
