@@ -338,6 +338,20 @@ fun divmod (xn, yn) =
 fun (xn div yn) = #1 (divmod (xn, yn))
 fun (xn mod yn) = #2 (divmod (xn, yn))
 
+
+local
+  fun gcd' i j = let
+    val r = i mod j
+  in
+    if r = zero then j else gcd' j r
+  end
+in
+fun gcd(i,j) = if i = zero then j
+               else if j = zero then i
+               else if i < j then gcd' j i
+               else gcd' i j
+end
+
 fun fromSubstring s = let
   open Substring
   val sz = size s

@@ -28,6 +28,7 @@ sig
   val div        : num * num -> num
   val mod        : num * num -> num
   val divmod     : num * num -> num * num
+  val gcd        : num * num -> num
 
   val <          : num * num -> bool
   val <=         : num * num -> bool
