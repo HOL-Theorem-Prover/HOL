@@ -1,5 +1,21 @@
 Bugs fixed:
 -----------
+  * The term grammar had the wrong precedences between the
+       let v = e in e
+    and
+       e => e | e
+    syntax.  This could be seen in the term
+       let v = e1 in e2 => e3 | e4
+    which parsed as
+       (let v = e1 in e2) => e3 | e4
+    Now let is as loose as possible, so that the above term will bind
+    with the let having as much scope as possible.  This was a bug
+    because it was incompatible with the earlier behaviour of the
+    parser (in the Athabasca and hol90 implementations).  All the
+    above notwithstanding, we recommend using
+        if e1 then e2 else e3
+    instead of the "arrow-bar" syntax for conditional expressions.
+    Thanks to Steve Brackin for the report of this bug.
 
 New features:
 -------------
