@@ -3544,6 +3544,10 @@ end;
 
 val BOOL_FUN_INDUCT = save_thm("BOOL_FUN_INDUCT",BOOL_FUN_INDUCT);
 
+(*---------------------------------------------------------------------------
+         Support for parsing "case" expressions
+ ---------------------------------------------------------------------------*)
+
 val _ = new_constant(GrammarSpecials.case_special,
                      Type`:'a -> ('a -> 'b) -> 'b`);
 val _ = new_constant(GrammarSpecials.case_split_special,

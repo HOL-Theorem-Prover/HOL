@@ -14,9 +14,11 @@ datatype defn
    = ABBREV  of {eqn:thm, bind:string}
    | PRIMREC of {eqs:thm, ind:thm, bind:string}
    | NONREC  of {eqs:thm, ind:thm, stem:string}
-   | STDREC  of {eqs:thm, ind:thm, R:term,SV:term list,stem:string}
-   | MUTREC  of {eqs:thm, ind:thm, R:term,SV:term list,stem:string,union:defn}
-   | NESTREC of {eqs:thm, ind:thm, R:term,SV:term list,stem:string,aux:defn}
+   | STDREC  of {eqs:thm list, ind:thm, R:term,SV:term list,stem:string}
+   | MUTREC  of {eqs:thm list, ind:thm, R:term, SV:term list,
+                 stem:string,union:defn}
+   | NESTREC of {eqs:thm list, ind:thm, R:term, SV:term list,
+                 stem:string, aux:defn}
 
 
 local open Portable
@@ -26,6 +28,7 @@ local open Portable
         | kind (PRIMREC _) = "primitive recursion"
         | kind (MUTREC  _) = "mutual recursion"
         | kind (NESTREC _) = "nested recursion"
+      fun hyps thl = op_U aconv (map hyp thl)
 in
 fun pp_defn ppstrm = 
  let val {add_string,add_break,
@@ -36,7 +39,7 @@ fun pp_defn ppstrm =
         (begin_block CONSISTENT 0;
          add_string "Equation(s) :"; 
          add_break(1,0);
-         pp_thm eqs; 
+         pr_list pp_thm (fn () => ()) add_newline eqs;
          add_newline (); add_newline ();
          add_string "Induction :"; 
          add_break(1,0);
@@ -75,9 +78,9 @@ fun pp_defn ppstrm =
            add_string "Case analysis:"; 
            add_break(1,0); pp_thm ind;
            end_block())
-     | pp (STDREC {eqs, ind, R, SV, stem})        = pp_rec(eqs,ind, hyp ind)
-     | pp (NESTREC{eqs, ind, R, SV, aux, stem})   = pp_rec(eqs,ind, hyp ind)
-     | pp (MUTREC {eqs, ind, R, SV, union, stem}) = pp_rec(eqs,ind, hyp ind)
+     | pp (STDREC {eqs, ind, R, SV, stem})        = pp_rec(eqs,ind, hyps eqs)
+     | pp (NESTREC{eqs, ind, R, SV, aux, stem})   = pp_rec(eqs,ind, hyps eqs)
+     | pp (MUTREC {eqs, ind, R, SV, union, stem}) = pp_rec(eqs,ind, hyps eqs)
  in
    fn d =>
        (begin_block CONSISTENT 0;
