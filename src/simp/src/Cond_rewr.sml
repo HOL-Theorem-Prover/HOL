@@ -96,6 +96,12 @@ fun size_of_term tm =
                     then (trace(1, TEXT "looping - stack limit reached");
                           failwith "stack limit") else ()
             val (l,r) = dest_eq eqn
+            val _ =
+              if Term.aconv l r then
+                (trace(1, IGNORE ("Rewrite loops", conditional_eqn));
+                 failwith "looping rewrite")
+              else ()
+
             val _ = if (isperm andalso (ac_term_ord(r,l) <> LESS))
                     then failwith "permutative rewr: not applied" else ()
             val _ = if null conditions then ()
