@@ -1,3 +1,5 @@
+\newcommand\holn{\textsf{hol98}}
+
 \chapter*{Preface}\markboth{Preface}{Preface}
 \label{intro}
 
@@ -45,14 +47,17 @@ Chapter~\ref{chap:euclid} then develops an extended example (Euclid's
 proof of the infinitude of primes) to demonstrate how \HOL{} is used
 to prove theorems.  This example is intended to demonstrate \HOL{}'s
 capabilities and to explain some of the issues at a high level.
-Chapter~\ref{proof} and chapter~\ref{tactics} then describe forward
-and goal directed proof in much greater detail.
+Chapters~\ref{proof} and~\ref{tactics} then describe forward and goal
+directed proof in much greater detail.
 
-Finally, Chapter~\ref{parity} consists of a worked example: the
-specification and verification of a simple sequential parity checker.
-The intention is to accomplish two things: (i) to present a complete
-piece of work with \HOL; and (ii) to give an idea of what it is like
-to use the \HOL\ system for a tricky proof.
+Chapter~\ref{parity} consists of a worked example: the specification
+and verification of a simple sequential parity checker.  The intention
+is to accomplish two things: (i) to present a complete piece of work
+with \HOL; and (ii) to give an idea of what it is like to use the
+\HOL\ system for a tricky proof.
+
+Chapter~\ref{chap:more-examples} briefly discusses some of the
+examples distributed with \holn{} in the \ml{examples} directory.
 
 %\item Chapter~\ref{tool} shows how a special purpose proof tool (a
 %  conjunction normaliser) can be implemented and optimised. It
@@ -69,8 +74,9 @@ to use the \HOL\ system for a tricky proof.
 
 %\end{itemize}
 
-\noindent
-\TUTORIAL\ has been kept short so that new users of \HOL\ can get
+\vskip 1cm
+
+\noindent \TUTORIAL{} has been kept short so that new users of \HOL\ can get
 going as fast as possible. Sometimes details have been simplified. It
 is recommended that as soon as a topic in \TUTORIAL\ has been
 digested, the relevant bits of \DESCRIPTION\ and \REFERENCE\ be

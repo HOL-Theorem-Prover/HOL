@@ -5,13 +5,12 @@
 in \HOL\ in more detail.  The previous chapter has provided a broad
 overview of how proof is done in \HOL{}, while here the emphasis is on
 attaining a more thorough grounding in the material.  As before, we
-are using \textsf{hol.unquote} and we require the following commands
-to be entered as a first step: \setcounter{sessioncount}{0}
+are using \textsf{hol.unquote} and we require the following command to
+be entered as a first step: \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
 - app load ["arithmeticTheory", "pairTheory"];
 > val it = () : unit
-- open Psyntax;
 \end{verbatim}
 \end{session}
 \vskip 1cm
@@ -724,8 +723,7 @@ $t$
 single subgoal
 {\small\verb|(|}$\Gamma${\small\verb|,|}$t${\small\verb|)|}---\ie\ it
 has no effect. {\small\verb|ALL_TAC|} is useful for writing complex
-tactics using tacticals (\eg\ see the definition of
-{\small\verb|REPEAT|} in Section~\ref{tacticals}).
+tactics using tacticals.
 
 
 \section{Using tactics to prove theorems}
@@ -1219,7 +1217,7 @@ $\{t_1, \ldots , t_m\}t'$
 \item {\small\verb|bossLib.RW_TAC|} of type \ml{simpLib.simpset -> thm
     list -> tactic}.  A \ml{simpset} is a special collection of
   rewriting theorems and other theorem-proving functionality.  Values
-  defined by \HOL\ include \ml{bossLib.bool\_ss}, which has basic
+  defined by \HOL\ include \ml{bossLib.base\_ss}, which has basic
   knowledge of the boolean connectives, \ml{bossLib.arith\_ss} which
   ``knows'' all about arithmetic, and \ml{HOLSimps.hol\_ss}, which
   includes theorems appropriate for lists, pairs, and arithmetic.

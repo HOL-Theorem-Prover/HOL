@@ -142,10 +142,12 @@ each expression $e_i$ being bound to the name $x_i$.
 
 \ML\ expressions like {\small\verb|"a"|}, {\small\verb|"b"|},
 {\small\verb|"foo"|} \etc\ are {\it strings\/} and have type
-{\small\verb|string|}. Any sequence of {\small ASCII} characters can be
-written between the quotes. The function {\small\verb|explode|} splits a
-string into a list of single characters, which are written like single
-character strings, with a {\small\verb|#|} character prepended.
+{\small\verb|string|}. Any sequence of {\small ASCII} characters can
+be written between the quotes.\footnote{Newlines must be written as
+  \ml{$\backslash$n}, and quotes as \ml{$\backslash$"}.} The function
+{\small\verb|explode|} splits a string into a list of single
+characters, which are written like single character strings, with a
+{\small\verb|#|} character prepended.
 
 \begin{session}
 \begin{verbatim}
