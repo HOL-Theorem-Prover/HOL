@@ -1,5 +1,6 @@
 help/Docfiles
 src/arith/help/entries
+src/compute/help/entries
 src/hol88/help/entries
 src/list/help/entries
 src/pair/help/entries
