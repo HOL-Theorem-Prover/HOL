@@ -1,6 +1,6 @@
 \DOC SYM
 
-\TYPE {SYM : (thm -> thm)}
+\TYPE {SYM : thm -> thm}
 
 \SYNOPSIS
 Swaps left-hand and right-hand sides of an equation.

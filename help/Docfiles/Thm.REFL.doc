@@ -9,7 +9,7 @@ Returns theorem expressing reflexivity of equality.
 rule, reflexive, equality.
 
 \DESCRIBE
-{REFL} maps any term {"t"} to the corresponding theorem {|- t = t}.
+{REFL} maps any term {t} to the corresponding theorem {|- t = t}.
 
 \FAILURE
 Never fails.

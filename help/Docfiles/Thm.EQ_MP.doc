@@ -1,6 +1,6 @@
 \DOC EQ_MP
 
-\TYPE {EQ_MP : (thm -> thm -> thm)}
+\TYPE {EQ_MP : thm -> thm -> thm}
 
 \SYNOPSIS
 Equality version of the Modus Ponens rule.

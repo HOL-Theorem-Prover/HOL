@@ -1,6 +1,6 @@
 \DOC NOT_ELIM
 
-\TYPE {NOT_ELIM : (thm -> thm)}
+\TYPE {NOT_ELIM : thm -> thm}
 
 \SYNOPSIS
 Transforms {|- ~t} into {|- t ==> F}.

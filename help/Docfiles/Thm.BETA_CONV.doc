@@ -3,7 +3,7 @@
 \TYPE {BETA_CONV : conv}
 
 \SYNOPSIS
-Performs a simple beta-conversion.
+Performs a single step of beta-conversion.
 
 \KEYWORDS
 conversion.
@@ -23,26 +23,15 @@ the HOL system.
 
 \EXAMPLE
 {
-- let val tm = Parse.Term `(\x.x+1)y`
-  in
-  BETA_CONV tm
-  end;
- val it = |- (\x. x + 1)y = y + 1 :thm
+- BETA_CONV (Term `(\x.x+1)y`);
+> val it = |- (\x. x + 1)y = y + 1 :thm
 
-- let val tm = Parse.Term `(\x y. x+y)y`
-  in
-  BETA_CONV tm
-  end;
-val it = |- (\x y. x + y)y = (\y'. y + y') : thm
+- BETA_CONV (Term `(\x y. x+y)y`);
+> val it = |- (\x y. x + y)y = (\y'. y + y') : thm
 }
-\COMMENTS
-This primitive inference rule is actually not very primitive, since it does
-automatic bound variable renaming. It would be logically cleaner for this
-renaming to be derived rather than built-in, but since beta-reduction is so
-common this would slow the system down a lot.  It is hoped to document the
-exact renaming algorithm used by {BETA_CONV} in the future.
 
 \SEEALSO
-Conv.BETA_RULE, Tactic.BETA_TAC, Drule.LIST_BETA_CONV, PairedLambda.PAIRED_BETA_CONV, Drule.RIGHT_BETA, Drule.RIGHT_LIST_BETA.
+Conv.BETA_RULE, Tactic.BETA_TAC, Drule.LIST_BETA_CONV, 
+PairedLambda.PAIRED_BETA_CONV, Drule.RIGHT_BETA, Drule.RIGHT_LIST_BETA.
 
 \ENDDOC

@@ -13,12 +13,12 @@ theorem-tactic, undischarge, antecedent, implication.
 it. This new theorem is passed to the theorem-tactic given as {DISCH_THEN}'s
 argument. The consequent tactic is then applied. Thus:
 {
-   DISCH_THEN f (asl,"t1 ==> t2") = f(ASSUME "t1")(asl,"t2")
+   DISCH_THEN f (asl, t1 ==> t2) = f(ASSUME t1) (asl,t2)
 }
 \noindent For example, if
 {
     A ?- t
-   ========  f (ASSUME "u")
+   ========  f (ASSUME u)
     B ?- v
 }
 \noindent then
@@ -27,7 +27,7 @@ argument. The consequent tactic is then applied. Thus:
    ==============  DISCH_THEN f
        B ?- v
 }
-\noindent Note that {DISCH_THEN} treats {"~u"} as {"u ==> F"}.
+\noindent Note that {DISCH_THEN} treats {~u} as {u ==> F}.
 
 \FAILURE
 {DISCH_THEN} will fail for goals which are not implications or negations.
@@ -48,6 +48,8 @@ away:
           A ?- t y
 }
 \SEEALSO
-Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
+Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Drule.NEG_DISCH, 
+Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, 
+Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
 
 \ENDDOC

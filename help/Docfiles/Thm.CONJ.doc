@@ -1,6 +1,6 @@
 \DOC CONJ
 
-\TYPE {CONJ : (thm -> thm -> thm)}
+\TYPE {CONJ : thm -> thm -> thm}
 
 \SYNOPSIS
 Introduces a conjunction.
@@ -17,7 +17,11 @@ rule, conjunction.
 \FAILURE
 Never fails.
 
+\COMMENTS
+The theorem {AND_INTRO_THM} can be instantiated to similar effect.
+
 \SEEALSO
-Drule.BODY_CONJUNCTS, Thm.CONJUNCT1, Thm.CONJUNCT2, Drule.CONJ_PAIR, Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
+Drule.BODY_CONJUNCTS, Thm.CONJUNCT1, Thm.CONJUNCT2, 
+Drule.CONJ_PAIR, Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
 
 \ENDDOC

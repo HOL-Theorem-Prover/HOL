@@ -1,0 +1,38 @@
+\DOC 
+
+\TYPE {pp_tag : ppstream -> tag -> unit}
+
+\SYNOPSIS
+Prettyprinter for tags.
+
+\KEYWORDS
+prettyprint, tag.
+
+\DESCRIBE
+An invocation {pp_tag ppstrm t} will place a representation
+of tag {t} on prettyprinting stream {ppstrm}.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+- val ppstrm = PP.mk_ppstream (Portable.defaultConsumer());
+> val ppstrm = <ppstream> : ppstream
+
+- Tag.pp_tag ppstrm (Tag.read "fooble");
+> val it = () : unit
+
+- (PP.flush_ppstream ppstrm; print "\n");
+[oracles: fooble] [axioms: ]
+> val it = () : unit
+}
+
+\COMMENTS
+In MoscowML, {Meta.installPP} won't install {pp_tag} in the top-level
+loop.
+
+\SEEALSO
+Parse.pp_thm.
+
+\ENDDOC

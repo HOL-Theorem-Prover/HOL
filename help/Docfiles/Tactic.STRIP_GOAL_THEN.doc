@@ -1,6 +1,6 @@
 \DOC STRIP_GOAL_THEN
 
-\TYPE {STRIP_GOAL_THEN : (thm_tactic -> tactic)}
+\TYPE {STRIP_GOAL_THEN : thm_tactic -> tactic}
 
 \SYNOPSIS
 Splits a goal by eliminating one outermost connective, applying the
@@ -27,7 +27,7 @@ the conjunction into two subgoals:
    =================  STRIP_GOAL_THEN ttac
     A ?- v   A ?- w
 }
-\noindent If {t} is an implication {"u ==> v"} and if:
+\noindent If {t} is an implication {u ==> v} and if:
 {
       A ?- v
   ===============  ttac (u |- u)
@@ -64,6 +64,7 @@ When solving the goal
 stripping outer connectives from a goal) directly, rather than as assumptions.
 
 \SEEALSO
-Tactic.CONJ_TAC, Thm_cont.DISCH_THEN, Thm_cont.FILTER_STRIP_THEN, Tactic.GEN_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_TAC.
+Tactic.CONJ_TAC, Thm_cont.DISCH_THEN, Thm_cont.FILTER_STRIP_THEN, 
+Tactic.GEN_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_TAC.
 
 \ENDDOC

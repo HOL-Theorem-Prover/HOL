@@ -12,15 +12,24 @@ and conclusion. All the terms therein should be of type {bool}.
 {
    mk_thm([a1,...,an],c) = ({{a1,...,an}} |- c)
 }
+\noindent {mk_thm} is an application of {mk_oracle_thm}, and every application
+of it tags the resulting theorem with {MK_THM}. 
+
 \FAILURE
-Fails unless all the terms provided for assumptions and conclusion are of type
-{bool}.
+Fails unless all the terms provided for assumptions and conclusion 
+are of type {bool}.
 
 \EXAMPLE
 The following shows how to create a simple contradiction:
 {
-   - mk_thm([],boolSyntax.F);
-   val it = |- F : thm
+   - val falsity = mk_thm([],boolSyntax.F);
+   > val falsity = |- F : thm
+
+   - Globals.show_tags := true;
+   > val it = () : unit
+
+   - falsity;
+   > val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
 }
 \COMMENTS
 Although {mk_thm} can be useful for experimentation or temporarily plugging
@@ -36,7 +45,10 @@ just these axioms and inference rules gives proofs which are (apart from bugs
 in HOL or the underlying system) completely secure. This is one of the great
 strengths of HOL, and it is foolish to sacrifice it to save a little work.
 
+Because of the way tags are propagated during proof, a theorem proved
+with the aid of {mk_thm} is detectable by examining its tag.
+
 \SEEALSO
-Theory.new_axiom, mk_oracle_thm.
+Theory.new_axiom, Thm.mk_oracle_thm, Thm.tag, Globals.show_tags.
 
 \ENDDOC

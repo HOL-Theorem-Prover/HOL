@@ -1,6 +1,6 @@
 \DOC SPECL
 
-\TYPE {SPECL : (term list -> thm -> thm)}
+\TYPE {SPECL : term list -> thm -> thm}
 
 \SYNOPSIS
 Specializes zero or more variables in the conclusion of a theorem.
@@ -17,7 +17,7 @@ sort of alpha-conversions applied to {t} if necessary to ensure that no
 variables which are free in {ui} become bound after substitution.
 {
        A |- !x1...xn. t
-   --------------------------  SPECL "[u1;...;un]"
+   --------------------------  SPECL [u1,...,un]
      A |- t[u1/x1]...[un/xn]
 }
 \noindent It is permissible for the term-list to be empty, in which case

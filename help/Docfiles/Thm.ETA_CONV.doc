@@ -9,12 +9,12 @@ Performs a toplevel eta-conversion.
 conversion, extentionality.
 
 \DESCRIBE
-{ETA_CONV} maps an eta-redex {\x. t x}, where {x} does not occur free in {t},
-to the theorem {|- (\x. t x) = t}.
+{ETA_CONV} maps an eta-redex {\x. (t x)}, where {x} does not occur free
+in {t}, to the theorem {|- (\x. (t x)) = t}.
 
 \FAILURE
 Fails if the input term is not an eta-redex.
 
 \SEEALSO
-Thm.BETA_CONV, Thm.ALPHA.
+Thm.BETA_CONV, Thm.ALPHA, Term.eta_conv.
 \ENDDOC

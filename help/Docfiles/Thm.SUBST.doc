@@ -1,6 +1,6 @@
 \DOC SUBST
 
-\TYPE {SUBST : (term, thm) subst -> term -> thm -> thm}
+\TYPE {SUBST : (term,thm) subst -> term -> thm -> thm}
 
 \SYNOPSIS
 Makes a set of parallel substitutions in a theorem.
@@ -45,33 +45,37 @@ equations (i.e. the terms {t1}, ... , {tn}).
 
 \EXAMPLE
 {
-  - val x = --`x:num`--
-    and y = --`y:num`--
-    and th0 = SPEC (--`0`--) arithmeticTheory.ADD1 
-    and th1 = SPEC (--`1`--) arithmeticTheory.ADD1;
+- val x = --`x:num`--
+  and y = --`y:num`--
+  and th0 = SPEC (--`0`--) arithmeticTheory.ADD1 
+  and th1 = SPEC (--`1`--) arithmeticTheory.ADD1;
 
-(*    x = (--`x`--)
-      y = (--`y`--)
+(*    x = `x`
+      y = `y`
     th0 = |- SUC 0 = 0 + 1
     th1 = |- SUC 1 = 1 + 1     *)
 
-  - SUBST [x |-> th0, y |-> th1] (--`(x+y) > SUC 0`--)
+- SUBST [x |-> th0, y |-> th1] 
+        (--`(x+y) > SUC 0`--)
         (ASSUME (--`(SUC 0 + SUC 1) > SUC 0`--));
 
-  val it = [.] |- (0 + 1) + 1 + 1 > SUC 0 : thm
+> val it = [.] |- (0 + 1) + 1 + 1 > SUC 0 : thm
 
 
-  - SUBST [x |-> th0, y |-> th1] (--`(SUC 0 + y) > SUC 0`--)
-         (ASSUME (--`(SUC 0 + SUC 1) > SUC 0`--));
+- SUBST [x |-> th0, y |-> th1] 
+        (--`(SUC 0 + y) > SUC 0`--)
+        (ASSUME (--`(SUC 0 + SUC 1) > SUC 0`--));
 
-  val it = [.] |- SUC 0 + 1 + 1 > SUC 0 : thm
+> val it = [.] |- SUC 0 + 1 + 1 > SUC 0 : thm
 
 
-  - SUBST [x |-> th0, y |-> th1] (--`(x+y) > x`--)
-          (ASSUME (--`(SUC 0 + SUC 1) > SUC 0`--));
+- SUBST [x |-> th0, y |-> th1] 
+        (--`(x+y) > x`--)
+        (ASSUME (--`(SUC 0 + SUC 1) > SUC 0`--));
 
-  val it = [.] |- (0 + 1) + 1 + 1 > 0 + 1 : thm
+> val it = [.] |- (0 + 1) + 1 + 1 > 0 + 1 : thm
 }
+
 \USES
 For substituting at selected occurrences. Often useful for writing
 special purpose derived inference rules.

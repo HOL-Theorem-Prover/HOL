@@ -1,6 +1,6 @@
 \DOC CCONTR
 
-\TYPE {CCONTR : (term -> thm -> thm)}
+\TYPE {CCONTR : term -> thm -> thm}
 
 \SYNOPSIS
 Implements the classical contradiction rule.

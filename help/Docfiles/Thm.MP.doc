@@ -1,6 +1,6 @@
 \DOC MP
 
-\TYPE {MP : (thm -> thm -> thm)}
+\TYPE {MP : thm -> thm -> thm}
 
 \SYNOPSIS
 Implements the Modus Ponens inference rule.

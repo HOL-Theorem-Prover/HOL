@@ -1,6 +1,6 @@
 \DOC CONTR
 
-\TYPE {CONTR : (term -> thm -> thm)}
+\TYPE {CONTR : term -> thm -> thm}
 
 \SYNOPSIS
 Implements the intuitionistic contradiction rule.
@@ -13,7 +13,7 @@ When applied to a term {t} and a theorem {A |- F}, the inference rule {CONTR}
 returns the theorem {A |- t}.
 {
     A |- F
-   --------  CONTR "t"
+   --------  CONTR t
     A |- t
 }
 \FAILURE

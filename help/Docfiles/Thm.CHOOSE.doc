@@ -15,7 +15,7 @@ theorem of the form {A2 u {{s[v/x]}} |- t}, the inference rule {CHOOSE}
 produces the theorem {A1 u A2 |- t}.
 {
     A1 |- ?x. s        A2 u {{s[v/x]}} |- t
-   ---------------------------------------  CHOOSE ("v",(A1 |- ?x. s))
+   ---------------------------------------  CHOOSE (v,(A1 |- ?x. s))
                 A1 u A2 |- t
 }
 \noindent Where {v} is not free in {A1}, {A2} or {t}.

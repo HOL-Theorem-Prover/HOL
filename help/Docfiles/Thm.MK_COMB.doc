@@ -23,6 +23,6 @@ functions whose domain types are the same as the types of {x} and {y}
 respectively.
 
 \SEEALSO
-Thm.AP_TERM, Thm.AP_THM.
+Thm.AP_TERM, Thm.AP_THM, Tactic.MK_COMB_TAC.
 
 \ENDDOC

@@ -1,6 +1,6 @@
 \DOC GSYM
 
-\TYPE {GSYM : (thm -> thm)}
+\TYPE {GSYM : thm -> thm}
 
 \SYNOPSIS
 Reverses the first equation(s) encountered in a top-down search.
@@ -23,11 +23,10 @@ Never fails, and never loops infinitely.
 
 \EXAMPLE
 {
-- ADD;
+- arithmeticTheory.ADD;
 > val it = |- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n)) : thm
-Run time: 0.0s
 
-- GSYM ADD;
+- GSYM arithmeticTheory.ADD;
 > val it = |- (!n. n = 0 + n) /\ (!m n. SUC(m + n) = (SUC m) + n) : thm
 }
 \SEEALSO
