@@ -193,3 +193,18 @@ Incompatibilities:
 
     This can be relatively difficult to track down, but the fix is
     simple enough: change "someconv t" to "QCONV someconv t".
+
+  * bool_ss no longer includes the rewrite LET_THM, which turns an
+    expression of the form
+
+      let v = e1 in e2
+
+    into
+
+      e2[e1/v]
+
+    std_ss and its descendents in bossLib still include this rewrite.
+    This rewrite is also missing from the stateful rewriter (srw_ss(),
+    and SRW_TAC).  This is so the stateful rewriter can implement a
+    rewriting strategy that only performs the substitution when e1 has
+    simplified to a "real value".
