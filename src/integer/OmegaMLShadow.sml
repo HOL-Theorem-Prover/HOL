@@ -37,6 +37,9 @@ fun factoid_constant f =
     case f of
       ALT av => Vector.sub(av, Vector.length av - 1)
 
+fun factoid_size f =
+    case f of ALT av => Vector.length av
+
 fun split_factoid f = (factoid_key f, factoid_constant f)
 
 fun zero_var_factoid f =
@@ -50,10 +53,24 @@ fun true_factoid f =
     zero_var_factoid f andalso Arbint.<=(Arbint.zero, factoid_constant f)
 
 fun eval_factoid_rhs vmap f = let
+  val maxdex = factoid_size f - 1
   open Arbint Vector
   fun foldthis (i, ai, acc) =
       if ai = zero then acc
+      else if i = maxdex then ai + acc
       else ai * PIntMap.find i vmap + acc
+in
+  case f of
+    ALT fv => foldli foldthis zero (fv, 0, NONE)
+end
+
+fun eval_factoid_except vmap i f = let
+  val maxdex = factoid_size f - 1
+  open Arbint Vector
+  fun foldthis (j, ai, acc) =
+      if ai = zero orelse i = j then acc
+      else if j = maxdex then ai + acc
+      else ai * PIntMap.find j vmap + acc
 in
   case f of
     ALT fv => foldli foldthis zero (fv, 0, NONE)
@@ -75,7 +92,7 @@ fun factoid_pairings vars f =
                 [] (av, 0, NONE)
 
 (* ----------------------------------------------------------------------
-    combine_factoids i f1 f2
+    combine_real_factoids i f1 f2
 
     takes two factoids and produces a fresh one by "variable
     elimination" over the i'th variable in the vector.  It requires
@@ -86,12 +103,12 @@ fun factoid_pairings vars f =
     factor is eliminated from the outset.
    ---------------------------------------------------------------------- *)
 
-fun combine_factoids i f1 f2 =
+fun combine_real_factoids i f1 f2 =
     case (f1, f2) of
       (ALT av1, ALT av2) => let
         open Arbint Vector CooperMath
         val c0 = sub(av1, i)
-        val d0 = Arbint.~ (sub(av2, i))
+        val d0 = ~ (sub(av2, i))
         val l = lcm (c0, d0)
         val c = l div d0
         val d = l div c0
@@ -99,6 +116,33 @@ fun combine_factoids i f1 f2 =
       in
         ALT (tabulate(length av1, gen))
       end
+
+(* ----------------------------------------------------------------------
+    combine_dark_factoids i lower upper
+
+    takes two factoids and combines them to produce a new, "dark shadow"
+    factoid.  As above, the first one must have a positive coefficient of
+    i, and the second a negative coefficient.
+   ---------------------------------------------------------------------- *)
+
+fun combine_dark_factoids i low up =
+    case (low, up) of
+      (ALT L, ALT U) => let
+        open Arbint Vector
+        (* have ~L <= ax /\ bx <= U *)
+        val a = sub(L, i)
+        val b = ~(sub(U, i))
+        val maxdex = Int.-(length L, 1)
+        fun gen j = let
+          val base =  a * sub(U, j) + b * sub(L, j)
+        in
+          if j = maxdex then base - ((a - one) * (b - one))
+          else base
+        end
+      in
+        ALT (tabulate(Int.+(maxdex, 1), gen))
+      end
+
 
 (* ----------------------------------------------------------------------
     factoid_gcd f
@@ -112,7 +156,7 @@ fun factoid_gcd f =
     case f of
       ALT av => let
         open Vector CooperMath
-        val g = foldli (fn (_, c, g0) => gcd (c, g0))
+        val g = foldli (fn (_, c, g0) => gcd (Arbint.abs c, g0))
                        Arbint.zero
                        (av, 0, SOME (length av - 1))
       in
@@ -180,13 +224,37 @@ datatype result = CONTR of derivation
 
 fun direct_contradiction(d1, d2) = CONTR (DIRECT_CONTR(d1, d2))
 
-fun combine_dfactoids i ((f1, d1), (f2, d2)) =
-    (combine_factoids i f1 f2, REAL_COMBIN(i, d1, d2))
-
-fun gcd_check_dfactoid (f, d) = (factoid_gcd f, GCD_CHECK d)
+fun gcd_check_dfactoid (df as (f, d)) =
+    (factoid_gcd f, GCD_CHECK d) handle no_gcd => df
 
 fun split_dfactoid (f, d) = (factoid_key f, (factoid_constant f, d))
 fun dfactoid_key (f, d) = factoid_key f
+fun dfactoid_derivation (f, d) = d
+
+fun term_to_dfactoid t = (term_to_factoid t, ASM t)
+
+(* ----------------------------------------------------------------------
+    The "elimination mode" datatype.
+
+    This records what sort of shadow we're currently working on.
+   ---------------------------------------------------------------------- *)
+
+datatype elimmode = REAL | DARK | EXACT
+
+fun inexactify EXACT = REAL
+  | inexactify x = x
+
+fun mode_result em result =
+    case em of
+      EXACT => result
+    | REAL => (case result of SATISFIABLE _ => NO_CONCL | x => x)
+    | DARK => (case result of CONTR _ => NO_CONCL | x => x)
+
+fun combine_dfactoids em i ((f1, d1), (f2, d2)) =
+    case em of
+      DARK => (combine_dark_factoids i f1 f2, d1)
+    | _ => (combine_real_factoids i f1 f2, REAL_COMBIN(i, d1, d2))
+
 
 (* ----------------------------------------------------------------------
     The "ptree" datatype
@@ -214,6 +282,20 @@ fun dbapp (f : factoid * derivation -> unit) ptree =
 
 fun dbinsert (df as (f,d)) ptree =
     #1 (PIntMap.addf (fn b => df :: b) (keyhash (factoid_key f)) [df] ptree)
+
+fun dbchoose ptree = let
+  val (_, (_, a_bucket)) = PIntMap.choose ptree
+in
+  hd a_bucket
+end
+
+fun dbwidth ptree = let
+  val (f,d) = dbchoose ptree
+in
+  factoid_size f
+end
+
+
 
 (* ----------------------------------------------------------------------
     add_factoid ptree df
@@ -244,40 +326,29 @@ in
 end
 
 (* ----------------------------------------------------------------------
-    add_check_factoid ptree df
+    add_check_factoid ptree df next kont
 
-    Precondition: df is neither a trivially true nor false factoid
+    Precondition: df is neither a trivially true nor false factoid.
+    Types:
+      next:     ptree -> (result -> 'a) -> 'a
+      kont:     result -> 'a
 
    ---------------------------------------------------------------------- *)
 
-fun add_check_factoid ptree0 (df as (f,d)) kont = let
+fun add_check_factoid ptree0 (df as (f,d)) next kont = let
   val (ptree, changed) = add_factoid ptree0 df
 in
-  if not changed then kont ptree
+  if not changed then next ptree kont
   else let
       val (fk,fc) = split_factoid f
       val (negdf as (negf, negd)) = lookup_fkey ptree (negate_key fk)
       val negc = factoid_constant negf
       open Arbint
     in
-      if negc < ~fc then direct_contradiction(d, negd)
-      else kont ptree
-    end handle PIntMap.NotFound => kont ptree
+      if negc < ~fc then kont (direct_contradiction(d, negd))
+      else next ptree kont
+    end handle PIntMap.NotFound => next ptree kont
 end
-
-(* ----------------------------------------------------------------------
-    add_factoids ptree dfl kont
-
-    Adds all of the factoids in dfl to ptree, and then continues with
-    continuation kont (of type :ptree -> result)
-   ---------------------------------------------------------------------- *)
-
-fun add_factoids ptree dfl kont =
-    case dfl of
-      [] => kont ptree
-    | (df :: dfs) => add_check_factoid ptree df
-                                       (fn pt => add_factoids pt dfs kont)
-
 
 (* ----------------------------------------------------------------------
     has_one_var ptree
@@ -308,7 +379,7 @@ end
 
 
 (* ----------------------------------------------------------------------
-    one_var_analysis ptree
+    one_var_analysis ptree em
 
     Precondition: the dfactoids in ptree have just one variable with a
     non-zero coefficient, and its everywhere the same variable.  Our aim
@@ -321,9 +392,8 @@ end
     false, combining the maximum lower and the minimum upper constraint.
    ---------------------------------------------------------------------- *)
 
-fun one_var_analysis ptree = let
-  val (_, (_, a_bucket)) = PIntMap.choose ptree
-  val (a_constraint, _) = hd a_bucket
+fun one_var_analysis ptree em = let
+  val (a_constraint, _) = dbchoose ptree
   fun find_var (i, ai, NONE) = if ai <> Arbint.zero then SOME i else NONE
     | find_var (_, _, v as SOME _) = v
   val x_var =
@@ -345,34 +415,38 @@ fun one_var_analysis ptree = let
       PIntMap.fold (fn (_,b,acc) => foldl assign_factoid acc b)
                    (NONE,NONE)
                    ptree
+  open PIntMap
 in
   case (upper, lower) of
     (NONE, NONE) => raise Fail "one_var_analysis: this can't happen"
-  | (SOME (c, _), NONE) => SATISFIABLE (PIntMap.add x_var c PIntMap.empty)
-  | (NONE, SOME (c, _)) => SATISFIABLE (PIntMap.add x_var c PIntMap.empty)
+  | (SOME (c, _), NONE) => if em = REAL then NO_CONCL
+                           else SATISFIABLE (add x_var c empty)
+  | (NONE, SOME (c, _)) => if em = REAL then NO_CONCL
+                           else SATISFIABLE (add x_var c empty)
   | (SOME (u,du), SOME (l, dl)) =>
-    if u < l then direct_contradiction(du,dl)
-    else SATISFIABLE (PIntMap.add x_var u PIntMap.empty)
+    if u < l then
+      if em = DARK then NO_CONCL
+      else direct_contradiction(du,dl)
+    else
+      if em = REAL then NO_CONCL
+      else SATISFIABLE (PIntMap.add x_var u PIntMap.empty)
 end
 
 (* ----------------------------------------------------------------------
-    throwaway_redundant_factoids ptree kont
+    throwaway_redundant_factoids ptree nextstage kont
 
-    checks ptree for variables that are constrained only in one sense.
-    If such a variable exists, then it can be chucked, as can all of
-    the constraints that mention it.  Call ourselves recursively with
-    the new ptree as there may be more variable eliminable, and
-    examine the result that comes back from this application.  If it
-    indicates that the system is satisfiable, then we need to update
-    the map that is returned with a value for the variable we
-    eliminated.  If there isn't a redundant variable, just continue
-    directly with kont.
+    checks ptree for variables that are constrained only in one sense
+    (i.e., with upper or lower bounds only).
+
+    The function nextstage takes a ptree and a continuation; it is
+    called when ptree has run out of constraints that can be thrown
+    away.
+
+    The continuation function kont is of type result -> 'a.
    ---------------------------------------------------------------------- *)
 
-fun throwaway_redundant_factoids ptree kont = let
-  val (_, (_, a_bucket)) = PIntMap.choose ptree
-  val (a_constraint, _) = hd a_bucket
-  val numvars = Vector.length (factoid_key a_constraint)
+fun throwaway_redundant_factoids ptree nextstage kont = let
+  val numvars = dbwidth ptree - 1
   val has_low = Array.array(numvars, false)
   val has_up = Array.array(numvars, false)
 
@@ -397,7 +471,7 @@ fun throwaway_redundant_factoids ptree kont = let
       else SOME (i, Array.sub(has_up, i))
 in
   case find_redundant_var 0 of
-    NONE => kont ptree
+    NONE => nextstage ptree kont
   | SOME(i, hasupper) => let
       fun partition (df as (f,d), (pt, elim)) = let
         open Arbint
@@ -408,17 +482,22 @@ in
           (pt, df :: elim)
       end
       val (newptree, elim) = dbfold partition (dbempty, []) ptree
+      fun handle_result r =
+          case r of
+            SATISFIABLE vmap => let
+              open Arbint
+              fun mapthis (f,_) = (eval_factoid_except vmap i f) div
+                                  abs (Vector.sub(factoid_key f, i))
+              val evaluated = map mapthis elim
+              val foldfn = if hasupper then Arbint.min else Arbint.max
+            in
+              SATISFIABLE (PIntMap.add i (foldl foldfn (hd evaluated)
+                                                (tl evaluated))
+                                       vmap)
+            end
+          | x => x
     in
-      case throwaway_redundant_factoids newptree kont of
-        SATISFIABLE vmap => let
-          val evaluated = map (eval_factoid_rhs vmap o #1) elim
-          val foldfn = if hasupper then Arbint.min else Arbint.max
-        in
-          SATISFIABLE (PIntMap.add i (foldl foldfn (hd evaluated)
-                                            (tl evaluated))
-                                   vmap)
-        end
-      | x => x
+      throwaway_redundant_factoids newptree nextstage (kont o handle_result)
     end
 end
 
@@ -431,10 +510,156 @@ end
     var.
    ---------------------------------------------------------------------- *)
 
-fun exact_var ptree = NONE
+fun exact_var ptree = let
+  val up_coeffs_unit = Array.array(dbwidth ptree - 1, true)
+  val low_coeffs_unit = Array.array(dbwidth ptree - 1, true)
+  fun appthis (f,d) = let
+    open Arbint
+    fun examine_key (i, ai) =
+        case compare(ai,zero) of
+          LESS => if abs ai <> one then Array.update(up_coeffs_unit, i, false)
+                  else ()
+        | EQUAL => ()
+        | GREATER => if ai <> one then Array.update(low_coeffs_unit, i, false)
+                     else ()
+  in
+    Vector.appi examine_key (factoid_key f, 0, NONE)
+  end
+  val () = dbapp appthis ptree
+  fun check_index (i, b, acc) = if b then SOME i else acc
+in
+  case Array.foldli check_index NONE (low_coeffs_unit, 0, NONE) of
+    NONE => Array.foldli check_index NONE (up_coeffs_unit, 0, NONE)
+  | x => x
+end
 
 (* ----------------------------------------------------------------------
-    one_step ptree kont
+    least_coeff_var ptree
+
+    Returns the variable whose coefficients' absolute values sum to the
+    least amount.
+   ---------------------------------------------------------------------- *)
+
+fun least_coeff_var ptree = let
+  val sums = Array.array(dbwidth ptree - 1, Arbint.zero)
+  fun appthis df = let
+    open Arbint
+    fun add_in_c (i, ai) =
+        Array.update(sums, i, Array.sub(sums, i) + abs ai)
+  in
+    Vector.appi add_in_c (dfactoid_key df, 0, NONE)
+  end
+  val () = dbapp appthis ptree
+  fun find_min (i,ai,NONE) = SOME(i,ai)
+    | find_min (i,ai, acc as SOME(mini, minai)) =
+      if Arbint.<(ai, minai) then SOME(i,ai) else acc
+in
+  #1 (valOf (Array.foldli find_min NONE (sums, 0, NONE)))
+end
+
+(* ----------------------------------------------------------------------
+    generate_row (pt0, em, i, up, lows, next, kont)
+
+    Types:
+      pt0       :ptree
+      em        :elimmode
+      i         :int  (a variable index)
+      up        :dfactoid
+      lows      :dfactoid list
+      next      :ptree -> (result -> 'a) -> 'a
+      kont      :result -> 'a
+
+    "Resolves" dfactoid against all the factoids in lows, producing new
+    factoids, which get added to the ptree.  If a factoid is directly
+    contradictory, then return it immediately, using kont.  If a factoid
+    is vacuous, drop it.
+   ---------------------------------------------------------------------- *)
+
+fun generate_row (pt0, em, i, up, lows, next, kont) =
+    case lows of
+      [] => next pt0 kont
+    | low::lowtl => let
+        val (df as (f,d)) =
+            gcd_check_dfactoid (combine_dfactoids em i (low, up))
+        fun after_add pt k = generate_row(pt, em, i, up, lowtl, next, k)
+      in
+        if true_factoid f then after_add pt0 kont
+        else if false_factoid f then kont (CONTR d)
+        else add_check_factoid pt0 df after_add kont
+      end
+
+(* ----------------------------------------------------------------------
+    generate_crossproduct (pt0, em, i, ups, lows, next, kont)
+
+    Types:
+      pt0       :ptree
+      em        :elimmode
+      i         :integer (a variable index)
+      ups       :dfactoid list
+      lows      :dfactoid list
+      next      :ptree -> (result -> 'a) -> 'a
+      kont      :result -> 'a
+   ---------------------------------------------------------------------- *)
+
+fun generate_crossproduct (pt0, em, i, ups, lows, next, kont) =
+    case ups of
+      [] => next pt0 kont
+    | u::us => let
+        fun after pt k = generate_crossproduct(pt, em, i, us, lows, next, k)
+      in
+        generate_row(pt0, em, i, u, lows, after, kont)
+      end
+
+(* ----------------------------------------------------------------------
+    extend_vmap ptree i vmap
+
+    vmap provides values for all of the variables present in ptree's
+    factoids except i.  Use it to evaluate all of the factoids, except
+    at variable i and to then return vmap extended with a value for
+    variable i that respects all of the factoids.
+
+    Note definite parallels with code in one_var_analysis.
+   ---------------------------------------------------------------------- *)
+
+fun extend_vmap ptree i vmap = let
+  fun categorise ((f, _), (acc as (lower, upper))) = let
+    val c0 = eval_factoid_except vmap i f
+    val fk = factoid_key f
+    open Arbint
+    val coeff = Vector.sub(fk, i)
+  in
+    if coeff <  zero then let (* upper *)
+        val c = c0 div ~coeff
+      in
+        case upper of
+          NONE => (lower, SOME c)
+        | SOME c' => if c < c' then (lower, SOME c) else acc
+      end
+    else let (* lower *)
+        val c = ~(c0 div coeff)
+      in
+        case lower of
+          NONE => (SOME c, upper)
+        | SOME c' => if c > c' then (SOME c, upper) else acc
+      end
+  end
+  val (lower, upper) = dbfold categorise (NONE, NONE) ptree
+  open Arbint
+  val _ = valOf lower <= valOf upper orelse raise Fail "urk in extend map"
+in
+  PIntMap.add i (valOf lower) vmap
+end
+
+
+
+
+(* ----------------------------------------------------------------------
+    one_step ptree em nextstage kont
+
+    Types:
+      em         :elimmode
+      nextstage  :ptree -> elimmode -> (result -> 'a) -> 'a
+      kont       :result -> 'a
 
     Assume that ptree doesn't contain anything directly contradictory,
     and that there aren't any redundant constraints around (these have
@@ -442,7 +667,8 @@ fun exact_var ptree = NONE
 
     Perform one step of the shadow calculation algorithm:
       (a) if there is only one variable left in all of the constraints
-          in ptree do one_var_analysis to return some sort of result
+          in ptree do one_var_analysis to return some sort of result,
+          and pass this result to kont.
       (b) otherwise, decide on a variable to eliminate.  If there's a
           variable that allows for an exact shadow (has coefficients of
           one in all of its lower-bound or upper-bound occurrences),
@@ -453,24 +679,120 @@ fun exact_var ptree = NONE
           variable to be eliminated.
       (d) divide the constraints that do mention the variable to be
           eliminated into upper and lower bound sets.
+    Then (in generate_crossproduct):
       (e) work through all of the possible combinations in
             upper x lower
           using combine_dfactoids.  Each new dfactoid has to be added
           to the accumulating tree.  This may produce a direct
-          contradiction, in which case, stop and return this.  Otherwise
-          keep going.
-      (f) pass the completed new ptree to kont.
+          contradiction, in which case, stop and return this (again,
+          using the kont function).  Otherwise keep going.
+      (f) pass the completed new ptree to nextstage, with an augmented
+          continuation that copes with satisfiable results (though
+          satisfiable results won't come back if the mode is REAL
+          of course).
    ---------------------------------------------------------------------- *)
 
-fun one_step ptree kont =
-    if has_one_var ptree then
-      one_var_analysis ptree
-    else
+fun one_step ptree em nextstage kont = let
+  val (var_to_elim, mode) =
       case exact_var ptree of
-        x => raise Fail "Not implemented yet"
+        SOME i => (i, em)
+      | NONE => (least_coeff_var ptree, inexactify em)
+  fun categorise (df, (notmentioned, uppers, lowers)) = let
+    open Arbint
+  in
+    case compare(Vector.sub(dfactoid_key df, var_to_elim), zero) of
+      LESS => (notmentioned, df::uppers, lowers)
+    | EQUAL => (dbinsert df notmentioned, uppers, lowers)
+    | GREATER => (notmentioned, uppers, df::lowers)
+  end
+  val (newtree0, uppers, lowers) =
+      dbfold categorise (dbempty, [], []) ptree
+  fun newkont r =
+      case (em, mode) of
+        (EXACT, EXACT) => kont r
+      | (EXACT, REAL) => let
+        in
+          case r of
+            CONTR _ => kont r
+          | _ => one_step ptree DARK nextstage kont
+        end
+      | (REAL, REAL) => kont r
+      | (DARK, DARK) => let
+        in
+          case r of
+            SATISFIABLE vmap =>
+            kont (SATISFIABLE (extend_vmap ptree var_to_elim vmap))
+          | CONTR _ => kont NO_CONCL
+          | x => kont x
+        end
+      | _ => raise Fail "Can't happen - in newkont calculation"
+  fun newnextstage pt k = nextstage pt mode k
+in
+  generate_crossproduct(newtree0, em, var_to_elim, uppers, lowers,
+                        newnextstage, newkont)
+end
+
+(* ----------------------------------------------------------------------
+    toplevel ptree em
+
+   ---------------------------------------------------------------------- *)
+
+fun toplevel ptree em kont = let
+  fun after_throwaway pt k = one_step pt em toplevel k
+in
+  if has_one_var ptree then
+    kont (mode_result em (one_var_analysis ptree em))
+  else
+    throwaway_redundant_factoids ptree after_throwaway kont
+end
+
+
+(* ----------------------------------------------------------------------
+   simple tests
+
+   fun fromList l = let
+     open intSyntax
+     val clist = map Arbint.fromInt l
+     val lim = length clist - 1
+     fun clist2term (x, (acc, n)) = let
+       val c = intSyntax.term_of_int x
+       val cx = if n = lim then c
+                else mk_mult(c, mk_var("x"^Int.toString n, int_ty))
+     in
+       case acc of
+         NONE => (SOME cx, n + 1)
+       | SOME a => (SOME(mk_plus(a, cx)), n + 1)
+     end
+     val t = valOf (#1 (List.foldl clist2term (NONE, 0) clist))
+   in
+     (ALT (Vector.fromList clist), ASM (mk_leq(zero_tm, t)))
+   end
+
+   datatype prettyr = SAT of (string * Arbint.int) list
+                    | PCONTR of derivation
+                    | PNOCONC
+   fun vmap2list vmap = PIntMap.fold(fn(k,v,acc) =>
+                                       ("x"^Int.toString k, v)::acc)
+                                    [] vmap
+   fun display_result r =
+       case r of
+         SATISFIABLE v => SAT (vmap2list v)
+       | CONTR x => PCONTR x
+       | NO_CONCL => PNOCONC
+
+   val gentree = List.foldl (fn (df,t) => dbinsert (fromList df) t) dbempty
+
+   fun test l = toplevel (gentree l) EXACT display_result
+
+   test [[2,3,6],[~1,~4,7]]  (* exact elimination *)
+   test [[2,3,4],[~3,~4,7]]  (* dark shadow test *)
+   test [[2,3,4],[~3,~4,7],[4,5,~10]]  (* another dark shadow *)
+   test [[2,3,4],[~3,~4,7],[4,~5,~10]]  (* also satisfiable *)
+   time test [[~3,~1,6],[2,1,~5],[3,~1,~3]]
 
 
 
+   ---------------------------------------------------------------------- *)
 
 
 end (* struct *)
