@@ -23,9 +23,7 @@ fun TYPE_ERR function message =
 
 type tyc = {name:string, revision:int};
 
-datatype hol_type = Stv of int           (* System generated type variables *)
-                  | Utv of string              (* User-given type variables *)
-                  | Link of hol_type ref             (* Modifiable pointers *)
+datatype hol_type = Utv of string              (* User-given type variables *)
                   | Tyapp of tyc * hol_type list;
 
 
@@ -114,7 +112,6 @@ val is_vartype = can dest_vartype;
 local
 fun tyvars (v as Utv _) vlist = if (mem v vlist) then vlist else v::vlist
   | tyvars (Tyapp(_,Args)) vlist = tyvarsl Args vlist
-  | tyvars _ _ = raise TYPE_ERR "tyvars" "type construction"
 and
     tyvarsl L vlist = rev_itlist tyvars L vlist
 in
@@ -139,18 +136,10 @@ fun lex_order order =
    end;
 
 (*---------------------------------------------------------------------------*
- * A total ordering on types. Stv < Utv < Link < Tyapp                       *
+ * A total ordering on types. Utv < Tyapp                                    *
  *---------------------------------------------------------------------------*)
-fun type_lt (Stv i1) (Stv i2) = (i1<i2)
-  | type_lt (Stv _) _ = true
-
-  | type_lt (Utv _) (Stv _)  = false
-  | type_lt (Utv s1) (Utv s2) = (s1<s2)
+fun type_lt (Utv s1) (Utv s2) = (s1<s2)
   | type_lt (Utv _) _ = true
-
-  | type_lt (Link (ref ty1)) (Link (ref ty2)) = type_lt ty1 ty2
-  | type_lt (Link _) (Tyapp _) = true
-  | type_lt (Link _) _ = false
 
   | type_lt (Tyapp({name=s1,...},L1)) (Tyapp({name=s2,...},L2)) =
        (case String.compare(s1,s2)
@@ -163,15 +152,6 @@ fun type_lt (Stv i1) (Stv i2) = (i1<i2)
 fun type_compare ty1 ty2 =
     if (ty1=ty2) then EQUAL
     else if type_lt ty1 ty2 then LESS else GREATER;
-
-(*---------------------------------------------------------------------------*
- * System type variable streams. Used in type inference.                     *
- *---------------------------------------------------------------------------*)
-local fun step i = Link(ref(Stv(i+1)))
-in
- fun fresh_tyvar_stream() = Lib.mk_istream (fn x => x+1) 0 step
-end;
-
 
 (*---------------------------------------------------------------------------*
  * An "all" function defined for uncurried predicates.                       *
@@ -192,68 +172,7 @@ fun pr_all2 f =
  *    fun EQ (M:hol_type,N:hol_type) = ((cast M:int) = (cast N:int))         *
  *                                                                           *
  *---------------------------------------------------------------------------*)
-fun ty_eq pr =
-   (op =) pr orelse
-   (case pr
-      of (Tyapp(tyrec1,A1),Tyapp(tyrec2,A2)) =>
-                 ((tyrec1=tyrec2) andalso pr_all2 ty_eq A1 A2)
-       | (Link(ref ty1), Link(ref ty2)) => ty_eq(ty1,ty2)
-       | (Link(ref ty1),ty2)  => ty_eq(ty1,ty2)
-       | (ty1, Link(ref ty2)) => ty_eq(ty1,ty2)
-       | _ => false);
-
-(*---------------------------------------------------------------------------*
- * The occurs check. We know that the first argument is an Stv.              *
- *---------------------------------------------------------------------------*)
-fun occurs v =
-   let fun occ (Tyapp(_,Args)) = exists occ Args
-         | occ (Link (ref ty)) = occ ty
-         | occ ty = (v = ty)
-   in occ
-   end;
-
-(*---------------------------------------------------------------------------*
- * Various error messages for unification                                    *
- *---------------------------------------------------------------------------*)
-val UNIFY_ERR = TYPE_ERR "unify";
-val INEQUAL_CONST_ERR = UNIFY_ERR "inequal constants";
-val OCCUR_CHECK = UNIFY_ERR "occurs check";
-
-
-(*---------------------------------------------------------------------------*
- * Unification of types by pointer redirection.                              *
- *                                                                           *
- * The order of the first three clauses of unif is delicate. They ensure     *
- * that the hol_type in the first argument, if it is an assignable variable, *
- * gets assigned.                                                            *
- *---------------------------------------------------------------------------*)
-fun unify ty1 ty2 = if ty_eq(ty1,ty2) then () else unif(ty1,ty2)
-and unif (Link(r as ref(s as Stv _)), ty) =
-        if (occurs s ty) then raise OCCUR_CHECK else r := ty
-  | unif (Link(ref ty1), ty2)          = unify ty1 ty2
-  | unif (ty, v as Link (ref (Stv _))) = unify v ty
-  | unif (ty1, Link (ref ty2))         = unify ty1 ty2
-  | unif (Tyapp(tyrec1,args1), Tyapp(tyrec2, args2)) =
-        if (tyrec1 <> tyrec2) then raise INEQUAL_CONST_ERR
-        else rev_itlist2 (fn ty1 => K o unify ty1) args1 args2 ()
-  | unif _ = raise UNIFY_ERR "structural difference in types";
-
-
-
-fun shrink_type alist =
-  let fun shrink (Link(ref ty)) = shrink ty
-        | shrink (Tyapp(r,Args)) = Tyapp(r, map shrink Args)
-        | shrink (s as Stv _) = assoc s alist
-        | shrink ty = ty
-  in shrink
-  end;
-
-
-fun tyvars (v as Utv _) vlist = insert v vlist
-  | tyvars (v as Stv _) vlist = insert v vlist
-  | tyvars (Tyapp(_,[])) vlist = vlist
-  | tyvars (Tyapp(_,Args)) vlist = rev_itlist tyvars Args vlist
-  | tyvars (Link(ref ty)) vlist = tyvars ty vlist;
+fun ty_eq pr = (op =) pr
 
 (*---------------------------------------------------------------------------*
  * Support datatypes and functions.                                          *
@@ -271,27 +190,6 @@ fun apply f ty =
 
 
 (*---------------------------------------------------------------------------*
- * Maps from hol_type to hol_type, with type variables consistently renamed. *
- *---------------------------------------------------------------------------*)
-
-local val tv_pair_list = ref ([]:(hol_type * hol_type) list)
-in
-fun rename_tv tyvars =
-  let val _ = tv_pair_list := []
-      fun rn (v as Utv _) = DIFF
-                (assoc v (!tv_pair_list) handle HOL_ERR _
-                 => let val v' = Lib.state(Lib.next tyvars)
-                    in tv_pair_list := ((v,v')::(!tv_pair_list));  v'   end)
-        | rn (Tyapp(tyrec, Args)) =
-           (case (itlist (apply rn) Args (NOPE[]))
-            of YUP l  => DIFF(Tyapp(tyrec,l))
-             | NOPE _ => SAME)
-        | rn _ = raise TYPE_ERR "rename_tv" "type construction"
-  in rn
-end end;
-
-
-(*---------------------------------------------------------------------------*
  * Substitute in a type.                                                     *
  *---------------------------------------------------------------------------*)
 
@@ -304,7 +202,6 @@ fun ty_sub []  ty    = SAME
       (case (itlist (apply (ty_sub theta)) Args (NOPE[]))
          of YUP l' => DIFF (Tyapp(tyrec,l'))
           | NOPE _ => SAME)
-  | ty_sub _ _ = raise TYPE_ERR "ty_sub" "type construction";
 
 fun type_subst theta ty =
     case (ty_sub theta ty)
@@ -317,7 +214,6 @@ fun type_subst theta ty =
  *---------------------------------------------------------------------------*)
 fun polymorphic (Utv _) = true
   | polymorphic (Tyapp(_,Args)) = exists polymorphic Args
-  | polymorphic _ = raise TYPE_ERR"polymorphic" "type construction";
 
 
 (*---------------------------------------------------------------------------*
@@ -345,40 +241,6 @@ local fun del [] A = A
 in
   fun match_type pat ob = del (type_reduce pat ob []) []
 end;
-
-fun prettify ty =
-  case ty of
-    Stv i => mk_vartype("'sys"^Int.toString i)
-  | Link r => prettify (!r)
-  | Utv _ => ty
-  | Tyapp (tyc, args) => Tyapp(tyc, map prettify args)
-
-
-(*---------------------------------------------------------------------------*
- * Information hiding with Parse_support.                                    *
- *---------------------------------------------------------------------------*)
-local val used = ref false
-in
- fun Ps_init r =
-  if !used then () else (r := rename_tv ; used := true)
-end;
-
-
-(*---------------------------------------------------------------------------*
- * Information hiding with Preterm.                                          *
- *---------------------------------------------------------------------------*)
-local val used = ref false
-      fun chase (Tyapp({name="fun",...}, [_,ty])) = ty
-        | chase (Link(ref ty)) = chase ty
-        | chase _ = raise TYPE_ERR"chase" ""
-in
- fun Preterm_init r1 r2 r3 r4 =
-  if !used then ()
-  else (r1 := unify; r2 := shrink_type;
-        r3 := chase; r4 := tyvars;
-        used := true)
-end;
-
 
 (*---------------------------------------------------------------------------*
  * Information hiding with Theory.                                           *

@@ -19,7 +19,6 @@ sig
   val type_varsl : hol_type list -> hol_type list
 
   val dummy : hol_type
-  val fresh_tyvar_stream : unit -> (int,hol_type)Lib.istream
 
   (* function types and booleans *)
   val -->     : hol_type * hol_type -> hol_type  (* infixr 3 --> *)
@@ -33,25 +32,12 @@ sig
        -> (hol_type,hol_type) Lib.subst -> (hol_type,hol_type) Lib.subst
   val match_type :  hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
 
-  (* prettying up, so that types generated internally can be show to the
-     outside world *)
-  val prettify : hol_type -> hol_type
-
-
   (* Forward reference *)
   val init : ({Tyop: string, Args:hol_type list} -> hol_type)
              -> (string -> int)
                -> unit
 
   (* Information hiding *)
-  val Preterm_init : (hol_type -> hol_type -> unit) ref             (* unify *)
-        -> ((hol_type*hol_type)list->hol_type->hol_type)ref   (* shrink_type *)
-        -> (hol_type -> hol_type) ref                               (* chase *)
-        -> (hol_type -> hol_type list -> hol_type list) ref        (* tyvars *)
-        -> unit
-  val Ps_init
-        : ((int,hol_type)Lib.istream -> hol_type -> hol_type delta)ref -> unit
-
   val Theory_init :({name:string,revision:int} * hol_type list -> hol_type)ref
                 -> (hol_type -> {name:string,revision:int} * hol_type list)ref
               -> unit
