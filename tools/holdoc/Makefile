@@ -15,7 +15,7 @@ DVIPS=dvips
 
 # files:
 
-MLSOURCES=hol_to_latex.ml holdoc_init.ml holparsesupp.ml \
+MLSOURCES=holdoc_init.ml holparsesupp.ml \
 	mng_to_latex.ml simpledump.ml simplemosmldump.ml simplemngdump.ml \
 	holdocmodel.ml holparsetools.ml mngdump.ml
 MLISOURCES=holdoc_init.mli holparsesupp.mli hollex.mli simpledump.mli holparsetools.mli mngdump.mli
