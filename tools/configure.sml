@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
+val mosmldir =
+val holdir   =
 
 (* note, if you are specifying directories under Windows, we recommend you
    use forward slashes (the "/" character) as a directory separator,
@@ -24,7 +24,7 @@ val holdir   =
    SML.  For example, write "c:/dir1/dir2/mosml", rather than
    "c:\\dir1\\dir2\\mosml", and certainly DON'T write "c:\dir1\dir2\mosml". *)
 
-val OS       = "winNT";    (* Operating system; choices are:
+val OS       =             (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT"        *)
 val CC       = "gcc";      (* C compiler                                   *)
 val GNUMAKE  = "make";     (* for bdd library and SMV                      *)
@@ -179,7 +179,7 @@ fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
 val _ = echo "Beginning configuration.";
 
 (*---------------------------------------------------------------------------
-    Compile Holmake (bypassing the makefile in directory Holmake), then 
+    Compile Holmake (bypassing the makefile in directory Holmake), then
     put the executable bin/Holmake.
  ---------------------------------------------------------------------------*)
 
@@ -303,7 +303,7 @@ val _ = let
   val cwd = FileSys.getDir()
   val _ = FileSys.chDir (fullPath [holdir, "tools/quote-filter"])
 in
-  if systeml [fullPath [holdir, "bin/Holmake"]] = Process.success 
+  if systeml [fullPath [holdir, "bin/Holmake"]] = Process.success
   then let val instrm = BinIO.openIn tgt0
            val ostrm = BinIO.openOut tgt
            val v = BinIO.inputAll instrm
@@ -313,7 +313,7 @@ in
          BinIO.closeOut ostrm;
          mk_xable tgt;
          print "Quote-filter built\n"
-       end 
+       end
        handle e => print "0.Quote-filter build failed (continuing anyway)\n"
   else             print "1.Quote-filter build failed (continuing anyway)\n"
   ;
