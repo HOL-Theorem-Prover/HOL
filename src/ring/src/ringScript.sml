@@ -128,7 +128,7 @@ val _ = asm_save_thm("mult_one_right",mult_one_right);
 val neg_mult = asm_store_thm
     ("neg_mult",
      --`!a b. RM (RN a) b = RN (RM a b)`--,
-GEN_TAC THEN
+REPEAT GEN_TAC THEN
 EQ_TRANS_TAC(--` RP (RM (RP a (RN a)) b) (RN (RM a b)) `--) THENL
   [ REWRITE_TAC[distr_left],
     REWRITE_TAC[opp_def,mult_zero_left,plus_zero_left] ] THEN
