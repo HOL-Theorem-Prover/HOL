@@ -47,14 +47,15 @@ fun appconv (c,UNBOUNDED) tm     = c tm
 
 fun dest_tagged_rewrite thm =
    (UNBOUNDED, DEST_UNBOUNDED thm)
- handle _ =>
+ handle HOL_ERR _ =>
    let val (th,n) = DEST_BOUNDED thm
    in (BOUNDED (ref n), th)
-   end;
+   end handle HOL_ERR _ => (UNBOUNDED, thm)
 
 fun mk_rewr_convdata thm =
  let val (tag,thm') = dest_tagged_rewrite thm
      val th = SPEC_ALL thm'
+     val _ = trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
  in
    {name   = "<rewrite>",
      key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
