@@ -25,7 +25,8 @@ val PAIR_ss = SIMPSET
 
 local open computeLib in
 val PAIR_rws =
-  add_thms (false, [CLOSED_PAIR_EQ, FST, SND, CURRY_DEF, UNCURRY_DEF])
+  add_thms
+    (List.map lazyfy_thm [CLOSED_PAIR_EQ, FST, SND, CURRY_DEF, UNCURRY_DEF])
 end;
 
 end (* struct *)

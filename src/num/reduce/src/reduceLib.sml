@@ -35,20 +35,15 @@ val RED_CONV =
 (* Uses computeLib.                                                      *)
 (*-----------------------------------------------------------------------*)
 
-val bool_rewrites =
-  (false,
-   [ INST_TYPE [alpha |-> bool] REFL_CLAUSE,
-     COND_CLAUSES, COND_ID, NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES,
-     IMP_CLAUSES, EQ_CLAUSES ]);
-
-val REFL_EQ_0 =
-  INST_TYPE [alpha |-> Type `:num`] REFL_CLAUSE;
+val bool_rewrites = List.map lazyfy_thm
+  [ COND_CLAUSES, COND_ID, NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES,
+    IMP_CLAUSES, EQ_CLAUSES ];
 
 val NORM_0 = prove(Term `NUMERAL ALT_ZERO = 0`,
   REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, arithmeticTheory.ALT_ZERO]);
 
 val numeral_rewrites =
-  [ numeral_distrib, REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
+  [ numeral_distrib, numeral_eq, numeral_suc, numeral_pre, NORM_0,
     numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
     numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
     numeral_exp, numeral_evenodd, iSQR ];
@@ -99,7 +94,7 @@ fun cbv_MOD_CONV tm =
 
 fun reduce_rws () =
   let val rws = from_list bool_rewrites
-      val _ = add_thms (true,numeral_rewrites) rws
+      val _ = add_thms numeral_rewrites rws
       val _ = add_conv (divop, 2, cbv_DIV_CONV) rws
       val _ = add_conv (modop, 2, cbv_MOD_CONV) rws
   in rws end;

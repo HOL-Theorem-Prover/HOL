@@ -60,7 +60,7 @@ val iota_length = Q.prove
 
 local open computeLib
       val compset = bossLib.initial_rws()
-      val _ = add_thms (true,[iota_eqn]) compset
+      val _ = add_thms [iota_eqn] compset
 in
 val Eval = Count.apply (CBV_CONV compset) o Term
 end;

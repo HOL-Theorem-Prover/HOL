@@ -153,8 +153,8 @@ WF_REL_TAC N_defn `measure \x. 101 - x` THENL
 
 local open computeLib
       val compset = reduceLib.reduce_rws()
-      val _ = add_thms(true,[GREATER_EQ, GREATER_DEF]) compset
-      val _ = add_thms (true,[N_eqn]) compset
+      val _ = add_thms [GREATER_EQ, GREATER_DEF] compset
+      val _ = add_thms [N_eqn] compset
 in
 val Eval = Count.apply (CBV_CONV compset) o Term
 end;

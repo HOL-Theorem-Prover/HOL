@@ -10,6 +10,7 @@ val compute_thms =
 
 val SUM_ss = simpLib.rewrites ([INL,INR]@compute_thms);
 
-val SUM_rws = computeLib.add_thms (false,compute_thms);
+val SUM_rws =
+  computeLib.add_thms (List.map computeLib.lazyfy_thm compute_thms);
 
 end (* struct *)

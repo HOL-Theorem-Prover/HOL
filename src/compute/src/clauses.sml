@@ -149,7 +149,7 @@ fun is_skip (_, CST {Skip=SOME n,Args,...}) = (n <= List.length Args)
  *)
 datatype comp_rws = RWS of (string, (db * int option) ref) Polyhash.hash_table;
 
-fun new_rws () = RWS (Polyhash.mkPolyTable(29,CL_ERR "new_rws" ""));
+fun empty_rws () = RWS (Polyhash.mkPolyTable(29,CL_ERR "empty_rws" ""));
 
 fun assoc_clause (RWS rws) cst =
   case Polyhash.peek rws cst of
@@ -209,20 +209,8 @@ fun mk_rewrite rws eq_thm =
   end
 ;
 
-
-
-local val eqT_thm = prove(Parse.Term `t = (t = T)`, REWRITE_TAC[EQ_CLAUSES])
-in
-fun norm_thm thm =
-  if is_eq (concl thm) then thm
-  else if is_neg (concl thm) then MATCH_MP NOT_F thm
-  else ONCE_REWRITE_RULE [eqT_thm] thm
-end;
-
-fun enter_thm rws str thm0 =
-  let val thm = Drule.SPEC_ALL thm0
-      val thm = norm_thm thm
-      val thm = if str then thm else lazyfy_thm thm
+fun enter_thm rws thm0 =
+  let val thm = eq_intro thm0
       val rw =
  	mk_rewrite rws thm
   	handle HOL_ERR _ =>
@@ -231,22 +219,24 @@ fun enter_thm rws str thm0 =
   in add_in_db_upd rws (key_of rw) (Rewrite [rw])
   end;
 
-fun enter_one_thm rws str thm =
-  List.app (enter_thm rws str) (Drule.CONJUNCTS (Drule.SPEC_ALL thm))
-;
-
-fun add_thms (str,lthm) rws =
-  List.app (enter_one_thm rws str) lthm
-;
+fun add_thms lthm rws =
+  List.app (List.app (enter_thm rws) o Drule.BODY_CONJUNCTS) lthm;
 
 fun add_extern (cst,arity,fconv) rws =
   let val {Name,...} = dest_const cst in
   add_in_db_upd rws (Name,arity,cst) (Conv fconv)
   end;
 
-fun from_list (str,lthm) =
+
+fun new_rws () =
+  let val rws = empty_rws() in
+  add_thms [REFL_CLAUSE] rws;
+  rws
+  end;
+
+fun from_list lthm =
   let val rws = new_rws() in
-  add_thms (str,lthm) rws;
+  add_thms lthm rws;
   rws
   end;
 

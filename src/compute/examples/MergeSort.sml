@@ -112,8 +112,8 @@ val L38400_def = Define_rw ` L38400 = double L19200 `;
 (* Save the useful thms *)
 val sort_thms = rev (!thms);
 
-val rws = from_list (false,[COND_CLAUSES]);
-val _ = add_thms (true,sort_thms) rws;
+val rws = reduceLib.reduce_rws();
+val _ = add_thms sort_thms rws;
 
 fun norm q = time (CBV_CONV rws) (--q--);
 (*
@@ -154,9 +154,7 @@ rw_norm `merge_sort L20`; (* ~ 15mn *)
 (* And SIMP_CONV *)
 open simpLib;
 
-val srws =
-   map SPEC_ALL
-   (flatten (map (CONJUNCTS o SPEC_ALL) (COND_CLAUSES :: sort_thms)));
+val srws = flatten (map BODY_CONJUNCTS (COND_CLAUSES :: sort_thms));
 
 fun simp_norm q = time (SIMP_CONV empty_ss srws) (--q--);
 

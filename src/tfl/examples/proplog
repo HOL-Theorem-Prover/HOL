@@ -68,8 +68,8 @@ val (Pr_eqns, Pr_ind) =
 local open computeLib
 in
 val compset = bossLib.initial_rws()
-val _ = add_thms (false, REFL_CLAUSE::tl(type_rws "prop")) compset
-val _ = add_thms (true,[Pr_eqns,Wang_def]) compset
+val _ = add_thms (REFL_CLAUSE::tl(type_rws "prop")) compset
+val _ = add_thms [Pr_eqns,Wang_def] compset
 val Eval = Count.apply (CBV_CONV compset) o Term
 end;
 
@@ -304,7 +304,7 @@ val nnf_mutrec_eqns =
     Evaluation with nnfpos. First tell computeLib about nnf_mutrec_eqns.
  ---------------------------------------------------------------------------*)
 
-val _ = computeLib.add_thms (true,[nnf_mutrec_eqns]) compset;
+val _ = computeLib.add_thms [nnf_mutrec_eqns] compset;
 
 Eval `nnfpos ^syn052_1`;
 Eval `nnfpos ^syn051_1`;

@@ -124,9 +124,10 @@ local
 fun iter_add []      rws = ()
   | iter_add (f::fs) rws = (f rws : unit ; iter_add fs rws);
 
+open computeLib
 val added_theories =
-  [ computeLib.add_thms (true, [computeLib.strictify_thm LET_DEF]),
-    computeLib.add_thms (false, [arithmeticTheory.num_case_compute]),
+  [ add_thms [strictify_thm LET_DEF],
+    add_thms [lazyfy_thm arithmeticTheory.num_case_compute],
     pairSimps.PAIR_rws, sumSimps.SUM_rws, optionLib.OPTION_rws,
     listSimps.list_rws ]
 

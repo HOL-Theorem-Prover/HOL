@@ -6,8 +6,8 @@ sig
   type comp_rws = clauses.comp_rws
 
   val new_rws : unit -> comp_rws
-  val from_list : bool * thm list -> comp_rws
-  val add_thms : bool * thm list -> comp_rws -> unit
+  val from_list : thm list -> comp_rws
+  val add_thms : thm list -> comp_rws -> unit
   val add_conv : term * int * conv -> comp_rws -> unit
   val set_skip : comp_rws -> string -> int option -> unit
 

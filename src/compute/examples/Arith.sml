@@ -65,10 +65,9 @@ val _ =
   end;
 
 
-val rws2 = from_list
-    (false,
-     [ ARITH_PROVE (--` !n. 0+n = n `--),
-       ARITH_PROVE (--` !n m. (SUC m)+n = SUC (m+n) `--) ]);
+val rws2 = from_list (List.map lazyfy_thm
+      [ ARITH_PROVE (--` !n. 0+n = n `--),
+	ARITH_PROVE (--` !n m. (SUC m)+n = SUC (m+n) `--) ]);
 
 val norm2 = CBV_CONV rws2;
 
@@ -83,9 +82,8 @@ norm2 g;
 norm2 h;
 
 val _ = add_thms
-    (true,
-     [ ARITH_PROVE (--` !n. n+0 = n `--),
-       ARITH_PROVE (--` !n m. m+SUC n = SUC (m+n) `--) ])
+    [ ARITH_PROVE (--` !n. n+0 = n `--),
+      ARITH_PROVE (--` !n m. m+SUC n = SUC (m+n) `--) ]
     rws2;
 
 norm2 h;
@@ -125,5 +123,5 @@ norm3 `123456789123456789 MOD 9876`;  (* 0.6s *)
 val th = ASSUME(--`0=x`--);
 val tm = --`\(x:num).x=0`--;
 
-val rws = from_list(true,[th]);
+val rws = from_list [th];
 CBV_CONV rws tm;

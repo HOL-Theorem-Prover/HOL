@@ -45,7 +45,7 @@ val (Qsort_eqns,Qsort_ind) = Defn.tprove
 local open computeLib arithmeticTheory listTheory
 in
   val compset = bossLib.initial_rws()
-  val _ = add_thms (true,[Qsort_eqns,GREATER_DEF,GREATER_EQ]) compset
+  val _ = add_thms [Qsort_eqns,GREATER_DEF,GREATER_EQ] compset
   val Eval = Count.apply (CBV_CONV compset) o Term
 end;
 
@@ -116,7 +116,7 @@ val (fqsort_eqns,fqsort_ind) = Defn.tprove
        Computing with fqsort.
  ---------------------------------------------------------------------------*)
 
-val _ = add_thms (true, [fqsort_eqns,part_def]) compset;
+val _ = add_thms [fqsort_eqns,part_def] compset;
 
 
 Eval `fqsort [1;2;3;6;5;4]`;
@@ -153,7 +153,7 @@ val (pqsort_eqns,pqsort_ind) = Defn.tprove
 (*---------------------------------------------------------------------------
        Computing with pqsort.
  ---------------------------------------------------------------------------*)
-val _ = add_thms (true, [pqsort_eqns]) compset;
+val _ = add_thms [pqsort_eqns] compset;
 
 Eval `pqsort $<= [1;2;3;6;5;4]`;
 Eval `pqsort $<= [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;0]`;
@@ -195,7 +195,7 @@ val (tpqsort_eqns,tpqsort_ind) = Defn.tprove
 (*---------------------------------------------------------------------------
        Computing with tpqsort.
  ---------------------------------------------------------------------------*)
-val _ = add_thms (true, [tpqsort_eqns]) compset;
+val _ = add_thms [tpqsort_eqns] compset;
 
 Eval`tpqsort($<=, [1;2;3;6;5;4])`;
 Eval`tpqsort($<=,[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;0])`;
@@ -237,7 +237,7 @@ val (tfqsort_eqns,tfqsort_ind) = Defn.tprove
 (*---------------------------------------------------------------------------
        Computing with tfqsort.
  ---------------------------------------------------------------------------*)
-val _ = add_thms (true, [tfqsort_eqns]) compset;
+val _ = add_thms [tfqsort_eqns] compset;
 
 Eval`tfqsort($<=, [1;2;3;6;5;4])`;
 Eval`tfqsort($<=,[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;0])`;

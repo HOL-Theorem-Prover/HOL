@@ -18,10 +18,12 @@ in
 end;
 *)
 
-  val OPTION_rws = computeLib.add_thms
-      (false,[ THE_DEF, IS_SOME_DEF, IS_NONE_DEF,
-	       SOME_11, NOT_NONE_SOME, NOT_SOME_NONE,
-	       Drule.EQT_INTRO (Thm.REFL(--`NONE : 'a option`--)),
-	       option_case_compute, option_APPLY_DEF ]);
+val OPTION_rewrites =
+  [ THE_DEF, IS_SOME_DEF, IS_NONE_DEF,
+    SOME_11, NOT_NONE_SOME, NOT_SOME_NONE,
+    option_case_compute, option_APPLY_DEF ];
+
+val OPTION_rws =
+  computeLib.add_thms (List.map computeLib.lazyfy_thm OPTION_rewrites);
 
 end;

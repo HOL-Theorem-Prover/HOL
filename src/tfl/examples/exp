@@ -78,7 +78,7 @@ RW_TAC std_ss []
 
 local open computeLib
       val compset = bossLib.initial_rws()
-      val _ = add_thms (true,[alt_exp_eqns]) compset
+      val _ = add_thms [alt_exp_eqns] compset
 in
 val Eval = Count.apply (CBV_CONV compset) o Term
 end;

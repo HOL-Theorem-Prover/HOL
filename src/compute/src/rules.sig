@@ -31,6 +31,7 @@ val beta_thm  : thm -> thm
 
 val lazyfy_thm    : Thm.thm -> Thm.thm
 val strictify_thm : Thm.thm -> Thm.thm
+val eq_intro      : Thm.thm -> Thm.thm
 
 end;
 

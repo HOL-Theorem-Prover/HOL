@@ -1,7 +1,7 @@
 structure rules :> rules =
 struct
 
-open HolKernel boolTheory;
+open HolKernel basicHol90Lib boolTheory;
 
 (* Useful data structure to build tail recursive functions of type 'a -> 'b
  * (left to right) or 'b -> 'a (right to left), when the domain has a
@@ -101,10 +101,10 @@ fun push_lam_in_stk (th, stk) =
 
 
 (* Does conversions between
-                            FUNIFY
-     (c t_1 .. t_n x) = M    --->   (c t_1 .. t_n) = \x. M
-                             <---
-                           UNFUNIFY
+                              FUNIFY
+    |- (c t_1 .. t_n x) = M    --->   |- (c t_1 .. t_n) = \x. M
+                               <---
+                             UNFUNIFY
    In UNFUNIFY, we must avoid choosing an x that appears free in t_1..t_n.
  *)
 local open Conv
@@ -123,15 +123,20 @@ and UNFUNIFY thm =
   handle HOL_ERR _ => raise RULES_ERR "UNFUNIFY" ""
 
 end;
-  
-fun lazyfy_thm thm =
-  lazyfy_thm (FUNIFY thm)
-  handle HOL_ERR _ => thm
-;
 
-fun strictify_thm thm =
-  strictify_thm (UNFUNIFY thm)
-  handle HOL_ERR _ => thm
-;
+
+fun repeat_on_conj f thm =
+  let fun iter th = iter (f th) handle HOL_ERR _ => th
+  in LIST_CONJ (List.map iter (BODY_CONJUNCTS thm))
+  end;
+
+val lazyfy_thm = repeat_on_conj FUNIFY;
+val strictify_thm = repeat_on_conj UNFUNIFY;
+
+(* Ensures a theorem is an equality. *)
+fun eq_intro thm =
+  if is_eq (concl thm) then thm
+  else if is_neg (concl thm) then EQF_INTRO thm
+  else EQT_INTRO thm;
 
 end;
