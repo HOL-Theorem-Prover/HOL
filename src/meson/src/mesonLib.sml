@@ -910,7 +910,7 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
               (allpairs (fn x => fn y => (x,y)) pconsts mconsts)
             val ths' = Lib.op_mk_set thm_eq (mapfilter (C INST_TYPE th) tyins)
           in
-            if null(ths') then
+            if null(ths') andalso !Globals.interactive then
               (say "No useful-looking instantiations of lemma\n"; [th])
             else ths'
           end
