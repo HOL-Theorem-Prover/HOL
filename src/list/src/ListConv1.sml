@@ -590,7 +590,7 @@ local
 val nv = --`n:num`--
 and mv = --`m:num`--
 and numty = ==`:num`==
-and plus = --`+`--
+and plus = --`$+`--
 val asym = SPECL [nv,mv] (arithmeticTheory.ADD_SYM)
 val Sth = let val addc = arithmeticTheory.ADD_CLAUSES
               val (t1,t2) = CONJ_PAIR (CONJUNCT2(CONJUNCT2 addc))
