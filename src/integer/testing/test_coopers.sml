@@ -25,7 +25,7 @@ in
   ()
 end
 
-fun A s = ("at."^s, concl (DB.theorem "arithmetic" s))
+fun A s = ("at."^s, concl (DB.fetch "arithmetic" s))
 fun L (t,s) = (s,t)
 
 val terms_to_test =
