@@ -4,6 +4,11 @@ Bugs fixed:
     adding too much context in some cases, and thereby failing to
     prove goals that were really within its scope.
   * pred_setLib was failing to load.
+  * It was impossible to redefine constants using IndDefLib.  Now this
+    is possible, though it is still a little tricky, because one needs
+    to hide the constant being redefined from the parser (using
+    "hide") to be able to generate a term where the name of the
+    constant corresponds to a variable.
 
 New theories:
 -------------
