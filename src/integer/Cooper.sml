@@ -50,6 +50,86 @@ val elim_le = GSYM INT_NOT_LT
 val elim_gt = int_gt
 val elim_ge = int_ge
 
+(* ---------------------------------------------------------------------- *)
+(* functions for dealing with "conjunctions" and "disjunctions"; logical  *)
+(* operators that might have their meaning concealed under negations      *)
+(* ---------------------------------------------------------------------- *)
+
+val mystrip_conj  = let
+  (* treats negations over disjunctions as conjunctions *)
+  fun doit posp acc tm = let
+    val (l,r) = (if posp then dest_conj else dest_disj) tm
+  in
+    doit posp (doit posp acc r) l
+  end handle HOL_ERR _ => let
+    val t0 = dest_neg tm
+  in
+    doit (not posp) acc t0
+  end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
+in
+  doit true []
+end
+
+val mystrip_disj = let
+  (* treats negations over conjunctions as disjunctions *)
+  fun doit posp acc tm = let
+    val (l,r) = (if posp then dest_disj else dest_conj) tm
+  in
+    doit posp (doit posp acc r) l
+  end handle HOL_ERR _ => let
+    val t0 = dest_neg tm
+  in
+    doit (not posp) acc t0
+  end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
+in
+  doit true []
+end
+
+datatype term_op = CONJN | DISJN | NEGN
+fun characterise t =
+  (case #1 (dest_const (#1 (strip_comb t))) of
+     "/\\" => SOME CONJN
+   | "\\/" => SOME DISJN
+   | "~" => SOME NEGN
+   | _ => NONE) handle HOL_ERR _ => NONE
+
+fun myEVERY_CONJ_CONV c tm = let
+  fun findconjunct posp tm =
+    case (characterise tm, posp) of
+      (SOME CONJN, true) => BINOP_CONV (findconjunct posp) tm
+    | (SOME DISJN, false) => BINOP_CONV (findconjunct posp) tm
+    | (SOME NEGN, _) => RAND_CONV (findconjunct (not posp)) tm
+    | _ => c tm
+in
+  findconjunct true tm
+end
+
+fun myEVERY_DISJ_CONV c tm = let
+  fun finddisj posp tm =
+    case (characterise tm, posp) of
+      (SOME DISJN, true) => BINOP_CONV (finddisj posp) tm
+    | (SOME CONJN, false) => BINOP_CONV (finddisj posp) tm
+    | (SOME NEGN, _) => RAND_CONV (finddisj (not posp)) tm
+    | _ => c tm
+in
+  finddisj true tm
+end
+
+fun myis_disj tm =
+  is_disj tm orelse let
+    val tm0 = dest_neg tm
+  in
+    myis_conj tm0
+  end handle HOL_ERR _ => false
+and myis_conj tm =
+  is_conj tm orelse let
+    val tm0 = dest_neg tm
+  in
+    myis_disj tm0
+  end handle HOL_ERR _ => false
+
+
+
 val remove_negated_vars = let
   fun remove_negated tm = let
     (* turn ~ var into ~1 * var *)
@@ -87,8 +167,13 @@ val T_or_l = GEN_ALL (List.nth(OR_CLAUSES0, 0))
 val T_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 1))
 val F_or_l = GEN_ALL (List.nth(OR_CLAUSES0, 2))
 val F_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 3))
+val NOT_NOT_P = List.nth(CONJUNCTS NOT_CLAUSES, 0)
+val NOT_OR = GEN_ALL (#2 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
+val NOT_AND = GEN_ALL (#1 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
 
-val REDUCE_CONV = intSimps.REDUCE_CONV
+val cooper_compset = intSimps.int_compset()
+val _ = computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY] cooper_compset
+val REDUCE_CONV = computeLib.CBV_CONV cooper_compset
 
 (*---------------------------------------------------------------------------*)
 (* Function to compute the Greatest Common Divisor of two integers.          *)
@@ -113,6 +198,19 @@ fun gcdl l =
     [] => raise ERR "gcdl" "empty list"
   | (h::t) => foldl gcd h t
 
+fun extended_gcd(a, b) = let
+  open Arbnum
+in
+  if b = zero then (a,(Arbint.one,Arbint.zero))
+  else let
+    val (q,r) = divmod (a,b)
+    val (d,(x,y)) = extended_gcd(b,r)
+    open Arbint
+  in
+    (d,(y,x - fromNat q * y))
+  end
+end
+
 (*---------------------------------------------------------------------------*)
 (* Function to compute the Lowest Common Multiple of two integers.           *)
 (*---------------------------------------------------------------------------*)
@@ -125,6 +223,8 @@ fun calc_lcm ints =
     [] => raise Fail "calc_lcm: should never happen"
   | [x] => x
   | (x::y::xs) => calc_lcm (lcm (x, y)::xs)
+
+
 
 
 
@@ -630,7 +730,9 @@ in
     end
     val eliminate_1divides =
       if lcm = Arbint.one then
-        BINDER_CONV (RAND_CONV (K (EQT_INTRO (SPEC var INT_DIVIDES_1))) THENC
+        BINDER_CONV (RAND_CONV (K
+                                (EQT_INTRO (CONJUNCT1
+                                            (SPEC var INT_DIVIDES_1)))) THENC
                      REWR_CONV T_and_r)
       else
         ALL_CONV
@@ -768,16 +870,17 @@ fun phase4_CONV tm = let
     Lib.mk_set (recurse true [] Body)
   end
   val use_bis = let
-    fun recurse a b l =
+    fun recurse (ai as (a, afv)) (bi as (b, bfv)) l =
       case l of
-        [] => (a,b)
-      | (x_LT _, true)::t => recurse (a+1) b t
-      | (x_LT _, false)::t => recurse a (b+1) t
-      | (LT_x _, true)::t => recurse a (b+1) t
-      | (LT_x _, false)::t => recurse (a+1) b t
-      | _ :: t => recurse a b t
+        [] => (ai, bi)
+      | (x_LT tm, true)::t => recurse (a+1, afv + length (free_vars tm)) bi t
+      | (x_LT tm, false)::t => recurse ai (b+1, bfv + length (free_vars tm)) t
+      | (LT_x tm, true)::t => recurse ai (b+1, bfv + length (free_vars tm)) t
+      | (LT_x tm, false)::t => recurse (a+1, afv + length (free_vars tm)) bi t
+      | _ :: t => recurse ai bi t
+    val ((at,afv), (bt, bfv)) = recurse (0, 0) (0, 0) leaf_arguments
   in
-    Int.>(recurse 0 0 leaf_arguments)
+    (bt < at) orelse (bt = at andalso bfv < afv)
   end
 
   (* need prove either that ?y. !x. x < y ==> (neginf x = F x)  or
@@ -1741,12 +1844,18 @@ in
   IMP_ANTISYM_RULE exFx_implies_rhs rhs_implies_exFx
 end
 
-val phase5_CONV = let
+fun phase5_CONV defer_dexpansion = let
   (* have something of the form
        (?x. 0 < x /\ x <= k /\ neginf x) \/
        (?b k. MEM b [..] /\ 0 < k /\ k <= d /\ F (b + k))
   *)
-  open simpLib boolSimps
+  fun remove_vacuous_existential tm = let
+    (* term is of form  ?x. x = e *)
+    val value = rhs (#2 (dest_exists tm))
+    val thm = ISPEC value EXISTS_REFL
+  in
+    EQT_INTRO thm
+  end
   fun expand tm =
     ((REWR_CONV RIGHT_AND_OVER_OR THENC BINOP_CONV expand) ORELSEC
      ALL_CONV) tm
@@ -1766,6 +1875,216 @@ val phase5_CONV = let
                TOP_DEPTH_CONV EXISTS_OR_CONV THENC
                EVERY_DISJ_CONV (under_single_quantifier THENC BETA_CONV)) THENC
     REWRITE_CONV []
+
+  fun do_delta_eliminating_lhs continuation tm = let
+    (* if there is a "conjunct" at the top level of the neginf term of the
+       form
+         c | x [ + d]
+       where x is the bound variable of the neginf abstraction, and where
+       d, if present at all, is a numeral, then we can reduce the number
+       of cases needed to be considered, using the theorem
+       int_arithTheory.gcdthm2. *)
+    val (lhs_t, _) = dest_disj tm
+    val (lhs_var, lhs_body) = dest_exists lhs_t
+    val neginf_applied = rand lhs_body
+    val neginf = rator neginf_applied
+    val (neginf_absvar, neginf_body) = dest_abs neginf
+    val body_conjuncts = mystrip_conj neginf_body
+    fun simple_divides tm = let
+      val (l,r) = dest_divides tm
+    in
+      free_vars r = [neginf_absvar]
+    end handle HOL_ERR _ => false
+    fun find_sdivides c tm = let
+      val (l,r) = dest_conj tm
+    in
+      if List.exists simple_divides (mystrip_conj l) then
+        LAND_CONV (find_sdivides c) tm
+      else
+        RAND_CONV (find_sdivides c) tm
+    end handle HOL_ERR _ => let
+      val tm0 = dest_neg tm
+    in
+      if is_neg tm0 then
+        (REWR_CONV NOT_NOT_P THENC find_sdivides c) tm
+      else (REWR_CONV NOT_OR THENC find_sdivides c) tm
+    end handle HOL_ERR _ => (* must be there *) c tm
+
+    val gcd_t = prim_mk_const {Thy = "gcd", Name = "gcd"}
+
+    fun elim_sdivides tm0 = let
+      (* term of form c | x + d *)
+      val (l,r) = dest_divides tm0
+      val normalise_plus_thm =
+        (if not (is_plus r) then RAND_CONV (REWR_CONV (GSYM INT_ADD_RID))
+         else ALL_CONV) tm0
+      val tm1 = rhs (concl normalise_plus_thm)
+      val normalised_thm = let
+        val (lp,_) = dest_plus (rand tm1)
+      in
+        if not (is_mult lp) then
+          TRANS normalise_plus_thm
+          (RAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_MUL_LID))) tm1)
+        else
+          normalise_plus_thm
+      end
+      val tm = rhs (concl normalised_thm)
+      val r = rand tm
+      val m = l
+      val m_nt = rand l
+      val (a,b) = let
+        val (lp,rp) = dest_plus r
+      in
+        (#1 (dest_mult lp), rp)
+      end
+      (* gcdthm2 of the form
+            m | ax + b  = d | b /\ ?t. ...
+         where d is the gcd of m and a *)
+      val a_nt = dest_injected a
+      val m_n = Numeral.dest_numeral m_nt
+      val a_n = Numeral.dest_numeral a_nt
+      val (d_n, (x_i, y_i)) = extended_gcd(m_n, a_n)
+      (* x_i * m_n + y_i * a_n = d_n *)
+      val m_nonz =
+        EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(m_nt,numSyntax.zero_tm))))
+      val a_nonz =
+        EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(a_nt,numSyntax.zero_tm))))
+      val pa_qm = mk_plus(mk_mult(term_of_int y_i, a),
+                          mk_mult(term_of_int x_i, m))
+      val pa_qm_eq_d = REDUCE_CONV pa_qm
+      val rwt =
+        if d_n = Arbnum.one then let
+          val hyp = LIST_CONJ [pa_qm_eq_d, m_nonz, a_nonz]
+        in
+          MATCH_MP gcd21_thm hyp
+        end
+        else let
+          val d_eq_pa_qm = SYM pa_qm_eq_d
+          val gcd_eq_d = REDUCE_CONV (list_mk_comb(gcd_t, [a_nt, m_nt]))
+          val d_eq_gcd = SYM gcd_eq_d
+          val d_nonz =
+            EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(rhs (concl gcd_eq_d),
+                                                numSyntax.zero_tm))))
+        in
+          MATCH_MP gcdthm2 (LIST_CONJ [d_eq_gcd, d_eq_pa_qm, d_nonz,
+                                       m_nonz, a_nonz])
+        end
+      val replaced = REWR_CONV rwt THENC REDUCE_CONV THENC
+                     ONCE_REWRITE_CONV [INT_MUL_COMM] THENC
+                     ONCE_REWRITE_CONV [INT_ADD_COMM]
+    in
+      TRANS normalised_thm (replaced tm)
+    end
+    val has_exists =
+      free_in (mk_thy_const{Name = "?", Thy = "bool",
+                            Ty = (int_ty --> bool) --> bool})
+    fun pull_out_exists tm = let
+      val (c1, c2) = dest_conj tm
+      val (cvl, thm) =
+        if has_exists c1 then (LAND_CONV, GSYM LEFT_EXISTS_AND_THM)
+        else (RAND_CONV, GSYM RIGHT_EXISTS_AND_THM)
+    in
+      (cvl pull_out_exists THENC HO_REWR_CONV thm) tm
+    end handle HOL_ERR _ =>
+      if is_exists tm then ALL_CONV tm
+      else NO_CONV tm
+
+    val simplify_constraints = let
+      (* applied to term of the form    0 < e /\ e <= d
+         where e is generally of the form    c * x [+ b]
+      *)
+      fun elim_coeff tm = let
+        (* term of form    d < c * x,  d may be negative, c is +ve digit *)
+        val r = rand tm (* i.e., &c * x *)
+        val c = rand (rand (rator r))
+        val cnonz = EQF_ELIM (REDUCE_CONV (mk_eq(c,numSyntax.zero_tm)))
+      in
+        if is_negated (rand (rator tm)) then        (* ~d < c * x *)
+          REWR_CONV (GSYM INT_LT_NEG) THENC         (* ~(c * x) < ~~d *)
+          RAND_CONV (REWR_CONV INT_NEGNEG) THENC    (* ~(c * x) < d *)
+          LAND_CONV (REWR_CONV INT_NEG_MINUS1 THENC (* ~1 * (c * x) < d *)
+                     REWR_CONV INT_MUL_COMM THENC   (* (c * x) * ~1 < d *)
+                     REWR_CONV (GSYM INT_MUL_ASSOC)) THENC
+                                                    (* c * (x * ~1) < d *)
+          REWR_CONV (MATCH_MP elim_lt_coeffs2 cnonz) THENC
+                                                    (* x * ~1 < if ... *)
+          REWR_CONV (GSYM INT_LT_NEG) THENC         (* ~(if ..) < ~(x * ~1) *)
+          RAND_CONV (REWR_CONV INT_NEG_RMUL THENC   (* ... < x * ~~1 *)
+                     RAND_CONV (REWR_CONV INT_NEGNEG) THENC
+                                                    (* ... < x * 1 *)
+                     REWR_CONV INT_MUL_RID) THENC
+          REDUCE_CONV
+        else
+          REWR_CONV (MATCH_MP elim_lt_coeffs1 cnonz) THENC
+          REDUCE_CONV
+      end tm
+      val do_lt_case =
+        (* deal with tm of form   e < c * x [+ b] *)
+        move_terms_from LT Right (null o free_vars) THENC
+        REDUCE_CONV THENC elim_coeff
+    in
+      LAND_CONV do_lt_case THENC
+      RAND_CONV (REWR_CONV elim_le THENC
+                 RAND_CONV do_lt_case THENC
+                 REWR_CONV (GSYM elim_le))
+    end
+
+    fun protect tm = let
+      (* turn tm into (\x. tm) x *)
+      val gv = genvar int_ty
+    in
+      SYM (BETA_CONV (mk_comb(mk_abs(gv,tm), gv)))
+    end
+
+    fun find_abs c tm =
+      if is_comb tm andalso is_abs (rator tm) then
+        (BETA_CONV THENC c) tm
+      else LAND_CONV (BETA_CONV THENC c) tm
+
+    fun simp_if_rangeonly tm = let
+      val (bv, body) = dest_exists tm
+    in
+      if length (strip_conj body) = 2 then
+        BINDER_CONV resquan_onestep THENC
+        EXISTS_OR_CONV THENC
+        LAND_CONV remove_vacuous_existential THENC
+        REWR_CONV T_or_l
+      else
+        ALL_CONV
+    end tm
+
+    fun pull_eliminate tm =
+      (* it's possible that there is no existential to pull out because
+         elim_sdivides will have rewritten the divides term to false. *)
+      if has_exists (rand tm) then
+        (BINDER_CONV pull_out_exists THENC
+         SWAP_VARS_CONV THENC
+         BINDER_CONV (BINDER_CONV (LAND_CONV protect) THENC
+                      Unwind.UNWIND_EXISTS_CONV) THENC
+         BINDER_CONV (find_abs simplify_constraints) THENC
+         simp_if_rangeonly) tm
+      else
+        REWRITE_CONV [] tm
+
+    fun absify_and_continue tm = let
+      val (l,r) = dest_disj tm
+      val (bv, body) = dest_exists l
+    in
+      (LAND_CONV (BINDER_CONV (RAND_CONV (mk_abs_CONV bv))) THENC
+       continuation) tm
+    end handle HOL_ERR _ => REWRITE_CONV [] tm
+
+  in
+    if List.exists simple_divides body_conjuncts then
+      LAND_CONV (BINDER_CONV
+                 (RAND_CONV (BETA_CONV THENC
+                             find_sdivides elim_sdivides)) THENC
+                 pull_eliminate) THENC
+      absify_and_continue
+    else
+      NO_CONV
+  end tm
+
   fun do_nonexpanding_lhs tm = let
     (* this one looks at the lhs and sees if the neginf predicate has
        the abstracted variable free in its body.  If so, the restricted
@@ -1776,18 +2095,12 @@ val phase5_CONV = let
     val neginf_var = rand lhs_body
     val neginf = rator neginf_var
     val (neginf_absvar, neginf_body) = dest_abs neginf
-    fun remove_vacuous_existential tm = let
-      (* term is of form  ?x. x = e *)
-      val value = rhs (#2 (dest_exists tm))
-      val thm = ISPEC value EXISTS_REFL
-    in
-      EQT_INTRO thm
-    end
 
   in
     if free_in neginf_absvar neginf_body then
       NO_CONV
     else
+      (* recall that lhs =  ?j. (0 < j /\ j <= delta) /\ P j *)
       LAND_CONV (BINDER_CONV (RAND_CONV BETA_CONV) THENC
                  EXISTS_AND_CONV THENC
                  LAND_CONV (BINDER_CONV resquan_onestep THENC
@@ -1799,7 +2112,9 @@ val phase5_CONV = let
   end tm
 
 
-  val do_lhs = do_nonexpanding_lhs ORELSEC do_expanding_lhs
+  fun do_lhs tm =
+    (do_nonexpanding_lhs ORELSEC do_delta_eliminating_lhs do_lhs ORELSEC
+     do_expanding_lhs) tm
   val prc_conv = PURE_REWRITE_CONV [RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
                                     listTheory.MEM, OR_CLAUSES, AND_CLAUSES,
                                     NOT_CLAUSES]
@@ -1845,9 +2160,6 @@ val obvious_improvements =
                             INT_DIVIDES_RSUB]
 
 
-val NOT_NOT_P = List.nth(CONJUNCTS NOT_CLAUSES, 0)
-val NOT_OR = GEN_ALL (#2 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
-val NOT_AND = GEN_ALL (#1 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
 val DISJ_NEQ_ELIM = prove(
   ``!P x v:'a. ~(x = v) \/ P x = ~(x = v) \/ P v``,
   REWRITE_TAC [GSYM IMP_DISJ_THM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
@@ -1856,78 +2168,6 @@ val DISJ_NEQ_ELIM = prove(
 
 fun optpluck P l = SOME (Lib.pluck P l) handle HOL_ERR _ => NONE
 
-val mystrip_conj  = let
-  (* treats negations over disjunctions as conjunctions *)
-  fun doit posp acc tm = let
-    val (l,r) = (if posp then dest_conj else dest_disj) tm
-  in
-    doit posp (doit posp acc r) l
-  end handle HOL_ERR _ => let
-    val t0 = dest_neg tm
-  in
-    doit (not posp) acc t0
-  end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
-in
-  doit true []
-end
-
-val mystrip_disj = let
-  (* treats negations over conjunctions as disjunctions *)
-  fun doit posp acc tm = let
-    val (l,r) = (if posp then dest_disj else dest_conj) tm
-  in
-    doit posp (doit posp acc r) l
-  end handle HOL_ERR _ => let
-    val t0 = dest_neg tm
-  in
-    doit (not posp) acc t0
-  end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
-in
-  doit true []
-end
-
-datatype term_op = CONJ | DISJ | NEG
-fun characterise t =
-  (case #1 (dest_const (#1 (strip_comb t))) of
-     "/\\" => SOME CONJ
-   | "\\/" => SOME DISJ
-   | "~" => SOME NEG
-   | _ => NONE) handle HOL_ERR _ => NONE
-
-fun myEVERY_CONJ_CONV c tm = let
-  fun findconjunct posp tm =
-    case (characterise tm, posp) of
-      (SOME CONJ, true) => BINOP_CONV (findconjunct posp) tm
-    | (SOME DISJ, false) => BINOP_CONV (findconjunct posp) tm
-    | (SOME NEG, _) => RAND_CONV (findconjunct (not posp)) tm
-    | _ => c tm
-in
-  findconjunct true tm
-end
-
-fun myEVERY_DISJ_CONV c tm = let
-  fun finddisj posp tm =
-    case (characterise tm, posp) of
-      (SOME DISJ, true) => BINOP_CONV (finddisj posp) tm
-    | (SOME CONJ, false) => BINOP_CONV (finddisj posp) tm
-    | (SOME NEG, _) => RAND_CONV (finddisj (not posp)) tm
-    | _ => c tm
-in
-  finddisj true tm
-end
-
-fun myis_disj tm =
-  is_disj tm orelse let
-    val tm0 = dest_neg tm
-  in
-    myis_conj tm0
-  end handle HOL_ERR _ => false
-and myis_conj tm =
-  is_conj tm orelse let
-    val tm0 = dest_neg tm
-  in
-    myis_disj tm0
-  end handle HOL_ERR _ => false
 
 fun do_equality_simplifications tm = let
   (* term is existentially quantified.  May contain leaf terms of the form
@@ -2050,7 +2290,7 @@ in
                    REDUCE_CONV) THENC
       ((REWR_CONV EXISTS_SIMP THENC REWRITE_CONV []) ORELSEC
        (phase3_CONV THENC do_equality_simplifications THENC
-        (stop_if_exelim ORELSEC (phase4_CONV THENC phase5_CONV))))
+        (stop_if_exelim ORELSEC (phase4_CONV THENC phase5_CONV false))))
   in
     if myis_disj body then
       BINDER_CONV reveal_a_disj THENC EXISTS_OR_CONV THENC
@@ -2115,6 +2355,32 @@ end
 
 val decide_pure_presburger_term = let
   (* no free variables allowed *)
+  datatype status = EITHER | NEITHER | UNIV | EXISTS
+  fun negstatus s = case s of UNIV => EXISTS | EXISTS => UNIV | x => x
+  fun pure_goal tm = let
+    fun recurse acc tm = let
+      val (l, r) = dest_conj tm handle HOL_ERR _ => dest_disj tm
+    in
+      case (acc, recurse acc l) of
+        (_, EITHER) => recurse acc r
+      | (_, NEITHER) => NEITHER
+      | (EITHER, x) => recurse x r
+      | _ => recurse acc r
+    end handle HOL_ERR _ => let
+      val (f, args) = strip_comb tm
+    in
+      case (#Name (dest_thy_const f), acc) of
+        ("~", _) => negstatus (recurse (negstatus acc) (hd args))
+      | ("!", EXISTS) => NEITHER
+      | ("!", _) => recurse UNIV (body (hd args))
+      | ("?", UNIV) => NEITHER
+      | ("?", _) => recurse EXISTS (body (hd args))
+      | _ => acc
+    end handle HOL_ERR _ => acc
+  in
+    recurse EITHER tm
+  end
+
   val phase0_CONV =
     (* rewrites out conditional expression and absolute value terms *)
     REWRITE_CONV [INT_ABS] THENC Sub_and_cond.COND_ELIM_CONV
