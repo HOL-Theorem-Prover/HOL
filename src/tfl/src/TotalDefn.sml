@@ -174,14 +174,18 @@ end;
  ---------------------------------------------------------------------------*)
 
 fun TC_SIMP_CONV simps tm =
- (Rewrite.REWRITE_CONV simps
-  THENC REDEPTH_CONV Let_conv.GEN_BETA_CONV
+ (REPEATC
+   (CHANGED_CONV
+     (Rewrite.REWRITE_CONV 
+        (simps @ mapfilter TypeBase.case_def_of
+               (TypeBase.listItems (TypeBase.theTypeBase())))
+       THENC REDEPTH_CONV Let_conv.GEN_BETA_CONV))
   THENC Rewrite.REWRITE_CONV
           (pairTheory.pair_rws @
            mapfilter (#2 o valOf o TypeBase.size_of)
                (TypeBase.listItems (TypeBase.theTypeBase())))
   THENC REDEPTH_CONV BETA_CONV
-  THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES])  tm;
+  THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES]) tm;
 
 val default_simps =
   [combinTheory.o_DEF,combinTheory.I_THM,prim_recTheory.measure_def, 
