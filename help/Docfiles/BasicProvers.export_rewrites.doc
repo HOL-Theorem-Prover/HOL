@@ -1,14 +1,12 @@
 \DOC export_rewrites
 
-\TYPE {BasicProvers.export_rewrites : string list -> unit}
+\TYPE {export_rewrites : string list -> unit}
 
 \SYNOPSIS
 Exports theorems so that they merge with the ``stateful'' rewriter's {simpset}.
 
 \KEYWORDS
 simplification
-
-\LIBRARY BasicProvers
 
 \DESCRIBE
 A call to {export_rewrites strlist} causes the theorems named by the

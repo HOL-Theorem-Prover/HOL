@@ -3,34 +3,12 @@
 \TYPE {op ++ : simpset * ssdata -> simpset}
 
 \SYNOPSIS
-Infix operator for augmenting simpsets with {ssdata} values.
-
-\KEYWORDS
-simplification
-
-\LIBRARY
-simpLib
+Infix operator for adding an {ssdata} item into a simpset.
 
 \DESCRIBE
-The {++} function combines its two arguments and creates a new
-simpset.  This is a way of creating simpsets that are tailored to the
-particular simplification task at hand.
-
-\FAILURE
-Never fails.
-
-\EXAMPLE
-Here we add the {UNWIND_ss} ssdata value to the {pure_ss} simpset to
-exploit the former's point-wise elimination conversions.
-{
-- SIMP_CONV (pureSimps.pure_ss ++ boolSimps.UNWIND_ss) []
-            (Term`!x. x ==> (?y. P(x,y) /\ (y = 5))`);
-
-> val it = |- (!x. x ==> (?y. P (x,y) /\ (y = 5))) = P (T,5) : thm
-}
-
+{bossLib.++} is identical to {simpLib.++}.
 
 \SEEALSO
-simpLib.mk_simpset, simpLib.rewrites, simpLib.SIMP_CONV, pureSimps.pure_ss, boolSimps.UNWIND_ss.
+bossLib.++.
 
 \ENDDOC

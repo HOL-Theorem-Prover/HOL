@@ -23,21 +23,21 @@ recursive function.
 
 \EXAMPLE
 { 
-    - val qsort_defn = 
-        Hol_defn "qsort"
-           `(qsort ___ [] = []) /\
-            (qsort ord (x::rst) = 
-                APPEND (qsort ord (FILTER ($~ o ord x) rst))
-                  (x :: qsort ord (FILTER (ord x) rst)))`;
+- val qsort_defn = 
+    Hol_defn "qsort"
+       `(qsort ___ [] = []) /\
+        (qsort ord (x::rst) = 
+            APPEND (qsort ord (FILTER ($~ o ord x) rst))
+              (x :: qsort ord (FILTER (ord x) rst)))`;
 
-    - tgoal qsort_defn;
-    > val it =
-       Proof manager status: 1 proof.
-       1. Incomplete:
-           Initial goal:
-           ?R. WF R /\
-               (!rst x ord. R (ord,FILTER ($~ o ord x) rst) (ord,x::rst)) /\
-                !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
+- tgoal qsort_defn;
+> val it =
+   Proof manager status: 1 proof.
+   1. Incomplete:
+       Initial goal:
+       ?R. WF R /\
+           (!rst x ord. R (ord,FILTER ($~ o ord x) rst) (ord,x::rst)) /\
+            !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
 }
 
 

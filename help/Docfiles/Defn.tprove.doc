@@ -68,5 +68,5 @@ The recursion equations returned by a successful invocation of {tprove}
 are automatically added to the global {compset} accessed by {EVAL}.
 
 \SEEALSO
-Defn.tgoal, Defn.Hol_defn, EVAL.
+Defn.tgoal, Defn.Hol_defn, bossLib.EVAL.
 \ENDDOC

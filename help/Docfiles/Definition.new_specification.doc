@@ -2,8 +2,9 @@
 
 \BLTYPE
 new_specification :
-{name:string, sat_thm:thm,
- consts:{const_name:string, fixity:fixity} list} -> thm
+   {name : string, 
+    sat_thm : thm,
+    consts : {const_name:string, fixity:fixity} list} -> thm
 \ELTYPE
 
 \SYNOPSIS
@@ -60,5 +61,8 @@ This introduces the constants {MOD} and {DIV} with the defining
 property shown above.
 
 \SEEALSO
-Definition.new_definition, boolSyntax.new_binder_definition, boolSyntax.new_infixl_definition, boolSyntax.new_infixr_definition, TotalDefn.Define.
+Definition.new_definition, 
+boolSyntax.new_binder_definition, boolSyntax.new_infixl_definition, 
+boolSyntax.new_infixr_definition, TotalDefn.Define.
+
 \ENDDOC
