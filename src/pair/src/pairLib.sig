@@ -2,6 +2,8 @@ signature pairLib =
 sig
  include Abbrev
 
+ (* from pairSyntax *)
+
  val mk_prod          : hol_type * hol_type -> hol_type
  val dest_prod        : hol_type -> hol_type * hol_type
  val list_mk_prod     : hol_type list -> hol_type
@@ -66,13 +68,47 @@ sig
 
  val genvarstruct     : hol_type -> term
 
+ (* From PairedLambda *)
 
  val PAIRED_BETA_CONV : conv 
  val PAIRED_ETA_CONV  : conv 
  val GEN_BETA_CONV    : conv 
  val let_CONV         : conv 
-
  val GEN_BETA_RULE    : thm -> thm
  val GEN_BETA_TAC     : tactic
 
+ (* from Pair_basic *)
+
+ val MK_PAIR : thm * thm -> thm
+ val PABS : term -> thm -> thm
+ val PABS_CONV : conv -> conv
+ val PSUB_CONV : conv -> conv
+ val CURRY_CONV : conv
+ val UNCURRY_CONV : conv
+ val PBETA_CONV : conv
+ val PBETA_RULE : thm -> thm
+ val PBETA_TAC : tactic
+ val RIGHT_PBETA : thm -> thm
+ val LIST_PBETA_CONV : conv
+ val RIGHT_LIST_PBETA : thm -> thm
+ val LEFT_PBETA : thm -> thm
+ val LEFT_LIST_PBETA : thm -> thm
+ val UNPBETA_CONV : term -> conv
+ val PETA_CONV : conv
+ val PALPHA_CONV : term -> conv
+ val GEN_PALPHA_CONV : term -> conv
+ val PALPHA : term -> conv
+ val paconv : term -> term -> bool
+ val PAIR_CONV : conv -> conv
+
+ (* from pairTools *)
+
+ val PGEN             : term -> term -> thm -> thm
+ val PGEN_TAC         : term -> tactic
+ val PFUN_EQ_RULE     : thm -> thm
+ val LET_INTRO        : thm -> thm
+ val LET_INTRO_TAC    : tactic
+ val LET_EQ_TAC       : thm list -> tactic
+ val TUPLE            : term -> thm -> thm
+ val TUPLE_TAC        : term -> tactic
 end

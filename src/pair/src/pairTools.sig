@@ -4,6 +4,7 @@ sig
 
  val PGEN             : term -> term -> thm -> thm
  val PGEN_TAC         : term -> tactic
+ val PFUN_EQ_RULE     : thm -> thm
 
  val LET_INTRO        : thm -> thm
  val LET_INTRO_TAC    : tactic

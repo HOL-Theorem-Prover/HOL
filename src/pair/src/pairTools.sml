@@ -79,6 +79,25 @@ fun PGEN_TAC vars (asl:Term.term list,tm) =
                      | _ => raise PERR "PGEN_TAC" "validation")
  end;
 
+(*---------------------------------------------------------------------------
+       |- f <vstr> = g <vstr>
+      ------------------------ PFUN_EQ_RULE
+              |- f = g
+ ---------------------------------------------------------------------------*)
+
+local val expected = PERR "PFUN_EQ_RULE" "expected f <vstruct> = g <vstruct>"
+      val SIMP = Rewrite.PURE_ONCE_REWRITE_RULE[GSYM FUN_EQ_THM]
+in
+fun PFUN_EQ_RULE th = 
+ let val ((_,v1),(_,v2)) 
+       = with_exn ((dest_comb##dest_comb) o dest_eq o concl) th expected
+ in if v1=v2
+      then SIMP (PGEN (genvar (type_of v1)) v1 th)
+      else raise expected
+ end
+end;
+
+
 (*---------------------------------------------------------------------------*
  *            v    (|- !v_1...v_n. M[v_1...v_n])                             *
  *   TUPLE   -------------------------------------------------               *

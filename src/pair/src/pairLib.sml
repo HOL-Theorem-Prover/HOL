@@ -9,7 +9,7 @@ struct
 
 local open pairTheory pairSimps pairTools in end;
 
-open pairSyntax PairedLambda 
+open pairSyntax PairedLambda Pair_basic pairTools
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
