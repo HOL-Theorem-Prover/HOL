@@ -1,0 +1,5 @@
+INCLUDES = ../parser ../parser.mosmlyacc ../official-semantics \
+           ../executable-semantics ../regexp
+
+pslcheck: pslcheck.uo
+	$(HOLMOSMLC) -o $@ $<

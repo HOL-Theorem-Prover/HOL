@@ -1,32 +1,32 @@
 
 (******************************************************************************
 * Command line tool
-* 
+*
 *  pslcheck [-all] -sere '<SERE>' -path '<PATH>'
 *  pslcheck [-all] -fl   '<FL>'   -path '<PATH>'
-* 
+*
 * The optional "-all" argument specifies that all intervals are
 * checked in the case of a SERE and all path tails in the case of a
 * formula.
-* 
-* Without the "-all" arguments, the commands: 
-* 
-*  pslcheck -sere '<SERE>' -path '<PATH>' 
-*  pslcheck -fl   '<FL>'   -path '<PATH>' 
-* 
+*
+* Without the "-all" arguments, the commands:
+*
+*  pslcheck -sere '<SERE>' -path '<PATH>'
+*  pslcheck -fl   '<FL>'   -path '<PATH>'
+*
 * report "true" or "false" (or a parser or processing error).
-* 
-* The command: 
-* 
+*
+* The command:
+*
 *  pslcheck -all -sere '<SERE>' -path '<PATH>'
-* 
-* reports "true on intervals [m1:n1][m2:n2] ..." 
+*
+* reports "true on intervals [m1:n1][m2:n2] ..."
 * (or a parser or processing error).
 *
-* The command: 
-* 
-*  pslcheck -all -fl   '<FL>'   -path '<PATH>' 
-* 
+* The command:
+*
+*  pslcheck -all -fl   '<FL>'   -path '<PATH>'
+*
 * reports "true at times t1,t2, ..."
 * (or a parser or processing error).
 *
@@ -36,7 +36,7 @@
 open HolKernel Parse boolLib bossLib;
 open ParserTools;
 
-val _ = Process.system ("echo " ^ process_args(CommandLine.arguments()));
+val _ = print (process_args(CommandLine.arguments()) ^ "\n")
 
 (*
 pslcheck      -sere '{{a;b}@clk1;c}@clk2' -path '{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}'
