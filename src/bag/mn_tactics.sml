@@ -168,7 +168,7 @@ infix >-
 fun f >- g          = g o f;
 fun dub x           = (x,x);
 fun my_distinct thm =
-  let val base = ConstrProofs.prove_constructors_distinct thm in
+  let val base = prove_constructors_distinct thm in
     CONJ base (GSYM base)
   end;
 val ETA_RULE = CONV_RULE (DEPTH_CONV ETA_CONV);

@@ -12,7 +12,7 @@
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
 (* ---------------------------------------------------------------------*)
-open HolKernel Parse Define_type Prim_rec ConstrProofs;
+open HolKernel Parse Define_type Prim_rec;
 
 val _ = new_theory "ascii";
 

@@ -18,7 +18,7 @@ struct
 
 local
 
-open HolKernel Parse basicHol90Lib Abbrev ConstrProofs Define_type Psyntax;
+open HolKernel Parse basicHol90Lib Abbrev Define_type Psyntax;
 infix ##;
 
 fun failwith function =
@@ -244,8 +244,8 @@ val _ = system_shells := [list_shell,num_shell];
 (*--------------------------------------------------------------------------*)
 (* Altered for hol98 *)
 fun define_shell {name,type_spec,fixities,accessors} =
-   let 
-(*     fun find_theory s = 
+   let
+(*     fun find_theory s =
           let fun f s [] = failwith "find_theory"
                 | f s (thy::thys) =
                  if can (theorem thy) s
@@ -272,7 +272,7 @@ fun define_shell {name,type_spec,fixities,accessors} =
    else
    let val defined = is_type name
    (* NEW for HOL98 *)
-       val _ = if defined 
+       val _ = if defined
                then failwith ("define_shell -- type already defined!")
                else ();
        val theory =
@@ -291,11 +291,11 @@ fun define_shell {name,type_spec,fixities,accessors} =
           else save_thm (name ^ "_Induct",prove_induction_thm name_Axiom)
        and name_one_ones =
           if defined
-          then failwith "define_shell" 
+          then failwith "define_shell"
            (* (CONJUNCTS (theorem theory (name ^ "_one_one"))
                 handle e => if (can prove_constructors_one_one name_Axiom)
                             then raise e
-                            else []) 
+                            else [])
            *)
           else ((CONJUNCTS o save_thm)
                    ((name ^ "_one_one"),prove_constructors_one_one name_Axiom)
@@ -333,7 +333,7 @@ fun define_shell {name,type_spec,fixities,accessors} =
              constrs_and_args
        val acc_defs =
           if defined
-          then failwith "define_shell" 
+          then failwith "define_shell"
              (* map (map ((fn acc => (acc,definition theory acc)) o #1))
                   acc_specs *)
           else map (define_accessors name_Axiom) (combine (combs,acc_specs))

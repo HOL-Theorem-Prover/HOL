@@ -18,8 +18,8 @@ struct
 
 local
 
-open HolKernel boolTheory Parse Define_type Psyntax 
-     Drule Conv Rewrite Prim_rec ConstrProofs
+open HolKernel boolTheory Parse Define_type Psyntax
+     Drule Conv Rewrite Prim_rec
      DecisionSupport DecisionNormConvs;
 
 infix ## THENC ORELSEC
@@ -641,8 +641,8 @@ fun define_type_info {name,type_spec,fixities,selectors,discriminators} =
    since "define_type_info" treats theories as first-class ML values,
    e.g., "can (theorem thy)". Therefore, we will only allow datatypes
    to be built using this call, and not brought in from ancestor theories
-   by first class operations. (Trying to bring things in from ancestor 
-   theories by name is fragile -- maybe we can fix this by having 
+   by first class operations. (Trying to bring things in from ancestor
+   theories by name is fragile -- maybe we can fix this by having
    a central repository of datatype facts.)
 
 fun define_type_info {name,type_spec,fixities,selectors,discriminators} =
@@ -690,7 +690,7 @@ fun define_type_info {name,type_spec,fixities,selectors,discriminators} =
        and name_one_ones =
           if defined
           then (CONJUNCTS (theorem theory (name ^ "_one_one"))
-                handle e as HOL_ERR _ => 
+                handle e as HOL_ERR _ =>
                    if (can prove_constructors_one_one name_Axiom)
                    then raise e
                    else [])
@@ -700,7 +700,7 @@ fun define_type_info {name,type_spec,fixities,selectors,discriminators} =
        and name_distincts =
           if defined
           then (CONJUNCTS (theorem theory (name ^ "_distinct"))
-                handle e as HOL_ERR _ => 
+                handle e as HOL_ERR _ =>
                      if (can prove_constructors_distinct name_Axiom)
                      then raise e
                      else [])

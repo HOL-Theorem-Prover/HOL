@@ -31,7 +31,7 @@
 structure Datatype :> Datatype =
 struct
 
-open HolKernel Parse Drule Tactical Tactic Conv Prim_rec ConstrProofs;
+open HolKernel Parse Drule Tactical Tactic Conv Prim_rec ;
 
 infix ## |-> THEN THENC THENL;
 infixr -->;
