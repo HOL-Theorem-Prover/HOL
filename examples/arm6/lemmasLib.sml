@@ -10,7 +10,7 @@ infix THEN THENC THENL ++;
 (* -------------------------------------------------------- *)
 
 fun core_rws () =
-   let val rws = reduceLib.num_compset()
+   let val rws = computeLib.bool_compset()
        val _ = add_thms [
                 iclass_distinct,iseq_distinct,GSYM iclass_distinct,GSYM iseq_distinct,
                 PCCHANGE_def,RWA_def,DECODE_PSR_def,

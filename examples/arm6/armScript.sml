@@ -333,11 +333,19 @@ val ALU_arith_def = Define`
       (MSB res,r = 0,ODD q,
         (MSB op2 = sign) /\ ~(MSB res = sign),res)`;
 
+val ALU_arith_neg_def = Define`
+  ALU_arith_neg op rn op2 =
+    let  sign = MSB rn
+    and (q,r) = DIVMOD_2EXP 32 (op (w2n rn) (w2n ~op2)) in
+    let   res = w32 r in
+      (MSB res,r = 0,ODD q \/ (op2 = word_0),
+        ~(MSB op2 = sign) /\ ~(MSB res = sign),res)`;
+
 val ALU_logic_def = Define`
   ALU_logic res = (MSB res,w2n res = 0,F,F,res)`;
 
 val SUB_def = Define`
-  SUB a b c = let c' = SBIT c 0 in ALU_arith (\x y.x+y+c'-1) a ~b`;
+  SUB a b c = let c' = SBIT c 0 in ALU_arith_neg (\x y.x+y+c'-1) a b`;
 val ADD_def = Define`
   ADD a b c = let c' = SBIT c 0 in ALU_arith (\x y.x+y+c') a b`;
 val AND_def = Define`AND a b = ALU_logic (a & b)`;
