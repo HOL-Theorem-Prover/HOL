@@ -14,10 +14,8 @@
 (define-prefix-command 'hol-d-map)
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
-(make-variable-buffer-local 'hol-loaded-modules)
 (set-default 'hol-buffer-ready nil)
 (set-default 'hol-buffer-name nil)
-(set-default 'hol-loaded-modules nil)
 
 (defvar hol98-executable HOL98-EXECUTABLE
   "*Path-name for the HOL98 executable.")
@@ -319,7 +317,7 @@ that the buffer has already had HOL terms, comments and strings removed."
                                         (point-max) t)
                      (- (point) (length (match-string 0)))
                    (point-max)))))
-          (hol-load-modules-in-region start end nil))))
+          (hol-load-modules-in-region start end))))
     ;; then finally send the string
     (send-raw-string-to-hol string)
     (kill-buffer tmpbuf)
@@ -386,54 +384,44 @@ that the buffer has already had HOL terms, comments and strings removed."
   (interactive "fFile to use: ")
   (send-raw-string-to-hol (concat "use \"" filename "\";")))
 
-(defun hol-load-string (s &optional really-load)
+(defun hol-load-string (s)
+  "Loads the ML object file NAME.uo; checking that it isn't already loaded."
   (let* ((buf (ensure-hol-buffer-ok))
          (mys (format "%s" s)) ;; gets rid of text properties
          (commandstring
-          (concat "val _ = (print  \"Loading " mys
-                  "\\n\"; " "load \"" mys "\");\n")))
-    (save-excursion
-      (set-buffer buf)
-      (let ((already-loaded (member mys hol-loaded-modules)))
-        (if (or (not already-loaded) really-load)
-            (progn
-              (if (not already-loaded)
-                  (setq hol-loaded-modules (cons mys hol-loaded-modules)))
-              (comint-send-string buf commandstring)))))))
+          (concat "val _ = if Lib.exists (fn s => s = \""
+                  mys
+                  "\") (Meta.loaded()) then () else "
+                  "(print  \"Loading " mys
+                  "\\n\"; " "Meta.load \"" mys "\");\n")))
+    (comint-send-string buf commandstring)))
 
-(defun hol-load-modules-in-region (start end arg)
+(defun hol-load-modules-in-region (start end)
   "Attempts to load all of the words in the region as modules."
   (interactive "rP")
   (save-excursion
     (goto-char start)
     (while (re-search-forward (concat "\\b" sml-struct-id-regexp "\\b") end t)
-      (hol-load-string (match-string 0) arg))))
+      (hol-load-string (match-string 0)))))
 
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.
 If there is no filename at point, then prompt for file.  If the region
 is active (in transient mark mode) and it looks like it might be a
 module name or a white-space delimited list of module names, then send
-region instead. With prefix ARG prompt for a file-name to load.  With
-a positive numeric prefix arg load the requested file, even if the HOL
-mode thinks it already has been."
+region instead. With prefix ARG prompt for a file-name to load."
   (interactive "P")
   (let* ((wap (word-at-point))
          (txt (condition-case nil
                   (buffer-substring (region-beginning) (region-end))
-                (error nil)))
-         (last-argument (and arg (numberp arg) (> arg 0))))
-    (cond (arg
-           (hol-load-string (read-string "Library to load: ") last-argument))
+                (error nil))))
+    (cond (arg (hol-load-string (read-string "Library to load: ")))
           ((and mark-active transient-mark-mode
                 (string-match (concat "^\\(\\s-*" sml-struct-id-regexp
                                       "\\)+\\s-*$") txt))
-           (hol-load-modules-in-region (region-beginning) (region-end) `
-                                       last-argument))
-          ((and wap (string-match "^\\w+$" wap))
-           (hol-load-string wap last-argument))
-          (t (hol-load-string (read-string "Library to load: ")
-                              last-argument)))))
+           (hol-load-modules-in-region (region-beginning) (region-end)))
+          ((and wap (string-match "^\\w+$" wap)) (hol-load-string wap))
+          (t (hol-load-string (read-string "Library to load: "))))))
 
 
 ;** hol map keys and function definitions
@@ -454,7 +442,6 @@ or at level 10 with a bare prefix. "
                     (t (make-comint "HOL98" hol98-executable)))))
     (setq hol-buffer-name (buffer-name buf))
     (switch-to-buffer buf)
-    (setq hol-loaded-modules nil)
     (setq hol-buffer-name (buffer-name buf))
     (setq comint-scroll-show-maximum-output t)))
 
@@ -497,34 +484,12 @@ or at level 10 with a bare prefix. "
   (interactive)
   (send-raw-string-to-hol "goalstackLib.drop()"))
 
-(defun hol-open-region (start end)
-  "Opens the identifiers in the region.
-Doesn't bother trying to open the word open.  Loads modules first."
-  (interactive "r")
-  (let ((text (buffer-substring start end)))
-    (save-excursion
-      (goto-char start)
-      (while (re-search-forward "\\w+" end t)
-        (let ((module-name (match-string 0)))
-          (if (not (string= "open" module-name))
-              (hol-open-string module-name)))))))
-
 (defun hol-open-string (module-name)
+  "Opens HOL modules, prompting for the name of the module to load."
   (interactive "sName of module to (load and) open: ")
   (progn
     (hol-load-string module-name)
     (send-raw-string-to-hol (concat "open " module-name))))
-
-(defun hol-open-action (arg)
-  "Opens HOL modules.
-If the region is active (and in transient mark mode) and there is no prefix,
-then scan all of the region for module names.  Otherwise prompt for the
-name of the module to load."
-  (interactive "P")
-  (if (and mark-active transient-mark-mode (not arg))
-      (hol-open-region (region-beginning) (region-end))
-    (call-interactively 'hol-open-string)))
-
 
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes)."
@@ -550,7 +515,7 @@ name of the module to load."
 (define-key hol-map "h"    'hol98)
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "n"    'hol-name-top-theorem)
-(define-key hol-map "o"    'hol-open-action)
+(define-key hol-map "o"    'hol-open-string)
 (define-key hol-map "p"    'hol-print)
 (define-key hol-map "r"    'hol-rotate)
 (define-key hol-map "R"    'hol-restart-goal)
