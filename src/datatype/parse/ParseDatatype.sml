@@ -27,9 +27,9 @@ struct
 val ERR = mk_HOL_ERR "ParseDatatype";
 
 
-datatype pretype 
-   = dVartype of string 
-   | dTyop of string * pretype list
+datatype pretype
+   = dVartype of string
+   | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
    | dAQ of Type.hol_type
 
 type field = string * pretype
@@ -41,11 +41,16 @@ datatype datatypeForm
 
 type AST = tyname * datatypeForm
 
-(* Should use long identifiers! *)
 fun pretypeToType pty =
   case pty of
     dVartype s => Type.mk_vartype s
-  | dTyop (s, args) => Type.mk_type(s, map pretypeToType args)
+  | dTyop {Tyop = s, Thy, Args} => let
+    in
+      case Thy of
+        NONE => Type.mk_type(s, map pretypeToType Args)
+      | SOME t => Type.mk_thy_type{Tyop = s, Thy = t,
+                                   Args = map pretypeToType Args}
+    end
   | dAQ pty => pty
 
 fun ident0 s = let
@@ -58,8 +63,12 @@ in
 end
 fun ident s = token ident0 s
 
+fun qtyop {Tyop, Thy, Args} = dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
+fun tyop (s, args) = dTyop {Tyop = s, Thy = NONE, Args = args}
+
 fun parse_type strm =
-  parse_type.parse_type {vartype = dVartype, tyop = dTyop, antiq = dAQ} true
+  parse_type.parse_type {vartype = dVartype, tyop = tyop, qtyop = qtyop,
+                         antiq = dAQ} true
   (Parse.type_grammar()) strm
 
 fun parse_constructor_id s =

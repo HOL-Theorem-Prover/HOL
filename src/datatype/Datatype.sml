@@ -301,12 +301,16 @@ fun to_tyspecs ASTs =
      val new_type_names = map #1 asts
      fun mk_hol_type (dAQ ty) = ty
        | mk_hol_type (dVartype s) = mk_vartype s
-       | mk_hol_type (dTyop(s, args)) =
+       | mk_hol_type (dTyop{Tyop = s, Args, Thy}) =
             if Lib.mem s new_type_names
-            then if null args then tyname_as_tyvar s
+            then if null Args then tyname_as_tyvar s
                  else raise ERR "to_tyspecs"
                      "Can't use new types as operators - leave them nullary"
-            else mk_type(s, map mk_hol_type args)
+            else
+              case Thy of
+                NONE => mk_type(s, map mk_hol_type Args)
+              | SOME t => mk_thy_type {Tyop = s, Thy = t,
+                                       Args = map mk_hol_type Args}
       fun constructor (cname, ptys) = (cname, map mk_hol_type ptys)
   in
      map (tyname_as_tyvar##map constructor) asts
@@ -450,12 +454,12 @@ fun write_tyinfo (tyinfo, record_rw_names) =
      val one_one_name =
        case one_one_of tyinfo
         of NONE => "NONE"
-         | SOME th => 
+         | SOME th =>
             let val nm = name"_11" in save_thm(nm, th); "SOME "^nm end
      val distinct_name =
        case distinct_of tyinfo
         of NONE => "NONE"
-         | SOME th => 
+         | SOME th =>
             let val nm = name"_distinct" in save_thm(nm,th); "SOME "^nm end
      val case_cong_name =
         let val ccname = name"_case_cong"
@@ -503,12 +507,12 @@ fun write_tyinfo (tyinfo, record_rw_names) =
  end;
 
 fun persistent_tyinfo (x as (tyinfo,_)) =
-   (TypeBase.write tyinfo; 
+   (TypeBase.write tyinfo;
     computeLib.write_datatype_info tyinfo;
     write_tyinfo x)
 
 fun Hol_datatype q =
-  List.app persistent_tyinfo 
+  List.app persistent_tyinfo
            (primHol_datatype (TypeBase.theTypeBase()) q)
   handle ? => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
 

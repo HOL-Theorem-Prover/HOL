@@ -3,23 +3,23 @@ sig
  include Abbrev
  type tyname   = string
 
-  datatype pretype
-      = dVartype of string
-      | dTyop    of string * pretype list
-      | dAQ      of hol_type
+ datatype pretype =
+   dVartype of string
+ | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
+ | dAQ of Type.hol_type
 
-  val pretypeToType : pretype -> hol_type
+ val pretypeToType : pretype -> hol_type
 
-  type field       = string * pretype
-  type constructor = string * pretype list
+ type field       = string * pretype
+ type constructor = string * pretype list
 
-  datatype datatypeForm
-      = Constructors of constructor list
-      | Record of field list
+ datatype datatypeForm =
+   Constructors of constructor list
+ | Record of field list
 
-  type AST = tyname * datatypeForm
+ type AST = tyname * datatypeForm
 
-  val parse : hol_type quotation -> AST list
+ val parse : hol_type quotation -> AST list
 
 (*---------------------------------------------------------------------------
   grammar we're parsing is:
