@@ -124,23 +124,27 @@ fun elim_div_mod0 t = let
     STRIP_QUANT_CONV (RAND_CONV (FORK_CONV (REDUCE_CONV, BETA_CONV)))
   end
 in
-  EVERY_CONV (map elim_t divmods) t
-end
+  case divmods of
+    [] => ALL_CONV
+  | _ => FIRST_CONV (map elim_t divmods) THENC elim_div_mod0
+end t
 
 fun elim_div_mod t = let
   (* can't just apply elim_div_mod to a term with quantifiers because the
      elimination of x/c relies on x being free.  So we need to traverse
      the term underneath the quantifiers.  It may also help to get the
      quantifiers to have scope over as little of the term as possible. *)
-  fun recurse tm = let
+  fun recurse passed_a_binder tm = let
   in
-    if is_exists tm orelse is_forall tm then BINDER_CONV recurse
+    if is_exists tm orelse is_forall tm orelse is_exists1 tm then
+      BINDER_CONV (recurse true)
+    else if is_abs tm then ABS_CONV (recurse true)
     else
-      elim_div_mod0 THENC
-      SUB_CONV recurse
+      (if passed_a_binder then TRY_CONV elim_div_mod0 else ALL_CONV) THENC
+      SUB_CONV (recurse false)
   end tm
 in
-  recurse t
+  recurse true t
 end
 
 
@@ -259,19 +263,25 @@ local
     in
       UNBETA_CONV to_elim THENC REWR_CONV rwt THENC
       STRIP_QUANT_CONV (RAND_CONV (RAND_CONV BETA_CONV))
-    end handle HOL_ERR _ => ALL_CONV
+    end
   in
-    EVERY_CONV (map elim_t divmods) t
-  end
+    case divmods of
+      [] => ALL_CONV
+    | _ => FIRST_CONV (map elim_t divmods) THENC elim_div_mod0
+  end t
   fun elim_div_mod t = let
-    fun recurse tm = let
+    fun recurse passed_a_binder tm = let
     in
-      if is_exists tm orelse is_forall tm then BINDER_CONV recurse
+      if is_exists tm orelse is_forall tm orelse is_exists1 tm then
+        BINDER_CONV (recurse true)
+      else if is_abs tm then
+        ABS_CONV (recurse true)
       else
-        elim_div_mod0 THENC SUB_CONV recurse
+        (if passed_a_binder then TRY_CONV elim_div_mod0 else ALL_CONV) THENC
+        SUB_CONV (recurse false)
     end tm
   in
-    recurse t
+    recurse true t
   end
   fun term_size t = let
     val (f,x) = dest_comb t

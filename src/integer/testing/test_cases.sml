@@ -31,16 +31,7 @@ fun test_term c (n,t,b) = let
   val pl = StringCvt.padLeft #" " 6
   val _ = print (pl (Time.toString usr)^" "^pl (Time.toString sys)^" "^
                  pl (Time.toString gc))
-  val pushtime =
-      #usr (Lib.assoc "push_in" (Profile.results()))
-      handle HOL_ERR _ => Time.fromReal 0.0
-  val usrms = Time.toReal usr
-  val pushms = Time.toReal pushtime
-  val percent =
-      StringCvt.padLeft #" " 4
-                        (Real.fmt (StringCvt.FIX (SOME 1))
-                                  (100.0 * (pushms / usrms)) handle Div => "?")
-  val _ = print (" (" ^ pl (Time.toString pushtime) ^ " " ^percent^"%)\n")
+  val _ = print "\n"
 in
   verdict
 end
@@ -80,7 +71,11 @@ val terms_to_test =
              (if 100 < y0 then x1 = y0 - 10 else x1 = 91))`),
    ("DIV1", Term`!x. 0 <= x = x / 2 <= x`, false),
    ("DIV2", Term`!x. (x / 2 = x) = (x = 0)`, false),
+   T ("DIV3", Term`!i. (i % 10) % 10 = i % 10`),
+   T ("DIV4", Term`?!i. 2 < i /\ (i / 2 = 1)`),
    T ("NDIV1", Term`!x. 0 < x ==> x DIV 2 < x`),
+   T ("NDIV2", Term`(x MOD 2) MOD 2 = x MOD 2`),
+   T ("NDIV3", Term`?!n. 2 < n /\ (n DIV 2 = 1)`),
    T ("KXSDIV1", Term`!n. ~(n = 0) /\ EVEN n ==> (n - 2) DIV 2 < n`),
    T ("KXSDIV2", Term`!n. ~(n = 0) /\ ~EVEN n ==> (n - 1) DIV 2 < n`),
    T ("simp_divides1", ``!x. 0 < x /\ 2 int_divides x ==> 1 < x``),
