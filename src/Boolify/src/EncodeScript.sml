@@ -1,9 +1,10 @@
 (* Interactive mode
-app load ["listSyntax", "combinSyntax", "rich_listTheory"];
+app load
+["bossLib", "listSyntax", "combinSyntax", "rich_listTheory", "metisLib"];
 *)
 
-open HolKernel boolLib Parse bossLib pairTheory pairTools
-     arithmeticTheory listTheory rich_listTheory optionTheory;
+open HolKernel boolLib Parse bossLib pairTheory pairTools combinTheory
+     arithmeticTheory listTheory rich_listTheory optionTheory metisLib;
 
 val _ = new_theory "Encode";
 
@@ -112,6 +113,30 @@ val IS_PREFIX_APPENDS = store_thm
    ++ RW_TAC std_ss [APPEND, IS_PREFIX]);
 
 (*---------------------------------------------------------------------------
+        Datatype of polymorphic n-ary trees.
+
+        A challenging example for boolification.
+ ---------------------------------------------------------------------------*)
+
+val () = Hol_datatype `tree = Node of 'a => tree list`;
+
+val tree_size_def  = fetch "-" "tree_size_def";
+val tree_induction = fetch "-" "tree_induction";
+
+val tree_ind = store_thm
+  ("tree_ind",
+   ``!p. (!a ts. (!t. MEM t ts ==> p t) ==> p (Node a ts)) ==> (!t. p t)``,
+   GEN_TAC
+   ++ REPEAT DISCH_TAC
+   ++ Suff `(!t. p t) /\ (!l : 'a tree list. EVERY p l)` >> PROVE_TAC []
+   ++ HO_MATCH_MP_TAC tree_induction
+   ++ RW_TAC std_ss [EVERY_DEF]
+   ++ Q.PAT_ASSUM `!x. Q x` MATCH_MP_TAC
+   ++ Induct_on `l`
+   ++ RW_TAC std_ss [EVERY_DEF, MEM]
+   ++ METIS_TAC []);
+
+(*---------------------------------------------------------------------------
         An always true predicate for total encodings.
  ---------------------------------------------------------------------------*)
 
@@ -122,32 +147,107 @@ in
   val () = add_const "total";
 end;
 
-val every_total = prove
-  (``EVERY total = total``,
+val lift_prod_def = Define `lift_prod p1 p2 x = p1 (FST x) /\ p2 (SND x)`;
+
+val lift_sum_def = Define
+  `lift_sum p1 p2 x = case x of INL x1 -> p1 x1 || INR x2 -> p2 x2`;
+
+val lift_option_def = Define
+  `lift_option p x = case x of NONE -> T || SOME y -> p y`;
+
+val (lift_tree_def, _) =
+  Defn.tprove
+  (Defn.Hol_defn "lift_tree"
+   `lift_tree p (Node a ts) = p a /\ EVERY (lift_tree p) ts`,
+   TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` ++
+   RW_TAC list_ss [tree_size_def, K_THM] ++
+   (Induct_on `ts` ++
+    RW_TAC list_ss [tree_size_def, K_THM]) >> DECIDE_TAC ++
+   RES_THEN (MP_TAC o SPEC_ALL) ++
+   SIMP_TAC arith_ss [K_THM]);
+
+val lift_tree_def =
+  save_thm ("lift_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) lift_tree_def);
+
+val every_total = store_thm
+  ("every_total",
+   ``EVERY total = total``,
    MATCH_MP_TAC EQ_EXT ++
    Induct ++
    RW_TAC std_ss [EVERY_DEF, total_def]);
+
+val lift_prod_total = store_thm
+  ("lift_prod_total",
+   ``lift_prod total total = total``,
+   MATCH_MP_TAC EQ_EXT ++
+   RW_TAC std_ss [lift_prod_def, total_def]);
+
+val lift_sum_total = store_thm
+  ("lift_sum_total",
+   ``lift_sum total total = total``,
+   MATCH_MP_TAC EQ_EXT ++
+   RW_TAC std_ss [lift_sum_def, total_def] ++
+   CASE_TAC);
+
+val lift_option_total = store_thm
+  ("lift_option_total",
+   ``lift_option total = total``,
+   MATCH_MP_TAC EQ_EXT ++
+   RW_TAC std_ss [lift_option_def, total_def] ++
+   CASE_TAC);
+
+val lift_tree_total = store_thm
+  ("lift_tree_total",
+   ``lift_tree total = total``,
+   MATCH_MP_TAC EQ_EXT ++
+   HO_MATCH_MP_TAC tree_ind ++
+   RW_TAC std_ss [lift_tree_def, total_def] ++
+   CONV_TAC (DEPTH_CONV ETA_CONV) ++
+   RW_TAC std_ss [EVERY_MEM]);
 
 (*---------------------------------------------------------------------------
         A well-formed encoder is prefix-free and injective.
  ---------------------------------------------------------------------------*)
 
-val wf_pencoder_def = Define
-  `wf_pencoder p (e : 'a -> bool list) =
-   !x y. p x /\ p y /\ IS_PREFIX (e x) (e y) ==> (x = y)`;
+val biprefix_def = Define `biprefix a b = IS_PREFIX a b \/ IS_PREFIX b a`;
 
-val wf_encoder_def = Define `wf_encoder = wf_pencoder total`;
+val biprefix_append = store_thm
+  ("biprefix_append",
+   ``!a b c d. biprefix (APPEND a b) (APPEND c d) ==> biprefix a c``,
+   RW_TAC std_ss [biprefix_def] ++
+   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
+
+val biprefix_cons = store_thm
+  ("biprefix_cons",
+   ``!a b c d. biprefix (a :: b) (c :: d) = (a = c) /\ biprefix b d``,
+   RW_TAC std_ss [biprefix_def, IS_PREFIX] ++
+   PROVE_TAC []);
+
+val biprefix_appends = store_thm
+  ("biprefix_appends",
+   ``!a b c. biprefix (APPEND a b) (APPEND a c) = biprefix b c``,
+   RW_TAC std_ss [biprefix_def, IS_PREFIX_APPENDS]);
+
+val wf_encoder_def = Define
+  `wf_encoder p (e : 'a -> bool list) =
+   !x y. p x /\ p y /\ IS_PREFIX (e x) (e y) ==> (x = y)`;
 
 val wf_encoder_alt = store_thm
   ("wf_encoder_alt",
-   ``wf_encoder e = !x y. IS_PREFIX (e x) (e y) ==> (x = y)``,
-   RW_TAC std_ss [wf_encoder_def, wf_pencoder_def, RES_FORALL_DEF, total_def]);
+   ``wf_encoder p (e : 'a -> bool list) =
+     !x y. p x /\ p y /\ biprefix (e x) (e y) ==> (x = y)``,
+   PROVE_TAC [wf_encoder_def, biprefix_def]);
 
-val wf_encoder = store_thm
-  ("wf_encoder",
-   ``!p e. wf_encoder e ==> wf_pencoder p e``,
-   RW_TAC std_ss [wf_encoder_def, wf_pencoder_def, total_def, RES_FORALL_DEF]);
-               
+val wf_encoder_eq = store_thm
+  ("wf_encoder_eq",
+   ``!p e f. wf_encoder p e /\ (!x. p x ==> (e x = f x)) ==> wf_encoder p f``,
+   RW_TAC std_ss [wf_encoder_def]);
+
+val wf_encoder_total = store_thm
+  ("wf_encoder_total",
+   ``!p e. wf_encoder total e ==> wf_encoder p e``,
+   RW_TAC std_ss [wf_encoder_def, wf_encoder_def, total_def, RES_FORALL_DEF]);
+
 (*---------------------------------------------------------------------------
       The unit type is cool because it consumes no space in the
       target list: the type has all the information!
@@ -198,6 +298,30 @@ val encode_list_def =
   `(encode_list xb [] = [F]) /\
    (encode_list xb (x :: xs) = T :: APPEND (xb x) (encode_list xb xs))`;
 
+(* A congruence rule *)
+
+val encode_list_cong = store_thm
+ ("encode_list_cong",
+  ``!l1 l2 f1 f2.
+      (l1=l2) /\ (!x. MEM x l2 ==> (f1 x = f2 x)) 
+              ==>
+      (encode_list f1 l1 = encode_list f2 l2)``,
+  Induct ++
+  SIMP_TAC list_ss [MEM,encode_list_def] ++
+  RW_TAC list_ss []);
+
+val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME(fn ppstrm =>
+   let val S = PP.add_string ppstrm
+       fun NL() = PP.add_newline ppstrm
+   in
+  S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());";
+  NL()
+  end)};
+
 (*---------------------------------------------------------------------------
         Nums (Norrish numeral encoding)
  ---------------------------------------------------------------------------*)
@@ -230,6 +354,23 @@ val _ = save_thm ("encode_num_ind", encode_num_ind);
        but then we'd need integers.
    ----------------------------------------------------------------------*)
 
+(*---------------------------------------------------------------------------
+        Polymorphic n-ary trees.
+ ---------------------------------------------------------------------------*)
+
+val (encode_tree_def, _) =
+  Defn.tprove
+  (Defn.Hol_defn "encode_tree"
+   `encode_tree e (Node a ts) = APPEND (e a) (encode_list (encode_tree e) ts)`,
+   TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` ++
+   (Induct_on `ts` ++
+    RW_TAC list_ss [tree_size_def, K_THM]) >> DECIDE_TAC ++
+   RES_THEN (MP_TAC o SPEC_ALL) ++
+   SIMP_TAC arith_ss [K_THM]);
+
+val encode_tree_def =
+  save_thm ("encode_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) encode_tree_def);
+
 (*---------------------------------------------------------------------------*)
 (* Alternative definition of encode_prod.                                    *)
 (*---------------------------------------------------------------------------*)
@@ -246,18 +387,20 @@ val encode_prod_alt = store_thm
 
 val wf_encode_unit = store_thm
   ("wf_encode_unit",
-   ``wf_encoder encode_unit``,
-   RW_TAC std_ss [wf_encoder_alt, encode_unit_def, IS_PREFIX, oneTheory.one]);
+   ``wf_encoder total encode_unit``,
+   RW_TAC std_ss [wf_encoder_def, encode_unit_def, IS_PREFIX, oneTheory.one]);
 
 val wf_encode_bool = store_thm
   ("wf_encode_bool",
-   ``wf_encoder encode_bool``,
-   RW_TAC std_ss [wf_encoder_alt, encode_bool_def, IS_PREFIX]);
+   ``wf_encoder total encode_bool``,
+   RW_TAC std_ss [wf_encoder_def, encode_bool_def, IS_PREFIX]);
    
 val wf_encode_prod = store_thm
   ("wf_encode_prod",
-   ``!f g. wf_encoder f /\ wf_encoder g ==> wf_encoder (encode_prod f g)``,
-   RW_TAC std_ss [wf_encoder_alt, encode_prod_alt] ++
+   ``!p1 p2 e1 e2.
+       wf_encoder p1 e1 /\ wf_encoder p2 e2 ==>
+       wf_encoder (lift_prod p1 p2) (encode_prod e1 e2)``,
+   RW_TAC std_ss [wf_encoder_def, encode_prod_alt, lift_prod_def] ++
    Cases_on `x` ++
    Cases_on `y` ++
    FULL_SIMP_TAC std_ss [] ++
@@ -266,24 +409,26 @@ val wf_encode_prod = store_thm
 
 val wf_encode_sum = store_thm
   ("wf_encode_sum",
-   ``!f g. wf_encoder f /\ wf_encoder g ==> wf_encoder (encode_sum f g)``,
-   RW_TAC std_ss [wf_encoder_alt] ++
+   ``!p1 p2 e1 e2.
+       wf_encoder p1 e1 /\ wf_encoder p2 e2 ==>
+       wf_encoder (lift_sum p1 p2) (encode_sum e1 e2)``,
+   RW_TAC std_ss [wf_encoder_def, lift_sum_def] ++
    Cases_on `x` ++
    Cases_on `y` ++
    FULL_SIMP_TAC std_ss [encode_sum_def, IS_PREFIX]);
 
 val wf_encode_option = store_thm
   ("wf_encode_option",
-   ``!f. wf_encoder f ==> wf_encoder (encode_option f)``,
-   RW_TAC std_ss [wf_encoder_alt] ++
+   ``!p e. wf_encoder p e ==> wf_encoder (lift_option p) (encode_option e)``,
+   RW_TAC std_ss [wf_encoder_def, lift_option_def] ++
    Cases_on `x` ++
    Cases_on `y` ++
    FULL_SIMP_TAC std_ss [encode_option_def, IS_PREFIX]);
 
 val wf_encode_num = store_thm
   ("wf_encode_num",
-   ``wf_encoder encode_num``,
-   SIMP_TAC std_ss [wf_encoder_alt] ++
+   ``wf_encoder total encode_num``,
+   SIMP_TAC std_ss [wf_encoder_def, total_def] ++
    recInduct encode_num_ind ++
    GEN_TAC ++
    Cases_on `n = 0` >>
@@ -330,10 +475,10 @@ val wf_encode_num = store_thm
     ONCE_REWRITE_TAC [MULT_COMM] ++
     RW_TAC arith_ss [MULT_DIV]]);
 
-val wf_pencode_list = store_thm
-  ("wf_pencode_list",
-   ``!p e. wf_pencoder p e ==> wf_pencoder (EVERY p) (encode_list e)``,
-   RW_TAC std_ss [wf_pencoder_def] ++
+val wf_encode_list = store_thm
+  ("wf_encode_list",
+   ``!p e. wf_encoder p e ==> wf_encoder (EVERY p) (encode_list e)``,
+   RW_TAC std_ss [wf_encoder_def] ++
    POP_ASSUM MP_TAC ++
    POP_ASSUM MP_TAC ++
    POP_ASSUM MP_TAC ++
@@ -351,36 +496,46 @@ val wf_pencode_list = store_thm
    Suff `h = h'` >> PROVE_TAC [IS_PREFIX_APPENDS] ++
    PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
 
-val wf_encode_list = store_thm
-  ("wf_encode_list",
-   ``!f. wf_encoder f ==> wf_encoder (encode_list f)``,
-   PROVE_TAC [wf_encoder_def, wf_pencode_list, every_total]);
-
-(*---------------------------------------------------------------------------*)
-(* A congruence rule for encode_list                                         *)
-(*---------------------------------------------------------------------------*)
-
-val encode_list_cong = store_thm
- ("encode_list_cong",
-  ``!l1 l2 f1 f2.
-      (l1=l2) /\ (!x. MEM x l2 ==> (f1 x = f2 x)) 
-              ==>
-      (encode_list f1 l1 = encode_list f2 l2)``,
-  Induct ++
-  SIMP_TAC list_ss [MEM,encode_list_def] ++
-  RW_TAC list_ss []);
-
-val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME(fn ppstrm =>
-   let val S = PP.add_string ppstrm
-       fun NL() = PP.add_newline ppstrm
-   in
-  S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());";
-  NL()
-  end)};
-
+val wf_encode_tree = store_thm
+  ("wf_encode_tree",
+   ``!p e. wf_encoder p e ==> wf_encoder (lift_tree p) (encode_tree e)``,
+   RW_TAC std_ss [] ++
+   SIMP_TAC std_ss [wf_encoder_alt] ++
+   HO_MATCH_MP_TAC tree_ind ++
+   REPEAT GEN_TAC ++
+   REPEAT DISCH_TAC ++
+   Cases ++
+   SIMP_TAC std_ss [lift_tree_def, encode_tree_def] ++
+   REPEAT STRIP_TAC ++
+   Know `a = a'` >> PROVE_TAC [biprefix_append, wf_encoder_alt] ++
+   RW_TAC std_ss [] ++
+   FULL_SIMP_TAC std_ss [biprefix_appends] ++
+   POP_ASSUM MP_TAC ++
+   POP_ASSUM MP_TAC ++
+   POP_ASSUM (K ALL_TAC) ++
+   POP_ASSUM MP_TAC ++
+   POP_ASSUM (K ALL_TAC) ++
+   CONV_TAC (DEPTH_CONV ETA_CONV) ++
+   POP_ASSUM MP_TAC ++
+   Q.SPEC_TAC (`ts`, `z`) ++
+   Q.SPEC_TAC (`l`, `y`) ++
+   Induct >>
+   (Cases ++ RW_TAC std_ss [IS_PREFIX, encode_list_def, biprefix_def]) ++
+   GEN_TAC ++
+   Cases >> RW_TAC std_ss [IS_PREFIX, encode_list_def, biprefix_def] ++
+   SIMP_TAC std_ss [encode_list_def, EVERY_DEF, biprefix_cons] ++
+   REPEAT STRIP_TAC ++
+   Know `h = h'` >>
+   (Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `h'`) ++
+    Q.PAT_ASSUM `!x. P x` (K ALL_TAC) ++
+    RW_TAC std_ss [MEM] ++
+    MATCH_MP_TAC EQ_SYM ++
+    POP_ASSUM MATCH_MP_TAC ++
+    RW_TAC std_ss [] ++
+    PROVE_TAC [biprefix_append]) ++
+   RW_TAC std_ss [] ++
+   Q.PAT_ASSUM `!z. (!x. P x z) ==> Q z`
+   (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO]) ++
+   PROVE_TAC [MEM, biprefix_appends]);
 
 val _ = export_theory ();

@@ -1,491 +1,460 @@
 (*===========================================================================*)
-(* Mapping from `:bool list` back to the original type. Implemented by       *)
-(* monadic-style parsing. There is some difficulty when the types get        *)
-(* more complex, owing to the requirement to prove termination.              *)
+(* Defining Decoders to be inverse Encoders                                  *)
 (*===========================================================================*)
 
 (* Interactive mode
-app load ["rich_listTheory", "EncodeTheory"];
+app load ["bossLib", "rich_listTheory", "EncodeTheory", "normalForms"];
 *)
 
 open HolKernel boolLib Parse bossLib pairTheory pairTools
      arithmeticTheory listTheory rich_listTheory EncodeTheory
-     mesonLib optionTheory;
-
-val REVERSE = Tactical.REVERSE;
+     mesonLib optionTheory normalForms combinTheory;
 
 val _ = new_theory "Decode";
 
-(*---------------------------------------------------------------------------*)
-(* A well-formed monadic parser is one that doesn't increase the length of   *)
-(* the input by parsing it. A *strict* well-formed monadic parser decreases  *)
-(* the input by parsing it.                                                  *)
-(*---------------------------------------------------------------------------*)
+infixr 0 ++ || <<;
+infix 1 >>;
 
-val wf_decoder_def = Define
-  `wf_decoder f =
-   !a x b.
-     (f a = SOME (x, b)) ==>
-     ?c. (APPEND c b = a) /\ !d. f (APPEND c d) = SOME (x, d)`;
+val op ++ = op THEN;
+val op >> = op THEN1;
+val op << = op THENL;
+val op || = op ORELSE;
 
-val swf_decoder_def = Define
-   `swf_decoder f =
-    wf_decoder f /\ !a x b. (f a = SOME (x, b)) ==> LENGTH b < LENGTH a`;
+val Suff = Q_TAC SUFF_TAC;
+val Know = Q_TAC KNOW_TAC;
 
-val swf_imp_wf_decoder = Q.store_thm
-("swf_imp_wf_decoder",
- `!f. swf_decoder f ==> wf_decoder f`,
- RW_TAC arith_ss [swf_decoder_def]);
-
-val wf_decoder_alt = store_thm
-  ("wf_decoder_alt",
-   ``!f.
-       wf_decoder f =
-       !x a b.
-         (f a = SOME (x, b)) ==>
-         LENGTH b <= LENGTH a /\
-         (!c. f (APPEND a c) = SOME (x, APPEND b c)) /\
-         (?c. IS_PREFIX a c /\ (f c = SOME (x, [])))``,
-   SIMP_TAC bool_ss [wf_decoder_def] THEN
-   REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
-   [RES_TAC THEN
-    Q.PAT_ASSUM `APPEND X Y = Z`
-    (fn th => SIMP_TAC arith_ss [LENGTH_APPEND, SYM th]),
-    RES_TAC THEN
-    Q.PAT_ASSUM `APPEND X Y = Z` (fn th => REWRITE_TAC [SYM th]) THEN
-    ASM_REWRITE_TAC [GSYM APPEND_ASSOC],
-    RES_TAC THEN
-    Q.EXISTS_TAC `c` THEN
-    POP_ASSUM
-    (fn th => REWRITE_TAC [REWRITE_RULE [APPEND_NIL] (Q.SPEC `[]` th)]) THEN
-    ASM_MESON_TAC [IS_PREFIX_APPEND],
-    RES_TAC THEN
-    Q.EXISTS_TAC `c` THEN
-    (REVERSE CONJ_TAC THEN1 ASM_MESON_TAC [APPEND_NIL]) THEN
-    Q.PAT_ASSUM `IS_PREFIX X Y` MP_TAC THEN
-    REWRITE_TAC [IS_PREFIX_APPEND] THEN
-    STRIP_TAC THEN
-    Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `[]`) THEN
-    REWRITE_TAC [APPEND_NIL] THEN
-    (Q_TAC KNOW_TAC `f a = SOME (x, l)` THEN1 ASM_MESON_TAC [APPEND_NIL]) THEN
-    SIMP_TAC bool_ss [optionTheory.SOME_11, pairTheory.PAIR_EQ] THEN
-    ASM_MESON_TAC []]);
-
-val swf_decoder_alt = store_thm
-  ("swf_decoder_alt",
-   ``!f.
-       swf_decoder f =
-       !x a b.
-         (f a = SOME (x, b)) ==>
-         LENGTH b < LENGTH a /\
-         (!c. f (APPEND a c) = SOME (x, APPEND b c)) /\
-         (?c. IS_PREFIX a c /\ (f c = SOME (x, [])))``,
-   SIMP_TAC bool_ss [swf_decoder_def, wf_decoder_alt] THEN
-   REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
-   ASM_MESON_TAC [DECIDE ``!m n : num. m < n ==> m <= n``]);
+val REVERSE = Tactical.REVERSE;
 
 (*---------------------------------------------------------------------------
-     The definition of some decoding parsers
+     decode turns a decoding parser of type
+
+       bool list -> ('a # bool list) option
+
+     into a straight function of type
+
+       bool list -> 'a
  ---------------------------------------------------------------------------*)
 
-val decode_bool_def = Define
-  `(decode_bool [] = NONE) /\
-   (decode_bool (h::t) = SOME(h,t))`;
-    
-val decode_unit_def = Define
-   `decode_unit l = SOME((),l)`;
-
-val decode_prod_def = Define
-   `decode_prod p1 p2 (l:bool list) = 
-       case p1 l 
-        of NONE -> NONE
-        || SOME(x:'a,l1:bool list) ->
-            (case p2 l1
-              of NONE -> NONE
-              || SOME(y:'b,l2:bool list) -> SOME((x,y),l2))`;
-
-val decode_sum_def = Define
-  `(decode_sum p1 p2   []   = NONE) /\
-   (decode_sum p1 p2 (T::t) = 
-        (case p1 t
-          of NONE -> NONE
-          || SOME(x:'a,rst) -> SOME(INL x,rst))) /\
-   (decode_sum p1 p2 (F::t) = 
-         (case p2 t
-           of NONE -> NONE
-           || SOME(y:'b,rst:bool list) -> SOME(INR y,rst)))`;
-   
-val decode_num_def = Define
-  `(decode_num (T::T::t) = SOME(0:num,t))                         /\
-   (decode_num (T::F::t) = (case decode_num t
-                             of NONE -> NONE
-                             || SOME(v,t') -> SOME(2*v + 1, t'))) /\
-   (decode_num (F::t)    = (case decode_num t
-                             of NONE -> NONE
-                             || SOME(v,t') -> SOME(2*v + 2, t'))) /\
-   (decode_num  _____    = NONE)`;
-
-val decode_num_ind = fetch "-" "decode_num_ind";
-
-val decode_option_def = Define
-  `(decode_option f   []   = (NONE:('a option#bool list)option)) /\
-   (decode_option f (F::t) = SOME(NONE,t)) /\
-   (decode_option f (T::t) = case f t
-                              of NONE -> NONE
-                              || SOME(v,t') -> SOME(SOME v, t'))`;
-  
-(*---------------------------------------------------------------------------*)
-(* This definition has to be schematic in f, since the termination of        *)
-(* decode_list depends on the behaviour of f. Same thing happens with every  *)
-(* recursive polymorphic type.                                               *)
-(*                                                                           *)
-(* At the same time we partially instantiate decode_list_def and             *)
-(* decode_list_ind to a length measure, and require their arguments to be    *)
-(* wf_decoders.                                                               *)
-(*---------------------------------------------------------------------------*)
-
-local
-  val def = TotalDefn.DefineSchema
-    `(decode_list [] = NONE)            /\
-     (decode_list (F::t) = SOME([],t))  /\  
-     (decode_list (T::t) = 
-        case f t 
-         of NONE -> NONE
-         || SOME(h,t') ->
-             (case decode_list t'
-               of NONE -> NONE
-               || SOME(tl, t'') -> SOME(h::tl, t'')))`;   
-
-  val ind = fetch "-" "decode_list_ind";
-
-  val listlemma =prove
-    (``!f p.
-         ((!t v v1 v2.
-             (f t = SOME v) /\ (v = (v1,v2)) ==> LENGTH v2 <= LENGTH t) ==>
-          p) ==>
-       wf_decoder f ==> p``,
-     RW_TAC std_ss [wf_decoder_alt]);
-
-  val th = DISCH_ALL def;
-  val th1 = Q.INST [`R` |-> `measure LENGTH`] th;
-  val th2 = REWRITE_RULE [prim_recTheory.WF_measure] th1;
-  val def' = 
-    MATCH_MP listlemma
-    (REWRITE_RULE [DECIDE (Term`x < SUC y = x <= y`),
-                   prim_recTheory.measure_thm,listTheory.LENGTH] th2);
-
-  val th = DISCH_ALL ind;
-  val th1 = Q.INST [`R` |-> `measure LENGTH`] th;
-  val th2 = REWRITE_RULE [prim_recTheory.WF_measure] th1;
-  val ind' = 
-    MATCH_MP listlemma
-    (REWRITE_RULE [DECIDE (Term`x < SUC y = x <= y`),
-                   prim_recTheory.measure_thm,listTheory.LENGTH] th2);
-in
-  val decode_list_def = save_thm ("decode_list_def", def');
-  val decode_list_ind = save_thm ("decode_list_ind", ind');
-end;
+val decode_def = Define `decode f = FST o THE o f`;
 
 (*---------------------------------------------------------------------------
-   Alternative definitions for decoders with lots of cases.
-  ---------------------------------------------------------------------------*)
+     Well-formed decoders: the definition is carefully chosen to be the
+     dual of well-formed encoders.
+ ---------------------------------------------------------------------------*)
 
-val decode_bool_alt = store_thm
-  ("decode_bool_alt",
-   ``decode_bool l = case l of [] -> NONE || (h :: t) -> SOME (h, t)``,
-   REPEAT CASE_TAC THEN
-   RW_TAC std_ss [decode_bool_def]);
+val wf_decoder_def = Define
+  `wf_decoder p (d : bool list -> ('a # bool list) option) =
+   !x.
+     if p x then (?a. !b c. (d b = SOME (x, c)) = (b = APPEND a c))
+     else !a b. ~(d a = SOME (x, b))`;
 
-val decode_sum_alt = store_thm
-  ("decode_sum_alt",
-   ``decode_sum p1 p2 l =
-     case l of [] -> NONE
-     || (T :: t) ->
-        (case p1 t of NONE -> NONE
-         || SOME (x:'a, t') -> SOME (INL x, t'))
-     || (F :: t) ->
-        (case p2 t of NONE -> NONE
-         || SOME (y:'b, t':bool list) -> SOME (INR y, t'))``,
-   REPEAT CASE_TAC THEN
-   RW_TAC std_ss [decode_sum_def]);
+(*---------------------------------------------------------------------------
+     Functions to transform well-formed encoders to well-formed decoders,
+     and vice versa.
+ ---------------------------------------------------------------------------*)
 
-val decode_num_alt = store_thm 
-  ("decode_num_alt",
-   ``decode_num l =
-     case l of [] -> NONE
-     || (F :: t) ->
-        (case decode_num t of NONE -> NONE
-         || SOME (n, t') -> SOME (2 * n + 2, t'))
-     || [T] -> NONE
-     || (T :: T :: t) -> SOME (0, t)
-     || (T :: F :: t) ->
-        (case decode_num t of NONE -> NONE
-         || SOME (n, t') -> SOME (2 * n + 1, t'))``,
-   REPEAT CASE_TAC THEN
-   RW_TAC std_ss [decode_num_def]);
+val enc2dec_def = Define
+  `enc2dec p e (l : bool list) =
+   if ?x t. p (x : 'a) /\ (l = APPEND (e x) t)
+   then SOME (@(x, t). p x /\ (l = APPEND (e x) t))
+   else NONE`;
 
-val decode_option_alt = store_thm
-  ("decode_option_alt",
-   ``decode_option f l =
-     case l of [] -> (NONE : ('a option # bool list) option)
-     || (T :: t) ->
-        (case f t of NONE -> NONE
-         || SOME (v, t') -> SOME (SOME v, t'))
-     || (F :: t) -> SOME (NONE, t)``,
-   REPEAT CASE_TAC THEN
-   RW_TAC std_ss [decode_option_def]);
+val dec2enc_def = Define
+  `dec2enc (d : bool list -> ('a # bool list) option) x =
+   @l. d l = SOME (x, [])`;
 
-val decode_list_alt = store_thm
-  ("decode_list_alt",
-   ``wf_decoder f ==>
-     (decode_list f l =
+(*---------------------------------------------------------------------------
+     Proofs that the transformation functions are mutually inverse.
+ ---------------------------------------------------------------------------*)
+
+val enc2dec_none = store_thm
+  ("enc2dec_none",
+   ``!p e l. (enc2dec p e l = NONE) = (!x t. p x ==> ~(l = APPEND (e x) t))``,
+   RW_TAC std_ss [enc2dec_def] ++
+   PROVE_TAC []);
+
+val enc2dec_some = store_thm
+  ("enc2dec_some",
+   ``!p e l x t.
+       wf_encoder p e ==>
+       ((enc2dec p e l = SOME (x, t)) = p x /\ (l = APPEND (e x) t))``,
+   REVERSE (RW_TAC std_ss [enc2dec_def]) >> PROVE_TAC [] ++
+   ONCE_REWRITE_TAC [GSYM (ONCE_DEPTH_CONV ETA_CONV ``@p. q p``)] ++
+   SELECT_TAC ++
+   RW_TAC std_ss [UNCURRY] ++
+   Cases_on `p'` ++
+   EQ_TAC >>
+   (DISCH_THEN (fn th => POP_ASSUM MP_TAC THEN SUBST1_TAC th) ++
+    SIMP_TAC std_ss [] ++
+    DISCH_THEN MATCH_MP_TAC ++
+    PROVE_TAC [FST, SND]) ++
+   POP_ASSUM MP_TAC ++
+   MATCH_MP_TAC
+   (PROVE [] ``(z ==> x) /\ (y ==> z ==> t) ==> (x ==> y) ==> z ==> t``) ++
+   CONJ_TAC >> PROVE_TAC [FST, SND] ++
+   SIMP_TAC std_ss [] ++
+   REPEAT (DISCH_THEN STRIP_ASSUME_TAC) ++
+   Suff `q = x` >> PROVE_TAC [APPEND_11] ++
+   FULL_SIMP_TAC std_ss [wf_encoder_def] ++
+   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2, IS_PREFIX_REFL]);
+
+val wf_enc2dec = store_thm
+  ("wf_enc2dec",
+   ``!p e. wf_encoder p e ==> wf_decoder p (enc2dec p e)``,
+   RW_TAC std_ss [wf_decoder_def, enc2dec_some] ++
+   PROVE_TAC [APPEND_NIL]);
+
+val dec2enc_some = store_thm
+  ("dec2enc_some",
+   ``!p d x l.
+       wf_decoder p d ==>
+       ((dec2enc d x = l) /\ p x = (d l = SOME (x, [])))``,
+   RW_TAC std_ss [dec2enc_def] ++
+   SELECT_TAC ++
+   RW_TAC std_ss [] ++
+   EQ_TAC >>
+   (RW_TAC std_ss [] ++
+    Q.PAT_ASSUM `X ==> Y` MATCH_MP_TAC ++
+    FULL_SIMP_TAC std_ss [wf_decoder_def] ++
+    PROVE_TAC [APPEND_NIL]) ++
+   POP_ASSUM MP_TAC ++
+   MATCH_MP_TAC
+   (PROVE [] ``(z ==> x) /\ (y ==> z ==> t) ==> (x ==> y) ==> z ==> t``) ++
+   CONJ_TAC >> PROVE_TAC [] ++
+   POP_ASSUM MP_TAC ++
+   SIMP_TAC std_ss [wf_decoder_def] ++
+   DISCH_THEN (MP_TAC o Q.SPEC `x`) ++
+   REVERSE (Cases_on `p x`) >> PROVE_TAC [] ++
+   ASM_REWRITE_TAC [] ++
+   DISCH_THEN (CHOOSE_THEN MP_TAC) ++
+   RW_TAC std_ss []);
+
+val decode_dec2enc = store_thm
+  ("decode_dec2enc",
+   ``!p d x.
+       wf_decoder p d /\ p x ==> (d (dec2enc d x) = SOME (x, []))``,
+   PROVE_TAC [dec2enc_some]);
+
+val decode_dec2enc_append = store_thm
+  ("decode_dec2enc_append",
+   ``!p d x t.
+       wf_decoder p d /\ p x ==>
+       (d (APPEND (dec2enc d x) t) = SOME (x, t))``,
+   RW_TAC std_ss [] ++
+   MP_TAC (Q.SPECL [`p`, `d`, `x`] decode_dec2enc) ++
+   RW_TAC std_ss [] ++
+   FULL_SIMP_TAC std_ss [wf_decoder_def] ++
+   Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`) ++
+   RW_TAC std_ss [] ++
+   RW_TAC std_ss [] ++
+   RES_TAC ++
+   RW_TAC std_ss [APPEND_NIL]);
+
+val wf_dec2enc = store_thm
+  ("wf_dec2enc",
+   ``!p d. wf_decoder p d ==> wf_encoder p (dec2enc d)``,
+   RW_TAC std_ss [wf_encoder_def] ++
+   MP_TAC (Q.SPECL [`p`, `d`] wf_decoder_def) ++
+   ASM_REWRITE_TAC [] ++
+   DISCH_THEN (fn th => MP_TAC (Q.SPEC `x` th) THEN MP_TAC (Q.SPEC `y` th)) ++
+   RW_TAC std_ss [] ++
+   MP_TAC (Q.SPECL [`p`, `d`, `x`] decode_dec2enc) ++
+   MP_TAC (Q.SPECL [`p`, `d`, `y`] decode_dec2enc) ++
+   RW_TAC std_ss [APPEND_NIL] ++
+   POP_ASSUM MP_TAC ++
+   POP_ASSUM MP_TAC ++
+   POP_ASSUM (CHOOSE_THEN MP_TAC o REWRITE_RULE [IS_PREFIX_APPEND]) ++
+   RW_TAC std_ss [GSYM APPEND_ASSOC] ++
+   POP_ASSUM (MP_TAC o Q.SPECL [`APPEND (dec2enc d y) l`, `[]`]) ++
+   POP_ASSUM (MP_TAC o Q.SPECL [`APPEND (dec2enc d y) l`, `l`]) ++
+   RW_TAC std_ss [APPEND_NIL]);
+
+val dec2enc_enc2dec = store_thm
+  ("dec2enc_enc2dec",
+   ``!p e x. wf_encoder p e /\ p x ==> (dec2enc (enc2dec p e) x = e x)``,
+   RW_TAC std_ss [] ++
+   MP_TAC (Q.SPECL [`p`, `e`] wf_enc2dec) ++
+   RW_TAC std_ss [dec2enc_some] ++
+   MP_TAC (Q.SPECL [`p`, `enc2dec p e`, `x`, `e x`] dec2enc_some) ++
+   RW_TAC std_ss [enc2dec_some, APPEND_NIL]);
+
+val enc2dec_dec2enc = store_thm
+  ("enc2dec_dec2enc",
+   ``!p d. wf_decoder p d ==> (enc2dec p (dec2enc d) = d)``,
+   RW_TAC std_ss [] ++
+   MATCH_MP_TAC EQ_EXT ++
+   Q.X_GEN_TAC `l` ++
+   MP_TAC (Q.SPECL [`p`, `d`] wf_dec2enc) ++
+   RW_TAC std_ss [] ++
+   Cases_on `d l` <<
+   [RW_TAC std_ss [enc2dec_none] ++
+    STRIP_TAC ++
+    RW_TAC std_ss [] ++
+    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    PROVE_TAC [NOT_SOME_NONE, decode_dec2enc_append],
+    Cases_on `x` ++
+    ASM_SIMP_TAC std_ss [enc2dec_some] ++
+    MATCH_MP_TAC (PROVE [] ``x /\ (x ==> y) ==> x /\ y``) ++
+    RW_TAC std_ss [] >> PROVE_TAC [wf_decoder_def] ++
+    MP_TAC (Q.SPECL [`p`, `d`] wf_decoder_def) ++
+    ASM_REWRITE_TAC [] ++
+    DISCH_THEN (MP_TAC o Q.SPEC `q`) ++
+    RW_TAC std_ss [] ++
+    RES_TAC ++
+    RW_TAC std_ss [APPEND_11] ++
+    Suff `d a = SOME (q, [])` >> PROVE_TAC [dec2enc_some] ++
+    RW_TAC std_ss [APPEND_NIL]]);
+
+(*---------------------------------------------------------------------------
+     Boolean decoders
+ ---------------------------------------------------------------------------*)
+
+val dec_bool_def = Define `dec_bool = enc2dec total encode_bool`;
+
+val decode_bool_def = Define `decode_bool = decode dec_bool`;
+
+val wf_dec_bool = store_thm
+  ("wf_dec_bool",
+   ``wf_decoder total dec_bool``,
+   RW_TAC std_ss [dec_bool_def, wf_enc2dec, wf_encode_bool]);
+
+val dec2enc_dec_bool = store_thm
+  ("dec2enc_dec_bool",
+   ``dec2enc dec_bool = encode_bool``,
+   MATCH_MP_TAC EQ_EXT ++
+   RW_TAC std_ss
+   [dec_bool_def, dec2enc_enc2dec, wf_encode_bool, total_def]);
+
+val dec_bool = store_thm
+  ("dec_bool",
+   ``dec_bool l = case l of [] -> NONE || (h :: t) -> SOME (h, t)``,
+   REPEAT CASE_TAC ++
+   RW_TAC std_ss
+   [dec_bool_def, enc2dec_none, enc2dec_some, encode_bool_def,
+    APPEND, wf_encode_bool, total_def]);
+
+(*---------------------------------------------------------------------------
+     List decoders
+ ---------------------------------------------------------------------------*)
+
+val dec_list_def = Define
+  `dec_list p d = enc2dec p (encode_list (dec2enc d))`;
+
+val decode_list_def = Define `decode_list p d = decode (dec_list p d)`;
+
+val wf_dec_list = store_thm
+  ("wf_dec_list",
+   ``!p d.
+       wf_decoder p d ==> wf_decoder (EVERY p) (dec_list (EVERY p) d)``,
+   RW_TAC std_ss [dec_list_def] ++
+   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_list]);
+
+val dec2enc_dec_list = store_thm
+  ("dec2enc_dec_list",
+   ``!p d x.
+       wf_decoder p d /\ EVERY p x ==>
+       (dec2enc (dec_list (EVERY p) d) x = encode_list (dec2enc d) x)``,
+   RW_TAC std_ss
+   [dec_list_def, dec2enc_enc2dec, wf_encode_list, wf_dec2enc]);
+
+val encode_then_dec_list = store_thm
+  ("decode_encode_list",
+   ``!p e l t.
+       wf_encoder p e /\ EVERY p l ==>
+       (dec_list (EVERY p) (enc2dec p e) (APPEND (encode_list e l) t) =
+        SOME (l, t))``,
+   RW_TAC std_ss [dec_list_def] ++
+   MP_TAC
+   (Q.SPECL [`EVERY p`, `encode_list (dec2enc (enc2dec p e))`,
+             `APPEND (encode_list e l) t`, `l`, `t`]
+    (INST_TYPE [alpha |-> ``:'a list``] enc2dec_some)) ++
+   MATCH_MP_TAC (PROVE [] ``x /\ (y ==> z) ==> (x ==> y) ==> z``) ++
+   CONJ_TAC >> PROVE_TAC [wf_encode_list, wf_dec2enc, wf_enc2dec] ++
+   RW_TAC std_ss [APPEND_11] ++
+   POP_ASSUM (K ALL_TAC) ++
+   Induct_on `l` ++
+   RW_TAC std_ss [EVERY_DEF, encode_list_def, APPEND_11] ++
+   PROVE_TAC [dec2enc_enc2dec]);
+
+val dec_list = store_thm
+  ("dec_list",
+   ``wf_decoder p d ==>
+     (dec_list (EVERY p) d l =
       case l of [] -> NONE
       || (T :: t) ->
-         (case f t of NONE -> NONE
+         (case d t of NONE -> NONE
           || SOME (x, t') ->
-             (case decode_list f t' of NONE -> NONE
+             (case dec_list (EVERY p) d t' of NONE -> NONE
               || SOME (xs, t'') -> SOME (x :: xs, t'')))
       || (F :: t) -> SOME ([], t))``,
-   REPEAT CASE_TAC THEN
-   RW_TAC std_ss [decode_list_def]);
+   (REPEAT CASE_TAC ++
+    RW_TAC std_ss [dec_list_def, enc2dec_none]) <<
+   [Cases_on `x` ++
+    RW_TAC std_ss [encode_list_def, APPEND],
+    Cases_on `x` ++
+    POP_ASSUM MP_TAC ++
+    RW_TAC std_ss [encode_list_def, APPEND, GSYM APPEND_ASSOC, EVERY_DEF] ++
+    POP_ASSUM (K ALL_TAC) ++
+    Q.SPEC_TAC (`APPEND (encode_list (dec2enc d) t'') t'`, `l`) ++
+    REPEAT STRIP_TAC ++
+    RW_TAC std_ss [] ++
+    MP_TAC (Q.SPECL [`p`, `d`] wf_decoder_def) ++
+    RW_TAC std_ss [] ++
+    Q.EXISTS_TAC `h` ++
+    RW_TAC std_ss [] ++
+    PROVE_TAC [decode_dec2enc_append, NOT_SOME_NONE],
+    Cases_on `x` ++
+    POP_ASSUM MP_TAC ++
+    RW_TAC std_ss [encode_list_def, APPEND, GSYM APPEND_ASSOC, EVERY_DEF] ++
+    STRIP_TAC ++
+    RW_TAC std_ss [] ++
+    Q.PAT_ASSUM `X = SOME Y` MP_TAC ++
+    MP_TAC (Q.SPECL [`p`, `d`, `h`] decode_dec2enc_append) ++
+    ASM_SIMP_TAC std_ss [] ++
+    DISCH_THEN (K ALL_TAC) ++
+    PURE_REWRITE_TAC [GSYM DE_MORGAN_THM] ++
+    STRIP_TAC ++
+    RW_TAC std_ss [] ++
+    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    RW_TAC std_ss [dec_list_def, enc2dec_none] ++
+    PROVE_TAC [],
+    Know `wf_decoder (EVERY p) (dec_list (EVERY p) d)` >>
+    PROVE_TAC [wf_dec_list] ++
+    STRIP_TAC ++
+    Know `wf_encoder p (dec2enc d)` >> PROVE_TAC [wf_dec2enc] ++
+    STRIP_TAC ++
+    Know `wf_encoder (EVERY p) (encode_list (dec2enc d))` >>
+    PROVE_TAC [wf_encode_list] ++
+    STRIP_TAC ++
+    ASM_SIMP_TAC std_ss [enc2dec_some, encode_list_def, APPEND] ++
+    MATCH_MP_TAC (PROVE [] ``x /\ (x ==> y) ==> x /\ y``) ++
+    CONJ_TAC >> PROVE_TAC [EVERY_DEF, wf_decoder_def, wf_dec_list] ++
+    RW_TAC std_ss [EVERY_DEF] ++
+    MP_TAC (Q.SPECL [`p`, `d`] wf_decoder_def) ++
+    ASM_SIMP_TAC std_ss [] ++
+    DISCH_THEN (MP_TAC o Q.SPEC `q`) ++
+    RW_TAC std_ss [] ++
+    RES_TAC ++
+    RW_TAC std_ss [GSYM APPEND_ASSOC] ++
+    Know `dec2enc d q = a` >> PROVE_TAC [APPEND_NIL, dec2enc_some] ++
+    RW_TAC std_ss [APPEND_11] ++
+    Q.PAT_ASSUM `!x. P x` (K ALL_TAC) ++
+    MP_TAC
+    (Q.ISPECL [`EVERY (p : 'a -> bool)`, `dec_list (EVERY p) d`]
+     wf_decoder_def) ++
+    ASM_SIMP_TAC std_ss [] ++
+    DISCH_THEN (MP_TAC o Q.SPEC `q'`) ++
+    RW_TAC std_ss [] ++
+    RES_TAC ++
+    RW_TAC std_ss [] ++
+    Q.PAT_ASSUM `!x. P x` (K ALL_TAC) ++
+    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    ASM_SIMP_TAC std_ss [dec_list_def, enc2dec_some],
+    Know `wf_decoder (EVERY p) (dec_list (EVERY p) d)` >>
+    PROVE_TAC [wf_dec_list] ++
+    STRIP_TAC ++
+    Know `wf_encoder p (dec2enc d)` >> PROVE_TAC [wf_dec2enc] ++
+    STRIP_TAC ++
+    Know `wf_encoder (EVERY p) (encode_list (dec2enc d))` >>
+    PROVE_TAC [wf_encode_list] ++
+    STRIP_TAC ++
+    ASM_SIMP_TAC std_ss [enc2dec_some, encode_list_def, APPEND, EVERY_DEF]]);
 
-(*---------------------------------------------------------------------------*)
-(* Proofs that our basic monadic parsers are well-formed. Decoders for       *)
-(* single constructor types can only propagate well-formedness; decoders for *)
-(* multi-constructor types take well-formed arguments and return strict      *)
-(* well-formed results.                                                      *)
-(*---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------
+     Trees
+ ---------------------------------------------------------------------------*)
 
-val wf_decode_bool = store_thm
-  ("wf_decode_bool",
-   ``swf_decoder decode_bool``,
-   REWRITE_TAC [swf_decoder_alt] THEN
-   REPEAT (DISCH_TAC ORELSE GEN_TAC) THEN
-   POP_ASSUM (MP_TAC o REWRITE_RULE [decode_bool_alt]) THEN
-   REPEAT CASE_TAC THEN
-   RW_TAC arith_ss [LENGTH, APPEND, decode_bool_def] THEN
-   Q.EXISTS_TAC `[h]` THEN
-   RW_TAC std_ss [IS_PREFIX, decode_bool_def]);
+val dec_tree_def = Define
+  `dec_tree p d = enc2dec p (encode_tree (dec2enc d))`;
 
-val wf_decode_unit = store_thm
-  ("wf_decode_unit",
-   ``wf_decoder decode_unit``,
-   RW_TAC list_ss [wf_decoder_alt, decode_unit_def, IS_PREFIX]);
+val decode_tree_def = Define `decode_tree p d = decode (dec_tree p d)`;
 
-val wf_decode_prod = store_thm
-  ("wf_decode_prod",
-   ``!f g. wf_decoder f /\ wf_decoder g ==> wf_decoder (decode_prod f g)``,
-   SIMP_TAC std_ss [wf_decoder_def, decode_prod_def] THEN
-   REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
-   REPEAT CASE_TAC THEN
-   RW_TAC std_ss [] THEN
-   RES_TAC THEN
-   Q.EXISTS_TAC `APPEND c' c` THEN
-   RW_TAC std_ss [GSYM APPEND_ASSOC]);
+val wf_dec_tree = store_thm
+  ("wf_dec_tree",
+   ``!p d.
+       wf_decoder p d ==>
+       wf_decoder (lift_tree p) (dec_tree (lift_tree p) d)``,
+   RW_TAC std_ss [dec_tree_def] ++
+   PROVE_TAC [wf_dec2enc, wf_enc2dec, wf_encode_tree]);
 
-val wf_decode_prod1 = store_thm
-  ("wf_decode_prod1",
-   ``!f g. swf_decoder f /\ wf_decoder g ==> swf_decoder (decode_prod f g)``,
-   RW_TAC std_ss [swf_decoder_def, wf_decode_prod, decode_prod_def] THEN
-   POP_ASSUM MP_TAC THEN
-   REPEAT CASE_TAC THEN
-   RW_TAC std_ss [] THEN
-   FULL_SIMP_TAC std_ss [wf_decoder_alt] THEN
-   RES_TAC THEN
-   ASM_MESON_TAC [LESS_EQ_LESS_TRANS]);
-
-val wf_decode_prod2 = store_thm
-  ("wf_decode_prod2",
-   ``!f g. wf_decoder f /\ swf_decoder g ==> swf_decoder (decode_prod f g)``,
-   RW_TAC std_ss [swf_decoder_def, wf_decode_prod, decode_prod_def] THEN
-   POP_ASSUM MP_TAC THEN
-   REPEAT CASE_TAC THEN
-   RW_TAC std_ss [] THEN
-   FULL_SIMP_TAC std_ss [wf_decoder_alt] THEN
-   RES_TAC THEN
-   ASM_MESON_TAC [LESS_LESS_EQ_TRANS]);
-
-val swf_decode_sum = store_thm
-  ("swf_decode_sum",
-   ``!f g. wf_decoder f /\ wf_decoder g ==> swf_decoder (decode_sum f g)``,
-   RW_TAC std_ss [swf_decoder_def] THENL
-   [REPEAT (POP_ASSUM MP_TAC) THEN
-    RW_TAC std_ss [wf_decoder_def] THEN
-    POP_ASSUM (MP_TAC o REWRITE_RULE [decode_sum_alt]) THEN
-    (REPEAT CASE_TAC THEN
-     RW_TAC std_ss [] THEN
-     RES_TAC) THENL
-    [Q.EXISTS_TAC `T :: c` THEN
-     RW_TAC std_ss [APPEND, decode_sum_def],
-     Q.EXISTS_TAC `F :: c` THEN
-     RW_TAC std_ss [APPEND, decode_sum_def]],
-    REPEAT (POP_ASSUM MP_TAC) THEN
-    RW_TAC std_ss [wf_decoder_alt, decode_sum_alt] THEN
-    REPEAT (POP_ASSUM MP_TAC) THEN
-    REPEAT CASE_TAC THEN
-    RW_TAC std_ss [] THEN
-    RES_TAC THEN
-    RW_TAC arith_ss [LENGTH]]);
-
-val swf_decode_option = store_thm
-  ("swf_decode_option",
-   ``!f. wf_decoder f ==> swf_decoder (decode_option f)``,
-   RW_TAC std_ss [swf_decoder_def] THENL
-   [POP_ASSUM MP_TAC THEN
-    RW_TAC std_ss [wf_decoder_def] THEN
-    POP_ASSUM (MP_TAC o REWRITE_RULE [decode_option_alt]) THEN
-    (REPEAT CASE_TAC THEN
-     RW_TAC std_ss []) THENL
-    [RES_TAC THEN
-     Q.EXISTS_TAC `T :: c` THEN
-     RW_TAC std_ss [APPEND, decode_option_def],
-     Q.EXISTS_TAC `[F]` THEN
-     RW_TAC std_ss [APPEND, decode_option_def]],
-    REPEAT (POP_ASSUM MP_TAC) THEN
-    RW_TAC std_ss [wf_decoder_alt, decode_option_alt] THEN
-    POP_ASSUM MP_TAC THEN
-    REPEAT CASE_TAC THEN
-    RW_TAC std_ss [] THEN
-    RES_TAC THEN
-    RW_TAC arith_ss [LENGTH]]);
-
-(*---------------------------------------------------------------------------*)
-(* Some recursive types. Induction needed in the proofs, of course. We use   *)
-(* the custom induction theorems produced at definition time.                *)
-(*---------------------------------------------------------------------------*)
-
-val wf_decode_num = store_thm
-  ("wf_decode_num",
-   ``swf_decoder decode_num``,
-   REWRITE_TAC [swf_decoder_def] THEN
-   MATCH_MP_TAC (DECIDE ``!a b. a /\ (a ==> b) ==> a /\ b``) THEN
-   CONJ_TAC THENL
-   [SIMP_TAC std_ss [wf_decoder_def] THEN
-    recInduct decode_num_ind THEN
-    RW_TAC list_ss [decode_num_def] THENL
-    [Q.EXISTS_TAC `[T; T]` THEN
-     RW_TAC std_ss [IS_PREFIX, decode_num_def, APPEND],
-     POP_ASSUM MP_TAC THEN
-     REPEAT CASE_TAC THEN
-     RW_TAC std_ss [] THEN
-     RES_TAC THEN
-     Q.EXISTS_TAC `T::F::c` THEN
-     RW_TAC std_ss [APPEND, decode_num_def],
-     POP_ASSUM MP_TAC THEN
-     REPEAT CASE_TAC THEN
-     RW_TAC std_ss [] THEN
-     RES_TAC THEN
-     Q.EXISTS_TAC `F::c` THEN
-     RW_TAC std_ss [APPEND, decode_num_def]],
-    SIMP_TAC std_ss [wf_decoder_alt] THEN
-    STRIP_TAC THEN
-    recInduct decode_num_ind THEN
-    RW_TAC list_ss [decode_num_def] THEN
-    POP_ASSUM MP_TAC THEN
-    REPEAT CASE_TAC THEN
-    RES_TAC THEN
-    RW_TAC arith_ss [] THEN
-    RW_TAC arith_ss []]);
-
-val wf_decode_list = store_thm
- ("wf_decode_list",
-  ``!f. wf_decoder f ==> swf_decoder (decode_list f)``,
-   REPEAT STRIP_TAC THEN
-   REWRITE_TAC [swf_decoder_def] THEN
-   MATCH_MP_TAC (DECIDE ``!a b. a /\ (a ==> b) ==> a /\ b``) THEN
-   CONJ_TAC THENL
-   [SIMP_TAC std_ss [wf_decoder_def] THEN
-    recInduct (UNDISCH decode_list_ind) THEN
-    RW_TAC list_ss [decode_list_def] THENL
-    [Q.EXISTS_TAC `[F]` THEN
-     RW_TAC std_ss [APPEND, decode_list_def],
-     POP_ASSUM MP_TAC THEN
-     REPEAT CASE_TAC THEN
-     RW_TAC std_ss [] THEN
-     Q.PAT_ASSUM `wf_decoder f`
-     (fn th =>
-      ASSUME_TAC (REWRITE_RULE [wf_decoder_def] th) THEN ASSUME_TAC th) THEN
-     RES_TAC THEN
-     Q.EXISTS_TAC `T :: APPEND c c'` THEN
-     RW_TAC std_ss [APPEND, GSYM APPEND_ASSOC, decode_list_def]],
-    SIMP_TAC std_ss [wf_decoder_alt] THEN
-    STRIP_TAC THEN
-    recInduct (UNDISCH decode_list_ind) THEN
-    RW_TAC list_ss [decode_list_def] THEN
-    POP_ASSUM MP_TAC THEN
-    REPEAT CASE_TAC THEN
-    RW_TAC std_ss [] THEN
-    Q.PAT_ASSUM `wf_decoder f`
-    (fn th =>
-     ASSUME_TAC (REWRITE_RULE [wf_decoder_alt] th) THEN ASSUME_TAC th) THEN
-    RES_TAC THEN
-    RW_TAC arith_ss []]);
-
-(*---------------------------------------------------------------------------*)
-(* Congruence rule for decode_list. Reflects fact that decode_list calls     *)
-(* its argument on strictly smaller lists. The format of the rule is         *)
-(* slightly non-standard. Usually, antecedents are conditional rewrites. In  *)
-(* our case, we add the requirements wf_decoder f and wf_decoder g. These are  *)
-(* needed to prove the theorem. When the rule is used to extract termination *)
-(* conditions, the matched parser f (which will be used to instantiate g)    *)
-(* will have to be proved to be a wf_decoder on the fly. Therefore, the       *)
-(* condition prover in the T.C. extractor will have to be augmented to       *)
-(* understand how to prove wf_decoder goals. Note that the wf_decoder formulas *)
-(* appear after the other conditions. The conditions now get separated into  *)
-(* two conceptual blocks: the first, as before, finds the values for the     *)
-(* variables on the rhs of the conclusion (TC trapping happens here). The    *)
-(* second block is a collection of other goals, dependent on the variable    *)
-(* settings found in the first block, which need other theorem proving to    *)
-(* polish off. So we need a little "wf_decoder" prover. It may also be        *)
-(* possible to handle schematic arguments by having the wf_decoder prover     *)
-(* assume them.                                                              *)
-(*---------------------------------------------------------------------------*)
-
-(* This is where we're currently stuck---Joe, 12 Aug 2002
-val th1 = UNDISCH (decode_list'');
-val th2 = UNDISCH (Q.SPEC `g` (Q.GEN `f` decode_list''));
-
-val decode_list_cong = store_thm
-("decode_list_cong",
- ``wf_decoder f /\ wf_decoder g  ==>
-   !l1 l2. 
-      (l1=l2) /\ 
-      (!l'. LENGTH l' < LENGTH l2 ==> (f l' = g l'))
-               ==>
-      (decode_list f l1 = decode_list g l2)``,
-  STRIP_TAC 
-    THEN recInduct (UNDISCH decode_list_ind'')
-    THEN RW_TAC list_ss [th1] THEN RW_TAC list_ss [th2]
-    THEN Cases_on `g t` THEN RW_TAC std_ss []
-    THEN Cases_on `x` THEN RW_TAC std_ss []
-    THEN Cases_on `decode_list f r`
-    THEN Cases_on `decode_list g r` THEN RW_TAC std_ss []
-    THEN `f t = g t` by PROVE_TAC [prim_recTheory.LESS_SUC_REFL]
-    THEN POP_ASSUM SUBST_ALL_TAC 
-    THEN `!l'. LENGTH l' < LENGTH r ==> (f l' = g l')` 
-      by (GEN_TAC THEN DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
-          MATCH_MP_TAC (DECIDE (Term `!a b c. a < b /\ b <= c ==> a < c`)) THEN
-          Q.EXISTS_TAC `LENGTH r` THEN RW_TAC std_ss [] THEN
-          Q.PAT_ASSUM `wf_decoder g` 
-               (MP_TAC o GSYM o REWRITE_RULE [wf_decoder]) THEN
-          PROVE_TAC [DECIDE(Term`x <= y ==> x <= SUC y`)])
-    THENL [PROVE_TAC [TypeBase.distinct_of "option"],
-           PROVE_TAC [TypeBase.distinct_of "option"],
-           Cases_on `x` THEN Cases_on `x'` 
-             THEN RW_TAC std_ss []
-             THEN RES_THEN MP_TAC
-             THEN RW_TAC std_ss []]);
-
-val decode_list_cong_ideal = store_thm
-("decode_list_cong_ideal",
- ``!l1 l2 f g. 
-       (l1=l2) 
-    /\ (!l'. LENGTH l' < LENGTH l2 ==> (f l' = g l')) 
-    /\ wf_decoder f 
-    /\ wf_decoder g
-    ==>
-      (decode_list f l1 = decode_list g l2)``,
- PROVE_TAC [decode_list_cong]);
-*)
+val dec_tree = store_thm
+  ("dec_tree",
+   ``wf_decoder p d ==>
+     (dec_tree (lift_tree p) d l =
+      case d l of NONE -> NONE
+      || SOME (a, t) ->
+         (case dec_list (EVERY (lift_tree p))
+               (dec_tree (lift_tree p) d) t
+          of NONE -> NONE
+          || SOME (ts, t') -> SOME (Node a ts, t')))``,
+   STRIP_TAC ++
+   Know `wf_decoder (lift_tree p) (dec_tree (lift_tree p) d)` >>
+   PROVE_TAC [wf_dec_tree] ++
+   STRIP_TAC ++
+   Know `wf_decoder (EVERY (lift_tree p))
+         (dec_list (EVERY (lift_tree p)) (dec_tree (lift_tree p) d))` >>
+   PROVE_TAC [wf_dec_list] ++
+   STRIP_TAC ++
+   REPEAT CASE_TAC <<
+   [RW_TAC std_ss [dec_tree_def, enc2dec_none] ++
+    STRIP_TAC ++
+    RW_TAC std_ss [] ++
+    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    Cases_on `x` ++
+    RW_TAC std_ss [encode_tree_def, GSYM APPEND_ASSOC] ++
+    POP_ASSUM MP_TAC ++
+    RW_TAC std_ss [lift_tree_def] ++
+    MP_TAC (Q.SPECL [`p`, `d`, `a`] decode_dec2enc_append) ++
+    RW_TAC std_ss [],
+    RW_TAC std_ss [dec_tree_def, enc2dec_none] ++
+    STRIP_TAC ++
+    RW_TAC std_ss [] ++
+    Q.PAT_ASSUM `X = SOME Y` MP_TAC ++
+    POP_ASSUM MP_TAC ++
+    Cases_on `x` ++
+    RW_TAC std_ss [lift_tree_def, encode_tree_def, GSYM APPEND_ASSOC] ++
+    MP_TAC (Q.SPECL [`p`, `d`, `a`] decode_dec2enc_append) ++
+    RW_TAC std_ss [] ++
+    REVERSE (Cases_on `a = q`) >> RW_TAC std_ss [] ++
+    RW_TAC std_ss [] ++
+    STRIP_TAC ++
+    RW_TAC std_ss [] ++
+    POP_ASSUM (K ALL_TAC) ++
+    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    POP_ASSUM MP_TAC ++
+    POP_ASSUM (K ALL_TAC) ++
+    CONV_TAC (DEPTH_CONV ETA_CONV) ++
+    STRIP_TAC ++
+    MP_TAC (Q.SPECL [`lift_tree p`, `encode_tree (dec2enc d)`, `l`, `t`]
+            (INST_TYPE [alpha |-> ``:'a tree``] encode_then_dec_list)) ++
+    MATCH_MP_TAC (PROVE [] ``(y ==> z) /\ x ==> (x ==> y) ==> z``) ++
+    CONJ_TAC >> RW_TAC std_ss [dec_tree_def] ++
+    PROVE_TAC [wf_encode_tree, wf_dec2enc],
+    MP_TAC
+    (Q.SPECL [`lift_tree p`, `encode_tree (dec2enc d)`, `l`, `Node q q'`, `r'`]
+     (INST_TYPE [alpha |-> ``:'a tree``] enc2dec_some)) ++
+    MATCH_MP_TAC (PROVE [] ``x /\ (y ==> z) ==> (x ==> y) ==> z``) ++
+    CONJ_TAC >> PROVE_TAC [wf_encode_tree, wf_dec2enc] ++
+    DISCH_THEN (fn th => SIMP_TAC std_ss [dec_tree_def, th]) ++
+    SIMP_TAC std_ss [encode_tree_def, GSYM APPEND_ASSOC, lift_tree_def] ++
+    CONV_TAC (DEPTH_CONV ETA_CONV) ++
+    Suff
+    `(p q /\ (l = APPEND (dec2enc d q) r)) /\
+     (ALL_EL (lift_tree p) q' /\
+      (r = APPEND (encode_list (encode_tree (dec2enc d)) q') r'))` >>
+    RW_TAC std_ss [] ++
+    CONJ_TAC <<
+    [Know `enc2dec p (dec2enc d) l = SOME (q, r)` >>
+     PROVE_TAC [enc2dec_dec2enc] ++
+     RW_TAC std_ss [enc2dec_some, wf_dec2enc],
+     POP_ASSUM MP_TAC ++
+     SIMP_TAC std_ss [dec_list_def] ++
+     RW_TAC std_ss [enc2dec_some, wf_dec2enc, wf_encode_list, APPEND_11] ++
+     Q.PAT_ASSUM `X = Y` (K ALL_TAC) ++
+     Induct_on `q'` ++
+     RW_TAC std_ss [EVERY_DEF, encode_list_def, APPEND_11] ++
+     RW_TAC std_ss
+     [dec_tree_def, dec2enc_enc2dec, wf_dec2enc, wf_encode_tree]]]);
 
 val _ = export_theory ();
+
