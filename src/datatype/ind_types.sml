@@ -1155,7 +1155,7 @@ local
   fun SWAP_TILL_BOTTOM_THEN c t =
     ((SWAP_VARS_CONV THENC BINDER_CONV (SWAP_TILL_BOTTOM_THEN c)) ORELSEC c) t
   fun app_letter ty =
-    if is_vartype ty then String.sub(dest_vartype ty, 0)
+    if is_vartype ty then String.sub(dest_vartype ty, 1)
     else String.sub(#1 (dest_type ty), 0)
   fun new_name ctxt ty = let
     fun nvary ctxt nm n = let
