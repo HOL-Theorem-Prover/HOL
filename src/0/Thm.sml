@@ -210,14 +210,14 @@ fun MP (THM(o1,asl1,c1)) (THM(o2,asl2,c2)) =
  * invocations of mk_thm are in Thm.                                         *
  *---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------
+(*---------------------------------------------------------------------------*
  *  Symmetry of =
  *
  *       A |- t1 = t2
  *     ----------------
  *       A |- t2 = t1
  *
- *fun SYM th =
+ * fun SYM th =
  *   let val (t1,t2) = dest_eq(concl th)
  *       val v = genvar(type_of t1)
  *   in
@@ -304,21 +304,22 @@ fun ALPHA t1 t2 =
  *   SUBS_OCCS [([2], funth), ([2], argth)] (REFL (Comb(f,x))))
  *   ? failwith `MK_COMB`;
  *---------------------------------------------------------------------------*)
+
 fun MK_COMB (funth,argth) =
    let val (eek,L) = strip_comb(concl funth)
-       and {lhs=x, rhs=y} = dest_eq (concl argth)
+       val {lhs=x, rhs=y} = dest_eq (concl argth)
    in
-     case L 
-      of [f,g] => make_thm Count.MkComb
+     case (dest_const eek, L)
+      of ({Name="=",Ty}, [f,g]) 
+          => make_thm Count.MkComb
                    (Tag.merge (tag funth) (tag argth),
                     union (hyp funth) (hyp argth), 
-                    mk_eq_nocheck (rng_ty (dom_ty (type_of eek)))
+                    mk_eq_nocheck (rng_ty (dom_ty Ty))
                                   (mk_comb{Rator=f, Rand=x})
                                   (mk_comb{Rator=g, Rand=y}))
        | _ => THM_ERR "" ""
    end
    handle HOL_ERR _ => THM_ERR"MK_COMB" "";
-
 
 
 (*---------------------------------------------------------------------------
