@@ -6,17 +6,17 @@
 Restores recognition of a constant by the quotation parser.
 
 \DESCRIBE
-A call {reveal "c"}, where {c} is a (perhaps) hidden constant, will 
+A call {reveal "c"}, where {c} is a (perhaps) hidden constant, will
 unhide the constant, that is, will make the quotation parser recognize
-it as such rather than treating it as a variable. It reverses the 
+it as such rather than treating it as a variable. It reverses the
 effect of the call {Parse.hide "c"}.
 
 \FAILURE
-Never fails.
+Never fails, but prints a warning message if the string does not
+correspond to an actual constant.
 
 \COMMENTS
-
-The hiding of a constant only affects the quotation parser; 
+The hiding of a constant only affects the quotation parser;
 the constant is still there in a theory.
 
 \SEEALSO

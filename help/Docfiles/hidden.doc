@@ -19,6 +19,6 @@ The hiding of a constant only affects the quotation parser; the constant is
 still there in a theory.
 
 \SEEALSO
-Parse.reveal, Parse.hide.
+hide, reveal.
 
 \ENDDOC
