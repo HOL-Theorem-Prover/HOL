@@ -738,19 +738,25 @@ fun pp_term (G : grammar) TyG = let
           if print_type then add_type() else ();
           pend print_type; end_block()
         end
-      | CONST{Name = cname0, ...} => let
+      | CONST{Name = cname0, Ty} => let
           val cname =
             case Overload.overloading_of_term overload_info tm of
               SOME s => s
             | NONE => cname0
           val crules = lookup_term cname
+          val is_string_literal =
+            (#Tyop(dest_type Ty) = "string" handle HOL_ERR _ => false) andalso
+            (cname = "emptystring" orelse Lexis.is_string_literal cname)
           fun print_string_literal s = let
-            val contents0 = String.substring(s, 1, size s - 2)
             fun tr #"\\" = "\\\\"
               | tr #"\"" = "\\\""
               | tr #"\n" = "\\n"
               | tr c = str c
-            val contents = String.translate tr contents0
+            val contents =
+              if String.sub(s,0) = #"\"" then
+                String.translate tr (String.substring(s, 1, size s - 2))
+              else
+                ""
           in
             add_string "\""; add_string contents; add_string "\""
           end
@@ -760,8 +766,7 @@ fun pp_term (G : grammar) TyG = let
             if cname = "0" andalso can_pr_numeral NONE then
               pr_numeral NONE tm
             else
-              if Lexis.is_string_literal cname then
-                print_string_literal cname
+              if is_string_literal then print_string_literal cname
               else add_string cname
         end
       | COMB{Rator, Rand} => let

@@ -511,10 +511,10 @@ local
 in
 fun lookup_const thy s e = lookup_tmc thy s e
   handle HOL_ERR _ =>  (* handle the family cases, if necessary *)
-    (case Globals.strings_defined()
-     of false => raise e
-      | true => if (Lexis.is_string_literal s)
-                  then mkX (mkString thy e) s else raise e)
+    if Globals.strings_defined() andalso Lexis.is_string_literal s then
+      if (s="\"\"") then lookup_const thy "emptystring" e
+      else mkX (mkString thy e) s
+    else raise e
 end;
 
 (*---------------------------------------------------------------------------
@@ -586,11 +586,11 @@ fun plucky x L =
 fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk, STH,
                         GR, facts, overwritten,adjoin}) =
   case (plucky s1 facts)
-   of SOME (X,(_,b),Y) => 
-         {facts=X@((s2,b)::Y), 
+   of SOME (X,(_,b),Y) =>
+         {facts=X@((s2,b)::Y),
           overwritten=overwritten, adjoin=adjoin,
           thid=thid, con_wrt_disk=con_wrt_disk, STH=STH, GR=GR}
-    | NONE => 
+    | NONE =>
         (Lib.mesg true (Lib.quote s1^" not found in current theory"); rcd)
 
 
@@ -1185,7 +1185,7 @@ datatype clientfixable = BADNAMES of string list
  *    Allocate a new theory segment over an existing one.                    *
  *---------------------------------------------------------------------------*)
 
-fun gen_new_theory printers str 
+fun gen_new_theory printers str
             (thy as {thid,con_wrt_disk,STH, GR,facts,...}:theory) =
   if not(Lexis.ok_identifier str)
   then FAILURE (CLIENT(EXN (THEORY_ERR"new_theory"
