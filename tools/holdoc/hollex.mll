@@ -12,11 +12,16 @@ exception BadChar of string      (* bad character *)
 exception EOF                    (* attempt to read past (already-reported) EOF *)
 
 
-let check_close expected got lexbuf =
-  if expected = got then
+type parser_info = {
+    expected : delim;   (* expected closing delimiter *)
+    backtick : bool;    (* is a backtick OK here? *)
+  }
+
+let check_close pi got lexbuf =
+  if pi.expected = got then
     From
   else
-    raise (Mismatch ("Mismatched delimiters: "^(delim_info expected).sopen^" closed by "^(delim_info got).sclose ^ " at " ^ pretty_pos lexbuf))
+    raise (Mismatch ("Mismatched delimiters: "^(delim_info pi.expected).sopen^" closed by "^(delim_info got).sclose ^ " at " ^ pretty_pos lexbuf))
 
 let bad_char mode lexbuf =
   raise (BadChar ("didn't expect char '"^Lexing.lexeme lexbuf^"' at " ^ pretty_pos lexbuf ^ " in " ^ render_mode mode ^ " mode (or illegal character in lexeme beginning here)."))
@@ -239,7 +244,7 @@ rule
   | starttex               { fun _  -> ToTex(DelimTex) }
   | startdir               { fun _  -> ToDir(DelimDir) }
   | startcom               { fun _  -> ToText(DelimText) }
-  | eof                    { fun ed -> check_close ed DelimEOF lexbuf }
+  | eof                    { fun pi -> check_close pi DelimEOF lexbuf }
   | _                      { fun _  -> bad_char ModeMosml lexbuf }
     
 and
@@ -250,17 +255,17 @@ and
                              register_newlines lexbuf s;
                              fun _  -> Str (String.sub s 1 (String.length s - 2)) }
   | startdir               { fun _  -> ToDir(DelimDir) }
-  | tendhol                { fun ed -> check_close ed DelimHolTex lexbuf }
-  | tendhol0               { fun ed -> check_close ed DelimHolTexMath lexbuf }
+  | tendhol                { fun pi -> check_close pi DelimHolTex lexbuf }
+  | tendhol0               { fun pi -> check_close pi DelimHolTexMath lexbuf }
   | starttex               { fun _  -> ToTex(DelimTex) }
   | startcom               { fun _  -> ToText(DelimText) }
   | dollar? anysymb        { fun _  -> Ident (Lexing.lexeme lexbuf,true) }
   | newline white*         { register_newline lexbuf;
                              fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
   | white+                 { fun _  -> White (Lexing.lexeme lexbuf) }
-  | backtick               { fun ed -> check_close ed DelimHolMosml lexbuf }
-  | backtick backtick      { fun ed -> check_close ed DelimHolMosmlD lexbuf }
-  | eof                    { fun ed -> check_close ed DelimEOF lexbuf }
+  | backtick               { fun pi -> check_close pi DelimHolMosml lexbuf }
+  | backtick backtick      { fun pi -> check_close pi DelimHolMosmlD lexbuf }
+  | eof                    { fun pi -> check_close pi DelimEOF lexbuf }
   | _                      { fun _  -> bad_char ModeHol lexbuf }
 
 and
@@ -269,9 +274,12 @@ and
                      register_newlines lexbuf s;
                      fun _  -> Content s }
   | startcom       { fun _  -> ToText(DelimText) }
-  | stopcom        { fun ed -> check_close ed DelimText lexbuf }
-  | eof            { fun ed -> check_close ed DelimEOF lexbuf }
-  | backtick       { fun _  -> bad_char ModeText lexbuf }
+  | stopcom        { fun pi -> check_close pi DelimText lexbuf }
+  | eof            { fun pi -> check_close pi DelimEOF lexbuf }
+  | backtick       { fun pi -> if pi.backtick then
+                                 Content (Lexing.lexeme lexbuf)
+                               else
+                                 bad_char ModeText lexbuf }
   | _              { fun _  -> bad_char ModeText lexbuf }
 
 and
@@ -286,7 +294,7 @@ and
 
     tstarthol      { fun _  -> ToHol(DelimHolTex) }
   | tstarthol0     { fun _  -> ToHol(DelimHolTexMath) }
-  | endtex         { fun ed -> check_close ed DelimTex lexbuf }
+  | endtex         { fun pi -> check_close pi DelimTex lexbuf }
   | tstartdir      { fun _  -> ToDir(DelimDir) }  (* recognised as an alias; closedelim is the same *)
   | startdir       { fun _  -> ToDir(DelimDir) }
 
@@ -301,8 +309,11 @@ and
                    { let s = Lexing.lexeme lexbuf in
                      register_newlines lexbuf s;
                      fun _  -> Content s }
-  | eof            { fun ed -> check_close ed DelimEOF lexbuf }
-  | backtick       { fun _ -> bad_char ModeTex lexbuf }
+  | eof            { fun pi -> check_close pi DelimEOF lexbuf }
+  | backtick       { fun pi -> if pi.backtick then
+                                 Content (Lexing.lexeme lexbuf)
+                               else
+                                 bad_char ModeTex lexbuf }
   | _              { let s = Lexing.lexeme lexbuf in
                      register_newlines lexbuf s;
                      fun _  -> Content s }
@@ -313,7 +324,7 @@ and
                            { let s = Lexing.lexeme lexbuf in
                              register_newlines lexbuf s;
                              fun _  -> Str (String.sub s 1 (String.length s - 2)) }
-  | enddir                 { fun ed -> check_close ed DelimDir lexbuf }
+  | enddir                 { fun pi -> check_close pi DelimDir lexbuf }
   | startcom               { fun _  -> ToText(DelimText) }
   | dollar? anysymb        { fun _  ->
                              let s = Lexing.lexeme lexbuf in
@@ -322,7 +333,7 @@ and
   | white+                 { fun _  -> White (Lexing.lexeme lexbuf) }
   | newline white*         { register_newline lexbuf;
                              fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
-  | eof                    { fun ed -> check_close ed DelimEOF lexbuf }
+  | eof                    { fun pi -> check_close pi DelimEOF lexbuf }
   | backtick               { fun _  -> bad_char ModeDir lexbuf }
   | _                      { fun _  -> bad_char ModeDir lexbuf }
 
@@ -340,6 +351,14 @@ let to_token_mode t =
   | ToTex   _ -> ModeTex  
   | ToDir   _ -> ModeDir  
   | _         -> raise (NeverHappen "to_token_mode: not To* token")
+
+
+(* is a backtick allowed in mode1, if previous mode was mode0 and
+   previous allowance was backtick0? *)
+let backtick_allowed backtick0 mode0 mode1 =
+  backtick0  (* monotonic: once it's forbidden, it's forbidden in all descendants *)
+  &&
+  (not (mode0 = ModeMosml && mode1 = ModeHol))  (* forbidden in backtick-delimited HOL *)
 
 
 (* eds is stack of enclosing delimiters *)
@@ -421,7 +440,7 @@ let nonagg_re = Str.regexp "[]()[{}~.,;]"
    nonagg chars). *)
 (* cf HOL98 src/parse/term_tokens.sml *)
 
-let rec split_ident ed nonagg_specs s lexbuf (* lexbuf for error reporting only *)
+let rec split_ident pi nonagg_specs s lexbuf (* lexbuf for error reporting only *)
     = match String.get s 0 with
         '"'  -> (Ident(s,true),String.length s)
       | '_'  -> (Ident(s,true),String.length s)
@@ -430,7 +449,7 @@ let rec split_ident ed nonagg_specs s lexbuf (* lexbuf for error reporting only 
                 (if rest = "" then
                   raise (BadChar "expected ident after $")
                 else
-                  match split_ident ed nonagg_specs rest lexbuf with
+                  match split_ident pi nonagg_specs rest lexbuf with
                     (Ident(s',b),r) -> (Ident("$"^s',b),1+r)
                   | _               -> raise (BadChar "expected ident after $"))
       | c    -> let possible_nonaggs = List.filter (function spec -> isPrefix spec s)
@@ -442,7 +461,7 @@ let rec split_ident ed nonagg_specs s lexbuf (* lexbuf for error reporting only 
                       match
                         findfirst (fun delim ->
                           let ds = (delim_info delim).sclose in
-                          if isPrefix ds s then Some (check_close ed delim lexbuf, String.length ds) else None)
+                          if isPrefix ds s then Some (check_close pi delim lexbuf, String.length ds) else None)
                           [DelimHolTex; DelimHolTexMath; DelimHolMosml; DelimHolMosmlD; DelimDir] with
                         Some x -> x
                       | None ->
@@ -458,13 +477,16 @@ let rec split_ident ed nonagg_specs s lexbuf (* lexbuf for error reporting only 
                    (Ident(best,isAlphaNum c),sz))
 
 
+(* a parser *)
+type pparser = Lexing.lexbuf -> parser_info -> token
+
 (* internal state for "token", the multiplexed parser *)
 type hollexstate = {
     lexbuf : Lexing.lexbuf;
     mutable curmode : mode;
-    mutable curparser : (Lexing.lexbuf -> delim -> token);
-    mutable curdelim : delim;
-    mutable stack : (mode * (Lexing.lexbuf -> delim -> token) * delim) list;
+    mutable curparser : pparser;
+    mutable curpi : parser_info;
+    mutable stack : (mode * pparser * parser_info) list;
   }
 
 (* create a hollexstate *)
@@ -472,16 +494,16 @@ let token_init mode lexbuf =
   { lexbuf = lexbuf;
     curmode = mode;
     curparser = modeparser mode;
-    curdelim = DelimEOF;
+    curpi = { expected = DelimEOF; backtick = true; };
     stack = [] }
 
 (* given a hollexstate, return the next token in the stream *)
 let token lst =
-  let t0 = lst.curparser lst.lexbuf lst.curdelim in
+  let t0 = lst.curparser lst.lexbuf lst.curpi in
   let t1 =
     match t0 with
     | Ident(s,_) when (lst.curmode = ModeHol || lst.curmode = ModeDir) ->
-        let (t',r) = split_ident lst.curdelim !nonagg_specials s lst.lexbuf in
+        let (t',r) = split_ident lst.curpi !nonagg_specials s lst.lexbuf in
         rewind_partial lst.lexbuf r;
         t'
     | _ -> t0
@@ -493,11 +515,12 @@ let token lst =
   | ToTex  (delim)
   | ToDir  (delim) ->
       let mode = to_token_mode t1 in
+      let backtick = backtick_allowed lst.curpi.backtick lst.curmode mode in
 (*      print_string ("\nPUSH "^render_mode lst.curmode^" -> "^render_mode mode^"\n"); *)
-      lst.stack     <- (lst.curmode,lst.curparser,lst.curdelim) :: lst.stack;
+      lst.stack     <- (lst.curmode,lst.curparser,lst.curpi) :: lst.stack;
       lst.curmode   <- mode;
       lst.curparser <- modeparser mode;
-      lst.curdelim  <- delim;
+      lst.curpi     <- { expected = delim; backtick = backtick };
       t1
   | From ->
       (match lst.stack with
@@ -505,11 +528,11 @@ let token lst =
 (*          print_string ("\nPOP - hit bottom\n");*)
           lst.curparser <- (fun _ _ -> raise EOF);
           t1
-      | ((m,p,d)::pds) ->
+      | ((m,p,pi)::pds) ->
 (*          print_string ("\nPOP "^render_mode lst.curmode^" -> "^render_mode m^"\n"); *)
           lst.curmode <- m;
           lst.curparser <- p;
-          lst.curdelim <- d;
+          lst.curpi <- pi;
           lst.stack <- pds;
           t1)
   | _ ->
