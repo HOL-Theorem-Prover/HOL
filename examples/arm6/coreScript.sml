@@ -586,7 +586,7 @@ val INIT_ARM6_def = Define`
     in
   ARM6 mem (DP reg psr pc ireg' alua alub)
        (CTRL pipeb' T pipeb' T ireg' T apipeb' apipeb' F T T
-         (NXTIC F T nxtic ireg') t3 (AREGN1 F) T F sctrlreg psrfb oareg)`;
+         (NXTIC F T nxtic ireg') t3 (AREGN1 F) nbw F sctrlreg psrfb oareg)`;
 
 (* --------------- *)
 
