@@ -228,9 +228,9 @@ fun ABS v (THM(ocl,asl,c)) =
                       => ERR "ABS" "first argument is not a variable"
  in if var_occursl v asl
      then ERR "ABS" "The variable is free in the assumptions"
-     else make_thm Count.Abs 
-            (ocl, asl, mk_eq_nocheck (vty --> ty) 
-                                     (mk_abs(v,lhs)) 
+     else make_thm Count.Abs
+            (ocl, asl, mk_eq_nocheck (vty --> ty)
+                                     (mk_abs(v,lhs))
                                      (mk_abs(v,rhs)))
  end;
 
@@ -245,7 +245,7 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
      val vset = addList(Term.empty_varset,vlist)
      val hset = hypset th
  in if isEmpty (intersection(vset,hset))
-    then let val (lhs,rhs,ty) = with_exn Term.dest_eq_ty c 
+    then let val (lhs,rhs,ty) = with_exn Term.dest_eq_ty c
                                   (thm_err "GEN_ABS" "not an equality")
              val lhs' = list_mk_binder opt (vlist,lhs)
              val rhs' = list_mk_binder opt (vlist,rhs)
@@ -718,11 +718,18 @@ fun CHOOSE (v,xth) bth =
   let val (x_asl, x_c) = sdest_thm xth
       val (b_asl, b_c) = sdest_thm bth
       val (Bvar,Body)  = dest_exists x_c
-      val newhyps = union_hyp x_asl (disch (subst [Bvar |-> v] Body, b_asl))
+      val A2_hyps = disch (subst [Bvar |-> v] Body, b_asl)
+      val newhyps = union_hyp x_asl A2_hyps
       val occursv = var_occurs v
       val _ = Assert (not(occursv x_c) andalso
                       not(occursv b_c) andalso
-                      not(hypset_exists occursv newhyps)) "" ""
+                      not(hypset_exists occursv A2_hyps)) "" ""
+    (* Need not check for occurrence of v in A1: one can imagine
+       implementing a derived rule on top of a more restrictive one that
+       instantiated the occurrence of v in A1 to something else, applied
+       the restrictive rule, and then instantiated it back again.
+
+       Credit for pointing out this optimisation to Jim Grundy. *)
   in make_thm Count.Choose
        (Tag.merge (tag xth) (tag bth), newhyps,  b_c)
   end
@@ -967,7 +974,7 @@ fun INST [] th = th
                         substf (concl th))
                      handle HOL_ERR _ => ERR "INST" ""
                   end
-                     
+
         | SOME _ => raise ERR "INST" "can only instantiate variables"
 
 
