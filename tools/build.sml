@@ -48,7 +48,7 @@ val SRCDIRS0 =
   "src/boss", "src/Boolify/src", "src/n_bit", "src/string",
   "src/llist", "src/pred_set/src", "src/path", "src/ring/src",
   "src/integer", "src/res_quan/src", "src/word/theories",
-  "src/word/src", "src/finite_map", "src/hol88", "src/real",
+  "src/word/src", "src/finite_map", "src/hol88", "src/real", "src/float",
   "src/bag", "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob",
   "src/HolSat", "src/muddy/muddyC", "src/muddy", "src/HolBdd"];
 
