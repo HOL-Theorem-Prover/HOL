@@ -311,6 +311,14 @@ in
         end
       val _ = map prove_semi11 fields
 
+      (* add to the TypeBase's simpls entry for the record type *)
+      val existing_simpls = TypeBase.simpls_of tyinfo
+      val new_simpls = [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
+                        updupd_thm, updcanon_thm] @ fupdfn_thms
+      val new_tyinfo =
+        TypeBase.put_simpls (existing_simpls @ new_simpls) tyinfo
+      val _ = TypeBase.write new_tyinfo
+
     in
       {type_axiom = typthm,
        accessor_fns = accessor_thm,
@@ -325,41 +333,41 @@ in
        create_fn = create_term}
     end;
 
-  fun create_term_fn_base arb str accthm =
+  fun create_term_fn_base arb str accthm = let
     (* str is the name of a type in theory, we can pull out the appropriate
      theorem to get a list of accessor functions, and then create a function
      just like the create_fn field of the type returned by the function
      above *)
-    let
-      val getfn = fst o strip_comb o lhs o snd o strip_forall o concl
-      val fldtyps = map (Psyntax.dest_const o getfn) (CONJUNCTS accthm)
-      val (fields,types) = split fldtyps
-      val types = map (el 2 o #Args o Rsyntax.dest_type) types
-      val constructor = #const (Term.const_decl str)
-      local
-        fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
-        val typeletters = foldl letgen [] types
-        fun constructor_args [] =
-          let fun mkarb typ = Psyntax.mk_const("ARB", typ)
+    val getfn = fst o strip_comb o lhs o snd o strip_forall o concl
+    val fldtyps = map (Psyntax.dest_const o getfn) (CONJUNCTS accthm)
+    val (fields,types) = split fldtyps
+    val types = map (el 2 o #Args o Rsyntax.dest_type) types
+    val constructor = #const (Term.const_decl str)
+    local
+      fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
+      val typeletters = foldl letgen [] types
+      fun constructor_args args =
+        case args of
+          [] => let
+            fun mkarb typ = Psyntax.mk_const("ARB", typ)
           in
             if (arb) then map mkarb types
-                     else typeletters
-
-          end |
-          constructor_args ((f,t)::xs) =
-          let val rest = constructor_args xs
+            else typeletters
+          end
+        | ((f,t)::xs) => let
+            val rest = constructor_args xs
             val posn = findi f fields handle _ =>
               raise Fail "Bad field name"
           in
             update posn t rest
           end
-      in
-        fun create_term ftl =
-          list_mk_comb(constructor, constructor_args ftl)
-      end
     in
-      create_term
-    end;
+      fun create_term ftl =
+        list_mk_comb(constructor, constructor_args ftl)
+    end
+  in
+    create_term
+  end;
 
   val create_term_fn = create_term_fn_base true
   val create_term_fn_vars = create_term_fn_base false
