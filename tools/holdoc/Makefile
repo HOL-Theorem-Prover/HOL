@@ -1,14 +1,22 @@
 # override this by setting OCAMLPATH in your .profile; if your OCaml
 # version is before 3.03a, also set OCAMLPPFLAGS to the empty string.
+# define NOOCAMLPATH if you want to just use whatever is in the current path,
+# either with "export NOOCAMLPATH=1; make all" or with "make NOOCAMLPATH=1 all".
 OCAMLPATH?=/usr/groups/netsem/ocaml/bin
-OCAMLPPFLAGS?=-pp $(OCAMLPATH)/camlp4o
+ifdef NOOCAMLPATH
+OCAMLPREFIX=
+else
+OCAMLPREFIX=$(OCAMLPATH)/
+endif
+OCAMLPPFLAGS?=-pp $(OCAMLPREFIX)camlp4o
 # add -pp camlp4o for ocaml version 3.03a and above, apparently
 
-OCAMLC=$(OCAMLPATH)/ocamlc $(OCAMLPPFLAGS)
-OCAMLOPT=$(OCAMLPATH)/ocamlopt $(OCAMLPPFLAGS)
-OCAMLLEX=$(OCAMLPATH)/ocamllex
-OCAMLYACC=${OCAMLPATH}/ocamlyacc
-OCAMLDEP=$(OCAMLPATH)/ocamldep -native $(OCAMLPPFLAGS)
+
+OCAMLC=$(OCAMLPREFIX)ocamlc $(OCAMLPPFLAGS)
+OCAMLOPT=$(OCAMLPREFIX)ocamlopt $(OCAMLPPFLAGS)
+OCAMLLEX=$(OCAMLPREFIX)ocamllex
+OCAMLYACC=$(OCAMLPREFIX)ocamlyacc
+OCAMLDEP=$(OCAMLPREFIX)ocamldep -native $(OCAMLPPFLAGS)
 
 LATEX=latex
 DVIPS=dvips
