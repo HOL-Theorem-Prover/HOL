@@ -1,6 +1,6 @@
-\DOC bool_ty
+\DOC bool
 
-\TYPE {bool_ty : type}
+\TYPE {Type.bool : hol_type}
 
 \SYNOPSIS
 Holds the logical type constant {bool}.
