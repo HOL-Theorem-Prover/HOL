@@ -64,17 +64,15 @@ val valid_keywords =
                        "FAILURE", "EXAMPLE", "ENDDOC", "LIBRARY",
                        "STRUCTURE"])
 
-local val noindent = Substring.all "noindent"
-      val noindent_size = Substring.size noindent
+fun check_string ss = let
+  val s = Substring.string ss
 in
-fun noindent_elim (ss1::ss2::rst) =
-     let val (ssa,ssb) = position "noindent" ss2
-     in if isEmpty ssa
-          then noindent_elim (all (concat[ss1, triml noindent_size ssb])::rst)
-          else ss1::noindent_elim (ss2::rst)
-     end
-  | noindent_elim l = l
-end;
+  if Binaryset.member(valid_keywords, s) then
+    s
+  else
+    raise ParseError ("Unknown keyword: "^s)
+end
+
 
 fun divide ss =
   if isEmpty ss
@@ -117,26 +115,28 @@ fun to_sections ss =
       val (docpart, rest) = find_doc ss
       val sslist = docpart :: divide rest
       (* butlast below drops final \enddoc *)
-      val sslist1 = noindent_elim (longtype_elim (butlast sslist))
+      val sslist1 = longtype_elim (butlast sslist)
   in
-   map ((string##dropl Char.isSpace) o splitl (not o Char.isSpace)) sslist1
+   map ((check_string ## dropl Char.isSpace) o
+        splitl (not o Char.isSpace)) sslist1
   end;
 
 (*---------------------------------------------------------------------------
         Divide into maximal chunks of text enclosed by braces.
  ---------------------------------------------------------------------------*)
 
-fun braces ss =
-  case getc ss of
-    SOME(#"}", ss1) => let
-    in
-      case getc ss1 of
-        SOME(#"}", ss2) => braces ss2
-      | _ => ss1
-    end
-  | SOME(_, ss1) => braces ss1
-  | NONE => raise ParseError "No closing brace"
-
+(* skips over text until it finds the end of a brace delimited bit of text *)
+fun braces ss = let
+  fun recurse ss n =
+      case getc ss of
+        SOME(#"}", ss1) => if n = 1 then ss1
+                           else recurse ss1 (n - 1)
+      | SOME(#"{", ss1) => recurse ss1 (n + 1)
+      | SOME (_, ss1) => recurse ss1 n
+      | NONE => raise ParseError "No closing brace"
+in
+  recurse ss 0
+end
 
 fun markup ss =
  let val (ssa,ssb) = position "{" ss
@@ -165,24 +165,20 @@ val paragraphs =
   end;
 
 
-(* Rejects singleton braces wherever they might appear.  Doesn't require
-   doubled braces to balance. *)
-fun elim_double_braces ss = let
+(* Translates out escaped braces wherever they might appear.  *)
+fun unescape_braces ss = let
   fun isBrace c = c = #"{" orelse c = #"}"
   fun recurse acc ss = let
-    val (ssa, ssb) = splitl (not o isBrace) ss
+    val (ssa, ssb) = splitl (not o equal #"\\") ss
   in
-    case size ssb of
-      0 => concat (rev (ssa::acc))
-    | 1 => raise ParseError "singleton brace in {}-delimited text"
-    | _ => if sub(ssb,0) <> sub(ssb,1) then
-             raise ParseError "singleton brace in {}-delimited text"
-           else let
-               val (s,j,n) = base ssa
-               val (s,k,m) = base ssb
-             in
-               recurse (substring(s,j,n+1)::acc) (substring(s,k+2,m-2))
-             end
+    if size ssb = 0 then
+      concat (List.rev (ssa::acc))
+    else if isPrefix "\\lbrace" ssb then
+      recurse (all "{"::ssa::acc) (triml 7 ssb)
+    else if isPrefix "\\rbrace" ssb then
+      recurse (all "}"::ssa::acc) (triml 7 ssb)
+    else
+      recurse (slice(ss,0,SOME (size ssa + 1))::acc) (triml 1 ssb)
   end
 in
   all (recurse [] ss)
@@ -197,7 +193,7 @@ fun parse_type ss =
               else raise ParseError "Closing brace not found in \\TYPE"
            end
         | other => ss
-  in elim_double_braces ss'
+  in unescape_braces ss'
   end
 
 fun trimws mlist =
@@ -229,9 +225,39 @@ fun install_doc_part fname sections =
          FIELD("DOC", [TEXT (name_from_fname fname)]) :: ss
     | x => x
 
+fun check_char_markup m = let
+  fun illegal_char c = c = #"{" orelse c = #"}" orelse c = #"\\"
+in
+  case m of
+    TEXT ss => let
+      val (ssa, ssb) = splitl (not o illegal_char) ss
+    in
+      if not (isEmpty ssb) then let
+          val (s0, j, _) = base ssb
+          val lo = if j > 5 then j - 5 else 0
+          val hi = if j + 5 > String.size s0 then NONE else SOME (j + 5 - lo)
+        in
+          raise ParseError ("Illegal character "^str (sub(ssb,0))^ " in "^
+                            "context: "^string (extract(s0,lo,hi)))
+        end
+      else ()
+    end
+  | _ => ()
+end
+
+
+fun check_char_section s =
+    case s of
+      FIELD (fname, mlist) => if fname <> "DOC" then
+                                List.app check_char_markup mlist
+                              else ()
+    | _ => ()
+
+fun final_char_check slist = (List.app check_char_section slist; slist)
+
 fun parse_file docfile =
- let fun db_out (BRKT ss) = BRKT (elim_double_braces ss)
-       | db_out (XMPL ss) = XMPL (elim_double_braces ss)
+ let fun db_out (BRKT ss) = BRKT (unescape_braces ss)
+       | db_out (XMPL ss) = XMPL (unescape_braces ss)
        | db_out otherwise = otherwise
 
      fun section (tag, ss) =
@@ -244,7 +270,7 @@ fun parse_file docfile =
            FIELD (tag, trimws (List.map db_out (paragraphs (markup ss))))
      val firstpass = List.map section (to_sections (fetch_contents docfile))
   in
-   install_doc_part docfile firstpass
+   final_char_check (install_doc_part docfile firstpass)
   end handle ParseError s => raise ParseError (docfile^": "^s)
            | x => (warn ("Exception raised in "^docfile^"\n"); raise x)
 
