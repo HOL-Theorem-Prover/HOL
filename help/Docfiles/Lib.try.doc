@@ -1,4 +1,4 @@
-\DOC try
+\DOC
 
 \TYPE {try : ('a -> 'b) -> 'a -> 'b}
 
@@ -7,7 +7,6 @@
 \KEYWORDS exception, error, application
 
 \DESCRIBE
-
 The application {try f x} evaluates {f x}; if this evaluation raises an
 exception {e}, then {e} is examined and some information about it is
 printed before {e} is re-raised. If {f x} evaluates to {y}, then {y} is
@@ -18,7 +17,6 @@ Unfortunately, the information held in the exception is not then printed.
 {try} can often display this information.
 
 \FAILURE
-
 When application of the first argument to the second raises an exception.
 
 \EXAMPLE
@@ -34,8 +32,7 @@ When application of the first argument to the second raises an exception.
     ! Uncaught exception: 
     ! HOL_ERR
 }
-
-Evaluation order can be significant. ML evaluates {try M N} by
+\noindent Evaluation order can be significant. ML evaluates {try M N} by
 evaluating {M} (yielding {f} say) and {N} (yielding {x} say), and then
 {f} is applied to {x}. Any exceptions raised in the course of evaluating
 {M} or {N} will not be detected by {try}. In such cases it is better to
@@ -55,6 +52,6 @@ the way to the top level; however, {Raise} does handle the exception.
     ! HOL_ERR
 }
 
-\SEEALSO Lib, Raise, trye.
+\SEEALSO Feedback.Raise, Lib.trye.
 
 \ENDDOC

@@ -1,6 +1,6 @@
 \DOC DISJ2
 
-\TYPE {DISJ2 : (term -> thm -> thm)}
+\TYPE {DISJ2 : term -> thm -> thm}
 
 \SYNOPSIS
 Introduces a left disjunct into the conclusion of a theorem.

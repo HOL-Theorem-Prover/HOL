@@ -7,7 +7,6 @@
 \KEYWORDS exception, error handling.
 
 \DESCRIBE
-
 The standard exception for HOL applications to raise is {HOL_ERR}. The
 use of a single exception simplifies the writing of exception handlers
 and facilities for decoding and printing error messages. However, ML
@@ -23,24 +22,23 @@ is {HOL_ERR}, then it is raised; otherwise, {e} is mapped to an
 application of {HOL_ERR} and then raised.
 
 \FAILURE
-
 Fails if the function application fails.
 
 \EXAMPLE
 {
-    - hd [];
-    ! Uncaught exception: 
-    ! Empty
+- hd [];
+! Uncaught exception: 
+! Empty
 
-    - trye hd [];
-    ! Uncaught exception: 
-    ! HOL_ERR
+- trye hd [];
+! Uncaught exception: 
+! HOL_ERR
 
-    - trye (fn _ => raise Interrupt) 1;
-    > Interrupted
+- trye (fn _ => raise Interrupt) 1;
+> Interrupted
 }
 
 \SEEALSO
-Lib, Feedback.Raise, try.
+Lib, Feedback.Raise, Lib.try.
 
 \ENDDOC

@@ -1,6 +1,6 @@
 \DOC DISJ_CASES_UNION
 
-\TYPE {DISJ_CASES_UNION : (thm -> thm -> thm -> thm)}
+\TYPE {DISJ_CASES_UNION : thm -> thm -> thm -> thm}
 
 \SYNOPSIS
 Makes an inference for each arm of a disjunct.
