@@ -64,8 +64,15 @@ html1/DTD/xhtml1-strict.dtd">
     everywhere (we hope!), it is not necessarily the same as the old
     behaviour on examples which used to work.
 
-<li> <code>pairLib.PAIRED_ETA_CONV</code> was broken.  Thanks to
-    Viktor Sabelfeld for the bug report.
+<li> <p> <code>pairLib.PAIRED_ETA_CONV</code> was broken.  Thanks to
+    Viktor Sabelfeld for the bug report.</p> </li>
+
+<li> <p> <code>Q.UNDISCH_THEN</code> was behaving more as if it were
+    <code>Q.PAT_UNDISCH_THEN</code>; it was finding matches in the
+    assumptions rather than equal terms.  Thanks to Lockwood Morris
+    for the bug report. </p> </li>
+
+
 </ul>
 
 <h2>New features:</h2>
