@@ -182,6 +182,30 @@ val BAG_INSERT_commutes = store_thm(
   REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN
   ELIM_TAC THEN ARWT);
 
+val _ = print "Properties of BAG_UNION\n";
+val BAG_UNION_LEFT_CANCEL = store_thm(
+  "BAG_UNION_LEFT_CANCEL",
+  ``!b b1 b2:'a -> num. (BAG_UNION b b1 = BAG_UNION b b2) = (b1 = b2)``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN SIMP_TAC hol_ss [BAG_UNION] THEN
+  STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
+  POP_ASSUM (MP_TAC o C AP_THM ``x:'a``) THEN
+  SIMP_TAC hol_ss []);
+
+val COMM_BAG_UNION = store_thm(
+  "COMM_BAG_UNION",
+  (--`!b1 b2. BAG_UNION b1 b2 = BAG_UNION b2 b1`--),
+  REWRITE_TAC [BAG_UNION] THEN
+  REPEAT STRIP_TAC THEN FUN_EQ_TAC THEN SIMP_TAC hol_ss []);
+val bu_comm = COMM_BAG_UNION;
+
+val ASSOC_BAG_UNION = store_thm(
+  "ASSOC_BAG_UNION",
+  (--`!b1 b2 b3. BAG_UNION b1 (BAG_UNION b2 b3)
+                 =
+                 BAG_UNION (BAG_UNION b1 b2) b3`--),
+  REWRITE_TAC [BAG_UNION] THEN
+  REPEAT STRIP_TAC THEN FUN_EQ_TAC THEN SIMP_TAC hol_ss []);
+
 val _ = print "Definition and properties of BAG_DELETE\n"
 val BAG_DELETE = new_definition (
   "BAG_DELETE",
