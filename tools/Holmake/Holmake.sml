@@ -467,6 +467,8 @@ fun fromFile f =
   | SML c => codeToString c ^ ".sml"
   | Unhandled s => s
 
+fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
+
 (** Construction of the dependency graph
     ------------------------------------
 
@@ -984,10 +986,7 @@ in
 end
 
 fun generate_all_plausible_targets () = let
-  val extra_targets =
-    case extra_rules of
-      [] => []
-    | (er::_) => [toFile (#target er)]
+  val extra_targets = [toFile (#target(hd extra_rules))] handle Empty => []
   fun find_files ds P =
     case FileSys.readDir ds of
       NONE => []
@@ -1005,8 +1004,13 @@ fun generate_all_plausible_targets () = let
     | src_to_target (SML s) = (UO s)
     | src_to_target (SIG s) = (UO s)
     | src_to_target _ = raise Fail "Can't happen"
+  val initially = map (src_to_target o toFile) src_files @ extra_targets
+  fun remove_sorted_dups [] = []
+    | remove_sorted_dups [x] = [x]
+    | remove_sorted_dups (x::y::z) = if x = y then remove_sorted_dups (y::z)
+                                     else x :: remove_sorted_dups (y::z)
 in
-  remove_duplicates (map (src_to_target o toFile) src_files @ extra_targets)
+  remove_sorted_dups (Listsort.sort file_compare initially)
 end
 
 
