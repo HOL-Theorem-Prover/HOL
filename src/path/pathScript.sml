@@ -715,6 +715,55 @@ val filter_every = store_thm(
   HO_MATCH_MP_TAC every_coinduction THEN
   PROVE_TAC [filter_eq_stopped, filter_eq_pcons]);
 
+val _ = print "Defining generation of paths from functions\n"
+
+val pgenerate_t = ``\f. (FST (f 0), SOME (SND (f 0), f o SUC))``
+
+val pgenerate_def = new_specification ("pgenerate_def",
+  ["pgenerate"],
+  prove(``?pg. !f g. pg f g = pcons (f 0) (g 0) (pg (f o SUC) (g o SUC))``,
+        Q.X_CHOOSE_THEN `h` ASSUME_TAC
+            (CONV_RULE SKOLEM_CONV (ISPEC pgenerate_t path_Axiom)) THEN
+        Q.EXISTS_TAC `\f g. h (\x. (f x, g x))` THEN
+        SIMP_TAC (srw_ss()) [] THEN REPEAT GEN_TAC THEN
+        POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
+        SIMP_TAC (srw_ss()) [combinTheory.o_DEF]));
+
+val pgenerate_infinite = store_thm(
+  "pgenerate_infinite",
+  ``!f g. ~finite (pgenerate f g)``,
+  Q_TAC SUFF_TAC `!p. finite p ==> !f g. ~(p = pgenerate f g)` THEN1
+  PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC finite_path_ind THEN CONJ_TAC THENL [
+    ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][],
+    REPEAT GEN_TAC THEN STRIP_TAC THEN ONCE_REWRITE_TAC [pgenerate_def] THEN
+    SRW_TAC [][]
+  ]);
+
+val el_pgenerate = store_thm(
+  "el_pgenerate",
+  ``!n f g. el n (pgenerate f g) = f n``,
+  Induct THEN ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][el_def]);
+
+val nth_label_def = Define`
+  (nth_label 0 p = first_label p) /\
+  (nth_label (SUC n) p = nth_label n (tail p))
+`;
+
+val nth_label_pgenerate = store_thm(
+  "nth_label_pgenerate",
+  ``!n f g. nth_label n (pgenerate f g) = g n``,
+  Induct THEN ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][nth_label_def]);
+
+val pgenerate_11 = store_thm(
+  "pgenerate_11",
+  ``!f1 g1 f2 g2. (pgenerate f1 g1 = pgenerate f2 g2) =
+                  (f1 = f2) /\ (g1 = g2)``,
+  SIMP_TAC (srw_ss()) [FORALL_AND_THM, EQ_IMP_THM] THEN
+  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+  POP_ASSUM MP_TAC THEN
+  SRW_TAC [][FUN_EQ_THM] THEN PROVE_TAC [el_pgenerate, nth_label_pgenerate]);
+
 val _ = print "Defining path OK-ness\n"
 
 val okpath_f_def =
@@ -840,6 +889,55 @@ val finite_plink = store_thm(
   SRW_TAC [][] THEN PROVE_TAC []);
 
 val _ = BasicProvers.export_rewrites ["finite_plink"]
+
+
+(* "strongly normalising" for labelled transition relations *)
+val SN_def = Define`
+  SN R = WF (\x y. ?l. R y l x)
+`;
+
+val SN_finite_paths = store_thm(
+  "SN_finite_paths",
+  ``!R p. SN R /\ okpath R p ==> finite p``,
+  SIMP_TAC (srw_ss()) [SN_def, GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
+  GEN_TAC THEN
+  DISCH_THEN (MP_TAC o MATCH_MP relationTheory.WF_INDUCTION_THM) THEN
+  SIMP_TAC (srw_ss()) [GSYM LEFT_FORALL_IMP_THM] THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!x p. (x = first p) /\ okpath R p ==> finite p`
+                                                THEN1 SRW_TAC [][] THEN
+  POP_ASSUM HO_MATCH_MP_TAC THEN SIMP_TAC (srw_ss()) [] THEN GEN_TAC THEN
+  STRIP_TAC THEN GEN_TAC THEN
+  Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
+  SRW_TAC [][] THEN PROVE_TAC []);
+
+val finite_paths_SN = store_thm(
+  "finite_paths_SN",
+  ``!R. (!p. okpath R p ==> finite p) ==> SN R``,
+  SRW_TAC [][SN_def, prim_recTheory.WF_IFF_WELLFOUNDED,
+             prim_recTheory.wellfounded_def] THEN
+  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+  POP_ASSUM (Q.X_CHOOSE_THEN `g` ASSUME_TAC o CONV_RULE SKOLEM_CONV) THEN
+  Q_TAC SUFF_TAC `okpath R (pgenerate f g)` THEN1
+        PROVE_TAC [pgenerate_infinite] THEN
+  Q_TAC SUFF_TAC `!p. (?n. p = pgenerate (f o (+) n) (g o (+) n)) ==>
+                      okpath R p` THEN1
+        (SIMP_TAC (srw_ss()) [GSYM LEFT_FORALL_IMP_THM] THEN
+         DISCH_THEN (Q.SPEC_THEN `0` MP_TAC) THEN
+         SIMP_TAC (srw_ss() ++ boolSimps.ETA_ss)
+                  [combinTheory.o_DEF]) THEN
+  HO_MATCH_MP_TAC okpath_co_ind THEN GEN_TAC THEN
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [pgenerate_def])) THEN
+  SRW_TAC [][] THEN SRW_TAC [][] THENL [
+    ONCE_REWRITE_TAC [pgenerate_def] THEN
+    ASM_SIMP_TAC (srw_ss()) [GSYM arithmeticTheory.ADD1],
+    Q.EXISTS_TAC `SUC n` THEN
+    SIMP_TAC (srw_ss()) [combinTheory.o_DEF, arithmeticTheory.ADD_CLAUSES]
+  ]);
+
+val SN_finite_paths_EQ = store_thm(
+  "SN_finite_paths_EQ",
+  ``!R. SN R = !p. okpath R p ==> finite p``,
+  PROVE_TAC [finite_paths_SN, SN_finite_paths]);
 
 val _ = export_theory();
 
