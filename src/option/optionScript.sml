@@ -137,6 +137,8 @@ val IS_SOME_DEF =
     rec_axiom=option_Axiom,
     def = Term`(IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F)`};
 
+
+
 val IS_NONE_DEF = new_recursive_definition {
   name = "IS_NONE_DEF",
    rec_axiom = option_Axiom,
@@ -147,10 +149,24 @@ val THE_DEF =
     rec_axiom=option_Axiom,
     def = Term `THE (SOME x) = x`};
 
+val option_JOIN_DEF = new_recursive_definition {
+  name = "option_JOIN_DEF",
+  rec_axiom = option_Axiom,
+  def = Term`(option_JOIN NONE = NONE) /\
+             (option_JOIN (SOME x) =
+                if IS_SOME x then SOME (THE x) else NONE)`};
+
+val option_JOIN_THM = store_thm(
+  "option_JOIN_THM",
+  Term`(option_JOIN NONE = NONE) /\
+       (option_JOIN (SOME NONE) = NONE) /\
+       !x:'a. option_JOIN (SOME (SOME x)) = SOME x`,
+  REWRITE_TAC [option_JOIN_DEF, IS_SOME_DEF, THE_DEF]);
+
 val option_rws =
     [IS_SOME_DEF, THE_DEF, IS_NONE_DEF, option_nchotomy,
      NOT_NONE_SOME,NOT_SOME_NONE, SOME_11, option_case_def,
-     option_APPLY_DEF];
+     option_APPLY_DEF, option_JOIN_THM];
 
 val ex1_rw = prove(Term`!x. (?y. x = y) /\ (?y. y = x)`,
    GEN_TAC THEN CONJ_TAC THEN EXISTS_TAC (Term`x`) THEN REFL_TAC);
@@ -241,6 +257,28 @@ val option_case_compute = store_thm("option_case_compute",
              if IS_SOME x then f (THE x) else e`--,
     OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws);
+
+val option_APPLY_EQ_SOME = store_thm(
+  "option_APPLY_EQ_SOME",
+  Term`!f (x:'a option) y.
+         (option_APPLY f x = SOME y) = ?z. (x = SOME z) /\ (y = f z)`,
+  REPEAT GEN_TAC THEN OPTION_CASES_TAC (--`x:'a option`--) THEN
+  simpLib.SIMP_TAC boolSimps.bool_ss
+    [SOME_11, NOT_NONE_SOME, NOT_SOME_NONE, option_APPLY_DEF] THEN
+  mesonLib.MESON_TAC []);
+
+val option_JOIN_EQ_SOME = store_thm(
+  "option_JOIN_EQ_SOME",
+  Term`!(x:'a option option) y.
+          (option_JOIN x = SOME y) = (x = SOME (SOME y))`,
+  GEN_TAC THEN
+  Q.SUBGOAL_THEN `(x = NONE) \/ (?z. x = SOME z)` STRIP_ASSUME_TAC THENL [
+    MATCH_ACCEPT_TAC option_nchotomy,
+    ALL_TAC,
+    ALL_TAC
+  ] THEN ASM_REWRITE_TAC option_rws THEN
+  OPTION_CASES_TAC (--`z:'a option`--) THEN
+  ASM_REWRITE_TAC option_rws);
 
 
 val option_case_cong =
