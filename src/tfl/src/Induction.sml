@@ -185,9 +185,11 @@ fun complete_cases thy =
  * Constructing induction hypotheses: one for each recursive call.           *
  *---------------------------------------------------------------------------*)
 
+(*
 local nonfix ^ ;   infix 9 ^  ;     infix 5 ==>
       fun (tm1 ^ tm2)   = mk_comb{Rator=tm1, Rand=tm2}
       fun (tm1 ==> tm2) = mk_imp{ant=tm1, conseq=tm2}
+      val /\ = list_mk_conj
 in
 fun build_ih f (P,R,SV) (pat,TCs) = 
  let val pat_vars = free_vars_lr pat
@@ -200,7 +202,7 @@ fun build_ih f (P,R,SV) (pat,TCs) =
          in case cntxt 
              of [] => (P_y, (tm,[]))
               | _  => let 
-                    val imp = list_mk_conj cntxt ==> P_y
+                    val imp = /\cntxt ==> P_y
                     val lvs = op_set_diff aconv (free_vars_lr imp) globals
                     val locals = #2(pluck (aconv P) lvs) handle _ => lvs
                   in (list_mk_forall(locals,imp), (tm,locals)) end
@@ -208,7 +210,37 @@ fun build_ih f (P,R,SV) (pat,TCs) =
  in case TCs
      of [] => (list_mk_forall(pat_vars, P^pat), [])
       |  _ => let val (ihs, TCs_locals) = unzip(map dest_TC TCs)
-                  val ind_clause = list_mk_conj ihs ==> P^pat
+                  val ind_clause = /\ihs ==> P^pat
+              in 
+                 (list_mk_forall(pat_vars,ind_clause), TCs_locals)
+              end
+ end
+end;
+*)
+
+local nonfix ^ ;   infix 9 ^  ;     infix 5 ==>
+      fun (tm1 ^ tm2)   = mk_comb{Rator=tm1, Rand=tm2}
+      fun (tm1 ==> tm2) = mk_imp{ant=tm1, conseq=tm2}
+      val /\ = list_mk_conj
+      val diff = op_set_diff aconv
+in
+fun build_ih f (P,R,SV) (pat,TCs) = 
+ let val pat_vars = free_vars_lr pat
+     val globals = (if is_var R then [R] else [])@pat_vars@SV
+     fun nested tm = can(find_term (aconv f)) tm handle _ => false
+     fun dest_TC tm = 
+         let val (cntxt,R_y_pat) = wfrecUtils.strip_imp(#2(strip_forall tm))
+             val (R,y,_) = wfrecUtils.dest_relation R_y_pat
+             val P_y     = if nested tm then R_y_pat ==> P^y else P^y
+             val ihyp    = case cntxt of [] => P_y | _ => /\cntxt ==> P_y
+             val locals  = diff (free_vars_lr ihyp) (P::globals)
+         in 
+           (list_mk_forall(locals,ihyp), (tm,locals))
+         end
+ in case TCs
+     of [] => (list_mk_forall(pat_vars, P^pat), [])
+      |  _ => let val (ihs, TCs_locals) = unzip(map dest_TC TCs)
+                  val ind_clause = /\ihs ==> P^pat
               in 
                  (list_mk_forall(pat_vars,ind_clause), TCs_locals)
               end

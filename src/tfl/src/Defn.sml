@@ -1,7 +1,7 @@
 structure Defn :> Defn =
 struct
 
-open HolKernel Parse Drule Conv
+open HolKernel Parse Drule Conv 
      Rules wfrecUtils Functional Induction pairTools DefnBase;
 
 type hol_type     = Type.hol_type
@@ -18,9 +18,9 @@ type 'a quotation = 'a Portable.frag list
 
 infixr 3 -->;
 infix 3 |->;
-infix 4 ##;
+infix 4 ##; 
 
-fun ERR func mesg = HOL_ERR{origin_structure = "Defn",
+fun ERR func mesg = HOL_ERR{origin_structure = "Defn", 
                             origin_function = func, message = mesg};
 
 (*---------------------------------------------------------------------------
@@ -44,26 +44,26 @@ fun variants FV vlist =
 fun make_definition thry s tm = (Parse.new_definition(s,tm), thry)
 
 fun head tm = head (rator tm) handle _ => tm;
-fun all_fns eqns =
+fun all_fns eqns = 
   mk_set (map (head o lhs o #2 o strip_forall) (strip_conj eqns));
 
-fun dest_hd_eqn eqs =
+fun dest_hd_eqn eqs = 
   let val hd_eqn = if is_conj eqs then #conj1(dest_conj eqs) else eqs
       val {lhs,rhs} = dest_eq hd_eqn
   in (strip_comb lhs, rhs)
   end;
 
-fun extract_info db =
+fun extract_info db = 
  let val (rws,congs) = rev_itlist
-     (fn tyinfo => fn (R,C) =>
+     (fn tyinfo => fn (R,C) => 
          (TypeBase.case_def_of tyinfo::R, TypeBase.case_cong_of tyinfo::C))
-     (TypeBase.listItems db) ([],[])
+     (TypeBase.listItems db) ([],[]) 
  in {case_congs=congs, case_rewrites=rws}
  end;
 
 
 (*---------------------------------------------------------------------------
-    Support for automatically building names to store definitions
+    Support for automatically building names to store definitions 
     (and the consequences thereof) with in the current theory. Somewhat
     ad hoc, but I don't know a better way!
  ---------------------------------------------------------------------------*)
@@ -79,7 +79,7 @@ fun argMunge s = defSuffix(s^"_arg_munge");
 fun auxStem stem   = stem^"_aux";
 fun unionStem stem = stem^"_UNION";
 
-val imp_elim =
+val imp_elim = 
  let val P = mk_var{Name="P",Ty=Type.bool}
      val Q = mk_var{Name="Q",Ty=Type.bool}
      val R = mk_var{Name="R",Ty=Type.bool}
@@ -89,33 +89,33 @@ val imp_elim =
      val tm1 = mk_imp{ant=P,conseq=tm}
      val th1 = DISCH tm (DISCH P (ASSUME tm))
      val th2 = ASSUME tm1
-     val th2a = ASSUME P
+     val th2a = ASSUME P 
      val th3 = MP th2 th2a
-     val [th4,th5] = CONJUNCTS
+     val [th4,th5] = CONJUNCTS 
                       (EQ_MP (SPECL[PimpQ, PimpR] boolTheory.EQ_IMP_THM) th3)
      val [th4a,th5a] = map (DISCH P o funpow 2 UNDISCH) [th4,th5]
      val th4b = DISCH PimpQ th4a
      val th5b = DISCH PimpR th5a
      val th6 = DISCH tm1 (IMP_ANTISYM_RULE th4b th5b)
      val th7 = DISCH tm (DISCH P (ASSUME tm))
- in GENL [P,Q,R]
+ in GENL [P,Q,R] 
          (IMP_ANTISYM_RULE th6 th7)
  end;
 
 local open Psyntax
 in
 fun inject ty [v] = [v]
-  | inject ty (v::vs) =
-     let val {Args = [lty,rty],...} = Type.dest_type ty
+  | inject ty (v::vs) = 
+     let val {Args = [lty,rty],...} = Type.dest_type ty 
          val res = mk_comb(mk_const("INL", lty-->ty),v)
          val inr = curry mk_comb (mk_const("INR", rty-->ty))
      in
        res::map inr (inject rty vs)
      end
 
-fun project ty M =
+fun project ty M = 
  if is_vartype ty then [M]
- else case dest_type ty
+ else case dest_type ty 
        of ("sum",[lty,rty]) =>
             mk_comb(mk_const("OUTL", type_of M-->lty),M)
             :: project rty (mk_comb(mk_const("OUTR", type_of M-->rty),M))
@@ -129,18 +129,18 @@ end;
  * variables are quantified first.                                           *
  *---------------------------------------------------------------------------*)
 
-fun ModusPonens th1 th2 =
+fun ModusPonens th1 th2 = 
   let val V1 = #1(strip_forall(#ant(dest_imp(concl th1))))
       val V2 = #1(strip_forall(concl th2))
       val diff = Lib.op_set_diff Term.aconv V2 V1
-      fun loop th =
-        if is_forall(concl th)
+      fun loop th = 
+        if is_forall(concl th) 
         then let val {Bvar,Body} = dest_forall (concl th)
              in if Lib.op_mem Term.aconv Bvar diff
                 then loop (SPEC Bvar th) else th
              end
         else th
-  in
+  in 
     MP th1 (loop th2)
   end
   handle _ => raise ERR "ModusPonens" "failed";
@@ -234,12 +234,12 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
   | inst_defn (PRIMREC{eqs,ind,bind}) theta =
       PRIMREC{eqs=INST_THM theta eqs,
               ind=INST_THM theta ind, bind=bind}
-  | inst_defn (NONREC {eqs,ind,stem}) theta =
-      NONREC {eqs=INST_THM theta eqs,
+  | inst_defn (NONREC {eqs,ind,stem}) theta = 
+      NONREC {eqs=INST_THM theta eqs, 
               ind=INST_THM theta ind, stem=stem}
-  | inst_defn (ABBREV {eqn,bind}) theta =
+  | inst_defn (ABBREV {eqn,bind}) theta = 
       ABBREV {eqn=INST_THM theta eqn,bind=bind}
-
+  
 
 fun set_reln def R =
    case reln_of def
@@ -311,7 +311,7 @@ fun simp_tcs (STDREC {eqs, ind, R, SV, stem}) conv =
   | simp_tcs x _ = x;
 
 
-fun TAC_HYPL tac th =
+fun TAC_HYPL tac th = 
   PROVE_HYPL (mapfilter (C (curry Tactical.prove) tac) (hyp th)) th;
 
 fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
@@ -333,43 +333,43 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
 
 (*---------------------------------------------------------------------------
    Store definition information to disk. Currently, just writes out the
-   eqns and induction theorem. A more advanced implementation would
+   eqns and induction theorem. A more advanced implementation would 
    write things out so that, when the exported theory is reloaded, the
-   defn datastructure is rebuilt. This would give a seamless view of
+   defn datastructure is rebuilt. This would give a seamless view of 
    things. I really should do this.
 
-   Note that we would need to save union and aux info only when
+   Note that we would need to save union and aux info only when 
    termination has not been proved for a nested recursion.
  ---------------------------------------------------------------------------*)
 
 fun been_stored s =
-  Lib.say ("Definition has been stored under "
+  Lib.say ("Definition has been stored under " 
            ^Lib.quote s
            ^".\n");
 
-fun store(stem,eqs,ind) =
+fun store(stem,eqs,ind) = 
   let val eqs_bind = defSuffix stem
       val ind_bind = indSuffix stem
       val   _  = save_thm(ind_bind, ind)
       val eqns = save_thm(eqs_bind, eqs)
-  in
+  in 
     Lib.say (String.concat
-       [   "Equations stored under ", Lib.quote eqs_bind,
+       [   "Equations stored under ", Lib.quote eqs_bind, 
         ".\nInduction stored under ", Lib.quote ind_bind, ".\n"])
   end;
 
 fun handle_nested (stem,eqs,ind) =
-  if null(hyp eqs)
+  if null(hyp eqs) 
   then store(stem,eqs,ind)
-  else raise ERR "store_defn"
+  else raise ERR "store_defn" 
    "Nested mutually recursive function with unproven termination conditions";
 
 fun save_defn (ABBREV {bind, ...}) = been_stored bind
   | save_defn (PRIMREC{bind, ...}) = been_stored bind
   | save_defn (NONREC {eqs, ind, stem}) = store(stem,eqs,ind)
   | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
-  | save_defn (MUTREC {eqs, ind, stem, union, ...}) =
-      (case union
+  | save_defn (MUTREC {eqs, ind, stem, union, ...}) = 
+      (case union 
         of NESTREC _ => handle_nested (stem,eqs,ind)
          | otherwise => store(stem,eqs,ind))
   | save_defn (NESTREC{eqs,ind,stem, ...}) = handle_nested (stem,eqs,ind);
@@ -379,24 +379,24 @@ fun save_defn (ABBREV {bind, ...}) = been_stored bind
         Termination condition extraction
  ---------------------------------------------------------------------------*)
 
-fun extraction_thms thy =
+fun extraction_thms thy = 
  let val {case_rewrites,case_congs} = extract_info thy
- in
+ in 
     (case_rewrites, case_congs@read_congs())
  end;
 
-fun extract FV context_congs f (proto_def,WFR) =
+fun extract FV context_congs f (proto_def,WFR) = 
  let val R = rand WFR
      val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
      val restr_fR = rator(rator(#lhs(dest_eq
                       (#conseq(dest_imp (concl (SPEC_ALL CUT_LEM)))))))
      fun mk_restr p = mk_comb{Rator=restr_fR, Rand=p}
- in fn (p,th) =>
+ in fn (p,th) => 
     let val nested_ref = ref false
-        val th' = CONTEXT_REWRITE_RULE
+        val th' = CONTEXT_REWRITE_RULE 
                    (mk_restr p, f,FV@free_vars(concl th), nested_ref)
                    {thms=[CUT_LEM], congs=context_congs, th=th}
-    in
+    in 
       (th', Lib.op_set_diff aconv (hyp th') [proto_def,WFR],!nested_ref)
     end
 end;
@@ -405,28 +405,28 @@ end;
 (*---------------------------------------------------------------------------
  * Pair patterns with termination conditions. The full list of patterns for
  * a definition is merged with the TCs arising from the user-given clauses.
- * There can be fewer clauses than the full list, if the user omitted some
+ * There can be fewer clauses than the full list, if the user omitted some 
  * cases. This routine is used to prepare input for mk_induction.
  *---------------------------------------------------------------------------*)
 
 fun merge full_pats TCs =
 let fun insert (p,TCs) =
-      let fun insrt ((x as (h,[]))::rst) =
+      let fun insrt ((x as (h,[]))::rst) = 
                  if (aconv p h) then (p,TCs)::rst else x::insrt rst
             | insrt (x::rst) = x::insrt rst
             | insrt[] = raise ERR"merge.insert" "pat not found"
       in insrt end
     fun pass ([],ptcl_final) = ptcl_final
       | pass (ptcs::tcl, ptcl) = pass(tcl, insert ptcs ptcl)
-in
+in 
   pass (TCs, map (fn p => (p,[])) full_pats)
 end;
 
 
 (*----------------------------------------------------------------------------
-
+ 
                      PRINCIPLES OF DEFINITION
-
+ 
  ----------------------------------------------------------------------------*)
 
 
@@ -457,7 +457,7 @@ fun prim_wfrec_definition thy name {R, functional} =
      val (def_thm,thy1) = make_definition thy name def_term
      val f = Lib.trye hd (snd (strip_comb (concl def_thm)))
      val cor3 = ISPEC f cor2
- in
+ in 
  {theory = thy1, def=def_thm, corollary=MP cor3 def_thm}
  end
  handle HOL_ERR _ => raise ERR"prim_wfrec_definition" "";
@@ -477,7 +477,7 @@ fun prim_wfrec_definition thy name {R, functional} =
 fun gen_wfrec_definition thy nm {R, eqs} =
  let val {functional,pats} = mk_functional thy eqs
      val given_pats = givens pats
-     val {def,corollary,theory} =
+     val {def,corollary,theory} = 
            prim_wfrec_definition thy nm {R=R, functional=functional}
      val {lhs=f,...} = dest_eq(concl def)
      val WFR         = #ant(dest_imp(concl corollary))
@@ -493,8 +493,8 @@ fun gen_wfrec_definition thy nm {R, eqs} =
  in
    {theory = theory,   (* holds def, if it's needed *)
     rules = rules1,
-    full_pats_TCs = merge (map pat_of pats) (zip given_pats TCs1),
-    TCs = TCs1,
+    full_pats_TCs = merge (map pat_of pats) (zip given_pats TCs1), 
+    TCs = TCs1, 
     patterns = pats}
  end;
 
@@ -503,7 +503,7 @@ fun gen_wfrec_definition thy nm {R, eqs} =
  * Perform TC extraction without making a definition.                        *
  *---------------------------------------------------------------------------*)
 
-type wfrec_eqns_result = {WFR : term,
+type wfrec_eqns_result = {WFR : term, 
                           SV : term list,
                           proto_def : term,
                           extracta  : (thm * term list * bool) list,
@@ -517,7 +517,7 @@ fun wfrec_eqns thy eqns =
      val {Name, Ty=fty} = dest_var f
      val (f_dty, f_rty) = Type.dom_rng fty
      val WFREC_THM0 = ISPEC functional relationTheory.WFREC_COROLLARY
-     val R = variant (free_vars eqns)
+     val R = variant (free_vars eqns) 
                      (#Bvar(dest_forall(concl WFREC_THM0)))
      val WFREC_THM = ISPECL [R, f] WFREC_THM0
      val tmp = fst(wfrecUtils.strip_imp(concl WFREC_THM))
@@ -530,10 +530,10 @@ fun wfrec_eqns thy eqns =
      val (case_rewrites,context_congs) = extraction_thms thy
      val corollaries' = map (simplify case_rewrites) corollaries
      val Xtract = extract [R1] context_congs f (proto_def,WFR)
- in
-    {proto_def=proto_def,
+ in 
+    {proto_def=proto_def, 
      SV=Lib.sort Term.term_lt SV,
-     WFR=WFR,
+     WFR=WFR, 
      pats=pats,
      extracta = map Xtract (zip given_pats corollaries')}
  end;
@@ -554,7 +554,7 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
  let val R1 = rand WFR
      val f = lhs proto_def
      val (extractants,TCl_0,_) = unzip3 extracta
-     fun gen_all away tm =
+     fun gen_all away tm = 
         let val FV = free_vars tm
         in itlist (fn v => fn tm =>
               if mem v away then tm else mk_forall{Bvar=v,Body=tm}) FV tm
@@ -576,9 +576,9 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
                        (SPEC R2 (GENL [R1, f] disch'd))
      val def' = MP inst'd (SPEC_ALL def)
      val var_wits = LIST_CONJ (map ASSUME full_rqt)
-     val TC_choice_thm =
+     val TC_choice_thm = 
            MP (BETA_RULE(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
- in
+ in 
     {theory = theory, R=R1, SV=SV,
      rules = rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) def',
      full_pats_TCs = merge (map pat_of pats) (zip (givens pats) TCl),
@@ -596,11 +596,11 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      (* make parameterized definition *)
      val {Name,Ty} = Lib.trye dest_var f
      val aux_name = Name^"_aux"
-     val faux = mk_var{Name=aux_name,
-                       Ty = itlist (curry (op-->))
+     val faux = mk_var{Name=aux_name, 
+                       Ty = itlist (curry (op-->)) 
                                    (map type_of (R1::SV)) Ty}
      val aux_bindstem = auxStem bindstem
-     val (def,theory) =
+     val (def,theory) = 
            make_definition thy (defSuffix aux_bindstem)
                (mk_eq{lhs=list_mk_comb(faux,R1::SV), rhs=rhs_proto_def})
      val def' = SPEC_ALL def
@@ -610,7 +610,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val TCs_0 = op_U aconv TCl_0
      val disch'd = itlist DISCH (proto_def::WFR::TCs_0) (LIST_CONJ extractants)
      val inst'd = GEN R1 (MP (SPEC faux_capp (GEN f disch'd)) def')
-     fun kdisch keep th =
+     fun kdisch keep th = 
        itlist (fn h => fn th => if op_mem aconv h keep then th else DISCH h th)
               (hyp th) th
      val disch'dl_0 = map (DISCH proto_def o
@@ -618,7 +618,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
                         extractants
      val disch'dl_1 = map (fn d => MP (SPEC faux_capp (GEN f d)) def')
                           disch'dl_0
-     fun gen_all away tm =
+     fun gen_all away tm = 
         let val FV = free_vars tm
         in itlist (fn v => fn tm =>
               if mem v away then tm else mk_forall{Bvar=v,Body=tm}) FV tm
@@ -635,9 +635,9 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val (def1,theory1) = make_definition thy (defPrim bindstem)
                (mk_eq{lhs=fvar_app, rhs=list_mk_comb(faux_const,R2::SV)})
      val var_wits = LIST_CONJ (map ASSUME full_rqt)
-     val TC_choice_thm =
+     val TC_choice_thm = 
          MP (BETA_RULE(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
-     val elim_chosenTCs =
+     val elim_chosenTCs = 
            rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) R2inst'd
      val rules = simplify [GSYM def1] elim_chosenTCs
      val pat_TCs_list = merge (map pat_of pats) (zip (givens pats) TCl)
@@ -651,7 +651,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      fun dest_ic tm = if is_imp tm then strip_conj (#ant(dest_imp tm)) else []
      val ihs = Lib.flatten (map (dest_ic o snd o strip_forall) ics)
      val nested_ihs = filter (can (find_term (aconv faux_const))) ihs
-     (* a nested ih is of the form
+     (* a nested ih is of the form 
 
            c1/\.../\ck ==> R a pat ==> P a
 
@@ -660,14 +660,14 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
         to aux in the context. In both cases, we want to eliminate "R a pat"
         by assuming "c1/\.../\ck ==> R a pat" and doing some work.
      *)
-     fun nested_guard tm =
+     fun nested_guard tm = 
          let val ngthm = SPEC_ALL (ASSUME tm)
          in if is_imp (concl ngthm) then UNDISCH ngthm else ngthm
          end
      val ng_thms = map nested_guard nested_guards
      val nested_ihs' = map (Rules.simpl_conv ng_thms) nested_ihs
      val nested_ihs''' = nested_ihs'
-(*     fun disch_context thm =
+(*     fun disch_context thm = 
           if length(hyp thm) = 2
           then DISCH (#ant(dest_imp(lhs (concl thm)))) thm
           else thm
@@ -678,19 +678,19 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val ind1 = UNDISCH_ALL (SPEC R2 (GEN R1 (DISCH_ALL ind0)))
      val ind2 = simplify [GSYM def1] ind1
      val ind3 = itlist PROVE_HYP (CONJUNCTS TC_choice_thm) ind2
- in
+ in 
     {rules = rules,
      ind = ind3,
      SV = SV,
      R = R1,
-     theory = theory1, aux_def = def, def = def1,
+     theory = theory1, aux_def = def, def = def1, 
      aux_rules = LIST_CONJ disch'dl_1,
      aux_ind = aux_ind
      }
  end;
 
 (*---------------------------------------------------------------------------
-      Performs tupling and also eta-expansion.
+      Performs tupling and also eta-expansion. 
  ---------------------------------------------------------------------------*)
 
 fun tuple_args alist =
@@ -713,7 +713,7 @@ fun tuple_args alist =
                     end
                else mk_comb(stem', list_mk_pair args')
          end
- in
+ in 
    tupelo
  end;
 
@@ -721,30 +721,30 @@ fun tuple_args alist =
 (*---------------------------------------------------------------------------
      Mutual recursion. This is reduced to an ordinary definition by
      use of sum types. The n mutually recursive functions are mapped
-     to a single function "mut" having domain and range be sums of
-     the domains and ranges of the given functions. The domain sum
-     has n components. The range sum has k <= n components, built from
-     the set of range types. The arguments of the left hand side of
+     to a single function "mut" having domain and range be sums of 
+     the domains and ranges of the given functions. The domain sum 
+     has n components. The range sum has k <= n components, built from 
+     the set of range types. The arguments of the left hand side of 
      the function are uniformly injected into the domain sum. On the
      right hand side, every occurrence of a function "f a" is translated
-     to "OUT(mut (IN a))", where IN is the compound injection function,
-     and OUT brings the result back to the original type of "f a".
-     Finally, each rhs is injected into the range sum.
+     to "OUT(mut (IN a))", where IN is the compound injection function, 
+     and OUT brings the result back to the original type of "f a". 
+     Finally, each rhs is injected into the range sum. 
 
      After that translation, "mut" is defined. And then the individual
      functions are defined. Rewriting then brings them out.
 
      After that, induction is easy to recover from the induction theorem
-     for mut.
+     for mut. 
  ---------------------------------------------------------------------------*)
 
 fun ndom_rng ty 0 = ([],ty)
-  | ndom_rng ty n =
+  | ndom_rng ty n = 
       let val (dom,rng) = dom_rng ty
           val (L,last) = ndom_rng rng (n-1)
       in (dom::L, last)
       end;
-
+  
 fun mutrec thy bindstem eqns =
   let open Psyntax
       val dom_rng = Type.dom_rng
@@ -755,7 +755,7 @@ fun mutrec thy bindstem eqns =
       val OUTR = sumTheory.OUTR
       val sum_case_def = sumTheory.sum_case_def
       val CONJ = Thm.CONJ
-      fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm);
+      fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm)
       val eqnl = strip_conj eqns
       val lhs_info = mk_set(map ((I##length) o strip_comb o lhs) eqnl)
       val div_tys = map (fn (tm,i) => ndom_rng (type_of tm) i) lhs_info
@@ -766,9 +766,9 @@ fun mutrec thy bindstem eqns =
       val mut_rng = end_itlist mk_sum_type rng_tyl
       val mut_name = unionStem bindstem
       val mut = mk_var(mut_name, mut_dom --> mut_rng)
-      fun inform (f,(doml,rng)) =
+      fun inform (f,(doml,rng)) = 
          let val s = fst(dest_atom f)
-         in if 1<length doml
+         in if 1<length doml 
              then (f, (mk_var(s^"_tupled",list_mk_prod_type doml --> rng),doml))
              else (f, (f,doml))
          end
@@ -780,7 +780,7 @@ fun mutrec thy bindstem eqns =
       val gvl = map genvar dom_tyl
       val gvr = map genvar rng_tyl
       val injmap = zip fnl' (map2 (C (curry mk_abs)) (inject mut_dom gvl) gvl)
-      fun mk_lhs_mut_app (f,arg) =
+      fun mk_lhs_mut_app (f,arg) = 
           mk_comb(mut,beta_conv (mk_comb(assoc f injmap,arg)))
       val L1 = map (mk_lhs_mut_app o dest_comb) L
       val gv_mut_rng = genvar mut_rng
@@ -789,12 +789,12 @@ fun mutrec thy bindstem eqns =
       (* now replace each f by \x. outbar(mut(inbar x)) *)
       fun fout f = (f,assoc (#2(dom_rng(type_of f))) ty_outs)
       val RNG_OUTS = map fout fnl'
-      fun mk_rhs_mut f v =
-          (f |-> mk_abs(v,beta_conv (mk_comb(assoc f RNG_OUTS,
+      fun mk_rhs_mut f v = 
+          (f |-> mk_abs(v,beta_conv (mk_comb(assoc f RNG_OUTS, 
                                              mk_lhs_mut_app (f,v)))))
       val R1 = map (Term.subst (map2 mk_rhs_mut fnl' gvl)) R
       val eqnl1 = zip L1 R1
-      val rng_injmap =
+      val rng_injmap = 
             zip rng_tyl (map2 (C (curry mk_abs)) (inject mut_rng gvr) gvr)
       fun f_rng_in f = (f,assoc (#2(dom_rng(type_of f))) rng_injmap)
       val RNG_INS = map f_rng_in fnl'
@@ -803,14 +803,14 @@ fun mutrec thy bindstem eqns =
       val R3 = map (rhs o concl o DEPTH_CONV BETA_CONV) R2
       val mut_eqns = list_mk_conj(map mk_eq (zip L1 R3))
       val wfrec_res = wfrec_eqns thy mut_eqns
-      val defn =
+      val defn = 
         if exists I (#3(unzip3 (#extracta wfrec_res)))   (* nested *)
-        then let val {rules,ind,aux_rules, aux_ind, theory, def,aux_def,...}
+        then let val {rules,ind,aux_rules, aux_ind, theory, def,aux_def,...} 
                      = nestrec thy mut_name wfrec_res
              in {rules=rules, ind=ind, theory=theory,
                  aux=SOME{rules=aux_rules, ind=aux_ind}}
               end
-        else let val {rules,R,SV,theory,full_pats_TCs,...}
+        else let val {rules,R,SV,theory,full_pats_TCs,...} 
                       = stdrec thy mut_name wfrec_res
              val f = #1(dest_comb(lhs (concl(Lib.trye CONJUNCT1 rules))))
              val ind = Induction.mk_induction theory
@@ -825,7 +825,7 @@ fun mutrec thy bindstem eqns =
          let val inbar  = assoc ftupvar injmap
              val outbar = assoc ftupvar RNG_OUTS
              val (fvarname,_) = dest_atom fvar
-             val defvars = rev
+             val defvars = rev 
                   (Lib.with_flag (Globals.priming, SOME"") (variants [fvar])
                      (map (curry Psyntax.mk_var "x") argtys))
              val tup_defvars = list_mk_pair defvars
@@ -836,14 +836,14 @@ fun mutrec thy bindstem eqns =
                             beta_conv(mk_comb(inbar,list_mk_pair defvars)))
              val drhs  = beta_conv (mk_comb(outbar,Uapp))
              val thybind = defExtract(mut_name,n)
-         in
+         in 
            (make_definition thy thybind (mk_eq(dlhs,drhs)) , (Uapp,outbar))
          end
       fun mk_def triple (defl,thy,Uout_map) =
-            let val ((d,thy'),Uout) = define_subfn triple thy
+            let val ((d,thy'),Uout) = define_subfn triple thy 
             in (d::defl, thy', Uout::Uout_map)
             end
-      val (defns,theory2,Uout_map) =
+      val (defns,theory2,Uout_map) = 
             itlist mk_def (Lib.enumerate 0 fnvar_map) ([],theory1,[])
       fun apply_outmap th =
          let fun matches (pat,_) = Lib.can (match_term pat) (lhs (concl th))
@@ -853,13 +853,13 @@ fun mutrec thy bindstem eqns =
       val mut_rules1 = LIST_CONJ (map apply_outmap (CONJUNCTS mut_rules))
       val simp = Rules.simplify (OUTL::OUTR::map GSYM defns)
       (* finally *)
-      val mut_rules2 = simp mut_rules1
+      val mut_rules2 = simp mut_rules1 
 
       (* induction *)
       val mut_ind0 = simp (#ind defn)
       val pindices = enumerate (map fst div_tys)
       val vary = Term.variant(Term.all_varsl(concl mut_rules2::hyp mut_rules2))
-      fun mkP (tyl,i) def =
+      fun mkP (tyl,i) def = 
           let val V0 = snd(strip_comb(lhs(snd(strip_forall(concl def)))))
               val V = drop (#SV wfrec_res) V0
               val P = vary (mk_var("P"^Lib.int_to_string i,
@@ -867,13 +867,13 @@ fun mutrec thy bindstem eqns =
            in (P, mk_aabs(list_mk_pair V,list_mk_comb(P, V)))
           end
       val (Plist,preds) = unzip (map2 mkP pindices defns)
-      val Psum_case = end_itlist (fn P => fn tm =>
+      val Psum_case = end_itlist (fn P => fn tm => 
            let val Pty = type_of P
                val Pdom = #1(dom_rng Pty)
                val tmty = type_of tm
                val tmdom = #1(dom_rng tmty)
                val sum_ty = Pty --> tmty --> mk_sum_type Pdom tmdom --> bool
-           in
+           in 
               list_mk_comb(mk_const("sum_case",sum_ty),[P,tm])
            end) preds
       val mut_ind1 = Rules.simplify [sum_case_def] (SPEC Psum_case mut_ind0)
@@ -881,17 +881,17 @@ fun mutrec thy bindstem eqns =
       fun mkv (i,ty) = mk_var("v"^Lib.int_to_string i,ty)
       val V = map (map mkv)
                   (map (Lib.enumerate 0 o fst) pindices)
-      val Vinj = map2 (fn f => fn vlist =>
+      val Vinj = map2 (fn f => fn vlist => 
                         beta_conv(mk_comb(#2 f, list_mk_pair vlist))) injmap V
       val und_mut_ind1 = UNDISCH mut_ind1
-      val tmpl = map (fn (vlist,v) =>
+      val tmpl = map (fn (vlist,v) => 
                          GENL vlist (Rules.simplify [sum_case_def]
                                      (SPEC v und_mut_ind1)))   (zip V Vinj)
       val mut_ind2 = GENL Plist (DISCH ant (LIST_CONJ tmpl))
-  in
+  in 
     { rules = mut_rules2,
       ind =  mut_ind2,
-      SV = #SV wfrec_res,
+      SV = #SV wfrec_res, 
       R = rand (#WFR wfrec_res),
       union = defn,
       theory = theory2
@@ -900,15 +900,15 @@ fun mutrec thy bindstem eqns =
 
 
 (*---------------------------------------------------------------------------
-       The purpose of pairf is to translate a prospective definition
-       into a completely tupled format. On entry to pairf, we know that
+       The purpose of pairf is to translate a prospective definition 
+       into a completely tupled format. On entry to pairf, we know that 
        f is curried, i.e., of type
 
               f : ty1 -> ... -> tyn -> rangety
 
-       We build a tupled version of f
+       We build a tupled version of f 
 
-              f_tupled : ty1 * ... * tyn -> rangety
+              f_tupled : ty1 * ... * tyn -> rangety 
 
        and then make a definition
 
@@ -920,11 +920,11 @@ fun mutrec thy bindstem eqns =
 
  ----------------------------------------------------------------------------*)
 
-fun pairf (stem,eqs0) =
+fun pairf (stem,eqs0) = 
  let val ((f,args),rhs) = dest_hd_eqn eqs0
  in if length args = 1   (* not curried ... do eta-expansion *)
     then (tuple_args[(f,(f,map type_of args))] eqs0, stem, I)
- else
+ else 
  let val stem'name = stem^"_tupled"
      val argtys    = map type_of args
      val rng_ty    = type_of rhs
@@ -946,14 +946,14 @@ fun pairf (stem,eqs0) =
                       mk_eq{lhs=list_mk_comb(fvar, def_args),
                          rhs=list_mk_comb(tuplecSV, [list_mk_pair defvars])})
           val rules' = Rewrite.PURE_REWRITE_RULE[GSYM def] rules
-          val induction' =
+          val induction' = 
              let val P   = #Name(dest_var(#Bvar(dest_forall(concl induction))))
                  val Qty = itlist (curry Type.-->) argtys Type.bool
                  val Q   = mk_primed_var{Name=P, Ty=Qty}
                  val tm  = mk_pabs{varstruct=list_mk_pair defvars,
                                    body=list_mk_comb(Q,defvars)}
              in
-               GEN Q (CONV_RULE(DEPTH_CONV Let_conv.GEN_BETA_CONV)
+               GEN Q (CONV_RULE(DEPTH_CONV Let_conv.GEN_BETA_CONV) 
                   (SPEC tm (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)))
              end
       in
@@ -966,10 +966,10 @@ fun pairf (stem,eqs0) =
 
 local fun is_constructor tm = not (is_var tm orelse is_pair tm)
 in
-fun non_wfrec_defn (facts,bind,eqns) =
+fun non_wfrec_defn (facts,bind,eqns) = 
  let val ((_,args),_) = dest_hd_eqn eqns
  in if Lib.exists is_constructor args
-    then case TypeBase.get facts
+    then case TypeBase.get facts 
                  (#Tyop(Type.dest_type(type_of(first is_constructor args))))
        of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
         | SOME tyinfo =>
@@ -984,11 +984,11 @@ end;
 
 
 fun mutrec_defn (facts,stem,eqns) =
- let val {rules, ind, SV, R,
+ let val {rules, ind, SV, R, 
           union as {rules=r,ind=i,aux,...},...} = mutrec facts stem eqns
      val union' = case aux
       of NONE => STDREC{eqs=r,ind=i,R=R,SV=SV, stem=unionStem stem}
-      | SOME{rules=raux,ind=iaux} =>
+      | SOME{rules=raux,ind=iaux} => 
          NESTREC{eqs=r,ind=i,R=R,SV=SV, stem=unionStem stem,
                  aux=STDREC{eqs=raux,ind=iaux,R=R,SV=SV,stem=auxStem stem}}
  in MUTREC{eqs=rules, ind=ind, R=R, SV=SV, stem=stem, union=union'}
@@ -999,7 +999,7 @@ fun nestrec_defn (fb,(stem,stem'),wfrec_res,untuple) =
   let val {rules,ind,SV,R,aux_rules,aux_ind,...} = nestrec fb stem' wfrec_res
       val (rules', ind') = untuple (rules, ind)
   in NESTREC {eqs=rules', ind=ind', R=R, SV=SV, stem=stem,
-              aux=STDREC{eqs=aux_rules, ind=aux_ind,
+              aux=STDREC{eqs=aux_rules, ind=aux_ind, 
                          R=R, SV=SV, stem=auxStem stem'}}
   end;
 
@@ -1022,7 +1022,7 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
         in
            NONREC {eqs=r2, ind=i2, stem=stem}
         end handle HOL_ERR _ => raise ERR "stdrec_defn" "")
-  | otherwise =>
+  | otherwise => 
         let val (rules', ind') = untuple (rules, ind)
         in STDREC {eqs=rules',ind=ind', R=R, SV=SV, stem=stem}
         end
@@ -1030,11 +1030,11 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
 
 
 (*---------------------------------------------------------------------------
-    A general, basic, interface to function definitions. First try to
-    use standard existing machinery to make a prim. rec. definition, or
+    A general, basic, interface to function definitions. First try to 
+    use standard existing machinery to make a prim. rec. definition, or 
     an abbreviation. If those attempts fail, try to use a wellfounded
     definition (with pattern matching, wildcard expansion, etc.). Note
-    that induction is derived for all wellfounded definitions, but
+    that induction is derived for all wellfounded definitions, but 
     a termination proof is not attempted. For that, use the entrypoints
     in TotalDefn.
  ---------------------------------------------------------------------------*)
@@ -1045,45 +1045,45 @@ fun mk_defn stem eqns =
                    (String.concat[Lib.quote stem," is not alphanumeric"])
      val facts = TypeBase.theTypeBase()
  in
-  non_wfrec_defn (facts, defSuffix stem, eqns)
-  handle HOL_ERR _
+  non_wfrec_defn (facts, defSuffix stem, eqns) 
+  handle HOL_ERR _ 
   => if 1 < length(all_fns eqns)
-     then mutrec_defn (facts,stem,eqns)
+     then mutrec_defn (facts,stem,eqns) 
      else
      let val (tup_eqs,stem',untuple) = pairf(stem,eqns)
           handle HOL_ERR _ => raise ERR "mk_defn"
                "failure in internal translation to tupled format"
-         val wfrec_res = wfrec_eqns facts tup_eqs
+         val wfrec_res = wfrec_eqns facts tup_eqs 
      in
         if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
         then nestrec_defn (facts,(stem,stem'),wfrec_res,untuple)
         else stdrec_defn  (facts,(stem,stem'),wfrec_res,untuple)
-     end
+     end 
  end;
 
 
 fun mk_Rdefn stem R eqs =
   let val defn = mk_defn stem eqs
-  in case reln_of defn
+  in case reln_of defn 
       of NONE => defn
        | SOME Rvar => inst_defn defn (Term.match_term Rvar R)
   end;
 
 
 (*---------------------------------------------------------------------------
-     Quotation interface to definition. This includes a pass for
+     Quotation interface to definition. This includes a pass for 
      expansion of wildcards in patterns.
  ---------------------------------------------------------------------------*)
 
 fun vary s S =
- let fun V n =
+ let fun V n = 
       let val s' = s^Lib.int_to_string n
       in if mem s' S then V (n+1) else (s',s'::S)
       end
  in V 0 end;
 
 (*---------------------------------------------------------------------------
-    A wildcard is a contiguous sequence of underscores. This is
+    A wildcard is a contiguous sequence of underscores. This is 
     somewhat cranky, we realize, but restricting to only one
     is not great for readability at times.
  ---------------------------------------------------------------------------*)
@@ -1093,7 +1093,7 @@ in
 fun wildcard s =
   let val ss = Substring.all s
   in if Substring.isEmpty ss then false
-     else Substring.isEmpty (Substring.dropl underscore ss)
+     else Substring.isEmpty (Substring.dropl underscore ss) 
   end
 end;
 
@@ -1112,39 +1112,39 @@ fun names_of (AQ tm) S = union (map (#Name o Term.dest_var) (all_vars tm)) S
 end;
 
 local val v_vary = vary "v"
-      fun tm_exp tm S =
+      fun tm_exp tm S = 
        let open Term Psyntax
        in case dest_term tm
-          of VAR{Name=s,Ty} =>
+          of VAR{Name=s,Ty} => 
               if wildcard s
               then let val (s',S') = v_vary S in (mk_var(s',Ty),S') end
               else (tm,S)
           | CONST{Name,...}  => (tm,S)
-          | COMB{Rator,Rand} =>
+          | COMB{Rator,Rand} => 
              let val (Rator',S')  = tm_exp Rator S
                  val (Rand', S'') = tm_exp Rand S
-             in (mk_comb(Rator', Rand'), S'')
+             in (mk_comb(Rator', Rand'), S'') 
              end
           | LAMB _ => raise ERR "tm_exp" "abstraction in pattern"
        end
        open Absyn
 in
 fun exp (AQ tm) S = let val (tm',S') = tm_exp tm S in (AQ tm',S') end
-  | exp (IDENT s) S =
-      if wildcard s
+  | exp (IDENT s) S = 
+      if wildcard s 
         then let val (s',S') = v_vary S in (IDENT s', S') end
         else (IDENT s, S)
-  | exp (APP(M,N)) S =
-      let val (M',S')   = exp M S
+  | exp (APP(M,N)) S = 
+      let val (M',S')   = exp M S 
           val (N', S'') = exp N S'
       in (APP (M',N'), S'')
       end
   | exp(TYPED(M,pty)) S = let val (M',S') = exp M S in (TYPED(M',pty),S') end
   | exp(LAM _) _ = raise ERR "exp" "abstraction in pattern"
 
-fun expand_wildcards asy (asyl,S) =
-   let val (asy',S') = exp asy S
-   in (asy'::asyl, S')
+fun expand_wildcards asy (asyl,S) = 
+   let val (asy',S') = exp asy S 
+   in (asy'::asyl, S') 
    end
 end;
 
@@ -1159,11 +1159,11 @@ fun munge eq (eqs,fset,V) =
                         then raise ERR "munge" "wildcards on rhs" else ()
      val (f,pats)     = Absyn.strip_app lhs
      val fstr         = Absyn.dest_ident f
-     val (pats',V')   = rev_itlist expand_wildcards pats
+     val (pats',V')   = rev_itlist expand_wildcards pats 
                             ([],Lib.union V (map dest_pvar vlist))
      val new_eq       = Absyn.list_mk_forall(vlist,
                           Absyn.mk_eq(Absyn.list_mk_app(f,rev pats'), rhs))
- in
+ in 
     (new_eq::eqs, insert fstr fset, V')
  end
 end;
@@ -1171,8 +1171,8 @@ end;
 fun elim_wildcards eqs =
  let val names = names_of eqs []
      val (eql,fset,_) = rev_itlist munge (Absyn.strip_conj eqs) ([],[],names)
- in
-   (Absyn.list_mk_conj (rev eql), fset)
+ in 
+   (Absyn.list_mk_conj (rev eql), rev fset)
  end;
 
 fun parse_defn q =
@@ -1200,13 +1200,14 @@ fun Hol_defn bindstem q =
       def_thm
   end
 
-fun Hol_Rdefn bindstem Rquote eqs_quote =
+
+fun Hol_Rdefn bindstem Rquote eqs_quote = 
   let val defn = Hol_defn bindstem eqs_quote
   in case reln_of defn
       of NONE => defn
        | SOME Rvar =>
           let val R = Parse.typedTerm Rquote (type_of Rvar)
-          in inst_defn defn (Term.match_term Rvar R)
+          in inst_defn defn (Term.match_term Rvar R) 
           end
   end;
 
@@ -1225,7 +1226,7 @@ fun TC_TAC defn =
                    (GEN_ALL(DISCH_ALL (CONJ E I))))
                THEN PURE_REWRITE_TAC [Conv.GSYM boolTheory.CONJ_ASSOC]
      val goal = ([],Psyntax.mk_conj(concl E, concl I))
- in
+ in 
    case tac goal
     of ([([],g)],validation) => (([],g), fn th => validation [th])
      | _  => raise ERR "TC_TAC" "unexpected output"
