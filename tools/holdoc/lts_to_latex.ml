@@ -5,5 +5,5 @@
 open Holdoc_munge
 
 let _ =
-  latex_render ()
+  lts_latex_render ()
 

@@ -764,9 +764,12 @@ let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
    | None   -> ());
   print_string "}}\n\n"
 
-(* render the whole input stream *)
-
-let latex_render () =
+(* render LTS from whole input stream *)
+let lts_latex_render () =
   ignore (parse_rules_and_process latex_rule holtokstream)
 
+(* render MNG from whole input stream *)
+
+let mng_latex_render () =
+  Stream.iter (fun t -> print_string (mtok [] t)) textokstream
 

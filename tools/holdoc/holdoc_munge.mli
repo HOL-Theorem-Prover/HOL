@@ -3,5 +3,8 @@
 
 
 (* render stdin (a HOL spec of the LTS) into LaTeX on stdout *)
-val latex_render : unit -> unit
+val lts_latex_render : unit -> unit
+
+(* render stdin (LaTeX with embedded HOL) into LaTeX on stdout *)
+val mng_latex_render : unit -> unit
 
