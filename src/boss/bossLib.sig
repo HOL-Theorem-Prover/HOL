@@ -27,8 +27,10 @@ sig
   (* Proof automation *)
 
   val PROVE          : thm list -> term -> thm   (* First order *)
+  val METIS_PROVE    : thm list -> term -> thm   (* First order *)
   val DECIDE         : term -> thm               (* Cooperating dec. procs *)
   val PROVE_TAC      : thm list -> tactic
+  val METIS_TAC      : thm list -> tactic
   val DECIDE_TAC     : tactic
 
   (* Simplification *)
