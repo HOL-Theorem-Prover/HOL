@@ -31,11 +31,11 @@ signature DerivedBddRules = sig
   val findTrace : varmap -> thm -> thm -> thm -> thm * thm list * thm
   val termToTermBddFun : (term -> term_bdd) ref
   val BddRhsOracle : (term -> term_bdd) -> varmap -> thm -> thm
-  val 'a computeTrace : (int -> term_bdd -> 'a) -> varmap -> thm -> thm * thm -> term_bdd list
+  val computeTrace : (int -> term_bdd -> 'a) -> varmap -> thm -> thm * thm -> term_bdd list
   val findModel : term_bdd -> thm
   val MakeSimpRecThm : thm -> thm
   val GenTermToTermBdd :  (term -> term_bdd) -> varmap -> term -> term_bdd
-  val 'a iterate : ('a -> bool) -> (int -> 'a -> 'a) -> 'a -> 'a
+  val iterate : ('a -> bool) -> (int -> 'a -> 'a) -> 'a -> 'a
   val BddSubst : (term_bdd * term_bdd) list -> term_bdd -> term_bdd
   val BddApReplace : term_bdd -> term -> term_bdd
   val eqToTermBdd : (term -> term_bdd) -> varmap -> thm -> term_bdd
@@ -43,11 +43,11 @@ signature DerivedBddRules = sig
   val isFALSE : term_bdd -> bool
   val showVarmap : unit -> (string * int) list
   val BddApConv : (term -> thm) -> term_bdd -> term_bdd
-  val 'a computeFixedpoint : (int -> term_bdd -> 'a) -> varmap -> thm * thm -> term_bdd * term_bdd
+  val computeFixedpoint : (int -> term_bdd -> 'a) -> varmap -> thm * thm -> term_bdd * term_bdd
   val dest_BddOp : term -> bddop * term * term
   val BddApSubst : term_bdd -> term -> term_bdd
   val extendSat : term list -> varmap -> (term_bdd * term_bdd) list -> (term_bdd * term_bdd) list
-  val ('a, 'b) failfn : 'a -> 'b
+  val failfn : 'a -> 'b
   val global_varmap : varmap ref
   val split_subst : (term_bdd * term_bdd) list -> (term_bdd * term_bdd) list * (term_bdd * term_bdd) list
   val BddApThm : thm -> term_bdd -> term_bdd
