@@ -13,11 +13,7 @@ signature Net =
 sig
   type term = Term.term
 
-(*  type 'a net *)
-datatype label = V | Cnst of string | Cmb | Lam;
-datatype 'a net = LEAF of (term  * 'a) list
-                | NODE of (label * 'a net) list;
-
+  type 'a net
 
   val empty     : 'a net
   val insert    : term * 'a -> 'a net -> 'a net
@@ -60,7 +56,8 @@ datatype 'a net = LEAF of (term  * 'a) list
     that a matching function would have to make, say when rewriting
     with a collection of theorems. "match tm net" will return every 
     element that has been inserted into the net using a term M as the 
-    key, such that M possibly matches tm.
+    key, such that M possibly matches tm. The matches are returned in
+    "most specific match first" order.
   
    [index tm net]
 
