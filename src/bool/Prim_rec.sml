@@ -79,7 +79,7 @@ fun mymatch_and_instantiate axth pattern instance = let
     val (instvars, insteqn) = strip_forall inst
     val forall_env = ListPair.map op|-> (patvars, instvars)
     val pateqn = Term.subst forall_env pateqn0
-    val _ = lhs pateqn = lhs insteqn orelse
+    val _ = aconv (lhs pateqn) (lhs insteqn) orelse
       raise HOL_ERR {origin_function =
                 "prove_raw_recursive_functions_exist.mymatch_and_instantiate",
               origin_structure = "Prim_rec",
