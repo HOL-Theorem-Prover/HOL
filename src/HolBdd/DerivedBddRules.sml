@@ -18,7 +18,7 @@
 
 (*
 load "pairLib";
-load "Pair_basic";
+load "PairRules";
 load "numLib";
 load "PrimitiveBddRules";
 load "MachineTransitionTheory";
@@ -30,7 +30,7 @@ local
 
 open pairSyntax;
 open pairTools;
-open Pair_basic;
+open PairRules;
 open numLib;
 open PrimitiveBddRules;
 open bdd;

@@ -41,7 +41,7 @@
 (*
 load "bdd";
 load "pairLib";
-load "Pair_basic";
+load "PairRules";
 load "numLib";
 load "Binarymap";
 load "Varmap";
@@ -53,7 +53,7 @@ local
 
 open pairSyntax;
 open pairTools;
-open Pair_basic;
+open PairRules;
 open numLib;
 open Binarymap;
 open Varmap;
