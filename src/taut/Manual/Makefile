@@ -25,10 +25,7 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg
-	@echo "\begin{theindex}" > index.tex
-	@echo "\mbox{}" >> index.tex
-	@echo "\end{theindex}" >> index.tex
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind entries.tex
 
 tex: ids
 	@echo "TeX files made"
