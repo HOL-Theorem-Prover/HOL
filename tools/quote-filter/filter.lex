@@ -23,7 +23,7 @@ let letter = [ `A` - `Z` `a` - `z` ]
 let digit = [ `0` - `9` ]
 let symbol = [ `!` `%` `&` `$` `+` `/` `:` `<` `=` `>` `?` `@` `~` `|` `-`
                `#` `*` `\\` `^`]
-let id = letter (letter | digit | `_`)* | symbol +
+let MLid = letter (letter | digit | `_` | `'`)* | symbol +
 let ws = [ ` ` `\t` ]
 let newline = [`\n` `\r`]
 
@@ -125,8 +125,8 @@ parse "`" ws * "=="  { print "\"])"; INITIAL lexbuf }
     | eof    { () }
 
 and ANTIQUOTE =
-parse id { ECHO lexbuf; print "),QUOTE \"" }
-    | `(` { let val oldanti = !antiquote in
+parse MLid { ECHO lexbuf; print "),QUOTE \"" }
+    | `(`  { let val oldanti = !antiquote in
               ECHO lexbuf; pardepth := 1; antiquote := true; INITIAL lexbuf;
               print "),QUOTE \""; antiquote := oldanti
             end }
