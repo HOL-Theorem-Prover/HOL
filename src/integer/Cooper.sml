@@ -175,10 +175,10 @@ local
 in
   val phase1_CONV =
     (* to push negations inwards; formula must be quantifier free *)
-    DEPTH_CONV (RED_CONV ORELSEC reduceLib.RED_CONV) THENC
+    DEPTH_CONV RED_CONV THENC
     basic_rewrite_conv THENC remove_negated_vars THENC
     remove_bare_vars THENC flip_muls THENC
-    DEPTH_CONV (RED_CONV ORELSEC reduceLib.RED_CONV)
+    DEPTH_CONV RED_CONV THENC REWRITE_CONV []
 end
 
 val simple_disj_congruence =
