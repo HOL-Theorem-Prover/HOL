@@ -22,6 +22,33 @@ struct
                * int
                * 'a frag list) ref
 
+  fun separate_out_comments s = let
+    (* take s and return a s hopefully as much like it as possible, but
+       if s should include a symbol character followed by the left-comment
+       delimiter  that is '(' '*', then return the same string but with
+       a space between the leading symbol and the comment delimiter. *)
+    val ss = Substring.all s
+    fun recurse A ss = let
+      val (ss1, ss2) = Substring.position "(*" ss
+      val sz1 = Substring.size ss1
+      val sz2 = Substring.size ss2
+    in
+      if sz2 > 0 then let
+          val (cchars, ss2') = Substring.splitAt(ss2, 2)
+        in
+          if sz1 > 0 then
+            if Char.isPunct (Substring.sub(ss1, sz1 - 1)) then
+              recurse (cchars ::Substring.all " " :: ss1 :: A) ss2'
+            else recurse (cchars :: ss1 :: A) ss2'
+          else recurse (cchars :: A) ss2'
+        end
+      else
+        Substring.concat (List.rev (ss::A))
+    end
+  in
+    recurse [] ss
+  end
+
   fun leading_quotes acc nf (q as QUOTE s :: t) = leading_quotes (s::acc) (nf+1) t
     | leading_quotes acc nf t = (String.concat (List.rev acc), nf, t)
 
@@ -37,7 +64,7 @@ struct
                                             " levels of comment",locp(LocPEnd(nf_rest'-1)))
           | (rest',nf_rest') => let
               val (s, nf_rest'', rest'') = leading_quotes [] nf_rest' rest'
-              val lbuf = Lexing.createLexerString s
+              val lbuf = Lexing.createLexerString (separate_out_comments s)
               val (t,locn) = base_lexer.comment lbuf (base_lexer.newstate nf_rest') n
             in
               buffer_from_tok (lbuf,st) (t,locn) nf_rest'' rest''
@@ -49,7 +76,7 @@ struct
         [] => (NONE, (BT_EOI,locp(LocPEnd(nf-1))), 0, q)
       | (QUOTE _ :: _) => let
           val (s, nf_rest, rest) = leading_quotes [] nf q
-          val lexbuf = Lexing.createLexerString s
+          val lexbuf = Lexing.createLexerString (separate_out_comments s)
           val st = base_lexer.newstate nf
           val (t,locn) = base_lexer.base_token lexbuf st
         in
@@ -61,7 +88,7 @@ struct
 
   fun current (ref (_, x, _, _)) = x
 
-  fun buffer_from_lbuf (lb,st) nf_q q = 
+  fun buffer_from_lbuf (lb,st) nf_q q =
       let val (t,locn) = base_lexer.base_token lb st
       in
           buffer_from_tok (lb,st) (t,locn) nf_q q

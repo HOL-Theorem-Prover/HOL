@@ -41,21 +41,10 @@
 let alpha = [ `A` - `Z` `a` - `z` `_` `'` ]
 let numeric = [ `0` - `9` ]
 
-(* symbol is as one would expect less '(' and '*' to enable handling of
-   comments *)
-(* Comments are still not parsed correctly inside symbol strings:
-     revision 1.2
-     date: 2002/07/26 14:05:47;  author: michaeln;  state: Exp;  lines: +8 -2
-     Fix to better handle comment start strings.  Still can't pick them up if
-     they're embedded in strings of symbols.  So,
-     
-        ***(*
-     
-     doesn't contain a comment according to the new lexer.  Sadly the old
-     system did cope with this, but it doesn't seem a serious loss in practice.
-
-   ... *)
-*)
+(* symbol is as one would expect less '(' and '*' to prevent symbols that
+   begin with '(''*' to match as symbols.  This sequence can't appear inside
+   symbols because of the hideous hack that is separate_out_comments in
+   qbuf.sml *)
 let symbol = [ `|` `!` `#` `%` `&` `)` `-` `=` `+` `[` `]` `{`
                `}` `;` `:` `@` `~` `\\` `,` `.` `<` `>` `?` `/` ]
 let nonparen = symbol | `*`
