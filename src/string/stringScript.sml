@@ -432,6 +432,8 @@ val (isPREFIX_DEF,isPREFIX_IND_0) =
       THEN RW_TAC arith_ss [DEST_STRING,STRLEN_DEF]
       THEN RW_TAC arith_ss []);
 
+val isPREFIX_DEF = save_thm("isPREFIX_DEF",isPREFIX_DEF);
+
 val isPREFIX_IND = Q.store_thm
 ("isPREFIX_IND",
  `!P. (!s1 s2.
