@@ -11,7 +11,7 @@
  * machines.                                                                 *
  *---------------------------------------------------------------------------*)
 
-time load "bossLib";
+load "bossLib";
 
 open arithmeticTheory bossLib;
 infix 8 by;
