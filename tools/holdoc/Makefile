@@ -61,6 +61,8 @@ depend:	.depend
 %.tex : %.mng mng_to_latex
 	./mng_to_latex < $< 2>&1 > $@ | sort -u | tee $*.errs
 
+.PRECIOUS: %.tex
+
 %.dvi : %.tex
 	$(LATEX) $<
 

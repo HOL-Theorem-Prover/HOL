@@ -1,5 +1,204 @@
+HOLDoc -- Typesetting for HOL and LaTeX
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Keith Wansbrough <kw217@cl.cam.ac.uk>
+  http://www.cl.cam.ac.uk/users/kw217/
+  Cambridge University Computer Laboratory
+
+  July, 2001.
+
+
+Contents
+~~~~~~~~
+
+- Makefile magic
+- Syntax
+- Directives
+
+
+Makefile magic
+~~~~~~~~~~~~~~
+
+This is a model Makefile.  It arranges things so that
+
+ - for HOL source to be processed by LTS, %Script.tex will
+   automatically be built from %Script.sml.
+
+ - for LaTeX source with embedded HOL to be processed by MNG,
+   %.tex will automatically be built from %.mng.
+
+ - %.dvi will be built from %.tex, and %.ps from %.dvi.
+
+Also, munging errors will be written into the corresponding .errs
+file, as well as being displayed on the console.
+
+BE VERY CAREFUL TO LOOK AT THE ERRORS, because make won't
+automatically detect them :-(.
+
+
+# Model Makefile for munging:
+
+#
+# locations of various programs:
+#
+LTSTOLATEX=../../HOLDoc/lts_to_latex
+MNGTOLATEX=../../HOLDoc/mng_to_latex
+LATEX=latex
+DVIPS=dvips
+
+#
+# location of ltsmunge.sty and other TeX style files:
+#
+EXTRATEXINPUTS=../../HOLDoc
+
+#
+# list of .imn include files to use:
+#
+IMNFILES=../../HOL-model/Timed/TNet.imn timedthreads.imn
+
+#
+# implicit munging rules:
+#
+%.tex : %.mng $(IMNFILES)
+	cat $(IMNFILES) $*.mng \
+		| $(MNGTOLATEX) 2>&1 > $*.tex \
+		| sort -u | tee $*.errs
+
+%Script.tex : %Script.sml $(IMNFILES)
+	cat $(IMNFILES) $*Script.sml \
+		| $(LTSTOLATEX) 2>&1 > $*Script.tex \
+		| sort -u | tee $*Script.errs
+
+.PRECIOUS : %.tex  # we want to keep these around for debugging purposes
+
+%.dvi : %.tex
+	TEXINPUTS=$(EXTRATEXINPUTS):$(TEXINPUTS) $(LATEX) $<
+
+%.ps : %.dvi
+	$(DVIPS) $< -o $@
+
+#
+# extra dependencies (hostsem.tex has an \include directive):
+#
+hostsem.dvi : TNet_hostLTSScript.tex
+
+#
+# end of Makefile
+#
+
+
+Syntax
+~~~~~~
+
+There are two parsing modes, HOL and TeX.  You can switch between
+them.  mng_to_latex starts in TeX mode, and lts_to_latex starts in HOL
+mode.
+
+In HOL mode, the parser parses identifiers,
+newlines-with-indentation-following, white space, ordinary comments (*
+stuff *), strings "string" (with no escapes, so you can't have a
+double quote inside), HOLDoc directives (*[ DIRECTIVE arg arg arg ]*),
+separators "~()[]{}.,", backticks, double backticks, and embedded TeX
+(*: this\footnote{is embedded \TeX{} $e=mc^2$.}? :*).
+
+In TeX mode, the parser parses HOLDoc directives (*[ DIRECTIVE arg arg
+arg ]*) (which cannot be commented out by a TeX comment), embedded HOL
+outside math mode [[this.is.HOL]], embedded HOL in math mode $
+<[this.is.HOL]> \text{but this is not} $, and of course ordinary TeX
+source.  There is an alternative syntax for directives: %(*[ DIRECTIVE
+arg arg arg ]*), which is safer because it will be ignored by LaTeX if
+it directly processes the file.
+
+
+In HOL, there are multiple classes of identifier and symbol, each of
+which may be typeset differently.  Typesetting is specified in
+ltsmunge.sty, and the actual translation is specified mostly in the
+relevant .imn file, although some is hardwired.  An unrecognised
+identifier will be typeset in red, and its name will be printed to
+stderr (with the model Makefile, this ends up in foo.errs).
+
+
+Directives
+~~~~~~~~~~
+
+Unrecognised directives are ignored, so a directive can be commented
+out by adding a "C" in front of it, and comments can be written as (*[
+C this is a comment ]*) in Fortran style.  Directives are *completely
+elided* from the output, so particularly, newlines inside directives
+do not appear in the output.
+
+If you want to specify a whole pile of directives at the top of a
+file, you might rather put it in a .imn (include munge) file and cat
+it onto the front of the file you are munging.  Blank lines are legal
+syntax in TeX, so that's fine; they're also legal in SML.  The model
+Makefile uses this trick.
+
+The first directive is built into holdoc_munge.ml.
+
+(*[ VARS x y z ]*) adds the named variables to the list of identifiers
+that will be typeset as variables (rather than unknown).  Scope in LTS
+mode is the entire current rule, and the directive is only processed
+when it occurs in the list of vars after a binder such as !.  Scope in
+MNG is the rest of the source file.
+
+The rest of the directives are defined in holdoc_init.ml.
+
+(*[ TYPE_LIST id id id *]) adds the named identifiers to the list of
+"type" identifiers, typeset with \tstype{} except that that is
+currently commented out.
+
+(*[ CON_LIST id id id *]) adds the named identifiers to the list of
+"constructor" identifiers, typeset with \tscon{}. [small caps]
+
+(*[ FIELD_LIST id id id *]) adds the named identifiers to the list of
+"field" identifiers, typeset with \tsvar{} at the moment just like
+variables because field names are usually the default variable name
+for that field.
+
+(*[ LIB_LIST id id id *]) adds the named identifiers to the list of
+"library call" identifiers, typeset with \tslib{}. [charter]
+
+(*[ AUX_LIST id id id *]) adds the named identifiers to the list of
+"auxiliary function" identifiers, typeset with \tsaux{}. [roman]
+
+(*[ AUX_INFIX_LIST id id id *]) adds the named identifiers to the list
+of "infix auxiliary function" identifiers, typeset with
+\tsauxinfix{}. [roman, spacing]
+
+(*[ VAR_PREFIX_LIST id id id *]) adds the named identifiers to the list
+of variable prefixes; identifiers with these names or appended numbers
+or primes will be typeset with \tsvar{}.  [italic]
+
+(*[ HOL_OP_LIST id id id *]) adds the named identifiers to the list of
+"HOL operators", typeset with \tsholop{}.  [bold lowercase]
+
+
+(*[ HOL_SYM_ALIST ++ "\TeXery" ==> "\more\texery" *]) adds the named
+symbols to the list of "HOL symbols", which are typeset with the
+specified TeX, literally.  Since HOL strings have no escapes, you
+don't need to escape the backslash, but you can't write a double
+quote.
+
+(*[ HOL_ID_ALIST id "\TeXery" id "\more\texery" *]) adds the named
+identifiers to the list of "HOL identifiers", which are typeset with
+the specified TeX, literally.  Since HOL strings have no escapes, you
+don't need to escape the backslash, but you can't write a double
+quote.
+
+
+The last two are a bit different.
+
 (*[ ECHO ]*) turns on echo mode *after the next token* (including
 white space).
 
 (*[ NOECHO ]*) turns off echo mode immediately.
 
+These two are generally used around a .imn file, and avoid generating
+extra blank lines around the file.  Unfortunately at the moment, the
+last blank line in the file will unavoidably generate a blank line in
+the output.
+
+Note that ECHO / NOECHO are only respected in MNG mode.
+
+
+ --==[ THE END ]==--
