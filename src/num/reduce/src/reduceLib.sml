@@ -1,19 +1,12 @@
 structure reduceLib :> reduceLib =
 struct
 
-  open HolKernel Parse boolLib Boolconv Arithconv
-       arithmeticTheory numeralTheory computeLib;
+open HolKernel Parse boolLib Boolconv Arithconv
+     arithmeticTheory numeralTheory computeLib;
 
-  infix THEN |-> ;
+infix THEN |-> ;
 
-type conv   = Abbrev.conv
-type tactic = Abbrev.tactic
-type thm    = Thm.thm
-
-fun failwith function = raise
- Feedback.HOL_ERR{origin_structure = "reduceLib",
-                   origin_function = function,
-                           message = ""};
+fun failwith function = raise mk_HOL_ERR "reduceLib" function "";
 
 
 (*-----------------------------------------------------------------------*)
@@ -56,8 +49,8 @@ val div_thm =
 
 val mod_thm =
     prove
-      (Term ` !x y q r. x MOD y =
-              if (x = q * y + r) /\ (r < y) then r else x MOD y `,
+      (Term `!x y q r. 
+          x MOD y = if (x = q * y + r) /\ r<y then r else x MOD y`,
        REPEAT STRIP_TAC THEN COND_CASES_TAC THEN REWRITE_TAC [] THEN
        MATCH_MP_TAC MOD_UNIQUE THEN EXISTS_TAC (Term `q:num`) THEN
        ASM_REWRITE_TAC []);
@@ -90,21 +83,16 @@ fun cbv_MOD_CONV tm =
     | otherwise => raise Fail "cbv_MOD_CONV";
 
 
-local val rws = from_list bool_redns
-      val _ = add_thms numeral_redns rws
-      val _ = add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV) rws
-      val _ = add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV) rws
-in
-val REDUCE_CONV = CBV_CONV rws
-end;
+fun num_compset () = 
+  let open computeLib
+      val compset = bool_compset()
+      val _ = add_thms numeral_redns compset
+      val _ = add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV) compset
+      val _ = add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV) compset
+  in 
+    compset
+  end;
 
-(*-----------------------------------------------------------------------*)
-(* REDUCE_RULE and REDUCE_TAC - Inference rule and tactic versions.      *)
-(*-----------------------------------------------------------------------*)
-
-val REDUCE_RULE = Conv.CONV_RULE REDUCE_CONV;
-
-val REDUCE_TAC = Tactic.CONV_TAC REDUCE_CONV;
 
 (*---------------------------------------------------------------------------
       Add numeral reductions to global compset
@@ -115,5 +103,22 @@ val _ = let open computeLib
            add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV) the_compset;
            add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV) the_compset
         end;
+
+
+(*-----------------------------------------------------------------------*)
+(* REDUCE_{CONV,RULE,TAC} - conversions, rule and tactic versions of     *)
+(* reduction.                                                            *)
+(*-----------------------------------------------------------------------*)
+
+local open computeLib
+      val numcomps = num_compset() 
+in 
+  val REDUCE_CONV = CBV_CONV numcomps
+end;
+
+val REDUCE_RULE = Conv.CONV_RULE REDUCE_CONV;
+
+val REDUCE_TAC = Tactic.CONV_TAC REDUCE_CONV;
+
 
 end;

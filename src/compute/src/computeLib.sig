@@ -7,9 +7,9 @@ sig
 
   type compset
   
-  val bool_redns    : thm list
-  val new_rws       : unit -> compset
-  val from_list     : thm list -> compset
+  val new_compset   : thm list -> compset
+  val bool_compset  : unit -> compset
+
   val add_thms      : thm list -> compset -> unit
   val add_conv      : term * int * conv -> compset -> unit
   val set_skip      : compset -> string*string -> int option -> unit
@@ -27,5 +27,7 @@ sig
   val the_compset   : compset
   val add_funs      : thm list -> unit
   val EVAL          : conv
+
   val write_datatype_info : TypeBase.tyinfo -> unit
+
 end;

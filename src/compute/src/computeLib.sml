@@ -8,6 +8,7 @@ open HolKernel boolSyntax boolTheory Abbrev clauses compute_rules equations;
 type rewrite = rewrite;
 type compset = comp_rws;
 
+val new_compset = from_list;
 
 type cbv_stack =
   ((thm->thm->thm) * (thm * db fterm),
@@ -155,7 +156,9 @@ val bool_redns =
       [COND_CLAUSES, COND_ID, NOT_CLAUSES, 
        AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
 
-val the_compset = from_list bool_redns;
+fun bool_compset() = from_list bool_redns;
+
+val the_compset = bool_compset();
 
 val add_funs = Lib.C add_thms the_compset;
 

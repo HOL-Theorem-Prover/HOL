@@ -24,9 +24,12 @@ val elim_thms = [INT_ADD_REDUCE, INT_SUB_REDUCE, INT_MUL_REDUCE,
                  INT_LT_REDUCE, INT_LE_REDUCE, INT_EQ_REDUCE,
                  INT_GT_REDUCE, INT_GE_REDUCE, INT_DIVIDES_REDUCE]
 
-val int_reduce_rws = reduceLib.reduce_rws()
-val _ = computeLib.add_thms elim_thms int_reduce_rws
-val REDUCE_CONV = computeLib.CBV_CONV int_reduce_rws
+local open computeLib
+      val compset = reduceLib.num_compset()
+      val _ = add_thms elim_thms compset
+in
+val REDUCE_CONV = CBV_CONV compset
+end;
 
 val x = mk_var{Name = "x", Ty = int_ty}
 and y = mk_var{Name = "y", Ty = int_ty}
