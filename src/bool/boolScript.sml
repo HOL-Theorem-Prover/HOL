@@ -2875,7 +2875,7 @@ val MONO_AND = save_thm("MONO_AND",
      val th6 = MP th1 th4
      val th7 = MP th2 th5
      val th8 = CONJ th6 th7
-     val th9 = itlist DISCH (hyp th8) th8;
+     val th9 = itlist DISCH [tm1,tm2,tm3] th8
      val th10 = SPEC (Term`^tm3 ==> ^tm4`) (SPEC tm2 (SPEC tm1 AND_IMP_INTRO))
  in
     EQ_MP th10 th9
