@@ -105,21 +105,20 @@ val EXPLODE_IMPLODE =
   save_thm ("EXPLODE_IMPLODE",
     GEN_ALL (EQ_MP (SPEC_ALL(BETA_RULE (CONJUNCT2 STRING_TYPE_FACTS))) TRUTH));
 
-val EXPLODE_11 = save_thm("EXPLODE_11",prove_rep_fn_one_one STRING_TYPE_FACTS)
-
 val EXPLODE_ONTO =
   save_thm("EXPLODE_ONTO",
     GEN_ALL
      (EQ_MP(SPEC_ALL(BETA_RULE (prove_rep_fn_onto STRING_TYPE_FACTS))) TRUTH));
 
-val IMPLODE_11 =
-  save_thm("IMPLODE_11",
-    REWRITE_RULE [] (BETA_RULE (prove_abs_fn_one_one STRING_TYPE_FACTS)));
-
 val IMPLODE_ONTO =
   save_thm("IMPLODE_ONTO",
        REWRITE_RULE [] (BETA_RULE (prove_abs_fn_onto STRING_TYPE_FACTS)));
 
+val EXPLODE_11 = save_thm("EXPLODE_11",prove_rep_fn_one_one STRING_TYPE_FACTS)
+
+val IMPLODE_11 =
+  save_thm("IMPLODE_11",
+    REWRITE_RULE [] (BETA_RULE (prove_abs_fn_one_one STRING_TYPE_FACTS)));
 
 (*---------------------------------------------------------------------------
     Definability of prim. rec. functions over strings.
@@ -142,8 +141,7 @@ REPEAT GEN_TAC
     Case expression.
  ---------------------------------------------------------------------------*)
 
-val ALT_STRING_CASE_DEF =
-new_recursive_definition
+val ALT_STRING_CASE_DEF = new_recursive_definition
  {name="ALT_STRING_CASE_DEF",
   def = Term `(alt_string_case f (IMPLODE [])     = f []) /\
               (alt_string_case f (IMPLODE (c::t)) = f (c::t))`,
@@ -169,7 +167,7 @@ val STRING_DEF =
  Q.new_definition("STRING_DEF", `STRING c str = IMPLODE (c::EXPLODE str)`);
 
 (*---------------------------------------------------------------------------
-     One-one and distinctness
+     One-one and distinctness of the constructors
  ---------------------------------------------------------------------------*)
 
 val STRING_11 = Q.store_thm
@@ -211,7 +209,7 @@ val ALT_STRING_INDUCT_THM = Q.store_thm
 
 val STRING_INDUCT_THM = Q.store_thm
 ("STRING_INDUCT_THM",
- `!P. P "" /\ (!c s. P s ==> P (STRING c s)) ==> !s. P s`,
+ `!P. P "" /\ (!s. P s ==> !c. P (STRING c s)) ==> !s. P s`,
  REWRITE_TAC [EMPTYSTRING_DEF, STRING_DEF]
    THEN GEN_TAC THEN STRIP_TAC
    THEN HO_MATCH_MP_TAC ALT_STRING_INDUCT_THM
@@ -244,8 +242,7 @@ val STRING_CASES = Q.store_thm
      Case expressions over strings.
  ---------------------------------------------------------------------------*)
 
-val STRING_CASE_DEF =
-new_recursive_definition
+val STRING_CASE_DEF = new_recursive_definition
  {name="STRING_CASE_DEF",
   def = Term `(string_case b f ""  = b) /\
               (string_case b f (STRING c s) = f c s)`,
@@ -374,7 +371,8 @@ val _ = adjoin_to_theory
    S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)});";
    S " ";
    S "val _ = computeLib.add_funs";
-   S "        [STRING_CASE_DEF,STRLEN_DEF,EXPLODE_EQNS,IMPLODE_EQNS];"
+   S "        [STRING_CASE_DEF,STRLEN_DEF,EXPLODE_EQNS,IMPLODE_EQNS,";
+   S "         STRCAT_EQNS];"
  end)};
 
 val _ = export_theory();

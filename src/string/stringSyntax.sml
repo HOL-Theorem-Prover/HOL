@@ -64,5 +64,6 @@ val fromMLstring =
          emptystring=emptystring_tm}
 
 val fromHOLstring = Literal.dest_string_lit
+val is_string_literal = Literal.is_string_lit
 
 end
