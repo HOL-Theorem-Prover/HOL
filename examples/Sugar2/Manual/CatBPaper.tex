@@ -1328,13 +1328,15 @@ However, we were still unable to prove
 $\vdash~\forall{\t{f}}.~\t{ClockFree~f}~\Rightarrow~(\sSem{M}{w}{\T}{f}~=~\sSem{M}{w}{\c}{f})$
 
 \medskip
-where here \t{ClockFree~f} means that \t{f} contains no clocked FL formulas or SEREs.
+where here \t{ClockFree~f} means that \t{f} contains no clocked FL formulas or SEREs,
+the semantics on the left of the equation is the one in Section~\ref{FL} and the
+semantics on the right of the equation is the one in Section~\ref{finite}.
 The proof attempt failed because the unclocked semantics for $\tt{\fUntil{f1}{f2}}$ 
 had a path length check, but the strongly clocked semantics didn't. By adding the conjunct
 $\t{finite}~\pi~\Rightarrow~\t{k}<\t{length}~\pi$ to the strongly clocked semantics
-the proof could be completed.
+the proof could be completed. 
 
-\section{Conclusions}
+\Section{Conclusions}
 
 It was quite straightforward to use the informal semantics in the
 \Sugar documentation to create a deep

@@ -460,7 +460,6 @@ val UF_SEM_def =
     /\
     (UF_SEM M p (F_UNTIL(f1,f2)) = 
       ?k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p) /\
-          (*  deleted then undeleted for proof *)
           UF_SEM M (RESTN p k) f2              /\
           !j. j < k ==> UF_SEM M (RESTN p j) f1)
     /\
@@ -475,12 +474,7 @@ val UF_SEM_def =
           ?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2)
     /\
     (UF_SEM M p (F_WEAK_IMP(r1,r2)) = 
-(*     UF_SEM M p (F_STRONG_IMP(r1,r2))     *)
-       (!j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1
-          ==>
-          ?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2)
-       \/
-       !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
+      !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
            (?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) \/
            !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
                ==> ?w. US_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) r2)  
@@ -514,7 +508,6 @@ val UF_SEM =
      /\
      (UF_SEM M p (F_UNTIL(f1,f2)) = 
        ?k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p) /\
-          (*  deleted then undeleted for proof *)
            UF_SEM M (RESTN p k) f2              /\
            !j. j < k ==> UF_SEM M (RESTN p j) f1)
      /\
@@ -529,8 +522,6 @@ val UF_SEM =
            ?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2)
      /\
     (UF_SEM M p (F_WEAK_IMP(r1,r2)) = 
-       UF_SEM M p (F_STRONG_IMP(r1,r2))   
-       \/
        !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
            (?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) \/  
            !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
@@ -662,7 +653,7 @@ val F_SEM_TRUE_LEMMA =
       (* F_STRONG_IMP f *)
       INIT_TAC THEN RW_TAC std_ss [S_SEM_TRUE],
       (* F_WEAK_IMP f *)
-      INIT_TAC THEN RW_TAC std_ss [S_SEM_TRUE,NEXT_RISE_TRUE_EXISTS],
+      INIT_TAC THEN ZAP_TAC std_ss [S_SEM_TRUE,NEXT_RISE_TRUE_EXISTS],
       (* F_ABORT(f,b)) *)
       INIT_TAC THEN RW_TAC std_ss [B_SEM_def]]);
 
