@@ -1,7 +1,7 @@
 (*
 load "rules";
 *)
-local open HolKernel rules
+local open HolKernel basicHol90Lib rules
 in
 
 (* The functions in this module (except [from_term] and [inst_dterm]) are
@@ -60,7 +60,7 @@ fun check_arg_form trm =
  *)
 datatype 'a fterm =
   (* order of Args: outermost ahead *)
-  CST of { Head : term, Args : (term * 'a fterm) list, Rws : 'a }
+  CST of { Head : term, Args : (term * 'a fterm) list, Rws : 'a, Skip : bool }
 | NEUTR
 | CLOS of { Env : 'a fterm list, Term : 'a dterm }
 
@@ -77,7 +77,7 @@ datatype 'a fterm =
 and 'a dterm =
     Bv of int
   | Fv
-  | Cst of term * 'a ref 
+  | Cst of term * ('a * bool) ref
   | App of 'a dterm * 'a dterm list  (* order: outermost ahead *)
   | Abs of 'a dterm
 ;
@@ -90,7 +90,7 @@ fun appl(App(a,l1),arg) = App(a,arg::l1)
 (* Type variable instantiation in dterm. Make it tail-recursive ? *)
 fun inst_type_dterm ([],v) = v
   | inst_type_dterm (tysub,v) =
-      let fun tyi_dt (Cst(c,db)) = Cst(Term.inst tysub c, db)
+      let fun tyi_dt (Cst(c,dbsk)) = Cst(Term.inst tysub c, dbsk)
             | tyi_dt (App(h,l))  = App(tyi_dt h, map tyi_dt l)
   	    | tyi_dt (Abs v)     = Abs(tyi_dt v)
   	    | tyi_dt v           = v
@@ -135,12 +135,18 @@ fun key_of (RW{cst, lhs, ...}) =
 ;
 
 
+
+(* *)
+fun is_skip (_, CST {Skip=true,Rws=EndDb,...}) = true
+  | is_skip _ = false
+;
+
 (* equation database
  * We should try to factorize the rules (cf discrimination nets)
  * Rules are packed according to their head constant, and then sorted
  * according to the width of their lhs.
  *)
-datatype comp_rws = RWS of (string, db ref) Polyhash.hash_table;
+datatype comp_rws = RWS of (string, (db * bool) ref) Polyhash.hash_table;
 
 fun new_rws () = RWS (Polyhash.mkPolyTable(29,CL_ERR "new_rws" ""));
 
@@ -148,17 +154,23 @@ fun assoc_clause (RWS rws) cst =
   case Polyhash.peek rws cst of
     SOME rl => rl
   | NONE =>
-      let val mt = ref EndDb in
+      let val mt = ref (EndDb, false) in
       Polyhash.insert rws (cst,mt);
       mt
       end
 ;
 
 fun add_in_db_upd rws (name,arity,hcst) act =
-  let val rl = assoc_clause rws name in
-  rl := add_in_db (arity,hcst,act,!rl)
+  let val (rl as ref(db,sk)) = assoc_clause rws name in
+  rl := (add_in_db (arity,hcst,act,db), sk)
   end
 ;
+
+fun set_skip (rws as RWS htbl) name sk =
+  let val (rl as ref(db,_)) = assoc_clause rws name in
+  rl := (db,sk)
+  end;
+
 
 fun from_term (rws,env,t) =
   let fun down (env,t,c) =
@@ -198,10 +210,20 @@ fun mk_rewrite rws eq_thm =
 ;
 
 
+
+local val eqT_thm = prove(Parse.Term `t = (t = T)`, REWRITE_TAC[EQ_CLAUSES])
+in
+fun norm_thm thm =
+  if is_eq (concl thm) then thm
+  else if is_neg (concl thm) then MATCH_MP NOT_F thm
+  else ONCE_REWRITE_RULE [eqT_thm] thm
+end;
+
 fun enter_thm rws str thm =
-  let val thm0 = Drule.SPEC_ALL thm
-      val thm1 = if str then thm0 else lazyfy_thm thm0
-      val rw = mk_rewrite rws thm1 in
+  let val thm = Drule.SPEC_ALL thm
+      val thm = norm_thm thm
+      val thm = if str then thm else lazyfy_thm thm
+      val rw = mk_rewrite rws thm in
   add_in_db_upd rws (key_of rw) (Rewrite [rw])
   end;
 

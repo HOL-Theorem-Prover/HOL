@@ -62,17 +62,17 @@ fun try_rwn ibds lt =
 (* Instanciating the rule according to the ouptut of the matching
  *)
 
-fun comb_ct {Head,Args,Rws=NeedArg tail} arg =
-      CST{Head=Head, Args=arg::Args, Rws=tail }
-  | comb_ct {Head,Args,Rws=EndDb} arg =
-      CST{Head=Head, Args=arg::Args, Rws=EndDb}
+fun comb_ct {Head,Args,Rws=NeedArg tail, Skip} arg =
+      CST{Head=Head, Args=arg::Args, Rws=tail, Skip=Skip }
+  | comb_ct {Head,Args,Rws=EndDb, Skip} arg =
+      CST{Head=Head, Args=arg::Args, Rws=EndDb, Skip=Skip }
   | comb_ct {Rws=Try _,...} arg =
       raise DEAD_CODE "comb_ct: yet rules to try"
 ;
 
 fun mk_clos(env,t) =
   case t of
-    Cst (hc,c) => CST{Head=hc, Args=[], Rws= !c}
+    Cst (hc,ref(db,b)) => CST{Head=hc, Args=[], Rws= db, Skip = b}
   | Bv i => List.nth(env,i)
   | Fv => NEUTR
   | _ => CLOS{Env=env, Term=t}
@@ -104,18 +104,20 @@ end;
 
 
 (* Reducing a constant *)
-fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail}}) =
+fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
       (let val (_,inst) = match_term Hcst Head
                           handle HOL_ERR _ => raise No_match
  	   val rule_inst = try_rwn inst Args rls in
-       (true,(inst_rw (th,rule_inst)))
+       (true, inst_rw (th,rule_inst))
        end
-       handle No_match => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail}))
-  | reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Conv fconv,Tail}}) =
+       handle No_match =>
+	 reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
+  | reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Conv fconv,Tail},Skip}) =
       (let val (thm, ft) = fconv (rhs_concl th) in
        (true, (trans_thm th thm, ft))
        end
-       handle HOL_ERR _ => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail}))
+       handle HOL_ERR _ =>
+	 reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
   | reduce_cst (th,cst) = (false,(th,CST cst))
 ;
 

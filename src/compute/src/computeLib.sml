@@ -67,8 +67,10 @@ fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
  *  - an application to a NEUTR can be rebuilt only if the argument has been
  *    strongly reduced, which we now for sure only if itself is a NEUTR.
  *)
-and cbv_up (hcl, Zrator{Rand=(mka,clos), Ctx=stk})  =
-      cbv_wk (clos,Zrand{Rator=(mka,false,hcl), Ctx=stk})
+and cbv_up (hcl, Zrator{Rand=(mka,clos), Ctx})  =
+      let val new_state = (clos, Zrand{Rator=(mka,false,hcl), Ctx=Ctx}) in
+      if is_skip hcl then cbv_up new_state else cbv_wk new_state
+      end
   | cbv_up ((thb,v), Zrand{Rator=(mka,false,(th,CST cargs)), Ctx=stk}) =
       cbv_wk ((mka th thb, comb_ct cargs (rhs_concl thb, v)), stk)
   | cbv_up ((thb,NEUTR), Zrand{Rator=(mka,false,(th,NEUTR)), Ctx=stk}) =
@@ -85,8 +87,10 @@ fun strong ((th, CLOS{Env,Term=Abs t}), stk) =
       strong (cbv_wk((thb, mk_clos(NEUTR :: Env, t)), stk'))
       end
   | strong (clos as (_,CLOS _), stk) = raise DEAD_CODE "strong"
-  | strong ((th,CST {Args,...}), stk) =
-      let val (th',stk') = foldl (push_in_stk snd) (th,stk) Args in
+  | strong (hcl as (th,CST {Args,...}), stk) =
+      let val (th',stk') =
+ 	if is_skip hcl then (th,stk)
+ 	else foldl (push_in_stk snd) (th,stk) Args in
       strong_up (th',stk')
       end
   | strong ((th, NEUTR), stk) = strong_up (th,stk)
