@@ -963,8 +963,41 @@ val final_equivalence = store_thm(
     PROVE_TAC [nightmare_implies_LHS]
   ]);
 
+val darkrow_implies_realrow = store_thm(
+  "darkrow_implies_realrow",
+  ``!rights c L. 0 < c /\ EVERY fst_nzero rights /\
+                 dark_shadow_row c L rights ==> rshadow_row (c,L) rights``,
+  Induct THEN1 SRW_TAC [][dark_shadow_row_def, rshadow_row_def] THEN
+  ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_row_def, rshadow_row_def,
+                           int_ge, INT_LE_SUB_LADD] THEN
+  REPEAT STRIP_TAC THEN
+  Q_TAC SUFF_TAC `0 <= (&c - 1) * (&p_1 - 1)` THEN1
+    PROVE_TAC [INT_LE_TRANS, INT_LE_ADDL] THEN
+  MATCH_MP_TAC INT_LE_MUL THEN
+  ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [INT_LE_SUB_LADD]);
 
+val dark_implies_real = store_thm(
+  "dark_implies_real",
+  ``!lefts rights. EVERY fst_nzero lefts /\ EVERY fst_nzero rights /\
+                   dark_shadow lefts rights ==> real_shadow lefts rights``,
+  Induct THEN
+  ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_def, real_shadow_def,
+                           darkrow_implies_realrow]);
 
+val alternative_equivalence = store_thm(
+  "alternative_equivalence",
+  ``!lefts rights m.
+       EVERY fst_nzero lefts /\ EVERY fst_nzero rights /\
+       EVERY (\p. FST p <= m) lefts ==>
+       ((?x. evalleft x lefts /\ evalright x rights) =
+        dark_shadow lefts rights \/ nightmare m lefts rights rights)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    Q.SPECL_THEN [`lefts`, `rights`, `m`] MP_TAC final_equivalence THEN
+    ASM_REWRITE_TAC [] THEN PROVE_TAC [],
+    Q.SPECL_THEN [`lefts`, `rights`, `m`] MP_TAC final_equivalence THEN
+    ASM_REWRITE_TAC [] THEN PROVE_TAC [dark_implies_real],
+    PROVE_TAC [nightmare_implies_LHS]
+  ]);
 
 val _ = export_theory();
 
