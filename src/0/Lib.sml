@@ -422,16 +422,7 @@ val string_to_int =
           Int.fromString
 
 val say = TextIO.print;
-fun quote s = let
-  fun munge c =
-    case c of
-      #"\\" => "\\\\"
-    | #"\n" => "\\n"
-    | #"\"" => "\\\""
-    | x => str x
-in
-  String.concat ["\"",String.translate munge s,"\""]
-end
+fun quote s = String.concat ["\"",String.toString s,"\""]
 
 fun prime s = s^"'";
 
