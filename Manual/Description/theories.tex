@@ -239,7 +239,7 @@ $P$'', or (more in line with its definition) as ``the predicate $P$ is
 true of $x$''.
 
 \subsection{Restricted quantifiers}\label{res-quant}
- 
+
 \index{restricted quantification}
 %
 The theory \theoryimp{bool} also defines constants that implement
@@ -268,7 +268,7 @@ than a direct equation.  There are two important properties
   (common) restricting set, then they are equal.
 \end{itemize}
 
-For completeness, restricted versions of unique existence and 
+For completeness, restricted versions of unique existence and
 indefinite description are provided, although hardly used.
 \begin{verbatim}
   RES_EXISTS_UNIQUE_DEF |- RES_EXISTS_UNIQUE =
@@ -280,16 +280,16 @@ indefinite description are provided, although hardly used.
 
 The definition of \ml{RES\_EXISTS\_UNIQUE} uses the restricted
 quantification syntax with the {\small\verb+::+} symbol, referring to
-the earlier definitions \ml{RES\_EXISTS} and \ml{RES\_FORALL}.  
+the earlier definitions \ml{RES\_EXISTS} and \ml{RES\_FORALL}.
 The \texttt{::} syntax is used with restricted quantifiers to allow
 arbitrary predicates to restrict binding variables.  Further to the
 above, the default grammar also allows restricted quantification of
 all of a sequence of binding variables by putting the restriction at
-the end of the sequence, thus with a universal quantification: 
+the end of the sequence, thus with a universal quantification:
 %
 \[
 \forall x \, y \, z \, {\tt ::} \; P \, . \; Q(x,y,z)
-\] 
+\]
 %
 Here the predicate $P$ restricts all of $x$, $y$ and $z$.
 
@@ -1096,7 +1096,7 @@ constructor's argument, and is unspecified on \texttt{NONE}:
 
 The natural numbers, integers, and real numbers are provided in a
 series of theories. Also available are theories of floating point and
-fixed point numbers. 
+fixed point numbers.
 
 \subsection{Natural numbers}
 
@@ -1677,8 +1677,8 @@ theorem.
 
 \section{Sequences}
 
-\HOL{} provides theories for various kinds of sequences: finite lists, lazy lists, 
-paths, finite strings, and $n$-bit words. 
+\HOL{} provides theories for various kinds of sequences: finite lists, lazy lists,
+paths, finite strings, and $n$-bit words.
 
 \subsection{Lists}\label{avra_list}
 \index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL{} logic}
@@ -2185,7 +2185,32 @@ value of \texttt{last} on such paths is unspecified:
 
 The function \texttt{pconcat} concatenates two paths, linking them
 with a provided label.  If the first path is infinite, then the result
-is equal to that first path.  The defining equation
+is equal to that first path.  The defining equation is
+\begin{verbatim}
+  pconcat_thm |- (pconcat (stopped_at x) lab p2 = pcons x lab p2) /\
+                 (pconcat (pcons x r p) lab p2 =
+                      pcons x r (pconcat p lab p2)
+\end{verbatim}
+These equations are true even when the first argument to \texttt{pconcat}
+is an infinite path.
+
+The \texttt{okpath} predicate tests whether or not a path is a valid
+transition given a ternary transition relation.  Its characterising
+theorem is
+\begin{verbatim}
+  okpath_thm |-
+     (okpath R (stopped_at x)) /\
+     (okpath R (pcons x r p) = R x r (first p) /\ okpath R p)
+\end{verbatim}
+There is an induction principle that simplifies reasoning about finite
+$R$-paths:
+\begin{verbatim}
+  finite_okpath_ind |-
+      (!x. P (stopped_at x)) /\
+      (!x r p. okpath R p /\ finite p /\ R x r (first p) /\ P p ==>
+               P (pcons x r p)) ==>
+      !p. okpath R p /\ finite p ==> P p
+\end{verbatim}
 
 
 \subsection{Character strings}
@@ -2232,7 +2257,7 @@ The empty set is the characteristic function that is constantly
 false. The constant {\small\verb+EMPTY+} denotes the empty set; it may
 be written as {\small\verb+{}+}. The universal set {\small\verb+UNIV+}
 on a type is the characteristic function that is always true for
-elements of that type. 
+elements of that type.
 %
 {\small
 \begin{verbatim}
@@ -2246,7 +2271,7 @@ The insertion ({\small\verb+INSERT+}, written infix) of an element
 into a set is defined with a set comprehension. Set comprehension is
 discussed in the next subsection. Set union ({\small\verb+UNION+},
 written infix) and intersection ({\small\verb+INTER+}, also infix)
-are given their usual definitions by set comprehension. 
+are given their usual definitions by set comprehension.
 %
 {\small
 \begin{verbatim}
@@ -2265,13 +2290,13 @@ definitions of  {\small\verb+BIGUNION+} and {\small\verb+BIGINTER+}.
   BIGINTER    |- !B. BIGINTER P = {x | !s. s IN B ==> x IN s}
 \end{verbatim}}
 %
-Both {\small\verb+BIGUNION+} and {\small\verb+BIGINTER+} reduce 
-a set of sets to a set and thus have the type 
+Both {\small\verb+BIGUNION+} and {\small\verb+BIGINTER+} reduce
+a set of sets to a set and thus have the type
 $((\alpha\to\konst{bool})\to\konst{bool})\to (\alpha\to\konst{bool})$.
 
 \paragraph{Subsets}
 
-Set inclusion ({\small\verb+SUBSET+}, infix) and proper set inclusion 
+Set inclusion ({\small\verb+SUBSET+}, infix) and proper set inclusion
 ({\small\verb+PSUBSET+}, infix) are defined as follows:
 %
 {\small
@@ -2302,7 +2327,7 @@ a set ({\small\verb+IMAGE+}) is defined with a set comprehension.
   IMAGE_DEF   |- !f s. IMAGE f s = {f x | x IN s}
 \end{verbatim}}
 %
-Injections, surjections, and bijections between sets are defined 
+Injections, surjections, and bijections between sets are defined
 as follows:
 %
 {\small
@@ -2328,7 +2353,7 @@ built from the empty set and created by a finite number of insertions.
 \begin{verbatim}
  FINITE_DEF
       |- !s. FINITE s = !P. P {} /\ (!s. P s ==> !e. P (e INSERT s)) ==> P s
- INFINITE_DEF 
+ INFINITE_DEF
       |- !s. INFINITE s = ~FINITE s
 \end{verbatim}}
 %
@@ -2351,7 +2376,7 @@ An extensive suite of theorems dealing with finiteness and cardinality
 is available in {\small\verb+pred_set+}.
 
 \paragraph{Cross product}
-The product of two sets ({\small\verb+CROSS+}, infix) is defined 
+The product of two sets ({\small\verb+CROSS+}, infix) is defined
 with a set comprehension.
 %
 {\small
@@ -2371,8 +2396,8 @@ Cardinality and cross product are related by the following theorem:
 Recursive functions on sets may be defined by wellfounded
 recursion. Usually, the totality of such a function is established by
 measuring the cardinality of the (finite) set. However, another
-theorem may be used to justify a fold ({\small\verb+ITSET+}) for finite sets. 
-Provided a function $f:\alpha\to\beta\to\beta$ obeys a condition 
+theorem may be used to justify a fold ({\small\verb+ITSET+}) for finite sets.
+Provided a function $f:\alpha\to\beta\to\beta$ obeys a condition
 known as \emph{left-commutativity}, namely, $f\;x\;(f\;y\;z) =
 f\;y\;(f\;x\;z)$, then $f$ can be applied by folding it on the set
 in a tail-recursive fashion.
@@ -2396,7 +2421,7 @@ A recursive version is also available:
 \end{verbatim}}
 %
 For the full derivation, see the sources of {\small\verb+pred_set+}.
-The definition of {\small\verb+ITSET+} allows, for example, the 
+The definition of {\small\verb+ITSET+} allows, for example, the
 definition of summing a finite set of numbers.
 %
 {\small
@@ -2407,14 +2432,14 @@ definition of summing a finite set of numbers.
 
 \paragraph{Other definitions and theorems}
 
-There are more definitions in {\small\verb+pred_set+}, but they 
+There are more definitions in {\small\verb+pred_set+}, but they
 are not as heavily used as the ones presented here. Similarly, most
 theorems in {\small\verb+pred_set+} relate the various standard
 operators to each other. Some notable other theorems are Koenig's
 Lemma, which states that every finitely branching infinite tree has an
 infinite path. There are many ways to formulate this theorem,
 depending on how the notion of tree is formalized. In
-{\small\verb+pred_set+}, finite branching is defined as a predicate on 
+{\small\verb+pred_set+}, finite branching is defined as a predicate on
 a relation.
 %
 {\small
