@@ -1,6 +1,8 @@
 open Polyhash
 
-val ptable = mkPolyTable (100, Fail "Profiler Not Found")
+exception ProfileEntryNotFound
+
+val ptable = mkPolyTable (100, ProfileEntryNotFound)
 
 fun time f x = let
   val timer = Timer.startCPUTimer()
@@ -27,7 +29,7 @@ fun profile nm f x =
         result
       end
 
-fun reset1 nm = ignore (remove ptable nm)
+fun reset1 nm = remove ptable nm handle ProfileEntryNotFound => ()
 
 fun reset_all () = filter (fn x => false) ptable
 
