@@ -21,7 +21,7 @@ fun enum_pred k =
  in mk_abs(n,mk_less(n,topnum))
  end;
 
-fun type_exists k = 
+fun type_exists k =
  let val n = mk_var("n",num)
  in prove (mk_exists(n, mk_comb(enum_pred k, n)),
            EXISTS_TAC zero_tm THEN REDUCE_TAC)
@@ -130,12 +130,12 @@ end
     Make a size definition for an enumerated type (everywhere zero)
    ---------------------------------------------------------------------- *)
 
-fun mk_size_definition ty = 
+fun mk_size_definition ty =
  let val tyname = #1 (dest_type ty)
      val cname = tyname^"_size"
      val var_t = mk_var(cname, ty --> NUM)
      val avar = mk_var("x", ty)
-     val def = new_definition(cname^"_def", 
+     val def = new_definition(cname^"_def",
                               mk_eq(mk_comb(var_t, avar), zero_tm))
  in
    SOME (rator (lhs (#2 (strip_forall (concl def)))), TypeBasePure.ORIG def)
@@ -158,12 +158,12 @@ in
   List.rev (doitall l [])
 end
 
-fun prove_distinctness_thm simpls constrs = 
+fun prove_distinctness_thm simpls constrs =
  let val upper_triangle = gen_triangle constrs
      fun prove_inequality (c1, c2) =
         (REWRITE_CONV simpls THENC numLib.REDUCE_CONV) (mk_eq(c1,c2))
  in
-   if null upper_triangle then NONE else 
+   if null upper_triangle then NONE else
    SOME (LIST_CONJ (map (EQF_ELIM o prove_inequality) upper_triangle))
  end
 
@@ -306,19 +306,16 @@ fun enum_type_to_tyinfo (ty, constrs) = let
   val abs = "num2"^ty
   val rep = ty^"2num"
   val (result as {constrs,TYPE,...}) = define_enum_type(ty,constrs,abs,rep)
+  val abs_thm = save_thm(abs ^ "_thm", LIST_CONJ (map SYM (#defs result)))
   val (simpl_names, simpls) = let
     val nvs      = num_values (#REP_ABS result) (#defs result)
+    val nv_name  = rep ^ "_thm"
+    val nv_thm   = (nv_name, save_thm(nv_name, LIST_CONJ nvs))
     val symrep11 = let val nm = ty^"_EQ_"^ty in
                       (nm, save_thm(nm, GSYM (#REP_11 result)))
                     end
-    fun save_nv thm = let
-       val nm0 = #1 (dest_const (rand (lhs (concl thm))))
-       val nm = rep^"_"^nm0
-     in
-       (nm, save_thm(nm, thm))
-    end
   in
-    ListPair.unzip (symrep11 :: map save_nv nvs)
+    ListPair.unzip [symrep11, nv_thm]
   end
 
   val nchotomy = prove_cases_thm (#ABS_ONTO result) (List.rev (#defs result))
