@@ -42,6 +42,17 @@ val READABLE_VARS_CONV : conv
 (* ------------------------------------------------------------------------- *)
 
 val SKI_CONV : conv
+
+(* ------------------------------------------------------------------------- *)
+(* Conversion to combinators {S,K,I,C,o}.                                    *)
+(*                                                                           *)
+(* Example:                                                                  *)
+(*   (?f. !y. f y = y + 1)                                                   *)
+(*   =                                                                       *)
+(*   $? ($! o C (S o $o $= o I) (C $+ 1))                                    *)
+(* ------------------------------------------------------------------------- *)
+
+val SKICo_CONV : conv
   
 (* ------------------------------------------------------------------------- *)
 (* Beta reduction and simplifying boolean rewrites.                          *)
@@ -65,7 +76,10 @@ val SIMPLIFY_CONV : conv
 (*   ?x. ~P x                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val NNF_CONV : conv
+val PURE_NNF_CONV' : conv -> conv       (* takes a 'leaf conversion' *)
+val PURE_NNF_CONV  : conv
+val NNF_CONV'      : conv -> conv       (* takes a 'leaf conversion' *)
+val NNF_CONV       : conv
   
 (* ------------------------------------------------------------------------- *)
 (* Skolemization.                                                            *)
@@ -93,21 +107,35 @@ val CONTRACT_CONV : conv
 (* Conjunctive Normal Form.                                                  *)
 (*                                                                           *)
 (* Example:                                                                  *)
-(*   (!x. P x ==> ?y z. Q y \/ ~?z. P z /\ Q z)                              *)
-(*   =                                                                       *)
-(*   ?y. !x x'. Q (y x) \/ ~P x' \/ ~Q x' \/ ~P x                            *)
+(*  (!x. P x ==> ?y z. Q y \/ ~?z. P z \/ Q z)                               *)
+(*  =                                                                        *)
+(*  ?y. (!x x'. Q (y x) \/ ~P x' \/ ~P x) /\ !x x'. Q (y x) \/ ~Q x' \/ ~P x *)
 (* ------------------------------------------------------------------------- *)
 
 val tautology_checking : bool ref
-val CNF_CONV : conv
+val PURE_CNF_CONV  : conv
+val CNF_CONV'      : conv -> conv       (* takes a 'leaf conversion' *)
+val CNF_CONV       : conv
   
+(* ------------------------------------------------------------------------- *)
+(* Disjunctive Normal Form.                                                  *)
+(*                                                                           *)
+(* Example:                                                                  *)
+(*   (!x. P x ==> ?y z. Q y \/ ~?z. P z \/ Q z)                              *)
+(*   =                                                                       *)
+(*   !x z. (?y. Q y) \/ (?y. ~P (z y) /\ ~Q (z y)) \/ ~P x                   *)
+(* ------------------------------------------------------------------------- *)
+
+val DNF_CONV'      : conv -> conv       (* takes a 'leaf conversion' *)
+val DNF_CONV       : conv
+
 (* ------------------------------------------------------------------------- *)
 (* Definitional negation normal form                                         *)
 (*                                                                           *)
 (* Example:                                                                  *)
 (*   (~(p = ~(q = r)) = ~(~(p = q) = r))                                     *)
 (*   =                                                                       *)
-(*   ((~p = (~q = r)) = ((p = q) = r))                                       *)
+(*   ((p = (q = r)) = ((p = ~q) = ~r))                                       *)
 (* ------------------------------------------------------------------------- *)
 
 val DEF_NNF_CONV : conv
@@ -151,7 +179,7 @@ val NEW_CONST_RULE         : rule
 val CLEANUP_CONSTS_RULE    : rule
 
 (* ------------------------------------------------------------------------- *)
-(* Eliminating lambdas to make terms "as first-order as possible".           *)
+(* Eliminates some lambdas to make terms "as first-order as possible".       *)
 (*                                                                           *)
 (* Example:  ((\x. f x z) = g z)  =  !x. f x z = g z x                       *)
 (* ------------------------------------------------------------------------- *)
@@ -173,7 +201,7 @@ val SELECT_TAC : tactic
 (* ------------------------------------------------------------------------- *)
 (* Lifting conditionals through function applications.                       *)
 (*                                                                           *)
-(* Example:  f (if x then 7 else 1)  =  (if x then f 7 else f 1)             *)
+(* Example:  f (if x then y else z)  =  (if x then f y else f z)             *)
 (* ------------------------------------------------------------------------- *)
 
 val cond_lift_SS  : ssdata
@@ -188,13 +216,4 @@ val cond_lift_ss  : simpset      (* pure + cond_lift *)
 val condify_SS    : ssdata
 val condify_ss    : simpset      (* pure + condify *)
   
-(* ------------------------------------------------------------------------- *)
-(* Evaluating successors of numerals (REDUCE_ss currently doesn't do this).  *)
-(*                                                                           *)
-(* Examples:  SUC 7 = 8,  SUC 0 = 1                                          *)
-(* ------------------------------------------------------------------------- *)
-
-val reduce_suc_SS : ssdata
-val reduce_ss     : simpset      (* pure + REDUCE + reduce_suc *)
-
 end

@@ -4,7 +4,8 @@
 (* ========================================================================= *)
 
 (*
-app load ["BasicProvers", "simpLib", "numLib"];
+app load ["simpLib", "combinTheory", "boolSimps"];
+guessing_tyvars := false;
 *)
 
 (*
@@ -12,9 +13,13 @@ app load ["BasicProvers", "simpLib", "numLib"];
 structure normalForms :> normalForms =
 struct
 
-open HolKernel Parse boolLib simpLib numLib BasicProvers;
+open HolKernel Parse boolLib QConv simpLib;
 
-infix THEN THENC ORELSEC ++ --> |->;
+infix THEN THENC ORELSEC ++ --> |-> THENQC ORELSEQC;
+
+val (Type,Term) = Parse.parse_from_grammars combinTheory.combin_grammars;
+val op THENQC = uncurry (op QConv.THENQC);
+val op ORELSEQC = uncurry (op QConv.ORELSEQC);
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -27,7 +32,7 @@ fun ERR f s =
 fun distinct [] = true
   | distinct (x :: rest) = not (mem x rest) andalso distinct rest;
 
-val if_and_only_if = ``$= : bool->bool->bool``;
+val beq = ``$= : bool->bool->bool``;
 
 fun dest_beq tm =
   let val (a, b, ty) = dest_eq_ty tm
@@ -35,6 +40,34 @@ fun dest_beq tm =
   end;
 
 val is_beq = can dest_beq;
+
+fun MK_QCONV c tm =
+  let val th = c tm
+  in if rhs (concl th) = tm then raise QConv.UNCHANGED else th
+  end;
+
+fun FIRST_QCONV [] _ = raise ERR "FIRST_QCONV" "out of QCONVs"
+  | FIRST_QCONV (qc :: rest) tm = (qc ORELSEQC FIRST_QCONV rest) tm;
+
+fun JUNCTS_CONV p c =
+  let fun f t = (if p t then LAND_CONV c THENC RAND_CONV f else c) t in f end;
+
+val CONJUNCTS_CONV = JUNCTS_CONV is_conj;
+val DISJUNCTS_CONV = JUNCTS_CONV is_disj;
+
+fun FORALL_CONV c tm =
+  if is_forall tm then QUANT_CONV c tm
+  else raise ERR "FORALL_CONV" "not a forall";
+
+fun EXISTS_CONV c tm =
+  if is_exists tm then QUANT_CONV c tm
+  else raise ERR "EXISTS_CONV" "not an exists";
+
+fun STRIP_EXISTS_CONV c tm =
+  if is_exists tm then STRIP_QUANT_CONV c tm else c tm;
+
+fun STRIP_FORALL_CONV c tm =
+  if is_forall tm then STRIP_QUANT_CONV c tm else c tm;
 
 fun NORM_ASSOC_CONV (a as (is_op, assoc_th)) =
   let
@@ -47,13 +80,7 @@ fun NORM_ASSOC_CONV (a as (is_op, assoc_th)) =
   end;
 
 val CONJ_ASSOC_CONV = NORM_ASSOC_CONV (is_conj, GSYM CONJ_ASSOC);
-
 val DISJ_ASSOC_CONV = NORM_ASSOC_CONV (is_disj, GSYM DISJ_ASSOC);
-
-fun CONJUNCTS_CONV c =
-  let fun f tm = (if is_conj tm then LAND_CONV c THENC RAND_CONV f else c) tm
-  in f
-  end;
 
 fun ANTI_BETA_CONV vars tm =
   let
@@ -65,12 +92,6 @@ fun ANTI_BETA_CONV vars tm =
 
 fun AVOID_SPEC_TAC (tm, v) =
   W (fn (_, g) => SPEC_TAC (tm, variant (free_vars g) v));
-
-fun STRIP_EXISTS_CONV c tm =
-  if is_exists tm then STRIP_QUANT_CONV c tm else c tm;
-
-fun STRIP_FORALL_CONV c tm =
-  if is_forall tm then STRIP_QUANT_CONV c tm else c tm;
 
 (* ------------------------------------------------------------------------- *)
 (* Replace genvars with variants on `v`.                                     *)
@@ -132,36 +153,66 @@ fun READABLE_VARS_CONV tm =
 (*   $? (S (K $!) (S (S (K S) (S (K (S (K $=))) I)) (K (S $+ (K 1)))))       *)
 (* ------------------------------------------------------------------------- *)
 
+fun COMBIN_CONV ths =
+  let
+    val mk_combin = FIRST_CONV (map HO_REWR_CONV ths)
+    fun conv tm =
+      (case dest_term tm of
+         CONST _ => ALL_CONV
+       | VAR _ => ALL_CONV
+       | COMB _ => RATOR_CONV conv THENC RAND_CONV conv
+       | LAMB _ => ABS_CONV conv THENC mk_combin) tm
+  in
+    conv
+  end;
+
 val MK_S = prove
-  (``!x y. (\v. (x v) (y v)) = S x y``,
+  (``!x y. (\v. (x v) (y v)) = S (x:'a->'b->'c) y``,
    REPEAT STRIP_TAC THEN
    CONV_TAC (FUN_EQ_CONV) THEN
-   RW_TAC boolSimps.bool_ss [combinTheory.S_DEF, combinTheory.K_DEF]);
+   SIMP_TAC boolSimps.bool_ss [combinTheory.S_DEF, combinTheory.K_DEF]);
 
 val MK_K = prove
-  (``!x. (\v. x) = K x``,
+  (``!x. (\v. x) = (K:'a->'b->'a) x``,
    REPEAT STRIP_TAC THEN
    CONV_TAC (FUN_EQ_CONV) THEN
-   RW_TAC boolSimps.bool_ss [combinTheory.S_DEF, combinTheory.K_DEF]);
+   SIMP_TAC boolSimps.bool_ss [combinTheory.S_DEF, combinTheory.K_DEF]);
 
 val MK_I = prove
-  (``(\v. v) = I``,
+  (``(\v. v) = (I:'a->'a)``,
    REPEAT STRIP_TAC THEN
    CONV_TAC (FUN_EQ_CONV) THEN
-   RW_TAC boolSimps.bool_ss
+   SIMP_TAC boolSimps.bool_ss
    [combinTheory.S_DEF, combinTheory.K_DEF, combinTheory.I_THM]);
+
+val SKI_CONV = COMBIN_CONV [MK_K, MK_I, MK_S];
+
+(* ------------------------------------------------------------------------- *)
+(* Conversion to combinators {S,K,I,C,o}.                                    *)
+(*                                                                           *)
+(* Example:                                                                  *)
+(*   (?f. !y. f y = y + 1)                                                   *)
+(*   =                                                                       *)
+(*   $? ($! o C (S o $o $= o I) (C $+ 1))                                    *)
+(* ------------------------------------------------------------------------- *)
+
+val MK_C = store_thm
+  ("MK_C",
+   ``!x y. (\v. (x v) y) = C (x:'a->'b->'c) y``,
+   REPEAT STRIP_TAC THEN
+   CONV_TAC (FUN_EQ_CONV) THEN
+   SIMP_TAC boolSimps.bool_ss
+   [combinTheory.S_DEF, combinTheory.K_DEF, combinTheory.C_DEF]);
+
+val MK_o = store_thm
+  ("MK_o",
+   ``!x y. (\v:'a. x (y v)) = (x:'b->'c) o y``,
+   REPEAT STRIP_TAC THEN
+   CONV_TAC (FUN_EQ_CONV) THEN
+   SIMP_TAC boolSimps.bool_ss
+   [combinTheory.S_DEF, combinTheory.K_DEF, combinTheory.o_DEF]);
    
-fun SKI_CONV tm =
-  (case dest_term tm of
-     CONST _ => ALL_CONV
-   | VAR _ => ALL_CONV
-   | COMB _ => RAND_CONV SKI_CONV THENC RATOR_CONV SKI_CONV
-   | LAMB _
-     => ABS_CONV SKI_CONV THENC
-        (HO_REWR_CONV MK_K ORELSEC
-         HO_REWR_CONV MK_I ORELSEC
-         HO_REWR_CONV MK_S) THENC
-        SKI_CONV) tm;
+val SKICo_CONV = COMBIN_CONV [MK_K, MK_I, MK_C, MK_o, MK_S];
 
 (* ------------------------------------------------------------------------- *)
 (* Beta reduction and simplifying boolean rewrites.                          *)
@@ -188,14 +239,58 @@ val SIMPLIFY_CONV = SIMP_CONV simplify_ss [];
 
 val IMP_DISJ_THM' = prove
   (``!x y. x ==> y = y \/ ~x``,
-   PROVE_TAC []);
+   tautLib.TAUT_TAC);
 
-val PURE_NNF_CONV =
-  SIMP_CONV simplify_ss
-  [IMP_DISJ_THM', EQ_EXPAND, hd (CONJUNCTS NOT_CLAUSES), NOT_FORALL_THM,
-   NOT_EXISTS_THM, DE_MORGAN_THM];
+val NIMP_CONJ_THM = prove
+  (``!x y. ~(x ==> y) = x /\ ~y``,
+   tautLib.TAUT_TAC);
 
-val NNF_CONV = SIMPLIFY_CONV THENC PURE_NNF_CONV;
+val EQ_EXPAND' = prove
+  (``!x y. (x = y) = (x \/ ~y) /\ (~x \/ y)``,
+   tautLib.TAUT_TAC);
+
+val NEQ_EXPAND = prove
+  (``!x y. ~(x = y) = (x \/ y) /\ (~x \/ ~y)``,
+   tautLib.TAUT_TAC);
+
+val DE_MORGAN_THM1 = prove
+  (``!x y. (~(x /\ y) = ~x \/ ~y)``,
+   tautLib.TAUT_TAC);
+
+val DE_MORGAN_THM2 = prove
+  (``!x y. (~(x \/ y) = ~x /\ ~y)``,
+   tautLib.TAUT_TAC);
+
+fun NNF_SUB_QCONV qc tm =
+  (if is_forall tm then QUANT_CONV qc
+   else if is_exists tm then QUANT_CONV qc
+   else if is_conj tm then LAND_CONV qc THENQC RAND_CONV qc
+   else if is_disj tm then LAND_CONV qc THENQC RAND_CONV qc
+   else NO_CONV) tm;
+
+local
+  val zap_neg = REWR_CONV (CONJUNCT1 NOT_CLAUSES);
+  val push_neg = FIRST_CONV
+    (map REWR_CONV
+     [IMP_DISJ_THM', NIMP_CONJ_THM, EQ_EXPAND', NEQ_EXPAND,
+      DE_MORGAN_THM1, DE_MORGAN_THM2] @
+     [NOT_FORALL_CONV, NOT_EXISTS_CONV]);
+  val q_neg = REPEATQC (MK_QCONV zap_neg) THENQC TRY_QCONV (MK_QCONV push_neg);
+in
+  fun PARTIAL_NNF_QCONV qc tm =
+    (q_neg THENQC
+     (NNF_SUB_QCONV (PARTIAL_NNF_QCONV qc) ORELSEQC TRY_QCONV qc)) tm;
+end;
+
+fun PURE_NNF_QCONV' qc tm =
+  PARTIAL_NNF_QCONV (qc THENQC PURE_NNF_QCONV' qc) tm;
+val PURE_NNF_QCONV = PURE_NNF_QCONV' NO_CONV;
+
+fun PURE_NNF_CONV' qc = QCONV (PURE_NNF_QCONV' (MK_QCONV qc));
+val PURE_NNF_CONV = PURE_NNF_CONV' NO_CONV;
+
+fun NNF_CONV' c = SIMPLIFY_CONV THENC PURE_NNF_CONV' c;
+val NNF_CONV = NNF_CONV' NO_CONV;
 
 (* ------------------------------------------------------------------------- *)
 (* Skolemization.                                                            *)
@@ -224,39 +319,39 @@ val SKOLEMIZE_CONV = DEPTH_CONV PULL_EXISTS_CONV;
 
 val BOOL_CASES = prove
   (``!a b. (a ==> b) /\ (~a ==> b) ==> b``,
-   PROVE_TAC []);
+   tautLib.TAUT_TAC);
 
 val T_OR = prove
   (``!t. T \/ t = T``,
-   PROVE_TAC []);
+   tautLib.TAUT_TAC);
 
 val OR_T = prove
   (``!t. t \/ T = T``,
-   PROVE_TAC []);
+   tautLib.TAUT_TAC);
 
 val T_AND = prove
   (``!t. T /\ t = t``,
-   PROVE_TAC []);
+   tautLib.TAUT_TAC);
 
 val AND_T = prove
   (``!t. t /\ T = t``,
-   PROVE_TAC []);
+   tautLib.TAUT_TAC);
 
 val FORALL_T = prove
-  (``(!x. T) = T``,
-   PROVE_TAC []);
+  (``(!x:'a. T) = T``,
+   ACCEPT_TAC (ISPEC T FORALL_SIMP));
 
 val OR_F = prove
   (``!t. t \/ F = t``,
-   PROVE_TAC []);
+   tautLib.TAUT_TAC);
 
 val CONTRACT_DISJ = prove
   (``!a b b'. (~a ==> (b = b')) ==> (~a ==> (a \/ b = b'))``,
-   PROVE_TAC []);
+   tautLib.TAUT_TAC);
 
 val DISJ_CONGRUENCE = prove
   (``!a b b'. (~a ==> (b = b')) ==> (a \/ b = a \/ b')``,
-   PROVE_TAC []);
+   tautLib.TAUT_TAC);
 
 local
   fun harvest res [] = res
@@ -331,9 +426,9 @@ end;
 (* Conjunctive Normal Form.                                                  *)
 (*                                                                           *)
 (* Example:                                                                  *)
-(*   (!x. P x ==> ?y z. Q y \/ ~?z. P z /\ Q z)                              *)
-(*   =                                                                       *)
-(*   ?y. !x x'. Q (y x) \/ ~P x' \/ ~Q x' \/ ~P x                            *)
+(*  (!x. P x ==> ?y z. Q y \/ ~?z. P z \/ Q z)                               *)
+(*  =                                                                        *)
+(*  ?y. (!x x'. Q (y x) \/ ~P x' \/ ~P x) /\ !x x'. Q (y x) \/ ~Q x' \/ ~P x *)
 (* ------------------------------------------------------------------------- *)
 
 val tautology_checking = ref true;
@@ -366,12 +461,34 @@ end;
 val CLEAN_CNF_CONV =
   STRIP_EXISTS_CONV
   (CONJ_ASSOC_CONV THENC
-   CONJUNCTS_CONV (STRIP_FORALL_CONV DISJ_ASSOC_CONV));
+   CONJUNCTS_CONV
+   (STRIP_FORALL_CONV (DISJ_ASSOC_CONV THENC DISJUNCTS_CONV SKI_CONV)));
 
-val CNF_CONV =
-  SIMPLIFY_CONV THENC NNF_CONV THENC SKOLEMIZE_CONV THENC
-  STRIP_EXISTS_CONV (DEPTH_CONV PUSH_ORS_CONV) THENC
-  CLEAN_CNF_CONV;
+val PURE_CNF_CONV =
+  STRIP_EXISTS_CONV (DEPTH_CONV PUSH_ORS_CONV) THENC CLEAN_CNF_CONV;
+
+fun CNF_CONV' c = NNF_CONV' c THENC SKOLEMIZE_CONV THENC PURE_CNF_CONV;
+
+val CNF_CONV = CNF_CONV' NO_CONV;
+
+(* ------------------------------------------------------------------------- *)
+(* Disjunctive Normal Form.                                                  *)
+(*                                                                           *)
+(* Example:                                                                  *)
+(*   (!x. P x ==> ?y z. Q y \/ ~?z. P z \/ Q z)                              *)
+(*   =                                                                       *)
+(*   !x z. (?y. Q y) \/ (?y. ~P (z y) /\ ~Q (z y)) \/ ~P x                   *)
+(* ------------------------------------------------------------------------- *)
+
+val DOUBLE_NEG_CONV = REWR_CONV (GSYM (CONJUNCT1 NOT_CLAUSES));
+
+fun NEG_CONV c tm =
+  ((if is_neg tm then ALL_CONV else DOUBLE_NEG_CONV) THENC RAND_CONV c) tm;
+
+fun DNF_CONV' c =
+  DOUBLE_NEG_CONV THENC RAND_CONV (CNF_CONV' (NEG_CONV c)) THENC PURE_NNF_CONV;
+
+val DNF_CONV = DNF_CONV' NO_CONV;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitional negation normal form                                         *)
@@ -379,12 +496,12 @@ val CNF_CONV =
 (* Example:                                                                  *)
 (*   (~(p = ~(q = r)) = ~(~(p = q) = r))                                     *)
 (*   =                                                                       *)
-(*   ((~p = (~q = r)) = ((p = q) = r))                                       *)
+(*   ((p = (q = r)) = ((p = ~q) = ~r))                                       *)
 (* ------------------------------------------------------------------------- *)
 
 val NEG_EQ = prove
-  (``!a b. ~(a = b) = (~a = b)``,
-   PROVE_TAC []);
+  (``!a b. ~(a = b) = (a = ~b)``,
+   tautLib.TAUT_TAC);
 
 val PURE_DEF_NNF_CONV =
   SIMP_CONV simplify_ss
@@ -444,7 +561,7 @@ fun gen_cnf defs tm =
   else if is_disj tm then
     def_step (sub_cnf gen_cnf disjunction defs (dest_disj tm))
   else if is_beq tm then
-    def_step (sub_cnf gen_cnf if_and_only_if defs (dest_beq tm))
+    def_step (sub_cnf gen_cnf beq defs (dest_beq tm))
   else
     (defs, tm);
 
@@ -560,16 +677,18 @@ end;
 (* ------------------------------------------------------------------------- *)
 (* Eliminating lambdas to make terms "as first-order as possible".           *)
 (*                                                                           *)
-(* Example:                                                                  *)
+(* Example:  ((\x. f x z) = g z)  =  !x. f x z = g z x                       *)
 (* ------------------------------------------------------------------------- *)
 
 val LAMB_EQ_ELIM = prove
   (``!(s : 'a -> 'b) t. ((\x. s x) = t) = (!x. s x = t x)``,
-   PROVE_TAC []);
+   CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
+   SIMP_TAC boolSimps.bool_ss []);
 
 val EQ_LAMB_ELIM = prove
   (``!(s : 'a -> 'b) t. (s = (\x. t x)) = (!x. s x = t x)``,
-   PROVE_TAC []);
+   CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
+   SIMP_TAC boolSimps.bool_ss []);
 
 val DELAMB_CONV = SIMP_CONV simplify_ss [EQ_LAMB_ELIM, LAMB_EQ_ELIM];
 
@@ -642,7 +761,7 @@ val SELECT_TAC = CONV_TAC SELECT_NORM_CONV THEN REPEAT SPEC_ONE_SELECT_TAC;
 (* ------------------------------------------------------------------------- *)
 (* Lifting conditionals through function applications.                       *)
 (*                                                                           *)
-(* Example:  f (if x then 7 else 1)  =  (if x then f 7 else f 1)             *)
+(* Example:  f (if x then y else z)  =  (if x then f y else f z)             *)
 (* ------------------------------------------------------------------------- *)
 
 fun cond_lift_rand_CONV tm =
@@ -678,44 +797,42 @@ val cond_lift_ss = simpLib.++ (pureSimps.pure_ss, cond_lift_SS);
 (* ------------------------------------------------------------------------- *)
 
 val COND_SIMP = prove
-  (``!a f g. (if a then f a else g a) = (if a then f T else g F)``,
-   RW_TAC boolSimps.bool_ss []);
+  (``!a f g. (if a then f a else g a):'a = (if a then f T else g F)``,
+   SIMP_TAC boolSimps.bool_ss []);
 
 val COND_NOT = prove
   (``!a. ~a = if a then F else T``,
-   RW_TAC boolSimps.bool_ss []
-   THEN PROVE_TAC []);
+   SIMP_TAC boolSimps.bool_ss []);
 
 val COND_AND = prove
   (``!a b. a /\ b = (if a then b else F)``,
-   RW_TAC boolSimps.bool_ss []
-   THEN PROVE_TAC []);
+   SIMP_TAC boolSimps.bool_ss []);
 
 val COND_OR = prove
   (``!a b. a \/ b = if a then T else b``,
-   RW_TAC boolSimps.bool_ss []
-   THEN PROVE_TAC []);
+   SIMP_TAC boolSimps.bool_ss []);
 
 val COND_IMP = prove
   (``!a b. a ==> b = if a then b else T``,
-   RW_TAC boolSimps.bool_ss []
-   THEN PROVE_TAC []);
+   SIMP_TAC boolSimps.bool_ss []);
 
 val COND_EQ = prove
   (``!a b. (a = b) = if a then b else ~b``,
-   RW_TAC boolSimps.bool_ss []
-   THEN PROVE_TAC []);
+   SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, COND_EXPAND]
+   THEN tautLib.TAUT_TAC);
 
 val COND_COND = prove
   (``!a b c x y.
-       (if (if a then b else c) then x else y) =
+       (if (if a then b else c) then (x:'a) else y) =
        (if a then (if b then x else y) else (if c then x else y))``,
-   RW_TAC boolSimps.bool_ss []
-   THEN PROVE_TAC []);
+   STRIP_TAC
+   THEN MP_TAC (SPEC ``a:bool`` EXCLUDED_MIDDLE)
+   THEN STRIP_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss []);
 
 val COND_ETA = prove
   (``!a. (if a then T else F) = a``,
-   RW_TAC boolSimps.bool_ss []);
+   SIMP_TAC boolSimps.bool_ss []);
 
 val COND_SIMP_CONV = CHANGED_CONV (HO_REWR_CONV COND_SIMP);
 
@@ -723,7 +840,8 @@ val condify_SS =
   SIMPSET
   {convs =
    [{name = "COND_SIMP_CONV", trace = 2,
-     key = SOME ([], (``if a then b else c``)), conv = K (K COND_SIMP_CONV)}],
+     key = SOME ([], (``if a then (b:'a) else c``)),
+     conv = K (K COND_SIMP_CONV)}],
    rewrs =
    [COND_CLAUSES, COND_NOT, COND_AND, COND_OR, COND_IMP, COND_EQ, COND_COND,
     COND_ID, COND_ETA, FORALL_SIMP, EXISTS_SIMP],
@@ -734,63 +852,19 @@ val condify_SS =
 
 val condify_ss = simpLib.++ (pureSimps.pure_ss, condify_SS);
 
-(* ------------------------------------------------------------------------- *)
-(* Evaluating successors of numerals (REDUCE_ss currently doesn't do this).  *)
-(*                                                                           *)
-(* Examples:  SUC 7 = 8,  SUC 0 = 1                                          *)
-(* ------------------------------------------------------------------------- *)
-
-val reduce_suc_SS =
-  SIMPSET
-  {convs =
-   [{name = "evaluating successors of numerals", trace = 2,
-     key = SOME([], Term`SUC (NUMERAL n)`), conv = K (K REDUCE_CONV)}],
-   rewrs = [GSYM arithmeticTheory.ONE],
-   congs = [],
-   filter = NONE,
-   ac = [],
-   dprocs = []};
-
-val reduce_ss =
-  simpLib.++
-  (simpLib.++ (pureSimps.pure_ss, numSimps.REDUCE_ss), reduce_suc_SS);
-
 (* Quick testing
+val Term = Parse.Term;
+val Type = Parse.Type;
 show_assums := true;
-app load ["normalFormsTest"];
-open normalFormsTest;
-
-val DEF_CNF_CONV' =
-  (time o try)
-  (time DEF_NNF_CONV THENC
-   time PURE_DEF_CNF_CONV THENC
-   time CLEAN_DEF_CNF_CONV);
-
-(* Large formulas *)
-
-val valid1 = time (mk_neg o Term) valid_1;
-
-val _ = DEF_CNF_CONV' valid1;
-
-(* The pigeon-hole principle *)
-
-val test = K () o DEF_CNF_CONV' o time (mk_neg o var_pigeon);
-
-test 8;
-test 9;
-test 10;
-test 11;
-test 12;
-test 13;
-test 14;
-test 15;
-
-stop;
+Globals.guessing_tyvars := true;
+app load ["normalFormsTest", "numLib", "arithmeticTheory", "bossLib"];
+open normalFormsTest numLib arithmeticTheory bossLib;
+Parse.reveal "C";
 
 READABLE_VARS_CONV (rhs (concl (DEF_CNF_CONV ``~(p = q) ==> q /\ r``)));
 
 try SKI_CONV ``?f. !y. f y = y + 1``;
-SKI_CONV ``\x. f x o g``;
+try SKI_CONV ``\x. f x o g``;
 SKI_CONV ``\x y. f x y``;
 SKI_CONV ``$? = \P. P ($@ P)``;
 SKI_CONV ``$==> = \a b. ~a \/ b``;
@@ -799,10 +873,29 @@ SKI_CONV ``!x y. P x y``;
 SKI_CONV ``!x y. P y x``;
 SKI_CONV ``(P = Q) = (!x. P x = Q x)``;
 
+try SKICo_CONV ``?f. !y. f y = y + 1``;
+try SKICo_CONV ``\x. f x o g``;
+SKICo_CONV ``\x y. f x y``;
+SKICo_CONV ``$? = \P. P ($@ P)``;
+SKICo_CONV ``$==> = \a b. ~a \/ b``;
+SKICo_CONV ``$! = \P. K T = P``;
+SKICo_CONV ``!x y. P x y``;
+SKICo_CONV ``!x y. P y x``;
+SKICo_CONV ``(P = Q) = (!x. P x = Q x)``;
+
 SIMPLIFY_CONV ``(!x y. P x \/ (P y /\ F)) ==> ?z. P z``;
 
-NNF_CONV ``(!x. P(x)) ==> ((?y. Q(y)) = (?z. P(z) /\ Q(z)))``;
+try NNF_CONV ``(!x. P(x)) ==> ((?y. Q(y)) = (?z. P(z) /\ Q(z)))``;
 NNF_CONV ``~(~(x = y) = z) = ~(x = ~(y = z))``;
+val tm = ``~(0 <= m ==>
+             0 <= n ==>
+             0 < m /\ 0 < n ==>
+             ((~(n <= 1) \/ (m = 1)) /\
+              (n <= 1 \/ (m + 1 = 1 + n) \/ m <= 0 /\ 1 + n <= 1) \/
+              m <= 1 /\ n <= 1 + 0 =
+              (m = n)))``;
+PARTIAL_NNF_QCONV (MK_QCONV (REWR_CONV NOT_NUM_EQ)) tm;
+PURE_NNF_CONV' (REWR_CONV NOT_NUM_EQ) tm;
 
 SKOLEMIZE_CONV ``!x. (?y. Q y \/ !z. ~P z \/ ~Q z) \/ ~P x``;
 
@@ -817,6 +910,16 @@ CNF_CONV ``~(((p = q) = r) = (p = (q = r)))``;
 CNF_CONV ``?y. x < y ==> (!u. ?v. x * u < y * v)``;
 CNF_CONV ``!x. P(x) ==> (?y z. Q(y) \/ ~(?z. P(z) /\ Q(z)))``;
 CNF_CONV ``?x y. x + y = 2``;
+
+val th = DNF_CONV' (REWR_CONV NOT_NUM_EQ)
+    ``~(0 <= m ==>
+        0 <= n ==>
+        0 < m /\ 0 < n ==>
+        ((~(n <= 1) \/ (m = 1)) /\
+         (n <= 1 \/ (m + 1 = 1 + n) \/ m <= 0 /\ 1 + n <= 1) \/
+         m <= 1 /\ n <= 1 + 0 =
+         (m = n)))``;
+val ds = length (strip_disj (rhs (concl th)));
 
 try DEF_NNF_CONV ``~(p = ~(q = r)) = ~(~(p = q) = r)``;
 try (DEF_CNF_CONV THENC READABLE_VARS_CONV)
@@ -843,13 +946,11 @@ g `(!x. x IN p ==> (f x = f' x)) ==> ((@x. x IN p /\ f x) = @x. x IN p /\ f' x)`
 e STRIP_TAC;
 e (CONV_TAC SELECT_NORM_CONV);
 e SELECT_TAC;
+drop ();
 
 try (SIMP_CONV cond_lift_ss []) ``f (if x then 7 else 1)``;
 
 try (SIMP_CONV condify_ss []) ``x /\ ~(y ==> ~z)``;
-
-try (SIMP_CONV reduce_ss []) ``SUC 7``;
-try (SIMP_CONV reduce_ss []) ``SUC 0``;
 *)
 
 (* Expensive tests
@@ -879,6 +980,31 @@ val p34 =
     ((?x. P(x)) = (!y. P(y))))``;
 
 time CNF_CONV (mk_neg p34);
+
+val DEF_CNF_CONV' =
+  (time o try)
+  (time DEF_NNF_CONV THENC
+   time PURE_DEF_CNF_CONV THENC
+   time CLEAN_DEF_CNF_CONV);
+
+(* Large formulas *)
+
+val valid1 = time (mk_neg o Term) valid_1;
+
+val _ = DEF_CNF_CONV' valid1;
+
+(* The pigeon-hole principle *)
+
+val test = K () o DEF_CNF_CONV' o time (mk_neg o var_pigeon);
+
+test 8;
+test 9;
+test 10;
+test 11;
+test 12;
+test 13;
+test 14;
+test 15;
 
 val _ = use "../metis/data/large-problem.sml";
 val large_problem = time Term large_problem_frag;
