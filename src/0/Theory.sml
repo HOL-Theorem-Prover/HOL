@@ -24,6 +24,9 @@
  *                                                                           *
  *  - stores information that aids the parser, e.g., fixity information      *
  *                                                                           *
+ *  - stores the arity of type operators, for the construction of            *
+ *    well-formed types.                                                     *
+ *                                                                           *
  *  - stores the type schemes of constants, thus supporting both the         *
  *    explicit construction of well-typed terms and the implicit             *
  *    construction of them, the latter via type inference.                   *
@@ -138,6 +141,7 @@ end;
  * A type for identifying the different kinds of theorems that may be        *
  * stored in a theory.                                                       *
  *---------------------------------------------------------------------------*)
+
 datatype thmkind = Thm of thm | Axiom of string ref * thm | Defn of thm
 
 fun is_axiom (Axiom _) = true  | is_axiom _ = false;
@@ -184,6 +188,7 @@ type theory = {thid : thyid,                                   (* unique id  *)
  * date. "con_wrt_disk" is set to false because when a theory is created no  *
  * corresponding file gets created (the file is only created on export).     *
  *---------------------------------------------------------------------------*)
+
 fun fresh_theory s STH GR :theory =
    {thid=new_thyid s,  STH=STH, GR=GR, facts=[],
     con_wrt_disk=false, overwritten=false, adjoin=[]};
@@ -206,6 +211,7 @@ fun theoryClone {thid,con_wrt_disk, STH=(ST,h), GR, facts,overwritten,adjoin} =
 (*---------------------------------------------------------------------------*
  * Filter the ST by a predicate.                                             *
  *---------------------------------------------------------------------------*)
+
 fun filterST P ST =
   for_se 0 (Array.length ST - 1)
       (fn i => Array.update(ST,i,Lib.gather P (Array.sub(ST,i))));
@@ -333,6 +339,7 @@ end;
  * witness that it depends on: if the witness goes out of date, then the     *
  * constant goes out of date.                                                *
  *---------------------------------------------------------------------------*)
+
 fun add_ty_witness (thy as {STH, ...}:theory) s th =
  let val (ST,hasher) = STH
      val i = hasher s
@@ -428,6 +435,7 @@ fun del_axiom name {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
  * Deleting a definition does not delete the constant(s) introduced by       *
  * the definition!                                                           *
  *---------------------------------------------------------------------------*)
+
 fun del_defn name {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
   let val facts' = filter (fn (s, Defn _) => (s=name) | _ => false) facts
   in {thid=thid, STH=STH, GR=GR, facts=facts',
@@ -575,21 +583,21 @@ fun plucky x L =
   in get L []
   end;
 
-fun set_MLbind (s1,s2) {thid, con_wrt_disk, STH,
-                        GR, facts, overwritten,adjoin} =
-   let val facts' =
-         case (plucky s1 facts)
-          of NONE => raise THEORY_ERR"set_MLbind" "no such binding"
-           | SOME (X,(_,b),Y) => X@((s2,b)::Y)
-   in
-    {facts=facts', overwritten=overwritten, adjoin=adjoin,
-     thid=thid, con_wrt_disk=con_wrt_disk, STH=STH, GR=GR}
-  end;
+fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk, STH,
+                        GR, facts, overwritten,adjoin}) =
+  case (plucky s1 facts)
+   of SOME (X,(_,b),Y) => 
+         {facts=X@((s2,b)::Y), 
+          overwritten=overwritten, adjoin=adjoin,
+          thid=thid, con_wrt_disk=con_wrt_disk, STH=STH, GR=GR}
+    | NONE => 
+        (Lib.mesg true (Lib.quote s1^" not found in current theory"); rcd)
 
 
 (*---------------------------------------------------------------------------*
  * Link a theory to its parents in a theory graph.                           *
  *---------------------------------------------------------------------------*)
+
 fun set_diff a b = gather (fn x => not (Lib.op_mem thyid_eq x b)) a;
 fun node_set_eq S1 S2 = null(set_diff S1 S2) andalso null(set_diff S2 S1);
 
@@ -827,11 +835,13 @@ fun const_decl x =
 (*---------------------------------------------------------------------------*
  * Is a string the name of a defined constant.                               *
  *---------------------------------------------------------------------------*)
+
 fun is_constant x = Lib.can const_decl x;
 
 (*---------------------------------------------------------------------------*
  * Is a string the name of a polymorphic constant.                           *
  *---------------------------------------------------------------------------*)
+
 fun is_polymorphic x =
   Type.polymorphic
     (#Ty(dest_const(#const(const_decl x)))) handle HOL_ERR _ => false;
@@ -840,6 +850,7 @@ fun is_polymorphic x =
 (*---------------------------------------------------------------------------*
  * Making type constants.                                                    *
  *---------------------------------------------------------------------------*)
+
 fun mk_type{Tyop, Args} =
   let val {occ,arity,...} = lookup_type (theCT()) Tyop
             (THEORY_ERR "mk_type" (Lib.quote Tyop^" is not a known HOL type"))
@@ -848,13 +859,14 @@ fun mk_type{Tyop, Args} =
       then Tyapp (occ,Args)
        else raise THEORY_ERR "mk_type"
          (String.concat [Lib.quote Tyop, " (arity ", Lib.int_to_string arity,
-                 ") is being applied to ", Lib.int_to_string l, " argument(s)"])
+                ") is being applied to ", Lib.int_to_string l, " argument(s)"])
   end;
 
 (*---------------------------------------------------------------------------*
  * Making constants without matching. Fails when tried on family members.    *
  *---------------------------------------------------------------------------*)
- fun prim_mk_const name =
+
+fun prim_mk_const name =
    let val {name,htype,...} = lookup_const (theCT()) name
                (THEORY_ERR "mk_const" (Lib.quote name^" has not been defined"))
        val poly = Type.polymorphic htype
@@ -893,7 +905,7 @@ in
 
   fun delete_type n     = augmentCT del_type  (n,CTname())
   fun delete_const n    = (augmentCT del_const (n,CTname());
-                           augmentCT del_const ("$"^n,CTname()));
+                           augmentCT del_const ("$"^n,CTname()))
   val delete_axiom      = augmentCT del_axiom
   val delete_theorem    = augmentCT del_theorem
   val delete_definition = augmentCT del_defn
@@ -905,8 +917,8 @@ end;
 
 fun set_ct_consistency b = makeCT(set_consistency b (theCT()))
 
-(*---------------------------------------------------------------------------
- *            INSTALLING CONSTANTS IN THE CURRENT THEORY
+(*---------------------------------------------------------------------------*
+ *            INSTALLING CONSTANTS IN THE CURRENT THEORY                     *
  *---------------------------------------------------------------------------*)
 
 fun new_type {Name,Arity} =
@@ -918,9 +930,10 @@ fun new_type {Name,Arity} =
 fun install_type(s,a,thy) = add_typeCT {name=s, arity=a, theory=thy};
 
 
-(*---------------------------------------------------------------------------
- * Installing term constants.
+(*---------------------------------------------------------------------------*
+ * Installing term constants.                                                *
  *---------------------------------------------------------------------------*)
+
 local fun dollar {name, theory, htype} =
        {name = "$"^name, theory=theory, htype=htype};
 fun write_constant err_str (c as {Name,Ty}) =
@@ -935,9 +948,9 @@ fun write_constant err_str (c as {Name,Ty}) =
 in
   val new_constant = write_constant "new_constant"
 
-  (*--------------------------------------------------------------------------
-   * Add a constant to the signature. This entrypoint is for adding constants
-   * from parent theories.
+  (*-------------------------------------------------------------------------*
+   * Add a constant to the signature. This entrypoint is for adding          *
+   * constants from parent theories as they are loaded.                      *
    *-------------------------------------------------------------------------*)
   fun install_const(s,ty,thy) =
      let val entry = {name=s, htype=ty, theory=thy}
@@ -1015,6 +1028,7 @@ fun incorporate_consts thy consts =
 (*---------------------------------------------------------------------------*
  *              GENERAL INFORMATION ON THE CURRENT THEORY                    *
  *---------------------------------------------------------------------------*)
+
 local val dollar = #"$"
       fun convert_type_recd{occ={name,...},arity,...} = {Name=name,Arity=arity}
       fun convert_term_recd{name,htype,...} =
@@ -1027,8 +1041,8 @@ local val dollar = #"$"
           | NONE => raise THEORY_ERR style
                      ("couldn't find "^style^" named "^Lib.quote name)
 in
- fun types s     = map convert_type_recd(thy_types s (theCT()))
- fun constants s = mapfilter convert_term_recd (thy_constants s (theCT()))
+ fun types s       = map convert_type_recd(thy_types s (theCT()))
+ fun constants s   = mapfilter convert_term_recd (thy_constants s (theCT()))
  fun axioms()      = map drop_pthmkind (thy_axioms (theCT()))
  fun definitions() = map drop_pthmkind (thy_defns (theCT()))
  fun theorems()    = map drop_pthmkind (thy_theorems (theCT()))
@@ -1171,7 +1185,8 @@ datatype clientfixable = BADNAMES of string list
  *    Allocate a new theory segment over an existing one.                    *
  *---------------------------------------------------------------------------*)
 
-fun gen_new_theory printers str (thy as {thid,con_wrt_disk,STH, GR,facts,...}:theory) =
+fun gen_new_theory printers str 
+            (thy as {thid,con_wrt_disk,STH, GR,facts,...}:theory) =
   if not(Lexis.ok_identifier str)
   then FAILURE (CLIENT(EXN (THEORY_ERR"new_theory"
        ("proposed theory name "^Lib.quote str^" is not an identifier"))))

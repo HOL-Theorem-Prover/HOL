@@ -22,9 +22,8 @@ sig
   val show_axioms      : bool ref
   val show_scrub       : bool ref
 
-  val show_dB          : bool ref
-  val show_restrict    : bool ref
   val show_types       : bool ref
+  val show_restrict    : bool ref
   val infix_at_front   : bool ref
   val stack_infixes    : bool ref
   val in_at_end        : bool ref
@@ -43,23 +42,16 @@ sig
   val goal_line        : string ref
 
   val old              : (string -> string) ref
-(*  val in_type_spec     : string option ref *)
-  val tilde_symbols    : string list ref
 
   val output_HOL_ERR   : ({origin_structure : string,
                            origin_function : string,
   		           message : string} -> unit) ref
 
-  val pp_flags : {show_dB: bool ref,
-                  show_restrict:bool ref,
+  val pp_flags : {show_restrict:bool ref,
                   show_types: bool ref,
                   infix_at_front:bool ref,
                   stack_infixes :bool ref,
                   in_at_end : bool ref}
-
-(*  val reserved_identifiers : {symbolic : string list,
-                              alphanumeric : string list}
-*)
 
   val strings_defined        : unit -> bool
   val assert_strings_defined : unit -> unit

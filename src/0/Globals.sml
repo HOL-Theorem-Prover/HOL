@@ -28,16 +28,6 @@ val HOLDIR = "/local/scratch/kxs/working";
 val release = "Taupo";
 val version = 0;
 
-(*---------------------------------------------------------------------------*
- * Bogus hack for informing parser whether numbers have been defined.        *
- *---------------------------------------------------------------------------*)
-
-local val defined = ref false
-in
-fun nums_defined() = !defined
-fun assert_nums_defined() = defined := true
-end;
-
 (*-------------------------------------------------------------------------*
  * Bogus hack for defining strings                                         *
  *-------------------------------------------------------------------------*)
@@ -92,7 +82,7 @@ val output_HOL_ERR =
  * to make "~" more widely accessible in symbolic identifiers.               *
  *---------------------------------------------------------------------------*)
 
-val tilde_symbols = ref []:string list ref;
+(* val tilde_symbols = ref []:string list ref; *)
 
 (*---------------------------------------------------------------------------*
  * Prettyprinting flags                                                      *
@@ -116,7 +106,7 @@ val linewidth = Portable.linewidth;
 
 val max_print_depth = ref ~1;
 
-val pp_flags = {show_dB        = ref false,
+val pp_flags = {(*show_dB        = ref false,*)
                 show_restrict  = ref true,
                 show_types     = ref false,
                 infix_at_front = ref false,
@@ -127,7 +117,7 @@ val pp_flags = {show_dB        = ref false,
  * For showing the deBruijn structure of a term                              *
  *---------------------------------------------------------------------------*)
 
-val show_dB = #show_dB pp_flags;
+(* val show_dB = #show_dB pp_flags; *)
 
 (*---------------------------------------------------------------------------*
  * For showing the representation of a term having restricted quantifiers    *
@@ -164,8 +154,9 @@ val in_at_end = #in_at_end pp_flags;
  * This is mainly for documentation purposes.                                *
  *---------------------------------------------------------------------------*)
 
-val reserved_identifiers = {symbolic = ["\\", ";", "=>", "|", ":" ],
+(* val reserved_identifiers = {symbolic = ["\\", ";", "=>", "|", ":" ],
                             alphanumeric = ["let", "in", "and", "of"]}
+*)
 
 
 val goal_line = ref "------------------------------------";
