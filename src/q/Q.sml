@@ -5,7 +5,7 @@
 structure Q :> Q =
 struct
 
-open HolKernel boolLib Rsyntax;
+open HolKernel boolLib;
 infix THEN |-> ## -->;
 
 val Q_ERR = mk_HOL_ERR "Q";
@@ -55,24 +55,23 @@ val DISJ2    = Thm.DISJ2 o btm;
 
 fun GEN [QUOTE s] th =
      let val V = free_vars (concl th)
-     in case Lib.assoc2 s (Lib.zip V (map (#Name o Term.dest_var) V))
+     in case Lib.assoc2 s (Lib.zip V (map (fst o Term.dest_var) V))
          of NONE => raise Q_ERR "GEN" "variable not found"
          | SOME (v,_) => Thm.GEN v th
      end
   | GEN _ _ = raise Q_ERR "GEN" "unexpected quote format"
 
 fun SPEC q =
- W(Thm.SPEC o ptm_with_ty q o (type_of o #Bvar o Rsyntax.dest_forall o concl));
+ W(Thm.SPEC o ptm_with_ty q o (type_of o fst o dest_forall o concl));
 
 val SPECL = rev_itlist SPEC;
 val ISPEC = Drule.ISPEC o ptm;
 val ISPECL = Drule.ISPECL o map ptm;
-val ID_SPEC = W(Thm.SPEC o (#Bvar o boolSyntax.dest_forall o concl))
-
+val ID_SPEC = W(Thm.SPEC o (fst o dest_forall o concl))
 
 fun SPEC_THEN q ttac thm (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)
-  val {Bvar,...} = boolSyntax.dest_forall (concl thm)
+  val (Bvar,_) = dest_forall (concl thm)
   val t = ptm_with_ctxtty ctxt (type_of Bvar) q
 in
   ttac (Thm.SPEC t thm) g
@@ -84,7 +83,7 @@ fun SPECL_THEN ql ttac thm (g as (asl,w)) = let
     case ql of
       [] => thm
     | (q::qs) => let
-        val {Bvar,...} = boolSyntax.dest_forall (concl thm)
+        val (Bvar,_) = dest_forall (concl thm)
         val t = ptm_with_ctxtty ctxt (type_of Bvar) q
       in
         spec qs (Thm.SPEC t thm)
@@ -117,49 +116,50 @@ end;
 
 (* Generalizes first free variable with given name to itself. *)
 
-fun ID_SPEC_TAC q (g as (asl,w)) = let
-  val ctxt = free_varsl (w::asl)
-  val tm = Parse.parse_in_context ctxt q
-in
-  Tactic.SPEC_TAC (tm, tm) g
-end
+fun ID_SPEC_TAC q (g as (asl,w)) = 
+ let val ctxt = free_varsl (w::asl)
+     val tm = Parse.parse_in_context ctxt q
+ in
+   Tactic.SPEC_TAC (tm, tm) g
+ end
 
 val EXISTS = Thm.EXISTS o (btm##btm);
 
-fun EXISTS_TAC q (g as (asl, w)) = let
-  val ctxt = free_varsl (w::asl)
-  val exvartype = type_of (#Bvar (boolSyntax.dest_exists w))
-    handle HOL_ERR _ => raise Q_ERR "EXISTS_TAC" "goal not an exists"
-in
+fun EXISTS_TAC q (g as (asl, w)) = 
+ let val ctxt = free_varsl (w::asl)
+     val exvartype = type_of (fst (dest_exists w))
+       handle HOL_ERR _ => raise Q_ERR "EXISTS_TAC" "goal not an exists"
+ in
   Tactic.EXISTS_TAC (ptm_with_ctxtty ctxt exvartype q) g
-end
+ end
 
 fun ID_EX_TAC(g as (_,w)) =
-  Tactic.EXISTS_TAC (#Bvar(boolSyntax.dest_exists w)
+  Tactic.EXISTS_TAC (fst(dest_exists w)
                      handle HOL_ERR _ =>
                        raise Q_ERR "ID_EX_TAC" "goal not an exists") g;
 
 
 fun REFINE_EXISTS_TAC q (asl, w) = let
-  val (qvar, body) = Psyntax.dest_exists w
+  val (qvar, body) = dest_exists w
   val ctxt = free_varsl (w::asl)
   val t = ptm_with_ctxtty ctxt (type_of qvar) q
   val qvars = set_diff (free_vars t) ctxt
-  val newgoal = Term.subst [qvar |-> t] body
+  val newgoal = subst [qvar |-> t] body
 in
   SUBGOAL_THEN (list_mk_exists(rev qvars, newgoal))
   (REPEAT_TCL CHOOSE_THEN (fn th => Tactic.EXISTS_TAC t THEN ACCEPT_TAC th))
   (asl, w)
 end
 
-fun X_CHOOSE_THEN q ttac thm (g as (asl,w))= let
-  val ty = type_of (#Bvar (Rsyntax.dest_exists (concl thm)))
-    handle HOL_ERR _ =>
-      raise Q_ERR "X_CHOOSE_THEN" "provided thm not an exists"
-  val ctxt = free_varsl (w::asl)
-in
-  Thm_cont.X_CHOOSE_THEN (ptm_with_ctxtty ctxt ty q) ttac thm g
-end
+fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) = 
+ let val ty = type_of (fst (dest_exists (concl thm)))
+       handle HOL_ERR _ => 
+          raise Q_ERR "X_CHOOSE_THEN" "provided thm not an exists"
+     val ctxt = free_varsl (w::asl)
+ in
+   Thm_cont.X_CHOOSE_THEN (ptm_with_ctxtty ctxt ty q) ttac thm g
+ end
+
 val X_CHOOSE_TAC = C X_CHOOSE_THEN Tactic.ASSUME_TAC;
 
 fun DISCH q th = 
@@ -178,64 +178,65 @@ end;
 
 fun UNDISCH_THEN q ttac = PAT_UNDISCH_TAC q THEN DISCH_THEN ttac;
 
+fun PAT_ASSUM q ttac (g as (asl,w)) = 
+ let val ctxt = free_varsl (w::asl)
+ in Tactical.PAT_ASSUM (ptm_with_ctxtty ctxt Type.bool q) ttac g
+ end
+
+val UNDISCH_TAC = Tactic.UNDISCH_TAC o btm;
+
 fun SUBGOAL_THEN q ttac (g as (asl,w)) = 
 let val ctxt = free_varsl (w::asl)
 in Tactical.SUBGOAL_THEN (ptm_with_ctxtty ctxt Type.bool q) ttac g
 
-fun PAT_ASSUM q ttac (g as (asl,w)) = let
-  val ctxt = free_varsl (w::asl)
-in
-  Tactical.PAT_ASSUM (ptm_with_ctxtty ctxt Type.bool q) ttac g
-end
-
 fun UNDISCH_TAC q (g as (asl, w)) = let
   val ctxt = free_varsl (w::asl)
-in
-  Tactic.UNDISCH_TAC (ptm_with_ctxtty ctxt Type.bool q) g
+in Tactic.UNDISCH_TAC (ptm_with_ctxtty ctxt Type.bool q) g
 end
 
 val ASSUME = ASSUME o btm
 
-fun X_GEN_TAC q (g as (asl, w)) = let
-  val ctxt = free_varsl (w::asl)
-  val ty = type_of (#Bvar (Rsyntax.dest_forall w))
-in
-  Tactic.X_GEN_TAC (ptm_with_ctxtty ctxt ty q) g
-end
+fun X_GEN_TAC q (g as (asl, w)) = 
+ let val ctxt = free_varsl (w::asl)
+     val ty = type_of (fst(dest_forall w))
+ in
+   Tactic.X_GEN_TAC (ptm_with_ctxtty ctxt ty q) g
+ end
 
-fun X_FUN_EQ_CONV q tm = let
-  val ctxt = free_vars tm
-  val ty = #1 (dom_rng (type_of (boolSyntax.lhs tm)))
-in
-  Conv.X_FUN_EQ_CONV (ptm_with_ctxtty ctxt ty q) tm
-end
+fun X_FUN_EQ_CONV q tm = 
+ let val ctxt = free_vars tm
+     val ty = #1 (dom_rng (type_of (lhs tm)))
+ in
+   Conv.X_FUN_EQ_CONV (ptm_with_ctxtty ctxt ty q) tm
+ end
 
 fun skolem_ty tm =
- let val (V,tm') = boolSyntax.strip_forall tm
+ let val (V,tm') = strip_forall tm
  in if V<>[]
-    then list_mk_fun (map type_of V, type_of(#Bvar(dest_exists tm')))
+    then list_mk_fun (map type_of V, type_of(fst(dest_exists tm')))
     else raise Q_ERR"XSKOLEM_CONV" "no universal prefix"
   end;
 
-fun X_SKOLEM_CONV q tm = let
-  val ctxt = free_vars tm
-  val ty = skolem_ty tm
-in
+fun X_SKOLEM_CONV q tm = 
+ let val ctxt = free_vars tm
+     val ty = skolem_ty tm
+ in
   Conv.X_SKOLEM_CONV (ptm_with_ctxtty ctxt ty q) tm
-end
+ end
+
 
 fun AP_TERM q th =
  let val ctxt = free_vars(concl th)
      val tm = contextTerm ctxt q
      val (ty,_) = dom_rng (type_of tm)
-     val {lhs,rhs} = dest_eq(concl th)
+     val (lhs,rhs) = dest_eq(concl th)
      val theta = match_type ty (type_of lhs)
  in
    Thm.AP_TERM (Term.inst theta tm) th
  end;
 
 fun AP_THM th q = 
- let val {lhs,rhs} = dest_eq(concl th)
+ let val (lhs,rhs) = dest_eq(concl th)
      val ty = fst (dom_rng (type_of lhs))
      val ctxt = free_vars (concl th)
  in
@@ -259,19 +260,18 @@ val INST_TYPE = Thm.INST_TYPE o mk_type_rsubst;
  * A couple from jrh.
  *---------------------------------------------------------------------------*)
 
-fun ABBREV_TAC q (g as (asl,w)) = let
-  val ctxt = free_varsl(w::asl)
-  val {lhs,rhs} = dest_eq (Parse.parse_in_context ctxt q)
-in
-  CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
-  (Thm.EXISTS (mk_exists{Bvar=lhs,Body=mk_eq{lhs=rhs,rhs=lhs}},rhs)
-   (Thm.REFL rhs))
-  g
-end;
+fun ABBREV_TAC q (g as (asl,w)) = 
+ let val ctxt = free_varsl(w::asl)
+     val (lhs,rhs) = dest_eq (Parse.parse_in_context ctxt q)
+ in
+    CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
+    (Thm.EXISTS (mk_exists(lhs, mk_eq(rhs,lhs)),rhs) (Thm.REFL rhs))
+    g
+ end;
 
 fun UNABBREV_TAC [QUOTE s] =
         FIRST_ASSUM(SUBST1_TAC o SYM o
-             assert(curry op = s o #Name o dest_var o rhs o concl))
+             assert(curry op = s o fst o dest_var o rhs o concl))
          THEN BETA_TAC
   | UNABBREV_TAC _ = raise Q_ERR "UNABBREV_TAC" "unexpected quote format"
 
