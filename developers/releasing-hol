@@ -1,16 +1,25 @@
 # this shell script can be used to create a hol98 tar ball.
 
-if [ $# -ne 1 ]
+if [ $# -ne 2 ]
 then
-        echo "Must provide one argument -- the name of the release"
+        echo "Usage: releasing-hol <releasename> <S/F user-id>"
+        echo "  <releasename> can be "today" for testing purposes..."
         exit 1
 fi
 name=$1
+userid=$2
 
-mosmldir=/local/scratch/kxs/144
+mosmldir=/local/scratch/mn200/Work/mosml
 cd /tmp
+
 # use -r release-name for known release
-CVSROOT=/usr/groups/hol/repository cvs export -r $name hol98
+if [ "$name" = "today" ]
+then
+  cvs -d:ext:${userid}@cvs.hol.sf.net:/cvsroot/hol export -D tomorrow hol98
+else
+  cvs -d:ext:${userid}@cvs.hol.sf.net:/cvsroot/hol export -r $name hol98
+fi
+
 sed "s|^val mosmldir.*\$|val mosmldir = \"$mosmldir\"|" \
    < hol98/tools/configure.sml | \
    sed 's|^val holdir.*$|val holdir = "/tmp/hol98"|' > new-config
@@ -20,31 +29,13 @@ mv new-config hol98/tools/configure.sml
 echo Removing all .cvsignore files
 find hol98 -name .cvsignore -exec /bin/rm \{} \;
 
-echo Building filter.c
-cd hol98/src/quote-filter
-make filter.c
-cd /tmp/hol98
-mv bin/README /tmp/bin-README
-mv sigobj/README /tmp/sigobj-README
-
 echo "Running configure script (original in /tmp)"
 cd /tmp/hol98
 $mosmldir/bin/mosml < tools/configure.sml
 
-echo Now building whole system
-echo "Working in directories:"
-if bin/build -symlink 2>&1 | tee build-log | perl developers/prettifier.pl
-then
-  :
-else
-  echo "Build failed!!" ; echo ; echo
-  echo "See /tmp/hol98/build-log file for details"
-  exit 1
-fi
-
-echo Now building help index
-cd developers/help
-make
+echo Now building Doc2Tex
+cd help/src
+../../bin/Holmake Doc2Tex
 
 echo Now building documentation
 for man_name in Reference Description Tutorial
@@ -59,25 +50,36 @@ do
     done
 done
 
+echo Also removing Buddy documentation from distribution
+cd /tmp/hol98
+mv src/muddy/muddyC/buddy/doc/*.ps .
+
+
 echo Now starting to clean up and make tar ball
 cd /tmp/hol98
-cat /tmp/hol98/tools/documentation-directories | \
- while read foo ; do echo "Removing .doc files from $foo" ; \
-                     /bin/rm /tmp/hol98/$foo/*.doc ; done
-/bin/rm build-log
-bin/build -cleanAll
 /bin/rm -rf developers
 /bin/rm -rf Manual
 mv /tmp/configure.sml tools
-/bin/rm bin/*
+
+mv bin/README ../bin-README
 /bin/rm tools/build.sml tools/Holmake/*.{uo,ui} tools/hol98-mode.el
 /bin/rm tools/Holmake/{Holmake,Parser,Lexer}.sml tools/Holmake/Parser.sig
-(cd src/muddy/muddyC ; /bin/rm -f *.o *.a *.so ; cd buddy17/src ; \
- /bin/rm -f *.o *.a *.so)
+/bin/rm tools/Holmake/Holmake_{parse.{sig,sml},tokens.sml}
+(cd tools/quote-filter ; ../../bin/Holmake cleanAll)
+(cd help/src ; ../../bin/Holmake cleanAll)
+/bin/rm std.prelude
+/bin/rm bin/*
+
 mv ../bin-README bin/README
-mv ../sigobj-README sigobj/README
+
 
 cd /tmp
+
 echo "Creating tar file"
 tar cvzf $name.tar.gz hol98
-mv hol98/doc/$name.release .
+
+if [ "$name" != "today" ]
+then
+  mv hol98/doc/$name.release .
+fi
+
