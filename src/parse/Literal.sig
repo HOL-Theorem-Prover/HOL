@@ -1,4 +1,4 @@
-signature Numeral =
+signature Literal =
 sig
  type term = HolKernel.term
  type num  = Arbnum.num
@@ -11,4 +11,10 @@ sig
                        NUMERAL : 'a,
                        BIT1    : 'a, 
                        BIT2    : 'a} -> Arbnum.num -> 'a
+
+ val is_string_lit   : term -> bool
+ val dest_string_lit : term -> String.string
+ val mk_string_lit   : {mk_string   : 'a * 'a -> 'a,
+                        emptystring : 'a,
+                        fromMLchar  : char -> 'a} -> String.string -> 'a
 end

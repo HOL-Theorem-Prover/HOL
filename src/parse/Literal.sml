@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------*
- *    Numerals
+ *    Literals (numerals and string literals).
  *
  * A numeral is a nest of NUMERAL_BIT{1,2}s built up from ALT_ZERO wrapped
  * inside the NUMERAL tag, or it is a straight ZERO constant.  This
@@ -8,16 +8,29 @@
  * (Principle of least surprises and all that.)  The use of ALT_ZERO rather
  * than ZERO inside the representations for other numerals means that
  * theorems of the form 0 = x will not match inside other numerals.
+ *
+ * A string literal is a bit like a list of characters, except that
+ * CONS is replaced by STRING and NIL is replaced by EMPTYSTRING.
+ *
+ *     STRING (CHAR c_0) (STRING ... (STRING (CHAR c_n) EMPTYSTRING) ...)
+ *
+ * The code in this structure has been generalized to work with 
+ * terms and also preterms, since it is also used to build preterms
+ * by the parser.
  *---------------------------------------------------------------------------*)
 
-structure Numeral :> Numeral =
+structure Literal :> Literal =
 struct
 
-open Feedback HolKernel;
+open HolKernel;
 
 type num = Arbnum.num;
 
-val ERR = mk_HOL_ERR "Numeral";
+val ERR = mk_HOL_ERR "Literal";
+
+(*---------------------------------------------------------------------------
+                 NUMERALS
+ ---------------------------------------------------------------------------*)
 
 fun is_numtype ty =
    if Type.is_vartype ty then false
@@ -71,7 +84,7 @@ fun dest_numeral t =
               in case fst(dest_const Rator) 
                   of "NUMERAL_BIT1" => two * dest Rand + one
                    | "NUMERAL_BIT2" => two * dest Rand + two
-                   | _ => raise ERR "dest_numeral" 
+                   | otherwise => raise ERR "dest_numeral" 
                                     "This should never ever happen"
               end
          else zero
@@ -87,8 +100,36 @@ fun gen_mk_numeral {mk_comb, ZERO, ALT_ZERO, NUMERAL, BIT1, BIT2} n =
          then mk_comb(BIT1, positive ((x-one) div two))
          else mk_comb(BIT2, positive ((x-two) div two))
  in
-  if n=zero then ZERO else mk_comb(NUMERAL,positive n)
+   if n=zero then ZERO else mk_comb(NUMERAL,positive n)
  end;
 
 
-end (* Numeral *)
+(*---------------------------------------------------------------------------
+                  STRINGS
+ ---------------------------------------------------------------------------*)
+
+val dest_chr    = dest_monop ("CHR","string")   (ERR "dest_chr" "")
+val dest_string = dest_binop ("STRING","string") (ERR "dest_string" "")
+val fromHOLchar = Char.chr o Arbnum.toInt o dest_numeral o dest_chr
+
+fun is_emptystring tm =
+  case toal dest_thy_const tm
+   of SOME {Name="EMPTYSTRING",Thy="string",...} => true
+    | NONE => false
+
+fun dest_string_lit tm = 
+ if is_emptystring tm then ""
+ else let val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+      in if is_emptystring e
+         then String.implode (itlist (cons o fromHOLchar) front [])
+         else raise ERR "dest_string_lit" "not terminated by EMPTYSTRING"
+      end
+
+val is_string_lit = can dest_string_lit
+
+fun mk_string_lit {mk_string,fromMLchar,emptystring} s =
+  let val sl = String.explode s
+  in itlist (curry mk_string) (List.map fromMLchar sl) emptystring
+  end
+
+end (* Literal *)
