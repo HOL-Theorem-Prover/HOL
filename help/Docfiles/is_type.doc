@@ -1,12 +1,12 @@
 \DOC is_type
 
-\TYPE {is_type : (string -> bool)}
+\TYPE {is_type : string -> bool}
 
 \SYNOPSIS
 Tests whether a string is the name of a type.
 
 \DESCRIBE
-{is_type `op`} returns {true} if {`op'} is the name of a type or type operator
+{is_type s} returns {true} if {s} is the name of a type or type operator
 and {false} otherwise.
 
 \FAILURE

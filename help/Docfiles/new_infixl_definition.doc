@@ -1,6 +1,6 @@
 \DOC new_infixl_definition
 
-\TYPE {Parse.new_infixl_definition : (string * term * int) -> thm}
+\TYPE {new_infixl_definition : string * term * int -> thm}
 
 \SYNOPSIS
 Declares a new left associative infix constant and installs a
@@ -16,11 +16,10 @@ value returned by {new_infix_definition} is a theorem which states the
 definition requested by the user.
 
 Let {v_1} and {v_2} be tuples of distinct variables, containing the variables
-{x_1,...,x_m}.  Evaluating {new_infix_definition (`name`, "ix v_1 v_2 = t")},
-where {ix} is not already a constant, declares the sequent
-{({{}},"\v_1 v_2. t")} to be a definition in the current theory, and
-declares {ix} to be a new constant in the current theory with this
-definition as its specification.
+{x_1,...,x_m}.  Evaluating {new_infix_definition (name, ix v_1 v_2 = t)}
+declares the sequent {({{}},\v_1 v_2. t)} to be a definition in the 
+current theory, and declares {ix} to be a new constant in the
+current theory with this definition as its specification.
 This constant specification is returned as a theorem with the form
 {
    |- !x_1 ... x_m. v_1 ix v_2 = t
@@ -33,9 +32,7 @@ declaration has been processed.  It is therefore necessary to use
 the constant in normal prefix position when making the definition.
 
 \FAILURE
-{new_infixl_definition} fails if there is already an axiom, definition
-or specification of the given name in an ancestral theory segment; if
-{`ix`} is not an allowed name for a constant; if {t} contains free
+{new_infixl_definition} fails if {t} contains free
 variables that are not in either of the variable structures {v_1} and
 {v_2} (this is equivalent to requiring {\v_1 v_2. t} to be a closed
 term); or if any variable occurs more than once in {v_1, v_2}.  It
@@ -59,7 +56,7 @@ the constant being defined as an infix to indicate that after the
 definition is made, it will have a special syntactic status; ie. to
 write:
 {
-   new_infixl_definition(`ix_DEF`, "$ix m n = ... ")
+   new_infixl_definition("ix_DEF", Term `$ix m n = ... `)
 }
 \noindent This use of {$} is not necessary; but after the definition
 has been made {$} must, of course, be used if the syntactic status
@@ -72,9 +69,7 @@ associative infix, so can be freely replaced by
 {new_infixr_definition}.
 
 \SEEALSO
-new_binder_definition, new_definition, new_gen_definition,
-new_infixr_definition, new_infix_list_rec_definition,
-new_prim_rec_definition, new_list_rec_definition,
-new_prim_rec_definition.
+new_binder_definition, new_definition, new_specification,
+new_infixr_definition, new_recursive_definition, Define.
 
 \ENDDOC

@@ -1,0 +1,22 @@
+\DOC list_mk_fun
+
+\TYPE {list_mk_fun : hol_type list * hol_type -> hol_type}
+
+\SYNOPSIS
+Iteratively constructs function types.
+
+\DESCRIBE
+{list_mk_fun([ty1,...,tyn],ty)} returns {ty1 -> ( ... (tyn -> t)...)}.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+- list_mk_fun ([alpha,bool],beta);
+> val it = `:'a -> bool -> 'b` : hol_type
+}
+\SEEALSO
+strip_fun, mk_type, -->.
+
+\ENDDOC

@@ -1,6 +1,6 @@
 \DOC prove_abs_fn_one_one
 
-\TYPE {prove_abs_fn_one_one : (thm -> thm)}
+\TYPE {prove_abs_fn_one_one : thm -> thm}
 
 \SYNOPSIS
 Proves that a type abstraction function is one-to-one (injective).

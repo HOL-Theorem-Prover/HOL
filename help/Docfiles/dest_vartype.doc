@@ -1,26 +1,22 @@
 \DOC dest_vartype
 
-\TYPE {dest_vartype : (type -> string)}
+\TYPE {dest_vartype : hol_type -> string}
 
 \SYNOPSIS
 Breaks a type variable down to its name.
-
-\DESCRIBE
-{dest_vartype ":*..."} returns {`*...`}.
 
 \FAILURE
 Fails with {dest_vartype} if the type is not a type variable.
 
 \EXAMPLE
 {
-#dest_vartype ":*test";;
-`*test` : string
+- dest_vartype alpha;
+> val it = "'a" : string
 
-#dest_vartype ":bool";;
-evaluation failed     dest_vartype
+- try dest_vartype bool;
 
-#dest_vartype ":* -> bool";;
-evaluation failed     dest_vartype
+Exception raised at Type.dest_vartype:
+not a type variable
 }
 \SEEALSO
 mk_vartype, is_vartype, dest_type.

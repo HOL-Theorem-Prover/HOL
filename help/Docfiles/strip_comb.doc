@@ -1,27 +1,28 @@
 \DOC strip_comb
 
-\TYPE {strip_comb : (term -> (term # term list))}
+\TYPE {strip_comb : term -> term * term list}
 
 \SYNOPSIS
 Iteratively breaks apart combinations (function applications).
 
 \DESCRIBE
-{strip_comb "t t1 ... tn"} returns {("t",["t1";...;"tn"])}. Note that
+If {M} has the form {t t1 ... tn} then {strip_comb M} returns 
+{(t,[t1,...,tn])}. Note that
 {
-   strip_comb(list_mk_comb("t",["t1";...;"tn"]))
+   strip_comb(list_mk_comb(t,[t1,...,tn]))
 }
-\noindent will not return {("t",["t1";...;"tn"])} if {t} is a combination.
+\noindent will not be {(t,[t1,...,tn])} if {t} is a combination.
 
 \FAILURE
 Never fails.
 
 \EXAMPLE
 {
-#strip_comb "x /\ y";;
-("$/\", ["x"; "y"]) : (term # term list)
+- strip_comb (Term `x /\ y`);
+> val it = (`$/\`, [`x`, `y`]) : term * term list
 
-#strip_comb "T";;
-("T", []) : (term # term list)
+- strip_comb T;
+> val it = (`T`, []) : term * term list
 }
 \SEEALSO
 list_mk_comb, dest_comb.

@@ -1,6 +1,6 @@
 \DOC prove_rep_fn_one_one
 
-\TYPE {prove_rep_fn_one_one : (thm -> thm)}
+\TYPE {prove_rep_fn_one_one : thm -> thm}
 
 \SYNOPSIS
 Proves that a type representation function is one-to-one (injective).

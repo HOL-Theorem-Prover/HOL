@@ -1,13 +1,13 @@
 \DOC is_neg
 
-\TYPE {is_neg : (term -> bool)}
+\TYPE {is_neg : term -> bool}
 
 \SYNOPSIS
 Tests a term to see if it is a negation.
 
 \DESCRIBE
-{is_neg "~t"} returns {true}. If the term is not a negation the result is
-{false}.
+If {M} has the form {~t}, then {is_neg M} returns {true}.
+If the term is not a negation the result is {false}.
 
 \FAILURE
 Never fails.

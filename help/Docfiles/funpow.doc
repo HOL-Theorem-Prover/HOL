@@ -7,8 +7,8 @@ Iterates a function a fixed number of times.
 
 \DESCRIBE
 {funpow n f x} applies {f} to {x}, {n} times, giving the result
-{f (f ... (f x)...)} where the number of {f}'s is {n}. {funpow 0 f x}
-returns {x}. If {n} is negative, {funpow n f x} returns {x}.
+{f (f ... (f x)...)} where the number of {f}'s is {n}. If {n} is not
+positive, the result is {x}.
 
 \FAILURE
 {funpow n f x} fails if any of the {n} applications of f fail.

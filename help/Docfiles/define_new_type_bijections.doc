@@ -29,7 +29,6 @@ These constants are defined so as to denote mutually inverse bijections
 between the defined type, whose definition is given by {tyax}, and the
 representing type of this defined type.
 
-
 If {th} is a theorem of the form returned by {new_type_definition}:
 {
    |- ?rep:newty->ty. TYPE_DEFINITION P rep
@@ -52,11 +51,7 @@ that {abs} is the left inverse of {rep} and, for values satisfying {P}, that
 
 \FAILURE
 A call to {define_new_type_bijections{{name=s1,ABS=s2,REP=s3,tyax=th}}} fails
-if {th} is not a theorem of the form returned by {new_type_definition}, or
-if either {s2} or {s3} is already the name of a constant in the current
-theory, or there already exists a constant definition, constant specification,
-type definition or axiom named {s1} in the current theory, or HOL is not in
-draft mode.
+if {th} is not a theorem of the form returned by {new_type_definition}.
 
 \SEEALSO
 new_type_definition, prove_abs_fn_one_one, prove_abs_fn_onto,

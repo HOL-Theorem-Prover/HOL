@@ -10,7 +10,7 @@ If {t1} and {t2} are terms, both of type {bool}, then
 {mk_disj(t1,t2)} returns the term {t1 \/ t2}.
 
 \FAILURE
-Fails if both of {t1} and {t2} have type {bool}.
+Fails if {t1} or {t2} does not have type {bool}.
 
 \SEEALSO
 dest_disj, is_disj, list_mk_disj, strip_disj.

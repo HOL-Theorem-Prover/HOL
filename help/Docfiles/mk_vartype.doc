@@ -1,27 +1,23 @@
 \DOC mk_vartype
 
-\TYPE {mk_vartype : (string -> type)}
+\TYPE {mk_vartype : string -> hol_type}
 
 \SYNOPSIS
 Constructs a type variable of the given name.
 
-\DESCRIBE
-{mk_vartype(`*...`)} returns {":*..."}.
-
 \FAILURE
-Fails with {mk_vartype} if the string does not begin with {`*`}.
+Fails if the string does not begin with {'}.
 
 \EXAMPLE
 {
-#mk_vartype `*test`;;
-":*test" : type
+- mk_vartype "'gamma";
+> val it = `:'gamma` : hol_type
 
-#mk_vartype `test`;;
-evaluation failed     mk_vartype
+- try mk_vartype "test";
+
+Exception raised at Type.mk_vartype:
+incorrect syntax
 }
-\COMMENTS
-{mk_vartype} can be used to create type variables with names which will not
-parse, i.e. they cannot be entered by quotation.
 
 \SEEALSO
 dest_vartype, is_vartype, mk_type.

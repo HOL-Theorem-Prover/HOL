@@ -1,0 +1,16 @@
+\DOC arb
+
+\TYPE {arb : term}
+
+\SYNOPSIS
+Constant denoting arbitrary items.
+
+\LIBRARY boolSyntax
+
+\DESCRIBE
+The ML variable {boolSyntax.arb} is bound to the term {bool$ARB}.
+
+\SEEALSO equality, implication, select, T, F, universal,
+ existential, exists1,  conjunction, disjunction, bool_case.
+
+\ENDDOC

@@ -1,6 +1,6 @@
 \DOC new_binder_definition
 
-\TYPE {new_binder_definition : ((string # term) -> thm)}
+\TYPE {new_binder_definition : string * term -> thm}
 
 \SYNOPSIS
 Defines a new constant, giving it the syntactic status of a binder.
@@ -64,8 +64,7 @@ has been made {$} must, of course, be used if the syntactic status of {b}
 needs to be suppressed.
 
 \SEEALSO
-new_definition, new_gen_definition, new_infix_definition,
-new_infix_list_rec_definition, new_prim_rec_definition,
-new_list_rec_definition, new_prim_rec_definition.
+new_definition, new_infixl_definition, new_infixr_definition,
+new_recursive_definition, Define.
 
 \ENDDOC

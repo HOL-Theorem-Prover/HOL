@@ -1,0 +1,17 @@
+\DOC T
+
+\TYPE {T : term}
+
+\SYNOPSIS
+Constant denoting truth.
+
+\LIBRARY boolSyntax
+
+\DESCRIBE
+The ML variable {boolSyntax.T} is bound to the term {bool$T}.
+
+\SEEALSO equality, implication, select, F, universal,
+ existential, exists1, conjunction, disjunction,
+ negation, conditional, bool_case, let_tm, arb.
+
+\ENDDOC

@@ -1,24 +1,28 @@
 \DOC is_let
 
-\TYPE {is_let : (term -> bool)}
+\TYPE {is_let : term -> bool}
 
 \SYNOPSIS
 Tests a term to see if it is a {let}-expression.
 
 \DESCRIBE
-{is_let "LET f x"} returns {true}. If the term is not a {let}-expression (or
-of the more general {"LET f x"} form) the result is {false}.
+If {tm} is a term of the form {LET M N}, then {dest_let tm}
+returns {true}. Otherwise, it returns {false}.
 
 \FAILURE
 Never fails.
 
 \EXAMPLE
 {
-#is_let "LET ($= 1) 2";;
-true : bool
+- Term `LET f x`;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+> val it = `LET f x` : term
 
-#is_let "let x = 2 in (x = 1)";;
-true : bool
+- is_let it;
+> val it = true : bool
+
+- is_let (Term `let x = P /\ Q in x \/ x`);
+> val it = true : bool
 }
 \SEEALSO
 mk_let, dest_let.

@@ -1,6 +1,6 @@
 \DOC prove_abs_fn_onto
 
-\TYPE {prove_abs_fn_onto : (thm -> thm)}
+\TYPE {prove_abs_fn_onto : thm -> thm}
 
 \SYNOPSIS
 Proves that a type abstraction function is onto (surjective).

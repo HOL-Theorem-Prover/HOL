@@ -1,6 +1,6 @@
 \DOC prove_rep_fn_onto
 
-\TYPE {prove_rep_fn_onto : (thm -> thm)}
+\TYPE {prove_rep_fn_onto : thm -> thm}
 
 \SYNOPSIS
 Proves that a type representation function is onto (surjective).

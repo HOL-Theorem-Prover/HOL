@@ -1,0 +1,16 @@
+\DOC conditional
+
+\TYPE {conditional : term}
+
+\SYNOPSIS
+Constant denoting conditional expressions.
+
+\LIBRARY boolSyntax
+
+\DESCRIBE
+The ML variable {boolSyntax.conditional} is bound to the term {bool$COND}.
+
+\SEEALSO equality, implication, select, T, F, universal,
+ existential, exists1,  conjunction, disjunction, bool_case, let_tm, arb.
+
+\ENDDOC

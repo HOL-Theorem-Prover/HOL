@@ -1,31 +1,22 @@
 \DOC dest_let
 
-\TYPE {dest_let : term -> {{func :term, arg :term}}}
+\TYPE {dest_let : term -> term * term}
 
 \SYNOPSIS
 Breaks apart a let-expression.
 
 \DESCRIBE
-{dest_let} is a term destructor for general let-expressions:
-{dest_let (--`LET f x`--)} returns {{func = f, arg = x}}.
+If {M} is a term of the form {LET M N}, then {dest_let M}
+returns {(M,N)}.
 
 \EXAMPLE
 {
-- dest_let (--`LET ($= 1) 2`--);
-{{func=(--`$= 1`--), arg=(--`2`--)}}
-
-- dest_let (--`let x = 2 in (x = 1)`--);
-{{func=(--`\x. x = 1`--), arg=(--`2`--)}}
+- dest_let (Term `let x = P /\ Q in x \/ x`);
+> val it = (`\x. x \/ x`, `P /\ Q`) : term * term
 }
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_let",
-            message = "not a let term"}}
-}
-\noindent if term is not a {let}-expression or of the more general
-{--`LET f x`--} form.
+Fails if {M} is not of the form {LET M N}.
 
 \SEEALSO
 mk_let, is_let.

@@ -1,34 +1,25 @@
 \DOC dest_type
 
-\TYPE {dest_type : type -> {{Tyop :string, Args :hol_type list}}}
+\TYPE {dest_type : hol_type -> string * hol_type list}
 
 \SYNOPSIS
 Breaks apart a type (other than a variable type).
 
 \DESCRIBE
-{dest_type(==`:(ty1,...,tyn)op`==)} returns
-
-    {{Tyop = "op", Args = [ty1,...,tyn]}}.
+If {ty} is a base type, then {dest_type t} returns {("ty",[])}.
+If {ty} is a compound type {(ty1,...,tyn)tyop}, then (dest_type ty}
+returns {(tyop,[ty1,...,tyn])}.
 
 \EXAMPLE
 {
-- dest_type (==`:bool`==);
-{{Tyop = "bool", Args = []}}
+- dest_type bool;
+> val it = ("bool", []) : string * hol_type list
 
-- dest_type (==`:bool list`==);
-{{Tyop = "list", Args = [==`:bool`==]}}
-
-- dest_type (==`:num -> bool`==);
-{{Tyop = "fun", Args = [==`:num`==;  ==`:bool`==]}}
+- dest_type (alpha --> bool);
+> val it = ("fun", [`:'a`, `:bool`]) : string * hol_type list
 }
-
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Type", origin_function = "dest_type",
-            message = ""}}
-}
-\noindent if the type is a type variable.
+Fails if {ty} is a type variable.
 
 \SEEALSO
 mk_type, dest_vartype.

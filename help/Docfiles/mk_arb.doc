@@ -15,10 +15,10 @@ constant.
 Never fails.
 
 \COMMENTS
-{ARB} is a fixed but arbitrary constant of type {alpha}. It is 
-occasionally useful for creating pseudo-partial functions.
+{ARB} is a constant of type {'a}. It is sometimes used for 
+creating pseudo-partial functions.
 
 \SEEALSO
-dest_arb, is_arb.
+dest_arb, is_arb, arb.
 
 \ENDDOC

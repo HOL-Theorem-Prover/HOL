@@ -1,17 +1,17 @@
 \DOC lhs
 
-\TYPE {lhs : (term -> term)}
+\TYPE {lhs : term -> term}
 
 \SYNOPSIS
 Returns the left-hand side of an equation.
 
 \DESCRIBE
-{lhs "t1 = t2"} returns {"t1"}.
+If {M} has the form {t1 = t2} then {lhs M} returns {t1}.
 
 \FAILURE
-Fails with {lhs} if the term is not an equation.
+Fails if the term is not an equation.
 
 \SEEALSO
-rhs, dest_eq.
+rhs, dest_eq, mk_eq.
 
 \ENDDOC

@@ -1,0 +1,17 @@
+\DOC existential
+
+\TYPE {existential : term}
+
+\SYNOPSIS
+Constant denoting existential quantification.
+
+\LIBRARY boolSyntax
+
+\DESCRIBE
+The ML variable {boolSyntax.existential} is bound to the term {bool$?}.
+
+\SEEALSO equality, implication, select, T, F, universal,
+ exists1, conjunction, disjunction,
+ negation, conditional, bool_case, let_tm, arb.
+
+\ENDDOC

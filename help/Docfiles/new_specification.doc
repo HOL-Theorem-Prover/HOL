@@ -18,7 +18,7 @@ Evaluating:
                       consts = [{{const_name = "c1", fixity = f1}}, ...,
                                 {{const_name = "cn", fixity = fn}}]}}
 }
-\noindent simultaneously introduces new constants named {c1}, ..., {cn}
+\noindent simultaneously introduces new constants named {c1},...,{cn}
 satisfying the property:
 {
    |- t[c1,...,cn/x1,...,xn]
@@ -26,21 +26,16 @@ satisfying the property:
 \noindent This theorem is stored, with name {name}, as a definition in
 the current theory segment. It is also returned by the call to
 {new_specification} The fixities {f1}, ..., {fn} are values which
-determine whether the new constants are infixes or binders or neither.
-If {fi} is {Prefix} then {ci} is declared an ordinary constant, if it is
-{Infix i} then {ci} is declared an infix with precedence {i}, and if it
-is {Binder} then {ci} is declared a binder.
+determine the parsing status of the new constants. Typical fixity
+values are {Prefix}, {Binder}, {Infixl n}, {Infixr n}, {Suffix n},
+{TruePrefix n} or {Closefix}. 
 
 \FAILURE
-{new_specification} fails if called when HOL is not in draft mode. It also
-fails if there is already an axiom, definition or specification of the given
-name in the current theory segment; if the theorem argument has assumptions or
-free variables; if the supplied constant names {`c1`}, ..., {`cn`} are not
-distinct; if any one of {`c1`}, ..., {`cn`} is already a constant in the
-current theory or is not an allowed name for a constant.  Failure also occurs
-if the type of {ci} is not suitable for a constant with the syntactic status
-specified by the fixity {fi}.  Finally, failure occurs if some {ci} does not
-contain all the type variables that occur in the term {?x1...xn. t}.
+{new_specification} fails if the theorem argument has assumptions or
+free variables. It also fails if the supplied constant names 
+{"c1"}, ..., {"cn"} are not distinct. Finally, failure occurs if
+some {ci} does not contain all the type variables that occur in 
+the term {?x1...xn. t}. 
 
 \USES
 {new_specification} can be used to introduce constants that satisfy a given
@@ -54,18 +49,18 @@ system by first proving the theorem:
 }
 \noindent and then making the constant specification:
 {
-   - val DIVISION = new_specification
-                     {{name = "DIVISION",
-                      consts = [{{fixity = Infix 650, const_name = "MOD"}},
-                                {{fixity = Infix 600, const_name = "DIV"}}],
-                      sat_thm = th}};
-
+   - val DIVISION = 
+        new_specification
+            {{name = "DIVISION",
+             consts = [{{fixity = Infixl 650, const_name = "MOD"}},
+                       {{fixity = Infixl 600, const_name = "DIV"}}],
+             sat_thm = th}};
 }
 \noindent This introduces the constants {MOD} and {DIV} with the defining
 property shown above.
 
 \SEEALSO
-new_definition, new_binder_definition, new_gen_definition,
-new_infix_definition.
+new_definition, new_binder_definition, 
+new_infixl_definition, new_infixr_definition, Define,
 
 \ENDDOC
