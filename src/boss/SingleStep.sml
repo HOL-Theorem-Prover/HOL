@@ -223,7 +223,13 @@ fun Induct (g as (_,w)) =
                        => raise STEP_ERR "Induct" "not a forall"
       val {Name,...} = dest_var Bvar
  in
-   Induct_on [QUOTE Name] g
+   (* if we don't do the GEN_TAC first, then Induct_on tries to parse
+      `Name` in the context of the freevars of the goal.  But if
+      Name is universally quantified, then it's not free, and the
+      attempt to parse it won't have get any contextual help, and the
+      parser will report that a type variable has been guessed, completely
+      un-necessarily. *)
+   (Tactic.GEN_TAC THEN Induct_on [QUOTE Name]) g
  end;
 
 (*---------------------------------------------------------------------------*
