@@ -30,7 +30,7 @@ val keepers =
      (* HolBdd *)
      "MachineTransitionTheory.sig",
      "PrimitiveBddRules.sig", "DerivedBddRules.sig",
-     "PrintBdd.sig", "Varmap.sig",
+     "PrintBdd.sig", "Varmap.sig", 
 
      (* multisets *)
      "bagTheory.sig", "bagLib.sig", "bagSimps.sig", "bagSyntax.sig",
@@ -62,8 +62,7 @@ val keepers =
      "hol88Lib.sig",
 
      (* Integer *)
-     "integerTheory.sig", "Cooper.sig", "intLib.sig",
-     "gcdTheory.sig", "dividesTheory.sig", "intSyntax.sig",
+     "integerTheory.sig", "Cooper.sig", "intLib.sig", "intSyntax.sig",
 
      (* list *)
      "rich_listTheory.sig", "listTheory.sig", "listLib.sig",
@@ -84,8 +83,8 @@ val keepers =
      (* num *)
      "numSyntax.sig",
      "numTheory.sig", "prim_recTheory.sig", "arithmeticTheory.sig",
-     "numeralTheory.sig", "numLib.sig", "numSimps.sig",
-     "reduceLib.sig",
+     "numeralTheory.sig", "whileTheory.sig", "numLib.sig", "numSimps.sig",
+     "reduceLib.sig", "dividesTheory.sig", "gcdTheory.sig",
 
      (* one *)
      "oneTheory.sig",
@@ -126,7 +125,7 @@ val keepers =
      "AC.sig","Canon.sig",
 
      (* relation *)
-     "relationTheory.sig",
+     "relationTheory.sig", "TermRewritingTheory.sig",
 
      (* res_quan *)
      "res_quanLib.sig", "res_quanTheory.sig",
@@ -170,10 +169,26 @@ val keepers =
      "bword_numTheory.sig","word_bitopTheory.sig",
 
      (* HolSat *)
-     "HolSatLib.sig",
+     "HolSatLib.sig", "defCNF.sig", "defCNFTheory.sig",
 
      (* simpsets *)
-     "optionSimps.sig", "numSimps.sig", "intSimps"
+     "optionSimps.sig", "intSimps",
 
+     (* sorting theory *)
+     "sortingTheory.sig",
+
+     (* fixed point operators on sets *)
+     "fixedPointTheory.sig",
+
+     (* paths theory *)
+     "pathTheory.sig",
+
+     (* Encoding and Decoding *)
+     "CoderTheory.sig", "DecodeTheory.sig",
+     "EncodeTheory.sig", "EncodeVarTheory.sig",
+
+     (* Fixed point and floating point arithmetic *)
+     "floatTheory.sig", "ieeeTheory.sig",
+     "fxpTheory.sig"
 
   ];

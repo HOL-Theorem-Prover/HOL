@@ -150,10 +150,12 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 
 	val os = TextIO.openOut htmlfile
 	fun out s = TextIO.output(os, s)
+
 	fun encode #"<" = "&lt;"
 	  | encode #">" = "&gt;"
-	  | encode #"&" = "&amp;"
+(*	  | encode #"&" = "&amp;" *)
 	  | encode c    = str c
+
 	fun outSubstr s = TextIO.output(os, Substring.translate encode s)
 
 	val seenDefinition = ref false
