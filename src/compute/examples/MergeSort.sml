@@ -21,15 +21,15 @@ val le_nat_def = Define_rw
 
 val append_def = Define_rw
  ` (append [] l2          = l2)
-/\ (append (CONS x l1) l2 = (CONS x (append l1 l2))) `
+/\ (append (x :: l1) l2 = x :: (append l1 l2)) `
 ;
 
 (* merge sort *)
 
 val merge_def = Define_rw
- ` (merge (CONS h1 t1) (CONS h2 t2) =
-      if (le_nat h1 h2) then (CONS h1 (merge t1 (CONS h2 t2)))
-      else (CONS h2 (merge (CONS h1 t1) t2)))
+ ` (merge (h1 :: t1) (h2 :: t2) =
+      if (le_nat h1 h2) then h1 :: (merge t1 (h2 :: t2))
+      else h2 :: (merge (h1 :: t1) t2))
 /\ (merge [] l2 = l2)
 /\ (merge l1 [] = l1) `
 ;
@@ -42,7 +42,7 @@ val _ = Hol_datatype ` arbin =
 
 val Tree2List_def = Define_rw
  ` (Tree2List Lf           = [])
-/\ (Tree2List (Nd n a1 a2) = CONS n (merge (Tree2List a1) (Tree2List a2))) `
+/\ (Tree2List (Nd n a1 a2) = n :: (merge (Tree2List a1) (Tree2List a2))) `
 ;
 
 val insTree_def = Define_rw
@@ -54,7 +54,7 @@ val insTree_def = Define_rw
 
 val List2Tree_def = Define_rw
 `  (List2Tree []          = Lf)
-/\ (List2Tree (CONS n ns) = insTree (List2Tree ns) n) `
+/\ (List2Tree (n :: ns) = insTree (List2Tree ns) n) `
 ;
 
 val merge_sort_def = Define_rw
@@ -70,10 +70,9 @@ val n3 = --`SUC ^n2 `--;
 val n4 = --`SUC ^n3 `--;
 
 fun app_l20 l =
-       --` (CONS ^n2 (CONS 0 (CONS ^n1 (CONS 0 (CONS ^n1 (CONS ^n3 (CONS ^n4
-           (CONS ^n1 (CONS 0 (CONS ^n1 (CONS ^n3 (CONS 0 (CONS ^n1 (CONS ^n3
-           (CONS ^n4 (CONS ^n2 (CONS 0 (CONS ^n1 (CONS 0 (CONS ^n1
-	     ^l )))))))))))))))))))) `--
+       --` ^n2 :: 0 :: ^n1 :: 0 :: ^n1 :: ^n3 :: ^n4 ::
+           ^n1 :: 0 :: ^n1 :: ^n3 :: 0 :: ^n1 :: ^n3 ::
+           ^n4 :: ^n2 :: 0 :: ^n1 :: 0 :: ^n1 :: ^l `--
 ;
 
 val L0 = --`[] : num list`--;
@@ -110,7 +109,7 @@ val L38400_def = Define_rw ` L38400 = append L19200 L19200 `;
 
 
 (* Save the useful thms *)
-val sort_thms = !thms;
+val sort_thms = rev (!thms);
 
 val rws = from_list false [COND_CLAUSES];
 val _ = add_clauses true sort_thms rws;
@@ -135,9 +134,11 @@ rw_norm `merge_sort L12`; (* ~ 3.4s *)
 rw_norm `merge_sort L20`; (* ~ 15mn *)
 
 (* And SIMP_CONV *)
+open simpLib;
+
 val srws =
    map SPEC_ALL
-   (flatten (map (CONJUNCTS o SPEC_ALL) (COND_CLAUSES::sort_thms)));
+   (flatten (map (CONJUNCTS o SPEC_ALL) (COND_CLAUSES :: sort_thms)));
 
 fun simp_norm q = time (SIMP_CONV empty_ss srws) (--q--);
 
