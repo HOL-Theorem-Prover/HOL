@@ -762,31 +762,37 @@ fun prove_bigrec_theorems ss (tyname, fldlist) = let
                             mk_eq(mk_eq(x, y),
                                   list_mk_conj(map mk_rhs accessors)))
   val comp_eq_name = tyname ^ "_component_equality"
+  val old_comp_eq_th = theorem comp_eq_name
   val tybrss = tyname ^ "_" ^ bigrec_subdivider_string
-  val subtype_names = filter (String.isPrefix tybrss) (map #1 (types "-"))
+  val subtype_names =
+      Listsort.sort String.compare
+                    (filter (String.isPrefix tybrss) (map #1 (types "-")))
   val subtype_comp_eqs =
       map (theorem o (fn s => s ^ "_component_equality")) subtype_names
   open simpLib
   val component_equality =
       store_thm(comp_eq_name, goal,
-                SIMP_TAC ss (GSYM CONJ_ASSOC :: theorem comp_eq_name ::
+                SIMP_TAC ss [] THEN
+                SIMP_TAC ss (GSYM CONJ_ASSOC :: old_comp_eq_th ::
                              subtype_comp_eqs))
   (* literal nchotomy theorem *)
   val goal =
       mk_forall(x,
                 list_mk_exists(fld_vars, mk_eq(x, stdliteral)))
+  val nchoto_name = tyname ^ "_literal_nchotomy"
   val literal_nchotomy =
-      store_thm(tyname ^ "_literal_nchotomy", goal,
+      store_thm(nchoto_name, goal,
                 GEN_TAC THEN
                 MAP_EVERY (EXISTS_TAC o (fn t => mk_comb(t, x))) accessors THEN
-                SIMP_TAC ss [component_equality])
+                SIMP_TAC ss [] THEN SIMP_TAC ss [component_equality])
 
   (* literal equality *)
   val liteq_name = tyname ^ "_updates_eq_literal"
+  val literal_equality0 =
+      prove(mk_forall(x, mk_eq(mk_literal x fld_vars, stdliteral)),
+            SIMP_TAC ss [] THEN SIMP_TAC ss [component_equality])
   val literal_equality =
-      store_thm(liteq_name,
-                mk_forall(x, mk_eq(mk_literal x fld_vars, stdliteral)),
-                SIMP_TAC ss [component_equality])
+      save_thm(liteq_name, SIMP_RULE ss [] literal_equality0)
   (* literal 1-1 *)
   val fld_vars' = map (mk_var o (prime ## I) o dest_var) fld_vars
   val lit11_name = tyname ^ "_literal_11"
