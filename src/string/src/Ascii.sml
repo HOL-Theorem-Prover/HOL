@@ -15,14 +15,13 @@
 structure Ascii :> Ascii =
 struct
 
-open HolKernel Parse boolLib Drule Conv Rsyntax;
+open HolKernel Parse boolLib;
 
 fun ASCII_ERR{function, message} = HOL_ERR{origin_structure = "Ascii",
                                            origin_function = function,
                                            message = message};
 infix ##;
 infix 5 |->;
-(* fun (r1 |-> r2) = {redex=r1, residue = r2}; *)
 
 (* --------------------------------------------------------------------- *)
 (* ascii_EQ_CONV: decision-procedure for equality of ascii constants.	 *)
@@ -30,10 +29,7 @@ infix 5 |->;
 local
 
 (* check checks that constructor is indeed ASCII *)
-val check = assert (fn c => #Name(dest_const c) = "ASCII")
-val T = --`T`--
-val F = --`F`--
-
+val check = assert (fn c => fst(dest_const c) = "ASCII")
 
 (* ckargs checks if all args of ASCII are either T or F *)
 
@@ -50,44 +46,48 @@ val strip = snd o (check##ckargs) o strip_comb
  the args of the ASCII constructor are equal, and VARS are the 16 args of
  the ASCII constructors of the combinations *)
 
-val (thm,vars) = let val th = asciiTheory.ASCII_11
-                     val vars = fst(strip_forall(concl th))
-               in
-               (fst(EQ_IMP_RULE (SPECL vars th)), vars)
-               end
+val (thm,vars) = 
+   let val th = asciiTheory.ASCII_11
+       val vars = fst(strip_forall(concl th))
+   in
+      (fst(EQ_IMP_RULE (SPECL vars th)), vars)
+   end;
 
 (* argument to fc is something like .|- (b0 = b0') /\ ... /\ (b6 = b6') .
  If all these pairs are indeed equal, then it returns the argument,
  else returns the first offending pair *)
 fun fc th =
    let val (t,c) = CONJ_PAIR th
-       val {lhs, rhs} = dest_eq(concl t)
-   in if (lhs=rhs)
-      then fc c
-      else t
-   end handle _ => th;
+       val (lhs, rhs) = dest_eq(concl t)
+   in if lhs=rhs then fc c else t
+   end handle HOL_ERR _ => th;
 
-fun mk_subst (t::terms, v::vars) =
-    (v |-> t)::mk_subst (terms, vars)
-  | mk_subst ([],[]) = []
-  | mk_subst (_, _) = raise ASCII_ERR{function = "ascii_EQ_CONV", message = ""}
+val mk_subst = map2 (fn v => fn m => v |-> m)
+
 in
 
-(* when passed in the term --`ASCII b0 ... b7 = ASCII b0' ... b7'`--,
- ascii_EQ_CONV returns the theorem
- |- (ASCII b0 ... b7 = ASCII b0' ... b7) = Q
- where Q is a T if the terms are indeed equal and Q is a F if not *)
+(*---------------------------------------------------------------------------
+   when passed in the term 
+
+        ASCII b0 ... b7 = ASCII b0' ... b7'
+
+   ascii_EQ_CONV returns the theorem
+
+        |- (ASCII b0 ... b7 = ASCII b0' ... b7) = Q
+
+   where Q is a T if the terms are indeed equal and Q is a F if not
+ --------------------------------------------------------------------------- *)
 
 fun ascii_EQ_CONV tm =
-    let val {lhs,rhs} = dest_eq tm
-        val l = strip lhs
-        val r = strip rhs
-    in if (l=r)
-       then EQT_INTRO(REFL(rand tm))
-       else let val cntr = fc(UNDISCH (INST (mk_subst (l@r,vars)) thm))
-                val false_thm = EQ_MP (bool_EQ_CONV (concl cntr)) cntr
-            in EQF_INTRO (NOT_INTRO (DISCH tm false_thm))
-            end
+  let val (lhs,rhs) = dest_eq tm
+      val l = strip lhs
+      val r = strip rhs
+  in if l=r 
+     then EQT_INTRO(REFL(rand tm)) 
+     else let val cntr = fc(UNDISCH (INST (mk_subst vars (l@r)) thm))
+              val false_thm = EQ_MP (bool_EQ_CONV (concl cntr)) cntr
+          in EQF_INTRO (NOT_INTRO (DISCH tm false_thm))
+          end
     end
     handle _ => raise ASCII_ERR{function = "ascii_EQ_CONV", message = ""}
 end;
