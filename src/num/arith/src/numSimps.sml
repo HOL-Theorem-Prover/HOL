@@ -300,7 +300,7 @@ val arithmetic_rewrites = [
    (* subtraction *)
    SUB_EQUAL_0, SUC_SUB1, SUB_0, ADD_SUB, SUB_EQ_0, sym_lhs SUB_EQ_0,
    SUB_LESS_EQ, SUB_MONO_EQ, SUB_RIGHT_GREATER, SUB_RIGHT_LESS,
-   SUB_RIGHT_GREATER_EQ, SUB_RIGHT_LESS_EQ,
+   SUB_RIGHT_GREATER_EQ, SUB_RIGHT_LESS_EQ, prim_recTheory.PRE,
 
    (* order relations and arith. ops *)
    LESS_EQ_0, LESS_MONO_ADD_EQ, add_sym LESS_MONO_ADD_EQ,
@@ -358,10 +358,86 @@ fun mk_unary_rconv op_t = mk_redconv0 (mk_comb(op_t, x))
 fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
 end;
 
-val ARITH_ss = simpLib.SIMPSET
-    {convs = [], rewrs = arithmetic_rewrites, congs = [],
-     filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+val SUC_PRE = UNDISCH (EQT_ELIM (ARITH_CONV ``0 < m ==> (SUC (PRE m) = m)``))
 
+fun mDISCH t th =
+    if is_eq (concl th) then DISCH t th
+    else let
+        val ant = #1 (dest_imp (concl th))
+        val conjoined = ASSUME (mk_conj(t, ant))
+      in
+        DISCH_ALL (MP (MP (DISCH_ALL th) (CONJUNCT1 conjoined))
+                      (CONJUNCT2 conjoined))
+      end
+
+fun check_for_bads s l r =
+    if is_eq l andalso is_eq r andalso is_suc (lhs l) andalso
+       is_suc (rhs l)
+    then raise mk_HOL_ERR "numSimps" s "Won't convert SUC-injectivity"
+    else if is_suc l then
+      raise mk_HOL_ERR "numSimps" s "Won't convert direct SUC terms"
+    else ()
+
+fun eliminate_single_SUC th = let
+  open numSyntax
+  (* theorem of form   |- P(n) ==> (f (SUC n) = g n)
+                  or   |- f (SUC n) = g n
+     with only occurrences of n on LHS being wrapped inside SUC terms.
+     Also check that theorem is not (SUC n = SUC m) = (n = m) *)
+  val (ant, w) = strip_imp (concl th)
+  val (l, r) = dest_eq w
+  val () = check_for_bads "eliminate_single_SUC" l r
+  val lsucs = find_terms (fn t => is_suc t andalso is_var (rand t)) l
+  fun is_v_sucless v t =
+      case dest_term t of
+        COMB(f, x) => if x = v then not (f = suc_tm)
+                      else is_v_sucless v f orelse is_v_sucless v x
+      | VAR _ => t = v
+      | LAMB(bv, body) => free_in v t andalso is_v_sucless v body
+      | CONST _ => false
+  val v = rand (valOf (List.find (not o C is_v_sucless l o rand) lsucs))
+  val base_rewrite = INST [mk_var ("m", num) |-> v] SUC_PRE
+  val base_thm = INST [v |-> numSyntax.mk_pre v] th
+in
+  mDISCH (mk_less(zero_tm, v)) (REWRITE_RULE [base_rewrite] base_thm)
+end handle Option.Option =>
+           raise mk_HOL_ERR "numSimps" "eliminate_single_SUC"
+                            "No applicable SUC term to eliminate"
+
+
+fun eliminate_SUCn th = let
+  (* theorem of form |- P n ==> (f (SUC n) n = g n)
+                  or |- f (SUC n) n = g n *)
+  open numSyntax
+  val (ant, w) = strip_imp (concl th)
+  val (l, r) = dest_eq w
+  val () = check_for_bads "eliminate_SUCn" l r
+  val lsucs = find_terms (fn t => is_suc t andalso is_var (rand t)) l
+  val v = rand (valOf (List.find (is_var o rand) lsucs))
+  val gv = genvar num
+  val asm = mk_eq(mk_suc v, gv)
+in
+  mDISCH asm (REWRITE_RULE [ASSUME asm] th)
+end handle Option.Option =>
+           raise mk_HOL_ERR "numSimps" "eliminate_SUCn"
+                            "No applicable SUC term to eliminate"
+
+fun numfilter th = let
+  val newth = repeat eliminate_SUCn (repeat eliminate_single_SUC th)
+in
+  if Term.compare(concl newth, concl th) = EQUAL then [th] else [th, newth]
+end
+
+val ARITH_RWTS_ss =
+    simpLib.SIMPSET
+    { convs = [], rewrs = arithmetic_rewrites, congs = [],
+      filter = NONE, ac = [], dprocs = []};
+val ARITH_DP_ss =
+    simpLib.SIMPSET
+    { convs = [], rewrs = [], congs = [],
+      filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+
+val ARITH_ss = merge_ss [ARITH_RWTS_ss, ARITH_DP_ss];
 
 val REDUCE_ss = simpLib.SIMPSET
   {convs = mk_unary_rconv (--`EVEN`--) ::
@@ -374,7 +450,11 @@ val REDUCE_ss = simpLib.SIMPSET
                            --`$>=`--, --`$= : num -> num -> bool`--],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
-val _ = BasicProvers.augment_srw_ss [REDUCE_ss]
+val SUC_FILTER_ss = simpLib.SIMPSET
+                    { convs = [], rewrs = [], congs = [],
+                      filter = SOME numfilter, ac = [], dprocs = []}
+
+val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
 
 fun clear_arith_caches() = clear_cache arith_cache;
 
