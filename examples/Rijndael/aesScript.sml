@@ -6,7 +6,7 @@
 structure aesScript =
 struct
 
-open HolKernel boolLib bossLib RoundOpTheory pairTools;
+open HolKernel boolLib bossLib RoundOpTheory pairTools metisLib;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -29,6 +29,13 @@ val _ = new_theory "aes";
 (*                                  (MixColumns                              *)
 (*                                    (ShiftRows (SubBytes state)))))`;      *)
 (*---------------------------------------------------------------------------*)
+
+(* || other -> FAIL Round ^(mk_var("need exactly one key",bool))
+                     n keys state)
+
+   [] -> FAIL Round ^(mk_var("no keys left",bool))
+                               n keys state
+*)
 
 val (Round_def, Round_ind) = Defn.tprove
  (Hol_defn 
@@ -201,6 +208,7 @@ val AES_def = Define
 (* each recursive call.                                                      *)
 (*---------------------------------------------------------------------------*)
 
+(* New rewriting screws up 
 val lemma = Q.prove
 (`!n t. 
     3 < n /\ n < 44 
@@ -208,7 +216,17 @@ val lemma = Q.prove
     ?h. expand (n+1) (h::t) = expand n t`,
  RW_TAC std_ss []
    THEN GEN_REWRITE_TAC (BINDER_CONV o RHS_CONV) empty_rewrites [expand_def]
-   THEN ZAP_TAC arith_ss []);
+   THEN RW_TAC arith_ss []);
+*)
+val lemma = Q.prove
+(`!n t. 
+    3 < n /\ n < 44 
+      ==> 
+    ?h. expand (n+1) (h::t) = expand n t`,
+ RW_TAC std_ss []
+   THEN GEN_REWRITE_TAC (BINDER_CONV o RHS_CONV) empty_rewrites [expand_def]
+   THEN RW_TAC arith_ss []
+   THEN METIS_TAC [markerTheory.Abbrev_def]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -366,7 +384,7 @@ val AES_Correct = Q.store_thm
        ((encrypt,decrypt) = AES key)
        ==>
        (decrypt (encrypt plaintext) = plaintext)`,
-   RW_TAC std_ss [AES_def,GSYM combinTheory.o_ASSOC] THEN
+   RW_TAC std_ss [AES_def,GSYM combinTheory.o_ASSOC, LET_THM] THEN
    RW_TAC std_ss [combinTheory.o_THM] THEN
    PROVE_TAC [SIMP_RULE std_ss [combinTheory.o_THM] lemma, keysched_length]);
 
@@ -497,7 +515,7 @@ val altAES_def = Define
 
 val altAES_eq_AES = Q.prove
 (`!k. altAES k = AES k`,
- RW_TAC std_ss [altAES_def, AES_def] THEN
+ RW_TAC std_ss [altAES_def, AES_def, LET_THM] THEN
  MATCH_MP_TAC (PROVE [combinTheory.o_THM] 
                      (Term `(f=g) ==> (h o f = h o g)`)) THEN
  REWRITE_TAC [combinTheory.o_ASSOC] THEN 
@@ -515,6 +533,32 @@ val altAES_Correct = Q.store_thm
         ==>
         (decrypt (encrypt plaintext) = plaintext)`,
    PROVE_TAC [AES_Correct,altAES_eq_AES]);
+
+
+val _ = 
+  let open sboxTheory RoundOpTheory aesTheory EmitML
+  in exportML("aes",
+(*      OPEN ["num"] :: *)
+      MLSTRUCT "type num = numML.num" ::
+      MLSIG "type num = numML.num"
+      :: 
+      map DEFN 
+      [ Sbox_def, InvSbox_def, ZERO_def, ONE_def,TWO_def,THREE_def,
+        NINE_def, ONE_B_def, EIGHTY_def, B_HEX_def, D_HEX_def, E_HEX_def,
+        B2N_def, BYTE_TO_NUM_def, NUM_TO_BYTE_def, 
+        LeftShift_def, RightShift_def, XOR_def, XOR8_def, AND8_def,
+        XOR_BLOCK_def, 
+        to_state_def, from_state_def, 
+        genSubBytes_def, SubBytes_def, InvSubBytes_def,
+        ShiftRows_def, InvShiftRows_def, 
+        xtime_def, ConstMult_def, PolyExp_def, 
+        MultCol_def, InvMultCol_def,
+        genMixColumns_def, MixColumns_def, InvMixColumns_def,
+        AddRoundKey_def, Round_def, InvRound_def, 
+        XOR8x4_def, SubWord_def, RotWord_def, Rcon_def, unpack_def,
+        expand_def, mk_keysched_def, AES_def, 
+        InvMix_def, InvMixify_def, EqInvRound_def, altAES_def])
+  end
 
 val _ = export_theory();
 

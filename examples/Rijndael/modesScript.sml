@@ -65,7 +65,7 @@ val CBC_Correct = Q.store_thm
  `!l key v. ((encrypt,decrypt) = AES key) 
                ==> 
             (CBC_DEC decrypt v (CBC_ENC encrypt v l) = l)`,
- Induct THEN RW_TAC std_ss [CBC_ENC_DEF,CBC_DEC_DEF] THENL
+ Induct THEN RW_TAC std_ss [CBC_ENC_DEF,CBC_DEC_DEF,LET_THM] THENL
  [PROVE_TAC [AES_Correct,XOR_BLOCK_IDEM],
   PROVE_TAC []]);
 
@@ -149,7 +149,7 @@ val LENGTH_PADDING_EQUALS_PADLEN = Q.store_thm
 ("LENGTH_PADDING_EQUALS_PADLEN",
  `!l. LENGTH (PADDING l) = PADLEN (PADDING l)`,
  REWRITE_TAC [PADDING_DEF] 
-  THEN RW_TAC std_ss [LENGTH_APPEND,LENGTH_REPLICATE] THENL
+  THEN RW_TAC std_ss [LENGTH_APPEND,LENGTH_REPLICATE,LET_THM] THENL
   [POP_ASSUM MP_TAC THEN Q.SPEC_TAC (`LENGTH l MOD 128`, `x`) 
      THEN GEN_TAC THEN STRIP_TAC
      THEN `x < 121` by DECIDE_TAC
@@ -179,7 +179,7 @@ val LENGTH8 = Q.prove
 val PADDING_APPEND_LEMMA = Q.prove
 (`!l. ?l1 h0 h1 h2 h3 h4 h5 h6 h7. 
         PADDING l = l1 <> [h7;h6;h5;h4;h3;h2;h1;h0]`,
- RW_TAC std_ss [PADDING_DEF] 
+ RW_TAC std_ss [PADDING_DEF, LET_THM] 
   THENL [Q.EXISTS_TAC `(REPLICATE (128 - LENGTH l MOD 128 - 8) F)`,
          Q.EXISTS_TAC `(REPLICATE (256 - LENGTH l MOD 128 - 8) F)`]
   THEN RW_TAC std_ss [APPEND_11]
@@ -247,7 +247,7 @@ val PADDED_LENGTH_THM = Q.store_thm
 ("PADDED_LENGTH_THM",
  `!l. LENGTH (PAD l) MOD 128 = 0`,
  RW_TAC std_ss [PAD_DEF,PADDING_DEF, listTheory.LENGTH_APPEND,
-                LENGTH_REPLICATE, LENGTH_BYTE_TO_LIST]
+                LENGTH_REPLICATE, LENGTH_BYTE_TO_LIST,LET_THM]
   THEN ONCE_REWRITE_TAC [EVAL_RULE (Q.SPEC `128` (GSYM MOD_PLUS))] THENL
   [POP_ASSUM MP_TAC 
      THEN Q.SPEC_TAC (`LENGTH l MOD 128`, `x`) 
@@ -379,7 +379,7 @@ val AES_CBC_CORRECT = Q.store_thm
  REWRITE_TAC [AES_CBC_DEF] 
   THEN REPEAT GEN_TAC
   THEN Cases_on `AES key`
-  THEN RW_TAC std_ss [FUN_EQ_THM]
+  THEN RW_TAC std_ss [FUN_EQ_THM,LET_THM]
   THEN METIS_TAC [CBC_Correct, PAD_TO_UNPAD_THM]);
 
 val _ = export_theory();

@@ -469,10 +469,8 @@ val BYTE_CASES_TAC =
 (*---------------------------------------------------------------------------*)
 
 val lemma_a1 = Q.prove
-(`!a. E_HEX ** (TWO ** a) XOR8 
-      B_HEX ** a          XOR8 
-      D_HEX ** a          XOR8 
-      NINE  ** (THREE ** a) = a`,
+(`!a. E_HEX ** (TWO ** a) XOR8 B_HEX ** a XOR8 
+      D_HEX ** a XOR8 NINE ** (THREE ** a) = a`,
  BYTE_CASES_TAC);
 
 val lemma_a2 = Q.prove
@@ -709,9 +707,7 @@ val InvMixColumns_Distrib = Q.store_thm
             = 
         AddRoundKey (InvMixColumns s) (InvMixColumns k)`,
  TWO_BLOCK_VAR_TAC THEN
- RW_TAC (std_ss ++ simpLib.ac_ss [(c,a)]) 
-        [AddRoundKey_def, XOR_BLOCK_def, InvMixColumns_def,
-         genMixColumns_def, InvMultCol_def, ConstMultDistrib]);
-
+ RW_TAC std_ss [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,
+                genMixColumns_def, InvMultCol_def, ConstMultDistrib, AC a c]);
 
 val _ = export_theory();
