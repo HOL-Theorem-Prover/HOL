@@ -38,8 +38,8 @@ fun chat s = (trace s; true)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun drop_after f =
-  S.foldr (fn (x, xs) => S.CONS (x, if f x then K S.NIL else xs)) S.NIL;
+fun drop_after _ S.NIL = S.NIL
+  | drop_after p (S.CONS (x,xs)) = S.CONS (x, if p x then K S.NIL else xs);
 
 fun time_to_string t =
   let val dp = if t < 9.95 then 1 else 0

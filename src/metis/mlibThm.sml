@@ -314,7 +314,7 @@ fun reconstruct (cl,(Axiom,[])) = Axiom' cl
     val l =
       case f (cl,cl) of SOME l => l
       | NONE =>
-        case first f (List.tabulate (length cl, split cl)) of SOME l => l
+        case first f (List.tabulate (length cl, divide cl)) of SOME l => l
         | NONE =>
           raise BUG "inference"
           ("couldn't reconstruct resolvant" ^

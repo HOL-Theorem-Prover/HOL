@@ -104,6 +104,15 @@ fun timed_fn s f a =
     r
   end;
 
+fun map_thk f =
+    let
+      fun m mlibStream.NIL = mlibStream.NIL
+        | m (mlibStream.CONS (h,t)) = mlibStream.CONS (h, m' t)
+      and m' t () = m (f t ())
+    in
+      m'
+    end;
+
 val type_vars_in_terms = foldl (fn (h,t) => union (type_vars_in_term h) t) [];
 
 fun variant_tys avoid =
@@ -486,7 +495,7 @@ fun FOL_SOLVE solv lmap lim =
       val () = save_fol_problem (thms, hyps, q)
       val lift = fol_thms_to_hol (#mapping_parm parm) (C assoc axioms) query
       val timed_lift = timed_fn "proof translation" lift
-      val timed_stream = mlibStream.map_thk (timed_fn "proof search" o exn_handler)
+      val timed_stream = map_thk (timed_fn "proof search" o exn_handler)
     in
       eliminate consts
       (mlibStream.map timed_lift (timed_stream (fn () => solver q) ()))

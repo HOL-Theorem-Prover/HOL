@@ -614,8 +614,9 @@ local
   val mkv = foldl (fn (x,v) => insertv x v) emptyv;
 
   fun tablify tab =
-    align_table {pad = #" ", left = false}
-    (map (fn l => ("  " ^ hd l) :: map (fn x => " " ^ x) (tl l)) tab);
+    join "\n"
+    (align_table {pad = #" ", left = false}
+     (map (fn l => ("  " ^ hd l) :: map (fn x => " " ^ x) (tl l)) tab)) ^ "\n";
 
   fun to_string eval x2s m tm [] = x2s (eval m (mkv []) tm)
     | to_string eval x2s m tm [v] =

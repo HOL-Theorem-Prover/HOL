@@ -19,7 +19,8 @@ val _ = loadPath :=
  "/home/jeh1004/dev/hol/metis/src/metis"] @ !loadPath;
 
 val _ = app load
-  ["bossLib","numLib","pred_setTheory","listTheory","llistTheory",
+  ["posetTheory","bossLib","numLib","pred_setTheory",
+   "listTheory","llistTheory","fixedPointTheory",
    "mlibProblem","metisLib"];
 
 val () = installPP mlibTerm.pp_term;
@@ -28,7 +29,7 @@ val () = installPP mlibThm.pp_thm;
 val () = installPP folTools.pp_logic_map;
 
 val () = set_trace "normalForms" 1;
-val () = set_trace "Metis" 2;
+val () = set_trace "metis" 2;
 
 open normalForms folTools metisLib;
 
@@ -171,9 +172,13 @@ val () = quietdec := false;
 val () = SAY "Syntax checking the problem sets";
 (* ------------------------------------------------------------------------- *)
 
+fun known_bug {name = "GEO036-2",...} = true
+  | known_bug (_ : 'a mlibProblem.problem) = false;
+
 val check_syntax : (unit -> term mlibProblem.set) -> string -> term =
   C assoc
   o map (fn {name, goal, ...} => (print (name ^ "\n"); (name, FOL_Term goal)))
+  o filter (not o known_bug)
   o #probs
   o (fn p => p ());
 
@@ -206,7 +211,7 @@ val DEFAULTS = (LIMIT {time = SOME 60.0, infs = NONE} o DEFAULTS);
 val () = show_types := true;
 val () = show_assums := true;
 val () = show_tags := true;
-val () = set_trace "Metis" 3;
+val () = set_trace "metis" 3;
 val () = PARM (ORESOLUTION o DEFAULTS);
 val () = folMapping.prettify_fol := false;
 val () = folTools.recent_fol_problems := SOME [];

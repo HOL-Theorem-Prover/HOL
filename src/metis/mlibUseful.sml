@@ -230,12 +230,12 @@ local
     | aux _ [] _ = raise Subscript
     | aux res (h :: t) n = aux (h :: res) t (n - 1);
 in
-  fun split l n = aux [] l n;
+  fun divide l n = aux [] l n;
 end;
 
 fun update_nth f n l =
   let
-    val (a, b) = split l n
+    val (a, b) = divide l n
   in
     case b of [] => raise Subscript
     | h :: t => a @ (f h :: t)
@@ -321,7 +321,7 @@ fun sort cmp =
     val m = merge cmp
     fun f [] = []
       | f (xs as [_]) = xs
-      | f xs = let val (l,r) = split xs (length xs div 2) in m (f l) (f r) end
+      | f xs = let val (l,r) = divide xs (length xs div 2) in m (f l) (f r) end
   in
     f
   end;
@@ -342,7 +342,8 @@ fun sort_map _ _ [] = []
 (* ------------------------------------------------------------------------- *)
 
 val int_to_string = Int.toString;
-val string_to_int = Option.valOf o Int.fromString;
+fun string_to_int s =
+  case Int.fromString s of SOME n => n | NONE => raise ERR "string_to_int" "";
 
 fun int_to_bits 0 = []
   | int_to_bits n = (n mod 2 <> 0) :: (int_to_bits (n div 2));
@@ -401,7 +402,7 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
-(* Strings.                                                                  *)
+(* Strings                                                                   *)
 (* ------------------------------------------------------------------------- *)
 
 local
@@ -421,7 +422,42 @@ fun nchars x =
   in fn n => implode (dup x n [])
   end;
 
+fun chomp s =
+    let
+      val n = size s
+    in
+      if n = 0 orelse String.sub (s, n - 1) <> #"\n" then s
+      else String.substring (s, 0, n - 1)
+    end;
+
+local
+  fun chop [] = []
+    | chop (l as (h :: t)) = if Char.isSpace h then chop t else l;
+in
+  val unpad = implode o chop o rev o chop o rev o explode;
+end;
+
 fun join _ [] = "" | join s (h :: t) = foldl (fn (x,y) => y ^ s ^ x) h t;
+
+local
+  fun match [] l = SOME l
+    | match _ [] = NONE
+    | match (x :: xs) (y :: ys) = if x = y then match xs ys else NONE;
+
+  fun stringify acc [] = acc
+    | stringify acc (h :: t) = stringify (implode h :: acc) t;
+in
+  fun split sep =
+    let
+      val pat = String.explode sep
+      fun div1 prev recent [] = stringify [] (rev recent :: prev)
+        | div1 prev recent (l as h :: t) =
+        case match pat l of NONE => div1 prev (h :: recent) t
+        | SOME rest => div1 (rev recent :: prev) [] rest
+    in
+      fn s => div1 [] [] (explode s)
+    end;
+end;
 
 fun variant x vars = if mem x vars then variant (x ^ "'") vars else x;
 
@@ -451,7 +487,7 @@ fun align_table {left,pad} =
       let val p = nchars pad (n - size s)
       in if left then s ^ p else p ^ s
       end
-    fun pad_cols (l as [] :: _) = map (K "\n") l
+    fun pad_cols (l as [] :: _) = map (K "") l
       | pad_cols l =
       let
         val hs = map hd l
@@ -462,7 +498,7 @@ fun align_table {left,pad} =
         zipwith (fn x => fn y => x ^ y) hs (pad_cols (map tl l))
       end
   in
-    fn [] => "" | l => String.concat (pad_cols l)
+    pad_cols
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -614,7 +650,14 @@ in
     let val n = !generator val () = generator := n + k in interval n k end;
 end;
 
-fun with_flag (r, update) f x =
+local
+  val gen = Random.newgenseed 1.0;
+in
+  fun uniform () = Random.random gen;
+  fun coin_flip () = Random.range (0,2) gen = 0;
+end;
+
+fun with_flag (r,update) f x =
   let
     val old = !r
     val () = r := update old
@@ -622,6 +665,16 @@ fun with_flag (r, update) f x =
     val () = r := old
   in
     y
+  end;
+
+fun mk_textfile f s =
+  let
+    open TextIO
+    val h = openOut f
+    val () = output (h,s)
+    val () = closeOut h
+  in
+    ()
   end;
 
 (* ------------------------------------------------------------------------- *)

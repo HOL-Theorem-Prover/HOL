@@ -888,16 +888,16 @@ val NEW_SKOLEM_CONST_RULE = W (SKOLEM_CONST_RULE o NEW_SKOLEM_CONST);
 
 local
   fun zap _ _ [] = raise ERR "zap" "fresh out of asms"
-    | zap th checked (asm::rest) =
+    | zap th checked (asm :: rest) =
     if is_eq asm then
       let
-        val (v, def) = dest_eq asm
+        val (v,def) = dest_eq asm
       in
-        if is_var v andalso all (not o free_in v) (checked @ rest) then
+        if is_var v andalso all (not o free_in v) (def :: checked @ rest) then
           MP (SPEC def (GEN v (DISCH asm th))) (REFL def)
-        else zap th (asm::checked) rest
+        else zap th (asm :: checked) rest
       end
-    else zap th (asm::checked) rest;
+    else zap th (asm :: checked) rest;
 in
   val CLEANUP_SKOLEM_CONSTS_RULE = repeat (fn th => zap th [concl th] (hyp th));
 end;
@@ -1007,8 +1007,8 @@ val SELECT_TAC = CONV_TAC SELECT_NORM_CONV THEN REPEAT SPEC_ONE_SELECT_TAC;
 
 fun cond_lift_rand_CONV tm =
   let
-    val (Rator, Rand) = Term.dest_comb tm
-    val (f, _) = strip_comb Rator
+    val (Rator,Rand) = Term.dest_comb tm
+    val (f,_) = strip_comb Rator
     val proceed =
       let val {Name,Thy,...} = Term.dest_thy_const f
       in not (Name="COND" andalso Thy="bool")

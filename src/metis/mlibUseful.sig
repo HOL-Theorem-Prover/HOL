@@ -72,7 +72,7 @@ val zip          : 'a list -> 'b list -> ('a * 'b) list
 val unzip        : ('a * 'b) list -> 'a list * 'b list
 val cartwith     : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val cart         : 'a list -> 'b list -> ('a * 'b) list
-val split        : 'a list -> int -> 'a list * 'a list      (* Subscript *)
+val divide       : 'a list -> int -> 'a list * 'a list      (* Subscript *)
 val update_nth   : ('a -> 'a) -> int -> 'a list -> 'a list  (* Subscript *)
 
 (* Lists-as-sets *)
@@ -113,13 +113,16 @@ val gcd           : int -> int -> int
 (* Strings *)
 val rot         : int -> char -> char
 val nchars      : char -> int -> string
+val chomp       : string -> string
+val unpad       : string -> string
 val join        : string -> string list -> string
+val split       : string -> string -> string list
 val variant     : string -> string list -> string
 val variant_num : string -> string list -> string
 val dest_prefix : string -> string -> string
 val is_prefix   : string -> string -> bool
 val mk_prefix   : string -> string -> string
-val align_table : {left : bool, pad : char} -> string list list -> string
+val align_table : {left : bool, pad : char} -> string list list -> string list
 
 (* Reals *)
 val real_to_string    : real -> string
@@ -168,7 +171,10 @@ val tree_partial_foldl :
 val lazify_thunk : (unit -> 'a) -> unit -> 'a
 val new_int      : unit -> int
 val new_ints     : int -> int list
+val uniform      : unit -> real
+val coin_flip    : unit -> bool
 val with_flag    : 'r ref * ('r -> 'r) -> ('a -> 'b) -> 'a -> 'b
+val mk_textfile  : string -> string -> unit  (* mk_textfile filename contents *)
 
 (* Information about the environment *)
 val host  : string

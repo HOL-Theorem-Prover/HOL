@@ -173,7 +173,7 @@ fun harvest inc =
     fun chk [] acc = acc
       | chk (([],[],[tm],net) :: rest) acc = chk rest (inc tm net acc)
       | chk ((pl, (f as (_,i), 0) :: fl, sl, n) :: l) acc =
-      let val (a,b) = split sl i
+      let val (a,b) = divide sl i
       in chk ((pl, fl, FN (f, rev a) :: b, n) :: l) acc
       end
       | chk ((pl, (f,j)::fl, sl, n) :: l) acc = get (pl,(f,j-1)::fl,sl,n) l acc

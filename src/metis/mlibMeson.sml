@@ -155,9 +155,9 @@ fun update_sort_rules f (parm : parameters) : parameters =
 
 fun halves n = let val n1 = n div 2 in (n1, n - n1) end;
 
-fun splittable [] = false
-  | splittable [_] = false
-  | splittable _ = true;
+fun divisible [] = false
+  | divisible [_] = false
+  | divisible _ = true;
 
 local
   val prefix = "_m";
@@ -198,8 +198,8 @@ fun choice_stream f =
 
 fun swivel m n l =
   let
-    val (l1, l') = split l m
-    val (l2, l3) = split l' n
+    val (l1, l') = divide l m
+    val (l2, l3) = divide l' n
   in
     l2 @ l1 @ l3
   end;
@@ -501,10 +501,10 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
         {env = env, depth = depth, proof = proof, offset = offset}
       end
     and expands ancestors g c (s as {depth = n, ...}) =
-      if divide_conquer andalso splittable g then
+      if divide_conquer andalso divisible g then
         let
           val (l1, l2) = halves (length g)
-          val (g1, g2) = split g l1
+          val (g1, g2) = divide g l1
           val (f1, f2) = Df (expands ancestors) (g1, g2)
           val (n1, n2) = halves n
           val s = update_depth (K n1) s
@@ -632,9 +632,10 @@ fun prolog' (name,parm) =
      fun comment S.NIL = "!\n"
        | comment (S.CONS (NONE, _)) = "-"
        | comment (S.CONS (SOME _, _)) = "$\n"
-     fun f t () = let val x = t () in chatting 1 andalso chat (comment x); x end
+     fun f S.NIL = S.NIL | f (S.CONS (x,xs)) = S.CONS (x, fn () => g (xs ()))
+     and g x = (chatting 1 andalso chat (comment x); f x)
    in
-     fn goals => S.map_thk f (fn () => raw_meson system goals prolog_depth) ()
+     fn goals => g (raw_meson system goals prolog_depth)
    end};
 
 local val p = update_sort_literals (K 0) (update_sort_rules (K false) defaults);

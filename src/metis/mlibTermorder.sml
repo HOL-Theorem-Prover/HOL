@@ -305,8 +305,9 @@ local
       fun makerow v =
         nicevar v :: map (int_to_string o M.count (B.find (tab,v))) vars
     in
-      align_table {left = false, pad = #" "}
-      (map nicerow (("" :: map nicevar vars) :: map makerow vars'))
+      join "\n"
+      (align_table {left = false, pad = #" "}
+       (map nicerow (("" :: map nicevar vars) :: map makerow vars'))) ^ "\n"
     end;
 
   fun new_vars vars mapl =

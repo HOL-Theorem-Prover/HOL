@@ -53,19 +53,15 @@ fun app f =
     fn mlibHeap (_, _, a) => ap [a]
   end;
 
-local
-  fun to_lst res h =
-    if is_empty h then rev res
-    else let val (x, h) = remove h in to_lst (x :: res) h end;
-in
-  fun to_list h = to_lst [] h;
-end;
+fun to_stream h =
+    if is_empty h then mlibStream.NIL
+    else let val (x,h) = remove h in mlibStream.CONS (x, fn () => to_stream h) end;
 
 local
   open mlibUseful;
+  fun to_list h = mlibStream.to_list (to_stream h);
 in
-  fun pp_heap pp_a =
-    pp_map to_list (pp_bracket "H[" "]" (pp_sequence "," pp_a));
+  fun pp pp_a = pp_map to_list (pp_bracket "H[" "]" (pp_sequence "," pp_a));
 end;
 
 end
