@@ -26,6 +26,35 @@ let isIdent : hol_content -> bool
         HolIdent _ -> true
       | _ -> false
 
+let isIndent : hol_content -> bool
+    = function
+        HolIndent _ -> true
+      | _ -> false
+
+let optionCat : 'a option list -> 'a list
+    = fun xs ->
+      let rec go xs ys =
+        match xs with
+          [] -> List.rev ys
+        | (Some x::xs) -> go xs (x::ys)
+        | (None  ::xs) -> go xs ys
+      in
+      go xs []
+
+let option : 'b -> ('a -> 'b) -> 'a option -> 'b
+    = fun none some -> function
+        None   -> none
+      | Some x -> some x
+
+let isNone : 'a option -> bool
+    = function
+        None -> true
+      | Some _ -> false
+
+let ($) : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c
+    = fun f g x ->
+      f (g x)
+
 
 (* -------------------------------------------------------------------- *)
 (*  High-level document model                                           *)
@@ -38,24 +67,29 @@ type rule_body =
       r_category    : string list;
       r_description : hol_content option;
       r_lhs         : holdoc;
-      r_label       : holdoc;
+      r_label       : string * holdoc * string;
       r_rhs         : holdoc;
-      r_side        : holdoc;
+      r_side        : holdoc option;
       r_comment     : hol_content option;
     }
 
+type rulesectioncomment_body =
+    { c_name : string;
+      c_body : hol_content;
+    }
+
 type definition_body =
-    { d_name : string option;
-      d_body : holdoc
+    { d_name : string;
+      d_body : holdoc;
     }
 
 type type_body =
-    { t_body : holdoc
+    { t_body : holdoc;
     }
 
 type item =
     Rule of rule_body
-  | RuleSectionComment of hol_content
+  | RuleSectionComment of rulesectioncomment_body
   | Definition of definition_body
   | Type of type_body
   | Directive of (unit -> unit)       (* a directive that is not inside an item *)
@@ -134,14 +168,14 @@ let parse_idsnocomm : string list holparser
 (* all stuff until n blank lines *)
 let parse_chunk : int -> string -> holdoc holparser
     = fun n0 s ->
-      let rec go n ds ds1 = function
+      let rec go n ds ds_blanks = function
           ((HolIndent(l) as d)::ts) ->
             if n = 0 then
-              (List.rev (ds1@ds),ts)
+              (List.rev ds,ts)
             else
-              go (n-1) ds (d::ds1) ts
+              go (n-1) ds (d::ds_blanks) ts
         | (t::ts) ->
-            go n0 (t::ds1@ds) ds1 ts
+            go n0 (t::ds_blanks@ds) [] ts
         | [] ->
             parsefail (string_of_int n0^" blank lines") s []
       in
@@ -192,6 +226,29 @@ let parse_lhs : string -> holdoc holparser
       in
       go 0 true [] [] ts ts
 
+(* parse label of rule *)
+let parse_label : string -> (string * holdoc * string) holparser
+    = fun rulename ts ->
+      let arrowlefts = ["--";"---"] in
+      let arrowrights = ["-->";"--->";"--=>"] in
+      let rec go1 = function
+          (HolWhite _::ts) -> go1 ts
+        | (HolIdent(_,s)::ts) when List.mem s arrowlefts
+              -> go2 s [] ts
+        | ts -> parsefail "label arrow" ("when looking for label of rule "^rulename) ts
+      and go2 s1 ds = function
+          (HolIdent(_,s)::ts) when List.mem s arrowrights ->
+              go3 s1 (List.rev ds) s ts
+        | ((HolIndent _ :: _) as ts) ->
+            parsefail "end of label arrow" ("when reading label of rule "^rulename) ts
+        | (t::ts) -> go2 s1 (t::ds) ts
+        | [] -> parsefail "end of label arrow" ("when reading label of rule "^rulename) []
+      and go3 s1 lab s2 = function
+          (HolWhite _::ts) -> go3 s1 lab s2 ts
+        | (HolIndent _::ts) -> ((s1,lab,s2),ts)
+        | ts -> parsefail "newline" ("after label of rule "^rulename) ts
+      in
+      go1 ts
 
 (* parse an LTS rule *)
 let parse_rule : rule_body holparser
@@ -216,7 +273,7 @@ let parse_rule : rule_body holparser
       let ds = parse_x (HolIdent(false,"*/")) ("after rule "^name^" category and description") ds in
       let ds = parse_sp ds in
       let (lhs,ds) = parse_lhs name ds in
-      let (label,ds) = parse_chunk 0 ("label of rule "^name) ds in
+      let (label,ds) = parse_label name ds in
       let (rhs,ds) = parse_chunk 1 ("right-hand side of rule "^name) ds in
       let ds = parse_sp' ds in
       let ds = parse_x (HolIdent(false,"<==")) ("after conclusion of rule "^name) ds in
@@ -237,7 +294,7 @@ let parse_rule : rule_body holparser
          r_lhs         = lhs        ;
          r_label       = label      ;
          r_rhs         = rhs        ;
-         r_side        = side       ;
+         r_side        = if List.for_all isIndent side then None else Some side;
          r_comment     = comment    ;
        }, ds)
          
@@ -264,31 +321,41 @@ let parse_Net_Hol_reln : hol_content list -> item list
         | ((HolTex  _ as d) :: ds) ->
             let ds = parse_sp' ds in
             prerr_string ("Read section comment\n");
-            go (RuleSectionComment d::vs) ds
+            go (RuleSectionComment { c_name = "";  (* filled in later  *)
+                                     c_body = d }::vs) ds
         | (HolIndent _ :: ds) ->
             go vs ds
         | (HolWhite _ :: ds) ->
             go vs ds
         | _ -> parsefail "rule or section comment" "while parsing LTS rules" ds
       in
-      go [] ds
+      let rec patch_rsc_name ys = function
+          (RuleSectionComment c :: Rule r :: rs) ->
+            patch_rsc_name (RuleSectionComment {c with c_name = r.r_name}::ys) (Rule r::rs)
+        | (RuleSectionComment c :: r :: rs) ->
+            raise (ParseFail ("Rule section comment without immediately-following rule"))
+        | (r::rs) ->
+            patch_rsc_name (r::ys) rs
+        | [] -> List.rev ys
+      in
+      patch_rsc_name [] (go [] ds)
 
 let parse_Define : hol_content list -> item
     = fun ds ->
       let name =  (* name is the first identifier in the body *)
         try
           match List.find isIdent ds with
-            HolIdent(_,s) -> Some s
+            HolIdent(_,s) -> s
           | _ -> raise (NeverHappen "parse_Define")
         with
-          Not_found -> None
+          Not_found -> raise (ParseFail ("Definition without obvious name"))
       in
       Definition { d_name = name;
                    d_body = ds }
 
 let parse_xDefine : string -> hol_content list -> item
     = fun name ds ->
-      Definition { d_name = Some name;
+      Definition { d_name = name;
                    d_body = ds }
 
 let parse_Hol_datatype : hol_content list -> item
@@ -323,7 +390,7 @@ let rec parseltsdoc0 : mosml_content list -> item list -> item list
           | MosmlHol(Some (tag,strs),MosmlHolBT,d') ->
               (match (tag,strs) with
                 ("Net_Hol_reln",[] ) -> let is' = parse_Net_Hol_reln d' in
-                                        parseltsdoc0 ds (is'@is)
+                                        parseltsdoc0 ds (List.rev is' @ is)
               | ("Define"      ,[] ) -> let i = parse_Define d' in
                                         parseltsdoc0 ds (i::is)
               | ("xDefine"     ,[s]) -> let i = parse_xDefine s d' in
@@ -351,22 +418,73 @@ let parseltsdoc : mosmldoc -> item list
 (*  Render whole file                                                   *)
 (* -------------------------------------------------------------------- *)
 
+let strip : holdoc -> holdoc
+    = fun d ->
+      if !(!curmodals.cOMMENTS) then
+        d
+      else
+        let is_interesting = function
+            HolIndent(_) -> false
+          | HolWhite(_)  -> false
+          | HolTex(_)    -> false
+          | HolText(_)   -> false
+          | _            -> true
+        in
+        List.filter is_interesting d
 
-let renderitem : item -> unit
+(* render a transition label *)
+let munge_label : pvars -> string * holdoc * string -> unit
+    = fun pvs (s1,d,s2) ->
+      wrap "\\inp{" "}" (munge_holdoc pvs) d
+
+(* render an item to a TeX definition, 
+   returning the TeX command name for that definition *)
+let renderitem : item -> string option
     = function
         Rule r ->
-          ()
-      | RuleSectionComment d ->
-          munge_hol_content [] d
+          let cmd = texify_command "" r.r_name in
+          let pvs =
+            r.r_var_list
+            @ potential_vars r.r_lhs
+            @ potential_vars (match r.r_label with (_,x,_) -> x)
+            @ potential_vars r.r_rhs
+            @ option [] potential_vars r.r_side in
+          let rrule = "\\rrule"
+              ^ (if isNone r.r_side then "n" else "c")
+              ^ (if isNone r.r_comment then "n" else "c") in
+          wrap ("\\newcommand{"^cmd^"}{"
+                ^rrule^"{"
+                ^texify_math r.r_name^"}{"
+                ^String.concat " " (List.map texify_math r.r_proto)^": "
+                ^String.concat " " (List.map texify_math r.r_category)^"}"
+               ) "}\n\n"
+            (fun () ->
+              wrap "{" "}\n" (option () (munge_hol_content pvs)) r.r_description;
+              wrap "{" "}\n" (munge_holdoc pvs) (strip r.r_lhs);
+              wrap "{" "}\n" (munge_label pvs) r.r_label;
+              wrap "{" "}\n" (munge_holdoc pvs) (strip r.r_rhs);
+              wrap "{" "}\n" (option () (munge_holdoc pvs $ strip)) r.r_side;
+              wrap "{" "}\n" (option () (munge_hol_content pvs)) r.r_comment;
+            ) ();
+          Some cmd
+      | RuleSectionComment c ->
+          let cmd = texify_command "seccomm" c.c_name in
+          wrap ("\\newcommand{"^cmd^"}{\\seccomm{") "}}\n\n"
+            (munge_hol_content []) c.c_body;
+          Some cmd
       | Definition d ->
-          renderholdoc d.d_body
+          let cmd = texify_command "defn" d.d_name in
+          wrap ("\\newcommand{"^cmd^"}{\\ddefn{"^texify_math d.d_name^"}{") "}}\n\n"
+            renderholdoc d.d_body;
+          Some cmd
       | Type t ->
-          renderholdoc t.t_body
+          raise (Unimplemented "renderitem: Type")
       | Directive f ->
-          f ()
+          f ();
+          None
 
-let renderitems : item list -> unit
-    = List.iter renderitem
+let renderitems : item list -> string list
+    = optionCat $ List.map renderitem
 
 
 (* -------------------------------------------------------------------- *)
@@ -378,6 +496,13 @@ let _ =
   let ltsdoc = parse_chan ModeMosml mosml_main stdin in
   print_string "%%%% AUTOGENERATED FILE (from LTS source) -- DO NOT EDIT! %%%%\n";
   let items = parseltsdoc ltsdoc in
-  renderitems items
+  let cmds = renderitems items in
+  wrap "\\newcommand{\\dumpallrules}{\n" "}\n\n"
+    (List.iter (fun rn -> print_string ("\\showrule{"^rn^"}\n"))) cmds;
+  (match !rCSID with
+    Some s -> print_string ("\\newcommand{\\rulesrcsid}{"^texify_text s^"}\n\n")
+  | None   -> ());
+  print_string "%%%% END %%%%\n"
+
 
 

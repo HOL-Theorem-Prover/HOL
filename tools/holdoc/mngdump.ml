@@ -135,12 +135,13 @@ let texify_text_list =
   ;('>', "\\textgreater{}")  (* the {} is to work around a bug in LaTeX / fontenc *)
   ]
 
-let texify_command s =
+let texify_command prefix s =
   let f s = String.make 1 (char_of_int
                              (int_of_string
                                 (Str.matched_string s)
                                 + int_of_char 'A' - 1))
   in
+   "\\" ^ prefix ^
    Str.global_replace    (Str.regexp "[^A-Za-z0-9]") "X"
   (Str.global_substitute (Str.regexp "[0-9]+"      )  f
                          s)

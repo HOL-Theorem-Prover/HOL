@@ -237,6 +237,7 @@ rule
   | backtick               { fun _  -> ToHol(DelimHolMosml) }
   | backtick backtick      { fun _  -> ToHol(DelimHolMosmlD) }
   | starttex               { fun _  -> ToTex(DelimTex) }
+  | startdir               { fun _  -> ToDir(DelimDir) }
   | startcom               { fun _  -> ToText(DelimText) }
   | eof                    { fun ed -> check_close ed DelimEOF lexbuf }
   | _                      { fun _  -> bad_char ModeMosml lexbuf }

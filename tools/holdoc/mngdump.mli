@@ -1,11 +1,12 @@
 exception BadArg of string
 val write_warning : string -> unit
-val wrap : string -> string -> ('a -> 'b) -> 'a -> unit
+val wrap : string -> string -> ('a -> unit) -> 'a -> unit
 val replicate : int -> 'a -> 'a list
-val texify_command : string -> string
+val texify_command : string -> string -> string
 val texify_math : string -> string
 val texify_text : string -> string
 type pvars = string list
+val potential_vars : Holdocmodel.holdoc -> pvars
 val munge_ident : pvars -> string -> unit
 val munge_symbol : pvars -> string -> unit
 val munge_texify_text : string -> unit

@@ -221,7 +221,8 @@ directive0 :
 | COMMENTS          opt_whitestuff { DirThunk (fun () -> !curmodals.cOMMENTS     := true ) }
 | NOCOMMENTS        opt_whitestuff { DirThunk (fun () -> !curmodals.cOMMENTS     := false) }
 /* other non-modals: */
-| ECHO opt_whitestuff                         { DirThunk (fun () -> eCHO  := true ) }
+| ECHO dirstuff /* used as comment in existing files sadly */
+                                              { DirThunk (fun () -> eCHO  := true ) }
 | NOECHO opt_whitestuff                       { DirThunk (fun () -> eCHO  := false) }
 | RCSID opt_whitestuff Str opt_whitestuff     { DirThunk (fun () -> rCSID := Some $3) }
 | HOLDELIM opt_whitestuff Str opt_whitestuff Str opt_whitestuff
