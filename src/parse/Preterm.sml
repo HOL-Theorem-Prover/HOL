@@ -123,6 +123,7 @@ fun to_term tm =
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
+exception phase1_exn of string * hol_type
 fun remove_overloading_phase1 ptm =
   case ptm of
     Comb{Rator, Rand} => Comb{Rator = remove_overloading_phase1 Rator,
@@ -141,8 +142,8 @@ fun remove_overloading_phase1 ptm =
      in
       case possible_ops of
         [] =>
-          (Lib.say ("\nNo possible type for overloaded constant "^Name^"\n");
-           raise ERR "typecheck" "failed")
+        raise phase1_exn("No possible type for overloaded constant "^Name^"\n",
+                         Pretype.toType Ty)
       | [{Ty = ty,Name,Thy}] => let
           val pty = Pretype.rename_typevars (Pretype.fromType ty)
           val _ = Pretype.unify pty Ty
@@ -280,8 +281,12 @@ fun remove_elim_magics ptm =
   | Overloaded _ => raise Fail "Preterm.remove_elim_magics on Overloaded"
 
 
-val overloading_resolution = remove_elim_magics o do_overloading_removal
+val overloading_resolution0 = remove_elim_magics o do_overloading_removal
 
+fun overloading_resolution ptm =
+    overloading_resolution0 ptm
+    handle phase1_exn(s,ty) =>
+           (Lib.say s ; raise ERR "overloading_resolution" s)
 
 (*---------------------------------------------------------------------------
  * Type inference for HOL terms. Looks ugly because of error messages, but is
@@ -395,7 +400,21 @@ val typecheck_phase1 = TC
 
 
 
-fun typecheck pfns ptm = (TC pfns ptm; to_term(overloading_resolution ptm));
+fun typecheck pfns ptm0 = let
+  val () = TC pfns ptm0
+  val ptm = overloading_resolution0 ptm0
+            handle phase1_exn(s,ty) =>
+                   case pfns of
+                     NONE => (Lib.say s; raise ERR "typecheck" s)
+                   | SOME (_, typ) =>
+                     (Lib.say s;
+                      Lib.say "Wanted it to have type:  ";
+                      Lib.say (typ ty);
+                      Lib.say "\n";
+                      raise ERR "typecheck" s)
+in
+  to_term ptm
+end
 
 end; (* Preterm *)
 
