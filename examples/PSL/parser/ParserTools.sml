@@ -335,8 +335,8 @@ EvalFL "{x}{y}{p}{q} |= {x;y;T} |-> {p;q}";
 ******************************************************************************)
 
 fun EvalAllFL(p,f) =
- let val ll = parseFilePath(stringToFile p)
-     val fm = parseFileFl(stringToFile f)
+ let val ll = parsePath p
+     val fm = parseFl f
      val nl = List.tabulate(length ll + 1,I)
  in
  mapfilter
@@ -375,8 +375,8 @@ fun map_interval p l =
 ******************************************************************************)
 
 fun EvalAllSERE(p,r) =
- let val ll = parseFilePath(stringToFile p)
-     val se = parseFileSere(stringToFile r)
+ let val ll = parsePath p
+     val se = parseSere r
  in
  mapfilter
   (fn (interval,result) => if result = ``F`` then fail() else interval)
@@ -404,6 +404,77 @@ fun EvalAllSERE(p,r) =
 EvalAllSERE
  ("{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}",
   "{{a;b}@clk1;c}@clk2");
+
+*)
+
+(******************************************************************************
+* ML function to support processing of arguments of command line invocation:
+* 
+*  pslcheck [-all] -sere '<SERE>' -path '<PATH>'
+*  pslcheck [-all] -fl   '<FL>'   -path '<PATH>' 
+* 
+* The optional "-all" argument specifies that all intervals are
+* checked in the case of a SERE and all path tails in the case of a
+* formula.
+* 
+* Without the "-all" arguments, the commands: 
+* 
+*  pslcheck -sere '<SERE>' -path '<PATH>' 
+*  pslcheck -fl   '<FL>'   -path '<PATH>' 
+* 
+* report "true" or "false" (or a parser or processing error).
+* 
+* The command: 
+* 
+*  pslcheck -sere '<SERE>' -path '<PATH>' -all
+* 
+* reports "true on intervals [m1:n1][m2:n2] ..." 
+* (or a parser or processing error).
+*
+* The command: 
+* 
+*  pslcheck -fl   '<FL>'   -path '<PATH>' -all
+* 
+* reports "true at times t1,t2, ..."
+* (or a parser or processing error).
+*
+* Arguments have to be in the order shown here.
+******************************************************************************)
+
+fun intervalsToString [] = ""
+ |  intervalsToString ((m,n)::il) = 
+     ("[" ^ Int.toString m ^ ":" ^ Int.toString n ^ "]" ^ intervalsToString il);
+
+fun timesToString []      = ""
+ |  timesToString [m]     = Int.toString m
+ |  timesToString (m::il) = (Int.toString m ^ "," ^ timesToString il);
+
+fun process_args ["-all","-sere",r,"-path",p] = 
+     ("true on intervals " ^ intervalsToString(EvalAllSERE(p,r)))
+ |  process_args ["-all","-fl",f,"-path",p] = 
+     ("true at times " ^ timesToString(EvalAllFL(p,f)))
+ |  process_args ["-sere",r,"-path",p] = 
+     if rhs(concl(EVAL(pathsereToTerm(parsePath p, parseSere r)))) = T 
+      then "true" 
+      else "false"
+ |  process_args ["-fl",f,"-path",p] = 
+     if rhs(concl(EVAL(pathflToTerm(parsePath p, parseFl f)))) = T   
+      then "true" 
+      else "false"
+ |  process_args _ = "bad arguments to pslcheck";
+
+(*
+process_args ["-all", "-sere", "{{a;b}@clk1;c}@clk2",
+                      "-path", "{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}"];
+
+process_args [        "-sere", "{{a;b}@clk1;c}@clk2",
+                      "-path", "{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}"];
+
+process_args ["-all", "-fl",   "(a until! b)@clk",
+                      "-path", "{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}"];
+
+process_args [        "-fl",   "(a until! b)@clk",
+                      "-path", "{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}"];
 
 *)
 
