@@ -242,6 +242,7 @@ val REGULARIZE :
 val lift_theorem_by_quotients :
         Thm.thm list -> (* quotient thms, e.g. from define_quotient_type *)
         Thm.thm list -> (* equivalence thms, e.g. from user or make_equiv *)
+        Thm.thm list -> (* above + conditional equivalence thms for type ops *)
         Thm.thm list -> (* conditional quotient ths for type ops *)
         Thm.thm list -> (* simplification ths for rel/map idents of type ops *)
         Thm.thm list -> (* new function definitions formed by d_q_l_f *)

@@ -422,12 +422,6 @@ val tint_of_num =
 val _ = add_numeral_form(#"t", SOME "tint_of_num");
 *)
 
-val TINT_OF_NUM_WELLDEF =
-    store_thm
-    ("TINT_OF_NUM_WELLDEF",
-     Term `!n m. (n = m) ==> tint_of_num n tint_eq tint_of_num m`,
-     REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[TINT_EQ_REFL]);
-
 val tint_of_num_PAIR =
     GEN_ALL (SYM (ISPEC(Term `tint_of_num n`) (pairTheory.PAIR)));
 
@@ -490,7 +484,7 @@ in
                  mk_def ("int_of_num",Term `tint_of_num`,"int_of_num",Prefix)],
 
 	 welldefs = [TINT_NEG_WELLDEF, TINT_LT_WELLDEF,
-		     TINT_ADD_WELLDEF, TINT_MUL_WELLDEF, TINT_OF_NUM_WELLDEF],
+		     TINT_ADD_WELLDEF, TINT_MUL_WELLDEF],
 	 old_thms = ([TINT_10] @
 		     (map (GEN_ALL o MATCH_MP TINT_EQ_AP o SPEC_ALL)
 		      [TINT_ADD_SYM, TINT_MUL_SYM, TINT_ADD_ASSOC,
