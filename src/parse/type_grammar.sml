@@ -37,8 +37,11 @@ fun structure_to_type st =
                         Args = map structure_to_type Args}
     | PARAM n => Type.mk_vartype ("'"^str (chr (n + ord #"a")))
 
-fun num_params (PARAM i) = 1
-  | num_params (TYOP{Args,...}) = foldl (fn (s,i) => num_params s + i) 0 Args
+fun params0 acc (PARAM i) = Binaryset.add(acc, i)
+  | params0 acc (TYOP{Args,...}) = foldl (fn (t,set) => params0 set t) acc Args
+val params = params0 (Binaryset.empty Int.compare)
+
+val num_params = Binaryset.numItems o params
 
 val std_suffix_precedence = 100
 
