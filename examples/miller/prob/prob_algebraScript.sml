@@ -1,13 +1,12 @@
-open HolKernel Parse boolLib;
-val _ = new_theory "prob_algebra";
-
-open bossLib arithmeticTheory pred_setTheory listTheory
-     rich_listTheory pairTheory combinTheory sequenceTheory
+open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
+     listTheory rich_listTheory pairTheory combinTheory sequenceTheory
      sequenceTools extra_pred_setTheory prob_canonTheory
      prob_canonTools numSyntax extra_pred_setTools extra_listTheory
-     formalizeUseful measureTheory realTheory extra_realTheory
-     realLib subtypeTheory extra_numTheory seqTheory probabilityTheory
+     formalizeUseful measureTheory realTheory extra_realTheory realLib
+     subtypeTheory extra_numTheory seqTheory probabilityTheory
      simpLib;
+
+val _ = new_theory "prob_algebra";
 
 infixr 0 ++ << || ORELSEC ## --> THENC;
 infix 1 >> |->;
@@ -18,6 +17,7 @@ val op|| = op ORELSE;
 val op>> = op THEN1;
 val Suff = PARSE_TAC SUFF_TAC;
 val Know = PARSE_TAC KNOW_TAC;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of the embedding function from boolean list lists to boolean   *)
@@ -501,7 +501,7 @@ val PROB_ALGEBRA_STL = store_thm
 val PROB_ALGEBRA_SDROP = store_thm
   ("PROB_ALGEBRA_SDROP",
    ``!n p. (p o sdrop n) IN prob_algebra = p IN prob_algebra``,
-   Induct >> RW_TAC std_ss [sdrop_def, o_DEF, I_THM]
+   Induct >> RW_TAC std_ss' [sdrop_def, o_DEF, I_THM]
    ++ RW_TAC std_ss [sdrop_def, o_ASSOC, PROB_ALGEBRA_STL]);
 
 val PROB_ALGEBRA_INTER_HALVES = store_thm
@@ -1372,7 +1372,7 @@ val PROB_MEASURE_SDROP = store_thm
   ("PROB_MEASURE_SDROP",
    ``!n a.
        a IN prob_algebra ==> (prob_measure (a o sdrop n) = prob_measure a)``,
-   Induct >> RW_TAC std_ss [sdrop_def, o_DEF, I_THM]
+   Induct >> RW_TAC std_ss' [sdrop_def, o_DEF, I_THM]
    ++ RW_TAC std_ss [sdrop_def, o_ASSOC, PROB_MEASURE_STL, PROB_ALGEBRA_SDROP]);
 
 val PROB_PRESERVING_PROB_ALGEBRA_STL = store_thm

@@ -17,6 +17,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val Strip = REPEAT STRIP_TAC;
 val Know = PARSE_TAC KNOW_TAC;
 val Suff = PARSE_TAC SUFF_TAC;
@@ -603,8 +604,8 @@ val INDEP_FUNCTION_BERN_SDEST = store_thm
 val INDEP_FUNCTION_BERN_SCONS = store_thm
   ("INDEP_FUNCTION_BERN_SCONS",
    ``!b. (\s. (b, scons b s)) IN indep_function bern``,
-   RW_TAC std_ss [indep_function_def, GSPECIFICATION, indep_families_def,
-                  IN_IMAGE, o_DEF, IN_UNIV, GSYM K_PARTIAL]
+   RW_TAC std_ss' [indep_function_def, GSPECIFICATION, indep_families_def,
+                   IN_IMAGE, o_DEF, IN_UNIV, GSYM K_PARTIAL]
    ++ Suff `PREIMAGE (scons b) x' IN events bern`
    >> RW_TAC std_ss [PREIMAGE_K, INDEP_EMPTY, INDEP_UNIV, PROB_SPACE_BERN]
    ++ Know `PREIMAGE (scons b) x' = IMAGE stl (x' INTER halfspace b)`
@@ -653,8 +654,8 @@ val INDEP_FUNCTION_BERN_BIND = store_thm
 val INDEP_FUNCTION_BERN_EXAMPLE = store_thm
   ("INDEP_FUNCTION_BERN_EXAMPLE",
    ``(\s. (shd s = shd (stl s), stl s)) IN indep_function bern``,
-   RW_TAC std_ss [indep_function_def, GSPECIFICATION, indep_families_def,
-                  IN_IMAGE, IN_UNIV, o_DEF]
+   RW_TAC std_ss' [indep_function_def, GSPECIFICATION, indep_families_def,
+                   IN_IMAGE, IN_UNIV, o_DEF]
    ++ Q.SPEC_TAC (`x`, `x`)
    ++ HO_MATCH_MP_TAC BOOL_SET_CASES
    ++ (RW_TAC std_ss [PREIMAGE_EMPTY, PREIMAGE_UNIV]
@@ -1240,7 +1241,7 @@ val PREFIX_COVER_APPEND = store_thm
    ++ Q.SPEC_TAC (`cf (x' x)`, `c`)
    ++ RW_TAC std_ss []
    ++ Q.SPEC_TAC (`x' x`, `l`)
-   ++ Induct >> RW_TAC std_ss [prefix_set_def, PROB_BERN_UNIV, o_DEF, APPEND]
+   ++ Induct >> RW_TAC std_ss' [prefix_set_def, PROB_BERN_UNIV, o_DEF, APPEND]
    ++ RW_TAC std_ss [prefix_set_def, APPEND]
    ++ Know
       `BIGUNION (IMAGE (prefix_set o APPEND (h::l)) c) =
@@ -2112,7 +2113,7 @@ val INDEP_FN_FUNPOW = store_thm
        (!a. f a IN indep_fn) ==>
        FUNPOW (UNCURRY f) n o UNIT a IN indep_fn``,
    RW_TAC std_ss []
-   ++ Induct_on `n` >> RW_TAC std_ss [FUNPOW, o_DEF, INDEP_FN_UNIT]
+   ++ Induct_on `n` >> RW_TAC std_ss' [FUNPOW, o_DEF, INDEP_FN_UNIT]
    ++ Suff `FUNPOW (UNCURRY f) (SUC n) o UNIT a =
             BIND (FUNPOW (UNCURRY f) n o UNIT a) f`
    >> RW_TAC std_ss [INDEP_FN_BIND]
@@ -3883,7 +3884,7 @@ val PROB_BERN_BIND_COMM = store_thm
        f IN indep_fn /\ g IN indep_fn /\ (!x y. h x y IN indep_fn) ==>
        (prob bern (p o FST o BIND f (\x. BIND g (\y. h x y))) =
         prob bern (p o FST o BIND g (\y. BIND f (\x. h x y))))``,
-   RW_TAC std_ss []
+   RW_TAC std_ss' []
    ++ Know `!x. BIND g (h x) = BIND (BIND g (\y. UNIT (x, y))) (UNCURRY h)`
    >> (FUN_EQ_TAC
        ++ RW_TAC std_ss [BIND_DEF, UNCURRY, o_DEF, UNIT_DEF])
@@ -4942,9 +4943,9 @@ val PROB_TERMINATES_MORGAN = store_thm
                   {s | ~c (FST (f s))} = {a | ~c a} o FST o f`
        >> (SET_EQ_TAC
            ++ RW_TAC std_ss [GSPECIFICATION, IN_o, o_THM])
-       ++ RW_TAC std_ss [PROB_SPACE_BERN, INDEP_FN_FST_EVENTS,
-                         INDEP_FN_PROB_WHILE_CUT, SUBSET_DEF, IN_UNIV,
-                         IN_BIGUNION_IMAGE, IN_o, o_THM, GSPECIFICATION] <<
+       ++ RW_TAC std_ss' [PROB_SPACE_BERN, INDEP_FN_FST_EVENTS,
+                          INDEP_FN_PROB_WHILE_CUT, SUBSET_DEF, IN_UNIV,
+                          IN_BIGUNION_IMAGE, IN_o, o_THM, GSPECIFICATION] <<
        [MATCH_MP_TAC EVENTS_COUNTABLE_UNION
         ++ RW_TAC std_ss [PROB_SPACE_BERN, IN_IMAGE, COUNTABLE_NUM, IN_UNIV,
                           COUNTABLE_IMAGE, SUBSET_DEF]

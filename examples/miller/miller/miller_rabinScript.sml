@@ -1,16 +1,15 @@
-open HolKernel Parse boolLib;
-val _ = new_theory "miller_rabin";
-
-open bossLib listTheory subtypeTools res_quanTools res_quanTheory
-     pred_setTheory extra_pred_setTheory arithContext
-     ho_proverTools extra_listTheory subtypeTheory
+open HolKernel Parse boolLib bossLib listTheory subtypeTools
+     res_quanTools res_quanTheory pred_setTheory extra_pred_setTheory
+     arithContext ho_proverTools extra_listTheory subtypeTheory
      listContext arithmeticTheory groupTheory formalizeUseful
-     groupContext extra_numTheory gcdTheory dividesTheory
-     primeTheory extra_arithTheory finite_groupTheory finite_groupContext
+     groupContext extra_numTheory gcdTheory dividesTheory primeTheory
+     extra_arithTheory finite_groupTheory finite_groupContext
      abelian_groupTheory num_polyTheory extra_binomialTheory
      binomialTheory summationTheory pred_setContext mult_groupTheory
      probTheory prob_uniformTheory extra_realTheory realTheory realLib
      state_transformerTheory combinTheory probabilityTheory;
+
+val _ = new_theory "miller_rabin";
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val REVERSE = formalizeUseful.REVERSE;
@@ -23,6 +22,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 
 (* ------------------------------------------------------------------------- *)
 (* Some standard tools.                                                      *)
@@ -778,8 +778,7 @@ val MILLER_RABIN_1_COMPOSITE = store_thm
    ++ Know
       `{s |
         ~FST
-        (LET
-         (UNCURRY (\a. $, ~witness n (a + 2))) (prob_uniform_cut t (n - 2) s))}
+        (let (a,s') = prob_uniform_cut t (n - 2) s in (~witness n (a + 2),s'))}
        =
        {s |
         FST (prob_uniform_cut t (n - 2) s) IN
@@ -881,8 +880,8 @@ val MILLER_RABIN_1_COMPOSITE_UPPER = store_thm
       `prob bern {s | FST (miller_rabin_1 n s)} +
        prob bern {s | ~FST (miller_rabin_1 n s)} = 2 * (1 / 2)`
    >> REAL_ARITH_TAC
-   ++ RW_TAC std_ss [HALF_CANCEL, INDEP_FN_PROB_FST_NOT,
-                     INDEP_FN_MILLER_RABIN_1]
+   ++ RW_TAC std_ss' [HALF_CANCEL, INDEP_FN_PROB_FST_NOT,
+                      INDEP_FN_MILLER_RABIN_1]
    ++ REAL_ARITH_TAC);
 
 val MILLER_RABIN_PRIME = store_thm
@@ -960,6 +959,3 @@ val MILLER_RABIN_DEDUCE_COMPOSITE = store_thm
    ++ RW_TAC std_ss []);
 
 val _ = export_theory ();
-
-
-

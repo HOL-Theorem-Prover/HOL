@@ -14,6 +14,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -388,7 +389,7 @@ val SIGMA_ALGEBRA_ALT = store_thm
    ++ RW_TAC std_ss [COUNTABLE_ALT]
    >> PROVE_TAC [ALGEBRA_FINITE_UNION]
    ++ Q.PAT_ASSUM `!f. P f` (MP_TAC o Q.SPEC `\n. enumerate c n`)
-   ++ RW_TAC std_ss [IN_UNIV, IN_FUNSET]
+   ++ RW_TAC std_ss' [IN_UNIV, IN_FUNSET]
    ++ Know `BIGUNION c = BIGUNION (IMAGE (enumerate c) UNIV)`
    >> (RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_IMAGE, IN_UNIV]
        ++ Suff `!s. s IN c = ?n. (enumerate c n = s)` >> PROVE_TAC []
@@ -1302,9 +1303,9 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
        ++ CONJ_TAC
        >> (Q.EXISTS_TAC `0`
            ++ ho_PROVE_TAC [INF_MEASURE_POS0])
-       ++ Q.EXISTS_TAC `suminf (measure m o $INTER x' o f)`
+       ++ Q.EXISTS_TAC `suminf (measure m o (\s. x' INTER s) o f)`
        ++ RW_TAC std_ss [REAL_LE_REFL, GSPECIFICATION]
-       ++ Q.EXISTS_TAC `$INTER x' o f`
+       ++ Q.EXISTS_TAC `(\s. x' INTER s) o f`
        ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, ALGEBRA_INTER, o_THM, SUMS_EQ]
        >> (Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPECL [`m'`, `n`])
            ++ RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY]
@@ -1320,8 +1321,8 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
    ++ RW_TAC std_ss [ALGEBRA_COMPL]
    ++ MATCH_MP_TAC REAL_LE_TRANS
    ++ Q.EXISTS_TAC
-      `suminf (measure m o $INTER x o f) +
-       suminf (measure m o $INTER (COMPL x) o f)`
+      `suminf (measure m o (\s. x INTER s) o f) +
+       suminf (measure m o (\s. (COMPL x) INTER s) o f)`
    ++ CONJ_TAC
    >> (Q.PAT_ASSUM `(a:real) <= b` MP_TAC
        ++ Q.PAT_ASSUM `(a:real) <= b` MP_TAC
@@ -1484,7 +1485,6 @@ val SIGMA_PROPERTY = store_thm
    >> PROVE_TAC [SUBSET_DEF, IN_INTER, IN_SIGMA]
    ++ RW_TAC std_ss [SIGMA_ALGEBRA, IN_INTER]
    ++ PROVE_TAC [SIGMA_ALGEBRA, IN_INTER, SIGMA_ALGEBRA_SIGMA, SUBSET_DEF]);
-
 
 val MEASURE_EMPTY = store_thm
   ("MEASURE_EMPTY",
@@ -2203,6 +2203,6 @@ val MONOTONE_CONVERGENCE = store_thm
        ++ RW_TAC std_ss [num_case_def, o_THM])
    ++ Rewr
    ++ Ho_Rewrite.REWRITE_TAC [GSYM SEQ_SUC]
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss' []);
 
 val _ = export_theory ();

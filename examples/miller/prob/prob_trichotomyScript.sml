@@ -16,6 +16,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val Know = PARSE_TAC KNOW_TAC;
 val Suff = PARSE_TAC SUFF_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
@@ -247,14 +248,14 @@ val PROB_BERN_TRICHOTOMY_ITER = store_thm
 
 val PROB_TRICHOTOMY_SET = store_thm
   ("PROB_TRICHOTOMY_SET",
-   ``{x | UNCURRY $\/ x} = {(T, T); (T, F); (F, T)}``,
+   ``{a | (\(x,y). x \/ y) a} = {(T, T); (T, F); (F, T)}``,
    ONCE_REWRITE_TAC [SET_PAIR_BOOL]
    ++ RW_TAC arith_ss [GSPECIFICATION, INSERT_UNION, IN_INSERT, NOT_IN_EMPTY,
                        UNION_EMPTY]);
 
 val PROB_TERMINATES_TRICHOTOMY = store_thm
   ("PROB_TERMINATES_TRICHOTOMY",
-   ``?*s. UNCURRY $\/ (FST (prob_trichotomy_iter s))``,
+   ``?*s. (\(x,y). x \/ y) (FST (prob_trichotomy_iter s))``,
    RW_TAC arith_ss [possibly_bern_def, possibly_def, EVENT_TRANSITION,
                     INDEP_FN_FST_EVENTS, INDEP_FN_PROB_TRICHOTOMY_ITER,
                     PROB_BERN_TRICHOTOMY_ITER, PROB_TRICHOTOMY_SET, CARD_INSERT,
@@ -305,7 +306,7 @@ val PROB_TRICHOTOMY_COMPUTE = store_thm
    ++ CONV_TAC (LAND_CONV (REWRITE_CONV [prob_trichotomy_def]))
    ++ RW_TAC std_ss [CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) PROB_UNTIL_ADVANCE,
                      INDEP_FN_PROB_TRICHOTOMY_ITER, PROB_TERMINATES_TRICHOTOMY]
-   ++ RW_TAC std_ss [CONV_RULE (DEPTH_CONV ETA_CONV) (GSYM prob_trichotomy_def)]
+   ++ RW_TAC std_ss [GSYM prob_trichotomy_def]
    ++ RW_TAC std_ss [prob_trichotomy_iter_def, GSYM BIND_ASSOC,
                      BIND_LEFT_UNIT]);
 

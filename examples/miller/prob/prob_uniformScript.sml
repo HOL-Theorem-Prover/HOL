@@ -1,12 +1,12 @@
-open HolKernel Parse boolLib;
-val _ = new_theory "prob_uniform";
+open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
+     listTheory sequenceTheory state_transformerTheory
+     probabilityTheory formalizeUseful extra_numTheory combinTheory
+     pairTheory realTheory realLib extra_boolTheory
+     extra_pred_setTheory prob_algebraTheory probTheory
+     extra_realTheory extra_pred_setTools measureTheory numTheory
+     simpLib;
 
-open bossLib arithmeticTheory pred_setTheory listTheory
-     sequenceTheory state_transformerTheory probabilityTheory
-     formalizeUseful extra_numTheory combinTheory pairTheory
-     realTheory realLib extra_boolTheory extra_pred_setTheory
-     prob_algebraTheory probTheory extra_realTheory extra_pred_setTools
-     measureTheory numTheory simpLib;
+val _ = new_theory "prob_uniform";
 
 infixr 0 ++ << || ORELSEC ## --> THENC;
 infix 1 >> |->;
@@ -15,6 +15,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val Know = PARSE_TAC KNOW_TAC;
 val Suff = PARSE_TAC SUFF_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
@@ -239,7 +240,7 @@ val PROB_BERN_UNIF_LT = store_thm
    ++ RW_TAC std_ss []
    ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
    ++ Cond >> RW_TAC arith_ss []
-   ++ RW_TAC std_ss [INDEP_FN_PROB_FST_SUC, INDEP_FN_PROB_UNIF]
+   ++ RW_TAC std_ss' [INDEP_FN_PROB_FST_SUC, INDEP_FN_PROB_UNIF]
    ++ Know `k < 2 EXP log2 n` >> DECIDE_TAC
    ++ POP_ASSUM (fn th => RW_TAC std_ss [th, o_DEF, PROB_BERN_UNIF])
    ++ RW_TAC real_ss [ADD1, REAL_ADD_RDISTRIB, GSYM REAL_ADD]);
@@ -623,7 +624,7 @@ val PROB_BERN_UNIFORM_CUT_CARD_LOWER = store_thm
                       REAL_LE_REFL]
    ++ POP_ASSUM MP_TAC
    ++ Cases_on `n`
-   ++ RW_TAC arith_ss [INDEP_FN_PROB_FST_INSERT, INDEP_FN_PROB_UNIFORM_CUT]
+   ++ RW_TAC std_ss' [INDEP_FN_PROB_FST_INSERT, INDEP_FN_PROB_UNIFORM_CUT]
    ++ RW_TAC std_ss [CARD_INSERT, ADD1, GSYM REAL_ADD, REAL_RDISTRIB]
    ++ Know `!a b c d : real. a <= d /\ b <= c ==> a + b <= c + d`
    >> REAL_ARITH_TAC

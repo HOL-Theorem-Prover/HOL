@@ -16,6 +16,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val Know = PARSE_TAC KNOW_TAC;
 val Suff = PARSE_TAC SUFF_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
@@ -143,7 +144,7 @@ val RANDOM_LURCHES_MULTIPLICATIVE = store_thm
               (FST (BIND (prob_while_cut ($< a) random_lurch n (SUC a))
                     (\l. prob_while_cut ($< 0) random_lurch n l) s) = 0))`
    >> (POP_ASSUM K_TAC
-       ++ RW_TAC std_ss []
+       ++ RW_TAC std_ss' []
        ++ EQ_TAC <<
        [RW_TAC std_ss []
         ++ Q.EXISTS_TAC `n`

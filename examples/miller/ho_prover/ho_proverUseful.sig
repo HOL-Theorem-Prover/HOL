@@ -200,6 +200,7 @@ sig
 
   (* HOL *)
 
+  type 'a set = 'a HOLset.set
   type hol_type = Type.hol_type
   type term = Term.term
   type thm = Thm.thm
@@ -217,7 +218,7 @@ sig
   type term_subst = (term, term) subst
   type substitution = term_subst * type_subst
   type ho_substitution = substitution * thm thunk
-  type raw_substitution = term_subst * (type_subst * hol_type list)
+  type raw_substitution = (term_subst * term set) * (type_subst * hol_type list)
   type ho_raw_substitution = raw_substitution * thm thunk
 
   (* General *)

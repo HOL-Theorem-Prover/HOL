@@ -16,6 +16,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val Know = PARSE_TAC KNOW_TAC;
 val Suff = PARSE_TAC SUFF_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
@@ -115,7 +116,7 @@ val PROB_TERMINATES_BERNOULLI = store_thm
    ++ REVERSE (Cases_on `a`)
    >> (RW_TAC std_ss [PROB_WHILE_CUT_ID, UNIT_DEF]
        ++ Suff
-          `{(x:real+bool) | ~ISL x} o FST o $, (INR y) =
+          `{(x:real+bool) | ~ISL x} o FST o (\s. (INR y, s)) =
            (UNIV:(num->bool)->bool)`
        >> RW_TAC std_ss [PROB_BERN_UNIV, REAL_LT_IMP_LE, HALF_LT_1]
        ++ SET_EQ_TAC

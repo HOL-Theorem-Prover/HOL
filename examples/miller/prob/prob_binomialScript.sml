@@ -1,13 +1,13 @@
-open HolKernel Parse boolLib;
-val _ = new_theory "prob_binomial";
+open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
+     listTheory sequenceTheory state_transformerTheory
+     probabilityTheory formalizeUseful extra_numTheory combinTheory
+     pairTheory realTheory realLib extra_boolTheory
+     extra_pred_setTheory prob_algebraTheory probTheory
+     extra_realTheory extra_pred_setTools measureTheory numTheory
+     simpLib seqTheory sequenceTools subtypeTheory res_quanTheory
+     binomialTheory sumTheory;
 
-open bossLib arithmeticTheory pred_setTheory listTheory
-     sequenceTheory state_transformerTheory probabilityTheory
-     formalizeUseful extra_numTheory combinTheory pairTheory
-     realTheory realLib extra_boolTheory extra_pred_setTheory
-     prob_algebraTheory probTheory extra_realTheory extra_pred_setTools
-     measureTheory numTheory simpLib seqTheory sequenceTools
-     subtypeTheory res_quanTheory binomialTheory sumTheory;
+val _ = new_theory "prob_binomial";
 
 infixr 0 ++ << || ORELSEC ## --> THENC;
 infix 1 >> |->;
@@ -17,6 +17,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val Know = PARSE_TAC KNOW_TAC;
 val Suff = PARSE_TAC SUFF_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
@@ -111,8 +112,8 @@ val PROB_BERN_BINOMIAL = store_thm
    >> (HO_MATCH_MP_TAC PROB_BERN_BIND_COMM
        ++ RW_TAC std_ss [INDEP_FN_PROB_BINOMIAL, INDEP_FN_SDEST, INDEP_FN_UNIT])
    ++ Rewr
-   ++ RW_TAC std_ss [PROB_BERN_BIND_SDEST, INDEP_FN_BIND, INDEP_FN_UNIT,
-                     INDEP_FN_PROB_BINOMIAL, BIND_RIGHT_UNIT]
+   ++ RW_TAC std_ss' [PROB_BERN_BIND_SDEST, INDEP_FN_BIND, INDEP_FN_UNIT,
+                      INDEP_FN_PROB_BINOMIAL, BIND_RIGHT_UNIT]
    ++ Know
       `($= m o FST o BIND (prob_binomial n) (\m. UNIT (SUC m))) =
        ((\x. m = SUC x) o FST o prob_binomial n)`
@@ -130,10 +131,10 @@ val PROB_BERN_BINOMIAL = store_thm
    ++ STRIP_TAC
    ++ Cases_on `m`
    >> (RW_TAC arith_ss [binomial_def, o_DEF, pow, GSYM EMPTY_DEF,
-                        PROB_BERN_EMPTY]
+                        PROB_BERN_EMPTY, BIND_RIGHT_UNIT]
        ++ Cases_on `n`
        ++ RW_TAC real_ss [binomial_def])
-   ++ RW_TAC std_ss [binomial_def, REAL_ADD_RDISTRIB, pow, GSYM REAL_ADD]
+   ++ RW_TAC std_ss' [binomial_def, REAL_ADD_RDISTRIB, pow, GSYM REAL_ADD]
    ++ Know `!a b c d : real. (a = b) /\ (c = d) ==> (a + c = d + b)`
    >> REAL_ARITH_TAC
    ++ DISCH_THEN MATCH_MP_TAC

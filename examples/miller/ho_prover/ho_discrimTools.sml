@@ -39,7 +39,7 @@ val !! = REPEAT;
 (* Type/term substitutions                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val empty_raw_subst : raw_substitution = ([], ([], []));
+val empty_raw_subst : raw_substitution = (([], empty_tmset), ([], []));
 
 fun type_raw_match ty1 ty2 (sub : raw_substitution) =
   let

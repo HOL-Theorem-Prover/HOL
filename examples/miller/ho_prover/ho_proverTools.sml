@@ -716,7 +716,7 @@ local
       val _ = assert (not (b = T) andalso not (b = F))
         (ERR "bool_rule" "already T or F")
       val ty_sub = if rng = alpha then [alpha |-> rng] else []
-      val tm_sub = norm_subst ty_sub [p_tm |-> a, x_tm |-> b]
+      val tm_sub = norm_subst ty_sub ([p_tm |-> a, x_tm |-> b], empty_tmset)
     in
       (tm_sub, ty_sub)
     end;

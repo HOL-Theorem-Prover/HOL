@@ -517,7 +517,7 @@ type type_subst = (hol_type, hol_type) subst
 type term_subst = (term, term) subst
 type substitution = (term, term) subst * (hol_type, hol_type) subst
 type ho_substitution = substitution * thm thunk
-type raw_substitution = term_subst * (type_subst * hol_type list)
+type raw_substitution = (term_subst * term set) * (type_subst * hol_type list)
 type ho_raw_substitution = raw_substitution * thm thunk
 
 (* --------------------------------------------------------------------- *)

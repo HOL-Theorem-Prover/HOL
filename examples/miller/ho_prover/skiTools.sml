@@ -34,9 +34,7 @@ fun printVal _ = ();
 (* Type/term substitutions                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-type raw_substitution = term_subst * (type_subst * hol_type list);
-
-val empty_raw_subst : raw_substitution = ([], ([], []));
+val empty_raw_subst : raw_substitution = (([], empty_tmset), ([], []));
 
 fun type_raw_match ty1 ty2 (sub : raw_substitution) =
   let

@@ -1,13 +1,13 @@
-open HolKernel Parse boolLib;
-val _ = new_theory "prob_geometric";
+open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
+     listTheory sequenceTheory state_transformerTheory
+     probabilityTheory formalizeUseful extra_numTheory combinTheory
+     pairTheory realTheory realLib extra_boolTheory
+     extra_pred_setTheory prob_algebraTheory probTheory
+     extra_realTheory extra_pred_setTools measureTheory numTheory
+     simpLib seqTheory sequenceTools subtypeTheory res_quanTheory
+     measureTheory;
 
-open bossLib arithmeticTheory pred_setTheory listTheory
-     sequenceTheory state_transformerTheory probabilityTheory
-     formalizeUseful extra_numTheory combinTheory pairTheory
-     realTheory realLib extra_boolTheory extra_pred_setTheory
-     prob_algebraTheory probTheory extra_realTheory extra_pred_setTools
-     measureTheory numTheory simpLib seqTheory sequenceTools
-     subtypeTheory res_quanTheory measureTheory;
+val _ = new_theory "prob_geometric";
 
 infixr 0 ++ << || ORELSEC ## --> THENC;
 infix 1 >> |->;
@@ -17,6 +17,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val Know = PARSE_TAC KNOW_TAC;
 val Suff = PARSE_TAC SUFF_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
@@ -276,7 +277,8 @@ val PROB_BERN_GEOMETRIC_LOOP = store_thm
        ++ Rewr
        ++ RW_TAC real_ss [PROB_BERN_BASIC])
    ++ RW_TAC std_ss [PROB_BERN_GEOMETRIC_LOOP_LEMMA]
-   ++ RW_TAC std_ss [prob_geometric_loop_def, BIND_DEF, o_DEF, UNCURRY, UNIT_DEF]
+   ++ RW_TAC std_ss [prob_geometric_loop_def, BIND_DEF, o_DEF, UNCURRY,
+                     UNIT_DEF]
    ++ RW_TAC std_ss [PROB_WHILE_ADVANCE, INDEP_FN_PROB_GEOMETRIC_ITER,
                      PROB_GEOMETRIC_LOOP_TERMINATES, prob_geometric_iter_def,
                      GSYM BIND_ASSOC, UNIT_DEF]
@@ -292,7 +294,7 @@ val PROB_BERN_GEOMETRIC_LOOP = store_thm
          SND
            (FST
               (BIND sdest
-               (\a. BIND ($, (a,SUC (SUC n))) prob_geometric_loop) x)) =
+                 (\a. BIND (\s. ((a,SUC (SUC n)),s)) prob_geometric_loop) x)) =
          n + SUC (SUC d)) =
          ((\x. SND x = SUC n + SUC d) o FST o
            BIND sdest (\a. BIND (UNIT (a,SUC (SUC n))) prob_geometric_loop))`
@@ -333,5 +335,3 @@ val PROB_BERN_GEOMETRIC = store_thm
     ++ DECIDE_TAC]);
 
 val _ = export_theory ();
-
-
