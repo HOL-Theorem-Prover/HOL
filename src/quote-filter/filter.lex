@@ -15,7 +15,7 @@
    /*                                                                   */
    /*    datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a;          */
    /*                                                                   */
-   /* and also the functions term_parser, type_parser, and ty_antiq.    */
+   /* and also the functions Term, Type, and ty_antiq.    */
 
    /* This filter adds the following special features to Standard ML:   */
    /*                                                                   */
@@ -40,7 +40,10 @@
    /*      or `==' and the quotation marks in the old-style quotations. */
 
 %{
+#include <stdlib.h>
+#include <stdio.h>
 unsigned antiquote = 0;
+int anti(void);
 %}
 
 %option noyywrap
@@ -66,12 +69,12 @@ int prevstate = INITIAL;
 <INITIAL>"("      { ECHO; ++pardepth; }
 <INITIAL>")"      { ECHO; --pardepth;
                     if (antiquote && pardepth < 1) return 0; }
-<INITIAL>=={ws}*` { fprintf(yyout, "(Parse.Type [QUOTE \"");
+<INITIAL>=={ws}*` { fprintf(yyout, "(Type [QUOTE \"");
                     BEGIN OLDTYQUOTE; }
 <INITIAL>--{ws}*` { fprintf(yyout,
-                    "(Parse.Term [QUOTE \""); BEGIN OLDTMQUOTE; }
-<INITIAL>``{ws}*: { fprintf(yyout, "(Parse.Type [QUOTE \":"); BEGIN TYQUOTE; }
-<INITIAL>``       { fprintf(yyout, "(Parse.Term [QUOTE \""); BEGIN TMQUOTE; }
+                    "(Term [QUOTE \""); BEGIN OLDTMQUOTE; }
+<INITIAL>``{ws}*: { fprintf(yyout, "(Type [QUOTE \":"); BEGIN TYQUOTE; }
+<INITIAL>``       { fprintf(yyout, "(Term [QUOTE \""); BEGIN TMQUOTE; }
 <INITIAL>`        { fprintf(yyout, "[QUOTE \""); BEGIN QUOTE; }
 <INITIAL>\n       { ECHO; fflush(stdout); fflush(stdout); }
 
@@ -134,10 +137,8 @@ int prevstate = INITIAL;
 %%
 
 #include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
 
-anti()
+int anti(void)
 { int x;
   unsigned old = antiquote;
   antiquote = 1;
@@ -164,7 +165,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  signal(SIGINT,SIG_IGN); /* Allows ^C to pass to the HOL process
-                             -- thanks to J.R.Harrison for this code */
+  signal(SIGINT,SIG_IGN); /* Ignores Ctl-C; when HOL is interrupted,
+                             the filter continues unaffected. */
   return yylex();
 }
