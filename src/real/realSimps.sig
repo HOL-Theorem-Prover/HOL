@@ -15,6 +15,7 @@ sig
 
   (* the RealArith decision procedure *)
   val REAL_ARITH_ss : simpLib.ssdata
+  val arith_cache : Cache.cache (* the cache of results behind it *)
 
   (* Incorporates the real simpset *)
   val real_ac_ss : simpLib.simpset
