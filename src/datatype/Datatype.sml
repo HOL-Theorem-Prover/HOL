@@ -510,7 +510,7 @@ fun persistent_tyinfo (x as (tyinfo,_)) =
 fun Hol_datatype q =
   List.app persistent_tyinfo 
            (primHol_datatype (TypeBase.theTypeBase()) q)
-  handle ? => raise (wrap_exn "Datatype" "Hol_datatype" ?);
+  handle ? => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
 
 
 end (* struct *)
