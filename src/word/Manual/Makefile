@@ -30,7 +30,7 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ps
 	@echo "\begin{theindex}" > index.tex
 	@echo "\mbox{}" >> index.tex
 	@echo "\end{theindex}" >> index.tex
@@ -68,4 +68,5 @@ word:
 
 all:
 	make clean; make tex; make word; make index; make word
+	dvips word.dvi
 
