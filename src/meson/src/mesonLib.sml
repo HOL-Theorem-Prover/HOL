@@ -94,6 +94,7 @@ val chatting = ref 1;           (* Gives intermediate info as proof runs.
                                    is given.                                 *)
 
 
+
 (* ------------------------------------------------------------------------- *)
 (* Shadow syntax for FOL terms in NNF. Functions and predicates have         *)
 (* numeric codes, and negation is done by negating the predicate code.       *)
@@ -1033,7 +1034,9 @@ fun GEN_MESON_TAC min max step ths g =
                       THEN PURE_MESON_TAC min max step)
         end) g;
 
-val ASM_MESON_TAC = GEN_MESON_TAC 0 30 1;
+
+val max_depth = ref 30;         
+val ASM_MESON_TAC = GEN_MESON_TAC 0 (!max_depth) 1;
 
 fun MESON_TAC ths = POP_ASSUM_LIST (K ALL_TAC) THEN ASM_MESON_TAC ths;
 
