@@ -38,7 +38,7 @@ val op>> = op THEN1;
 val alg_twin_def = Define
   `alg_twin x y = ?l. (x = SNOC T l) /\ (y = SNOC F l)`;
 
-val alg_order_def = Define 
+val alg_order_def = Define
     `(alg_order [] _ = T)
   /\ (alg_order _ [] = F)
   /\ (alg_order (h::t) (h'::t') = ((h = T) /\ (h' = F))
@@ -97,9 +97,9 @@ val ALG_TWIN_SING = store_thm
   ("ALG_TWIN_SING",
    ``!x l. (alg_twin [x] l = (x = T) /\ (l = [F]))
            /\ (alg_twin l [x] = (l = [T]) /\ (x = F))``,
-   RW_TAC std_ss [alg_twin_def] <<
+   GEN_TAC ++ Q.X_GEN_TAC `m` ++ RW_TAC std_ss [alg_twin_def] <<
    [EQ_TAC <<
-    [Cases_on `l` >> PROVE_TAC [NOT_NIL_SNOC]
+    [Cases_on `m` >> PROVE_TAC [NOT_NIL_SNOC]
      ++ STRIP_TAC
      ++ NTAC 2 (POP_ASSUM MP_TAC)
      ++ REVERSE (Cases_on `l`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
@@ -108,7 +108,7 @@ val ALG_TWIN_SING = store_thm
      ++ Q.EXISTS_TAC `[]`
      ++ RW_TAC std_ss [SNOC]],
     EQ_TAC <<
-    [Cases_on `l` >> PROVE_TAC [NOT_NIL_SNOC]
+    [Cases_on `m` >> PROVE_TAC [NOT_NIL_SNOC]
      ++ STRIP_TAC
      ++ NTAC 2 (POP_ASSUM MP_TAC)
      ++ REVERSE (Cases_on `l`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
@@ -216,7 +216,7 @@ val ALG_ORDER_PREFIX_ANTI = store_thm
    Induct >> RW_TAC list_ss [IS_PREFIX_NIL]
    ++ Cases_on `y` >> RW_TAC list_ss [IS_PREFIX_NIL, alg_order_def]
    ++ (RW_TAC list_ss [IS_PREFIX, alg_order_def]
-	 ++ PROVE_TAC []))   
+	 ++ PROVE_TAC []))
 
 val ALG_ORDER_PREFIX_MONO = store_thm
   ("ALG_ORDER_PREFIX_MONO",
@@ -698,7 +698,7 @@ val ALG_CANON_MERGE_SHORTENS = store_thm
    [Q.EXISTS_TAC `SNOC F l'`
     ++ RW_TAC std_ss [IS_PREFIX_SNOC],
     PROVE_TAC []]);
-    
+
 val ALG_CANON_MERGE_CONSTANT = store_thm
   ("ALG_CANON_MERGE_CONSTANT",
    ``!l b. alg_twinfree (l::b) ==> (alg_canon_merge l b = l::b)``,
@@ -720,7 +720,7 @@ val ALG_CANON2_PREFIXFREE_PRESERVE = store_thm
                        ==> ~IS_PREFIX h x /\ ~IS_PREFIX x h`
      >> PROVE_TAC [ALG_CANON_MERGE_PREFIXFREE_PRESERVE]
    ++ REWRITE_TAC [MEM]
-   ++ PROVE_TAC []);   
+   ++ PROVE_TAC []);
 
 val ALG_CANON2_SHORTENS = store_thm
   ("ALG_CANON2_SHORTENS",
@@ -796,7 +796,7 @@ val ALG_CANON_CONSTANT = store_thm
   ("ALG_CANON_CONSTANT",
    ``!l. alg_sorted l /\ alg_prefixfree l /\ alg_twinfree l
          ==> (alg_canon l = l)``,
-   RW_TAC std_ss [alg_canon_def, ALG_CANON1_CONSTANT, ALG_CANON2_CONSTANT]);   
+   RW_TAC std_ss [alg_canon_def, ALG_CANON1_CONSTANT, ALG_CANON2_CONSTANT]);
 
 val ALG_CANON_IDEMPOT = store_thm
   ("ALG_CANON_IDEMPOT",
@@ -1039,6 +1039,6 @@ val ALG_SORTED_PREFIXFREE_EQUALITY = store_thm
     ++ RES_TAC
     ++ NTAC 2 (POP_ASSUM (MP_TAC o Q.SPEC `h`))
     ++ NTAC 3 (POP_ASSUM (K ALL_TAC))
-    ++ RW_TAC std_ss [IS_PREFIX_REFL]]);    
+    ++ RW_TAC std_ss [IS_PREFIX_REFL]]);
 
 val _ = export_theory ();
