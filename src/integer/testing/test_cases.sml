@@ -228,8 +228,9 @@ val goals_to_test = [
    ([``0i <= i``, ``i :int < maxchar``,
      ``!n. 0i <= n /\ n < i ==> (skips ArrayApp n = 0i)``],
     ``maxchar - i > 0i``)),
-  ("natural number",
-   ([``n:num > 4``], ``n:num > 3``))
+  ("natural number 1", ([``n:num > 4``], ``n:num > 3``)),
+  ("natural number 2",
+   ([``n:num < p + 1``, ``!m:num. m < p ==> ~(n < m + 1)``], ``p:num = n``))
 ]
 
 fun test_goal tac (name, g) = let

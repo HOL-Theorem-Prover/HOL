@@ -95,7 +95,7 @@ fun nat_nonpresburgers tm =
     else
       let open numSyntax
       in
-        if is_great tm orelse is_geq tm orelse is_less tm orelse
+        if is_greater tm orelse is_geq tm orelse is_less tm orelse
            is_leq tm orelse is_plus tm orelse is_minus tm orelse
            is_natlin_mult tm
         then
@@ -103,8 +103,7 @@ fun nat_nonpresburgers tm =
                         nat_nonpresburgers (rand tm))
         else if is_numeral tm then empty_tmset
         else if is_var tm then empty_tmset
-        else if type_of tm = num then HOLset.add(empty_tmset, tm)
-        else empty_tmset
+        else HOLset.add(empty_tmset, tm)
       end
 
 val x_var = mk_var("x", int_ty)
@@ -239,7 +238,7 @@ fun tacRGEN t = let
 in
   (body, prove_it)
 end
-val tTHEN = fn (t1, t2) => tacTHEN t1 t2
+val op tTHEN = fn (t1, t2) => tacTHEN t1 t2
 infix tTHEN
 
 
@@ -346,8 +345,9 @@ val dealwith_nats = let
                                NBOOL_COND_RAND_CONV ORELSEC
                                COND_ABS_CONV))
   fun do_pbs tm = let
-    val non_pbs =
-        Listsort.sort subtm_rel (HOLset.listItems (nat_nonpresburgers tm))
+    val non_pbs0 = HOLset.listItems (nat_nonpresburgers tm)
+    val non_pbs = Listsort.sort subtm_rel
+                                (List.filter (equal num_ty o type_of) non_pbs0)
     val initially =
         if null non_pbs then tacALL
         else if goal_qtype tm = qsUNIV then
@@ -452,11 +452,24 @@ in
 end
 
 fun ok_asm th = let
+  val exists_th = goal_qtype (concl th) = qsEXISTS
   fun check(t, free_p) =
       mem (type_of t) [intSyntax.int_ty, numSyntax.num] andalso
-      (free_p orelse goal_qtype t = qsEXISTS)
+      (exists_th orelse free_p)
+  val dodgy_subterms0 = non_presburger_subterms0 [] (concl th)
+  fun ignore_nats ((t, free_p), acc) = let
+    val nat_set = nat_nonpresburgers t
+    fun foldthis (nt, acc) = HOLset.add(acc, (nt, free_p))
+  in
+    HOLset.foldl foldthis acc nat_set
+  end
+  fun bcompare (b1, b2) = if b1 = b2 then EQUAL
+                          else if b1 then GREATER
+                          else LESS
+  val empty_pairs = HOLset.empty (pair_compare(Term.compare, bcompare))
+  val dodgy_subterms = List.foldl ignore_nats empty_pairs dodgy_subterms0
 in
-  List.all check (non_presburger_subterms0 [] (concl th))
+  not (isSome (HOLset.find (not o check) dodgy_subterms))
 end
 
 fun conv_tac c =
