@@ -35,3 +35,13 @@ fun results () = Listsort.sort (fn (i1, i2) => String.compare(#1 i1, #1 i2))
                                (listItems ptable)
 
 
+fun print_profile_result (nm, {usr, sys, gc}) = let
+  val pl = StringCvt.padLeft #" " 8
+  val _ = print (StringCvt.padRight #" " 25 nm)
+  val _ = print (pl (Time.toString usr)^" "^pl (Time.toString sys)^" "^
+                 pl (Time.toString gc)^"\n")
+in
+  ()
+end
+
+val print_profile_results = app print_profile_result
