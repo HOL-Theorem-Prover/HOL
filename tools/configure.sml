@@ -291,13 +291,17 @@ val _ =
 val _ =
   let val _ = print "Attempting to compile quote filter ... "
       val src    = fullPath [holdir, "src/quote-filter/filter.c"]
-      val target = fullPath [holdir, "bin/unquote"]
+      val target = fullPath [holdir, "bin/unquote"] 
+        
       open Process
   in
     if system (String.concat [CC," ", src," -o ", target]) = success
-    then (mk_xable target; print "successful.\n")
+    then ((mk_xable target; print "successful.\n") 
+          handle _ 
+           => print(String.concat["\n>>>>>Failed to move quote filter!",
+                    "(continuing anyway)\n\n"]))
     else print "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
- end;
+ end
 
 (*---------------------------------------------------------------------------
     Generate a shell script for running HOL through a preprocessor.
