@@ -24,7 +24,28 @@ infix THEN THENC THENL |-> ORELSE;
 
 val _ = new_theory "arithmetic";
 
-val num_Axiom = prim_recTheory.num_Axiom;
+val NOT_SUC     = numTheory.NOT_SUC
+and INV_SUC     = numTheory.INV_SUC
+and INDUCTION   = numTheory.INDUCTION;
+
+val num_Axiom     = prim_recTheory.num_Axiom;
+val INV_SUC_EQ    = prim_recTheory.INV_SUC_EQ
+and LESS_REFL     = prim_recTheory.LESS_REFL
+and SUC_LESS      = prim_recTheory.SUC_LESS
+and NOT_LESS_0    = prim_recTheory.NOT_LESS_0
+and LESS_MONO     = prim_recTheory.LESS_MONO
+and LESS_SUC_REFL = prim_recTheory.LESS_SUC_REFL
+and LESS_SUC      = prim_recTheory.LESS_SUC
+and LESS_THM      = prim_recTheory.LESS_THM
+and LESS_SUC_IMP  = prim_recTheory.LESS_SUC_IMP
+and LESS_0        = prim_recTheory.LESS_0
+and EQ_LESS       = prim_recTheory.EQ_LESS
+and SUC_ID        = prim_recTheory.SUC_ID
+and NOT_LESS_EQ   = prim_recTheory.NOT_LESS_EQ
+and LESS_NOT_EQ   = prim_recTheory.LESS_NOT_EQ
+and LESS_SUC_SUC  = prim_recTheory.LESS_SUC_SUC
+and PRE           = prim_recTheory.PRE;
+
 
 (*---------------------------------------------------------------------------*
  * The basic arithmetic operations.                                          *
@@ -42,10 +63,7 @@ val ADD = new_recursive_definition
  *---------------------------------------------------------------------------*)
 
 val NUMERAL_DEF = new_definition("NUMERAL_DEF", --`NUMERAL (x:num) = x`--);
-
-val ALT_ZERO = new_definition(
-  "ALT_ZERO",
-  --`ALT_ZERO = ZERO`--);
+val ALT_ZERO    = new_definition("ALT_ZERO",    --`ALT_ZERO = ZERO`--);
 val NUMERAL_BIT1 =
   new_definition("NUMERAL_BIT1",
                  --`NUMERAL_BIT1 n = n + (n + SUC ZERO)`--);
@@ -109,33 +127,20 @@ val num_case_def = new_recursive_definition
     def = --`(num_case b f 0 = (b:'a)) /\
              (num_case b f (SUC n) = f n)`--};
 
-val INV_SUC_EQ    = prim_recTheory.INV_SUC_EQ
-and LESS_REFL     = prim_recTheory.LESS_REFL
-and SUC_LESS      = prim_recTheory.SUC_LESS
-and NOT_LESS_0    = prim_recTheory.NOT_LESS_0
-and LESS_MONO     = prim_recTheory.LESS_MONO
-and LESS_SUC_REFL = prim_recTheory.LESS_SUC_REFL
-and LESS_SUC      = prim_recTheory.LESS_SUC
-and LESS_THM      = prim_recTheory.LESS_THM
-and LESS_SUC_IMP  = prim_recTheory.LESS_SUC_IMP
-and LESS_0        = prim_recTheory.LESS_0
-and EQ_LESS       = prim_recTheory.EQ_LESS
-and SUC_ID        = prim_recTheory.SUC_ID
-and NOT_LESS_EQ   = prim_recTheory.NOT_LESS_EQ
-and LESS_NOT_EQ   = prim_recTheory.LESS_NOT_EQ
-and LESS_SUC_SUC  = prim_recTheory.LESS_SUC_SUC
-and PRE           = prim_recTheory.PRE;
 
+(*---------------------------------------------------------------------------
+                        THEOREMS
+ ---------------------------------------------------------------------------*)
 
-val NOT_SUC     = numTheory.NOT_SUC
-and INV_SUC     = numTheory.INV_SUC
-and INDUCTION   = numTheory.INDUCTION
-
-val ONE = store_thm(
-  "ONE",
+val ONE = store_thm("ONE",
   Term `1 = SUC 0`,
   REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1, ALT_ZERO, ADD]);
 
+val TWO = store_thm("TWO",
+  Term`2 = SUC 1`,
+REWRITE_TAC
+   [NUMERAL_DEF, NUMERAL_BIT2, ONE, 
+    ADD, ALT_ZERO,NUMERAL_BIT1]);
 
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
@@ -1676,7 +1681,7 @@ val _ = print "Proving division\n"
 (*                                                                      *)
 (* Prove the division algorithm:                                        *)
 (*                                                                      *)
-(*                    |- !k n. (n>0) ==> ?q r. k=qn+r /\ 0<=r<n         *)
+(*                    |- !k n. n>0 ==> ?q r. k=qn+r /\ 0<= r < n      *)
 (*                                                                      *)
 (* The proof follows MacLane & Birkhoff, p29.                           *)
 (* =====================================================================*)
@@ -1773,7 +1778,10 @@ val MOD_DIV_exist = prove
       FIRST_ASSUM ACCEPT_TAC,
       RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--))]);
 
-(* Now define MOD and DIV by a constant specification.                  *)
+(*---------------------------------------------------------------------------
+            Now define MOD and DIV by a constant specification.             
+ ---------------------------------------------------------------------------*)
+
 val DIVISION = new_specification
    {name = "DIVISION",
     consts = [{fixity = Infixl 650, const_name = "MOD"},
@@ -1786,7 +1794,7 @@ val DIVISION = new_specification
 (* ---------------------------------------------------------------------*)
 
 val MOD_ONE = store_thm("MOD_ONE",
---`!k. (k MOD (SUC 0)) = 0`--,
+--`!k. k MOD (SUC 0) = 0`--,
    STRIP_TAC THEN
    let val th = REWRITE_RULE [LESS_SUC_REFL]
                              (SPEC (--`SUC 0`--) DIVISION)
@@ -1808,6 +1816,7 @@ val DIV_LESS_EQ = store_thm("DIV_LESS_EQ",
     REWRITE_TAC [MULT_CLAUSES] THEN
     REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)] THEN
     MATCH_ACCEPT_TAC LESS_EQ_ADD]);
+
 
 (* ---------------------------------------------------------------------*)
 (* Now, show that the quotient and remainder are unique.                *)
@@ -1875,7 +1884,6 @@ REPEAT GEN_TAC THEN
                  (SPECL [Term`1`,Term`0`,Term`p:num`]ADD_MONO_LESS_EQ)]])
 end;
 
-(* NB: this lemma is strictly local to this file.                       *)
 val lemma = prove
 (--`!n k q r. ((k = (q * n) + r) /\ r < n) ==> (k DIV n = q)`--,
    REPEAT STRIP_TAC THEN
@@ -2099,6 +2107,50 @@ val DIV_DIV_DIV_MULT = store_thm("DIV_DIV_DIV_MULT",
     THEN PURE_ONCE_REWRITE_TAC[ADD_INV_0_EQ]
     THEN MATCH_MP_TAC LESS_DIV_EQ_ZERO
     THEN IMP_RES_TAC Less_MULT_ADD_lemma);
+
+val POS_ADD = prove(Term`!m n. 0<m+n = 0<m \/ 0<n`,
+REPEAT GEN_TAC 
+  THEN STRUCT_CASES_TAC (SPEC (Term`m:num`) num_CASES)
+  THEN STRUCT_CASES_TAC (SPEC (Term`n:num`) num_CASES)
+  THEN ASM_REWRITE_TAC[ADD_CLAUSES,prim_recTheory.LESS_0]);
+
+val POS_MULT = prove(Term`!m n. 0<m*n = 0<m /\ 0<n`,
+REPEAT GEN_TAC 
+  THEN STRUCT_CASES_TAC (SPEC (Term`m:num`) num_CASES)
+  THEN STRUCT_CASES_TAC (SPEC (Term`n:num`) num_CASES)
+  THEN ASM_REWRITE_TAC[MULT_CLAUSES,ADD_CLAUSES,prim_recTheory.LESS_0]);
+
+val SUC_PRE = prove(Term`!d. 0<d ==> (SUC(PRE d) = d)`,
+REPEAT GEN_TAC 
+  THEN STRUCT_CASES_TAC (SPEC (Term`d:num`) num_CASES)
+  THEN ASM_REWRITE_TAC[prim_recTheory.PRE,prim_recTheory.LESS_REFL]);
+
+val LESS_MONO_LEM = 
+GEN_ALL
+  (REWRITE_RULE [ADD_CLAUSES]
+    (SPECL (map Term [`0`, `y:num`, `x:num`])
+      (ONCE_REWRITE_RULE[ADD_SYM]LESS_MONO_ADD)));
+
+val DIV_LESS = store_thm("DIV_LESS",
+Term`!n d. 0<n /\ 1<d ==> n DIV d < n`,
+REWRITE_TAC [ONE] THEN REPEAT STRIP_TAC
+  THEN IMP_RES_TAC prim_recTheory.SUC_LESS
+  THEN CONJUNCTS_THEN2 SUBST_ALL_TAC ASSUME_TAC
+         (SPEC(Term`n:num`) (UNDISCH(SPEC(Term`d:num`) DIVISION)))
+  THEN RULE_ASSUM_TAC (REWRITE_RULE [POS_ADD])
+  THEN MP_TAC (SPEC (Term`d:num`) ADD_DIV_ADD_DIV) THEN ASM_REWRITE_TAC[]
+  THEN DISCH_THEN (fn th => REWRITE_TAC [th])
+  THEN MP_TAC (SPECL (map Term[`n MOD d`, `d:num`]) LESS_DIV_EQ_ZERO)
+  THEN ASM_REWRITE_TAC [] 
+  THEN DISCH_THEN (fn th => REWRITE_TAC [th,ADD_CLAUSES])
+  THEN SUBGOAL_THEN (Term`?m. d = SUC m`) (CHOOSE_THEN SUBST_ALL_TAC) THENL
+  [EXISTS_TAC (Term`PRE d`) THEN IMP_RES_TAC SUC_PRE THEN ASM_REWRITE_TAC[],
+   REWRITE_TAC [MULT_CLAUSES,GSYM ADD_ASSOC]
+    THEN MATCH_MP_TAC LESS_MONO_LEM
+    THEN PAT_ASSUM (Term`x \/ y`) MP_TAC
+    THEN REWRITE_TAC[POS_ADD,POS_MULT] THEN STRIP_TAC THENL
+    [DISJ1_TAC THEN RULE_ASSUM_TAC (REWRITE_RULE[LESS_MONO_EQ]), ALL_TAC]
+    THEN ASM_REWRITE_TAC[]]);
 
 
 val num_case_cong =
