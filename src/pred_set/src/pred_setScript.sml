@@ -2002,14 +2002,14 @@ val FINITE_COMPLETE_INDUCTION = store_thm(
 (* =====================================================================*)
 
 val INFINITE_DEF = new_definition ("INFINITE_DEF",
-(--`!s:^set. INFINITE s = ~(FINITE s)`--));
+(--`!s:^set. INFINITE s = ~FINITE s`--));
 
 val NOT_IN_FINITE =
     store_thm
     ("NOT_IN_FINITE",
-     (--`INFINITE (UNIV:^set) =
-         !s:^set.
-         FINITE s ==> ?x. ~(x IN s)`--),
+     (--`INFINITE (UNIV:^set) 
+           =
+         !s:^set. FINITE s ==> ?x. ~(x IN s)`--),
      PURE_ONCE_REWRITE_TAC [INFINITE_DEF] THEN EQ_TAC THENL
      [CONV_TAC CONTRAPOS_CONV THEN
       CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
@@ -2756,8 +2756,9 @@ val FINITE_CROSS_EQ_lemma =
 
 val FINITE_CROSS_EQ = store_thm(
   "FINITE_CROSS_EQ",
-  ``!P Q. FINITE (P CROSS Q) = (P = {}) \/ (Q = {}) \/
-                               FINITE P /\ FINITE Q``,
+  ``!P Q. FINITE (P CROSS Q) 
+             = 
+          (P = {}) \/ (Q = {}) \/ FINITE P /\ FINITE Q``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
   MESON_TAC [FINITE_CROSS_EQ_lemma, FINITE_CROSS, FINITE_EMPTY,
              CROSS_EMPTY]);

@@ -383,7 +383,7 @@ fun add_ty_witness (thy as {STH, ...}:theory) s th =
      fun get [] = raise THEORY_ERR"add_ty_witness" "no such type"
        | get ((e as TERM _)::rst) = e::get rst
        | get ((e as TYPE{occ, theory, arity, witness, utd})::rst) =
-         if (#name occ = s)
+         if #name occ = s
          then TYPE{occ=occ, theory=theory, arity=arity, utd=utd,
                    witness=SOME th}::rst
          else e::get rst
@@ -399,7 +399,7 @@ fun add_tm_witness (thy as {STH, ...}:theory) s th  =
      fun get [] = raise THEORY_ERR"add_tm_witness" "no such constant"
        | get ((e as TYPE _)::rst) = e::get rst
        | get ((e as TERM{name, theory, htype, witness,utd})::rst) =
-           if (!name=s)
+           if !name = s
            then TERM{name=name, theory=theory, utd=utd,
                      htype=htype, witness=SOME th}::rst
            else e::get rst
@@ -408,7 +408,7 @@ fun add_tm_witness (thy as {STH, ...}:theory) s th  =
  end;
 
 
-fun set_place (s,pl,thyname) (thy as {STH, ...}:theory)  =
+fun set_place (s,pl,thyname) (thy as {STH, ...}:theory) =
  let val (ST,hasher) = STH
      val i = hasher s
      val L = Array.sub(ST, i)
@@ -442,25 +442,6 @@ fun del_type (name,thyname)
      overwritten = true}
  end;
 
-(*
-fun del_const (name,thyname)
-     {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
- let val (ST,hasher) = STH
-     val i = hasher name
-     val L = Array.sub(ST, i)
-     fun del ((e as TERM{name = ref n1, theory=thy1,...})::rst) =
-          if (name=n1) andalso (thyname=thy1) then rst else e::del rst
-       | del ((e as TYPE _)::rst) = e::del rst
-       | del [] = raise THEORY_ERR "del_const"
-                (Lib.quote name^" not found in current theory")
- in
-   Array.update(ST, i, del L);
-   {thid=thid,STH=STH,GR=GR,facts=facts,
-    con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-    overwritten = true}
-
- end;
-*)
 
 fun del_const (name,thyname)
               {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
@@ -540,7 +521,7 @@ fun lookup_tmc ({STH,...}:theory) s e =
      fun get [] = raise e
        | get (TYPE _::rst) = get rst
        | get (TERM(tr as {name,...})::rst) =
-           if (s = !name) then tr else get rst
+           if s = !name then tr else get rst
  in
      get (Array.sub(ST, hasher s))
  end
@@ -548,8 +529,7 @@ fun lookup_tmc ({STH,...}:theory) s e =
 type term_recd = {name:string ref, theory:string,
                   htype:Type.hol_type, witness:Thm.thm option,utd:bool ref};
 
-local
-      fun mkString thy e n =
+local fun mkString thy e n =
           {name=ref n, theory="string", utd=ref true,
            htype=mk_type{Tyop="string",Args=[]},
            witness = #witness(lookup_tmc thy "emptystring" e)}
