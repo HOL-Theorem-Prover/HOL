@@ -213,6 +213,7 @@ val nextstate_def =
       (nextstate st alt_gets_near = tran_alt_gets_near st)`;
 
 
+(* Old 
 val st0_def = 
  Define 
     `st0 = states
@@ -224,6 +225,18 @@ val st0_def =
         (* "fpa_disp" *) current
         (* "cas_disp" *) current
         (* "altitude" *) away`;
+*)
+
+val st0_def = 
+ Define 
+    `st0 = <|att_cws  := engaged;
+             cas_eng  := off;
+             fpa_sel  := off;
+             alt_eng  := Mode off;
+             alt_disp := current;
+             fpa_disp := current;
+             cas_disp := current;
+             altitude := away|>`;
 
 
 val is_initial_def = 
