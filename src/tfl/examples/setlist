@@ -1,0 +1,75 @@
+(*---------------------------------------------------------------------------
+       Mapping finite sets into lists. Needs a constraint that 
+       the set is finite. Ordinarily, one would introduce this 
+       function via a constant specification, but in this case, 
+       TFL technology makes an easy job of it.
+ ---------------------------------------------------------------------------*)
+
+app load ["bossLib", "pred_setTheory"]; 
+open pred_setTheory bossLib;
+
+(*---------------------------------------------------------------------------
+       Make definition of set2list function.
+ ---------------------------------------------------------------------------*)
+
+val set2list_defn = 
+ Hol_defn
+  "set2list"
+  `set2list s = 
+     if FINITE s then 
+        if s={} then []
+        else CHOICE s :: set2list (REST s) 
+     else ARB`;
+
+(*---------------------------------------------------------------------------
+       Termination of set2list.
+ ---------------------------------------------------------------------------*)
+
+val (set2list_eqn0, set2list_ind) =
+ Defn.tprove (set2list_defn,
+   WF_REL_TAC `measure CARD` THEN 
+   PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
+
+(*---------------------------------------------------------------------------
+      Desired recursion equation.
+
+      |- FINITE s ==> (set2list s = if s = {} then [] 
+                                    else CHOICE s::set2list (REST s))
+
+ ---------------------------------------------------------------------------*)
+
+val set2list_eqn = 
+  DISCH_ALL (ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] set2list_eqn0);
+
+
+(*---------------------------------------------------------------------------
+      Map a list into a set.
+ ---------------------------------------------------------------------------*)
+
+val list2set = 
+ Define 
+   `(list2set []     = {}) 
+ /\ (list2set (h::t) = h INSERT (list2set t))`;
+
+
+(*---------------------------------------------------------------------------
+       A couple of useful consequences.
+ ---------------------------------------------------------------------------*)
+
+val setlist_thm = Q.prove
+(`!s. FINITE s ==> (list2set(set2list s) = s)`,
+ recInduct set2list_ind
+   THEN RW_TAC std_ss [] 
+   THEN ONCE_REWRITE_TAC [set2list]
+   THEN RW_TAC std_ss [list2set]
+   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]);
+
+
+val setlist_IN_MEM = Q.prove
+(`!s. FINITE s ==> !x. x IN s = MEM x (set2list s)`,
+ recInduct set2list_ind
+   THEN RW_TAC std_ss [] 
+   THEN ONCE_REWRITE_TAC [set2list]
+   THEN RW_TAC std_ss [listTheory.MEM,NOT_IN_EMPTY]
+   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
+
