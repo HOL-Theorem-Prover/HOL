@@ -34,8 +34,7 @@ fun (x /\ y)  = mk_conj{conj1=x, conj2=y};
 fun (x \/ y)  = mk_disj{disj1=x, disj2=y};
 
 val SUC  = Term`SUC`
-(* and zero = Term.mk_numeral arbnum.zero; *)
-and zero = Term`ZERO`;
+and zero = Term`0`;
 val NOT_SUC  = numTheory.NOT_SUC
 and INV_SUC  = numTheory.INV_SUC
 val PAIR_EQ' = pairTheory.PAIR_EQ;
