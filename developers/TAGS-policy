@@ -19,26 +19,30 @@ If working on branch <b>, then the following tags should be defined:
 
 Current branches:
 -----------------
-  term_with_closure: initiated by Bruno Barras as an investigation
-                     into representing substitutions as closures.
-                     Work from this branch was merged back into the
-                     main branch, but by hand, not using CVS, so it
-                     should be regarded as finished.
+  term_with_closure:
+      initiated by Bruno Barras as an investigation into representing
+      substitutions as closures. Work from this branch was merged back
+      into the main branch, but by hand, not using CVS, so it should
+      be regarded as finished.
 
-  parse: initiated by Michael Norrish as a reworking of the hol90
-         parser.  Finished, and merged back into the main branch to
-         start the Taupo series of releases.
+  parse:
+      initiated by Michael Norrish as a reworking of the hol90 parser.
+      Finished, and merged back into the main branch to start the
+      Taupo series of releases.
 
-  athabasca5: initiated by Michael Norrish to branch off from the
-              athabasca-4 release and allow a release fixing problems
-              in athabasca-4 without interfering with the development
-              of Taupo releases.
+  athabasca5:
+      initiated by Michael Norrish to branch off from the athabasca-4
+      release and allow a release fixing problems in athabasca-4
+      without interfering with the development of Taupo releases.
 
-              There shouldn't be an athabasca-6 release at all, but if
-              there was, it could still sit on this branch.
-              The only need for the branch is to allow improvements to
-              athabasca-5 to be released without having to also
-              release the new Taupo parser.
+      There shouldn't be an athabasca-6 release at all, but if there
+      was, it could still sit on this branch.  The only need for the
+      branch is to allow improvements to athabasca-5 to be released
+      without having to also release the new Taupo parser.
+
+  taupo-5-fixes-branch:
+      initiated to branch off from the taupo-5 release to provide a
+      taupo-6 release, while work continues on the Kananaskis series.
 
 Other tags:
 -----------
@@ -53,5 +57,31 @@ Other tags:
   now-need-mosml-144 - tag marking switch to MoscowML 1.44 on the main
                        branch.
 
+  post-holset-change - tag marking state of "Kananaskis-0" immediately
+                       after implementation of change described below
+                       under "pre-holset-change".
+
+  pre-holset-change  - tag marking state of "Kananaskis-0" immediately
+                       before implementation of fairly radical change
+                       to representation of theorems (using binary
+                       trees to store hypotheses), adoption of a
+                       different higher order matcher, and general
+                       incorporation of "HOL sets" in lots of places.
+
+  pre-kananaskis     - last known point on main branch at which system is
+                       known to build as a Taupo release.  Includes
+                       minor bug fixes above taupo-5.
+
+  pre-mn-typebase-change -
+                       point immediately before Michael Norrish
+                       changed TypeBase to have more "user-friendly"
+                       functions at the top-level.
+
   start              - beginning of the repository, version slightly
                        predating athabasca-4
+
+  taupo-[1-5]        - releases on the main branch.
+
+  taupo-6            - release on taupo-5-fixes-branch.
+
+
