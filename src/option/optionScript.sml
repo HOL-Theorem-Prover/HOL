@@ -258,6 +258,12 @@ val OPTION_MAP_EQ_SOME = store_thm(
     [SOME_11, NOT_NONE_SOME, NOT_SOME_NONE, OPTION_MAP_DEF] THEN
   mesonLib.MESON_TAC []);
 
+val OPTION_MAP_EQ_NONE = store_thm(
+  "OPTION_MAP_EQ_NONE",
+  ``!f x.  (OPTION_MAP f x = NONE) = (x = NONE)``,
+  REPEAT GEN_TAC THEN OPTION_CASES_TAC ``x:'a option`` THEN
+  REWRITE_TAC [option_CLAUSES]);
+
 val OPTION_JOIN_EQ_SOME = store_thm(
   "OPTION_JOIN_EQ_SOME",
   Term`!(x:'a option option) y.
