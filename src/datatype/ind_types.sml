@@ -1433,7 +1433,10 @@ local
     in
       (n,th1,th2)
     end else let
-      val nty = hd rectys
+      fun compare_types (t1,t2) = if occurs_in t1 t2 then GREATER
+                                  else if occurs_in t2 t1 then LESS
+                                  else EQUAL
+      val nty = hd (Listsort.sort compare_types rectys)
       val (k,tyal,ncls,ith,rth) =
         create_auxiliary_clauses nty (map dest_vartype utyvars)
       val cls = map (modify_clause tyal) def @ ncls
