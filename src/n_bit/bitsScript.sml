@@ -302,6 +302,34 @@ val ODD_MOD2_LEM = store_thm("ODD_MOD2_LEM",
   A_RW_TAC [ODD_EVEN,MOD_2]
 );
 
+val BIT_OF_BITS_THM = Q.store_thm (
+"BIT_OF_BITS_THM",
+`!n h l a. l + n <= h ==> (BIT n (BITS h l a) = BIT (l + n) a)`,
+RW_TAC arith_ss [BIT_def, BITS_COMP_THM])
+
+val BIT_SHIFT_THM = Q.store_thm (
+"BIT_SHIFT_THM",
+`!n a s. BIT (n + s) (a * 2 ** s) = BIT n a`,
+EVAL_TAC THEN
+RW_TAC arith_ss [SUC_SUB, EXP_ADD] THEN
+metisLib.METIS_TAC [GSYM DIV_DIV_DIV_MULT, ZERO_LT_TWOEXP,
+                    MULT_DIV, MULT_SYM])
+
+val BIT_SHIFT_THM2 = Q.store_thm (
+"BIT_SHIFT_THM2",
+`!n a s. s <= n ==> (BIT n (a * 2 ** s) = BIT (n - s) a)`,
+RW_TAC arith_ss [GSYM (Q.SPECL [`n-s`, `a`, `s`] BIT_SHIFT_THM)])
+
+val BIT_SHIFT_THM3 = Q.store_thm (
+"BIT_SHIFT_THM3",
+`!n a s. (n < s) ==> ~BIT n (a * 2 ** s)`,
+EVAL_TAC THEN
+RW_TAC arith_ss [SUC_SUB, NOT_MOD2_LEM2, GSYM EVEN_MOD2] THEN
+RW_TAC arith_ss [DIV_P, ZERO_LT_TWOEXP] THEN
+Q.EXISTS_TAC `a * 2 ** (s - n)` THEN Q.EXISTS_TAC `0` THEN
+RW_TAC arith_ss [ZERO_LT_TWOEXP,GSYM MULT_ASSOC, GSYM EXP_ADD, EVEN_MULT,
+                 EVEN_EXP])
+
 (* -------------------------------------------------------- *)
 
 val LSB_ODD = store_thm("LSB_ODD",
