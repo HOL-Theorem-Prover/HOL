@@ -83,7 +83,7 @@ can repeat the call to {overload_on}:
 
 \COMMENTS
 Overloading with abandon can lead to input that is very hard to make
-sense of so should be used with caution.
+sense of, and so should be used with caution.
 
 \SEEALSO
 allow_for_overloading_on, clear_overloads_on
