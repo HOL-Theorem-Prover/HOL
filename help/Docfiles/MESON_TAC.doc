@@ -13,11 +13,17 @@ theorems as additional assumptions in the search.
 \DESCRIBE
 
 {MESON_TAC} performs first order proof using the model elimination
-algorithm to do so.  This algorithm is semi-complete for pure first
-order logic.  It makes special provision for handling polymorphic
-and higher-order values, and often this is sufficient.  It does not
-handle conditional expressions at all, and these should be eliminated
-before {MESON_TAC} is applied.
+algorithm.  This algorithm is semi-complete for pure first order
+logic.  It makes special provision for handling polymorphic and
+higher-order values, and often this is sufficient.  It does not handle
+conditional expressions at all, and these should be eliminated before
+{MESON_TAC} is applied.
+
+{MESON_TAC} works by first converting the problem instance it is given
+into an internal format where it can do proof search efficiently,
+without having to do proof search at the level of HOL inference.  If a
+proof is found, this is translated back into applications of HOL
+inference rules, proving the goal.
 
 The feedback given by {MESON_TAC} is controlled by the level of the
 integer reference variable {mesonLib.chatting}.  At level zero,
@@ -37,15 +43,20 @@ the reference variable {mesonLib.max_depth} (set to 30 by default, but
 changeable by the user) without finding a proof.  Shouldn't fail
 otherwise.
 
-\EXAMPLE
-
 
 \USES
+
+{MESON_TAC} can only progress the goal to a successful proof of the
+(whole) goal or not at all.  In this respect it differs from tactics
+such as simplification and rewriting.  Its ability to solve
+existential goals and to make effective use of transitivity theorems
+make it a particularly powerful tactic.
 
 
 \COMMENTS
 The assumptions of a goal are ignored when {MESON_TAC} is applied.  To
 include assumptions use {ASM_MESON_TAC}.
+
 
 
 \SEEALSO
