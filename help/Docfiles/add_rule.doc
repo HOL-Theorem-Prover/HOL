@@ -224,7 +224,7 @@ pretty-printing.
                                    (PP.INCONSISTENT, 0))}};
 }
 \noindent Note that the above form is not that actually used in the
-system.  As written, this allows for pretty-printing some expressions
+system.  As written, it allows for pretty-printing some expressions
 as:
 {
    if P then
