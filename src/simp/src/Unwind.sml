@@ -68,20 +68,10 @@
 structure Unwind :> Unwind =
 struct
 
-open refuteLib HolKernel Parse basicHol90Lib Psyntax liteLib;
-open Ho_resolve Ho_boolTheory Trace AC Ho_rewrite;
+open refuteLib HolKernel boolLib liteLib Trace AC Ho_Rewrite;
 infix THEN THENC ##;
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-  type thm = Thm.thm
-  type conv = Abbrev.conv
-  type tactic = Abbrev.tactic
-
 fun WRAP_ERR x = STRUCT_WRAP "Unwind" x;
-
 
 (*-------------------------------------------------------------------
  * find_var_value
@@ -99,8 +89,8 @@ fun WRAP_ERR x = STRUCT_WRAP "Unwind" x;
  *
  *------------------------------------------------------------------------*)
 
-val false_tm = (--`F`--);
-val truth_tm = (--`T`--);
+val false_tm = F
+val truth_tm = T
 
 fun check_var var conj =
   if is_eq conj then let
@@ -292,42 +282,49 @@ fun elim_term_neg et tm =
   else NONE
 
 fun elim_term et tm =
-  if Dsyntax.is_imp tm then let (* want ~P to be considered an implication *)
-    val (h,c) = Psyntax.dest_imp tm
-    val (mk_imp, new_c) =
-      if is_neg tm then ((fn (t1, c) => mk_neg t1), NONE)
-      else (Psyntax.mk_imp, SOME c)
-  in
-    case elim_term_neg et h of
-      NONE => let
-      in
-        case elim_term et c of
-          NONE => NONE
-        | SOME NONE => SOME (SOME (mk_neg h))
-        | SOME (SOME t) => SOME (SOME (Psyntax.mk_imp(h,t)))
-      end
-    | SOME NONE => SOME new_c
-    | SOME (SOME t) => SOME (SOME (mk_imp(t, c)))
-  end
-  else if is_disj tm then let
-    val (d1, d2) = Psyntax.dest_disj tm
-  in
-    case elim_term et d1 of
-      NONE => let
-      in
-        case elim_term et d2 of
-          NONE => NONE
-        | SOME NONE => SOME (SOME d1)
-        | SOME (SOME t) => SOME (SOME (Psyntax.mk_disj(d1,t)))
-      end
-    | SOME NONE => SOME (SOME d2)
-    | SOME (SOME t) => SOME (SOME (Psyntax.mk_disj(t,d2)))
-  end
+  if is_imp tm   (* want ~P to be considered an implication *)
+  then let val (h,c) = Psyntax.dest_imp tm
+           val (mk_imp, new_c) =
+                  if is_neg tm then ((fn (t1, c) => mk_neg t1), NONE)
+                               else (Psyntax.mk_imp, SOME c)
+       in case elim_term_neg et h
+           of NONE => let in
+                case elim_term et c
+                 of NONE => NONE
+                  | SOME NONE => SOME (SOME (mk_neg h))
+                  | SOME (SOME t) => SOME (SOME (Psyntax.mk_imp(h,t)))
+                end
+            | SOME NONE => SOME new_c
+            | SOME (SOME t) => SOME (SOME (mk_imp(t, c)))
+       end
+  else
+  if is_disj tm
+  then let val (d1, d2) = Psyntax.dest_disj tm
+       in case elim_term et d1
+           of NONE => let in
+                 case elim_term et d2
+                  of NONE => NONE
+                   | SOME NONE => SOME (SOME d1)
+                   | SOME (SOME t) => SOME (SOME (Psyntax.mk_disj(d1,t)))
+                 end
+            | SOME NONE => SOME (SOME d2)
+            | SOME (SOME t) => SOME (SOME (Psyntax.mk_disj(t,d2)))
+       end
   else NONE
 
 val CONJ_IMP_THM = GSYM AND_IMP_INTRO
-val NOT_CONJ_THM = tautLib.TAUT_PROVE ``!A B. ~(A /\ B) = ~A \/ ~B``
-val NOT_IMP_THM = tautLib.TAUT_PROVE ``!A. ~A = A ==> F``
+val NOT_CONJ_THM =
+  let val th = boolTheory.DE_MORGAN_THM
+      val (l,_) = strip_forall (concl th)
+      val th1 = CONJUNCT1 (SPEC_ALL th)
+  in GENL l th1
+  end;
+
+val NOT_IMP_THM =
+  let val A = Term.mk_var{Name="A",Ty=bool}
+  in GEN A (RIGHT_BETA (AP_THM NOT_DEF A))
+  end;
+
 (* turns top level of term into series of disjunctions *)
 fun disjunctify tm =
   if is_disj tm then
@@ -356,15 +353,13 @@ fun IMP_TO_FRONT_CONV ante tm =
         | NONE => mk_neg ante
       val dtm = disjunctify tm
       val dnewtm = SYM (disjunctify newtm)
-      val eq3 =
-        AC_CONV(DISJ_ASSOC, DISJ_COMM) (mk_eq(rhs (concl dtm),
-                                              lhs (concl dnewtm)))
+      val eq3 = AC_CONV(DISJ_ASSOC, DISJ_COMM)
+                   (mk_eq(rhs (concl dtm), lhs (concl dnewtm)))
       val eq4 = TRANS dtm (TRANS (EQT_ELIM eq3) dnewtm)
     in
-      if is_neg newtm then
-        TRANS eq4 (SPEC (dest_neg newtm) NOT_IMP_THM)
-      else
-        eq4
+      if is_neg newtm
+        then TRANS eq4 (SPEC (dest_neg newtm) NOT_IMP_THM)
+        else eq4
     end
   | _ => failwith "IMP_TO_FRONT_CONV"
 
@@ -375,7 +370,11 @@ fun IMP_TO_FRONT_CONV ante tm =
  *     P = P /\ T
  *------------------------------------------------------------------------*)
 
-val TRUTH_CONJ_INTRO_THM = TAUT(--`!P. P = P /\ T`--);
+val TRUTH_CONJ_INTRO_THM =
+ let val P = Term.mk_var{Name="P", Ty=bool}
+ in GEN P (SYM (el 2 (CONJUNCTS (SPEC P AND_CLAUSES))))
+ end;
+
 fun ENSURE_CONJ_CONV tm =
    if (is_conj tm) then REFL tm else SPEC tm TRUTH_CONJ_INTRO_THM;
 
@@ -395,8 +394,20 @@ fun ENSURE_CONJ_CONV tm =
  * ENSURE_EQ_CONV (--`P:bool`--) (--`Q = (P:bool)`--);
  *------------------------------------------------------------------------*)
 
-val EQF_INTRO_THM = TAUT (--`!P. ~P = (P = F)`--);
-val EQT_INTRO_THM = TAUT (--`!P. P = (P = T)`--);
+(*---------------------------------------------------------------------------
+     !P. ~P = (P = F)
+     !P. P = (P = T)
+ ---------------------------------------------------------------------------*)
+
+val EQF_INTRO_THM =
+let val P = Term.mk_var{Name="P", Ty=bool}
+ in GEN P (SYM (el 4 (CONJUNCTS (SPEC P EQ_CLAUSES))))
+ end;
+
+val EQT_INTRO_THM =
+let val P = Term.mk_var{Name="P", Ty=bool}
+ in GEN P (SYM (el 2 (CONJUNCTS (SPEC P EQ_CLAUSES))))
+ end;
 
 fun ENSURE_EQ_CONV var tm =
    if (is_eq tm)
@@ -462,7 +473,7 @@ fun ELIM_EXISTS_CONV (var,conj) =
   RAND_CONV (ABS_CONV
          (CONJ_TO_FRONT_CONV conj THENC ENSURE_CONJ_CONV THENC
           LAND_CONV (ENSURE_EQ_CONV var)))
-  THENC REWR_CONV UNWIND_THM2;
+  THENC HO_REWR_CONV UNWIND_THM2;
 
 (*-------------------------------------------------------------------
  * ELIM_FORALL_CONV :
@@ -491,7 +502,7 @@ fun ELIM_EXISTS_CONV (var,conj) =
 fun ELIM_FORALL_CONV (var,conj) =
   RAND_CONV (ABS_CONV
          (IMP_TO_FRONT_CONV conj THENC LAND_CONV (ENSURE_EQ_CONV var)))
-  THENC REWR_CONV UNWIND_FORALL_THM2;
+  THENC HO_REWR_CONV UNWIND_FORALL_THM2;
 
 
 (*-------------------------------------------------------------------
