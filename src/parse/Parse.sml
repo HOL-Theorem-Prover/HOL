@@ -108,16 +108,18 @@ fun remove_ty_aq t =
   if is_ty_antiq t then dest_ty_antiq t
   else raise ERROR "type parser" "antiquotation is not of a type"
 
-fun tyop_to_qtyop (tyop, args) =
+fun tyop_to_qtyop ((tyop,locn), args) =
   case Type.decls tyop of
-    [] => raise ERROR "type parser" (tyop^" not a known type operator")
+    [] => raise ERRORloc "type parser" locn (tyop^" not a known type operator")
   | {Thy,Tyop} :: _ => Pretype.Tyop{Thy = Thy, Tyop = Tyop, Args = args}
 
-val typ1_rec = {vartype = Pretype.Vartype, qtyop = Pretype.Tyop,
+fun do_qtyop {Thy,Tyop,Locn,Args} = Pretype.Tyop {Thy=Thy,Tyop=Tyop,Args=Args}
+
+val typ1_rec = {vartype = Pretype.Vartype o fst, qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
                 antiq = Pretype.fromType o remove_ty_aq}
 
-val typ2_rec = {vartype = Pretype.Vartype, qtyop = Pretype.Tyop,
+val typ2_rec = {vartype = Pretype.Vartype o fst, qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
                 antiq = Pretype.fromType}
 
@@ -263,7 +265,7 @@ fn q => let
                                           ["Can't make sense of remaining: ",
                                            Lib.quote (toString qb)]))
      else
-       Raise (ERROR "Absyn"
+       Raise (ERRORloc "Absyn" (snd (current qb))
                     (String.concat
                        ["Parse failed with ", Lib.quote(toString qb),
                         " remaining"]))

@@ -5,27 +5,26 @@ open type_tokens type_grammar HOLgrammars
 
 open qbuf
 
-exception InternalFailure
+exception InternalFailure of locn.locn
 
-val ERR = Feedback.mk_HOL_ERR "parse_type"
+val ERR = Feedback.mk_HOL_ERR "Parse" "parse_type"
+val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_type"
 
-fun totalify f x = SOME (f x) handle InternalFailure => NONE
+fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
 fun parse_type tyfns allow_unknown_suffixes G = let
   val G = rules G and abbrevs = abbreviations G
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop} = tyfns
-  fun structure_to_value s args st =
+  fun structure_to_value (s,locn) args st =
       case st of
         TYOP {Args, Thy, Tyop} =>
-        qtyop {Args = map (structure_to_value s args) Args,
-               Thy = Thy, Tyop = Tyop}
+        qtyop {Args = map (structure_to_value (s,locn) args) Args,
+               Thy = Thy, Tyop = Tyop, Locn = locn}
       | PARAM n => List.nth(args, n)
         handle Subscript =>
                Feedback.Raise
-                 (Feedback.mk_HOL_ERR
-                    "Parse" "parse_type"
-                    ("Insufficient arguments to abbreviated operator " ^
-                     Lib.quote s))
+                 (ERRloc locn ("Insufficient arguments to abbreviated operator " ^
+                               Lib.quote s))
 
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)
@@ -37,7 +36,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
   fun itemP P fb = let
     val (adv, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
   in
-    if P t then adv() else raise InternalFailure
+    if P t then (locn,adv()) else raise InternalFailure locn
   end
 
   fun many f fb = let
@@ -59,15 +58,15 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     recurse [i1]
   end
 
-  fun apply_tyop t args =
+  fun apply_tyop (t,locn) args =
     case t of
       TypeIdent s => let
       in
         case Binarymap.peek(abbrevs, s) of
-          NONE => pType(s,args)
-        | SOME st => structure_to_value s args st
+          NONE => pType((s,locn),args)
+        | SOME st => structure_to_value (s,locn) args st
       end
-    | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Args=args}
+    | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=args}
     | _ => raise Fail "parse_type.apply_tyop: can't happen"
 
   fun n_appls (ops, t) =
@@ -80,13 +79,13 @@ fun parse_type tyfns allow_unknown_suffixes G = let
 
 
   fun parse_base_level f fb = let
-    val (advance, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
+    val (advance, (t,locn)) = typetok_of fb
   in
     case t  of
-      TypeVar s => (advance(); pVartype s)
-    | TypeIdent s => (advance (); apply_tyop t [])
+      TypeVar s => (advance(); pVartype (s,locn))
+    | TypeIdent s => (advance (); apply_tyop (t,locn) [])
     | QTypeIdent(thy, ty) => (advance ();
-                              qtyop{Thy = thy, Tyop = ty, Args = []})
+                              qtyop{Thy = thy, Tyop = ty, Locn = locn, Args = []})
     | AQ x => (advance (); pAQ x)
     | LParen => let
         val _ = advance ()
@@ -95,44 +94,44 @@ fun parse_type tyfns allow_unknown_suffixes G = let
       in
         ty
       end
-    | _ => raise InternalFailure
+    | _ => raise InternalFailure locn
   end
 
   fun parse_op slist fb = let
-    val (adv, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
+    val (adv, (t,locn)) = typetok_of fb
   in
     case t of
       TypeIdent s => if allow_unknown_suffixes orelse Lib.mem s slist then
-                       (adv(); t)
-                     else raise InternalFailure
-    | QTypeIdent _ => (adv(); t)
-    | _ => raise InternalFailure
+                       (adv(); (t,locn))
+                     else raise InternalFailure locn
+    | QTypeIdent _ => (adv(); (t,locn))
+    | _ => raise InternalFailure locn
   end
 
   fun parse_binop stlist fb = let
-    val (adv, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
-    fun doit t =
+    val (adv, (t,locn)) = typetok_of fb
+    fun doit (t,locn) =
       case List.find (fn r => (#parse_string r = token_string t)) stlist of
-        NONE => raise InternalFailure
-      | SOME r => (adv(); TypeIdent (#opname r))
+        NONE => raise InternalFailure locn
+      | SOME r => (adv(); (TypeIdent (#opname r),locn))
   in
     case t of
-      TypeIdent s => doit t
-    | TypeSymbol s => doit t
-    | _ => raise InternalFailure
+      TypeIdent s => doit (t,locn)
+    | TypeSymbol s => doit (t,locn)
+    | _ => raise InternalFailure locn
   end
 
 
   fun parse_tuple prse fb = let
-    val _ = itemP is_LParen fb
+    val (llocn,_) = itemP is_LParen fb
     val ty1 = prse fb
     fun recurse acc = let
-      val (adv,(t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
+      val (adv,(t,locn)) = typetok_of fb
     in
       case t of
-        RParen => (adv(); List.rev acc)
+        RParen => (adv(); (List.rev acc,locn.between llocn locn))
       | Comma => (adv(); recurse (prse fb :: acc))
-      | _ => raise InternalFailure
+      | _ => raise InternalFailure locn
     end
   in
     recurse [ty1]
@@ -179,11 +178,11 @@ fun parse_type tyfns allow_unknown_suffixes G = let
           in
             n_appls(ops, ty1)
           end
-        | SOME tyl => let
+        | SOME (tyl,locn) => let
           in
             case (many (parse_op slist) strm) of
               [] => if length tyl <> 1 then
-                      raise ERR "parse_type" "tuple with no suffix"
+                      raise ERRloc locn "tuple with no suffix"
                     else
                       hd tyl
             | oplist => n_appls_l (oplist, tyl)
@@ -192,8 +191,8 @@ fun parse_type tyfns allow_unknown_suffixes G = let
   end
 in
   fn qb => parse_term G qb
-     handle InternalFailure =>
-            raise ERR "parse_type"
+     handle InternalFailure locn =>
+            raise ERRloc locn
                   ("Type parsing failure with remaining input: "^
                    qbuf.toString qb)
 end

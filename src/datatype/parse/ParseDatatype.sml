@@ -118,11 +118,11 @@ in
                                    base_tokens.toString x^"\"")
 end
 
-fun qtyop {Tyop, Thy, Args} = dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
-fun tyop (s, args) = dTyop {Tyop = s, Thy = NONE, Args = args}
+fun qtyop {Tyop, Thy, Locn, Args} = dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
+fun tyop ((s,locn), args) = dTyop {Tyop = s, Thy = NONE, Args = args}
 
 fun parse_type strm =
-  parse_type.parse_type {vartype = dVartype, tyop = tyop, qtyop = qtyop,
+  parse_type.parse_type {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop,
                          antiq = dAQ} true
   (Parse.type_grammar()) strm
 

@@ -2,9 +2,9 @@ signature parse_type =
 sig
 
   val parse_type :
-    {vartype : string -> 'a,
-     tyop : (string * 'a list) -> 'a,
-     qtyop : {Thy:string, Tyop:string, Args: 'a list} -> 'a,
+    {vartype : string locn.located -> 'a,
+     tyop : (string locn.located * 'a list) -> 'a,
+     qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
      antiq : 'b -> 'a} ->
     bool ->
     type_grammar.grammar ->
