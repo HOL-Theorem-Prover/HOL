@@ -183,14 +183,14 @@ val TOP_OMEGA_def =
  Define `TOP_OMEGA = INFINITE(\n. TOP)`;
 
 (******************************************************************************
-* LESS m is predicate to test if a number is less than m
+* LESS m is a predicate to test if a number is less than m
 * LESS : num -> num -> bool
 ******************************************************************************)
 val LESS_def =
  Define `LESS (m:num) (n:num) = n < m`;
 
 (******************************************************************************
-* LESSX m is predicate to test if a number is less than extended number m
+* LESSX m is a predicate to test if a number is less than extended number m
 * LESSX : xnum -> num -> bool
 ******************************************************************************)
 val LESSX_def =
@@ -303,7 +303,7 @@ val UF_SEM =
    RW_TAC std_ss [UF_SEM_def]);
 
 (******************************************************************************
-* PATH M s is true of p iff p is a comnputationn path of M
+* PATH M s is true of p iff p is a computation path of M
 ******************************************************************************)
 val PATH_def = 
  Define 

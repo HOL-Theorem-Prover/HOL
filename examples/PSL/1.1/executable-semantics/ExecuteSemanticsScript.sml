@@ -9,14 +9,13 @@
 (*****************************************************************************)
 
 (******************************************************************************
-* Load theories
-* (commented out for compilation)
-* Compile using "Holmake -I ../official-semantics -I ../regexp"
+* Parent theories (comment out "load"s and "quietdec"s for compilation)
 ******************************************************************************)
 
 (* 
+*)
 quietdec := true;
-loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
+loadPath := ["../../path","../../regexp","../official-semantics"] @ !loadPath;
 app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
           "rich_listTheory", "regexpLib",
           "FinitePathTheory","PathTheory","SyntaxTheory",
@@ -24,26 +23,8 @@ app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
           "SyntacticSugarTheory"
           (*, "PropertiesTheory"*)
          ];
-val _ = intLib.deprecate_int();
 
-open bossLib metisLib listTheory rich_listTheory pred_setLib intLib
-     arithmeticTheory;
-open regexpTheory matcherTheory;
-open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory 
-     (* PropertiesTheory*);
-quietdec := false;
-*)
-
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
 open HolKernel Parse boolLib;
-
-(******************************************************************************
-* Open theories (comment out quietdec's for compilation)
-******************************************************************************)
-
 open bossLib metisLib listTheory rich_listTheory pred_setLib intLib
      arithmeticTheory;
 open regexpTheory matcherTheory;
@@ -51,10 +32,9 @@ open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory 
      (* PropertiesTheory*);
 
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers 
-******************************************************************************)
-val _ = intLib.deprecate_int();
+(*
+*)
+quietdec := false;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -64,6 +44,43 @@ val _ = intLib.deprecate_int();
 * Start a new theory called "ExecuteSemantics"
 ******************************************************************************)
 val _ = new_theory "ExecuteSemantics";
+
+(******************************************************************************
+* Set default parsing to natural numbers rather than integers 
+******************************************************************************)
+val _ = intLib.deprecate_int();
+
+(*---------------------------------------------------------------------------*)
+(* Symbolic tacticals.                                                       *)
+(*---------------------------------------------------------------------------*)
+
+infixr 0 ++ << || THENC ORELSEC ORELSER ##;
+infix 1 >>;
+
+val op ++ = op THEN;
+val op << = op THENL;
+val op >> = op THEN1;
+val op || = op ORELSE;
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val REVERSE = Tactical.REVERSE;
+
+val pureDefine = with_flag (computeLib.auto_import_definitions,false) Define;
+
+(******************************************************************************
+* A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
+******************************************************************************)
+val resq_SS = 
+ simpLib.merge_ss
+  [res_quanTools.resq_SS,
+   rewrites [IN_DEF,LESS_def,LESSX_def,
+             LS,GT,num_to_def,xnum_to_def,LENGTH_def]];
+
+val std_resq_ss   = simpLib.++ (std_ss,   resq_SS);
+val arith_resq_ss = simpLib.++ (arith_ss, resq_SS);
+val list_resq_ss  = simpLib.++ (list_ss,  resq_SS);
+
+val arith_suc_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 
 (******************************************************************************
 * Structural induction rule for SEREs (used to be in PropertiesTheory)
@@ -104,44 +121,166 @@ val S_CLOCK_FREE_def =
    (S_CLOCK_FREE (S_CLOCK v)         = F)`;
 
 (******************************************************************************
-* A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
+* Neutrality                                                
 ******************************************************************************)
-val resq_SS = 
- simpLib.merge_ss
-  [res_quanTools.resq_SS,
-   rewrites [IN_DEF,LESS_def,LESSX_def,
-             LS,GT,num_to_def,xnum_to_def,LENGTH_def]];
-
-val std_resq_ss   = simpLib.++ (std_ss,   resq_SS);
-val arith_resq_ss = simpLib.++ (arith_ss, resq_SS);
-val list_resq_ss  = simpLib.++ (list_ss,  resq_SS);
-
-val arith_suc_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
-
-(*---------------------------------------------------------------------------*)
-(* Symbolic tacticals.                                                       *)
-(*---------------------------------------------------------------------------*)
-
-infixr 0 ++ << || THENC ORELSEC ORELSER ##;
-infix 1 >>;
-
-val op ++ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-val op || = op ORELSE;
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
-val REVERSE = Tactical.REVERSE;
-
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
 (*
-(******************************************************************************
-* Boolean expression SEREs representing truth and falsity
-******************************************************************************)
-val S_TRUE_def  = Define `S_TRUE  = S_BOOL B_TRUE`;
-val S_FALSE_def = Define `S_FALSE = S_BOOL B_FALSE`;
+  A list of letters is neutral iff it contains no occurrences of TOP or
+  BOTTOM
 *)
+
+val NEUTRAL_LIST_def =
+ Define
+  `(NEUTRAL_LIST[] = T)          /\
+   (NEUTRAL_LIST(TOP::p) = F)    /\
+   (NEUTRAL_LIST(BOTTOM::p) = F) /\
+   (NEUTRAL_LIST(STATE f::p) = NEUTRAL_LIST p)`;
+
+val MAP_COMPLEMENT_LETTER_NEUTRAL_LIST =
+ store_thm
+  ("MAP_COMPLEMENT_LETTER_NEUTRAL_LIST",
+   ``!p. NEUTRAL_LIST p ==> (MAP COMPLEMENT_LETTER p = p)``,
+   Induct
+    THEN RW_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]
+    THEN Cases_on `h`
+    THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]);
+
+val COMPLEMENT_FINITE_NEUTRAL_LIST =
+ store_thm
+  ("COMPLEMENT_FINITE_NEUTRAL_LIST",
+   ``!p. NEUTRAL_LIST p ==> (COMPLEMENT(FINITE p) = FINITE p)``,
+   Induct
+    THEN RW_TAC list_ss [COMPLEMENT_def,NEUTRAL_LIST_def]
+    THEN Cases_on `h`
+    THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]
+    THEN RW_TAC std_ss [MAP_COMPLEMENT_LETTER_NEUTRAL_LIST]);
+
+(* A path is neutral iff it contains no occurrences of TOP or BOTTOM *)
+
+val NEUTRAL_PATH_def =
+ Define
+  `(NEUTRAL_PATH(FINITE p) = NEUTRAL_LIST p) /\
+   (NEUTRAL_PATH(INFINITE f) = !n. ?s. f n = STATE s)`;
+
+val COMPLEMENT_NEUTRAL_PATH =
+ store_thm
+  ("COMPLEMENT_NEUTRAL_PATH",
+   ``NEUTRAL_PATH w ==> (COMPLEMENT w = w)``,
+   Cases_on `w`
+    THEN RW_TAC list_ss [NEUTRAL_PATH_def,COMPLEMENT_FINITE_NEUTRAL_LIST,COMPLEMENT_def]
+    THEN CONV_TAC FUN_EQ_CONV
+    THEN Induct
+    THEN RW_TAC std_ss []
+    THEN PROVE_TAC[COMPLEMENT_LETTER_def]);
+
+(* Top-free and bottom-free *)
+val TOP_FREE_LIST_def = Define `TOP_FREE_LIST = EVERY (\x. ~(x = TOP))`;
+
+val BOTTOM_FREE_LIST_def = Define
+  `BOTTOM_FREE_LIST = EVERY (\x. ~(x = BOTTOM))`;
+
+val NEUTRAL_LIST = prove
+  (``!l. NEUTRAL_LIST l = TOP_FREE_LIST l /\ BOTTOM_FREE_LIST l``,
+   Induct
+   ++ RW_TAC std_ss
+      [NEUTRAL_LIST_def, TOP_FREE_LIST_def, BOTTOM_FREE_LIST_def, EVERY_DEF]
+   ++ Cases_on `h`
+   ++ RW_TAC std_ss
+      [NEUTRAL_LIST_def, TOP_FREE_LIST_def, BOTTOM_FREE_LIST_def, EVERY_DEF]);
+
+(******************************************************************************
+* Evaluating boolean properties                                        
+******************************************************************************)
+val B_SEMS_def = pureDefine `B_SEMS s b = B_SEM (STATE s) b`;
+
+val EVAL_B_SEMS = store_thm
+  ("EVAL_B_SEMS",
+   ``(B_SEMS l (B_PROP p) = p IN l) /\
+     (B_SEMS l B_TRUE = T) /\
+     (B_SEMS l B_FALSE = F) /\
+     (B_SEMS l (B_NOT b) = ~(B_SEMS l b)) /\
+     (B_SEMS l (B_AND (b1,b2)) = B_SEMS l b1 /\ B_SEMS l b2) /\
+     (B_SEMS l (B_OR (b1,b2)) = B_SEMS l b1 \/ B_SEMS l b2) /\
+     (B_SEMS l (B_IMP (b1,b2)) = (B_SEMS l b1 ==> B_SEMS l b2)) /\
+     (B_SEMS l (B_IFF (b1,b2)) = (B_SEMS l b1 = B_SEMS l b2))``,
+   RW_TAC std_ss [B_SEMS_def,B_OR_def,B_IMP_def,B_IFF_def,B_SEM_def]
+   THEN PROVE_TAC []);
+
+val EVAL_B_SEM = store_thm
+  ("EVAL_B_SEM",
+   ``!l b.
+       B_SEM l b =
+       case l of TOP -> T || BOTTOM -> F || STATE s -> B_SEMS s b``,
+   Cases
+   ++ RW_TAC std_ss [B_SEM_def, B_SEMS_def]);
+        
+(******************************************************************************
+* Derived SEREs                                               
+******************************************************************************)
+
+(* Empty only matches the empty string *)
+
+val S_EMPTY = store_thm
+  ("S_EMPTY",
+   ``!p. US_SEM p S_EMPTY = (p = [])``,
+   RW_TAC std_ss [US_SEM_def]);
+
+val S_EMPTY_CAT = store_thm
+  ("S_EMPTY_CAT",
+   ``!p a. US_SEM p (S_CAT (S_EMPTY, a)) = US_SEM p a``,
+   RW_TAC std_ss [US_SEM_def, S_EMPTY, APPEND]);
+
+(* Any matches any bottom-free string *)
+
+val S_ANY = store_thm
+  ("S_ANY",
+   ``!p. US_SEM p S_ANY = BOTTOM_FREE_LIST p``,
+   RW_TAC std_ss [S_ANY_def, BOTTOM_FREE_LIST_def]
+   ++ Induct_on `p`
+   ++ ONCE_REWRITE_TAC [US_SEM]
+   ++ RW_TAC std_ss [S_EMPTY, EVERY_DEF, LENGTH_NIL]
+   ++ RW_TAC std_ss [S_TRUE_def]
+   ++ Cases_on `p = []` >> RW_TAC std_ss [EVERY_DEF]
+   ++ RW_TAC std_ss []
+   ++ REVERSE EQ_TAC
+   >> (RW_TAC std_ss []
+       ++ Q.EXISTS_TAC `METIS_TAC [APPEND]
+
+   RW_TAC std_ss [S_ANY_def, BOTTOM_FREE_LIST_def]
+   ++ completeInduct_on `LENGTH p`
+   ++ ONCE_REWRITE_TAC [US_SEM]
+   ++ RW_TAC std_ss [S_EMPTY, EVERY_DEF, LENGTH_NIL]
+   ++ RW_TAC std_ss [S_TRUE_def]
+   ++ Cases_on `p = []` >> RW_TAC std_ss [EVERY_DEF]
+   ++ RW_TAC std_ss []
+   ++ REVERSE EQ_TAC
+   >> (RW_TAC std_ss []
+       ++ Q.EXISTS_TAC `METIS_TAC [APPEND]
+
+   ++ ONCE_REWRITE_TAC [US_SEM]
+   ++ RW_TAC std_ss [S_EMPTY, EVERY_DEF]
+   ++ Q.EXISTS_TAC `[h]`
+   ++ Q.EXISTS_TAC `p`
+   >> (RW_
+   RW_TAC std_ss [S_ANY_def, US_SEM_def, B_SEM_def, S_TRUE_def]
+   ++ Q.EXISTS_TAC `MAP (\x. [x]) w`
+   ++ (RW_TAC std_ss [listTheory.EVERY_MAP, listTheory.LENGTH]
+       ++ RW_TAC std_ss [listTheory.EVERY_MEM])
+   ++ Induct_on `w`
+   ++ RW_TAC std_ss [CONCAT_def, MAP, APPEND]
+   ++ PROVE_TAC []);
+
+val US_SEM_REPEAT_TRUE = store_thm
+  ("US_SEM_REPEAT_TRUE",
+   ``!w. US_SEM w (S_REPEAT S_TRUE)``,
+   RW_TAC std_ss [US_SEM_def, B_SEM, S_TRUE_def]
+   ++ Q.EXISTS_TAC `MAP (\x. [x]) w`
+   ++ (RW_TAC std_ss [listTheory.EVERY_MAP, listTheory.LENGTH]
+       ++ RW_TAC std_ss [listTheory.EVERY_MEM])
+   ++ Induct_on `w`
+   ++ RW_TAC std_ss [CONCAT_def, MAP, APPEND]
+   ++ PROVE_TAC []);
+
 
 (******************************************************************************
 * Executable semantics of [f1 U f2]
@@ -300,34 +439,6 @@ val UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL =
    PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL1,UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL2]);
 end;
 
-(* A list of letters is neutral iff it contains no occurrences of TOP or BOTTOM *)
-
-val NEUTRAL_LIST_def =
- Define
-  `(NEUTRAL_LIST[] = T)          /\
-   (NEUTRAL_LIST(TOP::p) = F)    /\
-   (NEUTRAL_LIST(BOTTOM::p) = F) /\
-   (NEUTRAL_LIST(STATE f::p) = NEUTRAL_LIST p)`;
-
-val MAP_COMPLEMENT_LETTER_NEUTRAL_LIST =
- store_thm
-  ("MAP_COMPLEMENT_LETTER_NEUTRAL_LIST",
-   ``!p. NEUTRAL_LIST p ==> (MAP COMPLEMENT_LETTER p = p)``,
-   Induct
-    THEN RW_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]
-    THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]);
-
-val COMPLEMENT_FINITE_NEUTRAL_LIST =
- store_thm
-  ("COMPLEMENT_FINITE_NEUTRAL_LIST",
-   ``!p. NEUTRAL_LIST p ==> (COMPLEMENT(FINITE p) = FINITE p)``,
-   Induct
-    THEN RW_TAC list_ss [COMPLEMENT_def,NEUTRAL_LIST_def]
-    THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]
-    THEN RW_TAC std_ss [MAP_COMPLEMENT_LETTER_NEUTRAL_LIST]);
-
 (******************************************************************************
 * w |= {r}(f)  <==>  w |=_|w| {r}(f)
 ******************************************************************************)
@@ -352,24 +463,6 @@ val UF_SEM_F_SUFFIX_IMP_REC_def =
    /\
    (UF_SEM_F_SUFFIX_IMP_REC w (r,f) INFINITY = 
      !n. US_SEM (SEL w (0,n)) r ==> UF_SEM (RESTN w n) f)`;
-
-(* A path is neutral iff it contains no occurrences of TOP or BOTTOM *)
-
-val NEUTRAL_PATH_def =
- Define
-  `(NEUTRAL_PATH(FINITE p) = NEUTRAL_LIST p) /\
-   (NEUTRAL_PATH(INFINITE f) = !n. ?s. f n = STATE s)`;
-
-val COMPLEMENT_NEUTRAL_PATH =
- store_thm
-  ("COMPLEMENT_NEUTRAL_PATH",
-   ``NEUTRAL_PATH w ==> (COMPLEMENT w = w)``,
-   Cases_on `w`
-    THEN RW_TAC list_ss [NEUTRAL_PATH_def,COMPLEMENT_FINITE_NEUTRAL_LIST,COMPLEMENT_def]
-    THEN CONV_TAC FUN_EQ_CONV
-    THEN Induct
-    THEN RW_TAC std_ss []
-    THEN PROVE_TAC[COMPLEMENT_LETTER_def]);
 
 (******************************************************************************
 * w |= {r}(f)  <==>  w |=_|w| {r}(f)  (for finite and infinite paths w)
@@ -457,29 +550,40 @@ val EVAL_US_SEM = store_thm
    RW_TAC std_ss [GSYM sere2regexp, amatch]);
 
 (******************************************************************************
-* w |= {r1} |-> {r2}!  <==>  w |= {r1}(not({r2}(F)))
+* Evaluating suffix implication of finite neutral paths with clockfree regexps
 ******************************************************************************)
 val EVAL_UF_SEM_F_SUFFIX_IMP = store_thm
   ("EVAL_UF_SEM_F_SUFFIX_IMP",
    ``!w r f.
-      NEUTRAL_LIST w
-      ==>
-      (UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f)) =
-        if S_CLOCK_FREE r then acheck (sere2regexp r) (\x. UF_SEM (FINITE x) f) w
-        else UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f)))``,
+       UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f)) =
+       if S_CLOCK_FREE r /\ NEUTRAL_LIST w then
+         acheck (sere2regexp r) (\x. UF_SEM (FINITE x) f) w
+       else UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f))``,
    RW_TAC list_resq_ss [acheck, UF_SEM_def, sere2regexp, RESTN_FINITE]
    ++ RW_TAC arith_ss
       [RESTN_is_BUTFIRSTN, SEL_FINITE_is_BUTFIRSTN_FIRSTN, BUTFIRSTN,
        COMPLEMENT_FINITE_NEUTRAL_LIST]
    ++ METIS_TAC []);
 
-val FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
-  ("FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
-   ``!w r1 r2.
-       UF_SEM (FINITE w) (F_STRONG_IMP (r1,r2)) =
-       UF_SEM (FINITE w)
-       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))``,
-   RW_TAC list_resq_ss [UF_SEM_def, B_SEM, AND_IMP_INTRO]
+(******************************************************************************
+* Strong seres
+******************************************************************************)
+val FINITE_UF_SEM_F_STRONG_SERE = store_thm
+  ("FINITE_UF_SEM_F_STRONG_SERE",
+   ``!w r.
+       UF_SEM (FINITE w) (F_STRONG_SERE r) =
+       US_SEM w (S_CAT (r,S_ANY))``,
+
+       if NEUTRAL_LIST w /\ CLOCK_FREE r then
+         US_SEM 
+        UF_SEM (FINITE w)
+        (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_STRONG_BOOL B_FALSE)))))``,
+       NEUTRAL_LIST w
+       ==>
+       (UF_SEM (FINITE w) (F_STRONG_IMP (r1,r2)) =
+        UF_SEM (FINITE w)
+        (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_STRONG_BOOL B_FALSE)))))``,
+   RW_TAC list_resq_ss [UF_SEM_def, B_SEM_def, AND_IMP_INTRO]
    ++ HO_MATCH_MP_TAC
       (METIS_PROVE []
        ``(!j. P j ==> (Q j = R j)) ==> ((!j. P j ==> Q j) = !j. P j ==> R j)``)
@@ -657,17 +761,6 @@ val ELEM_SEL = store_thm
        FinitePathTheory.HEAD_def, ELEM_def, RESTN_def, SEL_def]
    ++ REWRITE_TAC [GSYM arithmeticTheory.ADD1, SEL_REC_def, HEAD_def, HD]);
 
-val US_SEM_REPEAT_TRUE = store_thm
-  ("US_SEM_REPEAT_TRUE",
-   ``!w. US_SEM w (S_REPEAT S_TRUE)``,
-   RW_TAC std_ss [US_SEM_def, B_SEM, S_TRUE_def]
-   ++ Q.EXISTS_TAC `MAP (\x. [x]) w`
-   ++ (RW_TAC std_ss [listTheory.EVERY_MAP, listTheory.LENGTH]
-       ++ RW_TAC std_ss [listTheory.EVERY_MEM])
-   ++ Induct_on `w`
-   ++ RW_TAC std_ss [CONCAT_def, MAP, APPEND]
-   ++ PROVE_TAC []);
-
 val US_SEM_APPEND = store_thm
   ("US_SEM_APPEND",
    ``!r r' w w'.
@@ -750,20 +843,6 @@ val REST_CAT = store_thm
    ``!l p. ~(l = []) ==> (REST (CAT (l,p)) = CAT (TL l, p))``,
    Induct >> RW_TAC std_ss []
    ++ RW_TAC std_ss [CAT_def, REST_CONS, TL]);
-
-val S_EMPTY_def = Define `S_EMPTY = S_REPEAT S_FALSE`;
-
-val S_EMPTY = store_thm
-  ("S_EMPTY",
-   ``!p. US_SEM p S_EMPTY = (p = [])``,
-   RW_TAC std_ss
-   [US_SEM_def, S_EMPTY_def, listTheory.EVERY_MEM, S_FALSE_def,
-    B_SEM, NO_MEM, CONCAT_def]);
-
-val S_EMPTY_CAT = store_thm
-  ("S_EMPTY_CAT",
-   ``!p a. US_SEM p (S_CAT (S_EMPTY, a)) = US_SEM p a``,
-   RW_TAC std_ss [US_SEM_def, S_EMPTY, APPEND]);
 
 val S_OR_CAT = store_thm
   ("S_OR_CAT",
