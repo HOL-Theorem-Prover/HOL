@@ -3571,6 +3571,89 @@ val MIN_SET_THM = store_thm(
     REPEAT STRIP_TAC THEN RES_TAC THEN ASM_SIMP_TAC arith_ss [MIN_DEF]
   ]);
 
+val MIN_SET_LEM = Q.store_thm
+("MIN_SET_LEM",
+ `!s. ~(s={}) ==> (MIN_SET s IN s) /\ !x. x IN s ==> MIN_SET s <= x`,
+  METIS_TAC [GSYM MEMBER_NOT_EMPTY,MIN_SET_DEF,
+             IN_DEF,whileTheory.FULL_LEAST_INTRO]);
+
+val SUBSET_MIN_SET = Q.store_thm
+("SUBSET_MIN_SET",
+ `!I J n. ~(I={}) /\ ~(J={}) /\ I SUBSET J ==> MIN_SET J <= MIN_SET I`,
+  METIS_TAC [SUBSET_DEF,MIN_SET_LEM]);
+
+val SUBSET_MAX_SET = Q.store_thm
+("SUBSET_MAX_SET",
+ `!I J n. FINITE I /\ FINITE J /\ 
+          ~(I={}) /\ ~(J={}) /\ I SUBSET J ==> MAX_SET I <= MAX_SET J`,
+ METIS_TAC [SUBSET_DEF,MAX_SET_DEF]);
+
+val MIN_SET_LEQ_MAX_SET = Q.store_thm
+("MIN_SET_LEQ_MAX_SET",
+ `!s. ~(s={}) /\ FINITE s ==> MIN_SET s <= MAX_SET s`,
+ RW_TAC arith_ss [MIN_SET_DEF] THEN 
+METIS_TAC [FULL_LEAST_INTRO,MAX_SET_DEF,IN_DEF]);
+
+val MIN_SET_UNION = Q.store_thm
+("MIN_SET_UNION",
+ `!A B. FINITE A /\ FINITE B /\ ~(A={}) /\ ~(B={}) 
+         ==> 
+      (MIN_SET (A UNION B) = MIN (MIN_SET A) (MIN_SET B))`,
+ let val lem = Q.prove
+ (`!A. FINITE A ==> 
+   !B. FINITE B /\ ~(A={}) /\ ~(B={}) 
+       ==> (MIN_SET (A UNION B) = MIN (MIN_SET A) (MIN_SET B))`,
+  SET_INDUCT_TAC THEN RW_TAC (srw_ss()) []
+   THEN `?b t. (B = b INSERT t) /\ ~(b IN t)` by METIS_TAC [SET_CASES]
+   THEN RW_TAC (srw_ss()) []
+   THEN `(e INSERT s) UNION (b INSERT t) = e INSERT b INSERT (s UNION t)`
+        by METIS_TAC [INSERT_UNION,INSERT_UNION_EQ, UNION_COMM, UNION_ASSOC]
+   THEN POP_ASSUM SUBST_ALL_TAC
+   THEN `FINITE (s UNION t)` by METIS_TAC [FINITE_INSERT,FINITE_UNION]
+   THEN RW_TAC (srw_ss()) [MIN_SET_THM]
+   THEN Cases_on `s={}` THEN RW_TAC (srw_ss()) [MIN_SET_THM]
+   THEN `b INSERT (s UNION t) = s UNION (b INSERT t)`
+        by METIS_TAC [INSERT_UNION,INSERT_UNION_EQ, UNION_COMM, UNION_ASSOC]
+   THEN POP_ASSUM SUBST_ALL_TAC
+   THEN `MIN_SET (s UNION (b INSERT t)) = MIN (MIN_SET s) (MIN_SET (b INSERT t))`
+        by METIS_TAC [] THEN POP_ASSUM SUBST_ALL_TAC
+   THEN `MIN_SET (e INSERT s) = MIN (MIN_SET s) (MIN_SET {e})` 
+        by METIS_TAC [FINITE_SING,NOT_EMPTY_INSERT,
+                      UNION_COMM,INSERT_UNION_EQ,UNION_EMPTY]
+   THEN RW_TAC (srw_ss()) [MIN_SET_THM, AC MIN_COMM MIN_ASSOC])
+ in METIS_TAC [lem]
+ end);;
+
+val MAX_SET_UNION = Q.store_thm
+("MAX_SET_UNION",
+ `!A B. FINITE A /\ FINITE B /\ ~(A={}) /\ ~(B={}) 
+         ==> 
+      (MAX_SET (A UNION B) = MAX (MAX_SET A) (MAX_SET B))`,
+ let val lem = Q.prove
+ (`!A. FINITE A ==> 
+   !B. FINITE B /\ ~(A={}) /\ ~(B={}) 
+       ==> (MAX_SET (A UNION B) = MAX (MAX_SET A) (MAX_SET B))`,
+  SET_INDUCT_TAC THEN RW_TAC (srw_ss()) []
+   THEN `?b t. (B = b INSERT t) /\ ~(b IN t)` by METIS_TAC [SET_CASES]
+   THEN RW_TAC (srw_ss()) []
+   THEN `(e INSERT s) UNION (b INSERT t) = e INSERT b INSERT (s UNION t)`
+        by METIS_TAC [INSERT_UNION,INSERT_UNION_EQ, UNION_COMM, UNION_ASSOC]
+   THEN POP_ASSUM SUBST_ALL_TAC
+   THEN `FINITE (s UNION t)` by METIS_TAC [FINITE_INSERT,FINITE_UNION]
+   THEN RW_TAC (srw_ss()) [MAX_SET_THM]
+   THEN Cases_on `s={}` THEN RW_TAC (srw_ss()) [MAX_SET_THM]
+   THEN `b INSERT (s UNION t) = s UNION (b INSERT t)`
+        by METIS_TAC [INSERT_UNION,INSERT_UNION_EQ, UNION_COMM, UNION_ASSOC]
+   THEN POP_ASSUM SUBST_ALL_TAC
+   THEN `MAX_SET (s UNION (b INSERT t)) = MAX (MAX_SET s) (MAX_SET (b INSERT t))`
+        by METIS_TAC [] THEN POP_ASSUM SUBST_ALL_TAC
+   THEN `MAX_SET (e INSERT s) = MAX (MAX_SET s) (MAX_SET {e})` 
+        by METIS_TAC [FINITE_SING,NOT_EMPTY_INSERT,
+                      UNION_COMM,INSERT_UNION_EQ,UNION_EMPTY]
+   THEN RW_TAC (srw_ss()) [MAX_SET_THM, AC MAX_COMM MAX_ASSOC])
+ in METIS_TAC [lem]
+ end);;
+
 (* ----------------------------------------------------------------------
     Simple lemmas about GSPECIFICATIONs
    ---------------------------------------------------------------------- *)
@@ -3817,6 +3900,7 @@ val count_EQN = Q.store_thm
   THEN Induct
   THEN RW_TAC arith_ss [GSPEC_F]
   THEN RW_TAC set_ss [EXTENSION,IN_SING,IN_INSERT]);
+
 
 val _ = export_rewrites
     [
