@@ -176,6 +176,12 @@ val can_get_small = store_thm(
     ]
   ]);
 
+val can_get_big = store_thm(
+  "can_get_big",
+  ``!x:int y d. 0 < d ==> ?c. 0 < c /\ x < y + c * d``,
+  REPEAT STRIP_TAC THEN REWRITE_TAC [GSYM INT_LT_SUB_RADD] THEN
+  PROVE_TAC [can_get_small]);
+
 val positive_product_implication = store_thm(
   "positive_product_implication",
   Term`!c d:int. 0 < c /\ 0 < d ==> 0 < c * d`,
