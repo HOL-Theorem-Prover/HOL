@@ -192,8 +192,13 @@ and
    else false;
 *)
 
-
-fun is_arith_thm thm = (not (null (hyp thm)) andalso is_arith (concl thm));
+(* This function determines whether or not to add something as context to
+   the arithmetic decision procedure.  Because arithLib.ARITH_CONV can't
+   handle implications with nested foralls on the left hand side, we
+   eliminate those here.  *)
+fun is_arith_thm thm =
+  not (null (hyp thm)) andalso is_arith (concl thm) andalso
+   (not (is_forall (concl thm)));
 
 type ctxt = thm list;
 
