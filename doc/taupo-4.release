@@ -1,0 +1,15 @@
+Bugs fixed:
+-----------
+  * The arithmetic decision procedure embedded in the simplifier was
+    adding too much context in some cases, and thereby failing to
+    prove goals that were really within its scope.
+
+  * Restricted quantifiers with list literals in the restriction were
+    failing to pretty-print.  This bug was actually fixed in time for
+    Taupo-3, but wasn't mentioned in its release notes.
+
+New theories:
+-------------
+
+New tools:
+----------
