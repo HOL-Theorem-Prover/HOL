@@ -358,7 +358,7 @@ val ALGEBRA_EMBED_COMPL = store_thm
     ++ STRIP_TAC
     ++ SEQ_CASES_TAC `v`
     ++ PSET_TAC [ALGEBRA_EMBED_APPEND, ALGEBRA_EMBED_TLS]
-    ++ PROVE_TAC []]);    
+    ++ PROVE_TAC []]);
 
 val MEASURABLE_COMPL = store_thm
   ("MEASURABLE_COMPL",
@@ -419,7 +419,7 @@ val MEASURABLE_SDROP = store_thm
   ("MEASURABLE_SDROP",
    ``!n p. measurable (p o SDROP n) = measurable p``,
    Induct >> RW_TAC std_ss' [SDROP_def, o_DEF, I_THM]
-   ++ RW_TAC std_ss [SDROP_def, o_ASSOC, MEASURABLE_STL]);
+   ++ RW_TAC bool_ss [SDROP_def, o_ASSOC, MEASURABLE_STL]);
 
 val MEASURABLE_INTER_HALVES = store_thm
   ("MEASURABLE_INTER_HALVES",

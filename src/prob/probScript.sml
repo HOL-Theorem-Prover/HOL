@@ -426,7 +426,7 @@ val PROB_LE_X = store_thm
    ++ SUFF_TAC `prob (algebra_embed b) <= x`
      >> RW_TAC real_ac_ss [PROB_ALGEBRA]
    ++ SUFF_TAC `measurable (algebra_embed b)` >> PROVE_TAC []
-   ++ PROVE_TAC [measurable_def]);    
+   ++ PROVE_TAC [measurable_def]);
 
 val X_LE_PROB = store_thm
   ("X_LE_PROB",
@@ -518,7 +518,7 @@ val PROB_SDROP = store_thm
   ("PROB_SDROP",
    ``!n p. measurable p ==> (prob (p o SDROP n) = prob p)``,
    Induct >> RW_TAC std_ss' [o_DEF, I_THM, SDROP_def]
-   ++ RW_TAC std_ss [o_ASSOC, SDROP_def]
+   ++ RW_TAC bool_ss [o_ASSOC, SDROP_def]
    ++ KNOW_TAC `measurable (p o SDROP n)` >> PROVE_TAC [MEASURABLE_SDROP]
    ++ PROVE_TAC [PROB_STL]);
 
