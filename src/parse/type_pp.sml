@@ -6,6 +6,10 @@ datatype mygrav =
 
 datatype single_rule = SR | IR of (associativity * string)
 
+fun Fail s = Exception.HOL_ERR {origin_function = "pp_type",
+                                origin_structure = "type_pp",
+                                message = s};
+
 fun pp_type0 (G:grammar) = let
   fun lookup_tyop s = let
     fun recurse [] = NONE
@@ -28,45 +32,32 @@ fun pp_type0 (G:grammar) = let
   fun pr_ty pps ty grav depth = let
     val {add_string, add_break, begin_block, end_block,...} =
       with_ppstream pps
+    fun pbegin b = if b then add_string "(" else ()
+    fun pend b = if b then add_string ")" else ()
   in
     if depth = 0 then add_string "..."
     else
       if is_vartype ty then add_string (dest_vartype ty)
       else let
         val {Tyop, Args} = dest_type ty
-        fun print_args args = let
+        fun print_args grav0 args = let
+          val parens_needed = case Args of [_] => false | _ => true
+          val grav = if parens_needed then Top else grav0
         in
-          add_string "(";
+          pbegin parens_needed;
           begin_block INCONSISTENT 0;
-          pr_list (fn arg => pr_ty pps arg Top (depth - 1))
+          pr_list (fn arg => pr_ty pps arg grav (depth - 1))
                   (fn () => add_string ",") (fn () => add_break (1, 0)) args;
           end_block();
-          add_string ")"
+          pend parens_needed
         end
       in
         case Args of
           [] => add_string Tyop
-        | [arg] => let
-            val (prec, _) = valOf (lookup_tyop Tyop)
-              handle Option =>
-                raise Fail (Tyop^": no such type constructor in grammar")
-            val addparens =
-              case grav of
-                Rfx (n, _) => (n > prec)
-              | _ => false
-          in
-            begin_block INCONSISTENT 0;
-            if addparens then add_string "(" else ();
-            pr_ty pps arg (Sfx prec) (depth - 1);
-            add_break(1,0);
-            add_string Tyop;
-            if addparens then add_string ")" else ();
-            end_block()
-          end
         | [arg1, arg2] => let
             val (prec, rule) = valOf (lookup_tyop Tyop)
               handle Option =>
-                raise Fail (Tyop^": no such type constructor in grammar")
+                raise Fail (Tyop^": no such type operator in grammar")
           in
             case rule of
               SR => let
@@ -75,13 +66,16 @@ fun pp_type0 (G:grammar) = let
                     Rfx(n, _) => (n > prec)
                   | _ => false
               in
+                pbegin addparens;
                 begin_block INCONSISTENT 0;
-                if addparens then add_string "(" else ();
-                print_args Args;
+                (* knowing that there are two args, we know that they will
+                   be printed with parentheses, so the gravity we pass in
+                   here makes no difference. *)
+                print_args Top Args;
                 add_break(1,0);
                 add_string Tyop;
-                if addparens then add_string ")" else ();
-                end_block()
+                end_block();
+                pend addparens
               end
             | IR(assoc, printthis) => let
                 val parens_needed =
@@ -93,18 +87,34 @@ fun pp_type0 (G:grammar) = let
                                   else (n >= prec)
                   | _ => false
               in
+                pbegin parens_needed;
                 begin_block INCONSISTENT 0;
-                if parens_needed then add_string "(" else ();
                 pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
                 add_break(1,0);
                 add_string printthis;
                 add_break(1,0);
                 pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
-                if parens_needed then add_string ")" else ();
-                end_block()
+                end_block();
+                pend parens_needed
               end
           end
-        | _ => add_string "<blah>"
+        | _ => let
+            val (prec, _) = valOf (lookup_tyop Tyop)
+              handle Option =>
+                raise Fail (Tyop^": no such type constructor in grammar")
+            val addparens =
+              case grav of
+                Rfx (n, _) => (n > prec)
+              | _ => false
+          in
+            pbegin addparens;
+            begin_block INCONSISTENT 0;
+            print_args (Sfx prec) Args;
+            add_break(1,0);
+            add_string Tyop;
+            end_block();
+            pend addparens
+          end
       end
   end
 in
