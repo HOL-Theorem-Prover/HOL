@@ -271,27 +271,28 @@ fun term_to_ML openthys ppstrm =
         ; end_block()
       end
   and pp_case i (a,cases) =
-      ( begin_block CONSISTENT 0
+      ( begin_block CONSISTENT 1
         ; lparen i 5000
-        ; begin_block INCONSISTENT 1
+        ; begin_block INCONSISTENT 2
         ; add_string "case"
         ; add_break(1,0)
         ; pp minprec a
-        ; add_newline()
-        ; add_string"of" 
+        ; end_block()
         ; add_break(1,0)
-        ; pr_list pp_case_clause 
-                   (fn () => (add_newline(); add_string "|"))
-                   (fn () => add_break(1,0)) cases
-        ; rparen i 5000
+        ; begin_block CONSISTENT 1
+        ; add_string"of " 
+        ; pp_case_clause (hd cases)
+        ; add_break(1,0)
+        ; pr_list (fn cl => (add_string "| "; pp_case_clause cl))
+                  (fn () => ())
+                  (fn () => add_break(1,0)) (tl cases)
         ; end_block()
         ; rparen i 5000
         ; end_block())
   and pp_case_clause (pat,rhs) =
-        (begin_block CONSISTENT 0
+        (begin_block CONSISTENT 3
          ; pp minprec pat
-         ; add_break (1,0)
-         ; add_string "=>"
+         ; add_string " =>"
          ; add_break (1,0)
          ; pp minprec rhs
          ; end_block()
@@ -370,9 +371,13 @@ fun pp_defn_as_ML openthys ppstrm =
          ; add_string (s'^" ")
          ; pp_clause (hd els)
          ; add_newline()
-         ; pr_list (fn c => (add_string "| "; pp_clause c))
-                   (fn () => ())
-                   (fn () => add_newline()) (tl els)
+         ; case tl els
+            of [] => ()
+             | els' => 
+                 (pr_list (fn c => (add_string "| "; pp_clause c))
+                    (fn () => ())
+                    (fn () => add_newline()) els';
+                  add_newline())
          ; end_block()
        end
      fun pp tm =
@@ -542,7 +547,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
           pr_list (pp_clause (ref true))
                   (fn () => ())
                   (fn () => add_break(1,0)) clauselist;
-          end_block())
+          end_block(); end_block())
        | pp_decl tyvars (name,Record flist) = raise ERR "pp_datatype_as_ML" 
                                          "Records not yet dealt with"
  in 
@@ -551,7 +556,6 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
             (fn () => (add_newline(); add_string "and")) 
             add_newline
             decls
-  ; end_block()
   ; end_block()
  end;
 
@@ -595,10 +599,9 @@ fun pp_sig strm (s,elems) =
      end
     fun pp_valdec c =
      let val (_,name,ty) = ConstMapML.apply c
-     in begin_block CONSISTENT 0;
+     in begin_block CONSISTENT 3;
         add_string "val ";
-        add_string name; add_break(1,0); add_string ":"; add_break (1,0);
-        ppty ty;
+        add_string name; add_break(1,0); add_string ": "; ppty ty;
         end_block()
      end
     fun pp_el (DATATYPE astl) = pp_datatype (repair_type_decls (DATATYPE astl))
@@ -622,6 +625,9 @@ fun pp_sig strm (s,elems) =
    flush_ppstream()
  end 
  handle e => raise wrap_exn "Drop" "pp_sig" e;
+
+val MLinfixes = 
+  String.fields Char.isSpace "* / div mod + - ^ @ <> > < >= <= := o before";
 
 fun pp_struct strm (s,elems,cnames) =
  let open Portable
@@ -652,11 +658,13 @@ fun pp_struct strm (s,elems,cnames) =
    begin_block CONSISTENT 0;
    begin_block INCONSISTENT 7;
       add_string"nonfix ";
-      pr_list add_string (fn()=>()) (fn()=> add_break(1,0)) cnames;
+      pr_list add_string (fn()=>()) (fn()=> add_break(1,0)) 
+              (union cnames MLinfixes);
       add_string ";";
      end_block(); 
    add_newline(); add_newline();
-   pr_list pp_el (fn () =>()) add_newline elems;
+   pr_list pp_el (fn () =>()) add_newline 
+          (filter (fn (MLSIG _) => false | otherwise => true) elems);
    end_block(); end_block(); 
    add_newline();
    add_string"end"; add_newline();
