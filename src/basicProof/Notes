@@ -18,12 +18,16 @@ val NAMED_ERR = mk_HOL_ERR "NAMED";
  
 val NAMED_DEF = new_definition("NAMED", Term `NAMED x y = x`);
 
+(*---------------------------------------------------------------------------*)
+(* Not interpreted in the object language, but in the meta-language          *)
+(*---------------------------------------------------------------------------*)
+
 val named_tm = prim_mk_const{Name="NAMED", Thy="named"};
 
 fun mk_named (n,tm) =
   let val v = mk_var(n,alpha)
-      val NAMED = inst [alpha |-> type_of tm, beta |-> alpha] named_tm
-  in list_mk_comb(NAMED,[tm,v])
+      val named = inst [alpha |-> type_of tm, beta |-> alpha] named_tm
+  in list_mk_comb(named,[tm,v])
   end;
 
 datatype 'a named = NOT of term | NAMED of 'a * term;
@@ -36,14 +40,13 @@ datatype 'a named = NOT of term | NAMED of 'a * term;
 fun dest_named tm = 
   case strip_comb tm
    of (c,[x,y]) => 
-       (case total dest_const c
-         of SOME("NAMED",_) => 
-               (case total dest_var y
-                 of SOME (n,_) => NAMED(n,x)
-                  | otherwise => raise NAMED_ERR "dest_named"
-                    (String.concat ["expected ", 
-                         Lib.quote "NAMED <term> <var>"]))
-          | otherwise => NOT tm)
+       if same_const c named_tm
+         then (case total dest_var y
+                of SOME (n,_) => NAMED(n,x)
+                 | otherwise => raise NAMED_ERR "dest_named"
+                        (String.concat ["expected ", 
+                                        Lib.quote "NAMED <term> <var>"]))
+         else NOT tm
    | otherwise => NOT tm;
 
 fun is_named tm = 
@@ -163,6 +166,10 @@ end (* local *);
 
 fun PROVE_HYP_NAMED ath bth = MP (DISCHARGE (concl ath) bth) ath;
 
+(*****************************************************************************)
+(*   TACTICS                                                                 *)
+(*****************************************************************************)
+
 (*===========================================================================
            A ?- M
     -----------------------   ASSUME_NAMED_TAC (s, B|-N)
@@ -174,6 +181,7 @@ fun ASSUME_NAMED_TAC s bth : tactic =
    ([(mk_named (s,concl bth)::asl,w)], 
     (fn [th] => PROVE_HYP_NAMED bth th));
 
+val DISCH_NAMED_TAC = DISCH_THEN o ASSUME_NAMED_TAC;
 
 fun ASSUME_NAMED_AUTO_TAC th =
   ASSUME_NAMED_TAC (gen_name (mk_var("H",alpha)) [] th) th;
@@ -184,6 +192,12 @@ fun ASSUME_NAMED_AUTO_REF_TAC r th =
       val () = r := mk_var(name,alpha)::list
   in ASSUME_NAMED_TAC name th
   end;
+
+(* fun NAME_ASSUM_TAC P (g as (asl,w)) =
+ case filter P asl
+  of [x] => UNDISCH_THEN x ASSUME_NAMED_TAC 
+   | other => raise ERR "NAME_ASSUM_TAC" "predicate not satisfied"
+*)
 
 (*---------------------------------------------------------------------------
     A version of UNDISCH_THEN that uses names to index hypotheses
@@ -198,10 +212,9 @@ fun WITH_ASSUM s ttac : tactic =
          => ttac (UN_NAME(ASSUME_NAMED (s,core)))
                  (op_set_diff aconv asl [named_tm],w);
 
-val DISCH_NAMED_TAC = DISCH_THEN o ASSUME_NAMED_TAC;
-
 (*---------------------------------------------------------------------------
-         STRIP_NAMED_TAC
+        STRIP_NAMED_TAC: strip a goal, attaching names to each new 
+        element added to the hypotheses
  ---------------------------------------------------------------------------*)
 
 fun STRIP_NAMED_TAC (g as (asl,w)) = 
@@ -227,7 +240,7 @@ fun RULE_ASSUM_NAMED_TAC f =
   end;
 
 
-val NAMED_ASSUM_TAC s f = WITH_ASSUM s (ASSUME_NAMED_TAC s o f);
+fun NAMED_ASSUM_TAC s f = WITH_ASSUM s (ASSUME_NAMED_TAC s o f);
 
 (*---------------------------------------------------------------------------
       Robust POP_ASSUM
@@ -239,7 +252,6 @@ fun POP_ASSUM_NAMED ttac =
 
 to do: STRIP_ASSUME_TAC
        ASSUM_LIST
-       POP_ASSUM
        PROVE_TAC 
        WEAKEN_TAC
        SIMP_TAC
@@ -261,3 +273,35 @@ and a pattern M' and matches M to M'. The resulting instantiations will
 get turned into named assumptions.
 
    MATCH_STRIP_TAC 
+
+(*---------------------------------------------------------------------------*)
+(*  Example
+  open arithmeticTheory;
+
+ val EXP_2 = Q.prove
+(`!n:num. n**2 = n*n`,
+ RW_TAC arith_ss [EXP,MULT_CLAUSES,TWO,ONE]);
+
+val EXP2_LEM = Q.prove
+(`!x y:num. ((2*x)**2 = 2*(y**2)) = (2*(x**2) = y**2)`,
+ RW_TAC arith_ss [EXP_2,TWO,GSYM MULT_ASSOC] 
+ THEN PROVE_TAC [MULT_ASSOC,MULT_SYM]);
+
+val lemma = Q.prove
+(`!m n. (m**2 = 2 * n**2) ==> (m=0) /\ (n=0)`,
+ completeInduct_on `m` THEN NTAC 2 STRIP_TAC THEN
+  `?k. m = 2*k` by PROVE_TAC[EVEN_DOUBLE,EXP_2,EVEN_MULT,EVEN_EXISTS] 
+                THEN VAR_EQ_TAC THEN
+  `?p. n = 2*p` by PROVE_TAC[EVEN_DOUBLE,EXP_2,EVEN_MULT,EVEN_EXISTS,EXP2_LEM] 
+                THEN VAR_EQ_TAC THEN
+  `k**2 = 2*(p**2)` by PROVE_TAC [EXP2_LEM] THEN
+  `(k=0) \/ k < 2*k` by numLib.ARITH_TAC
+ THENL [FULL_SIMP_TAC arith_ss [EXP_2],
+        PROVE_TAC [MULT_EQ_0, DECIDE (Term `~(2 = 0n)`)]]);
+
+g `!m n. (m**2 = 2 * n**2) ==> (m=0) /\ (n=0)`;
+e (completeInduct_on `m`);
+
+
+*)
+(*---------------------------------------------------------------------------*)

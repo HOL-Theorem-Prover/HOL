@@ -16,6 +16,7 @@ sig
   val finite_tm   : term 
   val gspec_tm    : term 
   val insert_tm   : term 
+  val in_tm       : term 
   val infinite_tm : term 
   val inj_tm      : term 
   val inter_tm    : term 

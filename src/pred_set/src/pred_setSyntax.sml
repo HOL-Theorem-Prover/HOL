@@ -5,6 +5,10 @@ local open pred_setTheory in end;
 
 open HolKernel Abbrev;
 
+(* Dealt with specially *)
+
+val in_tm       = prim_mk_const{Name = "IN",       Thy = "bool"}
+
 val diff_tm     = prim_mk_const{Name = "DIFF",     Thy = "pred_set"}
 val compl_tm    = prim_mk_const{Name = "COMPL",    Thy = "pred_set"}
 val card_tm     = prim_mk_const{Name = "CARD",     Thy = "pred_set"}

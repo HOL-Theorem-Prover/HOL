@@ -2,7 +2,7 @@
      A battery of tests for the "Define" function in bossLib.
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib"]; open bossLib;
+app load ["bossLib"]; open TotalDefn bossLib;
 infix &&; infix 8 by;
 
 
@@ -150,9 +150,9 @@ val Swap_def' =
 
 val Flag_defn = 
  Hol_defn "Flag" 
-         `Flag list = case Swap list
-                       of NONE -> list
-                       || SOME slist -> Flag slist`;
+          `Flag list = case Swap list
+                        of NONE -> list
+                        || SOME slist -> Flag slist`;
 
 
 
@@ -410,7 +410,7 @@ DefineSchema
 
 (*---------------------------------------------------------------------------*
  * This one fails, because you need to know a relation between term_size and *
- * list_size. Would work with multiset ordering.                             *
+ * list_size. Might work with multiset ordering.                             *
  *---------------------------------------------------------------------------*)
 
 val V_def = 
