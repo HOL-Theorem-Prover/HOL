@@ -1,5 +1,7 @@
 \chapter{Theories}\label{HOLtheories}
 
+\newcommand{\konst}[1]{\ensuremath{\mbox{\small{\textbf{\sf{#1}}}}}}
+
 \index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies
 of} The \HOL{} system provides a collection of theories to base
 verification tools or further theory development on.  In the rest of
@@ -2367,7 +2369,87 @@ Anthony's package.
 
 \subsection{Sets (\theoryimp{pred\_set})}
 
-Sets as predicates. Finite sets.
+An extensive development of set theory is available by loading the
+theory {\small\verb+pred_set+}. Sets are represented by functions of
+the type $\alpha \to \konst{bool}$, \ie, they are so-called
+characteristic functions, and may be finite or infinite. All of the
+elements in a set must have the same type. The basic notion that set
+theory is usually based on is \emph{set membership}. In HOL, this is
+represented by a definition (in theory {\small\verb+bool+}) 
+%
+{\small
+\begin{verbatim}
+  IN_DEF  |- IN = \x f. f x
+\end{verbatim}}
+%
+The operator {\small\verb+IN+} is used as an infix and is merely a way
+of applying the characteristic function to an item:
+%
+{\small
+\begin{verbatim}
+  SPECIFICATION  |- !P x. x IN P = P x
+\end{verbatim}}
+%
+The following are standard definitions in set theory. The 
+empty set is the characteristic function that is constantly
+false. The universal set on a type is the characteristic 
+function that is always true. The insertion of an element
+into a set is defined with a set comprehension, as are 
+several other concepts. The definition of set comprehension
+is given in the next subsection.
+%
+{\small
+\begin{verbatim}
+ EMPTY_DEF   |- {} = (\x. F)
+ UNIV_DEF    |- UNIV = (\x. T)
+ INSERT_DEF  |- !x s. x INSERT s = {y | (y = x) \/ y IN s}
+ UNION_DEF   |- !s t. s UNION t = {x | x IN s \/ x IN t}
+ INTER_DEF   |- !s t. s INTER t = {x | x IN s /\ x IN t}
+ SUBSET_DEF  |- !s t. s SUBSET t = !x. x IN s ==> x IN t
+ PSUBSET_DEF |- !s t. s PSUBSET t = s SUBSET t /\ ~(s = t)
+ DIFF_DEF    |- !s t. s DIFF t = {x | x IN s /\ ~(x IN t)}
+ DELETE_DEF  |- !s x. s DELETE x = s DIFF {x}
+ BIGUNION    |- !P. BIGUNION P = {x | ?p. p IN P /\ x IN p}
+ BIGINTER    |- !B. BIGINTER B = {x | !P. P IN B ==> x IN P}
+ IMAGE_DEF   |- !f s. IMAGE f s = {f x | x IN s}
+ COMPL_DEF   |- !P. COMPL P = UNIV DIFF P
+ CROSS_DEF   |- !P Q. P CROSS Q = {p | FST p IN P /\ SND p IN Q}
+\end{verbatim}}
+%
+Injections, surjections, and bijections between sets are defined
+%
+{\small
+\begin{verbatim}
+ INJ_DEF
+      |- !f s t.
+           INJ f s t =
+           (!x. x IN s ==> f x IN t) /\
+           !x y. x IN s /\ y IN s ==> (f x = f y) ==> (x = y)
+ SURJ_DEF
+      |- !f s t.
+           SURJ f s t =
+           (!x. x IN s ==> f x IN t) /\ !x. x IN t ==> ?y. y IN s /\ (f y = x)
+ BIJ_DEF |- !f s t. BIJ f s t = INJ f s t /\ SURJ f s t
+\end{verbatim}}
+%
+Finiteness is defined inductively. Finite sets have cardinality 
+defined as a natural number. The cardinality of an infinite set
+is not specified.
+%
+{\small
+\begin{verbatim}
+ FINITE_DEF
+      |- !s. FINITE s = !P. P {} /\ (!s. P s ==> !e. P (e INSERT s)) ==> P s
+ INFINITE_DEF |- !s. INFINITE s = ~FINITE s
+ CARD_DEF
+      |- (CARD {} = 0) /\
+         !s. FINITE s ==>
+           !x. CARD (x INSERT s) = (if x IN s then CARD s else SUC (CARD s))
+\end{verbatim}}
+%
+An extensive suite of theorems dealing with finiteness is available. The 
+theory of sets has an analogue 
+
 
 %\subsection{Syntax for sets}\index{set theory notation}
 %
@@ -2554,6 +2636,8 @@ also derived.
 \subsection{Computation Tree Logic (CTL)}
 \subsection{The State-transformer monad}
 \subsection{While-loops}
+\subsection{List permutations and sorting}
+\subsection{Partial orders}
 
 %%% Local Variables:
 %%% mode: latex
