@@ -1,16 +1,11 @@
 structure Diff :> Diff =
 struct
 
-open HolKernel Parse
-     basicHol90Lib
-     Psyntax
-     hol88Lib
-     jrhUtils
-     limTheory;
+open HolKernel Parse boolLib hol88Lib jrhUtils limTheory;
 
 
 val xreal    = Term`x:real`;
-val lreal   = Term`l:real`
+val lreal    = Term`l:real`
 val diffl_tm = Term`$diffl`;
 val pow_tm   = Term`$pow`;
 

@@ -15,7 +15,7 @@ app load ["numLib",
           "boolSimps",
           "arithSimps",
           "pairSimps",
-          "Ho_rewrite",
+          "Ho_Rewrite",
           "jrhUtils",
           "limTheory",
           "listTheory",
@@ -23,34 +23,13 @@ app load ["numLib",
           "RealSS", "RealArith"];
 *)
 
-open HolKernel Parse basicHol90Lib;
-infix THEN THENL ORELSE ORELSEC ## THENC ORELSE_TCL;
+open HolKernel Parse boolLib hol88Lib reduceLib pairLib numLib
+     mesonLib tautLib arithLib simpLib boolSimps arithSimps RealSS
+     pairTheory numTheory prim_recTheory arithmeticTheory listTheory
+     Ho_Rewrite jrhUtils Canon_Port AC realTheory limTheory listTheory
+     pred_setTheory RealArith;
 
-open Psyntax
-     hol88Lib
-     reduceLib
-     pairTheory
-     numTheory
-     prim_recTheory
-     arithmeticTheory
-     numLib
-     Let_conv
-     mesonLib
-     tautLib
-     arithLib
-     simpLib
-     boolSimps
-     arithSimps
-     RealSS
-     Ho_rewrite
-     jrhUtils
-     Canon_Port
-     AC
-     realTheory
-     limTheory
-     listTheory
-     pred_setTheory
-     RealArith;
+infix THEN THENL ORELSE ORELSEC ## THENC ORELSE_TCL;
 
 val _ = new_theory "poly";
 
@@ -66,19 +45,15 @@ fun LIST_INDUCT_TAC g =
     val tac =
       CONV_TAC (GEN_ALPHA_CONV v')
       THEN INDUCT_THEN list_INDUCT ASSUME_TAC
-      THENL [
-        ALL_TAC,
-        GEN_TAC
-      ]
+      THENL [ALL_TAC,GEN_TAC]
   in
     tac g
   end;
 
 val ARITH_TAC = CONV_TAC ARITH_CONV;
-
 fun ARITH_RULE tm = prove (tm, ARITH_TAC);
 
-val FORALL = LIST_CONJ (map SPEC_ALL (CONJUNCTS listTheory.EVERY_DEF));
+val FORALL = LIST_CONJ (map SPEC_ALL (CONJUNCTS EVERY_DEF));
 
 (* Basic extra theorems *)
 
@@ -151,9 +126,15 @@ GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN BETA_TAC THEN GEN_TAC
 (* Application of polynomial as a real function.                             *)
 (* ------------------------------------------------------------------------- *)
 
+fun new_recursive_definition ax name def =
+     Prim_rec.new_recursive_definition
+       {name=name, def=def, rec_axiom=ax};
+
 val poly = new_recursive_definition list_Axiom "poly_def"
   (Term`(poly [] x = 0r) /\
         (poly (h::t) x = h + x * poly t x)`);
+
+val _ = HOL_MESG "after poly_def";
 
 (* ------------------------------------------------------------------------- *)
 (* Arithmetic operations on polynomials. Overloaded (not sure this is wise). *)
@@ -166,10 +147,12 @@ val poly_add = new_recursive_definition list_Axiom "poly_add_def"
 
 val _ = overload_on ("+", Term`poly_add`);
 
+val _ = Parse.hide "##";
+
 val poly_cmul = new_recursive_definition list_Axiom "poly_cmul_def"
  (Term`($## c [] = []) /\
        ($## c (h::t) = (c:real * h) :: ($## c t))`);
-val _ = set_fixity "##" (Infixl 600) ;
+val _ = set_fixity ("##",Infixl 600);
 
 val poly_neg = new_definition ("poly_neg_def", Term`poly_neg = $## (~(&1))`);
 
@@ -186,7 +169,7 @@ val poly_exp = new_recursive_definition num_Axiom "poly_exp_def"
  (Term`(poly_exp p 0       = [1r]) /\
        (poly_exp p (SUC n) = poly_mul p (poly_exp p n))`);
 
-val _ = set_fixity "poly_exp" (Infixr 700) ;
+val _ = set_fixity ("poly_exp",Infixr 700) ;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -196,10 +179,12 @@ val _ = set_fixity "poly_exp" (Infixr 700) ;
 val poly_diff_aux = new_recursive_definition list_Axiom
   "poly_diff_aux_def"
    (Term`(poly_diff_aux n [] = []) /\
-         (poly_diff_aux n (h::t) = (&n * h) :: (poly_diff_aux (SUC n) t))`);
+         (poly_diff_aux n (h::t) = (&n * h) :: poly_diff_aux (SUC n) t)`);
 
 val poly_diff = new_definition ("poly_diff_def",
-  Term`diff l = (if (l = []) then [] else (poly_diff_aux 1 (TL l)))`);
+  Term`diff l = if l = [] then [] else poly_diff_aux 1 (TL l)`);
+
+val _ = HOL_MESG "after poly_diff";
 
 (* ------------------------------------------------------------------------- *)
 (* Useful clausifications.                                                   *)
@@ -303,11 +288,12 @@ val POLY_DIFF = store_thm("POLY_DIFF",
   ONCE_REWRITE_TAC[SYM(ETA_CONV (Term`\x. poly l x`))] THEN
   REWRITE_TAC[poly, DIFF_CONST] THEN
   MAP_EVERY X_GEN_TAC [(Term`x:real`)] THEN
-  MP_TAC(SPECL [(Term`t:real list`), (Term`0:num`), (Term`x:real`)] POLY_DIFF_LEMMA) THEN
+  MP_TAC(SPECL [(Term`t:real list`), (Term`0:num`), (Term`x:real`)] 
+         POLY_DIFF_LEMMA) THEN
   REWRITE_TAC[SYM ONE] THEN REWRITE_TAC[pow, REAL_MUL_LID] THEN
   REWRITE_TAC[POW_1] THEN
-  DISCH_THEN(MP_TAC o CONJ (SPECL [(Term`h:real`), (Term`x:real`)] DIFF_CONST)) THEN
-  DISCH_THEN(MP_TAC o MATCH_MP DIFF_ADD) THEN BETA_TAC THEN
+  DISCH_THEN(MP_TAC o CONJ (SPECL [(Term`h:real`), (Term`x:real`)] DIFF_CONST))
+  THEN DISCH_THEN(MP_TAC o MATCH_MP DIFF_ADD) THEN BETA_TAC THEN
   REWRITE_TAC[REAL_ADD_LID]);
 
 (* ------------------------------------------------------------------------- *)

@@ -6,8 +6,7 @@ structure hrealScript =
 struct
 
 (*
-app load ["Psyntax",
-          "hol88Lib",
+app load ["hol88Lib",
           "numLib",
           "reduceLib",
           "pairTheory",
@@ -19,21 +18,12 @@ app load ["Psyntax",
           "hratTheory"];
 *)
 
-open HolKernel Parse basicHol90Lib;
-infix THEN THENL ORELSE ORELSEC;
+open HolKernel Parse boolLib
+     hol88Lib numLib reduceLib pairLib 
+     pairTheory arithmeticTheory numTheory
+     prim_recTheory jrhUtils hratTheory;
 
-open Psyntax
-     hol88Lib
-     numLib
-     reduceLib
-     pairTheory
-     arithmeticTheory
-     numTheory
-     prim_recTheory
-     Num_conv
-     Num_induct
-     jrhUtils
-     hratTheory;
+infix THEN THENL ORELSE ORELSEC;
 
 val _ = new_theory "hreal";
 
@@ -254,6 +244,8 @@ val HRAT_MEAN = prove_thm("HRAT_MEAN",
 (* Define cuts and the type ":hreal"                                         *)
 (*---------------------------------------------------------------------------*)
 
+val _ = Parse.hide "C";   (* in combinTheory *)
+
 val isacut = new_definition("isacut",
 --`isacut C =
       (?x. C x)                          /\     (* Nonempty     *)
@@ -275,13 +267,14 @@ val ISACUT_HRAT = prove_thm("ISACUT_HRAT",
   MATCH_MP_TAC th THEN MATCH_ACCEPT_TAC HRAT_LT_ANTISYM end);
 
 val hreal_tydef = new_type_definition
-  ("hreal",(--`isacut`--),
+  ("hreal",
    PROVE((--`?C. isacut C`--),
          EXISTS_TAC (--`cut_of_hrat($@(K T))`--) THEN
          MATCH_ACCEPT_TAC ISACUT_HRAT));
 
-val hreal_tybij = define_new_type_bijections
-  "hreal_tybij" "hreal" "cut" hreal_tydef;
+val hreal_tybij = 
+ define_new_type_bijections
+   {name="hreal_tybij",ABS="hreal",REP="cut",tyax=hreal_tydef};
 
 val EQUAL_CUTS = prove_thm("EQUAL_CUTS",
   (--`!X Y. (cut X = cut Y) ==> (X = Y)`--),

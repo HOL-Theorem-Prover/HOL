@@ -6,36 +6,22 @@ structure realaxScript =
 struct
 
 (*
-app load ["Psyntax",
-          "hol88Lib",
+app load ["hol88Lib",
           "numLib",
           "reduceLib",
           "pairTheory",
           "arithmeticTheory",
-          "Num_conv",
-          "Num_induct",
           "EquivType",
           "jrhUtils",
           "hratTheory",
           "hrealTheory"];
 *)
 
-open HolKernel Parse basicHol90Lib;
-infix THEN THENL ORELSE ORELSEC ##;
+open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
+     pairTheory arithmeticTheory numTheory prim_recTheory
+     jrhUtils hratTheory hrealTheory;
 
-open Psyntax
-     hol88Lib
-     numLib
-     reduceLib
-     pairTheory
-     arithmeticTheory
-     numTheory
-     prim_recTheory
-     Num_conv
-     Num_induct
-     jrhUtils
-     hratTheory
-     hrealTheory;
+infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "realax";
 
@@ -188,11 +174,11 @@ fun mk_rewrites th =
    let val th = Drule.SPEC_ALL th
        val t = Thm.concl th
    in
-   if (Dsyntax.is_eq t)
+   if is_eq t
    then [th]
-   else if (Dsyntax.is_conj t)
+   else if is_conj t
         then (op @ o (mk_rewrites##mk_rewrites) o Drule.CONJ_PAIR) th
-        else if (Dsyntax.is_neg t)
+        else if is_neg t
              then [Drule.EQF_INTRO th]
              else [Drule.EQT_INTRO th]
    end;

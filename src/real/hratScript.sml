@@ -5,15 +5,14 @@
 structure hratScript =
 struct
 
-open HolKernel basicHol90Lib;
+open HolKernel boolLib;
 infix THEN THENL ORELSE;
 
 (*
-app load ["Psyntax",
-          "hol88Lib",
+app load ["hol88Lib",
           "numLib",
           "reduceLib",
-          "pairTheory",
+          "pairLib";
           "arithmeticTheory",
           "Num_conv",
           "Num_induct",
@@ -21,17 +20,9 @@ app load ["Psyntax",
           "jrhUtils"];
 *)
 
-open Parse Psyntax
-     hol88Lib
-     numLib
-     reduceLib
-     pairTheory
-     arithmeticTheory
-     numTheory
-     prim_recTheory
-     Num_conv
-     Num_induct
-     jrhUtils;
+open Parse boolLib hol88Lib numLib reduceLib 
+     pairLib PairedLambda pairTheory
+     arithmeticTheory numTheory prim_recTheory jrhUtils;
 
 val _ = new_theory "hrat";
 
@@ -41,14 +32,14 @@ val _ = new_theory "hrat";
 (*---------------------------------------------------------------------------*)
 
 val UNSUCK_TAC =
-  let val tac = W(MAP_EVERY (STRUCT_CASES_TAC o C SPEC num_CASES)o frees o snd)
-                THEN REWRITE_TAC[NOT_SUC, PRE, MULT_CLAUSES, ADD_CLAUSES]
-      val [sps, azero, mzero] = map (C (curry PROVE) tac)
-        [(--`~(x = 0) ==> (SUC(PRE x) = x)`--),
-         (--`(x + y = 0) = (x = 0) /\ (y = 0)`--),
-         (--`(x * y = 0) = (x = 0) \/ (y = 0)`--)] in
-  REPEAT (IMP_SUBST_TAC sps THENL
-          [REWRITE_TAC[azero, mzero, NOT_SUC], ALL_TAC]) end;
+ let val tac = W(MAP_EVERY (STRUCT_CASES_TAC o C SPEC num_CASES) o frees o snd)
+               THEN REWRITE_TAC[NOT_SUC, PRE, MULT_CLAUSES, ADD_CLAUSES]
+     val [sps, azero, mzero] = map (C (curry PROVE) tac)
+       [(--`~(x = 0) ==> (SUC(PRE x) = x)`--),
+        (--`(x + y = 0) = (x = 0) /\ (y = 0)`--),
+        (--`(x * y = 0) = (x = 0) \/ (y = 0)`--)] in
+ REPEAT (IMP_SUBST_TAC sps THENL
+         [REWRITE_TAC[azero, mzero, NOT_SUC], ALL_TAC]) end;
 
 (*---------------------------------------------------------------------------*)
 (* Definitions of operations on representatives                              *)
@@ -300,12 +291,17 @@ val [HRAT_ADD_SYM, HRAT_ADD_ASSOC, HRAT_MUL_SYM, HRAT_MUL_ASSOC,
      HRAT_ADD_TOTAL, HRAT_ARCH, HRAT_SUCINT] =
   EquivType.define_equivalence_type
     {name = "hrat",
-     equiv = TRAT_EQ_EQUIV,
-     defs = [{def_name = "hrat_1", fname = "hrat_1",  func = --`trat_1`--,   fixity = Prefix},
-             {def_name = "hrat_inv", fname = "hrat_inv",func = --`trat_inv`--, fixity = Prefix},
-             {def_name = "hrat_add", fname = "hrat_add",func = --`$trat_add`--, fixity = Infixl 500},
-             {def_name = "hrat_mul", fname = "hrat_mul",func = --`$trat_mul`--, fixity = Infixl 600},
-             {def_name = "hrat_sucint", fname="hrat_sucint", func = --`trat_sucint`--, fixity = Prefix}],
+     equiv = TRAT_EQ_EQUIV, defs =
+     [{def_name="hrat_1",   fname="hrat_1", 
+       func=Term`trat_1`, fixity=Prefix},
+      {def_name="hrat_inv", fname="hrat_inv",
+       func=Term`trat_inv`, fixity=Prefix},
+      {def_name="hrat_add", fname="hrat_add",
+       func=Term`$trat_add`, fixity=Infixl 500},
+      {def_name="hrat_mul", fname="hrat_mul",
+       func=Term`$trat_mul`, fixity=Infixl 600},
+      {def_name="hrat_sucint", fname="hrat_sucint", 
+       func=Term`trat_sucint`, fixity=Prefix}],
      welldefs = [TRAT_INV_WELLDEFINED, TRAT_ADD_WELLDEFINED2,
                  TRAT_MUL_WELLDEFINED2],
      old_thms = [TRAT_ADD_SYM, TRAT_ADD_ASSOC, TRAT_MUL_SYM, TRAT_MUL_ASSOC,

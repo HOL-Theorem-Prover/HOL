@@ -8,33 +8,22 @@ structure netsScript =
 struct
 
 (*
-app load ["Psyntax",
-          "hol88Lib",
+app load ["hol88Lib",
           "numLib",
           "reduceLib",
           "pairTheory",
-          "Let_conv",
+          "PairedLambda",
           "jrhUtils",
           "topologyTheory"];
 *)
 
 (*
 *)
-open HolKernel Parse basicHol90Lib;
-infix THEN THENL ORELSE ORELSEC ##;
+open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
+     pairTheory arithmeticTheory numTheory prim_recTheory
+     jrhUtils realTheory topologyTheory;
 
-open Psyntax
-     hol88Lib
-     numLib
-     reduceLib
-     pairTheory
-     arithmeticTheory
-     numTheory
-     prim_recTheory
-     Let_conv
-     jrhUtils
-     realTheory
-     topologyTheory;
+infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "nets";
 

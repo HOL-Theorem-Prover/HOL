@@ -12,7 +12,7 @@ app load ["numLib",
           "reduceLib",
           "pairTheory",
           "numLib",
-          "Let_conv",
+          "PairedLambda",
           "jrhUtils",
           "topologyTheory",
           "netsTheory",
@@ -20,28 +20,14 @@ app load ["numLib",
           "limTheory"];
 *)
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
+     pairTheory arithmeticTheory numTheory prim_recTheory
+     jrhUtils realTheory topologyTheory netsTheory seqTheory limTheory;
+
 infix THEN THENL ORELSE ORELSEC ##;
 
-open Psyntax
-     hol88Lib
-     numLib
-     reduceLib
-     pairTheory
-     arithmeticTheory
-     numTheory
-     prim_recTheory
-     Num_conv
-     Num_induct
-     Let_conv
-     jrhUtils
-     realTheory
-     topologyTheory
-     netsTheory
-     seqTheory
-     limTheory;
-
 val _ = new_theory "powser";
+
 
 (*---------------------------------------------------------------------------*)
 (* More theorems about rearranging finite sums                               *)

@@ -6,18 +6,15 @@ structure topologyScript =
 struct
 
 (*
-app load ["Psyntax",
-          "hol88Lib",
+app load ["hol88Lib",
           "numLib",
-          "Let_conv",
+          "PairedLambda",
           "jrhUtils",
           "realTheory"];
 *)
 
-(*
-*)
-open HolKernel Parse basicHol90Lib;
-open Psyntax hol88Lib Let_conv jrhUtils realTheory;
+open HolKernel Parse boolLib
+     hol88Lib pairLib jrhUtils realTheory;
 
 infix THEN THENL ORELSE ORELSEC ##;
 
@@ -86,13 +83,13 @@ val istopology = new_definition("istopology",
 
 val topology_tydef = new_type_definition
  ("topology",
-  (--`istopology`--),
   PROVE((--`?t. istopology t`--),
         EXISTS_TAC (--`re_universe:('a->bool)->bool`--) THEN
         REWRITE_TAC[istopology, re_universe]));
 
 val topology_tybij = define_new_type_bijections
-      "topology_tybij" "topology" "open" topology_tydef;
+    {name="topology_tybij",
+     ABS="topology", REP="open",tyax=topology_tydef};
 
 val TOPOLOGY = prove_thm("TOPOLOGY",
   (--`!L. open(L) re_null /\
@@ -221,7 +218,6 @@ val ismet = new_definition("ismet",
 
 val metric_tydef = new_type_definition
  ("metric",
-  (--`ismet:('a#'a->real)->bool`--),
   PROVE((--`?m:('a#'a->real). ismet m`--),
         EXISTS_TAC (--`\(x:'a,(y:'a)). if (x = y) then &0 else &1`--) THEN
         REWRITE_TAC[ismet] THEN
@@ -237,7 +233,8 @@ val metric_tydef = new_type_definition
           EVERY_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[]]));
 
 val metric_tybij = define_new_type_bijections
-      "metric_tybij" "metric" "dist" metric_tydef;
+      {name="metric_tybij",
+       ABS="metric", REP="dist", tyax=metric_tydef};
 
 (*---------------------------------------------------------------------------*)
 (* Derive the metric properties                                              *)

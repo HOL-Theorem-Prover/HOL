@@ -18,7 +18,7 @@ app load ["Arbint",
           "pairTheory",
           "numLib",
           "realTheory",
-          "Let_conv",
+          "PairedLambda",
           "tautLib",
           "Ho_rewrite",
           "jrhUtils",
@@ -26,36 +26,22 @@ app load ["Arbint",
           "liteLib", "AC", "arithLib" (*goofy*)];
 *)
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib pairLib hol88Lib numLib reduceLib tautLib
+     pairTheory numTheory prim_recTheory arithmeticTheory
+     realTheory Ho_Rewrite jrhUtils Canon_Port AC numSyntax Arbint;
+
 infix THEN THENL ORELSE ORELSEC ## THENC ORELSE_TCL;
 
-open Psyntax
-     hol88Lib
-     pairTheory
-     numTheory
-     prim_recTheory
-     arithmeticTheory
-     realTheory
-     numLib
-     Let_conv
-     reduceLib
-     tautLib
-     Ho_rewrite
-     jrhUtils
-     Canon_Port
-     AC Arbint;
+val (Type,Term) = Parse.parse_from_grammars realTheory.real_grammars
+fun -- q x = Term q;
+fun == q x = Type q;
 
-   type term = Term.term
-   type thm = Thm.thm
-   type tactic = Abbrev.tactic
 
-val old_grammars = (type_grammar(), term_grammar())
-val _ = temp_set_grammars realTheory.real_grammars
-
+val _ = HOL_MESG "loading RealArith";
 
 (*----------------------------------------------------------------------- *)
-(* The trace system.                                                         *)
-(* ------------------------------------------------------------------------- *)
+(* The trace system.                                                      *)
+(* ---------------------------------------------------------------------- *)
 
 local
 (* fun trace_pure s = (print s; TextIO.flushOut TextIO.stdOut) *)
@@ -85,6 +71,7 @@ end;
 fun failwith s = liteLib.failwith s
 fun fail () = failwith "No message";
 
+fun term_lt u t = Term.compare(u,t) = LESS
 fun term_le t u = not (term_lt u t);
 
 fun el0 n l = if n <= zero then hd l
@@ -156,15 +143,12 @@ val NUM_ADD_CONV = ADD_CONV;
 
 (* ------------------------------------------------------------------------- *)
 (* Functions dealing with numbers (numerals) in theorems.                    *)
-(* At the moment we don't use any special representation of numerals, just   *)
-(* the default hol numbers. This is currently inefficient, but hopefully     *)
-(* one day it won't be, and then this code will be as good as the equivalent *)
-(* hol-light functions.                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val mk_numeral = Term.mk_numeral o toNat
-val dest_numeral = fromNat o Term.dest_numeral
-val is_numeral = Term.is_numeral
+
+val mk_numeral = mk_numeral o toNat
+val dest_numeral = fromNat o dest_numeral
+
 val amp = Term`&`;
 
 val is_numconst =
@@ -1641,7 +1625,5 @@ fun go12 () = REAL_ARITH (Term`&0 < x /\ &0 < y ==> x + y < &1
                              ==> &144 * x + &100 * y < &144`);
 fun go13 () = REAL_ARITH (Term`!x y. x <= ~y = x + y <= &0`);
 *)
-
-val _ = temp_set_grammars old_grammars
 
 end;

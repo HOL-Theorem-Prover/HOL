@@ -8,34 +8,20 @@ structure seqScript =
 struct
 
 (*
-app load ["Psyntax",
-          "hol88Lib",
+app load ["hol88Lib",
           "numLib",
           "reduceLib",
-          "Let_conv",
+          "PairedLambda",
           "jrhUtils",
           "netsTheory"];
 *)
 
 
-open HolKernel Parse basicHol90Lib;
-infix THEN THENL ORELSE ORELSEC ##;
+open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
+     pairTheory arithmeticTheory numTheory prim_recTheory
+     jrhUtils realTheory topologyTheory netsTheory;
 
-open Psyntax
-     hol88Lib
-     numLib
-     reduceLib
-     pairTheory
-     arithmeticTheory
-     numTheory
-     prim_recTheory
-     Num_conv
-     Num_induct
-     Let_conv
-     jrhUtils
-     realTheory
-     topologyTheory
-     netsTheory;
+infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "seq";
 

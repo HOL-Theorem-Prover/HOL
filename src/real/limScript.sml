@@ -12,34 +12,16 @@ app load ["numLib",
           "reduceLib",
           "pairTheory",
           "EquivType",
-          "Let_conv",
+          "PairedLambda",
           "jrhUtils",
           "seqTheory"];
 *)
 
-(*
-*)
-open HolKernel Parse basicHol90Lib;
-infix THEN THENL ORELSE ORELSEC ##;
+open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
+     pairTheory arithmeticTheory numTheory prim_recTheory
+     jrhUtils realTheory topologyTheory netsTheory seqTheory;
 
-(*
-*)
-open Psyntax
-     hol88Lib
-     numLib
-     reduceLib
-     pairTheory
-     arithmeticTheory
-     numTheory
-     prim_recTheory
-     Num_conv
-     Num_induct
-     Let_conv
-     jrhUtils
-     realTheory
-     topologyTheory
-     netsTheory
-     seqTheory;
+infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "lim";
 

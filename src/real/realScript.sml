@@ -9,7 +9,7 @@ struct
 (*
 app load ["numLib",
           "EquivType",
-          "Let_conv",
+          "PairedLambda",
           "listTheory",
           "mesonLib",
           "tautLib",
@@ -23,35 +23,15 @@ app load ["numLib",
           "AC",
           "jrhUtils",
           "realaxTheory"];
- *)
+*)
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 infix THEN THENL ORELSE ORELSEC ##;
 
-(*
-*)
-open Psyntax
-     hol88Lib
-     numLib
-     reduceLib
-     pairTheory
-     arithmeticTheory
-     numTheory
-     prim_recTheory
-     Let_conv
-     listTheory
-     mesonLib
-     tautLib
-     arithLib
-     simpLib
-     Ho_rewrite
-     Arithconv
-     jrhUtils
-     Canon_Port
-     AC
-     hratTheory
-     hrealTheory
-     realaxTheory;
+open HolKernel boolLib hol88Lib numLib reduceLib pairLib
+     arithmeticTheory numTheory prim_recTheory
+     mesonLib tautLib arithLib simpLib Ho_Rewrite Arithconv
+     jrhUtils Canon_Port AC hratTheory hrealTheory realaxTheory;
 
 val _ = new_theory "real";
 
@@ -1668,7 +1648,7 @@ val ABS_BOUNDS = prove_thm("ABS_BOUNDS",
 val pow = new_prim_rec_definition("pow",
   (--`($pow x 0 = &1) /\
       ($pow x (SUC n) = x * ($pow x n))`--));
-val _ = set_fixity "pow" (Infixr 700);
+val _ = set_fixity("pow",Infixr 700);
 
 val POW_0 = prove_thm("POW_0",
   (--`!n. 0 pow (SUC n) = 0`--),

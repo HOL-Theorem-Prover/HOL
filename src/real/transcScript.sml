@@ -11,7 +11,7 @@ struct
 app load ["numLib",
           "reduceLib",
           "pairTheory",
-          "Let_conv",
+          "PairedLamdba",
           "jrhUtils",
           "powserTheory",
           "Diff",
@@ -20,11 +20,10 @@ app load ["numLib",
 
 *)
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 infix THEN THENC THENL ORELSE ORELSEC ##;
 
-open Psyntax
-     hol88Lib
+open hol88Lib
      reduceLib
      pairTheory
      numTheory
@@ -38,7 +37,7 @@ open Psyntax
      powserTheory
      Num_conv
      Num_induct
-     Let_conv
+     PairedLambda
      jrhUtils
      Diff
      mesonLib
@@ -2813,7 +2812,7 @@ val DIVISION_EXISTS = prove_thm("DIVISION_EXISTS",
                    ==> ?D p. tdiv(u,v) (D,p) /\ fine(g) (D,p)`) THEN
   CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN
   W(C SUBGOAL_THEN (fn t => REWRITE_TAC[t]) o
-  funpow 2 (fst o Psyntax.dest_imp) o snd) THENL
+  funpow 2 (fst o dest_imp) o snd) THENL
    [CONJ_TAC,
     DISCH_THEN(MP_TAC o SPECL [Term`a:real`, Term`b:real`]) THEN
     REWRITE_TAC[REAL_LE_REFL]]
