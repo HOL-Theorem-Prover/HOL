@@ -102,3 +102,17 @@ New tools:
     implemented.  It is usually faster than Cooper's algorithm, but
     problems that require significant work in converting the input
     problem to DNF can cause it to take much longer.
+
+
+  * The Hol98 library HolSatLib (http://www.cl.cam.ac.uk/~mjcg/HolSatLib/)
+    provides a very simple harness for invoking SAT solvers on HOL
+    terms. Currently SATO, GRASP and ZCHAFF are supported. These solvers
+    all require input in the standard DIMACS format for conjunctive normal
+    form (CNF). It should be straightforward to add other DIMACS
+    compatible SAT solvers.  The purpose of HolSatLib is to provide a
+    platform for experimenting with combinations of theorem proving and
+    SAT. Hol98 can be used to deductively manipulate terms into CNF as
+    required for SAT analysis, and then the results of the analysis can be
+    reimported into HOL and either checked or just trusted.  HolSatLib has
+    only been tested under Linux, though it should be possible to run it
+    under Windows.
