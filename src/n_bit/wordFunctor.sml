@@ -501,11 +501,11 @@ val [WORD_ADD, WORD_ADD_0, WORD_ADD1, WORD_ADD_ASSOC, WORD_ADD_CLAUSES,
             r("word_T_def",Prefix,"word_T",(Term`COMP0`)),
             r("word_L_def",Prefix,"word_L",(Term`2 EXP HB`)),
             r("word_H_def",Prefix,"word_H",(Term`2 EXP HB - 1`)),
-            r("word_suc",Prefix,"word_suc",(Term`SUC`)),
+            r("word_suc",TruePrefix 900,"word_suc",(Term`SUC`)),
             r("word_add",Infixl 500,"word_add",(Term`$+`)),
             r("word_mul",Infixl 550,"word_mul",(Term`$*`)),
-            r("word_1comp",Prefix,"word_1comp",(Term`ONE_COMP`)),
-            r("word_2comp",Prefix,"word_2comp",(Term`TWO_COMP`)),
+            r("word_1comp",TruePrefix 900,"word_1comp",(Term`ONE_COMP`)),
+            r("word_2comp",TruePrefix 900,"word_2comp",(Term`TWO_COMP`)),
             r("word_lsr1",Prefix,"word_lsr1",(Term`LSR_ONE`)),
             r("word_asr1",Prefix,"word_asr1",(Term`ASR_ONE`)),
             r("word_ror1",Prefix,"word_ror1",(Term`ROR_ONE`)),
@@ -542,7 +542,7 @@ val _ = overload_on ("#", Term`$bitwise_eor`);
 
 val _ = add_infix("&",650,HOLgrammars.LEFT);
 val _ = add_infix("|",625,HOLgrammars.LEFT);
-val _ = add_infix("#",600,HOLgrammars.LEFT);
+val _ = add_infix("#",625,HOLgrammars.LEFT);
 val _ = add_infix("<<",680,HOLgrammars.LEFT);
 val _ = add_infix(">>",680,HOLgrammars.LEFT);
 val _ = add_infix(">>>",680,HOLgrammars.LEFT);

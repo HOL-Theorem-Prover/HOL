@@ -416,18 +416,20 @@ fun toString n =
 fun pp_num ppstrm n = PP.add_string ppstrm (toString n);
 
 local
-  fun toHexChar n =
+  fun toChar n =
       str (if Int.<(n, 10)
            then chr (Int.+(ord #"0", n))
            else chr (Int.-(Int.+(ord #"A", n), 10)))
-  val base = fromInt 16
-in
-  fun toHexString n =
+  fun toBaseString base n =
     let val (q,r) = divmod(n, base)
-        val s = toHexChar (toInt r)
+        val s = toChar (toInt r)
   in
-    if q = zero then s else toHexString q^s
+    if q = zero then s else toBaseString base q^s
   end
+in
+  val toBinString = toBaseString (fromInt 2)
+  val toOctString = toBaseString (fromInt 8)
+  val toHexString = toBaseString (fromInt 16)
 end
 
 (*  useful test code follows

@@ -44,6 +44,15 @@ end) : sig
   val WORD_CONV    : conv
   val WORD_RULE    : thm -> thm
   val WORD_TAC     : tactic
+
+  val pp_word_signed_bin   : unit -> unit
+  val pp_word_signed_oct   : unit -> unit
+  val pp_word_signed_dec   : unit -> unit
+  val pp_word_signed_hex   : unit -> unit
+  val pp_word_unsigned_bin : unit -> unit
+  val pp_word_unsigned_oct : unit -> unit
+  val pp_word_unsigned_hex : unit -> unit
+  val pp_word_off  : unit -> term_pp_types.userprinter option
 end =
 struct
 
@@ -74,7 +83,7 @@ fun word_compset () =
       LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL2,
       WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
       MSB_EVAL2, LSB_EVAL2,
-      iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2,
+      iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2, SIGN_EXTEND_def,
       DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP, TIMES_2EXP_def,
       MSBn_def, LSBn_def, BITV_def, SBIT_def, BITS_def, BIT_def, SLICE_def
       ] rws
@@ -86,19 +95,48 @@ val WORD_CONV = WEAK_CBV_CONV (word_compset());
 val WORD_RULE = CONV_RULE WORD_CONV;
 val WORD_TAC = CONV_TAC WORD_CONV;
 
-fun word_n_print ln sys gravs d pps t = let
+val thyname = "word"^sn;
+val n2w_term =
+  mk_thy_const {Name = "n2w", Thy = thyname,
+                Ty = mk_thy_type {Tyop = "num", Thy = "num", Args = []} -->
+                     mk_thy_type {Tyop = thyname, Thy = thyname, Args = []}};
+
+datatype nbase = binary | octal | decimal | hexadecimal;
+
+fun word_n_print ln twos base sys gravs d pps t = let
    open Portable term_pp_types
    val (l,r) = dest_comb t
    val n = numSyntax.dest_numeral r
-   val m = Arbnum.mod(n,Arbnum.pow(Arbnum.fromInt 2,ln))
+   val exph = Arbnum.pow(Arbnum.two,Arbnum.less1 ln)
+   val expl = Arbnum.*(Arbnum.two,exph)
+   val un = Arbnum.mod(n,expl)
+   val neg = twos andalso Arbnum.div(n,exph) = Arbnum.one
+   val sn = if neg then Arbnum.-(expl,un) else un
 in
-  if l = Term `n2w` then
-    add_string pps ("0x"^(Arbnum.toHexString m))
+  if l = n2w_term then
+    add_string pps
+      ((if neg then (if base = decimal then "~" else "-") else "")^
+       (case base of
+          decimal     => "n2w " ^(Arbnum.toString sn)
+        | binary      => "0b"^(Arbnum.toBinString sn)
+        | octal       => "0" ^(Arbnum.toOctString sn)
+        | hexadecimal => "0x"^(Arbnum.toHexString sn)))
   else
     raise UserPP_Failed
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-val _ = Parse.temp_add_user_printer ({Tyop = "word"^sn, Thy = "word"^sn}, word_n_print wl);
+fun pp_word tc base =
+   Parse.temp_add_user_printer ({Tyop = thyname, Thy = thyname}, word_n_print wl tc base);
+
+fun pp_word_signed_bin() = pp_word true binary;
+fun pp_word_signed_oct() = pp_word true octal;
+fun pp_word_signed_dec() = pp_word true decimal;
+fun pp_word_signed_hex() = pp_word true hexadecimal;
+fun pp_word_unsigned_bin() = pp_word false binary;
+fun pp_word_unsigned_oct() = pp_word false octal;
+fun pp_word_unsigned_hex() = pp_word false hexadecimal;
+
+fun pp_word_off() = Parse.remove_user_printer ({Tyop = thyname, Thy = thyname});
 
 (* -------------------------------------------------------- *)
 

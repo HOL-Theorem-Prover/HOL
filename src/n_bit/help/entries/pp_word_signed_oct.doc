@@ -1,0 +1,24 @@
+\DOC pp_word_signed_oct
+
+\TYPE {pp_word_signed_oct : unit -> unit}
+
+\SYNOPSIS
+Pretty print words as signed (two's complement) octal numbers.
+
+\EXAMPLE
+
+{
+- word4Lib.pp_word_signed_oct();
+> val it = () : unit
+- ``n2w 12``;
+> val it = ``-04`` : term
+}
+
+\COMMENTS
+HOL will fail to parse the pretty printed output.
+
+\SEEALSO
+pp_word_unsigned_bin, pp_word_unsigned_oct, pp_word_unsigned_hex,
+pp_word_signed_bin, pp_word_signed_dec, pp_word_signed_hex, pp_word_off
+
+\ENDDOC

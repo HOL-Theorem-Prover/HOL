@@ -1,0 +1,27 @@
+\DOC pp_word_off
+
+\TYPE {pp_word_off : unit -> term_pp_types.userprinter option}
+
+\SYNOPSIS
+Turns off the pretty printing of words.
+
+\EXAMPLE
+
+{
+- word4Lib.pp_word_signed_bin();
+> val it = () : unit
+- ``n2w 12``;
+> val it = ``-0b100`` : term
+- word4Lib.pp_word_off();
+> val it = SOME fn :
+  ((grav * grav * grav -> int -> term -> unit) -> grav * grav * grav -> int ->
+   ppstream -> term -> unit) option
+- ``n2w 12``;
+> val it = ``n2w 12`` : term
+}
+
+\SEEALSO
+pp_word_unsigned_bin, pp_word_unsigned_oct, pp_word_unsigned_hex,
+pp_word_signed_bin, pp_word_signed_oct, pp_word_signed_dec, pp_word_signed_hex
+
+\ENDDOC
