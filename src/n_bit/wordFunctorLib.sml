@@ -26,6 +26,7 @@ functor wordFunctorLib (structure wordTheory : sig
   val WORD_BITS_def : Thm.thm
   val WORD_SLICE_def : Thm.thm
   val w2n_EVAL : Thm.thm
+  val n2w_11 : Thm.thm
   val MSB_EVAL2 : Thm.thm
   val LSB_EVAL2 : Thm.thm
   val LT_EVAL : Thm.thm
@@ -39,7 +40,7 @@ functor wordFunctorLib (structure wordTheory : sig
 end) : sig
   include Abbrev
 
-  val word_compset : computeLib.compset
+  val word_compset : unit -> computeLib.compset
 
   val WORD_CONV    : conv
   val WORD_RULE    : thm -> thm
@@ -60,13 +61,13 @@ val sn = Arbnum.toString wl;
 
 (* -------------------------------------------------------- *)
 
-val word_compset =
+fun word_compset () =
   let val rws = reduceLib.num_compset()
       val _ = add_thms
      [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
       LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
       THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
-      MOD_WL_EVAL, w2n_EVAL,
+      MOD_WL_EVAL, w2n_EVAL, n2w_11,
       ADD_EVAL2, MUL_EVAL2, word_sub,
       REDUCE_RULE ONE_COMP_EVAL2,
       REDUCE_RULE TWO_COMP_EVAL2,
@@ -85,7 +86,7 @@ in
    rws
 end;
 
-val WORD_CONV = CBV_CONV word_compset;
+val WORD_CONV = CBV_CONV (word_compset());
 val WORD_RULE = CONV_RULE WORD_CONV;
 val WORD_TAC = CONV_TAC WORD_CONV;
 
