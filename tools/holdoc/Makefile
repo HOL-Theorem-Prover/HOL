@@ -16,7 +16,7 @@ DVIPS=dvips
 # files:
 
 MLSOURCES=hol_to_latex.ml holdoc_init.ml holdoc_munge.ml holparsesupp.ml \
-	lts_to_latex.ml mng_to_latex.ml simpledump.ml simplemosmldump.ml simplemngdump.ml \
+	mng_to_latex.ml simpledump.ml simplemosmldump.ml simplemngdump.ml \
 	holdocmodel.ml holparsetools.ml mngdump.ml
 MLISOURCES=holdoc_init.mli holdoc_munge.mli holparsesupp.mli hollex.mli simpledump.mli holparsetools.mli mngdump.mli
 OTHERSOURCES=hollex.mll holparse.mly
@@ -25,7 +25,7 @@ GENMLISOURCES=holparse.mli
 
 # main target:
 
-all: simplemngdump simplemosmldump mng_to_latex lts_to_latex
+all: simplemngdump simplemosmldump mng_to_latex
 
 # program targets:
 
@@ -35,31 +35,19 @@ simplemngdump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpled
 simplemosmldump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx simplemosmldump.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
-lts_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx mngdump.cmx lts_to_latex.cmx
-	$(OCAMLOPT) str.cmxa $+ -o $@
-
 mng_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx mngdump.cmx mng_to_latex.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
 hol_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx hol_to_latex.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
-# document targets:
-
-Net_hostLTSScript.tex : ../HOL-model/Net_hostLTSScript.sml lts_to_latex
-	cat ../HOL-model/Net.imn $< | ./lts_to_latex 2>&1 > $@ \
-		| sort | uniq -c | tee Net_hostLTSScript.errs
-
-hostlts.dvi : hostlts.tex Net_hostLTSScript.tex ltsmunge.sty
-	latex hostlts.tex
-
 # other targets:
 
 clean:
-	rm -f simpledump simpletexdump lts_to_latex $(GENMLSOURCES) $(GENMLISOURCES) \
+	rm -f simpledump simpletexdump $(GENMLSOURCES) $(GENMLISOURCES) \
 	      *.cm[iox] *.cmxa *~ '#*#' \
 	      *.o \
-              .depend Net_hostLTSScript.tex hostlts.{dvi,ps} \
+              .depend \
               *.{aux,log} hol_to_latex mng_to_latex simplemngdump \
 	      *.output
 
