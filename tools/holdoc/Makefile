@@ -13,36 +13,38 @@ OCAMLDEP=$(OCAMLPATH)/ocamldep $(OCAMLPPFLAGS)
 LATEX=latex
 DVIPS=dvips
 
+# files:
+
+MLSOURCES=hol_to_latex.ml holdoc_init.ml holdoc_munge.ml holparsesupp.ml \
+	lts_to_latex.ml mng_to_latex.ml simpledump.ml simpletexdump.ml 
+MLISOURCES=holdoc_init.mli holdoc_munge.mli holparsesupp.mli hollex.mli
+OTHERSOURCES=hollex.mll holparse.mly
+GENMLSOURCES=hollex.ml holparse.ml
+GENMLISOURCES=holparse.mli
+
 # main target:
 
 all: simpledump simpletexdump lts_to_latex mng_to_latex hol_to_latex
 
 # program targets:
 
-SIMPLEDUMP_OBJS=hollex.cmx simpledump.cmx
+simpledump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx 
+	$(OCAMLOPT) str.cmxa $+ -o $@
 
-simpledump : $(SIMPLEDUMP_OBJS)
-	$(OCAMLOPT) str.cmxa $(SIMPLEDUMP_OBJS) -o simpledump
+simpletexdump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpletexdump.cmx 
+	$(OCAMLOPT) str.cmxa $+ -o $@
 
-SIMPLETEXDUMP_OBJS=hollex.cmx simpletexdump.cmx
+simplemngdump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simplemngdump.cmx
+	$(OCAMLOPT) str.cmxa $+ -o $@
 
-simpletexdump : $(SIMPLETEXDUMP_OBJS)
-	$(OCAMLOPT) str.cmxa $(SIMPLETEXDUMP_OBJS) -o simpletexdump
+lts_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx lts_to_latex.cmx
+	$(OCAMLOPT) str.cmxa $+ -o $@
 
-LTS_TO_LATEX_OBJS=hollex.cmx holdoc_init.cmx holdoc_munge.cmx lts_to_latex.cmx
+mng_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx mng_to_latex.cmx
+	$(OCAMLOPT) str.cmxa $+ -o $@
 
-lts_to_latex : $(LTS_TO_LATEX_OBJS)
-	$(OCAMLOPT) str.cmxa $(LTS_TO_LATEX_OBJS) -o lts_to_latex
-
-MNG_TO_LATEX_OBJS=hollex.cmx holdoc_init.cmx holdoc_munge.cmx mng_to_latex.cmx
-
-mng_to_latex : $(MNG_TO_LATEX_OBJS)
-	$(OCAMLOPT) str.cmxa $(MNG_TO_LATEX_OBJS) -o mng_to_latex
-
-HOL_TO_LATEX_OBJS=hollex.cmx holdoc_init.cmx holdoc_munge.cmx hol_to_latex.cmx
-
-hol_to_latex : $(HOL_TO_LATEX_OBJS)
-	$(OCAMLOPT) str.cmxa $(HOL_TO_LATEX_OBJS) -o hol_to_latex
+hol_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx hol_to_latex.cmx
+	$(OCAMLOPT) str.cmxa $+ -o $@
 
 # document targets:
 
@@ -56,7 +58,8 @@ hostlts.dvi : hostlts.tex Net_hostLTSScript.tex ltsmunge.sty
 # other targets:
 
 clean:
-	rm -f simpledump simpletexdump lts_to_latex hollex.ml *.cm[iox] *.cmxa *~ '#*#' \
+	rm -f simpledump simpletexdump lts_to_latex $(GENMLSOURCES) $(GENMLISOURCES) \
+	      *.cm[iox] *.cmxa *~ '#*#' \
 	      *.o \
               .depend Net_hostLTSScript.tex hostlts.{dvi,ps} \
               *.{aux,log} hol_to_latex mng_to_latex
@@ -89,11 +92,14 @@ depend:	.depend
 %.ml : %.mll
 	$(OCAMLLEX) $<
 
+%.mli %.ml : %.mly
+	$(OCAMLYACC) -v $<
+
 # extra dependencies:
 
 # weirdly, OCaml-3.06 ocamldep can't handle .mll files!
-.depend: *.mli *.ml
-	$(OCAMLDEP) *.mli *.ml > $@
+.depend: $(MLSOURCES) $(MLISOURCES) $(GENMLSOURCES) $(GENMLISOURCES)
+	$(OCAMLDEP) $(MLSOURCES) $(MLISOURCES) $(GENMLSOURCES) $(GENMLISOURCES) > $@
 
 -include .depend
 

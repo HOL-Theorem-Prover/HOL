@@ -1,34 +1,25 @@
 (* hollex.mli  --  (approximate) HOL lexer interface *)
 (* Keith Wansbrough 2001 *)
 
-exception Eof     of string
-exception BadChar of string
+open Holparsesupp
+open Holparse
 
-type token =
-    Ident of string * bool  (* alphanumeric? *)
-  | Indent of int
-  | White of string
-  | Comment of string
-  | Str of string
-  | DirBeg  (* delimiters for holdoc parsing directives *)
-  | DirEnd  (* ditto *)
-  | DirBlk of string * token list (* nonterminal: directive name and body *)
-  | Sep of string
-  | Backtick
-  | DBacktick
-  | TeXStartHol   (* [[ *)
-  | TeXStartHol0  (* <[ *)
-  | TeXEndHol     (* ]] *)
-  | TeXEndHol0    (* ]> *)
-  | TeXNormal of string
-  | HolStartTeX   (* ( * : *)
-  | HolEndTeX     (* : * ) *)
+exception Mismatch of string     (* mismatched delimiters *)
+exception BadChar of string      (* bad character *)
+exception EOF                    (* attempt to read past (already-reported) EOF *)
+exception NeverHappen of string  (* bad error *)
 
 val render_token : token -> string
 
-val holtokstream : in_channel -> token Stream.t
+val print_token : delim list -> token -> string * delim list
 
-val textokstream : in_channel -> token Stream.t
+type hollexstate
+
+val token_init : mode -> Lexing.lexbuf -> hollexstate
+
+val token : hollexstate -> token
+
+val tokstream : mode -> in_channel -> token Stream.t
 
 val nonagg_specials : string list ref
 

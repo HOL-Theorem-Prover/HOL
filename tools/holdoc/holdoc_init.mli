@@ -35,5 +35,4 @@ val rCSID : string option ref
 val hOLDELIMOPEN : string ref
 val hOLDELIMCLOSE : string ref
 
-val dir_proc : string -> Hollex.token list -> unit
 

@@ -2,8 +2,10 @@
 (* Keith Wansbrough 2001 *)
 
 open Hollex
+open Holparse
+open Holparsesupp
 
 let go t = print_string ((render_token t)^" ")
 
-let _ = Stream.iter go (textokstream stdin)
+let _ = Stream.iter go (tokstream ModeTex stdin)
 
