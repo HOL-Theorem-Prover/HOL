@@ -322,7 +322,7 @@ val TOTAL_AUTOMATON_def =
 (*****************************************************************************)
 val MODEL_TO_AUTOMATON_def =
  Define
-  `MODEL_TO_AUTOMATON (M:('state,'prop)model) =
+  `MODEL_TO_AUTOMATON (M:('prop,'state)model) =
     <| Sigma := {a | a SUBSET M.P};
        Q     := {SOME s : ('state)option | s IN M.S} UNION {NONE};
        Delta := {(SOME s, a, SOME s') | (s,s') IN M.R /\ (a = M.L s')}
@@ -354,7 +354,7 @@ val AUTOMATON_MODEL_TO_AUTOMATON =
 val MODEL_AUTOMATON_PROD_def =
  Define 
   `MODEL_AUTOMATON_PROD 
-    (M:('state2, 'prop) model) (A:('prop -> bool, 'state1) automaton)  =
+    (M:('prop,'state2) model) (A:('prop -> bool, 'state1) automaton)  =
     <| S  := {(s,t) | s IN M.S  /\ t IN A.Q};
        S0 := {(s,t) | s IN M.S0 /\ t IN A.Q0};
        R  := {((s,t),(s',t')) | 

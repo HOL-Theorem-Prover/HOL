@@ -27,5 +27,6 @@ To run Holmake including the path directory, use:
 
    Holmake -I ../../path
 
-MJCG
-Wed Jan 05 2005
+[MJCG Sun Jan 16 2005: 
+ Fixed to work with type variables introduced by Hol_datatype being in
+ alphabetic order]
