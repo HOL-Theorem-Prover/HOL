@@ -671,6 +671,9 @@ val LESS_MONO_ADD_EQ = store_thm ("LESS_MONO_ADD_EQ",
    REPEAT GEN_TAC
     THEN EQ_TAC
     THEN REWRITE_TAC[LESS_MONO_ADD,LESS_MONO_ADD_INV]);
+val LT_ADD_RCANCEL = save_thm("LT_ADD_RCANCEL", LESS_MONO_ADD_EQ)
+val LT_ADD_LCANCEL = save_thm("LT_ADD_LCANCEL",
+                              ONCE_REWRITE_RULE [ADD_COMM] LT_ADD_RCANCEL)
 
 val EQ_MONO_ADD_EQ = store_thm ("EQ_MONO_ADD_EQ",
    --`!m n p. ((m + p) = (n + p)) = (m = n)`--,
@@ -1450,6 +1453,9 @@ val ADD_MONO_LESS_EQ = store_thm ("ADD_MONO_LESS_EQ",
    --`!m n p. (m + n) <= (m + p) = (n <= p)`--,
    ONCE_REWRITE_TAC [ADD_SYM]
     THEN REWRITE_TAC [LESS_EQ_MONO_ADD_EQ]);
+val LE_ADD_LCANCEL = save_thm("LE_ADD_LCANCEL", ADD_MONO_LESS_EQ)
+val LE_ADD_RCANCEL = save_thm("LE_ADD_RCANCEL",
+                              ONCE_REWRITE_RULE [ADD_COMM] LE_ADD_LCANCEL)
 
 val NOT_SUC_LESS_EQ_0 = store_thm ("NOT_SUC_LESS_EQ_0",
    --`!n. ~(SUC n <= 0)`--,
@@ -1527,6 +1533,19 @@ val MULT_LESS_EQ_SUC =
      IMP_RES_TAC th6]])
    end;
 
+val LE_MULT_LCANCEL = store_thm(
+  "LE_MULT_LCANCEL",
+  ``!m n p. m * n <= m * p = (m = 0) \/ n <= p``,
+  REPEAT GEN_TAC THEN
+  Q.SPEC_THEN `m`  STRUCT_CASES_TAC num_CASES THENL [
+    REWRITE_TAC [LESS_EQ_REFL, MULT_CLAUSES],
+    REWRITE_TAC [NOT_SUC, GSYM MULT_LESS_EQ_SUC]
+  ]);
+
+val LE_MULT_RCANCEL = store_thm(
+  "LE_MULT_RCANCEL",
+  ``!m n p. m * n <= p * n = (n = 0) \/ m <= p``,
+  ONCE_REWRITE_TAC [MULT_COMM] THEN REWRITE_TAC [LE_MULT_LCANCEL]);
 
 val SUB_LEFT_ADD = store_thm ("SUB_LEFT_ADD",
    --`!m n p. m + (n - p) = ((n <= p) => m | (m + n) - p)`--,
@@ -2332,6 +2351,38 @@ val X_MOD_Y_EQ_X = store_thm(
     STRIP_TAC THEN MATCH_MP_TAC MOD_UNIQUE THEN
     Q.EXISTS_TAC `0` THEN ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES]
   ]);
+
+val DIV_LE_MONOTONE = store_thm(
+  "DIV_LE_MONOTONE",
+  ``!n x y. 0 < n /\ x <= y ==> x DIV n <= y DIV n``,
+  REPEAT STRIP_TAC THEN
+  Q.SUBGOAL_THEN `~(n = 0)` ASSUME_TAC THENL [
+    ASM_REWRITE_TAC [NOT_ZERO_LT_ZERO],
+    ALL_TAC
+  ] THEN
+  Q.SPEC_THEN `n` MP_TAC DIVISION THEN ASM_REWRITE_TAC [] THEN
+  DISCH_THEN (fn th => Q.SPEC_THEN `x` STRIP_ASSUME_TAC th THEN
+                       Q.SPEC_THEN `y` STRIP_ASSUME_TAC th) THEN
+  Q.ABBREV_TAC `q = x DIV n` THEN POP_ASSUM (K ALL_TAC) THEN
+  Q.ABBREV_TAC `r = y DIV n` THEN POP_ASSUM (K ALL_TAC) THEN
+  Q.ABBREV_TAC `d = x MOD n` THEN POP_ASSUM (K ALL_TAC) THEN
+  Q.ABBREV_TAC `e = y MOD n` THEN POP_ASSUM (K ALL_TAC) THEN
+  BasicProvers.SRW_TAC [][] THEN CCONTR_TAC THEN
+  POP_ASSUM (ASSUME_TAC o REWRITE_RULE [NOT_LEQ]) THEN  (* SUC r < q *)
+  Q.SPECL_THEN [`SUC r`, `n`, `q`] MP_TAC LE_MULT_RCANCEL THEN
+  ASM_REWRITE_TAC [] THEN STRIP_TAC THEN       (* SUC r * n <= q * n *)
+  POP_ASSUM (ASSUME_TAC o REWRITE_RULE [MULT_CLAUSES]) THEN
+                                               (* r * n + n <= q * n *)
+  Q.SPECL_THEN [`r * n`, `e`, `n`] MP_TAC LT_ADD_LCANCEL THEN
+  ASM_REWRITE_TAC [] THEN STRIP_TAC THEN       (* r * n + e < r * n + n *)
+  Q.SPECL_THEN [`q * n`, `d`] ASSUME_TAC LESS_EQ_ADD THEN
+                                               (* q * n <= q * n + d *)
+  Q.SUBGOAL_THEN `r * n + e < r * n + e` (CONTR_TAC o MATCH_MP LESS_REFL) THEN
+  MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN Q.EXISTS_TAC `q * n + d` THEN
+  ASM_REWRITE_TAC [] THEN MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN
+  Q.EXISTS_TAC `r * n + n` THEN ASM_REWRITE_TAC [] THEN
+  MATCH_MP_TAC LESS_EQ_TRANS THEN Q.EXISTS_TAC `q * n` THEN
+  ASM_REWRITE_TAC []);
 
 (* ----------------------------------------------------------------------
     Some additional theorems (nothing to do with DIV and MOD)
