@@ -15,7 +15,7 @@ sig
     val RULE_INDUCT_THEN : thm -> thm_tactic -> tactic
 
     val prove_nonschematic_inductive_relations_exist : monoset -> term -> thm
-
+    val derive_nonschematic_inductive_relations : term -> thm
     val prove_monotonicity_hyps : monoset -> thm -> thm
     val prove_inductive_relations_exist : monoset -> term -> thm
     val gen_new_inductive_definition : monoset -> term -> (thm * thm * thm)
