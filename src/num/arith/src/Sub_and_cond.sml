@@ -18,7 +18,7 @@
 
 structure Sub_and_cond :> Sub_and_cond =
 struct
-  open Arbint HolKernel Parse boolLib Qconv Thm_convs Rsyntax;
+  open Arbint HolKernel Parse boolLib RJBConv Thm_convs Rsyntax;
 
 val COND_ABS       = boolTheory.COND_ABS;
 val TOP_DEPTH_CONV = Conv.TOP_DEPTH_CONV;

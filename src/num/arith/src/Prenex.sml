@@ -17,7 +17,7 @@
 
 structure Prenex :> Prenex =
 struct
-  open HolKernel boolLib Arbint Qconv;
+  open HolKernel boolLib Arbint RJBConv;
 
   infix ORELSEC;
 
