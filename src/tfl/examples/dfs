@@ -34,11 +34,11 @@ val DFS_defn = Hol_defn
  "DFS" 
  `DFS seen to_see (acc:'b) = 
    if FINITE (Nodes G)
-   then (case (to_see:'a list)
-          of [] -> acc 
-          || h::t -> if h IN seen 
-                       then DFS seen t acc 
-                       else DFS (h INSERT seen) (APPEND (G h) t) (f h acc))
+   then case (to_see:'a list)
+         of [] -> acc 
+         || h::t -> if h IN seen 
+                      then DFS seen t acc 
+                       else DFS (h INSERT seen) (APPEND (G h) t) (f h acc)
    else acc`;
 
 
