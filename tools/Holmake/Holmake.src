@@ -570,6 +570,7 @@ in
         end
 end handle CircularDependency => cache_insert (target, false)
          | Fail s => raise Fail s
+         | OS.SysErr(s, _) => raise Fail ("Operating system error: "^s)
          | x => raise Fail "Got an unknown exception in make_up_to_date"
 
 exception DirNotFound
