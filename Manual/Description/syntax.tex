@@ -477,6 +477,111 @@ When complete this subsection will document all of the possibly
 confusing error messages that the new parser and lexing code might
 generate.
 
+\subsection{Parser tricks and magic}
+
+Here we describe how to achieve some useful effects with the new
+parser in \holn{} Taupo-1.
+
+\begin{description}
+\item [Mix-fix syntax for {\it if-then-else}:] The first step in
+  bringing this about is to look at the general shape of expressions
+  of this form.  In this case, it will be:
+  \[
+  \mbox{\tt if}\;\; \dots \;\;\mbox{\tt then}\;\;\dots\;\;
+  \mbox{\tt else}\;\;\dots
+  \]
+  Because there needs to be a ``dangling'' term to the right, the
+  appropriate fixity is \texttt{TruePrefix}.  Knowing that the
+  underlying term constant is called \texttt{COND}, the simplest way
+  to achieve the desired syntax is:
+  \begin{verbatim}
+val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
+                 pp_elements = [TOK "if", BreakSpace(1,0), TM,
+                                BreakSpace(1,0),
+                                TOK "then", BreakSpace(1,0), TM,
+                                BreakSpace(1,0),
+                                TOK "else", BreakSpace(1,0)],
+                 paren_style = Always,
+                 block_style =
+                   (AroundEachPhrase, (PP.CONSISTENT, 0))};
+\end{verbatim}
+  \noindent The actual rule is slightly more complicated, and is
+  in \texttt{src/bool/boolScript.sml}.
+
+
+\item[Mix-fix syntax for term substitution:] Here we want to be able
+  to write something like:
+  \[
+  \mbox{\texttt{[}}\,t_1\,\mbox{\texttt{/}}\,t_2\,\mbox{\texttt{]}}\,t_3
+  \]
+  denoting the substitution of $t_1$ for $t_2$ in $t_3$, perhaps
+  translating to \mbox{\texttt{SUB} $t_1$ $t_2$ $t_3$}.  This looks
+like it should be another \texttt{TruePrefix}, but the choice of the
+square brackets (\texttt{[} and \texttt{]}) as delimiters would
+conflict with the concrete syntax for list literals if we did this.
+Given that list literals are effectively of the \texttt{CloseFix}
+class, we need to make our new syntax the same.  This is easy enough
+to do: we set up syntax \[
+\mbox{\texttt{[}}\,t_1\,\mbox{\texttt{/}}\,t_2\,\mbox{\texttt{]}}
+  \] to map to \mbox{\texttt{SUB} $t_1$ $t_2$} a value of a functional
+  type, that when applied to a third argument will look
+  right.\footnote{Note that doing the same thing for the
+    \textit{if-then-else} example in the previous example would be
+    inappropriate, as it would allow one to write \[
+    \texttt{if}\,P\,\texttt{then}\,Q\,\texttt{else}
+    \] without the trailing argument}
+  The rule for this is thus:
+  \begin{verbatim}
+val _ = add_rule {term_name = "SUB", fixity = Closefix,
+                  pp_elements = [TOK "[", TM, TOK "/", TM, TOK "]"],
+                  paren_style = OnlyIfNecessary,
+                  block_style =
+                    (AroundEachPhrase, (PP.INCONSISTENT, 2))};
+\end{verbatim}
+
+\item[Aliasing] If one wants a special syntax to be an ``alias'' for a
+  normal HOL form, this is easy to achieve; both examples so far have
+  effectively done this.  However, if one just wants to have a normal
+  one-for-one substitution of one string for another, one can't use
+  the grammar/syntax phase of parsing to do this.  Instead, one can
+  use the overloading mechanism.  For example, let us alias
+  \texttt{MEM} for \texttt{IS\_EL}.  First we should allow for
+  overloading on the new name at the exact type of the old.  Thus:
+  \begin{verbatim}
+val _ = allow_for_overloading_on ("MEM",
+                                  Type`:'a -> 'a list -> bool`);
+\end{verbatim}
+  \noindent The next step is to overload the original constant for the
+  new name:
+  \begin{verbatim}
+val _ = overload_on ("MEM", Term`IS_EL`);
+\end{verbatim}
+
+\item[Making addition right associative] If one has a number of old
+  scripts that assume addition is right associative because this is
+  how HOL used to be, it might be too much pain to convert.  The trick
+  is to remove all of the rules at the given level of the grammar, and
+  put them back as right associative infixes.  The easiest way to tell
+  what rules are in the grammar is by inspection (use
+  \texttt{term\_grammar()}).  With just \texttt{arithmeticTheory}
+  loaded, the only infixes at level 500 are \texttt{+} and
+  \texttt{-}.  So, we remove the rules for them:
+  \begin{verbatim}
+val _ = app temp_remove_rules_for_term ["+", "-"];
+\end{verbatim}
+  \noindent And then we put them back with the appropriate
+  associativity:
+\begin{verbatim}
+val _ = app (fn s => temp_add_infix(s, 500, RIGHT)) ["+", "-"];
+\end{verbatim}
+\noindent Note that we use the \texttt{temp\_} versions of these two
+functions so that other theories depending on this one won't be
+affected.  Further note that we can't have two infixes at the same
+level of precedence with different associativities, so we have to
+remove both operators, not just addition.
+
+\end{description}
+
 }
 
 %%% Local Variables:
