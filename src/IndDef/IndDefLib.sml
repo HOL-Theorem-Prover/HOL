@@ -318,6 +318,17 @@ fun variants av vs =
 (* Prove definitions work for non-schematic relations with canonical rules.  *)
 (* ------------------------------------------------------------------------- *)
 
+
+fun mySPEC_ALL thm =
+  (* version of SPEC_ALL that does not vary variables chosen to avoid
+     constant names - this was causing grief when attempting to define
+     inductive relations with constant names that already existed. *)
+  if is_forall (concl thm) then
+    mySPEC_ALL (SPEC (#Bvar (Dsyntax.dest_forall (concl thm))) thm)
+  else
+    thm
+
+
 fun derive_canon_inductive_relations pclauses =
     let val closed = list_mk_conj pclauses
         val pclauses = strip_conj closed
@@ -349,7 +360,7 @@ fun derive_canon_inductive_relations pclauses =
         val monothm = ASSUME(list_mk_forall(rels,list_mk_forall(rels',monotm)))
         val closthm = ASSUME closed'
         val monothms = CONJUNCTS
-            (MP (SPEC_ALL monothm) (MP (SPECL rels' indthm) closthm))
+            (MP (mySPEC_ALL monothm) (MP (SPECL rels' indthm) closthm))
         val closthms = CONJUNCTS closthm
         fun prove_rule mth (cth,dth) =
             let val (avs,bod) = strip_forall(concl mth)
