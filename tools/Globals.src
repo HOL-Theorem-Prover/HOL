@@ -100,16 +100,9 @@ val linewidth = ref 72;
 
 val max_print_depth = ref ~1;
 
-val pp_flags = {show_restrict  = ref true,
-                show_types     = ref false,
+val pp_flags = {show_types     = ref false,
                 show_numeral_types = ref false};
 
-
-(*---------------------------------------------------------------------------*
- * For showing the representation of a term having restricted quantifiers    *
- *---------------------------------------------------------------------------*)
-
-val show_restrict = #show_restrict pp_flags;
 
 (*---------------------------------------------------------------------------*
  * For prettyprinting type information in a term.                            *

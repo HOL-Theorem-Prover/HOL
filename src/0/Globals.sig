@@ -23,7 +23,6 @@ sig
   val show_scrub       : bool ref
 
   val show_types         : bool ref
-  val show_restrict      : bool ref
   val show_numeral_types : bool ref
 
   val priming               : string option ref
@@ -46,8 +45,7 @@ sig
                            origin_function : string,
   		           message : string} -> unit) ref
 
-  val pp_flags : {show_restrict:bool ref,
-                  show_types: bool ref,
+  val pp_flags : {show_types: bool ref,
                   show_numeral_types : bool ref}
 
   val strings_defined        : unit -> bool
