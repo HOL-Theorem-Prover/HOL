@@ -3,7 +3,7 @@ struct
 
 open HolKernel Parse simpLib
      basicHol90Lib liteLib Ho_theorems pureSimps Ho_rewrite;
-infix THENQC ++;
+infix THEN THENQC ++;
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
@@ -70,23 +70,46 @@ val CONG_ss = SIMPSET
   {convs = [], rewrs = [], congs = [IMP_CONG, COND_CONG],
    filter=NONE, ac=[], dprocs=[]};
 
-val bool_ss = pure_ss ++ BOOL_ss ++ CONG_ss;
-
-
 (* ---------------------------------------------------------------------
  * NOT_ss
  *
- * Moving negations inwards, eliminate disjuncts incolving negations,
+ * Moving negations inwards, eliminate disjuncts involving negations,
  * eliminate negations on either side of equalities.
+ *
+ * Previously also contained
+ *
+ *    |- ~x \/ y = (x ==> y)
+ *    |- x \/ ~y = (y ==> x)
+ *
+ * but the translation to implications was too dramatic for some ...
+ *
  * --------------------------------------------------------------------*)
 
 val NOT_ss = rewrites [NOT_IMP,
-                         DE_MORGAN_THM,
-                         NOT_FORALL_THM,
-                         NOT_EXISTS_THM,
-                         TAUT (--`~x \/ y = (x ==> y)`--),
-                         TAUT (--`x \/ ~y = (y ==> x)`--),
-                         TAUT(--`(~p = ~q) = (p = q)`--)];
+                       DE_MORGAN_THM,
+                       NOT_FORALL_THM,
+                       NOT_EXISTS_THM,
+                       TAUT (--`(~p = ~q) = (p = q)`--)];
+
+(*------------------------------------------------------------------------
+ * UNWIND_ss
+ *------------------------------------------------------------------------*)
+
+val UNWIND_ss = SIMPSET
+  {convs=[{name="UNWIND_EXISTS_CONV",
+           trace=1,
+           key=SOME ([],(--`?x:'a. P`--)),
+           conv=K (K Unwind.UNWIND_EXISTS_CONV)},
+          {name="UNWIND_FORALL_CONV",
+           trace=1,
+           key=SOME ([],(--`!x:'a. P`--)),
+           conv=K (K Unwind.UNWIND_FORALL_CONV)}],
+   rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
+
+
+val bool_ss = pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss;
+
+
 
 (* ----------------------------------------------------------------------
  * COND_elim_ss
@@ -95,7 +118,7 @@ val NOT_ss = rewrites [NOT_IMP,
  * strategy is to lift conditional expressions until they have boolean
  * type overall, in which case they can be written out using COND_EXPAND.
  * For goals (which have top-level type of bool), this usually works
- * well, but conditionals underneath lambda's won't disappear, as in
+ * well, but conditionals underneath lambdas won't disappear, as in
  *    `P (\x. if Q then f x else g x) : bool`
  * The lambda's that appear under foralls, existentials and the like are
  * OK of course because the bodies of such abstractions have boolean type.
@@ -104,9 +127,12 @@ val NOT_ss = rewrites [NOT_IMP,
  * boolean terms.
  * ---------------------------------------------------------------------- *)
 
-infix THEN
+
 val COND_COND_SAME = prove(
-  Term`!P (f:'a->'b) g x y. (COND P f g) (COND P x y) = COND P (f x) (g y)`,
+  Term`!P (f:'a->'b) g x y. 
+        (COND P f g) (COND P x y) 
+           = 
+        COND P (f x) (g y)`,
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
 
 fun celim_rand_CONV tm = let
