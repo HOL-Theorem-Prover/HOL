@@ -14,7 +14,7 @@ app load ["Psyntax",
           "reduceLib",
           "pairTheory",
           "Let_conv",
-          "useful",
+          "jrhUtils",
           "topologyTheory"];
 *)
 
@@ -32,7 +32,7 @@ open Psyntax
      numTheory
      prim_recTheory
      Let_conv
-     useful
+     jrhUtils
      realTheory
      topologyTheory;
 
