@@ -7,9 +7,9 @@ Restores recognition of a constant by the quotation parser.
 
 \DESCRIBE
 A call {reveal "c"}, where {c} is a (perhaps) hidden constant, will
-unhide the constant, that is, will make the quotation parser recognize
-it as such rather than treating it as a variable. It reverses the
-effect of the call {Parse.hide "c"}.
+unhide the constant, that is, will make the quotation parser map the
+identifier {c} to all current constants with the same name (there may
+be more than one such as different theories may re-use the same name).
 
 \FAILURE
 Never fails, but prints a warning message if the string does not
@@ -17,9 +17,11 @@ correspond to an actual constant.
 
 \COMMENTS
 The hiding of a constant only affects the quotation parser;
-the constant is still there in a theory.
+the constant is still there in a theory.  If the parameter {c} is
+already overloaded so as to map to other constants, these overloadings
+are not altered.
 
 \SEEALSO
-Parse.hide, Parse.hidden.
+hide, hidden, remove_ovl_mapping, update_overload_maps.
 
 \ENDDOC

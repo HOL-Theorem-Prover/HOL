@@ -15,7 +15,7 @@ This function removes all overloading associated with the given
 string, except those "overloads" that map the string to constants of
 the same name.  These additional overloads (there may be more than one
 constant of the same name, as long as each such is part of a different
-theory) may be removed with {remove_ovl_mapping}.
+theory) may be removed with {remove_ovl_mapping}, or by using {hide}.
 
 \FAILURE
 Never fails.  If a string is not overloaded, this function simply has

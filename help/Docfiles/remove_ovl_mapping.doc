@@ -37,6 +37,6 @@ As with other parsing functions, there is a sister function,
 is not saved to a theory file.
 
 \SEEALSO
-clear_overloads_on, overload_on.
+clear_overloads_on, overload_on, update_overload_maps.
 
 \ENDDOC
