@@ -3708,9 +3708,9 @@ val beta0_WCR = store_thm(
 val newman_recast = store_thm(
   "newman_recast",
   ``WF (inv R) /\ weak_diamond R ==> diamond_property (RTC R)``,
-  SRW_TAC [][TermRewritingTheory.Newmans_lemma,
-             GSYM TermRewritingTheory.CR_def,
-             GSYM TermRewritingTheory.SN_def]);
+  SRW_TAC [][relationTheory.Newmans_lemma,
+             GSYM relationTheory.CR_def,
+             GSYM relationTheory.SN_def]);
 
 val CR_beta0 = store_thm(
   "CR_beta0",
@@ -4108,6 +4108,6 @@ val corollary11_2_29 = store_thm(
   "corollary11_2_29",
   ``CR beta``,
   SRW_TAC [][CR_def, reduction_def, lemma11_2_28i, lemma11_2_28ii,
-             TermRewritingTheory.diamond_TC_diamond]);
+             relationTheory.diamond_TC_diamond]);
 
 val _ = export_theory();

@@ -376,13 +376,13 @@ val corollary3_2_1 = store_thm(
   ] THEN ASM_SIMP_TAC (srw_ss()) [reduction_def] THEN
   PROVE_TAC [relationTheory.RTC_CASES1]);
 
-local open TermRewritingTheory
+local open relationTheory
 in
 val diamond_property_def = save_thm("diamond_property_def", diamond_def)
 end
-val _ = overload_on("diamond_property", ``TermRewriting$diamond``)
+val _ = overload_on("diamond_property", ``relation$diamond``)
 
-(* This is not the same CR as appears in TermRewritingTheory.  There
+(* This is not the same CR as appears in relationTheory.  There
      CR R = diamond (RTC R)
    Here,
      CR R = diamond (RTC (compat_closure R))
@@ -418,7 +418,7 @@ val corollary3_3_1 = store_thm(
     PROVE_TAC [corollary3_2_1]
   ]);
 
-val diamond_TC = TermRewritingTheory.diamond_TC_diamond
+val diamond_TC = relationTheory.diamond_TC_diamond
 
 val (grandbeta_rules, grandbeta_ind, grandbeta_cases) =
     Hol_reln`(!M. grandbeta M M) /\
@@ -738,27 +738,27 @@ val lameq_consistent = store_thm(
   FULL_SIMP_TAC (srw_ss()) [S_def, K_def]);
 
 val weak_diamond_def =
-    save_thm("weak_diamond_def", TermRewritingTheory.WCR_def)
-val _ = overload_on("weak_diamond", ``TermRewriting$WCR``)
+    save_thm("weak_diamond_def", relationTheory.WCR_def)
+val _ = overload_on("weak_diamond", ``relation$WCR``)
 
 (* likewise, these definitions of WCR and SN, differ from those in
-   TermRewriting by wrapping the argument in a call to compat_closure
+   relation by wrapping the argument in a call to compat_closure
 *)
 val WCR_def = (* definition 3.20, p39 *) Define`
   WCR R = weak_diamond (compat_closure R)
 `;
 
-val SN_def = Define`SN R = TermRewriting$SN (compat_closure R)`;
+val SN_def = Define`SN R = relation$SN (compat_closure R)`;
 
 val EXTEND_RTC_TC = relationTheory.EXTEND_RTC_TC
 
 val newmans_lemma = store_thm( (* lemma3_22, p39 *)
   "newmans_lemma",
   ``!R. SN R /\ WCR R ==> CR R``,
-  SIMP_TAC (srw_ss()) [SN_def, WCR_def, TermRewritingTheory.Newmans_lemma,
+  SIMP_TAC (srw_ss()) [SN_def, WCR_def, relationTheory.Newmans_lemma,
                        CR_def, reduction_def,
-                       GSYM TermRewritingTheory.diamond_def,
-                       GSYM TermRewritingTheory.CR_def]);
+                       GSYM relationTheory.diamond_def,
+                       GSYM relationTheory.CR_def]);
 
 val commute_def =  (* p43 *)
     Define`commute R1 R2 = !x x1 x2. R1 x x1 /\ R2 x x2 ==>
@@ -769,7 +769,7 @@ val commute_COMM = store_thm(
   ``commute R1 R2 = commute R2 R1``,
   PROVE_TAC [commute_def]);
 
-val diamond_RC = TermRewritingTheory.diamond_RC_diamond
+val diamond_RC = relationTheory.diamond_RC_diamond
   (* |- !R. diamond_property R ==> diamond_property (RC R) *)
 
 val diamond_RTC = store_thm(
