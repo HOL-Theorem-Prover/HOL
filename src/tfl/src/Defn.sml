@@ -51,14 +51,15 @@ fun dest_hd_eqnl (hd_eqn::_) =
   in (strip_comb lhs, rhs)
   end;
 
-fun extract_info db =
- let val (rws,congs) = rev_itlist
-     (fn tyinfo => fn (R,C) =>
-         (TypeBasePure.case_def_of tyinfo::R,
-          TypeBasePure.case_cong_of tyinfo::C))
-     (TypeBasePure.listItems db) ([],[])
- in {case_congs=congs, case_rewrites=rws}
- end;
+fun extract_info constset db =
+    let open TypeBasePure
+        fun foldthis (tyinfo, (R, C)) =
+            if List.exists (same_const (case_const_of tyinfo)) constset then
+              (case_def_of tyinfo::R, case_cong_of tyinfo::C)
+            else (R, C)
+      val (rws,congs) = foldl foldthis ([], []) (listItems db)
+    in {case_congs=congs, case_rewrites=rws}
+    end;
 
 
 (*---------------------------------------------------------------------------
@@ -392,8 +393,8 @@ fun save_defn (ABBREV {bind,eqn, ...})       = been_stored bind eqn
         Termination condition extraction
  ---------------------------------------------------------------------------*)
 
-fun extraction_thms thy =
- let val {case_rewrites,case_congs} = extract_info thy
+fun extraction_thms constset thy =
+ let val {case_rewrites,case_congs} = extract_info constset thy
  in (case_rewrites, case_congs@read_congs())
  end;
 
@@ -492,7 +493,8 @@ fun gen_wfrec_definition thy nm {R, eqs} =
      val WFR         = fst(dest_imp(concl corollary))
      val corollary'  = UNDISCH corollary  (* put WF R on assums *)
      val corollaries = map (C SPEC corollary') given_pats
-     val (case_rewrites,context_congs) = extraction_thms thy
+     val eqs_consts  = find_terms is_const functional
+     val (case_rewrites,context_congs) = extraction_thms eqs_consts thy
      val corollaries'  = map (simplify case_rewrites) corollaries
      val Xtract        = extract [] context_congs f (concl def,WFR)
      val (rules,TCs,_) = unzip3 (map Xtract (zip given_pats corollaries'))
@@ -535,9 +537,10 @@ fun wfrec_eqns thy eqns =
      val corollary' = funpow 2 UNDISCH WFREC_THM
      val given_pats = givens pats
      val corollaries = map (C SPEC corollary') given_pats
-     val (case_rewrites,context_congs) = extraction_thms thy
+     val eqns_consts = find_terms is_const functional
+     val (case_rewrites,context_congs) = extraction_thms eqns_consts thy
      val RW = REWRITES_CONV (add_rewrites empty_rewrites case_rewrites)
-     val rule = RIGHT_CONV_RULE 
+     val rule = RIGHT_CONV_RULE
                   (LIST_BETA_CONV THENC REPEATC (RW THENC LIST_BETA_CONV))
      val corollaries' = map rule corollaries
 (*      val corollaries' = map (simplify case_rewrites) corollaries *)
