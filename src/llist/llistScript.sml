@@ -1192,11 +1192,18 @@ val LNTH_THM = store_thm(
 val minP = ``(OPTION_MAP P  (LNTH n ll) = SOME T) /\
              !m. m < n ==> (OPTION_MAP P (LNTH m ll) = SOME F)``
 
+
+(* John Matthew's paper "Recursive function definition over
+   coinductive types" in TPHOLs '99 is the source for firstPelemAt.
+   His treatment of definitions for lazy lists is much more
+   sophisticated than what follows here.
+*)
 val firstPelemAt = new_definition(
   "firstPelemAt",
   ``firstPelemAt P n ll =
        option_case F P (LNTH n ll) /\
        !m. m < n ==> (OPTION_MAP P (LNTH m ll) = SOME F)``);
+
 val never = new_definition(
   "never",
   ``never P ll = !n. ~firstPelemAt P n ll``);
