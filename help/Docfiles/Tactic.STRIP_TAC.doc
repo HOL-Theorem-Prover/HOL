@@ -9,18 +9,18 @@ Splits a goal by eliminating one outermost connective.
 tactic.
 
 \DESCRIBE
-Given a goal {(A,t)}, {STRIP_TAC} removes one outermost occurrence of one of the
-connectives {!}, {==>}, {~} or {/\} from the conclusion of the goal {t}.  If
-{t} is a universally quantified term, then {STRIP_TAC} strips off the
-quantifier:
+Given a goal {(A,t)}, {STRIP_TAC} removes one outermost occurrence of
+one of the connectives {!}, {==>}, {~} or {/\} from the conclusion of
+the goal {t}.  If {t} is a universally quantified term, then {STRIP_TAC}
+strips off the quantifier:
 {
       A ?- !x.u
    ==============  STRIP_TAC
      A ?- u[x'/x]
 }
 where {x'} is a primed variant that does not appear free in the
-assumptions {A}.  If {t} is a conjunction, then {STRIP_TAC} simply splits the
-conjunction into two subgoals:
+assumptions {A}.  If {t} is a conjunction, then {STRIP_TAC} simply splits
+the conjunction into two subgoals:
 {
       A ?- v /\ w
    =================  STRIP_TAC
@@ -61,5 +61,6 @@ When trying to solve a goal, often the best thing to do first
 is {REPEAT STRIP_TAC} to split the goal up into manageable pieces.
 
 \SEEALSO
-Tactic.CONJ_TAC, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.GEN_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_GOAL_THEN.
+Tactic.CONJ_TAC, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.GEN_TAC, 
+Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_GOAL_THEN.
 \ENDDOC
