@@ -29,7 +29,7 @@ The big record type passed to {SIMPSET} as an argument has six fields.
 Here we describe each in turn.
 
 The {ac} field is a list of ``AC theorem'' pairs.  Each such pair is
-the pair of theorems starting that a given binary function is
+the pair of theorems stating that a given binary function is
 associative and commutative.  The form of the associative theorem must
 be
 {
