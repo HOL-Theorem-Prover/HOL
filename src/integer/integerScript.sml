@@ -368,7 +368,7 @@ val TINT_MUL_WELLDEFR =
     ("TINT_MUL_WELLDEFR",
      Term`!x1 x2 y. x1 tint_eq x2 ==> (x1 tint_mul y) tint_eq (x2 tint_mul y)`,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[tint_mul, tint_eq] THEN
-  ONCE_REWRITE_TAC[AC(ADD_ASSOC,ADD_SYM)
+  ONCE_REWRITE_TAC[jrhUtils.AC(ADD_ASSOC,ADD_SYM)
     (Term `(a + b) + (c + d) =
            (a + d) + (b + c)`)] THEN
   REWRITE_TAC[GSYM RIGHT_ADD_DISTRIB] THEN DISCH_TAC THEN
@@ -611,7 +611,7 @@ val INT_NEG_ADD =
 	      REPEAT GEN_TAC THEN CONV_TAC SYM_CONV THEN
 	      REWRITE_TAC[GSYM INT_LNEG_UNIQ] THEN
 	      ONCE_REWRITE_TAC
-	      [AC(INT_ADD_ASSOC,INT_ADD_SYM)
+	      [jrhUtils.AC(INT_ADD_ASSOC,INT_ADD_SYM)
 	       (Term `(a + b) + (c + d) = (a + c) + (b + d:int)`)] THEN
 	      REWRITE_TAC[INT_ADD_LINV, INT_ADD_RID,INT_0]);
 
@@ -1229,7 +1229,7 @@ val INT_SUB_SUB =
     store_thm("INT_SUB_SUB",
 	      Term `!x y. (x - y) - x = ~y`,
 	      REPEAT GEN_TAC THEN REWRITE_TAC[int_sub] THEN
-	      ONCE_REWRITE_TAC[AC(INT_ADD_ASSOC,INT_ADD_SYM)
+	      ONCE_REWRITE_TAC[jrhUtils.AC(INT_ADD_ASSOC,INT_ADD_SYM)
 			       (Term `(a + b) + c = (c + a) + b:int`)] THEN
 	      REWRITE_TAC[INT_ADD_LINV, INT_ADD_LID]);
 
@@ -1340,7 +1340,7 @@ val INT_LT_MUL2 =
                           ((a * b) - (a * d)) + ((a * d) - (c * d))`) MP_TAC
      THENL
      [REPEAT GEN_TAC THEN REWRITE_TAC[int_sub] THEN
-      ONCE_REWRITE_TAC[AC(INT_ADD_ASSOC,INT_ADD_SYM)
+      ONCE_REWRITE_TAC[jrhUtils.AC(INT_ADD_ASSOC,INT_ADD_SYM)
 		       (Term `(a + b) + (c + d) = (b + c) + (a + d):int`)]
       THEN
       REWRITE_TAC[INT_ADD_LINV, INT_ADD_LID],
@@ -1378,7 +1378,7 @@ val INT_SUB_TRIANGLE =
     store_thm("INT_SUB_TRIANGLE",
 	      Term `!a b c:int. (a - b) + (b - c) = a - c`,
 	      REPEAT GEN_TAC THEN REWRITE_TAC[int_sub] THEN
-	      ONCE_REWRITE_TAC[AC(INT_ADD_ASSOC,INT_ADD_SYM)
+	      ONCE_REWRITE_TAC[jrhUtils.AC(INT_ADD_ASSOC,INT_ADD_SYM)
 			       (Term `(a + b) + (c + d)
 				      = (b + c) + (a + d):int`)] THEN
 	      REWRITE_TAC[INT_ADD_LINV, INT_ADD_LID]);
@@ -1455,7 +1455,7 @@ val INT_DIFFSQ =
 	      REPEAT GEN_TAC THEN
 	      REWRITE_TAC[INT_LDISTRIB, INT_RDISTRIB, int_sub,
 			  GSYM INT_ADD_ASSOC] THEN
-	      ONCE_REWRITE_TAC[AC(INT_ADD_ASSOC,INT_ADD_SYM)
+	      ONCE_REWRITE_TAC[jrhUtils.AC(INT_ADD_ASSOC,INT_ADD_SYM)
                      (Term`a + (b + (c + d)) = (b + c) + (a + d):int`)] THEN
 	      REWRITE_TAC[INT_ADD_LID_UNIQ, GSYM INT_NEG_RMUL] THEN
 	      REWRITE_TAC[INT_LNEG_UNIQ] THEN AP_TERM_TAC THEN
