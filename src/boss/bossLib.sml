@@ -54,8 +54,7 @@ val augment_srw_ss = BasicProvers.augment_srw_ss
 val EVAL           = computeLib.EVAL_CONV;
 val EVAL_TAC       = CONV_TAC EVAL;
 
-val && = BasicProvers.&&;
-infix &&;
+val op && = BasicProvers.&&;
 
 (*---------------------------------------------------------------------------
      The following simplification sets will be applied in a context
@@ -121,6 +120,6 @@ val measureInduct_on  = SingleStep.measureInduct_on;
 
 val SPOSE_NOT_THEN    = SingleStep.SPOSE_NOT_THEN
 
-val by                = SingleStep.by; (* infix 8 by *)
+val op by             = SingleStep.by; (* infix 8 by *)
 
 end

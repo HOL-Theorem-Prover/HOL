@@ -221,9 +221,8 @@ val _ = (add_const "RES_SELECT"; associate_restriction ("@",  "RES_SELECT"));
  *                   THEOREMS                                                *
  *---------------------------------------------------------------------------*)
 
-val --> = Type.-->
+val op --> = Type.-->
 infix ## |->;
-infixr -->;
 
 val ERR = Feedback.mk_HOL_ERR "boolScript"
 
@@ -540,11 +539,11 @@ val LET_THM =
 val _ = save_thm("LET_THM", LET_THM);
 
 
-val FORALL_THM = 
+val FORALL_THM =
   SYM (AP_TERM (Term `$! :('a->bool)->bool`)
                (ETA_CONV (Term `\x:'a. f x:bool`)));
 
-val EXISTS_THM = 
+val EXISTS_THM =
   SYM (AP_TERM (Term `$? :('a->bool)->bool`)
                (ETA_CONV (Term `\x:'a. f x:bool`)));
 
@@ -3469,7 +3468,7 @@ end
 
 
 (*---------------------------------------------------------------------------
-     The definition of restricted abstraction.          
+     The definition of restricted abstraction.
  ---------------------------------------------------------------------------*)
 
 val RES_ABSTRACT_EXISTS =

@@ -12,8 +12,6 @@
  *---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib;
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
 
 (*---------------------------------------------------------------------------*
@@ -25,7 +23,7 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
  *                                                                           *
  * before executing                                                          *
  *                                                                           *
-      open bossLib; infix &&; infix 8 by;                                    *
+      open bossLib;                                                          *
  *                                                                           *
  * However, when using the batch compiler, the call to "load" isn't allowed. *
  *                                                                           *
@@ -33,7 +31,7 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
  * refer to modules that are used.                                           *
  *---------------------------------------------------------------------------*)
 
-open bossLib; infix &&; infix 8 by;
+open bossLib;
 
 
 (*---------------------------------------------------------------------------*

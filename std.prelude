@@ -13,10 +13,8 @@ app load ["Mosml", "Process", "Path", "boolLib", "goalstackLib", "Arbint"];
 
 open HolKernel Parse boolLib goalstackLib;
 
-infix ++ && |-> THEN THEN1 THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-infixr ##
-infixr 3 -->;
-infix 8 via by;
+(* Loading HolKernel installs the "standard" set of infixes, which are
+   set up in src/0/Overlay.sml *)
 
 (*---------------------------------------------------------------------------*
  *   Install prettyprinters                                                  *
@@ -113,3 +111,7 @@ TextIO.output(TextIO.stdOut,
   ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
   ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
   ^"-----------------------------------------------------------------\n\n");
+
+(* Local variables: *)
+(* mode: sml *)
+(* end: *)

@@ -2,9 +2,6 @@ open HolKernel Parse boolLib
 
 open bossLib simpLib
 
-infix THEN THENL THENC &&
-infix 8 by
-
 val _ = new_theory "cl";
 
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;

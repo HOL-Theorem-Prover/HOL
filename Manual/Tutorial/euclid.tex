@@ -1523,16 +1523,6 @@ writing for the compiler, we need to explicitly mention the other
 \[
 \mbox{\ml{open HolKernel boolLib Parse bossLib}}
 \]
-Further, while \textsf{hol} (and \textsf{hol.unquote}) know that
-\ml{THEN} and \ml{THENL} are infixes, the compiler doesn't, so we must
-also add
-\[
-\mbox{\ml{infix THEN THENL}}
-\]
-Similarly, we need to specify that \ml{by} is a tightly binding
-infix.  \[
-\ml{infix 8 by}
-\]
 The next line that poses a difficulty is
 \[
   \mbox{\ml{set\_fixity "divides" (Infixr 450);}}

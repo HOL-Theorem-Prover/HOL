@@ -15,8 +15,6 @@ struct
 
 open HolKernel boolLib;
 
-infix THEN;
-
 val _ = new_theory "combin";
 
 (* Some basic combinators: function composition, S, K, I, W, and C.        *)
@@ -95,8 +93,8 @@ val I_o_ID = store_thm("I_o_ID",
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
- struct_ps = SOME (fn ppstrm => 
-   (PP.add_string ppstrm "val _ = Parse.hide \"C\";"; 
+ struct_ps = SOME (fn ppstrm =>
+   (PP.add_string ppstrm "val _ = Parse.hide \"C\";";
     PP.add_newline ppstrm))};
 
 val _ = adjoin_to_theory
@@ -106,7 +104,7 @@ val _ = adjoin_to_theory
       fun NL() = PP.add_newline ppstrm
   in
     S "val _ ="; NL();
-    S "   computeLib.add_funs [K_DEF,S_DEF,I_DEF,C_DEF,W_DEF,o_DEF]"; 
+    S "   computeLib.add_funs [K_DEF,S_DEF,I_DEF,C_DEF,W_DEF,o_DEF]";
     NL()
   end)};
 

@@ -152,8 +152,6 @@ case, this is simple; one must only add, at the head of the theory
 script, the following ``boilerplate'':
 \begin{verbatim}
     open HolKernel Parse boolLib;
-    infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-    infixr -->;
 \end{verbatim}
 This will duplicate the starting environment that one obtains with
 \verb+<holdir>/bin/hol+ and \verb+<holdir>/bin/hol.unquote+.

@@ -15,7 +15,8 @@ structure jrhTactics :> jrhTactics =
     val ERR = mk_HOL_ERR"jrhTactics";
 
     fun mk_Goalstate g = ([g], hd)
-   
+    nonfix by
+
     fun by t ([], _) = raise ERR  "by" "Can't apply tactic to empty Goal list"
       | by t (g::others, vf) =
           let val (newgs, vf1) = t g
@@ -40,8 +41,8 @@ structure jrhTactics :> jrhTactics =
                 in (newg::newgs, newj)
                 end
     in
-    fun rotate n = 
-      if n > 0 then funpow n rotate_p1 
+    fun rotate n =
+      if n > 0 then funpow n rotate_p1
                else funpow (~n) rotate_n1
     end
 
@@ -118,7 +119,7 @@ structure jrhTactics :> jrhTactics =
       end
       handle HOL_ERR _ => raise ERR "X_CHOOSE_TAC" ""
 
-    fun thm_frees thm = 
+    fun thm_frees thm =
       itlist (union o free_vars) (hyp thm) (free_vars (concl thm))
 
     fun CHOOSE_TAC xth (asl, g) =
@@ -152,11 +153,11 @@ structure jrhTactics :> jrhTactics =
     fun (ttcl1 ORELSE_TCL ttcl2) ttac th =
       ttcl1 ttac th handle HOL_ERR _ => ttcl2 ttac th
 
-    fun CONTR_TAC cth (asl, g) = 
+    fun CONTR_TAC cth (asl, g) =
        let val th = CONTR g cth in ([], fn [] => th) end
 
     fun ACCEPT_TAC th (asl, g) =
-      if aconv (concl th) g then ([], fn [] => th) 
+      if aconv (concl th) g then ([], fn [] => th)
                             else raise ERR "ACCEPT_TAC" ""
 
 end

@@ -1505,6 +1505,7 @@ fun deep_alpha [] tm = tm
  *      ~(const = const')`--)
  * ------------------------------------------------------------------------- *)
 
+nonfix THENC
 local fun COMB_CONV2 c1 c2 M =
         let val (f,x) = dest_comb M in MK_COMB(c1 f, c2 x) end
       fun ABS_CONV c M =
