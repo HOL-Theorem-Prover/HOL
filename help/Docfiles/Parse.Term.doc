@@ -74,8 +74,8 @@ Finally, depending on the value of the global flags {guessing_tyvars}
 and {guessing_overloads}, the parser will make choices about how to
 resolve any remaining ambiguities.
 
-The parsing process is driven in most respects by the global grammar.
-This value can be inspected with the {term_grammar} function.
+The parsing process is entirely driven by the global grammar.  This
+value can be inspected with the {term_grammar} function.
 
 \FAILURE
 All over place, and for all sorts of reasons.

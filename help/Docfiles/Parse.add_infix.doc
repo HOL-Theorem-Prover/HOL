@@ -37,9 +37,10 @@ the same as a different type of grammar rule (e.g., suffix or binder),
 or if the specified precedence level has infixes already but of a
 different associativity.
 
-It is also possible that the choice of string {s} will result in
-subsequent attempts to call the term parser failing due to precedence
-conflicts.
+It is also possible that the choice of string {s} will result in an
+ambiguous grammar.  This will be marked with a warning.  The parser
+may behave in strange ways if it encounters ambiguous phrases, but
+will work normally otherwise.
 
 \EXAMPLE
 Though we may not have {+} defined as a constant, we can still define
@@ -56,7 +57,7 @@ We can confirm that this new infix has indeed been parsed
 that way by taking the resulting term apart:
 {
    - dest_comb t;
-   > val it = (`$+ x`, `y`) : term * term 
+   > val it = (`$+ x`, `y`) : term * term
 }
 With its new status, {+} has to be ``quoted'' with a
 dollar-sign if we wish to use it in a position where it is not an
@@ -66,7 +67,7 @@ infix, as in the binding list of an abstraction:
    <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
    > val it = `\$+. x + y` : term
    - dest_abs it;
-   > val it = (`$+`,`x + y`) : term * term 
+   > val it = (`$+`,`x + y`) : term * term
 }
 The generation of three new type variables in the examples
 above emphasises the fact that the terms in the first example and the
@@ -80,7 +81,7 @@ associative:
    > val it = `x + y + z` : term
 
    - dest_comb it;
-   > val it = (`$+ (x + y)`, `z`) : term * term 
+   > val it = (`$+ (x + y)`, `z`) : term * term
 }
 It is also more tightly binding than {/\} (which has
 precedence 400 by default):
@@ -90,7 +91,7 @@ precedence 400 by default):
    > val it = `p /\ q + r` : term
 
    - dest_comb it;
-   > val it = (`$/\ p`, `q + r`) : term * term 
+   > val it = (`$/\ p`, `q + r`) : term * term
 }
 An attempt to define a right associative operator at the
 same level fails:
@@ -116,14 +117,14 @@ precedence level causes grief when we later attempt to use the parser:
    > val it = () : unit
 
    - Term`p + q`;
-   ! Uncaught exception:
-   ! HOL_ERR <poly>
-
-   - Lib.try Term`p + q`;
-
-   Exception raised at Parse.Term:
-   Grammar introduces precedence conflict between tokens + and +
+   <<HOL warning: Parse.Term: Grammar ambiguous on token pair + and +,
+                  and probably others too>>
+   <<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+   > val it = ``p + q`` : term
 }
+In this situation, the behaviour of the parser will become quite
+unpredictable whenever the {+} token is encountered.  In particular,
+{+} may parse with either fixity.
 
 
 \USES
