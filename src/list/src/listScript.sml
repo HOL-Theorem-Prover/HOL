@@ -813,8 +813,42 @@ val REVERSE_REVERSE = store_thm(
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [REVERSE_DEF, REVERSE_APPEND, APPEND]);
 
-(* --------------------------------------------------------------------- *)
 
+(* ----------------------------------------------------------------------
+    FRONT and LAST
+   ---------------------------------------------------------------------- *)
+
+val LAST_DEF = new_recursive_definition {
+  name = "LAST_DEF",
+  rec_axiom = list_Axiom,
+  def = ``LAST (h::t) = if t = [] then h else LAST t``};
+
+val FRONT_DEF = new_recursive_definition {
+  name = "FRONT_DEF",
+  rec_axiom = list_Axiom,
+  def = ``FRONT (h::t) = if t = [] then [] else h :: FRONT t``};
+
+val LAST_CONS = store_thm(
+  "LAST_CONS",
+  ``(!x:'a. LAST [x] = x) /\
+    (!(x:'a) y z. LAST (x::y::z) = LAST(y::z))``,
+  REWRITE_TAC [LAST_DEF, NOT_CONS_NIL]);
+
+val FRONT_CONS = store_thm(
+  "FRONT_CONS",
+  ``(!x:'a. FRONT [x] = []) /\
+    (!x:'a y z. FRONT (x::y::z) = x :: FRONT (y::z))``,
+  REWRITE_TAC [FRONT_DEF, NOT_CONS_NIL]);
+
+val APPEND_FRONT_LAST = store_thm(
+  "APPEND_FRONT_LAST",
+  ``!l:'a list. ~(l = []) ==> (APPEND (FRONT l) [LAST l] = l)``,
+  LIST_INDUCT_TAC THEN REWRITE_TAC [NOT_CONS_NIL] THEN
+  POP_ASSUM MP_TAC THEN Q.SPEC_THEN `l` STRUCT_CASES_TAC list_CASES THEN
+  REWRITE_TAC [NOT_CONS_NIL] THEN STRIP_TAC THEN
+  ASM_REWRITE_TAC [FRONT_CONS, LAST_CONS, APPEND]);
+
+(* --------------------------------------------------------------------- *)
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

@@ -334,13 +334,10 @@ val MAP2 = store_thm("MAP2",
 (*   ALL_EL P [x0;...;xn-1] = T, iff P xi = T for i=0,...,n-1   *)
 (*                            F, otherwise                      *)
 (*--------------------------------------------------------------*)
-(* Same as "EVERY" in "list" theory *)
-val ALL_EL = new_recursive_definition
-      {name = "ALL_EL",
-       rec_axiom = list_Axiom,
-       def = --`(!P:'a->bool. ALL_EL P NIL = T)  /\
-                (!P x l. ALL_EL P (CONS x l) = (P x /\ ALL_EL P l))`--};
 
+(* alias "ALL_EL" to EVERY in list theory *)
+val ALL_EL = save_thm("ALL_EL", listTheory.EVERY_DEF);
+val _ = overload_on("ALL_EL", ``EVERY``);
 
 (*--------------------------------------------------------------*)
 (* Spec:                                                        *)
@@ -348,24 +345,28 @@ val ALL_EL = new_recursive_definition
 (*                             F, otherwise                     *)
 (*--------------------------------------------------------------*)
 
-val SOME_EL = new_list_rec_definition("SOME_EL",
-    (--`(!P. SOME_EL P [] = F) /\
-     (!(P:'a->bool) x l. SOME_EL P (CONS x l) = P x \/ (SOME_EL P l))`--));
-
+(* alias "SOME_EL" to EXISTS in list theory *)
+val SOME_EL = save_thm("SOME_EL", listTheory.EXISTS_DEF);
+val _ = overload_on("SOME_EL", ``EXISTS``);
 
 (*--------------------------------------------------------------*)
 (* Spec:                                                        *)
 (*   IS_EL x [x0;...;xn-1] = T, iff ?xi. x = xi for i=0,...,n-1 *)
 (*                            F, otherwise                      *)
 (*--------------------------------------------------------------*)
-val IS_EL_DEF = new_definition("IS_EL_DEF",
-    (--`!(x:'a) l. IS_EL x l = SOME_EL ($= x) l`--));
 
-val AND_EL_DEF = new_definition("AND_EL_DEF",
-    (--`AND_EL = ALL_EL I`--));
+(* overload "IS_EL" to listTheory$MEM, and prove this next theorem
+   as consequence *)
+val _ = overload_on("IS_EL", ``list$MEM``);
+val IS_EL_DEF = store_thm(
+  "IS_EL_DEF",
+  ``!(x:'a) l. IS_EL x l = SOME_EL ($= x) l``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [SOME_EL, listTheory.MEM]);
 
-val OR_EL_DEF = new_definition("OR_EL_DEF",
-    (--`OR_EL = SOME_EL I`--));
+val AND_EL_DEF = new_definition("AND_EL_DEF", ``AND_EL = ALL_EL I``);
+
+val OR_EL_DEF = new_definition("OR_EL_DEF", ``OR_EL = SOME_EL I``);
 
 (*--------------------------------------------------------------*)
 (* Segments                                                     *)
@@ -433,39 +434,33 @@ val SEG =
 (*----------------------------------------------------------------*)
 (*- LAST and BUTLAST is analogous to HD and TL at the end of list-*)
 (*----------------------------------------------------------------*)
-val LAST_DEF = new_definition("LAST_DEF",
-    (--`!l:'a list. LAST l = HD (SEG 1 (PRE(LENGTH l)) l)`--));
 
-val BUTLAST_DEF = new_definition("BUTLAST_DEF",
-    (--`!l:'a list. BUTLAST l = SEG (PRE(LENGTH l)) 0 l`--));
+open BasicProvers
+
+(* establish BUTLAST as an alias for FRONT *)
+val _ = overload_on("BUTLAST", ``FRONT``);
 
 val LENGTH_SNOC = prove(
     (--`!(x:'a) l. LENGTH (SNOC x l) = SUC (LENGTH l)`--),
     GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH,SNOC]);
 
-val LAST =     (* (--`!(x:'a) l. LAST (SNOC x l) = x`--), *)
-    let val lem = prove(
-    (--`!x (l:'a list).  (SEG 1 (PRE(LENGTH (SNOC x l))) (SNOC x l)) = [x]`--),
-    GEN_TAC THEN PURE_ONCE_REWRITE_TAC[LENGTH_SNOC]
-    THEN PURE_ONCE_REWRITE_TAC[PRE]
-    THEN CONV_TAC (ONCE_DEPTH_CONV num_CONV)
-    THEN LIST_INDUCT_TAC
-    THEN PURE_ONCE_REWRITE_TAC[LENGTH] THEN REWRITE_TAC[SNOC,SEG]
-    THEN FIRST_ASSUM ACCEPT_TAC)
-    in
-    GEN_ALL(REWRITE_RULE[lem,HD](SPEC (--`SNOC (x:'a) l`--) LAST_DEF))
-    end;
+val LAST = store_thm(
+  "LAST",
+  ``!x:'a l. LAST (SNOC x l) = x``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  RW_TAC bool_ss [SNOC, listTheory.LAST_DEF] THEN
+  POP_ASSUM MP_TAC THEN
+  Q.SPEC_THEN `l`  STRUCT_CASES_TAC listTheory.list_CASES THEN
+  RW_TAC bool_ss [SNOC]);
 
-val BUTLAST =     (* (--`!x l. BUTLAST (SNOC x l) = l`--), *)
-    let val lem = prove(
-    (--`!x:'a. !l. SEG (PRE(LENGTH (SNOC x l))) 0 (SNOC x l) = l`--),
-    GEN_TAC THEN PURE_ONCE_REWRITE_TAC[LENGTH_SNOC]
-    THEN PURE_ONCE_REWRITE_TAC[PRE]
-    THEN LIST_INDUCT_TAC
-    THEN PURE_ONCE_REWRITE_TAC[LENGTH] THEN ASM_REWRITE_TAC[SNOC,SEG])
-    in
-    GEN_ALL(REWRITE_RULE[lem](SPEC (--`SNOC (x:'a) l`--) BUTLAST_DEF))
-    end;
+val BUTLAST = store_thm(
+  "BUTLAST",
+  ``!x:'a l. BUTLAST (SNOC x l) = l``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  RW_TAC bool_ss [SNOC, listTheory.FRONT_DEF] THEN
+  POP_ASSUM MP_TAC THEN
+  Q.SPEC_THEN `l` STRUCT_CASES_TAC listTheory.list_CASES THEN
+  RW_TAC bool_ss [SNOC]);
 
 val LASTN =
     let val thm1 = prove_rec_fn_exists num_Axiom
@@ -642,34 +637,9 @@ val SNOC_Axiom = store_thm(
 
 
 val IS_SUFFIX = let
-  val LENGTH_SNOC = prove(
-    (--`!(x:'a) l. LENGTH (SNOC x l) = SUC (LENGTH l)`--),
-    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH,SNOC])
   val NOT_NULL_SNOC = prove(
     (--`!(x:'a) l. ~NULL(SNOC x l)`--),
     GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,NULL_DEF])
-  val LAST = (* (--`!(x:'a) l. LAST (SNOC x l) = x`--), *) let
-    val lem = prove(
-      --`!x (l:'a list). (SEG 1 (PRE(LENGTH (SNOC x l))) (SNOC x l)) = [x]`--,
-      GEN_TAC THEN PURE_ONCE_REWRITE_TAC[LENGTH_SNOC]
-      THEN PURE_ONCE_REWRITE_TAC[PRE]
-      THEN CONV_TAC (ONCE_DEPTH_CONV num_CONV)
-      THEN LIST_INDUCT_TAC
-      THEN PURE_ONCE_REWRITE_TAC[LENGTH] THEN REWRITE_TAC[SNOC,SEG]
-      THEN FIRST_ASSUM ACCEPT_TAC)
-  in
-    GEN_ALL(REWRITE_RULE[lem,HD](SPEC (--`SNOC (x:'a) l`--) LAST_DEF))
-  end
-  val BUTLAST = (* (--`!x l. BUTLAST (SNOC x l) = l`--), *) let
-    val lem = prove(
-      --`!x:'a. !l. SEG (PRE(LENGTH (SNOC x l))) 0 (SNOC x l) = l`--,
-      GEN_TAC THEN PURE_ONCE_REWRITE_TAC[LENGTH_SNOC]
-      THEN PURE_ONCE_REWRITE_TAC[PRE] THEN LIST_INDUCT_TAC
-      THEN PURE_ONCE_REWRITE_TAC[LENGTH]
-      THEN ASM_REWRITE_TAC[SNOC,SEG])
-  in
-    GEN_ALL(REWRITE_RULE[lem](SPEC (--`SNOC (x:'a) l`--) BUTLAST_DEF))
-  end
   val lemma = prove(
     (--`?fn.
            (!l. fn l [] = T) /\
@@ -1719,35 +1689,6 @@ val FILTER_REVERSE = store_thm("FILTER_REVERSE",
     THEN ASM_REWRITE_TAC[REVERSE,FILTER,FILTER_SNOC]
     THEN GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC[REVERSE]);
 
-val LAST = save_thm("LAST",
-    (* (--`!(:'a) l. LAST (SNOC x l) = x`--), *)
-    let val lem = prove(
-    (--`!x (l:'a list).  (SEG 1 (PRE(LENGTH (SNOC x l))) (SNOC x l)) = [x]`--),
-    GEN_TAC THEN PURE_ONCE_REWRITE_TAC[LENGTH_SNOC]
-    THEN PURE_ONCE_REWRITE_TAC[PRE]
-    THEN CONV_TAC (ONCE_DEPTH_CONV num_CONV)
-    THEN LIST_INDUCT_TAC
-    THEN PURE_ONCE_REWRITE_TAC[LENGTH] THEN REWRITE_TAC[SNOC,SEG]
-    THEN FIRST_ASSUM ACCEPT_TAC)
-    in
-    GENL[(--`x:'a`--), (--`l:'a list`--)]
-        (REWRITE_RULE[lem,HD](SPEC (--`SNOC (x:'a) l`--) LAST_DEF))
-    end);
-
-val BUTLAST = save_thm("BUTLAST",
-    (* (--`!x l. BUTLAST (SNOC x l) = l`--), *)
-    let val lem = prove(
-    (--`!x:'a. !l. SEG (PRE(LENGTH (SNOC x l))) 0 (SNOC x l) = l`--),
-    GEN_TAC THEN PURE_ONCE_REWRITE_TAC[LENGTH_SNOC]
-    THEN PURE_ONCE_REWRITE_TAC[PRE]
-    THEN LIST_INDUCT_TAC
-    THEN PURE_ONCE_REWRITE_TAC[LENGTH] THEN ASM_REWRITE_TAC[SNOC,SEG])
-    in
-    GENL[(--`x:'a`--),(--`l:'a list`--)]
-        (REWRITE_RULE[lem](SPEC (--`SNOC (x:'a) l`--) BUTLAST_DEF))
-    end);
-
-
 val SEG_LENGTH_ID = store_thm("SEG_LENGTH_ID",
     (--`!l:'a list. SEG (LENGTH l) 0 l = l`--),
     LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[LENGTH,SEG]);
@@ -1933,18 +1874,8 @@ val BUTLASTN_CONS = store_thm("BUTLASTN_CONS",
     THEN ASM_REWRITE_TAC[LENGTH_SNOC,LESS_EQ_MONO]);
 
 (* added by Michael Norrish, 15 Feb 2000 *)
-val BUTLAST_CONS = store_thm(
-  "BUTLAST_CONS",
-  --`(!x:'a. BUTLAST [x] = []) /\
-     (!(x:'a) y z. BUTLAST (x::y::z) = x::BUTLAST (y::z))`--,
-  REWRITE_TAC [PRE, BUTLAST_DEF, LENGTH, SEG]);
-
-(* added by Michael Norrish, 15 Feb 2000 *)
-val LAST_CONS = store_thm(
-  "LAST_CONS",
-  --`(!x:'a. LAST [x] = x) /\
-     (!(x:'a) y z. LAST (x::y::z) = LAST(y::z))`--,
-  REWRITE_TAC [LAST_DEF, PRE, LENGTH, SEG, arithmeticTheory.ONE, HD]);
+val LAST_CONS = save_thm("LAST_CONS", listTheory.LAST_CONS);
+val BUTLAST_CONS = save_thm("BUTLAST_CONS", listTheory.FRONT_CONS);
 
 (*  |- !l x. BUTLASTN(LENGTH l)(CONS x l) = [x] *)
 val BUTLASTN_LENGTH_CONS = save_thm("BUTLASTN_LENGTH_CONS",
