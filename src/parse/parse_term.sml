@@ -719,7 +719,7 @@ fun parse_term (G : grammar) typeparser = let
             | (_, Numeral(dp, copt)) => let
                 val numeral_part =
                   Numeral.gen_mk_numeral
-                       {mk_comb = COMB),
+                       {mk_comb = COMB,
                         ZERO = QIDENT ("num", "0"),
                         ALT_ZERO = QIDENT ("arithmetic", "ALT_ZERO"),
                         NUMERAL  = QIDENT ("arithmetic", "NUMERAL"),
