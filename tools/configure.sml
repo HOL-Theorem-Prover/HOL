@@ -61,15 +61,15 @@ val SRCDIRS =
   "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
   "src/hol88", "src/taut", "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
-  "src/datatype",  "src/list/src", "src/tree", "src/datatype/basicrec",
-  "src/datatype/mutrec/utils", "src/datatype/mutrec",
+  "src/datatype",  "src/list/src", "src/tree", 
+  "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
+  "src/datatype/basicrec", "src/datatype/mutrec/utils", "src/datatype/mutrec",
   "src/datatype/nestrec", "src/datatype/mutual",
-  "src/decision/src", "src/tfl/src", "src/unwind", "src/boss", "src/llist",
-  "src/integer", "src/res_quan/src", "src/set/src", "src/pred_set/src",
-  "src/string/theories", "src/string/src",
-  "src/word/theories", "src/word/src", "src/BoyerMoore",
+  "src/llist", "src/integer", "src/res_quan/src", 
+  "src/set/src", "src/pred_set/src",  "src/string/theories", "src/string/src",
+  "src/word/theories", "src/word/src",
   "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src", 
-  "src/temporal/src", "src/temporal/smv.2.4.3"]
+  "src/temporal/src", "src/temporal/smv.2.4.3", "src/BoyerMoore"]
   @
   (if OS="linux" orelse OS="solaris" 
    then ["src/muddy/muddyC", "src/muddy", "src/HolBdd"]
