@@ -13,7 +13,7 @@
 (* Extensions by Michael Norrish to define exponentiation, division and
    modulus.                                       October/November 1999  *)
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
 val _ = new_theory "integer";
@@ -23,11 +23,17 @@ val _ = new_theory "integer";
         "SingleStep", "BasicProvers", "boolSimps", "pairSimps", "arithSimps",
         "numLib"];
 *)
-open jrhUtils EquivType hol88Lib arithLib Psyntax
+open jrhUtils EquivType liteLib arithLib Psyntax
      arithmeticTheory prim_recTheory numTheory
      simpLib numLib boolTheory liteLib;
 
 infix ++;
+
+fun new_prim_rec_definition(s,tm) =
+  Prim_rec.new_recursive_definition {
+    name = s, rec_axiom = prim_recTheory.num_Axiom, def = tm
+  };
+val PROVE = prove
 
 val int_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss;
 
@@ -592,7 +598,8 @@ val INT_ADD_LID_UNIQ =
     store_thm("INT_ADD_LID_UNIQ",
 	      Term `!x:int y. (x + y = y) = (x = 0)`,
 	      REPEAT GEN_TAC THEN
-	      GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [] [GSYM INT_ADD_LID]
+	      GEN_REWRITE_TAC (LAND_CONV o RAND_CONV)
+                empty_rewrites [GSYM INT_ADD_LID]
 	      THEN SIMP_TAC int_ss [INT_EQ_RADD])
 
 val INT_ADD_RID_UNIQ =
@@ -773,7 +780,8 @@ val INT_LE_TRANS =
     store_thm("INT_LE_TRANS",
 	      Term `!x y z:int. x <= y /\ y <= z ==> x <= z`,
 	      REPEAT GEN_TAC THEN
-	      GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [] [INT_LE_LT] THEN
+	      GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) empty_rewrites
+                [INT_LE_LT] THEN
 	      DISCH_THEN(CONJUNCTS_THEN2 MP_TAC
 			 (DISJ_CASES_THEN2 ASSUME_TAC SUBST1_TAC))
 	      THEN REWRITE_TAC[]
@@ -943,7 +951,7 @@ val INT_LT_ADD1 =
 	       THEN
 	       REWRITE_TAC[INT_ADD_RID],
 	       POP_ASSUM SUBST1_TAC THEN
-	       GEN_REWRITE_TAC LAND_CONV [] [GSYM INT_ADD_RID] THEN
+	       GEN_REWRITE_TAC LAND_CONV empty_rewrites [GSYM INT_ADD_RID] THEN
 	       REWRITE_TAC[INT_LT_LADD, INT_LT_01]]);
 
 val INT_SUB_ADD =
@@ -994,7 +1002,8 @@ val INT_LE_NEGR =
     store_thm("INT_LE_NEGR",
 	      Term `!x. x <= ~x = x <= 0`,
 	      GEN_TAC THEN SUBST1_TAC(SYM(SPEC (Term `x:int`) INT_NEGNEG)) THEN
-	      GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [] [INT_NEGNEG] THEN
+	      GEN_REWRITE_TAC (LAND_CONV o RAND_CONV)
+                empty_rewrites [INT_NEGNEG] THEN
 	      REWRITE_TAC[INT_LE_NEGL] THEN REWRITE_TAC[INT_NEG_GE0] THEN
 	      REWRITE_TAC[INT_NEGNEG]);
 
@@ -1127,7 +1136,7 @@ val INT_EQ_LMUL =
     store_thm("INT_EQ_LMUL",
 	      Term `!x y z:int. (x * y = x * z) = (x = 0) \/ (y = z)`,
 	      REPEAT GEN_TAC THEN
-	      GEN_REWRITE_TAC LAND_CONV [] [GSYM INT_SUB_0] THEN
+	      GEN_REWRITE_TAC LAND_CONV empty_rewrites [GSYM INT_SUB_0] THEN
 	      REWRITE_TAC[GSYM INT_SUB_LDISTRIB] THEN
 	      REWRITE_TAC[INT_ENTIRE, INT_SUB_0]);
 
@@ -1555,7 +1564,7 @@ val NUM_LEMMA =
 		  (fn th => REWRITE_TAC[MATCH_MP TINT_LT_WELLDEF th])
 		  THENL [REWRITE_TAC[REP_EQCLASS, tint_0], ALL_TAC] THEN
 		  REWRITE_TAC[tint_lt] THEN
-		  GEN_REWRITE_TAC RAND_CONV [] [ADD_SYM] THEN
+		  GEN_REWRITE_TAC RAND_CONV empty_rewrites [ADD_SYM] THEN
 		  ASM_REWRITE_TAC[LESS_MONO_ADD_EQ]);
 
 val NUM_DECOMPOSE =
@@ -1586,7 +1595,7 @@ val NUM_POSINT =
 		  CONJ_TAC THENL
 		  [ALL_TAC,
 		   REPEAT GEN_TAC THEN
-		   GEN_REWRITE_TAC RAND_CONV [] [GSYM INT_INJ] THEN
+		   GEN_REWRITE_TAC RAND_CONV empty_rewrites [GSYM INT_INJ] THEN
 		   DISCH_THEN(CONJUNCTS_THEN (SUBST1_TAC o SYM)) THEN
 		   REFL_TAC] THEN
 		  POP_ASSUM
@@ -2214,7 +2223,7 @@ val _ = print "Facts about integer divisibility\n";
 val INT_DIVIDES = new_definition (
   "INT_DIVIDES",
   Term`int_divides p q = ?m:int. m * p = q`);
-val _ = set_fixity "int_divides" (Infixr 450);
+val _ = set_fixity ("int_divides", Infixr 450);
 
 val INT_DIVIDES_MOD0 = store_thm(
   "INT_DIVIDES_MOD0",
@@ -2318,12 +2327,12 @@ val INT_DIVIDES_RSUB = store_thm(
 
 val _ = print "Exponentiation\n"
 
-val int_exp = Rsyntax.new_recursive_definition{
+val int_exp = Prim_rec.new_recursive_definition{
   def = Term`(int_exp (p:int) 0 = 1) /\
              (int_exp p (SUC n) = p * int_exp p n)`,
   name = "int_exp",
   rec_axiom = prim_recTheory.num_Axiom};
-val _ = set_fixity "int_exp" (Infixr 700);
+val _ = set_fixity ("int_exp", Infixr 700);
 
 val _ = add_infix("**", 700, HOLgrammars.RIGHT);
 val _ = overload_on ("**", Term`$EXP`);

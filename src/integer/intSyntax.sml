@@ -1,7 +1,7 @@
 structure intSyntax :> intSyntax =
 struct
 
-open HolKernel basicHol90Lib Parse integerTheory Psyntax;
+open HolKernel boolLib Parse integerTheory Psyntax;
 
 fun ERR f s = HOL_ERR {origin_structure = "intSyntax",
                        origin_function = f,
@@ -116,7 +116,7 @@ val int_injection =
   Rsyntax.mk_const{Name = "int_of_num", Ty = num_ty --> int_ty}
 val negate_tm = Rsyntax.mk_const{Name = "int_neg", Ty = int_ty --> int_ty}
 fun is_int_literal t =
-  (rator t = int_injection andalso Term.is_numeral (rand t)) orelse
+  (rator t = int_injection andalso numSyntax.is_numeral (rand t)) orelse
   (rator t = negate_tm andalso is_int_literal (rand t))
   handle HOL_ERR _ => false
 fun is_negated tm = is_comb tm andalso rator tm = negate_tm
@@ -130,7 +130,7 @@ fun int_of_term tm = let
   val (l,r) = dest_comb tm
 in
   if l = negate_tm then Arbint.~(int_of_term r)
-  else Arbint.fromNat (Term.dest_numeral r)
+  else Arbint.fromNat (numSyntax.dest_numeral r)
 end
 
 fun term_of_int i = let
@@ -139,7 +139,7 @@ in
   if i < zero then
     mk_negated (term_of_int (~i))
   else
-    mk_comb(int_injection, Term.mk_numeral (toNat i))
+    mk_comb(int_injection, numSyntax.mk_numeral (toNat i))
 end
 
 val zero_tm = term_of_int Arbint.zero

@@ -2,8 +2,8 @@ structure jrhUtils :> jrhUtils=
 struct
 
 (* Standard libs *)
-open HolKernel basicHol90Lib
-     Psyntax hol88Lib numLib reduceLib
+open HolKernel boolLib liteLib
+     Psyntax numLib reduceLib
      pairTheory prim_recTheory numTheory arithmeticTheory;
 
 type term = Term.term
@@ -46,17 +46,17 @@ val LAND_CONV = RATOR_CONV o RAND_CONV;
 (*---------------------------------------------------------------------------*)
 
 val TAUT_CONV =
-  let fun vl w t = type_of t = Type.bool 
+  let fun vl w t = type_of t = Type.bool
                    andalso
-                   can (find_term is_var) t 
-                   andalso 
-                   free_in t w 
+                   can (find_term is_var) t
+                   andalso
+                   free_in t w
   in
     C (curry prove)
      (REPEAT GEN_TAC THEN (REPEAT o CHANGED_TAC o W)
-     (C (curry op THEN) (REWRITE_TAC[]) o BOOL_CASES_TAC o 
+     (C (curry op THEN) (REWRITE_TAC[]) o BOOL_CASES_TAC o
       Lib.trye hd o
-     sort free_in o W(find_terms o vl) o snd)) 
+     sort free_in o W(find_terms o vl) o snd))
   end;
 
 (*---------------------------------------------------------------------------*)
@@ -103,7 +103,7 @@ fun SYM_CANON_CONV sym f =
 (*---------------------------------------------------------------------------*)
 
 fun IMP_SUBST_TAC th (asl,w) =
-  case (sort free_in 
+  case (sort free_in
            (find_terms (can (PART_MATCH (lhs o snd o dest_imp) th)) w))
    of [] => raise ERR "IMP_SUBST_TAC" ""
     | tm1::_ =>
@@ -114,7 +114,7 @@ fun IMP_SUBST_TAC th (asl,w) =
             val pat = subst[(gv,l)] w
         in
           ([(asl,a), (asl,subst[(r,gv)] pat)],
-           fn [t1,t2] => SUBST[(SYM(MP th1 t1),gv)] pat t2) 
+           fn [t1,t2] => SUBST[(SYM(MP th1 t1),gv)] pat t2)
        end;
 
 (*---------------------------------------------------------------------------*)

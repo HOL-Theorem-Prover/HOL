@@ -1,4 +1,4 @@
-open HolKernel basicHol90Lib Parse
+open HolKernel boolLib Parse
 infix THEN THENC THENL |->
 infixr -->
 

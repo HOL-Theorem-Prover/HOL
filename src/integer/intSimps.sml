@@ -1,19 +1,21 @@
 structure intSimps :> intSimps =
 struct
 
-open HolKernel basicHol90Lib integerTheory intSyntax;
+open HolKernel boolLib integerTheory intSyntax Rsyntax
 
 infix --> THENC
 
-val num_ty = mk_type{Tyop = "num", Args = []}
-val int_ty = mk_type{Tyop = "int", Args = []}
+val num_ty = mk_thy_type{Tyop = "num", Thy = "num", Args = []}
+val int_ty = mk_thy_type{Tyop = "int", Thy = "integer", Args = []}
 val int_2op = int_ty --> (int_ty --> int_ty)
 val int_rel = int_ty --> (int_ty --> Type.bool)
 
-val int_injection = mk_const{Name = "int_of_num", Ty = num_ty --> int_ty}
-val int_negation = mk_const{Name = "int_neg", Ty = int_ty --> int_ty}
+val int_injection = mk_thy_const{Name = "int_of_num", Thy = "integer",
+                                 Ty = num_ty --> int_ty}
+val int_negation = mk_thy_const{Name = "int_neg", Thy = "integer",
+                                Ty = int_ty --> int_ty}
 fun is_int_literal t =
-  (rator t = int_injection andalso Term.is_numeral (rand t)) orelse
+  (rator t = int_injection andalso numSyntax.is_numeral (rand t)) orelse
   (rator t = int_negation andalso is_int_literal (rand t))
   handle HOL_ERR _ => false
 
@@ -27,9 +29,9 @@ val elim_ints =
 
 fun reducer t = let
   val (_, args) = strip_comb t
-  fun reducible t = is_int_literal t orelse is_numeral t
+  fun reducible t = is_int_literal t orelse numSyntax.is_numeral t
 in
-  if List.all reducible args then elim_ints t else basicHol90Lib.NO_CONV t
+  if List.all reducible args then elim_ints t else Conv.NO_CONV t
 end
 
 val x = mk_var{Name = "x", Ty = int_ty}
@@ -75,7 +77,7 @@ in
       | ([_], _) => NO_CONV tm
       | (_, []) => REDUCE_CONV tm
       | (numerals, non_numerals) => let
-          val reorder_t = Psyntax.mk_eq(tm, 
+          val reorder_t = Psyntax.mk_eq(tm,
                            mk_plus(list_mk_plus non_numerals,
                                    list_mk_plus numerals));
           val reorder_thm =

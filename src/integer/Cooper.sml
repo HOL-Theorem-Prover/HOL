@@ -1,7 +1,7 @@
 structure Cooper :> Cooper =
 struct
 
-open HolKernel basicHol90Lib integerTheory Parse
+open HolKernel boolLib integerTheory Parse
 
 infix THEN THENC THENL |-> ## ORELSEC
 infixr -->
@@ -486,14 +486,14 @@ val simple_bool_formula =
   tautLib.TAUT_PROVE (Term`!p q. ~(p /\ q) = (p ==> ~q)`)
 
 fun prove_membership t1 t2 = let
-  val (tmlist, elty) = dest_list t2
+  val (tmlist, elty) = listSyntax.dest_list t2
   fun recurse preds thmtodate laters =
     case (thmtodate, preds, laters) of
       (NONE, _, []) => raise ERR "prove_membership" "term not found in list"
     | (NONE, _, x::xs) =>
         if x = t1 then let
-          val tailtm = mk_list(xs, elty)
-          val whole_list = mk_cons(x, tailtm)
+          val tailtm = listSyntax.mk_list(xs, elty)
+          val whole_list = listSyntax.mk_cons(x, tailtm)
         in
           recurse preds (SOME (ISPECL [x, tailtm] MEM_base, whole_list)) []
         end
@@ -501,7 +501,7 @@ fun prove_membership t1 t2 = let
           recurse (x::preds) NONE xs
     | (SOME (thm,_), [], _) => thm
     | (SOME (thm,tmlist), p::ps, _) => let
-        val newlist = mk_cons(p, tmlist)
+        val newlist = listSyntax.mk_cons(p, tmlist)
         val newthm = MP (ISPECL [tmlist, t1, p] MEM_build) thm
       in
         recurse ps (SOME (newthm, newlist)) []
@@ -699,7 +699,7 @@ fun phase4_CONV tm = let
       else
         acc
     val bis = Lib.mk_set (find_bis [] Body)
-    val bis_list_tm = mk_list(bis, int_ty)
+    val bis_list_tm = listSyntax.mk_list(bis, int_ty)
     val b = genvar int_ty
     val j = genvar int_ty
     val brestriction = list_mk_comb(MEM_tm, [b, bis_list_tm])
@@ -1215,7 +1215,7 @@ val phase5_CONV = let
     val (bvar, body) = dest_exists tm
   in
     BINDER_CONV (RAND_CONV (mk_abs_CONV bvar)) THENC
-    REWR_CONV Ho_boolTheory.UNWIND_THM2 THENC BETA_CONV
+    REWR_CONV UNWIND_THM2 THENC BETA_CONV
   end tm
 
   val do_lhs =
@@ -1233,7 +1233,7 @@ val phase5_CONV = let
       LAND_CONV (REWR_CONV CONJ_COMM) THENC REWR_CONV (GSYM CONJ_ASSOC) THENC
       RAND_CONV (mk_abs_CONV bvar)
   in
-    BINDER_CONV c THENC REWR_CONV Ho_boolTheory.UNWIND_THM2 THENC
+    BINDER_CONV c THENC REWR_CONV UNWIND_THM2 THENC
     BETA_CONV
   end tm
 
@@ -1341,12 +1341,12 @@ in
   (* assume that there are no quantifiers below the one we're eliminating *)
   in
     if is_forall tm then
-      Ho_rewrite.REWR_CONV NOT_EXISTS_THM THENC prc_conv THENC
+      HO_REWR_CONV NOT_EXISTS_THM THENC prc_conv THENC
       RAND_CONV eliminate_existential
     else if is_exists tm then
       eliminate_existential
-    else if is_uexists tm then
-      Ho_rewrite.REWR_CONV EXISTS_UNIQUE_THM THENC
+    else if is_exists1 tm then
+      HO_REWR_CONV EXISTS_UNIQUE_THM THENC
       RAND_CONV (BINDER_CONV eliminate_quantifier THENC
                  eliminate_quantifier) THENC
       RATOR_CONV (RAND_CONV eliminate_quantifier)
@@ -1362,7 +1362,7 @@ fun find_low_quantifier tm = let
       NONE => NONE
     | SOME f' => SOME (g o f')
 in
-  if (is_forall tm orelse is_exists tm orelse is_uexists tm) then
+  if (is_forall tm orelse is_exists tm orelse is_exists1 tm) then
     case find_low_quantifier (#2 (dest_abs (#2 (dest_comb tm)))) of
       NONE => SOME I
     | x => underc BINDER_CONV x
@@ -1408,7 +1408,7 @@ fun land tm = rand (rator tm)
    bound by a quantifier. *)
 fun non_presburger_subterms0 ctxt tm =
   if
-    (is_forall tm orelse is_uexists tm orelse is_exists tm) andalso
+    (is_forall tm orelse is_exists1 tm orelse is_exists tm) andalso
     (type_of (bvar (rand tm)) = int_ty)
   then let
     val abst = rand tm
@@ -1475,7 +1475,7 @@ end
 
 fun eliminate_nat_quants tm = let
 in
-  if is_forall tm orelse is_exists tm orelse is_uexists tm then let
+  if is_forall tm orelse is_exists tm orelse is_exists1 tm then let
     val (bvar, body) = dest_abs (rand tm)
   in
     if type_of bvar = num_ty then let
