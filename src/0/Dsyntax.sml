@@ -35,10 +35,10 @@ val b2b2b = infix_ty bool bool;
 fun dest_monop s e M =
    let val {Rator,Rand} = Term.dest_comb M handle HOL_ERR _ => raise e
        val _ = if #Name(dest_const Rator) = s then () else raise e
-   in 
+   in
      (Rator,Rand)
    end;
-   
+
 fun dest_binop s e M =
   let val {Rator,Rand=tm2} = Term.dest_comb M handle HOL_ERR _ => raise e
       val {Rator=c,Rand=tm1} = Term.dest_comb Rator handle HOL_ERR _ => raise e
@@ -76,7 +76,7 @@ fun mk_select(s as {Bvar, Body}) =
 local val deq = dest_binop "=" (ERR"dest_eq" "not an \"=\"")
 in
 fun dest_eq_ty M =
-   let val (c,tm1,tm2) = deq M 
+   let val (c,tm1,tm2) = deq M
    in {lhs=tm1, rhs=tm2, ty = #1 (Type.dom_rng (type_of c))}
    end
 
@@ -94,10 +94,10 @@ local val err = ERR"dest_imp" "not an \"==>\""
       val dimp = dest_binop "==>" err
 in
 fun dest_imp M =
-   let val (_,tm1,tm2) = dimp M 
+   let val (_,tm1,tm2) = dimp M
    in {ant=tm1, conseq=tm2}
    end handle HOL_ERR _
-   => let val (_,tm) = dneg M 
+   => let val (_,tm) = dneg M
       in {ant=tm,conseq=mk_const{Name="F",Ty=bool}}
       end
 end;
@@ -115,10 +115,12 @@ local fun mk_quant s (a as {Bvar,...}) =
 in
   val mk_forall = mk_quant "!"
   and mk_exists = mk_quant "?"
+  and mk_uexists = mk_quant "?!"
 end;
 
 val dest_forall = dest_binder "!" (ERR"dest_forall" "not a \"!\"")
 val dest_exists = dest_binder "?" (ERR"dest_exists" "not a \"?\"");
+val dest_uexists = dest_binder "?!" (ERR"dest_uexists" "not at \"?!\"");
 
 
 (*---------------------------------------------------------------------------
@@ -184,7 +186,7 @@ fun prod_ty ty1 ty2 = Type.mk_type{Tyop="prod",Args=[ty1,ty2]};
 fun comma_ty ty1 ty2 = ty1 --> ty2 --> prod_ty ty1 ty2;
 
 fun mk_pair{fst, snd} =
-  let val ty1 = type_of fst  
+  let val ty1 = type_of fst
       and ty2 = type_of snd
   in
     list_mk_comb(mk_const{Name=",", Ty=comma_ty ty1 ty2},[fst,snd])
@@ -283,17 +285,18 @@ val is_list = Lib.can dest_list;
 (*---------------------------------------------------------------------------*)
 
 
-val is_eq     = Lib.can dest_eq
-val is_imp    = Lib.can dest_imp
-val is_select = Lib.can dest_select;
-val is_forall = Lib.can dest_forall
-and is_exists = Lib.can dest_exists;
-val is_neg    = Lib.can dest_neg;
-val is_conj   = Lib.can dest_conj
-and is_disj   = Lib.can dest_disj;
-val is_cond   = Lib.can dest_cond;
-val is_pair   = Lib.can dest_pair;
-val is_let    = Lib.can dest_let;
+val is_eq      = Lib.can dest_eq
+val is_imp     = Lib.can dest_imp
+val is_select  = Lib.can dest_select;
+val is_forall  = Lib.can dest_forall
+and is_exists  = Lib.can dest_exists
+and is_uexists = Lib.can dest_uexists;
+val is_neg     = Lib.can dest_neg;
+val is_conj    = Lib.can dest_conj
+and is_disj    = Lib.can dest_disj;
+val is_cond    = Lib.can dest_cond;
+val is_pair    = Lib.can dest_pair;
+val is_let     = Lib.can dest_let;
 
 
 (*---------------------------------------------------------------------------

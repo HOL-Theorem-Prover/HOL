@@ -7,6 +7,7 @@ sig
   val mk_select :{Bvar:Term.term, Body:Term.term} -> Term.term
   val mk_forall :{Bvar:Term.term, Body:Term.term} -> Term.term
   val mk_exists :{Bvar:Term.term, Body:Term.term} -> Term.term
+  val mk_uexists :{Bvar:Term.term, Body:Term.term} -> Term.term
   val mk_neg  :Term.term -> Term.term
   val mk_conj :{conj1:Term.term, conj2:Term.term} -> Term.term
   val mk_disj :{disj1:Term.term, disj2:Term.term} -> Term.term
@@ -26,6 +27,7 @@ sig
   val dest_select:Term.term -> {Bvar:Term.term, Body:Term.term}
   val dest_forall:Term.term -> {Bvar:Term.term, Body:Term.term}
   val dest_exists:Term.term -> {Bvar:Term.term, Body:Term.term}
+  val dest_uexists:Term.term -> {Bvar:Term.term, Body:Term.term}
   val dest_neg :Term.term -> Term.term
   val dest_conj:Term.term -> {conj1:Term.term, conj2:Term.term}
   val dest_disj:Term.term -> {disj1:Term.term, disj2:Term.term}
@@ -42,6 +44,7 @@ sig
   val is_select:Term.term -> bool
   val is_forall:Term.term -> bool
   val is_exists:Term.term -> bool
+  val is_uexists:Term.term -> bool
   val is_neg :Term.term -> bool
   val is_conj:Term.term -> bool
   val is_disj:Term.term -> bool
