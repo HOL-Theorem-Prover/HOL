@@ -97,7 +97,7 @@ val chatting = ref 1;           (* Gives intermediate info as proof runs.
                                    is given. When the number is 0, no output
                                    is given. Otherwise, jrh's original output
                                    is given.                                 *)
-val _ = register_trace "meson" chatting;
+val _ = register_trace "meson" chatting;   (* not idempotent? *)
 
 
 
@@ -604,6 +604,7 @@ val state = (g,([],2 * offinc,maxinf))
      * ((fol_term * int) list * int * int);;
 
 *)
+
 (* ------------------------------------------------------------------------- *)
 (* With iterative deepening of inferences or depth.                          *)
 (*                                                                           *)
@@ -1042,7 +1043,7 @@ fun GEN_MESON_TAC min max step ths g =
 
 
 val max_depth = ref 30;
-val ASM_MESON_TAC = GEN_MESON_TAC 0 (!max_depth) 1;
+fun ASM_MESON_TAC thl g = GEN_MESON_TAC 0 (!max_depth) 1 thl g;
 
 fun MESON_TAC ths = POP_ASSUM_LIST (K ALL_TAC) THEN ASM_MESON_TAC ths;
 

@@ -25,46 +25,38 @@ structure jrhTactics :> jrhTactics =
                           origin_function=f,message=s};
 
     fun by t (gs, vf) =
-      case gs of
-        [] => raise ERR  "by" "Can't apply tactic to empty Goal list"
-      | g::others =>
-          let
-            val (newgs, vf1) = t g
-          in
-            (newgs @ others,
-             fn thl =>
-             let val (t_thms, rest) = Lib.split_after (* chopn *)
-                                         (length newgs) thl
-             in
-               vf ((vf1 t_thms)::rest)
-             end)
-          end
+      case gs 
+       of [] => raise ERR  "by" "Can't apply tactic to empty Goal list"
+        | g::others =>
+            let val (newgs, vf1) = t g
+            in (newgs @ others,
+                fn thl => let val (t_thms, rest) = 
+                              Lib.split_after (* chopn *) (length newgs) thl
+                          in vf ((vf1 t_thms)::rest)
+                          end)
+            end
 
 
     local
       fun rotate_p1 ([], just) = ([], just)
         | rotate_p1 ((g::gs), just) =
-          let
-            val newgs = gs @ [g]
-            fun newj ths = just (last ths::butlast ths)
+          let val newgs = gs @ [g]
+               fun newj ths = just (last ths::butlast ths)
           in
             (newgs, newj)
           end
 
       fun rotate_n1 ([], just) = ([], just)
         | rotate_n1 (gs, just) =
-          let
-            val (newg, newgs) = (last gs, butlast gs)
-            fun newj (th::ths) = just (ths @ [th])
+          let val (newg, newgs) = (last gs, butlast gs)
+              fun newj (th::ths) = just (ths @ [th])
           in
             (newg::newgs, newj)
           end
     in
       fun rotate n =
-        if n > 0 then
-          funpow n rotate_p1
-        else
-          funpow (~n) rotate_n1
+        if n > 0 then funpow n rotate_p1
+                 else funpow (~n) rotate_n1
     end
 
     local
@@ -73,9 +65,8 @@ structure jrhTactics :> jrhTactics =
          the goal list can be put back into order *)
       fun bysn n [] g = rotate n g
         | bysn n (t::ts) (g as (gl,j)) =
-          let
-            val newg as (newgl,j') = by t g
-            val k = length newgl + 1 - length gl
+          let val newg as (newgl,j') = by t g
+              val k = length newgl + 1 - length gl
           in
             bysn (n - k) ts (rotate k newg)
           end
@@ -86,26 +77,23 @@ structure jrhTactics :> jrhTactics =
 
 
     infix THENL
-    fun (t1 THENL tlist) g =
-      bys tlist (by t1 (mk_Goalstate g))
+    fun (t1 THENL tlist) g = bys tlist (by t1 (mk_Goalstate g))
 
     infix THEN
     fun (t1 THEN t2) g =
-      let
-        val g as (gls, jf) = by t1 (mk_Goalstate g)
-      in
-        bys (replicate (t2, length gls)) g
+      let val g as (gls, jf) = by t1 (mk_Goalstate g)
+      in bys (replicate (t2, length gls)) g
       end
 
     fun convert (T:Tactic) ((asl:term list), (g:term)) =
-      let
-        val (gs, jf) = T (map ASSUME asl, g)
-        val newgs = map (fn (asl, g) => (map concl asl, g)) gs
+      let val (gs, jf) = T (map ASSUME asl, g)
+          val newgs = map (fn (asl, g) => (map concl asl, g)) gs
       in
         (newgs, jf)
       end
 
     (* our actual Tactics *)
+
     fun ASSUME_TAC th : Tactic =
       fn (asl, g) =>
       ([(th::asl, g)],
@@ -116,17 +104,14 @@ structure jrhTactics :> jrhTactics =
 
     fun ASSUM_LIST thlf (asl, g)     = thlf asl (asl, g)
     fun POP_ASSUM_LIST thlf (asl, g) = thlf asl ([], g)
-    fun FIRST_ASSUM ttac (asl, g) = tryfind (fn th => ttac th (asl, g)) asl
+    fun FIRST_ASSUM ttac (asl, g)    = tryfind (fn th => ttac th (asl, g)) asl
 
     fun UNDISCH_THEN tm ttac (asl,g) =
-      let
-        val (th, asl') = Lib.pluck (fn th => concl th = tm) asl
-      in
-        ttac th (asl', g)
+      let val (th, asl') = Lib.pluck (fn th => concl th = tm) asl
+      in ttac th (asl', g)
       end
 
-    fun FIRST_X_ASSUM ttac =
-      FIRST_ASSUM (fn th => UNDISCH_THEN (concl th) ttac);
+    fun FIRST_X_ASSUM ttac = FIRST_ASSUM(fn th => UNDISCH_THEN (concl th) ttac)
 
     fun ALL_TAC (asl, g) = ([(asl,g)], fn [th] => th)
 
@@ -144,10 +129,9 @@ structure jrhTactics :> jrhTactics =
 
 
     fun X_CHOOSE_TAC t xth (asl, g) =
-      let
-        val xtm = concl xth
-        val (x, bod) = dest_exists xtm
-        val pat = ASSUME (Term.subst [x |-> t] bod)
+      let val xtm = concl xth
+          val (x, bod) = dest_exists xtm
+          val pat = ASSUME (Term.subst [x |-> t] bod)
       in
         ([(pat::asl, g)], fn [th] => CHOOSE (t, xth) th)
       end
@@ -183,8 +167,7 @@ structure jrhTactics :> jrhTactics =
                         fn [th1, th2] => DISJ_CASES dth th1 th2)
       end
 
-    fun DISJ_CASES_THEN ttac th =
-      DISJ_CASES_TAC th THEN POP_ASSUM ttac;
+    fun DISJ_CASES_THEN ttac th = DISJ_CASES_TAC th THEN POP_ASSUM ttac;
 
     infix ORELSE_TCL
     fun (ttcl1 ORELSE_TCL ttcl2) ttac th =
