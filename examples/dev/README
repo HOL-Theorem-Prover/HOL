@@ -461,5 +461,5 @@ ML reference "if_print_flag" to false.
 == [29.01.05: MJCG added COMB_SYNTH_CONV removed SEL operators]              ==
 == [30.01.05: MJCG added dff: Melham's temporal abstraction theory]          ==
 == [01.02.05: MJCG minor tweaks to MAKE_NETLIST and COMB_SYNTH_CONV]         ==
-== [06.02.05: MJCG added erfinement to clocked dtype registers               ==
+== [06.02.05: MJCG added refinement to clocked dtype registers               ==
 ===============================================================================
