@@ -106,6 +106,12 @@ fun el n l =
   else elem(n,l)
 end;
 
+fun index x l =
+  let fun idx (i, [])   = raise LIB_ERR "index" "no such element"
+        | idx (i, y::l) = if x=y then i else idx (i+1, l)
+  in idx(0,l)
+  end;
+
 
 fun map2 f L1 L2 =
  let fun mp2 [] [] L = rev L
