@@ -1167,7 +1167,7 @@ Since \HOL\ theories are represented by \ML\ modules, one imports an
 existing theory segment by simply importing the corresponding module.
 
 \begin{boxed}
-\index{load@\ml{load|pin}}
+\index{load@\ml{load}|pin}
 \begin{verbatim}
    load : string -> unit
 \end{verbatim}\end{boxed}
@@ -1832,8 +1832,8 @@ primitive constants\index{constants, in HOL
  logic@constants, in \HOL\ logic!primitive logical}\index{primitive
  constants, of HOL logic@primitive constants, of \HOL\ logic}
 are declared in the theory {\small\verb%min%}: equality, implication, and a choice operator.
-\index{ equality, in HOL logic@\ml{=} (equality, in
- \HOL\ logic)}\index{equality, in HOL logic@equality, in \HOL\ logic}
+\index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}
+\index{equality, in HOL logic@equality, in \HOL\ logic}
 
 Equality ({\small\verb+$= : 'a -> 'a -> bool+}) parses as an infix with
 low binding precedence (100).
@@ -1841,10 +1841,11 @@ low binding precedence (100).
 Implication ({\small\verb+$==> : bool -> bool -> bool+}) parses as a
 right-associative infix with binding precedence 200.
 
- Equality\index{equality, in HOL logic@equality, in \HOL\
- logic}\index{implication, in HOL logic@implication, in \HOL\ logic}
- and implication are standard predicate calculus notions, but choice is
- more exotic:
+Equality
+\index{equality, in HOL logic@equality, in \HOL\ logic}
+\index{implication, in HOL logic@implication, in \HOL\ logic}
+and implication are standard predicate calculus notions, but choice is
+more exotic:
 if $t$ is a term having type $\sigma${\small\verb%->bool%},
 then {\small\verb%@x.%}$t${\small\verb% x%} (or, equivalently,
 {\small\verb%$@%}$t$) denotes {\it some\/} member of the set whose
@@ -1852,12 +1853,17 @@ characteristic\index{characteristic predicate, of type definitions}
  function is $t$. If the set is empty, then
 {\small\verb%@x.%}$t${\small\verb% x%} denotes an arbitrary member of the
 set denoted by $\sigma$. The constant {\small\verb%@%} is a higher order
-version of Hilbert's\index{Hilbert, D.}\index{epsilon operator}
+version of Hilbert's
+\index{Hilbert, D.}
+\index{epsilon operator}
  $\hilbert$-operator; it is related to the constant
 $\iota$ in Church's formulation of higher order logic. For more details,
-see Church's\index{Church, A.} original paper \cite{Church}, Leisenring's\index{Leisenring, A.} book
-on Hilbert's $\hilbert$-symbol \cite{Leisenring}, or
-Andrews' textbook on type theory \cite{Andrews}.
+see Church's
+\index{Church, A.}
+original paper \cite{Church}, Leisenring's
+\index{Leisenring, A.}
+book on Hilbert's $\hilbert$-symbol \cite{Leisenring}, or Andrews'
+textbook on type theory \cite{Andrews}.
 
 \section{Primitive rules of inference of the HOL Logic}
 \label{rules}
@@ -2192,7 +2198,7 @@ true.
 
 - mk_thm([], Term `F`);;
 > val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
-\end{verbatim}\end{session}\index{mk_thm@mk_thm)}
+\end{verbatim}\end{session}\index{mk_thm@\ml{mk\_thm}}
 
 There are three elements to the left of the turnstile in the fully printed
 representation of a theorem: the first two\footnote{Tags are also used for

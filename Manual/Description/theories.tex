@@ -584,10 +584,14 @@ operations is developed. Lastly, a theory of numerals is provided.
 The theory \ml{num}\index{num, the theory in HOL logic@\ml{num}, the theory in \HOL\ logic}
 defines the type \ml{num} of natural numbers to be
 isomorphic to a countable subset of the primitive type \ml{ind}.  In this
-theory, the constants \ml{0}\index{ zero, in HOL logic@\ml{0} ( zero, in \HOL\ logic)}
- and \ml{SUC} (the successor function) are defined
-and Peano's axioms\index{axioms!in num theory@in \ml{num} theory}\index{Peano's axioms}\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic} pre-proved in the form:
-
+theory, the constants \ml{0}
+\index{ zero, in HOL logic@\ml{0} (zero, in \HOL\ logic)}
+and \ml{SUC} (the successor function) are defined
+and Peano's axioms
+\index{axioms!in num theory@in \ml{num} theory}
+\index{Peano's axioms}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic}
+pre-proved in the form:
 
 \begin{hol}
 \index{NOT_SUC@\ml{NOT\_SUC}}
@@ -635,7 +639,7 @@ recursion theorem\/} tells us that there is a unique function
 {\small\verb%fn%} such that:
 
 \begin{hol}
-{\small\verb%   %}\ml{fn}{\small\verb% 0 = %}$x${\small\verb%) /\ (!%}$n${\small\verb%.%}\ml{fn}{\small\verb%(%}\ml{SUC} $n${\small\verb%) = %}$f${\small\verb% (%}\ml{fn} $n${\small\verb%)%} $n${\small\verb%)%}
+{\small\verb%   (%}\ml{fn}{\small\verb% 0 = %}$x${\small\verb%) /\ (!%}$n${\small\verb%.%}\ml{fn}{\small\verb%(%}\ml{SUC} $n${\small\verb%) = %}$f${\small\verb% (%}\ml{fn} $n${\small\verb%)%} $n${\small\verb%)%}
 \end{hol}
 
 The primitive recursion theorem follows from Peano's\index{Peano's axioms}
@@ -782,7 +786,7 @@ of wellfoundedness (namely, that every set has an $R$-minimal element)
 defined in the theory {\small\verb+relation+}.
 
 \begin{hol}
-\index{Wellfounded@\ml{Wellfounded}}
+\index{wellfounded@\ml{wellfounded}}
 \begin{verbatim}
    wellfounded_def    |- wellfounded (R:'a->'a->bool)
                             =
@@ -796,10 +800,10 @@ wellfoundedness of the predecessor relation and the less-than relation,
 as well as the wellfoundedness of measure functions.
 
 \begin{hol}
-\index{WF_PRED\ml{WF_PRED}}
-\index{WF_LESS@\ml{WF_LESS}}
-\index{measure_def@\ml{measure_def}}
-\index{WF_measure@\ml{WF_measure}}
+\index{WF_PRED@\ml{WF\_PRED}}
+\index{WF_LESS@\ml{WF\_LESS}}
+\index{measure_def@\ml{measure\_def}}
+\index{WF_measure@\ml{WF\_measure}}
 \begin{verbatim}
    WF_PRED     |- WF (\x y. y = SUC x)
 
@@ -1188,9 +1192,8 @@ natural numbers discussed above in Section~\ref{num-prim-rec}.  It
 states  the  validity  of  primitive recursive definitions on lists, and
 can be used to justify any such definition.  The \ML\
 function {\small\verb+new_recursive_definition+}
-uses this theorem to do automatic\index{primitive recursion
-theorem!automated use of, in HOL system@automated use of, in \HOL\
-system}  proofs of the existence of primitive
+uses this theorem to do automatic
+\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system|)}  proofs of the existence of primitive
 recursive functions on lists and then make constant specifications to introduce
 constants that  denote  such  functions.  For example, the \HOL\ system defines
 a length function, \ml{LENGTH}, on lists by the primitive recursive
