@@ -37,7 +37,7 @@
 (*****************************************************************************)
 
 (*
-load "muddyLib";
+load "bdd";
 load "pairLib";
 load "Pair_basic";
 load "numLib";
@@ -55,7 +55,6 @@ open Pair_basic;
 open numLib;
 open Binarymap;
 open Varmap;
-open muddyLib;
 open bdd;
 
 open HolKernel Parse boolLib BasicProvers
@@ -72,11 +71,15 @@ in
 (* TermBdd should not be exported from this module.                          *)
 (*****************************************************************************)
 
+(*
 local
+*)
 
 datatype term_bdd = TermBdd of varmap * term * bdd.bdd;
 
+(*
 in
+*)
 
 (*****************************************************************************)
 (* Destructors for term_bdd                                                  *)
@@ -186,14 +189,6 @@ fun BddEqMp th (TermBdd(vm,t1,b)) =
  end;
 
 (*****************************************************************************)
-(* Check all elements of a list are pointer equal                            *)
-(*****************************************************************************)
-
-fun checkAllEq []  = true
- |  checkAllEq [_] = true
- |  checkAllEq(x1::(x2::l)) = Varmap.eq(x1,x2) andalso checkAllEq l;
-
-(*****************************************************************************)
 (*                    [(vm v1 |--> b1 , vm v1' |--> b1'),                    *)
 (*                                    .                                      *)
 (*                                    .                                      *)
@@ -210,19 +205,57 @@ exception BddReplaceError;
 
 fun BddReplace tbl tb =
  let val TermBdd(vm,tm,b) = tb
-     val (vml,substl,replacel) = 
+     val (vml,(l,l'),replacel) = 
        List.foldr
-        (fn(((TermBdd(vm,tm,b)),(TermBdd(vm',tm',b'))), (vml,substl,replacel))
+        (fn(((TermBdd(vm,tm,b)),(TermBdd(vm',tm',b'))), (vml,(l,l'),replacel))
            =>
-           ((vm::vm'::vml), 
-            ((tm |-> tm')::substl), 
-            ((bdd.var b, bdd.var b')::replacel)))
-        ([vm],[],[])
+           if not(Varmap.eq(hd vml,vm) andalso Varmap.eq(vm,vm'))
+            then (                print "unequal varmaps\n";       raise BddReplaceError) else
+           if not(is_var tm)
+            then (print_term tm ; print " should be a variable\n"; raise BddReplaceError) else
+           if not(is_var tm')
+            then (print_term tm'; print " should be a variable\n"; raise BddReplaceError) else
+           if mem tm l
+            then (print_term tm ; print" repeated\n";              raise BddReplaceError) else
+           if mem tm' l'
+            then (print_term tm'; print" repeated\n";              raise BddReplaceError) 
+            else ((vm::vm'::vml), 
+                  (tm :: l, tm' :: l'),
+                  ((bdd.var b, bdd.var b')::replacel)))
+        ([vm], ([],[]), [])
         tbl
-     val _ = checkAllEq vml orelse raise BddReplaceError
  in
-  TermBdd(vm, subst substl tm, bdd.replace b (makepairSet replacel))
+  TermBdd(vm, 
+          subst (ListPair.map (fn(v,v')=>(v|->v')) (l,l')) tm, 
+          bdd.replace b (bdd.makepairSet replacel))
  end;
+
+(*
+Test examples
+
+val tb1 = termToTermBdd ``x /\ y /\ z``;
+
+val tbx = termToTermBdd ``x:bool``
+and tby = termToTermBdd ``y:bool``
+and tbz = termToTermBdd ``z:bool``
+and tbp = termToTermBdd ``p:bool``
+and tbq = termToTermBdd ``q:bool``;
+
+val tb = tb1 and tbl = [(tbx,tbp),(tby,tbq)];
+val tb2 = BddReplace tbl tb;
+
+val tb = tb1 and tbl = [(tbx,tby),(tby,tbz)];
+val tb2 = BddReplace tbl tb;
+(* ! Fail  "Trying to replace with variables already in the bdd" *)
+
+val tb = tb1 and tbl = [(tbx,tby),(tby,tbx)];
+val tb3 = BddReplace tbl tb;
+(* OK *)
+
+val tb = tb1 and tbl = [(tbx,tbp),(tby,tbp)];
+val tb4 = BddReplace tbl tb;
+(* ! Fail  "Trying to replace with variables already in the bdd" *)
+*)
 
 (*****************************************************************************)
 (*    vm v |--> b    vm tm1 |--> b1    vm tm2 |--> b2                        *)
@@ -235,7 +268,7 @@ exception BddComposeError;
 fun BddCompose (TermBdd(vm,v,b)) (TermBdd(vm1,tm1,b1)) (TermBdd(vm2,tm2,b2)) =
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
   then TermBdd(vm, subst[v |-> tm2]tm1, compose b1 b2 (var b))
-  else raise BddComposeError;
+  else (print "different varmaps"; raise BddComposeError);
 
 (*****************************************************************************)
 (* BddRestrict [((vm v1 |--> b1),c1),...,(vm vi |--> bi),ci)] (vm tm |--> b) *)
@@ -265,15 +298,18 @@ fun BddRestrict tbcl tb =
        List.foldr
         (fn(((TermBdd(vm,tm,b)),c), (vml,substl,restrictl))
            =>
-           ((vm::vml), 
-            ((tm |-> c)::substl), 
-            ((bdd.var b, mlval c)::restrictl)))
+           if not(Varmap.eq(hd vml,vm))
+            then (print "unequal varmaps\n"; raise BddRestrictError) 
+            else ((vm::vml), 
+                  ((tm |-> c)::substl), 
+                  ((bdd.var b, mlval c)::restrictl)))
         ([vm],[],[])
         tbcl
-     val _ = checkAllEq vml orelse raise BddRestrictError
  in
-  TermBdd(vm, subst substl tm, bdd.restrict b (makeRestriction restrictl))
+  TermBdd(vm, subst substl tm, bdd.restrict b (bdd.makeRestriction restrictl))
  end
+
+end;
 
 (*****************************************************************************)
 (*   vm tm |--> b   not(mem (name v) (free_vars tm))                         *)
@@ -357,7 +393,7 @@ exception BddOpError;
 fun BddOp (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
 if Varmap.eq(vm1,vm2)
  then TermBdd(vm1, termApply t1 t2 bddop, bdd.apply b1 b2 bddop)
- else raise BddOpError;
+ else (print "different varmaps"; raise BddOpError);
 
 (*****************************************************************************)
 (*  vm t |--> b   vm t1 |--> b1   vm t2 |--> b2                              *)
@@ -370,7 +406,7 @@ exception BddIteError;
 fun BddIte(TermBdd(vm,t,b), TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) = 
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
   then TermBdd(vm, mk_cond(t,t1,t2), ITE b b1 b2)
-  else raise BddIteError;
+  else (print "different varmaps"; raise BddIteError);
 
 (*****************************************************************************)
 (*                   vm t |--> b                                             *)
@@ -445,7 +481,7 @@ fun BddAppall vl (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
                               SOME n => n
                             | NONE   => raise BddAppallError) 
         vl)))
-  else raise BddAppallError;
+  else (print "different varmaps"; raise BddAppallError);
 
 (*****************************************************************************)
 (*                   vm t1 |--> b1    vm t2 |--> b2                          *)
@@ -474,10 +510,10 @@ fun BddAppex vl (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
                               SOME n => n
                             | NONE   => raise BddAppallError) 
         vl)))
-  else raise BddAppallError;
+  else (print "different varmaps"; raise BddAppallError);
 
 end;
 
+(*
 end;
-
-end;
+*)

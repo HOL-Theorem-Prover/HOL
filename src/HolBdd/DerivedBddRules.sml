@@ -14,7 +14,6 @@
 (*****************************************************************************)
 
 (*
-load "muddyLib";
 load "pairLib";
 load "Pair_basic";
 load "numLib";
@@ -30,10 +29,11 @@ open pairSyntax;
 open pairTools;
 open Pair_basic;
 open numLib;
-open muddyLib;
 open PrimitiveBddRules;
 open bdd;
 open Varmap;
+
+open PrimitiveBddRules;
 
 open HolKernel Parse boolLib;
 infixr 3 -->;
@@ -240,7 +240,7 @@ fun defaultReport n tb =  (print(Int.toString n); print " ");
 
 fun flatten_pair t =
 if is_pair t
- then foldr (fn(t,l) => (flatten_pair t) @ l) [] (strip_pair t)
+ then List.foldr (fn(t,l) => (flatten_pair t) @ l) [] (strip_pair t)
  else [t];
 
 (*****************************************************************************)
@@ -277,12 +277,49 @@ fun MkIterThms reachth Rtm Btm =
                 (RHS_CONV
                  (ONCE_DEPTH_CONV
                   (Ho_Rewrite.REWRITE_CONV[pairTheory.EXISTS_PROD]
-                    THENC RENAME_VARS_CONV (map (fst o dest_var) (flatten_pair st')))))
+                    THENC RENAME_VARS_CONV (List.map (fst o dest_var) (flatten_pair st')))))
                 (SPECL[R,B,ntm,st]th2)
 
  in
   (th3, GEN ntm th4)
  end;
+
+
+(*****************************************************************************)
+(* Perform disjunctive partitioning                                          *)
+(* The simplification assumes R is of the form:                              *)
+(*                                                                           *)
+(*  R((x,y,z),(x',y',z'))=                                                   *)
+(*   ((x' = E1(x,y,z)) /\ (y' = y)         /\ (z' = z))                      *)
+(*    \/                                                                     *)
+(*   ((x' = x)         /\ (y' = E2(x,y,z)) /\ (z' = z))                      *)
+(*    \/                                                                     *)
+(*   ((x' = x)         /\ (y' = y)         /\ (z' = E3(x,y,z)))              *)
+(*                                                                           *)
+(* Then, for example, the equation:                                          *)
+(*                                                                           *)
+(*   ReachBy R B (SUC n) (x,y,z) =                                           *)
+(*     ReachBy R B n (x,y,z)                                                 *)
+(*     \/                                                                    *)
+(*     (?x_ y_ z_. ReachBy n R B (x_,y_,z_) /\ R((x_,y_,z_),(x,y,z))))       *)
+(*                                                                           *)
+(* is simplified to:                                                         *)
+(*                                                                           *)
+(*   ReachBy R B (SUC n) (x,y,z) =                                           *)
+(*     ReachBy R B n (x,y,z)                                                 *)
+(*     \/                                                                    *)
+(*     (?x_. ReachBy R B n (x_,y,z) /\ (x = E1(x_,y,z))                      *)
+(*     \/                                                                    *)
+(*     (?y_. ReachBy R B n (x,y_,z) /\ (y = E2(x,y_,z))                      *)
+(*     \/                                                                    *)
+(*     (?z_. ReachBy R B n (x,y,z_) /\ (z = E3(x,y,z_))                      *)
+(*                                                                           *)
+(* This avoids having to build the BDD of R((x,y,z),(x',y',z'))              *)
+(*****************************************************************************)
+
+val MakeSimpRecThm =
+ time 
+  (simpLib.SIMP_RULE boolSimps.bool_ss [LEFT_AND_OVER_OR,EXISTS_OR_THM]);
 
 (*****************************************************************************)
 (*  |- t1 = t2   vm t1' |--> b                                               *)
