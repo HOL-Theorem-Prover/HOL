@@ -367,9 +367,9 @@ fun ANTE_RES_THEN ttac ante : tactic =
 local
   fun MATCH_MP impth = let
     val sth = SPEC_ALL impth
-    val hyptyvars = HOLset.listItems (thm_hypfreetys sth)
+    val hyptyvars = HOLset.listItems (hyp_tyvars sth)
     val lconstants = HOLset.intersection 
-                         (FVL [concl sth] empty_tmset, thm_hypfrees sth)
+                         (FVL [concl sth] empty_tmset, hyp_frees sth)
     val matchfn =
         match_terml hyptyvars lconstants (fst(dest_imp(concl sth)))
   in fn th => MP (INST_TY_TERM (matchfn (concl th)) sth) th

@@ -6,14 +6,15 @@
 structure boolLib =
 struct
 
- open boolTheory boolSyntax 
-      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev;
+open boolTheory boolSyntax 
+     Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB;
 
- local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
+local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val Term = Parse.Term
 val Type = Parse.Type
 val --   = Parse.--   
+
 val parse_from_grammars = Parse.parse_from_grammars;
 
 (*---------------------------------------------------------------------------

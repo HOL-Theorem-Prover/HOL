@@ -122,7 +122,7 @@ end;
 
 fun SPEC_VAR th =
    let val (Bvar,_) = dest_forall (concl th)
-       val bv' = variant (HOLset.listItems (thm_hypfrees th)) Bvar
+       val bv' = variant (HOLset.listItems (hyp_frees th)) Bvar
    in (bv', SPEC bv' th)
    end;
 
@@ -785,7 +785,7 @@ end;
 fun GEN_ALL th =
    HOLset.foldl (fn (v, th) => GEN v th)
        th
-      (HOLset.difference (FVL [concl th] empty_tmset, thm_hypfrees th))
+      (HOLset.difference (FVL [concl th] empty_tmset, hyp_frees th))
 
 
 (*---------------------------------------------------------------------------
@@ -833,7 +833,7 @@ local fun varyAcc v (V,l) =
        let val v' = prim_variant V v in (v'::V, v'::l) end
 in
 fun SPEC_ALL th =
-   let val (hvs,con) = (HOLset.listItems ## I) (thm_hypfrees th, concl th)
+   let val (hvs,con) = (HOLset.listItems ## I) (hyp_frees th, concl th)
        val fvs = free_vars con
        val vars = fst(strip_forall con)
    in
@@ -1260,8 +1260,8 @@ fun GSPEC th =
 fun PART_MATCH partfn th =
   let val pth = GSPEC (GEN_ALL th)
       val conclfvs = Term.FVL [concl th] empty_tmset
-      val hypfvs = Thm.thm_hypfrees th
-      val hyptyvars = HOLset.listItems (Thm.thm_hypfreetys th)
+      val hypfvs = Thm.hyp_frees th
+      val hyptyvars = HOLset.listItems (Thm.hyp_tyvars th)
       val pat = partfn(concl pth)
       val matchfn =
           match_terml hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
@@ -1315,16 +1315,16 @@ local fun variants (_,[]) = []
 in
 fun MATCH_MP ith =
  let val bod = fst(dest_imp(snd(strip_forall(concl ith))))
-     val hyptyvars = HOLset.listItems (thm_hypfreetys ith)
+     val hyptyvars = HOLset.listItems (hyp_tyvars ith)
      val lconsts = HOLset.intersection
-                     (FVL [concl ith] empty_tmset, thm_hypfrees ith)
+                     (FVL [concl ith] empty_tmset, hyp_frees ith)
  in fn th =>
    let val mfn = C (Term.match_terml hyptyvars lconsts) (concl th)
        val tth = INST_TYPE (snd(mfn bod)) ith
        val tbod = fst(dest_imp(snd(strip_forall(concl tth))))
        val tmin = fst(mfn tbod)
-       val hy1 = HOLset.listItems (thm_hypfrees tth)
-       and hy2 = HOLset.listItems (thm_hypfrees th)
+       val hy1 = HOLset.listItems (hyp_frees tth)
+       and hy2 = HOLset.listItems (hyp_frees th)
        val (avs,(ant,conseq)) = (I ## dest_imp) (strip_forall (concl tth))
        val (rvs,fvs) = partition (C free_in ant) (free_vars conseq)
        val afvs = Lib.set_diff fvs (Lib.set_diff hy1 avs)
@@ -1551,8 +1551,8 @@ fun HO_PART_MATCH partfn th =
        in if null npossbetas then Lib.I
           else CONV_RULE (EVERY_CONV (mapfilter (C assoc npossbetas) ivs))
        end
-     val lconsts = HOLset.intersection (FVL[pbod]empty_tmset, thm_hypfrees th)
-     val ltyconsts = HOLset.listItems (thm_hypfreetys th)
+     val lconsts = HOLset.intersection (FVL[pbod]empty_tmset, hyp_frees th)
+     val ltyconsts = HOLset.listItems (hyp_tyvars th)
  in fn tm =>
     let val (tmin,tyin) = ho_match_term ltyconsts lconsts pbod tm
         val th0 = INST tmin (INST_TYPE tyin sth)
@@ -1733,7 +1733,7 @@ fun canon (fl,th) =
    if is_forall w then
      let val (vs,_) = strip_forall w
          val fvs = HOLset.listItems
-                    (HOLset.union(thm_hypfrees th, FVL[concl th] empty_tmset))
+                    (HOLset.union(hyp_frees th, FVL[concl th] empty_tmset))
          val nvs = itlist (fn v => fn nv => variant (nv @ fvs) v::nv) vs []
      in
         canon (fl, SPECL nvs th)

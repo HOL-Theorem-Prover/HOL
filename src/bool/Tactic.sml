@@ -676,8 +676,8 @@ local fun efn v (tm,th) =
 in
 fun MATCH_MP_TAC thm :tactic = let
   val lconsts      = HOLset.intersection 
-                        (FVL [concl thm] empty_tmset, thm_hypfrees thm)
-  val hyptyvars    = HOLset.listItems (thm_hypfreetys thm)
+                        (FVL [concl thm] empty_tmset, hyp_frees thm)
+  val hyptyvars    = HOLset.listItems (hyp_tyvars thm)
   val (gvs,imp)    = strip_forall (concl thm)
   val (ant,conseq) = with_exn dest_imp imp
                               (ERR "MATCH_MP_TAC" "Not an implication")

@@ -18,7 +18,6 @@ structure DB :> DB =
 struct
 
 open HolKernel Binarymap;
-type 'a quotation = 'a Portable.frag list
 
 datatype class = Thm | Axm | Def
 
@@ -85,9 +84,9 @@ in
 fun CT() =
   let val thyname = Theory.current_theory()
   in
-    itlist (add o classify thyname Def) (Theory.definitions ())
-     (itlist (add o classify thyname Axm) (Theory.axioms ())
-      (itlist (add o classify thyname Thm) (Theory.theorems ())
+    itlist (add o classify thyname Def) (Theory.curr_defs ())
+     (itlist (add o classify thyname Axm) (Theory.curr_axioms ())
+      (itlist (add o classify thyname Thm) (Theory.curr_thms ())
               (lemmas())))
   end
 end;
@@ -131,13 +130,27 @@ val apropos = match [];
       Some other lookup functions
  ---------------------------------------------------------------------------*)
 
-fun theorem_class thyname thmname =
+fun thm_class thyname thmname =
  #2 (Binarymap.find (CT(), (toLower (norm_thyname thyname), toLower thmname)))
 
-fun theorem s1 s2 = fst (theorem_class s1 s2);
+fun fetch s1 s2 = fst (thm_class s1 s2);
 
-fun theorems thyn = List.map (fn ((_,s),(th,_)) => (s,th)) (thy thyn);
+fun thm_of ((_,n),(th,_)) = (n,th);
+fun is x (_,(_,cl)) = (cl=x)
 
-fun all_thms () = List.map snd (Binarymap.listItems (CT()));
+val thms        = List.map thm_of o thy
+val theorems    = List.map thm_of o Lib.filter (is Thm) o thy
+val definitions = List.map thm_of o Lib.filter (is Def) o thy
+val axioms      = List.map thm_of o Lib.filter (is Axm) o thy
+
+
+fun all_thys () = List.map snd (Binarymap.listItems (CT()));
+
+(*---------------------------------------------------------------------------
+    Refugee from Parse
+ ---------------------------------------------------------------------------*)
+
+fun export_theory_as_docfiles dirname = 
+    Parse.export_theorems_as_docfiles dirname (theorems "-");
 
 end

@@ -66,7 +66,7 @@ val implicit = ref empty_rewrites;
 fun add_rewrites (RW{thms,net}) thl =
   RW{thms = thms@thl,
      net = itlist Ho_Net.enter
-     (map (fn th => (HOLset.listItems (thm_hypfrees th),
+     (map (fn th => (HOLset.listItems (hyp_frees th),
                      lhs(concl th), Conv.HO_REWR_CONV th))
 	(itlist (append o mk_rewrites) thl [])) net}
 
@@ -207,7 +207,7 @@ val HIGHER_REWRITE_CONV =
   let fun GINST th =
       let val fvs = HOLset.listItems
                        (HOLset.difference(FVL[concl th]empty_tmset, 
-                                          thm_hypfrees th))
+                                          hyp_frees th))
           val gvs = map (genvar o type_of) fvs
       in INST (map2 (curry op |->) fvs gvs) th
       end
