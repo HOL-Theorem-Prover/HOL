@@ -290,12 +290,13 @@ fun build_help () =
                           FileSys.mkDir htmlpath)
      val cmd1     = [doc2html, docpath, htmlpath]
      val cmd2     = [fullPath [dir,"makebase"]]
-     val _ = print "Generating ASCII versions of Docfiles... "
-     val _ = if build_adoc_files () then print "done\n" else ()
+     val _ = print "Generating ASCII versions of Docfiles...\n"
+     val _ = if build_adoc_files () then print "...ASCII Docfiles done\n"
+             else ()
  in
-   print "Generating HTML versions of Docfiles... "
+   print "Generating HTML versions of Docfiles...\n"
  ;
-   if SYSTEML cmd1  = Process.success then print "done\n"
+   if SYSTEML cmd1  = Process.success then print "...HTML Docfiles done\n"
    else (print ("Build failed in directory "^dir^"\n");
          raise Fail "Couldn't make html versions of Docfiles")
  ;
