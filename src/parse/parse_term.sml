@@ -1022,7 +1022,9 @@ fun parse_term (G : grammar) typeparser = let
                 require (SOME "(") >-
                 (fn (_,locn) => let val lrlocn = locn.between locn itlocn
                   in
-                  shift >> pop >> invstructp >- (return o #1 o hd) >-
+                  shift >> pop >>
+                  (if is_binder s then leave_binder else return ()) >>
+                  invstructp >- (return o #1 o hd) >-
                   (fn vstate =>
                       if vstate <> VSRES_VS then
                         push ((NonTerminal (VAR s),lrlocn), XXX)
