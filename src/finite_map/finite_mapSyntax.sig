@@ -28,4 +28,4 @@ sig
   val dest_fdom : term -> term
   val is_fdom : term -> bool
 
-end;
+end
