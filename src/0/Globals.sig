@@ -38,7 +38,4 @@ sig
   val guessing_overloads     : bool ref
   val notify_on_tyvar_guess  : bool ref
 
-  val strings_defined        : unit -> bool
-  val assert_strings_defined : unit -> unit
-
 end
