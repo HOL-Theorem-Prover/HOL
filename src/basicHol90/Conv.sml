@@ -2022,7 +2022,7 @@ in
   fun RENAME_VARS_CONV varlist  =
     case varlist of
       [] => REFL
-    | (v::vs) => BINDER_CONV (RENAME_VARS_CONV vs) THENC rename v
+    | (v::vs) => rename v THENC BINDER_CONV (RENAME_VARS_CONV vs)
 
 
   fun SWAP_VARS_CONV term = let
