@@ -67,9 +67,9 @@ Q. How do I antiquote types? (3)
      So, in order to accomplish this there is a bit of magic called
      ty_antiq, which if you look at its type (hol_type -> term) turns
      a type into a term.  The term formed is completely bogus in a
-     logical sense (you won't be able to mk_comb it with anything for
-     example), but can be pushed into the parsing function Term so as
-     to give the effect of antiquoting a type.
+     logical sense (it's actually a var with a special name and the
+     given type), but can be pushed into the parsing function Term so
+     as to give the effect of antiquoting a type.
 
      The function Hol_datatype takes a hol_type frag list, so if you
      want to antiquote a type into the quotations it takes, you will
