@@ -1782,8 +1782,7 @@ val CARD_DELETE =
     store_thm
     ("CARD_DELETE",
      (--`!s. FINITE s ==>
-          !x:'a. CARD(s DELETE x) =
-                 (if x IN s then (CARD s) - 1 else CARD s)`--),
+          !x:'a. CARD(s DELETE x) = if x IN s then CARD s - 1 else CARD s`--),
      SET_INDUCT_TAC THENL
      [REWRITE_TAC [EMPTY_DELETE,NOT_IN_EMPTY],
       PURE_REWRITE_TAC [DELETE_INSERT,IN_INSERT] THEN
@@ -1875,13 +1874,12 @@ val CARD_PSUBSET =
     store_thm
     ("CARD_PSUBSET",
      (--`!s:^set.
-         FINITE s ==> (!t. t PSUBSET s ==> (CARD t < CARD s))`--),
+         FINITE s ==> !t. t PSUBSET s ==> CARD t < CARD s`--),
      REPEAT STRIP_TAC THEN IMP_RES_TAC PSUBSET_DEF THEN
      IMP_RES_THEN (IMP_RES_THEN MP_TAC) CARD_SUBSET THEN
      PURE_ONCE_REWRITE_TAC [LESS_OR_EQ] THEN
      DISCH_THEN (STRIP_THM_THEN
-                 (fn th => fn g => ACCEPT_TAC th g handle _ => MP_TAC th g))
-     THEN
+       (fn th => fn g => ACCEPT_TAC th g handle _ => MP_TAC th g)) THEN
      IMP_RES_THEN STRIP_ASSUME_TAC PSUBSET_INSERT_SUBSET THEN
      IMP_RES_THEN (IMP_RES_THEN MP_TAC) CARD_SUBSET THEN
      IMP_RES_TAC INSERT_SUBSET THEN
@@ -1902,8 +1900,8 @@ val CARD_SING =
 val SING_IFF_CARD1 =
     store_thm
     ("SING_IFF_CARD1",
-     (--`!s:^set. (SING s) = ((CARD s = 1) /\ (FINITE s))`--),
-     REWRITE_TAC [SING_DEF,num_CONV (--`1`--)] THEN
+     (--`!s:^set. SING s = (CARD s = 1) /\ FINITE s`--),
+     REWRITE_TAC [SING_DEF,ONE] THEN
      GEN_TAC THEN EQ_TAC THENL
      [DISCH_THEN (CHOOSE_THEN SUBST1_TAC) THEN
       CONJ_TAC THENL
@@ -1944,7 +1942,7 @@ val CARD_DIFF =
        IMP_RES_TAC CARD_DELETE THEN
        RES_TAC THEN ASM_REWRITE_TAC [IN_INTER,DIFF_INSERT] THEN
        PURE_ONCE_REWRITE_TAC [SYM (SPEC_ALL SUB_PLUS)] THEN
-       REWRITE_TAC [num_CONV (--`1`--),ADD_CLAUSES,DELETE_INTER] THEN
+       REWRITE_TAC [ONE,ADD_CLAUSES,DELETE_INTER] THEN
        MP_TAC (SPECL [(--`s':^set`--),(--`s:^set`--),(--`e:'a`--)]
                      IN_INTER) THEN
        ASM_REWRITE_TAC [DELETE_NON_ELEMENT] THEN
