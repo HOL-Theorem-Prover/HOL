@@ -11,9 +11,9 @@
  * machines.                                                                 *
  *---------------------------------------------------------------------------*)
 
-time load "bossLib"; 
+time load "bossLib";
 
-open arithmeticTheory bossLib; 
+open arithmeticTheory bossLib;
 infix 8 by;
 
 val ARW_TAC = RW_TAC arith_ss;
@@ -25,7 +25,7 @@ val ARW_TAC = RW_TAC arith_ss;
 
 val divides = Define `divides a b = ?x. b = a * x`;
 
-set_fixity "divides" (Infix 450);
+set_fixity "divides" (Infixr 450);
 
 
 (*---------------------------------------------------------------------------*)
@@ -40,60 +40,60 @@ val prime = Define `prime p = ~(p=1) /\ !x. x divides p ==> (x=1) \/ (x=p)`;
 (*---------------------------------------------------------------------------*)
 
 val DIVIDES_0 = store_thm("DIVIDES_0",       ``!x. x divides 0``,
-PROVE_TAC 
+PROVE_TAC
   [divides,MULT_CLAUSES]);
 
 val DIVIDES_ZERO = store_thm("DIVIDES_ZERO", ``!x. 0 divides x = (x = 0)``,
-PROVE_TAC 
+PROVE_TAC
   [divides,MULT_CLAUSES]);
 
 val DIVIDES_ONE = store_thm("DIVIDES_ONE",   ``!x. x divides 1 = (x = 1)``,
-PROVE_TAC 
+PROVE_TAC
   [divides,MULT_CLAUSES,MULT_EQ_1]);
 
 val DIVIDES_REFL = store_thm("DIVIDES_REFL", ``!x. x divides x``,
-PROVE_TAC 
+PROVE_TAC
   [divides,MULT_CLAUSES]);
 
 val DIVIDES_TRANS = store_thm
 ("DIVIDES_TRANS", ``!a b c. a divides b /\ b divides c ==> a divides c``,
-PROVE_TAC 
-  [divides,MULT_ASSOC]); 
-	
+PROVE_TAC
+  [divides,MULT_ASSOC]);
+
 val DIVIDES_ADD = store_thm
 ("DIVIDES_ADD", ``!d a b. d divides a /\ d divides b ==> d divides (a + b)``,
-PROVE_TAC 
+PROVE_TAC
   [divides,LEFT_ADD_DISTRIB]);
 
 val DIVIDES_SUB = store_thm
 ("DIVIDES_SUB", ``!d a b. d divides a /\ d divides b ==> d divides (a - b)``,
-PROVE_TAC 
+PROVE_TAC
   [divides,LEFT_SUB_DISTRIB]);
 
 val DIVIDES_ADDL = store_thm
 ("DIVIDES_ADDL", ``!d a b. d divides a /\ d divides (a + b) ==> d divides b``,
-PROVE_TAC 
+PROVE_TAC
   [ADD_SUB,ADD_SYM,DIVIDES_SUB]);
 
 val DIVIDES_LMUL = store_thm
 ("DIVIDES_LMUL",  ``!d a x. d divides a ==> d divides (x * a)``,
-PROVE_TAC 
+PROVE_TAC
   [divides,MULT_ASSOC,MULT_SYM]);
 
 val DIVIDES_RMUL = store_thm
 ("DIVIDES_RMUL",  ``!d a x. d divides a ==> d divides (a * x)``,
-PROVE_TAC 
+PROVE_TAC
   [MULT_SYM,DIVIDES_LMUL]);
 
 val DIVIDES_LE = store_thm
 ("DIVIDES_LE",  ``!m n. m divides n ==> m <= n \/ (n = 0)``,
-ARW_TAC [divides] 
-  THEN Cases_on `x` 
+ARW_TAC [divides]
+  THEN Cases_on `x`
   THEN ARW_TAC [MULT_CLAUSES]);
 
 val DIVIDES_FACT = store_thm
 ("DIVIDES_FACT", ``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
-ARW_TAC [LESS_EQ_EXISTS] 
+ARW_TAC [LESS_EQ_EXISTS]
  THEN Induct_on `p`
  THEN ARW_TAC [FACT,ADD_CLAUSES]
  THENL [Cases_on `m`, ALL_TAC]
@@ -103,13 +103,13 @@ ARW_TAC [LESS_EQ_EXISTS]
 (* Alternative proof *)
 val DIVIDES_FACT = prove
 (``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
-Induct_on `n - m` 
+Induct_on `n - m`
  THEN ARW_TAC [] THENL
- [`m:num = n`     by DECIDE_TAC THEN 
+ [`m:num = n`     by DECIDE_TAC THEN
   `?k. m = SUC k` by PROVE_TAC[arithmeticTheory.num_CASES,
                                prim_recTheory.LESS_REFL] THEN
    PROVE_TAC[FACT,DIVIDES_RMUL,DIVIDES_REFL],
-  `0 < n`         by DECIDE_TAC THEN 
+  `0 < n`         by DECIDE_TAC THEN
   `?k. n = SUC k` by PROVE_TAC [arithmeticTheory.num_CASES,
                                 prim_recTheory.LESS_REFL]
    THEN ARW_TAC [FACT, DIVIDES_LMUL]]);
@@ -128,11 +128,11 @@ val NOT_PRIME_1 = store_thm
 val PRIME_2 = store_thm
 ("PRIME_2", ``prime 2``,
    ARW_TAC [prime]
-    THEN PROVE_TAC [DIVIDES_LE, DIVIDES_ZERO, 
-                    DECIDE`~(2=1) /\ ~(2=0) /\ 
+    THEN PROVE_TAC [DIVIDES_LE, DIVIDES_ZERO,
+                    DECIDE`~(2=1) /\ ~(2=0) /\
                            (x <= 2 = (x=0) \/ (x=1) \/ (x=2))`]);
 
-val PRIME_POS = 
+val PRIME_POS =
 store_thm("PRIME_POS", ``!p. prime p ==> 0<p``,
           Cases THEN ARW_TAC[NOT_PRIME_0]);
 
@@ -149,14 +149,14 @@ store_thm("PRIME_POS", ``!p. prime p ==> 0<p``,
 
 val PRIME_FACTOR = store_thm("PRIME_FACTOR",
  ``!n. ~(n = 1) ==> ?p. prime p /\ p divides n``,
-completeInduct_on `n` 
+completeInduct_on `n`
  THEN ARW_TAC []
  THEN Cases_on `prime n` THENL
  [PROVE_TAC [DIVIDES_REFL],
   `?x. x divides n /\ ~(x=1) /\ ~(x=n)` by PROVE_TAC[prime]
     THEN PROVE_TAC [LESS_OR_EQ, PRIME_2,
                     DIVIDES_LE, DIVIDES_TRANS, DIVIDES_0]]);
-  
+
 
 (*---------------------------------------------------------------------------*
  * Every number has a prime greater than it.                                 *
@@ -173,7 +173,7 @@ val EUCLID = store_thm ("EUCLID",
 SPOSE_NOT_THEN STRIP_ASSUME_TAC
  THEN MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR)
  THEN ARW_TAC [FACT_LESS, DECIDE `~(x=0) = 0<x`]
- THEN PROVE_TAC [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE, 
+ THEN PROVE_TAC [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
                  NOT_PRIME_1, NOT_LESS, PRIME_POS]);
 
 
@@ -185,19 +185,19 @@ SPOSE_NOT_THEN STRIP_ASSUME_TAC
 
 val EUCLID_AGAIN = prove (``!n. ?p. n < p /\ prime p``,
 CCONTR_TAC
-THEN 
-   `?n. !p. n < p ==> ~prime p`  by PROVE_TAC[]              THEN 
+THEN
+   `?n. !p. n < p ==> ~prime p`  by PROVE_TAC[]              THEN
    `~(FACT n + 1 = 1)`           by ARW_TAC [DECIDE `~(x=0) = 0<x`,
-                                             FACT_LESS]      THEN 
-   `?p. prime p /\ 
+                                             FACT_LESS]      THEN
+   `?p. prime p /\
         p divides (FACT n + 1)`  by PROVE_TAC [PRIME_FACTOR] THEN
    `0 < p`                       by PROVE_TAC [PRIME_POS]    THEN
    `p <= n`                      by PROVE_TAC [NOT_LESS]     THEN
    `p divides FACT n`            by PROVE_TAC [DIVIDES_FACT] THEN
    `p divides 1`                 by PROVE_TAC [DIVIDES_ADDL] THEN
    `p = 1`                       by PROVE_TAC [DIVIDES_ONE]  THEN
-   `~prime p`                    by PROVE_TAC [NOT_PRIME_1] 
-THEN 
+   `~prime p`                    by PROVE_TAC [NOT_PRIME_1]
+THEN
 PROVE_TAC[]);
 
 val _ = print_theory();
