@@ -5,9 +5,12 @@ structure CooperSyntax :> CooperSyntax = struct
    implementation of Cooper's algorithm *)
 
 open HolKernel boolLib intSyntax intSimps CooperThms
+open int_arithTheory integerTheory Parse
 
 infix THEN THENC ORELSEC |-> ##
 infixr -->
+
+val (Type,Term) = parse_from_grammars integerTheory.integer_grammars
 
 fun ERR f msg = HOL_ERR {origin_structure = "CooperSyntax",
                          origin_function = f,
@@ -194,7 +197,8 @@ local
   val NOT_EXISTS_THM =
     GEN_ALL (SYM
              (PURE_REWRITE_RULE [NOT_CLAUSES]
-              (BETA_RULE (Q.SPEC `\x. ~ P x` boolTheory.NOT_EXISTS_THM))))
+              (BETA_RULE (SPEC (Term`\x:'a. ~ P x`)
+                               boolTheory.NOT_EXISTS_THM))))
 in
 
   fun flip_forall tm = let

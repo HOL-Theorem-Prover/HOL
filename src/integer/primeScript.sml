@@ -1,13 +1,15 @@
 structure primeScript =
 struct
 
-open HolKernel Parse boolLib 
-     Num_conv arithmeticTheory bossLib dividesTheory ;
+open HolKernel Parse boolLib
+
+
+open TotalDefn BasicProvers SingleStep dividesTheory ;
 
 infix THEN THENC THENL;
 
 
-val ARW = RW_TAC arith_ss;
+val ARW = RW_TAC (simpLib.++(bool_ss, numSimps.ARITH_ss));
 
 val _ = new_theory "prime";
 

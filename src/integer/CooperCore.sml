@@ -6,8 +6,6 @@ open intSyntax CooperSyntax CooperMath CooperThms
 
 open Profile
 
-local open listTheory in end;
-
 infix ## ORELSEC THENC |->
 infixr -->
 
@@ -16,12 +14,33 @@ val ERR = mk_HOL_ERR "CooperCore";
 
 val lhand = rand o rator
 
-val move_add =
-  GENL (map (fn n => mk_var(n, int_ty)) ["x", "y", "z"])
-  (EQT_ELIM (AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM)
-            ``(x + y) + z = (x + z) + y:int``))
-
 val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
+
+local
+  val (Type,Term) = Parse.parse_from_grammars listTheory.list_grammars
+  val prove = INST_TYPE [alpha |-> int_ty] o prove
+  infix THEN
+in
+
+val MEM_base = prove(
+  Term`!e:'a l. MEM e (e::l)`,
+  REWRITE_TAC [listTheory.MEM]);
+val MEM_build = prove(
+  Term`!l1 e1:'a e2. MEM e1 l1 ==> MEM e1 (e2::l1)`,
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [listTheory.MEM]);
+val mem_nilP = prove(
+  ``!P. (?x:'a. MEM x [] /\ P x) = F``,
+  REWRITE_TAC [listTheory.MEM]);
+val mem_singP = prove(
+  ``!P y. (?x:'a. MEM x [y] /\ P x) = P y``,
+  simpLib.SIMP_TAC boolSimps.bool_ss [listTheory.MEM]);
+val mem_consP = prove(
+  ``!P h t. (?x:'a. MEM x (h :: t) /\ P x) = P h \/ (?x. MEM x t /\ P x)``,
+  simpLib.SIMP_TAC boolSimps.bool_ss [listTheory.MEM, RIGHT_AND_OVER_OR,
+                                      EXISTS_OR_THM]);
+end
+
+val _ = Term
 
 fun prove_membership t1 t2 = let
   val (tmlist, elty) = listSyntax.dest_list t2
@@ -50,21 +69,16 @@ end
 
 fun phase4_CONV tm = let
   (* have a formula of the form
-       ?x. t1 <op> t2 <op> t3 <op> .... <tn>
-     where each <op> is either /\ or \/ and
-     where each ti either doesn't involve x at all, or is one of the
-     following forms:
+       ?x. form
+     where
+       form ::= form /\ form | form \/ form | ~form | leaf
+     and where each leaf either doesn't involve x at all, or is one of
+     the following forms:
         x < a,
         b < x,
         x = a,
-        ~(x = a),
         d int_divides x + u
-        ~(e int_divides x + v)
      and where all of a, b, u and v are expressions not involving x.
-     Further there will be at least one of the latter two.
-
-     Want to calculate F_neginf such that each term of the first type is
-     replaced by TRUE and each of the second replaced by FALSE.
   *)
   val {Bvar, Body} = Rsyntax.dest_exists tm
   val F = rand tm
@@ -644,7 +658,7 @@ fun phase4_CONV tm = let
       val not_thm =
         CONV_RULE (NOT_EXISTS_CONV THENC
                    BINDER_CONV NOT_EXISTS_CONV THENC
-                   STRIP_QUANT_CONV (REWR_CONV simple_bool_formula))
+                   STRIP_QUANT_CONV (REWR_CONV NOT_AND_IMP))
         not_disj2_thm
       val fx_thm = ASSUME (mk_comb(F, Bvar))
       val fx_thm_expanded = CONV_RULE BETA_CONV fx_thm
@@ -1117,6 +1131,47 @@ in
       (LAND_CONV c THENC RAND_CONV (LIST_EL_CONV c)) tm
 end
 
+
+fun in_list_CONV tm = let
+  val (v, body) = dest_exists tm
+  val (mem_t, _) = dest_conj body
+
+  fun recurse tm = let
+    val (v, body) = dest_exists tm
+    val (mem_t, _) = dest_conj body
+    val list_t = rand mem_t
+    (* mem_t = MEM v l and l is not nil, so list_t = CONS h t *)
+  in
+    if is_const (rand list_t) then REWR_CONV mem_singP
+    else REWR_CONV mem_consP THENC RAND_CONV recurse
+  end tm
+in
+  if is_const (rand (mem_t)) (* i.e. = [] *) then REWR_CONV mem_nilP tm
+  else recurse tm
+end
+
+
+
+fun elim_bterms tm = let
+  (* tm is of form
+        ?b. (MEM b list /\ K ... j) /\ f (b + j)
+     or
+        ?b. MEM b list /\ f (b + j)
+  *)
+  val (var, body) = dest_exists tm
+  val initially = if is_conj (lhand body) then REWR_CONV (GSYM CONJ_ASSOC)
+                  else ALL_CONV
+in
+  BINDER_CONV (RAND_CONV BETA_CONV THENC initially THENC
+               profile "eb.abs" (RAND_CONV (mk_abs_CONV var))) THENC
+  profile "eb.in_list" in_list_CONV THENC
+  profile "eb.beta" (EVERY_DISJ_CONV (TRY_CONV BETA_CONV))
+end tm
+
+
+
+
+
 val phase5_CONV  = let
   (* have something of the form
        (?x. K (0 < x /\ x <= k) x  /\ neginf x) \/
@@ -1152,22 +1207,10 @@ val phase5_CONV  = let
        will fail.
        Otherwise, the basic action here is to expand out all of the
        "b" possibilities in the list *)
-    TRY_CONV (TRY_CONV SWAP_VARS_CONV THENC
-              STRIP_QUANT_CONV
-              (LAND_CONV (REWRITE_CONV [listTheory.MEM] THENC
-                          REWRITE_CONV [RIGHT_AND_OVER_OR]) THENC
-               expand_right_and_over_or) THENC
-              ((LAST_EXISTS_CONV
-                (push_one_exists_over_many_disjs THENC
-                 EVERY_DISJ_CONV (Unwind.UNWIND_EXISTS_CONV THENC
-                                  (BETA_CONV ORELSEC
-                                   RAND_CONV BETA_CONV) THENC
-                                  reduce_if_ground)) THENC
-                push_one_exists_over_many_disjs) ORELSEC
-               (* if the list was empty, there won't be an equality to do
-                  UNWIND_EXISTS_CONV on, and the above will fail; in that case,
-                  rewrite to push falsity upwards to the top level. *)
-               REWRITE_CONV []))
+    TRY_CONV (((SWAP_VARS_CONV THENC BINDER_CONV elim_bterms) ORELSEC
+               elim_bterms) THENC
+              reduce_if_ground THENC
+              push_one_exists_over_many_disjs)
   val elim_bterms_on_right = profile "phase5.er" elim_bterms_on_right
 in
   LAND_CONV prelim_left THENC

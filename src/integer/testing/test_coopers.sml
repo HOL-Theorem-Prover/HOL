@@ -171,5 +171,5 @@ end
 val _ = (map test_term terms_to_test;
          case CommandLine.arguments() of
            [] => ()
-         | _ => app print_profile_results (profile.results()))
+         | _ => app print_profile_results (Profile.results()))
 

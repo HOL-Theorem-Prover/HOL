@@ -1,4 +1,4 @@
-structure CooperThms = struct
+structure CooperThms :> CooperThms = struct
 
 open HolKernel boolLib Parse
 
@@ -13,7 +13,10 @@ val elim_le = GSYM INT_NOT_LT
 val elim_gt = int_gt
 val elim_ge = int_ge
 
-val T_not = List.nth(CONJUNCTS NOT_CLAUSES,1)
+val move_add = prove(
+  ``!x y z:int. (x + y) + z = (x + z) + y``,
+  REPEAT GEN_TAC THEN CONV_TAC (AC_CONV (INT_ADD_ASSOC, INT_ADD_COMM)));
+
 val F_not = List.nth(CONJUNCTS NOT_CLAUSES,2)
 
 val AND_CLAUSES0 = CONJUNCTS (Q.ID_SPEC AND_CLAUSES)
@@ -31,7 +34,7 @@ val NOT_NOT_P = List.nth(CONJUNCTS NOT_CLAUSES, 0)
 val NOT_OR = GEN_ALL (#2 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
 val NOT_AND = GEN_ALL (#1 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
 
-val simple_bool_formula =
+val NOT_AND_IMP =
   tautLib.TAUT_PROVE (Term`!p q. ~(p /\ q) = (p ==> ~q)`)
 
 val DISJ_NEQ_ELIM = prove(

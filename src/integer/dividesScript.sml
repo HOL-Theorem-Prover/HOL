@@ -1,12 +1,14 @@
 structure dividesScript =
 struct
 
-open HolKernel boolLib bossLib numLib arithmeticTheory
+open HolKernel boolLib TotalDefn BasicProvers numLib arithmeticTheory
+open SingleStep
 
 infix THEN THENC THENL;
 infix 8 by;
 
-val ARW = RW_TAC arith_ss;
+val arith_ss = simpLib.++(bool_ss, numSimps.ARITH_ss)
+val ARW = RW_TAC arith_ss
 
 val _ = new_theory "divides";
 
@@ -75,13 +77,13 @@ val DIVIDES_MULT_LEFT = store_thm(
   ``!n m. divides (n * m) m = (m = 0) \/ (n = 1)``,
   SIMP_TAC arith_ss [FORALL_AND_THM, EQ_IMP_THM, DISJ_IMP_THM,
                      ALL_DIVIDES_0, DIVIDES_REFL] THEN
-  SIMP_TAC std_ss [DIVIDES] THEN REPEAT STRIP_TAC THEN
+  SIMP_TAC bool_ss [DIVIDES] THEN REPEAT STRIP_TAC THEN
   `m * 1 = m * (n * q)` by (POP_ASSUM (CONV_TAC o LAND_CONV o
                                        ONCE_REWRITE_CONV o C cons []) THEN
-                            ASM_SIMP_TAC std_ss [MULT_CLAUSES] THEN
+                            ASM_SIMP_TAC bool_ss [MULT_CLAUSES] THEN
                             CONV_TAC (AC_CONV(MULT_ASSOC, MULT_COMM))) THEN
   `(m = 0) \/ (n * q = 1)` by PROVE_TAC [EQ_MULT_LCANCEL] THEN
-  ASM_SIMP_TAC std_ss [] THEN
+  ASM_SIMP_TAC bool_ss [] THEN
   PROVE_TAC [MULT_EQ_1]);
 
 val _ = export_theory();

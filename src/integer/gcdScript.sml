@@ -1,16 +1,23 @@
 structure gcdScript =
 struct
 
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib TotalDefn BasicProvers
+     SingleStep
      arithmeticTheory dividesTheory primeTheory;
 
 open simpLib boolSimps
 infix ++
 
-infix THEN THENC THENL;
+infix THEN THENC THENL ORELSE
 infix 8 by;
 
-val ARW = RW_TAC arith_ss;
+val arith_ss = bool_ss ++ numSimps.ARITH_ss
+val ARW = RW_TAC arith_ss
+val DECIDE = numLib.ARITH_PROVE
+fun DECIDE_TAC (g as (asl,_)) =
+  ((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith asl) THEN
+    numLib.ARITH_TAC)
+   ORELSE tautLib.TAUT_TAC) g;
 
 val _ = new_theory "gcd";
 
@@ -110,7 +117,7 @@ val GCD_ADD_L = store_thm("GCD_ADD_L",
 val GCD_EQ_0 = store_thm(
   "GCD_EQ_0",
   ``!n m. (gcd n m = 0) = (n = 0) /\ (m = 0)``,
-  SIMP_TAC std_ss [EQ_IMP_THM, FORALL_AND_THM, GCD] THEN
+  SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM, GCD] THEN
   HO_MATCH_MP_TAC gcd_ind THEN SIMP_TAC arith_ss [GCD]);
 
 val PRIME_GCD = store_thm("PRIME_GCD",
@@ -125,7 +132,7 @@ recInduct gcd_ind THEN ARW [GCD]
   THEN Q.PAT_ASSUM `$! M` MATCH_MP_TAC
   THENL [`?z. x = y+z` by (Q.EXISTS_TAC `x-y` THEN DECIDE_TAC),
          `?z. y = x+z` by (Q.EXISTS_TAC `y-x` THEN DECIDE_TAC)]
-  THEN RW_TAC std_ss [DECIDE (Term`(x + y) - x = y`)]
+  THEN RW_TAC bool_ss [DECIDE (Term`(x + y) - x = y`)]
   THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC,MULT_CLAUSES,
                   ADD_CLAUSES,LEFT_ADD_DISTRIB]);
 
@@ -173,15 +180,15 @@ val gcd_lemma1 = prove(
   Q.ABBREV_TAC `i = MIN m n` THEN
   FIRST_X_ASSUM (fn th => MP_TAC (Q.SPECL [`i`, `j`] th) THEN
                           MP_TAC (Q.SPECL [`j`, `i`] th)) THEN
-  ASM_SIMP_TAC std_ss [MAX_COMM] THEN
+  ASM_SIMP_TAC bool_ss [MAX_COMM] THEN
   Cases_on `m < n` THENL [
-    FULL_SIMP_TAC std_ss [MIN_DEF, MAX_DEF] THEN
+    FULL_SIMP_TAC bool_ss [MIN_DEF, MAX_DEF] THEN
     `gcd i j = 1` by PROVE_TAC [GCD_ADD_R, GCD_REF] THEN
-    ASM_SIMP_TAC std_ss [] THEN REPEAT STRIP_TAC THEN
+    ASM_SIMP_TAC bool_ss [] THEN REPEAT STRIP_TAC THEN
     MAP_EVERY Q.EXISTS_TAC [`p + q`, `q`],
-    `n < m` by ARW[] THEN FULL_SIMP_TAC std_ss [MIN_DEF, MAX_DEF] THEN
+    `n < m` by ARW[] THEN FULL_SIMP_TAC bool_ss [MIN_DEF, MAX_DEF] THEN
     `gcd j i = 1` by PROVE_TAC [GCD_ADD_L, GCD_REF, GCD_SYM] THEN
-    ASM_SIMP_TAC std_ss [] THEN REPEAT STRIP_TAC THEN
+    ASM_SIMP_TAC bool_ss [] THEN REPEAT STRIP_TAC THEN
     MAP_EVERY Q.EXISTS_TAC [`p`, `p + q`]
   ] THEN
   ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB, LEFT_ADD_DISTRIB] THEN
@@ -213,7 +220,7 @@ val FACTOR_OUT_GCD = store_thm(
   `divides (gcd k j * gcd n m) (gcd n m)`
      by PROVE_TAC [GCD_IS_GCD, IS_GCD] THEN
   `gcd n m = 0` by PROVE_TAC [DIVIDES_MULT_LEFT] THEN
-  FULL_SIMP_TAC std_ss [GCD_EQ_0]);
+  FULL_SIMP_TAC bool_ss [GCD_EQ_0]);
 
 val LINEAR_GCD = store_thm(
   "LINEAR_GCD",
@@ -236,7 +243,7 @@ val LINEAR_GCD = store_thm(
                                 MULT_RIGHT_1] THEN
       CONV_TAC (AC_CONV(MULT_ASSOC, MULT_COMM))) THEN
   POP_ASSUM (REWRITE_TAC o C cons []) THEN
-  SIMP_TAC std_ss [EQ_MULT_LCANCEL, EXISTS_OR_THM] THEN
+  SIMP_TAC bool_ss [EQ_MULT_LCANCEL, EXISTS_OR_THM] THEN
   `~(i = 0)` by (STRIP_TAC THEN FULL_SIMP_TAC arith_ss []) THEN
   `~(j = 0)` by (STRIP_TAC THEN FULL_SIMP_TAC arith_ss []) THEN
   PROVE_TAC [GCD_SYM, gcd_lemma]);
@@ -252,9 +259,9 @@ val gcd_lemma = prove(
   ``!n a b. n * b <= a ==> (gcd a b = gcd (a - n * b) b)``,
   Induct THENL [
     SIMP_TAC arith_ss [],
-    SIMP_TAC std_ss [MULT_CLAUSES] THEN REPEAT STRIP_TAC THEN
+    SIMP_TAC bool_ss [MULT_CLAUSES] THEN REPEAT STRIP_TAC THEN
     `n * b <= a` by ASM_SIMP_TAC arith_ss [] THEN
-    SIMP_TAC std_ss [SUB_PLUS] THEN
+    SIMP_TAC bool_ss [SUB_PLUS] THEN
     Q.SPECL_THEN [`a - n * b`, `b`] MP_TAC gcd_lemma0 THEN
     ASM_SIMP_TAC arith_ss []
   ]);
@@ -281,7 +288,7 @@ val GCD_EFFICIENTLY = store_thm(
   `q * a <= q * a + r` by SIMP_TAC arith_ss [] THEN
   POP_ASSUM (SUBST_ALL_TAC o ONCE_REWRITE_RULE [GCD_SYM] o
              MATCH_MP gcd_lemma) THEN
-  SIMP_TAC std_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
+  SIMP_TAC bool_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
   CONV_TAC (RAND_CONV (REWR_CONV GCD_SYM)) THEN REWRITE_TAC []);
 
 val _ = export_theory();

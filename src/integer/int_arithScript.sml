@@ -4,7 +4,7 @@ open HolKernel boolLib Parse
 infix THEN THENC THENL |-> ORELSE
 infixr -->
 
-open integerTheory intSyntax intSimps Psyntax listTheory dividesTheory
+open integerTheory intSyntax intSimps Psyntax dividesTheory
 
 open simpLib boolSimps BasicProvers SingleStep
 infix ++
@@ -312,15 +312,6 @@ val in_subtractive_range = store_thm(
   ]);
 
 
-val MEM_base = store_thm(
-  "MEM_base",
-  Term`!e l. MEM e (e::l)`,
-  REWRITE_TAC [MEM]);
-
-val MEM_build = store_thm(
-  "MEM_build",
-  Term`!l1 e1 e2. MEM e1 l1 ==> MEM e1 (e2::l1)`,
-  SIMP_TAC bool_ss [MEM]);
 
 val subtract_to_small = store_thm(
   "subtract_to_small",
