@@ -282,7 +282,7 @@ val _ =
       ["(defvar hol98-executable HOL98-EXECUTABLE\n"
         -->
        ("(defvar hol98-executable \n  "^
-        quote (fullPath [holdir, "bin/hol.unquote"])^"\n")]
+        quote (fullPath [holdir, "bin/hol"])^"\n")]
  end;
 
 
