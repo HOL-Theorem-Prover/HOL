@@ -9,6 +9,7 @@ struct
 
 open HolKernel boolLib;
 open labelLib
+local open labelTheory in end
 type simpset = simpLib.simpset;
 
 infix THEN THENL ORELSE ++;
