@@ -298,11 +298,14 @@ let rec do_var v s =
      || ((List.mem s0 v || is_field s0) && !(!curmodals.sMART_PREFIX)) then (* treat as prefix *)
                                               (* if smart, always do foo1 -> foo_1;
                                                  otherwise, only if foo is specified as a prefix *)
-    (try List.assoc s0 !(!curmodals.vAR_PREFIX_ALIST)
-     with Not_found -> "\\tsvar{"^texify s0^"}")
-    ^(if s2 <> "" then s2 else "")           (* primes *)
-    ^(if s1 <> "" then "_{"^s1^"}" else "")  (* digits *)
-    ^(if s3 = "_" then "_{"^do_var v s4^"}" else "")  (* recurse on subscript; TeX error if combined with digits *)
+    (let sbase = (try List.assoc s0 !(!curmodals.vAR_PREFIX_ALIST)
+                  with Not_found -> "\\tsvar{"^texify s0^"}")
+                 ^(if s2 <> "" then s2 else "")           (* primes *)
+                 ^(if s1 <> "" then "_{"^s1^"}" else "")  (* digits *) in
+     if s3 = "_" then
+       "{"^sbase^"}_{"^do_var v s4^"}"  (* recurse on subscript; avoid TeX multiple-subscript error *)
+     else
+       sbase)  (* no recursion *)
   else if List.mem s v || is_field s then  (* field names often reused as var names *)
     "\\tsvar{"^texify s^"}"
   else if Str.string_match (Str.regexp "[0-9]+") s 0 then  (* digits *)
