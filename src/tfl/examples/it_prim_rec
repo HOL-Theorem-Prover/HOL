@@ -1,6 +1,5 @@
 (*---------------------------------------------------------------------------
      Various iterative primitive recursions.
-
      We start with Ackermann's function.
  ---------------------------------------------------------------------------*)
 
@@ -53,5 +52,3 @@ val V_def = Rfunction "V_def" `^pred LEX ^pred LEX ^pred`
 
 val V_eqns = save_thm("V_eqns", #rules V_def);
 val V_induction = save_thm("V_induction", #induction V_def);
-
-val V_induct = mk_thm([],concl V_induction);
