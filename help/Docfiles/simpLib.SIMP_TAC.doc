@@ -1,6 +1,6 @@
 \DOC SIMP_TAC
 
-\TYPE {simpLib.SIMP_TAC : simpset -> thm list -> tactic}
+\TYPE {SIMP_TAC : simpset -> thm list -> tactic}
 
 \SYNOPSIS
 Simplifies the goal, using the given simpset and the additional
@@ -32,12 +32,14 @@ simplification.
 {SIMP_TAC} never fails, though it may diverge.
 
 \EXAMPLE
-{SIMP_TAC} and the {hol_ss} simpset combine to prove quite difficult
-seeming goals:
+{SIMP_TAC} and the {arith_ss} simpset combine to prove quite 
+difficult seeming goals:
 {
-   - val (_, p) =
-       SIMP_TAC hol_ss [] ([], Term`P x /\ (x = y + 3) ==> P x /\ y < x`);
+   - val (_, p) = SIMP_TAC arith_ss [] 
+                 ([], Term`P x /\ (x = y + 3) ==> P x /\ y < x`);
+
    > val p = fn : thm list -> thm
+
    - p [];
    > val it = |- P x /\ (x = y + 3) ==> P x /\ y < x : thm
 }
@@ -63,5 +65,9 @@ rewrites can still result in divergence, or poor performance.
 
 
 \SEEALSO
-simpLib.++, simpLib.ASM_SIMP_TAC, boolSimps.bool_ss, simpLib.FULL_SIMP_TAC, hol_ss, simpLib.mk_simpset, Rewrite.REWRITE_TAC, simpLib.SIMP_CONV, simpLib.SIMP_PROVE, simpLib.SIMP_RULE.
+simpLib.++, simpLib.ASM_SIMP_TAC, boolSimps.bool_ss, 
+simpLib.FULL_SIMP_TAC, simpLib.mk_simpset, 
+Rewrite.REWRITE_TAC, simpLib.SIMP_CONV, 
+simpLib.SIMP_PROVE, simpLib.SIMP_RULE.
+
 \ENDDOC

@@ -25,14 +25,14 @@ explained in the entry for {SIMP_CONV}.
 {ASM_SIMP_TAC} never fails, though it may diverge.
 
 \EXAMPLE
-Here, {hol_ss} and the one assumption are used to demonstrate the
-proof of a simple arithmetic fact:
+The simple goal {x < y ?- x + y < y + y} can be proved by using 
+{bossLib.arith_ss} and the assumption by
 {
-   - ASM_SIMP_TAC hol_ss [] ([Term`x < y`], Term`x + y < y + y`);
-   > val it = ([], fn) : tactic_result
+   ASM_SIMP_TAC bossLib.arith_ss []
 }
 
-
 \SEEALSO
-simpLib.++, boolSimps.bool_ss, simpLib.FULL_SIMP_TAC, hol_ss, simpLib.mk_simpset, simpLib.SIMP_CONV, simpLib.SIMP_TAC.
+simpLib.++, boolSimps.bool_ss, simpLib.FULL_SIMP_TAC, 
+simpLib.mk_simpset, simpLib.SIMP_CONV, simpLib.SIMP_TAC.
+
 \ENDDOC

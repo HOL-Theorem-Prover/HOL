@@ -19,16 +19,17 @@ Fails if the term can not be shown to be equivalent to true.  May
 diverge.
 
 \EXAMPLE
+Applying the tactic
+{
+   ASSUME_TAC (SIMP_PROVE arith_ss [] ``x < y ==> x < y + 6``)
+}
+to the goal {?- x + y = 10} yields the new goal
+{
+   x < y ==> x < y + 6 ?- x + y = 10
+}
 Using {SIMP_PROVE} here allows {ASSUME_TAC} to add a new fact, where
 the equality with truth that {SIMP_CONV} would produce would be less
-useful.
-{
-   - ASSUME_TAC (SIMP_PROVE hol_ss [] ``x < y ==> x < y + 6``)
-                ([], ``x + y = 10``)
-   > val it =
-       ([([`x < y ==> x < y + 6`], `x + y = 10`)], fn)
-       : tactic_result
-}
+useful. 
 
 
 \USES
@@ -38,4 +39,5 @@ theorems of the form {|- P = T}.
 
 \SEEALSO
 simpLib.SIMP_CONV, simpLib.SIMP_RULE, simpLib.SIMP_TAC.
+
 \ENDDOC

@@ -1,0 +1,14 @@
+\DOC &&
+
+\TYPE {op && : simpset * thm list -> simpset}
+
+\SYNOPSIS
+Infix operator for adding theorems into a simpset.
+
+\DESCRIBE
+{bossLib.&&} is identical to {BasicProvers.&&}.
+
+\SEEALSO
+bossLib.&&.
+
+\ENDDOC

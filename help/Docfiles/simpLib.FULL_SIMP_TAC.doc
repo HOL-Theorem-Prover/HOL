@@ -61,5 +61,6 @@ this occurring, the best approach seems to be the use of
 {RULE_ASSUM_TAC} and {SIMP_RULE}.
 
 \SEEALSO
-simpLib.ASM_SIMP_TAC, hol_ss, simpLib.SIMP_CONV, simpLib.SIMP_RULE, simpLib.SIMP_TAC.
+simpLib.ASM_SIMP_TAC, simpLib.SIMP_CONV, simpLib.SIMP_RULE, simpLib.SIMP_TAC.
+
 \ENDDOC

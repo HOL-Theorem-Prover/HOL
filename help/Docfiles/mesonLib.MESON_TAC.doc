@@ -1,6 +1,6 @@
 \DOC MESON_TAC
 
-\TYPE {mesonLib.MESON_TAC : thm list -> tactic}
+\TYPE {MESON_TAC : thm list -> tactic}
 
 \SYNOPSIS
 Performs first order proof search to prove the goal, using the given

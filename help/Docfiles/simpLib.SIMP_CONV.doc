@@ -1,6 +1,6 @@
 \DOC SIMP_CONV
 
-\TYPE {simpLib.SIMP_CONV : simpset -> thm list -> conv}
+\TYPE {SIMP_CONV : simpset -> thm list -> conv}
 
 \SYNOPSIS
 Applies a simpset and a list of rewrite rules to simplify a term.
@@ -13,9 +13,10 @@ simpLib
 
 \DESCRIBE
 {SIMP_CONV} is the fundamental engine of the HOL simplification
-library.  It repeatedly applies the transformations bound up in the
-the provided simpset augmented with the given rewrite rules to a term,
-ultimately yielding a theorem equating the original term to another.
+library.  It repeatedly applies the transformations included in 
+the provided simpset (which is augmented with the given rewrite rules)
+to a term, ultimately yielding a theorem equating the original 
+term to another.
 
 Values of the {simpset} type embody a suite of different
 transformations that might be applicable to given terms.  These
@@ -79,7 +80,7 @@ Congruence rules allow {SIMP_CONV} to assume additional context as a
 term is rewritten.  In a term such as {P ==> Q /\ f x} the truth of
 term P may be assumed as an additional piece of context in the
 rewriting of {Q /\ f x}.  The congruence theorem that states this is
-valid is ({Ho_theorems.IMP_CONG}):
+valid is ({IMP_CONG}):
 {
    |- (P = P') ==> (P' ==> (Q = Q')) ==> ((P ==> Q) = (P' ==> Q'))
 }
@@ -95,7 +96,7 @@ conjuncts or disjuncts can be very computationally intensive.
 Decision procedures in simpsets are similar to conversions.  They are
 arbitrary pieces of code that are applied to sub-terms at low
 priority.  They are given access to the wider context through a list
-of relevant theorems.  The {hol_ss} simpset includes an arithmetic
+of relevant theorems.  The {arith_ss} simpset includes an arithmetic
 decision procedure implemented in this way.
 
 \FAILURE
@@ -103,7 +104,7 @@ decision procedure implemented in this way.
 
 \EXAMPLE
 {
-- SIMP_CONV hol_ss [] ``(\x. x + 3) 4``;
+- SIMP_CONV arith_ss [] ``(\x. x + 3) 4``;
 > val it = |- (\x. x + 3) 4 = 7 : thm
 }
 
@@ -116,10 +117,10 @@ theorems ({SIMP_RULE}), but {SIMP_CONV} provides the underlying
 functionality, and is useful in its own right, just as conversions are
 generally.
 
-\COMMENTS
-This documentation is incomplete, due to a lack of understanding on
-the author's part of another's code.
-
 \SEEALSO
-simpLib.++, simpLib.ASM_SIMP_TAC, simpLib.FULL_SIMP_TAC, hol_ss, simpLib.mk_simpset, simpLib.rewrites, simpLib.SIMP_RULE, simpLib.SIMP_TAC, simpLib.SIMPSET.
+simpLib.++, simpLib.ASM_SIMP_TAC, 
+simpLib.FULL_SIMP_TAC, simpLib.mk_simpset, simpLib.rewrites, 
+simpLib.SIMP_RULE, simpLib.SIMP_TAC, simpLib.SIMPSET,
+computeLib.EVAL_CONV, bossLib.EVAL.
+
 \ENDDOC

@@ -1,0 +1,14 @@
+\DOC PROVE
+
+\TYPE {PROVE : thm list -> term -> thm}
+
+\SYNOPSIS
+Prove a theorem with use of supplied lemmas.
+
+\DESCRIBE
+{bossLib.PROVE} is identical to {BasicProvers.PROVE}.
+
+\SEEALSO
+BasicProvers.PROVE.
+
+\ENDDOC

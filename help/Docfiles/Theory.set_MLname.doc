@@ -69,7 +69,7 @@ defining constants, and to use overloading to get the desired name.
 
 \SEEALSO
 bossLib.Hol_reln, bossLib.Hol_datatype, Theory.export_theory,
-Theory.current_definitions, Theory.current_theoremms, 
+Theory.current_definitions, Theory.current_theorems, 
 Theory.current_axioms, DB.thy, DB.dest_theory.
 
 \ENDDOC

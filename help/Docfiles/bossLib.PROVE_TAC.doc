@@ -1,0 +1,14 @@
+\DOC PROVE_TAC
+
+\TYPE {PROVE_TAC : thm list -> tactic}
+
+\SYNOPSIS
+Solve a goal with use of hypotheses and supplied lemmas.
+
+\DESCRIBE
+{bossLib.PROVE_TAC} is identical to {BasicProvers.PROVE_TAC}.
+
+\SEEALSO
+BasicProvers.PROVE_TAC.
+
+\ENDDOC

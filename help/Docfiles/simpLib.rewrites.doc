@@ -1,6 +1,6 @@
 \DOC rewrites
 
-\TYPE {simpLib.rewrites : thm list -> ssdata}
+\TYPE {rewrites : thm list -> ssdata}
 
 \SYNOPSIS
 Creates an {ssdata} value consisting of the given theorems as
@@ -16,10 +16,10 @@ simpLib
 Never fails.
 
 \EXAMPLE
-Instead of writing the simpler {SIMP_CONV hol_ss thmlist}, one could
+Instead of writing the simpler {SIMP_CONV std_ss thmlist}, one could
 write
 {
-   SIMP_CONV (hol_ss ++ rewrites thmlist) []
+   SIMP_CONV (std_ss ++ rewrites thmlist) []
 }
 More plausibly, {rewrites} can be used to create commonly
 used {ssdata} values containing a great number of rewrites.  This is
@@ -28,4 +28,5 @@ those values consist only of rewrite theorems.
 
 \SEEALSO
 simpLib.++, simpLib.mk_simpset, simpLib.SIMPSET, simpLib.SIMP_CONV.
+
 \ENDDOC

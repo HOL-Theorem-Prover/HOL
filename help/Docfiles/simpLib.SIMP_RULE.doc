@@ -1,6 +1,6 @@
 \DOC SIMP_RULE
 
-\TYPE {simpLib.SIMP_RULE : simpset -> thm list -> thm -> thm}
+\TYPE {SIMP_RULE : simpset -> thm list -> thm -> thm}
 
 \SYNOPSIS
 Simplifies the conclusion of a theorem according to the given simpset
@@ -26,7 +26,7 @@ The following also demonstrates the higher order rewriting
 possible with simplification ({FORALL_AND_THM} states
 {|- (!x. P x /\ Q x) = (!x. P x) /\ (!x. Q x)}):
 {
-- SIMP_RULE hol_ss [boolTheory.FORALL_AND_THM]
+- SIMP_RULE bool_ss [boolTheory.FORALL_AND_THM]
             (ASSUME (Term`!x. P (x + 1) /\ R x /\ x < y`));
 > val it =  [.] |- (!x. P (x + 1)) /\ (!x. R x) /\ (!x. x < y) : thm
 }
@@ -35,8 +35,8 @@ possible with simplification ({FORALL_AND_THM} states
 \COMMENTS
 {SIMP_RULE ss thmlist} is equivalent to {CONV_RULE (SIMP_CONV ss thmlist)}.
 
-
-
 \SEEALSO
-simpLib.ASM_SIMP_RULE, simpLib.SIMP_CONV, simpLib.SIMP_TAC.
+simpLib.ASM_SIMP_RULE, simpLib.SIMP_CONV, simpLib.SIMP_TAC, 
+BasicProvers,bool_ss.
+
 \ENDDOC

@@ -1,0 +1,51 @@
+\DOC by
+
+\TYPE {op by : term quotation * tactic -> tactic}
+
+\SYNOPSIS
+Prove and place a theorem on the assumptions of the goal.
+
+\DESCRIBE
+An invocation {tm by tac}, when applied to goal {A ?- g}, applies {tac} 
+to goal {A ?- tm}. If {tm} is thereby proved, it is added to {A}, 
+yielding the new goal {A,tm ?- g}.  If {tm} is not proved by {tac}, 
+then any remaining subgoals generated are added to {A,tm ?- g}.
+
+When {tm} is added to the existing assumptions {A}, it is "stripped", 
+i.e., broken apart by eliminating existentials, conjunctions, 
+and disjunctions. This can lead to case splitting.
+
+\FAILURE
+Fails if {tac} fails when applied to {A ?- tm}.
+
+\EXAMPLE
+Given the goal {{x <= y, w < x} ?- P}, suppose that the fact
+{?n. y = n + w} would help in eventually proving {P}. Invoking
+{
+   `?n. y = n + w` by (EXISTS_TAC (Term `y-w`) THEN DECIDE_TAC)
+}
+yields the goal {{y = n + w, x <= y, w < x} ?- P} in which the proved
+fact has been added to the assumptions after its existential quantifier 
+is eliminated. Note the parentheses around the tactic: this is needed
+for the example because {by} binds more tightly than {THEN}.
+
+Since the tactic supplied need not solve the generated subgoal, {by} 
+gives a useful way of generating proof obligations while pursuing a 
+particular line of reasoning. For example, the above goal could also be
+attacked by 
+{
+   `?n. y = n + w` by ALL_TAC
+}
+with the result being the goal {{x <= y, w < x} ?- ?n. y = n + w} 
+and the augmented original {{y = n + w, x <= y, w < x} ?- P}. Now either 
+may be attempted.
+
+\COMMENTS
+Use of {by} can be more convenient than {IMP_RES_TAC} and {RES_TAC}
+when they would generate many useless assumptions.
+
+\SEEALSO
+Tactical.SUBGOAL_THEN, Tactic.IMP_RES_TAC, Tactic.RES_TAC, 
+Tactic.STRIP_ASSUME_TAC.
+
+\ENDDOC

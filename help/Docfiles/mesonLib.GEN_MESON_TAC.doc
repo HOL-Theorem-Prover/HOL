@@ -1,6 +1,6 @@
 \DOC GEN_MESON_TAC
 
-\TYPE {mesonLib.GEN_MESON_TAC : int -> int -> int -> thm list -> tactic}
+\TYPE {GEN_MESON_TAC : int -> int -> int -> thm list -> tactic}
 
 \SYNOPSIS
 Performs first order proof search to prove the goal, using both the

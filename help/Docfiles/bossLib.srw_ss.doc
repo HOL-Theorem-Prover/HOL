@@ -1,9 +1,9 @@
 \DOC srw_ss
 
-\TYPE {bossLib.srw_ss : unit -> simpset}
+\TYPE {srw_ss : unit -> simpset}
 
 \SYNOPSIS
-Returns the ``stateful rewriting'' system's underlying {simpset}.
+Returns the "stateful rewriting" system's underlying {simpset}.
 
 \KEYWORDS
 simplification
@@ -20,7 +20,7 @@ function.
 The value behind {srw_ss()} can change in three ways.  First, whenever
 a type enters the {TypeBase}, the type's associated simplification
 theorems (accessible directly using the function {TypeBase.simpls_of})
-are all added to the {simpset}.  This ensures that the ``obvious''
+are all added to the {simpset}.  This ensures that the "obvious"
 rewrite theorems for a type (such as the disjointness of constructors)
 need never be explicitly specified.
 

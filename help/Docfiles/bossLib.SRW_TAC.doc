@@ -1,6 +1,6 @@
 \DOC SRW_TAC
 
-\TYPE {bossLib.SRW_TAC : simpLib.ssdata list -> thm list -> tactic}
+\TYPE {SRW_TAC : ssdata list -> thm list -> tactic}
 
 \SYNOPSIS
 A version of {RW_TAC} with an implicit {simpset}.
@@ -11,13 +11,10 @@ simplification
 \LIBRARY bossLib
 
 \DESCRIBE
-A call to {SRW_TAC sslist thlist} produces the same result as
+A call to {SRW_TAC [d1,...,dn] thlist} produces the same result as
 {
-   RW_TAC (foldl (fn (ssd,ss) => ss ++ ssd) (srw_ss()) sslist) thlist
+   RW_TAC (srw_ss() ++ d1 ++ ... ++ dn) thlist
 }
-The complicated {foldl} expression simply adds each {simpset} fragment
-in the list {sslist} onto the base {simpset} returned by {srw_ss()}.
-
 
 \FAILURE
 When applied to a goal, the tactic resulting from an application of
@@ -49,7 +46,7 @@ such a fragment is {numSimps.ARITH_ss}, which embodies an arithmetic
 decision procedure for the natural numbers.
 
 \SEEALSO
-bossLib.augment_srw_ss, BasicProvers.export_rewrites, simpLib.SIMPSET,
-bossLib.srw_ss.
+bossLib.srw_ss, bossLib.augment_srw_ss, 
+BasicProvers.export_rewrites, simpLib.SIMPSET, simpLib.ssdata.
 
 \ENDDOC

@@ -64,10 +64,11 @@ distribution itself, as a basis for the construction of other
 simpsets.
 
 \COMMENTS
-There is also a {PURE_ss} {ssdata} value in the same {pureSimps}
-structure that I can't be bothered giving its own special manual
-entry.  It plausibly doesn't need to be there at all.
+There is also a {pureSimps.PURE_ss} {ssdata} value. Its usefulness is
+questionable.
 
 \SEEALSO
-boolSimps.bool_ss, hol_ss, Rewrite.PURE_REWRITE_TAC, simpLib.SIMP_CONV, simpLib.SIMP_TAC.
+boolSimps.bool_ss, Rewrite.PURE_REWRITE_TAC, 
+simpLib.SIMP_CONV, simpLib.SIMP_TAC.
+
 \ENDDOC

@@ -1,0 +1,14 @@
+\DOC srw_ss
+
+\TYPE {srw_ss : unit -> simpset}
+
+\SYNOPSIS
+Implicit {simpset}.
+
+\DESCRIBE
+{bossLib.srw_ss} is identical to {BasicProvers.srw_ss}.
+
+\SEEALSO
+bossLib.srw_ss.
+
+\ENDDOC
