@@ -389,7 +389,7 @@ that the buffer has already had HOL terms, comments and strings removed."
   (let* ((buf (ensure-hol-buffer-ok))
          (mys (format "%s" s)) ;; gets rid of text properties
          (commandstring
-          (concat "val _ = if Lib.exists (fn s => s = \""
+          (concat "val _ = if List.exists (fn s => s = \""
                   mys
                   "\") (Meta.loaded()) then () else "
                   "(print  \"Loading " mys
