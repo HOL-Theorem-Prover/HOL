@@ -389,7 +389,7 @@ fun adjust_tygram tygram =
  let val rules' = itlist elim (rules tygram) []
      val tygram' = 
           itlist add_rule rules' 
-              (add_rule (70,INFIX([{opname="prod",parse_string = "*"}],RIGHT))
+              (add_rule (70,INFIX([{opname="prod",parse_string = "*"}],NONASSOC))
                          empty_grammar)
      val abbrevs = Binarymap.listItems (abbreviations tygram)
      val tygram'' = itlist (C new_abbreviation) abbrevs tygram'
@@ -407,6 +407,14 @@ fun prim_pp_type_as_ML tygram tmgram ppstrm ty =
 fun pp_type_as_ML ppstrm ty =
    prim_pp_type_as_ML (Parse.type_grammar()) (Parse.term_grammar())
                       ppstrm ty ;
+
+datatype elem 
+    = DEFN of thm
+    | DATATYPE of ParseDatatype.AST list
+    | ABSDATATYPE of string list * ParseDatatype.AST list
+    | MLSIG of string
+    | MLSTRUCT of string;
+
 
 (*---------------------------------------------------------------------------*)
 (* Perhaps naive in light of the recent stuff of MN200 to eliminate flab     *)
@@ -432,17 +440,43 @@ fun pretype_of ty =
      end
 end;
 
-fun pp_datatype_as_ML ppstrm decls = 
+(*---------------------------------------------------------------------------*)
+(* Initially, datatype description do not have arguments to the type         *)
+(* operators being defined. This function finds out what they should be      *)
+(* and substitutes them through the rhs of the datatype declaration.         *)
+(* The DATATYPE description requires looking info up in the type base, in    *)
+(* order to see what order multiple type variables should be in. The         *)
+(* ABSDATATYPE clause expects the type variables to be given in the correct  *)
+(* order in the first argument.                                              *)
+(*---------------------------------------------------------------------------*)
+
+fun repair_type_decls (DATATYPE decls) = 
+     let val type_names = map fst decls
+         val tyax = TypeBase.axiom_of (hd type_names)
+         val newtypes = Prim_rec.doms_of_tyaxiom tyax
+         val tyvars = map dest_vartype (snd (dest_type (hd newtypes)))
+         val alist = map (fn x => (fst(dest_type x),pretype_of x)) newtypes
+         fun alist_fn name = snd (valOf (assoc1 name alist))
+     in 
+        (tyvars, map (I##replaceForm alist_fn) decls)
+     end
+  | repair_type_decls (ABSDATATYPE (tyvars,decls)) = 
+     let open ParseDatatype
+         val tyvarsl = map dVartype tyvars
+         val tynames = map fst decls
+         val newtypes = map (fn s => dTyop{Tyop=s,Thy=NONE,Args=tyvarsl}) tynames
+         val alist = zip tynames newtypes
+         fun alist_fn name = snd (valOf (assoc1 name alist))
+     in
+       (tyvars, map (I##replaceForm alist_fn) decls)
+     end
+  | repair_type_decls arg = raise ERR "repair_type_decls" "unexpected input";
+
+
+fun pp_datatype_as_ML ppstrm (tyvars,decls) = 
  let open Portable ParseDatatype
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val type_names = map fst decls
-     val tyax = TypeBase.axiom_of (hd type_names)
-     val newtypes = Prim_rec.doms_of_tyaxiom tyax
-     val tyvars = map dest_vartype (snd (dest_type (hd newtypes)))
-     val alist = map (fn x => (fst(dest_type x),pretype_of x)) newtypes
-     fun alist_fn name = snd (valOf (assoc1 name alist))
-     val decls' = map (I##replaceForm alist_fn) decls
      val ppty = pp_type_as_ML ppstrm
      fun pp_tyvars [] = ()
        | pp_tyvars [v] = add_string v
@@ -488,22 +522,10 @@ fun pp_datatype_as_ML ppstrm decls =
   ; pr_list (pp_decl (tyvars,ref true))
             (fn () => (add_newline(); add_string "and")) 
             add_newline
-            decls'
+            decls
   ; end_block()
   ; end_block()
  end;
-
-
-(*---------------------------------------------------------------------------*)
-(* Generate ML signature and structure corresponding to executable portion   *)
-(* of a theory.                                                              *)
-(*---------------------------------------------------------------------------*)
-
-datatype elem 
-    = DEFN of thm
-    | DATATYPE of ParseDatatype.AST list
-(*    | ABSTYPE of ParseDatatype.AST list *)
-;
 
 
 (*---------------------------------------------------------------------------*)
@@ -525,11 +547,22 @@ fun pp_sig strm (s,elems) =
          begin_block,end_block,flush_ppstream,...} = with_ppstream strm
     val ppty = pp_type_as_ML strm
     val pp_datatype = pp_datatype_as_ML strm
-    fun pp_abstype astl = (* doesn't yet deal with polymorphism *)
+    fun pp_absdatatype (tyvars,astl) = 
      let val tynames = map fst astl
-         fun pp_tydec s = add_string ("type "^s)
+         val tys = map (fn s => (tyvars,s)) tynames
+         fun pp_tydec (tyvars,s) = 
+           (begin_block CONSISTENT 0;
+             add_string "type ";
+             if null tyvars then add_string s else
+             if List.length tyvars = 1 
+              then (add_string (hd tyvars); add_string(" "^s))
+              else (add_string "(";
+                    pr_list add_string (fn () => add_string",")
+                                       (fn () => ()) tyvars;
+                    add_string")");
+            end_block())
      in begin_block CONSISTENT 0;
-        pr_list pp_tydec (fn () => ()) add_newline tynames;
+        pr_list pp_tydec (fn () => ()) add_newline (map (pair tyvars) tynames);
         end_block()
      end
     fun pp_valdec c =
@@ -540,10 +573,12 @@ fun pp_sig strm (s,elems) =
         ppty ty;
         end_block()
      end
-    fun pp_el (DATATYPE astl) = pp_datatype astl
-(*      | pp_el (ABSTYPE astl) = pp_abstype astl *)
+    fun pp_el (DATATYPE astl) = pp_datatype (repair_type_decls (DATATYPE astl))
+      | pp_el (ABSDATATYPE (tyvarsl,astl)) = pp_absdatatype(tyvarsl,astl)
       | pp_el (DEFN thm) = 
-         pr_list pp_valdec (fn () => ()) add_newline (consts_of_def thm)
+            pr_list pp_valdec (fn () => ()) add_newline (consts_of_def thm)
+      | pp_el (MLSIG s) = add_string s
+      | pp_el (MLSTRUCT s) = ()
  in 
    begin_block CONSISTENT 0;
    add_string ("signature "^ML s^" = "); add_newline();
@@ -564,9 +599,13 @@ fun pp_struct strm (s,elems,cnames) =
          begin_block,end_block,flush_ppstream,...} = with_ppstream strm
     val pp_datatype = pp_datatype_as_ML strm
     val pp_defn = pp_defn_as_ML s strm
-    fun pp_el (DATATYPE astl) = pp_datatype astl
-(*      | pp_el (ABSTYPE astl) = pp_datatype astl (* fails *) *)
+    fun pp_el (DATATYPE astl) = pp_datatype (repair_type_decls (DATATYPE astl))
+      | pp_el (ABSDATATYPE (tyvarsl,astl)) = 
+           pp_datatype (repair_type_decls (ABSDATATYPE(tyvarsl,astl)))
       | pp_el (DEFN thm) = pp_defn (concl thm)
+      | pp_el (MLSIG s) = ()
+      | pp_el (MLSTRUCT s) = add_string s
+
  in 
    begin_block CONSISTENT 0;
    add_string ("structure "^ML s^" :> "^ML s^" ="); add_newline();
@@ -688,7 +727,8 @@ fun install_consts _ [] = []
       let val consts = U (map (Term.decls o fst) (constructors ty))
           val _ = List.app (add s) consts
       in consts @ install_consts s rst
-      end;
+      end
+  | install_consts s (other::rst) = install_consts s rst
 
 
 (*---------------------------------------------------------------------------*)

@@ -23,10 +23,13 @@ sig
   val pp_type_as_ML     : ppstream -> hol_type -> unit
   val pp_term_as_ML     : string -> ppstream -> term -> unit
   val pp_defn_as_ML     : string -> ppstream -> term -> unit
-  val pp_datatype_as_ML : ppstream -> ParseDatatype.AST list -> unit
+  val pp_datatype_as_ML : ppstream -> string list * ParseDatatype.AST list -> unit
 
   datatype elem = DEFN of Thm.thm
-                | DATATYPE of ParseDatatype.AST list;
+                | DATATYPE of ParseDatatype.AST list
+                | ABSDATATYPE of string list * ParseDatatype.AST list
+                | MLSIG of string
+                | MLSTRUCT of string
 
   val exportML : string * elem list -> unit
 end
