@@ -125,13 +125,21 @@ variable names except for the last:
 
 \section{Types}\index{types, in HOL logic@types, in \HOL\ logic}
 
-The allowed types\index{type constraint!in HOL logic@in \HOL\ logic}
-depend on which type constants\index{type constants, in HOL logic@type
-constants, in \HOL\ logic} have been declared in the
-current theory. See Section~\ref{theoryfns} for details of how such
-declarations are made. There are two primitive constructor
+The allowed types
+%
+\index{type constraint!in HOL logic@in \HOL\ logic}
+%
+depend on which type constants
+%
+\index{type constants, in HOL logic@type constants, in \HOL\ logic}
+%
+have been declared in the current theory. See Section~\ref{theoryfns}
+for details of how such declarations are made. There are two primitive
+constructor
+%
 \index{types, in HOL logic@types, in \HOL\ logic!constructors for}
-\index{type constructors!in HOL logic@in \HOL\ logic} 
+\index{type constructors!in HOL logic@in \HOL\ logic}
+%
 functions for values of type \ml{hol\_type}:
 %
 \index{function types, in HOL logic@function types, in \HOL\ logic!constructors for}
@@ -144,28 +152,31 @@ functions for values of type \ml{hol\_type}:
 \end{verbatim}
 \end{boxed}
 %
-The function \ml{mk\_vartype}
- constructs a type variable\index{type variables, in HOL logic@type
- variables, in \HOL\ logic!constructor for} with a given name;
-it gives a warning if the name is not an allowable type variable name (\ie\ not
-a \ml{'} followed by an alphanumeric).
+The function \ml{mk\_vartype} constructs a type variable
+%
+\index{type variables, in HOL logic@type variables, in \HOL{} logic!constructor for}
+%
+with a given name; it gives a warning if the name is not an allowable
+type variable name (\ie\ not a \ml{'} followed by an alphanumeric).
 
 The function \ml{mk\_thy\_type} constructs a compound type
+%
 \index{compound types, in HOL logic@compound types, in \HOL\ logic!constructors for}
-from a record {\small\verb+{Tyop,Thy,Args}+} where {\small\verb+Tyop+}
-is a string representing the name of the type operator, 
-{\small\verb+Thy+} is a string representing the theory that
-{\small\verb+Tyop+} was declared in, and {\small\verb+Args+} is  a list of
+%
+from a record \ml{\{Tyop,Thy,Args\}} where \ml{Tyop}
+is a string representing the name of the type operator,
+\ml{Thy} is a string representing the theory that
+\ml{Tyop} was declared in, and \ml{Args} is  a list of
 types representing the arguments to the operator.  Function types
-$\sigma_1\fun\sigma_2$ of the logic are represented in \ML\ as though
+$\sigma_1\fun\sigma_2$ of the logic are represented in \ML{} as though
 they were compound types $(\sigma_1,\sigma_2)$\ml{fun} (in
 Section~\ref{types}, however, function types were not regarded as
 compound types).
 
 The evaluation of
-$\mathtt{mk\_thy\_type}\{\mathtt{Tyop} = \mathit{name},\
-\mathtt{Thy} = \mathit{thyname},\ 
-\mathtt{Args} = [\sigma_1, \cdots ,\sigma_n]\}$
+$\ml{mk\_thy\_type}\{\ml{Tyop} = \mathit{name},\
+\ml{Thy} = \mathit{thyname},\
+\ml{Args} = [\sigma_1, \cdots ,\sigma_n]\}$
 fails if
 %
 \begin{myenumerate}
@@ -177,14 +188,14 @@ but its arity is not $n$.
 For example, \ml{mk\_thy\_type\{Tyop="bool", Thy="bool", Args=[]\}}
 \index{truth values, in HOL logic@truth values, in \HOL\ logic}
 \index{bool, the type in HOL logic@\ml{bool}, the type in \HOL\ logic}
-evaluates to an \ML\ value of type \ml{term} representing the type
+evaluates to an \ML{} value of type \ml{term} representing the type
 \ty{bool}.
 %
 %\paragraph{Support for constructing types}
 
 Type constants may be
-bound to \ML\ values and need not be repeatedly constructed: \eg, the type built by 
-\ml{mk\_thy\_type\{Tyop="bool", Thy="bool", Args=[]\}} is abbreviated  
+bound to \ML\ values and need not be repeatedly constructed: \eg, the type built by
+\ml{mk\_thy\_type\{Tyop="bool", Thy="bool", Args=[]\}} is abbreviated
 by the \ML\ value \ml{bool}. Similarly, function types may be constructed
 with the infix \ML\ function \ml{-->}. A few common type variables
 have been constructed and bound to \ML{} identifers, \eg, \ml{alpha}
@@ -193,8 +204,8 @@ is the type variable \ml{'a} and \ml{beta} is the type variable
 %
 {\small
 \begin{verbatim}
-  mk_thy_type{Tyop="fun", Thy="min", 
-              Args=[mk_vartype "'a", 
+  mk_thy_type{Tyop="fun", Thy="min",
+              Args=[mk_vartype "'a",
                     mk_thy_type{Tyop="bool", Thy="bool", Args=[]}}
 \end{verbatim}
 }
@@ -220,7 +231,7 @@ functions for values of type \ml{hol\_type}:
 extracts the name of a type variable.
 A compound type is destructed by the function \ml{dest\_thy\_type} into the  name
  of the type operator, the name of the theory it was declared in, and
- a  list  of  the  argument  types; 
+ a  list  of  the  argument  types;
  \ml{dest\_vartype}  and \ml{dest\_thy\_type} are  thus the  inverses of
  \ml{mk\_vartype} and \ml{mk\_thy\_type}, respectively.  The destructors fail
  on arguments of the wrong form.
@@ -240,7 +251,7 @@ Section~\ref{theoryfns} for details of how such declarations are made.
 There are four primitive constructor
 \index{variables, in HOL logic@variables, in \HOL\ logic!constructor for}
 \index{terms, in HOL logic@terms, in \HOL\ logic!constructors for}
-\index{term constructors, in HOL logic@term constructors, in \HOL\ logic} 
+\index{term constructors, in HOL logic@term constructors, in \HOL\ logic}
 functions for values of type \ml{term}:
 
 \begin{boxed}
@@ -263,7 +274,7 @@ with name $x$ and type $\sigma$; it always succeeds.
 \noindent $\mathtt{mk\_thy\_const}\{\mathtt{Name} = \mathit{c},\
 \mathtt{Thy} = \mathit{thyname},\ \mathtt{Ty} = \sigma\}$
  evaluates to a term representing the constant
-\index{constants, in HOL logic@constants, in \HOL\ logic!constructor for} 
+\index{constants, in HOL logic@constants, in \HOL\ logic!constructor for}
 with name $c$ and type $\sigma$; it fails if:
 \begin{myenumerate}
 % \item $c$ is not an allowable constant name;
@@ -299,7 +310,16 @@ type of $t_2$ is not equal to $\sigma'$.
 the abstraction\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!constructor for} $\lquant{x}t$; it fails if $x$ is not a variable.
 
 
-There are four primitive destructor\index{term destructors, in HOL logic@term destructors, in \HOL\ logic}\index{variables, in HOL logic@variables, in \HOL\ logic!destructor for}\index{constants, in HOL logic@constants, in \HOL\ logic!destructor for}\index{combinations, in HOL logic@combinations, in \HOL\ logic!destructor for}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!destructor for}\index{function application, in HOL logic@function application, in \HOL\ logic!destructor for} functions on terms:
+There are four primitive destructor
+%
+\index{term destructors, in HOL logic@term destructors, in \HOL{} logic}
+\index{variables, in HOL logic@variables, in \HOL{} logic!destructor for}
+\index{constants, in HOL logic@constants, in \HOL{} logic!destructor for}
+\index{combinations, in HOL logic@combinations, in \HOL{} logic!destructor for}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!destructor for}
+\index{function application, in HOL logic@function application, in \HOL{} logic!destructor for}
+%
+functions on terms:
 
 \begin{boxed}
 
@@ -334,7 +354,7 @@ The function
 \end{verbatim}\end{boxed}
 
 \noindent returns the type
-\index{types, in HOL logic@types, in \HOL\ logic!determination of} 
+\index{types, in HOL logic@types, in \HOL\ logic!determination of}
 of a term. The function
 
 \begin{boxed}\index{aconv@\ml{aconv}|pin}
@@ -344,7 +364,7 @@ of a term. The function
 
 \noindent implements the $\alpha$-convertibility test for
 $\lambda$-calculus terms.
-\index{$\alpha$-convertibility, in HOL logic@$\alpha$-convertibility, in \HOL\ logic!determination of}  
+\index{$\alpha$-convertibility, in HOL logic@$\alpha$-convertibility, in \HOL\ logic!determination of}
 From the point of view of the \HOL{} logic, $\alpha$-convertible terms
 are identical. A variety of other functions are available for
 performing substitution (\verb+subst+), type instantiation
@@ -365,17 +385,17 @@ using the constructor functions. The \HOL\ system, adapting the
 approach taken in \LCF\index{LCF@\LCF}, has special
 quotation
 \index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}
-\index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax} 
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax}
 parsers for \HOL\ types and terms which enable types and terms
 to be input using a fairly standard syntax. For example, the \ML{}
 expression $\holquote{\ml{:bool -> bool}}$ denotes exactly the same
-value (of \ML\ type \ml{hol\_type}) as 
+value (of \ML\ type \ml{hol\_type}) as
 
 \begin{hol}
 \index{bool, the type in HOL logic@\ml{bool}, the type in \HOL\ logic}
 \begin{verbatim}
   mk_thy_type{Tyop = "fun",Thy = "min",
-              Args = [mk_thy_type{Tyop = "bool", Thy = "bool", Args = []}, 
+              Args = [mk_thy_type{Tyop = "bool", Thy = "bool", Args = []},
                       mk_thy_type{Tyop = "bool", Thy = "bool", Args = []}]}
 \end{verbatim}
 \end{hol}
@@ -385,13 +405,13 @@ value (of \ML\ type \ml{hol\_type}) as
 \index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic}
 %
 can be used instead of\footnote{In order to be processed successfully, this
-quotation requires the theory of arithmetic to have already been loaded, which 
+quotation requires the theory of arithmetic to have already been loaded, which
 can be accomplished by {\tt load "arithmeticTheory"}.}
 
 {\small\baselineskip\HOLSpacing
 \begin{verbatim}
  let val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
- in 
+ in
   mk_abs
    (mk_var("x",numty),
     mk_comb(mk_comb
@@ -409,12 +429,12 @@ can be accomplished by {\tt load "arithmeticTheory"}.}
 also outputs types and terms using this syntax.
 \index{printing, in HOL logic@printing, in \HOL{} logic!of quotation syntax}
 Types are printed
-\index{printing, in HOL logic@printing, in \HOL\ logic!of types} 
+\index{printing, in HOL logic@printing, in \HOL\ logic!of types}
 in the form $\holquote{:\mathit{type}}$. For example, the \ML\ value
-of type \ml{hol\_type} representing 
-$\alpha\fun(\ty{ind}\fun\ty{bool})$ would be printed out 
+of type \ml{hol\_type} representing
+$\alpha\fun(\ty{ind}\fun\ty{bool})$ would be printed out
 as $\holquote{: \ml{\ensuremath{{}^\prime\!} a -> ind -> bool}}$.
-Similarly, terms are printed in the form $\holquote{\,\mathit{term}\,}$. 
+Similarly, terms are printed in the form $\holquote{\,\mathit{term}\,}$.
 Thus, the term representing $\holquote{\uquant{x\ y}x<y \imp\equant{z}x+z = y}$
 would be printed as:
 %
@@ -424,23 +444,24 @@ A leading colon is used to distinguish a type quotation from a term quotation:
 the former have the form \ml{`:}$\ \cdots\ $\ml{`} and the latter have
 the form \ml{`}$\ \cdots\ $\ml{`}.
 
-\index{type inference!in HOL parser@in \HOL\ parser|(}
 
 \paragraph {Type inference}
+\index{type inference!in HOL parser@in \HOL{} parser|(}
+%
 Notice that there is no explicit type information in
-\verb!\x.x+1!.  The \HOL\ type checker knows that \ml{1} has
-type \ml{num} and \ml{+} has type \ml{num->(num->num)}.  From this
-information it can infer that both occurrences of \ml{x} in
-\verb!\x.x+1! could have type \ml{num}.  This is not the only possible
-type assignment; for example, the first occurrence of \ml{x} could
-have type \ml{bool} and the second one have type \ml{num}.  In that
-case there would be two \emph{different} variables with name
-\ml{x}, namely \ml{x}$_{\tt bool}$ and
-\ml{x}$_{\tt num}$, the second of which is free.  However, the only
-way to construct a term with this second type 
-assignment is by using constructors, since the type checker uses the
-heuristic that all variables in a term with the same name have the
-same type.  This is illustrated in the following session.
+\holtxt{\bs{}x.x+1}.  The \HOL{} type checker knows that \ml{1} has
+type \holtxt{num} and \holtxt{+} has type \holtxt{num->(num->num)}.
+From this information it can infer that both occurrences of \ml{x} in
+\holtxt{\bs{}x.x+1} could have type \holtxt{num}.  This is not the
+only possible type assignment; for example, the first occurrence of
+\holtxt{x} could have type \holtxt{bool} and the second one have type
+\holtxt{num}.  In that case there would be two \emph{different}
+variables with name \holtxt{x}, namely \holtxt{x}$_{\holtxt{bool}}$ and
+\holtxt{x}$_{\holtxt{num}}$, the second of which is free.  However, the
+only way to construct a term with this second type assignment is by
+using constructors, since the type checker uses the heuristic that all
+variables in a term with the same name have the same type.  This is
+illustrated in the following session.
 %
 \setcounter{sessioncount}{1}
 \begin{session}
@@ -487,11 +508,13 @@ At times, the user may want to control the exact type of a subterm. To
 support such functionality, types can be explicitly indicated by
 following any subterm with a colon and then a type.  For example,
 \ml{``f(x:num):bool``} will type check with \ml{f} and \ml{x}
-getting types \ml{num->bool} and \ml{num} respectively. 
+getting types \ml{num->bool} and \ml{num} respectively.
 This treatment of types within quotations is inherited from
-\LCF\index{LCF@\LCF}.  \index{type constraint!in HOL logic@in \HOL\
-  logic|)} \index{ term quotes, in ML@\ml{`$\cdots$`} (term quotes, in
-  \ML)|)}
+\LCF.
+%
+\index{LCF@\LCF}
+\index{type constraint!in HOL logic@in \HOL{} logic|)}
+\index{ term quotes, in ML@\ml{`$\cdots$`} (term quotes, in \ML)|)}
 
 \subsection{Antiquotation}
 
@@ -544,7 +567,7 @@ val z = ``y = ^y``;
 \end{session}
 
 \noindent Antiquoting a type into a term quotation requires the use of
-{\verb+ty_antiq+}. For example, 
+{\verb+ty_antiq+}. For example,
 
 \begin{session}
 \begin{verbatim}
@@ -573,15 +596,15 @@ parser with the functions \verb+type_grammar+ and \verb+term_grammar+.
 
 For example, in the following session, we see that the type grammar
 used in the startup context of \HOL{} has the type operators
-\verb+fun+, \verb+sum+, \verb+prod+, \verb+list+, \verb+recspace+, 
+\verb+fun+, \verb+sum+, \verb+prod+, \verb+list+, \verb+recspace+,
 \verb+num+, \verb+option+, \verb+one+, \verb+label+, \verb+ind+, and
-\verb+bool+. 
+\verb+bool+.
 
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
 - type_grammar();
-> val it = 
+> val it =
     Rules:
     (50)   TY  ::=  TY -> TY [fun] (R-associative)
     (60)   TY  ::=  TY + TY [sum] (R-associative)
@@ -592,15 +615,15 @@ used in the startup context of \HOL{} has the type operators
 \end{verbatim}
 \end{session}
 
-Also, \verb+fun+, \verb+sum+, and \verb+prod+ have infix 
-notation (\verb+->+), (\verb|+|), and (\verb+#+), respectively, with 
+Also, \verb+fun+, \verb+sum+, and \verb+prod+ have infix
+notation (\verb+->+), (\verb|+|), and (\verb+#+), respectively, with
 different binding strengths: \verb+#+ (with 70) binds stronger than
 \verb|+| (60), which  binds stronger than \verb+->+ (50). All postfix
 type operators (with 100) bind more strongly than the infixes.
 
 The next session shows the (abbreviated) output from invoking
 \verb+term_grammar+ in the startup \HOL{} environment. The deleted output
-includes a listing of  all constants known to the system, 
+includes a listing of  all constants known to the system,
 including prefix operators, along with all overloadings currrently in
 force. The portrayed grammar ranges from binding operators at very low (0) binding
 strength, through to function application (2000) and record selection
@@ -661,12 +684,12 @@ strength, through to function application (2000) and record selection
 \subsection{Namespace control}
 
 In order to provide convenience, the parser deals with overloading and
-ambiguity. Overloading of numeric literals is discussed in Section
-\ref{arith-overloading}, although any symbol may be overloaded, not
-just numerals. At times such flexibility is quite useful; however, it
-can happen that one wishes to explicitly designate a particular
-constant. In that case, the notation
-$\mathit{thy}$\verb+$+$\mathit{const}$ may be used in the parser to
+ambiguity. Overloading of numeric literals is discussed in
+Section~\ref{arith-overloading}, although any symbol may be
+overloaded, not just numerals. At times such flexibility is quite
+useful; however, it can happen that one wishes to explicitly designate
+a particular constant. In that case, the notation
+$\mathit{thy}\holtxt{\$}\mathit{const}$ may be used in the parser to
 designate the constant $\mathit{const}$ declared in theory
 $\mathit{thy}$. In the following example, the less-than operator is
 explicitly specified.
@@ -674,11 +697,14 @@ explicitly specified.
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
-- ``x prim_rec$< y``
+- ``prim_rec$< x y``
 > val it = ``x < y`` : term
 \end{verbatim}
 \end{session}
-
+Note how the \holtxt{<} symbol is not treated as an infix by the
+parser when given in ``fully-quantified'' form.  Syntactically, such
+tokens are never given special treatment by the parser of \HOL's
+concrete syntax.
 
 \section{Ways to construct types and terms}
 
@@ -708,18 +734,18 @@ The expressions in the same row are equivalent.
 Type variable &
 {\small\verb+: '+}{\small $alphanum$}  & {\small\verb+mk_vartype("'+$alphanum$\verb+")+}   \\ \hline
 Type constant & $:op$ & {\small\verb+mk_type("+}$op${\small\verb+",[])+}   \\ \hline
- & $:\mathit{thy}$\verb+$+$\mathit{op}$ 
+ & $:\mathit{thy}$\verb+$+$\mathit{op}$
   & {\small\verb+mk_thy_type{Thy="+}$\mathit{thy}${\small\verb+",Tyop="+}$\mathit{op}${\small\verb+",Args=[]}+}   \\ \hline
 Function type & $: \sigma_1$ {\small\verb+->+} $\sigma_2$ &
-$\sigma_1$ {\small\verb+-->+} $\sigma_2$ \\ 
+$\sigma_1$ {\small\verb+-->+} $\sigma_2$ \\
 \hline
 Compound type &
 {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$op$ &
 {\small\verb+mk_type("+}$op${\small\verb+", [+}
  $\sigma_1$ {\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+])+}
-\\ 
+\\
 \hline
-& {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$\mathit{thy}$\verb+$+$\mathit{op}$ 
+& {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$\mathit{thy}$\verb+$+$\mathit{op}$
 & \begin{tabular}{l}
    {\small\verb+mk_thy_type{Thy="+}$\mathit{thy}${\small\verb+",+} \\
 \quad \qquad {\small\verb+Tyop="+}$\mathit{op}${\small\verb+", Args=[+}
@@ -854,7 +880,7 @@ A formula\index{formulas as terms, in HOL logic@formulas as terms, in
   \HOL\ logic} in the abstract is represented concretely in \HOL\ by a
 term whose \HOL\ type is {\small\verb+:bool+}.  Therefore, a
 term
-\index{terms, in HOL logic@terms, in \HOL\ logic!as logical formulas} 
+\index{terms, in HOL logic@terms, in \HOL\ logic!as logical formulas}
 of type {\small\verb+:bool+} is used to represent a
 member of the set of hypotheses of a sequent; and likewise to
 represent the conclusion of a sequent.  Sets in this context are
@@ -877,7 +903,7 @@ The type {\verb+thm+} has a destructor function
 
 \noindent which returns a pair consisting of a list of the
 hypotheses
-\index{hypotheses!of theorems} 
+\index{hypotheses!of theorems}
 and the conclusion
 \index{conclusions!of theorems}, respectively, of a theorem.
 The order of assumptions in the list should not be relied on.  A
@@ -892,7 +918,7 @@ function
 \end{boxed}
 
 Using \ml{dest\_thm}, two further destructor
-\index{theorems, in HOL logic@theorems, in \HOL\ logic!destructors for} 
+\index{theorems, in HOL logic@theorems, in \HOL\ logic!destructors for}
 functions are derived
 
 \begin{boxed}
@@ -1359,12 +1385,12 @@ theorems of ${\cal T}$.
 In the implementation of \HOL, theories are structured hierarchically
 to represent sequences of extensions called
 \emph{segments}
-\index{theory segments} 
+\index{theory segments}
 of an initial theory (see Section~\ref{extensions}) called
 \ml{min}\index{min@\ml{min}}. A theory segment is not really a logical
 concept, but rather a means of representating theories in the
 \HOL\ system. Each segment records some types, constants, axioms and
-theorems, together with pointers to other segments called its 
+theorems, together with pointers to other segments called its
 \emph{parents}
 \index{parents, of HOL theories@parents, of \HOL\ theories}.
 The theory represented by a segment is obtained by taking the
@@ -1457,7 +1483,7 @@ in the theory hierarchy.
 
 \index{theories, in HOL logic@theories, in \HOL\ logic!creation of|(}
 
-One creates a new theory segment by a call to \verb+new_theory+. 
+One creates a new theory segment by a call to \verb+new_theory+.
 %
 \begin{boxed}
 \index{new_theory@\ml{new\_theory}|pin}
@@ -1526,8 +1552,8 @@ system.
 \paragraph{Adding to the current theory}
 
 The following \ML{} functions add types and terms to the current
-theory segment. In typical usage, these functions will not be 
-needed since higher-level definition facilities will invoke these as 
+theory segment. In typical usage, these functions will not be
+needed since higher-level definition facilities will invoke these as
 necessary. However, these functions can be useful for those writing
 proof tools and derived definition principles.
 
@@ -1540,7 +1566,7 @@ proof tools and derived definition principles.
 
 \noindent Executing \ml{new\_type}$\ n\ \ml{"\ty{op}"}$ makes \ty{op}
 a new $n$-ary type operator\index{type operators, in HOL logic@type
-operators, in \HOL\ logic!declaration} in the current theory. If 
+operators, in \HOL\ logic!declaration} in the current theory. If
 \ty{op} is not an allowed name for a type, a warning will be issued.
 
 
@@ -1555,7 +1581,7 @@ $c_{\sigma'}$ a new constant\index{constants, in HOL logic@constants, in \HOL\ l
 for all $c_{\sigma'}$ where $\sigma'$ is an instance of $\sigma$.
 The type $\sigma$ is
 called the {\it generic type\/}\index{generic types, in HOL
-  logic@generic types, in \HOL\ logic} of $c$. 
+  logic@generic types, in \HOL\ logic} of $c$.
 If $c$ is not an allowed name for a constant, a warning will be issued.
 
 \begin{boxed}
@@ -1893,7 +1919,7 @@ following \ML\ function is provided:
 \begin{boxed}
 \index{define_new_type_bijections@\ml{define\_new\_type\_bijections}|pin}
 \begin{verbatim}
-   define_new_type_bijections 
+   define_new_type_bijections
       : {name:string, ABS:string, REP:string, tyax:thm} -> thm
 \end{verbatim}\end{boxed}
 
@@ -1904,9 +1930,9 @@ the constant definition (a constant specification, in fact) made by
 {\small\verb!define_new_type_bijections!} will be stored in the current theory
 segment, and the {\small\verb+ABS+} and {\small\verb+REP+} arguments
 are user-specified names for the two constants that are to be
-defined. These constants are defined so as to denote mutually inverse 
+defined. These constants are defined so as to denote mutually inverse
 bijections between the defined type, whose definition is given by the
-supplied theorem, and the representing type of this defined 
+supplied theorem, and the representing type of this defined
 type.
 
 Evaluating:
@@ -1914,7 +1940,7 @@ Evaluating:
 \medskip
 {\def\op{{\normalsize\sl op}}
 \begin{hol}\begin{alltt}
-  define\_new\_type\_bijections 
+  define\_new\_type\_bijections
        \{name="\m{name}", ABS="\m{abs}", REP="\m{rep}",
          tyax = |- ?rep:newty->ty. TYPE\_DEFINITION \m{P} rep \}
 \end{alltt}\end{hol}}
@@ -2122,3 +2148,8 @@ None of these functions saves anything in the current theory.
 %Type abbreviations tend to be little used in practice; the antiquotation
 %method is usually sufficient.
 
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

@@ -81,71 +81,101 @@ in the theory of pairs (\theoryimp{prod}), disjoint sums
 
 \subsection{The theory \theoryimp{bool}}\label{boolfull}
 
-\index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|(} At
-start-up, the initial theory for users of the \HOL\ system is called
-\ml{bool}\index{HOL@\ml{HOL}}, which is constructed when the \HOL\
-system is built. The theory \theoryimp{bool} is an extension of the
-combination of the ``conceptual'' theories \theory{LOG} and
+\index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|(}
+%
+At start-up, the initial theory for users of the \HOL{} system is
+called \ml{bool}\index{HOL@\HOL{}}, which is constructed when the
+\HOL{} system is built. The theory \theoryimp{bool} is an extension of
+the combination of the ``conceptual'' theories \theory{LOG} and
 \theory{INIT}, described in Chapter~\ref{semantics}.  Thus it contains
-the four axioms\index{axioms!in bool theory@in \ml{bool} theory} for
-higher order logic. These axioms, together with the rules of inference
-described in Section~\ref{rules}, constitute the core of the \HOL\
-logic.  Because of the way the \HOL\ system evolved from
-\LCF,\index{LCF@\LCF}\footnote{To simplify the porting of the LCF
-  theorem-proving tools to the HOL system, the HOL logic was made as
-  like PP$\lambda$ (the logic built-in to LCF) as possible.} the
-particular axiomatization\index{axioms!non-primitive, of HOL
-  logic@non-primitive, of \HOL\ logic} of higher order logic it uses
-differs from the classical axiomatization due to Church\index{Church,
-  A.} \cite{Church}.  The biggest difference is that in Church's
-formulation type variables\index{type variables, in HOL logic@type
-  variables, in \HOL\ logic!differences from classical} are in the
-meta-language, whereas in the \HOL\ logic they are part of the object
-language.
+the four axioms
+%
+\index{axioms!in bool theory@in \ml{bool} theory}
+%
+for higher order logic. These axioms, together with the rules of
+inference described in Section~\ref{rules}, constitute the core of the
+\HOL\ logic.  Because of the way the \HOL\ system evolved from \LCF,
+%
+\index{LCF@\LCF}
+%
+\footnote{To simplify the porting of the LCF theorem-proving tools to
+  the HOL system, the HOL logic was made as like PP$\lambda$ (the
+  logic built-in to LCF) as possible.} the particular
+axiomatization
+%
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic}
+%
+of higher order logic it uses differs from the classical
+axiomatization due to Church\index{Church, A.}  \cite{Church}.  The
+biggest difference is that in Church's formulation type
+variables
+%
+\index{type variables, in HOL logic@type variables, in \HOL\ logic!differences from classical}
+%
+are in the meta-language, whereas in the \HOL\ logic they are part of
+the object language.
 
-The logical constants\index{logical constants, in HOL logic@logical
-  constants, in \HOL\ logic} {\small\verb+T+}\index{truth values, in
-  HOL logic@truth values, in \HOL\ logic!constants
-  for}\index{T@\ml{T}!defined in terms of primitives} (truth),
-{\small\verb+F+}\index{F@\ml{F}!defined in terms of primitives}
-(falsity), {\small\verb+~+} (negation)\index{ negation, in HOL
-  logic@{\small\verb+~+} (negation, in \HOL\ logic)},
-{\small\verb+/\+} (conjunction)\index{ conjunction, in HOL
-  logic@{\small\verb+/\+} (conjunction, in \HOL\
-  logic)}\index{conjunction, in HOL logic@conjunction, in \HOL\
-  logic!defined in terms of primitives},
-{\small\verb+\/+} (disjunction)\index{ disjunction, in HOL logic@{\small\verb+\/+} (disjunction, in \HOL\ logic)}\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!defined in terms of primitives}, {\small\verb+!+} (universal
-  quantification)\index{ universal quantifier, in HOL
-    logic@{\small\verb+"!+} (universal quantifier, in \HOL\
-    logic)}\index{universal quantifier, in HOL logic@universal
-    quantifier, in \HOL\ logic!defined in terms of primitives},
-  {\small\verb+?+} (existential quantification)\index{ existential
-    quantifier, in HOL logic@{\small\verb+?+} (existential quantifier,
-    in \HOL\ logic)}\index{existential quantifier, in HOL
-    logic@existential quantifier, in \HOL\ logic!defined in terms of
-    primitives} and {\small\verb+?!+} (unique existence
-  quantifier)\index{ exists unique, in HOL logic@{\small\verb+?"!+}
-    (exists unique, in \HOL\ logic)}\index{exists unique, in HOL
-    logic@exists unique, in \HOL\ logic!defined in terms of
-    primitives} can all be defined in terms of
-  equality\index{equality, in HOL logic@equality, in \HOL\ logic},
-  implication and choice.  The definitions listed below are fairly
-  standard; each one is preceded by its \ML\ name.  Later definitions
-  sometimes build on earlier ones.
-
+The logical constants
+%
+\index{logical constants, in HOL logic@logical constants, in \HOL{} logic}
+%
+\holtxt{T}~(truth),
+%
+\index{truth values, in HOL logic@truth values, in \HOL\ logic!constants for}
+\index{T@\holtxt{T}!defined in terms of primitives}
+%
+\holtxt{F}~(falsity),
+%
+\index{F@\ml{F}!defined in terms of primitives}
+%
+\holtxt{\~{}}~(negation),
+%
+\index{ negation, in HOL logic@\holtxt{\~{}} (negation, in \HOL{} logic)}
+%
+\holtxt{/\bs} (conjunction),
+%
+\index{ conjunction, in HOL logic@\holtxt{/\bs} (conjunction, in \HOL{} logic)}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!defined in terms of primitives}
+%
+\holtxt{\bs/} (disjunction),
+%
+\index{ disjunction, in HOL logic@\holtxt{\bs/} (disjunction, in \HOL{} logic)}
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!defined in terms of primitives}
+%
+\holtxt{!} (universal quantification),
+%
+\index{ universal quantifier, in HOL logic@\holtxt{"!} (universal quantifier, in \HOL{} logic)}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!defined in terms of primitives}
+%
+\holtxt{?} (existential quantification),
+%
+\index{ existential quantifier, in HOL logic@\holtxt{?} (existential quantifier, in \HOL{} logic)}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!defined in terms of primitives}
+%
+and \holtxt{?!} (unique existence quantifier)
+%
+\index{ exists unique, in HOL logic@\holtxt{?"!} (exists unique, in \HOL{} logic)}
+\index{exists unique, in HOL logic@exists unique, in \HOL{} logic!defined in terms of primitives}
+%
+can all be defined in terms of equality,
+%
+\index{equality, in HOL logic@equality, in \HOL{} logic}
+%
+implication and choice.  The definitions listed below are fairly
+standard; each one is preceded by its \ML{} name.  Later definitions
+sometimes build on earlier ones.
 
 \begin{hol}
-\index{truth values, in HOL logic@truth values, in \HOL\ logic!definition of}
-\index{T_DEF@\ml{T\_DEF}}
-\index{T@\ml{T}!definitional axiom for}
-\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!definitional axiom for}
-\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!definitional axiom for}
-\index{iff, in HOL logic@iff, in \HOL\ logic!definitional axiom for}
-\index{negation, in HOL logic@negation, in \HOL\ logic!definitional axiom for}
-\index{exists unique, in HOL logic@exists unique, in \HOL\ logic}
-\index{F@\ml{F}!axiom for}
-\index{F@\ml{F}!definitional axiom for}
-\index{ exists unique, in HOL logic@{\small\verb+?"!+} (exists unique, in \HOL\ logic)}
+\index{truth values, in HOL logic@truth values, in \HOL{} logic!definition of}
+\index{T@\holtxt{T}!definitional axiom for}
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!definitional axiom for}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!definitional axiom for}
+\index{iff, in HOL logic@iff, in \HOL{} logic!definitional axiom for}
+\index{negation, in HOL logic@negation, in \HOL{} logic!definitional axiom for}
+\index{exists unique, in HOL logic@exists unique, in \HOL{} logic}
+\index{ exists unique, in HOL logic@\holtxt{?"!} (exists unique, in \HOL{} logic)}
+\index{F@\holtxt{F}!axiom for}
+\index{F@\holtxt{F}!definitional axiom for}
 \index{T_DEF@\ml{T\_DEF}}
 \index{FORALL_DEF@\ml{FORALL\_DEF}}
 \index{EXISTS_DEF@\ml{EXISTS\_DEF}}
@@ -154,12 +184,12 @@ The logical constants\index{logical constants, in HOL logic@logical
 \index{F_DEF@\ml{F\_DEF}}
 \index{NOT_DEF@\ml{NOT\_DEF}}
 \index{EXISTS_UNIQUE_DEF@\ml{EXISTS\_UNIQUE\_DEF}}
-\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!definitional axiom for}
-\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!definitional axiom for}
-\index{equality, in HOL logic@equality, in \HOL\ logic!primitive axiom for}
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!definitional axiom for}
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!definitional axiom for}
-\index{exists unique, in HOL logic@exists unique, in \HOL\ logic!definitional axiom for}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!definitional axiom for}
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!definitional axiom for}
+\index{equality, in HOL logic@equality, in \HOL{} logic!primitive axiom for}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!definitional axiom for}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!definitional axiom for}
+\index{exists unique, in HOL logic@exists unique, in \HOL{} logic!definitional axiom for}
 \begin{verbatim}
    T_DEF              |- T  = ((\x:bool. x) = (\x. x))
 
@@ -181,26 +211,31 @@ The logical constants\index{logical constants, in HOL logic@logical
 
 
 There are four
-\index{universal quantifier, in HOL logic@universalquantifier,
-       in \HOL\ logic!in four primitive axioms}
-axioms in the theory {\small\verb+bool+}\index{bool, the HOL
-theory@\ml{bool}, the \HOL\ theory}; the first three are the following:
+%
+\index{universal quantifier, in HOL logic@universalquantifier, in \HOL{} logic!in four primitive axioms}
+%
+axioms in the theory \theoryimp{bool};
+%
+\index{bool, the HOL theory@\ml{bool}, the \HOL{} theory}
+%
+the first three are the following:
 
 \begin{hol}
 \index{BOOL_CASES_AX@\ml{BOOL\_CASES\_AX}}
 \index{ETA_AX@\ml{ETA\_AX}}
 \index{SELECT_AX@\ml{SELECT\_AX}}
-\index{implication, in HOL logic@implication, in \HOL\ logic!primitive axiom for}
-\index{ choice function, in HOL logic@{\small\verb+"@+} (choice function, in \HOL\ logic)}
+\index{implication, in HOL logic@implication, in \HOL{} logic!primitive axiom for}
+\index{ choice function, in HOL logic@\holtxt{"@} (choice function, in \HOL{} logic)}
 \index{choice axiom}
-\index{choice operator, in HOL logic@choice operator, in \HOL\ logic!primitive axiom for}
+\index{choice operator, in HOL logic@choice operator, in \HOL{} logic!primitive axiom for}
 \begin{verbatim}
    BOOL_CASES_AX   |- !t. (t = T) \/ (t = F)
 
    ETA_AX          |- !t. (\x. t x) = t
 
    SELECT_AX       |- !P:'a->bool x. P x ==> P($@ P)
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent
 The fourth and last axiom of the \HOL\ logic is the Axiom of
@@ -217,32 +252,40 @@ definitions are:
    ONE_ONE_DEF |- ONE_ONE f = (!x1 x2. (f x1 = f x2) ==> (x1 = x2))
 
    ONTO_DEF    |- ONTO f    = (!y. ?x. y = f x)
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent The Axiom of Infinity\index{axioms!in bool theory@in \ml{bool} theory} is
 %
-{\begin{hol}
+\begin{hol}
 \index{INFINITY_AX@\ml{INFINITY\_AX}}
 \index{axiom of infinity}
 \index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!in infinity axiom}
 \begin{verbatim}
   INFINITY_AX  |- ?f:ind->ind. ONE_ONE f /\ ~(ONTO f)
-\end{verbatim}\end{hol}}
+\end{verbatim}
+\end{hol}
 %
 \noindent
-This asserts that there exists a one-to-one map from {\small\verb+ind+} to
-itself that is not onto. This implies that the type {\small\verb+ind+}
-denotes an infinite set.\index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|)}
+This asserts that there exists a one-to-one map from \holtxt{ind} to
+itself that is not onto. This implies that the type \holtxt{ind}
+denotes an infinite set.
+%
+\index{axioms!primitive, of HOL logic@primitive, of \HOL{} logic|)}
 
-The three other axioms of the theory {\small\verb+bool+}, the rules of
+The three other axioms of the theory \theoryimp{bool}, the rules of
 inference in Section~\ref{rules} and the Axiom of Infinity are,
 together, sufficient for developing all of standard mathematics. Thus,
-in principle, the user of the \HOL\ system should never need to make a
-non-definitional\index{axioms!dispensibility of
-adding}\index{definitional theories} theory. In practice, it is often
-very tempting to take the risk of introducing new axioms because
-deriving them from definitions can be tedious---proving that `axioms'
-follow from definitions amounts to proving their consistency.
+in principle, the user of the \HOL{} system should never need to make a
+non-definitional
+%
+\index{axioms!dispensibility of adding}
+\index{definitional theories}
+%
+theory. In practice, it is often very tempting to take the risk of
+introducing new axioms because deriving them from definitions can be
+tedious---proving that `axioms' follow from definitions amounts to
+proving their consistency.
 
 \paragraph {Further definitions}
 
@@ -395,8 +438,8 @@ values (of type \ml{term}) as the other quotations in the same row.
 \index{choice operator, in HOL logic@choice operator, in \HOL\ logic!syntax of}
 \index{ negation, in HOL logic@{\small\verb+~+} (negation, in \HOL\ logic)}
 \index{ disjunction, in HOL logic@{\small\verb+\/+} (disjunction, in \HOL\ logic)}
-\index{ conjunction, in HOL logic@\texttt{\small/\bs} (conjunction, in \HOL\ logic)}
-\index{ implication, in HOL logic@{\small\verb+==>+} (implication, in \HOL\ logic)}
+\index{ conjunction, in HOL logic@\holtxt{/\bs} (conjunction, in \HOL\ logic)}
+\index{ implication, in HOL logic@\holtxt{==>} (implication, in \HOL\ logic)}
 \index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}
 \index{ universal quantifier, in HOL logic@{\small\verb+"!+} (universal quantifier, in \HOL\ logic)}
 \index{ existential quantifier, in HOL logic@{\small\verb+?+} (existential quantifier, in \HOL\ logic)}
@@ -1207,14 +1250,16 @@ one to inspect option values in a ``pattern-matching'' style.
        || SOME x -> f x
 \end{verbatim}
 }
+\noindent
 The constant underlying this syntactic sugar is \verb+option_case+
 with definition
 {\small
 \begin{verbatim}
    option_case_def |- (option_case u f NONE = u) /\
                       (option_case u f (SOME x) = f x)
-\end{verbatim}}
-
+\end{verbatim}
+}
+\noindent
 Another useful function maps a function over an option:
 {\small
 \begin{verbatim}
@@ -1598,7 +1643,7 @@ The properties of a number being even or odd are defined recursively.
 
 \paragraph{Maximum and minimum}
 
-The minumum and maximum of two numbers are defined in the usual way.
+The minimum and maximum of two numbers are defined in the usual way.
 %
 \begin{hol}
 \index{MIN@\ml{MIN}}
