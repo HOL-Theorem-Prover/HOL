@@ -41,6 +41,14 @@ let replicate n x =
   in
   go n []
 
+(* set a global and restore it afterwards *)
+let local_set r v f x =
+  let old_v = !r in
+  r := v;
+  let y = f x in
+  r := old_v;
+  y
+
 
 (* -------------------------------------------------------------------- *)
 (*  HOL helpers                                                         *)
@@ -319,6 +327,11 @@ let readbal : hol_content list        (* input stream *)
   in
   bal [] [] [] ts
 
+let safedumphol_content =
+  function
+      HolIndent n -> "<indent>"
+    | t -> dumphol_content t
+
 let rec readarg cf ml ts = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
   (* returns a list of lists of tokens because a single arg arity-wise may be
      multiple TeX arguments if cy_commas is in force *)
@@ -341,7 +354,7 @@ let rec readarg cf ml ts = (* read a single arg: spaces then (id.id.id or matche
   | ((HolIdent(false,s) as t)::ts)  -> ([[t]],ts)  (* no fields in a symbolic ident *)
   | ((HolSep(s) as t)::ts) when List.mem_assoc s balanced
                           -> readbal (t::ts) cf ml
-  | (t::ts)               -> raise (BadArg ("4: bad token "^dumphol_content t^" follows curried op"))
+  | (t::ts)               -> raise (BadArg ("4: bad token "^safedumphol_content t^" follows curried op"))
   | []                    -> raise (BadArg "5: unexpected end of input")
 
 
@@ -492,8 +505,12 @@ and rendertexdoc : texdoc -> unit
 and rendertexdoc_content : texdoc_content -> unit
     = function
     TexContent s -> print_string s
-  | TexHol(TexHolLR,d) -> wrap (!hOLDELIMOPEN) (!hOLDELIMCLOSE) renderholdoc d
-  | TexHol(TexHolMath,d) -> wrap "" "" renderholdoc d
+  | TexHol(TexHolLR,d) ->
+      local_set !curmodals.iNDENT false
+        (wrap (!hOLDELIMOPEN) (!hOLDELIMCLOSE) renderholdoc) d
+  | TexHol(TexHolMath,d) ->
+      local_set !curmodals.iNDENT false
+        (wrap "" "" renderholdoc) d
   | TexDir d -> texrenderdirective d
 
 and texrenderdirective : directive -> unit
