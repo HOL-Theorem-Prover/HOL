@@ -1,7 +1,7 @@
 \chapter{The HOL Logic}
 \label{HOLlogic}
 
-The \HOL\  system  supports {\it  higher order  logic}.   This is  a version of
+The \HOL{}  system  supports {\it  higher order  logic}.   This is  a version of
 predicate calculus with three main extensions:
 
 \begin{itemize}
@@ -15,7 +15,7 @@ predicate calculus with three main extensions:
 \section{Overview of higher order logic}
 
 It is assumed the reader is familiar with predicate logic.  The syntax
-and semantics of the particular logical system supported by \HOL\ is
+and semantics of the particular logical system supported by \HOL{} is
 described in detail in \DESCRIPTION.  The table below summarizes the
 notation used.
 
@@ -24,7 +24,7 @@ notation used.
 \multicolumn{4}{|c|}{ } \\
 \multicolumn{4}{|c|}{\bf Terms of the HOL Logic} \\
 \multicolumn{4}{|c|}{ } \\
-{\it Kind of term} & {\it \HOL\ notation} &
+{\it Kind of term} & {\it \HOL{} notation} &
 {\it Standard notation} &
 {\it Description} \\ \hline
  & & & \\
@@ -72,13 +72,13 @@ boolean operators and quantifiers, so we augment it with these two
 theories to allow us more interesting examples.
 \bigskip
 
-Terms of the \HOL\ logic are represented in \ML\ by an {\it abstract
+Terms of the \HOL{} logic are represented in \ML{} by an {\it abstract
   type\/} called {\small\verb|term|}. They are normally input between
 double back-quote marks.  For example, the expression
-{\small\verb|``x /\ y ==> z``|} evaluates in \ML\ to a term representing
+{\small\verb|``x /\ y ==> z``|} evaluates in \ML{} to a term representing
 {\small\verb|x|}$\wedge${\small\verb|y|}$\Rightarrow${\small\verb|z|}.
-Terms can be manipulated by various built-in \ML\ functions. For
-example, the \ML\ function \ml{dest\_imp} with \ML\ type
+Terms can be manipulated by various built-in \ML{} functions. For
+example, the \ML{} function \ml{dest\_imp} with \ML{} type
 {\small\verb|term -> term * term|} splits an implication into a pair
 of terms consisting of its antecedent and consequent, and the \ML\
 function \ml{dest\_conj} of type {\small\verb|term -> term * term|}
@@ -99,18 +99,18 @@ splits a conjunction into its two conjuncts.
 \end{verbatim}
 \end{session}
 
-Terms of the \HOL\ logic are quite similar to \ML\ expressions, and
+Terms of the \HOL{} logic are quite similar to \ML{} expressions, and
 this can at first be confusing.  Indeed, terms of the logic have types
-similar to those of \ML\ expressions.  For example,
-{\small\verb|``(1,2)``|} is an \ML\ expression with \ML\ type
-{\small\verb|term|}.  The \HOL\ type of this term is
-{\small\verb|num # num|}.  By contrast, the \ML\ expression
+similar to those of \ML{} expressions.  For example,
+{\small\verb|``(1,2)``|} is an \ML{} expression with \ML{} type
+{\small\verb|term|}.  The \HOL{} type of this term is
+{\small\verb|num # num|}.  By contrast, the \ML{} expression
 {\small\verb|(``1``, ``2``)|} has type {\small\verb|term * term|}.
 
-The types of \HOL\ terms form an \ML\ type called
+The types of \HOL{} terms form an \ML{} type called
 {\small\verb|hol_type|}.  Expressions having the form
 {\small\verb|``: |}$\cdots${\small\verb| ``|} evaluate to logical
-types.  The built-in function {\small\verb|type_of|} has \ML\ type
+types.  The built-in function {\small\verb|type_of|} has \ML{} type
 {\small\verb|term->type|} and returns the logical type of a term.
 
 \begin{session}
@@ -129,10 +129,10 @@ types.  The built-in function {\small\verb|type_of|} has \ML\ type
 \end{verbatim}
 \end{session}
 
-To try to minimise confusion between the logical types of \HOL\ terms and
-the \ML\ types of \ML\ expressions, the former will be referred to as {\it object
+To try to minimise confusion between the logical types of \HOL{} terms and
+the \ML{} types of \ML{} expressions, the former will be referred to as {\it object
 language types\/} and the latter as {\it meta-language types\/}.  For example,
-{\small\verb|``(1,T)``|} is an \ML\ expression that has meta-language type
+{\small\verb|``(1,T)``|} is an \ML{} expression that has meta-language type
 {\small\verb|term|} and evaluates to a term with object language type
 {\small\verb|``:num#bool``|}.
 
@@ -147,8 +147,8 @@ language types\/} and the latter as {\it meta-language types\/}.  For example,
 \end{verbatim}
 \end{session}
 
-\HOL\ terms can be input using explicit {\it quotation\/}, as above, or
-they can be constructed using \ML\ constructor functions. The function
+\HOL{} terms can be input using explicit {\it quotation\/}, as above, or
+they can be constructed using \ML{} constructor functions. The function
 {\small\verb|mk_var|} constructs a variable from a string and a type.  In
 the example below, three variables of type {\small\verb|bool|} are
 constructed.  These are used later.
@@ -202,7 +202,7 @@ val it = ``~x`` : term
 > val it = ``:'a`` : hol_type
 \end{verbatim}\end{session}
 
-    In the first case, the \HOL\ type checker used the known type
+    In the first case, the \HOL{} type checker used the known type
     \ml{bool->bool} of {\small\verb|~|} to deduce that the variable
     \ml{x} must have type \ml{bool}.  In the second case, it cannot
     deduce the type of \ml{x}.  The default `scope' of type

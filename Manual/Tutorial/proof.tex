@@ -1,8 +1,14 @@
 \chapter{Introduction to Proof with HOL}
 \label{proof}
 
+\newcommand\tacticline{\hline \hline}
+\newenvironment{proofenumerate}{\begin{enumerate}}{\end{enumerate}}
+% proofenumerate is distinguished from a normal enumeration so that
+% hevea can spot these special cases and treat them better.
+
+
 \paragraph{Preliminaries} This chapter discusses the nature of proof
-in \HOL\ in more detail.  The previous chapter has provided a broad
+in \HOL{} in more detail.  The previous chapter has provided a broad
 overview of how proof is done in \HOL{}, while here the emphasis is on
 attaining a more thorough grounding in the material.  As before, we
 are using \textsf{hol.unquote} and we require the following command to
@@ -13,7 +19,7 @@ be entered as a first step: \setcounter{sessioncount}{0}
 > val it = () : unit
 \end{verbatim}
 \end{session}
-\vskip 1cm
+\vspace{1cm}
 
 \noindent
 For a logician, a formal proof is a sequence, each of whose elements
@@ -21,16 +27,16 @@ is either an {\it axiom\/} or follows from earlier members of the
 sequence by a {\it rule of inference\/}.  A theorem is the last
 element of a proof.
 
-Theorems are represented in \HOL\ by values of an abstract type
+Theorems are represented in \HOL{} by values of an abstract type
 {\small\verb|thm|}.  The  only way  to create theorems is by generating a
-proof.  In \HOL\ (following \LCF), this consists in applying \ML\ functions
+proof.  In \HOL{} (following \LCF), this consists in applying \ML{} functions
 representing {\it rules of inference\/} to  axioms or previously generated
 theorems.  The sequence of such applications  directly corresponds to a
 logician's proof.
 
-There are five axioms of the \HOL\ logic and eight primitive
+There are five axioms of the \HOL{} logic and eight primitive
 inference rules. The axioms are bound to ML names. For example, the Law of
-Excluded Middle is bound to the \ML\ name {\small\verb|BOOL_CASES_AX|}:
+Excluded Middle is bound to the \ML{} name {\small\verb|BOOL_CASES_AX|}:
 
 \begin{session}
 \begin{verbatim}
@@ -41,7 +47,7 @@ Excluded Middle is bound to the \ML\ name {\small\verb|BOOL_CASES_AX|}:
 
 Theorems are printed with a preceding turnstile {\small\verb+|-+} as
 illustrated above; the symbol `{\small\verb|!|}' is the universal
-quantifier `$\forall$'.  Rules of inference are \ML\ functions that
+quantifier `$\forall$'.  Rules of inference are \ML{} functions that
 return values of type {\small\verb|thm|}.  An example of a rule of
 inference is {\it specialization\/} (or $\forall$-elimination).  In
 standard `natural deduction' notation this is:
@@ -78,13 +84,13 @@ This session consists of a proof of two steps: using an axiom and
 applying the rule \ml{SPEC}; it interactively performs the following proof:
 
 
-\begin{enumerate}
-\item $\turn \uquant{t} t=\top\ \disj\  t=\bot$ \hfill
+\begin{proofenumerate}
+\item $ \turn \uquant{t} t=\top\ \disj\  t=\bot$ \hfill
 [Axiom \ml{BOOL\_CASES\_AX}]
-\item $\turn (1{=}2)=\top\ \disj\ (1{=}2)=\bot$\hfill [Specializing line 1 to `$1{=}2$']
-\end{enumerate}
+\item $ \turn (1{=}2)=\top\ \disj\ (1{=}2)=\bot$\hfill [Specializing line 1 to `$1{=}2$']
+\end{proofenumerate}
 
-If the argument to an \ML\ function representing a rule of inference
+If the argument to an \ML{} function representing a rule of inference
 is of the wrong kind, or violates a condition of the rule, then the
 application fails.  For example, $\ml{SPEC}\ t\ th$ will fail if $th$
 is not of the form $\ml{|-\ !}x\ml{.}\cdots$ or if it is of this form
@@ -111,11 +117,11 @@ However, as this session illustrates, the failure token does not
 always indicate the exact reason for failure. The failure conditions
 for rules of inference are given in \REFERENCE.
 
-A proof in the \HOL\ system is constructed by repeatedly applying
+A proof in the \HOL{} system is constructed by repeatedly applying
 inference rules to axioms or to previously proved theorems.  Since
 proofs may consist of millions of steps, it is necessary to provide
 tools to make proof construction easier for the user.  The proof
-generating tools in the \HOL\ system are just those of \LCF, and are
+generating tools in the \HOL{} system are just those of \LCF, and are
 described later.
 
 The general form of a theorem is $t_1,\ldots,t_n\ $\ml{|-}$\ t$, where
@@ -127,12 +133,12 @@ single term
 $(t_1${\small\verb|/\|}$\ldots${\small\verb|/\|}$t_n$)\ml{==>}$t$.
 Theorems with no assumptions are printed out in the form \ml{|-}$\ t$.
 
-The five axioms and eight primitive inference rules of the \HOL\ logic
+The five axioms and eight primitive inference rules of the \HOL{} logic
 are described in detail in the document \DESCRIPTION.  Every value of
-type \ml{thm} in the \HOL\ system can be obtained by repeatedly
-applying primitive inference rules to axioms.  When the \HOL\ system
+type \ml{thm} in the \HOL{} system can be obtained by repeatedly
+applying primitive inference rules to axioms.  When the \HOL{} system
 is built, the eight primitive rules of inference are defined and the
-five axioms are bound to their \ML\ names, all other predefined
+five axioms are bound to their \ML{} names, all other predefined
 theorems are proved using rules of inference as the system is
 made.\footnote{This is a slight over-simplification.} This is one of
 the reasons why building \ml{hol} takes so long.
@@ -146,13 +152,13 @@ including the important notions of {\it tactics\/} and {\it
 \section{Forward proof}
 \label{forward}
 
-Three of the primitive inference rules of the \HOL\ logic are
+Three of the primitive inference rules of the \HOL{} logic are
 \ml{ASSUME} (assumption introduction), \ml{DISCH} (discharging or
 assumption elimination) and \ml{MP} (Modus Ponens).  These rules will
 be used to illustrate forward proof and the writing of derived rules.
 
 The inference rule {\small\verb|ASSUME|} generates theorems of the form
-$t${\small\verb% |- %}$t$. Note, however, that the \ML\ printer prints each
+$t${\small\verb% |- %}$t$. Note, however, that the \ML{} printer prints each
   assumption as a dot (but this default can be changed; see below).
   The function {\small\verb|dest_thm|} decomposes a theorem into a
   pair consisting of list of assumptions and the conclusion. The \ML\
@@ -200,7 +206,7 @@ this case they will be unchanged.
 \Gamma_1 \turn t_1 \imp t_2 \qquad\qquad \Gamma_2\turn t_1\over
 \Gamma_1 \cup \Gamma_2 \turn t_2
 \]
-The \ML\ function \ml{MP} takes argument theorems of the form
+The \ML{} function \ml{MP} takes argument theorems of the form
 \ml{$\cdots\ $|-$\ t_1$\ ==>\ $t_2$} and \ml{$\cdots\ $|-$\ t_1$} and
 returns \ml{$\cdots\ $|-$\ t_2$}. The next session illustrates the use
 of \ml{MP} and also a common error, namely not supplying the \HOL\
@@ -226,7 +232,7 @@ not a proposition
 > val Th6 =  [..] |- t2 : thm
 \end{verbatim}\end{session}
 
-    The hypotheses of \ml{Th6} can be inspected with the \ML\ function
+    The hypotheses of \ml{Th6} can be inspected with the \ML{} function
     \ml{hyp}, which returns the list of assumptions of a theorem (the
     conclusion is returned by \ml{concl}).
 
@@ -235,7 +241,7 @@ not a proposition
 > val it = [``t1 ==> t2``, ``t1``] : term list
 \end{verbatim}\end{session}
 
-    \HOL\ can be made to print out hypotheses of theorems explicitly
+    \HOL{} can be made to print out hypotheses of theorems explicitly
     by setting the global flag \ml{show\_assums} to true.
 
 \begin{session}\begin{verbatim}
@@ -262,22 +268,22 @@ not a proposition
 \end{verbatim}\end{session}
 
     The sequence of theorems: \ml{Th3}, \ml{Th5}, \ml{Th6}, \ml{Th7},
-    \ml{Th8} constitutes a proof in \HOL\ of the theorem \ml{|-\ t1
-      ==> (t1 ==> t2) ==> t2}. In stardard logical notation this proof
+    \ml{Th8} constitutes a proof in \HOL{} of the theorem \ml{|-\ t1
+      ==> (t1 ==> t2) ==> t2}. In standard logical notation this proof
     could be written:
 
-\begin{enumerate}
+\begin{proofenumerate}
 \item $ t_1\imp t_2\turn t_1\imp t_2$ \hfill
 [Assumption introduction]
 \item $ t_1\turn t_1$ \hfill
 [Assumption introduction]
-\item $t_1\imp t_2,\ t_1 \turn t_2 $ \hfill
+\item $ t_1\imp t_2,\ t_1 \turn t_2 $ \hfill
 [Modus Ponens applied to lines 1 and 2]
-\item $t_1 \turn (t_1\imp t_2)\imp t_2$ \hfill
+\item $ t_1 \turn (t_1\imp t_2)\imp t_2$ \hfill
 [Discharging the first assumption of line 3]
-\item $\turn t_1 \imp (t_1 \imp t_2) \imp t_2$ \hfill
+\item $ \turn t_1 \imp (t_1 \imp t_2) \imp t_2$ \hfill
 [Discharging the only assumption of line 4]
-\end{enumerate}
+\end{proofenumerate}
 
 \subsection{Derived rules}
 
@@ -290,12 +296,12 @@ For example, a proof of $\Gamma,\ t'\turn t$ from the hypothesis
 $\Gamma\turn t$ is:
 
 
-\begin{enumerate}
-\item $t'\turn t'$ \hfill [Assumption introduction]
-\item $\Gamma\turn t$ \hfill [Hypothesis]
-\item $\Gamma\turn t'\imp t$ \hfill [Discharge $t'$ from line 2]
-\item $\Gamma,\ t'\turn t$ \hfill [Modus Ponens applied to lines 3 and 1]
-\end{enumerate}
+\begin{proofenumerate}
+\item $ t'\turn t'$ \hfill [Assumption introduction]
+\item $ \Gamma\turn t$ \hfill [Hypothesis]
+\item $ \Gamma\turn t'\imp t$ \hfill [Discharge $t'$ from line 2]
+\item $ \Gamma,\ t'\turn t$ \hfill [Modus Ponens applied to lines 3 and 1]
+\end{proofenumerate}
 
 \noindent This proof works for any hypothesis of the form $\Gamma\turn t$
 and any boolean term $t'$ and shows that the result of adding an
@@ -317,16 +323,16 @@ proof to add the hypothesis \ml{``t3``} to \ml{Th6}.
 \end{verbatim}\end{session}
 
 
-    A {\it derived rule\/} is an \ML\ procedure that generates a proof
+    A {\it derived rule\/} is an \ML{} procedure that generates a proof
     from given hypotheses each time it is invoked. The hypotheses are
     the arguments of the rule.  To illustrate this, a rule, called
-    \ml{ADD\_ASSUM}, will now be defined as an \ML\ procedure that
+    \ml{ADD\_ASSUM}, will now be defined as an \ML{} procedure that
     carries out the proof above. In standard notation this would be
     described by:
 
 \[ \Gamma\turn t\over \Gamma,\ t'\turn t \]
 
-\noindent The \ML\ definition is:
+\noindent The \ML{} definition is:
 
 \begin{session}\begin{verbatim}
 - fun ADD_ASSUM t th = let
@@ -360,7 +366,7 @@ val it = [t1 ==> t2, t1, t3] |- t2 : thm
 
 \[ \Gamma\turn t_1\imp t_2 \over\Gamma,\ t_1\turn t_2 \]
 
-\noindent An \ML\ derived rule that implements this is:
+\noindent An \ML{} derived rule that implements this is:
 
 
 \begin{session}\begin{verbatim}
@@ -377,14 +383,14 @@ val it = [t1 ==> t2, t1, t3] |- t2 : thm
 \noindent Each time \ml{UNDISCH\ $\Gamma\turn t_1\imp t_2$} is executed,
 the following proof is performed:
 
-\begin{enumerate}
-\item $t_1\turn t_1$ \hfill [Assumption introduction]
-\item $\Gamma\turn t_1\imp t_2$ \hfill [Hypothesis]
-\item $\Gamma,\ t_1\turn t_2$ \hfill [Modus Ponens applied to lines 2 and 1]
-\end{enumerate}
+\begin{proofenumerate}
+\item $ t_1\turn t_1$ \hfill [Assumption introduction]
+\item $ \Gamma\turn t_1\imp t_2$ \hfill [Hypothesis]
+\item $ \Gamma,\ t_1\turn t_2$ \hfill [Modus Ponens applied to lines 2 and 1]
+\end{proofenumerate}
 
 The rules \ml{ADD\_ASSUM} and \ml{UNDISCH} are the first derived rules
-defined when the \HOL\ system is built. For a description of the main
+defined when the \HOL{} system is built. For a description of the main
 rules see the section on derived rules in \DESCRIPTION.
 
 \section{Rewriting}
@@ -447,7 +453,7 @@ This can then be rewritten using another pre-proved theorem
 > val it = [T /\ x \/ F ==> F] |- ~x : thm
 \end{verbatim}\end{session}
 
-    There are elaborate facilities in \HOL\ for producing customized
+    There are elaborate facilities in \HOL{} for producing customized
     rewriting tools which scan through terms in user programmed
     orders; \ml{REWRITE\_RULE} is the tip of an iceberg, see
     \DESCRIPTION\ for more details.
@@ -475,7 +481,7 @@ t_1\qquad\qquad\qquad\Gamma_2\turn t_2\over \Gamma_1\cup\Gamma_2 \turn t_1\conj
 t_2 \]
 
 
-\noindent In \HOL,  $\wedge$-introduction is  represented by  the \ML\ function
+\noindent In \HOL,  $\wedge$-introduction is  represented by  the \ML{} function
 \ml{CONJ}:
 
 \[\ml{CONJ}\ (\Gamma_1\turn t_1)\ (\Gamma_2\turn t_2) \ \ \leadsto\
@@ -512,21 +518,21 @@ goal  $\turn A \conj B$  to the two  subgoals  $\turn A$
 and $\turn B$ is the rule of $\wedge$-introduction.
 \end{myenumerate}
 
-A {\it goal\/} in \HOL\ is a pair \ml{([$t_1$;\ldots;$t_n$],$t$)} of
-\ML\ type {\small\verb|term list * term|}. An {\it achievement\/} of
+A {\it goal\/} in \HOL{} is a pair \ml{([$t_1$;\ldots;$t_n$],$t$)} of
+\ML{} type {\small\verb|term list * term|}. An {\it achievement\/} of
 such a goal is a theorem \ml{$t_1$,$\ldots$,$t_n$\ |-\ $t$}.  A tactic
-is an \ML\ function that when applied to a goal generates subgoals
+is an \ML{} function that when applied to a goal generates subgoals
 together with a {\it justification function\/} or {\it validation\/},
-which will be an \ML\ derived inference rule, that can be used to
+which will be an \ML{} derived inference rule, that can be used to
 infer an achievement of the original goal from achievements of the
 subgoals.
 
-If $T$ is a tactic (\ie\ an \ML\ function of type \ml{goal -> (goal
+If $T$ is a tactic (\ie\ an \ML{} function of type \ml{goal -> (goal
   list * (thm list -> thm))}) and $g$ is a goal, then applying $T$ to
-$g$ (\ie\ evaluating the \ML\ expression $T\ g$) will result in an
+$g$ (\ie\ evaluating the \ML{} expression $T\ g$) will result in an
 object which is a pair whose first component is a list of goals and
 whose second component is a justification function, \ie\ a value with
-\ML\ type {\small\verb|thm list -> thm|}.
+\ML{} type {\small\verb|thm list -> thm|}.
 
 An example tactic is \ml{CONJ\_TAC} which implements (i) and (ii)
 above.  For example, consider the utterly trivial goal of showing
@@ -569,7 +575,7 @@ in a theorem achieving the original goal:
 
     Although this example is trivial, it does illustrate the essential
     idea of tactics.  Note that tactics are not special
-    theorem-proving primitives; they are just \ML\ functions.  For
+    theorem-proving primitives; they are just \ML{} functions.  For
     example, the definition of \ml{CONJ\_TAC} is simply:
 
 \begin{hol}\begin{verbatim}
@@ -580,7 +586,7 @@ in a theorem achieving the original goal:
    end
 \end{verbatim}\end{hol}
 
-\noindent The \ML\ function \ml{dest\_conj} splits a conjunction into its
+\noindent The \ML{} function \ml{dest\_conj} splits a conjunction into its
 two conjuncts: If \ml{(asl,``$t_1$}{\small\verb|/\|}\ml{$t_2$``)} is a
 goal, then \ml{CONJ\_TAC} splits it into the list of two subgoals
 \ml{(asl,$t_1$)} and \ml{(asl,$t_2$)}. The justification function,
@@ -590,7 +596,7 @@ $th_1$ and $th_2$.
 
 To summarize: if $T$ is a tactic and $g$ is a goal, then applying $T$
 to $g$ will result in a pair whose first component is a list of goals
-and whose second component is a justification function, with \ML\ type
+and whose second component is a justification function, with \ML{} type
 {\small\verb|thm list -> thm|}.
 
 Suppose
@@ -601,7 +607,7 @@ $\ldots$ , $g_n$.  Suppose further that the subgoals $g_1$ , $\ldots$
 , $g_n$ have been solved.  This would mean that theorems $th_1$ ,
 $\ldots$ , $th_n$ had been proved such that each $th_i$ ($1\leq i\leq
 n$) `achieves' the goal $g_i$.  The justification $p$ (produced by
-applying $T$ to $g$) is an \ML\ function which when applied to the
+applying $T$ to $g$) is an \ML{} function which when applied to the
 list
 {\small\verb|[|}$th_1${\small\verb|,|}$\ldots${\small\verb|,|}$th_n${\small\verb|]|}
 returns a theorem, $th$, which `achieves' the original goal $g$.  Thus
@@ -644,7 +650,7 @@ of subgoals. Thus $T$ solves $g$ if
 $T\ g${\small\verb| = ([],|}$p${\small\verb|)|}.
 If this is the case and if $T$ is valid, then $p${\small\verb|[]|}
 will evaluate to a theorem achieving $g$.
-Thus if $T$ solves $g$ then the \ML\ expression
+Thus if $T$ solves $g$ then the \ML{} expression
 {\small\verb|snd(|}$T\ g${\small\verb|)[]|} evaluates to
 a theorem achieving $g$.
 
@@ -652,17 +658,20 @@ Tactics are specified using the following notation:
 
 \begin{center}
 \begin{tabular}{c} \\
-$goal$ \\ \hline \hline
+$goal$ \\ \tacticline
 $goal_1\ \ \ goal_2 \ \ \ \cdots\ \ \ goal_n$ \\
 \end{tabular}
 \end{center}
 
 \noindent For example, a tactic called {\small\verb|CONJ_TAC|} is described by
 
+\newcommand\ttbs{\texttt{\symbol{"5C}}}
+\newcommand\ttland{\texttt{/\ttbs}}
+
 \begin{center}
-\begin{tabular}{c} \\
-$ t_1${\small\verb| /\ |}$t_2$ \\ \hline \hline
-$t_1\ \ \ \ \ \ \ t_2$ \\
+\begin{tabular}{lr} \\
+\multicolumn{2}{c}{$t_1$ \ttland{} $t_2$} \\ \tacticline
+$t_1$ & $t_2$ \\
 \end{tabular}
 \end{center}
 
@@ -680,9 +689,9 @@ Another example is {\small\verb|numLib.INDUCT_TAC|}, the tactic for
 doing mathematical induction on the natural numbers:
 
 \begin{center}
-\begin{tabular}{c} \\
-{\small\verb|!|}$n${\small\verb|.|}$t[n]$ \\ \hline \hline
-$t[${\small\verb|0|}$]$ {\small\verb|     |} $\{t[n]\}\ t[${\small\verb|SUC |}$n]$
+\begin{tabular}{lr} \\
+\multicolumn{2}{c}{\texttt{!}$n$\texttt{.}$t[n]$} \\ \tacticline
+$t[\texttt{0}]$ & $\quad\{t[n]\}\ t[\texttt{SUC}\;n]$
 \end{tabular}
 \end{center}
 
@@ -705,7 +714,7 @@ is indicated in the tactic notation with set brackets.
 \noindent The first subgoal is the basis case and the second subgoal is
 the step case.
 
-Tactics generally fail (in the \ML\ sense, \ie\ raise an exception) if
+Tactics generally fail (in the \ML{} sense, \ie\ raise an exception) if
 they are applied to inappropriate goals. For example,
 {\small\verb|CONJ_TAC|} will fail if it is applied to a goal whose
 conclusion is not a conjunction. Some tactics never fail, for example
@@ -713,7 +722,7 @@ conclusion is not a conjunction. Some tactics never fail, for example
 
 \begin{center}
 \begin{tabular}{c} \\
-$t$ \\ \hline \hline
+$t$ \\ \tacticline
 $t$
 \end{tabular}
 \end{center}
@@ -763,7 +772,7 @@ so that they can be used in subsequent sessions.
 
 The built-in function
  \ml{store\_thm} of
-\ML\ type {\small\verb|(string * term * tactic) -> thm|} facilitates the use
+\ML{} type {\small\verb|(string * term * tactic) -> thm|} facilitates the use
 of tactics:
 {\small\verb|store_thm("foo",|}$t${\small\verb|,|}$T${\small\verb|)|} proves
 the goal   {\small\verb|([],|}$t${\small\verb|)|}   (\ie\  the   goal  with  no
@@ -780,7 +789,7 @@ goal {\small\verb|([],|}$t${\small\verb|)|}.
 When conducting a proof that involves many subgoals and tactics, it is
 necessary to keep track of all the justification functions and compose
 them in the correct order.  While this is feasible even in large
-proofs, it is tedious.  \HOL\ provides a package for building and
+proofs, it is tedious.  \HOL{} provides a package for building and
 traversing the tree of subgoals, stacking the justification functions
 and applying them properly; this package was originally implemented
 for \LCF\ by Larry Paulson.
@@ -1002,10 +1011,10 @@ Remaining subgoals:
 \section{Tacticals}
 \label{tacticals}
 
-A {\it tactical\/} is an \ML\ function that returns a tactic (or
+A {\it tactical\/} is an \ML{} function that returns a tactic (or
 tactics) as result.  Tacticals may take various parameters; this is
-reflected in the various \ML\ types that the built-in tacticals have.
-Some important tacticals in the \HOL\ system are listed below.
+reflected in the various \ML{} types that the built-in tacticals have.
+Some important tacticals in the \HOL{} system are listed below.
 
 
 \subsection{\tt THENL : tactic -> tactic list -> tactic}
@@ -1048,8 +1057,8 @@ same tactic to all subgoals.
 
 \subsection{\tt THEN : tactic -> tactic -> tactic}\label{THEN}
 
-The tactical {\small\verb|THEN|} is an \ML\ infix. If $T_1$ and $T_2$
-are tactics, then the \ML\ expression $T_1${\small\verb| THEN |}$T_2$
+The tactical {\small\verb|THEN|} is an \ML{} infix. If $T_1$ and $T_2$
+are tactics, then the \ML{} expression $T_1${\small\verb| THEN |}$T_2$
 evaluates to a tactic which first applies $T_1$ and then applies $T_2$
 to all the subgoals produced by $T_1$.
 
@@ -1075,7 +1084,7 @@ OK..
 \noindent This is typical: it is common to use a single tactic for several
 goals. Here, for example, are the first four consequences of the
 definition \ml{ADD} of addition that are pre-proved when the built-in
-theory \ml{arithmetic} \HOL\ is made.
+theory \ml{arithmetic} \HOL{} is made.
 
 \begin{hol}\begin{verbatim}
    val ADD_0 = prove (
@@ -1105,7 +1114,7 @@ theory \ml{arithmetic} \HOL\ is made.
 \end{verbatim}\end{hol}
 
 
-\noindent These proofs are performed when the \HOL\ system is made and the
+\noindent These proofs are performed when the \HOL{} system is made and the
 theorems are saved in the theory \ml{arithmetic}. The complete list of
 proofs for this built-in theory can be found in the file
 \ml{src/num/arithmeticScript.sml}.
@@ -1113,17 +1122,19 @@ proofs for this built-in theory can be found in the file
 
 \subsection{\tt ORELSE : tactic -> tactic -> tactic}\label{ORELSE}
 
-The tactical {\small\verb|ORELSE|} is an \ML\ infix. If $T_1$ and
-$T_2$ are tactics, \index{tacticals!for alternation} then
-$T_1${\small\verb| ORELSE |}$T_2$ evaluates to a tactic which applies
-$T_1$ unless that fails; if it fails, it applies $T_2$. \ml{ORELSE} is
-defined in \ML\ as a curried infix by\footnote{This is a minor
-  simplification.}
+The tactical {\small\verb|ORELSE|} is an \ML{} infix. If $T_1$ and
+$T_2$ are tactics,
+%\index{tacticals!for alternation}
+then $T_1${\small\verb| ORELSE |}$T_2$ evaluates to a tactic which
+applies $T_1$ unless that fails; if it fails, it applies $T_2$.
+\ml{ORELSE} is defined in \ML{} as a curried infix by\footnote{This is
+  a minor simplification.}
 
 \begin{hol}
    {\small\verb|(|}$T_1${\small\verb| ORELSE |}$T_2${\small\verb|)|} $g$
    {\small\verb|=|}  $T_1\; g$ {\small\verb|handle _ =>|} $T_2\; g$
-\end{hol}\index{alternation!of tactics|)}
+\end{hol}
+%\index{alternation!of tactics|)}
 
 \subsection{\tt REPEAT : tactic -> tactic}
 
@@ -1134,7 +1145,7 @@ conjunction with \ml{GEN\_TAC}, which is specified by:
 \begin{center}
 \begin{tabular}{c} \\
 {\small\verb|!|}$x${\small\verb|.|}$t[x]$
-\\ \hline \hline
+\\ \tacticline
 $t[x']$
 \\
 \end{tabular}
@@ -1172,10 +1183,10 @@ OK..
 \section{Some tactics built into HOL}
 
 This section contains a summary of some of the tactics built into the
-\HOL\ system (including those already discussed).  The tactics given
+\HOL{} system (including those already discussed).  The tactics given
 here are those that are used in the parity checking example.
 
-Before beginning, allow the \ML\ type {\small\verb|thm_tactic|} to
+Before beginning, allow the \ML{} type {\small\verb|thm_tactic|} to
 abbreviate {\small\verb|thm->tactic|}, and the type
 {\small\verb|conv|}\footnote{The type {\small{\tt conv}} comes from
   Larry Paulson's theory of conversions \cite{lcp_rewrite}.}  to
@@ -1194,7 +1205,7 @@ and various built-in rewriting rules.
 \begin{center}
 \begin{tabular}{c} \\
 $\{t_1, \ldots , t_m\}t$
-\\ \hline \hline
+\\ \tacticline
 $\{t_1, \ldots , t_m\}t'$
 \\
 \end{tabular}
@@ -1203,7 +1214,7 @@ $\{t_1, \ldots , t_m\}t'$
 \noindent where $t'$ is obtained from $t$ by rewriting with
 \begin{enumerate}
 \item  $th_1$, $\ldots$ , $th_n$ and
-\item  the standard rewrites held in the \ML\ variable {\small\verb|basic_rewrites|}.
+\item  the standard rewrites held in the \ML{} variable {\small\verb|basic_rewrites|}.
 \end{enumerate}
 
 \item{\bf Uses:} Simplifying goals using previously proved theorems.
@@ -1217,7 +1228,7 @@ $\{t_1, \ldots , t_m\}t'$
 \item {\small\verb|bossLib.RW_TAC|} of type \ml{simpLib.simpset -> thm
     list -> tactic}.  A \ml{simpset} is a special collection of
   rewriting theorems and other theorem-proving functionality.  Values
-  defined by \HOL\ include \ml{bossLib.base\_ss}, which has basic
+  defined by \HOL{} include \ml{bossLib.base\_ss}, which has basic
   knowledge of the boolean connectives, \ml{bossLib.arith\_ss} which
   ``knows'' all about arithmetic, and \ml{HOLSimps.hol\_ss}, which
   includes theorems appropriate for lists, pairs, and arithmetic.
@@ -1236,11 +1247,9 @@ goal {\small\verb|``|}$t_1${\small\verb|/\|}$t_2${\small\verb|``|} into two subg
 and {\small\verb|``|}$t_2${\small\verb|``|}.
 
 \begin{center}
-\begin{tabular}{c} \\
-$t_1${\small\verb| /\ |}$t_2$
-\\ \hline \hline
-$t_1\ \ \ \ \ \ t_2$
-\\
+\begin{tabular}{lr} \\
+\multicolumn{2}{c}{$t_1$ \ttland{} $t_2$} \\ \tacticline
+$t_1$ & $t_2$ \\
 \end{tabular}
 \end{center}
 
@@ -1265,11 +1274,9 @@ the `only-if' case):
 
 
 
-\begin{tabular}{c} \\
-$u\ \ml{=}\ v$
-\\ \hline \hline
-$u\ \ml{==>}\ v\ \ \ \ \ v\ \ml{==>}\ u$
-\\
+\begin{tabular}{lr} \\
+\multicolumn{2}{c}{$u\; \ml{=}\; v$} \\ \tacticline
+$u\; \ml{==>}\; v$ & $\quad v\; \ml{==>}\; u$ \\
 \end{tabular}
 \end{center}
 
@@ -1291,7 +1298,7 @@ of an implicative goal into the assumptions.
 \begin{center}
 \begin{tabular}{c} \\
 $u${\small\verb| ==> |}$v$
-\\ \hline \hline
+\\ \tacticline
 $\{u\}v$
 \\
 \end{tabular}
@@ -1314,7 +1321,7 @@ $\{u\}v$
 \begin{center}
 \begin{tabular}{c} \\
 {\small\verb|!|}$x${\small\verb|.|}$t[x]$
-\\ \hline \hline
+\\ \tacticline
 $t[x']$
 \\
 \end{tabular}
@@ -1391,9 +1398,10 @@ achieved by $th$.
 \[\ml{  T THENL[ACCEPT\_TAC }th_1\ml{,}\ldots\ml{,ACCEPT\_TAC }th_n\ml{]}
 \]
 
-would then solve $g$, where \ml{THENL} \index{THENL@\ml{THENL}} is the
-tactical that applies the respective elements of the tactic list to
-the subgoals produced by \ml{T}.
+would then solve $g$, where \ml{THENL}
+%\index{THENL@\ml{THENL}}
+is the tactical that applies the respective elements of the tactic
+list to the subgoals produced by \ml{T}.
 
 \end{itemize}
 

@@ -1,17 +1,17 @@
 \chapter{Getting and Installing HOL}
 \label{install}
 
-This chapter describes how to get the \HOL\ system and how to install
+This chapter describes how to get the \HOL{} system and how to install
 it.  It is generally assumed that some sort of Unix system is being
 used, but the instructions that follow should apply {\it mutatis
   mutandis\/} to other platforms.  Unix is not a pre-requisite for
-using the system. \HOL\ may be run PCs running Windows NT, and we are
+using the system. \HOL{} may be run PCs running Windows NT, and we are
 always interested in ports to other platforms.
 
 \section{Getting HOL}
 
-The \HOL\ system can be downloaded from
-\mbox{\texttt{http://www.ftp.cl.cam.ac.uk/ftp/hvg/}}.  This page on
+The \HOL{} system can be downloaded from
+\mbox{\oneurl{\texttt{http://www.ftp.cl.cam.ac.uk/ftp/hvg/}}}.  This page on
 the World-wide Web contains a number of sub-directories.  The system
 discussed in this tutorial is \holn, so the \texttt{hol98}
 sub-directory contains the appropriate source files.  The naming
@@ -24,14 +24,14 @@ described here is Taupo-1.
 Phil Windley has started a mailing list:
 {\small\verb%info-hol@jaguar.cs.byu.edu%} which he set up to serve as a
 forum
-for discussing \HOL\ and disseminating news about it.  If you wish to be on
+for discussing \HOL{} and disseminating news about it.  If you wish to be on
 this list (which is recommended for all users of \HOL), or know of other
 people who should be included, email to:
 {\small\verb%info-hol-request@jaguar.cs.byu.edu%}.
 
 \section{Installing HOL}
 
-It is assumed that the \HOL\ sources have been obtained and the
+It is assumed that the \HOL{} sources have been obtained and the
 \texttt{tar} file unpacked into a directory \ml{hol98}.\footnote{You may
   choose another name if you want; it is not important.} The contents
 of this directory are likely to change over time, but it should
@@ -49,17 +49,17 @@ contain the following:
 {\tt install.txt} & Installation instructions & Text\\
 {\tt tools} & Source code for building the system & Directory\\
 {\tt bin} & Directory for HOL executables & Directory\\
-{\tt sigobj} & Directory for \ML\ object files & Directory\\
-{\tt src} & \ML\ sources of \HOL & Directory\\
-{\tt Manual} & Files for \HOL\ system documentation & Directory\\
-{\tt help} & Help files for \HOL\ system & Directory\\
+{\tt sigobj} & Directory for \ML{} object files & Directory\\
+{\tt src} & \ML{} sources of \HOL & Directory\\
+{\tt Manual} & Files for \HOL{} system documentation & Directory\\
+{\tt help} & Help files for \HOL{} system & Directory\\
 {\tt examples} & Example source files & Directory\\
 \hline
 \end{tabular}
 \end{center}
 
 The session in the box below shows a typical distribution directory.
-The \HOL\ distribution has been placed on a PC running Linux in the
+The \HOL{} distribution has been placed on a PC running Linux in the
 directory {\small\tt /local/scratch/mn200/hol98/}.
 
 All sessions in this documentation will be displayed in boxes with a
@@ -69,13 +69,13 @@ the continuation of a session started in an earlier box.
 Consecutively numbered boxes are assumed to be part of a single
 continuous session.  The Unix prompt for the sessions is
 \texttt{\small \$}, so lines beginning with this prompt were typed by
-the user.  After entering the \HOL\ system (see below), the user is
+the user.  After entering the \HOL{} system (see below), the user is
 prompted with {\small\verb|-|} for an expression or command of the
-\HOL\ meta-language \ML; lines beginning with this are thus \ML\
+\HOL{} meta-language \ML; lines beginning with this are thus \ML\
 expressions or declarations.  Lines not beginning with \texttt{\small
   \$} or {\small\verb|-|} are system output.  Occasionally, system
 output will be replaced with a line containing {\small\verb|...|} when
-it is of minimal interest. The meta-language \ML\ is introduced in
+it is of minimal interest. The meta-language \ML{} is introduced in
 Chapter~\ref{ML}.
 
 \setcounter{sessioncount}{1}
@@ -89,7 +89,7 @@ Manual/      bin/         help/        sigobj/      tools/
 \end{verbatim}
 \end{session}
 
-Now you will need to rebuild \HOL\ from the sources.\footnote{It is
+Now you will need to rebuild \HOL{} from the sources.\footnote{It is
   possible that pre-built systems may soon be available from the
   web-page mentioned above.}
 

@@ -3,12 +3,12 @@
 
 This chapter consists of a worked example: the specification and
 verification of a simple sequential parity checker.  The intention is
-to   accomplish two things:
+to accomplish two things:
 
 \begin{myenumerate}
 \item To present a complete piece of work with \HOL.
-\item To give a flavour of what it is like to use the \HOL\
-system for a tricky proof.
+\item To give a flavour of what it is like to use the \HOL\ system for
+  a tricky proof.
 \end{myenumerate}
 
 Concerning (ii), note that although the theorems proved are, in fact,
@@ -19,28 +19,29 @@ purpose of illustrating various features of \HOL. It is hoped that the
 small example here will give the reader a feel for what it is like to
 do a big one.
 
-Readers who are not interested in hardware verification
-should be able to learn something about the
-\HOL\ system even if they do not wish to penetrate the details of the
-parity-checking example used here.  The specification and verification of a
-slightly more complex parity checker is set as an exercise (a solution
-is provided).
+Readers who are not interested in hardware verification should be able
+to learn something about the \HOL{} system even if they do not wish to
+penetrate the details of the parity-checking example used here.  The
+specification and verification of a slightly more complex parity
+checker is set as an exercise (a solution is provided).
 
 \section{Introduction}
 
-This case study is supported by three files in
-the \HOL\ distribution directory. These files are:
+This case study is supported by three files in the \HOL{} distribution
+directory. These files are:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    examples/parity/PARITY.sml
    examples/parity/RESET_REG.sml
    examples/parity/RESET_PARITY.sml
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
-The file {\verb|PARITY.sml|} contains the \HOL\ sessions
-in this chapter; the files {\verb|RESET_REG.sml|} and
-{\verb|RESET_PARITY.sml|} contain the solutions
-to the exercises described in Section~\ref{exercises}.
+The file {\verb|PARITY.sml|} contains the \HOL{} sessions in this
+chapter; the files {\verb|RESET_REG.sml|} and
+{\verb|RESET_PARITY.sml|} contain the solutions to the exercises
+described in Section~\ref{exercises}.
 
 The goal of the case study is to illustrate detailed `proof hacking'
 on a small and fairly simple example.
@@ -53,7 +54,7 @@ specification that the $n$th output on {\small\verb|out|} is
 {\small\verb|T|} if and only if there have been an even number of
 {\small\verb|T|}'s input on {\small\verb|in|}. A theory named
 {\small\verb|PARITY|} is constructed; this contains the specification
-and verification of the device. All the \ML\ input in the boxes below
+and verification of the device. All the \ML{} input in the boxes below
 can be found in the file {\small\verb|parity/PARITY.sml|}. It is
 suggested that the reader interactively input this to get a `hands on'
 feel for the example.
@@ -61,14 +62,15 @@ feel for the example.
 
 \section{Specification}
 \label{example}
-The first step is to start up the \HOL\ system.  We will again use
+The first step is to start up the \HOL{} system.  We will again use
 \textsf{hol.unquote} and start by loading and opening \ml{bossLib}.
-The \ML\ prompt is {\small\verb|-|}, so lines beginning with
+The \ML{} prompt is {\small\verb|-|}, so lines beginning with
 {\small\verb|-|} are typed by the user and other lines are the
 system's response.
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 % hol.unquote
 Moscow ML version 1.44 (August 1999)
   ...
@@ -100,6 +102,7 @@ Definition stored under "PARITY_def".
 \end{session}
 
 \noindent
+
 The effect of our call to {\small\verb|Define|} is to store the
 definition of {\small\verb|PARITY|} on the current theory with name
 {\small\verb|PARITY_def|} and to bind the defining theorem to the \ML\
@@ -111,15 +114,15 @@ requirements), but a common convention is (as here) to give the
 definition of a constant {\small\tt CON} the name
 {\small\verb|CON_DEF|} in the theory and also in \ML.  Another
 commonly-used convention is to use just {\small\verb|CON|} for the
-theory and \ML\ name of the definition of a constant
-{\small\verb|CON|}.  Unfortunately, the \HOL\ system does not use a
+theory and \ML{} name of the definition of a constant
+{\small\verb|CON|}.  Unfortunately, the \HOL{} system does not use a
 uniform convention, but users are recommended to adopt one.  In this
 case \ml{Define} has made one of the choices for us, but there are
 other scenarios where have to choose the name used in the theory file.
 
 The specification of the parity checking device can now be given as:
 
-{\small\baselineskip\HOLSpacing\begin{verbatim}
+{\small\begin{verbatim}
    !t. out t = PARITY t inp
 \end{verbatim}}
 
@@ -131,20 +134,20 @@ satisfied if the signal\footnote{Signals are modelled as functions
   to use \ml{in} as one of our variable names, but this is a reserved
   word for \ml{let}-expressions.}:
 
-{\small\baselineskip\HOLSpacing\begin{verbatim}
+{\small\begin{verbatim}
    out(0) = T
 \end{verbatim}}
 
 \noindent and
 
-{\small\baselineskip\HOLSpacing\begin{verbatim}
+{\small\begin{verbatim}
    !t. out(t+1)  =  (if inp(t+1) then ~(out t) else out t)
 \end{verbatim}}
 
-\noindent This can be verified formally in \HOL\ by proving the
+\noindent This can be verified formally in \HOL{} by proving the
 following lemma:
 
-{\small\baselineskip\HOLSpacing\begin{verbatim}
+{\small\begin{verbatim}
    !in out.
     (out 0 = T) /\ (!t. out(SUC t) = (if inp(SUC t) then ~(out t) else out t))
     ==>
@@ -178,7 +181,7 @@ function {\small\verb|g|} which takes a goal as argument.
 The top goal is expanded by stripping off the universal quantifier
 (with {\small\verb|GEN_TAC|}) and then making the two conjuncts of the
 antecedent of the implication into assumptions of the goal (with
-{\small\verb|STRIP_TAC|}).  The \ML\ function {\small\verb|expand|}
+{\small\verb|STRIP_TAC|}).  The \ML{} function {\small\verb|expand|}
 takes a tactic and applies it to the top goal; the resulting subgoals
 are pushed on to the goal stack.  The message `{\small\verb|OK..|}' is
 printed out just before the tactic is applied.  The resulting subgoal
@@ -204,7 +207,7 @@ induction on the outermost universally quantified variable.
 
 \begin{session}
 \begin{verbatim}
-- expand Induct;;
+- expand Induct;
 OK..
 2 subgoals:
 > val it =
@@ -276,15 +279,15 @@ the empty list).  These theorems are printed out in the order in which
 they are generated (note that assumptions of theorems are printed as
 dots).
 
-The \ML\ function
+The \ML{} function
 
-{\small\baselineskip\HOLSpacing\begin{verbatim}
+{\small\begin{verbatim}
    top_thm : unit -> thm
 \end{verbatim}}
 
 \noindent
 returns the theorem just proved (\ie\ on the top of the theorem stack)
-in the current theory, and we bind this to the \ML\ name
+in the current theory, and we bind this to the \ML{} name
 \ml{UNIQUENESS\_LEMMA}.
 
 \begin{session}
@@ -332,9 +335,9 @@ device {\small\verb|ONE|} via the lower multiplexer.  For all subsequent cycles
 stored parity value (if the current input is {\small\verb|F|}) or the
 complement of this value (if the current input is {\small\verb|T|}).
 
+\begin{center}
 %BEGIN IMAGE
 \setlength{\unitlength}{5mm}
-\begin{center}
 \begin{picture}(14,30)(0,0.5)
 \put(8,20){\framebox(2,2){\small{\tt NOT}}}
 \put(6,16){\framebox(6,2){\small{\tt MUX}}}
@@ -376,10 +379,10 @@ complement of this value (if the current input is {\small\verb|T|}).
 \put(2,14){\makebox(2,2){$\bullet$}}
 
 \end{picture}
-\end{center}
 \setlength{\unitlength}{1mm}
 %END IMAGE
 %HEVEA \imageflush
+\end{center}
 
 The devices making up this schematic will be modelled with predicates
 \cite{Why-HOL-paper}. For example, the predicate {\small\verb|ONE|} is true
@@ -395,7 +398,7 @@ Definition stored under "ONE_def".
 \end{session}
 
 \noindent Note that, as discussed above, `{\small\verb|ONE_def|}'  is used both
-as an \ML\ variable and as the name of the definition in the theory.
+as an \ML{} variable and as the name of the definition in the theory.
 Note also how `{\small\verb|:num->bool|}' has been added to resolve
 type ambiguities; without this (or some other type information) the
 typechecker would not be able to infer that {\small\tt t} is to have
@@ -480,7 +483,7 @@ Definition stored under "PARITY_IMP_def".
 \section{Verification}
 
 The following theorem will eventually be proved:
-{\small\baselineskip\HOLSpacing\begin{verbatim}
+{\small\begin{verbatim}
    |- !inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)
 \end{verbatim}}
 This states that {\it if\/} {\small\verb|inp|} and {\small\verb|out|}
@@ -580,20 +583,23 @@ Remaining subgoals:
 \end{session}
 The first of the two subgoals is proved.  Inspecting the remaining
 goal it can be seen that it will be solved if its left hand side,
-{\small\verb|out(SUC t)|}, is expanded using the assumption: \medskip
+{\small\verb|out(SUC t)|}, is expanded using the assumption:
 
-{\small\verb|!t. out t = if l5 t then l3 t else l4 t|}
+{\small\begin{verbatim}
+   !t. out t = if l5 t then l3 t else l4 t
+\end{verbatim}}
 
-\medskip However, if this assumption is used for rewriting, then all
-the subterms of the form {\small\verb|out t|} will also be expanded.
-To prevent this, we really want to rewrite with a formula that is
-specifically about {\small\verb|out (SUC t)|}.  We want to somehow
-pull the assumption that we do have out of the list and rewrite with a
-specialised version of it.  We can do just this using
-{\small\verb|PAT_ASSUM|}.  This tactic is of type \ml{term -> thm ->
-  tactic}.  It selects an assumption that is of the form given by its
-term argument, and passes it to the second argument, a function which
-expects a theorem and returns a tactic.  Here it is in action:
+    However, if this assumption is used for rewriting, then all the
+    subterms of the form {\small\verb|out t|} will also be expanded.
+    To prevent this, we really want to rewrite with a formula that is
+    specifically about {\small\verb|out (SUC t)|}.  We want to somehow
+    pull the assumption that we do have out of the list and rewrite
+    with a specialised version of it.  We can do just this using
+    {\small\verb|PAT_ASSUM|}.  This tactic is of type \ml{term -> thm
+      -> tactic}.  It selects an assumption that is of the form given
+    by its term argument, and passes it to the second argument, a
+    function which expects a theorem and returns a tactic.  Here it is
+    in action:
 
 \begin{session}
 \begin{verbatim}
@@ -619,13 +625,13 @@ stack did not have a RHS that looked like the application of a
 function (\ml{X} in the pattern) to the \ml{t} parameter, but the RHS
 could nonetheless be seen as equal to the application of \emph{some}
 function to the \ml{t} parameter.  In fact, the value that matched
-  \ml{X} was {\small\verb|``\x. if l5 x then l3 x else l4 x``|}.
+\ml{X} was {\small\verb|``\x. if l5 x then l3 x else l4 x``|}.
 
-  Inspecting the goal above, it can be seen that the next step is to
-  unwind the equations for the remaining lines of the circuit.  We do
-  this using the \ml{arith\_ss} simpset that comes with \ml{bossLib}
-  to help with the arithmetic embodied by the subtractions and
-  \ml{SUC} terms.
+Inspecting the goal above, it can be seen that the next step is to
+unwind the equations for the remaining lines of the circuit.  We do
+this using the \ml{arith\_ss} simpset that comes with \ml{bossLib} to
+help with the arithmetic embodied by the subtractions and \ml{SUC}
+terms.
 
 \begin{session}
 \begin{verbatim}
@@ -692,7 +698,7 @@ Meson search level: .....
 \end{session}
 
 Armed with {\small\verb|PARITY_LEMMA|}, the final theorem is easily
-proved.  This will be done in one step using the \ML\ function
+proved.  This will be done in one step using the \ML{} function
 {\small\verb|prove|}.
 
 \begin{session}
@@ -726,23 +732,24 @@ should be in the files:
 \subsection{Exercise 1}
 
 Using {\it only\/} the devices {\small\verb|ONE|}, {\small\verb|NOT|},
-{\small\verb|MUX|} and {\small\verb|REG|} defined in Section~\ref{implementation},
-design and verify a register {\small\verb|RESET_REG|}
-with an input {\small\verb|in|}, reset line {\small\verb|reset|},
-output {\small\verb|out|} and behaviour specified as follows.
+{\small\verb|MUX|} and {\small\verb|REG|} defined in
+Section~\ref{implementation}, design and verify a register
+{\small\verb|RESET_REG|} with an input {\small\verb|in|}, reset line
+{\small\verb|reset|}, output {\small\verb|out|} and behaviour
+specified as follows.
 \begin{itemize}
-\item If {\small\verb|reset|} is {\small\verb|T|} at time {\small\verb|t|},
-then the value at {\small\verb|out|} at time {\small\verb|t|} is also
-{\small\verb|T|}.
-\item If {\small\verb|reset|} is {\small\verb|T|} at time {\small\verb|t|} or
-{\small\verb|t+1|},
-then the value output at {\small\verb|out|} at time {\small\verb|t+1|} is
-{\small\verb|T|}, otherwise it is equal to
-the value input at time {\small\verb|t|} on {\small\verb|inp|}.
+\item If {\small\verb|reset|} is {\small\verb|T|} at time
+  {\small\verb|t|}, then the value at {\small\verb|out|} at time
+  {\small\verb|t|} is also {\small\verb|T|}.
+\item If {\small\verb|reset|} is {\small\verb|T|} at time
+  {\small\verb|t|} or {\small\verb|t+1|}, then the value output at
+  {\small\verb|out|} at time {\small\verb|t+1|} is {\small\verb|T|},
+  otherwise it is equal to the value input at time {\small\verb|t|} on
+  {\small\verb|inp|}.
 \end{itemize}
-This is formalized in \HOL\ by the definition:
+This is formalized in \HOL{} by the definition:
 
-{\small\baselineskip\HOLSpacing\begin{verbatim}
+{\small\begin{verbatim}
    RESET_REG(reset,inp,out) =
     (!t. reset t ==> (out t = T)) /\
     (!t. out(t+1) = ((reset t  \/ reset(t+1)) => T | inp t))
@@ -752,13 +759,18 @@ This is formalized in \HOL\ by the definition:
 output at time {\small\verb|0|} in the case that there is no reset.
 
 The solution to the exercise should be a definition of a predicate
-{\small\verb|RESET_REG_IMP|} as an existential quantification  of a conjunction
-of applications  of  {\small\verb|ONE|}, {\small\verb|NOT|}, {\small\verb|MUX|}
-and {\small\verb|REG|} to suitable line  names,\footnote{i.e.   a definition of
-the same form as that of {\small\tt PARITY\_IMP} on page~\pageref{parity-imp}.}
-together with a proof of:
+{\small\verb|RESET_REG_IMP|} as an existential quantification of a
+conjunction of applications of {\small\verb|ONE|}, {\small\verb|NOT|},
+{\small\verb|MUX|} and {\small\verb|REG|} to suitable line
+names,\footnote{i.e.  a definition of the same form as that of
+  {\small\tt PARITY\_IMP}
+%BEGIN LATEX
+on page~\pageref{parity-imp}.
+%END LATEX
+%HEVEA in section~\ref{parity-imp}
+} together with a proof of:
 
-{\small\baselineskip\HOLSpacing\begin{verbatim}
+{\small\begin{verbatim}
    RESET_REG_IMP(reset,inp,out) ==> RESET_REG(reset,inp,out)
 \end{verbatim}}
 

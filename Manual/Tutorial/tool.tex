@@ -1,7 +1,7 @@
 \chapter{How to program a proof tool}\label{tool}
 
-Users of \HOL\ can create their own theorem proving tools by combining
-predefined rules and tactics. The \ML\ type-discipline
+Users of \HOL{} can create their own theorem proving tools by combining
+predefined rules and tactics. The \ML{} type-discipline
 ensures that only logically sound methods can be used to create values
 of type \ml{thm}.
 In this chapter, a simple but real\footnote{The example
@@ -52,7 +52,7 @@ The tool described here is a tactic that puts conjunctions into the
 normal form obtained by right associating, sorting the conjuncts into
 a canonical order and then removing repetitions. This canonical order
 uses the built-in polymorphic infix \ml{<<}, which orders any pair of
-\ML\ values with the same type.
+\ML{} values with the same type.
 
 \section{A simple implementation}
 
@@ -70,8 +70,8 @@ the equations:
 \end{verbatim}\end{hol}
 
 \noindent These equations are easily proved using the 
-library \ml{taut}. Note that \HOL\ Version 1.12 is used in
-this chapter. Versions of \HOL\ later than 1.12 contain improved
+library \ml{taut}. Note that \HOL{} Version 1.12 is used in
+this chapter. Versions of \HOL{} later than 1.12 contain improved
 rewriting tools and a new version of the library \ml{taut} (the old version
 of the library is preserved in the directory
 {\small\verb%contrib/icl-taut%}).
@@ -95,7 +95,7 @@ Library `taut` loaded.
 
 \noindent The library \ml{taut} defines \ml{TAUT\_RULE}\footnote{The function \ml{TAUT\_RULE} has been replaced by a function called \ml{TAUT\_PROVE} 
 in the new version of the \ml{taut} library available in versions of 
-\HOL\ later than 1.12}
+\HOL{} later than 1.12}
 which converts a term to the corresponding theorem, if the term is a tautology.
 \vfill
 \newpage
@@ -123,7 +123,7 @@ order. Such a tool can be implemented as a {\it conversion\/}.
 
 Conversions are described in detail in \DESCRIPTION. The idea, which
 is due to Larry Paulson \cite{lcp_rewrite}, is that a conversion is an
-\ML\ function that maps a term $t_1$ to an equation:
+\ML{} function that maps a term $t_1$ to an equation:
 
 \medskip
 {\small\verb%|- %}$t_1${\small\verb% = %}$t_2$.  
@@ -132,7 +132,7 @@ is due to Larry Paulson \cite{lcp_rewrite}, is that a conversion is an
 \noindent The intention is that a conversion will only apply to a
 subset of terms: on members of this subset it will generate an
 equation, on all other terms it will fail. Because conversions are so
-central to theorem-proving in \HOL, the \ML\ type
+central to theorem-proving in \HOL, the \ML{} type
 {\small\verb%term->thm%} is abbreviated to {\small\verb%conv%}.
 Conversions are applied using the function:
 
@@ -141,7 +141,7 @@ Conversions are applied using the function:
 \end{verbatim}\end{hol}
 
 \noindent This takes an equation {\small\verb%|- %}$t_1${\small\verb% = %}$t_2$
-and generates a conversion (\ie\ \ML\ function of type {\small\verb%term->thm%}) 
+and generates a conversion (\ie\ \ML{} function of type {\small\verb%term->thm%}) 
 that maps any term $u$ that matches $t_1$ to the theorem
 {\small\verb%|- %}$u${\small\verb% = %}$v$, where $v$ is 
 obtained by applying the substitution obtained by matching $u$ with $t_1$ to $t_2$.
@@ -179,7 +179,7 @@ $t_{2_1}${\small\verb% << %}$t_1$ to the equational theorem:
 \medskip
 
 \noindent If $t_1${\small\verb% << %}$t_{2_1}$ then the conversion fails
-(in the \ML\ sense) when applied to
+(in the \ML{} sense) when applied to
 $t_1${\small\verb% /\ (%}$t_{2_1}${\small\verb% /\ %}$t_{2_2}${\small\verb%)%}.
 In addition, if the right conjunct is not itself a conjunction, then
 the conversion should reorder if necessary. More precisely, if the conversion
@@ -190,8 +190,8 @@ $t_2${\small\verb% << %}$t_1$, then it should generate the equation:
 {\small\verb%|- %}$t_1${\small\verb% /\ %}$t_2${\small\verb%  =  %}$t_2${\small\verb% /\ %}$t_1$
 \medskip
 
-\noindent Such a conversion is easily implemented in \ML\ using
-\ml{SYM1} and \ml{SYM2} proved above, together with the \ML\ syntax
+\noindent Such a conversion is easily implemented in \ML{} using
+\ml{SYM1} and \ml{SYM2} proved above, together with the \ML{} syntax
 processing functions \ml{is\_conj} and \ml{dest\_conj}, where:
 
 \begin{hol}\begin{verbatim}
@@ -301,7 +301,7 @@ evaluation failed     REWR_CONV: lhs of theorem doesn't match term
 \end{verbatim}\end{session}
 
 \noindent The right hand side of this theorem is \ml{ex1} in right-associated
-form. The conclusion of a theorem can be extracted with the \ML\ function
+form. The conclusion of a theorem can be extracted with the \ML{} function
 \ml{concl} and the right hand side of an equation can be extracted with
 \ml{rhs}. Thus, continuing the session:
 
@@ -406,7 +406,7 @@ OK..
 "A /\ B /\ C /\ D ==> B"
 \end{verbatim}\end{session}
 
-To summarize, here is the \ML\ code implementing the normalizer:
+To summarize, here is the \ML{} code implementing the normalizer:
 
 \begin{hol}\begin{verbatim}
    load_library `taut`;;
@@ -486,30 +486,30 @@ Intermediate theorems generated: 16761
 
 The reason that \ml{CONJ\_CANON\_CONV} is slow is because of the
 repeated pattern matching done during rewriting. A much more efficient
-approach is to normalize the conjunction by \ML\ programming outside
+approach is to normalize the conjunction by \ML{} programming outside
 the logic, and then to prove that the normalized term is equal to the
 original one. An even more efficient approach, which is not explored
 here, would be to avoid having to do this proof by verifing the
 normalization code by some sort of meta-theoretic
 reasoning about \ML. How to do this in
-\HOL\ is not clear, but work on this approach has been done in the
+\HOL{} is not clear, but work on this approach has been done in the
 context of {\small FOL} \cite{FOL}, the Boyer-Moore prover \cite{BoyerMoore}
 and Nuprl \cite{Nuprl}. These approaches all use logically
 sophisticated extra axioms, called reflection principles, that enable
 metatheorems to be `reflected' into the logic as object level
 theorems.
 
-To normalize the term by \ML\ programming, the conjuncts are extracted,
+To normalize the term by \ML{} programming, the conjuncts are extracted,
 repeated elements are deleted and the resulting list is sorted.
 
-\HOL\ already has a predefined function:
+\HOL{} already has a predefined function:
 
 \begin{hol}\begin{verbatim}
    conjuncts : term -> term list
 \end{verbatim}\end{hol}
 
 \noindent for extracting conjuncts.
-\HOL\ also has a predefined \ML\ function for removing repeated elements of
+\HOL{} also has a predefined \ML{} function for removing repeated elements of
 a list:
 
 
@@ -547,7 +547,7 @@ sort = - : (((* # *) -> bool) -> * list -> * list)
 \end{verbatim}\end{session}
 
 Using this function, the list of conjuncts of the normalization of a
-term is easily computed.  The predefined \ML\ function:
+term is easily computed.  The predefined \ML{} function:
 
 \begin{hol}\begin{verbatim}
    list_mk_conj : term list -> term
@@ -565,7 +565,7 @@ ex1_norm = "A /\ B /\ C /\ D" : term
 \end{verbatim}\end{session}
 
 \noindent The calculation of \ml{ex1\_norm} from \ml{ex1} has been
-done by (unverified) \ML\ code. What is required is the theorem
+done by (unverified) \ML{} code. What is required is the theorem
 asserting that they are equal. This can be proved using the tautology
 checker.
 
@@ -715,7 +715,7 @@ minus its top assumption:
    POP_ASSUM \(f\) ([\(t\sb{1}\);\(\ldots\);\(t\sb{n}\)],\(t\)) = \(f\) (ASSUME \(t\sb{1}\)) ([\(t\sb{2}\);\(\ldots\);\(t\sb{n}\)],\(t\))
 \end{alltt}\end{hol}
 
-\noindent \ML\ functions such as $f$,
+\noindent \ML{} functions such as $f$,
 with type \ml{thm -> tactic} are abbreviated to \ml{thm\_tactic} (see
 \DESCRIPTION\ for further details).
 
@@ -747,7 +747,7 @@ is characterized by:
 
 \noindent Returning to the proof: the final step is now performed by
 popping the assumption and applying to it the function obtained by
-composing \ml{CONJUNCTS} and \ml{MAP\_FIRST} using the \ML\ infixed
+composing \ml{CONJUNCTS} and \ml{MAP\_FIRST} using the \ML{} infixed
 function composition operator \ml{o} 
 (where \ml{(}$f$~\ml{o}~$g$\ml{)}$x$~\ml{=}~$g$\ml{(}$f$\ml{(}$x$\ml{))}).
 
@@ -900,7 +900,7 @@ converts a term $t$ to the theorem \ml{|-}~$t$
 if that theorem occurs in a supplied list of theorems (\ml{ths} in the
 code below), or $t$ is a conjunction each of whose conjuncts occurs in
 the list. The definition of \ml{PROVE\_CONJ} uses the following
-predefined \ML\ functions:
+predefined \ML{} functions:
 
 \begin{itemize}
 \item \ml{uncurry}~$f$~\ml{(}$x$\ml{,}$y$\ml{)}~~\ml{=}~~$f$~$x$~$y$
@@ -943,7 +943,7 @@ t_2 \]
     in IMP_ANTISYM_RULE imp1 imp2
 \end{verbatim}\end{hol}
 
-\noindent Loading these \ML\ function definitions into \HOL:
+\noindent Loading these \ML{} function definitions into \HOL:
 
 \begin{session}\begin{verbatim}
 #letrec PROVE_CONJ ths tm =
@@ -1088,7 +1088,7 @@ Run time: 0.0s
 \end{verbatim}\end{session}
 
 \noindent Next, a function that applies a conversion $c$ to all
-conjunctive subterms of a term. This uses the \ML\ function:
+conjunctive subterms of a term. This uses the \ML{} function:
 
 \bigskip
 \ml{map}~$f$~\ml{[}$x_1\ml{;}\ldots\ml{;}x_n$\ml{]}~~=~~\ml{[}$f\ x_1\ml{;}\ldots\ml{;}f\ x_n$\ml{]}
@@ -1224,7 +1224,7 @@ Intermediate theorems generated: 1932
 primitive inference steps!
 
 
-Here is the complete \ML\ program for the optimized normalizer.
+Here is the complete \ML{} program for the optimized normalizer.
 
 \begin{hol}\begin{verbatim}
    letrec insert ord x l =

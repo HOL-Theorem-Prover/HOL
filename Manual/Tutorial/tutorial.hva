@@ -1,0 +1,30 @@
+\newenvironment{session}{\vspace{1cm}\begin{center}
+ \begin{tabular}{|l|}\hline
+ \multicolumn{1}{r}{\sl \thesessioncount}\\}{\\ \hline
+ \end{tabular}\end{center}\stepcounter{sessioncount}\vspace{5mm}}
+
+\newenvironment{myenumerate}{\begin{enumerate}}{\end{enumerate}}
+\newenvironment{hol}{\begin{flushleft}}{\end{flushleft}}
+\newenvironment{boxed}{\begin{flushleft}
+ \begin{tabular}{|l|}\hline}{\end{tabular}\end{flushleft}}
+
+\newcommand\hilbert{\epsilon}
+
+\newcommand\lor{\vee}
+\newcommand\land{\wedge}
+
+\newcommand\tacticline{\hline}
+
+\newcommand\ml[1]{\texttt{#1}}
+\newcommand\top{T}
+
+\newenvironment{proofenumerate}{
+  \begin{quotation}
+  \begin{tabular*}{18cm}{lr}
+  \newcounter{temp}
+  \setcounter{temp}{1}
+  \renewcommand{\item}{\ifthenelse{\value{temp}=1}{}{\\}\thetemp.
+                       \stepcounter{temp}}
+  \renewcommand{\hfill}{&}}{\end{tabular*}\end{quotation}}
+
+\newcounter{page}

@@ -1,34 +1,34 @@
 \section{Theories}
 \label{theories}
 
-The result of a session with the \HOL\ system is an object called a
+The result of a session with the \HOL{} system is an object called a
 {\it theory\/}.  This object is closely related to what a logician
 would call a theory, but there are some differences arising from the
-needs of mechanical proof.  A \HOL\ theory, like a logician's theory,
+needs of mechanical proof.  A \HOL{} theory, like a logician's theory,
 contains sets of types, constants, definitions and axioms.  In
-addition, however, a \HOL\ theory contains an explicit list of
+addition, however, a \HOL{} theory contains an explicit list of
 theorems that have been proved from the axioms and definitions.
 Logicians normally do not need to distinguish theorems that have
 actually been proved from those that could be proved, hence they do
 not normally consider sets of proven theorems as part of a theory;
 rather, they take the theorems of a theory to be the (often infinite)
 set of all consequences of the axioms and definitions.  Another
-difference between logicians' theories and \HOL\ theories is that, for
-logicians, theories are relatively static objects, but in \HOL\ they
+difference between logicians' theories and \HOL{} theories is that, for
+logicians, theories are relatively static objects, but in \HOL{} they
 can be thought of as potentially extendable. For example, the \HOL\
 system provides tools for adding to theories and combining theories.
-A typical interaction with \HOL\ consists in combining some existing
+A typical interaction with \HOL{} consists in combining some existing
 theories, making some definitions, proving some theorems and then
 saving the resulting new theory.
 
-The purpose of the \HOL\ system is to provide tools to enable
+The purpose of the \HOL{} system is to provide tools to enable
 well-formed theories to be constructed.  All the theorems of such
 theories are logical consequences of the definitions and axioms of the
-theory.  The \HOL\ system ensures that only well-formed theories can
+theory.  The \HOL{} system ensures that only well-formed theories can
 be constructed by allowing theorems to be created by {\it formal
   proof\/} only.
 
-A theory is represented in the \HOL\ system as a collection of SML
+A theory is represented in the \HOL{} system as a collection of SML
 object files, called theory files.  Each file has a name of the form
 $name$\ml{Theory.}$ext$, where $name$ is a string supplied by the
 user, and $ext$ is one of \ml{sig}, \ml{sml}, \ml{ui}, \ml{uo}.
@@ -39,7 +39,7 @@ making up a theory records some types, constants, axioms and theorems,
 together with pointers to other theory files called its {\it
   parents\/}.  This collection of reachable files is called the {\it
   ancestry\/} of the theory file. Axioms, definitions and theorems are
-named in the \HOL\ system by two strings: the name of the theory file
+named in the \HOL{} system by two strings: the name of the theory file
 where they are stored, together with a name within that file supplied
 by the user.  Specifically, axioms, definitions and theorems are named
 by a pair of strings $\langle thy,name\rangle$ where $thy$ is the name
@@ -47,13 +47,13 @@ of the theory current when the item was declared and $name$ is a
 specific name supplied by the user (see the functions \ml{new\_axiom},
 \ml{new\_definition} \etc\ below).
 
-A typical piece of work with the \HOL\ system consists in a number of
+A typical piece of work with the \HOL{} system consists in a number of
 sessions.  A theorem-proving session consists of interactions with the
 system through its ``command-line interface''.  At the same time, it's
 important that the commands the user enters are saved in some sort of
 file (presumably through an editor) so that these commands can be
 replayed later.  For the first sessions of theory development, each
-time \HOL\ is started, the saved commands from previous sessions will
+time \HOL{} is started, the saved commands from previous sessions will
 need to be re-entered into the system.  This can be done with
 cut-and-paste functionality, or the \ml{use} command (which takes a
 file-name and reads it for input).
@@ -68,8 +68,8 @@ the same way as the system's built-in theories.
 There is always a {\it current theory\/}, whose name is given by the
 function \ml{current\_theory}.  This function maps the unit value,
 written `\ml{()}' in \ML, to a string giving the name of the current
-theory.  Thus the \ML\ expression \ml{current\_theory ()} evaluates to
-a string giving the name of the current theory.  Initially \HOL\ has
+theory.  Thus the \ML{} expression \ml{current\_theory ()} evaluates to
+a string giving the name of the current theory.  Initially \HOL{} has
 its current theory called \ml{scratch}.  In the examples so far, there
 hasn't been a call to \ml{new\_theory}, so the current theory is still
 ``scratch''.

@@ -4,20 +4,22 @@
 This chapter is a brief introduction to the meta-language \ML.  The
 aim is just to give a feel for what it is like to interact with the
 language.  A more detailed introduction can be found in numerous
-textbooks and web-pages; see for example the list of resources
-on the MoscowML home-page, or the \texttt{comp.lang.ml} FAQ.
+textbooks and web-pages; see for example the list of resources on the
+\url{http://www.dina.kvl.dk/\~{}sestoft/mosml.html}{MoscowML home-page},
+or the
+\url{http://src.doc.ic.ac.uk/usenet/news-faqs/comp.lang.ml/}{\texttt{comp.lang.ml} FAQ}.
 
 \section{How to interact with ML}
 
-\ML\ is an interactive programming language like Lisp. At top level
+\ML{} is an interactive programming language like Lisp. At top level
 one can evaluate expressions and perform declarations. The former
 results in the expression's value and type being printed, the latter
 in a value being bound to a name.
 
-A standard way to interact with \ML\ is to configure the workstation
+A standard way to interact with \ML{} is to configure the workstation
 screen so that there are two windows:
 \begin{myenumerate}
-\item An editor window into which \ML\ commands are initially typed
+\item An editor window into which \ML{} commands are initially typed
   and recorded.
 \item A shell window (or non-Unix equivalent) which is used to
   evaluate the commands.
@@ -28,7 +30,7 @@ A common way to achieve this is to work inside \ml{Emacs} with a text
 window and a shell window.
 
 After typing a command into the edit (text) window it can be
-transferred to the shell and evaluated in \HOL\ by `cut-and-paste'. In
+transferred to the shell and evaluated in \HOL{} by `cut-and-paste'. In
 \ml{Emacs} this is done by copying the text into a buffer and then
 `yanking' it into the shell. The advantage of working via an editor is
 that if the command has an error, then the text can simply be edited
@@ -42,11 +44,11 @@ position in the complete session).
 
 The interactions in these boxes should be understood as occurring in
 sequence.  For example, variable bindings made in earlier boxes are
-assumed to persist to later ones.  To enter the \HOL\ system one types
+assumed to persist to later ones.  To enter the \HOL{} system one types
 {\small\verb|hol|} or {\small\verb|hol.unquote|} to Unix, possibly
-  preceded by path information if the \HOL\ system's \texttt{bin}
-  directory is not in one's path.  The \HOL\ system then prints a
-  sign-on message and puts one into \ML.  The \ML\ prompt is
+  preceded by path information if the \HOL{} system's \texttt{bin}
+  directory is not in one's path.  The \HOL{} system then prints a
+  sign-on message and puts one into \ML.  The \ML{} prompt is
   {\small\verb|-|}, so lines beginning with {\small\verb|-|} are typed
   by the user and other lines are the system's responses.
 
@@ -71,7 +73,7 @@ Enter `quit();' to quit.
 \end{alltt}
 \end{session}
 
-The \ML\ expression {\small\verb|1 :: [2,3,4,5]|} has the form $e_1\
+The \ML{} expression {\small\verb|1 :: [2,3,4,5]|} has the form $e_1\
 op\ e_2$ where $e_1$ is the expression {\small\verb|1|} (whose value
 is the integer $1$), $e_2$ is the expression {\small\verb|[2,3,4,5]|}
 (whose value is a list of four integers) and $op$ is the infixed
@@ -81,14 +83,14 @@ Lisp), {\small\verb|tl|} ($cdr$ in Lisp) and {\small\verb|null|}
 ($null$ in Lisp).  The semicolon `{\small\verb|;|}' terminates a
 top-level phrase.  The system's response is shown on the line starting
 with the {\small\verb|>|} prompt.  It consists of the value of the
-expression followed, after a colon, by its type. The \ML\ type checker
+expression followed, after a colon, by its type. The \ML{} type checker
 infers the type of expressions using methods invented by Robin Milner
 \cite{Milner-types}. The type {\small\verb|int list|} is the type of
 `lists of integers'; {\small\verb|list|} is a unary type operator.
-The type system of \ML\ is very similar to the type system of the
-\HOL\ logic which is explained in Chapter~\ref{HOLlogic}.
+The type system of \ML{} is very similar to the type system of the
+\HOL{} logic which is explained in Chapter~\ref{HOLlogic}.
 
-The value of the last expression evaluated at top-level in \ML\ is always
+The value of the last expression evaluated at top-level in \ML{} is always
 remembered in a variable called {\small\verb|it|}.
 
 \begin{session}
@@ -128,7 +130,7 @@ each expression $e_i$ being bound to the name $x_i$.
 \end{verbatim}
 \end{session}
 
-\ML\ expressions like {\small\verb|"a"|}, {\small\verb|"b"|},
+\ML{} expressions like {\small\verb|"a"|}, {\small\verb|"b"|},
 {\small\verb|"foo"|} \etc\ are {\it strings\/} and have type
 {\small\verb|string|}. Any sequence of {\small ASCII} characters can
 be written between the quotes.\footnote{Newlines must be written as
@@ -150,7 +152,7 @@ to a pair of the values of $e_1$ and $e_2$. If $e_1$ has type
 $\sigma_1$ and $e_2$ has type $\sigma_2$ then
 {\small\verb|(|}$e_1${\small\verb|,|}$e_2${\small\verb|)|} has type
 $\sigma_1${\small\verb|*|}$\sigma_2$.  The first and second components
-of a pair can be extracted with the \ML\ functions {\small\verb|#1|}
+of a pair can be extracted with the \ML{} functions {\small\verb|#1|}
 and {\small\verb|#2|} respectively.  If a tuple has more than two
 components, its $n$-th component can be extracted with a function
 {\small\verb|#|$n$}.
@@ -174,10 +176,10 @@ The values {\small\verb|(1,2,3)|}, {\small\verb|(1,(2,3))|} and
 \end{verbatim}
 \end{session}
 
-\noindent The \ML\ expressions {\small\verb|true|} and {\small\verb|false|}
+\noindent The \ML{} expressions {\small\verb|true|} and {\small\verb|false|}
 denote the two truth values of type {\small\verb|bool|}.
 
-\ML\ types can contain the {\it type variables\/} {\small\verb|'a|},
+\ML{} types can contain the {\it type variables\/} {\small\verb|'a|},
 {\small\verb|'b|}, {\small\verb|'c|}, \etc\ Such types are called {\it
 polymorphic\/}. A function with a polymorphic type should be thought of as
 possessing all the types obtainable by replacing type variables by types.
@@ -251,20 +253,9 @@ of the whole is obtained by evaluating $e_2$.\footnote{This
 \end{session}
 
 The sessions above are enough to give a feel for \ML.  In the next
-chapter, the logic supported by the \HOL\ system (higher order logic)
-will be introduced, together with the tools in \ML\ for manipulating
+chapter, the logic supported by the \HOL{} system (higher order logic)
+will be introduced, together with the tools in \ML{} for manipulating
 it.
-
-
-
-
-
-
-
-
-
-
-
 
 %%% Local Variables:
 %%% mode: latex
