@@ -67,6 +67,17 @@ val lt_move_left_right = store_thm(
   CONV_TAC (LHS_CONV (RATOR_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM)))) THEN
   REFL_TAC);
 
+val le_move_right_left = store_thm(
+  "le_move_right_left",
+  ``!x y z. x <= y + z = x + ~z <= y``,
+  REWRITE_TAC [INT_LE_SUB_RADD, GSYM int_sub]);
+
+val le_move_all_right = store_thm(
+  "le_move_all_right",
+  ``!x y. x <= y = 0 <= y + ~x``,
+  REWRITE_TAC [GSYM int_sub, INT_LE_SUB_LADD, INT_ADD_LID]);
+
+
 val eq_move_all_right = store_thm(
   "eq_move_all_right",
   ``!x y. (x = y) = (0 = y + ~x)``,
@@ -92,6 +103,11 @@ val eq_move_left_left = store_thm(
 val eq_move_left_right = store_thm(
   "eq_move_left_right",
   ``!x y z. (x + y = z) = (y = z + ~x)``,
+  PROVE_TAC [INT_ADD_COMM, eq_move_left_left]);
+
+val eq_move_right_left = store_thm(
+  "eq_move_right_left",
+  ``!x y z. (x = y + z) = (x + ~z = y)``,
   PROVE_TAC [INT_ADD_COMM, eq_move_left_left]);
 
 val lcm_eliminate = store_thm(
@@ -772,6 +788,24 @@ val elim_lt_coeffs2 = store_thm(
        ASM_SIMP_TAC arith_ss [INT_LT, INT_MUL] THEN
     PROVE_TAC [INT_LET_TRANS]
   ]);
+
+val elim_le_coeffs_pos = store_thm(
+  "elim_le_coeffs_pos",
+  ``!m n x.  0 < m ==>
+             (&n <= m * x = (if m int_divides &n then &n / m
+                              else &n / m + 1) <= x)``,
+  REPEAT STRIP_TAC THEN
+  `?mn. m = &mn` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
+  FULL_SIMP_TAC arith_ss [GSYM INT_NOT_LT, elim_lt_coeffs2, INT_LT]);
+
+val elim_le_coeffs_neg = store_thm(
+  "elim_le_coeffs_neg",
+  ``!m n x. 0 < m ==> (~&n <= m * x = ~(&n / m) <= x)``,
+  REPEAT STRIP_TAC THEN SIMP_TAC arith_ss [GSYM INT_NOT_LT] THEN
+  `?mn. m = &mn` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
+  CONV_TAC (BINOP_CONV (REWR_CONV (GSYM INT_LT_NEG))) THEN
+  FULL_SIMP_TAC arith_ss [INT_NEGNEG, INT_NEG_RMUL, elim_lt_coeffs1,
+                          INT_LT]);
 
 val elim_eq_coeffs = store_thm(
   "elim_eq_coeffs",

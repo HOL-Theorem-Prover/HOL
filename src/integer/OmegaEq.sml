@@ -16,8 +16,9 @@ struct
       where some or none of the ci may be (integer) equalities,
       involving variables that may or may not be among the quantified
       vs.  Each conjunct is either an equality or a <= term, and in
-      either, the variables must all be collected up and on the right
-      side of the relation symbol.
+      either, the variables must all be collected up, on the right
+      side of the relation symbol and further there must always be a
+      numeral (possibly zero) added in on the right of the RHS.
 
     Output:
 
@@ -31,12 +32,14 @@ open intSyntax CooperSyntax CooperMath QConv integerTheory
 
 open OmegaTheory
 
-infix THENC ORELSEC ##
+infix THENC THEN THENL ORELSEC ##
 
 val (Type, Term) = parse_from_grammars Omega_grammars
 
 fun c1 THENC c2 = THENQC c1 c2
 fun c1 ORELSEC c2 = ORELSEQC c1 c2
+val BINOP_CONV = BINOP_QCONV
+val ALL_CONV = ALL_QCONV
 
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaEq",
                           origin_function = f,
@@ -49,9 +52,38 @@ fun myfind f [] = NONE
     | x => x
 fun lhand t = rand (rator t)
 
-val INT_NORM_CONV =
-    integerRingLib.INT_NORM_CONV THENC
-    REWRITE_CONV [int_sub, INT_NEG_LMUL, INT_ADD_ASSOC]
+(* ----------------------------------------------------------------------
+    INT_NORM_CONV tm
+
+    returns a normalised term, with coefficients collected over all
+    variables, etc.  Don't use integerRingLib.INT_NORM_CONV directly
+    because this can return terms including subtractions, associates the
+    additions to the right, and puts the numeral in the left-most
+    position (if there is one; it will drop trailing + 0 terms)
+   ---------------------------------------------------------------------- *)
+
+val INT_NORM_CONV = let
+  val move_numeral_right = prove(
+    ``!n y z:int. (&n + y = y + &n) /\ (~&n + y = y + ~&n) /\
+                  (y + &n + z = y + z + &n) /\
+                  (y + ~&n + z = y + z + ~&n)``,
+    REPEAT STRIP_TAC THEN REWRITE_TAC [GSYM INT_ADD_ASSOC, INT_EQ_LADD] THEN
+    MATCH_ACCEPT_TAC INT_ADD_COMM);
+  fun addzero t =
+      if is_int_literal (rand t) then ALL_QCONV t
+      else SYM (SPEC t INT_ADD_RID)
+  fun put_in_times1 t =
+      if is_plus t then BINOP_QCONV put_in_times1 t
+      else if is_var t then SYM (SPEC t INT_MUL_LID)
+      else if is_negated t andalso is_var (rand t) then
+        SPEC (rand t) INT_NEG_MINUS1
+      else ALL_QCONV t
+in
+  integerRingLib.INT_NORM_CONV THENC
+  REWRITE_CONV [int_sub, INT_NEG_LMUL, INT_ADD_ASSOC, move_numeral_right] THENC
+  addzero THENC put_in_times1
+end
+
 
 (* ----------------------------------------------------------------------
     rel_coeff v tm
@@ -97,7 +129,7 @@ end
 fun find_eliminable_equality vs (acc as (leastv, conj, rest)) cs = let
   fun ocons NONE xs = xs | ocons (SOME x) xs = x::xs
   fun doclause (acc as (leastv, conj, rest)) c k = let
-    val fvs = FVL [c] empty_tmset
+    val fvs = FVL [lhand (rand c)] empty_tmset
     val i = HOLset.intersection(vs,fvs)
     fun check_mins (v, (leastv, changed)) = let
       open Arbint
@@ -195,6 +227,9 @@ in
                 INT_ADD_RID, INT_ADD_ASSOC] THENC REDUCE_CONV
 end tm
 
+val eliminate_equality =
+    fn x => Profile.profile "eliminate_eq" (eliminate_equality x)
+
 
 
 
@@ -237,7 +272,10 @@ in
   STRIP_QUANT_CONV (K reordered_thm THENC bring_veq_to_top THENC
                     STRIP_QUANT_CONV (RAND_CONV (mk_abs_CONV to_elim))) THENC
   push_exvar_to_bot to_elim THENC
-  LAST_EXISTS_CONV (REWR_CONV UNWIND_THM2 THENC BETA_CONV)
+  LAST_EXISTS_CONV (REWR_CONV UNWIND_THM2 THENC BETA_CONV) THENC
+  STRIP_QUANT_CONV (EVERY_CONJ_CONV (RAND_CONV INT_NORM_CONV THENC
+                                     OmegaMath.gcd_check)) THENC
+  OmegaEq
 end t
 
 

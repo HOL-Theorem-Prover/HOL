@@ -1887,48 +1887,6 @@ val INT_MOD_NEG = store_thm(
                         INT_SUB_NEG2, INT_SUB_RNEG] THEN
   MATCH_ACCEPT_TAC INT_ADD_COMM);
 
-(*
-val INT_MOD_NEG = store_thm(
-  "INT_MOD_NEG",
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Cases_on `0 <= p` THENL [
-    `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0 <= q` THENL [
-      `?m. q = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_INJ]) THEN
-      ASM_SIMP_TAC int_ss [int_mod, INT_NEG_EQ0, INT_NEGNEG, INT_DIV, INT_INJ,
-                           INT_DIV_NEG, GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
-                           int_sub, INT_NEG_ADD],
-      `?m. q = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
-                                  INT_LE_LT] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_EQ0, INT_INJ]) THEN
-      ASM_SIMP_TAC int_ss [int_mod, INT_NEG_EQ0, INT_NEGNEG, INT_DIV, INT_INJ,
-                           INT_DIV_NEG, GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
-                           int_sub, INT_NEG_ADD]
-    ],
-    `?n. p = ~&n` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE, INT_LE_LT] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0 <= q` THENL [
-      `?m. q = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_INJ]) THEN
-      ASM_SIMP_TAC int_ss [int_mod, INT_NEG_EQ0, INT_NEGNEG, INT_DIV, INT_INJ,
-                           INT_DIV_NEG, GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
-                           int_sub, INT_NEG_ADD],
-      `?m. q = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
-                                  INT_LE_LT] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_EQ0, INT_INJ]) THEN
-      ASM_SIMP_TAC int_ss [int_mod, INT_NEG_EQ0, INT_NEGNEG, INT_DIV, INT_INJ,
-                           INT_DIV_NEG, GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
-                           int_sub, INT_NEG_ADD]
-    ]
-  ]);
-*)
-
 val INT_MOD0 = store_thm(
   "INT_MOD0",
   Term`!p. ~(p = 0) ==> (0 % p = 0)`,
@@ -2862,6 +2820,28 @@ val INT_MAX_NUM = store_thm(
   "INT_MAX_NUM",
   ``!m n. int_max (&m) (&n) = &(MAX m n)``,
   SIMP_TAC (bool_ss ++ COND_elim_ss) [INT_MAX, MAX_DEF, INT_LT]);
+
+
+(* ----------------------------------------------------------------------
+    Some monotonicity results
+   ---------------------------------------------------------------------- *)
+
+val INT_LT_MONO = store_thm(
+  "INT_LT_MONO",
+  ``!x y z. 0 < x ==> (x * y < x * z = y < z)``,
+  REPEAT STRIP_TAC THEN
+  CONV_TAC (Conv.BINOP_CONV (LAND_CONV (REWR_CONV (GSYM INT_ADD_LID)))) THEN
+  REWRITE_TAC [GSYM INT_LT_SUB_LADD, GSYM INT_SUB_LDISTRIB] THEN
+  PROVE_TAC [INT_LT_ANTISYM, INT_MUL_SIGN_CASES]);
+
+val INT_LE_MONO = store_thm(
+  "INT_LE_MONO",
+  ``!x y z. 0 < x ==> (x * y <= x * z = y <= z)``,
+  REPEAT STRIP_TAC THEN
+  CONV_TAC (Conv.BINOP_CONV (LAND_CONV (REWR_CONV (GSYM INT_ADD_LID)))) THEN
+  REWRITE_TAC [GSYM INT_LE_SUB_LADD, GSYM INT_SUB_LDISTRIB] THEN
+  ASM_SIMP_TAC bool_ss [INT_LE_LT, INT_MUL_SIGN_CASES, INT_LT_GT] THEN
+  PROVE_TAC [INT_ENTIRE, INT_LT_REFL]);
 
 (*----------------------------------------------------------------------*)
 (* Prove rewrites for calculation with integers                         *)
