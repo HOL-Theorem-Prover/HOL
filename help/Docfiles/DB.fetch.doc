@@ -20,6 +20,6 @@ If the specified theorem, axiom, or definition cannot be located.
 }
 
 \SEEALSO
-DB.thms, DB.thy.
+DB.thms, DB.thy, DB.theorems, DB.axioms, DB.definitions.
 
 \ENDDOC

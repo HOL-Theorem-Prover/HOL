@@ -20,16 +20,15 @@ the empty list is returned.
 {
 - theorems "combin";
 > val it =
-    [("C_THM", |- !f x y. combin$C f x y = f y x),
-     ("I_o_ID", |- !f. (I o f = f) /\ (f o I = f)), ("I_THM", |- !x. I x = x),
-     ("K_THM", |- !x y. K x y = x),
+    [("I_o_ID", |- !f. (I o f = f) /\ (f o I = f)), ("I_THM", |- !x. I x = x),
+     ("W_THM", |- !f x. W f x = f x x),
+     ("C_THM", |- !f x y. combin$C f x y = f y x),
+     ("S_THM", |- !f g x. S f g x = f x (g x)), ("K_THM", |- !x y. K x y = x),
      ("o_ASSOC", |- !f g h. f o g o h = (f o g) o h),
-     ("o_THM", |- !f g x. (f o g) x = f (g x)),
-     ("S_THM", |- !f g x. S f g x = f x (g x)),
-     ("W_THM", |- !f x. W f x = f x x)] : (string * thm) list
+     ("o_THM", |- !f g x. (f o g) x = f (g x))] : (string * thm) list
 }
 
 \SEEALSO
-DB.thy, DB.theorem, DB.thms, DB.definitions, DB.axioms, DB.all_thms.
+DB.thy, DB.fetch, DB.thms, DB.definitions, DB.axioms, DB.listDB.
 
 \ENDDOC

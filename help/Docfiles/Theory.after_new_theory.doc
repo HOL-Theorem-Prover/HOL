@@ -1,0 +1,66 @@
+\DOC after_new_theory
+
+\TYPE {after_new_theory : (string -> unit) -> unit}
+
+\SYNOPSIS
+Initialize package once a theory is declared.
+
+\KEYWORDS
+theory.
+
+\DESCRIBE
+Some HOL infrastructure depends on certain packages being
+informed each time a new theory is created. The function {after_new_theory}
+supports this. An invocation {after_new_theory f} adds the function {f} 
+to an internal queue of `initializers'. All subsequent calls to 
+{new_theory} will cause each initializer to be run, in queue order. Each 
+initializer will be given the name of the theory as argument.
+
+\FAILURE
+It can be that an initializer fails for some reason when it is executed. 
+Any exceptions will be caught, and an attempt will be made to print
+out a message. Then execution of the remaining initializers will continue.
+
+\EXAMPLE
+{
+- fun every8 s (a::b::c::d::e::f::g::h::rst) = 
+                a::b::c::d::e::f::g::h::s::every8 s rst
+    | every8 s otherwise = otherwise;
+> val 'a every8 = fn : 'a -> 'a list -> 'a list
+
+- after_new_theory (fn s => 
+    (print ("Ancestors of "^s^":\n  ");
+     print (String.concat (every8 "\n  " (commafy (ancestry s))));
+     print ".\n"));
+> val it = () : unit
+
+- new_theory"foo";
+<<HOL message: Created theory "foo">>
+Ancestors of foo:
+  one, option, pair, sum, 
+  combin, relation, min, bool, 
+  num, prim_rec, arithmetic, numeral, 
+  ind_type, list.
+> val it = () : unit
+
+- new_theory"bar";
+Exporting theory "foo" ... done.
+<<HOL message: Created theory "bar">>
+Ancestors of bar:
+  one, option, pair, sum, 
+  combin, relation, min, bool, 
+  num, prim_rec, arithmetic, numeral, 
+  ind_type, list, foo.
+> val it = () : unit
+}
+
+\COMMENTS
+Perhaps there should be a {before_export_theory} call as well?
+
+\USES
+Fairly low level system support tasks.
+
+\SEEALSO
+Theory.adjoin_to_theory.
+
+\ENDDOC

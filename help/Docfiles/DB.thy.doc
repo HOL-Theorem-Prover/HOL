@@ -39,6 +39,6 @@ a currently loaded theory segment.
 }
 
 \SEEALSO
-DB.class, DB.data, DB.all_thms, DB.theorems, DB.theorem_class, DB.match
-Theory.new_theory.
+DB.class, DB.data, DB.listDB, DB.theorems, DB.match, Theory.new_theory.
+
 \ENDDOC

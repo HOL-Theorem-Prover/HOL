@@ -17,16 +17,19 @@ Fails unless the named theory is an ancestor.
 
 \EXAMPLE
 {
-   - load "rich_listTheory";
+- load "bossLib";
+> val it = () : unit
 
-   - itlist union (map types (ancestry "-")) [];
-   > val it =
-       [("one", 0), ("option", 1), ("num", 0), ("sum", 2), 
-        ("recspace", 1), ("prod", 2), ("list", 1), ("bool", 0),
-        ("ind", 0), ("fun", 2)]
-     : (string * int) list
+- itlist union (map types (ancestry "-")) [];
+> val it =
+    [("one", 0), ("option", 1), ("prod", 2), ("sum", 2), ("fun", 2),
+     ("ind", 0), ("bool", 0), ("num", 0), ("recspace", 1), ("list", 1)] :
+  (string * int) list
 }
+
 \SEEALSO
-Theory.ancestry, Theory.axioms, Theory.constants, definitions, infixes, Theory.new_type, Definition.new_type_definition, Theory.parents.
+Theory.current_axioms, Theory.current_defs, Theory.current_thms,
+Theory.new_type, Theory.constants, Definition.new_type_definition, 
+Theory.parents, Theory.ancestry.
 
 \ENDDOC

@@ -54,6 +54,6 @@ The notion of matching is a restricted version of higher-order matching.
 For locating theorems when doing interactive proof.
 
 \SEEALSO
-DB.matcher, DB.matchp, DB.find, DB.theorems, Db.thy, Db.all_thms.
+DB.matcher, DB.matchp, DB.find, DB.theorems, Db.thy, Db.listDB.
 
 \ENDDOC

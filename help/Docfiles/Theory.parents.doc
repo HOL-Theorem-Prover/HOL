@@ -6,52 +6,30 @@
 Lists the parent theories of a named theory.
 
 \DESCRIBE
-The function {parents} returns a list of strings that identify the
-parent theories of a named theory. The function does not recursively
-descend the theory hierarchy in search of the `leaf' theories.
-The named theory must be the current theory or an ancestor of the
-current theory.
+If {s} is the name of the current theory or an ancestor of the
+current theory, the call {parents s} returns a list of strings that
+identify the parent theories of {s}. The shorthand {"-"} may be 
+used to denote the name of the current theory segment. 
 
 \FAILURE
 Fails if the named theory is not an ancestor of the current theory.
 
 \EXAMPLE
-Initially, the only parent is the basic {bool} theory:
 {
-   - new_theory "myTheory";
-   <<HOL message: Created theory "myTheory">>
-   > val it = () : unit
+- parents "bool";
+> val it = ["min"] : string list
 
-   - parents "myTheory";
-   > val it = ["bool"] : string list
+- parents "min";
+> val it = [] : string list
 
-   - load "bossLib"; 
-   > val it = () : unit
+- current_theory();
+> val it = "scratch" : string
 
-   - parents "-";
-   > val it = ["list", "option"] : string list
-
-   - parents "option";
-    > val it = ["sum", "one"] : string list
-
-   - parents "string";
-   ! Uncaught exception: 
-   ! HOL_ERR
-}
-\noindent However, loading the string library creates another
-link in the theory graph:
-{
-   - load "stringLib";
-   > val it = () : unit
-
-   - parents "string";
-   > val it = ["list"] : string list
-
-   - parents "myTheory";
-   > val it = ["string", "option"] : string list
+- parents "-";
+> val it = ["list", "option"] : string list
 }
 
 \SEEALSO
-Theory.ancestry.
+Theory.ancestry, Theory.current_theory.
 
 \ENDDOC

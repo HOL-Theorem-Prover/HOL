@@ -26,7 +26,8 @@ current theory.
 - constants "combin";
 > val it = [`$o`, `W`, `S`, `K`, `I`, `combin$C`] : term list
 }
+
 \SEEALSO
-Theory.types, Theory.axioms, Theory.definitions, Theory.theorems.
+Theory.types, Theory.current_axioms, Theory.current_defs, Theory.current_thms.
 
 \ENDDOC

@@ -34,6 +34,6 @@ the empty list is returned.
 }
 
 \SEEALSO
-DB.thy, DB.theorems, DB.axioms, DB.definitions, DB.theorem, DB.all_thms.
+DB.thy, DB.theorems, DB.axioms, DB.definitions, DB.fetch, DB.listDB.
 
 \ENDDOC

@@ -24,6 +24,6 @@ with classification {class}, stored in theory segment {thy} under {name}.
 }
 
 \SEEALSO
-DB.class, DB.thy, DB.find, DB.match, DB.apropos, DB.all_thms.
+DB.class, DB.thy, DB.find, DB.match, DB.apropos, DB.listDB.
 
 \ENDDOC

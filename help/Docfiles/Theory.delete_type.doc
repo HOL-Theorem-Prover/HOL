@@ -1,0 +1,64 @@
+\DOC delete_type
+
+\TYPE {delete_type : string -> unit}
+
+\SYNOPSIS
+Remove a type operator from the signature.
+
+\KEYWORDS
+type, delete.
+
+\DESCRIBE
+An invocation {delete_type s} will attempt to remove the type
+constant denoted by {s} from the current HOL segment. All types, terms, and 
+theorems that depend on that type thereby become suspect. The implementation
+of HOL tracks the currency of type and term constants, so that 
+consistency is maintained.
+
+In particular, the implementation takes care that a deleted type
+operator is never equal to a subsequently declared type operator
+with the same name (and arity). Furthermore, although suspect types,
+terms, and theorems may exist in a session, no theorem, definition, or axiom
+that is suspect is exported when {export_theory} is invoked. 
+
+The notion "suspect" is hereditary. If a type operator is suspect, then
+all types, terms, and theorems built from that operator are suspect.
+Furthermore, if a type or term is defined, and its witness theorem is
+suspect, then that type or term is suspect.
+
+
+\FAILURE
+If a type constant named {s} has not been declared in the current segment,
+a warning will be issued, but an exception will not be raised.
+
+\EXAMPLE
+{
+new_type ("foo", 2);
+> val it = () : unit
+
+- val thm = REFL (Term `f:('a,'b)foo`);
+> val thm = |- f = f : thm
+
+- delete_type "foo";
+> val it = () : unit
+
+- thm;
+> val it = |- f = f : thm
+
+- show_types := true;
+> val it = () : unit
+
+- thm;
+Exception raised at type_pp.pp_type:
+old->foo<-old: no such type operator in grammar
+}
+
+\COMMENTS
+It's rather dodgy to withdraw constants from the HOL signature. This
+entrypoint and its relatives are occasionally useful however.
+
+\SEEALSO
+Theory.delete_const, Theory.delete_axiom, Theory.delete_definition,
+Theory.delete_thm. 
+
+\ENDDOC

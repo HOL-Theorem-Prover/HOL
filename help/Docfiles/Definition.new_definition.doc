@@ -49,6 +49,8 @@ A NAND relation can be defined as follows.
        : thm
 }
 \SEEALSO
-Definition.new_specification, boolSyntax.new_binder_definition, boolSyntax.new_infixl_definition, boolSyntax.new_infixr_definition, Prim_rec.new_recursive_definition, TotalDefn.Define.
+Definition.new_specification, boolSyntax.new_binder_definition, 
+boolSyntax.new_infixl_definition, boolSyntax.new_infixr_definition, 
+Prim_rec.new_recursive_definition, TotalDefn.Define.
 
 \ENDDOC
