@@ -224,7 +224,7 @@ RW_TAC std_ss [dFV, dLAMBDA, dFV_dLAMBDA_lemma]);
 (* Inductive definition of proper terms.                                 *)
 (* --------------------------------------------------------------------- *)
 
-val (dOK_DEF, dOK_ind, dOK_cases) = new_inductive_definition
+val (dOK_DEF, dOK_ind, dOK_cases) = Hol_reln
   `(!x. dOK (dVAR x)) /\
    (!x. dOK (dCON x)) /\
    (!x t. dOK t ==> dOK (dLAMBDA x t)) /\

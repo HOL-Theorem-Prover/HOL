@@ -936,8 +936,7 @@ Induct THENL [ALL_TAC, Cases]
 (*       RENAMING ((x,VAR y)::R)         if RENAMING R                   *)
 (* --------------------------------------------------------------------- *)
 
-val (RENAMING_DEF,RENAMING_IND,RENAMING_CASES) = 
-  new_inductive_definition 
+val (RENAMING_DEF,RENAMING_IND,RENAMING_CASES) = Hol_reln
      `RENAMING ([]:('a nc # string) list)
   /\  (!R x y. RENAMING R ==> RENAMING ((VAR y,x)::R))`;
 
