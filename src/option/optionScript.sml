@@ -12,7 +12,7 @@
 (*                Dec.1998, in order to fit in with Datatype scheme       *)
 (* =======================================================================*)
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
 (* Make sure that oneTheory is loaded. *)
@@ -31,13 +31,11 @@ val _ = new_theory "option";
  * holML formalization (she called it "lift").                               *
  *---------------------------------------------------------------------------*)
 
-val option_TY_DEF =
-    new_type_definition
-    {name = "option",
-     pred = Term`\x:'a + one. T`,
-     inhab_thm = prove(Term`?x:'a + one. (\x.T) x`,
-		       BETA_TAC THEN EXISTS_TAC(--`x:'a + one`--) THEN
-		       ACCEPT_TAC TRUTH)};
+val option_TY_DEF = Rsyntax.new_type_definition
+  {name = "option",
+   inhab_thm = prove(Term`?x:'a + one. (\x.T) x`,
+                     BETA_TAC THEN EXISTS_TAC(--`x:'a + one`--) THEN
+                     ACCEPT_TAC TRUTH)};
 
 (*---------------------------------------------------------------------------*
  *  val option_REP_ABS_DEF =                                                 *
@@ -87,7 +85,8 @@ val option_Axiom = store_thm (
   STRIP_ASSUME_TAC
      (BETA_RULE
         (ISPECL [--`\x. f x`--, --`\x:one.(e:'b)`--]
-         (INST_TYPE [Type`:'b` |-> Type`:one`] sumTheory.sum_Axiom))) THEN
+         (Rsyntax.INST_TYPE [Type.beta |-> Type`:one`]
+          sumTheory.sum_Axiom))) THEN
   EXISTS_TAC (--`\x:'a option. h(option_REP x):'b`--) THEN BETA_TAC THEN
   ASM_REWRITE_TAC[reduce option_REP_ABS_DEF]);
 
@@ -98,7 +97,7 @@ val option_induction = store_thm (
   REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC [GSYM (CONJUNCT1 option_REP_ABS_DEF)] THEN
   SPEC_TAC (Term`option_REP (x:'a option)`, Term`s:'a + one`) THEN
-  Ho_resolve.MATCH_MP_TAC sumTheory.sum_INDUCT THEN
+  HO_MATCH_MP_TAC sumTheory.sum_INDUCT THEN
   ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []);
 
 val SOME_11 = store_thm("SOME_11",
@@ -117,43 +116,39 @@ val (NOT_NONE_SOME,NOT_SOME_NONE) =
 val option_nchotomy = save_thm("option_nchotomy",
  ONCE_REWRITE_RULE [DISJ_SYM] option_CASES_orig);
 
-val option_case_def =
- new_recursive_definition
-    {name="option_case_def",
-     rec_axiom=option_Axiom,
-     def = Term`(option_case u f NONE = u) /\
-                (option_case (u:'b) f (SOME (x:'a)) = f x)`};
+val option_case_def = Prim_rec.new_recursive_definition
+  {name="option_case_def",
+   rec_axiom=option_Axiom,
+   def = Term`(option_case u f NONE = u) /\
+              (option_case (u:'b) f (SOME (x:'a)) = f x)`};
 
-val option_APPLY_DEF =
- new_recursive_definition
+val option_APPLY_DEF = Prim_rec.new_recursive_definition
  {name="option_APPLY_DEF",
   rec_axiom=option_Axiom,
   def =
   Term`(option_APPLY (f:'a->'b) (SOME x) = SOME (f x)) /\
        (option_APPLY f NONE = NONE)`};
 
-val IS_SOME_DEF =
- new_recursive_definition {name="IS_SOME_DEF",
-    rec_axiom=option_Axiom,
-    def = Term`(IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F)`};
+val IS_SOME_DEF = Prim_rec.new_recursive_definition
+  {name="IS_SOME_DEF",
+   rec_axiom=option_Axiom,
+   def = Term`(IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F)`};
 
-
-
-val IS_NONE_DEF = new_recursive_definition {
+val IS_NONE_DEF = Prim_rec.new_recursive_definition {
   name = "IS_NONE_DEF",
-   rec_axiom = option_Axiom,
-   def = Term`(IS_NONE (SOME x) = F) /\ (IS_NONE NONE = T)`};
-
-val THE_DEF =
- new_recursive_definition {name="THE_DEF",
-    rec_axiom=option_Axiom,
-    def = Term `THE (SOME x) = x`};
-
-val option_JOIN_DEF = new_recursive_definition {
-  name = "option_JOIN_DEF",
   rec_axiom = option_Axiom,
-  def = Term`(option_JOIN NONE = NONE) /\
-             (option_JOIN (SOME x) = x)`};
+  def = Term`(IS_NONE (SOME x) = F) /\ (IS_NONE NONE = T)`};
+
+val THE_DEF = Prim_rec.new_recursive_definition
+  {name="THE_DEF",
+   rec_axiom=option_Axiom,
+   def = Term `THE (SOME x) = x`};
+
+val option_JOIN_DEF = Prim_rec.new_recursive_definition
+  {name = "option_JOIN_DEF",
+   rec_axiom = option_Axiom,
+   def = Term`(option_JOIN NONE = NONE) /\
+              (option_JOIN (SOME x) = x)`};
 
 val option_rws =
     [IS_SOME_DEF, THE_DEF, IS_NONE_DEF, option_nchotomy,
