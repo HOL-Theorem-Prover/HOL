@@ -102,7 +102,7 @@ signature Parse = sig
     val associate_restriction : (string * string) -> unit
     val prefer_form_with_tok : {term_name : string, tok : string} -> unit
     val clear_prefs_for_term : string -> unit
-    val set_fixity : string * fixity -> unit
+    val set_fixity : string -> fixity -> unit
 
     val remove_rules_for_term : string -> unit
     val remove_termtok : {term_name : string, tok : string} -> unit
@@ -143,7 +143,7 @@ signature Parse = sig
     val temp_associate_restriction : (string * string) -> unit
     val temp_prefer_form_with_tok : {term_name : string, tok : string} -> unit
     val temp_clear_prefs_for_term : string -> unit
-    val temp_set_fixity : string * fixity -> unit
+    val temp_set_fixity : string -> fixity -> unit
 
     val temp_remove_rules_for_term : string -> unit
     val temp_remove_termtok : {term_name : string, tok : string} -> unit

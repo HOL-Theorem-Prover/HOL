@@ -151,7 +151,7 @@ val _ = Parse.hide "##";
 val poly_cmul = new_recursive_definition list_Axiom "poly_cmul_def"
  (Term`($## c [] = []) /\
        ($## c (h::t) = (c:real * h) :: ($## c t))`);
-val _ = set_fixity ("##",Infixl 600);
+val _ = set_fixity "##" (Infixl 600);
 
 val poly_neg = new_definition ("poly_neg_def", Term`poly_neg = $## (~(&1))`);
 
@@ -168,7 +168,7 @@ val poly_exp = new_recursive_definition num_Axiom "poly_exp_def"
  (Term`(poly_exp p 0       = [1r]) /\
        (poly_exp p (SUC n) = poly_mul p (poly_exp p n))`);
 
-val _ = set_fixity ("poly_exp",Infixr 700) ;
+val _ = set_fixity "poly_exp" (Infixr 700) ;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -286,7 +286,7 @@ val POLY_DIFF = store_thm("POLY_DIFF",
   ONCE_REWRITE_TAC[SYM(ETA_CONV (Term`\x. poly l x`))] THEN
   REWRITE_TAC[poly, DIFF_CONST] THEN
   MAP_EVERY X_GEN_TAC [(Term`x:real`)] THEN
-  MP_TAC(SPECL [(Term`t:real list`), (Term`0:num`), (Term`x:real`)] 
+  MP_TAC(SPECL [(Term`t:real list`), (Term`0:num`), (Term`x:real`)]
          POLY_DIFF_LEMMA) THEN
   REWRITE_TAC[SYM ONE] THEN REWRITE_TAC[pow, REAL_MUL_LID] THEN
   REWRITE_TAC[POW_1] THEN

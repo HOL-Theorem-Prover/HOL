@@ -25,7 +25,7 @@ val _ = new_theory "integer";
 
 (* interactive mode
   app load ["jrhUtils", "EquivType", "liteLib", "QLib",
-     "SingleStep", "BasicProvers", "boolSimps", "pairSimps", 
+     "SingleStep", "BasicProvers", "boolSimps", "pairSimps",
      "numSimps", "numLib"];
 *)
 open jrhUtils EquivType liteLib
@@ -2250,7 +2250,7 @@ val _ = print "Facts about integer divisibility\n";
 val INT_DIVIDES = new_definition (
   "INT_DIVIDES",
   Term`int_divides p q = ?m:int. m * p = q`);
-val _ = set_fixity ("int_divides", Infixr 450);
+val _ = set_fixity "int_divides" (Infixr 450);
 
 val INT_DIVIDES_MOD0 = store_thm(
   "INT_DIVIDES_MOD0",
@@ -2361,7 +2361,7 @@ val int_exp = Prim_rec.new_recursive_definition{
              (int_exp p (SUC n) = p * int_exp p n)`,
   name = "int_exp",
   rec_axiom = prim_recTheory.num_Axiom};
-val _ = set_fixity ("int_exp", Infixr 700);
+val _ = set_fixity "int_exp"  (Infixr 700);
 
 val _ = add_infix("**", 700, HOLgrammars.RIGHT);
 val _ = overload_on ("**", Term`$EXP`);

@@ -821,15 +821,14 @@ fun remove_termtok (r as {term_name, tok}) = let in
         ["{term_name = ", quote term_name, ", tok = ", quote tok, "}"])
  end
 
-fun temp_set_fixity (s,f) = let in
+fun temp_set_fixity s f = let in
   temp_remove_termtok {term_name=s, tok=s};
   case f of Prefix => () | _ => temp_add_rule (standard_spacing s f)
  end
 
-fun set_fixity (s,f) = let in
-    temp_set_fixity (s,f);
-    update_grms ("temp_set_fixity",
-         String.concat ["(", quote s, ", ", fixityToString f, ")"])
+fun set_fixity s f = let in
+    temp_set_fixity s f;
+    update_grms ("(temp_set_fixity "^quote s^")", "("^fixityToString f^")")
  end
 
 fun temp_prefer_form_with_tok r = let open term_grammar in

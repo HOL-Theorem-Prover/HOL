@@ -57,7 +57,7 @@ val ADD = new_recursive_definition
     def = --`($+ 0 n = n) /\
              ($+ (SUC m) n = SUC($+ m n))`--};
 
-val _ = set_fixity ("+", Infixl 500);
+val _ = set_fixity "+" (Infixl 500);
 
 (*---------------------------------------------------------------------------*
  * Define NUMERAL, a tag put on numeric literals, and the basic constructors *
@@ -88,21 +88,21 @@ val SUB = new_recursive_definition
     rec_axiom = num_Axiom,
     def = --`($- 0 m = 0) /\
              ($- (SUC m) n = ((m < n) => 0 | SUC($- m n)))`--};
-val _ = set_fixity ("-", Infixl 500);
+val _ = set_fixity "-" (Infixl 500);
 
 val MULT = new_recursive_definition
    {name = "MULT",
     rec_axiom = num_Axiom,
     def = --`($* 0 n = 0) /\
              ($* (SUC m) n = ($* m n) + n)`--};
-val _ = set_fixity ("*", Infixl 600);
+val _ = set_fixity "*" (Infixl 600);
 
 val EXP = new_recursive_definition
    {name = "EXP",
     rec_axiom = num_Axiom,
     def = --`($EXP m 0 = 1) /\
              ($EXP m (SUC n) = m * ($EXP m n))`--};
-val _ = set_fixity ("EXP", Infixr 700);
+val _ = set_fixity "EXP" (Infixr 700);
 
 val GREATER_DEF = new_infixr_definition
   ("GREATER_DEF", --`$> m n = n < m`--,   450);

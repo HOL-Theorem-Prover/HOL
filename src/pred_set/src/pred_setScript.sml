@@ -37,7 +37,7 @@ val set = ty_antiq(Type`:'a->bool`);
 (* The axiom of specification: x IN {y | P y} iff P x			*)
 (* ---------------------------------------------------------------------*)
 
-val SPECIFICATION = 
+val SPECIFICATION =
  new_infixr_definition( "SPECIFICATION",
   --`!P x. $IN (x:'a) (P:^set) = P x`--,
   450);
@@ -2614,7 +2614,7 @@ open pairTheory
 val CROSS_DEF = new_definition(
   "CROSS_DEF",
   ``CROSS P Q = { p | FST p IN P /\ SND p IN Q }``);
-val _ = set_fixity ("CROSS", Infixl 600);
+val _ = set_fixity "CROSS" (Infixl 600);
 
 val IN_CROSS = store_thm(
   "IN_CROSS",
@@ -2778,8 +2778,8 @@ val FINITE_BIGUNION = store_thm(
  ---------------------------------------------------------------------------*)
 
 val ITSET_defn = Defn.Hol_defn "ITSET"
-  `ITSET (s:'a->bool) (b:'b) = 
-     if FINITE s then 
+  `ITSET (s:'a->bool) (b:'b) =
+     if FINITE s then
         if s={} then b
         else ITSET (REST s) (f (CHOICE s) b)
      else ARB`;
@@ -2790,24 +2790,24 @@ val ITSET_defn = Defn.Hol_defn "ITSET"
 
 val (ITSET_eqn0, ITSET_IND) =
  Defn.tprove (ITSET_defn,
-   TotalDefn.WF_REL_TAC `measure (CARD o FST)` THEN 
+   TotalDefn.WF_REL_TAC `measure (CARD o FST)` THEN
    BasicProvers.PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
 
 (*---------------------------------------------------------------------------
       Desired recursion equation.
 
-     |- FINITE s ==> ITSET f s b = if s = {} then b 
+     |- FINITE s ==> ITSET f s b = if s = {} then b
                                   else ITSET f (REST s) (f (CHOICE s) b)
  ---------------------------------------------------------------------------*)
 
-val ITSET_THM = 
+val ITSET_THM =
 W (GENL o rev o free_vars o concl)
   (DISCH_ALL(ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] ITSET_eqn0));
 
 val _ = save_thm("ITSET_IND",ITSET_IND);
 val _ = save_thm("ITSET_THM",ITSET_THM);
 val _ = save_thm("ITSET_EMPTY",
-                  REWRITE_RULE [] 
+                  REWRITE_RULE []
                       (MATCH_MP (SPEC (Term`{}`) ITSET_THM) FINITE_EMPTY));
 
 val _ = export_theory();
