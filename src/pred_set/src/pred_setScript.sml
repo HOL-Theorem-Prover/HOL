@@ -351,6 +351,11 @@ val SUBSET_UNION =
      PURE_REWRITE_TAC [SUBSET_DEF,IN_UNION] THEN
      REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]);
 
+val UNION_SUBSET = store_thm(
+    "UNION_SUBSET",
+  ``!s t u. (s UNION t) SUBSET u = s SUBSET u /\ t SUBSET u``,
+  PROVE_TAC [IN_UNION, SUBSET_DEF]);
+
 val SUBSET_UNION_ABSORPTION =
     store_thm
     ("SUBSET_UNION_ABSORPTION",
@@ -419,6 +424,11 @@ val INTER_SUBSET =
       (!s:'a set. !t. (t INTER s) SUBSET s)`--),
      PURE_REWRITE_TAC [SUBSET_DEF,IN_INTER] THEN
      REPEAT STRIP_TAC);
+
+val SUBSET_INTER = store_thm(
+  "SUBSET_INTER",
+  ``!s t u. s SUBSET (t INTER u) = s SUBSET t /\ s SUBSET u``,
+  PROVE_TAC [IN_INTER, SUBSET_DEF]);
 
 val SUBSET_INTER_ABSORPTION =
     store_thm
@@ -515,6 +525,12 @@ val DISJOINT_UNION = store_thm ("DISJOINT_UNION",
                          STRIP_ASSUME_TAC (SPEC (--`x:'a`--) th)) THEN
      ASM_REWRITE_TAC []);
 
+val DISJOINT_UNION_BOTH = store_thm(
+  "DISJOINT_UNION_BOTH",
+  ``!s t u:'a set.
+        (DISJOINT (s UNION t) u = DISJOINT s u /\ DISJOINT t u) /\
+        (DISJOINT u (s UNION t) = DISJOINT s u /\ DISJOINT t u)``,
+  PROVE_TAC [DISJOINT_UNION, DISJOINT_SYM]);
 
 (* ===================================================================== *)
 (* Set difference							 *)
@@ -2609,6 +2625,71 @@ val BIGUNION_INSERT = store_thm(
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT] THEN
   MESON_TAC []);
 
+val BIGUNION_SUBSET = store_thm(
+  "BIGUNION_SUBSET",
+  ``!X P. BIGUNION P SUBSET X = (!Y. Y IN P ==> Y SUBSET X)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN
+  FULL_SIMP_TAC bool_ss [IN_BIGUNION, SUBSET_DEF] THEN
+  PROVE_TAC []);
+
+val FINITE_BIGUNION = store_thm(
+  "FINITE_BIGUNION",
+  ``!P. FINITE P /\ (!s. s IN P ==> FINITE s) ==> FINITE (BIGUNION P)``,
+  SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SIMP_TAC bool_ss [NOT_IN_EMPTY, FINITE_EMPTY, BIGUNION_EMPTY,
+                    IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
+                    BIGUNION_INSERT, FINITE_UNION]);
+
+(* ----------------------------------------------------------------------
+    BIGINTER (intersection of a set of sets)
+   ---------------------------------------------------------------------- *)
+
+val BIGINTER = new_definition(
+  "BIGINTER",
+  ``BIGINTER B x = !P. P IN B ==> x IN P``);
+
+val IN_BIGINTER = store_thm(
+  "IN_BIGINTER",
+  ``x IN BIGINTER B = !P. P IN B ==> x IN P``,
+  REWRITE_TAC [BIGINTER, SPECIFICATION]);
+
+val BIGINTER_INSERT = store_thm(
+  "BIGINTER_INSERT",
+  ``!P B. BIGINTER (P INSERT B) = P INTER BIGINTER B``,
+  REPEAT GEN_TAC THEN CONV_TAC (REWR_CONV EXTENSION) THEN
+  SIMP_TAC bool_ss [IN_BIGINTER, IN_INSERT, IN_INTER, DISJ_IMP_THM,
+                    FORALL_AND_THM]);
+
+val BIGINTER_EMPTY = store_thm(
+  "BIGINTER_EMPTY",
+  ``BIGINTER {} = UNIV``,
+  REWRITE_TAC [EXTENSION, IN_BIGINTER, NOT_IN_EMPTY, IN_UNIV]);
+
+val BIGINTER_INTER = store_thm(
+  "BIGINTER_INTER",
+  ``!P Q. BIGINTER {P; Q} = P INTER Q``,
+  REWRITE_TAC [BIGINTER_EMPTY, BIGINTER_INSERT, INTER_UNIV]);
+
+val BIGINTER_SING = store_thm(
+  "BIGINTER_SING",
+  ``!P. BIGINTER {P} = P``,
+  SIMP_TAC bool_ss [EXTENSION, IN_BIGINTER, IN_SING] THEN
+  SIMP_TAC bool_ss [GSYM EXTENSION]);
+
+val SUBSET_BIGINTER = store_thm(
+  "SUBSET_BIGINTER",
+  ``!X P. X SUBSET BIGINTER P = !Y. Y IN P ==> X SUBSET Y``,
+  REPEAT STRIP_TAC THEN FULL_SIMP_TAC bool_ss [IN_BIGINTER, SUBSET_DEF] THEN
+  PROVE_TAC []);
+
+val DISJOINT_BIGINTER = store_thm(
+  "DISJOINT_BIGINTER",
+  ``!X Y P. Y IN P /\ DISJOINT Y X ==>
+            DISJOINT X (BIGINTER P) /\ DISJOINT (BIGINTER P) X``,
+  SIMP_TAC bool_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER,
+                    IN_BIGINTER] THEN PROVE_TAC []);
+
 (* ====================================================================== *)
 (* Cross product of sets                                                  *)
 (* ====================================================================== *)
@@ -2766,15 +2847,6 @@ val FINITE_CROSS_EQ = store_thm(
   MESON_TAC [FINITE_CROSS_EQ_lemma, FINITE_CROSS, FINITE_EMPTY,
              CROSS_EMPTY]);
 
-val FINITE_BIGUNION = store_thm(
-  "FINITE_BIGUNION",
-  ``!P. FINITE P /\ (!s. s IN P ==> FINITE s) ==> FINITE (BIGUNION P)``,
-  SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
-  HO_MATCH_MP_TAC FINITE_INDUCT THEN
-  SIMP_TAC bool_ss [NOT_IN_EMPTY, FINITE_EMPTY, BIGUNION_EMPTY,
-                    IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
-                    BIGUNION_INSERT, FINITE_UNION]);
-
 (* ====================================================================== *)
 (* Set complements.                                                       *)
 (* ====================================================================== *)
@@ -2892,6 +2964,49 @@ val _ = save_thm("ITSET_THM",ITSET_THM);
 val _ = save_thm("ITSET_EMPTY",
                   REWRITE_RULE []
                       (MATCH_MP (SPEC (Term`{}`) ITSET_THM) FINITE_EMPTY));
+
+val _ = export_rewrites
+    [
+     (* BIGUNION/BIGINTER theorems *)
+     "IN_BIGINTER", "IN_BIGUNION", "DISJOINT_BIGUNION", "BIGUNION_EMPTY",
+     "BIGUNION_INSERT", "BIGUNION_UNION",
+     "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
+     (* cardinality theorems *)
+     "CARD_EMPTY", "CARD_DIFF", "CARD_EQ_0", "CARD_INSERT",
+     "CARD_INTER_LESS_EQ", "CARD_DELETE", "CARD_DIFF",
+     (* complement theorems *)
+     "COMPL_CLAUSES", "COMPL_COMPL", "COMPL_EMPTY", "IN_COMPL",
+     (* "DELETE" theorems *)
+     "IN_DELETE", "DELETE_DELETE", "DELETE_EQ_SING", "DELETE_SUBSET",
+     "EMPTY_DELETE",
+     (* "DIFF" theorems *)
+     "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV", "EMPTY_DIFF",
+     (* "DISJOINT" theorems *)
+     "DISJOINT_EMPTY", "DISJOINT_INSERT", "DISJOINT_UNION_BOTH",
+     (* "FINITE" theorems *)
+     "FINITE_DELETE", "FINITE_EMPTY", "FINITE_INSERT", "FINITE_UNION",
+     (* "IMAGE" theorems *)
+     "IMAGE_EMPTY", "IMAGE_DELETE", "IMAGE_FINITE", "IMAGE_ID", "IMAGE_IN",
+     "IMAGE_INSERT", "IMAGE_SUBSET", "IMAGE_UNION", "IN_IMAGE",
+     (* "INSERT" theorems *)
+     "INSERT_DELETE", "INSERT_DIFF", "INSERT_INSERT", "INSERT_SUBSET",
+     "IN_INSERT", "NOT_IN_EMPTY",
+     (* "INTER" theorems *)
+     "IN_INTER", "INTER_EMPTY", "INTER_FINITE", "INTER_IDEMPOT",
+     "INTER_SUBSET", "INTER_UNIV", "SUBSET_INTER",
+     (* "PSUBSET" *)
+     "PSUBSET_IRREFL", "PSUBSET_FINITE",
+     (* "REST" *)
+     "REST_PSUBSET", "REST_SING", "REST_SUBSET",
+     (* "SING" *)
+     "SING", "SING_FINITE",
+     (* "SUBSET" *)
+     "SUBSET_EMPTY", "SUBSET_FINITE", "SUBSET_INSERT", "SUBSET_REFL",
+     (* "UNION" *)
+     "IN_UNION", "UNION_EMPTY", "UNION_IDEMPOT", "UNION_UNIV", "UNION_SUBSET",
+     "SUBSET_UNION"
+];
+
 
 val _ = export_theory();
 

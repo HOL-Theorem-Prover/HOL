@@ -2,41 +2,21 @@ structure pred_setSimps :> pred_setSimps =
 struct
 
   open HolKernel boolLib pred_setTheory
-  val PRED_SET_ss = simpLib.rewrites
-    [
-     (* cardinality theorems *)
-     CARD_EMPTY, CARD_DIFF, CARD_EQ_0, CARD_INSERT,
-     CARD_INTER_LESS_EQ, CARD_DELETE, CARD_DIFF,
-     (* DELETE theorems *)
-     DELETE_DELETE, DELETE_EQ_SING, DELETE_SUBSET, EMPTY_DELETE,
-     (* DIFF theorems *)
-     DIFF_DIFF, DIFF_EMPTY, DIFF_EQ_EMPTY, DIFF_UNIV, EMPTY_DIFF,
-     (* DISJOINT theorems *)
-     DISJOINT_EMPTY, DISJOINT_INSERT, DISJOINT_UNION,
-     CONV_RULE (STRIP_QUANT_CONV (LHS_CONV (REWR_CONV DISJOINT_SYM)))
-     DISJOINT_UNION,
-     (* FINITE theorems *)
-     FINITE_DELETE, FINITE_EMPTY, FINITE_INSERT, FINITE_UNION,
-     (* IMAGE theorems *)
-     IMAGE_EMPTY, IMAGE_DELETE, IMAGE_FINITE, IMAGE_ID, IMAGE_IN,
-     IMAGE_INSERT, IMAGE_SUBSET, IMAGE_UNION, IN_IMAGE,
-     (* INSERT theorems *)
-     INSERT_DELETE, INSERT_DIFF, INSERT_INSERT, INSERT_SUBSET,
-     IN_INSERT, IN_INTER, IN_UNION, NOT_IN_EMPTY,
-     (* INTER theorems *)
-     INTER_EMPTY, INTER_FINITE, INTER_IDEMPOT, INTER_SUBSET,
-     INTER_UNIV,
-     (* PSUBSET *)
-     PSUBSET_IRREFL, PSUBSET_FINITE,
-     (* REST *)
-     REST_PSUBSET, REST_SING, REST_SUBSET,
-     (* SING *)
-     SING, SING_FINITE,
-     (* SUBSET *)
-     SUBSET_EMPTY, SUBSET_FINITE, SUBSET_INSERT, SUBSET_REFL,
-     SUBSET_UNION,
-     (* UNION *)
-     UNION_EMPTY, UNION_IDEMPOT];
+  val (Type,Term) = Parse.parse_from_grammars pred_setTheory.pred_set_grammars
+
+  val simpLib.SIMPSET {rewrs = ps_rwts, ...} = pred_setTheory.pred_set_rwts
+  val SET_SPEC_CONV =
+      {conv = K (K (PGspec.SET_SPEC_CONV pred_setTheory.GSPECIFICATION)),
+       key = SOME ([], ``(x:'a) IN GSPEC f``),
+       name = "SET_SPEC_CONV",
+       trace = 2}
+  val SET_SPEC_ss = simpLib.SIMPSET { ac = [], congs = [],
+                                      convs = [SET_SPEC_CONV], dprocs = [],
+                                      filter = NONE, rewrs = []}
+  val PRED_SET_ss = simpLib.SIMPSET { ac = [], congs = [],
+                                      convs = [SET_SPEC_CONV], dprocs = [],
+                                      filter = NONE, rewrs = ps_rwts }
+
 
   val PRED_SET_AC_ss = simpLib.SIMPSET
     {
@@ -44,5 +24,9 @@ struct
      ac = [(SYM (SPEC_ALL UNION_ASSOC), SPEC_ALL UNION_COMM),
            (SYM (SPEC_ALL INTER_ASSOC), SPEC_ALL INTER_COMM)]
      }
+
+  (* the rewrites in PRED_SET_ss are already in srw_ss because they are
+     "exported" by pred_setScript. *)
+  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss];
 
 end (* struct *)
