@@ -240,15 +240,15 @@ fun tysize_env db = join TypeBase.size_of (TypeBase.get db);
 
 local open ParseDatatype
 in
-fun raw_define_type tyspec = 
+fun raw_define_type tyspec =
  let val (ind, recth) = ind_types.define_type tyspec
  in {induction=ind, recursion=recth}
  end
 
 fun translate_out_record dast =
-  case dast 
+  case dast
    of (tyname, WithConstructors cs) => ((tyname, cs), NONE)
-    | (rtyname, RecordType fldtypes) => 
+    | (rtyname, RecordType fldtypes) =>
         let val (flds, types) = ListPair.unzip fldtypes
         in ((rtyname, [(rtyname, types)]), SOME flds)
         end
@@ -280,11 +280,27 @@ fun translate_parse dastl = let
     (map translate_1_typedef dasts, record_infos)
   end
 
+fun duplicate_constructor_names tydef_input = let
+  val names = List.concat (List.map (List.map #1 o #2) tydef_input)
+  val sorted_names = Listsort.sort String.compare names
+  fun check [] = raise ERR "deftype_from_parse" "Type with no constructors!"
+    | check [x] = NONE
+    | check (x::y::xs) = if x = y then SOME x else check (y::xs)
+in
+  check sorted_names
+end
+
 fun deftype_from_parse dtastl =
     case dtastl of
       [] => raise ERR "deftype_from_parse" "No type forms specificed"
     | _ => let
         val (tydef_input, record_infos) = translate_parse dtastl
+        val _ =
+          case duplicate_constructor_names tydef_input of
+            NONE => ()
+          | SOME dup =>
+              raise ERR "deftype_from_parse"
+                ("Duplicate constructor_name: "^dup)
         val {induction,recursion} = raw_define_type tydef_input
         val case_defs = Prim_rec.define_case_constant recursion
         val tyinfos =
@@ -395,7 +411,7 @@ in
   (tyinfo_extras, conjed_up)
 end
 
-fun primHol_datatype db q = 
+fun primHol_datatype db q =
  let val parse_result = ParseDatatype.parse q
      val tyinfo_extras = deftype_from_parse parse_result
      val ax = TypeBase.axiom_of (#1 (hd tyinfo_extras))
@@ -406,10 +422,10 @@ fun primHol_datatype db q =
                     tyinfo_extras)
 end
 
-local fun do_side_effects (x as (tyinfo, _)) = 
-          (TypeBase.write tyinfo; 
+local fun do_side_effects (x as (tyinfo, _)) =
+          (TypeBase.write tyinfo;
            make_tyinfo_persist x)
-in 
+in
 fun Hol_datatype q =
       List.app do_side_effects (primHol_datatype (TypeBase.theTypeBase()) q)
 end;
