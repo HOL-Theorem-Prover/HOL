@@ -121,7 +121,7 @@ in
 end
 
 fun nonempty P = P >- (fn s => if s = "" then fail else return s)
-fun grab_whitespace strm = (nonempty (many_charP Char.isSpace) >> ok) strm
+fun grab_whitespace strm = (many1_charP Char.isSpace >> ok) strm
 
 fun comment strm = let
   fun comment_internals strm' =
@@ -138,7 +138,7 @@ in
 end
 
 
-fun token Prser = many (grab_whitespace ++ comment) >> Prser
+fun token Prser = many (grab_whitespace ++ comment) >> strip_eqs >> Prser
 
 
 fun symbol s = token (string s)
