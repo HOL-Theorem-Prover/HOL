@@ -36,6 +36,7 @@ sig
    val ONCE_DEPTH_CONV       : conv -> conv
    val CONV_RULE             : conv -> thm -> thm
    val BETA_RULE             : thm -> thm
+   val UNBETA_CONV           : term -> conv
    val NOT_FORALL_CONV       : conv
    val NOT_EXISTS_CONV       : conv
    val EXISTS_NOT_CONV       : conv

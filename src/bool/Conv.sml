@@ -376,6 +376,23 @@ fun CONV_RULE conv th = EQ_MP (conv(concl th)) th;
 
 val BETA_RULE = CONV_RULE(DEPTH_CONV BETA_CONV)
 
+fun UNBETA_CONV arg_t t = let
+  open Term (* counteract prevailing Rsyntax *)
+in
+  if is_var arg_t then
+    SYM (BETA_CONV (mk_comb(mk_abs(arg_t,t), arg_t)))
+  else let
+      (* find all instances of arg_t in t, and convert t
+         to (\v. t[v/arg_t]) arg_t
+         v can be a genvar because we expect to get rid of it later. *)
+      val gv = genvar (type_of arg_t)
+      val newbody = Term.subst [arg_t |-> gv] t
+    in
+      SYM (BETA_CONV (Term.mk_comb(mk_abs(gv,newbody), arg_t)))
+    end
+end
+
+
 
 (* =====================================================================*)
 (* What follows is a complete set of conversions for moving ! and ? into*)
