@@ -1,6 +1,6 @@
 open HolKernel boolLib Parse
 
-open ncLib bossLib metisLib BasicProvers
+open ncLib bossLib metisLib BasicProvers boolSimps
 
 val SUBSET_DEF = pred_setTheory.SUBSET_DEF
 
@@ -22,6 +22,8 @@ val SUBSET_DEF = pred_setTheory.SUBSET_DEF
 
 *)
 
+val _ = new_theory "fsubtypes"
+
 val (fsubrep_rules, fsubrep_ind, fsubrep_cases) = Hol_reln`
   fsubrep (CON T) /\
   (!v t t'. fsubrep t /\ fsubrep t' ==> fsubrep (CON F @@ t @@ LAM v t')) /\
@@ -42,7 +44,7 @@ val lam_not_fsubrep0 = prove(
   HO_MATCH_MP_TAC fsubrep_ind THEN SRW_TAC [][]);
 val lam_not_fsubrep = save_thm(
   "lam_not_fsubrep",
-  SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) [] lam_not_fsubrep0)
+  SIMP_RULE (srw_ss() ++ DNF_ss) [] lam_not_fsubrep0)
 val _ = export_rewrites ["lam_not_fsubrep"]
 
 val CONF_not_fsubrep = store_thm(
@@ -184,6 +186,11 @@ val fswap_id = store_thm(
   SRW_TAC [][fswap_def, bijections_exist]);
 val _ = export_rewrites ["fswap_id"]
 
+val fswap_comm = store_thm(
+  "fswap_comm",
+  ``fswap y x = fswap x y``,
+  SRW_TAC [][FUN_EQ_THM, fswap_def, swapTheory.swap_comm]);
+
 (* define swap over contexts *)
 val ctxtswap_def = Define`
   (ctxtswap x y [] = []) /\
@@ -204,11 +211,31 @@ val ctxtswap_id = store_thm(
   Induct THEN SRW_TAC [][ctxtswap_def]);
 val _ = export_rewrites ["ctxtswap_id"]
 
+val MEM_ctxtswap = store_thm(
+  "MEM_ctxtswap",
+  ``!G x y v ty. MEM (v,ty) (ctxtswap x y G) =
+                 MEM (swapstr x y v, fswap x y ty) G``,
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
+  METIS_TAC [fswap_inv]);
+val _ = export_rewrites ["MEM_ctxtswap"]
+
 val cdom_def = Define`
   (cdom ([]: (string # fsubty) list)  = {}) /\
   (cdom (h::t) = FST h INSERT cdom t)
 `;
 val _ = export_rewrites ["cdom_def"]
+
+val FINITE_cdom = store_thm(
+  "FINITE_cdom",
+  ``!G. FINITE (cdom G)``,
+  Induct THEN SRW_TAC [][]);
+val _ = export_rewrites ["FINITE_cdom"]
+
+val cdom_MEM = store_thm(
+  "cdom_MEM",
+  ``x IN cdom G = ?ty. MEM (x,ty) G``,
+  Induct_on `G` THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
+  METIS_TAC []);
 
 (* define fv for types *)
 val ftyFV_def = Define`
@@ -225,6 +252,43 @@ val ftyFV_thm = store_thm(
              rep_abs_lemma, fsubrep_rules]);
 val _ = export_rewrites ["ftyFV_thm"]
 
+(* the following is not really an injectivity result, but it seems the best
+   possible for ForallTy *)
+val ForallTy_11 = store_thm(
+  "ForallTy_11",
+  ``(ForallTy v1 bnd1 bod1 = ForallTy v2 bnd2 bod2) =
+      (bnd1 = bnd2) /\ ((v1 = v2) \/ ~(v1 IN ftyFV bod2)) /\
+      (bod1 = fswap v1 v2 bod2)``,
+  SRW_TAC [][ftyFV_def, ftyFV_thm, fswap_def, ForallTy_def,
+             term2fsubty_11, fsubrep_rules, swapTheory.LAM_INJ_swap,
+             EQ_IMP_THM] THEN
+  ASM_SIMP_TAC (srw_ss()) [] THENL [
+    FIRST_X_ASSUM (MP_TAC o Q.AP_TERM `term2fsubty`) THEN
+    SRW_TAC [][bijections_exist],
+    FIRST_X_ASSUM (MP_TAC o Q.AP_TERM `term2fsubty`) THEN
+    SRW_TAC [][bijections_exist],
+    SRW_TAC [][bijections_exist],
+    SRW_TAC [][rep_abs_lemma, fsubrep_fsubty2term, fsubrep_swap]
+  ]);
+
+val ForallTy_injectivity_lemma1 = store_thm(
+  "ForallTy_injectivity_lemma1",
+  ``(ForallTy x bnd1 ty1 = ForallTy y bnd2 ty2) ==>
+    (bnd1 = bnd2) /\ (ty2 = fswap x y ty1)``,
+  METIS_TAC [ForallTy_11, fswap_inv]);
+
+val ForallTy_INJ_ALPHA_FV = store_thm(
+  "ForallTy_INJ_ALPHA_FV",
+  ``(ForallTy x bnd ty1 = ForallTy y bnd ty2) /\ ~(x = y) ==>
+    ~(x IN ftyFV ty2) /\ ~(y IN ftyFV ty1)``,
+  METIS_TAC [ForallTy_11]);
+
+val ForallTy_ALPHA = store_thm(
+  "ForallTy_ALPHA",
+  ``~(u IN ftyFV ty) ==>
+    (ForallTy u bnd (fswap u v ty) = ForallTy v bnd ty)``,
+  METIS_TAC [ForallTy_11]);
+
 val fswap_fresh = store_thm(
   "fswap_fresh",
   ``!ty x y. ~(x IN ftyFV ty) /\ ~(y IN ftyFV ty) ==>
@@ -232,12 +296,17 @@ val fswap_fresh = store_thm(
   SRW_TAC [][fswap_def, ftyFV_def, swapTheory.swap_identity,
              bijections_exist]);
 
-
-
 val swapset_DELETE = store_thm(
   "swapset_DELETE",
   ``swapset x y (s1 DELETE s) = swapset x y s1 DELETE swapstr x y s``,
   SRW_TAC [][swapTheory.swapset_def, pred_setTheory.EXTENSION]);
+
+val swapset_SUBSET = store_thm(
+  "swapset_SUBSET",
+  ``s1 SUBSET swapset x y s2 = swapset x y s1 SUBSET s2``,
+  SRW_TAC [][swapTheory.swapset_def, SUBSET_DEF] THEN
+  METIS_TAC [swapTheory.swapstr_inverse]);
+val _ = export_rewrites ["swapset_SUBSET"]
 
 val ftyFV_fswap = store_thm(
   "ftyFV_fswap",
@@ -292,33 +361,35 @@ val ctxtswap_fresh = store_thm(
        (ctxtswap x y G = G)``,
   Induct THEN SRW_TAC [][fswap_fresh]);
 
-val ForallTy_injectivity_lemma1 = store_thm(
-  "ForallTy_injectivity_lemma1",
-  ``(ForallTy x bnd1 ty1 = ForallTy y bnd2 ty2) ==>
-    (bnd1 = bnd2) /\ (ty2 = fswap x y ty1)``,
-  SRW_TAC [][ForallTy_def, term2fsubty_11, fsubrep_rules, fswap_def] THEN
-  IMP_RES_TAC ncTheory.INJECTIVITY_LEMMA1 THEN
-  Cases_on `x = y` THENL [
-    FULL_SIMP_TAC (srw_ss()) [ncTheory.lemma14a, bijections_exist],
-    IMP_RES_TAC ncTheory.LAM_INJ_ALPHA_FV THEN
-    FULL_SIMP_TAC (srw_ss()) [swapTheory.fresh_var_swap] THEN
-    SRW_TAC [][bijections_exist]
-  ]);
+(* wfctxt implements the restrictions defined on pp393-4 *)
+val wfctxt_def = Define`
+  (wfctxt [] = T) /\
+  (wfctxt ((x,ty) :: t) = ~(x IN cdom t) /\
+                          ftyFV ty SUBSET cdom t /\
+                          wfctxt t)
+`;
+val _ = export_rewrites ["wfctxt_def"]
 
-val ForallTy_INJ_ALPHA_FV = store_thm(
-  "ForallTy_INJ_ALPHA_FV",
-  ``(ForallTy x bnd ty1 = ForallTy y bnd ty2) /\ ~(x = y) ==>
-    ~(x IN ftyFV ty2) /\ ~(y IN ftyFV ty1)``,
-  SRW_TAC [][ForallTy_def, ftyFV_def, term2fsubty_11, fsubrep_rules] THEN
-  METIS_TAC [ncTheory.LAM_INJ_ALPHA_FV]);
+val wfctxt_swap = store_thm(
+  "wfctxt_swap",
+  ``!G x y. wfctxt (ctxtswap x y G) = wfctxt G``,
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]);
+val _ = export_rewrites ["wfctxt_swap"]
 
-val ForallTy_ALPHA = store_thm(
-  "ForallTy_ALPHA",
-  ``~(u IN ftyFV ty) ==>
-    (ForallTy u bnd (fswap u v ty) = ForallTy v bnd ty)``,
-  SRW_TAC [][ForallTy_def, fswap_def, term2fsubty_11, fsubrep_rules,
-             rep_abs_lemma, fsubrep_swap, swapTheory.swap_ALPHA,
-             ftyFV_def]);
+val wfctxt_ctxtFV_cdom = store_thm(
+  "wfctxt_ctxtFV_cdom",
+  ``!G. wfctxt G ==> (ctxtFV G = cdom G)``,
+  SIMP_TAC (srw_ss()) [pred_setTheory.EXTENSION] THEN
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, SUBSET_DEF] THEN
+  METIS_TAC []);
+
+val wfctxt_MEM = store_thm(
+  "wfctxt_MEM",
+  ``!G. wfctxt G /\ MEM (x,ty) G ==>
+        x IN cdom G /\ !y. y IN ftyFV ty ==> y IN cdom G``,
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD,
+                                       SUBSET_DEF] THEN
+  METIS_TAC []);
 
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
                   fixity = Infix(NONASSOC, 425),
@@ -329,18 +400,20 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
                   term_name = "fsubtyping"}
 
 val (fsubtyping_rules, fsubtyping_ind, fsubtyping_cases) = Hol_reln`
-  (!Gamma ty. ftyFV ty SUBSET cdom Gamma ==> Gamma |- ty <: ty) /\
+  (!Gamma ty. wfctxt Gamma /\ ftyFV ty SUBSET cdom Gamma ==>
+              Gamma |- ty <: ty) /\
   (!Gamma ty1 ty2 ty3. Gamma |- ty1 <: ty2 /\
                        Gamma |- ty2 <: ty3 ==>
                        Gamma |- ty1 <: ty3) /\
-  (!Gamma ty. ftyFV ty SUBSET cdom Gamma ==> Gamma |- ty <: Top) /\
-  (!Gamma x ty. ftyFV ty SUBSET cdom Gamma /\ MEM (x, ty) Gamma ==>
+  (!Gamma ty. wfctxt Gamma /\ ftyFV ty SUBSET cdom Gamma ==>
+              Gamma |- ty <: Top) /\
+  (!Gamma x ty. wfctxt Gamma /\ MEM (x, ty) Gamma ==>
                 Gamma |- TyVar x <: ty) /\
   (!Gamma s1 t1 s2 t2.
           Gamma |- t1 <: s1 /\ Gamma |- s2 <: t2 ==>
           Gamma |- Fun s1 s2 <: Fun t1 t2) /\
   (!Gamma x u1 s2 t2.
-          ~(x IN ftyFV u1) /\ ~(x IN ctxtFV Gamma) /\
+          ~(x IN ftyFV u1) /\ ~(x IN cdom Gamma) /\
           ftyFV u1 SUBSET cdom Gamma /\
           ((x,u1) :: Gamma) |- s2 <: t2 ==>
           Gamma |- ForallTy x u1 s2 <: ForallTy x u1 t2)
@@ -357,17 +430,7 @@ val fsubtyping_swap = store_thm(
     (* trans *) METIS_TAC [fsubtyping_rules],
     (* top *)   SRW_TAC [][fsubtyping_rules, fswap_thm,
                            SUBSET_DEF],
-    (* tvar *)  SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
-                Induct (* on gamma *) THEN
-                SRW_TAC [][fswap_thm, fsubtyping_rules] THENL [
-                  FULL_SIMP_TAC (srw_ss()) [] THEN
-                  MATCH_MP_TAC (List.nth(CONJUNCTS fsubtyping_rules, 3)) THEN
-                  SRW_TAC [][SUBSET_DEF],
-                  MATCH_MP_TAC (List.nth(CONJUNCTS fsubtyping_rules, 3)) THEN
-                  SRW_TAC [][SUBSET_DEF] THEN DISJ2_TAC THEN
-                  POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `Gamma` THEN
-                  Induct THEN SRW_TAC [][] THEN SRW_TAC [][]
-                ],
+    (* tvar *)  SRW_TAC [][fswap_thm, fsubtyping_rules],
     (* fun *)   SRW_TAC [][fsubtyping_rules, fswap_thm],
     (* forall *)SRW_TAC [][fsubtyping_rules, fswap_thm, SUBSET_DEF]
   ]);
@@ -378,11 +441,12 @@ val fsubtyping_fv_constraint = store_thm(
                 ftyFV ty1 SUBSET cdom G /\
                 ftyFV ty2 SUBSET cdom G``,
   HO_MATCH_MP_TAC fsubtyping_ind THEN
-  SRW_TAC [][SUBSET_DEF] THEN
-  TRY (METIS_TAC []) THEN
-  Q_TAC SUFF_TAC `!G x ty. MEM (x, ty) G ==> x IN cdom G` THEN1
-        METIS_TAC [] THEN
-  Induct THEN SRW_TAC [][] THEN SRW_TAC [][] THEN METIS_TAC []);
+  SRW_TAC [][SUBSET_DEF] THEN METIS_TAC [wfctxt_MEM]);
+
+val fsubtyping_wfctxt = store_thm(
+  "fsubtyping_wfctxt",
+  ``!G ty1 ty2. G |- ty1 <: ty2 ==> wfctxt G``,
+  HO_MATCH_MP_TAC fsubtyping_ind THEN SRW_TAC [][]);
 
 val _ = remove_rules_for_term "dSUB"
 
@@ -396,8 +460,10 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
 
 val (algn_subtyping_rules, algn_subtyping_ind, algn_subtyping_cases) =
   Hol_reln`
-    (!Gamma s. algn_subtyping 0 Gamma s Top) /\
-    (!Gamma x. algn_subtyping 0 Gamma (TyVar x) (TyVar x)) /\
+    (!Gamma s. wfctxt Gamma /\ ftyFV s SUBSET cdom Gamma ==>
+               algn_subtyping 0 Gamma s Top) /\
+    (!Gamma x. wfctxt Gamma /\ x IN cdom Gamma ==>
+               algn_subtyping 0 Gamma (TyVar x) (TyVar x)) /\
     (!Gamma x u t n. MEM (x, u) Gamma /\ algn_subtyping n Gamma u t ==>
                      algn_subtyping (n + 1) Gamma (TyVar x) t) /\
     (!Gamma t1 s1 t2 s2 n m.
@@ -405,10 +471,11 @@ val (algn_subtyping_rules, algn_subtyping_ind, algn_subtyping_cases) =
                  algn_subtyping m Gamma s2 t2 ==>
                  algn_subtyping (MAX n m + 1) Gamma (Fun s1 s2) (Fun t1 t2)) /\
     (!Gamma x u1 s2 t2 n.
-                 ~(x IN ftyFV u1) /\ ~(x IN ctxtFV Gamma) /\
-                 algn_subtyping n ((x,u1)::Gamma ) s2 t2 ==>
+                 ~(x IN ftyFV u1) /\ ~(x IN cdom Gamma) /\
+                 ftyFV u1 SUBSET cdom Gamma /\
+                 algn_subtyping n ((x,u1)::Gamma) s2 t2 ==>
                  algn_subtyping (n + 1) Gamma (ForallTy x u1 s2)
-                                      (ForallTy x u1 t2))
+                                              (ForallTy x u1 t2))
 `;
 
 val algn_subtyping_fswap = store_thm(
@@ -418,26 +485,20 @@ val algn_subtyping_fswap = store_thm(
                                          (fswap x y ty1)
                                          (fswap x y ty2)``,
   HO_MATCH_MP_TAC algn_subtyping_ind THEN REPEAT CONJ_TAC THEN
-  TRY (SRW_TAC [][fswap_thm, algn_subtyping_rules] THEN NO_TAC) THEN
-  Induct (* on gamma *) THEN SRW_TAC [][] THENL [
-    SRW_TAC [][fswap_thm] THEN
-    MATCH_MP_TAC (List.nth(CONJUNCTS algn_subtyping_rules, 2)) THEN
-    SRW_TAC [boolSimps.DNF_ss][] THEN DISJ1_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [],
-    SRW_TAC [][fswap_thm] THEN
-    MATCH_MP_TAC (List.nth(CONJUNCTS algn_subtyping_rules, 2)) THEN
-    SRW_TAC [boolSimps.DNF_ss][] THEN DISJ2_TAC THEN
-    Q.EXISTS_TAC `fswap x' y ty1` THEN ASM_REWRITE_TAC [] THEN
-    Q.PAT_ASSUM `MEM (x, ty1) G` MP_TAC THEN
-    Q.ID_SPEC_TAC `G` THEN
-    Induct THEN SRW_TAC [][] THEN SRW_TAC [][]
-  ]);
+  SRW_TAC [][fswap_thm, algn_subtyping_rules] THEN
+  METIS_TAC [algn_subtyping_rules, MEM_ctxtswap, fswap_inv,
+             swapTheory.swapstr_inverse]);
 
 val algn_subtyping_fswap1_eq = store_thm(
   "algn_subtyping_fswap1_eq",
   ``algn_subtyping n G (fswap x y ty1) ty2 =
     algn_subtyping n (ctxtswap x y G) ty1 (fswap x y ty2)``,
   METIS_TAC [algn_subtyping_fswap, fswap_inv, ctxtswap_inv]);
+
+val algn_subtyping_wfctxt = store_thm(
+  "algn_subtyping_wfctxt",
+  ``!n G ty1 ty2. algn_subtyping n G ty1 ty2 ==> wfctxt G``,
+  HO_MATCH_MP_TAC algn_subtyping_ind THEN SRW_TAC [][]);
 
 val alg_subtyping_def = Define`
   Gamma |-> s <: t = ?n. algn_subtyping n Gamma s t
@@ -451,16 +512,15 @@ val alg_subtyping_fswap1_eq = store_thm(
 
 val alg_subtyping_rules = store_thm(
   "alg_subtyping_rules",
-  ``(!Gamma s. ftyFV s SUBSET cdom Gamma ==> Gamma |-> s <: Top) /\
-    (!Gamma x. Gamma |-> TyVar x <: TyVar x) /\
-    (!Gamma x u t.  MEM (x, u) Gamma /\ Gamma |-> u <: t ==>
-                    Gamma |-> TyVar x <: t) /\
-    (!Gamma t1 s1 t2 s2. Gamma |-> t1 <: s1 /\ Gamma |-> s2 <: t2 ==>
-                         Gamma |-> Fun s1 s2 <: Fun t1 t2) /\
-    (!Gamma x u1 s2 t2.
-       ~(x IN ftyFV u1) /\ ~(x IN ctxtFV Gamma) /\
-       ((x,u1) :: Gamma) |-> s2 <: t2 ==>
-       Gamma |-> ForallTy x u1 s2 <: ForallTy x u1 t2)``,
+  ``(!G s. wfctxt G /\ ftyFV s SUBSET cdom G ==> G |-> s <: Top) /\
+    (!G x. wfctxt G /\ x IN cdom G ==> G |-> TyVar x <: TyVar x) /\
+    (!G x u t. MEM (x, u) G /\ G |-> u <: t ==> G |-> TyVar x <: t) /\
+    (!G t1 s1 t2 s2. G |-> t1 <: s1 /\ G |-> s2 <: t2 ==>
+                     G |-> Fun s1 s2 <: Fun t1 t2) /\
+    (!G x u1 s2 t2.
+       ~(x IN ftyFV u1) /\ ~(x IN cdom G) /\ ftyFV u1 SUBSET cdom G /\
+       ((x,u1) :: G) |-> s2 <: t2 ==>
+       G |-> ForallTy x u1 s2 <: ForallTy x u1 t2)``,
   SRW_TAC [][alg_subtyping_def] THEN METIS_TAC [algn_subtyping_rules]);
 
 val alg_subtyping_ind =
@@ -490,57 +550,94 @@ val strong_alg_subtyping_ind =
 
 val alg_subtyping_refl (* lemma 28.3.1 *) = store_thm(
   "alg_subtyping_refl",
-  ``!ty Gamma. Gamma |-> ty <: ty``,
+  ``!ty G. wfctxt G /\ ftyFV ty SUBSET cdom G ==> G |-> ty <: ty``,
   HO_MATCH_MP_TAC fsubty_ind THEN
   SRW_TAC [][alg_subtyping_rules] THEN
-  Q_TAC (NEW_TAC "z") `ftyFV ty UNION ctxtFV Gamma UNION ftyFV ty'` THEN
+  Q_TAC (NEW_TAC "z") `cdom G UNION ftyFV ty UNION ftyFV ty'` THEN
   `ForallTy v ty ty' = ForallTy z ty (fswap z v ty')`
-     by SRW_TAC [][ForallTy_ALPHA] THEN
+    by SRW_TAC [][ForallTy_ALPHA] THEN
   SRW_TAC [][] THEN
-  MATCH_MP_TAC (List.nth(CONJUNCTS alg_subtyping_rules, 4)) THEN
-  SRW_TAC [][alg_subtyping_fswap1_eq]);
+  MATCH_MP_TAC (last (CONJUNCTS alg_subtyping_rules)) THEN
+  SRW_TAC [][alg_subtyping_fswap1_eq] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
+  FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
+  METIS_TAC [swapTheory.swapstr_def]);
 val _ = export_rewrites ["alg_subtyping_refl"]
 
 val alg_subtyping_top_left = store_thm(
   "alg_subtyping_top_left",
-  ``!Gamma t. Gamma |-> Top <: t = (t = Top)``,
-  SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)
-           [EQ_IMP_THM, alg_subtyping_rules] THEN
+  ``!Gamma t. wfctxt Gamma ==> (Gamma |-> Top <: t = (t = Top))``,
+  SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM, alg_subtyping_rules] THEN
   ONCE_REWRITE_TAC [alg_subtyping_cases] THEN
   SRW_TAC [][]);
 val _ = export_rewrites ["alg_subtyping_top_left"]
 
-val alg_subtyping_tyvar_right = store_thm(
-  "alg_subtyping_tyvar_right",
+val alg_subtyping_tyvar_right0 = prove(
   ``!Gamma ty1 ty2. Gamma |-> ty1 <: ty2 ==>
                     !x. (ty2 = TyVar x) ==>
                         ?y. ty1 = TyVar y``,
   HO_MATCH_MP_TAC alg_subtyping_ind THEN SRW_TAC [][]);
+val alg_subtyping_tyvar_right = save_thm(
+  "alg_subtyping_tyvar_right",
+  SIMP_RULE (bool_ss ++ DNF_ss) [] alg_subtyping_tyvar_right0)
 
+val algn_subtyping_ftyFVs_in_ctxt = store_thm(
+  "algn_subtyping_ftyFVs_in_ctxt",
+  ``!n G ty1 ty2. algn_subtyping n G ty1 ty2 ==>
+                  ftyFV ty1 SUBSET cdom G /\ ftyFV ty2 SUBSET cdom G``,
+  HO_MATCH_MP_TAC algn_subtyping_ind THEN
+  SRW_TAC [][SUBSET_DEF] THEN METIS_TAC [cdom_MEM])
+
+(* important to have this sort of inversion theorem, where you get the
+   same bound variable in the "other" position of the relation.  By
+   analogy, in the lambda calculus with beta reduction, you have to prove
+   that if
+     LAM v bod --> t
+   then
+     ?bod'. (t = LAM v bod') /\ bod --> bod'
+   In the lambda calculus, it's always possible to get this v (which
+   has to do with the fact that beta reduction doesn't produce extra
+   free variables).  In F<:, your x has to satisfy certain constraints.
+*)
 val algn_subtyping_ForallTy_eqn = store_thm(
   "algn_subtyping_ForallTy_eqn",
-  ``~(x IN ftyFV bnd) /\ ~(x IN ctxtFV G) ==>
+  ``~(x IN ftyFV bnd) /\ ~(x IN cdom G) ==>
     (algn_subtyping p G (ForallTy x bnd ty) t =
-       (t = Top) /\ (p = 0) \/
-       (?ty' p0. (t = ForallTy x bnd ty') /\ (p = p0 + 1) /\
-                 algn_subtyping p0 ((x,bnd)::G) ty ty'))``,
-  SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [EQ_IMP_THM,
-                                           algn_subtyping_rules] THEN
+       wfctxt G /\
+       ((t = Top) /\ (p = 0) /\ ftyFV (ForallTy x bnd ty) SUBSET cdom G \/
+        (?ty' p0. (t = ForallTy x bnd ty') /\ ftyFV bnd SUBSET cdom G /\
+                  (p = p0 + 1) /\
+                  algn_subtyping p0 ((x,bnd)::G) ty ty')))``,
+  SIMP_TAC (srw_ss() ++ DNF_ss ++ SatisfySimps.SATISFY_ss)
+           [EQ_IMP_THM, algn_subtyping_rules, algn_subtyping_wfctxt] THEN
   STRIP_TAC THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [algn_subtyping_cases])) THEN
-  SRW_TAC [][] THEN SRW_TAC [][] THEN
-  IMP_RES_TAC ForallTy_injectivity_lemma1 THEN
-  SRW_TAC [][] THEN
-  FULL_SIMP_TAC (srw_ss()) [algn_subtyping_fswap1_eq] THEN
-  Cases_on `x = x'` THEN1
-    (FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []) THEN
-  Q.PAT_ASSUM `algn_subtyping N G TY1 TY2` MP_TAC THEN
-  ASM_SIMP_TAC (srw_ss()) [fswap_fresh, ctxtswap_fresh] THEN
-  IMP_RES_TAC ForallTy_INJ_ALPHA_FV THEN
-  FULL_SIMP_TAC (srw_ss())[] THEN
-  STRIP_TAC THEN Q.EXISTS_TAC `fswap x x' t2` THEN
-
-
+  ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
+  Q_TAC SUFF_TAC
+        `!y bnd2 ty2 ty3 n.
+             (p = n + 1) /\ (ForallTy y bnd2 ty2 = ForallTy x bnd ty) /\
+             (t = ForallTy y bnd2 ty3) /\ ~(y IN ftyFV bnd2) /\
+             ~(y IN cdom G) /\ ftyFV bnd2 SUBSET cdom G /\
+             algn_subtyping n ((y,bnd2)::G) ty2 ty3 ==>
+             ?ty'.
+                (ForallTy x bnd ty' = ForallTy y bnd2 ty3) /\
+                ftyFV bnd SUBSET cdom G /\
+                algn_subtyping n ((x,bnd)::G) ty ty'` THEN1 METIS_TAC [] THEN
+  ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
+               [ForallTy_11, algn_subtyping_fswap1_eq] THEN
+  SRW_TAC [][fswap_comm] THEN
+  `wfctxt G` by (IMP_RES_TAC algn_subtyping_wfctxt THEN
+                 FULL_SIMP_TAC (srw_ss()) []) THEN
+  Q.PAT_ASSUM `algn_subtyping V X Y Z` MP_TAC THEN
+  ASM_SIMP_TAC (srw_ss()) [fswap_fresh, ctxtswap_fresh,
+                           wfctxt_ctxtFV_cdom] THEN
+  Cases_on `x = y` THEN SRW_TAC [][] THEN
+  STRIP_TAC THEN
+  `y IN ftyFV (fswap x y ty3)` by SRW_TAC [][] THEN
+  `y IN cdom ((x,bnd)::G)` by METIS_TAC [SUBSET_DEF,
+                                         algn_subtyping_ftyFVs_in_ctxt] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  FULL_SIMP_TAC (srw_ss()) []);
 
 val algn_subtyping_trans = prove(
   ``!n m p Gamma s q t.
@@ -556,14 +653,15 @@ val algn_subtyping_trans = prove(
     METIS_TAC [alg_subtyping_def, alg_subtyping_top_left,
                algn_subtyping_rules],
     METIS_TAC [],
-    FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [] THEN
+    FULL_SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
     `?r. algn_subtyping r Gamma u t`
        by METIS_TAC [DECIDE ``n + p < n + 1 + p``] THEN
     METIS_TAC [algn_subtyping_rules],
     Q.PAT_ASSUM `algn_subtyping p Gamma (Fun t1 t2) t`
                 (MP_TAC o ONCE_REWRITE_RULE [algn_subtyping_cases]) THEN
-    SRW_TAC [][] THEN1 METIS_TAC [algn_subtyping_rules] THEN
-    FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [AND_IMP_INTRO] THEN
+    SRW_TAC [][] THEN1 METIS_TAC [algn_subtyping_rules,
+                                  algn_subtyping_ftyFVs_in_ctxt] THEN
+    FULL_SIMP_TAC (srw_ss() ++ DNF_ss) [AND_IMP_INTRO] THEN
     `?r. algn_subtyping r Gamma t1' s1`
         by (FIRST_X_ASSUM MATCH_MP_TAC THEN
             MAP_EVERY Q.EXISTS_TAC [`n'`, `n`, `t1`] THEN
@@ -573,62 +671,37 @@ val algn_subtyping_trans = prove(
             MAP_EVERY Q.EXISTS_TAC [`m'`, `m`, `t2`] THEN
             ASM_SIMP_TAC arith_ss [arithmeticTheory.MAX_DEF]) THEN
     METIS_TAC [algn_subtyping_rules],
-    Q.PAT_ASSUM `algn_subtyping p Gamma (ForallTy x u1 t2) t`
-                (MP_TAC o ONCE_REWRITE_RULE [algn_subtyping_cases]) THEN
-    SRW_TAC [][] THEN1 METIS_TAC [algn_subtyping_rules] THEN
-    IMP_RES_TAC ForallTy_injectivity_lemma1 THEN
-    SRW_TAC [][] THEN
-    FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)
-                  [AND_IMP_INTRO, algn_subtyping_fswap1_eq] THEN
-    Q.PAT_ASSUM `algn_subtyping N G ty1 ty2` MP_TAC THEN
-    ASM_SIMP_TAC (srw_ss()) [fswap_fresh, ctxtswap_fresh] THEN
-    STRIP_TAC THEN
-    `?r. algn_subtyping r ((x,u1)::Gamma) s2 (fswap x x' t2')`
-       by (FIRST_X_ASSUM MATCH_MP_TAC THEN
-           MAP_EVERY Q.EXISTS_TAC [`n`, `n'`, `t2`] THEN
-           SRW_TAC [numSimps.ARITH_ss][]) THEN
-    `algn_subtyping (r + 1) Gamma (ForallTy x u1 s2)
-                                  (ForallTy x u1 (fswap x x' t2'))`
-       by METIS_TAC [algn_subtyping_rules] THEN
-    Q_TAC SUFF_TAC `ForallTy x' u1 t2' = ForallTy x u1 (fswap x x' t2')`
-       THEN1 METIS_TAC [] THEN
-
-
-
-
-
-
-
+    Q.PAT_ASSUM `algn_subtyping p Gamma (ForallTy x u1 t2) t` MP_TAC THEN
+    ASM_SIMP_TAC (srw_ss()) [algn_subtyping_ForallTy_eqn] THEN
+    SRW_TAC [][] THENL [
+      (* case where it's less than Top *)
+      IMP_RES_TAC algn_subtyping_ftyFVs_in_ctxt THEN
+      FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN METIS_TAC [],
+      ALL_TAC
+    ] THEN
+    SRW_TAC [][ForallTy_11] THEN
+    METIS_TAC [DECIDE ``n + p0 < n + 1 + (p0 + 1)``]
+  ]);
 
 val alg_subtyping_trans (* lemma 28.3.2 *) = store_thm(
   "alg_subtyping_trans",
-  ``!Gamma s q. Gamma |-> s <: q ==>
-                !t. (Gamma |-> q <: t ==> Gamma |-> s <: t) /\
-                    (Gamma |-> t <: s ==> Gamma |-> t <: q)``,
-  HO_MATCH_MP_TAC strong_alg_subtyping_ind THEN
-  REPEAT CONJ_TAC THENL [
-    SRW_TAC [][alg_subtyping_rules],
-    SRW_TAC [][],
-    REPEAT STRIP_TAC THENL [
-      METIS_TAC [alg_subtyping_rules],
-      Q.PAT_ASSUM `Gamma |-> t <: TyVar x`
-                  (MP_TAC o ONCE_REWRITE_RULE [alg_subtyping_cases]) THEN
-      SRW_TAC [][] THEN METIS_TAC [alg_subtyping_rules]
-    CONV_TAC (RENAME_VARS_CONV ["Gamma", "q1", "s1", "q2", "s2"]) THEN
-    REPEAT GEN_TAC THEN STRIP_TAC THEN
-    Q_TAC SUFF_TAC
-          `!Gamma' ty1 ty2. Gamma' |-> ty1 <: ty2 ==>
-                            (ty1 = Fun q1 q2) ==>
-    REPEAT STRIP_TAC THEN
-    `(t = Top) \/ (?t1 t2. (t = Fun t1 t2) /\ Gamma |-> t1 <: q1 /\
-                           Gamma |-> q2 <: t2)`
-       by METIS_TAC [alg_subtyping_fun_left] THEN1
-          SRW_TAC [][alg_subtyping_rules] THEN
-    SRW_TAC [][] THEN
-    MATCH_MP_TAC (List.nth(CONJUNCTS alg_subtyping_rules, 3)) THEN
-    `Gamma |-> s2 <: t2` by METIS_TAC [] THEN ASM_REWRITE_TAC [] THEN
-    SRW_TAC [][alg_subtyping_fun_left] THEN SRW_TAC [][] THEN
-    RES_TAC
+  ``!Gamma s q. Gamma |-> s <: q /\ Gamma |-> q <: t ==>
+                Gamma |-> s <: t``,
+  METIS_TAC [alg_subtyping_def, algn_subtyping_trans]);
 
+val alg_soundcomplete (* theorem 28.3.3 *) = store_thm(
+  "alg_soundcomplete",
+  ``G |- ty1 <: ty2 = G |-> ty1 <: ty2``,
+  EQ_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`ty2`, `ty1`, `G`] THENL [
+    HO_MATCH_MP_TAC fsubtyping_ind THEN SRW_TAC [][alg_subtyping_rules] THENL [
+      METIS_TAC [alg_subtyping_trans],
+      `Gamma |-> ty <: ty`
+         by METIS_TAC [alg_subtyping_refl, wfctxt_MEM, SUBSET_DEF] THEN
+      METIS_TAC [alg_subtyping_rules]
+    ],
+    HO_MATCH_MP_TAC alg_subtyping_ind THEN SRW_TAC [][fsubtyping_rules] THEN
+    METIS_TAC [fsubtyping_rules, wfctxt_MEM, SUBSET_DEF,
+               fsubtyping_wfctxt]
+  ]);
 
-!n G s. Gamma |->_n s <: t ==> P G s (Fun t1 t2)
+val _ = export_theory ();
