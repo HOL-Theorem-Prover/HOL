@@ -20,13 +20,13 @@ sig
                                  flush : unit -> unit, 
                                  linewidth : int}
   val stdOut_ppstream : unit -> ppstream
-  val pr_list : ('a -> unit)
-                  -> (unit -> 'b) -> (unit -> 'c) -> 'a list -> unit
-
+  val pr_list : ('a -> unit) -> (unit -> 'b) -> (unit -> 'c) 
+                -> 'a list -> unit
   val pr_list_to_ppstream 
      : ppstream -> (ppstream -> 'a -> unit)
                   -> (ppstream -> unit) 
                    -> (ppstream -> unit) -> 'a list -> unit
+  val pprint : (ppstream -> 'a -> unit) -> 'a -> unit
 
   val dec: int ref -> unit
   val inc: int ref -> unit

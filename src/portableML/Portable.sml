@@ -169,6 +169,19 @@ fun pr_list pfun dfun bfun =
          | pr (i::rst) = ( pfun i; dfun() ; bfun() ; pr rst )
    in pr end;
 
+(*---------------------------------------------------------------------------*)
+(* Send the results of prettyprinting to stdOut                              *)
+(*---------------------------------------------------------------------------*)
+
+fun pprint pp x = 
+ let val strm = stdOut_ppstream () 
+ in 
+   let val _  = pp strm x
+   in flush_ppstream strm; ()
+   end handle _ => flush_ppstream strm
+ end;
+    
+
 
 type 'a frag = 'a General.frag;
 type 'a quotation = 'a frag list;
