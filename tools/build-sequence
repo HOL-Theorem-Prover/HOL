@@ -65,6 +65,7 @@ src/finite_map
 src/hol88
 src/real
 src/float
+src/fxp
 src/bag
 src/temporal/src
 src/temporal/smv.2.4.3
