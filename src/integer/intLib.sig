@@ -4,6 +4,7 @@ signature intLib = sig
   val int_ty : Type.hol_type
   val zero_tm : Term.term
   val plus_tm : Term.term
+  val minus_tm : Term.term
   val mult_tm : Term.term
   val less_tm : Term.term
   val lesseq_tm : Term.term
@@ -23,6 +24,9 @@ signature intLib = sig
   val list_mk_plus : (* non-empty *) Term.term list -> Term.term
   val strip_plus : Term.term -> Term.term list
 
+  val is_minus : Term.term -> bool
+  val mk_minus : (Term.term * Term.term) -> Term.term
+
   val is_mult : Term.term -> bool
   val mk_mult : (Term.term * Term.term) -> Term.term
   val list_mk_mult : (* non-empty *) Term.term list -> Term.term
@@ -36,5 +40,15 @@ signature intLib = sig
 
   val is_divides : Term.term -> bool
   val mk_divides : (Term.term * Term.term) -> Term.term
+
+  (* theorem proving help *)
+  val int_ss : simpLib.simpset (* bool_ss + integer arithmetic *)
+  val REDUCE_CONV : Term.term -> Thm.thm  (* reduces all outstanding
+                                             integer arithmetic in a term *)
+  val collect_additive_consts : Term.term -> Thm.thm
+    (* collects all integer literals in an additive term and sums them;
+        e.g.:  3 + x + ~1  --> x + 2
+       the collected numeral always appears on the right *)
+
 
 end (* sig *)
