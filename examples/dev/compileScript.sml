@@ -408,6 +408,61 @@ val COMP_SEL_CLAUSES =
      COMP_SEL_3_1,COMP_SEL_3_2,COMP_SEL_3_3]);
 
 (*****************************************************************************)
+(* Identitly device (i.e. piece of wire)                                     *)
+(*****************************************************************************)
+val COMB_ID =
+ store_thm
+  ("COMB_ID",
+   ``COMB (\x. x) (inp,out) = (out = inp)``,
+   RW_TAC std_ss [COMB_def,FUN_EQ_THM]);
+
+(*****************************************************************************)
+(* Constant combinational device                                             *)
+(*****************************************************************************)
+val CONSTANT_def =
+ Define
+  `CONSTANT c out = !t. out t = c`;
+
+val COMB_CONSTANT_1 =
+ store_thm
+  ("COMB_CONSTANT_1",
+   ``COMB (\x. c) (inp,out) = CONSTANT c out``,
+   RW_TAC std_ss [COMB_def,CONSTANT_def]
+    THEN GEN_BETA_TAC
+    THEN PROVE_TAC[]);
+
+val COMB_CONSTANT_2 =
+ store_thm
+  ("COMB_CONSTANT_2",
+   ``COMB (\(x,y). c) (inp,out) = CONSTANT c out``,
+   RW_TAC std_ss [COMB_def,CONSTANT_def]
+    THEN GEN_BETA_TAC
+    THEN PROVE_TAC[]);
+
+val COMB_CONSTANT_3 =
+ store_thm
+  ("COMB_CONSTANT_3",
+   ``COMB (\(x,y,z). c) (inp,out) = CONSTANT c out``,
+   RW_TAC std_ss [COMB_def,CONSTANT_def]
+    THEN GEN_BETA_TAC
+    THEN PROVE_TAC[]);
+
+(*****************************************************************************)
+(* Combinational device computing a binary operation                         *)
+(*****************************************************************************)
+val BINOP_def =
+ Define
+  `BINOP f (in1,in2,out) = !t. out t = f(in1 t,in2 t)`;
+
+val COMB_BINOP =
+ store_thm
+  ("COMB_BINOP",
+   ``COMB f (in1 <> in2, out) = BINOP f (in1,in2,out)``,
+   RW_TAC std_ss [COMB_def,BINOP_def,BUS_CONCAT_def]
+    THEN GEN_BETA_TAC
+    THEN PROVE_TAC[]);
+
+(*****************************************************************************)
 (* Versions of POSEDGE_IMP, CALL, SELECT, FINISH, ATM, SEQ, PAR, ITE and REC *)
 (* suitable for rewriting hardware combinatory expressions.                  *)
 (*****************************************************************************)

@@ -39,6 +39,11 @@ and some bus component selection operators are defined by:
 These operators are introduced when creating netlists using
 MAKE_NETLIST (see example below).
 
+Other operators used in netlists are:
+
+  |- CONSTANT c out = !t. out t = c
+  |- BINOP f (in1,in2,out) = !t. out t = f(in1 t,in2 t)
+
 The main user-level functions are hwDefine, REFINE and MAKE_NETLIST
 for creating hardware, refining it and then creating a netlist
 representation.
@@ -198,15 +203,15 @@ PAR, ITE and REC and normalises the resulting term into a form,
 
 The following example is from FactScript.sml
 
-    FACT_cir =
+ FACT_cir =
     |- (\(load,inp,done,out).
           ?v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16 v17 v18
-             v19 v20 v21 v22 v23 v24 v25 v26 v27 v28 v29 v30 v31 v32 v33 v34
-             v35 v36 v37 v38 v39 v40 v41 v42 v43 v44 v45 v46 v47 v48 v49 v50
-             v51 v52 v53 v54 v55 v56 v57 v58 v59 v60 v61 v62 v63 v64 v65 v66
-             v67 v68 v69 v70 v71 v72 v73 v74 v75 v76 v77 v78 v79 v80 v81 v82
-             v83 v84 v85 v86 v87 v88 v89 v90 v91 v92 v93 v94 v95 v96 v97 v98
-             v99 v100 v101 v102 v103 v104 v105 v106 v107 v108 v109 v110 v111
+             v20 v21 v22 v23 v24 v25 v26 v27 v28 v29 v30 v31 v32 v33 v34 v35
+             v36 v37 v38 v39 v40 v41 v42 v43 v44 v45 v46 v47 v48 v49 v50 v51
+             v52 v53 v54 v55 v56 v57 v58 v59 v60 v61 v62 v63 v64 v65 v66 v67
+             v68 v69 v70 v71 v72 v73 v74 v75 v76 v77 v78 v79 v80 v81 v82 v83
+             v84 v85 v86 v87 v88 v89 v90 v91 v92 v93 v94 v95 v96 v97 v98 v99
+             v100 v101 v102 v103 v104 v105 v106 v107 v108 v109 v110 v111
              v112 v113 v114 v115 v116 v117 v118 v119 v120 v121 v122 v123
              v124 v125 v126 v127 v128 v129 v130 v131 v132 v133 v134 v135
              v136 v137 v138 v139 v140 v141 v142 v143 v144 v145 v146 v147
@@ -234,53 +239,53 @@ The following example is from FactScript.sml
             OR (v7,v2,v6) /\ DEL (v6,v18) /\ NOT (v18,v17) /\
             AND (v17,v6,v16) /\ DEL (v5,v15) /\ AND (v16,v15,v14) /\
             DEL (v14,v22) /\ NOT (v22,v21) /\ AND (v21,v14,v20) /\
-            NOT (v20,v13) /\ COMB (\n. n) (inp,v19) /\ DEL (v19,v11) /\
-            DEL (v14,v26) /\ NOT (v26,v25) /\ AND (v25,v14,v24) /\
-            NOT (v24,v12) /\ COMB (\n. 1) (inp,v23) /\ DEL (v23,v10) /\
-            DFF (v11,v13,v9) /\ DFF (v10,v12,v8) /\ AND (v13,v12,v5) /\
-            DEL (v5,v41) /\ NOT (v41,v40) /\ AND (v40,v5,v39) /\
-            DEL (v4,v38) /\ AND (v39,v38,v37) /\ OR (v37,v36,v34) /\
-            DEL (v35,v43) /\ NOT (v43,v42) /\ AND (v42,v35,v36) /\
+            NOT (v20,v13) /\ DEL (inp,v11) /\ DEL (v14,v26) /\
+            NOT (v26,v25) /\ AND (v25,v14,v24) /\ NOT (v24,v12) /\
+            CONSTANT 1 v23 /\ DEL (v23,v10) /\ DFF (v11,v13,v9) /\
+            DFF (v10,v12,v8) /\ AND (v13,v12,v5) /\ DEL (v5,v41) /\
+            NOT (v41,v40) /\ AND (v40,v5,v39) /\ DEL (v4,v38) /\
+            AND (v39,v38,v37) /\ OR (v37,v36,v34) /\ DEL (v35,v43) /\
+            NOT (v43,v42) /\ AND (v42,v35,v36) /\
             MUX (v36,v95 <> v94,v9 <> v8,v28) /\ DFF (v28,v34,v33) /\
             NOT (v44,v47) /\ OR (v47,v34,v46) /\ DEL (v46,v58) /\
             NOT (v58,v57) /\ AND (v57,v46,v56) /\ DEL (v45,v55) /\
             AND (v56,v55,v54) /\ DEL (v54,v62) /\ NOT (v62,v61) /\
             AND (v61,v54,v60) /\ NOT (v60,v53) /\ SEL_2_1 (v28,v59) /\
             DEL (v59,v51) /\ DEL (v54,v66) /\ NOT (v66,v65) /\
-            AND (v65,v54,v64) /\ NOT (v64,v52) /\
-            COMB (\(n,acc). 0) (v28,v63) /\ DEL (v63,v50) /\
-            DFF (v51,v53,v49) /\ DFF (v50,v52,v48) /\ AND (v53,v52,v45) /\
-            DEL (v45,v70) /\ NOT (v70,v69) /\ AND (v69,v45,v68) /\
-            NOT (v68,v44) /\ COMB (UNCURRY $=) (v49 <> v48,v67) /\
-            DEL (v67,v31) /\ AND (v45,v44,v32) /\ DEL (v32,v74) /\
-            NOT (v74,v73) /\ AND (v73,v32,v72) /\ AND (v72,v31,v30) /\
-            NOT (v31,v71) /\ AND (v71,v72,v29) /\ DEL (v30,v85) /\
-            NOT (v85,v84) /\ AND (v84,v30,v83) /\ DEL (v27,v82) /\
-            AND (v83,v82,v81) /\ DEL (v81,v89) /\ NOT (v89,v88) /\
-            AND (v88,v81,v87) /\ NOT (v87,v80) /\ SEL_2_1 (v33,v86) /\
-            DEL (v86,v78) /\ DEL (v81,v93) /\ NOT (v93,v92) /\
-            AND (v92,v81,v91) /\ NOT (v91,v79) /\ SEL_2_2 (v33,v90) /\
-            DEL (v90,v77) /\ DFF (v78,v80,v76) /\ DFF (v77,v79,v75) /\
-            AND (v80,v79,v27) /\ DEL (v29,v104) /\ NOT (v104,v103) /\
-            AND (v103,v29,v102) /\ DEL (v35,v101) /\ AND (v102,v101,v100) /\
-            NOT (v105,v108) /\ OR (v108,v100,v107) /\ DEL (v107,v119) /\
-            NOT (v119,v118) /\ AND (v118,v107,v117) /\ DEL (v106,v116) /\
+            AND (v65,v54,v64) /\ NOT (v64,v52) /\ CONSTANT 0 v63 /\
+            DEL (v63,v50) /\ DFF (v51,v53,v49) /\ DFF (v50,v52,v48) /\
+            AND (v53,v52,v45) /\ DEL (v45,v70) /\ NOT (v70,v69) /\
+            AND (v69,v45,v68) /\ NOT (v68,v44) /\
+            BINOP (UNCURRY $=) (v49,v48,v67) /\ DEL (v67,v31) /\
+            AND (v45,v44,v32) /\ DEL (v32,v74) /\ NOT (v74,v73) /\
+            AND (v73,v32,v72) /\ AND (v72,v31,v30) /\ NOT (v31,v71) /\
+            AND (v71,v72,v29) /\ DEL (v30,v85) /\ NOT (v85,v84) /\
+            AND (v84,v30,v83) /\ DEL (v27,v82) /\ AND (v83,v82,v81) /\
+            DEL (v81,v89) /\ NOT (v89,v88) /\ AND (v88,v81,v87) /\
+            NOT (v87,v80) /\ SEL_2_1 (v33,v86) /\ DEL (v86,v78) /\
+            DEL (v81,v93) /\ NOT (v93,v92) /\ AND (v92,v81,v91) /\
+            NOT (v91,v79) /\ SEL_2_2 (v33,v90) /\ DEL (v90,v77) /\
+            DFF (v78,v80,v76) /\ DFF (v77,v79,v75) /\ AND (v80,v79,v27) /\
+            DEL (v29,v104) /\ NOT (v104,v103) /\ AND (v103,v29,v102) /\
+            DEL (v35,v101) /\ AND (v102,v101,v100) /\ NOT (v105,v108) /\
+            OR (v108,v100,v107) /\ DEL (v107,v119) /\ NOT (v119,v118) /\
+            AND (v118,v107,v117) /\ DEL (v106,v116) /\
             AND (v117,v116,v115) /\ DEL (v115,v123) /\ NOT (v123,v122) /\
             AND (v122,v115,v121) /\ NOT (v121,v114) /\ SEL_2_1 (v33,v120) /\
             DEL (v120,v112) /\ DEL (v115,v127) /\ NOT (v127,v126) /\
-            AND (v126,v115,v125) /\ NOT (v125,v113) /\
-            COMB (\(n,acc). 1) (v33,v124) /\ DEL (v124,v111) /\
-            DFF (v112,v114,v110) /\ DFF (v111,v113,v109) /\
-            AND (v114,v113,v106) /\ DEL (v106,v131) /\ NOT (v131,v130) /\
-            AND (v130,v106,v129) /\ NOT (v129,v105) /\
-            COMB (UNCURRY $-) (v110 <> v109,v128) /\ DEL (v128,v97) /\
-            AND (v106,v105,v99) /\ NOT (v132,v135) /\ OR (v135,v100,v134) /\
-            DEL (v134,v146) /\ NOT (v146,v145) /\ AND (v145,v134,v144) /\
-            DEL (v133,v143) /\ AND (v144,v143,v142) /\ DEL (v142,v150) /\
-            NOT (v150,v149) /\ AND (v149,v142,v148) /\ NOT (v148,v141) /\
-            SEL_2_1 (v33,v147) /\ DEL (v147,v139) /\ DEL (v142,v154) /\
-            NOT (v154,v153) /\ AND (v153,v142,v152) /\ NOT (v152,v140) /\
-            SEL_2_2 (v33,v151) /\ DEL (v151,v138) /\ DFF (v139,v141,v137) /\
+            AND (v126,v115,v125) /\ NOT (v125,v113) /\ CONSTANT 1 v124 /\
+            DEL (v124,v111) /\ DFF (v112,v114,v110) /\
+            DFF (v111,v113,v109) /\ AND (v114,v113,v106) /\
+            DEL (v106,v131) /\ NOT (v131,v130) /\ AND (v130,v106,v129) /\
+            NOT (v129,v105) /\ BINOP (UNCURRY $-) (v110,v109,v128) /\
+            DEL (v128,v97) /\ AND (v106,v105,v99) /\ NOT (v132,v135) /\
+            OR (v135,v100,v134) /\ DEL (v134,v146) /\ NOT (v146,v145) /\
+            AND (v145,v134,v144) /\ DEL (v133,v143) /\
+            AND (v144,v143,v142) /\ DEL (v142,v150) /\ NOT (v150,v149) /\
+            AND (v149,v142,v148) /\ NOT (v148,v141) /\ SEL_2_1 (v33,v147) /\
+            DEL (v147,v139) /\ DEL (v142,v154) /\ NOT (v154,v153) /\
+            AND (v153,v142,v152) /\ NOT (v152,v140) /\ SEL_2_2 (v33,v151) /\
+            DEL (v151,v138) /\ DFF (v139,v141,v137) /\
             DFF (v138,v140,v136) /\ AND (v141,v140,v133) /\
             NOT (v156,v159) /\ OR (v159,v133,v158) /\ NOT (v160,v163) /\
             OR (v163,v158,v162) /\ NOT (v164,v167) /\ OR (v167,v162,v166) /\
@@ -293,14 +298,14 @@ The following example is from FactScript.sml
             NOT (v196,v195) /\ AND (v195,v188,v194) /\ NOT (v194,v187) /\
             SEL_2_2 (v137 <> v136,v193) /\ DEL (v193,v185) /\
             DEL (v188,v200) /\ NOT (v200,v199) /\ AND (v199,v188,v198) /\
-            NOT (v198,v186) /\ COMB (\(m,n). 0) (v137 <> v136,v197) /\
-            DEL (v197,v184) /\ DFF (v185,v187,v183) /\
-            DFF (v184,v186,v182) /\ AND (v187,v186,v171) /\
-            DFF (v170,v172,v169) /\ DFF (v183 <> v182,v171,v168) /\
-            AND (v172,v171,v165) /\ DEL (v165,v215) /\ NOT (v215,v214) /\
-            AND (v214,v165,v213) /\ DEL (v164,v212) /\
-            AND (v213,v212,v211) /\ OR (v211,v210,v208) /\
-            DEL (v209,v217) /\ NOT (v217,v216) /\ AND (v216,v209,v210) /\
+            NOT (v198,v186) /\ CONSTANT 0 v197 /\ DEL (v197,v184) /\
+            DFF (v185,v187,v183) /\ DFF (v184,v186,v182) /\
+            AND (v187,v186,v171) /\ DFF (v170,v172,v169) /\
+            DFF (v183 <> v182,v171,v168) /\ AND (v172,v171,v165) /\
+            DEL (v165,v215) /\ NOT (v215,v214) /\ AND (v214,v165,v213) /\
+            DEL (v164,v212) /\ AND (v213,v212,v211) /\
+            OR (v211,v210,v208) /\ DEL (v209,v217) /\ NOT (v217,v216) /\
+            AND (v216,v209,v210) /\
             MUX (v210,v283 <> v282,v169 <> v168,v202) /\
             DFF (v202,v208,v207) /\ NOT (v218,v221) /\
             OR (v221,v208,v220) /\ DEL (v220,v232) /\ NOT (v232,v231) /\
@@ -309,21 +314,21 @@ The following example is from FactScript.sml
             AND (v235,v228,v234) /\ NOT (v234,v227) /\
             SEL_3_1 (v202,v233) /\ DEL (v233,v225) /\ DEL (v228,v240) /\
             NOT (v240,v239) /\ AND (v239,v228,v238) /\ NOT (v238,v226) /\
-            COMB (\(m,n,acc). 0) (v202,v237) /\ DEL (v237,v224) /\
-            DFF (v225,v227,v223) /\ DFF (v224,v226,v222) /\
-            AND (v227,v226,v219) /\ DEL (v219,v244) /\ NOT (v244,v243) /\
-            AND (v243,v219,v242) /\ NOT (v242,v218) /\
-            COMB (UNCURRY $=) (v223 <> v222,v241) /\ DEL (v241,v205) /\
-            AND (v219,v218,v206) /\ DEL (v206,v248) /\ NOT (v248,v247) /\
-            AND (v247,v206,v246) /\ AND (v246,v205,v204) /\
-            NOT (v205,v245) /\ AND (v245,v246,v203) /\ DEL (v204,v258) /\
-            NOT (v258,v257) /\ AND (v257,v204,v256) /\ DEL (v201,v255) /\
+            CONSTANT 0 v237 /\ DEL (v237,v224) /\ DFF (v225,v227,v223) /\
+            DFF (v224,v226,v222) /\ AND (v227,v226,v219) /\
+            DEL (v219,v244) /\ NOT (v244,v243) /\ AND (v243,v219,v242) /\
+            NOT (v242,v218) /\ BINOP (UNCURRY $=) (v223,v222,v241) /\
+            DEL (v241,v205) /\ AND (v219,v218,v206) /\ DEL (v206,v248) /\
+            NOT (v248,v247) /\ AND (v247,v206,v246) /\
+            AND (v246,v205,v204) /\ NOT (v205,v245) /\
+            AND (v245,v246,v203) /\ DEL (v204,v258) /\ NOT (v258,v257) /\
+            AND (v257,v204,v256) /\ DEL (v201,v255) /\
             AND (v256,v255,v254) /\ DEL (v254,v262) /\ NOT (v262,v261) /\
-            AND (v261,v254,v260) /\ NOT (v260,v253) /\
-            COMB (\(m,n,acc). 0) (v207,v259) /\ DEL (v259,v251) /\
-            DEL (v254,v273) /\ NOT (v273,v272) /\ AND (v272,v254,v271) /\
-            DEL (v252,v270) /\ AND (v271,v270,v269) /\ DEL (v269,v277) /\
-            NOT (v277,v276) /\ AND (v276,v269,v275) /\ NOT (v275,v268) /\
+            AND (v261,v254,v260) /\ NOT (v260,v253) /\ CONSTANT 0 v259 /\
+            DEL (v259,v251) /\ DEL (v254,v273) /\ NOT (v273,v272) /\
+            AND (v272,v254,v271) /\ DEL (v252,v270) /\
+            AND (v271,v270,v269) /\ DEL (v269,v277) /\ NOT (v277,v276) /\
+            AND (v276,v269,v275) /\ NOT (v275,v268) /\
             SEL_3_2 (v207,v274) /\ DEL (v274,v266) /\ DEL (v269,v281) /\
             NOT (v281,v280) /\ AND (v280,v269,v279) /\ NOT (v279,v267) /\
             SEL_3_3 (v207,v278) /\ DEL (v278,v265) /\
@@ -338,13 +343,12 @@ The following example is from FactScript.sml
             AND (v309,v302,v308) /\ NOT (v308,v301) /\
             SEL_3_1 (v207,v307) /\ DEL (v307,v299) /\ DEL (v302,v314) /\
             NOT (v314,v313) /\ AND (v313,v302,v312) /\ NOT (v312,v300) /\
-            COMB (\(m,n,acc). 1) (v207,v311) /\ DEL (v311,v298) /\
-            DFF (v299,v301,v297) /\ DFF (v298,v300,v296) /\
-            AND (v301,v300,v293) /\ DEL (v293,v318) /\ NOT (v318,v317) /\
-            AND (v317,v293,v316) /\ NOT (v316,v292) /\
-            COMB (UNCURRY $-) (v297 <> v296,v315) /\ DEL (v315,v284) /\
-            AND (v293,v292,v286) /\ DEL (v287,v329) /\ NOT (v329,v328) /\
-            AND (v328,v287,v327) /\ DEL (v285,v326) /\
+            CONSTANT 1 v311 /\ DEL (v311,v298) /\ DFF (v299,v301,v297) /\
+            DFF (v298,v300,v296) /\ AND (v301,v300,v293) /\
+            DEL (v293,v318) /\ NOT (v318,v317) /\ AND (v317,v293,v316) /\
+            NOT (v316,v292) /\ BINOP (UNCURRY $-) (v297,v296,v315) /\
+            DEL (v315,v284) /\ AND (v293,v292,v286) /\ DEL (v287,v329) /\
+            NOT (v329,v328) /\ AND (v328,v287,v327) /\ DEL (v285,v326) /\
             AND (v327,v326,v325) /\ DEL (v325,v333) /\ NOT (v333,v332) /\
             AND (v332,v325,v331) /\ NOT (v331,v324) /\
             SEL_3_2 (v207,v330) /\ DEL (v330,v322) /\ NOT (v334,v337) /\
@@ -358,7 +362,7 @@ The following example is from FactScript.sml
             DFF (v341,v343,v339) /\ DFF (v340,v342,v338) /\
             AND (v343,v342,v335) /\ DEL (v335,v360) /\ NOT (v360,v359) /\
             AND (v359,v335,v358) /\ NOT (v358,v334) /\
-            COMB (UNCURRY $+) (v339 <> v338,v357) /\ DEL (v357,v321) /\
+            BINOP (UNCURRY $+) (v339,v338,v357) /\ DEL (v357,v321) /\
             AND (v335,v334,v323) /\ DFF (v322,v324,v320) /\
             DFF (v321,v323,v319) /\ AND (v324,v323,v285) /\
             DFF (v284,v286,v283) /\ DFF (v320 <> v319,v285,v282) /\
@@ -374,8 +378,7 @@ The following example is from FactScript.sml
             DEL (v35,v373) /\ AND (v35,v373,v372) /\ AND (v27,v32,v374) /\
             AND (v374,v372,v4) /\ AND (v5,v4,v1) /\ DEL (v1,v378) /\
             NOT (v378,v377) /\ AND (v377,v1,v376) /\ NOT (v376,v0) /\
-            DEL (v75,out) /\ AND (v1,v0,done)) ===> DEV FACT : thm
-
+            DEL (v75,out) /\ AND (v1,v0,done)) ===> DEV FACT
 
 *******************************************************************************
 
