@@ -72,6 +72,6 @@ end handle e => raise (wrap_exn "IndDefLib" "prim_Hol_reln" e);
 
 fun Hol_reln q =
     prim_Hol_reln InductiveDefinition.bool_monoset (term_of q)
-    handle e => raise (wrap_exn "IndDefLib" "Hol_reln" e);
+    handle e => Raise (wrap_exn "IndDefLib" "Hol_reln" e);
 
 end

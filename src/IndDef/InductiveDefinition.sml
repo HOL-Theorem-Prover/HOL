@@ -7,21 +7,21 @@
 structure InductiveDefinition :> InductiveDefinition =
 struct
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib
      liteLib refuteLib AC Ho_Rewrite;
 
 infix ## |-> THEN THENC; infixr -->;
 
 (*---------------------------------------------------------------------------
     Variants. We re-define the kernel "variant" function here because
-    of a subtle difference between Hol98 variant and Hol88/light 
-    variant functions: the former only looks at strings, while the 
+    of a subtle difference between Hol98 variant and Hol88/light
+    variant functions: the former only looks at strings, while the
     latter look at variables. For example
 
        variant [`x:bool`] `x:'a`
 
-    yields x' in Hol98, but `x` in the latter (I think). The following 
-    version of variant also does not vary away from constants with the 
+    yields x' in Hol98, but `x` in the latter (I think). The following
+    version of variant also does not vary away from constants with the
     same name, maybe it should.
  ---------------------------------------------------------------------------*)
 
@@ -36,7 +36,7 @@ end
 
 fun variants av [] = []
   | variants av (h::t) =
-      let val vh = vary av h 
+      let val vh = vary av h
       in vh::variants (vh::av) t
       end;
 
@@ -48,7 +48,7 @@ fun nsplit dest clist x =
   if null clist then ([],x) else
       let val (l,r) = dest x
           val (ll,y) = nsplit dest (tl clist) r
-      in (l::ll,y) 
+      in (l::ll,y)
       end;;
 
 (* ------------------------------------------------------------------------- *)
@@ -92,7 +92,7 @@ val make_args =
 
 fun getconcl tm =
     let val bod = repeat (snd o dest_forall) tm
-    in snd(dest_imp bod) handle HOL_ERR _ => bod 
+    in snd(dest_imp bod) handle HOL_ERR _ => bod
     end;;
 
 (* ------------------------------------------------------------------------- *)
@@ -185,8 +185,8 @@ val EXISTS_EQUATION =
 (* ------------------------------------------------------------------------- *)
 
 local fun getequs(avs,[]) = []
-        | getequs(avs,(h as {redex=r,residue})::t) = 
-            if mem r avs 
+        | getequs(avs,(h as {redex=r,residue})::t) =
+            if mem r avs
             then h::getequs(avs,filter (fn{redex,...} => not(r=redex)) t)
             else getequs(avs,t)
       fun calculate_simp_sequence avs plis =
@@ -202,7 +202,7 @@ fun canonicalize_clause clause carg =
      val plis        = map2 (curry op |->) xargs carg
      val (yes,no)    = calculate_simp_sequence avs plis
      val nvs         = filter (not o C mem (map #redex yes)) avs
-     val eth = 
+     val eth =
         if is_imp bimp then
           let val atm = itlist (curry mk_conj o mk_eq_of_bind) (yes@no) ant
               val (ths,tth) = nsplit CONJ_PAIR plis (ASSUME atm)
@@ -349,7 +349,7 @@ fun derive_canon_inductive_relations pclauses =
                (map2 mk_case (CONJUNCTS fthm) (CONJUNCTS ruvalhm))
     in CONJ ruvalhm (CONJ indthm casethm)
     end
-    handle e => raise (wrap_exn "InductiveDefinition" 
+    handle e => raise (wrap_exn "InductiveDefinition"
                          "derive_canon_inductive_relations"e);
 
 (* ------------------------------------------------------------------------- *)
@@ -464,8 +464,8 @@ val APPLY_MONOTAC =
  let val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
  in fn monoset => fn (asl,w) =>
     let val (a,c) = dest_imp w
-    in if aconv a c 
-       then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w) 
+    in if aconv a c
+       then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w)
        else let val cn = fst(dest_const(repeat rator c)) handle HOL_ERR _ => ""
             in tryfind (fn (k,t) => if k = cn then t (asl,w) else fail())
                        monoset
@@ -511,7 +511,7 @@ fun prove_monotonicity_hyps monoset =
       in itlist PROVE_HYP mths th
       end
   end
-  handle e => raise (wrap_exn "InductiveDefinition" 
+  handle e => raise (wrap_exn "InductiveDefinition"
                         "prove_monotonicity_hyps" e);
 
 (* ------------------------------------------------------------------------- *)
@@ -563,29 +563,102 @@ fun make_definitions th =
 (* "Unschematize" a set of clauses.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-local fun pare_comb qvs tm =
-        if null (intersect (free_vars tm) qvs)
-           andalso all is_var (snd(strip_comb tm))
-        then tm
-        else pare_comb qvs (rator tm)
-      fun schem_head cls = 
-        let val (avs,bod) = strip_forall cls
-        in pare_comb avs (snd(dest_imp bod) handle HOL_ERR _ => bod)
+val inddef_strict = ref false;
+val _ = Feedback.register_btrace ("inddef strict", inddef_strict);
+
+fun indented_term_to_string n tm = let
+  val nspaces = String.implode (List.tabulate(n, K #" "))
+  fun pper pps tm = let
+  in
+    PP.add_string pps nspaces;
+    Parse.pp_term pps tm
+  end
+in
+  PP.pp_to_string (!Globals.linewidth) pper tm
+end
+
+
+local
+  fun pare_comb qvs tm =
+      if null (intersect (free_vars tm) qvs)
+         andalso all is_var (snd(strip_comb tm))
+      then tm
+      else pare_comb qvs (rator tm)
+  fun schem_head cls =
+      let val (avs,bod) = strip_forall cls
+      in pare_comb avs (snd(dest_imp bod) handle HOL_ERR _ => bod)
+      end
+  fun common_prefix0 acc l1 l2 =
+      case (l1, l2) of
+        ([], _) => acc
+      | (_, []) => acc
+      | (h1::t1, h2::t2) => if h1 = h2 then common_prefix0 (h1::acc) t1 t2
+                            else acc
+  fun common_prefix l1 l2 = List.rev (common_prefix0 [] l1 l2)
+  fun lcommon_prefix0 acc l =
+      case l of
+        [] => acc
+      | (h::t) => let
+          val newprefix = common_prefix acc h
+        in
+          if null newprefix then []
+          else lcommon_prefix0 newprefix t
         end
-in 
-fun unschematize_clauses clauses =
- let val schem = map schem_head clauses
-     val schems = mk_set schem
- in if is_var(hd schem) then (clauses,[]) else
-    if not (length(mk_set (map (snd o strip_comb) schems)) = 1)
-       then failwith "Schematic variables not used consistently" 
+  fun lcommon_prefix [] = []
+    | lcommon_prefix (h::t) = lcommon_prefix0 h t
+
+in
+fun unschematize_clauses clauses = let
+  val schem = map schem_head clauses
+  val schems = mk_set schem
+  fun insert_list l s = foldl (fn (t,s) => HOLset.add(s,t)) s l
+  val hdops = mk_set (map (#1 o strip_comb) schems)
+  val schemv_extent = length (#2 (strip_comb (hd schems)))
+  fun is_hdop_instance t = let
+    val (f,args) = strip_comb t
+  in
+    mem f hdops andalso length args = schemv_extent
+  end
+  val all_instances =
+      foldl (fn (t, s) => insert_list (find_terms is_hdop_instance t) s)
+            empty_tmset clauses
+  fun do_substitution schems = let
+    val avoids = all_vars (list_mk_conj clauses)
+    fun hack_fn tm = mk_var(fst(dest_var(repeat rator tm)),type_of tm)
+    val grels = variants avoids (map hack_fn schems)
+    val crels = map2 (curry op |->) schems grels
+    val clauses' = map (subst crels) clauses
+  in
+    (clauses',snd(strip_comb(hd schems)))
+  end
+in
+  if is_var(hd schem) then (clauses,[])
+  else if !inddef_strict then
+    if not (HOLset.numItems all_instances = 1) then let
+        val instlist = HOLset.listItems all_instances
+        val t1_s = trace("types", 1) (indented_term_to_string 2) (hd instlist)
+        val t2_s =
+            trace("types", 1) (indented_term_to_string 2) (hd (tl instlist))
+      in
+        failwith ("Schematic variable(s) not used consistently - witness\n"^
+                  t1_s^"\nand\n"^t2_s)
+      end
     else
-    let val avoids = all_vars (list_mk_conj clauses)
-        fun hack_fn tm = mk_var(fst(dest_var(repeat rator tm)),type_of tm)
-        val grels = variants avoids (map hack_fn schems)
-        val crels = map2 (curry op |->) schems grels
-        val clauses' = map (subst crels) clauses
-    in (clauses',snd(strip_comb(hd schems)))
+      do_substitution schems
+  else (* liberal definitions *) let
+      val prefix_vars = HOLset.foldr (fn (t,l) => #2 (strip_comb t)::l)
+                                     [] all_instances
+      val prefix = lcommon_prefix prefix_vars
+    in
+      if null prefix then (clauses, [])
+      else let
+          val plist = String.concat (Lib.commafy
+                                     (map (quote o #1 o dest_var) prefix))
+          val _ = HOL_MESG ("Treating "^plist^" as schematic variable"^
+                            (if length prefix > 1 then "s" else ""))
+        in
+          do_substitution (map (fn t => list_mk_comb(t, prefix)) hdops)
+        end
     end
  end
 end;
@@ -594,13 +667,94 @@ end;
 (* Part 4: The final user wrapper.                                           *)
 (* ========================================================================= *)
 
-fun prove_nonschematic_inductive_relations_exist monoset tm =
- let val th0 = derive_nonschematic_inductive_relations tm
-     val th1 = prove_monotonicity_hyps monoset th0
- in derive_existence th1
- end
- handle e => raise (wrap_exn "InductiveDefinition" 
-                      "prove_nonschematic_inductive_relations_exist" e);
+
+fun check_definition schemevars tm = let
+  (* check that tm has no extra type variables or free variables other than *)
+  (* the heads of clauses *)
+  val nclauses = Lib.enumerate 1 (strip_conj tm)
+  fun ind_concl tm = #2 (dest_imp tm) handle HOL_ERR _ => tm
+  val relvars =
+      HOLset.addList(empty_tmset,
+                     map (#1 o strip_comb o ind_concl o #2 o strip_forall o #2)
+                         nclauses)
+  val okvars = foldl (fn (v,s) => HOLset.add(s,v)) relvars schemevars
+  val empty_tyset = HOLset.empty Type.compare
+  val reltyvars = HOLset.foldl (fn (tm,tyvset) =>
+                                   HOLset.addList(tyvset,
+                                                  type_vars_in_term tm))
+                               empty_tyset relvars
+  fun check_tyvars (n, c) = let
+    val tyvs = HOLset.addList(empty_tyset, type_vars_in_term c)
+  in
+    if not (HOLset.isSubset(tyvs, reltyvars)) then let
+        val really_free = HOLset.difference(tyvs, reltyvars)
+        val free_list0 = HOLset.foldr (fn (v,sl) => dest_vartype v :: sl)
+                                      [] really_free
+        val free_list = Lib.commafy free_list0
+        val tmstring = trace ("types", 1) (indented_term_to_string 2) c
+      in
+        raise HOL_ERR {origin_function = "check_clause",
+                       origin_structure = "InductiveDefinition",
+                       message =
+                       String.concat ("Clause #" :: Int.toString n ::
+                                      ":\n" :: tmstring ::
+                                      "\ncontains free type variable"^
+                                      (if length free_list > 1 then "s"
+                                       else "")^": " ::
+                                      free_list)}
+      end
+    else
+      ()
+  end
+  val _ = app check_tyvars nclauses
+
+  (* here, generalise on the extra free variables if we're not being strict *)
+  fun check_clause (n, c) = let
+    val fvs = FVL [c]
+  in
+    if not (HOLset.isSubset(fvs, okvars)) then let
+        val really_free = HOLset.difference(fvs, okvars)
+        val free_list0 =
+            HOLset.foldr (fn (v,sl) => Lib.quote (#1 (dest_var v)) :: sl)
+                         [] really_free
+        val free_list = Lib.commafy free_list0
+      in
+        if !inddef_strict then let
+            val tmstring = trace ("types", 1) (indented_term_to_string 2) c
+          in
+            raise HOL_ERR {origin_function = "check_clause",
+                           origin_structure = "InductiveDefinition",
+                           message =
+                           String.concat ("Clause #" :: Int.toString n ::
+                                          ",\n" :: tmstring ::
+                                          "\ncontains free variables: " ::
+                                          free_list)}
+          end
+        else
+          (HOL_MESG ("Generalising variable" ^
+                     (if length free_list > 1 then "s " else " ")^
+                     String.concat free_list ^
+                     " in clause #"^Int.toString n);
+           list_mk_forall (HOLset.listItems really_free, c))
+      end
+    else c
+  end
+in
+  list_mk_conj (map check_clause nclauses)
+end
+
+
+
+fun prove_nonschematic_inductive_relations_exist monoset tm0 = let
+  val tm = check_definition [] tm0
+  val th0 = derive_nonschematic_inductive_relations tm
+  val th1 = prove_monotonicity_hyps monoset th0
+in
+  derive_existence th1
+end
+  handle e =>
+         raise (wrap_exn "InductiveDefinition"
+                         "prove_nonschematic_inductive_relations_exist" e);
 
 (* ------------------------------------------------------------------------- *)
 (* The schematic case.                                                       *)
@@ -613,19 +767,21 @@ fun prove_nonschematic_inductive_relations_exist monoset tm =
 fun prove_inductive_relations_exist monoset tm =
  let val clauses = strip_conj tm
      val (clauses',fvs) = unschematize_clauses clauses
-     val th0 = derive_nonschematic_inductive_relations (list_mk_conj clauses')
+     val th0 = derive_nonschematic_inductive_relations
+                 (check_definition fvs (list_mk_conj clauses'))
      val th1 = prove_monotonicity_hyps monoset th0
      val th2 = generalize_schematic_variables fvs th1
  in derive_existence th2
  end
- handle e => raise (wrap_exn "InductiveDefinition" 
+ handle e => raise (wrap_exn "InductiveDefinition"
                              "prove_inductive_relations_exist" e);
 
 
 fun new_inductive_definition monoset tm =
  let val clauses = strip_conj tm
      val (clauses',fvs) = unschematize_clauses clauses
-     val th0 = derive_nonschematic_inductive_relations (list_mk_conj clauses')
+     val th0 = derive_nonschematic_inductive_relations
+                 (check_definition fvs (list_mk_conj clauses'))
      val th1 = prove_monotonicity_hyps monoset th0
      val th2 = generalize_schematic_variables fvs th1
      val th3 = make_definitions th2
