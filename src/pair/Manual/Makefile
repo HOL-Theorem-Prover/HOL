@@ -48,9 +48,15 @@ index:
 pair:
 	latex pair.tex
 
+ps:
+	dvips pair.dvi
+
+pdf:
+	pdflatex pair.tex
+
 all:
 	make clean;	\
 	make tex;	\
 	make pair;	\
 	make index;	\
-	make pair
+	make pair ps pdf
