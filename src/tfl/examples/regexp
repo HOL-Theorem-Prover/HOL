@@ -73,11 +73,11 @@ val MEM_EXISTS_LEM = Q.prove
 (*--------------------------------------------------------------------------*)
 
 Hol_datatype `regexp =
-   Epsilon                         (* Empty string *)
- | Atom of ('a -> bool)            (* Character set *)
+   Epsilon                   (* Empty string *)
+ | Atom of ('a -> bool)      (* Character set *)
  | Or of regexp => regexp    (* Union *)
  | Then of regexp => regexp  (* Concatenation *)
- | Repeat of regexp`;             (* Iterated concat, >= 0 *)
+ | Repeat of regexp`;        (* Iterated concat, >= 0 *)
 
 (*---------------------------------------------------------------------------*)
 (* Parser fiddling to get | and # as infixes - we have to first get rid      *)
