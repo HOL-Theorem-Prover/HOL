@@ -826,10 +826,52 @@ fun prettyprint_grammar pstrm (G :grammar) = let
     pprint_grule rule;
     end_block()
   end
-
+  fun print_overloading oinfo0 =
+    if null oinfo0 then ()
+    else let
+      open Lib infix ##
+      fun nblanks n = String.implode (List.tabulate(n, (fn _ => #" ")))
+      val oinfo = Listsort.sort (String.compare o (#overloaded_op ##
+                                                   #overloaded_op))
+                  oinfo0
+      val max =
+        List.foldl (fn (oi,n) => Int.max(String.size (#overloaded_op oi),
+                                         n))
+        0
+        oinfo
+      fun pr_ov {overloaded_op,actual_ops,...} =
+        (begin_block INCONSISTENT 0;
+         add_string (overloaded_op^
+                     nblanks (max - String.size overloaded_op)^
+                     " -> ");
+         add_break(1,2);
+         begin_block INCONSISTENT 0;
+         pr_list (add_string o #2) (fn () => ()) (fn () => add_break (1,0))
+                 actual_ops;
+         end_block();
+         end_block())
+    in
+      add_newline pstrm;
+      add_string "Overloading:";
+      add_break(1,2);
+      begin_block CONSISTENT 0;
+      pr_list pr_ov (fn () => ()) (fn () => add_break(1,0)) oinfo;
+      end_block ()
+    end
 in
   begin_block CONSISTENT 0;
+  (* rules *)
   pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) (rules G);
+  add_newline pstrm;
+  (* known constants *)
+  add_string "Known constants:";
+  add_break(1,2);
+  begin_block INCONSISTENT 0;
+  pr_list add_string (fn () => ()) (fn () => add_break(1,0))
+                     (Listsort.sort String.compare (known_constants G));
+  end_block ();
+  (* overloading *)
+  print_overloading (overload_info G);
   end_block ()
 end
 
