@@ -489,6 +489,7 @@ fun null_rule r =
   | PREFIX (BINDER slist) => null slist
   | INFIX (STD_infix(slist, _)) => null slist
   | CLOSEFIX slist => null slist
+  | LISTRULE rlist => null rlist
   | _ => false
 
 fun map_rules f G = let
@@ -506,9 +507,9 @@ in
 end
 
 
-
 fun remove_form s rule = let
   fun rr_ok (r:rule_record) = #term_name r <> s
+  fun lr_ok (ls:listspec) = #cons ls <> s andalso #nilstr ls <> s
   fun stringbinder LAMBDA = false | stringbinder (BinderString s0) = s0 = s
 in
   case rule of
@@ -519,6 +520,7 @@ in
   | PREFIX (BINDER slist) =>
       PREFIX (BINDER (List.filter (not o stringbinder) slist))
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_ok slist)
+  | LISTRULE rlist => LISTRULE (List.filter lr_ok rlist)
   | _ => rule
 end
 
