@@ -74,7 +74,7 @@ val INFINITE_UNIV_string = Q.prove(
  `INFINITE (UNIV:^stringset)`,
 RW_TAC std_ss [INFINITE_UNIV]
   THEN EXISTS_TAC (Term`STRING (ASCII F F F F F F F F)`)
-  THEN ZAP_TAC std_ss [stringTheory.string_distinct]);
+  THEN ZAP_TAC std_ss [stringTheory.STRING_DISTINCT]);
 
 val FRESH_string = Q.store_thm("FRESH_string",
  `!X. FINITE X ==> ?x:string. ~(x IN X)`,
@@ -307,7 +307,7 @@ Induct
 val dOK_dSUB = Q.store_thm("dOK_dSUB",
  `!t u x. dOK t /\ dOK u ==> dOK ([x |-> u] t)`,
 ZAP_TAC (arith_ss && [dDEG_dOK, dSUB])
-     [DECIDE`(x=0) = x <= 0`, dOK_dSUB_lemma, ADD_CLAUSES]);
+     [DECIDE (Term `(x=0) = x <= 0`), dOK_dSUB_lemma, ADD_CLAUSES]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -501,7 +501,7 @@ Induct
  [`d < n` by DECIDE_TAC THEN
   `?m. n-d = SUC m` by PROVE_TAC [SUB_ELIM_LEM]
     THEN ZAP_TAC (list_ss && [NTH])
-          [DECIDE `(n-d = SUC m) ==> (n-SUC d = m)`,NTH],
+          [DECIDE (Term `(n-d = SUC m) ==> (n-SUC d = m)`),NTH],
   `n - d = 0` by (REPEAT (POP_ASSUM MP_TAC) THEN CONV_TAC arithLib.ARITH_CONV)
     THEN RW_TAC list_ss [NTH]]);
 

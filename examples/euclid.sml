@@ -97,7 +97,7 @@ ARW_TAC [LESS_EQ_EXISTS]
  THEN Induct_on `p`
  THEN ARW_TAC [FACT,ADD_CLAUSES]
  THENL [Cases_on `m`, ALL_TAC]
- THEN PROVE_TAC [FACT, DECIDE `!x. ~(x < x)`,
+ THEN PROVE_TAC [FACT, DECIDE ``!x. ~(x < x)``,
                  DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]);
 
 (* Alternative proof *)
@@ -119,20 +119,16 @@ Induct_on `n - m`
 (* Zero and one are not prime, but two is.  All primes are positive.         *)
 (*---------------------------------------------------------------------------*)
 
-val NOT_PRIME_0 = store_thm("NOT_PRIME_0",
-``~prime 0``, 
-ARW_TAC [prime,DIVIDES_0]);
+val NOT_PRIME_0 = store_thm("NOT_PRIME_0", ``~prime 0``, 
+                            ARW_TAC [prime,DIVIDES_0]);
 
-val NOT_PRIME_1 = store_thm("NOT_PRIME_1",
-``~prime 1``, 
-ARW_TAC [prime]);
+val NOT_PRIME_1 = store_thm("NOT_PRIME_1", ``~prime 1``, ARW_TAC [prime]);
 
-val PRIME_2 = store_thm("PRIME_2",
-``prime 2``,
+val PRIME_2 = store_thm("PRIME_2", ``prime 2``,
 ARW_TAC [prime]
   THEN PROVE_TAC [DIVIDES_LE, DIVIDES_ZERO,
-                  DECIDE`~(2=1) /\ ~(2=0) /\
-                         (x <= 2 = (x=0) \/ (x=1) \/ (x=2))`]);
+                  DECIDE``~(2=1) /\ ~(2=0) /\
+                         (x <= 2 = (x=0) \/ (x=1) \/ (x=2))``]);
 
 val PRIME_POS = store_thm("PRIME_POS", 
 ``!p. prime p ==> 0<p``,
@@ -174,7 +170,7 @@ val EUCLID = store_thm ("EUCLID",
 ``!n. ?p. n < p /\ prime p``,
 SPOSE_NOT_THEN STRIP_ASSUME_TAC
  THEN MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR)
- THEN ARW_TAC [FACT_LESS, DECIDE `~(x=0) = 0<x`]
+ THEN ARW_TAC [FACT_LESS, DECIDE ``~(x=0) = 0<x``]
  THEN PROVE_TAC [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
                  NOT_PRIME_1, NOT_LESS, PRIME_POS]);
 
@@ -190,7 +186,7 @@ CCONTR_TAC
 THEN
    `?n. !p. n < p ==> ~prime p`  by PROVE_TAC[]              THEN
    `~(FACT n + 1 = 1)`           by ARW_TAC [FACT_LESS,
-                                      DECIDE `~(x=0) = 0<x`] THEN
+                                     DECIDE ``~(x=0) = 0<x``] THEN
    `?p. prime p /\
         p divides (FACT n + 1)`  by PROVE_TAC [PRIME_FACTOR] THEN
    `0 < p`                       by PROVE_TAC [PRIME_POS]    THEN

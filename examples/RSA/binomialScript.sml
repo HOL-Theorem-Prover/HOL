@@ -127,7 +127,7 @@ Induct_on `n`
           THEN DISCH_TAC
           THEN `SUC n' - k = SUC (n' - k)` by ARW[]
           THEN ASM_REWRITE_TAC[power_def] 
-          THEN MATCH_MP_TAC (DECIDE `(x=q) /\ (y=p) ==> (x + y = p + q)`)
+          THEN MATCH_MP_TAC (DECIDE ``(x=q) /\ (y=p) ==> (x + y = p + q)``)
           THEN PROVE_TAC [MULT_SYM,MULT_ASSOC],
          ASM_REWRITE_TAC [GSYM ADD_ASSOC]
           THEN ARW[Q.SPEC`SUC n'` SUMMATION_1, Q.SPEC`n'` SUMMATION_2]

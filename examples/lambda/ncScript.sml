@@ -381,9 +381,10 @@ val COPY_BUILD = Q.prove(
     (!t u. SND p(t @@ u) = app(FST p t, SND p t) (FST p u, SND p u)) /\
     (!x u. SND p(LAM x u) =
               lam(\y. (FST p([VAR y/x]u),SND p([VAR y/x]u)))))`,
-RW_TAC std_ss [DECIDE `(a /\ b /\ c /\ d) /\ (e /\ f /\ g /\ h)
-                          =
-                       (a /\ e) /\ (b /\ f) /\ (c /\ g) /\ (d /\ h)`,
+RW_TAC std_ss [DECIDE (Term 
+                  `(a /\ b /\ c /\ d) /\ (e /\ f /\ g /\ h)
+                        =
+                   (a /\ e) /\ (b /\ f) /\ (c /\ g) /\ (d /\ h)`),
                REWRITE_RULE pairTheory.pair_rws COPY_BUILD_lemma]);
 
 val lemma =
@@ -596,7 +597,7 @@ val nc_INDUCTION =
      val th5 = GEN_ALL (REWRITE_RULE [] (BETA_RULE th4))
  in
     GEN_ALL
-      (REWRITE_RULE [ABS,DECIDE `(A = B \/ A) = (B ==> A)`]
+      (REWRITE_RULE [ABS,DECIDE (Term`(A = B \/ A) = (B ==> A)`)]
                     (DISCH_ALL th5))
  end;
 
