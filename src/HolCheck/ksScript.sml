@@ -2,12 +2,16 @@ open HolKernel Parse boolLib bossLib stringLib pred_setLib pred_setTheory;
 
 val _ = new_theory "ks";
 
+(* make the first argument to the KS type operator be the state one by
+   using 'State and 'prop as the type arguments: the standard ASCII ordering
+   puts uppercase letters before lowercase ones, so the 'State argument comes
+   before the 'prop one. *)
 val _ = Hol_datatype `KS = <|
-                                S : 'state -> bool;
-                                S0 : 'state -> bool;
-                                T : string -> ('state # 'state) -> bool ; (* fn from R rel on S x S to bool *)
+                                S : 'State -> bool;
+                                S0 : 'State -> bool;
+                                T : string -> ('State # 'State) -> bool ; (* fn from R rel on S x S to bool *)
                                 ap: 'prop -> bool;
-                                L : 'state -> ('prop -> bool) (* returns only the true atoms *)
+                                L : 'State -> ('prop -> bool) (* returns only the true atoms *)
                         |>`;
 
 (* environment : relvars -> 2^(ks.states) ; can be thought of as an assignment to the free vars of a formula*)

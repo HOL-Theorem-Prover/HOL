@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib
 
-val _ = new_theory "ctl"; 
+val _ = new_theory "ctl";
 
 open pairTheory;
 open pairLib;
@@ -66,12 +66,12 @@ val ctl_def =
 ******************************************************************************)
 val kripke_structure_def =
  Hol_datatype
-  `kripke_structure = 
-    <| S: 'state -> bool;
-       S0:'state -> bool;
-       R: 'state # 'state -> bool;
+  `kripke_structure =
+    <| S: 'State -> bool;
+       S0:'State -> bool;
+       R: 'State # 'State -> bool;
        P: 'prop -> bool;
-       L: 'state -> ('prop -> bool) |>`;
+       L: 'State -> ('prop -> bool) |>`;
 
 val TOTAL_def = Define `TOTAL R = !s. ?s'. R(s,s')`;
 
@@ -91,8 +91,8 @@ THEN Q.EXISTS_TAC `s` THEN REFL_TAC]))
 ******************************************************************************)
 val B_SEM_def =
  Define
-  `(B_SEM l B_TRUE = T) 
-   /\ 
+  `(B_SEM l B_TRUE = T)
+   /\
    (B_SEM l (B_PROP(p:'prop)) = p IN l)
    /\
    (B_SEM l (B_NOT b)         = ~(B_SEM l b))
@@ -110,12 +110,12 @@ val path_def =
 (******************************************************************************
 * Tests
 ******************************************************************************)
-val IS_FINITE_def = 
+val IS_FINITE_def =
  Define `(IS_FINITE(FINITE p)   = T)
          /\
          (IS_FINITE(INFINITE f) = F)`;
 
-val IS_INFINITE_def = 
+val IS_INFINITE_def =
  Define `(IS_INFINITE(FINITE p)   = F)
          /\
          (IS_INFINITE(INFINITE f) = T)`;
@@ -123,7 +123,7 @@ val IS_INFINITE_def =
 (******************************************************************************
 * HEAD (p0 p1 p2 p3 ...) = p0
 ******************************************************************************)
-val HEAD_def = 
+val HEAD_def =
  Define `(HEAD (FINITE p) = HD p)
          /\
          (HEAD (INFINITE f)  = f 0)`;
@@ -131,7 +131,7 @@ val HEAD_def =
 (******************************************************************************
 * REST (p0 p1 p2 p3 ...) = (p1 p2 p3 ...)
 ******************************************************************************)
-val REST_def = 
+val REST_def =
  Define `(REST (FINITE p) = FINITE(TL p))
          /\
          (REST (INFINITE f) = INFINITE(\n. f(n+1)))`;
@@ -139,7 +139,7 @@ val REST_def =
 (******************************************************************************
 * RESTN (p0 p1 p2 p3 ...) n = (pn p(n+1) p(n+2) ...)
 ******************************************************************************)
-val RESTN_def = 
+val RESTN_def =
  Define `(RESTN p 0 = p) /\ (RESTN p (SUC n) = RESTN (REST p) n)`;
 
 (******************************************************************************
@@ -192,7 +192,7 @@ val IS_FINITE_RESTN =
   ("RESTN_FINITE",
    ``!l n. RESTN (FINITE l) n = FINITE(RESTN l n)``,
    Induct_on `n`
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [RESTN_def,FinitePathTheory.RESTN_def,
            REST_def,FinitePathTheory.REST_def]);*)
 
@@ -207,7 +207,7 @@ val FINITE_TL =
 * LENGTH(FINITE l) = LENGTH l
 * LENGTH is not specified on infinite paths, but LEN (defined below) is.
 ******************************************************************************)
-val LENGTH_def = 
+val LENGTH_def =
  Define `LENGTH (FINITE l)   = list$LENGTH l`;
 
 (******************************************************************************
@@ -231,10 +231,10 @@ val xnum_def =
 * (m to INFINITY) i means m <= i           (xnum_to_def)
 ******************************************************************************)
 val num_to_def =
- Define `$num_to m n i = m <= i /\ i < n`; 
+ Define `$num_to m n i = m <= i /\ i < n`;
 
 val xnum_to_def =
- Define 
+ Define
   `($xnum_to m (XNUM n) i = m <= i /\ i < n)
    /\
    ($xnum_to m INFINITY i = m <= i)`;
@@ -248,19 +248,19 @@ val _ = set_fixity "to" (Infixl 500);
 * Extend subtraction (-) to extended numbers
 ******************************************************************************)
 val SUB_num_xnum_def =
- Define 
+ Define
   `$SUB_num_xnum (m:num) (XNUM (n:num)) = XNUM((m:num) - (n:num))	`;
 
 val SUB_xnum_num_def =
  Define `$SUB_xnum_num (XNUM (m:num)) (n:num) = XNUM((m:num) - (n:num))`;
 
 val SUB_xnum_xnum_def =
- Define 
+ Define
   `($SUB_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = XNUM((m:num) - (n:num)))
    /\
    ($SUB_xnum_xnum INFINITY (XNUM (n:num)) = INFINITY)`;
 
-val SUB = 
+val SUB =
  save_thm
   ("SUB",
    LIST_CONJ(type_rws "xnum"@[SUB_num_xnum_def,SUB_xnum_num_def,SUB_xnum_xnum_def]));
@@ -273,13 +273,13 @@ val _ = overload_on("-", ``SUB_xnum_xnum``);
 * Extend less-than predicate (<) to extended numbers
 ******************************************************************************)
 val LS_num_xnum_def =
- Define 
+ Define
   `($LS_num_xnum (m:num) (XNUM (n:num)) = (m:num) < (n:num))
    /\
    ($LS_num_xnum (m:num) INFINITY = T)`;
 
 val LS_xnum_num_def =
- Define 
+ Define
   `($LS_xnum_num (XNUM (m:num)) (n:num) = (m:num) < (n:num))
    /\
    ($LS_xnum_num INFINITY (n:num) = F)`;
@@ -287,7 +287,7 @@ val LS_xnum_num_def =
 val LS_xnum_xnum_def =
  Define `$LS_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) < (n:num)`;
 
-val LS = 
+val LS =
  save_thm("LS",LIST_CONJ[LS_num_xnum_def,LS_xnum_num_def,LS_xnum_xnum_def]);
 
 val _ = overload_on("<", ``LS_num_xnum``);
@@ -301,13 +301,13 @@ val GT_num_xnum_def =
  Define `$GT_num_xnum (m:num) (XNUM (n:num)) = (m:num) > (n:num)`;
 
 val GT_num_xnum_def =
- Define 
+ Define
   `($GT_num_xnum (m:num) (XNUM (n:num)) = (m:num) > (n:num))
    /\
    ($GT_num_xnum (m:num) INFINITY = F)`;
 
 val GT_xnum_num_def =
- Define 
+ Define
   `($GT_xnum_num (XNUM (m:num)) (n:num) = (m:num) > (n:num))
    /\
    ($GT_xnum_num INFINITY (n:num) = T)`;
@@ -315,7 +315,7 @@ val GT_xnum_num_def =
 val GT_xnum_xnum_def =
  Define `$GT_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) > (n:num)`;
 
-val GT = 
+val GT =
  save_thm("GT",LIST_CONJ[GT_num_xnum_def,GT_xnum_num_def,GT_xnum_xnum_def]);
 
 val _ = overload_on(">", ``GT_num_xnum``);
@@ -326,7 +326,7 @@ val _ = overload_on(">", ``GT_xnum_xnum``);
 * LENGTH(FINITE l)   = XNUM(LENGTH l)
 * LENGTH(INFINITE l) = INFINITY
 ******************************************************************************)
-val LENGTH_def = 
+val LENGTH_def =
  Define `(LENGTH(FINITE l)   = XNUM(list$LENGTH l))
          /\
          (LENGTH(INFINITE p) = INFINITY)`;
@@ -337,24 +337,24 @@ val LENGTH_def =
 val PATH_def = Define `PATH M p s = IS_INFINITE p /\ (ELEM p 0 = s) /\ (!n. M.R(ELEM p n, ELEM p (n+1)))`;
 
 (******************************************************************************
-* C_SEM M s f means "M, s |= f" 
+* C_SEM M s f means "M, s |= f"
 ******************************************************************************)
 val C_SEM_def =
  Define
   `(C_SEM M (C_BOOL b) s = B_SEM (M.L s) b)
    /\
-   (C_SEM M (C_NOT f) s = ~(C_SEM M f s)) 
+   (C_SEM M (C_NOT f) s = ~(C_SEM M f s))
    /\
    (C_SEM M (C_AND(f1,f2)) s = C_SEM M f1 s /\ C_SEM M f2 s)
    /\
-   (C_SEM M (C_EX f) s = 
+   (C_SEM M (C_EX f) s =
      ?p. PATH M p s /\ C_SEM M f (ELEM p 1))
    /\
-   (C_SEM M (C_EU(f1,f2)) s = 
-     ?p. PATH M p s /\ 
+   (C_SEM M (C_EU(f1,f2)) s =
+     ?p. PATH M p s /\
          ?k :: (0 to LENGTH p). C_SEM M f2 (ELEM p k) /\ !j. j < k ==> C_SEM M f1 (ELEM p j))
    /\
-   (C_SEM M (C_EG f) s = 
+   (C_SEM M (C_EG f) s =
      ?p. PATH M p s /\ !j :: (0 to LENGTH p). C_SEM M f (ELEM p j))`;
 
 val CTL_MODEL_SAT_def = Define `CTL_MODEL_SAT M f = (!s. s IN M.S0 ==> C_SEM M f s)`
@@ -363,7 +363,7 @@ val C_AX_def = Define `C_AX (f: 'prop ctl) = C_NOT (C_EX (C_NOT f))`;
 val C_EF_def = Define `C_EF (f: 'prop ctl) = C_EU(C_BOOL B_TRUE,f)`;
 val C_AF_def = Define `C_AF (f: 'prop ctl) = C_NOT(C_EG (C_NOT f))`;
 val C_AG_def = Define `C_AG (f: 'prop ctl) = C_NOT (C_EF (C_NOT f))`;
-val C_AU_def = Define `C_AU ((f1: 'prop ctl),(f2: 'prop ctl)) = C_AND(C_NOT(C_EU(C_NOT f2,C_AND(C_NOT f1,C_NOT f2))),C_NOT(C_EG(C_NOT f2)))`; 
+val C_AU_def = Define `C_AU ((f1: 'prop ctl),(f2: 'prop ctl)) = C_AND(C_NOT(C_EU(C_NOT f2,C_AND(C_NOT f1,C_NOT f2))),C_NOT(C_EG(C_NOT f2)))`;
 val C_AR_def = Define `C_AR(f,g) = C_NOT (C_EU (C_NOT f,C_NOT g))`;
 val C_OR_def = Define `C_OR((f1: 'prop ctl),(f2: 'prop ctl)) = C_NOT(C_AND(C_NOT f1, C_NOT f2))`;
 val C_IMP_def = Define `C_IMP((f: 'prop ctl),(g: 'prop ctl)) = C_OR(C_NOT f,g)`;
@@ -420,7 +420,7 @@ val CTL_SUB = Define `
 (CTL_SUB g (C_EG f) = (CTL_SUB g f) \/ (g=C_EG f)) /\
 (CTL_SUB g (C_EU(f1,f2)) = (CTL_SUB g f1) \/ (CTL_SUB g f2) \/ (g=C_EU(f1,f2)))`;
 
-val IS_ACTL = Define `IS_ACTL f = (!g. ~CTL_SUB (C_EX g) (CTL_NNF f)) /\ (!g. ~CTL_SUB (C_EG g) (CTL_NNF f)) /\ (!g1 g2. ~CTL_SUB (C_EU(g1,g2)) (CTL_NNF f))`;   
+val IS_ACTL = Define `IS_ACTL f = (!g. ~CTL_SUB (C_EX g) (CTL_NNF f)) /\ (!g. ~CTL_SUB (C_EG g) (CTL_NNF f)) /\ (!g1 g2. ~CTL_SUB (C_EU(g1,g2)) (CTL_NNF f))`;
 
 val SAT_NNF_ID = save_thm("SAT_NNF_ID",prove(``!f M. C_SEM M (CTL_NNF f) = C_SEM M f``,
 REWRITE_TAC [FUN_EQ_THM]
@@ -444,7 +444,7 @@ val RESTN_INFINITE =
   ("RESTN_INFINITE",
    ``!f i. RESTN (INFINITE f) i = INFINITE(\n. f(n+i))``,
    Induct_on `i`
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [REST_INFINITE,ETA_AX,RESTN_def,
            DECIDE``i + (n + 1) = n + SUC i``]);
 
