@@ -202,6 +202,8 @@ val _ =
     systeml [compiler, "-c", "Lexer.sml" ];
     systeml [compiler, "-c", "Holdep.sml"];
     systeml [lexer, "Holmake_tokens.lex"];
+    systeml [compiler, "-c", "internal_functions.sig"];
+    systeml [compiler, "-c", "internal_functions.sml"];
     systeml [compiler, "-c", "Holmake_types.sig"];
     systeml [compiler, "-c", "Holmake_types.sml"];
     systeml [compiler, "-c", "Holmake_tokens.sml"];
