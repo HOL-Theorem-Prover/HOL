@@ -108,7 +108,7 @@ fun mk_HOLdocfile_entry (dir,s) =
          else String.substring(s,0,size s - 7)
       end
  in
-    {comp=Database.Term(content, SOME"HOL"), 
+    {comp=Database.Term(Symbolic.tosymb content, SOME"HOL"), 
      file=Path.concat(dir,s), line=0}
  end
 
@@ -120,11 +120,9 @@ local fun is_adocfile s =
          String.extract(s, String.size s - 4, NONE) = ".doc"
 in
 fun docdir_to_entries path (endpath, entries) =
-  let val dir = Path.concat (path, endpath)
-      val L0 = Mosml.listDir dir
-      val L1 = List.filter is_docfile L0
-  in
-    List.foldl (fn (s,l) => mk_HOLdocfile_entry (endpath,s)::l) entries L1
+  let val L1 = List.filter is_docfile 
+                  (Mosml.listDir (Path.concat (path, endpath)))
+  in List.foldl (fn (s,l) => mk_HOLdocfile_entry (endpath,s)::l) entries L1
   end
 end;
 
@@ -135,6 +133,16 @@ val docdirs =
                     raise Fail "File not found")
      val wholefile = TextIO.inputAll instr
      val _ = TextIO.closeIn instr
+ in
+   String.tokens Char.isSpace wholefile
+ end
+
+val SRCFILES = 
+ let open TextIO
+     val istrm = openIn (Path.concat(HOLpath,"sigobj/SRCFILES"))
+        handle _ => (print "Couldn't open HOLDIR/sigobj/SRCFILES";
+                     raise Fail "File not found")
+     val wholefile = inputAll istrm before closeIn istrm
  in
    String.tokens Char.isSpace wholefile
  end
@@ -158,15 +166,21 @@ fun process (libdir, helpfile, txtIndex, texIndex, htmldir, htmlIndex, HOLpage)
  (print ("Reading signatures in directory " ^ libdir ^ 
         "\nand writing help database in file " ^ helpfile ^ "\n")
  ; dirToBase (libdir, docdirs, helpfile)
+
  ; print ("\nWriting ASCII signature index in file " ^ txtIndex ^ "\n")
  ; Printbase.printASCIIBase(helpfile, txtIndex)
+
  ; print ("\nWriting Latex signature index in file " ^ texIndex ^ "\n")
  ; Printbase.printLatexBase(helpfile, texIndex)
+
  ; print ("\nCreating HTML versions of signature files\n")
  ; Htmlsigs.sigsToHtml 
-     version bgcolor stoplist helpfile HOLpath (libdir, htmldir)
+     version bgcolor stoplist helpfile HOLpath SRCFILES (libdir, htmldir)
+
  ; print ("\nWriting HTML signature index in file " ^ htmlIndex ^ "\n")
  ; Htmlsigs.printHTMLBase version bgcolor HOLpath (helpfile, htmlIndex)
+
+ ; print ("\nWriting HOLPage\n")
  ; HOLPage.printHOLPage version bgcolor HOLpath (helpfile, HOLpage)
      (*  ;
      print ("\nWriting LaTeX signature bodies in file " ^ texSigs ^ "\n");

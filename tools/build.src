@@ -97,23 +97,32 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
                f (fullPath [dir,file1])
                  (fullPath [targetdir,file2])
       fun idtransfer f (dir,file) = transfer f (dir,file,file)
-      fun digest file =
+      fun digest_sig file =
         let val b = Path.base file
         in if (String.extract(b,String.size b -4,NONE) = "-sig"
                handle _ => false)
-           then SOME (String.extract(b,0,SOME (String.size b - 4)) ^".sig")
+           then SOME (String.extract(b,0,SOME (String.size b - 4)))
            else NONE
         end
+      fun augmentSRCFILES file = 
+         let open TextIO
+             val ostrm = openAppend (Path.concat(SIGOBJ,"SRCFILES"))
+         in output(ostrm,fullPath[dir,file]^"\n")
+          ; closeOut ostrm
+         end
+
   in
    case Path.ext file
     of SOME"ui"     => idtransfer mv df
      | SOME"uo"     => idtransfer mv df
      | SOME"so"     => idtransfer mv df   (* for dynlibs *)
      | SOME"xable"  => idtransfer mv df   (* for executables *)
-     | SOME"sig"    => idtransfer cp df
-     | SOME"sml"    => (case digest file
+     | SOME"sig"    => (idtransfer cp df; augmentSRCFILES (Path.base file))
+     | SOME"sml"    => (case digest_sig file
                          of NONE => ()
-                          | SOME file' => transfer cp (dir,file,file'))
+                          | SOME file' => 
+                              (transfer cp (dir,file, file' ^".sig");
+                               augmentSRCFILES file'))
      |    _         => ()
   end;
 
@@ -129,17 +138,15 @@ fun build_dir dir = let
   val _ = print ("Working in directory "^dir^"\n")
 in
   case #file(Path.splitDirFile dir) of
-    "muddyC"    => let
-    in
-      case OS of
-        "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
-                                      "muddy.so"])
-                           (fullPath [HOLDIR, "sigobj", "muddy.so"])
-      | _ => Gnumake dir handle _ =>
+    "muddyC" => 
+      (case OS 
+        of "winNT" => 
+             bincopy (fullPath [HOLDIR, "tools", "win-binaries", "muddy.so"])
+                     (fullPath [HOLDIR, "sigobj", "muddy.so"])
+         | other => Gnumake dir handle _ =>
                            print(String.concat
                                  ["\nmuddyLib has NOT been built!! ",
-                                  "(continuing anyway).\n\n"])
-    end
+                                  "(continuing anyway).\n\n"]))
   | "smv.2.4.3" => (Gnumake dir
                     handle _ => print(String.concat
                                       ["\nCompilation of SMV fails!!",
@@ -197,7 +204,7 @@ fun build_help () =
      val _ = build_dir dir
      val doc2html = fullPath [dir,"Doc2Html"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
-     val htmlpath = fullPath [docpath, "html"]
+     val htmlpath = fullPath [docpath, "HTML"]
      val _        = if (FileSys.isDir htmlpath handle _ => false) then ()
                     else (print ("Creating directory "^htmlpath^"\n");
                           FileSys.mkDir htmlpath)
