@@ -31,16 +31,11 @@ A. First, install Moscow ML. This is usually straightforward. The
 
    * If you intend to use ML embeddings of C libraries, like the
      HolBdd library, you are so far restricted to running on Linux,
-     Solaris, and other Unix implementations. You will have to build
-     MoscowML from *source* in order to dynamically load C libraries,
-     as is required by, e.g., HolBddLib. In this case, you will have
-     to set a few shell variables; this is explained in the MoscowML
-     installation directions.
-
-     Further, if HolBdd etc are to build, the <mosml-dir> value must
-     be a directory that includes the src/runtime directory.  This is
-     because that directory includes various C header files that Muddy
-     needs to compile against.
+     Solaris, and other Unix implementations. You will probably have
+     to build MoscowML from *source* in order to dynamically load C
+     libraries, as is required by, e.g., HolBddLib. In this case, you
+     will have to set a few shell variables; this is explained in the
+     MoscowML installation directions.
 
      The upshot: if you are working on a Unix system, you should build
      MoscowML from source, making the necessary tweaks that enable
@@ -172,6 +167,13 @@ Dealing with failure.
            . hardware/OS the build failed on
            . version of MoscowML being used
            . version of HOL being built
+
+   * Alternatively, use the Support tracker web-page at
+
+       http://sourceforge.net/tracker/?func=add&group_id=31790&atid=403398
+
+     and submit a request for support.  You can also use the Bugs
+     forum on SourceForge.
 
    * If a build attempt fails for some reason, you should attempt to invoke
 
