@@ -10,8 +10,8 @@ Pretty print words as signed (two's complement) octal numbers.
 {
 - word4Lib.pp_word_signed_oct();
 > val it = () : unit
-- ``n2w 12``;
-> val it = ``-04`` : term
+- ``12w``;
+> val it = ``~04w`` : term
 }
 
 \COMMENTS

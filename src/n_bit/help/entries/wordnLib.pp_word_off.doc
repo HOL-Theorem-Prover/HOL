@@ -10,14 +10,14 @@ Turns off the pretty printing of words.
 {
 - word4Lib.pp_word_signed_bin();
 > val it = () : unit
-- ``n2w 12``;
-> val it = ``-0b100`` : term
+- ``12w``;
+> val it = ``~0b100w`` : term
 - word4Lib.pp_word_off();
 > val it = SOME fn :
   ((grav * grav * grav -> int -> term -> unit) -> grav * grav * grav -> int ->
    ppstream -> term -> unit) option
-- ``n2w 12``;
-> val it = ``n2w 12`` : term
+- ``12w``;
+> val it = ``12w`` : term
 }
 
 \COMMENTS

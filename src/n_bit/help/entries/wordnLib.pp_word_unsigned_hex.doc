@@ -10,8 +10,8 @@ Pretty print words as unsigned hexadecimal numbers.
 {
 - word4Lib.pp_word_unsigned_hex();
 > val it = () : unit
-- ``n2w 12``;
-> val it = ``0xC`` : term
+- ``12w``;
+> val it = ``0xCw`` : term
 }
 
 \COMMENTS

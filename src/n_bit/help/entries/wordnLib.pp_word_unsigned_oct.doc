@@ -10,8 +10,8 @@ Pretty print words as unsigned octal numbers.
 {
 - word4Lib.pp_word_unsigned_oct();
 > val it = () : unit
-- ``n2w 12``;
-> val it = ``014`` : term
+- ``12w``;
+> val it = ``014w`` : term
 }
 
 \COMMENTS

@@ -10,8 +10,8 @@ Pretty print words as signed (two's complement) hexadecimal numbers.
 {
 - word4Lib.pp_word_signed_hex();
 > val it = () : unit
-- ``n2w 12``;
-> val it = ``-0x4`` : term
+- ``12w``;
+> val it = ``~0x4w`` : term
 }
 
 \COMMENTS

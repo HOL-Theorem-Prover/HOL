@@ -120,7 +120,7 @@ in
    rws
 end;
 
-val WORD_CONV = WEAK_CBV_CONV (word_compset());
+val WORD_CONV = CBV_CONV (word_compset());
 val WORD_RULE = CONV_RULE WORD_CONV;
 val WORD_TAC = CONV_TAC WORD_CONV;
 
@@ -144,12 +144,12 @@ fun word_n_print ln twos base sys gravs d pps t = let
 in
   if l = n2w_term then
     add_string pps
-      ((if neg then (if base = decimal then "~" else "-") else "")^
+      ((if neg then "~" else "")^
        (case base of
-          decimal     => "n2w " ^(Arbnum.toString sn)
+          decimal     => (Arbnum.toString sn)
         | binary      => "0b"^(Arbnum.toBinString sn)
         | octal       => "0" ^(Arbnum.toOctString sn)
-        | hexadecimal => "0x"^(Arbnum.toHexString sn)))
+        | hexadecimal => "0x"^(Arbnum.toHexString sn))^"w")
   else
     raise UserPP_Failed
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;

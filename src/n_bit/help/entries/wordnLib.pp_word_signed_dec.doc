@@ -10,8 +10,8 @@ Pretty print words as signed (two's complement) decimal numbers.
 {
 - word4Lib.pp_word_signed_dec();
 > val it = () : unit
-- ``n2w 12``;
-> val it = ``~n2w 4`` : term
+- ``12w``;
+> val it = ``~4w`` : term
 }
 
 \COMMENTS

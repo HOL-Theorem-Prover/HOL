@@ -10,8 +10,8 @@ Pretty print words as signed (two's complement) binary numbers.
 {
 - word4Lib.pp_word_signed_bin();
 > val it = () : unit
-- ``n2w 12``;
-> val it = ``-0b100`` : term
+- ``12w``;
+> val it = ``~0b100w`` : term
 }
 
 \COMMENTS
