@@ -5,11 +5,47 @@
 (* more complex, owing to the requirement to prove termination.              *)
 (*===========================================================================*)
 
+(* Interactive mode
 load "BoolifyTheory";
+*)
 
-open pairTheory pairTools arithmeticTheory listTheory BoolifyTheory;
+open HolKernel boolLib Parse bossLib pairTheory pairTools
+     arithmeticTheory listTheory rich_listTheory BoolifyTheory
+     mesonLib;
+
+val REVERSE = Tactical.REVERSE;
+
+val _ = new_theory "Decode";
 
 val apro = apropos o Term;
+
+(*---------------------------------------------------------------------------
+     decode turns a decoding parser of type
+       bool list -> ('a # bool list) option
+     into a straight function of type
+       bool list -> 'a
+
+     domain parser identifies the set of bool lists where it is valid
+     to apply decode parser (i.e., any bool list l such that parser l
+     results in a successful parse with no bools remaining: SOME (t, []))
+ ---------------------------------------------------------------------------*)
+
+val decode_def = Define `decode f = FST o THE o f`;
+
+val domain_exists = prove
+  (``?d. !f x. x IN d f = ?y. f x = SOME (y, [])``,
+   Q.EXISTS_TAC `\f x. ?y. f x = SOME (y, [])` THEN
+   SIMP_TAC bool_ss [IN_DEF]);
+
+val domain_def =
+  Definition.new_specification
+  ("domain_def", ["domain"], domain_exists);
+
+val _ = add_const "domain";
+
+(*---------------------------------------------------------------------------
+     The definition of some decoding parsers
+ ---------------------------------------------------------------------------*)
 
 val decode_bool = Define
   `(decode_bool [] = NONE) /\
@@ -72,8 +108,7 @@ val decode_list = TotalDefn.DefineSchema
        || SOME(h,t') ->
            (case decode_list t'
              of NONE -> NONE
-             || SOME(tl, t'') -> SOME(h::tl, t'')))`;
-   
+             || SOME(tl, t'') -> SOME(h::tl, t'')))`;   
 
 (*---------------------------------------------------------------------------*)
 (* Partial instantiation of decode_list and decode_list_ind to a length      *)
@@ -86,7 +121,6 @@ val th2 = REWRITE_RULE [prim_recTheory.WF_measure] th1;
 val decode_list' = 
   REWRITE_RULE [DECIDE (Term`x < SUC y = x <= y`),
                 prim_recTheory.measure_thm,listTheory.LENGTH] th2;
-
 
 val decode_list_ind = fetch "-" "decode_list_ind";
 val th = DISCH_ALL decode_list_ind;
@@ -102,21 +136,61 @@ val decode_list_ind' =
 (* the input by parsing it.                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val wf_parser = Define
-   `wf_parser f = !x l l'. (SOME(x,l') = f l) ==> LENGTH l' <= LENGTH l`;
+val wf_parser_def = Define
+  `wf_parser f =
+   !x a b.
+     (f a = SOME (x, b)) ==>
+     ?c. (APPEND c b = a) /\ !d. f (APPEND c d) = SOME (x, d)`;
 
-val swf_parser = Define
-   `swf_parser f = !x l l'. (SOME(x,l') = f l) ==> LENGTH l' < LENGTH l`;
+val swf_parser_def = Define
+   `swf_parser f =
+    wf_parser f /\ !x l l'. (SOME(x,l') = f l) ==> LENGTH l' < LENGTH l`;
 
-val swf_imp_wf_parser = Q.prove
-(`!f. swf_parser f ==> wf_parser f`,
- RW_TAC arith_ss [swf_parser, wf_parser] THEN PROVE_TAC [LESS_IMP_LESS_OR_EQ]);
+val swf_imp_wf_parser = Q.store_thm
+("swf_imp_wf_parser",
+ `!f. swf_parser f ==> wf_parser f`,
+ RW_TAC arith_ss [swf_parser_def]);
 
+(*
 val wf_parser' = PROVE [wf_parser]
  (Term `(!t v v1 v2. 
            (f t = SOME v) /\ (v = (v1,v2)) ==> LENGTH v2 <= LENGTH t)
             = 
         wf_parser f`);
+*)
+
+val wf_parser_alt = prove
+  (``!f.
+       wf_parser f =
+       !x a b.
+         (f a = SOME (x, b)) ==>
+         LENGTH b <= LENGTH a /\
+         (!c. f (APPEND a c) = SOME (x, APPEND b c)) /\
+         (?c. IS_PREFIX a c /\ (f c = SOME (x, [])))``,
+   SIMP_TAC bool_ss [wf_parser_def] THEN
+   REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
+   [RES_TAC THEN
+    Q.PAT_ASSUM `APPEND X Y = Z`
+    (fn th => SIMP_TAC arith_ss [LENGTH_APPEND, SYM th]),
+    RES_TAC THEN
+    Q.PAT_ASSUM `APPEND X Y = Z` (fn th => REWRITE_TAC [SYM th]) THEN
+    ASM_REWRITE_TAC [GSYM APPEND_ASSOC],
+    RES_TAC THEN
+    Q.EXISTS_TAC `c` THEN
+    POP_ASSUM
+    (fn th => REWRITE_TAC [REWRITE_RULE [APPEND_NIL] (Q.SPEC `[]` th)]) THEN
+    ASM_MESON_TAC [IS_PREFIX_APPEND],
+    RES_TAC THEN
+    Q.EXISTS_TAC `c` THEN
+    (REVERSE CONJ_TAC THEN1 ASM_MESON_TAC [APPEND_NIL]) THEN
+    Q.PAT_ASSUM `IS_PREFIX X Y` MP_TAC THEN
+    REWRITE_TAC [IS_PREFIX_APPEND] THEN
+    STRIP_TAC THEN
+    Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `[]`) THEN
+    REWRITE_TAC [APPEND_NIL] THEN
+    (Q_TAC KNOW_TAC `f a = SOME (x, l)` THEN1 ASM_MESON_TAC [APPEND_NIL]) THEN
+    SIMP_TAC bool_ss [optionTheory.SOME_11, pairTheory.PAIR_EQ] THEN
+    ASM_MESON_TAC []]);
 
 (*---------------------------------------------------------------------------*)
 (* Proofs that our basic monadic parsers are well-formed. Decoders for       *)
@@ -203,7 +277,6 @@ val swf_decode_num = Q.prove
      THEN NTAC 2 (POP_ASSUM MP_TAC) 
      THEN RW_TAC arith_ss []);
 
-
 val decode_list'' = REWRITE_RULE [wf_parser'] decode_list';
 val decode_list_ind'' = REWRITE_RULE [wf_parser'] decode_list_ind';
 
@@ -229,7 +302,6 @@ val swf_decode_list = Q.prove
     THEN RULE_ASSUM_TAC (REWRITE_RULE[wf_parser])
     THEN PROVE_TAC [DECIDE (Term`x < y ==> y <= z ==> x<z`),
                     DECIDE (Term `x < y ==> x < SUC y`)]);
-
 
 (*---------------------------------------------------------------------------*)
 (* A congruence rule for list_to_bool (encode_list)                          *)
@@ -313,94 +385,4 @@ val decode_list_cong_ideal = Q.prove
       (decode_list f l1 = decode_list g l2)`,
  PROVE_TAC [decode_list_cong]);
 
-val hack_decode_list_cong = (* temporary *)
-mk_thm([],
- Term`!l1 l2. (l1=l2) /\ (!l'. LENGTH l' < LENGTH l2 ==> (f l' = g l')) 
-                  ==>
-          (decode_list f l1 = decode_list g l2)`);
-
-
-(*---------------------------------------------------------------------------*)
-(* A datatype of monomorphic n-ary trees.                                    *)
-(*---------------------------------------------------------------------------*)
-
-Hol_datatype `ntree = nNode of num => ntree list`;
-
-val (_,ntree_size_def) = TypeBase.size_of "ntree";
-
-(*---------------------------------------------------------------------------*)
-(* Map an ntree to a list of booleans.                                       *)
-(*---------------------------------------------------------------------------*)
-
-val (encode_ntree_def, encode_ntree_ind) = Defn.tprove (Hol_defn 
-    "encode_ntree"
-    `encode_ntree (nNode n tl) = 
-          APPEND (num_to_bool n)
-                 (list_to_bool encode_ntree tl)`,
- WF_REL_TAC `measure ntree_size`
-   THEN Induct_on `tl`
-   THEN RW_TAC list_ss [ntree_size_def]
-   THENL [ALL_TAC, RES_THEN (MP_TAC o SPEC_ALL)]
-   THEN numLib.ARITH_TAC);
-
-val encode_ntree_def' = CONV_RULE (DEPTH_CONV ETA_CONV) encode_ntree_def;
-
-(*---------------------------------------------------------------------------*)
-(* Definition of a decoder for ntrees. Easy, with right congruence for       *)
-(* decode_list. The question is how to automatically eliminate the wf_parser *)
-(* constraints.                                                              *)
-(*---------------------------------------------------------------------------*)
-
-val _ = DefnBase.write_congs (hack_decode_list_cong::DefnBase.read_congs());
-
-val (decode_ntree_def, decode_ntree_ind) = Defn.tprove (Hol_defn
-    "decode_ntree"
-    `decode_ntree l = 
-       case decode_num l
-        of NONE -> NONE
-        || SOME(n,l') -> 
-             case decode_list decode_ntree l'
-              of NONE -> NONE
-              || SOME(tl,l'') -> SOME(nNode n tl, l'')`,
- WF_REL_TAC `measure LENGTH` THEN RW_TAC std_ss [] THEN
- PROVE_TAC [LESS_TRANS, REWRITE_RULE [swf_parser] swf_decode_num]);
-
-
-(*---------------------------------------------------------------------------*)
-(* Another datatype of monomorphic n-ary trees. More challenging, since      *)
-(* elements of type :one don't take up any space.                            *)
-(*---------------------------------------------------------------------------*)
-
-Hol_datatype `utree = uNode of one => utree list`;
-
-val (_,utree_size_def) = TypeBase.size_of "utree";
-
-val (encode_utree_def, encode_utree_ind) = Defn.tprove (Hol_defn 
-    "encode_utree"
-    `encode_utree (uNode u tl) = 
-          APPEND (unit_to_bool u)
-                 (list_to_bool encode_utree tl)`,
- WF_REL_TAC `measure utree_size`
-   THEN Induct_on `tl`
-   THEN RW_TAC list_ss [utree_size_def]
-   THENL [ALL_TAC, RES_THEN (MP_TAC o SPEC_ALL)]
-   THEN numLib.ARITH_TAC);
-
-val encode_utree_def' = CONV_RULE (DEPTH_CONV ETA_CONV) encode_utree_def;
-
-(*---------------------------------------------------------------------------*)
-(* Now decoding to utree                                                     *)
-(*---------------------------------------------------------------------------*)
-
-val (decode_utree_def, decode_utree_ind) = Defn.tprove (Hol_defn
-    "decode_utree"
-    `decode_utree l = 
-       case decode_unit l
-        of NONE -> NONE
-        || SOME(_,l') -> (* N.B. bug in cong. rewriter when _ is () *)
-             case decode_list decode_utree l'
-              of NONE -> NONE
-              || SOME(tl,l'') -> SOME(uNode n tl, l'')`,
- WF_REL_TAC `measure LENGTH` THEN RW_TAC std_ss [] THEN
- PROVE_TAC [LESS_LESS_EQ_TRANS,REWRITE_RULE [wf_parser] wf_decode_unit]);
-
+val _ = export_theory ();
