@@ -32,7 +32,7 @@ simple parse tree datatype, with the following datatype definition
 \noindent This phase of parsing is concerned with the treatment of the
 rawest syntax.  It has no notion of whether or not a term corresponds
 to a constant or a variable, so all {preterm} leaves are ultimately
-either {IDENTS}s or {AQ}s (anti-quotations).
+either {IDENT}s or {AQ}s (anti-quotations).
 
 This first phase converts infixes, mixfixes and all the other
 categories of syntactic rule from the global grammar into simple
