@@ -821,7 +821,7 @@ in
   in
     Portable.begin_block pps CONSISTENT 0;
     pr_term false (!Globals.show_types) (start_names())
-    pps t RealTop RealTop 100;
+    pps t RealTop RealTop (!Globals.max_print_depth);
     Portable.end_block pps
   end)
 end
