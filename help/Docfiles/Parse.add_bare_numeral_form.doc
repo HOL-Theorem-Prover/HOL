@@ -53,6 +53,11 @@ form that could be used by users wanting to deal with binary numbers:
    > val it = (`binary_of`, `1011`) : term * term
 }
 
+\COMMENTS
+It is highly recommended that users avoid using suffixes that
+might be interpreted as hexadecimal digits A to F, in either upper or
+lower case.  Further, HOL convention has it that suffix character
+should be lower case.
 
 \USES
 If one has a range of values that are usefully indexed by natural
