@@ -236,6 +236,8 @@ end
 datatype dir = Left | Right
 datatype termtype = EQ | LT
 
+fun dir_of_pair Left (l,r) = l
+  | dir_of_pair Right (l,r) = r
 fun term_at Left tm = rand (rator tm)
   | term_at Right tm = rand tm
 
@@ -329,6 +331,30 @@ end tm
 
 
 val INT_DIVIDES_NEG = CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG
+val INT_NEG_FLIP_LTL = prove(
+  ``!x y. ~x < y = ~y < x``,
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
+  REWRITE_TAC [INT_LT_NEG]);
+val INT_NEG_FLIP_LTR = prove(
+  ``!x y. x < ~y = y < ~x``,
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
+  REWRITE_TAC [INT_LT_NEG]);
+
+val negated_elim_lt_coeffs1 =
+  (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTR] o
+   REWRITE_RULE [GSYM INT_NEG_RMUL] o
+   Q.SPECL [`n`, `m`, `~x`])
+  elim_lt_coeffs1;
+val negated_elim_lt_coeffs2 =
+  (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTL] o
+   REWRITE_RULE [GSYM INT_NEG_RMUL] o
+   Q.SPECL [`n`, `m`, `~x`])
+  elim_lt_coeffs2;
+
+
+
 val elim_eq_coeffs' =
   CONV_RULE (STRIP_QUANT_CONV (RAND_CONV
                                (BINOP_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))))
@@ -427,11 +453,13 @@ in
         val gnum_nonzero =
           EQF_ELIM (REDUCE_CONV (mk_eq(gnum_t, numSyntax.zero_tm)))
         val elim_coeffs_thm =
-          case (tt, dir2) of
-            (LT, Left) => MATCH_MP elim_lt_coeffs2 gnum_nonzero
-          | (LT, Right) => MATCH_MP elim_lt_coeffs1 gnum_nonzero
-          | (EQ, Left) => MATCH_MP elim_eq_coeffs gnum_nonzero
-          | (EQ, Right) => MATCH_MP elim_eq_coeffs' gnum_nonzero
+          case (tt, dir2, is_negated (dir_of_pair dir1 (l,r))) of
+            (LT, Left, false) => MATCH_MP elim_lt_coeffs2 gnum_nonzero
+          | (LT, Left, true) => MATCH_MP negated_elim_lt_coeffs1 gnum_nonzero
+          | (LT, Right, false) => MATCH_MP elim_lt_coeffs1 gnum_nonzero
+          | (LT, Right, true) => MATCH_MP negated_elim_lt_coeffs2 gnum_nonzero
+          | (EQ, Left, _) => MATCH_MP elim_eq_coeffs gnum_nonzero
+          | (EQ, Right, _) => MATCH_MP elim_eq_coeffs' gnum_nonzero
       in
         BINOP_CONV (factor_out g g_t) THENC
         move_terms_from tt dir1 is_mult THENC
