@@ -330,7 +330,6 @@ val FILTER = new_recursive_definition
                     FILTER P (h::t) = 
                          if P h then (h::FILTER P t) else FILTER P t)`--};
 
-
 val FOLDR = new_recursive_definition
       {name = "FOLDR",
        fixity = Prefix,
