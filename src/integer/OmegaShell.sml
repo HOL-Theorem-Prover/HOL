@@ -53,12 +53,13 @@ fun normalise_numbers tm = let
      REWR_CONV int_arithTheory.eq_move_all_right)
   val base_normaliser =
     RAND_CONV (REWRITE_CONV [INT_NEG_ADD, INT_LDISTRIB, INT_RDISTRIB,
-                             INT_NEG_LMUL, INT_NEGNEG] THENC
+                             INT_NEG_LMUL, INT_NEGNEG, INT_NEG_0,
+                             int_sub] THENC
                EVERY_SUMMAND (TRY_CONV OmegaMath.NORMALISE_MULT) THENC
                REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
                              INT_NEGNEG] THENC
                REWRITE_CONV [INT_NEG_LMUL] THENC
-               OmegaMath.SORT_AND_GATHER_CONV THENC OmegaMath.addzero)
+               OmegaMath.SORT_AND_GATHER_CONV)
 in
   if (is_leq tm orelse is_eq tm) andalso lhand tm = zero_tm then
     if is_plus (rand tm) then let
@@ -85,15 +86,18 @@ in
   else MK_LEQ THENC base_normaliser
 end tm
 
-val leaf_normalise =
-  REWR_CONV not_eq ORELSEC REWR_CONV eq_elim ORELSEC normalise_numbers
+val leaf_normalise = REWR_CONV not_eq ORELSEC normalise_numbers
 end (* local *)
 
 fun normalise tm = let
   val vs = map (#1 o dest_var) (#1 (strip_exists tm))
+  fun is_reln t =
+      List.exists (same_const (#1 (strip_comb t)))
+                  [less_tm, leq_tm, great_tm, geq_tm] orelse
+      is_eq t andalso type_of (rand t) = int_ty
 in
   STRIP_QUANT_CONV (Canon.NNF_CONV leaf_normalise false THENC
-                    Canon.PROP_DNF_CONV) THENC
+                    CSimp.csimp THENC Canon.PROP_DNF_CONV) THENC
   CooperSyntax.push_in_exists THENC EVERY_DISJ_CONV (RENAME_VARS_CONV vs)
 end tm
 
@@ -103,7 +107,8 @@ val simple =
   normalise THENC
   EVERY_DISJ_CONV (REWRITE_CONV [] THENC
                    (ISCONST_CONV ORELSEC
-                    (OmegaEq.OmegaEq THENC OmegaSimple.simple_CONV)))
+                    (OmegaEq.OmegaEq THENC
+                     (ISCONST_CONV ORELSEC OmegaSimple.simple_CONV))))
 
 
 fun decide_strategy tm = let
