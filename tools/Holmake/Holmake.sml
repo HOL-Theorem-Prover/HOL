@@ -205,6 +205,7 @@ val HOLDIR =
 
 val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 val UNQUOTER  = fullPath [HOLDIR, "bin/unquote"]
+val has_unquoter = FileSys.access(UNQUOTER, [FileSys.A_EXEC])
 fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
 
 (* find MOSMLDIR by first looking at command-line, then looking at the
@@ -752,7 +753,10 @@ in
          val _ = print ("Compiling "^file^"\n")
          open Process
          val res =
-          if has_dq (normPath file) (* handle double-backquotes *)
+          if has_unquoter
+                  (* force to always use unquoter if present, so as to generate location pragmas *)
+                  (* must test for existence, for bootstrapping *)
+                  (* was: has_dq (normPath file) (* handle double-backquotes *) *)
           then let val clone = variant file
                    val _ = FileSys.rename {old=file, new=clone}
                    fun revert() = (FileSys.remove file handle _ => ();
