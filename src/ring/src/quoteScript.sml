@@ -1,6 +1,6 @@
 
 open HolKernel Parse basicHol90Lib 
-     QuoteDef Datatype BasicProvers SingleStep;
+     TotalDefn Datatype BasicProvers SingleStep;
 
 infix THEN THENL;
 
