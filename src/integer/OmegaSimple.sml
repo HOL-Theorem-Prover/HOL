@@ -120,7 +120,7 @@ end t
    ---------------------------------------------------------------------- *)
 
 fun verify_combination v th1 th2 = let
-  open CooperMath
+  open CooperMath OmegaMath
   val lowth = CONV_RULE (isolate_var v) th1
   val upth = CONV_RULE (isolate_var v) th2
   val lo_c = lhand (rand (concl lowth))
@@ -140,16 +140,15 @@ fun verify_combination v th1 th2 = let
                              zero_lt_c))
                     th
         in
-          CONV_RULE
-          (BINOP_CONV (REWRITE_CONV [INT_LDISTRIB, INT_MUL_ASSOC] THENC
-                       REDUCE_CONV)) res
+          CONV_RULE (BINOP_CONV LINEAR_MULT) res
         end
   val newlo = multhru_by lo_f lowth
   val newhi = multhru_by hi_f upth
   val elim = MATCH_MP INT_LE_TRANS (CONJ newlo newhi)
 in
   CONV_RULE (REWR_CONV int_arithTheory.le_move_all_right THENC
-             RAND_CONV OmegaMath.INT_NORM_CONV) elim
+             RAND_CONV (RAND_CONV NEG_SUM_CONV THENC
+                        SORT_AND_GATHER_CONV)) elim
 end
 
 (* ----------------------------------------------------------------------

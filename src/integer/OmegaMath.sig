@@ -1,6 +1,7 @@
 signature OmegaMath =
 sig
   include Abbrev
+  val find_summand          : term -> term -> term
   val gcd_eq_check          : conv
   val gcd_le_check          : conv
   val gcd_check             : conv
@@ -12,11 +13,20 @@ sig
   val INT_EQ_CONV           : conv
 
   val SORT_AND_GATHER1_CONV : conv
+  val SORT_AND_GATHER_CONV  : conv
+  val S_AND_G_MULT          : conv
+
+  val MOVE_VCOEFF_TO_FRONT  : term -> conv
   val NEG_SUM_CONV          : conv
 
 end;
 
 (*
+
+   [find_summand v tm] finds the summand involving variable v in tm.
+   Raise a HOL_ERR if it's not there.  tm must be a left-associated
+   sum with one numeral in the rightmost position.
+
    [gcd_eq_check tm] returns a theorem equating tm to an improved
    equivalent, or QConv.UNCHANGED, if no improvement is possible.
 
@@ -57,10 +67,25 @@ end;
    the theorem; *not* |- (t1 = t2) = T  (which is what things like
    integerRingLib.INT_RING_CONV and AC_CONV do).
 
-   [SORT_AND_GATHER1_CONV] performs one step of an "insertion sort";
-   modifying a term of the form x + y, with x a normalised sum, and y
-   a singleton summand, so that y is inserted into x, merging with
-   any appropriate other summands, and possibly cancelling others out.
+   [SORT_AND_GATHER1_CONV tm] performs one step of an "insertion
+   sort"; modifying a term of the form x + y, with x a normalised sum,
+   and y a singleton summand, so that y is inserted into x, merging
+   with any appropriate other summands, and possibly cancelling others
+   out.
+
+   [SORT_AND_GATHER_CONV tm] performs all the steps of the insertion
+   sort, collecting up variable coefficients and producing a left
+   associated term with variables appearing in sorted order.
+
+   [S_AND_G_MULT tm] performs a sort-and-gather step, and also copes
+   with distributing multiplications over sub-summands, as long as the
+   constant to be multiplied through is on the left side of the
+   multiplication.
+
+   [MOVE_VCOEFF_TO_FRONT v tm] turns
+      c1 * v1 + ... + c * v + ... cn * vn + n
+   into
+      c * v + (c1 * v1 + ... + cn * vn + n)
 
    [NEG_SUM_CONV] simplifies ~(c1*v1 + c2 * v2 .. + cn * vn + n), by
    pushing the negation inwards.

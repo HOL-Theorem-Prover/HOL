@@ -45,11 +45,6 @@ fun ERR f msg = HOL_ERR { origin_structure = "OmegaEq",
                           origin_function = f,
                           message = msg}
 
-fun myfind f [] = NONE
-  | myfind f (x::xs) =
-    case f x of
-      NONE => myfind f xs
-    | x => x
 fun lhand t = rand (rator t)
 
 (* ----------------------------------------------------------------------
@@ -65,11 +60,14 @@ fun lhand t = rand (rator t)
    ---------------------------------------------------------------------- *)
 
 fun rel_coeff v tm = let
-  fun ok t = if is_mult t andalso rand t = v then SOME (lhand t) else NONE
+  fun recurse t = let
+    val (l,r) = dest_plus t
+  in
+    if rand r = v then lhand r
+    else recurse l
+  end handle HOL_ERR _ => if rand t = v then lhand t else zero_tm
 in
-  case myfind ok (strip_plus (rand tm)) of
-    SOME c => c
-  | _ => zero_tm
+  recurse (lhand (rand tm))
 end
 
 
@@ -206,28 +204,24 @@ end (* local *)
 
    ---------------------------------------------------------------------- *)
 
+val SYM_EQ_NEG = GSYM INT_EQ_NEG
 fun eliminate_equality v tm = let
+  open OmegaMath
   val instantiate_eqremoval =
       C MP TRUTH o CONV_RULE (LAND_CONV REDUCE_CONV) o
       PART_MATCH (lhand o rand) equality_removal
-  val rhs = rand tm
-  val (v_t, rest) = Lib.pluck (fn t => rand t = v) (strip_plus rhs)
-  val new_rhs = mk_plus(v_t, list_mk_plus rest)
-  val IRC = if length rest > 20 then integerRingLib.INT_RING_CONV
-            else AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM)
-  val rhs_th = EQT_ELIM (IRC (mk_eq(rhs, new_rhs)))
+  val rhs_th = MOVE_VCOEFF_TO_FRONT v (rand tm)
+  val cv_t = lhand (rand (concl rhs_th))
   val dealwith_negative_coefficient =
-      if is_negated (lhand v_t) then
-        REWR_CONV (GSYM INT_EQ_NEG) THENC
-        FORK_CONV (REWR_CONV INT_NEG_0,
-                   REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG])
-      else ALL_QCONV
+      if is_negated (lhand cv_t) then
+        REWR_CONV SYM_EQ_NEG THENC
+        FORK_CONV (REWR_CONV INT_NEG_0, NEG_SUM_CONV)
+      else ALL_CONV
 in
   RAND_CONV (K rhs_th) THENC dealwith_negative_coefficient THENC
-  RAND_CONV (RAND_CONV sum_to_sumc) THENC
-  instantiate_eqremoval THENC
+  RAND_CONV (RAND_CONV sum_to_sumc) THENC instantiate_eqremoval THENC
   BINDER_CONV
-    (LAND_CONV (* new equality conjunct *)
+     (LAND_CONV (* new equality conjunct *)
        (RAND_CONV (* rhs of equality *)
           (LAND_CONV (LAND_CONV REDUCE_CONV) THENC
            RAND_CONV (* sumc term *)
@@ -263,11 +257,11 @@ in
   else (BINDER_CONV (push_exvar_to_bot v))
 end tm
 
+val S_AND_G_MULT = Profile.profile "S_AND_G_MULT" OmegaMath.S_AND_G_MULT
 fun OmegaEq t = let
   val (exvars, body) = strip_exists t
   val exv_set = HOLset.addList(empty_tmset, exvars)
   val gcd_check = Profile.profile "gcd_check" OmegaMath.gcd_check
-  val INT_NORM_CONV = Profile.profile "INT_NORM_CONV" OmegaMath.INT_NORM_CONV
   val _ = length exvars > 0 orelse
           raise ERR "OmegaEq" "Term not existentially quantified"
   val conjns = strip_conj body
@@ -278,7 +272,7 @@ fun OmegaEq t = let
   val (to_elim, elimc) = valOf vwithleast
   val c = valOf conj
   val reordered_thm =
-      EQT_ELIM (AC_CONV(CONJ_ASSOC, CONJ_COMM)
+      EQT_ELIM (Profile.profile "AC" (AC_CONV(CONJ_ASSOC, CONJ_COMM))
                        (mk_eq(body, mk_conj(c, list_mk_conj rest))))
   val bring_veq_to_top =
       if elimc = Arbint.one then
@@ -288,12 +282,14 @@ fun OmegaEq t = let
         BINDER_CONV (REWR_CONV (GSYM CONJ_ASSOC))
   fun ifVarsRemain c t = if is_exists t then c t else ALL_QCONV t
 in
-  STRIP_QUANT_CONV (K reordered_thm THENC bring_veq_to_top THENC
-                    STRIP_QUANT_CONV (RAND_CONV (mk_abs_CONV to_elim))) THENC
-  push_exvar_to_bot to_elim THENC
-  LAST_EXISTS_CONV (REWR_CONV UNWIND_THM2 THENC BETA_CONV) THENC
-  STRIP_QUANT_CONV (EVERY_CONJ_CONV (RAND_CONV INT_NORM_CONV THENC
-                                     gcd_check)) THENC
+  STRIP_QUANT_CONV (Profile.profile "first"
+                    (K reordered_thm THENC bring_veq_to_top) THENC
+                    Profile.profile "second"
+                    (STRIP_QUANT_CONV (RAND_CONV (mk_abs_CONV to_elim)))) THENC
+  Profile.profile "third" (push_exvar_to_bot to_elim THENC
+  LAST_EXISTS_CONV (REWR_CONV UNWIND_THM2 THENC BETA_CONV)) THENC
+  Profile.profile "fourth" (STRIP_QUANT_CONV (EVERY_CONJ_CONV (RAND_CONV S_AND_G_MULT THENC
+                                     gcd_check))) THENC
   ifVarsRemain OmegaEq
 end t
 

@@ -18,6 +18,29 @@ fun ERR f msg = HOL_ERR { origin_structure = "OmegaMath",
                           origin_function = f,
                           message = msg}
 
+val lhand = rand o rator
+
+(* ----------------------------------------------------------------------
+    find_summand v tm
+
+    finds the summand involving variable v in tm.  Raise a HOL_ERR if it's
+    not there.  tm must be a left-associated sum with one numeral in the
+    rightmost position.
+   ---------------------------------------------------------------------- *)
+
+exception fs_NotFound
+fun find_summand v tm = let
+  fun recurse tm = let
+    val (l,r) = dest_plus tm
+  in
+    if rand r = v then r else recurse l
+  end handle HOL_ERR _ => if rand tm = v then tm else raise fs_NotFound
+in
+  recurse (lhand tm) handle fs_NotFound =>
+                            raise ERR "find_summand" "No such summand"
+end
+
+
 (* ----------------------------------------------------------------------
     gcd_eq_check tm
 
@@ -392,6 +415,56 @@ fun SORT_AND_GATHER1_CONV tm =
      TRY_CONV (LAND_CONV SORT_AND_GATHER1_CONV) THENC
      CHECK_RZERO_CONV) tm
 
+(* ----------------------------------------------------------------------
+    SORT_AND_GATHER_CONV tm
+
+    perform SORT_AND_GATHER1_CONV steps repeatedly to sort a sum term.
+   ---------------------------------------------------------------------- *)
+
+fun SORT_AND_GATHER_CONV tm = let
+  fun prepare_insertion tm =
+      (* term is a sum, if right argument is singleton, insert it using
+         SORT_AND_GATHER1_CONV, otherwise, reassociate and recurse *)
+      if is_plus (rand tm) then
+        (LASSOC_ADD_CONV THENC LAND_CONV SORT_AND_GATHER_CONV THENC
+         SORT_AND_GATHER_CONV) tm
+      else
+        SORT_AND_GATHER1_CONV tm
+in
+  if is_plus tm then
+    LAND_CONV SORT_AND_GATHER_CONV THENC prepare_insertion
+  else
+    ALL_CONV
+end tm
+
+(* ----------------------------------------------------------------------
+    S_AND_G_MULT tm
+
+    as for SORT_AND_GATHER_CONV, but also taking into account summands
+    of the form c * (...)  where the ... represents another summand.
+   ---------------------------------------------------------------------- *)
+
+fun S_AND_G_MULT tm = let
+  fun prepare_insertion tm =
+      (* term is a sum, if right argument is singleton, insert it using
+         SORT_AND_GATHER1_CONV, otherwise, reassociate and recurse *)
+      if is_plus (rand tm) then
+        (LASSOC_ADD_CONV THENC LAND_CONV S_AND_G_MULT THENC S_AND_G_MULT) tm
+      else if is_mult (rand tm) andalso not (is_var (rand (rand tm))) then
+        (RAND_CONV LINEAR_MULT THENC prepare_insertion) tm
+      else
+        SORT_AND_GATHER1_CONV tm
+in
+  if is_plus tm then
+    LAND_CONV S_AND_G_MULT THENC prepare_insertion
+  else if is_mult tm andalso not (is_var (rand tm)) then
+    CooperMath.LINEAR_MULT THENC S_AND_G_MULT
+  else
+    ALL_CONV
+end tm
+
+
+
 
 (* ----------------------------------------------------------------------
     NEG_SUM_CONV tm
@@ -404,6 +477,27 @@ fun NEG_SUM_CONV tm =
      (REWR_CONV INT_NEG_LMUL THENC
       TRY_CONV (LAND_CONV (REWR_CONV INT_NEGNEG))) ORELSEC
      TRY_CONV (REWR_CONV INT_NEGNEG)) tm
+
+
+(* ----------------------------------------------------------------------
+    MOVE_VCOEFF_TO_FRONT v tm
+
+    moves the summand featuring variable v to the front of the sum
+    tm.  Of course, this doesn't preserve the order in the sum.
+   ---------------------------------------------------------------------- *)
+
+(* ``!x y. x = y + (x + ~y)`` *)
+val front_put_thm = prove(
+  ``!x y. x = y + (x + ~y)``,
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM))) THEN
+  REWRITE_TAC [INT_ADD_ASSOC, INT_ADD_RINV, INT_ADD_LID]);
+fun MOVE_VCOEFF_TO_FRONT v tm = let
+  val cv = find_summand v tm
+  val th = SPECL [tm,cv] front_put_thm
+in
+  K th THENC RAND_CONV (RAND_CONV NEG_SUM_CONV THENC SORT_AND_GATHER1_CONV)
+end tm
 
 
 
