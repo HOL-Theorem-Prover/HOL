@@ -70,7 +70,7 @@ fun import_ring name ty ring th =
 	  { Vals = [ring],
 	    Inst = [th],
 	    Rule = REWRITE_RULE[ringTheory.ring_accessors ],
-	    Rename = fn s => SOME(name^s) }
+	    Rename = fn s => SOME(name^"_"^s) }
   in { Ty=ty,
        Thm = GSYM polynom_simplify_ok,
        LhsThm = [ interp_p_def, varmap_find_def ],
@@ -125,7 +125,7 @@ fun import_semi_ring name ty sring th =
 	  { Vals = [sring],
 	    Inst = [th],
 	    Rule = REWRITE_RULE[semi_ringTheory.semi_ring_accessors ],
-	    Rename = fn s => SOME(name^s) }
+	    Rename = fn s => SOME(name^"_"^s) }
   in { Ty=ty,
        Thm = GSYM spolynomial_simplify_ok,
        LhsThm =
@@ -142,21 +142,20 @@ fun import_semi_ring name ty sring th =
   end
 ;
 
-(* TODO: find a prefix name, instead of toto titi! *)
 fun dest_ring nm th =
   let val {Rator,Rand} = dest_comb (concl th)
-      val {Name=c,Ty} = dest_const Rator in
-  (case (c, dest_type (fst (dom_rng Ty))) of
+      val {Name,Ty} = dest_const Rator in
+  (case (Name, dest_type (fst (dom_rng Ty))) of
     ("is_ring", {Tyop="ring", Args=[ty]}) =>
-      import_ring(nm^"_") ty Rand th 
+      import_ring nm ty Rand th 
   | ("is_semi_ring", {Tyop="semi_ring", Args=[ty]}) =>
-      import_semi_ring (nm^"_") ty Rand th
+      import_semi_ring nm ty Rand th
   | _ => raise RING_ERR "" "")
   handle HOL_ERR _ => raise RING_ERR "dest_ring" "mal-formed thm"
   end
 ;
 (*
-dest_ring "int" (ASSUME(--`is_ring(ring int_0 int_1 $+_ $*_ --)`--))
+dest_ring "int" (ASSUME(--`is_ring(ring int_0 int_1 $+ $* $~)`--))
 dest_ring "num" (ASSUME(--`is_semi_ring(semi_ring 0 1 $+ $* )`--))
 *)
 
@@ -185,11 +184,11 @@ fun binop_eq ty =
   end;
 
 
-fun compile_ring_infos { Name, Theory=thm, Const=is_cst, Rewrites=rws } =
-  let val ring_elts = dest_ring Name thm
-      val reify_fun = meta_expr (#Ty ring_elts) is_cst (#Meta ring_elts)
+fun compile_ring_infos { Name, Theory, Const, Rewrites } =
+  let val ring_elts = dest_ring Name Theory
+      val reify_fun = meta_expr (#Ty ring_elts) Const (#Meta ring_elts)
       val (lhs_rws,rhs_rws) =
- 	comp_rws rws (#LhsThm ring_elts) (#RhsThm ring_elts)
+ 	comp_rws Rewrites (#LhsThm ring_elts) (#RhsThm ring_elts)
       val simp_rule =
 	CONV_RULE(CBV_CONV lhs_rws THENC RAND_CONV (CBV_CONV rhs_rws))
       val mk_eq = binop_eq (#Ty ring_elts)
@@ -216,6 +215,7 @@ fun declare_ring ring =
             val thm = SPECL[Metamap,p] Thm
   	in Ring_rule thm
   	end
+        handle HOL_ERR _ => raise RING_ERR "norm_conv" ""
 
       fun eq_conv t = 
   	let val {lhs,rhs,ty} = dest_eq_ty t 
@@ -228,6 +228,7 @@ fun declare_ring ring =
             val th2 = Ring_rule (SPEC p2 mthm)
   	in Mk_eq th1 th2
 	end
+        handle HOL_ERR _ => raise RING_ERR "eq_conv" ""
 
   in { NormConv=norm_conv, EqConv=eq_conv, Reify=Reify_fun }
   end
