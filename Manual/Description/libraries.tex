@@ -19,16 +19,77 @@
  \newcommand{\numeral}   {\mbox{\it numeral}}
  \newcommand{\charseq}   {\mbox{\it charseq}}
 
+A \emph{library} is intended to provide a higher level of
+organization for HOL applications. In general, a library 
+can contain a collection of theories, proof procedures, 
+and supporting material, such as documentation. Some libraries
+simply provide proof procedures, such as {\small\verb+simpLib+},
+while others provide theories and proof procedures, such as 
+{\small\verb+intLib+}. Libraries can include other libraries.
+
+In the \HOL{} system, libraries are represented by ML structures named
+following the convention that library \emph{x} will be found in the ML
+structure {\small\verb+xLib+}. Loading this structure should load all
+the relevant sub-components of the library and set whatever system
+parameters are suitable for use of the library.
+
+When the \HOL{} system is invoked in its normal configuration, several
+useful libraries are automatically loaded. The most basic \HOL{}
+library is {\small\verb+boolLib+}, which supports the definitions of
+the \HOL{} logic, found in the theory \theoryimp{bool}, and provides a
+useful suite of definition and reasoning tools. 
+
+Another pervasively used library is found in the structure
+{\small\verb+Parse+} (the reader can see that we are not strictly
+faithful to our convention about library naming). The parser library
+provides support for parsing and `pretty-printing' of HOL types,
+terms, and theorems.
+
+The verb+boss+ library provides a basic collection of standard
+theories and high-level proof procedures, and serves as a standard
+platform on which to work. It is preloaded and opened when the \HOL{}
+system starts up. It includes {\small\verb+boolLib+} and
+{\small\verb+Parse+}. Theories provided include \theoryimp{pair},
+\theoryimp{sum}, \theoryimp{option}; the arithmetic theories
+\theoryimp{num}, \theoryimp{prim\_rec}, \theoryimp{arithmetic},
+and \theoryimp{numeral}; and \theoryimp{list}. Other libraries 
+included in \verb+bossLib+ are \verb+goalstackLib+, which provides 
+a proof manager for tactic proofs; \verb+simpLib+, which provides
+a variety of simplifiers; \verb+numLib+, which provides a decision
+procedure for arithmetic; \verb+Datatype+, which provides 
+high-level support for defining algebraic datatypes; \verb+tflLib+,
+which provides support for defining recursive functions.
+
 
 \section{Parsing and Prettyprinting}
 
-\HOL{} types and terms are ultimately built by application of the
+\HOL{} types and terms must be well-typed; the \HOL{} implementation
+depends on the strong type system of SML to ensure this property.
+Every type and term is ultimately built by application of the
 primitive (abstract) constructors for types and terms. However, in
 order to accomodate the wide variety of mathematical expression,
-\HOL{} has flexible infrastracture for parsing and prettyprinting 
-types and terms.
+\HOL{} provides flexible infrastracture for parsing and prettyprinting
+types and terms through the \verb+Parse+ structure.
+
+The term parser supports type inference, overloading, binders, and
+various fixity declaration (infix, prefix, postfix, and
+combinations). There are also many flags for controlling the behaviour
+of the parser. Further, the structure of the parser is exposed so that
+new parsers can be quickly altered to support applications.
+
+The parser is parameterized by grammars for types and terms. The
+behaviour of the parser is therefore usually altered by grammar
+manipulations. These can be of two kinds: \emph{temporary} or
+\emph{permanent}.  Temporary changes do not persist after the current
+session, while permanent changes will be in force in all descendant
+theories.  Functions making temporary alterations are signified 
+by a leading \verb+temp_+.
 
 \subsection{Parsing Types}
+
+There is little to say about the type parser. Infixes may be introduced.
+The function \verb+type_grammar+ may be used to see the current grammar
+for types.
 
 \subsection{Parsing Terms}
 
@@ -262,88 +323,6 @@ denotational semantics is semantic brackets.  Thus, the HOL parsing
 facilities can be configured to allow one to write \texttt{denotation x}
 as \texttt{[| x |]}.  Closefixes are not associated with precedences
 because they can not compete for arguments with other operators.
-
-There is some further syntax that is specially treated by the parser.
-The theory of pairs introduces the infix pairing operator
-(\begin{Large}\verb+,+\end{Large}) as well as the corresponding infix
-product (\verb+#+) type operator. The theory of sets introduces
-notation for the empty set \verb+{}+ (or \verb+EMPTY+), insertion (the infix \verb+INSERT+), set
-comprehension, enumerated sets, and many other defined constants. The
-theory of lists introduces the constants \verb+NIL+ (the surface
-syntax \verb+[]+ can be used) and \verb+CONS+, as well as notation for
-enumerated lists. The theories of (Peano) numbers and strings
-introduce the constructors \verb+0+, \verb+SUC+, \verb+""+, and
-\verb+STRING+, as well as literals for numbers and strings.
-
-Thus, if the theories of pairs, sets, numbers, strings, and lists are
-loaded, the HOL grammar is an extension of that in
-Table~\ref{expanded-grammar}.
-
-\begin{table}
-  \[
-  \begin{array}{rclr}
-    \term & ::= & \term : \type & \mbox{(type constraint)} \\
-    & | & \term\ \term & \mbox{(application)} \\
-    & | & \CONS\ \term \ \term & \mbox{(list builder)} \\
-    & | & \term\ \verb|::|\ \term & \mbox{(list builder)}\\
-    & | & \term \ \INSERT\ \term & \mbox{(set builder)} \\
-    & | & \SUC\ \term & \mbox{(successor)} \\
-    & | & \verb+~+ \term & \mbox{(negation)} \\
-    & | & \term\ =\ \term & \mbox{(equality)} \\
-    & | & \term\ \IMP\ \term & \mbox{(implication)} \\
-    & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
-    & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
-    & | & \term\ \verb+<+ \ \term & \mbox{(less-than)} \\
-    & | & \term\ \verb!+! \ \term & \mbox{(addition)} \\
-    & | & \term\ \verb!*! \ \term & \mbox{(multiplication)} \\
-    & | & \term\ \verb!-! \ \term & \mbox{(subtraction)} \\
-    & | & \term\ \verb+=>+\ \term\ |\ \term & \mbox{(conditional)} \\
-    & | & \verb|if|\ \term\ \verb|then|\ \term\ \verb|else|\ \term & \mbox{(conditional)}\\
-    & | & \bs\vstr_1\ldots\vstr_n.\ \term & \mbox{(lambda abstraction)} \\
-    & | & \ALL \vstr_1\ldots\vstr_n.\ \term & \mbox{(forall)} \\
-    & | & \EXISTS \vstr_1\ldots\vstr_n.\ \term & \mbox{(exists)} \\
-    & | & \CHOOSE \vstr_1\ldots\vstr_n.\ \term & \mbox{(choose)} \\
-    & | & \EXISTSONE \vstr_1\ldots\vstr_n.\ \term &\mbox{(exists-unique)} \\
-    & | & \LET\; \vstr = \term  & \\
-    &   & [\und\ \vstr = \term]^{*}\ \IN\ \term & \mbox{(let expression)} \\
-    & | & \verb+T+ & \mbox{(truth)} \\
-    & | & \verb+F+ & \mbox{(falsity)} \\
-    & | & \verb+[]+ & \mbox{(empty list)} \\
-    & | & \verb+{}+ & \mbox{(empty set)} \\
-    & | & \verb+(+ \term \verb+,+ \term \verb+)+ & \mbox{(pair)} \\
-    & | & \ident & \mbox{(constant or variable)} \\
-    & | & \numeral & \mbox{(numeric literal)} \\
-    & | & \verb+"+\charseq \verb+"+& \mbox{(string literal)} \\
-    & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)} \\
-    & | & \verb+[+ \term \verb+;+ \ldots \verb+;+ \term \verb+]+ &
-    \mbox{(enumerated list)} \\
-    & | & \verb+{+ \term \verb+;+ \ldots \verb+;+ \term \verb+}+ &
-    \mbox{(enumerated set)} \\
-    & | & \verb+{+ \term \ \verb+|+\  \term \verb+}+ & \mbox{(set comprehension)}
-  \end{array}
-  \]
-  \caption{Expanded Term Grammar} \label{expanded-grammar}
-\end{table}
-
-In the table, the varstruct ({\it vstr\/}) construct is used. A
-varstruct is an arbitrarily nested tuple of variables,
-where each variable only occurs once. The translation of varstructs
-into the internal abstract syntax trees is complex.
-\[
-\begin{array}{rcl}
-  \vstr & ::= & \ident : \type \\
-  & | & \ident  \\
-  & | & \vstr \verb+,+ \vstr \\
-  & | & \verb+(+ \vstr \verb+)+\\
-  & | & \verb+(+\vstr {\tt ::} \term\verb+)+\\
-\end{array}
-\]
-
-Also, in the term grammar a \charseq\ is just a finite sequence of
-characters.
-
-The current term grammar is available interactively through a call to
-the function \texttt{term\_grammar()}.
 
 \subsection{Parser tricks and magic}
 
@@ -893,7 +872,6 @@ it by \ml{step}, and gives up when $d$ exceeds \ml{max}.
 \section{The {\tt num} library}
 \label{sec:numLib}
 \index{decision procedures!Presburger arithmetic over natural numbers}
-
 
 \section{The \texttt{HolSat} library}\label{sec:HolSatLib}
 \section{The \texttt{HolBdd} library}\label{sec:HolBddLib}
