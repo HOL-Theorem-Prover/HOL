@@ -44,6 +44,7 @@ type hol_type = Type.hol_type
 type term = Term.term;
 type thm = Thm.thm;
 type ppstream = Portable.ppstream
+type ThyPP_info = TheoryPP.thm_printer * string
 
 infix ##;
 
@@ -1109,61 +1110,67 @@ fun unadjzip [] A = A
  ----------------------------------------------------------------------------*)
 
 
-fun gen_export_theory printers (thy as {thid,con_wrt_disk,STH,GR,
-                                        facts,adjoin,...}:theory) =
-  if con_wrt_disk
-   then (Lib.say ("\nTheory "^Lib.quote(thyid_name thid)^" already \
-                    \consistent with disk, hence not exported.\n");
-         SUCCESS ())
-  else
-  let val concat = String.concat
-      val thyname = thyid_name thid
-      val name = CTname()^"Theory"
-      val (A,D,T) = unkind facts
-      val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
-      val sigthry = {name = thyname,
-                  parents = map thyid_name (Graph.fringe GR),
+fun gen_export_theory thyPPopt (thy:theory) = let
+  val {thid,con_wrt_disk,STH,GR, facts,adjoin,...} = thy
+in
+  if con_wrt_disk then
+    (Lib.say ("\nTheory "^Lib.quote(thyid_name thid)^" already \
+              \consistent with disk, hence not exported.\n");
+     SUCCESS ())
+  else let
+    val concat = String.concat
+    val thyname = thyid_name thid
+    val name = CTname()^"Theory"
+    val (A,D,T) = unkind facts
+    val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
+    val sigthry = {name = thyname,
+                   parents = map thyid_name (Graph.fringe GR),
                    axioms = A,
-              definitions = D,
-                 theorems = T,
+                   definitions = D,
+                   theorems = T,
                    sig_ps = sig_ps}
-      val structthry
-             = {theory = dest_thyid thid,
-               parents = map dest_thyid (Graph.fringe GR),
-                 types = map dty (thy_types thyname thy),
-             constants = Lib.mapfilter dconst (thy_constants thyname thy),
-                axioms = A,
-           definitions = D,
-              theorems = T,
-             struct_ps = struct_ps}
+    val structthry
+      = {theory = dest_thyid thid,
+         parents = map dest_thyid (Graph.fringe GR),
+         types = map dty (thy_types thyname thy),
+         constants = Lib.mapfilter dconst (thy_constants thyname thy),
+         axioms = A,
+         definitions = D,
+         theorems = T,
+         struct_ps = struct_ps}
   in
-   case filter (not o Lexis.ok_sml_identifier) (map fst (A@D@T))
-    of [] =>
-       (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
-            val ostrm2 = Portable.open_out(concat["./",name,".sml"])
-        in
-          Lib.say "Exporting theory ... ";
-          theory_out (fn ppstrm =>
+     case filter (not o Lexis.ok_sml_identifier) (map fst (A@D@T)) of
+       [] => (let
+         val ostrm1 = Portable.open_out(concat["./",name,".sig"])
+         val ostrm2 = Portable.open_out(concat["./",name,".sml"])
+         val (printers, smlprelude) =
+           case thyPPopt of
+             NONE => (NONE, "")
+           | SOME (pp, s) => (SOME pp, s)
+       in
+         Lib.say "Exporting theory ... ";
+         theory_out (fn ppstrm =>
                       TheoryPP.pp_theory_sig printers ppstrm sigthry)
                      {name = name, style = "signature"} ostrm1;
-          theory_out (fn ppstrm =>
-                      TheoryPP.pp_theory_struct ppstrm structthry)
+         theory_out (fn ppstrm =>
+                      TheoryPP.pp_theory_struct ppstrm smlprelude structthry)
                      {name = name, style = "structure"} ostrm2;
-          set_ct_consistency true;
-          Lib.say "done.\n";
-          SUCCESS ()
-        end
-        handle e => (Lib.say "\nFailure while writing theory!\n";
-                     FAILURE (SYSTEM e)))
+         set_ct_consistency true;
+         Lib.say "done.\n";
+         SUCCESS ()
+       end
+       handle e => (Lib.say "\nFailure while writing theory!\n";
+                    FAILURE (SYSTEM e)))
      | badnames =>
-        (Lib.say (String.concat
-          ["\nThe following ML binding names in the theory to be exported:\n",
-           String.concat (Lib.commafy (map Lib.quote badnames)),
-           "\n are not acceptable ML identifiers.\n",
-              "   Use `set_MLname' to change each name."]);
-         FAILURE (CLIENT badnames))
-  end
-  handle e => FAILURE (INTERNAL e);
+         (Lib.say
+          (String.concat
+           ["\nThe following ML binding names in the theory to be exported:\n",
+            String.concat (Lib.commafy (map Lib.quote badnames)),
+            "\n are not acceptable ML identifiers.\n",
+            "   Use `set_MLname' to change each name."]);
+          FAILURE (CLIENT badnames))
+  end handle e => FAILURE (INTERNAL e)
+end
 
 
 

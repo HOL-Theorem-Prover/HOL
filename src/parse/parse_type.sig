@@ -35,5 +35,7 @@ in
 
   val std_suffix_precedence : int
 
+  val merge_grammars : grammar * grammar -> grammar
+
 end
 

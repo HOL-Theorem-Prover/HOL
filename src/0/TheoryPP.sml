@@ -80,97 +80,97 @@ fun pp_theory_sig thm_printer ppstrm info_record = let
   val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} =
                  Portable.with_ppstream ppstrm
-     val parents' = sort parents
-     val axioms' = psort axioms
-     val definitions' = psort definitions
-     val theorems' = psort theorems
-     val thml = axioms@definitions@theorems
-     fun vblock(header, ob_pr, obs) =
-             ( begin_block CONSISTENT 2;
-               add_string ("(*  "^header^ "  *)");
-               add_newline();
-               pr_list ob_pr (fn () => ()) add_newline obs;
-               end_block())
-     fun pparent s = String.concat ["structure ",Thry s," : ",ThrySig s]
-     val parentstring = "Parent theory of "^Lib.quote name
-     fun pr_parent s = (begin_block CONSISTENT 0;
-                       add_string (String.concat ["[", s, "]"]);
-                       add_break(1,0);
-                       add_string parentstring; end_block())
-     fun pr_parents [] = ()
-       | pr_parents slist =
-             ( begin_block CONSISTENT 0;
-               pr_list pr_parent (fn () => ())
-                                 (fn () => (add_newline(); add_newline()))
-                          slist;
-               end_block();
-               add_newline(); add_newline())
+  val parents' = sort parents
+  val axioms' = psort axioms
+  val definitions' = psort definitions
+  val theorems' = psort theorems
+  val thml = axioms@definitions@theorems
+  fun vblock(header, ob_pr, obs) =
+    (begin_block CONSISTENT 2;
+     add_string ("(*  "^header^ "  *)");
+     add_newline();
+     pr_list ob_pr (fn () => ()) add_newline obs;
+     end_block())
+  fun pparent s = String.concat ["structure ",Thry s," : ",ThrySig s]
+  val parentstring = "Parent theory of "^Lib.quote name
+  fun pr_parent s = (begin_block CONSISTENT 0;
+                     add_string (String.concat ["[", s, "]"]);
+                     add_break(1,0);
+                     add_string parentstring; end_block())
+  fun pr_parents [] = ()
+    | pr_parents slist =
+    ( begin_block CONSISTENT 0;
+     pr_list pr_parent (fn () => ())
+     (fn () => (add_newline(); add_newline()))
+     slist;
+     end_block();
+     add_newline(); add_newline())
 
-     fun pr_thm class (s,th) =
-          (begin_block CONSISTENT 0;
-           add_string (String.concat ["[", s, "]"]);
-           add_break(2,0);
-           add_string class;
-           add_break(2,0);
-           Lib.with_flag(Globals.show_tags,true)
-            (Lib.with_flag(Globals.show_assums, true) pp_thm) th;
-           end_block())
-     fun pr_thms _ [] = ()
-       | pr_thms heading plist =
-             ( begin_block CONSISTENT 0;
-               pr_list (pr_thm heading)
-                          (fn () => ())
-                          (fn () => (add_newline(); add_newline()))
-                          plist;
-               end_block();
-               add_newline(); add_newline())
-    fun pr_sig_ps NONE = ()  (* won't be fired because of filtering below *)
-      | pr_sig_ps (SOME pp) =
-           (begin_block CONSISTENT 0; pp ppstrm; end_block());
+  fun pr_thm class (s,th) =
+    (begin_block CONSISTENT 0;
+     add_string (String.concat ["[", s, "]"]);
+     add_break(2,0);
+     add_string class;
+     add_break(2,0);
+     Lib.with_flag(Globals.show_tags,true)
+     (Lib.with_flag(Globals.show_assums, true) pp_thm) th;
+     end_block())
+  fun pr_thms _ [] = ()
+    | pr_thms heading plist =
+    ( begin_block CONSISTENT 0;
+     pr_list (pr_thm heading)
+     (fn () => ())
+     (fn () => (add_newline(); add_newline()))
+     plist;
+     end_block();
+     add_newline(); add_newline())
+  fun pr_sig_ps NONE = ()  (* won't be fired because of filtering below *)
+    | pr_sig_ps (SOME pp) =
+    (begin_block CONSISTENT 0; pp ppstrm; end_block());
 
-    fun pr_sig_psl [] = ()
-      | pr_sig_psl l =
-          (add_newline(); add_newline();
-            begin_block CONSISTENT 0;
-            pr_list pr_sig_ps (fn () => ())
-                    (fn () => (add_newline(); add_newline())) l;
-            end_block());
+  fun pr_sig_psl [] = ()
+    | pr_sig_psl l =
+    (add_newline(); add_newline();
+     begin_block CONSISTENT 0;
+     pr_list pr_sig_ps (fn () => ())
+     (fn () => (add_newline(); add_newline())) l;
+     end_block());
 
-    fun pr_docs() =
-        (begin_block CONSISTENT 3;
-         add_string "(*"; add_newline();
-            pr_parents parents';
-            pr_thms "Axiom" axioms';
-            pr_thms "Definition" definitions';
-            pr_thms "Theorem" theorems';
-         end_block(); add_newline(); add_string "*)"; add_newline())
-     fun pthms (heading, ths) = vblock(heading,
-          (fn (s,th) => (begin_block CONSISTENT 0;
-                           add_string(concat["val ",s, " : thm"]);
-                         end_block())),  ths)
-   in begin_block CONSISTENT 0;
-      add_string ("signature "^ThrySig name^" ="); add_newline();
-      begin_block CONSISTENT 2;
-      add_string "sig"; add_newline();
-      if (name="min") then ()
-      else
-      (begin_block CONSISTENT 0;
-       add_string"type thm = Thm.thm";
-       if null axioms' then ()
-       else (add_newline(); add_newline(); pthms ("Axioms",axioms'));
-       if null definitions' then ()
-       else (add_newline(); add_newline(); pthms("Definitions", definitions'));
-       if null theorems' then ()
-       else (add_newline(); add_newline(); pthms ("Theorems", theorems'));
-       pr_sig_psl (filter (fn NONE => false | _ => true) sig_ps);
-       end_block();
-       end_block();
-       add_newline();
-       pr_docs());  (* end of if-then-else *)
-       add_string"end"; add_newline();
-      end_block();
-      flush_ppstream()
-   end;
+  fun pr_docs() =
+    (begin_block CONSISTENT 3;
+     add_string "(*"; add_newline();
+     pr_parents parents';
+     pr_thms "Axiom" axioms';
+     pr_thms "Definition" definitions';
+     pr_thms "Theorem" theorems';
+     end_block(); add_newline(); add_string "*)"; add_newline())
+  fun pthms (heading, ths) =
+    vblock(heading,
+           (fn (s,th) => (begin_block CONSISTENT 0;
+                          add_string(concat["val ",s, " : thm"]);
+                          end_block())),  ths)
+in
+  begin_block CONSISTENT 0;
+  add_string ("signature "^ThrySig name^" ="); add_newline();
+  begin_block CONSISTENT 2;
+  add_string "sig"; add_newline();
+  begin_block CONSISTENT 0;
+  add_string"type thm = Thm.thm";
+  if null axioms' then ()
+  else (add_newline(); add_newline(); pthms ("Axioms",axioms'));
+  if null definitions' then ()
+  else (add_newline(); add_newline(); pthms("Definitions", definitions'));
+  if null theorems' then ()
+  else (add_newline(); add_newline(); pthms ("Theorems", theorems'));
+  pr_sig_psl (filter (fn NONE => false | _ => true) sig_ps);
+  end_block();
+  end_block();
+  add_newline();
+  pr_docs();  (* end of if-then-else *)
+  add_string"end"; add_newline();
+  end_block();
+  flush_ppstream()
+end;
 
 (*---------------------------------------------------------------------------
  * Set up a sharing table.
@@ -300,7 +300,7 @@ val swap_fregs_def = "\n\
 \  Parse.temp_set_grammars tmpvalue\n\
 \end\n"
 
-fun pp_theory_struct ppstrm info_record = let
+fun pp_theory_struct ppstrm prelude_string info_record = let
   open Term
    val {theory as (name,i1,i2), parents,
         axioms,definitions,theorems,types,constants,struct_ps} = info_record
@@ -445,9 +445,7 @@ fun pp_theory_struct ppstrm info_record = let
       add_newline();
       add_string"val U = Type.mk_vartype"; add_newline();
       add_newline();
-      add_string "val internal_grammar_ref = ref (Parse.pop_theory_grammar())";
-      add_newline();
-      add_string swap_fregs_def;
+      add_string prelude_string;
       add_newline();
       pblock ("Parents", add_string o pparent, thid_sort parents);
       add_newline();

@@ -29,7 +29,7 @@ sig
     sig_ps      : (ppstream -> unit)option list} -> unit
 
  val pp_theory_struct :
-   ppstream ->
+   ppstream -> string ->
    {theory      : string*int*int,
     parents     : (string*int*int) list,
     types       : (string*int) list,

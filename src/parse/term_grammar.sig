@@ -130,5 +130,7 @@ val prefer_form_with_tok :
 val set_associativity_at_level : grammar -> (int * associativity) -> grammar
 val get_precedence : grammar -> string -> rule_fixity option
 
+val merge_grammars : (grammar * grammar) -> grammar
+
 
 end

@@ -208,14 +208,6 @@ in
   val export_theory_as_docfiles : string -> unit
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
   val print_theory : unit -> unit
-  val theory_grammars :
-    unit -> (string * (parse_type.grammar * term_grammar.grammar)) list
-  val push_theory_grammar :
-    string -> (parse_type.grammar * term_grammar.grammar) -> unit
-  val pop_theory_grammar : unit -> (parse_type.grammar * term_grammar.grammar)
-  val get_theory_grammars :
-    string -> (parse_type.grammar * term_grammar.grammar)
-
 
   (* stuff inserted rather after the fact that used to be in old Parse,
      and is still needed *)

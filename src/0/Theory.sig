@@ -60,18 +60,23 @@ datatype 'a failed = SYSTEM   of exn     (* OS/network not right *)
 
   datatype clientfixable = BADNAMES of string list
                          | EXN of exn
+  (* string argument is added to theory.sml file as a prelude to all
+     subsequent definitions, thm pretty-printer is used to pretty-print
+     theorems that appear in signature files. *)
+  type ThyPP_info = TheoryPP.thm_printer * string
+
 
   val prim_new_theory :
-    TheoryPP.thm_printer option -> string -> (unit,clientfixable failed) result
-  val new_theory0 : TheoryPP.thm_printer option -> string -> unit
+    ThyPP_info option -> string -> (unit,clientfixable failed) result
+  val new_theory0 : ThyPP_info option -> string -> unit
 
 (* Operations for making theory persistent (write it to disk) *)
 
   val adjoin_to_theory : thy_addon -> unit
 
   val prim_export_theory :
-    TheoryPP.thm_printer option  -> (unit, string list failed) result
-  val export_theory0 : TheoryPP.thm_printer option -> unit
+    ThyPP_info option -> (unit, string list failed) result
+  val export_theory0 :  ThyPP_info option -> unit
 
 
 (* Support operations for theories-as-structures *)

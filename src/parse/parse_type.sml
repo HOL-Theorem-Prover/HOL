@@ -151,9 +151,28 @@ end
 fun new_tyop G name =
   insert_sorted (std_suffix_precedence, SUFFIX[name]) G
 
-
-
-
 val empty_grammar = []
 
 fun rules (G: grammar) = G
+
+fun rev_append [] acc = acc
+  | rev_append (x::xs) acc = rev_append xs (x::acc)
+
+fun merge_grammars (G1:grammar, G2:grammar) = let
+  (* both grammars are sorted, with no adjacent suffixes *)
+  fun merge_acc acc (gs as (g1, g2)) =
+    case gs of
+      ([], _) => rev_append acc g2
+    | (_, []) => rev_append acc g1
+    | ((g1rule as (g1k, g1v))::g1rest, (g2rule as (g2k, g2v))::g2rest) => let
+      in
+        case Int.compare (g1k, g2k) of
+          LESS => merge_acc (g1rule::acc) (g1rest, g2)
+        | GREATER => merge_acc (g2rule::acc) (g1, g2rest)
+        | EQUAL => merge_acc ((g1k, merge g1v g2v)::acc) (g1rest, g2rest)
+      end
+in
+  merge_acc [] (G1, G2)
+end
+
+

@@ -403,6 +403,7 @@ fun merge_rules (r1, r2) =
   | (INFIX RESQUAN_OP, INFIX RESQUAN_OP) => INFIX(RESQUAN_OP)
   | (CLOSEFIX c1, CLOSEFIX c2) => CLOSEFIX (Lib.union c1 c2)
   | (FNAPP, FNAPP) => FNAPP
+  | (VSCONS, VSCONS) => VSCONS
   | (LISTRULE lr1, LISTRULE lr2) => LISTRULE (Lib.union lr1 lr2)
   | _ => raise GrammarError "Attempt to have different forms at same level"
 
@@ -413,8 +414,13 @@ fun resolve_same_precs [] = []
     in
       if p1 <> p2 orelse not (isSome p1) then
         (p1, r1)::(resolve_same_precs rules1)
-      else
-        (p1, merge_rules (r1, r2)) :: resolve_same_precs rules2
+      else let
+        val merged_rule = merge_rules (r1, r2)
+          handle GrammarError s =>
+            raise GrammarError (s ^ "(" ^Int.toString (valOf p1)^")")
+      in
+        (p1, merged_rule) :: resolve_same_precs rules2
+      end
     end
 
 infix Gmerge

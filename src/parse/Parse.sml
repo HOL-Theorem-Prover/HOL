@@ -995,35 +995,60 @@ in
   res
 end
 
-val theory_grammar_stack =
-  ref ([] : (string * (parse_type.grammar * term_grammar.grammar)) list)
+val swap_grefs_str = "\
+  \fun swap_grefs () = let\n\
+  \  val tmpvalue = !internal_grammar_ref\n\
+  \in\n\
+  \  internal_grammar_ref := (Parse.type_grammar(), Parse.term_grammar());\n\
+  \  Parse.temp_set_grammars tmpvalue\n\
+  \end\n"
 
-fun theory_grammars () = !theory_grammar_stack
-fun push_theory_grammar s Gs =
-  theory_grammar_stack := (s, Gs) :: (!theory_grammar_stack)
-fun get_theory_grammars s = Lib.assoc s (!theory_grammar_stack)
-fun pop_theory_grammar () =
-  case !theory_grammar_stack of
-    [] => (parse_type.empty_grammar, term_grammar.stdhol)
-  | (x::_) => #2 x
+val Gmerge_foldfn_str =
+  "List.foldl (fn ((gname, (tyG0, tmG0)), (tyG1, tmG1)) => \n\
+  \            (parse_type.merge_grammars (tyG0, tyG1),\n\
+  \             term_grammar.merge_grammars (tmG0, tmG1))\n\
+  \            handle HOLgrammars.GrammarError s =>\n\
+  \              (Lib.mesg true (\"Error \"^s^\" merging grammar from \"^\
+  \gname^\"; ignoring it\\n\"); (tyG1, tmG1)))\n"
 
-fun new_theory s = Theory.new_theory0 (SOME pp_thm) s
+fun calculate_prelude () = let
+  val pars = parents "-"
+  val parthgs = map (fn s => (s, s ^ "Theory." ^ s ^ "_grammars")) pars
+  val gexp =
+    case parthgs of
+      [] => "(parse_type.empty_grammar, term_grammar.stdhol)"
+    | [x] => #2 x
+    | [x,y] => "(parse_type.merge_grammars (#1 "^ #2 x^", #1 "^ #2 y^"),\n\
+                \term_grammar.merge_grammars (#2 "^ #2 x^", #2 "^ #2 y^"))\n\
+                \handle HOLgrammars.GrammarError s =>\n\
+                \  (Lib.mesg true (\"Error \\n  \"^s^\"\\n  merging grammars from \
+                \theories "^
+                #1 x^ " and "^ #1 y^"; taking the first.\");\n" ^ #2 x ^")"
+    | _ => let
+        val newxs =
+          map (fn (s1, s2) => "(" ^ Lib.quote s1 ^", "^s2^")") parthgs
+        val grammarlist = String.concat ("[" :: commafy (tl newxs) @ ["]"])
+      in
+        Gmerge_foldfn_str ^ " " ^ #2 (hd parthgs)  ^ " " ^ grammarlist
+      end
+in
+  String.concat ["val internal_grammar_ref = ref (", gexp,  ");\n",
+                 swap_grefs_str]
+end
+
+fun new_theory s = Theory.new_theory0 (SOME (pp_thm, calculate_prelude())) s
 fun export_theory () = let
   val thyname = current_theory()
-  val lastcmdstring =
-    "val _ = Parse.push_theory_grammar " ^ quote thyname ^
-    " (!internal_grammar_ref)"
   val g_decl_string =
     String.concat ["val ", thyname, "_grammars = (!internal_grammar_ref)"]
   val g_decl_sig =
     String.concat ["val ", thyname, "_grammars : (parse_type.grammar * ",
                    "term_grammar.grammar)"]
 in
-  adjoin_to_theory (pureThyaddon lastcmdstring);
   adjoin_to_theory
   {sig_ps = SOME (fn pps => Portable.add_string pps g_decl_sig),
    struct_ps = SOME (fn pps => Portable.add_string pps g_decl_string)};
-  Theory.export_theory0 (SOME pp_thm)
+  Theory.export_theory0 (SOME (pp_thm, calculate_prelude()))
 end
 fun print_theory () = Theory.print_theory0 {pp_thm = pp_thm, pp_type = pp_type}
 
