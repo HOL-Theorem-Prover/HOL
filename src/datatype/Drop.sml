@@ -373,10 +373,10 @@ fun pp_datatype_as_ML ppstrm decls =
            pr_list add_string (fn () => add_string",") (fn ()=>()) vlist;
            add_string")";
            end_block())
-     fun pp_clause r arg =
+     fun pp_clause r clause =
        (if !r then (add_string "= "; r:=false) 
               else add_string "| "; 
-        case arg
+        case clause
          of (con,[]) => add_string con
           | (con,args) =>
               (begin_block INCONSISTENT 0; 
@@ -409,7 +409,7 @@ fun pp_datatype_as_ML ppstrm decls =
   ; pr_list (pp_decl (tyvars,ref true))
             (fn () => (add_newline(); add_string "and")) 
             add_newline
-            decls
+            decls'
   ; end_block()
   ; end_block()
  end;

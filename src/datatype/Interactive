@@ -25,7 +25,7 @@ val checkingML = ref true;
 (* Declare a function in HOL, and make a parallel definition in ML.          *)
 (*===========================================================================*)
 
-fun Declare q =
+fun Function q =
  let val def = bossLib.Define q
      val asMLstring = PP.pp_to_string 70 Drop.pp_defn_as_ML (concl def)
      val _ = if !checkingML then 
@@ -39,7 +39,7 @@ fun Declare q =
 (* A version that doesn't try to prove termination in HOL                    *)
 (*---------------------------------------------------------------------------*)
 
-fun Weak_Declare s q =
+fun Weak_Function s q =
  let val def = bossLib.Hol_defn s q
      val clauses = list_mk_conj(map concl (Defn.eqns_of def))
      val asMLstring = PP.pp_to_string 70 Drop.pp_defn_as_ML clauses
@@ -74,6 +74,12 @@ fun Datatype q =
     Datatype `bar = Alpha | Beta of 'a | Delta of ('a # 'b)list
                   | Elephant of bool list | Zebra of 'a -> 'b -> bool`;
     Datatype `tree = Node of 'a => tree list`;
+
+      Function `insert x l = if MEM x l then l else x::l`;
+      Weak_Function "tree_els" 
+             `tree_els els (Node x tlist) = 
+                 FOLDL tree_els (insert x els) tlist`;
+
     Datatype `enum = One | Two | Three | Four of blef list
                ;
               blef = E | G`;
