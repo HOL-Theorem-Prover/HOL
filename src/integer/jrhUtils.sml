@@ -151,7 +151,7 @@ fun X_BETA_CONV v tm = SYM(BETA_CONV(mk_comb(mk_abs(v,tm),v)));
 
 val EXACT_CONV =
   ONCE_DEPTH_CONV o FIRST_CONV o
-  map (fn t => K t o assert(curry op = (lhs(concl t))));
+  map (fn t => K t o assert(aconv (lhs(concl t))));
 
 (*---------------------------------------------------------------------------*)
 (* Rather ad-hoc higher-order fiddling conversion                            *)
