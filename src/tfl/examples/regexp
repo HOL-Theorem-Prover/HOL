@@ -19,10 +19,8 @@ fun match (res : re list)
  of ([], [])          => true
   | ([], _)           => false
   | (Epsilon::t, w)   => match t w stop
-  | (Any::t, [])      => false
-  | (Any::t, char::w) => match t w NONE
   | (Atom c::t, [])   => false
-  | (Atom c::t, d::w) => c = d andalso match t w NONE
+  | (Atom c::t, d::w) => c d andalso match t w NONE
   | (Or(r1,r2)::t, w) => match (r1::t) w stop orelse match (r2::t) w stop
   | (Then(r1,r2)::t,w) => match (r1::r2::t) w stop
   | ((R as (Repeat r::t)), w) => 
@@ -65,20 +63,6 @@ fun RENAME_FREES_TAC [] = ALL_TAC
 (* Miscellaneous lemmas; some should already exist in HOL                    *)
 (*---------------------------------------------------------------------------*)
 
-val APPEND_CONS = Q.prove
-(`!a b c d. ([a]<>b = c::d) ==> ((a = c) /\ (b = d))`,
- RW_TAC list_ss []);
-
-val APPEND_CONS2 = Q.prove
-(`!a b . ([a]<>b = a::b)`,
- RW_TAC list_ss []);
-
-val APPEND_CONS_THM = Q.prove
-(`!L h t. L <> (h::t) = (L <> [h]) <> t`,
- Cases THENL 
-  [RW_TAC list_ss [],
-   REWRITE_TAC [GSYM APPEND_ASSOC,APPEND_11] THEN PROVE_TAC [APPEND]]);
-
 val MEM_EXISTS_LEM = Q.prove
 (`!x l. MEM x l = EXISTS (\y. y = x) l`,
  Induct_on `l` THEN EVAL_TAC THEN METIS_TAC []);
@@ -89,12 +73,11 @@ val MEM_EXISTS_LEM = Q.prove
 (*--------------------------------------------------------------------------*)
 
 Hol_datatype `regexp =
-   Any                       (* Any character *)
- | Epsilon                   (* Empty string *)
- | Atom of char              (* Specific character *)
+   Epsilon                         (* Empty string *)
+ | Atom of ('a -> bool)            (* Character set *)
  | Or of regexp => regexp    (* Union *)
  | Then of regexp => regexp  (* Concatenation *)
- | Repeat of regexp`;        (* Iterated concat, >= 0 *)
+ | Repeat of regexp`;             (* Iterated concat, >= 0 *)
 
 (*---------------------------------------------------------------------------*)
 (* Parser fiddling to get | and # as infixes - we have to first get rid      *)
@@ -120,9 +103,8 @@ val regexp_cases = TypeBase.nchotomy_of "regexp";
 
 val sem_def =
  Define
-  `(sem Any w        = ?x. w = [x])                                    /\
-   (sem Epsilon w    = (w = []))                                       /\
-   (sem (Atom c) w   = (w = [c]))                                      /\
+  `(sem Epsilon w    = (w = []))                                       /\
+   (sem (Atom c) w   = (?x. (w = [x]) /\ (c x)))                       /\
    (sem (r1|r2) w    = sem r1 w \/ sem r2 w)                           /\
    (sem (r1#r2) w    = ?w1 w2. (w = w1<>w2) /\ sem r1 w1 /\ sem r2 w2) /\
    (sem (Repeat r) w = ?wlist. (w = FLAT wlist) /\ EVERY (sem r) wlist)`;
@@ -166,10 +148,8 @@ val match_defn = Hol_defn
    `(match [] [] _              = T)
 /\  (match [] _  _              = F)
 /\  (match (Epsilon::t) w s     = match t w s)
-/\  (match (Any::t) [] s        = F)
-/\  (match (Any::t) (_::w) s    = match t w NONE) 
 /\  (match (Atom c::t) [] s     = F)
-/\  (match (Atom c::t) (d::w) s = (c=d) /\ match t w NONE) 
+/\  (match (Atom c::t) (d::w) s = (c d) /\ match t w NONE) 
 /\  (match (r1|r2::t) w s       = match (r1::t) w s \/ match (r2::t) w s)
 /\  (match (r1#r2::t) w s       = match (r1::r2::t) w s)
 /\  (match (Repeat r::t) w s    = let stop = Repeat r::t in
@@ -191,8 +171,7 @@ val match_defn = Hol_defn
 
 val my_regexp_size_def =
   Define
-  `(my_regexp_size Any        = 1) /\
-   (my_regexp_size Epsilon    = 1) /\
+  `(my_regexp_size Epsilon    = 1) /\
    (my_regexp_size (Atom _)   = 1) /\
    (my_regexp_size (r1 | r2)  = 1 + my_regexp_size r1 + my_regexp_size r2) /\
    (my_regexp_size (r1 # r2)  = 1 + my_regexp_size r1 + my_regexp_size r2) /\
@@ -204,8 +183,7 @@ val my_regexp_size_def =
 
 val starHeight_def =
   Define
-  `(starHeight Any = 0) /\
-   (starHeight Epsilon    = 0) /\
+  `(starHeight Epsilon    = 0) /\
    (starHeight (Atom _)   = 0) /\
    (starHeight (r1 | r2)  = MAX (starHeight r1) (starHeight r2)) /\
    (starHeight (r1 # r2)  = MAX (starHeight r1) (starHeight r2)) /\
@@ -256,7 +234,7 @@ val (match_def, match_ind) = Defn.tprove
 val match_implies_sem = Q.prove
 (`!rl w s. match rl w s ==> sem (FOLDR $# Epsilon rl) w`,
  recInduct match_ind THEN RW_TAC list_ss [match_def, sem_def] THENL
- [PROVE_TAC [APPEND_CONS2],
+ [PROVE_TAC [APPEND],
   PROVE_TAC [],
   PROVE_TAC [],
   FULL_SIMP_TAC list_ss [] THEN PROVE_TAC [],
@@ -280,8 +258,7 @@ val match_implies_sem = Q.prove
 
 val m_def = Define
   `(m (Epsilon::t,w,s)  x  = (x = (t,w,s))) /\ 
-   (m (Any::t, c::w,s)  x  = (x = (t,w,NONE))) /\
-   (m (Atom c::t,d::w,s) x = (x = (t,w,NONE)) /\ (c = d)) /\
+   (m (Atom c::t,d::w,s) x = (x = (t,w,NONE)) /\ (c d)) /\
    (m (r1 | r2::t, w, s) x = (x = (r1::t,w,s)) \/ (x = (r2::t,w,s))) /\
    (m (r1 # r2::t, w, s) x = (x = (r1::r2::t,w,s))) /\
    (m (Repeat r::t, w,s) x = (x = (t, w, s)) \/ 
@@ -302,16 +279,14 @@ val m_ind  = fetch "-" "m_ind";
 val ms_ind = fetch "-" "match_seq_ind";
 
 val m_ind_thm = Q.prove 
-(`!P:regexp list # char list # regexp list option ->
-     regexp list # char list # regexp list option -> bool.
+(`!P:'a regexp list # 'a list # 'a regexp list option ->
+     'a regexp list # 'a list # 'a regexp list option -> bool.
   (!t w s x. P (Epsilon::t,w,s) x) /\
-  (!t c w s x. P (Any::t,c::w,s) x) /\
   (!c t d w s x. P (Atom c::t,d::w,s) x) /\
   (!r1 r2 t w s x. P (r1 | r2::t,w,s) x) /\
   (!r1 r2 t w s x. P (r1 # r2::t,w,s) x) /\
   (!r t w s x. P (Repeat r::t,w,s) x) /\
   (!c t s x. P (Atom c::t,[],s) x) /\
-  (!t s x. P (Any::t,[],s) x) /\ 
   (!w s. P ([],w) s) ==>
   !v v1 v2 v3 v4 v5. P (v,v1,v2) (v3,v4,v5)`,
  PROVE_TAC [ABS_PAIR_THM,m_ind]);
@@ -329,11 +304,10 @@ val m_thm2 = Q.prove
  recInduct m_ind_thm THEN RW_TAC list_ss [m_def]);
 
 val cases_lemma = Q.prove
-(`!a:regexp list # char list # regexp list option.
+(`!a: 'a regexp list # 'a list # 'a regexp list option.
      (?x. a = ([],[],x)) \/ (?h t x. a = ([],h::t,x)) \/
      (?t w s. a = (Epsilon::t,w,s)) \/
      (?c t w s. a = (Atom c::t,[],s)) \/ (?c d t w s. a = (Atom c::t,d::w,s)) \/
-     (?t w s. a = (Any::t,[],s)) \/ (?d t w s. a = (Any::t,d::w,s)) \/
      (?r1 r2 t w s. a = (r1|r2::t,w,s)) \/
      (?r1 r2 t w s. a = (r1#r2::t,w,s)) \/
      (?r t w s. a = (Repeat r::t,w,s))`,
@@ -341,7 +315,7 @@ val cases_lemma = Q.prove
 
 
 val ms_ind_thm = Q.prove
-(`!P:(regexp list # char list # regexp list option) list -> bool.
+(`!P:('a regexp list # 'a list # 'a regexp list option) list -> bool.
     P [] /\ 
     (!x. P [([],[],x)]) /\
     (!r t w s. P [(Repeat r::t,w,s)]) /\
@@ -350,13 +324,9 @@ val ms_ind_thm = Q.prove
     (!c d t w s. P [(Atom c::t,d::w,s)]) /\
     (!c t s. P [(Atom c::t,[],s)]) /\
     (!t w s. P [(Epsilon::t,w,s)]) /\
-    (!t c w s. P [(Any::t,c::w,s)]) /\
-    (!t s. P [(Any::t,[],s)]) /\
     (!h t s. P [([],h::t,s)]) /\
     (!t w s t' w' s' rst.
         P ((t',w',s')::rst) ==> P((Epsilon::t,w,s)::(t',w',s')::rst)) /\
-    (!t c w s t' w' s' rst.
-        P ((t',w',s')::rst) ==> P((Any::t,c::w,s)::(t',w',s')::rst)) /\
     (!c t d w s t' w' s' rst.
         P ((t',w',s')::rst) ==> P((Atom c::t,d::w,s)::(t',w',s')::rst)) /\
     (!r1 r2 t w s t' w' s' rst.
@@ -366,18 +336,12 @@ val ms_ind_thm = Q.prove
     (!r t w s t' w' s' rst.
         P ((t',w',s')::rst) ==> P((Repeat r::t,w,s)::(t',w',s')::rst)) /\
     (!c t s h1 t1. P ((Atom c::t,[],s)::h1::t1)) /\
-    (!t s h1 t1. P ((Any::t,[],s)::h1::t1)) /\
     (!c w s h1 t1. P (([],c::w,s)::h1::t1)) /\
     (!s h1 t1. P (([],[],s)::h1::t1)) 
    ==>
        !v. P v`,
- GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC ms_ind THEN REPEAT CONJ_TAC THENL 
-   [ASM_REWRITE_TAC [],METIS_TAC [cases_lemma],
-    GEN_TAC THEN GEN_TAC 
-      THEN `?c d e. b = (c,d,e)` by METIS_TAC [ABS_PAIR_THM]
-      THEN RW_TAC list_ss []
-      THEN STRIP_ASSUME_TAC (SPEC_ALL cases_lemma)
-      THEN RW_TAC list_ss []]);
+ GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC ms_ind THEN
+ METIS_TAC [ABS_PAIR_THM, cases_lemma]);
 
 val match_seq_down_closed = Q.prove
 (`!L1 L2. match_seq (L1 <> L2) ==> match_seq L2`,
@@ -389,16 +353,14 @@ val match_seq_down_closed = Q.prove
 (*---------------------------------------------------------------------------*)
 (* Concatenation of match sequences requires the "stopper" to be changed.    *)
 (*---------------------------------------------------------------------------*)
-
 val change_stop_on_prefix_def = 
  Define
-  `(change_stop_on_prefix [] ns = []) /\
+  `(change_stop_on_prefix ([] : ('a regexp list # 'a list # 'a regexp list option) list) ns = []) /\
    (change_stop_on_prefix ((Repeat r::t,w,s)::b::c) ns = 
      if b = (r::Repeat r::t, w, SOME (Repeat r::t)) then
        (Repeat r::t,w,ns)::b::c
      else
        (Repeat r::t,w,ns)::change_stop_on_prefix (b::c) ns) /\
-   (change_stop_on_prefix ((Any::t,w,s)::c) ns = (Any::t,w,ns)::c) /\
    (change_stop_on_prefix ((Atom c1::t,w,s)::c) ns = (Atom c1::t,w,ns)::c) /\
    (change_stop_on_prefix ((rl,w,s)::c) ns = (rl,w,ns)::change_stop_on_prefix c ns)`;
 
@@ -406,7 +368,7 @@ val csp_def = change_stop_on_prefix_def;
 val csp_ind = fetch "-" "change_stop_on_prefix_ind";
 
 val csp_step_lem = Q.prove
-(`!alist stop rl (w:char list) s x. 
+(`!alist stop rl w s x. 
     (alist = ((rl,w,s)::x)) ==>
     ?t. change_stop_on_prefix alist stop = (rl,w,stop)::t`,
  recInduct csp_ind THEN RW_TAC list_ss [csp_def]);
@@ -419,23 +381,8 @@ val csp_step = SIMP_RULE list_ss [] csp_step_lem;
 
 val change_stop_on_prefix_thm = Q.prove
 (`!L stop. match_seq L ==> match_seq (change_stop_on_prefix L stop)`,
- recInduct ms_ind_thm THEN RW_TAC list_ss [match_seq_def,m_def,csp_def] THENL
- [`?l. change_stop_on_prefix ((t,w,s)::rst) stop = (t,w,stop)::l` by 
-   PROVE_TAC [csp_step], 
-   PROVE_TAC [],
-   PROVE_TAC [],
-  `?l. change_stop_on_prefix ((r1::t,w,s)::rst) stop = (r1::t,w,stop)::l` by 
-   PROVE_TAC [csp_step],
-  `?l. change_stop_on_prefix ((r2::t,w,s)::rst) stop = (r2::t,w,stop)::l` by 
-   PROVE_TAC [csp_step],
-  `?l. change_stop_on_prefix ((r1::r2::t,w,s)::rst) stop = (r1::r2::t,w,stop)::l` by
-   PROVE_TAC [csp_step],
-  RW_TAC std_ss [] THENL 
-   [POP_ASSUM (MP_TAC o Q.AP_TERM `LENGTH`) THEN RW_TAC list_ss [],
-    `?l. change_stop_on_prefix ((t,w,s)::rst) stop = (t,w,stop)::l` by 
-     PROVE_TAC [csp_step]]]
- THEN RW_TAC list_ss [match_seq_def,m_def] 
- THEN PROVE_TAC []);
+ recInduct ms_ind_thm THEN RW_TAC list_ss [match_seq_def,m_def,csp_def] THEN
+ METIS_TAC [match_seq_def, m_def, csp_step]);
 
 val LENGTH_CSP = Q.prove
 (`!l s. LENGTH (change_stop_on_prefix l s) = LENGTH l`,
@@ -475,62 +422,39 @@ val lem = Q.prove
          [csp_step, change_stop_on_prefix_def, match_seq_def, m_def])
   THEN PROVE_TAC [CONS_ACYCLIC,list_CASES, CONS_11]);
 
-val I_DEF_ALT = Q.prove
-(`I = \x.x`, METIS_TAC [combinTheory.I_THM]);
-
-val OPTION_MAP_ID = Q.prove
-(`!opt. OPTION_MAP I opt = opt`,
- Cases THEN RW_TAC std_ss [OPTION_MAP_DEF,combinTheory.I_THM]);
-
 (*---------------------------------------------------------------------------*)
 (* Match_seq closed under concatenation. Tedious case analysis.              *)
 (*---------------------------------------------------------------------------*)
-
-val thms = [m_def, match_seq_def, compose_m_seq_def,OPTION_MAP_DEF,
-            SIMP_RULE std_ss [] lem, compose_m_seq_null,
-            OPTION_MAP_ID,GSYM I_DEF_ALT];
 
 val compose_m_seq_thm = Q.prove
 (`!x1 x2. match_seq x1 ==> match_seq x2 ==> match_seq (compose_m_seq x1 x2)`,
  REPEAT STRIP_TAC 
    THEN Induct_on `x1`
-   THEN RW_TAC list_ss [compose_m_seq_null]
+   THEN RW_TAC list_ss []
    THEN `(?rl w s. h = (rl,w,s)) /\ 
          ((x1 = []) \/ ?g t1. x1 = g::t1) /\
          ((x2 = []) \/ ?rl' w' s' t2 . x2 = (rl',w',s')::t2)` 
       by METIS_TAC [list_CASES,ABS_PAIR_THM]
    THEN RW_TAC list_ss [compose_m_seq_null] THENL 
    [(*Base Case*)
-    FULL_SIMP_TAC list_ss [match_seq_def,compose_m_seq_def] 
-      THEN RW_TAC list_ss [] 
-      THEN `(rl' = []) \/ ?h t. rl' = h::t` by METIS_TAC [list_CASES] 
-      THEN RW_TAC list_ss [OPTION_MAP_ID, SYM I_DEF_ALT] 
+      `(rl' = []) \/ ?h t. rl' = h::t` by METIS_TAC [list_CASES] 
       THEN `(t2 = []) \/ ?a z. t2 = a::z` by METIS_TAC [list_CASES] 
-      THEN FULL_SIMP_TAC list_ss thms THEN EVAL_TAC
-      THEN RW_TAC list_ss []
-      THEN `(h = Any) \/ (h = Epsilon) \/ (?c. h = Atom c) \/
+      THEN FULL_SIMP_TAC list_ss [match_seq_def]
+      THEN `(h = Epsilon) \/ (?c. h = Atom c) \/
             (?r1 r2. h = r1|r2) \/ (?r1 r2. h = r1#r2) \/ 
             (?r. h = Repeat r)` by METIS_TAC [regexp_cases]
-      THEN RW_TAC list_ss [] THEN EVAL_TAC THENL
-      [(*Any*) `(w'=[]) \/ ?c w. w' = c::w` by METIS_TAC [list_CASES]
-          THEN FULL_SIMP_TAC list_ss [m_def],
-       (*Epsilon*) FULL_SIMP_TAC list_ss thms THEN RW_TAC list_ss thms,
-       (*Atom*) `(w'=[]) \/ ?c w. w' = c::w` by METIS_TAC [list_CASES]
-          THEN FULL_SIMP_TAC list_ss [m_def],
-       (*Or*) FULL_SIMP_TAC list_ss [m_def] THEN RW_TAC list_ss thms,
-       (*Then*) FULL_SIMP_TAC list_ss [m_def] THEN RW_TAC list_ss thms,
-       (*Repeat*) FULL_SIMP_TAC list_ss [m_def] THEN RW_TAC list_ss thms 
-         THEN METIS_TAC [CONS_ACYCLIC,list_CASES, CONS_11]],
+      THEN RW_TAC list_ss [] THEN EVAL_TAC THEN FULL_SIMP_TAC list_ss [m_def]
+      THEN RW_TAC list_ss [m_def, match_seq_def, SIMP_RULE std_ss [] lem]
+      THEN METIS_TAC [list_CASES, m_def, CONS_ACYCLIC, CONS_11],
     (*Step Case*)
     `?rlist w1 s1. g = (rlist,w1,s1)` by METIS_TAC [ABS_PAIR_THM]
-       THEN RW_TAC list_ss []
        THEN `((rl = []) \/ ?h t. rl = h::t) /\
              ((w = []) \/ ?b y. w = b::y)` by METIS_TAC [list_CASES] 
-       THEN RW_TAC list_ss [] 
-       THEN `(h = Any) \/ (h = Epsilon) \/ (?c. h = Atom c) \/
+       THEN `(h = Epsilon) \/ (?c. h = Atom c) \/
              (?r1 r2. h = r1|r2) \/ (?r1 r2. h = r1#r2) \/ 
              (?r. h = Repeat r)` by METIS_TAC [regexp_cases]
-       THEN NTAC 2 (RW_TAC list_ss [] THEN FULL_SIMP_TAC list_ss thms)]);
+       THEN NTAC 2 (RW_TAC list_ss [] THEN
+                    FULL_SIMP_TAC list_ss [m_def, match_seq_def, compose_m_seq_def])]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -541,15 +465,9 @@ val match_seq_lemma = Q.prove
 (`!a x y z. match_seq (x<>[a]<>z) /\ match_seq ([a]<>y)
             ==> match_seq (x<>[a]<>y)`,
  Induct_on `x` 
-   THEN RW_TAC list_ss [match_seq_def]
-   THEN FULL_SIMP_TAC list_ss []
-   THEN Q.PAT_ASSUM `$! M` (MP_TAC o Q.SPECL [`a`,`y`,`z`])
    THEN RW_TAC list_ss []
-   THEN `match_seq (x <> [a] <> z)` 
-        by METIS_TAC [match_seq_down_closed, APPEND, APPEND_CONS]
-   THEN FULL_SIMP_TAC list_ss []
-   THEN Cases_on `x` 
-   THEN FULL_SIMP_TAC list_ss [match_seq_def]);
+   THEN Cases_on `x`
+   THEN METIS_TAC [APPEND, match_seq_def]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -557,45 +475,35 @@ val match_seq_lemma = Q.prove
 (*---------------------------------------------------------------------------*)
 
 val lem = Q.prove
-(`!r (w:char list) s r' w' s' x x'. 
+(`!(r: 'a regexp list) (w:'a list) s r' w' s' x x'. 
   ?t. compose_m_seq ((r, w, s)::x) ((r', w', s')::x') 
         =
       (r<>r', w<>w', OPTION_MAP (\e.e<>r') s)::t`,
  RW_TAC list_ss [compose_m_seq_def]);
 
-val thms = [match_seq_def, m_def, sem_def, compose_m_seq_thm, 
-            lem, OPTION_MAP_DEF,change_stop_on_prefix_thm, 
-            csp_step];
-
-
 val sem_implies_match_seq_exists = Q.prove
 (`!r w. sem r w ==> ?x. match_seq (([r], w, NONE)::x)`,
  Induct THENL 
- [RW_TAC list_ss thms 
-    THEN Q.EXISTS_TAC `[([],[],NONE)]` THEN RW_TAC list_ss thms,
-  RW_TAC list_ss thms
-    THEN Q.EXISTS_TAC `[([],[],NONE)]` THEN RW_TAC list_ss thms,
-  RW_TAC list_ss thms
-    THEN Q.EXISTS_TAC `[([],[],NONE)]` THEN RW_TAC list_ss thms, 
-  RW_TAC list_ss thms THEN RES_TAC THENL
-    [Q.EXISTS_TAC `([r],w,NONE)::x` THEN RW_TAC list_ss thms,
-     Q.EXISTS_TAC `([r'],w,NONE)::x` THEN RW_TAC list_ss thms],
-  RW_TAC list_ss thms THEN 
-    `?x1 x2. match_seq(([r],w1,NONE)::x1) /\ 
-             match_seq(([r'],w2,NONE)::x2)`by PROVE_TAC []
-    THEN Q.EXISTS_TAC `compose_m_seq (([r],w1,NONE)::x1) (([r'],w2,NONE)::x2)` 
-    THEN FULL_SIMP_TAC list_ss thms
+ [RW_TAC list_ss [sem_def] 
+    THEN Q.EXISTS_TAC `[([],[],NONE)]` THEN RW_TAC list_ss [match_seq_def, m_def],
+  RW_TAC list_ss [sem_def]
+    THEN Q.EXISTS_TAC `[([],[],NONE)]` THEN RW_TAC list_ss [match_seq_def, m_def], 
+  RW_TAC list_ss [sem_def] THEN RES_TAC THENL
+    [Q.EXISTS_TAC `([r],w,NONE)::x` THEN RW_TAC list_ss [match_seq_def, m_def],
+     Q.EXISTS_TAC `([r'],w,NONE)::x` THEN RW_TAC list_ss [match_seq_def, m_def]],
+  RW_TAC list_ss [sem_def] THEN RES_TAC
+    THEN Q.EXISTS_TAC `compose_m_seq (([r],w1,NONE)::x') (([r'],w2,NONE)::x)` 
     THEN STRIP_ASSUME_TAC 
-           (Q.SPECL [`[r]`, `w1`, `NONE`, `[r']`, `w2`,`NONE`, `x1`, `x2`] lem)
-    THEN ASM_REWRITE_TAC [] THEN REWRITE_TAC [match_seq_def] 
-    THEN CONJ_TAC THENL [RW_TAC list_ss thms, PROVE_TAC [compose_m_seq_thm]],
+           (Q.SPECL [`[r]`, `w1`, `NONE`, `[r']`, `w2`,`NONE`, `x'`, `x`] lem)
+    THEN FULL_SIMP_TAC list_ss [match_seq_def]
+    THEN METIS_TAC [m_def, compose_m_seq_thm],
   SIMP_TAC list_ss [repeat_equals_ncat_thm, GSYM LEFT_FORALL_IMP_THM]
     THEN Induct_on `n` THENL
     [RW_TAC list_ss [FUNPOW] 
-       THEN FULL_SIMP_TAC list_ss thms THEN RW_TAC list_ss thms
-       THEN Q.EXISTS_TAC `[([],[],NONE)]` THEN RW_TAC list_ss thms,
+       THEN FULL_SIMP_TAC list_ss [sem_def]
+       THEN Q.EXISTS_TAC `[([],[],NONE)]` THEN RW_TAC list_ss [match_seq_def, m_def],
      FULL_SIMP_TAC list_ss [FUNPOW_SUC] 
-       THEN FULL_SIMP_TAC list_ss thms THEN RW_TAC list_ss thms
+       THEN RW_TAC list_ss [sem_def]
        THEN `?x1 x2. match_seq (([r],w1,NONE)::x1) /\
                      match_seq (([Repeat r],w2,NONE)::x2)` by PROVE_TAC []
        THEN Q.EXISTS_TAC `change_stop_on_prefix 
@@ -604,44 +512,41 @@ val sem_implies_match_seq_exists = Q.prove
        THEN STRIP_ASSUME_TAC 
                (Q.SPECL [`[r]`, `w1`, `NONE`, `[Repeat r]`, 
                          `w2`,`NONE`, `x1`, `x2`] lem)
-       THEN RW_TAC list_ss [] THEN FULL_SIMP_TAC list_ss []
        THEN STRIP_ASSUME_TAC 
                (Q.SPECL [`SOME[Repeat r]`, `[r]<>[Repeat r]`, 
                          `w1<>w2`, `NONE`, `t`] csp_step)
-       THEN FULL_SIMP_TAC list_ss [] THEN REWRITE_TAC [match_seq_def]
-       THEN CONJ_TAC THENL
-       [RW_TAC list_ss thms,
-        PROVE_TAC [compose_m_seq_thm, change_stop_on_prefix_thm]]]]);
+       THEN FULL_SIMP_TAC list_ss [match_seq_def]
+       THEN METIS_TAC [m_def, compose_m_seq_thm, change_stop_on_prefix_thm]]
+]);
 
 
 (*---------------------------------------------------------------------------*)
 (* 5.2.3. --- Showing match based on a match sequence ---                    *)
 (*---------------------------------------------------------------------------*)
 
-val thms = [match_def, match_seq_def, m_def];
 
-val witness_implies_match_thm = Q.prove
+val witness_implies_match_thm = 
+let val thms = [match_def, match_seq_def, m_def] in
+Q.prove
 (`!rl w s x y. 
     (((rl,w,s)::y) = x) 
     ==> match_seq x /\ 
         (!r1 t1 w1. ~MEM (Repeat r1::t1, w1, SOME (Repeat r1::t1)) x)
     ==> match rl w s`,
- Induct_on `x` THEN RW_TAC list_ss thms THEN
+ Induct_on `x` THEN RW_TAC list_ss [] THEN
  `((x=[])  \/ ?h t. x = h::t) /\
-  ((rl=[]) \/ (?rst. rl = Any::rst) 
-           \/ (?rst. rl = Epsilon::rst)  
+  ((rl=[]) \/ (?rst. rl = Epsilon::rst)  
            \/ (?c rst. rl=Atom c::rst) 
            \/ (?r1 r2 rst. rl = (r1|r2)::rst) 
            \/ (?r1 r2 rst. rl = (r1#r2)::rst) 
            \/ (?r2 rst. rl = Repeat r2::rst))`
       by METIS_TAC [list_CASES,regexp_cases] 
-   THEN RW_TAC list_ss thms 
+   THEN RW_TAC list_ss [] 
    THEN FULL_SIMP_TAC list_ss thms THENL
    [Cases_on `w` THEN FULL_SIMP_TAC list_ss thms,
-    Cases_on `w` THEN FULL_SIMP_TAC list_ss thms,
-    RW_TAC list_ss thms THEN METIS_TAC thms,
-    RW_TAC list_ss thms THEN METIS_TAC thms]);
-
+    RW_TAC list_ss [] THEN METIS_TAC thms,
+    RW_TAC list_ss [] THEN METIS_TAC thms])
+end;
 
 (*---------------------------------------------------------------------------*)
 (* Split a list in two around the first point where predicate P holds.       *)
@@ -662,7 +567,7 @@ val split_thm = Q.prove
      (split P l acc = (SOME (l1, v, l2))) ==> (l1 <> [v] <> l2 = acc <> l)`,
  Induct_on `l` 
    THEN RW_TAC list_ss [split_def] 
-   THEN PROVE_TAC [APPEND_CONS_THM]);
+   THEN METIS_TAC [APPEND, APPEND_ASSOC]);
 
 val split_thm2 = Q.prove
 (`!P l acc l1 v l2. 
@@ -711,7 +616,6 @@ val split_cong_thm = Q.prove
 (*---------------------------------------------------------------------------*)
 (* Property of a special application of split.                               *)
 (*---------------------------------------------------------------------------*)
-
 val match_seq_find_lemma = Q.prove
 (`!ms l1 r l w z. 
   match_seq ms 
@@ -736,7 +640,7 @@ val match_seq_find_lemma = Q.prove
     THEN ASSUME_TAC (Q.SPECL 
              [`\x. ?r l w. x = (Repeat r::l,w,SOME (Repeat r::l))`,
               `ms`, `[]`, `l3`, `(Repeat r::l,w,SOME (Repeat r::l))`, `z`, `[h]`]
-        (INST_TYPE [alpha |-> Type`:regexp list#char list#regexp list option`]
+        (INST_TYPE [alpha |-> Type`:'a regexp list#'a list#'a regexp list option`]
                    split_thm3))
    THEN FULL_SIMP_TAC list_ss []
    THEN RES_TAC THEN FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss []
@@ -795,7 +699,7 @@ val (NS_DEF,NS_IND) = Defn.tprove
 (*---------------------------------------------------------------------------*)
 
 val match_seq_surg_thm = Q.prove
-(`!ms l1 bad_r (bad_w:char list) bad_w z x1 rl w1 s1 y.
+(`!ms l1 bad_r bad_w z x1 rl w1 s1 y.
         match_seq ms ==>
         (split (\x. ?r l w. x = (Repeat r::l, w, SOME (Repeat r::l))) ms [] =
          SOME (l1, (bad_r, bad_w, bad_s), z)) ==>
@@ -880,7 +784,7 @@ val NS_match_thm = Q.prove
      THEN RW_TAC list_ss [] THEN PROVE_TAC []]);
 
 val NS_is_normal_thm = Q.prove
-(`!ms r (w:char list) t. ~MEM (Repeat r::t, w, SOME (Repeat r::t)) (NS ms)`,
+(`!ms r w t. ~MEM (Repeat r::t, w, SOME (Repeat r::t)) (NS ms)`,
  recInduct NS_IND THEN RW_TAC list_ss []
    THEN ONCE_REWRITE_TAC [NS_DEF]
    THEN CASE_TAC THENL

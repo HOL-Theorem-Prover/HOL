@@ -335,7 +335,8 @@ val Matches_def = Define `Matches r w = hasEpsilon (DerivString w r)`;
 val MatchesCorrect = Q.prove
 (`!r w. sem r w =  Matches r w`,
  SIMP_TAC list_ss [Matches_def] 
-  THEN Induct_on `w` THEN RW_TAC list_ss [DerivString_def]
+  THEN Induct_on `w` 
+  THEN RW_TAC list_ss [DerivString_def]
   THENL [METIS_TAC [hasEpsilon_sem],RW_TAC list_ss [GSYM semDeriv]]);
 
 
@@ -357,7 +358,7 @@ val b = rhs(concl(EVAL(Term`Symbol(HD(EXPLODE "b"))`)));
 val c = rhs(concl(EVAL(Term`Symbol(HD(EXPLODE "c"))`)));
 
 val r0 = Term `^One # ^Two`;
-val r1 = Term `Star (^One # ^Two)`
+val r1 = Term `Star ^r0`
 val r2 = Term `Star Any # ^One`;
 val r3 = Term `^r2 # ^r1`;
 
@@ -393,6 +394,8 @@ CHECK AtMostTwo_a "ba";
 CHECK AtMostTwo_a "bb";
 CHECK AtMostTwo_a "abbbbabbbb";
 CHECK AtMostTwo_a "bbbbabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+CHECK AtMostTwo_a "bbbbabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba";
+CHECK AtMostTwo_a "bbbbabbbbbbbbbbbbbbbbbbbbbbbbbbbabbbbbbbbbbbbbbbbbbbbbbbbba";
 (* false *) CHECK AtMostTwo_a "abbbbabbbab";
 
 (* Exactly 2 a's. Alphabet = {a,b} *)
@@ -434,10 +437,25 @@ val NoDouble = Term `Any | Star (^a # ^b) | Star (^b # ^a)`;
 (* false *) CHECK NoDouble 
               "abababababababababababbababababababababababababababab";
 
+(* Same again, using Not expression *)
+
+val NoDub = Term `Not (Star Any # ((^a # ^a) | (^b # ^b)) # Star Any)`;
+(* true *)  CHECK NoDub "";
+(* true *)  CHECK NoDub "a";
+(* true *)  CHECK NoDub "b";
+(* false *) CHECK NoDub "aa";
+(* true *)  CHECK NoDub "ab";
+(* true *)  CHECK NoDub "ba";
+(* false *) CHECK NoDub "bb";
+(* true *)  CHECK NoDub 
+              "ababababababababababababababababababababababababababab";
+(* false *) CHECK NoDub 
+              "abababababababababababbababababababababababababababab";
+
 (* All strings with at least two consecutive zeros and not ending in 01 *)
 
 val pat = Term `(Star Any # ^Zero # ^Zero # Star Any) & 
-                Not (Star Any # ^Zero # ^One | )`;
+                Not (Star Any # ^Zero # ^One)`;
 
 (*true *) CHECK pat "00";
 (*false *) CHECK pat "001";
@@ -456,7 +474,10 @@ val pat = Term `(Star Any # ^One # ^One # ^One # Star Any) &
 (*false *) CHECK pat "1";
 (*false *) CHECK pat "11";
 (*false *) CHECK pat "111";
+(*false *) CHECK pat "1111111111111111111111111111111111";
 (*false *) CHECK pat "11111111111111111111111111111111111111111111111111111111";
+(*false *) CHECK pat 
+             "1111111111111111111111111111111111111111111111111111111111111111";
 (*true *)  CHECK pat "0111010101010111111000000";
 (*true *)  CHECK pat "01101010101011111100000010101000111111111111111111111";
 (*true *)  CHECK pat "10001101010101011000000101010001111111111111111111110";
