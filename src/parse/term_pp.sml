@@ -787,12 +787,9 @@ fun pp_term (G : grammar) TyG = let
                 SOME s =>
                 (isSome recupd_info andalso
                  (isPrefix recupd_special s orelse
-                  !prettyprint_bigrecs andalso isSuffix "_update" s andalso
-                  is_substring (bigrec_subdivider_string ^ "sf") s)) orelse
-                (isSome recfupd_info andalso
-                 (isPrefix recfupd_special s orelse
-                  !prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
-                  is_substring (bigrec_subdivider_string ^ "sf") s))
+                  (!prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
+                   is_substring (bigrec_subdivider_string ^ "sf") s))) orelse
+                (isSome recfupd_info andalso isPrefix recfupd_special s)
               | NONE => false
             end else false
           (* descend the rands of a term until one that is not a record
@@ -864,7 +861,8 @@ fun pp_term (G : grammar) TyG = let
             else if isPrefix recfupd_special rname then
               [(String.extract(rname,size recfupd_special, NONE), value,false)]
             else (* is a big record - examine value *)
-              categorise_bigrec_updates value
+              assert (not o null) (categorise_bigrec_updates value)
+              handle HOL_ERR _ => raise NotReallyARecord
           end
         in
           if is_record_update t1 then let
