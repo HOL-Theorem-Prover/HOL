@@ -1,18 +1,18 @@
 OPTIONS = NO_OVERLAY
 
-all: makebase Doc2Html
+all: makebase Doc2Html Doc2Tex
 
 makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo Printbase.uo Texsigs.uo makebase.uo
 (1)
 
 makebase.uo: Keepers.uo Htmlsigs.uo HOLPage.uo Database.ui Printbase.uo Parsspec.uo Symbolic.uo makebase.sml
-	HOLMOSMLC -c makebase.sml
+	MOSMLC -c makebase.sml
 
 Doc2Html : Doc2Html.uo ParseDoc.uo
 (2)
 
-Doc2Html.uo : Doc2Html.sml Symbolic.uo ParseDoc.ui
-	MOSMLC -c Doc2Html.sml
+Doc2Tex : Doc2Tex.uo ParseDoc.uo
+(3)
 
 Hasht.uo: Hasht.sml Hasht.ui
 	MOSMLC -c Hasht.sml

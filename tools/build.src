@@ -104,7 +104,7 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
            then SOME (String.extract(b,0,SOME (String.size b - 4)))
            else NONE
         end
-      fun augmentSRCFILES file = 
+      fun augmentSRCFILES file =
          let open TextIO
              val ostrm = openAppend (Path.concat(SIGOBJ,"SRCFILES"))
          in output(ostrm,fullPath[dir,file]^"\n")
@@ -120,7 +120,7 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
      | SOME"sig"    => (idtransfer cp df; augmentSRCFILES (Path.base file))
      | SOME"sml"    => (case digest_sig file
                          of NONE => ()
-                          | SOME file' => 
+                          | SOME file' =>
                               (transfer cp (dir,file, file' ^".sig");
                                augmentSRCFILES file'))
      |    _         => ()
@@ -138,9 +138,9 @@ fun build_dir dir = let
   val _ = print ("Working in directory "^dir^"\n")
 in
   case #file(Path.splitDirFile dir) of
-    "muddyC" => 
-      (case OS 
-        of "winNT" => 
+    "muddyC" =>
+      (case OS
+        of "winNT" =>
              bincopy (fullPath [HOLDIR, "tools", "win-binaries", "muddy.so"])
                      (fullPath [HOLDIR, "sigobj", "muddy.so"])
          | other => Gnumake dir handle _ =>
@@ -221,7 +221,7 @@ fun build_help () =
         raise Fail "Couldn't make help database")
  end;
 
-fun make_buildstamp () = 
+fun make_buildstamp () =
  let open Path TextIO
      val stamp_filename = concat(HOLDIR, concat("tools","build-stamp"))
      val stamp_stream = openOut stamp_filename
@@ -306,20 +306,22 @@ val help_mesg = "Usage: build\n\
                                 \  or: build cleanAll\n\
                                 \  or: build help.";
 
-val _ = let
+fun check_against s = let
   open Time
-  val cfgtime = FileSys.modTime (fullPath [HOLDIR, "tools","configure.sml"])
+  val cfgtime = FileSys.modTime (fullPath [HOLDIR, s])
 in
   if FileSys.modTime EXECUTABLE < cfgtime then
-    (print "WARNING! WARNING!\n";
-     print "  The build file is older than the configure.sml script;\n";
-     print "  this suggests you should reconfigure the system.\n";
-     print "  Press Ctl-C now to abort the build; <RETURN> to continue.\n";
-     print "WARNING! WARNING!\n";
+    (print ("WARNING! WARNING!\n");
+     print ("  The build file is older than " ^ s ^ ";\n");
+     print ("  this suggests you should reconfigure the system.\n");
+     print ("  Press Ctl-C now to abort the build; <RETURN> to continue.\n");
+     print ("WARNING! WARNING!\n");
      ignore (TextIO.inputLine TextIO.stdIn))
   else ()
 end;
 
+val _ = check_against "tools/configure.sml"
+val _ = check_against "tools/build.src"
 
 val _ =
   case Mosml.argv ()

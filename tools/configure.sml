@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
+val mosmldir =
+val holdir   =
 
 val OS       = "linux";    (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT"        *)
@@ -50,11 +50,11 @@ val holmakedir = fullPath [holdir, "tools", "Holmake"];
 val compiler = fullPath [mosmldir, "bin", "mosmlc"];
 
 (*---------------------------------------------------------------------------
-         First load in systeml functions 
+         First load in systeml functions
  ---------------------------------------------------------------------------*)
 
 val _ =
-  if FileSys.access(fullPath [holmakedir, "Systeml.uo"],[FileSys.A_READ]) 
+  if FileSys.access(fullPath [holmakedir, "Systeml.uo"],[FileSys.A_READ])
      andalso
      FileSys.access(fullPath [holmakedir, "Systeml.ui"], [FileSys.A_READ])
   then let val oldloadpath = !loadPath
@@ -73,15 +73,15 @@ val _ = use (fullPath [holdir,"tools/config-"^OSkind^".sml"])
 end;
 
 (*---------------------------------------------------------------------------
-     Now compile Systeml.sml; if necessary 
+     Now compile Systeml.sml; if necessary
  ---------------------------------------------------------------------------*)
 
-if not (FileSys.access("Holmake/Systeml.uo", [FileSys.A_READ])) 
+if not (FileSys.access("Holmake/Systeml.uo", [FileSys.A_READ]))
  then let val dir_0 = FileSys.getDir()
       in FileSys.chDir holmakedir;
          systeml [compiler, "-c", "Systeml.sml"];
          FileSys.chDir dir_0
-      end 
+      end
  else ();
 
 
@@ -90,7 +90,8 @@ if not (FileSys.access("Holmake/Systeml.uo", [FileSys.A_READ]))
  ---------------------------------------------------------------------------*)
 
 val SRCDIRS =
- ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack",
+ ["src/portableML", "src/0", "src/parse", "src/bool", "src/marker",
+  "src/goalstack",
   "src/taut", "src/compute/src", "src/q", "src/combin", "src/lite",
   "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
@@ -443,10 +444,12 @@ val _ =
    ["val HOLpath = __;\n"
       --> String.concat["val HOLpath = ", quote holdir, ";\n"]];
   fill_holes (src1,target1)
-   ["(1)\n" --> String.concat["\tHOLMOSMLC -o ", 
+   ["(1)\n" --> String.concat["\tMOSMLC -o ",
                               xable_string "makebase", " makebase.uo\n"],
-    "(2)\n" --> String.concat["\tHOLMOSMLC -o ", 
-                              xable_string "Doc2Html", " Doc2Html.uo\n"]]
+    "(2)\n" --> String.concat["\tMOSMLC -o ",
+                              xable_string "Doc2Html", " Doc2Html.uo\n"],
+    "(3)\n" --> String.concat["\tMOSMLC -o ",
+                              xable_string "Doc2Tex", " Doc2Tex.uo\n"]]
  end;
 
 val _ = print "\nFinished configuration!\n";
