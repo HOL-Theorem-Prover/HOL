@@ -1,3 +1,6 @@
+structure MakeBigTerm =
+struct
+
 open HolKernel Random boolSyntax
 
 fun gen_ty gen = let
@@ -97,3 +100,5 @@ in
 end
 
 fun gen_term i sz = gen_term0 (Random.newgenseed i) [] sz NONE
+
+end

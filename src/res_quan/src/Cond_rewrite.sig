@@ -4,11 +4,11 @@
 (*                 tactics 					        *)
 (* AUTHOR	 : P Curzon 					        *)
 (* DATE		 : May 1993						*)
-(*                                                                      *)
 (* =====================================================================*)
 
 signature Cond_rewrite =
 sig
+
   include Abbrev
 
   val COND_REWR_TAC 
@@ -23,4 +23,5 @@ sig
   val COND_REWR_CANON    : thm -> thm
   val COND_REWRITE1_TAC  : thm_tactic
   val COND_REWRITE1_CONV : thm list -> thm -> conv
-end;
+
+end

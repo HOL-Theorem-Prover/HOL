@@ -1,5 +1,8 @@
-local open HolKernel Parse quoteTheory
-in
+structure quote =
+struct
+
+open HolKernel Parse quoteTheory;
+
 infix THEN THENL |->;
 
 fun QUOTE_ERR function message =

@@ -1,3 +1,6 @@
+structure Profile :> Profile =
+struct
+
 open Polyhash
 
 exception ProfileEntryNotFound
@@ -60,3 +63,5 @@ fun output_profile_results out = app (output_profile_result out)
 val print_profile_result = output_profile_result TextIO.stdOut
 
 val print_profile_results = output_profile_results TextIO.stdOut
+
+end

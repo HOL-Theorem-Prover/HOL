@@ -300,7 +300,7 @@ fun new_infix_type (x as {Name,Arity,ParseName,Prec,Assoc}) =
 fun delete_const s =
    Theory.delete_const s
      before
-   Parse.hide s;
+   (Parse.hide s; ())
 
 
 (*---------------------------------------------------------------------------*)

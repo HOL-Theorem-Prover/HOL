@@ -275,4 +275,4 @@ fun COND_REWRITE1_CONV thms th = (fn tm =>
      itlist PROVE_HYP thms thm1
     end):conv;
 
-end (* signature Cond_rewrite *)
+end (* structure Cond_rewrite *)

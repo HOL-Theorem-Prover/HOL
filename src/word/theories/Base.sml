@@ -1,13 +1,17 @@
 structure Base =
 struct
 
+infix THEN THENL |->;
+
 local
- open HolKernel Parse boolLib Prim_rec numLib 
-      rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory
-  infix THEN THENL |->;
+
+open HolKernel Parse boolLib Prim_rec numLib 
+     rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory
+
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars;
 
 in
-val _ = Portable.output(Portable.std_out, "\nloading Base.\n");
+
 val LESS_EQ_SPLIT =
     let val asm_thm = ASSUME (--`(m + n) <= p`--)
     in
@@ -233,8 +237,6 @@ in
                              current_theory())
 end
 
-
 end (* local *)
 
-
-end;
+end

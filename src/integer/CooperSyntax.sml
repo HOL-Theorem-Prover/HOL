@@ -489,7 +489,7 @@ fun push_in_exists tm =
     else
       ALL_CONV tm
 
-val push_in_exists = Profile.profile "push_in" push_in_exists
+(*val push_in_exists = Profile.profile "push_in" push_in_exists*)
 
 fun remove_vacuous_existential tm = let
   (* term is of form  ?x. x = e *)

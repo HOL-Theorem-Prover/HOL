@@ -54,9 +54,8 @@ fun tty_trace (LZ_TEXT fs) = (say "  "; say (fs ()); say "\n")
 val _ = trace_hook :=
         (fn (n,a) => if (n <= !trace_level) then
                        (say "[";
-                        say (Int.toString
-                             (Time.toMilliseconds
-                              (#usr (Timer.checkCPUTimer Globals.hol_clock))));
+                        say ((Int.toString o #usec o Portable.dest_time)
+                             (#usr (Timer.checkCPUTimer Globals.hol_clock)));
                         say "]: ";
                         tty_trace a)
                      else ())

@@ -7,6 +7,9 @@
  * later on (except with external conv).
  *---------------------------------------------------------------------------*)
 
+structure clauses =
+struct
+
 local open HolKernel boolSyntax Drule compute_rules
       val CL_ERR = mk_HOL_ERR "clauses"
       infix ##
@@ -261,5 +264,7 @@ fun from_list lthm =
   in add_thms lthm rws
    ; rws
   end;
+
+end
 
 end

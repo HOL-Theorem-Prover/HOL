@@ -7,8 +7,6 @@ structure CooperMath :> CooperMath = struct
   open HolKernel boolLib intSyntax integerTheory int_arithTheory intSimps
   open CooperThms CooperSyntax
 
-  open Profile
-
   infix THENC ORELSEC THEN ## |->
 
   type num = Arbnum.num
@@ -1034,7 +1032,7 @@ fun simplify_constrained_disjunct tm = let
 
   val mainwork =
     if List.exists (simple_divides var) body_conjuncts then
-      profile "simpcst.mainwork.simpelim" (
+      Profile.profile "simpcst.mainwork.simpelim" (
 
       BINDER_CONV (find_sdivides var elim_sdivides) THENC
       pull_eliminate THENC
@@ -1050,7 +1048,7 @@ fun simplify_constrained_disjunct tm = let
          bound variable doesn't appear elsewhere, which can happen if
          the F term is something like (\x. F), which tends to happen in
          the construction of the neginf term. *)
-      profile "simpcst.mainwork.vacuous" (
+      Profile.profile "simpcst.mainwork.vacuous" (
       push_in_exists_and_follow
           (BINDER_CONV (UNCONSTRAIN THENC resquan_onestep) THENC
            EXISTS_OR_CONV THENC
@@ -1061,10 +1059,10 @@ fun simplify_constrained_disjunct tm = let
     else
       ALL_CONV
 in
-  (BINDER_CONV (profile "simpcst.quick" (find_cst var quick_cst_elim)) THENC
-   (profile "simpcst.unwind" Unwind.UNWIND_EXISTS_CONV ORELSEC REWRITE_CONV []) THENC
-   profile "simpcst.r_i_g" reduce_if_ground) ORELSEC
-  profile "simpcst.mainwork" mainwork
+  (BINDER_CONV (Profile.profile "simpcst.quick" (find_cst var quick_cst_elim)) THENC
+   (Profile.profile "simpcst.unwind" Unwind.UNWIND_EXISTS_CONV ORELSEC REWRITE_CONV []) THENC
+   Profile.profile "simpcst.r_i_g" reduce_if_ground) ORELSEC
+  Profile.profile "simpcst.mainwork" mainwork
 end tm
 
 

@@ -1,4 +1,8 @@
 (* Copyright (C) 1997-2001 by Ken Friis Larsen and Jakob Lichtenberg. *)
+
+structure MuddyCore =
+struct
+
 open Dynlib
 
 local
@@ -12,4 +16,6 @@ in
   fun cur2 h (a,b) = app2 h a b
   fun cur3 h (a,b,c) = app3 h a b c
   fun cur23 h a (b,c) = app3 h a b c
+end
+
 end

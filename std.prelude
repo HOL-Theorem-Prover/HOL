@@ -5,7 +5,8 @@ val _ = quietdec := true;
     Establish the basic environment and bring in the HOL kernel
    ---------------------------------------------------------------------- *)
 
-app load ["Mosml", "Process", "Path", "boolLib", "goalstackLib", "Arbint"];
+val _ = app load
+  ["Mosml", "Process", "Path", "boolLib", "goalstackLib", "Arbint"];
 
 open HolKernel Parse boolLib goalstackLib;
 

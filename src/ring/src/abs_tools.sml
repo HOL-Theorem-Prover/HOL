@@ -1,8 +1,9 @@
+structure abs_tools =
+struct
+
 open abstraction;
 
-local
 open HolKernel Parse boolLib
-in
 
 (* My stuffs: adding implicit arguments to preterms and TotalDefn.Define *)
 
@@ -65,4 +66,4 @@ fun gg flist = set_goal(get_assums(),--flist--);
 fun g0 flist = set_goal(get_assums(),flist);
 *)
 
-end;
+end

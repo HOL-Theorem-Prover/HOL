@@ -1,3 +1,6 @@
+structure equations =
+struct
+
 local open HolKernel compute_rules clauses
 in
 
@@ -140,3 +143,5 @@ fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
 ;
 
 end;
+
+end

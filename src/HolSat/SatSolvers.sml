@@ -14,6 +14,9 @@
 **  end_string}     (* string signalling end of variable assignment        *)
 *)
 
+structure SatSolvers =
+struct
+
 datatype sat_solver = 
  SatSolver of
   {name           : string,
@@ -68,3 +71,5 @@ val sato =
    failure_string = "The clause set is unsatisfiable",
    start_string   = "Model #1: (indices of true atoms)",
    end_string     = "The number of found models"};
+
+end

@@ -1,3 +1,6 @@
+structure ScaledTests =
+struct
+
 fun usr_time f x = let
   val t0 = #usr (Timer.checkCPUTimer Globals.hol_clock)
   val _ = f x
@@ -30,4 +33,6 @@ fun test_upto {f,ntrials,max_size,filename} = let
         end
 in
   recurse 1 ; TextIO.closeOut outstr
+end
+
 end
