@@ -233,7 +233,7 @@ fun compile debug args = let
                                spacify(MOSMLCOMP::args)^"\n")
           else ()
 in
-  SYSTEML (MOSMLCOMP:: args)
+  SYSTEML (MOSMLCOMP::args)
 end;
 
 val _ =

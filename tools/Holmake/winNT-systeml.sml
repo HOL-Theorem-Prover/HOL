@@ -5,12 +5,12 @@ structure Systeml :> Systeml = struct
    absolutely can not depend on any other HOL source code. *)
 
 fun dquote s = concat ["\"", s, "\""]
+
 fun concat_wspaces munge acc strl =
     case strl of
       [] => concat (List.rev acc)
     | [x] => concat (List.rev (munge x :: acc))
     | (x::xs) => concat_wspaces munge (" " :: munge x :: acc) xs
-open Process
 
 fun systeml l = let
   val command = "call "^concat_wspaces dquote [] l
@@ -18,7 +18,8 @@ in
   Process.system command
 end
 
-val protect = dquote
+(* val protect = dquote *)
+fun protect s = s
 
 fun xable_string s = s^".exe"
 fun mk_xable file =   (* returns the name of the executable *)
