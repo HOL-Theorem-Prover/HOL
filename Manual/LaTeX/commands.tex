@@ -13,6 +13,8 @@
 \newcommand\REFERENCE{{\footnotesize\sl REFERENCE}}
 \newcommand\LIBRARIES{{\footnotesize\sl LIBRARIES}}
 
+\newcommand{\bs}{\texttt{\symbol{92}}}
+
 \def\HOL{{\small HOL}}
 \def\holn{\HOL}  % i.e. hol n(inety-eight), no digits in
                  % macro names is a bit of a pain; deciding to do away
@@ -78,12 +80,13 @@
 % ---------------------------------------------------------------------
 
 \newcommand{\theory}[1]{\hbox{{\small\tt #1}}}
+\newcommand{\theoryimp}[1]{\texttt{#1}}
 
 \newcommand{\con}[1]{{\sf #1}}
 \newcommand{\rul}[1]{{\tt #1}}
 \newcommand{\ty}[1]{\textsl{#1}}
 
-\newcommand{\ml}[1]{\mbox{{\def\_{\char'137}\small\tt #1}}}
+\newcommand{\ml}[1]{\mbox{{\def\_{\char'137}\texttt{#1}}}}
 \newcommand\ms{\tt}
 \newcommand{\s}[1]{{\small #1}}
 
