@@ -109,7 +109,7 @@ val build_stamp =
 val _ =
 TextIO.output(TextIO.stdOut,
   "\n-----------------------------------------------------------------\n"
-  ^"       HOL98 ["
+  ^"       HOL ["
   ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
   ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
   ^"-----------------------------------------------------------------\n\n");

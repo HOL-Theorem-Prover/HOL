@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------
-              HOL98 configuration script
+              HOL configuration script
 
    First, edit the following user-settable parameters. Then execute this
    file by going
