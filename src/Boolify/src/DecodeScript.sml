@@ -209,8 +209,9 @@ val decode_sum_alt = store_thm
    REPEAT CASE_TAC THEN
    RW_TAC std_ss [decode_sum_def]);
 
-val decode_num_alt = prove 
-  (``decode_num l =
+val decode_num_alt = store_thm 
+  ("decode_num_alt",
+   ``decode_num l =
      case l of [] -> NONE
      || (F :: t) ->
         (case decode_num t of NONE -> NONE
