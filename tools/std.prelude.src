@@ -46,8 +46,8 @@ end
  * rewriting, etc. That's what the next few lines achieve.                   *
  *---------------------------------------------------------------------------*)
 
-val _ = app load ["basicHol90Lib", "goalstackLib"];
-open basicHol90Lib goalstackLib;
+val _ = app load ["basicHol90Lib", "goalstackLib", "Psyntax", "Rsyntax"];
+open basicHol90Lib goalstackLib Psyntax ;
 
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 infix 8 via;
