@@ -352,7 +352,7 @@ in
                              pull_out_divisor) THENC
                   LAND_CONV (K divisor_ok) THENC
                   REWR_CONV (GSYM (MATCH_MP justify_divides g_t_lt0)) THENC
-                  REWRITE_CONV [INT_DIVIDES_1] THENC
+                  REWRITE_CONV [INT_DIVIDES_1] THENQC
                   TRY_QCONV check_divides
                 end
               else
@@ -385,8 +385,8 @@ in
                          LAND_CONV (factor_out li l THENC
                                     factor_out_lits li l THENC
                                     REWRITE_CONV [GSYM INT_LDISTRIB])) THENC
-              REWR_CONV justify_divides3 THENC
-              TRY_CONV check_divides
+              REWR_CONV justify_divides3 THENQC
+              TRY_QCONV check_divides
             end
           else let
               val r_gcd = gcdl rns

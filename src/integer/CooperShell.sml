@@ -1,4 +1,3 @@
-
 open HolKernel boolLib integerTheory Parse
      arithmeticTheory intSyntax int_arithTheory intSimps;
 
@@ -41,6 +40,7 @@ val simple_conj_congruence =
   tautLib.TAUT_PROVE (Term`!p q r. (p ==> (q = r)) ==>
                                    (p /\ q = p /\ r)`)
 open QConv
+nonfix THENQC ORELSEQC
 val THENQC = uncurry THENQC
 val ORELSEQC = uncurry ORELSEQC
 infix ORELSEQC THENQC
@@ -109,17 +109,54 @@ fun push_in_exists tm =
 
 val unwind_constraint = UNCONSTRAIN THENC resquan_remove
 
-val phase6_CONV =
+val p6_step = prove(
+  ``(?x:int. K (lo < x /\ x <= hi) x /\ P x) =
+    lo < hi /\ (P hi \/ (?x:int. K (lo < x /\ x <= hi - 1) x /\ P x))``,
+  REWRITE_TAC [combinTheory.K_THM, LEFT_AND_OVER_OR] THEN
+  EQ_TAC THENL [
+    CONV_TAC
+      (LAND_CONV (ONCE_REWRITE_CONV [restricted_quantification_simp])) THEN
+    STRIP_TAC THENL [
+      FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC [],
+      ASM_REWRITE_TAC [] THEN DISJ2_TAC THEN
+      Q.EXISTS_TAC `x` THEN ASM_REWRITE_TAC []
+    ],
+    STRIP_TAC THENL [
+      Q.EXISTS_TAC `hi` THEN ASM_REWRITE_TAC [INT_LE_REFL],
+      ONCE_REWRITE_TAC [restricted_quantification_simp] THEN
+      Q.EXISTS_TAC `x` THEN  ASM_REWRITE_TAC []
+    ]
+  ]);
+
+fun p6_recurse tm = let
+  (* tm of form ?x. K (lo < x /\ x <= hi) x /\ P x *)
+in
+  REWR_CONV p6_step THENC
+  LAND_CONV REDUCE_CONV THENC
+  (REWR_CONV F_and_l ORELSEC
+   (REWR_CONV T_and_l THENC
+    LAND_CONV BETA_CONV THENC
+    RAND_CONV (BINDER_CONV (* under ?x. *)
+               (LAND_CONV (* into K (..) x *)
+                (LAND_CONV (* into lo < x /\ x <= hi - 1 *)
+                 (RAND_CONV REDUCE_CONV))) THENC
+               p6_recurse)))
+end tm
+
+
+
+fun phase6_CONV tm = let
   (* succeeds on disjuncts of the form
         ?x. K (lo < x /\ x <= hi) x /\ P x
      and converts these to
         P (lo + 1) \/ P (lo + 2) \/ ... P hi
      where each argument to P is actually a real numeral (not an expression)
   *)
-  BINDER_CONV (LAND_CONV unwind_constraint THENC
-               expand_right_and_over_or) THENC
-  push_one_exists_over_many_disjs THENC
-  EVERY_DISJ_CONV Unwind.UNWIND_EXISTS_CONV
+  val (v, _) = dest_exists tm
+in
+  BINDER_CONV (RAND_CONV (mk_abs_CONV v)) THENC
+  p6_recurse THENC PURE_REWRITE_CONV [F_or_r]
+end tm
 
 fun vphase6_CONV tm = let
   (* as above, but works over the constraint attached to v, not the one
@@ -129,7 +166,6 @@ in
   BINDER_CONV (move_conj_left (is_vconstraint v)) THENC
   phase6_CONV
 end tm;
-
 
 fun elim_vars_round_r tm = let
   val (l,r) = dest_eq tm
@@ -145,9 +181,10 @@ end tm
 
 val obvious_improvements =
   ADDITIVE_TERMS_CONV (QConv.TRY_QCONV collect_additive_consts) THENQC
-  BLEAF_CONV (op THENQC) (elim_vars_round_r ORELSEQC
-                          TRY_QCONV check_divides) THENQC
-  REDUCE_CONV
+  STRIP_QUANT_CONV
+    (BLEAF_CONV (op THENQC) (elim_vars_round_r ORELSEQC
+                             TRY_QCONV check_divides) THENQC
+     REDUCE_CONV)
 
 fun do_equality_simplifications tm = let
   (* term is existentially quantified.  May contain leaf terms of the form
@@ -281,7 +318,7 @@ in
       (RAND_CONV eliminate_existential) THENC
       (LAND_CONV eliminate_existential)
     else
-      base_case THENQC obvious_improvements
+      base_case THENQC EVERY_DISJ_CONV obvious_improvements
   end tm
 end
 
@@ -289,9 +326,12 @@ val eliminate_existential_entirely =
     (* used to eliminate an existential, and to lose any constraint *)
     (* existentials underneath; basically eliminate_existential followed *)
     (* by phase 6 *)
-    eliminate_existential THENC EVERY_DISJ_CONV (TRY_CONV phase6_CONV) THENC
-    (* variables substituted in might result in ground multiplication terms *)
-    REDUCE_CONV THENQC obvious_improvements
+    eliminate_existential THENC
+    EVERY_DISJ_CONV
+       (TRY_CONV phase6_CONV THENC
+        (* variables substituted in might result in ground
+           multiplication terms *)
+        REDUCE_CONV THENQC obvious_improvements)
 
 
 fun eliminate_quantifier tm = let
@@ -480,8 +520,9 @@ in
              LAND_CONV (phase2_CONV (hd vset) THENC
                         REWRITE_CONV [GSYM INT_ADD_ASSOC] THENC
                         elim_paired_divides THENC
-                        REWRITE_CONV [INT_DIVIDES_1] THENC
-                        phase1_CONV THENC phase2_CONV (hd vset)))
+                        phase1_CONV THENC phase2_CONV (hd (tl vset)) THENC
+                        BINOP_CONV (TRY_CONV check_divides) THENC
+                        REWRITE_CONV [INT_DIVIDES_1]))
         end
       | NONE => let
           (* look for constraint with least range *)
