@@ -48,43 +48,46 @@ applied at a particular subterm.
 certain goals may cause a non-terminating sequence of rewrites.
 Divergent rewriting behaviour results from a term {t} being
 immediately or eventually rewritten to a term containing {t} as a
-sub-term. The exact behaviour depends on the {HOL} implementation; it
-may be possible (unfortunately) to fall into Lisp in this event.
+sub-term. The exact behaviour depends on the {HOL} implementation.
 
 \EXAMPLE
-The arithmetic theorem {GREATER}, {|- !m n. m > n = n < m}, is used
+The arithmetic theorem {GREATER_DEF}, {|- !m n. m > n = n < m}, is used
 below to advance a goal:
 {
-   #REWRITE_TAC[GREATER]([],"5 > 4");;
-   ([([], "4 < 5")], -) : subgoals
+   - REWRITE_TAC [GREATER_DEF] ([],``5 > 4``);
+   > ([([], ``4 < 5``)], -) : subgoals
 }
 \noindent It is used below with the theorem {LESS_0},
 {|- !n. 0 < (SUC n)}, to solve a goal:
 {
-   #let gl,p = REWRITE_TAC[GREATER;LESS_0]([],"(SUC n) > 0");;
-   gl = [] : goal list
-   p = - : proof
+   - val (gl,p) =
+       REWRITE_TAC [GREATER_DEF, LESS_0] ([],``(SUC n) > 0``);
+   > val gl = [] : goal list
+   > val p = fn : proof
 
-   #p[];;
-   |- (SUC n) > 0
+   - p[];
+   > val it = |- (SUC n) > 0 : thm
 }
 \USES
-Rewriting is a powerful and general mechanism in HOL, and an
-important part of many proofs.  It relieves the user of the burden of
-directing and justifying a large number of minor proof steps.
-{REWRITE_TAC} fits a forward proof sequence smoothly into the general
-goal-oriented framework. That is, (within one subgoaling step) it
-produces and justifies certain forward inferences, none of which are
-necessarily on a direct path to the desired goal.
+
+Rewriting is a powerful and general mechanism in HOL, and an important
+part of many proofs.  It relieves the user of the burden of directing
+and justifying a large number of minor proof steps.  {REWRITE_TAC}
+fits a forward proof sequence smoothly into the general goal-oriented
+framework. That is, (within one subgoaling step) it produces and
+justifies certain forward inferences, none of which are necessarily on
+a direct path to the desired goal.
 
 {REWRITE_TAC} may be more powerful a tactic than is needed in certain
 situations; if efficiency is at stake, alternatives might be
-considered.
+considered.  On the other hand, if more power is required, the
+simplification functions ({SIMP_TAC} and others) may be appropriate.
 
 \SEEALSO
 ASM_REWRITE_TAC, GEN_REWRITE_TAC, FILTER_ASM_REWRITE_TAC,
 FILTER_ONCE_ASM_REWRITE_TAC, ONCE_ASM_REWRITE_TAC, ONCE_REWRITE_TAC,
 PURE_ASM_REWRITE_TAC, PURE_ONCE_ASM_REWRITE_TAC,
-PURE_ONCE_REWRITE_TAC, PURE_REWRITE_TAC, REWR_CONV, REWRITE_CONV, SUBST_TAC.
+PURE_ONCE_REWRITE_TAC, PURE_REWRITE_TAC, REWR_CONV, REWRITE_CONV,
+SIMP_TAC, SUBST_TAC.
 
 \ENDDOC

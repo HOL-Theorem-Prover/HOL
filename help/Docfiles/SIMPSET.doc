@@ -1,0 +1,153 @@
+\DOC SIMPSET
+
+\BLTYPE
+simpLib.SIMPSET : {{ ac     : (thm * thm) list,
+                    congs  : thm list,
+                    convs  : {{conv  : (term list -> term -> thm) -> term list
+                                       -> conv,
+                              key   : (term list * term) option,
+                              name  : string,
+                              trace : int}} list,
+                    dprocs : Traverse.reducer list,
+                    filter : (thm -> thm list) option,
+                    rewrs  : thm list }} -> ssdata
+\ELTYPE
+
+\SYNOPSIS Constructs {ssdata} values.
+
+\KEYWORDS simplification.
+
+\LIBRARY simpLib
+
+\DESCRIBE
+The {ssdata} type is the way in which simplification components are
+packaged up and made available to the simplifier (though {ssdata}
+values must first be turned into simpsets, either by addition to an
+existing simpset, or with the {mk_simpset} function).
+
+The big record type passed to {SIMPSET} as an argument has six fields.
+Here we describe each in turn.
+
+The {ac} field is a list of ``AC theorem'' pairs.  Each such pair is
+the pair of theorems starting that a given binary function is
+associative and commutative.  The form of the associative theorem must
+be
+{
+   |- x op (y op z) = (x op y) op z
+}
+\noindent and the commutative theorem (the second element of the pair)
+must be of the form
+{
+   |- x op y = y op x
+}
+\noindent Note that neither theorem can have any universal
+quantification.
+
+The {congs} field is a list of congruence theorems justifying the
+addition of theorems to simplification contexts.  For example, the
+congruence theorem for implication is
+{
+   |- (P = P') ==> (P' ==> (Q = Q')) ==> (P ==> Q = P' ==> Q')
+}
+\noindent This theorem encodes a rewriting strategy.  The consequent
+of the chain of implications is the form of term in question, where
+the appropriate components have been rewritten.  Then, in
+left-to-right order, the various antecedents of the implication
+specify the rewriting strategy which gives rise to the consequent.  In
+this example, {P} is first simplified to {P'} without any additional
+context, then, using {P'} as additional context, simplification of {Q}
+proceeds, producing {Q'}.  Another example is a rule for conjunction:
+{
+   |- (P ==> (Q = Q')) ==> (Q' ==> (P = P')) ==> ((P /\ Q) = (P' /\ Q'))
+}
+\noindent Here {P} is assumed while {Q} is simplified to {Q'}.  Then,
+{Q'} is assumed while {P} is simplified to {P'}.  If a antecedent
+doesn't involve the relation in question (here, equality) then it is
+treated as a side-condition, and the simplifier will be recursively
+invoked to try and solve it.
+
+The {convs} field is a list of conversions that the simplifier will
+apply.  Each conversion added to an {ssdata} value is done so in a
+record consisting of four fields.
+
+The {conv} field of this subsidiary record type includes the value of
+the conversion itself.  When the simplifier applies the conversion it
+is actually passed two extra arguments (as the type indicates).  The
+first is a solver function that can be used to recursively do
+side-condition solving, and the second is a stack of side-conditions
+that have been accumulated to date.  Many conversions will typically
+ignore these arguments (as in the example below).
+
+The {key} field of the subsidiary record type is an optional pattern,
+specifying the places where the conversion should be applied.  If the
+value is {NONE}, then the conversion will be applied to all sub-terms.
+It is not known what the role of the list of terms is.  However, if it
+is the list is left as {[]}, the second component of the pair, the
+bare term is used as a pattern.  The conversion will only be applied
+to sub-terms that match the pattern.  The {name} and {trace} fields
+are only relevant to the debugging facilities of the simplifier.
+
+The {dprocs} field of the record passed to {SIMPSET} is where decision
+procedures can be specified.  The construction of values of type
+{reducer} will be described in other reference entries (some of which
+may not have been written yet).
+
+The {filter} field of the record is an optional function, which, if
+present, is composed with the standard simplifier's function for
+generating rewrites from theorems, and replaces that function.  The
+version of this present in {bool_ss} and its descendents will, for
+example, turn {|- P /\ Q} into {|- P} and {|- Q}, and {|- ~(t1 = t2)}
+into {|- (t1 = t2) = F} and {|- (t2 = t1) = F}.
+
+The {rewrs} field of the record is a list of rewrite theorems that are
+to be applied.
+
+\FAILURE
+Never fails.  Failure to provide theorems of just the right form may
+cause later application of simplification functions to fail,
+documentation to the contrary notwithstanding.
+
+\EXAMPLE
+Given a conversion {MUL_CONV} to calculate multiplications, the
+following illustrates how this can be added to a simpset:
+{
+   - val ssd = SIMPSET {{ac = [], congs = [],
+                        convs = [{{conv = K (K MUL_CONV),
+                                  key= SOME ([], Term`x * y`),
+                                  name = "MUL_CONV",
+                                  trace = 2}}],
+                        dprocs = [], filter = NONE, rewrs = []}};
+   > val ssd =
+       SIMPSET{{ac = [], congs = [],
+               convs =
+                 [{{conv = fn, key = SOME([], `x * y`), name = "MUL_CONV",
+                   trace = 2}}], dprocs = [], filter = NONE, rewrs = []}}
+       : ssdata
+   - SIMP_CONV bool_ss [] (Term`3 * 4`);
+   > val it = |- 3 * 4 = 3 * 4 : thm
+   - SIMP_CONV (bool_ss ++ ssd) [] (Term`3 * 4`);
+   > val it = |- 3 * 4 = 12 : thm
+}
+\noindent Given the theorems {ADD_SYM} and {ADD_ASSOC} from
+{arithmeticTheory}, we can construct a normaliser for additive terms.
+{
+   - val ssd2 = SIMPSET {{ac = [(SPEC_ALL ADD_ASSOC, SPEC_ALL ADD_SYM)],
+                         congs = [], convs = [], dprocs = [],
+                         filter = NONE, rewrs = []}};
+   > val ssd2 =
+       SIMPSET{{ac = [(|- m + n + p = (m + n) + p, |- m + n = n + m)],
+               congs = [], convs = [], dprocs = [], filter = NONE,
+               rewrs = []}}
+       : ssdata
+   - SIMP_CONV (bool_ss ++ ssd2) [] (Term`(y + 3) + x + 4`);
+     (* note that the printing of + in this example is that of a
+        right associative operator.*)
+   > val it = |- (y + 3) + x + 4 = 3 + 4 + x + y : thm
+}
+\COMMENTS
+{SIMPSET} is not the right name for something that creates an {ssdata}
+value.  We still know too little about how this code works.
+
+\SEEALSO ++, bool_ss, mk_simpset, rewrites, SIMP_CONV
+
+\ENDDOC

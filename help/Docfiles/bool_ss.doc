@@ -1,0 +1,29 @@
+\DOC bool_ss
+
+\TYPE {boolSimps.bool_ss : simpset}
+
+\SYNOPSIS
+Basic simpset containing standard propositional calculus rewrites,
+beta conversion, and eta conversion.
+
+\KEYWORDS simplification
+
+\LIBRARY boolSimps
+
+\DESCRIBE
+The {bool_ss} simpset is at the base of the system-provided simpset
+hierarchy.  It includes rewrite rules such as {|- T /\ P = P}, and
+conversions to perform eta and beta reduction.
+
+\FAILURE
+Can't fail, as it is not a functional value.
+
+\USES
+The {bool_ss} simpset is an appropriate simpset to use at the base of
+new user-defined simpsets, and is also useful in its own right where a
+delicate simplification is desired, where other more powerful
+simpsets might cause undue disruption to a goal.
+
+\SEEALSO hol_ss, SIMP_CONV, SIMP_TAC.
+
+\ENDDOC

@@ -1,0 +1,21 @@
+\DOC mk_simpset
+
+\TYPE {simpLib.mk_simpset : ssdata list -> simpset}
+
+\SYNOPSIS
+Creates a simpset by combining a list of {ssdata} values.
+
+\KEYWORDS simplification.
+
+\LIBRARY simpLib
+
+\FAILURE
+Never fails.
+
+\USES
+Creates simpsets, which are a necessary argument to any simplification
+function.
+
+\SEEALSO ++, rewrites, SIMP_CONV
+
+\ENDDOC

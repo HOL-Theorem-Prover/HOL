@@ -1,0 +1,39 @@
+\DOC hol_ss
+
+\TYPE {HOLSimps.hol_ss : simpset}
+
+\SYNOPSIS
+The most powerful simpset provided by the HOL system.
+
+\KEYWORDS simplification.
+
+\LIBRARY HOLSimps
+
+\DESCRIBE
+The {hol_ss} simpset includes simplifications appropriate for use with
+the theories of pairs, sums, options, lists, and numbers.  It includes
+an arithmetic decision procedure for linear arithmetic over the
+natural numbers ({ARITH_CONV}) and a variety of other powerful
+techniques.  The way in which these components are applied to terms is
+described in the entry for {SIMP_CONV}.
+
+\FAILURE
+Can't fail as it is not a functional value.
+
+\EXAMPLE
+{
+- SIMP_CONV hol_ss []
+    (Term`P (2 * 2) /\ (P 4 ==> (x = y + 3)) ==> P x /\ y < x`);
+> val it =
+    |- P (2 * 2) /\ (P 4 ==> (x = y + 3)) ==> P x /\ y < x =
+       P 4 /\ (P 4 ==> (x = y + 3)) ==> P (y + 3)
+    : thm
+}
+\COMMENTS
+It can be very difficult to predict what simplification will manage to
+do to one's terms.
+
+
+\SEEALSO ++, ASM_SIMP_TAC, bool_ss, FULL_SIMP_TAC, SIMP_CONV, SIMP_TAC.
+
+\ENDDOC
