@@ -17,15 +17,15 @@ toplevel () {
 }
 
 simple_example () {
-  cd $1
+  pushd $1
   $holmake cleanAll
   if $holmake
   then
     echo Done Example $1
-    cd ..
+    popd
   else
     echo "***** Failed in $1"
-    cd ..
+    popd
     exit 1
   fi
 }
