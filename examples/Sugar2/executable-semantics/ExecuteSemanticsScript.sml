@@ -386,7 +386,7 @@ val FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
        ++ Q.EXISTS_TAC `k - j`
        ++ RW_TAC arith_ss [])
    ++ RW_TAC arith_ss []
-   ++ Know `(j,j+k) = (j+0,j+k)` >> RW_TAC arith_ss []
+   ++ Know `(j,j+j') = (j+0,j+j')` >> RW_TAC arith_ss []
    ++ DISCH_THEN (fn th => REWRITE_TAC [th, GSYM SEL_RESTN])
    ++ MATCH_MP_TAC (PROVE [] ``(a ==> (b = c)) ==> (b /\ a = c /\ a)``)
    ++ STRIP_TAC
@@ -482,26 +482,26 @@ val EVAL_UF_SEM_F_WEAK_IMP = store_thm
        ``(!j. A j ==> (B j = C j)) ==> ((!j. A j ==> B j) = !j. A j ==> C j)``)
    ++ RW_TAC std_ss []
    ++ MATCH_MP_TAC (PROVE [] ``(a = b) /\ (c = d) ==> (a \/ c = b \/ d)``)
-   ++ CONJ_TAC
-   >> (RW_TAC arith_ss [UF_SEM_def, B_SEM]
-       ++ HO_MATCH_MP_TAC
-          (METIS_PROVE []
-           ``!f.
-               (!j. A j ==> ?x. f x = j) /\ (!j. A (f j) = B j) ==>
-               ((?j. A j) = ?j. B j)``)
-       ++ Q.EXISTS_TAC `\k. k + n`
-       ++ RW_TAC arith_ss [] >> (Q.EXISTS_TAC `k - n` ++ RW_TAC arith_ss [])
-       ++ RW_TAC arith_ss [LENGTH_BUTFIRSTN]
-       ++ Cases_on `k + n < LENGTH w`
-       ++ RW_TAC arith_ss [SEL_FINITE_is_BUTFIRSTN_FIRSTN]
-       ++ AP_TERM_TAC
-       ++ Know `SUC (k + n) <= LENGTH w` >> DECIDE_TAC
-       ++ POP_ASSUM_LIST (K ALL_TAC)
-       ++ Know `SUC (k + n) = SUC k + n` >> DECIDE_TAC
-       ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-       ++ METIS_TAC [BUTFIRSTN_FIRSTN])
-   ++ Know `SUC (LENGTH w - 1) = LENGTH w` >> DECIDE_TAC
-   ++ RW_TAC std_ss [FIRSTN_LENGTH_ID]);
+   ++ REVERSE CONJ_TAC
+   >> (Know `SUC (LENGTH w - 1) = LENGTH w` >> DECIDE_TAC
+       ++ RW_TAC std_ss [FIRSTN_LENGTH_ID])
+   ++ RW_TAC arith_ss [UF_SEM_def, B_SEM]
+   ++ HO_MATCH_MP_TAC
+      (METIS_PROVE []
+       ``!f.
+           (!j. A j ==> ?x. f x = j) /\ (!j. A (f j) = B j) ==>
+           ((?j. A j) = ?j. B j)``)
+   ++ Q.EXISTS_TAC `\k. k + n`
+   ++ RW_TAC arith_ss [] >> (Q.EXISTS_TAC `k - n` ++ RW_TAC arith_ss [])
+   ++ RW_TAC arith_ss [LENGTH_BUTFIRSTN]
+   ++ Cases_on `n + n' < LENGTH w`
+   ++ RW_TAC arith_ss [SEL_FINITE_is_BUTFIRSTN_FIRSTN]
+   ++ AP_TERM_TAC
+   ++ Know `SUC (n + n') <= LENGTH w` >> DECIDE_TAC
+   ++ POP_ASSUM_LIST (K ALL_TAC)
+   ++ Know `SUC (n + n') = SUC n' + n` >> DECIDE_TAC
+   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   ++ METIS_TAC [BUTFIRSTN_FIRSTN]);
 
 (******************************************************************************
 * always{r} = {T[*]} |-> {r}
