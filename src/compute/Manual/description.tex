@@ -1,0 +1,86 @@
+
+\chapter{Computing}
+
+This library provides a conversion that does rewrite and
+$\beta$-reduce any term, using a call by value strategy.
+
+%% Document CBV_CONV, from_list, add_clauses, new_rws
+
+\section{Strategy}
+
+The \ml{CBV\_CONV} conversion rewrites the equations in a call-by-value
+strategy, that is completely evaluates the arguments before the
+``function call'' (the application of a rewrite which left-hand side
+has this constant in his head). The reduction is weak, which means
+that reduction under abstractions are delayed as long as
+possible. However, when we know that an abstraction will never be
+applied, reductions are performed under it, so that we can actually
+reach the full normal form.
+
+The strategy is intentionnaly close to ML. This allows to think \HOL\
+has a programming language, and \ml{CBV\_CONV} is an evaluator which
+have the same complexity (with a large slow down factor, though) as
+usual compiled ML programs.
+
+The strategy differs from ML for abstractions: $\beta$-redexes are
+reduced in call by need. The usual call by value strategy can be
+achieved by replacing abstractions \verb#\x. e# by
+\verb#LET (\x. e)#, and reducing \ml{LET} with equation
+\verb#LET f x = f x#.
+
+The reason is to allow the evaluation of conditional expressions
+without evaluating both alternatives. We could use the weak reduction
+strategy to fake call by need:
+\begin{eqnarray*}
+\ml{COND'~T~x~y} & = & \ml{x()} \\
+\ml{COND'~F~x~y} & = & \ml{y()}
+\end{eqnarray*}
+but this is a bit of overhead, and not very natural. Here, instead of
+rewriting equation \verb#COND T x y = x#, we use
+\verb#COND T = \x y. x#. The advantage of the second statement, is
+that only the condition is evaluated strictly, while in the first
+case, the two alternatives are also evaluated. Doing this
+transformation is not useful only in the case we need to evaluate
+arguments lazily, as shown above. It may be an improvement since
+$\beta$-reduction has been optimized, while pattern-matching is not a
+primitive notion in \HOL, and is slower.
+
+
+
+\section{Simplification sets}
+
+The \ml{compute} library has its own type of simplification sets, that
+can be as usual built from a list of theorems. These theorems must be
+conjunctions of possibly quantified equations, whose left-hand side
+satisfy some condition to be defined below. Conjuncts not in the
+requested form are not used.
+
+Left-hand sides must be a constant applied to a list of
+patterns. Patterns are either a variable or a constant applied to
+other patterns. Abstractions cannot appear in patterns.
+\begin{eqnarray*}
+P & ::= & x \mid c~P_1 \ldots P_n
+\end{eqnarray*}
+Patterns must be linear, that is there cannot be two identical pattern
+variables (same name and same type). This corresponds to the usual
+definition scheme by pattern-matching.
+
+Simplification sets are mutable objects: one creates an empty set and
+then adds lists of theorems to it. Function \ml{new\_rws} returns a
+new empty simplification set. Function \ml{add\_clauses} adds a list
+of theorems to a simplification set. It returns the list of rules that
+have been recognized, but it is mainly to check that everything was
+alright. An extra boolean argument tells if the equations must be
+evaluated strictly. If the boolean is \ml{true}, then the theorems are
+not preprocessed. If it is \ml{false}, the last variable patterns are
+turned into abstraction on the right-hand side, as described above.
+Creation of a new simplification set and addition of a list of
+theorems can be combined using \ml{from\_list}.
+
+\section{Rewriting numbers}
+
+The following is a list of theorems to include in a simplification set
+in order to simplify expressions involving closed numerals:
+\ml{numeral\_distrib}, \ml{numeral\_eq}, \ml{numeral\_suc},
+\ml{numeral\_iisuc}, \ml{numeral\_add}, \ml{numeral\_mult},
+\ml{iDUB\_removal}.
