@@ -24,5 +24,9 @@ end
 
 fun prefer_int () = app Parse.temp_overload_on operators
 
+val ARITH_CONV = Omega.OMEGA_CONV
+val ARITH_TAC = Omega.OMEGA_TAC
+val ARITH_PROVE = Omega.OMEGA_PROVE
+
 
 end;
