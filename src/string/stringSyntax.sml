@@ -85,14 +85,37 @@ val fromMLstring =
 val fromHOLstring = Literal.dest_string_lit
 val is_string_literal = Literal.is_string_lit
 
-fun lift_char ty c = fromMLchar c
-fun lift_string ty s = fromMLstring s;
-
 (*---------------------------------------------------------------------------*)
 (* For support of ML execution                                               *)
 (*---------------------------------------------------------------------------*)
 
+fun lift_char ty c = fromMLchar c
+fun lift_string ty s = fromMLstring s;
+
+(*---------------------------------------------------------------------------*)
+(* For support of ML code generation                                         *)
+(*---------------------------------------------------------------------------*)
+
 val _ = Drop.is_string_literal_hook := is_string_literal
 val _ = Drop.dest_string_literal_hook := fromHOLstring
+
+(*---------------------------------------------------------------------------*)
+(* Prettyprinter for characters (one for strings is already hardwired in the *)
+(* HOL prettyprinter).                                                       *)
+(*---------------------------------------------------------------------------*)
+
+fun char_printer sys gravs d pps tm = 
+ let open Portable term_pp_types
+     fun charqs s = "'"^s^"'"
+ in (case total fromHOLchar tm
+      of SOME ch => add_string pps (charqs(Char.toString ch))
+       | NONE => raise UserPP_Failed
+     )
+     handle HOL_ERR _ => raise UserPP_Failed
+ end
+
+val _ = Parse.temp_add_user_printer 
+        ({Thy="string", Tyop="char"}, char_printer);
+
 
 end

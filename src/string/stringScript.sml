@@ -12,7 +12,8 @@
   open numLib numSyntax BasicProvers listTheory listSyntax SingleStep;
 *)
 
-open HolKernel boolLib numLib numSyntax BasicProvers SingleStep listTheory;
+open HolKernel boolLib numLib numSyntax BasicProvers SingleStep listTheory
+     bossLib metisLib;
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
@@ -35,8 +36,16 @@ val CHAR_EXISTS = Q.prove (`?n. ^is_char n`, Q.EXISTS_TAC `0` THEN REDUCE_TAC);
 val CHAR_TYPE = new_type_definition("char", CHAR_EXISTS);
 
 val CHAR_TYPE_FACTS =
-  define_new_type_bijections
-      {ABS="CHR", REP="ORD",name="char_BIJ", tyax=CHAR_TYPE};
+    (define_new_type_bijections
+       {ABS="CHR", REP="ORD",name="char_BIJ", tyax=CHAR_TYPE});
+
+val ORD_11   = save_thm("ORD_11",prove_rep_fn_one_one CHAR_TYPE_FACTS)
+val CHR_11   = save_thm("CHR_11",
+                         BETA_RULE (prove_abs_fn_one_one CHAR_TYPE_FACTS));
+val ORD_ONTO = save_thm("ORD_ONTO",
+                         BETA_RULE (prove_rep_fn_onto CHAR_TYPE_FACTS));
+val CHR_ONTO = save_thm("CHR_ONTO",
+                         BETA_RULE (prove_abs_fn_onto CHAR_TYPE_FACTS));
 
 val CHR_ORD  = save_thm("CHR_ORD", CONJUNCT1 CHAR_TYPE_FACTS);
 val ORD_CHR  = save_thm("ORD_CHR",BETA_RULE (CONJUNCT2 CHAR_TYPE_FACTS));
@@ -50,15 +59,6 @@ val ORD_CHR_COMPUTE = Q.store_thm
 ("ORD_CHR_COMPUTE",
  `!r. ORD (CHR r) = if r < 256 then r else ORD (CHR r)`,
  PROVE_TAC [ORD_CHR_RWT]);
-
-
-val ORD_11   = save_thm("ORD_11",prove_rep_fn_one_one CHAR_TYPE_FACTS)
-val CHR_11   = save_thm("CHR_11",
-                         BETA_RULE (prove_abs_fn_one_one CHAR_TYPE_FACTS));
-val ORD_ONTO = save_thm("ORD_ONTO",
-                         BETA_RULE (prove_rep_fn_onto CHAR_TYPE_FACTS));
-val CHR_ONTO = save_thm("CHR_ONTO",
-                         BETA_RULE (prove_abs_fn_onto CHAR_TYPE_FACTS));
 
 val ORD_BOUND = Q.store_thm
 ("ORD_BOUND",
@@ -239,6 +239,18 @@ val STRING_CASE_CONG = save_thm
 ("STRING_CASE_CONG",
  case_cong_thm STRING_CASES STRING_CASE_DEF);
 
+(*---------------------------------------------------------------------------*)
+(* Destruct a string. This will be used to re-phrase the HOL development     *)
+(* with an ML definition of DEST_STRING in terms of the Basis String struct. *)
+(*---------------------------------------------------------------------------*)
+
+val DEST_STRING = new_recursive_definition
+{name = "DEST_STRING",
+ def = Term`(DEST_STRING "" = NONE) /\
+            (DEST_STRING (STRING c rst) = SOME(c,rst))`,
+ rec_axiom = string_Axiom};
+
+
 (*---------------------------------------------------------------------------
      Recursion equations for EXPLODE and IMPLODE
  ---------------------------------------------------------------------------*)
@@ -299,6 +311,26 @@ val IMPLODE_EQ_THM = Q.store_thm
   POP_ASSUM (MP_TAC o Q.AP_TERM `EXPLODE`) THEN
   simpLib.SIMP_TAC bool_ss [EXPLODE_EQNS, EXPLODE_IMPLODE]);
 
+(*---------------------------------------------------------------------------*)
+(* ML-style recursion equations for EXPLODE and IMPLODE                      *)
+(*---------------------------------------------------------------------------*)
+
+val EXPLODE_DEST_STRING = Q.store_thm
+("EXPLODE_DEST_STRING",
+ `!s. EXPLODE s = case DEST_STRING s
+                   of NONE -> []
+                   || SOME(c,t) -> c::EXPLODE t`,
+ GEN_TAC THEN STRIP_ASSUME_TAC (Q.SPEC `s` STRING_CASES) 
+ THEN RW_TAC std_ss [EXPLODE_EQNS,DEST_STRING]);
+
+
+val IMPLODE_STRING = Q.store_thm
+("IMPLODE_STRING",
+ `!clist.IMPLODE clist = FOLDR STRING "" clist`,
+INDUCT_THEN listTheory.list_INDUCT ASSUME_TAC
+  THEN RW_TAC std_ss [IMPLODE_EQNS,listTheory.FOLDR]);
+
+
 (*---------------------------------------------------------------------------
       Size of a string.
  ---------------------------------------------------------------------------*)
@@ -353,6 +385,12 @@ val STRCAT_ACYCLIC = Q.store_thm
  PROVE_TAC [STRCAT_EQNS,STRCAT_11]);
 
 
+val STRCAT_EXPLODE = Q.store_thm
+("STRCAT_EXPLODE",
+ `!s1 s2. STRCAT s1 s2 = FOLDR STRING s2 (EXPLODE s1)`,
+HO_MATCH_MP_TAC STRING_INDUCT_THM
+  THEN RW_TAC std_ss [STRCAT_EQNS,EXPLODE_EQNS,listTheory.FOLDR]);
+
 (*---------------------------------------------------------------------------
      String length and concatenation
  ---------------------------------------------------------------------------*)
@@ -367,10 +405,60 @@ val STRLEN_CAT = Q.store_thm
        Is one string a prefix of another?
  ---------------------------------------------------------------------------*)
 
-val isPREFIX =
- Q.new_definition
-   ("isPREFIX",
-    `isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3`);
+val _ = TypeBase.write
+     [TypeBasePure.mk_tyinfo
+       {ax=TypeBasePure.ORIG string_Axiom,
+        case_def=STRING_CASE_DEF,
+        case_cong=STRING_CASE_CONG,
+        induction=TypeBasePure.ORIG STRING_INDUCT_THM,
+        nchotomy=STRING_CASES,
+        size=SOME(Parse.Term`STRLEN`,TypeBasePure.ORIG STRLEN_DEF),
+        encode=NONE, lift=NONE,
+        one_one=SOME STRING_11,
+       distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];
+
+val isPREFIX_defn = Hol_defn "isPREFIX"
+   `isPREFIX s1 s2 = 
+       case (DEST_STRING s1, DEST_STRING s2)
+        of (NONE, _) -> T
+        || (SOME __, NONE) -> F
+        || (SOME(c1,t1),SOME(c2,t2)) -> (c1=c2) /\ isPREFIX t1 t2`;
+
+val (isPREFIX_DEF,isPREFIX_IND_0) =
+ Defn.tprove
+   (isPREFIX_defn,
+    WF_REL_TAC `measure (STRLEN o FST)` 
+      THEN Cases_on `s1`
+      THEN RW_TAC arith_ss [DEST_STRING,STRLEN_DEF]
+      THEN RW_TAC arith_ss []);
+
+val isPREFIX_IND = Q.store_thm
+("isPREFIX_IND",
+ `!P. (!s1 s2.
+         (!c1 c2 t1 t2.
+           (DEST_STRING s1 = SOME (c1,t1)) /\
+           (DEST_STRING s2 = SOME (c2,t2)) ==> P t1 t2) ==> P s1 s2) 
+       ==> !v v1. P v v1`,
+ METIS_TAC [pairTheory.ABS_PAIR_THM,isPREFIX_IND_0]);
+
+
+val DEST_STRING_LEMS = Q.store_thm
+("DEST_STRING_LEMS",
+ `!s. ((DEST_STRING s = NONE) = (s = "")) /\
+      ((DEST_STRING s = SOME(c,t)) = (s = STRING c t))`,
+ Cases THEN RW_TAC list_ss [DEST_STRING]);
+
+
+val isPREFIX_STRCAT = Q.store_thm
+("isPREFIX_STRCAT",
+ `!s1 s2. isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3`,
+ recInduct isPREFIX_IND
+   THEN REPEAT STRIP_TAC 
+   THEN RW_TAC list_ss [Once isPREFIX_DEF]
+   THEN REPEAT CASE_TAC
+   THEN FULL_SIMP_TAC list_ss [DEST_STRING_LEMS,STRCAT_EQNS]
+   THEN RW_TAC std_ss []
+   THEN PROVE_TAC[]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -381,6 +469,8 @@ val DATATYPE_STRING = Q.store_thm
 ("DATATYPE_STRING",
  `DATATYPE (string "" STRING)`,
  REWRITE_TAC [DATATYPE_TAG_THM]);
+
+
 
 (*---------------------------------------------------------------------------
     Exportation
@@ -416,5 +506,47 @@ val _ = adjoin_to_theory
    S "        [CHR_ORD,ORD_CHR_COMPUTE,STRING_CASE_DEF,STRLEN_DEF,";
    S "         EXPLODE_EQNS,IMPLODE_EQNS,STRCAT_EQNS];"
  end)};
+
+val _ = ConstMapML.insert(prim_mk_const{Name="DEST_STRING",Thy="string"});
+val _ = ConstMapML.insert(prim_mk_const{Name="STRING",Thy="string"});
+val _ = ConstMapML.prim_insert(prim_mk_const{Name="EMPTYSTRING",Thy="string"},
+                               ("","\"\"",Type`:string`));
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME (fn ppstrm =>
+  let val S = PP.add_string ppstrm
+      fun NL() = PP.add_newline ppstrm
+  in S "val _ = ConstMapML.insert (prim_mk_const{Name=\"DEST_STRING\",Thy=\"string\"});";
+     NL();
+     S "val _ = ConstMapML.insert (prim_mk_const{Name=\"STRING\",Thy=\"string\"});";
+     NL(); 
+     NL()
+  end)}
+
+(*      S "val _ = ConstMapML.prim_insert(prim_mk_const{Name=\"EMPTYSTRING\",Thy=\"string\"},\n\
+                               (\"\","\"\"",Type`:string`));
+
+*)
+
+val _ = 
+ let open Drop
+ in exportML("string",
+    OPEN ["num", "list", "option"]
+    :: MLSIG "type num = numML.num"
+    :: MLSIG "type char = Char.char"
+    :: MLSIG "type string = String.string"
+    :: MLSIG "val CHR : num -> char"
+    :: MLSIG "val ORD : char -> num"
+    :: MLSTRUCT "type char = Char.char;"
+    :: MLSTRUCT "type string = String.string;"
+    :: MLSTRUCT "fun CHR n = Char.chr(valOf(Int.fromString(numML.toDecString n)));"
+    :: MLSTRUCT "fun ORD c = numML.fromDecString(Int.toString(Char.ord c));"
+    :: MLSTRUCT "fun STRING c s = String.^(Char.toString c,s);"
+    :: MLSTRUCT "fun DEST_STRING s = if s= \"\" then NONE \n\
+        \          else SOME(String.sub(s,0),String.extract(s,1,NONE));"
+    :: map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
+       [EXPLODE_DEST_STRING, IMPLODE_STRING, STRLEN_THM, STRCAT_EXPLODE, isPREFIX_DEF])
+ end;
 
 val _ = export_theory();
