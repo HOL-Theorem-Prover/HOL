@@ -10,7 +10,7 @@
        record_defn ::=    "<|"  <idtype_pairs> "|>"
        idtype_pairs ::=   id ":" <type> | id : <type> ";" <idtype_pairs>
        ptype ::=          <type> | "(" <type> ")"
- 
+
   It had better be the case that => is not a type infix.  This is true of
   the standard HOL distribution.  In the event that => is an infix, this
   code will still work as long as the input puts the types in parentheses.
@@ -43,7 +43,7 @@ datatype pretype =
 type field = string * pretype
 type constructor = string * pretype list
 
-datatype datatypeForm 
+datatype datatypeForm
    = Constructors of constructor list
    | Record of field list
 
@@ -55,10 +55,13 @@ fun pretypeToType pty =
   | dTyop (s, args) => Type.mk_type{Tyop=s, Args=map pretypeToType args}
   | dAQ pty => pty
 
-fun ident0 s =
-  (itemP Char.isAlpha >-                                      (fn char1 =>
-   many_charP (fn c => Char.isAlphaNum c orelse c = #"_")  >- (fn rest =>
+fun ident0 s = let
+  open HOLtokens infix OR
+in
+  (itemP Char.isAlpha >-                         (fn char1 =>
+   many_charP (Char.isAlphaNum OR ITEMS "_'") >- (fn rest =>
    return (str char1 ^ rest)))) s
+end
 fun ident s = token ident0 s
 
 fun parse_type strm =
