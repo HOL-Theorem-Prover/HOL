@@ -16,7 +16,7 @@
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
 (* ---------------------------------------------------------------------*)
-(* open HolKernel Parse Prim_rec Define_type ConstrProofs asciiTheory; *)
+
 
 open HolKernel Parse Datatype asciiTheory;
 
@@ -29,8 +29,8 @@ val _ = new_theory "string";
 (* ---------------------------------------------------------------------*)
 
 val string_info =
- Datatype.Hol_datatype `string = emptystring  (* empty string *)
-                               | STRING of ascii => string`;
+ Hol_datatype `string = emptystring  (* empty string *)
+                      | STRING of ascii => string`;
 
 
 (*---------------------------------------------------------------------------

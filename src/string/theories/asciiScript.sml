@@ -1,7 +1,6 @@
 (* =====================================================================*)
-(* FILE		: mk_ascii.ml						*)
-(* DESCRIPTION   : Creates a theory of 8-bit ascii character codes	*)
-(* WRITES FILES	: ascii.th						*)
+(* FILE		: asciiScript.sml				        *)
+(* DESCRIPTION  : Creates a theory of 8-bit ascii character codes	*)
 (*									*)
 (* AUTHOR	: (c) T. Melham 1988					*)
 (* DATE		: 87.07.27						*)
@@ -12,6 +11,7 @@
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
 (* ---------------------------------------------------------------------*)
+
 open HolKernel Parse Datatype;
 
 val _ = new_theory "ascii";
