@@ -462,7 +462,7 @@ fun finish_logging buildok = let
 in
   if FileSys.access(logfilename, []) then let
       open Date
-      val timestamp = fmt "%Y-%m-%dT%H:%M" (fromTimeLocal (Time.now()))
+      val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
       val newname0 = hostname^timestamp
       val newname = (if buildok then "" else "bad-") ^ newname0
     in
