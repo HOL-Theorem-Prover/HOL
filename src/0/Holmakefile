@@ -4,7 +4,7 @@ OPTIONS = NO_OVERLAY
 Sig.uo: Sig.sml Lib.ui KernelTypes.ui Feedback.ui
 	HOLMOSMLC -c -toplevel Sig.sml
 
-Raw-sig.uo: Raw-sig.sml Sig.uo Lib.uo
+Raw-sig.uo: Raw-sig.sml Sig.uo Lib.ui
 	HOLMOSMLC -c -toplevel Sig.ui Raw-sig.sml
 
 Type.uo: Type.sml Raw-sig.uo Lexis.ui
@@ -34,10 +34,10 @@ Definition.uo: Definition.sml Theory.uo
 Net.uo: Net.sml Term.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Net.sml
 
-Type-sig.uo: Type-sig.sml
+Type-sig.uo: Type-sig.sml Lib.ui
 	HOLMOSMLC -c -toplevel Type-sig.sml
 
-Term-sig.uo: Type.uo Term-sig.sml
+Term-sig.uo: Type.uo Term-sig.sml Lib.ui
 	HOLMOSMLC -c -toplevel Type.ui Term-sig.sml
 
 Tag-sig.uo: Tag-sig.sml
