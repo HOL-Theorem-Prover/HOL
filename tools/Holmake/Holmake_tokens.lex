@@ -3,22 +3,23 @@
   open Holmake_types
 }
 
-let newline = "\r\n" | `\n` | `\r`
+let newline = "\r\n" | `\n`
 let whitespace = `\r` | `\t` | `\n` | ` ` | "\\" newline
 let nonlws = ([` ` `\t`]|"\\" newline)* (* no newline whitespace *)
 let alpha = [ `A` - `Z`  `a` - `z` ]
 let number = [`0` - `9`]
-let cmdtext = ([^ `\n` `\r` `\\`] | "\\"  _)* (newline | eof)
+let cmdtext = ([^ `\n` `\r` `\\`] | "\\"  _ | "\\" newline)* (newline | eof)
 let rulebody = `\t` cmdtext
 let ident = (alpha | number | `_` ) +
 let comment = `#` cmdtext
 (* text where comments possible, but not including the comments *)
-let composs_text = ([^ `\n` `#` `\\` `\r`] | "\\" _ | "\\#")* `\\`?
+let composs_text =
+    ([^ `\n` `#` `\\` `\r`] | "\\" _ | "\\#" | "\\" newline)* `\\`?
 (* text that actually includes comments, allowing for later processing to
    remove them *)
 let include_com_text =
-   ([^ `\n` `\r` `#` `\\`] | "\\" _ )* (comment|newline|eof)
-let nonspec_char = ([^ `\n` `\r` `:` `#` `\\`] | `\\` _)
+   ([^ `\n` `\r` `#` `\\`] | "\\" _  | "\\" newline)* (comment|newline|eof)
+let nonspec_char = ([^ `\n` `\r` `:` `#` `\\`] | `\\` _ | `\\` newline)
 
 rule token =
   parse

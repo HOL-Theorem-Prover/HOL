@@ -142,11 +142,24 @@ in
   else ok
 end
 
+fun convert_newlines ss0 = let
+  (* replace \r\n with \n to normalise against windows convention *)
+  open Substring
+  fun recurse acc ss0 = let
+    val (ss1, ss2) = position "\r\n" ss0
+  in
+    if size ss2 = 0 then concat (List.rev (ss1::acc))
+    else recurse (ss1::acc) (Substring.slice(ss2, 1, NONE))
+  end
+in
+  Substring.all (recurse [] ss0)
+end
+
 fun to_token pt =
     case pt of
       DEFN s => let
         open Substring
-        val ss = all s
+        val ss = convert_newlines (all s)
         fun endp c = c <> #"=" andalso not (Char.isSpace c)
         val (varname, rest) = splitl endp ss
         val rest = dropl Char.isSpace rest
@@ -157,7 +170,7 @@ fun to_token pt =
       end
     | RULE s => let
         open Substring
-        val ss = all s
+        val ss = convert_newlines (all s)
         val idx = valOf (find_unescaped [#":"] ss)
         val (tgts, rest) = splitAt(ss, idx)
         val tgts = strip_trailing_ws tgts
