@@ -19,6 +19,6 @@ If {P x} fails for some element {x} of {l}.
 Identical to {filter}.
 
 \SEEALSO
-Lib, Lib.filter, Lib.mapfilter, Lib.partition.
+Lib.filter, Lib.mapfilter, Lib.partition.
 
 \ENDDOC

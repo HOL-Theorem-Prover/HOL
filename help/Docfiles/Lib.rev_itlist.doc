@@ -10,19 +10,18 @@ list.
 
 \DESCRIBE
 {rev_itlist f [x1,...,xn] b} returns {f xn ( ... (f x2 (f x1 y))...)}.
-It returns {b} if the list is empty.
+It returns {b} if the second argument is an empty list.
 
 \FAILURE
-
 Fails if some application of {f} fails.
 
 \EXAMPLE
 {
-
-    - rev_itlist (curry op * ) [1,2,3,4] 1;
-    > val it = 24 : int
+- rev_itlist (curry op * ) [1,2,3,4] 1;
+> val it = 24 : int
 }
+
 \SEEALSO
-Lib, Lib.itlist, Lib.itlist2, Lib.rev_itlist2, Lib.end_itlist.
+Lib.itlist, Lib.itlist2, Lib.rev_itlist2, Lib.end_itlist.
 
 \ENDDOC

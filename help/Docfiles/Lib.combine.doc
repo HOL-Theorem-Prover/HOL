@@ -20,6 +20,6 @@ except that it fails if the arguments are not of equal length. Also
 note that {zip} is a curried version of {combine}
 
 \SEEALSO
-Lib, zip, unzip, Lib.split.
+Lib.zip, Lib.unzip, Lib.split.
 
 \ENDDOC

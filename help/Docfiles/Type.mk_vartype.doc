@@ -10,8 +10,8 @@ Fails if the string does not begin with {'}.
 
 \EXAMPLE
 {
-- mk_vartype "'gamma";
-> val it = `:'gamma` : hol_type
+- mk_vartype "'giraffe";
+> val it = `:'giraffe` : hol_type
 
 - try mk_vartype "test";
 

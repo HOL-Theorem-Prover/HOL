@@ -3,12 +3,15 @@
 \TYPE {dest_type : hol_type -> string * hol_type list}
 
 \SYNOPSIS
-Breaks apart a type (other than a variable type).
+Breaks apart a non-variable type.
 
 \DESCRIBE
-If {ty} is a base type, then {dest_type t} returns {("ty",[])}.
+If {ty} is a type constant, then {dest_type t} returns {(ty,[])}.
 If {ty} is a compound type {(ty1,...,tyn)tyop}, then {dest_type ty}
 returns {(tyop,[ty1,...,tyn])}.
+
+\FAILURE
+Fails if {ty} is a type variable.
 
 \EXAMPLE
 {
@@ -18,10 +21,12 @@ returns {(tyop,[ty1,...,tyn])}.
 - dest_type (alpha --> bool);
 > val it = ("fun", [`:'a`, `:bool`]) : string * hol_type list
 }
-\FAILURE
-Fails if {ty} is a type variable.
+
+\COMMENTS
+A more precise alternative is {dest_thy_type}, which tells which theory 
+the type operator was declared in.
 
 \SEEALSO
-Type.mk_type, Type.dest_vartype.
+Type.mk_type, Type.dest_thy_type, Type.dest_vartype.
 
 \ENDDOC

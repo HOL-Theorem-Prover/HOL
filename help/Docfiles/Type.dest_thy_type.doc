@@ -1,6 +1,9 @@
 \DOC dest_thy_type
 
-\TYPE {dest_thy_type : hol_type -> {{Thy:string, Name:string, Args:hol_type list}}}
+\BLTYPE {dest_thy_type 
+    : hol_type -> {{Thy:string, Name:string, 
+                   Args:hol_type list}}}
+\ELTYPE
 
 \SYNOPSIS
 Breaks apart a type (other than a variable type).
@@ -25,6 +28,6 @@ Exception raised at Type.dest_thy_type:
 }
 
 \SEEALSO
-Type.dest_type, Type.mk_thy_type, Type.mk_type, Term.mk_thy_const.
+Type.mk_thy_type, Type.dest_type, Type.mk_type, Term.mk_thy_const.
 
 \ENDDOC

@@ -6,7 +6,7 @@
 Computes the set-theoretic difference of two `sets'.
 
 \DESCRIBE
-{subtract} behaves exactly like {set_diff}.
+Behaves exactly like {set_diff}.
 
 \SEEALSO
 Lib.set_diff.

@@ -1,6 +1,6 @@
 \DOC PART_MATCH
 
-\TYPE {PART_MATCH : ((term -> term) -> thm -> term -> thm)}
+\TYPE {PART_MATCH : (term -> term) -> thm -> term -> thm}
 
 \SYNOPSIS
 Instantiates a theorem by matching part of it to a term.
@@ -43,6 +43,6 @@ then the following:
 it to {T}.
 
 \SEEALSO
-Thm.INST_TYPE, Drule.INST_TY_TERM, match.
+Thm.INST_TYPE, Drule.INST_TY_TERM, Drule.HO_PART_MATCH, Term.match_term.
 
 \ENDDOC

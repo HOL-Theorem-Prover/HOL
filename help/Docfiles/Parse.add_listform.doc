@@ -1,7 +1,7 @@
 \DOC add_listform
 
 \BLTYPE
-Parse.add_listform :
+add_listform :
   {{separator : string, leftdelim : string, rightdelim : string,
    cons : string, nilstr : string}} -> unit
 \ELTYPE

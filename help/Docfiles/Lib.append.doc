@@ -7,7 +7,6 @@
 \SYNOPSIS Curried form of list append
 
 \DESCRIBE
-
 The function {append} is a curried form of the standard operation for 
 appending two ML lists.
 
@@ -16,12 +15,8 @@ Never fails.
 
 \EXAMPLE
 {
-    - append [1] [2,3] = [1] @ [2,3];
-
-    > val it = true : bool
+- append [1] [2,3] = [1] @ [2,3];
+> val it = true : bool
 }
-
-\SEEALSO
-Lib.
 
 \ENDDOC

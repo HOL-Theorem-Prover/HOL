@@ -8,9 +8,12 @@
 
 \DESCRIBE
 An application {index P l} returns the index (0-based) to the first
-element (in a left-to-right scan) of {l} that {P} holds of.  If {P}
-doesn't hold of any element of {l}, then {index P l} fails. If {P x}
-fails for any {x} encountered in the scan, then {index P l} fails.
+element (in a left-to-right scan) of {l} that {P} holds of.  
+
+\FAILURE
+If {P} doesn't hold of any element of {l}, then {index P l} fails. 
+If {P x} fails for any {x} encountered in the scan, then 
+{index P l} fails.
 
 \EXAMPLE
 {
@@ -32,6 +35,6 @@ no such element
 }
 
 \SEEALSO
-Lib, Lib.el.
+Lib.el.
 
 \ENDDOC

@@ -15,17 +15,18 @@ given. In particular the list of terms {t1},...,{tn} may be empty.
 
 \EXAMPLE
 {
-- list_mk_comb(T,[]);
-> val it = `T` : term
+- list_mk_comb(conditional,[T, mk_var("one",alpha), mk_var("two",alpha)]);
+> val it = `(if T then one else two)` : term
 
-- list_mk_comb(conjunction,[T]);
-> val it = `$/\ T` : term
+- list_mk_comb(universal,[]);
+> val it = `$!` : term
 
-- try list_mk_comb(conjunction,[universal]);
+- try list_mk_comb(universal,[F]);
 
 Exception raised at Term.list_mk_comb:
 incompatible types
 }
+
 \SEEALSO
 boolSyntax.strip_comb, Term.mk_comb.
 

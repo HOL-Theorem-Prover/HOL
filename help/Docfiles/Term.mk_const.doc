@@ -10,6 +10,9 @@ If {n} is a string that has been previously declared to be a constant
 with type {ty} and and {ty1} is an instance of {ty}, then 
 {mk_const(n,ty1)} returns the specified instance of the constant.
 
+(A type {ty1} is an 'instance' of a type {ty2} when {match_type ty2 ty1}
+does not fail.)
+
 Note, however, that constants with the same name (and type) may be 
 declared in different theories. If two theories having constants with
 the same name {n} are in the ancestry of the current theory, then 
@@ -47,6 +50,7 @@ to make an instance of that constant.
 }
 
 \SEEALSO
-Term.mk_thy_const, Term.dest_const, Term.is_const, Term.mk_var, Term.mk_comb, Term.mk_abs.
+Term.mk_thy_const, Term.dest_const, Term.is_const, 
+Term.mk_var, Term.mk_comb, Term.mk_abs, Type.match_type.
 
 \ENDDOC

@@ -1,6 +1,6 @@
 \DOC last
 
-\TYPE {Compat.last : 'a list -> 'a}
+\TYPE {last : 'a list -> 'a}
 
 \SYNOPSIS
 Computes the last element of a list.
@@ -9,13 +9,9 @@ Computes the last element of a list.
 {last [x1,...,xn]} returns {xn}.
 
 \FAILURE
-Found in the hol88 library. Fails with {last} if the list is empty. It
-will not be found unless the hol88 library has been loaded.
-
-\COMMENTS
-Not in hol90, since it was never used in the implementation.
+Fails if the list is empty. 
 
 \SEEALSO
-Lib.butlast, hd, tl, Lib.el, null.
+Lib.butlast, Lib.el, Lib.front_last.
 
 \ENDDOC

@@ -3,7 +3,6 @@
 \TYPE {can : ('a -> 'b) -> 'a -> bool}
 
 \KEYWORDS
-
 Failure, exceptions.
 
 \SYNOPSIS
@@ -14,22 +13,23 @@ Tests for failure.
 It evaluates to {false} if the application fails.
 
 \FAILURE
-
 Only fails if {f x} raises the {Interrupt} exception.
 
 \EXAMPLE
 {
-    - hd [];
-    ! Uncaught exception: 
-    ! Empty
+- hd [];
+! Uncaught exception: 
+! Empty
 
-    - can hd [];
-    > val it = false : bool
+- can hd [];
+> val it = false : bool
 
-    - can (fn _ => raise Interrupt) 3;
-    > Interrupted.
+- can (fn _ => raise Interrupt) 3;
+> Interrupted.
 }
+
 \SEEALSO
-Lib, Lib.assert, try, Lib.trye, Lib.partial, Lib.total, Feedback.with_exn, Lib.assert_exn.
+Lib.assert, try, Lib.trye, Lib.partial, 
+Lib.total, Feedback.with_exn, Lib.assert_exn.
 
 \ENDDOC

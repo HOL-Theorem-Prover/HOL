@@ -1,7 +1,8 @@
 \DOC 
 
 \BLTYPE {delta_pair : ('a -> 'a delta) -> 
-             ('b -> 'b delta) -> 'a * 'b -> ('a * 'b) delta}
+             ('b -> 'b delta) -> 
+             'a * 'b -> ('a * 'b) delta}
 \ELTYPE
 
 \SYNOPSIS

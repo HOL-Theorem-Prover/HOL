@@ -8,9 +8,11 @@ Basic type constant.
 \LIBRARY Type
 
 \DESCRIBE
-The ML variable {Type.ind} is bound to the type constant {ind}.
+The ML variable {Type.ind} is bound to the HOL type constant {ind}.
+The axiom {INFINITY_AX} in {boolTheory} states that {ind} represents 
+an infinite set of individuals. 
 
 \SEEALSO
-alpha, Type.beta, Type.gamma, Type.delta, Type.bool.
+Type.bool, Type.-->.
 
 \ENDDOC

@@ -14,19 +14,19 @@ list.
 {
    f x1 y1 (f x2 y2 ... (f xn yn z)...)
 }
-\noindent It returns {z} if both lists are empty.
+\noindent An invocation {itlist2 f list1 list2 b} returns {b} if 
+{list1} and {list2} are empty.
 
 \FAILURE
-
 Fails if the two lists are of different lengths, or if one of the 
 applications of {f} fails.
 
 \EXAMPLE
 {
-    - itlist2 (fn x => fn y => fn z => (x,y)::z) [1,2] [3,4] [];
-    > val it = [(1, 3), (2, 4)] : (int * int) list
+- itlist2 (fn x => fn y => fn z => (x,y)::z) [1,2] [3,4] [];
+> val it = [(1,3), (2,4)] : (int * int) list
 }
 \SEEALSO
-Lib, Lib.itlist, Lib.rev_itlist, Lib.rev_itlist2, Lib.end_itlist.
+Lib.itlist, Lib.rev_itlist, Lib.rev_itlist2, Lib.end_itlist.
 
 \ENDDOC

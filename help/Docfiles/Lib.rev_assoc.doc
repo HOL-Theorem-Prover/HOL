@@ -21,11 +21,12 @@ list is empty.
 
 \EXAMPLE
 {
-    - rev_assoc 2 [(1,4),(3,2),(2,5),(2,6)];
-    > val it = (3, 2) : (int * int)
+- rev_assoc 2 [(1,4),(3,2),(2,5),(2,6)];
+> val it = (3, 2) : (int * int)
 }
 
 \SEEALSO
-Lib.assoc, Lib.assoc1, Lib.assoc2, Lib.find, Lib.mem, Lib.tryfind, Lib.exists, forall.
+Lib.assoc, Lib.assoc1, Lib.assoc2, Lib.find, Lib.mem, Lib.tryfind, 
+Lib.exists, Lib.all.
 
 \ENDDOC

@@ -1,6 +1,6 @@
 \DOC mem
 
-\TYPE {Lib.mem : ''a -> ''a list -> bool}
+\TYPE {mem : ''a -> ''a list -> bool}
 
 \LIBRARY Lib
 

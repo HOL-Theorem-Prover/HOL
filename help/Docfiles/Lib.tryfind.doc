@@ -11,18 +11,17 @@ the elements of a list.
 searching, list.
 
 \DESCRIBE
-
 {tryfind f [x1,...,xn]} returns {(f xi)} for the first {xi} in the list
 for which application of {f} does not raise an exception. However, if
 {Interrupt} is raised in the course of some application of {f xi}, then
 {tryfind f [x1,...,xn]} raises {Interrupt}.
 
 \FAILURE
-
 Fails if the application of {f} fails for all elements in the list. This
 will always be the case if the list is empty.
 
 \SEEALSO
-Lib, Lib.first, Lib.mem, Lib.exists, Lib.all, Lib.assoc, Lib.rev_assoc, Lib.assoc1, Lib.assoc2.
+Lib.first, Lib.mem, Lib.exists, Lib.all, 
+Lib.assoc, Lib.rev_assoc, Lib.assoc1, Lib.assoc2.
 
 \ENDDOC

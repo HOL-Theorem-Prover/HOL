@@ -22,10 +22,10 @@ Never fails.
 
 \EXAMPLE
 {
-- words2 "/" "/the/cat//sat/on//the/mat/";
+- words2  "/"  "/the/cat//sat/on//the/mat/";
 > val it = ["the", "cat", "sat", "on", "the", "mat"] : string list
 
-- words2 "//" "/the/cat//sat/on//the/mat/";
+- words2  "//"  "/the/cat//sat/on//the/mat/";
 > val it = ["/the/cat//sat/on//the/mat/"] : string list
 }
 

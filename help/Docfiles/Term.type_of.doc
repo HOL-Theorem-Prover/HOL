@@ -10,7 +10,8 @@ Never fails.
 
 \EXAMPLE
 {
-- type_of T;
-val it = `:bool` : hol_type
+- type_of boolSyntax.universal;
+> val it = `:('a -> bool) -> bool` : hol_type
 }
+
 \ENDDOC

@@ -23,7 +23,6 @@ Never fails.
 }
 
 \COMMENTS
-
 This function is open at the top level and is not the same as the
 Basis function {String.concat}.  The latter concatenates a list of
 strings.

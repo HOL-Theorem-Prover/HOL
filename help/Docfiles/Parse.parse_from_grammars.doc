@@ -1,14 +1,13 @@
 \DOC parse_from_grammars
 
 \BLTYPE
-Parse.parse_from_grammars :
+parse_from_grammars :
   (parse_type.grammar * term_grammar.grammar) ->
   ((hol_type frag list -> hol_type) * (term frag list -> term))
 \ELTYPE
 
 \SYNOPSIS
 Returns parsing functions based on the supplied grammars.
-
 
 \KEYWORDS
 parsing

@@ -3,35 +3,37 @@
 \TYPE {match_type : hol_type -> hol_type -> hol_type subst}
 
 \SYNOPSIS
-Finds a substitution theta such that instantiating the first argument with
-theta equals the second argument.
-
+Calculates a substitution {theta} such that instantiating the first 
+argument with {theta} equals the second argument.
 
 \DESCRIBE
 If {match_type ty1 ty2} succeeds, then
 {
-    Type.type_subst (match_type ty1 ty2) ty1 = ty2
+    type_subst (match_type ty1 ty2) ty1 = ty2
 }
-{match_type} is not found in hol88.
 
 \FAILURE
-It fails if no such substitution can be found.
+If no such substitution can be found.
 
 \EXAMPLE
 {
-   - match_type alpha (Type`:num`);
-   > val it =
-       [{{redex = `:'a`, residue = `:num`}}] : hol_type subst
+- match_type alpha (Type`:num`);
+> val it = [{{redex = `:'a`, residue = `:num`}}] : hol_type subst
 
-   - let val patt = Type`:('a -> bool) -> 'b`
-         val ty =   Type`:(num -> bool) -> bool`
-     in
-       type_subst (match_type patt ty) patt = ty
-     end;
-   > val it = true : bool
+- let val patt = Type`:('a -> bool) -> 'b`
+      val ty =   Type`:(num -> bool) -> bool`
+  in
+     type_subst (match_type patt ty) patt = ty
+  end;
+> val it = true : bool
+
+- match_type (alpha --> alpha)
+             (ind   --> bool);
+! Uncaught exception: 
+! HOL_ERR
 }
 
 \SEEALSO
-Term.match_term, ho_match_term.
+Term.match_term, HolKernel.ho_match_term, Type.type_subst.
 
 \ENDDOC

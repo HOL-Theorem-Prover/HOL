@@ -29,7 +29,5 @@ T = ((\(x. x) = (\x. x))
 > val it = () : unit
 }
 
-\SEEALSO
-Feedback.
-
+\SEEALSO Feedback.traces, Feedback.register_btrace, Feedback.trace, Lib.time. 
 \ENDDOC

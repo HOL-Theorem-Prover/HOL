@@ -3,19 +3,11 @@
 \TYPE {mk_type : string * hol_type list -> hol_type}
 
 \SYNOPSIS
-Constructs a type (other than a variable type).
+Constructs a compound type.
 
 \DESCRIBE
-{mk_type(tyop,[ty1,...,tyn])} returns {(ty1,...,tyn)tyop}, 
-if {tyop} is the name of a known {n}-ary type constructor.
-
-Note, however, that type operators with the same name (and arity) may
-be declared in different theories. If two theories having type 
-operators with the same name {s} are in the ancestry of the current
-theory, then {mk_type(s,tyl)} will issue a warning before arbitrarily
-selecting which type operator to use. In such situations, {mk_thy_type}
-is better since it allows one to specify exactly which type operator to 
-use.
+{mk_type(tyop,[ty1,...,tyn])} returns the HOL type {(ty1,...,tyn)tyop}, 
+provided {tyop} is the name of a known {n}-ary type constructor.
 
 \FAILURE
 Fails if {tyop} is not the name of a known type, or if {tyop} is known,
@@ -30,6 +22,16 @@ of {tyop}.
 - mk_type ("fun",[alpha,it]);
 > val it = `:'a -> bool` : hol_type
 }
+
+\COMMENTS
+Note that type operators with the same name (and arity) may
+be declared in different theories. If two theories having type 
+operators with the same name {s} are in the ancestry of the current
+theory, then {mk_type(s,tyl)} will issue a warning before arbitrarily
+selecting which type operator to use. In such situations, it is
+preferable to use {mk_thy_type} since it allows one to specify
+exactly which type operator to use.
+
 \SEEALSO
 Type.mk_thy_type, Type.dest_type, Type.mk_vartype, Type.-->
 

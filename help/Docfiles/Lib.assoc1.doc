@@ -20,11 +20,12 @@ Never fails.
 
 \EXAMPLE
 {
-    - assoc1 2 [(1,4),(3,2),(2,5),(2,6)];
-    > val it = SOME (2, 5) : (int * int)option
+- assoc1 2 [(1,4),(3,2),(2,5),(2,6)];
+> val it = SOME (2, 5) : (int * int)option
 }
 
 \SEEALSO
-Lib.assoc, Lib.assoc2, Lib.rev_assoc, Lib.find, Lib.mem, Lib.tryfind, Lib.exists, Lib.all.
+Lib.assoc, Lib.assoc2, Lib.rev_assoc, Lib.find, Lib.mem, 
+Lib.tryfind, Lib.exists, Lib.all.
 
 \ENDDOC

@@ -11,6 +11,6 @@ Common type variable.
 The ML variable {Type.delta} is bound to the type variable {'d}.
 
 \SEEALSO
-alpha, Type.beta, Type.gamma, Type.bool.
+Type.alpha, Type.beta, Type.gamma, Type.bool.
 
 \ENDDOC

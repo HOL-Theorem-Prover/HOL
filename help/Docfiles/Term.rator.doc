@@ -1,15 +1,16 @@
 \DOC rator
 
-\TYPE {rator : (term -> term)}
+\TYPE {rator : term -> term}
 
 \SYNOPSIS
 Returns the operator from a combination (function application).
 
 \DESCRIBE
-{rator("t1 t2")} returns {"t1"}.
+If {M} is a combination, i.e., has the form {(t1 t2)}, then 
+{rator M} returns {t1}.
 
 \FAILURE
-Fails with {rator} if term is not a combination.
+Fails if {M} is not a combination.
 
 \SEEALSO
 Term.rand, Term.dest_comb.

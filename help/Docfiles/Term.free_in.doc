@@ -1,6 +1,6 @@
 \DOC free_in
 
-\TYPE {free_in : (term -> term -> bool)}
+\TYPE {free_in : term -> term -> bool}
 
 \SYNOPSIS
 Tests if one term is free in another.
@@ -8,7 +8,9 @@ Tests if one term is free in another.
 \DESCRIBE
 When applied to two terms {t1} and {t2}, the function {free_in} returns
 {true} if {t1} is free in {t2}, and {false} otherwise. It is not necessary
-that {t1} be simply a variable.
+that {t1} be simply a variable. A term {M} occurs free in {N} when
+all the free variables of {M} are not bound at some occurrence of {M}
+in {N}.
 
 \FAILURE
 Never fails.
@@ -30,6 +32,6 @@ of {x} in the second term is free, even though there is also a bound instance:
 }
 
 \SEEALSO
-Term.free_vars, Term.FV, hol88Lib.frees, hol88Lib.freesl.
+Term.free_vars, Term.FVL.
 
 \ENDDOC

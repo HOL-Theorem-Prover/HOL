@@ -1,7 +1,7 @@
 \DOC register_ftrace
 
 \BLTYPE
-Feedback.register_ftrace :
+register_ftrace :
   (string * ((unit -> int) * (int -> unit)) * int) -> unit
 \ELTYPE
 

@@ -1,15 +1,16 @@
 \DOC bvar
 
-\TYPE {bvar : (term -> term)}
+\TYPE {bvar : term -> term}
 
 \SYNOPSIS
 Returns the bound variable of an abstraction.
 
 \DESCRIBE
-{bvar `\v. t`} returns {`v`}.
+If {M} is a lambda abstraction, i.e, has the form {\v. t}, then 
+{bvar M} returns {v}.
 
 \FAILURE
-Fails unless the term is an abstraction.
+Fails unless {M} is an abstraction.
 
 \SEEALSO
 Term.body, Term.dest_abs.

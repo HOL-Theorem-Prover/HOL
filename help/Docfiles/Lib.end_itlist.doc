@@ -11,14 +11,15 @@ of a list.
 Returns {x} for a one-element list {[x]}.
 
 \FAILURE
-Fails if list is empty.
+Fails if list is empty, or if an application of {f} raises an exception.
 
 \EXAMPLE
 {
-    - end_itlist (curry op+) [1,2,3,4];
-    > val it = 10 : int
+- end_itlist (curry op+) [1,2,3,4];
+> val it = 10 : int
 }
+
 \SEEALSO
-Lib, Lib.itlist, Lib.rev_itlist, Lib.itlist2, Lib.rev_itlist2.
+Lib.itlist, Lib.rev_itlist, Lib.itlist2, Lib.rev_itlist2.
 
 \ENDDOC

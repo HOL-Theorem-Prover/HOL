@@ -32,6 +32,6 @@ Never fails. However, notice that {fst (x,y,z)} fails to typecheck, since
 }
 
 \SEEALSO
-Lib, Lib.snd.
+Lib.snd.
 
 \ENDDOC

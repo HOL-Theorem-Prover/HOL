@@ -15,12 +15,11 @@ list.
 Fails if the two lists are of different lengths.
 
 \COMMENTS 
-
 Has much the same effect as the SML Basis function {ListPair.zip} except
 that it fails if the arguments are not of equal length. {zip} is a
 curried version of {combine}
 
 \SEEALSO
-Lib, Lib.combine, Lib.unzip, Lib.split.
+Lib.combine, Lib.unzip, Lib.split.
 
 \ENDDOC

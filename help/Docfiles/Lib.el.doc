@@ -15,11 +15,11 @@ length of the list.
 
 \EXAMPLE
 {
-    - el 3 [1,2,7,1];
-    > val it = 7 : int
-
+- el 3 [1,2,7,1];
+> val it = 7 : int
 }
+
 \SEEALSO
-Lib, hd, tl, Lib.index.
+Lib.index.
 
 \ENDDOC

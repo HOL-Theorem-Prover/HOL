@@ -11,19 +11,15 @@ An invocation {flatten [[x11,...,x1k1],...,[xn1,...,xnkn]]} yields
 the list {[x1,...,x1k1,...,xn1,...,xnkn]}.
 
 \FAILURE
-
 Never fails.
 
 \EXAMPLE
 {
-   - flatten [[1,2,3],[],[4,5]];
-   > val it = [1, 2, 3, 4, 5] : int list
+- flatten [[1,2,3],[],[4,5]];
+> val it = [1, 2, 3, 4, 5] : int list
 
-   - flatten ([[[]]] : int list list list);
-   > val it =  [[]]  : int list list
+- flatten ([[[]]] : int list list list);
+> val it =  [[]]  : int list list
 }
-
-\SEEALSO
-Lib.
 
 \ENDDOC

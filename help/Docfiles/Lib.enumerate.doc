@@ -19,7 +19,4 @@ Never fails.
 > val it = [(0, "komodo"), (1, "iguana"), (2, "gecko"), (3, "gila")]
 }
 
-\SEEALSO
-Lib.
-
 \ENDDOC

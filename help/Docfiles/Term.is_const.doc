@@ -1,13 +1,13 @@
 \DOC is_const
 
-\TYPE {is_const : (term -> bool)}
+\TYPE {is_const : term -> bool}
 
 \SYNOPSIS
 Tests a term to see if it is a constant.
 
 \DESCRIBE
-{is_const "const:ty"} returns {true}. If the term is not a constant the
-result is {false}.
+If {c} is an instance of a previously declared HOL constant, then
+{is_const c} returns {true}; otherwise the result is {false}.
 
 \FAILURE
 Never fails.

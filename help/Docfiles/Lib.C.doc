@@ -14,12 +14,11 @@ fails.
 
 \EXAMPLE
 {
-    - map (C cons []) [1,2,3];
-
-    > val it = [[1], [2], [3]] : int list list
+- map (C cons []) [1,2,3];
+> val it = [[1], [2], [3]] : int list list
 }
 
 \SEEALSO
-Lib, Lib.\#\#, Lib.A, Lib.B, Lib.I, Lib.K, Lib.S, Lib.W.
+Lib.\#\#, Lib.A, Lib.B, Lib.I, Lib.K, Lib.S, Lib.W.
 
 \ENDDOC
