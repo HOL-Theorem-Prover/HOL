@@ -8,9 +8,6 @@ Performs recursion induction.
 \KEYWORDS
 tactic, induction
 
-\LIBRARY
-SingleStep.
-
 \DESCRIBE
 An invocation {recInduct thm} on a goal {g}, where {thm} is typically an
 induction scheme returned from an invocation of {Define} or {Hol_defn},
@@ -47,8 +44,8 @@ list is not in the list:
 One could try mathematical induction, but that won't work well, since
 {x} gets incremented in recursive calls. Instead, induction with
 `{variant}-induction' works much better. {recInduct} can be used to
-apply such theorems in tactic proof. For our example,  {recInduct
-variant_ind} yields the goal
+apply such theorems in tactic proof. For our example,  
+{recInduct variant_ind} yields the goal
 {
    ?- !x L. (MEM x L ==> ~MEM (variant (x + 1) L) L) ==> ~MEM (variant x L) L
 }
