@@ -207,10 +207,8 @@ val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 val UNQUOTER  = fullPath [HOLDIR, "bin/unquote"]
 fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
 
-(* find MOSMLDIR by first looking at command-line, then looking for a
-   value compiled into the code, and then for the environment variable
-   MOSMLLIB.  This latter is set for Moscow ML's operation under
-   Windows, and will lead us to the right place. *)
+(* find MOSMLDIR by first looking at command-line, then looking at the
+   value compiled into the code. *)
 val MOSMLDIR =
   case cmdl_MOSMLDIR of
     NONE => MOSMLDIR0
@@ -638,63 +636,63 @@ in
     []
 end
 
-fun get_dependencies (f : File) : File list = let
-in
-  case (extra_deps (fromFile f)) of
-    SOME l => map toFile l
-  | NONE => let
-      val file_dependencies0 = get_direct_dependencies f
-      val file_dependencies =
-        case actual_overlay of
-          NONE => file_dependencies0
-        | SOME s => if isSome (holdep_arg f) then
+fun get_implicit_dependencies (f: File) : File list = let
+  val file_dependencies0 = get_direct_dependencies f
+  val file_dependencies =
+      case actual_overlay of
+        NONE => file_dependencies0
+      | SOME s => if isSome (holdep_arg f) then
                       toFile (fullPath [SIGOBJ, s]) :: file_dependencies0
-                    else
-                      file_dependencies0
-    in
-      case f of
-        SML (Theory x) => let
-          (* there may be theory files mentioned in the Theory.sml file that
-             aren't mentioned in the script file.  If so, we are really
-             dependent on these, and should add them.  They will be listed
-             in the dependencies for UO (Theory x). *)
-          val additional_theories =
-            if FileSys.access(fromFile f, [FileSys.A_READ]) then
-              List.mapPartial (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
-              (get_dependencies (UO (Theory x)))
-            else
-              []
+                  else
+                    file_dependencies0
+in
+  case f of
+    SML (Theory x) => let
+      (* there may be theory files mentioned in the Theory.sml file that
+         aren't mentioned in the script file.  If so, we are really
+         dependent on these, and should add them.  They will be listed
+         in the dependencies for UO (Theory x). *)
+      val additional_theories =
+          if FileSys.access(fromFile f, [FileSys.A_READ]) then
+            List.mapPartial (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
+                            (get_implicit_dependencies (UO (Theory x)))
+          else
+            []
 
-          val firstcut = set_union file_dependencies additional_theories
+      val firstcut = set_union file_dependencies additional_theories
           (* because we have to build an executable in order to build a
              theory, this build depends on all of the dependencies
              (meaning the transitive closure of the direct dependency
              relation) in their .UO form, not just .UI *)
-          fun collect_all_dependencies sofar tovisit =
-            case tovisit of
-              [] => sofar
-            | (f::fs) => let
-                val deps =
+      fun collect_all_dependencies sofar tovisit =
+          case tovisit of
+            [] => sofar
+          | (f::fs) => let
+              val deps =
                   if Path.dir (string_part f) <> "" then []
                   else
                     case f of
                       UI x => (get_direct_dependencies f @
                                get_direct_dependencies (UO x))
                     | _ => get_direct_dependencies f
-                val newdeps = set_diff deps sofar
-              in
-                collect_all_dependencies (sofar @ newdeps)
-                                         (set_union newdeps fs)
-              end
-          val alldeps = collect_all_dependencies [] [f]
-          val uo_deps =
-            List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) alldeps
-        in
-          set_union uo_deps (set_union alldeps firstcut)
-        end
-      | _ => file_dependencies
+              val newdeps = set_diff deps sofar
+            in
+              collect_all_dependencies (sofar @ newdeps)
+                                       (set_union newdeps fs)
+            end
+      val alldeps = collect_all_dependencies [] [f]
+      val uo_deps =
+          List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) alldeps
+    in
+      set_union uo_deps (set_union alldeps firstcut)
     end
+  | _ => file_dependencies
 end
+
+fun get_explicit_dependencies (f : File) : File list =
+    case (extra_deps (fromFile f)) of
+      SOME deps => map toFile deps
+    | NONE => []
 
 (** Build graph *)
 
@@ -825,8 +823,9 @@ end
 
 fun do_a_build_command target pdep secondaries =
   case (extra_commands (fromFile target)) of
-    SOME cs => run_extra_commands (fromFile target) cs = Process.success
-  | NONE => let
+    SOME (cs as _ :: _) =>
+      run_extra_commands (fromFile target) cs = Process.success
+  | _ (* i.e., NONE or SOME [] *) => let
     in
       case target of
          UO c           => build_command MOSMLC pdep
@@ -835,13 +834,22 @@ fun do_a_build_command target pdep secondaries =
        | SIG (Theory s) => true (* because building our primary dependent,
                                    the Theory.sml file, will have built us too
                                 *)
-       | x => raise Fail ("Don't know how to build a "^fromFile x^"\n")
+       | x => raise Fail "Can't happen"
+                    (* can't happen because do_a_build_command is only
+                       called on targets that have primary_dependents,
+                       and those are those targets of the shapes already
+                       matched in the previous cases *)
     end
 
 
 exception CircularDependency
 exception BuildFailure
 exception NotFound
+
+fun no_full_extra_rule tgt =
+    case extra_commands (fromFile tgt) of
+      NONE => true
+    | SOME cl => null cl
 
 val up_to_date_cache:(File, bool)Polyhash.hash_table =
   Polyhash.mkPolyTable(50, NotFound)
@@ -866,11 +874,12 @@ in
      (print (fromFile target ^" outside current directory; considered OK.\n");
       cache_insert (target, true))
     else
-      if isSome pdep then let
+      if isSome pdep andalso no_full_extra_rule target then let
         val pdep = valOf pdep
       in
         if make_up_to_date false (target::ctxt) pdep then let
-          val secondaries = get_dependencies target
+          val secondaries = set_union (get_implicit_dependencies target)
+                                      (get_explicit_dependencies target)
           val _ =
             (print ("Secondary dependencies for "^fromFile target^" are: ");
              print (print_list (map fromFile secondaries) ^ "\n"))
@@ -890,7 +899,7 @@ in
           cache_insert (target, false)
       end
       else let
-          val secondaries = get_dependencies target
+          val secondaries = get_explicit_dependencies target
           val _ =
             (print ("Secondary dependencies for "^fromFile target^" are: ");
              print (print_list (map fromFile secondaries) ^ "\n"))
@@ -920,10 +929,13 @@ in
                    secondary dependencies, they will have come from
                    a Holmakefile or from automatic dependency analysis.
                    The latter is done for everything with primary dependents,
-                   but in this branch, we have no primary dependent.
-                   But, extra_commands will return SOME cl for every
-                   rule.  cl may be the null list, but it will still be
-                   there.
+                   but in this branch, we either have no primary dependent or
+                   have some extra commands.
+
+                   For everything with Holmakefile induced
+                   dependencies, extra_commands x will return SOME cl
+                   for every x.  cl may be the null list, but it will
+                   still be there.
 
                    Recall the example of target "all", which can quite
                    reasonably have no commands, but just dependencies. *)

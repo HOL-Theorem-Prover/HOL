@@ -379,13 +379,16 @@ files that the target (the file before the colon) is said to
 ``depend'' on.  If any of these are newer than the target, then
 \holmake{} rebuilds the target according to the commands.  If there
 are no dependencies, then the commands are always executed.  If there
-are no commands, the extra dependencies are recorded, and will make a
-difference if \holmake{} knows how to build files of the given type.
-Further, dependencies recorded in the make-file are always added to
-those that \holmake{} has managed to infer for itself.  If commands
-are provided for a file-type that \holmake{} knows how to build
-itself, then the make-file's commands take precedence, and only they
-will be executed.
+are no commands, and the target is not of a type that \holmake{}
+already knows how to build, then it will just make sure that the the
+dependencies are up to date (this may or may not create the target).
+If there are no commands attached to a rule, and the target is one
+that \holmake{} does know how to build, then the rule's extra
+dependencies are added to those that \holmake{} has managed to infer
+for itself, and \holmake{} will build the target using its built-in
+rule.  If commands are provided for a type of file that \holmake{}
+knows how to build itself, then the make-file's commands and
+dependencies take precedence, and only they will be executed.
 
 Finally, the commands can use some useful abbreviations for the
 programs executed.  The valid abbreviations are:
