@@ -374,7 +374,8 @@ fun dest_exp tm =
 (*****************************************************************************)
 val combinational_constants = 
  ref["T","F","/\\","\\/","~",",","o","CURRY","UNCURRY","COND",
-     "Seq","Par","Ite","NUMERAL","BIT1","BIT2","ZERO","+","-"];
+     "FST","SND","=","Seq","Par","Ite","NUMERAL","BIT1","BIT2","ZERO",
+     "+","-"];
 
 fun COMBINATIONAL tm =
  is_var tm
@@ -407,6 +408,10 @@ fun CompileExp tm =
                   then MATCH_MP 
                         (ISPEC tm1 PRECEDE_DEV)
                         (CompileExp tm2)
+                  else if COMBINATIONAL tm2 
+                  then MATCH_MP 
+                        (ISPEC tm2 FOLLOW_DEV)
+                        (CompileExp tm1)
                   else MATCH_MP 
                         SEQ_INTRO 
                         (CONJ (CompileExp tm1) (CompileExp tm2))
@@ -610,6 +615,19 @@ fun dest_PRECEDE tm = (rand(rator tm), rand tm);
 fun mk_PRECEDE(f,d) = ``PRECEDE ^f ^d``;
 
 (*****************************************************************************)
+(* FOLLOW                                                                    *)
+(*****************************************************************************)
+fun is_FOLLOW tm =
+ is_comb tm
+  andalso is_comb(rator tm)
+  andalso is_const(rator(rator tm))
+  andalso (fst(dest_const(rator(rator tm))) = "FOLLOW");
+
+fun dest_FOLLOW tm = (rand(rator tm), rand tm);
+
+fun mk_FOLLOW(d,f) = ``FOLLOW ^d ^f``;
+
+(*****************************************************************************)
 (* ATM                                                                       *)
 (*****************************************************************************)
 fun is_ATM tm =
@@ -767,6 +785,13 @@ fun DEPTHR refine tm =
        val th = DEPTHR refine d
    in
     MATCH_MP (ISPEC f PRECEDE_DEV_IMP) th
+   end
+ else if is_FOLLOW tm
+  then
+   let val (d,f) = dest_FOLLOW tm
+       val th = DEPTHR refine d
+   in
+    MATCH_MP (ISPEC f FOLLOW_DEV_IMP) th
    end
  else if is_SEQ tm
   then
@@ -1010,12 +1035,12 @@ val MAKE_NETLIST =
     COMP_SEL_CLAUSES,SEL_CONCAT_CLAUSES,BUS_CONCAT_PAIR,BUS_CONCAT_o,
     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
-    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_CONCAT_SPLIT,
-    COMB_SUB1]                                                             o
+    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_CONCAT_SPLIT]                     o
  GEN_BETA_RULE                                                             o
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
-   ETA_THM,PRECEDE_SYNTH,PRECEDE_ID,Par_def,Seq_def,o_THM];
+   ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+   Par_def,Seq_def,o_THM];
 
 
 
