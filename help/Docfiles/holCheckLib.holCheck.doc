@@ -15,22 +15,22 @@ Basic symbolic model checker.
 
 \DESCRIBE
 Basic symbolic model checker. User specifies a model by giving initial
-states and a labelled transition system as propositional logic terms,
-and then provides a list of CTL or mu-calculus propertes to the model
+states and a labeled transition system as propositional logic terms,
+and then provides a list of CTL or mu-calculus properties to the model
 checker, which returns the BDD representation of the property, a
 theorem if the property holds in the model, and a counterexample or
 witness trace if appropriate.
 
 \EXAMPLE
 
-Load the library and initialise the bdd engine
+Load the library and initialise the BDD engine
 {
    - app load ["holCheckLib"];
    > val it = () : unit
    - bdd.init 100000 10000;
    > val it = () : unit
 }
-Specify the labelled transition system as a list of (string, term)
+Specify the labeled transition system as a list of (string, term)
 pairs, where each string is a transition label and each term
 represents a transition relation (this is for a mod-8 counter; 3
 booleans required to encode numbers 0-7; next-state variable values
