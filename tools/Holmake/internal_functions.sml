@@ -153,8 +153,6 @@ in
   spacify (map mapthis (tokenize arglist))
 end
 
-
-
 fun function_call (fnname, args, eval) = let
   open Substring
 in
@@ -192,6 +190,10 @@ in
       in
         patsubst tuple
       end
+  | "protect" => if length args <> 1 then
+                   raise Fail "Bad number of arguments to `protect' function."
+                 else
+                   Systeml.protect (eval (hd args))
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 

@@ -449,6 +449,15 @@ whose value are commas instead), but can otherwise be arbitrary text.
   list with the suffixes replaced with \texttt{.uo}.
 \item[\texttt{\$(subst arg1,arg2,text)}] replaces every occurrence
   of \texttt{arg1} in \texttt{text} with \texttt{arg2}.
+\item[\texttt{\$(protect arg)}] wraps \texttt{arg} in appropriate
+  quote characters to ensure that it will pass through the operating
+  system's command shell unscathed.  This is important in the presence
+  of file-names that include spaces.  Those make-file variables that
+  point directly at executables (\texttt{MOSMLC}, \texttt{MOSMLLEX}
+  etc) are automatically protected in this way.  Others, which might
+  be used in concatenation with other elements, are not so protected.
+  Thus, if \texttt{DIR} might include spaces, one should write
+  \texttt{\$(protect \$(DIR)/subdirectory/program)}.
 \end{description}
 
 \paragraph{Special and pre-defined variables}

@@ -18,8 +18,16 @@ in
   Process.system command
 end
 
-(* val protect = dquote *)
-fun protect s = s
+val protect = dquote
+
+(* the _ps suffix stands for 'protected string', as opposed to the 'l'
+   of systeml, which stands for 'list' of strings (all of which are
+   presumed unprotected).  The problem is that on Windows, if you pass
+   system a (protected) string such as
+      "c:/program files/bar/baz" "arg1"
+   then it has a fit.  It seems the only way of getting it to play nicely
+   is to prefix the commandline with "call". *)
+fun system_ps s - Process.system ("call " ^ s)
 
 fun xable_string s = s^".exe"
 fun mk_xable file =   (* returns the name of the executable *)

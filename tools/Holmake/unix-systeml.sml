@@ -29,6 +29,10 @@ in
 
   val systeml = system o concat_wspaces protect []
 
+  val system_ps = Process.system
+  (* see winNT-systeml.sml for an explanation of why what is a synonym under
+     unix needs to be slightly different on Windows. *)
+
   fun xable_string s = s
 
   fun mk_xable file =

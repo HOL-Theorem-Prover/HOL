@@ -262,13 +262,13 @@ fun base_environment s = let
   val p = Systeml.protect
 in
   case s of
-    "HOLDIR" => [LIT (p HOLDIR)]
+    "HOLDIR" => [LIT HOLDIR]
   | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
-  | "MOSMLDIR" => [LIT (p MOSMLDIR)]
-  | "MOSMLCOMP" => [VREF "MOSMLDIR", LIT "/bin/mosmlc"]
-  | "MOSMLLEX" => [VREF "MOSMLDIR", LIT "/bin/mosmllex"]
-  | "MOSMLYAC" => [VREF "MOSMLDIR", LIT "/bin/mosmlyac"]
-  | "UNQUOTE" => [VREF "HOLDIR", LIT (xable_string "/bin/unquote")]
+  | "MOSMLDIR" => [LIT MOSMLDIR]
+  | "MOSMLCOMP" => [VREF "protect $(MOSMLDIR)/bin/mosmlc"]
+  | "MOSMLLEX" => [VREF "protect $(MOSMLDIR)/bin/mosmllex"]
+  | "MOSMLYAC" => [VREF "protect $(MOSMLDIR)/bin/mosmlyac"]
+  | "UNQUOTE" => [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")]
   | _ => (case Process.getEnv s of
             NONE => [LIT ""]
           | SOME v => [LIT v])
@@ -401,7 +401,7 @@ fun run_extra_command tgt c = let
         (TextIO.output(TextIO.stdOut, c ^ "\n");
          TextIO.flushOut TextIO.stdOut)
       else ()
-  val result = Process.system c
+  val result = Systeml.system_ps c
 in
   if result <> Process.success andalso ignore_error then
     (warn ("["^tgt^"] Error (ignored)");
