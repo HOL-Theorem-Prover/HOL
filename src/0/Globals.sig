@@ -7,7 +7,6 @@ sig
 
   val show_types              : bool ref
   val show_types_verbosely    : bool ref
-  val show_aliases            : bool ref
   val show_numeral_types      : bool ref
   val show_assums             : bool ref
   val show_tags               : bool ref

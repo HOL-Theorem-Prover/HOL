@@ -266,6 +266,10 @@ fun compare_crec ({Name = n1, Thy = thy1},
     EQUAL => String.compare (n1, n2)
   | x => x
 
+val show_alias_resolution = ref true
+val _ = Feedback.register_btrace ("show_alias_printing_choices",
+                                  show_alias_resolution)
+
 fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
   val O1ops_sorted = Binarymap.listItems (#1 O1)
   val O2ops_sorted = Binarymap.listItems (#1 O2)
@@ -306,10 +310,11 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
           | GREATER => merge_cops (r2::acc) cop1s r2s
           | EQUAL => let
             in
-              if #2 r1 <> #2 r2 andalso !show_aliases
+              if #2 r1 <> #2 r2 andalso !show_alias_resolution andalso
+                 !Globals.interactive
               then
-                HOL_MESG ("Symbol "^quote(#2 r2)^
-                     " now denotes constant"^ #Thy (#1 r1)^"$"^ #Name (#1 r1))
+                HOL_MESG ("Constant " ^ #Thy (#1 r1) ^ "$" ^ #Name (#1 r1) ^
+                          " now prints as " ^ quote(#2 r2))
               else ();
               merge_cops (r1::acc) r1s r2s
             end

@@ -53,13 +53,6 @@ val show_axioms = ref true
 val show_scrub = ref true
 
 (*---------------------------------------------------------------------------*
- * For showing information on how aliases introduced by overload_on are      *
- * resolved when grammars are merged.                                        *
- *---------------------------------------------------------------------------*)
-
-val show_aliases = ref false
-
-(*---------------------------------------------------------------------------*
  * Assignable function for printing errors.                                  *
  *---------------------------------------------------------------------------*)
 
