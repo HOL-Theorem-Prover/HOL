@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/local/scratch/kxs/144";
-val holdir   = "/local/scratch/kxs/working";
+val mosmldir = "/usr/groups/hol/mosml.144";
+val holdir   = "/local/scratch/bb236/hol98";
 val OS       = "linux"       (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -55,11 +55,11 @@ end;
 
 val SRCDIRS =
  ["src/portableML", "src/0", "src/parse",
-  "src/bool", "src/basicHol90", "src/goalstack", "src/q", "src/combin",
-  "src/lite", "src/ho_match", "src/refute", "src/simp/src", "src/meson/src",
-  "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
-  "src/num", "src/reduce/src", "src/arith/src", "src/list/src", "src/tree",
-  "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
+  "src/bool", "src/basicHol90", "src/compute/src", "src/goalstack", "src/q",
+  "src/combin", "src/lite", "src/ho_match", "src/refute", "src/simp/src",
+  "src/meson/src", "src/relation", "src/pair/src", "src/sum", "src/one",
+  "src/option", "src/num", "src/reduce/src", "src/arith/src", "src/list/src",
+  "src/tree", "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/basicrec",
   "src/utils", "src/datatype/mutrec", "src/datatype/nestrec",
   "src/datatype/mutual", "src/datatype", "src/datatype/record",
