@@ -412,6 +412,12 @@ EXTERNML value mlbdd_bdd_satone(value r) /* ML */
   return mlbdd_make(bdd_satone(Bdd_val(r)));
 }
 
+/* ML type: bdd -> varSet */
+EXTERNML value mlbdd_bdd_fullsatone(value r) /* ML */
+{
+  return mlbdd_make(bdd_fullsatone(Bdd_val(r)));
+}
+
 /* ML type: bdd -> int */ 
 EXTERNML value mlbdd_bdd_nodecount(value r) /* ML */
 {

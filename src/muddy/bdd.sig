@@ -80,6 +80,7 @@ sig
     val restrict : bdd -> assignment -> bdd
 
     val satone : bdd -> assignment
+    val fullsatone : bdd -> assignment
 
 
     val simplify  : bdd -> bdd -> bdd

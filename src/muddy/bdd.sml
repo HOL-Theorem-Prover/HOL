@@ -202,6 +202,10 @@ struct
     fun satone r = if equal r FALSE then raise Domain
                    else satone_ r
 
+    val fullsatone_ : bdd -> assignment = app1 (symb "mlbdd_bdd_fullsatone")
+    fun fullsatone r = if equal r FALSE then raise Domain
+                   else fullsatone_ r
+
     type nodetable = int * (varnum * int * int) Vector.vector
 
 
