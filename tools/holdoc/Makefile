@@ -1,6 +1,8 @@
 OCAMLPATH=/home/pes20/bin
 
 OCAMLC=$(OCAMLPATH)/ocamlc
+# add -pp camlp4o for ocaml version 3.03a and above, apparently
+
 OCAMLLEX=$(OCAMLPATH)/ocamllex
 OCAMLDEP=$(OCAMLPATH)/ocamldep
 
