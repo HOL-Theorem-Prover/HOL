@@ -514,7 +514,7 @@ The changes which may cause old terms to fail to parse are:
 \end{itemize}
 
 
-\section{A simple proof manager}\label{sec:goalstack}
+\section{A Simple Proof Manager}\label{sec:goalstack}
 
 The \texttt{goal stack} provides a simple interface to tactic-based
 proof. When one uses tactics to decompose a proof, many intermediate
@@ -638,7 +638,7 @@ proof, or a different proof. The functions that do this are
 \ml{rotate} and \ml{rotate\_proofs}, respectively. The abbreviations
 \ml{r} and \ml{R} are simpler to type in.
 
-\section{The \texttt{boss} library---high level proof steps}
+\section{High Level Proof---\texttt{bossLib}}
 % would use \ml{boss} above but it puts LaTeX into fits
 \label{sec:bossLib}
 \newcommand\bossLib{\ml{bossLib}}
@@ -805,8 +805,7 @@ before attacking the goal.  On the other hand, \ml{SRW\_TAC} loads
 rewrites into the \simpset{} underneath \ml{srw\_ss()} just once,
 making for faster operation in this situation.
 
-\ml{bossLib} provides a number of simplification sets. In general,
-these are extended versions of those found in \ml{simpLib}. The
+\ml{bossLib} provides a number of simplification sets. The
 simpset for pure logic, sums, pairs, and the \ml{option} type is
 named \ml{std\_ss}. The simpset for arithmetic is named
 \ml{arith\_ss}, and the simpset for lists is named \ml{list\_ss}.
@@ -858,7 +857,7 @@ quantifiers. It provides the resulting theorem as an argument to the
 supplied function, which will use the theorem to build and apply a
 tactic.
 
-\section{The \texttt{meson} library---first order proof}
+\section{First Order Proof---\texttt{mesonLib}}
 \label{sec:mesonLib}
 
 \index{decision procedures!first-order logic, meson@first-order logic, \ml{meson}}
@@ -896,7 +895,7 @@ it by \ml{step}, and gives up when $d$ exceeds \ml{max}.
 
 
 
-\section{The \texttt{simp} library---simplification}
+\section{Simplification---\texttt{simpLib}}
 \label{sec:simpLib}
 \index{simplification}
 
@@ -922,10 +921,11 @@ the simplifier.  There are \simpset{}s accompanying most of \HOL's
 major theories.  For example, the \simpset{} \ml{boolSimps.bool\_ss}
 embodies all of the usual rewrite theorems one would want over boolean
 formulas:
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
-   - SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
-   > val it = |- p /\ T \/ ~(q /\ r) = p \/ ~q \/ ~r : thm
+- SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
+> val it = |- p /\ T \/ ~(q /\ r) = p \/ ~q \/ ~r : thm
 \end{verbatim}
 \end{session}
 In addition, to rewriting with the obvious theorems, \ml{bool\_ss} is
@@ -933,8 +933,8 @@ also capable of performing simplifications that are not expressible as
 simple theorems:
 \begin{session}
 \begin{verbatim}
-   - SIMP_CONV bool_ss [] ``?x. (\y. P (f y)) x /\ (x = z)``;
-   > val it = |- (?x. (\y. P (f y)) x /\ (x = z)) = P (f z) : thm
+- SIMP_CONV bool_ss [] ``?x. (\y. P (f y)) x /\ (x = z)``;
+> val it = |- (?x. (\y. P (f y)) x /\ (x = z)) = P (f z) : thm
 \end{verbatim}
 \end{session}
 In this example, the simplifier performed a $\beta$-reduction in the
@@ -958,27 +958,213 @@ side of the theorem).  Nonetheless, it is clear that this theorem may
 be appropriate on occasion:
 \begin{session}
 \begin{verbatim}
-   - SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
-   > val it = |- p * (n + 1) = p + p * n : thm
+- SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
+> val it = |- p * (n + 1) = p + p * n : thm
 \end{verbatim}
 \end{session}
 Note how the \ml{arith\_ss} \simpset{} has not only simplified the
 intermediate \ml{(p * 1)} term, but also re-ordered the addition to
 put the simpler term on the left.
 
+\subsection{Simplification tactics}
+
 \subsection{The standard \simpset{}s}
 
 \HOL{} comes with a number of standard \simpset{}s.  All of these are
-accessible from within \ml{bossLib}.
+accessible from within \ml{bossLib}, though some originate in other
+structures.
+
+\paragraph{\ml{pure\_ss}}
+%
+\index{pure_ss@\ml{pure\_ss}}
+%
+This \simpset{} (defined in structure \ml{pureSimps}) contains no
+rewrite theorems at all, and plays the role of a blank slate within
+the space of possible \simpset{}s.  When constructing a completely new
+\simpset, \ml{pure\_ss} is a possible starting point.  The
+\ml{pure\_ss} \simpset{} has just two components: congruence rules for
+specifying how to traverse terms, and a function that turns theorems
+into rewrite rules.  Congruence rules are further described in
+Section~\ref{sec:advanced-simplifier}; the generation of rewrite rules
+from theorems is described in Section~\ref{sec:simplifier-rewriting}.
+
+\paragraph{\ml{bool\_ss}}
+%
+\index{bool_ss@\ml{bool\_ss}}
+%
+This \simpset{} (defined in structure \ml{boolSimps}) is often used
+when other \simpset{}s might do too much.  It contains rewrite rules
+for the boolean connectives, and little more.  It contains all of the
+de~Morgan theorems for moving negations in over the connectives
+(conjunction, disjunction, implication and conditional expressions),
+including the quantifier rules that have $\neg(\forall x.\,P(x))$ and
+$\neg(\exists x.\,P (x))$ on their left-hand sides.  It also contains
+the rules specifying the behaviour of the connectives when the
+constants \holtxt{T} and \holtxt{F} appear as their arguments.  (One
+such rule is \holtxt{|- T /\bs{} p = p}.)
+
+As in the example above, \ml{bool\_ss} also performs
+$\beta$-reductions and one-point unwindings.  The latter turns terms
+of the form \[
+\exists x.\;P(x)\land\dots (x = e) \dots\land Q(x)
+\]
+into
+\[
+P(e) \land \dots \land Q(e)
+\]
+Similarly, unwinding will turn $\forall x.\;(x = e)
+\Rightarrow P(x)$ into $P(e)$.
+
+Finally, \ml{bool\_ss} also includes congruence rules that allow
+the simplifier to make additional assumptions when simplifying
+implications and conditional expressions.  This feature is further
+explained in Section~\ref{sec:simplifier-rewriting} below, but can be
+illustrated by some examples (the first also demonstrates unwinding
+under a universal quantifier):
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV bool_ss [] ``!x. (x = 3) /\ P x ==> Q x /\ P 3``;
+> val it = |- (!x. (x = 3) /\ P x ==> Q x /\ P 3) = P 3 ==> Q 3 : thm
+
+- SIMP_CONV bool_ss [] ``if ~(x = 3) then P x else Q x``;
+> val it = |- (if ~(x = 3) then P x else Q x) =
+              (if ~(x = 3) then P x else Q 3) : thm
+\end{verbatim}
+\end{session}
+
+\paragraph{\ml{std\_ss}}
+%
+\index{std_ss@\ml{std\_ss}}
+%
+This \simpset{} is defined in \ml{bossLib}, and adds rewrite rules
+pertinent to the types of sums, pairs and options to \ml{bool\_ss}.
+It can also perform calculations over natural numbers.
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV std_ss [] ``FST (x,y) + OUTR (INR z)``;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+> val it = |- FST (x,y) + OUTR (INR z) = x + z : thm
+
+- SIMP_CONV std_ss [] ``case SOME x of NONE -> P || SOME y -> f y``;
+> val it = |- (case SOME x of NONE -> P || SOME v -> f v) = f x : thm
+
+- SIMP_CONV std_ss [] ``23 * 6 + 7 ** 2 - 31 DIV 3``;
+> val it = |- 23 * 6 + 7 ** 2 - 31 DIV 3 = 177 : thm
+\end{verbatim}
+\end{session}
+
+\paragraph{\ml{arith\_ss}}
+%
+\index{arith_ss@\ml{arith\_ss}}
+%
+The \ml{arith\_ss} \simpset{} (defined in \ml{bossLib}) extends
+\ml{std\_ss} by adding an extensive treatment of natural number
+arithmetic.  In addition to what one might call the ``obvious
+rewrites'' (such as \holtxt{|- !x.\ 0 <= x}), this \simpset{} can
+decide formulas of Presburger arithmetic, and also normalises
+arithmetic expressions (collecting coefficients, and re-ordering
+summands).  The underlying natural number decision procedure is that
+described in Section~\ref{sec:numLib} below.
+
+These two facets of the \ml{arith\_ss} \simpset{} are demonstrated
+here:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV arith_ss [] ``x < 3 /\ P x ==> x < 20 DIV 2``;
+> val it = |- x < 3 /\ P x ==> x < 20 DIV 2 = T : thm
+
+- SIMP_CONV arith_ss [] ``2 * x + y - x + y``;
+> val it = |- 2 * x + y - x + y = x + 2 * y : thm
+\end{verbatim}
+\end{session}
+Note that subtraction over the natural numbers works in ways that can
+seem unintuitive.  In particular, coefficient normalisation may not
+occur when first expected:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV arith_ss [] ``2 * x + y - z + y``;
+! Uncaught exception:
+! UNCHANGED
+\end{verbatim}
+\end{session}
+Over the natural numbers, the expression $2 x + y - z + y$ is not
+equal to $2 x + 2 y - z$.  In particular, these expressions are not
+equal when $2x + y < z$.
+
+\paragraph{\ml{list\_ss}}
+%
+\index{list_ss@\ml{list\_ss}}
+%
+The last pure \simpset{} value in \ml{bossLib}, \ml{list\_ss} adds
+rewrite theorems about the type of lists to \ml{arith\_ss}.  These
+rewrites include the obvious facts about the list type's constructors
+\holtxt{NIL} and \holtxt{CONS}, such as the fact that \holtxt{CONS} is
+injective:
+\begin{verbatim}
+   (h1 :: t1 = h2 :: t2) = (h1 = h2) /\ (t1 = t2)
+\end{verbatim}
+Conveniently, \ml{list\_ss} also includes rewrites for the functions
+defined by primitive recursion over lists.  Examples include
+\holtxt{MAP}, \holtxt{FILTER} and \holtxt{LENGTH}.  Thus:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV list_ss [] ``MAP (\x. x + 1) [1;2;3;4]``;
+> val it = |- MAP (\x. x + 1) [1; 2; 3; 4] = [2; 3; 4; 5] : thm
+
+- SIMP_CONV list_ss [] ``FILTER (\x. x < 4) [1;2;y + 4]``;
+> val it = |- FILTER (\x. x < 4) [1; 2; y + 4] = [1; 2] : thm
+
+- SIMP_CONV list_ss [] ``LENGTH (FILTER ODD [1;2;3;4;5])``;
+> val it = |- LENGTH (FILTER ODD [1; 2; 3; 4; 5]) = 3 : thm
+\end{verbatim}
+\end{session}
+These examples demonstrate how the simplifier can be used as a general
+purpose symbolic evaluator for terms that look a great deal like those
+that appear in a functional programming language.  Note that
+this functionality is also provided by \ml{computeLib} (see
+Section~\ref{sec:computeLib} below); \ml{computeLib} is more
+efficient, but less general than the simplifier.  For example:
+\begin{session}
+\begin{verbatim}
+- EVAL ``FILTER (\x. x < 4) [1;2;y + 4]``;
+> val it =
+    |- FILTER (\x. x < 4) [1; 2; y + 4] =
+       1::2::(if y + 4 < 4 then [y + 4] else []) : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{The ``stateful'' \simpset---\texttt{srw\_ss()}}
+\index{srw_ss@\ml{srw\_ss}}
+
+The last \simpset{} exported by \ml{bossLib} is hidden behind a
+function.  The \ml{srw\_ss} value has type \ml{unit -> simpset}, so
+that one must type \ml{srw\_ss()} in order to get a \simpset{} value.
+This use of a function type allows the underlying \simpset{} to be
+stored in an \ML{} reference, and allows it to be updated
+dynamically.  In this way, referential transparency is deliberately
+broken.  All of the other \simpset{}s will always behave identically:
+\ml{SIMP\_CONV~bool\_ss} is the same simplification routine wherever
+and whenever it is called.
+
+In contrast, \ml{srw\_ss} is designed to be updated.  When a theory is
+loaded, when a new type is defined, the value behind \ml{srw\_ss()}
+changes, and the behaviour of \ml{SIMP\_CONV} applied to
+\ml{(srw\_ss())} changes with it.  The design philosophy behind
+\ml{srw\_ss} is that it should always be a reasonable first choice in
+all situations where the simplifier is used.
 
 \subsection{\Simpset{} fragments}
 
-\subsection{Advanced features}
+\subsection{Rewriting with the simplifier}
+\label{sec:simplifier-rewriting}
 
-\section{The \texttt{compute} library}
+\subsection{Advanced features}
+\label{sec:advanced-simplifier}
+
+\section{Efficient Applicative Order Reduction---\texttt{computeLib}}
 \label{sec:computeLib}
 
-\section{The {\tt num} library}
+\section{Manipulation of Arithmetic Formulas---\texttt{numLib}}
 \label{sec:numLib}
 \index{decision procedures!Presburger arithmetic over natural numbers}
 
