@@ -39,11 +39,11 @@ val MAX_DEF =
  Define
      `MAX m n = if m <= n then n else m`;
 
-val MAX_00 = Q.prove
-  `!m n. (MAX m n = 0) = (m=0) /\ (n=0)`  (RW_TAC arith_ss [MAX_DEF]);
+val MAX_00 = Q.prove(
+  `!m n. (MAX m n = 0) = (m=0) /\ (n=0)`,  RW_TAC arith_ss [MAX_DEF]);
 
-val MAX_LESS_EQ = Q.prove
-  `!m n p. MAX m n <= p = m <= p /\ n <= p`  (RW_TAC arith_ss [MAX_DEF]);
+val MAX_LESS_EQ = Q.prove(
+  `!m n p. MAX m n <= p = m <= p /\ n <= p`,  RW_TAC arith_ss [MAX_DEF]);
 
 
 val UNION_DELETE = Q.store_thm("UNION_DELETE",
@@ -51,14 +51,14 @@ val UNION_DELETE = Q.store_thm("UNION_DELETE",
 ZAP_TAC
    (base_ss && [EXTENSION,IN_UNION,IN_DELETE]) []);
 
-val UNION_SUBSET = Q.prove
- `!X Y Z. (X UNION Y) SUBSET Z = X SUBSET Z /\ Y SUBSET Z`
-(PROVE_TAC
+val UNION_SUBSET = Q.prove(
+ `!X Y Z. (X UNION Y) SUBSET Z = X SUBSET Z /\ Y SUBSET Z`,
+PROVE_TAC
    [SUBSET_DEF, IN_UNION]);
 
 val GSPEC_DEF = Q.prove
-`!f. GSPEC f = \v. ?z. f z = (v,T)`
-(FUN_EQ_TAC
+(`!f. GSPEC f = \v. ?z. f z = (v,T)`,
+ FUN_EQ_TAC
   THEN ONCE_REWRITE_TAC
         [BETA_RULE (ONCE_REWRITE_CONV
             [GSYM SPECIFICATION](Term`(\x. GSPEC f x) x`))]
@@ -73,9 +73,9 @@ val GSPEC_DEF = Q.prove
 
 val stringset = ty_antiq (Type `:string -> bool`);
 
-val INFINITE_UNIV_string = Q.prove
- `INFINITE (UNIV:^stringset)`
-(RW_TAC base_ss [INFINITE_UNIV]
+val INFINITE_UNIV_string = Q.prove(
+ `INFINITE (UNIV:^stringset)`,
+RW_TAC base_ss [INFINITE_UNIV]
   THEN EXISTS_TAC (Term`STRING (ASCII F F F F F F F F)`)
   THEN ZAP_TAC base_ss [stringTheory.string_distinct]);
 
@@ -92,14 +92,14 @@ RW_TAC base_ss [NEW]
   THEN CONV_TAC SELECT_CONV
   THEN PROVE_TAC [FRESH_string]);
 
-val NEW_UNION1 = Q.prove
-`!X Y:^stringset. FINITE (X UNION Y) ==> ~(NEW (X UNION Y) IN X)`
-(PROVE_TAC
+val NEW_UNION1 = Q.prove(
+`!X Y:^stringset. FINITE (X UNION Y) ==> ~(NEW (X UNION Y) IN X)`,
+PROVE_TAC
   [NEW_FRESH_string,IN_UNION]);
 
-val NOT_EQ_NEW = Q.prove
-`!X:^stringset. FINITE X /\ x IN X ==> ~(x = NEW X)`
-(PROVE_TAC [NEW_FRESH_string]);
+val NOT_EQ_NEW = Q.prove(
+`!X:^stringset. FINITE X /\ x IN X ==> ~(x = NEW X)`,
+PROVE_TAC [NEW_FRESH_string]);
 
 
 (* ===================================================================== *)
@@ -497,9 +497,9 @@ val PSUB =
  /\  (PSUB d xs (dABS t)   = dABS (PSUB (SUC d) xs t))
  /\  (PSUB d xs (dAPP t u) = dAPP (PSUB d xs t) (PSUB d xs u))`;
 
-val SUB_ELIM_LEM = Q.prove
-`!x y. x < y ==> ?m. y-x = SUC m`
-(RW_TAC arith_ss []
+val SUB_ELIM_LEM = Q.prove(
+`!x y. x < y ==> ?m. y-x = SUC m`,
+RW_TAC arith_ss []
   THEN Q.EXISTS_TAC `PRE(y-x)`
   THEN RW_TAC arith_ss []);
 
@@ -635,32 +635,32 @@ REPEAT STRIP_TAC
 (* Construct a model of the wrapping function.                           *)
 (* --------------------------------------------------------------------- *)
 
-val lemma1 = Q.prove
+val lemma1 = Q.prove(
 `!f:'a->'b->bool.
-   (!x. FINITE (f x)) ==> FINITE {z | !x. z IN (f x)}`
-(GEN_TAC THEN SPOSE_NOT_THEN MP_TAC
+   (!x. FINITE (f x)) ==> FINITE {z | !x. z IN (f x)}`,
+GEN_TAC THEN SPOSE_NOT_THEN MP_TAC
    THEN REWRITE_TAC [GSYM INFINITE_DEF]
    THEN RW_TAC base_ss [GSPEC_DEF,SPECIFICATION]
    THEN RULE_ASSUM_TAC SPEC_ALL THEN DISCH_TAC
    THEN IMP_RES_TAC (REWRITE_RULE [SPECIFICATION] IN_INFINITE_NOT_FINITE)
    THEN PROVE_TAC []);
 
-val lemma2 = Q.prove
+val lemma2 = Q.prove(
 `!u. dOK u
       ==>
-       !x. FINITE {z | !y. z IN dFV ([x |-> dVAR y] u)}`
-(REPEAT STRIP_TAC
+       !x. FINITE {z | !y. z IN dFV ([x |-> dVAR y] u)}`,
+REPEAT STRIP_TAC
   THEN MATCH_MP_TAC
         (BETA_RULE (Q.ISPEC `\y:string. dFV ([x |-> dVAR y] u)` lemma1))
   THEN REWRITE_TAC [FINITE_dFV]);
 
 val lemma3 =
- Q.prove
+ Q.prove(
   `!t x y z.
      dOK t /\ z IN dFV t /\ ~(z = x)
        ==>
-     z IN dFV ([x |-> dVAR y] t)`
-(measureInduct_on `dLGH t`
+     z IN dFV ([x |-> dVAR y] t)`,
+measureInduct_on `dLGH t`
   THEN ONCE_REWRITE_TAC [dOK_cases] THEN RW_TAC base_ss [] THENL
   [Q.PAT_ASSUM `x IN M` MP_TAC THEN RW_TAC base_ss [dFV, IN_SING]
      THEN RW_TAC base_ss [dFV, IN_SING, NEQ_dVAR_dSUB],
@@ -690,18 +690,18 @@ val lemma3 =
             [dLGH_dAPP_LESS_2,dLGH_dAPP_LESS_1]]);
 
 val lemma4 =
- Q.prove
+ Q.prove(
   `!u x.
      dOK u
       ==>
-     dFV (dLAMBDA x u) SUBSET {z | !y. z IN dFV([x |-> dVAR y] u)}`
-(RW_TAC base_ss
+     dFV (dLAMBDA x u) SUBSET {z | !y. z IN dFV([x |-> dVAR y] u)}`,
+RW_TAC base_ss
   (SUBSET_DEF::GSPEC_DEF::SPECIFICATION::dFV_dLAMBDA
     ::map (REWRITE_RULE [SPECIFICATION]) [IN_DELETE, lemma3]));
 
 val lemma5 =
- Q.prove
-   `!x s t. s SUBSET t /\ ~(x IN t) ==> ~(x IN s)` (PROVE_TAC [SUBSET_DEF]);
+ Q.prove(
+   `!x s t. s SUBSET t /\ ~(x IN t) ==> ~(x IN s)`, PROVE_TAC [SUBSET_DEF]);
 
 
 val WRAP_DB_EXISTS = Q.store_thm("WRAP_DB_EXISTS",
