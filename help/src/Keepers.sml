@@ -28,7 +28,8 @@ val keepers =
      "HolBdd.sig", "HolBddTheory.sig", "StateEnum.sig",
 
      (* multisets *)
-     "bagTheory.sig", "bagLib.sig",
+     "bagTheory.sig", "bagLib.sig", "bagSimps.sig", "bagSyntax.sig",
+     "containerTheory.sig",
 
      (* basic automated proof *)
      "BasicProvers.sig",
@@ -93,7 +94,7 @@ val keepers =
 
      (* pred_set *)
      "PFset_conv.sig", "PSet_ind.sig", "PGspec.sig","pred_setLib.sig",
-     "pred_setTheory.sig", "setlistTheory.sig",
+     "pred_setTheory.sig", "pred_setSimps.sig",
 
      (* probability *)
      "probLib.sig", "probTheory.sig",
@@ -111,7 +112,7 @@ val keepers =
      (* real numbers *)
      "Diff.sig", "limTheory.sig", "realTheory.sig",
      "RealArith.sig", "netsTheory.sig", "realaxTheory.sig",
-     "RealSS.sig", "polyTheory.sig", "seqTheory.sig",
+     "realSimps.sig", "polyTheory.sig", "seqTheory.sig",
      "hratTheory.sig", "powserTheory.sig", "topologyTheory.sig",
      "hrealTheory.sig", "realLib.sig", "transcTheory.sig",
 

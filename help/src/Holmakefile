@@ -1,7 +1,7 @@
 all: makebase Doc2Html
 
 makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo \
-    Printbase.uo Texsigs.uo HOLPage.uo makebase.uo
+    Printbase.uo Texsigs.uo makebase.uo
 	HOLMOSMLC -o makebase makebase.uo
 
 makebase.uo: Keepers.uo Htmlsigs.uo HOLPage.uo \
@@ -43,9 +43,6 @@ Htmlsigs.uo: Database.uo Htmlsigs.ui Htmlsigs.sml
 
 Database.uo: Database.sml Database.ui
 	HOLMOSMLC -c Database.sml
-
-HOLPage.uo: HOLPage.sml Database.uo
-	HOLMOSMLC -c HOLPage.sml
 
 Lexer.sml: Lexer.lex
 	/local/scratch/kxs/200/bin/mosmllex Lexer.lex
