@@ -29,6 +29,20 @@ Q. How do I antiquote types? (1)
      Then:
        - val x = Term`x:^antity`;
 
+Q. I'd like to use MEM as an infix, not a Prefix.  Can I do this? (1)
+
+  -- Yes!  Use grammar manipulation functions such as set_fixity to
+     alter its parsing information.  These changes can be made to
+     persist when the current theory is exported.  For example:
+
+       - load "listTheory";
+       - set_fixity "MEM" (Infixr 450);
+       > val it = () : unit
+       - listTheory.MEM;
+       > val it =
+           |- (!x. x MEM [] = F) /\ !x h t. x MEM (h::t) = (x = h) \/ x MEM t
+           : Thm.thm
+
 Q. How to rewrite with a theorem the other way round? (0)
 
   -- Use GSYM
