@@ -27,24 +27,20 @@ end tm
 fun is_stmarked t = same_const stmarker_t (rator t) handle HOL_ERR _ => false
 
 val [comm, assoc, commassoc] = CONJUNCTS (SPEC_ALL markerTheory.move_left_conj)
-open QConv
-val THENQC = fn (c1, c2) => THENQC c1 c2
-val ORELSEQC = fn (c1, c2) => ORELSEQC c1 c2
-infix THENQC ORELSEQC
 
 fun move_stmarked_conj_left tm = let
 in
-  if is_stmarked tm then ALL_QCONV
+  if is_stmarked tm then ALL_CONV
   else if is_conj tm then
-    (LAND_CONV move_stmarked_conj_left THENQC TRY_QCONV (REWR_CONV assoc))
-      ORELSEQC
-    (RAND_CONV move_stmarked_conj_left THENQC
-     (REWR_CONV commassoc ORELSEQC REWR_CONV comm))
+    (LAND_CONV move_stmarked_conj_left THENC TRY_CONV (REWR_CONV assoc))
+      ORELSEC
+    (RAND_CONV move_stmarked_conj_left THENC
+     (REWR_CONV commassoc ORELSEC REWR_CONV comm))
   else NO_CONV
 end tm
 val move_stmarked_conj_left =
-    move_stmarked_conj_left THENQC
-    (LAND_CONV (REWR_CONV stmarker_def) ORELSEQC REWR_CONV stmarker_def)
+    move_stmarked_conj_left THENC
+    (LAND_CONV (REWR_CONV stmarker_def) ORELSEC REWR_CONV stmarker_def)
 
 
 val move_stmarked_conj_right =

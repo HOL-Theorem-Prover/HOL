@@ -91,7 +91,7 @@ local
 in
   fun GEN_FOL_CONV (cheads,vheads) =
     let val hddata =
-          if vheads = [] 
+          if vheads = []
           then let val hops = mk_set (map fst cheads)
                    fun getmin h =
                     let val ns = mapfilter
@@ -133,24 +133,20 @@ local
   val NNFC_CONV0 =
     GEN_REWRITE_CONV TOP_SWEEP_CONV (common_tauts @ cnf_tauts)
 in
-val NNFC_CONV =
-  let fun SINGLE_SWEEP_CONV conv tm =
-       let val th = conv tm
-           val tm' = rand(concl th)
-           val th' = if is_abs tm' then NNFC_CONV0 tm'
-                     else SUB_CONV (SINGLE_SWEEP_CONV conv) tm'
-       in TRANS th th'
-       end
-       handle HOL_ERR _ =>
-          if is_abs tm then NNFC_CONV0 tm
-          else SUB_CONV (SINGLE_SWEEP_CONV conv) tm;
+val NNFC_CONV = let
+  fun SINGLE_SWEEP_CONV conv tm = let
+    fun continue tm = if is_abs tm then NNFC_CONV0 tm
+                      else SUB_CONV (SINGLE_SWEEP_CONV conv) tm
   in
-    SINGLE_SWEEP_CONV (GEN_REWRITE_CONV I (common_tauts @ dnf_tauts))
-  end
+    (conv THENC continue) ORELSEC continue
+  end tm
+in
+  SINGLE_SWEEP_CONV (GEN_REWRITE_CONV I (common_tauts @ dnf_tauts))
 end
+end (* local *)
 
 
-fun has_abs tm = 
+fun has_abs tm =
   case dest_term tm
    of LAMB _ => true
     | COMB(M,N) => if is_const M andalso is_abs N  (* binder *)
@@ -202,7 +198,7 @@ val SKOLEM_CONV =
       LEFT_OR_EXISTS_THM,
       SKOLEM_THM];
 
-local fun STRIP conv tm opt = 
+local fun STRIP conv tm opt =
         let val (vlist,M) = strip_binder opt tm
         in GEN_ABS opt vlist (conv M)
         end
@@ -242,20 +238,20 @@ val PRENEX_CONV =
                in if same_const oper boolSyntax.conjunction orelse
                      same_const oper boolSyntax.disjunction orelse
                      same_const oper boolSyntax.implication
-                  then let val th = 
+                  then let val th =
                          (let val lth = PRENEX_QCONV l
                           in let val rth = PRENEX_QCONV r
                              in MK_COMB(AP_TERM oper lth,rth)
                              end handle HOL_ERR _ => AP_THM(AP_TERM oper lth) r
                           end handle HOL_ERR _ => AP_TERM lop (PRENEX_QCONV r)
                          ) handle HOL_ERR _ => REFL tm
-                       in 
+                       in
                           TRANS th (PRENEX2_QCONV (rand(concl th)))
                        end
                   else failwith "unchanged"
                end
        end
- in 
+ in
    fn tm => TRY_CONV PRENEX_QCONV tm
  end;
 

@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir =
-val holdir   =
+val mosmldir = "/home/mn200/mosml"
+val holdir   = "/home/mn200/hol98"
 
 (* note, if you are specifying directories under Windows, we recommend you
    use forward slashes (the "/" character) as a directory separator,
@@ -24,7 +24,7 @@ val holdir   =
    SML.  For example, write "c:/dir1/dir2/mosml", rather than
    "c:\\dir1\\dir2\\mosml", and certainly DON'T write "c:\dir1\dir2\mosml". *)
 
-val OS       =             (* Operating system; choices are:
+val OS       = "linux"            (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT"        *)
 val CC       = "gcc";      (* C compiler                                   *)
 val GNUMAKE  = "make";     (* for bdd library and SMV                      *)

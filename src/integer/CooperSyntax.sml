@@ -435,7 +435,6 @@ fun fixup_newvar tm = let
      variable in the body with 1 * v, except that we don't need to go
      looking for this variable under multiplications, nor under
      constraint terms *)
-  open QConv
   val (v,body) = dest_exists tm
   val replace_thm = SYM (SPEC v INT_MUL_LID)
   fun recurse tm = let
@@ -443,16 +442,16 @@ fun fixup_newvar tm = let
   in
     case args of
       [] => if Term.compare(v,tm) = EQUAL then replace_thm
-            else ALL_QCONV tm
+            else ALL_CONV tm
     | [_] => RAND_CONV recurse tm
     | [_,_] => if Term.compare(f, constraint_tm) = EQUAL orelse
-                  Term.compare(f, mult_tm) = EQUAL then ALL_QCONV tm
-               else BINOP_QCONV recurse tm
+                  Term.compare(f, mult_tm) = EQUAL then ALL_CONV tm
+               else BINOP_CONV recurse tm
     | _ => raise ERR "fixup_newvar"
                      ("found ternary operator - "^term_to_string tm)
   end
 in
-  QConv.QCONV (BINDER_CONV recurse) tm
+  QCONV (BINDER_CONV recurse) tm
 end
 
 fun myEXISTS_OR_CONV tm = let
@@ -530,14 +529,13 @@ fun expand_right_and_over_or tm =
   ((REWR_CONV RIGHT_AND_OVER_OR THENC
     BINOP_CONV expand_right_and_over_or) ORELSEC ALL_CONV) tm
 
-open QConv
 fun ADDITIVE_TERMS_CONV c tm =
   if is_disj tm orelse is_conj tm then
-    BINOP_QCONV (ADDITIVE_TERMS_CONV c) tm
+    BINOP_CONV (ADDITIVE_TERMS_CONV c) tm
   else if is_neg tm then RAND_CONV (ADDITIVE_TERMS_CONV c) tm
   else if is_less tm orelse is_divides tm orelse is_eq tm then
-    BINOP_QCONV c tm
-  else ALL_QCONV tm
+    BINOP_CONV c tm
+  else ALL_CONV tm
 
 
 end

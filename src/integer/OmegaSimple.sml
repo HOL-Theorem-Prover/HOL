@@ -14,18 +14,13 @@ struct
     code in OmegaMLShadow.
    ---------------------------------------------------------------------- *)
 
-open HolKernel boolLib intSyntax QConv
+open HolKernel boolLib intSyntax
 
 open integerTheory
 
 infix THENC ORELSEC |->
 
 val lhand = rand o rator
-
-fun c1 THENC c2 = THENQC c1 c2
-fun c1 ORELSEC c2 = ORELSEQC c1 c2
-val BINOP_CONV = BINOP_QCONV
-val ALL_CONV = ALL_QCONV
 
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaSimple",
                           origin_function = f,

@@ -1,20 +1,11 @@
 structure CSimp :> CSimp =
 struct
 
-open HolKernel boolLib CooperThms QConv intSyntax integerTheory int_arithTheory
+open HolKernel boolLib CooperThms intSyntax integerTheory int_arithTheory
 
 val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
 
-infix THENC ORELSEC |->
-
 val lhand = rand o rator
-
-fun c1 THENC c2 = THENQC c1 c2
-fun c1 ORELSEC c2 = ORELSEQC c1 c2
-val BINOP_CONV = BINOP_QCONV
-val ALL_CONV = ALL_QCONV
-
-fun CONV_RULE c th = Conv.CONV_RULE c th handle UNCHANGED => th
 
 fun has_atom dthis is_other t = let
   val (t1, t2) = dthis t

@@ -175,7 +175,7 @@ end tm
     val (l,r) = dest_divides tm0
     val normalise_plus_thm =
       (if not (is_plus r) then RAND_CONV (REWR_CONV (GSYM INT_ADD_RID))
-       else ALL_CONV) tm0
+       else REFL) tm0
     val tm1 = rhs (concl normalise_plus_thm)
     val normalised_thm = let
       val (lp,_) = dest_plus (rand tm1)
@@ -305,21 +305,16 @@ end tm
       else REFL tm
 
 
-open QConv
-val THENQC = fn (c1,c2) => THENQC c1 c2
-val ORELSEQC = fn (c1, c2) => ORELSEQC c1 c2
-infix THENQC ORELSEQC
-
 fun check_divides tm = let
   val (l,r) = dest_divides tm
   val rterms = strip_plus r
   fun getc t = Arbint.abs (int_of_term (rand (rator t)))
   fun pull_out_divisor tm =
-    TRY_QCONV (BINOP_QCONV pull_out_divisor THENQC
-               REWR_CONV (GSYM INT_LDISTRIB)) tm
+    TRY_CONV (BINOP_CONV pull_out_divisor THENC
+              REWR_CONV (GSYM INT_LDISTRIB)) tm
 in
   case List.mapPartial (Lib.total getc) rterms of
-    [] => CHANGED_QCONV REDUCE_CONV tm
+    [] => CHANGED_CONV REDUCE_CONV tm
   | cs => let
       val g = gcdl (int_of_term l :: cs)
     in
@@ -334,7 +329,7 @@ in
               (* note that factor_out g g_t always changes the term as
                  far as QConv.THENQC is concerned, so the first line
                  below can not raise QConv.UNCHANGED *)
-              RAND_CONV (factor_out g g_t THENQC pull_out_divisor) THENC
+              RAND_CONV (factor_out g g_t THENC pull_out_divisor) THENC
               LAND_CONV (K divisor_ok) THENC
               REWR_CONV (GSYM (MATCH_MP justify_divides g_t_lt0)) THENC
               REWRITE_CONV [INT_DIVIDES_1]
@@ -357,8 +352,8 @@ in
                              pull_out_divisor) THENC
                   LAND_CONV (K divisor_ok) THENC
                   REWR_CONV (GSYM (MATCH_MP justify_divides g_t_lt0)) THENC
-                  REWRITE_CONV [INT_DIVIDES_1] THENQC
-                  TRY_QCONV check_divides
+                  REWRITE_CONV [INT_DIVIDES_1] THENC
+                  TRY_CONV check_divides
                 end
               else
                 RAND_CONV (K sorted THENC
@@ -390,8 +385,8 @@ in
                          LAND_CONV (factor_out li l THENC
                                     factor_out_lits li l THENC
                                     REWRITE_CONV [GSYM INT_LDISTRIB])) THENC
-              REWR_CONV justify_divides3 THENQC
-              TRY_QCONV check_divides
+              REWR_CONV justify_divides3 THENC
+              TRY_CONV check_divides
             end
           else let
               val r_gcd = gcdl rns
@@ -411,14 +406,14 @@ in
                                (REDUCE_CONV gcd_term))
                 end
               else
-                ALL_QCONV
+                ALL_CONV
             end
         end
     end tm
 end
 
 fun EVERY_SUMMAND_CONV c t =
-    if is_plus t then BINOP_QCONV (EVERY_SUMMAND_CONV c) t
+    if is_plus t then BINOP_CONV (EVERY_SUMMAND_CONV c) t
     else c t
 
 
@@ -448,8 +443,8 @@ fun minimise_divides tm = let
     val ld_pl_m =
         SYM (REDUCE_CONV (mk_plus(mk_mult(l, term_of_int d), term_of_int m)))
   in
-    cval (K ld_pl_m) THENQC
-    TRY_QCONV (REWR_CONV INT_RDISTRIB THENC
+    cval (K ld_pl_m) THENC
+    TRY_CONV (REWR_CONV INT_RDISTRIB THENC
                LAND_CONV (REWR_CONV (GSYM INT_MUL_ASSOC)))
   end t
   fun sort1 tm = let
@@ -469,9 +464,9 @@ fun minimise_divides tm = let
                        LAND_CONV (K (SYM (SPEC l INT_MUL_RZERO)))) THENC
             sort1) tm
 in
-  RAND_CONV (EVERY_SUMMAND_CONV split_summand THENQC
-             REWRITE_CONV [INT_ADD_ASSOC] THENQC sort) THENQC
-  REWR_CONV int_arithTheory.justify_divides3 THENQC
+  RAND_CONV (EVERY_SUMMAND_CONV split_summand THENC
+             REWRITE_CONV [INT_ADD_ASSOC] THENC sort) THENC
+  REWR_CONV int_arithTheory.justify_divides3 THENC
   REWRITE_CONV [INT_ADD_LID, INT_ADD_RID, INT_MUL_LZERO]
 end tm
 
@@ -536,9 +531,10 @@ fun BLEAF_CONV connector c tm =
 (* Phase 1 *)
 val remove_bare_vars = let
   fun Munge t = if is_var t then REWR_CONV (GSYM INT_MUL_LID) t
+                else if intSyntax.is_mult t then ALL_CONV t
                 else NO_CONV t
 in
-  DEPTH_CONV Munge
+  ONCE_DEPTH_CONV Munge
 end
 
 val remove_negated_vars = let
@@ -574,18 +570,18 @@ local
                 (mk_eq(tm, mk_mult(list_mk_mult rest, var))))
     end handle HOL_ERR {origin_structure = "Lib", ...} => ALL_CONV tm
     else if is_comb tm then
-      (RATOR_CONV flip_muls THENQC RAND_CONV flip_muls) tm
+      (RATOR_CONV flip_muls THENC RAND_CONV flip_muls) tm
     else if is_abs tm then
       ABS_CONV flip_muls tm
     else
-      ALL_QCONV tm
+      ALL_CONV tm
 in
   val phase1_CONV =
     (* formula must be quantifier free *)
-    DEPTH_CONV RED_CONV THENQC
-    basic_rewrite_conv THENQC remove_negated_vars THENQC
-    remove_bare_vars THENQC flip_muls THENQC
-    DEPTH_CONV RED_CONV THENQC REWRITE_CONV []
+    DEPTH_CONV RED_CONV THENC
+    basic_rewrite_conv THENC remove_negated_vars THENC
+    remove_bare_vars THENC flip_muls THENC
+    DEPTH_CONV RED_CONV THENC REWRITE_CONV []
 end
 
 val phase1_CONV = Profile.profile "phase1" phase1_CONV
@@ -656,18 +652,18 @@ in
       if is_negated coeff then
         REWR_CONV (GSYM (CONJUNCT1 INT_DIVIDES_NEG)) THENC myrewrite_conv
       else
-        ALL_QCONV
+        ALL_CONV
     end tm
     fun collect_up_other_freevars tm = let
       val fvs =
         Listsort.sort (String.compare o (#1 ## #1) o (dest_var ## dest_var))
         (free_vars tm)
     in
-      EVERY_QCONV (map collect_in_sum fvs) tm
+      EVERY_CONV (map collect_in_sum fvs) tm
     end
   in
     if is_disj tm orelse is_conj tm then
-      BINOP_QCONV (phase2_CONV var) tm
+      BINOP_CONV (phase2_CONV var) tm
     else if is_neg tm then
       RAND_CONV (phase2_CONV var) tm
     else if free_in var tm then let
@@ -679,7 +675,7 @@ in
                          else (Right, Left)
       (* dir2 is the side where x will be ending up *)
       val move_CONV =
-        move_terms_from tt dir1 (free_in var) THENQC
+        move_terms_from tt dir1 (free_in var) THENC
         move_terms_from tt dir2 (not o free_in var)
 
       fun factor_out_over_sum tm = let
@@ -698,10 +694,10 @@ in
            ~a * (b * c) into a * (~b * c) *)
         val _ = dest_mult tm
       in
-        TRY_QCONV (REWR_CONV (GSYM INT_NEG_LMUL) THENQC
-                   REWR_CONV INT_NEG_RMUL THENQC
+        TRY_CONV (REWR_CONV (GSYM INT_NEG_LMUL) THENC
+                   REWR_CONV INT_NEG_RMUL THENC
                    RAND_CONV (REWR_CONV INT_NEG_LMUL)) tm
-      end handle HOL_ERR _ => BINOP_QCONV fiddle_negs tm
+      end handle HOL_ERR _ => BINOP_CONV fiddle_negs tm
 
       fun reduce_by_gcd tm = let
         val (l,r) = (land tm, rand tm)
@@ -734,35 +730,35 @@ in
           | (EQ, Left, _) => MATCH_MP elim_eq_coeffs gnum_nonzero
           | (EQ, Right, _) => MATCH_MP elim_eq_coeffs' gnum_nonzero
       in
-        BINOP_QCONV (factor_out g g_t) THENQC
-        move_terms_from tt dir1 is_mult THENQC
-        conv_at dir2 fiddle_negs THENQC
-        conv_at dir2 factor_out_over_sum THENQC
-        REWR_CONV elim_coeffs_thm THENQC
+        BINOP_CONV (factor_out g g_t) THENC
+        move_terms_from tt dir1 is_mult THENC
+        conv_at dir2 fiddle_negs THENC
+        conv_at dir2 factor_out_over_sum THENC
+        REWR_CONV elim_coeffs_thm THENC
         REDUCE_CONV
       end tm
     in
-      (move_CONV THENQC conv_at dir2 collect_terms THENQC
-       conv_at dir1 collect_up_other_freevars THENQC
-       TRY_QCONV (conv_at dir1 collect_additive_consts) THENQC
-       conv_at dir2 (LAND_CONV REDUCE_CONV) THENQC
-       REWRITE_CONV [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID] THENQC
-       TRY_CONV (reduce_by_gcd THENQC TRY_CONV move_CONV) THENQC
+      (move_CONV THENC conv_at dir2 collect_terms THENC
+       conv_at dir1 collect_up_other_freevars THENC
+       TRY_CONV (conv_at dir1 collect_additive_consts) THENC
+       conv_at dir2 (LAND_CONV REDUCE_CONV) THENC
+       REWRITE_CONV [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID] THENC
+       TRY_CONV (reduce_by_gcd THENC TRY_CONV move_CONV) THENC
        normalise_eqs var) tm
     end handle HOL_ERR _ =>
       if is_divides tm then
-        (TRY_QCONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENQC
-         RAND_CONV (collect_in_sum var) THENQC
-         dealwith_negative_divides THENQC
-         RAND_CONV (TRY_QCONV (RAND_CONV collect_up_other_freevars)) THENQC
-         REWRITE_CONV [INT_MUL_LZERO] THENQC REDUCE_CONV) tm
-      else ALL_QCONV tm
-    else ALL_QCONV tm
+        (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
+         RAND_CONV (collect_in_sum var) THENC
+         dealwith_negative_divides THENC
+         RAND_CONV (TRY_CONV (RAND_CONV collect_up_other_freevars)) THENC
+         REWRITE_CONV [INT_MUL_LZERO] THENC REDUCE_CONV) tm
+      else ALL_CONV tm
+    else ALL_CONV tm
   end
 end
 
 val phase2_CONV =
-    fn t => Profile.profile "phase2" (QConv.QCONV (phase2_CONV t))
+    fn t => Profile.profile "phase2" (QCONV (phase2_CONV t))
 
 (* Phase 3 *)
 (* phase three takes all of the coefficients of the variable we're
@@ -894,24 +890,24 @@ end
      var to be the same lcm *)
     fun multiply_by_CONV zero_lti cat =
       case cat of
-        rDIV => REWR_CONV (MATCH_MP justify_divides zero_lti) THENQC
-                RAND_CONV LINEAR_MULT THENQC LAND_CONV REDUCE_CONV
-      | rLT =>  REWR_CONV (MATCH_MP lt_justify_multiplication zero_lti) THENQC
-                BINOP_QCONV LINEAR_MULT
-      | rEQ =>  REWR_CONV (MATCH_MP eq_justify_multiplication zero_lti) THENQC
-                BINOP_QCONV LINEAR_MULT
+        rDIV => REWR_CONV (MATCH_MP justify_divides zero_lti) THENC
+                RAND_CONV LINEAR_MULT THENC LAND_CONV REDUCE_CONV
+      | rLT =>  REWR_CONV (MATCH_MP lt_justify_multiplication zero_lti) THENC
+                BINOP_CONV LINEAR_MULT
+      | rEQ =>  REWR_CONV (MATCH_MP eq_justify_multiplication zero_lti) THENC
+                BINOP_CONV LINEAR_MULT
 
     fun LCMify term =
       if is_disj term orelse is_conj term then
-        BINOP_QCONV LCMify term
+        BINOP_CONV LCMify term
       else if is_neg term then RAND_CONV LCMify term
       else
         case (find_coeff var term) of
-          NONE => ALL_QCONV term
+          NONE => ALL_CONV term
         | SOME c => let
             val i = Arbint.div(lcm, c)
           in
-            if i = Arbint.one then ALL_QCONV term
+            if i = Arbint.one then ALL_CONV term
             else let
                 val cat = categorise_leaf term
                 val zero_lti =
@@ -933,12 +929,12 @@ end
                                             (SPEC var INT_DIVIDES_1)))) THENC
                      REWR_CONV T_and_r)
       else
-        ALL_QCONV
+        ALL_CONV
   in
-    (BINDER_CONV (LCMify THENQC absify_CONV) THENQC
-     REWR_CONV lcm_eliminate THENQC
-     RENAME_VARS_CONV [fst (dest_var var)] THENQC
-     BINDER_CONV (LAND_CONV BETA_CONV) THENQC
+    (BINDER_CONV (LCMify THENC absify_CONV) THENC
+     REWR_CONV lcm_eliminate THENC
+     RENAME_VARS_CONV [fst (dest_var var)] THENC
+     BINDER_CONV (LAND_CONV BETA_CONV) THENC
      eliminate_1divides)
     term
   end

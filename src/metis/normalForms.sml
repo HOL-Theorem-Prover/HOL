@@ -13,13 +13,13 @@ guessing_tyvars := false;
 structure normalForms :> normalForms =
 struct
 
-open HolKernel Parse boolLib QConv simpLib;
+open HolKernel Parse boolLib simpLib;
 
 infix THEN THENC ORELSEC ++ --> |-> THENQC ORELSEQC ##;
 
 val (Type,Term) = Parse.parse_from_grammars combinTheory.combin_grammars;
-val op THENQC = uncurry QConv.THENQC;
-val op ORELSEQC = uncurry QConv.ORELSEQC;
+val op THENQC = op THENC;
+val op ORELSEQC = op ORELSEC;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -41,7 +41,7 @@ val is_beq = can dest_beq;
 
 fun MK_QCONV c tm =
   let val th = c tm
-  in if rhs (concl th) = tm then raise QConv.UNCHANGED else th
+  in if rhs (concl th) = tm then raise Conv.UNCHANGED else th
   end;
 
 fun FIRST_QCONV [] _ = raise ERR "FIRST_QCONV" "out of QCONVs"
@@ -234,7 +234,7 @@ val MK_o = prove
    CONV_TAC (FUN_EQ_CONV) THEN
    SIMP_TAC boolSimps.bool_ss
    [combinTheory.S_DEF, combinTheory.K_DEF, combinTheory.o_DEF]);
-   
+
 val SKICo_CONV = COMBIN_CONV [MK_K, MK_I, MK_C, MK_o, MK_S];
 
 (* ------------------------------------------------------------------------- *)
@@ -358,11 +358,11 @@ local
       NNF_EXISTS_UNIQUE, NOT_EXISTS_UNIQUE,
       RES_FORALL_THM, RES_EXISTS_THM, NOT_RES_FORALL, NOT_RES_EXISTS] @
      [NOT_FORALL_CONV, NOT_EXISTS_CONV]);
-  val q_neg = REPEATQC (MK_QCONV beta_neg) THENQC TRY_QCONV (MK_QCONV push_neg);
+  val q_neg = REPEATC (MK_QCONV beta_neg) THENQC TRY_CONV (MK_QCONV push_neg);
 in
   fun PARTIAL_NNF_QCONV qc tm =
     (q_neg THENQC
-     (NNF_SUB_QCONV (PARTIAL_NNF_QCONV qc) ORELSEQC TRY_QCONV qc)) tm;
+     (NNF_SUB_QCONV (PARTIAL_NNF_QCONV qc) ORELSEQC TRY_CONV qc)) tm;
 end;
 
 fun PURE_NNF_QCONV' qc tm =
@@ -502,7 +502,7 @@ in
     W
     (fn tm =>
      if distinct (disjuncts tm) then NO_CONV
-     else QCONV (DEPTH_QCONV DISJ_RASSOC_CONV THENQC MK_QCONV (contract [])))
+     else QCONV (DEPTH_CONV DISJ_RASSOC_CONV THENQC MK_QCONV (contract [])))
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -543,10 +543,10 @@ end;
 
 val CLEAN_CNF_QCONV =
   STRIP_EXISTS_CONV
-  (DEPTH_QCONV CONJ_RASSOC_CONV THENQC
+  (DEPTH_CONV CONJ_RASSOC_CONV THENQC
    CONJUNCTS_QCONV
    (STRIP_FORALL_CONV
-    (DEPTH_QCONV DISJ_RASSOC_CONV THENQC
+    (DEPTH_CONV DISJ_RASSOC_CONV THENQC
      DISJUNCTS_QCONV (MK_QCONV SKICo_CONV))));
 
 val CLEAN_CNF_CONV = QCONV CLEAN_CNF_QCONV;
@@ -704,23 +704,23 @@ val CLEAN_DEF_CNF_QCONV =
 
 local
   datatype btree = LEAF of term | BRANCH of btree * btree;
-    
+
   fun btree_fold b f (LEAF tm) = b tm
     | btree_fold b f (BRANCH (s, t)) = f (btree_fold b f s) (btree_fold b f t);
-    
+
   fun btree_strip_conj tm =
     if is_conj tm then
       (BRANCH o (btree_strip_conj ## btree_strip_conj) o dest_conj) tm
     else LEAF tm;
-      
-  val rewr = QCONV (CLEAN_DEF_CNF_QCONV ORELSEQC DEPTH_QCONV DISJ_RASSOC_CONV);
+
+  val rewr = QCONV (CLEAN_DEF_CNF_QCONV ORELSEQC DEPTH_CONV DISJ_RASSOC_CONV);
 
   fun cleanup tm =
     let
       val b = btree_strip_conj tm
       val th = btree_fold rewr MK_CONJ_EQ b
     in
-      CONV_RULE (RAND_CONV (QCONV (DEPTH_QCONV CONJ_RASSOC_CONV))) th
+      CONV_RULE (RAND_CONV (QCONV (DEPTH_CONV CONJ_RASSOC_CONV))) th
     end;
 in
   val CLEANUP_DEF_CNF_CONV = STRIP_EXISTS_CONV cleanup;
@@ -832,7 +832,7 @@ val DELAMB_CONV = SIMP_CONV simplify_ss [EQ_LAMB_ELIM, LAMB_EQ_ELIM];
 
 local
   fun get vs tm =
-    case 
+    case
       (case dest_term tm of COMB (x, y) =>
          (case get vs x of s as SOME _ => s | NONE => get vs y)
        | LAMB (v, b) => get (v :: vs) b

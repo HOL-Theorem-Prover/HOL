@@ -157,7 +157,7 @@ end
 (* Prove existence when PR argument always comes first in argument lists.   *)
 (* ------------------------------------------------------------------------ *)
 
-val prove_canon_recursive_functions_exist = 
+val prove_canon_recursive_functions_exist =
 let val RIGHT_BETAS =
         rev_itlist (fn a => CONV_RULE (RAND_CONV BETA_CONV) o C AP_THM a)
   fun canonize t = let
@@ -230,8 +230,10 @@ val prove_recursive_functions_exist =
           val uxargs = map (C assoc lpats) ufns
           val oxargs = map (uncurry (C (curry op@)) o Lib.partition is_var) uxargs
           val trths = itlist2 reshuffle ufns uxargs []
-          val tth = REPEATC (CHANGED_CONV
-                      (PURE_REWRITE_CONV trths THENC DEPTH_CONV BETA_CONV)) tm
+          val tth = QCONV
+                      (REPEATC (CHANGED_CONV
+                                  (PURE_REWRITE_CONV trths THENC
+                                   DEPTH_CONV BETA_CONV))) tm
           val eth = prove_canon_recursive_functions_exist ax (rand(concl tth))
           val (evs,ebod) = strip_exists(concl eth)
           val fth = itlist SIMPLE_EXISTS ufns (EQ_MP (SYM tth) (ASSUME ebod))
@@ -650,7 +652,7 @@ fun INDUCT_THEN th =
      val eta_th = CONV_RULE (RAND_CONV ETA_CONV) (UNDISCH(SPEC v th))
      val ([asm],con) = dest_thm eta_th
      val ind = GEN v (SUBST [boolvar |-> GALPHA asm]
-                            (mk_imp{ant=boolvar, conseq=con}) 
+                            (mk_imp{ant=boolvar, conseq=con})
                             (DISCH asm eta_th))
  in fn ttac => fn (A,t) =>
      let val lam = #Rand(dest_comb t)
@@ -1751,9 +1753,9 @@ fun prove_constructors_distinct thm = let
       SOME (CHOOSE (f, fn_exists) thm)
     end
   end
-  fun maybe_prove_cd_for_type eqns = 
+  fun maybe_prove_cd_for_type eqns =
     let val ctrs = ctrs_with_args eqns
-    in if Lib.mem (type_of (hd ctrs)) axtypes 
+    in if Lib.mem (type_of (hd ctrs)) axtypes
           then SOME (prove_cd_for_type eqns)
           else NONE
     end

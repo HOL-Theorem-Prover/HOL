@@ -769,7 +769,7 @@ fun CONV_TAC (conv:conv) :tactic = fn (asl,w) =>
  in if rhs = T
     then ([], fn [] => EQ_MP (SYM th) TRUTH)
     else ([(asl,rhs)], fn [th'] => EQ_MP (SYM th) th')
- end
+ end handle UNCHANGED => ALL_TAC (asl, w)
 
 (*---------------------------------------------------------------------------
      Tactic for beta-reducing a goal.

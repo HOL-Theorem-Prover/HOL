@@ -2,12 +2,16 @@ signature Conv =
 sig
    include Abbrev
 
+   exception UNCHANGED
+
+   val QCONV                 : conv -> conv
    val REWR_CONV             : thm -> conv
    val HO_REWR_CONV          : thm -> conv
    val LAND_CONV             : conv -> conv
    val RAND_CONV             : conv -> conv
    val RATOR_CONV            : conv -> conv
    val ABS_CONV              : conv -> conv
+   val COMB_CONV             : conv -> conv
    val FORK_CONV             : conv * conv -> conv
    val BINOP_CONV            : conv -> conv
    val EVERY_DISJ_CONV       : conv -> conv

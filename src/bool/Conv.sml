@@ -18,7 +18,11 @@
 structure Conv :> Conv =
 struct
 
-open HolKernel Parse boolTheory Drule boolSyntax Rsyntax Abbrev QConv;
+open HolKernel Parse boolTheory Drule boolSyntax Rsyntax Abbrev
+
+exception UNCHANGED
+
+fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
 infix 3 ##
 infix 5 |->
@@ -128,11 +132,10 @@ fun LAND_CONV c = RATOR_CONV (RAND_CONV c)
 
 fun ABS_CONV conv tm =
     case dest_term tm of
-      LAMB{Bvar,Body} => (let
+      LAMB{Bvar,Body} => let
         val newbody = conv Body
       in
         ABS Bvar newbody
-      end
         handle HOL_ERR _ =>
                let
                  val v = genvar (type_of Bvar)
@@ -154,7 +157,8 @@ fun ABS_CONV conv tm =
                           raise ERR "ABS_CONV" message
                         else
                           raise ERR "ABS_CONV"
-                                    (origin_function ^ ": " ^ message))
+                                    (origin_function ^ ": " ^ message)
+      end
     | _ => raise ERR "ABS_CONV" "Term not an abstraction"
 
 (* -------------------------------------------------------------------- *)
@@ -189,27 +193,29 @@ fun RHS_CONV conv tm =
 
 fun NO_CONV _ = raise ERR "NO_CONV" "";
 
-(*---------------------------------------------------------------------------
- * Conversion that always succeeds, using reflexive law:   t --->  |- t=t
- *  Identity element for THENC
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Conversion that always succeeds, but does nothing.
+    Indicates this by raising the UNCHANGED exception.
+   ---------------------------------------------------------------------- *)
 
-val ALL_CONV = REFL;
+fun ALL_CONV t = raise UNCHANGED
 
+(* ----------------------------------------------------------------------
+    Apply two conversions in succession;  fail if either does.  Handle
+    UNCHANGED appropriately.
+   ---------------------------------------------------------------------- *)
 
-infix THENC ORELSEC;
+fun (conv1 THENC conv2) t = let
+  val th1 = conv1 t
+in
+  TRANS th1 (conv2 (rhs (concl th1))) handle UNCHANGED => th1
+end handle UNCHANGED => conv2 t
 
-(*---------------------------------------------------------------------------
- * Apply two conversions in succession;  fail if either does.
- *---------------------------------------------------------------------------*)
-
-fun (conv1 THENC conv2) t =
- let val th1 = conv1 t in TRANS th1 (conv2 (rhs (concl th1))) end;
-
-(*---------------------------------------------------------------------------*
- * Apply conv1;  if it raises a HOL_ERR then apply conv2. Note that          *
- * interrupts and other exceptions will sail on through.                     *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Apply conv1;  if it raises a HOL_ERR then apply conv2. Note that
+    interrupts and other exceptions (including UNCHANGED) will sail on
+    through.
+   ---------------------------------------------------------------------- *)
 
 fun (conv1 ORELSEC conv2) t = conv1 t handle HOL_ERR _ => conv2 t;
 
@@ -242,45 +248,36 @@ fun REPEATC conv t = ((conv THENC (REPEATC conv)) ORELSEC ALL_CONV) t;
 
 fun CHANGED_CONV conv tm =
    let val th = conv tm
+           handle UNCHANGED => raise ERR "CHANGED_CONV" "Input term unchanged"
        val {lhs,rhs} = dest_eq (concl th)
-   in if aconv lhs rhs then raise ERR"CHANGED_CONV" ""  else th
+   in if aconv lhs rhs then raise ERR"CHANGED_CONV" "Input term unchanged"
+      else th
    end;
 
 fun TRY_CONV conv = conv ORELSEC ALL_CONV;
 
+fun COMB_CONV conv tm = let
+  val {Rator, Rand} = dest_comb tm
+in
+  let
+    val th = conv Rator
+  in
+    MK_COMB (th, conv Rand) handle UNCHANGED => AP_THM th Rand
+  end handle UNCHANGED => AP_TERM Rator (conv Rand)
+end
 
-fun SUB_CONV conv tm =
-   if (is_comb tm)
-   then let val {Rator,Rand} = dest_comb tm
-        in MK_COMB(conv Rator, conv Rand)
-        end
-   else if (is_abs tm)
-        then let val {Bvar,Body} = dest_abs tm
-                 val Body' = conv Body
-             in
-               ABS Bvar Body'
-                handle HOL_ERR _ =>
-                     let val v = genvar (type_of Bvar)
-                         val th1 = ALPHA_CONV v tm
-                         val {rhs,...} = dest_eq(Thm.concl th1)
-                         val {Body=Body',...} = dest_abs rhs (* v = Bvar *)
-                         val eq_thm' = ABS v (conv Body')
-                         val at  = #rhs(dest_eq(concl eq_thm'))
-                         val v'  = variant (free_vars at) Bvar
-                         val th2 = ALPHA_CONV v' at
-                     in
-                       TRANS (TRANS th1 eq_thm') th2
-                     end
-             end
-        else ALL_CONV tm;
+fun SUB_CONV conv =
+    TRY_CONV (COMB_CONV conv ORELSEC ABS_CONV conv)
 
-
-fun FORK_CONV (conv1,conv2) tm =
-    let val {Rator,Rand=r} = dest_comb tm
-        val {Rator,Rand=l} = dest_comb Rator
-    in
-     MK_COMB(AP_TERM Rator (conv1 l), conv2 r)
-    end;
+fun FORK_CONV (conv1,conv2) tm = let
+  open Term (* get rid of overlying Rsyntax *)
+  val (fx,y) = with_exn dest_comb tm (ERR "FORK_CONV" "term not a comb")
+  val (f,x)  = with_exn dest_comb fx (ERR "FORK_CONV" "term not f x y")
+in
+  let val th = AP_TERM f (conv1 x)
+  in MK_COMB (th,conv2 y) handle UNCHANGED => AP_THM th y
+  end handle UNCHANGED => AP_TERM fx (conv2 y)
+ end;
 
 fun BINOP_CONV conv tm = FORK_CONV (conv,conv) tm;
 
@@ -292,32 +289,16 @@ val F_or = List.nth(OR_CLAUSES', 2);
 val or_F = List.nth(OR_CLAUSES', 3);
 
 
-fun EVERY_DISJ_CONV c tm =
-    case Lib.total Psyntax.dest_disj tm of
-      SOME (d1, d2) => let
-        val d1_thm = EVERY_DISJ_CONV c d1
-        val d1' = rhs (concl d1_thm)
-      in
-        if Term.compare(d1', boolSyntax.T) = EQUAL then
-          TRANS (AP_THM (AP_TERM boolSyntax.disjunction d1_thm) d2)
-                (SPEC d2 T_or)
-        else let
-            val d2_thm = EVERY_DISJ_CONV c d2
-            val d2' = rhs (concl d2_thm)
-            val result0 =
-                MK_COMB(AP_TERM boolSyntax.disjunction d1_thm, d2_thm)
-          in
-            if Term.compare(d1', boolSyntax.F) = EQUAL then
-              TRANS result0 (SPEC d2' F_or)
-            else if Term.compare(d2', boolSyntax.T) = EQUAL then
-              TRANS result0 (SPEC d1' or_T)
-            else if Term.compare(d2', boolSyntax.F) = EQUAL then
-              TRANS result0 (SPEC d1' or_F)
-            else
-              result0
-          end
-      end
-    | NONE => c tm
+fun EVERY_DISJ_CONV c tm = let
+in
+  if is_disj tm then
+    LAND_CONV (EVERY_DISJ_CONV c) THENC
+    (REWR_CONV T_or ORELSEC
+     (REWR_CONV F_or THENC EVERY_DISJ_CONV c) ORELSEC
+     (RAND_CONV (EVERY_DISJ_CONV c) THENC
+      TRY_CONV (REWR_CONV or_T ORELSEC REWR_CONV or_F)))
+  else c
+end tm
 
 val AND_CLAUSES' = map GEN_ALL (CONJUNCTS (SPEC_ALL AND_CLAUSES))
 val T_and = List.nth(AND_CLAUSES', 0)
@@ -325,31 +306,16 @@ val and_T = List.nth(AND_CLAUSES', 1)
 val F_and = List.nth(AND_CLAUSES', 2)
 val and_F = List.nth(AND_CLAUSES', 3)
 
-fun EVERY_CONJ_CONV c tm =
-    case Lib.total Psyntax.dest_conj tm of
-      SOME (c1, c2) => let
-        val c1_thm = EVERY_CONJ_CONV c c1
-        val c1' = rhs (concl c1_thm)
-      in
-        if Term.compare(c1', boolSyntax.F) = EQUAL then
-          TRANS (AP_THM (AP_TERM boolSyntax.conjunction c1_thm) c2)
-                (SPEC c2 F_and)
-        else let
-            val c2_thm = EVERY_CONJ_CONV c c2
-            val c2' = rhs (concl c2_thm)
-            val result0 =
-                MK_COMB(AP_TERM boolSyntax.conjunction c1_thm, c2_thm)
-          in
-            if Term.compare(c1', boolSyntax.T) = EQUAL then
-              TRANS result0 (SPEC c2' T_and)
-            else if Term.compare(c2', boolSyntax.F) = EQUAL then
-              TRANS result0 (SPEC c1' and_F)
-            else if Term.compare(c2', boolSyntax.T) = EQUAL then
-              TRANS result0 (SPEC c1' and_T)
-            else result0
-          end
-      end
-    | NONE => c tm
+fun EVERY_CONJ_CONV c tm = let
+in
+  if is_conj tm then
+    LAND_CONV (EVERY_CONJ_CONV c) THENC
+    (REWR_CONV F_and ORELSEC
+     (REWR_CONV T_and THENC EVERY_DISJ_CONV c) ORELSEC
+     (RAND_CONV (EVERY_CONJ_CONV c) THENC
+      TRY_CONV (REWR_CONV and_F ORELSEC REWR_CONV or_T)))
+  else c
+end tm
 
 fun QUANT_CONV conv  = RAND_CONV(ABS_CONV conv);
 fun BINDER_CONV conv = ABS_CONV conv ORELSEC QUANT_CONV conv;
@@ -403,19 +369,58 @@ fun LAST_FORALL_CONV c tm =
     BINDER_CONV (LAST_FORALL_CONV c) tm
   else c tm
 
-val DEPTH_CONV = QCONV o DEPTH_QCONV;;
-val REDEPTH_CONV = QCONV o REDEPTH_QCONV;;
-val TOP_DEPTH_CONV = QCONV o TOP_DEPTH_QCONV;
-val ONCE_DEPTH_CONV = QCONV o ONCE_DEPTH_QCONV;;
-val TOP_SWEEP_CONV = QCONV o TOP_SWEEP_QCONV; (* -- From Hol-Light  -- *)
+(* ----------------------------------------------------------------------
+    traversal conversionals.
+
+    DEPTH_CONV c
+      bottom-up, recurse over sub-terms, and then repeatedly apply c at
+      top-level.
+
+    REDEPTH_CONV c
+      bottom-up. recurse over sub-terms, apply c at top, and if this
+      succeeds, repeat from start.
+
+    TOP_DEPTH_CONV c
+      top-down. Repeatdly apply c at top-level, then descend.  If descending
+      doesn't change anything then stop.  If there was a change then
+      come back to top and try c once more at top-level.  If this succeeds
+      repeat.
+
+    TOP_SWEEP_CONV c
+      top-down.  Like TOP_DEPTH_CONV but only makes one pass over the term,
+      never coming back to the top level once descent starts.
+
+    ONCE_DEPTH_CONV c
+      top-down (confusingly).  Descends term looking for position at
+      which c works.  Does this "in parallel", so c may be applied multiple
+      times at highest possible positions in distinct sub-terms.
+
+   ---------------------------------------------------------------------- *)
 
 
+fun DEPTH_CONV conv tm =
+    (SUB_CONV (DEPTH_CONV conv) THENC REPEATC conv) tm
+
+fun REDEPTH_CONV conv tm =
+    (SUB_CONV (REDEPTH_CONV conv) THENC
+     TRY_CONV (conv THENC REDEPTH_CONV conv)) tm
+
+fun TOP_DEPTH_CONV conv tm =
+    (REPEATC conv THENC
+     TRY_CONV (CHANGED_CONV (SUB_CONV (TOP_DEPTH_CONV conv)) THENC
+               TRY_CONV (conv THENC TOP_DEPTH_CONV conv))) tm
+
+fun ONCE_DEPTH_CONV conv tm =
+    TRY_CONV (conv ORELSEC SUB_CONV (ONCE_DEPTH_CONV conv)) tm
+
+fun TOP_SWEEP_CONV conv tm =
+    (REPEATC conv THENC SUB_CONV (TOP_SWEEP_CONV conv)) tm
 
 (*---------------------------------------------------------------------------*
  * Convert a conversion to a rule                                            *
  *---------------------------------------------------------------------------*)
 
-fun CONV_RULE conv th = EQ_MP (conv(concl th)) th;
+fun CONV_RULE conv th = EQ_MP (conv(concl th)) th handle UNCHANGED => th
 
 (*---------------------------------------------------------------------------*
  * Rule for beta-reducing on all beta-redexes                                *
@@ -438,8 +443,6 @@ in
       SYM (BETA_CONV (Term.mk_comb(mk_abs(gv,newbody), arg_t)))
     end
 end
-
-
 
 (* =====================================================================*)
 (* What follows is a complete set of conversions for moving ! and ? into*)
@@ -583,7 +586,7 @@ fun EXISTS_OR_CONV tm =
    handle HOL_ERR _ => raise ERR "EXISTS_OR_CONV" "";
 *)
 
-local val alpha = mk_vartype "'a"
+local val alpha = Type.alpha
       val spotBeta = FORK_CONV (QUANT_CONV (BINOP_CONV BETA_CONV),
                                 BINOP_CONV (QUANT_CONV BETA_CONV))
       open boolTheory
@@ -1362,7 +1365,8 @@ fun SYM_CONV tm =
  *     A |- t1 = t2'
  *---------------------------------------------------------------------------*)
 
-fun RIGHT_CONV_RULE conv th = TRANS th (conv(rhs(concl th)));
+fun RIGHT_CONV_RULE conv th =
+    TRANS th (conv(rhs(concl th))) handle UNCHANGED => th
 
 (* ---------------------------------------------------------------------*)
 (* FUN_EQ_CONV "f = g"  returns:  |- (f = g) = !x. (f x = g x).  	*)
@@ -1751,7 +1755,7 @@ fun AC_CONV(associative,commutative) =
             end
  in
   fn tm =>
-    let val init = TOP_DEPTH_CONV (REWR_CONV ass) tm
+    let val init = QCONV (TOP_DEPTH_CONV (REWR_CONV ass)) tm
         val gl = rhs (concl init)
     in EQT_INTRO (EQ_MP (SYM init) (asce (dest_eq gl)))
     end

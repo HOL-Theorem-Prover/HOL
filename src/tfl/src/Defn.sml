@@ -814,7 +814,7 @@ fun mutrec thy bindstem eqns =
       val RNG_INS = map f_rng_in fnl'
       val tmp = zip (map (#1 o dest_comb) L) R1
       val R2 = map (fn (f,r) => beta_conv(mk_comb(assoc f RNG_INS, r))) tmp
-      val R3 = map (rhs o concl o DEPTH_CONV BETA_CONV) R2
+      val R3 = map (rhs o concl o QCONV (DEPTH_CONV BETA_CONV)) R2
       val mut_eqns = list_mk_conj(map mk_eq (zip L1 R3))
       val wfrec_res = wfrec_eqns thy mut_eqns
       val defn =

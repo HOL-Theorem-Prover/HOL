@@ -4,15 +4,6 @@ struct
 open HolKernel boolLib intSyntax boolSyntax CooperSyntax integerTheory
      int_arithTheory intSimps
 
-infix THEN THENC THENL |-> ## ORELSEC
-infixr -->
-
-open QConv
-nonfix THENQC ORELSEQC
-val THENQC = uncurry THENQC
-val ORELSEQC = uncurry ORELSEQC
-infix ORELSEQC THENQC
-
 val ERR = mk_HOL_ERR "IntDP_Munge";
 
 val normalise_mult = OmegaMath.NORMALISE_MULT
@@ -133,7 +124,7 @@ fun elim_div_mod0 t = let
     STRIP_QUANT_CONV (RAND_CONV (FORK_CONV (REDUCE_CONV, BETA_CONV)))
   end
 in
-  EVERY_QCONV (map elim_t divmods) t
+  EVERY_CONV (map elim_t divmods) t
 end
 
 fun elim_div_mod t = let
@@ -145,8 +136,8 @@ fun elim_div_mod t = let
   in
     if is_exists tm orelse is_forall tm then BINDER_CONV recurse
     else
-      elim_div_mod0 THENQC
-      SUB_QCONV recurse
+      elim_div_mod0 THENC
+      SUB_CONV recurse
   end tm
 in
   recurse t
@@ -164,8 +155,8 @@ fun decide_fv_presburger DPname DP tm = let
     in
       mk_forall(gv, subst [bv |-> gv] t)
     end
-  val preprocess = elim_div_mod THENQC REWRITE_CONV [INT_ABS]
-  val doit = preprocess THENQC DP
+  val preprocess = elim_div_mod THENC REWRITE_CONV [INT_ABS]
+  val doit = preprocess THENC DP
 in
   if null fvs then doit tm
   else let
@@ -237,7 +228,7 @@ fun tacCONV c tm = let
   val thm = c tm
 in
   (rhs (concl thm), TRANS thm)
-end
+end handle UNCHANGED => (tm, I)
 fun tacRGEN t = let
   val (fvs, body) = strip_forall t
   val prove_it = EQT_INTRO o GENL fvs o EQT_ELIM

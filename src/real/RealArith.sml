@@ -30,8 +30,6 @@ open HolKernel Parse boolLib pairLib hol88Lib numLib reduceLib tautLib
      pairTheory numTheory prim_recTheory arithmeticTheory
      realTheory Ho_Rewrite jrhUtils Canon_Port AC numSyntax Arbint;
 
-infix THEN THENL ORELSE ORELSEC ## THENC ORELSE_TCL;
-
 val (Type,Term) = Parse.parse_from_grammars realTheory.real_grammars
 fun -- q x = Term q;
 fun == q x = Type q;
@@ -417,7 +415,7 @@ val REAL_PROD_NORM_CONV =
         val res =
         if others = [] then
           let
-            val th1 = DEPTH_CONV REAL_INT_MUL_CONV tm
+            val th1 = QCONV (DEPTH_CONV REAL_INT_MUL_CONV) tm
           in
             TRANS th1 (INST [(rand(concl th1),x_tm)] pth1)
           end
@@ -438,8 +436,8 @@ val REAL_PROD_NORM_CONV =
                   (mk_eq(tm,mk_binop_mul(list_mk_binop_mul consts)
                            (list_mk_binop_mul sothers)))
                 val tm1 = rand(concl th1)
-                val th2 = AP_TERM mul_tm (DEPTH_CONV REAL_INT_MUL_CONV
-                          (liteLib.lhand tm1))
+                val th2 = AP_TERM mul_tm (QCONV (DEPTH_CONV REAL_INT_MUL_CONV)
+                                                (liteLib.lhand tm1))
               in
                 TRANS th1 (AP_THM th2 (rand tm1))
               end
@@ -606,8 +604,8 @@ val LINEAR_ADD =
     val mk = mk_binop add_tm
     val zero_tm = ``&0``
     val COEFF_CONV =
-      REWR_CONV (GSYM REAL_ADD_RDISTRIB) THENC
-      LAND_CONV REAL_INT_ADD_CONV
+      QCONV (REWR_CONV (GSYM REAL_ADD_RDISTRIB) THENC
+             LAND_CONV REAL_INT_ADD_CONV)
     fun linear_add tm1 tm2 =
     let
       val _ = trace "linear_add"
@@ -732,8 +730,10 @@ val LINEAR_ADD =
         val _ = trace_term tm2
         val th = linear_add tm1 tm2
         val tm = rand(concl th)
-        val zth = GEN_REWRITE_CONV DEPTH_CONV
-                     [REAL_MUL_LZERO, REAL_ADD_LID, REAL_ADD_RID] tm
+        val zth =
+            QCONV (GEN_REWRITE_CONV
+                     DEPTH_CONV
+                     [REAL_MUL_LZERO, REAL_ADD_LID, REAL_ADD_RID]) tm
         val res = TRANS th zth
         val _ = trace_thm res
         val _ = trace "done LINEAR_ADD"
@@ -759,7 +759,7 @@ val COLLECT_CONV =
       in
         TRANS (MK_COMB(AP_TERM add_tm lth,rth)) xth
       end
-      handle _ => REFL tm
+      handle HOL_ERR _ => REFL tm
   in
     collect
   end;
@@ -809,9 +809,9 @@ val REAL_SUM_NORM_CONV =
       let
         val _ = trace "REAL_SUM_NORM_CONV"
         val _ = trace_term tm
-        val th1 = prelim_conv tm
+        val th1 = QCONV prelim_conv tm
         val th2 = liteLib.DEPTH_BINOP_CONV stm
-                     REAL_PROD_NORM_CONV (rand(concl th1))
+                     (QCONV REAL_PROD_NORM_CONV) (rand(concl th1))
         val tm2 = rand(concl th2)
         val elements = binops_add tm2
         val selements = sort (fn x => fn y => term_le (rand x) (rand y))
@@ -926,8 +926,8 @@ val (clear_atom_cache,REAL_ATOM_NORM_CONV) =
 (* Combinators.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-fun F_F (f,g) (x, y) = (f x, g y);
 infix F_F;
+fun (f F_F g) (x, y) = (f x, g y);
 
 (* ------------------------------------------------------------------------- *)
 (* Replication and sequences.                                                *)
@@ -1610,20 +1610,20 @@ fun REAL_ARITH tm =
 (* ------------------------------------------------------------------------- *)
 
 (*Terms to test the real linear decison procedure:
-fun go1 () = REAL_ARITH (Term`x + y:real = y + x`);
-fun go2 () = REAL_ARITH (Term`&0 < x ==> &0 <= x`);
-fun go3 () = REAL_ARITH (Term`x + ~x = &0`);
-fun go4 () = REAL_ARITH (Term`&0 <= x ==> &0 <= y ==> &0 <= x + y`);
-fun go5 () = REAL_ARITH (Term`&1 * x + &0 = x`);
-fun go6 () = REAL_ARITH (Term`&3 * x + &4 * x = &7 * x`);
-fun go7 () = REAL_ARITH (Term`&300 * x + &400 * x = &700 * x`);
-fun go8 () = REAL_ARITH (Term`x < y:real ==> x <= y`);
-fun go9 () = REAL_ARITH (Term`(x + z:real = y + z) ==> (x = y)`);
-fun go10 () = REAL_ARITH (Term`(x <= y:real /\ y <= z) ==> x <= z`);
-fun go11 () = REAL_ARITH (Term`x:real <= y ==> y < z ==> x < z`);
-fun go12 () = REAL_ARITH (Term`&0 < x /\ &0 < y ==> x + y < &1
-                             ==> &144 * x + &100 * y < &144`);
-fun go13 () = REAL_ARITH (Term`!x y. x <= ~y = x + y <= &0`);
+REAL_ARITH (Term`x + y:real = y + x`);
+REAL_ARITH (Term`&0 < x ==> &0 <= x`);
+REAL_ARITH (Term`x + ~x = &0`);
+REAL_ARITH (Term`&0 <= x ==> &0 <= y ==> &0 <= x + y`);
+REAL_ARITH (Term`&1 * x + &0 = x`);
+REAL_ARITH (Term`&3 * x + &4 * x = &7 * x`);
+REAL_ARITH (Term`&300 * x + &400 * x = &700 * x`);
+REAL_ARITH (Term`x < y:real ==> x <= y`);
+REAL_ARITH (Term`(x + z:real = y + z) ==> (x = y)`);
+REAL_ARITH (Term`(x <= y:real /\ y <= z) ==> x <= z`);
+REAL_ARITH (Term`x:real <= y ==> y < z ==> x < z`);
+REAL_ARITH (Term`&0 < x /\ &0 < y ==> x + y < &1
+               ==> &144 * x + &100 * y < &144`);
+REAL_ARITH (Term`!x y. x <= ~y = x + y <= &0`);
 *)
 
 end;

@@ -1,0 +1,25 @@
+\DOC COMB_CONV
+
+\TYPE {COMB_CONV : conv -> conv}
+
+\SYNOPSIS
+Applies a conversion to both immediate sub-terms of an application.
+
+\KEYWORDS
+conversional.
+
+\DESCRIBE
+If {t} is an application term of the form {f x}, and {c} is a
+conversion, such that {c} maps {f} to {|- f = f'} and {x} to
+{|- x = x'}, then {COMB_CONV c} maps {t} to {|- f x = f' x'}.
+
+\FAILURE
+{COMB_CONV c t} fails if {t} is not an application term, or if {c}
+fails when applied to the rator and rand of {t}, or if {c} is not in
+fact a conversion (i.e., a function which maps terms {t} to a theorem
+{|- t = t'}.
+
+\SEEALSO
+Conv.ABS_CONV, Conv.SUB_CONV.
+
+\ENDDOC

@@ -102,7 +102,7 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
                                  REP = repname,
                                  tyax = tydef})
   val absty = mk_type(tyname,[])
-  val (abs,rep) = ((I ## rator) o dest_comb o lhs o snd o dest_forall 
+  val (abs,rep) = ((I ## rator) o dest_comb o lhs o snd o dest_forall
                                 o fst o dest_conj o concl) tybij
 
   val refl = PROVE
@@ -202,7 +202,8 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
       else list_mk_comb(transconv opp,tms) end
 
   fun TRANSFORM_CONV tm =
-    let val th1 = DEPTH_CONV(EQC_FORALL_CONV ORELSEC EQC_EXISTS_CONV) tm
+    let val th1 =
+            QCONV (DEPTH_CONV(EQC_FORALL_CONV ORELSEC EQC_EXISTS_CONV)) tm
         val tm1 = rhs(concl th1)
         val th2 = PROVE
          (mk_eq(tm1,transconv tm1),

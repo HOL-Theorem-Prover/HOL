@@ -2,22 +2,14 @@ structure OmegaMath :> OmegaMath = struct
 
 open HolKernel boolLib intSyntax integerTheory int_arithTheory
 
-open CooperMath QConv
+open CooperMath
 
 infix THEN THENL THENC ORELSEC ##
 infixr -->
 
 val (Type, Term) = parse_from_grammars int_arith_grammars
 
-fun c1 THENC c2 = THENQC c1 c2
-fun c1 ORELSEC c2 = ORELSEQC c1 c2
-val ALL_CONV = ALL_QCONV
-val BINOP_CONV = BINOP_QCONV
-val TRY_CONV = TRY_QCONV
-fun EVERY_DISJ_CONV c tm =
-    if is_disj tm then BINOP_CONV (EVERY_DISJ_CONV c) tm
-    else c tm
-val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_QCONV bool_rewrites
+val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV bool_rewrites
 
 
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaMath",
@@ -715,7 +707,7 @@ in
 end t
 
 fun TOP_SWEEP_ONCE_CONV c t =
-    (TRY_CONV c THENC SUB_QCONV (TOP_SWEEP_ONCE_CONV c)) t
+    (TRY_CONV c THENC SUB_CONV (TOP_SWEEP_ONCE_CONV c)) t
 
 val normalise_guards = TOP_SWEEP_ONCE_CONV normalise_guard
 
@@ -1048,7 +1040,7 @@ fun OmegaEq t = let
       else
         rCONV (eliminate_equality to_elim) THENC finisher
   end
-  fun ifVarsRemain c t = if is_exists t then c t else ALL_QCONV t
+  fun ifVarsRemain c t = if is_exists t then c t else ALL_CONV t
   val (absify, unwinder) =
       if null rest andalso elimc = Arbint.one then
         (ALL_CONV, REWR_CONV EX_REFL)

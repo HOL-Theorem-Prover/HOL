@@ -41,19 +41,14 @@ val simple_disj_congruence =
 val simple_conj_congruence =
   tautLib.TAUT_PROVE (Term`!p q r. (p ==> (q = r)) ==>
                                    (p /\ q = p /\ r)`)
-open QConv
-nonfix THENQC ORELSEQC
-val THENQC = uncurry THENQC
-val ORELSEQC = uncurry ORELSEQC
-infix ORELSEQC THENQC
 
 fun congruential_simplification tm = let
   val (d1, d2) = dest_disj tm
 in
   if is_disj d1 then
-    REWR_CONV (GSYM DISJ_ASSOC) THENQC congruential_simplification
+    REWR_CONV (GSYM DISJ_ASSOC) THENC congruential_simplification
   else if is_conj d1 then
-    LAND_CONV congruential_simplification THENQC
+    LAND_CONV congruential_simplification THENC
     RAND_CONV congruential_simplification
   else if d1 = true_tm then
     K (SPEC d2 T_or_l)
@@ -67,17 +62,17 @@ in
       else EQF_INTRO (notd1_thm)
     val d2_rewritten = DISCH notd1_t (REWRITE_CONV [notd1] d2)
   in
-    K (MATCH_MP simple_disj_congruence d2_rewritten) THENQC
-    (REWR_CONV T_or_r ORELSEQC REWR_CONV F_or_r ORELSEQC
+    K (MATCH_MP simple_disj_congruence d2_rewritten) THENC
+    (REWR_CONV T_or_r ORELSEC REWR_CONV F_or_r ORELSEC
      RAND_CONV congruential_simplification)
   end
 end tm handle HOL_ERR _ => let
   val (c1, c2) = dest_conj tm
 in
   if is_conj c1 then
-    REWR_CONV (GSYM CONJ_ASSOC) THENQC congruential_simplification
+    REWR_CONV (GSYM CONJ_ASSOC) THENC congruential_simplification
   else if is_disj c1 then
-    LAND_CONV congruential_simplification THENQC
+    LAND_CONV congruential_simplification THENC
     RAND_CONV congruential_simplification
   else if c1 = true_tm then
     K (SPEC c2 T_and_l)
@@ -86,18 +81,13 @@ in
   else let
     val c2_rewritten = DISCH c1 (REWRITE_CONV [EQT_INTRO (ASSUME c1)] c2)
   in
-    K (MATCH_MP simple_conj_congruence c2_rewritten) THENQC
-    (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r ORELSEQC
+    K (MATCH_MP simple_conj_congruence c2_rewritten) THENC
+    (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r ORELSEC
      RAND_CONV congruential_simplification)
   end
 end tm handle HOL_ERR _ =>
   if is_neg tm then RAND_CONV congruential_simplification tm
-  else ALL_QCONV tm
-
-val congruential_simplification = QConv.QCONV congruential_simplification
-
-
-
+  else ALL_CONV tm
 
 val unwind_constraint = UNCONSTRAIN THENC resquan_remove
 
@@ -174,10 +164,10 @@ end tm
 
 
 val obvious_improvements =
-  ADDITIVE_TERMS_CONV (QConv.TRY_QCONV collect_additive_consts) THENQC
+  ADDITIVE_TERMS_CONV (TRY_CONV collect_additive_consts) THENC
   STRIP_QUANT_CONV
-    (BLEAF_CONV (op THENQC) (elim_vars_round_r ORELSEQC
-                             TRY_QCONV check_divides) THENQC
+    (BLEAF_CONV (op THENC) (elim_vars_round_r ORELSEC
+                             TRY_CONV check_divides) THENC
      REDUCE_CONV)
 
 fun do_equality_simplifications tm = let
@@ -312,7 +302,7 @@ in
       (RAND_CONV eliminate_existential) THENC
       (LAND_CONV eliminate_existential)
     else
-      base_case THENQC EVERY_DISJ_CONV obvious_improvements
+      base_case THENC EVERY_DISJ_CONV obvious_improvements
   end tm
 end
 
@@ -325,7 +315,7 @@ val eliminate_existential_entirely =
        (TRY_CONV phase6_CONV THENC
         (* variables substituted in might result in ground
            multiplication terms *)
-        REDUCE_CONV THENQC obvious_improvements)
+        REDUCE_CONV THENC obvious_improvements)
 
 
 fun eliminate_quantifier tm = let
@@ -640,7 +630,7 @@ end tm
 fun finish_pure_goal tm =
     if is_exists tm then
       ((REWR_CONV EXISTS_SIMP ORELSEC finish_pure_goal1) THENC
-       EVERY_DISJ_CONV (obvious_improvements THENQC finish_pure_goal)) tm
+       EVERY_DISJ_CONV (obvious_improvements THENC finish_pure_goal)) tm
     else REDUCE_CONV tm
 
 
@@ -776,7 +766,7 @@ fun decide_pure_presburger_term tm = let
            RAND_CONV pure_goal THENC REDUCE_CONV))) tm
     | qsEXISTS => (move_quants_up THENC pure_goal) tm
 in
-  phase0_CONV THENQC phase1_CONV THENQC strategy
+  phase0_CONV THENC phase1_CONV THENC strategy
 end tm
 
 (* the following is useful in debugging the above; given an f, the

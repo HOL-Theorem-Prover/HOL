@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib QConv simpLib numLib rich_listTheory
+open HolKernel Parse boolLib bossLib simpLib numLib rich_listTheory
      arithmeticTheory;
 
 val _ = new_theory "defCNF";
@@ -80,7 +80,7 @@ val CONSISTENCY = store_thm
    [STRIP_TAC THEN
     POP_ASSUM MP_TAC THEN
     POP_ASSUM (K ALL_TAC) THEN
-    POP_ASSUM MP_TAC THEN    
+    POP_ASSUM MP_TAC THEN
     Q.SPEC_TAC (`n`, `n`) THEN
     (Induct_on `l` THEN1 RW_TAC std_ss [DEF_def]) THEN
     RW_TAC std_ss [LENGTH, ADD_CLAUSES, DEF_def, OKDEF_def] THEN

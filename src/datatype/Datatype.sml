@@ -163,7 +163,7 @@ fun crunch [] = []
 local open arithmeticTheory
       val zero_rws = [Rewrite.ONCE_REWRITE_RULE [ADD_SYM] ADD_0, ADD_0]
       val Zero  = numSyntax.zero_tm
-      val One   = Term `1n`
+      val One   = numSyntax.mk_numeral (Arbnum.fromInt 1)
 in
 fun define_size ax db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
@@ -232,6 +232,7 @@ fun define_size ax db =
      val pre_defn1 = rhs(concl   (* remove zero additions *)
                       ((DEPTH_CONV BETA_CONV THENC
                         Rewrite.PURE_REWRITE_CONV zero_rws) pre_defn0))
+                     handle UNCHANGED => pre_defn0
      val defn = new_recursive_definition
                  {name=def_name^"_size_def",
                   rec_axiom=ax, def=pre_defn1}

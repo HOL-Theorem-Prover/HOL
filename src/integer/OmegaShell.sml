@@ -1,7 +1,7 @@
 structure OmegaShell :> OmegaShell =
 struct
 
-open HolKernel boolLib intSyntax QConv integerTheory
+open HolKernel boolLib intSyntax integerTheory
 
 (* Takes a closed Presburger arithmetic term over the integers and
    tries to decide it using the Omega procedure.
@@ -18,18 +18,7 @@ infixr --> ##
 
 val lhand = rand o rator
 
-fun c1 THENC c2 = THENQC c1 c2
-fun c1 ORELSEC c2 = ORELSEQC c1 c2
-val BINOP_CONV = BINOP_QCONV
-val ALL_CONV = ALL_QCONV
-val TRY_CONV = TRY_QCONV
-val CHANGED_CONV = CHANGED_QCONV
-val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_QCONV bool_rewrites
-val DEPTH_CONV = DEPTH_QCONV
-val TOP_DEPTH_CONV = TOP_DEPTH_QCONV
-fun EVERY_DISJ_CONV c tm =
-    if is_disj tm then BINOP_CONV (EVERY_DISJ_CONV c) tm
-    else c tm
+val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV bool_rewrites
 
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaShell",
                           origin_function = f,
