@@ -50,6 +50,12 @@ val OS =
 val DEPDIR =
 val GNUMAKE =
 
+val isUnix = false
+
+val build_log_dir = fullPath [HOLDIR, "tools", "build-logs"]
+val build_log_file = fullPath [build_log_dir, "current-build-log"]
+val make_log_file = "current-make-log"
+
 local
   fun fopen file = (FileSys.remove file handle _ => (); TextIO.openOut file)
   fun munge s = String.translate (fn #"/" => "\\" | c => str c) s

@@ -681,7 +681,28 @@ val new_theory_time = ref (Timer.checkCPUTimer Globals.hol_clock)
 val report_times = ref true
 val _ = Feedback.register_btrace ("report_thy_times", report_times)
 
-local val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
+local
+  val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
+  fun maybe_log_time_to_disk thyname timestr = let
+    open FileSys
+    fun concatl pl = List.foldl (fn (p2,p1) => Path.concat(p1,p2))
+                                (hd pl) (tl pl)
+    val filename_opt = let
+      val build = Systeml.build_log_file
+      val currentdir = Systeml.make_log_file
+    in
+      List.find (fn s => access(s, [A_WRITE])) [build, currentdir]
+    end
+  in
+    case filename_opt of
+      SOME s => let
+        val fs = TextIO.openAppend s
+      in
+        TextIO.output(fs, thyname ^ " " ^ timestr ^ "\n");
+        TextIO.closeOut fs
+      end
+    | NONE => ()
+  end
 in
 fun export_theory () =
  let val {thid,con_wrt_disk,facts,adjoin,overwritten} = scrubCT()
@@ -727,7 +748,8 @@ fun export_theory () =
           set_ct_consistency true;
           mesg "done.\n";
           if !report_times then
-            mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ "s to build\n")
+            (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^"s to build\n");
+             maybe_log_time_to_disk thyname tstr)
           else ()
 
         end

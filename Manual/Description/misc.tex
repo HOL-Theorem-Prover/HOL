@@ -290,6 +290,14 @@ with the following command-line options:
 \item[\texttt{-k} or \texttt{--keep-going}] Causes \holmake{} to try
   to build all specified targets, rather than stopping as soon as one
   fails to build.
+\item[\texttt{--logging}] Causes \holmake{} to record the times taken
+  to build any theory files it encounters.  The times are logged in a
+  file in the current directory.  The name of this file includes the
+  time when \holmake{} completed, and when on a Unix system, the name
+  of the machine where the job was run.  If \holmake{} exits
+  unsuccessfully, the filename is preceded by the string
+  ``\texttt{bad-}''. Each line in the log-file is of the form
+  \textit{theory-name time-taken}, with the time recorded in seconds.
 \item[\texttt{--no\_holmakefile}]  Do not use a make-file, even if a file
   called \texttt{Holmakefile} is present in the current directory.
 \item[\texttt{--no\_overlay}] Do not use an overlay file.  All HOL

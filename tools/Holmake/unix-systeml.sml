@@ -56,6 +56,13 @@ val OS =
 val DEPDIR =
 val GNUMAKE =
 
+val isUnix = true
+
+val build_log_dir = fullPath [HOLDIR, "tools", "build-logs"]
+val build_log_file = fullPath [build_log_dir, "current-build-log"]
+val make_log_file = "current-make-log"
+
+
   fun emit_hol_script target qend =
       let val ostrm = TextIO.openOut target
           fun output s = TextIO.output(ostrm, s)

@@ -19,4 +19,12 @@ sig
   val DEPDIR : string
   val GNUMAKE : string
 
+  val isUnix : bool
+
+  (* other system-wide constants, shared between build tools and the
+     running hol *)
+  val build_log_dir : string
+  val build_log_file : string
+  val make_log_file : string
+
 end;

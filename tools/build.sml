@@ -5,6 +5,15 @@
 
 (* utilities *)
 
+(* ----------------------------------------------------------------------
+    Magic to ensure that interruptions (SIGINTs) are actually seen by the
+    linked executable as Interrupt exceptions
+   ---------------------------------------------------------------------- *)
+
+prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
+val _ = catch_interrupt true;
+
+
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f [x] = x
@@ -13,6 +22,7 @@ fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 fun quote s = String.concat["\"", s, "\""];
+
 fun die s =
     let open TextIO
     in
@@ -152,31 +162,31 @@ fun map_dir f dir =  (* map a function over the files in a directory *)
          of NONE => FileSys.closeDir dstrm
           | SOME file => (f (dir,file) ; loop())
   in loop()
-     handle OS.SysErr(s, erropt) 
+     handle OS.SysErr(s, erropt)
        => (FileSys.closeDir dstrm;
            die ("OS error: "^s^" - "^
               (case erropt of SOME s' => OS.errorMsg s' | _ => "")^"\n"))
        | otherexn => (FileSys.closeDir dstrm;
                       die "map_dir: unknown exception")
-  end 
+  end
 *)
 
-fun map_dir f dir = 
+fun map_dir f dir =
   let val dstrm = FileSys.openDir dir
-      fun loop () = 
+      fun loop () =
         case FileSys.readDir dstrm
          of NONE => []
           | SOME file => (dir,file)::loop()
       val files = loop()
       val _ = FileSys.closeDir dstrm
   in List.app f files
-     handle OS.SysErr(s, erropt) 
+     handle OS.SysErr(s, erropt)
        => die ("OS error: "^s^" - "^
               (case erropt of SOME s' => OS.errorMsg s' | _ => "")^"\n")
        | otherexn => die ("map_dir: "^General.exnMessage otherexn^"\n")
   end;
-      
-  
+
+
 
 fun copy file path =  (* Dead simple file copy *)
  let open TextIO
@@ -338,18 +348,18 @@ fun rem_file f =
 fun equal x y = (x=y);
 fun mem x l = List.exists (equal x) l;
 
-fun clean_sigobj() = 
+fun clean_sigobj() =
  let val _ = print ("Cleaning out "^SIGOBJ^"\n")
      val lowcase = String.map Char.toLower
-     fun sigobj_rem_file s = 
+     fun sigobj_rem_file s =
       let val f = Path.file s
           val n = lowcase (hd (String.fields (equal #".") f))
       in
-         if mem n ["systeml", "cvs", "", "readme"] 
+         if mem n ["systeml", "cvs", "", "readme"]
           then ()
           else rem_file s
       end
-     fun write_initial_srcfiles () = 
+     fun write_initial_srcfiles () =
       let open TextIO
           val outstr = openOut (fullPath [HOLDIR,"sigobj","SRCFILES"])
       in
@@ -420,15 +430,62 @@ fun make_buildstamp () =
     closeOut stamp_stream
 end
 
+val logdir = Systeml.build_log_dir
+val logfilename = Systeml.build_log_file
+val hostname = if Systeml.isUnix then
+                 case Mosml.run "hostname" [] "" of
+                   Mosml.Success s => String.substring(s,0,size s - 1) ^ "-"
+                                      (* substring to drop \n in output *)
+                 | _ => ""
+               else "" (* what to do under windows? *)
 
-fun build_hol symlink =
-  let val _ = clean_sigobj()
-      val _ = build_src symlink
-      val _ = make_buildstamp()
-      val _ = build_help()
-  in
-    print "\nHol built successfully.\n"
-  end;
+fun setup_logfile () = let
+  open FileSys
+  fun ensure_dir () =
+      if access (logdir, []) then
+        isDir logdir
+      else (mkDir logdir; true)
+in
+  if ensure_dir() then
+    if access (logfilename, []) then
+      warn "Build log exists; new logging will concatenate onto this file"
+    else let
+        (* touch the file *)
+        val outs = TextIO.openOut logfilename
+      in
+        TextIO.closeOut outs
+      end
+  else warn "Couldn't make or use build-logs directory"
+end handle Io _ => warn "Couldn't set up build-logs"
+
+fun finish_logging buildok = let
+in
+  if FileSys.access(logfilename, []) then let
+      open Date
+      val timestamp = fmt "%Y-%m-%dT%H:%M" (fromTimeLocal (Time.now()))
+      val newname0 = hostname^timestamp
+      val newname = (if buildok then "" else "bad-") ^ newname0
+    in
+      FileSys.rename {old = logfilename, new = fullPath [logdir, newname]}
+    end
+  else ()
+end handle Io _ => warn "Had problems making permanent record of build log"
+
+val () = Process.atExit (fn () => finish_logging false)
+        (* this will do nothing if finish_logging happened normally first;
+           otherwise the log's bad version will be recorded *)
+
+fun build_hol symlink = let
+in
+  clean_sigobj();
+  setup_logfile();
+  build_src symlink
+    handle Interrupt => (finish_logging false; die "Interrupted");
+  finish_logging true;
+  make_buildstamp();
+  build_help();
+  print "\nHol built successfully.\n"
+end
 
 
 (*---------------------------------------------------------------------------

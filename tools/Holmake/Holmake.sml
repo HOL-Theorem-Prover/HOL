@@ -93,7 +93,7 @@ local val expand_backslash =
         String.translate (fn #"\\" => "\\\\" | ch => Char.toString ch)
 in
 fun quote s = String.concat["\"", expand_backslash s, "\""]
-end;
+end
 
 fun exists_readable s = FileSys.access(s, [FileSys.A_READ])
 
@@ -194,6 +194,7 @@ fun parse_command_line list = let
                                 rem
   val (rem, keep_going_flag) = find_alternative_tags ["-k", "--keep-going"] rem
   val (rem, quiet_flag) = find_toggle "--quiet" rem
+  val (rem, do_logging_flag) = find_toggle "--logging" rem
 in
   {targets=rem, debug=debug, show_usage=help,
    always_rebuild_deps=rebuild_deps,
@@ -224,7 +225,8 @@ in
          SOME (List.last cmdl_MOSMLDIRs)
        end,
    keep_going_flag = keep_going_flag,
-   quiet_flag = quiet_flag}
+   quiet_flag = quiet_flag,
+   do_logging_flag = do_logging_flag}
 end
 
 
@@ -235,7 +237,7 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      cmdl_HOLDIR, cmdl_MOSMLDIR,
      no_sigobj = cline_no_sigobj,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
-     user_overlay, keep_going_flag, quiet_flag} =
+     user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
   parse_command_line (CommandLine.arguments())
 
 fun warn s = if not quiet_flag then
@@ -245,6 +247,40 @@ fun warn s = if not quiet_flag then
 fun info s = if not quiet_flag then print (execname^": "^s^"\n") else ()
 fun tgtfatal s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
                   TextIO.flushOut TextIO.stdErr)
+
+
+(* set up logging *)
+val logfilename = Systeml.make_log_file
+val hostname = if Systeml.isUnix then
+                 case Mosml.run "hostname" [] "" of
+                   Mosml.Success s => String.substring(s,0,size s - 1) ^ "-"
+                                      (* substring to drop \n in output *)
+                 | _ => ""
+               else "" (* what to do under windows? *)
+
+val () = if FileSys.access (logfilename, []) then
+           warn "Make log exists; new logging will concatenate on this file"
+         else let
+             (* touch the file *)
+             val outs = TextIO.openOut logfilename
+           in
+             TextIO.closeOut outs
+           end handle Io _ => warn "Couldn't set up make log"
+
+fun finish_logging buildok = let
+in
+  if FileSys.access(logfilename, []) then let
+      open Date
+      val timestamp = fmt "%Y-%m-%dT%H:%M" (fromTimeLocal (Time.now()))
+      val newname0 = hostname^timestamp
+      val newname = (if buildok then "" else "bad-") ^ newname0
+    in
+      FileSys.rename {old = logfilename, new = newname}
+    end
+  else ()
+end handle Io _ => warn "Had problems making permanent record of build log"
+
+val _ = Process.atExit (fn () => finish_logging false)
 
 
 (* find HOLDIR and MOSMLDIR by first looking at command-line, then looking
@@ -1273,7 +1309,7 @@ val _ =
       val result = deal_with_targets targets
         handle Fail s => (print ("Fail exception: "^s^"\n"); exit failure)
     in
-      if result then exit success
+      if result then (finish_logging true; exit success)
       else exit failure
     end
 
