@@ -1,16 +1,17 @@
 \DOC version
 
-\TYPE {Globals.version : string}
+\TYPE {Globals.version : int}
 
 \SYNOPSIS
-The version of the {HOL} system being run.
+The version number of the {HOL} system being run.
 
 \EXAMPLE
 {
-  - Globals.version;
-
-  val it = "Kananaskis" : string
+- Globals.version;
+> val it = 2 : int
 }
 
+\SEEALSO
+Globals.release.
 
 \ENDDOC

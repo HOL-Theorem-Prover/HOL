@@ -1,0 +1,17 @@
+\DOC
+
+\TYPE {release : string}
+
+\SYNOPSIS
+The name of the release series of the {HOL} system being run.
+
+\EXAMPLE
+{
+- Globals.release;
+> val it = "Kananaskis" : string
+}
+
+\SEEALSO
+Globals.version
+
+\ENDDOC

@@ -35,14 +35,13 @@ if all of the names in the list are not distinct.
 
 \EXAMPLE
 {
-  - RENAME_VARS_CONV ["a", "b"] ``\x y. x /\ y``;
-  > val it = |- (\x y. x /\ y) = (\a b. a /\ b) : thm
-  - RENAME_VARS_CONV ["a", "b"] ``!x:'a y. P x /\ P y``;
-  > val it = |- (!x y. P x /\ P y) = !a b. P a /\ P b : thm
-  - RENAME_VARS_CONV ["a", "b"] ``!x:'a. ?y. P x /\ P y``;
-  > val it = |- (!x. ?y. P x /\ P y) = !a. ?b. P a /\ P b : thm
+- RENAME_VARS_CONV ["a", "b"] ``\x y. x /\ y``;
+> val it = |- (\x y. x /\ y) = (\a b. a /\ b) : thm
+- RENAME_VARS_CONV ["a", "b"] ``!x:'a y. P x /\ P y``;
+> val it = |- (!x y. P x /\ P y) = !a b. P a /\ P b : thm
+- RENAME_VARS_CONV ["a", "b"] ``!x:'a. ?y. P x /\ P y``;
+> val it = |- (!x. ?y. P x /\ P y) = !a. ?b. P a /\ P b : thm
 }
-
 
 \USES
 Post-processing mangling of names in code implementing derived logical
