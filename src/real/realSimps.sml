@@ -93,7 +93,7 @@ end
 
 fun posnegonly rv nv th = let
   open realSyntax
-  val injected = mk_injected nv
+  val injected = mk_injected (mk_comb(numSyntax.numeral_tm, nv))
 in
   [INST [rv |-> injected] th, INST [rv |-> mk_negated injected] th]
 end
@@ -146,6 +146,7 @@ val sub4 = transform [(x, true), (y, true)] (SPEC_ALL real_sub)
 val div_rats = transform [(x, true), (y, false), (u, true), (v, false)] div_rat
 val div_ratls = transform [(x, true), (y, false), (z, false)] div_ratl
 val div_ratrs = transform [(x, true), (z, false), (y, true)] div_ratr
+val div_eq_1 = transform [(x, false)] (SPEC_ALL REAL_DIV_REFL)
 
 val max_ints = transform [(x, true), (y, true)] (SPEC_ALL max_def)
 val min_ints = transform [(x, true), (y, true)] (SPEC_ALL min_def)
@@ -172,7 +173,8 @@ val min_ratrs =
 val op_rwts = [mult_ints, add_ints, eq_ints, REAL_DIV_LZERO] @ neg_ths @
               add_rats @ add_ratls @ add_ratrs @
               mult_rats @ mult_ratls @ mult_ratrs @
-              sub1 @ sub2 @ sub3 @ sub4 @ div_rats @ div_ratls @ div_ratrs @
+              sub1 @ sub2 @ sub3 @ sub4 @
+              div_rats @ div_ratls @ div_ratrs @ div_eq_1 @
               max_ratls @ max_ratrs @ max_rats @ max_ints @
               min_ratls @ min_ratrs @ min_rats @ min_ints
 
