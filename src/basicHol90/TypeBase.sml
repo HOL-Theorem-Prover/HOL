@@ -96,19 +96,6 @@ fun put_size (size_tm,size_rw) (FACTS(s,
  * Returns the datatype name and the constructors. The code is a copy of     *
  * the beginning of "Datatype.define_case".                                  *
  *---------------------------------------------------------------------------*)
-(*
-fun ax_info ax =
-  let val exu = snd(strip_forall(concl ax))
-      val {Rator,Rand} = dest_comb exu
-      val {Name = "?!",...} = dest_const Rator
-      val {Bvar,Body} = dest_abs Rand
-      val (dty,_) = Type.dom_rng (type_of Bvar)
-      val {Tyop,Args} = dest_type dty
-      val clist = map (rand o lhs o #2 o strip_forall) (strip_conj Body)
-  in
-   (Tyop,  map (fst o strip_comb) clist)
-  end;
-*)
 
 fun basic_info case_def =
  let val clauses = (strip_conj o concl) case_def

@@ -22,7 +22,9 @@ sig
       that are defined in the axiom.  This is a test for detecting
       nested recursion, where the operator must already have an axiom
       elsewhere.  *)
-   val new_types : thm -> Type.hol_type list
+
+   (* val new_types : thm -> Type.hol_type list *)
+   val doms_of_tyaxiom : thm -> Type.hol_type list
 
    (* given a type axiom and the type name, returns the constructors
       associated with that type in the axiom *)
@@ -34,7 +36,7 @@ sig
 
    (* because a type axiom can be for multiple (mutually recursive) types at
       once, this function returns the definitions of the case constants for
-      each type in a list *)
+      each type introduced by an axiom. *)
    val define_case_constant : thm -> thm list
 
 
