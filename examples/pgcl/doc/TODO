@@ -9,12 +9,16 @@ Expectations:
 - Develop theory of 1-bounded expectation for qtlTheory
 
 WP:
+- Remove the Assert command, instead Define `Assert p c = c`
 - Theorems connecting wlp and wp
   - Perhaps via expect_lfp t = expect_gfp t?
+- Derived commands to model concurrency using nondeterminism
 
 Temporal Logic:
-- Get it working with positive reals and 1-bounded expectations.
+- Get it working with positive reals and 1-bounded expectations
 - Verify random walker
 
 Example Verifications:
+- Random walk
+- n-location rendezvous problem (strat n "i") a derived command
 - Miller-Rabin
