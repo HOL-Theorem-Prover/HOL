@@ -23,7 +23,7 @@ Documentation:
   while the Reference and Description are still being worked on.  New
   features (such as the simplifier, MESON_TAC, and the parser) in the
   latter pair are described accurately (if not completely), but
-  remnants of oyt-of-date HOL88 documentation persist.
+  remnants of out-of-date HOL88 documentation persist.
 
 Kernel:
 
