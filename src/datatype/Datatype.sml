@@ -718,7 +718,7 @@ in
   (tyname, #2 (List.foldl foldthis (0, []) fldlist))
 end
 
-fun prove_bigrec_theorems ss (tyname, fldlist) = let
+fun prove_bigrec_theorems tyinfos ss (tyname, fldlist) = let
   (* prove versions of component_equality, FORALL, EXISTS and literal_equality
      theorems that are not in terms of brss sub-records, but leaf field
      names instead. *)
@@ -730,6 +730,14 @@ fun prove_bigrec_theorems ss (tyname, fldlist) = let
      ickily tight coupling between that file and this.  For example, the
      names of the theorems below need to be the same as the theorems
      generated there. *)
+  open TypeBasePure
+  val tyinfos = map #1 (tyinfos : (tyinfo * string) list)
+  fun tyinfo_for ty = let
+    val {Tyop,...} = dest_thy_type ty
+  in
+    List.find (fn tyi => ty_name_of tyi = Tyop) tyinfos
+  end
+
   fun mk_accessor fldname = let
     val accname = tyname ^ "_" ^ fldname
   in
@@ -754,6 +762,10 @@ fun prove_bigrec_theorems ss (tyname, fldlist) = let
   val arb = mk_arb toprec_ty
   val stdliteral = mk_literal arb fld_vars
 
+  fun mk_literal' base values =
+      rhs (concl (simpLib.SIMP_CONV ss [] (mk_literal base values)))
+  val stdliteral' = mk_literal' arb fld_vars
+
   val x = mk_var("x", toprec_ty)
   val y = mk_var("y", toprec_ty)
   (* component equality theorem *)
@@ -776,29 +788,59 @@ fun prove_bigrec_theorems ss (tyname, fldlist) = let
                 SIMP_TAC ss (GSYM CONJ_ASSOC :: old_comp_eq_th ::
                              subtype_comp_eqs))
   (* literal nchotomy theorem *)
-  val goal =
-      mk_forall(x,
-                list_mk_exists(fld_vars, mk_eq(x, stdliteral)))
   val nchoto_name = tyname ^ "_literal_nchotomy"
+  val old_nchoto = nchotomy_of (valOf (tyinfo_for toprec_ty))
+  val base_nchoto = SPEC x old_nchoto
+  val arb_nchoto = SPEC arb old_nchoto
+
+  val subvars = let
+    fun foldthis (v, (acc, n)) =
+        (mk_var("x" ^ Int.toString n, type_of v) :: acc, n + 1)
+    val vars0 = #1 (strip_exists (concl base_nchoto))
+  in
+    List.rev (#1 (List.foldl foldthis ([], 1) vars0))
+  end
+  val subvars' = map (mk_var o (prime ## I) o dest_var) subvars
+  fun gen_cases v = let
+    val (_, ty) = dest_var v
+    val cases = nchotomy_of (valOf (tyinfo_for ty))
+  in
+    SPEC v cases
+  end
+  val subcases = map gen_cases (subvars @ subvars')
+  val fn_updates = theorem (tyname ^ "_fn_updates")
+
   val literal_nchotomy =
-      store_thm(nchoto_name, goal,
+      store_thm(nchoto_name,
+                mk_forall(x, list_mk_exists(fld_vars, mk_eq(x, stdliteral'))),
                 GEN_TAC THEN
-                MAP_EVERY (EXISTS_TAC o (fn t => mk_comb(t, x))) accessors THEN
-                SIMP_TAC ss [] THEN SIMP_TAC ss [component_equality])
+                EVERY_TCL (map X_CHOOSE_THEN subvars)
+                          SUBST_ALL_TAC base_nchoto THEN
+                EVERY_TCL (map X_CHOOSE_THEN subvars')
+                          SUBST_ALL_TAC arb_nchoto THEN
+                MAP_EVERY (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+                          subcases THEN
+                SIMP_TAC ss [fn_updates])
 
   (* literal equality *)
   val liteq_name = tyname ^ "_updates_eq_literal"
-  val literal_equality0 =
-      prove(mk_forall(x, mk_eq(mk_literal x fld_vars, stdliteral)),
-            SIMP_TAC ss [] THEN SIMP_TAC ss [component_equality])
   val literal_equality =
-      save_thm(liteq_name, SIMP_RULE ss [] literal_equality0)
+      store_thm(liteq_name,
+                mk_forall(x, mk_eq(mk_literal' x fld_vars, stdliteral')),
+                GEN_TAC THEN
+                EVERY_TCL (map X_CHOOSE_THEN subvars)
+                          SUBST_ALL_TAC base_nchoto THEN
+                EVERY_TCL (map X_CHOOSE_THEN subvars')
+                          SUBST_ALL_TAC arb_nchoto THEN
+                MAP_EVERY (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+                          subcases THEN
+                SIMP_TAC ss [] THEN SIMP_TAC ss [fn_updates])
   (* literal 1-1 *)
   val fld_vars' = map (mk_var o (prime ## I) o dest_var) fld_vars
   val lit11_name = tyname ^ "_literal_11"
   val literal_11 =
       save_thm(lit11_name,
-               SIMP_RULE ss [] (SPECL [stdliteral, mk_literal arb fld_vars']
+               SIMP_RULE ss [] (SPECL [stdliteral', mk_literal' arb fld_vars']
                                       component_equality))
   (* forall and exists *)
   val P = mk_var("P", toprec_ty --> bool)
@@ -807,7 +849,7 @@ fun prove_bigrec_theorems ss (tyname, fldlist) = let
                 mk_forall(P,
                           mk_eq(mk_forall(x, mk_comb(P, x)),
                                 list_mk_forall(fld_vars,
-                                               mk_comb(P, stdliteral)))),
+                                               mk_comb(P, stdliteral')))),
                 GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
                 GEN_TAC THEN
                 STRUCT_CASES_TAC (SPEC x literal_nchotomy) THEN
@@ -817,7 +859,7 @@ fun prove_bigrec_theorems ss (tyname, fldlist) = let
                 mk_forall(P,
                           mk_eq(mk_exists(x, mk_comb(P, x)),
                                 list_mk_exists(fld_vars,
-                                               mk_comb(P, stdliteral)))),
+                                               mk_comb(P, stdliteral')))),
                 GEN_TAC THEN EQ_TAC THENL [
                   DISCH_THEN (X_CHOOSE_THEN x ASSUME_TAC) THEN
                   EVERY_TCL (map X_CHOOSE_THEN fld_vars)
@@ -825,7 +867,7 @@ fun prove_bigrec_theorems ss (tyname, fldlist) = let
                   MAP_EVERY EXISTS_TAC fld_vars THEN ASM_REWRITE_TAC [],
                   DISCH_THEN (EVERY_TCL (map X_CHOOSE_THEN fld_vars)
                                         ASSUME_TAC) THEN
-                  EXISTS_TAC stdliteral THEN ASM_REWRITE_TAC []
+                  EXISTS_TAC stdliteral' THEN ASM_REWRITE_TAC []
                 ])
 in
   (tyname, [(liteq_name, literal_equality), (lit11_name, literal_11)])
@@ -942,7 +984,7 @@ in
       in
         foldl foldthis (bool_ss ++ combinSimps.COMBIN_ss) tyinfos
       end
-      val newtheorems = map (prove_bigrec_theorems ss) bigrecords
+      val newtheorems = map (prove_bigrec_theorems tyinfos ss) bigrecords
      (* don't need to make this stuff persist because what's adjoined already
         will mention the theorems that should be in the typebase.  What we've
         done here is made the theorems look right. *)
