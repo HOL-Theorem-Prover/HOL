@@ -66,4 +66,5 @@ sig
   val BINOP_TAC : tactic
   val NTAC : int -> tactic -> tactic
   val WEAKEN_TAC :(term -> bool) -> tactic
+  val via :term * tactic -> tactic
 end;

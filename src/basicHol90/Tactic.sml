@@ -599,4 +599,35 @@ fun WEAKEN_TAC P :tactic =
      end;
 
 
+(*---------------------------------------------------------------------------
+     Assertional style reasoning
+ ---------------------------------------------------------------------------*)
+
+(* First we need a variant on THEN. *)
+
+fun mapshape [] _ _ =  []
+  | mapshape (n::nums) (f::funcs) all_args =
+     let val (fargs,rst) = split_after n all_args
+     in
+      f fargs :: mapshape nums funcs rst
+     end
+  | mapshape _ _ _ = raise TACTIC_ERR "mapshape" "irregular lists";
+
+fun THENF (tac1:tactic,tac2:tactic,tac3:tactic) g =
+ case tac1 g
+  of (h::rst, p) =>
+      let val (gl0,p0) = tac2 h
+          val (gln,pn) = unzip (map tac3 rst)
+          val gll = gl0 @ flatten gln
+      in
+        (gll, p o mapshape (length gl0::map length gln) (p0::pn))
+      end
+   | x => x;
+
+infix 8 via;
+
+fun (tm via tac) =
+  THENF (SUBGOAL_THEN tm STRIP_ASSUME_TAC, tac, ALL_TAC)
+  handle e as HOL_ERR _ => raise TACTIC_ERR "via" "";
+
 end; (* Tactic *)

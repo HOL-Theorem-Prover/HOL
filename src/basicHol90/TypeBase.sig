@@ -1,5 +1,7 @@
 signature TypeBase =
 sig
+
+ type hol_type = Type.hol_type
  type term = Term.term
  type thm = Thm.thm
  type ppstream = Portable.ppstream
@@ -37,15 +39,19 @@ sig
   val put_size      : term * thm -> tyinfo -> tyinfo
 
   (* Functional database of datatype facts and associated operations. *)
-  val empty : typeBase
-  val add   : typeBase -> tyinfo -> typeBase
-  val get   : typeBase -> string -> tyinfo option
-  val listItems  : typeBase -> tyinfo list
+  val empty     : typeBase
+  val add       : typeBase -> tyinfo -> typeBase
+  val get       : typeBase -> string -> tyinfo option
+  val listItems : typeBase -> tyinfo list
+
+  val tysize    : (hol_type -> term option) * (string -> term option) 
+                    -> hol_type -> term
+  val type_size : typeBase -> hol_type -> term
 
   (* Imperative database of datatype facts and associated operations. *)
-  val theTypeBase  : unit -> typeBase
-  val write        : tyinfo -> unit
-  val read         : string -> tyinfo option
-  val elts         : unit -> tyinfo list
+  val theTypeBase : unit -> typeBase
+  val write       : tyinfo -> unit
+  val read        : string -> tyinfo option
+  val elts        : unit -> tyinfo list
 
 end;
