@@ -315,15 +315,31 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       end
     else REFL t
   end
+  fun o_assoc_munge th = let
+    (* th of form f o g = x; want to produce f o (g o h) = x o h *)
+    val (l, r) = dest_eq (concl th)
+    val l_ty = type_of l
+    val (dom, rng) = dom_rng l_ty
+    val tyvs = map dest_vartype (type_vars_in_term l)
+    val newtyv = mk_vartype(Lexis.gen_variant Lexis.tyvar_vary tyvs "'a")
+    val h = mk_var("h", newtyv --> dom)
+    val new_o = mk_thy_const{Name = "o", Thy = "combin",
+                             Ty = l_ty --> (type_of h --> (newtyv --> rng))}
+    val newth = AP_THM (AP_TERM new_o th) h
+  in
+    REWRITE_RULE [GSYM combinTheory.o_ASSOC] newth
+  end
+
   fun munge_to_composition thm = let
     val thm = SPEC_ALL thm
     val (l, r) = dest_eq (concl thm)
     val lthm = SYM (to_composition l)
     val rthm = to_composition r
     val new_eq = TRANS (TRANS lthm thm) rthm
-    val gnew_eq = GEN (rand (rand (concl new_eq))) new_eq
+    val gnew_eq = EXT (GEN (rand (rand (concl new_eq))) new_eq)
+    val o_assoc_version = o_assoc_munge gnew_eq
   in
-    GEN_ALL (EXT gnew_eq)
+    CONJ (GEN_ALL gnew_eq) (GEN_ALL o_assoc_version)
   end
   val updupd_comp_thm =
       save_thm(typename^"_updupd_comp",
