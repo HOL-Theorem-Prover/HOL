@@ -104,7 +104,7 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
         out"<DT><STRONG>THEORIES</STRONG>\n";
         out "&nbsp;&nbsp;&nbsp;\n";
         href "(Theory Graph)" 
-             (normPath [HOLpath,"help","theorygraph","theories.html"]);
+             (normPath [HOLpath,"help/theorygraph/theories.html"]);
         out "\n";
         out"<DD>"; prtree theory_of db;
         out "<P>";
