@@ -43,8 +43,8 @@ val ERR = mk_HOL_ERR "Conv";
 (* ---------------------------------------------------------------------*)
 
 fun REWR_CONV0 (part_matcher,fn_name) th =
-  let val instth = part_matcher lhs th handle e 
-           => raise (wrap_exn "Conv" 
+  let val instth = part_matcher lhs th handle e
+           => raise (wrap_exn "Conv"
                  (fn_name^": bad theorem argument: "
                   ^term_to_string (concl th)) e)
   in fn tm =>
@@ -270,16 +270,77 @@ fun FORK_CONV (conv1,conv2) tm =
 
 fun BINOP_CONV conv tm = FORK_CONV (conv,conv) tm;
 
+val OR_CLAUSES' =
+    map GEN_ALL (CONJUNCTS (SPEC_ALL boolTheory.OR_CLAUSES))
+val T_or = List.nth(OR_CLAUSES', 0);
+val or_T = List.nth(OR_CLAUSES', 1);
+val F_or = List.nth(OR_CLAUSES', 2);
+val or_F = List.nth(OR_CLAUSES', 3);
+
+
 fun EVERY_DISJ_CONV c tm =
-  if is_disj tm then BINOP_CONV (EVERY_DISJ_CONV c) tm else c tm
+    case Lib.total Psyntax.dest_disj tm of
+      SOME (d1, d2) => let
+        val d1_thm = c d1
+        val d1' = rhs (concl d1_thm)
+      in
+        if Term.compare(d1', boolSyntax.T) = EQUAL then
+          TRANS (AP_THM (AP_TERM boolSyntax.disjunction d1_thm) d2)
+                (SPEC d2 T_or)
+        else let
+            val d2_thm = c d2
+            val d2' = rhs (concl d2_thm)
+            val result0 =
+                MK_COMB(AP_TERM boolSyntax.disjunction d1_thm, d2_thm)
+          in
+            if Term.compare(d1', boolSyntax.F) = EQUAL then
+              TRANS result0 (SPEC d2' F_or)
+            else if Term.compare(d2', boolSyntax.T) = EQUAL then
+              TRANS result0 (SPEC d1' or_T)
+            else if Term.compare(d2', boolSyntax.F) = EQUAL then
+              TRANS result0 (SPEC d1' or_F)
+            else
+              result0
+          end
+      end
+    | NONE => c tm
+
+val AND_CLAUSES' = map GEN_ALL (CONJUNCTS (SPEC_ALL AND_CLAUSES))
+val T_and = List.nth(AND_CLAUSES', 0)
+val and_T = List.nth(AND_CLAUSES', 1)
+val F_and = List.nth(AND_CLAUSES', 2)
+val and_F = List.nth(AND_CLAUSES', 3)
 
 fun EVERY_CONJ_CONV c tm =
-  if is_conj tm then BINOP_CONV (EVERY_CONJ_CONV c) tm else c tm
+    case Lib.total Psyntax.dest_conj tm of
+      SOME (c1, c2) => let
+        val c1_thm = c c1
+        val c1' = rhs (concl c1_thm)
+      in
+        if Term.compare(c1', boolSyntax.F) = EQUAL then
+          TRANS (AP_THM (AP_TERM boolSyntax.conjunction c1_thm) c2)
+                (SPEC c2 F_and)
+        else let
+            val c2_thm = c c2
+            val c2' = rhs (concl c2_thm)
+            val result0 =
+                MK_COMB(AP_TERM boolSyntax.conjunction c1_thm, c2_thm)
+          in
+            if Term.compare(c1', boolSyntax.T) = EQUAL then
+              TRANS result0 (SPEC c2' T_and)
+            else if Term.compare(c2', boolSyntax.F) = EQUAL then
+              TRANS result0 (SPEC c1' and_F)
+            else if Term.compare(c2', boolSyntax.T) = EQUAL then
+              TRANS result0 (SPEC c1' and_T)
+            else result0
+          end
+      end
+    | NONE => c tm
 
 fun QUANT_CONV conv    = RAND_CONV(ABS_CONV conv);
 
 fun STRIP_QUANT_CONV conv tm =
-  if is_forall tm orelse is_exists tm orelse 
+  if is_forall tm orelse is_exists tm orelse
      is_select tm orelse is_exists1 tm
   then
     QUANT_CONV (STRIP_QUANT_CONV conv) tm
@@ -1427,9 +1488,9 @@ fun bool_EQ_CONV tm =
    let val {lhs,rhs} = dest_eq tm
        val _ = if type_of rhs = Type.bool then ()
                else raise ERR"bool_EQ_CONV" "does not have boolean type"
-   in if lhs=rhs then EQT_INTRO (REFL lhs) else 
-      if lhs=T then SPEC rhs Tb else 
-      if rhs=T then SPEC lhs bT 
+   in if lhs=rhs then EQT_INTRO (REFL lhs) else
+      if lhs=T then SPEC rhs Tb else
+      if rhs=T then SPEC lhs bT
       else raise ERR"bool_EQ_CONV" "inapplicable"
    end
    handle e => raise (wrap_exn "Conv" "bool_EQ_CONV" e)
@@ -1510,9 +1571,9 @@ fun COND_CONV tm =
  let val {cond,larm,rarm} = dest_cond tm
      val INST_TYPE' = INST_TYPE [alpha |-> type_of larm]
  in
-   if (cond=T) then SPEC rarm (SPEC larm (INST_TYPE' CT)) else 
-   if (cond=F) then SPEC rarm (SPEC larm (INST_TYPE' CF)) else 
-   if (larm=rarm) then SPEC larm (SPEC cond (INST_TYPE' COND_ID)) else 
+   if (cond=T) then SPEC rarm (SPEC larm (INST_TYPE' CT)) else
+   if (cond=F) then SPEC rarm (SPEC larm (INST_TYPE' CF)) else
+   if (larm=rarm) then SPEC larm (SPEC cond (INST_TYPE' COND_ID)) else
    if (aconv larm rarm)
      then let val cnd = AP_TERM (rator tm) (ALPHA rarm larm)
               val th = SPEC larm (SPEC cond (INST_TYPE' COND_ID))
@@ -1550,7 +1611,7 @@ fun EXISTENCE th =
        val {Rator,Rand} = dest_comb(concl th)
        val {Bvar,...} = dest_abs Rand
    in
-     MP (SPEC Rand (INST_TYPE [alpha |-> type_of Bvar] 
+     MP (SPEC Rand (INST_TYPE [alpha |-> type_of Bvar]
                       (GEN P (DISCH ex1P th2)))) th
    end
    handle HOL_ERR _ => raise ERR "EXISTENCE" ""
@@ -1615,7 +1676,7 @@ fun AC_CONV(associative,commutative) =
             else raise ERR"AC_CONV" "asce"
             end
  in
-  fn tm => 
+  fn tm =>
     let val init = TOP_DEPTH_CONV (REWR_CONV ass) tm
         val gl = rhs (concl init)
     in EQT_INTRO (EQ_MP (SYM init) (asce (dest_eq gl)))
@@ -1642,11 +1703,11 @@ val GSYM = CONV_RULE(ONCE_DEPTH_CONV SYM_CONV);
  ---------------------------------------------------------------------------*)
 local
   fun rename vname t = let
-    val (dest, mk) = 
-        if is_exists t then (dest_exists, mk_exists) else 
-        if is_forall t then (dest_forall, mk_forall) else 
-        if is_abs t then (dest_abs, mk_abs) else 
-        if is_select t then (dest_select, mk_select) else 
+    val (dest, mk) =
+        if is_exists t then (dest_exists, mk_exists) else
+        if is_forall t then (dest_forall, mk_forall) else
+        if is_abs t then (dest_abs, mk_abs) else
+        if is_select t then (dest_select, mk_select) else
         if is_exists1 t then (dest_exists1, mk_exists1)
         else raise ERR "rename_vars" "Term not a binder"
     val {Bvar=oldv, Body=body} = dest t

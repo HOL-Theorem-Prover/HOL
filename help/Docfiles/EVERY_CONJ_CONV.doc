@@ -17,8 +17,18 @@ those that would be returned by a call to {strip_conj c}.  In
 particular, if the term as a whole is not a conjunction, then the
 conversion will be applied to the whole term.
 
+If the result of the application of the conversion to one of the
+conjuncts is one of the constants true or false, then one of two
+standard rewrites is applied, simplifying the resulting term.  If one
+of the conjuncts is converted to false, then the conversion will not be
+applied to the remaining conjuncts (the conjuncts are worked on from
+left to right), and the result of the whole application will simply be
+false.  Alternatively, conjuncts that are converted to true will not
+appear in the final result at all.
+
+
 \FAILURE
-Fails if the conversion argument fails when applied to any of the
+Fails if the conversion argument fails when applied to one of the
 top-level conjuncts in a term.
 
 \EXAMPLE

@@ -17,8 +17,17 @@ those that would be returned by a call to {strip_disj c}. In
 particular, if the term as a whole is not a disjunction, then the
 conversion will be applied to the whole term.
 
+If the result of the application of the conversion to one of the
+disjuncts is one of the constants true or false, then one of two
+standard rewrites is applied, simplifying the resulting term.  If one
+of the disjuncts is converted to true, then the conversion will not be
+applied to the remaining disjuncts (the disjuncts are worked on from
+left to right), and the result of the whole application will simply be
+true.  Alternatively, disjuncts that are converted to false will not
+appear in the final result at all.
+
 \FAILURE
-Fails if the conversion argument fails when applied to any of the
+Fails if the conversion argument fails when applied to one of the
 top-level disjuncts in the term.
 
 \EXAMPLE
@@ -28,6 +37,8 @@ top-level disjuncts in the term.
 > val it =
     |- (\x. x /\ p) q \/ (\x. x) r \/ (\y. s /\ y) u = q /\ p \/ r \/ s /\ u
     : thm
+- EVERY_DISJ_CONV REDUCE_CONV ``3 < x \/ 2 < 3 \/ 2 EXP 1000 < 10``;
+> val it = |- 3 < x \/ 2 < 3 \/ 2 EXP 1000 < 10 = T : thm
 }
 \USES
 Useful for applying a conversion to all of the ``significant''
