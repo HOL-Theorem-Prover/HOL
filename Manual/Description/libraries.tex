@@ -865,6 +865,72 @@ it by \ml{step}, and gives up when $d$ exceeds \ml{max}.
 
 \section{The \texttt{simp} library}
 \label{sec:simpLib}
+\index{simplification}
+
+\subsection{Introduction}
+The \ml{simp} library implements \HOL's most sophisticated rewriting
+engine.  It is recommended as a general purpose work-horse during
+interactive theorem-proving.  As a rewriting tool, the simplifier's
+general role is to apply theorems of the general form \[
+\vdash l = r
+\]
+to terms, replacing instances of $l$ in the term with $r$. Thus, the
+basic simplification routine is a \emph{conversion}, taking a term
+$t$, and returning a theorem $\vdash t = t'$, or the exception
+\ml{UNCHANGED}.
+
+The basic conversion is
+\begin{verbatim}
+   simpLib.SIMP_CONV : simpLib.simpset -> thm list -> term -> thm
+\end{verbatim}
+The first argument, a \simpset, is the standard way of providing a
+collection of rewrite rules (and other data, to be explained below) to
+the simplifier.  There are \simpset{}s accompanying most of \HOL's
+major theories.  For example, the \simpset{} \ml{boolSimps.bool\_ss}
+embodies all of the usual rewrite theorems one would want over boolean
+formulas:
+\begin{session}
+\begin{verbatim}
+   - SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
+   > val it = |- p /\ T \/ ~(q /\ r) = p \/ ~q \/ ~r : thm
+\end{verbatim}
+\end{session}
+In addition, to rewriting with the obvious theorems, \ml{bool\_ss} is
+also capable of performing simplifications that are not expressible as
+simple theorems:
+\begin{session}
+\begin{verbatim}
+   - SIMP_CONV bool_ss [] ``?x. (\y. P (f y)) x /\ (x = z)``;
+   > val it = |- (?x. (\y. P (f y)) x /\ (x = z)) = P (f z) : thm
+\end{verbatim}
+\end{session}
+In this example, the simplifier performed a $\beta$-reduction in the
+first conjunct under the existential quantifier, and then did an
+``unwinding'' or ``one-point'' reduction, recognising that the only
+possible value for the quantified variable \ml{x} was the value \ml{z}.
+
+The second argument to \ml{SIMP\_CONV} is a list of theorems to be
+added to the provided \simpset, and used as additional rewrite rules.
+In this way, users can temporarily augment standard \simpset{}s with
+their own rewrites.  If a particular set of theorems is often used as
+such an argument, then it is possible to build a \simpset{} value to
+embody these new rewrites.
+
+For example, the rewrite \ml{arithmeticTheory.LEFT\_ADD\_DISTRIB}, which
+states that $p(m + n) = pm + pn$ is not part of any of \HOL's standard
+\simpset{}s.  This is because it can cause an unappealing increase in
+term size (because there are two occurrences of $p$ on the right hand
+side of the theorem).  Nonetheless, it is clear that this theorem may
+be appropriate on occasion:
+\begin{session}
+\begin{verbatim}
+   - SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
+   > val it = |- p * (n + 1) = p + p * n : thm
+\end{verbatim}
+\end{session}
+Note how the \ml{arith\_ss} \simpset{} has not only simplified the
+intermediate \ml{(p * 1)} term, but also re-ordered the addition to
+put the simpler term on the left.
 
 \section{The \texttt{compute} library}
 \label{sec:computeLib}
