@@ -49,13 +49,13 @@ fun failwith function = raise (mk_HOL_ERR "Solve" function  "")
 (*---------------------------------------------------------------------------*)
 
 fun INEQS_FALSE_CONV tm =
- (let val ineqs = strip_conj tm
-      val rev_ineqs = rev ineqs
-      val coeffsl = map coeffs_of_leq ineqs
-      val falses =
+ let val ineqs = strip_conj tm
+     val rev_ineqs = rev ineqs
+     val coeffsl = map coeffs_of_leq ineqs
+     val falses =
          filter (fn (const,bind) => (null bind) andalso (const < zero)) coeffsl
-      val th =
-         if (null falses)
+     val th =
+         if null falses
          then let val var_names = Lib.mk_set(map fst(flatten(map snd coeffsl)))
                   val coeffsl' =
                      (map (fn v => (zero, [(v,one)])) var_names) @ coeffsl
@@ -66,13 +66,14 @@ fun INEQS_FALSE_CONV tm =
               in  itlist PROVE_HYP axioms (f ())
               end
          else ASSUME (build_leq (hd falses))
-      val th' = CONV_RULE LEQ_CONV th
-      val th'' = DISCH (hd rev_ineqs) th'
-      fun conj_disch tm th = CONV_RULE IMP_IMP_CONJ_IMP_CONV (DISCH tm th)
-      val th''' = itlist conj_disch (rev (tl rev_ineqs)) th''
-  in  CONV_RULE IMP_F_EQ_F_CONV th'''
+     val th' = CONV_RULE LEQ_CONV th
+     val th'' = DISCH (hd rev_ineqs) th'
+     fun conj_disch tm th = CONV_RULE IMP_IMP_CONJ_IMP_CONV (DISCH tm th)
+     val th''' = itlist conj_disch (rev (tl rev_ineqs)) th''
+  in 
+      CONV_RULE IMP_F_EQ_F_CONV th'''
   end
- ) handle (HOL_ERR _) => failwith "INEQS_FALSE_CONV";
+  handle HOL_ERR _ => failwith "INEQS_FALSE_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* DISJ_INEQS_FALSE_CONV : conv                                              *)
@@ -82,7 +83,7 @@ fun INEQS_FALSE_CONV tm =
 (*---------------------------------------------------------------------------*)
 
 fun DISJ_INEQS_FALSE_CONV tm =
- (if (is_disj tm)
+ (if is_disj tm
   then ((RATOR_CONV (RAND_CONV INEQS_FALSE_CONV)) THENC
         OR_F_CONV THENC
         DISJ_INEQS_FALSE_CONV) tm
@@ -127,9 +128,8 @@ fun NEGATE_CONV conv tm =
      val th = RULE_OF_CONV conv (if neg then (dest_neg tm) else (mk_neg tm))
      val r = rhs (concl th)
      val truth_th =
-        if (is_T r) then NOT_T_F
-        else if (is_F r) then NOT_F_T
-        else failwith "NEGATE_CONV"
+        if is_T r then NOT_T_F else 
+        if is_F r then NOT_F_T else failwith "NEGATE_CONV"
      val neg_fn = if neg then I else TRANS (NOT_NOT_INTRO_CONV tm)
  in  neg_fn (TRANS (AP_TERM neg_tm th) truth_th)
  end;
@@ -144,9 +144,9 @@ fun NEGATE_CONV conv tm =
 (*---------------------------------------------------------------------------*)
 
 fun DEPTH_FORALL_CONV conv tm =
- if (is_forall tm)
- then RAND_CONV (ABS_CONV (DEPTH_FORALL_CONV conv)) tm
- else conv tm;
+   if is_forall tm
+   then RAND_CONV (ABS_CONV (DEPTH_FORALL_CONV conv)) tm
+   else conv tm;
 
 (*---------------------------------------------------------------------------*)
 (* FORALL_ARITH_CONV : conv                                                  *)
@@ -171,13 +171,13 @@ fun FORALL_ARITH_CONV tm =
   (DEPTH_FORALL_CONV
     (NEGATE_CONV
       ((fn tm => ARITH_FORM_NORM_CONV tm
-                 handle (HOL_ERR _) =>
+                 handle HOL_ERR _ =>
                  raise HOL_ERR{origin_structure = "Solve",
                                origin_function = "FORALL_ARITH_CONV",
                                message = "formula not in the allowed subset"}
        ) THENC
        (fn tm => DISJ_INEQS_FALSE_CONV tm
-                 handle (HOL_ERR _) =>
+                 handle HOL_ERR _ =>
                  raise HOL_ERR{origin_structure = "Solve",
                                origin_function = "FORALL_ARITH_CONV",
                                message = "cannot prove formula"}

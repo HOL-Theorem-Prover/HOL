@@ -89,13 +89,12 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
               else failwith "fail")) tm
         end)
   else ((ARGS_CONV arith_conv) THENC
-        (if (is_eq tm) then (NUM_EQ_NORM_CONV THENC (ARGS_CONV leq_conv))
-         else if (is_leq tm) then leq_conv
-         else if (is_less tm) then
+        (if is_eq tm then (NUM_EQ_NORM_CONV THENC (ARGS_CONV leq_conv)) else 
+         if is_leq tm then leq_conv else 
+         if is_less tm then
             (LESS_NORM_CONV THENC
-             (RATOR_CONV
-               (RAND_CONV (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC
-             leq_conv)
+              (RATOR_CONV 
+                (RAND_CONV (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC leq_conv)
          else if (is_great tm) then
             (GREAT_NORM_CONV THENC
              (RATOR_CONV
@@ -103,7 +102,9 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
              leq_conv)
          else if (is_geq tm) then (GEQ_NORM_CONV THENC leq_conv)
          else failwith "fail")) tm
- ) handle e => raise (wrap_exn "Norm_arith" "NUM_RELN_NORM_CONV" e);
+ ) handle Interrupt => raise Interrupt
+       | e as HOL_ERR _ => raise (wrap_exn "Norm_arith" "NUM_RELN_NORM_CONV" e)
+       
 
 (*---------------------------------------------------------------------------*)
 (* MULT_CONV : conv                                                          *)
@@ -181,7 +182,7 @@ fun FAST_MULT_CONV tm =
                      end
             end)
   end
- ) handle (Feedback.HOL_ERR _) => failwith "FAST_MULT_CONV";
+ ) handle (HOL_ERR _) => failwith "FAST_MULT_CONV";
 
 fun reset_multiplication_theorems () =
    multiplication_theorems := ([]:((int * int) * thm) list);
@@ -205,7 +206,8 @@ val multiplication_theorems = fn () => !multiplication_theorems;
 (*---------------------------------------------------------------------------*)
 
 val num_ty = Arith_cons.num_ty
-val plus_tm = mk_const{Name = "+",Ty = num_ty --> num_ty --> num_ty}
+val plus_tm = numSyntax.plus_tm;
+
 fun SUM_OF_PRODUCTS_SUC_CONV tm =
  let val add1 = term_of_int o (curry (op +) one) o int_of_term
  in

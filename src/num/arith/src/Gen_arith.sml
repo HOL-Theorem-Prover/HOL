@@ -17,17 +17,18 @@
 
 structure Gen_arith :> Gen_arith =
 struct
-  open Arbint
-  val << = String.<
 
+open Arbint HolKernel boolLib Rsyntax
+     Arith_cons Solve Exists_arith 
+     Sub_and_cond Prenex Instance Qconv; 
 
-open HolKernel boolLib Rsyntax;
-open Arith_cons Solve Exists_arith Sub_and_cond Prenex Instance
-open Qconv; infix THENC;
+infix THENC;
 
 val REWRITE_CONV = Rewrite.REWRITE_CONV;
 
 fun failwith function = raise (mk_HOL_ERR "Gen_arith" function "");
+
+val << = String.<;
 
 
 (*---------------------------------------------------------------------------*)
@@ -140,28 +141,16 @@ val is_presburger = (all is_num_var) o non_presburger_subterms;
 (*---------------------------------------------------------------------------*)
 
 val ARITH_CONV =
-   let val BOOL_SIMP_CONV = REWRITE_CONV []
-       fun GEN_ARITH_CONV tm =
-          if (is_exists tm)
-          then ((EXISTS_ARITH_CONV tm)
-                handle (HOL_ERR {origin_structure,
-                                 origin_function = "EXISTS_ARITH_CONV",
-                                 message}) =>
-                raise HOL_ERR {origin_structure = "Gen_arith",
-                               origin_function = "ARITH_CONV",
-                               message = message})
-          else ((INSTANCE_T_CONV non_presburger_subterms FORALL_ARITH_CONV tm)
-                handle (HOL_ERR {origin_structure,
-                                 origin_function = "FORALL_ARITH_CONV",
-                                 message}) =>
-                raise HOL_ERR {origin_structure = "Gen_arith",
-                               origin_function = "ARITH_CONV",
-                               message = message})
-   in  SUB_AND_COND_ELIM_CONV THENC
-       BOOL_SIMP_CONV THENC
-       (fn tm => if (is_T tm) orelse (is_F tm)
-                 then ALL_CONV tm
-                 else (PRENEX_CONV THENC GEN_ARITH_CONV) tm)
-   end;
+ let val BOOL_SIMP_CONV = REWRITE_CONV []
+     fun GEN_ARITH_CONV tm =
+       (if is_exists tm
+       then EXISTS_ARITH_CONV tm
+       else INSTANCE_T_CONV non_presburger_subterms FORALL_ARITH_CONV tm)
+       handle e => raise (wrap_exn "Gen_arith" "ARITH_CONV" e)
+ in 
+   SUB_AND_COND_ELIM_CONV THENC BOOL_SIMP_CONV THENC 
+   (fn tm => if (is_T tm) orelse (is_F tm) then ALL_CONV tm
+             else (PRENEX_CONV THENC GEN_ARITH_CONV) tm)
+ end;
 
 end
