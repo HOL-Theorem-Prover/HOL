@@ -2554,6 +2554,18 @@ val REAL_POS_MONO = store_thm
    RW_TAC boolSimps.bool_ss [pos_def, REAL_LE_REFL]
    THEN PROVE_TAC [REAL_LE_TOTAL, REAL_LE_TRANS]);
 
+val REAL_POS_EQ_ZERO = store_thm
+  ("REAL_POS_EQ_ZERO",
+   ``!x. (pos x = 0) = x <= 0``,
+   RW_TAC boolSimps.bool_ss [pos_def]
+   THEN PROVE_TAC [REAL_LE_ANTISYM, REAL_LE_TOTAL])
+
+val REAL_POS_LE_ZERO = store_thm
+  ("REAL_POS_LE_ZERO",
+   ``!x. (pos x <= 0) = x <= 0``,
+   RW_TAC boolSimps.bool_ss [pos_def]
+   THEN PROVE_TAC [REAL_LE_ANTISYM, REAL_LE_TOTAL])
+
 (* ------------------------------------------------------------------------- *)
 (* Define the minimum of two real numbers                                    *)
 (* ------------------------------------------------------------------------- *)
@@ -2606,6 +2618,81 @@ val REAL_MIN_LE_LIN = store_thm
           THEN (REVERSE CONJ_TAC THEN1 PROVE_TAC [REAL_LE_REFL])
           THEN MATCH_MP_TAC REAL_LE_LMUL_IMP
           THEN ASM_REWRITE_TAC []]);
+
+val REAL_MIN_ADD = store_thm
+  ("REAL_MIN_ADD",
+   ``!x y z. min (x + z) (y + z) = min x y + z``,
+   RW_TAC boolSimps.bool_ss [min_def, REAL_LE_RADD]);
+
+val REAL_MIN_SUB = store_thm
+  ("REAL_MIN_SUB",
+   ``!x y z. min (x - z) (y - z) = min x y - z``,
+   RW_TAC boolSimps.bool_ss [min_def, REAL_LE_SUB_RADD, REAL_SUB_ADD]);
+
+(* ------------------------------------------------------------------------- *)
+(* Define the minimum of two real numbers                                    *)
+(* ------------------------------------------------------------------------- *)
+
+val max_def = Define `max (x : real) y = if x <= y then y else x`;
+
+val REAL_MAX_REFL = store_thm
+  ("REAL_MAX_REFL",
+   ``!x. max x x = x``,
+   RW_TAC boolSimps.bool_ss [max_def]);
+
+val REAL_LE_MAX = store_thm
+  ("REAL_LE_MAX",
+   ``!x y. x <= max x y /\ y <= max x y``,
+   RW_TAC boolSimps.bool_ss [max_def, REAL_LE_REFL]
+   THEN PROVE_TAC [REAL_LE_TOTAL]);
+
+val REAL_MAX_LE = store_thm
+  ("REAL_MAX_LE",
+   ``!x y z. z <= x /\ z <= y ==> z <= max x y``,
+   RW_TAC boolSimps.bool_ss [max_def]);
+
+val REAL_MAX_ALT = store_thm
+  ("REAL_MAX_ALT",
+   ``!x y. (x <= y ==> (max x y = y)) /\ (y <= x ==> (max x y = x))``,
+   RW_TAC boolSimps.bool_ss [max_def]
+   THEN PROVE_TAC [REAL_LE_ANTISYM]);
+
+val REAL_MAX_MIN = store_thm
+  ("REAL_MAX_MIN",
+   ``!x y. max x y = ~min (~x) (~y)``,
+   REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPECL [`x`, `y`] REAL_LE_TOTAL)
+   THEN STRIP_TAC
+   THEN RW_TAC boolSimps.bool_ss
+        [REAL_MAX_ALT, REAL_MIN_ALT, REAL_LE_NEG2, REAL_NEGNEG]);
+
+val REAL_MIN_MAX = store_thm
+  ("REAL_MIN_MAX",
+   ``!x y. min x y = ~max (~x) (~y)``,
+   REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPECL [`x`, `y`] REAL_LE_TOTAL)
+   THEN STRIP_TAC
+   THEN RW_TAC boolSimps.bool_ss
+        [REAL_MAX_ALT, REAL_MIN_ALT, REAL_LE_NEG2, REAL_NEGNEG]);
+
+val REAL_LIN_LE_MAX = store_thm
+  ("REAL_LIN_LE_MAX",
+   ``!x y z. 0 <= z /\ z <= 1 ==> z * x + (1 - z) * y <= max x y``,
+   RW_TAC boolSimps.bool_ss []
+   THEN MP_TAC (Q.SPECL [`~x`, `~y`, `z`] REAL_MIN_LE_LIN) 
+   THEN RW_TAC boolSimps.bool_ss
+        [REAL_MIN_MAX, REAL_NEGNEG, REAL_MUL_RNEG, GSYM REAL_NEG_ADD,
+         REAL_LE_NEG2]);
+
+val REAL_MAX_ADD = store_thm
+  ("REAL_MAX_ADD",
+   ``!x y z. max (x + z) (y + z) = max x y + z``,
+   RW_TAC boolSimps.bool_ss [max_def, REAL_LE_RADD]);
+
+val REAL_MAX_SUB = store_thm
+  ("REAL_MAX_SUB",
+   ``!x y z. max (x - z) (y - z) = max x y - z``,
+   RW_TAC boolSimps.bool_ss [max_def, REAL_LE_SUB_RADD, REAL_SUB_ADD]);
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems to put in the real simpset                                       *)
@@ -2766,10 +2853,12 @@ val REAL_DIV_ADD = store_thm
 val REAL_LE_SUB_CANCEL2 = store_thm
   ("REAL_LE_SUB_CANCEL2",
    ``!x y z : real. x - z <= y - z = x <= y``,
-   REPEAT GEN_TAC
-   THEN (SUFF_TAC ``((x:real) - z) + z <= (y - z) + z = x <= y``
-         THEN1 RW_TAC boolSimps.bool_ss [REAL_LE_RADD])
-   THEN RW_TAC boolSimps.bool_ss [REAL_SUB_ADD]);
+   RW_TAC boolSimps.bool_ss [REAL_LE_SUB_RADD, REAL_SUB_ADD]);
+
+val REAL_ADD_SUB_ALT = store_thm
+  ("REAL_ADD_SUB_ALT",
+   ``!x y : real. (x + y) - y = x``,
+   RW_TAC boolSimps.bool_ss [REAL_EQ_SUB_RADD]);
 
 val _ = export_theory();
 
