@@ -22,7 +22,18 @@ val _ = new_infix_type{Name="fun",  Arity=2, ParseName = SOME "->",
                        Assoc = HOLgrammars.RIGHT, Prec = 50};
 
 val _ = new_infix{Name = "=",   Ty=Type `: 'a -> 'a -> bool`,     Prec=100};
-val _ = new_infix{Name = "==>", Ty=Type `: bool -> bool -> bool`, Prec=200};
+
+(* using the standard rules for infixes for ==> seems to result in bad
+   pretty-printing of goals.  I think the following customised printing
+   spec works better.  The crucial difference is that the blocking style
+   is CONSISTENT rather than INCONSISTENT. *)
+val _ = new_constant{Name = "==>", Ty = Type`:bool -> bool -> bool`};
+val _ = add_rule {term_name = "==>",
+                  block_style = (AroundSamePrec, (PP.CONSISTENT, 0)),
+                  fixity = Infix(RIGHT, 200),
+                  pp_elements = [HardSpace 1, TOK "==>", BreakSpace(1,0)],
+                  paren_style = OnlyIfNecessary};
+
 val _ = new_binder{Name ="@",   Ty=Type `: ('a -> bool) -> 'a`};
 
 val _ = adjoin_to_theory
