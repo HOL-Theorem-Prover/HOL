@@ -16,7 +16,12 @@ val ddiv = Arbnum.div
 val mmod = Arbnum.mod
 val AZ = Arbnum.zero
 
-infix ++ -- ** << ddiv mmod
+val zero = (true, Arbnum.zero)
+val one = (true, Arbnum.one)
+val two = (true, Arbnum.two)
+
+infix ++ -- ** <<
+infix 7 ddiv mmod
 
 fun norm_zeros (i as (b,n)) = if not b andalso n = AZ then (true, AZ) else i
 
@@ -37,14 +42,42 @@ fun ((true, n1) * (true, n2)) = (true, n1 ** n2)
   | ((false, n1) * (false, n2)) = (true, n1 ** n2)
 
 fun ((true, n1) div (true, n2)) = (true, n1 ddiv n2)
-  | ((true, n1) div (false, n2)) = norm_zeros (false, n1 ddiv n2)
-  | ((false, n1) div (true, n2)) = norm_zeros (false, n1 ddiv n2)
+  | ((true, n1) div (false, n2)) = let val (q,r) = Arbnum.divmod(n1, n2)
+                                   in if r <> Arbnum.zero then
+                                        (false, q ++ Arbnum.one)
+                                      else norm_zeros (false, q)
+                                   end
+  | ((false, n1) div (true, n2)) = let val (q,r) = Arbnum.divmod(n1, n2)
+                                   in if r <> Arbnum.zero then
+                                        (false, q ++ Arbnum.one)
+                                      else norm_zeros (false, q)
+                                   end
   | ((false, n1) div (false, n2)) = (true, n1 ddiv n2)
 
 fun ((true, n1) mod (true, n2)) = (true, n1 mmod n2)
-  | ((true, n1) mod (false, n2)) = norm_zeros (false, n1 mmod n2)
-  | ((false, n1) mod (true, n2)) = (true, n1 mmod n2)
+  | ((true, n1) mod (false, n2)) = let val m = n1 mmod n2
+                                   in
+                                     if m = AZ then zero else (false, n2 -- m)
+                                   end
+  | ((false, n1) mod (true, n2)) = let val m = n1 mmod n2
+                                   in
+                                     if m = AZ then zero else (true, n2 -- m)
+                                   end
   | ((false, n1) mod (false, n2)) = norm_zeros (false, n1 mmod n2)
+
+infix 7 quot rem
+
+fun ((true, n1) quot (true, n2)) = (true, n1 ddiv n2)
+  | ((true, n1) quot (false, n2)) = norm_zeros (false, n1 ddiv n2)
+  | ((false, n1) quot (true, n2)) = norm_zeros (false, n1 ddiv n2)
+  | ((false, n1) quot (false, n2)) = (true, n1 ddiv n2)
+
+fun ((true, n1) rem (true, n2)) = (true, n1 mmod n2)
+  | ((true, n1) rem (false, n2)) = norm_zeros (false, n1 mmod n2)
+  | ((false, n1) rem (true, n2)) = norm_zeros (false, n1 mmod n2)
+  | ((false, n1) rem (false, n2)) = (true, n1 mmod n2)
+
+fun quotrem(i,j) = (i quot j, i rem j)
 
 fun (true, n1) < (true, n2) = n1 << n2
   | (true, _) < (false, _) = false
@@ -79,10 +112,6 @@ fun fromInt n =
   if (Int.<(n,0)) then (false, Arbnum.fromInt(Int.-(0, n)))
   else (true, Arbnum.fromInt n)
 
-
-val zero = (true, Arbnum.zero)
-val one = (true, Arbnum.one)
-val two = (true, Arbnum.two)
 
 fun abs (_, n) = (true, n)
 

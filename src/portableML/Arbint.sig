@@ -22,7 +22,10 @@ sig
   val *      : (int * int) -> int
   val div    : (int * int) -> int
   val mod    : (int * int) -> int
+  val quot   : (int * int) -> int
+  val rem    : (int * int) -> int
   val divmod : (int * int) -> (int * int)
+  val quotrem: (int * int) -> (int * int)
   val negate : int -> int
   val ~      : int -> int
 
