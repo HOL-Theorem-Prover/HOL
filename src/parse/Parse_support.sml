@@ -217,12 +217,12 @@ local val num_ty = Pretype.Tyop("num",[])
       fun funty ty1 ty2 = Pretype.Tyop("fun",[ty1,ty2])
       fun mk_comb(ptm1,ptm2) = Preterm.Comb{Rator=ptm1,Rand=ptm2}
       val CHAR = Preterm.Const
-                   {Name="CHAR",Thy="string",Ty=funty num_ty char_ty}
+                   {Name="CHR",Thy="string",Ty=funty num_ty char_ty}
       val STRING = Preterm.Const {Name="STRING",Thy="string",
                       Ty=funty char_ty (funty string_ty string_ty)}
       val EMPTY = Preterm.Const
                       {Name="EMPTYSTRING",Thy="string",Ty=string_ty}
-      fun mk_char ptm = Preterm.Comb{Rator=CHAR,Rand=ptm}
+      fun mk_chr ptm = Preterm.Comb{Rator=CHR,Rand=ptm}
       fun mk_string (ptm1,ptm2) = 
           Preterm.Comb{Rator=Preterm.Comb{Rator=STRING,Rand=ptm1},Rand=ptm2}
       val mk_numeral = Literal.gen_mk_numeral
@@ -240,7 +240,7 @@ fun make_string_literal s =
  Literal.mk_string_lit
      {mk_string = mk_string,
       emptystring = EMPTY,
-      fromMLchar = fn ch => mk_char(mk_numeral(Arbnum.fromInt (Char.ord ch)))}
+      fromMLchar = fn ch => mk_chr(mk_numeral(Arbnum.fromInt (Char.ord ch)))}
   (String.substring(s,1,String.size s - 2))
 end;
 
