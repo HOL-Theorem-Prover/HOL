@@ -9,20 +9,40 @@
 structure hol88Lib :> hol88Lib =
 struct
 
-  type thm      = Thm.thm
-  type term     = Term.term
-  type hol_type = Type.hol_type
-  type tactic   = Abbrev.tactic
-  type conv     = Abbrev.conv
+open Lib Abbrev
 
 fun COMPAT_ERR{function,message} =
- Exception.HOL_ERR{origin_structure = "Compat",
+ Feedback.HOL_ERR{origin_structure = "hol88Lib",
                origin_function = function,
                message = message};
+infix ##;
+
+type ('a,'b)hol88subst = ('b * 'a) list
+
+fun pair2recd (M,v) = {redex=v, residue=M}
+fun recd2pair{redex,residue} = (residue,redex);
+
+fun hol88subst_of s = map recd2pair s;
+fun subst_of s = map pair2recd s;
+
+val type_subst             = Type.type_subst o subst_of
+fun match_type ty          = hol88subst_of o Type.match_type ty
+val subst                  = Term.subst o subst_of
+val inst                   = Term.inst o subst_of
+fun subst_occs occs_list   = HolKernel.subst_occs occs_list o subst_of
+fun match_term pat ob      = (hol88subst_of ## hol88subst_of) 
+                             (Term.match_term pat ob)
+
+fun SUBST s template th    = Thm.SUBST (subst_of s) template th
+val INST                   = Thm.INST o subst_of
+val INST_TYPE              = Thm.INST_TYPE o subst_of;
+fun SUBST_CONV s templ tm  = Drule.SUBST_CONV (subst_of s) templ tm
+val INST_TY_TERM           = Drule.INST_TY_TERM o (subst_of##subst_of);
+
 
 val setify = Lib.mk_set;
 val find = Lib.first;
-val match = Psyntax.match_term;
+val match = match_term;
 val prove_thm = Tactical.store_thm;
 val string_of_int = Lib.int_to_string
 val int_of_string = Lib.string_to_int;
@@ -30,18 +50,15 @@ fun save s = (Portable.output(Portable.std_out,
               "\n!! Not able to export images in MoscowML!!\n");   false);
 
 fun assoc i alist =
-   case (Lib.assoc1 i alist)
-     of NONE => raise COMPAT_ERR{function = "assoc",
-                                 message = ""}
+   case Lib.assoc1 i alist
+     of NONE => raise COMPAT_ERR{function = "assoc",message = ""}
       | (SOME x) => x;
 fun rev_assoc i alist =
-   case (Lib.assoc2 i alist)
-     of NONE => raise COMPAT_ERR{function = "rev_assoc",
-                                 message = ""}
+   case Lib.assoc2 i alist
+     of NONE => raise COMPAT_ERR{function = "rev_assoc",message = ""}
       | (SOME x) => x;
 
-
-val inst_type = Psyntax.type_subst;
+val inst_type = type_subst;
 
 val frees = rev o Term.free_vars;
 val freesl = rev o Term.free_varsl;
@@ -54,19 +71,20 @@ fun GEN_ALL th =
                             (freesl(Thm.hyp th)))
               th;
 
-fun new_axiom(s,tm) = Theory.new_axiom(s,Dsyntax.gen_all tm);
+fun new_axiom(s,tm) = Theory.new_axiom(s,boolSyntax.gen_all tm);
 
-val conjuncts = Dsyntax.strip_conj
-val disjuncts = Dsyntax.strip_disj
+val conjuncts = boolSyntax.strip_conj
+val disjuncts = boolSyntax.strip_disj
 
 
 fun new_prim_rec_definition (name,tm) =
-  Psyntax.new_recursive_definition prim_recTheory.num_Axiom name tm
+  Prim_rec.new_recursive_definition
+   {name=name, def=tm, rec_axiom=prim_recTheory.num_Axiom}
 
 fun new_infix_prim_rec_definition(name,tm,prec) = let
 in
-  Psyntax.new_recursive_definition prim_recTheory.num_Axiom name tm before
-  Lib.mesg true "Term not defined as infix - use set_fixity to do this"
+  new_prim_rec_definition (name,tm) before
+  Feedback.HOL_MESG "Term not defined as infix - use set_fixity to do this"
 end
 
 
@@ -81,9 +99,8 @@ val forall = Lib.all;
  * Plus, they return different answers: hol88 includes the current theory,
  * hol90 doesn't.
  *---------------------------------------------------------------------------*)
-fun ancestry() = Theory.current_theory()::Theory.ancestry"-";
 
-fun butlast L = Lib.fst (Lib.front_last L);
+fun ancestry() = Theory.current_theory()::Theory.ancestry"-";
 
 fun CB f g x = g(f x);
 fun KI x y = Lib.K Lib.I x y;
