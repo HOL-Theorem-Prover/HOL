@@ -1,0 +1,287 @@
+\documentclass[landscape,10pt]{article}
+\usepackage[landscape,a4paper,left=5mm,noheadfoot]{geometry}
+\usepackage{multicol}
+\usepackage{helvetic}
+\usepackage[colorlinks]{hyperref}
+\usepackage{underscore}
+% http://www.tex.ac.uk/tex-archive/help/Catalogue/entries/underscore.html
+
+\hyperbaseurl{http://hol.sourceforge.net/kananaskis-1-helpdocs/help/Docfiles/HTML/}
+% To use a local copy of the on-line help ...
+%\hyperbaseurl{file:$HOLDIR/help/Docfiles/HTML/}
+
+\newcommand{\hol}[2]{{\sffamily #1.\href{#1.#2.html}{#2}}}
+\newcommand{\holnoref}[2]{{\sffamily #1.#2}}
+% You can customise the above e.g. without hyperlinks and full path..
+%\newcommand{\hol}[2]{{\sffamily #2}}
+%\newcommand{\holnoref}[2]{{\sffamily #2}}
+\newcommand{\var}[1]{{\emph{#1}}}
+
+\pagestyle{empty}
+
+\begin{document}
+\begin{center}
+\Large A HOL Quick Reference
+\end{center}
+\footnotesize
+\begin{multicols}{3}
+\subsection*{Creating Theories}
+\begin{tabular}{ll}
+\hol{Theory}{new_theory} \var{name} & creates a new theory\\
+\hol{Theory}{export_theory}() & writes theory to disk  \\
+\hol{TotalDefn}{Define} \var{term} & function definition \\
+\hol{bossLib}{Hol_datatype} \var{type-dec} & defines a concrete datatype \\
+\holnoref{EquivType}{define_equivalence_type} \var{rec} & type of equivalence classes \\
+\hol{Theory}{save_thm}(\var{name},\var{thm}) & stores theorem \\
+\hol{Tactical}{prove}(\var{term},\var{tactic}) & proves theorem using tactic \\
+\hol{Tactical}{store_thm}(\var{name},\var{term},\var{tactic}) & proves and stores theorem \\
+\end{tabular}
+\subsection*{Goal Stack Operations}
+\begin{tabular}{ll}
+\hol{goalstackLib}{g} \var{term} & starts a new goal \\
+\hol{goalstackLib}{e} \var{tactic} & applies a tactic to the top goal \\
+\hol{goalstackLib}{b}() & undoes previous expansion \\
+\holnoref{goalstackLib}{restart}() & undoes all expansions \\
+\holnoref{goalstackLib}{drop}() & abandons the top goal \\
+\holnoref{goalstackLib}{dropn} \var{int} & abandons a number of goals \\
+\hol{goalstackLib}{p}() & prints the state of the top goal \\
+\holnoref{goalstackLib}{status}() & prints the state of all goals \\
+\hol{goalstackLib}{top_thm}() & returns the last theorem proved \\
+\hol{goalstackLib}{r} \var{int} & rotates sub-goals \\
+\holnoref{goalstackLib}{R} \var{int} & rotates proofs \\
+\end{tabular}
+\subsection*{Some Basic Tactics}
+\begin{tabular}{ll}
+\hol{bossLib}{Cases} & case analysis on outermost variable \\
+\hol{bossLib}{Cases_on} \var{term} & case analysis on named variable \\
+\hol{bossLib}{Induct} & induct on outermost variable \\
+\hol{bossLib}{Induct_on} \var{term} & induct on named variable \\
+\hol{Tactic}{STRIP_TAC} & splits on outermost connective \\
+\hol{Tactic}{EXISTS_TAC} \var{term} & gives witness for existential \\
+\holnoref{Tactic}{SELECT_ELIM_TAC} & eliminates Hilbert choice operator \\
+\hol{Tactic}{EQ_TAC} & reduces boolean equality to implication \\
+\hol{Tactic}{ASSUME_TAC} \var{thm} & adds an assumption \\
+\hol{Tactic}{DISJ1_TAC} & selects left disjunct \\
+\hol{Tactic}{DISJ2_TAC} & selects right disjunct \\
+\multicolumn{2}{l}{\hol{bossLib}{SPOSE_NOT_THEN} \var{thm-tactic}} \\
+& \quad starts proof by contradiction \\
+\end{tabular}
+\subsection*{Some Basic Tacticals}
+\begin{tabular}{ll}
+\hol{Tactical}{THEN} & applies tactics in sequence \\
+\hol{Tactical}{THENL} & applies list of tactics to sub-goals \\
+\hol{Tactical}{THEN1} & applies the second tactic to first sub-goal \\
+\hol{Tactical}{ORELSE} & applies second tactic only if the first fails \\
+\hol{Tactical}{REVERSE} & reverses the order of sub-goals \\
+\hol{Tactical}{ALL_TAC} & leaves the goal unchanged \\
+\hol{Tactical}{TRY} & do nothing if the tactic fails \\
+\hol{Tactical}{REPEAT} & repeat a tactic until it fails \\
+\holnoref{Tactic}{NTAC} & apply a tactic some number of times \\
+\hol{Tactical}{MAP_EVERY} & apply a tactic using theorems in a list \\
+\end{tabular}
+\subsection*{Using Assumptions}
+\begin{tabular}{ll}
+\hol{bossLib}{by}(\var{term},\var{tactic}) & add assum.\ using proof \\ % infix
+\hol{Tactical}{ASSUM_LIST} [\var{thms}] & adds list of theorems \\
+\hol{Tactical}{POP_ASSUM} \var{thm-tactic} & use first assumption \\
+\hol{Tactical}{POP_ASSUM_LIST} \var{thms-tactic} & use all assumptions \\
+\hol{Tactical}{PAT_ASSUM} \var{thm-tactic} & use matching assumption \\
+\hol{Tactical}{FIRST_X_ASSUM} \var{thm-tactic} & use first successful assum. \\
+\hol{Tactic}{STRIP_ASSUME_TAC} \var{thm} & split and add assumption \\
+\holnoref{Tactic}{WEAKEN_TAC} \var{term-pred} & remove assumptions \\
+\hol{Tactic}{RULE_ASSUM_TAC} & apply rule to assumptions \\
+\hol{Tactic}{IMP_RES_TAC} \var{thm} & resolve \var{thm} using assums. \\
+\hol{Tactic}{RES_TAC} & mutually resolve assums. \\
+\hol{Q}{ABBREV_TAC} & abbreviate goal's sub-term \\
+\end{tabular}
+\subsection*{Decision Procedures}
+\begin{tabular}{ll}
+\holnoref{tautLib}{TAUT_TAC} & tautology checker \\
+\hol{bossLib}{DECIDE_TAC} & above, plus linear arithmetic \\
+\hol{mesonLib}{MESON_TAC} [\var{thms}] & first-order prover \\
+\hol{BasicProvers}{PROVE_TAC} [\var{thms}] & uses Meson \\
+\holnoref{metisLib}{METIS_TAC} [\var{thms}] & new first-order prover \\
+\hol{bossLib}{EVAL_TAC} & evaluation tactic  \\
+\holnoref{numLib}{ARITH_TAC} & for Preburger arithmetic \\
+\holnoref{intLib}{ARITH_TAC} & uses Omega test \\
+\holnoref{intLib}{COOPER_TAC} & Cooper's algorithm \\
+\holnoref{realLib}{REAL_ARITH_TAC} & \\
+\end{tabular}
+\end{multicols}
+\begin{multicols}{2}
+\subsection*{Term Rewriting Tactics}
+\begin{tabular}{ll}
+\hol{Rewrite}{GEN_REWRITE_TAC} \var{conv-op rws} [\var{thms}] & used to construct bespoke rewriting tactics; \\
+ & applies \var{conv-op} to the rewriting conversion \\[4pt]
+\hol{Rewrite}{PURE_REWRITE_TAC} [\var{thms}] & rewrites goal only using the given theorems \\
+\hol{Rewrite}{PURE_ONCE_REWRITE_TAC} [\var{thms}] & as above but executes just a single rewrite  \\
+\hol{Rewrite}{REWRITE_TAC} [\var{thms}] & rewrites goal  using theorems and some basic rewrites \\
+\hol{Rewrite}{ONCE_REWRITE_TAC} [\var{thms}] & as above but executes just a single rewrite \\
+\hol{Rewrite}{PURE_ASM_REWRITE_TAC} [\var{thms}] & rewrites goal only using assumptions and theorems \\
+\hol{Rewrite}{PURE_ONCE_ASM_REWRITE_TAC} [\var{thms}] & as above but executes just a single rewrite \\
+\hol{Rewrite}{ASM_REWRITE_TAC} [\var{thms}] & rewrites using assums., theorems and basic rewrites \\
+\hol{Rewrite}{ONCE_ASM_REWRITE_TAC} [\var{thms}] & as above but executes just a single rewrite \\
+\end{tabular}
+\subsection*{Simplification Tactics}
+\begin{tabular}{ll}
+\hol{simpLib}{SIMP_TAC} \var{simpset} [\var{thms}] & simplifies goal using theorems and simplification set \\
+\hol{simpLib}{ASM_SIMP_TAC} \var{simpset} [\var{thms}] & as above but also uses the assumptions \\
+\hol{simpLib}{FULL_SIMP_TAC} \var{simpset} [\var{thms}] & simplifies the goal and all the assumptions \\[4pt]
+\hol{BasicProvers}{RW_TAC} \var{simpset} [\var{thms}] & more aggressive simplifier; uses type info.\ \& case splits \\
+\hol{BasicProvers}{SRW_TAC} [\var{ssdata}] \var{simpset} [\var{thms}] & as above but uses a list of \emph{simpset} fragments \\[4pt]
+\hol{simpLib}{rewrites} [\var{thms}] & constructs a rewrite fragment \\
+\hol{simpLib}{mk_simpset} [\var{ssdata}] & constructs a \emph{simpset} from fragments \\
+\holnoref{simpLib}{++}(\var{simpset},\var{ssdata}) & adds a fragment to a \emph{simpset} \\ % infix
+\holnoref{simpLib}{\&\&}(\var{simpset},[\var{thms}]) & adds rewrites to a \emph{simpset} \\ % infix
+\holnoref{simpLib}{AC} \var{thm} \var{thm} & constructs tagged theorem to enable AC simplification \\
+\end{tabular}
+\subsection*{Simplification Sets and Fragments}
+\begin{tabular}{ll}
+\hol{pureSimps}{pure_ss} & minimal \emph{simpset} for conditional rewriting \\
+\hol{boolSimps}{bool_ss} & propositional and first-order logic simplifications, plus beta-conversion \\
+\hol{bossLib}{std_ss} & as above + pairs, options, sums, numeral evaluation \& eta reduction \\
+\hol{bossLib}{arith_ss} & as above + arithmetic rewrites and decision procedure for linear arithmetic \\
+\hol{bossLib}{list_ss} & a version of the above for the theory of lists \\
+\holnoref{bossLib}{real_ss} & adds some real number evaluation and rewrites to the arithmetic \emph{simpset} \\
+\end{tabular}
+
+\noindent\begin{tabular}{ll}
+\holnoref{boolSimps}{CONJ_ss} & congruence rule for conjunction \\
+\holnoref{boolSimps}{ETA_ss} & eta conversion \\
+\holnoref{boolSimps}{LET_ss} & rewrites out `let' terms \\
+\holnoref{boolSimps}{DNF_ss} & converts term to disjunctive-normal-form\\
+\holnoref{pairSimps}{PAIR_ss} & rewrites for pairs \\
+\holnoref{optionSimps}{OPTION_ss} & rewrites for options \\
+\holnoref{stringSimps}{STRING_ss} & rewrites for strings \\
+\holnoref{numSimps}{ARITH_ss} & arithmetic rewrites and decision procedure \\
+\holnoref{numSimps}{ARITH_AC_ss} & AC fragment for addition and multiplication \\
+\holnoref{numSimps}{REDUCE_ss} & reduces ground-term expressions \\
+\holnoref{listSimps}{LIST_ss} & rewrites for lists \\
+\holnoref{pred_setSimps}{SET_SPEC_ss} & rewrites for set membership \\
+\holnoref{pred_setSimps}{PRED_SET_ss} & rewrites for sets \\
+\end{tabular}
+
+\noindent\begin{tabular}{ll}
+\hol{bossLib}{srw_ss}() & returns `stateful' \emph{simpset}; has type thms. from loaded theories \\
+\hol{bossLib}{augment_srw_ss} [\var{ssdata}] & adds fragments to the `stateful' \emph{simpset} \\
+\hol{BasicProvers}{export_rewrites} [\var{names}] & exports named theorems to the `stateful' \emph{simpset} \\
+\end{tabular}
+\end{multicols}
+\begin{multicols}{2}
+\subsection*{Specialize and Generalize Rules}
+\begin{tabular}{ll}
+\hol{Thm}{SPEC} \var{term} & specializes one variable in the conclusion of a theorem \\
+\hol{Drule}{SPECL} [\var{terms}] & specializes zero or more variables in the conclusion of a theorem \\
+\hol{Drule}{SPEC_ALL} & specializes the conclusion of a theorem with its own quantified variables \\
+\hol{Drule}{GSPEC} & as above but uses unique variables \\
+\hol{Drule}{ISPEC} \var{term} & specializes theorem, with type instantiation if necessary \\
+\hol{Drule}{ISPECL} [\var{terms}] & specializes theorem zero or more times, with type instantiation if necessary \\
+\hol{Thm}{INST} [\var{term} \verb+|->+ \var{term}] & instantiates free variables in a theorem \\
+\hol{Thm}{GEN} \var{term} & generalizes the conclusion of a theorem \\
+\hol{Drule}{GENL} [\var{terms}] & generalizes zero or more variables in the conclusion of a theorem \\
+\hol{Drule}{GEN_ALL} & generalizes the conclusion of a theorem over its own free variables \\
+\end{tabular}
+\subsection*{Some Inference Rules}
+\begin{tabular}{ll}
+\hol{Conv}{CONV_RULE} \var{conv} & makes an inference rule from a conversion \\
+\hol{Conv}{GSYM} \var{thm} & reverses the first equation(s) encountered in a top-down search \\
+\hol{Drule}{NOT_EQ_SYM} \var{thm} & swaps left-hand and right-hand sides of a negated equation \\
+\hol{Thm}{CONJUNCT1} \var{thm} & extracts left conjunct of theorem \\
+\hol{Thm}{CONJUNCT2} \var{thm} & extracts right conjunct of theorem \\
+\hol{Drule}{CONJUNCTS} \var{thm} & recursively splits conjunctions into a list of conjuncts \\
+\hol{Drule}{MATCH_MP} \var{thm} \var{thm} & Modus Ponens inference rule with automatic matching \\
+\hol{Thm}{EQ_MP} \var{thm} \var{thm} & equality version of the Modus Ponens rule \\
+\hol{Thm}{EQ_IMP_RULE} \var{thm} & derives forward and backward implication from equality of boolean terms \\
+\end{tabular}
+\subsection*{Some Conversions}
+\begin{tabular}{ll}
+\hol{bossLib}{DECIDE} & prove term using a tautology checker and linear arithmetic \\
+\hol{Rewrite}{REWRITE_CONV} [\var{thms}] & rewrites term using basic rewrites and given theorems \\
+\hol{simpLib}{SIMP_CONV} \var{simpset} [\var{thms}] & simplifies term using \emph{simpset} and theorems \\
+\hol{computeLib}{CBV_CONV} \var{compset} & call-by-value conversion \\[4pt]
+\hol{numLib}{num_CONV} & equates a non-zero numeral with the form $\mathrm{SUC}\ x$ for some $x$ \\
+\hol{numLib}{REDUCE_CONV} & evaluates arithmetic and boolean ground expressions \\
+\hol{numLib}{SUC_TO_NUMERAL_DEFN_CONV} & translates $\mathrm{SUC}\ x$ equations to use numeral constructors \\
+\holnoref{numLib}{EXISTS_LEAST_CONV} & when applied to a term $\exists n. P(n)$, this conversion returns: \\
+ & $\vdash (\exists n. P(n)) = \exists n. P(n) \wedge \forall n'. n' < n \Rightarrow \neg P(n')$ \\[4pt]
+\end{tabular}
+
+\noindent\begin{tabular}{ll}
+\hol{Conv}{SYM_CONV} & interchanges the left and right-hand sides of an equation \\
+\hol{Conv}{SKOLEM_CONV} & proves the existence of a Skolem function \\[4pt]
+\hol{Drule}{GEN_ALPHA_CONV} & renames the bound variable of an abstraction, quantified term, \emph{etc.} \\
+\hol{Thm}{BETA_CONV} & performs a single step of beta-conversion \\
+\hol{Thm}{ETA_CONV} & performs a top level eta-conversion \\[4pt]
+\hol{PairRules}{GEN_PALPHA_CONV} & paired variable version of the above \\
+\hol{PairRules}{PBETA_CONV} & paired variable version of the above \\
+\hol{PairRules}{PETA_CONV} & paired variable version of the above \\
+\end{tabular}
+\subsection*{Quantification Conversions}
+\begin{tabular}{ll}
+\holnoref{Conv}{SWAP_VARS_CONV} & swaps two universally quantified variables \\
+\hol{Conv}{SWAP_EXISTS_CONV} & swaps two existentially quantified variables \\
+\holnoref{Conv}{\{NOT$|$AND$|$OR\}_\{EXISTS$|$FORALL\}_CONV} & moves operation inwards through quantifier \\
+\holnoref{Conv}{\{EXISTS$|$FORALL\}_\{NOT$|$AND$|$OR$|$IMP\}_CONV} & moves quantifier inwards through operation \\
+\multicolumn{2}{l}{\holnoref{Conv}{\{LEFT$|$RIGHT\}_\{AND$|$OR$|$IMP\}_\{EXISTS$|$FORALL\}_CONV}} \\
+ & moves quantifier of left/right operand outward
+\end{tabular}
+\subsection*{Conversion Operations}
+\begin{tabular}{ll}
+\hol{Conv}{DEPTH_CONV} & applies conversion repeatedly to all sub-terms, in bottom-up order \\
+\hol{Conv}{REDEPTH_CONV} & applies conversion bottom-up to sub-terms, retraversing changed ones \\
+\hol{Conv}{ONCE_DEPTH_CONV} & applies conversion once to the first suitable sub-term in top-down order \\
+\hol{Conv}{TOP_DEPTH_CONV} & applies conversion top-down to all sub-terms, retraversing changed ones \\
+\hol{Conv}{LAND_CONV} & applies conversion to the left-hand argument of a binary operator \\
+\hol{Conv}{RAND_CONV} & applies conversion to the operand of an application \\
+\hol{Conv}{RATOR_CONV} & applies conversion to the operator of an application \\
+\hol{Conv}{BINOP_CONV} & applies conversion to both arguments of a binary operator \\
+\holnoref{Conv}{LHS_CONV} & applies conversion to the left-hand side of an equality \\
+\holnoref{Conv}{RHS_CONV} & applies conversion to the right-hand side of an equality \\
+\hol{Conv}{STRIP_QUANT_CONV} & applies conversion underneath a quantifier prefix \\
+\hol{Conv}{STRIP_BINDER_CONV} & applies conversion underneath a binder prefix \\
+\hol{Conv}{FORK_CONV}(\var{conv},\var{conv}) & applies a pair of conversions to the arguments of a binary operator \\
+\hol{Conv}{THENC}(\var{conv},\var{conv}) & applies two conversions in sequence \\
+\hol{Conv}{ORELSEC}(\var{conv},\var{conv}) & applies the first of two conversions that succeeds \\
+\end{tabular}
+\subsection*{Parsing}
+\begin{tabular}{ll}
+\holnoref{numLib}{prefer_num}() & parse numerals as natural numbers \\
+\holnoref{intLib}{prefer_int}() & parse numerals as integers \\
+\hol{Parse}{overload_on}(\var{name},\var{term}) & establishes constant as one of the overloading possibilities for a string \\
+\hol{Parse}{add_infix}(\var{name},\var{int},\var{assoc}) & adds string as infix with given precedence \& associativity to grammar \\
+\hol{Parse}{set_fixity} \var{name} \var{fixity} & allows the fixity of tokens to be updated \\
+\hol{Parse}{type_abbrev}(\var{name},\var{type}) & establishes a type abbreviation \\
+\hol{Parse}{add_rule} \var{record} & adds a parsing/printing rule to the global grammar \\
+\end{tabular}
+\subsection*{The Database}
+\begin{tabular}{ll}
+\hol{DB}{match} [\var{names}] \var{term} & attempt to find matching theorems in the specified theories \\
+\hol{DB}{find} \var{string} & search for theory element by name fragment \\
+\hol{DB}{axioms} \var{name} & all the axioms stored in the named theory \\
+\hol{DB}{theorems} \var{name} & all the theorems stored in the named theory \\
+\hol{DB}{definitions} \var{name} & all the definitions stored in the named theory \\
+\holnoref{DB}{export_theory_as_docfiles} \var{name} & produce \emph{.doc} files for the named theory \\
+\holnoref{DB}{html_theory} \var{name} & produce web-page for the named theory \\
+\end{tabular}
+\subsection*{Tracing}
+\begin{tabular}{ll}
+\hol{Feedback}{traces}() & returns a list of registered tracing variables \\
+\hol{Feedback}{set_trace} \var{name} \var{int} & set a tracing level for a registered trace \\
+\hol{Feedback}{reset_trace} \var{name} & resets a tracing variable to its default value \\
+\hol{Feedback}{reset_traces}() & resets all registered tracing variables to their default values \\[4pt]
+\quad \textsf{``Rewrite''} & tracing variable for term rewriting (0--1) \\
+\quad \textsf{``Subgoal number''} & number of printed sub-goals (10--10000) \\
+\quad \textsf{``meson''} & for the first-order prover (1--2) \\
+\quad \textsf{``simplifier''} & for the simplifier (0--7) \\
+\quad \textsf{``types''} & printing of types (0--2) \\[4pt]
+\hol{Globals}{show_types}:= \var{bool} & flag controlling printing of HOL types \\
+\hol{Globals}{show_tags}:= \var{bool} & flag for controlling display of tags in theorem pretty-printer \\[4pt]
+\hol{Lib}{start_time}() & set a timer running \\
+\hol{Lib}{end_time} \var{name} & check a running timer, and print out how long it has been running \\
+\hol{Lib}{time} \var{function} & measure how long a function application takes \\
+\hol{Count}{thm_count}() & returns the current value of the theorem counter \\
+\holnoref{Count}{reset_thm_count}() & resets the theorem counter \\
+\holnoref{Count}{apply} \var{function} & returns the theorem count for a function application \\
+\end{tabular}
+\end{multicols}
+\end{document}

@@ -1,0 +1,8 @@
+* The Makefile assumes that you have pdflatex.
+
+* To produce a Postscript file you can use: make quick.ps
+
+* The style file underscore.sty can be downloaded from a CTAN site, e.g.
+  http://www.tex.ac.uk/tex-archive/help/Catalogue/entries/underscore.html
+
+* The file quick.tex can be edited to link to a local copy of the on-line help.

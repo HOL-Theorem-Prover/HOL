@@ -27,14 +27,4 @@ bin		 : sed and shell scripts needed to build the manual
 
 Guide		 : style manual for writing HOL documentation.  
 
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-IMPORTANT NOTE.
-
-This directory is included in the hol90 distribution for the sole reason
-that it provides important typesetting support for the hol90
-libraries. Its contents are therefore, apt not to be wholly accurate in
-the context of hol90.
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Quick    	 : LaTeX source for a HOL quick reference sheet.
