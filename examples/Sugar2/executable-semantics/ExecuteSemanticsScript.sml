@@ -59,6 +59,7 @@ val resq_SS =
    rewrites
     [num_to_def,xnum_to_def,IN_DEF,num_to_def,xnum_to_def,LENGTH_def]];
 
+val std_resq_ss   = simpLib.++ (std_ss, resq_SS);
 val arith_resq_ss = simpLib.++ (arith_ss, resq_SS);
 val list_resq_ss  = simpLib.++ (list_ss,  resq_SS);
 
@@ -419,6 +420,60 @@ val F_ALWAYS_def =
 ******************************************************************************)
 val F_NEVER_def =
  pureDefine `F_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
+
+
+(******************************************************************************
+* Formula version of an operator due to Dana Fisman
+******************************************************************************)
+val F_PREF_def =
+ pureDefine `F_PREF w f = ?w'. UF_SEM (CAT(w,w')) f`;
+
+val EXISTS_RES_to =
+ store_thm
+  ("EXISTS_RES_to",
+   ``!m n P.
+      (?j :: (m to n). P j n) =  (m < n) /\ (P m n \/ ?j :: ((m+1) to n). P j n)``,
+   Cases_on `n`
+    THEN RW_TAC std_resq_ss [num_to_def,xnum_to_def,LS]
+    THENL
+     [PROVE_TAC[DECIDE ``m <= j = (m=j) \/ m+1 <= j``],
+      EQ_TAC
+       THEN RW_TAC std_ss []
+       THEN TRY(PROVE_TAC[DECIDE ``m <= j = (m=j) \/ m+1 <= j``])
+       THEN DECIDE_TAC]);
+
+val ABORT_AUX_def =
+ pureDefine
+  `ABORT_AUX w f b n =
+    ?(j::n to LENGTH w).
+      UF_SEM (RESTN w j) (F_BOOL b) /\ F_PREF (SEL w (0,j - 1)) f`;
+
+val EXISTS_RES_to_COR =
+ SIMP_RULE std_ss []
+  (Q.SPECL
+    [`n`,`LENGTH(w :('a -> bool) path)`,
+     `\j n. UF_SEM (RESTN w j) (F_BOOL b) /\ F_PREF (SEL w (0,j - 1)) f`]
+    EXISTS_RES_to);
+
+val ABORT_AUX_REC =
+ store_thm
+  ("ABORT_AUX_REC",
+   ``ABORT_AUX w f b n
+      = n < LENGTH w /\
+        (UF_SEM (RESTN w n) (F_BOOL b) /\ F_PREF (SEL w (0,n - 1)) f
+         \/
+         ABORT_AUX w f b (n+1))``,
+   RW_TAC std_ss [ABORT_AUX_def]
+    THEN ACCEPT_TAC EXISTS_RES_to_COR);
+
+val UF_ABORT_REC =
+ store_thm
+  ("UF_ABORT_REC",
+   ``UF_SEM w (F_ABORT (f,b)) =
+      UF_SEM w f \/ UF_SEM w (F_BOOL b) \/ ABORT_AUX w f b 1``,
+     RW_TAC std_resq_ss [UF_SEM_def,F_PREF_def,ABORT_AUX_def]
+    THEN PROVE_TAC[]);
+
 
 val _ = export_theory();
 
