@@ -8,7 +8,7 @@ functor wordFunctorLib (structure wordTheory : sig
   val word_T : Thm.thm
   val MOD_WL_EVAL : Thm.thm
   val MSBn_def : Thm.thm
-  val ADD_EVAL : Thm.thm
+  val ADD_EVAL2 : Thm.thm
   val MUL_EVAL2 : Thm.thm
   val ONE_COMP_EVAL2 : Thm.thm
   val TWO_COMP_EVAL2 : Thm.thm
@@ -68,7 +68,7 @@ fun word_compset () =
       LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
       THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
       MOD_WL_EVAL, w2n_EVAL, n2w_11,
-      ADD_EVAL, MUL_EVAL2, word_sub,
+      ADD_EVAL2, MUL_EVAL2, word_sub,
       ONE_COMP_EVAL2, TWO_COMP_EVAL2,
       AND_EVAL2, OR_EVAL2, EOR_EVAL2,
       LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL2,
