@@ -5,9 +5,18 @@
 
 (* app load ["Mosml","Database","Parsspec"]; *)
 
-fun mkentry s = {comp = Database.Term(String.substring(s, 0, size s - 5),
-                                      SOME"HOL"),
-                 file = s, line = 0};
+fun mkentry s = let
+  val content = let
+    val (pfx,sfx) = Substring.position "-lc.adoc" (Substring.all s)
+  in
+    if Substring.size sfx = 0 orelse Substring.size sfx <> 8 then
+      String.substring(s,0,size s - 5)
+    else
+      String.substring(s,0,size s - 8)
+  end
+in
+  {comp = Database.Term(content, SOME"HOL"), file = s, line = 0}
+end
 
 fun docdir_to_entries path (endpath, entries) =
   let val dir = Path.concat (path, endpath)
