@@ -2502,6 +2502,7 @@ infix ++
 infix 8 by
 val AP = numLib.ARITH_PROVE
 val arith_ss = bool_ss ++ arithSimps.ARITH_ss
+
 val FINITE_WEAK_ENUMERATE = store_thm(
   "FINITE_WEAK_ENUMERATE",
   ``!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)``,
@@ -2772,6 +2773,44 @@ val FINITE_BIGUNION = store_thm(
   SIMP_TAC bool_ss [NOT_IN_EMPTY, FINITE_EMPTY, BIGUNION_EMPTY,
                     IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
                     BIGUNION_INSERT, FINITE_UNION]);
+
+
+(*---------------------------------------------------------------------------
+    A "fold" operation for sets
+ ---------------------------------------------------------------------------*)
+
+val ITSET_defn = Defn.Hol_defn "ITSET"
+  `ITSET (s:'a->bool) (b:'b) = 
+     if FINITE s then 
+        if s={} then b
+        else ITSET (REST s) (f (CHOICE s) b)
+     else ARB`;
+
+(*---------------------------------------------------------------------------
+       Termination of ITSET.
+ ---------------------------------------------------------------------------*)
+
+val (ITSET_eqn0, ITSET_IND) =
+ Defn.tprove (ITSET_defn,
+   TotalDefn.WF_REL_TAC `measure (CARD o FST)` THEN 
+   BasicProvers.PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
+
+(*---------------------------------------------------------------------------
+      Desired recursion equation.
+
+     |- FINITE s ==> ITSET f s b = if s = {} then b 
+                                  else ITSET f (REST s) (f (CHOICE s) b)
+ ---------------------------------------------------------------------------*)
+
+val ITSET_THM = 
+W (GENL o rev o free_vars o concl)
+  (DISCH_ALL(ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] ITSET_eqn0));
+
+val _ = save_thm("ITSET_IND",ITSET_IND);
+val _ = save_thm("ITSET_THM",ITSET_THM);
+val _ = save_thm("ITSET_EMPTY",
+                  REWRITE_RULE [] 
+                      (MATCH_MP (SPEC (Term`{}`) ITSET_THM) FINITE_EMPTY));
 
 val _ = export_theory();
 
