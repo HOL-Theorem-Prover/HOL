@@ -3,6 +3,9 @@
 (* very simple-minded implementation of arbitrary precision natural
    numbers *)
 
+structure Arbnum :> Arbnum =
+struct
+
 (* app load ["Substring", "Random", "Int", "Process"] *)
 
 (* base must be <= the sqrt of MaxInt *)
@@ -474,3 +477,5 @@ val _ = testprop 100 mult_assoc
 val _ = testprop 100 distrib
 val _ = testprop 100 divmod_test
 *)
+
+end

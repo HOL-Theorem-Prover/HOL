@@ -16,31 +16,42 @@
 structure Portable = 
 struct
 
-val string_to_int  = Int.fromString;
-val real_to_string = Real.toString
-val implode        = Portable_String.concat;
-val explode        = map Portable_String.str o Portable_String.explode;
+exception Div = General.Div
+exception Mod = General.Div
 
-val say       = TextIO.print
-val linewidth = ref 72 (* ### POTENTIAL ### *) 
+(*---------------------------------------------------------------------------
+      Refs
+ ---------------------------------------------------------------------------*)
 
+fun inc r = (r := !r + 1)
+fun dec r = (r := !r - 1);
+
+
+(*---------------------------------------------------------------------------
+   SML/NJ v.93 style string operations
+ ---------------------------------------------------------------------------*)
+
+fun ordof (string,place) = Char.ord(String.sub(string,place))
+val implode = String.concat;
+val explode = map Char.toString o String.explode;
+
+(*---------------------------------------------------------------------------
+    System
+ ---------------------------------------------------------------------------*)
 val getEnv = Process.getEnv
 val cd     = FileSys.chDir
 val pwd    = FileSys.getDir
-
-
-val listDir = Mosml.listDir (* ### POTENTIAL ### *)
-
+val listDir = Mosml.listDir
 fun system s = if Process.system s = Process.success then 0 else 1
 val getArgs  = CommandLine.arguments
 val argv     = getArgs
-
-fun file_exists_for_reading s = FileSys.access(s,[FileSys.A_READ])
-
 fun exit() = Process.exit Process.success
 
-exception Io of string;
 
+(*---------------------------------------------------------------------------
+    IO
+ ---------------------------------------------------------------------------*)
+exception Io of string;
 type instream      = TextIO.instream 
 type outstream     = TextIO.outstream 
 val std_out        = TextIO.stdOut
@@ -59,8 +70,99 @@ val flush_out      = TextIO.flushOut
 val input_line     = TextIO.inputLine
 val end_of_stream  = TextIO.endOfStream
 
+(*---------------------------------------------------------------------------
+    Efficiency hack, currently disabled.
+ ---------------------------------------------------------------------------*)
 
 fun pointer_eq(x,y) = x=y
 (* ((Unsafe.cast x:int) = (Unsafe.cast y:int)) *)
+
+
+(*---------------------------------------------------------------------------
+    Time
+ ---------------------------------------------------------------------------*)
+
+local open Time
+in
+  val timestamp : unit -> time = now
+  val time_to_string : time -> string = toString
+  fun dest_time t =
+     let val sec = toSeconds t
+         val usec = toMicroseconds (t - fromSeconds sec)
+     in
+        {sec=sec, usec=usec}
+     end
+  fun mk_time {sec,usec} = fromSeconds sec + fromMicroseconds usec
+  fun time_eq (t1:time) t2 = (t1 = t2)
+  fun time_lt (t1:time) t2 = Time.<(t1,t2)
+end
+
+
+(*---------------------------------------------------------------------------
+    Pretty Printing
+ ---------------------------------------------------------------------------*)
+
+open PP
+
+type ppstream = ppstream;
+	    
+fun with_ppstream ppstrm = 
+  {add_string     = add_string ppstrm, 
+   add_break      = add_break ppstrm, 
+   begin_block    = begin_block ppstrm, 
+   end_block      = fn () => end_block ppstrm, 
+   add_newline    = fn () => add_newline ppstrm, 
+   clear_ppstream = fn () => clear_ppstream ppstrm, 
+   flush_ppstream = fn () => flush_ppstream ppstrm}
+
+fun defaultConsumer () =
+   {consumer  = fn s => TextIO.output(TextIO.stdOut, s),
+    linewidth = 72, 
+    flush     = fn () => TextIO.flushOut TextIO.stdOut}
+	    
+fun pp_to_string linewidth ppfn ob = 
+    let val l = ref ([]:string list)
+	fun attach s = l := (s::(!l))
+    in with_pp {consumer = attach, 
+		linewidth=linewidth, flush = fn()=>()}
+               (fn ppstrm =>  ppfn ppstrm ob);
+	String.concat(List.rev(!l))
+    end
+
+val mk_consumer = fn x => x
+
+(*---------------------------------------------------------------------------
+ * Print a list of items.
+ *
+ *     pfun = print_function
+ *     dfun = delim_function
+ *     bfun = break_function
+ *---------------------------------------------------------------------------*)
+fun pr_list_to_ppstream ppstrm pfun dfun bfun =
+ let fun pr [] = ()
+       | pr [i] = pfun ppstrm i
+       | pr (i::rst) = ( pfun ppstrm i; dfun ppstrm ; bfun ppstrm ; pr rst )
+ in 
+    pr 
+ end;
+
+
+(*---------------------------------------------------------------------------
+ * Simple and heavily used.
+ * pfun = item printing function
+ * dfun = delimiter printing function
+ * bfun = break printer function
+ *---------------------------------------------------------------------------*)
+fun pr_list pfun dfun bfun =
+   let fun pr [] = ()
+         | pr [i] = pfun i
+         | pr (i::rst) = ( pfun i; dfun() ; bfun() ; pr rst )
+   in
+      pr 
+   end;
+
+
+
+type 'a frag = 'a General.frag;
 
 end (* structure Portable *)

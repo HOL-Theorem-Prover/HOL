@@ -1,13 +1,18 @@
-type num = arbnum.num
+(* Author: Michael Norrish *)
+
+structure Arbint :> Arbint =
+struct
+
+type num = Arbnum.num
 type int = bool * num
 
-val ++ = arbnum.+
-val -- = arbnum.-
-val ** = arbnum.*
-val << = arbnum.<
-val ddiv = arbnum.div
-val mmod = arbnum.mod
-val AZ = arbnum.zero
+val ++ = Arbnum.+
+val -- = Arbnum.-
+val ** = Arbnum.*
+val << = Arbnum.<
+val ddiv = Arbnum.div
+val mmod = Arbnum.mod
+val AZ = Arbnum.zero
 
 infix ++ -- ** << ddiv mmod
 
@@ -53,31 +58,32 @@ fun compare(i,j) = if i < j then LESS
 
 fun divmod (i, j) = (i div j, i mod j)
 
-fun toString (true, n) = arbnum.toString n ^ "i"
-  | toString (false, n) = "-" ^ arbnum.toString n ^ "i"
+fun toString (true, n) = Arbnum.toString n ^ "i"
+  | toString (false, n) = "-" ^ Arbnum.toString n ^ "i"
 
 fun fromString s = let
   open Substring
   val (pfx, rest) = splitl (fn c => c = #"-") (all s)
   val neg = Int.mod(size pfx, 2) = 1
 in
-  (neg, arbnum.fromString (string rest))
+  (neg, Arbnum.fromString (string rest))
 end
 
-fun toInt (true, n) = arbnum.toInt n
-  | toInt (false, n) = Int.-(0, arbnum.toInt n)
+fun toInt (true, n) = Arbnum.toInt n
+  | toInt (false, n) = Int.-(0, Arbnum.toInt n)
 fun toNat (true, n) = n
   | toNat (false, _) = raise Fail "Attempt to make negative integer a nat"
 fun fromInt n =
-  if (Int.<(n,0)) then (false, arbnum.fromInt(Int.-(0, n)))
-  else (true, arbnum.fromInt n)
+  if (Int.<(n,0)) then (false, Arbnum.fromInt(Int.-(0, n)))
+  else (true, Arbnum.fromInt n)
 
 
-val zero = (true, arbnum.zero)
-val one = (true, arbnum.one)
-val two = (true, arbnum.two)
+val zero = (true, Arbnum.zero)
+val one = (true, Arbnum.one)
+val two = (true, Arbnum.two)
 
 fun abs (_, n) = (true, n)
 
 fun fromNat n = (true, n)
 
+end
