@@ -1,73 +1,51 @@
-% Gropius, SAFL, Sheeran, Johnson, Fourman, 
-% Hunt, Hanna, O'Donnel, reflect/Forte
+Previous approaches to combine theorem provers 
+and formal synthesis established an analogy between
+the goal directed proof technique and an interactive 
+design process. In LAMBDA, the user starts from the behavioural
+specification and builds the circuit incrementally
+by adding primitive hardware components
+which automatically simplify the goal \cite{Fou89}.
+Hanna {\em et al.\/} \cite{HLD89} introduce
+several {\em techniques\/} (functions) that
+simplify the current goal into simpler subgoals.
+Techniques are adaptations to hardware design
+of {\em tactics\/} in LCF.
 
-%------ LAMBDA: Fourman
-LAMBDA (Logic And Mathematics Behind Design Automation)
-is a tool-set to support interactive synthesis which
-integrates proof and design \cite{Fou89,Fou96}.
-The LAMBDA theorem prover sets a goal (correctness theorem)
-to be proved through synthesis. 
-The user builds the circuit incrementally by 
-connecting primitive hardware components using
-the schematic interface DIALOG.
-Each refinement step automatically simplifies the goal.
-The process continues until a circuit that implements the
-specification is constructed.
-
-%------ DDD: Johnson
-The Digital Design Derivation (DDD) is 
-an interactive transformation system that synthesises
-high-level specifications into hierarchical
-boolean systems~\cite{Johnson90}.
-The specifications are essentially tail-recursive lambda 
-abstractions that describe finite-state machines.
-DDD guarantees the correct application of
-the transformations, but requires substantial user
-guidance to conduct the synthesis and to
-explore the design space.
-
-
-%------ Lava: Bjesse and Sheeran 
-Lava \cite{BCSS99} is a hardware description language embedded
-in the functional language Haskell \cite{Jon03}.
-The programs consist of definitions
-of gates and their connections (netlists).
-These circuits can be verified with respect to a relation that
-restricts the values of the inputs and outputs.
-This equation is transformed into a logical formula that
-is exported to external theorem provers like 
-Otter~\cite{MW97} and Gandalf~\cite{Tam97}.
-As the programs are already at the gate level,
-no synthesis is performed, although it is possible
-to translate them into structural VHDL.
-
-%------ muFP & Ruby: Sheeran
-The functional language $\mu$FP is an extension 
-of Backus' FP for specifying circuits at the 
-structural level \cite{Bac78,She84}. 
+Alternative approaches synthesise circuits
+by applying semantic-preserving transformations
+to their specifications. For instance,
+the Digital Design Derivation (DDD) transforms
+finite-state machines specified in terms of
+tail-recursive lambda abstractions into hierarchical
+boolean systems~\cite{Johnson90}. Lava and Hydra
+are both hardware description languages embedded
+in Haskell whose programs
+consist of definitions of gates and their 
+connections (netlists)~\cite{BCSS99,OD02}. While Lava interfaces with
+external theorem provers to verify its circuits,
+Hydra designers can synthesise them
+via formal equational reasoning
+(using definitions and lemmas from functional programming).
+The functional languages $\mu$FP and Ruby
+adopt similar principles in hardware design~\cite{JS90,She84}.
 The circuits are defined in terms of primitive
-functions over booleans, numbers and lists and
+functions over booleans, numbers and lists, and
 higher-order functions, the {\em combining forms\/},
 which compose hardware blocks in different
-structures (sequence, parallel, conditional etc).
-The algebraic laws allow the designer to
-transform an abstract specification into
-a concrete circuit. Following similar principles
-adopted in $\mu$FP, Ruby offers a wide
-range of compositions which, together with
-their mathematical properties, provide
-a calculational style for design exploration \cite{JS90}.
+structures. Their mathematical properties provide
+a calculational style in design exploration.
 
-%------ HYDRA: O'Donnell
-
+These approaches deal with an interactive
+synthesis at the gate or state-machine level
+of abstraction only. Moreover, the synthesis
+and the proof of correctness require a 
+substantial user guidance. Gropius and SAFL 
+are two related works that address these issues.
 
 %------ Gropius: Blumenrohr
 Gropius is a hardware description language
-defined as a subset of HOL~\mbox{\cite{Blu01,Gropius1,BS99,Gropius2}}.
-It~comprises four languages ranging
-from gate-level abstractions (Gropius 0) to 
-system level structures (Gropius 3).
-The algorithmic level (Gropius 2)
+defined as a subset of HOL~\mbox{\cite{Blu01,Gropius1}}.
+Its algorithmic level
 provides control structures like if-then-else,
 sequential composition and while loop.
 The~atomic commands are DFGs (data flow
@@ -79,8 +57,8 @@ program:
 \DEF{PROGRAM}\ \VAR{out\_default}\ (\DEF{LOCVAR}\ \VAR{vars}\ 
 (\DEF{WHILE}\ c\ (\DEF{PARTIALIZE}\ \VAR{b})))
 \]
-The body \VAR{b} of the \DEF{WHILE} loop is an acyclic % combinational 
-DFG. The list \VAR{out\_default}
+The body \VAR{b} of the \DEF{WHILE} loop is an acyclic~DFG.
+The list \VAR{out\_default}
 provides initial values for the output variables.
 The term \DEF{LOCVAR} declares the local variables
 \VAR{vars} and \DEF{PARTIALIZE} converts a
@@ -106,20 +84,26 @@ k-processes does not match the handshaking interface pattern.
 Our compilation method is partly inspired by SAFL 
 (Statically Allocated Functional Language) \cite{MS01b},
 especially the ideas in Richard Sharp's PhD \cite{Sha02}. 
-SAFL is a first-order functional language.
-A user program consists of a sequence of function 
-definitions in which all recursive calls are tail-recursive.
-The compiler translates each function into
-a single hardware block.
-Its high-level of abstraction allows
+SAFL~is a first-order functional language whose
+programs consist of a sequence of tail-recursive function 
+definitions. Its high-level of abstraction allows
 the exploitation of powerful program analyses
 and optimisations not available in traditional
 synthesis systems. 
-For instance, the functional properties of SAFL 
-allow equational reasoning and therefore the
-application of semantic-preserving 
-source-to-source manipulations.
 However, the synthesis is not based on
-correct-by-construction transformations
-and the circuit generated and the compiler
-have not been verified.
+the correct-by-construction principles
+and the compiler has not been verified.
+
+% our approach
+The novelty of our approach is the 
+compilation of functional programs by
+composing especially designed and
+pre-verified circuit constructors.
+%
+As each of these circuit constructors
+have the key property of implementing
+a device that computes precisely their
+corresponding combinators, 
+the verification and the compilation of 
+functional programs can be done
+automatically.

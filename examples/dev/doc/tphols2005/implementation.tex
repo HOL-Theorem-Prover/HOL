@@ -10,7 +10,7 @@ $e$ must be tail-recursive. Applying \texttt{hwDefine} to such a
 definition will first define $f$ in higher order logic (using TFL
 \cite{slind:wfrec})  and then generate a theorem $\vdash {\it{Imp_C}}
 \Longrightarrow \DEF{Dev}~f$, where ${\it{Imp_C}}$ is a term
-constructed using `circuit constructors'n.
+constructed using `circuit constructors'.
 %\DEF{ATM}, \DEF{SEQ},
 %\DEF{PAR}, \DEF{ITE} and \DEF{REC}, which are defined below.  
 To support top-down development, ${\it{Imp_C}}$ can also contain terms
@@ -73,7 +73,7 @@ from:
 The next step is to replace the combinators \DEF{Seq},
 \DEF{Par}, \DEF{Ite} and \DEF{Rec} with corresponding circuit constructors
 \DEF{SEQ},
-\DEF{PAR}, \DEF{ITE} and \DEF{REC} that build had shaking devices and, for easy access, are defined
+\DEF{PAR}, \DEF{ITE} and \DEF{REC} that build handshaking devices and, for easy access, are defined
 at the end of this paper in the appendix.  The key property of these constructors
 are the following theorems that enable us to compositionally deduce
 theorems of the form $\vdash {\it{Imp_C}}

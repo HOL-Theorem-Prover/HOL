@@ -74,8 +74,8 @@ $\DEF{Dev}\ f\ \VAR{(load,inp,done,out)}$ where:
 \phantom{~~\quad     (\forall t.~} \IMP \\
 \phantom{~~\quad     (\forall t.\ ~ } \exists t'.\ t' > t{+}1\ \AND\ \DEF{HoldF}\ (t{+}1,t')\ \VAR{done}\ \AND \\
 \phantom{~~\quad     (\forall t.\ ~ \exists t'.\ }  \VAR{done}\ t'\ \AND\ (\VAR{out}\ t' = f (\VAR{inp}\ (t{+}1))))\ ~  \AND \\
-~~\quad (\forall t.\ \VAR{done}\ t\ \AND\ \NOT(\DEF{Posedge}\ \VAR{load}\ (t{+}1))\ \IMP  \VAR{done}\ (t{+}1)) ~\AND \\
-~~\quad (\forall t.\ \NOT\VAR{done}\ t\ \IMP \exists t'.\ t' > t{+}1\ \AND \VAR{done}\ (t{+}1))\\
+~~\quad (\forall t.\ \VAR{done}\ t\ \AND\ \NOT(\DEF{Posedge}\ \VAR{load}\ (t{+}1))\ \IMP\  \VAR{done}\ (t{+}1)) ~\AND \\
+~~\quad (\forall t.\ \NOT(\VAR{done}\ t)\ \IMP\ \exists t'.\ t' > t\ \AND \VAR{done}\ t')\\
 \end{array}
 \]
 The first conjunct in the right-hand side describes the context presented
