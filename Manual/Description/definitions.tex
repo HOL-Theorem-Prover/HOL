@@ -7,7 +7,7 @@ definition: structural induction, rewrite rules for constructors,
 \etc\ However, these have not traditionally been automatically derived
 at the invocation of the definition package: the user would have to
 build the required theorems by explicitly invoking various proof
-procedures.  The \verb+Hol_datatype+ function supports the definition of 
+procedures.  The \verb+Hol_datatype+ function supports the definition of
 concrete data types; the specifications of the types may be recursive, mutually
 recursive, nested recursive, and involve records.  The syntax
 of declarations that \verb+Hol_datatype+ accepts is found in Table
@@ -44,7 +44,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 \caption{Datatype Declaration}\label{datatype}
 \end{center}
 \end{table}
-} 
+}
 
 % Many formalizations require the definition of new types.  For
 % example, ML-style datatypes are commonly used to model the abstract
@@ -55,10 +55,10 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 % {<spec>} should conform to the following grammar:
 % {
 %    spec    ::= [ <binding> ; ]* <binding>
-% 
+%
 %    binding ::= <ident> = [ <clause> | ]* <clause>
 %             |  <ident> = <| [ <ident> : <type> ; ]* <ident> : <type> |>
-% 
+%
 %    clause  ::= <ident>
 %             |  <ident> of [<type> => ]* <type>
 % }
@@ -68,7 +68,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 % theorems are proved, and each type also has a `size' function defined
 % for it. All these theorems are stored in the current theory and added to
 % a database accessed via the functions in {TypeBase}.
-% 
+%
 % The notation used to declare datatypes is, unfortunately, not the same
 % as that of ML. For example, an ML declaration
 % {
@@ -85,18 +85,18 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 % HOL, constructors are by default curried.  Note also that any type
 % parameters for the new type are not allowed; they are inferred (in an
 % arbitrary order) from the right hand side of the binding.
-% 
+%
 % When a record type is defined, the parser is adjusted to allow new
 % syntax (appropriate for records), and a number of useful
 % simplification theorems are also proved.  The most useful of the
 % latter are automatically stored in the {TypeBase} and can be inspected
 % using the {simpls_of} function.  For further details on record types,
 % see the DESCRIPTION.
-% 
+%
 % \EXAMPLE
 % In the following, we shall give an overview of the kinds of types that
 % may be defined by {Hol_datatype}.
-% 
+%
 % To start, enumerated types can be defined as in the following example:
 % {
 %    Hol_datatype `enum = A1  | A2  | A3  | A4  | A5
@@ -105,7 +105,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 %                       | A16 | A17 | A18 | A19 | A20
 %                       | A21 | A22 | A23 | A24 | A25
 %                       | A26 | A27 | A28 | A29 | A30`
-% 
+%
 % }
 % Other non-recursive types may be defined as well:
 % {
@@ -129,12 +129,12 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 % This specification seems closer to the declaration that one might make
 % in ML, but is more difficult to deal with in proof than the curried format
 % used above.
-% 
+%
 % The basic syntax of the named lambda calculus is easy to describe:
 % {
 %     - load "stringTheory";
 %     > val it = () : unit
-% 
+%
 %     - Hol_datatype `lambda = Var of string
 %                            | Const of 'a
 %                            | Comb of lambda => lambda
@@ -166,24 +166,24 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 %    Hol_datatype
 %         `atexp = var_exp of string
 %                | let_exp of dec => exp ;
-% 
+%
 %            exp = aexp    of atexp
 %                | app_exp of exp => atexp
 %                | fn_exp  of match ;
-% 
+%
 %          match = match  of rule
 %                | matchl of rule => match ;
-% 
+%
 %           rule = rule of pat => exp ;
-% 
+%
 %            dec = val_dec   of valbind
 %                | local_dec of dec => dec
 %                | seq_dec   of dec => dec ;
-% 
+%
 %        valbind = bind  of pat => exp
 %                | bindl of pat => exp => valbind
 %                | rec_bind of valbind ;
-% 
+%
 %            pat = wild_pat
 %                | var_pat of string`
 % }
@@ -201,13 +201,13 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 %     directory = <| owner : string ;
 %                    files : (string # file) list |>`
 % }
-% 
+%
 % \FAILURE
 % Now we address some types that cannot be declared with {Hol_datatype}.
 % In some cases they cannot exist in HOL at all; in others, the type
 % can be built in the HOL logic, but {Hol_datatype} is not able to make
 % the definition.
-% 
+%
 % First, an empty type is not allowed in HOL, so the following attempt
 % is doomed to fail.
 % {
@@ -225,7 +225,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 %                           | Cons of 'a # (one -> lazylist)`
 % }
 % This type can however be built in HOL: see {llistTheory}.
-% 
+%
 % Finally, for cardinality reasons, HOL does not allow the following attempt
 % to model the untyped lambda calculus as a set (note the {->} in the clause
 % for the {Abs} constructor):
@@ -237,7 +237,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 % }
 % Instead, one would have to build a theory of complete partial orders
 % (or something similar) with which to model the untyped lambda calculus.
-% 
+%
 % \COMMENTS
 % The consequences of an invocation of {Hol_datatype} are stored in the
 % current theory segment and in {TypeBase}. The principal consequences
@@ -254,7 +254,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 % theorem for "case" statements on elements of {ty}. These case statements
 % are introduced by {ty_case_def}. Also, a definition of the "size" of the type
 % is added to the current theory, under the name {ty_size_def}.
-% 
+%
 % For example, invoking
 % {
 %    Hol_datatype `tree = Leaf of num
@@ -265,7 +265,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 %    tree_case_def =
 %      |- (!f f1 a. case f f1 (Leaf a) = f a) /\
 %          !f f1 a0 a1. case f f1 (Node a0 a1) = f1 a0 a1
-% 
+%
 %    tree_size_def
 %      |- (!a. tree_size (Leaf a) = 1 + a) /\
 %          !a0 a1. tree_size (Node a0 a1) = 1 + (tree_size a0 + tree_size a1)
@@ -277,21 +277,21 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 %      |- !f0 f1.
 %           ?fn. (!a. fn (Leaf a) = f0 a) /\
 %                !a0 a1. fn (Node a0 a1) = f1 a0 a1 (fn a0) (fn a1)
-% 
+%
 %    tree_induction
 %      |- !P. (!n. P (Leaf n)) /\
 %             (!t t0. P t /\ P t0 ==> P (Node t t0))
 %             ==>
 %             !t. P t
-% 
+%
 %    tree_nchotomy  |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
-% 
+%
 %    tree_11
 %      |- (!a a'. (Leaf a = Leaf a') = (a = a')) /\
 %          !a0 a1 a0' a1'. (Node a0 a1 = Node a0' a1') = (a0=a0') /\ (a1=a1')
-% 
+%
 %    tree_distinct  |- !a1 a0 a. ~(Leaf a = Node a0 a1)
-% 
+%
 %    tree_case_cong
 %      |- !M M' f f1.
 %           (M = M') /\
@@ -302,7 +302,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 % }
 % When a type involving records is defined, many more definitions are
 % made and added to the current theory.
-% 
+%
 % A definition of mutually recursives types results in the above theorems and
 % definitions being added for each of the defined types.
 
@@ -324,6 +324,40 @@ information is derived and stored in the database.
 \item congruence theorem for the case constant
 \item definition of the `size' of the type
 \end{itemize}
+
+The \texttt{Hol\_datatype} function can be used to define types that
+are parametrically polymorphic.  For example, the type of lists is
+defined as
+{\small
+\begin{verbatim}
+   Hol_datatype `list = NIL | CONS of 'a => list`;
+\end{verbatim}
+}
+\noindent Although the new \texttt{list} type is polymorphic, the
+specification passed to \texttt{Hol\_datatype} does not explicitly
+provide arguments for the new operator.  Contrast with SML, where one
+would write
+{\small
+\begin{verbatim}
+   datatype 'a list = nil | cons of 'a * 'a list
+\end{verbatim}
+}
+\noindent In \HOL{} neither occurrence of the new operator has its
+arguments provided.  When defining a type that is polymorphic in more
+than one argument, this raises the question of what the order of the
+new operator's arguments will be.  For example, if one defines
+{\small
+\begin{verbatim}
+   Hol_datatype `sum = Left of 'left | Right of 'right`;
+\end{verbatim}
+}
+\noindent and then writes \ml{('a,'b)sum}, will the \ml{'a} value be
+under the \ml{Left} or \ml{Right} constructor?  The system chooses to
+make the arguments corresponding to variables appear in the order
+given by the dictionary ordering of the variables' names.  Thus, in
+the example given, the \ml{'a} of \ml{('a,'b)sum} will be the
+\ml{Left} argument because \ml{left} comes before \ml{right} in the
+standard (ASCII) dictionary ordering.
 
 \section{Record types}
 
@@ -713,3 +747,8 @@ comprising the requested equations and the induction theorem.
    >               P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
    >      ==> !v v1. P v v1
 \end{verbatim}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

@@ -46,8 +46,10 @@ would most likely be declared in HOL as
 The {=>} notation in a HOL datatype description is intended to replace
 {*} in an ML datatype description, and highlights the fact that, in
 HOL, constructors are by default curried.  Note also that any type
-parameters for the new type are not allowed; they are inferred (in an
-arbitrary order) from the right hand side of the binding.
+parameters for the new type are not allowed; they are inferred
+from the right hand side of the binding.  The type variables in the
+specification become arguments to the new type operator in alphabetic
+order.
 
 When a record type is defined, the parser is adjusted to allow new
 syntax (appropriate for records), and a number of useful
