@@ -28,8 +28,8 @@ val _ = new_theory "string";
 (* define the type :string (and a lot more) 			        *)
 (* ---------------------------------------------------------------------*)
 
-val string_info = 
- Datatype.primHol_datatype 
+val string_info =
+ Datatype.primHol_datatype
    (TypeBase.theTypeBase())  `string = emptystring  (* empty string *)
                                      | STRING of ascii => string`;
 
@@ -53,7 +53,7 @@ val _ = adjoin_to_theory
         S "val STRING_11        : thm"; NL();
         S "val NOT_STRING_EMPTY : thm"
     end),
- struct_ps = SOME(fn ppstrm => 
+ struct_ps = SOME(fn ppstrm =>
     let val S = PP.add_string ppstrm
         fun NL() = PP.add_newline ppstrm
     in
@@ -65,5 +65,9 @@ val _ = adjoin_to_theory
         NL();
         S "val _ = Globals.assert_strings_defined();"
     end)};
+
+val _ = export_theorems_as_docfiles "../help/thms" (theorems())
+val _ = export_theorems_as_docfiles "../help/defs" (definitions())
+
 
 val _ = export_theory();

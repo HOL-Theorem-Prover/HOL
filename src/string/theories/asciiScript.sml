@@ -38,11 +38,14 @@ val ascii_CASES = save_thm ("ascii_CASES", prove_cases_thm ascii_Induct);
 (* ---------------------------------------------------------------------*)
 val ASCII_11 = save_thm ("ASCII_11", prove_constructors_one_one ascii_Axiom);
 
-val ascii_case_def = 
+val ascii_case_def =
 new_recursive_definition {name="ascii_case_def",
-  def = Term`ascii_case f (ASCII v1 v2 v3 v4 v5 v6 v7 v8) 
+  def = Term`ascii_case f (ASCII v1 v2 v3 v4 v5 v6 v7 v8)
                              = f v1 v2 v3 v4 v5 v6 v7 v8`,
-  rec_axiom = ascii_Axiom, 
+  rec_axiom = ascii_Axiom,
   fixity = Prefix};
+
+val _ = export_theorems_as_docfiles "../help/thms" (theorems())
+val _ = export_theorems_as_docfiles "../help/defs" (definitions())
 
 val _ = export_theory();
