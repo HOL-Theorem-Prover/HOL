@@ -649,13 +649,13 @@ val InvSbox = time Define
      (InvSbox(T,T,T,T,T,T,T,F) = (F,F,F,F,T,T,F,F)) /\
      (InvSbox(T,T,T,T,T,T,T,T) = (F,T,T,T,T,T,F,T))`;
 
-val Sbox_ind = DB.fetch "-" "Sbox_ind";
+
+val byte_nchotomy = DB.fetch "-" "Sbox_ind";
 
 val Sbox_Inversion = Q.store_thm
 ("Sbox_Inversion",
  `!w:word8. InvSbox (Sbox w) = w`,
-  PGEN_TAC (Term`(a,b,c,d,e,f,g,h):word8`) THEN
-  MAP_EVERY Q.ID_SPEC_TAC [`h`,`g`,`f`,`e`,`d`,`c`,`b`,`a`]
-  THEN recInduct Sbox_ind THEN EVAL_TAC);
+  recInduct byte_nchotomy THEN EVAL_TAC);
+
 
 val _ = export_theory();
