@@ -419,44 +419,29 @@ val swap_11 = store_thm(
   ]);
 val _ = export_rewrites ["swap_11"]
 
+val swap_induction = store_thm(
+  "swap_induction",
+  ``!P. (!s. P (VAR s)) /\ (!k. P (CON k)) /\
+        (!t u. P t /\ P u ==> P(t @@ u)) /\
+        (!v t. (!u. ~(u IN FV t) ==> P(swap u v t)) ==> P (LAM v t)) ==>
+        !t. P t``,
+  GEN_TAC THEN STRIP_TAC THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [][] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][GSYM fresh_var_swap]);
+
 (* ----------------------------------------------------------------------
     supporting recursion over lambda calculus terms using swap
    ---------------------------------------------------------------------- *)
 
-val fresh_new_subst0 = prove(
-  ``FINITE X ==>
-    ((let v = NEW (FV (LAM x u) UNION X) in f v ([VAR v/x] u)) =
-     (let v = NEW (FV (LAM x u) UNION X) in f v (swap v x u)))``,
-  STRIP_TAC THEN NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
-  SRW_TAC [][fresh_var_swap, lemma14a]);
-
-val fresh_new_subst =
-    (SIMP_RULE bool_ss [FINITE_EMPTY,
-                        UNION_EMPTY] o
-     Q.INST [`f` |-> `\v t. lam (hom t : 'b) v t  : 'b`,
-             `X` |-> `EMPTY`] o
-     INST_TYPE [alpha |-> beta, beta |-> alpha]) fresh_new_subst0
-
-
-val lemma =
-    (SIMP_RULE bool_ss [ASSUME ``FINITE (X:string set)``,
-                        ABS_DEF, fresh_new_subst0] o
-     Q.INST [`lam` |->
-              `\r t. let v = NEW (FV (ABS t) UNION X) in lam (r v) v (t v) `] o
-     SPEC_ALL) nc_RECURSION
-
-val LET_RAND' = prove(
-  ``(let x = M in P (N x)) = P (let x = M in N x)``,
-  SRW_TAC [][]);
-
 val swapping_def = Define`
   swapping f fv =
     (!x z. f x x z = z) /\
-    (!x y u v z. f x y (f u v z) =
-                   f (swapstr x y u) (swapstr x y v) (f x y z)) /\
+    (* (!x y u v z. f x y (f u v z) =
+                   f (swapstr x y u) (swapstr x y v) (f x y z)) /\ *)
     (!x y z. f x y (f x y z) = z) /\
-    (!x y z z'. (f x y z = f x y z') = (z = z')) /\
-    (!x y z. ~(x IN fv z) /\ ~(y IN fv z) ==> (f x y z = z))
+    (* (!x y z z'. (f x y z = f x y z') = (z = z')) /\ *)
+    (!x y z. ~(x IN fv z) /\ ~(y IN fv z) ==> (f x y z = z)) /\
+    (!x y z s. s IN fv (f x y z) = swapstr x y s IN fv z)
 `
 
 val LET_NEW_congruence = store_thm(
@@ -465,140 +450,11 @@ val LET_NEW_congruence = store_thm(
     (LET P (NEW X)  = LET Q (NEW Y))``,
   SRW_TAC [][] THEN NEW_ELIM_TAC THEN SRW_TAC [][]);
 
-val swap_RECURSION_generic = store_thm(
-  "swap_RECURSION_generic",
-  ``swapping rswap rFV /\
-    FINITE X /\
-    (!k. rFV (con k) SUBSET X) /\
-    (!s. rFV (var s) SUBSET (s INSERT X)) /\
-    (!t' u' t u. rFV t' SUBSET (FV t UNION X) /\
-                 rFV u' SUBSET (FV u UNION X) ==>
-                 rFV (app t' u' t u) SUBSET FV (t @@ u) UNION X) /\
-    (!t' v t. rFV t' SUBSET (FV t UNION X) ==>
-              rFV (lam t' v t) SUBSET (FV (LAM v t) UNION X)) /\
-    (!k x y. ~(x IN X) /\ ~(y IN X) ==> (rswap x y (con k) = con k)) /\
-    (!s x y. ~(x IN X) /\ ~(y IN X) ==>
-             (rswap x y (var s) = var (swapstr x y  s))) /\
-    (!t t' u u' x y.
-         ~(x IN X) /\ ~(y IN X) ==>
-         (rswap x y (app t' u' t u) =
-          app (rswap x y t') (rswap x y u') (swap x y t) (swap x y u))) /\
-    (!t' t x y v.
-         ~(x IN X) /\ ~(y IN X) ==>
-         (rswap x y (lam t' v t) =
-          lam (rswap x y t') (swapstr x y v) (swap x y t))) ==>
-    ?hom : 'a nc -> 'b.
-      ((!k. hom (CON k) = con k) /\
-       (!s. hom (VAR s) = var s) /\
-       (!t u. hom (t @@ u) = app (hom t) (hom u) t u) /\
-       (!v t. ~(v IN X) ==> (hom (LAM v t) = lam (hom t) v t))) /\
-      (!t x y. ~(x IN X) /\ ~(y IN X) ==>
-               (hom (swap x y t) = rswap x y (hom t))) /\
-      (!t. rFV (hom t) SUBSET FV t UNION X)``,
-  SRW_TAC [][swapping_def] THEN
-  STRIP_ASSUME_TAC
-    (CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV lemma)) THEN
-  Q.EXISTS_TAC `hom` THEN
-  ASM_SIMP_TAC bool_ss [] THEN
-  `!t. rFV (hom t) SUBSET FV t UNION X`
-     by (HO_MATCH_MP_TAC nc_INDUCTION THEN
-         ASM_SIMP_TAC (srw_ss()) [GSYM INSERT_SING_UNION] THEN
-         REPEAT STRIP_TAC THEN
-         NEW_ELIM_TAC THEN SRW_TAC [][] THENL [
-           MATCH_MP_TAC SUBSET_TRANS THEN
-           Q.EXISTS_TAC `FV (LAM v (swap v x t)) UNION X` THEN
-           CONJ_TAC THENL [
-             ASM_SIMP_TAC bool_ss [FV_THM, GSYM fresh_var_swap],
-             `LAM v (swap v x t) = LAM x t`
-                by ASM_SIMP_TAC bool_ss
-                                [GSYM fresh_var_swap, SIMPLE_ALPHA] THEN
-             ASM_SIMP_TAC bool_ss [] THEN SRW_TAC [][]
-           ],
-           FULL_SIMP_TAC (srw_ss()) [] THEN
-           FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC [lemma14a]
-         ]) THEN
-  ASM_SIMP_TAC bool_ss [] THEN
-  Q.PAT_ASSUM `!u w x y v.
-                  P ==> (rswap x y (lam u v w) = Z)` (ASSUME_TAC o GSYM) THEN
-  `!t' t x y v.
-      ~(x IN X) /\ ~(y IN X) ==>
-      (lam (rswap x y t') v (swap x y t) =
-       rswap x y (lam t' (swapstr x y v) t))`
-    by PROVE_TAC [swapstr_inverse] THEN
-  Q.PAT_ASSUM `!x y u v z. rswap x y (rswap u v z) = Z`
-              (ASSUME_TAC o GSYM) THEN
-  `!t x y. ~(x IN X) /\ ~(y IN X) ==> (hom (swap x y t) = rswap x y (hom t))`
-    by (HO_MATCH_MP_TAC pvh_induction THEN REPEAT CONJ_TAC THEN
-        TRY (SRW_TAC [][swap_thm] THEN NO_TAC) THEN
-        REPEAT STRIP_TAC THEN
-        Cases_on `x = y` THEN1 SRW_TAC [][] THEN
-        `?z. ~(z IN {v;x;y} UNION X UNION FV t)`
-            by SRW_TAC [][dBTheory.FRESH_string] THEN
-        POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE (srw_ss()) []) THEN
-        `LAM v t = LAM z ([VAR z/v] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-        Q.ABBREV_TAC `M = [VAR z/v] t` THEN
-        `size t = size M` by SRW_TAC [][] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN POP_ASSUM (K ALL_TAC) THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        `hom (swap x y (LAM z M)) = rswap x y (lam (hom M) z M)`
-          by (ASM_SIMP_TAC bool_ss [swap_thm, swapstr_def] THEN
-              NEW_ELIM_TAC THEN ASM_REWRITE_TAC [] THEN
-              Q.X_GEN_TAC `a` THEN REVERSE (SRW_TAC [][]) THEN1
-                ASM_SIMP_TAC bool_ss [swapstr_def] THEN
-              Q.ABBREV_TAC `N = lam (hom M) z M` THEN
-              `rswap a z (rswap x y N) =
-                 rswap x y (rswap x y (rswap a z (rswap x y N)))`
-                    by SRW_TAC [][] THEN
-              ` _ = rswap x y (rswap (swapstr x y a) (swapstr x y z)
-                                     (rswap x y (rswap x y N)))`
-                    by SRW_TAC [][] THEN
-              ` _ = rswap x y (rswap (swapstr x y a) (swapstr x y z) N)`
-                    by SRW_TAC [][] THEN
-              SRW_TAC [][] THEN
-              FIRST_X_ASSUM MATCH_MP_TAC THEN
-              `rFV (lam (hom M) z M) SUBSET FV M DELETE z UNION X`
-                 by METIS_TAC [] THEN
-              REPEAT STRIP_TAC THENL [
-                `swapstr x y a IN FV M DELETE z UNION X`
-                    by PROVE_TAC [SUBSET_DEF] THEN
-                POP_ASSUM MP_TAC THEN SRW_TAC [][] THEN
-                SRW_TAC [][swapstr_def],
-                `z IN FV M DELETE z UNION X`
-                    by PROVE_TAC [SUBSET_DEF] THEN
-                POP_ASSUM MP_TAC THEN SRW_TAC [][]
-              ]) THEN
-        POP_ASSUM SUBST_ALL_TAC THEN ASM_SIMP_TAC bool_ss [] THEN
-        NEW_ELIM_TAC THEN ASM_REWRITE_TAC [] THEN Q.X_GEN_TAC `a` THEN
-        REVERSE (SRW_TAC [][]) THEN1 SRW_TAC [][] THEN
-        Q_TAC SUFF_TAC
-          `~(a IN rFV (lam (hom M) z M)) /\ ~(z IN rFV (lam (hom M) z M))`
-              THEN1 PROVE_TAC [] THEN
-        `rFV (lam (hom M) z M) SUBSET FV M DELETE z UNION X`
-           by PROVE_TAC [] THEN
-        REPEAT STRIP_TAC THENL [
-          `a IN FV M DELETE z UNION X` by PROVE_TAC [SUBSET_DEF] THEN
-          POP_ASSUM MP_TAC THEN SRW_TAC [][],
-          `z IN FV M DELETE z UNION X` by PROVE_TAC [SUBSET_DEF] THEN
-          POP_ASSUM MP_TAC THEN SRW_TAC [][]
-        ]) THEN
-  ASM_SIMP_TAC bool_ss [] THEN
-  REPEAT GEN_TAC THEN STRIP_TAC THEN NEW_ELIM_TAC THEN SRW_TAC [][] THENL [
-    Cases_on `v = v'` THEN1 SRW_TAC [][] THEN
-    SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC `~(v' IN rFV (lam (hom t) v t)) /\
-                    ~(v IN rFV (lam (hom t) v t))` THEN1
-          SRW_TAC [][] THEN
-    PROVE_TAC [SUBSET_DEF, IN_DELETE, IN_UNION],
-    SRW_TAC [][]
-  ]);
-
-val swap_RECURSION_nosideset = save_thm(
-  "swap_RECURSION_nosideset",
-  SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`] swap_RECURSION_generic));
-
 val null_swapping = store_thm(
   "null_swapping",
-  ``swapping (\x y z. z) (\z. {})``,
+  ``swapping (\x y z. z) (K {})``,
+  (* can't write \x. {} for second argument above; it tweaks a bug in
+     HO_PART_MATCH *)
   SRW_TAC [][swapping_def]);
 
 val swap_identity = store_thm(
@@ -626,7 +482,252 @@ val swapping_implies_empty_swap = store_thm(
   ``swapping sw fv /\ (fv t = {}) ==> !x y. sw x y t = t``,
   SRW_TAC [][swapping_def]);
 
+val swapping_implies_identity_swap = store_thm(
+  "swapping_implies_identity_swap",
+  ``!sw fv x y t. swapping sw fv /\ ~(x IN fv t) /\ ~(y IN fv t) ==>
+                  (sw x y t = t)``,
+  SRW_TAC [][swapping_def]);
 
+
+val swapfn_def = Define`
+  swapfn (dswap:string -> string -> 'a -> 'a)
+         (rswap:string -> string -> 'b -> 'b)
+         x y f d = rswap x y (f (dswap x y d))
+`;
+
+val fresh_new_subst0 = prove(
+  ``FINITE X /\ (!p. FINITE (pFV p)) ==>
+    ((let v = NEW (FV (LAM x u) UNION pFV p UNION X) in f v ([VAR v/x] u)) =
+     (let v = NEW (FV (LAM x u) UNION pFV p UNION X) in f v (swap v x u)))``,
+  STRIP_TAC THEN NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
+  SRW_TAC [][fresh_var_swap, lemma14a]);
+
+
+val lemma =
+    (SIMP_RULE bool_ss [FUN_EQ_THM, ABS_DEF, fresh_new_subst0,
+                        ASSUME ``FINITE (X:string set)``,
+                        ASSUME ``!p:'b. FINITE (pFV p : string set)``] o
+     Q.INST [`lam` |->
+             `\r t p.
+                 let v = NEW (FV (ABS t) UNION pFV p UNION X)
+                 in
+                   lam (r v) v (t v) p`] o
+     INST_TYPE [beta |-> (beta --> gamma)] o
+     CONJUNCT1 o
+     CONV_RULE EXISTS_UNIQUE_CONV o
+     SPEC_ALL)
+    nc_RECURSION
+
+
+val swap_RECURSION_pgeneric = store_thm(
+  "swap_RECURSION_pgeneric",
+  ``swapping rswap rFV /\ swapping pswap pFV /\
+
+    FINITE X /\ (!p. FINITE (pFV p)) /\
+
+    (!k p. rFV (con k p) SUBSET (X UNION pFV p)) /\
+    (!s p. rFV (var s p) SUBSET (s INSERT pFV p UNION X)) /\
+    (!t' u' t u p.
+        (!p. rFV (t' p) SUBSET (FV t UNION pFV p UNION X)) /\
+        (!p. rFV (u' p) SUBSET (FV u UNION pFV p UNION X)) ==>
+        rFV (app t' u' t u p) SUBSET FV t UNION FV u UNION pFV p UNION X) /\
+    (!t' v t p.
+        (!p. rFV (t' p) SUBSET (FV t UNION pFV p UNION X)) ==>
+        rFV (lam t' v t p) SUBSET (FV (LAM v t) UNION pFV p UNION X)) /\
+
+    (!k x y p. ~(x IN X) /\ ~(y IN X) ==>
+               (rswap x y (con k p) = con k (pswap x y p))) /\
+    (!s x y p. ~(x IN X) /\ ~(y IN X) ==>
+               (rswap x y (var s p) = var (swapstr x y s) (pswap x y p))) /\
+    (!t t' u u' x y p.
+         ~(x IN X) /\ ~(y IN X) ==>
+         (rswap x y (app t' u' t u p) =
+          app (swapfn pswap rswap x y t') (swapfn pswap rswap x y u')
+              (swap x y t) (swap x y u)
+              (pswap x y p))) /\
+    (!t' t x y v p.
+         ~(x IN X) /\ ~(y IN X) ==>
+         (rswap x y (lam t' v t p) =
+          lam (swapfn pswap rswap x y t')
+              (swapstr x y v) (swap x y t) (pswap x y p))) ==>
+    ?hom : 'a nc -> 'b -> 'c.
+      ((!k p. hom (CON k) p = con k p) /\
+       (!s p. hom (VAR s) p = var s p) /\
+       (!t u p. hom (t @@ u) p = app (hom t) (hom u) t u p) /\
+       (!v t p. ~(v IN X UNION pFV p) ==>
+                (hom (LAM v t) p = lam (hom t) v t p))) /\
+      (!t p x y. ~(x IN X) /\ ~(y IN X) ==>
+                 (hom (swap x y t) p = rswap x y (hom t (pswap x y p)))) /\
+      (!t p. rFV (hom t p) SUBSET FV t UNION pFV p UNION X)``,
+  REPEAT STRIP_TAC THEN
+  STRIP_ASSUME_TAC lemma THEN
+  Q.EXISTS_TAC `hom` THEN ASM_SIMP_TAC bool_ss [] THEN
+  `!t p. rFV (hom t p) SUBSET FV t UNION pFV p UNION X`
+     by (HO_MATCH_MP_TAC nc_INDUCTION THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+         REPEAT CONJ_TAC THENL [
+           PROVE_TAC [UNION_COMM],
+           ASM_SIMP_TAC (srw_ss()) [GSYM INSERT_SING_UNION, INSERT_UNION_EQ],
+           REPEAT STRIP_TAC THEN NEW_ELIM_TAC THEN
+           ASM_SIMP_TAC bool_ss [] THEN
+           Q.X_GEN_TAC `u` THEN REPEAT STRIP_TAC THENL [
+             `FV t DELETE x = FV (LAM x t)` by SRW_TAC [][] THEN
+             POP_ASSUM SUBST_ALL_TAC THEN
+             `LAM x t = LAM u (swap u x t)` by SRW_TAC [][swap_ALPHA] THEN
+             POP_ASSUM SUBST_ALL_TAC THEN
+             FIRST_ASSUM MATCH_MP_TAC THEN
+             `swap u x t = [VAR u/x] t` by SRW_TAC [][fresh_var_swap] THEN
+             ASM_SIMP_TAC bool_ss [],
+             SRW_TAC [][] THEN
+             `FV t DELETE u = FV (LAM u t)` by SRW_TAC [][] THEN
+             POP_ASSUM SUBST_ALL_TAC THEN
+             FIRST_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
+             METIS_TAC [lemma14a]
+           ]
+         ]) THEN
+  ASM_SIMP_TAC bool_ss [] THEN
+  `(!x y p. pswap x y (pswap x y p) = p) /\ (!x p. pswap x x p = p) /\
+   (!x r. rswap x x r = r)`
+     by FULL_SIMP_TAC (srw_ss()) [swapping_def] THEN
+  `!t p x y. ~(x IN X) /\ ~(y IN X) ==>
+             (hom (swap x y t) p = rswap x y (hom t (pswap x y p)))`
+      by (HO_MATCH_MP_TAC pvh_induction THEN REPEAT CONJ_TAC THEN
+          TRY (SRW_TAC [][swap_thm] THEN NO_TAC) THENL [
+            MAP_EVERY Q.X_GEN_TAC [`t`,`u`] THEN
+            SRW_TAC [][swap_thm] THEN
+            `(hom (swap x y t) = swapfn pswap rswap x y (hom t)) /\
+             (hom (swap x y u) = swapfn pswap rswap x y (hom u))`
+               by SRW_TAC [][FUN_EQ_THM, swapfn_def] THEN
+            SRW_TAC [][],
+            REPEAT STRIP_TAC THEN
+            Cases_on `x = y` THEN1 SRW_TAC [][] THEN
+            Q.SPEC_THEN `{x;y;v} UNION FV t UNION X UNION pFV p`
+                        MP_TAC dBTheory.FRESH_string THEN
+            CONV_TAC
+              (LAND_CONV
+                 (SIMP_CONV
+                    (srw_ss())
+                    [Q.ASSUME `FINITE (X:string set)`,
+                     Q.ASSUME `!p:'b. FINITE (pFV p:string set)`])) THEN
+            DISCH_THEN (Q.X_CHOOSE_THEN `z` STRIP_ASSUME_TAC) THEN
+            `LAM v t = LAM z ([VAR z/v] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
+            Q.ABBREV_TAC `M = [VAR z/v] t` THEN
+            `size t = size M` by SRW_TAC [][] THEN
+            POP_ASSUM SUBST_ALL_TAC THEN POP_ASSUM (K ALL_TAC) THEN
+            POP_ASSUM SUBST_ALL_TAC THEN
+            `hom (swap x y (LAM z M)) p =
+               rswap x y (lam (hom M) z M (pswap x y p))`
+               by (SRW_TAC [][swap_thm] THEN
+                   NEW_ELIM_TAC THEN ASM_SIMP_TAC bool_ss [] THEN
+                   Q.X_GEN_TAC `a` THEN
+                   REVERSE (SRW_TAC [][]) THEN1
+                           (SRW_TAC [][] THEN
+                            REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
+                            SRW_TAC [][FUN_EQ_THM, swapfn_def]) THEN
+                   `hom (swap a z (swap x y M)) =
+                      swapfn pswap rswap a z (hom (swap x y M))`
+                        by SRW_TAC [][swapfn_def, FUN_EQ_THM] THEN
+                   `pswap a z p = p`
+                      by PROVE_TAC [swapping_implies_identity_swap] THEN
+                   `lam (hom (swap a z (swap x y M))) a
+                        (swap a z (swap x y M)) p =
+                      rswap a z
+                          (lam (hom (swap x y M)) z (swap x y M) p)`
+                      by SRW_TAC [][] THEN
+                   POP_ASSUM SUBST_ALL_TAC THEN
+                   `swapfn pswap rswap x y (hom M) = hom (swap x y M)`
+                       by SRW_TAC [][FUN_EQ_THM, swapfn_def] THEN
+                   POP_ASSUM SUBST_ALL_TAC THEN
+                   MATCH_MP_TAC swapping_implies_identity_swap THEN
+                   Q.EXISTS_TAC `rFV` THEN ASM_REWRITE_TAC [] THEN
+                   `rFV (lam (hom (swap x y M)) z (swap x y M) p)
+                        SUBSET
+                    FV (LAM z (swap x y M)) UNION pFV p UNION X`
+                       by SRW_TAC [][] THEN
+                   POP_ASSUM MP_TAC THEN SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
+                   METIS_TAC []) THEN
+            POP_ASSUM SUBST_ALL_TAC THEN REPEAT AP_TERM_TAC THEN
+            ASM_SIMP_TAC bool_ss [] THEN
+            NEW_ELIM_TAC THEN ASM_REWRITE_TAC [] THEN
+            Q.X_GEN_TAC `a` THEN
+            REVERSE (SRW_TAC [][]) THEN1 REWRITE_TAC [swap_id] THEN
+            `~(z IN pFV (pswap x y p))`
+               by FULL_SIMP_TAC (srw_ss()) [swapping_def] THEN
+            `pswap a z (pswap x y p) = pswap x y p`
+               by (MATCH_MP_TAC swapping_implies_identity_swap THEN
+                   Q.EXISTS_TAC `pFV` THEN ASM_REWRITE_TAC []) THEN
+            MATCH_MP_TAC EQ_TRANS THEN
+            Q.EXISTS_TAC `rswap a z (lam (hom M) z M (pswap x y p))` THEN
+            CONJ_TAC THENL [
+              ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
+              MATCH_MP_TAC swapping_implies_identity_swap THEN
+              Q.EXISTS_TAC `rFV` THEN ASM_REWRITE_TAC [] THEN
+              `rFV (lam (hom M) z M (pswap x y p)) SUBSET
+               FV (LAM z M) UNION pFV (pswap x y p) UNION X`
+                  by SRW_TAC [][] THEN
+              POP_ASSUM MP_TAC THEN SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
+              PROVE_TAC [],
+              SRW_TAC [][] THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
+              SRW_TAC [][FUN_EQ_THM, swapfn_def]
+            ]
+          ]) THEN
+  ASM_SIMP_TAC bool_ss [] THEN SRW_TAC [][] THEN
+  NEW_ELIM_TAC THEN ASM_SIMP_TAC bool_ss [] THEN
+  Q.X_GEN_TAC `u` THEN STRIP_TAC THENL [
+    `hom (swap u v t) = swapfn pswap rswap u v (hom t)`
+       by SRW_TAC [][FUN_EQ_THM, swapfn_def] THEN
+    `pswap u v p = p` by PROVE_TAC [swapping_implies_identity_swap] THEN
+    `lam (hom (swap u v t)) u (swap u v t) p = rswap u v (lam (hom t) v t p)`
+       by SRW_TAC [][] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    MATCH_MP_TAC swapping_implies_identity_swap THEN
+    Q.EXISTS_TAC `rFV` THEN
+    ASM_REWRITE_TAC [] THEN
+    `rFV (lam (hom t) v t p) SUBSET FV (LAM v t) UNION pFV p UNION X`
+       by SRW_TAC [][] THEN
+    POP_ASSUM MP_TAC THEN REWRITE_TAC [SUBSET_DEF] THEN SRW_TAC [][] THEN
+    METIS_TAC [],
+    SRW_TAC [][]
+  ]);
+
+
+
+val one_eta = prove(
+  ``(\u. f ()) = f``,
+  SRW_TAC [][FUN_EQ_THM] THEN Cases_on `u` THEN SRW_TAC [][]);
+val exists_fn_dom_one = prove(
+  ``(?f: 'a -> one -> 'b. P f) = (?f: 'a -> 'b. P (\x u. f x))``,
+  EQ_TAC THEN STRIP_TAC THENL [
+    Q.EXISTS_TAC `\a. f a ()` THEN BETA_TAC THEN REWRITE_TAC [one_eta] THEN
+    SRW_TAC [ETA_ss][],
+    METIS_TAC []
+  ]);
+
+val forall_fn_dom_one = prove(
+  ``(!f : one -> 'b. P f) = (!f: 'b. P (K f))``,
+  SRW_TAC [][EQ_IMP_THM] THEN
+  `f = K (f ())` by SRW_TAC [][combinTheory.K_DEF, one_eta] THEN
+  POP_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC []);
+val forall_one_one = prove(
+  ``(!p:one. P p) = P ()``,
+  SRW_TAC [][EQ_IMP_THM] THEN Cases_on `p` THEN SRW_TAC [][]);
+
+
+val swap_RECURSION_generic = save_thm(
+  "swap_RECURSION_generic",
+  (SIMP_RULE (srw_ss()) [null_swapping, exists_fn_dom_one, swapfn_def,
+                         forall_fn_dom_one, forall_one_one] o
+   Q.INST [`pFV` |-> `K {}`,
+           `pswap` |-> `\x y u. u`,
+           `var` |-> `\s p. var s`,
+           `con` |-> `\k p. con k`,
+           `app` |-> `\rt ru t u p. app (rt()) (ru()) t u`,
+           `lam` |-> `\rt v t p. lam (rt()) v t`] o
+   INST_TYPE [beta |-> ``:one``])
+  swap_RECURSION_pgeneric);
+
+val swap_RECURSION_nosideset = save_thm(
+  "swap_RECURSION_nosideset",
+  SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`] swap_RECURSION_generic));
 
 val swap_RECURSION_simple = save_thm(
   "swap_RECURSION_simple",
@@ -634,7 +735,10 @@ val swap_RECURSION_simple = save_thm(
    Q.INST [`rswap` |-> `\x y z. z`, `rFV` |-> `\z. {}`])
     swap_RECURSION_nosideset);
 
+
 (* examples
+
+* ENF *
 
 val enf_lam = ``\t' v t. t' /\ is_comb t ==> (rand t = VAR v) ==>
                          v IN FV (rator t)``
@@ -647,6 +751,80 @@ val simple_recursor_lam = ``\t' v t : 'a nc. LAM v t'``
 val g = ``!t' t x y v. ^simple_recursor_lam (swap x y t') (swapstr x y v) (swap x y t) = swap x y (^simple_recursor_lam t' v t)``
 
 val _ = SIMP_CONV (srw_ss()) [GSYM swap_thm] g
+
+* SUBSTITUTION *
+
+open BasicProvers simpLib pred_setTheory boolSimps SingleStep NEWLib
+     ncTheory
+val pswap = ``\x y. (swapstr x y ## swap x y)``
+val pFV = ``\p : string # 'a nc. FST p INSERT FV (SND p)``
+
+val swap_if = prove(``swap x y (if p then q else r) =
+                      if p then swap x y q else swap x y r``,
+                    SRW_TAC [][])
+
+val pair_swapping = prove(
+  ``swapping (\x y. swapstr x y ## swap x y) (\p. FST p INSERT FV (SND p))``,
+  REWRITE_TAC [swapping_def] THEN
+  SIMP_TAC (srw_ss())[pairTheory.FORALL_PROD, swap_identity]);
+
+
+val forall_prod =
+    CONV_RULE (RHS_CONV (RENAME_VARS_CONV ["z", "M"])) pairTheory.FORALL_PROD
+
+val reorder = prove(
+  ``(?f: 'a -> 'b # 'c -> 'd.  P f) =
+    (?f: 'c -> 'b -> 'a -> 'd. P (\a bc. f (SND bc) (FST bc) a))``,
+  SRW_TAC [][EQ_IMP_THM] THEN TRY (metisLib.METIS_TAC []) THEN
+  Q.EXISTS_TAC `\c b a. f a (b, c)` THEN SRW_TAC [ETA_ss][]);
+
+val result0 =
+    (REWRITE_RULE [] o
+     CONV_RULE (LAND_CONV (EQT_INTRO o PROVE [])) o
+     CONV_RULE
+       (LAND_CONV (SIMP_CONV (srw_ss() ++ COND_elim_ss)
+                             [SUBSET_DEF, swap_thm, RIGHT_AND_OVER_OR,
+                              LEFT_AND_OVER_OR, DISJ_IMP_THM,
+                              swap_identity])) o
+     SIMP_RULE (srw_ss()) [forall_prod] o
+     SIMP_RULE (srw_ss()) [SUBSET_UNION, nc_swapping,
+                           swapfn_def, swap_thm, swap_if,
+                           pair_swapping, reorder] o
+     Q.INST [`X` |-> `{}`,
+             `app` |-> `\rt ru t u p. rt p @@ ru p`,
+             `con` |-> `\k p. CON k`,
+             `var` |-> `\s p . if s = FST p then SND p else VAR s`,
+             `lam` |-> `\rt u t p. LAM u (rt p)`,
+             `rswap` |-> `swap`, `rFV` |-> `FV`,
+             `pswap` |-> `^pswap`, `pFV` |-> `^pFV`] o
+     INST_TYPE [beta |-> ``:string # 'a nc``, gamma |-> ``:'a nc``])
+    swap_RECURSION_pgeneric
+
+val hom_def = new_specification ("hom_def", ["hom"], result0)
+
+val l14b = prove(
+  ``!t v M. ~(v IN FV t) ==> (hom M v t = t)``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][hom_def] THENL [
+    Q_TAC (NEW_TAC "z") `FV M UNION FV t UNION {v';v}` THEN
+    `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swap_ALPHA] THEN
+    SRW_TAC [][hom_def] THEN Cases_on `v' = v` THEN SRW_TAC [][],
+    Q_TAC (NEW_TAC "z") `FV M UNION FV t UNION {v}` THEN
+    `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swap_ALPHA] THEN
+    SRW_TAC [][hom_def]
+  ]);
+
+val hom_lam_eq_var = prove(
+  ``hom M v (LAM v t) = LAM v t``,
+  SRW_TAC [][l14b]);
+
+val l14a = prove(
+  ``!t v. hom (VAR v) v t = t``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][hom_def] THEN
+  Cases_on `v = v'` THEN1 SRW_TAC [][l14b] THEN
+  Q_TAC (NEW_TAC "z") `FV t UNION {v;v'}` THEN
+  `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swap_ALPHA] THEN
+  SRW_TAC [][hom_def]);
+
 
 *)
 
