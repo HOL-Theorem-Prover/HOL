@@ -5,6 +5,8 @@ local
   val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
   fun -- q x = Term q
   fun == q x = Type q
+  val oldmesonchat = !mesonLib.chatting
+  val _ = mesonLib.chatting := 0;
 in
 
 infix myTRANS THEN ORELSE ORELSEC THENL THENC |->;
@@ -927,5 +929,7 @@ in
       EVERY_CONV convs term
   end;
 end;
+
+val _ = mesonLib.chatting := oldmesonchat
 
 end;
