@@ -67,11 +67,11 @@ val ctl_def =
 val kripke_structure_def =
  Hol_datatype
   `kripke_structure =
-    <| S: 'State -> bool;
-       S0:'State -> bool;
-       R: 'State # 'State -> bool;
+    <| S: 'state -> bool;
+       S0:'state -> bool;
+       R: 'state # 'state -> bool;
        P: 'prop -> bool;
-       L: 'State -> ('prop -> bool) |>`;
+       L: 'state -> ('prop -> bool) |>`;
 
 val TOTAL_def = Define `TOTAL R = !s. ?s'. R(s,s')`;
 

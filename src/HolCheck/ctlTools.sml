@@ -114,8 +114,8 @@ fun mk_ctlKS I1 R1 RTm state apl vm ksname =
 	val KS_valids =  list_mk_pabs([state,pvar],mk_comb(pvar,state)) 
 	val KS_trans = mk_pabs(mk_pair(state,state'), R1t)
 	val kn = if (Option.isSome ksname) then Option.valOf ksname else "ctlKS"
-	val _ = new_constant(kn,``:(^state_type,^stset_ty) kripke_structure``)
-	val ksnm = mk_const(kn,``:(^state_type,^stset_ty) kripke_structure``)
+	val _ = new_constant(kn,``:(^stset_ty,^state_type) kripke_structure``)
+	val ksnm = mk_const(kn,``:(^stset_ty,^state_type) kripke_structure``)
 	val ks_def =  hd(Defn.eqns_of(Hol_defn (kn) 
 				      `^ksnm = <| S := ^KS_states; S0:= ^KS_initstates; R := ^KS_trans; P:= ^KS_ap; L:= ^KS_valids |>`))
 	val (totth,Rtb,Rthm) = let val Rthm = PBETA_RULE (AP_THM (PURE_REWRITE_RULE [SYM ks_def](*mk totth and Rtb in terms of ks.R*) 

@@ -7,11 +7,11 @@ val _ = new_theory "ks";
    puts uppercase letters before lowercase ones, so the 'State argument comes
    before the 'prop one. *)
 val _ = Hol_datatype `KS = <|
-                                S : 'State -> bool;
-                                S0 : 'State -> bool;
-                                T : string -> ('State # 'State) -> bool ; (* fn from R rel on S x S to bool *)
+                                S : 'state -> bool;
+                                S0 : 'state -> bool;
+                                T : string -> ('state # 'state) -> bool ; (* fn from R rel on S x S to bool *)
                                 ap: 'prop -> bool;
-                                L : 'State -> ('prop -> bool) (* returns only the true atoms *)
+                                L : 'state -> ('prop -> bool) (* returns only the true atoms *)
                         |>`;
 
 (* environment : relvars -> 2^(ks.states) ; can be thought of as an assignment to the free vars of a formula*)

@@ -53,16 +53,16 @@ open cacheTheory
 open ksTools
 
 val dbgmc = holCheckTools.dbgall
-val dbginit = true
+val dbginit = holCheckTools.dbgall
 
 fun DMSG m v = if v then let val _ = print "muCheck: " val _ = holCheckTools.DMSG m v in () end else ()
 
 val cntap = ref 0 val cntrv = ref 0 val cntcj = ref 0 val cntdj = ref 0 val cntng = ref 0 val cntdm = ref 0 val cntbx = ref 0
 val cntmu = ref 0 val cntnu = ref 0 val cntfpitfn = ref 0 val cntfpitit = ref 0
-val tmap = ref 0.0val tmrv = ref 0.0val tmcj = ref 0.0val tmdj = ref 0.0val tmng = ref 0.0val tmdm = ref 0.0val tmbx = ref 0.0
-val tmmu = ref 0.0val tmnu = ref 0.0
-val tmbobb = ref 0.0val tmboth = ref 0.0val tmbobe = ref 0.0
-val tmfpoh = ref 0.0val tmfpit = ref 0.0val tmfpitfn = ref 0.0val tmfpitit = ref 0.0
+val tmap = ref 0.0 val tmrv = ref 0.0 val tmcj = ref 0.0 val tmdj = ref 0.0 val tmng = ref 0.0 val tmdm = ref 0.0 val tmbx = ref 0.0
+val tmmu = ref 0.0 val tmnu = ref 0.0
+val tmbobb = ref 0.0 val tmboth = ref 0.0 val tmbobe = ref 0.0
+val tmfpoh = ref 0.0 val tmfpit = ref 0.0 val tmfpitfn = ref 0.0 val tmfpitit = ref 0.0
 val mtmr = ref (Timer.startRealTimer())
 
 in 
@@ -726,7 +726,7 @@ fun init_thms (apl,ks_def,wfKS_ks) T1 state vm Ric absf =
     let 
 	val tmr = Timer.startRealTimer()
 	val ksname = lhs(concl ks_def)
-	val prop_ty = List.last(snd(dest_type(type_of ksname)))
+	val prop_ty = List.hd(snd(dest_type(type_of ksname)))
 	val state' = mk_primed_state state
 	val (st,st') = (strip_pair##strip_pair) (state,state')
         val s2s' = List.map (fn(v,v') => (BddVar true vm v,BddVar true vm v')) (ListPair.zip(st,st'))

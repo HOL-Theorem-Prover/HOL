@@ -32,7 +32,7 @@ open ksTheory
 open holCheckTools
 open boolTheory
 
-val dbgkt = true; (* holCheckTools.dbgall*)
+val dbgkt = holCheckTools.dbgall
 
 fun DMSG m v = if v then let val _ = print "ksTools: " val _ = holCheckTools.DMSG m v in () end else ()
 
@@ -118,8 +118,8 @@ fun mk_wfKS I1 T1 RTm state vm Ric apl abs_fun ksname =
 	val Rvar = mk_var("R",mk_type("fun",[mk_prod(state_type,state_type),bool]))	
 	val KS_trans = mk_tree (List.map (fn (nm,tm)=>(nm,mk_pabs((mk_pair(state,state')),tm))) T1)
 	val kn = if (Option.isSome ksname) then Option.valOf ksname else "muKS"
-	val _ = new_constant(kn,``:(^state_type,^stset_ty) KS``)
-	val ksnm = mk_const(kn,``:(^state_type,^stset_ty) KS``)
+	val _ = new_constant(kn,``:(^stset_ty,^state_type) KS``)
+	val ksnm = mk_const(kn,``:(^stset_ty,^state_type) KS``)
 	(* skip M.ap for abstracted M since cearTheory.ABS_KS_def does not define M.ap *)
 	(* FIXME: since aks.ap is simply the set of state variables, we could pass it in to ABS_KS_def *)
 	val ks_def = if (Option.isSome abs_fun)  

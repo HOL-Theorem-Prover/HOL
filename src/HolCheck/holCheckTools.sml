@@ -6,7 +6,7 @@ struct
 
 local
 
-open Globals HolKernel Parse goalstackLib;
+open Globals HolKernel Parse goalstackLib Feedback
 
 open bossLib;
 open pairTheory;
@@ -36,7 +36,11 @@ open numLib;
 
 in
 
-val dbgall = false
+val trace = ref 0;
+
+val dbgall = not ((!trace)=0)
+
+val _ = register_trace("HolCheck",trace,10);
 
 val mk_var = Term.mk_var;
 
