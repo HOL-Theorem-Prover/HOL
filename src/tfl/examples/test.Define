@@ -150,7 +150,9 @@ val Swap_def' =
 
 val Flag_defn = 
  Hol_defn "Flag" 
-         `Flag list = option_case list Flag (Swap list)`;
+         `Flag list = case Swap list
+                       of NONE -> list
+                       || SOME slist -> Flag slist`;
 
 
 

@@ -348,8 +348,8 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
  ---------------------------------------------------------------------------*)
 
 fun been_stored s thm =
-  (Lib.say ("Definition has been stored under "^Lib.quote s^".\n");
-   computeLib.add_persistent_funs [(s,thm)]
+  (computeLib.add_persistent_funs [(s,thm)];
+   Lib.say ("Definition has been stored under "^Lib.quote s^".\n")
    );
 
 
@@ -359,6 +359,7 @@ fun store(stem,eqs,ind) =
       val   _  = save_thm(ind_bind, ind)
       val eqns = save_thm(eqs_bind, eqs)
       val _ = computeLib.add_persistent_funs [(eqs_bind,eqs)]
+         handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
     Lib.say (String.concat
        [   "Equations stored under ", Lib.quote eqs_bind,

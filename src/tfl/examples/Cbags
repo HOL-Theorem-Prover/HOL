@@ -116,5 +116,5 @@ val (rbags_eqns,rbags_ind) =
       THEN Induct_on `el`
       THEN RW_TAC list_ss [listTheory.list_size_def]
       THEN POP_ASSUM (MP_TAC o SPEC_ALL)
-      THEN RW_TAC list_ss [definition"CExpr_size_def"]);
+      THEN RW_TAC list_ss [fetch "-" "CExpr_size_def"]);
 

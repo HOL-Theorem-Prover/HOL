@@ -243,7 +243,7 @@ val tcs as [tc1,tc2,nested,tc3,tc4,tc5,tc6,tc7,tc8] = Defn.tcs_of defnR;
 val easy_tcs = prove(list_mk_conj [tc1,tc2,tc3,tc4,tc5,tc6,tc7,tc8],
  TotalDefn.TC_SIMP_TAC [] 
     [JointAppCount_def,JointStdSize_def,
-     AppCount_def,definition "arith_size_def"]);
+     AppCount_def,fetch "-" "arith_size_def"]);
 
 (*---------------------------------------------------------------------------
        And eliminate them from the definition
@@ -296,9 +296,8 @@ val AppCountLem = Q.prove
    Q.SUBGOAL_THEN 
      `inv_image ($< LEX $<) (\x. (JointAppCount x,JointStdSize x))
         (INL (Fn (INL (B,v,M)),y,N)) (INL (App B v M,y,N))` ASSUME_TAC THENL 
-   [WEAKEN_TAC is_imp 
-      THEN TotalDefn.TC_SIMP_TAC []
-             [JointAppCount_def, JointStdSize_def,AppCount_def],
+   [WEAKEN_TAC is_imp THEN 
+    TotalDefn.TC_SIMP_TAC [] [JointAppCount_def,JointStdSize_def,AppCount_def],
     PROVE_TAC [eqn4]]);
 
 (*---------------------------------------------------------------------------

@@ -249,7 +249,7 @@ val nnf_defn0 =
     The size of the largest NOT expression in a proposition.
  ---------------------------------------------------------------------------*)
 
-val prop_size_def = definition "prop_size_def";
+val prop_size_def = fetch "-" "prop_size_def";
 
 val MAX_def = Define `MAX x y = if x<y then y else x`;
 
