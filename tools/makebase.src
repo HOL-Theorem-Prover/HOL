@@ -25,6 +25,18 @@ fun destProperSuffix s1 s2 =
        end
  end;
 
+fun isTheory {comp,file=path,line} =
+  let open Path
+      val {dir,file} = splitDirFile path
+      val {base,ext} = splitBaseExt file
+  in Option.isSome (destProperSuffix "Theory" base)
+  end
+  handle _ => false;
+
+fun isSigId {comp=Database.Term(_,SOME"HOL"),file,line} = false
+  | isSigId entry = not (isTheory entry)
+
+
 (*---------------------------------------------------------------------------
     Set values
  ---------------------------------------------------------------------------*)
@@ -54,8 +66,12 @@ val texIndexDef = "index.tex"
 (* Default directory for signatures in HTML format: *)
 val htmlDirDef = "htmlsigs"
 
-(* Default filename for the HTML format database: *)
-val htmlIndexDef = htmlDirDef ^ "/idIndex.html"
+(* Default filename for the HTML format database for identifiers: *)
+val htmlIndexDef = normPath[HOLpath,"help","src",htmlDirDef,"idIndex.html"]
+
+(* Default filename for the HTML format database for theories: *)
+val htmlTheoryIndexDef = 
+   normPath[HOLpath,"help","src",htmlDirDef,"TheoryIndex.html"]
 
 (* Default filename for the LaTeX signatures: *)
 val texSigs = "texsigsigs.tex"
@@ -194,7 +210,8 @@ fun dirToBase (sigdir, docdirs, filename) =
     end
     handle exn as OS.SysErr (str, _) => (print(str ^ "\n\n"); raise exn)
 
-fun process (libdir, helpfile, txtIndex, texIndex, htmldir, htmlIndex, HOLpage)
+fun process (libdir, helpfile, txtIndex, 
+             texIndex, htmldir, htmlIndex, htmlTheoryIndex, HOLpage)
  =
  (print ("Reading signatures in directory " ^ libdir ^ 
         "\nand writing help database in file " ^ helpfile ^ "\n")
@@ -211,10 +228,17 @@ fun process (libdir, helpfile, txtIndex, texIndex, htmldir, htmlIndex, HOLpage)
      version bgcolor stoplist helpfile HOLpath SRCFILES (libdir, htmldir)
 
  ; print ("\nWriting HTML signature index in file " ^ htmlIndex ^ "\n")
- ; Htmlsigs.printHTMLBase version bgcolor HOLpath (helpfile, htmlIndex)
+ ; Htmlsigs.printHTMLBase version bgcolor HOLpath 
+         isSigId "HOL IDENTIFIER INDEX" (helpfile, htmlIndex)
+
+ ; print ("\nWriting HTML theory signature index in file "
+          ^ htmlTheoryIndex ^ "\n")
+ ; Htmlsigs.printHTMLBase version bgcolor HOLpath 
+         isTheory "HOL THEORY BINDINGS" (helpfile, htmlTheoryIndex)
 
  ; print ("\nWriting HOLPage\n")
- ; HOLPage.printHOLPage version bgcolor HOLpath (helpfile, HOLpage)
+ ; HOLPage.printHOLPage version bgcolor HOLpath 
+                        htmlIndex htmlTheoryIndex (helpfile, HOLpage)
      (*  ;
      print ("\nWriting LaTeX signature bodies in file " ^ texSigs ^ "\n");
      Texsigs.sigsToLatex stoplist libdir helpfile texSigs
@@ -226,9 +250,11 @@ val _ =
 	[]       => 
 	    process (libdirDef, helpfileDef, 
 		     txtIndexDef, texIndexDef, 
-                     htmlDirDef, htmlIndexDef, HOLpageDef)
+                     htmlDirDef, htmlIndexDef, 
+                     htmlTheoryIndexDef, HOLpageDef)
       | [libdir] => 
 	    process (libdir, helpfileDef, 
 		     txtIndexDef, texIndexDef, 
-                     htmlDirDef, htmlIndexDef, HOLpageDef)
+                     htmlDirDef, htmlIndexDef, 
+                     htmlTheoryIndexDef, HOLpageDef)
       | _ => print "Usage: makebase\n"
