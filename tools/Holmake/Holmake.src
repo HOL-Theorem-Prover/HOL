@@ -418,11 +418,21 @@ in
         else
            file_dependencies
     | SML (Theory x) => let
-        val additionals =
+        val additionals1 =
           List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE)
           file_dependencies
+        (* there may be theory files mentioned in the Theory.sml file that
+           aren't mentioned in the script file.  If so, we are really
+           dependent on these, and should add them.  They will be listed
+           in the dependencies for UO (Theory x). *)
+        val additionals2 =
+          if FileSys.access(fromFile f, [FileSys.A_READ]) then
+            List.mapPartial (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
+            (get_dependencies (UO (Theory x)))
+          else
+            []
       in
-        additionals @ file_dependencies
+        additionals1 @ additionals2 @ file_dependencies
       end
     | _ => file_dependencies
   end
