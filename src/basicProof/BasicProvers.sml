@@ -115,13 +115,18 @@ fun add_simpls tyinfo ss = ss && TypeBasePure.simpls_of tyinfo;
 
 fun is_dneg tm = 1 < snd(strip_neg tm);
 
+val notT = mk_neg T
+val notF = mk_neg F;
+
 fun breakable tm =
     is_exists tm orelse
     is_conj tm   orelse
     is_disj tm   orelse
     is_dneg tm   orelse
-    T=tm         orelse
-    F=tm;
+    notT = tm    orelse
+    notF = tm    orelse
+    T=tm orelse F=tm
+
 
 (*---------------------------------------------------------------------------
       STP_TAC (Simplify then Prove)
