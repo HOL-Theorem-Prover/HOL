@@ -4,9 +4,10 @@ struct
 open HolKernel boolLib simpLib stringTheory stringLib;
 
 val char_rewrites = [CHR_ORD,CHAR_EQ_THM,ORD_11];
+
 val string_rewrites = 
      STRING_CASE_DEF::STRING_11::STRING_DISTINCT::
-     EXPLODE_EQNS::IMPLODE_EQNS::STRING_SIZE_DEF::
+     EXPLODE_EQNS::IMPLODE_EQNS::STRLEN_DEF::
      EXPLODE_11::EXPLODE_IMPLODE::IMPLODE_EXPLODE::char_rewrites;
 
 

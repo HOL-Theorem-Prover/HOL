@@ -41,7 +41,7 @@ val string_EQ_CONV =
       CBV_CONV compset
    end;
 
-val string_rewrites = STRING_SIZE_DEF::STRING_CASE_DEF::
+val string_rewrites = STRLEN_DEF::STRING_CASE_DEF::
                       EXPLODE_EQNS::IMPLODE_EQNS::string_eq_thms;
 
 val _ = computeLib.add_funs string_rewrites;
