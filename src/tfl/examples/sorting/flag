@@ -21,12 +21,10 @@
  * Load and open useful libraries and theories.                              *
  *---------------------------------------------------------------------------*)
 
-app load ["bossLib", "permTheory", "Q"]; 
-open bossLib;
+app load ["bossLib", "permTheory"]; open bossLib listTheory permTheory;
 
 infix 8 by;
 
-open listTheory permTheory;
 
 (*---------------------------------------------------------------------------*
  * Define Red, White, and Blue to be the colours.                            *
@@ -80,7 +78,7 @@ GEN_TAC THEN DISCH_TAC
 
 val Flag_defn = 
  Defn.Hol_defn "Flag" 
-               `Flag list = option_case list (\l. Flag l) (Swap list)`;
+               `Flag list = option_case list Flag (Swap list)`;
 
 
 (*---------------------------------------------------------------------------*
@@ -103,7 +101,6 @@ val option_APPLY_lem2 = Q.prove
 (`!f opt x. (option_APPLY f opt = NONE) ==> (opt = NONE)`,
 Cases_on `opt` THEN RW_TAC std_ss []);
 
-
 val option_APPLY_eq_SOME_TAC =
      IMP_RES_THEN (CHOOSE_THEN SUBST_ALL_TAC) option_APPLY_lem1
         THEN Q.PAT_ASSUM `M = N` MP_TAC 
@@ -113,7 +110,7 @@ val option_APPLY_eq_SOME_TAC =
 val (Flag_eqns,Flag_ind) = 
 Defn.tprove
 (Flag_defn,
- WF_REL_TAC Flag_defn `measure Weight`
+ WF_REL_TAC `measure Weight`
   THEN recInduct Swap_ind_thm
   THEN RW_TAC std_ss [Swap_eqns,Weight_def] 
   THENL [ALL_TAC,ALL_TAC,ALL_TAC,

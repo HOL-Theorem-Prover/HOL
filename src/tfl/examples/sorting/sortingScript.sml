@@ -11,7 +11,7 @@ app load ["permTheory", "BasicProvers", "TotalDefn", "SingleStep",
 open permTheory listTheory BasicProvers TotalDefn SingleStep;
 *)
 
-open HolKernel Parse basicHol90Lib
+open HolKernel Parse boolLib
      permTheory listTheory BasicProvers TotalDefn SingleStep;
 
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;

@@ -10,7 +10,7 @@ app load ["listTheory", "BasicProvers", "TotalDefn", "SingleStep",
 open listTheory BasicProvers TotalDefn SingleStep;
 *)
 
-open HolKernel basicHol90Lib Parse listTheory 
+open HolKernel Parse boolLib listTheory 
      BasicProvers TotalDefn SingleStep;
 
 infix THEN THENL |-> ;
