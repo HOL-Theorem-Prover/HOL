@@ -278,11 +278,31 @@ fun pathsereToTerm(p,r) = ``S_SEM ^(pathToTerm p) B_TRUE ^(sereToTerm r)``;
 ******************************************************************************)
 fun pathflToTerm(p,f) = ``F_SEM (FINITE ^(pathToTerm p)) B_TRUE ^(flToTerm f)``;
 
+(******************************************************************************
+* State "a,b,c" =
+*  ``{"a"; "b"; "c"}`` 
+*
+* Path "{}{a,b}{c,d,e}" = 
+*  ``[{}; {"a"; "b"}; {"c"; "d"; "e"}]`` 
+*
+* PathSERE "{x}{y} |= x;y" =
+*  ``S_SEM [{"x"}; {"y"}] B_TRUE
+*     (S_CAT (S_BOOL (B_PROP "x"),S_BOOL (B_PROP "y")))`` 
+*
+* PathFL "{x}{y,p}{q} |= {x;y} |-> {p;q}" =
+*  ``F_SEM (FINITE [{"x"}; {"y"; "p"}; {"q"}]) B_TRUE
+*     (F_WEAK_IMP
+*        (S_CAT (S_BOOL (B_PROP "x"),S_BOOL (B_PROP "y")),
+*         S_CAT (S_BOOL (B_PROP "p"),S_BOOL (B_PROP "q"))))``
+******************************************************************************)
 val State    = stateToTerm    o parseFileState    o stringToFile
 and Path     = pathToTerm     o parseFilePath     o stringToFile
 and PathSERE = pathsereToTerm o parseFilePathSere o stringToFile
 and PathFL   = pathflToTerm   o parseFilePathFl   o stringToFile;
 
+(******************************************************************************
+* EVAL a SERE or FL formula wrt a path
+******************************************************************************)
 val EvalSERE = EVAL o PathSERE
 and EvalFL   = EVAL o PathFL;
 
@@ -307,5 +327,83 @@ EvalFL "{x}{y}{p}{q} |= {x;y} |-> {p;q}";
 EvalFL "{x}{y}{p}{q} |= {x;y} |=> {p;q}";
 EvalFL "{x}{y}{p}{q} |= {x;y;p} |-> {p;q}";
 EvalFL "{x}{y}{p}{q} |= {x;y;T} |-> {p;q}";
+*)
+
+(******************************************************************************
+* EVAL an FL formula on all tails of a path and report positions 
+* where it is true
+******************************************************************************)
+
+fun EvalAllFL(p,f) =
+ let val ll = parseFilePath(stringToFile p)
+     val fm = parseFileFl(stringToFile f)
+     val nl = List.tabulate(length ll + 1,I)
+ in
+ mapfilter
+  (fn n => if rhs(concl(EVAL(pathflToTerm(List.drop(ll,n),fm)))) = ``F``
+            then fail()
+            else n)
+   nl
+ end;
+
+(*
+
+EvalAllFL
+ ("{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}", "a until! b");
+
+EvalAllFL
+ ("{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}", "(a until! b)@clk");
+
+*)
+
+
+(******************************************************************************
+* map_interval p [x0,...,xn] = [((i,j), p[xi,...,xj]) | 0 <= i <= j <= n]
+******************************************************************************)
+fun map_interval p l =
+ flatten
+  (mapfilter
+   (fn i =>
+     mapfilter
+      (fn j => if i<=j then ((i,j),p(List.take(List.drop(l,i),j-i+1))) 
+                       else fail())
+      (List.tabulate(length l,I)))
+   (List.tabulate(length l,I)));
+
+(******************************************************************************
+* EVAL a SERE on all sub-intervals of a path and report those where it holds
+******************************************************************************)
+
+fun EvalAllSERE(p,r) =
+ let val ll = parseFilePath(stringToFile p)
+     val se = parseFileSere(stringToFile r)
+ in
+ mapfilter
+  (fn (interval,result) => if result = ``F`` then fail() else interval)
+  (map_interval (fn w => rhs(concl(EVAL(pathsereToTerm(w,se))))) ll)
+ end;
+
+
+(*
+
+
+(******************************************************************************
+* Example 2 (LRM Version 1.0, page 33)
+*
+* time  0  1  2  3  4  5  6  7
+* ----------------------------
+* clk1  0  1  0  1  0  1  0  1
+* a     0  1  1  0  0  0  0  0
+* b     0  0  0  1  0  0  0  0
+* c     0  0  0  0  1  0  1  0
+* clk2  1  0  0  1  0  0  1  0
+*
+* {clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}
+******************************************************************************)
+
+EvalAllSERE
+ ("{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}",
+  "{{a;b}@clk1;c}@clk2");
+
 *)
 

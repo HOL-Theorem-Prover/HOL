@@ -53,6 +53,8 @@ EvalFL "                              {clk,b}{b}{clk} |= a until! b"; (* w^7 *)
 EvalFL "                                     {b}{clk} |= a until! b"; (* w^8 *)
 EvalFL "                                        {clk} |= a until! b"; (* w^9 *)
 
+EvalAllFL
+ ("{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}", "a until! b");
 
 EvalFL "{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^0 *)
 EvalFL "  {clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^1 *)
@@ -64,6 +66,9 @@ EvalFL "                            {}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w
 EvalFL "                              {clk,b}{b}{clk} |= (a until! b)@clk"; (* w^7 *)
 EvalFL "                                     {b}{clk} |= (a until! b)@clk"; (* w^8 *)
 EvalFL "                                        {clk} |= (a until! b)@clk"; (* w^9 *)
+
+EvalAllFL
+ ("{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}", "(a until! b)@clk");
 
 (******************************************************************************
 * Example 2 (LRM Version 1.0, page 45)
@@ -101,6 +106,10 @@ EvalFL "                                                            {b}{clk1,clk
 EvalFL "                                                               {clk1,clk2}\
 \       |= c && next! (a until! b)";  (* w^9 *)
 
+EvalAllFL
+ ("{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}",
+  "c && next! (a until! b)");
+
 EvalFL "{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
 \       |= (c && next! (a until! b))@clk1";  (* w^0 *)
 EvalFL "        {clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
@@ -121,5 +130,61 @@ EvalFL "                                                            {b}{clk1,clk
 \       |= (c && next! (a until! b))@clk1";  (* w^8 *)
 EvalFL "                                                               {clk1,clk2}\
 \       |= (c && next! (a until! b))@clk1";  (* w^9 *)
+
+EvalAllFL
+ ("{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}",
+  "(c && next! (a until! b))@clk1");
+
+
+(******************************************************************************
+* Example 1 (LRM Version 1.0, page 33)
+*
+* time  0  1  2  3  4
+* -------------------
+* clk   0  1  0  1  0
+* a     0  1  1  0  0
+* b     0  0  0  1  0
+*
+* {}{clk,a}{a}{clk,b}{b}
+******************************************************************************)
+
+EvalAllSERE
+ ("{}{clk,a}{a}{clk,b}{b}",
+  "{a;b}");
+
+EvalAllSERE
+ ("{}{clk,a}{a}{clk,b}{b}",
+  "{a;b}@clk");
+
+
+(******************************************************************************
+* Example 2 (LRM Version 1.0, page 33)
+*
+* time  0  1  2  3  4  5  6  7
+* ----------------------------
+* clk1  0  1  0  1  0  1  0  1
+* a     0  1  1  0  0  0  0  0
+* b     0  0  0  1  0  0  0  0
+* c     0  0  0  0  1  0  1  0
+* clk2  1  0  0  1  0  0  1  0
+*
+* {clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}
+******************************************************************************)
+
+EvalAllSERE
+ ("{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}",
+  "{{a;b};c}");
+
+EvalAllSERE
+ ("{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}",
+  "{{a;b}@clk1;c}@clk2");
+
+EvalAllSERE
+ ("{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}",
+  "{{a;b};c}@clk1");
+
+EvalAllSERE
+ ("{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}",
+  "{{a;b};c}@clk2");
 
 
