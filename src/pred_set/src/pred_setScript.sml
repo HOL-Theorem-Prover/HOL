@@ -2599,6 +2599,12 @@ val DISJOINT_BIGUNION = save_thm(
   CONJ DISJOINT_BIGUNION_lemma
        (ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_BIGUNION_lemma));
 
+val BIGUNION_INSERT = store_thm(
+  "BIGUNION_INSERT",
+  ``!s P. BIGUNION (s INSERT P) = s UNION (BIGUNION P)``,
+  SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT] THEN
+  MESON_TAC []);
+
 (* ====================================================================== *)
 (* Cross product of sets                                                  *)
 (* ====================================================================== *)
@@ -2754,6 +2760,15 @@ val FINITE_CROSS_EQ = store_thm(
   REPEAT GEN_TAC THEN EQ_TAC THEN
   MESON_TAC [FINITE_CROSS_EQ_lemma, FINITE_CROSS, FINITE_EMPTY,
              CROSS_EMPTY]);
+
+val FINITE_BIGUNION = store_thm(
+  "FINITE_BIGUNION",
+  ``!P. FINITE P /\ (!s. s IN P ==> FINITE s) ==> FINITE (BIGUNION P)``,
+  SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
+  Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+  SIMP_TAC bool_ss [NOT_IN_EMPTY, FINITE_EMPTY, BIGUNION_EMPTY,
+                    IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
+                    BIGUNION_INSERT, FINITE_UNION]);
 
 val _ = export_theory();
 
