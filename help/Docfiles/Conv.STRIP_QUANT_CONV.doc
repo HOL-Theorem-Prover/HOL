@@ -13,7 +13,7 @@ If {tm} has the form {Q(\v1. ... (Q(\vn.M))...)} and the application of
 {conv} to {M} yields {|- M = N}, then {STRIP_QUANT_CONV conv tm}
 returns {|- Q(\v1. ... (Q(\vn.M))...) = Q(\v1. ... (Q(\vn.N))...)},
 provided {Q} is Hilbert's choice operator or a universal, existential, or 
-unique_existence quantifer.
+unique-existence quantifer.
 
 Otherwise, {STRIP_QUANT_CONV conv tm} returns {conv tm}.
 
@@ -40,6 +40,6 @@ are more efficient than iterated application of {QUANT_CONV}, {BINDER_CONV},
 or {ABS_CONV}.
 
 \SEEALSO
-STRIP_BINDER_CONV, QUANT_CONV, BINDER_CONV, ABS_CONV.
+Conv.STRIP_BINDER_CONV, Conv.QUANT_CONV, Conv.BINDER_CONV, Conv.ABS_CONV.
 
 \ENDDOC

@@ -15,7 +15,7 @@ theorems of the form:
 {
    |- (\x.tm) = (\x.tm')
 }
-That is, {ABS_CONV c "\x.t"} applies {c} to the body of the
+That is, {ABS_CONV c (\x.t)} applies {c} to the body of the
 abstraction {\x.t}.
 
 \FAILURE
@@ -28,11 +28,13 @@ function returned by {ABS_CONV c} may also fail if the ML function
 \EXAMPLE
 {
 - ABS_CONV SYM_CONV (Term `\x. 1 = x`)
-
 > val it = |- (\x. 1 = x) = (\x. x = 1) : thm
 }
 
 
 \SEEALSO
-Conv.RAND_CONV, Conv.RATOR_CONV, Conv.SUB_CONV.
+Conv.RAND_CONV, Conv.RATOR_CONV, Conv.SUB_CONV, 
+Conv.BINDER_CONV, Conv.QUANT_CONV,
+Conv.STRIP_BINDER_CONV, Conv.STRIP_QUANT_CONV.
+
 \ENDDOC

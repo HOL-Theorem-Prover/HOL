@@ -9,8 +9,8 @@ Applies a conversion underneath a binder.
 conversion, quantifier.
 
 \DESCRIBE
-If {conv N} returns {A |- N = P}, then {BINDER_CONV c (M (\v.N))} returns
-{A |- M (\v.N) = M (\v.P)} and {BINDER_CONV c (\v.N)} returns
+If {conv N} returns {A |- N = P}, then {BINDER_CONV conv (M (\v.N))} returns
+{A |- M (\v.N) = M (\v.P)} and {BINDER_CONV conv (\v.N)} returns
 {A |- (\v.N) = (\v.P)}
 
 \FAILURE
@@ -28,5 +28,6 @@ For deeply nested quantifiers, {STRIP_BINDER_CONV} and
 {BINDER_CONV}, {BINDER_CONV}, or {ABS_CONV}.
 
 \SEEALSO
-QUANT_CONV, STRIP_QUANT_CONV, STRIP_BINDER_CONV, ABS_CONV.
+Conv.QUANT_CONV, Conv.STRIP_QUANT_CONV, Conv.STRIP_BINDER_CONV, Conv.ABS_CONV.
+
 \ENDDOC
