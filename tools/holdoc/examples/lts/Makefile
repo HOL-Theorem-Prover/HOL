@@ -3,7 +3,8 @@
 #
 # locations of various programs:
 #
-HOLDOCDIR=..
+HOLDOCDIR=../..
+LIBDIR=.
 
 LTSTOLATEX=$(HOLDOCDIR)/lts_to_latex
 MNGTOLATEX=$(HOLDOCDIR)/mng_to_latex
@@ -13,7 +14,7 @@ DVIPS=dvips
 #
 # location of ltsmunge.sty and other TeX style files:
 #
-EXTRATEXINPUTS=.
+EXTRATEXINPUTS=$(LIBDIR)
   # no need to give current directory here; it's just a placeholder.
   # Normally this would point to another directory, containing your
   # standard set of HOLDoc style files.
@@ -110,7 +111,7 @@ space := $(nullstring) # end of the line
 #
 # extra dependencies:
 #
-StoreLTS-doc.dvi : ltsmunge.sty
+StoreLTS-doc.dvi : $(LIBDIR)/ltsmunge.sty
 
 #
 # end of Makefile
