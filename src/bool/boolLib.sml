@@ -1,7 +1,6 @@
 (* ===================================================================== *)
 (* FILE          : boolLib.sml                                           *)
-(* DESCRIPTION   : boolTheory and related support, most of which is      *)
-(*                 inherited from hol88.                                 *)
+(* DESCRIPTION   : boolTheory and related support.                       *)
 (* ===================================================================== *)
 
 structure boolLib =
@@ -17,8 +16,8 @@ val Type = Parse.Type
 val --   = Parse.--   
 
 (*---------------------------------------------------------------------------
-      Stock the rewriter in Ho_Rewrite with some rules not proved
-      in boolTheory.
+      Stock the rewriter in Ho_Rewrite with some rules not yet 
+      proved in boolTheory.
  ---------------------------------------------------------------------------*)
 
 infix THEN THENL ORELSE
@@ -82,7 +81,7 @@ val UNIQUE_SKOLEM_THM = prove
 (* store_thm("UNIQUE_SKOLEM_THM", *)
 (Term`!P. (!x:'a. ?!y:'b. P x y) = ?!f. !x. P x (f x)`,
  GEN_TAC 
-  THEN Ho_Rewrite.REWRITE_TAC[EXISTS_UNIQUE_THM, SKOLEM_THM, FORALL_AND_THM]
+  THEN REWRITE_TAC[EXISTS_UNIQUE_THM, SKOLEM_THM, FORALL_AND_THM]
   THEN EQ_TAC THEN DISCH_THEN(CONJUNCTS_THEN ASSUME_TAC) 
   THEN ASM_REWRITE_TAC[] THENL
    [REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
