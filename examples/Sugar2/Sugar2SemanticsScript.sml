@@ -221,7 +221,7 @@ val F_SEM_defn =
       ?i. FIRST_RISE M p c i /\ B_SEM M (L M (PATH_EL p i)) b)
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_NOT f) = 
-      ~(F_SEM M p (STRONG_CLOCK c) f))(*WEAK_CLOCK -> STRONG_CLOCK for proof*) 
+      ~(F_SEM M p (WEAK_CLOCK c) f))
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_AND(f1,f2)) = 
       ?i. FIRST_RISE M p c i                      /\ 

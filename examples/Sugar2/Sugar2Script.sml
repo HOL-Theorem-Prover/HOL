@@ -389,6 +389,49 @@ val NEXT_RISE_TRUE_EXISTS =
     THEN RW_TAC std_ss 
      [SIMP_RULE arith_ss [] (Q.SPECL[`p`,`j`,`j`](GEN_ALL NEXT_RISE_TRUE))]);
 
+
+val F_NEG_FREE_def =
+ Define
+  `(F_NEG_FREE (F_BOOL b)            = T)
+   /\
+   (F_NEG_FREE (F_NOT f)             = F) 
+   /\
+   (F_NEG_FREE (F_AND(f1,f2))        = F_NEG_FREE f1 /\ F_NEG_FREE f2)
+   /\
+   (F_NEG_FREE (F_NEXT f)            = F_NEG_FREE f)
+   /\
+   (F_NEG_FREE (F_UNTIL(f1,f2))      = F_NEG_FREE f1 /\ F_NEG_FREE f2)
+   /\
+   (F_NEG_FREE (F_SUFFIX_IMP(r,f))   = F_NEG_FREE f)
+   /\
+   (F_NEG_FREE (F_STRONG_IMP(r1,r2)) = T)
+   /\
+   (F_NEG_FREE (F_WEAK_IMP(r1,r2))   = T)
+   /\
+   (F_NEG_FREE (F_ABORT (f,b))       = F_NEG_FREE f)
+   /\
+   (F_NEG_FREE (F_WEAK_CLOCK v)      = T)
+   /\
+   (F_NEG_FREE (F_STRONG_CLOCK v)    = T)`;
+
+val F_SEM_TRUE_EQ_LEMMA =
+ store_thm
+  ("F_SEM_TRUE_EQ_LEMMA",
+   ``!m1 m2 m3 m4 m5 p v1 f v2.
+       (v1 = STRONG_CLOCK B_TRUE) /\
+       (v2 = WEAK_CLOCK B_TRUE)   /\
+       F_NEG_FREE f
+       ==>
+       (F_SEM (m1,m2,m3,m4,m5) p v1 f =
+         F_SEM (m1,m2,m3,m4,m5) p v2 f)``,
+   recInduct (fetch "Sugar2Semantics" "F_SEM_ind")
+    THEN REPEAT CONJ_TAC
+    THEN RW_TAC std_ss 
+          [F_SEM_def,FIRST_RISE_TRUE,B_SEM_def,F_NEG_FREE_def,
+           intLib.COOPER_PROVE ``(?k. !l. ~(l > k))=F``,NEXT_RISE_TRUE_EXISTS]
+    THEN PROVE_TAC[]);
+
+(*
 val F_SEM_TRUE_EQ_LEMMA =
  store_thm
   ("F_SEM_TRUE_EQ_LEMMA",
@@ -419,6 +462,7 @@ val F_SEM_TRUE_EQ =
    	``F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f``,
    Cases_on `M` THEN Cases_on `r` THEN Cases_on `r'` THEN Cases_on `r`
     THEN RW_TAC std_ss [F_SEM_TRUE_EQ_LEMMA]);
+*)
 
 (******************************************************************************
 * US_SEM M w r means "w is in the language of r" in the unclocked semantics
@@ -542,7 +586,7 @@ val UF_SEM =
        UF_SEM M p (F_STRONG_IMP(r1,r2))   
        \/
        !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
-           (?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) \/
+           (?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) \/  
            !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
                ==> ?w. US_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) r2)  
      /\
@@ -639,13 +683,13 @@ val F_CLOCK_FREE_def =
 val INIT_TAC =
  RW_TAC std_ss 
   [F_SEM_def,UF_SEM_def,F_CLOCK_FREE_def,FIRST_RISE_TRUE,RESTN_def,
-   DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``];
+   F_NEG_FREE_def,DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``];
 
 val F_SEM_TRUE_LEMMA =
  store_thm
   ("F_SEM_TRUE_LEMMA",
    ``!m1 m2 m3 m4 m5 p f. 
-      F_CLOCK_FREE f
+      F_CLOCK_FREE f /\ F_NEG_FREE f
       ==>
       (F_SEM (m1,m2,m3,m4,m5) p (STRONG_CLOCK B_TRUE) f =
         UF_SEM (m1,m2,m3,m4,m5) p f)``,
