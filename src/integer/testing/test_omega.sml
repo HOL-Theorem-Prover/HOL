@@ -56,6 +56,7 @@ val terms_to_test =
    ("DIV1", Term`!x. 0 <= x = x / 2 <= x`),
    ("DIV2", Term`!x. (x / 2 = x) = (x = 0)`),
    ("NDIV1", Term`!x. 0 < x ==> x DIV 2 < x`),
+   ("sub_zero_coeff", Term`!x y:int. 0 < x ==> y - x < y`),
    ("10000.9391",
     Term`~(v <
         SUC
