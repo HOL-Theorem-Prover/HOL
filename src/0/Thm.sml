@@ -13,7 +13,6 @@ structure Thm :> Thm =
 struct
 
 type tag = Tag.tag
-datatype thmclass = Thm | Axm | Def
 open Exception Lib Dsyntax Term;
 
 infix 5 |->;

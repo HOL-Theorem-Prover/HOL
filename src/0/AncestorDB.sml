@@ -20,8 +20,8 @@ struct
 
  open Binarymap;
 
- type data = (string * string) * (thm * Thm.thmclass)
- type class = Thm.thmclass
+ datatype class = Thm | Axm | Def
+ type data = (string * string) * (thm * class)
 
  fun comp ((s1,s2),(t1,t2)) =
    case String.compare(s1,t1)

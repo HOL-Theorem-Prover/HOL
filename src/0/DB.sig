@@ -5,6 +5,7 @@ sig
  type thm = Thm.thm
 
  type data = AncestorDB.data
+ type class = AncestorDB.class
 
  (* returns data for every theory which has a name in which the given string
     occurs, ignoring case *)
@@ -29,8 +30,8 @@ sig
     "-" as an abbreviation for the current theory. *)
  val theorem : string -> string -> thm
  val theorems : string -> (string * thm) list
- val gen_theorem : string -> string -> thm * Thm.thmclass
- val gen_theorems : string -> (string * thm * Thm.thmclass) list
+ val gen_theorem : string -> string -> thm * class
+ val gen_theorems : string -> (string * thm * class) list
 
  val all_thms : unit -> data list
 

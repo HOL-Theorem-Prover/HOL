@@ -18,6 +18,7 @@ struct
  type term = Term.term
  type thm = Thm.thm
 
+ type class = AncestorDB.class
  type data = AncestorDB.data
 
  val ct = Theory.current_theory
@@ -28,9 +29,9 @@ struct
    val thms = Theory.theorems()
    val thyname = Theory.current_theory()
  in
-   map (fn (s, thm) => ((thyname, s), (thm, Thm.Def))) defns @
-   map (fn (s, thm) => ((thyname, s), (thm, Thm.Axm))) axms @
-   map (fn (s, thm) => ((thyname, s), (thm, Thm.Thm))) thms
+   map (fn (s, thm) => ((thyname, s), (thm, AncestorDB.Def))) defns @
+   map (fn (s, thm) => ((thyname, s), (thm, AncestorDB.Axm))) axms @
+   map (fn (s, thm) => ((thyname, s), (thm, AncestorDB.Thm))) thms
  end
 
  fun occurs s1 s2 =

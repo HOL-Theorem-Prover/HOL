@@ -411,9 +411,9 @@ fun pp_theory_struct ppstrm prelude_string info_record = let
          add_string class; add_string ")"; end_block())
 
      fun dblist () =
-        let val axl  = map (fn (s,_) => ("Thm.Axm",s)) axioms
-            val defl = map (fn (s,_) => ("Thm.Def",s)) definitions
-            val thml = map (fn (s,_) => ("Thm.Thm",s)) theorems
+        let val axl  = map (fn (s,_) => ("AncestorDB.Axm",s)) axioms
+            val defl = map (fn (s,_) => ("AncestorDB.Def",s)) definitions
+            val thml = map (fn (s,_) => ("AncestorDB.Thm",s)) theorems
         in
            begin_block INCONSISTENT 0;
            add_string "val _ = AncestorDB.bindl"; add_break(1,0);
