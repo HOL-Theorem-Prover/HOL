@@ -3,7 +3,8 @@
 (* Create "KripkeTheory" containing definition of Kripke structure and some  *)
 (* related definitions, including computation paths.                         *)
 (*                                                                           *)
-(* Created Wed Dec 25 23:02:12 GMT 2002                                      *)
+(* Created  Wed Dec 25 23:02:12 GMT 2002                                     *)
+(* Modified Wed Jan 29 09:46:40 GMT 2003                                     *)
 (*****************************************************************************)
 
 (******************************************************************************

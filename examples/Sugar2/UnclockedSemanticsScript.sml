@@ -152,7 +152,7 @@ val UF_SEM_def =
              UF_SEM (CAT(SEL w (0,j-1),w')) f)`;
 
 (******************************************************************************
-* PATH M p is true iff p is a path with respect to transition relation getR M
+* PATH M p is true iff p is a path with respect to transition relation M.R
 ******************************************************************************)
 val PATH_def = Define `PATH M p = !n. M.R(ELEM p n, ELEM p (n+1))`;
 
