@@ -3388,6 +3388,77 @@ val GSPEC_OR = store_thm(
   ``!P Q. {x | P x \/ Q x} = {x | P x} UNION {x | Q x}``,
   SRW_TAC [][EXTENSION, IN_UNION] THEN sspec_tac THEN REWRITE_TAC []);
 
+(* ----------------------------------------------------------------------
+    partition a set according to an equivalence relation (or at least
+    a relation that is reflexive, symmetric and transitive over that set)
+   ---------------------------------------------------------------------- *)
+
+open metisLib
+val equiv_on_def = new_definition(
+  "equiv_on_def",
+  ``(equiv_on) R s =
+       (!x. x IN s ==> R x x) /\
+       (!x y. x IN s /\ y IN s ==> (R x y = R y x)) /\
+       (!x y z. x IN s /\ y IN s /\ z IN s /\ R x y /\ R y z ==> R x z)``);
+val _ = set_fixity "equiv_on" (Infix(NONASSOC, 425))
+
+val partition_def = new_definition(
+  "partition_def",
+  ``partition R s =
+      { t | ?x. x IN s /\ (t = { y | y IN s /\ R x y})}``);
+
+val GSPEC_ss = SIMPSET {ac = [], congs = [],
+                        convs = [{conv = K (K SET_SPEC_CONV),
+                                  key = SOME([], ``x IN GSPEC f``),
+                                  name = "SET_SPEC_CONV", trace = 2}],
+                        dprocs = [], filter = NONE, rewrs = []}
+val _ = augment_srw_ss [GSPEC_ss]
+
+val BIGUNION_partition = store_thm(
+  "BIGUNION_partition",
+  ``R equiv_on s ==> (BIGUNION (partition R s) = s)``,
+  STRIP_TAC THEN
+  SRW_TAC [][EXTENSION, IN_BIGUNION, partition_def] THEN
+  EQ_TAC THEN STRIP_TAC THENL[
+    METIS_TAC [equiv_on_def],
+    Q.EXISTS_TAC `{ y | R x y /\ y IN s}` THEN
+    `R x x` by METIS_TAC [equiv_on_def] THEN SRW_TAC [][] THEN
+    METIS_TAC []
+  ]);
+
+val EMPTY_NOT_IN_partition = store_thm(
+  "EMPTY_NOT_IN_partition",
+  ``R equiv_on s ==> ~({} IN partition R s)``,
+  SRW_TAC [][partition_def, EXTENSION] THEN
+  METIS_TAC [equiv_on_def]);
+
+val partition_elements_disjoint = store_thm(
+  "partition_elements_disjoint",
+  ``R equiv_on s ==>
+    !t1 t2. t1 IN partition R s /\ t2 IN partition R s /\ ~(t1 = t2) ==>
+            DISJOINT t1 t2``,
+  STRIP_TAC THEN SIMP_TAC (srw_ss()) [partition_def] THEN
+  REPEAT GEN_TAC THEN
+  DISCH_THEN (CONJUNCTS_THEN2
+              (Q.X_CHOOSE_THEN `a` MP_TAC)
+              (CONJUNCTS_THEN2
+               (Q.X_CHOOSE_THEN `b` MP_TAC) MP_TAC)) THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`t1`, `t2`] THEN SIMP_TAC (srw_ss()) [] THEN
+  SRW_TAC [][DISJOINT_DEF] THEN
+  SIMP_TAC (srw_ss()) [EXTENSION, IN_INTER] THEN
+  Q.X_GEN_TAC `c` THEN Cases_on `c IN s` THEN SRW_TAC [][] THEN
+  Cases_on `R a c` THEN SRW_TAC [][] THEN
+  STRIP_TAC THEN
+  `R a b` by PROVE_TAC [equiv_on_def] THEN
+  Q.PAT_ASSUM `~(a = b)` MP_TAC THEN SRW_TAC [][] THEN
+  SRW_TAC [][EXTENSION] THEN PROVE_TAC [equiv_on_def]);
+
+val partition_elements_interrelate = store_thm(
+  "partition_elements_interrelate",
+  ``R equiv_on s ==> !t. t IN partition R s ==>
+                         !x y. x IN t /\ y IN t ==> R x y``,
+  SIMP_TAC (srw_ss()) [partition_def, GSYM LEFT_FORALL_IMP_THM] THEN
+  PROVE_TAC [equiv_on_def]);
 
 (* ----------------------------------------------------------------------
     A proof of Koenig's Lemma
