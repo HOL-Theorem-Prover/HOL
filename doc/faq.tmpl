@@ -99,7 +99,7 @@ HOL98 Frequently Asked Questions
 
 <DT><strong> Are error messages during the build like the following a
 source for concern? </strong>(2)
-<PRE> 
+<PRE>
    > File "Term.sml", line 1328, characters 10-42:
    > !   let val {const=Const(r1,_),theory,place} = const_decl name
    > !           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -152,7 +152,7 @@ source for concern? </strong>(2)
 </PRE>
 <P>
 
-<DT><strong> I'd like to use MEM as an infix, not a Prefix.  
+<DT><strong> I'd like to use MEM as an infix, not a Prefix.
              Can I do this?</strong> (1)
 
 <DD> Yes!  Use grammar manipulation functions such as set_fixity to
@@ -169,8 +169,8 @@ source for concern? </strong>(2)
 </PRE>
 <P>
 
-<DT><strong> How do I get a datatype's axiom after using 
-             Hol_datatype?</strong> (1) 
+<DT><strong> How do I get a datatype's axiom after using
+             Hol_datatype?</strong> (1)
 
 <DD> Use TypeBase.axiom_of (valOf (TypeBase.read "mytypename")).
      Hopefully you won't need to do this very much because many of the
@@ -182,6 +182,16 @@ source for concern? </strong>(2)
      TypeBase.one_one_of (valOf (TypeBase.read "mytypename"))
 </PRE>
 <P>
+
+<dt><strong>How do I create theories in more than one
+directory?</strong> (1)
+
+<dd> Both the <code>Holmake</code> program and the <code>hol</code>
+scripts take <code>-I &lt;dir&gt;</code> flags to indicate that the
+system should look in the specified directories for object files
+(whether theories or libraries).  You can rebuild theories in later
+directories by calling <code>Holmake</code> with the appropriate
+<code>-I</code> flags.
 
 <DT><strong> How to rewrite with a theorem the other way round?</strong> (0)
 
@@ -201,13 +211,13 @@ source for concern? </strong>(2)
         (e) handle E => Raise E
      (Often the parentheses around e will not be required.)
 
-<DT><strong>How do I put hol98 in a state so that theorem assumptions are 
+<DT><strong>How do I put hol98 in a state so that theorem assumptions are
    printed?</strong> (1)
 
 <DD><PRE>show_assums := true; </PRE>
 <P>
-     This flag, along with several others that control HOL behaviour can 
-     be found in the Globals structure. 
+     This flag, along with several others that control HOL behaviour can
+     be found in the Globals structure.
 
 </DL>
 <P>

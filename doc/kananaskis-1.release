@@ -1,6 +1,16 @@
 Bugs fixed:
 -----------
 
+  * Muddy wouldn't build on Linux if the binary distribution of Moscow
+    ML was being used because of a lack of header files in an expected
+    place.  Thanks to Hasan Amjad for reporting this bug.
+
+  * Define_type.define_type wouldn't work.  This code is deprecated
+    with a capital 'd', but we've provided a fix anyway.  Thanks to
+    Viktor Sabelfeld for the report of the bug.  It was caused by the
+    now correct behaviour of constant hiding that wasn't correct prior
+    to Taupo-6.
+
 New features:
 -------------
 
