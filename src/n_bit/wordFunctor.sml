@@ -287,7 +287,7 @@ val lem = prove(
 
 val lem2 = MATCH_MP lem (REWRITE_RULE [SUB_0] (SPECL [`n`,`0`,`a`] BITSLT_THM));
 
-val BITWISE_ONE_COMP_LEM = prove(
+val BITWISE_ONE_COMP_LEM = store_thm("BITWISE_ONE_COMP_LEM",
   `!n a b. BITWISE (SUC n) (\x y. ~x) a b = 2 EXP (SUC n) - 1 - BITS n 0 a`,
   Induct_on `n`
     THEN REPEAT STRIP_TAC
@@ -323,7 +323,7 @@ val ONE_COMP_THM = store_thm("ONE_COMP_THM",
 
 val ZERO_IS_FALSE = prove(
   `!x. ~BIT x 0`,
-  A_RW_TAC [BIT_def,BITS_THM,ZERO_LT_TWOEXP,ZERO_DIV,ZERO_MOD]
+  A_RW_TAC [BIT_def,BITS_ZERO2]
 );
 
 (* ONE_COMP_TRUE: |- !x. x < WL ==> BIT x (ONE_COMP 0) *)
@@ -1715,6 +1715,12 @@ val WORD_SLICE_ZERO_THM = store_thm("WORD_SLICE_ZERO_THM",
 val WORD_SLICE_COMP_THM = store_thm("WORD_SLICE_COMP_THM",
   `!h m l a. (SUC m) <= h /\ l <= m ==> (WORD_SLICE h (SUC m) a + WORD_SLICE m l a = WORD_SLICE h l a)`,
   B_RW_TAC [WORD_SLICE_def,SLICE_COMP_THM]
+);
+
+val WORD_SLICE_COMP_RWT = store_thm("WORD_SLICE_COMP_RWT",
+  `!h m' m l a. l <= m /\ (m' = m + 1) /\ m < h ==>
+      (WORD_SLICE h m' a + WORD_SLICE m l a = WORD_SLICE h l a)`,
+  B_RW_TAC [WORD_SLICE_def,SLICE_COMP_RWT]
 );
 
 val WORD_BITS_ZERO = store_thm("WORD_BITS_ZERO",

@@ -217,6 +217,11 @@ val BITS_ZERO3 = save_thm("BITS_ZERO3",
   (GEN_ALL o SIMP_RULE bool_ss [CONJUNCT1 EXP,DIV1] o SPECL [`h`,`0`]) BITS_THM2
 );
 
+val BITS_ZEROL = store_thm("BITS_ZEROL",
+  `!h a. a < 2 EXP SUC h ==> (BITS h 0 a = a)`,
+  RW_TAC bool_ss [BITS_ZERO3,LESS_MOD]
+);
+
 val BIT_ZERO = store_thm("BIT_ZERO",
   `!b. ~BIT b 0`,
   REWRITE_TAC [BIT_def,BITS_ZERO2,DECIDE ``~(0 = 1)``]
@@ -225,6 +230,19 @@ val BIT_ZERO = store_thm("BIT_ZERO",
 val BIT_B = store_thm("BIT_B",
   `!b. BIT b (2 EXP b)`,
   SIMP_TAC arith_ss [BIT_def,BITS_THM,DIVMOD_ID,ZERO_LT_TWOEXP,SUC_SUB]
+);
+
+val BIT_B_NEQ = store_thm("BIT_B_NEQ",
+  `!a b. ~(a = b) ==> ~BIT a (2 EXP b)`,
+  NTAC 3 STRIP_TAC
+    THEN REWRITE_TAC [BIT_def,BITS_THM,SUC_SUB,EXP_1]
+    THEN IMP_RES_TAC (DECIDE (Term `!(a:num) b. ~(a = b) ==> (a < b) \/ (b < a)`))
+    THENL [
+      IMP_RES_TAC LESS_ADD_1
+        THEN ASM_SIMP_TAC arith_ss [ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV,
+                                    EXP_ADD,MOD_EQ_0,ZERO_LT_TWOEXP],
+      IMP_RES_TAC TWOEXP_MONO THEN ASM_SIMP_TAC arith_ss [LESS_DIV_EQ_ZERO]
+    ]
 );
 
 (* -------------------------------------------------------- *)
@@ -399,6 +417,12 @@ val MOD_2EXP_MONO = store_thm("MOD_2EXP_MONO",
 val SLICE_COMP_THM = store_thm("SLICE_COMP_THM",
   `!h m l n. (SUC m) <= h /\ l <= m ==> (SLICE h (SUC m) n + SLICE m l n = SLICE h l n)`,
   B_RW_TAC [SLICE_def,MOD_2EXP_def,MOD_2EXP_MONO,GSYM LESS_EQ_ADD_SUB,SUB_ADD]
+);
+
+val SLICE_COMP_RWT = store_thm("SLICE_COMP_RWT",
+  `!h m' m l n. l <= m /\ (m' = m + 1) /\ m < h ==>
+             (SLICE h m' n + SLICE m l n = SLICE h l n)`,
+  A_RW_TAC [SLICE_COMP_THM,GSYM ADD1]
 );
 
 val SLICE_ZERO = store_thm("SLICE_ZERO",
