@@ -58,4 +58,18 @@ fun mk_sum_case (f,g,s) =
        (inst [alpha |-> r, beta |-> df, gamma |-> dg] sum_case_tm, [f,g,s])
   end;
 
+(*---------------------------------------------------------------------------*)
+(* Lifting sums                                                              *)
+(*---------------------------------------------------------------------------*)
+
+datatype ('a,'b)sum = INL of 'a | INR of 'b;
+
+fun lift_sum ty =
+  let val inl = TypeBasePure.cinst ty inl_tm
+      val inr = TypeBasePure.cinst ty inr_tm
+      fun lift f g (INL x) = mk_comb(inl, f x)
+        | lift f g (INR y) = mk_comb(inr, g y)
+  in lift
+  end
+
 end

@@ -308,7 +308,7 @@ val _ = adjoin_to_theory
     S "      nchotomy=option_nchotomy,";                     NL();
     S "      size=NONE,";                                    NL();
     S "      encode=NONE,";                                  NL();
-    S "      lift=SOME(mk_var(\"lift_option\",Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),";
+    S "      lift=SOME(mk_var(\"optionSyntax.lift_option\",Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),";
     NL();
     S "      one_one=SOME SOME_11,";                         NL();
     S "      distinct=SOME NOT_NONE_SOME}];";                NL();

@@ -949,7 +949,7 @@ val _ = adjoin_to_theory
    NL(); NL();
    S "val _ =";
    S "  let val list_info = Option.valOf (TypeBase.read \"list\")";
-   S "      val lift_list = mk_var(\"lift_list\",Parse.Type`:'type -> ('a -> 'term) -> 'a list -> 'term`)";
+   S "      val lift_list = mk_var(\"listSyntax.lift_list\",Parse.Type`:'type -> ('a -> 'term) -> 'a list -> 'term`)";
    S "      val list_info' = TypeBasePure.put_lift lift_list list_info";
    S "  in TypeBase.write [list_info']";
    S "  end;"

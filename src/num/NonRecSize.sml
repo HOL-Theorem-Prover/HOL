@@ -22,7 +22,7 @@ local
                         TypeBasePure.ORIG boolTheory.bool_case_ID)
   val ty = mk_vartype "'type"
   val tm = mk_vartype "'term"
-  val lift_bool_var = mk_var("lift_bool",ty --> bool --> tm)
+  val lift_bool_var = mk_var("boolSyntax.lift_bool",ty --> bool --> tm)
   val bool_info' = TypeBasePure.put_lift lift_bool_var
                       (TypeBasePure.put_size bool_size_info bool_info);
 
@@ -67,7 +67,7 @@ local
                         TypeBasePure.ORIG oneTheory.one_case_rw)
   val ty = mk_vartype "'type"
   val tm = mk_vartype "'term"
-  val lift_one_var = mk_var("lift_one", ty --> oneSyntax.one_ty --> tm)
+  val lift_one_var = mk_var("oneSyntax.lift_one", ty --> oneSyntax.one_ty --> tm)
   val one_info' = TypeBasePure.put_lift lift_one_var
                      (TypeBasePure.put_size one_size_info one_info)
 

@@ -403,7 +403,7 @@ val _ = adjoin_to_theory
    S "      nchotomy=STRING_CASES,";
    S "      size=SOME(Parse.Term`STRLEN`,TypeBasePure.ORIG STRLEN_DEF),";
    S "      encode=NONE,";
-   S "      lift=SOME(mk_var(\"lift_string\",Parse.Type`:'type -> string -> 'term`)),";
+   S "      lift=SOME(mk_var(\"stringSyntax.lift_string\",Parse.Type`:'type -> string -> 'term`)),";
    S "      one_one=SOME STRING_11,";
    S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];";
    S " ";

@@ -37,7 +37,7 @@ sig
  val dest_pabs       : term -> term * term
  val pbvar           : term -> term
  val pbody           : term -> term
- val dest_plet       : term -> term * term
+ val dest_plet       : term -> term * term * term
  val dest_pforall    : term -> term * term
  val dest_pexists    : term -> term * term
  val dest_pexists1   : term -> term * term
@@ -73,5 +73,4 @@ sig
 
  val  lift_prod      : hol_type -> ('a -> term ) -> ('b -> term) 
                                 -> 'a * 'b -> term
-
 end

@@ -191,9 +191,15 @@ fun dest_pabs tm =
 fun pbvar tm = fst (dest_pabs tm) handle HOL_ERR _ => failwith "pbvar"
 and pbody tm = snd (dest_pabs tm) handle HOL_ERR _ => failwith "pbody" ;
 
+fun dest_plet M =
+  let val (f,rhs) = dest_let M
+      val (vstruct,body) = dest_pabs f
+  in (vstruct,rhs,body)
+  end
+  handle _ => raise ERR "dest_plet" "not a (possibly paired) \"let\""
 
-local val LET_ERR     = ERR "dest_plet"     "not a (possibly paired) \"let\""
-      val FORALL_ERR  = ERR "dest_pforall"  "not a (possibly paired) \"!\""
+
+local val FORALL_ERR  = ERR "dest_pforall"  "not a (possibly paired) \"!\""
       val EXISTS_ERR  = ERR "dest_pexists"  "not a (possibly paired) \"?\""
       val EXISTS1_ERR = ERR "dest_pexists1" "not a (possibly paired) \"?!\""
       val SELECT_ERR  = ERR "dest_pselect"  "not a (possibly paired) \"@\""
@@ -204,8 +210,6 @@ fun dest_pbinder c e M =
      then with_exn dest_pabs Rand e
      else raise e
   end
-
-val dest_plet     = dest_pbinder let_tm      LET_ERR
 val dest_pforall  = dest_pbinder universal   FORALL_ERR
 val dest_pexists  = dest_pbinder existential EXISTS_ERR
 val dest_pexists1 = dest_pbinder exists1     EXISTS1_ERR
@@ -225,6 +229,8 @@ val is_pselect  = can dest_pselect;
 fun list_mk_pabs(V,M)    = itlist (curry mk_pabs) V M
 fun list_mk_pforall(V,M) = itlist (curry mk_pforall) V M
 fun list_mk_pexists(V,M) = itlist (curry mk_pexists) V M;
+
+(*---------------------------------------------------------------------------*)
 
 fun strip dest =
  let fun decomp M =
