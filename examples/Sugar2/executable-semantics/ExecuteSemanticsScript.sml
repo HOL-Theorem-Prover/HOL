@@ -377,4 +377,29 @@ val EVAL_UF_SEM_F_STRONG_IMP = store_thm
    ++ RW_TAC arith_ss [xnum_to_def, RESTN_FINITE, LENGTH_def]
    ++ RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]);
 
+val INFINITE_UF_SEM_F_STRONG_IMP = store_thm
+  ("INFINITE_UF_SEM_F_STRONG_IMP",
+   ``!p r1 r2.
+       UF_SEM (INFINITE p) (F_STRONG_IMP (r1,r2)) =
+       UF_SEM (INFINITE p)
+       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))``,
+   RW_TAC list_resq_ss [UF_SEM_def, B_SEM, AND_IMP_INTRO] 
+    THEN HO_MATCH_MP_TAC (* MJCG tried using ++, <<, but it wouldn't parse *)
+          (METIS_PROVE []
+           ``(!j. P j ==> (Q j = R j)) ==> ((!j. P j ==> Q j) = !j. P j ==> R j)``)
+    THEN RW_TAC arith_ss [LENGTH_RESTN_INFINITE,xnum_to_def,SEL_RESTN]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL[Q.EXISTS_TAC `k-j`, Q.EXISTS_TAC `j+j'`]
+    THEN RW_TAC arith_ss []);
+
+val UF_SEM_F_STRONG_IMP = store_thm
+  ("UF_SEM_F_STRONG_IMP",
+   ``!w r1 r2.
+       UF_SEM w (F_STRONG_IMP (r1,r2)) =
+       UF_SEM w
+       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))``,
+   Cases_on `w`
+    THEN PROVE_TAC[EVAL_UF_SEM_F_STRONG_IMP, INFINITE_UF_SEM_F_STRONG_IMP]);
+
 val _ = export_theory();
