@@ -525,7 +525,11 @@ val _ = adjoin_to_theory
  struct_ps = SOME (fn ppstrm =>
   let val S = PP.add_string ppstrm
       fun NL() = PP.add_newline ppstrm
-  in S "val _ = ConstMapML.insert (prim_mk_const{Name=\"DEST_STRING\",Thy=\"string\"});";
+  in S "val _ = ConstMapML.insert (prim_mk_const{Name=\"CHR\",Thy=\"string\"});";
+     NL();
+     S "val _ = ConstMapML.insert (prim_mk_const{Name=\"ORD\",Thy=\"string\"});";
+     NL();
+     S "val _ = ConstMapML.insert (prim_mk_const{Name=\"DEST_STRING\",Thy=\"string\"});";
      NL();
      S "val _ = ConstMapML.insert (prim_mk_const{Name=\"STRING\",Thy=\"string\"});";
      NL(); 
