@@ -54,7 +54,7 @@ val ADD = new_recursive_definition
    {name = "ADD",
     fixity = Infixl 500,
     rec_axiom = num_Axiom,
-    def = --`($+ ZERO n = n) /\
+    def = --`($+ 0 n = n) /\
              ($+ (SUC m) n = SUC($+ m n))`--};
 
 (*---------------------------------------------------------------------------*
@@ -63,13 +63,13 @@ val ADD = new_recursive_definition
  *---------------------------------------------------------------------------*)
 
 val NUMERAL_DEF = new_definition("NUMERAL_DEF", --`NUMERAL (x:num) = x`--);
-val ALT_ZERO    = new_definition("ALT_ZERO",    --`ALT_ZERO = ZERO`--);
+val ALT_ZERO    = new_definition("ALT_ZERO",    --`ALT_ZERO = 0`--);
 val NUMERAL_BIT1 =
   new_definition("NUMERAL_BIT1",
-                 --`NUMERAL_BIT1 n = n + (n + SUC ZERO)`--);
+                 --`NUMERAL_BIT1 n = n + (n + SUC 0)`--);
 val NUMERAL_BIT2 =
   new_definition("NUMERAL_BIT2",
-                 --`NUMERAL_BIT2 n = n + (n + SUC (SUC ZERO))`--);
+                 --`NUMERAL_BIT2 n = n + (n + SUC (SUC 0))`--);
 
 (*---------------------------------------------------------------------------*
  * After this call, numerals parse into `NUMERAL( ... )`                     *
@@ -139,7 +139,7 @@ val ONE = store_thm("ONE",
 val TWO = store_thm("TWO",
   Term`2 = SUC 1`,
 REWRITE_TAC
-   [NUMERAL_DEF, NUMERAL_BIT2, ONE, 
+   [NUMERAL_DEF, NUMERAL_BIT2, ONE,
     ADD, ALT_ZERO,NUMERAL_BIT1]);
 
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
@@ -1355,7 +1355,7 @@ val ODD_MULT = store_thm("ODD_MULT",
 val two = prove(Term
   `2 = SUC 1`,
   REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1, NUMERAL_BIT2] THEN
-  ONCE_REWRITE_TAC [SYM (SPEC (--`ZERO`--) NUMERAL_DEF)] THEN
+  ONCE_REWRITE_TAC [SYM (SPEC (--`0`--) NUMERAL_DEF)] THEN
   REWRITE_TAC [ADD_CLAUSES]);
 
 val EVEN_DOUBLE = store_thm("EVEN_DOUBLE",
@@ -1779,7 +1779,7 @@ val MOD_DIV_exist = prove
       RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--))]);
 
 (*---------------------------------------------------------------------------
-            Now define MOD and DIV by a constant specification.             
+            Now define MOD and DIV by a constant specification.
  ---------------------------------------------------------------------------*)
 
 val DIVISION = new_specification
@@ -2109,23 +2109,23 @@ val DIV_DIV_DIV_MULT = store_thm("DIV_DIV_DIV_MULT",
     THEN IMP_RES_TAC Less_MULT_ADD_lemma);
 
 val POS_ADD = prove(Term`!m n. 0<m+n = 0<m \/ 0<n`,
-REPEAT GEN_TAC 
+REPEAT GEN_TAC
   THEN STRUCT_CASES_TAC (SPEC (Term`m:num`) num_CASES)
   THEN STRUCT_CASES_TAC (SPEC (Term`n:num`) num_CASES)
   THEN ASM_REWRITE_TAC[ADD_CLAUSES,prim_recTheory.LESS_0]);
 
 val POS_MULT = prove(Term`!m n. 0<m*n = 0<m /\ 0<n`,
-REPEAT GEN_TAC 
+REPEAT GEN_TAC
   THEN STRUCT_CASES_TAC (SPEC (Term`m:num`) num_CASES)
   THEN STRUCT_CASES_TAC (SPEC (Term`n:num`) num_CASES)
   THEN ASM_REWRITE_TAC[MULT_CLAUSES,ADD_CLAUSES,prim_recTheory.LESS_0]);
 
 val SUC_PRE = prove(Term`!d. 0<d ==> (SUC(PRE d) = d)`,
-REPEAT GEN_TAC 
+REPEAT GEN_TAC
   THEN STRUCT_CASES_TAC (SPEC (Term`d:num`) num_CASES)
   THEN ASM_REWRITE_TAC[prim_recTheory.PRE,prim_recTheory.LESS_REFL]);
 
-val LESS_MONO_LEM = 
+val LESS_MONO_LEM =
 GEN_ALL
   (REWRITE_RULE [ADD_CLAUSES]
     (SPECL (map Term [`0`, `y:num`, `x:num`])
@@ -2141,7 +2141,7 @@ REWRITE_TAC [ONE] THEN REPEAT STRIP_TAC
   THEN MP_TAC (SPEC (Term`d:num`) ADD_DIV_ADD_DIV) THEN ASM_REWRITE_TAC[]
   THEN DISCH_THEN (fn th => REWRITE_TAC [th])
   THEN MP_TAC (SPECL (map Term[`n MOD d`, `d:num`]) LESS_DIV_EQ_ZERO)
-  THEN ASM_REWRITE_TAC [] 
+  THEN ASM_REWRITE_TAC []
   THEN DISCH_THEN (fn th => REWRITE_TAC [th,ADD_CLAUSES])
   THEN SUBGOAL_THEN (Term`?m. d = SUC m`) (CHOOSE_THEN SUBST_ALL_TAC) THENL
   [EXISTS_TAC (Term`PRE d`) THEN IMP_RES_TAC SUC_PRE THEN ASM_REWRITE_TAC[],

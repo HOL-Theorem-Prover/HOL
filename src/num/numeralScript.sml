@@ -548,7 +548,7 @@ val iSUB_correct = prove(
 val numeral_sub = store_thm(
   "numeral_sub",
   Term
-  `!n m. NUMERAL (n - m) = (m < n => NUMERAL (iSUB T n m) | ZERO)`,
+  `!n m. NUMERAL (n - m) = (m < n => NUMERAL (iSUB T n m) | 0)`,
   SIMP_TAC bool_ss [iSUB_correct, COND_OUT_THMS,
                     REWRITE_RULE [NUMERAL_DEF] SUB_EQ_0, LESS_EQ_CASES,
                     NUMERAL_DEF, LESS_IMP_LESS_OR_EQ, GSYM NOT_LESS]);

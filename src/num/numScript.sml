@@ -60,7 +60,7 @@ and A_ONTO = prove_abs_fn_onto    num_ISO_DEF;
 (*---------------------------------------------------------------------------
  * Define ZERO.
  *---------------------------------------------------------------------------*)
-val ZERO_DEF = new_definition("ZERO_DEF", --`ZERO = ABS_num ZERO_REP`--);
+val ZERO_DEF = new_definition("ZERO_DEF", --`0 = ABS_num ZERO_REP`--);
 
 
 (*---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ val NOT_SUC_ZERO =
 (* Proof of NOT_SUC : |- !n. ~(SUC n = ZERO)				*)
 (* ---------------------------------------------------------------------*)
 val NOT_SUC = store_thm("NOT_SUC",
-    --`!n. ~(SUC n = ZERO)`--,
+    --`!n. ~(SUC n = 0)`--,
      PURE_REWRITE_TAC [SUC_DEF,ZERO_DEF] THEN GEN_TAC THEN
      MP_TAC (SPECL [--`SUC_REP(REP_num n)`--,--`ZERO_REP`--] A_11) THEN
      REWRITE_TAC [IS_NUM_REP_ZERO,IS_NUM_REP_SUC_REP] THEN
@@ -178,7 +178,7 @@ val lemma1 =
       ASM_REWRITE_TAC []]);
 
 val INDUCTION = store_thm("INDUCTION",
-    --`!P. P ZERO /\ (!n. P n ==> P(SUC n)) ==> !n. P n`--,
+    --`!P. P 0 /\ (!n. P n ==> P(SUC n)) ==> !n. P n`--,
      GEN_TAC THEN STRIP_TAC THEN
      MP_TAC (SPEC (--`\i. ((P(ABS_num i)):bool)`--) ind_lemma2) THEN
      CONV_TAC(DEPTH_CONV BETA_CONV) THEN
