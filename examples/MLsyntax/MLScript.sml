@@ -12,7 +12,7 @@
  * file is found in MLSyntaxTheory.u{i,o}. It can be loaded into an          *
  * interactive session by                                                    *
  *                                                                           *
- *    load"MLTheory";                                                        *
+ *    load "MLTheory";                                                       *
  *                                                                           *
  * Loading the theory can take a little while - about 5 seconds on my        *
  * machine.                                                                  *
@@ -60,7 +60,7 @@ struct
 
 open bossLib Theory Parse ;
 
-local open stringTheory setTheory       (* Make strings and sets be present *)
+local open stringTheory pred_setTheory   (* Make strings and sets be present *)
 in end;   
 
 val _ = new_theory "ML";
