@@ -154,9 +154,9 @@ html1/DTD/xhtml1-strict.dtd">
 
 <li> <p> Pretty-printing of &ldquo;list forms&rdquo; (e.g., lists,
     sets and bags) is now under more user-control.  See the REFERENCE
-    for <code>add_listform</code>, whose type has changed, for more
-    detail on this.  (Thanks to Lockwood Morris for this feature
-    suggestion.)</p></li>
+    (or online help) for <code>add_listform</code>, whose type has
+    changed, for more detail on this.  (Thanks to Lockwood Morris for
+    this feature suggestion.)</p></li>
 
 <li> There are two new simpset fragments in realSimps.
     <code>REAL_REDUCE_ss</code>
@@ -196,6 +196,25 @@ html1/DTD/xhtml1-strict.dtd">
     the building of theories.  These times are stored in a file in the
     current directory.  See the DESCRIPTION for more
     details. </p></li>
+
+<li> <p> Support for abbreviations in goals, via tactics such as
+    <code>Q.ABBREV_TAC</code>, is now a deal richer.  Abbbreviations
+    are now specially marked as such in a goal&rsquo;s assumptions,
+    protecting them against being removed by tactics such as
+    <code>RW_TAC</code> or <code>SRW_TAC</code>.  There are also new
+    tactics for establishing abbreviations, such as
+    <code>MATCH_ABBREV_TAC</code> and <code>PAT_ABBREV_TAC</code>.
+    For more on these and other new tactics, see the REFERENCE (or the
+    online help). </p>
+
+    <p> To support old code, the old implementations of these tactics
+    are available in a structure <code>OldAbbrevTactics</code>.  Thus,
+    it is possible to restore a file to its old behaviour by
+    including: </p>
+<pre>
+         structure Q = struct open Q open OldAbbrevTactics end;
+</pre>
+    <p> at the top of an affected file. </p> </li>
 
 </ul>
 
@@ -242,6 +261,10 @@ html1/DTD/xhtml1-strict.dtd">
 <p>    has been removed from <code>std_ss</code> and later simplification
     sets. (Simpsets <code>arith_ss</code>, <code>list_ss</code> and
     <code>srw_ss()</code> are all affected.)</p>
+    <p> Old behaviours can be restored with code such as </p>
+<pre>
+         val std_ss = std_ss ++ simpLib.rewrites [LET_THM]
+</pre>
 </li>
 
   <li> <p>Rewrite rules for <code>arithmeticTheory</code>'s
