@@ -25,7 +25,11 @@ simplifying with the assumptions will not undo the effect of
 abbreviation.
 
 \FAILURE
-Never fails.
+Fails if the quotation is ill-typed.  This may happen because
+variables in the quotation that also appear in the goal are given the
+same type in the quotation as they have in the goal.  Also fails if
+the variable of the equation appears in the expression that it is
+supposed to be abbreviating.
 
 \EXAMPLE
 Substitution in the goal:
