@@ -40,6 +40,15 @@ fun flip_cmpresult LESS = GREATER
   | flip_cmpresult GREATER = LESS
   | flip_cmpresult EQUAL = EQUAL
 
+fun str_all P s = let
+  fun recurse ss =
+      case Substring.getc ss of
+        NONE => true
+      | SOME (c, ss') => P c andalso recurse ss'
+in
+  recurse (Substring.all s)
+end
+
 open qbuf
 fun split_ident nonagg_specs s qb = let
   val s0 = String.sub(s, 0)
@@ -47,9 +56,8 @@ in
   if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" then
     (advance qb; s)
   else if s0 = #"'" then
-    if size s > 1 then
-      raise LEX_ERR "Term idents can't begin with prime characters"
-    else (advance qb; s)
+    if str_all (fn c => c = #"'") s then (advance qb; s)
+    else raise LEX_ERR "Term idents can't begin with prime characters"
   else if s0 = #"$" then
       "$" ^ split_ident nonagg_specs (String.extract(s, 1, NONE)) qb
   else (* have a symbolic identifier *)
