@@ -2648,6 +2648,20 @@ val EXP_INJECTIVE = store_thm(
     ASM_REWRITE_TAC [MULT_MONO_EQ]
   ]);
 
+val EXP_SUB = Q.store_thm
+("EXP_SUB",
+  `!p q n. 0 < n /\ q <= p ==> (n ** (p - q) = n ** p DIV n ** q)`,
+   let open BasicProvers in
+   REPEAT STRIP_TAC THEN
+   ``0 < n ** p /\ 0 < n ** q`` via
+        (STRIP_ASSUME_TAC (Q.SPEC`n` num_CASES) THEN
+         RW_TAC bool_ss [] THEN
+         FULL_SIMP_TAC bool_ss [ZERO_LESS_EXP,LESS_REFL]) THEN
+   RW_TAC bool_ss [DIV_P] THEN
+   Q.EXISTS_TAC `0` THEN
+   RW_TAC bool_ss [GSYM EXP_ADD,ADD_CLAUSES] THEN
+   METIS_TAC [SUB_ADD] end);
+
 
 (* ********************************************************************** *)
 (* Maximum and minimum                                                    *)
