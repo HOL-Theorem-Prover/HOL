@@ -343,8 +343,8 @@ fun pp_term (G : grammar) TyG = let
     in
       case rule of
         NONE => Name = str
-      | SOME [(_, rr)] => mem str (term_grammar.rule_tokens G rr)
-      | SOME _ => raise Fail "term_pp.nmight_print: can't happen"
+      | SOME rrlist =>
+          List.exists (mem str o term_grammar.rule_tokens G o #2) rrlist
     end
 
     fun tm might_print str =
