@@ -1,4 +1,4 @@
-\documentstyle[a4]{article}
+\documentclass[a4]{article}
 \bibliographystyle{plain}
 
 \title{A Simplifier/Programmable Grinder for hol98}
@@ -56,7 +56,7 @@ with the equality case.
 The simplification library is brought into an interactive session by
 invoking
 \begin{verbatim}
-    load "simpLib"; 
+    load "simpLib";
     open simpLib;
 \end{verbatim}
 
@@ -87,7 +87,7 @@ composing smaller fragments when you only want to add a few theorems.
 Hence you can use the infix\footnote{At least it is intended that
 \ml{++} be infix. Currently it isn't when you start up HOL, so you
 must type \ml{infix ++} to make it so. This is a directive that perhaps
-ought to be in your \verb+hol-init.sml+ file.} operator \ml{++} to add
+ought to be in your {\tt hol-init.sml} file.} operator \ml{++} to add
 theorems to a simpset.  This is useful when you are developing a
 theory.
 
@@ -95,7 +95,7 @@ For example, the following three methods are equivalent, except that the
 first two create a reusable component {\tt SUMML\_ss}.  The example is a
 taken from the longer example at the end of this chapter.
 \begin{verbatim}
-val SUMML_ss = rewrites [SUMM_TAKE_LEFT,SUMM_1,SUMM_0]; 
+val SUMML_ss = rewrites [SUMM_TAKE_LEFT,SUMM_1,SUMM_0];
 val summl_ss = mk_simpset [HOL_ss, SUMML_ss];
 
 val SUMML_ss = rewrites [SUMM_TAKE_LEFT, SUMM_1,SUMM_0];
@@ -115,7 +115,7 @@ facilities in {\tt bool\_ss}.  The final line indicates that these
 rewrites are actually already present in the built-in simpset {\tt
 hol\_ss}.  {\tt hol\_ss} contains powerful arithmetic reasoning
 simplification strategies and it is a workhorse simpset for many
-verifications. 
+verifications.
 \begin{boxed} \begin{verbatim}
 - load "simpLib";     (* load the simplification library *)
   load "boolSimps";   (* contains bool_ss *)
@@ -165,7 +165,7 @@ val it = |- ~([1; 2; 4] = [1; 2; 3]) : thm
 Some useful simpset fragments are included in the simplifier library.
 These are based on existing HOL theories.  They can automate a large
 amount of ``trivial reasoning'' about HOL constructs that previously
-needed special treatment. 
+needed special treatment.
 \begin{boxed}
 \begin{verbatim}
    boolSimps.BOOL_ss     : ssdata
@@ -205,7 +205,7 @@ needed special treatment.
 
 \item[{\tt list\_ss}] The most useful rewrites from the ``list''
   theory.  Will reduce {\tt MAP}, {\tt APPEND}, {\tt EVERY} and so
-  on, where they are applied to concrete lists.  
+  on, where they are applied to concrete lists.
 
 \item[{\tt LIST\_ss}] The most useful rewrites from the ``List''
   library, as well as those from the ``list'' theory.
@@ -236,9 +236,9 @@ needed special treatment.
   \item Calls to {\tt ARITH} are cached.
   \end{itemize}
 
-\item[{\tt HOL\_ss}] This merges the fragments from {\tt BOOL\_ss}, 
-  {\tt CONG\_ss}, {\tt NOT\_ss}, {\tt PAIR\_ss}, 
-  {\tt SUM\_ss}, {\tt COMBIN\_ss}, {\tt SATISFY\_ss}, 
+\item[{\tt HOL\_ss}] This merges the fragments from {\tt BOOL\_ss},
+  {\tt CONG\_ss}, {\tt NOT\_ss}, {\tt PAIR\_ss},
+  {\tt SUM\_ss}, {\tt COMBIN\_ss}, {\tt SATISFY\_ss},
   {\tt UNWIND\_ss}, {\tt ARITH\_ss}, and {\tt LIST\_ss}.
 \end{description}
 
@@ -255,7 +255,7 @@ what most users will initially use.
 %{\tt bool\_ss} contains {\tt BOOL\_ss} and {\tt CONG\_ss}.  Using it is
 %akin to using {\tt REWRITE\_TAC}, except that contextual rewriting using
 %congruence rules for implications and conditional expressions is also
-%performed. 
+%performed.
 
 Notice that the above simpset fragments dwell in independent
 structures. This allows the simplifier library to be used to work in a
@@ -631,7 +631,7 @@ for performing similar operations.}
 To enable AC ordered rewriting, the associativity and commutativity theorems
 for the operation must be inserted in a simpset by making a \ml{ssdata}
 object and merging it with an existing simpset. For example, to enable
-AC rewriting over \ml{+}: 
+AC rewriting over \ml{+}:
 \begin{hol} \begin{verbatim}
 ADD_ASSOC |- x + (y + z) = (x + y) + z
 ADD_SYM |- x + y = y + x
@@ -641,7 +641,7 @@ the theorem \ml{ADD\_SYM} is misnamed in \HOL.  It refers
 to the commutativity of addition, and so should be called
 \ml{ADD\_COMM}.
 Symmetry is a notion that should only be used for relations such as
-\verb!=!.} 
+{\tt =}.}
 \begin{boxed} \begin{verbatim}
 - val ac_ss = bool_ss ++ SIMPSET {ac =[(ADD_ASSOC,ADD_SYM)],
                                   convs=[],dprocs=[],filter=NONE,rewrs=[],
@@ -664,7 +664,7 @@ val it = |- (y + x) + 3 + 6 + (2 * x + 1) =
 
 This is implemented using ordered rewriting, with a term ordering that
 is AC compatible.    Three rewrite rules are needed to implement AC
-rewriting: 
+rewriting:
 \begin{hol} \begin{verbatim}
 ADD_SYM |- x + y = y + x
 GSYM ADD_ASSOC |- (x + y) + z = x + (y + z)
