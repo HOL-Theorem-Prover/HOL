@@ -26,10 +26,10 @@ end
 fun gen_formula () = let
   val r = Random.random gen
 in
-  if r < 0.75 then gen_atomic_formula()
-  else if r < 0.85 then mk_neg (gen_formula())
-  else if r < 0.90 then mk_conj (gen_formula(), gen_formula())
-  else if r < 0.95 then mk_disj (gen_formula(), gen_formula())
+  if r < 0.65 then gen_atomic_formula()
+  else if r < 0.70 then mk_neg (gen_formula())
+  else if r < 0.80 then mk_conj (gen_formula(), gen_formula())
+  else if r < 0.90 then mk_disj (gen_formula(), gen_formula())
   else mk_imp (gen_formula(), gen_formula())
 end
 

@@ -37,9 +37,10 @@ fun compare (t0,n) = let
   val t = valOf t0
   fun doproc p = let
     val fav = analyse_term p (gen_all t)
+    val _ = (print fav; print " / ")
     val exv = analyse_term p (list_mk_exists(free_vars t,t))
   in
-    print fav; print " / "; print exv
+    print exv
   end
 in
   print (StringCvt.padRight #" " 6 (Int.toString n ^ "."));

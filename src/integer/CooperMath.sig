@@ -1,8 +1,7 @@
 signature CooperMath = sig
 
+  include Abbrev
   type num = Arbnum.num
-  type term = Term.term
-  type thm = Thm.thm
 
   val cooper_compset : computeLib.compset
   val REDUCE_CONV    : term -> thm
@@ -55,6 +54,9 @@ signature CooperMath = sig
 
   val simplify_constraints : term -> thm
 
+  val simplify_constrained_disjunct : conv
+
+
   (* These two functions both factor out integers from sums
      Both take the factor as an arbint and as a term as the first two
      arguments (experience suggests that you usually have both of these
@@ -67,5 +69,10 @@ signature CooperMath = sig
      divide cleanly, e.g., factor_out_lits (Arbint.fromInt 2) ``5 + x`` *)
   val factor_out : Arbint.int -> term -> term -> thm
   val factor_out_lits : Arbint.int -> term -> term -> thm
+
+  (* initial phases of the procedure *)
+  val phase1_CONV : conv
+  val phase2_CONV : term -> conv
+  val phase3_CONV : conv
 
 end

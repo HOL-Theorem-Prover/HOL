@@ -4,10 +4,14 @@ structure CooperSyntax :> CooperSyntax = struct
    conversions, all intended for very specific use within the
    implementation of Cooper's algorithm *)
 
-open HolKernel boolLib intSyntax CooperThms
+open HolKernel boolLib intSyntax intSimps CooperThms
 
-infix THENC ORELSEC
+infix THEN THENC ORELSEC |-> ##
 infixr -->
+
+fun ERR f msg = HOL_ERR {origin_structure = "CooperSyntax",
+                         origin_function = f,
+                         message = msg}
 
 val not_tm = boolSyntax.negation;
 val num_ty = numSyntax.num
@@ -68,6 +72,19 @@ fun characterise t =
    | "~" => SOME NEGN
    | _ => NONE) handle HOL_ERR _ => NONE
 val bop_characterise = characterise
+
+
+datatype reltype = rEQ | rDIV | rLT
+fun categorise_leaf tm = let
+  val (c, _) = strip_comb tm
+in
+  case dest_const c of
+    ("int_lt", _) => rLT
+  | ("=", _) => rEQ
+  | ("int_divides", _) => rDIV
+  | _ => raise Fail "categorise leaf applied to non Cooper leaf"
+end
+
 
 fun cpEVERY_CONJ_CONV c tm = let
   fun findconjunct posp tm =
@@ -235,6 +252,20 @@ in
   listItems (recurse (tm, mkDict String.compare))
 end
 
+(* dealing with constraints of the form lo < x /\ x <= hi *)
+val resquan_onestep =
+  REWR_CONV restricted_quantification_simp THENC
+  REDUCE_CONV THENC REWRITE_CONV []
+
+fun resquan_remove tm =
+  (resquan_onestep THENC TRY_CONV (RAND_CONV resquan_remove) THENC
+   REWRITE_CONV []) tm
+
+
+
+
+
+
 val bmarker_tm = prim_mk_const { Name = "bmarker", Thy = "int_arith"};
 
 val mk_bmark_thm = GSYM int_arithTheory.bmarker_def
@@ -259,6 +290,154 @@ val move_bmarked_left = PURE_REWRITE_CONV [bmarker_rewrites] THENC
                         LAND_CONV (REWR_CONV int_arithTheory.bmarker_def)
 fun move_conj_left P = mark_conjunct P THENC move_bmarked_left
 
+
+(* special "constraint" terms will be wrapped in K terms, with the
+   variable being constrained as the second argument to the combinator.
+   The only free variable in the constraint term will be the constrained
+   variable.  Further a constraint will be of the form
+     d1 < j /\ j <= d2
+   for some pair of integer literals d1 and d2, with the variable j. *)
+val constraint_tm = mk_thy_const {Name = "K", Thy = "combin",
+                                  Ty = bool --> (int_ty --> bool)}
+fun mk_constraint (v,tm) = list_mk_comb(constraint_tm,[tm,v])
+fun is_constraint tm = let
+  val (f, args) = strip_comb tm
+in
+  f = constraint_tm andalso length args = 2
+end
+fun is_vconstraint v tm = let
+  val (f, args) = strip_comb tm
+in
+  f = constraint_tm andalso length args = 2 andalso
+  free_vars (hd (tl args)) = [v]
+end
+
+
+val K_THM = INST_TYPE [(alpha |-> bool), (beta |-> int_ty)] combinTheory.K_THM
+fun MK_CONSTRAINT tm =
+  case free_vars tm of
+    [] => ALL_CONV tm
+  | [v] => SYM (SPECL [tm,v] K_THM)
+  | _ => raise Fail "MK_CONSTRAINT: Term has too many free variables"
+fun UNCONSTRAIN tm = let
+  val (f, args) = strip_comb tm
+in
+  SPECL args K_THM
+end
+fun IN_CONSTRAINT c = UNCONSTRAIN THENC c THENC MK_CONSTRAINT
+
+fun quick_cst_elim tm = let
+  (* eliminates constraints of the form
+        K (lo < x /\ x <= hi) x
+     where hi - lo <= 1, either replacing it with x = lo, or just false
+     fails (NO_CONV) otherwise. *)
+  val (_, args) = strip_comb tm  (* K and its args *)
+  val cst = hd args
+  val (_, cstargs) = strip_comb cst  (* two conjuncts *)
+  val lo_cst = hd cstargs
+  val hi_cst = hd (tl cstargs)
+  val lo_t = rand (rator lo_cst)
+  val hi_t = rand hi_cst
+  val lo_i = int_of_term lo_t
+  val hi_i = int_of_term hi_t
+  open Arbint
+in
+  if hi_i - lo_i <= one then
+    (UNCONSTRAIN THENC resquan_remove) tm
+  else
+    NO_CONV tm
+end
+
+fun reduce_if_ground tm =
+  (* calls REDUCE_CONV on a ground term, does nothing otherwise *)
+  if is_exists tm orelse not (HOLset.isEmpty (FVL [tm])) then ALL_CONV tm
+  else REDUCE_CONV tm
+
+
+fun fixup_newvar tm = let
+  (* takes an existential term and replaces all occurrences of the bound
+     variable in the body with 1 * v, except that we don't need to go
+     looking for this variable under multiplications, nor under
+     constraint terms *)
+  open QConv
+  val (v,body) = dest_exists tm
+  val replace_thm = SYM (SPEC v INT_MUL_LID)
+  fun recurse tm = let
+    val (f, args) = strip_comb tm
+  in
+    case args of
+      [] => if Term.compare(v,tm) = EQUAL then replace_thm
+            else ALL_QCONV tm
+    | [_] => RAND_CONV recurse tm
+    | [_,_] => if Term.compare(f, constraint_tm) = EQUAL orelse
+                  Term.compare(f, mult_tm) = EQUAL then ALL_QCONV tm
+               else BINOP_QCONV recurse tm
+    | _ => raise ERR "fixup_newvar"
+                     ("found ternary operator - "^term_to_string tm)
+  end
+in
+  QConv.QCONV (BINDER_CONV recurse) tm
+end
+
+(* with ?x. p \/ q \/ r...          (with or's right associated)
+   expand to (?x. p) \/ (?x.q) \/ (?x.r) ...
+*)
+fun push_one_exists_over_many_disjs tm =
+  ((EXISTS_OR_CONV THENC RAND_CONV push_one_exists_over_many_disjs) ORELSEC
+   ALL_CONV) tm
+
+
+fun remove_vacuous_existential tm = let
+  (* term is of form  ?x. x = e *)
+  val value = rhs (#2 (dest_exists tm))
+  val thm = ISPEC value EXISTS_REFL
+in
+  EQT_INTRO thm
+end
+
+
+fun simple_divides var tm = let
+  (* true if a term is a divides, where the right hand side's only
+     free variable is the parameter var *)
+  val (l,r) = dest_divides tm
+in
+  free_vars r = [var]
+end handle HOL_ERR _ => false
+
+
+local exception foo
+in
+fun push_in_exists_and_follow c tm = let
+  (* looking at
+       ?x. ... /\ P x /\ ...
+     where the ... don't contain any instances of x
+     Push the existential in over the conjuncts and finish by applying c
+     to ?x. P x
+  *)
+  val th0 = EXISTS_AND_CONV tm handle HOL_ERR _ => raise foo
+  val tm1 = rhs (concl th0)
+  val goleft = is_exists (#1 (dest_conj tm1))
+  val cconval = if goleft then LAND_CONV else RAND_CONV
+in
+  (K th0 THENC cconval (push_in_exists_and_follow c)) tm
+end handle foo => c tm
+end
+
+
+(* given (p \/ q \/ r..) /\ s   (with the or's right associated)
+   expand to (p /\ s) \/ (q /\ s) \/ (r /\ s) \/ ...
+*)
+fun expand_right_and_over_or tm =
+  ((REWR_CONV RIGHT_AND_OVER_OR THENC
+    BINOP_CONV expand_right_and_over_or) ORELSEC ALL_CONV) tm
+
+fun ADDITIVE_TERMS_CONV c tm =
+  if is_disj tm orelse is_conj tm then
+    BINOP_CONV (ADDITIVE_TERMS_CONV c) tm
+  else if is_neg tm then RAND_CONV (ADDITIVE_TERMS_CONV c) tm
+  else if is_less tm orelse is_divides tm orelse is_eq tm then
+    BINOP_CONV c tm
+  else ALL_CONV tm
 
 
 end

@@ -159,5 +159,17 @@ val terms_to_test =
                      x <= w /\ w < z`, "pt11")
 ];
 
+fun print_profile_results (nm, {usr, sys, gc}) = let
+  val pl = StringCvt.padLeft #" " 8
+  val _ = print (StringCvt.padRight #" " 25 nm)
+  val _ = print (pl (Time.toString usr)^" "^pl (Time.toString sys)^" "^
+                 pl (Time.toString gc)^"\n")
+in
+  ()
+end
 
-val _ = map test_term terms_to_test;
+val _ = (map test_term terms_to_test;
+         case CommandLine.arguments() of
+           [] => ()
+         | _ => app print_profile_results (profile.results()))
+

@@ -1,0 +1,14 @@
+An explanation of the modules in this directory:
+
+CooperSyntax    : simple syntactic manipulations (conversions mainly)
+                  that are used by the procedure.
+CooperMath      : more elaborate, and generally mathematical
+                  manipulations. Includes phases 1 to 3.
+CooperCore      : phases 4 and 5
+jrhCore         : alternative implementation of phases 4 and 5.
+CooperShell     : implementation of decide_pure_presburger, putting
+                  together everything preceding.
+Cooper          : top-level interface, includes code for converting
+                  natural number problems, writing out constants such
+                  as ODD or EVEN, guessing generalisations where free
+                  variables exist.

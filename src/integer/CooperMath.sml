@@ -4,10 +4,12 @@ structure CooperMath :> CooperMath = struct
   in
   end
 
-  open HolKernel boolLib intSyntax integerTheory int_arithTheory
-  open CooperThms
+  open HolKernel boolLib intSyntax integerTheory int_arithTheory intSimps
+  open CooperThms CooperSyntax
 
-  infix THENC
+  open Profile
+
+  infix THENC ORELSEC THEN ## |->
 
   type num = Arbnum.num
 
@@ -298,9 +300,6 @@ end tm
       else REFL tm
 
 
-fun optpluck P l = SOME (Lib.pluck P l) handle HOL_ERR _ => NONE
-
-
 fun check_divides tm = let
   val (l,r) = dest_divides tm
   val rterms = strip_plus r
@@ -325,7 +324,7 @@ in
           val divq = Arbint.div(int_of_term l, g)
           val divisor_ok = SYM (REDUCE_CONV (mk_mult(g_t, term_of_int divq)))
         in
-          case optpluck is_int_literal rterms of
+          case Lib.total (Lib.pluck is_int_literal) rterms of
             NONE =>
               RAND_CONV (factor_out g g_t THENC pull_out_divisor) THENC
               LAND_CONV (K divisor_ok) THENC
@@ -448,6 +447,572 @@ in
   th
 end
 
+
+val my_INT_MUL_LID = SPEC ``c * d : int`` INT_MUL_LID (* used below *)
+
+fun BLEAF_CONV connector c tm =
+    case bop_characterise tm of
+      NONE => c tm
+    | SOME NEGN => RAND_CONV (BLEAF_CONV connector c) tm
+    | SOME _ => connector(LAND_CONV (BLEAF_CONV connector c),
+                          RAND_CONV (BLEAF_CONV connector c))
+                         tm
+
+
+
+
+(* ----------------------------------------------------------------------
+    Initial phases of the Cooper transformation
+   ---------------------------------------------------------------------- *)
+
+
+(* Phase 1 *)
+val remove_bare_vars = let
+  fun Munge t = if is_var t then REWR_CONV (GSYM INT_MUL_LID) t
+                else NO_CONV t
+in
+  DEPTH_CONV Munge
+end
+
+val remove_negated_vars = let
+  fun remove_negated tm = let
+    (* turn ~ var into ~1 * var *)
+    val t0 = dest_negated tm (* exception raised when term not a negation
+                                will be trapped appropriately by DEPTH_CONV
+                                below *)
+  in
+    if is_var t0 then
+      REWR_CONV INT_NEG_MINUS1 tm
+    else
+      NO_CONV tm
+  end
+in
+  DEPTH_CONV remove_negated
+end
+
+
+local
+  val basic_rewrite_conv =
+    REWRITE_CONV [boolTheory.NOT_IMP,
+                  boolTheory.IMP_DISJ_THM, boolTheory.EQ_IMP_THM,
+                  elim_le, elim_ge, elim_gt,
+                  INT_SUB_CALCULATE, INT_RDISTRIB, INT_LDISTRIB,
+                  INT_NEG_LMUL, INT_NEG_ADD, INT_NEGNEG, INT_NEG_0,
+                  INT_MUL_RZERO, INT_MUL_LZERO]
+  fun flip_muls tm =
+    if is_mult tm andalso not (is_var (rand tm)) then let
+      val mcands = strip_mult tm
+      val (var, rest) = Lib.pluck is_var mcands
+    in
+      EQT_ELIM (AC_CONV (INT_MUL_ASSOC, INT_MUL_SYM)
+                (mk_eq(tm, mk_mult(list_mk_mult rest, var))))
+    end handle HOL_ERR {origin_structure = "Lib", ...} => ALL_CONV tm
+    else if is_comb tm then
+      (RATOR_CONV flip_muls THENC RAND_CONV flip_muls) tm
+    else if is_abs tm then
+      ABS_CONV flip_muls tm
+    else
+      ALL_CONV tm
+in
+  val phase1_CONV =
+    (* to push negations inwards; formula must be quantifier free *)
+    DEPTH_CONV RED_CONV THENC
+    basic_rewrite_conv THENC remove_negated_vars THENC
+    remove_bare_vars THENC flip_muls THENC
+    DEPTH_CONV RED_CONV THENC REWRITE_CONV []
+end
+
+val phase1_CONV = Profile.profile "phase1" phase1_CONV
+
+(* Phase 2 *)
+(* phase 2 massages the terms so that all of the < terms have one side or
+   the other with just n * x on it, where n is a non-negative integer, and x
+   is the variable we're going to eliminate, unless x can be entirely
+   eliminated, in which case the 0 * x is reduced to 0.
+
+   All equality terms are similarly rewritten so that any involving
+   x have a term of the form c * x on the left hand side.
+
+   Further, all of the int_divides terms (negated or not) involving
+   our variable are cast in the form
+     c1 int_divides (c2 * x) + e
+   where both c1 and c2 are positive constants
+
+   Finally, if the coefficients of variables in less-than or equality terms
+   have a gcd > 1, then we can divide through by that gcd.
+*)
+
+
+val INT_DIVIDES_NEG = CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG
+val INT_NEG_FLIP_LTL = prove(
+  ``!x y. ~x < y = ~y < x``,
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
+  REWRITE_TAC [INT_LT_NEG]);
+val INT_NEG_FLIP_LTR = prove(
+  ``!x y. x < ~y = y < ~x``,
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
+  REWRITE_TAC [INT_LT_NEG]);
+
+val negated_elim_lt_coeffs1 =
+  (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTR] o
+   REWRITE_RULE [GSYM INT_NEG_RMUL] o
+   Q.SPECL [`n`, `m`, `~x`])
+  elim_lt_coeffs1;
+val negated_elim_lt_coeffs2 =
+  (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTL] o
+   REWRITE_RULE [GSYM INT_NEG_RMUL] o
+   Q.SPECL [`n`, `m`, `~x`])
+  elim_lt_coeffs2;
+
+
+
+val elim_eq_coeffs' =
+  CONV_RULE (STRIP_QUANT_CONV (RAND_CONV
+                               (BINOP_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))))
+  elim_eq_coeffs
+
+local
+  open QConv
+  val THENQC = fn (c1, c2) => THENQC c1 c2
+  infix THENQC
+  val myrewrite_conv = REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG]
+  fun normalise_eqs var tm =
+    if is_eq tm andalso free_in var (rhs tm) then
+      REWR_CONV EQ_SYM_EQ tm
+    else
+      ALL_CONV tm
+in
+  fun phase2_CONV var tm = let
+    val land = rand o rator
+    fun dealwith_negative_divides tm = let
+      val coeff = if is_plus (rand tm) then land (land (rand tm))
+                  else land (rand tm)
+    in
+      if is_negated coeff then
+        REWR_CONV (GSYM (CONJUNCT1 INT_DIVIDES_NEG)) THENC myrewrite_conv
+      else
+        ALL_QCONV
+    end tm
+    fun collect_up_other_freevars tm = let
+      val fvs =
+        Listsort.sort (String.compare o (#1 ## #1) o (dest_var ## dest_var))
+        (free_vars tm)
+    in
+      EVERY_QCONV (map collect_in_sum fvs) tm
+    end
+  in
+    if is_disj tm orelse is_conj tm then
+      BINOP_QCONV (phase2_CONV var) tm
+    else if is_neg tm then
+      RAND_CONV (phase2_CONV var) tm
+    else if free_in var tm then let
+      val ((l,r),tt) = (dest_less tm, LT) handle HOL_ERR _ => (dest_eq tm, EQ)
+      open Arbint
+      val var_onL = sum_var_coeffs var l
+      val var_onR = sum_var_coeffs var r
+      val (dir1, dir2) = if var_onL < var_onR then (Left, Right)
+                         else (Right, Left)
+      (* dir2 is the side where x will be ending up *)
+      val move_CONV =
+        move_terms_from tt dir1 (free_in var) THENQC
+        move_terms_from tt dir2 (not o free_in var)
+
+      fun factor_out_over_sum tm = let
+        (* tm is a sum of multiplications where the left hand argument
+           of each multiplication is the same numeral.  We want to turn
+              c * x + c * y + ... + c * z
+           into
+              c * (x + y + ... + z)
+        *)
+      in
+        REWRITE_CONV [GSYM INT_LDISTRIB] tm
+      end
+
+      fun fiddle_negs tm = let
+        (* used over a sum of multiplications to fix
+           ~a * (b * c) into a * (~b * c) *)
+        val _ = dest_mult tm
+      in
+        TRY_QCONV (REWR_CONV (GSYM INT_NEG_LMUL) THENQC
+                   REWR_CONV INT_NEG_RMUL THENQC
+                   RAND_CONV (REWR_CONV INT_NEG_LMUL)) tm
+      end handle HOL_ERR _ => BINOP_CONV fiddle_negs tm
+
+      fun reduce_by_gcd tm = let
+        val (l,r) = (land tm, rand tm)
+        val ts = strip_plus l @ strip_plus r
+        val coeffs =
+          List.mapPartial (fn a => if is_var (rand a) then
+                                     SOME (rand (rator a))
+                                   else NONE) ts
+        (* if there are no variables left in the term, the following will
+           raise an exception, which is fine; it will be caught by the
+           TRY_CONV above us *)
+        val g = gcdl (map (Arbint.abs o intSyntax.int_of_term) coeffs)
+        val _ = g <> one orelse raise ERR "" ""
+        val g_t = term_of_int g
+        val gnum_t = rand g_t
+        val gnum_nonzero =
+          EQF_ELIM (REDUCE_CONV (mk_eq(gnum_t, numSyntax.zero_tm)))
+        val dir1_numeral =
+          List.find is_int_literal (strip_plus (dir_of_pair dir1 (l,r)))
+        val negative_numeral =
+          case dir1_numeral of
+            NONE => false
+          | SOME t => is_negated t
+        val elim_coeffs_thm =
+          case (tt, dir2, negative_numeral) of
+            (LT, Left, false) => MATCH_MP elim_lt_coeffs2 gnum_nonzero
+          | (LT, Left, true) => MATCH_MP negated_elim_lt_coeffs1 gnum_nonzero
+          | (LT, Right, false) => MATCH_MP elim_lt_coeffs1 gnum_nonzero
+          | (LT, Right, true) => MATCH_MP negated_elim_lt_coeffs2 gnum_nonzero
+          | (EQ, Left, _) => MATCH_MP elim_eq_coeffs gnum_nonzero
+          | (EQ, Right, _) => MATCH_MP elim_eq_coeffs' gnum_nonzero
+      in
+        BINOP_QCONV (factor_out g g_t) THENQC
+        move_terms_from tt dir1 is_mult THENQC
+        conv_at dir2 fiddle_negs THENQC
+        conv_at dir2 factor_out_over_sum THENQC
+        REWR_CONV elim_coeffs_thm THENQC
+        REDUCE_CONV
+      end tm
+    in
+      (move_CONV THENQC conv_at dir2 collect_terms THENQC
+       conv_at dir1 collect_up_other_freevars THENQC
+       TRY_QCONV (conv_at dir1 collect_additive_consts) THENQC
+       conv_at dir2 (LAND_CONV REDUCE_CONV) THENQC
+       REWRITE_CONV [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID] THENQC
+       TRY_CONV (reduce_by_gcd THENQC TRY_CONV move_CONV) THENQC
+       normalise_eqs var) tm
+    end handle HOL_ERR _ =>
+      if is_divides tm then
+        (TRY_QCONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENQC
+         RAND_CONV (collect_in_sum var) THENQC
+         dealwith_negative_divides THENQC
+         RAND_CONV (TRY_QCONV (RAND_CONV collect_up_other_freevars)) THENQC
+         REWRITE_CONV [INT_MUL_LZERO] THENQC REDUCE_CONV) tm
+      else ALL_QCONV tm
+    else ALL_QCONV tm
+  end
+end
+
+val phase2_CONV =
+    fn t => Profile.profile "phase2" (QConv.QCONV (phase2_CONV t))
+
+(* Phase 3 *)
+(* phase three takes all of the coefficients of the variable we're
+   eliminating, and calculates their LCM.  Every term is then altered to
+   be of the form
+        LCM x < ..   or  .. < LCM x
+   Then, we can rewrite
+     ?x.  .... LCM x ... LCM x ...
+   to
+     ?x'. .... x' .... x' .... /\ LCM divides x'
+   every occurrence of LCM x is replaced with a new variable
+
+*)
+
+fun find_coeff_binop var term = let
+  val (_, args) = strip_comb term  (* operator will be < *)
+  val arg1 = hd args
+  val arg2 = hd (tl args)
+in
+  if is_mult arg1 andalso rand arg1 = var then
+    SOME (int_of_term (rand (rator arg1)))
+  else if is_mult arg2 andalso rand arg2 = var then
+    SOME (int_of_term (rand (rator arg2)))
+  else
+    NONE
+end
+
+fun find_coeff_divides var term = let
+  val (_, args) = strip_comb term (* operator will be int_divides *)
+  val arg = hd (tl args)  (* first arg is uninteresting, it should be
+                             just a constant *)
+  fun recurse_on_rhs t =
+    if is_plus t then recurse_on_rhs (rand (rator t))
+    else if is_mult t andalso rand t = var then
+      SOME (int_of_term (rand (rator t)))
+    else
+      NONE
+in
+  recurse_on_rhs arg
+end
+
+fun find_coeffs var term = let
+  (* have disj/conj term including the following sorts of leaves that involve
+     the var x:
+       i.    c * x < e
+       ii.   e < c * x
+       iii.  ~(c * x = e)
+       iv.   c * x = e
+       v.    ~(e = c * x)
+       vi.   e = c * x
+       vii.  d | c * x + e0
+       viii. ~(d | c * x + e0)
+     want to get list of c's, which should all be integer constants.
+     The e0 may not be present.
+  *)
+  fun deal_with_binop acc tm =
+    case find_coeff_binop var tm of
+      NONE => acc
+    | SOME i => i :: acc
+  fun recurse acc tm =
+    if is_disj tm orelse is_conj tm then
+      recurse (recurse acc (rand tm)) (rand (rator tm))
+    else if is_less tm orelse is_eq tm then
+      deal_with_binop acc tm
+    else if is_neg tm then
+      recurse acc (rand tm)
+    else if is_divides tm then
+      case find_coeff_divides var tm of
+        NONE => acc
+      | SOME x => x :: acc
+    else
+      acc
+in
+  Lib.mk_set (recurse [] term)
+end
+
+fun find_coeff var term =  (* works over un-negated leaves *)
+  if is_divides term then find_coeff_divides var term
+  else if is_less term orelse is_eq term then find_coeff_binop var term
+  else NONE
+
+
+
+
+(* Phase 3 multiplies up all coefficients of x in order to make them
+   the lcm, and then eliminates this, by changing
+     ?x. P (c * x)
+   to
+     ?x. P x /\ c | x
+*)
+(* this phase has to be done at the level of the existential quantifier *)
+(* assume that the existential quantifier still has occurrences of the
+   bound variable in the body *)
+fun LINEAR_MULT tm = let
+  (* tm is of form c * (e1 + e2 + ... en), where each
+     ei is either a constant, or  c' * v, with v a variable.
+     This conversion distributes the c over all the ei's *)
+
+  (* use this rather than is_mult, because the only binops about are
+     multiplications *)
+  fun is_binop tm = length (#2 (strip_comb tm)) = 2
+  fun leaf_case tm =
+      if not (is_binop (rand tm)) then REDUCE_CONV tm
+      else (REWR_CONV INT_MUL_ASSOC THENC LAND_CONV REDUCE_CONV) tm
+  fun recurse tm =
+      ((REWR_CONV INT_LDISTRIB THENC BINOP_CONV recurse) ORELSEC leaf_case) tm
+in
+  recurse tm
+end
+
+
+
+(* Phase 3 multiplies up all coefficients of x in order to make them
+   the lcm, and then eliminates this, by changing
+     ?x. P (c * x)
+   to
+     ?x. P x /\ c | x
+*)
+(* this phase has to be done at the level of the existential quantifier *)
+(* assume that the existential quantifier still has occurrences of the
+   bound variable in the body *)
+local
+  open QConv
+  val THENQC = fn (c1, c2) => THENQC c1 c2
+  val ORELSEQC = uncurry ORELSEQC
+  infix ORELSEQC THENQC
+in
+  fun phase3_CONV term = let
+    val (var, body) = Psyntax.dest_exists term
+    (* first calculate the desired LCM *)
+    val coeffs = find_coeffs var body
+    val lcm = lcml coeffs
+    (* now descend to each less-than term, and update the coefficients of
+     var to be the same lcm *)
+    fun multiply_by_CONV zero_lti cat =
+      case cat of
+        rDIV => REWR_CONV (MATCH_MP justify_divides zero_lti) THENQC
+                RAND_CONV LINEAR_MULT THENQC LAND_CONV REDUCE_CONV
+      | rLT =>  REWR_CONV (MATCH_MP lt_justify_multiplication zero_lti) THENQC
+                BINOP_QCONV LINEAR_MULT
+      | rEQ =>  REWR_CONV (MATCH_MP eq_justify_multiplication zero_lti) THENQC
+                BINOP_QCONV LINEAR_MULT
+
+    fun LCMify term =
+      if is_disj term orelse is_conj term then
+        BINOP_QCONV LCMify term
+      else if is_neg term then RAND_CONV LCMify term
+      else
+        case (find_coeff var term) of
+          NONE => ALL_QCONV term
+        | SOME c => let
+            val i = Arbint.div(lcm, c)
+          in
+            if i = Arbint.one then ALL_QCONV term
+            else let
+                val cat = categorise_leaf term
+                val zero_lti =
+                    EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, term_of_int i)))
+              in
+                multiply_by_CONV zero_lti cat
+              end term
+          end
+    fun absify_CONV tm = let
+      val arg = mk_mult(term_of_int lcm, var)
+      val body = Term.subst[(arg |-> var)] tm
+    in
+      SYM (BETA_CONV (mk_comb(mk_abs(var, body), arg)))
+    end
+    val eliminate_1divides =
+      if lcm = Arbint.one then
+        BINDER_CONV (RAND_CONV (K
+                                (EQT_INTRO (CONJUNCT1
+                                            (SPEC var INT_DIVIDES_1)))) THENC
+                     REWR_CONV T_and_r)
+      else
+        ALL_QCONV
+  in
+    (BINDER_CONV (LCMify THENQC absify_CONV) THENQC
+     REWR_CONV lcm_eliminate THENQC
+     RENAME_VARS_CONV [fst (dest_var var)] THENQC
+     BINDER_CONV (LAND_CONV BETA_CONV) THENQC
+     eliminate_1divides)
+    term
+  end
+end
+
+val phase3_CONV = Profile.profile "phase3" phase3_CONV
+
+(* "sophisticated" simplification routines *)
+fun simplify_constrained_disjunct tm = let
+  (* takes a term of the form
+       ?j.   ... /\ K (d1 < j /\ j <= d2) j /\ ...
+     and simplifies it *)
+  (* if there is a "conjunct" at the top level of the conjuncts of the
+     form
+       c | x [ + d]
+     where x is the bound variable of the neginf abstraction, and where
+     d, if present at all, is a numeral, then we can reduce the number
+     of cases needed to be considered, using the theorem
+     int_arithTheory.gcdthm2. *)
+  open CooperSyntax
+  val (var, body) = dest_exists tm
+  val body_conjuncts = filter (not o is_constraint) (cpstrip_conj body)
+
+  fun find_sdivides v c tm = let
+    (* knowing that a simple divides term over variable v is a "conjunct"
+       of tm, apply conversion c to that term *)
+    val (l,r) = dest_conj tm
+  in
+    if List.exists (simple_divides v) (cpstrip_conj l) then
+      LAND_CONV (find_sdivides v c) tm
+    else
+      RAND_CONV (find_sdivides v c) tm
+  end handle HOL_ERR _ => let
+    val tm0 = dest_neg tm
+  in
+    if is_neg tm0 then
+      (REWR_CONV NOT_NOT_P THENC find_sdivides v c) tm
+    else (REWR_CONV NOT_OR THENC find_sdivides v c) tm
+  end handle HOL_ERR _ => (* must be there *) let
+    (* possible that phase2 will eliminate variable entirely, turning the
+       term into either true or false *)
+    fun check_vars tm = if is_const tm then ALL_CONV tm else c tm
+  in
+    (phase1_CONV THENC phase2_CONV v THENC check_vars) tm
+  end
+
+  fun pull_out_exists tm = let
+    (* pulls out a nested existential quantifier to the head of the term *)
+    val (c1, c2) = dest_conj tm
+    val (cvl, thm) =
+      if has_exists c1 then (LAND_CONV, GSYM LEFT_EXISTS_AND_THM)
+      else (RAND_CONV, GSYM RIGHT_EXISTS_AND_THM)
+  in
+    (cvl pull_out_exists THENC HO_REWR_CONV thm) tm
+  end handle HOL_ERR _ =>
+    if is_exists tm then ALL_CONV tm
+    else NO_CONV tm
+
+
+  fun find_cst v c tm = let
+    fun atleaf tm =
+        if is_vconstraint v tm then c tm
+        else NO_CONV tm
+  in
+    BLEAF_CONV (op ORELSEC) atleaf tm
+  end
+
+  fun simp_if_rangeonly tm = let
+    (* simplifies ?x. K (lo < x /\ x <= hi) x  to T, *)
+    (* knowing that a contradictory constraint would have already been *)
+    (* dealt with *)
+    val (bv, body) = dest_exists tm
+  in
+    if is_constraint body then
+      BINDER_CONV (UNCONSTRAIN THENC resquan_onestep) THENC
+      EXISTS_OR_CONV THENC
+      LAND_CONV remove_vacuous_existential THENC
+      REWR_CONV T_or_l
+    else
+      ALL_CONV
+  end tm
+
+  fun pull_eliminate tm =
+    (* it's possible that there is no existential to pull out because
+       elim_sdivides will have rewritten the divides term to false. *)
+    if has_exists (rand tm) then
+      (BINDER_CONV pull_out_exists THENC
+       SWAP_VARS_CONV THENC
+       BINDER_CONV Unwind.UNWIND_EXISTS_CONV THENC
+       (fn tm => let val (v, _) = dest_exists tm
+                 in
+                   BINDER_CONV (find_cst v
+                                         (IN_CONSTRAINT simplify_constraints))
+                 end tm) THENC
+       simp_if_rangeonly) tm
+    else
+      REWRITE_CONV [] tm
+
+  val mainwork =
+    if List.exists (simple_divides var) body_conjuncts then
+      profile "simpcst.mainwork.simpelim" (
+
+      BINDER_CONV (find_sdivides var elim_sdivides) THENC
+      pull_eliminate THENC
+      (* variable was present in form 1 * v; have now just replaced it with
+         things of the form c * v', so now have bunch of terms of form
+         1 * (c * v'); get rid of these *)
+      PURE_REWRITE_CONV [my_INT_MUL_LID]) THENC
+      (* have another go at this, recursively, but allow for the fact that
+         we may have reduced the term to true or false or whatever *)
+      TRY_CONV simplify_constrained_disjunct
+    else if List.all (not o mem var o free_vars) body_conjuncts then
+      (* case where existential only has scope over constraint, and
+         bound variable doesn't appear elsewhere, which can happen if
+         the F term is something like (\x. F), which tends to happen in
+         the construction of the neginf term. *)
+      profile "simpcst.mainwork.vacuous" (
+      push_in_exists_and_follow
+          (BINDER_CONV (UNCONSTRAIN THENC resquan_onestep) THENC
+           EXISTS_OR_CONV THENC
+           LAND_CONV remove_vacuous_existential THENC
+           REWR_CONV T_or_l) THENC
+      REWRITE_CONV []
+      )
+    else
+      ALL_CONV
+in
+  (BINDER_CONV (profile "simpcst.quick" (find_cst var quick_cst_elim)) THENC
+   (profile "simpcst.unwind" Unwind.UNWIND_EXISTS_CONV ORELSEC REWRITE_CONV []) THENC
+   profile "simpcst.r_i_g" reduce_if_ground) ORELSEC
+  profile "simpcst.mainwork" mainwork
+end tm
 
 
 
