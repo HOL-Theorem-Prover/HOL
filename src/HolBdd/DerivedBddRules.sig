@@ -50,7 +50,8 @@ signature DerivedBddRules = sig
   val failfn : 'a -> 'b
   val global_varmap : varmap ref
   val split_subst : (term_bdd * term_bdd) list -> (term_bdd * term_bdd) list * (term_bdd * term_bdd) list
-  val BddAssume : term -> varmap -> term_bdd
+  val BddAssume : term -> term_bdd
+  val thmToTermBdd : thm -> term_bdd
   val BddApThm : thm -> term_bdd -> term_bdd
   val BddApRestrict : term_bdd -> term -> term_bdd
   val MkIterThms : thm -> term -> term -> thm * thm

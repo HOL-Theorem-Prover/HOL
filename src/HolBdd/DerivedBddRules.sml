@@ -369,8 +369,15 @@ val MakeSimpRecThm =
 (* ASSUME for term_bdd                                                       *)
 (*****************************************************************************)
 
-fun BddAssume tm vm =
-    BddEqMp ((SYM o EQT_INTRO o ASSUME) tm) (BddCon true vm)       
+fun BddAssume tm =
+    BddEqMp ((SYM o EQT_INTRO o ASSUME) tm) (BddCon true Varmap.empty)       
+
+(*****************************************************************************)
+(* Convert a theorem to a term_bdd                                           *)
+(*****************************************************************************)
+
+fun thmToTermBdd th = 
+    BddEqMp ((SYM o EQT_INTRO) th) (BddCon true Varmap.empty)
 
 (*****************************************************************************)
 (*  asl |- t1 = t2   ass vm t1' |--> b                                       *)

@@ -141,9 +141,16 @@ fun name v =
 (* DISCH for term_bdd                                                        *)
 (*****************************************************************************)
 
-fun BddDisch asm (TermBdd(tg,ass,vm,tm,b)) = 
-    (if (type_of asm = bool) then () else failwith ("BddDisch: not a proposition");
-     TermBdd(tg,HOLset.delete(ass,asm) handle HOLset.NotFound => ass,vm,mk_imp(asm,tm),b))
+exception BddDischError;
+
+fun BddDisch (TermBdd(tg1,ass1,vm1,tm1,b1))  (TermBdd(tg,ass,vm,tm,b)) = 
+    if Varmap.eq(vm1,vm)
+	then TermBdd(Tag.merge tg1 tg,
+	             HOLset.union(HOLset.delete(ass,tm1),ass1) handle HOLset.NotFound => HOLset.union(ass,ass1),
+		     vm,
+		     mk_imp(tm1,tm),
+		     bdd.IMP(b1,b))
+    else (print "different varmaps\n"; raise BddDischError)
 
 (*****************************************************************************)
 (* Oracle function                                                           *)
