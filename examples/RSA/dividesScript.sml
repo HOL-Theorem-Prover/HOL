@@ -1,7 +1,7 @@
 structure dividesScript =
 struct
 
-open HolKernel Parse basicHol90Lib bossLib numLib
+open HolKernel Parse boolLib bossLib numLib
      arithmeticTheory factorialTheory;
 
 infix THEN THENC THENL;

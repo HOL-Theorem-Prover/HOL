@@ -1,7 +1,7 @@
 structure powerScript =
 struct
 
-open HolKernel Parse basicHol90Lib 
+open HolKernel Parse boolLib 
      Num_conv arithmeticTheory bossLib;
 
 infix THEN THENC THENL;

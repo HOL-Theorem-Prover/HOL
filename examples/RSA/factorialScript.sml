@@ -2,7 +2,7 @@ structure factorialScript =
 
 struct
 
-open HolKernel Parse basicHol90Lib bossLib 
+open HolKernel Parse boolLib bossLib 
      arithmeticTheory;
 
 infix THEN THENC THENL;

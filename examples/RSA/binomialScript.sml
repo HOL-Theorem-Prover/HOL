@@ -1,7 +1,7 @@
 structure binomialScript =
 struct
 
-open HolKernel Parse basicHol90Lib bossLib
+open HolKernel Parse boolLib bossLib
      arithmeticTheory factorialTheory powerTheory summationTheory ;
 
 infix THEN THENC THENL;

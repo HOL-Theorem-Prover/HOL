@@ -1,7 +1,7 @@
 structure gcdScript =
 struct
 
-open HolKernel Parse basicHol90Lib bossLib
+open HolKernel Parse boolLib bossLib
      arithmeticTheory dividesTheory primeTheory;
 
 infix THEN THENC THENL;
@@ -69,10 +69,12 @@ val gcd_ind = GEN_ALL (theorem "gcd_ind");
 
 
 val GCD_IS_GCD = store_thm("GCD_IS_GCD",
- Term`!a b. is_gcd a b (gcd a b)`,
-(recInduct gcd_ind THEN ARW [GCD] THEN 
- PROVE_TAC [IS_GCD_0L,IS_GCD_0R,IS_GCD_MINUS_L,IS_GCD_MINUS_R,
-      DECIDE`~(y<=x) ==> SUC x <= SUC y`,LESS_EQ_MONO,SUB_MONO_EQ]));
+                           Term`!a b. is_gcd a b (gcd a b)`,
+                           recInduct gcd_ind THEN ARW [GCD] THEN 
+                           PROVE_TAC [IS_GCD_0L,IS_GCD_0R,
+                                      IS_GCD_MINUS_L,IS_GCD_MINUS_R,
+                                      DECIDE`~(y<=x) ==> SUC x <= SUC y`,
+                                      LESS_EQ_MONO,SUB_MONO_EQ]);
 
 val GCD_REF = store_thm("GCD_REF",
                         Term `!a. gcd a a = a`,
@@ -138,7 +140,6 @@ val P_EUCLIDES = store_thm("P_EUCLIDES",
                            THEN `gcd p a = 1` by PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIC,PRIME_GCD]
                            THEN PROVE_TAC[L_EUCLIDES,GCD_SYM]
                            );
-
 
 val _ = export_theory();
 

@@ -6,11 +6,9 @@ struct
   app load ["numLib", "bossLib", 
             "gcdTheory", "primeTheory", 
             "powerTheory", "summationTheory", "dividesTheory"];
-
-
  *)
 
-open HolKernel Parse basicHol90Lib bossLib 
+open HolKernel Parse boolLib bossLib 
      numLib arithmeticTheory prim_recTheory 
      gcdTheory primeTheory powerTheory summationTheory dividesTheory;
 

@@ -1,7 +1,7 @@
 structure summationScript =
 struct
 
-open HolKernel Parse basicHol90Lib bossLib
+open HolKernel Parse boolLib bossLib
      arithmeticTheory numLib;
 
 infix THEN THENC THENL;

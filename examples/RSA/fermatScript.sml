@@ -8,7 +8,7 @@ struct
      "binomialTheory", "congruentTheory", "summationTheory", "powerTheory"] ;
 *)
 
-open HolKernel Parse basicHol90Lib bossLib 
+open HolKernel Parse boolLib bossLib 
      numLib arithmeticTheory prim_recTheory 
      gcdTheory primeTheory dividesTheory factorialTheory 
      binomialTheory congruentTheory summationTheory powerTheory ;

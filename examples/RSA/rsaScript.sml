@@ -9,7 +9,7 @@ struct
      "powerTheory", "fermatTheory"] ;
 
 *)
-open HolKernel Parse basicHol90Lib bossLib numLib
+open HolKernel Parse boolLib bossLib numLib
      arithmeticTheory prim_recTheory 
      gcdTheory primeTheory dividesTheory factorialTheory 
      binomialTheory congruentTheory summationTheory powerTheory fermatTheory;
