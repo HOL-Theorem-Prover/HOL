@@ -331,7 +331,10 @@ in
         in
           case Lib.total (Lib.pluck is_int_literal) rterms of
             NONE =>
-              RAND_CONV (factor_out g g_t THENC pull_out_divisor) THENC
+              (* note that factor_out g g_t always changes the term as
+                 far as QConv.THENQC is concerned, so the first line
+                 below can not raise QConv.UNCHANGED *)
+              RAND_CONV (factor_out g g_t THENQC pull_out_divisor) THENC
               LAND_CONV (K divisor_ok) THENC
               REWR_CONV (GSYM (MATCH_MP justify_divides g_t_lt0)) THENC
               REWRITE_CONV [INT_DIVIDES_1]

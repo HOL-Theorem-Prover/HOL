@@ -556,7 +556,7 @@ end tm
 
 fun finish_pure_goal tm =
     if is_exists tm then
-      (finish_pure_goal1 THENC
+      ((REWR_CONV EXISTS_SIMP ORELSEC finish_pure_goal1) THENC
        EVERY_DISJ_CONV (obvious_improvements THENQC finish_pure_goal)) tm
     else REDUCE_CONV tm
 

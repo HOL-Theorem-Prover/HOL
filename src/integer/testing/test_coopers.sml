@@ -30,6 +30,8 @@ fun L (t,s) = (s,t)
 
 val terms_to_test =
   [("INT_GROUP", Term`?!x:int. (!y. x + y = y) /\ (!y. ?!z. y + z = x)`),
+   ("BUG1", ``(?x. y <= x /\ x <= z /\ 2i * z + 1 <= x /\ x <= 2 * y) =
+              y <= z /\ 2 * z + 1 <= 2 * y /\ y <= 2 * y /\ 2 * z + 1 <= z``),
    ("ILP1", Term`?z y x. 2n * x + 3 * y < 4 * z ==> 5 * x < 3 * y + z`),
    ("ILP2", Term`?z y x v u. ~9 * u + ~12 * v + 4 * x + 5 * y + ~10 * z = 17`),
    ("aILP1",
@@ -161,7 +163,14 @@ val terms_to_test =
   L (Term`!x z:int. ?!y. x - y = z`, "pt10"),
   L (Term`!x y z:int. 2 * x < y /\ y < 2 * z ==>
                  ?w. ((y = 2 * w) \/ (y = 2 * w + 1)) /\
-                     x <= w /\ w < z`, "pt11")
+                     x <= w /\ w < z`, "pt11"),
+  L (Term`(0 :num) < SUC (u' :num) ==> (0 :num) < (m :num) ==>
+          (0 :num) < (n :num) ==> ~(m = (0 :num)) ==>
+          n + (u' * m + m) < m ==> u' * m + m <= n ==> F`, "NONPB1"),
+  L (Term`((n :num) = (r :num) + (i :num) * (m :num)) ==>
+          r < m ==> (n MOD m = r) ==> (n DIV m = i) ==>
+          ~(m = (0 :num))`, "NONPB2")
+
 ];
 
 fun print_profile_results (nm, {usr, sys, gc}) = let
