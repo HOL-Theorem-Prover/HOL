@@ -1,0 +1,66 @@
+% =====================================================================
+% HOL Manual LaTeX Source: reference manual
+% =====================================================================
+
+\documentclass[12pt]{book}
+
+\usepackage{fleqn}
+\usepackage{,../LaTeX/alltt}
+\usepackage{../LaTeX/layout}
+
+
+% ---------------------------------------------------------------------
+% Read in defined macros and commands
+% ---------------------------------------------------------------------
+\input{../LaTeX/commands}
+\input{../LaTeX/ref-macros}
+
+%\includeonly{title,contents,preface,tactics,index}
+
+\verbosereftrue                           % verbose typesetting
+%\includeonly{theorems}
+%\includeonly{rules}
+
+\makeindex
+
+\begin{document}
+
+   \setlength{\unitlength}{1mm}           % unit of length = 1mm
+   \setlength{\baselineskip}{16pt}        % line spacing = 16pt
+
+   % ---------------------------------------------------------------------
+   % prelims
+   % ---------------------------------------------------------------------
+
+   \pagenumbering{roman}                  % roman page numbers for prelims
+   \setcounter{page}{1}                   % start at page 1
+
+   \include{title}                        % reference title page
+   \include{preface}                      % preface to reference manual
+   \include{ack}                          % global acknowledgements
+   \include{contents}                     % table of contents
+
+   % ---------------------------------------------------------------------
+   %
+   % ---------------------------------------------------------------------
+
+   \cleardoublepage
+   \pagenumbering{arabic}                % arabic page numbers
+   \setcounter{page}{1}                  % start at page 1
+
+   \include{entries}                     % manual entries
+
+%   \include{genfns}                     % general purpose functions
+%   \include{logfns}                     % logic functions
+%   \include{rules}                      % rules
+%   \include{tactics}                    % tactics
+
+   \include{theorems}                    % pre-proved theorems
+
+   {\def\#{\char'043}                    % \tt style `#' character
+    \cleardoublepage
+    \printindex}
+
+\end{document}
+
+
