@@ -2,7 +2,7 @@
    fun mload s = (print ("Loading "^s^"\n"); load s);
    app mload ["pred_setTheory", "mnUtils", "QLib", "numLib",
               "BasicProvers", "SingleStep", "PairedDefinition"];
- *)
+*)
 
 open HolKernel Parse boolLib numLib Prim_rec mnUtils pred_setTheory 
      BasicProvers SingleStep PairedDefinition;
@@ -623,21 +623,6 @@ val move_BAG_UNION_over_eq = store_thm(
   --`!X Y Z:'a->num. (BAG_UNION X Y = Z) ==> (X = BAG_DIFF Z Y)`--,
   SIMP_TAC hol_ss [BAG_UNION, BAG_DIFF]);
 
-(*
-val COMM_BAG_UNION = store_thm(
-  "COMM_BAG_UNION",
-  (--`COMM (BAG_UNION:('a->num) -> ('a->num) -> 'a -> num)`--),
-  REWRITE_TAC [operatorTheory.COMM_DEF, BAG_UNION] THEN
-  REPEAT STRIP_TAC THEN FUN_EQ_TAC THEN SIMP_TAC hol_ss []);
-val bu_comm =
-  REWRITE_RULE [operatorTheory.COMM_DEF] COMM_BAG_UNION
-
-val ASSOC_BAG_UNION = store_thm(
-  "ASSOC_BAG_UNION",
-  (--`ASSOC (BAG_UNION:('a->num) -> ('a->num) -> 'a -> num)`--),
-  REWRITE_TAC [operatorTheory.ASSOC_DEF, BAG_UNION] THEN
-  REPEAT STRIP_TAC THEN FUN_EQ_TAC THEN SIMP_TAC hol_ss []);
-*)
 val COMM_BAG_UNION = store_thm(
   "COMM_BAG_UNION",
   (--`!b1 b2. BAG_UNION b1 b2 = BAG_UNION b2 b1`--),
@@ -1000,27 +985,31 @@ val BAG_DISJOINT_DIFF = store_thm(
   SIMP_TAC hol_ss [SPECIFICATION]);
 
 
-
 val _ = print "Developing theory of finite bags\n"
+
 val FINITE_BAG = Q.new_definition(
   "FINITE_BAG",
   `FINITE_BAG (b:'a->num) =
      !P. P EMPTY_BAG /\ (!b. P b ==> (!e. P (BAG_INSERT e b))) ==>
          P b`);
+
 val FINITE_EMPTY_BAG = Q.store_thm(
   "FINITE_EMPTY_BAG",
   `FINITE_BAG EMPTY_BAG`,
   SIMP_TAC hol_ss [FINITE_BAG]);
+
 val FINITE_BAG_INSERT = Q.store_thm(
   "FINITE_BAG_INSERT",
   `!b. FINITE_BAG b ==> (!e. FINITE_BAG (BAG_INSERT e b))`,
   SIMP_TAC hol_ss [FINITE_BAG]);
+
 val FINITE_BAG_INDUCT = Q.store_thm(
   "FINITE_BAG_INDUCT",
   `!P. P EMPTY_BAG /\
         (!b. P b ==> (!e. P (BAG_INSERT e b))) ==>
         (!b. FINITE_BAG b ==> P b)`,
   SIMP_TAC hol_ss [FINITE_BAG]);
+
 val STRONG_FINITE_BAG_INDUCT = save_thm(
   "STRONG_FINITE_BAG_INDUCT",
   (Q.SPEC `\b. FINITE_BAG b /\ P b` >-
@@ -1126,6 +1115,7 @@ val FINITE_SUB_BAG = Q.store_thm(
 
 
 val _ = print "Developing theory of bag cardinality\n"
+
 val BAG_CARD_RELn = Q.new_definition(
   "BAG_CARD_RELn",
   `BAG_CARD_RELn (b:'a->num) n =
@@ -1137,14 +1127,17 @@ val BCARD_imps = prove(
        (!b n. BAG_CARD_RELn b n ==>
            (!e. BAG_CARD_RELn (BAG_INSERT e b) (n + 1)))`,
   SIMP_TAC hol_ss [BAG_CARD_RELn, arithmeticTheory.ADD1])
+
 val BCARD_induct = prove(
   Term`!P. P EMPTY_BAG 0 /\
            (!b n. P b n ==> (!e. P (BAG_INSERT e b) (n + 1))) ==>
            (!b n. BAG_CARD_RELn b n ==> P b n)`,
   SIMP_TAC hol_ss [BAG_CARD_RELn, arithmeticTheory.ADD1]);
+
 val strong_BCARD_induct =
   (Q.SPEC `\b n. BAG_CARD_RELn b n /\ P b n` >-
    SIMP_RULE hol_ss [BCARD_imps]) BCARD_induct
+
 val BCARD_R_cases = prove(
   Term`!b n. BAG_CARD_RELn b n ==>
              (b = EMPTY_BAG) /\ (n = 0) \/
@@ -1152,12 +1145,14 @@ val BCARD_R_cases = prove(
                        BAG_CARD_RELn b0 m /\ (n = m + 1))`,
   HO_MATCH_MP_TAC BCARD_induct THEN SIMP_TAC hol_ss [] THEN
   REPEAT STRIP_TAC THEN ELIM_TAC THEN ASM_MESON_TAC [BCARD_imps]);
+
 val BCARD_rwts = prove(
   Term`!b n. BAG_CARD_RELn b n =
              (b = EMPTY_BAG) /\ (n = 0) \/
              (?b0 e m. (b = BAG_INSERT e b0) /\ (n = m + 1) /\
                        BAG_CARD_RELn b0 m)`,
   MESON_TAC [BCARD_R_cases, BCARD_imps]);
+
 val BAG_cases = Q.store_thm(
   "BAG_cases",
   `!b. (b = EMPTY_BAG) \/ (?b0 e. b = BAG_INSERT e b0)`,
@@ -1215,7 +1210,9 @@ val BCARD_BINSERT = prove(
     ASM_SIMP_TAC hol_ss [],
     ASM_MESON_TAC [BCARD_imps]
   ]);
+
 val BCARD_RWT = CONJ BCARD_EMPTY BCARD_BINSERT
+
 val BCARD_R_det = prove(
   Term`!b n. BAG_CARD_RELn b n ==>
              !n'. BAG_CARD_RELn b n' ==> (n' = n)`,
@@ -1325,23 +1322,22 @@ val BAG_REST_DEF = Q.new_definition
  ("BAG_REST_DEF", 
   `BAG_REST b = BAG_DIFF b (EL_BAG (BAG_CHOICE b))`);
 
+
 val BAG_INSERT_CHOICE_REST = Q.store_thm
 ("BAG_INSERT_CHOICE_REST",
  `!b:^bag. ~(b = {||}) ==> (b = BAG_INSERT (BAG_CHOICE b) (BAG_REST b))`,
  REPEAT STRIP_TAC 
    THEN IMP_RES_THEN MP_TAC BAG_CHOICE_DEF
-   THEN RW_TAC bool_ss 
+   THEN RW_TAC num_ss 
         [BAG_INSERT,BAG_REST_DEF,BAG_DIFF,EL_BAG,BAG_IN,BAG_INN,
-         EMPTY_BAG,combinTheory.K_DEF]
-   THEN CONV_TAC FUN_EQ_CONV 
-   THEN RW_TAC num_ss []);
+         EMPTY_BAG,combinTheory.K_DEF,FUN_EQ_THM]);
+
 
 val SUB_BAG_REST = Q.store_thm
 ("SUB_BAG_REST",
  `!b:^bag. SUB_BAG (BAG_REST b) b`,
- RW_TAC num_ss [BAG_REST_DEF,SUB_BAG,BAG_INN,BAG_DIFF,EL_BAG,BAG_INSERT]
-   THENL [POP_ASSUM MP_TAC, ALL_TAC]
-   THEN RW_TAC num_ss []);
+ RW_TAC bool_ss [BAG_REST_DEF,SUB_BAG,BAG_INN,BAG_DIFF,EL_BAG,BAG_INSERT] THEN
+ RW_TAC num_ss []);
 
 
 val PSUB_BAG_REST = Q.store_thm
@@ -1349,27 +1345,19 @@ val PSUB_BAG_REST = Q.store_thm
  `!b:^bag. ~(b = {||}) ==> PSUB_BAG (BAG_REST b) b`,
  REPEAT STRIP_TAC 
    THEN IMP_RES_THEN MP_TAC BAG_CHOICE_DEF
-   THEN RW_TAC num_ss [BAG_REST_DEF,PSUB_BAG, SUB_BAG,BAG_IN,
-           BAG_INN,BAG_DIFF,EL_BAG,BAG_INSERT,EMPTY_BAG,combinTheory.K_DEF]
-   THENL [POP_ASSUM MP_TAC, ALL_TAC, 
-          CONV_TAC (DEPTH_CONV FUN_EQ_CONV) 
-            THEN RW_TAC bool_ss []
-            THEN Q.EXISTS_TAC `BAG_CHOICE b`]
+   THEN RW_TAC num_ss [BAG_REST_DEF,PSUB_BAG, SUB_BAG,BAG_IN, BAG_INN,
+       BAG_DIFF,EL_BAG,BAG_INSERT,EMPTY_BAG,combinTheory.K_DEF,FUN_EQ_THM]
+   THENL [ALL_TAC, Q.EXISTS_TAC `BAG_CHOICE b`]
    THEN RW_TAC num_ss []);
 
 
 val SUB_BAG_DIFF_EQ = Q.store_thm
 ("SUB_BAG_DIFF_EQ",
  `!b1 b2. SUB_BAG b1 b2 ==> (b2 = BAG_UNION b1 (BAG_DIFF b2 b1))`,
- RW_TAC bool_ss [SUB_BAG,BAG_UNION,BAG_DIFF,BAG_INN]
-   THEN CONV_TAC FUN_EQ_CONV THEN RW_TAC num_ss []
-   THEN POP_ASSUM (STRIP_ASSUME_TAC o Q.ID_SPEC)
-   THEN `!p q. (!n. p>=n ==> q>=n) ==> q>=p` 
-      by (POP_ASSUM (K ALL_TAC) THEN  REPEAT GEN_TAC 
-           THEN CONV_TAC CONTRAPOS_CONV 
-           THEN RW_TAC bool_ss [] THEN Q.EXISTS_TAC `p` 
-           THEN POP_ASSUM MP_TAC THEN ARITH_TAC)
-   THEN RES_TAC THEN RW_TAC num_ss []);
+ RW_TAC bool_ss [SUB_BAG,BAG_UNION,BAG_DIFF,BAG_INN,FUN_EQ_THM] 
+   THEN MATCH_MP_TAC (ARITH `a >= b ==> (a = b + (a - b))`)
+   THEN POP_ASSUM (MP_TAC o Q.SPECL [`x`, `b1 x`])
+   THEN RW_TAC num_ss []);
 
 val SUB_BAG_DIFF_EXISTS = Q.prove
 (`!b1 b2. SUB_BAG b1 b2 ==> ?d. b2 = BAG_UNION b1 d`,
@@ -1392,8 +1380,7 @@ RW_TAC bool_ss []
 
 val BAG_UNION_STABLE = Q.prove
 (`!b1 b2. (b1 = BAG_UNION b1 b2) = (b2 = {||})`,
- RW_TAC bool_ss [BAG_UNION,EMPTY_BAG_alt] THEN
- CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN
+ RW_TAC bool_ss [BAG_UNION,EMPTY_BAG_alt,FUN_EQ_THM] THEN
  EQ_TAC THEN DISCH_THEN (fn th => GEN_TAC THEN MP_TAC(SPEC_ALL th)) THEN
  RW_TAC num_ss []);
 
@@ -1410,13 +1397,12 @@ RW_TAC bool_ss [PSUB_BAG]
   THEN RW_TAC bool_ss []
   THEN `~(d = {||})` by PROVE_TAC [BAG_UNION_STABLE]
   THEN STRIP_ASSUME_TAC (Q.SPEC`d` BAG_cases) 
-  THENL [PROVE_TAC [], ALL_TAC]
   THEN RW_TAC bool_ss [BAG_UNION_INSERT]
   THEN POP_ASSUM (K ALL_TAC)
-  THEN `FINITE_BAG (BAG_UNION b1 b0)` by
-      PROVE_TAC[FINITE_BAG_UNION, BAG_UNION_INSERT,FINITE_BAG_THM]
-  THEN RW_TAC bool_ss [BAG_CARD_THM,ARITH `x <y+1n = x <= y`]
-  THEN PROVE_TAC[SUB_BAG_CARD, SUB_BAG_UNION_MONO]);
+  THEN `FINITE_BAG (BAG_UNION b1 b0)` 
+        by PROVE_TAC[FINITE_BAG_UNION, BAG_UNION_INSERT, FINITE_BAG_THM]
+  THEN PROVE_TAC [BAG_CARD_THM, ARITH `x <y+1n = x <= y`,
+                  SUB_BAG_CARD, SUB_BAG_UNION_MONO]);
 
 
 val _ = export_theory();

@@ -22,13 +22,11 @@ val exp_defn =
         Remove termination constraints.
  ---------------------------------------------------------------------------*)
 
-val (exp_eqns, exp_ind) = Defn.tprove 
+val (exp_eqns, exp_ind) = 
+ Defn.tprove 
  (exp_defn,
-  WF_REL_TAC `$<` 
-    THEN RW_TAC std_ss []
-    THEN MP_TAC (Q.SPEC `SUC(SUC v2)` 
-                  (REWRITE_RULE [DECIDE `0<2`] (Q.SPEC`2` DIVISION)))
-    THEN RW_TAC arith_ss []);
+  WF_REL_TAC `$<` THEN RW_TAC arith_ss [arithmeticTheory.DIV_LESS]);
+
 
 
 (*---------------------------------------------------------------------------*
@@ -44,12 +42,11 @@ val EXP_eq_exp = Q.prove
 (`!x m. x EXP m = exp x m`,
  GEN_TAC 
    THEN recInduct exp_ind 
-   THEN REPEAT CONJ_TAC
    THEN RW_TAC arith_ss [EXP, exp_eqns]
    THEN POP_ASSUM (SUBST1_TAC o SYM)
    THEN RW_TAC arith_ss [GSYM EXP_ADD] 
    THEN `2 * (SUC(SUC v2) DIV 2) = SUC(SUC v2)` 
-        by PROVE_TAC [DIVISION,DECIDE `0<2`,ADD_0,MULT_SYM]
+          by PROVE_TAC [DIVISION,DECIDE (Term`0<2`),ADD_0,MULT_SYM]
    THEN PROVE_TAC [EXP]);
 
 

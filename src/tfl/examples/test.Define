@@ -138,13 +138,13 @@ val Swap_def =
  /\ (Swap (White::Red::rst)  = SOME(Red::White::rst))
  /\ (Swap (Blue::Red::rst)   = SOME(Red::Blue::rst))
  /\ (Swap (Blue::White::rst) = SOME(White::Blue::rst))
- /\ (Swap (x::rst)           = option_APPLY (CONS x) (Swap rst))`;
+ /\ (Swap (x::rst)           = OPTION_MAP (CONS x) (Swap rst))`;
 
 val Swap_def' = 
   let val Swap_NIL = CONJUNCT1 Swap_def
   in 
     CONJ Swap_NIL 
-     (REWRITE_RULE [Swap_NIL,optionTheory.option_APPLY_DEF] 
+     (REWRITE_RULE [Swap_NIL,optionTheory.OPTION_MAP_DEF] 
              (CONJUNCT2 Swap_def))
   end;
 
@@ -249,7 +249,7 @@ val accRec_def0 =
 val binRec_def = 
  Define
     `binRec (x:'a) = 
-      if atomic x then A x 
+      if atomic x then (A x:'b) 
       else join (binRec (left x)) 
                 (binRec (right x))`;
 

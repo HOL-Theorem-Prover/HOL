@@ -145,6 +145,21 @@ fun breakable tm =
     T=tm         orelse
     F=tm;
 
+(* This is an expensive test ....  *)
+
+fun splittable w =
+   Lib.can (find_term (fn tm => is_cond tm andalso free_in tm w)) w;
+
+
+fun LIFT_SPLIT_SIMP ss simp tm =
+   UNDISCH_THEN tm 
+     (fn th => MP_TAC (simpLib.SIMP_RULE ss [] th) 
+                 THEN IF_CASES_TAC 
+                 THEN simp 
+                 THEN REPEAT BOSS_STRIP_TAC);
+
+fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
+
 
 (*---------------------------------------------------------------------------
       STP_TAC (Simplify then Prove)
@@ -176,8 +191,14 @@ fun breakable tm =
 
          * break up an equation between constructors in the goal
 
-         * break up conjunctions, disjunctions, or existentials occurring
+         * break up conjunctions, disjunctions, existentials, or
+           double negations occurring in the assumptions.
+
+         * eliminate occurrences of T (toss it away) and F (prove the goal)
            in the assumptions.
+
+         * elimininate free occurrences of if-then-else in the 
+           assumptions, simplifying the goal afterwards.
 
     7. Apply the finishing tactic.
 
@@ -205,7 +226,9 @@ fun PRIM_STP_TAC ss finisher =
             (ASSUM_TAC VSUBST_TAC var_eq
                ORELSE ASSUMS_TAC (LIFT_SIMP ss) has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
-               ORELSE CONCL_TAC ASM_SIMP has_constr_eqn))
+               ORELSE CONCL_TAC ASM_SIMP has_constr_eqn)
+               ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP) splittable
+               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable)
      THEN TRY finisher
   end
 end;

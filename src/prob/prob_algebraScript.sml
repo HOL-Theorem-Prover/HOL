@@ -16,8 +16,8 @@ if !show_assums then () else (
   load "pairTheory";
   load "combinTheory";
   load "probTools";
-  load "booleanSequenceTheory";
-  load "booleanSequenceTools";
+  load "boolean_sequenceTheory";
+  load "boolean_sequenceTools";
   load "prob_extraTheory";
   load "prob_extraTools";
   load "prob_canonTheory";
@@ -210,13 +210,11 @@ val ALG_CANON_FIND_EMBED = store_thm
    STRIP_TAC
    ++ Induct >> RW_TAC list_ss [alg_canon_find_def]
    ++ POP_ASSUM MP_TAC
-   ++ RW_TAC list_ss [alg_canon_find_def, algebra_embed_def]
-   ++ RW_TAC std_ss [algebra_embed_def] <<
+   ++ RW_TAC list_ss [alg_canon_find_def, algebra_embed_def] <<
    [MP_TAC (Q.SPECL [`l`, `h`] ALG_EMBED_PREFIX_SUBSET)
     ++ PSET_TAC []
     ++ PROVE_TAC [],
-    PSET_TAC []
-    ++ PROVE_TAC [],
+    PSET_TAC [] ++ PROVE_TAC [],
     MP_TAC (Q.SPECL [`l`, `h::b`] ALG_CANON_PREFS_EMBED)
     ++ RW_TAC std_ss [algebra_embed_def]]);
 
