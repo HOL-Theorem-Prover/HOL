@@ -411,15 +411,34 @@ in
   (tyinfo_extras, conjed_up)
 end
 
-fun primHol_datatype db q =
- let val parse_result = ParseDatatype.parse q
-     val tyinfo_extras = deftype_from_parse parse_result
-     val ax = TypeBase.axiom_of (#1 (hd tyinfo_extras))
- in
-   case define_size ax (tysize_env db)
-    of SOME thm => munge_size_thm ax tyinfo_extras thm
-     | NONE     => (Lib.mesg true "Couldn't prove size function for this type";
-                    tyinfo_extras)
+fun check_recordtype_for_duplicate_fields pspec =
+  case pspec of
+    (tyname, ParseDatatype.RecordType flds) => let
+      val names = map #1 flds
+      val sorted_names = Listsort.sort String.compare names
+      fun find_dup [] = NONE
+        | find_dup [x] = NONE
+        | find_dup (x::y::xs) = if x = y then SOME x else find_dup (y::xs)
+    in
+      Option.map (fn s => (tyname, s)) (find_dup sorted_names)
+    end
+  | _ => NONE
+
+fun primHol_datatype db q = let
+  val parse_result = ParseDatatype.parse q
+  val _ =
+    case List.mapPartial check_recordtype_for_duplicate_fields parse_result of
+      [] => true
+    | ((tyname, fldname)::_) =>
+        raise ERR "Hol_datatype" ("record type "^tyname^
+                                  " has two fields called "^fldname)
+  val tyinfo_extras = deftype_from_parse parse_result
+  val ax = TypeBase.axiom_of (#1 (hd tyinfo_extras))
+in
+  case define_size ax (tysize_env db) of
+    SOME thm => munge_size_thm ax tyinfo_extras thm
+  | NONE     => (Lib.mesg true "Couldn't prove size function for this type";
+                 tyinfo_extras)
 end
 
 local fun do_side_effects (x as (tyinfo, _)) =
