@@ -2,24 +2,20 @@ structure jrhTactics :> jrhTactics =
   struct
     open HolKernel boolLib liteLib;
 
-    type Goal = (thm list * term)
-    type Goalstate = Goal list * validation
-    type Tactic = Goal -> Goalstate
-    type Thm_Tactic = thm -> Tactic
+    type Goal         = (thm list * term)
+    type Goalstate    = Goal list * validation
+    type Tactic       = Goal -> Goalstate
+    type Thm_Tactic   = thm -> Tactic
     type Thm_Tactical = Thm_Tactic -> Thm_Tactic
-    type refinement = Goalstate -> Goalstate
+    type refinement   = Goalstate -> Goalstate
 
-    infix >- 
+    infix >- |->;
     fun (f >- g) x = g(f x);
-
-    val |-> = Lib.|->; infix |->;
-
     fun butlast l = #1(Lib.front_last l)
+    val ERR = mk_HOL_ERR"jrhTactics";
 
     fun mk_Goalstate g = ([g], hd)
    
-    val ERR = mk_HOL_ERR"jrhTactics";
-
     fun by t ([], _) = raise ERR  "by" "Can't apply tactic to empty Goal list"
       | by t (g::others, vf) =
           let val (newgs, vf1) = t g
@@ -64,7 +60,6 @@ structure jrhTactics :> jrhTactics =
     end
 
 
-
     infix THENL
     fun (t1 THENL tlist) g = bys tlist (by t1 (mk_Goalstate g))
 
@@ -86,18 +81,16 @@ structure jrhTactics :> jrhTactics =
       ([(th::asl, g)],
        fn [resth] => PROVE_HYP th resth)
 
-    fun POP_ASSUM thf (a::asl, g)    = thf a (asl, g)
-      | POP_ASSUM  _  ([],_)         = raise ERR "POP_ASSUM" "no assums" ;
+    fun POP_ASSUM thf (a::asl, g) = thf a (asl, g)
+      | POP_ASSUM  _  ([],_)      = raise ERR "POP_ASSUM" "no assums" ;
 
-    fun ASSUM_LIST thlf (asl, g)     = thlf asl (asl, g)
+    fun ASSUM_LIST thlf (asl, g)  = thlf asl (asl, g)
     fun POP_ASSUM_LIST thlf (asl, g) = thlf asl ([], g)
     fun FIRST_ASSUM ttac (asl, g) = tryfind (fn th => ttac th (asl, g)) asl
 
     fun UNDISCH_THEN tm ttac (asl,g) =
-      let
-        val (th, asl') = Lib.pluck (fn th => concl th = tm) asl
-      in
-        ttac th (asl', g)
+      let val (th, asl') = Lib.pluck (fn th => concl th = tm) asl
+      in ttac th (asl', g)
       end
 
     fun FIRST_X_ASSUM ttac =
@@ -105,8 +98,7 @@ structure jrhTactics :> jrhTactics =
 
     fun ALL_TAC (asl, g) = ([(asl,g)], fn [th] => th)
 
-    fun EVERY [] = ALL_TAC
-      | EVERY (t::ts) = t THEN EVERY ts
+    fun EVERY [] = ALL_TAC | EVERY (t::ts) = t THEN EVERY ts
 
     fun MAP_EVERY f l = EVERY (map f l)
 
@@ -119,14 +111,12 @@ structure jrhTactics :> jrhTactics =
 
 
     fun X_CHOOSE_TAC t xth (asl, g) =
-      let
-        val xtm = concl xth
-        val (x, bod) = dest_exists xtm
-        val pat = ASSUME (Term.subst [x |-> t] bod)
-      in
-        ([(pat::asl, g)], fn [th] => CHOOSE (t, xth) th)
+      let val xtm = concl xth
+          val (x, bod) = dest_exists xtm
+          val pat = ASSUME (Term.subst [x |-> t] bod)
+      in ([(pat::asl, g)], fn [th] => CHOOSE (t, xth) th)
       end
-    handle HOL_ERR _ => raise ERR "X_CHOOSE_TAC" ""
+      handle HOL_ERR _ => raise ERR "X_CHOOSE_TAC" ""
 
     fun thm_frees thm = 
       itlist (union o free_vars) (hyp thm) (free_vars (concl thm))
@@ -144,18 +134,15 @@ structure jrhTactics :> jrhTactics =
 
     fun CONJUNCTS_THEN ttac th =
       let val (c1, c2) = (CONJUNCT1 th, CONJUNCT2 th)
-      in
-        ttac c1 THEN ttac c2
+      in ttac c1 THEN ttac c2
       end
 
     fun DISJ_CASES_TAC dth =
-      let
-        val dtm = concl dth
-        val (l,r) = dest_disj dtm
-        val (thl, thr) = (ASSUME l, ASSUME r)
-      in
-        fn (asl, g) => ([(thl::asl, g), (thr::asl, g)],
-                        fn [th1, th2] => DISJ_CASES dth th1 th2)
+      let val dtm = concl dth
+          val (l,r) = dest_disj dtm
+          val (thl, thr) = (ASSUME l, ASSUME r)
+      in fn (asl, g) => ([(thl::asl, g), (thr::asl, g)],
+                         fn [th1, th2] => DISJ_CASES dth th1 th2)
       end
 
     fun DISJ_CASES_THEN ttac th =
@@ -165,13 +152,11 @@ structure jrhTactics :> jrhTactics =
     fun (ttcl1 ORELSE_TCL ttcl2) ttac th =
       ttcl1 ttac th handle HOL_ERR _ => ttcl2 ttac th
 
-    fun CONTR_TAC cth (asl, g) =
-      let val th = CONTR g cth
-      in ([], fn [] => th)
-      end
+    fun CONTR_TAC cth (asl, g) = 
+       let val th = CONTR g cth in ([], fn [] => th) end
 
     fun ACCEPT_TAC th (asl, g) =
-      if aconv (concl th) g then ([], fn [] => th)
-      else raise ERR "ACCEPT_TAC" ""
+      if aconv (concl th) g then ([], fn [] => th) 
+                            else raise ERR "ACCEPT_TAC" ""
 
 end

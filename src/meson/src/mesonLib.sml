@@ -17,6 +17,7 @@ fun == q x = Type q
 (*---------------------------------------------------------------------------*
  * Miscellaneous bits.                                                       *
  *---------------------------------------------------------------------------*)
+
 exception NOT_FOUND;
 exception Cut;
 
@@ -40,11 +41,11 @@ val the_false = F
 fun type_match vty cty sofar =
   if is_vartype vty
   then if ((vty = cty) orelse
-           (case (assoc2 vty sofar)
+           (case subst_assoc (equal vty) sofar
              of SOME ty => (ty = cty)
               | NONE => false))
        then sofar
-       else (cty,vty)::sofar
+       else {redex=vty, residue=cty}::sofar
   else let val (vop,vargs) = dest_type vty
            and (cop,cargs) = dest_type cty
        in
@@ -53,9 +54,8 @@ fun type_match vty cty sofar =
          else failwith "type_match"
        end;
 
-fun is_beq tm =
- (type_of (#lhs(boolSyntax.dest_eq tm)) = bool)
- handle HOL_ERR _ => false;
+
+fun is_beq tm = (type_of (lhs tm) = bool) handle HOL_ERR _ => false;
 
 (*---------------------------------------------------------------------------*
  * Global constant.                                                          *
@@ -146,13 +146,11 @@ in
   fun reset_vars () = (vstore := []; gstore := []; vcounter := 0)
   fun fol_of_var (v:term) =
     let val currentvars = !vstore
-    in case (assoc1 v currentvars)
+    in case assoc1 v currentvars
         of SOME x => x
          | NONE =>
             let val n = inc_vcounter()
-            in
-              vstore := (v,n)::currentvars;
-              n
+            in vstore := (v,n)::currentvars; n 
             end
     end
   val hol_of_var = hol_of_bumped_var
@@ -192,8 +190,7 @@ fun fol_of_term env consts tm =
 
 fun fol_of_atom env consts tm =
   let val (f,args) = strip_comb tm
-  in
-     if mem f env then failwith "fol_of_atom: higher order"
+  in if mem f env then failwith "fol_of_atom: higher order"
      else (fol_of_const f, map (fol_of_term env consts) args)
   end
 
@@ -278,9 +275,9 @@ local exception Unchanged
       fun qtry f arg = f arg handle Unchanged => arg
 in
 fun raw_fol_subst theta (Var v) =
-     (case (assoc2 v theta)
-       of SOME x => x
-        | NONE => raise Unchanged)
+       (case assoc2 v theta
+         of SOME x => x
+          | NONE => raise Unchanged)
   | raw_fol_subst theta (Fnapp(f,args)) =
      Fnapp(f,qmap (raw_fol_subst theta) args);;
 
@@ -297,10 +294,9 @@ fun raw_fol_subst_bump offset theta tm =
    of Var v =>
         if v < offinc
         then let val v' = v + offset
-             in
-               case (assoc2 v' theta) of SOME x => x | NONE => Var(v')
+             in case (assoc2 v' theta) of SOME x => x | NONE => Var(v')
              end
-        else (case (assoc2 v theta) of SOME x => x | NONE => raise Unchanged)
+        else (case assoc2 v theta of SOME x => x | NONE => raise Unchanged)
     | Fnapp(f,args) =>
       Fnapp(f,qmap (raw_fol_subst_bump offset theta) args);;
 
@@ -315,42 +311,33 @@ fun fol_inst_bump offset theta (at as (p,args)) =
 (* ------------------------------------------------------------------------- *)
 
 val raw_augment_insts =
-  let
-    fun augment1 theta (s,x) =
+ let fun augment1 theta (s,x) =
       let val s' = raw_fol_subst theta s
-      in
-        if fol_free_in x s andalso not(s = Var(x)) then
-          failwith "augment1: Occurs check"
-        else (s',x)
+      in if fol_free_in x s andalso not(s = Var(x)) 
+            then failwith "augment1: Occurs check"
+            else (s',x)
       end
-  in
+ in
     fn p => fn insts => p :: qtry (qmap (augment1 [p])) insts
-  end;
+ end;
 
 fun qpartition p m =
  let fun qpart l =
-   if (l = m) then raise Unchanged else
+   if l=m then raise Unchanged else
    case l
     of [] => raise Unchanged
      | h::t => if p h
-                 then let val (yes,no) = qpart t
-                      in
-                         (h::yes,no)
-                      end
+                 then let val (yes,no) = qpart t in (h::yes,no) end
                       handle Unchanged => ([h],t)
-                 else let val (yes,no) = qpart t
-                      in
-                        (yes,h::no)
-                      end
+                 else let val (yes,no) = qpart t in (yes,h::no) end
  in
     fn l => qpart l handle Unchanged => ([], l)
- end;
+ end
 end;
 
 fun augment_insts offset (t,v) insts =
-  let
-    val t' = fol_subst_bump offset insts t
-    val p = (t',v)
+  let val t' = fol_subst_bump offset insts t
+      val p = (t',v)
   in
     case t' of
       Var(w) =>
@@ -367,7 +354,7 @@ fun fol_unify offset tm1 tm2 sofar =
   case tm1 of
     Var(x) =>
       let val x' = if x < offinc then x + offset else x
-      in case (assoc2 x' sofar)
+      in case assoc2 x' sofar
           of SOME tm1' => fol_unify offset tm1' tm2 sofar
            | NONE      => augment_insts offset (tm2,x') sofar
       end
@@ -375,7 +362,7 @@ fun fol_unify offset tm1 tm2 sofar =
       (case tm2 of
         Var(y) =>
           let val y' = if y < offinc then y + offset else y
-          in case (assoc2 y' sofar)
+          in case assoc2 y' sofar
               of SOME tm2' => fol_unify offset tm1 tm2' sofar
                | NONE      => augment_insts offset (tm1,y') sofar
           end
@@ -392,7 +379,7 @@ fun fol_eq insts tm1 tm2 =
   tm1 = tm2 orelse
   case tm1
    of Var(x) =>
-      (case (assoc2 x insts)
+      (case assoc2 x insts
         of SOME tm1' => fol_eq insts tm1' tm2
          | NONE =>
             (case tm2
@@ -404,12 +391,12 @@ fun fol_eq insts tm1 tm2 =
    | Fnapp(f1,args1) =>
       case tm2
        of Var(y) =>
-           (case (assoc2 y insts)
+           (case assoc2 y insts
              of SOME tm2' => fol_eq insts tm1 tm2'
               | NONE      => false)
        | Fnapp(f2,args2) =>
            if f1 = f2 then Lib.all2 (fol_eq insts) args1 args2
-           else false;
+                      else false;
 
 
 fun fol_atom_eq insts (p1,args1) (p2,args2) =
@@ -420,36 +407,33 @@ fun fol_atom_eq insts (p1,args1) (p2,args2) =
 (* ------------------------------------------------------------------------- *)
 
 fun cacheconts f =
-  if !cache then
-    let val memory = ref []
-    in
-      fn input as (gg, (insts,offset,(size:int))) =>
-      if exists (fn (_,(insts',_,size')) =>
-                     insts = insts' andalso (size <= size' orelse !depth))
-        (!memory) then
-        failwith "cachecont"
-      else
-        (memory := input::(!memory); f input)
-    end
-  else f;;
+ if !cache 
+ then let val memory = ref []
+      in fn input as (gg, (insts,offset,(size:int))) =>
+           if exists (fn (_,(insts',_,size')) =>
+                       insts=insts' andalso (size <= size' orelse !depth))
+                     (!memory) 
+           then failwith "cachecont"
+           else (memory := input::(!memory); f input)
+      end
+ else f;;
 
 (* ------------------------------------------------------------------------- *)
 (* Check ancestor list for repetition.                                       *)
 (* ------------------------------------------------------------------------- *)
 
 fun checkan insts (p:int,a) ancestors =
-  if !precheck
-  then let val p' = ~p
-           val t' = (p',a)
-       in
-         case (assoc1 p' ancestors)
+ if !precheck
+ then let val p' = ~p
+          val t' = (p',a)
+      in case assoc1 p' ancestors
           of NONE => ancestors
            | SOME ours =>
-               if exists (fn u => fol_atom_eq insts t' (snd(fst u))) ours
-               then failwith "checkan"
-               else ancestors
-       end
-  else ancestors;;
+             if exists (fn u => fol_atom_eq insts t' (snd(fst u))) ours
+                then failwith "checkan"
+                else ancestors
+      end
+ else ancestors;;
 
 (* ------------------------------------------------------------------------- *)
 (* Insert new goal's negation in ancestor clause, given refinement.          *)
@@ -745,7 +729,8 @@ end
 local
   fun bump_hol_thm offset th =
     let val fvs = subtract (free_vars (concl th)) (freesl(hyp th))
-    in INST (map (fn v => (hol_of_var(fol_of_var v + offset),v)) fvs) th
+    in INST (map(fn v => {redex=v,residue=hol_of_var(fol_of_var v + offset)})
+                 fvs) th 
     end
   fun hol_negate tm = dest_neg tm handle HOL_ERR _ => mk_neg tm
   fun merge_inst (t,x) current = (fol_subst current t,x)::current
@@ -906,8 +891,8 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
             grab_constants (rand tm) acc
           else union (find_terms is_const tm) acc
     fun match_consts (tm1,tm2) =
-      let val (s1,thy1,ty1) = dest_thy_const tm1
-          and (s2,thy2,ty2) = dest_thy_const tm2
+      let val {Name=s1,Thy=thy1,Ty=ty1} = dest_thy_const tm1
+          and {Name=s2,Thy=thy2,Ty=ty2} = dest_thy_const tm2
       in
         if (s1=s2) andalso (thy1=thy2)
         then type_match ty1 ty2 [] 

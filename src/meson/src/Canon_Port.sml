@@ -23,10 +23,10 @@ val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
 
 fun freesl tml = itlist (union o free_vars) tml [];;
 
-fun is_eqc tm =
+fun is_eqc tm = 
  (case Term.dest_thy_const tm
-   of {Name="=",Thy="min",...} => true
-    | other => false)
+   of {Name="=",Thy="min",...} => true 
+    | other => false) 
   handle HOL_ERR _ => false;
 
 local fun get_heads lconsts tm (sofar as (cheads,vheads)) =
@@ -34,7 +34,7 @@ local fun get_heads lconsts tm (sofar as (cheads,vheads)) =
         in get_heads (subtract lconsts [v]) bod sofar
         end
         handle HOL_ERR _ =>
-            let val (l,r) =  dest_conj tm handle HOL_ERR _ => dest_disj tm
+            let val (l,r) = dest_conj tm handle HOL_ERR _ => dest_disj tm
             in get_heads lconsts l (get_heads lconsts r sofar)
             end
         handle HOL_ERR _ =>
@@ -95,7 +95,7 @@ local
 in
   fun GEN_FOL_CONV (cheads,vheads) =
     let val hddata =
-          if vheads = []
+          if vheads = [] 
           then let val hops = mk_set (map fst cheads)
                    fun getmin h =
                     let val ns = mapfilter
@@ -187,8 +187,7 @@ val PRESIMP_CONV =
 
 val REFUTE_THEN =
   let val conv = REWR_CONV(TAUT `p = ~p ==> F`)
-  in
-    fn ttac => CONV_TAC conv THEN DISCH_THEN ttac
+  in fn ttac => CONV_TAC conv THEN DISCH_THEN ttac
   end;;
 
 val SKOLEM_CONV =
