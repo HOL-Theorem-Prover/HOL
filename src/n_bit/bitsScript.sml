@@ -2,15 +2,6 @@
 open HolKernel boolLib abbrevUtil Q bossLib Parse simpLib
      numLib pairTheory numeralTheory arithmeticTheory prim_recTheory;
 
-
-(* this makes the dependence on listTheory explicit.  Without it,
-   listTheory can change, and bitsScript won't get recompiled.  This
-   is despite the fact that it depends on bossLib, which indirectly depends
-   on listTheory (via listSimps).  The problem is that bossLib doesn't
-   get recompiled because listSimps' signature doesn't change in the event
-   of listTheory changing. *)
-local open listTheory in end;
-
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "bits";

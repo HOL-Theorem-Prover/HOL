@@ -16,6 +16,12 @@ struct
 
 open HolKernel Parse boolLib pairLib;
 
+(* This makes the dependency on listTheory and optionTheory explicit.
+   Without it, the theories can change, and bossLib won't get recompiled.
+   This is because the listSimps and optionSimps signatures do not change
+   in the event of listTheory and optionTheory changing. *)
+local open listTheory optionTheory in end;
+
 open simpLib
 infix THEN ORELSE;
 
