@@ -13,7 +13,7 @@
 quietdec := true;
 map load  ["compile"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory
-     composeTheory compileTheory compile;
+     devTheory composeTheory compileTheory compile;
 infixr 3 THENR;
 infixr 3 ORELSER;
 quietdec := false;

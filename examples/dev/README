@@ -11,6 +11,7 @@
 == [19.01.05: MJCG changed to use refinement combinators]                    ==
 == [20.01.05: MJCG added netlist synthesis]                                  ==
 == [21.01.05: MJCG minor changes and README update]                          ==
+== [24.01.05: MJCG added hw synthesis improvements]                          ==
 ===============================================================================
 
 composeScript.sml ......... definition of devices and their composition

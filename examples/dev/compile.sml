@@ -334,35 +334,138 @@ fun RecConvert defth totalth =
  end;
 
 (*****************************************************************************)
+(* Check if term tm is a well-formed expression built out of Seq, Par, Ite,  *)
+(* and Rec and if so return a pair (constructor, args), else return (tm,[])  *)
+(*****************************************************************************)
+fun dest_exp tm =
+ if not(fst(dest_type(type_of tm)) = "fun")
+  then (print_term tm;print "\n";
+        print "is not a function";
+        raise ERR "dest_exp" "dest_exp failure")
+  else if is_comb tm 
+          andalso is_const(fst(strip_comb tm))
+          andalso mem 
+                   (fst(dest_const(fst(strip_comb tm))))
+                   ["Seq","Par","Ite","Rec"]
+  then
+   let val (opr,args) = strip_comb tm
+   in
+   case fst(dest_const opr) of
+      "Seq" => if length args = 2 
+                then (opr, args) 
+                else raise ERR "dest_exp" "bad Seq"
+    | "Par" => if length args = 2 
+                then (opr, args) 
+                else raise ERR "dest_exp" "bad Par"
+    | "Ite" => if length args = 3
+                then (opr, args) 
+                else raise ERR "dest_exp" "bad Ite"
+    | "Rec" => if length args = 3
+                then (opr, args) 
+                else raise ERR "dest_exp" "bad Rec"
+    | _     => raise ERR "dest_exp" "this shouldn't happen"
+   end
+  else (tm,[]);
+
+(*****************************************************************************)
+(* Optimise result of converting to program combinators                      *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Check if a term is built out of constants using only application          *)
+(* (e.g. Norrish numerals)                                                   *)
+(*****************************************************************************)
+fun is_compound_const tm =
+ is_const tm
+  orelse (is_comb tm 
+           andalso is_compound_const(rator tm)
+           andalso is_compound_const(rand tm));
+
+(*****************************************************************************)
+(* A simple function has the form ``\(x1,...,xn). tm`` where tm is           *)
+(* composed using only pairing (including Par), composition (including Seq)  *)
+(* constants and the variables x1,...,xn, or is, recursively, built from     *)
+(* such paired abstractions using Seq or Par.                                *)
+(*****************************************************************************)
+fun SIMPLE tm =
+ if is_pabs tm
+  then
+   let val (args, bdy) = strip_pabs tm
+       val argslist = flatten(map strip_pair args)
+       val bdylist = strip_pair bdy
+   in
+    all (fn t => mem t argslist orelse is_compound_const t) bdylist
+   end 
+ else 
+  is_comb tm 
+   andalso is_comb(rator tm) 
+   andalso is_const(rator(rator tm))
+   andalso mem (fst(dest_const(rator(rator tm)))) ["Seq","Par"]
+   andalso SIMPLE(rand tm) andalso SIMPLE(rand(rator tm));
+
+val convert_optimisations =                   (* List of optimising rewrites *)
+ [ParId,SeqId,I_THM];
+
+fun Optimise_CONV tm =
+ let val (opr,args) = dest_exp tm
+                      handle HOL_ERR _ 
+                      => raise ERR "Optimise_CONV" "bad expression"
+ in
+  if is_const opr
+   then
+    case fst(dest_const opr) of
+       "Seq" => (RAND_CONV Optimise_CONV 
+                  THENC (RATOR_CONV(RAND_CONV Optimise_CONV))) tm
+     | "Par" => (RAND_CONV Optimise_CONV 
+                  THENC (RATOR_CONV(RAND_CONV Optimise_CONV))) tm
+     | "Ite" => (RAND_CONV Optimise_CONV 
+                  THENC (RATOR_CONV(RAND_CONV Optimise_CONV))
+                  THENC (RATOR_CONV(RATOR_CONV(RAND_CONV Optimise_CONV)))) tm
+     | "Rec" => (RAND_CONV Optimise_CONV 
+                  THENC (RATOR_CONV(RAND_CONV Optimise_CONV))
+                  THENC (RATOR_CONV(RATOR_CONV(RAND_CONV Optimise_CONV)))) tm
+     | _     => raise ERR "Optimise_CONV" "this shouldn't happen"
+   else REFL tm
+ end;
+
+val Optimise = PURE_REWRITE_RULE convert_optimisations;
+
+(*****************************************************************************)
 (* CompileExp exp                                                            *)
 (* -->                                                                       *)
 (* [REC assumption] |- <circuit> ===> DEV exp                                *)
 (*****************************************************************************)
 fun CompileExp tm =
- if not(fst(dest_type(type_of tm)) = "fun")
-  then (print_term tm;print "\n";
-        print "is not a function -- can only compile functions";
-        raise ERR "CompileExp" "attempt to compile a non-function")
-  else if is_comb tm 
-          andalso is_const(fst(strip_comb tm))
-          andalso mem (fst(dest_const(fst(strip_comb tm)))) ["Seq","Par","Ite","Rec"]
-  then
-   let val (opr,args) = strip_comb tm
-   in
-   case fst(dest_const opr) of
-      "Seq" => MATCH_MP SEQ_INTRO (LIST_CONJ(map CompileExp args))
-    | "Par" => MATCH_MP PAR_INTRO (LIST_CONJ(map CompileExp args))
-    | "Ite" => MATCH_MP ITE_INTRO (LIST_CONJ(map CompileExp args))
-    | "Rec" => let val thl = map (CompileExp) args
-                   val var_list = map (rand o rand o concl o SPEC_ALL) thl
-               in
-                MATCH_MP
-                 (UNDISCH(SPEC_ALL(ISPECL var_list REC_INTRO)))
-                 (LIST_CONJ thl)
-               end
-    | _     => raise ERR "CompileExp" "this shouldn't happen"
-   end
-  else ISPEC ``DEV ^tm`` DEV_IMP_REFL;
+ let val (opr,args) = dest_exp tm
+                      handle HOL_ERR _ 
+                      => raise ERR "CompileExp" "bad expression"
+ in
+  if null args
+   then ISPEC ``DEV ^tm`` DEV_IMP_REFL
+   else
+    case fst(dest_const opr) of
+       "Seq" => let val tm1 = hd args
+                    val tm2 = hd(tl args)
+                in
+                 if SIMPLE tm1 
+                  then MATCH_MP 
+                        (ISPEC tm1 PRECEDE_DEV)
+                        (CompileExp tm2)
+                  else MATCH_MP 
+                        SEQ_INTRO 
+                        (CONJ (CompileExp tm1) (CompileExp tm2))
+                end
+     | "Par" => MATCH_MP PAR_INTRO (LIST_CONJ(map CompileExp args))
+     | "Ite" => MATCH_MP ITE_INTRO (LIST_CONJ(map CompileExp args))
+     | "Rec" => let val thl = map (CompileExp) args
+                    val var_list = map (rand o rand o concl o SPEC_ALL) thl
+                   in
+                    MATCH_MP
+                     (UNDISCH(SPEC_ALL(ISPECL var_list REC_INTRO)))
+                     (LIST_CONJ thl)
+                   end
+     | _     => raise ERR "CompileExp" "this shouldn't happen"
+ end;
 
 (*****************************************************************************)
 (* Compile prog tm --> rewrite tm with prog, then compile result             *)
@@ -371,7 +474,7 @@ fun Compile prog tm =
  let val expand_th = REWRITE_CONV prog tm
      val compile_th = CompileExp (rhs(concl expand_th))
  in
-  REWRITE_RULE [GSYM expand_th] compile_th
+  CONV_RULE (RAND_CONV(REWRITE_CONV[GSYM expand_th])) compile_th
  end;
 
 (*****************************************************************************)
@@ -417,8 +520,10 @@ val UNPAIR_TOTAL =
    THENC DEPTH_CONV GEN_BETA_CONV);
 
 (*****************************************************************************)
-(* Convert a non-recursive definition to an expression and then compile it.  *)
+(* Convert a non-recursive definition to an expression, apply optimisations  *)
+(* and then compile it.                                                      *)
 (*****************************************************************************)
+
 fun ConvertCompile defth =
  let val (l,r) = 
       dest_eq(concl(SPEC_ALL defth))
@@ -435,7 +540,7 @@ fun ConvertCompile defth =
                     raise ERR "ConvertCompile" "rator of lhs not a constant")
               else ()
  in
-  Compile [Convert defth] func
+  Compile [Optimise(Convert defth)] func
  end;
 
 (*****************************************************************************)
@@ -541,6 +646,19 @@ fun hwDefine defq =
 (*****************************************************************************)
 
 (*****************************************************************************)
+(* PRECEDE                                                                   *)
+(*****************************************************************************)
+fun is_PRECEDE tm =
+ is_comb tm
+  andalso is_comb(rator tm)
+  andalso is_const(rator(rator tm))
+  andalso (fst(dest_const(rator(rator tm))) = "PRECEDE");
+
+fun dest_PRECEDE tm = (rand(rator tm), rand tm);
+
+fun mk_PRECEDE(f,d) = ``PRECEDE ^f ^d``;
+
+(*****************************************************************************)
 (* ATM                                                                       *)
 (*****************************************************************************)
 fun is_ATM tm =
@@ -607,7 +725,7 @@ fun dest_REC tm = (rand(rator(rator tm)), rand(rator tm), rand tm);
 fun mk_REC(tm1,tm2,tm3) = ``REC ^tm1 ^tm2 ^tm3``;
 
 (*****************************************************************************)
-(* DEV                                                                       *)
+(* Dev                                                                       *)
 (*****************************************************************************)
 fun is_DEV tm =
  is_comb tm 
@@ -692,6 +810,13 @@ fun DEPTHR refine tm =
         handle _ => ISPEC tm DEV_IMP_REFL)
  else if is_ATM tm
   then ISPEC tm DEV_IMP_REFL
+ else if is_PRECEDE tm
+  then
+   let val (f,d) = dest_PRECEDE tm
+       val th = DEPTHR refine d
+   in
+    MATCH_MP (ISPEC f PRECEDE_DEV_IMP) th
+   end
  else if is_SEQ tm
   then
    let val (tm1,tm2) = dest_SEQ tm
@@ -932,4 +1057,6 @@ val MAKE_NETLIST =
    COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,COMP_SEL_CLAUSES(*,SEL_DEFS*)]    o
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
  GEN_BETA_RULE                                                             o
- REWRITE_RULE [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC];
+ REWRITE_RULE 
+  [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
+   PRECEDE_def,Par_def,Seq_def,o_THM];

@@ -101,6 +101,43 @@ val Ite_def =
 val Rec_def = Define `Rec = TAILREC`;
 
 (*****************************************************************************)
+(* Seq is just reverse order function composition                            *)
+(*****************************************************************************)
+val Seq_o =
+ store_thm
+  ("Seq_o",
+   ``Seq f1 f2 = f2 o f1``,
+   RW_TAC std_ss [Seq_def,o_THM,FUN_EQ_THM]);
+
+(*****************************************************************************)
+(* Precede a device with a function                                          *)
+(*****************************************************************************)
+val PRECEDE_def =
+ Define `PRECEDE f d = \(load,inp,done,out). d(load, (f o inp), done, out)`;
+
+(*****************************************************************************)
+(* Precede a device with a combinational circuit                             *)
+(*****************************************************************************)
+val PRECEDE_DEV =
+ store_thm
+  ("PRECEDE_DEV",
+   ``!f1 f2 P.
+      (P ===> DEV f2)
+      ==>
+      PRECEDE f1 P
+      ===> 
+      DEV (Seq f1 f2)``,
+   RW_TAC std_ss 
+    [PRECEDE_def,FORALL_PROD,DEV_IMP_def,DEV_def,SAFE_DEV_def,
+     LIV_def,Seq_def]
+    THENL
+     [RES_TAC
+       THEN Q.EXISTS_TAC `t''`
+       THEN RW_TAC std_ss [],
+      RES_TAC,
+      PROVE_TAC[]]);
+
+(*****************************************************************************)
 (* Introduction rules for devices                                            *)
 (*****************************************************************************)
 val ATM_INTRO =
@@ -251,6 +288,13 @@ val TOTAL_THM =
 (*****************************************************************************)
 (* Monotonicity of ===> lemmas for device refinement                         *)
 (*****************************************************************************)
+val PRECEDE_DEV_IMP =
+ store_thm
+  ("PRECEDE_DEV_IMP",
+   ``!f P Q. 
+       (P ===> Q) ==> (PRECEDE f P ===> PRECEDE f Q)``,   
+   RW_TAC std_ss [DEV_IMP_def,FORALL_PROD,PRECEDE_def]);
+
 val SEQ_DEV_IMP =
  store_thm
   ("SEQ_DEV_IMP",
@@ -578,6 +622,21 @@ val REC =
            f (start_f,q,done_f,out) /\ g (start_g,q,done_g,data_g) /\
            FINISH (done_e,done_f,done_g,done)``,
    RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,REC_def]);
+
+(*****************************************************************************)
+(* Translation optimisations                                                 *)
+(*****************************************************************************)
+val ParId =
+ store_thm
+  ("ParId",
+   ``Par (\(m,n). m) (\(m,n). n) = I``,
+   RW_TAC std_ss [FUN_EQ_THM,Par_def,UNCURRY]);
+
+val SeqId =
+ store_thm
+  ("SeqId",
+   ``(Seq I f = f) /\ (Seq f I = f)``,
+   RW_TAC std_ss [FUN_EQ_THM,Seq_def,UNCURRY]);
 
 
 val _ = export_theory();
