@@ -137,7 +137,7 @@ val UNWIND_ss = SIMPSET
    ``(v:'a = v') ==> (LET (f:'a -> 'b) v = LET f (I v'))``,
    DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [LET_THM, combinTheory.I_THM])
 val let_I_thm = prove(
-  ``LET f (I x) = f x``,
+  ``LET (f : 'a -> 'b) (I x) = f x``,
   REWRITE_TAC [combinTheory.I_THM, LET_THM]);
 
 val LET_ss = simpLib.SIMPSET {ac = [], congs = [let_cong],
