@@ -21,25 +21,6 @@ fun name_eq s M = ((s = #Name(dest_var M)) handle HOL_ERR _ => false)
 fun tm_free_eq M N P =
    (aconv N P andalso free_in N M) orelse raise STEP_ERR "tm_free_eq" ""
 
-fun parse_in_context FVs q =
- let val tm = Lib.with_flag
-                (Globals.notify_on_tyvar_guess,false) Parse.Term q
-     val tmfrees = free_vars tm
-     fun bargle v = (v,first (name_eq (#Name (dest_var v))) FVs)
- in
-   case mapfilter bargle tmfrees
-    of [] => tm
-     | L =>
-       let val (L1,L2) = (map type_of##map type_of) (unzip L)
-           val fty1 = end_itlist (curry (op -->)) L1
-           val fty2 = end_itlist (curry (op -->)) L2
-           val tytheta = match_type fty1 fty2
-       in
-           inst tytheta tm
-       end
- end
-  handle HOL_ERR _ => raise STEP_ERR "parse_in_context" "";
-
 (*---------------------------------------------------------------------------*
  * Mildly altered STRUCT_CASES_TAC, so that it does a SUBST_ALL_TAC instead  *
  * of a SUBST1_TAC.                                                          *
