@@ -1034,7 +1034,7 @@ val FDOM_DOMSUB = store_thm(
   ``!fm k. FDOM (fm \\ k) = FDOM fm DELETE k``,
   SRW_TAC [][fmap_domsub, FDOM_DRESTRICT, pred_setTheory.EXTENSION]);
 
-val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE"]
+val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE", "FDOM_DOMSUB"]
 
 (* ----------------------------------------------------------------------
     Iterated updates
