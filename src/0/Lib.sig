@@ -136,4 +136,13 @@ sig
   val tmvar_vary : string -> string
   val gen_variant : (string -> string) -> string list -> string -> string
 
+  val traces :
+    unit -> {name : string, current_value : int, default_value: int} list
+  val trace : string -> int -> unit
+  val reset_trace : string -> unit
+  val reset_traces : unit -> unit
+  val register_trace : string -> int ref -> unit
+  val current_trace : string -> int
+
+
 end

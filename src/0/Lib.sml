@@ -235,8 +235,8 @@ fun funpow n f x =
      if (n<0) then x else iter(n,x)
    end;
 
-fun repeat f = 
-  let fun loop x = loop (f x) 
+fun repeat f =
+  let fun loop x = loop (f x)
                   handle Interrupt => raise Interrupt
                       |  Exception.HOL_ERR _ => x
   in loop
@@ -576,5 +576,49 @@ end
 fun gen_variant vfn avoids s =
   if mem s avoids then gen_variant vfn avoids (vfn s)
   else s
+
+(*---------------------------------------------------------------------------*
+ * Traces, numeric flags; the higher the more verbose the thing being traced *
+ *---------------------------------------------------------------------------*)
+
+open Exception
+val trace_list = ref ([]:(string * (int ref * int)) list)
+fun traces() = map (fn (n,(r,dflt)) => {name = n, current_value = !r,
+                                        default_value = dflt})
+               (!trace_list)
+
+fun current_trace nm =
+  ! (#1 (assoc nm (!trace_list)))
+  handle HOL_ERR _ => raise HOL_ERR {origin_structure = "Globals",
+                                     origin_function = "current_trace",
+                                     message = ("No trace called "^nm^
+                                                " registered.")};
+
+fun trace nm newvalue =
+  #1 (assoc nm (!trace_list)) := newvalue
+  handle HOL_ERR _ => raise HOL_ERR {origin_structure = "Globals",
+                                     origin_function = "trace",
+                                     message = ("No trace called "^nm^
+                                                " registered.")};
+fun reset_trace nm = let
+  val (r, default) = assoc nm (!trace_list)
+in
+  r := default
+end
+  handle HOL_ERR _ => raise HOL_ERR {origin_structure = "Globals",
+                                     origin_function = "reset_trace",
+                                     message = ("No trace called "^nm^
+                                                " registered.")};
+
+fun reset_traces () = app (fn (_, (r, d)) => r := d) (!trace_list)
+
+fun register_trace nm r =
+  case List.find (fn (s, _) => s = nm) (!trace_list) of
+    NONE => trace_list := (nm, (r, !r))::(!trace_list)
+  | SOME _ => raise HOL_ERR {origin_structure = "Globals",
+                             origin_function = "register_trace",
+                             message = ("Already a trace called "^nm^
+                                        " registered.")};
+
 
 end (* Lib *)
