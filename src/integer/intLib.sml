@@ -17,6 +17,7 @@ val int_ty = Rsyntax.mk_type{Tyop = "int", Args = []}
 val plus_tm = Term`$+ : int -> int -> int`
 val mult_tm = Term`$* : int -> int -> int`
 val less_tm = Term`$< : int -> int -> bool`
+val lesseq_tm = Term`$<= : int -> int -> bool`
 val divides_tm = Term`$int_divides : int -> int -> bool`;
 val min_tm = Term.mk_const{Name = "int_min", Ty = int_ty --> int_ty --> int_ty}
 val zero_tm = Term`0i`
@@ -73,6 +74,13 @@ in
   length args = 2 andalso hd = less_tm
 end
 fun mk_less (tm1, tm2) = list_mk_comb(less_tm, [tm1, tm2])
+
+fun is_lesseq tm = let
+  val (hd, args) = strip_comb tm
+in
+  length args = 2 andalso hd = lesseq_tm
+end
+fun mk_lesseq (tm1, tm2) = list_mk_comb(lesseq_tm, [tm1, tm2])
 
 fun is_divides tm = let
   val (hd, args) = strip_comb tm

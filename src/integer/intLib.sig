@@ -6,6 +6,7 @@ signature intLib = sig
   val plus_tm : Term.term
   val mult_tm : Term.term
   val less_tm : Term.term
+  val lesseq_tm : Term.term
   val divides_tm : Term.term
   val min_tm : Term.term
   val int_injection : Term.term (* the injection from :num -> :int *)
@@ -29,6 +30,9 @@ signature intLib = sig
 
   val is_less : Term.term -> bool
   val mk_less : (Term.term * Term.term) -> Term.term
+
+  val is_lesseq : Term.term -> bool
+  val mk_lesseq : (Term.term * Term.term) -> Term.term
 
   val is_divides : Term.term -> bool
   val mk_divides : (Term.term * Term.term) -> Term.term
