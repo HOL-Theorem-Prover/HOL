@@ -28,17 +28,31 @@ fun spacify [] = []
 fun createLexerStream (is : BasicIO.instream) =
   Lexing.createLexer (fn buff => fn n => Nonstdio.buff_input is buff 0 n)
 
-fun parsePhraseAndClear parsingFun lexingFun lexbuf =
-  let val phr =
-    parsingFun lexingFun lexbuf
-    handle x => (Parsing.clearParser(); raise x)
-  in
-    Parsing.clearParser();
-    phr
-  end;
+fun parsePhraseAndClear (file, stream) parsingFun lexingFun lexbuf = let
+  val phr = parsingFun lexingFun lexbuf handle
+    Parsing.ParseError f => let
+      val pos1 = Lexing.getLexemeStart lexbuf
+      val pos2 = Lexing.getLexemeEnd lexbuf
+    in
+      Location.errMsg (file, stream, lexbuf) (Location.Loc(pos1, pos2))
+      "Syntax error."
+    end
+  | Lexer.LexicalError(msg, pos1, pos2) =>
+    if pos1 >= 0 andalso pos2 >= 0 then
+      Location.errMsg (file, stream, lexbuf)
+      (Location.Loc(pos1, pos2))
+      ("Lexical error: " ^ msg)
+    else
+      (Location.errPrompt ("Lexical error: " ^ msg ^ "\n\n");
+       raise Fail "Lexical error")
+  | x => (Parsing.clearParser(); raise x)
+in
+  Parsing.clearParser();
+  phr
+end;
 
-val parseFile =
-  parsePhraseAndClear Parser.MLtext Lexer.Token;
+fun parseFile (f, strm) =
+  parsePhraseAndClear (f, strm) Parser.MLtext Lexer.Token;
 
 local val path    = ref [""]
       fun lpcl []                = (errMsg "No filenames"; fail())
@@ -135,7 +149,7 @@ fun read srcext objext filename =
      val lexbuf   = createLexerStream is
      val mentions = Polyhash.mkPolyTable (37, Subscript)
      fun insert s = Polyhash.insert mentions (s,())
-     val names    = parseFile lexbuf
+     val names    = parseFile (filename, is) lexbuf
      val _        = BasicIO.close_in is
      val curr_dir = Path.dir filename
  in

@@ -66,6 +66,7 @@ fun mkKeyword lexbuf =
 ;
 
 val savedLexemeStart = ref 0;
+exception LexicalError of string * int * int (* (message, loc1, loc2) *)
 
 fun getQual s =
   let open CharVector
@@ -82,7 +83,9 @@ fun getQual s =
 fun mkQualId lexbuf =
   QUAL_ID (getQual(getLexeme lexbuf));
 
-fun lexError msg lexbuf = NULL;
+fun lexError msg lexbuf =
+  raise LexicalError (msg, getLexemeStart lexbuf, getLexemeEnd lexbuf)
+
 
 fun incr r = (r := !r + 1);
 fun decr r = (r := !r - 1);
