@@ -27,6 +27,24 @@ Q. HOL is failing to complete the build process.  It stops when trying
      reporting it.  If it doesn't in your case, please get back to us.
 
 
+Q. How do I antiquote types? (2)
+
+  -- Antiquoting types works as you would expect when parsing types,
+     so that it is fine to write:
+       - val ty = Type`:bool`;
+     and then
+       - Type`:num -> ^ty`;
+     However, you may wish to also introduce type antiquotations into
+     term parses (as a type constraint on a variable for example).
+     The problem is that you can't just write ^ty in this context,
+     because the parsing function's type insists that all antiquotes
+     be of type term.  You must use the ty_antiq function, which
+     magically makes a type appear as a term:
+       - val antity = ty_antiq ty;
+       > val antity = `(ty_antiq(`:bool`))` : Term.term
+     Then:
+       - val x = Term`x:^antity`;
+
 Q. Are error messages during the build like the following a source for
    concern? (2)
 
@@ -72,24 +90,6 @@ Q. How do I prove strings equal or inequal? (1)
      > val t = ``(if "foo" = "bar" then 3 else 1)`` : Term.term
      - (DEPTH_CONV stringLib.string_EQ_CONV THENC REWRITE_CONV []) t;
      > val it = |- (if "foo" = "bar" then 3 else 1) = 1 : Thm.thm
-
-Q. How do I antiquote types? (1)
-
-  -- Antiquoting types works as you would expect when parsing types,
-     so that it is fine to write:
-       - val ty = Type`:bool`;
-     and then
-       - Type`:num -> ^ty`;
-     However, you may wish to also introduce type antiquotations into
-     term parses (as a type constraint on a variable for example).
-     The problem is that you can't just write ^ty in this context,
-     because the parsing function's type insists that all antiquotes
-     be of type term.  You must use the ty_antiq function, which
-     magically makes a type appear as a term:
-       - val antity = ty_antiq ty;
-       > val antity = `(ty_antiq(`:bool`))` : Term.term
-     Then:
-       - val x = Term`x:^antity`;
 
 Q. I'd like to use MEM as an infix, not a Prefix.  Can I do this? (1)
 
