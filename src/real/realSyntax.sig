@@ -53,9 +53,10 @@ sig
   val list_mk_mult   : (* non-empty *) term list -> term
   val strip_mult     : term -> term list
 
-(*   val is_div         : term -> bool
+  val is_div         : term -> bool
   val dest_div       : term -> (term * term)
   val mk_div         : (term * term) -> term
+
 
   val is_absval      : term -> bool
   val mk_absval      : term -> term
@@ -75,6 +76,5 @@ sig
   val is_geq         : term -> bool
   val dest_geq       : term -> (term * term)
   val mk_geq         : (term * term) -> term
-*)
 
 end

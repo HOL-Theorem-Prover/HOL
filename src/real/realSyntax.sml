@@ -127,4 +127,29 @@ in
     recurse [] [t]
   end
 
+
+  val dest_div = dest2 div_tm "dest_div" "division"
+  val is_div = can dest_div
+  fun mk_div(t1, t2) = list_mk_comb(div_tm, [t1, t2])
+
+  val dest_absval = dest1 absval_tm "dest_absval" "absolute value"
+  val is_absval = can dest_absval
+  fun mk_absval t = mk_comb(absval_tm, t)
+
+  val dest_less = dest2 less_tm "dest_less" "less-than term"
+  val is_less = can dest_less
+  fun mk_less(t1, t2) = list_mk_comb(less_tm, [t1, t2])
+
+  val dest_leq = dest2 leq_tm "dest_leq" "less-than-or-equal term"
+  val is_leq = can dest_leq
+  fun mk_leq(t1, t2) = list_mk_comb(leq_tm, [t1, t2])
+
+  val dest_great = dest2 great_tm "dest_great" "greater-than term"
+  val is_great = can dest_great
+  fun mk_great(t1, t2) = list_mk_comb(great_tm, [t1, t2])
+
+  val dest_geq = dest2 geq_tm "dest_geq" "greater-than-or-equal term"
+  val is_geq = can dest_geq
+  fun mk_geq(t1, t2) = list_mk_comb(geq_tm, [t1, t2])
+
 end ;
