@@ -101,7 +101,7 @@ fun inst_type_dterm ([],v) = v
 
 datatype action =
     Rewrite of rewrite list
-  | Conv of Conv.conv
+  | Conv of (term -> Thm.thm * db fterm)
 
 and db =
     EndDb
@@ -113,7 +113,7 @@ and rewrite =
             lhs: pattern list,  (* patterns = constant args in lhs of thm *)
 	    npv: int,           (* number of distinct pat vars in lhs *)
 	    rhs: db dterm,
-            thm: thm }          (* thm we use for rewriting *)
+            thm: Thm.thm }      (* thm we use for rewriting *)
 ;
 
 fun add_in_db (n,cst,act,EndDb) =
@@ -213,11 +213,10 @@ fun add_thms (str,lthm) rws =
   List.app (enter_one_thm rws str) lthm
 ;
 
-fun add_conv (cst,arity,conv) rws =
+fun add_extern (cst,arity,fconv) rws =
   let val {Name,...} = dest_const cst in
-  add_in_db_upd rws (Name,arity,cst) (Conv conv)
+  add_in_db_upd rws (Name,arity,cst) (Conv fconv)
   end;
-
 
 fun from_list (str,lthm) =
   let val rws = new_rws() in

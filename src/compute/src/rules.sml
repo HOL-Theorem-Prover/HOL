@@ -1,5 +1,7 @@
-local open HolKernel boolTheory
-in
+structure rules :> rules =
+struct
+
+open HolKernel boolTheory;
 
 (* Useful data structure to build tail recursive functions of type 'a -> 'b
  * (left to right) or 'b -> 'a (right to left), when the domain has a
@@ -22,22 +24,18 @@ fun RULES_ERR function message =
  *)
 exception DEAD_CODE of string;
 
-(* less efficient implementation of Mk_comb, Mk_abs and Beta: *)
+val rhs_concl = rand o concl;
+
+val refl_thm = REFL;
+val trans_thm = TRANS;
+val beta_thm = Beta;
+
+fun evaluate th = th;
+
+(* less efficient implementation: *)
 (*
-fun Mk_comb th =
-  let val {Rator,Rand} = dest_comb(rhs (concl th)) in
-  (REFL Rator, REFL Rand, (fn th1 => fn th2 => TRANS th (MK_COMB(th1,th2))))
-  end;
-
-fun Mk_abs th =
-  let val {Bvar,Body} = dest_abs(rhs (concl th)) in
-  (Bvar, REFL Body, (fn th1 => TRANS th (ABS Bvar th1)))
-  end;
-
 val Beta = Drule.RIGHT_BETA;
-
 fun Eta thm = TRANS thm (ETA_CONV (rhs (concl thm)));
-
 fun Spec tm thm = SPEC tm thm;
 *)
 (* end of inefficient implementation. *)
@@ -59,27 +57,54 @@ fun Spec th = tickt "Spec" (!spec_r) th;
 end;
 *)
 
+(* Other impl. of thm with boolean: *)
+(* about 5 to 10 % faster
+type thm = Thm.thm * bool
+fun rhs_concl x = (rand o concl o fst) x
+val evaluate = fst
+
+fun Mk_comb (t as (thm,_)) =
+  let val (tha,thb,mka) = Thm.Mk_comb thm
+      fun mka' (_,false) (_,false) = t
+	| mka' (th1,_) (th2,_) = (mka th1 th2, true)
+  in ((tha,false),(thb,false),mka')
+  end;
+
+fun Mk_abs (t as (thm,_)) =
+  let val (bv,thb,mkl) = Thm.Mk_abs thm
+      fun mkl' (_,false) = t
+	| mkl' (th1,_) = (mkl th1, true)
+  in (bv,(thb,false),mkl')
+  end;
+
+fun refl_thm tm = (REFL tm, false);
+fun trans_thm (th1,_) th2 = (TRANS th1 th2, true);
+fun beta_thm (thm,_) = (Beta thm, true);
+
+fun try_eta' (t as (thm,_)) = ((Eta thm),true) handle HOL_ERR _ => t;
+*)
+(* End of alt. thm impl. *)
+
+
 fun try_eta thm = (Eta thm) handle HOL_ERR _ => thm;
 
+(* Precondition: f(arg) is a closure corresponding to b.
+ * Given   (arg,(|- M = (a b), Stk)),
+ * returns (|- a = a, (<fun>,(|- b = b, f(arg)))::Stk)
+ * where   <fun> =  (|- a = a' , |- b = b') |-> |- M = (a' b')
+ *)
 
-
-fun APPL_DOWN_FUN f (thm,stk) =
-  let val (thma,thmb,mkthm) = Mk_comb thm in
-  (thma, (mkthm, f thmb)::stk)
-  end
+fun push_in_stk f (arg,(th,stk)) =
+      let val (tha,thb,mka) = Mk_comb th in
+      (tha, Zrator{Rand=(mka,(thb,f arg)), Ctx=stk})
+      end
 ;
 
-fun APPL_UP (thma,((mka,thmb)::stk)) = (mka thma thmb, stk)
-  | APPL_UP _ = raise RULES_ERR "APPL_UP" ""
-
-fun APPL_UP_FUN f (thma,((thm,thmb)::stk)) = (thm thma (f thmb), stk)
-  | APPL_UP_FUN f _ = raise RULES_ERR "APPL_UP_FUN" ""
-
-
-fun until_fun p f x = if p x then x else until_fun p f (f x);
-
-fun out_stk x = (fst o (until_fun (null o snd) APPL_UP)) x;
-fun out_stk_fun f = fst o (until_fun (null o snd) (APPL_UP_FUN f));
+fun push_lam_in_stk (th, stk) =
+      let val (_,thb,mkl) = Mk_abs th in
+      (thb, Zabs{Bvar=try_eta o mkl, Ctx=stk})
+      end
+;
 
 
 (* Does conversions between

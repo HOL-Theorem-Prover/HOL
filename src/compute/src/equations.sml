@@ -98,24 +98,25 @@ fun inst_rw (th,{Rule=RW{thm,rhs,...}, Inst=(bds,tbds)}) =
       val tirhs = inst_type_dterm (tysub,rhs)
       val tithm = INST_TYPE tysub thm
       val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds in
-  (TRANS th spec_thm, mk_clos(venv,tirhs))
+  (trans_thm th spec_thm, mk_clos(venv,tirhs))
   end
 end;
 
+
 (* Reducing a constant *)
-fun reduce_cst (rws,th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail}}) =
+fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail}}) =
       (let val (_,inst) = match_term Hcst Head
                           handle HOL_ERR _ => raise No_match
  	   val rule_inst = try_rwn inst Args rls in
        (true,(inst_rw (th,rule_inst)))
        end
-       handle No_match => reduce_cst (rws,th,{Head=Head,Args=Args,Rws=Tail}))
-  | reduce_cst (rws,th,{Head, Args, Rws=Try{Hcst,Rws=Conv conv,Tail}}) =
-      (let val thm = TRANS th (conv (rhs (concl th))) in
-       (true, (thm, mk_clos([],from_term (rws,[],rhs (concl thm)))))
+       handle No_match => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail}))
+  | reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Conv fconv,Tail}}) =
+      (let val (thm, ft) = fconv (rhs_concl th) in
+       (true, (trans_thm th thm, ft))
        end
-       handle HOL_ERR _ => reduce_cst (rws,th,{Head=Head,Args=Args,Rws=Tail}))
-  | reduce_cst (rws,th,cst) = (false,(th,CST cst))
+       handle HOL_ERR _ => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail}))
+  | reduce_cst (th,cst) = (false,(th,CST cst))
 ;
 
 end;
