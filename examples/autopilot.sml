@@ -15,6 +15,7 @@ open bossLib;  infix &&;
 (*---------------------------------------------------------------------------*
  * We'll track information on inferences.                                    *
  *---------------------------------------------------------------------------*)
+
 val meter = Count.mk_meter();
 
 
@@ -201,6 +202,7 @@ val tran_defs =
 (*---------------------------------------------------------------------------*
  * The transition function.                                                  *
  *---------------------------------------------------------------------------*)
+
 val nextstate_def = 
   Define
      `(nextstate st press_att_cws = tran_att_cws st)     /\
@@ -253,14 +255,13 @@ val valid_state_def =
 
 
 (*---------------------------------------------------------------------------*
- * Proofs. First we build the simplification set.                            *
+ * Proofs. First we build the simplification set. Note that standard         *
+ * simplifications arising from datatype definitions get applied             *
+ * automatically, and thus can be considered to be in every simplification   *
+ * set.                                                                      *
  *---------------------------------------------------------------------------*)
 
-val ap_ss = bool_ss
-            && [nextstate_def, valid_state_def]
-            && ([select_states,select_update_states,
-                 update_select_states, update_update_states, 
-                 update_canon_states] @ fn_update_states);
+val ap_ss = bool_ss && [nextstate_def, valid_state_def];
 
 val st0_initial = prove (Term`is_initial st0`,
  ZAP_TAC 
@@ -296,9 +297,9 @@ Count.apply prove
 
 val reachable_in_def = 
  Define
-  `(reachable_in 0 st = is_initial st) /\
-   (reachable_in (SUC n) st =
-     ?pst ev. (st = nextstate pst ev) /\ reachable_in n pst)`;
+    `(reachable_in 0 st = is_initial st) /\
+     (reachable_in (SUC n) st =
+        ?pst ev. (st = nextstate pst ev) /\ reachable_in n pst)`;
 
 
 

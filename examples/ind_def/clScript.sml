@@ -14,7 +14,7 @@
 
 (* Interactive mode prelude:
 
-   app load ["ind_defLib", "Datatype"];
+     app load ["ind_defLib", "Datatype"];
 *)
 
 structure clScript =

@@ -1,5 +1,5 @@
-(*---------------------------------------------------------------------------
- * hol97 version of the multiplier example from the LCF_LSM paper.
+(*---------------------------------------------------------------------------*
+ *     The multiplier example from the LCF_LSM paper.                        *
  *---------------------------------------------------------------------------*)
 
 app load ["unwindLib", "arithmeticTheory", "pairTheory", "Num_conv"];

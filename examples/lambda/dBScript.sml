@@ -406,13 +406,13 @@ ZAP_TAC (arith_ss && [dFV_dLAMBDA,IN_DELETE])
 (* Beta-conversion.                                                      *)
 (* --------------------------------------------------------------------- *)
 
-val dBETA_DEF =
+val dBETA =
  Define
     `dBETA (dABS u) t = Inst 0 u t`;
 
-val dBETA = Q.store_thm("dBETA",
+val dBETA_THM = Q.store_thm("dBETA_THM",
  `!t u x. dBETA (dLAMBDA x t) u = [x |-> u] t`,
-RW_TAC arith_ss [dBETA_DEF, dLAMBDA, dSUB]);
+RW_TAC arith_ss [dBETA, dLAMBDA, dSUB]);
 
 (* --------------------------------------------------------------------- *)
 (* The length of a term: the number of occurrences of atoms.             *)
@@ -456,12 +456,11 @@ val dLGH_dLAMBDA_LESS = Q.store_thm("dLGH_dLAMBDA_LESS",
 `!t x. dLGH t < dLGH (dLAMBDA x t)`,
 RW_TAC arith_ss [dLAMBDA, dLGH, dLGH_Abst]);
 
-val NTH_DEF0 =
+val NTH =
  Define
     `(NTH 0 (CONS h t) = h)
  /\  (NTH (SUC n) (CONS h t) = NTH n t)`;
 
-val NTH_DEF = CONJUNCT1 NTH_DEF0;
 
 (* --------------------------------------------------------------------- *)
 (* Initiality.........                                                   *)
@@ -515,10 +514,10 @@ Induct
   THEN RW_TAC list_ss [Inst, PSUB] THENL
  [`d < n` by DECIDE_TAC THEN
   `?m. n-d = SUC m` by PROVE_TAC [SUB_ELIM_LEM]
-    THEN ZAP_TAC (list_ss && [NTH_DEF])
-          [DECIDE `(n-d = SUC m) ==> (n-SUC d = m)`,NTH_DEF],
+    THEN ZAP_TAC (list_ss && [NTH])
+          [DECIDE `(n-d = SUC m) ==> (n-SUC d = m)`,NTH],
   `n - d = 0` by (REPEAT (POP_ASSUM MP_TAC) THEN CONV_TAC arithLib.ARITH_CONV)
-    THEN RW_TAC list_ss [NTH_DEF],
+    THEN RW_TAC list_ss [NTH],
   REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC arith_ss []]);
 
 

@@ -10,6 +10,11 @@ Currently on offer are the following:
        unrealistic subset of ML is defined, along with a simple mutually
        recursive function over the syntax.
 
+  * RSA
+
+       This directory develops some of the mathematics underlying
+       the RSA cryptography scheme. The theories have been 
+       produced by Laurent Thery of INRIA Sophia-Antipolis.
 
   * autopilot.sml
 
@@ -18,12 +23,10 @@ Currently on offer are the following:
        package due to Mike Norrish and Phil Windley, as well as
        illustrating some aspects of the automation available in Hol98.
 
-
   * bmark
 
        This example is an old and standard HOL benchmark: the proof of
        correctness of a multiplier circuit, due to Mike Gordon.
-
 
   * euclid.sml
 
@@ -32,39 +35,38 @@ Currently on offer are the following:
        Slind from a much larger development originally due to John 
        Harrison.
 
-
   * fol.sml
 
-      This file exercises John Harrison's implementation of a
-      model-elimination style first order prover. 
+       This file exercises John Harrison's implementation of a
+       model-elimination style first order prover. 
 
   * ind_def
 
-      This directory contains some examples of Tom Melham's inductive
-      definition package in action. Featured are an operational
-      semantics for a small imperative programming language, a small
-      process algebra, and combinatory logic with its type system. The
-      files are extensively commented.  
+       This directory contains some examples of Tom Melham's inductive
+       definition package in action. Featured are an operational
+       semantics for a small imperative programming language, a small
+       process algebra, and combinatory logic with its type system. The
+       files are extensively commented.  
 
-      NB. Most of the proofs in these theories can now be done much more
-      easily by using some of the recently developed tools, namely the
-      simplifier and the first order prover.  
+       NB. Most of the proofs in these theories can now be done much more
+       easily by using some of the recently developed proof tools, 
+       namely the simplifier and the first order prover.  
 
   * lambda
 
-      This directory develops a "de Bruijn" style lambda calculus, and
-      also a name-carrying version. Both are untyped. The development is
-      a revision of the proofs underlying the "5 Axioms of Alpha
-      Conversion" paper of Andy Gordon and Tom Melham (Proceedings of
-      TPHOLs'96, Springer LNCS 1125).
+       This directory develops a "de Bruijn" style lambda calculus, and
+       also a name-carrying version. Both are untyped. The development is
+       a revision of the proofs underlying the "5 Axioms of Alpha
+       Conversion" paper of Andy Gordon and Tom Melham (Proceedings of
+       TPHOLs'96, Springer LNCS 1125).
 
   * taut.sml
 
-      This file presents some tautologies, and uses an ML binding of
-      J"orn Lind's ROBDD (Reduced Ordered Binary Decision Diagram) package 
-      to attempt to prove them.
+       This file presents some tautologies, and uses an ML binding of 
+       J"orn Lind's ROBDD (Reduced Ordered Binary Decision Diagram) package 
+       to attempt to prove them.
 
   * tempScript.sml
 
-      This file is a template for making a separately compilable HOL
-      theory script.
+       This file is a template for making a separately compilable HOL
+       theory script.

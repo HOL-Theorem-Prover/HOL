@@ -30,7 +30,6 @@ val _ = new_theory"nc";
  ---------------------------------------------------------------------------*)
 
 val ADD1    = arithmeticTheory.ADD1;
-val dFV     = dBTheory.dFV_def;
 val dOK_DEF = CONJUNCT1 dOK_DEF;
 
 val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
@@ -76,6 +75,7 @@ val OK_ss = bool_ss && [OK_REP, OK_REP_ABS, dOK_DEF, ABS_REP, dOK_dSUB];
 
 val CON =  Define  `CON c   = ABS_nc (dCON c)`
 val VARR = Define  `VAR x   = ABS_nc (dVAR x)`
+STOP;
 val APP =  Define  `$@@ m n = ABS_nc (dAPP (REP_nc m) (REP_nc n))`
 val LAM =  Define  `LAM x m = ABS_nc (dLAMBDA x (REP_nc m))`;
 
@@ -96,17 +96,17 @@ val _ = set_fixity "@@" (Infixl 901);
 (* of name-carrying terms.                                               *)
 (* --------------------------------------------------------------------- *)
 
-val FV_DEF =
+val FV =
  Define
     `FV u = dFV (REP_nc u)`;
 
-val FV = Q.store_thm("FV",
+val FV_THM = Q.store_thm("FV_THM",
  `(!k.   FV (CON k:'a nc)   = {})  /\
   (!x.   FV (VAR x:'a nc)   = {x}) /\
   (!t u. FV (t @@ u:'a nc)  = (FV t) UNION (FV u)) /\
   (!x n. FV (LAM x n:'a nc) = (FV n) DELETE x)`,
 RW_TAC OK_ss
-  [FV_DEF, CON, VARR, APP, LAM, dFV, dFV_dLAMBDA]);
+  [FV, CON, VARR, APP, LAM, dFV, dFV_dLAMBDA]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -152,7 +152,7 @@ val SUB_THM =
    (!^u x y. ~(x=y) /\ ~(y IN FV u)
                  ==> !t. [u/x](LAM y t) = LAM y ([u/x]t))`,
 RW_TAC OK_ss
-  [LAM, APP, VARR, CON, FV_DEF, SUB_DEF,lem, NEQ_dVAR_dSUB,
+  [LAM, APP, VARR, CON, FV, SUB_DEF,lem, NEQ_dVAR_dSUB,
    EQ_dVAR_dSUB,dCON_dSUB, dAPP_dSUB,dLAMBDA_dSUB_EQ,dLAMBDA_dSUB]);
 
 
@@ -165,7 +165,7 @@ val ALPHAa =
  Q.store_thm ("ALPHA",
   `!x y ^u.
        ~(y IN (FV (LAM x u))) ==> (LAM x u = LAM y ([VAR y/x]u))`,
-RW_TAC bool_ss [FV,DE_MORGAN_THM,IN_DELETE,FV_DEF, LAM, SUB_DEF, VARR]
+RW_TAC bool_ss [FV_THM,DE_MORGAN_THM,IN_DELETE,FV, LAM, SUB_DEF, VARR]
  THEN MATCH_MP_TAC lem
  THEN RW_TAC OK_ss []
  THEN Cases_on `y:string = x`
@@ -174,7 +174,7 @@ RW_TAC bool_ss [FV,DE_MORGAN_THM,IN_DELETE,FV_DEF, LAM, SUB_DEF, VARR]
 
 val ALPHA_LEMMA = Q.prove
     `!x u. LAM x ([VAR x/x]u) = LAM x u`
-(PROVE_TAC [ALPHAa,FV,IN_DELETE]);
+(PROVE_TAC [ALPHAa,FV_THM,IN_DELETE]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -185,7 +185,7 @@ val SIMPLE_ALPHA =
  Q.store_thm ("SIMPLE_ALPHA",
    `!y u.
       ~(y IN FV u) ==> !x. LAM x u = LAM y ([VAR y/x]u)`,
-PROVE_TAC [ALPHAa,FV,IN_DELETE]);
+PROVE_TAC [ALPHAa,FV_THM,IN_DELETE]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -265,7 +265,7 @@ val ABS =
 val (ALT_FV,ALT_SUB_THM,ALT_ALPHA,ALT_ITERATOR)
   = let val f = REWRITE_RULE [GSYM ABS]
     in
-       (f FV, f SUB_THM, f ALPHAa, f nc_ITERATOR)
+       (f FV_THM, f SUB_THM, f ALPHAa, f nc_ITERATOR)
     end;
 val _ = save_thm("ALT_FV", ALT_FV);
 val _ = save_thm("ALT_SUB_THM", ALT_SUB_THM);
@@ -681,7 +681,7 @@ nc_INDUCT_TAC THEN RW_TAC bool_ss [SUB_THM] THENL
   [VAR_SUB_TAC THEN REFL_TAC,
    Cases_on `x':string = x` THENL
      [RW_TAC bool_ss [SUB_THM],
-      `~(x IN FV (VAR x'))` by RW_TAC bool_ss [FV,IN_SING]
+      `~(x IN FV (VAR x'))` by RW_TAC bool_ss [FV_THM,IN_SING]
         THEN RW_TAC bool_ss [SUB_THM]
         THEN Q.PAT_ASSUM `$! M`
               (MP_TAC o Q.AP_TERM `LAM x` o Q.SPECL [`x:string`, `x':string`])
@@ -695,7 +695,7 @@ nc_INDUCT_TAC THEN RW_TAC bool_ss [SUB_THM] THENL
 val slemma = Q.prove
 `!x y u.
    ~(y IN (FV (LAM x u))) ==> (LAM x u = LAM y([VAR y/x]u))`
-(ZAP_TAC (bool_ss && [FV,IN_DELETE,IN_SING,DE_MORGAN_THM])
+(ZAP_TAC (bool_ss && [FV_THM,IN_DELETE,IN_SING,DE_MORGAN_THM])
          [lemma14a,SIMPLE_ALPHA]);
 
 (* ===================================================================== *)
@@ -708,7 +708,7 @@ val FINITE_FV = Q.store_thm ("FINITE_FV",
 `!u. FINITE(FV u)`,
 nc_INDUCT_TAC
    THEN RW_TAC bool_ss
-         [FV,FINITE_EMPTY,FINITE_SING,FINITE_UNION,FINITE_DELETE]
+         [FV_THM,FINITE_EMPTY,FINITE_SING,FINITE_UNION,FINITE_DELETE]
    THEN PROVE_TAC [lemma14a]);
 
 
@@ -801,7 +801,7 @@ fun nc_INDUCT_TAC2 (A,g) =
 val lemma14b = Q.store_thm("lemma14b",
 `!t x u. ~(x IN FV u) ==> ([t/x]u = u)`,
 NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2
-   THEN RW_TAC bool_ss [FV,SUB_THM,DE_MORGAN_THM,IN_DELETE,IN_UNION,IN_SING]
+   THEN RW_TAC bool_ss [FV_THM,SUB_THM,DE_MORGAN_THM,IN_DELETE,IN_UNION,IN_SING]
    THEN Q.EXISTS_TAC `FV t`
    THEN RW_TAC bool_ss
           [FINITE_FV,FINITE_UNION,FINITE_SING,IN_UNION, DE_MORGAN_THM,IN_SING]
@@ -815,7 +815,7 @@ NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2
 val lemma14b = Q.store_thm("lemma14b",
 `!t u x. ~(x IN FV u) ==> ([t/x]u = u)`,
 GEN_TAC THEN nc_INDUCT_TAC2
-   THEN RW_TAC bool_ss [FV,SUB_THM,DE_MORGAN_THM,IN_DELETE,IN_UNION,IN_SING]
+   THEN RW_TAC bool_ss [FV_THM,SUB_THM,DE_MORGAN_THM,IN_DELETE,IN_UNION,IN_SING]
    THEN Q.EXISTS_TAC `FV t`
    THEN RW_TAC bool_ss
          [FINITE_FV,FINITE_UNION,FINITE_SING,IN_UNION,DE_MORGAN_THM,IN_SING]
@@ -830,7 +830,7 @@ val lemma14c = Q.store_thm("lemma14c",
 `!t u x.
    x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))`,
 GEN_TAC THEN nc_INDUCT_TAC2
-  THEN RW_TAC bool_ss [NOT_IN_EMPTY,FV,SUB_THM,DE_MORGAN_THM,
+  THEN RW_TAC bool_ss [NOT_IN_EMPTY,FV_THM,SUB_THM,DE_MORGAN_THM,
           IN_DELETE,IN_UNION,IN_SING,UNION_DELETE] THENL
  [RW_TAC bool_ss  [SING_DELETE,UNION_EMPTY],
   Cases_on `x IN (FV u)` THEN
@@ -838,21 +838,21 @@ GEN_TAC THEN nc_INDUCT_TAC2
   Cases_on `x IN (FV t')` THEN
      ZAP_TAC (bool_ss && [lemma14b,EXTENSION,IN_UNION]) [DELETE_NON_ELEMENT],
   Q.EXISTS_TAC `FV t` THEN ZAP_TAC (bool_ss &&
-      [FINITE_FV,SUB_THM,FV,UNION_DELETE,EXTENSION,IN_UNION,IN_DELETE]) []]);
+      [FINITE_FV,SUB_THM,FV_THM,UNION_DELETE,EXTENSION,IN_UNION,IN_DELETE]) []]);
 
 
 val lemma15a = Q.store_thm("lemma15a",
 `!t y u.
    ~(y IN FV u) ==> !x. [t/y]([VAR y/x]u) = [t/x]u`,
 NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2
-  THEN RW_TAC bool_ss [FV,SUB_THM,DE_MORGAN_THM,IN_UNION,IN_SING] THENL
+  THEN RW_TAC bool_ss [FV_THM,SUB_THM,DE_MORGAN_THM,IN_UNION,IN_SING] THENL
   [VAR_SUB_TAC THEN RW_TAC bool_ss [SUB_THM],
    Q.EXISTS_TAC `FV t UNION {y}`
     THEN RW_TAC bool_ss [FINITE_FV,IN_DELETE,DE_MORGAN_THM,FINITE_UNION,
                         FINITE_SING,IN_UNION,IN_SING]
     THEN Cases_on `x:string = y'` THENL
     [RW_TAC bool_ss [lemma14b,SUB_THM],
-     RW_TAC bool_ss [FV,EXTENSION,IN_SING,SUB_THM]]]);
+     RW_TAC bool_ss [FV_THM,EXTENSION,IN_SING,SUB_THM]]]);
 
 
 val lemma15b = Q.store_thm("lemma15b",
@@ -870,7 +870,7 @@ val lemma = Q.prove
 `!x u. (~((@y. ~(y IN (FV(LAM x u)))) IN (FV u)))
        \/
       ((@y. ~(y IN (FV(LAM x u)))) = x)`
-(REWRITE_TAC [FV,DE_MORGAN_THM,IN_DELETE]
+(REWRITE_TAC [FV_THM,DE_MORGAN_THM,IN_DELETE]
   THEN REPEAT GEN_TAC THEN CONV_TAC SELECT_CONV
   THEN PROVE_TAC []);
 
@@ -1023,7 +1023,7 @@ Induct THENL
    Ho_rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
      THEN Cases_on `x` THEN POP_ASSUM MP_TAC]
  THEN RW_TAC list_ss
-        [ISUB_THM,DOM,FVS,FV,IN_UNION,IN_SING,DE_MORGAN_THM,SUB_THM]);
+        [ISUB_THM,DOM,FVS,FV_THM,IN_UNION,IN_SING,DE_MORGAN_THM,SUB_THM]);
 
 (* --------------------------------------------------------------------- *)
 (* Definition of length -- set-based construction.                       *)

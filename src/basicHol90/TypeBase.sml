@@ -1,6 +1,5 @@
 (*---------------------------------------------------------------------------*
- * Building records of facts about datatypes. This is all purely functional, *
- * i.e., there are no side-effects happening anywhere in this file.          *
+ * Building records of facts about datatypes.                                *
  *---------------------------------------------------------------------------*)
 
 structure TypeBase :> TypeBase =
@@ -34,8 +33,9 @@ datatype tyinfo =
                      simpls : thm list};
 
 (*---------------------------------------------------------------------------
-      Projections.
+                  Projections
  ---------------------------------------------------------------------------*)
+
 fun constructors_of (FACTS(_, {constructors,...})) = constructors
 fun case_const_of (FACTS(_,{case_const,...})) = case_const
 fun case_cong_of (FACTS(_,{case_cong,...})) = case_cong
@@ -51,8 +51,9 @@ fun ty_name_of (FACTS(s,_)) = s
 
 
 (*---------------------------------------------------------------------------
-         Making alterations.
+                    Making alterations
  ---------------------------------------------------------------------------*)
+
 fun put_nchotomy th (FACTS(s,
  {axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, simpls, size}))
@@ -95,6 +96,7 @@ fun put_size (size_tm,size_rw) (FACTS(s,
  * Returns the datatype name and the constructors. The code is a copy of     *
  * the beginning of "Datatype.define_case".                                  *
  *---------------------------------------------------------------------------*)
+
 fun ax_info ax =
   let val exu = snd(strip_forall(concl ax))
       val {Rator,Rand} = dest_comb exu
@@ -192,14 +194,13 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
 end;
 
 
-fun gen_tyinfo {ax, case_def} = let
+fun gen_tyinfo {ax, case_def} = 
+let
   val induct_thm = prove_induction_thm ax
   val nchotomy   = prove_cases_thm induct_thm
   val case_cong  = case_cong_thm nchotomy case_def
-  val one_one = SOME (prove_constructors_one_one ax)
-    handle HOL_ERR _ => NONE
-  val distinct = SOME (prove_constructors_distinct ax)
-    handle HOL_ERR _ => NONE
+  val one_one = SOME (prove_constructors_one_one ax) handle HOL_ERR _ => NONE
+  val distinct = SOME (prove_constructors_distinct ax) handle HOL_ERR _ => NONE
 in
   mk_tyinfo {ax=ax,case_def=case_def,case_cong=case_cong,
              induction=induct_thm,nchotomy=nchotomy, size = NONE,
@@ -209,6 +210,7 @@ end;
 (*---------------------------------------------------------------------------*
  * Databases of facts.                                                       *
  *---------------------------------------------------------------------------*)
+
 type typeBase = tyinfo Binaryset.set
 
 val empty =
@@ -230,8 +232,7 @@ val listItems = Binaryset.listItems;
 local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty));
       fun Zero() = mk_const{Name="0",Ty= mk_type{Tyop="num",Args=[]}}
-                   handle HOL_ERR _ =>
-                     raise ERR "type_size.Zero()" "Numbers not declared"
+        handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
       fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()};
       fun join f g x =
         case (g x)

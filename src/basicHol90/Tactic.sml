@@ -221,22 +221,26 @@ val EQ_TAC:tactic = fn (asl,t) =>
  * Optimization for the x=x' case added.                                     *
  *                                                                           *
  *---------------------------------------------------------------------------*)
-fun X_GEN_TAC x1 : tactic = fn (asl,w) =>
-   if (not(is_var x1))
-   then raise TACTIC_ERR "X_GEN_TAC"  "need a var."
-   else let val {Bvar,Body} = dest_forall w 
-        in
-        if (Bvar=x1) then ([(asl,Body)], fn [th] => GEN x1 th)
-        else ([(asl,subst [{redex = Bvar, residue = x1}] Body)],
-              fn [th] => 
-                let val th' = GEN x1 th
-                in EQ_MP(GEN_ALPHA_CONV Bvar (concl th')) th' end)
-        end handle HOL_ERR _ => raise TACTIC_ERR "X_GEN_TAC" "";
 
+fun X_GEN_TAC x1 : tactic = fn (asl,w) =>
+ if is_var x1 
+ then (let val {Bvar,Body} = dest_forall w
+       in
+        if (Bvar=x1) then ([(asl,Body)], fn [th] => GEN x1 th)
+        else ([(asl,subst [Bvar |-> x1] Body)],
+              fn [th] => 
+                 let val th' = GEN x1 th
+                 in 
+                     EQ_MP (GEN_ALPHA_CONV Bvar (concl th')) th'
+                 end)
+       end 
+        handle HOL_ERR _ => raise TACTIC_ERR "X_GEN_TAC" "")
+ else raise TACTIC_ERR "X_GEN_TAC"  "need a variable";
 
 (*---------------------------------------------------------------------------*
  * GEN_TAC - Chooses a variant for the user;  for interactive proof          *
  *---------------------------------------------------------------------------*)
+
 val GEN_TAC:tactic = fn (asl,w) =>
    let val {Bvar,...} = dest_forall w handle HOL_ERR _ 
         => raise TACTIC_ERR "GEN_TAC" "not a forall"
@@ -253,6 +257,7 @@ val GEN_TAC:tactic = fn (asl,w) =>
  * Example of use:  generalizing a goal before attempting an inductive proof *
  * as with Boyer and Moore.                                                  *
  *---------------------------------------------------------------------------*)
+
 fun SPEC_TAC (t,x) :tactic = fn (asl,w) =>
     ([(asl, mk_forall{Bvar=x, Body = subst[t |-> x] w})],
      fn [th] => SPEC t th)
@@ -287,6 +292,7 @@ fun EXISTS_TAC t :tactic = fn (asl,w) =>
  * SUBS_OCCS, despite superficial similarities.  In fact, SUBS and SUBS_OCCS *
  * are not invertible;  only SUBST is.                                       *
  *---------------------------------------------------------------------------*)
+
 fun GSUBST_TAC substfn ths (asl,w) =
       let val (theta1,theta2,theta3) =
           itlist (fn th => fn (theta1,theta2,theta3) =>
@@ -335,6 +341,7 @@ fun SUBST1_TAC rthm = SUBST_TAC [rthm];
 (*---------------------------------------------------------------------------*
  * Map an inference rule over the assumptions, replacing them.               *
  *---------------------------------------------------------------------------*)
+
 fun RULE_ASSUM_TAC rule :tactic =
    POP_ASSUM_LIST
    (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (cons o rule) asl []));
@@ -390,8 +397,7 @@ val STRUCT_CASES_TAC =
  * 						[Revised: TFM 90.05.11]      *
  *---------------------------------------------------------------------------*)
 
-local val alpha =  Type`:'a`
-      fun ok_cond tm = 
+local fun ok_cond tm = 
         not(is_const(#cond(dest_cond tm))) handle HOL_ERR _ => false
 
 in
@@ -399,7 +405,7 @@ val COND_CASES_TAC :tactic = fn (asl,w) =>
    let val cond = find_term (fn tm => ok_cond tm andalso free_in tm w) w
               handle HOL_ERR _ => raise TACTIC_ERR "COND_CASES_TAC" ""
        val {cond,larm,rarm} = dest_cond cond
-       val inst = INST_TYPE[alpha |-> type_of larm] COND_CLAUSES
+       val inst = INST_TYPE[Type.alpha |-> type_of larm] COND_CLAUSES
        val (ct,cf) = CONJ_PAIR (SPEC rarm (SPEC larm inst))
    in
    DISJ_CASES_THEN2
@@ -413,18 +419,21 @@ end;
 (*---------------------------------------------------------------------------*
  * Cases on  |- p=T  \/  p=F                                                 *
  *---------------------------------------------------------------------------*)
+
 fun BOOL_CASES_TAC p = STRUCT_CASES_TAC (SPEC p BOOL_CASES_AX);
 
 
 (*---------------------------------------------------------------------------*
  * Strip one outer !, /\, ==> from the goal.                                 *
  *---------------------------------------------------------------------------*)
+
 fun STRIP_GOAL_THEN ttac =  FIRST [GEN_TAC, CONJ_TAC, DISCH_THEN ttac];
 
 
 (*---------------------------------------------------------------------------*
  * Like GEN_TAC but fails if the term equals the quantified variable.        *
  *---------------------------------------------------------------------------*)
+
 fun FILTER_GEN_TAC tm : tactic = fn (asl,w) =>
     if (is_forall w andalso not (tm = (#Bvar(dest_forall w))))
     then GEN_TAC (asl,w)
@@ -467,6 +476,7 @@ val FILTER_STRIP_TAC = FILTER_STRIP_THEN STRIP_ASSUME_TAC;
 (*---------------------------------------------------------------------------*
  * Cases on  |- t \/ ~t                                                      *
  *---------------------------------------------------------------------------*)
+
 fun ASM_CASES_TAC t = DISJ_CASES_TAC (SPEC t EXCLUDED_MIDDLE);
 
 

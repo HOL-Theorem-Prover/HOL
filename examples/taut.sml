@@ -12,7 +12,7 @@
 
 load "robddLib";
 
-infix_at_front := true;       (* For readability of large formulas *)
+(* infix_at_front := true;       (* For readability of large formulas *) *)
 stack_infixes := false;
 show_tags := true;
 

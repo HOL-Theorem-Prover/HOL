@@ -8,6 +8,7 @@ app load ["mesonLib", "pairTheory"];
 (*---------------------------------------------------------------------------*
  * Invokes MESON and supplies some statistics as well.                       *
  *---------------------------------------------------------------------------*)
+
 fun Prove tm = 
   Lib.with_flag(mesonLib.chatting, 1)
     (Count.apply Tactical.prove) 
@@ -110,4 +111,4 @@ val CAT005_1 = Term
      F`;
 
 
-Prove CAT005_1; (* Takes a while: about a minute and a half on my laptop *)
+Prove CAT005_1; (* Takes a while *)

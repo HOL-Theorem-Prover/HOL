@@ -375,16 +375,6 @@ in
 end;
 
 
-(*---------------------------------------------------------------------------
- * Addition 17.1.98: Induct_then, prove_induction_thm, and prove_cases_thm
- * moved here.
- *---------------------------------------------------------------------------*)
-
-fun ERR function message =
-    Exception.HOL_ERR{origin_structure = "Prim_rec.Induct_then",
-		      origin_function = function,
-		      message = message}
-
 (* ---------------------------------------------------------------------*)
 (* Internal function: 							*)
 (*									*)
@@ -633,10 +623,6 @@ end;
  * Now prove_induction_thm and prove_cases_thm.
  *---------------------------------------------------------------------------*)
 
-fun ERR function message =
-      HOL_ERR{origin_structure = "Prim_rec",
-	      origin_function = function,
-	      message = message}
 infixr 3 ==;
 infixr 3 ==>;
 infixr 3 /\;
@@ -1270,20 +1256,6 @@ fun case_cong_thm nchotomy case_def =
  handle HOL_ERR _ => raise ERR "case_cong_thm" "construction failed";
 
 
-fun ERR{function,message} =
-      HOL_ERR{origin_structure = "Prim_rec",
-	      origin_function = function,
-	      message = message}
-infixr 3 ==;
-infixr 3 ==>;
-infixr 3 /\;
-infixr 3 \/;
-
-fun (x == y)  = mk_eq{lhs=x,    rhs=y};
-fun (x ==> y) = mk_imp{ant=x, conseq=y}
-fun (x /\ y)  = mk_conj{conj1=x, conj2=y};
-fun (x \/ y)  = mk_disj{disj1=x, disj2=y};
-
 val T = mk_const{Name = "T", Ty = Type.bool};
 val F = mk_const{Name = "F", Ty = Type.bool};
 
@@ -1403,12 +1375,12 @@ fun prove_constructors_one_one th = let
     eqns
 in
   if null funs then
-    raise ERR {function = "prove_constructors_one_one",
-               message = "No constructor takes any arguments"}
+    raise ERR "prove_constructors_one_one"
+              "No constructor takes any arguments"
   else
     LIST_CONJ (map (prove_const_one_one th) funs)
     handle HOL_ERR _ =>
-      raise ERR{function="prove_constructors_one_one",message = ""}
+      raise ERR "prove_constructors_one_one" ""
 end
 
 
@@ -1632,8 +1604,8 @@ fun prove_constructors_distinct thm = let
   val nb = rounded_log (length ctrs)
 in
   if nb = 0 then
-    raise ERR {function = "prove_constructors_distinct",
-               message = "Type must have more than one constructor"}
+    raise ERR "prove_constructors_distinct"
+              "Type must have more than one constructor"
   else let
     val f = generate_fn_term nb thm
     val eqns = generate_eqns nb ctrs f
@@ -1651,7 +1623,10 @@ in
   end
 end
 
-(*
+(*---------------------------------------------------------------------------
+
+          Test routines for distinctness proofs.
+
   load "Define_type";
   fun gen_type n = let
     val name = "foo"^Int.toString n
@@ -1682,7 +1657,8 @@ end
      slower than the original code by Tom Melham.  This is probably
      acceptable given that it is now independent of the theory of
      numbers *)
-*)
+
+ ---------------------------------------------------------------------------*)
 
 
 end; (* Prim_rec *)
