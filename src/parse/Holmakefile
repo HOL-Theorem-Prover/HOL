@@ -1,0 +1,2 @@
+base_lexer.sml: base_lexer.lex
+	MOSMLLEX base_lexer.lex

@@ -9,8 +9,9 @@ signature type_tokens = sig
       | LParen
       | RParen
       | AQ of 'a
+      | Error of 'a base_tokens.base_token
 
-  val lex : ('a type_token, 'a frag) monadic_parse.Parser
+  val typetok_of : 'a qbuf.qbuf -> ((unit -> unit) * 'a type_token)
 
   val token_string : 'a type_token -> string
   val dest_aq : 'a type_token -> 'a

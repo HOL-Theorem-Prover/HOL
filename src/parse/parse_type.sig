@@ -8,7 +8,7 @@ sig
      antiq : 'b -> 'a} ->
     bool ->
     type_grammar.grammar ->
-    ('a, 'b frag) monadic_parse.Parser
+    'b qbuf.qbuf -> 'a
 
     (* The record of functions specify how to deal with the need to
        construct variable types, type operators and antiquotations

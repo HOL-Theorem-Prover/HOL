@@ -1,8 +1,9 @@
 structure term_tokens :> term_tokens =
 struct
 
-  val WARN = Feedback.HOL_WARNING "term lexer" "";
+  open qbuf base_tokens
 
+  val WARN = Feedback.HOL_WARNING "term lexer" ""
 
   datatype 'a term_token =
     Ident of string
@@ -10,236 +11,92 @@ struct
   | Numeral of (string * char option)
   | QIdent of (string * string)
 
-open optmonad monadic_parse
-open fragstr
 
-infix >- >> ++ >->
-
-exception LEX_ERR of string
-
-open HOLtokens
-infix OR
-
-val quotec = #"\"" and bslashc = #"\\" and nlc = #"\n"
-fun q_ok c = c <> quotec andalso c <> bslashc andalso c <> nlc
-fun strip_eqs strm =
-  (many
-   (monadic_parse.itemP (fn ANTIQUOTE _ => false | QUOTE s => size s = 0)))
-  strm
-fun bslash_error strm =
-  (strip_eqs >> get >-
-   (fn x =>
-    case x of
-      QUOTE s =>
-        (WARN ("Don't recognise \\"^String.substring(s,0,1)^
-                        " as a valid backslash escape.\n");
-         pushback x >> fail)
-    | ANTIQUOTE _ => let
-      in
-        WARN "Must not have antiquotations inside strings.\n";
-        pushback x >> fail
-      end)) strm
-
-fun failwith s x = (WARN s ; fail) x
-fun qstring_contents strm =
-  (many (many1_charP q_ok ++
-         (string "\\\\" >> return "\\") ++
-         (string "\\\"" >> return "\"") ++
-         (string "\\n" >> return "\n") ++
-         (item #"\\" >> bslash_error) ++
-         (item #"\n" >>
-          failwith "Newlines must not appear inside strings.") ++
-         (antiq >>
-          failwith "Must not have antiquotations inside strings.")) >-
-   (fn slist => return (String.concat slist))) strm;
-
-fun quoted_string strm =
-  ((item #"\"" >> qstring_contents >-> item #"\"") >-
-   (fn c => return ("\""^c^"\""))) strm
-
-(* Terminology and basic algorithm
-   -------------------------------
-
-   An identifier character is one of A-Z a-z 0-9 _ and '.
-
-   A punctuation character is pretty much anything else except $.
-
-   A non-aggregating character is one of:
-     ~ ( ) [ ] { } . ,
-   All non-aggregating characters are punctuation characters.
-
-   A non-aggregating string is a string including one of the above.
-
-   We are given a list of keywords, or specials, and must come up with a
-   lexing function.  The function must return a sequence of Idents, Symbols
-   and antiquotations.  Idents are undistinguished identifiers, symbols are
-   from the list of specials.
-
-   The first thing to do is to grab the next non-empty sequence of
-   identifier and punctuation characters with an optional leading
-   dollar-sign.  (If there isn't one, there will be an anti-quote which
-   can be returned.)
-
-   This string (ignoring the dollar-sign if present) needs to yield
-   the string corresponding to the next token, and then this string needs to
-   be classified as either a symbol or an ident.
-
-   If the string includes any non-aggregating characters
-   from the strings in the list of specials, then
-
-     * split it into two substrings s and t such that s^t = the
-       original string, and t has a non-aggregating string from the
-       specials list as a prefix.  Further, t's prefix is the first
-       such non-aggregating string.
-
-     * if s non-empty, then s is the token string, pushback t.
-     * otherwise the longest prefix of t which is a non-aggregating string
-       on the list of specials is the token string, push back the rest of t.
-
-  If the string has no non-aggregating characters, it is the token string.
-
-  If there is a $, split the string into identifier and punctuation
-  regions and return Ident of the first region, pushing back the rest.
-
-  To get this far, we have a string with no leading dollar.  If the
-  whole string is equal to a special, return Symbol of the whole
-  string.  Otherwise split the string into identifier and punctuation
-  regions, pushback all but the first region, and then if the first is a
-  special, return Symbol of it, else return Ident of it.
-*)
-
-val non_aggregating_chars = explode "()[]{}~.,;"
-fun nonagg_c c = Lib.mem c non_aggregating_chars
+val non_aggregating_chars =
+    foldl (fn (c, cs) => CharSet.add(cs,c)) CharSet.empty
+          (explode "()[]{}~.,;")
+fun nonagg_c c = CharSet.member(non_aggregating_chars, c)
 
 fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
 
-fun pushback_s s = if s <> "" then pushback (QUOTE s) else ok
+(* lexer guarantees:
 
-fun compare_pos (((pfx1, _), n1), ((pfx2, _), n2)) = let
-  open Substring
-  val s1 = size pfx1 and s2 = size pfx2
+     All Idents fit into one of the following categories :
+
+     * a double-quote delimited string
+     * an alpha-numeric identifier (first character will be one
+       of _ ' A-Z a-z), possibly preceded by a dollar sign
+     * a symbolic identifier = a chain of symbol characters (again possibly
+       preceded by a dollar sign).
+
+     A symbol is any  printable ASCII character EXCEPT
+       A-Z a-z 0-9 ^ ` $ "
+     ^ and ` are excluded because of their use in quotation syntax at the
+     ML level.  " is used exclusively for strings, and $ is used for
+     token 'quoting' as well as being the separator for qualified identifiers.
+*)
+
+fun flip_cmpresult LESS = GREATER
+  | flip_cmpresult GREATER = LESS
+  | flip_cmpresult EQUAL = EQUAL
+
+open qbuf
+fun split_ident nonagg_specs s qb = let
+  val s0 = String.sub(s, 0)
 in
-  if s1 = 0 andalso s2 = 0 then Int.compare(String.size n2, String.size n1)
-  else Int.compare(s1, s2)
+  if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" then
+    (advance qb; s)
+  else if s0 = #"'" then
+    raise LEX_ERR "Term idents can't begin with prime characters"
+  else if s0 = #"$" then
+      "$" ^ split_ident nonagg_specs (String.extract(s, 1, NONE)) qb
+  else (* have a symbolic identifier *)
+    let
+      val possible_nonaggs =
+          List.filter (fn spec => String.isPrefix spec s) nonagg_specs
+    in
+      if null possible_nonaggs then let
+          val (ss1, ss2) = Substring.splitl (not o nonagg_c) (Substring.all s)
+          val (s1, s2) = (Substring.string ss1, Substring.string ss2)
+        in
+          if size s1 = 0 then
+            (* first character is a non-aggregating character *)
+            if size s > 1 then
+              (replace_current (BT_Ident (String.extract(s, 1, NONE))) qb;
+               String.extract (s, 0, SOME 1))
+            else (advance qb; s)
+          else if size s2 <> 0 then
+            (* s2 is non-empty and begins with a non-aggreating character *)
+            (replace_current (BT_Ident s2) qb; s1)
+          else
+            (advance qb; s)
+        end
+      else let
+          fun compare(s1, s2) = flip_cmpresult (Int.compare(size s1, size s2))
+          val best = hd (Listsort.sort compare possible_nonaggs)
+          val sz = size best
+        in
+          if sz = size s then (advance qb; s)
+          else (replace_current (BT_Ident (String.extract(s, sz, NONE))) qb;
+                best)
+        end
+    end
 end
 
-fun std_id strm  =
-  (itemP (fromLex Lexis.alphabet) >-
-   (fn c1 => many_charP (fromLex Lexis.alphanumerics) >-
-    (fn remainder => return (str c1 ^ remainder)))) strm
 
-fun strip_eqs [] = []
-  | strip_eqs (QUOTE ""::xs) = strip_eqs xs
-  | strip_eqs x = x
-
-fun lex keywords0 frags0 = let
+fun lex keywords0 = let
   val non_agg_specials = List.filter s_has_nonagg_char keywords0
-  fun handle_symbolics dollarp ss = let
-    open Substring
-    fun dollarit s = Ident ((if dollarp then "$" else "") ^ s)
-    val non_agg_positions0 =
-      map (fn na => (position na ss, na)) non_agg_specials
-    val non_agg_positions = Listsort.sort compare_pos non_agg_positions0
-    val ((pfx, sfx), na) = hd non_agg_positions
-  in
-    if (size pfx = 0) then
-      pushback_s (string (triml (String.size na) sfx)) >> return (dollarit na)
-    else
-      pushback_s (string sfx) >> return (dollarit (string pfx))
-  end
-  val (frags1, f1) = token get frags0
+  val split = split_ident non_agg_specials
 in
-  case f1 of
-    NONE => (frags1, NONE)
-  | SOME (ANTIQUOTE aq) => (frags1, SOME (Antiquote aq))
-  | SOME (q as (QUOTE s)) => let
-      (* know that s is a non-empty string, whose first character is not
-         white-space *)
-      val c1 = String.sub(s,0)
-      val (frags2, _) = pushback q frags1
-    in
-      if Char.isDigit c1 then let
-        val (frags3, dp) = many1_charP Char.isDigit frags2
-        val (frags4, optc) = optional (itemP Char.isAlpha) frags3
-      in
-        (frags4,
-         SOME (Numeral(valOf dp, Option.map Char.toLower (valOf optc))))
-      end
-      else if c1 = quotec then let
-        val (final_frags, stropt) = quoted_string frags2
-      in
-        case stropt of
-          NONE => raise LEX_ERR "quoted string fails to terminate"
-        | SOME s => (final_frags, SOME (Ident s))
-      end
-      else let (* it's some sort of symbol *)
-        (* get everything up to the next whitespace *)
-        val (frags3, stropt) = many1_charP (not o Char.isSpace) frags2
-        open Substring
-        val str0 = all (valOf stropt)
-        val (dollared, str) =
-          if sub(str0, 0) = #"$" then (true, slice(str0, 1, NONE))
-          else (false, str0)
-        val c2 = sub(str, 0)
-          handle Subscript => raise LEX_ERR "isolated dollar-sign meaningless"
-        fun ok_inid c =
-          Char.isAlpha c orelse Char.isDigit c orelse
-          c = #"_" orelse c = #"'"
-      in
-        (* c2 is first character of identifier, ignoring dollar-signs *)
-        if Char.isAlpha c2 then let
-          (* could be a long-ID or a normal identifier *)
-          val (id, rest) = splitl ok_inid str
-        in
-          if not (isEmpty rest) andalso sub(rest,0) = #"$" then let
-            (* long-ID *)
-            (* the id string is a possible theory name *)
-            val undollared = slice(rest, 1, NONE) (* skip dollar sign *)
-          in
-            case getc undollared of
-              NONE =>
-                raise LEX_ERR ("long $-id "^string id^" with no sub-part")
-            | SOME(c3, rest) => let (* c3 will be alphabetic or a hol sym *)
-                fun grab_id P = let
-                  val (constant_name, push_this_back) = splitl P undollared
-                  (* ignores any leading dollar-sign *)
-                  val (final_frags,_) =
-                    pushback_s (string push_this_back) frags3
-                in
-                  (final_frags,
-                   SOME (QIdent(string id, string constant_name)))
-                end
-              in
-                if Char.isAlpha c3 then grab_id ok_inid
-                else
-                  if fromLex Lexis.hol_symbols c3 then
-                    grab_id (fromLex Lexis.hol_symbols)
-                  else
-                    raise LEX_ERR ("sub-component starting with "^
-                                   String.str c3^ " after "^string id^
-                                   " lexically bad")
-              end
-          end
-          else (* not a possible long-ID *) let
-            val (final_frags, _) = pushback_s (string rest) frags3
-            val final_id = string (span(str0, id))
-            (* grabs dollar-sign, if any *)
-          in
-            (final_frags, SOME (Ident final_id))
-          end
-        end
-        else (* not (Char.isAlpha c2) *)
-          if HOLsym c2 orelse HOLspecials c2 then let
-            val (ss, push_this_back) = splitl (HOLsym OR HOLspecials) str
-            val (final_frags, _) = pushback_s (string push_this_back) frags3
-          in
-            handle_symbolics dollared ss final_frags
-          end
-          else
-            raise LEX_ERR ("can't make lexical sense of "^string str)
-      end (* "some sort of symbol" let *)
-    end (* SOME (QUOTE s) let *)
-end (* newlex *)
+fn qb =>
+   case current qb of
+     BT_Numeral p => (advance qb; SOME (Numeral p))
+   | BT_AQ x => (advance qb; SOME (Antiquote x))
+   | BT_QIdent p => (advance qb; SOME (QIdent p))
+   | BT_EOI => NONE
+   | BT_Ident s => SOME (Ident (split s qb))
+   | BT_InComment _ => raise Fail "qbuf returned BT_InComment"
+end
 
 fun token_string (Ident s) = s
   | token_string _ = raise Fail "token_string of something with no string"

@@ -1,5 +1,6 @@
 signature parse_term = sig
     type 'a PStack
+    type 'a qbuf= 'a qbuf.qbuf
     val initial_pstack : 'a PStack
     val is_final_pstack : 'a PStack -> bool
     val top_nonterminal : Term.term PStack -> Absyn.absyn
@@ -15,9 +16,9 @@ signature parse_term = sig
 
     val parse_term :
       term_grammar.grammar ->
-      (Pretype.pretype, ''a frag) monadic_parse.Parser ->
-      (''a frag list * ''a PStack) ->
-      (''a frag list * ''a PStack) * unit option
+      (''a qbuf -> Pretype.pretype) ->
+      (''a qbuf * ''a PStack) ->
+      (''a qbuf * ''a PStack) * unit option
 
 end
 

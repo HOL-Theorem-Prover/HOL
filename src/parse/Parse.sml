@@ -201,22 +201,29 @@ end
 
 local open parse_type
 in
-fun parse_Type parser q =
- let open optmonad monadic_parse fragstr
-     infix >> >->
-     val (rest, parse_result) = (parse (token (item #":") >> parser)) q
- in
-   case parse_result
-    of SOME pt => Pretype.toType pt
-     | NONE =>
-        let val errstring = String.concat
-           ["Couldn't make any sense with remaining input of ",
-            Lib.quote (ftoString rest)]
-        in
-           raise ERROR "hol_type parser" errstring
-        end
- end
-end;
+fun parse_Type parser q = let
+  open base_tokens qbuf
+  val qb = new_buffer q
+in
+  case qbuf.current qb of
+    BT_Ident s =>
+    if String.sub(s, 0) <> #":" then
+      raise ERROR "parse_Type" "types must begin with a colon"
+    else let
+        val _ = if size s = 1 then advance qb
+                else replace_current (BT_Ident (String.extract(s, 1, NONE))) qb
+        val pt = parser qb
+      in
+        if current qb <> BT_EOI then
+          raise ERROR "parse_Type"
+                      ("Couldn't make any sense of remaining input: "^
+                       toString qb)
+        else
+          Pretype.toType pt
+      end
+  | _ => raise ERROR "parse_Type" "types must begin with a colon"
+end
+end (* local *)
 
 fun Type q = let in
    update_type_fns();
@@ -230,31 +237,37 @@ fun == q x = Type q;
              Parsing into abstract syntax
  ---------------------------------------------------------------------------*)
 
-fun do_parse G ty =
- let open optmonad parse_term
-     val pt = parse_term G ty
-              handle PrecConflict(st1, st2)
-              => raise ERROR "Term" (String.concat
+fun do_parse G ty = let
+  open parse_term
+  val pt = parse_term G ty
+      handle PrecConflict(st1, st2) =>
+             raise ERROR "Term"
+               (String.concat
                  ["Grammar introduces precedence conflict between tokens ",
                   term_grammar.STtoString G st1, " and ",
                   term_grammar.STtoString G st2])
- in fn q =>
-  let val ((cs,p), _) = pt (q, initial_pstack)
-        handle term_tokens.LEX_ERR s =>
-          raise ERROR "term parser" ("Lexical error - "^s)
-  in
-  if is_final_pstack p then
-  let infix ++ >>
-      open fragstr
-  in case (many (comment ++ grab_whitespace) >> eof) cs
-      of (_,SOME _) =>
-           (top_nonterminal p handle ParseTermError s => raise ERROR "Term" s)
-       | (_,NONE) => raise ERROR "term parser" (String.concat
-                ["Can't make sense of remaining: ", Lib.quote (ftoString cs)])
-  end
-  else raise ERROR "term parser" (String.concat
-           ["Parse failed with ", Lib.quote(ftoString cs), " remaining"])
- end end;
+  open base_tokens qbuf
+in
+fn q => let
+     val ((qb,p), _) = pt (new_buffer q, initial_pstack)
+         handle base_tokens.LEX_ERR s =>
+                raise ERROR "term parser" ("Lexical error - "^s)
+   in
+     if is_final_pstack p then
+       case current qb of
+         BT_EOI => (top_nonterminal p handle ParseTermError s =>
+                                             raise ERROR "Term" s)
+       | _ => raise ERROR "term parser"
+                          (String.concat
+                             ["Can't make sense of remaining: ",
+                              Lib.quote (toString qb)])
+     else
+       raise ERROR "term parser"
+                   (String.concat
+                      ["Parse failed with ", Lib.quote(toString qb),
+                       " remaining"])
+   end
+end;
 
 
 val the_absyn_parser: (term frag list -> Absyn.absyn) ref =

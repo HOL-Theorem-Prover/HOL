@@ -10,28 +10,51 @@ datatype 'a type_token
      | LParen
      | RParen
      | AQ of 'a
+     | Error of 'a base_tokens.base_token
 
 
-open optmonad monadic_parse
-open fragstr
-infix >- >> ++
+val ERR = Feedback.mk_HOL_ERR "type_tokens"
 
-open HOLtokens
-infix ANDNOT
+open qbuf base_tokens
 
-fun lex s =
-  ((token antiq >- return o AQ) ++
-   (symbol "(" >> return LParen) ++
-   (symbol ")" >> return RParen) ++
-   (symbol "," >> return Comma) ++
-   (token (item #"'" >> normal_alpha_ident)  >-
-    (fn s => return (TypeVar ("'"^s)))) ++
-   (token (many1_charP (fromLex Lexis.tyvar_ids)) >-
-    (fn thyname => item #"$" >> many1_charP (fromLex Lexis.tyvar_ids) >-
-     (fn tyname => return (QTypeIdent(thyname, tyname))))) ++
-   (token (many1_charP (fromLex Lexis.tyvar_ids)) >- return o TypeIdent) ++
-   (token (many1_charP (HOLsym ANDNOT ITEM #",")) >- return o TypeSymbol)) s
+fun special_symb c = c = #"(" orelse c = #")" orelse c = #","
 
+fun split_and_check fb s = let
+  (* if the first character of s is non-alphanumeric character, then it
+     will be a symbolic blob.  *)
+  val s0 = String.sub(s, 0)
+  fun nadvance n =
+      if size s = n then (fn () => advance fb)
+      else
+        (fn () => replace_current (BT_Ident (String.extract(s, n, NONE))) fb)
+in
+  if Char.isAlpha s0 then ((fn () => advance fb), TypeIdent s)
+  else if s0 = #"'" then ((fn () => advance fb), TypeVar s)
+  else if s0 = #"(" then (nadvance 1, LParen)
+  else if s0 = #")" then (nadvance 1, RParen)
+  else if s0 = #"," then (nadvance 1, Comma)
+  else if s0 = #"\"" then ((fn () => advance fb), Error (BT_Ident s))
+  else let
+      val (ssl, ssr) =
+          Substring.splitl (not o special_symb) (Substring.all s)
+      val sl = Substring.string ssl
+      val sr = Substring.string ssr
+    in
+      (nadvance (size sl), TypeSymbol sl)
+    end
+end
+
+fun typetok_of fb = let
+  val bt = current fb
+in
+  case bt of
+    BT_Numeral _ => ((fn () => advance fb), Error bt)
+  | BT_QIdent p => ((fn () => advance fb), QTypeIdent p)
+  | BT_AQ x => ((fn () => advance fb), AQ x)
+  | BT_EOI => ((fn () => ()), Error bt)
+  | BT_Ident s => split_and_check fb s
+  | BT_InComment n => raise Fail "qbuf returned BT_InComment"
+end
 
 fun token_string (TypeIdent s) = s
   | token_string (TypeVar s) = s

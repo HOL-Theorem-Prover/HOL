@@ -2,7 +2,7 @@ structure parse_term :> parse_term =
 struct
 
 open Lib
-open monadic_parse optmonad term_tokens term_grammar HOLgrammars
+open optmonad term_tokens term_grammar HOLgrammars
 open GrammarSpecials
 infix >> >- ++ >->
 
@@ -11,6 +11,8 @@ val WARN = Feedback.HOL_WARNING "parse_term";
 
 exception ParseTermError of string
 type 'a token = 'a term_tokens.term_token
+type 'a qbuf = 'a qbuf.qbuf
+
 
 fun insert_sorted (k, v) [] = [(k, v)]
   | insert_sorted kv1 (wholething as (kv2::rest)) = let
@@ -433,12 +435,6 @@ in
 end
 
 
-fun lift (P : ('a, 'b) Parser) (x:'b list * 'c) = let
-  val (newx1, result) = P (#1 x)
-in
-  ((newx1, #2 x), result)
-end
-
 fun mwhile B C =
   B >-  (fn b => if b then C >> mwhile B C else ok)
 
@@ -534,11 +530,20 @@ fun parse_term (G : grammar) typeparser = let
   val rule_db = mk_ruledb G
   val is_binder = is_binder G
   val grammar_tokens = term_grammar.grammar_tokens G
-  val lex = lift (term_tokens.lex (endbinding::grammar_tokens))
+  val lex  = let
+    val specials = (endbinding::grammar_tokens)
+    val ttlex = term_tokens.lex specials
+  in
+    fn (qb, ps) =>
+       case ttlex qb of
+         NONE => ((qb, ps), NONE)
+       | SOME t => ((qb, ps), SOME t)
+  end
+  fun lifted_typeparser (qb, ps) = ((qb, ps), SOME (typeparser qb))
+
+
   val keyword_table = Polyhash.mkPolyTable (50, Fail "")
   val _ = app (fn v => Polyhash.insert keyword_table (v, ())) grammar_tokens
-  fun itemP P = lex >- (fn t => if P t then return t else fail)
-  fun item t = itemP (fn t' => t = t')
 
   fun transform (in_vs as (vs_state, nparens)) (t:'a lookahead_item option) =
     case t of
@@ -1006,7 +1011,7 @@ fun parse_term (G : grammar) typeparser = let
         fun action_on_la la =
           case la of
             [x] =>
-              lift typeparser >-  (fn ty => set_la [x, PreType ty])
+              lifted_typeparser >-  (fn ty => set_la [x, PreType ty])
           | _ => usual_action
       in
         current_la >- action_on_la
