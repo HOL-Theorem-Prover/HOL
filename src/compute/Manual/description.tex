@@ -76,9 +76,5 @@ then adds lists of theorems to it. Function \ml{new\_rws} returns a
 new empty simplification set. Function \ml{add\_clauses} adds a list
 of theorems to a simplification set. It returns the list of rules that
 have been recognized, but it is mainly to check that everything was
-alright. An extra boolean argument tells if the equations must be
-evaluated strictly. If the boolean is \ml{true}, then the theorems are
-not preprocessed. If it is \ml{false}, the last variable patterns are
-turned into abstraction on the right-hand side, as described above.
-Creation of a new simplification set and addition of a list of
-theorems can be combined using \ml{from\_list}.
+all right. Creation of a new simplification set and addition of a list
+of theorems can be combined using \ml{from\_list}.
