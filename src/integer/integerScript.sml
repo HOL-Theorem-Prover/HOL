@@ -2668,9 +2668,7 @@ val int_exp = Prim_rec.new_recursive_definition{
   rec_axiom = prim_recTheory.num_Axiom};
 
 val _ = set_fixity "int_exp"  (Infixr 700);
-val _ = add_infix("**", 700, HOLgrammars.RIGHT);
 val _ = overload_on ("**", Term`$int_exp`);
-val _ = overload_on ("**", Term`$EXP`);
 
 val INT_EXP = store_thm(
   "INT_EXP",

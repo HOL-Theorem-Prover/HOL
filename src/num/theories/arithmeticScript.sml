@@ -104,6 +104,10 @@ val EXP = new_recursive_definition
              ($EXP m (SUC n) = m * ($EXP m n))`--};
 val _ = set_fixity "EXP" (Infixr 700);
 
+val _ = add_infix("**", 700, HOLgrammars.RIGHT);
+val _ = overload_on ("**", Term`$EXP`);
+
+
 val GREATER_DEF = new_infixr_definition
   ("GREATER_DEF", --`$> m n = n < m`--,   450);
 
