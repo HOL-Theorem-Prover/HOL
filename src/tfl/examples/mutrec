@@ -162,9 +162,6 @@ val ELBdefn =
  /\  (EB (env, AND b1 b2)   = EB (env, b1) /\ EB (env, b2))`;
 
 
-Defn.eqns_of ELBdefn;
-Defn.ind_of ELBdefn;
-
 val SOME(_,size_def) = TypeBase.size_of(valOf(TypeBase.read "exp"));
 
 val [_,guess] = TotalDefn.guessR ELBdefn;

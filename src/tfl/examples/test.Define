@@ -148,14 +148,10 @@ val Swap_def' =
              (CONJUNCT2 Swap_def))
   end;
 
-(* Note that eta-expansion "\l. Flag l" needed in definition of Flag.  *)
-
-val Flag = 
+val Flag_defn = 
  Hol_defn "Flag" 
-         `Flag list = option_case list (\l. Flag l) (Swap list)`;
+         `Flag list = option_case list Flag (Swap list)`;
 
-Defn.eqns_of Flag;
-Defn.tcs_of Flag;
 
 
 (*---------------------------------------------------------------------------
@@ -249,6 +245,7 @@ val accRec_def0 =
 (*---------------------------------------------------------------------------
         Binary recursive schema.
  ---------------------------------------------------------------------------*)
+
 val binRec_def = 
  Define
     `binRec (x:'a) = 
@@ -268,7 +265,7 @@ val baRec_def =
         then baRec (t, join v (A h:'b))
         else baRec (APPEND (dest (h:'a)) t, v))`;
 
-(* Fails! *)
+(* Used to fail *)
 val baRec_def = 
  Define
     `(baRec [] v = (v:'b)) 
@@ -472,7 +469,6 @@ val N = Define `N x = if x>100 then x-10 else N(N(x+11))`; (* Fails *)
 val Ndef = Hol_defn "ninety1"
                     `N x = if x>100 then x-10 else N(N(x+11))`;
 
-(* Fails (as it should) and doesn't clean up properly (as it shouldn't) *)
 
 xDefine "percentage" `% x = if x>100 then x-10 else %(%(x+11))`;  
 

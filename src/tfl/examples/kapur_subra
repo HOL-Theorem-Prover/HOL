@@ -180,4 +180,3 @@ val CBVTerminates = Q.prove(`CBVTerminates ^guess1`,
          [prim_recTheory.measure_def,relationTheory.inv_image_def,
           #2(valOf(TypeBase.size_of(valOf(TypeBase.read"arith"))))])
 end;
-
