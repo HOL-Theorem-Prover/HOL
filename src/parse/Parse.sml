@@ -819,9 +819,11 @@ fun temp_overload_on_by_nametype s {Name, Thy, Ty} =
 
 fun overload_on_by_nametype s (r as {Name, Thy, Ty}) = let in
    temp_overload_on_by_nametype s r;
-   update_grms ("temp_overload_on_by_nametype", String.concat
-     [quote s, " {Name = ", quote Name, ", ", "Thy = ", quote Thy, ", ",
-      "Ty = ", Portable.pp_to_string 75 (TheoryPP.pp_type "U" "T") Ty, "}"])
+   update_grms ("(temp_overload_on_by_nametype "^quote s^")",
+                String.concat
+                [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, ", ",
+                 "Ty = ",
+                 Portable.pp_to_string 75 (TheoryPP.pp_type "U" "T") Ty, "}"])
  end
 
 fun temp_overload_on (s, t) =

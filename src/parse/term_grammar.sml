@@ -263,7 +263,7 @@ val stdhol : grammar =
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
-   overload_info = []
+   overload_info = Overload.null_oinfo
    }
 
 local
@@ -817,22 +817,24 @@ fun prettyprint_grammar pstrm (G :grammar) = let
     pprint_grule rule;
     end_block()
   end
+  fun uninteresting_overload (r:Overload.overloaded_op_info) =
+    length (#actual_ops r) = 1 andalso
+    #Name (hd (#actual_ops r)) = #overloaded_op r
   fun print_overloading oinfo0 =
-    if List.all (fn r => length (#actual_ops r) <= 1) oinfo0 then ()
+    if List.all uninteresting_overload oinfo0 then ()
     else let
       open Lib infix ##
       fun nblanks n = String.implode (List.tabulate(n, (fn _ => #" ")))
+      val oinfo1 = List.filter (not o uninteresting_overload) oinfo0
       val oinfo = Listsort.sort (String.compare o (#overloaded_op ##
                                                    #overloaded_op))
-                  oinfo0
+                  oinfo1
       val max =
         List.foldl (fn (oi,n) => Int.max(String.size (#overloaded_op oi),
                                          n))
         0
         oinfo
-      fun pr_ov {overloaded_op,actual_ops,...} =
-        if length actual_ops <= 1 then ()
-        else
+      fun pr_ov (r as {overloaded_op,actual_ops,...}) =
         (begin_block INCONSISTENT 0;
          add_string (overloaded_op^
                      nblanks (max - String.size overloaded_op)^
@@ -864,7 +866,7 @@ in
                      (Listsort.sort String.compare (known_constants G));
   end_block ();
   (* overloading *)
-  print_overloading (overload_info G);
+  print_overloading (Overload.oinfo_ops (overload_info G));
   end_block ()
 end
 

@@ -10,7 +10,10 @@ sig
      actual_ops : const_rec list}
 
 
-  type overload_info = overloaded_op_info list
+  type overload_info
+
+  val null_oinfo : overload_info
+  val oinfo_ops : overload_info -> overloaded_op_info list
 
   val fupd_actual_ops :
     (const_rec list -> const_rec list) -> overloaded_op_info ->
@@ -35,5 +38,7 @@ sig
   val merge_oinfos : overload_info -> overload_info -> overload_info
 
   val known_constants : overload_info -> string list
+
+  val remove_mapping : const_rec -> string -> overload_info -> overload_info
 
 end

@@ -14,7 +14,15 @@ type const_rec = {Name : string, Ty : hol_type, Thy : string}
 type overloaded_op_info =
   {overloaded_op: string, base_type : Type.hol_type,
    actual_ops : const_rec list}
-type overload_info = overloaded_op_info list
+type overload_info = (overloaded_op_info list * (const_rec * string) list)
+
+val null_oinfo = ([],[])
+
+fun oinfo_ops (oi,_) = oi
+
+fun update_assoc k v [] = [(k,v)]
+  | update_assoc k v ((k',v')::kvs) = if k = k' then (k,v)::kvs
+                                      else (k',v')::update_assoc k v kvs
 
 exception OVERLOAD_ERR of string
 
@@ -106,9 +114,9 @@ fun fupd_list_at_P P f list =
              else Option.map (fn xs' => x::xs') (fupd_list_at_P P f xs)
 
 fun info_for_name (overloads:overload_info) s =
-  List.find (fn x => #overloaded_op x = s) overloads
+  List.find (fn x => #overloaded_op x = s) (#1 overloads)
 fun is_overloaded (overloads:overload_info) s =
-  List.exists (fn x => #overloaded_op x = s) overloads
+  List.exists (fn x => #overloaded_op x = s) (#1 overloads)
 
 fun type_compare (ty1, ty2) = let
   val ty1_gte_ty2 = Lib.can (Type.match_type ty1) ty2
@@ -121,8 +129,20 @@ in
   | (false, false) => NONE
 end
 
-fun remove_overloaded_form s (oinfo:overload_info) =
-  List.filter (fn x => #overloaded_op x <> s) oinfo
+fun remove_overloaded_form s (oinfo:overload_info) = let
+  val (op2cnst, cnst2op) = oinfo
+  val (okopc, badopc) = Lib.partition (fn x => #overloaded_op x <> s) op2cnst
+  (* will keep okopc, but should now remove all pairs of the form
+       (c, s)
+     where c is an actual op from one of the badopc and s is the s above *)
+  val allbad_ops = List.concat (map #actual_ops badopc)
+  fun goodcop (crec, str) =
+    str <> s orelse
+    Lib.mem crec allbad_ops
+  val okcop = List.filter goodcop cnst2op
+in
+  (okopc, okcop)
+end
 
 (* a predicate on pairs of operations and types that returns true if
    they're equal, given that two types are equal if they can match
@@ -138,66 +158,70 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
    in ambigous resolutions. *)
 fun add_actual_overloading {opname, realname, realtype, realthy} oinfo = let
   val newrec = {Ty = realtype, Name = realname, Thy = realthy}
+  val (opc0, cop0) = oinfo
+  val opc =
+    if is_overloaded oinfo opname then let
+      val {base_type, ...} = valOf (info_for_name oinfo opname)
+      val newbase = anti_unify base_type realtype
+    in
+      valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
+             ((fupd_actual_ops
+               (fn ops =>
+                newrec :: Lib.op_set_diff ntys_equal ops [newrec])) o
+              (fupd_base_type (fn b => newbase)))
+             opc0)
+    end
+    else
+      {actual_ops = [newrec], overloaded_op = opname, base_type = realtype} ::
+      opc0
+  val cop = if opname <> realname then update_assoc newrec opname cop0
+            else (* opname = realname - possible that newrec binds to some
+                                        other in the map; need to remove
+                                        this *)
+              List.filter (fn (r,v) => r <> newrec) cop0
 in
-  if is_overloaded oinfo opname then let
-    val {base_type, ...} = valOf (info_for_name oinfo opname)
-    val newbase = anti_unify base_type realtype
-  in
-    valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
-           ((fupd_actual_ops
-             (fn ops =>
-              newrec :: Lib.op_set_diff ntys_equal ops [newrec])) o
-            (fupd_base_type (fn b => newbase)))
-           oinfo)
-  end
-  else
-    {actual_ops = [newrec],
-     overloaded_op = opname,
-     base_type = realtype} ::
-    oinfo
+  (opc, cop)
 end
 
 
 fun myfind f [] = NONE
   | myfind f (x::xs) = case f x of (v as SOME _) => v | NONE => myfind f xs
 
+fun myassoc (searchrecord as {Name,Ty,Thy}) alist =
+  case alist of
+    [] => NONE
+  | (({Name = n, Thy = thy, Ty = ty}, s)::rs) =>
+      if n = Name andalso thy = Thy andalso Lib.can (Type.match_type ty) Ty
+      then SOME s
+      else myassoc searchrecord rs
+
+
+
 fun overloading_of_term (oinfo:overload_info) t =
   if not (Term.is_const t) then NONE
-  else let
-    val {Name,Ty,Thy} = Term.dest_thy_const t
-  in
-    myfind (fn {actual_ops,overloaded_op,...} =>
-            myfind (fn {Name = s, Thy = thy, Ty = t} =>
-                    if s = Name andalso thy = Thy andalso
-                       Lib.can (Type.match_type t) Ty
-                    then
-                      SOME overloaded_op
-                    else
-                      NONE)
-            actual_ops)
-    oinfo
-  end
+  else myassoc (Term.dest_thy_const t) (#2 oinfo)
 
-fun overloading_of_nametype oinfo {Name = n, Thy = th, Ty = ty} =
-  myfind (fn {actual_ops, overloaded_op, ...} =>
-          myfind (fn {Ty = t, Name = s, Thy = th'} =>
-                  if s = n andalso th' = th andalso
-                     Lib.can (Type.match_type t) ty
-                  then
-                    SOME overloaded_op
-                  else
-                    NONE)
-          actual_ops)
-  (oinfo : overload_info)
+fun overloading_of_nametype (oinfo:overload_info) r = myassoc r (#2 oinfo)
 
 fun rev_append [] rest = rest
   | rev_append (x::xs) rest = rev_append xs (x::rest)
 
-fun merge_oinfos O1 O2 = let
+fun compare_crec ({Name = n1, Ty = ty1, Thy = thy1},
+                  {Name = n2, Ty = ty2, Thy = thy2}) =
+  case String.compare(thy1, thy2) of
+    EQUAL => let
+    in
+      case String.compare(n1, n2) of
+        EQUAL => Type.compare(ty1, ty2)
+      | x => x
+    end
+  | x => x
+
+fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
   fun cmp (op1:overloaded_op_info, op2:overloaded_op_info) =
     String.compare(#overloaded_op op1, #overloaded_op op2)
-  val O1_sorted = Listsort.sort cmp O1
-  val O2_sorted = Listsort.sort cmp O2
+  val O1ops_sorted = Listsort.sort cmp (#1 O1)
+  val O2ops_sorted = Listsort.sort cmp (#1 O2)
   fun merge acc op1s op2s =
     case (op1s, op2s) of
       ([], x) => rev_append acc x
@@ -220,12 +244,49 @@ fun merge_oinfos O1 O2 = let
           end
         | GREATER => merge (op2::acc) op1s op2s'
       end
+    infix ##
+    val O1cops_sorted = Listsort.sort (compare_crec o (#1 ## #1)) (#2 O1)
+    val O2cops_sorted = Listsort.sort (compare_crec o (#1 ## #1)) (#2 O2)
+    fun merge_cops acc cop1s cop2s =
+      case (cop1s, cop2s) of
+        ([], x) => rev_append acc x
+      | (x, []) => rev_append acc x
+      | (r1::r1s, r2::r2s) => let
+        in
+          case compare_crec(#1 r1, #1 r2) of
+            LESS => merge_cops (r1::acc) r1s cop2s
+          | GREATER => merge_cops (r2::acc) cop1s r2s
+          | EQUAL => let
+            in
+              HOL_MESG ("Merging overload information: "^
+                        "arbitrarily choosing to map "^
+                        #Thy (#1 r1)^"$"^ #Name (#1 r1)^" to "^ #2 r2);
+              merge_cops (r1::acc) r1s r2s
+            end
+        end
 in
-  merge [] O1_sorted O2_sorted
+  (merge [] O1ops_sorted O2ops_sorted,
+   merge_cops [] O1cops_sorted O2cops_sorted)
 end
 
-fun known_constants (oi:overload_info) = map #overloaded_op oi
+fun known_constants (oi:overload_info) = map #overloaded_op (#1 oi)
 
+fun remove_omapping crec str oplist =
+  case oplist of
+    [] => []
+  | (r::rs) =>
+      if #overloaded_op r = str then let
+        val new_rec0 = fupd_actual_ops (List.filter (fn opr => opr <> crec)) r
+      in
+        if (null (#actual_ops new_rec0)) then rs
+        else new_rec0::rs
+      end
+      else r::remove_omapping crec str rs
+
+
+fun remove_mapping crec str (oi:overload_info) =
+  (remove_omapping crec str (#1 oi),
+   List.filter (fn (r,str') => r <> crec orelse str <> str') (#2 oi))
 
 
 end (* Overload *)

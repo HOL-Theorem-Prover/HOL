@@ -111,104 +111,6 @@ fun to_term tm =
  end
 
 
-(*---------------------------------------------------------------------------
- * Translation to terms so that the term prettyprinter can be used when
- * type inference fails. Note: "andalso" binds tighter than "orelse".
- *---------------------------------------------------------------------------*)
-
-fun is_atom (Var _) = true
-  | is_atom (Const _) = true
-  | is_atom (Constrained(tm,_)) = is_atom tm
-  | is_atom (Overloaded _) = true
-  | is_atom (t as Comb{Rator,Rand}) =
-      Numeral.is_numeral (to_term t) orelse
-      Numeral.is_numeral (to_term Rand) andalso
-        (case Rator
-          of Overloaded{Name,...} => Name = fromNum_str
-           | Const{Name,...} => Name = nat_elim_term
-           | _ => false)
-  | is_atom t = false
-
-
-(*---------------------------------------------------------------------------
- * Type inference for HOL terms. Looks ugly because of error messages, but is
- * actually very simple, given side-effecting unification.
- *---------------------------------------------------------------------------*)
-
-local fun -->(ty1,ty2) = Pretype.Tyop("fun", [ty1, ty2])
-      infix  -->
-      fun type_of (Var{Ty, ...}) = Ty
-        | type_of (Const{Ty, ...}) = Ty
-        | type_of (Comb{Rator, ...}) = Pretype.chase (type_of Rator)
-        | type_of (Abs{Bvar,Body}) = type_of Bvar --> type_of Body
-        | type_of (Constrained(_,ty)) = ty
-        | type_of (Antiq tm) = Pretype.fromType (Term.type_of tm)
-        | type_of (Overloaded {Ty,...}) = Ty
-      fun default_typrinter x = "<hol_type>"
-      fun default_tmprinter x = "<term>"
-in
-fun TC printers =
- let val (ptm, pty) =
-      case printers
-       of SOME (x,y) =>
-           let val typrint = Lib.say o y o Pretype.toType
-               fun tmprint tm =
-                  if Term.is_const tm
-                     then (Lib.say (x tm ^ " " ^ y (Term.type_of tm)))
-                     else Lib.say (x tm)
-           in
-              (tmprint, typrint)
-           end
-        | NONE => (Lib.say o default_tmprinter, Lib.say o default_typrinter)
-  fun check(Comb{Rator, Rand}) =
-      (check Rator;
-       check Rand;
-       Pretype.unify (type_of Rator)
-       (type_of Rand --> Pretype.new_uvar())
-       handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
-                                     origin_function="unify",message})
-       => let val tmp = !Globals.show_types
-              val _   = Globals.show_types := true
-              val Rator' = to_term Rator
-              val Rand'  = to_term Rand
-          in
-            Lib.say "\nType inference failure: unable to infer a type \
-                              \for the application of\n\n";
-            ptm Rator';
-            Lib.say "\n\n";
-            if (is_atom Rator) then ()
-            else(Lib.say"which has type\n\n";pty(type_of Rator);Lib.say"\n\n");
-            Lib.say "to\n\n"; ptm Rand'; Lib.say "\n\n";
-            if (is_atom Rand) then ()
-            else(Lib.say"which has type\n\n";pty(type_of Rand);Lib.say"\n\n");
-
-            Lib.say ("unification failure message: "^message^"\n");
-            Globals.show_types := tmp;
-            raise ERR"typecheck" "failed"
-          end)
-    | check (Abs{Bvar, Body}) = (check Bvar; check Body)
-    | check (Constrained(tm,ty)) =
-       (check tm; Pretype.unify (type_of tm) ty
-       handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
-                                    origin_function="unify",message})
-       => let val tmp = !Globals.show_types
-              val _ = Globals.show_types := true
-          in
-            Lib.say "\nType inference failure: the term\n\n";
-            ptm (to_term tm); Lib.say "\n\n";
-            if (is_atom tm) then ()
-            else(Lib.say"which has type\n\n";pty(type_of tm);Lib.say"\n\n");
-            Lib.say "can not be constrained to be of type\n\n";
-            pty ty;
-            Lib.say ("\n\nunification failure message: "^message^"\n");
-            Globals.show_types := tmp;
-            raise ERR"typecheck" "failed"
-          end)
-    | check _ = ()
-in check
-end end;
-
-val typecheck_phase1 = TC
 
 
 (*---------------------------------------------------------------------------*
@@ -379,6 +281,106 @@ fun remove_elim_magics ptm =
 
 
 val overloading_resolution = remove_elim_magics o do_overloading_removal
+
+
+(*---------------------------------------------------------------------------
+ * Type inference for HOL terms. Looks ugly because of error messages, but is
+ * actually very simple, given side-effecting unification.
+ *---------------------------------------------------------------------------*)
+
+fun is_atom (Var _) = true
+  | is_atom (Const _) = true
+  | is_atom (Constrained(tm,_)) = is_atom tm
+  | is_atom (Overloaded _) = true
+  | is_atom (t as Comb{Rator,Rand}) =
+      Numeral.is_numeral (to_term (overloading_resolution t)) orelse
+      Numeral.is_numeral (to_term (overloading_resolution Rand)) andalso
+        (case Rator
+          of Overloaded{Name,...} => Name = fromNum_str
+           | Const{Name,...} => Name = nat_elim_term
+           | _ => false)
+  | is_atom t = false
+
+
+local fun -->(ty1,ty2) = Pretype.Tyop("fun", [ty1, ty2])
+      infix  -->
+      fun type_of (Var{Ty, ...}) = Ty
+        | type_of (Const{Ty, ...}) = Ty
+        | type_of (Comb{Rator, ...}) = Pretype.chase (type_of Rator)
+        | type_of (Abs{Bvar,Body}) = type_of Bvar --> type_of Body
+        | type_of (Constrained(_,ty)) = ty
+        | type_of (Antiq tm) = Pretype.fromType (Term.type_of tm)
+        | type_of (Overloaded {Ty,...}) = Ty
+      fun default_typrinter x = "<hol_type>"
+      fun default_tmprinter x = "<term>"
+in
+fun TC printers =
+ let val (ptm, pty) =
+      case printers
+       of SOME (x,y) =>
+           let val typrint = Lib.say o y o Pretype.toType
+               fun tmprint tm =
+                  if Term.is_const tm
+                     then (Lib.say (x tm ^ " " ^ y (Term.type_of tm)))
+                     else Lib.say (x tm)
+           in
+              (tmprint, typrint)
+           end
+        | NONE => (Lib.say o default_tmprinter, Lib.say o default_typrinter)
+  fun check(Comb{Rator, Rand}) =
+      (check Rator;
+       check Rand;
+       Pretype.unify (type_of Rator)
+       (type_of Rand --> Pretype.new_uvar())
+       handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
+                                     origin_function="unify",message})
+       => let val tmp = !Globals.show_types
+              val _   = Globals.show_types := true
+              val Rator' = to_term (overloading_resolution Rator)
+              val Rand'  = to_term (overloading_resolution Rand)
+          in
+            Lib.say "\nType inference failure: unable to infer a type \
+                              \for the application of\n\n";
+            ptm Rator';
+            Lib.say "\n\n";
+            if (is_atom Rator) then ()
+            else(Lib.say"which has type\n\n";pty(type_of Rator);Lib.say"\n\n");
+            Lib.say "to\n\n"; ptm Rand'; Lib.say "\n\n";
+            if (is_atom Rand) then ()
+            else(Lib.say"which has type\n\n";pty(type_of Rand);Lib.say"\n\n");
+
+            Lib.say ("unification failure message: "^message^"\n");
+            Globals.show_types := tmp;
+            raise ERR"typecheck" "failed"
+          end)
+    | check (Abs{Bvar, Body}) = (check Bvar; check Body)
+    | check (Constrained(tm,ty)) =
+       (check tm; Pretype.unify (type_of tm) ty
+       handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
+                                    origin_function="unify",message})
+       => let val tmp = !Globals.show_types
+              val _ = Globals.show_types := true
+              val real_term = to_term (overloading_resolution tm)
+                handle HOL_ERR _ =>
+                  raise ERR "typecheck" "internal to_term failed"
+          in
+            Lib.say "\nType inference failure: the term\n\n";
+            ptm real_term; Lib.say "\n\n";
+            if (is_atom tm) then ()
+            else(Lib.say"which has type\n\n";pty(type_of tm);Lib.say"\n\n");
+            Lib.say "can not be constrained to be of type\n\n";
+            pty ty;
+            Lib.say ("\n\nunification failure message: "^message^"\n");
+            Globals.show_types := tmp;
+            raise ERR"typecheck" "failed"
+          end)
+    | check _ = ()
+in check
+end end;
+
+val typecheck_phase1 = TC
+
+
 
 fun typecheck pfns ptm = (TC pfns ptm; to_term(overloading_resolution ptm));
 
