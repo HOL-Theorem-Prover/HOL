@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib
 
-open bossLib llistTheory
+open bossLib llistTheory BasicProvers
 
 local open pred_setLib fixedPointTheory in end
 
@@ -283,7 +283,18 @@ val finite_length = store_thm(
   PROVE_TAC [finite_length_lemma, optionTheory.option_CASES,
              optionTheory.NOT_NONE_SOME]);
 
-val el_def = Define`(el 0 p = first p) /\ (el (SUC n) p = el n (tail p))`;
+val el_def = Define`
+  (el 0 p = first p) /\ (el (SUC n) p = el n (tail p))
+`;
+val _ = BasicProvers.export_rewrites ["el_def"]
+
+val nth_label_def = Define`
+  (nth_label 0 p = first_label p) /\
+  (nth_label (SUC n) p = nth_label n (tail p))
+`;
+val _ = BasicProvers.export_rewrites ["nth_label_def"]
+
+
 
 val path_Axiom = store_thm(
   "path_Axiom",
@@ -416,22 +427,21 @@ val firstP_at_def =
 val firstP_at_stopped = prove(
   ``!P x n. firstP_at P (stopped_at x) n = (n = 0) /\ P x``,
   SIMP_TAC (srw_ss() ++ ARITH_ss) [firstP_at_def, PL_thm, EQ_IMP_THM,
-                                   FORALL_AND_THM, el_def]);
+                                   FORALL_AND_THM]);
 
 val firstP_at_pcons = prove(
   ``!P n x r p.
        firstP_at P (pcons x r p) n =
           (n = 0) /\ P x \/ 0 < n /\ ~P x /\ firstP_at P p (n - 1)``,
  REPEAT GEN_TAC THEN Cases_on `n` THENL [
-   SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons, el_def],
-   SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons, el_def,
-                      EQ_IMP_THM]
+   SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons],
+   SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons, EQ_IMP_THM]
    THENL [
      FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
-     SRW_TAC [ARITH_ss][el_def],
+     SRW_TAC [ARITH_ss][],
      FIRST_X_ASSUM (Q.SPEC_THEN `SUC j` MP_TAC) THEN
-     SRW_TAC [ARITH_ss][el_def],
-     Cases_on `j` THEN SRW_TAC [ARITH_ss][el_def]
+     SRW_TAC [ARITH_ss][],
+     Cases_on `j` THEN SRW_TAC [ARITH_ss][]
    ]
  ]);
 
@@ -533,13 +543,20 @@ val mem_thm = store_thm(
   "mem_thm",
   ``(!x s. mem s (stopped_at x) = (s = x)) /\
     (!x r p s. mem s (pcons x r p) = (s = x) \/ mem s p)``,
-  SRW_TAC [][mem_def, PL_thm, el_def, RIGHT_AND_OVER_OR,
+  SRW_TAC [][mem_def, PL_thm, RIGHT_AND_OVER_OR,
              EXISTS_OR_THM, GSYM LEFT_EXISTS_AND_THM]);
+val _ = BasicProvers.export_rewrites ["mem_thm"]
 
-val drop_def = Define`(drop 0 p = p) /\
-                      (drop (SUC n) p = drop n (tail p))`;
+(* ----------------------------------------------------------------------
+    drop n p
+       drops n elements from the front of p and returns what's left
+   ---------------------------------------------------------------------- *)
 
-val _ = BasicProvers.export_rewrites ["mem_thm", "drop_def"]
+val drop_def = Define`
+  (drop 0 p = p) /\
+  (drop (SUC n) p = drop n (tail p))
+`;
+val _ = BasicProvers.export_rewrites ["drop_def"]
 
 
 val finite_drop = store_thm(
@@ -568,13 +585,84 @@ val length_drop = store_thm(
   ]);
 
 
-(* ``take n p`` takes n _labels_ from p *)
+val PL_drop = store_thm(
+  "PL_drop",
+  ``!p i. i IN PL p ==> (PL (drop i p) = IMAGE (\n. n - i) (PL p))``,
+  Induct_on `i` THENL [
+    SRW_TAC [][drop_def, PL_thm],
+    CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][drop_def, PL_thm, pred_setTheory.EXTENSION, EQ_IMP_THM] THENL [
+      SRW_TAC [][LEFT_AND_OVER_OR, EXISTS_OR_THM,
+                 GSYM RIGHT_EXISTS_AND_THM] THEN PROVE_TAC [],
+      SRW_TAC [][] THEN PROVE_TAC [arithmeticTheory.LESS_EQ_REFL],
+      SRW_TAC [][] THEN PROVE_TAC []
+    ]
+  ]);
+
+val IN_PL_drop = store_thm(
+  "IN_PL_drop",
+  ``!i j p. i IN PL p ==> (j IN PL (drop i p) = i + j IN PL p)``,
+  SRW_TAC [][PL_drop, EQ_IMP_THM] THENL [
+    `(i + (x - i) = x) \/ (i + (x - i) = i)` by DECIDE_TAC THEN
+    SRW_TAC [][],
+    Q.EXISTS_TAC `i + j` THEN SRW_TAC [numSimps.ARITH_ss][]
+  ]);
+val _ = BasicProvers.export_rewrites ["IN_PL_drop"]
+
+val first_drop = store_thm(
+  "first_drop",
+  ``!i p. i IN PL p ==> (first (drop i p) = el i p)``,
+  Induct THENL [
+    SRW_TAC [][],
+    CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][PL_thm]
+  ]);
+val _ = BasicProvers.export_rewrites ["first_drop"]
+
+val first_label_drop = store_thm(
+  "first_label_drop",
+  ``!i p. i IN PL p ==> (first_label (drop i p) = nth_label i p)``,
+  Induct THENL [
+    SRW_TAC [][nth_label_def],
+    CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][nth_label_def, PL_thm]
+  ]);
+val _ = BasicProvers.export_rewrites ["first_label_drop"]
+
+val tail_drop = store_thm(
+  "tail_drop",
+  ``!i p. (i + 1) IN PL p ==> (tail (drop i p) = drop (i + 1) p)``,
+  Induct THEN
+  CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+  SRW_TAC [][PL_thm, CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV drop_def] THEN
+  FULL_SIMP_TAC (srw_ss()) [DECIDE ``SUC x + y = SUC (x + y)``]);
+val _ = BasicProvers.export_rewrites ["tail_drop"]
+
+val el_drop = store_thm(
+  "el_drop",
+  ``!i j p. i + j IN PL p ==> (el i (drop j p) = el (i + j) p)``,
+  Induct_on `j` THENL [
+    SRW_TAC [][],
+    GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][PL_thm, arithmeticTheory.ADD_CLAUSES]
+  ]);
+val _ = BasicProvers.export_rewrites ["el_drop"]
+
+(* ----------------------------------------------------------------------
+    ``take n p`` takes n _labels_ from p
+   ---------------------------------------------------------------------- *)
+
 val take_def = Define`
   (take 0 p = stopped_at (first p)) /\
   (take (SUC n) p = pcons (first p) (first_label p) (take n (tail p)))
 `;
-
 val _ = BasicProvers.export_rewrites ["take_def"]
+
+val first_take = store_thm(
+  "first_take",
+  ``!p i. first (take i p) = first p``,
+  REPEAT GEN_TAC THEN Cases_on `i` THEN SRW_TAC [][]);
+val _ = BasicProvers.export_rewrites ["first_take"]
 
 val finite_take = store_thm(
   "finite_take",
@@ -584,7 +672,6 @@ val finite_take = store_thm(
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
     SRW_TAC [][PL_thm, take_def]
   ]);
-
 val _ = BasicProvers.export_rewrites ["finite_take"]
 
 val length_take = store_thm(
@@ -596,95 +683,98 @@ val length_take = store_thm(
     SRW_TAC [][PL_thm, take_def, length_thm, arithmeticTheory.ADD1,
                finite_take]
   ]);
+val _ = BasicProvers.export_rewrites ["length_take"]
 
+
+val PL_take = store_thm(
+  "PL_take",
+  ``!p i. i IN PL p ==> (PL (take i p) = { n | n <= i })``,
+  Induct_on `i` THENL [
+    SRW_TAC [][take_def, PL_thm],
+    CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][take_def, PL_thm, pred_setTheory.EXTENSION, EQ_IMP_THM] THEN
+    SRW_TAC [][] THEN POP_ASSUM MP_TAC THEN Cases_on `x'` THEN SRW_TAC [][]
+  ]);
+val _ = BasicProvers.export_rewrites ["PL_take"]
+
+val last_take = store_thm(
+  "last_take",
+  ``!i p. i IN PL p ==> (last (take i p) = el i p)``,
+  Induct_on `i` THENL [
+    SRW_TAC [][],
+    CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][PL_thm]
+  ]);
+val _ = BasicProvers.export_rewrites ["last_take"]
+
+(* ----------------------------------------------------------------------
+    seg i j p
+      is a path consisting of elements i to j from p
+      has no useful meaning if i > j \/ j indexes beyond end of p
+   ---------------------------------------------------------------------- *)
 
 val seg_def = Define`
   seg i j p = take (j - i) (drop i p)
 `;
 
-val chop_narrows_def =
-    Define`chop_narrows n p =
-             if length p = SOME 1 then
-               NONE
-             else if n = 0 then
-               SOME(stopped_at (first p), first_label p, tail p)
-             else
-               OPTION_MAP (\ (seg1, lab, seg2).
-                             (pcons (first p) (first_label p) seg1,
-                              lab,
-                              seg2)) (chop_narrows (n - 1) (tail p))`;
+val singleton_seg = store_thm(
+  "singleton_seg",
+  ``!i p. i IN PL p ==> (seg i i p = stopped_at (el i p))``,
+  SRW_TAC [][seg_def]);
+val _ = BasicProvers.export_rewrites ["singleton_seg"]
 
-val chop_narrows_thm = store_thm(
-  "chop_narrows_thm",
-  ``(!x n. chop_narrows n (stopped_at x) = NONE) /\
-    (!x r p.
-           chop_narrows 0 (pcons x r p) = SOME(stopped_at x, r, p)) /\
-    (!x r p n.
-           chop_narrows (SUC n) (pcons x r p) =
-               case chop_narrows n p of
-                  NONE -> NONE
-               || SOME (seg1, lab, seg2) -> SOME(pcons x r seg1, lab, seg2))``,
-  ONCE_REWRITE_TAC [chop_narrows_def] THEN
-  SRW_TAC [][alt_length_thm,
-             DECIDE ``(1 = SUC z) = (z = 0)``, length_never_zero]
-  THENL [
-    ONCE_REWRITE_TAC [chop_narrows_def] THEN SRW_TAC [][],
-    ONCE_REWRITE_TAC [chop_narrows_def] THEN SRW_TAC [][],
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [chop_narrows_def])) THEN
-    SRW_TAC [ARITH_ss][] THEN
-    Cases_on `chop_narrows (n - 1) (tail p)` THEN SRW_TAC [][] THEN
-    Cases_on `x'` THEN Cases_on `r'` THEN
-    SRW_TAC [][]
+val recursive_seg = store_thm(
+  "recursive_seg",
+  ``!i j p. i < j /\ j IN PL p ==>
+            (seg i j p = pcons (el i p) (nth_label i p) (seg (i + 1) j p))``,
+  SRW_TAC [][seg_def] THEN
+  `~(j - i = 0)` by DECIDE_TAC THEN
+  `?v. j - i = SUC v` by PROVE_TAC [arithmeticTheory.num_CASES] THEN
+  SRW_TAC [][] THENL [
+    PROVE_TAC [PL_downward_closed, first_drop],
+    PROVE_TAC [PL_downward_closed, first_label_drop],
+    `j - (i + 1) = v` by DECIDE_TAC THEN
+    SRW_TAC [][] THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
+    `i + 1 < j \/ (i + 1 = j)` by DECIDE_TAC THEN
+    PROVE_TAC [tail_drop, PL_downward_closed]
   ]);
 
-val chop_narrows_eq_SOME = store_thm(
-  "chop_narrows_eq_SOME",
-  ``!p i. i + 1 IN PL p ==>
-          (?seg1 lab seg2. chop_narrows i p = SOME(seg1, lab, seg2))``,
-  CONV_TAC SWAP_VARS_CONV THEN SIMP_TAC (srw_ss()) [PL_def] THEN Induct THEN
-  GEN_TAC THEN
-  Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
-  SRW_TAC [numSimps.REDUCE_ss, ARITH_ss][PL_def, length_thm, chop_narrows_thm,
-                                         arithmeticTheory.ADD1] THEN
-  `finite q ==> i + 1 < THE (length q)` by (SRW_TAC [][] THEN
-                                            RES_TAC THEN
-                                            DECIDE_TAC) THEN
-  `?s1 l s2. chop_narrows i q = SOME(s1, l, s2)` by PROVE_TAC [] THEN
-  SRW_TAC [][]);
+
+val PLdc_le = prove(
+  ``i <= j ==> j IN PL p ==> i IN PL p``,
+  PROVE_TAC [arithmeticTheory.LESS_OR_EQ, PL_downward_closed]);
+
+val PL_seg = store_thm(
+  "PL_seg",
+  ``!i j p. i <= j /\ j IN PL p ==> (PL (seg i j p) = {n | n <= j - i})``,
+  SRW_TAC [][seg_def] THEN `i IN PL p` by IMP_RES_TAC PLdc_le THEN
+  SRW_TAC [numSimps.ARITH_ss][]);
+val _ = BasicProvers.export_rewrites ["PL_seg"]
 
 
-val chop_narrows_pconcat = store_thm(
-  "chop_narrows_pconcat",
-  ``!i p. i + 1 IN PL p ==>
-          let (s1, l, s2) = THE (chop_narrows i p)
-          in
-              finite s1 /\ (pconcat s1 l s2 = p)``,
-  Induct THEN REPEAT STRIP_TAC THENL [
-    `?s1 l s2. chop_narrows 0 p = SOME (s1, l, s2)`
-       by PROVE_TAC [chop_narrows_eq_SOME] THEN
-    ASM_SIMP_TAC (srw_ss()) [] THEN
-    Q.SPEC_THEN `p` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
-    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [PL_def, length_thm,
-                                          chop_narrows_thm] THEN
-    SRW_TAC [][pconcat_thm],
+val finite_seg = store_thm(
+  "finite_seg",
+  ``!p i j. i <= j /\ j IN PL p ==> finite (seg i j p)``,
+  REPEAT STRIP_TAC THEN
+  `i IN PL p` by IMP_RES_TAC PLdc_le THEN
+  SRW_TAC [numSimps.ARITH_ss][seg_def]);
+val _ = BasicProvers.export_rewrites ["finite_seg"]
 
-    Q.SPEC_THEN `p` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
-                path_cases
-    THENL [
-      FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [length_thm,
-                                            chop_narrows_thm, PL_def],
+val first_seg = store_thm(
+  "first_seg",
+  ``!i j p. i <= j /\ j IN PL p ==> (first (seg i j p) = el i p)``,
+  SRW_TAC [][seg_def] THEN IMP_RES_TAC PLdc_le THEN SRW_TAC [][]);
+val _ = BasicProvers.export_rewrites ["first_seg"]
 
-      FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [PL_pcons,
-                                            GSYM arithmeticTheory.ADD1] THEN
-      SRW_TAC [][chop_narrows_thm] THEN
-      `?s1 l s2. chop_narrows i q = SOME (s1, l, s2)` by
-          PROVE_TAC [REWRITE_RULE [GSYM arithmeticTheory.ADD1]
-                                  chop_narrows_eq_SOME] THEN
-      FIRST_ASSUM (ASSUME_TAC o Q.AP_TERM `THE`) THEN
-      FIRST_X_ASSUM (Q.SPEC_THEN `q` MP_TAC) THEN
-      FULL_SIMP_TAC (srw_ss()) [pconcat_thm]
-    ]
-  ]);
+val last_seg = store_thm(
+  "last_seg",
+  ``!i j p. i <= j /\ j IN PL p ==> (last (seg i j p) = el j p)``,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC PLdc_le THEN
+  SRW_TAC [numSimps.ARITH_ss][seg_def]);
+
+(* ----------------------------------------------------------------------
+    labels p  = lazy list of a path's labels
+   ---------------------------------------------------------------------- *)
 
 val labels_def =
     new_specification
@@ -831,11 +921,6 @@ val el_pgenerate = store_thm(
   "el_pgenerate",
   ``!n f g. el n (pgenerate f g) = f n``,
   Induct THEN ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][el_def]);
-
-val nth_label_def = Define`
-  (nth_label 0 p = first_label p) /\
-  (nth_label (SUC n) p = nth_label n (tail p))
-`;
 
 val nth_label_pgenerate = store_thm(
   "nth_label_pgenerate",
@@ -1001,10 +1086,10 @@ val _ = BasicProvers.export_rewrites ["first_plink"]
 
 val last_plink = store_thm(
   "last_plink",
-  ``!p1 p2. finite p1 /\ finite p2 /\ (first p2 = last p1) ==>
+  ``!p1 p2. finite p1 /\ finite p2 /\ (last p1 = first p2) ==>
             (last (plink p1 p2) = last p2)``,
   Q_TAC SUFF_TAC `!p1. finite p1 ==>
-                       !p2. finite p2 /\ (first p2 = last p1) ==>
+                       !p2. finite p2 /\ (last p1 = first p2) ==>
                             (last (plink p1 p2) = last p2)`
         THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][]);
