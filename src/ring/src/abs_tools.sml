@@ -9,10 +9,6 @@ in
 
 local open parse_term in
 
-fun impl_of x =
-  map AQ (assoc x (!impl_param_cstr)) handle HOL_ERR _ => []
-
-
 val add_ip =
   let fun add_ip (c as VAR s) =
             foldl (fn (v,pt) => COMB(pt,v)) c (impl_of s)
@@ -32,35 +28,7 @@ fun import {Inst=inst} lthm =
 *)
 (*-------*)
 
-fun add_parameter v =
-  let val _ = dest_var v in
-  fv_ass := v :: !fv_ass
-  end;
-
-
-fun set_assums asl =
-  (curr_assums := asl;
-   fv_ass := free_varsl asl)
-;
-
-fun add_assums asl =
-  (curr_assums := rev asl @ !curr_assums;
-   fv_ass := subtract (free_varsl asl) (!fv_ass) @ !fv_ass)
-;
-
-fun asm_prove (cl,tac) = TAC_PROOF((!curr_assums,cl), tac);
-
-fun select_disch (h,th) =
-  if op_mem (curry Portable.pointer_eq) h (hyp th) then DISCH h th
-  else th;
-
-
-(* Only the variables appearing in the discharged hypothese should
- * be generalized.
- *)
-fun gen_assums thm =
-  GENL (!fv_ass) (foldr select_disch thm (!curr_assums));
-
+fun asm_prove (cl,tac) = TAC_PROOF((get_assums(),cl), tac);
 
 fun asm_save_thm(x,thm) =
   Theory.save_thm(x,gen_assums thm);
@@ -87,13 +55,13 @@ fun --q _ = Term q;
 
 fun Define q =
   let val tm = --q--
-      val tm' = abstraction.param_eq (head tm) tm
+      val tm' = abstraction.param_eq tm
   in bossLib.Define [ANTIQUOTE tm']
   end;
 
 (*
-fun gg flist = set_goal(!curr_assums,--flist--);
-fun g0 flist = set_goal(!curr_assums,flist);
+fun gg flist = set_goal(get_assums(),--flist--);
+fun g0 flist = set_goal(get_assums(),flist);
 *)
 
 end;

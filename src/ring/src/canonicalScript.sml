@@ -24,7 +24,7 @@ val { plus_sym, plus_assoc, mult_sym, mult_assoc, distr_left,
       mult_zero_left, mult_zero_right,... } =
   semi_ringTheory.IMPORT
     { Vals = [sr],
-      Inst = map ASSUME (!curr_assums),
+      Inst = map ASSUME (get_assums()),
       Rule = REWRITE_RULE[semi_ringTheory.semi_ring_accessors],
       Rename = K NONE }
 ;

@@ -23,7 +23,7 @@ val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
 
 val rth = ringTheory.IMPORT
     { Vals = [r],
-      Inst = map ASSUME (!curr_assums),
+      Inst = map ASSUME (get_assums()),
       Rule = REWRITE_RULE[ring_accessors],
       Rename = K NONE };
 

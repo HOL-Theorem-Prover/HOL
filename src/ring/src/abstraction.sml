@@ -1,7 +1,7 @@
+structure abstraction :> abstraction =
+struct
 
-local open HolKernel Parse basicHol90Lib
-in
-
+open HolKernel Parse basicHol90Lib;
 infix o |->;
 
 fun ABS_ERR function message =
@@ -13,11 +13,42 @@ val curr_assums = ref ([]:term list);
 val fv_ass = ref ([]:term list);
 
 
+fun add_parameter v =
+  let val _ = dest_var v in
+  fv_ass := v :: !fv_ass
+  end;
+
+fun get_assums () = !curr_assums;
+
+fun set_assums asl =
+  (curr_assums := asl;
+   fv_ass := free_varsl asl)
+;
+
+fun add_assums asl =
+  (curr_assums := rev asl @ !curr_assums;
+   fv_ass := subtract (free_varsl asl) (!fv_ass) @ !fv_ass)
+;
+
+
+fun select_disch (h,th) =
+  if op_mem (curry Portable.pointer_eq) h (hyp th) then DISCH h th
+  else th;
+
+(* Only the variables appearing in the discharged hypothese should
+ * be generalized.
+ *)
+fun gen_assums thm =
+  GENL (!fv_ass) (foldr select_disch thm (!curr_assums));
+
+
+
 val impl_param_cstr = ref ([]:(string * term list) list);
-fun impl_of x =
-  map Preterm.Antiq (assoc x (!impl_param_cstr)) handle HOL_ERR _ => [];
 fun add_impl_param x p =
   impl_param_cstr := (x,p)::(!impl_param_cstr);
+fun impl_of x =
+  map parse_term.AQ (assoc x (!impl_param_cstr)) handle HOL_ERR _ => []
+
 
 
 fun head tm = 
@@ -27,8 +58,9 @@ fun head tm =
     #Name(dest_var a handle HOL_ERR _ => dest_const a)
   end;
 
-fun param_eq nm eqs0 =
- let val eqs = map (snd o strip_forall) (strip_conj eqs0)
+fun param_eq eqs0 =
+ let val nm = head eqs0
+     val eqs = map (snd o strip_forall) (strip_conj eqs0)
      val fvrhs = subtract (free_varsl (map rhs eqs)) (free_varsl (map lhs eqs))
      val pv = filter (C mem fvrhs) (!fv_ass)
      val ty = type_of(fst(strip_comb(lhs(hd eqs))))
@@ -38,7 +70,7 @@ fun param_eq nm eqs0 =
  in subst [old_var|->list_mk_comb(newvar,pv)] eqs0
  end;
 
-fun new_param_definition (x,tm) = new_definition(x, param_eq (head tm) tm);
+fun new_param_definition (x,tm) = new_definition(x, param_eq tm);
 
 
 
@@ -164,6 +196,8 @@ type inst_infos =
       Rule : thm -> thm,
       Rename : string -> string option };
 
+type cinst_infos =
+    { Inst : thm list, Rule : thm -> thm, Csts : term list, Defs : thm list };
 
 
 fun compute_inst_infos ctab ({Rename,Inst,Rule,...}:inst_infos) =
