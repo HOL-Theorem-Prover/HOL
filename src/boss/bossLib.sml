@@ -64,7 +64,7 @@ local open listTheory
      val hocongs = [EXISTS_CONG,EVERY_CONG,MAP_CONG,
                     FOLDL_CONG, FOLDR_CONG,list_size_cong]
 in
-  val _ = Tfl.write_context (hocongs@Tfl.read_context())
+  val _ = Defn.write_context (hocongs@Defn.read_context())
 end;
 
 (*---------------------------------------------------------------------------
