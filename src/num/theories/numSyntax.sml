@@ -18,6 +18,8 @@ struct
   val zero_tm      = prim_mk_const {Name="0",       Thy="num"}
   val suc_tm       = prim_mk_const {Name="SUC",     Thy="num"}
   val pre_tm       = prim_mk_const {Name="PRE",     Thy="prim_rec"}
+  val measure_tm   = prim_mk_const {Name="measure", Thy="prim_rec"}
+  val less_tm      = prim_mk_const {Name="<",       Thy="prim_rec"}
   val numeral_tm   = prim_mk_const {Name="NUMERAL", Thy="arithmetic"}
   val alt_zero_tm  = prim_mk_const {Name="ZERO",    Thy="arithmetic"}
   val bit1_tm      = prim_mk_const {Name="BIT1",    Thy="arithmetic"}
@@ -28,7 +30,6 @@ struct
   val exp_tm       = prim_mk_const {Name="EXP",     Thy="arithmetic"}
   val div_tm       = prim_mk_const {Name="DIV",     Thy="arithmetic"}
   val mod_tm       = prim_mk_const {Name="MOD",     Thy="arithmetic"}
-  val less_tm      = prim_mk_const {Name="<",       Thy="prim_rec"}
   val greater_tm   = prim_mk_const {Name=">",       Thy="arithmetic"}
   val geq_tm       = prim_mk_const {Name=">=",      Thy="arithmetic"}
   val leq_tm       = prim_mk_const {Name="<=",      Thy="arithmetic"}
@@ -37,9 +38,9 @@ struct
   val num_case_tm  = prim_mk_const {Name="num_case",Thy="arithmetic"}
   val fact_tm      = prim_mk_const {Name="FACT",    Thy="arithmetic"}
   val funpow_tm    = prim_mk_const {Name="FUNPOW",  Thy="arithmetic"}
+  val divmod_tm    = prim_mk_const {Name="DIVMOD",  Thy="arithmetic"};
   val while_tm     = prim_mk_const {Name="WHILE",   Thy="while"}
   val least_tm     = prim_mk_const {Name="LEAST",   Thy="while"};
-  val divmod_tm    = prim_mk_const {Name="DIVMOD",  Thy="arithmetic"};
 
 
 (*---------------------------------------------------------------------------
@@ -78,6 +79,9 @@ struct
       mk_comb(inst [alpha |-> fst(dom_rng(type_of P))] least_tm, P);
 
   fun mk_divmod(m,n,a) = list_mk_comb(divmod_tm, [m,n,a]);
+
+  fun mk_measure (f,x,y) = 
+      list_mk_comb(inst [alpha |-> type_of x] measure_tm, [f,x,y]);
 
 
 (*---------------------------------------------------------------------------
@@ -134,6 +138,14 @@ struct
          else raise ERR "dest_divmod" "not an application of \"divmod\""
       | _ => raise ERR "dest_divmod" "not an application of \"divmod\"";
 
+  fun dest_measure tm =
+    case strip_comb tm
+     of (m,[f,x,y]) =>
+         if same_const measure_tm m
+         then (f,x,y)
+         else raise ERR "dest_measure" "not an application of \"measure\""
+      | _ => raise ERR "dest_measure" "not an application of \"measure\"";
+
 
 (*---------------------------------------------------------------------------
           Query operations
@@ -159,6 +171,7 @@ struct
   val is_while    = can dest_while
   val is_least    = can dest_least
   val is_divmod   = can dest_divmod
+  val is_measure  = can dest_measure
 
 
 (*---------------------------------------------------------------------------

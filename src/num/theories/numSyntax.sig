@@ -28,7 +28,8 @@ sig
   val funpow_tm     : term
   val while_tm      : term
   val least_tm      : term
-  val divmod_tm      : term
+  val divmod_tm     : term
+  val measure_tm    : term
 
   val mk_suc        : term -> term
   val mk_pre        : term -> term
@@ -50,6 +51,7 @@ sig
   val mk_while      : term * term * term -> term
   val mk_least      : term -> term
   val mk_divmod     : term * term * term -> term
+  val mk_measure    : term * term * term -> term
 
   val dest_suc      : term -> term
   val dest_pre      : term -> term
@@ -71,6 +73,7 @@ sig
   val dest_while    : term -> term * term * term
   val dest_least    : term -> term
   val dest_divmod   : term -> term * term * term
+  val dest_measure  : term -> term * term * term
 
   val is_suc        : term -> bool
   val is_pre        : term -> bool
@@ -91,7 +94,8 @@ sig
   val is_funpow     : term -> bool
   val is_while      : term -> bool
   val is_least      : term -> bool
-  val is_divmod      : term -> bool
+  val is_divmod     : term -> bool
+  val is_measure    : term -> bool
 
   val is_numeral    : term -> bool
   val mk_numeral    : Arbnum.num -> Term.term

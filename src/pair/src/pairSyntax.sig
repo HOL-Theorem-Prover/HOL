@@ -14,6 +14,7 @@ sig
  val uncurry_tm      : term
  val curry_tm        : term
  val pair_map_tm     : term
+ val lex_tm          : term
 
  val mk_pair         : term * term -> term
  val mk_fst          : term -> term
@@ -21,6 +22,7 @@ sig
  val mk_curry        : term * term * term -> term
  val mk_uncurry      : term * term -> term
  val mk_pair_map     : term * term * term -> term
+ val mk_lex          : term * term -> term
  val mk_pabs         : term * term -> term
  val mk_pforall      : term * term -> term
  val mk_pexists      : term * term -> term
@@ -35,6 +37,7 @@ sig
  val dest_curry      : term -> term * term * term
  val dest_uncurry    : term -> term * term
  val dest_pair_map   : term -> term * term * term
+ val dest_lex        : term -> term * term
  val dest_pabs       : term -> term * term
  val pbvar           : term -> term
  val pbody           : term -> term
@@ -66,6 +69,7 @@ sig
  val is_curry        : term -> bool
  val is_uncurry      : term -> bool
  val is_pair_map     : term -> bool
+ val is_lex          : term -> bool
  val is_pabs         : term -> bool
  val is_plet         : term -> bool
  val is_pforall      : term -> bool

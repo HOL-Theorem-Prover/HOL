@@ -36,6 +36,7 @@ val fst_tm      = prim_mk_const {Name="FST",     Thy="pair"};
 val snd_tm      = prim_mk_const {Name="SND",     Thy="pair"};
 val curry_tm    = prim_mk_const {Name="CURRY",   Thy="pair"};
 val pair_map_tm = prim_mk_const {Name="##",      Thy="pair"};
+val lex_tm      = prim_mk_const {Name="LEX",     Thy="pair"};
 
 
 (*---------------------------------------------------------------------------
@@ -125,6 +126,12 @@ fun mk_pair_map(f,g,p) =
                       gamma |-> rf, delta |-> rg] pair_map_tm, [f,g,p])
  end;
 
+fun mk_lex (r1,r2) =
+ let val (dr1,_) = dom_rng (type_of r1)
+     val (dr2,_) = dom_rng (type_of r2)
+ in list_mk_comb(inst[alpha |-> dr1, beta |-> dr2] lex_tm, [r1,r2])
+ end;
+
 val dest_fst = dest_monop fst_tm (ERR "dest_fst" "")
 val dest_snd = dest_monop snd_tm (ERR "dest_snd" "")
 
@@ -140,10 +147,17 @@ fun dest_pair_map tm =
   in (f,g,p)
   end;
 
+fun dest_lex tm = 
+  let val (M,r2) = with_exn dest_comb tm (ERR "dest_lex" "")
+      val (_,r1) = dest_binop lex_tm (ERR "dest_lex" "") M
+  in (r1,r2)
+  end;
+
 val is_fst = can dest_fst
 val is_snd = can dest_snd
 val is_curry = can dest_curry
 val is_pair_map = can dest_pair_map;
+val is_lex = can dest_lex;
 
 
 (*---------------------------------------------------------------------------*)
