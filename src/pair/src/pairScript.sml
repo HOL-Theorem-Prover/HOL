@@ -401,6 +401,74 @@ REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
   THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
   THEN REWRITE_TAC[]);
 
+open BasicProvers
+val GEN_LET_RAND = store_thm(
+  "GEN_LET_RAND",
+  ``P (LET f v) = LET (P o f) v``,
+  SRW_TAC [][LET_THM]);
+
+val GEN_LET_RATOR = store_thm(
+  "GEN_LET_RATOR",
+  ``(LET f v) x = LET (combin$C f x) v``,
+  SRW_TAC [][LET_THM]);
+
+val o_ABS_R = store_thm(
+  "o_ABS_R",
+  ``f o (\x. g x) = (\x. f (g x))``,
+  SRW_TAC [][FUN_EQ_THM]);
+
+val o_UNCURRY_R = store_thm(
+  "o_UNCURRY_R",
+  ``f o UNCURRY g = UNCURRY ((o) f o g)``,
+  SRW_TAC [][FUN_EQ_THM, UNCURRY]);
+
+val C_ABS_L = store_thm(
+  "C_ABS_L",
+  ``combin$C (\x. f x) y = (\x. f x y)``,
+  SRW_TAC [][FUN_EQ_THM]);
+
+val C_UNCURRY_L = store_thm(
+  "C_UNCURRY_L",
+  ``combin$C (UNCURRY f) x = UNCURRY (combin$C (combin$C o f) x)``,
+  SRW_TAC [][FUN_EQ_THM, UNCURRY]);
+
+val LET_FORALL_ELIM = store_thm(
+  "LET_FORALL_ELIM",
+  ``LET f v = (!) (S ((==>) o ((=) v)) f)``,
+  SRW_TAC [][combinTheory.S_DEF, LET_THM]);
+
+val S_ABS_R = store_thm(
+  "S_ABS_R",
+  ``S f (\x. g x) = \x. (f x) (g x)``,
+  SRW_TAC [][FUN_EQ_THM]);
+
+val S_UNCURRY_R = store_thm(
+  "S_UNCURRY_R",
+  ``S f (UNCURRY g) = UNCURRY (S (S o ((o) f) o (,)) g)``,
+  SRW_TAC [][FUN_EQ_THM, UNCURRY, PAIR]);
+
+val UNCURRY' = prove(
+  ``UNCURRY f = \p. f (FST p) (SND p)``,
+  SRW_TAC [][FUN_EQ_THM, UNCURRY]);
+
+val FORALL_UNCURRY = store_thm(
+  "FORALL_UNCURRY",
+  ``(!) (UNCURRY f) = (!) ((!) o f)``,
+  SRW_TAC [][UNCURRY', combinTheory.o_DEF] THEN
+  Q.SUBGOAL_THEN `!x. f x = \y. f x y` (fn th => ONCE_REWRITE_TAC [th]) THENL [
+    REWRITE_TAC [FUN_EQ_THM] THEN BETA_TAC THEN REWRITE_TAC [],
+    ALL_TAC
+  ] THEN
+  SRW_TAC [][FORALL_PROD, FST, SND]);
+
+(* this conversion seems to do much of what's necessary
+val c = SIMP_CONV bool_ss [o_ABS_R, o_UNCURRY_R, LET_FORALL_ELIM, S_ABS_R,
+                   S_UNCURRY_R, combinTheory.o_THM, FORALL_UNCURRY]
+*)
+
+
+
+
 (*---------------------------------------------------------------------------
        TFL support.
  ---------------------------------------------------------------------------*)
