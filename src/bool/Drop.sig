@@ -11,6 +11,7 @@ sig
   val is_let_hook              : (term -> bool) ref
   val is_pabs_hook             : (term -> bool) ref
   val is_one_hook              : (term -> bool) ref
+  val is_fail_hook              : (term -> bool) ref
 
   val dest_int_literal_hook    : (term -> Arbint.int) ref
   val dest_string_literal_hook : (term -> string) ref
@@ -18,6 +19,7 @@ sig
   val dest_cons_hook           : (term -> term * term) ref
   val dest_pair_hook           : (term -> term * term) ref
   val dest_pabs_hook           : (term -> term * term) ref
+  val dest_fail_hook           : (term -> term * string * term list) ref
   val strip_let_hook           : (term -> (term * term) list list * term) ref
 
   val pp_type_as_ML     : ppstream -> hol_type -> unit

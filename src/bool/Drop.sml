@@ -56,6 +56,7 @@ val is_pair_hook           = ref (K false)
 val is_let_hook            = ref (K false)
 val is_pabs_hook           = ref (K false)
 val is_one_hook            = ref (K false)
+val is_fail_hook           = ref (K false)
 
 val dest_num_literal_hook  = ref (fn _ => raise ERR "dest_num_literal" "undefined")
 val dest_int_literal_hook  = ref (fn _ => raise ERR "dest_int_literal" "undefined")
@@ -64,6 +65,7 @@ val dest_cons_hook = ref (fn _ => raise ERR "dest_cons" "undefined")
 val dest_list_hook = ref (fn _ => raise ERR "dest_list" "undefined")
 val dest_pair_hook = ref (fn _ => raise ERR "dest_pair" "undefined")
 val dest_pabs_hook = ref (fn _ => raise ERR "dest_pabs" "undefined")
+val dest_fail_hook = ref (fn _ => raise ERR "dest_fail" "undefined")
 val strip_let_hook = ref (fn _ => raise ERR "strip_let" "undefined")
 
 fun strip_cons M = 
@@ -139,6 +141,7 @@ fun term_to_ML openthys ppstrm =
      if !is_pair_hook tm then pp_pair i tm else
      if !is_let_hook tm then pp_lets i tm else
      if !is_pabs_hook tm then pp_abs i tm else
+     if !is_fail_hook tm then pp_fail i tm else
      if !is_one_hook tm  then pp_one tm else
      if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
      if is_const tm then pp_const i tm else
@@ -297,6 +300,15 @@ fun term_to_ML openthys ppstrm =
          ; pp minprec rhs
          ; end_block()
         )
+  and pp_fail i tm =
+       let val (f,s,args) = !dest_fail_hook tm
+           val fname = fst(dest_const f)
+       in begin_block CONSISTENT 3
+         ; add_string "raise Fail"
+         ; add_break (1,0)
+         ; add_string (Lib.quote (fname^": "^s))
+         ; end_block()
+       end
   and pp_var tm = add_string(fst(dest_var tm))
   and pp_const i tm = 
       if same_const tm boolSyntax.conjunction 
