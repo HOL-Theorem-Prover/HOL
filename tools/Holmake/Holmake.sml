@@ -58,6 +58,37 @@ in
   implode (trans charlist)
 end
 
+fun realspace_delimited_fields s = let
+  open Substring
+  fun inword cword words ss =
+      case getc ss of
+        NONE => List.rev (implode (List.rev cword) :: words)
+      | SOME (c,ss') => let
+        in
+          case c of
+            #" " => outword (implode (List.rev cword) :: words) ss'
+          | #"\\" => let
+            in
+              case getc ss' of
+                NONE => List.rev (implode (List.rev (c::cword)) :: words)
+              | SOME (c',ss'') => inword (c'::cword) words ss''
+            end
+          | _ => inword (c::cword) words ss'
+        end
+  and outword words ss =
+      case getc ss of
+        NONE => List.rev words
+      | SOME(c, ss') => let
+        in
+          case c of
+            #" " => outword words ss'
+          | _ => inword [] words ss
+        end
+in
+  outword [] (all s)
+end
+
+
 local val expand_backslash =
         String.translate (fn #"\\" => "\\\\" | ch => Char.toString ch)
 in
@@ -678,7 +709,7 @@ fun get_dependencies_from_file depfile = let
       val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
         handle Subscript => ""
     in
-      String.tokens Char.isSpace rhs
+      realspace_delimited_fields rhs
     end
     val result = List.concat (map process_line lines)
   in

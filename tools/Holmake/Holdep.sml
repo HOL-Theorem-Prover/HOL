@@ -144,10 +144,20 @@ in
   else ()
 end;
 
+val escape_spaces = let
+  fun translation c = if c = #" " then "\\ "
+                      else if c = #"\\" then "\\\\"
+                      else str c
+  val escape_space = String.translate translation
+in
+  map escape_space
+end
+
 fun endentry() = (* for non-file-based Holdep *)
-  if length (!res) > 1
-  then String.concat (spacify (rev ("\n" :: !res)))
-   else ""
+  if length (!res) > 1 then (* the first entry is the name of the file for
+                               which we are computing dependencies *)
+    String.concat (spacify (rev ("\n" :: escape_spaces (!res))))
+  else ""
 end;
 
 fun read assumes srcext objext filename =
@@ -189,4 +199,3 @@ fun main assumes debug sl =
   end
    handle e as OS.SysErr (str, _) => (errMsg str; raise e)
 
-(* val _ = main (parseComLine(CommandLine.arguments())) *)
