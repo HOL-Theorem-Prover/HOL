@@ -5,11 +5,11 @@
 structure TotalDefn :> TotalDefn =
 struct
 
-open HolKernel Parse boolLib pairLib arithLib NonRecSize DefnBase Rsyntax;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+open HolKernel Parse boolLib pairLib arithLib NonRecSize DefnBase;
+
+infix ## |-> THEN THENL THENC ORELSE;
 infixr 3 -->;
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 
 val ERR = mk_HOL_ERR "TotalDefn";
 
@@ -17,7 +17,9 @@ fun proper_subterm tm1 tm2 =
   not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
 
 fun isWFR tm =
-  (#Name(dest_const(fst(strip_comb tm))) = "WF")
+ (case dest_thy_const (fst (strip_comb tm))
+   of {Name="WF", Thy="relation",...} => true
+    | otherwise => false)
   handle HOL_ERR _ => false;
 
 fun foo [] _  = raise ERR "foo" "empty arg."
@@ -28,7 +30,7 @@ fun foo [] _  = raise ERR "foo" "empty arg."
 
 fun dest tm =
   let val Ryx = (snd o strip_imp o snd o strip_forall) tm
-      val {Rator=Ry, Rand=x} = dest_comb Ryx
+      val (Ry, x) = dest_comb Ryx
       val y = rand Ry
       open pairSyntax
   in
@@ -56,8 +58,8 @@ fun rectangular L =
  end;
 
 fun true_col L =
-      if (all null L) then []
-      else all I (map (Lib.trye hd) L)::true_col (map (Lib.trye tl) L);
+ if all null L then []
+ else all I (map (Lib.trye hd) L)::true_col (map (Lib.trye tl) L);
 
 fun fix [] = []
   | fix (true::t)  = true::map (fn x => false) t
@@ -80,30 +82,29 @@ fun nth P [] _ N = rev N
 fun strip_prod_ty [] _ = raise ERR "strip_prod_ty" ""
   | strip_prod_ty [x] ty = [(x,ty)]
   | strip_prod_ty (h::t) ty =
-     if is_vartype ty then raise ERR "strip_prod_ty" "expected a product type"
-     else case dest_thy_type ty
-           of {Tyop="prod", Thy="pair",Args=[x,y]} => (h,x)::strip_prod_ty t y
-            | _ => raise ERR "strip_prod_ty" "expected a product type"
+     let val (x,y) = with_exn pairSyntax.dest_prod ty
+                          (ERR "strip_prod_ty" "expected a product type")
+     in  (h,x)::strip_prod_ty t y
+     end
 
-val Zero = numSyntax.zero_tm
-fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero};
+fun K0 ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm);
 
 fun list_mk_prod_tyl L =
  let val (front,(b,last)) = front_last L
      val tysize = TypeBase.type_size (TypeBase.theTypeBase())
      val last' = (if b then tysize else K0) last
+     handle e => Raise (wrap_exn "TotalDefn" "last'" e);
   in
   itlist (fn (b,ty1) => fn M =>
-     let val x = mk_var{Name="x",Ty=ty1}
-         val y = mk_var{Name="y",Ty=fst(dom_rng (type_of M))}
+     let val x = mk_var("x",ty1)
+         val y = mk_var("y",fst(dom_rng (type_of M)))
+         val blagga = (if b then tysize else K0) ty1
      in
-       mk_pabs
-          (mk_pair(x,y),
-           numSyntax.mk_plus
-               (mk_comb{Rator=(if b then tysize else K0) ty1,Rand=x},
-                mk_comb{Rator=M,Rand=y}))
+       mk_pabs(mk_pair(x,y),
+               numSyntax.mk_plus(mk_comb(blagga,x),mk_comb(M,y)))
      end) front last'
- end;
+ end
+
 
 
 (*---------------------------------------------------------------------------*
@@ -121,6 +122,11 @@ fun list_mk_prod_tyl L =
  *---------------------------------------------------------------------------*)
 
 local open Defn
+      val meas = prim_mk_const{Name="measure",Thy="prim_rec"}
+      fun mk_meas tm =
+        let val (d,_) = dom_rng(type_of tm)
+        in mk_comb(inst [Type.alpha |-> d] meas,tm)
+        end
 in
 fun guessR defn =
  if null (tcs_of defn) then []
@@ -128,16 +134,16 @@ fun guessR defn =
   case reln_of defn
    of NONE => []
     | SOME R =>
-       let val domty = fst(dom_rng(type_of R))
+       let val domty   = fst(dom_rng(type_of R))
            val (_,tcs) = Lib.pluck isWFR (tcs_of defn)
-           val matrix = map dest tcs
-           val check1 = map (map (uncurry proper_subterm)) matrix
-           val chf = projects check1
-           val domtyl = strip_prod_ty chf domty
-           val domty0 = list_mk_prod_tyl domtyl
+           val matrix  = map dest tcs
+           val check1  = map (map (uncurry proper_subterm)) matrix
+           val chf     = projects check1
+           val domtyl  = strip_prod_ty chf domty
+           val domty0  = list_mk_prod_tyl domtyl
        in
-          [Term`measure ^domty0`,
-           Term`measure ^(TypeBase.type_size (TypeBase.theTypeBase()) domty)`]
+          [mk_meas domty0,
+           mk_meas (TypeBase.type_size (TypeBase.theTypeBase()) domty)]
        end
 end;
 
@@ -191,11 +197,11 @@ val default_simps =
           pairTheory.LEX_DEF];
 
 val ASM_ARITH_TAC =
-      REPEAT STRIP_TAC
-        THEN REPEAT (POP_ASSUM
-               (fn th => if arithSimps.is_arith (concl th)
-                         then MP_TAC th else ALL_TAC))
-        THEN numLib.ARITH_TAC;
+ REPEAT STRIP_TAC
+    THEN REPEAT (POP_ASSUM 
+         (fn th => if arithSimps.is_arith (concl th)
+                   then MP_TAC th else ALL_TAC))
+    THEN numLib.ARITH_TAC;
 
 fun TC_SIMP_TAC WFthl thl =
    WF_TAC WFthl THEN
@@ -249,7 +255,7 @@ fun primDefine defn =
                ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
                "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
                "termination proof.\n"]);
-             raise ERR "primDefine" "Unable to prove termination")
+               raise ERR "primDefine" "Unable to prove termination")
          else defn
  in
     save_defn defn';

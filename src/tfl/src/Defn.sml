@@ -236,7 +236,8 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
 fun set_reln def R =
    case reln_of def
     of NONE => def
-     | SOME Rpat => inst_defn def (Term.match_term Rpat R);
+     | SOME Rpat => inst_defn def (Term.match_term Rpat R)
+                    handle e => (HOL_MESG"set_reln: unable"; raise e);
 
 
 fun PROVE_HYPL thl th =
