@@ -1204,7 +1204,7 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val P         = with_exn rator Body TYDEF_FORM_ERR
   val Pty       = type_of P
   val (dom,rng) = with_exn Type.dom_rng Pty TYDEF_FORM_ERR
-  val tyvars    = type_vars_in_term P
+  val tyvars    = Listsort.sort Type.compare (type_vars_in_term P)
   val checked   = check_null_hyp thm TYDEF_ERR
   val checked   =
       assert_exn null (free_vars P)
