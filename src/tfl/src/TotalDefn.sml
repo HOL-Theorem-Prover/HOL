@@ -332,4 +332,11 @@ fun xDefineSchema stem =
 val DefineSchema = 
    with_flag(allow_schema_definition,true) Define;
 
+
+(*---------------------------------------------------------------------------
+    Absolutely the most basic entrypoint
+ ---------------------------------------------------------------------------*)
+
+(* fun basicDefine (eqns_bind, ind_bind) quotation tactic = *)
+
 end

@@ -682,7 +682,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
          end
      val ng_thms = map nested_guard nested_guards
      val nested_ihs' = map (Rules.simpl_conv ng_thms) nested_ihs
-     val nested_ihs''' = nested_ihs'
+     val nested_ihs''' = nested_ihs' 
 (*     fun disch_context thm =
           if length(hyp thm) = 2
           then DISCH (fst(dest_imp(lhs (concl thm)))) thm

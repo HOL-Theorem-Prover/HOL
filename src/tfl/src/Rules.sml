@@ -25,12 +25,12 @@ fun simpl_conv thl =
   end;
 
 fun simplify thl = 
- let val rewrite = PURE_REWRITE_RULE thl
+ let val rewrite = PURE_REWRITE_RULE thl (* PURE_ONCE_REWRITE_RULE *)
      fun simpl th =
       let val th' = GEN_BETA_RULE (rewrite th)
           val (_,c1) = dest_thm th
           val (_,c2) = dest_thm th'
-      in if (aconv c1 c2) then th else simpl th'
+      in if aconv c1 c2 then th else simpl th'
       end
  in simpl
  end;
