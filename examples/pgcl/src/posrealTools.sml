@@ -156,7 +156,7 @@ val posreal_reduce_SS = simpLib.SIMPSET
             (* reciprocal *)
             (* division *)
             div_rat, div_ratl, div_ratr, div_rzero_num, div_rzero_rat,
-            div_lzero, div_rinfty, div_linfty_num, div_linfty_rat,
+            div_lzero, div_rinfty, div_linfty_num, div_linfty_rat, div_rone,
             (* cancellations *)
             (* min *)
             min_linfty, min_rinfty, min_num, min_ratl, min_ratr, min_rat,

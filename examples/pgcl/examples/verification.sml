@@ -8,13 +8,13 @@
 loadPath := ["../src"] @ !loadPath;
 app load
   ["bossLib","realLib","rich_listTheory","intLib","stringTheory","metisLib",
-   "posrealLib","wpTheory","wpTools"];
+   "posrealLib","wpTheory","pgclLib"];
 quietdec := true;
 
 open HolKernel Parse boolLib bossLib intLib realLib metisLib;
 open combinTheory listTheory rich_listTheory stringTheory
-     arithmeticTheory integerTheory realTheory;
-open posetTheory posrealTheory posrealLib expectationTheory wpTheory wpTools;
+     arithmeticTheory integerTheory realTheory pgclLib;
+open posetTheory posrealTheory posrealLib expectationTheory wpTheory pgclLib;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;
