@@ -112,8 +112,11 @@ end;
 
 fun make_binding_occ s binder E =
  let open Preterm
-     val _ = Lexis.ok_identifier s orelse raise ERROR "make_binding_occ"
-                  (s ^ " is not lexically permissible as a binding variable")
+     val _ =
+       Lexis.ok_identifier s orelse
+       Lexis.ok_symbolic s orelse
+       raise ERROR "make_binding_occ"
+         (s ^ " is not lexically permissible as a binding variable")
      val ntv = TCPretype.new_uvar()
      val E' = add_scope((s,ntv),E)
  in
