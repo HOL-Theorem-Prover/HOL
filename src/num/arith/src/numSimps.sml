@@ -89,8 +89,7 @@ fun term_of_tm (tm,n) =
    if (abs n = one) then tm
    else mk_mult (mk_numeral (abs n),tm);
 
-val list_mk_plus = end_foldr mk_plus;
-val list_mk_mult = end_foldr mk_mult;
+val list_mk_plus = end_foldr mk_plus (* right associates additions; ugh! *)
 
 fun term_of_lin (LIN (tms,k)) =
   let val pos_terms = map term_of_tm (filter is_pos_tm tms)
@@ -137,6 +136,12 @@ fun lin_of_term tm =
 *)
   handle HOL_ERR _ =>
   mk_lin([], dest_numeral tm)
+  handle HOL_ERR _ =>
+  let val (t1, t2) = dest_mult tm
+      val n = dest_numeral t1
+  in
+      mk_lin([(t2, n)], zero)
+  end
   handle HOL_ERR _ =>
   mk_lin([(tm,one)], zero);
 
