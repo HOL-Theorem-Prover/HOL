@@ -144,13 +144,16 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun free_vars_lr tm =
-  let fun FV (v as Fv _) A        = Lib.insert v A
-        | FV (Comb(Rator,Rand)) A = FV Rator (FV Rand A)
-        | FV (Abs(_,Body)) A      = FV Body A
-	| FV (t as Clos _) A      = FV (push_clos t) A
-        | FV _ A = A
-  in FV tm []
-end;
+  let fun FV ((v as Fv _)::t) A   = FV t (Lib.insert v A)
+        | FV (Bv _::t) A          = FV t A
+        | FV (Const _::t) A       = FV t A
+        | FV (Comb(M,N)::t) A     = FV (M::N::t) A
+        | FV (Abs(_,M)::t) A      = FV (M::t) A
+	| FV ((M as Clos _)::t) A = FV (push_clos M::t) A
+        | FV [] A = rev A
+  in 
+     FV [tm] []
+  end;
 
 (*---------------------------------------------------------------------------*
  * The set of all variables in a term, represented as a list.                *
