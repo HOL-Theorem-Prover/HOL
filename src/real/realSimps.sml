@@ -243,8 +243,8 @@ val le_ratrs =
     List.concat (map (transform [(x,posneg0), (u,posneg)]) (nat2nat le_ratr))
 
 val eq_rats = transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)] eq_rat
-val eq_ratls = transform [(x, posneg), (y, nb12), (z, posneg)] eq_ratl
-val eq_ratrs = transform [(x, posneg), (y, nb12), (z, posneg)] eq_ratr
+val eq_ratls = transform [(x, posneg), (y, nb12), (z, posneg0)] eq_ratl
+val eq_ratrs = transform [(x, posneg), (y, nb12), (z, posneg0)] eq_ratr
 
 val real_gts = transform [(x, posneg0), (y, posneg0)] (SPEC_ALL real_gt)
 val real_ges = transform [(x, posneg0), (y, posneg0)] (SPEC_ALL real_ge)
