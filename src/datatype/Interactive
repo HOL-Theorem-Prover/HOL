@@ -67,33 +67,6 @@ fun Datatype q =
  end;
 
 
-(*---------------------------------------------------------------------------*)
-(* Examples
-
-    Datatype `foo = One | Two`;
-    Datatype `bar = Alpha | Beta of 'a | Delta of ('a # 'b)list
-                  | Elephant of bool list | Zebra of 'a -> 'b -> bool`;
-    Datatype `tree = Node of 'a => tree list`;
-
-      Function `insert x l = if MEM x l then l else x::l`;
-      Weak_Function "tree_els" 
-             `tree_els els (Node x tlist) = 
-                 FOLDL tree_els (insert x els) tlist`;
-
-    Datatype `enum = One | Two | Three | Four of blef list
-               ;
-              blef = E | G`;
-    Datatype `Enum = A1 | A2 | A3 | A4 | A5 | A6 | A7 | A8 | A9 | A10 
-                   | A11 | A12 | A13 | A14 | A15 | A16 of 'a list list 
-                   | A17 | A18 of 'b -> num -> bool | A19 | A20`;
-    Datatype `prods = P of 'a # 'b # bool # bool # bool # bool # bool
-                              # bool # bool # bool # bool # bool # bool`;
-    Datatype `funs = Q of 'a => 'b => bool => bool => bool => bool => bool
-                             => bool => bool => bool => bool => bool => bool`;
-*)
-(*---------------------------------------------------------------------------*)
-
-
 (*===========================================================================*)
 (* Evaluate a HOL term by dropping it to ML and lifting the result of the    *)
 (* ensuing ML evaluation.                                                    *)

@@ -1,0 +1,66 @@
+(*---------------------------------------------------------------------------*)
+(* Examples to test ML execution                                             *)
+(*---------------------------------------------------------------------------*)
+
+
+Datatype `foo = One | Two`;
+
+Datatype `bar = Alpha 
+              | Beta of 'a 
+              | Delta of ('a # 'b)list
+              | Elephant of bool list 
+              | Zebra of 'a -> 'b -> bool`;
+
+Datatype `tree = Node of 'a => tree list`;
+
+Function `(mem x [] = F) /\ (mem x (h::t) = (x=h) \/ mem x t)`;
+Function `insert x l = if mem x l then l else x::l`;
+
+Weak_Function "tree_els" 
+              `tree_els els (Node x tlist) = 
+                    FOLDL (\acc t. tree_els acc t) (insert x els) tlist`;
+
+Weak_Function "occurs" 
+              `occurs x (Node y tlist) = (x=y) \/ EXISTS (occurs x) tlist`;
+
+
+Datatype `enum = One | Two | Three | Four of blef list
+            ;
+          blef = E | G`;
+
+Datatype `Enum = A1 | A2 | A3 | A4 | A5 | A6 | A7 | A8 | A9 | A10 
+               | A11 | A12 | A13 | A14 | A15 | A16 of 'a list list 
+               | A17 | A18 of 'b -> num -> bool | A19 | A20`;
+
+Datatype `prods = P of 'a # 'b # bool # bool # bool # bool # bool
+                          # bool # bool # bool # bool # bool # bool`;
+
+Datatype `funs = Q of 'a => 'b => bool => bool => bool => bool => bool
+                         => bool => bool => bool => bool => bool => bool`;
+
+
+
+(*---------------------------------------------------------------------------*)
+(* Testing theory generation.                                                *)
+(*---------------------------------------------------------------------------*)
+
+fun EQN defn = DEFN (LIST_CONJ (Defn.eqns_of defn));
+fun DATA q = (Hol_datatype q; ParseDatatype.parse q);
+
+val list = 
+  [DATATYPE (ParseDatatype.parse`foo = One | Two`),
+   DATATYPE (ParseDatatype.parse `tree = Node of 'a => tree list`),
+   DATATYPE (ParseDatatype.parse `bar = Alpha 
+              | Beta of 'a 
+              | Delta of ('a # 'b)list
+              | Elephant of bool list 
+              | Zebra of 'a -> 'b -> bool`),
+   DEFN(Function `(mem x [] = F) /\ (mem x (h::t) = (x=h) \/ mem x t)`),
+   DEFN (Function `insert x l = if mem x l then l else x::l`),
+   EQN (Weak_Function "tree_els" 
+              `tree_els els (Node x tlist) = 
+                    FOLDL (\acc t. tree_els acc t) (insert x els) tlist`),
+   EQN (Weak_Function "occurs" 
+              `occurs x (Node y tlist) = (x=y) \/ EXISTS (occurs x) tlist`)];
+
+pprint pp_theory_as_ML ("foo",list);

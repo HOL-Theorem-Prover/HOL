@@ -64,6 +64,7 @@ val maxprec = 9999;
 
 val is_int_literal_hook    = ref (K false)
 val is_string_literal_hook = ref (K false)
+val is_cons_hook           = ref (K false)
 val is_list_hook           = ref (K false)
 
 val dest_int_literal_hook = ref (fn _ => raise ERR "dest_int_literal" "undefined")
@@ -91,6 +92,7 @@ fun term_to_ML ppstrm =
      if !is_int_literal_hook tm then pp_int_literal tm else
      if !is_string_literal_hook tm then pp_string tm else
      if !is_list_hook tm then pp_list tm else
+     if !is_cons_hook tm then pp_binop i tm else
      if boolSyntax.is_eq tm then pp_binop i tm else
      if boolSyntax.is_conj tm then pp_binop i tm else
      if boolSyntax.is_disj tm then pp_binop i tm else
@@ -326,6 +328,16 @@ fun adjust_tygram tygram =
  end
 end;
 
+fun prim_pp_type_as_ML tygram tmgram ppstrm ty =
+ let val (pp_type,_) = Parse.print_from_grammars
+                              (adjust_tygram tygram, tmgram)
+ in pp_type ppstrm ty
+ end;
+
+fun pp_type_as_ML ppstrm ty =
+   prim_pp_type_as_ML (Parse.type_grammar()) (Parse.term_grammar())
+                      ppstrm ty ;
+
 (*---------------------------------------------------------------------------*)
 (* Perhaps naive in light of the recent stuff of MN200 to eliminate flab     *)
 (* from big record types?                                                    *)
@@ -361,10 +373,7 @@ fun pp_datatype_as_ML ppstrm decls =
      val alist = map (fn x => (fst(dest_type x),pretype_of x)) newtypes
      fun alist_fn name = snd (valOf (assoc1 name alist))
      val decls' = map (I##replaceForm alist_fn) decls
-     val (pp_type,_) = Parse.print_from_grammars
-                        (adjust_tygram (Parse.type_grammar()),
-                         Parse.term_grammar())
-     val ppty = pp_type ppstrm
+     val ppty = pp_type_as_ML ppstrm
      fun pp_tyvars [] = ()
        | pp_tyvars [v] = add_string v
        | pp_tyvars vlist = 
@@ -413,5 +422,82 @@ fun pp_datatype_as_ML ppstrm decls =
   ; end_block()
   ; end_block()
  end;
+
+
+(*---------------------------------------------------------------------------*)
+(* Generate ML signature and structure corresponding to executable portion   *)
+(* of a theory.                                                              *)
+(*---------------------------------------------------------------------------*)
+
+datatype elem 
+    = DEFN of thm
+    | DATATYPE of ParseDatatype.AST list;
+
+fun consts_of_def thm =
+  let val eqns = strip_conj (concl thm)
+      val allCs = map (fst o strip_comb o lhs o snd o strip_forall) eqns
+  in op_mk_set aconv allCs
+  end;
+
+fun ML s = s^"ML";
+
+fun pp_sig strm (s,elems) =
+ let open Portable
+    val {add_break,add_newline, add_string, 
+         begin_block,end_block,flush_ppstream,...} = with_ppstream strm
+    val ppty = pp_type_as_ML strm
+    val pp_datatype = pp_datatype_as_ML strm
+    fun pp_valdec c =
+     let val (name,ty) = dest_const c
+     in begin_block CONSISTENT 0;
+        add_string "val ";
+        add_string name; add_break(1,0); add_string ":"; add_break (1,0);
+        ppty ty;
+        end_block()
+     end
+    fun pp_el (DATATYPE astl) = pp_datatype astl
+      | pp_el (DEFN thm) = 
+         pr_list pp_valdec (fn () => ()) add_newline (consts_of_def thm)
+ in 
+   begin_block CONSISTENT 0;
+   add_string ("signature "^ML s^" = "); add_newline();
+   begin_block CONSISTENT 2;
+   add_string"sig"; add_newline();
+   begin_block CONSISTENT 0;
+   pr_list pp_el (fn () => ()) add_newline elems;
+   end_block(); end_block(); 
+   add_newline();
+   add_string"end"; add_newline();
+   end_block();
+   flush_ppstream()
+ end;
+
+fun pp_struct strm (s,elems) =
+ let open Portable
+    val {add_break,add_newline, add_string, 
+         begin_block,end_block,flush_ppstream,...} = with_ppstream strm
+    val pp_datatype = pp_datatype_as_ML strm
+    val pp_defn = pp_defn_as_ML strm
+    fun pp_el (DATATYPE astl) = pp_datatype astl
+      | pp_el (DEFN thm) =  pp_defn (concl thm)
+ in 
+   begin_block CONSISTENT 0;
+   add_string ("structure "^ML s^" :> "^ML s^" ="); add_newline();
+   begin_block CONSISTENT 2;
+   add_string"struct"; add_newline();
+   begin_block CONSISTENT 0;
+   pr_list pp_el (fn () =>()) (fn () => (add_newline();add_newline())) elems;
+   end_block(); end_block(); 
+   add_newline();
+   add_string"end"; add_newline();
+   end_block();
+   flush_ppstream()
+ end;
+
+
+fun pp_theory_as_ML strm1 strm2 (s,elems) =
+ (pp_sig strm1 (s,elems);
+  pp_struct strm2 (s,elems)
+ );
 
 end
