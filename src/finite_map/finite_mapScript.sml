@@ -1,29 +1,30 @@
-(* ====================================================================== *)
-(* THEORY: finite_map						          *)
-(* FILE:    finite_mapScript.sml					  *)
-(* DESCRIPTION: A theory of finite maps					  *)
-(*									  *)
-(* AUTHOR:  Graham Collins and Donald Syme				  *)
-(*									  *)
-(* ====================================================================== *)
-(* There is little documentation in this file but a discussion of this    *)
-(* theory is available as:  						  *)
-(*   									  *)
-(* @inproceedings{P-Collins-FMAP,  					  *)
-(*    author = {Graham Collins and Donald Syme},  			  *)
-(*    editor = {E. Thomas Schubert and Phillip J. Windley   		  *)
-(*              and James Alves-Foss},  				  *)
-(*    booktitle={Higher Order Logic Theorem Proving and its Applications},*)
-(*    publisher = {Springer-Verlag},  					  *)
-(*    series = {Lecture Notes in Computer Science},  			  *)
-(*    title = {A {T}heory of {F}inite {M}aps},  			  *)
-(*    volume = {971},  							  *)
-(*    year = {1995},  							  *)
-(*    pages = {122--137}  						  *)
-(* } 									  *)
-(* 									  *)
-(* Please email any comments to Graham Collins (grmc@dcs.gla.ac.uk)	  *)
-(* =====================================================================  *)
+(* ======================================================================
+   THEORY: finite_map
+   FILE:    finite_mapScript.sml
+   DESCRIPTION: A theory of finite maps
+
+   AUTHOR:  Graham Collins and Donald Syme
+
+   ======================================================================
+   There is little documentation in this file but a discussion of this
+   theory is available as:
+
+   @inproceedings{P-Collins-FMAP,
+      author = {Graham Collins and Donald Syme},
+      editor = {E. Thomas Schubert and Phillip J. Windley
+                and James Alves-Foss},
+      booktitle={Higher Order Logic Theorem Proving and its Applications}
+      publisher = {Springer-Verlag},
+      series = {Lecture Notes in Computer Science},
+      title = {A {T}heory of {F}inite {M}aps},
+      volume = {971},
+      year = {1995},
+      pages = {122--137}
+   }
+
+   Updated for HOL4 in 2002 by Michael Norrish.
+
+   ===================================================================== *)
 
 structure finite_mapScript =
 struct
@@ -241,6 +242,8 @@ REPEAT STRIP_TAC
   THEN Q.ASM_CASES_TAC `x = a` THEN BETA_TAC
   THEN ASM_REWRITE_TAC []);
 
+val _ = export_rewrites ["FUPDATE_EQ"]
+
 val lemma1 = Q.prove
 (`~((ISL :'b + one -> bool) ((INR :one -> 'b + one) one))`,
  REWRITE_TAC [sumTheory.ISL]);
@@ -340,10 +343,10 @@ val FUPDATE_ABSORB_THM = Q.prove (
        x IN FDOM f /\ (FAPPLY f x = y) ==> (FUPDATE f (x,y) = f)`,
   INDUCT_THEN fmap_SIMPLE_INDUCT STRIP_ASSUME_TAC THEN
   ASM_SIMP_TAC (srw_ss()) [FDOM_FEMPTY, FDOM_FUPDATE, DISJ_IMP_THM,
-                           FORALL_AND_THM, FUPDATE_EQ] THEN
+                           FORALL_AND_THM] THEN
   REPEAT STRIP_TAC THEN
   Q.ASM_CASES_TAC `x = x'` THENL [
-     ASM_SIMP_TAC (srw_ss()) [FUPDATE_EQ],
+     ASM_SIMP_TAC (srw_ss()) [],
      ASM_SIMP_TAC (srw_ss()) [FAPPLY_FUPDATE_THM] THEN
      FIRST_ASSUM (FREEZE_THEN (fn th => REWRITE_TAC [th]) o
                   MATCH_MP FUPDATE_COMMUTES) THEN
@@ -428,7 +431,7 @@ val FCARD_SUC = store_thm(
                 (map Q.X_CHOOSE_THEN [`g`, `u`, `v`]) STRIP_ASSUME_TAC) THEN
     Q.ASM_CASES_TAC `x = u` THENL [
       MAP_EVERY Q.EXISTS_TAC [`g`, `u`, `y`] THEN
-      ASM_SIMP_TAC (srw_ss()) [FUPDATE_EQ],
+      ASM_SIMP_TAC (srw_ss()) [],
       MAP_EVERY Q.EXISTS_TAC [`FUPDATE g (x, y)`, `u`, `v`] THEN
       `x IN FDOM g` by FULL_SIMP_TAC (srw_ss()) [FDOM_FUPDATE] THEN
       ASM_SIMP_TAC (srw_ss()) [FDOM_FUPDATE, FCARD_FUPDATE, FUPDATE_COMMUTES]
@@ -1172,6 +1175,21 @@ val FMEQ_SINGLE_SIMPLE_ELIM = store_thm(
     PROVE_TAC [FUPD_SAME_KEY_UNWIND],
     Q.EXISTS_TAC `FEMPTY` THEN SRW_TAC [][]
   ]);
+
+val FMEQ_SINGLE_SIMPLE_DISJ_ELIM = store_thm(
+  "FMEQ_SINGLE_SIMPLE_DISJ_ELIM",
+  ``!fm k v ck cv.
+       (fm |+ (k,v) = FEMPTY |+ (ck, cv)) =
+       (k = ck) /\ (v = cv) /\
+       ((fm = FEMPTY) \/ (?v'. fm = FEMPTY |+ (k, v')))``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  SIMP_TAC (srw_ss()) [DISJ_IMP_THM, LEFT_AND_OVER_OR,
+                       GSYM RIGHT_EXISTS_AND_THM,
+                       GSYM LEFT_FORALL_IMP_THM] THEN
+  SIMP_TAC (srw_ss() ++ boolSimps.CONJ_ss)
+           [GSYM fmap_EQ_THM, DISJ_IMP_THM, FORALL_AND_THM] THEN
+  SIMP_TAC (srw_ss()) [EXTENSION] THEN
+  PROVE_TAC [FAPPLY_FUPDATE]);
 
 (* ----------------------------------------------------------------------
     to close...
