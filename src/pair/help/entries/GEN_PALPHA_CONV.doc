@@ -1,11 +1,11 @@
 \DOC GEN_PALPHA_CONV
 
+\TYPE {GEN_PALPHA_CONV : (term -> conv)}
+
 \KEYWORDS
 conversion, alpha.
 
 \LIBRARY pair
-
-\TYPE {GEN_PALPHA_CONV : (term -> conv)}
 
 \SYNOPSIS
 Renames the bound pair of a paired abstraction, quantified term,
@@ -16,8 +16,8 @@ The conversion {GEN_PALPHA_CONV} provides alpha conversion for lambda
 abstractions of the form {"\p.t"}, quantified terms of the forms {"!p.t"},
 {"?p.t"} or {"?!p.t"}, and epsilon terms of the form {"@p.t"}.  In general,
 if {B} is a binder constant, then {GEN_ALPHA_CONV} implements alpha
-conversion for applications of the form {"B p.t"}.  
-The function {is_binder} determines what is regarded as a binder in this 
+conversion for applications of the form {"B p.t"}.
+The function {is_binder} determines what is regarded as a binder in this
 context.
 
 The renaming of pairs is as described for {PALPHA_CONV}.
