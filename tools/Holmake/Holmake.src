@@ -313,6 +313,7 @@ fun mk_depfile_name s = fullPath [DEPDIR, s^".d"]
    runs holdep, and puts the output into specified file, which will live
    in DEPDIR somewhere. *)
 
+exception HolDepFailed
 fun runholdep arg destination_file = let
   open Mosml
   val _ = print ("Analysing "^fromFile arg^"\n")
@@ -342,7 +343,7 @@ fun runholdep arg destination_file = let
 in
   case result of
     Success s => write_result_to_file s
-  | Failure s => raise Fail ("holdep failed with output: "^s)
+  | Failure s => raise HolDepFailed
 end
 
 (* a function that given a product file, figures out the argument that
@@ -541,7 +542,7 @@ fun build_command c arg = let
   exception FileNotFound
 in
   case c of
-    MOSMLC => 
+    MOSMLC =>
      let val file = fromFile arg
          val _ = FileSys.access(file, [FileSys.A_READ]) orelse
                   (print ("Wanted to compile "^file^", but it wasn't there\n");
@@ -549,19 +550,19 @@ in
          val _ = print ("Compiling "^file^"\n")
          open Process
          val res =
-          if has_dq (normPath file) (* handle double-backquotes *) 
+          if has_dq (normPath file) (* handle double-backquotes *)
           then let val clone = variant file
                    val _ = FileSys.rename {old=file, new=clone}
                    fun revert() = (FileSys.remove file handle _ => ();
                                    FileSys.rename{old=clone, new=file})
                in
-                 if unquote_to clone file = Process.success 
-                 then let val res = 
+                 if unquote_to clone file = Process.success
+                 then let val res =
                             compile debug ("-q"::(include_flags@["-c",file]))
-                             handle e => (revert(); 
+                             handle e => (revert();
                                        print("Unable to compile: "^file^"\n");
                                       raise CompileFailed)
-                      in revert(); res 
+                      in revert(); res
                       end
                  else (revert(); raise CompileFailed)
                end
@@ -680,6 +681,7 @@ in
 end handle CircularDependency => cache_insert (target, false)
          | Fail s => raise Fail s
          | OS.SysErr(s, _) => raise Fail ("Operating system error: "^s)
+         | HolDepFailed => cache_insert(target, false)
          | General.Io{function,name,cause = OS.SysErr(s,_)} =>
              raise Fail ("Got I/O exception for function "^function^
                          " with name "^name^" and cause "^s)
