@@ -1,6 +1,14 @@
 open Database;
 
 fun equal x y = (x=y);
+fun curry f x y = f (x,y);
+
+fun itstrings f [] = raise Fail "itstrings: empty list"
+  | itstrings f [x] = x
+  | itstrings f (h::t) = f h (itstrings f t);
+
+val normPath = (* string list -> string *)
+  Path.toString o Path.fromString o itstrings (curry Path.concat);
 
 fun destProperSuffix s1 s2 = 
   let val sz1 = String.size s1
@@ -26,9 +34,9 @@ fun find_most_appealing HOLpath docfile =
       val htmldir  = concat(docfile_dir,"html")
       val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
       val adocfile = joinBaseExt{base=base,ext=SOME "adoc"}
-      val htmlpath = concat(htmldir,htmlfile)
-      val adocpath = concat(docfile_dir,adocfile)
-      val docpath  = concat(docfile_dir,file)
+      val htmlpath = normPath[htmldir,htmlfile]
+      val adocpath = normPath[docfile_dir,adocfile]
+      val docpath  = normPath[docfile_dir,file]
   in
      if FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
      if FileSys.access(adocpath,[A_READ]) then SOME adocpath else 
@@ -46,8 +54,8 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
 	    href anchor (concat [file, ".html#line", Int.toString line])
 	fun strhref file anchor = href anchor (file ^ ".html")
 	fun mkref line file = idhref file line file 
-        val sigspath = Path.concat(HOLpath,"help/src/htmlsigs")
-        fun path front file = Path.concat(front, file^".html")
+        val sigspath = normPath[HOLpath,"help","src","htmlsigs"]
+        fun path front file = normPath[front, file^".html"]
 
         fun class_of drop {comp=Str, file, line} = 
              (case drop file
@@ -86,8 +94,8 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
          * Generate index for Docfiles                          *
          *------------------------------------------------------*)
 
-        val _ = let val docfileIndex = Path.concat(HOLpath, 
-                            "help/Docfiles/HTML/docfileIndex.html")
+        val _ = let val docfileIndex = normPath
+                        [HOLpath, "help/Docfiles/HTML/docfileIndex.html"]
                   val ostrm = TextIO.openOut docfileIndex
                   fun out s = TextIO.output(ostrm, s)
                   fun href anchor target = 
