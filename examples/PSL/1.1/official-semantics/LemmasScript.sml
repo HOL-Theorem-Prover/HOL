@@ -59,12 +59,6 @@ val _ = intLib.deprecate_int();
 val _ = new_theory "Lemmas";
 
 (******************************************************************************
-* Versions of simpsets that deal properly with theorems containing SUC
-******************************************************************************)
-val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
-val simp_list_ss  = simpLib.++ (list_ss,  numSimps.SUC_FILTER_ss);
-
-(******************************************************************************
 * A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
 ******************************************************************************)
 val resq_SS = 
