@@ -2378,44 +2378,11 @@ GEN_TAC THEN EQ_TAC THENL
 
 
 val _ = adjoin_to_theory
-{sig_ps = SOME (fn ppstrm =>
-                let val SNL = (fn s => (PP.add_string ppstrm s;
-                                        PP.add_newline ppstrm))
-                in
-                  SNL "val SUC_ELIM_CONV : Term.term -> thm"
-                end),
+{sig_ps = NONE,
  struct_ps = SOME
  (fn ppstrm => let
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
  in
-   S "local";
-   S "  open HolKernel basicHol90Lib Psyntax";
-   S "  infix |-> THENC";
-   S "  val num_ty = mk_type(\"num\", [])";
-   S "  val SUC = mk_const(\"SUC\", mk_type(\"fun\", [num_ty, num_ty]))";
-   S "  fun mk_SUC t = mk_comb(SUC, t)";
-   S "  fun SEC_ERR m = HOL_ERR {message = m, ";
-   S "                           origin_function = \"SUC_ELIM_CONV\",";
-   S "                           origin_structure = \"arithmeticTheory\"}";
-   S "  fun assert f x = f x orelse raise SEC_ERR \"assertion failed\"";
-   S "in";
-   S "  fun SUC_ELIM_CONV tm =";
-   S "    let val (v,bod) = Psyntax.dest_forall tm";
-   S "        val _ = assert (fn x => type_of x = num_ty) v";
-   S "        val (sn,n) = (genvar num_ty, genvar num_ty)";
-   S "        val suck_suc = Rsyntax.subst [mk_SUC v |-> sn] bod";
-   S "        val suck_n = Rsyntax.subst [v |-> n] suck_suc";
-   S "        val _ = assert (fn x => x <> tm) suck_n";
-   S "        val th1 = ISPEC (list_mk_abs ([sn,n],suck_n)) SUC_ELIM_THM";
-   S "        val BETA2_CONV = (RATOR_CONV BETA_CONV) THENC BETA_CONV";
-   S "        val th2 = CONV_RULE (LHS_CONV (QUANT_CONV BETA2_CONV)) th1";
-   S "        val th3 = ";
-   S "          CONV_RULE (RHS_CONV (QUANT_CONV ";
-   S "             (FORK_CONV (ALL_CONV, BETA2_CONV)))) th2";
-   S "    in th3";
-   S "    end";
-   S "end;";
-
    S "val _ = TypeBase.write";
    S "  (TypeBase.mk_tyinfo";
    S "     {ax=prim_recTheory.num_Axiom,";
