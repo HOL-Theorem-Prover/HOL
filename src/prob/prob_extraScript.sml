@@ -130,12 +130,10 @@ val MOD_TWO = store_thm
    STRIP_TAC
    ++ MP_TAC (Q.SPEC `n` DIVISION_TWO)
    ++ STRIP_TAC <<
-   [Q.PAT_ASSUM `n = X` MP_TAC
-    ++ RW_TAC std_ss []
+   [RW_TAC std_ss []
     ++ KNOW_TAC `n = 2 * (n DIV 2)` >> DECIDE_TAC
     ++ PROVE_TAC [EVEN_DOUBLE, ODD_EVEN],
-    Q.PAT_ASSUM `n = X` MP_TAC
-    ++ RW_TAC std_ss []
+    RW_TAC std_ss []
     ++ KNOW_TAC `n = SUC (2 * (n DIV 2))` >> DECIDE_TAC
     ++ PROVE_TAC [ODD_DOUBLE, ODD_EVEN]]);
 

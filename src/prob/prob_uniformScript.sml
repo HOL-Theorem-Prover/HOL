@@ -368,9 +368,7 @@ val PROB_UNIFORM_LOWER_BOUND = store_thm
    ++ Induct
    >> (RW_TAC arith_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `0`)
-       ++ MP_TAC (DECIDE ``!m. m < SUC 0 = (m = 0)``)
-       ++ MP_TAC (DECIDE ``SUC 0 = 1``)
-       ++ RW_TAC std_ss []
+       ++ RW_TAC arith_ss [DECIDE ``!m. m < SUC 0 = (m = 0)``, SYM ONE]
        ++ RW_TAC real_ss [])
    ++ RW_TAC arith_ss []
    ++ KNOW_TAC `indep (uniform t (SUC n))` >> RW_TAC std_ss [INDEP_UNIFORM]
@@ -394,9 +392,7 @@ val PROB_UNIFORM_UPPER_BOUND = store_thm
    ++ Induct
    >> (RW_TAC arith_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `0`)
-       ++ MP_TAC (DECIDE ``!m. m < SUC 0 = (m = 0)``)
-       ++ MP_TAC (DECIDE ``SUC 0 = 1``)
-       ++ RW_TAC std_ss []
+       ++ RW_TAC arith_ss [DECIDE ``!m. m < SUC 0 = (m = 0)``, SYM ONE]
        ++ RW_TAC real_ss [])
    ++ RW_TAC arith_ss []
    ++ KNOW_TAC `indep (uniform t (SUC n))` >> RW_TAC std_ss [INDEP_UNIFORM]
