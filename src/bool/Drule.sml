@@ -1842,7 +1842,12 @@ fun prove_rep_fn_one_one th =
    in
       GEN a (GEN a' (IMP_ANTISYM_RULE (DISCH Ra_eq_Ra' th2) th3))
    end
-   handle HOL_ERR _ => raise ERR "prove_rep_fn_one_one"  "";
+   handle HOL_ERR _ => raise ERR "prove_rep_fn_one_one"  ""
+        | Bind => raise ERR "prove_abs_fn_one_one"
+                            ("Theorem not of right form: must be\n "^
+                             "|- (!a. to (from a) = a) /\\ "^
+                             "(!r. P r = (from (to r) = r))")
+
 
 (* --------------------------------------------------------------------- *)
 (* NAME: prove_rep_fn_onto	 					*)
@@ -1880,7 +1885,11 @@ fun prove_rep_fn_onto th =
    in
    GEN Bvar (TRANS (SPEC Bvar th2) swap)
    end
-   handle HOL_ERR _ => raise ERR "prove_rep_fn_onto" "";
+   handle HOL_ERR _ => raise ERR "prove_rep_fn_onto" ""
+        | Bind => raise ERR "prove_abs_fn_one_one"
+                            ("Theorem not of right form: must be\n "^
+                             "|- (!a. to (from a) = a) /\\ "^
+                             "(!r. P r = (from (to r) = r))")
 
 (* ---------------------------------------------------------------------*)
 (* NAME: prove_abs_fn_onto	 					*)
@@ -1914,7 +1923,11 @@ fun prove_abs_fn_onto th =
                   mk_conj(mk_eq(bv_th1,mk_comb(A, r)), mk_comb(P, r)))
    in GEN bv_th1 (EXISTS(ex,rb) (CONJ thm2 thm1))
    end
-   handle HOL_ERR _ => raise ERR "prove_abs_fn_onto" "";
+   handle HOL_ERR _ => raise ERR "prove_abs_fn_onto" ""
+        | Bind => raise ERR "prove_abs_fn_one_one"
+                            ("Theorem not of right form: must be\n "^
+                             "|- (!a. to (from a) = a) /\\ "^
+                             "(!r. P r = (from (to r) = r))")
 
 
 (* ---------------------------------------------------------------------*)
@@ -1961,6 +1974,10 @@ fun prove_abs_fn_one_one th =
    in
      GEN r (GEN r' disch)
    end
-   handle HOL_ERR _ => raise ERR "prove_abs_fn_one_one"  "";
+   handle HOL_ERR _ => raise ERR "prove_abs_fn_one_one"  ""
+        | Bind => raise ERR "prove_abs_fn_one_one"
+                            ("Theorem not of right form: must be\n "^
+                             "|- (!a. to (from a) = a) /\\ "^
+                             "(!r. P r = (from (to r) = r))")
 
 end; (* Drule *)
