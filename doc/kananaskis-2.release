@@ -1,0 +1,68 @@
+Bugs fixed:
+-----------
+
+  * Hol_datatype would fail if called on to define a type with a
+    single nullary constructor.
+
+  * pred_setLib.UNION_CONV (and other functions in this library)
+    failed to work as advertised.  (Thanks to Lockwood Morris for the
+    report of this bug.)
+
+  * it was too easy to do significant parser things before a
+    new_theory declaration, causing these effects not to persist with
+    the export of the theory.  Now, attempting to do this causes a
+    strong warning to be issued.
+
+  * let terms with bodies that were abstractions didn't print
+    correctly.
+
+  * the type grammar didn't print stored type abbreviations
+    correctly.
+
+  * adding a user-supplied pretty-printer caused polymorphic terms to
+    fail to print.
+
+  * DECIDE_TAC didn't pay attention to goal assumptions.
+
+  * a bug in ARITH_CONV's handling of conditional expressions caused
+    some quantified goals to fail to be proved.
+
+  * The lexer got confused if a token made up of non-aggregating
+    characters (e.g., including ";") was used, but not as part of
+    special concrete syntax.  I.e., ;; was OK as an infix, but not as
+    a normal constant.  (Thanks to Klaus Schneider for the report of
+    this bug.)
+
+  * SPEC_VAR and theory export caused bound variables with the same
+    name as constants to get changed.  (Thanks to Lockwood Morris for
+    the report of this bug.)
+
+  * Many, many documentation typos and bugs were fixed.  (Thanks to
+    Carl Witty for the report of most of these.)
+
+New features:
+-------------
+
+  * The term and type parsers now report errors with an indication as
+    to where in the parse they have occurred.  If the error is found
+    during a run of Holmake, the location includes the line number in
+    the file where the error is.  (Many thanks to Keith Wansbrough for
+    the implementation of this feature.)
+
+  * The system better distinguishes interactive and non-interactive
+    use (the latter occurs with building things with Holmake).
+    Diagnostic output is now rather different in non-interactive
+    mode.  Holmake comes with a new -i or --interactive flag to flip
+    the underlying flag back to interactive, if you want to see
+    "interactive mode" output.
+
+
+New theories:
+-------------
+
+  * A theory of co-inductive (possibly infinite) labelled transition
+    paths in pathTheory.
+
+
+New tools:
+----------
