@@ -60,23 +60,6 @@ val WL_SUB_SUC_X = SIMP_CONV arith_ss [WL_def] (Term`WL - SUC x`);
 
 (* -------------------------------------------------------- *)
 
-val FUNPOW_THM = prove(
-  `!f n x. FUNPOW f n (f x) = f (FUNPOW f n x)`,
-  Induct_on `n` THEN ASM_REWRITE_TAC [FUNPOW]
-);
-
-val FUNPOW_THM2 = prove(
-  `!f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)`,
-  Induct_on `n` THEN B_RW_TAC [FUNPOW,FUNPOW_THM]
-);
-
-val FUNPOW_COMP = prove(
-  `!f m n a. FUNPOW f m (FUNPOW f n a) = FUNPOW f (m + n) a`,
-  Induct_on `n` THEN ASM_REWRITE_TAC [ADD_CLAUSES,FUNPOW]
-);
-
-(* -------------------------------------------------------- *)
-
 val LT_WL_MOD_WL = store_thm("LT_WL_MOD_WL",
   `!n. LT_WL (MOD_WL n)`,
   A_RW_TAC [ZERO_LT_TWOEXP,DIVISION,LT_WL_def,MOD_WL_def]
@@ -1165,6 +1148,11 @@ val WORD_DOUBLE = store_thm("WORD_DOUBLE",
 
 (* -------------------------------------------------------- *)
 
+val FUNPOW_COMP = prove(
+  `!f m n a. FUNPOW f m (FUNPOW f n a) = FUNPOW f (m + n) a`,
+  Induct_on `n` THEN ASM_REWRITE_TAC [ADD_CLAUSES,FUNPOW]
+);
+
 val LSL_ADD = store_thm("LSL_ADD",
   `!a m n. a << m << n = a << (m + n)`,
   B_RW_TAC [word_lsl_def,EXP_ADD,GSYM WORD_MULT_ASSOC,MUL_EVAL]
@@ -1224,7 +1212,7 @@ val LSR_EVAL = store_thm("LSR_EVAL",
   Induct_on `n`
     THENL [
        B_SIMP_TAC [FUNPOW,word_lsr_def,EXP,DIV_1,MOD_WL_ELIM],
-       B_FULL_SIMP_TAC [word_lsr_def,FUNPOW_THM2,LSR_ONE_EVAL,LSR_ONE_def,MOD_MOD_DIV_2EXP]
+       B_FULL_SIMP_TAC [word_lsr_def,FUNPOW_SUC,LSR_ONE_EVAL,LSR_ONE_def,MOD_MOD_DIV_2EXP]
     ]
 );
 
@@ -1313,7 +1301,7 @@ val SLICE_COR = (GEN_ALL o SIMP_RULE arith_ss [] o SPECL [`n`,`h`,`0`]) SLICE_TH
 
 (* |- !n x. n #>> (SUC x) = word_ror1 (n #>> x) *)
 val ROR_LEM = GEN_ALL (RIGHT_REWRITE_RULE [GSYM word_ror_def]
-                 (SIMP_CONV bool_ss [word_ror_def,FUNPOW_THM2] (Term`n #>> (SUC x)`)));
+                 (SIMP_CONV bool_ss [word_ror_def,FUNPOW_SUC] (Term`n #>> (SUC x)`)));
 
 val ROR_THM = store_thm("ROR_THM",
   `!x n. (n2w n) #>> x = let x' = x MOD WL in
@@ -1466,7 +1454,7 @@ val TWOEXP_LT_EQ1 = prove(
 
 (* |- !n x. n >> (SUC x) = word_asr1 (n >> x) *)
 val ASR_LEM = GEN_ALL (RIGHT_REWRITE_RULE [GSYM word_asr_def]
-                 (REWRITE_CONV [word_asr_def,FUNPOW_THM2] (Term`n >> (SUC x)`)));
+                 (REWRITE_CONV [word_asr_def,FUNPOW_SUC] (Term`n >> (SUC x)`)));
 
 val ASR_THM = store_thm("ASR_THM",
   `!x n. (n2w n) >> x =
