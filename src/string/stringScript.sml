@@ -3,7 +3,7 @@
 (* DESCRIPTION  : A theory of 8-bit characters and strings built        *)
 (*                from them.                                            *)
 (*                                                                      *)
-(* AUTHOR	: (c) Konrad Slind, University of Cambridge, 2001       *)
+(* AUTHOR	: Konrad Slind, University of Cambridge, 2001           *)
 (* =====================================================================*)
 
 (* interactive use:
@@ -45,6 +45,12 @@ val ORD_CHR_RWT = Q.store_thm
 ("ORD_CHR_RWT",
  `!r. r < 256 ==> (ORD (CHR r) = r)`,
  PROVE_TAC [ORD_CHR]);
+
+val ORD_CHR_COMPUTE = Q.store_thm
+("ORD_CHR_COMPUTE",
+ `!r. ORD (CHR r) = if r < 256 then r else ORD (CHR r)`,
+ PROVE_TAC [ORD_CHR_RWT]);
+
 
 val ORD_11   = save_thm("ORD_11",prove_rep_fn_one_one CHAR_TYPE_FACTS)
 val CHR_11   = save_thm("CHR_11",
@@ -123,40 +129,6 @@ val IMPLODE_11 =
     REWRITE_RULE [] (BETA_RULE (prove_abs_fn_one_one STRING_TYPE_FACTS)));
 
 (*---------------------------------------------------------------------------
-    Definability of prim. rec. functions over strings.
- ---------------------------------------------------------------------------*)
-
-val alt_string_Axiom = Q.store_thm
-("alt_string_Axiom",
- `!b g. ?f.  (f (IMPLODE []) = b) /\
-       (!c t. f (IMPLODE (c::t)) = g c t (f (IMPLODE t)))`,
-REPEAT GEN_TAC
-  THEN STRIP_ASSUME_TAC
-     (prove_rec_fn_exists listTheory.list_Axiom
-       (Term `(list_rec (b:'a) f ([]:char list) = b) /\
-              (list_rec b f (h::t) = f h t (list_rec b f t))`))
-   THEN Q.EXISTS_TAC`list_rec b g o EXPLODE`
-   THEN RW_TAC bool_ss [combinTheory.o_DEF,list_case_def,EXPLODE_IMPLODE]);
-
-
-(*---------------------------------------------------------------------------
-    Case expression.
- ---------------------------------------------------------------------------*)
-
-val ALT_STRING_CASE_DEF = new_recursive_definition
- {name="ALT_STRING_CASE_DEF",
-  def = Term `(alt_string_case f (IMPLODE [])     = f []) /\
-              (alt_string_case f (IMPLODE (c::t)) = f (c::t))`,
-  rec_axiom = alt_string_Axiom};
-
-val ALT_STRING_CASE_THM  = Q.store_thm
-("ALT_STRING_CASE_THM",
- `!l f. alt_string_case f (IMPLODE l) = f l`,
- GEN_TAC
-   THEN STRUCT_CASES_TAC (Q.ISPEC `l:char list` listTheory.list_CASES)
-   THEN RW_TAC bool_ss [ALT_STRING_CASE_DEF]);
-
-(*---------------------------------------------------------------------------
     Standard constructors for strings, defined using IMPLODE and EXPLODE.
     The parser and prettyprinter are set up to handle string literals,
     e.g., `"foo"` or `""`.
@@ -184,8 +156,20 @@ val STRING_DISTINCT = Q.store_thm
  RW_TAC bool_ss [STRING_DEF,EMPTYSTRING_DEF,IMPLODE_11,NOT_NIL_CONS]);
 
 (*---------------------------------------------------------------------------
-   Prim. rec. phrased in terms of the standard constructors.
+    Definability of prim. rec. functions over strings.
  ---------------------------------------------------------------------------*)
+
+val alt_string_Axiom = Q.prove
+(`!b g. ?f.  (f (IMPLODE []) = b) /\
+       (!c t. f (IMPLODE (c::t)) = g c t (f (IMPLODE t)))`,
+REPEAT GEN_TAC
+  THEN STRIP_ASSUME_TAC
+     (prove_rec_fn_exists listTheory.list_Axiom
+       (Term `(list_rec (b:'a) f ([]:char list) = b) /\
+              (list_rec b f (h::t) = f h t (list_rec b f t))`))
+   THEN Q.EXISTS_TAC`list_rec b g o EXPLODE`
+   THEN RW_TAC bool_ss [combinTheory.o_DEF,list_case_def,EXPLODE_IMPLODE]);
+
 
 val string_Axiom = Q.store_thm
 ("string_Axiom",
@@ -201,9 +185,8 @@ val string_Axiom = Q.store_thm
      Induction for strings.
  ---------------------------------------------------------------------------*)
 
-val ALT_STRING_INDUCT_THM = Q.store_thm
-("ALT_STRING_INDUCT_THM",
- `!P. P (IMPLODE []) /\
+val ALT_STRING_INDUCT_THM = Q.prove
+(`!P. P (IMPLODE []) /\
      (!c cl. P (IMPLODE cl) ==> P (IMPLODE (c::cl))) ==> !s. P s`,
  RW_TAC bool_ss []
    THEN CHOOSE_THEN SUBST_ALL_TAC (Q.SPEC `s` IMPLODE_ONTO)
@@ -229,10 +212,11 @@ val STRING_ACYCLIC = Q.store_thm
      Nchotomy for strings.
  ---------------------------------------------------------------------------*)
 
-val ALT_STRING_CASES = Q.store_thm
-("ALT_STRING_CASES",
- `!s. (s = IMPLODE []) \/ (?c cl. s = IMPLODE (c::cl))`,
+(*
+val ALT_STRING_CASES = Q.prove
+(`!s. (s = IMPLODE []) \/ (?c cl. s = IMPLODE (c::cl))`,
  HO_MATCH_MP_TAC ALT_STRING_INDUCT_THM THEN PROVE_TAC[]);
+*)
 
 val STRING_CASES = Q.store_thm
 ("STRING_CASES",
@@ -294,8 +278,6 @@ val EXPLODE_EQ_NIL = store_thm(
   RW_TAC bool_ss [EQ_IMP_THM, EXPLODE_EQNS, EXPLODE_IMPLODE] THEN
   POP_ASSUM (MP_TAC o Q.AP_TERM `IMPLODE`) THEN
   RW_TAC bool_ss [IMPLODE_EQNS, IMPLODE_EXPLODE]);
-
-
 
 val EXPLODE_EQ_THM = Q.store_thm
 ("EXPLODE_EQ_THM",
@@ -391,14 +373,14 @@ val isPREFIX =
     `isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3`);
 
 
-(*---------------------------------------------------------------------------
-      Raises unary list operators to string operators.
- ---------------------------------------------------------------------------*)
-(*
-val BY_LISTOP_DEF = Q.new_definition
- ("BY_LIST_OP",
-  `BY_LIST_OP f s = IMPLODE (f (EXPLODE s))`);
-*)
+(*---------------------------------------------------------------------------*)
+(* Emit a vacuous theorem specifying that num is a datatype.                 *)
+(*---------------------------------------------------------------------------*)
+
+val DATATYPE_STRING = Q.store_thm
+("DATATYPE_STRING",
+ `DATATYPE (string "" STRING)`,
+ REWRITE_TAC [DATATYPE_TAG_THM]);
 
 (*---------------------------------------------------------------------------
     Exportation
@@ -431,8 +413,8 @@ val _ = adjoin_to_theory
    S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];";
    S " ";
    S "val _ = computeLib.add_funs";
-   S "        [STRING_CASE_DEF,STRLEN_DEF,EXPLODE_EQNS,IMPLODE_EQNS,";
-   S "         STRCAT_EQNS];"
+   S "        [CHR_ORD,ORD_CHR_COMPUTE,STRING_CASE_DEF,STRLEN_DEF,";
+   S "         EXPLODE_EQNS,IMPLODE_EQNS,STRCAT_EQNS];"
  end)};
 
 val _ = export_theory();

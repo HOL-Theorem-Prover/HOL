@@ -1,7 +1,8 @@
 structure stringLib :> stringLib =
 struct
 
-open HolKernel boolLib numSyntax reduceLib stringTheory stringSyntax;
+open HolKernel boolLib numSyntax reduceLib 
+     stringTheory stringSyntax stringML;
 
 infix ##;
 
