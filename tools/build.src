@@ -292,6 +292,22 @@ val help_mesg = "Usage: build\n\
                                 \  or: build -symlink\n\
                                 \  or: build -clean\n\
                                 \  or: build -cleanAll.";
+val _ = let
+  open OS.FileSys Time
+  val mytime = modTime (fullPath (HOLDIR ^ "/bin/build"))
+  val cfgtime = modTime (fullPath (HOLDIR ^ "/tools/configure.sml"))
+in
+  if mytime < cfgtime then
+    (print "WARNING! WARNING!\n";
+     print "  The build file is older than the configure.sml script;\n";
+     print "  this suggests you should reconfigure the system.\n";
+     print "  Press Ctl-C now to abort the build; <RETURN> to continue.\n";
+     print "WARNING! WARNING!\n";
+     ignore (TextIO.inputLine TextIO.stdIn))
+  else ()
+end;
+
+
 val _ =
   case Mosml.argv ()
    of [_]             => build_hol false (* no symbolic linking *)
