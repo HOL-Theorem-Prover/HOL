@@ -69,8 +69,6 @@ fun THEORY_ERR function message =
 (*---------------------------------------------------------------------------
  * Miscellaneous support functions.
  *---------------------------------------------------------------------------*)
-fun dollar s = "$"^s;
-fun dollared s = (String.sub(s,0) = #"$");
 
 fun st_foldl f b A = Array.foldl (fn (L, A) => List.foldl f A L) b A;
 fun st_filter P A = Array.foldl (fn (L, A) => Lib.mapfilter P L@A) [] A;
@@ -321,9 +319,9 @@ fun add_term_entry {name,theory,htype}
       | del ((e as TERM{name = n1, theory=thy1,
                         htype=ty1,witness,utd})::rst) =
           if name = !n1 andalso (theory=thy1) (* repl. an existing resident *)
-          then (changed := true; 
+          then (changed := true;
                 n1 := !Globals.old (!n1);
-                entry::rst) 
+                entry::rst)
           else if (name = !n1) andalso (theory<>thy1)
                then raise THEORY_ERR"add_entry"
                           ("attempt to redeclare constant "
@@ -466,7 +464,7 @@ fun del_const (name,thyname)
      val i = hasher name
      val L = Array.sub(ST, i)
      fun del ((e as TERM{name = n1, theory=thy1,...})::rst) =
-          if (name = !n1) andalso (thyname=thy1) 
+          if (name = !n1) andalso (thyname=thy1)
             then (n1 := !Globals.old (!n1); rst)
             else e::del rst
        | del ((e as TYPE _)::rst) = e::del rst
@@ -991,30 +989,25 @@ fun install_type(s,a,thy) = add_typeCT {name=s, arity=a, theory=thy};
  * Installing term constants.                                                *
  *---------------------------------------------------------------------------*)
 
-local fun dollar{name,theory,htype} = {name="$"^name,theory=theory,htype=htype}
-in
 fun new_constant (c as {Name,Ty}) =
   (if (Lexis.allowed_term_constant Name) then ()
     else Lib.mesg true
           ("new_constant: "^Lib.quote Name
            ^ " is not a standard constant name (continuing anyway)");
    let val trec = {name=Name, htype=Ty, theory=CTname()}
-       val dtrec = dollar trec
    in
-      add_termCT trec; add_termCT dtrec
+      add_termCT trec
    end)
 
-  (*-------------------------------------------------------------------------*
-   * Add a constant to the signature. This entrypoint is for adding          *
-   * constants from parent theories as they are loaded.                      *
-   *-------------------------------------------------------------------------*)
-  fun install_const(s,ty,thy) =
-     let val entry = {name=s, htype=ty, theory=thy}
-     in
-       add_termCT entry;
-       add_termCT (dollar entry)
-     end;
-end;
+(*-------------------------------------------------------------------------*
+ * Add a constant to the signature. This entrypoint is for adding          *
+ * constants from parent theories as they are loaded.                      *
+ *-------------------------------------------------------------------------*)
+fun install_const(s,ty,thy) =
+   let val entry = {name=s, htype=ty, theory=thy}
+   in
+     add_termCT entry
+   end;
 
 
 (*---------------------------------------------------------------------------*
@@ -1039,8 +1032,7 @@ fun new_axiom (name,tm) =
 fun add_tm_witnessCT s wthm =
    let val thy = theCT()
    in
-      add_tm_witness thy s wthm;
-      add_tm_witness thy (dollar s) wthm
+      add_tm_witness thy s wthm
    end;
 
 fun store_definition(name, consts, wthm, tm) =
@@ -1085,12 +1077,9 @@ fun incorporate_consts thy consts =
  *              GENERAL INFORMATION ON THE CURRENT THEORY                    *
  *---------------------------------------------------------------------------*)
 
-local val dollar = #"$"
+local
       fun convert_type_recd{occ={name,...},arity,...} = {Name=name,Arity=arity}
-      fun convert_term_recd{name,htype,...} =
-            if (String.sub(!name,0) = dollar)
-            then raise THEORY_ERR"convert_term_recd" "dollared"
-            else mk_const{Name = !name,Ty=htype}
+      fun convert_term_recd{name,htype,...} = mk_const{Name = !name,Ty=htype}
       fun grab_item style name alist =
          case (Lib.assoc1 name alist)
          of SOME (_,th) => th
@@ -1136,10 +1125,7 @@ fun theory_out f {name,style} ostrm =
  end;
 
 
-fun dconst {name,htype,theory,witness,utd} =
-  let val _ = Lib.assert (not o dollared) (!name)
-  in (!name,htype)
-  end;
+fun dconst {name,htype,theory,witness,utd} = (!name,htype)
 
 fun dty{occ={name,revision},arity,theory,witness,utd} = (name,arity);
 
