@@ -1,7 +1,6 @@
 (* ===================================================================== *)
 (* FILE          : Globals.sml                                           *)
 (* DESCRIPTION   : Contains global flags for hol98.                      *)
-(*                 Generated from tools/Globals.src ... edit that!       *)
 (*                                                                       *)
 (* AUTHOR        : (c) Konrad Slind, University of Calgary               *)
 (* DATE          : August 26, 1991                                       *)
