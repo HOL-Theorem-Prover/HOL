@@ -1,4 +1,4 @@
-\documentclass[12pt,fleqn,layout,a4paper]{report}
+\documentclass[12pt,fleqn,a4paper]{report}
 
 %\documentstyle[12pt,fleqn,/home/kxs/hol/9.beta.1/Manual/LaTeX/alltt,
 %               /home/kxs/hol/9.beta.1/Manual/LaTeX/layout,amssymb]{report}
@@ -54,7 +54,7 @@
 
  \begin{document}
 
- \title {HOL98 Draft User's Manual \\ Athabasca Release \\ Version 2}
+ \title {HOL98 Draft User's Manual \\ Taupo Release \\ Version 1}
  \author{Konrad Slind \\ {\tt kxs@cl.cam.ac.uk} \\
          Cambridge University Computer Laboratory}
  \maketitle
@@ -303,9 +303,9 @@ this document, but we needn't wait to exercise the system.
 First, we start up the system. The start-up phase executes a standard
 prelude. (System responses occur on lines starting with \verb+>+.)
 
-\begin{verbatim}
+\begin{alltt}
 
-     bash$ /home/kxs/hol98/bin/hol
+     bash\$ /home/kxs/hol98/bin/hol
 
 >    Enter `quit();' to quit.
 >    For HOL help, type: help "hol";
@@ -326,7 +326,7 @@ prelude. (System responses occur on lines starting with \verb+>+.)
 >
 >    [closing file "/home/kxs/hol98/std.prelude"]
 
-\end{verbatim}
+\end{alltt}
 
 Now we load an automatic first order reasoner, written by John
 Harrison (and ported by Michael Norrish from Harrison's HOL-Light
@@ -381,87 +381,87 @@ bind it to a name in ML.
 \end{verbatim}
 
 
- \chapter{Syntax}
+\chapter{Syntax}
 
- The HOL logic is a classical higher-order predicate calculus. Its
- syntax enjoys two main differences from the syntax of standard first
- order logic.\footnote{We assume the reader is familiar with first
-   order logic.}  First, there is no distinction in HOL between terms
- and formulas: HOL has only terms. Second, each term has a type: types
- are used in order to build well-formed terms. There are two ways to
- construct types and terms in HOL: by use of a parser, or by use of
- the programmer's interface. In this chapter, we will focus on the
- concrete syntax accepted by the parsers, leaving the programmer's
- interface for Chapter~\ref{api}.
+The HOL logic is a classical higher-order predicate calculus. Its
+syntax enjoys two main differences from the syntax of standard first
+order logic.\footnote{We assume the reader is familiar with first
+  order logic.}  First, there is no distinction in HOL between terms
+and formulas: HOL has only terms. Second, each term has a type: types
+are used in order to build well-formed terms. There are two ways to
+construct types and terms in HOL: by use of a parser, or by use of the
+programmer's interface. In this chapter, we will focus on the concrete
+syntax accepted by the parsers, leaving the programmer's interface for
+Chapter~\ref{api}.
 
 
- \section{Types}
+\section{Types}
 
- A HOL type can be a variable, a constant, or a compound type, which is a
- constant of arity $n$ applied to a list of $n$ types.
- \[
- \begin{array}{rclr}
+A HOL type can be a variable, a constant, or a compound type, which is
+a constant of arity $n$ applied to a list of $n$ types.
+\[
+\begin{array}{rclr}
   \type & ::= & \mbox{\bf '}\ident & \mbox{(type variable)} \\
-     & | &  \verb+bool+ & \mbox{(type of truth values)} \\
-     & | &  \verb+ind+ & \mbox{(type of individuals)} \\
-     & | &  \type\ \verb+->+\ \type & \mbox{(function arrow)} \\
-     & | &  \ident & \mbox{(nullary type constant)} \\
-     & | & \type\; \ident & \mbox{(unary compound type)} \\
-     & | & (\type_1,\ldots,\type_n) \ident &
- \mbox{(compound type)}
- \end{array}
- \]
- Type constants are also known as type operators. They must be
- alphanumeric. Type variables are
- alphanumerics written with a leading prime ('). In Hol98, the type
- constants {\tt bool}, {\tt fun}, and {\tt ind} are primitive. The
- introduction of new type constants is described in Chapter
- \ref{thy-ops}. {\tt bool} is the two element type of truth values. The
- binary operator {\tt fun} is used to denote function types; it can be
- written with an infix arrow. The nullary type constant {\tt ind} denotes
- an infinite set of individuals; it is used for a few highly technical
- developments in the system and can be ignored by beginners.  Thus
- \begin{verbatim}
+  & | &  \verb+bool+ & \mbox{(type of truth values)} \\
+  & | &  \verb+ind+ & \mbox{(type of individuals)} \\
+  & | &  \type\ \verb+->+\ \type & \mbox{(function arrow)} \\
+  & | &  \type\ \ident\ \type\ & \mbox{(binary compound type)}\\
+  & | &  \ident & \mbox{(nullary type constant)} \\
+  & | & \type\; \ident & \mbox{(unary compound type)} \\
+  & | & (\type_1,\ldots,\type_n) \ident & \mbox{(compound type)}
+\end{array}
+\]
+Type constants are also known as type operators. They must be
+alphanumeric. Type variables are alphanumerics written with a leading
+prime ('). In Hol98, the type constants {\tt bool}, {\tt fun}, and
+{\tt ind} are primitive. The introduction of new type constants is
+described in Chapter \ref{thy-ops}. {\tt bool} is the two element type
+of truth values. The binary operator {\tt fun} is used to denote
+function types; it can be written with an infix arrow. The nullary
+type constant {\tt ind} denotes an infinite set of individuals; it is
+used for a few highly technical developments in the system and can be
+ignored by beginners.  Thus
+\begin{verbatim}
      'a -> 'b
      (bool -> 'a) -> ind
- \end{verbatim}
- are both well-formed types. The function arrow is "right associative",
- which means that ambiguous uses of the arrow in types are resolved by
- adding parentheses in a right-to-left sweep: thus the type expression
- \begin{verbatim}
+\end{verbatim}
+are both well-formed types. The function arrow is "right associative",
+which means that ambiguous uses of the arrow in types are resolved by
+adding parentheses in a right-to-left sweep: thus the type expression
+\begin{verbatim}
      ind -> ind -> ind -> ind
- \end{verbatim}
- is identical to
- \begin{verbatim}
+\end{verbatim}
+is identical to
+\begin{verbatim}
      ind -> (ind -> (ind -> ind)).
- \end{verbatim}
- The product (\verb+#+) and sum (\verb!+!) are other infix type
- operators, also right associative; however, they are not loaded by
- default in Hol98. How to load in useful logical context is
- dealt with in Chapter~\ref{context}.
+\end{verbatim}
+The product (\verb+#+) and sum (\verb!+!) are other infix type
+operators, also right associative; however, they are not loaded by
+default in Hol98. How to load in useful logical context is dealt with
+in Chapter~\ref{context}.
 
- \section{Terms}
+\section{Terms}
 
- Ultimately, a HOL term can only be a variable, a constant, an
- application, or a lambda term.
- \[
- \begin{array}{rclr}
+Ultimately, a HOL term can only be a variable, a constant, an
+application, or a lambda term.
+\[
+\begin{array}{rclr}
   \term & ::= & \ident & \mbox{(variable or constant)} \\
-     & | &  \term\  \term & \mbox{(combination)} \\
-     & | &  \bs\ident.\  \term &
- \mbox{(lambda abstraction)}
- \end{array}
- \]
+  & | &  \term\  \term & \mbox{(combination)} \\
+  & | &  \bs\ident.\  \term &
+  \mbox{(lambda abstraction)}
+\end{array}
+\]
 In the system, the usual logical operators have already been defined,
- including truth (\verb+T+), falsity (\verb+F+), negation (\verb+~+),
- equality (\verb+=+), conjunction (\verb+/\+), disjunction (\verb+\/+),
- implication (\verb+==>+), universal (\verb+!+) and existential
- (\verb+?+)  quantification, and an indefinite description operator
- (\verb+@+). As well, the basis includes conditional, lambda, and `let'
- expressions. Thus the set of terms available is, in general, an extension
- of the following grammar:
- \[
- \begin{array}{rclr}
+including truth (\verb+T+), falsity (\verb+F+), negation (\verb+~+),
+equality (\verb+=+), conjunction (\verb+/\+), disjunction (\verb+\/+),
+implication (\verb+==>+), universal (\verb+!+) and existential
+(\verb+?+) quantification, and an indefinite description operator
+(\verb+@+). As well, the basis includes conditional, lambda, and `let'
+expressions. Thus the set of terms available is, in general, an
+extension of the following grammar:
+\[
+\begin{array}{rclr}
   \mbox{\it term} & ::= & \term : \type & \mbox{(type constraint)} \\
   & | & \term\ \term & \mbox{(application)} \\
   & | & \verb+~+ \term & \mbox{(negation)} \\
@@ -481,13 +481,13 @@ In the system, the usual logical operators have already been defined,
   & | & \verb+F+ & \mbox{(falsity)} \\
   & | & \ident & \mbox{(constant or variable)} \\
   & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)}
- \end{array}
- \]
+\end{array}
+\]
 
- Some examples may be found in Table \ref{syntaxExamples}. Term
- application can be iterated. Application is left associative so that
- $\term\ \term\ \term \ldots \term$ is equivalent in the eyes of the
- parser to $(\ldots((\term\ \term)\ \term) \ldots)\ \term$.
+Some examples may be found in Table \ref{syntaxExamples}. Term
+application can be iterated. Application is left associative so that
+$\term\ \term\ \term \ldots \term$ is equivalent in the eyes of the
+parser to $(\ldots((\term\ \term)\ \term) \ldots)\ \term$.
 
 The lexical structure for term identifiers is much like that for
 ML: identifiers can be alphanumeric or symbolic. Variables must be
@@ -520,62 +520,120 @@ keywords \verb+let+, \verb+in+, \verb+and+, and \verb+of+.
 The HOL grammar gets extended when a new constant is introduced. The
 introduction of new constants will be discussed in section
 \ref{thy-ops}. In order to provide some notational flexibility,
-constants come in various flavours: besides being an ordinary constant,
-a constant could also be a {\it binder\/} or an {\it infix}.
+constants come in various flavours or {\it fixities}: besides being an
+ordinary constant (with a fixity of {\sf Prefix}), constants can also
+be {\it binders}, {\it true prefixes}\footnote{The use of the term
+  ``true prefix'' is forced upon us by the history of the system,
+  which reserved the classification ``prefix'' for terms without any
+  special syntactic features.}, {\it suffixes}, {\it infixes}, or {\it
+  closefixes}.  More generally, terms can also be represented using
+reasonably arbitrary {\it mixfix} specifications.  The degree to which
+terms bind their associated arguments is known as precedence.  The
+higher this number, the tighter the binding.  For example, when
+introduced, \verb-+- has a precedence of 500, while the tighter
+binding multiplication (\verb+*+) has a precedence of 600.
 
-\subsubsection{Binders} A binder is a construct that binds a variable;
- for example, the universal quantifier. In HOL, this is represented
- using a trick that goes back to Alonzo Church: a binder is a constant
- that takes a lambda abstraction as its argument. The lambda binding is
- used to implement the binding of the construct. This is an elegant and
- uniform solution. Thus the concrete syntax \verb+!v. M+ is represented
- by the application of the constant \verb+!+ to the abstraction
- \verb+(\v. M)+.
+\subsubsection{Binders}
 
- The most common binders are \verb+!+, \verb+?+, \verb+?!+, and
- \verb+@+. Sometimes one wants to iterate applications of the same binder,
- \eg,
- \begin{alltt}
-    !x. !y. ?p. ?q. ?r. \term.
- \end{alltt}
- This can instead be rendered
- \begin{alltt}
-     !x y. ?p q r. \term.
- \end{alltt}
+A binder is a construct that binds a variable; for example, the
+universal quantifier. In HOL, this is represented using a trick that
+goes back to Alonzo Church: a binder is a constant that takes a lambda
+abstraction as its argument. The lambda binding is used to implement
+the binding of the construct. This is an elegant and uniform solution.
+Thus the concrete syntax \verb+!v. M+ is represented by the
+application of the constant \verb+!+ to the abstraction \verb+(\v. M)+.
 
- \subsubsection{Infixes}
+The most common binders are \verb+!+, \verb+?+, \verb+?!+, and
+\verb+@+. Sometimes one wants to iterate applications of the same
+binder, \eg,
+\begin{alltt}
+  !x. !y. ?p. ?q. ?r. \term.
+\end{alltt}
+This can instead be rendered
+\begin{alltt}
+  !x y. ?p q r. \term.
+\end{alltt}
 
-All infix constants associate to the right. The precedence ordering for the
-initial set of infixes is
- \verb+/\+, \verb+\/+, \verb+==>+, \verb+=+, \begin{Large}\verb+,+\end{Large}
- (comma\footnote{When pairTheory has been loaded}). Thus
- \begin{verbatim}
+\subsubsection{Infixes}
+
+Infix constants can associate in one of three different ways: right,
+left or not at all.  (If \verb-+- were non-associative, then {\tt 3 +
+  4 + 5} would fail to parse; one would have to write {\tt (3 + 4) +
+  5} or {\tt 3 + (4 + 5)} depending on the desired meaning.  The
+precedence ordering for the initial set of infixes is \verb+/\+,
+\verb+\/+, \verb+==>+, \verb+=+,
+ \begin{Large}\verb+,+\end{Large} (comma\footnote{When {\tt pairTheory} has
+   been loaded.}). Moreover, all of these constants are right
+ associative. Thus
+\begin{verbatim}
      X /\ Y ==> C \/ D, P = E, Q
- \end{verbatim}
+\end{verbatim}
  is equal to
- \begin{verbatim}
+\begin{verbatim}
      ((X /\ Y) ==> (C \/ D)), ((P = E), Q).
- \end{verbatim}
+\end{verbatim}
 
-\noindent An expression $\term\ \verb+<infix>+\ \term$ is internally
-represented as $((\verb+<infix>+\ \term)\ \term)$.
+\noindent An expression \[\term\ \verb+<infix>+\ \term\] is internally
+represented as \[((\verb+<infix>+\ \term)\ \term)\].
+
+\subsubsection{True prefixes}
+
+Where infixes appear between their arguments, true prefixes appear
+before theirs.  This might initially appear to be the same thing as
+happens with normal function application (is $f$ in $f(x)$ not acting
+as a prefix?), but in fact, it is useful to allow for prefixes to have
+binding power less than that associated with function application.  An
+example of this is \verb+~+, logical negation.  This is a prefix with
+lower precedence than function application.  Normally
+\[
+   f\;x\; y\qquad \mbox{is parsed as}\qquad (f\; x)\; y
+\] but \[
+  \mbox{\tt \~{}}\; x\; y\qquad\mbox{is parsed as}\qquad
+  \mbox{\tt \~{}}\; (x\; y)
+\] because the precedence of \verb+~+ is lower than that of function
+  application.
+
+\subsubsection{Suffixes}
+
+Suffixes appear after their arguments.  There are no suffixes
+introduced into the standard theories available in HOL, but users are
+always able to introduce their own if they choose.  Suffixes are
+associated with a precedence just as infixes and true prefixes are.
+If \verb+p+ is a true prefix, \verb+i+ an infix, and \verb+s+ a
+suffix, then there are six possible orderings for the three different
+operators based on their precedences, giving five parses for
+$\verb+p+\; t_1\; \verb+i+\; t_2\; \verb+s+$ depending on the relative
+precedences:
+\[
+\begin{array}{cl}
+\mbox{\begin{tabular}{c}Precedences\\(lowest to highest)\end{tabular}} &
+\multicolumn{1}{c}{\mbox{Parses}}\\
+\hline
+p,\;i,\;s & \verb+p+\;(t_1\;\verb+i+\;(t_2\;\verb+s+))\\
+p,\;s,\;i & \verb+p+\;((t_1\;\verb+i+\;t_2)\;\verb+s+)\\
+i,\;p,\;s & (\verb+p+\;t_1)\;\verb+i+\;(t_2\;\verb+s+)\\
+i,\;s,\;p & (\verb+p+\;t_1)\;\verb+i+\;(t_2\;\verb+s+)\\
+s,\;p,\;i & (\verb+p+\;(t_1\;\verb+i+\;t_2))\;\verb+s+\\
+s,\;i,\;p & ((\verb+p+\;t_1)\;\verb+i+\;t_2)\;\verb+s+\\
+\end{array}
+\]
 
 \subsection{Type constraints}
 
- A term can be constrained to be of a certain type.  For example,
- \verb+X:bool+ constrains the variable \verb+X+ to have type
- \verb+bool+. Similarly, \verb+T:bool+ performs a (vacuous) constraint of
- the constant \verb+T+ to \verb+bool+. An attempt to constrain a term
- inappropriately will raise an exception: for example,
- \begin{verbatim}
-    T => (X:ind) | (Y:bool)
- \end{verbatim}
- will fail because both branches of a conditional must be of the same type.
- Type constraints can be seen as an infix that binds more weakly than any
- term constant. Thus $\term\ \ldots\ \term \ : \type$ is equal to
- $(\term\ \ldots\ \term)\ : \type$. For example, the prospective term
- \verb+(x, y : bool)+ will not be accepted, since we are attempting to
- constrain a pair to be a boolean.
+A term can be constrained to be of a certain type.  For example,
+\verb+X:bool+ constrains the variable \verb+X+ to have type
+\verb+bool+. Similarly, \verb+T:bool+ performs a (vacuous) constraint
+of the constant \verb+T+ to \verb+bool+. An attempt to constrain a
+term inappropriately will raise an exception: for example,
+\begin{verbatim}
+  T => (X:ind) | (Y:bool)
+\end{verbatim}
+will fail because both branches of a conditional must be of the same
+type.  Type constraints can be seen as a suffix that binds more
+tightly than everything except function application.  Thus $\term\
+\ldots\ \term \ : \type$ is equal to $(\term\ \ldots\ \term)\ :
+\type$, but $x < y:\mbox{\tt num}$ is a legitimate (though, again
+redundant) constraint on just the variable $y$.
 
 The inclusion of \verb+:+ in the symbolic identifiers means that some
 constraints may need to be separated by white space. For example,
@@ -594,7 +652,16 @@ the argument list of terms [\verb+bool+, \verb+->+, \verb+bool+,
 \end{verbatim}
 is parsed as the symbolic identifier "=" constrained by a type.
 
- \subsubsection{Type inference}
+\subsubsection{Closefixes}
+
+Closefix terms are operators that completely enclose their arguments.
+An example one might use in the development of a theory of
+denotational semantics, are semantic brackets.  Thus, the HOL parsing
+facilities can be configured to allow one to write {\tt denotation x}
+as {\tt [| x |]}.  Closefixes are not associated with precedences
+because they can not compete for arguments with other operators.
+
+\subsubsection{Type inference}
 
 Consider the term \verb+x = T+.
 Each term (and all of its subterms), has a type in the HOL
@@ -738,45 +805,45 @@ that in Table \ref{expanded-grammar}.
 
 \section{Oracles}
 
- Hol98 extends the LCF tradition by allowing the use of an {\it
- oracle\/} mechanism to allow arbitrary formulas to become elements of
- the \verb+thm+ type. Thus Hol98 can utilize arbitrary proof
- procedures.\footnote{Some care should be taken with proof procedures
- for theories lacking a formalization in the HOL logic. The product of
- such procedures can be used in HOL without damage; however, in the end
- it won't be clear --- at least in HOL --- what has been proven.} In
- spite of such liberalness, the system can still make strong assertions
- about the security of ML objects of type \verb+thm+.
+Hol98 extends the LCF tradition by allowing the use of an {\it
+  oracle\/} mechanism to allow arbitrary formulas to become elements
+of the \verb+thm+ type. Thus Hol98 can utilize arbitrary proof
+procedures.\footnote{Some care should be taken with proof procedures
+  for theories lacking a formalization in the HOL logic. The product
+  of such procedures can be used in HOL without damage; however, in
+  the end it won't be clear --- at least in HOL --- what has been
+  proven.} In spite of such liberalness, the system can still make
+strong assertions about the security of ML objects of type \verb+thm+.
 
- To avoid unsoundness, the system ensures that a tag is attached to any
- theorem coming from an oracle. The system propagates this tag through
- every inference that the theorem participates in.\footnote{The idea is
- due to Mike Gordon.} If it happens that falsity becomes derived, the
- offending oracle can be found by examining the tags component of the
- theorem. (The Hol98 authors would be quite interested to hear of cases
- where falsity is derivable without the use of oracles.) A theorem proved
- without use of any oracle will have an empty tag, and can be considered
- to have been proved in the HOL logic.
+To avoid unsoundness, the system ensures that a tag is attached to any
+theorem coming from an oracle. The system propagates this tag through
+every inference that the theorem participates in.\footnote{The idea is
+  due to Mike Gordon.} If it happens that falsity becomes derived, the
+offending oracle can be found by examining the tags component of the
+theorem. (The Hol98 authors would be quite interested to hear of cases
+where falsity is derivable without the use of oracles.) A theorem
+proved without use of any oracle will have an empty tag, and can be
+considered to have been proved in the HOL logic.
 
- Tagged theorems can be created via
- \begin{verbatim}
+Tagged theorems can be created via
+\begin{verbatim}
     val mk_oracle_thm : tag -> term list * term -> thm
- \end{verbatim}
- which directly creates the requested theorem and attaches the given tag to
- it. Tags may be created with
- \begin{verbatim}
+\end{verbatim}
+which directly creates the requested theorem and attaches the given tag to
+it. Tags may be created with
+\begin{verbatim}
      Tag.read : string -> tag.
- \end{verbatim}
+\end{verbatim}
 As well as providing principled access to external reasoners, tags are
-used to implement some useful `system' operations on theorems. For example,
-Hol98 allows one to directly create a theorem via \verb+mk_thm+. The
-tag \verb+MK_THM+ gets attached to each theorem created with this
-call. This allows users to directly create useful theorems, \eg, to use
-as test data for derived rules of inference. Another tag
-is used to implement validity checking in tactics. Other common
-pre-existing tags are for "definition schemas" like \verb+num_CONV+
-(which encapsulates the semantics of numeric literals) and
-\verb+string_CONV+ (which performs the analogous function for strings).
+used to implement some useful `system' operations on theorems. For
+example, Hol98 allows one to directly create a theorem via
+\verb+mk_thm+. The tag \verb+MK_THM+ gets attached to each theorem
+created with this call. This allows users to directly create useful
+theorems, \eg, to use as test data for derived rules of inference.
+Another tag is used to implement validity checking in tactics. Other
+common pre-existing tags are for ``definition schemas'' like
+\verb+string_CONV+ (which encapsulates the semantics of string
+literals).
 
 The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
 true. For example, we have\footnote{Hol98 currently also uses tags for
@@ -929,29 +996,33 @@ of them.
 
 \begin{center}
 \begin{tabular}{|r|l|} \hline
-\verb+empty_ss+ & The empty simplification set \\
-\verb+boolSimps+ & Standard logic simplifications \\
-\verb+combinSimps+ & Combinator rewrites \\
-\verb+pairSimps+ & Rewrite rules for pairs \\
-\verb+sumSimps+ & Rewrite rules for sums \\
-\verb+listSimps+ & Basic list theory rewrites \\
-\verb+ListSimps+ & Extended list theory simplifications \\
-\verb+arithSimps+ & Arithmetic simplification, using linear arithmetic proc. \\
-\verb+SatisfySimps+ & Conversions for witness instantiation \\
-\verb+UnwindSimps+ & Unwinding existentials \\
-\verb+HOLSimps+ &  All of the above \\
- \hline
+  \verb+empty_ss+ & The empty simplification set \\
+  \verb+pure_ss+ & The simplification set allowing just basic rewriting\\
+  \verb+boolSimps+ & Standard logic simplifications \\
+  \verb+combinSimps+ & Combinator rewrites \\
+  \verb+pairSimps+ & Rewrite rules for pairs \\
+  \verb+sumSimps+ & Rewrite rules for sums \\
+  \verb+listSimps+ & Basic list theory rewrites \\
+  \verb+ListSimps+ & Extended list theory simplifications \\
+  \verb+arithSimps+ & Arithmetic simplification, using\\
+                    & a linear arithmetic decision procedure \\
+  \verb+SatisfySimps+ & Conversions for witness instantiation \\
+  \verb+UnwindSimps+ & Point-wise unwinding of existential and\\
+                     & universal formulae\\
+  \verb+HOLSimps+ &  All of the above \\
+  \hline
 \end{tabular}
 \end{center}
 
-By default, only \verb+empty_ss+ is available when \verb+simpLib+ is loaded.
+By default, only \verb+empty_ss+ and \verb+pure_ss+ are available when
+\verb+simpLib+ is loaded.
 \end{description}
 
-Although it might seem like there ought to be only one simplification
+\noindent Although it might seem like there ought to be only one simplification
 tool supported in Hol98, each of the above tools has found a niche in
-the system, and the differences among them have been significant enough
-to deter consideration of their unification. It is therefore up to the
-user to decide which is most suitable for the purpose at hand.
+the system, and the differences among them have been significant
+enough to deter consideration of their unification. It is therefore up
+to the user to decide which is most suitable for the purpose at hand.
 
 
 \subsection{Automatic methods}
@@ -1254,7 +1325,7 @@ states. The undo-list for each attempt is of fixed size (initially
 12). If you wish to set this value for the current proof attempt, the
 function \verb+set_backup+ can be used. If the size of the backup
 list is set to be smaller than it currently is, the undo list will be
-immediately truncated. You can not undo a "proofs-level" operation, such
+immediately truncated. You can not undo a ``proofs-level'' operation, such
 as \verb+set_goal+ or \verb+drop+.
 
 \subsection{Viewing the state of the proof manager}
@@ -1321,7 +1392,7 @@ setTheory & sets as a separate type (includes finite sets) \\
 pred\_setTheory & sets as predicates (includes finite sets) \\
 listTheory & lists  \\
 ListTheory & extended theory of lists \\
-optionTheory & the "option" type \\
+optionTheory & the ``option'' type \\
 finite\_mapTheory & finite maps from $\alpha$ to $\beta$ \\
 ltreeTheory & polymorphic finitely branching trees \\
 combinTheory & combinators \\
@@ -1582,30 +1653,29 @@ theory is exported, but not compiled. This makes it difficult to
 
 \section{Holmake}
 
-  The purpose of \verb+Holmake+\footnote{{\tt Holmake} has been written by
-Ken Larsen.} is to maintain dependencies in a Hol98 source directory. A
-single invocation of {\tt Holmake} will compute dependencies between files,
-(re-)compile plain ML code, (re-)compile and execute theory scripts, and
-(re-)compile the resulting theory modules. {\tt Holmake} does not require the
-user to provide any dependency information,\eg, a Makefile. {\tt Holmake}
-can be very convenient to use, but there are some conventions and
-restrictions on it that must be followed, which we will describe in the
-sequel.
+The purpose of \verb+Holmake+\footnote{{\tt Holmake} was first written
+  by Ken Larsen and then extended by Michael Norrish.} is to maintain
+dependencies in a Hol98 source directory. A single invocation of {\tt
+  Holmake} will compute dependencies between files, (re-)compile plain
+ML code, (re-)compile and execute theory scripts, and (re-)compile the
+resulting theory modules. {\tt Holmake} does not require the user to
+provide any dependency information,\eg, a Makefile. {\tt Holmake} can
+be very convenient to use, but there are some conventions and
+restrictions on it that must be followed, which we will describe in
+the sequel.
 
 {\tt Holmake} can be accessed through
 \begin{verbatim}
    <hol-dir>/bin/Holmake.
 \end{verbatim}
 
-
-  The model of user development that {\tt Holmake} is designed to support is
-that there are two modes of work: theory construction and system
-revision.  In `theory construction' mode, the user builds up a theory by
-interacting with HOL, perhaps over many sessions. In `system rebuild'
-mode, a module that others depend on has been altered, so all
-intervening modules have to be brought up to date. System re-build mode
-is simpler so we deal with it first.
-
+The model of user development that {\tt Holmake} is designed to
+support is that there are two modes of work: theory construction and
+system revision.  In `theory construction' mode, the user builds up a
+theory by interacting with HOL, perhaps over many sessions. In `system
+rebuild' mode, a module that others depend on has been altered, so all
+intervening modules have to be brought up to date. System re-build
+mode is simpler so we deal with it first.
 
 \subsection{System Rebuild}
 
@@ -1620,22 +1690,22 @@ re-compiling and re-executing them.
 \subsection{Theory construction}
 
 To start a theory construction, some context (semantic, and also proof
-support) is established, typically by loading parent theories and useful
-libraries. In the course of building the theory, the user keeps track of
-the ML --- which, for example, establishes context, makes definitions,
-builds and invokes tactics, and saves theorems --- in a text file. This
-file is used to achieve inter-session persistence of the theory being
-constructed, i.e., the text file resulting from session $n$ is
-``\verb+use+''d to start session $n+1$; after that, theory construction
-resumes.
+support) is established, typically by loading parent theories and
+useful libraries. In the course of building the theory, the user keeps
+track of the ML---which, for example, establishes context, makes
+definitions, builds and invokes tactics, and saves theorems---in a
+text file. This file is used to achieve inter-session persistence of
+the theory being constructed, i.e., the text file resulting from
+session $n$ is ``\verb+use+''d to start session $n+1$; after that,
+theory construction resumes.
 
 Once the user finishes the perhaps long and arduous task of constructing
 a theory, the user should
 \begin{enumerate}
 \item make the script separately compilable;
-\item invoke {\tt Holmake}. This will (a) compile and execute the script
-       file; and (b) compile the resulting theory file. After this, the
-       theory file is available for use.
+\item invoke {\tt Holmake}. This will (a) compile and execute the
+  script file; and (b) compile the resulting theory file. After this,
+  the theory file is available for use.
 \end{enumerate}
 
 \subsection{Making the script separately compilable}
@@ -1647,98 +1717,87 @@ First, the invocation
 should be added at the end of the file. When the script is finally
 executed, this call writes the theory to disk.
 
-Second, we address a crucial environmental issue: if a theory script has
-been constructed using\verb+ <holdir>/bin/hol+, then it has been developed in
-an environment where some commonly used structures, \eg, \verb+Tactic+, have
-already been loaded and opened for the user's convenience. When we wish
-to apply {\tt Holmake} to a script developed in this way, we have to take some
-extra steps to ensure that the compilation environment also provides
-these structures.  In the common case, this is simple; one must only
-add, at the head of the theory script, the following ``boilerplate'':
+Second, we address a crucial environmental issue: if a theory script
+has been constructed using\verb+ <holdir>/bin/hol+, then it has been
+developed in an environment where some commonly used structures, \eg,
+\verb+Tactic+, have already been loaded and opened for the user's
+convenience. When we wish to apply {\tt Holmake} to a script developed
+in this way, we have to take some extra steps to ensure that the
+compilation environment also provides these structures.  In the common
+case, this is simple; one must only add, at the head of the theory
+script, the following ``boilerplate'':
 \begin{verbatim}
     open HolKernel Parse basicHol90Lib;
     infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
     infixr -->;
 \end{verbatim}
 This will duplicate the starting environment that one obtains with
-\verb+<holdir>/bin/hol+ and \verb+<holdir>/bin/hol.enquote+.
+\verb+<holdir>/bin/hol+ and \verb+<holdir>/bin/hol.unquote+.
 
-Now the script should be separately compilable. Invoke {\tt Holmake} to check;
-MoscowML will flag any unaccounted-for identifiers it finds. The user
-has to resolve these, either by using the `dot' notation to locate the
-identifier for the compiler, or by \verb+open+ing the relevant
-module. This ``compile/resolve-identifier'' loop should continue until
-{\tt Holmake} succeeds in compiling the module.
+Now the script should be separately compilable. Invoke {\tt Holmake}
+to check; MoscowML will flag any unaccounted-for identifiers it finds.
+The user has to resolve these, either by using the `dot' notation to
+locate the identifier for the compiler, or by \verb+open+ing the
+relevant module. This ``compile/resolve-identifier'' loop should
+continue until {\tt Holmake} succeeds in compiling the module.
 
 The following notes may be of some help.
 
 \begin{enumerate}
 \item The filenames of theory scripts must follow the following
-convention: a HOL theory script for theory "x" should be
-named
+  convention: a HOL theory script for theory ``x'' should be named
 \begin{verbatim}
-    xScript.sml.
+  xScript.sml.
 \end{verbatim}
-If there is a corresponding signature (and there needn't be), it
-should -- following Moscow ML convention -- be named \verb+xScript.sig+. When
-\verb+export_theory+ is called during an invocation of \verb+Holmake+,
-the files
+  If there is a corresponding signature (and there needn't be), it
+  should---following Moscow ML convention---be named
+  \verb+xScript.sig+. When \verb+export_theory+ is called during an
+  invocation of \verb+Holmake+, the files
 \begin{verbatim}
     xTheory.{sig,sml}
 \end{verbatim}
 will be generated and then compiled.
 
-\item In the MoscowML batch compiler, modules are not allowed to have unbound
-top-level expressions. Hence, something like the following is not
-allowed:
+\item In the MoscowML batch compiler, modules are not allowed to have
+  unbound top-level expressions. Hence, something like the following
+  is not allowed:
 \begin{verbatim}
-    new_theory"ted";
+    new_theory "ted";
 \end{verbatim}
 To make Moscow ML happy, one must instead write something like
 \begin{verbatim}
-    val _ = new_theory"ted";
+    val _ = new_theory "ted";
 \end{verbatim}
 
-
 \item In the interactive system, one has to explicitly \verb+load+
-modules; on the other hand, the batch compiler will load modules
-automatically.  For example, in order to execute \verb+open Foo+ (or
-refer to values in \verb+Foo+) in the interactive system, one must first
-have executed \verb+load "Foo"+. Contrarily, the batch compiler will reject
-files having occurrences of \verb+load+, since \verb+load+ is only
-defined for the interactive system.
+  modules; on the other hand, the batch compiler will load modules
+  automatically.  For example, in order to execute \verb+open Foo+ (or
+  refer to values in \verb+Foo+) in the interactive system, one must
+  first have executed \verb+load "Foo"+. Contrarily, the batch
+  compiler will reject files having occurrences of \verb+load+, since
+  \verb+load+ is only defined for the interactive system.
 
-\item Take care not to have the string "Theory" embedded in the name of any of
-your files. Hol98 generates files containing this string, and when it
-cleans up after itself, it removes such files using a regular
-expression. This will also remove other files with names containing
-"Theory". For example, if, in your development directory, you had a file
-of ML code named
+\item Take care not to have the string "Theory" embedded in the name
+  of any of your files. Hol98 generates files containing this string,
+  and when it cleans up after itself, it removes such files using a
+  regular expression. This will also remove other files with names
+  containing "Theory". For example, if, in your development directory,
+  you had a file of ML code named
 \begin{verbatim}
    MyTheory.sml
 \end{verbatim}
-and you also were managing a Hol98 development there with {\tt Holmake}, then
-MyTheory.sml would get deleted if \verb+Holmake clean+ was invoked.
-
-
-\item The dependency analysis of {\tt Holmake} will generate dependencies for
-{\it all\/} files ending in ".sig" and".sml" in the directory where
-{\tt Holmake} is invoked. If you do not want a particular file to be compiled
-by {\tt Holmake}, for example, a script for a theory under construction,
-simply omit the suffix, or invent a different one.
-
+  and you also were managing a Hol98 development there with {\tt
+    Holmake}, then MyTheory.sml would get deleted if {\tt Holmake
+    clean} was invoked.
 
 \item We can see that some users may not wish to use (some of) the
-support provided by \verb+basicHol90Lib+, since it is becoming dated. In
-that case, the same general principle set out above will apply: the user
-must ensure that the compilation environment for a theory script is the
-same as the interactive environment it was developed in.
-
-\item Currently, dependencies can get computed several times. This is
-not harmful, but it should eventually get fixed.
+  support provided by \verb+basicHol90Lib+, since it is becoming
+  dated. In that case, the same general principle set out above will
+  apply: the user must ensure that the compilation environment for a
+  theory script is the same as the interactive environment it was
+  developed in.
 
 \end{enumerate}
-
 
 \subsection{Summary}
 
@@ -1754,41 +1813,60 @@ After that, the theory is usable as a module in MoscowML.
 
 \subsection{What {\tt Holmake} doesn't do}
 
-{\tt Holmake} only works properly on the current directory. If there is an
-out-of-date dependence leading up out of the current directory, {\tt Holmake}
-will follow it and attempt to build whatever has to be built. This can
-fail, and it is not the right way to use {\tt Holmake}.  If one is developing
-a system over more than one directory, one should write a master
-Makefile (or shell script) that invokes {\tt Holmake} in the subsidiary
+{\tt Holmake} only works properly on the current directory.  Holmake
+will rebuild files in the current directory if something it depends on
+from another directory is fresher than it is, but it will not do any
+analysis on files in other directories.  If one is developing a system
+over more than one directory, one should write a master Makefile (or
+shell script) that invokes {\tt Holmake} in the subsidiary
 directories, in the correct order, \ie., such that there never is an
 out-of-date dependence leading outside of the current directory. This
 should always be achievable, simply by ordering the directories in the
-order that one would have to ``\verb+use+'' files in them. See the
-Makefile in the top level of the Hol98 distribution for a large example.
+order that one would have to ``\verb+use+'' files in them.
 
+\subsection{{\tt Holmake}'s command-line arguments}
 
-\subsection{Options to {\tt Holmake}}
-
-There are several other options to {\tt Holmake}:
+Like {\tt make}, {\tt Holmake} takes command-line arguments
+corresponding to the targets that the user desires to build.  If there
+are none, then {\tt Holmake} will attempt to build all ML modules and
+HOL theories it can detect in the current directory.  In addition,
+there are three special targets that can be used:
 \begin{description}
-
-\item[clean] Removes all compiled files.
-
-\item [cleanAll] Removes all compiled files as well as all of the hidden
-dependency information.
+\item[{\tt clean}] Removes all compiled files.
+\item [{\tt cleanDeps}] Removes all of the pre-computed dependency
+  files.  This can be an important thing to do if, for example, you
+  have introduced a new {\tt .sig} file on top of an existing {\tt
+  .sml} file.
+\item [{\tt cleanAll}] Removes all compiled files as well as all of
+  the hidden dependency information.
 \end{description}
 
-Finally, the user can directly affect the workings of \verb+Holmake+ by
-writing a file named \verb+INCLUDE.mk+ to the directory where
-\verb+Holmake+ is to be invoked. This file is typically used to extend
-the load path used by the MoscowML batch compiler. The following example
-comprises the entire contents of the the file \verb+INCLUDE.mk+, and
-allows already compiled code/theories to be found by the batch system
-at the given paths:
-\begin{verbatim}
-  INCLUDE = -I /some/full/path \
-            -I /some/other/path
-\end{verbatim}
+Finally, the user can directly affect the workings of \verb+Holmake+
+with the following command-line options:
+\begin{description}
+\item[\tt -I <directory>] Look in specified directory for additional
+  MoscowML object files, including other HOL theories.  This option
+  can be repeated, with multiple {\tt -I}'s to allow for multiple
+  directories to be referenced.
+\item[\tt -d <file>] Ignore the given file and don't try to build it.
+  The file may be rebuilt anyway if other files you have specified
+  depend on it.  This is useful to stop Holmake from attempting to
+  compile files that are interactive scripts (include use of {\tt
+  load} or {\tt use}, for example).
+\item[{\tt --help} or {\tt -h}] Prints out a useful option summary and
+  exits.
+\item[\tt --holdir <directory>] Associate this build with the given
+  HOL directory, rather than the one this version of {\tt Holmake} was
+  configured to use by default.
+\item[{\tt --rebuild\_deps} or {\tt -r}] Forces {\tt Holmake} to
+  always rebuild the dependency information, whether or not it thinks
+  it needs to.
+\item[{\tt --version} or {\tt -v}] Show some brief version
+  information.  As of this writing, {\tt Holmake} is at version 2.04.
+\end{description}
+
+{\tt Holmake} should never exit with the MoscowML message ``Uncaught
+exception''.  Such behaviour is a bug, please report it!
 
 \chapter{High-level interactive proof support}\label{bossLib}
 
@@ -1935,7 +2013,7 @@ functions and attempt to define recursive-but-not-primitive-recursive
 functions. For these more difficult recursions, it attempts to find a
 measure under which recursive calls become smaller (and to prove that
 they do indeed become smaller). Currently, it examines the domain type
-of the function being defined and synthesizes a "size" measure.  Then it
+of the function being defined and synthesizes a ``size'' measure.  Then it
 does some basic simplifications and then attempts to automatically prove
 the termination constraints.  If this termination proof fails, then the
 termination constraints remain on the hypotheses. An induction theorem
@@ -2251,9 +2329,9 @@ binding is made for each definition and (useful) proved theorem: the ML
 environment is being used as a convenient place to hold definitions and
 theorems for later reference.
 
-We want to treat \verb+divides+ as an infix:
+We want to treat \verb+divides+ as a (right associative) infix:
 {\small\begin{verbatim}
-     set_fixity "divides" (Infix 450)
+     set_fixity "divides" (Infixr 450)
 \end{verbatim}}
 Now we can define the property of a number being {\it prime}: a number $p$ is
 prime if and only if it is not equal to 1 and it has no divisors other
