@@ -14,5 +14,7 @@ fun return v s = (s, v)
 fun ok s = return () s
 
 
-fun mmap f [] = ok
-  | mmap f (x::xs) = f x >> mmap f xs
+fun mmap f list =
+  case list of
+    [] => return []
+  | (x::xs) => f x >- (fn x' => mmap f xs >- (fn xs' => return (x'::xs')))
