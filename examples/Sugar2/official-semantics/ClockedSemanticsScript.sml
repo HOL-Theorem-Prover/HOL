@@ -382,16 +382,16 @@ val F_SEM =
        THEN RW_TAC arith_ss []
        THEN RW_TAC arith_ss []
        THENL
-        [Q.EXISTS_TAC `x`
+        [Q.EXISTS_TAC `k`
           THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN],
-         Q.EXISTS_TAC `x`
+         Q.EXISTS_TAC `k`
           THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN],
          REPEAT DISJ2_TAC
-          THEN Q.EXISTS_TAC `x`
+          THEN Q.EXISTS_TAC `i`
           THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]
           THEN PROVE_TAC[],
          REPEAT DISJ2_TAC
-          THEN Q.EXISTS_TAC `x`
+          THEN Q.EXISTS_TAC `i`
           THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]
           THEN PROVE_TAC[]]);
   
