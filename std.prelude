@@ -1,59 +1,16 @@
-(*---------------------------------------------------------------------------*
- * Bring in the HOL kernel.                                                  *
- *---------------------------------------------------------------------------*)
-
 val _ = quietdec := true;
 
-local open Path
-      val SIGOBJ = toString(fromString(concat
-                    ("c:\\cygwin\\home\\slind\\hol98","sigobj")))
-in
-val _ = Meta.loadPath := SIGOBJ :: !Meta.loadPath
-end;
 
-(*---------------------------------------------------------------------------*
- *       Establish the basic environment.                                    *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Establish the basic environment and bring in the HOL kernel
+   ---------------------------------------------------------------------- *)
 
 app load ["Mosml", "Process", "Path", "boolLib", "goalstackLib", "Arbint"];
 
 open HolKernel Parse boolLib goalstackLib;
 
-infix ++ && |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-infixr ##
-infixr 3 -->;
-infix 8 via by;
-
-(*---------------------------------------------------------------------------*
- *       Find out if bossLib is requested, by looking at argv.               *
- *---------------------------------------------------------------------------*)
-
-val _ =
-  case List.rev(Mosml.argv())
-   of end_init_path::_ =>
-        (case Path.base(Path.file end_init_path)
-          of "end-init-boss" =>
-                let val terminfo = case Process.getEnv "TERM" of
-                                     SOME s => s
-                                   | NONE => ""
-                    val (prelude, dotchar) =
-                        if terminfo <> "emacs" andalso terminfo <> "dumb"
-                        then
-                          ("                          ____________ ]\r", "*")
-                        else ("", ".")
-                    fun dotload f = (print dotchar; load f)
-                in
-                  print prelude;
-                  print "[loading HOL power tools ";
-                  app dotload ["optionTheory", "pairLib", "sumTheory",
-                               "numTheory", "arithmeticTheory", "Arith",
-                               "numLib", "mesonLib", "BasicProvers",
-                               "SingleStep", "Datatype",
-                               "listTheory", "bossLib"];
-                  print " ]"
-                end
-           | otherwise       => ())
-    | [] => raise Fail "std.prelude: bizarre invocation of HOL"
+(* Loading HolKernel installs the "standard" set of infixes, which are
+   set up in src/0/Overlay.sml *)
 
 (*---------------------------------------------------------------------------*
  *   Install prettyprinters                                                  *
@@ -93,7 +50,8 @@ in
   val () = indexfiles := HELP "HOL.Help" :: !indexfiles
   val () = helpdirs   := HOLDIR :: SIGOBJ :: !helpdirs
   val () = Help.specialfiles :=
-             {file = "README.Hol98", term = "hol", title = "Hol98 Overview"}
+             {file = "help/Docfiles/README.Hol98",
+              term = "hol", title = "Hol98 Overview"}
              :: !Help.specialfiles
 end
 
@@ -125,7 +83,11 @@ in
      print "No theory files on disk; perhaps export_theory() required.\n"
 end
 
-val _ = use (HOLDIR^"/src/datatype/Interactive");
+(* ----------------------------------------------------------------------
+    Set interactive flag to true
+   ---------------------------------------------------------------------- *)
+
+val _ = Globals.interactive := true;
 
 (*---------------------------------------------------------------------------*
  * Print a banner.                                                           *
@@ -146,3 +108,7 @@ TextIO.output(TextIO.stdOut,
   ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
   ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
   ^"-----------------------------------------------------------------\n\n");
+
+(* Local variables: *)
+(* mode: sml *)
+(* end: *)
