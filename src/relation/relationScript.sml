@@ -1,6 +1,6 @@
 (*---------------------------------------------------------------------------*
  * A theory about relations, taken as functions of type 'a->'a->bool.        *
- * This is not well-fleshed-out currently. We just treat transitive closure  *
+ * We treat various kinds of closure (reflexive, transitive, r&t)            *
  * and wellfoundedness to start. A few other notions, like inverse image,    *
  * are also defined.                                                         *
  *---------------------------------------------------------------------------*)
@@ -13,14 +13,15 @@ infix ORELSE ORELSEC THEN THENL |->;
 
 val _ = new_theory "relation";
 
+(*---------------------------------------------------------------------------*)
+(* Closures                                                                  *)
+(*---------------------------------------------------------------------------*)
 
-val TC_DEF =
-Q.new_definition
-("TC_DEF",
- `TC (R:'a->'a->bool) a b =
-    !P.(!x y. R x y ==> P x y) /\
-       (!x y z. P x y /\ P y z ==> P x z)
-       ==> P a b`);
+val TC_DEF = Q.new_definition
+  ("TC_DEF",
+   `TC (R:'a->'a->bool) a b =
+     !P.(!x y. R x y ==> P x y) /\
+        (!x y z. P x y /\ P y z ==> P x z)  ==> P a b`);
 
 val RTC_DEF = new_definition(
   "RTC_DEF",
@@ -327,9 +328,18 @@ val RTC_MONOTONE = store_thm(
   ASM_MESON_TAC [RTC_RULES]);
 
 (*---------------------------------------------------------------------------*
- * Wellfounded relations. Applications of wellfoundedness to specific types  *
+ * Wellfounded relations. Wellfoundedness: Every non-empty set has an        *
+ * R-minimal element. Applications of wellfoundedness to specific types      *
  * (numbers, lists, etc.) can be found in the respective theories.           *
  *---------------------------------------------------------------------------*)
+
+val WF_DEF =
+Q.new_definition
+ ("WF_DEF", `WF R = !B. (?w:'a. B w) ==> ?min. B min /\ !b. R b min ==> ~B b`);
+
+(*---------------------------------------------------------------------------*)
+(* Misc. proof tools, from pre-automation days.                              *)
+(*---------------------------------------------------------------------------*)
 
 val USE_TAC = IMP_RES_THEN(fn th => ONCE_REWRITE_TAC[th]);
 
@@ -342,15 +352,6 @@ val NNF_CONV =
    end;
 
 val NNF_TAC = CONV_TAC NNF_CONV;
-
-
-(*---------------------------------------------------------------------------*
- * Wellfoundedness: Every non-empty set has an R-minimal element.            *
- *---------------------------------------------------------------------------*)
-
-val WF_DEF =
-Q.new_definition
- ("WF_DEF", `WF R = !B. (?w:'a. B w) ==> ?min. B min /\ !b. R b min ==> ~B b`);
 
 
 (*---------------------------------------------------------------------------*
@@ -378,7 +379,7 @@ GEN_TAC THEN REWRITE_TAC[WF_DEF]
  THEN Q.EXISTS_TAC`min` THEN ASM_REWRITE_TAC[]);
 
 
-val INDUCTION_WF_THM = Q.prove(
+val INDUCTION_WF_THM = Q.store_thm("INDUCTION_WF_THM",
 `!R:'a->'a->bool.
      (!P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x) ==> WF R`,
 GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[WF_DEF] THEN GEN_TAC THEN
@@ -387,6 +388,12 @@ GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[WF_DEF] THEN GEN_TAC THEN
                       THEN ASSUME_TAC th) THEN GEN_TAC THEN
  CONV_TAC CONTRAPOS_CONV THEN NNF_TAC
  THEN POP_ASSUM MATCH_ACCEPT_TAC);
+
+val WF_EQ_INDUCTION_THM = Q.store_thm("WF_EQ_INDUCTION_THM",
+ `!R:'a->'a->bool.
+     WF R = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x`,
+GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL 
+   [IMP_RES_TAC WF_INDUCTION_THM, IMP_RES_TAC INDUCTION_WF_THM]);
 
 
 (*---------------------------------------------------------------------------
@@ -413,14 +420,13 @@ val WF_INDUCT_TAC =
     in MATCH_MP_TAC thf (asl,w)
     end
     handle _ => raise HOL_ERR{origin_structure = "<top-level>",
-                               origin_function = "WF_INDUCT_TAC",
-                                      message = "Unanticipated term structure"}
+                    origin_function = "WF_INDUCT_TAC",
+                    message = "Unanticipated term structure"}
  in tac
  end;
 
 
-val ex_lem = Q.prove(
-`!x. (?y. y = x) /\ ?y. x=y`,
+val ex_lem = Q.prove(`!x. (?y. y = x) /\ ?y. x=y`,
 GEN_TAC THEN CONJ_TAC THEN Q.EXISTS_TAC`x` THEN REFL_TAC);
 
 val WF_NOT_REFL = Q.store_thm("WF_NOT_REFL",
@@ -847,6 +853,58 @@ THEN CONJ_TAC THENL
    FIRST_ASSUM MATCH_ACCEPT_TAC]]);
 
 
+(*---------------------------------------------------------------------------*)
+(* The wellfounded part of a relation. Defined inductively.                  *)
+(*---------------------------------------------------------------------------*)
+
+val WFP_DEF = Q.new_definition
+  ("WFP_DEF",
+   `WFP R a = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> P a`);
+
+val WFP_RULES = Q.store_thm
+   ("WFP_RULES",
+    `!R x. (!y. R y x ==> WFP R y) ==> WFP R x`,
+    REWRITE_TAC [WFP_DEF] THEN MESON_TAC []);
+
+val WFP_INDUCT = Q.store_thm
+   ("WFP_INDUCT",
+    `!R P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. WFP R x ==> P x`,
+    REWRITE_TAC [WFP_DEF] THEN MESON_TAC []);
+
+val WFP_CASES = Q.store_thm
+  ("WFP_CASES",
+   `!R x. WFP R x = !y. R y x ==> WFP R y`,
+   REPEAT STRIP_TAC THEN EQ_TAC 
+    THENL [Q.ID_SPEC_TAC `x` THEN HO_MATCH_MP_TAC WFP_INDUCT, ALL_TAC]
+    THEN MESON_TAC [WFP_RULES]);
+
+(* ------------------------------------------------------------------------- *)
+(* Wellfounded part induction, strong version.                               *)
+(* ------------------------------------------------------------------------- *)
+
+val WFP_STRONG_INDUCT = Q.store_thm
+  ("WFP_STRONG_INDUCT",
+   `!R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x) 
+          ==> 
+        !x. WFP R x ==> P x`,
+ REPEAT GEN_TAC THEN STRIP_TAC
+   THEN ONCE_REWRITE_TAC[TAUT `a ==> b = a ==> a /\ b`]
+   THEN HO_MATCH_MP_TAC WFP_INDUCT THEN ASM_MESON_TAC[WFP_RULES]);
+
+
+(* ------------------------------------------------------------------------- *)
+(* A relation is wellfounded iff WFP is the whole universe.                  *)
+(* ------------------------------------------------------------------------- *)
+
+val WF_EQ_WFP = Q.store_thm
+("WF_EQ_WFP",
+ `!R. WF R = !x. WFP R x`,
+ GEN_TAC THEN EQ_TAC THENL
+ [REWRITE_TAC [WF_EQ_INDUCTION_THM] THEN MESON_TAC [WFP_RULES],
+  DISCH_TAC THEN MATCH_MP_TAC (SPEC_ALL INDUCTION_WF_THM) 
+    THEN GEN_TAC THEN MP_TAC (SPEC_ALL WFP_STRONG_INDUCT)
+    THEN ASM_REWRITE_TAC []]);
+
 val _ = export_theory();
 
-end;
+end
