@@ -8,20 +8,32 @@ type rewrite = rewrite;
 type comp_rws = comp_rws;
 
 
-(* Precondition: [S]arg is a closure corresponding to b.
+datatype stack =
+    Ztop
+  | Zappl of (thm->thm->thm) * (thm * db fterm) * stack
+  | Zappr of (thm->thm->thm) * (thm * db fterm) * stack
+  | Zabs of (thm->thm) * stack
+;
+
+fun initial_state rws t =
+  ((REFL t, mk_clos([],from_term rws [] t)), Ztop);
+
+
+(* Precondition: f(arg) is a closure corresponding to b.
  * Given   (arg,(|- M = (a b), Stk)),
- * returns (|- a = a, (<fun>,(|- b = b, [S]arg))::Stk)
+ * returns (|- a = a, (<fun>,(|- b = b, f(arg)))::Stk)
  * where   <fun> =  (|- a = a' , |- b = b') |-> |- M = (a' b')
  *)
-fun push_in_stk env (arg,(th,stk)) =
+fun push_in_stk f (arg,(th,stk)) =
       let val (tha,thb,mka) = Mk_comb th in
-      (tha, (mka,(thb,mk_clos(env,arg)))::stk)
+      (tha, Zappl(mka,(thb,f arg),stk))
       end
 ;
 
 (* [cbv_wk ((th,cl),stk)] puts the closure cl (useful information about
  * the rhs of th) in head normal form (weak reduction). It returns either
- * a closure which term is an abstraction, a variable applied to strongly
+ * a closure which term is an abstraction, in a context other than Zappl,
+ * a variable applied to strongly
  * reduced arguments, or a constant applied to weakly reduced arguments
  * which does not match any rewriting rule.
  * 
@@ -29,74 +41,70 @@ fun push_in_stk env (arg,(th,stk)) =
  * - if the rhs is an abstraction and there is one arg on the stack,
  *   this means we found a beta redex. mka rebuilds the application of
  *   the function to its argument, and Beta does the actual beta step.
- * - if there is no argument, then we reached the head normal form.
- * - closures are not delayed on variables: only applications and abstractions.
- * - for a neutral value (ie. a variable applied to args), we strongly
- *   normalize its arguments, and this makes up a neutral value.
  * - for an applied constant, we look for a rewrite matching it.
  *   If we found one, then we apply the instanciated rule, and go on.
- *   Otherwise, we call cbv_wk_cst, which weakly reduces the first argument,
- *   append it to the constant, and resumes weak head reduction.
+ *   Otherwise, we try to rebuild the thm.
+ * - for an already strongly normalized term, we try to rebuild the thm.
  *)
-fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) = 
-      let val (tha,stk') = foldl (push_in_stk Env) (th,stk) args in
+fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk)                    = 
+      let val (tha,stk') =
+            foldl (push_in_stk (curry mk_clos Env)) (th,stk) args in
       cbv_wk ((tha, mk_clos(Env,a)), stk')
       end
-  | cbv_wk ((th,CLOS{Env, Term=Abs body}), (mka,(thb,cl))::s') =
+  | cbv_wk ((th,CLOS{Env, Term=Abs body}),    Zappl(mka,(thb,cl),s')) =
       cbv_wk ((Beta(mka th thb), mk_clos(cl :: Env, body)), s')
-  | cbv_wk (clos as (_,CLOS _), []) = clos
-  | cbv_wk ((_, CLOS _), _) = raise DEAD_CODE "cbv_wk"
-  | cbv_wk ((th, NEUTR), stk) =
-      (out_stk_fun (fn clos => strong(cbv_wk(clos,[]))) (th,stk), NEUTR)
-  | cbv_wk ((th, CST cargs), stk) =
+  | cbv_wk ((th, CST cargs),                  stk)                    =
       (case reduce_cst cargs of
 	LEFT{Thm,Residue} => cbv_wk ((TRANS th Thm, Residue), stk)
-      |	RIGHT cst => cbv_wk_cst (th,cst,stk))
+      |	RIGHT cst => cbv_up ((th,CST cst), stk))
+  | cbv_wk (clos,                             stk)                    =
+      cbv_up (clos,stk)
 
-and cbv_wk_cst (th, cargs, [])                = (th, CST cargs)
-  | cbv_wk_cst (th, cargs, (mka,clos) :: stk) =
-      let val (thb',v) = cbv_wk (clos,[]) in
-      cbv_wk ((mka th thb', comb_ct cargs (rand (concl thb'),v)), stk)
-      end
+(* *)
+and cbv_up (cl,          Zappl(mka,clos,stk))           =
+      cbv_wk (clos,Zappr(mka,cl,stk))
+  | cbv_up ((thb,v),     Zappr(mka,(th,CST cargs),stk)) =
+      cbv_wk ((mka th thb, comb_ct cargs (rand (concl thb),v)), stk)
+  | cbv_up ((thb,NEUTR), Zappr(mka,(th,NEUTR),stk))     =
+      cbv_up ((mka th thb, NEUTR), stk)
+  | cbv_up (_,           Zappr(_,(_,CLOS _),_))         =
+      raise DEAD_CODE "cbv_up"
+  | cbv_up (clos,        stk)                           =
+      (clos,stk)
+;
 
 (* [strong] continues the reduction of a term in head normal form under
  * abstractions, and in the arguments of non reduced constant.
- * - the arguments of a constant are first moved to the stack, and then
- *   out_stk_fun strongly normalize them from left to right (they already 
- *   are in head normal form).
- * - in the case of neutral terms, we are already done
- * - we cross an abstraction by creating a new free variable we push in the
- *   environment, reduce the body, and rebuild the abstraction. We then try
- *   eta-reduction.
+ *
+ * Note: we lose the info that args of CST are already weak normal forms...
  *) 
-and strong (th, CST {Args,...}) =
-      let fun eval_arg ((_,arg),tstk) = 
-	        APPL_DOWN_FUN (fn thb => (thb,arg)) tstk in
-      out_stk_fun strong (foldl eval_arg (th,[]) Args)
-      end
-  | strong (th, NEUTR) = th
-  | strong (th, CLOS{Env, Term=Abs t}) =
+fun strong ((th, CLOS{Env,Term=Abs t}), stk) =
       let val (_,thb,mkl) = Mk_abs th in
-      try_eta(mkl(strong (cbv_wk ((thb, mk_clos(NEUTR :: Env, t)),[]))))
+      strong (cbv_wk ((thb, mk_clos(NEUTR :: Env, t)), Zabs(mkl,stk)))
       end
-  | strong _ = raise DEAD_CODE "strong: closure should be an abstraction"
-;
+  | strong ((_, CLOS _),                _) =
+      raise DEAD_CODE "strong"
+  | strong ((th,CST {Args,...}),        stk) =
+      strong_up (foldl (push_in_stk snd) (th,stk) Args)
+  | strong ((th, NEUTR),                stk) =
+      strong_up (th,stk)
 
-fun norm_wk rws t =
-  let val clos = mk_clos([],from_term rws [] t) in
-  cbv_wk ((REFL t, clos), [])
-  end;
+and strong_up (th, Ztop) = th
+  | strong_up (th, Zappl(mka,clos,stk)) =
+      strong (cbv_wk (clos, Zappr(mka,(th,NEUTR),stk)))
+  | strong_up (th, Zappr(mka,(tha,_),stk)) = strong_up (mka tha th, stk)
+  | strong_up (th, Zabs(mkl,stk)) = strong_up (try_eta (mkl th), stk)
+;
 
 
 (* [CBV_CONV rws t] is a conversion that does the full normalization of t,
  * using rewrites rws.
  *)
-fun CBV_CONV rws t = strong (norm_wk rws t);
+fun CBV_CONV rws t = strong (cbv_wk (initial_state rws t));
 
 (* WEAK_CBV_CONV is the same as CBV_CONV except that it does not reduce
- * under abstractions (except arguments of variables that are always
- * strongly reduced.
+ * under abstractions, and reduce weakly the arguments of constants.
  *)
-fun WEAK_CBV_CONV rws t = fst (norm_wk rws t);
+fun WEAK_CBV_CONV rws t = fst (fst (cbv_wk (initial_state rws t)));
 
 end;
