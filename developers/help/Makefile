@@ -41,7 +41,7 @@ clean:
 	rm -f Parser.sig Parser.sml Lexer.sml mk_dbs index adoc-files
 	rm -f *.ui
 	rm -f *.uo
-	./clean-adocs.sh docdirs
+	./clean-adocs.sh ../../tools/documentation-directories
 
 ### DO NOT DELETE THIS LINE
 Parser.uo: Parser.ui
