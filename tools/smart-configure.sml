@@ -46,13 +46,12 @@ in
 end;
 
 fun determining s =
-    (print (StringCvt.padRight #" " 10 (s^":"));
-     delay 1 (fn _ => ()));
+    (print (s^" "); delay 1 (fn _ => ()));
 
 (* action starts here *)
 print "\nHOL smart configuration.\n\n";
 
-print "Determining configuration parameters...\n";
+print "Determining configuration parameters: ";
 determining "OS";
 
 val currentdir = FileSys.getDir()
@@ -73,8 +72,6 @@ in
   else "winNT"
 end;
 
-print (OS ^ "\n");
-
 determining "mosmldir";
 
 val mosmldir = let
@@ -87,13 +84,12 @@ val mosmldir = let
   val (arcs', lib) = frontlast arcs
   val _ =
       if lib <> "lib" then
-        print "Mosml library directory (from loadPath) not .../lib -- weird!\n"
+        print "\nMosml library directory (from loadPath) not .../lib -- weird!\n"
       else ()
 in
   Path.toString {arcs = arcs', isAbs = true, vol = vol}
 end;
 
-print (mosmldir ^"\n");
 
 determining "holdir";
 
@@ -114,11 +110,28 @@ in
         print "please run me from the root HOL directory\n";
         Process.exit Process.failure)
 end;
-
-print (holdir ^"\n");
 print "\n";
 
-print "Configuration will begin with above values.  If they are wrong\n";
+val _ = let
+  val override = Path.concat(holdir, "config-override")
+in
+  if FileSys.access (override, [FileSys.A_READ]) then
+    (print "\n[Using override file!]\n\n";
+     use override)
+  else ()
+end;
+
+
+fun verdict (prompt, value) =
+    (print (StringCvt.padRight #" " 10 (prompt^":"));
+     print value;
+     print "\n");
+
+verdict ("OS", OS);
+verdict ("mosmldir", mosmldir);
+verdict ("holdir", holdir);
+
+print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";
 
 delay 3
@@ -128,5 +141,6 @@ delay 3
 print "\n";
 
 val configfile = Path.concat (Path.concat (holdir, "tools"), "configure.sml");
+
 
 use configfile;
