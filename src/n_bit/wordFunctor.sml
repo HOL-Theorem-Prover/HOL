@@ -1,7 +1,7 @@
 functor wordFunctor (val bits : int) =
 struct
 
-(* 
+(*
    app load ["EquivType","pairTheory",
              "numeralTheory","wordUtil","bitsTheory","numeral_bitsTheory"];
 val bits = 8;
@@ -2533,11 +2533,11 @@ val _ = add_infix(">=.",450,HOLgrammars.RIGHT);
 
 (* STOP; *)
 
-val _ = 
- let open numeral_bitsTheory bitsTheory Drop
+val _ =
+ let open Drop
      val THE_WL = SIMP_RULE arith_ss [HB_def,arithmeticTheory.ADD1] WL_def
      val MOD_WL_EVAL = REWRITE_RULE [THE_WL,GSYM MOD_2EXP_def] MOD_WL_def
-     val RRX_EVAL2 = GEN_ALL (REWRITE_RULE 
+     val RRX_EVAL2 = GEN_ALL (REWRITE_RULE
                          [GSYM DIV2_def,RRXn_def,LSR_ONE_def,HB_def] RRX_EVAL)
      val LT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LT_EVAL
      val LE_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LE_EVAL
@@ -2552,8 +2552,8 @@ val _ =
     :: map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
      [THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
       MSBn_def, MSB_EVAL,  LSB_EVAL, MOD_WL_EVAL, w2n_EVAL,
-      OR_def, OR_EVAL, AND_def, AND_EVAL, EOR_def, EOR_EVAL, 
-      TWO_COMP_def, TWO_COMP_EVAL, ONE_COMP_def, ONE_COMP_EVAL, 
+      OR_def, OR_EVAL, AND_def, AND_EVAL, EOR_def, EOR_EVAL,
+      TWO_COMP_def, TWO_COMP_EVAL, ONE_COMP_def, ONE_COMP_EVAL,
       ADD_EVAL, MUL_EVAL, word_sub_def,
       LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL2,
       WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
