@@ -197,11 +197,34 @@ fun clean_sigobj() =
      map_dir (rem_file o normPath o Path.concat) SIGOBJ
   end;
 
+fun build_adoc_files () = let
+  val docdirs = let
+    val instr = TextIO.openIn(fullPath [HOLDIR, "tools",
+                                        "documentation-directories"])
+    val wholefile = TextIO.inputAll instr before TextIO.closeIn instr
+  in
+    map normPath (String.tokens Char.isSpace wholefile)
+  end handle _ => (print "Couldn't read documentation directories file\n";
+                   [])
+  val doc2txt = fullPath [HOLDIR, "help", "src", "Doc2Txt"]
+  fun make_adocs dir = let
+    val fulldir = fullPath [HOLDIR, dir]
+  in
+    if SYSTEML [doc2txt, fulldir, fulldir] = Process.success then true
+    else
+      (print ("Generation of ASCII doc files failed in directory "^dir^"\n");
+       false)
+  end
+in
+  List.all make_adocs docdirs
+end
+
+
+
 
 fun build_help () =
  let val dir = Path.concat(Path.concat (HOLDIR,"help"),"src")
      val _ = FileSys.chDir dir
-     val _ = print ("Working in directory "^dir^"\n");
      val _ = build_dir dir
      val doc2html = fullPath [dir,"Doc2Html"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
@@ -209,14 +232,18 @@ fun build_help () =
      val _        = if (FileSys.isDir htmlpath handle _ => false) then ()
                     else (print ("Creating directory "^htmlpath^"\n");
                           FileSys.mkDir htmlpath)
-     val cmd1     = String.concat [doc2html, " ",docpath, " ", htmlpath]
-     val cmd2     = fullPath [dir,"makebase"]
+     val cmd1     = [doc2html, docpath, htmlpath]
+     val cmd2     = [fullPath [dir,"makebase"]]
+     val _ = print "Generating ASCII versions of Docfiles... "
+     val _ = if build_adoc_files () then print "done\n" else ()
  in
-   if Process.system cmd1 = Process.success then ()
-   else (print ("Build failed in directory "^dir^"\n");
-        raise Fail "Couldn't make html versions of Docfiles")
+   print "Gemerating HTML versions of Docfiles... "
  ;
-   if Process.system cmd2 = Process.success then ()
+   if SYSTEML cmd1  = Process.success then print "done\n"
+   else (print ("Build failed in directory "^dir^"\n");
+         raise Fail "Couldn't make html versions of Docfiles")
+ ;
+   if (print "Building Help DB\n"; SYSTEML cmd2) = Process.success then ()
    else (print ("Build failed in directory "^dir^"\n");
         raise Fail "Couldn't make help database")
  end;

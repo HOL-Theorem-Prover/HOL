@@ -130,7 +130,7 @@ fun trans htmldir docfile =
        end
        handle e => print ("Failed to translate file: "
                     ^docfile^"---"^exnMessage e^"\n"))
-   | otherwise => print ("Failed to parse file name: "^docfile^"\n");
+   | otherwise => ()
 
 
 
@@ -144,13 +144,12 @@ fun docdir_to_htmldir docdir htmldir =
           | SOME docfile =>
              let val fulldocfile = Path.concat (docdir,docfile)
              in
-                 print ("Translating "^fulldocfile^"\n");
+                 (* print ("Translating "^fulldocfile^"\n"); *)
                  trans_html fulldocfile;
                  loop()
              end
  in loop()
   ; closeDir dstrm
-  ; print "\nFinished translating docfiles to html.\n\n"
  end;
 
 val _ =

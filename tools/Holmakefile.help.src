@@ -1,6 +1,7 @@
+(0)
 OPTIONS = NO_OVERLAY
 
-all: makebase Doc2Html Doc2Tex
+all: makebase Doc2Html Doc2Tex Doc2Txt
 
 makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo Printbase.uo Texsigs.uo makebase.uo
 (1)
@@ -13,6 +14,9 @@ Doc2Html : Doc2Html.uo ParseDoc.uo
 
 Doc2Tex : Doc2Tex.uo ParseDoc.uo
 (3)
+
+Doc2Txt: Doc2Txt.uo ParseDoc.uo
+(4)
 
 Hasht.uo: Hasht.sml Hasht.ui
 	MOSMLC -c Hasht.sml

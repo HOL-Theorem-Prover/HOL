@@ -255,23 +255,75 @@ fun check_char_section s =
 
 fun final_char_check slist = (List.app check_char_section slist; slist)
 
-fun parse_file docfile =
- let fun db_out (BRKT ss) = BRKT (unescape_braces ss)
-       | db_out (XMPL ss) = XMPL (unescape_braces ss)
-       | db_out otherwise = otherwise
+fun parse_file docfile = let
+  fun db_out (BRKT ss) = BRKT (unescape_braces ss)
+    | db_out (XMPL ss) = XMPL (unescape_braces ss)
+    | db_out otherwise = otherwise
 
-     fun section (tag, ss) =
-       case tag
-        of "TYPE" => TYPE (parse_type ss)
-         | "SEEALSO" => SEEALSO
-                          (tokens (Char.isSpace \/ equal #",")
-                             (dropr (Char.isSpace \/ equal #".") ss))
-         | otherwise =>
-           FIELD (tag, trimws (List.map db_out (paragraphs (markup ss))))
-     val firstpass = List.map section (to_sections (fetch_contents docfile))
+  fun section (tag, ss) =
+      case tag of
+        "TYPE" => TYPE (parse_type ss)
+      | "SEEALSO" => let
+          val args = tokens (Char.isSpace \/ equal #",")
+                            (dropr (Char.isSpace \/ equal #".") ss)
+        in
+          if null args then
+            raise ParseError "Empty SEEALSO list"
+          else
+            SEEALSO args
+        end
+      | otherwise =>
+        FIELD (tag, trimws (List.map db_out (paragraphs (markup ss))))
+  val firstpass = List.map section (to_sections (fetch_contents docfile))
+in
+  final_char_check (install_doc_part docfile firstpass)
+end handle ParseError s => raise ParseError (docfile^": "^s)
+         | x => (warn ("Exception raised in "^docfile^"\n"); raise x)
+
+(* ----------------------------------------------------------------------
+    File handling routines
+   ---------------------------------------------------------------------- *)
+
+open String
+fun stripdoc_suff s = String.extract(s, 0, SOME (size s - 4))
+fun hasdoc_suff s =
+    String.extract(s, size s - 4, NONE) = ".doc"
+    handle Subscript => false
+
+fun valid_doc_name s = hasdoc_suff s
+
+fun core_dname dnm = let
+  val toks = String.tokens (equal #".") dnm
+in
+  if length toks = 2 then hd (tl toks) else hd toks
+end
+
+fun structpart dnm =  hd (String.tokens (equal #".") dnm)
+
+(* returns a set of file-names from the given directory that are .doc
+   files *)
+fun find_docfiles dirname = let
+  val dirstr = FileSys.openDir dirname
+  fun name_compare(s1,s2) = let
+    (* names already less .doc suffix *)
+    val lower = String.map Char.toLower
+    val s1tok = lower (core_dname (Symbolic.tosymb s1))
+    val s2tok = lower (core_dname (Symbolic.tosymb s2))
   in
-   final_char_check (install_doc_part docfile firstpass)
-  end handle ParseError s => raise ParseError (docfile^": "^s)
-           | x => (warn ("Exception raised in "^docfile^"\n"); raise x)
+    case String.compare (s1tok, s2tok) of
+      EQUAL => String.compare(lower (structpart s1), lower (structpart s2))
+    | x => x
+  end
+  fun insert s t =
+      if valid_doc_name s then Binaryset.add(t, stripdoc_suff s)
+      else t
+  fun loop acc =
+      case FileSys.readDir dirstr of
+        SOME s => loop (insert s acc)
+      | NONE => (FileSys.closeDir dirstr; acc)
+in
+  loop (Binaryset.empty name_compare)
+end
+
 
 end

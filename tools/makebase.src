@@ -1,4 +1,4 @@
-(* makebase -- create the signature database from the Moscow ML 
+(* makebase -- create the signature database from the Moscow ML
  * library signatures.  PS 1995-11-19, 2000-06-29
  *
  * Hacked for HOL help system, Konrad Slind, Nov. 2001.
@@ -14,7 +14,7 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 val normPath = (* string list -> string *)
   Path.toString o Path.fromString o itstrings (curry Path.concat);
 
-fun destProperSuffix s1 s2 = 
+fun destProperSuffix s1 s2 =
   let val sz1 = String.size s1
       val sz2 = String.size s2
       open Substring
@@ -42,7 +42,7 @@ fun isSigId {comp=Database.Term(_,SOME"HOL"),file,line} = false
  ---------------------------------------------------------------------------*)
 
 (* The version number inserted in generated files: *)
-val version = 
+val version =
  "<A HREF=\"http://www.cl.cam.ac.uk/Research/HVG/FTP/\">HOL Kananaskis 0";
 
 (* HOL distribution directory: *)
@@ -70,7 +70,7 @@ val htmlDirDef = "htmlsigs"
 val htmlIndexDef = normPath[HOLpath,"help","src",htmlDirDef,"idIndex.html"]
 
 (* Default filename for the HTML format database for theories: *)
-val htmlTheoryIndexDef = 
+val htmlTheoryIndexDef =
    normPath[HOLpath,"help","src",htmlDirDef,"TheoryIndex.html"]
 
 (* Default filename for the LaTeX signatures: *)
@@ -84,7 +84,7 @@ val bgcolor = "#fbf2e7";
 
 (* To make the database, sort entries on normalized (lower case) name,
  * lump together equal normalized names in entry lists, and sort these by
- * structure name (except that a Str entry always precedes the others): 
+ * structure name (except that a Str entry always precedes the others):
  *)
 
 fun mkbase (entries : Database.entry list) =
@@ -103,31 +103,31 @@ fun mkbase (entries : Database.entry list) =
 	  | kindof (Con _) = "con"
 	  | kindof (Term (_, NONE)) = ""
 	  | kindof (Term (_, SOME kind)) = kind
-	fun kindCompare (e1 as {comp=c1, ...}, e2 as {comp=c2, ...}) = 
+	fun kindCompare (e1 as {comp=c1, ...}, e2 as {comp=c2, ...}) =
 	    String.compare(kindof c1, kindof c2)
-	fun nameCompare (e1, e2) = 
+	fun nameCompare (e1, e2) =
 	    String.compare(getname e1, getname e2)
 	fun fileCompare (e1, e2) = String.compare(#file e1, #file e2)
 	val entryCompare = kindCompare THEN nameCompare THEN fileCompare
 	(* Share strings if result=argument: *)
-	fun toLower s = 
+	fun toLower s =
 	    let val s' = String.map Char.toLower s
 	    in if s=s' then s else s' end
 	(* Lump together names that differ only in capitalization;
            then sort each lump using entryCompare                   *)
 	fun lump [] = []
-	  | lump (x1 :: xr) = 
-	    let fun mkLump lumpname lump = (toLower (getname lumpname), 
+	  | lump (x1 :: xr) =
+	    let fun mkLump lumpname lump = (toLower (getname lumpname),
 					    Listsort.sort entryCompare lump)
 		fun h lump1name lump1 []       = [mkLump lump1name lump1]
-		  | h lump1name lump1 (x1::xr) = 
-		    if compname(x1, lump1name) = EQUAL then 
+		  | h lump1name lump1 (x1::xr) =
+		    if compname(x1, lump1name) = EQUAL then
 			h lump1name (x1 :: lump1) xr
 		    else
 			mkLump lump1name lump1 :: h x1 [x1] xr
 	    in h x1 [x1] xr end
 	val lumps = lump entries : (string * entry list) list
-	fun mkOrderedTree xs = 
+	fun mkOrderedTree xs =
 	    let fun h 0 xs = (Empty, xs)
 		  | h n xs =
 		    let val m = n div 2
@@ -143,34 +143,29 @@ fun mkbase (entries : Database.entry list) =
 (* Additional stuff specific to HOL.                                         *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_HOLdocfile_entry (dir,s) = 
- let val content = 
-      let val (pfx,sfx) = Substring.position "-lc.doc" (Substring.all s)
-      in if Substring.size sfx = 0 orelse Substring.size sfx <> 7
-         then String.substring(s,0,size s - 4)
-         else String.substring(s,0,size s - 7)
-      end
+fun mk_HOLdocfile_entry (dir,s) =
+ let val content =String.substring(s,0,size s - 5)
  in
-    {comp=Database.Term(Symbolic.tosymb content, SOME"HOL"), 
+    {comp=Database.Term(Symbolic.tosymb content, SOME"HOL"),
      file=normPath[dir,s], line=0}
  end
 
 local fun is_adocfile s =
-         String.size s>5 andalso 
+         String.size s>5 andalso
          String.extract(s, String.size s - 5, NONE) = ".adoc"
       fun is_docfile s =
-         String.size s>4 andalso 
+         String.size s>4 andalso
          String.extract(s, String.size s - 4, NONE) = ".doc"
 in
 fun docdir_to_entries path (endpath, entries) =
-  let val L1 = List.filter is_docfile 
+  let val L1 = List.filter is_adocfile
                   (Mosml.listDir (normPath [path, endpath]))
   in List.foldl (fn (s,l) => mk_HOLdocfile_entry (endpath,s)::l) entries L1
   end
 end;
 
-val docdirs = 
- let val instr = TextIO.openIn 
+val docdirs =
+ let val instr = TextIO.openIn
                    (Path.concat(HOLpath,"tools/documentation-directories"))
         handle _ => (print "Couldn't open documentation directories file";
                     raise Fail "File not found")
@@ -180,13 +175,13 @@ val docdirs =
    map (normPath o single) (String.tokens Char.isSpace wholefile)
  end
 
-val SRCFILES = 
+val SRCFILES =
  let open TextIO
      val istrm = openIn (Path.concat(HOLpath,"sigobj/SRCFILES"))
         handle _ => (print "Couldn't open HOLDIR/sigobj/SRCFILES";
                      raise Fail "File not found")
      val wholefile = inputAll istrm before closeIn istrm
-     fun munge path = 
+     fun munge path =
        let val {dir,file} = Path.splitDirFile path
        in case destProperSuffix "Theory" file
            of SOME thy => (file, Path.concat(dir,thy^"Script.sml"))
@@ -198,22 +193,22 @@ val SRCFILES =
 
 fun dirToBase (sigdir, docdirs, filename) =
     let val doc_entryl = List.foldl (docdir_to_entries HOLpath) [] docdirs
-        val res = List.foldl (Parsspec.processfile stoplist sigdir) 
+        val res = List.foldl (Parsspec.processfile stoplist sigdir)
 	                     doc_entryl Keepers.keepers
-	val _ = print ("\nProcessed " ^ Int.toString (length res) 
+	val _ = print ("\nProcessed " ^ Int.toString (length res)
 		       ^ " entries in total.\n");
 	val _ = print ("Building database...\n");
 	val db = mkbase res
 	val _ = print ("Writing database to file " ^ filename ^ "\n");
-    in 
+    in
 	Database.writebase(filename, db)
     end
     handle exn as OS.SysErr (str, _) => (print(str ^ "\n\n"); raise exn)
 
-fun process (libdir, helpfile, txtIndex, 
+fun process (libdir, helpfile, txtIndex,
              texIndex, htmldir, htmlIndex, htmlTheoryIndex, HOLpage)
  =
- (print ("Reading signatures in directory " ^ libdir ^ 
+ (print ("Reading signatures in directory " ^ libdir ^
         "\nand writing help database in file " ^ helpfile ^ "\n")
  ; dirToBase (libdir, docdirs, helpfile)
 
@@ -224,37 +219,37 @@ fun process (libdir, helpfile, txtIndex,
  ; Printbase.printLatexBase(helpfile, texIndex)
 
  ; print ("\nCreating HTML versions of signature files\n")
- ; Htmlsigs.sigsToHtml 
+ ; Htmlsigs.sigsToHtml
      version bgcolor stoplist helpfile HOLpath SRCFILES (libdir, htmldir)
 
  ; print ("\nWriting HTML signature index in file " ^ htmlIndex ^ "\n")
- ; Htmlsigs.printHTMLBase version bgcolor HOLpath 
+ ; Htmlsigs.printHTMLBase version bgcolor HOLpath
          isSigId "HOL IDENTIFIER INDEX" (helpfile, htmlIndex)
 
  ; print ("\nWriting HTML theory signature index in file "
           ^ htmlTheoryIndex ^ "\n")
- ; Htmlsigs.printHTMLBase version bgcolor HOLpath 
+ ; Htmlsigs.printHTMLBase version bgcolor HOLpath
          isTheory "HOL THEORY BINDINGS" (helpfile, htmlTheoryIndex)
 
  ; print ("\nWriting HOLPage\n")
- ; HOLPage.printHOLPage version bgcolor HOLpath 
+ ; HOLPage.printHOLPage version bgcolor HOLpath
                         htmlIndex htmlTheoryIndex (helpfile, HOLpage)
      (*  ;
      print ("\nWriting LaTeX signature bodies in file " ^ texSigs ^ "\n");
      Texsigs.sigsToLatex stoplist libdir helpfile texSigs
      *)
- )    
+ )
 
-val _ = 
+val _ =
     case CommandLine.arguments () of
-	[]       => 
-	    process (libdirDef, helpfileDef, 
-		     txtIndexDef, texIndexDef, 
-                     htmlDirDef, htmlIndexDef, 
+	[]       =>
+	    process (libdirDef, helpfileDef,
+		     txtIndexDef, texIndexDef,
+                     htmlDirDef, htmlIndexDef,
                      htmlTheoryIndexDef, HOLpageDef)
-      | [libdir] => 
-	    process (libdir, helpfileDef, 
-		     txtIndexDef, texIndexDef, 
-                     htmlDirDef, htmlIndexDef, 
+      | [libdir] =>
+	    process (libdir, helpfileDef,
+		     txtIndexDef, texIndexDef,
+                     htmlDirDef, htmlIndexDef,
                      htmlTheoryIndexDef, HOLpageDef)
       | _ => print "Usage: makebase\n"
