@@ -116,16 +116,16 @@ val _ = (set_fixity (";;",  Infixr 350); set_MLname ";;"  "seq_def");
 (* ---------------------------------------------------------------------*)
 
 val (rules,induction,ecases) = new_inductive_definition
- (Term `(!s. EVAL Skip s s) 
-   /\   (!s V E. EVAL (V ::= E) s (\v. if v=V then E s else s v))
-   /\   (!C1 C2 s1 s3. 
-          (?s2. EVAL C1 s1 s2 /\ EVAL C2 s2 s3) ==> EVAL (C1;;C2) s1 s3)
-   /\   (!C1 C2 s1 s2 B. EVAL C1 s1 s2 /\  B s1 ==> EVAL (If B C1 C2) s1 s2)
-   /\   (!C1 C2 s1 s2 B. EVAL C2 s1 s2 /\ ~B s1 ==> EVAL (If B C1 C2) s1 s2)
-   /\   (!C s B.                           ~B s ==> EVAL (While B C) s s)
-   /\   (!C s1 s3 B. 
-             (?s2. EVAL C s1 s2 /\ 
-                EVAL (While B C) s2 s3 /\ B s1) ==> EVAL (While B C) s1 s3)`);
+     `(!s. EVAL Skip s s) 
+ /\   (!s V E. EVAL (V ::= E) s (\v. if v=V then E s else s v))
+ /\   (!C1 C2 s1 s3. 
+        (?s2. EVAL C1 s1 s2 /\ EVAL C2 s2 s3) ==> EVAL (C1;;C2) s1 s3)
+ /\   (!C1 C2 s1 s2 B. EVAL C1 s1 s2 /\  B s1 ==> EVAL (If B C1 C2) s1 s2)
+ /\   (!C1 C2 s1 s2 B. EVAL C2 s1 s2 /\ ~B s1 ==> EVAL (If B C1 C2) s1 s2)
+ /\   (!C s B.                           ~B s ==> EVAL (While B C) s s)
+ /\   (!C s1 s3 B. 
+        (?s2. EVAL C s1 s2 /\ 
+              EVAL (While B C) s2 s3 /\ B s1) ==> EVAL (While B C) s1 s3)`;
 
 val rules = CONJUNCTS rules;
 

@@ -78,10 +78,10 @@ val (distinct,ap11) =
 val _ = set_fixity("--->",Infixr 700);
 
 val (Crules, Cind, Ccases) = new_inductive_definition
-  (Term `(!x y.               (K#x#y) ---> x)
-     /\  (!x y z.             (S#x#y#z) ---> (x#z#(y#z)))
-     /\  (!x y z. x ---> y ==> (x#z) ---> (y#z))
-     /\  (!x y z. x ---> y ==> (z#x) ---> (z#y))`);
+    `(!x y.               K#x#y ---> x)
+ /\  (!x y z.             S#x#y#z ---> x#z#(y#z))
+ /\  (!x y z. x ---> y ==> x#z ---> y#z)
+ /\  (!x y z. x ---> y ==> z#x ---> z#y)`;
 
 val Crules = CONJUNCTS Crules;
 
@@ -116,9 +116,9 @@ val [Ck_TAC,Cs_TAC,LCap_TAC,RCap_TAC] = map RULE_TAC Crules;
 (* ---------------------------------------------------------------------*)
 
 val (RTCrules, RTCind, RTCcases) = new_inductive_definition
-  (Term `(!x y. R x y ==> RTC R x y)
-     /\  (!x. RTC R x x)
-     /\  (!x y. (?z. RTC R x z /\ RTC R z y) ==> RTC R x y)`);
+    `(!x y. R x y ==> RTC R x y)
+ /\  (!x.             RTC R x x)
+ /\  (!x y. (?z. RTC R x z /\ RTC R z y) ==> RTC R x y)`;
 
 val RTCrules = map GEN_ALL (CONJUNCTS (SPEC_ALL RTCrules));
 
@@ -323,10 +323,10 @@ val NOT_C_CR =
 val _ = set_fixity("===>",Infixr 700);
 
 val (PCrules, PCind, PCcases) = new_inductive_definition
- (Term `(!x. x ===> x)
-   /\   (!x y. K#x#y ===> x)
-   /\   (!x y z. S#x#y#z ===> x#z#(y#z))
-   /\   (!w x y z. w ===> x /\ y ===> z ==> (w#y ===> x#z))`);
+     `(!x. x ===> x)
+ /\   (!x y. K#x#y ===> x)
+ /\   (!x y z. S#x#y#z ===> x#z#(y#z))
+ /\   (!w x y z. w ===> x /\ y ===> z ==> (w#y ===> x#z))`;
 
 val PCrules = CONJUNCTS PCrules;
 
@@ -391,8 +391,8 @@ fun PC_TAC g =
 val _ = hide "TC";  (* TC already defined in relationTheory *)
 
 val (TCrules, TCind, TCcases) = new_inductive_definition
- (Term `(!x y. R x y ==> TC R x y)
-    /\  (!x y. (?z. TC R x z /\ R z y) ==> TC R x y)`);
+    `(!x y. R x y ==> TC R x y)
+ /\  (!x y. (?z. TC R x z /\ R z y) ==> TC R x y)`;
 
 val TCrules = map GEN_ALL (CONJUNCTS (SPEC_ALL TCrules));
 
@@ -538,7 +538,7 @@ val PRED_SUB_RED =
 
 val PRk_THM =
     prove
-    ((--`!a b. ((K # a) # b) ===>* a`--),
+    ((--`!a b. K#a#b ===>* a`--),
      SUBST1_TAC preduce THEN
      TC_IN_TAC THEN PC_TAC);
 
@@ -778,7 +778,7 @@ val CR_THEOREM =
        val mkcases = REPEAT_TCL STRIP_THM_THEN ttac 
        val STRIP_PC_TAC = REPEAT STRIP_TAC THEN PC_TAC THEN
                           TRY(FIRST_ASSUM MATCH_ACCEPT_TAC) 
-   in prove (--`CR $===>`--,
+   in Q.prove (`CR $===>`,
       PURE_ONCE_REWRITE_TAC [CR] THEN
       RULE_INDUCT_THEN PCsind STRIP_ASSUME_TAC STRIP_ASSUME_TAC THEN
       REPEAT GEN_TAC THENL
