@@ -43,87 +43,96 @@ fun rotr lst =
 type tac_result = {goals : goal list,
                    validation : Thm.thm list -> Thm.thm}
 
+(*---------------------------------------------------------------------------
+   Need both initial goal and final theorem in PROVED case, because
+   finalizer can take a theorem achieving the original goal and
+   transform it into a second theorem. Destructing that second theorem
+   wouldn't deliver the original goal.
+ ---------------------------------------------------------------------------*)
 datatype proposition = POSED of goal
-                     | PROVED of Thm.thm;
+                     | PROVED of Thm.thm * goal;
 
-datatype gstk = GSTK of {prop: proposition,
+datatype gstk = GSTK of {prop: proposition, final: thm -> thm,
                          stack : tac_result list}
 
 fun depth(GSTK{stack,...}) = length stack;
 
-fun is_initial(GSTK{prop = POSED g, stack = []}) = true
+fun is_initial(GSTK{prop=POSED g, stack=[], ...}) = true
   | is_initial _ = false;
 
-fun top_goals(GSTK{prop=POSED g, stack = []}) = [g]
-  | top_goals(GSTK{prop=POSED _, stack = {goals,...}::_}) = goals
+fun top_goals(GSTK{prop=POSED g, stack=[], ...}) = [g]
+  | top_goals(GSTK{prop=POSED _, stack = ({goals,...}::_),...}) = goals
   | top_goals(GSTK{prop=PROVED _, ...}) = raise ERR "top_goals" "no goals";
 
 val top_goal = hd o top_goals;
 
-fun new_goal (g as (asl,w)) =
+fun new_goal (g as (asl,w)) f =
    if all (fn tm => Term.type_of tm = Type.bool) (w::asl)
-    then GSTK{prop = POSED g, stack = []}
+    then GSTK{prop=POSED g, stack=[], final=f}
     else raise ERR "set_goal" "not a proposition; new goal not added";
 
 
+fun finalizer(GSTK{final,...}) = final;
+
 fun initial_goal(GSTK{prop = POSED g,...}) = g
-  | initial_goal(GSTK{prop = PROVED th,...}) = Thm.dest_thm th;
+  | initial_goal(GSTK{prop = PROVED (th,g),...}) = g;
 
 
-fun rotate(GSTK{prop = PROVED _, ...}) _ =
+fun rotate(GSTK{prop=PROVED _, ...}) _ =
         raise ERR "rotate" "goal has already been proved"
-  | rotate(GSTK{prop, stack}) n =
-      if (n<0)
-      then raise ERR"rotate" "negative rotations not allowed"
-      else
+  | rotate(GSTK{prop, stack, final}) n =
+     if n<0 then raise ERR"rotate" "negative rotations not allowed"
+     else 
       case stack
-      of [] => raise ERR"rotate" "No goals to rotate"
-       | ({goals,validation}::rst) =>
-          if (n > length goals)
-          then raise ERR "rotate"
+       of [] => raise ERR"rotate" "No goals to rotate"
+        | ({goals,validation}::rst) =>
+           if n > length goals
+           then raise ERR "rotate"
                         "More rotations than goals -- no rotation done"
-          else GSTK{prop = prop,
-                    stack = {goals = funpow n rotl goals,
-                             validation=validation o funpow n rotr}
-                            :: rst};
+           else GSTK{prop=prop, final=final,
+                     stack={goals=funpow n rotl goals,
+                            validation=validation o funpow n rotr} :: rst};
 
 
-local
-fun imp_err s = raise ERR "expandf" ("implementation error: "^s)
-fun return(GSTK{stack = {goals = [],validation}::rst, prop}) =
+local fun imp_err s = raise ERR "expandf" ("implementation error: "^s)
+fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g,final}) =
     let val th = validation []
     in case rst
-       of [] => GSTK{prop = PROVED th, stack = []}
+       of [] => (let val thm = final th
+                     (* val _ = sanity check : g = dest_thm(th) *)
+                 in GSTK{prop=PROVED (thm,g), stack=[], final=final}
+                 end handle e as HOL_ERR _
+                  => (cr_add_string_cr "finalization failed"; raise e))
        | ({goals = _::rst_o_goals, validation}::rst') =>
            ( cr_add_string_cr "Goal proved.";
-             add_string_cr (Parse.thm_to_string th);
-             return(GSTK{prop = prop,
-                         stack = {goals = rst_o_goals,
+             Parse.print_thm th; say "\n";
+             return(GSTK{prop=prop, final=final,
+                         stack={goals=rst_o_goals,
                                   validation=fn thl => validation(th::thl)}
-                                 :: rst'}))
+                                :: rst'}))
        | _ => imp_err (quote "return")
     end
   | return gstk = gstk
 in
-fun expandf(GSTK{prop = PROVED _, ...}) _ =
-           raise ERR "expandf" "goal has already been proved"
-  | expandf(GSTK{prop as POSED g, stack}) tac =
-     let val (glist,vf) = tac (case stack of   []    => g
-                                           | (tr::_) => hd (#goals tr))
+fun expandf (GSTK{prop=PROVED _, ...}) _ =
+       raise ERR "expandf" "goal has already been proved"
+  | expandf (GSTK{prop as POSED g, stack,final}) tac =
+     let val arg = (case stack of [] => g | tr::_ => hd (#goals tr))
+         val (glist,vf) = tac arg
          val dpth = length stack
-         val gs = return(GSTK{prop = prop,
-                              stack = {goals = glist, validation = vf}
-                                      :: stack})
+         val gs = return(GSTK{prop=prop,final=final,
+                              stack={goals=glist, validation=vf} :: stack})
      in case gs
-        of GSTK{prop = PROVED _, stack} => ()
-         | GSTK{prop, stack as {goals, ...}::_} =>
+        of GSTK{prop = PROVED _, ...} => ()
+         | GSTK{prop, final, stack as {goals, ...}::_} =>
              let val dpth' = length stack
-             in if (dpth' > dpth)
+             in if dpth' > dpth
                 then if (dpth+1 = dpth')
-                     then add_string_cr(case (length goals)
-                                        of 0 => imp_err "1"
-                                         | 1 => "1 subgoal:"
-                                         | n => (int_to_string n)^" subgoals:")
+                     then add_string_cr
+                           (case (length goals)
+                             of 0 => imp_err "1"
+                              | 1 => "1 subgoal:"
+                              | n => (int_to_string n)^" subgoals:")
                      else imp_err "2"
                 else cr_add_string_cr "Remaining subgoals:"
              end
@@ -135,7 +144,7 @@ end;
 
 fun expand gs = expandf gs o Tactical.VALID;
 
-fun extract_thm (GSTK{prop = PROVED th, ...}) = th
+fun extract_thm (GSTK{prop = PROVED (th,_), ...}) = th
   | extract_thm _ = raise ERR "extract_thm" "no theorem proved";
 
 (* Prettyprinting *)
@@ -185,18 +194,18 @@ fun pp_gstk ppstrm  =
    let val pr_goal = pp_goal ppstrm
        val {add_string, add_break, begin_block, end_block, add_newline, ...} =
                      Portable.with_ppstream ppstrm
-       fun pr (GSTK{prop = POSED g, stack = []}) =
+       fun pr (GSTK{prop = POSED g, stack = [], ...}) =
               (begin_block Portable.CONSISTENT 0;
                add_string"Initial goal:";
                add_newline(); add_newline();
                pr_goal g;
                end_block())
-         | pr (GSTK{prop = POSED _, stack = {goals,...}::_}) =
+         | pr (GSTK{prop = POSED _, stack = ({goals,...}::_), ...}) =
              (begin_block Portable.CONSISTENT 0;
               Portable.pr_list
                    pr_goal (fn () => ()) add_newline (rev goals);
               end_block())
-         | pr (GSTK{prop = PROVED th, ...}) =
+         | pr (GSTK{prop = PROVED (th,_), ...}) =
              (begin_block Portable.CONSISTENT 0;
               add_string "Initial goal proved.";
               add_newline();

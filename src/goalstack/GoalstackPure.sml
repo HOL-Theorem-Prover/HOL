@@ -5,6 +5,8 @@ open Exception Lib History;
 
 type thm = Thm.thm
 type goal = Abbrev.goal;
+type tactic = Abbrev.tactic;
+type ppstream = Portable.ppstream;
 
 fun ERR func mesg =
      HOL_ERR{origin_structure = "GoalstackPure",
@@ -19,21 +21,25 @@ fun rotl (a::rst) = rst@[a]
  *---------------------------------------------------------------------------*)
 datatype goalstack = GOALSTACK of Bwd.gstk history;
 
-fun set_goal g = GOALSTACK(new_history{obj = Bwd.new_goal g, limit = 15});
+fun prim_set_goal g f = 
+     GOALSTACK(new_history{obj=Bwd.new_goal g f, limit=15});
+
+fun set_goal g = prim_set_goal g Lib.I;
 
 fun backup (GOALSTACK s) = GOALSTACK(undo s);
 fun set_backup i (GOALSTACK s) = GOALSTACK(set_limit s i);
-fun restart (GOALSTACK s) = set_goal (project Bwd.initial_goal s);
-
 fun expandf tac (GOALSTACK s) = GOALSTACK (apply (C Bwd.expandf tac) s);
 fun expand tac (GOALSTACK s) = GOALSTACK (apply (C Bwd.expand tac) s);
 
 fun top_thm (GOALSTACK s) = project Bwd.extract_thm s;
 fun initial_goal (GOALSTACK s) = project Bwd.initial_goal s;
+fun finalizer (GOALSTACK s) = project Bwd.finalizer s;
 fun top_goal (GOALSTACK s) = project Bwd.top_goal s;
 fun top_goals (GOALSTACK s) = project Bwd.top_goals s;
-
 fun rotate i (GOALSTACK s) = GOALSTACK(apply (C Bwd.rotate i) s);
+
+fun restart x = prim_set_goal (initial_goal x) (finalizer x);
+
 
 
 (*---------------------------------------------------------------------------
@@ -49,6 +55,7 @@ val std_goal_pp = Bwd.std_pp_goal;
 (*---------------------------------------------------------------------------
  * A type that collects groups of goalstacks into one place.
  *---------------------------------------------------------------------------*)
+
 datatype proofs = PRFS of goalstack list;
 
 exception NO_PROOFS;
