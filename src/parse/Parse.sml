@@ -573,13 +573,7 @@ end
 
 val grm_updates = ref [] : (string * string) list ref;
 
-fun update_grms fname p =
-    (if current_theory() = "scratch" then
-       HOL_WARNING "Parse" fname
-                   ("Shouldn't update grammar in theory \"scratch\""^
-                    " try \"new_theory\" first, or use temporary change.")
-     else ();
-     grm_updates := (p :: !grm_updates));
+fun update_grms fname p = grm_updates := (p :: !grm_updates);
 
 
 fun temp_add_type s = let open parse_type in
@@ -1235,9 +1229,14 @@ local fun sig_addn s = String.concat
        ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
       open Portable
 in
-fun setup_grammars thyname =
- let val _ = grm_updates := []
- in
+fun setup_grammars (oldname, thyname) = let
+in
+  if not (null (!grm_updates)) andalso thyname <> oldname then
+    HOL_WARNING "Parse" "setup_grammars"
+                ("\"new_theory\" is throwing away grammar changes for "^
+                 "theory "^oldname)
+  else ();
+  grm_updates := [];
   adjoin_to_theory
   {sig_ps = SOME (fn pps => Portable.add_string pps (sig_addn thyname)),
    struct_ps = SOME (fn ppstrm =>
@@ -1266,6 +1265,7 @@ fun setup_grammars thyname =
          val (names,rules) = partition (equal"reveal" o fst)
                                 (List.rev(!grm_updates))
          val reveals = map snd names
+         val _ = grm_updates := []
      in
        B 0;
          add_string "local open Portable GrammarSpecials Parse";

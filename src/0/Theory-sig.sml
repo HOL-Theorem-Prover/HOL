@@ -40,7 +40,7 @@ sig
 
   val adjoin_to_theory   : thy_addon -> unit
   val export_theory      : unit -> unit
-  val after_new_theory   : (string -> unit) -> unit
+  val after_new_theory   : (string * string -> unit) -> unit
 
 (* Freshness information on HOL objects *)
 
