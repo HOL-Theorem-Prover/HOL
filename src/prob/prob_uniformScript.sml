@@ -530,7 +530,7 @@ val PROB_UNIFORM_PAIR_SUC = store_thm
    ++ KILL_ALL_TAC
    ++ RW_TAC real_ac_ss [o_DEF]
    ++ MP_TAC (Q.SPEC `n` PROB_UNIF_GOOD)
-   ++ RW_TAC std_ss' [ONE_MINUS_HALF]);
+   ++ RW_TAC std_ss' [le_ratl]);
 
 val PROB_UNIFORM_SUC = store_thm
   ("PROB_UNIFORM_SUC",
