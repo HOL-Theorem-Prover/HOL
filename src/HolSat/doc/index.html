@@ -1,0 +1,115 @@
+<HTML>
+<HEAD>
+<TITLE>HolSatLib</TITLE>
+<!--
+<STYLE type="text/css">
+   BODY { font-family : Helvetica, Univers, sans-serif;
+          font-variant : normal-caps;
+          font-size : medium}
+</STYLE>
+-->
+</HEAD>
+
+<BODY>
+
+<H1>
+<!-- &nbsp;&nbsp;&nbsp; -->
+
+<code>HolSatLib</code></H1>
+
+
+<img src="saturn.jpg" align=left>
+
+
+<ul>
+<LI> Documentation
+[<A HREF="HolSatLib.html">html</A>
+|
+<A HREF="HolSatLib.ps">postscript</A>
+]
+
+
+
+<LI> Download 
+[<A HREF = "http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/hol/hol98/src/HolSat/">
+<TT>http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/hol/hol98/src/HolSat/</TT></A>]
+
+</ul>
+
+<br clear=left>
+
+<P><BR>
+
+The <A HREF="http://www.cl.cam.ac.uk/Research/HVG/FTP/">Hol98</A> library
+<code>HolSatLib</code> provides a very simple harness for
+invoking SAT solvers on HOL terms. Currently the following
+solvers are supported
+
+<P>
+
+<table>
+<tr><td><b>Solver</b> </td> <td><b>Home Page</b> </td> <td><b>Download</b></td>
+<tr><td>SATO</td>
+    <td><font size="-1"><A HREF="http://www.cs.uiowa.edu/~hzhang/sato.html">
+        <tt>http://www.cs.uiowa.edu/~hzhang/sato.html</tt></A></font>
+    </td>
+    <td><font size="-1"><A HREF="ftp://cs.uiowa.edu/pub/hzhang/sato/sato.tar.gz">
+        <tt>ftp://cs.uiowa.edu/pub/hzhang/sato/sato.tar.gz</tt></A></font>
+    </td>
+<tr><td>GRASP</td>
+     <td><font size="-1"><A HREF="http://sat.inesc.pt/~jpms/grasp">
+         <tt>http://sat.inesc.pt/~jpms/grasp</tt></A></font>
+     </td>
+    <td><font size="-1"><A HREF="http://sat.inesc.pt/~jpms/grasp/sat-grasp.st.linux.tar.gz">
+        <tt>http://sat.inesc.pt/~jpms/grasp/sat-grasp.st.linux.tar.gz</tt></A></font>
+    </td>
+<tr><td>ZCHAFF</td>
+    <td><font size="-1"><A HREF="http://www.ee.princeton.edu/~chaff">
+        <tt>http://www.ee.princeton.edu/~chaff</tt></A></font>
+    </td>
+    <td><font size="-1"><A HREF="http://www.ee.princeton.edu/~chaff/zchaff/zchaff.2001.2.17.linux.gz">
+        <tt>http://www.ee.princeton.edu/~chaff/zchaff/zchaff.2001.2.17.linux.gz</tt></A></font>
+</table>
+
+<P>
+
+These solvers all require input in the standard 
+<A HREF="ftp://dimacs.rutgers.edu/pub/challenge/satisfiability/doc/satformat.dvi">DIMACS  format</A>
+for conjunctive normal form (CNF). It should be straightforward to add other
+DIMACS compatible SAT solvers.
+
+<p>
+The purpose of <tt>HolSatLib</tt> is to provide a platform
+for experimenting with combinations of theorem proving and
+SAT. Hol98 can be used to deductively manipulate terms into CNF as
+required for SAT analysis, and then the results of the analysis
+can be reimported into HOL and either checked or just trusted.
+
+<p>
+<tt>HolSatLib</tt> has only been tested under Linux, though it should be
+possible to run it under Windows.
+
+
+<P>
+<HR>
+<P>
+
+<ADDRESS>
+<A HREF="..">MICHAEL J. C. GORDON</A><BR>
+<A HREF="http://www.cl.cam.ac.uk/home.html">
+University of Cambridge Computer Laboratory</A><BR>
+<A HREF="http://www.cl.cam.ac.uk/site-maps/site-maps.html">
+New Museums Site</A><BR>
+Pembroke Street<BR>
+Cambridge CB2 3QG<BR>
+United Kingdom<BR>
+work: (+44) 1223 334627<BR>
+fax: (+44) 1223 334678<BR>
+home: (+44) 1223 362123<BR>
+email: <KBD>mjcg@cl.cam.ac.uk</KBD>
+</ADDRESS>
+
+</BODY>
+</HTML>
+
+

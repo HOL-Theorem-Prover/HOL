@@ -265,7 +265,7 @@ since there is no efficient way to check for unsatisfiability using pure \Hol
 theorem proving.
 
 A tautology checker that uses SAT can be easily programmed using
-\t{CNF\_CONV}, which is supplied in the structure \t{Cnf} that comes
+\t{CNF\_CONV}, which is supplied in the structure \t{canonTools} that comes
 with \t{HolSatLib}. To check the validity of a term $t$
 
 \begin{quote}
@@ -286,7 +286,7 @@ Example \Hol code to mechanise these steps is as follows:
 val NOT_NOT = CONJUNCT1 NOT_CLAUSES;
 
 fun SAT_TAUT_CHECK sat_solver t =
- let val th1 = Cnf.CNF_CONV(mk_neg t)
+ let val th1 = canonTools.CNF_CONV(mk_neg t)
      val th2 = satOracle sat_solver (rhs(concl th1))
      val th3 = AP_TERM ``$~`` th1
      val th4 = EQ_MP (SYM th3) th2
@@ -298,8 +298,6 @@ fun SAT_TAUT_CHECK sat_solver t =
 \end{verbatim}\end{session}
 
 \section{Installing {\tt HolSatLib} under Linux}\label{install}
-
-
 
 \begin{enumerate}
 
@@ -599,14 +597,17 @@ be specified for use with {\tt HolSatLib}. If access to such solvers is needed, 
 it will be necessary to extend the datatype \t{sat\_solver} to contain
 additional parsing data (e.g.~regular expressions).
 
-\subsection{Contents of {\tt Cnf} module}
+\subsection{Contents of {\tt canonTools} module}
 
-The module {\tt Cnf} contains a simple conversion {\small\verb+CNF_CONV : term -> thm+}, 
+The module {\tt canonTools} contains a simple conversion 
+{\small\verb+CNF_CONV : term -> thm+}, 
 from Joe Hurd, to convert
 \HOL terms to a form suitable for inputting to \t{satOracle} or \t{satProve}.
 
 {\small\verb+CNF_CONV+}~$t$ returns a theorem {\small\verb+|- +}$t\t{~=~}t'$,
 where $t'$ is in CNF.
 
+There are other tools for converting to various canonical forms. See the source code
+{\small\verb+canonTools.sml+} for details.
 
 \end{document}
