@@ -143,5 +143,5 @@ current theory is exported.
 
 
 \SEEALSO
-add_binder, Parse.add_rule, Parse.add_listform, Parse.Term.
+Parse.add_binder, Parse.add_rule, Parse.add_listform, Parse.Term.
 \ENDDOC

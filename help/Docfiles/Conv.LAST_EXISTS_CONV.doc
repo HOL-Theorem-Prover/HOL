@@ -23,5 +23,5 @@ Fails if the term is not existentially quantified, or if the
 conversion {c} fails when it is applied.
 
 \SEEALSO
-BINDER_CONV, STRIP_QUANT_CONV.
+Conv.BINDER_CONV, Conv.STRIP_QUANT_CONV.
 \ENDDOC

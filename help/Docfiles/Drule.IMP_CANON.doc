@@ -31,5 +31,5 @@ merely gives a list whose only member is the original theorem.
 This is a rather ad-hoc inference rule, and its use is not recommended.
 
 \SEEALSO
-CONJ1, CONJ2, Drule.CONJUNCTS, Thm.DISJ1, Thm.DISJ2, Thm.EXISTS, Thm.SPEC.
+Thm.CONJUNCT1, Thm.CONJUNCT2, Drule.CONJUNCTS, Thm.DISJ1, Thm.DISJ2, Thm.EXISTS, Thm.SPEC.
 \ENDDOC
