@@ -421,11 +421,13 @@ and mungelab v s = (* munge the label *)
   let rec go xs =
     match xs with
       (Ident("--",_) :: xs) -> go1 xs []
+    | (Ident("---",_) :: xs)-> go1 xs []
     | (Indent(_) :: xs)     -> go xs
     | _                     -> raise BadLabel
   and go1 xs ys =
     match xs with
       (Ident("-->",_) :: xs) -> munge v (List.rev ys) []
+    | (Ident("--->",_) :: xs)-> munge v (List.rev ys) []
     | (x :: xs)              -> go1 xs (x::ys)
     | _                      -> raise BadLabel
   in
@@ -525,6 +527,7 @@ and parse_rule1 = parser
               (Indent(_)     :: ts) -> isLab ts
             | (White(_)      :: ts) -> isLab ts
             | (Ident("--",_) :: _ ) -> true
+            | (Ident("---",_):: _ ) -> true
             | _                   -> false
          in
          let rec go c lhs =
