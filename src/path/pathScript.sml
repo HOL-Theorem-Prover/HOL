@@ -740,6 +740,13 @@ val pgenerate_infinite = store_thm(
     SRW_TAC [][]
   ]);
 
+val pgenerate_not_stopped = store_thm(
+  "pgenerate_not_stopped",
+  ``!f g x. ~(stopped_at x = pgenerate f g)``,
+  PROVE_TAC [pgenerate_infinite, finite_thm]);
+
+val _ = BasicProvers.export_rewrites ["pgenerate_not_stopped"]
+
 val el_pgenerate = store_thm(
   "el_pgenerate",
   ``!n f g. el n (pgenerate f g) = f n``,
@@ -760,9 +767,22 @@ val pgenerate_11 = store_thm(
   ``!f1 g1 f2 g2. (pgenerate f1 g1 = pgenerate f2 g2) =
                   (f1 = f2) /\ (g1 = g2)``,
   SIMP_TAC (srw_ss()) [FORALL_AND_THM, EQ_IMP_THM] THEN
-  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-  POP_ASSUM MP_TAC THEN
   SRW_TAC [][FUN_EQ_THM] THEN PROVE_TAC [el_pgenerate, nth_label_pgenerate]);
+
+
+val pgenerate_onto = store_thm(
+  "pgenerate_onto",
+  ``!p. ~finite p ==> ?f g. p = pgenerate f g``,
+  REPEAT STRIP_TAC THEN
+  MAP_EVERY Q.EXISTS_TAC [`\n. el n p`, `\n. nth_label n p`] THEN
+  ONCE_REWRITE_TAC [path_bisimulation] THEN
+  Q.EXISTS_TAC
+    `\x y. ~finite x /\ (y = pgenerate (\n. el n x) (\n. nth_label n x))` THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THEN
+  Q.SPEC_THEN `q1` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [pgenerate_def])) THEN
+  SRW_TAC [][el_def, nth_label_def, combinTheory.o_DEF]);
 
 val _ = print "Defining path OK-ness\n"
 
