@@ -368,10 +368,6 @@ fun dest_exp tm =
   else (tm,[]);
 
 (*****************************************************************************)
-(* Optimise result of converting to program combinators                      *)
-(*****************************************************************************)
-
-(*****************************************************************************)
 (* Check if a term is built out of constants using only application          *)
 (* (e.g. Norrish numerals)                                                   *)
 (*****************************************************************************)
@@ -402,33 +398,6 @@ fun SIMPLE tm =
    andalso is_const(rator(rator tm))
    andalso mem (fst(dest_const(rator(rator tm)))) ["Seq","Par"]
    andalso SIMPLE(rand tm) andalso SIMPLE(rand(rator tm));
-
-val convert_optimisations =                   (* List of optimising rewrites *)
- [ParId,SeqId,I_THM];
-
-fun Optimise_CONV tm =
- let val (opr,args) = dest_exp tm
-                      handle HOL_ERR _ 
-                      => raise ERR "Optimise_CONV" "bad expression"
- in
-  if is_const opr
-   then
-    case fst(dest_const opr) of
-       "Seq" => (RAND_CONV Optimise_CONV 
-                  THENC (RATOR_CONV(RAND_CONV Optimise_CONV))) tm
-     | "Par" => (RAND_CONV Optimise_CONV 
-                  THENC (RATOR_CONV(RAND_CONV Optimise_CONV))) tm
-     | "Ite" => (RAND_CONV Optimise_CONV 
-                  THENC (RATOR_CONV(RAND_CONV Optimise_CONV))
-                  THENC (RATOR_CONV(RATOR_CONV(RAND_CONV Optimise_CONV)))) tm
-     | "Rec" => (RAND_CONV Optimise_CONV 
-                  THENC (RATOR_CONV(RAND_CONV Optimise_CONV))
-                  THENC (RATOR_CONV(RATOR_CONV(RAND_CONV Optimise_CONV)))) tm
-     | _     => raise ERR "Optimise_CONV" "this shouldn't happen"
-   else REFL tm
- end;
-
-val Optimise = PURE_REWRITE_RULE convert_optimisations;
 
 (*****************************************************************************)
 (* CompileExp exp                                                            *)
@@ -540,7 +509,7 @@ fun ConvertCompile defth =
                     raise ERR "ConvertCompile" "rator of lhs not a constant")
               else ()
  in
-  Compile [Optimise(Convert defth)] func
+  Compile [Convert defth] func
  end;
 
 (*****************************************************************************)
