@@ -113,7 +113,7 @@ val dest_string = dest_binop ("STRING","string") (ERR "dest_string" "")
 val fromHOLchar = Char.chr o Arbnum.toInt o dest_numeral o dest_chr
 
 fun is_emptystring tm =
-  case toal dest_thy_const tm
+  case total dest_thy_const tm
    of SOME {Name="EMPTYSTRING",Thy="string",...} => true
     | NONE => false
 
