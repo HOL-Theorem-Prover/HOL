@@ -26,6 +26,7 @@ sig
 
   val is_real_literal : term -> bool
   val term_of_int     : Arbint.int -> term
+  val int_of_term     : term -> Arbint.int
 
   val mk_injected    : term -> term
   val dest_injected  : term -> term

@@ -152,4 +152,15 @@ in
   val is_geq = can dest_geq
   fun mk_geq(t1, t2) = list_mk_comb(geq_tm, [t1, t2])
 
+
+  fun int_of_term t = let
+    val (is_pos, n) =
+        case Lib.total dest_negated t of
+          NONE => (true, numSyntax.dest_numeral (dest_injected t))
+        | SOME neg_i => (false, numSyntax.dest_numeral (dest_injected neg_i))
+  in
+    if is_pos then Arbint.fromNat n
+    else Arbint.~(Arbint.fromNat n)
+  end
+
 end ;
