@@ -1,3 +1,6 @@
+structure HOLgrammars = 
+struct
+
 exception GrammarError of string
 datatype associativity = LEFT | RIGHT | NONASSOC
 
@@ -6,3 +9,5 @@ fun assocToString x =
     LEFT => "HOLgrammars.LEFT"
   | RIGHT => "HOLgrammars.RIGHT"
   | NONASSOC => "HOLgrammars.NONASSOC"
+
+end

@@ -1,3 +1,5 @@
+structure fragstr :> fragstr =
+struct
 
 open optmonad monadic_parse
 infix >- >> ++ >->
@@ -156,3 +158,4 @@ fun eof cs =
 fun parse P =
   P >-> (many (grab_whitespace ++ comment) >> eof)
 
+end

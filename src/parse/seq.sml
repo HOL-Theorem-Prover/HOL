@@ -1,6 +1,7 @@
 (* Copyright University of Cambridge 1999 *)
 (* Author: Michael Norrish *)
 (* $Id$ *)
+
 structure seq :> seq = struct
 datatype 'a seq =
   LNIL |

@@ -1,3 +1,5 @@
+structure stmonad =
+struct
 type ('a, 'b) stmonad = 'a -> ('a * 'b)
 
 infix >> >-
@@ -18,3 +20,4 @@ fun mmap f list =
   case list of
     [] => return []
   | (x::xs) => f x >- (fn x' => mmap f xs >- (fn xs' => return (x'::xs')))
+end

@@ -1,4 +1,8 @@
-exception GrammarError of string
-datatype associativity = LEFT | RIGHT | NONASSOC
+signature HOLgrammars =
+sig
 
-val assocToString : associativity -> string
+  exception GrammarError of string
+  datatype associativity = LEFT | RIGHT | NONASSOC
+
+  val assocToString : associativity -> string
+end

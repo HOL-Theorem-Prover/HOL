@@ -1,3 +1,5 @@
+signature monadic_parse =
+sig
 
 type ('a,'b) Parser = ('b list, 'a) optmonad.optmonad
 
@@ -48,3 +50,4 @@ exception NoParseResult of string
 val apply_to_file : ('a, char) Parser -> string -> 'a
 val apply_to_string : ('a, char) Parser -> string -> 'a
 
+end

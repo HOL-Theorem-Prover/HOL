@@ -1,4 +1,5 @@
-signature fragstr = sig
+signature fragstr = 
+sig
   type ('a,'b) Parser = ('a,'b) monadic_parse.Parser
   val antiq : ('a, 'a frag) Parser
   val item : char -> (char, 'a frag) Parser
