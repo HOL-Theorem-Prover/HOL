@@ -522,10 +522,10 @@ val INT_1 =
 	      REWRITE_TAC[ONE, int_of_num, INT_ADD_LID]);
 
 (*--------------------------------------------------------------------------*)
-(* Prove lots of boring field theorems                                      *)
+(* Prove lots of boring ring theorems                                       *)
 (*--------------------------------------------------------------------------*)
 
-val _ = print "Prove \"lots of boring field theorems\"\n";
+val _ = print "Prove \"lots of boring ring theorems\"\n";
 
 (* already defined, but using the wrong term for 0 *)
 val INT_ADD_LID =
