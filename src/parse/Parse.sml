@@ -432,6 +432,15 @@ fun Term q = absyn_to_term (term_grammar()) (Absyn q)
 
 fun -- q x = Term q;
 
+fun typedTerm qtm ty =
+   let fun trail s = [QUOTE (s^"):"), ANTIQUOTE(ty_antiq ty), QUOTE""]
+   in
+   Term (case (Lib.front_last qtm)
+        of ([],QUOTE s) => trail ("("^s)
+         | (QUOTE s::rst, QUOTE s') => (QUOTE ("("^s)::rst) @ trail s'
+         | _ => raise ERROR"typedTerm" "badly formed quotation")
+   end;
+
 fun parse_from_grammars (tyG, tmG) = let
   val ty_parser = parse_type.parse_type typ2_rec false tyG
   (* this next parser is used within the term parser *)
@@ -811,8 +820,8 @@ fun temp_overload_on_by_nametype s {Name, Thy, Ty} =
 fun overload_on_by_nametype s (r as {Name, Thy, Ty}) = let in
    temp_overload_on_by_nametype s r;
    update_grms ("temp_overload_on_by_nametype", String.concat
-     [quote s, "{Name = ", quote Name, ", ", "Thy = ", quote Thy, ", ",
-      "Ty = ", Portable.pp_to_string 75 (TheoryPP.pp_type "U" "T") Ty, ")"])
+     [quote s, " {Name = ", quote Name, ", ", "Thy = ", quote Thy, ", ",
+      "Ty = ", Portable.pp_to_string 75 (TheoryPP.pp_type "U" "T") Ty, "}"])
  end
 
 fun temp_overload_on (s, t) =
@@ -966,20 +975,30 @@ fun add_const s      = (reveal s; remember_const s);
            and print out informative messages.
  ---------------------------------------------------------------------------*)
 
-fun update_grms f x =
- let val _ = f x                          (* update global grammars *)
-     val (tyG, tmG) = current_grammars()  (* save global grm. values *)
-     val (tyL0,tmL0) = current_lgrms()    (* read local grm. values *)
-     val _ = the_type_grammar := tyL0     (* mv locals into globals *)
-     val _ = the_term_grammar := tmL0
-     val _ = f x                       (* update global (really local) grms *)
-     val (tyL1, tmL1) = current_grammars()
-     val _ = the_lty_grm := tyL1       (* mv updates into locals *)
-     val _ = the_ltm_grm := tmL1
- in
-     the_type_grammar := tyG;          (* restore global grm. values *)
-     the_term_grammar := tmG
- end;
+fun update_grms f x = let
+  val _ = f x                          (* update global grammars *)
+    handle HOL_ERR {origin_structure, origin_function, message} =>
+      (WARN "update_grms"
+       ("Update to global grammar failed in "^origin_function^
+        " with message: "^message^"\nproceeding anyway."))
+
+  val (tyG, tmG) = current_grammars()  (* save global grm. values *)
+  val (tyL0,tmL0) = current_lgrms()    (* read local grm. values *)
+  val _ = the_type_grammar := tyL0     (* mv locals into globals *)
+  val _ = the_term_grammar := tmL0
+  val _ = f x                          (* update global (really local) grms *)
+    handle HOL_ERR {origin_structure, origin_function, message} =>
+      (WARN "update_grms"
+       ("Update to local grammar failed in "^origin_function^
+        " with message: "^message^"\nproceeding anyway."))
+  val (tyL1, tmL1) = current_grammars()
+  val _ = the_lty_grm := tyL1          (* mv updates into locals *)
+  val _ = the_ltm_grm := tmL1
+in
+  the_type_grammar := tyG;             (* restore global grm. values *)
+  the_term_grammar := tmG
+end
+
 
 
 fun merge_grm (gname, (tyG0, tmG0)) (tyG1, tmG1) =
