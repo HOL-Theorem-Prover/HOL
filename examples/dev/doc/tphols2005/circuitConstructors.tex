@@ -7,7 +7,9 @@
 
 The components used in the definitions of the circuit constructors are:
 
-\smallskip
+\begin{footnotesize}
+
+\medskip
 $
 \begin{array}{l}
 \TURNST\ \DEF{AND}\ (\sVAR{in}{1},\sVAR{in}{2},\VAR{out}) ~ = 
@@ -34,6 +36,9 @@ $
                   \DEF{NOT} (c_0, c_1)\ \AND\ \DEF{AND} (c_1,\VAR{inp},\VAR{out})
 $
 
+\smallskip
+
+
 $
 \begin{array}{l}
 \TURNST\ \DEF{ATM}\ f\ (\VAR{load,inp,done,out}) =\\
@@ -43,6 +48,7 @@ $
 \end{array}
 $
 
+\smallskip
 
 $
 \begin{array}{l}
@@ -55,6 +61,8 @@ $
         \DEF{AND} (c_1,c_2,\VAR{done}) 
 \end{array}
 $
+
+\smallskip
 
 $
 \begin{array}{l}
@@ -76,6 +84,8 @@ $
        (\VAR{out} = \LAMBDA{t}{(\sVAR{out}{1}\ t,\sVAR{out}{2}\ t)})
 \end{array}
 $
+
+\smallskip
 
 $
 \begin{array}{l}
@@ -109,6 +119,8 @@ $
            \DEF{AND} (c_2,\VAR{done\_g},\VAR{done}) 
 \end{array}
 $
+
+\smallskip
 
 $
 \begin{array}{l}
@@ -149,6 +161,8 @@ $
         \DEF{AND}(\sVAR{c}{2},\sVAR{c}{4},\VAR{done})
 \end{array}
 $
+
+\end{footnotesize}
 
 %\fbox{Can we put the diagrams back so that they all fit onto the rest of this page?}
 

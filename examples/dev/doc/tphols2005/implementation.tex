@@ -1,8 +1,6 @@
 We implement functions $f$ where
-$
-f : \sigma_1\times\cdots\times\sigma_m \rightarrow \tau_1\times\cdots\times\tau_n
-$
-and (for practical applications) $\sigma_1,\ldots,\sigma_m,\tau_1,\ldots,\tau_n$ are the types of
+$f : \sigma_1\times\cdots\times\sigma_m \rightarrow \tau_1\times\cdots\times\tau_n$
+and $\sigma_1,\ldots,\sigma_m,\tau_1,\ldots,\tau_n$ are the types of
 values that can be carried on busses (e.g. $n$-bit words).
 The starting point of compilation is the definition of such a function $f$ by an equation of
 the form: $f(x_1,\ldots,x_n)=e$, where any recursive calls of $f$ in
@@ -73,8 +71,8 @@ from:
 The next step is to replace the combinators \DEF{Seq},
 \DEF{Par}, \DEF{Ite} and \DEF{Rec} with corresponding circuit constructors
 \DEF{SEQ},
-\DEF{PAR}, \DEF{ITE} and \DEF{REC} that build handshaking devices and, for easy access, are defined
-at the end of this paper in the appendix.  The key property of these constructors
+\DEF{PAR}, \DEF{ITE} and \DEF{REC} that build handshaking devices (see the appendix for their definitions)
+The key property of these constructors
 are the following theorems that enable us to compositionally deduce
 theorems of the form $\vdash {\it{Imp_C}}
 \Longrightarrow \DEF{Dev}~f$, where ${\it{Imp_C}}$ is a term
@@ -138,7 +136,7 @@ $\vdash e_C \FIMP \DEF{Dev}~f$
 
 A function $f$ which is combinational (i.e.~can be implemented
 directly with logic gates without using registers) can be packaged as
-a handshaking device using a contructor \DEF{ATM} which create a
+a handshaking device using a contructor \DEF{ATM} which creates a
 simple handshake interface and satisfies:
 
 \vspace*{-4mm}
@@ -148,7 +146,7 @@ $$\begin{array}{l}
 \phantom{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}\\[-4mm]
 \end{array}$$
 
-\noindent The circuit constructor \DEF{ATM} is defined with the other constructors in Section~\ref{CircuitConstructors}.
+\noindent The circuit constructor \DEF{ATM} is defined with the other constructors in the appendix.
 To avoid a proliferation  of internal handshakes, when the proof script that constructs $e_C$ from $e_c$ 
 is implementing $\DEF{Seq}~f_1~f_2$, it checks to see whether $f_1$ or $f_2$ 
 are compositions of combinational functions and if so introduces \DEF{PRECEDE} or \DEF{FOLLOW} instead of \DEF{SEQ},
@@ -166,10 +164,7 @@ $$\begin{array}{l}
 
 \noindent $\DEF{PRECEDE}~f~d$ processes inputs with $f$ before sending them to $d$ and
 $\DEF{FOLLOW}~d~f$ processes outputs of $d$ with
-$f$. The construction $\DEF{SEQ}~d_1~d_2$ introduces a handshake between the executions
-of $d_1$ and $d_2$, but $\DEF{PRECEDE}~f~d$ and $\DEF{FOLLOW}~d~f$
-just `wire' f before or after $d$, respectively, without introducing a
-handshake. The definitions are:
+$f$. The definitions are:
 
 \vspace*{3mm}
 
@@ -181,6 +176,11 @@ $\begin{array}{l}
 ~~ \exists v.~d(load,inp,done,v) ~\wedge~ \DEF{COMB}~f~(v,out)
 \end{array}$
 \vspace*{3mm}
+
+The construction $\DEF{SEQ}~d_1~d_2$ introduces a handshake between the executions
+of $d_1$ and $d_2$, but $\DEF{PRECEDE}~f~d$ and $\DEF{FOLLOW}~d~f$
+just `wire' f before or after $d$, respectively, without introducing a
+handshake. 
 
 \subsection*{Step 3: unfolding to a cycle-level netlist}
 
@@ -207,15 +207,15 @@ combinational circuits. For example:
 \vspace*{-2mm}
 
 {\begin{alltt}
-\( \vdash \DEF{COMB}({\lambda}(m,n). (m<n, m+1))(inp1<>inp2,out1<>out2) =              \)
-\(     {\exists}v0. \DEF{COMB}({<})(inp1<>inp2,out1) \wedge \DEF{CONSTANT} 1 v0 \wedge \)
-\(          \DEF{COMB}({+})(inp1<>v0,out2)                                              \)
+\( \vdash \DEF{COMB}({\lambda}(m,n). (m<n, m+1))(inp1\texttt{<>}inp2,out1\texttt{<>}out2) =              \)
+\(     {\exists}v0. \DEF{COMB}({<})(inp1\texttt{<>}inp2,out1) \wedge \DEF{CONSTANT} 1 v0 \wedge \)
+\(          \DEF{COMB}({+})(inp1\texttt{<>}v0,out2)                                              \)
 \end{alltt}}
 \vspace*{-2mm}
 
-\noindent where {\verb+<>+} is bus concatenation,
-{\verb+CONSTANT 1 v0+} drives \texttt{v0} high continuously, and
-{\verb+COMB (UNCURRY $<)+} and {\verb&COMB (UNCURRY $+)&} are assumed
+\noindent where \texttt{<>} is bus concatenation,
+$\DEF{CONSTANT}~1~v0$ drives $v0$ high continuously, and
+$\DEF{COMB}~{<}$ and $\DEF{COMB}~{+}$ are assumed
 given components (if they were not given, then the could be
 implemented explicitly, but one has to stop somewhere). 
  
@@ -233,13 +233,11 @@ the circuit constructs are defined by:
 \vspace*{-2mm}
 
 These definitions were chosen for convenience in defining
-\DEF{ATM}, \DEF{SEQ}, \DEF{PAR}, \DEF{ITE} and \DEF{REC}, but they are not standard.
-First, \DEF{DEL} is not explicity clocked, and it also has a
-non-standard behaviour on initialisation (i.e.~at time $0$).  Second,
-\DEF{DFF} is transparent on the positive edge of clock (i.e.~ there is
-no delay from \texttt{d} to
-\texttt{q} at the time just after \texttt{clk} has risen. 
-However, we can easily implement \DEF{DEL} and \DEF{DFF} in terms of off-the-shelf
+\DEF{ATM}, \DEF{SEQ}, \DEF{PAR}, \DEF{ITE} and \DEF{REC}, but they are not standard:
+\DEF{DEL} is not explicity clocked, and it is transparent at time $0$,
+and
+\DEF{DFF} is transparent on the positive edge of clock. 
+However, we can implement \DEF{DEL} and \DEF{DFF} in terms of more
 standard components,  \DEF{REG} and \DEF{REGF}, where:
 
 {\baselineskip16pt\begin{alltt}
@@ -249,7 +247,7 @@ standard components,  \DEF{REG} and \DEF{REGF}, where:
 
 Both \DEF{DEL} and \DEF{DFF} can be realised by combinations of
 \DEF{REG} and \DEF{REGF} (and some combinational logic). We omit
-details here. The final part of Step~3 is to rewrite with the
+details here. The final part of Step~3 is to refine with the
 definitions of \DEF{DEL}, \DEF{DFF} and $\FIMP$ to get an implication
 theorem $\vdash {\it{Imp}}_C \IMP \DEF{Dev}~f~(load,inp,done,out)$, where ${\it{Imp}}_C$
 is an existentially quantified conjunction of predicates describing
@@ -265,9 +263,9 @@ next step is to replace these abstract `cycle level' registers with
 standard clocked synchronous parts. Up until now we have viewed
 signals as abstract sequences of values.  We now move to a finer
 temporal granularity in which values are sampled on the edge of a
-clock; such values can be latched by edge-triggered registers, like
-Dtypes. We implement \DEF{DEL} and \DEF{DFF} in terms of a standard
-dtype register defined by:
+clock; such values can be latched by edge-triggered registers. We
+implement \DEF{DEL} and \DEF{DFF} in terms of a standard dtype
+register defined by:
 
 \vspace*{2mm}
 
@@ -286,7 +284,7 @@ $\DEF{Dff}(ck,d,q) ~ = ~ (q~0~ =~F)~\wedge~\DEF{Dtype}(ck,d,q)$
 If $s$ is a signal, then $s~\DEF{at}~clk$ is the temporal
 abstraction consisting of the values of $s$ at positive edges of
 $clk$. 
-Melham has described in his monograph (and previously proved mechanically in HOL88) that:
+Melham has described in his monograph that:
 
 
 
@@ -329,4 +327,21 @@ correspondence between the structure of ${\it{Imp}}$ and the Verilog
 text that is printed.  Currently we have a translator to Verilog
 implemented, but we are still testing and validating it.
 
-
+%Steps 1 and 2 are performed automatically when
+%a function is defined using the \texttt{hwDefine} command.  Steps 3
+%and 4 are invoked using separate SML functions applied to the output
+%of \texttt{hwDefine}. All these steps are implemented as derived proof
+%rules, so that the circuit produced is formally verified by theorem
+%proving.
+%
+%
+%Typically one defines several functions using \texttt{hwDefine} in a
+%top-down fashion, as illustrated in Section~\ref{secHOL2Verilog}.  The
+%combination of the resulting implementations can be done
+%interactively, or by writing a script (analogous to a Makefile) in
+%SML. The user must explicitly declare constants that are to be
+%combinational primitives, and must also supply implementations of
+%these in the form of Verilog modules.
+%
+%
+%

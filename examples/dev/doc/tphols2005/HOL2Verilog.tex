@@ -1,23 +1,8 @@
 
-Our system is implemented in HOL4, but the ideas could be
-realised in other programmable higher order logic proof systems like
-Isabelle, PVS, NuPrl and Coq. In such systems, functions are defined
-recursively and then proof scripts are executed to prove properties of
-the functions.  Proof scripts are programs that perform sequences of
-deductions to create theorems.
-
-The key idea of our approach is to automatically prove theorems of the
-form $\vdash {\it{Imp}}\Longrightarrow\DEF{Dev}~f$, where
-{\it{Imp}} is a term describing a circuit, $\DEF{Dev}~f$ specifies
-that function $f$ is computed by a four-phase handshake and the
-operator $\Longrightarrow$ means that the implementation meets the
-specification.  Several different representations of implementations
-are created, with the lowest level corresponding to
-synthesisable Verilog.
 
 We illustrate the translation from higher order logic to hardware with a
 simple toy example: the factorial function. This example is chosen for
-clarity in illustrating our ideas and is not typical of the kind of
+clarity and is not typical of the kind of
 applications were are working on!  For a discussion of those
 applications see Section~\ref{secRelatedWork}.
 The factorial function \DEF{FACT} satisfies
@@ -31,7 +16,7 @@ The factorial function \DEF{FACT} satisfies
 \vspace*{-2mm}
 We can only synthesise tail recursions, so the first
 step is to define a tail-recursive function \DEF{FactIter} and show
-that it can be used to compute \DEF{Fact}.
+that it can be used to compute \DEF{FACT}.
 
 \vspace*{-2mm}
 
@@ -88,16 +73,16 @@ are described in the appendix.  The term \DEF{Dev~FactIter} describes
 a behaviour that applies the function \DEF{FactIter} under the control
 of a four-phase handshake. The details of the handshake are specified
 in the definition of the higher order function \DEF{Dev} in
-Section~\ref{secSpecification}. The theorem proved automatically by
+Section~\ref{secSpecification}. The theorem that is proved automatically by
 \texttt{hwDefine} verifies that the circuit is a correct
-implementation (of \DEF{FactIter} in the example above). As it is the
-factorial function \DEF{FACT} that we want to implement, we create an
+implementation (of \DEF{FactIter} in the example above). We want to implement \DEF{FACT}, so
+we create an
 implementation of it, called \DEF{Fact}, using \DEF{FactIter}:
 
 \vspace*{-2mm}
 
 {\baselineskip10pt\begin{alltt}
- hwDefine\( `\DEF{Fact} n = \DEF{Snd}(\DEF{FactIter} (n,1))  \)
+ hwDefine\( `\DEF{Fact} n = \DEF{Snd}(\DEF{FactIter} (n,1))`  \)
 \end{alltt}}
 
 \vspace*{-2mm}
@@ -144,15 +129,14 @@ implementation by replacing the specification
 
 \vspace*{-2mm}
 
-At this point, we need to decide whether multiplication ($\times$)
-has a combinational or sequential implementation.
-
+At this point a design decision is needed: whether to give multiplication ($\times$)
+a combinational or sequential implementation.
 Components in a
 circuit of the form $\DEF{Dev}~f$ are specifications to compute
 $f$. They can either be refined to implementations (like we just
 refined \DEF{Dev~FactIter}) or they can be converted to
-combinational logic (assuming we have a combinational circuit to
-compute $f$ in our library of components).
+combinational logic (assuming we can directly implement
+$f$ in terms of logic gates).
 
 Suppose we wanted to use a sequential implementation of multiplication,
 then we would synthesise a theorem:
@@ -169,15 +153,14 @@ then we would synthesise a theorem:
 to \texttt{(...)}.  In this fashion we can incrementally develop a
 circuit in a top-down fashion. To manage such developments we have
 implemented operators for combining refinements analogous to rewriting
-operators. This is a fairly standard ML programming
-method and we don't give further details here.
+operators \cite{paulson83}.
 
-For simplicity, let us continue the example using a combinational
-implementation of multiplication. We add ${\times}$ to the list of
-combinationally-implementable functions and then our system will
-automatically prove a theorem of the form shown below (we have omitted
-parts of the circuit to save space, but hope what remains is enough to
-give an idea).
+For simplicity (though unrealistically), let us continue the example
+using a combinational implementation of multiplication. We add
+${\times}$ to the list of combinationally-implementable functions and
+then our system will automatically prove a theorem of the form shown
+below (we have omitted parts of the circuit to save space, but hope
+what remains is enough to give an idea).
 
 \vspace*{-2mm}
 
@@ -185,7 +168,7 @@ give an idea).
 \( \vdash ({\exists}v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 ...                                             \)
 \(      ... v51 v52 v53 v54 v55.                                                                       \)
 \(     \DEF{CONSTANT} 1 v0 {\wedge} \DEF{DEL}(load,v20) {\wedge} \DEF{NOT}(v20,v19) {\wedge}       \)
-\(     \DEF{NOT}(v50,v37) {\wedge} \DEF{COMB}({\times}) (v10<>v9,v49) {\wedge}                     \)
+\(     \DEF{NOT}(v50,v37) {\wedge} \DEF{COMB}({\times}) (v10\texttt{<>}v9,v49) {\wedge}                     \)
       \(\raisebox{3mm}{\vdots}\)
 \(     \DEF{DEL}(v49,v35) {\wedge} \DEF{DFF}(v36,v38,v13) {\wedge} \DEF{DFF}(v35,v37,v12) {\wedge} \)
 \(     \DEF{AND}(v2,v8,v55) {\wedge} \DEF{AND}(v55,v53,done))                                     \)
@@ -194,13 +177,14 @@ give an idea).
 
 \vspace*{-2mm}
 
-The arguments $(load,inp,done,out)$ are control and data lines of the component
-and are explained later. The circuit to the left of $\Rightarrow$ is a netlist represented in
-the standard way in higher order logic \cite{Mel93} and built out of
-two kinds of abstract registers: a unit delay \DEF{DEL} and
-edge-triggered register \DEF{DFF}. The other components are
-combinational and comprise boolean functions \DEF{NOT},
-\DEF{AND}, \DEF{OR}, multiplexers \DEF{MUX}, constants
+The arguments $(load,inp,done,out)$ are control and data lines of the
+component and are explained in Section~\ref{secSpecification}. The
+circuit to the left of $\Rightarrow$ is a netlist represented in the
+standard way in higher order logic \cite{Mel93} and built out of two
+kinds of abstract registers: a unit delay \DEF{DEL} and edge-triggered
+register \DEF{DFF}. The other components are combinational and
+comprise boolean functions \DEF{NOT},
+\DEF{AND}, \DEF{OR}, multiplexers \DEF{MUX}, constants $\DEF{CONSTANT}~n$
 and functional blocks
 $\DEF{COMB}~f$ that compute the function $f$. These components are
 described in more detail in Section~\ref{secImplementation}. To
@@ -221,7 +205,7 @@ this yields a theorem of the form:
 \(   ({\exists}v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 ...                               \)
 \(     ... v125 v126 v127 v128 v129.                                                                   \)
 \(     \DEF{CONSTANT} 1 v0 {\wedge} \DEF{TRUE} v23 {\wedge} \DEF{Dff}(clk,v23,v22) {\wedge}        \)
-\(     \DEF{COMB}({\times}) (v10<>v9,v100) {\wedge} \DEF{TRUE} v109 {\wedge}                       \)
+\(     \DEF{COMB}({\times}) (v10\texttt{<>}v9,v100) {\wedge} \DEF{TRUE} v109 {\wedge}                       \)
        \(\raisebox{3mm}{\vdots}\)
 \(     \DEF{Dtype}(clk,v12,v123) {\wedge} \DEF{AND}(v77,v76,v14) {\wedge} \DEF{TRUE} v129 {\wedge} \)
 \(     \DEF{AND} (v2,v8,v126) {\wedge} \DEF{AND}(v126,v124,done))                                  \)
@@ -245,6 +229,25 @@ specification) visual inspection and other tools can yield a high
 degree of confidence that it corresponds to the verified netlist
 represented in higher order logic. The Verilog we create is intended
 to be synthesisable, but we have not yet tried any actual synthesis
-experiments.
+experiments. A tiny fragment of the Verilog for the \DEF{FACT}
+implementation is:
 
+\vspace*{-3mm}
+
+{\baselineskip6pt\footnotesize\begin{verbatim}
+module FACT (clk,load,inp,done,out);
+ input clk,load; input [31:0] inp;
+ output done; output [31:0] out;
+ wire clk,done;
+ wire [31:0] v0; wire [31:0] v1; ... wire [0:0] v225;
+
+ CONSTANT   CONSTANT_0 (v0);          defparam CONSTANT_0.size  = 31;
+                                      defparam CONSTANT_0.value = 1;
+ TRUE       TRUE_0 (v23);
+ Dff        Dff_0 (clk,v23,v22);
+ Dtype      Dtype_0 (clk,load,v21);   defparam Dtype_0.size = 0;
+ MUX        MUX_0 (v22,v21,load,v20); defparam MUX_0.size = 0;
+ ...
+endmodule
+\end{verbatim}}
 
