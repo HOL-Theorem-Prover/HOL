@@ -14,7 +14,8 @@ structure pred_setScript =
 struct
 
 (* interactive use
-app load ["pairLib", "numLib", "PGspec", "PSet_ind"];
+app load ["pairLib", "numLib", "PGspec", "PSet_ind", "SingleStep", "Q",
+          "Defn", "TotalDefn", "metisLib"];
 *)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
      numTheory prim_recTheory arithmeticTheory BasicProvers;
@@ -795,9 +796,8 @@ val INSERT_DIFF =
        FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN RES_TAC,
        STRIP_TAC THEN ASM_REWRITE_TAC[]],
       ASM_REWRITE_TAC [EXTENSION,IN_DIFF,IN_INSERT] THEN
-      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC [] THENL
-      [FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN RES_TAC,
-       RES_TAC]]);
+      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC [] THEN
+      FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN RES_TAC]);
 
 (* ===================================================================== *)
 (* Removal of an element						 *)

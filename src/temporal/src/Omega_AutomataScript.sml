@@ -1,5 +1,5 @@
 (*
-  app load ["numLib", "pairTheory", "schneiderUtils",
+  app load ["bossLib", "numLib", "pairTheory", "schneiderUtils",
             "Past_Temporal_LogicTheory"];
 *)
 open HolKernel Parse boolLib Rsyntax schneiderUtils
@@ -160,8 +160,6 @@ val OMEGA_DISJ_CLOSURE = TAC_PROOF(
 	THEN DISJ1_TAC THEN EXISTS_TAC(--`q1:num->'b1`--)
 	THEN POP_ASSUM (fn x => RULE_ASSUM_TAC(REWRITE_RULE[x]) THEN ASSUME_TAC x)
 	THEN ASM_REWRITE_TAC[],
-	RES_TAC,
-	RES_TAC,
 	MY_MP_TAC (--`!t. p(t+t0)`--)
 	THENL[
 	    INDUCT_TAC THEN ASM_REWRITE_TAC[ADD_CLAUSES]

@@ -1,5 +1,5 @@
 (*
-  app load ["numLib", "pairTheory",
+  app load ["bossLib", "numLib", "pairTheory",
             "schneiderUtils", "Temporal_LogicTheory"];
 *)
 
@@ -3320,7 +3320,6 @@ val PSWHEN_RIGHT_NEXT = TAC_PROOF(
 	    THEN POP_NO_ASSUM 6 MATCH_MP_TAC
 	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2
 	    THEN ASM_REWRITE_TAC[] THEN ARITH_TAC,
-	    UNDISCH_NO_TAC 1 THEN ASM_REWRITE_TAC[],
 	    IMP_RES_TAC(ARITH_PROVE(--`~(a=0) ==> (0<a)`--))
 	    THEN IMP_RES_TAC LESS_ADD_1
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])

@@ -11,7 +11,6 @@
 (* ADDITIONS     : December 22, 1992                                     *)
 (* ===================================================================== *)
 
-
 structure arithmeticScript =
 struct
 
@@ -2411,8 +2410,7 @@ val SUC_ELIM_THM = store_thm(
         STRIP_ASSUME_TAC (SPECL [--`n:num`--, --`SUC 0`--] LESS_LESS_CASES)
         THENL [
           FULL_SIMP_TAC bool_ss [],
-          IMP_RES_TAC LESS_LESS_SUC,
-          RES_TAC
+          IMP_RES_TAC LESS_LESS_SUC
         ],
         REWRITE_TAC []
       ],
