@@ -448,15 +448,15 @@ fun setup_logfile () = let
 in
   if ensure_dir() then
     if access (logfilename, []) then
-      warn "Build log exists; new logging will concatenate onto this file"
+      warn "Build log exists; new logging will concatenate onto this file\n"
     else let
         (* touch the file *)
         val outs = TextIO.openOut logfilename
       in
         TextIO.closeOut outs
       end
-  else warn "Couldn't make or use build-logs directory"
-end handle Io _ => warn "Couldn't set up build-logs"
+  else warn "Couldn't make or use build-logs directory\n"
+end handle Io _ => warn "Couldn't set up build-logs\n"
 
 fun finish_logging buildok = let
 in
@@ -469,7 +469,7 @@ in
       FileSys.rename {old = logfilename, new = fullPath [logdir, newname]}
     end
   else ()
-end handle Io _ => warn "Had problems making permanent record of build log"
+end handle Io _ => warn "Had problems making permanent record of build log\n"
 
 val () = Process.atExit (fn () => finish_logging false)
         (* this will do nothing if finish_logging happened normally first;
