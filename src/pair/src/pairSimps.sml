@@ -23,4 +23,9 @@ val PAIR_ss = SIMPSET
    filter=NONE,ac=[],dprocs=[],congs=[]};
 
 
+local open computeLib in
+val PAIR_rws =
+  add_thms (false, [CLOSED_PAIR_EQ, FST, SND, CURRY_DEF, UNCURRY_DEF])
+end;
+
 end (* struct *)
