@@ -14,6 +14,7 @@ type token =
   | Indent of int
   | White of string
   | Comment of string
+  | Str of string
   | DirBeg  (* delimiters for holdoc parsing directives *)
   | DirEnd  (* ditto *)
   | DirBlk of string * token list (* nonterminal: directive name and body *)
@@ -49,6 +50,7 @@ let rec render_token t =
   | Indent(n)    -> "\nN:"^(String.make n '>')
   | White(s)     -> "W:"^s
   | Comment(s)   -> "C:(*"^s^"*)-C"
+  | Str(s)       -> "s:\""^s^"\""
   | DirBeg       -> "D+"
   | DirEnd       -> "-D"
   | DirBlk(n,ts) -> "D:"^n^": "^(String.concat " " (List.map render_token ts))^" :D"
@@ -132,6 +134,8 @@ rule
   | tendhol                { TeXEndHol }
   | tendhol0               { TeXEndHol0 }
   | starttex               { HolStartTeX }
+  | '"' [^ '"']* '"'       { let s = Lexing.lexeme lexbuf in
+                             Str (String.sub s 1 (String.length s - 2)) }
   | eof                    { raise Eof }
   | _                      { raise BadChar }
 
