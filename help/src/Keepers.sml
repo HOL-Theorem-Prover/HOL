@@ -41,7 +41,7 @@ val keepers =
      "bossLib.sig", "SingleStep.sig",
 
      (* combin theory *)
-     "combinTheory.sig",
+     "combinTheory.sig", "combinSyntax.sig",
 
      (* computeLib *)
      "computeLib.sig",
@@ -165,9 +165,14 @@ val keepers =
      "bword_bitopTheory.sig","word_baseTheory.sig",
      "bword_numTheory.sig","word_bitopTheory.sig",
 
+     (* word32 *)
+     "bitsTheory.sig", "word32Theory.sig", "word32Lib.sig",
+
      (* HolSat *)
      "HolSatLib.sig", "canon_supportTheory.sig", "canonTools.sig",
 
      (* simpsets *)
      "optionSimps.sig", "numSimps.sig", "intSimps"
+
+
   ];
