@@ -500,6 +500,18 @@ val LET_THM =
 
 val _ = save_thm("LET_THM", LET_THM);
 
+
+val FORALL_THM = 
+  SYM (AP_TERM (Term `$! :('a->bool)->bool`)
+               (ETA_CONV (Term `\x:'a. f x:bool`)));
+
+val EXISTS_THM = 
+  SYM (AP_TERM (Term `$? :('a->bool)->bool`)
+               (ETA_CONV (Term `\x:'a. f x:bool`)));
+
+val _ = save_thm("FORALL_THM",FORALL_THM);
+val _ = save_thm("EXISTS_THM",EXISTS_THM);
+
 (*---------------------------------------------------------------------------*
  *  |- !t1:'a. !t2:'b. (\x. t1) t2 = t1                                      *
  *---------------------------------------------------------------------------*)

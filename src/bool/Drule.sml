@@ -1152,9 +1152,8 @@ fun ALPHA_CONV x t = let
   val (dty, _) = dom_rng (type_of t)
                  handle HOL_ERR _ =>
                         raise ERR "ALPHA_CONV" "Second term not an abstraction"
-  val (xstr, xty) = dest_var x
-                    handle HOL_ERR _ =>
-                           raise ERR "ALPHA_CONV" "First term not a variable"
+  val (xstr, xty) = with_exn dest_var x 
+                      (ERR "ALPHA_CONV" "First term not a variable")
   val _ = Type.compare(dty, xty) = EQUAL
           orelse raise ERR "ALPHA_CONV"
                            "Type of variable not compatible with abstraction"
