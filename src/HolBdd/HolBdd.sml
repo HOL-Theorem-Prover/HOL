@@ -1,7 +1,8 @@
-structure HolBdd :> HolBdd = 
-struct
 
 (*****************************************************************************)
+(* HolBdd.sml                                                                *)
+(* ----------                                                                *)
+(*                                                                           *)
 (* Ken Larsen's BDDOracle package opened up, renamed  and modified           *)
 (* to support BDDs listed in a table of the form:                            *)
 (*                                                                           *)
@@ -20,18 +21,29 @@ struct
 (*****************************************************************************)
 
 (*
+structure HolBdd :> HolBdd = struct
+*)
+
+(*
 map load ["bdd",
           "Binarymap",
-          "bdd",
           "Net",
           "Polyhash",
+          "Psyntax",
+          "Rsyntax",
+          "pairLib",
           "unwindLib"];
 *)
 
+local
 
 open Globals HolKernel Parse boolLib bdd;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+
+in
+
+open bdd;
 
 (* See pp_flags *)
 
@@ -45,17 +57,18 @@ val _ = infix_at_front := true;
 
 (* val term_to_string = Parse.term_to_string; *)
 
-val T = boolSyntax.T
-val F = boolSyntax.F;
-
+open Psyntax;
 
 (*---------------------------------------------------------------------------*
  * General purpose conversionals. [from Konrad Slind]                        *
  *---------------------------------------------------------------------------*)
 
+local open Rsyntax
+in
+
 fun FORK_CONV (conv1,conv2) tm =
-    let val (Rator,r) = dest_comb tm
-        val (Rator,l) = dest_comb Rator
+    let val {Rator,Rand=r} = dest_comb tm
+        val {Rator,Rand=l} = dest_comb Rator
     in
      MK_COMB(AP_TERM Rator (conv1 l), conv2 r)
     end;
@@ -64,20 +77,23 @@ fun BINOP_CONV conv tm = FORK_CONV (conv,conv) tm;
 fun QUANT_CONV conv    = RAND_CONV(ABS_CONV conv);
 fun BINDER_CONV conv   = ABS_CONV conv ORELSEC QUANT_CONV conv;
 
+end;
 
-local open boolTheory
-      val thm0 = SPEC_ALL EXISTS_OR_THM
+local val alpha = mk_vartype "'a"
       val spotBeta = FORK_CONV (QUANT_CONV (BINOP_CONV BETA_CONV),
                                 BINOP_CONV (QUANT_CONV BETA_CONV))
+      open boolTheory
+      val thm0 = SPEC_ALL EXISTS_OR_THM
 in
 fun EX_OR_CONV tm = 
-  let val (Bvar,Body) = dest_exists tm
-      val ty = type_of Bvar --> bool
-      val P = mk_var("P", ty)
-      val Q = mk_var("Q", ty)
-      val (disj1,disj2) = dest_disj Body
-      val lamP = mk_abs(Bvar,disj1)
-      val lamQ = mk_abs(Bvar,disj2)
+  let open Rsyntax
+      val {Bvar,Body} = dest_exists tm
+      val ty = type_of Bvar --> Type.bool
+      val P = mk_var{Name="P", Ty=ty}
+      val Q = mk_var{Name="Q", Ty=ty}
+      val {disj1,disj2} = dest_disj Body
+      val lamP = mk_abs{Bvar=Bvar, Body=disj1}
+      val lamQ = mk_abs{Bvar=Bvar, Body=disj2}
       val thm = CONV_RULE (RAND_CONV (BINOP_CONV (GEN_ALPHA_CONV Bvar)))
                           (INST_TYPE [alpha |-> type_of Bvar] thm0)
   in 
@@ -88,15 +104,26 @@ end;
 fun TERNOP_CONV cnv = 
  RAND_CONV cnv THENC RATOR_CONV(RAND_CONV cnv THENC RATOR_CONV(RAND_CONV cnv));
 
-fun mk_conj1 (t1,t2) =
- if t1 = T then t2 else 
- if t2 = T then t1 else 
- if t1 = F orelse t2 = F then F else mk_conj(t1,t2);
+val T = ``T``
+and F = ``F``;
 
-fun mk_disj1 (t1,t2) =
- if t1 = F then t2 else 
- if t2 = F then t1 else 
- if t1 = T orelse t2 = T then T else mk_disj(t1,t2);
+fun mk_conj1(t1,t2) =
+ if t1 = T 
+  then t2
+  else 
+  if t2 = T 
+   then t1
+   else 
+   if t1 = F orelse t2 = F then F else Psyntax.mk_conj(t1,t2);
+
+fun mk_disj1(t1,t2) =
+ if t1 = F 
+  then t2
+  else 
+  if t2 = F 
+   then t1
+   else 
+   if t1 = T orelse t2 = T then T else Psyntax.mk_disj(t1,t2);
 
 exception Error;
 
@@ -107,7 +134,7 @@ fun hol_err msg func =
   print "\" \""; print func; print "\"\n";
   raise mk_HOL_ERR "HolBdd" func msg);
 
-val tag = Tag.read "BDD";
+val HolBddTag = Tag.read "BuDDy";
 
 (* Should var_map be a hash table? *)
 
@@ -157,7 +184,7 @@ val var_to_int = reftime var_to_int_time var_to_int_fn;
 
 fun list_to_var_map l =
  let fun list_to_var_map_aux n []     = empty_var_map
-       | list_to_var_map_aux n (x::l) =
+      |  list_to_var_map_aux n (x::l) =
           Binarymap.insert(list_to_var_map_aux(n+1)l,x,n)
  in
   list_to_var_map_aux 0 l
@@ -233,7 +260,8 @@ fun match_to_pairs []             = []
 
 fun subst_bdd var_map old_new_list bdd =
  let val v2i = var_to_int var_map
- in bdd.replace bdd (bdd.makepairSet(List.map (v2i ## v2i) old_new_list))
+ in
+  bdd.replace bdd (bdd.makepairSet(List.map (v2i ## v2i) old_new_list))
  end;
 
 (*****************************************************************************)
@@ -279,6 +307,40 @@ fun appQuantTest tm =
  is_conj tm orelse is_disj tm orelse is_imp tm;
 
 (*****************************************************************************)
+(* Flatten a varstruct term into a list of variables.                        *)
+(*****************************************************************************)
+
+fun flatten_pair t =
+if is_var t 
+ then [t] 
+ else foldr (fn(t,l) => (flatten_pair t) @ l) [] (pairSyntax.strip_pair t);
+
+
+(*****************************************************************************)
+(* ?v1...vn. t                     --> ([v1,...,vn],t)                       *)
+(* ?(v1,...,vn). t                 --> ([v1,...,vn],t)                       *)
+(* ?(v1,...,(u1,...,um),...,vn). t --> ([v1,...,u1,...,um,...,vn],t)         *)
+(*****************************************************************************)
+
+fun gen_strip_exists t =
+ let val (vs,bdy) =  pairSyntax.strip_pexists t
+ in
+  (foldr (fn (p,l) => flatten_pair p @ l) [] vs, bdy)
+ end
+
+(*****************************************************************************)
+(* !v1...vn. t                     --> ([v1,...,vn],t)                       *)
+(* !(v1,...,vn). t                 --> ([v1,...,vn],t)                       *)
+(* !(v1,...,(u1,...,um),...,vn). t --> ([v1,...,u1,...,um,...,vn],t)         *)
+(*****************************************************************************)
+
+fun gen_strip_forall t =
+ let val (vs,bdy) =  pairSyntax.strip_pforall t
+ in
+  (foldr (fn (p,l) => flatten_pair p @ l) [] vs, bdy)
+ end
+
+(*****************************************************************************)
 (* Timings:                                                                  *)
 (*                                                                           *)
 (* Old version:                                                              *)
@@ -297,55 +359,62 @@ fun fromTerm_aux var_map (htbl,net) tm =
     SOME bdd => bdd
   | NONE
     =>
-    case NetPeek var_map (htbl,net) tm 
-    of SOME bdd => bdd
-     | NONE =>
-       if is_var tm 
-       then let val (Name,Ty) = dest_var tm
-            in if Ty = bool then lookup_var var_map Name
-               else hol_err("Variable "^Name^" is not of type bool") "fromTerm"
-            end 
+    case NetPeek var_map (htbl,net) tm of
+       SOME bdd => bdd
+     | NONE
+       =>
+       if Term.is_var tm then 
+           let val (Name,Ty) = Term.dest_var tm
+           in  
+               if Ty = Type.bool then lookup_var var_map Name
+               else hol_err ("Variable "^Name^" is not of type bool") "fromTerm"
+           end 
        else
-       let val (comb,args) = strip_comb tm
-       in if is_abs comb then combExp var_map (htbl,net) comb args 
-          else 
-          let val {Name,Thy,...} = dest_thy_const comb
-          in case (Name,Thy)
-             of ("/\\","bool") => binExp var_map (htbl,net) bdd.And args
-              | ("\\/","bool") => binExp var_map (htbl,net) bdd.Or args
-              | ("==>","min")  => binExp var_map (htbl,net) bdd.Imp args
-              | ("=",  "min")  => 
-                   (case args 
-                     of [arg1,arg2] =>
-                         if is_var arg1 andalso is_var arg2
-                         then binExp var_map (htbl,net) bdd.Biimp args
-                         else (ListPair.foldl (fn(x1,x2,bdd) => bdd.AND
-                                (binExp var_map (htbl,net) bdd.Biimp [x1,x2],
-                                 bdd)) bdd.TRUE
-                                 (pairSyntax.strip_pair arg1,
-                                  pairSyntax.strip_pair arg2)
-                               handle Interrupt => raise Interrupt
-                               |  _ => (print "Can't make BDD of: ";
-                                        print_term tm; print "\n";
-                                        hol_err "Can't make BDD of equation"
-                                        "fromTerm"))
-                      | _ => error()
-                   )
-              | ("~","bool") => bdd.NOT(fromTerm_aux var_map (htbl,net)
-                                       (List.hd args))
-              | ("T","bool")    => bdd.TRUE
-              | ("F","bool")    => bdd.FALSE
-              | ("!","bool")    => quantExp var_map (htbl,net) strip_forall 
+           let val (comb,args) = strip_comb tm
+           in
+            if Term.is_abs comb then combExp var_map (htbl,net) comb args else 
+            case fst(Psyntax.dest_const comb) of
+                "/\\"  => binExp var_map (htbl,net) bdd.And args
+              | "\\/"  => binExp var_map (htbl,net) bdd.Or args
+              | "==>"  => binExp var_map (htbl,net) bdd.Imp args
+              | "="    => (case args of
+                            [arg1,arg2]
+                            =>
+                             if Term.is_var arg1 andalso Term.is_var arg2
+                              then binExp var_map (htbl,net) bdd.Biimp args
+                              else 
+                               (ListPair.foldl
+                                 (fn(x1,x2,bdd)=> 
+                                   bdd.AND
+                                    (binExp var_map (htbl,net) bdd.Biimp [x1,x2],
+                                     bdd))
+                                 bdd.TRUE
+                                 (pairSyntax.strip_pair arg1,pairSyntax.strip_pair arg2)
+                                 handle Interrupt 
+                                         => raise Interrupt
+                                   |    match_to_pairs_Failure
+                                         => raise match_to_pairs_Failure
+                                   |  _  => (print "Can't make BDD of: ";
+                                             print_term tm;
+                                             print "\n";
+                                             hol_err 
+                                             "Can't make BDD of equation"
+                                             "fromTerm"))
+                        | _ => error())
+              | "~"    => bdd.NOT(fromTerm_aux var_map (htbl,net) (List.hd args))
+              | "T"    => bdd.TRUE
+              | "F"    => bdd.FALSE
+              | "!"    => quantExp var_map (htbl,net) gen_strip_forall 
                                    bdd.forall bdd.appall tm
-              | ("?","bool")    => quantExp var_map (htbl,net) strip_exists 
+              | "?"    => quantExp var_map (htbl,net) gen_strip_exists 
                                    bdd.exist bdd.appex   tm
-              | ("COND","bool") => condExp var_map (htbl,net) args
-              | otherwise       => (print "Can't make BDD of: ";
-                                    print_term tm; print "\n";
-                                    hol_err ("Can't make BDD from "
-                                    ^(Thy^"$"^Name)) "fromTerm_aux")
-          end
-       end
+              | "COND" => condExp var_map (htbl,net) args
+              | _      => (print "Can't make BDD of: ";
+                           print_term tm;
+                           print "\n";
+                           hol_err ("Can't make BDD from "^(fst(Psyntax.dest_const comb))) 
+                                   "fromTerm_aux")
+           end
 
 (* check v in bdy, if so get BDD of bdy (will guarantee v in var_map)
    then (using new map) get number of v, compute BDD of arg,
@@ -353,14 +422,14 @@ fun fromTerm_aux var_map (htbl,net) tm =
    then return BDD bdy
 *)
 and combExp var_map bdd_map comb args =  
-    let val (v,bdy) = dest_abs comb
+    let val (v,bdy) = Psyntax.dest_abs comb
         val [arg]   = args
     in
      if free_in v bdy
       then compose 
             (fromTerm_aux var_map bdd_map bdy)
             (fromTerm_aux var_map bdd_map arg)
-            (valOf(Binarymap.peek(var_map, fst(dest_var v))))
+            (valOf(Binarymap.peek(var_map, fst(Psyntax.dest_var v))))
       else fromTerm_aux var_map bdd_map bdy
     end
   | combExp _ _ _ _ = error()
@@ -375,10 +444,12 @@ and binExp var_map bdd_map opr [t1,t2] =
 and quantExp var_map bdd_map strip quant appquant t =
     let val (vars,body) = strip t
         fun find v = 
-            case peek_map var_map (fst(dest_var v)) of
+            case peek_map var_map (fst(Term.dest_var v)) of
                 SOME i => i
-              | NONE   => hol_err ("The variable "^(fst(dest_var v))^
-                                   " is not in the mapping") "quantExp"
+              | NONE   => hol_err ("The variable "^
+                                   (fst(Term.dest_var v))^
+                                   " is not in the mapping")
+                                  "quantExp"
         val varset = bdd.makeset (List.map find vars)
         val tmfn   = fromTerm_aux var_map bdd_map
     in  
@@ -394,7 +465,7 @@ and quantExp var_map bdd_map strip quant appquant t =
       then 
        let val (tm1,tm2) = dest_imp body 
        in appquant (tmfn tm1) (tmfn tm2) Imp varset end
-     else if is_eq body andalso (type_of(rand body) = Type.bool)
+     else if is_eq body andalso (Term.type_of(Term.rand body) = Type.bool)
       then 
        let val (tm1,tm2) = dest_eq body 
        in appquant (tmfn tm1) (tmfn tm2) Biimp varset end
@@ -424,45 +495,49 @@ fun fromTerm var_map bdd_map tm =
 (*****************************************************************************)
 
 fun pureFromTerm_aux var_map tm =
- if is_var tm then 
+ if Term.is_var tm then 
      let val (Name,Ty) = dest_var tm
-     in if Ty = Type.bool then lookup_var var_map Name
-        else hol_err ("Variable "^Name^" is not of type bool") "pureFromTerm"
+     in  
+         if Ty = Type.bool then lookup_var var_map Name
+         else hol_err ("Variable "^Name^" is not of type bool") "pureFromTerm"
      end 
  else
- let val (comb,args) = strip_comb tm
-     val {Name, Thy,...}  = dest_thy_const comb
- in
- case (Name,Thy) 
-  of ("/\\","bool")  => pureBinExp var_map bdd.And args
-   | ("\\/","bool")  => pureBinExp var_map bdd.Or args
-   | ("==>", "min")  => pureBinExp var_map bdd.Imp args
-   | ("=",   "min")  => 
-        (case args 
-          of [arg1,arg2] =>
-              if is_var arg1 andalso is_var arg2
-              then pureBinExp var_map bdd.Biimp args
-              else (ListPair.foldl (fn(x1,x2,bdd) => bdd.AND
-                     (pureBinExp var_map bdd.Biimp [x1,x2], bdd))
-                     bdd.TRUE
-                     (pairSyntax.strip_pair arg1,
-                     pairSyntax.strip_pair arg2)
-                   handle Interrupt => raise Interrupt
-                        |  _ => hol_err "Can't make BDD of equation"
-                                              "pureFromTerm")
-           | _ => error()
-        )
-   | ("~","bool")    => bdd.NOT(pureFromTerm_aux var_map (List.hd args))
-   | ("T","bool")    => bdd.TRUE
-   | ("F","bool")    => bdd.FALSE
-   | ("!","bool")    => pureQuantExp var_map strip_forall bdd.forall tm
-   | ("?","bool")    => pureQuantExp var_map strip_exists bdd.exist tm
-   | ("COND","bool") => pureCondExp var_map args
-   | otherwise       => (print "Can't make BDD of: ";
-                         print_term tm; print "\n";
-                         hol_err ("Can't make BDD from "^Name) 
-                                 "pureFromTerm_aux")
- end
+     let val (comb,args) = strip_comb tm
+         val (Name, Ty)  = dest_const comb
+     in
+      case Name of
+          "/\\"  => pureBinExp var_map bdd.And args
+        | "\\/"  => pureBinExp var_map bdd.Or args
+        | "==>"  => pureBinExp var_map bdd.Imp args
+        | "="    => (case args of
+                      [arg1,arg2]
+                      =>
+                       if Term.is_var arg1 andalso Term.is_var arg2
+                        then pureBinExp var_map bdd.Biimp args
+                        else 
+                         (ListPair.foldl
+                           (fn(x1,x2,bdd)=> 
+                             bdd.AND
+                              (pureBinExp var_map bdd.Biimp [x1,x2],
+                               bdd))
+                           bdd.TRUE
+                           (pairSyntax.strip_pair arg1,pairSyntax.strip_pair arg2)
+                           handle Interrupt => raise Interrupt
+                                       |  _ => hol_err 
+                                                "Can't make BDD of equation"
+                                                "pureFromTerm")
+                  | _ => error())
+        | "~"    => bdd.NOT(pureFromTerm_aux var_map (List.hd args))
+        | "T"    => bdd.TRUE
+        | "F"    => bdd.FALSE
+        | "!"    => pureQuantExp var_map gen_strip_forall bdd.forall tm
+        | "?"    => pureQuantExp var_map gen_strip_exists bdd.exist tm
+        | "COND" => pureCondExp var_map args
+        | _      => (print "Can't make BDD of: ";
+                     print_term tm;
+                     print "\n";
+                     hol_err ("Can't make BDD from "^Name) "pureFromTerm_aux")
+     end
    
 and pureBinExp var_map opr [t1,t2] = 
     let val e1 = pureFromTerm_aux var_map t1
@@ -474,10 +549,12 @@ and pureBinExp var_map opr [t1,t2] =
 and pureQuantExp var_map strip quant t =
     let val (vars,body) = strip t
         fun find v = 
-            case peek_map var_map (fst(dest_var v)) of
+            case peek_map var_map (fst(Term.dest_var v)) of
                 SOME i => i
-              | NONE   => hol_err ("The variable "^fst(dest_var v)^
-                                   " is not in the mapping") "pureQuantExp"
+              | NONE   => hol_err ("The variable "^
+                                   (fst(Term.dest_var v))^
+                                   " is not in the mapping")
+                                  "pureQuantExp"
         val varset = bdd.makeset (List.map find vars)
         val ebody = pureFromTerm_aux var_map body
     in  
@@ -572,23 +649,24 @@ fun BDD_CONV (htbl,net) tm =
        SOME th => th
      | NONE
        =>
-       if is_var tm then ALL_CONV tm
+       if Term.is_var tm then ALL_CONV tm
        else
-       let val (comb,args) = strip_comb tm
-           val {Name, Thy,...}  = dest_thy_const comb
-       in case (Name,Thy)
-           of ("/\\","bool")  => BINOP_CONV (BDD_CONV (htbl,net)) tm
-            | ("\\/","bool")  => BINOP_CONV (BDD_CONV (htbl,net)) tm
-            | ("==>","min")   => BINOP_CONV (BDD_CONV (htbl,net)) tm
-            | ("=",  "min")   => BINOP_CONV (BDD_CONV (htbl,net)) tm
-            | ("~","bool")    => RAND_CONV  (BDD_CONV (htbl,net)) tm
-            | ("T","bool")    => ALL_CONV tm
-            | ("F","bool")    => ALL_CONV tm
-            | ("!","bool")    => QUANT_CONV (BDD_CONV (htbl,net)) tm
-            | ("?","bool")    => QUANT_CONV (BDD_CONV (htbl,net)) tm
-            | ("COND","bool") => TERNOP_CONV(BDD_CONV (htbl,net)) tm
-            | otherwise       => ALL_CONV tm
-       end
+           let val (comb,args) = strip_comb tm
+               val (Name, Ty)  = dest_const comb
+           in
+            case Name of
+                "/\\"  => BINOP_CONV (BDD_CONV (htbl,net)) tm
+              | "\\/"  => BINOP_CONV (BDD_CONV (htbl,net)) tm
+              | "==>"  => BINOP_CONV (BDD_CONV (htbl,net)) tm
+              | "="    => BINOP_CONV (BDD_CONV (htbl,net)) tm
+              | "~"    => RAND_CONV  (BDD_CONV (htbl,net)) tm
+              | "T"    => ALL_CONV tm
+              | "F"    => ALL_CONV tm
+              | "!"    => QUANT_CONV (BDD_CONV (htbl,net)) tm
+              | "?"    => QUANT_CONV (BDD_CONV (htbl,net)) tm
+              | "COND" => TERNOP_CONV(BDD_CONV (htbl,net)) tm
+              | _      => ALL_CONV tm
+           end
 
 
 (*****************************************************************************)
@@ -633,7 +711,7 @@ and BDD_MATCH_CONV bdd_map descr tm =
    then ALL_CONV tm
    else
    let val qtm = 
-        list_mk_exists(qvars, mk_conj1(qconj, subst (rlist@rlist') descr))
+        list_mk_exists(qvars ,mk_conj1(qconj, subst (rlist@rlist') descr))
        val th1 = SYM(unwindLib.EXPAND_AUTO_CONV [] qtm)
        val th2 = unwindLib.DEPTH_EXISTS_CONV 
                   (RATOR_CONV(RAND_CONV(BDD_CONV bdd_map))) 
@@ -656,7 +734,7 @@ fun BDD_TR bdd_map tm =
      val tm = rhs(concl th)
  in
   if !BDD_CONV_flag 
-   then (print "BDD_CONV "; print_thm th; print "\n"; tm) 
+   then (print "BDD_CONV ";print_thm th; print "\n"; tm) 
    else tm
  end;
 
@@ -799,7 +877,7 @@ fun print_bdd_state dir ((_:int,var_map),bdd_map) =
  in
   List.map
    (fn (descr,bdd) => 
-      let val name  = fst(dest_const(fst(strip_comb descr)))
+      let val name  = fst(Psyntax.dest_const(fst(strip_comb descr)))
           val file  = dir^"/"^name
           val label = Parse.term_to_string descr
           val pairs = var_map_to_pairs var_map;
@@ -834,17 +912,16 @@ fun print_bdd_state dir ((_:int,var_map),bdd_map) =
 val bdd_state = ref(empty_table,current_bdd_map);
 
 (*****************************************************************************)
-(* Set BDD state to have an empty BDD hash table and variable table          *)
-(* with a given variable ordering                                            *)
+(* Get the BuDDy variable number corresponding to a HOL variable             *)
 (*****************************************************************************)
 
-fun initHolBdd var_order =
- let val (_,(htbl,net)) = !bdd_state
- in
-  (map (fn(tm,_) => Polyhash.remove htbl tm) (Polyhash.listItems htbl);
-   bdd_state := (add_names_to_table empty_table var_order,
-                 (htbl,Net.empty)))
- end;
+fun varToBddVar (var_map:(string, int) Binarymap.dict) v = 
+ case Binarymap.peek(var_map, fst(Term.dest_var v)) of
+     SOME i => i
+   | NONE   => hol_err ("The variable "^
+                        (fst(Term.dest_var v))^
+                        " is not in the mapping")
+                       "varToBddVar";
 
 (*****************************************************************************)
 (* Show var_map and bdd_map                                                  *)
@@ -859,6 +936,22 @@ fun showBddMap() = Polyhash.listItems(fst(snd(!bdd_state)));
 (*****************************************************************************)
 
 fun showVarOrd() = map fst (sort (fn(_,m)=>fn(_,n)=>m<n) (showVarMap()));
+
+(*****************************************************************************)
+(* Set BDD state to have an empty BDD hash table and variable table          *)
+(* with a given variable ordering                                            *)
+(*****************************************************************************)
+
+fun initHolBdd var_order =
+ let val (_,(htbl,net)) = !bdd_state
+ in
+  (map (fn(tm,_) => Polyhash.remove htbl tm) (Polyhash.listItems htbl);
+   bdd_state := (add_names_to_table empty_table var_order,(htbl,Net.empty));
+   let val var_count = length(showVarMap())
+   in 
+    if getVarnum() < var_count then setVarnum var_count else () 
+   end)
+ end;
 
 (*****************************************************************************)
 (* Delete a BDD from the BDD hash table                                      *)
@@ -880,25 +973,25 @@ val deleteBdd_flag = ref false;
 exception termToBddError;
 
 fun termToBdd tm =
- let val (tab,bdd_map) = !bdd_state
-     val (c',var_map') = add_vars_to_table tab (all_vars tm)
-     val _             = bdd_state := ((c', var_map'), bdd_map)
- in
+ (let val (tab,bdd_map) = !bdd_state
+      val (c',var_map') = add_vars_to_table tab (all_vars tm)
+      val _             = bdd_state := ((c', var_map'), bdd_map)
+  in
    fromTerm var_map' bdd_map tm
-    handle Interrupt => raise Interrupt
-         | match_to_pairs_Failure => 
-              let val tm' = BDD_TR bdd_map tm
-                  val (c'',var_map'') = add_vars_to_table 
+    handle Interrupt 
+             => raise Interrupt
+      |    match_to_pairs_Failure 
+             => let val tm' = BDD_TR bdd_map tm
+                    val (c'',var_map'') = add_vars_to_table 
                                            (c', var_map')
                                            (all_vars tm')
-              in
+                in
                  bdd_state := ((c'', var_map''), snd(!bdd_state));
                  fromTerm var_map'' bdd_map tm'
-              end
-         |    _ => raise termToBddError
- end
-  handle Interrupt => raise Interrupt
-      |    _       => raise termToBddError ;
+                end
+      |    _ => raise termToBddError
+  end) handle Interrupt => raise Interrupt
+         |    _         => raise termToBddError ;
 
 (*****************************************************************************)
 (* Version not using BDD table                                               *)
@@ -907,13 +1000,13 @@ fun termToBdd tm =
 exception pureTermToBddError;
 
 fun pureTermToBdd tm =
- let val (tab,bdd_map) = !bdd_state
+ (let val (tab,bdd_map) = !bdd_state
       val (c',var_map') = add_vars_to_table tab (all_vars tm)
       val _             = bdd_state := ((c', var_map'), bdd_map)
- in
+  in
    pureFromTerm var_map' tm
- end handle Interrupt => raise Interrupt
-          |    _      => raise termToBddError ;
+  end) handle Interrupt => raise Interrupt
+         |    _         => raise termToBddError ;
 
 (*****************************************************************************)
 (* Add a variable to the BDD state, returning the node number. If the        *)
@@ -941,16 +1034,17 @@ fun add_definition defn (tab,bdd_map)
      val _             = bdd_state := ((c', var_map'), bdd_map)
      val tm_bdd        = fromTerm var_map' bdd_map tm
                            handle Interrupt => raise Interrupt
-                                |    _      => 
-                                    let val tm' = BDD_TR bdd_map tm
-                                        val (c'',var_map'') =
+                                     |    _ => let val tm' = BDD_TR bdd_map tm
+                                                   val (c'',var_map'') =
                                                     add_vars_to_table 
                                                      (c', var_map')
                                                      (all_vars tm')
-                                    in bdd_state := ((c'', var_map''), 
-                                                     snd(!bdd_state));
-                                       fromTerm var_map'' bdd_map tm'
-                                    end
+                                               in
+                                                bdd_state := 
+                                                 ((c'', var_map''), 
+                                                  snd(!bdd_state));
+                                                fromTerm var_map'' bdd_map tm'
+                                               end
      val (htbl,net)    = bdd_map
      val bdd_map'      = ((Polyhash.insert htbl (tm_descr,tm_bdd);htbl),
                           Net.insert(tm_descr,tm_descr)net)
@@ -1059,7 +1153,7 @@ fun eqCheck(t1,t2) = isT(mk_eq(t1,t2));
 
 fun mk_bdd_thm tm = 
  Thm.mk_oracle_thm 
-  tag 
+  HolBddTag 
   ([], (if valOf (tautCheck tm) 
          then tm
          else mk_neg tm)
@@ -1071,7 +1165,7 @@ exception bddOracleError;
 
 fun bddOracle tm = 
  Thm.mk_oracle_thm 
-  tag 
+  HolBddTag 
   ([], (if valOf(tautCheck tm) 
          then tm
          else raise bddOracleError)
@@ -1211,8 +1305,8 @@ fun find_bdd_model bdd =
      case find_bdd_model (bdd.high bdd) of
         SOME bdd' => SOME(bdd.AND(bdd.ithvar(bdd.var bdd),bdd'))
       | NONE      => case find_bdd_model (bdd.low bdd) of
-                      SOME bdd' => SOME(bdd.AND(bdd.nithvar(bdd.var bdd),bdd'))
-                    | NONE      => NONE;
+                        SOME bdd' => SOME(bdd.AND(bdd.nithvar(bdd.var bdd),bdd'))
+                      | NONE      => NONE;
 *)
 
 fun find_bdd_model_aux bdd acc = 
@@ -1289,26 +1383,30 @@ fun bddToTerm bdd =
  let infix 9 sub 
      val op sub = Vector.sub
      val (root,nt) = bdd.nodetable bdd
-     fun var i  = mk_var(get_node_name(#1(nt sub i)),``:bool``)
+     fun var i  = Psyntax.mk_var(get_node_name(#1(nt sub i)),``:bool``)
      fun low i  = #2(nt sub i) 
      fun high i = #3(nt sub i)
      fun bddToTerm_aux node = 
-           if node=0 then T else 
-           if node=1 then F else 
-           mk_cond (var node, 
-                    bddToTerm_aux(high node), 
-                    bddToTerm_aux(low node))
+           if node=0 then T
+      else if node=1 then F 
+                     else Psyntax.mk_cond
+                           (var node, 
+                            bddToTerm_aux(high node), 
+                            bddToTerm_aux(low node))
  in
   bddToTerm_aux root
  end;
 *)
 
 fun bddToTerm bdd =
- if (bdd.equal bdd bdd.TRUE)  then T else
- if (bdd.equal bdd bdd.FALSE) then F else 
- mk_cond(mk_var(get_node_name(bdd.var bdd),bool),
-         bddToTerm(bdd.high bdd),
-         bddToTerm(bdd.low bdd));
+ if (bdd.equal bdd bdd.TRUE)
+  then T
+  else
+   if (bdd.equal bdd bdd.FALSE)
+    then F
+    else Psyntax.mk_cond(mk_var(get_node_name(bdd.var bdd),bool),
+                         bddToTerm(bdd.high bdd),
+                         bddToTerm(bdd.low bdd));
 
 
 (*****************************************************************************)
@@ -1341,3 +1439,13 @@ fun statecount b =
  end;
 
 end
+
+
+(*
+end
+*)
+
+
+
+
+

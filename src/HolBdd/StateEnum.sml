@@ -1,16 +1,38 @@
-structure StateEnum :> StateEnum = 
-struct
+(*****************************************************************************)
+(* StateEnum.sml                                                             *)
+(* -------------                                                             *)
+(*                                                                           *)
+(* First implementation of reachability tools for HolBddLib. Now partly      *)
+(* obsoleted by BddRules.sml                                                 *)
+(*****************************************************************************)
+
+(* structure StateEnum :> StateEnum = struct *)
 
 (*
-load "BasicProvers"; (* for PROVE_TAC *)
-load "TotalDefn";  (* for Define *)
-load "numLib";
+load "bossLib";
+load "pairLib";
+load "liteLib";
+load "Ho_Rewrite";
+load "Num_conv";
 load "unwindLib";
-load "pairTools";
 load "HolBdd";
 load "HolBddTheory";
-load "SatisfySimps";
 *)
+
+(* Function to make arguments of subst work in Kananaskis *)
+
+fun pair2recd (v,M) = {redex=v, residue=M};
+
+val _ = 
+ print 
+  "\nComputeReachable is obsolete.\n\
+   \It uses an inefficient coding style.\n\
+   \Use BddRules.ComputeReachableBdd instead.\n";
+
+open HolBdd;
+open HolBddTheory;
+
+local 
 
 open HolKernel Parse boolLib 
      BasicProvers pairSyntax pairTools numLib HolBdd;
@@ -18,14 +40,15 @@ open HolKernel Parse boolLib
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
+val num = ``:num``;
+
+in
 
 (* open bossLib;          *)
-(* open BasicProvers;     *)
 (* open arithmeticTheory; *)
 (* open pairTheory;       *)
-(* open Ho_rewrite;       *)
+(* open Ho_Rewrite;       *)
 (* open Num_conv;         *)
-(* open PGEN;             *)
 (* open HolBddTheory;     *)
 
 (* Def superceded by bossLib.Define ******************************************
@@ -44,17 +67,14 @@ fun Def tm =
  in
   new_definition((name ^ "_def"),tm)
  end;
-
  *****************************************************************************)
 
 
-local open simpLib boolSimps pureSimps SatisfySimps pairSimps
-      val data = merge_ss[PURE_ss,BOOL_ss,CONG_ss,SATISFY_ss,PAIR_ss]
-in
-  val my_ss = mk_simpset [data]
-  val MY_SIMP_RULE = simpLib.SIMP_RULE my_ss  (* partial evaluation here *)
-end;
+(*****************************************************************************)
+(* Convert an ML integer to a HOL numerical constant                         *)
+(*****************************************************************************)
 
+fun intToTerm n = numSyntax.mk_numeral(Arbnum.fromInt n);
 
 (*****************************************************************************)
 (*    |- t2(v1,...,vn) = t2(v1,...,vn)                                       *)
@@ -64,15 +84,12 @@ end;
 
 fun PGEN_EXT th =
  let val vars = rand(rand(concl th))
- in EXT(PGEN (genvar(type_of vars)) vars th)
+ in
+  EXT(pairTools.PGEN (genvar(type_of vars)) vars th)
  end
 
 val DEPTH_EXISTS_CONV = unwindLib.DEPTH_EXISTS_CONV
 and EXPAND_AUTO_CONV  = unwindLib.EXPAND_AUTO_CONV;
-
-(* 
-  fun g tm = set_goal([],tm); 
-*)
 
 (*****************************************************************************)
 (* Some utility functions for examples                                       *)
@@ -97,14 +114,6 @@ fun mk_primed_bool_var s = mk_bool_var(s^"'");
 (* and then using ReachBy_fixedpoint                                         *)
 (*                                                                           *)
 (*****************************************************************************)
-
-(*****************************************************************************)
-(* Convert an ML integer to a HOL numerical constant                         *)
-(*****************************************************************************)
-
-val num = numSyntax.num;
-
-fun intToTerm n = numSyntax.mk_numeral(Arbnum.fromInt n);
 
 (*****************************************************************************)
 (* If ithm is:                                                               *)
@@ -133,13 +142,7 @@ val ReachBy_CONV = CONV_RULE o RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV;
 (*****************************************************************************)
 
 fun ReachBy_SUC_CONV n =
- ReachBy_CONV(REWR_CONV(SYM(num_CONV(intToTerm(n+1)))));
-
-(*****************************************************************************)
-(* Delete a BDD from the BDD hash table                                      *)
-(*****************************************************************************)
-
-val deleteBdd = Polyhash.remove(fst(snd(!bdd_state)));
+ ReachBy_CONV(REWR_CONV(SYM(Num_conv.num_CONV(intToTerm(n+1)))));
 
 (*****************************************************************************)
 (* Flag (default true) to determine whether to delete BDDs                   *)
@@ -170,35 +173,41 @@ fun ComputeReachable (Rthm,Bthm) =
                                 can (match_term st_b) st) orelse
                                hol_err "R & B mismatch" "ComputeReachable"
      val ntm                 = ``n:num``
-     val [CITER0,CITER_SUC]  = CONJUNCTS HolBddTheory.ReachBy_rec
+     val [CITER0,CITER_SUC]  = CONJUNCTS ReachBy_rec
      val ci0                 = ISPECL[R,B,st]CITER0
      val cisuc               = GEN ntm 
                                 (Ho_Rewrite.REWRITE_RULE
-                                  [HolBddTheory.Next_def,pairTheory.EXISTS_PROD]
+                                  [Next_def,pairTheory.EXISTS_PROD]
                                   (ISPECL[R,B,ntm,st]CITER_SUC))
      val (Rdescr,Rbdd)       = addEquation Rthm
      val (Bdescr,Bbdd)       = addEquation Bthm
      fun iterate n (cidescr,cibdd) = 
       let val _                 = print "."
-          val (cidescr',cibdd') = addEquation (ReachBy_SUC_CONV n 
-                                                 (SPEC (intToTerm n) cisuc))
+          val (cidescr',cibdd') = 
+               addEquation (ReachBy_SUC_CONV n (SPEC (intToTerm n) cisuc))
           val test              = is_taut(bdd.BIIMP(cibdd,cibdd'))
       in
-       if test then n
+       if test
+        then n
         else if !deleteBdd_flag 
-              then (deleteBdd cidescr;iterate (n+1) (cidescr',cibdd'))
+              then (HolBdd.deleteBdd cidescr;iterate (n+1) (cidescr',cibdd'))
               else iterate (n+1) (cidescr',cibdd')
       end
  in
-  let val n    = iterate 0 (addEquation ci0)
-      val ntm  = intToTerm n
-      val ntm' = intToTerm(n+1)
-      val th1  = bddOracle ``ReachBy ^R ^B ^ntm' ^st = ReachBy ^R ^B ^ntm ^st``
-      val th2  = MATCH_MP HolBddTheory.ReachBy_fixedpoint
-                   (MATCH_MP EQ_EXT
-                        (PGEN (genvar(type_of st)) st
-                          (SYM(ReachBy_CONV num_CONV th1))))
-      val th3  = AP_THM th2 st
+  let val n       = iterate 0 (addEquation ci0)
+      val ntm     = intToTerm n
+      val ntm'    = intToTerm(n+1)
+      val th1     = bddOracle ``ReachBy ^R ^B ^ntm' ^st =
+                                  ReachBy ^R ^B ^ntm ^st``
+      val th2     = MATCH_MP
+                     ReachBy_fixedpoint
+                      (MATCH_MP
+                        EQ_EXT
+                        (pairTools.PGEN 
+                          (genvar(type_of st))
+                          st
+                          (SYM(ReachBy_CONV Num_conv.num_CONV th1))))
+      val th3     = AP_THM th2 st
   in
    addEquation th3;
    {ReachThm=th3,iterations=n}
@@ -216,12 +225,12 @@ fun Make_Reachable_ReachIn_Bdd (Rthm,Bthm) =
                                    can (match_term st_b) st) orelse
                                   hol_err "R & B mismatch" "Make_Reachable_ReachIn_Bdd"
      val ntm                    = ``n:num``
-     val [ReachIn0,ReachIn_SUC] = CONJUNCTS HolBddTheory.ReachIn_def
+     val [ReachIn0,ReachIn_SUC] = CONJUNCTS ReachIn_def
      val i0                     = AP_THM(ISPECL[R,B]ReachIn0)st
      val isuc                   = Ho_Rewrite.REWRITE_RULE (* needs Ho_Rewrite *)
-                                   [HolBddTheory.Next_def,pairTheory.EXISTS_PROD]
+                                   [Next_def,pairTheory.EXISTS_PROD]
                                    (GEN ntm (AP_THM(ISPECL[R,B,ntm]ReachIn_SUC)st))
-     val [CITER0,CITER_SUC]     = CONJUNCTS HolBddTheory.ReachBy_ReachIn
+     val [CITER0,CITER_SUC]     = CONJUNCTS ReachBy_ReachIn
      val ci0                    = ISPECL[R,B,st]CITER0
      val cisuc                  = GEN ntm (ISPECL[R,B,ntm,st]CITER_SUC)
      val (Rdescr,Rbdd)          = addEquation Rthm
@@ -234,28 +243,33 @@ fun Make_Reachable_ReachIn_Bdd (Rthm,Bthm) =
                addEquation (ReachBy_SUC_CONV n (SPEC (intToTerm n) cisuc))
           val test              = is_taut(bdd.BIIMP(cibdd,cibdd'))
       in
-       if test then n
-        else let val (idescr'',_) = addEquation (ReachBy_SUC_CONV n 
-                                                   (REFL idescr'))
+       if test
+        then n
+        else let val (idescr'',_) = addEquation (ReachBy_SUC_CONV n (REFL idescr'))
              in
               if !deleteBdd_flag 
-               then(deleteBdd idescr; 
-                    deleteBdd cidescr; 
-                    deleteBdd idescr';
+               then(HolBdd.deleteBdd idescr; 
+                    HolBdd.deleteBdd cidescr; 
+                    HolBdd.deleteBdd idescr';
                     iterate (n+1) idescr'' (cidescr',cibdd'))
                else iterate (n+1) idescr'' (cidescr',cibdd')
               end
       end
  in
-  let val n    = iterate 0 i0_descr (addEquation ci0)
-      val ntm  = intToTerm n
-      val ntm' = intToTerm(n+1)
-      val th1  = bddOracle ``ReachBy ^R ^B ^ntm' ^st = ReachBy ^R ^B ^ntm ^st``
-      val th2  = MATCH_MP HolBddTheory.ReachBy_fixedpoint
-                  (MATCH_MP EQ_EXT
-                   (PGEN (genvar(type_of st)) st
-                          (SYM(ReachBy_CONV num_CONV th1))))
-      val th3  = AP_THM th2 st
+  let val n       = iterate 0 i0_descr (addEquation ci0)
+      val ntm     = intToTerm n
+      val ntm'    = intToTerm(n+1)
+      val th1     = bddOracle ``ReachBy ^R ^B ^ntm' ^st =
+                                  ReachBy ^R ^B ^ntm ^st``
+      val th2     = MATCH_MP
+                     ReachBy_fixedpoint
+                      (MATCH_MP
+                        EQ_EXT
+                        (pairTools.PGEN 
+                          (genvar(type_of st))
+                          st
+                          (SYM(ReachBy_CONV Num_conv.num_CONV th1))))
+      val th3     = AP_THM th2 st
   in
    addEquation th3;
    {Thm=th3,iterations=n}
@@ -280,11 +294,11 @@ fun Make_Reachable_ReachIn_Bdd (Rthm,Bthm) =
 
 (*
 fun MakeReachableChecker (Rthm,Bthm) =
- let val _                    = print "Making checker: "
-     val (R,st_st')           = dest_comb(lhs(concl(SPEC_ALL Rthm)))
-     val (B,st_b)             = dest_comb(lhs(concl(SPEC_ALL Bthm)))
-     val (st,st')             = dest_pair st_st'
-     val {Thm=_,iterations=m} = Make_Reachable_ReachBy_Bdd (Rthm,Bthm)
+ let val _                   = print "Making checker: "
+     val (R,st_st')          = dest_comb(lhs(concl(SPEC_ALL Rthm)))
+     val (B,st_b)            = dest_comb(lhs(concl(SPEC_ALL Bthm)))
+     val (st,st')            = dest_pair st_st'
+     val {Thm=_,iterations=m}= Make_Reachable_ReachBy_Bdd (Rthm,Bthm)
      val _ = print("\n" ^ (int_to_string m) ^" iterations")
  in
   fn tm => bddOracle ``Reachable ^R ^B ^st ==> ^tm``
@@ -305,7 +319,7 @@ fun MakeStableChecker (Rthm,Bthm) =
      val stbthm =
       Ho_Rewrite.REWRITE_RULE 
        [pairTheory.FORALL_PROD,pairTheory.PAIR_EQ] 
-       (ISPECL [``DFF``,st] HolBddTheory.Stable_def)
+       (ISPECL [``DFF``,st] Stable_def)
      val _ = addEquation stbthm
  in
   fn tm => rcheck ``Stable ^R ^st ==> ^tm``
@@ -324,14 +338,14 @@ fun MakeStableChecker2 (Rthm,Bthm) =
      val _                   = (st=st_b) orelse
                                hol_err "R & B mismatch" "MakeStableChecker2"
      val ntm                 = ``n:num``
-     val [ReachIn0,ReachIn_SUC]    = CONJUNCTS HolBddTheory.ReachIn_def
+     val [ReachIn0,ReachIn_SUC]    = CONJUNCTS ReachIn_def
      val i0                  = AP_THM(ISPECL[R,B]ReachIn0)st
      val isuc                = Ho_Rewrite.REWRITE_RULE (* needs Ho_Rewrite *)
-                                [HolBddTheory.Next_def,pairTheory.EXISTS_PROD]
+                                [Next_def,pairTheory.EXISTS_PROD]
                                 (GEN ntm (AP_THM(ISPECL[R,B,ntm]ReachIn_SUC)st))
      val stbthm              = Ho_Rewrite.REWRITE_RULE (* needs Ho_Rewrite *)
-                                [HolBddTheory.Next_def,pairTheory.FORALL_PROD]
-                                (ISPECL[R,st]HolBddTheory.Stable_def)
+                                [Next_def,pairTheory.FORALL_PROD]
+                                (ISPECL[R,st]Stable_def)
      val (Rdescr,Rbdd)       = addEquation Rthm
      val (Bdescr,Bbdd)       = addEquation Bthm
      val (stb_descr,stbbdd)  = addEquation stbthm
@@ -352,13 +366,13 @@ fun MakeStableChecker2 (Rthm,Bthm) =
      val ntm     = intToTerm n
      val th1     = bddOracle ``ReachIn ^R ^B ^ntm ^st ==> ^stb_descr``
      val st_var  = mk_var("state",type_of st)
-     val th2     = PGEN st_var st th1
+     val th2     = pairTools.PGEN st_var st th1
      val Live_th = Ho_Rewrite.REWRITE_RULE
                      [pairTheory.EXISTS_PROD,pairTheory.FORALL_PROD]
-                     (ISPEC R HolBddTheory.Live_def)
+                     (ISPEC R Live_def)
      val (ldescr,lbdd)  = addEquation Live_th
      val th3 = bddOracle ``Live ^R``
-     val th4 = SPEC st (MATCH_MP HolBddTheory.Reachable_Stable (CONJ th3 th2))
+     val th4 = SPEC st (MATCH_MP Reachable_Stable (CONJ th3 th2))
      val _   = addEquation th4
  in
   fn tm => 
@@ -437,8 +451,7 @@ fun LIST_MK_CONJ [th] = th
 (*****************************************************************************)
 
 val IMP_DISCH_EQN = 
- Lib.with_flag (mesonLib.chatting,0)
-   (PROVE []) ``!w u v. (w ==> (u = v)) ==> (w /\ u = w /\ v)``;
+ bossLib.DECIDE ``!w u v:bool. (w ==> (u = v)) ==> (w /\ u = w /\ v)``;
 
 fun ELIM_LHS_CONV l =
  if length l <= 1 orelse not(is_eq(hd l))
@@ -470,7 +483,7 @@ fun split p alist =
  * through the list.
  *
  *     fun curry f x y = f (x,y)
- *     partition (curry (op =)) [1,2,3,1,1,2,2,3,4,5,4,4,3,2,1];
+ *      partition (curry (op =)) [1,2,3,1,1,2,2,3,4,5,4,4,3,2,1];
  *     val it = [[1,1,1,1],[2,2,2,2],[3,3,3],[4,4,4],[5]] : int list list
  *---------------------------------------------------------------------------*)
 
@@ -493,11 +506,9 @@ fun LIST_ELIM_LHS_CONV tm =
   TRANS th2 th1
  end;
 
+val AND_OR = bossLib.DECIDE ``A /\ (B \/ C) = (A /\ B) \/ (A /\ C)``;
 
-val AND_OR = Lib.with_flag (mesonLib.chatting,0)
-   (PROVE []) ``A /\ (B \/ C) = (A /\ B) \/ (A /\ C)``;
-val OR_AND = Lib.with_flag (mesonLib.chatting,0)
-   (PROVE []) ``(A \/ B) /\ C = (A /\ C) \/ (B /\ C)``;
+val OR_AND = bossLib.DECIDE ``(A \/ B) /\ C = (A /\ C) \/ (B /\ C)``;
 
 (*****************************************************************************)
 (* Generate a simplified instantion of ReachBy_rec:                          *)
@@ -543,12 +554,14 @@ fun MakeSimpReachByRecThm(Rthm,Bthm) =
      val (B,st_b)            = dest_comb(lhs(concl(SPEC_ALL Bthm)))
      val (st,st')            = dest_pair st_st'
      val ntm                 = ``n:num``
-     val [CITER0,CITER_SUC]  = CONJUNCTS HolBddTheory.ReachBy_rec
+     val [CITER0,CITER_SUC]  = CONJUNCTS ReachBy_rec
      val ci0                 = ISPECL[R,B,st]CITER0
      val cisuc               = Ho_Rewrite.REWRITE_RULE
-                                [HolBddTheory.Next_def,pairTheory.EXISTS_PROD]
+                                [Next_def,pairTheory.EXISTS_PROD]
                                 (ISPECL[R,B,ntm,st]CITER_SUC)
-(*   val cisuc_simp          = time (MY_SIMP_RULE[Rthm,AND_OR,EXISTS_OR_THM])
+(*   val cisuc_simp          = time (simpLib.SIMP_RULE 
+                                HOLSimps.hol_ss
+                                [Rthm,AND_OR,EXISTS_OR_THM])
                                 cisuc
 *)
      val cisuc_simp          = RIGHT_CONV_RULE
@@ -571,13 +584,15 @@ fun MakeSimpReachInRecThm(Rthm,Bthm) =
      val (B,st_b)               = dest_comb(lhs(concl(SPEC_ALL Bthm)))
      val (st,st')               = dest_pair st_st'
      val ntm                    = ``n:num``
-     val [ReachIn0,ReachIn_SUC] = CONJUNCTS HolBddTheory.ReachIn_rec
+     val [ReachIn0,ReachIn_SUC] = CONJUNCTS ReachIn_rec
      val i0                     = ISPECL[R,B,st] ReachIn0
      val isuc                   = Ho_Rewrite.REWRITE_RULE
-                                   [HolBddTheory.Next_def,pairTheory.EXISTS_PROD]
+                                   [Next_def,pairTheory.EXISTS_PROD]
                                    (ISPECL[R,B,ntm,st]ReachIn_SUC)
-     val isuc_simp              = time(MY_SIMP_RULE[Rthm,AND_OR,EXISTS_OR_THM])
-                                        isuc
+     val isuc_simp             = time (simpLib.SIMP_RULE 
+                                   boolSimps.bool_ss (* HOLSimps.hol_ss *)
+                                   [Rthm,AND_OR,EXISTS_OR_THM])
+                                   isuc
 (* Code below won't work as it is tuned to ReachBy (EX_OR_CONV?)
      val isuc_simp           = RIGHT_CONV_RULE
                                 (RAND_CONV
@@ -613,7 +628,7 @@ fun ComputeSimpReachable (Rthm,Bthm) =
        if test
         then n
         else if !deleteBdd_flag 
-              then (deleteBdd cidescr;iterate (n+1) (cidescr',cibdd'))
+              then (HolBdd.deleteBdd cidescr;iterate (n+1) (cidescr',cibdd'))
               else iterate (n+1) (cidescr',cibdd')
       end
      val n       = time (iterate 0) (addEquation ci0)
@@ -622,11 +637,13 @@ fun ComputeSimpReachable (Rthm,Bthm) =
      val th1     = bddOracle ``ReachBy ^R ^B ^ntm' ^st =
                                  ReachBy ^R ^B ^ntm ^st``
      val th2     = MATCH_MP
-                    HolBddTheory.ReachBy_fixedpoint
+                    ReachBy_fixedpoint
                      (MATCH_MP
                        EQ_EXT
-                       (PGEN (genvar(type_of st)) st
-                         (SYM(ReachBy_CONV num_CONV th1))))
+                       (pairTools.PGEN 
+                         (genvar(type_of st))
+                         st
+                         (SYM(ReachBy_CONV Num_conv.num_CONV th1))))
      val th3     = AP_THM th2 st
  in
   addEquation th3;
@@ -685,7 +702,7 @@ fun Find_Refutation_ReachBy_Trace(Rthm,Bthm,Qthm) =
      val _          = print "Simplifying Prev instance..."
      val prev_thm1  = Ho_Rewrite.REWRITE_RULE 
                        [pairTheory.EXISTS_PROD,Rthm] 
-                       (ISPECL[R,``Q:^(type_of st)->bool``,st]HolBddTheory.Prev_def)
+                       (ISPECL[R,``Q:^(type_of st)->bool``,st]Prev_def)
      val prev_thm2  = RIGHT_CONV_RULE
                        (DEPTH_EXISTS_CONV (REWRITE_CONV[OR_AND])
                          THENC TOP_DEPTH_CONV EX_OR_CONV
@@ -695,7 +712,7 @@ fun Find_Refutation_ReachBy_Trace(Rthm,Bthm,Qthm) =
                        prev_thm1
      val prev_thm3 = GEN (mk_var("Q",type_of Q)) prev_thm2
      fun prev s = Ho_Rewrite.REWRITE_RULE
-                   [HolBddTheory.Eq_def,pairTheory.PAIR_EQ](SPEC ``Eq ^s`` prev_thm3)
+                   [Eq_def,pairTheory.PAIR_EQ](SPEC ``Eq ^s`` prev_thm3)
      val _          = print "done"
      fun get_st tm = 
       let val s = rhs(concl(REWRITE_CONV[ASSUME tm]st))
@@ -711,7 +728,7 @@ fun Find_Refutation_ReachBy_Trace(Rthm,Bthm,Qthm) =
               val s' = get_st(findModel(mk_conj(descr',descr)))
               val nxt_thm = 
                Ho_Rewrite.REWRITE_RULE
-                [HolBddTheory.Prev_Next_Eq](bddOracle(mk_comb(rator descr',s')))
+                [Prev_Next_Eq](bddOracle(mk_comb(rator descr',s')))
           in
            get_sts trace s' ((s',nxt_thm)::acc)
           end
@@ -755,8 +772,7 @@ fun FindRefutationTrace(Rthm,Bthm,Qthm) =
      val _          = print "Simplifying Prev instance..."
      val prev_thm1  = Ho_Rewrite.REWRITE_RULE 
                        [pairTheory.EXISTS_PROD,Rthm] 
-                       (ISPECL[R,mk_var("Q",type_of st-->bool),st]
-                              HolBddTheory.Prev_def)
+                       (ISPECL[R,mk_var("Q",``:(type_of st)->bool``),st]Prev_def)
      val prev_thm2  = RIGHT_CONV_RULE
                        (DEPTH_EXISTS_CONV (REWRITE_CONV[OR_AND])
                          THENC TOP_DEPTH_CONV EX_OR_CONV
@@ -766,7 +782,7 @@ fun FindRefutationTrace(Rthm,Bthm,Qthm) =
                        prev_thm1
      val prev_thm3 = GEN (mk_var("Q",type_of Q)) prev_thm2
      fun prev s = Ho_Rewrite.REWRITE_RULE
-                   [HolBddTheory.Eq_def,pairTheory.PAIR_EQ](SPEC ``Eq ^s`` prev_thm3)
+                   [Eq_def,pairTheory.PAIR_EQ](SPEC ``Eq ^s`` prev_thm3)
      val _          = print "done"
      fun get_st tm = 
       let val s = rhs(concl(REWRITE_CONV[ASSUME tm]st))
@@ -782,7 +798,7 @@ fun FindRefutationTrace(Rthm,Bthm,Qthm) =
               val s' = get_st(findModel(mk_conj(descr',descr)))
               val nxt_thm = 
                Ho_Rewrite.REWRITE_RULE
-                [HolBddTheory.Prev_Next_Eq](bddOracle(mk_comb(rator descr',s')))
+                [Prev_Next_Eq](bddOracle(mk_comb(rator descr',s')))
           in
            get_sts trace s' ((s',nxt_thm)::acc)
           end
@@ -833,12 +849,16 @@ fun word_rep m n =
 fun mk_bool_tuple_type n =
  if n<2 
   then bool 
-  else mk_type("prod",[bool, mk_bool_tuple_type(n-1)]);
+  else Psyntax.mk_type("prod",[bool, mk_bool_tuple_type(n-1)]);
 
 fun mk_disj1(t1,t2) =  (* Also defined in KLBDD.ml *)
- if t1 = F then t2 else 
- if t2 = F then t1 else 
- if t1 = T orelse t2 = T then T else mk_disj(t1,t2);
+ if t1 = F 
+  then t2
+  else 
+  if t2 = F 
+   then t1
+   else 
+   if t1 = T orelse t2 = T then T else Psyntax.mk_disj(t1,t2);
 
 (*****************************************************************************)
 (*     |- !P rep.                                                            *)
@@ -846,7 +866,7 @@ fun mk_disj1(t1,t2) =  (* Also defined in KLBDD.ml *)
 (*          (?abs. (!a. abs (rep a) = a) /\ (!r. P r = rep (abs r) = r))     *)
 (*****************************************************************************)
 
-val ABS_EXISTS_THM = HolBddTheory.ABS_EXISTS_THM
+val ABS_EXISTS_THM = HolBddTheory.ABS_EXISTS_THM;
 
 (*****************************************************************************)
 (* Generate the definition of abstraction and representation functions       *)
@@ -856,16 +876,14 @@ val ABS_EXISTS_THM = HolBddTheory.ABS_EXISTS_THM
 (* The names of the functions are the name of the type prefixed with         *)
 (* "abs_" and "rep_".  For example, if:                                      *)
 (*                                                                           *)
-(* altitude_vals =                                                           *)
-(*     |- !e0 e1 e2.                                                         *)
-(*          ?!fn.                                                            *)
-(*            (fn away = e0) /\                                              *)
-(*            (fn near_pre_selected = e1) /\                                 *)
-(*            (fn at_pre_selected = e2)                                      *)
+(*  Hol_datatype `altitude_vals                                              *)
+(*                       = away                                              *)
+(*                       | near_pre_selected                                 *)
+(*                       | at_pre_selected`;                                 *)
 (*                                                                           *)
 (* then                                                                      *)
 (*                                                                           *)
-(*    define_rep altitude_vals                                               *)
+(*    define_rep "altitude_vals"                                             *)
 (*                                                                           *)
 (* returns the record:                                                       *)
 (*                                                                           *)
@@ -888,7 +906,7 @@ val ABS_EXISTS_THM = HolBddTheory.ABS_EXISTS_THM
 (*     : {abs_spec : Thm.thm, rep_range_def : Thm.thm, rep_spec : Thm.thm,   *)
 (*        rep_type_def : Thm.thm}                                            *)
 (*****************************************************************************)
-                           
+                
 fun define_rep th =
  let val (vs,bdy) = strip_forall(concl th)
      val (qnt,lam) = dest_comb bdy
@@ -929,7 +947,7 @@ fun define_rep th =
                         THEN GEN_TAC
                         THEN EQ_TAC
                         THENL[PROVE_TAC[rep_spec],
-                              Ho_Rewrite.REWRITE_TAC[HolBddTheory.EXISTS_IMP]
+                              Ho_Rewrite.REWRITE_TAC[HolBddTheory.EXISTS_IMP_EQ]
                                THEN INDUCT_THEN induct_thm ASSUME_TAC
                                THEN PROVE_TAC[rep_spec]])
      val ty_def_thm = EQ_MP
@@ -957,6 +975,376 @@ fun PROVE_ABS_THMS abs_def rep_def =
   LIST_CONJ(map (CONV_RULE(RATOR_CONV(RAND_CONV(REWRITE_CONV[abs_eqn])))) thl1)
  end;
 
+(*****************************************************************************)
+(* Tools to extract transition system from predicates on traces.             *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* ExtractTransitionSystem_CONV                                              *)
+(*  ``u1,...,um,v1,...,vn``                                                  *)
+(*  ``?vt1...vtn.                                                            *)
+(*     INIT(ut1 0,...,utm 0,vt1 0,...,vtn 0)                                 *)
+(*     /\                                                                    *)
+(*     !t. STEP((ut1 t,...,utm t,vt1 t,...,vtn t),                           *)
+(*              (ut1(t+1),...,utm(t+1),vt1(t+1),...,vtn(t+1)))``             *)
+(* =                                                                         *)
+(* ((\((u1,...,um,v1,...,vn),(u1',...,um',v1',...,vn')).                     *)
+(*     STEP((u1,...,um,v1,...,vn),(u1',...,um',v1',...,vn'))),               *)
+(*  (\(u1,...,um,v1,...,vn). INIT(u1,...,um,v1,...,vn))),                    *)
+(*  |- (?vt1...vtn.                                                          *)
+(*       INIT(ut1 0,...,utm 0,vt1 0,...,vtn 0)                               *)
+(*       /\                                                                  *)
+(*       !t. STEP((ut1 t,...,utm t,vt1 t,...,vtn t),                         *)
+(*                (ut1(t+1),...,utm(t+1),vt1(t+1),...,vtn(t+1))))            *)
+(*      =                                                                    *)
+(*      ?vt1...vtn.                                                          *)
+(*       (\(u1,...,um,v1,...,vn). INIT(u1,...,um,v1,...,vn))                 *)
+(*        (ut1 0,...,utm 0,vt1 0,...,vtn 0)                                  *)
+(*      /\                                                                   *)
+(*      !t. (\((u1,...,um,v1,...,vn),(u1',...,um',v1',...,vn')).             *)
+(*            STEP((u1,...,um,v1,...,vn),(u1',...,um',v1',...,vn')))         *)
+(*          ((ut1 t,...,utm t,vt1 t,...,vtn t),                              *)
+(*           (ut1(t+1),...,utm(t+1),vt1(t+1),...,vtn(t+1)))                  *)
+(*                                                                           *)
+(* [All values assumed boolean -- i.e. fully scalarized]                     *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Remove repeated elements from a list                                      *)
+(*****************************************************************************)
+
+fun setify []     = []
+ |  setify [x]    = [x]
+ |  setify (x::l) = let val ls = setify l 
+                    in 
+                     if mem x ls then ls else x::ls 
+                    end;
+
+(*****************************************************************************)
+(* Flatten a varstruct term into a list of variables.                        *)
+(*****************************************************************************)
+
+fun flatten_pair t =
+if is_pair t
+ then foldr (fn(t,l) => (flatten_pair t) @ l) [] (strip_pair t)
+ else [t];
+
+(*****************************************************************************)
+(* Map over a tuple.                                                         *)
+(*****************************************************************************)
+
+fun map_tuple f tup =
+ if is_pair tup
+  then let val (t1,t2) = dest_pair tup
+       in
+        mk_pair(map_tuple f t1, map_tuple f t2)
+       end
+  else f tup;
+
+(*
+val statevec = 
+ ``((clk:bool,(req_1:bool,req_2:bool),check:bool),
+    (ack1_0:bool,ack2_0:bool,counter:bool,counter':bool))``;
+
+val tm = rhs(concl(SPEC_ALL ArbiterTest_eqn));
+
+val((R,B),RBth) = ExtractTransitionSystem_CONV statevec tm;
+*)
+
+fun ExtractTransitionSystem_CONV statevec tm =
+ let val statevars = flatten_pair statevec
+     val statevarnames = map (fst o dest_var) statevars
+     val prime_sym = (* if a state variables ends with "'", use "+" instead *)
+          if mem #"'" (map (last o explode) statevarnames) 
+           then "+" 
+           else "'"
+     val (exvars,exbody) = strip_exists tm 
+     val exvarnames = map (fst o dest_var) exvars
+     val _ = if not(null(set_diff exvarnames statevarnames))
+              then (print "local variable not in state vector:";
+                    app (fn s => print(" "^s)) (set_diff exvarnames statevarnames);
+                    print "\n")
+              else ()
+     val (initl,stepquant) = front_last(strip_conj exbody)
+     val init = if null initl then T else list_mk_conj initl
+     val (timevar,step) = dest_forall stepquant
+     val num2bool_ty = ``:num->bool``
+     fun mk_app0 s = mk_comb(mk_var(s,num2bool_ty),``0``)
+     val B = pairSyntax.mk_pabs
+              (statevec,
+                subst
+                  (map (fn v => pair2recd(mk_var(v,bool), mk_app0 v)) statevarnames)
+                  init)
+(*   val Bth = pairLib.PBETA_CONV(mk_comb(B,map_tuple (mk_app0 o fst o dest_var) statevec)) *)
+     val Bth = pairLib.PAIRED_BETA_CONV(mk_comb(B,map_tuple (mk_app0 o fst o dest_var) statevec))
+     fun mk_app s = mk_comb(mk_var(s,num2bool_ty),timevar)
+     val timevar' = ``^timevar+1``
+     fun mk_app' s = mk_comb(mk_var(s,num2bool_ty),timevar')
+     fun mk_primevar s = mk_var((s^prime_sym),bool)
+     val statevec' = map_tuple (mk_primevar o fst o dest_var) statevec
+     val R = pairSyntax.mk_pabs
+              (mk_pair(statevec,statevec'),
+                subst
+                 ((map (fn v => pair2recd(mk_var(v,bool), mk_app v)) statevarnames)
+                  @
+                  (map (fn v => pair2recd(mk_primevar v, mk_app' v)) statevarnames))
+                 step)
+     val Rth = pairLib.PAIRED_BETA_CONV
+                (mk_comb
+                  (R,
+                   mk_pair
+                    (map_tuple (mk_app  o fst o dest_var) statevec,
+                     map_tuple (mk_app' o fst o dest_var) statevec)))
+     val Rth1 = FORALL_EQ timevar Rth
+     val BRth1 = if init = T
+                  then FORALL_EQ timevar Rth
+                  else liteLib.MK_CONJ Bth (FORALL_EQ timevar Rth)
+     val BRth2 = TRANS BRth1 (CONJUNCTS_CONV(rhs(concl BRth1), exbody))
+ in
+  ((R,B),LIST_MK_EXISTS exvars (SYM BRth2))
+ end;
+
+(*****************************************************************************)
+(* FnPairTuple ``(f1,...,fn)`` =                                             *)
+(*  ``(FnPair f1 (FnPair f2 ... (FnPair fn-1 fn) ...))``                     *)
+(*****************************************************************************)
+
+fun FnPairTuple v =
+      if is_var v
+ then let val (name,ty) = dest_var v in mk_var(name,``:num->^ty``) end 
+ else if is_pair v
+ then let val (v1,v2) = dest_pair v
+      in
+       ``FnPair ^(FnPairTuple v1) ^(FnPairTuple v2)``
+      end 
+ else v;
+
+(*****************************************************************************)
+(* LiftTuple raises all types in a varstruct (tuple of variables)            *)
+(* to functions of ``:num``.                                                 *)
+(*****************************************************************************)
+
+val LiftTuple =
+ map_tuple 
+  (fn u => let val (nm,ty) = dest_var u in mk_var(nm,``:num->^ty``) end);
+
+(*****************************************************************************)
+(* If B is a binder (e.g. ``!`` or ``?``)                                    *)
+(*                                                                           *)
+(* LIST_GEN_ALPHA_CONV [``u1``,...,``un``] ``B v1...vn. t``                  *)
+(* -->                                                                       *)
+(* |- (B v1...vn. t) = (B u1...un. t)                                        *)
+(*****************************************************************************)
+
+fun LIST_GEN_ALPHA_CONV [] tm = REFL tm
+ |  LIST_GEN_ALPHA_CONV (v::vl) tm = 
+      (BINDER_CONV (LIST_GEN_ALPHA_CONV vl) 
+        THENC GEN_ALPHA_CONV v) tm;
+
+(*****************************************************************************)
+(* Specialise FnPairForall to use variables from a supplied varstruct.       *)
+(*                                                                           *)
+(* SpecFnPairForall ``(f1,...,fn-1,fn)``                                     *)
+(*                                                                           *)
+(*  |- !P. (!tr. P tr) =                                                     *)
+(*         !f1...fn. P(FnPair f1 (FnPair f2 ... (FnPair fn-1 fn) ...))       *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* MakeTupleType ``((v1:num->ty1),(v2:num->ty2))`` --> ``:ty1 # ty2``        *)
+(*****************************************************************************)
+
+fun MakeTupleType tup =
+ type_of
+  (map_tuple 
+    (fn u => let val (v,vty) = dest_var u
+                 val (c,[ty1,ty2]) = dest_type vty
+                 val _ = not(c="fun" andalso ty1=num) andalso
+                         hol_err ("bad var in tuple: "^v) "MakeTupleType"
+              in 
+               mk_var(v,last(snd(dest_type vty))) 
+              end)
+    tup);
+
+fun SpecFnPairForall vf =
+ let val ty = MakeTupleType vf
+     val tr = mk_var("tr",``:num->^ty``)
+     val Ptm = mk_forall(tr,mk_comb(mk_var("P",``:(num->^ty)->bool``),tr))
+     val th = Ho_Rewrite.REWRITE_CONV[HolBddTheory.FnPairForall]Ptm
+ in
+  RIGHT_CONV_RULE (LIST_GEN_ALPHA_CONV(flatten_pair vf)) th
+ end;
+
+(*****************************************************************************)
+(* Specialise FnPairExists to use variables from a supplied varstruct.       *)
+(*                                                                           *)
+(* SpecFnPairExists ``(f1,...,fn-1,fn)``                                     *)
+(*                                                                           *)
+(*  |- !P. (?tr. P tr) =                                                     *)
+(*         ?f1...,fn. P(FnPair f1 (FnPair f2 ... (FnPair fn-1 fn) ...))      *)
+(*****************************************************************************)
+
+fun SpecFnPairExists vf =
+ let val ty = MakeTupleType vf
+     val tr = mk_var("tr",``:num->^ty``)
+     val Ptm = mk_exists(tr,mk_comb(mk_var("P",``:(num->^ty)->bool``),tr))
+     val th = Ho_Rewrite.REWRITE_CONV[HolBddTheory.FnPairExists]Ptm
+ in
+  RIGHT_CONV_RULE(LIST_GEN_ALPHA_CONV(flatten_pair vf) )th
+ end;
+
+(*****************************************************************************)
+(* Conversion to scalarize quantifications                                   *)
+(*                                                                           *)
+(*   ``Q f. P f``                                                            *)
+(*    -->                                                                    *)
+(*    |- (Q f. P f) =                                                        *)
+(*       Q f_1 ... f_n.                                                      *)
+(*        P(FnPair f_1 (FnPair f_2 ... (FnPair f_n-1 f_n) ...))              *)
+(*****************************************************************************)
+
+(* Test data
+val tm = ``?f g. !t:num. (f t = (T,F,T,T,F)) /\ (g t = (F,F,T))``;
+val tm = ``!g. !t:num. g t = (T,F,T,T,F)``;
+val tm = ``(!g. !t:num. g t = (T,F,T,T,F)) /\ (?f. !t:num. f t = (T,F))``;
+*)
+
+(* flatten a product type to a list of its leaf types *)
+
+fun flatten_pair_type ty =
+ let val (con,tyl) = dest_type ty
+ in
+  if con="prod"
+   then flatten_pair_type(hd tyl)@flatten_pair_type(hd(tl tyl))
+   else [ty]
+ end;
+
+(*****************************************************************************)
+(* scalarizeTuple ``(f :num -> bool # bool # bool # bool # bool)``           *)
+(* = ``((f_0 :num -> bool),(f_1 :num -> bool),(f_2 :num -> bool),            *)
+(*      (f_3 :num -> bool),(f_4 :num -> bool))``                             *)
+(*****************************************************************************)
+
+fun scalarizeTuple v =
+ let val ("fun",[ty1,ty2]) = dest_type(type_of v)
+     val tyl = flatten_pair_type ty2
+     val vname = fst(dest_var v)
+ in
+  list_mk_pair
+   (map2
+    (fn n => fn ty => mk_var((vname^"_"^(int_to_string n)),
+                             mk_type("fun",[ty1,ty])))
+    (List.rev(List.tabulate(length tyl,I)))  (* rev so LSB is rightmost *)
+    tyl)
+ end;
+
+exception Error;
+
+fun scalarize_CONV tm =
+ (let val (v,_) = if is_forall tm then dest_forall tm else dest_exists tm
+      val ("fun",[ty1,ty2]) = dest_type(snd(dest_var v))
+  in
+   if (ty1 = num) andalso (fst(dest_type ty2) = "prod")
+    then
+    (if is_exists tm
+      then Ho_Rewrite.REWRITE_CONV
+            [SpecFnPairExists(scalarizeTuple(fst(dest_exists tm))),FnPair_def]
+            tm 
+      else Ho_Rewrite.REWRITE_CONV
+            [SpecFnPairForall(scalarizeTuple(fst(dest_forall tm))),FnPair_def]
+            tm)
+    else raise Error
+  end)
+  handle Interrupt => raise Interrupt 
+    |    _         => hol_err "scalarization failure" "scalarize_CONV";
+
+(*****************************************************************************)
+(* MakeReachableChecker |- !u1...um. D tuple = ?v1...vn. tm                  *)
+(*                                                                           *)
+(* defines constants DTrans and DInit and proves                             *)
+(*                                                                           *)
+(*  Bth = |- DInit(tuple,(v1,...,vn)) = ...                                  *)
+(*                                                                           *)
+(*  Rth = |- DTrans((tuple,(v1,...,vn)),(tuple',(v1',...,vn'))) = ...        *)
+(*                                                                           *)
+(* and then proves th1 and the2 where                                        *)
+(*                                                                           *)
+(* th1 = |- !P. (!s1 s2. Reachable DTrans DInit (s1,s2) ==> P s1)            *)
+(*              ==>                                                          *)
+(*              !u1...um v1...vn. D tuple ==> !t. P(tuple<t>)                *)
+(*                                                                           *)
+(* th2 = |- !P. (!u1 ... um v1 ... vn.                                       *)
+(*                 Reachable DTrans DInit ((u1,...,um),(v1,...,vn)))         *)
+(*                 ==>                                                       *)
+(*                 P(u1,...,um))                                             *)
+(*              ==>                                                          *)
+(*              !u1...um v1...vn. D tuple ==> !t. P(tuple<t>)                *)
+(*                                                                           *)
+(* The same variable names are used for traces (type num->bool) and state    *)
+(* variables (type bool).  The notation "tuple<t>" denotes the tuple of      *)
+(* applications to t.  For example                                           *)
+(*                                                                           *)
+(*  (clk,(req_1,req_0),check)<t> = (clk t, (req_1 t, req_0 t), check t)      *)
+(*                                                                           *)
+(* The pair of pairs ((Rth,Bth), (th1,th2)) is returned.                     *)
+(*****************************************************************************)
+
+fun MakeReachableChecker defth =
+ let val (l,r) = dest_eq(concl(SPEC_ALL defth))
+     val (con,tup) = dest_comb l
+     val (name,ty) = dest_const con
+     val (exvars,exbody) = strip_exists r
+     val statetracevec = if null exvars then tup else mk_pair(tup,list_mk_pair exvars)
+     val statevec = map_tuple (fn v => mk_var(fst(dest_var v),bool)) statetracevec
+     val ((R,B),RBth) = ExtractTransitionSystem_CONV statevec r
+     val InitName = name^"Init"
+     val Bdef = new_definition(InitName, mk_eq(mk_var(InitName,type_of B),B))
+     val Bcon = lhs(concl Bdef)
+     val Bth = save_thm
+                ((InitName ^ "_eqn"),
+                 CONV_RULE(RHS_CONV pairLib.PAIRED_BETA_CONV)(AP_THM Bdef statevec))
+     val TransName = name^"Trans"
+     val Rdef = new_definition(TransName, mk_eq(mk_var(TransName,type_of R),R))
+     val Rcon = lhs(concl Rdef)
+     val statevec_statevec' = fst(pairSyntax.dest_pabs R)
+     val Rth = save_thm
+                ((TransName ^ "_eqn"),
+                 CONV_RULE(RHS_CONV pairLib.PAIRED_BETA_CONV)(AP_THM Rdef statevec_statevec'))
+     val RBth1 = (ONCE_REWRITE_RULE[SYM Bdef,SYM Rdef]RBth)
+     val RBth2 = TRANS (SPEC_ALL defth) RBth1
+     val th2 = if null exvars
+                then ISPECL[Rcon,Bcon]HolBddTheory.ModelCheckAlways
+                else ISPECL[Rcon,Bcon]HolBddTheory.ModelCheckAlwaysCor2
+     val th3 = CONV_RULE
+                (BINDER_CONV
+                  (RAND_CONV
+                    (HO_REWR_CONV(SpecFnPairForall tup))))
+                th2
+     val th4 = if null exvars
+                then th3
+                else
+                 CONV_RULE
+                 (BINDER_CONV
+                  (RAND_CONV
+                   (STRIP_QUANT_CONV
+                    (RATOR_CONV
+                     (RAND_CONV
+                      (HO_REWR_CONV
+                       (SpecFnPairExists(list_mk_pair exvars))))))))
+                 th3
+     val th5 = Ho_Rewrite.REWRITE_RULE [HolBddTheory.FnPair_def] th4
+     val th6 = REWRITE_RULE [GSYM RBth2] th5
+ in
+  ((Rth,Bth),th6)
+ end
+
 val _ = Globals.priming := SOME "";
 
 end
+
+(* end *)
+
+
+
+
+
