@@ -1,15 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : tactic.sig                                            *)
-(* DESCRIPTION   : Signature for tactics, an idea of Robin Milner.       *)
-(*                 Translated from hol88.                                *)
-(*                                                                       *)
-(* AUTHORS       : (c) University of Edinburgh and                       *)
-(*                     University of Cambridge, for hol88                *)
-(* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
-(* DATE          : September 11, 1991                                    *)
-(* ===================================================================== *)
-
-
 signature Tactic =
 sig
   include Abbrev

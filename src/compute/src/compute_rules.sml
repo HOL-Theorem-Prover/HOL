@@ -42,7 +42,7 @@ val mk_comb_r = ref Thm.Mk_comb;
 val mk_abs_r = ref Thm.Mk_abs;
 val beta_r = ref Thm.Beta;
 val eta_r = ref Thm.Eta;
-val spec_r = ref Thm.Spec;
+val spec_r = ref Thm.Specialize;
 
 
 local open timing in
@@ -50,7 +50,7 @@ fun Mk_comb th = tickt "Mk_cmb" (!mk_comb_r) th;
 fun Mk_abs th = tickt "Mk_abs" (!mk_abs_r) th;
 fun Beta th = tickt "Beta" (!beta_r) th;
 fun Eta th = tickt "Eta" (!eta_r) th;
-fun Spec th = tickt "Spec" (!spec_r) th;
+fun Spec th = tickt "Specialize" (!spec_r) th;
 end;
 *)
 

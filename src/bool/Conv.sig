@@ -1,18 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : Conv.sig                                              *)
-(* DESCRIPTION   : Signature for various conversions. Translated from    *)
-(*                 hol88.                                                *)
-(* AUTHORS       : (c) Many people at Cambridge:                         *)
-(*                        Larry Paulson                                  *)
-(*                        Mike Gordon                                    *)
-(*                        Richard Boulton and                            *)
-(*                        Tom Melham, University of Cambridge plus       *)
-(*                     Paul Loewenstein, for hol88                       *)
-(* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
-(* DATE          : September 11, 1991                                    *)
-(* ===================================================================== *)
-
-
 signature Conv =
 sig
    include Abbrev

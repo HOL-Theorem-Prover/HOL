@@ -1,9 +1,3 @@
-(* ===================================================================== 
- * FILE          : Ho_Rewrite.sig
- * DESCRIPTION   : Signature for the higher order rewriter
- * ===================================================================== *)
-
-
 signature Ho_Rewrite =
 sig
   include Abbrev

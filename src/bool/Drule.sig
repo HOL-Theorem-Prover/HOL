@@ -1,14 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : Drule.sig                                             *)
-(* DESCRIPTION   : Signature for many derived rules of inference.        *)
-(*                 Translated from hol88.                                *)
-(*                                                                       *)
-(* AUTHORS       : (c) Mike Gordon and                                   *)
-(*                     Tom Melham, University of Cambridge, for hol88    *)
-(* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
-(* DATE          : September 11, 1991                                    *)
-(* ===================================================================== *)
-
 signature Drule =
 sig
   include Abbrev

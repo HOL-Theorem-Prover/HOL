@@ -1,18 +1,5 @@
-(* ===================================================================== *)
-(* FILE          : Thm_cont.sig                                          *)
-(* DESCRIPTION   : Signature for theorem continuations. Translated from  *)
-(*                 hol88.                                                *)
-(*                                                                       *)
-(* AUTHOR        : (c) Larry Paulson and then others,                    *)
-(*                     University of Cambridge, for hol88                *)
-(* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
-(* DATE          : September 11, 1991                                    *)
-(* ===================================================================== *)
-
-
 signature Thm_cont =
 sig
-
   include Abbrev
 
   val THEN_TCL         : thm_tactical * thm_tactical -> thm_tactical

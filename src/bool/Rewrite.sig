@@ -1,19 +1,5 @@
-(* ===================================================================== *)
-(* FILE          : rewrite.sig                                           *)
-(* DESCRIPTION   : Signature for the rewriting routines. Translated from *)
-(*                 hol88.                                                *)
-(*                                                                       *)
-(* AUTHOR        : (c) Larry Paulson, University of Cambridge, for hol88 *)
-(* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
-(* DATE          : September 11, 1991                                    *)
-(* REVISED       : November 1994, to encapsulate the type of rewrite     *)
-(*                 rules. (KLS)                                          *)
-(* ===================================================================== *)
-
-
 signature Rewrite =
 sig
-
   include Abbrev
   type rewrites
 

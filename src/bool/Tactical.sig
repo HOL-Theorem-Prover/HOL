@@ -1,16 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : tactical.sig                                          *)
-(* DESCRIPTION   : Signature for functions that glue tactics together.   *)
-(*                 From LCF, and added to through the years. Translated  *)
-(*                 from hol88.                                           *)
-(*                                                                       *)
-(* AUTHORS       : (c) University of Edinburgh and                       *)
-(*                     University of Cambridge                           *)
-(* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
-(* DATE          : September 11, 1991                                    *)
-(* ===================================================================== *)
-
-
 signature Tactical =
 sig
   include Abbrev

@@ -1,15 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : prim_rec.sig                                          *)
-(* DESCRIPTION   : Signature for primitive recursive definitions over    *)
-(*                 recursive types. Translated from hol88.               *)
-(*                                                                       *)
-(* AUTHOR        : (c) Tom Melham, University of Cambridge 1987          *)
-(* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
-(* DATE          : September 11, 1991                                    *)
-(*               : Many alterations since then, by JRH, MN200, & KXS     *)
-(* ===================================================================== *)
-
-
 signature Prim_rec =
 sig
 

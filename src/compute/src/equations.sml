@@ -95,7 +95,7 @@ fun mk_clos(env,t) =
  * It is probably this code that can be improved the most
  *---------------------------------------------------------------------------*)
 
-local fun inst_one_var (SOME(tm,v),(thm,lv)) = (Spec tm thm, v :: lv)
+local fun inst_one_var (SOME(tm,v),(thm,lv)) = (Specialize tm thm, v :: lv)
         | inst_one_var (NONE,_) = raise DEAD_CODE "inst_rw"
 in
 fun inst_rw (th,{Rule=RW{thm,rhs,...}, Inst=(bds,(tysub,_))}) =
