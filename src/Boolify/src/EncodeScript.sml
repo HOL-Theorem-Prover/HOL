@@ -112,34 +112,41 @@ val IS_PREFIX_APPENDS = store_thm
    ++ RW_TAC std_ss [APPEND, IS_PREFIX]);
 
 (*---------------------------------------------------------------------------
-        A well-formed encoder is prefix-free and injective.
+        An always true predicate for total encodings.
  ---------------------------------------------------------------------------*)
 
 local
-  val th =prove
-    (``?p. !x. x IN p``,
-     Q.EXISTS_TAC `\x. T` ++
-     RW_TAC std_ss [IN_DEF]);
+  val th =prove (``?p. !x. p x``, Q.EXISTS_TAC `\x. T` ++ RW_TAC std_ss []);
 in
-  val tot_def = Definition.new_specification ("tot_def", ["tot"], th);
-  val () = add_const "tot";
+  val total_def = Definition.new_specification ("total_def", ["total"], th);
+  val () = add_const "total";
 end;
+
+val every_total = prove
+  (``EVERY total = total``,
+   MATCH_MP_TAC EQ_EXT ++
+   Induct ++
+   RW_TAC std_ss [EVERY_DEF, total_def]);
+
+(*---------------------------------------------------------------------------
+        A well-formed encoder is prefix-free and injective.
+ ---------------------------------------------------------------------------*)
 
 val wf_pencoder_def = Define
   `wf_pencoder p (e : 'a -> bool list) =
-   !x y :: p. IS_PREFIX (e x) (e y) ==> (x = y)`;
+   !x y. p x /\ p y /\ IS_PREFIX (e x) (e y) ==> (x = y)`;
 
-val wf_encoder_def = Define `wf_encoder = wf_pencoder tot`;
+val wf_encoder_def = Define `wf_encoder = wf_pencoder total`;
 
 val wf_encoder_alt = store_thm
   ("wf_encoder_alt",
    ``wf_encoder e = !x y. IS_PREFIX (e x) (e y) ==> (x = y)``,
-   RW_TAC std_ss [wf_encoder_def, wf_pencoder_def, RES_FORALL_DEF, tot_def]);
+   RW_TAC std_ss [wf_encoder_def, wf_pencoder_def, RES_FORALL_DEF, total_def]);
 
 val wf_encoder = store_thm
   ("wf_encoder",
    ``!p e. wf_encoder e ==> wf_pencoder p e``,
-   RW_TAC std_ss [wf_encoder_def, wf_pencoder_def, tot_def, RES_FORALL_DEF]);
+   RW_TAC std_ss [wf_encoder_def, wf_pencoder_def, total_def, RES_FORALL_DEF]);
                
 (*---------------------------------------------------------------------------
       The unit type is cool because it consumes no space in the
@@ -323,10 +330,12 @@ val wf_encode_num = store_thm
     ONCE_REWRITE_TAC [MULT_COMM] ++
     RW_TAC arith_ss [MULT_DIV]]);
 
-val wf_encode_list = store_thm
-  ("wf_encode_list",
-   ``!f. wf_encoder f ==> wf_encoder (encode_list f)``,
-   RW_TAC std_ss [wf_encoder_alt] ++
+val wf_pencode_list = store_thm
+  ("wf_pencode_list",
+   ``!p e. wf_pencoder p e ==> wf_pencoder (EVERY p) (encode_list e)``,
+   RW_TAC std_ss [wf_pencoder_def] ++
+   POP_ASSUM MP_TAC ++
+   POP_ASSUM MP_TAC ++
    POP_ASSUM MP_TAC ++
    Q.SPEC_TAC (`y`, `y`) ++
    Q.SPEC_TAC (`x`, `x`) ++
@@ -335,10 +344,17 @@ val wf_encode_list = store_thm
     RW_TAC std_ss [IS_PREFIX, encode_list_def]) ++
    GEN_TAC ++
    Cases >> RW_TAC std_ss [IS_PREFIX, encode_list_def] ++
-   SIMP_TAC std_ss [encode_list_def, IS_PREFIX] ++
+   SIMP_TAC std_ss [encode_list_def, IS_PREFIX, EVERY_DEF] ++
+   STRIP_TAC ++
+   STRIP_TAC ++
    STRIP_TAC ++
    Suff `h = h'` >> PROVE_TAC [IS_PREFIX_APPENDS] ++
    PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
+
+val wf_encode_list = store_thm
+  ("wf_encode_list",
+   ``!f. wf_encoder f ==> wf_encoder (encode_list f)``,
+   PROVE_TAC [wf_encoder_def, wf_pencode_list, every_total]);
 
 (*---------------------------------------------------------------------------*)
 (* A congruence rule for encode_list                                         *)
