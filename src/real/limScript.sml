@@ -31,9 +31,12 @@ val _ = Parse.reveal "B";
 (* Specialize nets theorems to the pointwise limit of real->real functions   *)
 (*---------------------------------------------------------------------------*)
 
-val tends_real_real = new_infixr_definition("tends_real_real",
-  (--`($-> f l)(x0) =
-        (f tends l)(mtop(mr1),tendsto(mr1,x0))`--), 750);
+val tends_real_real = new_definition(
+  "tends_real_real",
+  (--`(tends_real_real f l)(x0) =
+        (f tends l)(mtop(mr1),tendsto(mr1,x0))`--));
+
+val _ = overload_on (GrammarSpecials.case_arrow_special, ``tends_real_real``);
 
 val LIM = prove_thm("LIM",
   (--`!f y0 x0. (f -> y0)(x0) =
@@ -414,9 +417,9 @@ val IVT2 = prove_thm("IVT2",
              (!x. a <= x /\ x <= b ==> $contl f x) ==>
         ?x. a <= x /\ x <= b /\ (f(x) = y)`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  MP_TAC(SPECL 
-    [(--`\x:real. ~(f x)`--), (--`a:real`--), (--`b:real`--), (--`~y`--)] IVT) 
-  THEN BETA_TAC THEN ASM_REWRITE_TAC[REAL_LE_NEG, REAL_NEG_EQ, REAL_NEGNEG] 
+  MP_TAC(SPECL
+    [(--`\x:real. ~(f x)`--), (--`a:real`--), (--`b:real`--), (--`~y`--)] IVT)
+  THEN BETA_TAC THEN ASM_REWRITE_TAC[REAL_LE_NEG, REAL_NEG_EQ, REAL_NEGNEG]
   THEN DISCH_THEN MATCH_MP_TAC THEN GEN_TAC THEN DISCH_TAC THEN
   MATCH_MP_TAC CONT_NEG THEN FIRST_ASSUM MATCH_MP_TAC THEN
   ASM_REWRITE_TAC[]);
