@@ -1670,9 +1670,10 @@ val ABS_BOUNDS = prove_thm("ABS_BOUNDS",
 (* Define integer powers                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val pow = new_infix_prim_rec_definition("pow",
+val pow = new_prim_rec_definition("pow",
   (--`($pow x 0 = &1) /\
-      ($pow x (SUC n) = x * ($pow x n))`--), 700);
+      ($pow x (SUC n) = x * ($pow x n))`--));
+val _ = set_fixity "pow" (Infixr 700);
 
 val POW_0 = prove_thm("POW_0",
   (--`!n. 0 pow (SUC n) = 0`--),

@@ -152,7 +152,7 @@ GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN BETA_TAC THEN GEN_TAC
 (* Application of polynomial as a real function.                             *)
 (* ------------------------------------------------------------------------- *)
 
-val poly = new_recursive_definition Prefix list_Axiom "poly_def"
+val poly = new_recursive_definition list_Axiom "poly_def"
   ``(poly [] x = &0) /\
     (poly (CONS h t) x = h + x * poly t x)``;
 
@@ -160,32 +160,35 @@ val poly = new_recursive_definition Prefix list_Axiom "poly_def"
 (* Arithmetic operations on polynomials.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val poly_add = new_recursive_definition (Infixl 500) list_Axiom "poly_add_def"
+val poly_add = new_recursive_definition list_Axiom "poly_add_def"
   ``($++ [] l2 = l2) /\
     ($++ (h::t) l2 = if (l2 = []) then h::t
-                    else CONS (h:real + HD l2) ($++ t (TL l2)))``;
+                    else CONS ((h:real) + HD l2) ($++ t (TL l2)))``;
+val _ = set_fixity "++" (Infixl 500);
 
-val poly_cmul = new_recursive_definition (Infixl 600) list_Axiom "poly_cmul_def"
+val poly_cmul = new_recursive_definition list_Axiom "poly_cmul_def"
   ``($## c [] = []) /\
     ($## c (h::t) = (c:real * h) :: ($## c t))``;
+val _ = set_fixity "##" (Infixl 600);
 
-val poly_neg = new_definition ("poly_neg_def",
-  ``neg = $## (~(&1))``);
+val poly_neg = new_definition ("poly_neg_def", ``neg = $## (~(&1))``);
 
-val poly_mul = new_recursive_definition (Infixl 600) list_Axiom "poly_mul_def"
+val poly_mul = new_recursive_definition list_Axiom "poly_mul_def"
   ``($** [] l2 = []) /\
     ($** (h::t) l2 = if (t = []) then h ## l2
                      else (h ## l2) ++ (&0 :: ($** t l2)))``;
+val _ = set_fixity "**" (Infixl 600);
 
-val poly_pexp = new_recursive_definition (Infixr 700) num_Axiom "poly_pexp_def"
+val poly_pexp = new_recursive_definition num_Axiom "poly_pexp_def"
   ``($pexp p 0 = [&1]) /\
     ($pexp p (SUC n) = p ** $pexp p n)``;
+val _ = set_fixity "pexp" (Infixr 700);
 
 (* ------------------------------------------------------------------------- *)
 (* Differentiation of polynomials (needs an auxiliary function).             *)
 (* ------------------------------------------------------------------------- *)
 
-val poly_diff_aux = new_recursive_definition Prefix list_Axiom
+val poly_diff_aux = new_recursive_definition list_Axiom
   "poly_diff_aux_def"
   ``(poly_diff_aux n [] = []) /\
     (poly_diff_aux n (h::t) = (&n * h) :: (poly_diff_aux (SUC n) t))``;
@@ -1280,7 +1283,7 @@ val POLY_SQUAREFREE_DECOMP = store_thm("POLY_SQUAREFREE_DECOMP",
 (* Normalization of a polynomial.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-val normalize = new_recursive_definition Prefix list_Axiom "normalize"
+val normalize = new_recursive_definition list_Axiom "normalize"
   ``(normalize [] = []) /\
    (normalize (CONS h t) = (if (normalize t = []) then
                               if (h = &0) then [] else [h]

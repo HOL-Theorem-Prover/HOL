@@ -148,17 +148,17 @@ val SUBSEQ_SUC = prove_thm("SUBSEQ_SUC",
 (*---------------------------------------------------------------------------*)
 
 val mono = new_definition("mono",
-  (--`mono f = (!m n:num. m <= n ==> f(m) <= (f n:real)) 
+  (--`mono f = (!m n:num. m <= n ==> f(m) <= (f n:real))
                \/
                (!m n. m <= n ==> f(m) >= f(n))`--));
 
 val MONO_SUC = prove_thm("MONO_SUC",
- (--`!f:num->real. 
-         mono f 
-           = 
+ (--`!f:num->real.
+         mono f
+           =
          (!n. f(SUC n) >= f n) \/ (!n. f(SUC n) <= f(n))`--),
 GEN_TAC THEN REWRITE_TAC[mono, real_ge] THEN
- MATCH_MP_TAC(TAUT_CONV (--`(a = c) /\ (b = d) ==> (a \/ b = c \/ d)`--)) 
+ MATCH_MP_TAC(TAUT_CONV (--`(a = c) /\ (b = d) ==> (a \/ b = c \/ d)`--))
   THEN CONJ_TAC THEN (EQ_TAC THENL
     [DISCH_THEN(MP_TAC o GEN (--`n:num`--) o
                 SPECL [(--`n:num`--), (--`SUC n`--)]) THEN
@@ -256,7 +256,7 @@ GEN_TAC THEN DISCH_TAC THEN
    [CONJ_TAC THENL
      [MAP_EVERY EXISTS_TAC [(--`f(0:num):real`--), (--`0:num`--)] THEN REFL_TAC,
       POP_ASSUM(MP_TAC o REWRITE_RULE[SEQ_BOUNDED] o CONJUNCT1) THEN
-      DISCH_THEN(X_CHOOSE_TAC (--`k:real`--)) THEN 
+      DISCH_THEN(X_CHOOSE_TAC (--`k:real`--)) THEN
       EXISTS_TAC (--`k:real`--) THEN
       GEN_TAC THEN DISCH_THEN(X_CHOOSE_THEN (--`n:num`--) SUBST1_TAC) THEN
       MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC (--`abs(f(n:num))`--) THEN
@@ -335,12 +335,13 @@ val SEQ_MONOSUB = prove_thm("SEQ_MONOSUB",
   (--`!s:num->real. ?f. subseq f /\ mono(\n. s(f n))`--),
   GEN_TAC THEN
   ASM_CASES_TAC (--`!n. ?p:num. p>n /\ !m. m >= p ==> s(m) <= s(p)`--) THENL
-  [(X_CHOOSE_THEN (--`f:num->num`--) MP_TAC o EXISTENCE o C ISPECL num_Axiom)
+  [(X_CHOOSE_THEN (--`f:num->num`--) MP_TAC o EXISTENCE o
+    C ISPECL num_Axiom_old)
      [(--`@p:num. p>0 /\ (!m. m >= p ==> (s m) <= (s p))`--),
       (--`\x. \n:num. @p:num. p > x /\ (!m. m >= p ==> (s m) <= (s p))`--)] THEN
     BETA_TAC THEN RULE_ASSUM_TAC
     (GEN (--`n:num`--) o SELECT_RULE o SPEC (--`n:num`--)) THEN
-    POP_ASSUM(fn th => DISCH_THEN(ASSUME_TAC o GSYM) THEN 
+    POP_ASSUM(fn th => DISCH_THEN(ASSUME_TAC o GSYM) THEN
         MP_TAC(SPEC (--`0:num`--) th) THEN
         MP_TAC(GEN (--`n:num`--) (SPEC (--`(f:num->num) n`--) th))) THEN
     ASM_REWRITE_TAC[] THEN POP_ASSUM(K ALL_TAC) THEN REPEAT STRIP_TAC THEN
@@ -370,7 +371,8 @@ val SEQ_MONOSUB = prove_thm("SEQ_MONOSUB",
         DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
         ASM_REWRITE_TAC[REAL_LT_REFL]], ALL_TAC] THEN
     POP_ASSUM(K ALL_TAC) THEN DISCH_TAC THEN
-    (X_CHOOSE_THEN (--`f:num->num`--) MP_TAC o EXISTENCE o C ISPECL num_Axiom)
+    (X_CHOOSE_THEN (--`f:num->num`--) MP_TAC o EXISTENCE o
+     C ISPECL num_Axiom_old)
      [(--`@m. m > SUC N /\ s(SUC N) < s(m)`--),
       (--`\x:num. \n:num. @m. m > x /\ s(x) < s(m)`--)] THEN
     BETA_TAC THEN DISCH_THEN ASSUME_TAC THEN SUBGOAL_THEN
@@ -463,11 +465,11 @@ val SEQ_CAUCHY = prove_thm("SEQ_CAUCHY",
     EXISTS_TAC (--`l:real`--) THEN REWRITE_TAC[SEQ] THEN
     X_GEN_TAC (--`e:real`--) THEN DISCH_TAC THEN
     UNDISCH_TAC (--`(\n. f(g(n):num)) --> l`--) THEN REWRITE_TAC[SEQ] THEN
-    DISCH_THEN(MP_TAC o SPEC (--`e / &2`--)) THEN 
-    ASM_REWRITE_TAC[REAL_LT_HALF1] THEN BETA_TAC THEN 
+    DISCH_THEN(MP_TAC o SPEC (--`e / &2`--)) THEN
+    ASM_REWRITE_TAC[REAL_LT_HALF1] THEN BETA_TAC THEN
     DISCH_THEN(X_CHOOSE_TAC (--`N1:num`--)) THEN
     UNDISCH_TAC (--`cauchy f`--) THEN REWRITE_TAC[cauchy] THEN
-    DISCH_THEN(MP_TAC o SPEC (--`e / &2`--)) THEN 
+    DISCH_THEN(MP_TAC o SPEC (--`e / &2`--)) THEN
     ASM_REWRITE_TAC[REAL_LT_HALF1] THEN
     DISCH_THEN(X_CHOOSE_THEN (--`N2:num`--) ASSUME_TAC) THEN
     FIRST_ASSUM(MP_TAC o MATCH_MP SEQ_DIRECT) THEN
@@ -562,7 +564,7 @@ val SEQ_ABS_IMP = prove_thm("SEQ_ABS_IMP",
 
 val SEQ_INV0 = prove_thm("SEQ_INV0",
   (--`!f. (!y. ?N. !n. n >= N ==> f(n) > y)
-               ==> 
+               ==>
           (\n. inv(f n)) --> &0`--),
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[SEQ, REAL_SUB_RZERO] THEN
   X_GEN_TAC (--`e:real`--) THEN DISCH_TAC THEN
@@ -676,7 +678,7 @@ val NEST_LEMMA = prove_thm("NEST_LEMMA",
    [MATCH_MP_TAC SEQ_BOUNDED_2 THEN
     MAP_EVERY EXISTS_TAC [(--`(f:num->real) 0`--), (--`(g:num->real) 0`--)] THEN
     INDUCT_TAC THEN ASM_REWRITE_TAC[REAL_LE_REFL] THEN CONJ_TAC THENL
-     [MATCH_MP_TAC REAL_LE_TRANS THEN 
+     [MATCH_MP_TAC REAL_LE_TRANS THEN
       EXISTS_TAC (--`(f:num->real) (SUC n)`--) THEN
       ASM_REWRITE_TAC[] THEN SPEC_TAC((--`SUC n`--),(--`m:num`--)) THEN
       INDUCT_TAC THEN REWRITE_TAC[REAL_LE_REFL] THEN
@@ -687,10 +689,10 @@ val NEST_LEMMA = prove_thm("NEST_LEMMA",
   MP_TAC(SPEC (--`f:num->real`--) SEQ_BCONV) THEN ASM_REWRITE_TAC[SEQ_LIM] THEN
   DISCH_TAC THEN MP_TAC(SPEC (--`g:num->real`--) SEQ_BCONV) THEN
   ASM_REWRITE_TAC[SEQ_LIM] THEN DISCH_TAC THEN
-  MAP_EVERY EXISTS_TAC [(--`lim f`--), (--`lim g`--)] THEN 
+  MAP_EVERY EXISTS_TAC [(--`lim f`--), (--`lim g`--)] THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
    [MATCH_MP_TAC SEQ_LE THEN
-    MAP_EVERY EXISTS_TAC [(--`f:num->real`--), (--`g:num->real`--)] THEN 
+    MAP_EVERY EXISTS_TAC [(--`f:num->real`--), (--`g:num->real`--)] THEN
     ASM_REWRITE_TAC[],
     X_GEN_TAC (--`m:num`--) THEN
     GEN_REWR_TAC I  [TAUT_CONV (--`a = ~~a:bool`--)] THEN
@@ -704,7 +706,7 @@ val NEST_LEMMA = prove_thm("NEST_LEMMA",
     SUBGOAL_THEN (--`!p:num. lim f <= f(p + m)`--) ASSUME_TAC THENL
      [INDUCT_TAC THEN ASM_REWRITE_TAC[ADD_CLAUSES] THENL
        [MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_ASSUM ACCEPT_TAC,
-        MATCH_MP_TAC REAL_LE_TRANS THEN 
+        MATCH_MP_TAC REAL_LE_TRANS THEN
         EXISTS_TAC (--`f(p + m:num):real`--) THEN
         RULE_ASSUM_TAC(REWRITE_RULE[real_ge]) THEN ASM_REWRITE_TAC[]],
       ASM_REWRITE_TAC[REAL_SUB_LE] THEN
@@ -766,9 +768,9 @@ val BOLZANO_LEMMA = prove_thm("BOLZANO_LEMMA",
   GEN_REWR_TAC I  [TAUT_CONV (--`a = ~~a:bool`--)] THEN
   DISCH_TAC THEN
   (X_CHOOSE_THEN (--`f:num->real#real`--) STRIP_ASSUME_TAC o
-   EXISTENCE o BETA_RULE o C ISPECL num_Axiom)
+   EXISTENCE o BETA_RULE o C ISPECL num_Axiom_old)
     [(--`(a:real,(b:real))`--),
-     (--`\fn (n:num). if P(FST fn,(FST fn + SND fn) / &2) 
+     (--`\fn (n:num). if P(FST fn,(FST fn + SND fn) / &2)
                       then ((FST fn + SND fn) / &2,SND fn)
                       else (FST fn,(FST fn + SND fn) / &2)`--)] THEN
   MP_TAC(SPECL
@@ -787,7 +789,7 @@ val BOLZANO_LEMMA = prove_thm("BOLZANO_LEMMA",
     MATCH_MP_TAC REAL_MIDDLE1 THEN FIRST_ASSUM MATCH_ACCEPT_TAC, ALL_TAC] THEN
   SUBGOAL_THEN (--`!n. ~P(FST((f:num->real#real) n),SND(f n))`--) ASSUME_TAC THENL
    [INDUCT_TAC THEN ASM_REWRITE_TAC[] THEN
-    COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN DISCH_TAC THEN 
+    COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
     UNDISCH_TAC (--`~P(FST((f:num->real#real) n),SND(f n)):bool`--) THEN
     PURE_REWRITE_TAC[IMP_CLAUSES, NOT_CLAUSES] THEN
     FIRST_ASSUM MATCH_MP_TAC THEN
@@ -1050,9 +1052,9 @@ val SER_POS_LT_PAIR = prove_thm("SER_POS_LT_PAIR",
       REWRITE_TAC[GSYM(ONCE_REWRITE_RULE[ADD_SYM] ADD1)] THEN
       REWRITE_TAC[SYM TWO] THEN REWRITE_TAC[ADD_CLAUSES] THEN
       GEN_REWR_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [ADD1] THEN
-      (* changed for new term nets. 
+      (* changed for new term nets.
        old: REWRITE_TAC[GSYM ADD_ASSOC, GSYM ADD1, SYM(num_CONV (--`2`--))] *)
-      REWRITE_TAC[GSYM ADD_ASSOC] THEN 
+      REWRITE_TAC[GSYM ADD_ASSOC] THEN
       REWRITE_TAC [GSYM ADD1, SYM TWO] THEN
       MATCH_MP_TAC REAL_LE_TRANS THEN
       EXISTS_TAC (--`sum(0,(2 * M) + n) f`--) THEN
@@ -1064,7 +1066,7 @@ val SER_POS_LT_PAIR = prove_thm("SER_POS_LT_PAIR",
       ONCE_REWRITE_TAC[SPEC (--`1:num`--) ADD_SYM] THEN
       MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]],
     DISCH_THEN(MP_TAC o SPEC (--`(2 * SUC N) + n`--)) THEN
-    W(C SUBGOAL_THEN (fn th => REWRITE_TAC[th]) 
+    W(C SUBGOAL_THEN (fn th => REWRITE_TAC[th])
                         o funpow 2(fst o dest_imp) o snd)
     THENL
      [REWRITE_TAC[TWO, MULT_CLAUSES] THEN
@@ -1090,7 +1092,7 @@ val SER_POS_LT_PAIR = prove_thm("SER_POS_LT_PAIR",
       MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_ASSUM ACCEPT_TAC, ALL_TAC] THEN
     ASM_REWRITE_TAC[abs, REAL_SUB_LE] THEN
     REWRITE_TAC[REAL_LT_SUB_RADD] THEN
-    GEN_REWR_TAC (funpow 2 RAND_CONV) [REAL_ADD_SYM] 
+    GEN_REWR_TAC (funpow 2 RAND_CONV) [REAL_ADD_SYM]
     THEN ASM_REWRITE_TAC[REAL_NOT_LT]]);
 
 (*---------------------------------------------------------------------------*)
@@ -1324,8 +1326,8 @@ val ABS_NEG_LEMMA = prove_thm("ABS_NEG_LEMMA",
   REWRITE_TAC[ABS_NZ, REAL_NOT_LE]);
 
 val SER_RATIO = prove_thm("SER_RATIO",
-  (--`!f c (N:num). 
-         c < &1 /\ (!n. n >= N ==> abs(f(SUC n)) <= c * abs(f(n))) 
+  (--`!f c (N:num).
+         c < &1 /\ (!n. n >= N ==> abs(f(SUC n)) <= c * abs(f(n)))
           ==>
         summable f`--),
   REPEAT GEN_TAC THEN DISCH_THEN STRIP_ASSUME_TAC THEN
@@ -1359,7 +1361,7 @@ val SER_RATIO = prove_thm("SER_RATIO",
         MATCH_MP_TAC REAL_LT_IMP_NE THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
       SPEC_TAC((--`d:num`--),(--`d:num`--)) THEN INDUCT_TAC THEN
       REWRITE_TAC[pow, ADD_CLAUSES, REAL_MUL_RID, REAL_LE_REFL] THEN
-      MATCH_MP_TAC REAL_LE_TRANS THEN 
+      MATCH_MP_TAC REAL_LE_TRANS THEN
       EXISTS_TAC (--`c * abs(f((N:num) + d))`--) THEN CONJ_TAC THENL
        [FIRST_ASSUM MATCH_MP_TAC THEN REWRITE_TAC[GREATER_EQ, LESS_EQ_ADD],
         ONCE_REWRITE_TAC[AC(REAL_MUL_ASSOC,REAL_MUL_SYM)

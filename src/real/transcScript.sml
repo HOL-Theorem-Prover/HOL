@@ -69,11 +69,11 @@ val EVEN_DIV2 = PROVE
 (* The three functions we define by series are exp, sin, cos                 *)
 (*---------------------------------------------------------------------------*)
 
-val sin_ser = 
- (--`\n. if EVEN n then &0 
+val sin_ser =
+ (--`\n. if EVEN n then &0
          else ((~(&1)) pow ((n - 1) DIV 2)) / &(FACT n)`--);
 
-val cos_ser = 
+val cos_ser =
    (--`\n. if EVEN n then ((~(&1)) pow (n DIV 2)) / &(FACT n) else &0`--);
 
 val exp_ser = (--`\n. inv(&(FACT n))`--);
@@ -356,10 +356,10 @@ GEN_TAC THEN DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
       CONV_TAC(TOP_DEPTH_CONV num_CONV) THEN REWRITE_TAC[sum] THEN
       BETA_TAC THEN REWRITE_TAC[ADD_CLAUSES, FACT, pow, REAL_ADD_LID] THEN
       (* new term nets require change in proof; old:
-        REWRITE_TAC[MULT_CLAUSES, REAL_INV1, REAL_MUL_LID, ADD_CLAUSES] THEN 
+        REWRITE_TAC[MULT_CLAUSES, REAL_INV1, REAL_MUL_LID, ADD_CLAUSES] THEN
         REWRITE_TAC[REAL_MUL_RID, SYM(ONE)]
        *)
-      REWRITE_TAC[MULT_RIGHT_1, CONJUNCT1 MULT,REAL_INV1, 
+      REWRITE_TAC[MULT_RIGHT_1, CONJUNCT1 MULT,REAL_INV1,
       REAL_MUL_LID, ADD_CLAUSES,REAL_MUL_RID, SYM(ONE)]],
     POP_ASSUM(SUBST1_TAC o SYM) THEN
     REWRITE_TAC[EXP_0, REAL_ADD_RID, REAL_LE_REFL]]);
@@ -1234,7 +1234,7 @@ val COS_2 = prove_thm("COS_2",
     REWRITE_TAC[MULT_CLAUSES, ADD_CLAUSES, pow, FACT] THEN
     REWRITE_TAC[REAL_MUL_RID, POW_1, POW_2, GSYM REAL_NEG_RMUL] THEN
     IMP_SUBST_TAC REAL_DIV_REFL THEN REWRITE_TAC[REAL_NEGNEG, REAL_10] THEN
-    REDUCE_TAC THEN 
+    REDUCE_TAC THEN
     REWRITE_TAC[num_CONV (--`4:num`--), num_CONV (--`3:num`--), FACT, pow] THEN
     REWRITE_TAC[SYM(num_CONV (--`4:num`--)), SYM(num_CONV (--`3:num`--))] THEN
     REWRITE_TAC[TWO, ONE, FACT, pow] THEN
@@ -1301,7 +1301,7 @@ val COS_2 = prove_thm("COS_2",
   ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
   REWRITE_TAC[GSYM real_div] THEN MATCH_MP_TAC REAL_LT_1 THEN
   REWRITE_TAC[POW_2, REAL_MUL, REAL_LE, REAL_LT] THEN REDUCE_TAC THEN
-  REWRITE_TAC[num_CONV (--`4:num`--), num_CONV (--`3:num`--), 
+  REWRITE_TAC[num_CONV (--`4:num`--), num_CONV (--`3:num`--),
               MULT_CLAUSES, ADD_CLAUSES] THEN
   REWRITE_TAC[LESS_MONO_EQ] THEN
   REWRITE_TAC[TWO, ADD_CLAUSES, MULT_CLAUSES] THEN
@@ -1323,7 +1323,7 @@ val COS_ISZERO = prove_thm("COS_ISZERO",
     GEN_REWR_TAC I  [TAUT_CONV (--`a:bool = ~~a`--)] THEN
     PURE_REWRITE_TAC[NOT_IMP] THEN REWRITE_TAC[] THEN STRIP_TAC THEN
     MP_TAC(SPECL [(--`x1:real`--), (--`x2:real`--)] REAL_LT_TOTAL) THEN
-    SUBGOAL_THEN (--`(!x. cos differentiable x) /\ (!x. cos contl x)`--) 
+    SUBGOAL_THEN (--`(!x. cos differentiable x) /\ (!x. cos contl x)`--)
     STRIP_ASSUME_TAC THENL
      [CONJ_TAC THEN GEN_TAC THENL
        [REWRITE_TAC[differentiable], MATCH_MP_TAC DIFF_CONT] THEN
@@ -1601,8 +1601,8 @@ val SIN_TOTAL = prove_thm("SIN_TOTAL",
   GEN_TAC THEN DISCH_TAC THEN
   SUBGOAL_THEN (--`!x. ~(pi / &2) <= x /\ x <= pi / &2 /\ (sin(x) = y)
                            =
-                       &0 <= (x + pi / &2) /\ 
-                       (x + pi / &2) <= pi  /\ 
+                       &0 <= (x + pi / &2) /\
+                       (x + pi / &2) <= pi  /\
                        (cos(x + pi / &2) = ~y)`--)
   (fn th => REWRITE_TAC[th]) THENL
    [GEN_TAC THEN REWRITE_TAC[COS_ADD, SIN_PI2, COS_PI2] THEN
@@ -2632,7 +2632,7 @@ val DIVISION_APPEND_LEMMA2 = prove(
       REWRITE_TAC[GSYM NOT_LESS_EQUAL, LESS_EQ_ADD] THEN
       SUBGOAL_THEN (Term`!x y. x <= SUC(x + y)`) ASSUME_TAC THENL
        [REPEAT GEN_TAC THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
-        EXISTS_TAC (Term`x:num + y`) THEN
+        EXISTS_TAC (Term`(x:num) + y`) THEN
         REWRITE_TAC[LESS_EQ_ADD, LESS_EQ_SUC_REFL], ALL_TAC] THEN
       ASM_REWRITE_TAC[] THEN REWRITE_TAC[SUB, GSYM NOT_LESS_EQUAL] THEN
       REWRITE_TAC[LESS_EQ_ADD] THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
