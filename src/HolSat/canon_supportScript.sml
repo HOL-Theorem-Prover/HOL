@@ -8,6 +8,58 @@ infixr 0 THEN;
 val _ = Parse.reveal "C";
 
 (* ------------------------------------------------------------------------- *)
+(* Condify theorems.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+val COND_SIMP = store_thm
+  ("COND_SIMP",
+   ``!a f g. (if a then f a else g a) = (if a then f T else g F)``,
+   RW_TAC std_ss []);
+
+val COND_NOT = store_thm
+  ("COND_NOT",
+   ``!a. ~a = if a then F else T``,
+   RW_TAC std_ss []
+   THEN PROVE_TAC []);
+
+val COND_AND = store_thm
+  ("COND_AND",
+   ``!a b. a /\ b = (if a then b else F)``,
+   RW_TAC std_ss []
+   THEN PROVE_TAC []);
+
+val COND_OR = store_thm
+  ("COND_OR",
+   ``!a b. a \/ b = if a then T else b``,
+   RW_TAC std_ss []
+   THEN PROVE_TAC []);
+
+val COND_IMP = store_thm
+  ("COND_IMP",
+   ``!a b. a ==> b = if a then b else T``,
+   RW_TAC std_ss []
+   THEN PROVE_TAC []);
+
+val COND_EQ = store_thm
+  ("COND_EQ",
+   ``!a b. (a = b) = if a then b else ~b``,
+   RW_TAC std_ss []
+   THEN PROVE_TAC []);
+
+val COND_COND = store_thm
+  ("COND_COND",
+   ``!a b c x y.
+       (if (if a then b else c) then x else y) =
+       (if a then (if b then x else y) else (if c then x else y))``,
+   RW_TAC std_ss []
+   THEN PROVE_TAC []);
+
+val COND_ETA = store_thm
+  ("COND_ETA",
+   ``!a. (if a then T else F) = a``,
+   RW_TAC std_ss []);
+
+(* ------------------------------------------------------------------------- *)
 (* {S,K,I} theorems.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
@@ -52,6 +104,15 @@ val LIFT_K_THRU_S = store_thm
    REPEAT STRIP_TAC
    THEN CONV_TAC (FUN_EQ_CONV)
    THEN RW_TAC std_ss [S_DEF, K_DEF]);
+
+(* ------------------------------------------------------------------------- *)
+(* Worker theorems for NNF.                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+val IMP_DISJ_THM' = store_thm
+  ("IMP_DISJ_THM'",
+   ``!x y. x ==> y = y \/ ~x``,
+   PROVE_TAC []);
 
 (* ------------------------------------------------------------------------- *)
 (* Worker theorems for the tautology prover.                                 *)
