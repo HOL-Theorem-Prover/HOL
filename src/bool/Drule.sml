@@ -1996,16 +1996,16 @@ fun MK_BOUNDED th n =
              (SPEC (concl th) BOUNDED_THM)))
         th;
 
-fun DEST_UNBOUNDED th = 
+fun DEST_UNBOUNDED th =
  case strip_comb (concl th)
   of (c,[a]) => if same_const unbounded_tm c
                 then EQ_MP (SPEC a UNBOUNDED_THM) th
                 else raise ERR "DEST_UNBOUNDED" ""
    | other => raise ERR "DEST_UNBOUNDED" "";
 
-fun DEST_BOUNDED th = 
+fun DEST_BOUNDED th =
  case strip_comb (concl th)
-  of (c,[a1,a2]) => 
+  of (c,[a1,a2]) =>
         if same_const bounded_tm c
          then let val (s,_) = dest_var a2
               in (EQ_MP (SPEC a2 (SPEC a1 BOUNDED_THM)) th,
@@ -2033,18 +2033,18 @@ fun norm_ac (th1,th2) =
      val tm1 = concl th1'
      val tm2 = concl th2'
  in if is_comm tm2
-    then if is_assoc tm1 then (regen th1,regen th2) else
+    then if is_assoc tm1 then (regen th1',regen th2') else
           let val th1a = SYM th1'
           in if is_assoc (concl th1a)
-             then (regen th1a,regen th2)
+             then (regen th1a,regen th2')
              else (HOL_MESG "unable to AC-normalize input";
                    raise ERR "norm_ac" "failed")
           end
     else if is_comm tm1
          then if is_assoc tm2 then (regen th2,regen th1) else
                let val th2a = SYM th2'
-               in if is_assoc (concl th2a) 
-                  then (regen th2a,regen th1)
+               in if is_assoc (concl th2a)
+                  then (regen th2a,regen th1')
                   else (HOL_MESG "unable to AC-normalize input";
                         raise ERR "norm_ac" "failed")
                end
