@@ -140,7 +140,7 @@ fun parse_command_line list = let
   val (rem1, dontmakes) = find_pairs "-d" rem0
   val (rem2, debug) = find_toggle "--debug" rem1
   val (rem3, help) = find_alternative_tags  ["--help", "-h"] rem2
-  val (rem4, show_version) = find_alternative_tags ["--version", "-v"] rem3
+  val rem4 = rem3
   val (rem5, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem4
   val (rem6, cmdl_HOLDIRs) = find_pairs "--holdir" rem5
   val (rem7, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem6
@@ -156,7 +156,7 @@ fun parse_command_line list = let
   val (rem16, interactive_flag) = find_alternative_tags ["--interactive", "-i"]
                                                         rem15
 in
-  {targets=rem16, debug=debug, show_usage=help, show_version=show_version,
+  {targets=rem16, debug=debug, show_usage=help,
    always_rebuild_deps=rebuild_deps,
    additional_includes=includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
@@ -188,7 +188,7 @@ end
 
 
 (* parameters which vary from run to run according to the command-line *)
-val {targets, debug, dontmakes, show_usage, show_version, allfast, fastfiles,
+val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      always_rebuild_deps, interactive_flag,
      additional_includes = cline_additional_includes,
      cmdl_HOLDIR, cmdl_MOSMLDIR,
@@ -1091,12 +1091,8 @@ val _ =
      "    --no_sigobj | -n     : don't use any HOL files from sigobj\n",
      "    --overlay <file>     : use given .ui file as overlay\n",
      "    --qof                : quit on tactic failure\n",
-     "    --rebuild_deps | -r  : always rebuild dependency info files \n",
-     "    --version | -v       : show version information\n"]
-  else
-    if show_version then
-      print "Holmake version 3.01\n"
-    else let
+     "    --rebuild_deps | -r  : always rebuild dependency info files \n"]
+  else let
       open Process
       val result = deal_with_targets targets
         handle Fail s => (print ("Fail exception: "^s^"\n"); exit failure)
