@@ -27,7 +27,7 @@ val fin_ss =
 (* --------------------------------------------------------------------- *)
 
 
-(* For interactive use: 
+(* For interactive use:
   app load ["BasicProvers", "SingleStep", "setTheory", "setLib", "Q"];
   open BasicProvers setTheory simpLib;
 *)
@@ -141,7 +141,7 @@ in
 end
 
 fun set_absorb_list ty =
-(* given a type 'a -> 'b set ... -> 'o, 
+(* given a type 'a -> 'b set ... -> 'o,
    returns ([(false, 'a), (true, 'b) ...], 'o) *)
 (* This does not catch 'a -> ('a set -> 'a set) -> 'a so some
    formulas won't be translated *)
@@ -149,7 +149,7 @@ fun set_absorb_list ty =
         let val (Arg, Rest) = dom_rng ty
             val (bl, tyend) = set_absorb_list Rest
         in
-            ((if is_set Arg then (true, dest_set Arg) 
+            ((if is_set Arg then (true, dest_set Arg)
               else (false, Arg))::bl, tyend)
         end
     else ([], ty)
@@ -405,7 +405,7 @@ val REST_fREST = store_thm(
 
 val EQ_fEQ = store_thm(
   "EQ_fEQ",
-  ``(finset_REP s = finset_REP s') = s = s'``,
+  ``(finset_REP s = finset_REP s') = (s = s')``,
   PROVE_TAC[finset_ISO_DEF]);
 
 val _ = add_thms_to_transl [DELETE_fDELETE, REST_fREST, EQ_fEQ];
