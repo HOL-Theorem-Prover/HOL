@@ -56,10 +56,11 @@ let from_filelist files =
   lexbuf_r := Some lexbuf;
   lexbuf
 
-let parse_fileargs mode nonterminal =
+let parse_fileargs_ext handlers finalhook error mode nonterminal =
   let files = ref [] in
   let handle_file f = files := f :: !files in
-  Arg.parse [] handle_file "Invalid argument";
+  Arg.parse handlers handle_file error;
+  finalhook ();
   let lexbuf =
     if !files = [] then
       Lexing.from_channel stdin  (* use stdin if no files listed *)
@@ -67,3 +68,6 @@ let parse_fileargs mode nonterminal =
       from_filelist (List.rev !files)
   in
   parse mode nonterminal lexbuf
+
+let parse_fileargs mode nonterminal =
+  parse_fileargs_ext [] (fun () -> ()) "Invalid argument" mode nonterminal

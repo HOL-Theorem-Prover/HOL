@@ -5,6 +5,12 @@ val parse :
 val parse_chan :
   Holparsesupp.mode ->
   (('a -> Holparse.token) -> Lexing.lexbuf -> 'b) -> in_channel -> 'b
+val parse_fileargs_ext :
+  (string * Arg.spec * string) list ->
+  (unit -> unit) ->
+  string ->
+  Holparsesupp.mode ->
+  (('a -> Holparse.token) -> Lexing.lexbuf -> 'b) -> 'b
 val parse_fileargs :
   Holparsesupp.mode ->
   (('a -> Holparse.token) -> Lexing.lexbuf -> 'b) -> 'b
