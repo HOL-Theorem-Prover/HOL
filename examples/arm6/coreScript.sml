@@ -459,7 +459,7 @@ val ALU6_def = Define`
    else if (is = t3) /\ (ic = br) then
      ADD alua alub F
    else if (ic = br) \/ (ic = swi_ex) then
-     if is = t4 then ALU_logic alua                else
+     if is = t4 then ALU_logic alua         else
      if is = t5 then ADD (NOT alua) alub F  else ARB
    else if ic = swp then
      ALU_logic alub

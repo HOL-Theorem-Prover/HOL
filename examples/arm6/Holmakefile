@@ -1,10 +1,10 @@
 EXTRA_CLEANS = word32Lib.sml
 
-word32Theory.ui : ../../sigobj/wordFunctor.ui ../../sigobj/wordFunctorLib.ui ../../sigobj/bitsTheory.ui
-	../../src/n_bit/mkword.exe 32
+word32Theory.ui : $(SIGOBJ)/wordFunctor.ui $(SIGOBJ)/wordFunctorLib.ui $(SIGOBJ)/bitsTheory.ui
+	$(HOLDIR)/src/n_bit/mkword.exe 32
 
 
-word32Theory.uo : ../../sigobj/wordFunctor.ui ../../sigobj/wordFunctorLib.ui ../../sigobj/bitsTheory.ui
-	../../src/n_bit/mkword.exe 32
+word32Theory.uo : $(SIGOBJ)/wordFunctor.ui $(SIGOBJ)/wordFunctorLib.ui $(SIGOBJ)/bitsTheory.ui
+	$(HOLDIR)/src/n_bit/mkword.exe 32
 
 armTheory.sml : word32Theory.ui
