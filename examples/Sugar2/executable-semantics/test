@@ -4,22 +4,29 @@
 (*****************************************************************************)
 
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
-app load ["bossLib","ExecuteSemanticsTheory","regexpLib","pred_setLib"];
+app 
+ load 
+ ["bossLib","ExecuteSemanticsTheory","intLib", "stringLib",
+  "regexpLib","pred_setLib"];
 
 quietdec := true;
-open bossLib FinitePathTheory UnclockedSemanticsTheory ExecuteSemanticsTheory;
+open bossLib intLib stringLib FinitePathTheory UnclockedSemanticsTheory 
+     ExecuteSemanticsTheory;
 quietdec := false;
+
+(******************************************************************************
+* Set default parsing to natural numbers rather than integers 
+******************************************************************************)
+val _ = intLib.deprecate_int();
 
 val _ = computeLib.add_funs 
          ([PathTheory.SEL_REC_AUX,
            UF_SEM_F_UNTIL_REC,
            UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX,
            UF_SEM_F_SUFFIX_IMP_FINITE_REC,
-           UF_SEM_F_SUFFIX_IMP_REC]
-          @
-          CONJUNCTS B_SEM
-          @
-          [EVAL_US_SEM]);
+           UF_SEM_F_SUFFIX_IMP_REC,
+           B_SEM,
+           EVAL_US_SEM]);
 
 val _ = 
  computeLib.add_convs
@@ -42,8 +49,342 @@ EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_SUFFIX_IMP(r,f))``;
 EVAL ``UF_SEM (FINITE[{1};{3};{2}])
        (F_SUFFIX_IMP (S_BOOL (B_PROP n), f))``;
 
-EVAL
-``UF_SEM (FINITE[{1};{3};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
+EVAL ``US_SEM [{1};{2};{3}] (S_CAT(S_REPEAT S_TRUE, S_BOOL(B_PROP 3)))``;
+
+EVAL ``US_SEM [{1};{2};{3}] (S_CAT(S_REPEAT S_TRUE, S_BOOL(B_PROP 2)))``;
+
+EVAL ``US_SEM 
+        [{1};{2};{3};{4};{5}] 
+        (S_CAT(S_REPEAT S_TRUE, S_CAT(S_BOOL(B_PROP 2), S_REPEAT S_TRUE)))``;
+
+(* 
+** I generated this from a Verilog model of the BUF example in
+** Chapter 4 of FoCs User's Manual 
+** (www.haifa.il.ibm.com/projects/verification/focs/)
+*)
+val SimRun =
+    ``[{}; {"StoB_REQ"}; {"BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"};
+       {"StoB_REQ"; "BtoS_ACK"; "BtoR_REQ"; "RtoB_ACK"};
+       {"StoB_REQ"; "BtoS_ACK"}; {"StoB_REQ"}; {"BtoS_ACK"}]``;
+
+time
+ EVAL 
+ ``US_SEM 
+    ^SimRun
+    (S_CAT(S_REPEAT S_TRUE, 
+           S_CAT(S_BOOL(B_PROP "StoB_REQ"), 
+                 S_REPEAT S_TRUE)))``;
+
+time
+ EVAL 
+ ``US_SEM 
+    ^SimRun
+    (S_CAT(S_REPEAT S_TRUE, 
+           S_CAT(S_CAT(S_BOOL(B_PROP "StoB_REQ"),S_BOOL(B_PROP "StoB_REQ")),
+                 S_REPEAT S_TRUE)))``;
+
+time
+ EVAL 
+ ``US_SEM 
+    ^SimRun
+    (S_CAT(S_REPEAT S_TRUE, 
+           S_CAT(S_CAT(S_BOOL(B_PROP "StoB_REQ"),S_BOOL(B_PROP "BtoR_REQ")),
+                 S_REPEAT S_TRUE)))``;
 
 
 
