@@ -41,7 +41,19 @@ val SRCDIRS0 =
   "src/bag", "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob",
   "src/HolSat", "src/muddy/muddyC", "src/muddy", "src/HolBdd"];
 
-val SRCDIRS = map (fn s => fullPath [HOLDIR, s]) SRCDIRS0
+val (use_expk, cmdline) =   let
+  val (expks, rest) =
+      List.partition (fn e => e = "-expk") (CommandLine.arguments())
+in
+  (not (null expks), rest)
+end
+
+
+val SRCDIRS =
+    map (fn s => fullPath [HOLDIR, s])
+        ("src/portableML" ::
+         (if use_expk then "src/experimental-kernel" else "src/0") ::
+         SRCDIRS0)
 
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -220,13 +232,7 @@ fun upload (src,target,symlink) =
 
 fun buildDir symlink s = (build_dir s; upload(s,SIGOBJ,symlink));
 
-fun build_src use_expk symlink = let
-  val el1 = fullPath [HOLDIR, "src", "portableML"]
-  val el2 = fullPath [HOLDIR, "src",
-                      if use_expk then "experimental-kernel" else "0"]
-in
-  List.app (buildDir symlink) (el1::el2::SRCDIRS)
-end
+fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 
 fun rem_file f =
  FileSys.remove f
@@ -320,9 +326,9 @@ fun make_buildstamp () =
 end
 
 
-fun build_hol use_expk symlink =
+fun build_hol symlink =
   let val _ = clean_sigobj()
-      val _ = build_src use_expk symlink
+      val _ = build_src symlink
       val _ = make_buildstamp()
       val _ = build_help()
   in
@@ -350,11 +356,6 @@ fun suffixCheck s =
   end
 end;
 
-(*---------------------------------------------------------------------------
-    "cleandir" could be extended to do a better job of cleaning up
-    directories where external tools have been built.
- ---------------------------------------------------------------------------*)
-
 infix called_in
 fun (cmd called_in dir) = let
   val dir0 = FileSys.getDir()
@@ -368,7 +369,12 @@ fun cleanAlldir dir = ignore ([HOLMAKE, "cleanAll"] called_in dir)
 
 fun clean_dirs f =
     clean_sigobj() before
-    List.app f (fullPath [HOLDIR, "help", "src"] :: SRCDIRS);
+    (* clean both kernel directories, regardless of which was actually built,
+       and the help src directory too *)
+    List.app f (fullPath [HOLDIR, "help", "src"] ::
+                fullPath [HOLDIR, "src", "0"] ::
+                fullPath [HOLDIR, "src", "experimental-kernel"] ::
+                SRCDIRS);
 
 fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
 val help_mesg = "Usage: build\n\
@@ -411,25 +417,19 @@ fun symlink_check() =
 
 
 
-val _ = let
-  val cmdline = CommandLine.arguments()
-  val (expks, rest) = List.partition (fn e => e = "-expk") cmdline
-  val use_expk = not (null expks)
-  val build_hol = build_hol use_expk
-in
-  case rest of
-    []             => build_hol cp                (* no symbolic linking *)
-  | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
-  | ["-small"]    => build_hol mv                (* by renaming *)
-  | ["-dir",path] => buildDir cp path
-  | ["-dir",path,
-     "-symlink"]  => buildDir (symlink_check()) path
-  | ["-clean"]    => clean_dirs cleandir
-  | ["-cleanAll"] => clean_dirs cleanAlldir
-  | ["clean"]     => clean_dirs cleandir
-  | ["cleanAll"]  => clean_dirs cleanAlldir
-  | ["symlink"]   => build_hol (symlink_check())
-  | ["small"]     => build_hol mv
-  | ["help"]      => build_help()
-  | otherwise     => errmsg help_mesg
-end
+val _ =
+    case cmdline of
+      []            => build_hol cp                (* no symbolic linking *)
+    | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
+    | ["-small"]    => build_hol mv                (* by renaming *)
+    | ["-dir",path] => buildDir cp path
+    | ["-dir",path,
+       "-symlink"]  => buildDir (symlink_check()) path
+    | ["-clean"]    => clean_dirs cleandir
+    | ["-cleanAll"] => clean_dirs cleanAlldir
+    | ["clean"]     => clean_dirs cleandir
+    | ["cleanAll"]  => clean_dirs cleanAlldir
+    | ["symlink"]   => build_hol (symlink_check())
+    | ["small"]     => build_hol mv
+    | ["help"]      => build_help()
+    | otherwise     => errmsg help_mesg
