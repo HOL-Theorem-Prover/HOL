@@ -37,7 +37,7 @@ val sumc_def = Define
    (sumc [] _ = 0) /\
    (sumc (c::cs) (v::vs) = c * v + sumc cs vs)`;
 
-val sumc_ind = theorem "sumc_ind"
+val sumc_ind = DB.fetch "-" "sumc_ind";
 
 val sumc_thm = store_thm(
   "sumc_thm",

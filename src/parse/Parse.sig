@@ -195,7 +195,6 @@ signature Parse = sig
   val print_type : hol_type -> unit
   val print_term : term -> unit
 
-  val export_theory_as_docfiles : string -> unit
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
 
   val update_grms   : ('a -> unit) -> 'a -> unit

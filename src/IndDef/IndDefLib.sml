@@ -42,32 +42,36 @@ fun term_of q = term_of_absyn (Parse.Absyn q)
 end;
 
 
-(* given a case theorem of the sort returned by new_inductive_definition *)
-(* return the name of the first new constant mentioned *)
-(* form is
+(*---------------------------------------------------------------------------
+  given a case theorem of the sort returned by new_inductive_definition
+  return the name of the first new constant mentioned
+  form is
         (!x y z.  (C x y z = ...)) /\
         (!u v w.  (D u v w = ...))
-   in which case we return ["C", "D"] *)
-fun names_from_casethm thm = let
-  open boolLib
-  val eqns = map (#2 o strip_forall) (strip_conj (concl thm))
-  val cnsts = map (#1 o strip_comb o lhs) eqns
-in
-  map (#1 o dest_const) cnsts
-end;
+   in which case we return ["C", "D"] 
+ ---------------------------------------------------------------------------*)
 
-fun prim_Hol_reln monoset tm = let
-  val (rules, indn, cases) =
-      InductiveDefinition.new_inductive_definition
-        InductiveDefinition.bool_monoset tm
-  val names = names_from_casethm cases
-  val name = hd names
-  val _ = save_thm(name^"_rules", rules)
-  val _ = save_thm(name^"_ind", indn)
-  val _ = save_thm(name^"_cases", cases)
+fun names_from_casethm thm = 
+ let open HolKernel boolSyntax
+     val eqns = map (#2 o strip_forall) (strip_conj (concl thm))
+     val cnsts = map (#1 o strip_comb o lhs) eqns
+ in
+    map (#1 o dest_const) cnsts
+ end;
+
+fun prim_Hol_reln monoset tm = 
+ let val (rules, indn, cases) =
+        InductiveDefinition.new_inductive_definition
+                  InductiveDefinition.bool_monoset tm
+     val names = names_from_casethm cases
+     val name = hd names
+     val _ = save_thm(name^"_rules", rules)
+     val _ = save_thm(name^"_ind", indn)
+     val _ = save_thm(name^"_cases", cases)
 in
   (rules, indn, cases)
-end handle e => raise (wrap_exn "IndDefLib" "prim_Hol_reln" e);
+end 
+handle e => raise (wrap_exn "IndDefLib" "prim_Hol_reln" e);
 
 
 fun Hol_reln q =

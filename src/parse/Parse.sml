@@ -1262,12 +1262,6 @@ in
   app write_thm thms
 end
 
-fun export_theory_as_docfiles dirname = let
-  val thms = axioms() @ definitions() @ theorems()
-in
-  export_theorems_as_docfiles dirname thms
-end
-
 (*---------------------------------------------------------------------------
      pp_element values that are brought across from term_grammar.
      Tremendous potential for confusion: TM and TOK are constructed

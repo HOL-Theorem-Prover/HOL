@@ -255,8 +255,8 @@ fun compute_cst_arg_map (fv,impargs) strm =
 ;
 
 fun export_param_theory () =
-  let val defs = rev (map fst (definitions()))
-      val thms = rev (map fst (theorems()))
+  let val defs = rev (map fst (definitions"-"))
+      val thms = rev (map fst (theorems"-"))
       fun struct_line ppstrm thn =
             (S ppstrm thn; S ppstrm " = inst_fun "; S ppstrm thn)
       fun sig_line ppstrm thn =

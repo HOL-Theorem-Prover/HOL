@@ -453,7 +453,7 @@ val _ = Theory.save_thm ("INT_LT_LADD_IMP",INT_LT_LADD_IMP)
 val _ = Theory.save_thm ("INT_LT_MUL",INT_LT_MUL)
 ;
 
-val int_tybij = definition "int_tybij";
+val int_tybij = DB.fetch "-" "int_tybij";
 
 val _ = overload_on ("+", Term`$int_add`);
 val _ = overload_on ("<", Term`$int_lt`);
@@ -1559,8 +1559,8 @@ val NUM_LEMMA =
 		  X_CHOOSE_THEN (Term `m:num`)
 		           (X_CHOOSE_THEN (Term `n:num`) SUBST1_TAC)
 		  (SPEC (Term `i:int`) INT_DECOMPOSE) THEN
-		  REWRITE_TAC[GSYM INT_0, definition "int_lt",
-                              definition "int_0", int_le, tint_lt] THEN
+		  REWRITE_TAC[GSYM INT_0, fetch "-" "int_lt",
+                              fetch "-" "int_0", int_le, tint_lt] THEN
 		  REWRITE_TAC[DEST_MK_EQCLASS] THEN
 		  DISCH_TAC THEN Q.EXISTS_TAC `m - n`
 		  THEN AP_TERM_TAC THEN
@@ -1580,12 +1580,12 @@ val NUM_LEMMA =
 val NUM_DECOMPOSE =
     store_thm("NUM_DECOMPOSE",
 	      Term `!n. &n = mk_int($tint_eq (n,0))`,
-	      INDUCT_TAC THEN REWRITE_TAC[int_of_num, definition "int_0",
-					  tint_0] THENL
-	      [AP_TERM_TAC THEN REWRITE_TAC[GSYM TINT_EQ_EQUIV,
-					    tint_eq, ADD_CLAUSES],
-	       ASM_REWRITE_TAC[definition "int_1",definition"int_add",tint_1]
-	       THEN
+	      INDUCT_TAC THEN 
+              REWRITE_TAC[int_of_num, fetch "-" "int_0", tint_0] THENL
+	      [AP_TERM_TAC THEN 
+                REWRITE_TAC[GSYM TINT_EQ_EQUIV, tint_eq, ADD_CLAUSES],
+	       ASM_REWRITE_TAC
+                   [fetch "-" "int_1", fetch "-" "int_add",tint_1] THEN
 	       AP_TERM_TAC THEN REWRITE_TAC[GSYM TINT_EQ_EQUIV,
 					    DEST_MK_EQCLASS] THEN
 	       REWRITE_TAC[TINT_EQ_EQUIV] THEN
