@@ -55,7 +55,7 @@ do
     make all
     for i in .dvi .ps .pdf
     do
-        mv $lcname.$i /tmp/$name-$lcname.$i
+        mv $lcname$i /tmp/$name-$lcname$i
     done
 done
 
@@ -72,10 +72,12 @@ mv /tmp/configure.sml tools
 /bin/rm bin/*
 /bin/rm tools/build.sml tools/Holmake/*.{uo,ui} tools/hol98-mode.el
 /bin/rm tools/Holmake/{Holmake,Parser,Lexer}.sml tools/Holmake/Parser.sig
-(cd src/muddy/ ; make clean ; cd buddy17 ; make clean)
+(cd src/muddy/muddyC ; /bin/rm -f *.o *.a *.so ; cd buddy17/src ; \
+ /bin/rm -f *.o *.a *.so)
 mv ../bin-README bin/README
 mv ../sigobj-README sigobj/README
 
 cd /tmp
 echo "Creating tar file"
 tar cvzf $name.tar.gz hol98
+mv hol98/doc/$name.release .
