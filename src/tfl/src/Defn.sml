@@ -346,8 +346,22 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
    what is assumed at present.
  ---------------------------------------------------------------------------*)
 
+fun add_persistent_funs l = let
+  val has_lhs_SUC =
+      List.exists (can (find_term numLib.is_suc) o lhs o #2 o strip_forall) o
+      strip_conj o concl
+  fun f (s, th) = [(s, th)] @
+                  (if has_lhs_SUC th then
+                     [("(Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV "^s
+                       ^")",
+                       CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV th)]
+                   else [])
+in
+  computeLib.add_persistent_funs (List.concat (map f l))
+end
+
 fun been_stored s thm =
-  (computeLib.add_persistent_funs [(s,thm)];
+  (add_persistent_funs [(s,thm)];
    Lib.say ("Definition has been stored under "^Lib.quote s^".\n")
    );
 
@@ -357,7 +371,7 @@ fun store(stem,eqs,ind) =
       val ind_bind = indSuffix stem
       val   _  = save_thm(ind_bind, ind)
       val eqns = save_thm(eqs_bind, eqs)
-      val _ = computeLib.add_persistent_funs [(eqs_bind,eqs)]
+      val _ = add_persistent_funs [(eqs_bind,eqs)]
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
     Lib.say (String.concat
@@ -991,7 +1005,7 @@ fun mutrec_defn (facts,stem,eqns) =
 
 
 fun nestrec_defn (fb,(stem,stem'),wfrec_res,untuple) =
-  let val {rules,ind,SV,R,aux_rules,aux_ind,...} 
+  let val {rules,ind,SV,R,aux_rules,aux_ind,...}
          = nestrec fb stem' wfrec_res
       val (rules', ind') = untuple (rules, ind)
   in NESTREC {eqs=rules', ind=ind', R=R, SV=SV, stem=stem,
@@ -1280,7 +1294,7 @@ fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
 
 fun tprove p   =
   let val (eqns,ind) = Lib.with_flag (goalstackLib.chatting,false) tprove0 p
-  in computeLib.add_funs [eqns]
+  in computeLib.add_funs [eqns, CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV eqns]
    ; (eqns, ind)
   end
 
