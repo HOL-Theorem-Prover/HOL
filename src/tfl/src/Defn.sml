@@ -1122,14 +1122,19 @@ fun exp (AQ tm) S = let val (tm',S') = tm_exp tm S in (AQ tm',S') end
   | exp (LAM _) _ = raise ERR "exp" "abstraction in pattern"
 
 fun expand_wildcards asy (asyl,S) =
-   let val (asy',S') = exp asy S
-   in (asy'::asyl, S')
-   end
+   let val (asy',S') = exp asy S in (asy'::asyl, S') end
 end;
 
 
 local fun dest_pvar (Absyn.VIDENT s) = s
         | dest_pvar _ = raise ERR "munge" "dest_pvar"
+      fun dest_atom tm = (dest_const tm handle HOL_ERR _ => dest_var tm);
+      fun dest_head (Absyn.AQ tm) = fst(dest_atom tm)
+        | dest_head (Absyn.IDENT s) = s
+        | dest_head (Absyn.TYPED(a,_)) = dest_head a
+        | dest_head (Absyn.QIDENT _) = raise ERR "dest_head" "qual. ident."
+        | dest_head (Absyn.APP _) = raise ERR "dest_head" "app. node"
+        | dest_head (Absyn.LAM _) = raise ERR "dest_head" "lam. node"
 in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
@@ -1137,11 +1142,12 @@ fun munge eq (eqs,fset,V) =
      val   _          = if exists wildcard (names_of rhs [])
                         then raise ERR "munge" "wildcards on rhs" else ()
      val (f,pats)     = Absyn.strip_app lhs
-     val fstr         = Absyn.dest_ident f
      val (pats',V')   = rev_itlist expand_wildcards pats
                             ([],Lib.union V (map dest_pvar vlist))
      val new_eq       = Absyn.list_mk_forall(vlist,
                           Absyn.mk_eq(Absyn.list_mk_app(f,rev pats'), rhs))
+     val fstr         = dest_head f
+
  in
     (new_eq::eqs, insert fstr fset, V')
  end
