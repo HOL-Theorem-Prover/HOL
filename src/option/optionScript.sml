@@ -1,5 +1,5 @@
 (* =======================================================================*)
-(* FILE		: mk_option.ml						  *)
+(* FILE		: optionScript.sml                                        *)
 (* DESCRIPTION  : Creates a theory of SML like options         	          *)
 (* WRITES FILES	: option.th						  *)
 (*									  *)
@@ -15,7 +15,9 @@
 open HolKernel Parse boolLib;
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
-(* Make sure that oneTheory is loaded. *)
+(*---------------------------------------------------------------------------
+     Make sure that sumTheory and oneTheory is loaded. 
+ ---------------------------------------------------------------------------*)
 
 local open sumTheory oneTheory in end;
 
@@ -31,17 +33,18 @@ val _ = new_theory "option";
  * holML formalization (she called it "lift").                               *
  *---------------------------------------------------------------------------*)
 
-val option_TY_DEF = Rsyntax.new_type_definition
-  {name = "option",
-   inhab_thm = prove(Term`?x:'a + one. (\x.T) x`,
-                     BETA_TAC THEN EXISTS_TAC(--`x:'a + one`--) THEN
-                     ACCEPT_TAC TRUTH)};
+val option_TY_DEF = 
+ new_type_definition
+  ("option",
+   prove(Term`?x:'a + one. (\x.T) x`,
+          BETA_TAC THEN EXISTS_TAC(--`x:'a + one`--) THEN ACCEPT_TAC TRUTH));
 
 (*---------------------------------------------------------------------------*
  *  val option_REP_ABS_DEF =                                                 *
  *     |- (!a. option_ABS (option_REP a) = a) /\                             *
  *        (!r. (\x. T) r = option_REP (option_ABS r) = r)                    *
  *---------------------------------------------------------------------------*)
+
 val option_REP_ABS_DEF =
      define_new_type_bijections
      {name = "option_REP_ABS_DEF",
@@ -85,7 +88,7 @@ val option_Axiom = store_thm (
   STRIP_ASSUME_TAC
      (BETA_RULE
         (ISPECL [--`\x. f x`--, --`\x:one.(e:'b)`--]
-         (Rsyntax.INST_TYPE [Type.beta |-> Type`:one`]
+         (INST_TYPE [Type.beta |-> Type`:one`]
           sumTheory.sum_Axiom))) THEN
   EXISTS_TAC (--`\x:'a option. h(option_REP x):'b`--) THEN BETA_TAC THEN
   ASM_REWRITE_TAC[reduce option_REP_ABS_DEF]);

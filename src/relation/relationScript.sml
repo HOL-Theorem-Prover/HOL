@@ -1,15 +1,15 @@
 (*---------------------------------------------------------------------------*
  * A theory about relations, taken as functions of type 'a->'a->bool.        *
  * This is not well-fleshed-out currently. We just treat transitive closure  *
- * and wellfoundedness to start. Other notions, like inverse image are       *
- * also defined.                                                             *
+ * and wellfoundedness to start. A few other notions, like inverse image,    *
+ * are also defined.                                                         *
  *---------------------------------------------------------------------------*)
 
 structure relationScript =
 struct
 
 
-open HolKernel Parse basicHol90Lib QLib mesonLib;
+open HolKernel Parse boolLib QLib tautLib mesonLib Rsyntax;
 infix ORELSE ORELSEC THEN THENL |->;
 
 val _ = new_theory "relation";
@@ -57,7 +57,7 @@ val TC_INDUCT_TAC =
       let val {Bvar=u,Body} = dest_forall w
           val {Bvar=v,Body} = dest_forall Body
           val {ant,conseq} = dest_imp Body
-          val (TC,[R,u',v']) = Dsyntax.strip_comb ant
+          val (TC,[R,u',v']) = strip_comb ant
           val {Name = "TC",...} = dest_const TC
           val _ = assert (aconv u) u'
           val _ = assert (aconv v) v'
@@ -89,8 +89,6 @@ GEN_TAC
  THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]);
 
 
-
-
 (*---------------------------------------------------------------------------*
  * Wellfounded relations. Applications of wellfoundedness to specific types  *
  * (numbers, lists, etc.) can be found in the respective theories.           *
@@ -98,38 +96,24 @@ GEN_TAC
 
 val USE_TAC = IMP_RES_THEN(fn th => ONCE_REWRITE_TAC[th]);
 
-local fun bval w t = 
-        (type_of t = Type.bool) 
-        andalso (can (find_term is_var) t) andalso (free_in t w)
-in val TAUT_CONV =
-       C (curry prove)
-         (REPEAT GEN_TAC THEN (REPEAT o CHANGED_TAC o W)
-           (C (curry op THEN) (Rewrite.REWRITE_TAC[]) o BOOL_CASES_TAC o hd 
-                               o sort free_in
-                               o W(find_terms o bval) o snd))
-end
-
-local val TCONV = TAUT_CONV o Parse.Term
-in
-
 val NNF_CONV =
    let val DE_MORGAN = REWRITE_CONV
-                        [TCONV`~(x==>y) = (x /\ ~y)`,
-                         TCONV`~x \/ y = (x ==> y)`,DE_MORGAN_THM]
+                        [TAUT `~(x==>y) = (x /\ ~y)`,
+                         TAUT `~x \/ y = (x ==> y)`,DE_MORGAN_THM]
        val QUANT_CONV = NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV
    in REDEPTH_CONV (QUANT_CONV ORELSEC CHANGED_CONV DE_MORGAN)
    end;
-val NNF_TAC = CONV_TAC NNF_CONV
-end;
+
+val NNF_TAC = CONV_TAC NNF_CONV;
 
 
 (*---------------------------------------------------------------------------*
  * Wellfoundedness: Every non-empty set has an R-minimal element.            *
  *---------------------------------------------------------------------------*)
+
 val WF_DEF = 
 Q.new_definition
- ("WF_DEF",
-      `WF R = !B. (?w:'a. B w) ==> ?min. B min /\ !b. R b min ==> ~B b`);
+ ("WF_DEF", `WF R = !B. (?w:'a. B w) ==> ?min. B min /\ !b. R b min ==> ~B b`);
 
 
 (*---------------------------------------------------------------------------*
@@ -173,9 +157,11 @@ GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[WF_DEF] THEN GEN_TAC THEN
  * John Harrison's definition of WO_INDUCT_TAC in the wellordering library. 
  *---------------------------------------------------------------------------*)
 
+val _ = Parse.hide "C";
+
 val WF_INDUCT_TAC =
  let val wf_thm0 = CONV_RULE (ONCE_DEPTH_CONV ETA_CONV)
-                   (REWRITE_RULE [Q.TAUT_CONV`A==>B==>C = A/\B==>C`]
+                   (REWRITE_RULE [TAUT`A==>B==>C = A/\B==>C`]
                       (CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_FORALL_CONV) 
                           WF_INDUCTION_THM))
       val [R,P] = fst(strip_forall(concl wf_thm0))
@@ -217,6 +203,7 @@ REWRITE_TAC[WF_DEF]
 (*---------------------------------------------------------------------------
  * The empty relation is wellfounded.
  *---------------------------------------------------------------------------*)
+
 val Empty_def = 
 Q.new_definition
         ("Empty_def", `Empty (x:'a) (y:'a) = F`);
@@ -336,6 +323,7 @@ Q.new_definition
  * Obvious, but crucially useful. Unary case. Handling the n-ary case might 
  * be messy!
  *---------------------------------------------------------------------------*)
+
 val RESTRICT_LEMMA = Q.store_thm("RESTRICT_LEMMA",
 `!(f:'a->'b) R (y:'a) (z:'a).   
     R y z ==> (RESTRICT f R z y = f y)`,
@@ -347,6 +335,7 @@ THEN ASM_REWRITE_TAC[]);
  * Two restricted functions are equal just when they are equal on each
  * element of their domain.
  *---------------------------------------------------------------------------*)
+
 val CUTS_EQ = Q.prove(
 `!R f g (x:'a). 
    (RESTRICT f R x = RESTRICT g R x) 
@@ -399,6 +388,7 @@ val approx_SELECT1 = CONV_RULE FORALL_IMP_CONV  approx_SELECT0;
  *    (!w. the_fun R M x w = ((R w x) => (M (RESTRICT (the_fun R M x) R w) w)
  *                                    |  (@v. T)))
  *---------------------------------------------------------------------------*)
+
 val the_fun_def = 
 Q.new_definition
 ("the_fun_def",
@@ -463,13 +453,13 @@ REWRITE_TAC[approx_ext] THEN REPEAT GEN_TAC THEN STRIP_TAC
   THEN REPEAT COND_CASES_TAC THEN RES_TAC
   THEN EXPOSE_CUTS_TAC
   THEN ASM_REWRITE_TAC[]
-  THEN RULE_ASSUM_TAC (REWRITE_RULE[Q.TAUT_CONV`A==>B==>C==>D = A/\B/\C==>D`,
+  THEN RULE_ASSUM_TAC (REWRITE_RULE[TAUT`A==>B==>C==>D = A/\B/\C==>D`,
                                     transitive_def])
   THEN FIRST_ASSUM MATCH_MP_TAC
   THEN RES_TAC THEN ASM_REWRITE_TAC[]);
 
 val AGREE_BELOW = 
-   REWRITE_RULE[Q.TAUT_CONV`A==>B==>C==>D = B/\C/\A==>D`]
+   REWRITE_RULE[TAUT`A==>B==>C==>D = B/\C/\A==>D`]
     (CONV_RULE (DEPTH_CONV RIGHT_IMP_FORALL_CONV) APPROX_EQUAL_BELOW);
 
 
