@@ -16,6 +16,14 @@
 val mosmldir =
 val holdir   =
 
+(* note, if you are specifying directories under Windows, we recommend you
+   use forward slashes (the "/" character) as a directory separator,
+   rather than the 'traditional' backslash (the "\" character).  The
+   problem with the latter is that you have to double them up (i.e.,
+   write "\\") in order to 'escape' them and make the string valid for
+   SML.  For example, write "c:/dir1/dir2/mosml", rather than
+   "c:\\dir1\\dir2\\mosml", and certainly DON'T write "c:\dir1\dir2\mosml". *)
+
 val OS       = "linux";    (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT"        *)
 
