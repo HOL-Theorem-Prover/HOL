@@ -467,43 +467,15 @@ val BITWISE_EVAL = store_thm("BITWISE_EVAL",
 
 (* -------------------------------------------------------- *)
 
-val MOD_WL_2EXP_GT_WL = prove(
-  `!n. WL <= n ==> (MOD_WL (2 EXP n) = 0)`,
-  B_RW_TAC [MOD_WL_def]
-    THEN IMP_RES_TAC LESS_EQ_EXP_MULT
-    THEN ASM_B_SIMP_TAC [ZERO_LT_TWOEXP,MOD_EQ_0]
-);
-
 val BITWISE_WELLDEF = prove(
-  `!n op a b c d. a == b /\ c == d ==> (BITWISE n op) a c == (BITWISE n op) b d`,
-  Induct_on `n`
-    THEN REPEAT STRIP_TAC
-    THENL [
-       A_SIMP_TAC [BITWISE_def,EQUIV_def],
-       FIRST_ASSUM (fn th => `!op. BITWISE n op a c == BITWISE n op b d` by
-                        IMP_RES_TAC (SPECL [`op`,`a`,`b`,`c`,`d`] th))
-         THEN ASM_B_SIMP_TAC [BITWISE_def]
-         THEN Cases_on `n < WL`
-         THENL [
-            IMP_RES_TAC BIT_EQUIV THEN NTAC 4 (POP_ASSUM (K ALL_TAC))
-              THEN A_RW_TAC [SBIT_def]
-              THEN B_FULL_SIMP_TAC [EQUIV_def]
-              THEN ONCE_REWRITE_TAC [MOD_ADD]
-              THEN ASM_B_SIMP_TAC [],
-            RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS])
-              THEN A_RW_TAC [SBIT_def]
-              THEN B_FULL_SIMP_TAC [EQUIV_def]
-              THEN ONCE_REWRITE_TAC [MOD_ADD]
-              THEN ASM_A_SIMP_TAC [MOD_WL_IDEM2,MOD_WL_2EXP_GT_WL]
-         ]
-    ]
+  `!op a b c d. a == b /\ c == d ==> (BITWISE WL op) a c == (BITWISE WL op) b d`,
+  RW_TAC bool_ss [WL_def,EQUIV_def,MOD_WL_THM]
+    THEN ONCE_REWRITE_TAC [GSYM BITWISE_BITS] THEN ASM_REWRITE_TAC []
 );
 
-val BITWISEw_WELLDEF = SPEC `WL` BITWISE_WELLDEF;
-
-val OR_WELLDEF  = REWRITE_RULE [GSYM OR_def]  (SPEC `$\/` BITWISEw_WELLDEF);
-val AND_WELLDEF = REWRITE_RULE [GSYM AND_def] (SPEC `$/\` BITWISEw_WELLDEF);
-val EOR_WELLDEF = REWRITE_RULE [GSYM EOR_def] (SPEC `(\x y. ~(x = y))` BITWISEw_WELLDEF);
+val OR_WELLDEF  = REWRITE_RULE [GSYM OR_def]  (SPEC `$\/` BITWISE_WELLDEF);
+val AND_WELLDEF = REWRITE_RULE [GSYM AND_def] (SPEC `$/\` BITWISE_WELLDEF);
+val EOR_WELLDEF = REWRITE_RULE [GSYM EOR_def] (SPEC `(\x y. ~(x = y))` BITWISE_WELLDEF);
 
 (* -------------------------------------------------------- *)
 

@@ -22,6 +22,8 @@ val SBIT_def        = Define `SBIT b n = if b then 2 EXP n else 0`;
 
 val BITS_def        = Define `BITS h l n = MOD_2EXP (SUC h-l) (DIV_2EXP l n)`;
 
+val BITV_def        = Define `BITV n b = BITS b b n`;
+
 val BIT_def         = Define `BIT b n = (BITS b b n = 1)`;
 
 val SLICE_def       = Define `SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n`;
@@ -603,6 +605,14 @@ val BIT_BITS_THM = store_thm("BIT_BITS_THM",
 
 (* -------------------------------------------------------- *)
 
+val BITV_THM = store_thm("BITV_THM",
+  `!b n. BITV n b = SBIT (BIT b n) 0`,
+  RW_TAC arith_ss [BITV_def,BIT_def,SBIT_def]
+    THEN FULL_SIMP_TAC bool_ss [NOT_BITS2]
+);
+
+(* -------------------------------------------------------- *)
+
 val BITWISE_LT_2EXP = store_thm("BITWISE_LT_2EXP",
   `!n op a b. BITWISE n op a b < 2 EXP n`,
   Induct_on `n`
@@ -670,6 +680,15 @@ val BITWISE_NOT_COR = store_thm("BITWISE_NOT_COR",
     THEN NTAC 2 (WEAKEN_TAC (K true))
     THEN POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
     THEN ASM_REWRITE_TAC [BITS_THM,BIT_def,GSYM NOT_MOD2_LEM,DIV1,EXP_1,SUC_SUB]
+);
+
+val BITWISE_BITS = store_thm("BITWISE_BITS",
+  `!wl op a b. BITWISE (SUC wl) op (BITS wl 0 a) (BITS wl 0 b) = BITWISE (SUC wl) op a b`,
+  Induct
+    THEN SIMP_TAC arith_ss [BITWISE_def,BIT_def,BITS_COMP_THM2,MIN_DEF]
+    THEN FULL_SIMP_TAC arith_ss [BITWISE_def,BIT_def,BITS_COMP_THM2,MIN_DEF]
+    THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
+    THEN SIMP_TAC arith_ss [BITS_COMP_THM2,MIN_DEF]
 );
 
 (* -------------------------------------------------------- *)
