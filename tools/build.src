@@ -322,6 +322,7 @@ end;
 
 val _ = check_against "tools/configure.sml"
 val _ = check_against "tools/build.src"
+val _ = check_against "tools/Globals.src"
 
 val _ =
   case Mosml.argv ()
