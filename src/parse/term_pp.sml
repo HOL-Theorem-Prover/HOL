@@ -710,45 +710,71 @@ fun pp_term (G : grammar) TyG = let
           end handle HOL_ERR _ => ()
         else ()
 
+      exception NotReallyARecord
       val _ = (* check for record field selection *)
         if is_const t1 then let
           val rname_opt = Overload.overloading_of_term overload_info t1
         in
           case rname_opt of
-            SOME s =>
-              if isPrefix recsel_special s andalso isSome recsel_info
-              then let
-                val (prec0, fldtok) = valOf recsel_info
-                (* assumes that field selection is always left associative *)
-                val add_l =
-                  case lgrav of
-                    Prec(n, _) => n >= prec0
-                  | _ => false
-                val add_r =
-                  case rgrav of
-                    Prec(n, _) => n > prec0
-                  | _ => false
-                val prec = Prec(prec0, recsel_special)
-                val add_parens = add_l orelse add_r
-                val lprec = if add_parens then Top else lgrav
-                val fldname =
-                  String.extract(s, size recsel_special, NONE)
-              in
-                begin_block INCONSISTENT 0;
-                pbegin add_parens;
-                pr_term t2 prec lprec prec (depth - 1);
-                add_string fldtok;
-                add_break(0,0);
-                add_string fldname;
-                pend add_parens;
-                end_block (); raise SimpleExit
-              end
-              else ()
+            SOME s => let
+              val fldname =
+                  if isSome recsel_info then
+                    if isPrefix recsel_special s then
+                      SOME (String.extract(s, size recsel_special, NONE), t2)
+                    else if is_substring bigrec_subdivider_string s andalso
+                            !prettyprint_bigrecs
+                    then let
+                        open Overload
+                        val brss = bigrec_subdivider_string
+                        val (f, x) = dest_comb t2
+                        val _ = is_const f orelse raise NotReallyARecord
+                        val fname = valOf (overloading_of_term overload_info f)
+                        val _ = is_substring (brss ^ "sf") fname orelse
+                                raise NotReallyARecord
+                        open Substring
+                        val (_, brsssguff) = position brss (all s)
+                        val dropguff = slice(brsssguff, String.size brss, NONE)
+                        val dropdigits = dropl Char.isDigit dropguff
+                        val fldname = string(slice(dropdigits, 1, NONE))
+                      in
+                        SOME (fldname, x)
+                      end handle HOL_ERR _ => NONE
+                               | NotReallyARecord => NONE
+                               | Option => NONE
+                    else NONE
+                  else NONE
+            in
+              case fldname of
+                SOME(fldname, t2) => let
+                  val (prec0, fldtok) = valOf recsel_info
+                  (* assumes that field selection is always left associative *)
+                  val add_l =
+                      case lgrav of
+                        Prec(n, _) => n >= prec0
+                      | _ => false
+                  val add_r =
+                      case rgrav of
+                        Prec(n, _) => n > prec0
+                      | _ => false
+                  val prec = Prec(prec0, recsel_special)
+                  val add_parens = add_l orelse add_r
+                  val lprec = if add_parens then Top else lgrav
+                in
+                  begin_block INCONSISTENT 0;
+                  pbegin add_parens;
+                  pr_term t2 prec lprec prec (depth - 1);
+                  add_string fldtok;
+                  add_break(0,0);
+                  add_string fldname;
+                  pend add_parens;
+                  end_block (); raise SimpleExit
+                end
+              | NONE => ()
+            end
           | NONE => ()
         end
         else ()
 
-      exception NotReallyARecord
       val _ = (* check for record update *)
         if isSome recwith_info andalso isSome reclist_info then let
           open Overload
@@ -762,11 +788,11 @@ fun pp_term (G : grammar) TyG = let
                 (isSome recupd_info andalso
                  (isPrefix recupd_special s orelse
                   !prettyprint_bigrecs andalso isSuffix "_update" s andalso
-                  is_substring bigrec_subdivider_string s)) orelse
+                  is_substring (bigrec_subdivider_string ^ "sf") s)) orelse
                 (isSome recfupd_info andalso
                  (isPrefix recfupd_special s orelse
                   !prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
-                  is_substring bigrec_subdivider_string s))
+                  is_substring (bigrec_subdivider_string ^ "sf") s))
               | NONE => false
             end else false
           (* descend the rands of a term until one that is not a record
