@@ -14,18 +14,18 @@
 structure bossLib :> bossLib =
 struct
 
-open HolKernel Parse boolLib pairLib;
+open HolKernel Parse boolLib pairLib simpLib;
 
 (* This makes the dependency on listTheory and optionTheory explicit.
    Without it, the theories can change, and bossLib won't get recompiled.
    This is because the listSimps and optionSimps signatures do not change
    in the event of listTheory and optionTheory changing. *)
+
 local open listTheory optionTheory in end;
 
-open simpLib
 infix THEN ORELSE;
 
-val BOSS_ERR = mk_HOL_ERR "bossLib";
+val ERR = mk_HOL_ERR "bossLib";
 
 (*---------------------------------------------------------------------------*
             Datatype definition
@@ -62,7 +62,7 @@ val EVAL           = computeLib.EVAL_CONV;
 val EVAL_RULE      = computeLib.EVAL_RULE
 val EVAL_TAC       = computeLib.EVAL_TAC
 
-val op && = BasicProvers.&&;
+val op && = simpLib.&&;
 
 (*---------------------------------------------------------------------------
      The following simplification sets will be applied in a context
@@ -79,6 +79,7 @@ val op && = BasicProvers.&&;
 local open sumTheory
       infix ++
 in
+val pure_ss = pureSimps.pure_ss
 val bool_ss = boolSimps.bool_ss
 val std_ss =
      (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
@@ -92,7 +93,7 @@ end
 
 fun DECIDE tm =
  numLib.ARITH_PROVE tm handle HOL_ERR _ => tautLib.TAUT_PROVE tm
-                       handle HOL_ERR _ => raise BOSS_ERR "DECIDE" "";
+                       handle HOL_ERR _ => raise ERR "DECIDE" "";
 
 
 fun DECIDE_TAC (g as (asl,_)) =

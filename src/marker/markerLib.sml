@@ -58,4 +58,19 @@ fun move_conj_right P = stmark_conjunct P THENC move_stmarked_conj_right
 fun move_disj_left P = stmark_disjunct P THENC move_stmarked_disj_left
 fun move_disj_right P = stmark_disjunct P THENC move_stmarked_disj_right
 
+fun AC th1 th2 = 
+  EQ_MP (SYM (SPECL [concl th1, concl th2] markerTheory.AC_DEF))
+        (CONJ th1 th2);
+
+fun unAC th = let val th1 = PURE_REWRITE_RULE [AC_DEF] th
+              in (CONJUNCT1 th1, CONJUNCT2 th1)
+              end;
+
+fun Cong th = EQ_MP (SYM(SPEC (concl th) markerTheory.Cong_def)) th;
+
+fun unCong th = PURE_REWRITE_RULE [Cong_def] th;
+
+val AC_tm = prim_mk_const{Name="AC",Thy="marker"}
+val Cong_tm = prim_mk_const{Name="Cong",Thy="marker"};
+
 end

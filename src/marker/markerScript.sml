@@ -71,5 +71,13 @@ val unint_def = new_definition(
   "unint_def",
   ``unint (x:'a) = x``);
 
+
+(*---------------------------------------------------------------------------*)
+(* Support for the simplifier                                                *)
+(*---------------------------------------------------------------------------*)
+
+val AC_DEF = new_definition("AC_DEF", Term `AC b1 b2 = b1 /\ b2`);
+val Cong_def = new_definition("Cong_def", Term `Cong (x:bool) = x`);
+
 val _ = export_theory();
 

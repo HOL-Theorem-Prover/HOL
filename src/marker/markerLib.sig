@@ -16,6 +16,15 @@ sig
   val move_conj_right : (term -> bool) -> conv
   val move_disj_left : (term -> bool) -> conv
   val move_disj_right : (term -> bool) -> conv
+
+  val AC_tm   : term 
+  val AC      : thm -> thm -> thm
+  val unAC    : thm -> thm * thm
+
+  val Cong_tm : term 
+  val Cong    : thm -> thm
+  val unCong  : thm -> thm
+
 end
 
 (*

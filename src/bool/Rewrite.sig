@@ -17,9 +17,6 @@ sig
   val bool_rewrites         : rewrites
   val monitoring            : bool ref
 
-  val Ntimes                : thm -> int -> thm
-  val Once                  : thm -> thm
-
   val REWRITES_CONV         : rewrites -> conv
   val GEN_REWRITE_CONV : (conv -> conv) -> rewrites -> thm list -> conv
   val GEN_REWRITE_RULE : (conv -> conv) -> rewrites -> thm list -> thm -> thm

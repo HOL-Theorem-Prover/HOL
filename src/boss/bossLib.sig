@@ -35,8 +35,9 @@ sig
 
   val ++             : simpset * ssdata -> simpset    (* infix *)
   val &&             : simpset * thm list -> simpset  (* infix *)
+  val pure_ss        : simpset
   val bool_ss        : simpset
-  val std_ss         : simpset                (* bool + option + pair + sum *)
+  val std_ss         : simpset           (* bool + option + pair + sum *)
   val arith_ss       : simpset
   val list_ss        : simpset
   val srw_ss         : unit -> simpset
@@ -44,6 +45,9 @@ sig
   val type_rws       : string -> thm list
   val rewrites       : thm list -> ssdata
   val augment_srw_ss : ssdata list -> unit
+
+  val Cong           : thm -> thm
+  val AC             : thm -> thm -> thm
 
   val SIMP_CONV      : simpset -> thm list -> conv
   val SIMP_RULE      : simpset -> thm list -> thm -> thm

@@ -1983,4 +1983,84 @@ fun prove_abs_fn_one_one th =
                              "|- (!a. to (from a) = a) /\\ "^
                              "(!r. P r = (from (to r) = r))")
 
-end; (* Drule *)
+(*---------------------------------------------------------------------------*)
+(* Rules related to "semantic tags" for controlling rewriting                *)
+(*---------------------------------------------------------------------------*)
+
+fun MK_UNBOUNDED th = EQ_MP (SYM (SPEC (concl th) UNBOUNDED_THM)) th;
+
+fun MK_BOUNDED th n =
+  if n<0 then raise ERR "MK_BOUNDED" "negative bound"
+  else
+  EQ_MP (SYM (SPEC (mk_var(Int.toString n, bool))
+             (SPEC (concl th) BOUNDED_THM)))
+        th;
+
+fun DEST_UNBOUNDED th = 
+ case strip_comb (concl th)
+  of (c,[a]) => if same_const unbounded_tm c
+                then EQ_MP (SPEC a UNBOUNDED_THM) th
+                else raise ERR "DEST_UNBOUNDED" ""
+   | other => raise ERR "DEST_UNBOUNDED" "";
+
+fun DEST_BOUNDED th = 
+ case strip_comb (concl th)
+  of (c,[a1,a2]) => 
+        if same_const bounded_tm c
+         then let val (s,_) = dest_var a2
+              in (EQ_MP (SPEC a2 (SPEC a1 BOUNDED_THM)) th,
+                  Option.valOf(Int.fromString s))
+              end
+         else raise ERR "DEST_BOUNDED" ""
+   | other => raise ERR "DEST_BOUNDED" "";
+
+val Ntimes = MK_BOUNDED;
+val Once = C Ntimes 1;
+
+val is_comm = can (match_term comm_tm);
+val is_assoc = can (match_term assoc_tm);
+
+(*---------------------------------------------------------------------------*)
+(* Classify a pair of theorems as one assoc. thm and one comm. thm. Then     *)
+(* return pair (A,C) where A has the form |- f(x,f(y,z)) = f (f(x,y),z)      *)
+(*---------------------------------------------------------------------------*)
+
+fun regen th = GENL (free_vars_lr (concl th)) th;
+
+fun norm_ac (th1,th2) =
+ let val th1' = SPEC_ALL th1
+     val th2' = SPEC_ALL th2
+     val tm1 = concl th1'
+     val tm2 = concl th2'
+ in if is_comm tm2
+    then if is_assoc tm1 then (regen th1,regen th2) else
+          let val th1a = SYM th1'
+          in if is_assoc (concl th1a)
+             then (regen th1a,regen th2)
+             else (HOL_MESG "unable to AC-normalize input";
+                   raise ERR "norm_ac" "failed")
+          end
+    else if is_comm tm1
+         then if is_assoc tm2 then (regen th2,regen th1) else
+               let val th2a = SYM th2'
+               in if is_assoc (concl th2a) 
+                  then (regen th2a,regen th1)
+                  else (HOL_MESG "unable to AC-normalize input";
+                        raise ERR "norm_ac" "failed")
+               end
+         else (HOL_MESG "unable to AC-normalize input";
+               raise ERR "norm_ac" "failed")
+    end;
+
+(*---------------------------------------------------------------------------*)
+(* Take an AC pair, normalize them, then prove left-commutativity            *)
+(*---------------------------------------------------------------------------*)
+
+fun MK_AC_LCOMM (th1,th2) =
+   let val (a,c) = norm_ac(th1,th2)
+       val lcomm = MATCH_MP (MATCH_MP LCOMM_THM a) c
+   in
+     (regen (SYM (SPEC_ALL a)), c, lcomm)
+   end
+
+end (* Drule *)

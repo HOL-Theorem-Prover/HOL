@@ -24,21 +24,24 @@ infix 5 |->;
        Basic constants
  ---------------------------------------------------------------------------*)
 
-val equality    = prim_mk_const {Name="=",         Thy="min"};
-val implication = prim_mk_const {Name="==>",       Thy="min"};
-val select      = prim_mk_const {Name="@",         Thy="min"};
-val T           = prim_mk_const {Name="T",         Thy="bool"};
-val F           = prim_mk_const {Name="F",         Thy="bool"};
-val universal   = prim_mk_const {Name="!",         Thy="bool"};
-val existential = prim_mk_const {Name="?",         Thy="bool"};
-val exists1     = prim_mk_const {Name="?!",        Thy="bool"};
-val conjunction = prim_mk_const {Name="/\\",       Thy="bool"};
-val disjunction = prim_mk_const {Name="\\/",       Thy="bool"};
-val negation    = prim_mk_const {Name="~",         Thy="bool"};
-val conditional = prim_mk_const {Name="COND",      Thy="bool"};
-val let_tm      = prim_mk_const {Name="LET",       Thy="bool"};
-val arb         = prim_mk_const {Name="ARB",       Thy="bool"};
-val bool_case   = prim_mk_const {Name="bool_case", Thy="bool"};
+val equality     = prim_mk_const {Name="=",         Thy="min"};
+val implication  = prim_mk_const {Name="==>",       Thy="min"};
+val select       = prim_mk_const {Name="@",         Thy="min"};
+val T            = prim_mk_const {Name="T",         Thy="bool"};
+val F            = prim_mk_const {Name="F",         Thy="bool"};
+val universal    = prim_mk_const {Name="!",         Thy="bool"};
+val existential  = prim_mk_const {Name="?",         Thy="bool"};
+val exists1      = prim_mk_const {Name="?!",        Thy="bool"};
+val conjunction  = prim_mk_const {Name="/\\",       Thy="bool"};
+val disjunction  = prim_mk_const {Name="\\/",       Thy="bool"};
+val negation     = prim_mk_const {Name="~",         Thy="bool"};
+val conditional  = prim_mk_const {Name="COND",      Thy="bool"};
+val let_tm       = prim_mk_const {Name="LET",       Thy="bool"};
+val arb          = prim_mk_const {Name="ARB",       Thy="bool"};
+val bool_case    = prim_mk_const {Name="bool_case", Thy="bool"};
+val bounded_tm   = prim_mk_const {Name="BOUNDED",   Thy="bool"};
+val unbounded_tm = prim_mk_const {Name="UNBOUNDED", Thy="bool"};
+
 
 
 (*---------------------------------------------------------------------------
@@ -306,5 +309,26 @@ fun delete_const s =
 
 fun lift_bool _ true  = T
   | lift_bool _ false = F;
+
+(*--------------------------------------------------------------------------*)
+(*  Some simple algebraic properties expressed at the term level.           *)
+(*--------------------------------------------------------------------------*)
+
+val (comm_tm,assoc_tm,idem_tm,ldistrib_tm,rdistrib_tm) =
+    let val f = mk_var("f",Type.alpha --> Type.alpha --> Type.alpha)
+        val g = mk_var("g",Type.alpha --> Type.alpha --> Type.alpha)
+        val g1 = mk_var("g",Type.alpha --> Type.alpha)
+        val x = mk_var("x",Type.alpha)
+        val y = mk_var("y",Type.alpha)
+        val z = mk_var("z",Type.alpha)
+   in (mk_eq(list_mk_comb(f,[x,y]),list_mk_comb(f,[y,x])),
+       mk_eq(list_mk_comb(f,[x,list_mk_comb(f,[y,z])]),
+             list_mk_comb(f,[list_mk_comb(f,[x,y]),z])),
+       mk_eq(mk_comb(g1,mk_comb(g1,x)), mk_comb(g1,x)),
+       mk_eq(list_mk_comb(f,[x,list_mk_comb(g,[y,z])]),
+             list_mk_comb(g,[list_mk_comb(f,[x,y]),list_mk_comb(f,[x,z])])),
+       mk_eq(list_mk_comb(f,[list_mk_comb(g,[y,z]),x]),
+             list_mk_comb(g,[list_mk_comb(f,[y,x]),list_mk_comb(f,[z,x])])))
+   end;
 
 end

@@ -33,38 +33,7 @@ datatype control
      = UNBOUNDED
      | BOUNDED of int ref
 
-val unbounded_tm = prim_mk_const {Thy="bool", Name="UNBOUNDED"};
-val bounded_tm   = prim_mk_const {Thy="bool", Name="BOUNDED"};
 
-fun mk_unbounded th = EQ_MP (SYM (SPEC (concl th) UNBOUNDED_THM)) th;
-
-fun mk_bounded th n =
-  EQ_MP (SYM (SPEC (mk_var(Int.toString n, bool))
-             (SPEC (concl th) BOUNDED_THM)))
-        th;
-
-val Ntimes = mk_bounded;
-val Once = C Ntimes 1;
-
-fun dest_unbounded th = 
- case strip_comb (concl th)
-  of (c,[a]) => if same_const unbounded_tm c
-                then EQ_MP (SPEC a UNBOUNDED_THM) th
-                else raise Fail "dest_unbounded"
-   | other => raise Fail "dest_unbounded";
-
-fun dest_bounded th = 
- case strip_comb (concl th)
-  of (c,[a1,a2]) => 
-        if same_const bounded_tm c
-         then let val (s,_) = dest_var a2
-              in (EQ_MP (SPEC a2 (SPEC a1 BOUNDED_THM)) th,
-                  Option.valOf(Int.fromString s))
-              end
-         else raise Fail "dest_bounded"
-   | other => raise Fail "dest_bounded";
-
-  
 (*---------------------------------------------------------------------------*
  * Split a theorem into a list of theorems suitable for rewriting:           *
  *                                                                           *
@@ -92,7 +61,7 @@ fun decompose tag th =
   handle e => raise wrap_exn "Rewrite" "mk_rewrites.decompose" e;
 
 fun local_mk_rewrites th =
- case total dest_bounded th
+ case total DEST_BOUNDED th
   of NONE => decompose UNBOUNDED th
    | SOME(th',n) => decompose (BOUNDED (ref n)) th';
 
@@ -114,8 +83,8 @@ abstype rewrites = RW of {thms : thm list,
                            net : conv Net.net}
 with
  fun dest_rewrites(RW{thms, ...}) = thms
- fun net_of(RW{net,...}) = net
- val empty_rewrites = RW{thms = [],  net = Net.empty}
+ fun net_of(RW{net,...})          = net
+ val empty_rewrites = RW{thms = [], net= Net.empty}
  val implicit = ref empty_rewrites;
  fun implicit_rewrites() = !implicit
  fun set_implicit_rewrites rws = (implicit := rws);
@@ -123,7 +92,7 @@ with
 fun add_rewrites (RW{thms,net}) thl =
  let val rewrites = itlist (append o local_mk_rewrites) thl []
      fun appconv (c,UNBOUNDED) tm     = c tm
-       | appconv (c,BOUNDED(ref 0)) _ = raise ERR "app_conv" "zero"
+       | appconv (c,BOUNDED(ref 0)) _ = failwith "exceeded bound"
        | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r
  in
    RW{thms = thms@thl,

@@ -22,6 +22,8 @@ sig
   val bool_case      : term
   val let_tm         : term
   val arb            : term
+  val bounded_tm     : term
+  val unbounded_tm   : term
 
   (* Construction routines *)
 
@@ -121,5 +123,13 @@ sig
   (* Lifter from ML bool to HOL bool *)
 
   val lift_bool : hol_type -> bool -> term
+
+  (* Algebraic properties *)
+
+  val comm_tm     : term
+  val assoc_tm    : term
+  val idem_tm     : term
+  val ldistrib_tm : term
+  val rdistrib_tm : term
 
 end

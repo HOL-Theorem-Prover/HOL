@@ -3795,6 +3795,34 @@ val UNBOUNDED_THM =
 
 val _ = save_thm("UNBOUNDED_THM", UNBOUNDED_THM);
 
+
+(*---------------------------------------------------------------------------*)
+(* LCOMM_THM : derive "left-commutativity" from associativity and            *)
+(* commutativity. Used in permutative rewriting, e.g., simpLib entrypoints   *)
+(*                                                                           *)
+(*  LCOMM_THM  |- !f. (!x y. f x y = f y x) ==>                              *)
+(*                    (!x y z. f x (f y z) = f (f x y) z) ==>                *)
+(*                    (!x y z. f x (f y z) = f y (f x z))                    *)
+(*---------------------------------------------------------------------------*)
+
+val LCOMM_THM = save_thm("LCOMM_THM",
+ let val x = mk_var("x",alpha)
+     val y = mk_var("y",alpha)
+     val z = mk_var("z",alpha)
+     val f = mk_var("f",alpha --> alpha --> alpha)
+     val comm = Term`!x y. ^f x y = f y x`
+     val assoc = Term`!x y z. ^f x (f y z) = f (f x y) z`
+     val comm_thm = ASSUME comm
+     val assoc_thm = ASSUME assoc
+     val th0 = SPEC (list_mk_comb(f,[y,z])) (SPEC x comm_thm)
+     val th1 = SYM (SPECL [y,z,x] assoc_thm)
+     val th2 = TRANS th0 th1
+     val th3 = AP_TERM (mk_comb(f,y)) (SPECL[z,x] comm_thm)
+ in
+   GEN f (DISCH assoc (DISCH comm (GENL [x,y,z] (TRANS th2 th3))))
+ end);
+
+
 val _ = export_theory();
 
 end (* boolScript *)

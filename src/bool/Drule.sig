@@ -82,4 +82,13 @@ sig
 
   val define_new_type_bijections 
     : {name:string, ABS:string, REP:string, tyax:thm} -> thm
-end;
+
+  val MK_BOUNDED     : thm -> int -> thm
+  val DEST_BOUNDED   : thm -> thm * int
+  val MK_UNBOUNDED   : thm -> thm
+  val DEST_UNBOUNDED : thm -> thm
+  val Ntimes         : thm -> int -> thm
+  val Once           : thm -> thm
+
+  val MK_AC_LCOMM    : thm * thm -> thm * thm * thm
+end
