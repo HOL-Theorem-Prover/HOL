@@ -199,6 +199,11 @@ fun dest_plet M =
   handle _ => raise ERR "dest_plet" "not a (possibly paired) \"let\""
 
 
+
+(*---------------------------------------------------------------------------*)
+(* Paired binders                                                            *)
+(*---------------------------------------------------------------------------*)
+
 local val FORALL_ERR  = ERR "dest_pforall"  "not a (possibly paired) \"!\""
       val EXISTS_ERR  = ERR "dest_pexists"  "not a (possibly paired) \"?\""
       val EXISTS1_ERR = ERR "dest_pexists1" "not a (possibly paired) \"?!\""
@@ -248,6 +253,87 @@ val strip_pforall = strip (total dest_pforall)
 val strip_pexists = strip (total dest_pexists);
 
 
+
+(*---------------------------------------------------------------------------*)
+(* Support for dealing with the syntax of any kind of let.                   *)
+(*---------------------------------------------------------------------------*)
+
+local 
+  fun dest_plet' tm = 
+     let val (a,b,c) = dest_plet tm
+     in ([(a,b)],c)
+     end
+  fun dest_simple_let tm = 
+     let val (f,x) = dest_let tm
+         val (v,M) = dest_abs f
+     in ([(v,x)],M)
+     end
+  fun dest_and_let tm acc = 
+    let val (f,x) = boolSyntax.dest_let tm
+    in if is_let f
+       then dest_and_let f (x::acc)
+       else let val (blist,M) = strip_pabs f
+            in (zip blist (x::acc), M)
+            end
+    end
+  fun fixup (l,r) = 
+    let val (vstructs,M) = strip_pabs r
+    in (list_mk_comb(l,vstructs),M)
+    end
+in
+fun dest_anylet tm = 
+  let val (blist,M) = dest_simple_let tm handle HOL_ERR _ => 
+                      dest_plet' tm      handle HOL_ERR _ => 
+                      dest_and_let tm []
+  in (map fixup blist,M)
+  end
+  handle HOL_ERR _ => raise ERR "dest_anylet" "not a \"let\"-term"
+end;
+
+local fun abstr (l,r) = 
+        if is_pair l orelse is_var l then (l,r)
+        else let val (f,args) = strip_comb l
+             in (f,list_mk_pabs(args,r))
+             end
+      fun reorg(l,r,M) = let val (a,b) = abstr(l,r) in (a,b,M) end
+in
+fun mk_anylet ([],M) = raise ERR "mk_anylet" "no binding"
+  | mk_anylet ([(l,r)],M) = mk_plet (reorg(l,r,M))
+  | mk_anylet (blist,M) = 
+      let val (L,R) = unzip (map abstr blist)
+          val abstr = list_mk_pabs(L,M)
+      in rev_itlist (fn r => fn tm => mk_let(tm,r)) R abstr
+      end
+end;
+
+fun strip_anylet tm = 
+  case total dest_anylet tm
+   of SOME(blist,M) =>
+       let val (L,N) = strip_anylet M
+       in (blist::L,N)
+       end
+    | NONE => ([],tm);
+
+fun list_mk_anylet (L,M) = itlist (curry mk_anylet) L M;
+
+(* Examples 
+  val tm1 = Term `let x = M in N x`;
+  val tm2 = Term `let (x,y,z) = M in N x y z`;
+  val tm3 = Term `let x = M and y = N in P x y`;
+  val tm4 = Term `let (x,y) = M and z = N in P x y z`;
+  val tm5 = Term `let (x,y) = M and z = N in let u = x in P x y z u`;
+  val tm6 = Term `let f(x,y) = M 
+                  and g z = N 
+                  in let u = x in P (g(f(x,u)))`;
+  val tm7 = Term `let f x = M in P (f y)`;
+  val tm8 = Term `let g x = A in 
+                  let v = g x y in
+                  let f x y (a,b) = g a
+                  and foo = M 
+                  in f x foo v`;
+*)
+
+
 (*---------------------------------------------------------------------------
      A "vstruct" is a tuple of variables, with no duplicate occurrences.
  ---------------------------------------------------------------------------*)
@@ -280,12 +366,17 @@ fun lift_prod ty =
 (* Resolving forward references from bool/Drop                               *)
 (*---------------------------------------------------------------------------*)
 
+fun is_let tm = 
+  case strip_comb tm
+   of (c,[f,x]) => same_const c boolSyntax.let_tm
+    | other => false;
+
 val _ = Drop.dest_pair_hook := dest_pair
-val _ = Drop.dest_plet_hook := dest_plet
+val _ = Drop.strip_let_hook := strip_anylet
 val _ = Drop.dest_pabs_hook := dest_pabs
-val _ = Drop.is_pair_hook := is_pair
-val _ = Drop.is_plet_hook := is_plet
-val _ = Drop.is_pabs_hook := is_pabs
+val _ = Drop.is_pair_hook   := is_pair
+val _ = Drop.is_let_hook    := is_let
+val _ = Drop.is_pabs_hook   := is_pabs
 
 
 end

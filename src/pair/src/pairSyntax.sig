@@ -27,6 +27,7 @@ sig
  val mk_pexists1     : term * term -> term
  val mk_pselect      : term * term -> term
  val mk_plet         : term * term * term -> term
+ val mk_anylet       : (term * term) list * term -> term
 
  val dest_pair       : term -> term * term
  val dest_fst        : term -> term
@@ -38,6 +39,7 @@ sig
  val pbvar           : term -> term
  val pbody           : term -> term
  val dest_plet       : term -> term * term * term
+ val dest_anylet     : term -> (term * term) list * term 
  val dest_pforall    : term -> term * term
  val dest_pexists    : term -> term * term
  val dest_pexists1   : term -> term * term
@@ -46,14 +48,17 @@ sig
 
  val list_mk_pair    : term list -> term
  val list_mk_pabs    : term list * term -> term
+ val list_mk_anylet  : (term * term) list list * term -> term
  val list_mk_pforall : term list * term -> term
  val list_mk_pexists : term list * term -> term
  val strip_pair      : term -> term list
  val spine_pair      : term -> term list
  val unstrip_pair    : hol_type -> term list -> term * term list
  val strip_pabs      : term -> term list * term
+ val strip_anylet    : term -> (term * term) list list * term 
  val strip_pforall   : term -> term list * term
  val strip_pexists   : term -> term list * term
+
 
  val is_pair         : term -> bool
  val is_fst          : term -> bool
