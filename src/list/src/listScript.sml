@@ -66,10 +66,8 @@ val ONE           = arithmeticTheory.ONE;
 val PAIR_EQ = pairTheory.PAIR_EQ;
 
 
-val _ = print "Defining datatype of lists.\n";
 val _ = Datatype.Hol_datatype `list = NIL | CONS of 'a => list`;
 
-val _ = print "Done defining datatype of lists.\n";
 val _ = set_MLname "CONS" "CONS_def";
 
 val _ = add_listform {separator = ";", leftdelim = "[", rightdelim = "]",
