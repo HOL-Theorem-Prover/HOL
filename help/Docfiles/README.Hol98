@@ -16,7 +16,7 @@ Theories.
 In Hol98, theories are represented by ML structures. The theories listed
 below come pre-built in the system.
 
-    -------------------------------------------------------------------
+     ------------------------------------------------------------------
     | minTheory          | the origin theory                           |
     | boolTheory         | basic logical operators                     |
     | pairTheory         | theory of pairs                             |
@@ -25,6 +25,7 @@ below come pre-built in the system.
     | prim_recTheory     | Primitive recursion theorem                 |
     | arithmeticTheory   | Peano arithmetic development                |
     | intTheory          | integers, by John Harrison                  |
+    | transcTheory       | real numbers and analysis, by John Harrison |
     |------------------------------------------------------------------|
     |                    | transitive closure of a relation            |
     | relationTheory     | wellfoundedness, induction, and recursion   |
@@ -32,9 +33,11 @@ below come pre-built in the system.
     |----------------------------------------------------------------  |
     | setTheory          | sets as a type (includes finite sets)       |
     | pred_setTheory     | sets as predicates (includes finite sets)   |
+    | bagTheory          | multisets (includes finite multisets)       |
     |------------------------------------------------------------------|
     | listTheory         | basic theory of lists                       |
     | rich_listTheory    | extended theory of lists                    |
+    | llistTheory        | theory of lazy lists                        |
     |------------------------------------------------------------------|
     | combinTheory       | combinators                                 |
     | optionTheory       | the "option" type                           |
@@ -42,15 +45,16 @@ below come pre-built in the system.
     | ltreeTheory        | polymorphic finitely branching trees        |
     | finite_mapTheory   | finite maps from 'a to 'b                   |
     |------------------------------------------------------------------|
-    | restr_binderTheory | definitions of binder restrictions          |
     | res_quanTheory     | restricted quantifier support               |
     |------------------------------------------------------------------|
     | asciiTheory        | ascii                                       |
     | stringTheory       | strings                                     |
     |------------------------------------------------------------------|
-    | wordTheory         | theory of bitstrings                        |
-    | HOLTheory          | equivalent to HOL theory from hol88/90      |
-    -------------------------------------------------------------------
+    | wordTheory. etc.   | theory of bitstrings                        |
+    |------------------------------------------------------------------|
+    | Temporal_LogicTheory | Linear time temporal logic                |
+    | Omega_AutomataTheory | Infinite state automata                   |
+     ------------------------------------------------------------------
 
 The only theory that is initially loaded by an invocation of Hol98 is
 boolTheory. To gain access to any other theory when working
@@ -92,12 +96,10 @@ Hol98 currently offers the following libraries.
     | decisionLib     | cooperating decision procedures             |
     | mesonLib        | model- elimination first order reasoner     |
     | simpLib         | Isabelle-style simplifier                   |
-    | IndDefLib       | generalized inductive defn. package         |
     | tflLib          | wellfounded recursive definitions           |
-    | mutrecLib,      | mutually recursive datatype definitions     |
-    | nested_recLib   | nested  recursive datatype definitions      |
     | goalstackLib    | simple manager for building tactic proofs   |
     | basicHol90Lib   | derived rules, tactics, convs, rewriting    |
+    | IndDefLib       | generalized inductive defn. package         |
     | ind_defLib      | inductive defn. package                     |
     | optionLib       | option type                                 |
     | pairLib         | extended support for pairs                  |
@@ -115,6 +117,8 @@ Hol98 currently offers the following libraries.
     | refuteLib       | support for refutation procedures           |
     | reduceLib       | basic reasoners for nums and bools          |
     | tautLib         | tautology prover                            |
-    | arithLib        | linear arith. decision procedures           |
     | BoyerMooreLib   | Nqthm-inspired automatic proof procedure    |
+    | numLib          | linear arith. decision procedures           |
+    | decisionLib     | cooperating decision procedures             |
+    | HolBddLib       | BDD-based state-exploration tools           |
     ----------------------------------------------------------------
