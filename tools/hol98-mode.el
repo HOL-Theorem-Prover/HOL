@@ -66,21 +66,25 @@ process in it."
 
 (defun next-hol-lexeme-terminates-tactic ()
   (skip-syntax-forward " ")
-  (or (char-equal (following-char) ?,)
+  (or (eobp)
+      (char-equal (following-char) ?,)
       (char-equal (following-char) ?=)
       (char-equal (following-char) ?\;)
-      (is-a-then (word-at-point))))
+      (is-a-then (word-at-point))
+      (string= (word-at-point) "val")))
 
 (defun previous-hol-lexeme-terminates-tactic ()
   (save-excursion
     (skip-chars-backward " \n\t\r")
-    (or (char-equal (preceding-char) ?,)
+    (or (bobp)
+        (char-equal (preceding-char) ?,)
         (char-equal (preceding-char) ?=)
         (char-equal (preceding-char) ?\;)
         (and (condition-case nil
                  (progn (backward-char 1) t)
                  (error nil))
-             (is-a-then (word-at-point))))))
+             (or (is-a-then (word-at-point))
+                 (string= (word-at-point) "val"))))))
 
 ;;; returns true and moves forward a sexp if this is possible, returns nil
 ;;; and stays where it is otherwise
@@ -172,13 +176,16 @@ process in it."
 
 (defun hol-do-goal (arg)
   "Send term around point to HOL process as goal.
-If prefix ARG is true, or if in transient mark mode and region is active
-then send region instead."
+If prefix ARG is true, or if in transient mark mode, region is active and
+the region contains no backquotes, then send region instead."
   (interactive "P")
-  (if (or (and mark-active transient-mark-mode) arg)
-      (send-string-as-hol-goal
-       (buffer-substring (region-beginning) (region-end)))
-    (send-string-as-hol-goal (hol-term-at-point))))
+  (let ((txt (condition-case nil
+                 (buffer-substring (region-beginning) (region-end))
+               (error nil))))
+    (if (or (and mark-active transient-mark-mode (= (count ?\` txt) 0))
+            arg)
+      (send-string-as-hol-goal txt)
+    (send-string-as-hol-goal (hol-term-at-point)))))
 
 
 (defun copy-region-as-hol-definition (start end arg)
@@ -273,14 +280,20 @@ then send region instead."
 
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.
-If there is no filename at point, then prompt for file.
-If the region is active (in transient mark mode) then send region instead.
-With prefix ARG prompt for a file-name to load.  "
+If there is no filename at point, then prompt for file.  If the region
+is active (in transient mark mode) and it looks like it might be a
+module name, then send region instead. With prefix ARG prompt for a
+file-name to load.  "
   (interactive "P")
   (let* ((wap (word-at-point))
-         (s (if (and mark-active transient-mark-mode)
-                (buffer-substring (region-beginning) (region-end))
-              (if (or (not wap) arg) (read-string "Library to load: ") wap))))
+         (txt (condition-case nil
+                  (buffer-substring (region-beginning) (region-end))
+                (error nil)))
+         (s (cond (arg (read-string "Library to load: "))
+                  ((and mark-active transient-mark-mode
+                        (string-match "^\\w+$" txt)) txt)
+                  (wap wap)
+                  (t (read-string "Library to load: ")))))
     (hol-load-string s)))
 
 ;** hol map keys and function definitions
@@ -343,6 +356,22 @@ or at level 10 with a bare prefix. "
   (interactive)
   (send-string-to-hol "goalstackLib.drop()"))
 
+(defun hol-open-region (start end)
+  "Opens the identifiers in the region.
+Doesn't bother trying to open the word open.  Loads modules first."
+  (interactive "r")
+  (let ((text (buffer-substring start end)))
+    (save-excursion
+      (goto-char start)
+      (while (re-search-forward "\\w+" end t)
+        (let ((module-name (match-string 0)))
+          (if (not (string= "open" module-name))
+              (progn
+                (hol-load-string module-name)
+                (send-string-to-hol (concat "open " module-name)))))))))
+
+
+
 (define-key global-map "\M-h" 'hol-map)
 
 (define-key hol-map "\C-c" 'hol-interrupt)
@@ -361,6 +390,7 @@ or at level 10 with a bare prefix. "
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'copy-region-as-wmizar-tactic)
 (define-key hol-map "n"    'hol-name-top-theorem)
+(define-key hol-map "o"    'hol-open-region)
 (define-key hol-map "p"    'hol-print)
 (define-key hol-map "r"    'hol-rotate)
 (define-key hol-map "R"    'hol-restart-goal)
