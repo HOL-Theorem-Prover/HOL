@@ -342,9 +342,9 @@ fun TC printers =
                                      origin_function="unify",message})
        => let val tmp = !Globals.show_types
               val _   = Globals.show_types := true
-              val Rator' = to_term (overloading_resolution Rator)
+              val Rator' = to_term (overloading_resolution0 Rator)
                 handle e => (Globals.show_types := tmp; raise e)
-              val Rand'  = to_term (overloading_resolution Rand)
+              val Rand'  = to_term (overloading_resolution0 Rand)
                 handle e => (Globals.show_types := tmp; raise e)
           in
             Lib.say "\nType inference failure: unable to infer a type \
@@ -375,7 +375,7 @@ fun TC printers =
                                     origin_function="unify",message})
        => let val tmp = !Globals.show_types
               val _ = Globals.show_types := true
-              val real_term = to_term (overloading_resolution tm)
+              val real_term = to_term (overloading_resolution0 tm)
                 handle e => (Globals.show_types := tmp; raise e)
               val real_type = Pretype.toType ty
                 handle e => (Globals.show_types := tmp; raise e)
@@ -396,25 +396,35 @@ fun TC printers =
 in check
 end end;
 
-val typecheck_phase1 = TC
+fun typecheck_phase1 pfns ptm =
+    TC pfns ptm
+    handle phase1_exn(s,ty) =>
+           case pfns of
+             NONE => (Lib.say s; raise ERR "typecheck" s)
+           | SOME (_, typ) =>
+             (Lib.say s;
+              Lib.say "Wanted it to have type:  ";
+              Lib.say (typ ty);
+              Lib.say "\n";
+              raise ERR "typecheck" s);
 
 
 
 fun typecheck pfns ptm0 = let
   val () = TC pfns ptm0
   val ptm = overloading_resolution0 ptm0
-            handle phase1_exn(s,ty) =>
-                   case pfns of
-                     NONE => (Lib.say s; raise ERR "typecheck" s)
-                   | SOME (_, typ) =>
-                     (Lib.say s;
-                      Lib.say "Wanted it to have type:  ";
-                      Lib.say (typ ty);
-                      Lib.say "\n";
-                      raise ERR "typecheck" s)
 in
   to_term ptm
-end
+end handle phase1_exn(s,ty) =>
+           case pfns of
+             NONE => (Lib.say s; raise ERR "typecheck" s)
+           | SOME (_, typ) =>
+             (Lib.say s;
+              Lib.say "Wanted it to have type:  ";
+              Lib.say (typ ty);
+              Lib.say "\n";
+              raise ERR "typecheck" s)
+
 
 end; (* Preterm *)
 
