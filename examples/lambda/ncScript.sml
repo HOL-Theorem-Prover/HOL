@@ -41,7 +41,7 @@ val BI_nc =
       {name = "BI_nc",
        ABS  = "ABS_nc",
        REP  = "REP_nc",
-       tyax = new_type_definition ("nc", 
+       tyax = new_type_definition ("nc",
                  Q.prove(`?x:'a dB. dOK x`, PROVE_TAC [dOK_DEF]))};
 
 val REP_nc_11 = prove_rep_fn_one_one BI_nc;
@@ -381,7 +381,7 @@ val COPY_BUILD = Q.prove(
     (!t u. SND p(t @@ u) = app(FST p t, SND p t) (FST p u, SND p u)) /\
     (!x u. SND p(LAM x u) =
               lam(\y. (FST p([VAR y/x]u),SND p([VAR y/x]u)))))`,
-RW_TAC std_ss [DECIDE (Term 
+RW_TAC std_ss [DECIDE (Term
                   `(a /\ b /\ c /\ d) /\ (e /\ f /\ g /\ h)
                         =
                    (a /\ e) /\ (b /\ f) /\ (c /\ g) /\ (d /\ h)`),
@@ -1046,9 +1046,9 @@ STRIP_TAC THEN nc_INDUCT_TAC2 THENL
         val th1 = Q.prove(`FINITE ^vs`,
                   REWRITE_TAC [FINITE_UNION,FINITE_FV, FINITE_FVS,FINITE_DOM])
         val th2 = MATCH_MP NEW_FRESH_string th1
-        val th3 = REWRITE_RULE [GSYM UNION_ASSOC] th2
+        val th3 = REWRITE_RULE [UNION_ASSOC] th2
         val th4 = PURE_ONCE_REWRITE_RULE [IN_UNION] th3
-        val th5 = REWRITE_RULE [UNION_ASSOC,DE_MORGAN_THM] th4
+        val th5 = REWRITE_RULE [GSYM UNION_ASSOC,DE_MORGAN_THM] th4
         val th6 = MATCH_MP SIMPLE_ALPHA (CONJUNCT2 th5)
     in
       SUBST1_TAC (Q.SPEC `y` th6)
@@ -1078,7 +1078,7 @@ val ncLENGTH_EXISTS = Q.store_thm("ncLENGTH_EXISTS",
      (!x. hom(VAR x) = 1) /\
      (!t u. hom(t @@ u) = (hom t) + (hom u)) /\
      (!x u. hom(LAM x u) = SUC (hom u))`,
-STRIP_ASSUME_TAC existence 
+STRIP_ASSUME_TAC existence
   THEN IMP_RES_TAC lemma3
   THEN Q.EXISTS_TAC `hom`
   THEN RW_TAC std_ss [GSYM ADD1,lemma4,lemma5]);

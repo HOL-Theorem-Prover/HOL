@@ -51,6 +51,9 @@ val Cond =
 
 (* prob_algebra *)
 
+val INTER_ASSOC = GSYM INTER_ASSOC
+val UNION_ASSOC = GSYM UNION_ASSOC
+
 (* ------------------------------------------------------------------------- *)
 (* The definition of probability.                                            *)
 (* ------------------------------------------------------------------------- *)
@@ -172,7 +175,7 @@ val PROB_SPACE_BERN = store_thm
   ("PROB_SPACE_BERN",
    ``prob_space bern``,
    PROVE_TAC [bern_def]);
-   
+
 val EVENTS_BERN = store_thm
   ("EVENTS_BERN",
    ``events bern = sigma prob_algebra``,
@@ -928,7 +931,7 @@ val INDEP_FN_STRONG = store_thm
        ++ PROVE_TAC [])
    ++ Know
       `(\n. (prob bern o $INTER (PREIMAGE (FST o f) x) o f') n
-        * prob bern (PREIMAGE (SND o f) x')) sums 
+        * prob bern (PREIMAGE (SND o f) x')) sums
        (prob bern (PREIMAGE (FST o f) x) * prob bern (PREIMAGE (SND o f) x'))`
    >> (ONCE_REWRITE_TAC [REAL_MUL_SYM]
        ++ MATCH_MP_TAC SER_CMUL
@@ -1372,7 +1375,7 @@ val INDEP_FN_BIND = store_thm
     ++ Rewr
     ++ Know `s IN prefix_set x = T`
     >> PROVE_TAC [PREFIX_SET_APPEND]
-    ++ Rewr   
+    ++ Rewr
     ++ RW_TAC std_ss []
     ++ Suff
   `(sdrop (LENGTH x) (prefix_seq (APPEND x x')) = prefix_seq x') /\
@@ -2061,7 +2064,7 @@ val PROB_BERN_PROB_WHILE_CUT = store_thm
    ++ Cases_on `n`
    ++ RW_TAC std_ss [prob_while_cut_def, o_DEF, UNIT_DEF, GSYM EMPTY_DEF,
                      PROB_BERN_BASIC, REAL_LE_REFL]);
-       
+
 val MANY = store_thm
   ("MANY",
    ``!f n.
@@ -2091,7 +2094,7 @@ val PROB_BERN_MANY = store_thm
    >> RW_TAC std_ss [pow, UNIT_DEF, o_DEF, GSYM UNIV_DEF,
                      PROB_BERN_BASIC, prob_while_cut_def]
    ++ RW_TAC std_ss [prob_while_cut_def, I_THM, K_THM]
-   ++ (MP_TAC o 
+   ++ (MP_TAC o
        Q.SPECL
        [`f`, `prob_while_cut I (K f) n`,
         `prob bern (FST o (f : (num -> bool) -> bool # (num -> bool)))`])
@@ -3862,7 +3865,7 @@ val PROB_BERN_BIND_EQ = store_thm
    ++ Cond >> RW_TAC std_ss []
    ++ RW_TAC std_ss [SUMS_EQ]
    ++ POP_ASSUM (REWRITE_TAC o wrap o SYM));
-       
+
 val PROB_BERN_BIND_SDEST = store_thm
   ("PROB_BERN_BIND_SDEST",
    ``!f p.
@@ -4020,7 +4023,7 @@ val PROB_BERN_UNTIL = store_thm
    ++ Rewr
    ++ Know `!a b c d : real. (a = b) /\ (c = d) ==> (a + c = b + d)`
    >> REAL_ARITH_TAC
-   ++ DISCH_THEN MATCH_MP_TAC 
+   ++ DISCH_THEN MATCH_MP_TAC
    ++ CONJ_TAC
    >> (MATCH_MP_TAC RAND_THM
        ++ SET_EQ_TAC
@@ -4281,7 +4284,7 @@ val POSSIBLY_SOME_COIN_FLIP1 = store_thm
    ++ SET_EQ_TAC
    ++ PSET_TAC [o_THM]
    ++ RW_TAC std_ss [SPECIFICATION]);
-   
+
 val POSSIBLY_SOME_COIN_FLIP2 = store_thm
   ("POSSIBLY_SOME_COIN_FLIP2",
    ``!f g.

@@ -9,5 +9,5 @@ then
 fi
 
 echo -n "$MPATH: building... "
-$Holmake -I ../ho_prover -I ../subtypes -I ../RSA -I ../formalize --qof
-echo "done."
+$Holmake -I ../ho_prover -I ../subtypes -I ../RSA -I ../formalize --qof &&
+ echo "done."

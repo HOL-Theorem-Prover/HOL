@@ -51,6 +51,7 @@ parity () {
 
 miller () {
   cd miller
+  ./m clean
   ./m
   cd ..
 }

@@ -20,6 +20,7 @@ open HolKernel Parse boolLib Prim_rec pairLib numLib
      numTheory prim_recTheory arithmeticTheory BasicProvers;
 
 infix THEN THENL THENC ORELSE ORELSEC |->;
+infix 8 by
 
 
 (* ---------------------------------------------------------------------*)
@@ -327,7 +328,7 @@ val IN_UNION = store_thm
 
 val UNION_ASSOC = store_thm
     ("UNION_ASSOC",
-     (--`!(s:'a set) t u. (s UNION t) UNION u = s UNION (t UNION u)`--),
+     (--`!(s:'a set) t u. s UNION (t UNION u) = (s UNION t) UNION u`--),
      REWRITE_TAC [EXTENSION, IN_UNION] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
      ASM_REWRITE_TAC[]);
@@ -402,7 +403,7 @@ val IN_INTER = store_thm
 
 val INTER_ASSOC = store_thm
     ("INTER_ASSOC",
-     (--`!(s:'a set) t u. (s INTER t) INTER u = s INTER (t INTER u)`--),
+     (--`!(s:'a set) t u. s INTER (t INTER u) = (s INTER t) INTER u`--),
      REWRITE_TAC [EXTENSION, IN_INTER, CONJ_ASSOC]);
 
 val INTER_IDEMPOT = store_thm
@@ -1528,17 +1529,20 @@ val FINITE_DELETE =
      [MATCH_ACCEPT_TAC DELETE_FINITE,
       DISCH_THEN (MATCH_ACCEPT_TAC o MATCH_MP FINITE_DELETE)]);
 
-val UNION_FINITE = TAC_PROOF(([],
---`!s:'a set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)`--),
-     SET_INDUCT_TAC THENL
-     [REWRITE_TAC [UNION_EMPTY],
-      SET_INDUCT_TAC THENL
-      [IMP_RES_TAC FINITE_INSERT THEN ASM_REWRITE_TAC [UNION_EMPTY],
-       SUBST1_TAC (SPECL [--`s':'a set`--, --`e':'a`--] INSERT_SING_UNION)
-       THEN PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL UNION_ASSOC)] THEN
-       PURE_REWRITE_TAC [SPECL [(--`s:'a set`--),(--`{x:'a}`--)]UNION_COMM]
-       THEN PURE_REWRITE_TAC [UNION_ASSOC,SYM(SPEC_ALL INSERT_SING_UNION)] THEN
-       IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT]]);
+open SingleStep simpLib boolSimps
+val UNION_FINITE = prove(
+  --`!s:'a set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)`--,
+  SET_INDUCT_TAC THENL [
+    REWRITE_TAC [UNION_EMPTY],
+    SET_INDUCT_TAC THENL [
+      IMP_RES_TAC FINITE_INSERT THEN ASM_REWRITE_TAC [UNION_EMPTY],
+      `(e INSERT s) UNION (e' INSERT s') =
+          s UNION (e INSERT e' INSERT s')` by
+         SIMP_TAC bool_ss [IN_UNION, EXTENSION, IN_INSERT, NOT_IN_EMPTY,
+                           EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM] THEN
+      ASM_SIMP_TAC bool_ss [FINITE_INSERT, FINITE_EMPTY]
+    ]
+  ]);
 
 val FINITE_UNION_LEMMA = TAC_PROOF(([],
 --`!s:'a set. FINITE s ==> !t. FINITE (s UNION t) ==> FINITE t`--),
@@ -1550,15 +1554,10 @@ val FINITE_UNION_LEMMA = TAC_PROOF(([],
        DISCH_THEN (MP_TAC o MATCH_MP INSERT_FINITE) THEN
        FIRST_ASSUM MATCH_ACCEPT_TAC]]);
 
-val FINITE_UNION = TAC_PROOF(([],
---`!s:'a set. !t. FINITE(s UNION t) ==> (FINITE s /\ FINITE t)`--),
-     REPEAT STRIP_TAC THEN
-     IMP_RES_THEN MATCH_MP_TAC FINITE_UNION_LEMMA THENL
-     [SUBST1_TAC (SPECL [(--`s:'a set`--),(--`t:'a set`--)] UNION_COMM)
-      THEN REWRITE_TAC [UNION_ASSOC,UNION_IDEMPOT] THEN
-      PURE_ONCE_REWRITE_TAC [UNION_COMM] THEN
-      FIRST_ASSUM ACCEPT_TAC,
-      ASM_REWRITE_TAC [UNION_ASSOC,UNION_IDEMPOT]]);
+val FINITE_UNION = prove(
+  --`!s:'a set. !t. FINITE(s UNION t) ==> (FINITE s /\ FINITE t)`--,
+  REPEAT STRIP_TAC THEN IMP_RES_THEN MATCH_MP_TAC FINITE_UNION_LEMMA THEN
+  PROVE_TAC [UNION_COMM, UNION_ASSOC, UNION_IDEMPOT]);
 
 val FINITE_UNION =
     store_thm
@@ -2516,7 +2515,6 @@ val FINITE_ISO_NUM =
 
 open simpLib boolSimps mesonLib SingleStep
 infix ++
-infix 8 by
 val AP = numLib.ARITH_PROVE
 val arith_ss = bool_ss ++ numSimps.ARITH_ss
 

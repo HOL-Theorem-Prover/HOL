@@ -15,6 +15,8 @@ val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
 val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
+val INTER_ASSOC = GSYM INTER_ASSOC
+val UNION_ASSOC = GSYM UNION_ASSOC
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -1329,7 +1331,7 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
        ++ REAL_ARITH_TAC)
    ++ RW_TAC std_ss [SUMINF_ADD, o_THM]
    ++ Know `!a b : real. (a = b) ==> a <= b` >> REAL_ARITH_TAC
-   ++ DISCH_THEN MATCH_MP_TAC 
+   ++ DISCH_THEN MATCH_MP_TAC
    ++ MATCH_MP_TAC RAND_THM
    ++ FUN_EQ_TAC
    ++ RW_TAC std_ss [o_THM]
@@ -1382,9 +1384,9 @@ val IN_SIGMA = store_thm
 val SIGMA_ALGEBRA = store_thm
   ("SIGMA_ALGEBRA",
    ``!p.
-       sigma_algebra p = 
+       sigma_algebra p =
        {} IN p /\ (!s. s IN p ==> COMPL s IN p) /\
-       (!c. countable c /\ c SUBSET p ==> BIGUNION c IN p)``,       
+       (!c. countable c /\ c SUBSET p ==> BIGUNION c IN p)``,
    RW_TAC std_ss [sigma_algebra_def, algebra_def]
    ++ EQ_TAC >> PROVE_TAC []
    ++ RW_TAC std_ss []
@@ -1504,7 +1506,7 @@ val SIGMA_SUBSET_MEASURABLE_SETS = store_thm
 val SIGMA_ALGEBRA_FN = store_thm
   ("SIGMA_ALGEBRA_FN",
    ``!a.
-       sigma_algebra a = 
+       sigma_algebra a =
        {} IN a /\ (!s. s IN a ==> COMPL s IN a) /\
        (!f : num -> 'a -> bool.
           f IN (UNIV -> a) ==> BIGUNION (IMAGE f UNIV) IN a)``,
@@ -1524,7 +1526,7 @@ val SIGMA_ALGEBRA_FN = store_thm
 val SIGMA_ALGEBRA_FN_DISJOINT = store_thm
   ("SIGMA_ALGEBRA_FN_DISJOINT",
    ``!a.
-       sigma_algebra a = 
+       sigma_algebra a =
        {} IN a /\ (!s. s IN a ==> COMPL s IN a) /\
        (!s t. s IN a /\ t IN a ==> s UNION t IN a) /\
        (!f : num -> 'a -> bool.

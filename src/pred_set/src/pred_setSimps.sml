@@ -21,8 +21,7 @@ struct
   val PRED_SET_AC_ss = simpLib.SIMPSET
     {
      convs = [], rewrs = [], filter = NONE, dprocs = [], congs = [],
-     ac = [(SYM (SPEC_ALL UNION_ASSOC), SPEC_ALL UNION_COMM),
-           (SYM (SPEC_ALL INTER_ASSOC), SPEC_ALL INTER_COMM)]
+     ac = [(UNION_ASSOC, UNION_COMM), (INTER_ASSOC, INTER_COMM)]
      }
 
   (* the rewrites in PRED_SET_ss are already in srw_ss because they are

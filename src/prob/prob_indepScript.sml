@@ -97,7 +97,7 @@ val ALG_COVER_UNIV = store_thm
    ``alg_cover [[]] = K []``,
    RW_TAC std_ss [GSYM EQ_EXT_EQ]
    ++ MP_TAC (Q.SPECL [`[[]]`, `x`] ALG_COVER_WELL_DEFINED)
-   ++ RW_TAC std_ss [MEM, K_DEF, ALG_COVER_SET_BASIC]);   
+   ++ RW_TAC std_ss [MEM, K_DEF, ALG_COVER_SET_BASIC]);
 
 val MAP_CONS_TL_FILTER = store_thm
   ("MAP_CONS_TL_FILTER",
@@ -354,7 +354,7 @@ val ALG_COVER_HEAD = store_thm
     >> RW_TAC std_ss []
     ++ KILL_ALL_TAC
     ++ RW_TAC std_ss [o_DEF]]);
-  
+
 val ALG_COVER_TAIL_STEP = store_thm
   ("ALG_COVER_TAIL_STEP",
    ``!l1 l2 q. alg_cover_set l1 /\ alg_cover_set l2 ==>
@@ -420,6 +420,7 @@ val ALG_COVER_TAIL_PROB = store_thm
     ++ PSET_TAC []
     ++ PROVE_TAC []]);
 
+val INTER_ASSOC = GSYM INTER_ASSOC
 val INDEP_INDEP_SET_LEMMA = store_thm
   ("INDEP_INDEP_SET_LEMMA",
    ``!l. alg_cover_set l
@@ -570,7 +571,7 @@ val BIND_STEP = store_thm
        BIND SDEST (\k. f o SCONS k) = f``,
    RW_TAC std_ss [BIND_DEF, o_DEF, GSYM EQ_EXT_EQ, SDEST_def]
    ++ SEQ_CASES_TAC `x`
-   ++ RW_TAC std_ss [SHD_SCONS, STL_SCONS]);   
+   ++ RW_TAC std_ss [SHD_SCONS, STL_SCONS]);
 
 val INDEP_BIND_SDEST = store_thm
   ("INDEP_BIND_SDEST",
@@ -685,6 +686,6 @@ val PROB_INDEP_BOUND = store_thm
    ++ NTAC 3 (POP_ASSUM (K ALL_TAC))
    ++ RW_TAC std_ss [INDEP_MEASURABLE1]
    ++ PSET_TAC [o_DEF]
-   ++ RW_TAC arith_ss []);   
+   ++ RW_TAC arith_ss []);
 
 val _ = export_theory ();

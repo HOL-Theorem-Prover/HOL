@@ -7,6 +7,5 @@ then
         echo "done."
 else
         echo -n "$MPATH: building... "
-        $Holmake --qof
-        echo "done."
+        $Holmake --qof && echo "done."
 fi
