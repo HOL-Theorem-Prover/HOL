@@ -671,6 +671,12 @@ S "val _ = Definition.new_definition_hook := (dest, post)"; NL()
   end)};
 
 
+val _ = BasicProvers.export_rewrites
+        ["PAIR", "FST", "SND", "CLOSED_PAIR_EQ", "CURRY_UNCURRY_THM",
+         "UNCURRY_CURRY_THM", "CURRY_ONE_ONE_THM", "UNCURRY_ONE_ONE_THM",
+         "UNCURRY", "CURRY_DEF", "PAIR_MAP_THM"]
+
+
 val _ = export_theory();
 
 val _ = export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))
