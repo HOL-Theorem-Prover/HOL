@@ -133,12 +133,19 @@ val Fact1_dev =
  Refine (Lib[FactIter2_dev]) Fact_dev;
 
 (*****************************************************************************)
-(* Create implementation of factorial (HOL's built-in FACT)                  *)
+(* Refine all remaining DEVs to ATM                                          *)
+(*****************************************************************************)
+val Fact2_dev =
+ Refine ATMfn Fact1_dev;
+
+(*****************************************************************************)
+(* Create implementation of FACT (HOL's built-in factorial function)         *)
 (*****************************************************************************)
 val FACT_dev =
  save_thm
   ("FACT_dev",
-   REWRITE_RULE [FactThm] Fact1_dev);
+   REWRITE_RULE [FactThm] Fact2_dev);
+
 
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)
