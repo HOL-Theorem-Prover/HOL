@@ -819,7 +819,8 @@ fun prettyprint_grammar pstrm (G :grammar) = let
   end
   fun uninteresting_overload (r:Overload.overloaded_op_info) =
     length (#actual_ops r) = 1 andalso
-    #Name (hd (#actual_ops r)) = #overloaded_op r
+    #Name (hd (#actual_ops r)) = #overloaded_op r andalso
+    length (Term.decls (#overloaded_op r)) = 1
   fun print_overloading oinfo0 =
     if List.all uninteresting_overload oinfo0 then ()
     else let
@@ -834,23 +835,30 @@ fun prettyprint_grammar pstrm (G :grammar) = let
                                          n))
         0
         oinfo
-      fun pr_ov (r as {overloaded_op,actual_ops,...}) =
-        (begin_block INCONSISTENT 0;
-         add_string (overloaded_op^
-                     nblanks (max - String.size overloaded_op)^
-                     " -> ");
-         add_break(1,2);
-         begin_block INCONSISTENT 0;
-         pr_list (add_string o #Name) (fn () => ()) (fn () => add_break (1,0))
-                 actual_ops;
-         end_block();
-         end_block())
+      fun pr_ov (r as {overloaded_op,actual_ops,...}) = let
+        fun pr_name r =
+          case Term.decls (#Name r) of
+            [] => raise Fail "term_grammar.prettyprint: should never happen"
+          | [_] => #Name r
+          | _ => (#Thy r) ^ "$" ^ (#Name r)
+      in
+        begin_block INCONSISTENT 0;
+        add_string (overloaded_op^
+                    nblanks (max - String.size overloaded_op)^
+                    " -> ");
+        add_break(1,2);
+        begin_block INCONSISTENT 0;
+        pr_list (add_string o pr_name) (fn () => ()) (fn () => add_break (1,0))
+                actual_ops;
+        end_block();
+        end_block()
+      end
     in
       add_newline pstrm;
       add_string "Overloading:";
       add_break(1,2);
       begin_block CONSISTENT 0;
-      pr_list pr_ov (fn () => ()) (fn () => add_break(1,0)) oinfo;
+      pr_list pr_ov (fn () => ()) (fn () => add_newline pstrm) oinfo;
       end_block ()
     end
 in
