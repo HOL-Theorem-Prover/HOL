@@ -39,20 +39,6 @@ val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
 val _ = new_theory "list";
 
-(*---------------------------------------------------------------------------*)
-(* Define some useful support, which doesn't get defined until SingleStep    *)
-(* which is in bossLib, alas.                                                *)
-(*---------------------------------------------------------------------------*)
-(*
-fun (q by t) = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC THENL [t, ALL_TAC]
-
-fun genCases_on thm q = 
-  REPEAT_TCL STRIP_THM_THEN 
-    (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th) (Q.SPEC q thm)
-
-val Cases_on = genCases_on arithmeticTheory.num_CASES;
-*)
-
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
 val NOT_SUC      = numTheory.NOT_SUC
@@ -77,7 +63,6 @@ val LESS_MONO_EQ = arithmeticTheory.LESS_MONO_EQ;
 val LESS_MONO_EQ = arithmeticTheory.LESS_MONO_EQ;
 val ADD_EQ_0     = arithmeticTheory.ADD_EQ_0;
 val ONE          = arithmeticTheory.ONE;
-
 val PAIR_EQ      = pairTheory.PAIR_EQ;
 
 (*---------------------------------------------------------------------------*)
@@ -151,8 +136,8 @@ val APPEND = new_recursive_definition
        def = --`(!l:'a list. APPEND [] l = l) /\
                   (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)`--};
 
-val _ = set_fixity "<>" (Infixl 500);
-val _ = overload_on ("<>", Term`APPEND`);
+val _ = set_fixity "++" (Infixl 500);
+val _ = overload_on ("++", Term`APPEND`);
 
 val FLAT = new_recursive_definition
       {name = "FLAT",
