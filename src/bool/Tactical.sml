@@ -319,4 +319,15 @@ fun CHANGED_TAC tac g =
  in if set_eq gl [g] then raise ERR "CHANGED_TAC" "no change" else (gl,p)
  end;
 
+(*---------------------------------------------------------------------------
+ * A tactical that parses in the context of a goal, a la the Q library.
+ *---------------------------------------------------------------------------*)
+
+fun parse_with_goal t (asms, g) =
+  let val ctxt = free_varsl (g :: asms)
+  in Parse.parse_in_context ctxt t
+  end;
+
+val Q_TAC = fn tac => fn g => W (tac o parse_with_goal g);
+
 end;  (* Tactical *)
