@@ -548,6 +548,7 @@ val INDEP_UNIT = store_thm
    ++ RW_TAC std_ss [ALG_COVER_SET_BASIC, ALG_COVER_UNIV, K_DEF, UNIT_DEF,
 		     SDROP_def, LENGTH, I_THM]);
 
+val SDROP_def' = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV SDROP_def
 val INDEP_SDEST = store_thm
   ("INDEP_SDEST",
    ``indep SDEST``,
@@ -563,7 +564,7 @@ val INDEP_SDEST = store_thm
    ++ REPEAT (POP_ASSUM MP_TAC)
    ++ REWRITE_TAC [MEM, SHD_SCONS, STL_SCONS]
    ++ (STRIP_TAC ++ RW_TAC std_ss [alg_embed_def, SHD_SCONS, HD, LENGTH,
-				   SDROP_def, o_DEF, I_THM, STL_SCONS]));
+				   SDROP_def', o_DEF, I_THM, STL_SCONS]));
 
 val BIND_STEP = store_thm
   ("BIND_STEP",

@@ -45,7 +45,7 @@ fun prove_thm(_:string,tm,tac) = prove(tm,tac);
 
 val Next_def =
  Define
-  `Next R B state = 
+  `Next R B state =
     ?state_. B state_ /\  R(state_,state)`;
 
 (*****************************************************************************)
@@ -85,25 +85,25 @@ val ReachIn_def =
 val ReachIn_rec =
  store_thm
   ("ReachIn_rec",
-   ``(!R B state. 
+   ``(!R B state.
        ReachIn R B 0 state = B state)
    /\
-   (!R B n state. 
-     ReachIn R B (SUC n) state = 
+   (!R B n state.
+     ReachIn R B (SUC n) state =
      (?state_. ReachIn R B n state_ /\ R(state_,state)))``,
    PROVE_TAC[ReachIn_def,Next_def]);
 
 val ReachIn_Next =
- prove_thm 
+ prove_thm
   ("ReachIn_Next",
    ``!n. ReachIn R (Next R B) n = ReachIn R B (SUC n)``,
-   Induct   
+   Induct
     THEN RW_TAC std_ss [ReachIn_def,Next_def]);
 
 val ReachIn_expand =
  prove_thm
   ("ReachIn_expand",
-   ``!n. ReachIn R (Next R B) n state = 
+   ``!n. ReachIn R (Next R B) n state =
           (?state_. ReachIn R B n state_ /\ R(state_,state))``,
     PROVE_TAC[ReachIn_def,Next_def,ReachIn_Next]);
 
@@ -122,7 +122,7 @@ val Reachable_def =
  Define
   `Reachable R B state = ?n. ReachIn R B n state`;
 
-val Reachable_eqn = 
+val Reachable_eqn =
  prove_thm
   ("Reachable_eqn",
    ``Reachable R B state =
@@ -139,7 +139,7 @@ val Reachable_eqn =
 
 val ReachBy_def =
  Define
-  `ReachBy R B n state = 
+  `ReachBy R B n state =
     ?m. (m <= n) /\ ReachIn R B m state`;
 
 val ReachIn_IMPLIES_ReachBy =
@@ -150,16 +150,16 @@ val ReachIn_IMPLIES_ReachBy =
 
 (* Proof of  ReachBy_lemma below is gross -- done in zombie mode *)
 
-val ReachBy_lemma = 
+val ReachBy_lemma =
  prove_thm
   ("ReachBy_lemma",
    ``(!R B state.
        ReachBy R B 0 state = B state)
      /\
      (!R B n state.
-       ReachBy R B (SUC n) state = 
-        ReachBy R B n state 
-        \/ 
+       ReachBy R B (SUC n) state =
+        ReachBy R B n state
+        \/
         Next R (ReachBy R B n) state)``,
    REWRITE_TAC[ReachBy_def,ReachIn_def,LESS_EQ_0]
     THEN CONJ_TAC
@@ -170,9 +170,9 @@ val ReachBy_lemma =
        THEN EQ_TAC
        THEN REPEAT STRIP_TAC
        THENL
-        [ASSUM_LIST(fn[th1,th2]=> 
+        [ASSUM_LIST(fn[th1,th2]=>
                      DISJ_CASES_TAC
-                      (EQ_MP 
+                      (EQ_MP
                        (DECIDE ``(m <= SUC n) = (m <= n) \/ (m = SUC n)``)
                        th2))
           THENL
@@ -193,27 +193,27 @@ val ReachBy_lemma =
           THEN ASM_REWRITE_TAC
                 [GSYM(ReachIn_Next),DECIDE``(SUC m<=SUC n)=(m<=n)``]]]);
 
-val ReachBy_rec = 
+val ReachBy_rec =
  store_thm
   ("ReachBy_rec",
    ``(!R B state.
        ReachBy R B 0 state = B state)
      /\
      (!R B n state.
-       ReachBy R B (SUC n) state = 
-        ReachBy R B n state 
-        \/ 
+       ReachBy R B (SUC n) state =
+        ReachBy R B n state
+        \/
         ?state_. ReachBy R B n state_ /\ R (state_,state))``,
    PROVE_TAC[ReachBy_lemma,Next_def]);
 
-val ReachBy_ReachIn = 
+val ReachBy_ReachIn =
  store_thm
   ("ReachBy_ReachIn",
    ``(!R B state.
        ReachBy R B 0 state = B state)
      /\
      (!R B n state.
-       ReachBy R B (SUC n) state = 
+       ReachBy R B (SUC n) state =
         ReachBy R B n state \/ ReachIn R B (SUC n) state)``,
    REWRITE_TAC[ReachBy_def,ReachIn_def,LESS_EQ_0]
     THEN CONJ_TAC
@@ -223,9 +223,9 @@ val ReachBy_ReachIn =
       EQ_TAC
        THEN REPEAT STRIP_TAC
        THENL
-        [ASSUM_LIST(fn[th1,th2]=> 
+        [ASSUM_LIST(fn[th1,th2]=>
                      DISJ_CASES_TAC
-                      (EQ_MP 
+                      (EQ_MP
                        (DECIDE ``(m <= SUC n) = (m <= n) \/ (m = SUC n)``)
                        th2))
           THEN PROVE_TAC[Next_ReachIn],
@@ -238,12 +238,12 @@ val Reachable_ReachBy =
   ("Reachable_ReachBy",
    ``Reachable R B state = ?n. ReachBy R B n state``,
    PROVE_TAC[Reachable_def,ReachBy_def,LESS_EQ_REFL]);
-   
+
 val ReachBy_mono =
  prove_thm
   ("ReachBy_mono",
-   ``!m. ReachBy R B m state 
-         ==> 
+   ``!m. ReachBy R B m state
+         ==>
          !n. ReachBy R B (m+n) state``,
    REWRITE_TAC[ReachBy_def]
     THEN GEN_TAC
@@ -255,19 +255,19 @@ val ReachBy_mono =
           (fn[th1,th2,th3]
              => ASSUME_TAC(MP(DECIDE``(m' <= m + n)==>(m'<=SUC(m+n))``)th2))
     THEN PROVE_TAC[]);
-   
+
 val ReachBy_mono_cor =
  prove_thm
   ("ReachBy_mono_cor",
-   ``ReachBy R B n state 
-     ==> 
+   ``ReachBy R B n state
+     ==>
      ReachBy R B (SUC n) state``,
    PROVE_TAC[ReachBy_mono,DECIDE``SUC n = n+1``]);
 
 val ReachBy_LESS =
  prove_thm
   ("ReachBy_LESS",
-   ``!n m. m <= n /\ ReachIn R B m state 
+   ``!n m. m <= n /\ ReachIn R B m state
            ==> ReachBy R B n state``,
    Induct
     THEN PROVE_TAC [ReachBy_def]);
@@ -280,7 +280,7 @@ val Next_ReachIn_ReachBy =
          Next R (ReachBy R B n) state``,
    PROVE_TAC[LESS_EQ_REFL,ReachBy_LESS,Next_def]);
 
-val fixedpoint_Next = 
+val fixedpoint_Next =
  prove_thm
   ("fixedpoint_Next",
    ``(ReachBy R B n = ReachBy R B (SUC n))
@@ -292,7 +292,7 @@ val fixedpoint_Next =
     THEN REWRITE_TAC[ReachBy_ReachIn,ReachIn_def,Next_def]
     THEN REPEAT STRIP_TAC
     THEN ASSUM_LIST
-          (fn[th1,th2,th3]=> 
+          (fn[th1,th2,th3]=>
             STRIP_ASSUME_TAC
              (MATCH_MP (DECIDE``(A = A \/ B) ==> (B ==> A)``)
                        (SPEC ``state':'a`` th3)))
@@ -304,7 +304,7 @@ val fixedpoint_Next =
            DECIDE``(m<n)==>(SUC m<=n)``,
            ReachBy_LESS]);
 
-val fixedpoint_Next_cor = 
+val fixedpoint_Next_cor =
  prove_thm
   ("fixedpoint_Next_cor",
    ``(ReachBy R B n = ReachBy R B (SUC n))
@@ -314,7 +314,7 @@ val fixedpoint_Next_cor =
                ReachBy R B (SUC n) state')``,
    PROVE_TAC[fixedpoint_Next]);
 
-val fixedpoint_SUC = 
+val fixedpoint_SUC =
  prove_thm
   ("fixedpoint_SUC",
    ``(ReachBy R B n = ReachBy R B (SUC n))
@@ -331,7 +331,7 @@ val fixedpoint_SUC =
        THEN POP_ASSUM(ASSUME_TAC o ONCE_REWRITE_RULE[ReachIn_def])
        THEN PROVE_TAC [Next_ReachIn_ReachBy,fixedpoint_Next_cor]]);
 
-val fixedpoint_lemma1 = 
+val fixedpoint_lemma1 =
  prove_thm
   ("fixedpoint_lemma1",
    ``(ReachBy R B n = ReachBy R B (SUC n))
@@ -342,7 +342,7 @@ val fixedpoint_lemma1 =
     THEN ASM_REWRITE_TAC[ADD_CLAUSES]
     THEN IMP_RES_TAC fixedpoint_SUC);
 
-val fixedpoint_lemma2 = 
+val fixedpoint_lemma2 =
  prove_thm
   ("fixedpoint_lemma2",
    ``(ReachBy R B n = ReachBy R B (SUC n))
@@ -352,7 +352,7 @@ val fixedpoint_lemma2 =
     THEN Induct
     THEN PROVE_TAC[ADD_CLAUSES,fixedpoint_lemma1]);
 
-val ReachBy_fixedpoint = 
+val ReachBy_fixedpoint =
  store_thm
   ("ReachBy_fixedpoint",
    ``!R B n.
@@ -375,7 +375,7 @@ val ReachBy_fixedpoint =
           THEN PROVE_TAC[fixedpoint_lemma2]],
       PROVE_TAC[ReachBy_def]]);
 
-val EXISTS_IMP_EQ = 
+val EXISTS_IMP_EQ =
  store_thm
   ("EXISTS_IMP_EQ",
    ``((?x. P x) ==> Q) = (!x. P x ==> Q)``,
@@ -384,8 +384,8 @@ val EXISTS_IMP_EQ =
 val LENGTH_EQ_CONS_EXISTS =
  prove_thm
   ("LENGTH_EQ_CONS_EXISTS",
-   ``!P. (?l. (LENGTH l = SUC n) /\ P l) 
-         = 
+   ``!P. (?l. (LENGTH l = SUC n) /\ P l)
+         =
          (?l. (LENGTH l = n)     /\ ?x. P(CONS x l))``,
    PROVE_TAC[LENGTH_CONS]);
 
@@ -426,7 +426,7 @@ val IsTrace_def =
    /\
    (IsTrace R B Q [s] = B s /\ Q s)
    /\
-   (IsTrace R B Q (s0 :: (s1 :: tr)) = 
+   (IsTrace R B Q (s0 :: (s1 :: tr)) =
      B s0 /\ R(s0,s1) /\ IsTrace R (Eq s1) Q (s1 :: tr))`;
 
 
@@ -477,14 +477,14 @@ val Stable_ADD =
   ("Stable_ADD",
    ``(!state. ReachIn R B m state ==> Stable R state)
      ==>
-     !n state. 
+     !n state.
       ReachIn R B (m+n) state ==> ReachIn R B m state``,
    DISCH_TAC
     THEN Induct
     THENL
      [PROVE_TAC[ADD_CLAUSES],
       REWRITE_TAC[ADD_CLAUSES,ReachIn_def,Next_def]
-       THEN REPEAT STRIP_TAC    
+       THEN REPEAT STRIP_TAC
        THEN RES_TAC
        THEN RES_TAC
        THEN PROVE_TAC[Stable_def]]);
@@ -492,7 +492,7 @@ val Stable_ADD =
 val Reachable_Stable =
  store_thm
   ("Reachable_Stable",
-   ``Live R 
+   ``Live R
      /\
      (!state. ReachIn R B n state ==> Stable R state)
      ==>
@@ -526,15 +526,15 @@ val ModelCheckAlways =
  store_thm
   ("ModelCheckAlways",
    ``!R B P.
-      (!s. Reachable R B s ==> P s) 
-      ==> 
+      (!s. Reachable R B s ==> P s)
+      ==>
       !tr. B(tr 0) /\ (!t. R(tr t, tr(t+1)))  ==> !t. P(tr t)``,
    PROVE_TAC[TraceReachIn,Reachable_def]);
 
 val ModelCheckAlwaysCor1 =
  store_thm
   ("ModelCheckAlwaysCor1",
-   ``(!s1 s2. Reachable R B (s1,s2) ==> P s1) 
+   ``(!s1 s2. Reachable R B (s1,s2) ==> P s1)
      ==>
      !tr. B (tr 0) /\ (!t. R (tr t,tr (t + 1))) ==> !t. P(FST(tr t))``,
  REWRITE_TAC
@@ -542,8 +542,8 @@ val ModelCheckAlwaysCor1 =
     bossLib.arith_ss
     [pairTheory.FORALL_PROD]
     (ISPECL
-      [``R :('a1#'a2) # ('a1#'a2) -> bool``, 
-       ``B :('a1#'a2) -> bool``, 
+      [``R :('a1#'a2) # ('a1#'a2) -> bool``,
+       ``B :('a1#'a2) -> bool``,
        ``\p:'a1#'a2. P(FST p):bool``]
       ModelCheckAlways)]);
 
@@ -552,7 +552,7 @@ val ModelCheckAlwaysCor2 =
   ("ModelCheckAlwaysCor2",
    ``!R B P.
       (!s1 s2. Reachable R B (s1,s2) ==> P s1)
-      ==> 
+      ==>
       !tr1. (?tr2. B(tr1 0,tr2 0) /\ !t. R((tr1 t,tr2 t), (tr1(t+1),tr2(t+1))))  ==> !t. P(tr1 t)``,
    REPEAT STRIP_TAC
     THEN IMP_RES_TAC ModelCheckAlwaysCor1
@@ -607,7 +607,7 @@ val FnPairForall =
 val ABS_EXISTS_THM = (* Adapted from Hol sources *)
    let val th1 = ASSUME (``?rep:'b->'a. TYPE_DEFINITION P rep``)
        and th2 = BETA_RULE
-                  (AP_THM 
+                  (AP_THM
                     (AP_THM TYPE_DEFINITION ``P:'a->bool``)
                     ``rep :'b -> 'a``)
        val def = EQ_MP (MK_EXISTS(Q.GEN `rep` th2)) th1
@@ -687,8 +687,8 @@ val ReachInPath1 =
 
 val FinPath_def =
  Define
-  `(FinPath(R,s) f 0 = (f 0 = s)) 
-   /\ 
+  `(FinPath(R,s) f 0 = (f 0 = s))
+   /\
    (FinPath(R,s) f (SUC n) = FinPath(R,s) f n /\ R(f n, f(n+1)))`;
 
 val FinFunEq =
@@ -711,7 +711,7 @@ val FinPathThm =
 val FinPathLemma =
  store_thm
   ("FinPathLemma",
-   ``!f1 f2 n. 
+   ``!f1 f2 n.
       (!m. m <= n ==> (f1 m = f2 m)) ==> (FinPath(R,s) f1 n = FinPath(R,s) f2 n)``,
    STRIP_TAC
     THEN STRIP_TAC
@@ -725,7 +725,7 @@ val th =
      [``f:num->'a``,``\p. (if p <= n then f p else (s':'a))``,``n:num``]
      FinPathLemma)
    (prove
-     (``!m. m <= n ==> (f m = (\p. (if p <= n then f p else s')) m)``, 
+     (``!m. m <= n ==> (f m = (\p. (if p <= n then f p else s')) m)``,
       RW_TAC std_ss []))
 in
 val ReachInFinPath1 =
@@ -770,15 +770,15 @@ val ReachableFinPath =
    ``!R B s. Reachable R B s = ?f s0 n. B s0 /\ FinPath(R,s0) f n /\ (s = f n)``,
    PROVE_TAC[ReachInFinPath,Reachable_def]);
 
-(* Another gross proof! *) 
+(* Another gross proof! *)
 val ReachIn_revrec =
  store_thm
   ("ReachIn_revrec",
-   ``(!R B state. 
+   ``(!R B state.
        ReachIn R B 0 state = B state)
    /\
-   (!R B n state. 
-     ReachIn R B (SUC n) state = 
+   (!R B n state.
+     ReachIn R B (SUC n) state =
      (?state1 state2. B state1 /\ R(state1,state2) /\ ReachIn R (Eq state2) n state))``,
    SIMP_TAC std_ss [CONJUNCT1 ReachIn_rec,ReachInFinPath,FinPathThm,Eq_def]
     THEN REPEAT STRIP_TAC
@@ -786,15 +786,14 @@ val ReachIn_revrec =
     THEN RW_TAC std_ss []
     THENL
      [Q.EXISTS_TAC `f 0`
-       THEN Q.EXISTS_TAC `f(SUC 0)`
-       THEN ASSUM_LIST(ASSUME_TAC o SIMP_RULE arith_ss [DECIDE ``1 = SUC 0``] o SPEC ``0`` o hd)
-       THEN RW_TAC arith_ss [DECIDE ``0<SUC n /\ (SUC 0 = 1)``,ADD_CLAUSES]
-       THEN `R (f 0,f (SUC 0))` 
-            by PROVE_TAC[DECIDE ``0<SUC n /\ (SUC 0 = 1)``,ADD_CLAUSES]
+       THEN Q.EXISTS_TAC `f 1`
+       THEN FIRST_ASSUM (Q.SPEC_THEN `0` (ASSUME_TAC o
+                                          SIMP_RULE arith_ss []))
+       THEN ASM_REWRITE_TAC []
        THEN Q.EXISTS_TAC `\i. f(i+1):'b`
-       THEN RW_TAC arith_ss [DECIDE``SUC n = n+1``]
-       THEN `R (f(SUC m),f(SUC m + 1))` by PROVE_TAC[DECIDE``(m<n)=(SUC m < SUC n)``]
-       THEN FULL_SIMP_TAC std_ss [DECIDE``(SUC m = m+1) /\ (SUC m + 1 = m+2)``],
+       THEN RW_TAC arith_ss [GSYM ADD1]
+       THEN `m + 1 < SUC n` by DECIDE_TAC
+       THEN RW_TAC bool_ss [DECIDE``m + 2 = m + 1 + 1``, ADD1],
       Q.EXISTS_TAC `\i. if (i=0) then state1 else f(i-1)`
        THEN RW_TAC std_ss [DECIDE ``(SUC n - 1 = n) /\ (n+1-1 = n)``]
        THEN IMP_RES_TAC(DECIDE``~(m+1=0)``)
@@ -805,10 +804,10 @@ val ReachIn_revrec =
 
 val Total_def = Define `Total R = !s.?s'. R(s,s')`;
 
-val ChoosePath_def = 
- Define 
-  `(ChoosePath R s 0 = s) 
-   /\ 
+val ChoosePath_def =
+ Define
+  `(ChoosePath R s 0 = s)
+   /\
    (ChoosePath R s (SUC n) = @s'. R(ChoosePath R s n, s'))`;
 
 val TotalPathExists =
@@ -839,32 +838,32 @@ val FinPathChoosePath =
 val FinPathPathExists =
  Q.store_thm
   ("FinPathPathExists",
-   `!R B f s n. 
-      Total R /\ FinPath(R,s) f n 
-      ==> 
+   `!R B f s n.
+      Total R /\ FinPath(R,s) f n
+      ==>
       ?g. (!m. m <= n ==> (f m = g m)) /\ Path(R,s)g`,
    REPEAT STRIP_TAC
     THEN `Path (R, f n) (ChoosePath R (f n))` by PROVE_TAC [TotalPathExists]
     THEN Q.EXISTS_TAC `\m. if m <= n then f m else ChoosePath R (f n) (m-n)`
-    THEN RW_TAC std_ss [Path_def,ZERO_LESS_EQ] 
+    THEN RW_TAC std_ss [Path_def,ZERO_LESS_EQ]
     THENL
      [PROVE_TAC [FinPathThm],
       IMP_RES_TAC FinPathChoosePath
-       THEN BasicProvers.NORM_TAC std_ss [] 
+       THEN BasicProvers.NORM_TAC std_ss []
        THENL
         [`n' < n` by DECIDE_TAC THEN PROVE_TAC [FinPathThm],
          `n' = n` by DECIDE_TAC THEN RW_TAC arith_ss []
                                 THEN PROVE_TAC [Path_def,ADD_CLAUSES],
          PROVE_TAC [DECIDE (Term`x+1 <=y /\ ~(x <= y) ==> F`)],
-         `n < n'` by DECIDE_TAC 
+         `n < n'` by DECIDE_TAC
            THEN `n' + 1 - n = (n' - n) + 1` by DECIDE_TAC
            THEN PROVE_TAC [Path_def, ADD_CLAUSES]]]);
 
 val ReachInPath =
  store_thm
   ("ReachInPath",
-   ``!R B n s. Total R 
-                ==> 
+   ``!R B n s. Total R
+                ==>
                (ReachIn R B n s = ?f s0. B s0 /\ Path(R,s0)f /\ (s = f n))``,
    REWRITE_TAC[ReachInFinPath]
     THEN REPEAT STRIP_TAC
@@ -882,8 +881,8 @@ val ReachInPath =
 val ReachablePath =
  store_thm
   ("ReachablePath",
-   ``!R B s. Total R 
-              ==> 
+   ``!R B s. Total R
+              ==>
              (Reachable R B s = ?f s0. B s0 /\ Path(R,s0)f /\ ?n. (s = f n))``,
    PROVE_TAC[ReachInPath,Reachable_def]);
 
@@ -944,8 +943,8 @@ val ReachableTotalise =
 val ReachablePathThm =
  save_thm
   ("ReachablePathThm",
-   GEN 
-    ``R :'a # 'a -> bool`` 
+   GEN
+    ``R :'a # 'a -> bool``
     (REWRITE_RULE[ReachableTotalise,TotalTotalise]
                  (SPEC ``Totalise R`` ReachablePath)));
 
@@ -977,13 +976,13 @@ val MooreTransEq =
     THEN Cases_on `r`
     THEN CONV_TAC(DEPTH_CONV PAIRED_BETA_CONV)
     THEN RW_TAC std_ss [MooreTrans_def]);
-    
+
 val MoorePath =
  store_thm
   ("MoorePath",
    ``Moore nextfn (inputs,states) =
-     Path 
-      (MooreTrans nextfn, (inputs 0,states 0)) 
+     Path
+      (MooreTrans nextfn, (inputs 0,states 0))
       (\t. (inputs t, states t))``,
    RW_TAC std_ss [Path_def,MooreTrans_def,Moore_def]);
 
@@ -996,7 +995,7 @@ val TotalMooreTrans =
     THEN Q.EXISTS_TAC `(q',nextfn(q,r))`
     THEN RW_TAC std_ss [MooreTrans_def]);
 
-val ReachableMooreTrans = 
+val ReachableMooreTrans =
  save_thm
   ("ReachableMooreTrans",
    SPECL
@@ -1011,7 +1010,7 @@ val ReachableMooreTrans =
 (*          ?f s0. B s0 /\ Path (MooreTrans nextfn,s0) f /\ ?n. s = f n      *)
 (*****************************************************************************)
 
-val ReachableMooreTrans = 
+val ReachableMooreTrans =
  save_thm
   ("ReachableMooreTrans",
    MATCH_MP ReachablePath TotalMooreTrans);
@@ -1021,18 +1020,18 @@ val ReachableMooreTrans =
 val MooreReachable1 =
  Q.store_thm
   ("MooreReachable1",
-   `(!inputs states. 
-       B(inputs 0, states 0) /\ Moore nextfn (inputs,states) 
+   `(!inputs states.
+       B(inputs 0, states 0) /\ Moore nextfn (inputs,states)
        ==> !t. P(inputs t, states t))
      ==>
      (!s. Reachable (MooreTrans nextfn) B s ==> P s)`,
    RW_TAC std_ss [ReachableMooreTrans,MoorePath]
-    THEN Q.PAT_ASSUM `$! M` 
-         (MP_TAC o REWRITE_RULE [PAIR] o BETA_RULE o Q.SPECL 
+    THEN Q.PAT_ASSUM `$! M`
+         (MP_TAC o REWRITE_RULE [PAIR] o BETA_RULE o Q.SPECL
            [`\t. if t=0 then FST (s0:'a#'b) else FST(f t:'a#'b)`,
             `\t. if t=0 then SND (s0:'a#'b) else SND(f t:'a#'b)`])
    THEN RW_TAC std_ss [COND_RAND,COND_RATOR]
-   THEN `f:num->'a#'b = \t. if t=0 then s0 else f t` 
+   THEN `f:num->'a#'b = \t. if t=0 then s0 else f t`
         by (RW_TAC std_ss [FUN_EQ_THM] THEN PROVE_TAC [Path_def])
    THEN Q.PAT_ASSUM `Path x y` MP_TAC THEN ONCE_ASM_REWRITE_TAC[]
    THEN BETA_TAC THEN PROVE_TAC []);
@@ -1042,14 +1041,14 @@ val MooreReachable2 =
   ("MooreReachable2",
    ``(!s. Reachable (MooreTrans nextfn) B s ==> P s)
      ==>
-     (!inputs states. 
-        B(inputs 0, states 0) /\ Moore nextfn (inputs,states) 
+     (!inputs states.
+        B(inputs 0, states 0) /\ Moore nextfn (inputs,states)
         ==> !t. P(inputs t, states t))``,
    RW_TAC std_ss [ReachableMooreTrans,MoorePath]
-    THEN Q.PAT_ASSUM `$! M` 
-         (MP_TAC o BETA_RULE 
+    THEN Q.PAT_ASSUM `$! M`
+         (MP_TAC o BETA_RULE
                  o Q.SPECL [`\t. (inputs t,states t)`, `(inputs 0,states 0)`]
-                 o Ho_Rewrite.REWRITE_RULE [GSYM LEFT_FORALL_IMP_THM] 
+                 o Ho_Rewrite.REWRITE_RULE [GSYM LEFT_FORALL_IMP_THM]
                  o Q.SPEC `(inputs (t:num), states t)`)
     THEN RW_TAC std_ss []
     THEN PROVE_TAC []);
@@ -1058,8 +1057,8 @@ val MooreReachable =
  store_thm
   ("MooreReachable",
    ``!B nextfn P.
-      (!inputs states. 
-         B(inputs 0, states 0) /\ Moore nextfn (inputs,states) 
+      (!inputs states.
+         B(inputs 0, states 0) /\ Moore nextfn (inputs,states)
          ==> !t. P(inputs t, states t))
       =
       (!s. Reachable (MooreTrans nextfn) B s ==> P s)``,
@@ -1094,8 +1093,8 @@ val MooreReachableCor1 =
  store_thm
   ("MooreReachableCor1",
    ``!B nextfn.
-      (!inputs states. 
-         B(inputs 0, states 0) /\ 
+      (!inputs states.
+         B(inputs 0, states 0) /\
          (!t.  states (t + 1) = nextfn (inputs t,states t))
          ==> !t. P(inputs t, states t))
       =

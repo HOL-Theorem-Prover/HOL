@@ -80,7 +80,7 @@ val (unif_def, unif_ind) = Defn.tprove
 
 val _ = save_thm ("unif_def", unif_def);
 val _ = save_thm ("unif_ind", unif_ind);
- 
+
 val uniform_def = Define `(uniform 0 (SUC n) s = (0, s))
   /\ (uniform (SUC t) (SUC n) s
       = let (res, s') = unif n s
@@ -146,7 +146,7 @@ val UNIF_BOUND_UPPER_SUC = store_thm
    STRIP_TAC
    ++ MP_TAC (Q.SPEC `n` UNIF_BOUND_UPPER)
    ++ REVERSE (Cases_on `n = 0`) >> RW_TAC arith_ss []
-   ++ RW_TAC arith_ss [unif_bound_def, EXP]);   
+   ++ RW_TAC arith_ss [unif_bound_def, EXP]);
 
 val UNIF_DEF_ALT = prove
   (``!n. unif n = if (n = 0) then \s. (0, s) else
@@ -368,7 +368,7 @@ val PROB_UNIFORM_LOWER_BOUND = store_thm
    ++ Induct
    >> (RW_TAC arith_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `0`)
-       ++ RW_TAC arith_ss [DECIDE ``!m. m < SUC 0 = (m = 0)``, SYM ONE]
+       ++ RW_TAC arith_ss [DECIDE ``!m. m < 1n = (m = 0)``]
        ++ RW_TAC real_ss [])
    ++ RW_TAC arith_ss []
    ++ KNOW_TAC `indep (uniform t (SUC n))` >> RW_TAC std_ss [INDEP_UNIFORM]
@@ -392,7 +392,7 @@ val PROB_UNIFORM_UPPER_BOUND = store_thm
    ++ Induct
    >> (RW_TAC arith_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `0`)
-       ++ RW_TAC arith_ss [DECIDE ``!m. m < SUC 0 = (m = 0)``, SYM ONE]
+       ++ RW_TAC arith_ss [DECIDE ``!m. m < 1n = (m = 0)``]
        ++ RW_TAC real_ss [])
    ++ RW_TAC arith_ss []
    ++ KNOW_TAC `indep (uniform t (SUC n))` >> RW_TAC std_ss [INDEP_UNIFORM]

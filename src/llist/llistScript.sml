@@ -198,7 +198,7 @@ val lbuildn_LENGTH = prove(
   Cases_on `x'` THEN SIMP_TAC hol_ss [] THEN
   Cases_on `f r` THEN SIMP_TAC hol_ss [] THEN
   REPEAT STRIP_TAC THEN ELIM_TAC THEN
-  ASM_SIMP_TAC hol_ss [arithmeticTheory.ADD_CLAUSES] THEN
+  ASM_SIMP_TAC hol_ss [arithmeticTheory.ADD1] THEN
   ASM_MESON_TAC []);
 
 val lbuildn_rep_predecessors = prove(
@@ -1095,7 +1095,7 @@ val LDROP1_THM = store_thm(
   "LDROP1_THM",
   ``LDROP 1 = LTL``,
   CONV_TAC (Q.X_FUN_EQ_CONV `ll`) THEN
-  SIMP_TAC hol_ss [ARITH_PROVE ``1 = SUC 0``, LDROP] THEN
+  SIMP_TAC bool_ss [ARITH_PROVE ``1 = SUC 0``, LDROP] THEN
   GEN_TAC THEN Cases_on `LTL ll` THEN
   SIMP_TAC hol_ss [LDROP]);
 
