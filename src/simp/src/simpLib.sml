@@ -157,6 +157,8 @@ with
             option_cases #2 any key,
             USER_CONV data);
 
+(* itlist is like foldr, so that theorems get added to the context starting
+   from the end of the list *)
  fun net_add_convs net convs = itlist net_add_conv convs net;
 
 
