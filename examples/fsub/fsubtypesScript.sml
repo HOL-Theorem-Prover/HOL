@@ -398,5 +398,20 @@ val wfctxt_MEM = store_thm(
                                        SUBSET_DEF] THEN
   METIS_TAC []);
 
+val fsize_def = Define`
+  fsize (t:fsubty) = size (fsubty2term t)
+`;
+
+val fsize_thm = store_thm(
+  "fsize_thm",
+  ``(fsize Top = 1) /\
+    (fsize (TyVar s) = 1) /\
+    (fsize (ForallTy x ty1 ty2) = fsize ty1 + fsize ty2 + 4) /\
+    (fsize (Fun ty1 ty2) = fsize ty1 + fsize ty2 + 1)``,
+  SRW_TAC [numSimps.ARITH_ss]
+          [fsize_def,Fun_def,Top_def,ForallTy_def,TyVar_def,
+           rep_abs_lemma, fsubrep_rules, ncTheory.size_thm]);
+
+
 val _ = export_theory();
 
