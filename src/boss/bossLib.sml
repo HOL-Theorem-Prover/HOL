@@ -55,19 +55,6 @@ val def_suffix = TotalDefn.def_suffix;
 
 
 (*---------------------------------------------------------------------------
-     Support for higher-order recursion. There should be a better
-     place for this. Probably listTheory would be right, but then
-     Context would have to be known earlier.
- ---------------------------------------------------------------------------*)
-
-local open listTheory
-     val hocongs = [EXISTS_CONG,EVERY_CONG,MAP_CONG,
-                    FOLDL_CONG, FOLDR_CONG,list_size_cong]
-in
-  val _ = Defn.write_context (hocongs@Defn.read_context())
-end;
-
-(*---------------------------------------------------------------------------
             Automated proof operations
  ---------------------------------------------------------------------------*)
 
