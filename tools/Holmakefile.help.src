@@ -4,7 +4,7 @@ makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo \
     Printbase.uo Texsigs.uo makebase.uo
 	HOLMOSMLC -o makebase makebase.uo
 
-makebase.uo: Keepers.uo Htmlsigs.uo \
+makebase.uo: Keepers.uo Htmlsigs.uo HOLPage.uo \
              Database.ui Printbase.uo Parsspec.uo makebase.sml
 	HOLMOSMLC -c makebase.sml
 
