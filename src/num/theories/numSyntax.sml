@@ -65,7 +65,7 @@ struct
   fun mk_num_case(b,f,n) =
       list_mk_comb(inst[alpha |-> type_of b] num_case_tm, [b,f,n]);
 
-  fun mk_funpow(f,n,x) = 
+  fun mk_funpow(f,n,x) =
       list_mk_comb(inst [alpha |-> type_of x] funpow_tm, [f,n,x]);
 
 (*---------------------------------------------------------------------------
@@ -88,11 +88,11 @@ struct
   val dest_odd     = dest_monop odd_tm     (ERR "dest_odd" "");
   val dest_fact    = dest_monop fact_tm    (ERR "dest_fact" "");
 
-  fun dest_num_case tm = 
+  fun dest_num_case tm =
     case strip_comb tm
-     of (ncase,[b,f,n]) => 
+     of (ncase,[b,f,n]) =>
          if same_const num_case_tm ncase
-         then (b,f,n) 
+         then (b,f,n)
          else raise ERR "dest_num_case" "not an application of \"num_case\""
       | _ => raise ERR "dest_num_case" "not an application of \"num_case\""
 
@@ -100,7 +100,7 @@ struct
     case strip_comb tm
      of (funpow,[f,n,x]) =>
          if same_const funpow_tm funpow
-         then (f,n,x) 
+         then (f,n,x)
          else raise ERR "dest_funpow" "not an application of \"funpow\""
       | _ => raise ERR "dest_funpow" "not an application of \"funpow\"";
 
@@ -129,7 +129,7 @@ struct
 
 
 (*---------------------------------------------------------------------------
-     Numerals are treated specially 
+     Numerals are treated specially
  ---------------------------------------------------------------------------*)
 
   val mk_numeral = Literal.gen_mk_numeral {
@@ -144,8 +144,8 @@ struct
   val dest_numeral = Literal.dest_numeral
   val is_numeral   = Literal.is_numeral
 
-  val int_of_term = Arbnum.toInt o numSyntax.dest_numeral
-  fun term_of_int i = numSyntax.mk_numeral(Arbnum.fromInt i)
+  val int_of_term = Arbnum.toInt o dest_numeral
+  fun term_of_int i = mk_numeral(Arbnum.fromInt i)
 
 (*---------------------------------------------------------------------------
      Dealing with lists of things to be added or multiplied.
