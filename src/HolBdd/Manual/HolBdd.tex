@@ -1255,7 +1255,7 @@ The constructor \t{TermBdd} is not exported, so the only way to construct
 values of type \termbddty is using the following inference rules
 (which are described in more detail in the rest of this section).
 
-{\footnotesize\begin{verbatim}
+{\footnotesize\baselineskip 10pt\begin{verbatim}
    BddExtendVarmap           : term_bdd->varmap->term_bdd
    BddFreevarsContractVarmap : term->term_bdd->term_bdd
    BddSupportContractVarmap  : term->term_bdd->term_bdd
@@ -1274,6 +1274,7 @@ values of type \termbddty is using the following inference rules
    BddReplace                : (term_bdd*term_bdd)list->term_bdd->term_bdd
    BddEqMp                   : thm->term_bdd->term_bdd
    BddSimplify               : term_bdd*term_bdd->term_bdd
+   BddFindModel              : term_bdd->term_bdd
 \end{verbatim}}
 
 Destructor functions \t{dest\_term\_bdd}, \t{getAssums}, \t{getVarmap}, \t{getTerm}
@@ -1913,6 +1914,7 @@ or if any of the terms $v_1',\ldots,v_i'$ are repeated or are not variables
 
 \subsubsection*{Coudert, Berthet \& Madre simplification}\label{BddSimplify}
 
+\vspace*{-1mm}
 
 \newsavebox\BddSimplify
 \begin{lrbox}\BddSimplify
@@ -1942,6 +1944,43 @@ The exception
 \end{minipage}
 \end{lrbox}
 \fbox{\usebox{\BddSimplify}}\bnind{BddSimplify}
+
+\vspace*{-2mm}
+
+\subsubsection*{Finding a satisfying assignment}\label{BddFindModel}
+
+\vspace*{-1mm}
+
+\newsavebox\BddFindModel
+\begin{lrbox}\BddFindModel
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddFindModel : term_bdd -> term_bdd +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{-2mm}
+
+$$\begin{array}{c}
+\termbdd{a}{\rho}{t}{b} 
+\\ \hline
+\termbdd{a\cup \setass{v_1=c_1,\ldots,v_p=c_p}}{\rho}{t}{{\footnotesize\t{TRUE}}}
+\end{array}$$
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+The set $\{v_1=c_1,\ldots,v_p=c_p\}$ is a satisfying assignment for $t$
+($c_i$ is \T{} or \F{} for $1\leq i \leq p$). Exception 
+{\footnotesize\t{BddFindModelError}} is raised if {\footnotesize\t{satone}}
+can't find a satisfying assignment.
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddFindModel}}\bnind{BddFindModel}
 
 
 

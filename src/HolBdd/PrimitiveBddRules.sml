@@ -27,6 +27,7 @@
 (* BddAppall                                                                 *)
 (* BddAppex                                                                  *)
 (* BddSimplify                                                               *)
+(* BddFindModel                                                              *)
 (*                                                                           *)
 (*****************************************************************************)
 (*                                                                           *)
@@ -35,6 +36,7 @@
 (*   Tue Oct  2 15:03:11 BST 2001 -- created file                            *)
 (*   Fri Oct  5 17:23:09 BST 2001 -- revised file                            *)
 (*   Thu Nov  1 14:18:41 GMT 2001 -- added assumptions to term_bdd values    *)
+(*   Mon Mar 11 11:01:53 GMT 2002 -- added BddFindModel                      *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -728,6 +730,48 @@ fun BddSimplify (TermBdd(ass1,vm1,t1,b1), TermBdd(ass2,vm2,t2,b2)) =
      val _   = if Varmap.eq(vm1,vm2) then () else raise BddSimplifyError
  in
   TermBdd(ass,vm1,t2, simplify b1 b2)
+ end;
+
+
+(*****************************************************************************)
+(* If t is satifiable (i.e. b is not FALSE)                                  *)
+(*                                                                           *)
+(*                  a vm t |--> b                                            *)
+(*      --------------------------------------                               *)
+(*      (a U {v1=c1,...,vn=cn}) vm t |--> TRUE                               *)
+(*                                                                           *)
+(*****************************************************************************)
+
+(* Test data
+
+val (TermBdd(ass,vm,t,b)) = termToTermBdd ``x /\ y /\ ~z /\ (p \/ q)``;
+
+val (TermBdd(ass1,vm1,t1,b1)) = BddfindModel (TermBdd(ass,vm,t,b));
+
+fun test t =
+ let val (TermBdd(ass,vm,t,b)) = BddfindModel(termToTermBdd t)
+ in
+  (t,EVAL(subst (List.map  ((Lib.|->) o dest_eq) (HOLset.listItems ass)) t))
+ end;
+
+*)
+
+exception BddfindModelError;
+
+fun BddfindModel (TermBdd(ass,vm,t,b)) = 
+ let val assl        = bdd.getAssignment(bdd.satone b)
+     val vml         = Varmap.dest vm
+     val setl        = List.map 
+                        (fn (n,tv) => 
+                          mk_eq
+                           ((case assoc2 n vml of 
+                                SOME(s,_) => mk_var(s,bool)
+                              | NONE      => (print "This should not happen!\n";
+                                              raise BddfindModelError)),
+                            if tv then T else F))
+                        assl
+ in
+  TermBdd(HOLset.addList(ass,setl),vm,t,TRUE)
  end;
 
 end;
