@@ -19,7 +19,8 @@ infixr 3 -->;
 val _ = quotation := true
 val _ = Help.displayLines := 40;
 
-val _ = load "Parse"; open Parse
+val _ = load "Parse"; open Parse;
+load "DB";
 
 local
   fun capture_errors ppfn pps x =
