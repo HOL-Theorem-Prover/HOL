@@ -11,7 +11,7 @@
 structure RealArith :> RealArith =
 struct
 
-open arbint
+open Arbint
 
 (*
 app load ["Char",

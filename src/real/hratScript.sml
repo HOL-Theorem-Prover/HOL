@@ -240,32 +240,39 @@ val TRAT_ADD_TOTAL = prove_thm("TRAT_ADD_TOTAL",
   CONV_TAC(AC_CONV(MULT_ASSOC,MULT_SYM)));
 
 val TRAT_SUCINT_0 = prove_thm("TRAT_SUCINT_0",
-  (--`!n. (trat_sucint n) trat_eq (n,0)`--),
-  INDUCT_TAC THEN REWRITE_TAC[trat_sucint, trat_1, TRAT_EQ_REFL] THEN
+(--`!n. (trat_sucint n) trat_eq (n,0)`--),
+INDUCT_TAC THEN REWRITE_TAC[trat_sucint, trat_1, TRAT_EQ_REFL] THEN
   MATCH_MP_TAC TRAT_EQ_TRANS THEN EXISTS_TAC (--`(n,0) trat_add (0,0)`--) THEN
   CONJ_TAC THENL
    [MATCH_MP_TAC TRAT_ADD_WELLDEFINED THEN POP_ASSUM ACCEPT_TAC,
     REWRITE_TAC[trat_add, trat_eq] THEN UNSUCK_TAC THEN
-    REWRITE_TAC[SYM(num_CONV (--`1`--))] THEN REWRITE_TAC[MULT_CLAUSES]]);
+    (* for new term nets  REWRITE_TAC[SYM(num_CONV (--`1`--))] *)
+    REWRITE_TAC[MULT_CLAUSES,ADD_CLAUSES]]);
 
+(* Proof changed for new term nets *)
 val TRAT_ARCH = prove_thm("TRAT_ARCH",
-  (--`!h. ?n. ?d. (trat_sucint n) trat_eq (h trat_add d)`--),
-  GEN_PAIR_TAC THEN EXISTS_TAC (--`SUC(FST(h:num#num))`--) THEN
+(--`!h. ?n. ?d. (trat_sucint n) trat_eq (h trat_add d)`--),
+ GEN_PAIR_TAC THEN EXISTS_TAC (--`SUC(FST(h:num#num))`--) THEN
   EXISTS_TAC(--`(PRE((SUC(SUC(FST h))*(SUC(SND h))) - (SUC(FST h))),SND h)`--)
-  THEN MATCH_MP_TAC TRAT_EQ_TRANS THEN
+  THEN MATCH_MP_TAC TRAT_EQ_TRANS THEN 
   EXISTS_TAC (--`(SUC(FST(h:num#num)),0)`--)
   THEN PURE_REWRITE_TAC[TRAT_SUCINT_0] THEN PURE_REWRITE_TAC[trat_add, trat_eq]
   THEN REWRITE_TAC[] THEN UNSUCK_TAC THENL
    [REWRITE_TAC[SUB_EQ_0, GSYM NOT_LESS],
-    REWRITE_TAC[RIGHT_SUB_DISTRIB, RIGHT_ADD_DISTRIB, SYM(num_CONV (--`1`--)),
-                MULT_RIGHT_1] THEN
+    REWRITE_TAC [RIGHT_SUB_DISTRIB, 
+        RIGHT_ADD_DISTRIB,SYM(num_CONV (--`1`--)), MULT_RIGHT_1] THEN
     ONCE_REWRITE_TAC[ADD_SYM] THEN IMP_SUBST_TAC SUB_ADD THEN
     REWRITE_TAC[MULT_ASSOC] THEN MATCH_MP_TAC LESS_MONO_MULT THEN
-    MATCH_MP_TAC LESS_IMP_LESS_OR_EQ] THEN
+   MATCH_MP_TAC LESS_IMP_LESS_OR_EQ] THEN
   W(C (curry SPEC_TAC) (--`x:num`--) o rand o rator o snd) THEN GEN_TAC THEN
-  REWRITE_TAC[MULT_CLAUSES, GSYM ADD_ASSOC] THEN MATCH_MP_TAC LESS_ADD_NONZERO
-  THEN REWRITE_TAC[ADD_CLAUSES, NOT_SUC]);
+  REWRITE_TAC [MULT_SUC,GSYM ADD_ASSOC,ADD1] THEN 
+  MATCH_MP_TAC LESS_ADD_NONZERO THEN 
+  REWRITE_TAC[ADD_CLAUSES, NOT_SUC, ONCE_REWRITE_RULE[ADD_SYM] (GSYM ADD1)]);
 
+(* original
+  REWRITE_TAC[MULT_CLAUSES, GSYM ADD_ASSOC] THEN MATCH_MP_TAC LESS_ADD_NONZERO
+  THEN REWRITE_TAC[ADD_CLAUSES, NOT_SUC]
+*)
 val TRAT_SUCINT = prove_thm("TRAT_SUCINT",
   (--`((trat_sucint 0) trat_eq trat_1) /\
    (!n. (trat_sucint(SUC n)) trat_eq ((trat_sucint n) trat_add trat_1))`--),

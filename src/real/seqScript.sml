@@ -1045,7 +1045,10 @@ val SER_POS_LT_PAIR = prove_thm("SER_POS_LT_PAIR",
       REWRITE_TAC[GSYM(ONCE_REWRITE_RULE[ADD_SYM] ADD1)] THEN
       REWRITE_TAC[SYM(num_CONV (--`2`--))] THEN REWRITE_TAC[ADD_CLAUSES] THEN
       GEN_REWR_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [ADD1] THEN
-      REWRITE_TAC[GSYM ADD_ASSOC, GSYM ADD1, SYM(num_CONV (--`2`--))] THEN
+      (* changed for new term nets. 
+       old: REWRITE_TAC[GSYM ADD_ASSOC, GSYM ADD1, SYM(num_CONV (--`2`--))] *)
+      REWRITE_TAC[GSYM ADD_ASSOC] THEN 
+      REWRITE_TAC [GSYM ADD1, SYM(num_CONV (--`2`--))] THEN
       MATCH_MP_TAC REAL_LE_TRANS THEN
       EXISTS_TAC (--`sum(0,(2 * M) + n) f`--) THEN
       ASM_REWRITE_TAC[] THEN REWRITE_TAC[sum] THEN
@@ -1060,8 +1063,7 @@ val SER_POS_LT_PAIR = prove_thm("SER_POS_LT_PAIR",
     THENL
      [REWRITE_TAC[num_CONV (--`2`--), MULT_CLAUSES] THEN
       ONCE_REWRITE_TAC[AC(ADD_ASSOC,ADD_SYM)
-       (--`(a + (b + c)) + d =
-                b + (a + (c + d))`--)] THEN
+       (--`(a + (b + c)) + d = b + (a + (c + d))`--)] THEN
       REWRITE_TAC[GREATER_EQ, LESS_EQ_ADD], ALL_TAC] THEN
     SUBGOAL_THEN (--`(suminf f |+| (f(n) |+| f(n + 1))) |<=|
                               sum(0,(2 * (SUC N)) + n) f`--)
@@ -1082,7 +1084,7 @@ val SER_POS_LT_PAIR = prove_thm("SER_POS_LT_PAIR",
       MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_ASSUM ACCEPT_TAC, ALL_TAC] THEN
     ASM_REWRITE_TAC[abs, REAL_SUB_LE] THEN
     REWRITE_TAC[REAL_LT_SUB_RADD] THEN
-    GEN_REWR_TAC (funpow 2 RAND_CONV) [REAL_ADD_SYM]
+    GEN_REWR_TAC (funpow 2 RAND_CONV) [REAL_ADD_SYM] 
     THEN ASM_REWRITE_TAC[REAL_NOT_LT]]);
 
 (*---------------------------------------------------------------------------*)

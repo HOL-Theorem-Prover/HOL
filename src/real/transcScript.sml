@@ -355,12 +355,12 @@ val EXP_0 = prove_thm("EXP_0",
   REWRITE_TAC[GSYM ADD1, POW_0, REAL_MUL_RZERO, ADD_CLAUSES]);
 
 val EXP_LE_X = prove_thm("EXP_LE_X",
-  (--`!x. &0 |<=| x ==> (&1 |+| x) |<=| exp(x)`--),
-  GEN_TAC THEN DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
-   [MP_TAC(SPECL [(--`\n. (^exp_ser) n |*| (x pow n)`--), (--`2`--)] SER_POS_LE) THEN
+(--`!x. &0 |<=| x ==> (&1 |+| x) |<=| exp(x)`--),
+GEN_TAC THEN DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
+ [MP_TAC(SPECL [Term`\n. ^exp_ser n |*| (x pow n)`,Term`2`] SER_POS_LE) THEN
     REWRITE_TAC[MATCH_MP SUM_SUMMABLE (SPEC_ALL EXP_CONVERGES)] THEN
     REWRITE_TAC[GSYM exp] THEN BETA_TAC THEN
-    W(C SUBGOAL_THEN (fn t =>REWRITE_TAC[t]) o
+    W(C SUBGOAL_THEN (fn t => REWRITE_TAC[t]) o
     funpow 2 (fst o dest_imp) o snd) THENL
      [GEN_TAC THEN DISCH_THEN(K ALL_TAC) THEN
       MATCH_MP_TAC REAL_LE_MUL THEN CONJ_TAC THENL
@@ -370,8 +370,12 @@ val EXP_LE_X = prove_thm("EXP_LE_X",
         FIRST_ASSUM ACCEPT_TAC],
       CONV_TAC(TOP_DEPTH_CONV num_CONV) THEN REWRITE_TAC[sum] THEN
       BETA_TAC THEN REWRITE_TAC[ADD_CLAUSES, FACT, pow, REAL_ADD_LID] THEN
-      REWRITE_TAC[MULT_CLAUSES, REAL_INV1, REAL_MUL_LID, ADD_CLAUSES] THEN
-      REWRITE_TAC[REAL_MUL_RID, SYM(num_CONV (--`1`--))]],
+      (* new term nets require change in proof; old:
+        REWRITE_TAC[MULT_CLAUSES, REAL_INV1, REAL_MUL_LID, ADD_CLAUSES] THEN 
+        REWRITE_TAC[REAL_MUL_RID, SYM(num_CONV (--`1`--))]
+       *)
+      REWRITE_TAC[MULT_RIGHT_1, CONJUNCT1 MULT,REAL_INV1, 
+      REAL_MUL_LID, ADD_CLAUSES,REAL_MUL_RID, SYM(num_CONV (--`1`--))]],
     POP_ASSUM(SUBST1_TAC o SYM) THEN
     REWRITE_TAC[EXP_0, REAL_ADD_RID, REAL_LE_REFL]]);
 
