@@ -23,6 +23,7 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
+
 val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 val MOSMLCOMP = fullPath [MOSMLDIR, "bin/mosmlc"]
 val UNQUOTER  = fullPath [HOLDIR, "bin/unquote"]
@@ -66,8 +67,17 @@ fun unquote_to file1 file2 = Process.system
 (*** list functions *)
 fun member m [] = false
   | member m (x::xs) = if x = m then true else member m xs
+fun set_union s1 s2 =
+  case s1 of
+    [] => s2
+  | (e::es) => let
+      val s' = set_union es s2
+    in
+      if member e s' then s' else e::s'
+    end
 fun delete m [] = []
   | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
+fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
 fun remove_duplicates [] = []
   | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
 fun alltrue [] = true
@@ -207,6 +217,15 @@ datatype File
     | UO of CodeType
     | UI of CodeType
     | Unhandled of string
+
+fun string_part0 (Theory s) = s
+  | string_part0 (Script s) = s
+  | string_part0 (Other s) = s
+fun string_part (UO c)  = string_part0 c
+  | string_part (UI c)  = string_part0 c
+  | string_part (SML c) = string_part0 c
+  | string_part (SIG c) = string_part0 c
+  | string_part (Unhandled s) = s
 
 fun isProperSuffix s1 s2 = let
   val sz1 = size s1
@@ -395,49 +414,74 @@ in
   (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
 end
 
-fun get_dependencies (f : File) : File list = let
+fun get_direct_dependencies (f : File) : File list = let
   val fname = fromFile f
   val arg = holdep_arg f
 in
   if isSome arg then let
     val arg = valOf arg
     val argname = fromFile arg
-    val depfile = mk_depfile_name argname (* (fromFile arg)  *)
+    val depfile = mk_depfile_name argname
     val _ =
       if always_rebuild_deps orelse argname forces_update_of depfile then
         runholdep arg depfile
       else ()
-    val file_dependencies = get_dependencies_from_file depfile
+    val phase1 = get_dependencies_from_file depfile
   in
     case f of
       UO x =>
-        if FileSys.access(fromFile (SIG x), []) andalso
-           List.all (fn f => f <> SIG x) file_dependencies
+        if
+          FileSys.access(fromFile (SIG x), []) andalso
+          List.all (fn f => f <> SIG x) phase1
         then
-           UI x :: file_dependencies
+          UI x :: phase1
         else
-           file_dependencies
-    | SML (Theory x) => let
-        val additionals1 =
-          List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE)
-          file_dependencies
-        (* there may be theory files mentioned in the Theory.sml file that
-           aren't mentioned in the script file.  If so, we are really
-           dependent on these, and should add them.  They will be listed
-           in the dependencies for UO (Theory x). *)
-        val additionals2 =
-          if FileSys.access(fromFile f, [FileSys.A_READ]) then
-            List.mapPartial (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
-            (get_dependencies (UO (Theory x)))
-          else
-            []
-      in
-        additionals1 @ additionals2 @ file_dependencies
-      end
-    | _ => file_dependencies
+          phase1
+    | _ => phase1
   end
   else
     []
+end
+
+fun get_dependencies (f : File) : File list = let
+  val file_dependencies = get_direct_dependencies f
+in
+  case f of
+    SML (Theory x) => let
+      (* there may be theory files mentioned in the Theory.sml file that
+         aren't mentioned in the script file.  If so, we are really
+         dependent on these, and should add them.  They will be listed
+         in the dependencies for UO (Theory x). *)
+      val additional_theories =
+        if FileSys.access(fromFile f, [FileSys.A_READ]) then
+          List.mapPartial (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
+          (get_dependencies (UO (Theory x)))
+        else
+          []
+
+      val firstcut = set_union file_dependencies additional_theories
+      (* because we have to build an executable in order to build a
+         theory, this build depends on all of the dependencies
+         (meaning the transitive closure of the direct dependency
+         relation) in their .UO form, not just .UI *)
+      fun collect_all_dependencies sofar tovisit =
+        case tovisit of
+          [] => sofar
+        | (f::fs) => let
+            val deps =
+              if Path.dir (string_part f) <> "" then []
+              else get_direct_dependencies f
+            val newdeps = set_diff deps sofar
+          in
+            collect_all_dependencies (sofar @ newdeps) (set_union newdeps fs)
+          end
+      val alldeps = collect_all_dependencies [] [f]
+      val uo_deps =
+        List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) alldeps
+    in
+      set_union uo_deps alldeps
+    end
+  | _ => file_dependencies
 end
 
 (** Build graph *)
@@ -561,14 +605,6 @@ fun do_a_build_command target pdep secondaries =
   | SIG (Theory s) => build_command (BuildScript s) pdep
   | x => raise Fail ("Don't know how to build a "^fromFile x^"\n")
 
-fun string_part0 (Theory s) = s
-  | string_part0 (Script s) = s
-  | string_part0 (Other s) = s
-fun string_part (UO c)  = string_part0 c
-  | string_part (UI c)  = string_part0 c
-  | string_part (SML c) = string_part0 c
-  | string_part (SIG c) = string_part0 c
-  | string_part (Unhandled s) = s
 
 exception CircularDependency
 exception BuildFailure
