@@ -2494,6 +2494,20 @@ val TYPE_DEFINITION_THM =
 
 val _ = save_thm("TYPE_DEFINITION_THM", TYPE_DEFINITION_THM);
 
+val ONTO_THM = save_thm(
+  "ONTO_THM",
+  let val f = mk_var{Name = "f", Ty = Type.alpha --> Type.beta}
+  in
+      GEN f (RIGHT_BETA (AP_THM ONTO_DEF f))
+  end);
+
+val ONE_ONE_THM = save_thm(
+  "ONE_ONE_THM",
+  let val f = mk_var{Name = "f", Ty = Type.alpha --> Type.beta}
+  in
+      GEN f (RIGHT_BETA (AP_THM ONE_ONE_DEF f))
+  end);
+
 (*---------------------------------------------------------------------------*
  * ABS_REP_THM                                                               *
  *  |- !P. (?rep. TYPE_DEFINITION P rep) ==>                                 *
@@ -2859,7 +2873,15 @@ val COND_CONG =
 
 val _ = save_thm("COND_CONG", COND_CONG);
 
-(* results about Unique exists *)
+(* ----------------------------------------------------------------------
+    Results about unique exists
+
+      UEXISTS_OR_THM:
+         |- !P Q. (?!x. P x \/ Q x) ==> (?!x. P x) \/ ?!x. Q x
+      UEXISTS_SIMP:
+         |- (?!x. t) = t /\ !x y. x = y
+
+   ---------------------------------------------------------------------- *)
 local
   val LAND_CONV = RATOR_CONV o RAND_CONV
   val P = mk_var{Name = "P", Ty = Type.alpha --> Type.bool}

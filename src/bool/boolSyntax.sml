@@ -44,7 +44,7 @@ val arb         = prim_mk_const {Name="ARB",  Thy="bool"};
  *     Derived syntax operations                                             *
  *---------------------------------------------------------------------------*)
 
-fun mk_eq{lhs,rhs} = 
+fun mk_eq{lhs,rhs} =
  list_mk_comb(inst[alpha |-> type_of lhs] equality, [lhs,rhs])
  handle HOL_ERR _ => raise ERR "mk_eq" "lhs and rhs have different types";
 
@@ -65,8 +65,8 @@ fun mk_disj{disj1,disj2} =
  list_mk_comb(disjunction,[disj1,disj2])
  handle HOL_ERR _ => raise ERR "mk_disj" "Non-boolean argument"
 
-fun mk_neg M = 
- mk_comb{Rator=negation, Rand=M} 
+fun mk_neg M =
+ mk_comb{Rator=negation, Rand=M}
  handle HOL_ERR _ => raise ERR "mk_neg" "Non-boolean argument";
 
 fun mk_cond {cond,larm,rarm} =
@@ -109,8 +109,8 @@ fun rhs M = #rhs (dest_eq_ty M) handle HOL_ERR _ => raise rhs_err
 val dest_neg = dest_monop ("~","bool") (ERR"dest_neg" "not a negation");
 
 fun dest_imp_only M = let val (_,a,c) = dimp M in {ant=a, conseq=c} end
-fun dest_imp M = 
-  dest_imp_only M handle HOL_ERR _ => {ant=dest_neg M, conseq=F} 
+fun dest_imp M =
+  dest_imp_only M handle HOL_ERR _ => {ant=dest_neg M, conseq=F}
                   handle HOL_ERR _ => raise dest_imp_err
 
 val dest_select  = dest_binder("@", "min")  (ERR"dest_select"  "not a \"@\"")
@@ -126,10 +126,10 @@ fun dest_cond M =
  let val {Rator,Rand=t2} = with_exn dest_comb M dest_cond_err
      val (_,b,t1) = dest_binop ("COND","bool") dest_cond_err Rator
  in {cond=b, larm=t1, rarm=t2}
- end 
+ end
 
-fun dest_arb M = 
-  case dest_thy_const M 
+fun dest_arb M =
+  case dest_thy_const M
    of {Name="ARB", Thy="bool", Ty} => Ty
     | otherwise => raise ERR "dest_arb" "";
 end;
@@ -170,7 +170,7 @@ in
 fun acc_strip_comb rands M =
   case destc M
    of NONE => (M, rands)
-    | SOME{Rator,Rand} => acc_strip_comb (Rand::rands) Rator 
+    | SOME{Rator,Rand} => acc_strip_comb (Rand::rands) Rator
 
 val strip_comb = acc_strip_comb []
 end
@@ -189,20 +189,20 @@ val strip_imp =
   end;
 
 val strip_conj =
-  let val destc = total dest_conj   
+  let val destc = total dest_conj
       fun strip A M =
         case destc M
-         of NONE => List.rev (M::A)
-          | SOME{conj1,conj2} => strip (conj1::A) conj2
+         of NONE => M::A
+          | SOME{conj1,conj2} => strip (strip A conj2) conj1
   in strip []
   end;
 
 val strip_disj =
-  let val destd = total dest_disj 
+  let val destd = total dest_disj
       fun strip A M =
         case destd M
-         of NONE => List.rev (M::A)
-          | SOME{disj1,disj2} => strip (disj1::A) disj2
+         of NONE => M::A
+          | SOME{disj1,disj2} => strip (strip A disj2) disj1
   in strip []
   end;
 
@@ -214,7 +214,7 @@ val strip_disj =
 
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
 
-local fun strip acc ty = 
+local fun strip acc ty =
         case total dom_rng ty
          of SOME(dom,rng) => strip (dom::acc) rng
           | NONE => (List.rev acc,ty)
@@ -225,11 +225,11 @@ end
 
 
 (*---------------------------------------------------------------------------
-     Linking definitional principles and signature operations 
+     Linking definitional principles and signature operations
      with grammars.
  ---------------------------------------------------------------------------*)
 
-fun dest t = 
+fun dest t =
   let val {lhs,rhs} = dest_eq (snd(strip_forall t))
       val (f,args) = strip_comb lhs
   in if all is_var args
@@ -245,43 +245,43 @@ fun post (V,th) =
   in Parse.add_const cname;
      itlist GEN V (rev_itlist add_var V th)
   end;
-  
+
 val _ = Definition.new_definition_hook := (dest, post)
 
-fun defname t = 
+fun defname t =
   let val head = #1 (strip_comb (lhs (#2 (strip_forall t))))
   in #Name (dest_var head handle HOL_ERR _ => dest_const head)
   end;
-  
-fun new_infixr_definition (s, t, p) = 
+
+fun new_infixr_definition (s, t, p) =
   Definition.new_definition(s, t)
-    before 
+    before
   Parse.add_infix(defname t, p, Parse.RIGHT);
 
-fun new_infixl_definition (s, t, p) = 
+fun new_infixl_definition (s, t, p) =
   Definition.new_definition(s, t)
     before
    Parse.add_infix(defname t, p, Parse.LEFT);
 
-fun new_binder_definition (s, t) = 
+fun new_binder_definition (s, t) =
   Definition.new_definition(s, t)
     before
   Parse.add_binder (defname t, Parse.std_binder_precedence);
 
-fun new_type_definition (name, inhab_thm) = 
+fun new_type_definition (name, inhab_thm) =
   Definition.new_type_definition (name,inhab_thm)
      before
   Parse.add_type name;
 
 local fun foldfn ({const_name,fixity}, (ncs,cfs)) =
                     (const_name::ncs, (const_name, fixity) :: cfs)
-in 
-fun new_specification {name,sat_thm,consts} = 
+in
+fun new_specification {name,sat_thm,consts} =
  let val (newconsts, consts_with_fixities) = List.foldl foldfn ([],[]) consts
      val res = Definition.new_specification(name, List.rev newconsts, sat_thm)
-     fun add_rule' r = 
+     fun add_rule' r =
           if #fixity r = Parse.Prefix then () else Parse.add_rule r
-     fun modify_grammar (name, fixity) = 
+     fun modify_grammar (name, fixity) =
         let in add_rule'(Parse.standard_spacing name fixity);
                Parse.add_const name
         end
@@ -289,29 +289,29 @@ fun new_specification {name,sat_thm,consts} =
     res
 end end;
 
-fun new_constant (r as {Name,Ty}) = 
+fun new_constant (r as {Name,Ty}) =
   Theory.new_constant r
-     before 
+     before
   Parse.add_const Name;
 
-fun new_infix{Name, Ty, Prec} = 
+fun new_infix{Name, Ty, Prec} =
   Theory.new_constant{Name=Name, Ty=Ty}
      before
-  (Parse.add_const Name; Parse.add_infix(Name, Prec, Parse.RIGHT)); 
+  (Parse.add_const Name; Parse.add_infix(Name, Prec, Parse.RIGHT));
 
-fun new_binder {Name, Ty} = 
+fun new_binder {Name, Ty} =
   Theory.new_constant{Name=Name, Ty=Ty}
      before
-  (Parse.add_const Name; 
-   Parse.add_binder (Name, Parse.std_binder_precedence)); 
+  (Parse.add_const Name;
+   Parse.add_binder (Name, Parse.std_binder_precedence));
 
-fun new_type{Name,Arity} = 
+fun new_type{Name,Arity} =
   Theory.new_type{Name=Name, Arity=Arity}
-     before 
+     before
   Parse.add_type Name;
 
-fun new_infix_type (x as {Name,Arity,ParseName,Prec,Assoc}) = 
- let val _ = Arity = 2 orelse 
+fun new_infix_type (x as {Name,Arity,ParseName,Prec,Assoc}) =
+ let val _ = Arity = 2 orelse
              raise ERR "new_infix_type" "Infix types must have arity 2"
  in
    Theory.new_type{Name=Name, Arity=Arity}
