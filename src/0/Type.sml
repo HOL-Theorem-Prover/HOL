@@ -45,11 +45,25 @@ val INITIAL{const=bool_tyc,...} = insert (mk_id("bool", "min"), 0);
 val INITIAL{const=ind_tyc,...}  = insert (mk_id("ind",  "min"), 0);
 end
 
-infixr 3 -->;
-fun (X --> Y) = Tyapp (fun_tyc,  [X,Y]);
+
+(*---------------------------------------------------------------------------
+        Some basic values
+ ---------------------------------------------------------------------------*)
+
 val bool      = Tyapp (bool_tyc, []);
 val ind       = Tyapp (ind_tyc,  []);
 
+(*---------------------------------------------------------------------------
+       Function types
+ ---------------------------------------------------------------------------*)
+
+infixr 3 -->;
+fun (X --> Y) = Tyapp (fun_tyc,  [X,Y]);
+
+fun dom_rng (Tyapp(tyc,[x,y])) =
+      if tyc=fun_tyc then (x,y)
+      else raise ERR "dom_rng" "not a function type"
+  | dom_rng _ = raise ERR "dom_rng" "not a function type";
 
 (*---------------------------------------------------------------------------*
  * Create a compound type, in a specific segment, and in the current theory. *
@@ -114,16 +128,6 @@ fun op_arity {Thy,Tyop} =
       SOME {const = (id, a), ...} => SOME a
     | NONE => NONE
 
-(*---------------------------------------------------------------------------*
- *          Invert -->                                                       *
- *---------------------------------------------------------------------------*)
-
-fun dom_rng ty =
-    case dest_thy_type ty
-     of {Thy="min", Tyop="fun", Args=[x,y]} => (x,y)
-      | _ => raise ERR "dom_rng" "not a function type";
-
-
 (*---------------------------------------------------------------------------
        Declared types in a theory segment
  ---------------------------------------------------------------------------*)
@@ -138,16 +142,16 @@ fun thy_types s =
  *         Type variables                                                    *
  *---------------------------------------------------------------------------*)
 
-val alpha = Tyv "'a"
-val beta  = Tyv "'b";
-val gamma = Tyv "'c"
-val delta = Tyv "'d"
-val evar  = Tyv "'e"
-val fvar =  Tyv "'f"
+val alpha  = Tyv "'a"
+val beta   = Tyv "'b";
+val gamma  = Tyv "'c"
+val delta  = Tyv "'d"
+val etyvar = Tyv "'e"
+val ftyvar = Tyv "'f"
 
 fun mk_vartype "'a" = alpha  | mk_vartype "'b" = beta
   | mk_vartype "'c" = gamma  | mk_vartype "'d" = delta
-  | mk_vartype "'e" = evar   | mk_vartype "'f" = fvar
+  | mk_vartype "'e" = etyvar | mk_vartype "'f" = ftyvar
   | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
                    else raise ERR "mk_vartype" "incorrect syntax"
 

@@ -402,6 +402,9 @@ fun mk_const(Name,Ty) = create_const"mk_const" (first_decl"mk_const" Name) Ty;
 
 val all_consts = map #const o TermSig.all_entries;
 
+fun same_const (Const(id1,_)) (Const(id2,_)) = same_id (id1,id2)
+  | same_const _ _ = raise ERR "same_const" "expected two constants"
+
 (*---------------------------------------------------------------------------*
  *        Making applications                                                *
  *---------------------------------------------------------------------------*)
@@ -525,7 +528,7 @@ fun is_abs  (Abs _) = true
  *       Alpha conversion                                                    *
  *---------------------------------------------------------------------------*)
 
-local fun EQ (M,N) = Portable.pointer_eq(M,N)
+local val EQ = Portable.pointer_eq
 in
 fun aconv t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
@@ -665,7 +668,8 @@ fun inst [] tm = tm
     A total ordering on terms.  Fv < Bv < Const < Comb < Abs
       (respects alpha equivalence)
    ---------------------------------------------------------------------- *)
-fun EQ (M,N) = Portable.pointer_eq(M,N)
+local val EQ = Portable.pointer_eq
+in
 fun compare (t1, t2) =
     if EQ(t1,t2) then EQUAL else
     case (t1, t2) of
@@ -693,7 +697,8 @@ fun compare (t1, t2) =
        Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2) of
                                    EQUAL => compare (M,N)
                                  | x => x)
-    | (Abs _, _)             => GREATER;
+    | (Abs _, _)             => GREATER
+end;
 
 val empty_tmset = HOLset.empty compare
 
@@ -710,32 +715,32 @@ local fun MERR() = raise ERR "match_term.red" ""
         | free _ _ = true
       val tymatch = Type.raw_match_type
 in
-fun raw_match tyavoids avoidset pat ob  (S as (tmS,tyS)) = let
-  val raw_match = raw_match tyavoids avoidset
-in
-  case (pat, ob) of
-    (v as Fv(_,Ty), tm) =>
+fun raw_match tyavoids avoidset pat ob  (S as (tmS,tyS)) = 
+ let val raw_match = raw_match tyavoids avoidset
+ in
+  case (pat, ob) 
+   of (v as Fv(_,Ty), tm) =>
       if HOLset.member(avoidset,v) andalso v <> tm then MERR()
       else if not(free tm 0) then MERR()
       else ((case Lib.subst_assoc (equal v) tmS of
                NONE => (v |-> tm)::tmS
              | SOME tm' => if aconv tm' tm then tmS else MERR()),
             tymatch tyavoids Ty (type_of tm) tyS)
-  | (Const(c1, ty1), Const(c2, ty2)) =>
-      if c1 <> c2 then MERR()
-      else (case (ty1,ty2) of
-              (GRND _, POLY _) => MERR()
-            | (GRND pat, GRND obj) => if pat=obj then (tmS,tyS) else MERR()
-            | (POLY pat, GRND obj) => (tmS, tymatch tyavoids pat obj tyS)
-            | (POLY pat, POLY obj) => (tmS, tymatch tyavoids pat obj tyS))
-  | (Comb(M,N), Comb(P,Q))               => raw_match M P (raw_match N Q S)
-  | (Abs(Fv(_,ty1),M), Abs(Fv(_,ty2),N)) =>
-       raw_match M N (tmS, tymatch tyavoids ty1 ty2 tyS)
-  | (Bv i, Bv j)                         => if i=j then S else MERR()
-  | (Clos _, tm)                         => raw_match (push_clos pat) tm S
-  | (pt, tm as Clos _)                   => raw_match pt (push_clos tm) S
-  | otherwise                            => MERR()
-end
+    | (Const(c1, ty1), Const(c2, ty2)) =>
+       if c1 <> c2 then MERR()
+       else (case (ty1,ty2) 
+              of (GRND _, POLY _) => MERR()
+               | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) else MERR()
+               | (POLY pat,GRND obj) => (tmS, tymatch tyavoids pat obj tyS)
+               | (POLY pat,POLY obj) => (tmS, tymatch tyavoids pat obj tyS))
+    | (Abs(Fv(_,ty1),M), Abs(Fv(_,ty2),N)) 
+         => raw_match M N (tmS, tymatch tyavoids ty1 ty2 tyS)
+    | (Comb(M,N),Comb(P,Q)) => raw_match M P (raw_match N Q S)
+    | (Bv i, Bv j)       => if i=j then S else MERR()
+    | (Clos _, tm)       => raw_match (push_clos pat) tm S
+    | (pt, tm as Clos _) => raw_match pt (push_clos tm) S
+    | otherwise          => MERR()
+ end
 end (* local *)
 
 fun norm_subst tytheta =
@@ -757,11 +762,10 @@ end
 val match_term = match_terml [] (HOLset.empty compare)
 
 (*---------------------------------------------------------------------------
-         Must know that ty is the type of tm1 and tm2.
+       Must know that ty is the type of tm1 and tm2.
  ---------------------------------------------------------------------------*)
 
 fun prim_mk_eq ty tm1 tm2 = Comb(Comb(inst [Type.alpha |-> ty] eqc, tm1), tm2)
-
 
 (*---------------------------------------------------------------------------
       Must know that tm1 and tm2 both have type "bool"
@@ -770,27 +774,22 @@ fun prim_mk_eq ty tm1 tm2 = Comb(Comb(inst [Type.alpha |-> ty] eqc, tm1), tm2)
 fun prim_mk_imp tm1 tm2  = Comb(Comb(imp, tm1),tm2);
 
 
-local val Const(eqid,_) = eqc
-      fun get ty = case Type.dest_thy_type ty
-                    of {Args = h::_, ...} => h
-                     | _ => raise ERR "dest_eq_ty" ""
+local val err = ERR "dest_eq_ty" ""
 in
 fun dest_eq_ty t =
-  let val (Rator,N) = dest_comb t
-  in case dest_comb Rator
-      of (Const(id,holty),M)
-          => if eqid=id then (M,N, get (to_hol_type holty))
-                        else raise ERR "dest_eq_ty" ""
-       | otherwise => raise ERR "dest_eq_ty" ""
+ let val (Rator,N) = dest_comb t
+ in case dest_comb Rator
+     of (c as Const(_,holty),M) => 
+           if same_const eqc c 
+             then (M,N, fst(Type.dom_rng (to_hol_type holty))) 
+             else raise err
+       | otherwise => raise err
   end
 end
 
 fun break_abs(Abs(_,Body)) = Body
   | break_abs(t as Clos _) = break_abs (push_clos t)
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
-
-
-
 
 
 (*---------------------------------------------------------------------------*

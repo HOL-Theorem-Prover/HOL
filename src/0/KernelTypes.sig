@@ -17,6 +17,7 @@ eqtype id
   val name_of  : id -> name
   val seg_of   : id  -> segment
   val compare  : id * id -> order
+  val same_id  : id * id -> bool
   val retire   : id -> unit
   val fullname : name * segment -> string
   val id_to_string : id -> string

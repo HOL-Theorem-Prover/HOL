@@ -57,12 +57,12 @@ sig
   val is_const      : term -> bool
   val is_comb       : term -> bool
   val is_abs        : term -> bool
-
   val rator         : term -> term
   val rand          : term -> term
   val bvar          : term -> term
   val body          : term -> term
 
+  val same_const    : term -> term -> bool
   val aconv         : term -> term -> bool
   val beta_conv     : term -> term
   val eta_conv      : term -> term

@@ -200,11 +200,9 @@ fun DISCH_THEN ttac (asl,w) =
  *---------------------------------------------------------------------------*)
 
 fun UNDISCH_THEN tm ttac (asl, w) =
- let val (_, asl') =
-       Lib.pluck (equal tm) asl handle HOL_ERR _
-       => raise ERR "UNDISCH_THEN" "Term given not an assumption"
- in
-   ttac (ASSUME tm) (asl', w)
+ let val (_, asl') = with_exn (Lib.pluck (equal tm)) asl
+                     (ERR "UNDISCH_THEN" "Term given not an assumption")
+ in ttac (ASSUME tm) (asl', w)
  end;
 
 

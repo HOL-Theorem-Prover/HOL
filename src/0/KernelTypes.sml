@@ -17,6 +17,7 @@ fun dest_id ((ref p):id) = p
 fun name_of id = #1(dest_id id)
 fun seg_of id  = #2(dest_id id)
 fun retire r = let val (n,t) = dest_id r in r := (!Globals.old n, t) end
+val same_id = (op=);
 fun compare (id1,id2) =
   case String.compare (name_of id1, name_of id2)
    of EQUAL => String.compare (seg_of id1, seg_of id2)
@@ -59,7 +60,6 @@ datatype term = Fv of string * hol_type
               | Abs   of term * term
               | Clos  of term Subst.subs * term;
 
-
 (*---------------------------------------------------------------------------
       The representation of theorems. A "tag" is a pair of the oracles
       used and the axioms used. Oracles are represented as ordered lists
@@ -74,7 +74,6 @@ datatype thm = THM of tag * term HOLset.set * term
      The type of witnesses for definitions, used in Theory.
  ---------------------------------------------------------------------------*)
 
-  datatype witness
-       = TERM of term
-       | THEOREM of thm
-end;
+datatype witness = TERM of term | THEOREM of thm
+
+end

@@ -241,23 +241,14 @@ fun ABS v (THM(ocl,asl,c)) =
  *  --------------------  INST_TYPE theta
  *  theta(A) |- theta(M)
  *
- * The proviso means that no type variable in the domain of theta occurs
- * in A. It would be more sensible to just apply theta to A.
  *---------------------------------------------------------------------------*)
 
-local open Type
-      fun compare (v1,v2) = String.compare(dest_vartype v1,dest_vartype v2)
-      val init_varset = HOLset.empty compare
-in
 fun INST_TYPE [] th = th
   | INST_TYPE theta (THM(ocl,asl,c)) =
-    let val domvars = rev_itlist(fn {redex,...} => fn S =>
-                         HOLset.add(S,redex)) theta init_varset
-        fun in_dom v = HOLset.member(domvars,v)
-    in
-      make_thm Count.InstType (ocl, hypset_map (inst theta) asl, inst theta c)
-    end
-end;
+      make_thm Count.InstType 
+        (ocl, 
+         hypset_map (inst theta) asl, 
+         inst theta c)
 
 (*---------------------------------------------------------------------------
  *          A |- M

@@ -36,6 +36,9 @@ sig
   val beta          : hol_type
   val gamma         : hol_type
   val delta         : hol_type
+  val etyvar        : hol_type
+  val ftyvar        : hol_type
+
   val raw_match_type: hol_type list -> hol_type -> hol_type ->
                       (hol_type,hol_type) Lib.subst * hol_type list ->
                       (hol_type,hol_type) Lib.subst * hol_type list
@@ -98,6 +101,7 @@ sig
   val bvar          : term -> term
   val body          : term -> term
   val is_bvar       : term -> bool
+  val same_const    : term -> term -> bool
   val aconv         : term -> term -> bool
   val beta_conv     : term -> term
   val eta_conv      : term -> term
