@@ -366,8 +366,8 @@ fun pp_defn_as_ML openthys ppstrm =
           ; end_block()
          end
      fun pp_clauses (s,els) =
-       let val s' = if is_fn_app(lhs(hd els)) then s else "val" in 
-           begin_block CONSISTENT 2
+       let val s' = if is_fn_app(lhs(hd els)) then s else "val"
+       in  begin_block CONSISTENT 2
          ; add_string (s'^" ")
          ; pp_clause (hd els)
          ; add_newline()
@@ -443,8 +443,10 @@ fun pp_type_as_ML ppstrm ty =
 
 datatype elem 
     = DEFN of thm
+    | DEFN_NOSIG of thm
     | DATATYPE of ParseDatatype.AST list
     | EQDATATYPE of string list * ParseDatatype.AST list
+    | ABSDATATYPE of string list * ParseDatatype.AST list
     | OPEN of string list
     | MLSIG of string
     | MLSTRUCT of string;
@@ -504,6 +506,7 @@ fun repair_type_decls (DATATYPE decls) =
      in
        (tyvars, map (I##replaceForm alist_fn) decls)
      end
+  | repair_type_decls (ABSDATATYPE stuff) = repair_type_decls (EQDATATYPE stuff)
   | repair_type_decls arg = raise ERR "repair_type_decls" "unexpected input";
 
 
@@ -521,8 +524,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
            add_string")";
            end_block())
      fun pp_clause r clause =
-       (if !r then (add_string "= "; r:=false) 
-              else add_string "| "; 
+       (if !r then (add_string "= "; r:=false) else add_string "| "; 
         case clause
          of (con,[]) => add_string con
           | (con,args) =>
@@ -579,12 +581,12 @@ fun pp_sig strm (s,elems) =
          begin_block,end_block,flush_ppstream,...} = with_ppstream strm
     val ppty = pp_type_as_ML strm
     val pp_datatype = pp_datatype_as_ML strm
-    fun pp_eqdatatype (tyvars,astl) = 
+    fun pp_eqdatatype b (tyvars,astl) = 
      let val tynames = map fst astl
          val tys = map (fn s => (tyvars,s)) tynames
          fun pp_tydec (tyvars,s) = 
            (begin_block CONSISTENT 0;
-             add_string "eqtype ";
+             add_string (if b then "eqtype " else "type ");
              if null tyvars then add_string s else
              if List.length tyvars = 1 
               then (add_string (hd tyvars); add_string(" "^s))
@@ -605,10 +607,12 @@ fun pp_sig strm (s,elems) =
         end_block()
      end
     fun pp_el (DATATYPE astl) = pp_datatype (repair_type_decls (DATATYPE astl))
-      | pp_el (EQDATATYPE (tyvarsl,astl)) = pp_eqdatatype(tyvarsl,astl)
+      | pp_el (EQDATATYPE (tyvarsl,astl)) = pp_eqdatatype true (tyvarsl,astl)
+      | pp_el (ABSDATATYPE (tyvarsl,astl)) = pp_eqdatatype false (tyvarsl,astl)
       | pp_el (DEFN thm) = 
             pr_list pp_valdec (fn () => ()) add_newline (consts_of_def thm)
       | pp_el (MLSIG s) = add_string s
+      | pp_el (DEFN_NOSIG thm) = ()
       | pp_el (MLSTRUCT s) = ()
       | pp_el (OPEN slist) = ()
  in 
@@ -617,7 +621,11 @@ fun pp_sig strm (s,elems) =
    begin_block CONSISTENT 2;
    add_string"sig"; add_newline();
    begin_block CONSISTENT 0;
-   pr_list pp_el (fn () => ()) add_newline elems;
+   pr_list pp_el (fn () => ()) add_newline 
+       (filter (fn (DEFN_NOSIG _) => false 
+                 | (OPEN _) => false
+                 | (MLSTRUCT _) => false
+                 | otherwise => true) elems);
    end_block(); end_block(); 
    add_newline();
    add_string"end"; add_newline();
@@ -639,7 +647,10 @@ fun pp_struct strm (s,elems,cnames) =
     fun pp_el (DATATYPE astl) = pp_datatype (repair_type_decls (DATATYPE astl))
       | pp_el (EQDATATYPE (tyvarsl,astl)) = 
            pp_datatype (repair_type_decls (EQDATATYPE(tyvarsl,astl)))
+      | pp_el (ABSDATATYPE (tyvarsl,astl)) = 
+           pp_datatype (repair_type_decls (ABSDATATYPE(tyvarsl,astl)))
       | pp_el (DEFN thm) = pp_defn_as_ML (s::opens()) strm (concl thm)
+      | pp_el (DEFN_NOSIG thm) = pp_el (DEFN thm)
       | pp_el (MLSIG s) = ()
       | pp_el (MLSTRUCT s) = add_string s
       | pp_el (OPEN slist) = (openthys := union slist (!openthys);
@@ -765,6 +776,7 @@ fun add s c =
    end;
 
 fun install_consts _ [] = []
+  | install_consts s (DEFN_NOSIG thm::rst) = install_consts s (DEFN thm::rst)
   | install_consts s (DEFN thm::rst) = 
        let val clist = munge_def_type thm 
            val _ = List.app (add s) clist
@@ -780,6 +792,8 @@ fun install_consts _ [] = []
           val _ = List.app (add s) consts
       in consts @ install_consts s rst
       end
+  | install_consts s (ABSDATATYPE (tyvars,ty)::rst) = 
+    install_consts s (EQDATATYPE (tyvars,ty)::rst)
   | install_consts s (other::rst) = install_consts s rst
 
 

@@ -25,9 +25,11 @@ sig
   val pp_defn_as_ML     : string list -> ppstream -> term -> unit
   val pp_datatype_as_ML : ppstream -> string list * ParseDatatype.AST list -> unit
 
-  datatype elem = DEFN of Thm.thm
+  datatype elem = DEFN of thm
+                | DEFN_NOSIG of thm
                 | DATATYPE of ParseDatatype.AST list
                 | EQDATATYPE of string list * ParseDatatype.AST list
+                | ABSDATATYPE of string list * ParseDatatype.AST list
                 | OPEN of string list
                 | MLSIG of string
                 | MLSTRUCT of string
