@@ -461,6 +461,43 @@ val BIT_COMP_THM3 = store_thm("BIT_COMP_THM3",
 
 (* -------------------------------------------------------- *)
 
+val BITS_SUM = store_thm("BITS_SUM",
+  `!h l a b. b < 2 ** l ==> (BITS h l (a * 2 ** l + b) = BITS h l (a * 2 ** l))`,
+  RW_TAC bool_ss [BITS_THM,DIV_MULT,MULT_DIV,ZERO_LT_TWOEXP]
+);
+ 
+val BITS_SUM2 = store_thm("BITS_SUM2",
+  `!h l a b. BITS h l (a * 2 ** SUC h + b) = BITS h l b`,
+  RW_TAC bool_ss [BITS_THM2,MOD_TIMES,ZERO_LT_TWOEXP]
+);
+ 
+val SLICE_TWOEXP = prove(
+  `!h l a n. SLICE (h + n) (l + n) (a * 2 ** n) = (SLICE h l a) * 2 ** n`,
+  REPEAT STRIP_TAC
+    THEN SUBST1_TAC (SPECL [`l`,`n`] ADD_COMM)
+    THEN RW_TAC bool_ss [(GSYM o CONJUNCT2) ADD,SLICE_THM,BITS_THM,MULT_DIV,EXP_ADD,GSYM DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]
+    THEN SIMP_TAC arith_ss [AC MULT_ASSOC MULT_COMM]
+);
+ 
+val SPEC_SLICE_TWOEXP =
+  (GEN_ALL o SIMP_RULE arith_ss [] o DISCH `n <= l /\ n <= h` o SPECL [`h - n`,`l - n`,`a`,`n`]) SLICE_TWOEXP;
+ 
+val SLICE_COMP_THM2 = store_thm("SLICE_COMP_THM2",
+  `!h l x y n.
+      h <= x /\ y <= l ==>
+        (SLICE h l (SLICE x y n) = SLICE h l n)`,
+  REPEAT STRIP_TAC
+    THEN Cases_on `h < l` THEN1 ASM_SIMP_TAC bool_ss [SLICE_ZERO]
+    THEN `y <= h` by DECIDE_TAC
+    THEN SUBST1_TAC (SPECL [`n`,`x`,`y`] SLICE_THM)
+    THEN ASM_SIMP_TAC bool_ss [SPEC_SLICE_TWOEXP]
+    THEN ASM_SIMP_TAC arith_ss [SLICE_THM,BITS_COMP_THM2,MIN_DEF]
+    THEN SIMP_TAC bool_ss [GSYM MULT_ASSOC,GSYM EXP_ADD]
+    THEN ASM_SIMP_TAC arith_ss []
+);
+
+(* -------------------------------------------------------- *)
+
 val NOT_BIT = store_thm("NOT_BIT",
   `!n a. ~BIT n a = (BITS n n a = 0)`,
   B_RW_TAC [BIT_def,BITS_THM,SUC_SUB,EXP_1,GSYM NOT_MOD2_LEM]
