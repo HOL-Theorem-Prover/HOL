@@ -368,37 +368,24 @@ fun dest_exp tm =
   else (tm,[]);
 
 (*****************************************************************************)
-(* Check if a term is built out of constants using only application          *)
-(* (e.g. Norrish numerals)                                                   *)
+(* A combinational term is one that only contains constants declared         *)
+(* combinational by having their names included in the assignable list       *)
+(* combinational_constants                                                   *)
 (*****************************************************************************)
-fun is_compound_const tm =
- is_const tm
-  orelse (is_comb tm 
-           andalso is_compound_const(rator tm)
-           andalso is_compound_const(rand tm));
+val combinational_constants = 
+ ref["T","F","/\\","\\/","~",",","o","CURRY","UNCURRY","COND",
+     "Seq","Par","Ite","NUMERAL","BIT1","BIT2","ZERO","+","-"];
 
-(*****************************************************************************)
-(* A simple function has the form ``\(x1,...,xn). tm`` where tm is           *)
-(* composed using only pairing (including Par), composition (including Seq)  *)
-(* constants and the variables x1,...,xn, or is, recursively, built from     *)
-(* such paired abstractions using Seq or Par.                                *)
-(*****************************************************************************)
-fun SIMPLE tm =
- if is_pabs tm
-  then
-   let val (args, bdy) = strip_pabs tm
-       val argslist = flatten(map strip_pair args)
-       val bdylist = strip_pair bdy
-   in
-    all (fn t => mem t argslist orelse is_compound_const t) bdylist
-   end 
- else 
-  is_comb tm 
-   andalso is_comb(rator tm) 
-   andalso is_const(rator(rator tm))
-   andalso mem (fst(dest_const(rator(rator tm)))) ["Seq","Par"]
-   andalso SIMPLE(rand tm) andalso SIMPLE(rand(rator tm));
-
+fun COMBINATIONAL tm =
+ is_var tm
+  orelse (is_const tm 
+           andalso  mem (fst(dest_const tm))  (!combinational_constants))
+  orelse (is_abs tm
+           andalso COMBINATIONAL(body tm))
+  orelse (is_comb tm
+           andalso COMBINATIONAL(rator tm)
+           andalso COMBINATIONAL(rand tm));
+   
 (*****************************************************************************)
 (* CompileExp exp                                                            *)
 (* -->                                                                       *)
@@ -409,14 +396,14 @@ fun CompileExp tm =
                       handle HOL_ERR _ 
                       => raise ERR "CompileExp" "bad expression"
  in
-  if null args orelse SIMPLE tm
+  if null args orelse COMBINATIONAL tm
    then ISPEC ``DEV ^tm`` DEV_IMP_REFL
    else
     case fst(dest_const opr) of
        "Seq" => let val tm1 = hd args
                     val tm2 = hd(tl args)
                 in
-                 if SIMPLE tm1 
+                 if COMBINATIONAL tm1 
                   then MATCH_MP 
                         (ISPEC tm1 PRECEDE_DEV)
                         (CompileExp tm2)
@@ -1014,7 +1001,6 @@ fun EXISTS_OUT_CONV t =
 (*****************************************************************************)
 (* Compile a device implementation into a netlist represented in HOL         *)
 (*****************************************************************************)
-
 val MAKE_NETLIST =
  SIMP_RULE std_ss 
   [COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,COMB_CONSTANT_3,COMB_BINOP,
@@ -1023,4 +1009,4 @@ val MAKE_NETLIST =
  GEN_BETA_RULE                                                             o
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
-   PRECEDE_def,Par_def,Seq_def,o_THM];
+   (*COMB_SYNTH,*)PRECEDE_SYNTH,PRECEDE_ID,Par_def,Seq_def,o_THM];

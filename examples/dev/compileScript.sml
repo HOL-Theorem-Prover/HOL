@@ -115,6 +115,21 @@ val Seq_o =
 val PRECEDE_def =
  Define `PRECEDE f d = \(load,inp,done,out). d(load, (f o inp), done, out)`;
 
+val PRECEDE_ID =
+ store_thm
+  ("PRECEDE_ID",
+   ``PRECEDE (\x.x) d = d``,
+   RW_TAC std_ss [PRECEDE_def,o_DEF,ETA_THM]
+    THEN CONV_TAC(LHS_CONV PETA_CONV)
+    THEN RW_TAC std_ss []);
+
+val PRECEDE_SYNTH =
+ store_thm
+  ("PRECEDE_SYNTH",
+   ``PRECEDE f d = 
+      \(load,inp,done,out). ?v. (v = f o inp) /\ d(load,v,done,out)``,
+   RW_TAC std_ss [PRECEDE_def,o_DEF,ETA_THM]);
+
 (*****************************************************************************)
 (* Precede a device with a combinational circuit                             *)
 (*****************************************************************************)
@@ -369,6 +384,12 @@ val COMB_SND =
    ``COMB SND (f <> g, h) = (h = g)``,
    RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
     THEN PROVE_TAC[]);
+
+val COMB_SYNTH =
+ store_thm
+  ("COMB_SYNTH",
+   ``COMB f (inp,out) = (out = f o inp)``,
+   RW_TAC std_ss [COMB_def,FUN_EQ_THM]);
 
 (*****************************************************************************)
 (* Bus selector operators                                                    *)
