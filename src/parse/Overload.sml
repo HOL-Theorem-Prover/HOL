@@ -36,12 +36,16 @@ type overloaded_op_info =
 
 
 type overload_info = ((string,overloaded_op_info) Binarymap.dict *
-                      ({Name:string,Thy:string} * string) list)
+                      ({Name:string,Thy:string}, string) Binarymap.dict)
 
-val null_oinfo = (Binarymap.mkDict String.compare, [])
+fun nthy_rec_cmp ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
+    pair_compare (String.compare, String.compare) ((thy1, n1), (thy2, n2))
+
+val null_oinfo = (Binarymap.mkDict String.compare,
+                  Binarymap.mkDict nthy_rec_cmp)
 
 fun oinfo_ops (oi,_) = Binarymap.listItems oi
-fun print_map (_, pm) = pm
+fun print_map (_, pm) = Binarymap.listItems pm
 
 fun update_assoc k v [] = [(k,v)]
   | update_assoc k v ((k',v')::kvs) = if k = k' then (k,v)::kvs
@@ -164,9 +168,13 @@ fun remove_overloaded_form s (oinfo:overload_info) = let
   (* will keep okopc, but should now remove from cnst2op all pairs of the form
        (c, s)
      where s is the s above *)
-  val (okcop, badcop) = List.partition (fn (c,s') => s' <> s) cnst2op
+  fun foldthis (k,v,acc as (map,removed)) =
+      if v = s then (#1 (Binarymap.remove (map, k)), k::removed)
+      else acc
+
+  val (okcop, badcop) = Binarymap.foldl foldthis (cnst2op,[]) cnst2op
 in
-  ((okopc, okcop), (badopc, map #1 badcop))
+  ((okopc, okcop), (badopc, badcop))
 end
 
 fun raw_map_insert s (new_op2cs, new_c2ops) (op2c_map, c2op_map) = let
@@ -176,7 +184,8 @@ fun raw_map_insert s (new_op2cs, new_c2ops) (op2c_map, c2op_map) = let
       raise OVERLOAD_ERR ("No such constant: "^Thy^"$"^Name)
   val withtypes = map install_ty new_op2cs
   val new_c2op_map =
-    foldl (fn (crec,ass) => update_assoc crec s ass) c2op_map new_c2ops
+    List.foldl (fn (crec,acc) => Binarymap.insert(acc, crec, s))
+               c2op_map new_c2ops
 in
   case withtypes of
     [] => (op2c_map, new_c2op_map)
@@ -240,7 +249,7 @@ fun add_actual_overloading {opname, realname, realthy} oinfo = let
         (* this name not overloaded at all *)
         Binarymap.insert(opc0, opname,
                          {actual_ops = [newrec], base_type = #Ty newrec})
-  val cop = update_assoc nthy_rec opname cop0
+  val cop = Binarymap.insert(cop0, nthy_rec, opname)
 in
   (opc, cop)
 end
@@ -252,26 +261,19 @@ fun myfind f [] = NONE
 fun overloading_of_term (oinfo:overload_info) t =
   if not (Term.is_const t) then NONE
   else
-    Option.map #2
-    (Lib.assoc1 (lose_constrec_ty (Term.dest_thy_const t)) (#2 oinfo))
+    Binarymap.peek (#2 oinfo, lose_constrec_ty (Term.dest_thy_const t))
 
 fun overloading_of_nametype (oinfo:overload_info) r =
-  Option.map #2 (Lib.assoc1 r (#2 oinfo))
+    Binarymap.peek (#2 oinfo, r)
 
 fun rev_append [] rest = rest
   | rev_append (x::xs) rest = rev_append xs (x::rest)
-
-fun compare_crec ({Name = n1, Thy = thy1},
-                  {Name = n2, Thy = thy2}) =
-  case String.compare(thy1, thy2) of
-    EQUAL => String.compare (n1, n2)
-  | x => x
 
 val show_alias_resolution = ref true
 val _ = Feedback.register_btrace ("show_alias_printing_choices",
                                   show_alias_resolution)
 
-fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
+fun merge_oinfos (O1:overload_info) (O2:overload_info) : overload_info = let
   val O1ops_sorted = Binarymap.listItems (#1 O1)
   val O2ops_sorted = Binarymap.listItems (#1 O2)
   fun merge acc op1s op2s =
@@ -298,15 +300,15 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
         | GREATER => merge ((k2, op2)::acc) op1s op2s'
       end
     infix ##
-    val O1cops_sorted = Listsort.sort (compare_crec o (#1 ## #1)) (#2 O1)
-    val O2cops_sorted = Listsort.sort (compare_crec o (#1 ## #1)) (#2 O2)
+    val O1cops_sorted = Binarymap.listItems (#2 O1)
+    val O2cops_sorted = Binarymap.listItems (#2 O2)
     fun merge_cops acc cop1s cop2s =
       case (cop1s, cop2s) of
         ([], x) => rev_append acc x
       | (x, []) => rev_append acc x
       | (r1::r1s, r2::r2s) => let
         in
-          case compare_crec(#1 r1, #1 r2) of
+          case nthy_rec_cmp(#1 r1, #1 r2) of
             LESS => merge_cops (r1::acc) r1s cop2s
           | GREATER => merge_cops (r2::acc) cop1s r2s
           | EQUAL => let
@@ -322,9 +324,11 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
         end
 in
   (List.foldr (fn ((k,v),dict) => Binarymap.insert(dict,k,v))
-   (Binarymap.mkDict String.compare)
-   (merge [] O1ops_sorted O2ops_sorted),
-   merge_cops [] O1cops_sorted O2cops_sorted)
+              (Binarymap.mkDict String.compare)
+              (merge [] O1ops_sorted O2ops_sorted),
+   List.foldl (fn ((k,v),dict) => Binarymap.insert(dict,k,v))
+              (Binarymap.mkDict nthy_rec_cmp)
+              (merge_cops [] O1cops_sorted O2cops_sorted))
 end
 
 fun keys dict = Binarymap.foldr (fn (k,v,l) => k::l) [] dict
@@ -341,9 +345,10 @@ in
 end handle Binarymap.NotFound => opdict
 
 
-fun remove_mapping str crec (oi:overload_info) =
-  (remove_omapping crec str (#1 oi),
-   List.filter (fn (r,str') => r <> crec orelse str <> str') (#2 oi))
-
+fun remove_mapping str crec ((opc, cop) : overload_info) =
+  (remove_omapping crec str opc,
+   case Binarymap.peek (cop, crec) of
+     NONE => cop
+   | SOME s => if s = str then #1 (Binarymap.remove(cop, crec)) else cop)
 
 end (* Overload *)
