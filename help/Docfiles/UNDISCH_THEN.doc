@@ -18,9 +18,9 @@ the theorem-tactic and then applies the consequent tactic.  Thus:
 }
 \noindent For example, if
 {
-    A ?- t
-   ========  f (ASSUME "u")
-    B ?- v
+    A u {{t1}} ?- t
+   ===============  f (ASSUME "t1")
+    B u {{t1}} ?- v
 }
 \noindent then
 {

@@ -1,0 +1,130 @@
+\DOC add_infix
+
+\TYPE {Parse.add_infix : string * int * associativity -> unit}
+
+\SYNOPSIS
+Adds a string as an infix with the given precedence and associativity
+to the grammar.
+
+\KEYWORDS
+parsing, prettyprinting
+
+\LIBRARY Parse
+
+\DESCRIBE
+This function adds the given string to the grammar such that the
+string
+{
+   <str1> s <str2>
+}
+\noindent will be parsed as
+{
+   s <t1> <t2>
+}
+\noindent where {<str1>} and {<str2>} have been parsed to two terms
+{<t1>} and {<t2>}.  The parsing process does not pay any attention to
+whether or not {s} corresponds to a constant or not.  This resolution
+happens later in the parse, and will result in either a constant or a
+variable with name {s}.
+
+\FAILURE
+{add_infix} fails if the precedence level chosen for the new infix is
+the same as a different type of grammar rule (e.g., suffix or binder),
+or if the precedence level has infixes already but of a different
+associativity.
+
+It is also possible that the choice of string {s} will result in
+subsequent attempts to call the term parser failing due to precedence
+conflicts.
+
+\EXAMPLE
+Though we may not have {+} defined as a constant, we can still define
+it as infix for the purposes of printing and parsing:
+{
+   - add_infix ("+", 500, HOLgrammars.LEFT);
+   > val it = () : unit
+   - Term`x + y`;
+   <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
+   > val it = `x + y` : Term.term
+   - dest_comb it;
+   > val it = {{Rand = `y`, Rator = `$+ x`}} :
+         {{Rand : Term.term, Rator : Term.term}}
+   - Term`\$+. x + y`;
+   <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
+   > val it = `\$+. x + y` : Term.term
+   - dest_abs it;
+   > val it = {{Body = `x + y`, Bvar = `$+`}}
+              : {{Body : Term.term, Bvar : Term.term}}
+}
+\noindent The generation of three new type variables in the examples
+above reflects the fact that the term in the first example and the
+body of the second are really no different from {f x y}.  The new {+}
+infix is left associative:
+{
+   - Term`x + y + z`;
+   <<HOL message: inventing new type variable names: 'a, 'b.>>
+   > val it = `x + y + z` : Term.term
+   - dest_comb it;
+   > val it =
+       {{Rand = `z`, Rator = `$+ (x + y)`}}
+       : {{Rand : Term.term, Rator : Term.term}}
+}
+\noindent It is also more tightly binding than {/\} (which has
+precedence 400 by default):
+{
+   - Term`p /\ q + r`;
+   <<HOL message: inventing new type variable names: 'a, 'b.>>
+   > val it = `p /\ q + r` : Term.term
+   - dest_comb it;
+   > val it =
+       {{Rand = `q + r`, Rator = `$/\ p`}}
+       : {{Rand : Term.term, Rator : Term.term}}
+}
+\noindent An attempt to define a right associative operator at the
+same level fails:
+{
+   Lib.try add_infix("-", 500, HOLgrammars.RIGHT);
+
+   Exception raised at Parse.add_infix:
+   Grammar Error: Attempt to have differently associated infixes
+                  (RIGHT and LEFT) at same level
+   ! Uncaught exception:
+   ! HOL_ERR <poly>
+}
+\noindent Similarly we can't define an infix at level 900, because
+this is where the (true prefix) rule for logical negation ({~}) is.
+{
+   - Lib.try add_infix("-", 900, HOLgrammars.RIGHT);
+
+   Exception raised at Parse.add_infix:
+   Grammar Error: Attempt to have different forms at same level
+   ! Uncaught exception:
+   ! HOL_ERR <poly>
+}
+\noindent Finally, an attempt to have a second {+} infix at a different
+precedence level causes grief when we later attempt to use the parser:
+{
+   - add_infix("+", 400, HOLgrammars.RIGHT);
+   > val it = () : unit
+   - Term`p + q`;
+   ! Uncaught exception:
+   ! HOL_ERR <poly>
+   - Lib.try Term`p + q`;
+
+   Exception raised at Parse.Term:
+   Grammar introduces precedence conflict between tokens + and +
+   ! Uncaught exception:
+   ! HOL_ERR <poly>
+}
+
+\USES
+Most use of infixes will want to have them associated with a
+particular constant in which case the definitional principles
+({new_infixl_definition} etc) are more likely to be appropriate.
+However, a development of a theory of abstract algebra may well want
+to have infix variables such as {+} above.
+
+\SEEALSO
+add_binder, add_rule, add_listform.
+
+\ENDDOC

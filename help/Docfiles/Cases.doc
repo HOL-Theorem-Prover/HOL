@@ -28,11 +28,11 @@ for natural numbers initially in the {TypeBase} is:
 {
    |- !n. (n = 0) \/ (?m. n = SUC m)
 }
-Case-splitting consists of specialising the cases theorem with the
+\noindent Case-splitting consists of specialising the cases theorem with the
 variable from the goal and then generating as many sub-goals as there
 are disjuncts in the cases theorem, where in each sub-goal (including
 the assumptions) the variable has been replaced by an expression
-involving the given ``constructor'' (the {Ci}s above) applied to as
+involving the given ``constructor'' (the {Ci}'s above) applied to as
 many fresh variables as appropriate.
 
 \FAILURE

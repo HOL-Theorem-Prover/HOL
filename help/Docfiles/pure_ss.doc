@@ -11,7 +11,6 @@ additional rewrites.
 \LIBRARY pureSimps
 
 \DESCRIBE
-
 This simpset sits at the root of the simpset hierarchy.  It contains
 no rewrites, congruences, conversions or decision procedures.  Instead
 it contains just the code which converts theorems passed to it as
@@ -33,14 +32,14 @@ The theorem {ADD_EQ_SUB} from {arithmeticTheory} states that
 {
    |- !m n p. n <= p ==> ((m + n = p) = m = p - n)
 }
-We can use this result to make progress with the following goal in
+\noindent We can use this result to make progress with the following goal in
 conjunction with {pure_ss} in a way that no form of {REWRITE_TAC}
 could:
 {
    - ASM_SIMP_TAC pure_ss [ADD_EQ_SUB] ([--`x <= y`--], --`z + x = y`--);
    > val it = ([([`x <= y`], `z = y - x`)], fn) : tactic_result
 }
-This example illustrates the way in which the simplifier can do
+\noindent This example illustrates the way in which the simplifier can do
 conditional rewriting.  However, the lack of the congruence for
 implications, means that using {pure_ss} will not be able to discharge
 the side condition in the goal below:
@@ -48,7 +47,7 @@ the side condition in the goal below:
    - SIMP_TAC pure_ss [ADD_EQ_SUB] ([], --`x <= y ==> (z + x = y)`--);
    > val it = ([([], `x <= y ==> (z + x = y)`)], fn) : tactic_result
 }
-As {bool_ss} has the relevant congruence included, it does make
+\noindent As {bool_ss} has the relevant congruence included, it does make
 progress in the same situation:
 {
    - SIMP_TAC bool_ss [ADD_EQ_SUB] ([], --`x <= y ==> (z + x = y)`--);
