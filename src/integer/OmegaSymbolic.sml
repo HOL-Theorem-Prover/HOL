@@ -674,6 +674,8 @@ in
    orelse same_const f equality andalso type_of (hd args) = bool)
 end
 
+fun IFEXISTS c tm = if is_exists tm then c tm else ALL_CONV tm
+
 fun findelim_deep_existential tm = let
 in
   if is_forall tm then
@@ -681,7 +683,7 @@ in
     (CooperSyntax.flip_foralls THENC RAND_CONV findelim_deep_existential)
   else if is_exists tm then
     (STRIP_QUANT_CONV findelim_deep_existential) ORELSEC
-    (sym_normalise THENC EVERY_DISJ_CONV (TRY_CONV eliminate_an_existential))
+    (sym_normalise THENC EVERY_DISJ_CONV (IFEXISTS eliminate_an_existential))
   else if is_bool_binop tm then
     (LAND_CONV findelim_deep_existential) ORELSEC
     (RAND_CONV findelim_deep_existential)

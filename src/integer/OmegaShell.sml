@@ -23,6 +23,9 @@ fun c1 ORELSEC c2 = ORELSEQC c1 c2
 val BINOP_CONV = BINOP_QCONV
 val ALL_CONV = ALL_QCONV
 val TRY_CONV = TRY_QCONV
+fun EVERY_DISJ_CONV c tm =
+    if is_disj tm then BINOP_CONV (EVERY_DISJ_CONV c) tm
+    else c tm
 
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaShell",
                           origin_function = f,
@@ -68,14 +71,13 @@ in
   STRIP_QUANT_CONV (Canon.NNF_CONV leaf_normalise false THENC
                     CSimp.csimp (TRY_CONV leaf_normalise)) THENC
   push_exs THENC
-  EVERY_DISJ_CONV (check_for_early_equalities THENC
-                   (ISCONST_CONV ORELSEC
-                    (STRIP_QUANT_CONV Canon.PROP_DNF_CONV THENC
-                     push_exs THENC
-                     EVERY_DISJ_CONV
-                       (TRY_CONV eliminate_negative_divides THENC
-                        EVERY_DISJ_CONV
-                          (TRY_CONV eliminate_positive_divides)))))
+  EVERY_DISJ_CONV
+    (check_for_early_equalities THENC
+     (ISCONST_CONV ORELSEC
+      (STRIP_QUANT_CONV Canon.PROP_DNF_CONV THENC
+       push_exs THENC
+       EVERY_DISJ_CONV (TRY_CONV eliminate_negative_divides) THENC
+       EVERY_DISJ_CONV (TRY_CONV eliminate_positive_divides))))
 end
 
 (* ----------------------------------------------------------------------

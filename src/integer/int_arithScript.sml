@@ -1090,6 +1090,21 @@ val NOT_INT_DIVIDES_POS = store_thm(
   `~(&n = 0)` by ASM_SIMP_TAC bool_ss [INT_INJ] THEN
   ASM_SIMP_TAC bool_ss [NOT_INT_DIVIDES, INT_ABS_NUM, CONJ_ASSOC]);
 
+val context_rwt1 = store_thm(
+  "context_rwt1",
+  ``0 <= c + x /\ x <= y ==> (0 <= c + y = T)``,
+  PROVE_TAC [INT_LE_LADD, INT_ADD_COMM, INT_ADD_ASSOC, INT_LE_ADD2,
+             INT_ADD_LID]);
+
+val context_rwt2 = store_thm(
+  "context_rwt2",
+  ``0 <= c + x /\ y < ~x ==> (0 <= ~c + y = F)``,
+  REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
+  `c <= y` by PROVE_TAC [le_move_all_right, INT_ADD_COMM] THEN
+  `~x <= c` by PROVE_TAC [INT_NEGNEG, le_move_all_right, INT_ADD_COMM] THEN
+  PROVE_TAC [INT_LE_TRANS, INT_NOT_LE]);
+
+
 val _ = hide "bmarker";
 
 val _ = export_theory();
