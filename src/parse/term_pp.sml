@@ -258,6 +258,8 @@ fun first_tok [] = raise Fail "Shouldn't happen term_pp 133"
   | first_tok (RE (TOK s)::_) = s
   | first_tok (_ :: t) = first_tok t
 
+fun decdepth n = if n < 0 then n else n - 1
+
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val overload_info = overload_info G
@@ -543,11 +545,11 @@ fun pp_term (G : grammar) TyG = let
                             recurse (es, args))
           | BreakSpace (n, m) => (add_break(n,m); recurse (es, args))
           | RE (TOK s) => (add_string s; recurse (es, args))
-          | RE TM => (pr_term (hd args) Top Top Top (depth - 1);
+          | RE TM => (pr_term (hd args) Top Top Top (decdepth depth);
                       recurse (es, tl args))
-          | FirstTM => (pr_term (hd args) cprec lprec cprec (depth - 1);
+          | FirstTM => (pr_term (hd args) cprec lprec cprec (decdepth depth);
                         recurse (es, tl args))
-          | LastTM => (pr_term (hd args) cprec cprec rprec (depth - 1);
+          | LastTM => (pr_term (hd args) cprec cprec rprec (decdepth depth);
                        recurse (es, tl args))
           | EndInitialBlock _ => raise Fail "term_pp - encountered EIB"
           | BeginFinalBlock _ => raise Fail "term_pp - encountered BFB"
@@ -565,7 +567,7 @@ fun pp_term (G : grammar) TyG = let
         Simple tm => let
         in
           if (is_pair tm orelse is_var tm) then
-            pr_t tm Top Top Top (depth - 1)
+            pr_t tm Top Top Top (decdepth depth)
           else
             raise PP_ERR "pr_vstruct"
               "Can only handle pairs and vars as vstructs"
@@ -577,7 +579,7 @@ fun pp_term (G : grammar) TyG = let
           pr_vstruct (Simple Bvar);
           add_string (res_quanop);
           add_break(0,2);
-          pr_term Restrictor Top Top Top (depth - 1);
+          pr_term Restrictor Top Top Top (decdepth depth);
           add_string ")";
           end_block ()
         end
@@ -644,7 +646,7 @@ fun pp_term (G : grammar) TyG = let
       end_block();
       add_string res_op;
       pbegin add_final_parens;
-      pr_term restrictor Top Top Top (depth - 1);
+      pr_term restrictor Top Top Top (decdepth depth);
       pend add_final_parens;
       end_block ()
     end
@@ -689,7 +691,7 @@ fun pp_term (G : grammar) TyG = let
       pr_vstructl bvars;
       add_string endbinding; add_break (1,0);
       bvars_seen := bvars_seen_here @ old_seen;
-      pr_term body Top Top Top (depth - 1);
+      pr_term body Top Top Top (decdepth depth);
       bvars_seen := old_seen;
       end_block();
       pend addparens
@@ -726,7 +728,7 @@ fun pp_term (G : grammar) TyG = let
       else ();
       if showtypes then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG pps (depth - 1) (#2 (dom_rng injty)))
+         type_pp.pp_type_with_depth TyG pps (decdepth depth) (#2 (dom_rng injty)))
       else ();
       pend showtypes
     end
@@ -770,9 +772,9 @@ fun pp_term (G : grammar) TyG = let
           in
             begin_block CONSISTENT 0;
             add_string "{"; begin_block CONSISTENT 0;
-            pr_term l Top Top Top (depth - 1);
+            pr_term l Top Top Top (decdepth depth);
             add_string " |"; spacep true;
-            pr_term r Top Top Top (depth - 1);
+            pr_term r Top Top Top (decdepth depth);
             end_block(); add_string "}"; end_block(); raise SimpleExit
           end handle HOL_ERR _ => ()
         else ()
@@ -829,7 +831,7 @@ fun pp_term (G : grammar) TyG = let
                 in
                   begin_block INCONSISTENT 0;
                   pbegin add_parens;
-                  pr_term t2 prec lprec prec (depth - 1);
+                  pr_term t2 prec lprec prec (decdepth depth);
                   add_string fldtok;
                   add_break(0,0);
                   add_string fldname;
@@ -951,7 +953,7 @@ fun pp_term (G : grammar) TyG = let
             val updates = List.concat (map categorise_update (t1::updates0))
             val (with_prec, with_tok) = valOf recwith_info
             val (ldelim, rdelim, sep) = valOf reclist_info
-            fun print_update (fld, value, normal_upd) = let
+            fun print_update depth (fld, value, normal_upd) = let
               val (upd_prec, updtok) =
                 if normal_upd then valOf recupd_info
                 else valOf recfupd_info
@@ -961,16 +963,21 @@ fun pp_term (G : grammar) TyG = let
               add_string " ";
               add_string updtok;
               add_break(1,0);
-              pr_term value upd_prec upd_prec Top (depth - 1);
+              pr_term value upd_prec upd_prec Top (decdepth depth);
               end_block ()
             end
             fun print_updlist updates = let
+              fun recurse depth upds =
+                  case upds of
+                    [] => () (* should never happen *)
+                  | [u] => print_update (decdepth depth) u
+                  | u::us => (print_update (decdepth depth) u;
+                              print_ellist(Top,Top,Top) (sep, []);
+                              recurse (decdepth depth) us)
             in
               print_ellist (Top,Top,Top) (ldelim, []);
               begin_block INCONSISTENT 0;
-              pr_list print_update
-                     (fn () => ignore (print_ellist(Top,Top,Top) (sep, [])))
-                     (fn () => ()) updates;
+              recurse depth updates;
               end_block ();
               print_ellist (Top,Top,Top) (rdelim, []);
               ()
@@ -993,11 +1000,11 @@ fun pp_term (G : grammar) TyG = let
             in
               pbegin addparens;
               begin_block INCONSISTENT 0;
-              pr_term base with_grav lprec with_grav (depth - 1);
+              pr_term base with_grav lprec with_grav (decdepth depth);
               add_string " ";
               add_string with_tok;
               add_break (1,0);
-              if length updates = 1 then print_update (hd updates)
+              if length updates = 1 then print_update depth (hd updates)
               else print_updlist updates;
               end_block();
               pend addparens;
@@ -1014,9 +1021,9 @@ fun pp_term (G : grammar) TyG = let
     in
       pbegin addparens;
       begin_block INCONSISTENT 2;
-      pr_term t1 prec lprec prec (depth - 1);
+      pr_term t1 prec lprec prec (decdepth depth);
       add_break (1, 0);
-      pr_term t2 prec prec rprec (depth - 1);
+      pr_term t2 prec prec rprec (decdepth depth);
       end_block();
       pend addparens
     end handle SimpleExit => ()
@@ -1161,7 +1168,7 @@ fun pp_term (G : grammar) TyG = let
           add_string endbinding; spacep true;
           begin_block CONSISTENT 0;
           bvars_seen := bvars_seen_here @ old_seen;
-          pr_term body Top Top Top (depth - 1);
+          pr_term body Top Top Top (decdepth depth);
           bvars_seen := old_seen;
           end_block ();
           end_block();
@@ -1191,12 +1198,12 @@ fun pp_term (G : grammar) TyG = let
               if depth = 0 then add_string "..."
               else if has_name G nilstr tail then
                 (* last element *)
-                pr_term head Top Top Top (depth - 1)
+                pr_term head Top Top Top (decdepth depth)
               else let
               in
-                pr_term head Top Top Top (depth - 1);
+                pr_term head Top Top Top (decdepth depth);
                 print_ellist (Top,Top,Top) (sep, []);
-                recurse (depth - 1) tail
+                recurse (decdepth depth) tail
               end
             end
           in
@@ -1231,7 +1238,7 @@ fun pp_term (G : grammar) TyG = let
         spacep (not (null args));
         add_string "="; spacep true;
         begin_block INCONSISTENT 2;
-        pr_term rhs_t Top Top Top (depth - 1);
+        pr_term rhs_t Top Top Top (decdepth depth);
         end_block();
         bvars_seen := old_seen;
         end_block()
@@ -1255,7 +1262,7 @@ fun pp_term (G : grammar) TyG = let
       else
         (add_break(1,2);
          (* a lie! but it works *)
-         pr_term body RealTop RealTop RealTop (depth - 1))
+         pr_term body RealTop RealTop RealTop (decdepth depth))
     end
 
     fun pr_let lgrav rgrav tm = let
@@ -1277,7 +1284,7 @@ fun pp_term (G : grammar) TyG = let
       add_string "(ty_antiq(";
       add_break(0,0);
       add_string "`:";
-      type_pp.pp_type_with_depth TyG pps (depth - 1) ty;
+      type_pp.pp_type_with_depth TyG pps (decdepth depth) ty;
       add_string "`))";
       end_block()
     end
@@ -1315,7 +1322,7 @@ fun pp_term (G : grammar) TyG = let
           fun add_type () = let
           in
             add_string (" "^type_intro); add_break (0,0);
-            type_pp.pp_type_with_depth TyG pps (depth - 1) Ty
+            type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty
           end
           val new_freevar =
             showtypes andalso (not (mem tm (!fvars_seen))) andalso
@@ -1342,7 +1349,7 @@ fun pp_term (G : grammar) TyG = let
             pbegin true;
             action();
             add_string (" "^type_intro);
-            type_pp.pp_type_with_depth TyG pps (depth - 1) Ty;
+            type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty;
             pend true
           end
           val r = {Name = Name, Thy = Thy}
