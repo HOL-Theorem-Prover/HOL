@@ -303,14 +303,14 @@ fun run_extra_command c =
             MOSMLCOMP :: "-q" :: (hmake_preincludes @ std_include_flags @
                                   additional_includes)
         | "HOLMOSMLC-C" => let
-            val overlay_string =
+            val overlay_stringl =
               case actual_overlay of
-                NONE => ""
-              | SOME s => s
+                NONE => []
+              | SOME s => [s]
           in
             MOSMLCOMP :: "-q" :: (hmake_preincludes @ std_include_flags @
-                                  additional_includes @
-                                  ["-c", overlay_string])
+                                  additional_includes @ ["-c"] @
+                                  overlay_stringl)
           end
         | "MOSMLC" => MOSMLCOMP :: additional_includes
         | "MOSMLLEX" => [fullPath [MOSMLDIR, "bin/mosmllex"]]
@@ -735,10 +735,10 @@ fun variant str =  (* get an unused file name in the current directory *)
 fun build_command c arg = let
   val include_flags = hmake_preincludes @ std_include_flags @
                       additional_includes
-  val overlay_string =
+  val overlay_stringl =
     case actual_overlay of
-      NONE => ""
-    | SOME s => s
+      NONE => []
+    | SOME s => [s]
 (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
   exception CompileFailed
   exception FileNotFound
@@ -761,8 +761,8 @@ in
                  if unquote_to clone file = Process.success
                  then let
                    val res =
-                     compile debug ("-q"::(include_flags@["-c",overlay_string,
-                                                          file]))
+                     compile debug ("-q"::(include_flags @ ["-c"] @
+                                           overlay_stringl @ [file]))
                      handle e => (revert();
                                   print("Unable to compile: "^file^"\n");
                                   raise CompileFailed)
@@ -770,7 +770,8 @@ in
                  end
                  else (revert(); raise CompileFailed)
                end
-          else compile debug ("-q"::(include_flags@["-c",overlay_string,file]))
+          else compile debug ("-q"::(include_flags@ ("-c"::(overlay_stringl @
+                                                            [file]))))
      in
         res = success
      end
