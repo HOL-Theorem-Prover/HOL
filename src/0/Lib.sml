@@ -76,9 +76,7 @@ end;
  * For interactive use: "Raise" prints out the exception.                    *
  *---------------------------------------------------------------------------*)
 
-fun try f x = 
-  f x handle Interrupt => raise Interrupt 
-           | a_n_other => Feedback.Raise a_n_other;
+fun try f x = f x handle e => Feedback.Raise e;
 
 fun assert_exn P x e = if P x then x else raise e
 fun assert P x       = assert_exn P x (ERR"assert" "predicate not true")

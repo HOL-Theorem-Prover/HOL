@@ -5,6 +5,7 @@
 (* AUTHOR        : (c) Konrad Slind, University of Calgary               *)
 (* DATE          : August 26, 1991                                       *)
 (* Modified      : September 22, 1997, Ken Larsen                        *)
+(* Modified      : 1999, Bruno Barras, for explicit substitutions.       *)
 (* Modified      : July 2000, Konrad Slind                               *)
 (* ===================================================================== *)
 

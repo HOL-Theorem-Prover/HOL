@@ -1,3 +1,16 @@
+(* ========================================================================= *)
+(* FILE          : Theory.sml                                                *)
+(* DESCRIPTION   : Management of logical theories.                           *)
+(*                                                                           *)
+(* AUTHOR        : Konrad Slind, University of Calgary                       *)
+(*                 (also T.U. Munich and Cambridge)                          *)
+(* DATE          : September 11, 1991                                        *)
+(* REVISION      : August 7, 1997                                            *)
+(*               : March 9, 1998                                             *)
+(*               : August 2000                                               *)
+(*                                                                           *)
+(* ========================================================================= *)
+
 signature Theory =
 sig
 

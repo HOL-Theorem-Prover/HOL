@@ -1,3 +1,10 @@
+(*---------------------------------------------------------------------------*
+ * MODULE      : TheoryPP                                                    *
+ * DESCRIPTION : HOL theories represented by SML structures.                 *
+ * AUTHOR      : Konrad Slind                                                *
+ * DATE        : 1998                                                        *
+ *---------------------------------------------------------------------------*)
+
 signature TheoryPP =
 sig
  type thm      = Thm.thm

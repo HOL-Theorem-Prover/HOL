@@ -1,3 +1,12 @@
+(* ===================================================================== *)
+(* FILE          : Count.sig                                             *)
+(* DESCRIPTION   : Signature for inference counting.                     *)
+(*                                                                       *)
+(* AUTHOR        : (c) Konrad Slind, University of Cambridge             *)
+(* DATE          : 1998                                                  *)
+(* ===================================================================== *)
+
+
 signature Count =
 sig
 
@@ -32,7 +41,8 @@ sig
     DISJ2 : int, DISJ_CASES : int, 
     NOT_INTRO : int, NOT_ELIM : int, CCONTR : int, 
     definition : int, axiom : int, 
-    from_disk : int, oracle :int,      total :int }
+    from_disk : int, oracle :int,  
+    total :int }
 
   type meter
   val mk_meter  : unit -> meter

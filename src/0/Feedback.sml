@@ -67,11 +67,11 @@ fun format_ERR {message,origin_function,origin_structure} =
                    origin_structure,".", origin_function,
                    ":\n",message,"\n"];
 
-fun format_MESG s = String.concat["<<HOL message: ", s, ".>>\n"];
+fun format_MESG s = String.concat["<<HOL message: ", s, ">>\n"];
 
 fun format_WARNING structName fnName mesg =
   String.concat["<<HOL warning: ", 
-                structName, ".", fnName, ":\n  ", mesg, ".>>\n"];
+                structName, ".", fnName, ": ", mesg, ">>\n"];
 
 val ERR_to_string     = ref format_ERR
 val MESG_to_string    = ref format_MESG
@@ -93,9 +93,12 @@ fun exn_to_string (HOL_ERR sss)     = !ERR_to_string sss
 
 fun Raise e = (output_ERR (exn_to_string e); raise e)
 
-fun fail() = raise (ERR "??" "fail");
-
-fun failwith s = raise (ERR "failwith" s);
+local val err1 = mk_HOL_ERR "??" "??" "fail"
+      val err2 = mk_HOL_ERR "??" "failwith" 
+in
+fun fail() = raise err1
+fun failwith s = raise (err2 s);
+end;
 
 (*---------------------------------------------------------------------------
     Takes an exception, grabs its message as best as possible, then 
