@@ -1,10 +1,10 @@
 (*---------------------------------------------------------------------------
-            A not totally naive version of Quicksort 
+            A not totally naive version of Quicksort
  ---------------------------------------------------------------------------*)
 
 app load ["bossLib", "Q", "sortingTheory", "partitionTheory", "pairTools"];
 
-open combinTheory relationTheory pairTheory listTheory 
+open combinTheory relationTheory pairTheory listTheory
      sortingTheory permTheory partitionTheory bossLib pairTools;
 
 (*---------------------------------------------------------------------------
@@ -13,8 +13,8 @@ open combinTheory relationTheory pairTheory listTheory
 
 val MEM_FILTER = Q.prove
 (`!P L x. MEM x (FILTER P L) = P x /\ MEM x L`,
-Induct_on `L`  
- THEN RW_TAC list_ss [MEM,FILTER] 
+Induct_on `L`
+ THEN RW_TAC list_ss [MEM,FILTER]
  THEN PROVE_TAC [MEM]);
 
 val MEM_APPEND_DISJ = Q.prove
@@ -33,18 +33,18 @@ val total_def = Define `total R = !x y. R x y \/ R y x`;
  *      Quicksort                                                            *
  *---------------------------------------------------------------------------*)
 
-val fqsort_def = 
+val fqsort_def =
  Hol_defn "fqsort"
     `(fqsort ord [] = []) /\
-     (fqsort ord (h::t) = 
+     (fqsort ord (h::t) =
            let (l1,l2) = partition (\y. ord y h) t
            in
-           APPEND (fqsort ord l1) 
+           APPEND (fqsort ord l1)
                (h::fqsort ord l2))`;
 
 
 (*---------------------------------------------------------------------------
- * Termination of fqsort 
+ * Termination of fqsort
  *---------------------------------------------------------------------------*)
 
 val (fqsort_eqns,fqsort_ind) = Defn.tprove
@@ -63,11 +63,20 @@ val fqsort_MEM_stable = Q.store_thm
 ("fqsort_MEM",
  `!R L x. MEM x (fqsort R L) = MEM x L`,
 recInduct fqsort_ind
- THEN RW_TAC std_ss [fqsort_eqns,partition_def]
- THEN LET_EQ_TAC [LET2_RATOR,LET2_RAND]
+ THEN RW_TAC bool_ss [fqsort_eqns,partition_def]
+ THEN (* first move lets as far out as possible *)
+      SIMP_TAC pureSimps.pure_ss
+               [GEN_LET_RAND, GEN_LET_RATOR,
+                C_UNCURRY_L, pairTheory.C_ABS_L,
+                combinTheory.o_THM, o_ABS_R, o_UNCURRY_R]
+ THEN (* turn lets into foralls *)
+      SIMP_TAC pureSimps.pure_ss [LET_FORALL_ELIM, S_ABS_R,
+                                  S_UNCURRY_R, combinTheory.o_THM,
+                                  FORALL_UNCURRY, o_ABS_R]
+ THEN (* strip off the new "abbreviation" assumptions *)
+      REPEAT GEN_TAC THEN STRIP_TAC
  THEN RW_TAC list_ss []
- THEN RES_THEN (TRY o SUBST1_TAC o SPEC_ALL)
- THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP part_MEM)
+ THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP part_MEM o SYM)
  THEN RW_TAC list_ss [] THEN PROVE_TAC []);
 
 
@@ -78,11 +87,11 @@ recInduct fqsort_ind
  *---------------------------------------------------------------------------*)
 
 val part_PERM = Q.prove
-(`!P L a1 a2 l1 l2. 
-   ((a1,a2) = part P L l1 l2) 
-      ==> 
+(`!P L a1 a2 l1 l2.
+   ((a1,a2) = part P L l1 l2)
+      ==>
    PERM (APPEND L (APPEND l1 l2)) (APPEND a1 a2)`,
-Induct_on `L` 
+Induct_on `L`
   THEN RW_TAC list_ss [part_def, PERM_refl]
   THEN RES_TAC THEN MATCH_MP_TAC PERM_trans1 THENL
   [Q.EXISTS_TAC `APPEND L (APPEND (h::l1) l2)`,
@@ -101,7 +110,7 @@ val fqsort_PERM = Q.store_thm
   THEN Q.EXISTS_TAC`APPEND l1 l2`
   THEN RW_TAC std_ss [] THENL
   [PROVE_TAC [APPEND,APPEND_NIL,part_PERM],
-   `PERM l1 (fqsort ord l1)` by RES_TAC THEN 
+   `PERM l1 (fqsort ord l1)` by RES_TAC THEN
    `PERM l2 (fqsort ord l2)` by RES_TAC THEN PROVE_TAC [PERM_cong]]);
 
 
@@ -109,18 +118,18 @@ val fqsort_PERM = Q.store_thm
  * The result list is sorted.
  *---------------------------------------------------------------------------*)
 
-val fqsort_sorts = 
+val fqsort_sorts =
 Q.store_thm
 ("fqsort_sorts",
 `!R L. transitive R /\ total R ==> SORTED R (fqsort R L)`,
- recInduct fqsort_ind 
+ recInduct fqsort_ind
   THEN RW_TAC list_ss [fqsort_eqns,SORTED_def,partition_def]
   THEN LET_EQ_TAC [LET2_RATOR,LET2_RAND]
   THEN MATCH_MP_TAC SORTED_APPEND
   THEN IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) SORTED_eq
-  THEN RW_TAC list_ss [MEM_FILTER,MEM,fqsort_MEM_stable] 
+  THEN RW_TAC list_ss [MEM_FILTER,MEM,fqsort_MEM_stable]
   THEN ((RES_TAC THEN NO_TAC) ORELSE ALL_TAC)
-  THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP 
+  THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP
         (REWRITE_RULE[PROVE [] (Term `x/\y/\z ==> w = x ==> y/\z ==> w`)]
             parts_have_prop))
   THEN RW_TAC std_ss [MEM]
@@ -132,7 +141,7 @@ Q.store_thm
  *---------------------------------------------------------------------------*)
 
 val fqsort_correct = Q.store_thm
-("fqsort_correct", 
+("fqsort_correct",
 `!R. transitive R /\ total R ==> performs_sorting fqsort R`,
 PROVE_TAC
   [performs_sorting_def, fqsort_PERM, fqsort_sorts]);
