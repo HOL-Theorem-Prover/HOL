@@ -8,7 +8,7 @@
 structure RecordType :> RecordType =
 struct
 
-local open HolKernel Parse boolLib
+open HolKernel Parse boolLib
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
@@ -125,7 +125,6 @@ fun foldl f zero []      = zero
 (* make any excuses for it.  However, it's very much a function in    *)
 (* an imperative style, as its result is not as important as the side *)
 (* effect it brings about in the state.                               *)
-in
   fun prove_recordtype_thms (tyinfo, fields) = let
 
     fun store_thm (n, t, tac) = save_thm(n, prove(t,tac))
@@ -470,10 +469,13 @@ in
       val exists_thm =
           GEN_ALL
           (prove(exists_goal,
-                 EQ_TAC THEN STRIP_TAC THENL [
+                 EQ_TAC THENL [
+                   DISCH_THEN (X_CHOOSE_THEN var ASSUME_TAC) THEN
                    EVERY_TCL (map X_CHOOSE_THEN value_vars)
                              SUBST_ALL_TAC (SPEC var literal_nchotomy) THEN
                    MAP_EVERY EXISTS_TAC value_vars THEN ASM_REWRITE_TAC [],
+                   DISCH_THEN (EVERY_TCL (map X_CHOOSE_THEN value_vars)
+                                         ASSUME_TAC) THEN
                    EXISTS_TAC rhs THEN ASM_REWRITE_TAC []
                  ]))
     in
@@ -531,6 +533,4 @@ in
           (if not (null upd_canon_thms) then ["_updcanon"] else [])))
     end
 
-end
-
-end
+end (* struct *)
