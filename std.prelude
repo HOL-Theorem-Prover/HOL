@@ -4,6 +4,12 @@
 
 val _ = quietdec := true;
 
+local open Path
+      val SIGOBJ = toString(fromString(concat
+                    ("c:\\cygwin\\home\\slind\\hol98","sigobj")))
+in
+val _ = Meta.loadPath := SIGOBJ :: !Meta.loadPath
+end;
 
 (*---------------------------------------------------------------------------*
  *       Establish the basic environment.                                    *
@@ -13,8 +19,41 @@ app load ["Mosml", "Process", "Path", "boolLib", "goalstackLib", "Arbint"];
 
 open HolKernel Parse boolLib goalstackLib;
 
-(* Loading HolKernel installs the "standard" set of infixes, which are
-   set up in src/0/Overlay.sml *)
+infix ++ && |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+infixr ##
+infixr 3 -->;
+infix 8 via by;
+
+(*---------------------------------------------------------------------------*
+ *       Find out if bossLib is requested, by looking at argv.               *
+ *---------------------------------------------------------------------------*)
+
+val _ =
+  case List.rev(Mosml.argv())
+   of end_init_path::_ =>
+        (case Path.base(Path.file end_init_path)
+          of "end-init-boss" =>
+                let val terminfo = case Process.getEnv "TERM" of
+                                     SOME s => s
+                                   | NONE => ""
+                    val (prelude, dotchar) =
+                        if terminfo <> "emacs" andalso terminfo <> "dumb"
+                        then
+                          ("                          ____________ ]\r", "*")
+                        else ("", ".")
+                    fun dotload f = (print dotchar; load f)
+                in
+                  print prelude;
+                  print "[loading HOL power tools ";
+                  app dotload ["optionTheory", "pairLib", "sumTheory",
+                               "numTheory", "arithmeticTheory", "Arith",
+                               "numLib", "mesonLib", "BasicProvers",
+                               "SingleStep", "Datatype",
+                               "listTheory", "bossLib"];
+                  print " ]"
+                end
+           | otherwise       => ())
+    | [] => raise Fail "std.prelude: bizarre invocation of HOL"
 
 (*---------------------------------------------------------------------------*
  *   Install prettyprinters                                                  *
@@ -37,7 +76,8 @@ in
   val _ = installPP (with_pp Rewrite.pp_rewrites)
   val _ = installPP (with_pp TypeBasePure.pp_tyinfo)
   val _ = installPP (with_pp DefnBase.pp_defn)
-  val _ = installPP (with_pp (pp_from_stringfn Arbint.toString))
+  val _ = installPP (with_pp Arbnum.pp_num)
+  val _ = installPP (with_pp Arbint.pp_int)
 end;
 
 
@@ -53,8 +93,7 @@ in
   val () = indexfiles := HELP "HOL.Help" :: !indexfiles
   val () = helpdirs   := HOLDIR :: SIGOBJ :: !helpdirs
   val () = Help.specialfiles :=
-             {file = "help/Docfiles/README.Hol98",
-              term = "hol", title = "Hol98 Overview"}
+             {file = "README.Hol98", term = "hol", title = "Hol98 Overview"}
              :: !Help.specialfiles
 end
 
@@ -86,11 +125,7 @@ in
      print "No theory files on disk; perhaps export_theory() required.\n"
 end
 
-(* ----------------------------------------------------------------------
-    Set interactive flag to true
-   ---------------------------------------------------------------------- *)
-
-val _ = Globals.interactive := true;
+val _ = use (HOLDIR^"/src/datatype/Interactive");
 
 (*---------------------------------------------------------------------------*
  * Print a banner.                                                           *
@@ -107,11 +142,7 @@ val build_stamp =
 val _ =
 TextIO.output(TextIO.stdOut,
   "\n-----------------------------------------------------------------\n"
-  ^"       HOL ["
+  ^"       HOL-4 ["
   ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
   ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
   ^"-----------------------------------------------------------------\n\n");
-
-(* Local variables: *)
-(* mode: sml *)
-(* end: *)
