@@ -11,26 +11,27 @@
 
 (*---------------------------------------------------------------------------
           BEGIN user-settable parameters
-
-val mosmldir =
-val holdir   =
-
-(* note, if you are specifying directories under Windows, we recommend you
+ 
+   If you are specifying directories under Windows, we recommend you
    use forward slashes (the "/" character) as a directory separator,
    rather than the 'traditional' backslash (the "\" character).  The
    problem with the latter is that you have to double them up (i.e.,
    write "\\") in order to 'escape' them and make the string valid for
    SML.  For example, write "c:/dir1/dir2/mosml", rather than
-   "c:\\dir1\\dir2\\mosml", and certainly DON'T write "c:\dir1\dir2\mosml". *)
+   "c:\\dir1\\dir2\\mosml", and certainly DON'T write "c:\dir1\dir2\mosml". 
+  ---------------------------------------------------------------------------*)
 
-val OS       =
+
+val mosmldir:string = 
+val holdir :string  = 
+
+val OS :string      = 
                            (* Operating system; choices are:
-                                "linux", "solaris", "unix", "winNT"        *)
-*)
+                                "linux", "solaris", "unix", "winNT"   *)
 
-val CC       = "gcc";      (* C compiler                                   *)
-val GNUMAKE  = "make";     (* for bdd library and SMV                      *)
-val DEPDIR   = ".HOLMK";   (* local dir. where Holmake dependencies kept   *)
+val CC:string       = "gcc";      (* C compiler                       *)
+val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
+val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 (*---------------------------------------------------------------------------
           END user-settable parameters
