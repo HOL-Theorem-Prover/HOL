@@ -216,7 +216,7 @@ local val num_ty = Pretype.Tyop("num",[])
       val string_ty = Pretype.Tyop("string",[])
       fun funty ty1 ty2 = Pretype.Tyop("fun",[ty1,ty2])
       fun mk_comb(ptm1,ptm2) = Preterm.Comb{Rator=ptm1,Rand=ptm2}
-      val CHAR = Preterm.Const
+      val CHR = Preterm.Const
                    {Name="CHR",Thy="string",Ty=funty num_ty char_ty}
       val STRING = Preterm.Const {Name="STRING",Thy="string",
                       Ty=funty char_ty (funty string_ty string_ty)}

@@ -942,18 +942,6 @@ fun pp_term (G : grammar) TyG = let
       end_block()
     end
 
-    fun print_string_literal s = 
-      let fun tr #"\\" = "\\\\"
-            | tr #"\"" = "\\\""
-            | tr #"\n" = "\\n"
-            | tr c = str c
-          val contents =
-            if String.sub(s,0) = #"\"" 
-             then String.translate tr (String.substring(s,1,size s - 2))
-             else ""
-      in add_string "\""; add_string contents; add_string "\""
-      end
-
     val _ = if is_ty_antiq tm then (print_ty_antiq tm; raise SimpleExit)
             else ()
   in
@@ -995,9 +983,11 @@ fun pp_term (G : grammar) TyG = let
              val crules = lookup_term cname
          in
           if isSome crules then pr_sole_name cname (map #2 (valOf crules))
-          else if cname = "0" andalso can_pr_numeral NONE 
-                then pr_numeral NONE tm
-                else add_string cname
+          else if cname = "0" andalso can_pr_numeral NONE
+               then pr_numeral NONE tm
+               else if Name="EMPTYSTRING" andalso Thy="string"
+                    then add_string "\"\""
+                    else add_string cname
         end
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator

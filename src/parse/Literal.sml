@@ -115,7 +115,7 @@ val fromHOLchar = Char.chr o Arbnum.toInt o dest_numeral o dest_chr
 fun is_emptystring tm =
   case total dest_thy_const tm
    of SOME {Name="EMPTYSTRING",Thy="string",...} => true
-    | NONE => false
+    | otherwise => false
 
 fun dest_string_lit tm = 
  if is_emptystring tm then ""
