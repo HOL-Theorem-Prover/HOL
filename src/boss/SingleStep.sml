@@ -9,7 +9,7 @@ val ERR = mk_HOL_ERR "SingleStep";
 
 fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
 
-fun tm_free_eq M N P = 
+fun tm_free_eq M N P =
   (aconv N P andalso free_in N M) orelse raise ERR "tm_free_eq" ""
 
 (*---------------------------------------------------------------------------*
@@ -62,7 +62,7 @@ fun FREEUP [] M g = (ALL_TAC,M)
  * the term is boolean, we do a case-split on whether it is true or false.   *
  *---------------------------------------------------------------------------*)
 
-datatype category 
+datatype category
     = Free of term
     | Bound of term list * term  (* in Bound(V,M), V = vars to be freed up *)
     | Alien of term;
@@ -87,7 +87,7 @@ fun prim_find_subterm FVs tm (asl,w) =
                    val M = find_term (can (tm_free_eq body tm)) body
                in (intersect (free_vars M) V, M)
                end)
-      handle HOL_ERR _ 
+      handle HOL_ERR _
       => Alien tm;
 
 fun find_subterm qtm (g as (asl,w)) =
@@ -153,7 +153,7 @@ fun primInduct st ind_tac (g as (asl,c)) =
               end
          else ind_non_var [] M g
       | Bound(V,M) =>
-         if is_var M 
+         if is_var M
            then let val (tac,M') = FREEUP V M g
                 in (tac THEN ID_SPEC_TAC M' THEN ind_tac) g
                 end
@@ -287,14 +287,8 @@ fun SPOSE_NOT_THEN ttac =
      Assertional style reasoning
  ---------------------------------------------------------------------------*)
 
-infix 8 by;
 infix on
 
-fun (q by tac) (g as (asl,w)) =
-  let val tm = parse_in_context (free_varsl (w::asl)) q
-  in Tactic.via(tm,tac) g
-  end
-  handle e => raise (wrap_exn "SingleStep" "by" e);
 
 fun chop_at n frontacc l =
   if n <= 0 then (List.rev frontacc, l)
@@ -320,6 +314,38 @@ in
        end))
     end
 end
+
+fun eqTRANS new old = let
+  (* allow for possibility that old might be labelled *)
+  open labelLib
+  val s = #1 (labelLib.dest_label (concl old))
+in
+  ASSUME_NAMED_TAC s (TRANS (DEST_LABEL old) new)
+end handle HOL_ERR _ => ASSUME_TAC (TRANS old new)
+
+fun is_labeq t = (* term is a possibly labelled equality *)
+    is_eq t orelse
+    labelLib.is_label t andalso is_eq (#2 (labelLib.dest_label t))
+
+fun labrhs t = (* term is a possibly labelled equality *)
+    if is_eq t then rhs t
+    else rhs (#2 (labelLib.dest_label t))
+
+fun (q by tac) (g as (asl,w)) = let
+  val a = Absyn q
+  val (goal_pt, finisher) =
+      case Lib.total Absyn.dest_eq a of
+        SOME (Absyn.IDENT "_", r) =>
+        if not (null asl) andalso is_labeq (hd asl) then
+          (absyn_to_preterm (Absyn.mk_eq(Absyn.AQ (labrhs (hd asl)), r)),
+           POP_ASSUM o eqTRANS)
+        else
+          raise ERR "by" "Top assumption must be an equality"
+      | x => (absyn_to_preterm a, STRIP_ASSUME_TAC)
+  val tm = parse_preterm_in_context (free_varsl (w::asl)) goal_pt
+in
+  SUBGOAL_THEN tm finisher THEN1 tac
+end (asl, w)
 
 infix on
 fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
