@@ -273,6 +273,10 @@ val SIMPLIFY_CONV = SIMP_CONV simplify_ss [];
 (*   ?x. ~P x                                                                *)
 (* ------------------------------------------------------------------------- *)
 
+val NOT_TRUE = prove (``~T = F``, tautLib.TAUT_TAC);
+
+val NOT_FALSE = prove (``~F = T``, tautLib.TAUT_TAC);
+
 val IMP_DISJ_THM' = prove
   (``!x y. x ==> y = y \/ ~x``,
    tautLib.TAUT_TAC);
@@ -353,8 +357,8 @@ local
     BETA_CONV ORELSEC NEG_CONV BETA_CONV;
   val push_neg = FIRST_CONV
     (map REWR_CONV
-     [IMP_DISJ_THM', NIMP_CONJ_THM, EQ_EXPAND', NEQ_EXPAND,
-      COND_EXPAND', NCOND_EXPAND, DE_MORGAN_THM1, DE_MORGAN_THM2,
+     [NOT_TRUE, NOT_FALSE, IMP_DISJ_THM', NIMP_CONJ_THM, EQ_EXPAND',
+      NEQ_EXPAND, COND_EXPAND', NCOND_EXPAND, DE_MORGAN_THM1, DE_MORGAN_THM2,
       NNF_EXISTS_UNIQUE, NOT_EXISTS_UNIQUE,
       RES_FORALL_THM, RES_EXISTS_THM, NOT_RES_FORALL, NOT_RES_EXISTS] @
      [NOT_FORALL_CONV, NOT_EXISTS_CONV]);
