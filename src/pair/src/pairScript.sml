@@ -14,7 +14,7 @@
 structure pairScript =
 struct
 
-open HolKernel Parse basicHol90Lib 
+open HolKernel Parse basicHol90Lib
      Type_def_support relationTheory mesonLib;
 
 infix THEN THENL |->;
@@ -279,8 +279,8 @@ val FORALL_PROD = store_thm("FORALL_PROD",
         (SPEC (Term`p:'a#'b`) ABS_PAIR_THM)]
  THEN ASM_REWRITE_TAC[]);
 
-val pair_induction = 
- save_thm("pair_induction", 
+val pair_induction =
+ save_thm("pair_induction",
           #2(EQ_IMP_RULE FORALL_PROD));
 
 (* ------------------------------------------------------------------------- *)
@@ -357,7 +357,7 @@ val pair_rws = [PAIR, FST, SND];
 
 (* pair_rws formerly also had
 
-    CLOSED_PAIR_EQ, 
+    CLOSED_PAIR_EQ,
     CURRY_UNCURRY_THM, UNCURRY_CURRY_THM,
     CURRY_ONE_ONE_THM, UNCURRY_ONE_ONE_THM];
 
@@ -366,11 +366,11 @@ val pair_rws = [PAIR, FST, SND];
 
 
 (*---------------------------------------------------------------------------
-    Generate some ML that gets evaluated at theory load time. 
+    Generate some ML that gets evaluated at theory load time.
 
-    The TFL definition package uses "pair_case" as a case construct, 
+    The TFL definition package uses "pair_case" as a case construct,
     rather than UNCURRY. This (apparently) solves a deeply buried
-    problem in termination condition extraction involving paired 
+    problem in termination condition extraction involving paired
     beta-reduction.
 
  ---------------------------------------------------------------------------*)
@@ -415,8 +415,8 @@ val _ = adjoin_to_theory
 val LEX_DEF =
 Q.new_infixr_definition
 ("LEX_DEF",
-  `$LEX (R1:'a->'a->bool) (R2:'b->'b->bool) 
-     = 
+  `$LEX (R1:'a->'a->bool) (R2:'b->'b->bool)
+     =
    \(s,t) (u,v). R1 s u \/ (s=u) /\ R2 t v`, 450);
 
 val WF_LEX = Q.store_thm("WF_LEX",
@@ -476,5 +476,6 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
 
 
 val _ = export_theory();
-
+val _ =
+  export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))
 end;
