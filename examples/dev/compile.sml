@@ -1079,6 +1079,16 @@ fun BUS_MATCH vst bus =
  handle HOL_ERR _ => [];
 
 (*****************************************************************************)
+(* A pure abstraction has the form ``\<varstruct>.<body>`` where             *)
+(* <body> is built out of variables in <varstruct> using pairing.            *)
+(*****************************************************************************)
+fun is_pure_abs tm =
+ is_pabs tm
+  andalso (subtract 
+            (strip_pair(snd(dest_pabs tm)))
+            (strip_pair(fst(dest_pabs tm))) = []);
+
+(*****************************************************************************)
 (* Synthesise combinational circuits.                                        *)
 (* Examples (derived from FactScript.sml):                                   *)
 (*                                                                           *)
@@ -1120,14 +1130,18 @@ fun COMB_SYNTH_CONV tm =
      andalso is_pair(rand tm)
      andalso is_pabs(rand(rator tm))
   then
-   let val (args,bdy) = dest_pabs(rand(rator tm))
+   let val abstr = rand(rator tm)
+       val (args,bdy) = dest_pabs abstr
        val (in_bus,out_bus) = dest_pair(rand tm)
        val time_ty = hd(snd(dest_type(type_of in_bus)))
        val args_match = 
             BUS_MATCH args in_bus
             handle HOL_ERR _ => raise ERR "SYNTH_COMB" "input match failure"
    in
-    if is_var bdy andalso can (assoc bdy) args_match
+    if is_pure_abs abstr
+     then (if_print "COMB_SYNTH_CONV warning, following not compiled:\n";
+           if_print_term abstr;if_print"\n"; raise ERR "COMB_SYNTH_CONV" "pure abstraction")
+    else if is_var bdy andalso can (assoc bdy) args_match
      then let val goal = ``^tm = (^out_bus = ^(assoc bdy args_match))``
           in
            prove
