@@ -236,11 +236,21 @@ val UF_SEM_def =
       ?k :: (LESS(LENGTH v)).
         UF_SEM (RESTN v k) f2 /\ !j :: (LESS k). UF_SEM (RESTN v j) f1)
     /\
+(* Contains j=0 bug spotted by Thomas Turk
+     (UF_SEM v (F_ABORT (f,b)) =
+       UF_SEM v f 
+       \/
+       ?j :: (LESS(LENGTH v)). 
+          B_SEM (ELEM v j) b /\ UF_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) f)
+*)
     (UF_SEM v (F_ABORT (f,b)) =
       UF_SEM v f 
       \/
       ?j :: (LESS(LENGTH v)). 
-         B_SEM (ELEM v j) b /\ UF_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) f)
+        B_SEM (ELEM v j) b  
+        /\
+        if j=0 then UF_SEM TOP_OMEGA f 
+               else UF_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) f)
     /\
     (UF_SEM v (F_SUFFIX_IMP(r,f)) = 
       !j :: (LESS(LENGTH v)).
@@ -288,11 +298,21 @@ val UF_SEM =
        ?k :: (LESS(LENGTH v)).
          UF_SEM (RESTN v k) f2 /\ !j :: (LESS k). UF_SEM (RESTN v j) f1)
      /\
+(* Contains j=0 bug spotted by Thomas Turk
      (UF_SEM v (F_ABORT (f,b)) =
        UF_SEM v f 
        \/
        ?j :: (LESS(LENGTH v)). 
           B_SEM (ELEM v j) b /\ UF_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) f)
+*)
+    (UF_SEM v (F_ABORT (f,b)) =
+      UF_SEM v f 
+      \/
+      ?j :: (LESS(LENGTH v)). 
+        B_SEM (ELEM v j) b  
+        /\
+        if j=0 then UF_SEM TOP_OMEGA f 
+               else UF_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) f)
      /\
      (UF_SEM v (F_SUFFIX_IMP(r,f)) = 
        !j :: (LESS(LENGTH v)).

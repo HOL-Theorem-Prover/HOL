@@ -199,11 +199,21 @@ val F_SEM_def =
         F_SEM (RESTN v k) c f2 /\ 
         !j :: LESS k. B_SEM (ELEM (COMPLEMENT v) j) c ==> F_SEM (RESTN v j) c f1)
     /\
+(* Contains j=0 bug spoteed by Thomas Turk
     (F_SEM v c (F_ABORT (f,b)) =
       F_SEM v c f 
       \/
       ?j :: LESS(LENGTH v). 
          B_SEM (ELEM v j) b /\ F_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) c f)
+*)
+    (F_SEM v c (F_ABORT (f,b)) =
+      F_SEM v c f 
+      \/
+      ?j :: LESS(LENGTH v). 
+         B_SEM (ELEM v j) b
+         /\ 
+         if j=0 then F_SEM TOP_OMEGA c f
+                else F_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) c f)
     /\
     (F_SEM v c (F_CLOCK(f,c1)) =
       F_SEM v c1 f)
@@ -261,11 +271,21 @@ val F_SEM =
          F_SEM (RESTN v k) c f2 /\ 
          !j :: LESS k. B_SEM (ELEM (COMPLEMENT v) j) c ==> F_SEM (RESTN v j) c f1)
      /\
-     (F_SEM v c (F_ABORT (f,b)) =
-       F_SEM v c f 
-       \/
-       ?j :: LESS(LENGTH v). 
-          B_SEM (ELEM v j) b /\ F_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) c f)
+(* Contains j=0 bug spoteed by Thomas Turk
+    (F_SEM v c (F_ABORT (f,b)) =
+      F_SEM v c f 
+      \/
+      ?j :: LESS(LENGTH v). 
+         B_SEM (ELEM v j) b /\ F_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) c f)
+*)
+    (F_SEM v c (F_ABORT (f,b)) =
+      F_SEM v c f 
+      \/
+      ?j :: LESS(LENGTH v). 
+         B_SEM (ELEM v j) b
+         /\ 
+         if j=0 then F_SEM TOP_OMEGA c f
+                else F_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) c f)
      /\
      (F_SEM v c (F_CLOCK(f,c1)) =
        F_SEM v c1 f)

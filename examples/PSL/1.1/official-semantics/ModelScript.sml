@@ -88,22 +88,19 @@ val letter_def =
 (*****************************************************************************)
 val PATH_def = 
  Define 
-  `(PATH M s (FINITE l) = 
-    (LENGTH l > 0) /\ (s = HD l) /\ s IN M.S /\
-    (!n :: (LESS(LENGTH l - 1)). 
-      EL n l IN M.S /\ EL (SUC n) l IN M.S /\ (EL n l, EL (SUC n) l) IN M.R) /\
-    !s. ~((EL (LENGTH l - 1) l, s) IN M.R))
-   /\
-   (PATH M s (INFINITE f) = 
-     (s = f 0) /\ !n. f n IN M.S /\ (f n, f(SUC n)) IN M.R)`;
+  `PATH M s w = 
+    (LENGTH w > 0) /\ (s = ELEM w 0) /\ s IN M.S /\
+    (!n :: (LESS(LENGTH w - 1)). 
+      ELEM w n IN M.S /\ ELEM w (SUC n) IN M.S /\ 
+      (ELEM w n, ELEM w (SUC n)) IN M.R) /\
+    (!l. (w = FINITE l) ==> !s. ~((ELEM w (LENGTH l - 1), s) IN M.R))`;
 
 (*****************************************************************************)
 (* A computation of M is a path of M starting from an initial state          *)
 (*****************************************************************************)
 val COMPUTATION_def =
  Define 
-  `COMPUTATION M w = 
-    ?s. s IN M.S0 /\ PATH M s w`;
+  `COMPUTATION M w = ?s. s IN M.S0 /\ PATH M s w`;
 
 val _ = export_theory();
 
