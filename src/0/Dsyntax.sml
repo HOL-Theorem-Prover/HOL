@@ -109,9 +109,11 @@ val dest_select = dest_binder "@" (ERR"dest_select" "not a \"@\"");
  * Derived syntax from theory "bool"
  *---------------------------------------------------------------------------*)
 
-local fun mk_quant s (a as {Bvar,...}) =
-   mk_comb{Rator=mk_const{Name=s, Ty=quant_ty (type_of Bvar)}, Rand=mk_abs a}
-   handle HOL_ERR _ => raise ERR"mk_quant" ("not a "^s)
+local
+  fun mk_quant s (a as {Bvar,Body}) =
+    mk_comb{Rator=mk_const{Name=s, Ty=quant_ty (type_of Bvar)}, Rand=mk_abs a}
+    handle HOL_ERR {origin_function,message,...} =>
+      raise ERR "mk_quant" (origin_function ^ ": " ^ message)
 in
   val mk_forall = mk_quant "!"
   and mk_exists = mk_quant "?"
