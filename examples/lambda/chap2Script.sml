@@ -1014,7 +1014,7 @@ val enf_body_lemma = store_thm(
      in
        enf ([VAR v/x] t) /\
        (is_comb t ==> (rand t = VAR x) ==> x IN FV (rator t)))``,
-  SRW_TAC [][LET_THM] THEN NEW_ELIM_TAC THEN Q.X_GEN_TAC `y` THEN
+  SRW_TAC [][] THEN NEW_ELIM_TAC THEN Q.X_GEN_TAC `y` THEN
   REPEAT STRIP_TAC THEN
   SRW_TAC [][lemma14a] THEN EQ_TAC THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [is_comb_APP_EXISTS] THEN
@@ -1029,7 +1029,7 @@ val enf_renaming_invariant = store_thm(
   "enf_renaming_invariant",
   ``!t R. RENAMING R ==> (enf (t ISUB R) = enf t)``,
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
-  SRW_TAC [][enf_def, ISUB_APP, ISUB_VAR_RENAME, ISUB_CON, LET_THM] THEN
+  SRW_TAC [][enf_def, ISUB_APP, ISUB_VAR_RENAME, ISUB_CON] THEN
   Q.EXISTS_TAC `{}` THEN SRW_TAC [][] THEN NEW_ELIM_TAC THEN
   Q.X_GEN_TAC `nv` THEN (* bound variable of right hand term *)
   SRW_TAC [][] THENL [
@@ -1039,7 +1039,7 @@ val enf_renaming_invariant = store_thm(
     `LAM nv t = LAM z ([VAR z/nv] t)` by SRW_TAC [][SIMPLE_ALPHA]
   ] THEN
   SRW_TAC [][ISUB_LAM, SUB_ISUB_SINGLETON, ISUB_APPEND, RENAMING_THM,
-             enf_def, LET_THM] THEN SRW_TAC [][] THEN
+             enf_def] THEN SRW_TAC [][] THEN
   EQ_TAC THEN SRW_TAC [][lemma14a] THEN
   Q.PAT_ASSUM `RENAMING R` ASSUME_TAC THEN
   Q.PAT_ASSUM `is_comb t` ASSUME_TAC THEN
@@ -1077,7 +1077,7 @@ val enf_renaming_invariant = store_thm(
 val enf_thm = save_thm(
   "enf_thm",
   SIMP_RULE (srw_ss()) [RENAMING_THM, SUB_ISUB_SINGLETON, ISUB_APPEND,
-                        enf_renaming_invariant, LET_THM] enf_def);
+                        enf_renaming_invariant] enf_def);
 
 val benf_def = Define`benf t = bnf t /\ enf t`;
 

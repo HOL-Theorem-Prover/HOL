@@ -194,16 +194,3 @@ Incompatibilities:
     This can be relatively difficult to track down, but the fix is
     simple enough: change "someconv t" to "QCONV someconv t".
 
-  * The stateful rewriting system (srw_ss() and the SRW_TAC tactic) no
-    longer include the rewrite LET_THM, which turns an expression of
-    the form
-
-      let v = e1 in e2
-
-    into
-
-      e2[e1/v]
-
-    This is so the stateful rewriter can implement a rewriting
-    strategy that only performs the substitution when e1 has
-    simplified to a "real value".

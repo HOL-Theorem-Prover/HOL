@@ -356,12 +356,6 @@ val sum_case_def = Prim_rec.new_recursive_definition{
 val sum_case_cong = save_thm("sum_case_cong",
                              Prim_rec.case_cong_thm sum_CASES sum_case_def);
 
-val LET_SUM = store_thm(
-  "LET_SUM",
-  ``(LET f (I (INL a)) = LET (\v. f (INL v)) (I a)) /\
-    (LET f (I (INR b)) = LET (\u. f (INR u)) (I b))``,
-  REWRITE_TAC [LET_THM, combinTheory.I_THM] THEN BETA_TAC THEN REWRITE_TAC []);
-
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME(fn ppstrm =>
@@ -390,7 +384,7 @@ val _ = adjoin_to_theory
 
 val _ = BasicProvers.export_rewrites ["ISL", "ISR", "OUTL", "OUTR",
                                       "sum_distinct", "INR_INL_11",
-                                      "sum_case_def", "INL", "INR", "LET_SUM"]
+                                      "sum_case_def", "INL", "INR"]
 
 
 val _ = export_theory();

@@ -144,23 +144,6 @@ val LET_ss =
     simpLib.SIMPSET {ac = [], congs = [let_cong], convs = [], filter = NONE,
                      dprocs = [], rewrs = [let_I_thm]}
 
-val LET_COMP_ss = let
-  val let_comp_cong = prove(
-    ``(v:'a = v') ==> (M:'a -> 'b = M') ==> (LET M v = LET M' (I v'))``,
-     REPEAT (DISCH_THEN SUBST_ALL_TAC) THEN
-     REWRITE_TAC [combinTheory.I_THM])
-  val let_simp = prove(``LET (\x:'a. M:'b) v = M``, REWRITE_TAC [LET_THM])
-  val I_LET = prove(``LET (f:bool -> 'a) (I x) = f x``,
-                    REWRITE_TAC [combinTheory.I_THM, LET_THM])
-  val x = mk_var("x",bool)
-  val T_value = INST [x|->boolSyntax.T] I_LET
-  val F_value = INST [x|->boolSyntax.F] I_LET
-in
-  simpLib.SIMPSET {ac = [], congs = [let_comp_cong],
-                   convs = [], filter = NONE, dprocs = [],
-                   rewrs = [T_value, F_value, let_simp]}
-end
-
 (* ----------------------------------------------------------------------
     bool_ss
       This is essentially the same as the old REWRITE_TAC []

@@ -4,7 +4,6 @@ open BasicProvers pred_setTheory
 
 val _ = new_theory "term_posns";
 
-val _ = augment_srw_ss [simpLib.rewrites [LET_THM]]
 val _ = Hol_datatype `redpos = Lt | Rt | In`;
 
 val _ = type_abbrev ("posn", ``:redpos list``)

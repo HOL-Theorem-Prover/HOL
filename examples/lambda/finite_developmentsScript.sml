@@ -8,8 +8,6 @@ open pathTheory BasicProvers
 
 local open pred_setLib in end
 
-val _ = augment_srw_ss [simpLib.rewrites [LET_THM]]
-
 val _ = new_theory "finite_developments";
 
 val DNF_ss = rewrites [GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,

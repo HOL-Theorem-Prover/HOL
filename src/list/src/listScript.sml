@@ -35,7 +35,6 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
  *---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib Num_conv Prim_rec;
-infix THEN ORELSE THENL THENC ORELSEC  |->;
 
 val _ = new_theory "list";
 
@@ -924,17 +923,6 @@ val ALL_DISTINCT_FILTER = store_thm(
                 FORALL_AND_THM, CONS_11, EQ_IMP_THM, lemma] THEN
   metisLib.METIS_TAC []);
 
-(* ----------------------------------------------------------------------
-    LET_LIST
-   ---------------------------------------------------------------------- *)
-
-val LET_LIST = store_thm(
-  "LET_LIST",
-  ``(LET f [] = f []) /\
-    (LET f (h::t) = LET (\v1. LET (\v2. f (v1 :: v2)) t) h)``,
-  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
-
-
 (* --------------------------------------------------------------------- *)
 
 val _ = adjoin_to_theory
@@ -977,7 +965,7 @@ val _ = BasicProvers.export_rewrites
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS", "MEM_APPEND",
            "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR", "FILTER",
-           "ALL_DISTINCT", "LET_LIST"];
+           "ALL_DISTINCT"];
 
 val _ = export_theory();
 

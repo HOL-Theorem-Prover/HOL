@@ -7,8 +7,6 @@ open chap3Theory chap2Theory ncTheory ncLib
 
 local open pred_setLib in end
 
-val _ = augment_srw_ss [simpLib.rewrites [LET_THM]]
-
 val _ = new_theory "labelledTerms";
 
 

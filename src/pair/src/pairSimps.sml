@@ -22,6 +22,6 @@ val PAIR0_ss =
 
 val PAIR_ss = merge_ss [PAIR0_ss, boolSimps.LET_ss]
 
-val _ = BasicProvers.augment_srw_ss [PAIR0_ss];
+val _ = BasicProvers.augment_srw_ss [PAIR_ss];
 
 end (* struct *)
