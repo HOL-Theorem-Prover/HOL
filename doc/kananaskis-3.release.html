@@ -95,9 +95,10 @@ html1/DTD/xhtml1-strict.dtd">
     during a run of Holmake, the location includes the line number in
     the file where the error is.  Pragma comments of the form
     <code>(*#loc&nbsp;100&nbsp;5*)</code> allow the line and column
-    numbers to be overridden, a la C's <code>#line</code> directive.
-    (Many thanks to Keith Wansbrough for the implementation of this
-    feature.)  The lexer is also much faster than it used to be.</p></li>
+    numbers to be overridden, &agrave; la C&rsquo;s <code>#line</code>
+    directive.  (Many thanks to Keith Wansbrough for the
+    implementation of this feature.)  The lexer is also much faster
+    than it used to be.</p></li>
 
 <li> <p> The system better distinguishes interactive and non-interactive
     use (the latter occurs with building things with Holmake).
@@ -151,14 +152,15 @@ html1/DTD/xhtml1-strict.dtd">
          mosml &lt; tools/smart-configure.sml
 </pre></li>
 
-<li> <p> Pretty-printing of "list forms" (e.g., lists, sets and bags) is
-    now under more user-control.  See the REFERENCE for
-    <code>add_listform</code>, whose type has changed, for more detail
-    on this.  (Thanks to Lockwood Morris for this feature suggestion.)</p></li>
+<li> <p> Pretty-printing of &ldquo;list forms&rdquo; (e.g., lists,
+    sets and bags) is now under more user-control.  See the REFERENCE
+    for <code>add_listform</code>, whose type has changed, for more
+    detail on this.  (Thanks to Lockwood Morris for this feature
+    suggestion.)</p></li>
 
-<li> There is a new simpset fragment in realSimps,
-    <code>REAL_REDUCE_ss</code>,
-    which performs calculations over ground rational values.  Thus,
+<li> There are two new simpset fragments in realSimps.
+    <code>REAL_REDUCE_ss</code>
+    performs calculations over ground rational values.  Thus,
 <pre>
          SIMP_CONV (std_ss ++ REAL_REDUCE_ss) [] ``1/3 - 3/7``
 </pre>
@@ -167,11 +169,16 @@ html1/DTD/xhtml1-strict.dtd">
          &gt; val it = |- 1 / 3 - 3 / 7 = ~2 / 21 : thm
 </pre>
 
-    When realSimps is loaded, <code>REAL_REDUCE_ss</code> is
+    When <code>realSimps</code> is loaded, <code>REAL_REDUCE_ss</code> is
     automatically added to the stateful-rewriting simpset, and
     bossLib's EVAL is also augmented with this functionality.  This
     code also removes common factors from fractions even when there
     are no other arithmetic operations being performed.
+
+    <p> The second simpset fragment in <code>realSimps</code> is
+    <code>REAL_ARITH_ss</code>, which embodies the
+    <code>RealArith</code> decision procedure for universal Presburger
+    arithmetic over the real numbers.</li>
 
 <li> The simplifier now provides simpler interfaces for the addition of
     AC-rewriting and congruence rules.  They can be added as if normal
@@ -183,6 +190,7 @@ html1/DTD/xhtml1-strict.dtd">
 </pre>
     <code>Cong</code> is used similarly.  Both functions are further
     described in the REFERENCE.
+
 </ul>
 
 <h2 id="new-theories">New theories:</h2>
@@ -221,15 +229,25 @@ html1/DTD/xhtml1-strict.dtd">
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
 <ul>
-<li> Rewrite rules for arithmeticTheory's MIN and MAX constants have
-    been made more general; they will now match more often.  For
-    example, MIN_LE has changed from
+<li> <p> The rewrite theorem for <code>LET</code>, </p>
 <pre>
-         m <= MIN m n = m <= n
+         LET f v = f v
+</pre>
+<p>    has been removed from <code>std_ss</code> and later simplification
+    sets. (Simpsets <code>arith_ss</code>, <code>list_ss</code> and
+    <code>srw_ss()</code> are all affected.)</p>
+</li>
+
+  <li> <p>Rewrite rules for <code>arithmeticTheory</code>'s
+      <code>MIN</code> and <code>MAX</code> constants have been made
+      more general; they will now match more often.  For example,
+      <code>MIN_LE</code> has changed from</p>
+<pre>
+         m &lt;= MIN m n = m &lt;= n
 </pre>
     to
 <pre>
-         p <= MIN m n = p <= m /\ p <= n
+         p &lt;= MIN m n = p &lt;= m /\ p <= n
 </pre>
 
 <li> For reasons of efficiency, all conversions in the system may now
