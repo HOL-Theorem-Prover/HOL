@@ -123,10 +123,6 @@ New theories:
   * A theory of co-inductive (possibly infinite) labelled transition
     paths in pathTheory.
 
-  * An example formalizing the probabilistic guarded command language
-    (pGCL) in higher-order logic, including a tool for deriving
-    sufficient verification conditions for partial correctness.
-
 New tools:
 ----------
 
@@ -145,6 +141,10 @@ New examples:
     (examples/lambda) to include mechanisations of chapters 2 & 3 of
     Hankin's lambda calculus text, and the standardisation theorem
     from Barendregt's chapter 11.
+
+  * A formalization of the probabilistic guarded command language
+    (pGCL) in higher-order logic, including a tool for deriving
+    sufficient verification conditions for partial correctness.
 
 Incompatibilities:
 ------------------
