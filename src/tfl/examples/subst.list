@@ -3,6 +3,7 @@
  ---------------------------------------------------------------------------*)
 
 app load ["bossLib", "stringTheory", "pred_setTheory"]; 
+
 open bossLib listTheory stringTheory pred_setTheory 
      relationTheory prim_recTheory arithmeticTheory TotalDefn;
 
@@ -154,7 +155,7 @@ val E3a = CONV_RULE (TC_SIMP_CONV [lam_count_def,DECIDE (Term`x<1+y = x<=y`)])
 
 (*---------------------------------------------------------------------------
     Finally, the termination proof for the nested TC. In its full 
-    ugliness, it is
+    glory, the goal is
 
     !Q M v x v'.
       ~(x = v) /\ (MEM x (FV M []) /\ MEM v (FV Q [])) /\
@@ -163,8 +164,8 @@ val E3a = CONV_RULE (TC_SIMP_CONV [lam_count_def,DECIDE (Term`x<1+y = x<=y`)])
         ((x,Q),subst_tupled_aux (measure (lam_count o SND)) ((v,Var v'),M))
         ((x,Q),Abs v M)
 
-    All the antecedents are cruft, and are generalized away at the start.
-    That leaves us with trying to prove the more manageable
+    All the antecedents are cruft, and can be generalized away at the 
+    start. That leaves us with trying to prove the more manageable
 
     !v w.
       lam_count
@@ -173,13 +174,13 @@ val E3a = CONV_RULE (TC_SIMP_CONV [lam_count_def,DECIDE (Term`x<1+y = x<=y`)])
 
     We proceed by induction on the lam_count of M. The nested call, 
     since it only replaces a variable by a variable, terminates.
-    The Var and Comb cases are simple. The Abs case splits into
-    3 cases determined by the if-then-else structure of the Abs clause.
-    One of these is trivial, since there is no recursive call in it.
-    Another is easy, since we just do a normal recursion. The 
+    In particular, the Var and Comb cases are simple. The Abs case
+    splits into 3 cases determined by the if-then-else structure of
+    the Abs clause. One of these is trivial, since there is no recursive
+    call in it. Another is easy, since we just do a normal recursion. The 
     final case is where the nested call is made. This is the tricky part.
     The induction hypothesis proves the constraint on unrolling the 
-    clause, so the nested call is exposed. The goal now roughly says
+    clause, so the nested call is exposed. The goal now (roughly) says
 
        lam_count (subst s1 (subst s2 l)) <= lam_count l
 
@@ -216,7 +217,7 @@ val (subst_eqns, subst_ind) = Defn.tprove
       [`M:lam`    |-> `l:lam`,
        `v:string` |-> `s:string`,
        `x:string` |-> `v:string`,
-       `Q:lam`    |-> `Var w:lam`] E3a) (* INST problem *)
+       `Q:lam`    |-> `Var w:lam`] E3a)
       THEN RW_TAC arith_ss [lam_count_def]
       THEN REPEAT (WEAKEN_TAC (not o is_forall))
       THEN PROVE_TAC [LESS_EQ_TRANS,LESS_EQ_REFL]]);
@@ -248,9 +249,10 @@ val STRCAT_ACYCLIC = Q.prove
 
 (*---------------------------------------------------------------------------
    Termination of AWAY. The function terminates because the set of 
-   strings in L that x is a prefix of decreases with each recursive call.
+   strings in L that x is a prefix of strictly decreases with each
+   recursive call.
 
-     AWAY = |- AWAY L x = if MEM x L then AWAY L (PRIME x) else x
+     AWAY     = |- AWAY L x = if MEM x L then AWAY L (PRIME x) else x
      AWAY_IND = |- !P. (!x. (MEM x L ==> P (PRIME x)) ==> P x) ==> !v. P v
 
  ---------------------------------------------------------------------------*)
