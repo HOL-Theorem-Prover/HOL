@@ -37,6 +37,16 @@ val elim_eq = store_thm(
     ASM_REWRITE_TAC []
   ]);
 
+val less_to_leq_samel = store_thm(
+  "less_to_leq_samel",
+  Term`!x y. x < y = x <= y + ~1`,
+  REWRITE_TAC [int_le, not_less, GSYM INT_ADD_ASSOC, INT_ADD_LINV,
+               INT_ADD_RID]);
+val less_to_leq_samer = store_thm(
+  "less_to_leq_samer",
+  Term`!x y:int. x < y = x + 1 <= y`,
+  REWRITE_TAC [int_le, not_less, INT_LT_RADD]);
+
 val lt_move_all_right = store_thm(
   "lt_move_all_right",
   ``!x y. x < y = 0 < y + ~x``,

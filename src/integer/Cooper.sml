@@ -128,19 +128,16 @@ fun calc_lcm ints =
 
 
 
-fun remove_bare_vars tm =
-  if is_conj tm orelse is_disj tm orelse is_less tm orelse is_plus tm orelse
-     is_divides tm orelse is_eq tm
-  then
-    BINOP_CONV remove_bare_vars tm
-  else if is_neg tm then RAND_CONV remove_bare_vars tm
-  else if is_negated tm then RAND_CONV remove_bare_vars tm
-  else if is_var tm then REWR_CONV (GSYM INT_MUL_LID) tm
-  else ALL_CONV tm
+val remove_bare_vars = let
+  fun Munge t = if is_var t then REWR_CONV (GSYM INT_MUL_LID) t
+                else NO_CONV t
+in
+  DEPTH_CONV Munge
+end
 
 local
   val basic_rewrite_conv =
-    REWRITE_CONV [boolTheory.DE_MORGAN_THM, boolTheory.NOT_IMP, not_less,
+    REWRITE_CONV [boolTheory.NOT_IMP,
                   boolTheory.IMP_DISJ_THM, boolTheory.EQ_IMP_THM,
                   elim_le, elim_ge, elim_gt,
                   INT_SUB_CALCULATE, INT_RDISTRIB, INT_LDISTRIB,
@@ -156,8 +153,10 @@ local
     end handle HOL_ERR {origin_structure = "Lib", ...} => ALL_CONV tm
     else if is_comb tm then
       (RATOR_CONV flip_muls THENC RAND_CONV flip_muls) tm
-         else
-           ALL_CONV tm
+    else if is_abs tm then
+      ABS_CONV flip_muls tm
+    else
+      ALL_CONV tm
 in
   val phase1_CONV =
   (* to push negations inwards; formula must be quantifier free *)
@@ -219,7 +218,8 @@ in
       (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r ORELSEC
        RAND_CONV congruential_simplification)
     end
-  end else ALL_CONV
+  end else if is_neg tm then RAND_CONV congruential_simplification
+  else ALL_CONV
 end tm
 
 fun sum_var_coeffs var tm = let
@@ -390,6 +390,8 @@ in
   in
     if is_disj tm orelse is_conj tm then
       BINOP_CONV (phase2_CONV var) tm
+    else if is_neg tm then
+      RAND_CONV (phase2_CONV var) tm
     else if free_in var tm then let
       val ((l,r),tt) = (dest_less tm, LT) handle HOL_ERR _ => (dest_eq tm, EQ)
       open Arbint
@@ -484,8 +486,7 @@ in
        TRY_CONV (reduce_by_gcd THENC TRY_CONV move_CONV) THENC
        normalise_eqs var) tm
     end handle HOL_ERR _ =>
-      if is_neg tm then RAND_CONV (phase2_CONV var) tm
-      else if is_divides tm then
+      if is_divides tm then
         (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
          RAND_CONV (collect_in_sum var) THENC
          dealwith_negative_divides THENC
@@ -556,7 +557,7 @@ fun find_coeffs var term = let
       recurse (recurse acc (rand tm)) (rand (rator tm))
     else if is_less tm orelse is_eq tm then
       deal_with_binop acc tm
-    else if is_neg tm then (* arises only over int_divides *)
+    else if is_neg tm then
       recurse acc (rand tm)
     else if is_divides tm then
       case find_coeff_divides var tm of
@@ -568,10 +569,9 @@ in
   Lib.mk_set (recurse [] term)
 end
 
-fun find_coeff var term =
+fun find_coeff var term =  (* works over un-negated leaves *)
   if is_divides term then find_coeff_divides var term
   else if is_less term orelse is_eq term then find_coeff_binop var term
-  else if is_neg term then find_coeff var (rand term)
   else NONE
 
 
@@ -602,7 +602,6 @@ in
         RAND_CONV (TRY_CONV (REWR_CONV INT_LDISTRIB)) THENC REDUCE_CONV
     in
       if is_divides tm then divides_conv
-      else if is_neg tm then RAND_CONV (multiply_by_CONV zero_lti)
       else if is_less tm then
         REWR_CONV (MATCH_MP lt_justify_multiplication zero_lti)
       else (* must be equality *)
@@ -612,6 +611,7 @@ in
     fun LCMify term =
       if is_disj term orelse is_conj term then
         BINOP_CONV LCMify term
+      else if is_neg term then RAND_CONV LCMify term
       else
         case (find_coeff var term) of
           NONE => ALL_CONV term
@@ -718,59 +718,63 @@ fun phase4_CONV tm = let
     x_LT of term
   | LT_x of term
   | x_EQ of term
-  | x_NEQ of term
   | DIVIDES of (term * term option)
-  | NDIVIDES of (term * term option)
-  infix DIVIDES NDIVIDES
   fun rtype_to_term rt =
     case rt of
       x_LT t => SOME t
     | LT_x t => SOME t
     | x_EQ t => SOME t
-    | x_NEQ t => SOME t
     | _ => NONE
   val leaf_arguments = let
     (* traverse the leaves of the term; classifying all those where the
-       Bvar is involved in a < or = relation.  If
+       Bvar is involved.  If
           x < t    then     add x_LT t
           t < x    then     add LT_x t
           x = t    then     add x_EQ t
-        ~(x = t)   then     add x_NEQ t
+          t | x    then     add DIVIDES(t, NONE)
+          t | x+a  then     add DIVIDES(t, SOME a)
        Note that t = x never occur because of normalisation carried out
-       at the end of phase2. *)
-    fun recurse underneg acc tm = let
+       at the end of phase2.
+
+       Pair these with a boolean indicating the parity
+       (true = 0, false = 1) of the number of logical negations passed
+       through to get to the leaf.
+    *)
+    fun recurse posp acc tm = let
       val (l,r) = dest_disj tm
         handle HOL_ERR _ => dest_conj tm
     in
-      recurse underneg (recurse underneg acc r) l
+      recurse posp (recurse posp acc r) l
     end handle HOL_ERR _ => let
       val (l,r) = dest_less tm
     in
-      if l = Bvar then x_LT r :: acc
-      else if r = Bvar then LT_x l :: acc else acc
+      if l = Bvar then (x_LT r, posp) :: acc
+      else if r = Bvar then (LT_x l, posp) :: acc else acc
     end handle HOL_ERR _ => let
       val (l,r) = dest_eq tm
     in
-      if l = Bvar then (if underneg then x_NEQ else x_EQ) r :: acc else acc
+      if l = Bvar then (x_EQ r, posp) :: acc else acc
     end handle HOL_ERR _ => let
       val (l,r) = dest_divides tm
       val (first_rhs_arg, rest_rhs) = (I ## SOME) (dest_plus r)
         handle HOL_ERR _ => (r, NONE)
     in
       if first_rhs_arg = Bvar then
-        (if underneg then op NDIVIDES else op DIVIDES) (l, rest_rhs) :: acc
+        (DIVIDES (l, rest_rhs), posp) :: acc
       else acc
-    end handle HOL_ERR _ =>
-      recurse (not underneg) acc (dest_neg tm) handle HOL_ERR _ => acc
+    end handle HOL_ERR _ => (* must be a negation *)
+      recurse (not posp) acc (dest_neg tm) handle HOL_ERR _ => acc
   in
-    Lib.mk_set (recurse false [] Body)
+    Lib.mk_set (recurse true [] Body)
   end
   val use_bis = let
     fun recurse a b l =
       case l of
         [] => (a,b)
-      | (x_LT _)::t => recurse (a+1) b t
-      | (LT_x _)::t => recurse a (b+1) t
+      | (x_LT _, true)::t => recurse (a+1) b t
+      | (x_LT _, false)::t => recurse a (b+1) t
+      | (LT_x _, true)::t => recurse a (b+1) t
+      | (LT_x _, false)::t => recurse (a+1) b t
       | _ :: t => recurse a b t
   in
     Int.>(recurse 0 0 leaf_arguments)
@@ -782,7 +786,7 @@ fun phase4_CONV tm = let
      our use_bis variable *)
   val lemma = let
     val y = genvar int_ty
-    val all_terms = List.mapPartial rtype_to_term leaf_arguments
+    val all_terms = List.mapPartial (rtype_to_term o #1) leaf_arguments
     val MK_LESS = if use_bis then mk_less else (fn (x,y) => mk_less(y,x))
   in
     if null all_terms then let
@@ -841,8 +845,7 @@ fun phase4_CONV tm = let
      the above forms, call it delta *)
 
   val all_delta_tms = let
-    fun collect (c DIVIDES _) = SOME c
-      | collect (c NDIVIDES _) = SOME c
+    fun collect (DIVIDES(c, _), _) = SOME c
       | collect _ = NONE
   in
     Lib.mk_set (List.mapPartial collect leaf_arguments)
@@ -929,13 +932,15 @@ fun phase4_CONV tm = let
     val intlist_ty = mk_thy_type{Args=[int_ty], Tyop="list",Thy="list"}
     val MEM_tm = mk_thy_const{Name = "MEM", Thy="list",
                                Ty = int_ty --> intlist_ty --> Type.bool}
-    fun find_bi (LT_x t) = SOME t
-      | find_bi (x_EQ t) = SOME (mk_plus(t, mk_negated one_tm))
-      | find_bi (x_NEQ t) = SOME t
+    fun find_bi (LT_x t, true) = SOME t
+      | find_bi (x_LT t, false) = SOME (mk_plus(t, mk_negated one_tm))
+      | find_bi (x_EQ t, true) = SOME (mk_plus(t, mk_negated one_tm))
+      | find_bi (x_EQ t, false) = SOME t
       | find_bi _ = NONE
-    fun find_ai (x_LT t) = SOME t
-      | find_ai (x_EQ t) = SOME (mk_plus(t, one_tm))
-      | find_ai (x_NEQ t) = SOME t
+    fun find_ai (x_LT t, true) = SOME t
+      | find_ai (LT_x t, false) = SOME (mk_plus(t, one_tm))
+      | find_ai (x_EQ t, true) = SOME (mk_plus(t, one_tm))
+      | find_ai (x_EQ t, false) = SOME t
       | find_ai _ = NONE
     val (find_xi, arith_op) = if use_bis then (find_bi, mk_plus)
                               else (find_ai, mk_minus)
@@ -1079,13 +1084,21 @@ fun phase4_CONV tm = let
            val d2_thm = recurse d2_thm0 d2_tm
         in
            DISJ_CASES thm d1_thm d2_thm
+        end else if is_neg thm then let
+           val Pxd_tm = dest_neg tm
+           val subres = recurse (ASSUME Pxd_tm) (dest_neg (concl thm))
+           val false_concl = MP thm subres
+        in
+           EQF_ELIM (DISCH Pxd_tm false_concl)
         end
 
-    There are six base cases depending on the form of the term; the
-    following are demonstrate what happens when use_bis is true.
+    There are seven base cases depending on the form of the term and
+    whether or not we're under a negation; the following are
+    demonstrate what happens when use_bis is true.
 
-         (A)   thm = |- x < e
-              tm  =    x - d < e
+         (A)   thm  = |- x < e
+               tm   =    x - d < e
+               posp = true
 
               0 < d              (zero_lt_delta)
            specialise INT_LT_ADD2 with x, e, 0, d to get
@@ -1098,8 +1111,42 @@ fun phase4_CONV tm = let
               x - d < e
            as required
 
-         (B)   thm = |- e < x
-              tm  =    e < x - d
+         (B)   thm  = |- x - d < e
+               tm   = |- x < e
+               posp = false
+
+           e + ~1 is one of the bi terms
+
+           ASSUME ~tm
+                     |- ~(x < e)
+           REWR_CONV with not_less
+                     |- e < x + 1
+           REWR_CONV with (GSYM INT_LT_ADDNEG2)
+                     |- e + ~1 < x                  (lowbound)
+           REWR_CONV thm with less_to_leq_samel
+                     |- x - d <= e + ~1
+           REWR_CONV with INT_LE_SUB_RADD
+                     |- x <= (e + ~1) + d           (highbound)
+           REWR_CONV (lowbound /\ highbound) with in_additive_range
+                     |- ?j. (x = (e + ~1) + j) /\ 0 < j /\ j <= d
+           choose j take conjuncts
+                     |- (x = (e + ~1) + j)          (conj1)
+                     |- 0 < j /\ j <= d             (conj2)
+           prove e + ~1 in list of bis              (membership)
+           match not_thm with membership /\ conj2
+                     |- ~P((e + ~1) + j)            (notP)
+           AP_TERM P conj1
+                     |- P(x) = P((e + ~1) + j)
+           EQ_TRANS with fx_thm
+                     |- P((e + ~1) + j)
+           MP with notP
+                     |- F
+           CCONTR tm
+                     |- x < e    as required
+
+         (C)   thm  = |- e < x
+               tm   =    e < x - d
+               posp = true
 
              ASSUME ~tm
                  ... |- ~(e < x - d)                 (not_tm)
@@ -1129,28 +1176,30 @@ fun phase4_CONV tm = let
              CCONTR tm
                      |- e < x - d      as required
 
-         (C)  and (D)
+         (D)   thm  = |- e < x - d
+               tm   = |- e < x
+               posp = false
 
-              thm = |- f int_divides (x + e)
-              tm  =    f int_divides (x - d + e)
 
-             or negated versions of both
-
-             specialise INT_DIVIDES_RMUL and match with divides_info
-             theorem that f int_divides d to get
-                  f int_divides (c * d)
-             specialise INT_DIVIDES_RSUB to get
-                  f int_divides (c * d) ==>
-                  (f int_divides (x + e) - (c * d) = f int_divides (x + e))
-             match two preceding and GSYM to get
-                  f int_divides (x + e) = f int_divides (x + e) - c * d
-             and if C) then EQ_MP this thm to get result.
-             else if D) EQ_MP (AP_TERM ``~`` this) thm to get result
+                      |- 0 < d                  (zero_lt_delta)
+               REWR_CONV (GSYM INT_NEG_LT0)
+                      |- ~d < 0                 (part2)
+               REWR_CONV INT_LT_SUB_LADD thm
+                      |- e + d < x              (part1)
+               MATCH_MP INT_LT_ADD2 (part1 /\ part2)
+                      |- e + d + ~d < x + 0
+               CONV_RULE (LAND_CONV (REWR_CONV (GSYM INT_ADD_ASSOC)))
+                      |- e + (d + ~d) < x + 0
+               CONV_RULE (LAND_CONV (RAND_CONV (REWR_CONV INT_ADD_RINV)))
+                      |- e + 0 < x + 0
+               CONV_RULE (BINOP_CONV (REWR_CONV INT_ADD_RID))
+                      |- e < x
 
          (E)
 
-             thm =  |- x = e
-             tm  =  |- x - d = e
+             thm  =  |- x = e
+             tm   =     x - d = e
+             posp =  true
 
              given our assumption, the thm is an impossibility
              straightaway.
@@ -1180,11 +1229,13 @@ fun phase4_CONV tm = let
                     |- x - d = e     as required
 
          (F)
-             thm = |- ~(x = e)
-             tm =  |- ~(x - d = e)
-             eqn = |- x - d = e
+             thm  = |- x - d = e
+             tm   =    x = e
+             posp = false
 
-             ASSUME x - d = e
+             e is in bis list
+
+             thm
                    |- x - d = e                           (xlessd_eq_e)
              CONV_RULE (REWR_CONV INT_EQ_SUB_RADD)
                    |- x = e + d                           (x_eq_ed)
@@ -1203,8 +1254,26 @@ fun phase4_CONV tm = let
                    |- F(x) = F                            (fx_eq_f)
              EQ_MP fx_thm fx_eq_f
                    |- F
-             NOT_INTRO (DISCH eqn)
-                   |- ~(x - d = e)
+             CCONTR tm
+                   |- x = e
+
+         (G)
+
+              thm  = |- f int_divides (x + e)
+              tm   =    f int_divides (x - d + e)
+              posp = _
+
+             specialise INT_DIVIDES_RMUL and match with divides_info
+             theorem that f int_divides d to get
+                  f int_divides (c * d)
+             specialise INT_DIVIDES_RSUB to get
+                  f int_divides (c * d) ==>
+                  (f int_divides (x + e) - (c * d) = f int_divides (x + e))
+             match two preceding and GSYM to get
+                  f int_divides (x + e) = f int_divides (x + e) - c * d
+             and if C) then EQ_MP this thm to get result.
+             else if D) EQ_MP (AP_TERM ``~`` this) thm to get result
+
 
         *)
 
@@ -1223,109 +1292,156 @@ fun phase4_CONV tm = let
         not_disj2_thm
       val fx_thm = ASSUME (mk_comb(F, Bvar))
       val fx_thm_expanded = CONV_RULE BETA_CONV fx_thm
-      fun arecurse thm tm = let
+      fun arecurse posp thm tm = let
         val thm_concl = concl thm
       in let
         val (c1, c2) = dest_conj tm
       in
-        CONJ (arecurse (CONJUNCT1 thm) c1) (arecurse (CONJUNCT2 thm) c2)
+        CONJ (arecurse posp (CONJUNCT1 thm) c1)
+             (arecurse posp (CONJUNCT2 thm) c2)
       end handle HOL_ERR _ => let
         val (d1_thm0, d2_thm0) = (ASSUME ## ASSUME) (dest_disj thm_concl)
         val (d1_tm, d2_tm) = dest_disj tm
-        val d1_thm = DISJ1 (arecurse d1_thm0 d1_tm) d2_tm
-        val d2_thm = DISJ2 d1_tm (arecurse d2_thm0 d2_tm)
+        val d1_thm = DISJ1 (arecurse posp d1_thm0 d1_tm) d2_tm
+        val d2_thm = DISJ2 d1_tm (arecurse posp d2_thm0 d2_tm)
       in
         DISJ_CASES thm d1_thm d2_thm
       end handle HOL_ERR _ => let
+        val Pxd_tm = dest_neg tm
+        val subres = arecurse (not posp) (ASSUME Pxd_tm) (dest_neg (concl thm))
+        val false_concl = MP thm subres
+      in
+        NOT_INTRO (DISCH Pxd_tm false_concl)
+      end handle HOL_ERR _ => let
         val (lthm,rthm) = dest_less thm_concl
+        val (ltm, rtm) = dest_less tm
       in
         (* base cases with less as operator *)
-        if lthm = Bvar then let
-          (* x < e - want to prove that x + d < e
-             do it by contradiction *)
-          val e = rthm
-          val not_tm = ASSUME (mk_neg tm)
-          val leq_var = CONV_RULE (REWR_CONV INT_NOT_LT THENC
-                                   REWR_CONV (GSYM INT_LE_SUB_RADD)) not_tm
-          (* ~(x + d < e) --> e <= x + d --> e - d <= x *)
-          val exists_j =
-            CONV_RULE (REWR_CONV in_subtractive_range) (CONJ leq_var thm)
-          (* ?j. (x = e - j) /\ 0 < j /\ j <= d *)
-          val membership = prove_membership e bis_list_tm
-          val (jvar, jbody) = dest_exists (concl exists_j)
-          val choose_j = ASSUME jbody
-          val (var_eq, j_in_range) = CONJ_PAIR choose_j
-          val not_fej =
-            EQF_INTRO (MATCH_MP not_thm (CONJ membership j_in_range))
-          val fx_eq_fej = AP_TERM F var_eq
-          val fx_eq_F = TRANS fx_eq_fej not_fej
-          val contradiction = EQ_MP fx_eq_F fx_thm
-        in
-          CCONTR tm (CHOOSE(jvar, exists_j) contradiction)
-        end
-        else if rthm = Bvar then let
-          val e = lthm
-          (* e < x - want to prove e < x + d *)
-          val thm0 = SPECL [e, Bvar, zero_tm, delta_tm] INT_LT_ADD2
-          (* e < x /\ 0 < d ==> e + 0 < x + d *)
-          val thm1 = MP thm0 (CONJ thm zero_lt_delta)
+        if posp then (* thm is positive instance *)
+          if lthm = Bvar then let
+            (* x < e - want to prove that x + d < e
+               do it by contradiction *)
+            val e = rthm
+            val not_tm = ASSUME (mk_neg tm)
+            val leq_var = CONV_RULE (REWR_CONV INT_NOT_LT THENC
+                                     REWR_CONV (GSYM INT_LE_SUB_RADD)) not_tm
+            (* ~(x + d < e) --> e <= x + d --> e - d <= x *)
+            val exists_j =
+              CONV_RULE (REWR_CONV in_subtractive_range) (CONJ leq_var thm)
+            (* ?j. (x = e - j) /\ 0 < j /\ j <= d *)
+            val membership = prove_membership e bis_list_tm
+            val (jvar, jbody) = dest_exists (concl exists_j)
+            val choose_j = ASSUME jbody
+            val (var_eq, j_in_range) = CONJ_PAIR choose_j
+            val not_fej =
+              EQF_INTRO (MATCH_MP not_thm (CONJ membership j_in_range))
+            val fx_eq_fej = AP_TERM F var_eq
+            val fx_eq_F = TRANS fx_eq_fej not_fej
+            val contradiction = EQ_MP fx_eq_F fx_thm
+          in
+            CCONTR tm (CHOOSE(jvar, exists_j) contradiction)
+          end
+          else if rthm = Bvar then let
+            val e = lthm
+            (* e < x - want to prove e < x + d *)
+            val thm0 = SPECL [e, Bvar, zero_tm, delta_tm] INT_LT_ADD2
+            (* e < x /\ 0 < d ==> e + 0 < x + d *)
+            val thm1 = MP thm0 (CONJ thm zero_lt_delta)
           (* e + 0 < x + d *)
-        in
-          CONV_RULE (LAND_CONV (REWR_CONV INT_ADD_RID)) thm1
-        end
-        else (* Bvar not present *)
-          thm
+          in
+            CONV_RULE (LAND_CONV (REWR_CONV INT_ADD_RID)) thm1
+          end
+          else (* Bvar not present *) thm
+        else (* not posp *)
+          if ltm = Bvar then let
+            (* have x + d < e, want to show x < e *)
+            val negdelta_lt_0 =
+              CONV_RULE (REWR_CONV (GSYM INT_NEG_LT0)) zero_lt_delta
+            val stage0 =
+              MATCH_MP INT_LT_ADD2 (CONJ thm negdelta_lt_0)
+              (* (x + d) + ~d < e + 0 *)
+            val stage1 =
+              CONV_RULE (LAND_CONV (REWR_CONV (GSYM INT_ADD_ASSOC))) stage0
+              (* x + (d + ~d) < e + 0 *)
+            val stage2 =
+              CONV_RULE (LAND_CONV (RAND_CONV (REWR_CONV INT_ADD_RINV))) stage1
+              (* x + 0 < e + 0 *)
+          in
+            CONV_RULE (BINOP_CONV (REWR_CONV INT_ADD_RID)) stage2
+          end
+          else if rtm = Bvar then let
+            val e = ltm
+            (* have e < x + d, want to show e < x  -- by contradiction *)
+            val not_tm = ASSUME (mk_neg tm)
+              (* |- ~(e < x) *)
+            val x_lt_e1 = CONV_RULE (REWR_CONV not_less) not_tm
+              (* |- x < e + 1 *)
+            val e1_leq_xd = CONV_RULE (REWR_CONV less_to_leq_samer) thm
+              (* |- e + 1 <= x + d *)
+            val e1d_leq_x =
+              CONV_RULE (REWR_CONV (GSYM INT_LE_SUB_RADD)) e1_leq_xd
+              (* |- (e + 1) - d <= x *)
+            val exists_j =
+              CONV_RULE (REWR_CONV in_subtractive_range)
+                        (CONJ e1d_leq_x x_lt_e1)
+              (* ?j. (x = e + 1 - j) /\ 0 < j /\ j <= d *)
+            val membership = prove_membership (mk_plus(e,one_tm)) bis_list_tm
+            val (jvar, jbody) = dest_exists (concl exists_j)
+            val choose_j = ASSUME jbody
+            val (var_eq, j_in_range) = CONJ_PAIR choose_j
+            val not_fej = MATCH_MP not_thm (CONJ membership j_in_range)
+            val fej = EQ_MP (AP_TERM F var_eq) fx_thm
+          in
+            CCONTR tm (CHOOSE(jvar, exists_j) (MP not_fej fej))
+          end
+          else (* Bvar not present *) thm
       end handle HOL_ERR _ => let
-        val (l,r) = dest_eq thm_concl
+        val (lthm,rthm) = dest_eq thm_concl
+        val (ltm, rtm) = dest_eq tm
       in
-        if l = Bvar then let
-          (* x = e *)
-          val e = r
-          val e_plus_1 = mk_plus(e, one_tm)
-          val spec_not_thm = SPECL [e_plus_1, one_tm] not_thm
-          (* MEM (e + 1) [....; e + 1] /\ 0 < 1 /\ 1 <= d ==> ~F(e + 1 - 1) *)
-          val membership = prove_membership e_plus_1 bis_list_tm
-          val not_fe1 = MP spec_not_thm (CONJ membership one_ok)
-          val fe1_eqF = EQF_INTRO not_fe1
-          (* F(e + 1 - 1) = false *)
-          val e_eq_e11 = SYM (SPEC e elim_minus_ones)
-          (* e = e + 1 - 1 *)
-          val x_eq_e11 = TRANS thm e_eq_e11
-          (* x = e + 1 - 1 *)
-          val Fx_eq_Fe11 = AP_TERM F x_eq_e11
-          (* F x = F(e + 1 - 1) *)
-          val Fx_eq_F = TRANS Fx_eq_Fe11 fe1_eqF
-        in
-          CONTR tm (EQ_MP Fx_eq_F fx_thm)
-        end
-        else (* Bvar not present *)
-          thm
+        if posp then
+          if lthm = Bvar then let
+            (* x = e *)
+            val e = rthm
+            val e_plus_1 = mk_plus(e, one_tm)
+            val spec_not_thm = SPECL [e_plus_1, one_tm] not_thm
+            (* MEM (e + 1) [....; e + 1] /\ 0 < 1 /\ 1 <= d ==>
+               ~F(e + 1 - 1) *)
+            val membership = prove_membership e_plus_1 bis_list_tm
+            val not_fe1 = MP spec_not_thm (CONJ membership one_ok)
+            val fe1_eqF = EQF_INTRO not_fe1
+            (* F(e + 1 - 1) = false *)
+            val e_eq_e11 = SYM (SPEC e elim_minus_ones)
+            (* e = e + 1 - 1 *)
+            val x_eq_e11 = TRANS thm e_eq_e11
+            (* x = e + 1 - 1 *)
+            val Fx_eq_Fe11 = AP_TERM F x_eq_e11
+            (* F x = F(e + 1 - 1) *)
+            val Fx_eq_F = TRANS Fx_eq_Fe11 fe1_eqF
+          in
+            CONTR tm (EQ_MP Fx_eq_F fx_thm)
+          end
+          else (* Bvar not present *)
+            thm
+        else (* not posp *)
+          if ltm = Bvar then let
+            (* have x + d = e, want x = e *)
+            val e = rtm
+            val xplusd_eq_e = thm
+            val x_eq_elessd =
+              EQ_MP (SYM (SPECL [Bvar,e,delta_tm] INT_EQ_SUB_LADD)) xplusd_eq_e
+              (* x = e - d *)
+            val F_elessd = EQ_MP (AP_TERM F x_eq_elessd) fx_thm
+            val spec_not_thm = SPECL [e, delta_tm] not_thm
+            val membership = prove_membership e bis_list_tm
+            val not_F_elessd = MP spec_not_thm (CONJ membership delta_ok)
+          in
+            CCONTR tm (MP not_F_elessd F_elessd)
+          end
+          else (* Bvar not present *) thm
       end handle HOL_ERR _ => let
-        val tm0 = dest_neg thm_concl
-      in let
-        val (l,r) = dest_eq tm0
-      in
-        if l = Bvar then let
-          (* ~(x = e) - want to prove ~(x + d = e) do this by contradiction *)
-          val e = r
-          val eqn = rand tm
-          val xplusd_eq_e = ASSUME eqn
-          val x_eq_elessd =
-            EQ_MP (SYM (SPECL [Bvar,e,delta_tm] INT_EQ_SUB_LADD)) xplusd_eq_e
-          (* x = e - d *)
-          val F_elessd = EQ_MP (AP_TERM F x_eq_elessd) fx_thm
-          val spec_not_thm = SPECL [e, delta_tm] not_thm
-          val membership = prove_membership e bis_list_tm
-          val not_F_elessd = MP spec_not_thm (CONJ membership delta_ok)
-          val F_elessd_eq_F = EQF_INTRO not_F_elessd
-        in
-          NOT_INTRO (DISCH eqn (EQ_MP F_elessd_eq_F F_elessd))
-        end
-        else (* Bvar not present *)
-          thm
-      end handle HOL_ERR _ => let
-        (* still under a negation *)
-        val (c,r) = dest_divides tm0
+        val (c,r) = dest_divides (if posp then thm_concl else tm)
+          handle HOL_ERR _ => raise ERR "phase4" "Unexpected term type"
         val (var, rem) = (I ## SOME) (dest_plus r)
           handle HOL_ERR _ => (r, NONE)
       in
@@ -1335,166 +1451,186 @@ fun phase4_CONV tm = let
           val c_div_rplusd0 =
             SYM (MP (SPECL [c,delta_tm,r] INT_DIVIDES_RADD) c_div_d)
           (* c | x [+ rem] = c | x [+ rem] + d *)
-          val c_div_rplusd =
+          val c_div_rplusd1 =
             if isSome rem then
               CONV_RULE (RAND_CONV
                          (RAND_CONV (REWR_CONV move_add))) c_div_rplusd0
             else c_div_rplusd0
-          val negated = AP_TERM boolSyntax.negation c_div_rplusd
+          val c_div_rplusd = if posp then c_div_rplusd1 else SYM c_div_rplusd1
         in
-          EQ_MP negated thm
+          EQ_MP c_div_rplusd thm
         end
         else thm
-      end handle HOL_ERR _ => (* still under a negation *)
-        raise ERR "phase4" "under a negation but not = or divides"
-      end (* no longer under a negation *) handle HOL_ERR _ => let
-        val (c,r) = dest_divides thm_concl
+      end
+      end (* need double end, because of double let at start of function *)
+
+      fun brecurse posp thm tm = let
+        val thm_concl = concl thm
+      in let
+        val (c1, c2) = dest_conj tm
+      in
+        CONJ (brecurse posp (CONJUNCT1 thm) c1)
+             (brecurse posp (CONJUNCT2 thm) c2)
+      end handle HOL_ERR _ => let
+        val (d1_thm0, d2_thm0) = (ASSUME ## ASSUME) (dest_disj (concl thm))
+        val (d1_tm, d2_tm) = dest_disj tm
+        val d1_thm = DISJ1 (brecurse posp d1_thm0 d1_tm) d2_tm
+        val d2_thm = DISJ2 d1_tm (brecurse posp d2_thm0 d2_tm)
+      in
+        DISJ_CASES thm d1_thm d2_thm
+      end handle HOL_ERR _ => let
+        val Pxd_tm = dest_neg tm
+        val subres = brecurse (not posp) (ASSUME Pxd_tm) (dest_neg (concl thm))
+        val false_concl = MP thm subres
+      in
+        NOT_INTRO (DISCH Pxd_tm false_concl)
+      end handle HOL_ERR _ => let
+        val (lthm,rthm) = dest_less thm_concl
+        val (ltm, rtm) = dest_less tm
+      in
+        (* base cases with less as operator *)
+        if posp then
+          if lthm = Bvar then let
+            (* x < e *)
+            val e = rthm
+            val thm0 = SPECL [Bvar, e, zero_tm, delta_tm] INT_LT_ADD2
+            val thm1 = MP thm0 (CONJ thm zero_lt_delta)
+            val thm2 =
+              CONV_RULE (LAND_CONV (REWR_CONV INT_ADD_RID)) thm1
+          in
+            CONV_RULE (REWR_CONV (GSYM INT_LT_SUB_RADD)) thm2
+          end
+          else if rthm = Bvar then let
+            (* e < x *)
+            val e = lthm
+            val not_tm = ASSUME (mk_neg tm)
+            val var_leq = CONV_RULE (REWR_CONV INT_NOT_LT THENC
+                                     REWR_CONV INT_LE_SUB_RADD) not_tm
+            val exists_j =
+              CONV_RULE (REWR_CONV in_additive_range) (CONJ thm var_leq)
+            val membership = prove_membership e bis_list_tm
+            (* choose j from exists_j *)
+            val (jvar, jbody) = dest_exists (concl exists_j)
+            val choose_j = ASSUME jbody
+            val (var_eq, j_in_range) = CONJ_PAIR choose_j
+            val not_fej =
+              EQF_INTRO (MATCH_MP not_thm (CONJ membership j_in_range))
+            val fx_eq_fej = AP_TERM F var_eq
+            val fx_eq_F = TRANS fx_eq_fej not_fej
+            val contradiction = EQ_MP fx_eq_F fx_thm
+          in
+            CCONTR tm (CHOOSE(jvar, exists_j) contradiction)
+          end
+          else (* Bvar not present *) thm
+        else (* not posp *)
+          if ltm = Bvar then let
+            val e = rtm
+            (* have x - d < e, want x < e  - by contradiction *)
+            val not_tm = ASSUME (mk_neg tm)
+            val e_less_x1 = CONV_RULE (REWR_CONV not_less) not_tm
+              (* e < x + 1 *)
+            val lobound = CONV_RULE (REWR_CONV (GSYM INT_LT_ADDNEG2)) e_less_x1
+              (* e + ~1 < x *)
+            val xd_leq_e1 = CONV_RULE (REWR_CONV less_to_leq_samel) thm
+              (* x - d <= e + ~1 *)
+            val hibound = CONV_RULE (REWR_CONV INT_LE_SUB_RADD) xd_leq_e1
+              (* x <= e + ~1 + d *)
+            val exists_j =
+              CONV_RULE (REWR_CONV in_additive_range) (CONJ lobound hibound)
+            val membership =
+              prove_membership (mk_plus(e,mk_negated one_tm)) bis_list_tm
+            val (jvar, jbody) = dest_exists (concl exists_j)
+            val choose_j = ASSUME jbody
+            val (var_eq, j_in_range) = CONJ_PAIR choose_j
+            val not_fej = MATCH_MP not_thm (CONJ membership j_in_range)
+            val fej = EQ_MP (AP_TERM F var_eq) fx_thm
+          in
+            CCONTR tm (CHOOSE(jvar, exists_j) (MP not_fej fej))
+          end
+          else if rtm = Bvar then let
+            (* have e < x - d, want e < x *)
+            val ed_lt_x = CONV_RULE (REWR_CONV INT_LT_SUB_LADD) thm
+            (* have e + d < x, want to show e < x *)
+            val negdelta_lt_0 =
+              CONV_RULE (REWR_CONV (GSYM INT_NEG_LT0)) zero_lt_delta
+            val stage0 =
+              MATCH_MP INT_LT_ADD2 (CONJ ed_lt_x negdelta_lt_0)
+              (* (e + d) + ~d < x + 0 *)
+            val stage1 =
+              CONV_RULE (LAND_CONV (REWR_CONV (GSYM INT_ADD_ASSOC))) stage0
+              (* e + (d + ~d) < x + 0 *)
+            val stage2 =
+              CONV_RULE (LAND_CONV (RAND_CONV (REWR_CONV INT_ADD_RINV))) stage1
+              (* e + 0 < x + 0 *)
+          in
+            CONV_RULE (BINOP_CONV (REWR_CONV INT_ADD_RID)) stage2
+          end else (* Bvar not here *) thm
+      end handle HOL_ERR _ => let
+        val (lthm, rthm) = dest_eq thm_concl
+        val (ltm, rtm) = dest_eq tm
+      in
+        if posp then
+          if lthm = Bvar then let
+            (* have x = e, want to show x - d = e *)
+            val e = rtm
+            val e_less1 = mk_plus(e, mk_negated one_tm)
+            val spec_not_thm = SPECL [e_less1, one_tm] not_thm
+            val membership = prove_membership e_less1 bis_list_tm
+            val not_f_11 = MP spec_not_thm (CONJ membership one_ok)
+            val f_11_eqF = EQF_INTRO not_f_11
+            val e_eq_11 = SYM (SPEC e elim_neg_ones)
+            val x_eq_11 = TRANS thm e_eq_11
+            val Fx_eq_Fe_11 = AP_TERM F x_eq_11
+            val Fx_eq_F = TRANS Fx_eq_Fe_11 f_11_eqF
+          in
+            CONTR tm (EQ_MP Fx_eq_F fx_thm)
+          end
+          else thm
+        else (* not posp *)
+          if ltm = Bvar then let
+            (* have x - d = e, want to show x = e *)
+            val e = rthm
+            val xlessd_eq_e = thm
+            val x_eq_ed = CONV_RULE (REWR_CONV INT_EQ_SUB_RADD) xlessd_eq_e
+            val spec_not_thm = SPECL [e, delta_tm] not_thm
+            val membership = prove_membership e bis_list_tm
+            val not_fed = MP spec_not_thm (CONJ membership delta_ok)
+            val fed = EQ_MP (AP_TERM F x_eq_ed) fx_thm
+          in
+            CCONTR tm (MP not_fed fed)
+          end
+          else thm
+      end handle HOL_ERR _ => let
+        val (c,r) = dest_divides (if posp then thm_concl else tm)
+          handle HOL_ERR _ => raise ERR "phase4" "Unexpected term type"
         val (var, rem) = (I ## SOME) (dest_plus r)
           handle HOL_ERR _ => (r, NONE)
       in
         if var = Bvar then let
-          (* c | x [+ rem] - want to show that c | x + d [+ rem] *)
+          (* c | x [+ rem] - want to show that c | x + d [ + rem ] *)
           val c_div_d = Lib.assoc c divides_info
-          val c_div_rplusd0 =
-            SYM (MP (SPECL [c,delta_tm,r] INT_DIVIDES_RADD) c_div_d)
+          val c_div_rsubd0 =
+            MP (SPECL [c,delta_tm,r] INT_DIVIDES_RSUB) c_div_d
           (* c | x [+ rem] = c | x [+ rem] + d *)
-          val c_div_rplusd =
+          val c_div_rsubd1 =
             if isSome rem then
-              CONV_RULE (RAND_CONV
-                         (RAND_CONV (REWR_CONV move_add))) c_div_rplusd0
-            else c_div_rplusd0
+              CONV_RULE (LAND_CONV
+                         (RAND_CONV (REWR_CONV (GSYM move_sub)))) c_div_rsubd0
+            else c_div_rsubd0
+          val c_div_rsubd = if posp then SYM c_div_rsubd1 else c_div_rsubd1
         in
-          EQ_MP c_div_rplusd thm
+          EQ_MP c_div_rsubd thm
         end
-        else
-          thm
-      end handle HOL_ERR _ => raise ERR "phase4" "Unexpected term type"
+        else thm
       end
+      end (* again need a double end *)
 
-      fun brecurse thm tm = let
-        val (c1, c2) = dest_conj tm
-      in
-        CONJ (brecurse (CONJUNCT1 thm) c1) (brecurse (CONJUNCT2 thm) c2)
-      end handle HOL_ERR _ => let
-        val (d1_thm0, d2_thm0) = (ASSUME ## ASSUME) (dest_disj (concl thm))
-        val (d1_tm, d2_tm) = dest_disj tm
-        val d1_thm = DISJ1 (brecurse d1_thm0 d1_tm) d2_tm
-        val d2_thm = DISJ2 d1_tm (brecurse d2_thm0 d2_tm)
-      in
-        DISJ_CASES thm d1_thm d2_thm
-      end handle HOL_ERR _ => let
-        val thm_concl = concl thm
-        val (lthm,rthm) = dest_less thm_concl
-      in
-        (* base cases with less as operator *)
-        if lthm = Bvar then let
-          (* x < e *)
-          val e = rthm
-          val thm0 = SPECL [Bvar, e, zero_tm, delta_tm] INT_LT_ADD2
-          val thm1 = MP thm0 (CONJ thm zero_lt_delta)
-          val thm2 =
-            CONV_RULE (LAND_CONV (REWR_CONV INT_ADD_RID)) thm1
-        in
-          CONV_RULE (REWR_CONV (GSYM INT_LT_SUB_RADD)) thm2
-        end
-        else if rthm = Bvar then let
-          (* e < x *)
-          val e = lthm
-          val not_tm = ASSUME (mk_neg tm)
-          val var_leq = CONV_RULE (REWR_CONV INT_NOT_LT THENC
-                                   REWR_CONV INT_LE_SUB_RADD) not_tm
-          val exists_j =
-            CONV_RULE (REWR_CONV in_additive_range) (CONJ thm var_leq)
-          val membership = prove_membership e bis_list_tm
-          (* choose j from exists_j *)
-          val (jvar, jbody) = dest_exists (concl exists_j)
-          val choose_j = ASSUME jbody
-          val (var_eq, j_in_range) = CONJ_PAIR choose_j
-          val not_fej =
-            EQF_INTRO (MATCH_MP not_thm (CONJ membership j_in_range))
-          val fx_eq_fej = AP_TERM F var_eq
-          val fx_eq_F = TRANS fx_eq_fej not_fej
-          val contradiction = EQ_MP fx_eq_F fx_thm
-        in
-          CCONTR tm (CHOOSE(jvar, exists_j) contradiction)
-        end
-        else (* Bvar not present *)
-          thm
-      end handle HOL_ERR _ =>
-        if is_eq tm andalso rand (rator (concl thm)) = Bvar then let
-          (* x = e *)
-          val e = rand tm
-          val e_less1 = mk_plus(e, mk_negated one_tm)
-          val spec_not_thm = SPECL [e_less1, one_tm] not_thm
-          val membership = prove_membership e_less1 bis_list_tm
-          val not_f_11 = MP spec_not_thm (CONJ membership one_ok)
-          val f_11_eqF = EQF_INTRO not_f_11
-          val e_eq_11 = SYM (SPEC e elim_neg_ones)
-          val x_eq_11 = TRANS thm e_eq_11
-          val Fx_eq_Fe_11 = AP_TERM F x_eq_11
-          val Fx_eq_F = TRANS Fx_eq_Fe_11 f_11_eqF
-        in
-          CONTR tm (EQ_MP Fx_eq_F fx_thm)
-        end
-        else if
-          is_neg tm andalso is_eq (rand tm) andalso
-          rand (rator (rand (concl thm))) = Bvar
-        then let
-          (* ~(x = e) *)
-          val eqn = rand tm
-          val e = rand eqn
-          val xlessd_eq_e = ASSUME eqn
-          val x_eq_ed = CONV_RULE (REWR_CONV INT_EQ_SUB_RADD) xlessd_eq_e
-          val spec_not_thm = SPECL [e, delta_tm] not_thm
-          val membership = prove_membership e bis_list_tm
-          val not_fed = MP spec_not_thm (CONJ membership delta_ok)
-          val fed_eq_f = EQF_INTRO not_fed
-          val fx_eq_fed = AP_TERM F x_eq_ed
-          val fx_eq_f = TRANS fx_eq_fed fed_eq_f
-        in
-          NOT_INTRO (DISCH eqn (EQ_MP fx_eq_f fx_thm))
-        end
-        else let
-          fun is_vardivides tm =
-            is_divides tm andalso (rand tm = Bvar orelse
-                                   is_plus (rand tm) andalso
-                                   rand (rator (rand tm)) = Bvar)
-          val thmconcl = concl thm
-        in
-          if
-            is_vardivides thmconcl orelse
-            (is_neg thmconcl andalso is_vardivides (rand thmconcl))
-          then let
-            (* have f int_divides e in thm, possibly under negation *)
-            val (f, e, munger) =
-              if is_neg thmconcl then (rand (rator (rand thmconcl)),
-                                       rand (rand thmconcl),
-                                       AP_TERM not_tm)
-              else (rand (rator thmconcl), rand thmconcl, (fn x => x))
-            val f_div_d = Lib.assoc f divides_info
-            val thm0 = MP (SPECL [f, delta_tm, e] INT_DIVIDES_RSUB) f_div_d
-            val thm1 =
-              if is_plus e then
-                CONV_RULE (RATOR_CONV   (* $= (f int_divides x - 6 + y) *)
-                           (RAND_CONV   (* f int_divides x - 6 + y *)
-                            (RAND_CONV  (* x - 6 + y *)
-                             (REWR_CONV (GSYM move_sub))))) thm0
-              else
-                thm0
-            val thm2 = SYM thm1
-              (* f int_divides x = f int_divides (x - d) *)
-            val thm3 = munger thm2
-          in
-            EQ_MP thm3 thm
-          end
-          else
-            thm
-        end
+
       val (arith_op, recurse) =
         if use_bis then (mk_minus, brecurse) else (mk_plus, arecurse)
       val fxd_beta_thm = BETA_CONV (mk_comb(F, arith_op(Bvar, delta_tm)))
       val fxd_tm = rhs (concl fxd_beta_thm)
-      val fxd_thm = recurse fx_thm_expanded fxd_tm
+      val fxd_thm = recurse true fx_thm_expanded fxd_tm
     in
       GEN Bvar (DISCH Fx (EQ_MP (SYM fxd_beta_thm) fxd_thm))
     end
@@ -1709,7 +1845,90 @@ val obvious_improvements =
                             INT_DIVIDES_RSUB]
 
 
+val NOT_NOT_P = List.nth(CONJUNCTS NOT_CLAUSES, 0)
+val NOT_OR = GEN_ALL (#2 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
+val NOT_AND = GEN_ALL (#1 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
+val DISJ_NEQ_ELIM = prove(
+  ``!P x v:'a. ~(x = v) \/ P x = ~(x = v) \/ P v``,
+  REWRITE_TAC [GSYM IMP_DISJ_THM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
+  REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
+  POP_ASSUM MP_TAC THEN REWRITE_TAC []);
+
 fun optpluck P l = SOME (Lib.pluck P l) handle HOL_ERR _ => NONE
+
+val mystrip_conj  = let
+  (* treats negations over disjunctions as conjunctions *)
+  fun doit posp acc tm = let
+    val (l,r) = (if posp then dest_conj else dest_disj) tm
+  in
+    doit posp (doit posp acc r) l
+  end handle HOL_ERR _ => let
+    val t0 = dest_neg tm
+  in
+    doit (not posp) acc t0
+  end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
+in
+  doit true []
+end
+
+val mystrip_disj = let
+  (* treats negations over conjunctions as disjunctions *)
+  fun doit posp acc tm = let
+    val (l,r) = (if posp then dest_disj else dest_conj) tm
+  in
+    doit posp (doit posp acc r) l
+  end handle HOL_ERR _ => let
+    val t0 = dest_neg tm
+  in
+    doit (not posp) acc t0
+  end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
+in
+  doit true []
+end
+
+datatype term_op = CONJ | DISJ | NEG
+fun characterise t =
+  (case #1 (dest_const (#1 (strip_comb t))) of
+     "/\\" => SOME CONJ
+   | "\\/" => SOME DISJ
+   | "~" => SOME NEG
+   | _ => NONE) handle HOL_ERR _ => NONE
+
+fun myEVERY_CONJ_CONV c tm = let
+  fun findconjunct posp tm =
+    case (characterise tm, posp) of
+      (SOME CONJ, true) => BINOP_CONV (findconjunct posp) tm
+    | (SOME DISJ, false) => BINOP_CONV (findconjunct posp) tm
+    | (SOME NEG, _) => RAND_CONV (findconjunct (not posp)) tm
+    | _ => c tm
+in
+  findconjunct true tm
+end
+
+fun myEVERY_DISJ_CONV c tm = let
+  fun finddisj posp tm =
+    case (characterise tm, posp) of
+      (SOME DISJ, true) => BINOP_CONV (finddisj posp) tm
+    | (SOME CONJ, false) => BINOP_CONV (finddisj posp) tm
+    | (SOME NEG, _) => RAND_CONV (finddisj (not posp)) tm
+    | _ => c tm
+in
+  finddisj true tm
+end
+
+fun myis_disj tm =
+  is_disj tm orelse let
+    val tm0 = dest_neg tm
+  in
+    myis_conj tm0
+  end handle HOL_ERR _ => false
+and myis_conj tm =
+  is_conj tm orelse let
+    val tm0 = dest_neg tm
+  in
+    myis_disj tm0
+  end handle HOL_ERR _ => false
+
 fun do_equality_simplifications tm = let
   (* term is existentially quantified.  May contain leaf terms of the form
      v = e, where v is the variable quantified.  If there is such a term at
@@ -1719,36 +1938,102 @@ fun do_equality_simplifications tm = let
      neighbouring conjuncts. *)
   val (bvar, body) = dest_exists tm
   fun eq_term tm = is_eq tm andalso lhs tm = bvar
-  fun descend_and_eliminate skipconjs tm =
+  fun neq_term t = eq_term (dest_neg t) handle HOL_ERR _ => false
+
+  fun reveal_eq tm = let
+    (* tm is a "conjunctive" term, in which there is an equality of the
+       form (bvar = e).
+
+       Our mission, should we choose to accept it, is to selectively rewrite
+       with de-morgan's thm to reveal the tm to  be of the form:
+           P /\ Q /\ (bvar = e) /\ R
+    *)
+    val (c1,c2) = dest_conj tm
+    (* easy case because the top level operator is already correct *)
+    val subconv =
+      if List.exists eq_term (mystrip_conj c1) then LAND_CONV
+      else RAND_CONV
+  in
+    subconv reveal_eq tm
+  end handle HOL_ERR _ => let
+    val tm0 = dest_neg tm
+  in
+    if is_neg tm0 then
+      (REWR_CONV NOT_NOT_P THENC reveal_eq) tm
+    else (* must be a disjunction *)
+      (REWR_CONV NOT_OR THENC reveal_eq) tm
+  end handle HOL_ERR _ => ALL_CONV tm
+
+  fun reveal_neq tm = let
+    (* tm is a "disjunctive" term in which there is a negated equality *)
+    val (d1,d2) = dest_disj tm
+    val subconv = if List.exists neq_term (mystrip_disj d1) then LAND_CONV
+                  else RAND_CONV
+  in
+    subconv reveal_neq tm
+  end handle HOL_ERR _ => let
+    val tm0 = dest_neg tm
+  in
+    if is_neg tm0 then
+      (REWR_CONV NOT_NOT_P THENC reveal_neq) tm
+    else if is_conj tm0 then
+      (REWR_CONV NOT_AND THENC reveal_neq) tm
+    else ALL_CONV tm
+  end handle HOL_ERR _ => ALL_CONV tm
+
+  fun descend_and_eliminate tm =
     if is_conj tm then
-      if skipconjs then
-        BINOP_CONV (descend_and_eliminate skipconjs) tm
+      if List.exists eq_term (mystrip_conj tm) then let
+        val revealed = reveal_eq tm
+        val revealed_t = rhs (concl revealed)
+        val (eqt, rest) = valOf (optpluck eq_term (strip_conj revealed_t))
+        val rearranged_t = mk_conj(eqt, list_mk_conj rest)
+        val rearranged = EQT_ELIM (AC_CONV (CONJ_ASSOC, CONJ_COMM)
+                                   (mk_eq(revealed_t, rearranged_t)))
+        val eliminated =
+          (RAND_CONV (mk_abs_CONV bvar) THENC
+           REWR_CONV CONJ_EQ_ELIM THENC
+           RAND_CONV BETA_CONV) rearranged_t
+      in
+        TRANS (TRANS revealed rearranged) eliminated
+      end
       else
-        case optpluck eq_term (strip_conj tm) of
-          NONE => BINOP_CONV (descend_and_eliminate true) tm
-        | SOME (eqt, rest) =>
-            if List.exists (free_in bvar) rest then let
-              val rearranged_t = mk_conj(eqt, list_mk_conj rest)
-              val rearranged = EQT_ELIM (AC_CONV (CONJ_ASSOC, CONJ_COMM)
-                                         (mk_eq(tm, rearranged_t)))
-              val eliminated =
-                (RAND_CONV (mk_abs_CONV bvar) THENC
-                 REWR_CONV CONJ_EQ_ELIM THENC
-                 RAND_CONV BETA_CONV) rearranged_t
-            in
-              TRANS rearranged eliminated
-            end
-            else
-              BINOP_CONV (descend_and_eliminate true) tm
+        myEVERY_CONJ_CONV descend_and_eliminate tm
     else if is_disj tm then
-      BINOP_CONV (descend_and_eliminate false) tm
-    else
-      ALL_CONV tm
+      if List.exists neq_term (mystrip_disj tm) then let
+        val revealed = reveal_neq tm
+        val revealed_t = rhs (concl revealed)
+        val (eqt, rest) = valOf (optpluck neq_term (strip_disj revealed_t))
+        val rearranged_t = mk_disj(eqt, list_mk_disj rest)
+        val rearranged = EQT_ELIM (AC_CONV (DISJ_ASSOC, DISJ_COMM)
+                                   (mk_eq(revealed_t, rearranged_t)))
+        val eliminated =
+          (RAND_CONV (mk_abs_CONV bvar) THENC
+           REWR_CONV DISJ_NEQ_ELIM THENC
+           RAND_CONV BETA_CONV) rearranged_t
+      in
+        TRANS (TRANS revealed rearranged) eliminated
+      end
+      else
+        myEVERY_DISJ_CONV descend_and_eliminate tm
+    else if is_neg tm then
+      RAND_CONV descend_and_eliminate tm
+    else ALL_CONV tm
 in
-  case List.find eq_term (strip_conj body) of
-    NONE => BINDER_CONV (descend_and_eliminate true)
-  | SOME _ => Unwind.UNWIND_EXISTS_CONV
+  if List.exists eq_term (mystrip_conj body) then
+    BINDER_CONV reveal_eq THENC Unwind.UNWIND_EXISTS_CONV
+  else
+    BINDER_CONV descend_and_eliminate
 end tm
+
+fun reveal_a_disj tm =
+  if is_disj tm then ALL_CONV tm
+  else let
+    val tm0 = dest_neg tm
+  in
+    if is_conj tm0 then REWR_CONV NOT_AND tm
+    else (REWR_CONV NOT_NOT_P THENC reveal_a_disj) tm
+  end
 
 local
   fun stop_if_exelim tm =
@@ -1760,15 +2045,16 @@ in
       handle HOL_ERR _ =>
         raise ERR "eliminate_existential" "term not an exists"
     val base_case =
-      BINDER_CONV (phase1_CONV THENC phase2_CONV bvar THENC
+      BINDER_CONV (phase2_CONV bvar THENC
                    REPEATC (CHANGED_CONV congruential_simplification) THENC
                    REDUCE_CONV) THENC
       ((REWR_CONV EXISTS_SIMP THENC REWRITE_CONV []) ORELSEC
        (phase3_CONV THENC do_equality_simplifications THENC
         (stop_if_exelim ORELSEC (phase4_CONV THENC phase5_CONV))))
   in
-    if is_disj body then
-      EXISTS_OR_CONV THENC (RAND_CONV eliminate_existential) THENC
+    if myis_disj body then
+      BINDER_CONV reveal_a_disj THENC EXISTS_OR_CONV THENC
+      (RAND_CONV eliminate_existential) THENC
       (LAND_CONV eliminate_existential)
     else
       (EXIN_CONJ_CONV THENC
@@ -1786,27 +2072,28 @@ val NOT_EXISTS_THM =
   GEN_ALL (SYM (PURE_REWRITE_RULE [NOT_CLAUSES]
                 (BETA_RULE (Q.SPEC `\x. ~ P x` boolTheory.NOT_EXISTS_THM))))
 
-local
-  val prc_conv = PURE_REWRITE_CONV [DE_MORGAN_THM, NOT_CLAUSES, NOT_IMP]
+val myEU_THM = prove(
+  ``!P. (?!x:int. P x) =
+        (?x. P x) /\ (!y y'. (~P y \/ ~P y') \/ (1*y = 1*y'))``,
+  REWRITE_TAC [INT_MUL_LID, EXISTS_UNIQUE_THM, GSYM DE_MORGAN_THM,
+               GSYM IMP_DISJ_THM]);
+
+fun eliminate_quantifier tm = let
+(* assume that there are no quantifiers below the one we're eliminating *)
 in
-  fun eliminate_quantifier tm = let
-  (* assume that there are no quantifiers below the one we're eliminating *)
-  in
-    if is_forall tm then
-      HO_REWR_CONV NOT_EXISTS_THM THENC prc_conv THENC
-      RAND_CONV eliminate_existential
-    else if is_exists tm then
-      eliminate_existential
-    else if is_exists1 tm then
-      HO_REWR_CONV EXISTS_UNIQUE_THM THENC
-      RAND_CONV (BINDER_CONV eliminate_quantifier THENC
-                 eliminate_quantifier) THENC
-      RATOR_CONV (RAND_CONV eliminate_quantifier)
-    else
-      raise ERR "eliminate_quantifier"
-        "Not a forall or an exists or a unique exists"
-  end tm
-end
+  if is_forall tm then
+    HO_REWR_CONV NOT_EXISTS_THM THENC RAND_CONV eliminate_existential
+  else if is_exists tm then
+    eliminate_existential
+  else if is_exists1 tm then
+    HO_REWR_CONV myEU_THM THENC
+    RAND_CONV (BINDER_CONV eliminate_quantifier THENC
+               eliminate_quantifier) THENC
+    RATOR_CONV (RAND_CONV eliminate_quantifier)
+  else
+    raise ERR "eliminate_quantifier"
+      "Not a forall or an exists or a unique exists"
+end tm
 
 fun find_low_quantifier tm = let
   fun underc g f =
@@ -1828,8 +2115,6 @@ end
 
 val decide_pure_presburger_term = let
   (* no free variables allowed *)
-  open boolSimps simpLib
-  infix ++
   val phase0_CONV =
     (* rewrites out conditional expression and absolute value terms *)
     REWRITE_CONV [INT_ABS] THENC Sub_and_cond.COND_ELIM_CONV
@@ -1842,7 +2127,7 @@ val decide_pure_presburger_term = let
         REWRITE_CONV [] THENC mainwork
   end tm
 in
-  phase0_CONV THENC mainwork
+  phase0_CONV THENC phase1_CONV THENC mainwork
 end
 
 (* the following is useful in debugging the above; given an f, the
