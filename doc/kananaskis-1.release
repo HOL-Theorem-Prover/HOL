@@ -30,7 +30,7 @@ New Examples
 
   * ARM6, due to Anthony Fox
 
-  * Sunrise (revised and extended, and now in the system examples), 
+  * Sunrise (revised and extended, and now in the system examples),
             due to Peter Homeier
 
   * Sugar, due to Mike Gordon
@@ -47,7 +47,6 @@ New proof tools
     problems that require significant work in converting the input
     problem to DNF can cause it to take much longer.  The Omega Test
     is available in intLib as intLib.ARITH_CONV.
-
 
 New libraries
 --------------
@@ -67,7 +66,7 @@ New libraries
 
   * The library word32Lib comprises a functor (called "wordFunctor")
     for creating word theories, an instance of it, word32Theory (see below),
-    plus an evaluation conversion "WORD_CONV". 
+    plus an evaluation conversion "WORD_CONV".
 
 
 New theories
@@ -96,17 +95,17 @@ New theories
     rules are also provided, and these support fairly efficient term
     evaluation using WORD_CONV.
 
-    The functor wordFunctor can be used to create bespoke word theories.  
-    For example, a theory of 8-bit words can be obtained by the 
+    The functor wordFunctor can be used to create bespoke word theories.
+    For example, a theory of 8-bit words can be obtained by the
     invocation
 
       structure word8Script = wordFunctor (val bits = 8)
 
   * A new theory of strings over an alphabet of 256 characters has
-    been provided. String literals are no longer implemented as an 
+    been provided. String literals are no longer implemented as an
     infinite set of constants, given meaning by mk_thm; instead, they
     are constructed terms. This removes the last use of mk_thm in the
-    HOL system. 
+    HOL system.
 
 
 New features
@@ -195,6 +194,31 @@ New features
 
     Definitions made with Define also automatically update this global
     set of rewrites.
+
+  * The system now maintains a "stateful" simpset that is updated
+    automatically as theories and libraries load, and as new types are
+    defined.  It can be accessed in the module BasicProvers or
+    bossLib, with the function
+
+       srw_ss : unit -> simpset
+
+    The access to type information (constructor injectivity and
+    disjointness) duplicates the functionality provided by RW_TAC, but
+    use of srw_ss has the advantage that other theorems and behaviours
+    are also available automatically.  For example, when pred_setLib
+    is loaded, the srw_ss() simpset is extended with all
+    pred_setTheory's "obvious rewrites", things like
+
+      |- FINITE (P UNION Q) = FINITE P /\ FINITE Q
+
+    as well as the SET_SPEC_CONV conversion which does the right thing
+    with
+
+      x IN { ... | ... }
+
+    terms.  There is also an RW_TAC equivalent, SRW_TAC which uses
+    this simpset and also implements RW_TAC's aggressive stripping and
+    normalisation strategies.
 
 Behaviours changed:
 -------------------
@@ -288,6 +312,14 @@ Bugs fixed:
     (e.g.  x + (y + z) = (x + y) + z).  This form is that expected by
     the AC_CONV procedure.
 
+    If you want to flip them back to make a now-broken proof go
+    through, use something like
+
+      val INTER_ASSOC = GSYM INTER_ASSOC
+      val UNION_ASSOC = GSYM UNION_ASSOC
+
+    before the references to these theorems occur.
+
   * Quotations vs. terms.  New tactics from bossLib and definitional
     principles take quotations (i.e., use `...`).  This allows tactics
     to parse the quotations in the context of the current goal, and
@@ -296,3 +328,8 @@ Bugs fixed:
     name.  Other functions take terms, or types (i.e., use ``...``, or
     (Term`...`)).  This means that bossLib.DECIDE now takes a term,
     not a quotation.
+
+  * We have removed set_Theory from the core distribution, though the
+    source code is still present in the src/retired/set directory.
+    With the "set" type abbreviation enabled, pred_setTheory should
+    be a "drop-in" replacement for set.
