@@ -5,8 +5,8 @@
 %\input{/home/kxs/hol/9.beta.1/Manual/LaTeX/commands}
 
 \usepackage{epsfig}
-\usepackage{/usr/groups/hol/hol90/Manual/LaTeX/alltt}
-\input{/usr/groups/hol/hol90/Manual/LaTeX/commands}
+\usepackage{alltt}
+\input{../../Manual/LaTeX/commands}
 
 %\newcommand{\eg}       {\mbox{\it e.g.}}
 %\newcommand{\ie}       {\mbox{\it i.e.}}
@@ -138,7 +138,7 @@ syntactical perversities of various Unix shells. Finally, Peter Sestoft,
 the main developer of MoscowML, has been very responsive to our requests
 for changes to his compiler.
 
-\subsection*{Acknowledgements for Version 2}
+\subsection*{Acknowledgements for the Athabasca 2 release}
 
 Joe Hurd ported John Harrison's development of the real numbers and
 analysis, including a decision procedure. Graham Collins donated his
@@ -157,7 +157,7 @@ installation problems, one of which Mike Norrish fixed.
      <hol-dir>/bin/hol a0 ... an
  \end{verbatim}
  where an argument $a_i$ to the invocation can be either (1) a path
- (prefixed by \verb+-I+) where the system can find code or, (2) a file to
+ (prefixed by~\verb+-I+) where the system can find code or, (2) a file to
  execute before turning control over to the user. For example, invoking
  \begin{verbatim}
      <hol-dir>/bin/hol  -I /local/foo  /home/me/my-hol-init.sml
@@ -170,14 +170,14 @@ installation problems, one of which Mike Norrish fixed.
     looking in \verb+/local/foo+ for \verb+X+. Usually, no paths need be
     added to the system path.
 
- \item The ML file \verb+/home/me/my-hol-init.sml+ will be executed. The
-      order of execution of start-up files is left-to-right. There is a
-      system start-up file that gets executed before any user-given ones:
-      it can be found in the file \verb+std.prelude+ in the top level of the
-      Hol98 distribution directory. The code in \verb+std.prelude+ will
-      load and open some standard basic support (tactics, conversions,
-      simple definition principles) and set up the paths to all the
-      system libraries.
+  \item The ML file \verb+/home/me/my-hol-init.sml+ will be executed.
+    The order of execution of start-up files is left-to-right. There
+    is a system start-up file that gets executed before any user-given
+    ones: it can be found in the file \verb+std.prelude+ in the top
+    level of the Hol98 distribution directory. The code in
+    \verb+std.prelude+ will load and open some standard basic support
+    (tactics, conversions, simple definition principles) and set up
+    the paths to all the system libraries.
  \end{itemize}
 
  As usual, at least in Unix systems, Hol98 can be exited by entering
@@ -195,28 +195,28 @@ installation problems, one of which Mike Norrish fixed.
  \begin{description}
 
  \item [MoscowML help.] This is uniformly excellent. Information for
- library routines is available, whether the library is loaded or not via
- \verb+help "Lib"+.
+   library routines is available, whether the library is loaded or not
+   via \verb+help "Lib"+.
 
- \item [HOL overview.] This is a short summary of important information
-about Hol98.
+\item [HOL overview.] This is a short summary of important information
+  about Hol98.
 
- \item [HOL help.] This is the on-line help from Hol88 and Hol90, and is
- intended to document all HOL-specific functions available to the
- user. It is very detailed and often accurate; however, it can be
- out-of-date, refer to HOL90 or HOL88, or even be missing!
+\item [HOL help.] This is the on-line help from Hol88 and Hol90, and
+  is intended to document all HOL-specific functions available to the
+  user. It is very detailed and often accurate; however, it can be
+  out-of-date, refer to HOL90 or HOL88, or even be missing!
 
- \item [HOL structure information.]  For most structures in the Hol98
+\item [HOL structure information.]  For most structures in the Hol98
   source, one can get a listing of the entrypoints found in the
-  accompanying signature. This is helpful for locating functions and is
-  automatically derived from the system sources, so it is alway
+  accompanying signature. This is helpful for locating functions and
+  is automatically derived from the system sources, so it is alway
   up-to-date.
 
- \item [Theory facts.] These are automatically derived from theory
- files, so they are always up-to-date. The signature of each theory is
- available (since theories are represented by structures in
- Hol98). Also, each axiom, definition, and theorem in the theory can be
- accessed by name in the help system; the theorem itself is given.
+\item [Theory facts.] These are automatically derived from theory
+  files, so they are always up-to-date. The signature of each theory
+  is available (since theories are represented by structures in
+  Hol98). Also, each axiom, definition, and theorem in the theory can
+  be accessed by name in the help system; the theorem itself is given.
  \end{description}
 
  Therefore the following example queries can be made:
@@ -281,18 +281,11 @@ invoked. For example
 the quotation needs to provide a hint: the type parser will only be
 called if the first character after the leading {\tt ``} is a colon (\verb+:+).
 
-Knowledgeable ML users will notice that the idiom {\tt ``}$\ldots$ {\tt
-``} is not ML-typable; it is implemented as a pre-processor to ML,
+Knowledgable ML users will notice that the idiom {\tt ``}$\ldots$ {\tt
+  ``} is not ML-typable; it is implemented as a pre-processor to ML,
 thanks to work by Richard Boulton. Preprocessing is not the default in
-this release. Users who wish to use the pre-processor should use
-
-\begin{verbatim}
-    <hol-dir>/bin/hol.enquote
-    <hol-dir>/bin/Holmake.enquote.
-\end{verbatim}
-
-Input containing instances of {\tt ``}$\ldots$ {\tt ``} will be accepted
-by these versions of Hol98.
+this release. Users who wish to use the pre-processor should use {\tt
+  <hol-dir>/bin/hol.unquote}.
 
 \section{First proof}
 
@@ -337,7 +330,7 @@ system).\footnote{One might think that this sort of tool should
   implementation, and add libraries on top.}
 \begin{verbatim}
     - load"mesonLib";
->   val it = () : unit
+    > val it = () : unit
 \end{verbatim}
 
 Now we will set a goal for the reasoner to prove. In mathematical
@@ -469,7 +462,8 @@ extension of the following grammar:
   & | & \term\ \IMP\ \term & \mbox{(implication)} \\
   & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
   & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
-  & | & \term\ \verb+=>+\ \term\ |\ \term & \mbox{(conditional)} \\
+  & | & \texttt{if}\ \term\ \texttt{then}\ \term\ \texttt{else}\ \term &
+  \mbox{(conditional)} \\
   & | & \bs\ident_1\ldots\ident_n.\  \term & \mbox{(lambda abstraction)} \\
   & | & \ALL \ident_1\ldots\ident_n.\ \term & \mbox{(forall)} \\
   & | & \EXISTS \ident_1\ldots\ident_n.\ \term & \mbox{(exists)} \\
@@ -629,7 +623,7 @@ A term can be constrained to be of a certain type.  For example,
 of the constant \verb+T+ to \verb+bool+. An attempt to constrain a
 term inappropriately will raise an exception: for example,
 \begin{verbatim}
-  T => (X:ind) | (Y:bool)
+  if T then (X:ind) else (Y:bool)
 \end{verbatim}
 will fail because both branches of a conditional must be of the same
 type.  Type constraints can be seen as a suffix that binds more
@@ -659,9 +653,9 @@ is parsed as the symbolic identifier "=" constrained by a type.
 
 Closefix terms are operators that completely enclose their arguments.
 An example one might use in the development of a theory of
-denotational semantics, are semantic brackets.  Thus, the HOL parsing
-facilities can be configured to allow one to write {\tt denotation x}
-as {\tt [| x |]}.  Closefixes are not associated with precedences
+denotational semantics is semantic brackets.  Thus, the HOL parsing
+facilities can be configured to allow one to write \texttt{denotation x}
+as \texttt{[| x |]}.  Closefixes are not associated with precedences
 because they can not compete for arguments with other operators.
 
 \subsubsection{Type inference}
@@ -1157,7 +1151,7 @@ type has to be defined, then separate function calls need to be made to
 build induction theorems, standard rewrite rule sets, `case' theorems,
 \etc\ Moreover, during proof, the names of all these entities must be
 remembered, and managed. A prototype library aimed at remedying this
-problem can be found in Chapter \ref{bossLib}.
+problem can be found in Chapter~\ref{bossLib}.
 
 \subsection{Record types}
 
@@ -1460,8 +1454,9 @@ primWFTheory & wellfounded relations, plus WF induction and recursion \\
 WFTheory & instances of wellfoundedness at various types \\
 setTheory & sets as a separate type (includes finite sets) \\
 pred\_setTheory & sets as predicates (includes finite sets) \\
+bagTheory & bags (also known as \emph{multi-sets})\\
 listTheory & lists  \\
-ListTheory & extended theory of lists \\
+rich\_listTheory & extended theory of lists \\
 optionTheory & the ``option'' type \\
 finite\_mapTheory & finite maps from $\alpha$ to $\beta$ \\
 ltreeTheory & polymorphic finitely branching trees \\
@@ -1500,7 +1495,7 @@ Hol98 currently offers the libraries found in Table \ref{nativeLibs}.
 \begin{center}
 \begin{tabular}{|r|l|} \hline
     decisionLib     & cooperating decision procedures \\
-    mesonLib        & model- elimination first order reasoner \\
+    mesonLib        & model-elimination first order reasoner \\
     simpLib         & Isabelle-style simplifier \\
     ind\_defLib     & inductive defn. package \\
     IndDefLib       & generalized inductive defn. package \\
@@ -1520,7 +1515,7 @@ Hol98 currently offers the libraries found in Table \ref{nativeLibs}.
     unwindLib       & unwinding existential quantifiers \\
     res\_quanLib    & bounded quantification \\
     hol88Lib        & support for hol88 compatibility \\
-    liteLib         & support for portability with HOL-Lite \\
+    liteLib         & support for portability with HOL-Light \\
     ho\_matchLib    & higher-order versions of various proof tools \\
     refuteLib       & support for refutation procedures \\
     reduceLib       & basic reasoners for nums and bools \\
