@@ -2,8 +2,8 @@ structure boolSimps :> boolSimps =
 struct
 
 open HolKernel Parse simpLib
-     basicHol90Lib liteLib Ho_theorems Cond_rewr Ho_rewrite;
-infix THENQC;
+     basicHol90Lib liteLib Ho_theorems pureSimps Ho_rewrite;
+infix THENQC ++;
 
 (* ---------------------------------------------------------------------
  * bool_ss
@@ -22,7 +22,7 @@ infix THENQC;
 fun BETA_CONVS tm = (RATOR_CONV BETA_CONVS THENQC BETA_CONV) tm
 
 fun comb_ETA_CONV t =
-    (if (not (Dsyntax.is_exists t orelse Dsyntax.is_forall t 
+    (if (not (Dsyntax.is_exists t orelse Dsyntax.is_forall t
               orelse Dsyntax.is_select t)) then
          RAND_CONV ETA_CONV
      else NO_CONV) t
@@ -32,7 +32,7 @@ val BOOL_ss = SIMPSET
            trace=2,
            key=SOME ([],(--`(\x:'a. y:'b) z`--)),
 	   conv=K (K BETA_CONV)},
-(* kls. This doesn't make much sense in just the "bool" theory; if you 
+(* kls. This doesn't make much sense in just the "bool" theory; if you
    are not using pairs, then rewriting with boolTheory.LET_DEF will suffice!
 	  {name = "let_CONV (reduction of let terms)",
 	   trace = 2,
@@ -59,14 +59,13 @@ val BOOL_ss = SIMPSET
           EXCLUDED_MIDDLE,
           ONCE_REWRITE_RULE [DISJ_SYM] EXCLUDED_MIDDLE,
           SELECT_REFL, Ho_theorems.SELECT_REFL_2],
-   congs = [], filter = SOME mk_cond_rewrs, ac = [], dprocs = []};
+   congs = [], filter = NONE, ac = [], dprocs = []};
 
 val CONG_ss = SIMPSET
-  {convs = [], rewrs = [],
-   congs = [IMP_CONG, COND_CONG],
+  {convs = [], rewrs = [], congs = [IMP_CONG, COND_CONG],
    filter=NONE, ac=[], dprocs=[]};
 
-val bool_ss = mk_simpset [BOOL_ss, CONG_ss];
+val bool_ss = pure_ss ++ BOOL_ss ++ CONG_ss;
 
 
 (* ---------------------------------------------------------------------
