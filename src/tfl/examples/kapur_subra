@@ -266,5 +266,3 @@ Defn.tprove(CBN_defn,
   EXISTS_TAC R THEN REWRITE_TAC [SYM Fn_def, basic_tcs]
    THEN TotalDefn.TC_SIMP_TAC [] 
           [JointAppCount_def,JointStdSize_def, AppCount_def,AppCount_lem]);
-
-
