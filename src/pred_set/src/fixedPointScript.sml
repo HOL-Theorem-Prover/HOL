@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib
 
-infix THEN THEN1 THENL
-infix 8 by
+open SingleStep BasicProvers simpLib boolSimps
 
 val _ = new_theory "fixedPoint";
 
@@ -52,7 +51,7 @@ val gfp_greatest_dense = store_thm(
   ``!f. monotone f ==>
         dense f (gfp f) /\ !X. dense f X ==> X SUBSET gfp f``,
   REPEAT STRIP_TAC THEN REWRITE_TAC [gfp_def] THENL [
-    SIMP_TAC std_ss [dense_def] THEN MATCH_MP_TAC SUBSET_TRANS THEN
+    SIMP_TAC bool_ss [dense_def] THEN MATCH_MP_TAC SUBSET_TRANS THEN
     Q.EXISTS_TAC `BIGUNION (GSPEC (\X. (f X, X SUBSET f X)))` THEN
     CONJ_TAC THENL [
       CONV_TAC (REWR_CONV SUBSET_DEF) THEN
@@ -115,7 +114,7 @@ val lfp_strong_induction = let
 in
   save_thm("lfp_strong_induction",
            (GEN_ALL o DISCH_ALL o GEN ``X:'a -> bool`` o
-            simpLib.ASM_SIMP_RULE std_ss [lemma] o
+            ASM_SIMP_RULE bool_ss [lemma] o
             REWRITE_RULE [SUBSET_INTER, SUBSET_REFL] o Q.SPEC `X INTER lfp f` o
             UNDISCH o SPEC_ALL) lfp_induction)
 end;
@@ -127,7 +126,7 @@ val gfp_strong_coinduction = let
 in
   save_thm("gfp_strong_coinduction",
            (GEN_ALL o DISCH_ALL o GEN ``X:'a -> bool`` o
-            simpLib.ASM_SIMP_RULE std_ss [lemma] o
+            ASM_SIMP_RULE bool_ss [lemma] o
             REWRITE_RULE [UNION_SUBSET, SUBSET_REFL] o Q.SPEC `X UNION gfp f` o
             UNDISCH o SPEC_ALL) gfp_coinduction)
 end;
@@ -144,13 +143,13 @@ val _ = add_rule {block_style = (AroundSameName, (PP.INCONSISTENT, 0)),
 val fnsum_monotone = store_thm(
   "fnsum_monotone",
   ``!f1 f2. monotone f1 /\ monotone f2 ==> monotone (fnsum f1 f2)``,
-  ASM_SIMP_TAC std_ss [fnsum_def, monotone_def] THEN
+  ASM_SIMP_TAC bool_ss [fnsum_def, monotone_def] THEN
   REPEAT STRIP_TAC THEN
   `f1 X SUBSET f1 Y` by PROVE_TAC [] THEN
   `f2 X SUBSET f2 Y` by PROVE_TAC [] THEN
   PROVE_TAC [SUBSET_DEF, IN_UNION]);
 
-val empty_def = Define`empty = \X. {}`;
+val empty_def = new_definition("empty_def", ``empty = \X. {}``);
 
 val empty_monotone = store_thm(
   "empty_monotone",
@@ -166,19 +165,19 @@ val fnsum_ASSOC = store_thm(
   "fnsum_ASSOC",
   ``!f g h. fnsum f (fnsum g h) = fnsum (fnsum f g) h``,
   REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-  SIMP_TAC std_ss [fnsum_def, UNION_ASSOC]);
+  SIMP_TAC bool_ss [fnsum_def, UNION_ASSOC]);
 
 val fnsum_COMM = store_thm(
   "fnsum_COMM",
   ``!f g. fnsum f g = fnsum g f``,
   REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-  SIMP_TAC std_ss [fnsum_def, UNION_COMM]);
+  SIMP_TAC bool_ss [fnsum_def, UNION_COMM]);
 
 
 val fnsum_SUBSET = store_thm(
   "fnsum_SUBSET",
   ``!f g X. f X SUBSET fnsum f g X /\ g X SUBSET fnsum f g X``,
-  SIMP_TAC std_ss [fnsum_def, SUBSET_DEF, IN_UNION]);
+  SIMP_TAC bool_ss [fnsum_def, SUBSET_DEF, IN_UNION]);
 
 val lfp_fnsum = store_thm(
   "lfp_fnsum",
