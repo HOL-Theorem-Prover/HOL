@@ -27,7 +27,6 @@ generate precedence conflict errors depending on the rules in the
 grammar.
 
 \EXAMPLE
-
 First the user loads {arithmeticTheory} to augment the built-in
 grammar with the ability to lex numerals and deal with symbols such as
 {+} and {-}:
@@ -71,9 +70,6 @@ to have library code that depends on the default parsers {Term} and
 {Type}.  When the library is loaded, which may happen at any stage,
 these global values may be such that the parsing causes quite
 unexpected results or failures.
-
-\COMMENTS
-
 
 \SEEALSO
 add_rule, Term, Type

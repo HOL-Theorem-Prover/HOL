@@ -1,6 +1,6 @@
 \DOC add_infix
 
-\TYPE {Parse.add_infix : string * int * associativity -> unit}
+\TYPE {Parse.add_infix : string * int * HOLgrammars.associativity -> unit}
 
 \SYNOPSIS
 Adds a string as an infix with the given precedence and associativity
@@ -25,7 +25,9 @@ string
 {<t1>} and {<t2>}.  The parsing process does not pay any attention to
 whether or not {s} corresponds to a constant or not.  This resolution
 happens later in the parse, and will result in either a constant or a
-variable with name {s}.
+variable with name {s}.  In fact, if this name is overloaded, the
+eventual term generated may have a constant of quite a different name
+again; the resolution of overloading comes as a separate phase.
 
 \FAILURE
 {add_infix} fails if the precedence level chosen for the new infix is
@@ -123,6 +125,13 @@ particular constant in which case the definitional principles
 ({new_infixl_definition} etc) are more likely to be appropriate.
 However, a development of a theory of abstract algebra may well want
 to have infix variables such as {+} above.
+
+\COMMENTS
+As with other functions in the {Parse} structure, there is a companion
+{temp_add_infix} function, which has the same effect on the global
+grammar, but which does not cause this effect to persist when the
+current theory is exported.
+
 
 \SEEALSO
 add_binder, add_rule, add_listform.

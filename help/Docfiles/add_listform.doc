@@ -65,7 +65,10 @@ Used to make sequential term structures print and parse more
 pleasingly.
 
 \COMMENTS
-
+As with other parsing functions, there is a {temp_add_listform}
+version of this function, which has the same effect on the global
+grammar, but which does not cause this effect to persist when the
+current theory is exported.
 
 \SEEALSO
 add_rule.
