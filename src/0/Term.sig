@@ -27,6 +27,7 @@ sig
   val genvar       : Type.hol_type -> term
   val genvars      : Type.hol_type -> int -> term list
   val variant      : term list -> term -> term
+  val prim_variant : term list -> term -> term
 
   (* Constructors and destructors *)
 

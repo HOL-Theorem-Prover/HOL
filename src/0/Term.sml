@@ -237,31 +237,41 @@ fun genvars _ 0 = []
  * on the list, then return the variable. Otherwise, rename the variable and *
  * try again.                                                                *
  *---------------------------------------------------------------------------*)
-fun away L init incr =
-  let fun vary A [] s = s
-        | vary A (h::t) s =
-           case String.compare(h,s)
-            of LESS => vary A t s
-             | EQUAL => vary [] (A@t) (incr())
-             | GREATER => vary (h::A) t s
-  in
-    vary [] L init
-  end;
 
-local fun var_name(Fv{Name,...}) = Name
+local fun away L incr =
+       let fun vary A [] s = s
+             | vary A (h::t) s =
+                case String.compare(h,s)
+                 of LESS => vary A t s
+                  | EQUAL => vary [] (A@t) (incr())
+                  | GREATER => vary (h::A) t s
+       in
+          vary [] L
+       end
+      fun var_name(Fv{Name,...}) = Name
         | var_name _ = raise TERM_ERR "variant.var_name" "not a variable"
 in
 fun variant [] v = v
   | variant vlist (Fv{Name,Ty}) =
     let val next = nameStrm Name
-        val V = map var_name vlist  (* wasteful *)
+        val awayf = away (map var_name vlist) next
         fun loop name =
-           let val s = away V name next
-           in if (inST s) then loop (next()) else s
+           let val s = awayf name
+           in if inST s then loop (next()) else s
            end
     in mk_var{Name=loop Name, Ty=Ty}
     end
   | variant _ _ = raise TERM_ERR "variant" "2nd arg. should be a variable"
+
+(*---------------------------------------------------------------------------
+     Returned value may have same name as a constant in the signature.
+ ---------------------------------------------------------------------------*)
+
+fun prim_variant [] v = v
+  | prim_variant vlist (Fv{Name,Ty}) =
+       mk_var{Name=away (map var_name vlist) (nameStrm Name) Name, Ty=Ty}
+  | prim_variant _ _ = raise TERM_ERR "prim_variant" 
+                                      "2nd arg. should be a variable"
 end;
 
 
