@@ -21,11 +21,12 @@
 structure opsemScript =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib
+     stringLib indDefLib Datatype;
+
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
-open stringLib ind_defLib Datatype;
 
 
 (* ---------------------------------------------------------------------*)
@@ -87,8 +88,10 @@ val _ = Hol_datatype
              | If    of ^bexp => comm => comm
              | While of ^bexp => comm`;
 
+
 val _ = set_MLname ":==" "assign_def";
 val _ = set_MLname ";;" "seq_def";
+
 val _ = set_fixity ":==" (Infixr 400);
 val _ = set_fixity ";;" (Infixr 350);
 

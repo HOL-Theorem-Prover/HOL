@@ -75,7 +75,8 @@ val ty_distinct =
 (* Definition of well-typed terms of combinatory logic.			 *)
 (* ===================================================================== *)
 
-val _ = set_fixity ("IN", Infixr 450);
+val _ = set_fixity "IN" (Infixr 450);
+
 val (TYrules,TYind, TYcases) =
   IndDefLib.Hol_reln
     `(!A B. K IN (A ==> (B ==> A)))

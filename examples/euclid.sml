@@ -11,10 +11,7 @@
  * machines.                                                                 *
  *---------------------------------------------------------------------------*)
 
-load "bossLib";
-
-open arithmeticTheory bossLib;
-infix 8 by;
+open arithmeticTheory
 
 val ARW_TAC = RW_TAC arith_ss;
 
@@ -23,7 +20,7 @@ val ARW_TAC = RW_TAC arith_ss;
 (* Divisibility.                                                             *)
 (*---------------------------------------------------------------------------*)
 
-set_fixity ("divides", Infixr 450);
+set_fixity "divides" (Infixr 450);
 
 val divides = Define `a divides b = ?x. b = a * x`;
 
@@ -198,4 +195,3 @@ THEN
 THEN
 PROVE_TAC[]);
 
-val _ = print_theory();

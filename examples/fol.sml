@@ -3,8 +3,6 @@
  * of MESON. There are many more such examples in src/meson/test.sml.        *
  *---------------------------------------------------------------------------*)
 
-app load ["mesonLib", "pairTheory"];
-
 (*---------------------------------------------------------------------------*
  * Invokes MESON and supplies some statistics as well.                       *
  *---------------------------------------------------------------------------*)

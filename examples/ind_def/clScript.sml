@@ -9,10 +9,11 @@ val _ = new_theory "cl";
 
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;
 
-val _ = set_fixity ("#", Infixl 1100);
+val _ = set_fixity "#"   (Infixl 1100);
+val _ = set_fixity "-->" (Infix(NONASSOC, 510));
+
 val _ = set_MLname "#" "HASH";
 
-val _ = set_fixity ("-->", Infix(NONASSOC, 510));
 val (redn_rules, redn_ind, redn_cases) =
   IndDefLib.Hol_reln `
     (!x y f. x --> y   ==>    f # x --> f # y) /\
@@ -21,9 +22,12 @@ val (redn_rules, redn_ind, redn_cases) =
     (!f g x. S # f # g # x --> (f # x) # (g # x))`;
 
 val redn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) redn_ind
+
 val _ = app (uncurry set_MLname) [
-          ("-->", "redn"), ("-->_rules", "redn_rules"),
-          ("-->_ind", "redn_ind"), ("-->_cases", "redn_cases")
+          ("-->",       "redn"), 
+          ("-->_rules", "redn_rules"),
+          ("-->_ind",   "redn_ind"), 
+          ("-->_cases", "redn_cases")
         ];
 
 val _ = hide "RTC";
@@ -107,7 +111,8 @@ val strong = prove(
 
 
 
-val _ = set_fixity("-||->", Infix(NONASSOC, 510));
+val _ = set_fixity "-||->" (Infix(NONASSOC, 510));
+
 val (predn_rules, predn_ind, predn_cases) =
     IndDefLib.Hol_reln
       `(!x. x -||-> x) /\
@@ -118,10 +123,13 @@ val (predn_rules, predn_ind, predn_cases) =
        (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
 
 val predn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) predn_ind;
+
 val _ = app (uncurry set_MLname) [
-    ("-||->_rules", "predn_rules"), ("-||->_ind", "predn_ind"),
-    ("-||->_cases", "predn_cases")
+          ("-||->_rules", "predn_rules"), 
+          ("-||->_ind",   "predn_ind"),
+          ("-||->_cases", "predn_cases")
   ];
+
 val RTC_monotone = store_thm(
   "RTC_monotone",
   ``!R1 R2. (!x y. R1 x y ==> R2 x y) ==>
@@ -129,10 +137,12 @@ val RTC_monotone = store_thm(
   REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
   REPEAT STRIP_TAC THEN PROVE_TAC [RTC_rules]);
 
-val _ = set_fixity("-->*", Infix(NONASSOC, 510));
+val _ = set_fixity "-->*" (Infix(NONASSOC, 510));
+
 val RTCredn_def = xDefine "RTCredn" `$-->* = RTC $-->`;
 
-val _ = set_fixity("-||->*", Infix(NONASSOC, 510));
+val _ = set_fixity "-||->*" (Infix(NONASSOC, 510));
+
 val RTCpredn_def = xDefine "RTCpredn" `$-||->* = RTC $-||->`;
 
 val RTCredn_rules =
