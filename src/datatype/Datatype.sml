@@ -78,12 +78,7 @@ val numty = mk_type{Tyop="num",Args=[]};
 val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
 
-fun repeat f =
- let fun loop x = loop (f x) handle HOL_ERR _ => x
- in loop
- end;
-
-val head = repeat rator;
+val head = Lib.repeat rator;
 
 local fun find_dup [] = NONE
         | find_dup [x] = NONE
@@ -212,6 +207,7 @@ fun define_size ax db =
      val conjl = strip_conj ebody
      val bare_conjl = map (snd o strip_forall) conjl
      val capplist = map (rand o lhs) bare_conjl
+     val def_name = #Tyop(dest_type(type_of(hd capplist)))
      (* 'a -> num variables : size functions for type variables *)
      val fparams = rev(fst(rev_itlist mk_tyvar_size tyvars 
                              ([],free_varsl capplist)))
@@ -244,9 +240,8 @@ fun define_size ax db =
         end
      val dty_map = zip dty_fns (map (dty_size o type_of) dty_fns)
      val non_dty_fns = fst(dupls (map head_of_clause non_dty_clauses) ([],[]))
-     val hd_dty_name = #Tyop(dest_type(hd dtys))
      fun nested_binding (n,f) = 
-        let val name = String.concat[hd_dty_name,Lib.int_to_string n,"_size"]
+        let val name = String.concat[def_name,Lib.int_to_string n,"_size"]
             val (d,r) = dom_rng (type_of f)
             val proto_const = proto_const name d
         in (f, list_mk_comb (proto_const,fparams))
@@ -271,7 +266,7 @@ fun define_size ax db =
                       ((DEPTH_CONV BETA_CONV THENC 
                         Rewrite.PURE_REWRITE_CONV zero_rws) pre_defn0)))
      val defn = new_recursive_definition 
-                 {name=hd_dty_name^"_size_def", 
+                 {name=def_name^"_size_def", 
                   rec_axiom=ax, def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
      val ctyl = Lib.mk_set (map cty (strip_conj (concl defn)))
@@ -430,7 +425,7 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
                in S ("         size="^line); NL();
                   S ("                   "^s^"),")
                end
-          fun do_simpls () = (S "["; app S (Lib.commafy record_rw_names); S "]")
+          fun do_simpls() = (S "["; app S (Lib.commafy record_rw_names); S "]")
           fun do_field_rws() =
             if null record_rw_names then (S " tyinfo0")
             else (NL();S "       (TypeBase.put_simpls ("; do_simpls();
@@ -458,11 +453,11 @@ fun write_tyinfo (tyinfo, record_rw_names) =
      val one_one_name =
        case one_one_of tyinfo
         of NONE => "NONE"
-         | SOME th => (save_thm(name "_11", th); "SOME "^name "_11")
+         | SOME th => (save_thm(name "_11", th); "SOME "^name"_11")
      val distinct_name =
        case distinct_of tyinfo 
         of NONE => "NONE"
-         | SOME th => (save_thm(name "_distinct", th); "SOME "^name "_distinct")
+         | SOME th => (save_thm(name "_distinct",th); "SOME "^name"_distinct")
      val case_cong_name = 
         let val ccname = name"_case_cong"
         in save_thm (ccname,case_cong_of tyinfo);
