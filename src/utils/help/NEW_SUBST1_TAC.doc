@@ -1,0 +1,66 @@
+\DOC NEW_SUBST1_TAC
+
+\TYPE
+{
+NEW_SUBST1_TAC : thm_tactic
+}
+
+\LIBRARY utils
+
+\SYNOPSIS
+Substitutes all occurrences of an expression within a goal for an
+equal expression.
+
+\DESCRIBE
+The tactic {NEW_SUBST1_TAC thm} where {thm = B |- exp1 = exp2}, when
+applied to a goal {A ?- P}, returns the subgoal {A u B ?- P[exp2/exp1]}. 
+If {hypi} is a hypothesis of {thm} which is not among the assumptions {A},
+then the subgoal {(A ?- hypi)} is also returned.
+{
+
+            A ?- P
+   =======================  NEW_SUBST1_TAC (B |- exp1 = exp2)
+    A u B ?- P[exp2/exp1]
+     <... A ?- hypi ...>
+
+}
+
+\FAILURE
+The tactic {NEW_SUBST1_TAC} fails if the conclusion of the theorem it
+is given is not an equation.
+
+\EXAMPLE
+{
+   NEW_SUBST1_TAC
+    (UNDISCH (SPECL [(--`neg((Y times QUOT) plus REM)`--), (--`X:integer`--)]
+      PLUS_UNIQUE_INV))
+}
+where
+{
+   PLUS_UNIQUE_INV = |- !x u. (u plus x = INT 0) ==> (u = neg x)
+}
+when applied to the goal
+{
+   ([(--`X minus ((Y times QUOT) plus REM) = INT 0`--)],
+    (--`MIN times X = TOP plus (MIN times REM)`--))
+}
+returns the subgoals
+{
+   ([(--`X plus (neg((Y times QUOT) plus REM)) = INT 0`--),
+     (--`X minus ((Y times QUOT) plus REM) = INT 0`--)],
+    (--`MIN times (neg(neg((Y times QUOT) plus REM))) =
+     TOP plus (MIN times REM)`--)),
+
+   ([(--`X minus ((Y times QUOT) plus REM) = INT 0`--)],
+    (--`X plus (neg((Y times QUOT) plus REM)) = INT 0`--))
+}
+
+\USES
+When you need to carefully control the rewriting of a goal, particularly
+when using conditional equations (as often arise when doing forms of
+algebra).
+
+\SEEALSO
+SUBST1_TAC, SUBST_TAC, PURE_ONCE_REWRITE_TAC, REWRITE_TAC, SUBST_MATCH_TAC.
+
+\ENDDOC

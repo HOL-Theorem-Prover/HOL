@@ -1,0 +1,208 @@
+\chapter{The arith Library}
+
+This document describes the facilities provided by the \ml{arith} library
+for the HOL system~\cite{description}. The main function is a partial decision
+procedure for a subset of linear natural number
+arithmetic\index{linear arithmetic}. There are also some associated functions,
+and some more general tools for normalisation and for increasing the power of
+proof procedures.
+
+The main function, \ml{ARITH\_CONV}, is a partial decision procedure for
+Presburger natural arithmetic\index{Presburger arithmetic}. Presburger natural
+arithmetic is the subset of arithmetic formulae made up from natural number
+constants, numeric variables, addition, multiplication by a constant, the
+relations on the natural numbers ($<$, $\leq$, $=$, $\geq$, $>$) and the
+logical connectives ($\neg$, $\wedge$, $\vee$, $\Rightarrow$,
+$\Leftrightarrow$, $\forall$, $\exists$).
+Products\index{products}\index{multiplication} of two expressions which both
+contain variables are not included in the subset, but the function
+{\small\verb%SUC%} which is not normally included in a specification of
+Presburger arithmetic are allowed in this \HOL\ implementation.
+
+\ml{ARITH\_CONV} further restricts the subset as follows: when the formula has
+been put in prenex normal form\index{prenex normal form} it must contain only
+one kind of quantifier, that is the quantifiers must either all be
+universal\index{quantifiers!universal} (`forall') or all
+existential\index{quantifiers!existential}. Variables may appear
+free\index{free variables} (unquantified) provided any quantifiers that do
+appear in the prenex normal form are universal; free variables are taken as
+being implicitly universally quantified so mixing them with existential
+quantifiers would violate the above restriction.
+
+\index{normalisation}
+The function makes use of a number of preprocessors\index{preprocessors} which
+extend the coverage beyond the subset specified above and which are also
+available as separate functions. Natural number subtraction\index{subtraction},
+the predecessor function {\small\verb%PRE%}, and conditional
+statements\index{conditional statements} can be eliminated using the function
+\ml{SUB\_AND\_COND\_ELIM\_CONV}. Another preprocessor, \ml{INSTANCE\_T\_CONV},
+permits substitution instances\index{instances}\index{substitution instances}
+of universally quantified formulae to be accepted. There is also a function
+for putting a formula into prenex normal form\index{prenex normal form}:
+\ml{PRENEX\_CONV}.
+
+
+\section{The method of proof}
+
+The main function, \ml{ARITH\_CONV}, is constructed from two separate
+procedures, one for universally quantified formulae (\ml{FORALL\_ARITH\_CONV})
+and one for existentially quantified formulae (\ml{EXISTS\_ARITH\_CONV}).
+\ml{FORALL\_ARITH\_CONV}\index{quantifiers!universal} uses a variable
+elimination\index{variable elimination} technique similar to the one described
+by Hodes~\cite{VarElimHodes}\index{Hodes}. This procedure is
+incomplete\index{completeness} for the natural numbers\index{natural numbers}.
+In particular, it does not prove formulae which depend on the integral
+properties\index{integral properties} of natural numbers.
+
+\ml{EXISTS\_ARITH\_CONV}\index{quantifiers!existential} uses a technique of
+Shostak's~\cite{SUPINFShostak}\index{Shostak} based on the
+{\small SUP-INF}\index{SUP-INF method} method due to
+Bledsoe~\cite{SUPINFBledsoe}\index{Bledsoe}. This technique is able to find
+witnesses\index{witnesses} for the existentially quantified variables, that is
+values which satisfy\index{satisfaction of formulae} the formula.
+Unfortunately this method too is incomplete\index{completeness} for the
+natural numbers. The implementation used by \ml{EXISTS\_ARITH\_CONV} does not
+have a very good coverage. It could be improved but only at the expense of
+increased computation times. Despite the incompleteness, the procedure should
+be of some use.
+
+Both of the proof methods are described more fully in a
+report~\cite{EfficFullyExpTP} which also discusses techniques for writing
+efficient\index{efficient proof procedures} proof procedures in the \HOL\
+system.
+
+
+\section{Using the library}
+
+The \ml{arith} library can be loaded into a user's \HOL\ session using the
+function \ml{load\_library}\index{load\_library@{\ptt load\_library}} (see the
+\HOL\ manual for a general description of library loading). The first action
+in the load sequence initiated by \ml{load\_library} is to update the \HOL\
+help\index{help!updating search path} search path. The help search path is
+updated with a pathname to online help files for the \ML\ functions in the
+library. After updating the help search path, the \ml{reduce}
+library~\cite{reduce} is loaded. The \ml{arith} library makes use of some of
+the functions in the \ml{reduce} library. Finally, the \ML\ functions in the
+\ml{arith} library are loaded into \HOL.
+
+The following session shows how the \ml{arith} library may be loaded using
+\ml{load\_library}:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#load_library `arith`;;
+Loading library `arith` ...
+Updating help search path
+.Loading library `reduce` ...
+Extending help search path.
+Loading boolean conversions........
+Loading arithmetic conversions..................
+Loading general conversions, rule and tactic.....
+Library `reduce` loaded.
+.............................................................................
+.............................................................................
+.............................................................................
+.............................................................................
+.............................................................................
+................................
+Library `arith` loaded.
+() : void
+
+#
+\end{verbatim}\end{session}
+
+\noindent
+The arithmetic proof procedure can be called by applying the conversion
+\ml{ARITH\_CONV}:
+
+\begin{session}\begin{verbatim}
+#ARITH_CONV "!m n p. m < n /\ n < p ==> m < p";;
+|- (!m n p. m < n /\ n < p ==> m < p) = T
+\end{verbatim}\end{session}
+
+\noindent
+It is easy to define a function which returns a theorem directly corresponding
+to the arithmetic formula:
+
+\begin{session}\begin{verbatim}
+#let ARITH_PROVE = EQT_ELIM o ARITH_CONV;;
+ARITH_PROVE = - : conv
+
+#ARITH_PROVE "!m n p. m < n /\ n < p ==> m < p";;
+|- !m n p. m < n /\ n < p ==> m < p
+\end{verbatim}\end{session}
+
+
+\section{Using the procedure to prove a formula false}
+
+Continuing the session from the previous section, here is an example of how
+to use the proof procedure to prove that a formula is
+false\index{false!proof of}\index{proving false}:
+
+\begin{session}\begin{verbatim}
+#NEGATE_CONV ARITH_CONV "!m n. m < n";;
+|- (!m n. m < n) = F
+
+#NEGATE_CONV ARITH_CONV "?m n. (m + n) < 0";;
+|- (?m n. (m + n) < 0) = F
+\end{verbatim}\end{session}
+
+\noindent
+\ml{NEGATE\_CONV} works by applying the proof procedure to the
+negation\index{negation} of the formula. This means that when proving a
+universally quantified formula false, the main procedure is actually trying to
+prove that an existentially quantified formula is true. One could define a
+function that proves formulae either true or false, but this would be
+inefficient as for certain examples it would apply \ml{ARITH\_CONV} twice. The
+author anticipates that in most circumstances the user will know whether the
+formula is true or false and can therefore apply either \ml{ARITH\_CONV} or
+\ml{NEGATE\_CONV ARITH\_CONV} as appropriate. A combined function is
+illustrated below:
+
+\begin{session}\begin{verbatim}
+#let TF_ARITH_CONV = ARITH_CONV ORELSEC NEGATE_CONV ARITH_CONV;;
+TF_ARITH_CONV = - : conv
+
+#TF_ARITH_CONV "!m n p. m < n /\ n < p ==> m < p";;
+|- (!m n p. m < n /\ n < p ==> m < p) = T
+
+#TF_ARITH_CONV "!m n. m < n";;
+|- (!m n. m < n) = F
+\end{verbatim}\end{session}
+
+
+\section{Constructing a tactic}
+
+Consider the following goal\index{goals}:
+
+\begin{session}\begin{verbatim}
+#g "!x y t. x /\ ((~(t + 3 = 0)) => F | y) = y /\ x";;
+"!x y t. x /\ ((~(t + 3 = 0)) => F | y) = y /\ x"
+
+() : void
+\end{verbatim}\end{session}
+
+\noindent
+\ml{ARITH\_CONV} can be used as a tactic\index{tactics} as illustrated below:
+
+\begin{session}\begin{verbatim}
+#expand (CONV_TAC ARITH_CONV);;
+OK..
+evaluation failed     ARITH_CONV -- formula not in the allowed subset
+\end{verbatim}\end{session}
+
+\noindent
+This fails because the arithmetic conversion is only being applied to the
+whole goal. To simplify the goal it is necessary to apply the conversion
+deep\index{depth conversion} within the goal:
+
+\begin{session}\begin{verbatim}
+#let DEPTH_ARITH_TAC = CONV_TAC (ONCE_DEPTH_CONV ARITH_CONV);;
+DEPTH_ARITH_TAC = - : tactic
+
+#expand DEPTH_ARITH_TAC;;
+OK..
+"!x y t. x /\ (T => F | y) = y /\ x"
+
+() : void
+\end{verbatim}\end{session}

@@ -1,0 +1,33 @@
+\DOC RESQ_SPEC_ALL
+
+\TYPE {RESQ_SPEC_ALL : (thm -> thm)}
+
+\SYNOPSIS
+Specializes the conclusion of a theorem with its own restricted
+quantified variables.
+
+\KEYWORDS
+rule, restricted quantifier.
+
+\DESCRIBE
+When applied to a theorem {A |- !x1::P1. ...!xn::Pn. t},
+the inference rule {RESQ_SPEC_ALL}
+returns the theorem {A,P1 x1',...,Pn xn' |- t[x1'/x1]...[xn'/xn]}
+ where the {xi'} are distinct
+variants of the corresponding {xi}, chosen to avoid clashes with any variables
+free in the assumption list and with the names of constants. Normally {xi'} is
+just {xi}, in which case {RESQ_SPEC_ALL} simply removes all restricted
+ universal quantifiers.
+{
+       A |- !x1::P1. ... !xn::Pn. t
+   -------------------------------------------  RESQ_SPEC_ALL
+    A,P1 x1,...,Pn xn |- t[x1'/x1]...[xn'/xn]
+}
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+RESQ_GEN, RESQ_GENL, RESQ_GEN_ALL, RESQ_GEN_TAC, RESQ_SPEC, RESQ_SPECL.
+
+\ENDDOC

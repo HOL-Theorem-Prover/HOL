@@ -1,0 +1,26 @@
+\DOC RESQ_GEN_ALL
+
+\TYPE {RESQ_GEN_ALL : (thm -> thm)}
+
+\SYNOPSIS
+Generalizes the conclusion of a theorem over its own assumptions.
+
+\KEYWORDS
+rule, restricted quantifier, universal.
+
+\DESCRIBE
+When applied to a theorem {A |- t}, the inference rule {RESQ_GEN_ALL} returns
+the theorem {A' |- !x1::P1. ...!xn::Pn. t}, where the {Pi xi} are in the 
+assumptions.
+{
+         A |- t
+   ------------------------------------------------  RESQ_GEN_ALL
+   A - (P1 x1,...,Pn xn) |- !x1::P1. ... !xn::Pn. t
+}
+\FAILURE
+Never fails.
+
+\SEEALSO
+RESQ_GEN, RESQ_GENL, GEN_ALL, RESQ_SPEC, RESQ_SPECL, RESQ_SPEC_ALL.
+
+\ENDDOC

@@ -1,0 +1,61 @@
+\DOC new_binder_resq_definition
+
+\TYPE {new_binder_resq_definition : ((string # term) -> thm)}
+
+\SYNOPSIS
+Declare a new binder and install a definitional axiom in the current theory.
+
+\KEYWORDS
+definition, restricted quantifier.
+
+\DESCRIBE
+The function {new_binder_resq_definition} provides a facility for definitional
+extensions to the current theory. The new constant defined using this
+function may take arguments which are restricted quantified.  The
+function {new_binder_resq_definition} takes a pair argument consisting 
+of the name under which the resulting definition will be saved
+in the current theory segment, and a term giving the desired definition.  The
+value returned by {new_binder_resq_definition} is a theorem which states the
+definition requested by the user.
+
+Let {x_1,...,x_n} be distinct variables.  Evaluating
+{
+   new_binder_resq_definition (`name`,
+    "!x_i::P_i. ... !x_j::P_j. B x_1 ... x_n = t")
+} 
+where {B} is not already a constant, {i} is greater or equal to 1 and
+{i <= j <= n}, declares {B} to be a new constant in the current theory
+with this definition as its specification. 
+This constant specification is returned as a theorem with the form
+{
+   |- !x_i::P_i. ... !x_j::P_j. !x_k .... B x_1 ... x_n = t
+}
+\noindent where the variables {x_k} are the free variables occurring on
+the left hand side of the definition and are not restricted
+quantified. This theorem is saved in the current theory under
+(the name) {name}. 
+
+The constant {B} defined by this function will have the binder status
+only after the definition has been processed. It is therefore necessary to use
+the constant in normal prefix position when making the definition.
+ 
+If the restricting predicates {P_l} contains free occurrence of
+variable(s) of the left hand side, the constant {B} will stand for a
+family of functions.
+
+\FAILURE
+{new_binder_resq_definition} fails if called when HOL is not in draft mode.  It also
+fails if there is already an axiom, definition or specification of the given
+name in the current theory segment; if {`B`} is already a constant in the
+current theory or is not an allowed name for a constant; if {t} contains free
+variables that do not occur in the left hand side, or if
+any variable occurs more than once in {x_1, ..., x_n}.  Finally, failure occurs
+if there is a type variable in {x_1}, ..., {x_n} or {t} that does not occur in
+the type of {B}.
+
+\SEEALSO
+new_infix_resq_definition, new_resq_definition,
+new_definition, new_specification.
+
+
+\ENDDOC

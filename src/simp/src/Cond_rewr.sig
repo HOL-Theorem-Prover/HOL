@@ -1,0 +1,39 @@
+   (* ----------------------------------------------------------------------
+    * COND_REWR_CONV : thm -> (term -> thm) -> conv
+    * 
+    * Build a conversion based on a conditional rewrite theorem.  
+    * The theorem must be of the form
+    *       A |- P1 ==> ... Pm ==> (Q[x1,...,xn] = R[x1,...,xn])
+    * The conversion matches the input term against Q, using limited
+    * higher order matching.  This instantiates
+    * x1 ... xn, which the conversion then solves with the solver provided.
+    * If any of the conditions are not solved COND_REWR_CONV fails.
+    *
+    * The theorem can be a permutative rewrite, such as
+    *      |- (x = y) = (y = x)
+    *      |- (x + y) = (y + x)
+    * In these cases the rewrite will only get applied if the ordering
+    * of the variables in the term is not in strictly ascending order,
+    * according to a term_lt function which places a total ordering
+    * on terms.  (Nb. term_lt is broken in hol90.7, so I have to
+    * work with my own version here, which is not so efficient.  Also,
+    * the term ordering needs to be "AC" compatible - see Termord).
+    *
+    * FAILURE CONDITIONS
+    *
+    * Fails if any of the assumptions cannot be solved by the solver,
+    * or if the term does not match the rewrite in the first place.
+    * ---------------------------------------------------------------------*)
+
+signature Cond_rewr = sig
+
+  type term = Term.term
+  type thm  = Thm.thm
+  type conv = Abbrev.conv
+
+    val mk_cond_rewrs  : thm -> thm list
+    val IMP_EQ_CANON   : thm -> thm list
+    val COND_REWR_CONV : thm -> (term list -> term -> thm) -> term list -> conv
+    val QUANTIFY_CONDITIONS : thm -> thm list
+    val stack_limit : int ref
+end (* sig *)

@@ -1,0 +1,177 @@
+              Tfl Entrypoints
+            ------------------
+
+
+
+*   structure Prim : Prim_sig
+
+  The structure "Prim" makes accessible all the underlying support of
+  TFL for those who want to hack the source or track down bugs.
+
+
+  
+*   current_congs : unit -> thm list
+
+  "current_congs" gives the current notion of context used by
+  Tfl. Context is represented via congruence rules. This is extensible
+  in 2 ways: 1) automatically, when a datatype is defined; and 2)
+  manually, via "Prim.Context.write", which will replace the current
+  *non-datatype* context by its argument. The current datatype context
+  is not modifiable.
+
+
+*  rfunction  
+    : ({induction:thm, rules:thm, TCs:term list list} 
+             -> {induction:thm, rules:thm, nested_tcs:thm list})
+       -> (thm list -> thm -> thm)
+         -> term frag list -> term frag list 
+           -> {induction:thm, rules:thm, tcs:term list}
+
+  "rfunction" is one of the main entrypoints to the definition
+  mechanisms.  "rfunction" is not for normal use, only for when
+  "Rfunction" is not satisfactory. "rfunction" is parameterized by a
+  postprocessor and yet another simplifier ("reducer"). This reducer
+  attempts to eliminate (or simplify, when that's not possible) 
+  termination conditions, in the definition and induction theorems. This
+  reducer is only invoked on the results of defining a nested recursion.
+  Other than that, the functionality of "rfunction" is like that of its
+  simple instantiation "Rfunction".
+
+
+
+*  Rfunction  : term frag list 
+                -> term frag list 
+                  -> {induction:thm, rules:thm, tcs:term list}
+
+
+  "Rfunction" takes a termination relation and a conjunction of
+  recursion equations, given as SML/NJ style quotations, and makes the
+  definition, extracts termination conditions, attempts to solve them,
+  and then derives recursion induction. Any remaining termination
+  conditions are also made available. No restriction is made on the form
+  of the recursion, except that the patterns must be non-overlapping and
+  exhaustive, and the argument to the function must be a single
+  tuple. Remaining termination conditions are pushed into the
+  assumptions of the induction theorem, and become conditions to the
+  clauses where they originated in the recursion equations. Hence, the
+  recursion equations resulting from an invocation of "Rfunction" can
+  appear as a conjunction of conditional equations.  Nested recursions
+  that don't have their termination conditions solved get expanded into
+  conditional expressions.
+
+
+
+*   lazyR_def : term frag list -> thm
+
+  "lazyR_def" takes a conjunction of recursion equations, given as a
+  quotation. (Nested recursions are not accepted.) As for "Rfunction",
+  the patterns must be non-overlapping and exhaustive, and the argument
+  to the function must be a single tuple. The definition of the function is
+  then made, and termination conditions are extracted and placed on the
+  assumptions. The name of this entrypoint comes from the fact that a
+  termination relation doesn't need to be given; of course, one will
+  later have to be given in order to eliminate the termination
+  conditions.
+
+
+
+*   function : term frag list -> thm
+
+  "function" takes a conjunction of recursion equations, given as a
+  quotation, and makes the definition, extracts termination conditions,
+  and then derives recursion induction. As for "Rfunction", the patterns
+  must be non-overlapping and exhaustive, and the argument to the
+  function must be a single tuple. Termination conditions are placed on
+  the assumptions, and the conclusion is a conjunction of the recursion
+  equations and the induction theorem.
+
+
+
+*   WF_TAC : thm list -> tactic
+
+  "WF_TAC" is a trivial backchaining wellfoundedness prover for 
+  combinations of wellfounded relations. It already uses the following 
+  theorems from the theory "WF":
+ 
+     "WF_measure"
+     "WF_LESS"
+     "WF_PRED"
+     "WF_LIST_PRED"
+     "WF_inv_image"
+     "WF_RPROD"
+     "WF_X"
+     "WF_TC"
+     "WF_Empty"
+
+
+*   tc_simplifier : thm list -> term -> thm
+
+  "tc_simplifier" is a simplifier for termination conditions. It already
+  includes the following simplifications from the theory "WF":
+ 
+     "measure_def"
+     "inv_image_def"
+     "RPROD_DEF"
+     "X_DEF"
+ 
+  along with the following trivial expansions from the "combin" theory:
+ 
+     "o_DEF"
+     "I_THM"
+
+
+*   terminator : tactic
+
+  "terminator" is a prover for termination conditions. It gets called
+  after "tc_simplifier" has simplified the conditions. Currently, 
+  "terminator is a decision procedure for unquantified Presburger 
+  arithmetic.
+
+
+
+*   std_postprocessor : {induction:thm, rules:thm, TCs:term list list} 
+                         -> {induction:thm, rules:thm, nested_tcs:thm list}
+
+  The standard postprocessor is called on definitions after they are
+  made.  It applies WF_TAC to try to eliminate the wellfoundedness
+  condition.  Then it simplifies the termination conditions with
+  "tc_simplifier" and then it applies "terminator" to the results. If
+  they get proved, then they get eliminated from the definition and the
+  induction theorem. Nested termination conditions are more recondite
+  and usually must be handled specially; this is the purpose of the
+  "nested_tcs" field.
+
+
+
+*   REC_INDUCT_TAC : thm -> tactic
+
+  "REC_INDUCT_TAC is a simple recursion induction tactic. See the 
+  "examples" directory for examples of its use.
+
+
+
+*   PROGRAM_TAC : {induction:thm, rules:thm} -> tactic
+
+ "PROGRAM_TAC" is a naive but useful program tactic. See the 
+ "examples" directory for examples of its use.
+
+
+
+*   tgoal : {induction:thm,rules:thm,tcs:term list} -> proofs
+
+  "tgoal" takes the termination conditions from, e.g., the output of
+  "Rfunction" and puts them into a goal stack.
+
+
+*   prove_termination : {induction:thm, rules:thm, tcs:term list}
+                         -> tactic -> thm
+
+  "prove_termination" applies a tactic to the termination conditions 
+  arising, e.g., from an invocation of Rfunction.
+
+
+*   pred : term
+*   list_pred : term
+
+ "pred" and "list_pred" are often-used wellfounded relations, included
+ for convenience.

@@ -1,0 +1,49 @@
+Release 0. (HOL only)
+---------------------------------------------------------------------------
+Release 1. (HOL only.)
+              Patches and Bugfixes to Previous Release
+
+* Several bugs in the rewriter have been fixed. The result is that
+  normal rewriting, as well as termination-condition extraction, is
+  faster and apt to return correct answers in more situations. In particular,
+  TC extraction for nested recursions involving "let" was faulty.
+
+* Michael Norrish pointed out a non-portabilism in the source: in rw.sml, I 
+  was using the identifier "Term" as a term parser. This has been fixed.
+
+* The termination relation for the "unify" example is more apt to be 
+  correct.
+
+* I added a new example - the "select" algorithm. This is fairly demanding on
+  the machinery of TFL, so I included it even though I haven't proved that it 
+  terminates, or that it is correct.
+
+
+---------------------------------------------------------------------------
+Release 2. This was an Isabelle version of release 1. It is noteworthy
+because it has a complete and new proof of the Manna/Waldinger/Paulson
+unification algorithm. 
+---------------------------------------------------------------------------
+Release 3.  This was an improved Isabelle release. In particular, it now 
+builds on PolyML.
+---------------------------------------------------------------------------
+Release 4 (HOL and Isabelle)
+
+* The expressiveness of patterns has been improved. Incomplete and
+   overlapping patterns are handled. See hol/test2.sml and
+   isabelle/test1.sml for examples.
+
+* The isabelle port still does not interface with the ".thy" files. This 
+  is being worked on. 
+
+* The proof of the wellfounded recursion theorem in hol/ has been simplified.
+
+* In hol/ I have moved "define" from "Hol_datatype" to "post", since
+it's an ugly-but-useful hack that doesn't really have much to do with
+datatypes (it uses the datatype info to look up prim_rec definition
+principles to apply). This caused changes to some of the files in the
+"examples/" directory. "define" should someday grow into a useful
+entrypoint in a HOL release, but it's not yet ready for prime time.
+
+
+Please mail any problems to slind@informatik.tu-muenchen.de.

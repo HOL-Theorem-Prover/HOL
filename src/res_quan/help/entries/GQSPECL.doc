@@ -1,0 +1,36 @@
+\DOC GQSPECL
+
+\TYPE {GQSPECL : (term list -> thm -> thm)}
+
+\SYNOPSIS
+Specializes zero or more variables in the conclusion of a 
+universally quantified theorem.
+
+\KEYWORDS
+rule, restricted quantifier.
+
+\DESCRIBE
+When applied to a term list {[u1;...;un]} and a theorem whose conclusion has
+zero or more ordinary or restricted universal quantifications,
+the inference rule {GQSPECL} returns a theorem which is the result of
+specializing the quantified variables. The substitutions are made
+sequentially left-to-right in the same way as for {GQSPEC}, with the same
+sort of alpha-conversions applied to the body of the conclusion.
+The two kinds of universal quantification can be mixed.
+{
+       A |- !x1::P1. ... !xk. ... !xn::Pn. t
+   --------------------------------------------------  GQSPECL "[u1;...;un]"
+    A,P1 u1,...,Pn un |- t[u1/x1]...[uk/xk]...[un/xn]
+}
+\noindent It is permissible for the term-list to be empty, in which case
+the application of {GQSPECL} has no effect.
+
+\FAILURE
+Fails if one of the specialization of the 
+quantified variable in the original theorem fails.
+
+\SEEALSO
+GQSPEC, GQSPEC_ALL, SPECL, GENL, RESQ_GEN, RESQ_GENL, RESQ_GEN_ALL,
+RESQ_GEN_TAC, RESQ_SPEC, RESQ_SPECL, RESQ_SPEC_ALL.
+
+\ENDDOC

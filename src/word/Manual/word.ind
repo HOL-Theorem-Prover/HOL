@@ -1,0 +1,245 @@
+\begin{theindex}
+
+  \item \idxname{\sfc }{ACARRY}, 11
+  \item {\ptt ACARRY\_ACARRY\_SEG}, 33
+  \item {\ptt ACARRY\_DEF}, 34
+  \item {\ptt ACARRY\_EQ\_ADD\_DIV}, 34
+  \item {\ptt ACARRY\_EQ\_ICARRY}, 11, 34
+  \item {\ptt ACARRY\_MSB}, 34
+  \item {\ptt ACARRY\_SEG}, 34
+  \item {\ptt ADD\_BNVAL\_LEFT}, 30
+  \item {\ptt ADD\_BNVAL\_RIGHT}, 30
+  \item {\ptt ADD\_BNVAL\_SPLIT}, 31
+  \item {\ptt ADD\_NBWORD\_EQ0\_SPLIT}, 35
+  \item \idxname{\ptt }{ADD_WORD_SPLIT}, 11, \ul{11}, 35
+
+  \indexspace
+
+  \item \idxname{\sfc }{BIT}, 4, 5, 8, 11
+  \item {\ptt BIT0}, 19
+  \item {\ptt BIT\_CONV}, 15
+  \item {\ptt BIT\_DEF}, 19
+  \item {\ptt BIT\_EQ\_IMP\_WORD\_EQ}, 19
+  \item {\ptt BIT\_NBWORD0}, 31
+  \item {\ptt BIT\_SEG}, 19
+  \item {\ptt BIT\_WCAT1}, 19
+  \item {\ptt BIT\_WCAT\_FST}, 19
+  \item {\ptt BIT\_WCAT\_SND}, 19
+  \item \idxname{\sfc }{BNVAL}, 9--11
+  \item {\ptt BNVAL0}, 31
+  \item {\ptt BNVAL\_11}, 31
+  \item {\ptt BNVAL\_DEF}, 31
+  \item {\ptt BNVAL\_MAX}, 31
+  \item \idxname{\ptt }{BNVAL_NBWORD}, \ul{10}, 31
+  \item {\ptt BNVAL\_NVAL}, 31
+  \item {\ptt BNVAL\_ONTO}, 31
+  \item {\ptt BNVAL\_WCAT}, 31
+  \item {\ptt BNVAL\_WCAT1}, 31
+  \item {\ptt BNVAL\_WCAT2}, 31
+  \item \idxname{\sfc }{BV}, 9--11
+  \item {\ptt BV\_DEF}, 32
+  \item {\ptt BV\_LESS\_2}, 32
+  \item \idxname{\ptt }{BV_VB}, \ul{10}, 32
+
+  \indexspace
+
+  \item {\ptt DOUBL\_EQ\_SHL}, 32
+
+  \indexspace
+
+  \item {\ptt EQ\_NBWORD0\_SPLIT}, 32
+  \item \idxname{\sfc }{EXISTSABIT}, 6
+  \item {\ptt EXISTSABIT}, 24
+  \item {\ptt EXISTSABIT\_DEF}, 24
+  \item {\ptt EXISTSABIT\_SEG}, 24
+  \item {\ptt EXISTSABIT\_WCAT}, 24
+
+  \indexspace
+
+  \item \idxname{\sfc }{FORALLBITS}, 6
+  \item {\ptt FORALLBITS}, 24
+  \item {\ptt FORALLBITS\_DEF}, 24
+  \item {\ptt FORALLBITS\_SEG}, 24
+  \item {\ptt FORALLBITS\_WCAT}, 24
+
+  \indexspace
+
+  \item \idxname{\sfc }{ICARRY}, 11
+  \item {\ptt ICARRY\_DEF}, 35
+  \item {\ptt ICARRY\_SEG}, 35
+
+  \indexspace
+
+  \item \idxname{\sfc }{LSB}, 5
+  \item {\ptt LSB}, 20
+  \item {\ptt LSB\_DEF}, 20
+  \item {\ptt LVAL\_DEF}, 28
+  \item {\ptt LVAL\_MAX}, 28
+  \item {\ptt LVAL\_SNOC}, 28
+
+  \indexspace
+
+  \item \idxname{\sfc }{MAP}, 7
+  \item \idxname{\sfc }{MSB}, 4, 5
+  \item {\ptt MSB}, 20
+  \item {\ptt MSB\_DEF}, 20
+  \item {\ptt MSB\_NBWORD}, 32
+
+  \indexspace
+
+  \item \idxname{\sfc }{NBWORD}, 9--11, 13
+  \item {\ptt NBWORD0}, 32
+  \item \idxname{\ptt }{NBWORD_BNVAL}, \ul{10}, 32
+  \item {\ptt NBWORD\_DEF}, 32
+  \item \idxname{\ptt }{NBWORD_MOD}, \ul{10}, 32
+  \item \idxname{\ptt }{NBWORD_PWORDLEN}, \ul{10}
+  \item \idxname{\ptt }{NBWORD_SPLIT}, 13, \ul{13}, 32
+  \item \idxname{\ptt }{NBWORD_SUC}, 10, \ul{10}, 13, 32
+  \item {\ptt NBWORD\_SUC\_FST}, 33
+  \item \idxname{\ptt }{NBWORD_SUC_LEFT}, 13, \ul{13}
+  \item {\ptt NBWORD\_SUC\_SEG}, 33
+  \item {\ptt NLIST\_DEF}, 28
+  \item {\ptt NOT\_EXISTSABIT}, 24
+  \item \idxname{\sfc }{NVAL}, 8, 9
+  \item {\ptt NVAL0}, 28
+  \item {\ptt NVAL1}, 29
+  \item {\ptt NVAL\_DEF}, 29
+  \item \idxname{\ptt }{NVAL_MAX}, 9, \ul{9}, 29
+  \item \idxname{\ptt }{NVAL_WCAT}, 9, \ul{9}, 29
+  \item {\ptt NVAL\_WCAT1}, 29
+  \item {\ptt NVAL\_WCAT2}, 29
+  \item {\ptt NVAL\_WORDLEN\_0}, 29
+  \item \idxname{\sfc }{NWORD}, 8, 9
+  \item {\ptt NWORD\_DEF}, 29
+  \item {\ptt NWORD\_LENGTH}, 29
+  \item \idxname{\ptt }{NWORD_PWORDLEN}, 9, \ul{9}, 29
+
+  \indexspace
+
+  \item \idxname{\sfc }{PBITBOP}, 6, 8
+  \item {\ptt PBITBOP\_DEF}, 25
+  \item {\ptt PBITBOP\_EXISTS}, 25
+  \item {\ptt PBITBOP\_PWORDLEN}, 25
+  \item {\ptt PBITBOP\_SEG}, 25
+  \item {\ptt PBITBOP\_WAND}, 8, 29
+  \item {\ptt PBITBOP\_WOR}, 8, 30
+  \item {\ptt PBITBOP\_WXOR}, 8, 30
+  \item \idxname{\sfc }{PBITOP}, 6, 8
+  \item {\ptt PBITOP\_BIT}, 25
+  \item {\ptt PBITOP\_DEF}, 25
+  \item {\ptt PBITOP\_PWORDLEN}, 25
+  \item {\ptt PBITOP\_SEG}, 26
+  \item {\ptt PBITOP\_WNOT}, 8, 30
+  \item \idxname{\sfc }{PRE}, 5
+  \item \idxname{\sfc }{PWORDLEN}, 2, 4--12
+  \item {\ptt PWORDLEN}, 20
+  \item {\ptt PWORDLEN0}, 20
+  \item {\ptt PWORDLEN1}, 20
+  \item {\ptt PWORDLEN\_bitop\_CONV}, 15
+  \item {\ptt PWORDLEN\_CONV}, 12, 16
+  \item {\ptt PWORDLEN\_DEF}, 20
+  \item {\ptt PWORDLEN\_NBWORD}, 33
+  \item {\ptt PWORDLEN\_TAC}, 12, 17
+
+  \indexspace
+
+  \item \idxname{\sfc }{SEG}, 4--8, 10--13
+  \item {\ptt SEG0}, 20
+  \item {\ptt SEG\_BIT}, 20
+  \item {\ptt SEG\_CONV}, 17
+  \item {\ptt SEG\_DEF}, 20
+  \item \idxname{\ptt }{SEG_NBWORD}, 10, \ul{10}, 33
+  \item \idxname{\ptt }{SEG_NBWORD_ADD}, 11, \ul{11}, 36
+  \item {\ptt SEG\_NBWORD\_SUC}, 33
+  \item \idxname{\ptt }{SEG_PWORDLEN}, 4, \ul{4}, 20
+  \item \idxname{\ptt }{SEG_SEG}, 4, \ul{4}, 20
+  \item {\ptt SEG\_SEG\_CONV}, 12, 18
+  \item {\ptt SEG\_SHL}, 26
+  \item {\ptt SEG\_SHL\_0}, 26
+  \item {\ptt SEG\_WCAT1}, 20
+  \item {\ptt SEG\_WCAT2}, 21
+  \item \idxname{\ptt }{SEG_WCAT_SEG}, 5, \ul{5}, 13, 14, 21
+  \item {\ptt SEG\_WCAT\_SEG1}, 21
+  \item {\ptt SEG\_WCAT\_SEG2}, 21
+  \item {\ptt SEG\_WORD\_LENGTH}, 21
+  \item {\ptt SEG\_WORDLEN}, 21
+  \item \idxname{\sfc }{SHL}, 7, 8
+  \item {\ptt SHL\_DEF}, 26
+  \item \idxname{\ptt }{SHL_SEG}, 7, \ul{8}, 26
+  \item {\ptt SHL\_SEG\_1F}, 26
+  \item {\ptt SHL\_SEG\_NF}, 27
+  \item \idxname{\sfc }{SHR}, 7, 8
+  \item {\ptt SHR\_DEF}, 27
+  \item \idxname{\ptt }{SHR_SEG}, 7, \ul{7}, 27
+  \item {\ptt SHR\_SEG\_1F}, 27
+  \item {\ptt SHR\_SEG\_NF}, 27
+
+  \indexspace
+
+  \item \idxname{\sfc }{VB}, 9, 10, 13
+  \item \idxname{\ptt }{VB_BV}, \ul{10}, 33
+  \item {\ptt VB\_DEF}, 33
+
+  \indexspace
+
+  \item \idxname{\sfc }{WAND}, 8, 12
+  \item {\ptt WAND\_DEF}, 30
+  \item \idxname{\sfc }{WCAT}, 4--13
+  \item {\ptt WCAT0}, 21
+  \item {\ptt WCAT\_11}, 21
+  \item \idxname{\ptt }{WCAT_ASSOC}, 5, \ul{5}, 21
+  \item {\ptt WCAT\_DEF}, 21
+  \item {\ptt WCAT\_NBWORD\_0}, 33
+  \item \idxname{\ptt }{WCAT_PWORDLEN}, 5, \ul{5}, 22
+  \item {\ptt WCAT\_SEG\_SEG}, 22
+  \item {\ptt WCAT\_WNOT}, 30
+  \item \idxname{\sfc }{WMAP}, 7
+  \item {\ptt WMAP\_0}, 27
+  \item {\ptt WMAP\_BIT}, 28
+  \item {\ptt WMAP\_DEF}, 28
+  \item {\ptt WMAP\_o}, 28
+  \item {\ptt WMAP\_PBITOP}, 28
+  \item {\ptt WMAP\_PWORDLEN}, 28
+  \item {\ptt WMAP\_SEG}, 28
+  \item {\ptt WMAP\_WCAT}, 28
+  \item \idxname{\sfc }{WNOT}, 8, 12
+  \item {\ptt WNOT\_DEF}, 30
+  \item {\ptt WNOT\_WNOT}, 30
+  \item \idxname{\sfc }{WOR}, 8, 12
+  \item {\ptt WOR\_DEF}, 30
+  \item \idxname{\sfc }{WORD}, 8, 10--13
+  \item \idxname{\sfc }{word8}, 2
+  \item {\ptt WORD\_11}, 22
+  \item {\ptt word\_Ax}, 22
+  \item {\ptt word\_cases}, 22
+  \item {\ptt WORD\_CONS\_WCAT}, 22
+  \item {\ptt WORD\_DEF}, 22
+  \item {\ptt word\_induct}, 23
+  \item {\ptt word\_ISO\_DEF}, 23
+  \item {\ptt WORD\_PARTITION}, 23
+  \item {\ptt WORD\_SNOC\_WCAT}, 23
+  \item {\ptt WORD\_SPLIT}, 23
+  \item {\ptt word\_TY\_DEF}, 23
+  \item \idxname{\sfc }{WORDLEN}, 4
+  \item {\ptt WORDLEN\_DEF}, 22
+  \item {\ptt WORDLEN\_NBWORD}, 33
+  \item {\ptt WORDLEN\_SUC\_WCAT}, 22
+  \item {\ptt WORDLEN\_SUC\_WCAT\_BIT\_SEG}, 22
+  \item {\ptt WORDLEN\_SUC\_WCAT\_BIT\_SEG\_RIGHT}, 22
+  \item {\ptt WORDLEN\_SUC\_WCAT\_SEG\_SEG}, 22
+  \item {\ptt WORDLEN\_SUC\_WCAT\_SEG\_SEG\_RIGHT}, 22
+  \item \idxname{\sfc }{WSPLIT}, 5
+  \item {\ptt WSPLIT\_DEF}, 23
+  \item {\ptt WSPLIT\_NBWORD\_0}, 33
+  \item {\ptt WSPLIT\_PWORDLEN}, 23
+  \item {\ptt WSPLIT\_SEG}, 23
+  \item {\ptt WSPLIT\_SEG1}, 23
+  \item {\ptt WSPLIT\_SEG2}, 23
+  \item \idxname{\sfc }{WXOR}, 8, 12
+  \item {\ptt WXOR\_DEF}, 30
+
+  \indexspace
+
+  \item {\ptt ZERO\_WORD\_VAL}, 33
+
+\end{theindex}

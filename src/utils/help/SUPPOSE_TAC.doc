@@ -1,0 +1,56 @@
+\DOC SUPPOSE_TAC
+
+\TYPE
+{
+SUPPOSE_TAC : term -> tactic
+}
+
+\LIBRARY utils
+
+\SYNOPSIS
+A tactic for adding an assumption to a goal, with the condition
+that the assumption be proved later.
+
+\DESCRIBE
+The tactic {SUPPOSE_TAC t} when applied to a goal {([a1,...,an],Goal)}
+returns the two subgoals
+{
+   ([t,a1,...,an],Goal)
+
+   ([a1,...,an],t)
+}
+
+\FAILURE
+The tactic {SUPPOSE_TAC} fails if it is not given a term of type
+{(==`:bool`==)}.
+
+\EXAMPLE
+{
+   SUPPOSE_TAC (--`?n. INT n = MIN`--)
+}
+\noindent when applied to the goal
+{
+   ([(--`POS MIN`--)], (--`?x:num. Y = ((MAX times (INT x)) plus REM)`--))
+}
+returns the two subgoals
+{
+   ([(--`?n. INT n = MIN`--), (--`POS MIN`--)],
+   (--`?x. Y = ((MAX times (INT x)) plus REM)`--))
+
+   ([(--`POS MIN`--)], (--`?n. INT n = MIN`--))
+}
+
+\USES
+Adding lemmas as assumptions to a goal to assist in its proof.
+{SUPPOSE_TAC} allows you to assume a lemma while proving a theorem using
+the goal stack without having to break the flow of proof of the main
+theorem you are working on.
+
+
+\SEEALSO
+{
+REV_SUPPOSE_TAC, ASSUME_TAC
+}
+
+
+\ENDDOC

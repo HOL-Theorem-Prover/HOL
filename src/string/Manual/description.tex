@@ -1,0 +1,511 @@
+\chapter{The string Library}
+
+This document describes the facilities provided by the \ml{string} library and
+explains its logical basis. This library makes ascii character strings
+available in the \HOL\ logic via two formally-defined logical types, \ml{ascii}
+and \ml{string}. The definitions of these types and some simple theorems about
+them reside in the two theory files \ml{ascii.th} and \ml{string.th} in the
+library \ml{string}.  The library also contains some very basic derived rules
+of inference for reasoning about character strings in logic.
+
+\section{Ascii character codes}
+
+The most basic theory in the library is the theory \ml{ascii}, in which a type
+\ml{ascii} of 8-bit ascii character codes is defined.  In the notation for
+describing concrete types used by the function \ml{define\_type}, the type
+\ml{ascii} is specified by the following equation.
+
+\begin{hol}\begin{verbatim}
+   ascii  =  ASCII bool bool bool bool bool bool bool bool
+\end{verbatim}\end{hol}
+
+\noindent The simple enumerated type \ml{ascii} described by this equation
+provides a representation in logic for the set of all 8-bit ascii character
+codes.  Each character is represented by a value obtained by applying the
+function \ml{ASCII} to the eight boolean values of its standard ascii character
+code.  The letter `a', for example, has the 8-bit code `01100001' and is
+represented formally in logic by the term
+
+\begin{hol}\begin{verbatim}
+   "ASCII F T T F F F F T"
+\end{verbatim}\end{hol}
+
+\noindent Of course, any other ascii character code can likewise be represented
+in logic by a value of type \ml{ascii} constructed using the function constant
+\ml{ASCII}.
+
+The type \ml{ascii} and the constant \ml{ASCII} are defined formally in the
+library using the function \ml{define\_type} from the \HOL\ recursive types
+package (see~\cite{description,melham}).  This gives the following theorem,
+called \ml{ascii\_Axiom}\index{ascii\_Axiom@{\ptt ascii\_Axiom}|(}, as an
+abstract characterization of the type \ml{ascii}:
+
+\begin{hol}
+\begin{verbatim}
+   |- !f. ?!fn:ascii->*.
+        !b0 b1 b2 b3 b4 b5 b6 b7.
+          fn(ASCII b0 b1 b2 b3 b4 b5 b6 b7) = f b0 b1 b2 b3 b4 b5 b6 b7
+\end{verbatim}\end{hol}
+
+\noindent This simply says that functions on values of type \ml{ascii} may be
+uniquely specified by defining them in terms of the eight boolean values from
+which these values are constructed. 
+
+\subsection{Function definitions on type {\tt ascii}}%
+\index{function definitions!on type {\tt ascii}|(} 
+
+The theorem \ml{ascii\_Axiom}, having been proved using the recursive types
+package, is in the right form for use with the derived rule of definition
+\ml{new\_recursive\_definition}.  For example, once the \ml{string} library is
+loaded into \HOL, one can use this rule of definition to define a function that
+selects the high-order bit of an ascii character code:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#let BIT1 = 
+     new_recursive_definition false ascii_Axiom `BIT1` 
+     "BIT1(ASCII b1 b2 b3 b4 b5 b6 b7 b8) = b1";;
+BIT1 = 
+|- !b1 b2 b3 b4 b5 b6 b7 b8. BIT1(ASCII b1 b2 b3 b4 b5 b6 b7 b8) = b1
+\end{verbatim}\end{session}
+
+\noindent In fact, any function whatsoever on the \ml{ascii} is definable
+using the theorem \ml{ascii\_Axiom} and the rule
+\ml{new\_recursive\_definition}.  \index{ascii\_Axiom@{\ptt ascii\_Axiom}|)}
+\index{function definitions!on type {\tt ascii}|)}
+
+\subsection{Theorems about the type {\tt ascii}}%
+\index{theorems!about the type {\tt ascii}|(} 
+
+In addition to \ml{ascii\_Axiom}, several standard theorems about the defined
+type \ml{ascii} proved using the recursive types package are available as
+built-in theorems of the \ml{string} library.  They are all set up to autoload,
+if possible, when the library is loaded into \HOL.
+
+The theorem \ml{ASCII\_{11}}\index{ASCII\_11@{\ptt ASCII\_11}} states that
+the function \ml{ASCII} is injective:
+
+\begin{hol}
+\begin{verbatim}
+   |- !b0 b1 b2 b3 b4 b5 b6 b7 b0' b1' b2' b3' b4' b5' b6' b7'.
+      (ASCII b0 b1 b2 b3 b4 b5 b6 b7 = ASCII b0' b1' b2' b3' b4' b5' b6' b7')
+        =
+      (b0 = b0') /\ (b1 = b1') /\ (b2 = b2') /\ (b3 = b3') /\
+      (b4 = b4') /\ (b5 = b5') /\ (b6 = b6') /\ (b7 = b7')
+\end{verbatim}\end{hol}
+
+\noindent This theorem allows one to prove equality or inequality of ascii
+character codes; it also forms the basis for the decision-procedure
+\ml{ascii\_EQ\_CONV} explained in section~\ref{ascii-eq-conv}.  A
+degenerate `structural induction' theorem for the type \ml{ascii}, called
+\ml{ascii\_Induct}\index{ascii\_Induct@{\ptt ascii\_Induct}}, is also available
+in the library:
+
+\begin{hol}
+\begin{verbatim}
+   |- !P. (!b0 b1 b2 b3 b4 b5 b6 b7. P(ASCII b0 b1 b2 b3 b4 b5 b6 b7)) 
+            ==>
+          (!a. P a)
+\end{verbatim}\end{hol}
+
+\noindent This is in the standard form used by the recursive types package and
+can therefore be used with \ml{INDUCT\_THEN} if desired. Finally, there is
+the\index{case analysis!on type {\tt ascii}|(} trivial case analysis theorem
+\ml{ascii\_CASES}\index{ascii\_CASES@{\ptt ascii\_CASES}}:
+
+\begin{hol}
+\begin{verbatim}
+   |- !a. ?b0 b1 b2 b3 b4 b5 b6 b7. a = ASCII b0 b1 b2 b3 b4 b5 b6 b7
+\end{verbatim}\end{hol}
+
+\noindent This states that every value of type \ml{ascii} can be constructed
+using the function \ml{ASCII} and can be used, for example, with
+\ml{STRUCT\_CASES\_TAC} to replace variables ranging over \ml{ascii} by values
+explicitly constructed with\index{case analysis!on type {\tt ascii}|)}
+\ml{ASCII}\index{theorems!about the type {\tt ascii}|)}.
+
+\subsection{Decision procedure for ascii code equality}\label{ascii-eq-conv}%
+\index{ascii\_EQ\_CONV@{\ptt ascii\_EQ\_CONV}}
+
+The \ml{string} library provides a highly optimized conversion for proving
+equality or inequality of constant terms that represent ascii character codes,
+in the form of applications of the constructor \ml{ASCII} to the boolean
+constants \ml{T} and \ml{F}.  This conversion, called \ml{ascii\_EQ\_COND},
+expects its term argument to be an equation of the form:
+
+\begin{hol}\begin{alltt}
+   "ASCII \m{a\sb{1}} \m{a\sb{2}} \m{a\sb{3}} \m{a\sb{4}} \m{a\sb{5}} \m{a\sb{6}} \m{a\sb{7}} \m{a\sb{8}} = ASCII \m{b\sb{1}} \m{b\sb{2}} \m{b\sb{3}} \m{b\sb{4}} \m{b\sb{5}} \m{b\sb{6}} \m{b\sb{7}} \m{b\sb{8}}"
+\end{alltt}\end{hol}
+
+\noindent where each of $a_1$, \dots, $a_8$, $b_1$, \dots, $b_8$ is either the
+constant \ml{T} or the constant \ml{F}.  Given such an equation,
+\ml{ascii\_EQ\_COND} proves that it is equal to true (\ml{T}) if the left and
+right-hand sides represent the same ascii code or false (\ml{F}) otherwise.
+The following session illustrates the use of the conversion:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#ascii_EQ_CONV "ASCII T T F T T F T T = ASCII T T F T T F T T";;
+|- (ASCII T T F T T F T T = ASCII T T F T T F T T) = T
+
+#ascii_EQ_CONV "ASCII T T F T T F T T = ASCII T T F T T F T F";;
+|- (ASCII T T F T T F T T = ASCII T T F T T F T F) = F
+\end{verbatim}\end{session}
+
+\noindent The conversion is highly optimised and using it can be considerably
+faster than proving equality or inequality by, for example, rewriting with
+the theorem \ml{ASCII\_{11}}\index{ASCII\_11@{\ptt ASCII\_11}}.
+
+\section{Character strings}
+
+The theory \ml{string} in the library defines a logical type of ascii character
+strings.  These are (possibly empty) sequences of character codes, and the
+theory \ml{ascii} is a parent of the theory \ml{string}. The type of ascii
+character strings, called \ml{string}, is defined formally in the library using
+\ml{define\_type}, with the recursive specifying equation shown below.
+
+\begin{hol}\begin{verbatim}
+   string  =  ``  |  STRING ascii string
+\end{verbatim}\end{hol}
+
+\noindent Every value of type \ml{string} consists of a finite sequence of
+ascii character codes. These sequences are constructed using the function
+\ml{STRING} from the empty string represented by the constant \ml{``}.  For
+example, the character string `ab' is represented in logic by:
+
+\begin{hol}\begin{verbatim}
+   "STRING (ASCII F T T F F F F T) (STRING (ASCII F T T F F F T F) ``)"
+\end{verbatim}\end{hol}
+
+\noindent Any finite string of ascii characters can be represented in logic in
+a similar way.
+
+The type \ml{string} is defined in the library using the recursive types
+package. An abstract characterization of the type \ml{string}, in the standard
+form used by the recursive types package, is provided by the
+theorem \ml{string\_Axiom}\index{string\_Axiom@{\ptt string\_Axiom}|(}:
+
+\begin{hol}
+\begin{verbatim}
+   |- !e f. ?! fn. (fn `` = e) /\ (!a s. fn(STRING a s) = f(fn s)a s)
+\end{verbatim}\end{hol}
+
+\noindent This theorem, which is proved automatically by \ml{define\_type},
+states the validity of primitive recursive definitions on the type \ml{string}.
+
+\subsection{Function definitions on type {\tt string}}%
+\index{function definitions!on type {\tt string}|(} 
+
+The theorem \ml{string\_Axiom} is in the standard form accepted by
+\ml{new\_recursive\_definition} and can therefore be used to define functions
+over type \ml{string} by primitive recursion.  For example, one can define the
+length of a string as follows.
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#let LEN = 
+     new_recursive_definition false string_Axiom `LEN` 
+     "(LEN `` = 0) /\ (LEN (STRING a s) = (LEN s) + 1)";;
+LEN = |- (LEN `` = 0) /\ (!a s. LEN(STRING a s) = (LEN s) + 1)
+\end{verbatim}\end{session}
+
+\noindent Other forms of primitive recursive definition may also be made using
+\ml{string\_Axiom} and \ml{new\_recursive\_definition}; see the \HOL\ system
+documentation for details.\index{string\_Axiom@{\ptt string\_Axiom}|)}%
+\index{function definitions!on type {\tt string}|)}
+
+\subsection{Theorems about the type {\tt string}}%
+\index{theorems!about the type {\tt string}|(} 
+
+For the recursive type \ml{string}, the library provides as built-in all the
+standard theorems provable using the recursive types package.  These theorems,
+which are set up to autoload when the library is loaded, include theorems
+stating the distinctness of empty and non-empty strings:
+
+\begin{hol}
+\index{NOT\_EMPTY\_STRING@{\ptt NOT\_EMPTY\_STRING}}
+\index{NOT\_STRING\_EMPTY@{\ptt NOT\_STRING\_EMPTY}}
+\begin{verbatim}
+   NOT_STRING_EMPTY   |- !a s. ~(`` = STRING a s)
+
+   NOT_EMPTY_STRING   |- !a s. ~(STRING a s = ``)
+\end{verbatim}\end{hol}
+
+\noindent The library also contains a theorem stating that the constructor
+\ml{STRING} is injective:
+
+\begin{hol}
+\index{STRING\_11@{\ptt STRING\_11}}
+\begin{verbatim}
+   STRING_11   |- !a s a' s'. (STRING a s = STRING a' s') = (a=a') /\ (s=s')
+\end{verbatim}\end{hol}
+
+\noindent This theorem, which can be used to reason about the equality of
+character strings, forms the basis of the equality conversion described in
+section~\ref{string-eq-conv} below.  Also\index{structural induction|(}
+built-in are theorems for doing proofs by structural induction on type
+\ml{string} and \index{case analysis!on type {\tt string}|(} for empty vs
+non-empty case analysis on character strings:
+
+\begin{hol}
+\index{string\_Induct@{\ptt string\_Induct}}
+\index{string\_CASES@{\ptt string\_CASES}}
+\begin{verbatim}
+   string_Induct |- !P. P `` /\ (!s. P s ==> (!a.P(STRING a s))) ==> (!s. P s)
+
+   string_CASES  |- !s. (s = ``) \/ (?s' a. s = STRING a s')
+\end{verbatim}\end{hol}
+
+\noindent The theorem \ml{string\_Induct} is in the correct form for use with
+the built-in induction tactic \ml{INDUCT\_THEN}, and the theorem
+\ml{string\_CASES} may be used with \ml{STRUCT\_CASES\_TAC}.  See the \HOL\
+manual for details of these two functions.
+
+\index{structural induction|)}
+\index{case analysis!on type {\tt string}|)}
+\index{theorems!about the type {\tt string}|)} 
+
+\subsection{String constants}
+\index{string constants|(} 
+\index{\\\@\verb+""`+$\dots$\verb+`""+ (string constants)|(}
+
+To provide a concise notation for strings in the \HOL\ logic, the system parser
+and pretty-printer supports a notation for {\it string constants\/} is
+introduced. A string constant is a logical constant of type \ml{string} written
+between single quotes as follows: \ml{"`\m{c\sb{1}\ldots c\sb{n}}`"}.  Such a
+term should be regarded as an object language abbreviation for the value of
+type \ml{string} that represents the ascii character string `$c_1\dots c_n$'.
+For example, the string constant \ml{"`ab`"} is (conceptually) defined formally
+by:
+
+\begin{hol}\begin{verbatim}
+   |- `ab` = STRING(ASCII F T T F F F F T)(STRING(ASCII F T T F F F T F)``)
+\end{verbatim}\end{hol}
+
+\noindent and abbreviates the term of type \ml{string} that represents the
+string `ab'.
+
+The \HOL\ parser and pretty-printer supports the character string notation only
+when the \ml{string} library has been loaded. This is illustrated by the
+following session, which begins before the library has been loaded.
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#"`abc`";;
+type ":string" not defined -- load library string?
+skipping: <string> " ;; parse failed
+\end{verbatim}\end{session}
+
+\noindent Here, character string constants like \ml{"`abc`"} do not parse,
+since the logical type \ml{string} is not present in the current theory. But 
+the string notation becomes available when the library is loaded:
+
+\begin{session}\begin{alltt}
+#load_library `string`;;
+  \(\vdots\)
+Library `string` loaded.
+() : void
+
+#"`abc`";;
+"`abc`" : term
+\end{alltt}\end{session}
+
+\noindent Note that terms in the \HOL\ logic like \ml{"`abc`"} are in fact {\it
+constants\/} of type \ml{string}:
+
+\begin{session}\begin{verbatim}
+#is_const "`abc`";;
+true : bool
+
+#type_of "`abc`";;
+":string" : type
+\end{verbatim}\end{session}
+
+Like\index{string\_CONV@{\ptt string\_CONV}|(} numerals in \HOL, strings
+written in this notation form an infinite family of defined constants.  As
+such, their definitions are not directly available as theorems stored in a
+theory.  Instead, a defining equation for any given string constant can be
+generated as required using the \ml{string} library conversion
+\ml{string\_CONV}. This\pagebreak[3] expects its term argument to be a
+non-empty ascii character string constant, for example \ml{"`a`"}, \ml{"`b`"},
+or \ml{"`abc`"}.  Given such a term, the conversion returns a theorem that
+defines this constant in terms of a shorter string.  This is best illustrated
+by an example:
+
+\begin{session}\begin{verbatim}
+#string_CONV "`abc`";;
+|- `abc` = STRING(ASCII F T T F F F F T)`bc`
+
+#string_CONV "`bc`";;
+|- `bc` = STRING(ASCII F T T F F F T F)`c`
+
+#string_CONV "`c`";;
+|- `c` = STRING(ASCII F T T F F F T T)``
+\end{verbatim}\end{session}
+
+\noindent Here, we have used \ml{string\_CONV} to iteratively unfold the formal
+definition of the string constant \ml{"`abc`"}.  Note that \ml{string\_CONV}
+fails on the empty string \ml{"``"}.
+
+\index{string constants|)} 
+\index{\\\@\verb+""`+$\dots$\verb+`""+ (string constants)|)}
+\index{string\_CONV@{\ptt string\_CONV}|)}
+
+\subsection{Decision procedure for string equality}\label{string-eq-conv}%
+\index{string\_EQ\_CONV@{\ptt string\_EQ\_CONV}|(}
+
+The \ml{string} library includes an optimized conversion for proving equality
+or inequality of string constants This conversion is called
+\ml{string\_EQ\_COND}. Its term argument is expected to be an equation between
+character strings of the following form:
+
+\begin{hol}\begin{alltt}
+   "`\m{\ldots}` = `\m{\ldots}`"
+\end{alltt}\end{hol}
+
+\noindent Given such an equation, \ml{string\_EQ\_CONV} proves that it is equal
+to true if the string constants on the left and right-hand sides are identical
+or equal to false otherwise.  The following session illustrates
+\ml{string\_EQ\_CONV} in use:
+
+\begin{session}\begin{verbatim}
+#string_EQ_CONV "`abc` = `abc`";;
+|- (`abc` = `abc`) = T
+
+#string_EQ_CONV "`abc` = `abd`";;
+|- (`abc` = `abd`) = F
+
+#string_EQ_CONV "`` = `abc`";;
+|- (`` = `abc`) = F
+
+#string_EQ_CONV "`abc` = `abcdef`";;
+|- (`abc` = `abcdef`) = F
+\end{verbatim}\end{session}
+
+\noindent Use of this conversion, which is highly optimised for speed, is to be
+preferred to other slower methods for proving equality or inequality of string
+constants, for example rewriting with the theorems
+\ml{STRING\_{11}}\index{STRING\_11@{\ptt STRING\_11}} and
+\ml{ASCII\_{11}}\index{ASCII\_11@{\ptt ASCII\_11}}. The depth conversion
+\ml{ONCE\_DEPTH\_CONV} may be used with \ml{string\_EQ\_CONV} to reduce to true
+or false all the equations between string constants that\pagebreak[3] occur in
+a term.\index{string\_EQ\_CONV@{\ptt string\_EQ\_CONV}|)}
+
+\section{Using the library}
+
+The \ml{string} library is loaded into a user's \HOL\ session using the
+function \ml{load\_library} (see the \HOL\ manual for a general description of
+library loading).  The first action in the load sequence initiated by
+\ml{load\_library} is to update the internal \HOL\ search paths.  A pathname to
+the \ml{string} library is added to the search path, so that theorems may be
+autoloaded from the library theories \ml{ascii} and \ml{string}; and the \HOL\
+help search path is updated with a pathname to online help files for the \ML\
+functions in the library.
+
+After updating search paths, the load sequence for \ml{string} depends on the
+current state of the \HOL\ session. If the system is in draft mode, the library
+theory \ml{string} is added as a new parent to the current theory.  If the
+system is not in draft mode, but the current theory is an ancestor of the
+\ml{string} theory in the library (e.g.\ the user is in a fresh \HOL\ session)
+then the \ml{string} theory is made into the current theory.  In both cases,
+the \ML\ functions in the library are loaded into \HOL\, and the theorems in
+the library theories are set up to be autoloaded on demand.  The \ml{string}
+library is at this point fully loaded into the user's \HOL\ session.
+
+\subsection{Example session}
+
+The following session shows how the \ml{string} library may be loaded using
+\ml{load\_library}. Suppose, beginning in a fresh \HOL\ session, the user
+wishes to create a theory \ml{foo} whose parents include the theories in the
+\ml{string} library. This may be done as follows:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{alltt}
+#new_theory `foo`;;
+() : void
+
+#load_library `string`;;
+  \(\vdots\)
+Library `string` loaded.
+() : void
+\end{alltt}\end{session}
+
+\noindent Loading the library while drafting the theory \ml{foo} makes the
+library theory \ml{string} into a parent of \ml{foo}.  The same effect could
+have been achieved (in a fresh session) by first loading the library and then
+creating \ml{foo}:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{alltt}
+#load_library `string`;;
+  \(\vdots\)
+Library `string` loaded.
+() : void
+
+#new_theory `foo`;;
+() : void
+\end{alltt}\end{session}
+
+\noindent Here, the theory \ml{string} is first made the current theory of the
+new session.  It then automatically becomes a parent of \ml{foo} when this
+theory is created by\pagebreak[3] \ml{new\_theory}.
+
+Now, suppose that \ml{foo} has been created as shown above, and the user does
+some work in this theory, quits \HOL\, and in a later session wishes to load
+the theory \ml{foo}.  This must be done by {\it first\/} loading the
+\ml{string} library and {\it then\/} loading the theory \ml{foo}.
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{alltt}
+#load_library `string`;;
+  \(\vdots\)
+Library `string` loaded.
+() : void
+
+#load_theory `foo`;;
+Theory foo loaded
+() : void
+\end{alltt}\end{session}
+
+\noindent This sequence of actions ensures that the system can find the parent
+theory \ml{string} when it comes to load \ml{foo}, since loading the library
+updates the search path. 
+
+\subsection{The {\tt load\_string} function}%
+\index{load\_string@{\ptt load\_string}|(}
+
+The \ml{string} library may in many cases simply be loaded into the system as
+illustrated by the examples given above.  There are, however, certain
+situations in which the \ml{string} library cannot be fully loaded at the time
+when the \ml{load\_library} is used.  This occurs when the system is not in
+draft mode and the current theory is not an ancestor of the theory \ml{string}.
+In this case, loading the library can and will update the search paths, as
+usual. But the \ml{string} theory in the library can neither be made into a
+parent of the current theory nor can it be made the current theory.  This means
+that autoloading from the library cannot at this stage be activated.  Nor can
+the \ML\ code in the library be loaded into \HOL, since it requires access to
+some of the theorems in the library.
+
+In the situation described above---when the system is not in draft mode and the
+current theory is not an ancestor of the theory \ml{string}---the library load
+sequence defines an \ML\ function called \ml{load\_string} in the current \HOL\
+session.  If at a future point in the session the \ml{string} theory (now
+accessible via the search path) becomes an ancestor of the current theory, this
+function can then be used to complete loading of the library. Evaluating
+
+\begin{hol}\begin{verbatim}
+   load_string();;
+\end{verbatim}\end{hol}
+
+\noindent in such a context loads the \ML\ functions of the \ml{string} library
+into \HOL\ and activates autoloading from its theory files.  The function
+\ml{load\_string} fails if the theory \ml{string} is not a parent of the
+current theory.
+
+Note that the function \ml{load\_string} becomes available when loading the
+\ml{string} library only if the \ml{string} theory at that point can neither be
+made into a new parent (i.e.\ the system is not in draft mode) nor be made the
+current theory.
+
+\index{load\_string@{\ptt load\_string}|)}
+

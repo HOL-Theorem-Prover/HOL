@@ -1,0 +1,25 @@
+\DOC LIST_RESQ_FORALL_CONV
+
+\TYPE {LIST_RESQ_FORALL_CONV : conv}
+
+\SYNOPSIS
+Converts restricted universal quantifications iteratively to implications.
+
+\KEYWORDS
+conversion, restricted quantifier, universal, implication.
+
+\DESCRIBE
+When applied to a term whose outer level is a series of restricted universal
+quantifications, the conversion
+{LIST_RESQ_FORALL_CONV} returns the theorem:
+{
+   |- !x1::P1. ... !xn::Pn. Q = (!x1...xn. P1 x1 ==> ... ==> Pn xn ==> Q)
+}
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+IMP_RESQ_FORALL_CONV, RESQ_FORALL_CONV.
+
+\ENDDOC

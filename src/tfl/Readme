@@ -1,0 +1,18 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: tfl							|
+|									|
+| DESCRIPTION   : Well-founded recursive function definitions		|
+|									|
+| AUTHOR	: K.Slind						|
+| DATE		: 1995							|
+|									|
+| MODIFIED      : R.J.Boulton						|
+| DATE		: 29 June 1996						|
++ =====================================================================	+
+
+This directory contains the source and some examples for the "TFL"
+software system. TFL is a parameterized system for verifying functional
+programs, i.e., formally defining programs, proving that they terminate,
+and proving their correctness.
+

@@ -1,0 +1,25 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: simp							|
+|									|
+| DESCRIPTION   : A conditional/contextual Isabelle-style simplifier.	|
+|									|
+| AUTHOR	: D.R.Syme						|
+| DATE		: 1996							|
+|									|
+| MODIFIED      : R.J.Boulton						|
+| DATE		: 6 August 1996						|
++ =====================================================================	+
+
+A conditional/contextual Isabelle-style simplifier, with additional
+integration of the "ARITH" decision procedure for natural numbers.
+There is some documentation in doc/simp.tex.  Some test code is included in
+src/test.sml.
+
+Structures: Simplifier, Simpsets, arith_ss, Trace, Theorems and others
+
+Important functions:
+   Tactics:         SIMP_TAC, ASM_SIMP_TAC, FULL_SIMP_TAC
+   Making simpsets: rewrites, mk_simpset , see examples in src/Simpsets.sml
+   Tracing:         trace_level := ...
+

@@ -1,0 +1,53 @@
+app load ["bossLib", "tflLib", "QLib"];
+open bossLib arithmeticTheory;
+infix 8 by;
+
+(*---------------------------------------------------------------------------*
+ *                                                                           *
+ *     fun Exp x 0 = 1                                                       *
+ *       | Exp x 1 = x                                                       *
+ *       | Exp x n = if (n mod 2 = 0)                                        *
+ *                    then Exp x (n div 2) * Exp x (n div 2)                 *
+ *                     else x * Exp x (n-1);                                 *
+ *                                                                           *
+ *---------------------------------------------------------------------------*)
+
+val exp_def = Lib.try (tflLib.Rfunction "exp_def" `measure SND`) 
+  `(exp x 0       = 1) 
+/\ (exp x (SUC 0) = x)
+/\ (exp x n       = (n MOD 2 = 0 
+                      => exp x (n DIV 2) * exp x (n DIV 2)
+                       |  x * exp x (n-1)))`;
+
+(*---------------------------------------------------------------------------*
+ * |- !v4. (SUC (SUC v4) MOD 2 = 0) ==> SUC (SUC v4) DIV 2 < SUC (SUC v4)    *
+ *---------------------------------------------------------------------------*)
+val terminates = tflLib.prove_termination exp_def
+(REPEAT STRIP_TAC 
+   THEN MP_TAC (Q.SPEC `SUC(SUC v4)` 
+            (REWRITE_RULE [DECIDE `0<2`] (Q.SPEC`2` DIVISION)))
+   THEN RW_TAC arith_ss []);
+
+val induction = PROVE_HYP terminates (#induction exp_def);
+val rules     = REWRITE_RULE [terminates] (#rules exp_def);
+
+(*---------------------------------------------------------------------------*
+ * A form of correctness: exp is equal to the prim. rec defn. of EXP         *
+ * given by:                                                                 *
+ *                                                                           *
+ *     m EXP 0       = 1                                                     *
+ *     m EXP (SUC n) = m * m EXP n                                           *
+ *                                                                           *
+ *---------------------------------------------------------------------------*)
+
+val EXP_eq_exp = Q.prove`!x m. x EXP m = exp x m`
+(tflLib.REC_INDUCT_TAC induction 
+  THEN REPEAT CONJ_TAC THENL
+  [RW_TAC arith_ss [EXP, rules], RW_TAC arith_ss [EXP, rules],
+   RW_TAC arith_ss [rules]] THENL
+   [POP_ASSUM (SUBST1_TAC o SYM)
+      THEN RW_TAC arith_ss [GSYM EXP_ADD] 
+      THEN ONCE_REWRITE_TAC [MULT_SYM]
+      THEN AP_TERM_TAC
+      THEN PROVE_TAC [DIVISION,DECIDE `0<2`,ADD_0],
+    PROVE_TAC [EXP]]);

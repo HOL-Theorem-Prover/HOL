@@ -1,0 +1,53 @@
+\DOC ASSUM_LIST_TAC.doc
+{
+ASSUM_LIST_TAC : thm list -> tactic
+}
+
+\LIBRARY utils
+
+\SYNOPSIS
+A tactic for adding a list of theorems as assumptions to a goal.
+
+\DESCRIBE
+The tactic {ASSUME_LIST_TAC [thm1,...,thmn]} when applied to a goal
+{([a1,...,am],Goal)} returns the subgoal {([a1,...,am,thm1,...,thmn],Goal)}.
+If {hyp} is a hypothesis of one of the theorems {thmi}, and {hyp} is
+not among the assumptions {[a1,...,am]} then the subgoal
+{([a1,...,am,...],hyp)} is also returned.
+
+
+\FAILURE
+None.
+
+\EXAMPLE
+{
+   ASSUME_LIST_TAC [integer_as_GROUP,int_mod_as_GROUP]
+}
+where
+{
+   integer_as_GROUP = |- GROUP((\N. T),$plus)
+   int_mod_as_GROUP = |- GROUP(int_mod n,plus_mod n)
+}
+when applied to the goal
+{
+   ([],(--`ID(int_mod n,plus_mod n) = mod n(INT 0)`--))
+}
+returns the subgoal
+{
+   ([(--`GROUP(int_mod n,plus_mod n)`--), (--`GROUP((\N. T),$plus)`--)],
+    (--`ID(int_mod n,plus_mod n) = mod n(INT 0)`--))
+}
+
+
+\USES
+Adding a collection of standard facts to the assumptions of a goal
+so that hypotheses of theorems used in proving the goal will already
+be among the assumptions.
+
+
+
+\SEEALSO
+ASSSUME_TAC, SUPPOSE_TAC, REV_SUPPOSE_TAC.
+
+
+\ENDDOC

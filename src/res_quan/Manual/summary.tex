@@ -1,0 +1,291 @@
+\documentstyle[12pt,verbatim]{article}
+
+\title{Summary of the {\tt res\_quan} library}
+\author{W. Wong}
+\date{15 April 1993}
+
+\input{summacs}
+
+\begin{document}
+\maketitle
+
+The {\tt res\_quan} library privides some basic facilities for
+manipulate restricted quantifications. It consists of a single theory,
+{\tt res\_quan}, which  contains a number of theorems about the
+properties of some restricted quantifiers, and a set of ML functions
+for dealing with them. This summary lists all theorem stored in the
+{\tt res\_quan} theory and ML functions available in the library.
+
+\section{The theory {\tt res\_quan}}
+
+This theory caontains the following theorems.
+{\small
+% =====================================================================
+% Commands for typesetting theorems
+% =====================================================================
+
+\makeatletter
+
+% ---------------------------------------------------------------------
+% define \@xboxverb<thing>\ENDTHEOREM to mean <thing>\ENDTHEOREM
+% ---------------------------------------------------------------------
+
+\begingroup \catcode `|=0 \catcode `[= 1
+\catcode`]=2 \catcode `\{=12 \catcode `\}=12
+\catcode`\\=12 |gdef|@xboxverb#1\ENDTHEOREM[#1|ENDTHEOREM]
+|endgroup
+
+% ---------------------------------------------------------------------
+% \bboxverb<thing> = <thing> in a verbatim box 5mm from left margin
+% ---------------------------------------------------------------------
+
+\def\@boxverb{\bgroup\leftskip=5mm\parindent\z@
+\parfillskip=\@flushglue\parskip\z@
+\obeylines\tt \catcode``=13 \@noligs \let\do\@makeother \dospecials}
+
+\def\boxverb{\@boxverb \frenchspacing\@vobeyspaces \@xboxverb}
+
+% ---------------------------------------------------------------------
+% \ENDTHEOREM just finishes off the group (and kick page if necessary)
+% ---------------------------------------------------------------------
+
+\def\ENDTHEOREM{\egroup\filbreak}
+
+% ---------------------------------------------------------------------
+% \THEOREM <name> <thy> ... \ENDTHEOREM = typeset a theorem
+% ---------------------------------------------------------------------
+\def\autoindex#1{}
+\def\THEOREM #1 #2 {
+ \autoindex{#1@{\tt #1}}
+   \vspace{4mm plus2mm minus1mm}
+   \noindent {\tt #1}\quad ({\tt #2}) \par \boxverb 
+}
+
+\makeatother
+
+\THEOREM DISJ\_RESQ\_EXISTS\_DIST res\_quan
+|- !P Q R.
+   (?i :: \i. P i \/ Q i. R i) = (?i :: P. R i) \/ (?i :: Q. R i)
+\ENDTHEOREM
+\THEOREM RESQ\_EXISTS\_DISJ\_DIST res\_quan
+|- !P Q R. (?i :: P. Q i \/ R i) = (?i :: P. Q i) \/ (?i :: P. R i)
+\ENDTHEOREM
+\THEOREM RESQ\_EXISTS\_REORDER res\_quan
+|- !P Q R. (?i :: P. ?j :: Q. R i j) = (?j :: Q. ?i :: P. R i j)
+\ENDTHEOREM
+\THEOREM RESQ\_EXISTS\_UNIQUE res\_quan
+|- !P j. (?i :: $= j. P i) = P j
+\ENDTHEOREM
+\THEOREM RESQ\_FORALL\_CONJ\_DIST res\_quan
+|- !P Q R. (!i :: P. Q i /\ R i) = (!i :: P. Q i) /\ (!i :: P. R i)
+\ENDTHEOREM
+\THEOREM RESQ\_FORALL\_DISJ\_DIST res\_quan
+|- !P Q R.
+   (!i :: \i. P i \/ Q i. R i) = (!i :: P. R i) /\ (!i :: Q. R i)
+\ENDTHEOREM
+\THEOREM RESQ\_FORALL\_FORALL res\_quan
+|- !P R x. (!x. !i :: P. R i x) = (!i :: P. !x. R i x)
+\ENDTHEOREM
+\THEOREM RESQ\_FORALL\_REORDER res\_quan
+|- !P Q R. (!i :: P. !j :: Q. R i j) = (!j :: Q. !i :: P. R i j)
+\ENDTHEOREM
+\THEOREM RESQ\_FORALL\_UNIQUE res\_quan
+|- !P j. (!i :: $= j. P i) = P j
+\ENDTHEOREM
+}
+
+\section{ML functions in the library}
+
+\subsection*{Conditional rewriting tools}
+
+\begin{itemize}
+\item \mlname{COND_REWRITE1_CONV} \verb|: (thm list -> thm -> conv)|\newline
+A simple conditional rewriting conversion.
+
+\item \mlname{COND_REWRITE1_TAC} \verb|: thm_tactic|\newline
+A simple conditional rewriting tactic.
+
+\item \mlname{COND_REWR_CANON} \verb|: thm -> thm|\newline
+Transform a theorem into a form accepted by \mlname{COND_REWR_TAC}.
+
+\item \mlname{COND_REWR_CONV} \linebreak
+\verb|: ((term -> term ->| \verb|((term # term) list # (type # type) list) list)|
+\verb| -> thm -> conv)|\newline
+A lower level conversion implementing simple conditional rewriting.
+
+\item \mlname{COND_REWR_TAC}\linebreak
+\verb|: ((term -> term ->| \verb|((term # term) list # (type # type) list) list)|
+\verb|-> thm_tactic)|\newline
+A lower level tactic used to implement simple conditional rewriting tactic.
+\end{itemize}
+
+\subsection*{Syntax functions}
+
+\begin{itemize}
+\item \mlname{mk_resq_abstract} \verb|: ((term # term # term) -> term)|\newline
+Term constructor for restricted abstraction.
+
+\item \mlname{mk_resq_exists} \verb|: ((term # term # term) -> term)|\newline
+Term constructor for restricted existential quantification.
+
+\item \mlname{mk_resq_forall} \verb|: ((term # term # term) -> term)|\newline
+Term constructor for restricted universal quantification.
+
+\item \mlname{mk_resq_select} \verb|: ((term # term # term) -> term)|\newline
+Term constructor for restricted choice quantification.
+
+\item \mlname{list_mk_resq_exists} \verb|: ((term # term) list # term) -> term)|\newline
+Iteratively constructs a restricted existential quantification.
+
+\item \mlname{list_mk_resq_forall} \verb|: ((term # term) list # term) -> term)|\newline
+Iteratively constructs a restricted universal quantification.
+
+\item \mlname{dest_resq_abstract} \verb|: (term -> (term # term # term))|\newline
+Breaks apart a restricted abstract term into
+quantified variable, predicate and body.
+
+\item \mlname{dest_resq_exists} \verb|: (term -> (term # term # term))|\newline
+Breaks apart a restricted existentially quantified term into
+quantified variable, predicate and body.
+
+\item \mlname{dest_resq_forall} \verb|: (term -> (term # term # term))|\newline
+Breaks apart a restricted universally quantified term into
+quantified variable, predicate and body.
+
+\item \mlname{dest_resq_select} \verb|: (term -> (term # term # term))|\newline
+Breaks apart a restricted choice quantified term into
+quantified variable, predicate and body.
+
+\item \mlname{strip_resq_exists} \verb|: (term -> ((term # term) list # term))|\newline
+Iteratively breaks apart a restricted existenially quantified term.
+
+\item \mlname{strip_resq_forall} \verb|: (term -> ((term # term) list # term))|\newline
+Iteratively breaks apart a restricted universally quantified term.
+
+\item \mlname{is_resq_abstract} \verb|: (term -> bool)|\newline
+Tests a term to see if it is a restricted abstraction.
+
+\item \mlname{is_resq_exists} \verb|: (term -> bool)|\newline
+Tests a term to see if it is a restricted existential quantification.
+
+\item \mlname{is_resq_forall} \verb|: (term -> bool)|\newline
+Tests a term to see if it is a restricted universal quantification.
+
+\item \mlname{is_resq_select} \verb|: (term -> bool)|\newline
+Tests a term to see if it is a restricted choice quantification.
+\end{itemize}
+
+\subsection*{Derived rules}
+
+\begin{itemize}
+\item \mlname{RESQ_GEN} \verb|: ((term # term) -> thm -> thm)|\newline
+Generalizes the conclusion of a theorem to a restricted universal quantification.
+
+\item \mlname{RESQ_GENL} \verb|: ((term # term) list -> thm -> thm)|\newline
+Generalizes zero or more variables to restricted universal quantification
+in the conclusion of a theorem.
+
+\item \mlname{RESQ_GEN_ALL} \verb|: (thm -> thm)|\newline
+Generalizes the conclusion of a theorem over its own assumptions.
+
+\item \mlname{RESQ_HALF_EXISTS} \verb|: (thm -> thm)|\newline
+Strip a restricted existential quantification in the conclusion of a theorem.
+
+\item \mlname{RESQ_HALF_SPEC} \verb|: (thm -> thm)|\newline
+Strip a restricted universal quantification in the conclusion of a theorem.
+
+\item \mlname{RESQ_MATCH_MP} \verb|: (thm -> thm -> thm)|\newline
+Eliminating a restricted universal quatification with automatic matching.
+
+\item \mlname{RESQ_REWR_CANON} \verb|: thm -> thm|\newline
+Transform a theorem into a form accepted for rewriting
+
+\item \mlname{RESQ_SPEC} \verb|: (term -> thm -> thm)|\newline
+Specializes the conclusion of a restricted universally quantified theorem.
+
+\item \mlname{RESQ_SPECL} \verb|: (term list -> thm -> thm)|\newline
+Specializes zero or more variables in the conclusion of a restricted
+universally quantified theorem.
+
+\item \mlname{RESQ_SPEC_ALL} \verb|: (thm -> thm)|\newline
+Specializes the conclusion of a theorem with its own quantified variables.
+\end{itemize}
+
+\subsection*{Conversions}
+
+\begin{itemize}
+\item \mlname{AND_RESQ_FORALL_CONV} \verb|: conv|\newline
+Moves a restricted universal quantification out a conjunction.
+
+\item \mlname{IMP_RESQ_FORALL_CONV} \verb|: conv|\newline
+Converts an implication to a restricted universal quantification.
+
+\item \mlname{LIST_RESQ_FORALL_CONV} \verb|: conv|\newline
+Converts restricted universal quantifications iteratively to implications.
+
+\item \mlname{RESQ_EXISTS_CONV} \verb|: conv|\newline
+Converts a restricted existential quantification to a conjunction.
+
+\item \mlname{RESQ_FORALL_AND_CONV} \verb|: conv|\newline
+Splits a restricted universal quantification across a conjunction.
+
+\item \mlname{RESQ_FORALL_CONV} \verb|: conv|\newline
+Converts a restricted universal quantification to an implication.
+
+\item \mlname{RESQ_FORALL_SWAP_CONV} \verb|: conv|\newline
+Changes the order of two restricted universal quantifications.
+
+\item \mlname{RESQ_REWRITE1_CONV} \verb|: thm list -> thm -> conv|\newline
+Rewriting conversion with restricted universally quantified theorem.
+\end{itemize}
+
+\subsection*{Tactics}
+
+\begin{itemize}
+\item \mlname{RESQ_GEN_TAC} \verb|: tactic|\newline
+Strips the outermost restricted universal quantifier from
+the conclusion of a goal.
+
+\item \mlname{RESQ_HALF_GEN_TAC} \verb|: tactic|\newline
+Strips the outermost restricted universal quantifier from
+the conclusion of a goal.
+
+\item \mlname{RESQ_EXISTS_TAC} \verb|: term -> tactic|\newline
+Strips the outermost restricted extistential quantifier from
+the conclusion of a goal.
+
+\item \mlname{RESQ_IMP_RES_TAC} \verb|: thm_tactic|\newline
+REpeatedly resolves a restricted univerally quantified theorem with
+the assumptions of a goal.
+
+\item \mlname{RESQ_IMP_RES_THEN} \verb|: thm_tactical|\newline
+Resolves a restricted univerally quantified theorem with
+the assumptions of a goal.
+
+\item \mlname{RESQ_RES_TAC} \verb|: tactic|\newline
+Enriches assumptions by repeatedly resolving restricted universal
+quantifications in them against the others.
+
+\item \mlname{RESQ_RES_THEN} \verb|: thm_tactic -> tactic|\newline
+Resolves all restricted univerally quantified assumptions against
+other assumptions of a goal.
+
+\item \mlname{RESQ_REWRITE1_TAC} \verb|: thm_tactic|\newline
+Rewriting with restricted universally quantified theorem.
+\end{itemize}
+
+\subsection*{Constant definition}
+
+\begin{itemize}
+\item \mlname{new_binder_resq_definition} \verb|: ((string # term) -> thm)|\newline
+Declare a new binder and install a definitional axiom in the current theory.
+
+\item \mlname{new_infix_resq_definition} \verb|: ((string # term) -> thm)|\newline
+Declare a new infix constant and install a definitional axiom in the current theory.
+
+\item \mlname{new_resq_definition} \verb|: ((string # term) -> thm)|\newline
+Declare a new constant and install a definitional axiom in the current theory.
+\end{itemize}
+
+
+\end{document}

@@ -1,0 +1,56 @@
+# =====================================================================
+# Makefile for the res_quan library documentation 
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Pathname to the help files
+# ---------------------------------------------------------------------
+Help=../help
+LATEX=latex
+# ---------------------------------------------------------------------
+# Pathname to the doc-to-tex script and doc-to-tex.sed file 
+# ---------------------------------------------------------------------
+DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
+DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
+
+# ---------------------------------------------------------------------
+# Pathname to the makeindex script
+# ---------------------------------------------------------------------
+MAKEINDEX=../../../Manual/LaTeX/makeindex ../../../
+#MAKEINDEX=makeindex
+
+default:	
+	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
+
+# ---------------------------------------------------------------------
+# Remove all trace of previous LaTeX jobs
+# ---------------------------------------------------------------------
+clean:
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg
+	@echo "\begin{theindex}" > index.tex
+	@echo "\mbox{}" >> index.tex
+	@echo "\end{theindex}" >> index.tex
+
+tex: theorems functions
+	@echo "TeX files made"
+
+functions:
+	@echo "\chapter{ML Functions in the {\tt res\_quan} Library}">entries.tex
+	@echo "\label{entries}">>entries.tex
+	@echo "\input{entries-intro}" >> entries.tex
+	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
+
+theorems:
+	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
+	@echo "\input{theorems-intro}" >> theorems.tex
+	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms theorems.tex
+
+index: 
+	${MAKEINDEX} res_quan.idx index.tex
+
+res_quan: 
+	$(LATEX) res_quan.tex 
+
+all: 
+	make clean; make tex; make res_quan; make index; make res_quan
+

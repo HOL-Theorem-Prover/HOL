@@ -1,0 +1,60 @@
+\DOC SUBST_MATCH_TAC
+
+\TYPE
+{
+SUBST_MATCH_TAC :thm_tactic
+}
+
+\LIBRARY utils
+
+\SYNOPSIS
+Rewrites a goal with an instance of a single theorem, where the instance
+may be derived by instantiating variables that occur in the hypothesis of
+the given theorem.
+
+\DESCRIBE
+The tactic {SUBST_MATCH_TAC thm} strips the theorem {thm} to find an
+equation {lhs = rhs} then looks for a match between {lhs} and the
+subterms of the goal.  Once a match is found the theorem is
+instantiated to the particular instance found, and {NEW_SUBST1_TAC}
+is used to write the goal with the result.
+
+
+\FAILURE
+The tactic {SUBST_MATCH_TAC thm} will fail if either {thm} does not
+strip to and equation, or if no match is found with the left hand side
+of the equation.
+
+
+
+\EXAMPLE
+The tactic
+{
+   SUBST_MATCH_TAC (SYM (UNDISCH SBGP_ID_GP_ID))
+}
+where 
+{
+   SBGP_ID_GP_ID = |- SUBGROUP(G,prod)H ==> (ID(H,prod) = ID(G,prod))
+}
+when applied to the goal
+{
+   ([(--`SUBGROUP((\N. T),$plus)H`--)],(--`H(ID((\N. T),$plus))`--))
+}
+returns the subgoal
+{
+   ([(--`SUBGROUP((\N. T),$plus)H`--)],(--`H(ID(H,$plus))`--))
+}
+
+
+\USES
+Rewriting with a theorem that has hypotheses that need to be
+instantiated by the matching of the rewriting.
+
+
+\SEEALSO
+{
+NEW_SUBST1_TAC, PURE_ONCE_REWRITE_TAC
+}
+
+
+\ENDDOC

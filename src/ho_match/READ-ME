@@ -1,0 +1,29 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: ho_match						|
+|									|
+| DESCRIPTION   : Higher order matching and rewriting.			|
+|									|
+| AUTHOR	: J.R.Harrison						|
+| DATE		: 1996							|
+|									|
+| PORTED BY	: D.R.Syme						|
+| DATE		: 1996							|
+|									|
+| MODIFIED      : R.J.Boulton						|
+| DATE		: 6 August 1996						|
++ =====================================================================	+
+
+Higher order rewriting and matching.  Matching is limited to simple
+patterns and is deterministic.  e.g. structural inductions can now be
+performed by using MATCH_MP_TAC <induction theorem>.  Higher
+order rewriting can subsume many of the conversions in the HOL
+system (e.g. the quantifier movements can be done using matching,
+when used in conjunction with the theorems in the "Theorems" structure).
+
+Relevant structures: Ho_match, Ho_rewrite, Resolve
+
+Important functions:
+   All standard rewriting functions are replaced when "Ho_rewrite" is opened.
+   MATCH_MP, MATCH_MP_TAC now higher order.
+

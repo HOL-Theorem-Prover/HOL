@@ -1,0 +1,44 @@
+app load ["tflLib", "bossLib", "listXTheory", "QLib"];
+open tflLib bossLib;
+infix 8 by;
+
+
+(*---------------------------------------------------------------------------*
+ * Define the function.                                                      *
+ *---------------------------------------------------------------------------*)
+val iota_def = 
+  Rfunction "iota_def"  `measure \(b,t). SUC t - b`
+
+    `iota bot top = (bot > top => [] | CONS bot (iota (bot+1) top))`;
+
+
+(*---------------------------------------------------------------------------*
+ * A couple of properties.                                                   *
+ *---------------------------------------------------------------------------*)
+
+val iota_bounds = Q.prove
+`!bot top n. mem n (iota bot top) ==> bot <= n /\ n <= top`
+(PROGRAM_TAC{induction = #induction iota_def, 
+             rules = GEN_ALL (#rules iota_def)} 
+  THEN RW_TAC list_ss [listXTheory.mem_def]
+  THENL [DECIDE_TAC, 
+         DECIDE_TAC, 
+         RES_TAC THEN DECIDE_TAC,
+         PROVE_TAC[]]);
+
+
+val iota_length = Q.prove
+`!bot top. bot <= top ==> (LENGTH(iota bot top) = SUC(top-bot))`
+(PROGRAM_TAC{induction = #induction iota_def, 
+             rules = GEN_ALL (#rules iota_def)} THENL
+ [DECIDE_TAC,
+  RW_TAC arith_ss [listTheory.LENGTH] 
+   THEN Cases_on `bot:num = top` THENL
+   [RW_TAC bool_ss [] 
+      THEN ONCE_REWRITE_TAC [#rules iota_def]
+      THEN RW_TAC list_ss [],
+    `bot+1 <= top` by DECIDE_TAC THEN
+    `LENGTH (iota (bot + 1) top) = SUC (top - (bot + 1))` by RES_TAC 
+      THEN RW_TAC bool_ss [] 
+      THEN DECIDE_TAC]]);
+

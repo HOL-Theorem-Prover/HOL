@@ -1,0 +1,98 @@
+(*---------------------------------------------------------------------------
+ * McCarthy's 91 function.
+ *---------------------------------------------------------------------------*)
+
+app load ["tflLib","QLib"];
+open arithTools RW;
+
+val USE_ARITH_FACT = IMP_RES_THEN (fn th => RW.RW_TAC[th]) o ARITH;
+
+val N1def = tflLib.Rfunction  "N1def"
+    `measure \x. 101 - x`
+    `ninety1 x = (x>100 => (x-10) | ninety1 (ninety1 (x+11)))`;
+
+
+(*---------------------------------------------------------------------------
+ * Beautify the rules and induction theorem.
+ *---------------------------------------------------------------------------*)
+val lem0 = ARITH`(~(x>100)) ==> (101-y < 101-x = x<y)`;
+val eqns = ONCE_RW_RULE[lem0] (#rules N1def);
+val induction = ONCE_RW_RULE[lem0] (#induction N1def);
+val tc = ONCE_RW_CONV[lem0] (hd(#tcs N1def));
+
+
+(*--------------------------------------------------------------------------- 
+ * Prove termination. We need to use wellfounded induction, since 
+ * application of recursion induction seems to get derailed by the 
+ * destructor-style definition of the function.
+ *---------------------------------------------------------------------------*)
+
+val th = ISPEC (Term`measure \x. 101 - x`) primWFTheory.WF_INDUCTION_THM;
+val ind = CONV_RULE (tflLib.tc_simplifier[]) (RW_RULE[WFTheory.WF_measure] th);
+
+
+(*---------------------------------------------------------------------------
+ * This proof is rather involved, but the fact that it succeeds shows that,
+ * sometimes, termination and partial correctness for nested functions 
+ * do not depend on each other, contrary to feelings expressed in
+ * the literature. Of course, the termination property for 91 is a
+ * partial correctness statement, since it involves the constant "91", but
+ * more importantly, it's a termination condition, and if we were forced to
+ * put it in one or the other category, it would go in the termination box.
+ * The induction hypothesis gets used twice in this proof, once at "x+11" and 
+ * once at "ninety1((x+11)+11) - 11".
+ *---------------------------------------------------------------------------*)
+
+val ninety1_terminates = Q.store_thm("ninety1_terminates",
+`!x. ~(x>100) ==> x < ninety1(x+11)`,
+tflLib.PROGRAM_TAC{induction = ind, rules = eqns} 
+ THEN IMP_RES_THEN (fn th => RULE_ASSUM_TAC(RW_RULE[th])) lem0 THENL
+ [ ARITH_TAC,
+   Q.ASM_CASES_TAC`ninety1((x+11)+11) -11 > 100` THENL
+   [ SUBST_TAC[Q.INST[`x` |-> `ninety1((x+11)+11)`] eqns] 
+       THEN USE_ARITH_FACT`x-11 > 100 ==> x>100` 
+       THEN Q.UNDISCH_TAC`x+11 < ninety1((x+11)+11)` 
+       THEN ARITH_TAC,
+     IMP_RES_TAC(ARITH`v+11<z ==> v<z-11`) THEN RES_TAC 
+      THEN IMP_RES_THEN SUBST_ALL_TAC (ARITH`w+11<y ==> ((y-11)+11 = y)`)
+      THEN IMP_RES_TAC arithmeticTheory.LESS_TRANS],
+   ANTE_RES_THEN IMP_RES_TAC (ARITH`x<x+11`) THEN RES_TAC]);
+
+
+val N1induct = save_thm("ninety1_induct",
+                        RW_RULE[ninety1_terminates] induction);;
+
+val N1eqns = save_thm("ninety1_eqns",RW_RULE[ninety1_terminates] eqns);
+
+
+(*----------------------------------------------------------------------------
+ * Prove a property of 91. Induction not needed. Not used in correctness proof.
+ *---------------------------------------------------------------------------*)
+
+fun UNROLL1_TAC qtm = 
+  SUBST1_TAC (Q.INST[`x` |-> qtm] N1eqns) THEN reduceLib.REDUCE_TAC;
+
+val climb90 = Q.store_thm("climb90",
+`!n. 90<=n/\n<=100 ==> (ninety1(n) = ninety1(n+1))`,
+RW_TAC[arithmeticTheory.LESS_OR_EQ] THEN GEN_TAC THEN
+ SUBST1_TAC(SYM_CONV(Term`90=n`)) THEN REPEAT STRIP_TAC THEN ASM_RW_TAC[] 
+ THENL
+   [ UNROLL1_TAC`n:num` THEN USE_ARITH_FACT`x<y ==> ~(x>y) /\ ~(x+1>y)` 
+      THEN UNROLL1_TAC`n+11`  THEN USE_ARITH_FACT`90<n ==> n+11>100` 
+      THEN SUBST1_TAC (ARITH`(n+11)-10 = n+1`),
+     UNROLL1_TAC`100` THEN UNROLL1_TAC`111`,
+     UNROLL1_TAC`100` THEN UNROLL1_TAC`90` THEN UNROLL1_TAC`101`,
+     UNROLL1_TAC`100` THEN UNROLL1_TAC`111`]
+  THEN REFL_TAC);
+
+
+(*---------------------------------------------------------------------------*
+ * A closed form specification for 91.                                       *
+ *---------------------------------------------------------------------------*)
+
+val ninety1_correct = Q.store_thm("ninety1_correct",
+`!n. ninety1 n = (n>100 => n-10 | 91)`,
+tflLib.PROGRAM_TAC{induction = N1induct, rules = N1eqns} 
+  THEN ASM_RW_TAC[]
+  THEN POP_ASSUM MP_TAC
+  THEN ARITH_TAC);

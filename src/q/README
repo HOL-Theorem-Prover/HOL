@@ -1,0 +1,18 @@
+This is a small library intended to make the handling of quotations
+somewhat more convenient, for some common HOL functions that use
+quotations. This saves on some typing, both of the name of the HOL type
+or term parser, and of type constraints.
+
+To load the library:
+
+   load"QLib";
+
+This loads in a structure "Q", and the quotation-friendly entrypoints
+are then accessible through the "dot" notation, e.g.,
+
+   Q.EXISTS_TAC`x`
+
+The full set of entrypoints, which is quite ad-hoc, can be found by
+examining Q.sig.
+
+-- Konrad Slind.

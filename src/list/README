@@ -1,0 +1,133 @@
+This file describes the file modifications made for the new list theory.
+
+
+The file test.sml contains a series of tests to check the new conversions
+work. If it fails something is wrong.
+
+
+Files Modified:
+---------------
+
+theories/src/mk_list_thms.sml
+theories/src/mk_arithmetic.sml
+theories/src/mk_tree.sml
+theories/src/mk_ltree.sml
+theories/src/mk_rec_type.sml
+
+src/0/theory/add_to_sml.sml
+
+src/3/list_conv.sml
+src/3/list_conv.sig
+src/3/define_type.sml
+
+src/make_hol
+
+New Files:
+----------
+
+theories/src/mk_fun.sml
+
+New Theories:
+-------------
+
+fun
+
+Help Files
+----------
+
+New help files have been created for the new ML functions and some old ones
+have been modified to SEE ALSO the new.
+
+Theorem help files have not been created on the assumption that this can be
+more safely done automatically when rebuilding HOL.
+
+
+The following changes were made:
+
+
+mk_list_thms.sml:
+  New definitions are added
+  Variable names are changed to x l from h t
+  New theorems proved
+  Change EVERY to ALL_EL
+  Change EVERY_DEF to ALL_EL
+  Variable names produced by list_Axiom are left alone in proofs
+
+mk_fun.sml:
+  Create a new theory fun about MONOID etc
+
+mk_arithmetic.sml:
+  Added new theorems about MONOID etc
+    ASSOC_ADD
+    RIGHT_ID_ADD_0
+    LEFT_ID_ADD_0
+    MONOID_ADD_0
+    ASSOC_MULT
+    RIGHT_ID_MULT_1
+    LEFT_ID_MULT_1
+    MONOID_MULT_1
+
+mk_tree.sml:
+  Change EVERY to ALL_EL
+  Change EVERY_DEF to ALL_EL
+  Variable names are changed to x l from h t
+ 
+mk_ltree.sml:
+  Change EVERY to ALL_EL
+  Change EVERY_DEF to ALL_EL
+  Variable names are changed to x l from h t
+ 
+mk_rec_type.sml:
+  Change EVERY to ALL_EL
+  Change EVERY_DEF to ALL_EL
+  Variable names are changed to x l from h t
+
+define_type.sml
+  Variable names are changed to x l from h t
+
+list_conv.sml
+list_conv.sig:
+   Add SNOC_INDUCT_TAC
+       LIST_CONV
+       PURE_LIST_CONV
+       EQ_LENGTH_INDUCT_TAC
+       EQ_LENGTH_SNOC_INDUCT_TAC
+       FOLDR_CONV
+       FOLDL_CONV
+       list_FOLD_CONV
+       SUM_CONV
+       FILTER_CONV
+       SNOC_CONV
+       REVERSE_CONV
+       FLAT_CONV
+       EL_CONV
+       ELL_CONV
+       MAP2_CONV
+       ALL_EL_CONV
+       SOME_EL_CONV
+       IS_EL_CONV
+       LAST_CONV
+       BUTLAST_CONV
+       SEG_CONV
+       LASTN_CONV
+       BUTLASTN_CONV
+       BUTFIRSTN_CONV
+       FIRSTN_CONV
+       SCANL_CONV
+       SCANR_CONV
+       REPLICATE_CONV
+       GENLIST_CONV
+NOTE:
+      SUM_CONV uses ADD_CONV from the library num_lib so a copy was made.
+      In HOL88, this conversion is in the core.   
+
+
+add_to_sml.sml
+   The theorems and definitions added to the theories fun, list and arithmetic
+   have been added to the "autoload" lists.
+
+
+
+
+make_hol
+   Install new theory fun.

@@ -1,0 +1,257 @@
+\chapter{Statement of Rights}
+
+Jim Grundy, hereafter referred to as `the Author', retains the        
+copyright and all other legal rights to the software contained in     
+the pair library, hereafter referred to as `the Software'.                   
+The Software is made available free of charge on an `as is' basis.
+No guarantee, either express or implied, of maintenance, reliability,
+merchantability or suitability for any purpose is made by the Author.
+
+The user is granted the right to make personal or internal use        
+of the Software provided that both:                                   
+\begin{enumerate}
+    \item   The Software is not used for commercial gain.                   
+    \item   The user shall not hold the Author liable for any consequences 
+            arising from use of the Software.
+\end{enumerate}
+The user is granted the right to further distribute the Software      
+provided that both:                                                   
+\begin{enumerate}
+    \item   The Software and this statement of rights is not modified.     
+    \item   The Software does not form part or the whole of a system        
+            distributed for commercial gain.                                   
+\end{enumerate}
+The user is granted the right to modify the Software for personal or  
+internal use provided that all of the following conditions are        
+observed:                                                             
+\begin{enumerate}
+    \item   The user does not distribute the modified software.             
+    \item   The modified software is not used for commercial gain.          
+    \item   The Author retains all rights to the modified software.         
+\end{enumerate}
+                                                                      
+Anyone seeking a licence to use this software for commercial purposes 
+is invited to contact the Author.                                     
+
+\chapter{The pair Library}
+
+This manual describes the use of the pair library.
+The pair library has been provided to reduce the difficulty of reasoning
+about pairs (and tuples), particularly paired quantifications and abstractions.
+The pair library contains a version of every standard \HOL\ function
+for manipulating abstractions and quantifications.
+The table below sets out all the standard \HOL\ functions for which the
+pair library provides paired equivalents:
+{\tiny \begin{center}
+    \begin{tabular}[t]{|l|l|}                                           \hline
+        \multicolumn{1}{|c|}{\normalsize Function}
+    &   \multicolumn{1}{|c|}{\normalsize Paired Version}\\              \hline
+        ABS                         &   PABS                        \\
+        ABS\_CONV                   &   PABS\_CONV                  \\
+        aconv                       &   paconv                      \\
+        ALPHA                       &   PALPHA                      \\
+        ALPHA\_CONV                 &   PALPHA\_CONV                \\
+        AND\_EXISTS\_CONV           &   AND\_PEXISTS\_CONV          \\
+        AND\_FORALL\_CONV           &   AND\_PFORALL\_CONV          \\
+        BETA\_CONV                  &   PBETA\_CONV                 \\
+        BETA\_RULE                  &   PBETA\_RULE                 \\
+        BETA\_TAC                   &   PBETA\_TAC                  \\
+        bndvar                      &   bndpair                     \\
+        body                        &   pbody                       \\
+        CHOOSE                      &   PCHOOSE                     \\
+        CHOOSE\_TAC                 &   PCHOOSE\_TAC                \\
+        CHOOSE\_THEN                &   PCHOOSE\_THEN               \\
+        dest\_abs                   &   dest\_pabs                  \\
+        dest\_exists                &   dest\_pexists               \\
+        dest\_forall                &   dest\_pforall               \\
+        dest\_select                &   dest\_pselect               \\
+        ETA\_CONV                   &   PETA\_CONV                  \\
+        EXISTENCE                   &   PEXISTENCE                  \\
+        EXISTS                      &   PEXISTS                     \\
+        EXISTS\_AND\_CONV           &   PEXISTS\_AND\_CONV          \\
+        EXISTS\_EQ                  &   PEXISTS\_EQ                 \\
+        EXISTS\_IMP                 &   PEXISTS\_IMP                \\
+        EXISTS\_IMP\_CONV           &   PEXISTS\_IMP\_CONV          \\
+        EXISTS\_NOT\_CONV           &   PEXISTS\_NOT\_CONV          \\
+        EXISTS\_OR\_CONV            &   PEXISTS\_OR\_CONV           \\
+        EXISTS\_TAC                 &   PEXISTS\_TAC                \\
+        EXISTS\_UNIQUE\_CONV        &   PEXISTS\_UNIQUE\_CONV       \\
+        EXT                         &   PEXT                        \\
+        FILTER\_GEN\_TAC            &   FILTER\_PGEN\_TAC           \\
+        FILTER\_STRIP\_TAC          &   FILTER\_PSTRIP\_TAC         \\
+        FILTER\_STRIP\_THEN         &   FILTER\_PSTRIP\_THEN        \\
+        FORALL\_AND\_CONV           &   PFORALL\_AND\_CONV          \\
+        FORALL\_EQ                  &   PFORALL\_EQ                 \\
+        FORALL\_IMP\_CONV           &   PFORALL\_IMP\_CONV          \\
+        FORALL\_NOT\_CONV           &   PFORALL\_NOT\_CONV          \\
+        FORALL\_OR\_CONV            &   PFORALL\_OR\_CONV           \\
+        free\_in                    &   occs\_in                    \\
+        GEN                         &   PGEN                        \\
+        GEN\_ALPHA\_CONV            &   GEN\_PALPHA\_CONV           \\
+        GEN\_TAC                    &   PGEN\_TAC                   \\
+        GENL                        &   PGENL                       \\
+        genvar                      &   genlike                     \\
+        GSPEC                       &   GPSPEC                      \\
+        HALF\_MK\_ABS               &   HALF\_MK\_PABS              \\
+        is\_abs                     &   is\_pabs                    \\
+        is\_exists                  &   is\_pexists                 \\
+        is\_forall                  &   is\_pforall                 \\
+        is\_select                  &   is\_pselect                 \\
+        is\_var                     &   is\_pvar                    \\
+        ISPEC                       &   IPSPEC                      \\
+        ISPECL                      &   IPSPECL                     \\
+        LEFT\_AND\_EXISTS\_CONV     &   LEFT\_AND\_PEXISTS\_CONV    \\
+        LEFT\_AND\_FORALL\_CONV     &   LEFT\_AND\_PFORALL\_CONV    \\
+        LEFT\_IMP\_EXISTS\_CONV     &   LEFT\_IMP\_PEXISTS\_CONV    \\  \hline
+    \end{tabular}
+    \begin{tabular}[t]{|l|l|}                                           \hline
+        \multicolumn{1}{|c|}{\normalsize Function}
+    &   \multicolumn{1}{|c|}{\normalsize Paired Version}\\              \hline
+        LEFT\_IMP\_FORALL\_CONV     &   LEFT\_IMP\_PFORALL\_CONV    \\
+        LEFT\_OR\_EXISTS\_CONV      &   LEFT\_OR\_PEXISTS\_CONV     \\
+        LEFT\_OR\_FORALL\_CONV      &   LEFT\_OR\_PFORALL\_CONV     \\
+        LIST\_BETA\_CONV            &   LIST\_PBETA\_CONV           \\
+        list\_mk\_abs               &   list\_mk\_pabs              \\
+        LIST\_MK\_EXISTS            &   LIST\_MK\_PEXISTS           \\
+        list\_mk\_exists            &   list\_mk\_pexists           \\
+        list\_mk\_forall            &   list\_mk\_pforall           \\
+        MATCH\_MP                   &   PMATCH\_MP                  \\
+        MATCH\_MP\_TAC              &   PMATCH\_MP\_TAC             \\
+        MK\_ABS                     &   MK\_PABS                    \\
+        mk\_abs                     &   mk\_pabs                    \\
+        MK\_EXISTS                  &   MK\_PEXISTS                 \\
+        mk\_exists                  &   mk\_pexists                 \\
+        mk\_forall                  &   mk\_pforall                 \\
+        mk\_select                  &   mk\_pselect                 \\
+        NOT\_EXISTS\_CONV           &   NOT\_PEXISTS\_CONV          \\
+        NOT\_FORALL\_CONV           &   NOT\_PFORALL\_CONV          \\
+        OR\_EXISTS\_CONV            &   OR\_PEXISTS\_CONV           \\
+        OR\_FORALL\_CONV            &   OR\_PFORALL\_CONV           \\
+        PART\_MATCH                 &   PART\_PMATCH                \\
+        RIGHT\_AND\_EXISTS\_CONV    &   RIGHT\_AND\_PEXISTS\_CONV   \\
+        RIGHT\_AND\_FORALL\_CONV    &   RIGHT\_AND\_PFORALL\_CONV   \\
+        RIGHT\_BETA                 &   RIGHT\_PBETA                \\
+        RIGHT\_IMP\_EXISTS\_CONV    &   RIGHT\_IMP\_PEXISTS\_CONV   \\
+        RIGHT\_IMP\_FORALL\_CONV    &   RIGHT\_IMP\_PFORALL\_CONV   \\
+        RIGHT\_LIST\_BETA           &   RIGHT\_LIST\_PBETA          \\
+        RIGHT\_OR\_EXISTS\_CONV     &   RIGHT\_OR\_PEXISTS\_CONV    \\
+        RIGHT\_OR\_FORALL\_CONV     &   RIGHT\_OR\_PFORALL\_CONV    \\
+        SELECT\_CONV                &   PSELECT\_CONV               \\
+        SELECT\_ELIM                &   PSELECT\_ELIM               \\
+        SELECT\_EQ                  &   PSELECT\_EQ                 \\
+        SELECT\_INTRO               &   PSELECT\_INTRO              \\
+        SELECT\_RULE                &   PSELECT\_RULE               \\
+        SKOLEM\_CONV                &   PSKOLEM\_CONV               \\
+        SPEC                        &   PSPEC                       \\
+        SPECL                       &   PSPECL                      \\
+        SPEC\_ALL                   &   PSPEC\_ALL                  \\
+        SPEC\_TAC                   &   PSPEC\_TAC                  \\
+        SPEC\_VAR                   &   PSPEC\_PAIR                 \\
+        strip\_abs                  &   strip\_pabs                 \\
+        STRIP\_ASSUME\_TAC          &   PSTRIP\_ASSUME\_TAC         \\
+        strip\_exists               &   strip\_pexists              \\
+        strip\_forall               &   strip\_pforall              \\
+        STRIP\_GOAL\_THEN           &   PSTRIP\_GOAL\_THEN          \\
+        STRIP\_TAC                  &   PSTRIP\_TAC                 \\
+        STRIP\_THM\_THEN            &   PSTRIP\_THM\_THEN           \\
+        STRUCT\_CASES\_TAC          &   PSTRUCT\_CASES\_TAC         \\
+        SUB\_CONV                   &   PSUB\_CONV                  \\
+        SWAP\_EXISTS\_CONV          &   SWAP\_PEXISTS\_CONV         \\
+        variant                     &   pvariant                    \\
+        X\_CHOOSE\_TAC              &   P\_PCHOOSE\_TAC             \\
+        X\_CHOOSE\_THEN             &   P\_PCHOOSE\_THEN            \\
+        X\_FUN\_EQ\_CONV            &   P\_FUN\_EQ\_CONV            \\
+        X\_GEN\_TAC                 &   P\_PGEN\_TAC                \\
+        X\_SKOLEM\_CONV             &   P\_PSKOLEM\_CONV            \\  
+                                    &                               \\  \hline
+    \end{tabular}
+\end{center} }
+The pair library also contains many functions for which there are no
+analogous nonpaired functions.
+
+\section{Getting Started}
+
+Before you can use any of the functions described in this manual,
+you must load the pair library.
+To load the pair library, issue the following command:
+\begin{hol}\begin{alltt}
+    load_library `pair`;;
+\end{alltt}\end{hol}
+The pair library contains no theories, so it is always possible to load it.
+
+\section{The pair Library Philosophy}
+
+Two main design decisions should be noted about the pair library.
+These decisions run counter to the usual \HOL\ philosophy that each
+inference rule should perform a single simple inference,
+and should do so only under a particular restricted set of circumstances.
+The philosophy of the pair library is that each 
+inference rule should do whatever is necessary to eliminate the distinctions
+between reasoning about paired and unpaired abstractions and quantifications.
+
+The first design decision is that all the functions for dealing with paired
+quantifications and abstractions have a very general notion of what a pair is.
+For the purposes of such functions, a pair may be an arbitrary
+{\it paired structure}.
+A paired structure is either a term,
+or a pair of terms which may themselves be paired structures.
+For example, the following are all considered to be paired structures:  \\
+\noindent
+\hbox to \textwidth{\tt
+    \hfil
+    a
+    \hfil
+    (a,b)
+    \hfil
+    (a,b,c)
+    \hfil
+    ((a1,a2),(b1,b2))
+    \hfil
+    ((a1,a2),(b2,b2),(c1,c2))
+    \hfil
+}\\
+\noindent
+Note that it is always possible to use the paired version
+of an inference rule in place of the standard version.
+
+The other design decision is that the a pair (or subpair) bound by a paired
+abstraction should be treated as much like a single variable as possible.
+This means that paired and nonpaired abstractions can be considered
+$\alpha$-equivalent.
+For example:
+\begin{boxed}\begin{verbatim}
+   #PALPHA "\(x,y). (f (x,y))" "\xy. (f xy)";;
+   |- (\(x,y). f(x,y)) = (\xy. f xy)
+\end{verbatim}\end{boxed}\index{PALPHA@{\ptt PALPHA}}
+The effect of this decision can be seen in evidence in $\beta$-conversion
+and other inference rules:
+\begin{boxed}\begin{verbatim}
+   #PBETA_CONV "(\(x,y). (f x y (x,y))) ab";;
+   |- (\(x,y). f x y(x,y))xy = f(FST ab)(SND ab)ab
+\end{verbatim}\end{boxed}\index{PBETA\_CONV@{\ptt PBETA\_CONV}}
+
+\section{Bugs and Future Changes}
+
+At the time of release there were no known bugs in the system.
+However, this is more likely to be a result of poor testing than of good coding.
+If you do find a bug please report it to me, preferably along with a
+short example that exhibits the bug and the version number of the 
+pair library that you are using.
+The constant \mbox{\tt pair\_version} contains the version number of the pair
+    library.
+I will provide bug fixes as soon as possible.
+I can be contacted at:
+\begin{center}
+    \begin{tabular}{l@{\hspace{10mm}}ll}
+        Jim Grundy                  &        &                                \\
+	Defence Science \&
+	    Technology Organisation & phone: & +61$\;$8$\:$259$\,$6162        \\
+	Building 171
+	    Laboratories Area       & fax:   & +61$\;$8$\:$259$\,$5980        \\
+	PO Box 1500                 & telex: & AA82799                        \\
+	Salisbury~~SA~~5108         & email: & Jim.Grundy@dsto.defence.gov.au \\
+	AUSTRALIA                   &        & jim@grundy-j.apana.org.au      \\
+    \end{tabular}
+\end{center}
+I would also welcome any suggestions for improving to the library,
+including optimisations and suggestions for new functions.

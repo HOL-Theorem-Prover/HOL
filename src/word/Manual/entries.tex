@@ -1,0 +1,215 @@
+\chapter{ML Functions in the {\tt word} Library}
+\label{entries}
+\input{entries-intro}
+\DOC{BIT\_CONV}
+
+\TYPE {\small\verb%BIT_CONV : conv%}\egroup
+
+\SYNOPSIS
+Computes by inference the result of accessing a bit in a word.
+
+\DESCRIBE
+For any word of the form {\small\verb%WORD[b(n-1);...;bk;...;b0]%}, the result of evaluating
+{\par\samepage\setseps\small
+\begin{verbatim}
+   BIT_CONV "BIT k (WORD [b(n-1);...;bk;...;b0])"
+\end{verbatim}
+}
+\noindent is the theorem
+{\par\samepage\setseps\small
+\begin{verbatim}
+   |- BIT k (WORD [b(n-1);...;bk;...;b0]) = bk
+\end{verbatim}
+}
+\noindent The bits are indexed form the end of the list and starts
+from 0.
+
+\FAILURE
+{\small\verb%BIT_CONV tm%} fails if {\small\verb%tm%} is not of the form {\small\verb%"BIT k w"%} where {\small\verb%w%}
+is as described above, or {\small\verb%k%} is not less than the size of the word.
+
+\SEEALSO
+WSEG_CONV
+
+\ENDDOC
+
+\DOC{PWORDLEN\_bitop\_CONV}
+
+\TYPE {\small\verb%PWORDLEN_bitop_CONV : conv%}\egroup
+
+\SYNOPSIS
+Computes by inference the predicate asserting the size of a word.
+
+\DESCRIBE
+For a term {\small\verb%tm%} of type {\small\verb%:(bool)word%} involving only a combination of bitwise
+operators {\small\verb%WNOT%}, {\small\verb%WAND%}, {\small\verb%WOR%}, {\small\verb%WXOR%} and variables, the
+result of evaluating 
+{\par\samepage\setseps\small
+\begin{verbatim}
+   PWORDLEN_bitop_CONV  "PWORDLEN n tm"
+\end{verbatim}
+}
+\noindent is the theorem
+{\par\samepage\setseps\small
+\begin{verbatim}
+   ..., PWORDLEN n vi, ... |- PWORDLEN n tm = T
+\end{verbatim}
+}
+\noindent Each free variable occurred in {\small\verb%tm%} will have a corresponding
+clause in the assumption. This conversion recursively descends into
+the subterms of {\small\verb%tm%} until it reaches all simple variables.
+
+\FAILURE
+{\small\verb%PWORDLEN_bitop_CONV tm%} fails if constants other than those mentioned
+above occur in {\small\verb%tm%}.
+
+\SEEALSO
+PWORDLEN_CONV, PWORDLEN_TAC
+
+\ENDDOC
+
+\DOC{PWORDLEN\_CONV}
+
+\TYPE {\small\verb%PWORDLEN_CONV : term list -> conv%}\egroup
+
+\SYNOPSIS
+Computes by inference the predicate asserting the size of a word.
+
+\DESCRIBE
+For any term {\small\verb%tm%} of type {\small\verb%:(*)word%}, the result of evaluating
+{\par\samepage\setseps\small
+\begin{verbatim}
+   PWORDLEN_CONV tms "PWORDLEN n tm"
+\end{verbatim}
+}
+\noindent where {\small\verb%n%} must be a numeric constant,
+is the theorem
+{\par\samepage\setseps\small
+\begin{verbatim}
+   A |- PWORDLEN n tm = T
+\end{verbatim}
+}
+\noindent where the new assumption(s) {\small\verb%A%} depends on the actual form
+of the term {\small\verb%tm%}.
+
+If {\small\verb%tm%} is an application of the unary bitwise operator {\small\verb%WNOT%}, i.e.,
+{\small\verb%tm = WNOT tm'%}, then {\small\verb%A%} will be {\small\verb%PWORDLEN n tm'%}.
+If {\small\verb%tm%} is an application of one of the binary bitwise operators:
+{\small\verb%WAND%}, {\small\verb%WOR%} and {\small\verb%WXOR%}, then {\small\verb%A%} will be {\small\verb%PWORDLEN n tm'%}, {\small\verb%PWORDLEN n tm''%}.
+If {\small\verb%tm%} is  {\small\verb%WORD [b(n-1);...;b0]%}, then {\small\verb%A%} is empty. The length of
+the list must agree with {\small\verb%n%}.
+In all above cases, the term list argument is irrelevant. An empty
+list could be supplied.
+
+If {\small\verb%tm%} is {\small\verb%WSEG n k tm'%}, then the term list {\small\verb%tms%} should  be {\small\verb%[N]%}
+which indicates the size of {\small\verb%tm'%},
+and the assumption {\small\verb%A%} will be {\small\verb%PWORDLEN N tm'%}.
+
+If {\small\verb%tm%} is {\small\verb%WCAT(tm',tm'')%}, then the term list {\small\verb%tms%} should be
+{\small\verb%[n1;n2]%} which tells the sizes of the words to be concatenated. The
+assumption will be {\small\verb%PWORDLEN n1 tm', PWORDLEN n2 tm''%}. The value of
+{\small\verb%n%} must be the sum of {\small\verb%n1%} and {\small\verb%n2%}.
+
+\FAILURE
+{\small\verb%PWORDLEN_CONV tms tm%} fails if {\small\verb%tm%} is not of the form described above.
+
+\SEEALSO
+PWORDLEN_bitop_CONV, PWORDLEN_TAC
+
+\ENDDOC
+
+\DOC{PWORDLEN\_TAC}
+
+\TYPE {\small\verb%PWORDLEN_TAC : term list -> tactic%}\egroup
+
+\SYNOPSIS
+Tactic to solve a goal about the size of a word.
+
+\DESCRIBE
+When applied to a goal {\small\verb%A ?- PWORDLEN n tm%}, the tactic {\small\verb%PWORDLEN_TAC tms%}
+solves it if the conversion {\small\verb%PWORDLEN_CONV tms%} returns a theorem
+{\par\samepage\setseps\small
+\begin{verbatim}
+   A' |- PWORDLEN n tm
+\end{verbatim}
+}
+\noindent where {\small\verb%A'%} is either empty or every clause in it occurs in the
+assumption of the goal {\small\verb%A%}.
+Otherwise, each clause in {\small\verb%A'%} which does not appear in {\small\verb%A%} becomes a new
+subgoal.
+
+\FAILURE
+{\small\verb%PWORDLEN_TAC tms%} fails if the corresponding conversion
+{\small\verb%PWORDLEN_CONV%} fails.
+
+\SEEALSO
+PWORDLEN_CONV
+
+\ENDDOC
+
+\DOC{WSEG\_CONV}
+
+\TYPE {\small\verb%WSEG_CONV : conv%}\egroup
+
+\SYNOPSIS
+Computes by inference the result of taking a segment from a word.
+
+\DESCRIBE
+For any word of the form {\small\verb%WORD[b(n-1);...;bk;...;b0]%}, the result of evaluating
+{\par\samepage\setseps\small
+\begin{verbatim}
+   WSEG_CONV "WSEG m k (WORD [b(n-1);...;bk;...;b0])",
+\end{verbatim}
+}
+\noindent where {\small\verb%m%} and {\small\verb%k%} must be numeric constants, is the theorem
+{\par\samepage\setseps\small
+\begin{verbatim}
+   |- WSEG m k (WORD [b(n-1);...;bk;...;b0]) = [b(m+k-1);...;bk]
+\end{verbatim}
+}
+\noindent The bits are indexed form the end of the list and starts
+from 0.
+
+\FAILURE
+{\small\verb%WSEG_CONV tm%} fails if {\small\verb%tm%} is not of the form described above,
+or {\small\verb%m + k%} is not less than the size of the word.
+
+\SEEALSO
+BIT_CONV, WSEG_WSEG_CONV
+
+\ENDDOC
+
+\DOC{WSEG\_WSEG\_CONV}
+
+\TYPE {\small\verb%WSEG_WSEG_CONV : term -> conv%}\egroup
+
+\SYNOPSIS
+Computes by inference the result of taking a segment from a segment of
+a word.
+
+\DESCRIBE
+For any word {\small\verb%w%} of size {\small\verb%n%}, the result of evaluating
+{\par\samepage\setseps\small
+\begin{verbatim}
+   WSEG_WSEG_CONV "n" "WSEG m2 k2 (WSEG m1 k1 w)"
+\end{verbatim}
+}
+\noindent where {\small\verb%m2%}, {\small\verb%k2%}, {\small\verb%m1%} and {\small\verb%k1%} must be numeric constants,
+is the theorem
+{\par\samepage\setseps\small
+\begin{verbatim}
+   PWORDLEN n w |- WSEG m2 k2 (WSEG m1 k1 w) = WSEG m2 k w
+\end{verbatim}
+}
+\noindent where {\small\verb%k%} is a numeric constant whose value is the sum of
+{\small\verb%k1%} and {\small\verb%k2%}.
+
+\FAILURE
+{\small\verb%WSEG_WSEG_CONV tm%} fails if {\small\verb%tm%} is not of the form described above,
+or the relations {\small\verb%k1 + m1 <= n%} and {\small\verb%k2 + m2 <= m1%} are not satisfied.
+
+\SEEALSO
+BIT_CONV, WSEG_CONV
+
+\ENDDOC
+

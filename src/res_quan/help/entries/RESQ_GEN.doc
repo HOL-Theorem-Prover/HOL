@@ -1,0 +1,30 @@
+\DOC RESQ_GEN
+
+\TYPE {RESQ_GEN : ((term # term) -> thm -> thm)}
+
+\SYNOPSIS
+Generalizes the conclusion of a theorem to a restricted universal quantification.
+
+\KEYWORDS
+rule, restricted quantifier, universal.
+
+\DESCRIBE
+When applied to a pair of terms {x}, {P} and a theorem {A |- t},
+the inference rule {RESQ_GEN} returns the theorem {A |- !x::P. t},
+provided that {P} is a predicate taking an argument of the same type
+as {x} and that {x} is a variable not free in any of the assumptions
+except {P x} if it occurs. There is no compulsion that {x} should
+be free in {t} or {P x} should be in the assumptions.
+{
+      A |- t
+   --------------- RESQ_GEN ("x","P") [where x is not free in A except P x]
+    A |- !x::P. t
+}
+\FAILURE
+Fails if {x} is not a variable, or if it is free in any of the assumptions
+other than {P x}.
+
+\SEEALSO
+RESQ_GENL, RESQ_GEN_ALL, RESQ_GEN_TAC, RESQ_SPEC, RESQ_SPECL, RESQ_SPEC_ALL.
+
+\ENDDOC

@@ -1,0 +1,33 @@
+\DOC RESQ_HALF_GEN_TAC
+
+\TYPE {RESQ_HALF_GEN_TAC : tactic}
+
+\SYNOPSIS
+Strips the outermost restricted universal quantifier from
+the conclusion of a goal.
+
+\KEYWORDS
+tactic, restricted quantifier, universal.
+
+\DESCRIBE
+When applied to a goal {A ?- !x::P. t}, {RESQ_GEN_TAC}
+reduces it to {A ?- !x. P x ==> t} which is the underlying semantic
+representation of the restricted universal quantification.
+{
+     A ?- !x::P. t
+   ====================  RESQ_HALF_GEN_TAC
+    A ?- !x. P x ==> t
+}
+\FAILURE
+Fails unless the goal's conclusion is a restricted universal quantification.
+
+\USES
+The tactic {REPEAT RESQ_GEN_TAC} strips away a series of restricted
+universal quantifiers, and is commonly used before tactics relying on
+the  underlying term structure. 
+
+\SEEALSO
+RESQ_GEN_TAC, RESQ_GEN, RESQ_GENL, RESQ_GEN_ALL, RESQ_SPEC, RESQ_SPECL,
+RESQ_SPEC_ALL, GGEN_TAC, STRIP_TAC, GEN_TAC, X_GEN_TAC.
+
+\ENDDOC

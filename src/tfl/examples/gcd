@@ -1,0 +1,42 @@
+app load ["bossLib", "tflLib", "Q"]; open bossLib;
+infix 8 by;
+
+(*---------------------------------------------------------------------------
+ * The definition of GCD.
+ *---------------------------------------------------------------------------*)
+
+val gcd_def = 
+ Define
+    `(gcd 0 y = y) /\
+     (gcd (SUC x) 0 = SUC x) /\
+     (gcd (SUC x) (SUC y) = (y <= x 
+                              => gcd(x-y)  (SUC y) 
+                              |  gcd(SUC x) (y-x)))`;
+
+(*---------------------------------------------------------------------------
+ * Termination has automatically been proved.
+ *---------------------------------------------------------------------------*)
+
+val gcd_eqns = save_thm("gcd_eqns", CONJUNCT1 gcd_def);
+val gcd_induction = save_thm("gcd_induction", CONJUNCT2 gcd_def);
+
+
+save_thm("calculation",Q.prove`gcd 24 9 = 3`
+ (CONV_TAC (REPEATC(CHANGED_CONV
+   (REDEPTH_CONV Num_conv.num_CONV 
+       THENC REWRITE_CONV [gcd_eqns] THENC reduceLib.REDUCE_CONV)))));
+
+
+val num_CASES   = theorem"arithmetic" "num_CASES";
+val LEQ_ANTISYM = theorem"arithmetic" "LESS_EQUAL_ANTISYM";
+val SUB_EQUAL_0 = theorem"arithmetic" "SUB_EQUAL_0";
+
+
+val gcd_commutes = Q.store_thm("gcd_commutes",
+`!x y. gcd x y = gcd y x`,
+tflLib.PROGRAM_TAC{induction=gcd_induction, rules=gcd_eqns}
+ THEN RW_TAC arith_ss [] THENL
+ [Cases_on `y` THEN RW_TAC arith_ss [gcd_eqns],
+  `x:num = y` by DECIDE_TAC THEN RW_TAC arith_ss []]);
+
+

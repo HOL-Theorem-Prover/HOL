@@ -1,0 +1,23 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: meson							|
+|									|
+| DESCRIPTION   : MESON Model Elimination first order theorem prover.	|
+|									|
+| AUTHOR	: J.R.Harrison						|
+| DATE		: 1996							|
+|									|
+| PORTED BY	: D.R.Syme						|
+| DATE		: 1996							|
+|									|
+| MODIFIED      : R.J.Boulton						|
+| DATE		: 6 August 1996						|
++ =====================================================================	+
+
+Relevant structures: Meson
+
+Functions:
+   val MESON : mset list -> thm list -> term -> thm
+   val MESON_TAC : mset list -> thm list -> tactic
+   val mk_mset : thm list -> mset
+

@@ -1,0 +1,21 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: refute						|
+|									|
+| DESCRIPTION   : Support for refutation procedures.			|
+|									|
+| AUTHOR	: J.R.Harrison						|
+| DATE		: 1996							|
+|									|
+| PORTED BY	: D.R.Syme						|
+| DATE		: 1996							|
+|									|
+| MODIFIED      : R.J.Boulton						|
+| DATE		: 6 August 1996						|
++ =====================================================================	+
+
+Includes:
+   Support for associative-commutative reasoning.
+   Canonical forms for propositional and first order logic expressions.
+   Wrappers for refutation procedures.
+

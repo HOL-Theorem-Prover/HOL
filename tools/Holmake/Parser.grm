@@ -1,0 +1,50 @@
+%{
+open List
+
+fun print s = BasicIO.print;
+fun printb s = print (s ^ " ");
+%}
+
+%token ID EQUALS NULL OPEN QUAL_ID STAR 
+%token <string> ID QUAL_ID
+%token EOF
+%start MLtext
+%type <string list> MLtext MLfrag MLseq UnitName_seq LongIdent
+%type <string> UnitName Ident
+
+%%
+MLtext :
+    MLseq EOF		{ $1 }
+  | EOF			{ [] }
+;
+
+MLfrag :
+    NULL		{ [] }    
+  | LongIdent		{ $1 }
+  | OPEN UnitName_seq  	{ $2 }
+;
+
+MLseq :
+    MLfrag MLseq	{ $1 @ $2 }
+  | MLfrag              { $1 }
+;
+
+UnitName_seq :
+    UnitName UnitName_seq	{ $1 :: $2 }
+  | /* empty */			{ [] }
+;
+
+UnitName :
+    Ident       	{ $1 }
+  | EQUALS      	{ "=" }
+;
+
+Ident :
+    ID          	{ $1 }
+  | STAR        	{ "*" }
+;
+
+LongIdent :
+    Ident       	{ [] }
+  | QUAL_ID     	{ [$1] }
+;

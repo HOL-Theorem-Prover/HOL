@@ -1,0 +1,90 @@
+% =====================================================================
+% HOL Manual LaTeX Source: pred_sets library (standard latex style)
+% =====================================================================
+
+\documentstyle[12pt,fleqn,
+               ../../../Manual/LaTeX/alltt,
+               ../../../Manual/LaTeX/layout]{book}
+
+% ---------------------------------------------------------------------
+% Input defined macros and commands
+% ---------------------------------------------------------------------
+\input{../../../Manual/LaTeX/commands}
+\input{../../../Manual/LaTeX/ref-macros}
+
+% ---------------------------------------------------------------------
+% Define a few other commands.
+% ---------------------------------------------------------------------
+\def\bk{{\tt\char`\\}}
+\def\lb{{\tt\char`\{}}
+\def\rb{{\tt\char`\}}}
+\def\vb{{\tt\char`\|}}
+
+% --------------------------------------------------------------------- %
+% Macro to make a nice underscore in the library name when typeset in   %
+% boldface.  Standard \_ macro doesn't give tall enough underscore.	%
+% The underscore is used on the titlepage and in Chapter 1 title (hence %
+% also on running heads) --- all in boldface.				%
+% --------------------------------------------------------------------- %
+
+\def\und{\leavevmode%
+\kern0.15ex \vbox{\hrule height0.1ex width0.3em}\kern0.2ex}
+
+% ---------------------------------------------------------------------
+% The document has an index
+% ---------------------------------------------------------------------
+\makeindex
+
+\begin{document}
+
+   \setlength{\unitlength}{1mm}		  % unit of length = 1mm
+   \setlength{\baselineskip}{16pt}        % line spacing = 16pt
+
+   % ---------------------------------------------------------------------
+   % prelims
+   % ---------------------------------------------------------------------
+
+   \pagenumbering{roman}	          % roman page numbers for prelims
+   \setcounter{page}{1}		          % start at page 1
+
+   \include{title}			  % title page
+   \tableofcontents			  % table of contents
+
+   % ---------------------------------------------------------------------
+   % Systematic description of the library 
+   % ---------------------------------------------------------------------
+
+   \cleardoublepage			 % kick to a right-hand page
+   \pagenumbering{arabic}		 % arabic page numbers
+   \setcounter{page}{1}		         % start at page 1
+   \include{description}
+
+   % ---------------------------------------------------------------------
+   % Reference manual entries for functions
+   % ---------------------------------------------------------------------
+
+   \include{entries}
+
+   % ---------------------------------------------------------------------
+   % Listing of theorems
+   % ---------------------------------------------------------------------
+
+   \include{theorems}
+
+   % ---------------------------------------------------------------------
+   % References 
+   % ---------------------------------------------------------------------
+
+   \include{references}
+
+   % ---------------------------------------------------------------------
+   % Index
+   % ---------------------------------------------------------------------
+ 
+   {\def\_{{\char'137}}		         % \tt style `_' character
+
+    \include{index}}
+
+\end{document}
+
+

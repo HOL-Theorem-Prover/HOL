@@ -1,0 +1,121 @@
+(*---------------------------------------------------------------------------
+
+      Definition and correctness of a naive quicksort algorithm.
+
+ ---------------------------------------------------------------------------*)
+
+app load ["bossLib", "tflLib", "QLib", "sortingTheory"];
+
+open tflLib bossLib listXTheory sortingTheory permTheory;
+infix 8 by;
+
+(*---------------------------------------------------------------------------*
+ * Function and relation definitions and properties.                         *
+ *---------------------------------------------------------------------------*)
+
+val o_DEF          = combinTheory.o_DEF;
+val transitive_def = TCTheory.transitive_def;
+val total_def      = Define `total R = !x y. R x y \/ R y x`;
+
+
+(*---------------------------------------------------------------------------*
+ * The quicksort algorithm.                                                  *
+ *---------------------------------------------------------------------------*)
+
+val qsort_def = 
+ Rfunction 
+    "qsort_def" 
+    `measure (LENGTH o SND)`    (* termination relation *)
+        `(qsort ord [] = []) 
+      /\ (qsort ord (CONS x rst) = 
+            APPEND
+               (qsort ord (filter ($~ o ord x) rst))
+               (CONS x (qsort ord (filter (ord x) rst))))`;
+
+
+(*---------------------------------------------------------------------------*
+ *  Termination of qsort.                                                    *
+ *---------------------------------------------------------------------------*)
+
+val qsort_terminates = save_thm("qsort_terminates",
+tflLib.prove_termination qsort_def
+  (PROVE_TAC[listTheory.LENGTH, length_filter,
+             arithmeticTheory.LESS_EQ_IMP_LESS_SUC]));
+
+
+val qsort_induction = save_thm("qsort_induction",
+  REWRITE_RULE [qsort_terminates](DISCH_ALL (#induction qsort_def)));
+
+val qsort_eqns = save_thm("qsort_eqns", 
+  REWRITE_RULE[qsort_terminates](#rules qsort_def));
+
+
+val QSORT_TAC = PROGRAM_TAC{induction = qsort_induction,
+                                rules = qsort_eqns};
+
+(*---------------------------------------------------------------------------*
+ *           Properties of qsort                                             *
+ *---------------------------------------------------------------------------*)
+
+val qsort_mem_stable = Q.prove
+`!x R L. mem x (qsort R L) = mem x L`
+(GEN_TAC THEN QSORT_TAC THENL
+  [PROVE_TAC[],
+   RW_TAC list_ss [o_DEF,mem_of_append,mem_def,mem_filter] 
+     THEN PROVE_TAC[]]);
+
+
+val qsort_perm = 
+Q.store_thm
+("qsort_perm",
+`!R L. perm L (qsort R L)`,
+QSORT_TAC THENL
+ [PROVE_TAC [perm_refl],
+  REWRITE_TAC [APPEND] 
+    THEN MATCH_MP_TAC cons_perm 
+    THEN MATCH_MP_TAC trans_permute 
+    THEN Q.EXISTS_TAC`APPEND (filter(~ o ord x) rst) (filter(ord (x:'a)) rst)`
+    THEN PROVE_TAC [perm_split, perm_cong,
+                    ONCE_REWRITE_RULE[perm_sym] append_perm_sym]]);
+
+
+val qsort_sorts = 
+Q.store_thm
+("qsort_sorts",
+`!R L. transitive R /\ total R ==> sorted R (qsort R L)`,
+QSORT_TAC THENL
+ [RW_TAC list_ss [sorted_eqns],
+  MATCH_MP_TAC sorted_append
+   THEN RW_TAC list_ss [sorted_eq,qsort_mem_stable,mem_filter,o_DEF] 
+   THEN Q.PAT_ASSUM `(x ==> y) /\ (x ==> z)` (K ALL_TAC)
+   THEN Q.PAT_ASSUM `transitive ord /\ total ord` MP_TAC 
+   THEN RW_TAC bool_ss [total_def,transitive_def] THEN
+   `(y=x) \/ ord x y` by (Q.PAT_ASSUM `mem y (CONS x M)` MP_TAC THEN 
+                          RW_TAC list_ss [mem_def,mem_filter,qsort_mem_stable]
+                          THEN PROVE_TAC[]) 
+   THEN PROVE_TAC []]);
+
+(*---------------------------------------------------------------------------*
+ * Bring everything together.                                                *
+ *---------------------------------------------------------------------------*)
+
+val qsort_correct = Q.store_thm
+("qsort_correct", 
+`!R. transitive R /\ total R ==> performs_sorting qsort R`,
+PROVE_TAC
+  [performs_sorting_def, qsort_perm, qsort_sorts]);
+
+
+(*---------------------------------------------------------------------------*
+ * "qsort" can be evaluated in the logic, very slowly:                       *
+
+  open reduceLib;
+  val eval = REPEATC 
+     (CHANGED_CONV
+        (REWRITE_CONV[qsort_eqns, filter_def, o_DEF, APPEND] 
+         THENC REDUCE_CONV THENC DEPTH_CONV BETA_CONV));
+
+  eval (Term `qsort $<= [0;3;5;2;2;1;5]`);
+  eval (Term `qsort $=  [0;3;5;2;2;1;5]`);  (* Note: "=" not total! *)
+
+ *---------------------------------------------------------------------------*)

@@ -1,0 +1,97 @@
+(* =====================================================================*)
+(* FILE		: mk_string.ml						*)
+(* DESCRIPTION  : Creates the theory `string.th`.			*)
+(*									*)
+(* PARENTS	: ascii.th						*)
+(* WRITES FILES	: string.th						*)
+(*									*)
+(* AUTHOR	: (c) T. Melham 1988					*)
+(* DATE		: 87.07.27						*)
+(* REVISED	: 90.10.27						*)
+(* TRANSLATED   : Konrad Slind, University of Calgary                   *)
+(* =====================================================================*)
+
+(* ---------------------------------------------------------------------*)
+(* Create the new theory						*)
+(* ---------------------------------------------------------------------*)
+open HolKernel Parse Prim_rec Define_type ConstrProofs asciiTheory;
+
+val _ = new_theory "string";
+
+
+(* ---------------------------------------------------------------------*)
+(* define the type :string						*)
+(* ---------------------------------------------------------------------*)
+val string_Axiom = 
+  define_type{name="string_Axiom",
+              type_spec=`string = emptystring  (* empty string *)
+                                | STRING of ascii => string`,
+                         fixities = [Prefix,Prefix]};
+
+val _ = Globals.assert_strings_defined();
+
+(* ---------------------------------------------------------------------*)
+(* prove "induction" theorem for :string.				*)
+(* ---------------------------------------------------------------------*)
+val string_Induct = 
+   save_thm ("string_Induct", prove_induction_thm string_Axiom);
+
+(* ---------------------------------------------------------------------*)
+(* prove cases theorem for :string.					*)
+(* ---------------------------------------------------------------------*)
+val string_CASES = 
+    save_thm ("string_CASES", prove_cases_thm string_Induct);
+
+(* ---------------------------------------------------------------------*)
+(* prove that the constructor STRING is one-to-one			*)
+(* ---------------------------------------------------------------------*)
+val STRING_11 = 
+    save_thm ("STRING_11", prove_constructors_one_one string_Axiom);
+
+(* ---------------------------------------------------------------------*)
+(* prove that the constructors empty_string and STRING are distinct	*)
+(* ---------------------------------------------------------------------*)
+val NOT_STRING_EMPTY = 
+    save_thm ("NOT_STRING_EMPTY", prove_constructors_distinct string_Axiom);
+
+val string_case_def = 
+new_recursive_definition 
+ {name="string_case_def",
+  def = Term`(string_case v f "" = v) /\
+             (string_case v f (STRING a s) = f a s)`,
+  rec_axiom = string_Axiom, 
+  fixity = Prefix};
+
+
+val string_size_def = 
+new_recursive_definition 
+ {name="string_size_def",
+  def = Term`(string_size "" = 0) /\
+             (string_size (STRING a s) = 1 + string_size s)`,
+  rec_axiom = string_Axiom, 
+  fixity = Prefix};
+
+val string_case_cong = 
+  save_thm("string_case_cong", 
+           Prim_rec.case_cong_thm string_CASES string_case_def);
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME(fn ppstrm => 
+  let val S = PP.add_string ppstrm
+      fun NL() = PP.add_newline ppstrm
+  in
+    S "val _ = Globals.assert_strings_defined();"; NL();
+    S "val _ = TypeBase.write";         NL();
+    S "  (TypeBase.mk_tyinfo";          NL();
+    S "     {ax=string_Axiom,";           NL();
+    S "      case_def=string_case_def,";  NL();
+    S "      case_cong=string_case_cong,"; NL();
+    S "      induction=string_Induct,";    NL();
+    S "      nchotomy=string_CASES,";      NL();
+    S "      size=SOME(Parse.Term`string_size`, string_size_def),"; NL();
+    S "      one_one=SOME STRING_11,"; NL();
+    S "      distinct=SOME NOT_STRING_EMPTY});"
+  end)};
+
+val _ = export_theory();

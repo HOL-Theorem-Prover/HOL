@@ -1,0 +1,178 @@
+A hol90 instantiation of the TFL package is now available via ftp from
+Munich at
+
+  ftp.informatik.tu-muenchen.de/local/lehrstuhl/nipkow/slind/hol90/tfl.tar.gz
+
+It will run on hol90.7 or hol90.8. 
+
+TFL is a system for defining recursive functions in higher order
+logic. It is based on a formally proven wellfounded recursion theorem
+and offers the ability to use ML-style pattern matching in function
+definitions. As a bonus, the system automatically derives a principle of
+recursion induction for each function. This release also includes a
+naive but useful program tactic which can simplify the task of proving
+correctness of recursive functions. Following are some simple examples
+of the system in action.
+
+
+Example 1.
+
+The "variant" function increments a value until it is no longer in a
+list. It makes its recursive call on a larger argument and so is not
+easy to define in current implementations of HOL. Here is how its
+definition looks in TFL-HOL:
+
+   Rfunction `measure \(x,L). LENGTH(filter (\y. x <= y) L)`
+             `variant(x, L) = (mem x L => variant(SUC x, L) | x)`;
+
+The ML function "Rfunction" takes two quotations (things delimited by `).
+The first is a wellfounded relation that says why "variant"
+terminates. It is up to the user to provide this relation which, at
+times, is not easy to find. The second quotation is the recursion
+equation that implements "variant". The system digests this information
+and returns the following record:
+
+  {rules=|- (!x L.
+              mem x L ==>
+              LENGTH (filter (\y. SUC x <= y) L) <
+              LENGTH (filter (\y'. x <= y') L)) ==>
+            (variant (x,L) = ((mem x L) => (variant (SUC x,L)) | x)),
+   induction= .
+              |- !P.
+                  (!x L. (mem x L ==> P (SUC x,L)) ==> P (x,L)) ==>
+                  (!v v1. P (v,v1)),
+   tcs=[`!x L.
+           mem x L ==>
+           LENGTH (filter (\y. SUC x <= y) L) <
+           LENGTH (filter (\y'. x <= y') L)`]}
+
+As part of digesting its input, "Rfunction" defined "variant" and
+attempted to prove that "variant" terminates. It failed to do so, as we
+can see by examining the "tcs" field ("tcs" stands for "termination
+conditions"). Since it failed, the "rules" field holds an implication,
+where the antecedent is the termination condition and the consequent is
+"variant"s equation. The system has also proven an induction theorem for
+variant. (The assumption to this theorem is the termination condition.)
+Suppose that we now prove the termination condition and eliminate it
+from "rules" and "induction". We can then give a simple proof of the
+correctness of "variant" by using our program tactic:
+
+    Q.prove
+      `!x L. ~mem (variant (x,L)) L`
+      (PROGRAM_TAC{induction=variant_induction, rules=variant_eqn}
+       THEN ASM_RW_TAC[]);
+
+
+Example 2.
+
+Just to show that life is not always so bad, we consider a function
+where termination is proved automatically: a version of Euclid's
+algorithm. This function would not previously be easy to define in HOL
+because of the compound patterns and the non-primitive recursions.
+
+    Rfunction `measure (prod_case $+)`
+        `(gcd (0,y) = y) /\
+         (gcd (SUC x, 0) = SUC x) /\
+         (gcd (SUC x, SUC y) = ((y <= x) => gcd(x - y, SUC y) 
+                                         |  gcd(SUC x, y - x)))`;
+
+The termination relation, which looks obscure, just says that the sum of
+the arguments to gcd decreases in recursive calls (prod_case is defined
+as "\f (x,y). f x y"). The system returns the following record where the
+rules and induction are not cluttered up with termination conditions:
+
+  {rules=|- (gcd (0,y) = y) /\
+            (gcd (SUC x,0) = SUC x) /\
+            (gcd (SUC x,SUC y) =
+             ((y <= x) => (gcd (x - y,SUC y)) 
+                       |  (gcd (SUC x,y - x)))),
+   induction=|- !P.
+                  (!y. P (0,y)) /\
+                  (!x. P (SUC x,0)) /\
+                  (!y x.
+                    (~(y <= x) ==> P (SUC x,y - x)) /\
+                      (y <= x  ==> P (x - y,SUC y)) ==> P (SUC x,SUC y)) 
+                  ==>
+                  (!v v1. P (v,v1)),
+   tcs=[]}
+
+
+Proving that "gcd" is commutative is easy using PROGRAM_TAC:
+
+   val gcd_commutes = Q.store_thm("gcd_commutes",
+   `!x y. gcd(x,y) = gcd(y,x)`,
+   PROGRAM_TAC{induction=gcd_induction, rules=gcd_eqns}
+     THEN ASM_RW_TAC[] 
+     THENL
+     [ STRUCT_CASES_TAC(Q.SPEC`y` num_CASES) THEN RW_TAC[gcd_eqns],
+       IMP_RES_THEN (IMP_RES_THEN SUBST1_TAC) LEQ_ANTISYM THEN REFL_TAC,
+       IMP_RES_TAC (EQT_ELIM(ARITH_CONV(Term`~(y<=x) ==> ~(x<=y) ==> F`)))]);
+
+
+Example 3.
+
+Supplying termination relations is the price one pays for working in a
+logic of total functions, but it would still be nice not to have to give
+them, at least straight off. For the subset of equations having no
+nested recursion, TFL supplies an entrypoint that makes the desired
+definition and proves the induction theorem, but doesn't need a
+termination relation. For example, if one didn't care to give a
+termination relation for the Fibonacci function, one could write
+
+    function `(Fib 0 = 1) /\
+              (Fib (SUC 0) = 1) /\
+              (Fib (SUC(SUC x)) = Fib x + Fib (SUC x))`;
+
+The output, showing the assumptions to the theorem as well, is the 
+following:
+
+    [WF R, 
+     !x. R (SUC x) (SUC (SUC x)), 
+     !x. R x (SUC (SUC x))]
+    |- 
+    ((Fib 0 = 1) /\
+     (Fib (SUC 0) = 1) /\
+     (Fib (SUC (SUC x)) = Fib x + Fib (SUC x)))
+    /\
+    (!P. P 0 /\ 
+         P (SUC 0) /\ 
+         (!x. P (SUC x) /\ P x ==> P (SUC (SUC x))) 
+         ==> 
+         (!v. P v))
+
+Examining the conclusion of the theorem first, we see that there are two
+conjuncts: the recursion equations and the induction theorem. Turning to
+the assumptions, we see that the system has computed 3 termination
+conditions involving a free variable R. It is up to the client to
+eliminate them; to do so a wellfounded R must be found such that
+
+    !x. R (SUC x) (SUC (SUC x))  and 
+    !x. R x (SUC (SUC x))
+
+both hold. (Less-than (<) is a plausible candidate.) A consequence of
+the behaviour of "function" is that the act of definition can be
+separated from the proof of termination for the class of programs that
+don't have nested recursions. One interesting problem here would be to
+write a function that would guess the R and attempt to prove the
+termination conditions, with the aim that the user would rarely have to
+deal with the issue of termination.
+
+
+That concludes the examples. There are many more in the "examples"
+directory of the distribution, including some that are significantly
+more difficult than those presented here.
+
+The distribution includes the TFL source as well as the source for the
+HOL instantiation. There is some documentation in the source directory,
+unfortunately not of a high quality. For example, a proper introduction
+to wellfounded relations is lacking. In spite of that, I hope people
+will try the system out.
+
+Another instantiation of TFL is currently being integrated into the
+Isabelle-HOL release. Unfortunately, a "porting manual" for TFL has not
+been written, so others out there in info-hol land who want to
+instantiate TFL to their favourite theorem prover should send me some
+email.
+
+
+Konrad.

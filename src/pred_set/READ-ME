@@ -1,0 +1,54 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: pred_sets						|
+|									|
+| DESCRIPTION   : Theory of sets-as-predicates				|
+|									|
+| AUTHORS	: T. Kalker, T. Melham					|
+|									|
+| DATE		: 8 June 1989, revised January 1992			|
+|									|
+| NOTE		: This library has been completely rewritten for HOL    |
+|  		  version 2.01.  See the file "CHANGES".		|
++ =====================================================================	+
+
++ --------------------------------------------------------------------- +
+| FILES:								|
++ --------------------------------------------------------------------- +
+    
+    mk_pred_sets.ml     creates the theory of sets
+    fset_conv.ml        conversions for finite sets
+    gspec.ml	        a conversion for generalized set specifications
+    set_ind.ml	        induction tactic for finite sets
+    pred_sets.ml	loadfile for the pred_sets library
+    load_pred_sets.ml   auxiliary loadfile for the pred_sets library
+
++ --------------------------------------------------------------------- +
+|									|
+| TO REBUILD THE LIBRARY:						|
+|									|
++ --------------------------------------------------------------------- +
+
+   1) edit the pathnames in the Makefile (if necessary)
+
+   2) type "make clobber"
+
+   3) type "make all"
+
++ --------------------------------------------------------------------- +
+|									|
+| TO USE THE LIBRARY:							|
+|									|
++ --------------------------------------------------------------------- +
+
+   load_library `pred_sets`  
+
++ --------------------------------------------------------------------- +
+|									|
+| DOCUMENTATION:							|
+|									|
++ --------------------------------------------------------------------- +
+
+   * User Manual: Manual/pred_sets.dvi
+
+   * Changes since HOL version 2.0: ./CHANGES

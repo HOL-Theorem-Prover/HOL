@@ -1,0 +1,34 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: ind_def_new						|
+|									|
+| DESCRIPTION   : Inductive definitions package.		        |
+|									|
+| AUTHOR	: J.R.Harrison						|
+| DATE		: 1996							|
+|									|
+| PORTED BY	: D.R.Syme						|
+| DATE		: 1996							|
+|									|
+| MODIFIED      : R.J.Boulton						|
+| DATE		: 6 August 1996						|
++ =====================================================================	+
+
+Inductive definitions package.
+See the following paper:
+
+   J. Harrison
+   "Inductive Definitions: Automation and Application"
+   In: E. T. Schubert, P. J. Windley and J. Alves-Foss (editors),
+   "Proceedings of the 8th International Workshop on Higher Order Logic
+   Theorem Proving and Its Applications", Aspen Grove, UT, USA, September 1995.
+   Volume 971 of Lecture Notes in Computer Science, Springer-Verlag,
+   pages 200-213.
+
+Relevant structures: Ind_defs
+
+Functions:
+   val new_inductive_definition : <as for ind_def library>
+   val gen_new_inductive_definition : ...
+   val new_simple_inductive_definition : ...
+

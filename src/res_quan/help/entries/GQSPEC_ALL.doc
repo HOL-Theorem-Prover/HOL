@@ -1,0 +1,31 @@
+\DOC GQSPEC_ALL
+
+\TYPE {GQSPEC_ALL : (thm -> thm)}
+
+\SYNOPSIS
+Specializes the conclusion of a theorem with its own quantified variables.
+
+\KEYWORDS
+rule, restricted quantifier.
+
+\DESCRIBE
+When applied to a theorem whose conclusion has zero or more 
+ordinary or restricted universal quantifications,
+the inference rule {GQSPEC_ALL} returns a theorem which is the result
+of specializing the quantified variables with its own variables. If this
+will cause name clashes, a variant of the variable is used instead.
+Normally {xi'} is just {xi}, in which case {GQSPEC_ALL} simply removes
+all universal quantifiers.
+{
+       A |- !x1::P1. ...!xk. ... !xn::Pn. t
+   ------------------------------------------------------  GQSPEC_ALL
+    A,P1 x1,...,Pn xn |- t[x1'/x1]...[xk'/xk]...[xn'/xn]
+}
+\FAILURE
+Never fails.
+
+\SEEALSO
+GQSPEC, GQSPECL, SPEC, SPECL, SPEC_ALL, RESQ_GEN, RESQ_GENL,
+RESQ_GEN_ALL, RESQ_GEN_TAC, RESQ_SPEC, RESQ_SPECL, RESQ_SPEC_ALL.
+
+\ENDDOC

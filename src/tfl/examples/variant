@@ -1,0 +1,75 @@
+app load ["bossLib", "tflLib", "QLib", "listXTheory"];
+open bossLib;
+infix 8 by;
+
+val mem_def              = listXTheory.mem_def;
+val filter_def           = listXTheory.filter_def;
+val length_filter_subset = listXTheory.length_filter_subset;
+
+
+(*---------------------------------------------------------------------------*
+ * The definition of variant.                                                *
+ *---------------------------------------------------------------------------*)
+
+val variant_def = 
+ Define 
+     `variant (x, L) = (mem x L => variant (SUC x, L) | x)`;
+
+(*---------------------------------------------------------------------------*
+ * Instantiate it with a measure function. Slightly messy!                   *
+ *---------------------------------------------------------------------------*)
+val vary = Q.INST [`R` |-> `measure \(x,L). LENGTH(filter (\y. x <= y) L)`]
+                  (DISCH_ALL variant_def);
+val vary' = REWRITE_RULE [WFTheory.WF_measure] vary;
+val vary'' = REWRITE_RULE pairTheory.pair_rws
+              (CONV_RULE (DEPTH_CONV Let_conv.GEN_BETA_CONV)
+               (REWRITE_RULE [WFTheory.measure_def, primWFTheory.inv_image_def]
+                             vary'));
+                     
+
+(*---------------------------------------------------------------------------*
+ * The termination argument.                                                 *
+ *---------------------------------------------------------------------------*)
+val variant_terminates = Q.store_thm
+("variant_terminates",
+ `!x L. mem x L ==> LENGTH (filter (\y. SUC x <= y) L) 
+                    < 
+                    LENGTH (filter (\y. x <= y) L)`,
+RW_TAC bool_ss []
+  THEN Induct_on `L`
+  THEN RW_TAC list_ss 
+          [mem_def,filter_def,length_filter_subset,
+           DECIDE `!x y. x < SUC y = x <= y`]);
+
+
+(*---------------------------------------------------------------------------*
+ * Removal of termination conditions.                                        *
+ *---------------------------------------------------------------------------*)
+local val vary''' = REWRITE_RULE[variant_terminates] vary''
+in
+  val variant_eqn = save_thm("variant_eqn", CONJUNCT1 vary''')
+  val variant_induction = save_thm("variant_induction",CONJUNCT2 vary''')
+end;
+
+
+(*---------------------------------------------------------------------------*
+ * Correctness: A variant is not in the list it is supposed to vary from.    *
+ *---------------------------------------------------------------------------*)
+
+val variant_correct = Q.store_thm("variant_correct", 
+`!x L. ~mem (variant (x,L)) L`,
+tflLib.PROGRAM_TAC{induction=variant_induction, rules=variant_eqn}
+ THEN RW_TAC bool_ss []);
+
+(*---------------------------------------------------------------------------*
+ *   Of all the numbers that aren't in L, variant (x,L) is the               *
+ *   smallest one that is greater-than-or-equal-to x.                        *
+ *---------------------------------------------------------------------------*)
+
+val variant_minimal = Q.store_thm("variant_minimal",
+`!x L y. ~mem y L /\ x<=y ==> variant(x,L) <= y`,
+tflLib.PROGRAM_TAC{induction=variant_induction, rules=variant_eqn}
+  THEN RW_TAC bool_ss []
+  THEN `x < y` by PROVE_TAC [arithmeticTheory.LESS_OR_EQ]
+  THEN RW_TAC arith_ss []);
+

@@ -1,0 +1,30 @@
+\DOC RESQ_HALF_EXISTS
+
+\TYPE {RESQ_HALF_EXISTS : (thm -> thm)}
+
+\SYNOPSIS
+Strip a restricted existential quantification from the conclusion of a theorem.
+
+\KEYWORDS
+rule, restricted quantifier.
+
+\DESCRIBE
+When applied to a theorem {A |- ?x::P. t}, {RESQ_HALF_EXISTS} returns
+the theorem
+{
+   A |- ?x. P x /\ t
+}
+\noindent i.e., it transforms the restricted existential
+quantification to its underlying semantic representation.
+{
+      A |- ?x::P. t
+   --------------------  RESQ_HALF_EXISTS
+    A |- ?x. P x ==> t
+}
+\FAILURE
+Fails if the theorem's conclusion is not a restricted existential quantification.
+
+\SEEALSO
+RESQ_EXISTS_TAC, EXISTS.
+
+\ENDDOC

@@ -1,0 +1,81 @@
+(*---------------------------------------------------------------------------*
+ * Underspecified functions and how they can be handled.                     *
+ *---------------------------------------------------------------------------*)
+
+app load ["bossLib", "tflLib", "listXTheory", "QLib"];
+open bossLib tflLib;
+
+val mem_def = listXTheory.mem_def;
+
+(* Auxiliary facts *)
+val [HD,TL,LENGTH]      = map (definition "list") ["HD","TL","LENGTH"];
+val [LESS_0,NOT_LESS_0] = map (theorem"prim_rec") ["LESS_0", "NOT_LESS_0"];
+val LESS_MONO_EQ = theorem"arithmetic" "LESS_MONO_EQ";
+
+(*---------------------------------------------------------------------------*
+ * This is a "partial" function. Well, to be clear, it is a total function   *
+ * in HOL, but the user is not given any rule for finding the value when the *
+ * list is empty. In ML, applying a program compiled from this description   *
+ * to an empty list will raise a Match exception.                            *
+ *---------------------------------------------------------------------------*)
+
+val nth_def = 
+Define
+   `(nth 0       (CONS h t) = h) /\
+    (nth (SUC n) (CONS h t) = nth n t)`;
+
+(*---------------------------------------------------------------------------*
+ * Iterate a function application. Notice that this forces the type of the   *
+ * function to be ":'a ->'a".                                                *
+ *---------------------------------------------------------------------------*)
+
+val funpow_def = 
+Define
+   `(funpow 0 (f:'a->'a) x = x) /\
+    (funpow (SUC n) f x    = f (funpow n f x))`;
+
+
+(*---------------------------------------------------------------------------*
+ * This lemma is needed in the proof below. An automated induction system    *
+ * would have to discover this and prove it on the fly. Written more         *
+ * elegantly in curried form, we'd have                                      *
+ *                                                                           *
+ *   funpow n f o f = f o funpow n f                                         *
+ *---------------------------------------------------------------------------*)
+
+val funpow_law = Q.store_thm("funpow_law",
+`!n f l. funpow n f (f l) = f (funpow n f l)`,
+Induct 
+ THEN RW_TAC arith_ss [funpow_def]);
+
+
+(*---------------------------------------------------------------------------*
+ * A simple relationship between nth and funpow. Invoking "nth" is the       *
+ * same as taking the tail of the list "n" times and then returning the      *
+ * head of the resulting list. The proof goes by induction on the definition *
+ * of nth.                                                                   * 
+ *                                                                           *
+ * Note. This is not the only way to prove this. Iterated induction          *
+ * on the structure of the data also works. However, one loses the           *
+ * connection with the definition of the function, and hence the             *
+ * possibilities for automation.                                             *
+ *---------------------------------------------------------------------------*)
+
+val nth_funpow_thm = Q.store_thm("nth_funpow_thm",
+`!n L. n < LENGTH L ==> (nth n L = HD(funpow n TL L))`,
+PROGRAM_TAC {rules = CONJUNCT1 nth_def,
+              induction = CONJUNCT2 nth_def} THENL
+ [POP_ASSUM MP_TAC THEN RW_TAC list_ss [],
+  POP_ASSUM MP_TAC THEN RW_TAC list_ss [],
+  RW_TAC list_ss [funpow_def],
+  POP_ASSUM MP_TAC 
+     THEN RW_TAC list_ss [funpow_def,GSYM funpow_law]]);
+
+
+val mem_nth = Q.store_thm("mem_nth",
+`!n l. n < LENGTH l ==> mem (nth n l) l`,
+PROG_TAC{induction = CONJUNCT2 nth_def, rules = CONJUNCT1 nth_def}
+ THEN REPEAT (POP_ASSUM MP_TAC)
+ THEN RW_TAC list_ss [mem_def]);
+
+

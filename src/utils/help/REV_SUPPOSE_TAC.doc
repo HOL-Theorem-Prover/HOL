@@ -1,0 +1,59 @@
+\DOC REV_SUPPOSE_TAC
+
+\TYPE
+{
+REV_SUPPOSE_TAC : term -> tactic
+}
+
+\LIBRARY utils
+
+\SYNOPSIS
+A tactic for adding an assumption to a goal, with the condition
+that the assumption be proved first.
+
+\DESCRIBE
+The tactic {REV_SUPPOSE_TAC t} when applied to a goal {([a1,...,an],Goal)}
+returns the two subgoals
+{
+   ([a1,...,an],t)
+
+   ([t,a1,...,an],Goal)
+}
+\noindent The differnce between {REV_SUPPOSE_TAC} and {SUPPOSE_TAC} is the
+order in which they return the subgoals.
+
+
+\FAILURE
+The tactic {REV_SUPPOSE_TAC} fails if it is not given a term of type
+{(==`:bool`==)}.
+
+\EXAMPLE
+{
+   SUPPOSE_TAC (--`?n. INT n = MIN`--)
+}
+\noindent when applied to the goal
+{
+   ([(--`POS MIN`--)], (--`?x:num. Y = ((MAX times (INT x)) plus REM)`--))
+}
+returns the two subgoals
+{
+   ([(--`POS MIN`--)], (--`?n. INT n = MIN`--))
+
+   ([(--`?n. INT n = MIN`--), (--`POS MIN`--)],
+   (--`?x. Y = ((MAX times (INT x)) plus REM)`--))
+}
+
+\USES
+Adding lemmas as assumptions to a goal to assists in its proof.
+{REV_SUPPOSE_TAC} allows you to inline the proof of a fairly short easy
+lemma while proving a theorem using the goal stack, and then return to your
+original proof with the lemma available as an assumption.
+
+
+\SEEALSO
+{
+SUPPOSE_TAC, ASSUME_TAC
+}
+
+
+\ENDDOC

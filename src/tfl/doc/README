@@ -1,0 +1,33 @@
+To make the system, perform the following 2 commands in the shell:
+
+    make_theories <hol>
+    <hol> < sys.sml
+
+where <hol> is a pathname for a hol90 executable. This will first build
+3 theories in this directory, and then build and dump the TFL system in
+the file "hol90.tfl". 
+
+Some examples can be found in the files "test.sml", "test1.sml", and
+"test2.sml". More extended developments may be found in the "examples"
+directory.
+
+See the file "doc.txt" for further information about the Tfl entrypoints. 
+
+Some Tfl support that is more widely usable:
+
+    1. There is a conditional/contextual rewriter in rw.sig and rw.sml. 
+       This is very helpful in shortening proofs. Many of the examples
+       make use of it.
+
+    2. The structure Hol_datatype provides a centralized repository 
+       of facts about datatypes that gets incrementally adjusted with
+       each new datatype definition.
+
+    3. The structure "Q". This folds quotation parsing into certain
+       popular entrypoints. Because of this "context-sensitivity"
+       interacting with quotations can be more pleasant in some cases.
+       For example, type constraints don't have to be given as often. 
+       See the file "mk_wf.sml" for examples.
+
+
+Please mail any problems to slind@informatik.tu-muenchen.de.

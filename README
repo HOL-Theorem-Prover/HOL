@@ -1,0 +1,13 @@
+This is the distribution directory for the Athabasca release of HOL98.
+The following is a brief listing of what's available.
+
+     install.txt    * Installation instructions 
+     doc/man.ps     * User manual
+     bin/           * Executables
+     src/           * The system sources
+     examples/      * Some examples 
+     tools/         * Support for building Hol98
+     help/          * Online help support
+     sigobj/        * Collection of all signatures and code
+     std.prelude    * File loaded at the beginning of each Hol98 run. 
+

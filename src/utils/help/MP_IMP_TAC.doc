@@ -1,0 +1,37 @@
+\DOC MP_IMP_TAC
+
+\TYPE
+{
+MP_IMP_TAC : thm_tactic
+}
+
+\LIBRARY utils
+
+\SYNOPSIS
+The tactic {MP_IMP_TAC thm} uses modus ponens with the theorem {thm}
+to reduce a goal.
+
+\DESCRIBE
+The tactic {MP_IMP_TAC thm} where {thm} is a theorem of the form
+{B |- s ==> t}, when epplied to the goal {A ?- s} returns the subgoal {A ?- t}.  If {hypi}
+is a hypothesis of {thm} which does not occor among the assumptions {A},
+then the subgoal {A ?- hypi} is also returned.
+{
+             A ?- s
+   ===========================  MP_IMP_TAC ([hyp1,...,hypn] |- s ==> t)
+    A u {hyp1,...,hypn} ?- t
+    <A ?- hypi ... A ?- hypj>
+
+\FAILURE
+
+
+\EXAMPLE
+
+
+\USES
+
+
+\SEEALSO
+
+
+\ENDDOC

@@ -1,0 +1,274 @@
+
+                          Changes to unwind library
+                          -------------------------
+
+This file describes the changes that have taken place in the unwind library.
+Listed below are each of the identifiers declared in the file `des-unwind.ml'
+in the old version of the library. For each identifier an explanation is given
+of what has happened to the identifier, or an alternative expression is given
+that may be used to obtain roughly the same functionality in the new library.
+
+I hope that the differences in functionality do not cause people much
+difficulty. The library badly needed tidying-up and no longer uses mk_thm.
+Hopefully the new functions will perform at a reasonable speed. While giving
+the library an overhaul, I have taken the opportunity to rationalize the
+naming of the functions, and to add a more automated unwinding facility.
+The additions are listed at the end of this file.
+
+Comments and bug reports are welcome.
+
+   RJB, 5th September 1991.
+
+                          -------------------------
+
+MK_CONJL : proof
+
+   Deleted. Considered to be an internal function.
+
+UNFOLD : (thm list -> conv)
+
+   Use UNFOLD_CONV.
+   UNFOLD_CONV does not flatten the conjunction, and it should be applied
+   beneath any existential quantifiers.
+   Unlike UNFOLD, it does not fail if some of the conjuncts cannot be
+   rewritten.
+
+UNFOLD_RULE : (thm list -> thm -> thm)
+
+   Use UNFOLD_RIGHT_RULE.
+   UNFOLD_RIGHT_RULE does not flatten the conjunction.
+   Unlike UNFOLD_RULE, it does not fail if some of the conjuncts cannot be
+   rewritten.
+
+OLD_UNWIND_ONCE_CONV : conv
+
+   Use UNWIND_ONCE_CONV.
+
+UNWIND_EQS : conv
+
+   Use UNWIND_CONV.
+
+UNWIND : conv
+
+   Use (DEPTH_EXISTS_CONV UNWIND_CONV)
+   or the safer (won't loop) UNWIND_AUTO_CONV.
+
+OLD_UNWIND_RULE : (thm -> thm)
+
+   Use the safer (won't loop) UNWIND_AUTO_RIGHT_RULE instead.
+
+dest_andl : (term -> (term # term list))
+
+   Deleted. Considered to be an internal function.
+
+AND_FORALL_CONV : conv
+
+   Use CONJ_FORALL_ONCE_CONV.
+   Unlike AND_FORALL_CONV, CONJ_FORALL_ONCE_CONV does not flatten the tree of
+   conjunctions. To flatten the conjunction use FLATTEN_CONJ_CONV.
+
+FORALL_AND_CONV : conv
+
+   Use FORALL_CONJ_ONCE_CONV.
+
+UNWINDF : conv
+
+   Use (DEPTH_EXISTS_CONV UNWIND_CONV)
+   or the safer (won't loop) UNWIND_AUTO_CONV.
+
+UNWINDF_RULE : (thm -> thm)
+
+   Use the safer (won't loop) UNWIND_AUTO_RIGHT_RULE instead.
+
+EXISTS_AND_LEFT : conv
+EXISTS_AND_RIGHT : conv
+EXISTS_AND_BOTH : conv
+EXISTS_AND : conv
+
+   These functions are no longer used by other functions in the library,
+   and their functionality is captured by the main system function
+   EXISTS_AND_CONV. Hence, the functions have been deleted.
+
+   Note, however, that EXISTS_AND_CONV "?x. P /\ Q" returns:
+
+      |- (?x. P /\ Q) = (?x. P) /\ (?x. Q)
+
+   when x is free in neither P nor Q. EXISTS_AND_BOTH used to return:
+
+      |- (?x. P /\ Q) = P /\ Q
+
+   EXISTS_DEL1_CONV can be used in conjunction with EXISTS_AND_CONV to obtain
+   the functionality of EXISTS_AND_BOTH.
+
+EXISTS_PERM : (thm -> thm)
+
+   Deleted. Use (CONV_RULE SWAP_EXISTS_CONV).
+
+EXISTS_PERM_CONV : conv
+
+   Deleted. Use SWAP_EXISTS_CONV.
+
+EXISTS_EQN : conv
+
+   Use EXISTS_EQN_CONV.
+   EXISTS_EQN_CONV has the functionality of both EXISTS_EQN and EXISTS_EQNF.
+
+EXISTS_EQNF : conv
+
+   Use EXISTS_EQN_CONV.
+   EXISTS_EQN_CONV has the functionality of both EXISTS_EQN and EXISTS_EQNF.
+
+EXISTS_DEL1 : conv
+
+   Renamed EXISTS_DEL1_CONV.
+
+EXISTS_DEL : conv
+
+   Renamed EXISTS_DEL_CONV.
+
+PRUNE1SINGLE : (term -> conv)
+
+   Deleted. Considered to be an internal function to PRUNE1.
+
+PRUNE1 : (term -> conv)
+
+   Use PRUNE_ONCE_CONV. This is more general than PRUNE1 in that it handles
+   lines with arguments (as PRUNE1F used to). PRUNE_ONCE_CONV takes the
+   existential term as a single argument.
+
+PRUNE1F : (term -> conv)
+
+   Use PRUNE_ONCE_CONV. This takes the existential term as a single argument.
+
+PRUNEL : (term list -> conv)
+
+   Use PRUNE_SOME_CONV. This is more general then PRUNEL in that it can
+   handle any ordering of the variables.
+
+PRUNE : conv
+
+   Use PRUNE_CONV.
+
+PRUNE_RULE : (thm -> thm)
+
+   Use PRUNE_RIGHT_RULE.
+
+PRUNELF : (term list -> conv)
+
+   Use PRUNE_SOME_CONV. This is more general then PRUNELF in that it can
+   handle any ordering of the variables.
+
+PRUNEF : conv
+
+   Use PRUNE_CONV.
+
+PRUNEF_RULE : (thm -> thm)
+
+   Use PRUNE_RIGHT_RULE.
+
+EXPAND : (thm list -> thm -> thm)
+
+   Use EXPAND_AUTO_RIGHT_RULE.
+
+EXPANDF : (thm list -> thm -> thm)
+
+   Use EXPAND_AUTO_RIGHT_RULE.
+
+line_var : (term -> term)
+
+   No change.
+
+var_name : (term -> string)
+
+   Deleted. Considered to be an internal function.
+
+line_name : (term -> string)
+
+   No change.
+
+UNWIND_ONCE_CONV : ((term -> bool) -> conv)
+
+   No change.
+
+UNWIND_CONV : ((term -> bool) -> conv)
+
+   No change.
+
+UNWIND_ONCE_RULE : ((term -> bool) -> thm -> thm)
+
+   Deleted. If its functionality is required, apply UNWIND_ONCE_CONV using
+   CONV_RULE, DEPTH_FORALL_CONV, DEPTH_EXISTS_CONV, RAND_CONV, etc.
+
+UNWIND_RULE : ((term -> bool) -> thm -> thm)
+
+   Deleted. Use the safer (won't loop) UNWIND_AUTO_RIGHT_RULE instead.
+
+UNWIND_ALL_RULE : (string list -> thm -> thm)
+
+   Renamed UNWIND_ALL_BUT_RIGHT_RULE.
+
+NEW_EXPANDF : (string list -> thm list -> thm -> thm)
+
+   Use EXPAND_ALL_BUT_RIGHT_RULE.
+
+                          -------------------------
+
+ADDITIONS:
+----------
+
+DEPTH_FORALL_CONV : (conv -> conv)
+
+   Function for applying a conversion beneath nested universal quantifiers.
+
+DEPTH_EXISTS_CONV : (conv -> conv)
+
+   Function for applying a conversion beneath nested existential quantifiers.
+
+FLATTEN_CONJ_CONV : conv
+
+   Conversion for flattening a tree of conjunctions.
+
+CONJ_FORALL_CONV : conv
+
+   Like AND_FORALL_CONV but moves multiple universal quantifiers.
+
+FORALL_CONJ_CONV : conv
+
+   Like FORALL_AND_CONV but moves multiple universal quantifiers.
+
+CONJ_FORALL_RIGHT_RULE : (thm -> thm)
+
+   A rule that uses CONJ_FORALL_CONV.
+
+FORALL_CONJ_RIGHT_RULE : (thm -> thm)
+
+   A rule that uses FORALL_CONJ_CONV.
+
+UNWIND_ALL_BUT_CONV : (string list -> conv)
+
+   Conversion that forms the basis of UNWIND_ALL_RULE (which is now called
+   UNWIND_ALL_BUT_RIGHT_RULE).
+
+UNWIND_AUTO_CONV : conv
+UNWIND_AUTO_RIGHT_RULE : (thm -> thm)
+
+   Conversion and rule for unwinding as far as possible without the risk of
+   getting into an infinite loop.
+
+PRUNE_ONE_CONV : (string -> conv)
+
+   Conversion for pruning a selected internal line.
+
+PRUNE_SOME_CONV : (string list -> conv)
+PRUNE_SOME_RIGHT_RULE : (string list -> thm -> thm)
+
+   Conversion and rule for pruning selected internal lines.
+
+EXPAND_ALL_BUT_CONV : (string list -> thm list -> conv)
+EXPAND_AUTO_CONV : (thm list -> conv)
+EXPAND_ALL_BUT_RIGHT_RULE : (string list -> thm list -> thm -> thm)
+EXPAND_AUTO_RIGHT_RULE : (thm list -> thm -> thm)
+
+   Conversions and rules for doing unfolding, unwinding and pruning.
+
+                          -------------------------
