@@ -1,25 +1,22 @@
 structure TotalDefn :> TotalDefn =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse basicHol90Lib arithLib Let_conv NonRecSize;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-open arithLib Let_conv NonRecSize;
 
 type thm    = Thm.thm;
 type conv   = Abbrev.conv
 type tactic = Abbrev.tactic;
-type proofs   = GoalstackPure.proofs
+type proofs = GoalstackPure.proofs
 type defn   = Defn.defn;
 type 'a quotation = 'a Portable.frag list
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+
 fun ERR f m =
   HOL_ERR{origin_structure="TotalDefn", origin_function=f, message=m};
+
 
 
 fun proper_subterm tm1 tm2 =
@@ -60,9 +57,7 @@ fun rectangular L =
  in case mk_set lens
      of []  => raise ERR "rectangular" "impossible"
       | [x] => L
-      |  _  => let val m = max lens 0
-               in map (fill m) L
-               end
+      |  _  => map (fill (max lens 0)) L
  end;
 
 fun true_col L =
@@ -221,8 +216,8 @@ val TC_SIMP_TAC = CONV_TAC (TC_SIMP_CONV []);
         from Defn.
  ---------------------------------------------------------------------------*)
 
-val tgoal = Defn.tgoal
-val tprove = Defn.tprove
+val tgoal        = Defn.tgoal
+val tprove       = Defn.tprove
 val TC_INTRO_TAC = Defn.TC_INTRO_TAC
 
 
@@ -264,15 +259,10 @@ fun WF_REL_TAC defn Rquote = PRIM_WF_REL_TAC defn Rquote [] default_simps;
 val ind_suffix = ref "ind";
 val def_suffix = ref "def";
 
-fun atom_name tm = #Name(dest_var tm handle HOL_ERR _ => dest_const tm);
-
-
-fun const_of th =
-  let val hd_eqn = 
-       snd(strip_imp(snd(strip_forall(hd(strip_conj(concl th))))))
-  in
-    fst(strip_comb(#lhs(dest_eq hd_eqn)))
-  end;
+(*---------------------------------------------------------------------------
+    Not quite right, since have to consider pairing translation, and
+    the sub-definitions in a mutual recursion.
+ ---------------------------------------------------------------------------*)
 
 fun constants_of defn =
   let val eqns = Defn.eqns_of defn
@@ -286,17 +276,16 @@ fun constants_of defn =
                             ::(case Defn.aux_defn mut
                                 of NONE => []
                                  | SOME nest => [Defn.eqns_of nest])
-      val alleqns = eqns::(nest_eqns@mut_eqns)
-      val consts = map const_of alleqns
   in 
-      consts
+     mk_set (map (wfrecUtils.func_of_cond_eqn o hd o strip_conj o concl)
+                       (eqns::(nest_eqns@mut_eqns)))
   end;
 
 
 (*---------------------------------------------------------------------------
     xDefine bindstem ` ... ` operates as follows:
 
-        1. It makes the definition, using Hol_fun.
+        1. It takes a defn probably made using Hol_fun.
         2. If the definition is not recursive or is
            primitive recursive, the defining equations are 
            stored under bindstem_def (and returned).
@@ -312,18 +301,16 @@ fun constants_of defn =
            the recursion equations are returned.
  ---------------------------------------------------------------------------*)
 
-fun xDefine bindstem qtm =
+fun defn_to_eqns bindstem defn =
  let val defname = bindstem^"_"^ !def_suffix
      val indname = bindstem^"_"^ !ind_suffix
-     val defn = Defn.Hol_defn bindstem qtm
-                 handle e => (Lib.say "Unable to define function!\n"; raise e)
  in
-   if Defn.abbrev defn orelse Defn.primrec defn 
+   if Defn.is_abbrev defn orelse Defn.is_primrec defn 
    then (Theory.set_MLname bindstem defname;
          Lib.say ("Definition stored under "^Lib.quote defname^".\n");
          Defn.eqns_of defn)
    else
-   if not(null(Defn.parameters defn)) 
+   if not(null(Defn.params_of defn)) 
    then let val ind = Option.valOf (Defn.ind_of defn)
         in
           Lib.say (String.concat
@@ -349,11 +336,14 @@ fun xDefine bindstem qtm =
                ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
                "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
                "termination proof.\n"]);
-             mapfilter delete_const (map atom_name (constants_of defn));
+             mapfilter delete_const 
+                 (map wfrecUtils.atom_name (constants_of defn));
              Theory.scrub();
              raise ERR "xDefine" "Unable to prove termination")
     end
  end;
+
+fun xDefine bindstem q = defn_to_eqns bindstem (Defn.Hol_defn bindstem q);
 
 
 (*---------------------------------------------------------------------------
@@ -381,34 +371,28 @@ local val mut_namesl = ref []:string list list ref
          let val s = "symbol_"^Lib.int_to_string (!symbr)
          in Portable.inc symbr; s
          end
-in
-fun Define ql =
- let val qtm = Defn.norm_quote ql
-     val names = Defn.preview qtm
-     val bindstem =
-        case names
-         of []  => raise ERR "Define" "Can't find name of function"
-          | [x] => if Lexis.ok_identifier x then x
-                   else let val name = gen_symbolic_name()
-                        in
-                          Lib.say (String.concat
-                             ["Non-alphanumeric being defined.\n",
-                              "Invented stem for binding(s): ", 
-                              Lib.quote name,".\n"]);
-                          name
-                        end
-          |  _  =>
+      fun mk_bindstem []  = raise ERR "Define" "Can't find name of function"
+        | mk_bindstem [x] = 
+              if Lexis.ok_identifier x then x
+              else let val name = gen_symbolic_name()
+                   in Lib.say (String.concat
+                      ["Non-alphanumeric being defined.\n",
+                       "Invented stem for binding(s): ",Lib.quote name,".\n"]);
+                      name
+                   end
+        | mk_bindstem names =
              let val name = "mutrec"^Lib.int_to_string(inc_mutl names)
-             in 
-               Lib.say (String.concat
-                  ["Mutually recursive definition.\n",
-                   "Invented stem for bindings is ", 
-                   Lib.quote name,".\n"]);
-               name
+             in Lib.say (String.concat ["Mutually recursive definition.\n",
+                   "Invented stem for bindings is ", Lib.quote name,".\n"]);
+                name
              end
- in 
-    xDefine bindstem qtm
- end               
+in
+fun Define q =
+   let val (ptm,names) = Defn.prepare_quote q
+       val bindstem = mk_bindstem names
+   in 
+       defn_to_eqns bindstem (Defn.Hol_defn0 bindstem (ptm,names))
+   end               
 end;
 
 end;
