@@ -85,12 +85,9 @@ recInduct variant_ind
          Evaluation of variant with computeLib
  ---------------------------------------------------------------------------*)
 
-local open listTheory computeLib
-  val MEM_IF = Q.prove(`!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
-                       RW_TAC list_ss [MEM])
-  val MEM_DEF' = CONJ (CONJUNCT1 MEM) MEM_IF
+local open computeLib
   val compset = bossLib.initial_rws()
-  val _ = add_thms (true,[variant_eqn,MEM_DEF']) compset
+  val _ = add_thms (true,[variant_eqn]) compset
 in
 val Eval = Count.apply (CBV_CONV compset) o Term
 end;

@@ -45,7 +45,7 @@ val (Qsort_eqns,Qsort_ind) = Defn.tprove
 local open computeLib arithmeticTheory listTheory
 in
   val compset = bossLib.initial_rws()
-  val _ = add_thms (true,[Qsort_eqns,FILTER,GREATER_DEF,GREATER_EQ]) compset
+  val _ = add_thms (true,[Qsort_eqns,GREATER_DEF,GREATER_EQ]) compset
   val Eval = Count.apply (CBV_CONV compset) o Term
 end;
 
