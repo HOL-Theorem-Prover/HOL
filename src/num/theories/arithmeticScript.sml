@@ -2635,19 +2635,7 @@ val FORALL_NUM = store_thm(
     least n satisfying P
    ---------------------------------------------------------------------- *)
 
-val SELECT_ELIM = prove(
-  ``!P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P)``,
-  PROVE_TAC [SELECT_AX]);
-
-fun SELECT_ELIM_TAC (asl, w) = let
-  val t = find_term is_select w
-in
-  CONV_TAC (UNBETA_CONV t) THEN
-  MATCH_MP_TAC SELECT_ELIM THEN BETA_TAC
-end (asl, w)
-
-val ITERATION = store_thm(
-  "ITERATION",
+val ITERATION = prove(
   ``!P g. ?f. !x. f x = if P x then x else f (g x)``,
   REPEAT GEN_TAC THEN
   Q.EXISTS_TAC `\x. if ?n. P (FUNPOW g n x) then
@@ -2698,20 +2686,21 @@ val ITERATION = store_thm(
     ASM_REWRITE_TAC [] THEN PROVE_TAC [FUNPOW]
   ]);
 
-val search_from_def = new_specification (
-  "search_from_def", ["search_from"],
-  prove(``?f. !n P. f n P = if P n then n else f (n + 1) P``,
-        STRIP_ASSUME_TAC
-        (CONV_RULE SKOLEM_CONV
-                   (GEN_ALL
-                      (BETA_RULE
-                         (ISPECL [``P : num -> bool``, ``\x. x + 1``]
-                                 ITERATION)))) THEN
-        Q.EXISTS_TAC `\n P. f P n` THEN BETA_TAC THEN
-        REPEAT GEN_TAC THEN POP_ASSUM MATCH_ACCEPT_TAC));
+val cond_lemma = prove(
+  ``(if ~p then q else r) = (if p then r else q)``,
+  Q.ASM_CASES_TAC `p` THEN ASM_REWRITE_TAC []);
 
+val o_THM = combinTheory.o_THM
 
-val LEAST_DEF = new_definition("LEAST_DEF", ``LEAST P = search_from 0 P``);
+val WHILE = new_specification (
+  "WHILE", ["WHILE"],
+  (CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) o GEN_ALL o
+   REWRITE_RULE [o_THM, cond_lemma] o
+   SPEC ``$~ o P : 'a -> bool``) ITERATION);
+
+val LEAST_DEF = new_definition(
+  "LEAST_DEF",
+  ``LEAST P = WHILE ($~ o P) SUC 0``);
 
 val _ = set_fixity "LEAST" Binder;
 
@@ -2719,7 +2708,7 @@ val LEAST_INTRO = store_thm(
   "LEAST_INTRO",
   ``!P x. P x ==> P ($LEAST P)``,
   GEN_TAC THEN SIMP_TAC (srw_ss()) [LEAST_DEF] THEN
-  Q_TAC SUFF_TAC `!m n. P (m + n) ==> P (search_from n P)`
+  Q_TAC SUFF_TAC `!m n. P (m + n) ==> P (WHILE ($~ o P) SUC n)`
   THENL [
     SRW_TAC [][] THEN
     FIRST_X_ASSUM (Q.SPECL_THEN [`x`,`0`] MP_TAC) THEN
@@ -2727,16 +2716,12 @@ val LEAST_INTRO = store_thm(
     ALL_TAC
   ] THEN
   INDUCT_TAC THENL [
-    ONCE_REWRITE_TAC [search_from_def] THEN
-    ASM_SIMP_TAC bool_ss [ADD_CLAUSES],
-    FULL_SIMP_TAC bool_ss [ADD_CLAUSES] THEN
-    REPEAT STRIP_TAC THEN
-    ONCE_REWRITE_TAC [search_from_def] THEN
-    COND_CASES_TAC THENL [
-      ASM_REWRITE_TAC [],
-      FIRST_X_ASSUM MATCH_MP_TAC THEN
-      ASM_SIMP_TAC (srw_ss()) [GSYM ADD1, ADD_CLAUSES]
-    ]
+    ONCE_REWRITE_TAC [WHILE] THEN
+    ASM_SIMP_TAC bool_ss [ADD_CLAUSES, o_THM],
+    ONCE_REWRITE_TAC [WHILE] THEN
+    SRW_TAC [][ADD_CLAUSES] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    ASM_SIMP_TAC bool_ss [ADD_CLAUSES]
   ]);
 
 val LESS_LEAST = store_thm(
@@ -2746,23 +2731,22 @@ val LESS_LEAST = store_thm(
   Q.ASM_CASES_TAC `?x. P x` THENL [
     POP_ASSUM STRIP_ASSUME_TAC THEN
     REWRITE_TAC [LEAST_DEF] THEN
-    Q_TAC SUFF_TAC `!y n. n + y < search_from n P ==> ~P(n + y)` THENL [
+    Q_TAC SUFF_TAC `!y n. n + y < WHILE ($~ o P) SUC n ==> ~P(n + y)` THENL [
       STRIP_TAC THEN GEN_TAC THEN
       POP_ASSUM (Q.SPECL_THEN [`m`, `0`] MP_TAC) THEN
       SIMP_TAC bool_ss [ADD_CLAUSES],
       ALL_TAC
     ] THEN
     INDUCT_TAC THENL [
-      ONCE_REWRITE_TAC [search_from_def] THEN GEN_TAC THEN
-      COND_CASES_TAC THEN ASM_REWRITE_TAC [LESS_REFL, ADD_CLAUSES],
+      ONCE_REWRITE_TAC [WHILE] THEN SRW_TAC [][LESS_REFL, ADD_CLAUSES],
       GEN_TAC THEN
       Q.SUBGOAL_THEN `n + SUC y = SUC n + y` SUBST_ALL_TAC THEN1
-        PROVE_TAC [ADD_CLAUSES] THEN
+        SRW_TAC [][ADD_CLAUSES] THEN
       STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-      RULE_ASSUM_TAC (ONCE_REWRITE_RULE [search_from_def]) THEN
-      Q.ASM_CASES_TAC `P n` THEN FULL_SIMP_TAC bool_ss [GSYM ADD1] THEN
+      RULE_ASSUM_TAC (ONCE_REWRITE_RULE [WHILE]) THEN
+      Q.ASM_CASES_TAC `P n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
       Q.SUBGOAL_THEN `SUC n + y = n + SUC y` SUBST_ALL_TAC THEN1
-        PROVE_TAC [ADD_CLAUSES] THEN
+        SRW_TAC [][ADD_CLAUSES] THEN
       PROVE_TAC [LESS_ADD_SUC, LESS_TRANS, LESS_REFL]
     ],
     PROVE_TAC []
