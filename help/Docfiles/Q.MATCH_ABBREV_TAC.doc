@@ -18,7 +18,7 @@ local constant, there will be a instantiation term {t}, such that the
 substitution {pattern[v1 |-> t1, v2 |-> t2, ...]} produces {w}.  The
 effect of the tactic is to then perform abbreviations in the goal,
 replacing each {t} with the corresponding {v}, and adding assumptions
-of the form {t = v} to the goal.
+of the form {Abbrev(v = t)} to the goal.
 
 \FAILURE
 {MATCH_ABBREV_TAC} fails if the pattern provided does not match the
@@ -33,15 +33,12 @@ If the current goal is
 then applying the tactic {Q.MATCH_ABBREV_TAC `X <= Y /\ P`} results in
 the goal
 {
-   (n + 10) * y = X , 42315 = Y , (!x y. x < y ==> f x < f y) = P
+   Abbrev(X = (n + 10) * y),
+   Abbrev(Y = 42315),
+   Abbrev(P = !x y. x < y ==> f x < f y)
       ?-
    X <= Y /\ P
 }
-
-\COMMENTS
-Though most of the rewriting and simplification tools leave
-abbreviations undisturbed in the assumptions, both {RW_TAC} and
-{SRW_TAC} will eliminate them.
 
 \SEEALSO
 Q.ABBREV_TAC, Q.HO_MATCH_ABBREV_TAC, Q.PAT_ABBREV_TAC.

@@ -17,7 +17,7 @@ The goal
 }
 is transformed by {Q.HO_MATCH_ABBREV_TAC `!k. P k`} to
 {
-   (\n. (n + 1) * (n - 1) = n * n - 1) = P  ?-  !k. P k
+   Abbrev(P = (\n. (n + 1) * (n - 1) = n * n - 1)) ?-  !k. P k
 }
 Note how the bound variable changes to match that used in the pattern.
 
