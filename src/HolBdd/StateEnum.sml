@@ -53,6 +53,15 @@ fun Def tm =
  end;
  *****************************************************************************)
 
+
+local open simpLib boolSimps pureSimps SatisfySimps UnwindSimps pairSimps
+      val data = merge_ss[PURE_ss,BOOL_ss,CONG_ss,SATISFY_ss,UNWIND_ss,PAIR_ss]
+in
+  val my_ss = mk_simpset [data]
+  val MY_SIMP_RULE = simpLib.SIMP_RULE my_ss  (* partial evaluation here *)
+end;
+
+
 (*****************************************************************************)
 (*    |- t2(v1,...,vn) = t2(v1,...,vn)                                       *)
 (*    --------------------------------                                       *)
@@ -557,9 +566,7 @@ fun MakeSimpReachByRecThm(Rthm,Bthm) =
      val cisuc               = Ho_rewrite.REWRITE_RULE
                                 [HolBddTheory.Next_def,pairTheory.EXISTS_PROD]
                                 (ISPECL[R,B,ntm,st]CITER_SUC)
-(*   val cisuc_simp          = time (simpLib.SIMP_RULE 
-                                HOLSimps.hol_ss
-                                [Rthm,AND_OR,EXISTS_OR_THM])
+(*   val cisuc_simp          = time (MY_SIMP_RULE[Rthm,AND_OR,EXISTS_OR_THM])
                                 cisuc
 *)
      val cisuc_simp          = RIGHT_CONV_RULE
@@ -587,10 +594,8 @@ fun MakeSimpReachInRecThm(Rthm,Bthm) =
      val isuc                   = Ho_rewrite.REWRITE_RULE
                                    [HolBddTheory.Next_def,pairTheory.EXISTS_PROD]
                                    (ISPECL[R,B,ntm,st]ReachIn_SUC)
-     val isuc_simp             = time (simpLib.SIMP_RULE 
-                                   HOLSimps.hol_ss
-                                   [Rthm,AND_OR,EXISTS_OR_THM])
-                                   isuc
+     val isuc_simp              = time(MY_SIMP_RULE[Rthm,AND_OR,EXISTS_OR_THM])
+                                        isuc
 (* Code below won't work as it is tuned to ReachBy (EX_OR_CONV?)
      val isuc_simp           = RIGHT_CONV_RULE
                                 (RAND_CONV
