@@ -39,6 +39,11 @@ New features:
     development can be checked even though something may fail early
     on.  Holmake's old behaviour is available if the --qof (the TLA
     stands for "quit on failure") flag is give at the command-line.
+  * If code uses prove, and it is not appropriate for failures to be
+    caught in the above ways when Holmake runs, the function
+    Tactical.default_prover can be used instead; this provides the
+    default implementation for prove, and can't be changed by other
+    tools.
 
 New theories:
 -------------
