@@ -118,11 +118,7 @@ fun find_var_value var =
  * If we find that a quantified variable does have a value waiting for
  * it, then we need to move it rightwards as far as possible in the
  * string of existentially quantified variables.  To do this, we develop
- * a [[MOVE_RIGHT_CONV]] that performs just this action.  The basic
- * primitive action is that of swapping two variables in the
- * existentially quantified chain, so we also need a proof that allows us
- * that rewrite.  Having swapped the variable in question to the right,
- * we call the same [[conv]] recursively on the body of the quantification.
+ * [[MOVE_{EXISTS,FORALL}_RIGHT_CONV]] that perform just this action.
  *
  *------------------------------------------------------------------------*)
 
@@ -132,18 +128,24 @@ in
   case vs of
     [] => failwith "MOVE_EXISTS_RIGHT_CONV"
   | [_] => ALL_CONV tm
-  | v::others => let
-      val new_order_vs = others @ [v]
-      val new_rhs  = list_mk_exists(new_order_vs, body)
+  | (v::others) => let
+      val reordered_vars = others @ [v]
+      val asm = ASSUME body
+      fun one_direction old new = let
+        val thm =
+            foldr (fn (v, th) => EXISTS (mk_exists(v, concl th),v) th) asm new
+        fun foldthis (v, th) = let
+          val hyp_t = hd (hyp th)
+        in
+          CHOOSE (v, ASSUME (mk_exists(v, hyp_t))) th
+        end
+      in
+        DISCH_ALL (List.foldr foldthis thm old)
+      end
     in
-      prove(mk_eq(tm, new_rhs),
-            EQ_TAC THENL [
-              DISCH_THEN (EVERY_TCL (map X_CHOOSE_THEN vs) ASSUME_TAC) THEN
-              MAP_EVERY EXISTS_TAC new_order_vs THEN POP_ASSUM ACCEPT_TAC,
-              DISCH_THEN (EVERY_TCL (map X_CHOOSE_THEN new_order_vs)
-                                    ASSUME_TAC) THEN
-              MAP_EVERY EXISTS_TAC vs THEN POP_ASSUM ACCEPT_TAC
-            ])
+      IMP_ANTISYM_RULE (one_direction vs reordered_vars)
+                       (one_direction reordered_vars vs)
+
     end
 end
 
