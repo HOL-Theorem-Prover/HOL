@@ -300,14 +300,14 @@ val hmake_no_overlay = member "NO_OVERLAY" hmake_options
 val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
 
+val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
 val actual_overlay =
-  if no_overlay orelse hmake_no_overlay then NONE
+  if no_sigobj orelse no_overlay orelse hmake_no_overlay then NONE
   else
     case user_overlay of
       NONE => SOME DEFAULT_OVERLAY
     | SOME _ => user_overlay
 
-val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
 val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
 
 val hmakefile_env = let
