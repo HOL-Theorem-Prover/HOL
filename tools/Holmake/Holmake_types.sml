@@ -272,6 +272,8 @@ in
   recurse [] ss
 end
 
+fun is_pseudo_target s = s = ".PHONY"
+
 fun mk_rules warn toks env = let
   fun recurse (p as (tgt1, deponly_rules, fullrules)) toklist =
       case toklist of
@@ -300,7 +302,9 @@ fun mk_rules warn toks env = let
             { dependencies = deps,
               commands = map (perform_substitution newenv) commands }
           end
-          val tgt1 = case tgt1 of NONE => SOME (hd tgts) | SOME _ => tgt1
+          val tgt1 = case tgt1 of
+                       NONE => List.find (not o is_pseudo_target) tgts
+                     | SOME _ => tgt1
         in
           if null commands then
             recurse (tgt1,
