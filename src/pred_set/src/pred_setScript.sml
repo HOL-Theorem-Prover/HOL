@@ -2716,7 +2716,7 @@ val FINITE_WEAK_ENUMERATE = store_thm(
 
 val BIGUNION = new_definition(
   "BIGUNION",
-  Term`BIGUNION P = { x | ?p. p IN P /\ x IN p}`);
+  Term`BIGUNION P = { x | ?s. s IN P /\ x IN s}`);
 
 val IN_BIGUNION = store_thm(
   "IN_BIGUNION",
@@ -2837,7 +2837,7 @@ val _ = export_rewrites ["FINITE_BIGUNION_EQ"]
 
 val BIGINTER = new_definition(
   "BIGINTER",
-  ``BIGINTER B = { x | !P. P IN B ==> x IN P}``);
+  ``BIGINTER P = { x | !s. s IN P ==> x IN s}``);
 
 val IN_BIGINTER = store_thm(
   "IN_BIGINTER",
