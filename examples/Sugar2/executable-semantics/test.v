@@ -113,6 +113,7 @@ always
  begin
   #10 data = DO;                 // Copy data from DO
   #10 RtoB_ACK_reg = 1;          // Assert RtoB_ACK to say data aquired
+  #10 @(negedge BtoR_REQ)        // Wait for BtoR_REQ to be deasserted
   #10 RtoB_ACK_reg = 0;          // Deassert RtoB_ACK
  end
 
@@ -143,22 +144,22 @@ initial
 // Xtreme kludge to generate output that can be munged
 // into SimRun example in test (have eliminated strings)
 
-initial
- begin
- $monitor 
-   ("Time = %0d, clk = %0d, StoB_REQ = %0d, BtoS_ACK = %0d, DI = %0d, BtoR_REQ = %0d, RtoB_ACK = %0d, DO = %0d",
-    $time, clk, StoB_REQ, BtoS_ACK, DI, BtoR_REQ, RtoB_ACK, DO);
- end
-
 //initial
 // begin
 // $monitor 
-//  ("((if %0d=1 then {\"StoB_REQ\"} else {}) UNION\
-//(if %0d=1 then {\"BtoS_ACK\"} else {}) UNION\
-//(if %0d=1 then {\"BtoR_REQ\"} else {}) UNION\
-//(if %0d=1 then {\"RtoB_ACK\"} else {}));",
-//   StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK);
+//   ("Time = %0d, clk = %0d, StoB_REQ = %0d, BtoS_ACK = %0d, DI = %0d, BtoR_REQ = %0d, RtoB_ACK = %0d, DO = %0d",
+//    $time, clk, StoB_REQ, BtoS_ACK, DI, BtoR_REQ, RtoB_ACK, DO);
 // end
+
+initial
+ begin
+ $monitor 
+  ("((if %0d=1 then {\"StoB_REQ\"} else {}) UNION\
+(if %0d=1 then {\"BtoS_ACK\"} else {}) UNION\
+(if %0d=1 then {\"BtoR_REQ\"} else {}) UNION\
+(if %0d=1 then {\"RtoB_ACK\"} else {}));",
+   StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK);
+ end
 
 endmodule
 
