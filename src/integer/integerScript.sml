@@ -26,9 +26,8 @@ infix ++;
 
 val int_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss ++
              UnwindSimps.UNWIND_ss;
-val DECIDE_TAC = CONV_TAC ARITH_CONV;
 
-val _ = Globals.guessing_overloads := false;
+val DECIDE_TAC = CONV_TAC ARITH_CONV;
 
 (*--------------------------------------------------------------------------*)
 (* Required lemmas about the natural numbers - mostly to drive CANCEL_TAC   *)
