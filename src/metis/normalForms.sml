@@ -1192,11 +1192,14 @@ fun extract_lambdas (defs,th,acc) =
 local
   val condify_bool = REWR_CONV (GSYM COND_BOOL);
 
+  val let_conv = REWR_CONV LET_THM;
+
   fun is_a_bool tm = type_of tm = bool andalso tm <> T andalso tm <> F;
 
   fun lift_cond tm =
     TRY_CONV
-    (COMB_CONV lift_bool
+    (REPEATC let_conv
+     THENC COMB_CONV lift_bool
      THENC (REWR_CONV COND_RATOR
             ORELSEC REWR_CONV COND_RAND
             ORELSEC ALL_CONV)) tm
@@ -1208,14 +1211,14 @@ local
 *)
       else lift_cond) tm);
 in
-  val lift_bool_conv = ATOM_CONV (CHANGED_CONV lift_cond);
+  val boolify_conv = ATOM_CONV (CHANGED_CONV lift_cond);
 end;
 
 fun min_cnf_prep defs acc [] = (defs, rev acc)
   | min_cnf_prep defs acc (th :: ths) =
   let
     val th = CONV_RULE DELAMB_CONV th
-    val th = CONV_RULE (DEF_NNF_CONV' lift_bool_conv) th
+    val th = CONV_RULE (DEF_NNF_CONV' boolify_conv) th
 (*
     val (defs,th,bs) = repeat extract_bools (defs,th,[])
     val (defs,th,ls) = repeat extract_lambdas (defs,th,[])

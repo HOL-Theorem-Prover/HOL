@@ -19,7 +19,7 @@ val _ = loadPath :=
  "/home/jeh1004/dev/hol/metis/src/metis"] @ !loadPath;
 
 val _ = app load
-  ["posetTheory","bossLib","numLib","pred_setTheory",
+  ["posetTheory","bossLib","numLib","pred_setTheory","res_quanTheory",
    "listTheory","llistTheory","fixedPointTheory",
    "mlibProblem","metisLib"];
 
@@ -350,6 +350,10 @@ val INJMAP_def = Definition.new_definition
 val t =
   METIS_PROVE [INJMAP_def] ``INJMAP (g : 'b -> 'a) b a ==> !y :: b. g y IN a``;
 
+(* Bug check: this tests how we handle lets (from Konrad) *)
+val t = METIS_PROVE [] ``let p = (q \/ ~q) in p``;
+val t = METIS_PROVE [] ``let c = a in c = a``;
+
 val metis_p_or_not_p = METIS_PROVE [] p_or_not_p;
 val metis_xor_assoc = METIS_PROVE [] xor_assoc;
 val metis_p28 = METIS_PROVE [] p28;
@@ -414,6 +418,27 @@ val t = METIS_PROVE [] ``~((a : 'a) = b) /\ (!x : 'a. x = c) ==> F``;
 val t = METIS_PROVE [listTheory.list_CASES, listTheory.HD, listTheory.TL]
   ``~(k = []) /\ ~(l = []) /\ (HD k = HD l) /\ (TL k = TL l) ==>
     ((k:'a list) = l)``;
+
+(* A trivial group theory problem from Konrad (uses lets) *)
+val () = bossLib.Hol_datatype
+  `group = <| carrier: 'a->bool;
+              id: 'a;
+              op: 'a -> 'a -> 'a;
+              inv: 'a -> 'a |>`;
+val group_def = bossLib.Define
+  `GROUP g =
+   let G = g.carrier in
+   let $* = g.op in
+   let e = g.id in
+    e IN G /\
+    (!x y :: G. x * y IN G) /\
+    (!x :: G. g.inv x IN G) /\
+    (!x y z :: G. ((x * y) * z = x * (y * z))) /\
+    (!x :: G. (x * e = x)) /\
+    (!x :: G. (x * (g.inv x) = e))`;
+val t =
+  METIS_PROVE (group_def :: [IN_DEF, res_quanTheory.RES_FORALL])
+  ``GROUP G /\ G.carrier x  ==> G.carrier (G.inv x)``;
 
 (* ------------------------------------------------------------------------- *)
 val () = METIS_TEST "solving a selection of first-order HOL goals";
