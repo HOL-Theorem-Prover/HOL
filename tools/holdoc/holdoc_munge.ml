@@ -157,11 +157,11 @@ and dir_var_vars ts =
 
 let texify_list =
   [('_', "\\_")
-  ;('~', "\\neg ")
+  ;('~', "\\neg{}")
   ;('$', "\\$")
   ;('%', "\\%")
   ;('&', "\\&")
-  ;('\\', "\\backslash ")
+  ;('\\', "\\backslash{}")
   ;('^', "\\hat{\\phantom{x}}")
   ;('{', "\\{")
   ;('}', "\\}")
@@ -169,17 +169,17 @@ let texify_list =
   ]
 
 let texify_text_list =
-  [('_', "\\textunderscore ")
-  ;('~', "\\textasciitilde ")
+  [('_', "\\textunderscore{}")
+  ;('~', "\\textasciitilde{}")
   ;('$', "\\$")
   ;('%', "\\%")
   ;('&', "\\&")
-  ;('\\', "\\textbackslash ")
-  ;('^', "\\textasciicircum ")
+  ;('\\', "\\textbackslash{}")
+  ;('^', "\\textasciicircum{}")
   ;('{', "\\{")
   ;('}', "\\}")
   ;('#', "\\#")
-  ;('<', "\\textless{}")  (* {} to work around a bug in LaTeX / fontenc *)
+  ;('<', "\\textless{}")  (* {} to work around a bug in LaTeX / fontenc: \textless\textless == \textguillemotleft  (!!!) *)
   ;('>', "\\textgreater{}")  (* {} to work around a bug in LaTeX / fontenc *)
   ]
 
