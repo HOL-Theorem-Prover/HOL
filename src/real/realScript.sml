@@ -125,14 +125,14 @@ val _ = allow_for_overloading_on ("<=", Type`:'a -> 'a -> bool`);
 val _ = allow_for_overloading_on (">",  Type`:'a -> 'a -> bool`);
 val _ = allow_for_overloading_on (">=", Type`:'a -> 'a -> bool`);
 
-val _ = overload_on("-", natsub);
+val _ = overload_on ("-",  natsub);
 val _ = overload_on ("<=", natlte);
-val _ = overload_on (">", natgt);
+val _ = overload_on (">",  natgt);
 val _ = overload_on (">=", natge);
 
-val _ = overload_on("-", Term`$real_sub`);
+val _ = overload_on ("-",  Term`$real_sub`);
 val _ = overload_on ("<=", Term`$real_lte`);
-val _ = overload_on (">", Term`$real_gt`);
+val _ = overload_on (">",  Term`$real_gt`);
 val _ = overload_on (">=", Term`$real_ge`);
 
 (*---------------------------------------------------------------------------*)
