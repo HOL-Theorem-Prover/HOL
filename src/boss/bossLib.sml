@@ -543,7 +543,14 @@ end
  ---------------------------------------------------------------------------*)
 
 fun PROVE thl tm = Tactical.prove (Parse.Term tm, mesonLib.MESON_TAC thl);
-val PROVE_TAC    = mesonLib.ASM_MESON_TAC;
+val PROVE_TAC    = let
+  open restr_binderTheory
+  val rwts = [RES_FORALL, RES_EXISTS]
+in
+  (fn thl =>
+   REWRITE_TAC rwts THEN RULE_ASSUM_TAC (REWRITE_RULE rwts) THEN
+   mesonLib.ASM_MESON_TAC (map (REWRITE_RULE rwts) thl))
+end
 
 val DECIDE     = decisionLib.DECIDE o Parse.Term
 val DECIDE_TAC = decisionLib.DECIDE_TAC
