@@ -19,22 +19,24 @@ fun RING_ERR function message =
 (* reify ring expressions: building a signature, which is the correspondence
    between the semantic level operators and the syntactic level ones. *)
 
-fun ring_field q = 
+fun ring_field q =
   rhs(concl(REWRITE_CONV[ringTheory.ring_accessors] (--q--)));
 
-fun sring_field q = 
+fun sring_field q =
   rhs(concl(REWRITE_CONV[semi_ringTheory.semi_ring_accessors] (--q--)));
 
 fun inst_ty ty = inst [alpha |-> ty];
-local val pvar = (--`Pvar`--)
-      val pcst = (--`Pconst`--)
-      val pplus = (--`Pplus`--)
-      val pmult = (--`Pmult`--)
-      val popp = (--`Popp`--)
-      val spvar = (--`SPvar`--)
-      val spcst = (--`SPconst`--)
-      val spplus = (--`SPplus`--)
-      val spmult = (--`SPmult`--)
+local fun pmc s = prim_mk_const {Name = s, Thy = "ringNorm"}
+      fun canon_pmc s = prim_mk_const {Name = s, Thy = "canonical"}
+      val pvar = pmc "Pvar"
+      val pcst = pmc "Pconst"
+      val pplus = pmc "Pplus"
+      val pmult = pmc "Pmult"
+      val popp = pmc "Popp"
+      val spvar = canon_pmc "SPvar"
+      val spcst = canon_pmc "SPconst"
+      val spplus = canon_pmc "SPplus"
+      val spmult = canon_pmc "SPmult"
 in
 fun polynom_sign ty ring =
   let val [P,M,N] = map ring_field [`RP ^ring`,`RM ^ring`,`RN ^ring`] in
@@ -42,7 +44,7 @@ fun polynom_sign ty ring =
     Csts=inst_ty ty pcst,
     Op1=[(N,inst_ty ty popp)],
     Op2=[(P,inst_ty ty pplus),(M,inst_ty ty pmult)] }
-  end    
+  end
 
 fun spolynom_sign ty sring =
   let val [P,M] = map sring_field [`SRP ^sring`,`SRM ^sring`] in
@@ -124,7 +126,7 @@ fun import_semi_ring name th =
 	  canonical_sum_scalar2_def, canonical_sum_scalar3_def,
 	  canonical_sum_prod_def, canonical_sum_simplify_def,
 	  ivl_aux_def, interp_vl_def, interp_m_def, ics_aux_def, interp_cs_def,
-	  spolynom_normalize_def, spolynom_simplify_def ] ] 
+	  spolynom_normalize_def, spolynom_simplify_def ] ]
   end;
 
 fun mk_ring_thm nm th =
@@ -219,8 +221,8 @@ fun declare_ring {RingThm,IsConst,Rewrites} =
   	end
         handle HOL_ERR _ => raise RING_ERR "norm_conv" ""
 
-      fun eq_conv t = 
-  	let val (lhs,rhs) = dest_eq t 
+      fun eq_conv t =
+  	let val (lhs,rhs) = dest_eq t
             val {Metamap,Poly=[p1,p2]} = reify_fun [lhs,rhs]
 	    val mthm = SPEC Metamap SoundThm
             val th1 = simp_rule (SPEC p1 mthm)
