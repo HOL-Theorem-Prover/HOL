@@ -32,11 +32,11 @@ simple_example () {
 
 MLsyntax () { simple_example MLsyntax; }
 RSA ()      { simple_example RSA; }
-Sugar2 ()   { simple_example Sugar2; }
 ind_def ()  { simple_example ind_def; }
 lambda ()   { simple_example lambda; }
 sunrise ()  { simple_example sunrise/src; }
 arm6 ()     { simple_example arm6; }
+PSL ()      { simple_example PSL; }
 
 bmark () {
   cd bmark
@@ -65,7 +65,7 @@ Rijndael () {
 }
 
 fast () {
-    for i in toplevel MLsyntax RSA ind_def lambda bmark parity Sugar2
+    for i in toplevel MLsyntax RSA ind_def lambda bmark parity
     do
         buildit $i
     done
@@ -99,8 +99,8 @@ fi
 if [ $# -eq 0 ]
 then
     echo Building all examples
-    for i in toplevel MLsyntax RSA Sugar2 ind_def lambda bmark parity \
-             miller arm6 Rijndael
+    for i in toplevel MLsyntax RSA ind_def lambda bmark parity \
+             miller arm6 Rijndael PSL
     do
         buildit $i
     done
