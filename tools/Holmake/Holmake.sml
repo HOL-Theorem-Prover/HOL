@@ -846,7 +846,7 @@ exception NotFound
 val up_to_date_cache:(File, bool)Polyhash.hash_table =
   Polyhash.mkPolyTable(50, NotFound)
 fun cache_insert(f, b) = (Polyhash.insert up_to_date_cache (f, b); b)
-fun make_up_to_date ctxt target = let
+fun make_up_to_date am_at_top ctxt target = let
   fun print s =
     if debug then (nspaces TextIO.print (length ctxt);
                    TextIO.print s)
@@ -869,13 +869,13 @@ in
       if isSome pdep then let
         val pdep = valOf pdep
       in
-        if make_up_to_date (target::ctxt) pdep then let
+        if make_up_to_date false (target::ctxt) pdep then let
           val secondaries = get_dependencies target
           val _ =
             (print ("Secondary dependencies for "^fromFile target^" are: ");
              print (print_list (map fromFile secondaries) ^ "\n"))
         in
-          if (List.all (make_up_to_date (target::ctxt)) secondaries) then
+          if (List.all (make_up_to_date false (target::ctxt)) secondaries) then
             if (List.exists
                 (fn dep =>
                  (fromFile dep) forces_update_of (fromFile target))
@@ -899,18 +899,34 @@ in
           if null secondaries then
             case extra_commands tgt_str of
               NONE => if FileSys.access(tgt_str, [FileSys.A_READ]) then
-                        cache_insert(target, true)
+                        (if am_at_top then
+                           warn ("*** Nothing to be done for `"^tgt_str^"'.\n")
+                         else ();
+                         cache_insert(target, true))
                       else
                         (warn ("*** No rule to make target `"^tgt_str^"'.\n");
                          cache_insert(target, false))
             | SOME cs => cache_insert(target, run_extra_commands tgt_str cs =
                                               Process.success)
-          else if List.all (make_up_to_date (target::ctxt)) secondaries then
+          else if List.all (make_up_to_date false (target::ctxt))
+                           secondaries
+          then
             if List.exists
                (fn dep => (fromFile dep) forces_update_of (fromFile target))
                secondaries
             then
               case extra_commands (fromFile target) of
+                (* NONE is impossible because for something to have
+                   secondary dependencies, they will have come from
+                   a Holmakefile or from automatic dependency analysis.
+                   The latter is done for everything with primary dependents,
+                   but in this branch, we have no primary dependent.
+                   But, extra_commands will return SOME cl for every
+                   rule.  cl may be the null list, but it will still be
+                   there.
+
+                   Recall the example of target "all", which can quite
+                   reasonably have no commands, but just dependencies. *)
                 NONE => raise Fail "Impossible situation #1"
               | SOME cs => cache_insert(target,
                                         run_extra_commands tgt_str cs =
@@ -983,7 +999,7 @@ in
   | "cleanDeps" => clean_deps()
   | "cleanAll" => clean_action() andalso clean_deps()
   | _ => if (not (member x dontmakes))
-         then make_up_to_date [] (toFile x)
+         then make_up_to_date true [] (toFile x)
          else true
 end
 
