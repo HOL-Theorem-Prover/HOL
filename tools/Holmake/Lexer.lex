@@ -6,7 +6,7 @@ open Parser
 val comment_depth = ref 0;
 
 (* The table of keywords *)
-val keyword_table = 
+val keyword_table =
     (Polyhash.mkPolyTable(53, Subscript) : (string,token) Polyhash.hash_table);
 
 val () =
@@ -122,20 +122,22 @@ and TokenN = parse
   | ")"		{ NULL }
   | ";"         { NULL }
   | (eof | `\^Z`) { EOF }
+  | "``"        { DQuotation lexbuf; TokenN lexbuf }
+  | `\``        { Quotation lexbuf; TokenN lexbuf }
   | ""          { TokenId lexbuf }
 
 and TokenId = parse
     ( [`A`-`Z` `a`-`z`] [ `A`-`Z` `a`-`z` `0`-`9` `_` `'`]*
     | [`!` `%` `&` `$` `#` `+` `-` `/` `:` `<` `=` `>` `?` `@` `\\`
-       `~` `\`` `^` `|` `*`]+ )
+       `~` `^` `|` `*`]+ )
       { mkKeyword lexbuf }
   | ( [`A`-`Z` `a`-`z`] [ `A`-`Z` `a`-`z` `0`-`9` `_` `'`]*
     | [`!` `%` `&` `$` `#` `+` `-` `/` `:` `<` `=` `>` `?` `@` `\\`
-       `~` `\`` `^` `|` `*`]+ )
+       `~` `^` `|` `*`]+ )
     "."
     ( [`A`-`Z` `a`-`z`] [ `A`-`Z` `a`-`z` `0`-`9` `_` `'`]*
     | [`!` `%` `&` `$` `#` `+` `-` `/` `:` `<` `=` `>` `?` `@` `\\`
-       `~` `\`` `^` `|` `*`]+ )
+       `~` `^` `|` `*`]+ )
       { mkQualId lexbuf }
   | _
       { lexError "ill-formed token" lexbuf }
@@ -182,5 +184,10 @@ and SkipString = parse
       { EOF }
   | _
       { SkipString lexbuf }
+
+and Quotation = parse
+    [^`\``]* `\`` { () }
+and DQuotation = parse
+    [^`\``]* "``" { () }
 
 ;
