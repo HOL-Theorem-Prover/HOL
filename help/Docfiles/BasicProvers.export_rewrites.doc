@@ -29,7 +29,7 @@ name of a theorem, definition or axiom of the current theory segment.
 \COMMENTS
 This function is useful for ensuring that the stateful rewriter is
 augmented as theories are loaded.  This in turn means that users of
-these theories don't need to learn the name of their ``obvious''
+these theories don't need to learn the names of their ``obvious''
 theorems.  Because theorems can not be removed from the stateful
 rewriter's underlying {simpset}, choice of ``obvious'' theorems needs
 to be done with care.
