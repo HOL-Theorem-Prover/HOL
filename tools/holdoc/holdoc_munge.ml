@@ -315,7 +315,7 @@ let mindent n = (* munge an indentation of level n *)
     else
       x :: ntimes (n-1) x in
   let m = (n-5) / 2 in
-  String.concat "" (ntimes m "\\quad") ^ " "
+  "\n" ^ String.concat "" (ntimes m "\\quad") ^ " "
 
 let mdir v n ts = (* munge a directive *)
   let rec go ts =
@@ -393,7 +393,7 @@ let rec mtok v t =
   match t with
     Ident(s,true)  -> mident v s
   | Ident(s,false) -> msym v s
-  | Indent(n)      -> if !iNDENT then mindent n else "" (* only render if desired *)
+  | Indent(n)      -> if !iNDENT then mindent n else "\n" (* only render if desired *)
   | White(s)       -> s
   | Comment(s)     -> (if String.contains s '\n' then  (* anything split over a line must be long *)
                          "\\tslongcomm{"
