@@ -43,7 +43,7 @@ fun TAUT_ERR{function,message} = HOL_ERR{origin_structure = "Taut",
 
 local
    open HolKernel Parse basicHol90Lib Psyntax DecisionConv DecisionSupport
-infix THEN THENC
+infix THEN THENC |->
 in
 
 (*==========================================================================*)
@@ -192,8 +192,7 @@ end;
 
 local
 
-val th = Rsyntax.INST_TYPE
-            [{residue = (==`:bool`==),redex = (==`:'a`==)}] REFL_CLAUSE
+val th = Rsyntax.INST_TYPE [Type.alpha |-> Type.bool] REFL_CLAUSE
 and ths = map GEN_ALL (CONJUNCTS (SPEC_ALL EQ_CLAUSES));
 
 in
@@ -334,9 +333,8 @@ local
 
 val ths =
    map GEN_ALL
-      (CONJUNCTS (SPEC_ALL (Rsyntax.INST_TYPE
-                               [{residue = (==`:bool`==),redex = (==`:'a`==)}]
-                               COND_CLAUSES)));
+      (CONJUNCTS (SPEC_ALL 
+         (Rsyntax.INST_TYPE [Type.alpha |-> Type.bool] COND_CLAUSES)));
 
 in
 
@@ -401,8 +399,7 @@ fun FORALL_T [] = T_REFL
 local
 
 val forall_simp =
-   SPEC F (Rsyntax.INST_TYPE
-              [{residue = (==`:bool`==),redex = (==`:'a`==)}] FORALL_SIMP);
+   SPEC F (Rsyntax.INST_TYPE [Type.alpha |-> Type.bool] FORALL_SIMP);
 
 in
 

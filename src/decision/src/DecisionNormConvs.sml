@@ -39,7 +39,7 @@ val EQ_DISJ_NORM_CONV = REWR_CONV EQ_EXPAND;
 val COND_CONJ_NORM_CONV = REWR_CONV COND_EXPAND;
 
 val COND_DISJ_NORM_CONV =
-   REWR_CONV (prove (--`(b => t1 | t2) = (b /\ t1) \/ (~b /\ t2)`--,
+   REWR_CONV (prove (--`(if b then t1 else t2) = (b /\ t1) \/ (~b /\ t2)`--,
                      BOOL_CASES_TAC (--`b:bool`--) THEN REWRITE_TAC []));
 
 val NOT_NOT_NORM_CONV = REWR_CONV (CONJUNCT1 NOT_CLAUSES);
@@ -64,11 +64,11 @@ val NOT_EQ_DISJ_NORM_CONV =
                      REWRITE_TAC []));
 
 val NOT_COND_CONJ_NORM_CONV =
-   REWR_CONV (prove (--`~(b => t1 | t2) = (~b \/ ~t1) /\ (b \/ ~t2)`--,
+   REWR_CONV (prove (--`~(if b then t1 else t2) = (~b \/ ~t1) /\ (b \/ ~t2)`--,
                      BOOL_CASES_TAC (--`b:bool`--) THEN REWRITE_TAC []));
 
 val NOT_COND_DISJ_NORM_CONV =
-   REWR_CONV (prove (--`~(b => t1 | t2) = (b /\ ~t1) \/ (~b /\ ~t2)`--,
+   REWR_CONV (prove (--`~(if b then t1 else t2) = (b /\ ~t1) \/ (~b /\ ~t2)`--,
                      BOOL_CASES_TAC (--`b:bool`--) THEN REWRITE_TAC []));
 
 val CONJ_ASSOC_NORM_CONV = REWR_CONV (GSYM CONJ_ASSOC);
