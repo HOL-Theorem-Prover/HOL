@@ -574,7 +574,7 @@ fun pp_term (G : grammar) TyG = let
             fun print_updlist updates = let
             in
               add_string ldelim;
-              begin_block CONSISTENT 0;
+              begin_block INCONSISTENT 0;
               pr_list print_update (fn () => add_string sep)
               (fn () => add_break (1,0)) updates;
               end_block ();
