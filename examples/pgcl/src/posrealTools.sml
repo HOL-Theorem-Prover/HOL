@@ -7,6 +7,8 @@ struct
 
 open HolKernel Parse boolLib simpLib posrealTheory;
 
+val ERR = mk_HOL_ERR "posrealTools";
+
 (* ------------------------------------------------------------------------- *)
 (* Two useful case-splits on posreals                                        *)
 (* pcases:  finite and infinite                                              *)
@@ -81,6 +83,14 @@ val posreal_ss = simpLib.++ (realSimps.real_ss, posreal_SS);
 (* ------------------------------------------------------------------------- *)
 (* A calculator for rational posreals.                                       *)
 (* ------------------------------------------------------------------------- *)
+
+val dest_preal_div = dest_binop ``preal_div`` (ERR "dest_preal_div" "");
+
+fun rat_cancel_conv tm =
+  let
+    val (a,b) = dest_preal_div tm
+    val m = dest_numeral a
+    val n = dest_numeral b
 
 val posreal_reduce_SS = simpLib.SIMPSET
   {ac = [],

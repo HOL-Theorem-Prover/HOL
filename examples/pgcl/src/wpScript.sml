@@ -87,9 +87,9 @@ val Program_def = Define
 val If_def = Define
   `If c a b = Prob (\s. if c s then 1 else 0) a b`;
 
-(* Demons [] should evaluate to the identity for Demon, which is Magic.     *)
-(* But we don't allow magic (i.e., miraculous) programs, so we underspecify *)
-(* Demons to avoid this nasty case.                                         *)
+(* wp (Demons []) should evaluate to the identity for Demon, which is Magic. *)
+(* But we don't allow magic (i.e., miraculous) programs, so we underspecify  *)
+(* Demons to avoid this nasty case.                                          *)
 val Demons_def = Define
   `(Demons [x] = x) /\
    (Demons (x :: y :: z) = Demon x (Demons (y :: z)))`;
@@ -164,10 +164,14 @@ val healthy_wp_abort = lemma
    ++ RW_TAC posreal_ss [up_continuous_def, lub_def, expect_def]
    ++ RW_TAC posreal_ss [Leq_def]);
 
+val () = print "wp Abort is healthy\n";
+
 val healthy_wp_skip = lemma
   (``healthy (wp Skip)``,
    RW_TAC posreal_ss [wp_def, healthy_def, feasible_def, sublinear_def]
    ++ RW_TAC posreal_ss [up_continuous_def, lub_def]);
+
+val () = print "wp Skip is healthy\n";
 
 val healthy_wp_assign = lemma
   (``!v e. healthy (wp (Assign v e))``,
@@ -193,6 +197,8 @@ val healthy_wp_assign = lemma
    ++ Q.SPEC_TAC (`s`, `s`)
    ++ Q.PAT_ASSUM `!y. P y` MATCH_MP_TAC
    ++ METIS_TAC []);
+
+val () = print "wp Assign is healthy\n";
 
 val healthy_wp_seq = lemma
   (``!prog prog'.
@@ -244,6 +250,8 @@ val healthy_wp_seq = lemma
        ++ CONV_TAC FUN_EQ_CONV
        ++ RW_TAC posreal_ss [expect_def]
        ++ METIS_TAC []]);
+
+val () = print "wp Seq is healthy\n";
 
 val healthy_wp_demon = lemma
   (``!prog prog'.
@@ -366,6 +374,8 @@ val healthy_wp_demon = lemma
            ++ RW_TAC posreal_ss [min_le]
            ++ RW_TAC posreal_ss [GSYM preal_lt_def]]]);
 
+val () = print "wp Demon is healthy\n";
+
 val healthy_wp_prob = lemma
   (``!f prog prog'.
         healthy (wp prog) /\ healthy (wp prog') ==>
@@ -378,7 +388,7 @@ val healthy_wp_prob = lemma
        ++ Know `wp prog' Zero = Zero` >> METIS_TAC [healthy_def, feasible_def]
        ++ DISCH_THEN (fn th => REWRITE_TAC [th])
        ++ CONV_TAC FUN_EQ_CONV
-       ++ RW_TAC posreal_ss [Zero_def],
+       ++ RW_TAC posreal_ss [Zero_def, LET_THM],
        RW_TAC std_ss [sublinear_def]
        ++ Know `sublinear (wp prog)` >> PROVE_TAC [healthy_sublinear]
        ++ SIMP_TAC std_ss [sublinear_def]
@@ -398,6 +408,12 @@ val healthy_wp_prob = lemma
        ++ Know `!a b c d : posreal. (a + b) + (c + d) = (a + c) + (b + d)`
        >> METIS_TAC [add_comm, add_assoc]
        ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+       ++ Suff
+          `(bound1 (f s) * (c1 * x1) + bound1 (f s) * (c2 * x2)) +
+           (c1 * ((1 - bound1 (f s)) * x1') + c2 * ((1 - bound1 (f s)) * x2'))
+           - c <= bound1 (f s) * y + (1 - bound1 (f s)) * y'`
+       >> (MATCH_MP_TAC (PROVE[]``(a : posreal = a') ==> (a <= b ==> a' <= b)``)
+           ++ METIS_TAC [mul_comm, mul_assoc])
        ++ Suff
           `(bound1 (f s) * (c1 * x1) + bound1 (f s) * (c2 * x2)) +
            ((1 - bound1 (f s)) * (c1 * x1') + (1 - bound1 (f s)) * (c2 * x2'))
@@ -526,6 +542,8 @@ val healthy_wp_prob = lemma
            ++ MATCH_MP_TAC le_sup_imp
            ++ BETA_TAC
            ++ METIS_TAC []]]);
+
+val () = print "wp Prob is healthy\n";
 
 val wp_while_monotonic = lemma
   (``!trans cond l.
@@ -924,6 +942,8 @@ val healthy_wp_while = lemma
            ++ RW_TAC posreal_ss [Leq_def])
        ++ CONV_TAC (DEPTH_CONV ETA_CONV)
        ++ RW_TAC posreal_ss [Leq_def]]);
+
+val () = print "wp While is healthy\n";
 
 val wp_healthy = store_thm
   ("wp_healthy",
