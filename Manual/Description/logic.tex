@@ -118,7 +118,7 @@ range over arbitrary types.
 There are four kinds of types in the \HOL\ logic. These can be described
 informally by the following {\small BNF} grammar,
 in which $\alpha$ ranges
-over type variables, {\sl c} ranges over atomic types and {\sl op} ranges over
+over type variables, \textsl{c} ranges over atomic types and \textsl{op} ranges over
 type operators.
 
 \newlength{\ttX}
@@ -212,8 +212,8 @@ The term `type constant' is used to cover both atomic types and type
 operators.  It is assumed that an infinite set {\sf
 TyNames} of the {\em names of type constants\/} is given.  The greek
 letter $\nu$ is used to range over arbitrary members of {\sf TyNames},
-{\sl c} will continue to be used to range over the names of atomic
-types (\ie\ $0$-ary type constants), and {\sl op} is used to range
+\textsl{c} will continue to be used to range over the names of atomic
+types (\ie\ $0$-ary type constants), and \textsl{op} is used to range
 over the names of type operators (\ie\ $n$-ary type constants, where
 $n>0$).
 
@@ -360,16 +360,16 @@ interpreted by full function sets.
 \medskip
 
 \noindent{\bf Examples\ }
-Suppose that $\Omega$ contains a type constant $({\sl b},0)$ and that
-the model $M$ assigns the set $\two$ to $\sl b$. Then:
+Suppose that $\Omega$ contains a type constant $(\textsl{b},0)$ and that
+the model $M$ assigns the set $\two$ to $\textsl{b}$. Then:
 \begin{enumerate}
 
-\item $\den{{\sl b}\fun{\sl b}\fun{\sl b}}=\two\fun\two\fun\two\in{\cal U}$.
+\item $\den{\textsl{b}\fun\textsl{b}\fun\textsl{b}}=\two\fun\two\fun\two\in{\cal U}$.
 
-\item $\den{(\alpha\fun{\sl b})\fun\alpha}:{\cal U}\longrightarrow{\cal U}$
+\item $\den{(\alpha\fun\textsl{b})\fun\alpha}:{\cal U}\longrightarrow{\cal U}$
 is the function sending $X\in{\cal U}$ to $(X\fun\two)\fun X\in{\cal U}$.
 
-\item $\den{\alpha,\beta . (\alpha\fun{\sl b})\fun\alpha}:{\cal
+\item $\den{\alpha,\beta . (\alpha\fun\textsl{b})\fun\alpha}:{\cal
 U}^{2}\longrightarrow{\cal U}$ is the function sending $(X,Y)\in{\cal
 U}^{2}$ to $(X\fun\two)\fun X\in{\cal U}$.
 
@@ -554,8 +554,8 @@ x_1.\ (\lambda x_2.\ \cdots\ (\lambda x_n.\ t)\ \cdots\ )$.
 A term is called polymorphic\index{polymorphic terms, in HOL logic@polymorphic terms, in \HOL\ logic} if it contains a type
 variable. Otherwise it is called monomorphic. Note that a term
 $t_{\sigma}$ may be polymorphic even though $\sigma$ is
-monomorphic---for example, $(f_{\alpha\fun{\sl b}}\ x_{\alpha})_{\sl
-b}$, where $\sl b$ is an atomic type. The expression
+monomorphic---for example,
+$(f_{\alpha\fun\textsl{b}}\ x_{\alpha})_{\textsl{b}}$, where $\textsl{b}$ is an atomic type. The expression
 $tyvars(t_{\sigma})$ denotes the set of type variables occurring in
 $t_{\sigma}$.
 
