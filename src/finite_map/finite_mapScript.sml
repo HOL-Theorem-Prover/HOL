@@ -899,8 +899,9 @@ val fmap_EQ = Q.store_thm
 val fmap_EQ_THM = Q.store_thm
 ("fmap_EQ_THM",
  `!(f:'a |-> 'b) g.
-     (FDOM f = FDOM g) /\
-     (!x. FDOM f x ==> (FAPPLY f x = FAPPLY g x)) = (f = g)`,
+    (FDOM f = FDOM g) /\ (!x. FDOM f x ==> (FAPPLY f x = FAPPLY g x)) 
+                       = 
+                    (f = g)`,
  REPEAT STRIP_TAC THEN EQ_TAC THENL
  [STRIP_TAC 
     THEN ASM_REWRITE_TAC [ONCE_REWRITE_RULE [EQ_SYM_EQ] fmap_EQ] 
