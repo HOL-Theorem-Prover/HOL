@@ -7,14 +7,10 @@ app load
 structure int_arithScript = struct
 
 open HolKernel boolLib Parse
-infix THEN THENC THENL |-> ORELSE
-infixr -->
 
 open integerTheory intSyntax intSimps dividesTheory
 
 open simpLib boolSimps BasicProvers SingleStep
-infix ++
-infix 8 by
 
 val _ = new_theory "int_arith";
 
@@ -888,7 +884,7 @@ val cooper_lemma_1 = store_thm(
     `&m * &n int_divides (p * &u * &m + q * &a * &n) * x +
                          v * &m * p + b * &n * q` by
         (POP_ASSUM MP_TAC THEN
-         SIMP_TAC (bool_ss ++ int_acnorm_ss)[INT_LDISTRIB]) THEN
+         SIMP_TAC (bool_ss ++ int_acnorm_ss)[INT_LDISTRIB, INT_RDISTRIB]) THEN
     POP_ASSUM MP_TAC THEN ASM_SIMP_TAC bool_ss [],
     (* m | ax + b /\ n | ux + v ==> d | av - ub *)
     `?j. &m * j = &a * x + b` by PROVE_TAC [INT_DIVIDES, INT_MUL_COMM] THEN
@@ -917,7 +913,8 @@ val cooper_lemma_1 = store_thm(
        ASSUME_TAC THEN
     `&m * &n int_divides &m * p * (&u * x + v) + &n * q * (&a * x + b)` by
        (POP_ASSUM MP_TAC THEN
-        ASM_SIMP_TAC (bool_ss ++ int_acnorm_ss)[INT_LDISTRIB]) THEN
+        ASM_SIMP_TAC (bool_ss ++ int_acnorm_ss)
+                     [INT_LDISTRIB, INT_RDISTRIB]) THEN
     `&a * &u * &m * &n int_divides
          &u * &m * p * (&u * &a * x + &a * v) +
          &a * &n * q * (&u * &a * x + &u * b)` by
@@ -976,7 +973,8 @@ val cooper_lemma_1 = store_thm(
        ASSUME_TAC THEN
     `&m * &n int_divides &m * p * (&u * x + v) + &n * q * (&a * x + b)` by
        (POP_ASSUM MP_TAC THEN
-        ASM_SIMP_TAC (bool_ss ++ int_acnorm_ss)[INT_LDISTRIB]) THEN
+        ASM_SIMP_TAC (bool_ss ++ int_acnorm_ss)
+                     [INT_LDISTRIB, INT_RDISTRIB]) THEN
     `&a * &u * &m * &n int_divides
          &u * &m * p * (&u * &a * x + &a * v) +
          &a * &n * q * (&u * &a * x + &u * b)` by

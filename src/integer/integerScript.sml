@@ -31,6 +31,8 @@ open jrhUtils EquivType liteLib
      arithmeticTheory prim_recTheory numTheory
      simpLib numLib boolTheory liteLib metisLib;
 
+open BasicProvers
+
 
 val int_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss ++ pairSimps.PAIR_ss;
 
@@ -533,7 +535,7 @@ val INT_ADD_LID =
 val INT_ADD_RID =
     store_thm("INT_ADD_RID",
 	      Term `!x:int. x + 0 = x`,
-	      SIMP_TAC int_ss [INT_ADD_SYM,INT_ADD_LID])
+	      PROVE_TAC [INT_ADD_COMM,INT_ADD_LID])
 
 (* already defined, but using the wrong term for 0 *)
 val INT_ADD_LINV =
@@ -543,7 +545,8 @@ val INT_ADD_LINV =
 val INT_ADD_RINV =
     store_thm("INT_ADD_RINV",
 	      Term `!x. x + ~x = 0`,
-	      SIMP_TAC int_ss [INT_ADD_SYM,INT_0,INT_ADD_LINV])
+	      ONCE_REWRITE_TAC [INT_ADD_SYM] THEN
+              REWRITE_TAC [INT_ADD_LINV])
 
 (* already defined, but using the wrong term for 1 *)
 val INT_MUL_LID =
@@ -553,12 +556,13 @@ val INT_MUL_LID =
 val INT_MUL_RID =
     store_thm("INT_MUL_RID",
 	      Term `!x:int. x * 1 = x`,
-	      SIMP_TAC int_ss [INT_MUL_SYM,GSYM INT_1,INT_MUL_LID])
+	      PROVE_TAC [INT_MUL_SYM,GSYM INT_1,INT_MUL_LID])
 
 val INT_RDISTRIB =
     store_thm("INT_RDISTRIB",
 	      Term `!(x:int) y z. (x + y) * z = (x * z) + (y * z)`,
-	      SIMP_TAC int_ss [INT_MUL_SYM,INT_LDISTRIB])
+              ONCE_REWRITE_TAC [INT_MUL_COMM] THEN
+              REWRITE_TAC [INT_LDISTRIB])
 
 val INT_EQ_LADD =
     store_thm("INT_EQ_LADD",
@@ -853,7 +857,7 @@ val INT_LE_SQUARE =
 
 val INT_LE_01 =
     store_thm("INT_LE_01",
-	      Term `0 <= 1`,
+	      Term `0i <= 1`,
 	      SUBST1_TAC(SYM(Q.SPEC `1` INT_MUL_LID)) THEN
 	      SIMP_TAC int_ss [INT_LE_SQUARE,INT_1]);
 
@@ -1610,7 +1614,7 @@ val NUM_POSINT =
 		                   (MATCH_MP NUM_LEMMA th)) THEN
 		  EXISTS_TAC (Term `n:num`) THEN REWRITE_TAC[NUM_DECOMPOSE]);
 
-open SingleStep BasicProvers
+open SingleStep
 
 val NUM_POSINT_EXISTS = store_thm(
   "NUM_POSINT_EXISTS",
@@ -1623,7 +1627,6 @@ val NUM_NEGINT_EXISTS = store_thm(
   PROVE_TAC [NUM_POSINT_EXISTS, INT_NEG_LE0, INT_NEG_EQ]);
 
 open boolSimps
-infix 8 by
 
 val INT_NUM_CASES = store_thm(
   "INT_NUM_CASES",
@@ -1877,10 +1880,9 @@ val INT_MOD_NEG = store_thm(
   REPEAT GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
   FULL_SIMP_TAC int_ss [INT_INJ, INT_NEGNEG, int_mod, INT_NEG_EQ,
-                        INT_NEG_0, INT_DIV_NEG, INT_NEG_SUB,
-                        GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL,
-                        INT_SUB_NEG2, INT_SUB_RNEG, INT_NEG_EQ0] THEN
-  MATCH_ACCEPT_TAC INT_ADD_COMM);
+                        INT_NEG_0, INT_DIV_NEG, INT_NEG_ADD,
+                        GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, int_sub,
+                        INT_NEG_EQ0]);
 
 val INT_MOD0 = store_thm(
   "INT_MOD0",

@@ -949,13 +949,15 @@ val final_equivalence = store_thm(
     `0 < c /\ 0 < d /\ c <= m` by PROVE_TAC [] THEN
     `&d * (&c * x) <= &d * L /\ &c * R <= &c * (&d * x)` by
        PROVE_TAC [le_mono] THEN
-    FULL_SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss) [INT_SUB_LDISTRIB,
-      INT_SUB_RDISTRIB, arithmeticTheory.MULT_CLAUSES] THEN
+    `&d * L - &c * R < &(c * d) - &c - (&d - 1)` by
+      FULL_SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss)
+                    [INT_SUB_LDISTRIB, INT_SUB_RDISTRIB,
+                     arithmeticTheory.MULT_CLAUSES] THEN
     `&d * L <= &c * R + (&(c * d) - &c - &d)` by
        FULL_SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss ++ INT_ADD_AC_ss)
                      [move_subs_out, LE_LT1, INT_LT_SUB_LADD,
                       INT_LT_SUB_RADD] THEN
-    `&c * (&d * x) <= &c * R + (&(c * d) - &c - &d)` by
+    `&d * (&c * x) <= &c * R + (&(c * d) - &c - &d)` by
        PROVE_TAC [INT_LE_TRANS] THEN
     `&c * (&d * x - R) <= &(c * d) - &c - &d` by
        FULL_SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss ++ INT_ADD_AC_ss)

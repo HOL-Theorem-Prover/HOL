@@ -32,6 +32,69 @@ fun size_of_term tm =
        | COMB(Rator,Rand) => size_of_term Rator + size_of_term Rand
        | _ => 1
 
+fun op lex_cmp (cmp1, cmp2) ((a1,b1), (a2,b2)) =
+    case cmp1 (a1, a2) of
+      EQUAL => cmp2 (b1, b2)
+    | x => x
+infix lex_cmp
+
+fun dest_hd env t =
+    case dest_term t of
+      VAR (s, ty) => let
+      in
+        case Binarymap.peek(env, t) of
+          NONE => (((s, ""), 0), ty)
+        | SOME n => ((("", ""), ~n), Type.alpha)
+      end
+    | CONST {Name, Thy, Ty} => (((Name, Thy), 1), Ty)
+    | LAMB (bv, body) => ((("", ""), 2), type_of bv)
+    | COMB _ => ((("", ""), 3), Type.alpha) (* should never happen *)
+
+fun hd_compare (env1, env2) (t1, t2) =
+    (String.compare lex_cmp String.compare lex_cmp Int.compare
+     lex_cmp Type.compare)
+    (dest_hd env1 t1, dest_hd env2 t2)
+
+fun ac_term_ord0 n (e as (env1, env2)) (tm1, tm2) = let
+  val cmp = ac_term_ord0 n e
+in
+  case Int.compare (size_of_term tm1, size_of_term tm2) of
+    EQUAL => let
+    in
+      if is_abs tm1 then
+        if is_abs tm2 then let
+            val (bv1, bdy1) = dest_abs tm1
+            val (bv2, bdy2) = dest_abs tm2
+          in
+            case Type.compare(type_of bv1, type_of bv2) of
+              EQUAL => let
+                val env1' = Binarymap.insert(env1, bv1, n)
+                val env2' = Binarymap.insert(env2, bv2, n)
+              in
+                ac_term_ord0 (n + 1) (env1', env2') (bdy1, bdy2)
+              end
+            | x => x
+          end
+        else GREATER
+      else if is_abs tm2 then LESS
+      else let
+          val (f, xs) = strip_comb tm1
+          val (g, ys) = strip_comb tm2
+        in
+          (hd_compare e lex_cmp Int.compare lex_cmp list_compare cmp)
+          (((f, length xs), xs), ((g, length ys), ys))
+        end
+    end
+  | x => x
+end
+val empty_dict = Binarymap.mkDict Term.compare
+val ac_term_ord = ac_term_ord0 0 (empty_dict, empty_dict)
+
+(* bad old implementation, has a loop between
+
+  (x + y) + 1  >  x + (y + 1)  >  x + (1 + y)  >  1 + (x + y)  >  (x + y) + 1
+
+ remembering that 1 is really NUMERAL (NUMERAL_BIT1 ALT_ZERO)
 
 fun ac_term_ord(tm1,tm2) =
    case (dest_term tm1, dest_term tm2) of
@@ -56,6 +119,8 @@ fun ac_term_ord(tm1,tm2) =
                   | ord => ord
                  end)
        | ord => ord)
+
+*)
 
    (* ---------------------------------------------------------------------
     * COND_REWR_CONV
@@ -94,8 +159,8 @@ fun ac_term_ord(tm1,tm2) =
                  failwith "looping rewrite")
               else ()
 
-            val _ = if (isperm andalso (ac_term_ord(r,l) <> LESS))
-                    then failwith "permutative rewr: not applied" else ()
+            val _ = if isperm andalso ac_term_ord(l, r) <> GREATER then
+                      failwith "permutative rewr: not applied" else ()
             val _ = if null conditions then ()
                     else trace(if isperm then 2 else 1, REWRITING(tm,th))
 	    val new_stack = conditions@stack
@@ -203,16 +268,22 @@ fun IMP_EQ_CANON thm =
        val conc = concl undisch_thm
        val undisch_rewrites =
         if (is_eq conc)
-        then if (loops undisch_thm)
-             then (trace(1,IGNORE("looping rewrite",thm)); [])
+        then if (loops undisch_thm) then
+               (trace(1,IGNORE("looping rewrite",thm)); [])
              else let
                  val base = if null (subtract (free_vars (rhs conc))
 			                      (free_varsl (hyp thm)@
                                                free_vars(lhs conc)))
 		            then undisch_thm
 		            else EQT_INTRO undisch_thm
+                 val flip_eqp = let
+                   val (ll, lr) = dest_eq (lhs (concl base))
+                 in
+                   not (can (match_term (mk_eq(lr,ll)))
+                            (rhs (concl base)))
+                 end handle HOL_ERR _ => false
                in
-                 if is_eq (lhs (concl base)) then
+                 if flip_eqp then
                    [base, CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ)) base]
                  else [base]
                end
