@@ -12,7 +12,7 @@ struct
   val vs_cons_special = " _ vs cons"
   val resquan_special = " _ res quan special"
   val nat_elim_term = " _ elim_nat"
-  val fromNum_str = "fromNum"
+  val fromNum_str = "&"
   val std_binder_precedence = 0
 
 
