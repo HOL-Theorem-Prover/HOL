@@ -178,7 +178,7 @@ fun buildDb holpath = let
      (* TFL *)
      "Context.sig","Thry.sig",(* "listTools.sig" *)"RW.sig",
      "USyntax.sig","pairTools.sig","Rules.sig",
-     "arithTools.sig",
+     "arithTools.sig", "Defn.sig",
      "relationTheory.sig", "Tfl.sig","boolTools.sig","tflLib.sig",
      "Thms.sig",  (* "datatypeRW.sig", *)
 
