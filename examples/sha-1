@@ -1,0 +1,424 @@
+(*===========================================================================*)
+(* Secure Hash Algorithm                                                     *)
+(*                                                                           *)
+(* HOL version of an ML implementation by Hiro Kuwahara                      *)
+(*                                                                           *)
+(*===========================================================================*)
+
+app load ["pairTools", "word32Lib", "word8Lib", "stringLib"];
+
+open stringTheory arithmeticTheory;
+
+numLib.prefer_num();
+
+word8Lib.pp_word_unsigned_hex();
+word32Lib.pp_word_unsigned_hex();
+
+(*---------------------------------------------------------------------------*)
+(* Some support stuff on lists, in particular a definition of TAKE.          *)
+(*---------------------------------------------------------------------------*)
+
+val _ = set_fixity "<>" (Infixl 500);
+val _ = overload_on ("<>", Term`APPEND`);
+
+val lemma = Q.prove
+(`!n L. n <= LENGTH L ==> n-1 <= LENGTH (TL L)`,
+ Induct_on `L` THEN RW_TAC list_ss []);
+
+val (TAKE_def,TAKE_ind) = 
+ Defn.tprove(Hol_defn 
+    "TAKE"
+    `TAKE n L = if n = 0 then ([],L) else
+                   let (front,back) = TAKE (n-1) (TL L)
+                   in (HD L::front,back)`,
+ WF_REL_TAC `measure FST`);
+
+
+val TAKE_THM = Q.prove
+(`!n L taken left. 
+      n <= LENGTH L /\ ((taken,left) = TAKE n L) 
+       ==> (taken <> left = L) /\ (LENGTH taken = n)`,
+ recInduct TAKE_ind THEN REPEAT GEN_TAC THEN STRIP_TAC
+   THEN ONCE_REWRITE_TAC [TAKE_def]
+   THEN REPEAT GEN_TAC THEN COND_CASES_TAC THENL
+   [RW_TAC list_ss [] THEN RW_TAC list_ss [],
+    pairTools.LET_EQ_TAC [pairTheory.LET2_RATOR,pairTheory.LET2_RAND]
+      THEN RW_TAC list_ss []
+      THEN FULL_SIMP_TAC list_ss [lemma] THENL
+      [MATCH_MP_TAC listTheory.CONS
+         THEN Cases_on `L` 
+         THEN FULL_SIMP_TAC list_ss [],
+       RES_TAC THEN RW_TAC list_ss []]]);
+
+(*---------------------------------------------------------------------------*)
+(* Misc. support for 8 bit bytes and 32 bit words.                           *)
+(*---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* Left rotate a word                                                        *)
+(*---------------------------------------------------------------------------*)
+
+val rotl32_def = Define 
+   `rotl_w32 (a:word32) (b:num) = a #>> (32 - b)`;
+
+val _ = set_fixity "<<#" (Infixl 680);
+val _ = temp_overload_on ("<<#", Term `$rotl_w32`);
+
+(*---------------------------------------------------------------------------*)
+(* Trivial abbreviations.                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val W8 = Define `W8 = word8$n2w`;
+val W32 = Define `W32 = word32$n2w`;
+
+(*---------------------------------------------------------------------------*)
+(* 64 copies of ZERO                                                         *)
+(*---------------------------------------------------------------------------*)
+
+val ZERO_def = Define `ZERO = W32 0n`;
+
+val ZEROx64_def = Define 
+   `ZEROx64 = [ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
+               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
+               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
+               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
+               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
+               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
+               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
+               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO]`;
+
+(*---------------------------------------------------------------------------*)
+(* Convert from 8 bits to 32 bits                                            *)
+(*---------------------------------------------------------------------------*)
+
+val w8to32 = Define `w8to32 word8 = W32(word8$w2n word8)`; 
+
+(*---------------------------------------------------------------------------*)
+(*    word32 <--> (word8 # word8 # word8 # word8)                            *)
+(*---------------------------------------------------------------------------*)
+
+val w8x4to32_def = Define 
+   `w8x4to32 w1 w2 w3 w4 = (w8to32(w1) << 24n) | (w8to32(w2) << 16n) | 
+                           (w8to32(w3) << 8n)  | w8to32(w4)`;
+val w32to8x4_def = Define 
+   `w32to8x4 w = (W8 (word32$w2n((w:word32) >>> 24n)), 
+                  W8 (word32$w2n(w >>> 16n)), 
+                  W8 (word32$w2n(w >>> 8n)), 
+                  W8 (word32$w2n(w)))` ;
+
+val w32List_def = Define 
+  `(w32List (b1::b2::b3::b4::t) = w8x4to32 b1 b2 b3 b4::w32List t) /\
+   (w32List other = [])`;
+
+val w8List_def = Define 
+  `(w8List [] = []) /\
+   (w8List (h::t) = let (b1,b2,b3,b4) = w32to8x4 h in b1::b2::b3::b4::w8List t)`;
+
+(*---------------------------------------------------------------------------*)
+(* Translate 5 32 bit words to a 20-tuple of 8-bit words.                    *)
+(*---------------------------------------------------------------------------*)
+
+val w32x5to8_def = Define 
+   `w32x5to8 (w1,w2,w3,w4,w5) =
+      let (w1b1,w1b2,w1b3,w1b4) = w32to8x4 w1 in
+      let (w2b1,w2b2,w2b3,w2b4) = w32to8x4 w2 in
+      let (w3b1,w3b2,w3b3,w3b4) = w32to8x4 w3 in
+      let (w4b1,w4b2,w4b3,w4b4) = w32to8x4 w4 in
+      let (w5b1,w5b2,w5b3,w5b4) = w32to8x4 w5 
+       in
+        (w1b1,w1b2,w1b3,w1b4,w2b1,w2b2,w2b3,w2b4,
+         w3b1,w3b2,w3b3,w3b4,w4b1,w4b2,w4b3,w4b4,w5b1,w5b2,w5b3,w5b4)`;
+
+
+(*---------------------------------------------------------------------------*)
+(*             Padding                                                       *)
+(*---------------------------------------------------------------------------*)
+
+val div64 = CONV_RULE EVAL (Q.SPEC `64n` arithmeticTheory.DIVISION);
+val ndiv64 = Q.SPEC `n` div64;
+val n1div64 = Q.SPEC `n+1` div64;
+
+val swap_lem =
+  DECIDE (Term `!a b c d : num. a < b /\ c < d ==> (b-a < d-c = b+c < d+a)`);
+
+(*---------------------------------------------------------------------------*)
+(* Gross termination proof. Would be better in the integers.                 *)
+(*---------------------------------------------------------------------------*)
+
+val (appendPaddingBitsHelper_def,
+     appendPaddingBitsHelper_ind) = 
+Defn.tprove
+(Hol_defn 
+  "appendPaddingBitsHelper"
+  `appendPaddingBitsHelper n : word8 list = 
+       if n MOD 64 = 56 then [] 
+       else word8$word_0::appendPaddingBitsHelper (n+1)`,
+ WF_REL_TAC 
+    `measure \n. if n MOD 64 <= 56 then 56 - n MOD 64 else 120 - n MOD 64`
+   THEN RW_TAC std_ss [] THENL
+   [`n MOD 64 < 56` by DECIDE_TAC 
+      THEN WEAKEN_TAC (equal (Term `n MOD 64 <= 56`))
+      THEN WEAKEN_TAC (equal (Term `~(n MOD 64 = 56)`))
+      THEN FULL_SIMP_TAC std_ss [LESS_OR_EQ] THENL
+      [RW_TAC arith_ss [swap_lem] 
+        THEN Induct_on `n DIV 64` THEN RW_TAC std_ss [] THENL
+        [MP_TAC ndiv64 
+           THEN Q.PAT_ASSUM `x = y` (SUBST_ALL_TAC o SYM)
+           THEN RW_TAC arith_ss []
+           THEN `(n=63) \/ n<63` by DECIDE_TAC THEN FULL_SIMP_TAC arith_ss [],
+         Q.PAT_ASSUM `$!M` (MP_TAC o Q.SPEC `v * 64n + n MOD 64`)
+           THEN RW_TAC arith_ss []
+           THEN FULL_SIMP_TAC arith_ss [ADD_DIV_ADD_DIV]
+           THEN `n MOD 64 DIV 64 = 0` by RW_TAC arith_ss [LESS_DIV_EQ_ZERO]
+           THEN FULL_SIMP_TAC std_ss []
+           THEN `(v * 64 + n MOD 64) MOD 64 = n MOD 64` 
+                by RW_TAC arith_ss [MOD_MULT]
+           THEN FULL_SIMP_TAC arith_ss []
+           THEN `(v * 64 + (n MOD 64 + 1)) MOD 64 = n MOD 64 + 1` 
+                by RW_TAC arith_ss [MOD_MULT]
+           THEN `n MOD 64 + 1 = (n+1) MOD 64` 
+                by RW_TAC arith_ss [Once (GSYM MOD_PLUS)]
+           THEN FULL_SIMP_TAC arith_ss []],
+       DECIDE_TAC],
+    ASSUME_TAC (CONJUNCT2 ndiv64) THEN DECIDE_TAC,
+    FULL_SIMP_TAC arith_ss [Once (GSYM MOD_PLUS)],
+    `56 < n MOD 64 /\ n MOD 64 < 64` by RW_TAC arith_ss [ndiv64] THEN
+    `56 < (n+1) MOD 64 /\ (n+1) MOD 64 < 64` by RW_TAC arith_ss [n1div64] 
+       THEN REPEAT (WEAKEN_TAC is_neg) 
+       THEN RW_TAC arith_ss [swap_lem]
+       THEN FULL_SIMP_TAC arith_ss [Once (GSYM MOD_PLUS)]
+       THEN `(n MOD 64 = 57) \/ (n MOD 64 = 58) \/ (n MOD 64 = 59) \/ 
+             (n MOD 64 = 60) \/ (n MOD 64 = 61) \/ (n MOD 64 = 62) \/
+             (n MOD 64 = 63)` by DECIDE_TAC THEN FULL_SIMP_TAC arith_ss []]);
+
+
+val computePaddingBits = Define
+   `computePaddingBits len : word8 list =
+         W8(128)::appendPaddingBitsHelper (len+1n)`;
+
+val computeLengthBitsHelper_def = Define
+   `computeLengthBitsHelper(len,i) = 
+      if i = 0 then []
+       else W8(word32$WORD_BITS 7 0 (W32 len >> ((i-1)*8)))
+           ::computeLengthBitsHelper(len,i-1)`;
+
+val computeLengthBits_def = Define 
+   `computeLengthBits len = computeLengthBitsHelper(len * 8n, 8)`;
+
+val appendPadding_def = Define 
+   `appendPadding input = 
+      let len = LENGTH input
+      in input <> computePaddingBits(len) <> computeLengthBits(len)`;
+
+
+(*---------------------------------------------------------------------------*)
+(* There are 4 highly similar rounds of computation, each consisting of 20   *)
+(* highly similar steps. Higher order functions to the rescue!               *)                                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val f1_def = Define `f1(a,b,c) = (c # (a & (b # c))) + W32 1518500249`;
+val f2_def = Define `f2(a,b,c) = (a # b # c) + W32 1859775393`;
+val f3_def = Define `f3(a,b,c) = ((a & b) | (c & (a | b))) + W32 2400959708`;
+val f4_def = Define `f4(a,b,c) = (a # b # c) + W32 3395469782`;
+
+
+val Helper_def = Define
+ `Helper f n (a,b,c,d,e) w = 
+    if n = 0 then (a,(b <<# 30n),c,d,e+(a <<# 5n)+f(b,c,d)+w) else
+    if n = 1 then ((a <<# 30n),b,c,d+(e <<# 5n)+f(a,b,c)+w,e) else 
+    if n = 2 then (a,b,c+(d <<# 5n)+f(e,a,b)+w,d,e <<# 30n)   else 
+    if n = 3 then (a,b+(c <<# 5n)+f(d,e,a)+w,c,d <<# 30n,e)   
+             else (a+(b <<# 5n)+f(c,d,e)+w,b,c <<# 30n,d,e)`;
+
+val Round_def = Define 
+  `(Round _ _ args [] = (args,[])) /\
+   (Round helper i args (w::t) =
+      if i<20 then Round helper (i+1) (helper (i MOD 5) args w) t 
+              else (args, w::t))`;
+   
+val expand_def = Define 
+  `(expand (w0::w1::w2::w3::w4::w5::w6::w7::w8::w9::
+            w10::w11::w12::w13::w14::w15::w16::t) = 
+        let j = (w0 # w2 # w8 # w13) <<# 1n
+        in w0::expand(w1::w2::w3::w4::w5::w6::w7::w8::
+                      w9::w10::w11::w12::w13::w14::w15::j::t))
+/\ (expand wlist = wlist)`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Digest a block	                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val digestBlock_def = Define 
+   `digestBlock (block:word8 list) (h0,h1,h2,h3,h4) =
+      let wlist = expand (w32List block <> ZEROx64) in
+      let (hbar1,wlist1) = Round (Helper f1) 0 (h0,h1,h2,h3,h4) wlist in
+      let (hbar2,wlist2) = Round (Helper f2) 0 hbar1 wlist1 in
+      let (hbar3,wlist3) = Round (Helper f3) 0 hbar2 wlist2 in
+      let (hbar4,wlist4) = Round (Helper f4) 0 hbar3 wlist3 in
+      let (a,b,c,d,e) = hbar4 
+       in 
+         (h0+a, h1+b, h2+c, h3+d, h4+e)`;
+
+(*---------------------------------------------------------------------------*)
+(* The LENGTH check is needed for termination proof.                         *)
+(*---------------------------------------------------------------------------*)
+
+val (digest_def,digest_ind) = Defn.tprove
+(Hol_defn
+  "digest"
+  `digest message Hbar = 
+     if LENGTH message < 64 then Hbar
+     else let (next, rest) = TAKE 64 message
+           in digest rest (digestBlock next Hbar)`,
+ WF_REL_TAC `measure (LENGTH o FST)`
+  THEN RW_TAC list_ss []
+  THEN `64 <= LENGTH message` by DECIDE_TAC
+  THEN IMP_RES_TAC TAKE_THM
+  THEN RW_TAC list_ss []);
+
+(*---------------------------------------------------------------------------*)
+(* Compute the message digest                                                *)
+(*---------------------------------------------------------------------------*)
+
+val H0_def = Define `H0 = W32 1732584193`;
+val H1_def = Define `H1 = W32 4023233417`;
+val H2_def = Define `H2 = W32 2562383102`;
+val H3_def = Define `H3 = W32 271733878`;
+val H4_def = Define `H4 = W32 3285377520`;
+
+val computeMD_def = Define 
+   `computeMD input =
+      let paddedMessage = appendPadding input in
+      let (a,b,c,d,e) = digest paddedMessage (H0,H1,H2,H3,H4)
+      in w32x5to8 (a,b,c,d,e)`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Tests (need bespoke compset)                                              *)
+(*---------------------------------------------------------------------------*)
+
+val char_to_w8_def = Define 
+   `char_to_w8 c = W8 (ORD c)`;
+
+val string_to_w8_list_def = Define 
+   `string_to_w8_list s = MAP char_to_w8 (EXPLODE s)`;
+
+val string_to_w8_thms = [char_to_w8_def, string_to_w8_list_def];
+
+val pairs_and_lists = let open pairTheory listTheory 
+ in
+  [CLOSED_PAIR_EQ, FST, SND,pair_case_thm,
+   CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM,
+   numeralTheory.numeral_funpow, (* LET_THM, *)
+   APPEND,APPEND_NIL, FLAT, HD, TL,
+   LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,
+   EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,
+   FOLDL, REVERSE_DEF, EL_compute, ALL_DISTINCT,
+   computeLib.lazyfy_thm list_case_compute,
+   list_size_def,FRONT_DEF,LAST_DEF]
+ end;
+
+val string_thms = let open stringTheory
+   in [ORD_CHR_COMPUTE,CHR_ORD,STRING_CASE_DEF,STRLEN_DEF,
+       EXPLODE_EQNS,IMPLODE_EQNS,STRCAT_EQNS]
+   end;
+
+val word8thms = 
+ let open bitsTheory numeral_bitsTheory word8Theory 
+     val THE_WL = SIMP_RULE arith_ss [HB_def,arithmeticTheory.ADD1] WL_def
+     val MOD_WL_EVAL = REWRITE_RULE [THE_WL,GSYM MOD_2EXP_def] MOD_WL_def;
+     val RRX_EVAL2 = GEN_ALL (REWRITE_RULE 
+                         [GSYM DIV2_def,RRXn_def,LSR_ONE_def,HB_def] RRX_EVAL);
+     val LT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LT_EVAL;
+     val LE_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LE_EVAL;
+     val GT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GT_EVAL;
+     val GE_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GE_EVAL;
+     val LO_EVAL = REWRITE_RULE [MOD_WL_EVAL] LO_EVAL;
+     val LS_EVAL = REWRITE_RULE [MOD_WL_EVAL] LS_EVAL;
+     val HI_EVAL = REWRITE_RULE [MOD_WL_EVAL] HI_EVAL;
+     val HS_EVAL = REWRITE_RULE [MOD_WL_EVAL] HS_EVAL;
+   in
+    [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
+     LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
+     THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
+     MOD_WL_EVAL, w2n_EVAL, n2w_11,
+     OR_def, AND_def, EOR_def, TWO_COMP_def, ONE_COMP_def, RRX_def,MSB_def,
+     ADD_EVAL, MUL_EVAL, word_sub,
+     ONE_COMP_EVAL, TWO_COMP_EVAL,
+     AND_EVAL, OR_EVAL, EOR_EVAL,
+     LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL,
+     WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
+     MSB_EVAL, LSB_EVAL,
+     iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2, SIGN_EXTEND_def,
+     DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP, TIMES_2EXP_def,
+     MSBn_def, LSBn_def, BITV_def, SBIT_def, BITS_def, BIT_def, SLICE_def]
+   end;
+
+val word32thms = 
+let open bitsTheory numeral_bitsTheory word32Theory
+     val THE_WL = SIMP_RULE arith_ss [HB_def,arithmeticTheory.ADD1] WL_def
+     val MOD_WL_EVAL = REWRITE_RULE [THE_WL,GSYM MOD_2EXP_def] MOD_WL_def;
+     val LT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LT_EVAL;
+     val LE_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LE_EVAL;
+     val GT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GT_EVAL;
+     val GE_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GE_EVAL;
+     val LO_EVAL = REWRITE_RULE [MOD_WL_EVAL] LO_EVAL;
+     val LS_EVAL = REWRITE_RULE [MOD_WL_EVAL] LS_EVAL;
+     val HI_EVAL = REWRITE_RULE [MOD_WL_EVAL] HI_EVAL;
+     val HS_EVAL = REWRITE_RULE [MOD_WL_EVAL] HS_EVAL;
+   in
+    [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
+     THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
+     MOD_WL_EVAL, w2n_EVAL, n2w_11,
+     OR_def, AND_def, EOR_def, TWO_COMP_def, ONE_COMP_def, RRX_def,MSB_def,
+     ADD_EVAL, MUL_EVAL, word_sub,ONE_COMP_EVAL, TWO_COMP_EVAL,
+     AND_EVAL, OR_EVAL, EOR_EVAL,LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL,
+     WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
+     MSB_EVAL, LSB_EVAL,
+     iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2, SIGN_EXTEND_def,
+     DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP, TIMES_2EXP_def,
+     MSBn_def, LSBn_def, BITV_def, SBIT_def, BITS_def, BIT_def, SLICE_def]
+   end;
+
+
+val sha1thms = 
+ [TAKE_def,rotl32_def, W8, W32, ZERO_def,ZEROx64_def, 
+  w8to32, w8x4to32_def, w32to8x4_def,
+  w32List_def, w8List_def, w32x5to8_def,appendPaddingBitsHelper_def, 
+  computePaddingBits, computeLengthBitsHelper_def,computeLengthBits_def,
+  appendPadding_def, f1_def, f2_def, f3_def, f4_def, 
+  Helper_def, Round_def,expand_def, 
+  digestBlock_def,digest_def, H0_def,H1_def,H2_def,H3_def,H4_def,computeMD_def];
+
+val compset = reduceLib.num_compset();
+
+val _ = try (computeLib.add_thms 
+          (string_to_w8_thms @ string_thms @ pairs_and_lists @ 
+           word8thms @ word32thms @ sha1thms))
+          compset;
+
+val SHA1_CONV = computeLib.WEAK_CBV_CONV compset;
+
+(*
+val thm1 = SHA1_CONV (Term `appendPadding (string_to_w8_list "abc")`);
+val thm2 = SHA1_CONV (Term `LENGTH (appendPadding (string_to_w8_list "abc")) < 64`);
+val thm3 = SHA1_CONV (Term 
+  `let (next,rest) = TAKE 64 (appendPadding (string_to_w8_list "abc")) in 
+   let block1 = expand (w32List next <> ZEROx64) 
+   in block1`);
+  
+val thm4a = SHA1_CONV (Term 
+  `let (next,rest) = TAKE 64 (appendPadding (string_to_w8_list "abc")) in 
+   let block1 = expand (w32List next <> ZEROx64) in
+   doRound (Helper f1) 0 (H0,H1,H2,H3,H4) block1`);
+
+val thm4 = SHA1_CONV (Term 
+  `let (next,rest) = TAKE 64 (appendPadding (string_to_w8_list "abc")) in 
+   let block1 = expand (w32List next <> ZEROx64) in
+   doRound (Helper f1) 0 (H0,H1,H2,H3,H4) block1`);
+
+
+val thm5 = Count.apply SHA1_CONV (Term `computeMD (string_to_w8_list "abc")`);
+
+*)
