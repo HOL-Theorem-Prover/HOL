@@ -1,12 +1,14 @@
-open HolKernel Parse boolLib Prim_rec mnUtils Psyntax;
+(*
+   fun mload s = (print ("Loading "^s^"\n"); load s);
+   app mload ["pred_setTheory", "mnUtils", "QLib"];
+*)
+
+open HolKernel Parse boolLib Prim_rec mnUtils PairedDefinition;
 
 infix THEN ORELSE THENL THENC ORELSEC >- ++ |->;
 
 val _ = new_theory "bag";
-(*
-   fun mload s = (print ("Loading "^s^"\n"); load s);
-   app mload ["pred_setTheory", "mnUtils", "QLib"]
-*)
+
 
 val hol_ss = mn_ss;
 
@@ -472,7 +474,8 @@ val SUB_BAG_LEQ = store_thm(
   SIMP_TAC hol_ss [SUB_BAG, BAG_INN, geq_lemma] THEN
   SIMP_TAC hol_ss [arithmeticTheory.GREATER_EQ]);
 
-val _ = print "Properties of BAG_DIFF\n"
+val _ = print "Properties of BAG_DIFF\n";
+
 val BAG_DIFF_EMPTY = store_thm(
   "BAG_DIFF_EMPTY",
   --`(!b. BAG_DIFF b b = EMPTY_BAG) /\
@@ -703,12 +706,14 @@ val SUB_BAG_UNION = save_thm(
   "SUB_BAG_UNION",
   LIST_CONJ (simplest_cases @ one_from_assoc @ union_from_union @
              union_union2_assoc @ union2_union_assoc));
+
 val SUB_BAG_EL_BAG = Q.store_thm(
   "SUB_BAG_EL_BAG",
   `!e b. SUB_BAG (EL_BAG e) b = BAG_IN e b`,
   SIMP_TAC (hol_ss ++ impnorm_set) [EL_BAG, BAG_IN, SUB_BAG,
     BAG_INN_BAG_INSERT, FORALL_AND_THM, BAG_INN_EMPTY_BAG,
     BAG_INN_0, ARITH_PROVE (Term`!n. (n - 1 = 0) = (n = 0) \/ (n = 1)`)]);
+
 val GREATER_OR_EQ_TRANS =
   ARITH_PROVE (Term`!n m q. n >= m /\ m >= q ==> n >= q`)
 
@@ -1211,7 +1216,7 @@ val BCARD_R_det = prove(
 val FINITE_BAGS_BCARD = prove(
   Term`!b. FINITE_BAG b ==> ?n. BAG_CARD_RELn b n`,
   HO_MATCH_MP_TAC FINITE_BAG_INDUCT THEN MESON_TAC [BCARD_imps]);
-val BAG_CARD = Rsyntax.new_specification {
+val BAG_CARD = new_specification {
   consts = [{const_name = "BAG_CARD", fixity = Prefix}],
   name = "BAG_CARD",
   sat_thm = CONV_RULE SKOLEM_CONV (
@@ -1278,3 +1283,4 @@ val BAG_CARD_BAG_INN = Q.store_thm(
   ]);
 
 val _ = export_theory();
+

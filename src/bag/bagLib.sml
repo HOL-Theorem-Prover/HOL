@@ -1,21 +1,18 @@
 structure bagLib :> bagLib = struct
 
-open HolKernel Parse boolLib
-open Psyntax simpLib boolSimps
+open HolKernel Parse boolLib simpLib boolSimps bagTheory;
+
 infixr -->
 infix |-> THENC
 
-open bagTheory
 
-
-fun ERR f s = HOL_ERR {origin_function = f, message = s,
-                       origin_structure = "bagLib"};
+val ERR = mk_HOL_ERR "bagLib";
 
 (* remove x xs removes one instance of x from xs *)
 fun remove x [] = raise ERR "remove" "no such element"
   | remove x (y::xs) = if x = y then xs else y::(remove x xs)
 
-val num_ty = mk_type("num", [])
+val num_ty = numSyntax.num
 val bag_ty = Type.alpha --> num_ty
 fun is_bag_ty ty = #2 (dom_rng ty) = num_ty handle HOL_ERR _ => false
 
@@ -116,7 +113,7 @@ fun mk_bag (tms, ty) =
   list_mk_insert(tms, Term.inst [alpha |-> ty] EMPTY_BAG_tm)
 fun dest_bag tm = let
   val (els, b) = strip_insert tm
-  val _ = is_const b andalso #Name (Term.dest_const b) = "EMPTY_BAG" orelse
+  val _ = is_const b andalso fst (Term.dest_const b) = "EMPTY_BAG" orelse
     raise ERR "dest_bag" "Not a bag literal"
 in
   (els, base_type b)
@@ -133,7 +130,7 @@ fun remove_list [] l2 = l2
   | remove_list (x::xs) l2 = remove_list xs (remove x l2)
 
 fun buac_prover ty = let
-  fun type_inst ty = Rsyntax.INST_TYPE [alpha |-> ty]
+  fun type_inst ty = INST_TYPE [alpha |-> ty]
 in
   AC_CONV (type_inst ty ASSOC_BAG_UNION, type_inst ty COMM_BAG_UNION)
 end
@@ -184,7 +181,7 @@ fun CANCEL_CONV tm = let
   val v1 = genvar bag_type and v2 = genvar bag_type
   val template = mk_rel (v1, v2)
 in
-  Rsyntax.SUBST_CONV [v1 |-> thm1, v2 |-> thm2] template THENC
+  SUBST_CONV [v1 |-> thm1, v2 |-> thm2] template THENC
   REWR_CONV thm
 end tm
 

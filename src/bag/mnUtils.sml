@@ -1,6 +1,7 @@
-
+structure mnUtils =
+struct
 local
-  open HolKernel boolLib Psyntax Parse;
+  open HolKernel boolLib Parse
   val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
   fun -- q x = Term q
   fun == q x = Type q
@@ -121,9 +122,9 @@ val MESON_TAC = mesonLib.MESON_TAC;
 val ASM_MESON_TAC = mesonLib.ASM_MESON_TAC;
 fun find_match {pattern, term} = let
     fun find_match_aux term =
-        Rsyntax.match_term pattern term
+        match_term pattern term
         handle HOL_ERR _ =>
-            find_match_aux (#Body(Rsyntax.dest_abs term))
+            find_match_aux (snd(dest_abs term))
             handle HOL_ERR _ =>
                 find_match_aux (rator term)
                 handle HOL_ERR _ =>
@@ -249,7 +250,7 @@ fun conjl_CONV n c term = let
    val template = list_mk_conj (insert n subsvar (delete n conjs))
    val res1 = CONJUNCTS_CONV (term,newterm)
    val res2 =
-     Rsyntax.SUBST_CONV [subsvar |-> substthm] template newterm in
+     SUBST_CONV [subsvar |-> substthm] template newterm in
    TRANS res1 res2
 end;
 fun LAST_EXISTS_CONV conv tm =
@@ -323,7 +324,7 @@ local
     else
       let val vs = set_diff acc (map #redex subst)
       in
-          GENL (rev vs) (Rsyntax.INST subst th)
+          GENL (rev vs) (INST subst th)
            handle
             HOL_ERR {message, origin_function, origin_structure} =>
            raise HOL_ERR {message =  origin_function^": "^message,
@@ -394,7 +395,7 @@ fun lastn n list =
 fun myEXISTS t th =
   let val (var,body) = dest_exists t
       val (mtch,_) = match_term body (concl th)
-      val inst = rev_assoc var mtch
+      val inst = valOf(subst_assoc (equal var) mtch)
   in
       EXISTS (t,inst) th
   end
@@ -405,10 +406,12 @@ fun myEXISTSplus t th =
   in
       prove(t, dMESON_TAC 4 [th])
   end handle _ => raise Fail "myEXISTSplus: doesn't follow"
+
 fun SYM_TAC ((asl:term list), goal) =
   let val (l,r) = dest_eq goal in
     ([(asl,mk_eq(r,l))], fn [th] => SYM th)
   end;
+
 val RWT          = REWRITE_TAC [];;
 val ARWT         = ASM_REWRITE_TAC [];;
 val carwt        = REPEAT CONJ_TAC THEN
@@ -440,8 +443,7 @@ fun rename_vars varlist term =
     val (ex_vars, body) = strip term
     val (tochange, unchanged) = chopn (length varlist) ex_vars
     val new_vars = varlist @ unchanged
-    val new_body =
-        Rsyntax.subst (map2 (curry op |->)  tochange varlist) body in
+    val new_body = subst (map2 (curry op |->)  tochange varlist) body in
     ALPHA (list_mk (ex_vars, body)) (list_mk (new_vars, new_body))
   end;
 val ABBREV_TAC:term -> tactic = fn tm =>
@@ -658,7 +660,7 @@ local
   datatype findresult = Found of (term*((conv->conv)*(conv->conv))) |
                         NotFound of int
   fun t2mlsym t =
-     case #Name(Rsyntax.dest_const t) of
+     case fst(dest_const t) of
         "/\\" => /\ |
         "\\/" => \/ |
         "==>" => ==> |
@@ -733,17 +735,17 @@ in
       EQ_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN ARWT
     fun exists_tac ty =
       EQ_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
-      EXISTS_TAC (Rsyntax.mk_const{Name = "ARB", Ty = ty}) THEN
+      EXISTS_TAC (mk_arb ty) THEN
       ARWT
   in
     fun rmqvar t =
       let val (qvar,body,tac) =
             if (is_exists t) then
-              let val {Bvar,Body} = Rsyntax.dest_exists t in
+              let val (Bvar,Body) = dest_exists t in
                  (Bvar, Body, exists_tac (type_of Bvar))
               end
             else if (is_forall t) then
-              let val {Bvar, Body} = Rsyntax.dest_forall t in
+              let val (Bvar, Body) = dest_forall t in
                 (Bvar, Body, forall_tac) end
             else
               failwith "rmqvar" "Needs to be a quantified term"
@@ -935,5 +937,7 @@ in
 end;
 
 val _ = mesonLib.chatting := oldmesonchat
+
+end;
 
 end;
