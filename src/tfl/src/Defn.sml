@@ -356,7 +356,7 @@ fun handle_nested (stem,eqs,ind) =
   if null(hyp ind)
   then store(stem,LIST_CONJ eqs,ind)
   else raise ERR "store_defn"
-   "Nested mutually recursive function with unproven termination conditions";
+   "Nested recursive function with unproven termination conditions";
 
 fun save_defn (ABBREV {bind, ...}) = been_stored bind
   | save_defn (PRIMREC{bind, ...}) = been_stored bind
@@ -1194,14 +1194,8 @@ fun parse_defn q =
    (tm, fn_names)
  end;
 
-fun Hol_defn bindstem q =
-  let val (def,fn_names) = parse_defn q
-      val is_constant = not o null o decls
-      val def_thm = mk_defn bindstem def
-  in
-      def_thm
-  end
-
+fun Hol_defn bindstem q = mk_defn bindstem (fst (parse_defn q))
+      handle e => raise (wrap_exn "Defn" "Hol_defn" e);
 
 fun Hol_Rdefn bindstem Rquote eqs_quote =
   let val defn = Hol_defn bindstem eqs_quote

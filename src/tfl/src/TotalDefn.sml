@@ -251,47 +251,49 @@ fun default_prover g =
    THEN mesg ASM_ARITH_TAC) g
 end;
 
-
 local val term_prover = proveTotal default_prover
       open Defn
       fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
-      fun should_try_to_prove_termination defn =
-        let val tcs = tcs_of defn
-        in not(null tcs) andalso
-           null(intersect (free_varsl tcs) (params_of defn))
+      fun should_try_to_prove_termination defn rhs_frees =
+         let val tcs = tcs_of defn
+         in not(null tcs) andalso
+            null(intersect (free_varsl tcs) rhs_frees)
+         end
+      fun fvs_on_rhs V = 
+        let val Vstr = String.concat (Lib.commafy
+                          (map (Lib.quote o #1 o dest_var) V))
+        in if !allow_schema_definition 
+           then HOL_MESG (String.concat
+               ["Definition is schematic in the following variables:\n    ",
+                Vstr])
+           else raise ERR "primDefine"
+            ("  The following variables are free in the \n right hand side of\
+             \ the proposed definition: " ^ Vstr)
         end
+      fun termination_proof_failed () = 
+        raise ERR "primDefine" (String.concat
+            ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
+             "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
+             "termination proof.\n"])
 in
 fun primDefine defn =
- let val defn' =
-       if should_try_to_prove_termination defn
+ let val V = params_of defn
+     val _ = if not(null V) then fvs_on_rhs V else ()  (* can fail *)
+     val defn' =
+       if should_try_to_prove_termination defn V
          then Lib.tryfind (try_proof defn) (guessR defn)
-               handle HOL_ERR _ => (Lib.say (String.concat
-               ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
-               "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
-               "termination proof.\n"]);
-               raise ERR "primDefine" "Unable to prove termination")
+               handle HOL_ERR _ => termination_proof_failed()
          else defn
-     val _ = save_defn defn'
      val eqns = eqns_of defn'
-     val _ =
-         if null (params_of defn') then computeLib.add_funs eqns
-         else let
-             val fvs_s =
-                 String.concat
-                   (Lib.commafy
-                      (map (Lib.quote o #1 o dest_var) (params_of defn')))
-           in
-             WARN "primDefine"
-                  ("\n    Extra free vars ("^fvs_s^
-                   ") in right-hand side!! Making schematic definition!!")
-           end
  in
-    LIST_CONJ eqns
+    save_defn defn'
+  ; if null (params_of defn') then computeLib.add_funs eqns else ()
+  ; LIST_CONJ eqns
  end
 end;
 
 
-fun xDefine stem q = primDefine (Defn.Hol_defn stem q);
+fun xDefine stem = Lib.try (primDefine o Defn.Hol_defn stem);
 
 
 (*---------------------------------------------------------------------------
@@ -307,13 +309,25 @@ local fun msg alist invoc = String.concat
             Lib.first Lexis.ok_identifier alist
             handle HOL_ERR _ => (Lib.say (msg alist invoc); raise exn)
 in
-fun Define q =
+fun define q =
    let val (tm,names) = Defn.parse_defn q
        val bindstem = mk_bindstem (ERR "Define" "")
             "xDefine <alphanumeric-stem> <eqns-quotation>" names
    in
        primDefine (Defn.mk_defn bindstem tm)
+       handle e => raise (wrap_exn "TotalDefn" "Define" e)
    end
+val Define = Lib.try define
 end;
+
+(*---------------------------------------------------------------------------
+    Special entrypoints for defining schemas
+ ---------------------------------------------------------------------------*)
+
+fun xDefineSchema stem = 
+   with_flag(allow_schema_definition,true) (xDefine stem);
+
+val DefineSchema = 
+   with_flag(allow_schema_definition,true) Define;
 
 end;
