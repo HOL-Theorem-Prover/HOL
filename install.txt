@@ -71,55 +71,35 @@ C. Enter the "tools" directory and type
    to step D below.
 
    If smart-configure guesses the options incorrectly, then you will
-   need to provide them yourself by editting the file "configure.sml".
-   The three parameters are mosmldir, holdir and OS.  Incomplete
-   declarations for these parameters are commented out at the top of
-   configure.sml.  You will need to uncomment this section of the file
-   and fill in correct values:
+   need to provide them yourself. Do this by creating a file called
 
-    (1) You must supply values for the following parameters:
+     config-override
 
-            val mosmldir =
-            val holdir   =
+   in <hol-dir>.  In this file provide ML bindings for as  many of the
+   values that were incorrectly guessed by smart-configure.sml.  For
+   example, if the holdir guess was incorrect, then put
 
-        Both values must be absolute (full) pathnames. For example, my
-        local setup has
+     val holdir = "a full pathname to my holdir"
 
-            val mosmldir = "/home/kxs/mosml";
-            val holdir   = "/home/kxs/hol98";
+   for example. All three parameters must be given as ML strings.
 
-        Under Windows, it's easier to use forward-slashes, as above,
-        rather than backwards slashes, because backwards slashes will
-        need to be doubled in order get the same effect.  E.g., prefer
+   The valid values for OS are "linux", "unix", "solaris" and "winNT".
+   If you are on a unix operating system that is not Linux or Solaris,
+   it is OK to just put "unix"; however, this will imply that the
+   robdd library will not be usable (it currently only builds on linux
+   and solaris).  "winNT" stands in for all versions of "Windows NT",
+   "Windows 2000", and (we believe) "Windows XP".
 
-           val mosmldir = "c:/program files/mosml"
-
-        to
-
-           val mosmldir = "c:\\program files\\mosml"
-
-
-    (2) The following parameter tells the build procedure what operating
-        system is being used.
-
-            val OS =
-
-        The current choices for this are: "linux", "solaris", and "winNT".
-        If you are on a unix operating system that is not Linux or
-        Solaris, it is OK to just put "unix"; however, this will imply
-        that the robdd library will not be usable (it currently only
-        builds on linux and solaris).  "winNT" stands in for all
-        versions of "Windows NT", "Windows 2000", and (we believe)
-        "Windows XP".
-
-    Lower in the file, you may find that you need to alter the binding
-    given for GNUMAKE, which is required to build the muddy library.
+   It's possible that in order to get the muddy library to build, you
+   will need to change the binding for GNUMAKE, which is made in the
+   tools/configure.sml file.  Edit this file if necessary to change
+   this binding to whatever's required:
 
            val GNUMAKE = "gnumake";
 
-    If you are building HOL on an OS that is *not* Solaris or Linux,
-    the muddy library is not currently accessible. In such a case, the
-    value of GNUMAKE does not matter.
+   If you are building HOL on an OS that is *not* Solaris or Linux,
+   the muddy library is not currently accessible. In such a case, the
+   value of GNUMAKE does not matter.
 
 D. Now perform the following shell command:
 
