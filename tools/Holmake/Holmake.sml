@@ -1298,6 +1298,7 @@ val _ =
      "    --holmakefile <file> : use file as Holmakefile\n",
      "    --interactive | -i   : run HOL with \"interactive\" flag set\n",
      "    --keep-going | -k    : don't stop on failure\n",
+     "    --logging            : do per-theory time logging\n",
      "    --mosmldir directory : use specified directory as MoscowML root\n",
      "    --no_holmakefile     : don't use any Holmakefile\n",
      "    --no_overlay         : don't use an overlay file\n",
