@@ -84,6 +84,7 @@ fun sdest_binop (name,thy) e tm =
    in if Name=name andalso Thy=thy then pair else raise e
    end
 end;
+
 local fun dest M =
        let val (c, Rand) = dest_comb M
        in (dest_thy_const c,dest_abs Rand)
@@ -342,10 +343,10 @@ local
           end
       end
 
-fun get_type_insts avoids insts =
-    itlist (fn {redex = x, residue = t} =>
-               raw_match_type avoids (snd (dest_var x)) (type_of t))
-           insts
+fun get_type_insts avoids L (tyS,Id) =
+ itlist (fn {redex,residue} => fn Theta =>
+          raw_match_type (snd(dest_var redex)) (type_of residue) Theta)
+       L (tyS,union avoids Id)
 
 fun separate_insts tyavoids insts = let
   val (realinsts, patterns) = partition (is_var o #redex) insts

@@ -223,27 +223,26 @@ fun polymorphic (Tyv _) = true
  ---------------------------------------------------------------------------*)
 
 local
-  fun MERR s = raise ERR "tymatch" s
+  fun MERR s = raise ERR "raw_match_type" s
   fun lookup x ids =
    let fun look [] = if Lib.mem x ids then SOME x else NONE
          | look ({redex,residue}::t) = if x=redex then SOME residue else look t
    in look end
 in
-fun raw_match_type avoids =
- let fun M (v as Tyv _) ty (Sids as (S,ids)) = 
-           (case lookup v ids S 
-             of NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
-              | SOME ty1 => if ty1=ty then Sids else MERR "double bind")
-       | M (Tyapp(c1,A1)) (Tyapp(c2,A2)) Sids =
-            if c1=c2 then rev_itlist2 M A1 A2 Sids else MERR "2"
-       | M _ _ _ =  MERR "different constructors"
- in
-   fn pat => fn ob => fn (S,ids) => M pat ob (S,union avoids ids)
+fun raw_match_type (v as Tyv _) ty (Sids as (S,ids)) = 
+       (case lookup v ids S 
+         of NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
+          | SOME ty1 => if ty1=ty then Sids else MERR "double bind")
+  | raw_match_type (Tyapp(c1,A1)) (Tyapp(c2,A2)) Sids =
+       if c1=c2 then rev_itlist2 raw_match_type A1 A2 Sids 
+                else MERR "different tyops"
+  | raw_match_type _ _ _ =  MERR "different constructors"
 end
 
-fun match_typel l pat ob = fst (raw_match_type l pat ob ([], []))
-val match_type = match_typel []
-end
+fun match_type pat ob = fst(raw_match_type pat ob ([],[]))
+
+fun match_typel fixed pat ob = fst (raw_match_type pat ob ([],fixed))
+
 
 
 (*---------------------------------------------------------------------------

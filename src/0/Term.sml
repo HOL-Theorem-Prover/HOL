@@ -19,8 +19,9 @@ type 'a set = 'a HOLset.set;
 val ERR = mk_HOL_ERR "Term";
 val WARN = HOL_WARNING "Term";
 
-val -->         = Type.-->;
-infix |-> ##; infixr 3 -->;
+val --> = Type.-->;   infixr 3 -->;
+
+infix |-> ##; 
 
 (*---------------------------------------------------------------------------
                Create the signature for HOL terms
@@ -179,6 +180,42 @@ fun var_compare (Fv(s1,ty1), Fv(s2,ty2)) =
 
 val empty_varset = HOLset.empty var_compare
 
+(* ----------------------------------------------------------------------
+    A total ordering on terms that respects alpha equivalence.
+    Fv < Bv < Const < Comb < Abs
+   ---------------------------------------------------------------------- *)
+
+fun compare p =
+    if Portable.pointer_eq p then EQUAL else
+    case p of
+      (t1 as Clos _, t2)     => compare (push_clos t1, t2)
+    | (t1, t2 as Clos _)     => compare (t1, push_clos t2)
+    | (u as Fv _, v as Fv _) => var_compare (u,v)
+    | (Fv _, _)              => LESS
+    | (Bv _, Fv _)           => GREATER
+    | (Bv i, Bv j)           => Int.compare (i,j)
+    | (Bv _, _)              => LESS
+    | (Const _, Fv _)        => GREATER
+    | (Const _, Bv _)        => GREATER
+    | (Const(c1,ty1),
+       Const(c2,ty2))        => (case KernelTypes.compare (c1,c2)
+                                  of EQUAL => Type.compare (to_hol_type ty1,
+                                                            to_hol_type ty2)
+                                   | x => x)
+    | (Const _, _)           => LESS
+    | (Comb(M,N),Comb(P,Q))  => (case compare (M,P)
+                                  of EQUAL => compare (N,Q)
+                                   | x => x)
+    | (Comb _, Abs _)        => LESS
+    | (Comb _, _)            => GREATER
+    | (Abs(Fv(_, ty1),M),
+       Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2)
+                                  of EQUAL => compare (M,N)
+                                   | x => x)
+    | (Abs _, _)             => GREATER;
+
+val empty_tmset = HOLset.empty compare
+
 (*---------------------------------------------------------------------------
         Free variables of a term. Tail recursive. Returns a set.
  ---------------------------------------------------------------------------*)
@@ -311,7 +348,7 @@ val ground = Lib.all (fn {redex,residue} => not(Type.polymorphic residue));
 fun create_const errstr (const as Const(_,GRND pat)) Ty =
       if Ty=pat then const else raise ERR "create_const" "not a type match"
   | create_const errstr (const as Const(r,POLY pat)) Ty =
-     ((case Type.raw_match_type [] pat Ty ([],[])
+     ((case Type.raw_match_type pat Ty ([],[])
         of ([],_) => const
          | (S,[]) => Const(r, if ground S then GRND Ty else POLY Ty)
          | (S, _) => Const(r,POLY Ty))
@@ -408,15 +445,15 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun beta_conv (Comb(Abs(_,Body), Rand)) =
- let fun subs((tm as Bv j),i)     = if i=j then Rand else tm
-       | subs(Comb(Rator,Rand),i) = Comb(subs(Rator,i),subs(Rand,i))
-       | subs(Abs(v,Body),i)      = Abs(v,subs(Body,i+1))
-       | subs (tm as Clos _,i)    = subs(push_clos tm,i)
-       | subs (tm,_) = tm
- in
-   subs (Body,0)
- end
-| beta_conv _ = raise ERR "beta_conv" "not a beta-redex";
+     let fun subs((tm as Bv j),i)     = if i=j then Rand else tm
+           | subs(Comb(Rator,Rand),i) = Comb(subs(Rator,i),subs(Rand,i))
+           | subs(Abs(v,Body),i)      = Abs(v,subs(Body,i+1))
+           | subs (tm as Clos _,i)    = subs(push_clos tm,i)
+           | subs (tm,_) = tm
+     in
+       subs (Body,0)
+     end
+  | beta_conv _ = raise ERR "beta_conv" "not a beta-redex";
 
 
 (*---------------------------------------------------------------------------*
@@ -456,14 +493,27 @@ end;
  *    Replace arbitrary subterms in a term. Non-renaming.                    *
  *---------------------------------------------------------------------------*)
 
-local fun check [] = ()
-        | check ({redex,residue}::rst) =
-            if type_of redex = type_of residue then check rst
-            else raise ERR "subst" "redex has different type than residue"
+val emptysubst = Binarymap.mkDict compare
+local 
+  fun addb [] A = A
+    | addb ({redex,residue}::t) (A,b) = 
+      addb t (if type_of redex = type_of residue
+              then (Binarymap.insert(A,redex,residue), 
+                    is_var redex andalso b)
+              else raise ERR "subst" "redex has different type than residue")
+  fun mk_fun theta = 
+   let val (vmap,b) = addb theta (emptysubst, true)
+   in ((fn v => case Binarymap.peek(vmap,v) of NONE => v | SOME y => y), b)
+   end
 in
-fun subst [] tm = tm
-  | subst theta tm =
-    let val _ = check theta
+fun subst [] = I 
+  | subst theta = 
+    let val (lookup,b) = mk_fun theta
+        fun vsubs (v as Fv _) = lookup v
+          | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
+          | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)
+          | vsubs (c as Clos _) = vsubs (push_clos c)
+          | vsubs tm = tm
         fun subs tm =
           case Lib.subst_assoc (aconv tm) theta
            of SOME residue => residue
@@ -473,9 +523,10 @@ fun subst [] tm = tm
                  | Abs(Bvar,Body) => Abs(Bvar,subs Body)
 	         | Clos _        => subs(push_clos tm)
                  |   _         => tm)
-    in subs tm
+    in 
+      (if b then vsubs else subs)
     end
-end;
+end
 
 (*---------------------------------------------------------------------------*
  *     Instantiate type variables in a term                                  *
@@ -710,113 +761,72 @@ val bvar = fst o dest_abs;
 val body = snd o dest_abs;
 
 
-(* ----------------------------------------------------------------------
-    A total ordering on terms that respects alpha equivalence.
-    Fv < Bv < Const < Comb < Abs
-   ---------------------------------------------------------------------- *)
-
-fun compare p =
-    if Portable.pointer_eq p then EQUAL else
-    case p of
-      (t1 as Clos _, t2)     => compare (push_clos t1, t2)
-    | (t1, t2 as Clos _)     => compare (t1, push_clos t2)
-    | (u as Fv _, v as Fv _) => var_compare (u,v)
-    | (Fv _, _)              => LESS
-    | (Bv _, Fv _)           => GREATER
-    | (Bv i, Bv j)           => Int.compare (i,j)
-    | (Bv _, _)              => LESS
-    | (Const _, Fv _)        => GREATER
-    | (Const _, Bv _)        => GREATER
-    | (Const(c1,ty1),
-       Const(c2,ty2))        => (case KernelTypes.compare (c1,c2)
-                                  of EQUAL => Type.compare (to_hol_type ty1,
-                                                            to_hol_type ty2)
-                                   | x => x)
-    | (Const _, _)           => LESS
-    | (Comb(M,N),Comb(P,Q))  => (case compare (M,P)
-                                  of EQUAL => compare (N,Q)
-                                   | x => x)
-    | (Comb _, Abs _)        => LESS
-    | (Comb _, _)            => GREATER
-    | (Abs(Fv(_, ty1),M),
-       Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2)
-                                  of EQUAL => compare (M,N)
-                                   | x => x)
-    | (Abs _, _)             => GREATER;
-
-val empty_tmset = HOLset.empty compare
-
 (*---------------------------------------------------------------------------
     Matching (first order, modulo alpha conversion) of terms, including
     sets of variables and type variables to avoid binding.
  ---------------------------------------------------------------------------*)
 
-local fun MERR s = raise ERR "raw_match_term error" s
-      fun free (Bv i) n             = i<n
-        | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
-        | free (Abs(_,Body)) n      = free Body (n+1)
-        | free (t as Clos _) n      = free (push_clos t) n
-        | free _ _ = true
-      fun lookup x ids =
-       let fun look [] = if HOLset.member(ids,x) then SOME x else NONE
-             | look ({redex,residue}::t) =
-                       if x=redex then SOME residue else look t
-       in look end
-      fun bound_by_scope M = not (free M 0)
+local 
+  fun MERR s = raise ERR "raw_match_term error" s
+  fun free (Bv i) n             = i<n
+    | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
+    | free (Abs(_,Body)) n      = free Body (n+1)
+    | free (t as Clos _) n      = free (push_clos t) n
+    | free _ _ = true
+  fun lookup x ids =
+   let fun look [] = if HOLset.member(ids,x) then SOME x else NONE
+         | look ({redex,residue}::t) = if x=redex then SOME residue else look t
+   in look end
+  fun bound_by_scope scoped M = if scoped then not (free M 0) else false
+  val tymatch = Type.raw_match_type
 in
-fun raw_match tyavoids avoidset =
- let val tymatch = Type.raw_match_type tyavoids
-     fun dont_bind v = HOLset.member(avoidset,v)
-     fun RM (v as Fv(_,Ty)) tm ((S1 as (tmS,Id)),tyS)
-          = if bound_by_scope tm then MERR "variable bound by scope" else
+fun RM [] theta = theta
+  | RM (((v as Fv(_,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
+     = if bound_by_scope scoped tm 
+       then MERR "variable bound by scope" 
+       else RM rst
             ((case lookup v Id tmS
                of NONE => if v=tm then (tmS,HOLset.add(Id,v))
                                   else ((v |-> tm)::tmS,Id)
                 | SOME tm' => if aconv tm' tm then S1
-                              else MERR"double bind on variable"),
+                              else MERR "double bind on variable"),
              tymatch Ty (type_of tm) tyS)
-       | RM (Const(c1, ty1)) (Const(c2, ty2)) (tmS,tyS)
-          = (if c1 <> c2 then MERR "different constants" else
-             case (ty1,ty2)
-              of (GRND _, POLY _) => MERR"ground const vs. polymorphic const"
-               | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS)
-                           else MERR"const-const with different (ground) types"
-               | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
-               | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
-       | RM (Abs(Fv(_,ty1),M))
-            (Abs(Fv(_,ty2),N)) (tmS,tyS) = RM M N (tmS, tymatch ty1 ty2 tyS)
-       | RM (Comb(M,N))
-            (Comb(P,Q)) S        = RM M P (RM N Q S)
-       | RM (Bv i) (Bv j) S      = if i=j then S else MERR"Bound var. depth"
-       | RM (pat as Clos _) ob S = RM (push_clos pat) ob S
-       | RM pat (ob as Clos _) S = RM pat (push_clos ob) S
-       | RM all other things     = MERR "different constructors"
- in
-    fn pat => fn ob => fn ((S,Ids),(tyS,tyIds)) =>
-       RM pat ob ((S,HOLset.union(Ids,avoidset)),
-                  (tyS,Lib.union tyIds tyavoids))
- end
+  | RM ((Const(c1,ty1),Const(c2,ty2),_)::rst) (tmS,tyS)
+      = RM rst
+        (if c1 <> c2 then MERR "different constants" else
+         case (ty1,ty2)
+          of (GRND _, POLY _) => MERR"ground const vs. polymorphic const"
+           | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS)
+                       else MERR"const-const with different (ground) types"
+           | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
+           | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
+  | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS) 
+      = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
+  | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
+  | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S 
+                                 else MERR "Bound var. depth"
+  | RM (((pat as Clos _),ob,s)::t) S = RM ((push_clos pat,ob,s)::t) S
+  | RM ((pat,(ob as Clos _),s)::t) S  = RM ((pat,push_clos ob,s)::t) S
+  | RM all others               = MERR "different constructors"
 end
 
+fun raw_match tyfixed tmfixed pat ob (tmS,tyS) 
+   = RM [(pat,ob,false)] ((tmS,tmfixed), (tyS,tyfixed));
 
-fun norm_subst tytheta =
- let val Theta = inst tytheta
+fun norm_subst ((tmS,_),(tyS,_)) =
+ let val Theta = inst tyS
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
               in if residue=redex' then A else (redex' |-> residue)::A
               end) rst
- in del [] o fst
+ in (del [] tmS,tyS)
  end
 
-fun match_terml tyavoids avoids pat ob =
- let val (tmS,(tyS,_)) = raw_match tyavoids avoids pat ob
-                                   (([],HOLset.empty compare),([],[]))
- in
-   (norm_subst tyS tmS, tyS)
- end
+fun match_terml tyfixed tmfixed pat ob =
+ norm_subst (raw_match tyfixed tmfixed pat ob ([],[]))
 
-val match_term = match_terml [] (HOLset.empty compare)
+val match_term = match_terml [] empty_varset;
 
 (*---------------------------------------------------------------------------
        Must know that ty is the type of tm1 and tm2.

@@ -961,10 +961,13 @@ fun CCONTR w fth =
 fun INST [] th = th
   | INST theta th =
       case subst_assoc (not o is_var) theta
-       of NONE => (make_thm Count.Inst
-                       (tag th, hypset_map (subst theta) (hypset th),
-                        subst theta (concl th))
-                     handle HOL_ERR _ => ERR "INST" "")
+       of NONE => let val substf = subst theta
+                  in make_thm Count.Inst
+                       (tag th, hypset_map substf (hypset th),
+                        substf (concl th))
+                     handle HOL_ERR _ => ERR "INST" ""
+                  end
+                     
         | SOME _ => raise ERR "INST" "can only instantiate variables"
 
 
