@@ -21,19 +21,16 @@ struct
 
 local open operatorTheory listTheory in end;
 
-open HolKernel Parse boolLib Num_conv Num_induct Prim_rec ;
+open HolKernel Parse boolLib numLib Prim_rec ;
 
 infix THEN THENL ORELSE;
-type thm = Thm.thm
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 val list_Axiom = listTheory.list_Axiom;
 val list_Axiom_old = listTheory.list_Axiom_old;
-
-val _ = new_theory "rich_list";
-
 val let_CONV = PairedLambda.let_CONV;
 
+val _ = new_theory "rich_list";
 
 fun new_list_rec_definition (name,tm) =
   new_recursive_definition {name=name,rec_axiom=list_Axiom,def=tm};
