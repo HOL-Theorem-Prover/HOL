@@ -126,11 +126,13 @@ fun parse_command_line list = let
   val (rem7, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem6
   val (rem8, allfast) = find_toggle "--fast" rem7
   val (rem9, fastfiles) = find_pairs "-f" rem8
+  val (rem10, qofp) = find_toggle "--qof" rem9
 in
-  {targets=rem9, debug=debug, show_usage=help, show_version=show_version,
+  {targets=rem10, debug=debug, show_usage=help, show_version=show_version,
    always_rebuild_deps=rebuild_deps,
    additional_includes=List.foldr(fn (s,L) => "-I"::s::L) [] includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
+   quit_on_failure = qofp,
    allfast = allfast, fastfiles = fastfiles,
    actual_HOLDIR =
      case actual_HOLDIRs
@@ -146,8 +148,15 @@ end
 
 (* parameters which vary from run to run according to the command-line *)
 val {targets, debug, dontmakes, show_usage, show_version, allfast, fastfiles,
-     always_rebuild_deps, additional_includes, actual_HOLDIR, no_sigobj} =
+     always_rebuild_deps, additional_includes, actual_HOLDIR, no_sigobj,
+     quit_on_failure} =
   parse_command_line (CommandLine.arguments())
+
+val _ =
+  if quit_on_failure andalso allfast then
+    print "Warning: quit on (tactic) failure ignored for fast built theories"
+  else
+    ()
 
 val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
 (*
@@ -588,7 +597,8 @@ in
         if allfast andalso not (member s fastfiles) orelse
            not allfast andalso member s fastfiles
         then ["fastbuild.uo", scriptuo]
-        else [scriptuo]
+        else if quit_on_failure then [scriptuo]
+        else ["holmakebuild.uo", scriptuo]
 
     in
       if compile debug (include_flags @ ["-o", script] @ objectfiles) = success
@@ -805,11 +815,12 @@ val _ =
      "    --help | -h         : show this message\n",
      "    --holdir directory  : use specified directory as HOL root\n",
      "    --no_sigobj | -n    : don't use any HOL files from sigobj\n",
+     "    --qof               : quit on tactic failure\n",
      "    --rebuild_deps | -r : always rebuild dependency info files \n",
      "    --version | -v      : show version information\n"]
   else
     if show_version then
-      print "Holmake version 2.1\n"
+      print "Holmake version 2.1.1\n"
     else let
       open Process
       val result = deal_with_targets targets
