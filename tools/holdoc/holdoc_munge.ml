@@ -224,22 +224,22 @@ let is_rule s =
      s
      0
 
-let is_type s = List.mem s !tYPE_LIST
+let is_type s = List.mem s !(!curmodals.tYPE_LIST)
 
-let is_con s = List.mem s !cON_LIST
+let is_con s = List.mem s !(!curmodals.cON_LIST)
 
-let is_field s = List.mem s !fIELD_LIST
+let is_field s = List.mem s !(!curmodals.fIELD_LIST)
 
-let is_lib s = List.mem s !lIB_LIST (* lib not constructor, as special case *)
+let is_lib s = List.mem s !(!curmodals.lIB_LIST) (* lib not constructor, as special case *)
 
-let is_aux s = List.mem s !aUX_LIST
+let is_aux s = List.mem s !(!curmodals.aUX_LIST)
 
-let is_aux_infix s = List.mem s !aUX_INFIX_LIST
+let is_aux_infix s = List.mem s !(!curmodals.aUX_INFIX_LIST)
 
-let is_var_prefix s = List.mem s !vAR_PREFIX_LIST
+let is_var_prefix s = List.mem s !(!curmodals.vAR_PREFIX_LIST)
 
 let is_curried s =
-  try Some (List.assoc s !hOL_CURRIED_ALIST)
+  try Some (List.assoc s !(!curmodals.hOL_CURRIED_ALIST))
   with Not_found -> None
 
 let var_prefix s =
@@ -269,7 +269,7 @@ let do_sub s =
   else
     (texify s,"")
 
-let is_holop s = List.mem s !hOL_OP_LIST
+let is_holop s = List.mem s !(!curmodals.hOL_OP_LIST)
 
 (* translations for symbols and particular identifiers; these take precedence over is_foo *)
 
@@ -283,7 +283,7 @@ let write_warning s = prerr_endline ("WARNING: " ^ s ^ ".")
 
 let mident v s = (* munge alphanumeric identifier *)
 (*  "\\tsvar{"^texify s^"}" *)
-  try List.assoc s !hOL_ID_ALIST
+  try List.assoc s !(!curmodals.hOL_ID_ALIST)
   with Not_found ->
     if (is_num s) then texify s else
     let (c,sub)  = if (is_rule s)        then ("tsrule"    ,false) else
@@ -305,7 +305,7 @@ let mident v s = (* munge alphanumeric identifier *)
   (* would be good to check is_* for overlaps *)
 
 let msym v s = (* munge symbolic identifier *)
-   try List.assoc s !hOL_SYM_ALIST
+   try List.assoc s !(!curmodals.hOL_SYM_ALIST)
    with Not_found -> texify s
 
 let mindent n = (* munge an indentation of level n *)

@@ -2,17 +2,65 @@
 (* Keith Wansbrough 2001,2002 *)
 
 (* these are now always initialised from a file; there are no defaults *)
-let tYPE_LIST = ref []
-let cON_LIST = ref []
-let fIELD_LIST = ref []
-let lIB_LIST = ref []
-let aUX_LIST = ref []
-let aUX_INFIX_LIST = ref []
-let vAR_PREFIX_LIST = ref []
-let hOL_OP_LIST = ref []
-let hOL_SYM_ALIST = ref []
-let hOL_ID_ALIST = ref []
-let hOL_CURRIED_ALIST = ref []
+
+(* modal settings first (these depend on the current mode) *)
+
+type modalsettings = {
+  tYPE_LIST : string list ref;
+  cON_LIST : string list ref;
+  fIELD_LIST : string list ref;
+  lIB_LIST : string list ref;
+  aUX_LIST : string list ref;
+  aUX_INFIX_LIST : string list ref;
+  vAR_PREFIX_LIST : string list ref;
+  hOL_OP_LIST : string list ref;
+  hOL_SYM_ALIST : (string * string) list ref;
+  hOL_ID_ALIST : (string * string) list ref;
+  hOL_CURRIED_ALIST : (string * (string * int * bool * bool)) list ref;
+}
+
+(* current modal settings *)
+let curmodals = ref {
+  tYPE_LIST = ref [];
+  cON_LIST = ref [];
+  fIELD_LIST = ref [];
+  lIB_LIST = ref [];
+  aUX_LIST = ref [];
+  aUX_INFIX_LIST = ref [];
+  vAR_PREFIX_LIST = ref [];
+  hOL_OP_LIST = ref [];
+  hOL_SYM_ALIST = ref [];
+  hOL_ID_ALIST = ref [];
+  hOL_CURRIED_ALIST = ref [];
+}
+
+(* list of all modes and corresponding settings *)
+let modes = ref [("0",!curmodals)]
+
+exception BadDirective
+
+(* new mode is based on current mode, allowing tree-structured creation of modes *)
+let new_mode name = (if List.mem_assoc name !modes then
+                       (prerr_endline ("Attempt to recreate existing mode "^name);
+                        raise BadDirective)
+                     else
+                       modes := (name,{
+                                        tYPE_LIST = ref !(!curmodals.tYPE_LIST);
+                                        cON_LIST = ref !(!curmodals.cON_LIST);
+                                        fIELD_LIST = ref !(!curmodals.fIELD_LIST);
+                                        lIB_LIST = ref !(!curmodals.lIB_LIST);
+                                        aUX_LIST = ref !(!curmodals.aUX_LIST);
+                                        aUX_INFIX_LIST = ref !(!curmodals.aUX_INFIX_LIST);
+                                        vAR_PREFIX_LIST = ref !(!curmodals.vAR_PREFIX_LIST);
+                                        hOL_OP_LIST = ref !(!curmodals.hOL_OP_LIST);
+                                        hOL_SYM_ALIST = ref !(!curmodals.hOL_SYM_ALIST);
+                                        hOL_ID_ALIST = ref !(!curmodals.hOL_ID_ALIST);
+                                        hOL_CURRIED_ALIST = ref !(!curmodals.hOL_CURRIED_ALIST);
+                                       })::!modes
+                    )
+
+(* changing a mode just means picking out the right modalsettings *)
+let change_mode name = (curmodals := List.assoc name !modes)
 
 (* other settings *)
 let eCHO = ref true
@@ -22,7 +70,6 @@ let hOLDELIMOPEN  = ref "$" (* [[ *)
 let hOLDELIMCLOSE = ref "$" (* ]] *)
 
 open Hollex
-exception BadDirective
 
 let dir_proc n ts =
   let rec go ts =
@@ -83,17 +130,17 @@ let dir_proc n ts =
   in
   match n with
   (* category lists *)
-    "TYPE_LIST"       -> tYPE_LIST       := (go ts)  @ !tYPE_LIST
-  | "CON_LIST"        -> cON_LIST        := (go ts)  @ !cON_LIST
-  | "FIELD_LIST"      -> fIELD_LIST      := (go ts)  @ !fIELD_LIST
-  | "LIB_LIST"        -> lIB_LIST        := (go ts)  @ !lIB_LIST
-  | "AUX_LIST"        -> aUX_LIST        := (go ts)  @ !aUX_LIST
-  | "AUX_INFIX_LIST"  -> aUX_INFIX_LIST  := (go ts)  @ !aUX_INFIX_LIST
-  | "VAR_PREFIX_LIST" -> vAR_PREFIX_LIST := (go ts)  @ !vAR_PREFIX_LIST
-  | "HOL_OP_LIST"     -> hOL_OP_LIST     := (go ts)  @ !hOL_OP_LIST
-  | "HOL_SYM_ALIST"   -> hOL_SYM_ALIST   := (go2 ts) @ !hOL_SYM_ALIST
-  | "HOL_ID_ALIST"    -> hOL_ID_ALIST    := (go2 ts) @ !hOL_ID_ALIST
-  | "HOL_CURRIED_ALIST" -> hOL_CURRIED_ALIST := (go2nb ts) @ !hOL_CURRIED_ALIST
+    "TYPE_LIST"       -> !curmodals.tYPE_LIST       := (go ts)  @ !(!curmodals.tYPE_LIST)
+  | "CON_LIST"        -> !curmodals.cON_LIST        := (go ts)  @ !(!curmodals.cON_LIST)
+  | "FIELD_LIST"      -> !curmodals.fIELD_LIST      := (go ts)  @ !(!curmodals.fIELD_LIST)
+  | "LIB_LIST"        -> !curmodals.lIB_LIST        := (go ts)  @ !(!curmodals.lIB_LIST)
+  | "AUX_LIST"        -> !curmodals.aUX_LIST        := (go ts)  @ !(!curmodals.aUX_LIST)
+  | "AUX_INFIX_LIST"  -> !curmodals.aUX_INFIX_LIST  := (go ts)  @ !(!curmodals.aUX_INFIX_LIST)
+  | "VAR_PREFIX_LIST" -> !curmodals.vAR_PREFIX_LIST := (go ts)  @ !(!curmodals.vAR_PREFIX_LIST)
+  | "HOL_OP_LIST"     -> !curmodals.hOL_OP_LIST     := (go ts)  @ !(!curmodals.hOL_OP_LIST)
+  | "HOL_SYM_ALIST"   -> !curmodals.hOL_SYM_ALIST   := (go2 ts) @ !(!curmodals.hOL_SYM_ALIST)
+  | "HOL_ID_ALIST"    -> !curmodals.hOL_ID_ALIST    := (go2 ts) @ !(!curmodals.hOL_ID_ALIST)
+  | "HOL_CURRIED_ALIST" -> !curmodals.hOL_CURRIED_ALIST := (go2nb ts) @ !(!curmodals.hOL_CURRIED_ALIST)
   (* other *)
   | "ECHO"            -> eCHO := true
   | "NOECHO"          -> eCHO := false
