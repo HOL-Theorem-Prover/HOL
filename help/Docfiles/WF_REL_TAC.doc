@@ -1,0 +1,94 @@
+\DOC WF_REL_TAC
+
+\TYPE {WF_REL_TAC : term quotation -> tactic}
+
+\SYNOPSIS Start termination proof of a {defn}.
+
+\KEYWORDS recursive definition, termination.
+
+\DESCRIBE
+
+{WF_REL_TAC} builds a tactic that starts a termination proof. An
+invocation {WF_REL_TAC q}, where {q} should parse into a term that
+denotes a wellfounded relation, builds a tactic {tac} that is intended
+to be applied to a goal arising from an application of {tgoal} or
+{tprove}. Such a goal has the form
+
+{
+    ?R. WF R /\ ...
+}
+
+The tactic {tac} will instantiate {R} with the relation denoted by {q}
+and will attempt various simplifications of the goal. For example, it
+will try to automatically prove the well-foundedness of the relation
+denoted by {q}, and will also attempt to simplify the goal using some
+basic facts about well-founded relations. Often this can result in a
+much simpler goal.
+
+\FAILURE
+
+{WF_REL_TAC q} fails if {q} does not parse into a term whose type is
+an instance of {'a -> 'a -> bool}.
+
+\EXAMPLE
+
+Suppose that a version of Quicksort had been defined as follows:
+
+{
+    val qsort_defn = 
+         Hol_defn "qsort"
+            `(qsort ___ [] = []) /\
+             (qsort ord (x::rst) = 
+                 APPEND (qsort ord (FILTER ($~ o ord x) rst))
+                   (x :: qsort ord (FILTER (ord x) rst)))`;
+}
+
+Then one can start a termination proof as follows: set up a goalstack
+with {tgoal} and then apply {WF_REL_TAC} with a quotation denoting a
+suitable wellfounded relation.
+
+{
+    - tgoal qsort_defn;;
+    > val it =
+        Proof manager status: 1 proof.
+        1. Incomplete:
+           Initial goal:
+            ?R. WF R /\
+             (!rst x ord. R (ord,FILTER ($~ o ord x) rst) (ord,x::rst)) /\
+              !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
+
+    - e (WF_REL_TAC `measure (LENGTH o SND)`);
+
+    OK..
+    2 subgoals:
+    > val it =
+       !rst x ord. LENGTH (FILTER (ord x) rst) < LENGTH (x::rst)
+       
+       !rst x ord. LENGTH (FILTER (\x'. ~ord x x') rst) < LENGTH (x::rst)
+}
+
+During the execution of {WF_REL_TAC}, the wellfoundedness of 
+{measure (LENGTH o SND)} is proved automatically, and the remainder of
+the goal has been simplified into a pair of easy goals.   
+
+\COMMENTS
+
+There are a number of basic and advanced means of specifying wellfounded
+relations. The {Hol_datatype} package also helps, by constructing a
+`size` function for each datatype.
+
+
+1. measuring single argument position
+1a. size functions
+2a. polynomial interpretations
+2. measuring multiple argument positions
+3. lexicographic combinations
+4. recursion over finite sets
+5. nested recursions (subst in lambda-calculus)
+6. mutual recursions 
+7. mutual and nested recursions
+
+
+\SEEALSO tgoal, tprove, Hol_defn, guessR.
+
+\ENDDOC

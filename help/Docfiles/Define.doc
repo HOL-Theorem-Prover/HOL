@@ -70,7 +70,8 @@ In general, {Define} attempts to derive exactly the specified
 conjunction of equations. However, the rich syntax of patterns allows
 some ambiguity. For example, the input
 
-{    Define `(f 0 _ = 1)
+{
+     Define `(f 0 _ = 1)
        /\    (f _ 0 = 2)`
 }
 
@@ -97,7 +98,8 @@ dropped from the final theorem.
 In summary, {Define} will derive the unambiguous and complete
 equations
 
-{     |- (f 0 (SUC v4) = 1) /\ 
+{
+      |- (f 0 (SUC v4) = 1) /\ 
          (f 0 0 = 1) /\ 
          (f (SUC v2) 0 = 2)
          (f (SUC v2) (SUC v4) = ARB)
@@ -108,7 +110,8 @@ variable names are due to the pre-processing steps described above. The
 above result is only an intermediate value: in the final result returned
 by {Define}, the last equation is droppped:  
 
-{     |- (f 0 (SUC v4) = 1) /\ 
+{ 
+      |- (f 0 (SUC v4) = 1) /\ 
          (f 0 0 = 1) /\ 
          (f (SUC v2) 0 = 2)
 }
