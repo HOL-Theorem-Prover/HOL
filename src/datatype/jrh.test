@@ -8,6 +8,8 @@ open bossLib;
 
 val Hol_datatype = Lib.try (Count.apply Hol_datatype);
 
+Hol_datatype `One = Single_contructor`;
+
 Hol_datatype
          `Term = Var of 'A => 'B 
                | App of bool => Termlist;
