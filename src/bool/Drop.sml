@@ -53,7 +53,7 @@ val is_string_literal_hook = ref (K false)
 val is_list_hook           = ref (K false)
 val is_comma_hook          = ref (K false)
 val is_pair_hook           = ref (K false)
-val is_plet_hook           = ref (K false)
+val is_let_hook            = ref (K false)
 val is_pabs_hook           = ref (K false)
 val is_one_hook            = ref (K false)
 
@@ -62,10 +62,9 @@ val dest_int_literal_hook  = ref (fn _ => raise ERR "dest_int_literal" "undefine
 val dest_string_literal_hook = ref (fn _ => raise ERR "dest_string_literal" "undefined")
 val dest_cons_hook = ref (fn _ => raise ERR "dest_cons" "undefined")
 val dest_list_hook = ref (fn _ => raise ERR "dest_list" "undefined")
-
 val dest_pair_hook = ref (fn _ => raise ERR "dest_pair" "undefined")
 val dest_pabs_hook = ref (fn _ => raise ERR "dest_pabs" "undefined")
-val dest_plet_hook = ref (fn _ => raise ERR "dest_plet" "undefined")
+val strip_let_hook = ref (fn _ => raise ERR "strip_let" "undefined")
 
 fun strip_cons M = 
     case total (!dest_cons_hook) M
@@ -74,14 +73,29 @@ fun strip_cons M =
 
 fun is_cons tm = Lib.can (!dest_cons_hook) tm;
 
+fun is_fn_app tm = not(!is_pair_hook tm orelse is_var tm)
+
+local val a = mk_var("a",bool)
+      val b = mk_var("b",bool)
+in
+val andalso_tm = list_mk_abs([a,b],mk_conj(a,b))
+val orelse_tm = list_mk_abs([a,b],mk_disj(a,b))
+end
+
 fun partitions P [] = []
   | partitions P (h::t) =
      case partition (P h) t 
       of (L1,L2) => (h::L1) :: partitions P L2;
 
+fun triml s = 
+  if String.sub(s,0) = #" "
+  then String.substring(s,1,String.size(s)-1)
+  else s;
 
-fun full_name ct (s1,s2,_) = if s1=ct then s2 else 
-                             if s1="" then s2 else s1^"ML."^s2;
+fun full_name ct (s1,s2,_) = 
+    if s1=ct then s2 else 
+    if s1="" then s2 else s1^"ML."^triml s2;
+
 fun const_map thy c = full_name thy (ConstMapML.apply c);
 
 val COMMA_PREC = 50;
@@ -123,15 +137,14 @@ fun term_to_ML thy ppstrm =
      if boolSyntax.is_conj tm then pp_binop i tm else
      if boolSyntax.is_disj tm then pp_binop i tm else
      if !is_pair_hook tm then pp_pair i tm else
-     if !is_plet_hook tm then pp_let i tm else
+     if !is_let_hook tm then pp_lets i tm else
      if !is_pabs_hook tm then pp_abs i tm else
      if !is_one_hook tm  then pp_one tm else
      if TypeBase.is_case tm then pp_case i (TypeBase.dest_case tm) else
-     if is_const tm then pp_const tm else
+     if is_const tm then pp_const i tm else
      if is_comb tm then pp_comb i tm 
      else raise ERR "term_to_ML" 
                     ("Unknown syntax with term: "^Parse.term_to_string tm)
-
   and pp_cond i tm = 
          let val (b,a1,a2) = dest_cond tm
          in begin_block CONSISTENT 0;
@@ -192,7 +205,7 @@ fun term_to_ML thy ppstrm =
         ; begin_block CONSISTENT 0
         ; pp (j+1) t1
         ; add_break(1,0)
-        ; pp_const c
+        ; add_string (const_map c)
         ; add_break(1,0)
         ; pp j t2
         ; end_block()
@@ -225,21 +238,32 @@ fun term_to_ML thy ppstrm =
         ; rparen maxprec i 
         ; end_block()
       end
-  and pp_let i tm =
-      let val (vstruct,rhs,body) = !dest_plet_hook tm
+  and pp_lets i tm = (* a sequence of lets *)
+      let val (blists,body) = !strip_let_hook tm
+          fun keyword1 (l,r) = ((if is_fn_app l then "fun" else "val"),(l,r))
+          fun keyword2 (l,r) = ("and",(l,r))
+          fun keyword [] = raise ERR "term_to_ML" "pp_lets"
+            | keyword(h::t) = keyword1(h)::map keyword2 t
+          val blist' = flatten (map keyword blists)
+          fun pp_binding (k,(l,r)) =
+               (begin_block INCONSISTENT 4;
+                add_string k; add_break(1,0);
+                pp minprec l; add_break(1,0);
+                add_string "="; add_break(1,0);
+                begin_block CONSISTENT 0;
+                pp minprec r; end_block();
+                end_block())
       in  begin_block CONSISTENT 0
         ; lparen i 5000
-        ; begin_block INCONSISTENT 2
-        ; add_string "let val"
-        ; add_break(1,0)
-        ; pp minprec vstruct
-        ; add_break(1,0)
-        ; add_string"="
-        ; add_break(1,0)
-        ; pp minprec rhs
+        ; begin_block CONSISTENT 0
+        ; add_string "let "
+        ; begin_block CONSISTENT 0
+        ;    pr_list pp_binding (fn()=>()) add_newline blist'
+        ;    end_block()
         ; add_break(1,0)
         ; add_string"in"
         ; add_break(1,0)
+        ; add_string "  "
         ; pp minprec body
         ; add_break(1,0)
         ; add_string"end"
@@ -274,7 +298,12 @@ fun term_to_ML thy ppstrm =
          ; end_block()
         )
   and pp_var tm = add_string(fst(dest_var tm))
-  and pp_const tm = add_string (const_map tm)
+  and pp_const i tm = 
+      if same_const tm boolSyntax.conjunction 
+         then pp_abs i andalso_tm else
+       if same_const tm boolSyntax.disjunction
+         then pp_abs i orelse_tm
+       else add_string (const_map tm)
   and pp_one tm = add_string "()"
   and pp_nil tm = add_string "[]"
   and pp_comb i tm = 
@@ -337,9 +366,10 @@ fun pp_defn_as_ML thy ppstrm =
           ; end_block()
          end
      fun pp_clauses (s,els) =
-       let in 
+       let val s' = if is_fn_app(lhs(hd els)) then s else "val"
+       in 
            begin_block CONSISTENT 2
-         ; add_string (s^" ")
+         ; add_string (s'^" ")
          ; pp_clause (hd els)
          ; add_newline()
          ; pr_list (fn c => (add_string "| "; pp_clause c))
@@ -724,6 +754,11 @@ fun install_consts _ [] = []
        in clist @ install_consts s rst
        end
   | install_consts s (DATATYPE ty::rst) = 
+      let val consts = U (map (Term.decls o fst) (constructors ty))
+          val _ = List.app (add s) consts
+      in consts @ install_consts s rst
+      end
+  | install_consts s (ABSDATATYPE (tyvars,ty)::rst) = 
       let val consts = U (map (Term.decls o fst) (constructors ty))
           val _ = List.app (add s) consts
       in consts @ install_consts s rst

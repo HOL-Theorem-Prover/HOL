@@ -12,8 +12,7 @@ fun LEX c1 c2 ((x1,x2),(y1,y2)) =
    of EQUAL => c2 (x2,y2)
     | other => other;
 
-val alph = Lib.with_flag (Feedback.emit_WARNING,false)
-             mk_vartype "''a";
+val alph = Lib.with_flag (Feedback.emit_WARNING,false) mk_vartype "''a";
 
 (*---------------------------------------------------------------------------*)
 (* The initial constant map has equality, conjunction, disjunction,          *)
@@ -53,6 +52,12 @@ end;
 
 fun theConstMap () = !ConstMapRef;
 
+(*---------------------------------------------------------------------------*)
+(* Checks for "*" are to avoid situation where prefix multiplication has an  *)
+(* open paren just before it ... which is interpreted as beginning of a      *)
+(* comment.                                                                  *)
+(*---------------------------------------------------------------------------*)
+
 local fun check_name(Thy,Name,Ty) =
        let val Name' = if String.sub(Name,0) = #"*" orelse
                           String.sub(Name,String.size Name -1) = #"*"
@@ -64,11 +69,6 @@ in
 fun prim_insert (c,t) = (ConstMapRef := insert(theConstMap(),c,check_name t))
 end;
 
-(*---------------------------------------------------------------------------*)
-(* Checks for "*" are to avoid situation where prefix multiplication has an  *)
-(* open paren just before it ... which is interpreted as beginning of a      *)
-(* comment.                                                                  *)
-(*---------------------------------------------------------------------------*)
 
 fun insert c = 
  let val {Name,Thy,Ty} = dest_thy_const c
@@ -82,16 +82,5 @@ fun apply c =
               in raise ERR "apply" 
                        ("no binding found for "^Lib.quote(Thy^"$"^Name))
               end
-
-(*
-fun apply c =
- case peek(theConstMap(),c)
-   of SOME triple => triple
-    | NONE => let val {Name,Thy,Ty} = dest_thy_const c
-              in if Thy=current_theory() then ("",Name,Ty) 
-                 else raise ERR "apply" 
-                       ("no binding found for "^Lib.quote(Thy^"$"^Name))
-              end
-*)
 
 end

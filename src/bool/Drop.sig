@@ -8,7 +8,7 @@ sig
   val is_list_hook             : (term -> bool) ref
   val is_comma_hook            : (term -> bool) ref
   val is_pair_hook             : (term -> bool) ref
-  val is_plet_hook             : (term -> bool) ref
+  val is_let_hook              : (term -> bool) ref
   val is_pabs_hook             : (term -> bool) ref
   val is_one_hook              : (term -> bool) ref
 
@@ -18,7 +18,7 @@ sig
   val dest_cons_hook           : (term -> term * term) ref
   val dest_pair_hook           : (term -> term * term) ref
   val dest_pabs_hook           : (term -> term * term) ref
-  val dest_plet_hook           : (term -> term * term * term) ref
+  val strip_let_hook           : (term -> (term * term) list list * term) ref
 
   val pp_type_as_ML     : ppstream -> hol_type -> unit
   val pp_term_as_ML     : string -> ppstream -> term -> unit
