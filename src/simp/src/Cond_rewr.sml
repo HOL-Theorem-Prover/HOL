@@ -377,7 +377,7 @@ fun IMP_CANON acc thl =
                  boolean term and force endless attempts to prove P.
                  Instead, convert to |- ~P *)
               else
-                IMP_CANON ((ant::ants, UNDISCH th)::acc) ths
+                IMP_CANON acc ((ant::ants, UNDISCH th)::ths)
             end
           else if is_forall w then
             IMP_CANON acc ((ants, SPEC_ALL th) :: ths)
