@@ -211,31 +211,28 @@ val UF_SEM_def =
 (******************************************************************************
 * PATH M p is true iff p is a path with respect to transition relation M.R
 ******************************************************************************)
-val PATH_def = 
- Define 
-  `PATH M p = !n :: (1 to LENGTH p). M.R(ELEM p (n-1), ELEM p n)`;
+val PATH_def = Define `PATH M p s = IS_INFINITE p /\ (ELEM p 0 = s) /\ (!n. M.R(ELEM p n, ELEM p (n+1)))`;
 
 (******************************************************************************
 * O_SEM M s f means "M, s |= f" 
 ******************************************************************************)
 val O_SEM_def =
  Define
-  `(O_SEM M s (O_BOOL b) = B_SEM (M.L s) b)
+  `(O_SEM M (O_BOOL b) s = B_SEM (M.L s) b)
    /\
-   (O_SEM M s (O_NOT f) = ~(O_SEM M s f)) 
+   (O_SEM M (O_NOT f) s = ~(O_SEM M f s)) 
    /\
-   (O_SEM M s (O_AND(f1,f2)) = O_SEM M s f1 /\ O_SEM M s f2)
+   (O_SEM M (O_AND(f1,f2)) s = O_SEM M f1 s /\ O_SEM M f2 s)
    /\
-   (O_SEM M s (O_EX f) = 
-     ?p. PATH M p /\ LENGTH p > 1 /\ (ELEM p 0 = s) /\ O_SEM M (ELEM p 1) f)
+   (O_SEM M (O_EX f) s = 
+     ?p. PATH M p s /\ O_SEM M f (ELEM p 1))
    /\
-   (O_SEM M s (O_EU(f1,f2)) = 
-     ?p. PATH M p     /\ 
-         (ELEM p 0 = s) /\ 
-         ?k :: (0 to LENGTH p). O_SEM M (ELEM p k) f2  /\ !j. j < k ==> O_SEM M (ELEM p j) f1)
+   (O_SEM M (O_EU(f1,f2)) s = 
+     ?p. PATH M p s /\ 
+         ?k :: (0 to LENGTH p). O_SEM M f2 (ELEM p k) /\ !j. j < k ==> O_SEM M f1 (ELEM p j))
    /\
-   (O_SEM M s (O_EG f) = 
-     ?p. PATH M p /\ (ELEM p 0 = s) /\ !j :: (0 to LENGTH p). O_SEM M (ELEM p j) f)`;
+   (O_SEM M (O_EG f) s = 
+     ?p. PATH M p s /\ !j :: (0 to LENGTH p). O_SEM M f (ELEM p j))`;
 
 val _ = export_theory();
 
