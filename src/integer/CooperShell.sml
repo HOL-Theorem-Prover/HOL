@@ -473,15 +473,6 @@ in
     ALL_CONV tm
 end
 
-fun push_exvar_to_bot v tm = let
-  val (bv, body) = dest_exists tm
-in
-  if bv = v then (SWAP_VARS_CONV THENC
-                  BINDER_CONV (push_exvar_to_bot v) ORELSEC
-                  ALL_CONV)
-  else (BINDER_CONV (push_exvar_to_bot v))
-end tm
-
 fun push_nthvar_to_bot n tm =
     if n <= 0 then TRY_CONV (SWAP_VARS_CONV THENC
                              BINDER_CONV (push_nthvar_to_bot 0)) tm
@@ -649,7 +640,7 @@ in
                      end
           val (minv, _) = List.foldl min init (tl constraints)
         in
-          push_exvar_to_bot minv THENC
+          push_nthvar_to_bot (index (equal minv) vars) THENC
           LAST_EXISTS_CONV vphase6_CONV THENC
           push_in_exists
         end
@@ -727,7 +718,7 @@ in
         NONE => valOf (best_var vars body)
       | SOME v => v
   in
-      push_exvar_to_bot next_var THENC
+      push_nthvar_to_bot (index (equal next_var) vars) THENC
       LAST_EXISTS_CONV eliminate_existential THENC
       TRY_CONV push_in_exists THENC
       EVERY_DISJ_CONV (pull_out_and_recurse (length vars - 1) THENC
