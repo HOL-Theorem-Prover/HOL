@@ -13,7 +13,7 @@ val _ = new_theory "semi_ring";
 val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);
 
 
-val _ = Hol_datatype 
+val _ = Hol_datatype
           `semi_ring = <| SR0 : 'a;
                           SR1 : 'a;
                           SRP : 'a -> 'a -> 'a;
@@ -23,6 +23,9 @@ val _ = Hol_datatype
 val sr = --`r:'a semi_ring`--;
 val _ = add_parameter sr;
 val _ = app (C add_impl_param [sr]) ["SR0","SR1","SRP","SRM"];
+
+val _ = app (fn s => overload_on (s, Parse.Term [QUOTE ("semi_ring_"^s)]))
+        ["SR0","SR1","SRP","SRM"];
 
 val sp_plus_sym = --`!n m.  SRP n m = SRP m n`--;
 val sp_plus_assoc = --`!n m p.  SRP n (SRP m p) = SRP (SRP n m) p`--;

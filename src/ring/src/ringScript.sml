@@ -25,6 +25,8 @@ val _ = Hol_datatype `ring = <| R0 : 'a;
 
 val r = --`r:'a ring`--;
 val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
+val _ = app (fn s => overload_on (s, Parse.Term [QUOTE ("ring_"^s)]))
+            ["R0","R1","RP","RM","RN"];
 
 
 val p_plus_sym = --`!n m.  RP n m = RP m n`--;
