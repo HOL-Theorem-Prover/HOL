@@ -1154,21 +1154,27 @@ local fun dest_pvar (Absyn.VIDENT s) = s
         | dest_head (Absyn.QIDENT _) = raise ERR "dest_head" "qual. ident."
         | dest_head (Absyn.APP _)    = raise ERR "dest_head" "app. node"
         | dest_head (Absyn.LAM _)    = raise ERR "dest_head" "lam. node"
-      fun remove_tyannote (Absyn.TYPED(a, _)) = remove_tyannote a
-        | remove_tyannote x = x
+      fun strip_tyannote0 acc absyn =
+          case absyn of
+            Absyn.TYPED(a, ty) => strip_tyannote0 (ty::acc) a
+          | x => (List.rev acc, x)
+      val strip_tyannote = strip_tyannote0 []
+      fun list_mk_tyannote(tyl,a) =
+          List.foldl (fn (ty,t) => Absyn.TYPED(t,ty)) a tyl
 in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
-     val (lhs,rhs)    = Absyn.dest_eq body
+     val (lhs0,rhs)   = Absyn.dest_eq body
      val   _          = if exists wildcard (names_of rhs [])
                         then raise ERR "munge" "wildcards on rhs" else ()
-     val (f,pats)     = Absyn.strip_app (remove_tyannote lhs)
+     val (tys, lhs)   = strip_tyannote lhs0
+     val (f,pats)     = Absyn.strip_app lhs
      val (pats',V')   = rev_itlist expand_wildcards pats
                             ([],Lib.union V (map dest_pvar vlist))
-     val new_eq       = Absyn.list_mk_forall(vlist,
-                          Absyn.mk_eq(Absyn.list_mk_app(f,rev pats'), rhs))
+     val new_lhs0     = Absyn.list_mk_app(f,rev pats')
+     val new_lhs      = list_mk_tyannote(tys, new_lhs0)
+     val new_eq       = Absyn.list_mk_forall(vlist, Absyn.mk_eq(new_lhs, rhs))
      val fstr         = dest_head f
-
  in
     (new_eq::eqs, insert fstr fset, V')
  end
