@@ -8,12 +8,11 @@
 
 (* interactive use:
   app load ["numLib", "listTheory", "listSyntax",
-            "BasicProvers", "Q", "SingleStep"];
-  open numLib numSyntax BasicProvers listTheory listSyntax SingleStep;
+            "BasicProvers", "Q", "SingleStep", "metisLib"];
 *)
 
-open HolKernel boolLib numLib numSyntax BasicProvers SingleStep listTheory
-     bossLib metisLib;
+open HolKernel boolLib 
+     numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib;
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
@@ -239,6 +238,30 @@ val STRING_CASE_CONG = save_thm
 ("STRING_CASE_CONG",
  case_cong_thm STRING_CASES STRING_CASE_DEF);
 
+
+(*---------------------------------------------------------------------------
+      Size of a string.
+ ---------------------------------------------------------------------------*)
+
+val STRLEN_DEF = new_recursive_definition
+   {def = Term`(STRLEN "" = 0) /\
+               (STRLEN (STRING c s) = 1 + STRLEN s)`,
+    name = "STRLEN_DEF",
+    rec_axiom = string_Axiom};
+
+
+val _ = TypeBase.write
+     [TypeBasePure.mk_tyinfo
+       {ax=TypeBasePure.ORIG string_Axiom,
+        case_def=STRING_CASE_DEF,
+        case_cong=STRING_CASE_CONG,
+        induction=TypeBasePure.ORIG STRING_INDUCT_THM,
+        nchotomy=STRING_CASES,
+        size=SOME(Parse.Term`STRLEN`,TypeBasePure.ORIG STRLEN_DEF),
+        encode=NONE, lift=NONE,
+        one_one=SOME STRING_11,
+       distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];
+
 (*---------------------------------------------------------------------------*)
 (* Destruct a string. This will be used to re-phrase the HOL development     *)
 (* with an ML definition of DEST_STRING in terms of the Basis String struct. *)
@@ -249,6 +272,16 @@ val DEST_STRING = new_recursive_definition
  def = Term`(DEST_STRING "" = NONE) /\
             (DEST_STRING (STRING c rst) = SOME(c,rst))`,
  rec_axiom = string_Axiom};
+
+
+val DEST_STRING_LEMS = Q.store_thm
+("DEST_STRING_LEMS",
+ `!s. ((DEST_STRING s = NONE) = (s = "")) /\
+      ((DEST_STRING s = SOME(c,t)) = (s = STRING c t))`,
+ GEN_TAC 
+   THEN STRIP_ASSUME_TAC (SPEC_ALL STRING_CASES)
+   THEN RW_TAC list_ss [DEST_STRING]);
+
 
 
 (*---------------------------------------------------------------------------
@@ -271,20 +304,20 @@ val IMPLODE_EQNS = Q.store_thm
     More rewrites for IMPLODE and EXPLODE
    ---------------------------------------------------------------------- *)
 
-val IMPLODE_EQ_EMPTYSTRING = store_thm(
+val IMPLODE_EQ_EMPTYSTRING = Q.store_thm(
   "IMPLODE_EQ_EMPTYSTRING",
-  ``((IMPLODE l = "") = (l = [])) /\
-    (("" = IMPLODE l) = (l = []))``,
+  `((IMPLODE l = "") = (l = [])) /\
+   (("" = IMPLODE l) = (l = []))`,
   CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) THEN
   REWRITE_TAC [] THEN
   RW_TAC bool_ss [EQ_IMP_THM, IMPLODE_EQNS, IMPLODE_EXPLODE] THEN
   POP_ASSUM (MP_TAC o Q.AP_TERM `EXPLODE`) THEN
   RW_TAC bool_ss [EXPLODE_EQNS, EXPLODE_IMPLODE]);
 
-val EXPLODE_EQ_NIL = store_thm(
+val EXPLODE_EQ_NIL = Q.store_thm(
   "EXPLODE_EQ_NIL",
-  ``((EXPLODE s = []) = (s = "")) /\
-    (([] = EXPLODE s) = (s = ""))``,
+  `((EXPLODE s = []) = (s = "")) /\
+   (([] = EXPLODE s) = (s = ""))`,
   CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) THEN
   REWRITE_TAC [] THEN
   RW_TAC bool_ss [EQ_IMP_THM, EXPLODE_EQNS, EXPLODE_IMPLODE] THEN
@@ -330,17 +363,9 @@ val IMPLODE_STRING = Q.store_thm
 INDUCT_THEN listTheory.list_INDUCT ASSUME_TAC
   THEN RW_TAC std_ss [IMPLODE_EQNS,listTheory.FOLDR]);
 
-
-(*---------------------------------------------------------------------------
-      Size of a string.
- ---------------------------------------------------------------------------*)
-
-val STRLEN_DEF = new_recursive_definition
-   {def = Term`(STRLEN "" = 0) /\
-               (STRLEN (STRING c s) = 1 + STRLEN s)`,
-    name = "STRLEN_DEF",
-    rec_axiom = string_Axiom};
-
+(*---------------------------------------------------------------------------*)
+(* Main fact about STRLEN                                                    *)
+(*---------------------------------------------------------------------------*)
 
 val STRLEN_THM = Q.store_thm
 ("STRLEN_THM",
@@ -405,18 +430,6 @@ val STRLEN_CAT = Q.store_thm
        Is one string a prefix of another?
  ---------------------------------------------------------------------------*)
 
-val _ = TypeBase.write
-     [TypeBasePure.mk_tyinfo
-       {ax=TypeBasePure.ORIG string_Axiom,
-        case_def=STRING_CASE_DEF,
-        case_cong=STRING_CASE_CONG,
-        induction=TypeBasePure.ORIG STRING_INDUCT_THM,
-        nchotomy=STRING_CASES,
-        size=SOME(Parse.Term`STRLEN`,TypeBasePure.ORIG STRLEN_DEF),
-        encode=NONE, lift=NONE,
-        one_one=SOME STRING_11,
-       distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];
-
 val isPREFIX_defn = Hol_defn "isPREFIX"
    `isPREFIX s1 s2 = 
        case (DEST_STRING s1, DEST_STRING s2)
@@ -428,9 +441,9 @@ val (isPREFIX_DEF,isPREFIX_IND_0) =
  Defn.tprove
    (isPREFIX_defn,
     WF_REL_TAC `measure (STRLEN o FST)` 
-      THEN Cases_on `s1`
-      THEN RW_TAC arith_ss [DEST_STRING,STRLEN_DEF]
-      THEN RW_TAC arith_ss []);
+      THEN RW_TAC std_ss []
+      THEN FULL_SIMP_TAC std_ss [DEST_STRING_LEMS]
+      THEN RW_TAC arith_ss [STRLEN_DEF]);
 
 val isPREFIX_DEF = save_thm("isPREFIX_DEF",isPREFIX_DEF);
 
@@ -442,13 +455,6 @@ val isPREFIX_IND = Q.store_thm
            (DEST_STRING s2 = SOME (c2,t2)) ==> P t1 t2) ==> P s1 s2) 
        ==> !v v1. P v v1`,
  METIS_TAC [pairTheory.ABS_PAIR_THM,isPREFIX_IND_0]);
-
-
-val DEST_STRING_LEMS = Q.store_thm
-("DEST_STRING_LEMS",
- `!s. ((DEST_STRING s = NONE) = (s = "")) /\
-      ((DEST_STRING s = SOME(c,t)) = (s = STRING c t))`,
- Cases THEN RW_TAC list_ss [DEST_STRING]);
 
 
 val isPREFIX_STRCAT = Q.store_thm
