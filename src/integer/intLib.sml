@@ -28,5 +28,9 @@ val ARITH_CONV = Omega.OMEGA_CONV
 val ARITH_TAC = Omega.OMEGA_TAC
 val ARITH_PROVE = Omega.OMEGA_PROVE
 
+val _ = if !Globals.interactive then
+          Feedback.HOL_MESG ("intLib loaded.  Use intLib.deprecate_int()"^
+                             " to turn off integer parsing")
+        else ()
 
 end;
