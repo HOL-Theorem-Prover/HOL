@@ -92,6 +92,7 @@ val keepers =
      (* pair *)
      "pairLib.sig", "pairTheory.sig", "pairSyntax.sig",
      "PairedLambda.sig", "pairSimps.sig", "pairTools.sig",
+     "PairRules.sig",
 
      (* pred_set *)
      "pred_setLib.sig",
