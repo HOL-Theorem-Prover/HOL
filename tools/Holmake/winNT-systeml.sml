@@ -27,7 +27,7 @@ val protect = dquote
       "c:/program files/bar/baz" "arg1"
    then it has a fit.  It seems the only way of getting it to play nicely
    is to prefix the commandline with "call". *)
-fun system_ps s - Process.system ("call " ^ s)
+fun system_ps s = Process.system ("call " ^ s)
 
 fun xable_string s = s^".exe"
 fun mk_xable file =   (* returns the name of the executable *)
