@@ -433,11 +433,14 @@ let munge_indent : int -> unit
 
 
 (* output a single HOL token *)
-let rec munge_hol_content : pvars -> hol_content -> unit
-    = fun pvs (t,_) ->
+(* boolean flag: was previous token an alphanumeric ident? *)
+let rec munge_hol_content0 : pvars -> bool -> hol_content -> bool
+    = fun pvs adjid (t,_) ->
       let render_it =
         match t with
-          HolIdent(true ,s) -> (fun () -> munge_ident pvs s)
+          HolIdent(true ,s) -> (fun () ->
+            if adjid then print_string "\;";
+            munge_ident pvs s)
         | HolIdent(false,s) -> (fun () -> munge_symbol pvs s)
         | HolStr s          -> (fun () -> wrap "\\text{``" "''}" munge_texify_text s)
         | HolWhite s        -> (fun () -> print_string s)
@@ -455,10 +458,16 @@ let rec munge_hol_content : pvars -> hol_content -> unit
         | HolDir (dir       ,_) -> do_directive dir (* do it now, even if not echoing *);
                                    (fun () -> ())
       in
-      if !eCHO then
-        render_it ()
-      else
-        ()  (* don't display anything if echoing turned off *)
+      if !eCHO then begin
+        render_it ();
+        let adjid' = match t with HolIdent(true,_) -> true | HolWhite _ -> adjid | _ -> false in
+        adjid'
+      end else
+        adjid  (* don't display anything if echoing turned off *)
+
+and munge_hol_content : pvars -> hol_content -> unit
+    = fun pvs tt ->
+      let (_:bool) = munge_hol_content0 pvs false tt in ()
 
 
 (* output a curried op, returning the remainder of the stream *)
@@ -485,23 +494,25 @@ and munge_curried : pvars -> hol_content -> curried_info -> hol_content list -> 
 
 
 (* output an entire HOL document *)
-and munge_holdoc : pvars -> holdoc -> unit
-    = fun pvs ts ->
+and munge_holdoc0 : pvars -> bool -> holdoc -> bool
+    = fun pvs adjid ts ->
       match ts with
         []
-          -> ()
+          -> adjid
 
       | (((HolIdent(b,s),_) as t)::ts) when (match is_curried s with Some _ -> true | None -> false)
           -> (match is_curried s with
                 Some info
-                  -> let ts' = munge_curried pvs t info ts
-                     in
-                     munge_holdoc pvs ts'
+                  -> let ts' = munge_curried pvs t info ts in
+                     munge_holdoc0 pvs false ts'
               | _ -> raise (NeverHappen "munge_holdoc"))
 
       | (t::ts)
-          -> (munge_hol_content pvs t;
-              munge_holdoc pvs ts)
+          -> let adjid' = munge_hol_content0 pvs adjid t in
+             munge_holdoc0 pvs adjid' ts
+
+and munge_holdoc : pvars -> holdoc -> unit
+    = fun pvs ts -> let (_:bool) = munge_holdoc0 pvs false ts in ()
 
 
 
