@@ -375,6 +375,12 @@ val EXISTS_MEM = store_thm(
   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [EXISTS_DEF, MEM] THEN
   mesonLib.MESON_TAC []);
 
+val MEM_APPEND = store_thm(
+  "MEM_APPEND",
+  ``!e l1 l2. MEM e (APPEND l1 l2) = MEM e l1 \/ MEM e l2``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [APPEND, MEM, DISJ_ASSOC]);
+
 val EVERY_APPEND = store_thm(
   "EVERY_APPEND",
   ``!P (l1:'a list) l2.

@@ -12,7 +12,7 @@ val list_ss = rewrites
         LENGTH_APPEND, LENGTH_MAP, MAP_APPEND, NOT_CONS_NIL,
         NOT_NIL_CONS, MAP_EQ_NIL, APPEND_NIL, CONS_ACYCLIC,
         list_case_def, APPEND_eq_NIL, ZIP, UNZIP,
-        EVERY_APPEND, EXISTS_APPEND];
+        EVERY_APPEND, EXISTS_APPEND, MEM_APPEND];
 
 
  val list_rws = computeLib.add_thms
