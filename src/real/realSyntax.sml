@@ -81,6 +81,8 @@ in
     else posint i
   end
 
+
+  fun flip f (x,y) = f (y, x)
   val dest_plus = dest2 plus_tm "dest_plus" "plus"
   val is_plus = can dest_plus
   fun mk_plus(t1, t2) = list_mk_comb(plus_tm, [t1, t2])
@@ -88,7 +90,7 @@ in
       case tlist of
         [] => raise ERR "list_mk_plus" "Empty list"
       | [t] => t
-      | t::ts => List.foldl mk_plus t ts
+      | t::ts => List.foldl (flip mk_plus) t ts
   fun strip_plus t = let
     fun recurse a k =
         case k of
@@ -113,7 +115,7 @@ in
       case tlist of
         [] => raise ERR "list_mk_mult" "Empty list"
       | [t] => t
-      | t::ts => List.foldl mk_mult t ts
+      | t::ts => List.foldl (flip mk_mult) t ts
   fun strip_mult t = let
     fun recurse a k =
         case k of
@@ -121,7 +123,7 @@ in
         | t::ts => let
             val (t1, t2) = dest_mult t
           in
-            recurse a (t2::t2::ts)
+            recurse a (t2::t1::ts)
           end handle HOL_ERR _ => recurse (t::a) ts
   in
     recurse [] [t]
