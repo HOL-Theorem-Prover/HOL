@@ -1,9 +1,13 @@
-open HolKernel boolLib Parse pairSyntax numSyntax listSyntax
+(* Interactive mode
+app load ["listSyntax", "combinSyntax", "state_transformerTheory"];
+*)
+
+open HolKernel boolLib Parse bossLib pairSyntax numSyntax listSyntax
   combinSyntax arithmeticTheory mesonLib simpLib boolSimps numLib
   optionTheory oneTheory listTheory combinTheory state_transformerTheory
   pairTheory;
 
-val _ = new_theory "Boolify";
+val _ = new_theory "Encode";
 
 infix 0 THEN |->;
 infixr 1 --> by;
@@ -11,73 +15,58 @@ infixr 1 --> by;
 val arith_ss = bool_ss ++ numSimps.ARITH_ss;
 
 (*---------------------------------------------------------------------------
-     Constructor encodings 
- ---------------------------------------------------------------------------*)
-
-val encNone  = Term `[F]`;   (* options *)
-val encSome  = Term `[T]`;
-val encZ     = Term `[T;T]`; (* numbers *)
-val encB1    = Term `[T;F]`;
-val encB2    = Term `[F]`;
-val encNil   = Term `[F]`;   (* lists *)
-val encCons  = Term `[T]`;
-val encInl   = Term `[T]`;   (* sums *)
-val encInr   = Term `[F]`;
-
-(*---------------------------------------------------------------------------
         Booleans
  ---------------------------------------------------------------------------*)
 
-val bool_to_bool_def = TotalDefn.Define
-  `bool_to_bool (x : bool) = [x]`;
+val encode_bool_def = TotalDefn.Define
+  `encode_bool (x : bool) = [x]`;
 
 (*---------------------------------------------------------------------------
         Pairs
  ---------------------------------------------------------------------------*)
 
-val prod_to_bool_def =
+val encode_prod_def =
   TotalDefn.Define
-  `prod_to_bool xb yb (x : 'a, y : 'b) : bool list = APPEND (xb x) (yb y)`;
+  `encode_prod xb yb (x : 'a, y : 'b) : bool list = APPEND (xb x) (yb y)`;
 
 (*---------------------------------------------------------------------------
         Sums
  ---------------------------------------------------------------------------*)
 
-val sum_to_bool_def =
+val encode_sum_def =
   TotalDefn.Define
-  `(sum_to_bool xb yb (INL (x : 'a)) : bool list = APPEND ^encInl (xb x)) /\
-   (sum_to_bool xb yb (INR (y : 'b)) = APPEND ^encInr (yb y))`;
+  `(encode_sum xb yb (INL (x : 'a)) : bool list = T :: xb x) /\
+   (encode_sum xb yb (INR (y : 'b)) = F :: yb y)`;
 
 (*---------------------------------------------------------------------------
         Options
  ---------------------------------------------------------------------------*)
 
-val option_to_bool_def =
+val encode_option_def =
   TotalDefn.Define
-  `(option_to_bool xb NONE = ^encNone) /\
-   (option_to_bool xb (SOME x) = APPEND ^encSome (xb x))`;
+  `(encode_option xb NONE = [F]) /\
+   (encode_option xb (SOME x) = T :: xb x)`;
 
 (*---------------------------------------------------------------------------
         Lists
  ---------------------------------------------------------------------------*)
 
-val list_to_bool_def = 
+val encode_list_def = 
   TotalDefn.Define
-  `(list_to_bool xb [] = ^encNil) /\
-   (list_to_bool xb (x::xs) =
-    APPEND ^encCons (APPEND (xb x) (list_to_bool xb xs)))`;
+  `(encode_list xb [] = [F]) /\
+   (encode_list xb (x :: xs) = T :: APPEND (xb x) (encode_list xb xs))`;
 
 (*---------------------------------------------------------------------------
         Nums (Norrish numeral encoding)
  ---------------------------------------------------------------------------*)
 
-val (num_to_bool_def, num_to_bool_ind) =
+val (encode_num_def, encode_num_ind) =
   Defn.tprove
-  (Defn.Hol_defn "num_to_bool"
-   `num_to_bool (n:num) = 
-    if n = 0 then ^encZ
-    else if EVEN n then APPEND ^encB2 (num_to_bool ((n-2) DIV 2))
-    else APPEND ^encB1 (num_to_bool ((n-1) DIV 2))`,
+  (Defn.Hol_defn "encode_num"
+   `encode_num (n:num) = 
+    if n = 0 then [T; T]
+    else if EVEN n then F :: encode_num ((n - 2) DIV 2)
+    else T :: F :: encode_num ((n - 1) DIV 2)`,
    TotalDefn.WF_REL_TAC `$<` THEN
    REPEAT STRIP_TAC THEN
    (KNOW_TAC (Term`?j. n = SUC j`) THEN1 ASM_MESON_TAC [num_CASES]) THEN
@@ -88,8 +77,8 @@ val (num_to_bool_def, num_to_bool_ind) =
     EQT_ELIM (ARITH_CONV (Term `2n*m - 2n = (m-1n)*2n`)),
     EQT_ELIM (ARITH_CONV (Term `x < SUC y = x <= y`))]);
 
-val _ = save_thm ("num_to_bool_def", num_to_bool_def);
-val _ = save_thm ("num_to_bool_ind", num_to_bool_ind);
+val _ = save_thm ("encode_num_def", encode_num_def);
+val _ = save_thm ("encode_num_ind", encode_num_ind);
   
   (*--------------------------------------------------------------------
        Termination proof can also go: 
@@ -104,7 +93,22 @@ val _ = save_thm ("num_to_bool_ind", num_to_bool_ind);
       target list: the type has all the information!
  ---------------------------------------------------------------------------*)
 
-val one_to_bool_def =
-  TotalDefn.Define `one_to_bool (_ : one) : bool list = []`;
+val encode_unit_def =
+  TotalDefn.Define `encode_unit (_ : one) : bool list = []`;
+
+(*---------------------------------------------------------------------------*)
+(* A congruence rule for encode_list                                         *)
+(*---------------------------------------------------------------------------*)
+
+val encode_list_cong = store_thm
+ ("encode_list_cong",
+  ``!l1 l2 f1 f2.
+      (l1=l2) /\ (!x. MEM x l2 ==> (f1 x = f2 x)) 
+              ==>
+      (encode_list f1 l1 = encode_list f2 l2)``,
+  Induct THEN SIMP_TAC list_ss [MEM,encode_list_def]
+         THEN RW_TAC list_ss []);
+
+val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());
 
 val _ = export_theory ();

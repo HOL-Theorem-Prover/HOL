@@ -9,7 +9,7 @@ val () =
   !loadPath;
 
 app load
-["sumTheory", "Datatype", "listTheory", "Boolify", "bossLib"];
+["sumTheory", "Datatype", "listTheory", "Encode", "bossLib"];
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)

@@ -1,6 +1,6 @@
 
 -----------------------------------------------------------------
-       HOL [Kananaskis 2 (built Wed Jul  3 16:52:10 2002)]
+       HOL [Kananaskis 2 (built Fri Aug  9 01:27:19 2002)]
 
        For introductory HOL help, type: help "hol";
 -----------------------------------------------------------------
@@ -14,7 +14,7 @@
   hol_type frag list -> string * (term * thm) option * (term * thm) option
 - > val boolify = fn : term -> thm
 - <<HOL message: Defined type: "NumBool0">>
-runtime: 0.220s,    gctime: 0.030s,     systime: 0.000s.
+runtime: 0.220s,    gctime: 0.040s,     systime: 0.000s.
 Axioms asserted: 0.
 Definitions made: 9.
 Oracle invocations: 0.
@@ -26,12 +26,12 @@ Total: 1524.
      SOME(``NumBool0_size``,
           |- (!a. NumBool0_size (Num0 a) = 1 + a) /\
              !a. NumBool0_size (Bool0 a) = 1 + case a of T -> 0 || F -> 0),
-     SOME(``NumBool0_to_bool``,
-          |- (!a. NumBool0_to_bool (Num0 a) = APPEND [T] (num_to_bool a)) /\
-             !a. NumBool0_to_bool (Bool0 a) = APPEND [F] (bool_to_bool a))) :
+     SOME(``encode_NumBool0``,
+          |- (!a. encode_NumBool0 (Num0 a) = APPEND [T] (encode_num a)) /\
+             !a. encode_NumBool0 (Bool0 a) = APPEND [F] (encode_bool a))) :
   string * (term * thm) option * (term * thm) option
 - <<HOL message: Defined type: "NumBoolNums">>
-runtime: 0.330s,    gctime: 0.040s,     systime: 0.000s.
+runtime: 0.310s,    gctime: 0.060s,     systime: 0.000s.
 Axioms asserted: 0.
 Definitions made: 11.
 Oracle invocations: 0.
@@ -44,16 +44,15 @@ Total: 2412.
           |- (!a. NumBoolNums_size (Num a) = 1 + a) /\
              (!a. NumBoolNums_size (Bool a) = 1 + case a of T -> 0 || F -> 0) /\
              !a. NumBoolNums_size (Nums a) = 1 + list_size (\x. x) a),
-     SOME(``NumBoolNums_to_bool``,
-          |- (!a. NumBoolNums_to_bool (Num a) = APPEND [T; T] (num_to_bool a)) /\
-             (!a.
-                NumBoolNums_to_bool (Bool a) = APPEND [T; F] (bool_to_bool a)) /\
+     SOME(``encode_NumBoolNums``,
+          |- (!a. encode_NumBoolNums (Num a) = APPEND [T; T] (encode_num a)) /\
+             (!a. encode_NumBoolNums (Bool a) = APPEND [T; F] (encode_bool a)) /\
              !a.
-               NumBoolNums_to_bool (Nums a) =
-               APPEND [F; T] (list_to_bool num_to_bool a))) :
+               encode_NumBoolNums (Nums a) =
+               APPEND [F; T] (encode_list encode_num a))) :
   string * (term * thm) option * (term * thm) option
 - <<HOL message: Defined type: "NTree">>
-runtime: 0.690s,    gctime: 0.110s,     systime: 0.010s.
+runtime: 0.630s,    gctime: 0.080s,     systime: 0.000s.
 Axioms asserted: 0.
 Definitions made: 12.
 Oracle invocations: 0.
@@ -66,15 +65,15 @@ Total: 3447.
           |- (!a. NTree_size (Tree a) = 1 + NTree1_size a) /\
              (NTree1_size [] = 0) /\
              !a0 a1. NTree1_size (a0::a1) = 1 + (NTree_size a0 + NTree1_size a1)),
-     SOME(``NTree_to_bool``,
-          |- (!a. NTree_to_bool (Tree a) = NTree1_to_bool a) /\
-             (NTree1_to_bool [] = [T]) /\
+     SOME(``encode_NTree``,
+          |- (!a. encode_NTree (Tree a) = encode_NTree1 a) /\
+             (encode_NTree1 [] = [T]) /\
              !a0 a1.
-               NTree1_to_bool (a0::a1) =
-               APPEND [F] (APPEND (NTree_to_bool a0) (NTree1_to_bool a1)))) :
+               encode_NTree1 (a0::a1) =
+               APPEND [F] (APPEND (encode_NTree a0) (encode_NTree1 a1)))) :
   string * (term * thm) option * (term * thm) option
 - <<HOL message: Defined type: "List">>
-runtime: 0.280s,    gctime: 0.070s,     systime: 0.000s.
+runtime: 0.280s,    gctime: 0.090s,     systime: 0.000s.
 Axioms asserted: 0.
 Definitions made: 9.
 Oracle invocations: 0.
@@ -86,14 +85,14 @@ Total: 1839.
      SOME(``List_size``,
           |- (!f. List_size f Nil = 0) /\
              !f a0 a1. List_size f (Cons a0 a1) = 1 + (f a0 + List_size f a1)),
-     SOME(``List_to_bool``,
-          |- (!f. List_to_bool f Nil = [T]) /\
+     SOME(``encode_List``,
+          |- (!f. encode_List f Nil = [T]) /\
              !f a0 a1.
-               List_to_bool f (Cons a0 a1) =
-               APPEND [F] (APPEND (f a0) (List_to_bool f a1)))) :
+               encode_List f (Cons a0 a1) =
+               APPEND [F] (APPEND (f a0) (encode_List f a1)))) :
   string * (term * thm) option * (term * thm) option
 - <<HOL message: Defined type: "tri">>
-runtime: 0.110s,    gctime: 0.000s,     systime: 0.000s.
+runtime: 0.120s,    gctime: 0.020s,     systime: 0.000s.
 Axioms asserted: 0.
 Definitions made: 8.
 Oracle invocations: 0.
@@ -102,12 +101,12 @@ HOL primitive inference steps: 1708.
 Total: 1716.
 > val it =
     ("tri", SOME(``tri_size``, |- !x. tri_size x = 0),
-     SOME(``tri_to_bool``,
-          |- (tri_to_bool ONE = [T; T]) /\ (tri_to_bool TWO = [T; F]) /\
-             (tri_to_bool THREE = [F; T]))) :
+     SOME(``encode_tri``,
+          |- (encode_tri ONE = [T; T]) /\ (encode_tri TWO = [T; F]) /\
+             (encode_tri THREE = [F; T]))) :
   string * (term * thm) option * (term * thm) option
 - <<HOL message: Defined types: "command", "expression">>
-runtime: 8.600s,    gctime: 1.660s,     systime: 0.010s.
+runtime: 8.460s,    gctime: 1.970s,     systime: 0.010s.
 Axioms asserted: 0.
 Definitions made: 36.
 Oracle invocations: 0.
@@ -136,37 +135,32 @@ Total: 18966.
              !a0 a1.
                command4_size (a0::a1) =
                1 + (expression_size a0 + command4_size a1)),
-     SOME(``command_to_bool``,
+     SOME(``encode_command``,
           |- (!a.
-                command_to_bool (Assignment a) =
-                APPEND [T] (command2_to_bool a)) /\
+                encode_command (Assignment a) = APPEND [T] (encode_command2 a)) /\
+             (!a. encode_command (Sequence a) = APPEND [F] (encode_command1 a)) /\
+             (!a. encode_expression (Numeral a) = APPEND [T; T] (encode_num a)) /\
              (!a.
-                command_to_bool (Sequence a) = APPEND [F] (command1_to_bool a)) /\
+                encode_expression (Plus a) = APPEND [T; F] (encode_command3 a)) /\
              (!a.
-                expression_to_bool (Numeral a) = APPEND [T; T] (num_to_bool a)) /\
-             (!a.
-                expression_to_bool (Plus a) =
-                APPEND [T; F] (command3_to_bool a)) /\
-             (!a.
-                expression_to_bool (Valof a) =
-                APPEND [F; T] (command_to_bool a)) /\
-             (command1_to_bool [] = [T]) /\
+                encode_expression (Valof a) = APPEND [F; T] (encode_command a)) /\
+             (encode_command1 [] = [T]) /\
              (!a0 a1.
-                command1_to_bool (a0::a1) =
-                APPEND [F] (APPEND (command_to_bool a0) (command1_to_bool a1))) /\
+                encode_command1 (a0::a1) =
+                APPEND [F] (APPEND (encode_command a0) (encode_command1 a1))) /\
              (!a0 a1.
-                command2_to_bool (a0,a1) =
-                APPEND (list_to_bool num_to_bool a0) (command4_to_bool a1)) /\
+                encode_command2 (a0,a1) =
+                APPEND (encode_list encode_num a0) (encode_command4 a1)) /\
              (!a0 a1.
-                command3_to_bool (a0,a1) =
-                APPEND (expression_to_bool a0) (expression_to_bool a1)) /\
-             (command4_to_bool [] = [T]) /\
+                encode_command3 (a0,a1) =
+                APPEND (encode_expression a0) (encode_expression a1)) /\
+             (encode_command4 [] = [T]) /\
              !a0 a1.
-               command4_to_bool (a0::a1) =
-               APPEND [F] (APPEND (expression_to_bool a0) (command4_to_bool a1))))
+               encode_command4 (a0::a1) =
+               APPEND [F] (APPEND (encode_expression a0) (encode_command4 a1))))
      : string * (term * thm) option * (term * thm) option
 - <<HOL message: Defined types: "exp", "bexp">>
-runtime: 4.060s,    gctime: 0.580s,     systime: 0.000s.
+runtime: 3.950s,    gctime: 0.670s,     systime: 0.010s.
 Axioms asserted: 0.
 Definitions made: 29.
 Oracle invocations: 0.
@@ -200,69 +194,68 @@ Total: 16501.
              !f f1 a0 a1.
                exp1_size f f1 (a0::a1) =
                1 + (exp_size f f1 a0 + exp1_size f f1 a1)),
-     SOME(``exp_to_bool``,
-          |- (!f f1 a. exp_to_bool f f1 (VAR a) = APPEND [T; T] (f a)) /\
+     SOME(``encode_exp``,
+          |- (!f f1 a. encode_exp f f1 (VAR a) = APPEND [T; T] (f a)) /\
              (!f f1 a0 a1 a2.
-                exp_to_bool f f1 (IF a0 a1 a2) =
+                encode_exp f f1 (IF a0 a1 a2) =
                 APPEND [T; F]
-                  (APPEND (bexp_to_bool f f1 a0)
-                     (APPEND (exp_to_bool f f1 a1) (exp_to_bool f f1 a2)))) /\
+                  (APPEND (encode_bexp f f1 a0)
+                     (APPEND (encode_exp f f1 a1) (encode_exp f f1 a2)))) /\
              (!f f1 a0 a1.
-                exp_to_bool f f1 (APP a0 a1) =
-                APPEND [F; T] (APPEND (f1 a0) (exp1_to_bool f f1 a1))) /\
+                encode_exp f f1 (APP a0 a1) =
+                APPEND [F; T] (APPEND (f1 a0) (encode_exp1 f f1 a1))) /\
              (!f f1 a0 a1.
-                bexp_to_bool f f1 (EQ a0 a1) =
+                encode_bexp f f1 (EQ a0 a1) =
                 APPEND [T; T; T]
-                  (APPEND (exp_to_bool f f1 a0) (exp_to_bool f f1 a1))) /\
+                  (APPEND (encode_exp f f1 a0) (encode_exp f f1 a1))) /\
              (!f f1 a0 a1.
-                bexp_to_bool f f1 (LEQ a0 a1) =
+                encode_bexp f f1 (LEQ a0 a1) =
                 APPEND [T; T; F]
-                  (APPEND (exp_to_bool f f1 a0) (exp_to_bool f f1 a1))) /\
+                  (APPEND (encode_exp f f1 a0) (encode_exp f f1 a1))) /\
              (!f f1 a0 a1.
-                bexp_to_bool f f1 (AND a0 a1) =
+                encode_bexp f f1 (AND a0 a1) =
                 APPEND [T; F; T]
-                  (APPEND (bexp_to_bool f f1 a0) (bexp_to_bool f f1 a1))) /\
+                  (APPEND (encode_bexp f f1 a0) (encode_bexp f f1 a1))) /\
              (!f f1 a0 a1.
-                bexp_to_bool f f1 (OR a0 a1) =
+                encode_bexp f f1 (OR a0 a1) =
                 APPEND [T; F; F]
-                  (APPEND (bexp_to_bool f f1 a0) (bexp_to_bool f f1 a1))) /\
+                  (APPEND (encode_bexp f f1 a0) (encode_bexp f f1 a1))) /\
              (!f f1 a.
-                bexp_to_bool f f1 (NOT a) =
-                APPEND [F; T; T] (bexp_to_bool f f1 a)) /\
-             (!f f1. exp1_to_bool f f1 [] = [T]) /\
+                encode_bexp f f1 (NOT a) =
+                APPEND [F; T; T] (encode_bexp f f1 a)) /\
+             (!f f1. encode_exp1 f f1 [] = [T]) /\
              !f f1 a0 a1.
-               exp1_to_bool f f1 (a0::a1) =
-               APPEND [F] (APPEND (exp_to_bool f f1 a0) (exp1_to_bool f f1 a1))))
+               encode_exp1 f f1 (a0::a1) =
+               APPEND [F] (APPEND (encode_exp f f1 a0) (encode_exp1 f f1 a1))))
      : string * (term * thm) option * (term * thm) option
 - > val it =
-    |- list_to_bool
-         (prod_to_bool num_to_bool
-            (prod_to_bool num_to_bool
-               (prod_to_bool num_to_bool num_to_bool)))
+    |- encode_list
+         (encode_prod encode_num
+            (encode_prod encode_num (encode_prod encode_num encode_num)))
          [(1,2,3,4); (5,6,7,8)] =
        [T; T; F; T; T; F; T; T; T; F; T; F; T; T; F; T; F; T; T; T; T; F; F;
         T; T; F; F; T; T; T; F; T; F; T; F; T; T; F; T; F; T; F; T; T; F] : thm
 - > val it =
-    |- prod_to_bool (option_to_bool bool_to_bool)
-         (prod_to_bool num_to_bool (list_to_bool bool_to_bool))
+    |- encode_prod (encode_option encode_bool)
+         (encode_prod encode_num (encode_list encode_bool))
          (SOME F,123,[F; T]) =
        [T; F; T; F; T; F; F; F; F; F; T; T; T; F; T; T; F] : thm
-- > val it = |- list_to_bool num_to_bool [] = [F] : thm
+- > val it = |- encode_list encode_num [] = [F] : thm
 - > val it =
-    |- list_to_bool num_to_bool [1; 2; 3] =
+    |- encode_list encode_num [1; 2; 3] =
        [T; T; F; T; T; T; F; T; T; T; T; F; T; F; T; T; F] : thm
 - > val it =
-    |- prod_to_bool NumBoolNums_to_bool NumBoolNums_to_bool
+    |- encode_prod encode_NumBoolNums encode_NumBoolNums
          (Num 1,Nums [2; 3]) =
        [T; T; T; F; T; T; F; T; T; F; T; T; T; T; F; T; F; T; T; F] : thm
 - > val it =
-    |- NTree_to_bool (Tree [Tree []; Tree [Tree []; Tree []]; Tree []]) =
+    |- encode_NTree (Tree [Tree []; Tree [Tree []; Tree []]; Tree []]) =
        [F; T; F; F; T; F; T; T; F; T; T] : thm
 - > val it =
-    |- list_to_bool (sum_to_bool tri_to_bool NumBool0_to_bool)
+    |- encode_list (encode_sum encode_tri encode_NumBool0)
          [INL TWO; INR (Bool0 T)] =
        [T; T; T; F; T; F; F; T; F] : thm
 - > val it =
-    |- command_to_bool (Assignment ([1; 2],[Numeral 1])) =
+    |- encode_command (Assignment ([1; 2],[Numeral 1])) =
        [T; T; T; F; T; T; T; F; T; T; F; F; T; T; T; F; T; T; T] : thm
 - 

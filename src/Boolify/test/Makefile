@@ -12,10 +12,10 @@ clean:
 	rm -f result
 
 diff:
-	@grep -v 'HOL.* (built \|^\(- \)*runtime: \|User: ' <result >$(TMPFILE1)
-	@grep -v 'HOL.* (built \|^\(- \)*runtime: \|User: ' <result.ok >$(TMPFILE2)
+	@grep -v 'HOL.* (built \|^\(- \)*runtime: \|User: ' <result.ok >$(TMPFILE1)
+	@grep -v 'HOL.* (built \|^\(- \)*runtime: \|User: ' <result >$(TMPFILE2)
 	@diff $(TMPFILE1) $(TMPFILE2)
 
-result: test.sml ../src/Boolify.uo
+result: test.sml ../src/Encode.uo
 	rm -f result
 	$(HOL) <test.sml 2>&1 | tee result

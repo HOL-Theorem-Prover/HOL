@@ -3,4 +3,4 @@
 (* Created by Joe Hurd and Konrad Slind, July 2002                           *)
 (* ========================================================================= *)
 
-signature PreListBoolify = sig end
+signature PreListEncode = sig end

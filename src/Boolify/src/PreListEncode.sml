@@ -9,17 +9,17 @@ val () = loadPath := ["../../list/src"] @ !loadPath;
 
 (*
 *)
-structure PreListBoolify :> PreListBoolify =
+structure PreListEncode :> PreListEncode =
 struct
 
 open HolKernel boolLib Parse pairSyntax numSyntax listSyntax
   combinSyntax arithmeticTheory mesonLib simpLib boolSimps numLib
-  optionTheory BoolifyTheory;
+  optionTheory EncodeTheory;
   
 infix 0 THEN |->;
 infixr 1 --> by;
 
-val ERR = mk_HOL_ERR "PreListBoolify";
+val ERR = mk_HOL_ERR "PreListEncode";
 
 (*---------------------------------------------------------------------------
         Booleans
@@ -27,7 +27,7 @@ val ERR = mk_HOL_ERR "PreListBoolify";
   
 val bool_info = Option.valOf (TypeBase.read "bool");
 val bool_boolify_info =
-  (Term`bool_to_bool`, TypeBasePure.ORIG bool_to_bool_def);
+  (Term`encode_bool`, TypeBasePure.ORIG encode_bool_def);
 val bool_info' = TypeBasePure.put_boolify bool_boolify_info bool_info;
 
 (*---------------------------------------------------------------------------
@@ -36,8 +36,8 @@ val bool_info' = TypeBasePure.put_boolify bool_boolify_info bool_info;
 
 val prod_info = Option.valOf (TypeBase.read "prod");
 val prod_boolify_info =
-  (Term`prod_to_bool:('a->bool list)->('b->bool list)-> 'a # 'b ->bool list`,
-   TypeBasePure.ORIG prod_to_bool_def);
+  (Term`encode_prod:('a->bool list)->('b->bool list)-> 'a # 'b ->bool list`,
+   TypeBasePure.ORIG encode_prod_def);
 val prod_info' = TypeBasePure.put_boolify prod_boolify_info prod_info;
 
 (*---------------------------------------------------------------------------
@@ -46,8 +46,8 @@ val prod_info' = TypeBasePure.put_boolify prod_boolify_info prod_info;
 
 val sum_info = Option.valOf (TypeBase.read "sum");
 val sum_boolify_info =
-  (Term`sum_to_bool:('a->bool list)->('b->bool list)-> 'a + 'b ->bool list`,
-   TypeBasePure.ORIG sum_to_bool_def);
+  (Term`encode_sum:('a->bool list)->('b->bool list)-> 'a + 'b ->bool list`,
+   TypeBasePure.ORIG encode_sum_def);
 val sum_info' = TypeBasePure.put_boolify sum_boolify_info sum_info;
 
 (*---------------------------------------------------------------------------
@@ -56,8 +56,8 @@ val sum_info' = TypeBasePure.put_boolify sum_boolify_info sum_info;
 
 val option_info = Option.valOf (TypeBase.read "option");
 val option_boolify_info =
-  (Term`option_to_bool : ('a -> bool list) -> 'a option -> bool list`,
-   TypeBasePure.ORIG option_to_bool_def);
+  (Term`encode_option : ('a -> bool list) -> 'a option -> bool list`,
+   TypeBasePure.ORIG encode_option_def);
 val option_info' = TypeBasePure.put_boolify option_boolify_info option_info;
 
 (*---------------------------------------------------------------------------
@@ -66,8 +66,8 @@ val option_info' = TypeBasePure.put_boolify option_boolify_info option_info;
 
 val list_info = Option.valOf (TypeBase.read "list");
 val list_boolify_info =
-  (Term`list_to_bool : ('a -> bool list) -> 'a list -> bool list`,
-   TypeBasePure.ORIG list_to_bool_def);
+  (Term`encode_list : ('a -> bool list) -> 'a list -> bool list`,
+   TypeBasePure.ORIG encode_list_def);
 val list_info' = TypeBasePure.put_boolify list_boolify_info list_info;
 
 (*---------------------------------------------------------------------------
@@ -76,7 +76,7 @@ val list_info' = TypeBasePure.put_boolify list_boolify_info list_info;
 
 val num_info = Option.valOf (TypeBase.read "num");
 val num_boolify_info =
-  (Term`num_to_bool`, TypeBasePure.ORIG num_to_bool_primitive_def);
+  (Term`encode_num`, TypeBasePure.ORIG encode_num_primitive_def);
 val num_info' = TypeBasePure.put_boolify num_boolify_info num_info;
 
 (*---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ val num_info' = TypeBasePure.put_boolify num_boolify_info num_info;
    entry for units.
 val one_info = Option.valOf (TypeBase.read "one");
 val one_boolify_info =
-  (Term`one_to_bool`, TypeBasePure.ORIG one_to_bool_def);
+  (Term`encode_unit`, TypeBasePure.ORIG encode_unit_def);
 val one_info' = TypeBasePure.put_boolify one_boolify_info one_info;
 *)
 
@@ -106,7 +106,7 @@ val _ = TypeBase.write [one_info']
 *)
 
 val () = computeLib.add_funs
-  [bool_to_bool_def, prod_to_bool_def, sum_to_bool_def, option_to_bool_def,
-   list_to_bool_def, num_to_bool_def, one_to_bool_def];
+  [encode_bool_def, encode_prod_def, encode_sum_def, encode_option_def,
+   encode_list_def, encode_num_def, encode_unit_def];
 
 end

@@ -1,5 +1,5 @@
 (* ========================================================================= *)
-(* AUTOMATICALLY WRITING BOOLIFICATION FUNCTIONS FOR DATATYPES.              *)
+(* AUTOMATIC GENERATION OF ENCODING FUNCTIONS FOR DATATYPES.                 *)
 (* Created by Joe Hurd, July 2002                                            *)
 (* Basically the same as Konrad Slind's code to generate size functions      *)
 (* ========================================================================= *)
@@ -10,12 +10,12 @@ val () = loadPath := ["../../list/src"] @ !loadPath;
 
 (*
 *)
-structure Boolify :> Boolify =
+structure Encode :> Encode =
 struct
 
 open HolKernel boolLib Parse pairSyntax numSyntax listSyntax
   combinSyntax arithmeticTheory mesonLib simpLib boolSimps numLib
-  optionTheory listSyntax BoolifyTheory PreListBoolify;
+  optionTheory listSyntax EncodeTheory PreListEncode;
   
 infix 0 THEN |->;
 infixr 1 --> by;
@@ -24,7 +24,7 @@ infixr 1 --> by;
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val ERR = mk_HOL_ERR "Boolify";
+val ERR = mk_HOL_ERR "Encode";
 
 val head = Lib.repeat rator;
 
@@ -169,7 +169,7 @@ fun define_boolify ax db =
          mk_var(n, itlist (curry op-->) fparams_tyl (ty --> bool_list))
      fun tyop_binding ty =
        let val root_tyop = fst(dest_type ty)
-       in (root_tyop, (ty, proto_const(root_tyop^"_to_bool") ty))
+       in (root_tyop, (ty, proto_const("encode_" ^ root_tyop) ty))
        end
      val tyvar_map = zip tyvars fparams
      val tyop_map = map tyop_binding dtys
@@ -189,12 +189,12 @@ fun define_boolify ax db =
      val dty_fns = fst(dupls (map head_of_clause dty_clauses) ([],[]))
      fun dty_boolify ty =
         let val (d,r) = dom_rng ty
-        in list_mk_comb(proto_const(fst(dest_type d)^"_to_bool") d,fparams)
+        in list_mk_comb(proto_const("encode_"^fst(dest_type d)) d,fparams)
         end
      val dty_map = zip dty_fns (map (dty_boolify o type_of) dty_fns)
      val non_dty_fns = fst(dupls (map head_of_clause non_dty_clauses) ([],[]))
      fun nested_binding (n,f) =
-        let val name = String.concat[def_name,Lib.int_to_string n,"_to_bool"]
+        let val name = String.concat["encode_",def_name,Lib.int_to_string n]
             val (d,r) = dom_rng (type_of f)
             val proto_const = proto_const name d
         in (f, list_mk_comb (proto_const,fparams))
@@ -228,7 +228,7 @@ fun define_boolify ax db =
                       ((DEPTH_CONV BETA_CONV THENC
                         Rewrite.PURE_REWRITE_CONV nil_rws) pre_defn0))
      val defn = new_recursive_definition
-                 {name=def_name^"_to_bool_def",
+                 {name="encode_"^def_name^"_def",
                   rec_axiom=ax, def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
      val ctyl = Lib.mk_set (map cty (strip_conj (concl defn)))
