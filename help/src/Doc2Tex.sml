@@ -68,8 +68,8 @@ fun print_type (ss, ostr) =
 fun print_list(ssl, ostr) =
     case ssl of
       [] => ()
-    | [x] => out(ostr, Substring.string x)
-    | x::xs => (out(ostr, Substring.string x ^ ", ");
+    | [x] => out(ostr, lastminute_fixes (Substring.string x))
+    | x::xs => (out(ostr, lastminute_fixes (Substring.string x) ^ ", ");
                 print_list (xs, ostr))
 
 fun indent_munge mlist =
@@ -83,7 +83,7 @@ fun indent_munge mlist =
     | m::ms => m :: indent_munge ms
 
 
-val ignored_sections = ["KEYWORDS", "LIBRARY", "STRUCTURE"]
+val ignored_sections = ["KEYWORDS", "LIBRARY", "STRUCTURE", "DOC"]
 fun should_ignore s = List.exists (fn t => t = s) ignored_sections
 
 fun print_section(s, ostr) =
@@ -91,15 +91,29 @@ fun print_section(s, ostr) =
       TYPE ss => print_type(ss,ostr)
     | FIELD (s, mlist) =>
       if should_ignore s then ()
-      else (out(ostr, "\\" ^ s);
-            out(ostr, if s = "DOC" then "{" else "\n");
-            app (fn m => print_markup(m, ostr))
-                (indent_munge mlist);
-            if s = "DOC" then out(ostr, "}") else ();
+      else (out(ostr, "\\" ^ s ^ "\n");
+            app (fn m => print_markup(m, ostr)) (indent_munge mlist);
             out(ostr, "\n\n"))
     | SEEALSO ssl => (out(ostr, "\\SEEALSO\n");
                       print_list (ssl, ostr);
                       out(ostr, ".\n\n"))
+
+fun print_docpart (slist, ostr) = let
+  fun find_structpart [] = NONE
+    | find_structpart (FIELD("STRUCTURE", [TEXT m])::_) = SOME m
+    | find_structpart (_ :: t) = find_structpart t
+  fun find_docpart [] = raise Fail "Can't happen - empty section list"
+    | find_docpart (FIELD("DOC", [TEXT m]) :: _) = m
+    | find_docpart (_ :: t) = raise Fail "Can't happen \\DOC not first entry"
+  val docpart = lastminute_fixes (Substring.string (find_docpart slist))
+  val prettypart =
+      case find_structpart slist of
+        NONE => docpart
+      | SOME ss => docpart ^ "\\hfill(" ^
+                   lastminute_fixes (Substring.string ss) ^ ")"
+in
+  out (ostr, "\\DOC{"^docpart^"}{"^prettypart^"}\n\n")
+end
 
 
 fun do_the_work dir dset outstr = let
@@ -107,7 +121,8 @@ fun do_the_work dir dset outstr = let
     val cname = core_dname dnm
     val file = parse_file (Path.concat(dir,dnm ^ ".doc"))
   in
-    app (fn s => print_section(s,outstr)) file;
+    print_docpart(file, outstr);
+    app (fn s => print_section (s,outstr)) file;
     out(outstr, "\\ENDDOC\n\n")
   end
 in

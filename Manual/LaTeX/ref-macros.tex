@@ -7,7 +7,7 @@
 % ---------------------------------------------------------------------
 
 \newif\ifverboseref
-\verbosereffalse			  % don't be verbose
+\verbosereffalse                          % don't be verbose
 
 % ---------------------------------------------------------------------
 % Macro for generating right-hand page running titles.
@@ -17,34 +17,34 @@
 
 \def\mkhead{\futurelet\@t\chsize}
 \def\chsize#1.{\ifx a\@t \markright{{\protect\bf #1}}\else
-   	       \ifx b\@t \markright{{\protect\bf #1}}\else
-	       \ifx c\@t \markright{{\protect\bf #1}}\else
-	       \ifx d\@t \markright{{\protect\bf #1}}\else
-	       \ifx e\@t \markright{{\protect\bf #1}}\else
-	       \ifx f\@t \markright{{\protect\bf #1}}\else
-	       \ifx g\@t \markright{{\protect\bf #1}}\else
-	       \ifx h\@t \markright{{\protect\bf #1}}\else
-	       \ifx i\@t \markright{{\protect\bf #1}}\else
-	       \ifx j\@t \markright{{\protect\bf #1}}\else
-	       \ifx k\@t \markright{{\protect\bf #1}}\else
-	       \ifx l\@t \markright{{\protect\bf #1}}\else
-	       \ifx m\@t \markright{{\protect\bf #1}}\else
-	       \ifx n\@t \markright{{\protect\bf #1}}\else
-	       \ifx o\@t \markright{{\protect\bf #1}}\else
-	       \ifx p\@t \markright{{\protect\bf #1}}\else
-	       \ifx q\@t \markright{{\protect\bf #1}}\else
-	       \ifx r\@t \markright{{\protect\bf #1}}\else
-	       \ifx s\@t \markright{{\protect\bf #1}}\else
-	       \ifx t\@t \markright{{\protect\bf #1}}\else
-	       \ifx u\@t \markright{{\protect\bf #1}}\else
-	       \ifx v\@t \markright{{\protect\bf #1}}\else
-	       \ifx w\@t \markright{{\protect\bf #1}}\else
-	       \ifx z\@t \markright{{\protect\bf #1}}\else
-	       \ifx y\@t \markright{{\protect\bf #1}}\else
-	       \ifx z\@t \markright{{\protect\bf #1}}\else
+               \ifx b\@t \markright{{\protect\bf #1}}\else
+               \ifx c\@t \markright{{\protect\bf #1}}\else
+               \ifx d\@t \markright{{\protect\bf #1}}\else
+               \ifx e\@t \markright{{\protect\bf #1}}\else
+               \ifx f\@t \markright{{\protect\bf #1}}\else
+               \ifx g\@t \markright{{\protect\bf #1}}\else
+               \ifx h\@t \markright{{\protect\bf #1}}\else
+               \ifx i\@t \markright{{\protect\bf #1}}\else
+               \ifx j\@t \markright{{\protect\bf #1}}\else
+               \ifx k\@t \markright{{\protect\bf #1}}\else
+               \ifx l\@t \markright{{\protect\bf #1}}\else
+               \ifx m\@t \markright{{\protect\bf #1}}\else
+               \ifx n\@t \markright{{\protect\bf #1}}\else
+               \ifx o\@t \markright{{\protect\bf #1}}\else
+               \ifx p\@t \markright{{\protect\bf #1}}\else
+               \ifx q\@t \markright{{\protect\bf #1}}\else
+               \ifx r\@t \markright{{\protect\bf #1}}\else
+               \ifx s\@t \markright{{\protect\bf #1}}\else
+               \ifx t\@t \markright{{\protect\bf #1}}\else
+               \ifx u\@t \markright{{\protect\bf #1}}\else
+               \ifx v\@t \markright{{\protect\bf #1}}\else
+               \ifx w\@t \markright{{\protect\bf #1}}\else
+               \ifx z\@t \markright{{\protect\bf #1}}\else
+               \ifx y\@t \markright{{\protect\bf #1}}\else
+               \ifx z\@t \markright{{\protect\bf #1}}\else
                \markright{{\protect\small\bf #1}}\fi
-	       \fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi
-	       \fi\fi\fi\fi\fi\fi\fi\fi\fi\fi}
+               \fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi
+               \fi\fi\fi\fi\fi\fi\fi\fi\fi\fi}
 
 \makeatother
 
@@ -52,16 +52,16 @@
 % \DOC{<object>}  : start a manual entry for <object>.
 % ---------------------------------------------------------------------
 
-\newcommand{\DOC}[1]%
+\newcommand{\DOC}[2]%
 {\bigskip
  {\ifverboseref{\def\_{\string_}\typeout{Typesetting: #1}}\fi}
- \bgroup\samepage		% ended after \TYPE
+ \bgroup\samepage               % ended after \TYPE
  \mkhead #1.
  \begin{flushleft}
  \begin{tabular}{|c|}\hline
  \begin{minipage}{\minipagewidth}
  \bigskip
- {\def\_{\char'137}\LARGE\tt #1}\autoindex{#1@{\tt #1}}
+ {\def\_{\char'137}\LARGE\tt #2}\autoindex{#1@{\tt #1}}
  \bigskip
  \end{minipage}\\ \hline
  \end{tabular}
@@ -77,7 +77,7 @@
 % flag for typesetting SEEALSO list
 % ---------------------------------------------------------------------
 \newif\ifseealso
-\seealsofalse			  % start false.
+\seealsofalse                     % start false.
 
 % ---------------------------------------------------------------------
 % \TYPE {<thing>} : {<type>}
@@ -86,7 +86,7 @@
 
 % ---------------------------------------------------------------------
 % Commands for parts of a \DOC:
-%    \SYNOPSIS 
+%    \SYNOPSIS
 %    \DESCRIBE
 %    \FAILURE
 %    \EXAMPLE
@@ -162,7 +162,7 @@
 \def\THEOREM #1 #2 {
  \autoindex{#1@{\tt #1}}
    \vspace{4mm plus2mm minus1mm}
-\noindent {\def\_{{\char'137}}\small\tt #1}\quad({\small\tt #2}) \par \boxverb 
+\noindent {\def\_{{\char'137}}\small\tt #1}\quad({\small\tt #2}) \par \boxverb
 }
 
 \makeatother

@@ -221,9 +221,34 @@ end
 
 fun install_doc_part fname sections =
     case sections of
-      (FIELD("DOC", []) :: ss) =>
+      FIELD("DOC", []) :: ss =>
          FIELD("DOC", [TEXT (name_from_fname fname)]) :: ss
-    | x => x
+    | FIELD("DOC", [TEXT m]) :: ss => sections
+    | _ => raise ParseError "Ill-formed \\DOC section"
+
+(* if there isn't a STRUCTURE section, then add one if the filename of the
+   docfile suggests that there should be. *)
+fun install_structure_part fname sections = let
+  fun has_struct_section slist =
+      case slist of
+        [] => false
+      | FIELD("STRUCTURE", m)::_ =>
+        (case m of
+           [TEXT ss] => if length (tokens Char.isSpace ss) <> 1 then
+                          raise ParseError "Multi-word \\STRUCTURE section"
+                        else true
+         | _ => raise ParseError "Ill-formed \\STRUCTURE section")
+    | _::t => has_struct_section t
+  fun insert2 x [] = [x]
+    | insert2 x (h::t) = h::x::t
+  val name_parts = String.tokens (equal #".") (#file (Path.splitDirFile fname))
+in
+  if not (has_struct_section sections) andalso length name_parts = 3
+  then
+    insert2 (FIELD("STRUCTURE", [TEXT (all (hd name_parts))])) sections
+  else sections
+end
+
 
 fun check_char_markup m = let
   fun illegal_char c = c = #"{" orelse c = #"}" orelse c = #"\\"
@@ -275,8 +300,11 @@ fun parse_file docfile = let
       | otherwise =>
         FIELD (tag, trimws (List.map db_out (paragraphs (markup ss))))
   val firstpass = List.map section (to_sections (fetch_contents docfile))
+  val finalisation = final_char_check o
+                     install_structure_part docfile o
+                     install_doc_part docfile
 in
-  final_char_check (install_doc_part docfile firstpass)
+  finalisation firstpass
 end handle ParseError s => raise ParseError (docfile^": "^s)
          | x => (warn ("Exception raised in "^docfile^"\n"); raise x)
 

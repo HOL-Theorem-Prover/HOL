@@ -12,5 +12,5 @@ Performs curried function-composition: {B f g x} = {f (g x)}.
 Never fails.
 
 \SEEALSO
-Lib, Lib.\#\#, Lib.A, Lib.C, Lib.I, Lib.K, Lib.S, Lib.W.
+Lib, Lib.##, Lib.A, Lib.C, Lib.I, Lib.K, Lib.S, Lib.W.
 \ENDDOC
