@@ -304,12 +304,12 @@ val ALG_COVER_EXISTS_UNIQUE = store_thm
    ++ Q.PAT_ASSUM `alg_embed (a::b) c` MP_TAC
    ++ RW_TAC std_ss' [alg_embed_def, SHD_SCONS, STL_SCONS]
    ++ Cases_on `h` <<
-   [KNOW_TAC `MEM t' l1 /\ MEM t'' l1`
+   [KNOW_TAC `MEM t' l /\ MEM t'' l`
     >> (Q.PAT_ASSUM `MEM x y` MP_TAC
         ++ Q.PAT_ASSUM `MEM x y` MP_TAC
         ++ RW_TAC list_ss [APPEND_MEM, MAP_MEM])
     ++ PROVE_TAC [],
-    KNOW_TAC `MEM t' l2 /\ MEM t'' l2`
+    KNOW_TAC `MEM t' l' /\ MEM t'' l'`
     >> (Q.PAT_ASSUM `MEM x y` MP_TAC
         ++ Q.PAT_ASSUM `MEM x y` MP_TAC
         ++ RW_TAC list_ss [APPEND_MEM, MAP_MEM])
@@ -348,6 +348,7 @@ val ALG_COVER_HEAD = store_thm
    HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ CONJ_TAC
    >> PSET_TAC [ALG_COVER_UNIV, K_DEF, o_DEF, FILTER, ALGEBRA_EMBED_BASIC]
+   ++ Q.X_GEN_TAC `l1` ++ Q.X_GEN_TAC `l2`
    ++ RW_TAC std_ss' [o_DEF, GSYM EQ_EXT_EQ]
    ++ SEQ_CASES_TAC `x`
    ++ RW_TAC list_ss [FILTER_APPEND, FILTER_MAP, ALGEBRA_EMBED_APPEND,
@@ -386,6 +387,7 @@ val ALG_COVER_TAIL_MEASURABLE = store_thm
    ++ CONJ_TAC
    >> (PSET_TAC [ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, o_DEF, I_THM]
        ++ RW_TAC std_ss' [])
+   ++ Q.X_GEN_TAC `l1` ++ Q.X_GEN_TAC `l2`
    ++ RW_TAC std_ss' []
    ++ MP_TAC (Q.SPECL [`l1`, `l2`, `q`] ALG_COVER_TAIL_STEP)
    ++ MP_TAC MEASURABLE_HALVES
@@ -403,6 +405,7 @@ val ALG_COVER_TAIL_PROB = store_thm
    ++ CONJ_TAC
    >> (PSET_TAC [ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, o_DEF, I_THM]
        ++ RW_TAC std_ss' [])
+   ++ Q.X_GEN_TAC `l1` ++ Q.X_GEN_TAC `l2`
    ++ RW_TAC std_ss' []
    ++ MP_TAC (Q.SPECL [`l1`, `l2`, `q`] ALG_COVER_TAIL_STEP)
    ++ RW_TAC std_ss' []
@@ -437,10 +440,11 @@ val INDEP_INDEP_SET_LEMMA = store_thm
      ==> (prob (alg_embed x INTER q o (\x. SDROP (LENGTH (alg_cover l x)) x))
           = (1 / 2) pow LENGTH x * prob q)``,
    HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
-   ++ REPEAT STRIP_TAC
+   ++ CONJ_TAC
    >> (PSET_TAC [MEM, ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, I_THM, o_DEF,
                  ALG_EMBED_BASIC, pow, REAL_MUL_LID]
        ++ RW_TAC std_ss' [])
+   ++ Q.X_GEN_TAC `l1` ++ Q.X_GEN_TAC `l2`
    ++ RW_TAC std_ss' []
    ++ MP_TAC ALG_COVER_TAIL_STEP
    ++ RW_TAC std_ss' []
@@ -617,11 +621,14 @@ val INDEP_BIND = store_thm
    ++ Q.PAT_ASSUM `alg_cover_set l` MP_TAC
    ++ Q.SPEC_TAC (`l`, `l`)
    ++ HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
-   ++ RW_TAC std_ss' [] <<
-   [POP_ASSUM (MP_TAC o Q.SPEC `r ([]:bool list)`)
+   ++ CONJ_TAC <<
+   [RW_TAC std_ss' []
+    ++ POP_ASSUM (MP_TAC o Q.SPEC `r ([]:bool list)`)
     ++ RW_TAC std_ss' [BIND_DEF, o_DEF, ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def,
                       I_THM],
-    SUFF_TAC `indep (BIND (\s. let c = alg_cover (APPEND (MAP (CONS T) l1)
+    Q.X_GEN_TAC `l1` ++ Q.X_GEN_TAC `l2`
+    ++ RW_TAC std_ss' []
+    ++ SUFF_TAC `indep (BIND (\s. let c = alg_cover (APPEND (MAP (CONS T) l1)
       (MAP (CONS F) l2)) s in (r c, SDROP (LENGTH c) s)) g)`
     >> RW_TAC std_ss' [indep_def]
     ++ (CONV_TAC o RAND_CONV o RATOR_CONV o RAND_CONV o REWR_CONV o GSYM)

@@ -1353,6 +1353,11 @@ end;
  * Now higher-order versions of PART_MATCH and MATCH_MP                      *
  *---------------------------------------------------------------------------*)
 
+(* IMPORTANT: See the bottom of this file for a longish discussion of some
+              of the ways this implementation attempts to keep bound variable
+              names sensible.
+*)
+
 (* ------------------------------------------------------------------------- *)
 (* Attempt alpha conversion.                                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -1369,13 +1374,25 @@ fun tryalpha v tm =
 (* Match up bound variables names.                                           *)
 (* ------------------------------------------------------------------------- *)
 
+(* first argument is actual term, second is from theorem being matched *)
 fun match_bvs t1 t2 acc =
  case (dest_term t1, dest_term t2)
   of (LAMB(v1,b1), LAMB(v2,b2))
       => let val n1 = fst(dest_var v1)
              val n2 = fst(dest_var v2)
-             val newacc = if n1 = n2 then acc else insert (n1,n2) acc
-         in match_bvs b1 b2 newacc
+             val newacc =
+                 if n1 = n2 then acc
+                 else let
+                     val (bindings, rename_these) = acc
+                     val fvs = FVL [b2] empty_tmset
+                     fun f (v, acc) =
+                         if #1 (dest_var v) = n1 then HOLset.add(acc, v)
+                         else acc
+                   in
+                     (insert(n1,n2) bindings, HOLset.foldl f rename_these fvs)
+                   end
+         in
+           match_bvs b1 b2 newacc
          end
   | (COMB(l1,r1), COMB(l2,r2)) => match_bvs l1 l2 (match_bvs r1 r2 acc)
   | otherwise => acc;
@@ -1544,6 +1561,64 @@ fun BETA_VAR v tm =
               end handle HOL_ERR _ => RAND_CONV (BETA_VAR v Rand)
            end
 
+structure Map = Redblackmap
+
+(* count from zero to indicate last argument, up to #args - 1 to indicate
+   first argument *)
+fun arg_CONV 0 c t = RAND_CONV c t
+  | arg_CONV n c t = RATOR_CONV (arg_CONV (n - 1) c) t
+
+fun foldri f acc list = let
+  fun foldthis (e, (acc, n)) = (f(n, e, acc), n + 1)
+in
+  #1 (foldr foldthis (acc,0) list)
+end
+
+fun munge_bvars absmap th = let
+  fun recurse curposn bvarposns (donebvars, acc) t =
+      case dest_term t of
+        LAMB(bv, body) => let
+          val newposnmap = Map.insert(bvarposns, bv, curposn)
+          val (newdonemap, restore) =
+              (HOLset.delete(donebvars, bv), (fn m => HOLset.add(m, bv)))
+              handle HOLset.NotFound =>
+                     (donebvars, (fn m => HOLset.delete(m, bv)
+                                     handle HOLset.NotFound => m))
+          val (dbvars, actions) =
+              recurse (curposn o ABS_CONV) newposnmap (newdonemap, acc) body
+        in
+          (restore dbvars, actions)
+        end
+      | COMB _ => let
+          val (f, args) = strip_comb t
+          fun argfold (n, arg, A) =
+              recurse (curposn o arg_CONV n) bvarposns A arg
+        in
+          case Map.peek(absmap, f) of
+            NONE => foldri argfold (donebvars, acc) args
+          | SOME abs_t => let
+              val (abs_bvars, _) = strip_abs abs_t
+              val paired_up = ListPair.zip (args, abs_bvars)
+              fun foldthis ((arg, absv), acc as (dbvars, actionlist)) =
+                  if HOLset.member(dbvars, arg) then acc
+                  else case Map.peek(bvarposns, arg) of
+                         NONE => acc
+                       | SOME p =>
+                         (HOLset.add(dbvars, arg),
+                          p (ALPHA_CONV absv):: actionlist)
+              val (A as (newdbvars, newacc)) =
+                  List.foldl foldthis (donebvars, acc) paired_up
+            in
+              foldri argfold A args
+            end
+        end
+      | _ => (donebvars, acc)
+in
+  recurse I (Map.mkDict Term.compare) (empty_tmset, []) (concl th)
+end
+
+
+
 fun HO_PART_MATCH partfn th =
  let val sth = SPEC_ALL th
      val bod = concl sth
@@ -1559,14 +1634,33 @@ fun HO_PART_MATCH partfn th =
      val ltyconsts = HOLset.listItems (hyp_tyvars th)
  in fn tm =>
     let val (tmin,tyin) = ho_match_term ltyconsts lconsts pbod tm
-        val th0 = INST tmin (INST_TYPE tyin sth)
+        fun foldthis ({redex,residue}, acc) =
+            if is_abs residue then Map.insert(acc, redex, residue) else acc
+        val bound_to_abs = List.foldl foldthis (Map.mkDict Term.compare) tmin
+        val sth0 = INST_TYPE tyin sth
+        val sth0c = concl sth0
+        val (sth1, tmin') =
+            case match_bvs tm (partfn sth0c) ([], empty_tmset) of
+              ([],_) => (sth0, tmin)
+            | (bvms, avoids) => let
+                fun f (v, acc) = (v |-> genvar (type_of v)) :: acc
+                val newinst = HOLset.foldl f [] avoids
+                val newthm = INST newinst sth0
+                val tmin' = map (fn {residue, redex} =>
+                                    {residue = residue,
+                                     redex = Term.subst newinst redex}) tmin
+                val thmc = concl newthm
+              in
+                (EQ_MP (ALPHA thmc (deep_alpha bvms thmc)) newthm, tmin')
+              end
+        val sth2 =
+            if Map.numItems bound_to_abs = 0 then sth1
+            else
+              CONV_RULE (EVERY_CONV (#2 (munge_bvars bound_to_abs sth1))) sth1
+        val th0 = INST tmin' sth2
         val th1 = finish_fn tyin (map #redex tmin) th0
-        val th1c = concl th1
-    in case match_bvs tm (partfn th1c) []
-        of [] => th1
-         | bvms => let val tm1 = deep_alpha bvms th1c
-                   in EQ_MP (ALPHA th1c tm1) th1
-                   end
+    in
+      th1
     end
  end
 end;
@@ -2064,3 +2158,119 @@ fun MK_AC_LCOMM (th1,th2) =
    end
 
 end (* Drule *)
+
+(* ----------------------------------------------------------------------
+    HO_PART_MATCH and bound variables
+   ----------------------------------------------------------------------
+
+Given
+
+  val th = GSYM RIGHT_EXISTS_AND_THM
+         = |- P /\ (?x. Q x) = ?x. P /\ Q x
+
+the old implementation would come back from
+
+  HO_REWR_CONV th ``P x /\ ?y. Q y``
+
+with
+
+  (P x /\ ?y. Q y) = (?x'. P x /\ Q x')
+
+This is because of the following: in HO_PART_MATCH, there is code that
+attempts to rename bound variables from the rewrite theorem so that
+they match the bound variables in the original term.
+
+After performing the ho_match_term, and doing the instantiation, the
+resulting theorem is
+
+  (P x /\ ?x. Q x) = (?x'. P x /\ Q x')
+
+The renaming on the rhs has to happen to avoid unsoundness, and
+happens immediately in the name-carrying kernel, and will happen
+whenever a dest_abs is done in the dB kernel.  Anyway, in the fixup
+phase, the implementation first notices that ?x.Q x in the pattern
+corresponds to ?y. Q y in the term.  It then passes over the term
+replacing bound x's with y's.  (In the dB kernel, it can't see that
+the bound variable on the right is actually still an x because
+dest_abs will rename the x to x'.)
+
+So, I thought I would fix this by doing the bound-variable fixup on
+the pattern theorem before it was instantiated.  So, I look at
+
+  P /\ ?x. Q x
+
+compare it to P x /\ ?y. Q y, and see that bound x needs to be
+replaced by y throughout the theorem, giving
+
+  (P /\ ?y. Q y) = (?y. P /\ Q y)
+
+Then the instantiation can be done, producing
+
+  (P x /\ ?y. Q y) = (?y. P x /\ Q y)
+
+and it's all lovely.  (This is also more efficient than the current
+method because the traversal is only of the original theorem, not its
+possibly much larger instantiation.)
+
+Unfortunately, there are still problems.  Consider, this LHS
+
+  p /\ ?P. FINITE P
+
+when you do the bound variable fix to the rewrite theorem early, you
+get
+
+  (P /\ ?P. Q P) = (?P'. P /\ Q P')
+
+The free variables in the theorem itself get in the way.  The fix is
+to examine whether or not the new bound variable clashes with a named
+variable in the body of the theorem.  If so, then the theorem has that
+variable instantiated to a genvar.  (The instantiation returned by
+ho_match_term also needs to be adjusted because it may be expecting to
+instantiate some of the pattern theorem's free variables.)
+
+So, the code in match_bvs figures out what renamings of bound
+variables need to happen, and also returns a set of free variables
+that need to be instantiated into genvars.  Then, given the example,
+the main code in HO_PART_MATCH will produce
+
+  (%gv /\ ?x. Q x) = (?x. %gv /\ Q x)
+
+before then fixing the bound variables to produce
+
+  (%gv /\ ?P. Q P) = (?P. %gv /\ Q P)
+
+Finally, this theorem will be instantiated with bindings for Q and
+%gv [%gv |-> p, Q |-> FINITE].
+
+                    ------------------------------
+
+Part 2.
+
+Even with the above in place, the ho-part matcher can make a mess of
+things like the congruence rule for RES_FORALL_CONG,
+
+  |- (P = Q) ==> (!x. x IN Q ==> (f x = g x)) ==>
+     (RES_FORALL P f = RES_FORALL Q g)
+
+HO_PART_MATCH only gets called with its "partfn" being to look at the
+LHS of the last equation.  Then, when the side conditions are looked
+over, x gets picked as a bound variable, and any bound variable in f
+gets ignored.
+
+The code in munge_bvars gets around this failing by searching the
+whole theorem for instances of variables that are going to be
+instantiated with abstractions that are next to bound variables.  (In
+the example, this search will find f applied to the bound x.)  If such
+a situation is found, it specifies that the bound variable be renamed
+to match the bound variable of the abstraction.
+
+In this way
+
+   !y::P. Q y
+
+won't get rewritten to
+
+   !x::P'. Q' x
+
+
+*)

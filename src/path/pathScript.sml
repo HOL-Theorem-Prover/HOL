@@ -706,7 +706,7 @@ val IN_PL_drop = store_thm(
   "IN_PL_drop",
   ``!i j p. i IN PL p ==> (j IN PL (drop i p) = i + j IN PL p)``,
   SRW_TAC [][PL_drop, EQ_IMP_THM] THENL [
-    `(i + (x - i) = x) \/ (i + (x - i) = i)` by DECIDE_TAC THEN
+    `(i + (n - i) = n) \/ (i + (n - i) = i)` by DECIDE_TAC THEN
     SRW_TAC [][],
     Q.EXISTS_TAC `i + j` THEN SRW_TAC [numSimps.ARITH_ss][]
   ]);

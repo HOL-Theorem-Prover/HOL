@@ -12,9 +12,6 @@
 (*****************************************************************************)
 
 open HolKernel Parse boolLib;
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-infix 8 by;
 
 open tautLib;
 open bossLib;
@@ -851,12 +848,12 @@ val FinPathPathExists =
       IMP_RES_TAC FinPathChoosePath
        THEN BasicProvers.NORM_TAC std_ss []
        THENL
-        [`n' < n` by DECIDE_TAC THEN PROVE_TAC [FinPathThm],
-         `n' = n` by DECIDE_TAC THEN RW_TAC arith_ss []
+        [`m < n` by DECIDE_TAC THEN PROVE_TAC [FinPathThm],
+         `m = n` by DECIDE_TAC THEN RW_TAC arith_ss []
                                 THEN PROVE_TAC [Path_def,ADD_CLAUSES],
          PROVE_TAC [DECIDE (Term`x+1 <=y /\ ~(x <= y) ==> F`)],
-         `n < n'` by DECIDE_TAC
-           THEN `n' + 1 - n = (n' - n) + 1` by DECIDE_TAC
+         `n < m` by DECIDE_TAC
+           THEN `m + 1 - n = (m - n) + 1` by DECIDE_TAC
            THEN PROVE_TAC [Path_def, ADD_CLAUSES]]]);
 
 val ReachInPath =

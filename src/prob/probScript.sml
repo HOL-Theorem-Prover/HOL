@@ -175,8 +175,8 @@ val ALGEBRA_CANON_MEASURE_MAX = store_thm
    ++ CONJ_TAC >> (RW_TAC list_ss [alg_measure_def] ++ REAL_ARITH_TAC)
    ++ CONJ_TAC >> (RW_TAC list_ss [alg_measure_def, pow] ++ REAL_ARITH_TAC)
    ++ RW_TAC list_ss [ALG_MEASURE_APPEND]
-   ++ SUFF_TAC `(2 * alg_measure (MAP (CONS T) l1) = alg_measure l1)
-                   /\ (2 * alg_measure (MAP (CONS F) l2) = alg_measure l2)`
+   ++ SUFF_TAC `(2 * alg_measure (MAP (CONS T) l) = alg_measure l)
+                   /\ (2 * alg_measure (MAP (CONS F) l') = alg_measure l')`
    >> PROVE_TAC [REAL_ARITH ``(2 * a = b) /\ (2 * c = d) /\ b <= 1 /\ d <= 1
                               ==> a + c <= (1:real)``]
    ++ PROVE_TAC [ALG_MEASURE_TLS]);
@@ -207,7 +207,7 @@ val ALGEBRA_MEASURE_MONO_EMBED = store_thm
     ++ Q.SPEC_TAC (`b`, `b`)
     ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ PSET_TAC [ALG_MEASURE_BASIC, ALG_MEASURE_POS, ALGEBRA_EMBED_BASIC] <<
-    [KNOW_TAC `alg_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
+    [KNOW_TAC `alg_canon (APPEND (MAP (CONS T) c) (MAP (CONS F) c'))
                = alg_canon [[]]`
      >> (RW_TAC std_ss [ALG_CANON_REP, ALGEBRA_EMBED_BASIC] ++ PSET_TAC [])
      ++ NTAC 3 (POP_ASSUM MP_TAC)
@@ -216,18 +216,18 @@ val ALGEBRA_MEASURE_MONO_EMBED = store_thm
      MATCH_MP_TAC (REAL_ARITH ``(2:real) * a <= 2 * b ==> a <= b``)
      ++ PSET_TAC [ALGEBRA_EMBED_APPEND, ALG_MEASURE_APPEND, REAL_ADD_LDISTRIB,
                   ALG_MEASURE_TLS]
-     ++ KNOW_TAC `!x. algebra_embed l1' x ==> algebra_embed l1 x`
+     ++ KNOW_TAC `!x. algebra_embed l1 x ==> algebra_embed c x`
      >> (STRIP_TAC
          ++ POP_ASSUM (MP_TAC o Q.SPEC `SCONS T x`)
          ++ RW_TAC std_ss [ALGEBRA_EMBED_TLS, STL_SCONS, SHD_SCONS])
-     ++ KNOW_TAC `!x. algebra_embed l2' x ==> algebra_embed l2 x`
+     ++ KNOW_TAC `!x. algebra_embed l2 x ==> algebra_embed c' x`
      >> (POP_ASSUM (K ALL_TAC)
          ++ STRIP_TAC
          ++ POP_ASSUM (MP_TAC o Q.SPEC `SCONS F x`)
          ++ RW_TAC std_ss [ALGEBRA_EMBED_TLS, STL_SCONS, SHD_SCONS])
      ++ RES_TAC
-     ++ SUFF_TAC `alg_measure l1' <= alg_measure l1
-                  /\ alg_measure l2' <= alg_measure l2`
+     ++ SUFF_TAC `alg_measure l1 <= alg_measure c
+                  /\ alg_measure l2 <= alg_measure c'`
      >> (KILL_ALL_TAC ++ REAL_ARITH_TAC)
      ++ RW_TAC std_ss []]]);
 
@@ -250,26 +250,26 @@ val ALG_MEASURE_COMPL = store_thm
     ++ Q.SPEC_TAC (`c`, `c`)
     ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ PSET_TAC [ALGEBRA_EMBED_BASIC, ALG_MEASURE_BASIC] <<
-    [SUFF_TAC `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) = [[]]`
+    [SUFF_TAC `APPEND (MAP (CONS T) b) (MAP (CONS F) b') = [[]]`
      >> PROVE_TAC [MEM_NIL_STEP, MEM]
      ++ PROVE_TAC [ALGEBRA_CANON_EMBED_UNIV],
-     KNOW_TAC `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) = []`
+     KNOW_TAC `APPEND (MAP (CONS T) b) (MAP (CONS F) b') = []`
      >> PROVE_TAC [ALGEBRA_CANON_EMBED_EMPTY]
      ++ RW_TAC std_ss [ALG_MEASURE_BASIC, REAL_ADD_LID],
      MATCH_MP_TAC
        (REAL_ARITH ``(2 * (a:real) + 2 * b = 1 + 1) ==> (a + b = 1)``)
      ++ PSET_TAC [ALGEBRA_EMBED_APPEND, ALG_MEASURE_APPEND, ALG_MEASURE_TLS,
                   REAL_ADD_LDISTRIB]
-     ++ SUFF_TAC `(alg_measure l1 + alg_measure l1' = 1)
-                  /\ (alg_measure l2 + alg_measure l2' = 1)`
+     ++ SUFF_TAC `(alg_measure b + alg_measure l1 = 1)
+                  /\ (alg_measure b' + alg_measure l2 = 1)`
      >> REAL_ARITH_TAC
      ++ CONJ_TAC <<
-     [SUFF_TAC `!v. ~algebra_embed l1 v = algebra_embed l1' v`
+     [SUFF_TAC `!v. ~algebra_embed b v = algebra_embed l1 v`
       >> PROVE_TAC []
       ++ STRIP_TAC
       ++ POP_ASSUM (MP_TAC o Q.SPEC `SCONS T v`)
       ++ RW_TAC std_ss [ALGEBRA_EMBED_TLS, SHD_SCONS, STL_SCONS],
-      SUFF_TAC `!v. ~algebra_embed l2 v = algebra_embed l2' v`
+      SUFF_TAC `!v. ~algebra_embed b' v = algebra_embed l2 v`
       >> PROVE_TAC []
       ++ STRIP_TAC
       ++ POP_ASSUM (MP_TAC o Q.SPEC `SCONS F v`)
@@ -295,44 +295,44 @@ val ALG_MEASURE_ADDITIVE = store_thm
     ++ Q.SPEC_TAC (`c`, `c`)
     ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ PSET_TAC [ALG_MEASURE_BASIC, ALGEBRA_EMBED_BASIC] <<
-    [SUFF_TAC `d = APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)`
+    [SUFF_TAC `d = APPEND (MAP (CONS T) b) (MAP (CONS F) b')`
      >> RW_TAC real_ac_ss []
      ++ SUFF_TAC `alg_canon d
-                  = alg_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))`
+                  = alg_canon (APPEND (MAP (CONS T) b) (MAP (CONS F) b'))`
      >> PROVE_TAC [algebra_canon_def]
      ++ PSET_TAC [ALG_CANON_REP],
-     SUFF_TAC `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) = [[]]`
+     SUFF_TAC `APPEND (MAP (CONS T) b) (MAP (CONS F) b') = [[]]`
      >> PROVE_TAC [MEM_NIL_STEP, MEM]
      ++ PROVE_TAC [ALGEBRA_CANON_EMBED_UNIV],
      NTAC 3 (POP_ASSUM MP_TAC)
      ++ Q.SPEC_TAC (`d`, `d`)
      ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
      ++ PSET_TAC [ALG_MEASURE_BASIC, ALGEBRA_EMBED_BASIC] <<
-     [SUFF_TAC `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) =
-                APPEND (MAP (CONS T) l1') (MAP (CONS F) l2')`
+     [SUFF_TAC `APPEND (MAP (CONS T) b) (MAP (CONS F) b') =
+                APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)`
       >> RW_TAC real_ac_ss []
-      ++ SUFF_TAC `alg_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)) =
-                   alg_canon (APPEND (MAP (CONS T) l1') (MAP (CONS F) l2'))`
+      ++ SUFF_TAC `alg_canon (APPEND (MAP (CONS T) b) (MAP (CONS F) b')) =
+                   alg_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))`
       >> PSET_TAC [algebra_canon_def]
       ++ PSET_TAC [ALG_CANON_REP],
-      SUFF_TAC `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) = [[]]`
+      SUFF_TAC `APPEND (MAP (CONS T) b) (MAP (CONS F) b') = [[]]`
       >> PROVE_TAC [MEM_NIL_STEP, MEM]
       ++ PROVE_TAC [ALGEBRA_CANON_EMBED_UNIV],
       MATCH_MP_TAC (REAL_ARITH ``(2 * (a:real) = 2 * b) ==> (a = b)``)
       ++ PSET_TAC [REAL_ADD_LDISTRIB, ALG_MEASURE_APPEND, ALG_MEASURE_TLS,
                    ALGEBRA_EMBED_APPEND]
-      ++ SUFF_TAC `(alg_measure l1 = alg_measure l1' + alg_measure l1'') /\
-                   (alg_measure l2 = alg_measure l2' + alg_measure l2'')`
+      ++ SUFF_TAC `(alg_measure b = alg_measure l1 + alg_measure l1') /\
+                   (alg_measure b' = alg_measure l2 + alg_measure l2')`
       >> RW_TAC real_ac_ss []
       ++ CONJ_TAC <<
-      [SUFF_TAC `(!v. ~algebra_embed l1' v \/ ~algebra_embed l1'' v) /\
-         (!v. algebra_embed l1 v = algebra_embed l1' v \/ algebra_embed l1'' v)`
+      [SUFF_TAC `(!v. ~algebra_embed l1 v \/ ~algebra_embed l1' v) /\
+         (!v. algebra_embed b v = algebra_embed l1 v \/ algebra_embed l1' v)`
        >> (Q.PAT_ASSUM `!c. algebra_canon c ==> !d. algebra_canon d ==>
                (!v. ~algebra_embed c v \/ ~algebra_embed d v) /\
-               (!v. algebra_embed l1 v =
+               (!v. algebra_embed b v =
                     algebra_embed c v \/ algebra_embed d v) ==>
-               (alg_measure l1 = alg_measure c + alg_measure d)`
-             (MP_TAC o Q.SPEC `l1'`)
+               (alg_measure b = alg_measure c + alg_measure d)`
+             (MP_TAC o Q.SPEC `l1`)
            ++ RW_TAC std_ss [])
        ++ RW_TAC std_ss [] <<
        [POP_ASSUM (K ALL_TAC)
@@ -340,14 +340,14 @@ val ALG_MEASURE_ADDITIVE = store_thm
         ++ RW_TAC std_ss [ALGEBRA_EMBED_TLS, STL_SCONS, SHD_SCONS],
         POP_ASSUM (MP_TAC o Q.SPEC `SCONS T v`)
         ++ RW_TAC std_ss [ALGEBRA_EMBED_TLS, STL_SCONS, SHD_SCONS]],
-       SUFF_TAC `(!v. ~algebra_embed l2' v \/ ~algebra_embed l2'' v) /\
-         (!v. algebra_embed l2 v = algebra_embed l2' v \/ algebra_embed l2'' v)`
+       SUFF_TAC `(!v. ~algebra_embed l2 v \/ ~algebra_embed l2' v) /\
+         (!v. algebra_embed b' v = algebra_embed l2 v \/ algebra_embed l2' v)`
        >> (Q.PAT_ASSUM `!c. algebra_canon c ==> !d. algebra_canon d ==>
                (!v. ~algebra_embed c v \/ ~algebra_embed d v) /\
-               (!v. algebra_embed l2 v =
+               (!v. algebra_embed b' v =
                     algebra_embed c v \/ algebra_embed d v) ==>
-               (alg_measure l2 = alg_measure c + alg_measure d)`
-             (MP_TAC o Q.SPEC `l2'`)
+               (alg_measure b' = alg_measure c + alg_measure d)`
+             (MP_TAC o Q.SPEC `l2`)
            ++ RW_TAC std_ss [])
        ++ RW_TAC std_ss [] <<
        [POP_ASSUM (K ALL_TAC)

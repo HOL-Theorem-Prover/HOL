@@ -236,12 +236,12 @@ val ALGEBRA_CANON_UNIV = store_thm
    HO_MATCH_MP_TAC ALGEBRA_CANON_INDUCTION
    ++ RW_TAC std_ss []
    >> PSET_TAC [algebra_embed_def, FOLDR]
-   ++ KNOW_TAC `(algebra_embed l1 = UNIV)`
+   ++ KNOW_TAC `(algebra_embed l = UNIV)`
    >> (POP_ASSUM MP_TAC
        ++ PSET_TAC [ALGEBRA_EMBED_APPEND]
        ++ POP_ASSUM (MP_TAC o Q.SPEC `SCONS T v`)
        ++ RW_TAC std_ss [ALGEBRA_EMBED_TLS])
-   ++ KNOW_TAC `(algebra_embed l2 = UNIV)`
+   ++ KNOW_TAC `(algebra_embed l' = UNIV)`
    >> (Q.PAT_ASSUM `algebra_embed (APPEND X Y) = UNIV` MP_TAC
        ++ PSET_TAC [ALGEBRA_EMBED_APPEND]
        ++ POP_ASSUM (MP_TAC o Q.SPEC `SCONS F v`)
@@ -273,21 +273,21 @@ val ALG_CANON_REP = store_thm
     ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ RW_TAC std_ss [] <<
     [POP_ASSUM MP_TAC
-     ++ REVERSE (Cases_on `l1`)
+     ++ REVERSE (Cases_on `b`)
      >> (PSET_TAC [algebra_embed_def, FOLDR, APPEND, MAP]
          ++ PROVE_TAC [ALG_EMBED_POPULATED])
-     ++ REVERSE (Cases_on `l2`)
+     ++ REVERSE (Cases_on `b'`)
      >> (PSET_TAC [algebra_embed_def, FOLDR, APPEND, MAP]
          ++ PROVE_TAC [ALG_EMBED_POPULATED])
      ++ RW_TAC list_ss [MAP],
      PROVE_TAC [ALGEBRA_EMBED_BASIC, ALGEBRA_CANON_UNIV],
-     KNOW_TAC `algebra_embed l1 = algebra_embed l1'`
+     KNOW_TAC `algebra_embed b = algebra_embed l1`
      >> (POP_ASSUM MP_TAC
          ++ KILL_ALL_TAC
          ++ PSET_TAC [ALGEBRA_EMBED_APPEND]
          ++ POP_ASSUM (MP_TAC o Q.SPEC `SCONS T v`)
          ++ RW_TAC std_ss [ALGEBRA_EMBED_TLS])
-     ++ KNOW_TAC `algebra_embed l2 = algebra_embed l2'`
+     ++ KNOW_TAC `algebra_embed b' = algebra_embed l2`
      >> (POP_ASSUM (K ALL_TAC)
          ++ POP_ASSUM MP_TAC
          ++ KILL_ALL_TAC
@@ -354,7 +354,7 @@ val ALGEBRA_EMBED_COMPL = store_thm
     ++ PSET_TAC [ALGEBRA_EMBED_BASIC],
     Q.EXISTS_TAC `[]`
     ++ PSET_TAC [ALGEBRA_EMBED_BASIC],
-    Q.EXISTS_TAC `APPEND (MAP (CONS T) l') (MAP (CONS F) l'')`
+    Q.EXISTS_TAC `APPEND (MAP (CONS T) l'') (MAP (CONS F) l''')`
     ++ STRIP_TAC
     ++ SEQ_CASES_TAC `v`
     ++ PSET_TAC [ALGEBRA_EMBED_APPEND, ALGEBRA_EMBED_TLS]

@@ -56,7 +56,7 @@ val of_length_univ_suc = store_thm
    REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
    [Q.PAT_ASSUM `!x. Q x` MATCH_MP_TAC THEN
     ASM_SIMP_TAC arith_ss [LENGTH],
-    MP_TAC (ISPEC ``x : 'a list`` list_CASES) THEN
+    MP_TAC (ISPEC ``w : 'a list`` list_CASES) THEN
     STRIP_TAC THENL
     [FULL_SIMP_TAC arith_ss [LENGTH],
      FULL_SIMP_TAC arith_ss [LENGTH]]]);
@@ -83,13 +83,13 @@ val of_length_exists_suc = store_thm
        (?x. ?w :: of_length n. phi (x :: w))``,
    SIMP_TAC bool_ss [RES_EXISTS_THM, of_length_def] THEN
    REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
-   [MP_TAC (ISPEC ``x:'a list`` list_CASES) THEN
+   [MP_TAC (ISPEC ``w:'a list`` list_CASES) THEN
     (STRIP_TAC THEN1 FULL_SIMP_TAC arith_ss [LENGTH]) THEN
     FULL_SIMP_TAC arith_ss [LENGTH] THEN
     EXISTS_TAC ``h : 'a`` THEN
     EXISTS_TAC ``t : 'a list`` THEN
     ASM_SIMP_TAC bool_ss [],
-    EXISTS_TAC ``(x : 'a) :: x'`` THEN
+    EXISTS_TAC ``(x : 'a) :: w`` THEN
     ASM_SIMP_TAC arith_ss [LENGTH]]);
 
 val of_length_exists_zero = store_thm
