@@ -10,7 +10,7 @@ infix 3 |->
  type thm = Thm.thm
  type tactic = Abbrev.tactic
 
-fun RULES_ERR{func,mesg} = 
+fun ERR func mesg = 
       HOL_ERR{origin_structure = "Rules",
               origin_function=func,message=mesg};
 
@@ -48,70 +48,73 @@ val DISJ_CASESL = Drule.DISJ_CASESL
 
 
 (*---------------------------------------------------------------------------
-     It's intentional that we store the termination conditions on the
-     reference list, even if we fail in capturing the TC. The reason for
-     this is that we don't want to put nested TCs on the assumptions. 
-     Therefore, we capture them onto the ref. list and attempt to handle
-     them specially. 
- *---------------------------------------------------------------------------*)
+         Capturing termination conditions.
+ ----------------------------------------------------------------------------*)
+
+
+local fun !!v M = Dsyntax.mk_forall{Bvar=v, Body=M}
+      val mem = Lib.op_mem aconv
+      fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
+in
+fun solver (restrf,f,G,nref) simps context tm =
+  let val globals = f::G  (* not to be generalized *)
+      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
+      val rcontext = rev context
+      val antl = case rcontext of [] => [] 
+                               | _   => [list_mk_conj(map concl rcontext)]
+      val (R,arg,pat) = USyntax.dest_relation tm
+      val TC = genl(list_mk_imp(antl, tm))
+  in 
+     if can(find_term (aconv restrf)) arg
+     then (nref := true; raise ERR "solver" "nested function") 
+     else let val _ = if can(find_term (aconv f)) TC 
+                      then nref := true else ()
+          in case rcontext
+              of [] => SPEC_ALL(ASSUME TC)
+               | _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
+          end
+  end
+end;
 
 (*
 local fun !!v M = Dsyntax.mk_forall{Bvar=v, Body=M}
       val mem = Lib.op_mem aconv
       fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
 in
-fun solver (f,R) tc_list simps context tm =
-  let fun genl tm = itlist !! (set_diff (rev(free_vars tm)) [f,R]) tm
-      val nested = can(find_term (aconv f))
+fun solver (restrf,f,G,nref) simps context tm =
+  let val globals = f::G  (* not to be generalized *)
+      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
       val rcontext = rev context
       val antl = case rcontext of [] => [] 
                                | _   => [list_mk_conj(map concl rcontext)]
+      val (R,arg,pat) = USyntax.dest_relation tm
       val TC = genl(list_mk_imp(antl, tm))
-      val _ = tc_list := (TC :: !tc_list)
-  in if nested TC
-     then raise RULES_ERR{func="solver", mesg="nested function"}
+      val _ = if can(find_term (aconv f)) TC then nref := true else ()
+  in 
+     if can(find_term (aconv f)) arg then raise ERR "solver" "nested function"
      else case rcontext
-          of [] => SPEC_ALL(ASSUME TC)
-          |  _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
+           of [] => SPEC_ALL(ASSUME TC)
+            | _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
   end
 end;
 *)
 
-local fun !!v M = Dsyntax.mk_forall{Bvar=v, Body=M}
-      val mem = Lib.op_mem aconv
-      fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
+fun sthat P x = P x handle Interrupt => raise Interrupt
+                         |     _     => false;
+
+
+(*
+local fun is_restr tm = (#Name(dest_const tm) = "RESTRICT")
+      val restricted = can(find_term(sthat is_restr))
 in
-fun solver (f,G) tc_list simps context tm =
-  let val globals = f::G  (* not to be generalized *)
-      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
-      val nested = can(find_term (aconv f))
-      val rcontext = rev context
-      val antl = case rcontext of [] => [] 
-                               | _   => [list_mk_conj(map concl rcontext)]
-      val TC = genl(list_mk_imp(antl, tm))
-      val _ = tc_list := (TC :: !tc_list)
-  in if nested TC
-     then raise RULES_ERR{func="solver", mesg="nested function"}
-     else case rcontext
-          of [] => SPEC_ALL(ASSUME TC)
-          |  _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
-  end
-end;
+*)
 
-
-fun holds P x = P x handle Interrupt => raise Interrupt
-                         |         _ => false;
-
-fun CONTEXT_REWRITE_RULE (f,R) {thms,congs,th} = 
-  let val tc_list = ref[]: term list ref
-      open RW 
-      val th1 = REWRITE_RULE Fully 
-                 (Pure thms,Context([],DONT_ADD), Congs congs,
-                  Solver(solver (f,R) tc_list)) th
-      val restricted = 
-            can(find_term (holds(fn c => (#Name(dest_const c)="RESTRICT"))))
-  in 
-    (th1, filter (not o restricted) (!tc_list))
+fun CONTEXT_REWRITE_RULE (restrf,f,G,nr) {thms,congs,th} = 
+  let open RW 
+  in
+     REWRITE_RULE Fully 
+         (Pure thms, Context([],DONT_ADD), Congs congs,
+          Solver(solver (restrf,f,G,nr))) th
   end;
 
 
@@ -145,7 +148,7 @@ val RIGHT_ASSOC = RW.PURE_RW_RULE[GSYM DISJ_ASSOC];
 
 fun FILTER_DISCH_ALL P th =
    let val (asl,_) = dest_thm th
-   in itlist DISCH (filter (holds P) asl) th
+   in itlist DISCH (filter (sthat P) asl) th
    end;
 
 (*----------------------------------------------------------------------------

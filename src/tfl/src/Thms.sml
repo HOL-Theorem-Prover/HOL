@@ -6,10 +6,10 @@ struct
  type thm = Thm.thm
 
    val LET_DEF          = boolTheory.LET_DEF;
-   val WF_INDUCTION_THM = primWFTheory.WF_INDUCTION_THM
-   val WFREC_COROLLARY  = primWFTheory.WFREC_COROLLARY
-   val CUT_DEF          = primWFTheory.RESTRICT_DEF
-   val CUT_LEMMA        = primWFTheory.RESTRICT_LEMMA
+   val WF_INDUCTION_THM = relationTheory.WF_INDUCTION_THM
+   val WFREC_COROLLARY  = relationTheory.WFREC_COROLLARY
+   val CUT_DEF          = relationTheory.RESTRICT_DEF
+   val CUT_LEMMA        = relationTheory.RESTRICT_LEMMA
 
    (* SELECT_AX = |- !P x. P x ==> P ($@ P) *)
    val SELECT_AX = boolTheory.SELECT_AX;
@@ -30,9 +30,10 @@ struct
 
    val P = GEN_ALL o TAUT_CONV;
 
-   val thm_eq    = P`x ==> y ==> (x = y)`
-   val eqT       = P`(x = T) ==> x`
-   val rev_eq_mp = P`(x = y) ==> y ==> x`
-   val simp_thm  = P`(x==>y) ==> (x = x') ==> (x' ==> y)`
+   val thm_eq    = P `x ==> y ==> (x = y)`
+   val eqT       = P `(x = T) ==> x`
+   val imp_elim  = P `P ==> (P ==> Q = P ==> R) = P ==> Q = P ==> R`
+   val rev_eq_mp = P `(x = y) ==> y ==> x`
+   val simp_thm  = P `(x==>y) ==> (x = x') ==> (x' ==> y)`
 
 end;

@@ -24,20 +24,28 @@ signature Tfl =
                   patterns :pattern list,
                   theory:thry}
 
-   val wfrec_eqns : thry -> term 
-                         -> {WFR : term, 
+   type wfrec_eqns_result = {WFR : term, 
+                             SV : term list,
                              proto_def : term,
-                             extracta  : (thm * term list) list,
-                             pats  : pattern list}
+                             extracta  : (thm * term list * bool) list,
+                             pats : pattern list}
 
-   val lazyR_def : thry -> string -> term 
-                        -> {rules:thm,
-                            R : term,
-                            full_pats_TCs:(term * term list) list, 
-                            patterns: pattern list,
-                            theory:thry}
+   val wfrec_eqns : thry -> term -> wfrec_eqns_result
 
-   val mk_induction : thry -> term -> term -> (term * term list) list -> thm
+   val lazyR_def : thry -> string -> wfrec_eqns_result 
+                        -> {rules : thm,
+                            R  : term,
+                            SV : term list,
+                            full_pats_TCs : (term * term list) list, 
+                            patterns : pattern list,
+                            theory : thry}
+
+   val mk_induction : thry 
+                       -> {fconst : term,
+                           R : term,
+                           SV : term list,
+                           pat_TCs_list: (term * term list) list}
+                       -> thm
 
    val postprocess: {WFtac:tactic, terminator:tactic, simplifier:term -> thm}
                     -> thry
@@ -45,4 +53,16 @@ signature Tfl =
                          -> {rules:thm, induction:thm, nested_tcs:thm list}
 
    val termination_goals : thm -> term list
+
+   val nested_function : thry -> string -> wfrec_eqns_result 
+                        -> {rules:thm,ind:thm,SV:term list, R:term,
+                            aux_rules:thm, aux_ind:thm,
+                            theory:thry, def:thm,aux_def:thm}
+
+   val mutual_function : thry -> string -> term 
+                        -> {rules:thm, ind:thm, SV:term list, R:term,
+                            union : {rules:thm, ind:thm, theory:thry,
+                                     aux:{rules:thm, ind:thm}option},
+                            theory:thry}
+
  end

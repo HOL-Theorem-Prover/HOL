@@ -42,7 +42,7 @@ fun RW_ERR{func,mesg} =
             origin_function = func,
                     message = mesg};
 
-val tracing = ref false;
+val monitoring = ref false;
 
 (*----------------------------------------------------------------------------
  * |- !x y z. w   --->  |- w[x|->g1][y|->g2][z|->g3]
@@ -96,7 +96,7 @@ fun GSPEC_ALL th =
     let val (ants,{lhs,rhs}) = (I##dest_eq)(strip_imp(concl th))
         val embedded_in = !embedded_ref
         val islooper = (aconv lhs rhs) orelse (exists (embedded_in lhs) ants)
-    in if (islooper  andalso !tracing)
+    in if (islooper  andalso !monitoring)
        then Lib.say ("excluding possibly looping rewrite:\n"
                      ^thm_to_string th^"\n\n")
        else ();
@@ -169,6 +169,9 @@ datatype context_policy = ADD | DONT_ADD
 
 (* Provides a quick way of telling if a rewrite rule is conditional or not. *)
 datatype choice = COND of thm | UNCOND of thm;
+
+fun dest_choice (COND th)   = th
+  | dest_choice (UNCOND th) = th;
 
 
 (*----------------------------------------------------------------------------
@@ -262,36 +265,59 @@ fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
  * "ant_vars_fixed" is true when the instantiated rewrite rule has no
  * uninstantiated variables in its antecedent. If "ant_vars_fixed" is not
  * true, we get the instantiation from the context.
+ *
+ * Note.
+ * "sys_var" could be more rigorous in its check, but we don't
+ * have a defined notion of the syntax of system variables.
  *---------------------------------------------------------------------------*)
+
+fun stringulate _ [] = []
+  | stringulate f [x] = [f x]
+  | stringulate f (h::t) = f h::",\n"::stringulate f t;
+
+fun drop_opt [] = []
+  | drop_opt (SOME x::rst) = x::drop_opt rst
+  | drop_opt (NONE::rst) = drop_opt rst;
+
 local fun sys_var tm = (is_var tm andalso
                         not(Lexis.ok_identifier(#Name(dest_var tm))))
       val failed = RW_ERR{func="RW_STEP",mesg="all applications failed"}
- (*--------------------------------------------------------------
-  * "sys_var" could be more rigorous in its check, but we don't
-  * have a defined notion of the syntax of system variables.
-  *--------------------------------------------------------------*)
 in
 fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm =
-let fun try [] = raise failed
-      | try (f::rst) =
-        (case (f tm)
-         of UNCOND th => th
-          | COND th =>
+ let fun match f =
+      (case f tm 
+        of UNCOND th => SOME th
+         | COND th => 
             let val condition = #ant(dest_imp(concl th))
+                val cond_thm = prover simpls cntxt condition
                 val ant_vars_fixed = not(can(find_term sys_var) condition)
-            in if ant_vars_fixed
-               then MP th (prover simpls cntxt condition)
-               else MATCH_MP th (prover simpls cntxt condition)
+            in 
+               SOME ((if ant_vars_fixed then MP else MATCH_MP) th cond_thm)
             end)
-        handle HOL_ERR _ => try rst
-in
-  try (Net.match tm rw_net)
-end end;
+           handle HOL_ERR _ => NONE
+    fun try [] = raise failed
+      | try (f::rst) =
+         case match f 
+          of NONE => try rst
+           | SOME th => 
+             if !monitoring 
+             then case drop_opt (map match rst)
+                  of [] => (Lib.mesg true (String.concat
+                              ["RW_STEP:\n", Parse.thm_to_string th]); th)
+                  | L => (Lib.mesg true (String.concat
+                      ["RW_STEP: multiple rewrites possible (first taken):\n",
+                            String.concat 
+                              (stringulate Parse.thm_to_string(th::L))]); th)
+             else th
+ in 
+   try (Net.match tm rw_net)
+end end
 
 (*---------------------------------------------------------------------------
  * It should be a mistake to have more than one applicable congruence rule for
  * a constant, but I don't currently check that.
  *---------------------------------------------------------------------------*)
+
 fun CONG_STEP (RW{cong_net,...}) tm =
   Lib.trye hd (Net.match tm cong_net) tm;
 
@@ -761,10 +787,10 @@ fun always_fails x y z = solver_err();
 local val untrue = Parse.Term`F`
 in
 fun std_solver _ context tm =
- let val _ = if (!tracing)
+ let val _ = if !monitoring
              then Lib.say("Solver: trying to lookup in context\n"
                           ^term_to_string tm^"\n") else ()
-     fun loop [] = (if !tracing then Lib.say "Solver: couldn't find it.\n"
+     fun loop [] = (if !monitoring then Lib.say "Solver: couldn't find it.\n"
                                 else ();
                     solver_err())
        | loop (x::rst) =
@@ -777,7 +803,7 @@ fun std_solver _ context tm =
            end
      val thm = loop (boolTheory.TRUTH::context)
  in
-    if !tracing then Lib.say "Solver: found it.\n" else ();
+    if !monitoring then Lib.say "Solver: found it.\n" else ();
     thm
 end end;
 
@@ -790,13 +816,13 @@ local val untrue = Term`F`
       val istrue = Term`T`
 in
 fun rw_solver simpls context tm =
- let val _ = if !tracing
+ let val _ = if !monitoring
              then Lib.say("Solver: attempting to prove (by rewriting)\n  "
                           ^term_to_string tm^"\n") else ()
      val th = TOP_DEPTH RW_STEP {context = (context,ADD),
                                   simpls = simpls,
                                   prover = rw_solver} tm
-     val _ = if (!tracing)
+     val _ = if !monitoring
              then let val {lhs,rhs} = dest_eq(concl th)
                   in if (aconv rhs istrue)
                      then Lib.say("Solver: proved\n"^thm_to_string th^"\n\n")

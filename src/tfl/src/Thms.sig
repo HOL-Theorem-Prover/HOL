@@ -10,6 +10,7 @@ sig
    val COND_CONG       :thm
    val LET_CONG        :thm
    val eqT             :thm
+   val imp_elim        :thm
    val rev_eq_mp       :thm
    val simp_thm        :thm
 end;
