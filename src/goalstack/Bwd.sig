@@ -4,6 +4,8 @@ signature Bwd =
  type tactic = Abbrev.tactic
  type gstk
 
+      val chatting : bool ref
+
       val expand : gstk -> tactic -> gstk
       val expandf : gstk -> tactic -> gstk
       val extract_thm : gstk -> Thm.thm

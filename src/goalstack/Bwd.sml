@@ -1,4 +1,5 @@
 (* Backward proofs, with no idea of undo *)
+
 structure Bwd :> Bwd =
 struct
 
@@ -6,22 +7,26 @@ struct
 open HolKernel Abbrev;
 infix 0 before;
 
-fun BWD_ERR{func,mesg} =
+fun ERR func mesg =
     HOL_ERR{origin_structure = "Bwd",
             origin_function = func,
             message = mesg}
+
+val chatting = ref true;
+
+fun say s = if !chatting then Lib.say s else ();
 
 fun add_string_cr s = say (s^"\n")
 fun cr_add_string_cr s = say ("\n"^s^"\n")
 
 fun rotl (a::rst) = rst@[a]
-  | rotl [] = raise BWD_ERR{func = "rotl", mesg =  "empty list"}
+  | rotl [] = raise ERR "rotl" "empty list"
 
 fun rotr lst =
    let val (front,back) = Lib.front_last lst
    in (back::front)
    end
-   handle _ => raise BWD_ERR{func = "rotr",mesg =  "empty list"}
+   handle _ => raise ERR "rotr" "empty list"
 
 
 
@@ -49,38 +54,34 @@ fun depth(GSTK{stack,...}) = length stack;
 fun is_initial(GSTK{prop = POSED g, stack = []}) = true
   | is_initial _ = false;
 
-fun top_goals(GSTK{prop = POSED g, stack = []}) = [g]
-  | top_goals(GSTK{prop = POSED _, stack = {goals,...}::_}) = goals
-  | top_goals(GSTK{prop = PROVED _, ...}) = raise BWD_ERR{func = "top_goals",
-                                                          mesg = "no goals"};
+fun top_goals(GSTK{prop=POSED g, stack = []}) = [g]
+  | top_goals(GSTK{prop=POSED _, stack = {goals,...}::_}) = goals
+  | top_goals(GSTK{prop=PROVED _, ...}) = raise ERR "top_goals" "no goals";
 
 val top_goal = hd o top_goals;
 
 fun new_goal (g as (asl,w)) =
-   let val bool = Type.mk_type{Tyop = "bool", Args = []}
-       fun is_bool tm = (Term.type_of tm = bool)
-   in if (all is_bool (w::asl))
-      then GSTK{prop = POSED g, stack = []}
-      else raise BWD_ERR{func = "set_goal",
-                         mesg = "not a proposition; new goal not added"}
-   end;
+   if all (fn tm => Term.type_of tm = Type.bool) (w::asl)
+    then GSTK{prop = POSED g, stack = []}
+    else raise ERR "set_goal" "not a proposition; new goal not added";
+
 
 fun initial_goal(GSTK{prop = POSED g,...}) = g
   | initial_goal(GSTK{prop = PROVED th,...}) = Thm.dest_thm th;
 
 
 fun rotate(GSTK{prop = PROVED _, ...}) _ =
-        raise BWD_ERR{func = "rotate", mesg = "goal has already been proved"}
+        raise ERR "rotate" "goal has already been proved"
   | rotate(GSTK{prop, stack}) n =
       if (n<0)
-      then raise BWD_ERR{func="rotate", mesg="negative rotations not allowed"}
+      then raise ERR"rotate" "negative rotations not allowed"
       else
       case stack
-      of [] => raise BWD_ERR{func = "rotate",mesg = "No goals to rotate"}
+      of [] => raise ERR"rotate" "No goals to rotate"
        | ({goals,validation}::rst) =>
           if (n > length goals)
-          then raise BWD_ERR{func = "rotate",
-                        mesg = "More rotations than goals -- no rotation done"}
+          then raise ERR "rotate"
+                        "More rotations than goals -- no rotation done"
           else GSTK{prop = prop,
                     stack = {goals = funpow n rotl goals,
                              validation=validation o funpow n rotr}
@@ -88,8 +89,7 @@ fun rotate(GSTK{prop = PROVED _, ...}) _ =
 
 
 local
-fun imp_err s = raise BWD_ERR{func = "expandf",
-                              mesg = "implementation error: "^s}
+fun imp_err s = raise ERR "expandf" ("implementation error: "^s)
 fun return(GSTK{stack = {goals = [],validation}::rst, prop}) =
     let val th = validation []
     in case rst
@@ -106,7 +106,7 @@ fun return(GSTK{stack = {goals = [],validation}::rst, prop}) =
   | return gstk = gstk
 in
 fun expandf(GSTK{prop = PROVED _, ...}) _ =
-           raise BWD_ERR{func = "expandf", mesg="goal has already been proved"}
+           raise ERR "expandf" "goal has already been proved"
   | expandf(GSTK{prop as POSED g, stack}) tac =
      let val (glist,vf) = tac (case stack of   []    => g
                                            | (tr::_) => hd (#goals tr))
@@ -136,13 +136,12 @@ end;
 fun expand gs = expandf gs o Tactical.VALID;
 
 fun extract_thm (GSTK{prop = PROVED th, ...}) = th
-  | extract_thm _ = raise BWD_ERR{func = "extract_thm",
-                                  mesg = "no theorem proved"};
+  | extract_thm _ = raise ERR "extract_thm" "no theorem proved";
 
 (* Prettyprinting *)
+
 fun enum i [] = []
-  | enum i (h::t) =
-     (i,h)::enum (i+1) t;
+  | enum i (h::t) = (i,h)::enum (i+1) t;
 fun enumerate l = enum 0 l;
 
 local
@@ -155,7 +154,7 @@ fun ppgoal ppstrm (asl,w) =
             (begin_block CONSISTENT 0;
              add_string (Int.toString i^".  ");
              pr tm; end_block())
-       fun pr_indexes [] = raise BWD_ERR{func="pr_indexes", mesg=""}
+       fun pr_indexes [] = raise ERR "pr_indexes" ""
          | pr_indexes [x] = pr x
          | pr_indexes L = pr_list pr_index (fn () => ()) add_newline
                                   (enumerate (rev asl));
@@ -173,7 +172,7 @@ fun ppgoal ppstrm (asl,w) =
      add_newline ();
      end_block ()
    end
-   handle e => (say "\nError in attempting to print a goal!\n";  raise e);
+   handle e => (Lib.say "\nError in attempting to print a goal!\n";  raise e);
 
    val goal_printer = ref ppgoal
 in

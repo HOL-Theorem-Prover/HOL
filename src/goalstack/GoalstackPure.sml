@@ -39,6 +39,7 @@ fun rotate i (GOALSTACK s) = GOALSTACK(apply (C Bwd.rotate i) s);
 (*---------------------------------------------------------------------------
  * Prettyprinting of goalstacks.
  *---------------------------------------------------------------------------*)
+
 fun pp_goalstack ppstrm (GOALSTACK g) = project (Bwd.pp_gstk ppstrm) g;
 val set_goal_pp = Bwd.set_goal_pp;
 val std_goal_pp = Bwd.std_pp_goal;
@@ -63,15 +64,15 @@ fun current_goalstack (PRFS (h::_)) = h
 
 fun rotate_proofs i (PRFS []) = PRFS []
   | rotate_proofs i (PRFS L) =
-      if (i<0)
-      then raise ERR "rotate_proofs" "negative rotation"
-      else if (i > length L)
+      if i<0 then raise ERR "rotate_proofs" "negative rotation"
+      else if i > length L
            then raise ERR "rotate_proofs" "more rotations than proofs"
            else PRFS(funpow i rotl L);
 
 (*---------------------------------------------------------------------------
  * Operations on PRFS.
  *---------------------------------------------------------------------------*)
+
 fun hd_opr f (PRFS (h::rst)) = PRFS(f h::rst)
   | hd_opr f (PRFS[]) = raise NO_PROOFS;
 
@@ -128,4 +129,5 @@ fun pp_proofs ppstrm =
    in fn pl => (begin_block Portable.CONSISTENT 0;
                 pr pl; end_block())
    end;
+
 end (* GoalstackPure *)

@@ -21,6 +21,9 @@ type goalstack = GoalstackPure.goalstack
 type proofs = GoalstackPure.proofs
 type 'a quotation = 'a frag list
 
+val chatting = Bwd.chatting;
+fun say s = if !chatting then Lib.say s else ();
+
 val the_proofs = ref (GoalstackPure.initial_proofs());
 
 fun proofs() = (!the_proofs);
@@ -52,7 +55,7 @@ in
 fun drop() = (primdrop(); say"OK..\n"; proofs())
         handle GoalstackPure.NO_PROOFS => proofs()
 fun dropn i =
-   if (i<1) then (say"OK..\n"; proofs()) else (primdrop(); dropn (i-1)) 
+   if i<1 then (say"OK..\n"; proofs()) else (primdrop(); dropn (i-1)) 
    handle GoalstackPure.NO_PROOFS => proofs()
 end;
 

@@ -8,6 +8,8 @@ signature goalstackLib =
     type proofs = GoalstackPure.proofs
     type 'a quotation = 'a Portable.frag list
 
+      val chatting : bool ref 
+
       (* Starting a proof *)
       val g        : term quotation -> proofs
       val set_goal : goal -> proofs
