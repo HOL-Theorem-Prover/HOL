@@ -20,6 +20,10 @@ struct
 
 open HolKernel Parse Drule Tactical Tactic Conv;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 type term = Term.term;
 type thm = Thm.thm;
 type tactic = Abbrev.tactic;
@@ -285,31 +289,31 @@ local fun sys_var tm = (is_var tm andalso
 in
 fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm =
  let fun match f =
-      (case f tm 
+      (case f tm
         of UNCOND th => SOME th
-         | COND th => 
+         | COND th =>
             let val condition = #ant(dest_imp(concl th))
                 val cond_thm = prover simpls cntxt condition
                 val ant_vars_fixed = not(can(find_term sys_var) condition)
-            in 
+            in
                SOME ((if ant_vars_fixed then MP else MATCH_MP) th cond_thm)
             end)
            handle HOL_ERR _ => NONE
     fun try [] = raise failed
       | try (f::rst) =
-         case match f 
+         case match f
           of NONE => try rst
-           | SOME th => 
-             if !monitoring 
+           | SOME th =>
+             if !monitoring
              then case drop_opt (map match rst)
                   of [] => (Lib.mesg true (String.concat
                               ["RW_STEP:\n", Parse.thm_to_string th]); th)
                   | L => (Lib.mesg true (String.concat
                       ["RW_STEP: multiple rewrites possible (first taken):\n",
-                            String.concat 
+                            String.concat
                               (stringulate Parse.thm_to_string(th::L))]); th)
              else th
- in 
+ in
    try (Net.match tm rw_net)
 end end
 

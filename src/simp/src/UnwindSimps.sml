@@ -1,6 +1,11 @@
-structure UnwindSimps :> UnwindSimps = 
+structure UnwindSimps :> UnwindSimps =
 struct
 open Lib simpLib Parse;
+
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 
 (*------------------------------------------------------------------------
  * UNWIND_ss

@@ -43,7 +43,11 @@ fun TAUT_ERR{function,message} = HOL_ERR{origin_structure = "Taut",
 
 local
    open HolKernel Parse basicHol90Lib Psyntax DecisionConv DecisionSupport
-infix THEN THENC |->
+   infix THEN THENC |->
+
+   val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+   fun -- q x = Term q
+   fun == q x = Type q
 in
 
 (*==========================================================================*)
@@ -170,9 +174,9 @@ in
 
 fun NOT_CONV tm =
    let val arg = dest_neg tm
-   in  if (is_T arg) 
+   in  if (is_T arg)
        then el 2 ths
-       else if (is_F arg) 
+       else if (is_F arg)
             then el 3 ths
             else SPEC (dest_neg arg) (el 1 ths)
    end
@@ -265,7 +269,7 @@ local
 
 val ths = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES));
 
-in 
+in
 
 fun OR_CONV tm =
    let val (disj1,disj2) = dest_disj tm
@@ -333,7 +337,7 @@ local
 
 val ths =
    map GEN_ALL
-      (CONJUNCTS (SPEC_ALL 
+      (CONJUNCTS (SPEC_ALL
          (Rsyntax.INST_TYPE [Type.alpha |-> Type.bool] COND_CLAUSES)));
 
 in

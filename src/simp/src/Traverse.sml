@@ -1,9 +1,9 @@
-(* ===================================================================== 
- * FILE          : traverse.sml 
+(* =====================================================================
+ * FILE          : traverse.sml
  * DESCRIPTION   : A programmable term traversal engine for hol90
- *                                                                       
+ *
  * AUTHOR        : Donald Syme
- *                 Based loosely on original HOL rewriting by 
+ *                 Based loosely on original HOL rewriting by
  *                 Larry Paulson et al.
  * ===================================================================== *)
 
@@ -16,7 +16,7 @@
  * =====================================================================*)
 
 
-structure Traverse :> Traverse = 
+structure Traverse :> Traverse =
 struct
 
 open HolKernel Parse Drule Conv Psyntax liteLib Trace Travrules Opening;
@@ -29,64 +29,68 @@ infix THENQC THENCQC ORELSEC IFCQC
 fun WRAP x = STRUCT_WRAP "Traverse" x;
 fun ERR x = STRUCT_ERR "Traverse" x;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 val equality = (--`$= :'a -> 'a ->bool`--);
-  
+
 (* ---------------------------------------------------------------------
  * reducers and contexts
  * ---------------------------------------------------------------------*)
-  
+
 type context = exn   (* well known SML hack to allow any kind of data *)
-  
-datatype reducer = 
+
+datatype reducer =
   REDUCER of {initial: context,
               addcontext : context * Thm.thm list -> context,
               apply: {solver:term list -> term -> thm, context: context,
                       stack: term list} -> conv
               };
-fun dest_reducer (REDUCER x) = x 
-  
+fun dest_reducer (REDUCER x) = x
+
 
 (* ---------------------------------------------------------------------
  * Traversal states
  *    - stores the state of the reducers during the simpl. process
  * ---------------------------------------------------------------------*)
-  
-datatype trav_state = 
+
+datatype trav_state =
   TSTATE of {relation : preorder,
              contexts1 : context list,
              contexts2 : context list,
-             freevars : term list}; 
-  
+             freevars : term list};
+
 fun initial_context {rewriters:reducer list,
                      dprocs:reducer list,
                      travrules=TRAVRULES tsdata,
-                     relation} = 
+                     relation} =
   TSTATE{contexts1=map (#initial o dest_reducer) rewriters,
          contexts2=map (#initial o dest_reducer) dprocs,
          freevars=[],
          relation = find_relation relation (#relations tsdata)};
-  
+
 (* ---------------------------------------------------------------------
  * add_context
  *
  * ---------------------------------------------------------------------*)
-       
+
 fun add_context rewriters dprocs =
   let val rewrite_collectors' = map (#addcontext o dest_reducer) rewriters
       val dproc_collectors' = map (#addcontext o dest_reducer) dprocs
-  in fn (context as 
+  in fn (context as
          TSTATE {contexts1,contexts2,freevars,relation}, thms) =>
     if (null thms) then context else
     let val more_freevars = free_varsl (flatten (map hyp thms))
         val _ = map (fn thm => trace(2,MORE_CONTEXT thm)) thms
         fun mk_privcontext maker privcontext = maker (privcontext,thms)
-        val newcontexts1 = 
+        val newcontexts1 =
           if (null thms) then contexts1
           else map2 mk_privcontext rewrite_collectors' contexts1
-        val newcontexts2 = 
+        val newcontexts2 =
           if (null thms) then contexts2
           else map2 mk_privcontext dproc_collectors' contexts2
-        val newfreevars = 
+        val newfreevars =
           if (null more_freevars) then freevars
           else more_freevars@freevars
     in TSTATE{contexts1=newcontexts1,
@@ -102,10 +106,10 @@ fun add_context rewriters dprocs =
  *
  * ---------------------------------------------------------------------*)
 
-fun change_relation 
+fun change_relation
   (TRAVRULES{relations,...})
-  (context as 
-   TSTATE {contexts1,contexts2,freevars,  
+  (context as
+   TSTATE {contexts1,contexts2,freevars,
                relation as PREORDER(oldrelname,_,_)},
    rel) =
   if (name_of_const rel = oldrelname) then context
@@ -113,7 +117,7 @@ fun change_relation
               contexts2=contexts2,
               freevars=freevars,
               relation=find_relation rel relations};
-    
+
 (* ---------------------------------------------------------------------
  * Quick, General conversion routines.  These work for any preorder,
  * not just equality.
@@ -125,10 +129,10 @@ fun GEN_THENQC (PREORDER(_,TRANS,_)) (conv1,conv2) tm =
      handle HOL_ERR _ => th1
   end
   handle HOL_ERR _ => conv2 tm
-  
+
 fun GEN_THENCQC  (PREORDER(_,TRANS,_)) (conv1,conv2) tm =
-  let val th1 = conv1 tm 
-  in let val th2 = conv2(rand(concl th1)) 
+  let val th1 = conv1 tm
+  in let val th2 = conv2(rand(concl th1))
      in TRANS th1 th2
      end
      handle HOL_ERR _ => th1
@@ -137,7 +141,7 @@ fun GEN_THENCQC  (PREORDER(_,TRANS,_)) (conv1,conv2) tm =
 (* perform continuation with argumnt indicating whether a change occurred *)
 fun GEN_IFCQC  (PREORDER(_,TRANS,_)) (conv1,conv2) tm =
   let val th1 = conv1 tm
-  in let val th2 = conv2 true (rand(concl th1)) 
+  in let val th2 = conv2 true (rand(concl th1))
      in TRANS th1 th2
      end
      handle HOL_ERR _ => th1
@@ -153,7 +157,7 @@ fun GEN_REPEATQC rel =
    end;
 
 fun mapfilter2 f (h1::t1) (h2::t2) =
-      let val X = mapfilter2 f t1 t2 
+      let val X = mapfilter2 f t1 t2
       in f h1 h2::X handle Interrupt => raise Interrupt | _ => X
       end
   | mapfilter2 f _ _ = [];
@@ -178,19 +182,19 @@ let val add_context' = add_context rewriters dprocs
 
     fun trav stack (context as TSTATE {contexts1,contexts2,
                   freevars,relation as (PREORDER (relname,_,_))}) =
-      let 
-       fun ctxt_solver stack = 
+      let
+       fun ctxt_solver stack =
          EQT_ELIM o trav stack (change_relation' (context,equality))
        fun apply_reducer (REDUCER rdata) context =
          (#apply rdata) {solver=ctxt_solver,context=context,
-                         stack=stack} 
-       val high_priority = 
+                         stack=stack}
+       val high_priority =
          FIRST_CONV (mapfilter2 apply_reducer rewriters contexts1)
-       val low_priority = 
+       val low_priority =
          FIRST_CONV (mapfilter2 apply_reducer dprocs contexts2)
-       fun depther (thms,relation) = 
+       fun depther (thms,relation) =
          trav stack (change_relation' (add_context' (context,thms), relation))
-       val congproc_args = 
+       val congproc_args =
          {relation=relname,
           solver=(fn tm => ctxt_solver stack tm), (* do not eta-convert! *)
           depther=depther,
@@ -206,10 +210,10 @@ let val add_context' = add_context rewriters dprocs
        fun loop tm =
          let val conv =
              REPEATQC high_priority THENQC
-             (descend IFCQC 
-             (fn change => 
-              ((if change then high_priority else NO_CONV) 
-              ORELSEC low_priority ORELSEC weaken) THENCQC 
+             (descend IFCQC
+             (fn change =>
+              ((if change then high_priority else NO_CONV)
+              ORELSEC low_priority ORELSEC weaken) THENCQC
              loop));
         in (trace(4,REDUCE ("Reducing",tm)); conv tm)
         end;
@@ -224,7 +228,7 @@ end;
  *
  * ---------------------------------------------------------------------*)
 
-fun TRAVERSE (data as {dprocs,rewriters,travrules,relation}) thms = 
+fun TRAVERSE (data as {dprocs,rewriters,travrules,relation}) thms =
    let val context' = add_context rewriters dprocs (initial_context data,thms)
    in TRAVERSE_IN_CONTEXT rewriters dprocs travrules [] context'
    end;

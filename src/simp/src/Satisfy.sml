@@ -1,15 +1,20 @@
 
 
-structure Satisfy :> Satisfy = 
+structure Satisfy :> Satisfy =
 struct
   type term = Term.term
   type thm = Thm.thm
   type conv = Abbrev.conv
   type tactic = Abbrev.tactic
-	
+
 
 open HolKernel Parse Drule Tactical Tactic Conv;
 open Sequence Psyntax liteLib Unify Ho_rewrite Resolve Trace;
+
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 
 infix THEN;
 
@@ -20,20 +25,20 @@ infix THEN;
  * over a sequence of environments.
  * Do not return instantiations local to the terms from the sequence
  * This corresponds to matching a goal against a series of facts, where
- * some of the facts are universally quantified. 
+ * some of the facts are universally quantified.
  *
  * satisfyl_in_envs
  *
- * This correpsonds to unifying a set of subgoals with unknowns 
- * against a set of facts. 
+ * This correpsonds to unifying a set of subgoals with unknowns
+ * against a set of facts.
  *
  * satisfyl
  *
  * Satisfy a list of goals via a set of facts.
  *----------------------------------------------------------------*)
- 
+
 fun satisfy_in_envs consts tms (tm1,envs) =
-  let fun f env tm2 = 
+  let fun f env tm2 =
       let val new_env = simp_unify_terms_in_env consts tm1 tm2 env
       in restrict_tmenv (not o C mem (free_vars tm2)) new_env
       end
@@ -41,7 +46,7 @@ fun satisfy_in_envs consts tms (tm1,envs) =
   end;
 
 fun satisfyl_in_envs consts tms1 tms2 envs =
-    seq_iterate (satisfy_in_envs consts (seq_of_list tms2)) 
+    seq_iterate (satisfy_in_envs consts (seq_of_list tms2))
     (seq_of_list tms1,envs);
 
 fun satisfy consts tms1 tms2 =
@@ -80,8 +85,8 @@ fun satisfy1 (consts,facts) gl =
   end;
 
 fun SATISFY (consts,facts) gl =
-    let val choices = satisfy1 (consts,map concl facts) gl 
-    in TAC_PROOF ((U (map hyp facts),gl),EVERY (map EXISTS_TAC choices) THEN 
+    let val choices = satisfy1 (consts,map concl facts) gl
+    in TAC_PROOF ((U (map hyp facts),gl),EVERY (map EXISTS_TAC choices) THEN
                   REPEAT CONJ_TAC THEN FIRST (map MATCH_ACCEPT_TAC facts))
     end;
 
@@ -91,7 +96,7 @@ fun SATISFY_CONV factdb tm =
     in trace(1,PRODUCE(tm,"SATISFY",thm)); thm
     end;
 
-fun SATISFY_TAC (asms,gl) = 
+fun SATISFY_TAC (asms,gl) =
   CONV_TAC (SATISFY_CONV (free_varsl asms,map ASSUME asms)) (asms,gl);
 
 fun GSPEC thm = SPEC(genvar(type_of(bvar(rand(concl thm))))) thm;
@@ -101,7 +106,7 @@ fun FACT_CANON thm =
        else [thm];;
 
 
-fun add_facts (consts,facts) thms = 
+fun add_facts (consts,facts) thms =
   (union consts (U (map (free_varsl o hyp) thms)),
    flatten (map FACT_CANON thms)@facts);
 
@@ -121,10 +126,10 @@ SIMP_CONV tspec_ss [] (--`
     T_SPEC(p,c,q) /\ T_SPEC(q,c',r) ==> T_SPEC(p,MK_SEQ(c,c'),r)`--);
 
 fun mk_facts tms = concat (map (FACT_CANON o ASSUME) tms);
-val facts = mk_facts 
+val facts = mk_facts
 val facts = mk_facts [`!x:'a. P x (b:'a)`, `!x y:'a. Q x y`, `!z:'a. R x z`];
-fun S f = 
-  let val facts = mk_facts f 
+fun S f =
+  let val facts = mk_facts f
       in satisfy1 (U (map (freesl o hyp) facts)) (map concl facts)
         end;
 S [`!x:'a. P x (b:'a)`]  `?a b:'a. P a b`;
@@ -152,37 +157,37 @@ val P = `(P:'a->'a->'a->bool)`;
 
 list_of_s (satisfyl [`^(P) a b c`--,([a,b,c],[]))] [`^(P) g e f`--,([],[]))]);
 list_of_s (satisfyl [`^(P) a b c`--,([a,b],[]))] [`^(P) g e f`--,([],[]))]);
-list_of_s (satisfyl 
-            [`^(P) a b c`--,([a,b,c],[]))] 
+list_of_s (satisfyl
+            [`^(P) a b c`--,([a,b,c],[]))]
             [`^(P) g e f`--,([],[])),
              `^(P) x y z`--,([],[]))]);
-list_of_s (satisfyl 
-            [`^(P) a b a`--,([a,b],[]))] 
+list_of_s (satisfyl
+            [`^(P) a b a`--,([a,b],[]))]
             [`^(P) g e g`--,([],[])),
              `^(P) x y z`--,([],[]))]);
-list_of_s (satisfyl 
-            [`^(P) a b a`--,([a,b],[]))] 
+list_of_s (satisfyl
+            [`^(P) a b a`--,([a,b],[]))]
             [`^(P) g e g`--,([],[])),
              `^(P) x y z`--,([z],[]))]);
 
 (* this one's a bit odd - the substitutions returned are empty because
-neither a nor b need get bound. 
+neither a nor b need get bound.
 *)
-list_of_s (satisfyl 
-            [`^(P) a b a`--,([a,b],[]))] 
+list_of_s (satisfyl
+            [`^(P) a b a`--,([a,b],[]))]
             [`^(P) g e g`--,([g,e,g],[])),
-             `^(P) x y z`--,([x,y,z],[]))]); 
-list_of_s (satisfyl 
+             `^(P) x y z`--,([x,y,z],[]))]);
+list_of_s (satisfyl
             [`^(P) a b a`--,([a,b],[])),
-             `^(Pnum) 1 2 n`--,([n],[]))] 
+             `^(Pnum) 1 2 n`--,([n],[]))]
             [`^(P) g e g`--,([g,e,g],[])),
-             `^(P) x y z`--,([x,y,z],[]))]); 
+             `^(P) x y z`--,([x,y,z],[]))]);
 
-list_of_s (satisfyl 
+list_of_s (satisfyl
             [`^(P) a b a`--,([a,b],[])),
-             `^(Pnum) 1 2 n`--,([n],[]))] 
+             `^(Pnum) 1 2 n`--,([n],[]))]
             [`^(P) g e g`--,([],[])),
-             `^(Pnum) 1 2 m`--,([],[]))]); 
+             `^(Pnum) 1 2 m`--,([],[]))]);
 
 
 

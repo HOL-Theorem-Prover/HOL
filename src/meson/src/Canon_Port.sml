@@ -1,8 +1,13 @@
-structure Canon_Port :> Canon_Port = 
+structure Canon_Port :> Canon_Port =
 struct
 
 open ho_matchLib Parse HolKernel basicHol90Lib
      liteLib Ho_rewrite Ho_theorems Psyntax;
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+
 infix THEN THENC;
 
 type term = Term.term
@@ -16,27 +21,27 @@ fun TAUT q = Ho_rewrite.TAUT(Parse.Term q);
 fun freesl tml = itlist (union o free_vars) tml [];;
 
 local fun get_heads lconsts tm (sofar as (cheads,vheads)) =
-        let val (v,bod) = dest_forall tm 
+        let val (v,bod) = dest_forall tm
         in
           get_heads (subtract lconsts [v]) bod sofar
-        end 
+        end
         handle HOL_ERR _ =>
             let val (l,r) =  dest_conj tm handle HOL_ERR _ => dest_disj tm
             in
               get_heads lconsts l (get_heads lconsts r sofar)
-            end 
+            end
         handle HOL_ERR _ =>
             let val tm' = dest_neg tm
             in
                get_heads lconsts tm' sofar
-            end 
+            end
         handle HOL_ERR _ =>
             let val (hop,args) = strip_comb tm
                 val len = length args
                 val newheads =
-                  if is_const hop orelse mem hop lconsts 
+                  if is_const hop orelse mem hop lconsts
                   then (insert (hop,len) cheads, vheads)
-                  else if len > 0 
+                  else if len > 0
                        then (cheads,insert (hop,len) vheads)
                        else sofar
         in
@@ -78,7 +83,7 @@ local
           val th = rev_itlist (C (curry MK_COMB))
             (map (FOL_CONV hddata) args) (REFL opn)
           val tm' = rand(concl th)
-          val n = length args - assoc opn hddata 
+          val n = length args - assoc opn hddata
                   handle HOL_ERR _ => 0
         in
           if n = 0 then th
@@ -114,8 +119,8 @@ end
 local
   val NOT_EXISTS_UNIQUE_THM = Tactical.prove(
     --`~(?!x:'a. P x) = (!x. ~P x) \/ ?x x'. P x /\ P x' /\ ~(x = x')`--,
-    REWRITE_TAC [Ho_theorems.EXISTS_UNIQUE_THM, DE_MORGAN_THM, 
-                 Ho_theorems.NOT_EXISTS_THM] 
+    REWRITE_TAC [Ho_theorems.EXISTS_UNIQUE_THM, DE_MORGAN_THM,
+                 Ho_theorems.NOT_EXISTS_THM]
      THEN CONV_TAC (REDEPTH_CONV NOT_FORALL_CONV)
      THEN REWRITE_TAC [NOT_IMP, CONJ_ASSOC])
   val common_tauts =
@@ -145,7 +150,7 @@ in
                        else SUB_CONV (SINGLE_SWEEP_CONV conv) tm'
          in
            TRANS th th'
-         end 
+         end
          handle HOL_ERR _ =>
             if is_abs tm then NNFC_CONV0 tm
             else SUB_CONV (SINGLE_SWEEP_CONV conv) tm;
@@ -216,7 +221,7 @@ val PRENEX_CONV =
       fun PRENEX_QCONV tm =
 	  let val (lop,r) = dest_comb tm
 	      exception DEST_CONST
-	  in let val cname = name_of_const lop 
+	  in let val cname = name_of_const lop
                               handle HOL_ERR _ => raise DEST_CONST
 	     in if cname = "!" orelse cname = "?" then
 		 AP_TERM lop (ABS_CONV PRENEX_QCONV r)
@@ -225,16 +230,16 @@ val PRENEX_CONV =
 		     else failwith "unchanged"
 	     end
 	     handle DEST_CONST =>
-	     let val (oper,l) = dest_comb lop 
+	     let val (oper,l) = dest_comb lop
 		 val cname = name_of_const oper
 	     in if cname = "/\\" orelse cname = "\\/" orelse cname = "==>" then
-		 let val th = 
+		 let val th =
 		     let val lth = PRENEX_QCONV l
-		     in let val rth = PRENEX_QCONV r 
+		     in let val rth = PRENEX_QCONV r
 			in MK_COMB(AP_TERM oper lth,rth)
 			end handle HOL_ERR _ => AP_THM (AP_TERM oper lth) r
 		     end handle HOL_ERR _ => AP_TERM lop (PRENEX_QCONV r)
-		     val tm' = rand(concl th) 
+		     val tm' = rand(concl th)
 		     val th' = PRENEX2_QCONV tm'
 		 in TRANS th th'
 		 end
@@ -244,5 +249,5 @@ val PRENEX_CONV =
 	  end
   in fn tm => TRY_CONV PRENEX_QCONV tm
   end;
-  
+
 end;

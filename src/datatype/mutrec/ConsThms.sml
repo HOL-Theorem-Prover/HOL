@@ -16,6 +16,11 @@ struct
 open HolKernel Parse basicHol90Lib;
 infix THEN THENL;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+
 type thm = Thm.thm;
 
 fun decompose (tm, args_so_far) =
@@ -27,8 +32,8 @@ fun decompose (tm, args_so_far) =
 	(tm, args_so_far)
 
 
-fun build {New_Ty_Existence_Thm, New_Ty_Induct_Thm,New_Ty_Uniqueness_Thm} 
- = let 
+fun build {New_Ty_Existence_Thm, New_Ty_Induct_Thm,New_Ty_Uniqueness_Thm}
+ = let
 val rec_thm = New_Ty_Existence_Thm
 val induct_thm = New_Ty_Induct_Thm
 
@@ -71,7 +76,7 @@ fun divide_list first_item (item::rest_list) current_type current_sublist
    functions. *)
 
 
-(* the first thing I want to to is tear apart rec_thm to find out what 
+(* the first thing I want to to is tear apart rec_thm to find out what
    all the constructors and their args are *)
 
 val temp = map strip_forall
@@ -98,8 +103,8 @@ val cons_var_list = map split temp
 val all_vars = flatten (flatten (map snd cons_var_list))
 (* note all_vars is used below, not as a parameter *)
 
-fun add_differently_named_vars (cons_list, vars_list) = 
-    let val new_vars_list = 
+fun add_differently_named_vars (cons_list, vars_list) =
+    let val new_vars_list =
 	map (fn y => map (fn x => variant all_vars x) y) vars_list
     in
 	(cons_list, vars_list, new_vars_list)
@@ -135,8 +140,8 @@ fun mk_conjuncts
      origin_structure = "prove_mutual_constructors_distinct"}
 
 (* this function makes all the conjuncts for one type *)
-fun mk_all_conjuncts (con::cons_list, 
-		      x_args::x_args_list, y_args::y_args_list) = 
+fun mk_all_conjuncts (con::cons_list,
+		      x_args::x_args_list, y_args::y_args_list) =
     if (cons_list = []) then
 	([] : term list)
     else
@@ -149,7 +154,7 @@ fun mk_all_conjuncts (con::cons_list,
 
 val conjuncts_list = map mk_all_conjuncts cons_var_newvar_list
 
-(* now, the problem is that there may be types that have only one 
+(* now, the problem is that there may be types that have only one
    constructor, so the list of conjuncts may be empty, so we have
    to filter out these empty lists *)
 val filtered_list = filter (fn x => x <> []) conjuncts_list
@@ -167,9 +172,9 @@ val num_ty = Type`:num`
 fun mk_function_variable the_type =
     mk_var {Name = "dist_aux_ftn_"^(#Tyop (dest_type the_type)),
 	    Ty = mk_type {Tyop = "fun", Args = [the_type, num_ty]}}
-fun mk_def_term ftn_var old_type (app_con::app_con_list) count = 
+fun mk_def_term ftn_var old_type (app_con::app_con_list) count =
     let val new_type = type_of app_con
-	val new_ftn_var = 
+	val new_ftn_var =
 	    if new_type = old_type then	ftn_var
 	    else mk_function_variable new_type
 	val new_conjunct =
@@ -196,10 +201,10 @@ fun mk_def_term ftn_var old_type (app_con::app_con_list) count =
    different numbers when applied to terms made from different
    constructors *)
 
-val def_term = 
+val def_term =
     let val old_type = type_of (hd applied_cons_list)
     in
-	mk_def_term (mk_function_variable old_type) old_type 
+	mk_def_term (mk_function_variable old_type) old_type
 	applied_cons_list 0
     end
 
@@ -210,7 +215,7 @@ val dist_aux_ftns_thm = Recftn.define_mutual_functions
                                  (hd applied_cons_list))))^"_DEF")}
 
 
-(* OK, now the way that we go about proving the theorem is this -- 
+(* OK, now the way that we go about proving the theorem is this --
    we need to prove, for example,
          ~(CON1 <args for CON1> = CON2 <args for CON2>)
    using STRIP_TAC, this breaks down to showing
@@ -220,8 +225,8 @@ val dist_aux_ftns_thm = Recftn.define_mutual_functions
    We apply the appropriate distinctness function, getting
          n1 = n2
    where n1 and n2 are two different natural numbers.
-   We apply num_EQ_CONV and get 
-         F   
+   We apply num_EQ_CONV and get
+         F
    and we're done *)
 
 fun solve_goal_tac dist_ftn (asms, gl) =
@@ -271,7 +276,7 @@ val mutual_constructors_distinct =
 
 
 
-(* the first thing I want to to is tear apart rec_thm to find out what 
+(* the first thing I want to to is tear apart rec_thm to find out what
    all the constructors and their args are *)
 
 val temp = map strip_forall
@@ -282,7 +287,7 @@ val applied_cons_list = map (fn x => rand (lhs (snd x))) temp
 
 val divided_list = divide_list true applied_cons_list Type.bool [] []
 
-(* At this stage, I will eliminate from the list the constructors 
+(* At this stage, I will eliminate from the list the constructors
    that have no arguments, since they won't be needed in the theorem *)
     val temp = map (map (fn x => decompose (x, []))) divided_list
 
@@ -298,8 +303,8 @@ val cons_var_list = map split unsplit_cons_var_list
    over all of them separately. *)
 val all_vars = flatten (flatten (map snd cons_var_list))
 (* note all_vars is used below, not as a parameter *)
-fun add_differently_named_vars (cons_list, vars_list) = 
-    let val new_vars_list = 
+fun add_differently_named_vars (cons_list, vars_list) =
+    let val new_vars_list =
 	map (fn y => map (fn x => variant all_vars x) y) vars_list
     in
 	(cons_list, vars_list, new_vars_list)
@@ -321,7 +326,7 @@ fun mk_1_1_statement con x_vars y_vars =
     let val appl_x = list_mk_comb (con, x_vars)
 	val appl_y = list_mk_comb (con, y_vars)
 	val left = mk_eq {lhs = appl_x, rhs = appl_y}
-	val eq_term = mk_eq {lhs = left, 
+	val eq_term = mk_eq {lhs = left,
 			     rhs = mk_var_eq_conj x_vars y_vars}
 	val forall_term = list_mk_forall (y_vars, eq_term)
     in
@@ -332,7 +337,7 @@ val T_term = Term`T`
 fun mk_goal_for_one_type ([],[],[]) = T_term
   | mk_goal_for_one_type (con::[],x_vars::[],y_vars::[]) =
 	mk_1_1_statement con x_vars y_vars
-  | mk_goal_for_one_type (con::cons_list, x_vars::x_vars_list, 
+  | mk_goal_for_one_type (con::cons_list, x_vars::x_vars_list,
 			  y_vars::y_vars_list) =
     mk_conj {conj1 = mk_1_1_statement con x_vars y_vars,
 	     conj2 = mk_goal_for_one_type (cons_list, x_vars_list,
@@ -357,7 +362,7 @@ fun mk_ftn_var con suffix type_of_ftn =
     in {ftn_name = name, ftn_var =  mk_var {Name = name, Ty = type_of_ftn}}
     end
 
-fun mk_hilbert the_type = 
+fun mk_hilbert the_type =
     let val the_ftn = mk_abs {Bvar = mk_var {Name = "x", Ty = the_type},
 			      Body = T_term}
 	val hilbert_type = mk_fun_ty (mk_fun_ty the_type Type.bool) the_type
@@ -374,10 +379,10 @@ fun define_single_ftn con arg =
 	val {ftn_var, ftn_name} = mk_ftn_var con "_arg" type_of_ftn
 	val ftn_appl_term = mk_comb {Rator = ftn_var, Rand = appl_term}
 	val def_clause = mk_eq {lhs = ftn_appl_term, rhs = arg}
-	val allelse_lhs = mk_comb {Rator = ftn_var, 
+	val allelse_lhs = mk_comb {Rator = ftn_var,
 				   Rand = mk_var {Name = "allelse",
 						  Ty = appl_term_type}}
-	val allelse_clause = mk_eq {lhs = allelse_lhs, 
+	val allelse_clause = mk_eq {lhs = allelse_lhs,
 				    rhs = mk_hilbert arg_type}
 	val def_term = mk_conj {conj1 = def_clause, conj2 = allelse_clause}
 	val def_name = ftn_name ^ "_DEF"
@@ -400,13 +405,13 @@ fun define_several_functions con args =
 		val ftn_appl_term = mk_comb {Rator = ftn_var,
 					     Rand = appl_term}
 		val def_clause = mk_eq {lhs = ftn_appl_term, rhs = arg}
-		val allelse_lhs = 
-		    mk_comb {Rator = ftn_var, 
+		val allelse_lhs =
+		    mk_comb {Rator = ftn_var,
 			     Rand = mk_var {Name = "allelse",
 					    Ty = appl_term_type}}
-		val allelse_clause = mk_eq {lhs = allelse_lhs, 
+		val allelse_clause = mk_eq {lhs = allelse_lhs,
 					    rhs = mk_hilbert arg_type}
-		val def_term = mk_conj {conj1 = def_clause, 
+		val def_term = mk_conj {conj1 = def_clause,
 					conj2 = allelse_clause}
 		val def_name = ftn_name ^"_DEF"
 		val ftn_thm = Recftn.define_mutual_functions
@@ -437,7 +442,7 @@ fun ftn_defs_for_one_type unsplit_cons_vars =
    each constructor for that type. Each element of this is a list, containing
    information on the different extraction functions (there is one for
    each argument) defined for that constructor. Each of these elements is
-   a pair consisting of the definition of the function and the name of 
+   a pair consisting of the definition of the function and the name of
    the function defined. *)
 
 val ftn_defs = map ftn_defs_for_one_type unsplit_cons_var_list
@@ -459,7 +464,7 @@ fun solve_goal_tac ftn_info (asms, gl) =
 	val args_eq_list = strip_conj args_eq
 	val thm1 = ASSUME appl_cons_eq
 	fun mk_thm (((name,thm),const)::more_info) =
-	    let val this_thm = 
+	    let val this_thm =
 		REWRITE_RULE [thm] (AP_TERM const thm1)
 	    in
 		if null more_info then
@@ -496,7 +501,7 @@ fun solve_goal_for_one_type ftn_info_for_type goal =
 
 fun prove_theorms (ftn_info::more_info) (goal::more_goals) =
     (solve_goal_for_one_type ftn_info goal)::
-    prove_theorms more_info more_goals 
+    prove_theorms more_info more_goals
   | prove_theorms [] [] = []
   | prove_theorms _ _ = raise HOL_ERR
     {message = "ftn_info and goals lists have different length",
@@ -506,9 +511,9 @@ fun prove_theorms (ftn_info::more_info) (goal::more_goals) =
 val mutual_constructors_one_one = LIST_CONJ (prove_theorms ftn_defs goals)
 
 
-val argument_extraction_definitions = 
-foldr (fn (listlist,name_thm_list)=> 
-        foldr (fn (name_thm_const_list, name_thm_l) => 
+val argument_extraction_definitions =
+foldr (fn (listlist,name_thm_list)=>
+        foldr (fn (name_thm_const_list, name_thm_l) =>
 	        foldr (fn ((n_t,c),n_t_list) => n_t::n_t_list)
 		      name_thm_l
 	              name_thm_const_list)
@@ -534,7 +539,7 @@ val conjuncts = strip_conj ant
 fun make_props_aux {prop_conjs, props, prev_type, term_var,
 		    conjuncts = (conj::more_conjs)} =
     let val (vars, impl) = strip_forall conj
-	val prop_appl_cons = 
+	val prop_appl_cons =
 	    if is_imp impl then
 		#conseq (dest_imp impl)
 	    else
@@ -547,7 +552,7 @@ fun make_props_aux {prop_conjs, props, prev_type, term_var,
 			Ty = new_type}
 	    else
 		term_var
-	val new_conj_in_prop = 
+	val new_conj_in_prop =
 	    list_mk_exists (vars, mk_eq {lhs = new_term_var, rhs = appl_cons})
     in
 	if (new_type <> prev_type) then
@@ -571,7 +576,7 @@ fun make_props_aux {prop_conjs, props, prev_type, term_var,
 fun make_props [] = []
   | make_props (conj :: more_conjs) =
     let val (vars, impl) = strip_forall conj
-	val prop_appl_cons = 
+	val prop_appl_cons =
 	    if is_imp impl then
 		#conseq (dest_imp impl)
 	    else
@@ -580,7 +585,7 @@ fun make_props [] = []
 	val new_type = type_of appl_cons
 	val new_term_var = mk_var {Name = (#Tyop (dest_type new_type))^"_term",
 				   Ty = new_type}
-	val new_conj_in_prop = 
+	val new_conj_in_prop =
 	    list_mk_exists (vars, mk_eq {lhs = new_term_var, rhs = appl_cons})
     in
     make_props_aux {prop_conjs = [new_conj_in_prop],
@@ -605,31 +610,31 @@ fun exists_list_tac (ex_term::terms) =
 fun just_do_it lhs_args (asms, gl) =
     if (lhs_args = []) then
 	REWRITE_TAC [] (asms, gl)
-    else 
+    else
 	(exists_list_tac lhs_args THEN REWRITE_TAC []) (asms, gl)
 
 fun solve_goal_tac (asms, gl) =
     let val gl_is_disj = is_disj gl
-	val term1 = 
+	val term1 =
 	    if gl_is_disj then #disj1 (dest_disj gl)
 	    else gl
 	val (vars, eq_term) = strip_exists term1
 	val {lhs = left, rhs = right} = dest_eq eq_term
 	val (lhs_cons, lhs_args) = decompose (left, [])
 	val (rhs_cons, rhs_args) = decompose (right, [])
-        (* the folowing function is nested so that 
+        (* the folowing function is nested so that
 	   lhs_cons and lhs_args can be free in it *)
 	fun helper (asms, gl) =
 	    let val gl_is_disj = is_disj gl
-		val term1 = 
+		val term1 =
 		if gl_is_disj then #disj1 (dest_disj gl)
 		else gl
 		val (vars, eq_term) = strip_exists term1
-		val (rhs_cons, rhs_args) = 
+		val (rhs_cons, rhs_args) =
 		    decompose (rhs eq_term, [])
 	    in
 		if not gl_is_disj then
-		    just_do_it lhs_args (asms, gl) 
+		    just_do_it lhs_args (asms, gl)
 		else if lhs_cons = rhs_cons then
 		    (DISJ1_TAC THEN just_do_it lhs_args) (asms, gl)
 		else
@@ -644,7 +649,7 @@ fun solve_goal_tac (asms, gl) =
 	    (DISJ2_TAC THEN helper) (asms, gl)
     end
 
-val goal_thm = 
+val goal_thm =
     TAC_PROOF (([], goal),
 	       REPEAT STRIP_TAC THEN solve_goal_tac)
 

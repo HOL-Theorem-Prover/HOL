@@ -16,6 +16,11 @@ fun BTOOLS_ERR{func,mesg} =
               message = mesg};
 
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+
 (*--------------------------------------------------------------------------
  * I am not sure if this really does give NNF, but it is useful
  * interactively, especially when doing proof by contradiction.
@@ -115,10 +120,10 @@ fun variants away0 vlist =
  *---------------------------------------------------------------------------*)
 val COND_CONG = prove(
 --`!P P' (x:'a) x' y y'.
-      (P = P') /\ 
+      (P = P') /\
       (P'  ==> (x = x')) /\
       (~P' ==> (y = y'))
-         ==> 
+         ==>
       ((if P then x else y) = (if P' then x' else y'))`--,
  REPEAT STRIP_TAC THEN
  REPEAT COND_CASES_TAC THEN

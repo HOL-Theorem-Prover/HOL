@@ -25,6 +25,11 @@ fun failwith function = raise HOL_ERR{origin_structure = "NumArithCons",
 
 local
    open Lib Term Psyntax NumHOLType Parse
+
+   val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+   fun -- q x = Term q
+   fun == q x = Type q
+
 in
 type term = Term.term
 (*==========================================================================*)

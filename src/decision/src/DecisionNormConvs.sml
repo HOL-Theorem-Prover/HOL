@@ -15,8 +15,15 @@
 structure DecisionNormConvs =
 struct
 
-local open HolKernel Parse basicHol90Lib
-      infix THEN
+local
+  open HolKernel Parse basicHol90Lib
+  infix THEN
+  (* VERY important that these be local declarations as this file does
+     not have a .sig file to hide the Type and Term values below, and
+     we absolutely don't want them exported. *)
+  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+  fun -- q x = Term q
+  fun == q x = Type q
 in
 fun failwith function =
   raise HOL_ERR{origin_structure = "DecisionNormConvs",

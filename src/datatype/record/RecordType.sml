@@ -11,6 +11,10 @@ struct
 local open HolKernel Parse basicHol90Lib
       infix THEN
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 fun map3 f ([], _, _) = []
   | map3 f (x::xs, ys, zs) = f (x, hd ys, hd zs) :: map3 f (xs, tl ys, tl zs)
 

@@ -33,6 +33,10 @@ struct
 
 open HolKernel Parse Drule Tactical Tactic Conv Prim_rec ;
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 infix ## |-> THEN THENC THENL;
 infixr -->;
 

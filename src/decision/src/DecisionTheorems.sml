@@ -23,6 +23,10 @@ val m = --`m:num`--
 and n = --`n:num`--
 and p = --`p:num`--;
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 (*===========================================================================*)
 (* Theorems for normalizing arithmetic                                       *)
 (*===========================================================================*)
@@ -68,7 +72,7 @@ val SUC_ADD2 = arithmeticTheory.SUC_ADD_SYM;
 (* MULT_SUC = |- !m n. (SUC m) * n = (m * n) + n                             *)
 (*---------------------------------------------------------------------------*)
 
-local 
+local
    val thms = CONJUNCTS (SPEC_ALL (arithmeticTheory.MULT_CLAUSES))
 in
    val ZERO_MULT = GEN_ALL (el 1 thms)

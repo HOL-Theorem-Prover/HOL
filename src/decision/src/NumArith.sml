@@ -35,6 +35,10 @@ type thm   = Thm.thm
 type num   = NumType.num;
 type coeffs = num * (string * num) list;
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 
 (*==========================================================================*)
 (* Conversions for normalizing arithmetic                                   *)

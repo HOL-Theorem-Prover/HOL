@@ -102,6 +102,10 @@ fun ERR func mesg =
      origin_function = func,
      message = mesg};
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 val OR  = --`$\/`--;
 val AND = --`$/\`--;
 

@@ -1,9 +1,13 @@
-structure Halts :> Halts = 
+structure Halts :> Halts =
 struct
 
 open HolKernel Parse basicHol90Lib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q
 
 open arithLib Let_conv NonRecSize;
 
@@ -12,14 +16,14 @@ type conv     = Abbrev.conv
 type tactic = Abbrev.tactic;
 type defn   = Defn.defn;
 
-fun ERR f m = 
+fun ERR f m =
   HOL_ERR{origin_structure="Halts", origin_function=f, message=m};
 
 
-fun proper_subterm tm1 tm2 = 
+fun proper_subterm tm1 tm2 =
   not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
 
-fun isWFR tm = 
+fun isWFR tm =
   (#Name(dest_const(fst(strip_comb tm))) = "WF")
   handle HOL_ERR _ => false;
 
@@ -29,11 +33,11 @@ fun foo [] _  = raise ERR "foo" "empty arg."
   | foo X [y] = [(list_mk_pair X, y)]
   | foo (x::rst) (y::rst1) = (x,y)::foo rst rst1;
 
-fun dest tm = 
+fun dest tm =
   let val Ryx = (snd o strip_imp o snd o strip_forall) tm
       val {Rator=Ry, Rand=x} = dest_comb Ryx
       val y = rand Ry
-  in 
+  in
      foo (strip_pair y) (strip_pair x)
   end;
 
@@ -49,7 +53,7 @@ fun copies x =
 fun fill n [] = copies false n
   | fill n (h::t) = h::fill (n-1) t;
 
-fun rectangular L = 
+fun rectangular L =
  let val lens = map length L
  in case mk_set lens
      of []  => raise ERR "rectangular" "impossible"
@@ -59,7 +63,7 @@ fun rectangular L =
                end
  end;
 
-fun true_col L = 
+fun true_col L =
       if (all null L) then []
       else all I (map (Lib.trye hd) L)::true_col (map (Lib.trye tl) L);
 
@@ -67,14 +71,14 @@ fun fix [] = []
   | fix (true::t)  = true::map (fn x => false) t
   | fix (false::t) = false::fix t;
 
-fun transp L = 
+fun transp L =
       if (all null L) then []
       else exists I (map (Lib.trye hd) L)::transp (map (Lib.trye tl) L);
 
-fun projects L0 = 
+fun projects L0 =
   let val L = rectangular L0
       val trues = true_col L
-  in 
+  in
     if exists I trues then fix trues else transp L
   end;
 
@@ -95,12 +99,12 @@ val Plus = mk_const{Name="+", Ty=Type`:num -> num -> num`};
 fun mk_plus x y = list_mk_comb(Plus,[x,y]);
 fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero};
 
-fun list_mk_prod_tyl L = 
+fun list_mk_prod_tyl L =
  let val (front,(b,last)) = front_last L
      val tysize = TypeBase.type_size (TypeBase.theTypeBase())
      val last' = (if b then tysize else K0) last
   in
-  itlist (fn (b,ty1) => fn M => 
+  itlist (fn (b,ty1) => fn M =>
      let val x = mk_var{Name="x",Ty=ty1}
          val y = mk_var{Name="y",Ty=fst(dom_rng (type_of M))}
      in
@@ -126,18 +130,18 @@ fun list_mk_prod_tyl L =
  * The second measure is just the total size of the arguments.               *
  *---------------------------------------------------------------------------*)
 
-local open Defn 
+local open Defn
 in
 fun guessR defn =
  if null (tcs_of defn) then []
-  else 
+  else
   case reln_of defn
    of NONE => []
-    | SOME R => 
+    | SOME R =>
        let val domty = fst(dom_rng(type_of R))
            val (_,tcs) = Lib.pluck isWFR (tcs_of defn)
            val matrix = map dest tcs
-           val check1 = map (map (uncurry proper_subterm)) matrix 
+           val check1 = map (map (uncurry proper_subterm)) matrix
            val chf = projects check1
            val domtyl = strip_prod_ty chf domty
            val domty0 = list_mk_prod_tyl domtyl
@@ -154,7 +158,7 @@ fun try_proof def tac r =
        val tcs = tcs_of def'
        val thm = prove(list_mk_conj tcs, tac)
        val thml = CONJUNCTS thm
-    in 
+    in
        elim_tcs def' thml
     end
 fun proveTotal0 tac def =
@@ -172,9 +176,9 @@ fun simplify_conv tm =
     [prim_recTheory.WF_measure, prim_recTheory.WF_LESS,
      prim_recTheory.measure_def, relationTheory.inv_image_def]
   THENC REDEPTH_CONV Let_conv.GEN_BETA_CONV
-  THENC Rewrite.REWRITE_CONV 
+  THENC Rewrite.REWRITE_CONV
           (pairTheory.pair_rws @
-           mapfilter (#2 o valOf o TypeBase.size_of) 
+           mapfilter (#2 o valOf o TypeBase.size_of)
                (TypeBase.listItems (TypeBase.theTypeBase())))
   THENC REDEPTH_CONV BETA_CONV
   THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES])  tm;
@@ -182,7 +186,7 @@ fun simplify_conv tm =
 fun prover g =
 (CONV_TAC simplify_conv
   THEN REPEAT STRIP_TAC
-  THEN REPEAT (POP_ASSUM (fn th => 
+  THEN REPEAT (POP_ASSUM (fn th =>
        if arithSimps.is_arith (concl th)
        then MP_TAC th else ALL_TAC))
   THEN CONV_TAC arithLib.ARITH_CONV) g;
@@ -195,28 +199,28 @@ val proveTotal = proveTotal0 prover;
 
 val Define = Count.apply bossLib.Define;
 
-val gcd_def = 
-  Define 
+val gcd_def =
+  Define
     `(gcd 0 y = y)  /\
      (gcd (SUC x) 0 = SUC x) /\
-     (gcd (SUC x) (SUC y) = 
-         if y<=x then gcd (x-y)   (SUC y) 
+     (gcd (SUC x) (SUC y) =
+         if y<=x then gcd (x-y)   (SUC y)
                  else gcd (SUC x) (y-x))`;
 
-val gcd_def = 
-  Define 
+val gcd_def =
+  Define
     `(gcd (0,y)          = y)      /\
      (gcd (SUC x, 0)     = SUC x)  /\
-     (gcd (SUC x, SUC y) = ((y<=x) => gcd (x-y, SUC y) 
+     (gcd (SUC x, SUC y) = ((y<=x) => gcd (x-y, SUC y)
                                    |  gcd (SUC x, y-x)))`;
 
-val Tot_def = 
+val Tot_def =
   Define
     `(Tot [] = 0) /\
      (Tot (CONS 0 t) = Tot t) /\
      (Tot (CONS (SUC n) t) = 1 + Tot (CONS n t))`;
 
-val Tot_def = 
+val Tot_def =
   Define
     `(Tot [] = 0) /\
      (Tot (CONS 0 t) = Tot t) /\
@@ -236,7 +240,7 @@ val fib_def = Define
 val smaller_def = Define
   `(smaller((0,i), z) = (i:num))    /\
    (smaller((SUC x, i), (0,j)) = j) /\
-   (smaller((SUC x, i), (SUC y,j)) = 
+   (smaller((SUC x, i), (SUC y,j)) =
       ((SUC y = i) => i
      | (SUC x = j) => j
      | smaller((x,i), (y,j))))`;
@@ -248,17 +252,17 @@ val map2_def = Define
 
 val sorted_def = Define
    `(sorted (R, [])  = T) /\
-    (sorted (R, [x]) = T) /\   
+    (sorted (R, [x]) = T) /\
     (sorted (R, CONS x (CONS y rst)) = R x y /\ sorted (R, CONS y rst))`;
 
-val filter_def = 
+val filter_def =
  Define
   `(filter P [] = []) /\
    (filter P (CONS h t) = (P h => CONS h (filter P t) | filter P t))`;
 
 val qsort_def = Define
    `(qsort(ord,[]) = []) /\
-    (qsort(ord, CONS x rst) = 
+    (qsort(ord, CONS x rst) =
       APPEND (qsort(ord,filter($~ o ord x) rst))
              (CONS x (qsort(ord,filter(ord x) rst))))`;
 
@@ -273,8 +277,8 @@ val mem_def = Define `(mem x [] = F) /\ (mem x (CONS h t) = (x=h) \/ mem x t)`;
 val variant_def = Define `variant(x, L) = (mem x L => variant(x+1, L) | x)`;
 
 (* Destructor style -- fails to prove termination *)
-Define `Gate (l:num list,x) = 
-           if l=[] then  1 
+Define `Gate (l:num list,x) =
+           if l=[] then  1
            else let rst = Gate (TL l, x) in FST (HD l, x))`;
 
 (* Constructor style. *)
@@ -284,18 +288,18 @@ Define `(Gate ([],x) = 1)
 val div_def = Define
    `(div(0,x) = (0,0)) /\
     (div(SUC x, y) = let (q,r) = div(x,y)
-                     in (y <= SUC r => (SUC q,0) 
+                     in (y <= SUC r => (SUC q,0)
                         | (*otherwise*) (q, SUC r)))`;
 
 (* Test nested lets *)
 val div_def = Define
    `(Div(0,x) = (0,0)) /\
-    (Div(SUC x, y) = let q = FST(Div(x,y)) 
+    (Div(SUC x, y) = let q = FST(Div(x,y))
                      and r = SND(Div(x,y))
-                     in (y <= SUC r => (SUC q,0) 
+                     in (y <= SUC r => (SUC q,0)
                         | (*otherwise*) (q, SUC r)))`;
 
-val part_def = 
+val part_def =
 Define
      `(part (P, [], l1,l2)         = (l1,l2)) /\
       (part (P, CONS h rst, l1,l2) = (P h => part(P,rst, CONS h l1, l2)
@@ -304,7 +308,7 @@ Define
 (*---------------------------------------------------------------------------*
  * new_recursive_definition gets invoked.                                    *
  *---------------------------------------------------------------------------*)
-val part_def = 
+val part_def =
    Define
        `(part P [] l1 l2 = (l1,l2)) /\
         (part P (CONS h rst) l1 l2 =
@@ -317,10 +321,10 @@ val part_def =
  *---------------------------------------------------------------------------*)
 val qsort_def = Define
    `(qsort ord [] = []) /\
-    (qsort ord (CONS x rst) = 
+    (qsort ord (CONS x rst) =
        let (l1,l2) = part (ord x) rst [] []
-       in 
-        APPEND (qsort ord l1) 
+       in
+        APPEND (qsort ord l1)
                (CONS x (qsort ord l2)))`;
 
 
@@ -330,14 +334,14 @@ val qsort_def = Define
 bossLib.Hol_datatype `colour = Red | White | Blue`;
 
 val Swap_def =
- Define 
- `(Swap [] = NONE)        /\ 
-  (Swap (CONS White (CONS Red rst)) =   SOME(CONS Red (CONS White rst)))  /\ 
-  (Swap (CONS Blue  (CONS Red rst)) =   SOME(CONS Red (CONS Blue rst)))   /\ 
-  (Swap (CONS Blue  (CONS White rst)) = SOME(CONS White (CONS Blue rst))) /\ 
+ Define
+ `(Swap [] = NONE)        /\
+  (Swap (CONS White (CONS Red rst)) =   SOME(CONS Red (CONS White rst)))  /\
+  (Swap (CONS Blue  (CONS Red rst)) =   SOME(CONS Red (CONS Blue rst)))   /\
+  (Swap (CONS Blue  (CONS White rst)) = SOME(CONS White (CONS Blue rst))) /\
   (Swap (CONS x rst) = option_APPLY (CONS x) (Swap rst))`;
 
-val Flag = 
+val Flag =
  Define `Flag list = option_case list (\l. Flag l) (Swap list)`;
 
 (* Note that eta-expansion "\l. Flag l" needed in definition of Flag.  *)
@@ -346,9 +350,9 @@ val Flag =
 (* Binary trees. *)
 bossLib.Hol_datatype `btree = Leaf of 'a
                             | Brh of 'a => btree => btree`;
- 
+
 (* prim. rec. *)
-Define 
+Define
    `(upheap R w (Leaf x) = Brh w (Leaf x) (Leaf x)) /\
     (upheap R w (Brh v p q) =
          (R w v => Brh w (upheap R v q) p
@@ -356,10 +360,10 @@ Define
 
 (* Not sure if this actually does anything useful. *)
 Define
-   `(merge_heap R (Leaf x) b = b)                         
- /\ (merge_heap R (Brh v b1 b2) (Leaf x) = Brh v b1 b2) 
- /\ (merge_heap R (Brh v b1 b2) (Brh w c1 c2) 
-       = if R v w 
+   `(merge_heap R (Leaf x) b = b)
+ /\ (merge_heap R (Brh v b1 b2) (Leaf x) = Brh v b1 b2)
+ /\ (merge_heap R (Brh v b1 b2) (Brh w c1 c2)
+       = if R v w
          then Brh v (merge_heap R b1 b2) (Brh w c1 c2)
          else Brh w (Brh v b1 b2) (merge_heap R c1 c2))`;
 
@@ -368,10 +372,10 @@ Define
  * term_size and list_size. Would work with multiset ordering.               *
  *---------------------------------------------------------------------------*)
 
-val V_def = 
+val V_def =
 Define
   `(V [] acc = acc)
-/\ (V (CONS(Leaf s) rst) acc        = V rst (CONS [Leaf s] acc)) 
+/\ (V (CONS(Leaf s) rst) acc        = V rst (CONS [Leaf s] acc))
 /\ (V (CONS(Brh x tm1 tm2) rst) acc = V (CONS tm1 (CONS tm2 rst)) acc)`;
 
 TypeBase.type_size (TypeBase.theTypeBase()) (Type`:'a btree list`);
@@ -384,43 +388,43 @@ TypeBase.type_size (TypeBase.theTypeBase()) (Type`:'a btree list`);
  *    Int (Brh x y) = 2 * Int x + Int y + 1                                  *
  *---------------------------------------------------------------------------*)
 
-val Lin_def = 
-Define`(Lin (Leaf x) = Leaf x) 
+val Lin_def =
+Define`(Lin (Leaf x) = Leaf x)
   /\   (Lin (Brh a (Leaf x) bt) = Brh a (Leaf x) (Lin bt))
   /\   (Lin (Brh a (Brh x bt1 bt2) bt) = Lin (Brh x bt1 (Brh a bt2 bt)))`;
 
 
 Define`assoc x (CONS (x1,y) t) = if x=x1 then y else assoc x t`;
 
-Define 
+Define
    `(Maj [] (winner,lead) = (winner,lead))
- /\ (Maj (CONS h t) (leader,0) = 
+ /\ (Maj (CONS h t) (leader,0) =
         if h=leader then Maj t (leader,1) else Maj t (h,1))
- /\ (Maj (CONS h t) (leader, SUC m) = 
+ /\ (Maj (CONS h t) (leader, SUC m) =
         if h=leader then Maj t (leader, SUC(SUC m)) else Maj t (leader, m))`;
 
 (* Used to fail *)
-Define 
+Define
    `(Maj [] (winner,lead)      = (winner,lead))
  /\ (Maj (CONS h t) (leader,0) = Maj t (h=leader => (leader,1) | (h,1)))
- /\ (Maj (CONS h t) (leader, SUC m) = 
+ /\ (Maj (CONS h t) (leader, SUC m) =
         (h=leader => Maj t (leader, SUC(SUC m))
                   |  Maj t (leader, m)))`;
 (* Used to fail *)
-Define 
+Define
    `(Maj [] (winner,lead)      = (winner,lead))
  /\ (Maj (CONS h t) (leader,0) = Maj t (h=leader => (leader,1) | (h,1)))
  /\ (Maj (CONS h t) (leader, SUC m) =
        Maj t (leader, (h=leader => SUC(SUC m) | m)))`;
 
 (* Used to fail *)
-Define 
+Define
    `(Maj [] (winner,lead)      = (winner,lead))
  /\ (Maj (CONS h t) (leader,0) = Maj t ((h=leader => leader | h),1))
  /\ (Maj (CONS h t) (leader, SUC m) =
        Maj t (leader, (h=leader => SUC(SUC m) | m)))`;
 
-Define 
+Define
    `(Maj [] (winner,lead) = (winner,lead))
  /\ (Maj (CONS h t) (_,0) = Maj t (h,1))
  /\ (Maj (CONS h t) (leader, SUC m) =

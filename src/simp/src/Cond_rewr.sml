@@ -3,6 +3,12 @@ structure Cond_rewr :> Cond_rewr = struct
 open HolKernel Parse Drule Conv
      Psyntax liteLib Trace Ho_match Ho_rewrite Ho_theorems;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+
+
 type term = Term.term
 type thm  = Thm.thm
 type conv = Abbrev.conv;

@@ -48,6 +48,10 @@ open Psyntax hol88Lib boolTheory;
 
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 val LAND_CONV = RATOR_CONV o RAND_CONV;
 
 fun MK_COMB_TAC (asl,w) =

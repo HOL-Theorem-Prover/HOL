@@ -11,6 +11,11 @@ open Exception;
 
 infix THEN THENC ORELSE ORELSE_TCL;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+
 type thm = Thm.thm
 type tactic = Abbrev.tactic;
 
@@ -37,7 +42,7 @@ fun thm_eq th1 th2 = (dest_thm th1 = dest_thm th2);
 val the_true =  mk_const("T", Type.bool);
 val the_false = mk_const("F", Type.bool);
 
-fun TAUT q = Ho_rewrite.TAUT (Parse.Term q);
+fun TAUT q = Ho_rewrite.TAUT (Term q);
 
 fun type_match vty cty sofar =
   if is_vartype vty
@@ -1035,7 +1040,7 @@ fun GEN_MESON_TAC min max step ths g =
         end) g;
 
 
-val max_depth = ref 30;         
+val max_depth = ref 30;
 val ASM_MESON_TAC = GEN_MESON_TAC 0 (!max_depth) 1;
 
 fun MESON_TAC ths = POP_ASSUM_LIST (K ALL_TAC) THEN ASM_MESON_TAC ths;

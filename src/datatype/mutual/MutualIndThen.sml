@@ -22,6 +22,11 @@ fun MUTUAL_INDUCT_THEN_ERR{function,message} =
     Exception.HOL_ERR{origin_structure = "Mutual_induct_then",
 		      origin_function = function,
 		      message = message}
+
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 val AND = --`$/\`--;
 
 (* ---------------------------------------------------------------------*)
@@ -34,7 +39,7 @@ val AND = --`$/\`--;
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-fun MOVEQS tys tm = 
+fun MOVEQS tys tm =
    if not (is_forall tm) then
          raise MUTUAL_INDUCT_THEN_ERR{function = "MOVEQS",
 					         message = "not a forall"}
@@ -71,13 +76,13 @@ MOVEQS tys tm;
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-fun REPAIR th = 
+fun REPAIR th =
    let val (Bvars,Body) = strip_forall(concl th)
        val {ant = hy, conseq = cns} = Rsyntax.dest_imp Body
        val tys = map (type_of o #Bvar o Rsyntax.dest_forall) (strip_conj cns)
    in
        CONV_RULE (((itlist (fn v => RAND_CONV o ABS_CONV) Bvars) o
-                   RATOR_CONV o RAND_CONV o 
+                   RATOR_CONV o RAND_CONV o
                    ONCE_DEPTH_CONV) (MOVEQS tys))
               (REWRITE_RULE[AND_IMP_INTRO,GSYM CONJ_ASSOC] th)
    end;
@@ -97,15 +102,15 @@ REPAIR avexp_induction handle e => (print_HOL_ERR e; raise e);
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-fun BETAS fnns body = 
-   if ((is_var body) orelse (is_const body)) 
-   then REFL 
+fun BETAS fnns body =
+   if ((is_var body) orelse (is_const body))
+   then REFL
    else if (is_abs body)
-        then ABS_CONV (BETAS fnns (#Body(dest_abs body))) 
-        else let val {Rator,Rand} = dest_comb body 
-             in 
-             if (mem Rator fnns) 
-             then BETA_CONV 
+        then ABS_CONV (BETAS fnns (#Body(dest_abs body)))
+        else let val {Rator,Rand} = dest_comb body
+             in
+             if (mem Rator fnns)
+             then BETA_CONV
              else let val cnv1 = BETAS fnns Rator
                       and cnv2 = BETAS fnns Rand
                       fun f {Rator,Rand} = (cnv1 Rator, cnv2 Rand)
@@ -124,8 +129,8 @@ fun BETAS fnns body =
 (* NB: the x is always a genvar, so optimized for this case.		*)
 (* ---------------------------------------------------------------------*)
 
-fun GTAC y (A,g) = 
-   let val {Bvar,Body} = dest_forall g 
+fun GTAC y (A,g) =
+   let val {Bvar,Body} = dest_forall g
        and y' = variant (free_varsl (g::A)) y
    in
    ([(A,subst[{redex = Bvar, residue = y'}]Body)],
@@ -165,11 +170,11 @@ fun GTAC y (A,g) =
 (* TACF is a strictly local function, used only to define TACS, below.	*)
 (* ---------------------------------------------------------------------*)
 local
-fun ctacs tm = 
-   if (is_conj tm) 
-   then let val tac2 = ctacs (#conj2(dest_conj tm)) 
+fun ctacs tm =
+   if (is_conj tm)
+   then let val tac2 = ctacs (#conj2(dest_conj tm))
         in
-        fn ttac => CONJUNCTS_THEN2 ttac (tac2 ttac) 
+        fn ttac => CONJUNCTS_THEN2 ttac (tac2 ttac)
         end
    else fn ttac => ttac
 val find = Lib.first;
@@ -177,12 +182,12 @@ fun findx bvars v =
    find (fn x => type_of x = type_of v) bvars
 in
 fun TACF tm =
-   let val (vs,body) = strip_forall tm 
+   let val (vs,body) = strip_forall tm
    in
-   if (is_imp body) 
-   then let val TTAC = ctacs (#ant(dest_imp body)) 
+   if (is_imp body)
+   then let val TTAC = ctacs (#ant(dest_imp body))
         in
-        fn xs => fn ttac => 
+        fn xs => fn ttac =>
 (*
            let val _ = print_string "TACF: xs = "
                val _ = print_terms xs
@@ -197,7 +202,7 @@ fun TACF tm =
 *)
            MAP_EVERY (GTAC o (findx xs)) vs THEN
         (* MAP_EVERY (GTAC o (Lib.K x)) vs THEN *)
-           DISCH_THEN (TTAC ttac) 
+           DISCH_THEN (TTAC ttac)
 (*
            end
 *)
@@ -227,8 +232,8 @@ end;
 
 fun f {conj1,conj2} = (TACF conj1, TACS conj2)
 and
-    TACS tm = 
-      let val (cf,csf) = f(dest_conj tm) 
+    TACS tm =
+      let val (cf,csf) = f(dest_conj tm)
                          handle _ => (TACF tm, Lib.K(Lib.K[]))
       in
       fn xs => fn ttac => (cf xs ttac)::(csf xs ttac)
@@ -246,14 +251,14 @@ and
 (* ---------------------------------------------------------------------*)
 fun GOALS A [] tm = raise MUTUAL_INDUCT_THEN_ERR{function = "GOALS",
 					         message = "empty lsit"}
-  | GOALS A [t] tm = 
+  | GOALS A [t] tm =
       let val (sg,pf) = t (A,tm)
-      in 
+      in
       ([sg],[pf])
       end
-  | GOALS A (h::t) tm = 
+  | GOALS A (h::t) tm =
       let val {conj1,conj2} = dest_conj tm
-          val (sgs,pfs) = GOALS A t conj2 
+          val (sgs,pfs) = GOALS A t conj2
           val (sg,pf) = h (A,conj1)
       in
       ((sg::sgs),(pf::pfs))
@@ -265,17 +270,17 @@ fun GOALS A [] tm = raise MUTUAL_INDUCT_THEN_ERR{function = "GOALS",
 (* GALPH "!x1 ... xn. A ==> B":   alpha-converts the x's to genvars.	*)
 (* --------------------------------------------------------------------- *)
 local
-fun rule v = 
-   let val gv = genvar(type_of v) 
+fun rule v =
+   let val gv = genvar(type_of v)
    in
-   fn eq => let val th = FORALL_EQ v eq 
-            in 
+   fn eq => let val th = FORALL_EQ v eq
+            in
             TRANS th (GEN_ALPHA_CONV gv (rhs(concl th)))
             end
    end
 in
 fun GALPH tm =
-   let val (vs,hy) = strip_forall tm 
+   let val (vs,hy) = strip_forall tm
    in
    if (is_imp hy)
    then Lib.itlist rule vs (REFL hy)
@@ -291,8 +296,8 @@ end;
 
 
 fun f {conj1,conj2} = (GALPH conj1, GALPHA conj2)
-and GALPHA tm = 
-   let val (c,cs) = f(dest_conj tm) 
+and GALPHA tm =
+   let val (c,cs) = f(dest_conj tm)
    in
    MK_COMB(AP_TERM AND c, cs)
    end
@@ -307,12 +312,12 @@ and GALPHA tm =
 (* --------------------------------------------------------------------- *)
 
 fun mapshape [] _ _ =  [] |
-    mapshape (n1::nums) (f1::funcs) args = 
+    mapshape (n1::nums) (f1::funcs) args =
        let val (f1_args,args') = Lib.split_after n1 args
-       in 
+       in
        (f1 f1_args)::(mapshape nums funcs args')
        end;
- 
+
 
 (* --------------------------------------------------------------------- *)
 (* MUTUAL_INDUCT_THEN : general induction tactic for mutuallly recursive *)
@@ -320,7 +325,7 @@ fun mapshape [] _ _ =  [] |
 (* --------------------------------------------------------------------- *)
 local val bool = genvar (Type`:bool`)
 
-fun MUTUAL_INDUCT_THEN1 th = 
+fun MUTUAL_INDUCT_THEN1 th =
    let val th' = REPAIR th
 (*
        val _ = print_string "Repaired induction theorem:\n"
@@ -370,7 +375,7 @@ fun MUTUAL_INDUCT_THEN1 th =
           val ts_thm = Tactical.prove (mk_eq{lhs = list_mk_conj ts',
                                              rhs = list_mk_conj ts},
                        REWRITE_TAC[] THEN
-                       EQ_TAC THEN STRIP_TAC THEN 
+                       EQ_TAC THEN STRIP_TAC THEN
                        REPEAT CONJ_TAC THEN
                        CHECK_TAC)
 (*
@@ -419,7 +424,7 @@ fun MUTUAL_INDUCT_THEN1 th =
 
 in
 
-fun MUTUAL_INDUCT_THEN th ttac = 
+fun MUTUAL_INDUCT_THEN th ttac =
     (MUTUAL_INDUCT_THEN1 th ttac)
     THEN REWRITE_TAC[]
     THEN TRY (UNDISCH_TAC (concl TRUTH) THEN DISCH_THEN (fn th => ALL_TAC))

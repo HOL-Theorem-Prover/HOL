@@ -24,6 +24,9 @@ val rem = Int.rem;
 infix 7 quot rem;
 
 open HolKernel Parse basicHol90Lib TypeInfo;
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
 
 infix THEN ORELSE;
 
@@ -69,7 +72,7 @@ fun find test [] = NONE
 
 
 (*
- is_closed determines whether there is a witness for each type in the 
+ is_closed determines whether there is a witness for each type in the
  arg_info for a constructor.
 *)
 fun is_closed {constructor_arg_info = [], ...} = true
@@ -132,7 +135,7 @@ fun find_witnesses {seen_new_witness_this_pass,
 		    no_witness_this_pass,
 		    witnesses} =
     let
-	val witness = find 
+	val witness = find
 	                (fn {name,arg_info} =>
 			 is_closed {constructor_arg_info = arg_info,
 				    witnesses = witnesses})
@@ -201,7 +204,7 @@ val existence_witnesses =
 
 
 (* First we'll define a type that is a combinition of all types being
-   defined, and use this as a base for defining other types. The name of 
+   defined, and use this as a base for defining other types. The name of
    this combinition type (the joint_name) is the concatenation (separated
    by _) of all the type names being defined, preceded by "joint_ty" *)
 val joint_name = rev_itlist
@@ -219,7 +222,7 @@ val big_simple_spec =
                      constructors part_result))
  	  mut_rec_ty_spec
  	  [];
- 
+
 val JointTypeAxiom = Define_type.dtype
                      {save_name = joint_name^"_Axiom",
                       ty_name = joint_name,
@@ -262,12 +265,12 @@ fun type_num name = type_num_aux name 1 type_names
  recursive type.
 *)
 
-(* get_var_info is used to create the variables (and numbers) we will 
+(* get_var_info is used to create the variables (and numbers) we will
    need to create the return functions for our joint select function.
    The recN vars returned are the vars representing the return values of
    the recursive calls to the joint select function, the number terms will
-   be the values these recursive calls should return for the item to be a 
-   legitimate member of a particular type, and the xN vars are the vars 
+   be the values these recursive calls should return for the item to be a
+   legitimate member of a particular type, and the xN vars are the vars
    representing the arguments to the constructor the return function
    is for. We build up the being_defined & existing constructor arg lists
    separately since the return functions take the existing args before
@@ -282,7 +285,7 @@ fun type_num name = type_num_aux name 1 type_names
 fun get_var_info {arg_info =[],
 		  type_case_num,
 		  var_num,
-		  recvar_eq_num_list, 
+		  recvar_eq_num_list,
 		  being_defined_args,
 		  existing_args} =
       {recvar_eq_num_list = rev recvar_eq_num_list,
@@ -293,17 +296,17 @@ fun get_var_info {arg_info =[],
  Case: We are looking at an argument of existing type.  We need to generate
  a variable of the existing type from var_num and add it to the
  existing_args.
-*) 
+*)
   | get_var_info {arg_info = (existing ty)::arg_info,
 		  type_case_num,
 		  var_num,
-		  recvar_eq_num_list, 
+		  recvar_eq_num_list,
 		  being_defined_args,
-		  existing_args} = 
+		  existing_args} =
        get_var_info {arg_info = arg_info,
 		     type_case_num = type_case_num,
 		     var_num = var_num + 1,
-		     recvar_eq_num_list = recvar_eq_num_list, 
+		     recvar_eq_num_list = recvar_eq_num_list,
 		     being_defined_args = being_defined_args,
 		     existing_args =
 		       (mk_var {Name = "x"^(int_to_string var_num),
@@ -312,7 +315,7 @@ fun get_var_info {arg_info =[],
 (*
  Case: We are looking at an argument of a type being defined.  We need to
  generate a variable of type num and record the information for the equation
- that gives well-formedness.   We also need to generate a variable of the 
+ that gives well-formedness.   We also need to generate a variable of the
  joint type from var_num and add it to the being_defined_args.
 *)
   | get_var_info {arg_info = (being_defined str)::arg_info,
@@ -320,7 +323,7 @@ fun get_var_info {arg_info =[],
 		  var_num,
 		  recvar_eq_num_list,
 		  being_defined_args,
-		  existing_args} = 
+		  existing_args} =
     let val recvar = mk_var {Name = "rec"^(int_to_string type_case_num),
 			     Ty = num}
 	val rec_num_term = mk_hol_num (type_num str)
@@ -330,7 +333,7 @@ fun get_var_info {arg_info =[],
 		      var_num = var_num + 1,
 		      recvar_eq_num_list =
 		        {lhs = recvar, rhs = rec_num_term}::
-			recvar_eq_num_list, 
+			recvar_eq_num_list,
 		      being_defined_args =
 		        (mk_var {Name = "x"^(int_to_string var_num),
 				 Ty = joint_type})::being_defined_args,
@@ -344,15 +347,15 @@ fun make_return_ftn {name, arg_info = []} type_num = mk_hol_num type_num
     (* if the constructor has args, get variables (and numbers) to
        correspond to return values of recursive calls and variables
        to correspond to arguments of the constructor *)
-  | make_return_ftn {name, arg_info} type_num = 
-    let val {recvar_eq_num_list, plain_then_rec_var_type_info} = 
+  | make_return_ftn {name, arg_info} type_num =
+    let val {recvar_eq_num_list, plain_then_rec_var_type_info} =
 	      get_var_info {arg_info = arg_info,
 			    type_case_num = 1,
 			    var_num = 1,
 			    recvar_eq_num_list = [],
 			    being_defined_args = [],
 			    existing_args = []}
-	val body = 
+	val body =
 	    (* if all the args are existing types, then the body of
 	       our return function will be just a constant giving the
 	       type; otherwise we need to test that the return values
@@ -376,8 +379,8 @@ fun make_return_ftns ({type_name, constructors}::spec) n =
 
 (* fn_lemma says there exists a unique function satisfying the
    desired properties of our joint selection function *)
-val fn_lemma = 
-    CONV_RULE (DEPTH_CONV BETA_CONV) 
+val fn_lemma =
+    CONV_RULE (DEPTH_CONV BETA_CONV)
               (ISPECL (make_return_ftns mut_rec_ty_spec 1) JointTypeAxiom)
 
 (* we want to make a name, joint_name ^ "_select", for the fn in fn_lemma *)
@@ -431,7 +434,7 @@ fun prove_exists
 	     end)
 	    arg_info
 	    {args = [], ty = joint_type}
-	val witness = 
+	val witness =
 	    list_mk_comb ((mk_const{Name = "JOINT_"^name, Ty = ty}),args)
 	val goal = ([],mk_exists (joint_select_x type_name))
 	val tac = (EXISTS_TAC witness) THEN
@@ -448,7 +451,7 @@ fun prove_exists
  Here are the existence theorems
 *)
 
-val {exist_thms = existence_thms,...} = 
+val {exist_thms = existence_thms,...} =
     rev_itlist
     prove_exists
     existence_witnesses
@@ -470,7 +473,7 @@ fun rev_map f l = rev_map_aux f [] l
  and ABS functions
 *)
 
-val ty_defs = 
+val ty_defs =
     rev_map
     (fn {exists_thm, type_name} =>
      let
@@ -491,7 +494,7 @@ val ty_defs =
 					   ABS = abs_name,
 					   REP = rep_name,
 					   tyax = type_def}
-	 val rep = mk_const{Name = rep_name, 
+	 val rep = mk_const{Name = rep_name,
 			    Ty = mk_fun {Domain = new_type,
 					 Range = joint_type}}
 	 val abs = mk_const{Name = abs_name,
@@ -511,13 +514,13 @@ val ty_defs =
    *_abs and *_rep functions thrown in for typecasting. All of the functions
    up to define_constructors are essentiall helper functions *)
 
-(* mk_constructor_app makes a constructor and creates variables of the 
+(* mk_constructor_app makes a constructor and creates variables of the
    right type for it to be applied to, applies it to the variables,
    returns the applied constructor and list of vars that were created. *)
 fun mk_constructor_app type_name {name, arg_info} =
     let
 	val result_type = mk_type {Tyop=type_name,Args=type_arg_vars}
-	val (constructor_type, dom_ty_list) = 
+	val (constructor_type, dom_ty_list) =
 	    itlist
 	    (fn (existing ty) =>
 	            (fn (range_ty, dom_ty_list) =>
@@ -551,13 +554,13 @@ fun mk_constructor_app type_name {name, arg_info} =
    to, and the type the result should be after it's applied, creates a
    constant for the constructor and applies it *)
 fun apply_constructor (cons_name, result_type, args) =
-    let val constructor_type = 
+    let val constructor_type =
 	     foldr (fn (arg, range_ty) => mk_fun{Domain = type_of arg,
 						 Range = range_ty})
 	           result_type
                    args
 	fun apply_args (tm, []) = tm
-	  | apply_args (tm, first_arg :: rest_args) = 
+	  | apply_args (tm, first_arg :: rest_args) =
 	       apply_args (mk_comb {Rator = tm, Rand = first_arg},
 			   rest_args)
     in
@@ -598,13 +601,13 @@ fun get_rep tyname =
    mk_constructor_app, so the variables that are of types being defined
    must be coerced to be in the joint type *)
 fun coerce_arg (arg, existing ty) = arg
-  | coerce_arg (arg, being_defined tyname) = 
+  | coerce_arg (arg, being_defined tyname) =
       mk_comb {Rator = get_rep tyname, Rand = arg}
 
-(* define_constructor does the coersions, assembles the definitions, and 
+(* define_constructor does the coersions, assembles the definitions, and
    defines one constructor for the type with name tyname *)
-fun define_constructor tyname (cons_info as {name, arg_info}) = 
-    let val {Applied_Constructor = lhs, Var_Args} = 
+fun define_constructor tyname (cons_info as {name, arg_info}) =
+    let val {Applied_Constructor = lhs, Var_Args} =
 	      mk_constructor_app tyname cons_info
 	val args_of_joint_cons = map coerce_arg
 	                             (combine (Var_Args, arg_info))
@@ -617,7 +620,7 @@ fun define_constructor tyname (cons_info as {name, arg_info}) =
 	(new_definition (name ^ "_DEF", cons_def); ())
     end
 
-(* the purpose of define_constructors is to essentially feed info to 
+(* the purpose of define_constructors is to essentially feed info to
    define_constructor *)
 fun define_constructors (tyname, cons_info::more_info, type_data) =
     (define_constructor tyname (cons_info);
@@ -651,7 +654,7 @@ val _ = define_constructors ("", [], mut_rec_ty_spec)
     val ord_a = 97
     fun name_of_num n =
 	if n < 26 then Char.toString(Char.chr(n + ord_a))
-	else name_of_num ((n quot 26) - 1) 
+	else name_of_num ((n quot 26) - 1)
              ^ Char.toString(Char.chr((n rem 26) + ord_a))
 
     fun mk_new_tyvar_name {type_num, avoiding_tyvar_names} =
@@ -670,11 +673,11 @@ val _ = define_constructors ("", [], mut_rec_ty_spec)
 	(fn Inl => fn Inr => mk_sum{Inl = Inl, Inr = Inr})
 	rest
 	inl
-	
+
       | get_sum_type {type_names = (type_name::type_names),
 		      types_made,
 		      type_num} =
-	let 
+	let
 
 	    val {new_type_name, next_type_num} =
 		mk_new_tyvar_name {type_num = type_num,
@@ -767,13 +770,13 @@ fun new_ty_Prop type_name = mk_var{Name = type_name^"_Prop",
 				   Ty = mk_fun {Domain = get_type type_name,
 						Range = bool}}
 
-fun joint_select_x ty_name = 
+fun joint_select_x ty_name =
     mk_eq {lhs = mk_comb {Rator = joint_select, Rand = Joint_x},
 	   rhs = mk_hol_num (type_num ty_name)}
 
 
 (*
- mk_case_aux is used to create the types, variables and arguments we will 
+ mk_case_aux is used to create the types, variables and arguments we will
  need to create the return functions for our joint mutual recursion function.
  The summand_types are the recursive argument types to the case, the
  exisiting_types are the types of the arguments to the operators of
@@ -919,13 +922,13 @@ fun mk_case_aux {arg_info = [] : type_info list,
 	 applied_joint_constructor = applied_joint_constructor,
 	 sym_cons_def = sym_cons_def,
 	 new_ty_induct_case = new_ty_induct_case}
-    end	     
+    end
 
 (*
  Case: We are looking at an argument of existing type.  We need to generate
  a variable of the existing type from var_num and add it to both plain_vars
  and arg_vars.
-*) 
+*)
   | mk_case_aux {arg_info = (existing ty)::arg_info,
 		 constructor_name,
 		 type_name,
@@ -1142,8 +1145,8 @@ val mod_fns =
     type_names
 
 val rep_abs_thms =
-    map 
-    (fn type_name => 
+    map
+    (fn type_name =>
      (case find (fn entry => type_name = #type_name entry) ty_defs
 	  of SOME entry => BETA_RULE (#rep_abs_thm entry)
 	       | NONE => raise MUT_REC_ERR{function = "",
@@ -1158,7 +1161,7 @@ val elim_cons_thms =
      let
 	 val cons_REP_ABS =
 	     CONJUNCT2 (definition (mk_bij_name type_name))
-	 val {abs = cons_abs, rep = cons_rep,...} = 
+	 val {abs = cons_abs, rep = cons_rep,...} =
 	     case find (fn entry => type_name = #type_name entry) ty_defs
 	       of SOME entry => entry
 		| NONE => raise MUT_REC_ERR{function = "",
@@ -1182,7 +1185,7 @@ val elim_cons_thms =
 				    (AP_TERM cons_abs joint_elim_thm))
 
 	   in
-	       {type_name = type_name, 
+	       {type_name = type_name,
 		joint_elim_thm = SYM joint_elim_thm,
 		cons_elim_thm = cons_elim_thm} :: l
 	   end)
@@ -1219,7 +1222,7 @@ val II_THM = prove((--`!x:'a. I (I x) = x`--),
 		end
 
 fun abstract_every tm1 v tm2 =
-    let val var = variant (all_vars tm2) v 
+    let val var = variant (all_vars tm2) v
 	val frees = free_vars tm1
 	in
 	    abs_every tm1 var tm2 frees
@@ -1227,7 +1230,7 @@ fun abstract_every tm1 v tm2 =
 
 
 fun EX n [] thm = {fns = [], ext_thm = thm}
-  | EX n (tm::tms) thm = 
+  | EX n (tm::tms) thm =
     let
 	val f = mk_var {Name = "fn"^(int_to_string n), Ty = type_of tm}
 	val {fns, ext_thm} = EX (n+1) tms thm
@@ -1253,7 +1256,7 @@ val {ext_thm = ext_thm, fns} =
 	   GENL new_ty_const_arg_vars
 	   (PURE_ONCE_REWRITE_RULE (map (#beta_thm) mod_fns)
 	    (PURE_REWRITE_RULE (II_THM::OUTL::OUTR::abs_rep_thms)
-	     (itlist AP_TERM Outs 
+	     (itlist AP_TERM Outs
 	      (PURE_ONCE_REWRITE_RULE [joint_elim_thm]
 	       (SPECL exists_specl thm)))))
        end)
@@ -1281,9 +1284,9 @@ val IfThenElse_Imp =
 	    (ASM_CASES_TAC (--`A:bool`--)) THEN
 	    (ASM_REWRITE_TAC [])))
 
-val JointInduct = 
+val JointInduct =
 let
-    val th = 
+    val th =
 	CONJUNCT2
 	(CONV_RULE EXISTS_UNIQUE_CONV
 	 (BETA_RULE
@@ -1317,7 +1320,7 @@ val rep_abs_eq_simps =
       (CONV_RULE (DEPTH_CONV numLib.num_EQ_CONV)
        (REWRITE_RULE [lemma,joint_select_def]
 	(SYM (SPEC applied_joint_constructor
-	      (CONJUNCT2 (List.nth 
+	      (CONJUNCT2 (List.nth
                   ((rep_abs_thms,(type_num type_name) - 1))))))))))
     spec_cases
 
@@ -1333,7 +1336,7 @@ val not_rep_abs_thms =
      (fn {type_name, applied_joint_constructor, ...} =>
       non_diag_map
       (fn tyn => (tyn = type_name))
-      (fn ty_name => 
+      (fn ty_name =>
        prove
        (mk_neg(mk_eq{lhs = mk_comb{Rator = get_rep ty_name,
 				   Rand = mk_comb{Rator = get_abs ty_name,
@@ -1362,7 +1365,7 @@ fun mk_case_prop type_name =
     end
 
 fun mk_rep_abs_cases_prop [] =  mk_const{Name= "T",Ty=bool}
-  | mk_rep_abs_cases_prop (type_name :: nil) = 
+  | mk_rep_abs_cases_prop (type_name :: nil) =
     mk_case_prop type_name
   | mk_rep_abs_cases_prop (type_name :: type_names) =
       mk_conj{conj1 = mk_case_prop type_name,
@@ -1379,7 +1382,7 @@ fun case_thm type_name num =
     in
 	GEN var
 	(REWRITE_RULE
-	 rep_abs_thms 
+	 rep_abs_thms
 	 (List.nth (CONJUNCTS (SPEC
 			 (mk_comb {Rator = get_rep type_name,
 				   Rand = var})
@@ -1422,10 +1425,10 @@ val pre_case_induct_thm = prove
   (REPEAT CONJ_TAC) THEN
   (FIRST_ASSUM utilsLib.MATCH_MP_IMP_TAC) THEN (FIRST_ASSUM ACCEPT_TAC)))
 
-val New_Ty_Induct_Thm = itlist (fn ty_name => fn th => 
+val New_Ty_Induct_Thm = itlist (fn ty_name => fn th =>
                                   GEN (new_ty_Prop ty_name) th)
-                               type_names 
-                               (IMP_TRANS pre_case_induct_thm 
+                               type_names
+                               (IMP_TRANS pre_case_induct_thm
                                           inter_case_induct_thm);
 
 
@@ -1435,7 +1438,7 @@ val New_Ty_Induct_Thm = itlist (fn ty_name => fn th =>
 
 val New_Ty_Existence_Body = New_Ty_Existence_Body
 
-val {new_fns, fns_subst} = 
+val {new_fns, fns_subst} =
     itlist
     (fn f => (fn {new_fns, fns_subst} =>
      let
@@ -1461,16 +1464,16 @@ val pre_unique_thm = prove(unique_goal,
   (fn g as (asm,gl) =>
    let val eq_preds = map rand (strip_conj gl)
        val induct = BETA_RULE (SPECL eq_preds New_Ty_Induct_Thm)
-   in utilsLib.MP_IMP_TAC induct g 
+   in utilsLib.MP_IMP_TAC induct g
    end) THEN
   (REPEAT STRIP_TAC) THEN
   (ASM_REWRITE_TAC [])))
 
 val New_Ty_Uniqueness_Thm = GENL (cases @ fns @ new_fns) pre_unique_thm
 
-in 
+in
   {New_Ty_Existence_Thm = New_Ty_Existence_Thm,
-   New_Ty_Induct_Thm = New_Ty_Induct_Thm, 
+   New_Ty_Induct_Thm = New_Ty_Induct_Thm,
    New_Ty_Uniqueness_Thm = New_Ty_Uniqueness_Thm}
 end
 

@@ -83,6 +83,11 @@ open HolKernel Parse basicHol90Lib;
 infix THEN ORELSE THENC THENL;
 
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+
 (* define_mutual_functions takes the term def (one such as the one above)
    and warps into a state where it can be combined with rec_thm to
    produce definitions for the mutually recursive functions the user

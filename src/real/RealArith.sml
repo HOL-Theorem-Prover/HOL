@@ -49,6 +49,9 @@ open Psyntax
    type thm = Thm.thm
    type tactic = Abbrev.tactic
 
+val old_grammars = (type_grammar(), term_grammar())
+val _ = temp_set_grammars realTheory.real_grammars
+
 
 (*----------------------------------------------------------------------- *)
 (* The trace system.                                                         *)
@@ -1638,5 +1641,7 @@ fun go12 () = REAL_ARITH (Term`&0 < x /\ &0 < y ==> x + y < &1
                              ==> &144 * x + &100 * y < &144`);
 fun go13 () = REAL_ARITH (Term`!x y. x <= ~y = x + y <= &0`);
 *)
+
+val _ = temp_set_grammars old_grammars
 
 end;

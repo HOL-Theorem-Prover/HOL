@@ -13,9 +13,12 @@
 (* Share and Enjoy *)
 
 structure DefType :> DefType =
-    struct
+  struct
 
-        open HolKernel Parse basicHol90Lib;
+    open HolKernel Parse basicHol90Lib;
+    val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+    fun -- q x = Term q
+    fun == q x = Type q
         infix THEN |->
         open Recftn;
         open TypeInfo
@@ -24,7 +27,7 @@ structure DefType :> DefType =
             HOL_ERR {message = message,
                      origin_function = function,
                      origin_structure = "def_type"}
-            
+
 
         val int_to_string = Int.toString
         (*
@@ -110,7 +113,7 @@ structure DefType :> DefType =
 fun define_type def_type_spec recursor_thms =
  let
         val {defs, constrs, ty_ops} = collect_new_defs def_type_spec
-            
+
         (*
          * Check that all types being defined in constructors are
          * being defined on left-hand side
@@ -123,7 +126,7 @@ fun define_type def_type_spec recursor_thms =
                 {function = "define_type_list",
                  message = (GenFuns.present_strings l) ^
                  " used in constructors but not defined"}
-                
+
 
 (*	local
         structure RecursorThms =
@@ -171,7 +174,7 @@ fun define_type def_type_spec recursor_thms =
                                     (int_to_string arity) ^
                                     " in theorem"}
                        end) () (StringTable.elts ty_ops)
-            
+
         (*
          * Create the equations for the mutual recursive type
          *)
@@ -226,7 +229,7 @@ fun define_type def_type_spec recursor_thms =
                 {constr_info = {name = name, arg_info = arg_info},
                  new_types = new_types}
             end
-        
+
         (*
          * Create a table with type specifications, keyed by type name
          *)
@@ -284,7 +287,7 @@ fun define_type def_type_spec recursor_thms =
                  new_type = {type_name = type_name, def = def,
                              constructors = constr_info}}
             end
-        
+
         (*
          * Change original specification to have the definition tag as well
          * For now the list should have one element
@@ -294,9 +297,9 @@ fun define_type def_type_spec recursor_thms =
             {type_name = type_name,
              constructors = constructors,
              def = Basic}::(basics l)
-            
+
         val types = make_mutual_types (basics def_type_spec)
-            
+
         (*
          * Extract the specification of the mutual type as
          * MutRecDefFunc expects it
@@ -315,7 +318,7 @@ fun define_type def_type_spec recursor_thms =
                  constructors = internal_names constructors}::
                 (extract_mut_rec_definition l)
         end
-    
+
         (*
          * Extract the specification and call the mutual type
          * definition package
@@ -329,7 +332,7 @@ fun define_type def_type_spec recursor_thms =
             struct
                 structure TypeInfo = TypeInfo
                 type type_info = TypeInfo.type_info
-                    
+
                 val mut_rec_ty_spec = mut_rec_ty_spec
             end
         in
@@ -338,18 +341,18 @@ fun define_type def_type_spec recursor_thms =
                            structure MutRecTyInput = MutRecTyInput)
         end
 *)
-       val {New_Ty_Induct_Thm = MRD_New_Ty_Induct_Thm, 
+       val {New_Ty_Induct_Thm = MRD_New_Ty_Induct_Thm,
             New_Ty_Uniqueness_Thm = MRD_New_Ty_Uniqueness_Thm,
             New_Ty_Existence_Thm = MRD_New_Ty_Existence_Thm}
               = MutRecDef.define_type mut_rec_ty_spec
 
-        val newly_defined_types = 
+        val newly_defined_types =
             map
             (fn tm => hd (#Args (dest_type (type_of tm))))
             (#1(strip_exists
                 (#2(strip_forall(concl MRD_New_Ty_Existence_Thm)))))
 
-        fun get_new_type name = 
+        fun get_new_type name =
             Lib.first
             (fn ty => #Tyop (dest_type ty) = name)
             newly_defined_types
@@ -369,7 +372,7 @@ fun define_type def_type_spec recursor_thms =
         local
             fun get_vars {rec_vars, arg_vars, x_vars, arg_info = [], ...} =
                 {rec_vars = rec_vars, arg_vars = arg_vars, x_vars = x_vars}
-              | get_vars {count, rec_vars, arg_vars, x_vars, 
+              | get_vars {count, rec_vars, arg_vars, x_vars,
                           arg_info = (existing ty) :: arg_info} =
                 let val x = mk_var{Name = "x"^(int_to_string count), Ty = ty}
                 in get_vars {count = count + 1,rec_vars = rec_vars,
@@ -386,13 +389,13 @@ fun define_type def_type_spec recursor_thms =
                     get_vars {count = count + 2, rec_vars = r::rec_vars,
                               arg_vars = r::arg_vars, x_vars = x :: x_vars,
                               arg_info = arg_info}
-                end             
+                end
         in
             val internal_constructors =
                 map
                 (fn {type_name, constructors} =>
                  {type_name = type_name,
-                  int_const_info = 
+                  int_const_info =
                   foldr
                   (fn ({name, arg_info}, {int_consts, cases}) =>
                    let
@@ -506,13 +509,13 @@ fun define_type def_type_spec recursor_thms =
                         {solve = solve, new_list = ty::new_list}
                     end
             end
-        
+
         (*
          * Type for storing isomorphisms between mutual type
          * representations and expanded type operators
          *)
         type map_table = {map : term, map_thm : thm} TypeTable.table
-            
+
 
 
         (* Coerce the varaible form the range of the maps back to
@@ -561,7 +564,7 @@ fun define_type def_type_spec recursor_thms =
             in
                 coerce (t, 0)
             end
-        
+
         (*
          * Same as coerce_arg_vars, but does the abstractions
          *)
@@ -571,7 +574,7 @@ fun define_type def_type_spec recursor_thms =
             in
                 GenFuns.abslist vars coerced_term
             end
-        
+
         (*
          * Returns specification of return value for a map (either
          *      injection or inverse) for one particular constructor
@@ -597,7 +600,7 @@ fun define_type def_type_spec recursor_thms =
                                       Rand = mk_lhs vars case_map},
                        rhs = rhs}
             end
-        
+
         (*
          * Define either an injection or an inverse, given a
          *      function which takes a functional specification and
@@ -638,7 +641,7 @@ fun define_type def_type_spec recursor_thms =
                 {map = mk_const {Name = map_name, Ty = map_type},
                  map_thm = map_thm}
             end
-        
+
         (*
          * If there's a map with codomain t in the table, return its domain
          *)
@@ -651,10 +654,10 @@ fun define_type def_type_spec recursor_thms =
                     in
                         dom
                     end
-                
+
         fun get_rewrites (maps:map_table) =
             map (fn {map_thm, ...} => map_thm) (TypeTable.elts maps)
-            
+
         fun get_id_eqn (constr : term) (t : hol_type) =
             let
                 fun get_id_eqn_n (constr : term) (n:int) =
@@ -732,7 +735,7 @@ fun define_type def_type_spec recursor_thms =
             in
                 final
             end
-        
+
         (*
          * Define inj : Type_op (Args) -> Type_op_Args
          * and    inv : Type_op_Args   -> Type_op (Args)
@@ -808,7 +811,7 @@ fun define_type def_type_spec recursor_thms =
                  inv_inj_thm = inv_inj_thm,
                  inj_o_invs = new_inj_o_invs}
             end
-        
+
         (*
          * Define constructors for one of the originally specified types
          * It needs the injection table to coerce constructors from
@@ -850,7 +853,7 @@ fun define_type def_type_spec recursor_thms =
             in
                 do_defines constructors
             end
-        
+
         (*
          * Define injections, inverses, reductions, and constructors
          *)
@@ -909,7 +912,7 @@ fun define_type def_type_spec recursor_thms =
                                          tyop_args = tyop_args,
                                          tyop_name = tyop_name,
                                          original_constructors =
-                                         original_constructors} 
+                                         original_constructors}
                         in
                                     def_all_maps {injs = injs,
                                                   invs = invs,
@@ -930,13 +933,13 @@ fun define_type def_type_spec recursor_thms =
                               inv_inj_rewrite_eqns = [],
                               constructor_defs = []} l
             end
-        
+
         val {injs = inj_table, invs = inv_table, inj_o_invs,
              inv_inj_rewrite_eqns, constructor_defs} =
             define_all_maps types (StringTable.elts types)
 
 
-            
+
         fun coerce_term {dom_maps:map_table,
                          cod_maps:map_table,
                          coercee:term}  =
@@ -951,7 +954,7 @@ fun define_type def_type_spec recursor_thms =
                           | TypeTable.InTable {map, map_thm} =>
                                 mk_comb {Rator = map, Rand = coercee}
                     end
-                
+
         (*
          * Since inj : Type_op Args -> Type_op_Args, we rewrite by
          *      the inverse of the theorems about the injection to get
@@ -1010,7 +1013,7 @@ fun define_type def_type_spec recursor_thms =
 		map (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV))
 		    (CONJUNCTS thm2)
         end
-        
+
 
 
        val inj_one_one_lemmas =
@@ -1061,7 +1064,7 @@ fun define_type def_type_spec recursor_thms =
             exception NotForall
         in
             fun spec_change_foralls thm =
-                let 
+                let
                     val {Bvar, ...} = dest_forall (concl thm)
                         handle HOL_ERR _ => raise NotForall
                     val new_forall_var = change_var Bvar
@@ -1101,7 +1104,7 @@ fun define_type def_type_spec recursor_thms =
          * we really want
          *      (\fn1 x. fn1 (inj x)) fn1 x
          *)
-            
+
         fun mk_fun_exists_coercion var =
             let
                 val {vars, coerced_term} = coerce_arg_vars inj_table var
@@ -1129,7 +1132,7 @@ fun define_type def_type_spec recursor_thms =
             in
                 {coercion_fun = coercion_fun, coercion_CONV = coercion_CONV}
             end
-        
+
         (*
          * Do the rewriting necessary to change the mutual recursive
          *      existential theorem into the simply type existential thm
@@ -1146,7 +1149,7 @@ fun define_type def_type_spec recursor_thms =
                      {coercion_funs = [],coercion_CONVs = []} coercions
                 val int_var = mk_var {Name = "int_var",
                                       Ty = type_of base_t}
-                
+
                 val seed = GenFuns.conj_map change_foralls  (ASSUME base_t)
                 (*
                  * This should very possibly use ORELSEC instead of
@@ -1171,7 +1174,7 @@ fun define_type def_type_spec recursor_thms =
                  forall_imp_thm = forall_imp_thm,
                  coercion_funs = coercion_funs}
             end
-        
+
         (*
          * Take the mutual recursive recursor and massage it into
          * the recursor for our simple type with embedded type operators
@@ -1213,7 +1216,7 @@ fun define_type def_type_spec recursor_thms =
                                mk_comb{Rator=inj,
                                        Rand=mk_comb{Rator=inv,
                                                     Rand=var}}}))
-                                      
+
 
         (*
          * change_arg_exists:
@@ -1227,7 +1230,7 @@ fun define_type def_type_spec recursor_thms =
                 val {substitution, coercion_funs} =
                     foldr
                     (fn (v, {substitution, coercion_funs}) =>
-                     (case mk_arg_exists_coercion v of 
+                     (case mk_arg_exists_coercion v of
                           {coerced_term, coercion_fun} =>
 			      {substitution = (v |->
                                  ONCE_REWRITE_CONV sym_inj_inv_rewrite_eqns v)
@@ -1317,16 +1320,16 @@ fun define_type def_type_spec recursor_thms =
 		(PURE_REWRITE_RULE inv_inj_rewrite_eqns
 		 (PURE_REWRITE_RULE constructor_defs thm5))
 	end
-    
-            
-(*        structure ConsThms = ConsThmsFunc(structure numLib = numLib 
+
+
+(*        structure ConsThms = ConsThmsFunc(structure numLib = numLib
                                           structure MutRecDef = MutRecDef)
 *)
        val {mutual_constructors_distinct,
             mutual_constructors_one_one,
             mutual_cases,
-            argument_extraction_definitions} 
-              = ConsThms.build {New_Ty_Existence_Thm = MRD_New_Ty_Existence_Thm, 
+            argument_extraction_definitions}
+              = ConsThms.build {New_Ty_Existence_Thm = MRD_New_Ty_Existence_Thm,
                                 New_Ty_Induct_Thm = MRD_New_Ty_Induct_Thm,
                                 New_Ty_Uniqueness_Thm=MRD_New_Ty_Uniqueness_Thm};
 
@@ -1334,14 +1337,14 @@ fun define_type def_type_spec recursor_thms =
               PURE_REWRITE_RULE inj_one_one_lemmas
 	      (PURE_REWRITE_RULE inv_inj_rewrite_eqns
 	       (PURE_REWRITE_RULE constructor_defs
-                (GenFuns.conj_map change_foralls 
+                (GenFuns.conj_map change_foralls
                  mutual_constructors_distinct)))
 
-        val Constructors_One_One_Thm =                            
+        val Constructors_One_One_Thm =
               PURE_REWRITE_RULE inj_one_one_lemmas
 	      (PURE_REWRITE_RULE inv_inj_rewrite_eqns
 	       (PURE_REWRITE_RULE constructor_defs
-                (GenFuns.conj_map change_foralls 
+                (GenFuns.conj_map change_foralls
 		 mutual_constructors_one_one)))
 
         val Cases_Thm =
@@ -1355,7 +1358,7 @@ fun define_type def_type_spec recursor_thms =
    in
       {New_Ty_Induct_Thm = New_Ty_Induct_Thm,
        New_Ty_Uniqueness_Thm = New_Ty_Uniqueness_Thm,
-       New_Ty_Existence_Thm = New_Ty_Existence_Thm, 
+       New_Ty_Existence_Thm = New_Ty_Existence_Thm,
        Constructors_Distinct_Thm = Constructors_Distinct_Thm,
        Constructors_One_One_Thm = Constructors_One_One_Thm,
        Cases_Thm = Cases_Thm}

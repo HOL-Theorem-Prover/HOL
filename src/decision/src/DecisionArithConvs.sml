@@ -19,6 +19,9 @@ open DecisionTheorems HolKernel Parse boolTheory Drule Conv Rewrite;
 infix ORELSEC |->;
 
 type conv = Abbrev.conv
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q
 
 val dense = false;
 val num = Type`:num`;
@@ -38,23 +41,23 @@ val ADD_SYM_CONV = REWR_CONV (arithmeticTheory.ADD_SYM);
 val GATHER_BOTH_CONV =
  REWR_CONV
   (SYM
-    (SPECL [--`a:num`--,--`b:num`--,--`x:num`--] 
+    (SPECL [--`a:num`--,--`b:num`--,--`x:num`--]
            arithmeticTheory.RIGHT_ADD_DISTRIB));
 
 val GATHER_LEFT_CONV =
  REWR_CONV
-  (SUBS [el 3 (CONJUNCTS (SPECL [--`x:num`--,n] 
+  (SUBS [el 3 (CONJUNCTS (SPECL [--`x:num`--,n]
         arithmeticTheory.MULT_CLAUSES))]
-    (SYM (SPECL [--`a:num`--,--`1`--,--`x:num`--] 
+    (SYM (SPECL [--`a:num`--,--`1`--,--`x:num`--]
                 arithmeticTheory.RIGHT_ADD_DISTRIB)));
 
 val GATHER_NEITHER_CONV = REWR_CONV (GSYM arithmeticTheory.TIMES2);
 
 val GATHER_RIGHT_CONV =
  REWR_CONV
-  (SUBS [el 3 (CONJUNCTS (SPECL [--`x:num`--,n] 
+  (SUBS [el 3 (CONJUNCTS (SPECL [--`x:num`--,n]
         arithmeticTheory.MULT_CLAUSES))]
-    (SYM (SPECL [--`1`--,--`b:num`--,--`x:num`--] 
+    (SYM (SPECL [--`1`--,--`b:num`--,--`x:num`--]
                 arithmeticTheory.RIGHT_ADD_DISTRIB)));
 
 val GEQ_NORM_CONV = REWR_CONV arithmeticTheory.GREATER_EQ;
@@ -73,7 +76,7 @@ val LESS_NORM_CONV =
    if dense
    then ALL_CONV
    else REWR_CONV
-         (SUBS [SPEC m arithmeticTheory.SUC_ONE_ADD] 
+         (SUBS [SPEC m arithmeticTheory.SUC_ONE_ADD]
                (SPECL [m,n] arithmeticTheory.LESS_EQ));
 
 val MULT_ASSOC_CONV = REWR_CONV arithmeticTheory.MULT_ASSOC;
@@ -95,7 +98,7 @@ val NOT_LEQ_NORM_CONV =
    then REWR_CONV (TRANS (SPECL [m,n] arithmeticTheory.NOT_LEQ)
                          (SYM (SPECL [n,m] arithmeticTheory.LESS_EQ)))
    else REWR_CONV
-         (SUBS [SPEC n arithmeticTheory.SUC_ONE_ADD] 
+         (SUBS [SPEC n arithmeticTheory.SUC_ONE_ADD]
                (SPECL [m,n] arithmeticTheory.NOT_LEQ));
 
 val NOT_LESS_NORM_CONV = REWR_CONV arithmeticTheory.NOT_LESS;
@@ -159,7 +162,7 @@ val NUM_COND_RAND_CONV =
    (INST_TYPE [alpha |-> num] COND_RAND);
 
 val SUB_NORM_CONV =
- GEN_REWRITE_CONV I Rewrite.empty_rewrites 
+ GEN_REWRITE_CONV I Rewrite.empty_rewrites
  [arithmeticTheory.SUB_LEFT_ADD,         arithmeticTheory.SUB_RIGHT_ADD,
   arithmeticTheory.SUB_LEFT_SUB,         arithmeticTheory.SUB_RIGHT_SUB,
   arithmeticTheory.LEFT_SUB_DISTRIB,     arithmeticTheory.RIGHT_SUB_DISTRIB,

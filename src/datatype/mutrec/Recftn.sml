@@ -78,6 +78,11 @@ struct
 open HolKernel Parse basicHol90Lib;
 infix THEN ORELSE;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+
 type term = Term.term
 type fixity = Parse.fixity
 type thm = Thm.thm;

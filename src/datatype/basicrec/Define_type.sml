@@ -22,6 +22,11 @@ open HolKernel Parse Drule Conv Type_def_support oneTheory;
 infix THENC ## |->;
 val --> = Type.-->; infixr -->
 
+val (Type,Term) = parse_from_grammars rec_typeTheory.rec_type_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+
 fun ERR function message =
       HOL_ERR{origin_structure = "Define_type",
 	      origin_function = function,

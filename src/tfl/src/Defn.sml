@@ -9,13 +9,18 @@ open HolKernel Parse basicHol90Lib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+
    type hol_type = Type.hol_type
    type term = Term.term
    type thm = Thm.thm
    type conv = Abbrev.conv
    type tactic = Abbrev.tactic
 
-fun ERR func mesg = 
+fun ERR func mesg =
   HOL_ERR
     {origin_structure="Defn",
      origin_function=func,
@@ -23,7 +28,7 @@ fun ERR func mesg =
 
 val monitoring = ref true;
 
-datatype defn 
+datatype defn
    = ABBREV  of thm
    | PRIMREC of {eqs:thm, ind:thm}
    | STDREC  of {eqs:thm, ind:thm, R:term, SV:term list}
@@ -35,7 +40,7 @@ fun primrec (PRIMREC _) = true | primrec _ = false;
 fun nestrec (NESTREC _) = true | nestrec _ = false;
 fun mutrec  (MUTREC _)  = true | mutrec _  = false;
 
- 
+
 (*---------------------------------------------------------------------------
                   Miscellaneous support.
  ---------------------------------------------------------------------------*)
@@ -45,7 +50,7 @@ fun drop [] x = x
   | drop _ _ = raise ERR "drop" "";
 
 fun unzip3 [] = ([],[],[])
-  | unzip3 ((x,y,z)::rst) = 
+  | unzip3 ((x,y,z)::rst) =
       let val (l1,l2,l3) = unzip3 rst
       in (x::l1, y::l2, z::l3)
       end;
@@ -57,10 +62,10 @@ fun func_of_cond_eqn tm =
 val prod_tyl =
   end_itlist(fn ty1 => fn ty2 => mk_type{Tyop="prod",Args=[ty1,ty2]});
 
-fun variants FV vlist = 
+fun variants FV vlist =
   fst
-    (rev_itlist 
-       (fn v => fn (V,W) => 
+    (rev_itlist
+       (fn v => fn (V,W) =>
            let val v' = variant W v
            in (v'::V, v'::W)
            end) vlist ([],FV));
@@ -69,10 +74,10 @@ fun dest_atom a = (dest_var a handle HOL_ERR _ => dest_const a);
 
 
 (*---------------------------------------------------------------------------
-         The purpose of pairf is to translate a prospective definition 
+         The purpose of pairf is to translate a prospective definition
          into a completely tupled format. On entry to pairf, we know
-         that f is curried, i.e., of type               
- 
+         that f is curried, i.e., of type
+
               f : ty1 -> ... -> tyn -> rangety
 
  *---------------------------------------------------------------------------*)
@@ -106,18 +111,18 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
 
      val defvars = rev   (* seems goofy *)
        (Lib.with_flag (Globals.priming, SOME"")
-          (variants [f]) 
+          (variants [f])
           (map (fn ty => mk_var{Name="x", Ty=ty}) argtys))
 
-     fun unpair (rules,ind) = 
+     fun unpair (rules,ind) =
       let val eq1 = concl(CONJUNCT1 rules handle HOL_ERR _ => rules)
           val fconst = func_of_cond_eqn eq1
           val def = new_definition (stem,
                       mk_eq{lhs=list_mk_comb(f, defvars),
                           rhs=list_mk_comb(fconst, [list_mk_pair defvars])})
           val rules' = Rewrite.PURE_REWRITE_RULE[GSYM def] rules
-          val ind' = 
-            case ind 
+          val ind' =
+            case ind
              of NONE => NONE
               | SOME induction =>
                 let val P = #Bvar(dest_forall(concl induction))
@@ -130,7 +135,7 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
                 in
                  SOME (CONV_RULE(DEPTH_CONV Let_conv.GEN_BETA_CONV) ind1)
                 end
-      in 
+      in
          (rules', ind')
       end
    in
@@ -140,7 +145,7 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
 
 (*---------------------------------------------------------------------------
 
-     Attempt to define a function, given some input equations. 
+     Attempt to define a function, given some input equations.
      The following cases are handled:
 
        1. Non-recursive definition, varstructs allowed on lhs.
@@ -150,12 +155,12 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
              -- use new_recursive_definition with datatype axiom
                 from theTypeBase().
 
-       3. Non-recursive definition, over more complex patterns than 
+       3. Non-recursive definition, over more complex patterns than
           allowed in 1 or 2.
              -- use TFL, and automatically eliminate the vacuous
                 wellfoundedness requirement.
 
-       4. Recursions (not mutual or nested) that aren't handled by 2. 
+       4. Recursions (not mutual or nested) that aren't handled by 2.
              -- use TFL.
 
        5. Nested recursions.
@@ -164,30 +169,30 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
 
        6. Mutual recursions.
              -- use TFL. Auxiliary `union' function defined (with
-                TFL), from which the specified functions are derived. 
-                If the union function is nested, then 5 is called. 
+                TFL), from which the specified functions are derived.
+                If the union function is nested, then 5 is called.
 
        7. Schematic definitions (must be recursive).
              -- use TFL. Mutual and nested recursions are accepted.
 
      For 3-7, induction theorems are derived. Also, TFL internally
      processes functions over a single tupled argument, but it is
-     convenient for users to give curried definitions, so for 3-7, 
-     there is an automatic translation from curried recursion equations 
+     convenient for users to give curried definitions, so for 3-7,
+     there is an automatic translation from curried recursion equations
      into (and back out of) the tupled form.
 
      A number of primitive definitions may be made in the course of
      defining the specified function. Since these must be stored in
      the current theory, names for the ML bindings of these will be
      invented by "define". Such names will be derived from the "stem"
-     argument. In the case that the specified function is 
+     argument. In the case that the specified function is
      non-recursive or primitive recursive, the specified equation(s)
      will be added to the current theory under the stem name.
-     Otherwise, the specified equation(s) will not be stored in the 
-     current theory (although underlying definitions used to derive 
+     Otherwise, the specified equation(s) will not be stored in the
+     current theory (although underlying definitions used to derive
      the equations will be). The reasoning behind this is that the user
-     will typically want to eliminate termination conditions before 
-     storing the equations (and associated induction theorem) in the 
+     will typically want to eliminate termination conditions before
+     storing the equations (and associated induction theorem) in the
      current theory.
 
      Of course, schemes are a counter-example to this. For the sake of
@@ -203,8 +208,8 @@ local fun is_constructor tm = not (is_var tm orelse is_pair tm);
       fun occurs f = can (find_term (aconv f))
 in
 fun define stem eqs0 =
- let val _ = if Lexis.ok_identifier stem then () 
-             else raise ERR "define" 
+ let val _ = if Lexis.ok_identifier stem then ()
+             else raise ERR "define"
                    (String.concat[Lib.quote stem," is not alphanumeric"])
      val eql = map (#2 o strip_forall) (strip_conj eqs0)
      val (lhsl,rhsl) = unzip (map Psyntax.dest_eq eql)
@@ -216,11 +221,11 @@ fun define stem eqs0 =
      val mutual    = 1<length fns
      val facts     = TypeBase.theTypeBase()
  in
-  if mutual 
+  if mutual
   then let val {rules, ind, SV, R, union as {rules=r,ind=i,aux,...},...}
               = Tfl.mutual_function facts stem eqs0
        in
-        MUTREC {eqs=rules, ind=ind, R=R, SV=SV, 
+        MUTREC {eqs=rules, ind=ind, R=R, SV=SV,
           union =
              case aux
               of NONE => STDREC{eqs=r,ind=i,R=R,SV=SV}
@@ -231,13 +236,13 @@ fun define stem eqs0 =
        end
   else
    (ABBREV (basic_defn (stem,eqs0))  (* try an abbreviation *)
-     handle HOL_ERR _ 
+     handle HOL_ERR _
      =>
      if Lib.exists is_constructor args
      then case TypeBase.read (#Tyop(Type.dest_type
                   (type_of(first is_constructor args))))
            of NONE => raise ERR "define" "unexpected lhs in definition"
-            | SOME tyinfo => 
+            | SOME tyinfo =>
                let val def = new_recursive_definition
                                 {name=stem,def=eqs0,fixity=Parse.Prefix,
                                  rec_axiom=TypeBase.axiom_of tyinfo}
@@ -248,17 +253,17 @@ fun define stem eqs0 =
      else raise ERR "define" ""
    )
   handle HOL_ERR _  (* not mutual or prim. rec. or simple abbreviation *)
-   => 
+   =>
   let val (unc_eqs,stem',inverses) = pairf(curried,f,stem,args,eqs0)
       val (wfrec_res as {WFR,SV,proto_def,extracta,pats})
-          = Tfl.wfrec_eqns facts unc_eqs handle e as HOL_ERR _ 
+          = Tfl.wfrec_eqns facts unc_eqs handle e as HOL_ERR _
               => (Lib.say"Definition failed.\n"; raise e)
       val (_,_,nestedl) = unzip3 (#extracta wfrec_res)
   in
      if exists (fn x => (x=true)) nestedl  (* nested *)
      then let val {rules,ind,SV, R, aux_rules, aux_ind,...}
                    = Tfl.nested_function facts stem' wfrec_res
-          in 
+          in
             case inverses (rules, SOME ind)
              of (rules', SOME ind') =>
                   NESTREC {eqs=rules',ind=ind',R=R,SV=SV,
@@ -266,10 +271,10 @@ fun define stem eqs0 =
                                       R=R,SV=SV}}
               | _ => raise ERR"define" "bad inverses in nested case"
           end
-     else 
+     else
      let val {rules,R,SV,full_pats_TCs,...}
                = Tfl.lazyR_def facts stem' wfrec_res
-         val ind = Tfl.mk_induction facts 
+         val ind = Tfl.mk_induction facts
                       {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
      in
      case hyp rules
@@ -281,19 +286,19 @@ fun define stem eqs0 =
                val Empty_thm = INST_TYPE theta relationTheory.WF_Empty
            in
             case inverses(rules, SOME ind)
-             of (rules', SOME ind') => 
+             of (rules', SOME ind') =>
                let val rules'' = MATCH_MP (DISCH_ALL rules') Empty_thm
                    val ind''   = MATCH_MP (DISCH_ALL ind') Empty_thm
-               in 
-                  STDREC {eqs=rules'', ind=ind'', 
+               in
+                  STDREC {eqs=rules'', ind=ind'',
                           R=rand(concl Empty_thm), SV=SV}
-               end 
+               end
               | _ => raise ERR "" ""
-             end 
+             end
              handle HOL_ERR _ => raise ERR"define" "non-rec. TFL call failed")
        | _  => (* recursive, not prim.rec., not mutual, not nested *)
            (case inverses(rules, SOME ind)
-             of (rules', SOME ind') => 
+             of (rules', SOME ind') =>
                    STDREC {eqs=rules',ind=ind', R=R, SV=SV}
               | _ => raise ERR "define" "bad inverses in std. case")
      end
@@ -332,12 +337,12 @@ fun parameters (ABBREV _)  = []
 fun schematic defn = not(List.null (parameters defn));
 
 fun nUNDISCH n th = if n<1 then th else nUNDISCH (n-1) (UNDISCH th)
- 
+
 fun INST_THM theta th =
   let val asl = hyp th
       val th1 = rev_itlist DISCH asl th
       val th2 = INST_TY_TERM theta th1
-  in 
+  in
    nUNDISCH (length asl) th2
   end;
 
@@ -356,7 +361,7 @@ fun lineup [] SV = []
      let val name = #Name(dest_var redex)
      in
        case name_assoc name SV
-        of NONE => raise ERR "inst_params.lineup" 
+        of NONE => raise ERR "inst_params.lineup"
                        ("missing schematic variable: "^name)
          | SOME sv => (sv,redex)::lineup rst SV
      end;
@@ -370,7 +375,7 @@ fun mk_tytheta SV theta =
     match_type (type_of pat) (type_of obj)
   end;
 
-fun inst_params (STDREC{eqs,ind,R,SV}) theta = 
+fun inst_params (STDREC{eqs,ind,R,SV}) theta =
       let val tytheta = mk_tytheta SV theta
           val fulltheta = (theta,tytheta)
       in STDREC
@@ -379,7 +384,7 @@ fun inst_params (STDREC{eqs,ind,R,SV}) theta =
             R=inst tytheta R,
             SV=map (subst theta o inst tytheta) SV}
       end
-  | inst_params (NESTREC{eqs,ind,R,SV,aux}) theta = 
+  | inst_params (NESTREC{eqs,ind,R,SV,aux}) theta =
       let val tytheta = mk_tytheta SV theta
           val fulltheta = (theta,tytheta)
       in NESTREC
@@ -389,7 +394,7 @@ fun inst_params (STDREC{eqs,ind,R,SV}) theta =
             SV=map (subst theta o inst tytheta) SV,
             aux=inst_params aux theta}
       end
-  | inst_params (MUTREC{eqs,ind,R,SV,union}) theta = 
+  | inst_params (MUTREC{eqs,ind,R,SV,union}) theta =
       let val tytheta = mk_tytheta SV theta
           val fulltheta = (theta,tytheta)
       in MUTREC
@@ -402,25 +407,25 @@ fun inst_params (STDREC{eqs,ind,R,SV}) theta =
   | inst_params x theta = x;
 *)
 
-fun inst_defn (STDREC{eqs,ind,R,SV}) theta = 
+fun inst_defn (STDREC{eqs,ind,R,SV}) theta =
       STDREC {eqs=INST_THM theta eqs,
               ind=INST_THM theta ind,
               R=isubst theta R,
               SV=map (isubst theta) SV}
-  | inst_defn (NESTREC{eqs,ind,R,SV,aux}) theta = 
+  | inst_defn (NESTREC{eqs,ind,R,SV,aux}) theta =
       NESTREC {eqs=INST_THM theta eqs,
                ind=INST_THM theta ind,
                R=isubst theta R,
                SV=map (isubst theta) SV,
                aux=inst_defn aux theta}
-  | inst_defn (MUTREC{eqs,ind,R,SV,union}) theta = 
+  | inst_defn (MUTREC{eqs,ind,R,SV,union}) theta =
       MUTREC {eqs=INST_THM theta eqs,
                  ind=INST_THM theta ind,
                  R=isubst theta R,
                  SV=map (isubst theta) SV,
                  union=inst_defn union theta}
-  | inst_defn (PRIMREC{eqs,ind}) theta = 
-      PRIMREC{eqs=INST_THM theta eqs, 
+  | inst_defn (PRIMREC{eqs,ind}) theta =
+      PRIMREC{eqs=INST_THM theta eqs,
               ind=INST_THM theta ind}
   | inst_defn (ABBREV eq) theta = ABBREV (INST_THM theta eq)
 
@@ -439,56 +444,56 @@ fun reln_of (ABBREV _)  = NONE
   | reln_of (MUTREC  {R, ...}) = SOME R;
 
 
-fun set_reln (STDREC {eqs, ind, R, SV}) R1 = 
+fun set_reln (STDREC {eqs, ind, R, SV}) R1 =
      let val (theta as (_,tytheta)) = match_term R R1
          val subs = INST_THM theta
-     in 
+     in
        STDREC{R=R1, SV=map (inst tytheta) SV,
-              eqs=subs eqs, 
+              eqs=subs eqs,
               ind=subs ind}
      end
-  | set_reln (NESTREC {eqs, ind, R, SV, aux}) R1 = 
+  | set_reln (NESTREC {eqs, ind, R, SV, aux}) R1 =
      let val (theta as (_,tytheta)) = match_term R R1
          val subs = INST_THM theta
-     in 
+     in
        NESTREC{R=R1, SV=map (inst tytheta) SV,
-               eqs=subs eqs, 
+               eqs=subs eqs,
                ind=subs ind,
                aux=set_reln aux R1}
      end
-  | set_reln (MUTREC {eqs, ind, R, SV, union}) R1 = 
+  | set_reln (MUTREC {eqs, ind, R, SV, union}) R1 =
      let val (theta as (_,tytheta)) = match_term R R1
          val subs = INST_THM theta
-     in 
+     in
        MUTREC{R=R1, SV=map (inst tytheta) SV,
-              eqs=subs eqs, 
+              eqs=subs eqs,
               ind=subs ind,
               union=set_reln union R1}
      end
   | set_reln x _ = x;
 
 
-fun PROVE_HYPL thl th = 
+fun PROVE_HYPL thl th =
   let val thm = itlist PROVE_HYP thl th
-  in if null(hyp thm) then thm 
+  in if null(hyp thm) then thm
      else raise ERR "PROVE_HYPL" "remaining termination conditions"
   end;
 
 
 (* Should perhaps be extended to existential theorems. *)
 
-fun elim_tcs (STDREC {eqs, ind, R, SV}) thms = 
-     STDREC{R=R, SV=SV, 
-            eqs=PROVE_HYPL thms eqs, 
+fun elim_tcs (STDREC {eqs, ind, R, SV}) thms =
+     STDREC{R=R, SV=SV,
+            eqs=PROVE_HYPL thms eqs,
             ind=PROVE_HYPL thms ind}
-  | elim_tcs (NESTREC {eqs, ind, R,  SV, aux}) thms = 
+  | elim_tcs (NESTREC {eqs, ind, R,  SV, aux}) thms =
      NESTREC{R=R, SV=SV,
-            eqs=PROVE_HYPL thms eqs, 
+            eqs=PROVE_HYPL thms eqs,
             ind=PROVE_HYPL thms ind,
             aux=elim_tcs aux thms}
-  | elim_tcs (MUTREC {eqs, ind, R, SV, union}) thms = 
+  | elim_tcs (MUTREC {eqs, ind, R, SV, union}) thms =
      MUTREC{R=R, SV=SV,
-            eqs=PROVE_HYPL thms eqs, 
+            eqs=PROVE_HYPL thms eqs,
             ind=PROVE_HYPL thms ind,
             union=elim_tcs union thms}
   | elim_tcs x _ = x;
@@ -510,38 +515,38 @@ end;
 
 fun SIMP_HYPL conv th = itlist (simp_assum conv) (hyp th) th;
 
-fun simp_tcs (STDREC {eqs, ind, R, SV}) conv = 
-     STDREC{R=rhs(concl(conv R)), SV=SV, 
-            eqs=SIMP_HYPL conv eqs, 
+fun simp_tcs (STDREC {eqs, ind, R, SV}) conv =
+     STDREC{R=rhs(concl(conv R)), SV=SV,
+            eqs=SIMP_HYPL conv eqs,
             ind=SIMP_HYPL conv ind}
-  | simp_tcs (NESTREC {eqs, ind, R,  SV, aux}) conv = 
+  | simp_tcs (NESTREC {eqs, ind, R,  SV, aux}) conv =
      NESTREC{R=rhs(concl(conv R)), SV=SV,
-            eqs=SIMP_HYPL conv eqs, 
+            eqs=SIMP_HYPL conv eqs,
             ind=SIMP_HYPL conv ind,
             aux=simp_tcs aux conv}
-  | simp_tcs (MUTREC {eqs, ind, R, SV, union}) conv = 
+  | simp_tcs (MUTREC {eqs, ind, R, SV, union}) conv =
      MUTREC{R=rhs(concl(conv R)), SV=SV,
-            eqs=SIMP_HYPL conv eqs, 
+            eqs=SIMP_HYPL conv eqs,
             ind=SIMP_HYPL conv ind,
             union=simp_tcs union conv}
   | simp_tcs x _ = x;
 
 
-fun TAC_HYPL tac th = 
+fun TAC_HYPL tac th =
    PROVE_HYPL (mapfilter (C (curry prove) tac) (hyp th)) th;
 
-fun prove_tcs (STDREC {eqs, ind, R, SV}) tac = 
-     STDREC{R=R, SV=SV, 
-            eqs=TAC_HYPL tac eqs, 
+fun prove_tcs (STDREC {eqs, ind, R, SV}) tac =
+     STDREC{R=R, SV=SV,
+            eqs=TAC_HYPL tac eqs,
             ind=TAC_HYPL tac ind}
-  | prove_tcs (NESTREC {eqs, ind, R,  SV, aux}) tac = 
+  | prove_tcs (NESTREC {eqs, ind, R,  SV, aux}) tac =
      NESTREC{R=R, SV=SV,
-            eqs=TAC_HYPL tac eqs, 
+            eqs=TAC_HYPL tac eqs,
             ind=TAC_HYPL tac ind,
             aux=prove_tcs aux tac}
-  | prove_tcs (MUTREC {eqs, ind, R, SV, union}) tac = 
+  | prove_tcs (MUTREC {eqs, ind, R, SV, union}) tac =
      MUTREC{R=R, SV=SV,
-            eqs=TAC_HYPL tac eqs, 
+            eqs=TAC_HYPL tac eqs,
             ind=TAC_HYPL tac ind,
             union=prove_tcs union tac}
   | prove_tcs x _ = x;
