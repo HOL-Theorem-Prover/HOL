@@ -11,7 +11,6 @@ theorems as additional assumptions in the search.
 \LIBRARY mesonLib
 
 \DESCRIBE
-
 {MESON_TAC} performs first order proof using the model elimination
 algorithm.  This algorithm is semi-complete for pure first order
 logic.  It makes special provision for handling polymorphic and
@@ -37,7 +36,6 @@ levels.  (At level one, a ``level'' is represented by the printing of
 a single dot.)
 
 \FAILURE
-
 {MESON_TAC} fails if it searches to a depth equal to the contents of
 the reference variable {mesonLib.max_depth} (set to 30 by default, but
 changeable by the user) without finding a proof.  Shouldn't fail
@@ -45,7 +43,6 @@ otherwise.
 
 
 \USES
-
 {MESON_TAC} can only progress the goal to a successful proof of the
 (whole) goal or not at all.  In this respect it differs from tactics
 such as simplification and rewriting.  Its ability to solve

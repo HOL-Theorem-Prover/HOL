@@ -3,7 +3,6 @@
 \TYPE {mesonLib.GEN_MESON_TAC : int -> int -> int -> thm list -> tactic}
 
 \SYNOPSIS
-
 Performs first order proof search to prove the goal, using both the
 given theorems and the assumptions in the search.
 
@@ -12,7 +11,6 @@ given theorems and the assumptions in the search.
 \LIBRARY mesonLib
 
 \DESCRIBE
-
 {GEN_MESON_TAC} is the function which provides the underlying
 implementation of the model elimination solver used by both
 {MESON_TAC} and {ASM_MESON_TAC}.  The three integer parameters
@@ -37,22 +35,17 @@ The approach used is iterative deepening, so with a call to
 {
   GEN_MESON_TAC mn mx inc
 }
-\noident the algorithm looks for a proof of depth {mn}, then for one
+\noindent the algorithm looks for a proof of depth {mn}, then for one
 of depth {mn + inc}, then at depth {mn + 2 * inc} etc.  Once the depth
 gets greater than {mx}, the proof search stops.
 
 \FAILURE
-
 {GEN_MESON_TAC} fails if it searches to a depth equal to the second
 integer parameter without finding a proof.  Shouldn't fail otherwise.
 
 
 \USES
-
-The construction of tailored versions of {MESON_TAC} and
-{ASM_MESON_TAC}.
-
-
+The construction of tailored versions of {MESON_TAC} and {ASM_MESON_TAC}.
 
 \SEEALSO
 ASM_MESON_TAC, MESON_TAC

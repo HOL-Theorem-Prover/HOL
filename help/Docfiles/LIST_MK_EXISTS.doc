@@ -10,7 +10,7 @@ variables.
 rule, quantifier, existential.
 
 \DESCRIBE
-When applied to a list of terms {[x1;...;xn]}, where the {ti} are all
+When applied to a list of terms {[x1;...;xn]}, where the {xi} are all
 variables, and a theorem {A |- t1 = t2}, the inference rule
 {LIST_MK_EXISTS} existentially quantifies both sides of the equation
 using the variables given, none of which should be free in the assumption

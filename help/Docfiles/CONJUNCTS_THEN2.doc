@@ -39,7 +39,7 @@ The system shows the type as {(thm_tactic -> thm_tactical)}.
 The construction of complex {tactical}s like {CONJUNCTS_THEN}.
 
 \SEEALSO
-CONJUNCT1, CONJUNCT2, CONJUNCTS, CONJUNCTS_TAC, CONJUNCTS_THEN2,
+CONJUNCT1, CONJUNCT2, CONJUNCTS, CONJ_TAC, CONJUNCTS_THEN2,
 STRIP_THM_THEN.
 
 \ENDDOC
