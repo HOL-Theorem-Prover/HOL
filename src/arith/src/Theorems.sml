@@ -21,7 +21,7 @@ struct
   val << = String.<
 
 
-open HolKernel boolTheory Drule Parse;
+open HolKernel boolTheory Drule ;
 
 (*---------------------------------------------------------------------------
  * The following ensures that the theory of arithmetic is loaded. In the
@@ -29,6 +29,10 @@ open HolKernel boolTheory Drule Parse;
  * and depend on that.
  *---------------------------------------------------------------------------*)
 local open arithmeticTheory in end;
+
+val num_ty = Type.mk_type{Tyop = "num", Args = []}
+val m_tm = Term.mk_var{Name = "m", Ty = num_ty}
+val n_tm = Term.mk_var{Name = "n", Ty = num_ty}
 
 
 (*===========================================================================*)
@@ -60,8 +64,7 @@ val PLUS_ZERO =
 (*---------------------------------------------------------------------------*)
 
 val SUC_ADD1 =
- GENL [--`m:num`--,--`n:num`--]
-  (SYM (el 3 (CONJUNCTS (arithmeticTheory.ADD_CLAUSES))));
+ GENL [m_tm, n_tm] (SYM (el 3 (CONJUNCTS (arithmeticTheory.ADD_CLAUSES))));
 
 (*---------------------------------------------------------------------------*)
 (* SUC_ADD2 = |- !m n. SUC (m + n) = (SUC n) + m                             *)
@@ -84,7 +87,7 @@ in
    val MULT_ZERO = GEN_ALL (el 2 thms)
    val ONE_MULT = GEN_ALL (el 3 thms)
    val MULT_ONE = GEN_ALL (el 4 thms)
-   val MULT_SUC = GENL [--`m:num`--,--`n:num`--] (el 5 thms)
+   val MULT_SUC = GENL [m_tm, n_tm] (el 5 thms)
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -98,7 +101,7 @@ val MULT_COMM = arithmeticTheory.MULT_SYM;
 (*---------------------------------------------------------------------------*)
 
 val SUC_ADD_LESS_EQ_F =
- GENL [--`m:num`--,--`n:num`--]
+ GENL [m_tm, n_tm]
   (EQF_INTRO (SPEC_ALL (arithmeticTheory.NOT_SUC_ADD_LESS_EQ)));
 
 (*---------------------------------------------------------------------------*)
@@ -127,7 +130,7 @@ val SUC_LESS_EQ_ZERO_F =
 
 val ZERO_LESS_EQ_ONE_TIMES =
  GEN_ALL
-  (SUBS [SYM (el 3 (CONJUNCTS (SPECL [--`n:num`--,--`m:num`--]
+  (SUBS [SYM (el 3 (CONJUNCTS (SPECL [n_tm, m_tm]
                                 (arithmeticTheory.MULT_CLAUSES))))]
     (SPEC_ALL (arithmeticTheory.ZERO_LESS_EQ)));
 

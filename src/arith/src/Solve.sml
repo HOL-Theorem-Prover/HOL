@@ -35,7 +35,6 @@ open Solve_ineqs;
 open Drule;
 open Dsyntax;
 open Thm;
-open Parse;
 open Lib;
 open Exception;
 
@@ -125,8 +124,8 @@ fun NOT_NOT_INTRO_CONV tm =
 (* Discriminator functions for T (true) and F (false)                        *)
 (*---------------------------------------------------------------------------*)
 
-val is_T = let val T = (--`T`--) in fn tm => tm = T end
-and is_F = let val F = (--`F`--) in fn tm => tm = F end;
+val is_T = let val T = Psyntax.mk_const("T", Type.bool) in fn tm => tm = T end
+and is_F = let val F = Psyntax.mk_const("F", Type.bool) in fn tm => tm = F end;
 
 (*---------------------------------------------------------------------------*)
 (* NEGATE_CONV : conv -> conv                                                *)
@@ -142,6 +141,7 @@ and is_F = let val F = (--`F`--) in fn tm => tm = F end;
 (* take a CONV as its argument.                                              *)
 (*---------------------------------------------------------------------------*)
 
+val neg_tm = Term.mk_const{Name = "~", Ty = Type.-->(Type.bool, Type.bool)}
 fun NEGATE_CONV conv tm =
  let val neg = is_neg tm
      val th = RULE_OF_CONV conv (if neg then (dest_neg tm) else (mk_neg tm))
@@ -151,7 +151,7 @@ fun NEGATE_CONV conv tm =
         else if (is_F r) then NOT_F_T
         else failwith "NEGATE_CONV"
      val neg_fn = if neg then I else TRANS (NOT_NOT_INTRO_CONV tm)
- in  neg_fn (TRANS (AP_TERM (--`$~`--) th) truth_th)
+ in  neg_fn (TRANS (AP_TERM neg_tm th) truth_th)
  end;
 
 (*---------------------------------------------------------------------------*)

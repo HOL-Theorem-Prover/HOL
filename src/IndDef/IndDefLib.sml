@@ -17,6 +17,10 @@ infix THEN THENC
 
 fun WRAP_ERR x = STRUCT_WRAP "Ind_defs" x;
 
+val (Type,Term) = parse_from_grammars combinTheory.combin_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 (* ------------------------------------------------------------------------- *)
 (* Apply a destructor as many times as elements in list.                     *)
 (* ------------------------------------------------------------------------- *)

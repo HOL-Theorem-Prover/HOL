@@ -28,7 +28,10 @@ fun NUM_ERR{function,message} =
 infix 5 |->
 infix ##;
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+
 val N = Type`:num`
+fun -- q x = Term q
 
 (* --------------------------------------------------------------------- *)
 (* ADD_CONV: addition of natural number constants (numerals).            *)
@@ -47,10 +50,10 @@ val N = Type`:num`
 (* --------------------------------------------------------------------- *)
 
 local open numeralTheory
-      val RW = REWRITE_CONV 
+      val RW = REWRITE_CONV
          [numeral_add, numeral_distrib, numeral_suc, numeral_iisuc]
 in
-fun ADD_CONV tm = 
+fun ADD_CONV tm =
  let val (f, args) = strip_comb tm
      val _ = assert (fn t => #Name(dest_const t) = "+") f
      val _ = assert (fn l => length l = 2) args
@@ -84,7 +87,7 @@ end;
 local open numeralTheory
       val RW = REWRITE_CONV [numeral_eq, numeral_distrib]
 in
-fun num_EQ_CONV tm = 
+fun num_EQ_CONV tm =
  let val {lhs=n, rhs=m} = dest_eq tm
      val _ = assert (fn t => type_of t = N) n
  in
@@ -92,7 +95,7 @@ fun num_EQ_CONV tm =
    if is_numeral n andalso is_numeral m then RW tm
    else raise NUM_ERR{function = "num_EQ_CONV",
                message = "Terms are neither identical nor numerals"}
- end 
+ end
  handle HOL_ERR _ => raise NUM_ERR{function="num_EQ_CONV",message = ""}
 end;
 
@@ -154,7 +157,9 @@ and NOT_LESS_0' = prim_recTheory.NOT_LESS_0
 and num_CASES' = arithmeticTheory.num_CASES
 and GREATER' = arithmeticTheory.GREATER_DEF
 val EXISTS_GREATEST = prove(
---`!P.(?x. P x) /\ (?x. !y. y > x ==> ~P y) = ?x. P x /\ !y. y > x ==> ~P y`--,
+  Term`!P.
+          (?x. P x) /\ (?x. !y. y > x ==> ~P y) =
+          ?x. P x /\ !y. y > x ==> ~P y`,
   GEN_TAC THEN EQ_TAC THENL
   [REWRITE_TAC[GREATER'] THEN
    DISCH_THEN (CONJUNCTS_THEN2 STRIP_ASSUME_TAC

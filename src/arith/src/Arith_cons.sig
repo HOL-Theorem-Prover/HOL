@@ -1,7 +1,7 @@
 signature Arith_cons =
 sig
 
- local type int = Arbint.int 
+ local type int = Arbint.int
  in
 
    type term = Term.term

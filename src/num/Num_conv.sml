@@ -24,12 +24,14 @@ fun NUM_CONV_ERR function message =
                  origin_function = function,
                  message = message}
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+
 (* |- !m n. 0 < n ==> ((m = PRE n) = SUC m = n) *)
 val PRE_SUC_EQ      = arithmeticTheory.PRE_SUC_EQ
 val numeral_pre     = numeralTheory.numeral_pre
 val numeral_lt      = numeralTheory.numeral_lt
 val numeral_distrib = numeralTheory.numeral_distrib
-val save_zero = 
+val save_zero =
   prove(Term`NUMERAL ALT_ZERO = 0`,
    REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, arithmeticTheory.ALT_ZERO]);
 
@@ -45,7 +47,7 @@ in
 fun num_CONV t =
  if t=one then arithmeticTheory.ONE else
  if t=two then arithmeticTheory.TWO else
- if is_numeral t andalso t <> ZERO 
+ if is_numeral t andalso t <> ZERO
  then let val pre_t    = mk_comb(PRE, t)
           val pre_thm  = SYM (RW_CONV1 pre_t)
           val result_t = lhs (concl pre_thm)

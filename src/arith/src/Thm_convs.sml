@@ -31,6 +31,10 @@ val GSYM      = Conv.GSYM;
 val REWR_CONV = Conv.REWR_CONV;
 val GEN_REWRITE_CONV = Rewrite.GEN_REWRITE_CONV;
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 (*===========================================================================*)
 (* Conversions for rewriting Boolean terms                                   *)
 (*===========================================================================*)

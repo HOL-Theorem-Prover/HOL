@@ -1,4 +1,9 @@
 open HolKernel basicHol90Lib Psyntax Parse;
+
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 infix myTRANS THEN ORELSE ORELSEC THENL THENC |->;
 fun th1 myTRANS th2 = TRANS th1 th2;
 fun failwith s      =

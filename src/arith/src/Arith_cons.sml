@@ -29,7 +29,7 @@ fun failwith function = raise
  Exception.HOL_ERR{origin_structure = "Arith_cons",
                    origin_function = function,
                            message = ""};
-open HolKernel Parse;
+open HolKernel;
 
 type term = Term.term
 
@@ -216,7 +216,7 @@ val is_pre = can dest_pre;
 (*===========================================================================*)
 
 val is_num_const = Term.is_numeral
-val zero = (--`0`--)
+val zero = mk_numeral (Arbnum.fromInt 0)
 fun is_zero tm = tm = zero
 
 

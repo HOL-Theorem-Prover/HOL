@@ -38,7 +38,7 @@ open Qconv;
 open Theorems;
 open Thm_convs;
 open reduceLib;
-open HolKernel Drule Parse;
+open HolKernel Drule ;
 
 infix ##;
 infix THENC;
@@ -222,6 +222,9 @@ val multiplication_theorems = fn () => !multiplication_theorems;
 (* where const' is the numeric constant one greater than const.              *)
 (*---------------------------------------------------------------------------*)
 
+val num_ty = Type.mk_type{Tyop = "num", Args = []}
+val plus_tm = Term.mk_const{Name = "+",
+                            Ty = Type.-->(num_ty, Type.-->(num_ty, num_ty))}
 fun SUM_OF_PRODUCTS_SUC_CONV tm =
  let val add1 = term_of_int o (curry (op +) one) o int_of_term
  in
@@ -237,13 +240,13 @@ fun SUM_OF_PRODUCTS_SUC_CONV tm =
               (let val (a,b) = dest_plus tm'
                in  if (is_num_const a) then
                       (let val th1 = SPEC b (SPEC a SUC_ADD1)
-                           and th2 = AP_THM (AP_TERM (--`$+`--)
+                           and th2 = AP_THM (AP_TERM plus_tm
                                                 ((SYM o num_CONV o add1) a)) b
                        in  TRANS th1 th2
                        end)
                    else if (is_num_const b) then
                       (let val th1 = SPEC b (SPEC a SUC_ADD2)
-                           and th2 = AP_THM (AP_TERM (--`$+`--)
+                           and th2 = AP_THM (AP_TERM plus_tm
                                                 ((SYM o num_CONV o add1) b)) a
                        in  TRANS th1 th2
                        end)

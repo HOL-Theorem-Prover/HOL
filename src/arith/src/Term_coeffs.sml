@@ -35,7 +35,6 @@ infix 3 ##;
 open Term;
 open Dsyntax;
 open Arith_cons;
-open Parse;
 
 (* datatype frag = datatype Portable.frag; *)
 
@@ -231,29 +230,30 @@ fun coeffs_of_leq_set tm =
 (*    (0,[("x",0);("y",0)]) ---> `0`                                         *)
 (*---------------------------------------------------------------------------*)
 
-fun build_arith (const,bind) =
-   let fun build bind =
-          if (null bind)
-          then (--`0`--)
-          else let val (name,coeff) = hd bind
-                   and rest = build (tl bind)
-               in  if (coeff = zero)
-                   then rest
-                   else let val prod =
-                               mk_mult (term_of_int coeff,mk_num_var name)
-                        in  if (rest = (--`0`--))
-                            then prod
-                            else mk_plus (prod,rest)
-                        end
-               end
-   in (let val c = term_of_int const
-           and rest = build bind
-       in  if (rest = (--`0`--)) then c
-           else if (const = zero) then rest
-           else mk_plus (c,rest)
-       end
-      ) handle _ => failwith "build_arith"
-   end;
+val zero_tm = term_of_int zero
+fun build_arith (const,bind) = let
+  fun build bind =
+    if (null bind) then zero_tm
+    else let
+      val (name,coeff) = hd bind
+      and rest = build (tl bind)
+    in
+      if (coeff = zero) then rest
+      else let
+        val prod = mk_mult (term_of_int coeff,mk_num_var name)
+      in
+        if is_zero rest then prod else mk_plus (prod,rest)
+      end
+    end
+in (let
+  val c = term_of_int const
+  and rest = build bind
+in
+  if is_zero rest then c
+  else if (const = zero) then rest
+       else mk_plus (c,rest)
+end) handle _ => failwith "build_arith"
+end;
 
 (*---------------------------------------------------------------------------*)
 (* build_leq : (int * (string * int) list) -> term                           *)

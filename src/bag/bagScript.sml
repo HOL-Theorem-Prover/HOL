@@ -1,4 +1,5 @@
 open HolKernel basicHol90Lib mn_tactics
+open Parse
 infix THEN ORELSE THENL THENC ORELSEC >- ++ |->;
 
 val _ = new_theory "bag";

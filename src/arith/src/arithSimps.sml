@@ -18,6 +18,10 @@ open liteLib Arith_cons Arith simpLib Traverse Cache Trace;
 
 type conv = Abbrev.conv;
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 (* ---------------------------------------------------------------------*
  * LIN: Linear arithmetic expressions                                   *
  * ---------------------------------------------------------------------*)

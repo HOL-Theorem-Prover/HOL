@@ -32,6 +32,10 @@ fun failwith function = raise
 open HolKernel boolTheory basicHol90Lib Parse
 open Num_conv;
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 infix THEN |-> THENC;
 
 val prove = Tactical.prove;
@@ -101,7 +105,7 @@ end
 
 local val NEQ_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_eq])
 in
-fun NEQ_CONV tm = 
+fun NEQ_CONV tm =
   case dest_op neqop tm
    of [xn,yn] => (NEQ_RW tm handle HOL_ERR _ => failwith "NEQ_CONV")
     |    _    => failwith "NEQ_CONV"
@@ -113,7 +117,7 @@ end;
 
 local val LT_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lt])
 in
-fun LT_CONV tm = 
+fun LT_CONV tm =
   case dest_op ltop tm
    of [xn,yn] => (LT_RW tm handle HOL_ERR _ => failwith "LT_CONV")
     |   _     => failwith "LT_CONV"
@@ -150,7 +154,7 @@ end;
 local val GE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lte])
 in
 fun GE_CONV tm =
-  case dest_op geop tm 
+  case dest_op geop tm
    of [xn,yn] => (GE_RW tm handle HOL_ERR _ => failwith "GE_CONV")
     |    _    => failwith "GE_CONV"
 end;
@@ -174,7 +178,7 @@ end;
 val save_zero = prove(Term`NUMERAL ALT_ZERO = 0`,
                       REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
                                    arithmeticTheory.ALT_ZERO]);
-local 
+local
  val PRE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_pre,save_zero])
 in
 fun PRE_CONV tm =
@@ -187,10 +191,10 @@ end;
 (* SBC_CONV "[x] - [y]" = |- ([x] - [y]) = [x - y]                       *)
 (*-----------------------------------------------------------------------*)
 
-local 
- val SBC_RW = 
-   TFN_CONV (REWRITE_CONV 
-       [numeral_distrib, numeral_sub,iSUB_THM, 
+local
+ val SBC_RW =
+   TFN_CONV (REWRITE_CONV
+       [numeral_distrib, numeral_sub,iSUB_THM,
         iDUB_removal,numeral_pre, numeral_lt])
 in
 fun SBC_CONV tm =
@@ -203,13 +207,13 @@ end;
 (* ADD_CONV "[x] + [y]" = |- [x] + [y] = [x+y]                           *)
 (*-----------------------------------------------------------------------*)
 
-local 
- val ADD_RW = 
-   TFN_CONV (REWRITE_CONV 
+local
+ val ADD_RW =
+   TFN_CONV (REWRITE_CONV
       [numeral_distrib, numeral_add,numeral_suc, numeral_iisuc])
 in
 fun ADD_CONV tm =
-  case dest_op plusop tm 
+  case dest_op plusop tm
    of [xn, yn] => (ADD_RW tm handle HOL_ERR _ => failwith "ADD_CONV")
     |    _     => failwith "ADD_CONV"
 end;
@@ -219,9 +223,9 @@ end;
 (*-----------------------------------------------------------------------*)
 
 local
-  val MUL_RW = 
-    TFN_CONV (REWRITE_CONV 
-      [numeral_distrib, numeral_add, numeral_suc, 
+  val MUL_RW =
+    TFN_CONV (REWRITE_CONV
+      [numeral_distrib, numeral_add, numeral_suc,
        numeral_iisuc, numeral_mult, iDUB_removal, numeral_pre])
 in
 fun MUL_CONV tm =
@@ -234,7 +238,7 @@ end;
 (* EXP_CONV "[x] EXP [y]" = |- [x] EXP [y] = [x ** y]                    *)
 (*-----------------------------------------------------------------------*)
 
-local 
+local
  val RW1 = REWRITE_CONV [numeral_distrib, numeral_exp]
  val RW2 = REWRITE_CONV [numeral_add, numeral_suc, numeral_iisuc,
                          numeral_mult, iDUB_removal, numeral_pre, iSQR]

@@ -22,6 +22,10 @@ val BETA_THM          = boolTheory.BETA_THM
 val ABS_SIMP          = boolTheory.ABS_SIMP;
 
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 (* ------------------------------------------------------------------------- *)
 (* Start building up the basic rewrites; we add a few more later.            *)
 (* ------------------------------------------------------------------------- *)
