@@ -70,6 +70,10 @@ fun tyVars ptm =  (* the pretype variables in a preterm *)
     overloading resolution should already have gotten rid of them.
  ---------------------------------------------------------------------------*)
 
+val _ =
+    register_btrace ("notify type variable guesses",
+                     Globals.notify_on_tyvar_guess)
+
 fun to_term tm =
  if !Globals.guessing_tyvars
  then
