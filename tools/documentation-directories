@@ -1,11 +1,11 @@
 help/Docfiles
-src/arith/help/entries
 src/compute/help/entries
 src/hol88/help/entries
 src/list/help/entries
+src/num/arith/help/entries
+src/num/reduce/help/entries
 src/pair/help/entries
 src/pred_set/help/entries
-src/reduce/help/entries
 src/res_quan/help/entries
 src/set/help/entries
 src/string/help/entries
