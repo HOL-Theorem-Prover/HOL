@@ -2373,7 +2373,7 @@ val DIV_LE_MONOTONE = store_thm(
   ASM_REWRITE_TAC [] THEN STRIP_TAC THEN       (* SUC r * n <= q * n *)
   POP_ASSUM (ASSUME_TAC o REWRITE_RULE [MULT_CLAUSES]) THEN
                                                (* r * n + n <= q * n *)
-  Q.SPECL_THEN [`r * n`, `e`, `n`] MP_TAC LT_ADD_LCANCEL THEN
+  Q.SPECL_THEN [`e`, `n`, `r * n`] MP_TAC LT_ADD_LCANCEL THEN
   ASM_REWRITE_TAC [] THEN STRIP_TAC THEN       (* r * n + e < r * n + n *)
   Q.SPECL_THEN [`q * n`, `d`] ASSUME_TAC LESS_EQ_ADD THEN
                                                (* q * n <= q * n + d *)
