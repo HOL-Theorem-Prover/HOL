@@ -26,10 +26,13 @@ open monadic_parse
 open fragstr
 infix >> >- >-> ++
 
-fun parse_type strm = parse_type.parse_type true (Parse.type_grammar()) strm
-val parse_ptype :
-  (Type.hol_type parse_type.pretype, Type.hol_type frag) Parser =
-  (symbol "(" >> parse_type >-> symbol ")") ++ parse_type
+datatype pretype =
+  dVartype of string | dTyop of (string * pretype list) |
+  dAQ of Type.hol_type
+
+fun parse_type strm =
+  parse_type.parse_type {vartype = dVartype, tyop = dTyop, antiq = dAQ} true
+  (Parse.type_grammar()) strm
 fun parse_constructor_id s =
   (token (many1_charP (fn c => Lexis.in_class (Lexis.hol_symbols, Char.ord c)))
    ++
@@ -38,7 +41,7 @@ fun parse_constructor_id s =
 val parse_phrase =
   parse_constructor_id >-                            (fn constr_id =>
   optional (symbol "of" >>
-            sepby1 (symbol "=>") parse_ptype) >-     (fn optlist =>
+            sepby1 (symbol "=>") parse_type) >-     (fn optlist =>
   case optlist of
     NONE => return (constr_id, [])
   | SOME tylist => return (constr_id, tylist)))
@@ -48,8 +51,7 @@ val parse_G =
   symbol "=" >> sepby1 (symbol "|") parse_phrase >-  (fn phrlist =>
   return (tyname, phrlist)))
 
-type datatypeAST = string
-                   * ((string * Type.hol_type parse_type.pretype list) list)
+type datatypeAST = string * ((string * pretype list) list)
 
 fun fragtoString (QUOTE s) = s
   | fragtoString (ANTIQUOTE _) = " ^... "
