@@ -4,6 +4,7 @@ struct
   type term         = Term.term
   type hol_type     = Type.hol_type
   type conv         = term -> thm
+  type rule         = thm -> thm
   type goal         = term list * term
   type validation   = thm list -> thm
   type tactic       = goal -> goal list * validation
