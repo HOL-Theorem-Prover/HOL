@@ -52,6 +52,8 @@ val basic_op_terms =
    less_tm, leq_tm, great_tm, geq_tm, divides_tm, rem_tm, quot_tm]
 val basic_op_patterns = map (fn t => list_mk_comb(t, [x,y])) basic_op_terms
 val exp_pattern = list_mk_comb(exp_tm, [x,n])
+val abs_patterns = [lhs (#2 (strip_forall (concl INT_ABS_NEG))),
+                    lhs (#2 (strip_forall (concl INT_ABS_NUM)))]
 
 fun reducible t = is_int_literal t orelse numSyntax.is_numeral t
 fun reducer t = let
@@ -81,7 +83,7 @@ fun mk_conv pat = {name = "Integer calculation", key = SOME([], pat),
                    trace = 2, conv = K (K reducer)}
 
 val INT_REDUCE_ss = simpLib.SIMPSET
-  {convs = map mk_conv (exp_pattern::basic_op_patterns),
+  {convs = map mk_conv (exp_pattern::(abs_patterns @ basic_op_patterns)),
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val int_ss = simpLib.++(boolSimps.bool_ss, INT_REDUCE_ss)
