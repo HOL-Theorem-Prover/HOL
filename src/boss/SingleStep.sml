@@ -292,7 +292,7 @@ fun chop_at n frontacc l =
   else
     case l of
       [] => raise Fail "chop_at"
-    | (h::t) => chop_at (n - 1) (h::frontacc) t
+    | (h::t) => chop_at (n-1) (h::frontacc) t
 
 infix THEN1
 fun ((tac1:tactic) THEN1 (tac2:tactic)) (asl:term list,w:term) = let

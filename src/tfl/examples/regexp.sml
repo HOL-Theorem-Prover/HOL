@@ -134,7 +134,7 @@ val sem_def =
 (*---------------------------------------------------------------------------*)
 
 val ALL_SPLITS_def = Define
-  `(ALL_SPLITS (l,[]) = [(l,[])]) /\
+  `(ALL_SPLITS (l,[])   = [(l,[])]) /\
    (ALL_SPLITS (l,h::t) = (l,h::t)::ALL_SPLITS(l<>[h],t))`;
 
 val SPLITS_def = Define `SPLITS l = ALL_SPLITS ([],l)`;

@@ -2,7 +2,7 @@
  * Setting information for types.                                            *
  *                                                                           *
  * Here we fill in the "size" entries in theTypeBase for some types that     *
- * are non-recursive and built before numbers.                               *
+ * are non-recursive and built before numbers. Also add some lifters.        *
  *---------------------------------------------------------------------------*)
 
 structure NonRecSize =
@@ -13,10 +13,22 @@ local open pairTheory sumTheory optionTheory arithmeticTheory in end;
 local
   open HolKernel boolLib Parse pairSyntax numSyntax
 
+  (*----------------------------------------------------------------------*)
+  (* Booleans                                                             *)
+  (*----------------------------------------------------------------------*)
+
   val bool_info = Option.valOf (TypeBase.read "bool");
   val bool_size_info = (rator(mk_bool_case(zero_tm,zero_tm,mk_arb bool)),
                         TypeBasePure.ORIG boolTheory.bool_case_ID)
-  val bool_info' = TypeBasePure.put_size bool_size_info bool_info
+  val ty = mk_vartype "'type"
+  val tm = mk_vartype "'term"
+  val lift_bool_var = mk_var("lift_bool",ty --> bool --> tm)
+  val bool_info' = TypeBasePure.put_lift lift_bool_var
+                      (TypeBasePure.put_size bool_size_info bool_info);
+
+  (*----------------------------------------------------------------------*)
+  (* Products                                                             *)
+  (*----------------------------------------------------------------------*)
 
   val prod_size_info =
     (let val f = mk_var("f", alpha --> num)
@@ -31,6 +43,10 @@ local
   val prod_info' = TypeBasePure.put_size prod_size_info 
                      (Option.valOf (TypeBase.read"prod"))
 
+  (*----------------------------------------------------------------------*)
+  (* Sums                                                                 *)
+  (*----------------------------------------------------------------------*)
+
   val sum_info = Option.valOf(TypeBase.read "sum");
   val sum_case = prim_mk_const{Name="sum_case", Thy="sum"}
   val num = numSyntax.num
@@ -42,10 +58,22 @@ local
   val sum_size_info = (tm,TypeBasePure.ORIG sumTheory.sum_case_def)
   val sum_info' = TypeBasePure.put_size sum_size_info sum_info
 
+  (*----------------------------------------------------------------------*)
+  (* Unit type                                                            *)
+  (*----------------------------------------------------------------------*)
+
   val one_info = Option.valOf (TypeBase.read "one")
   val one_size_info = (rator(oneSyntax.mk_one_case zero_tm),
                         TypeBasePure.ORIG oneTheory.one_case_rw)
-  val one_info' = TypeBasePure.put_size one_size_info one_info
+  val ty = mk_vartype "'type"
+  val tm = mk_vartype "'term"
+  val lift_one_var = mk_var("lift_one", ty --> oneSyntax.one_ty --> tm)
+  val one_info' = TypeBasePure.put_lift lift_one_var
+                     (TypeBasePure.put_size one_size_info one_info)
+
+  (*----------------------------------------------------------------------*)
+  (* Options                                                              *)
+  (*----------------------------------------------------------------------*)
 
   val option_info = Option.valOf (TypeBase.read "option")
   val option_case_tm = prim_mk_const{Name="option_case",Thy="option"}

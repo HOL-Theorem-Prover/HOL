@@ -214,7 +214,9 @@ val enc2dec_dec2enc = store_thm
      Units
  ---------------------------------------------------------------------------*)
 
-val decode_unit_def = Define `decode_unit p = enc2dec p encode_unit`;
+val decode_unit_def = Q.new_definition
+  ("decode_unit_def",
+   `decode_unit p = enc2dec p encode_unit`);
 
 val wf_decode_unit = store_thm
   ("wf_decode_unit",
@@ -237,7 +239,9 @@ val decode_unit = store_thm
      Booleans
  ---------------------------------------------------------------------------*)
 
-val decode_bool_def = Define `decode_bool p = enc2dec p encode_bool`;
+val decode_bool_def = Q.new_definition
+   ("decode_bool_def",
+    `decode_bool p = enc2dec p encode_bool`);
 
 val wf_decode_bool = store_thm
   ("wf_decode_bool",
@@ -262,8 +266,9 @@ val decode_bool = store_thm
      Pairs
  ---------------------------------------------------------------------------*)
 
-val decode_prod_def = Define
-  `decode_prod p d1 d2 = enc2dec p (encode_prod (dec2enc d1) (dec2enc d2))`;
+val decode_prod_def = Q.new_definition
+  ("decode_prod_def",
+   `decode_prod p d1 d2 = enc2dec p (encode_prod (dec2enc d1) (dec2enc d2))`);
 
 val wf_decode_prod = store_thm
   ("wf_decode_prod",
@@ -372,8 +377,9 @@ val decode_prod = store_thm
      Sums
  ---------------------------------------------------------------------------*)
 
-val decode_sum_def = Define
-  `decode_sum p d1 d2 = enc2dec p (encode_sum (dec2enc d1) (dec2enc d2))`;
+val decode_sum_def = Q.new_definition
+  ("decode_sum_def",
+   `decode_sum p d1 d2 = enc2dec p (encode_sum (dec2enc d1) (dec2enc d2))`);
 
 val wf_decode_sum = store_thm
   ("wf_decode_sum",
@@ -493,8 +499,9 @@ val decode_sum = store_thm
      Options
  ---------------------------------------------------------------------------*)
 
-val decode_option_def = Define
-  `decode_option p d = enc2dec p (encode_option (dec2enc d))`;
+val decode_option_def = Q.new_definition
+  ("decode_option_def",
+   `decode_option p d = enc2dec p (encode_option (dec2enc d))`);
 
 val wf_decode_option = store_thm
   ("wf_decode_option",
@@ -590,8 +597,9 @@ val decode_option = store_thm
      Lists
  ---------------------------------------------------------------------------*)
 
-val decode_list_def = Define
-  `decode_list p d = enc2dec p (encode_list (dec2enc d))`;
+val decode_list_def = Q.new_definition
+  ("decode_list_def",
+   `decode_list p d = enc2dec p (encode_list (dec2enc d))`);
 
 val wf_decode_list = store_thm
   ("wf_decode_list",
@@ -715,8 +723,9 @@ val decode_list = store_thm
      Bounded lists
  ---------------------------------------------------------------------------*)
 
-val decode_blist_def = Define
-  `decode_blist p m d = enc2dec p (encode_blist m (dec2enc d))`;
+val decode_blist_def = Q.new_definition
+  ("decode_blist_def",
+   `decode_blist p m d = enc2dec p (encode_blist m (dec2enc d))`);
 
 val wf_decode_blist = store_thm
   ("wf_decode_blist",
@@ -834,7 +843,9 @@ val decode_blist = store_thm
      Nums
  ---------------------------------------------------------------------------*)
 
-val decode_num_def = Define `decode_num p = enc2dec p encode_num`;
+val decode_num_def = Q.new_definition
+  ("decode_num_def",
+   `decode_num p = enc2dec p encode_num`);
 
 val wf_decode_num = store_thm
   ("wf_decode_num",
@@ -959,7 +970,9 @@ val decode_num = store_thm
      Bounded numbers
  ---------------------------------------------------------------------------*)
 
-val decode_bnum_def = Define `decode_bnum m p = enc2dec p (encode_bnum m)`;
+val decode_bnum_def = Q.new_definition
+   ("decode_bnum_def",
+    `decode_bnum m p = enc2dec p (encode_bnum m)`);
 
 val dec_bnum_def = Define
   `(dec_bnum 0 l = SOME (0, l)) /\
@@ -1107,8 +1120,9 @@ val decode_bnum = store_thm
      Trees
  ---------------------------------------------------------------------------*)
 
-val decode_tree_def = Define
-  `decode_tree p d = enc2dec p (encode_tree (dec2enc d))`;
+val decode_tree_def = Q.new_definition
+  ("decode_tree_def",
+   `decode_tree p d = enc2dec p (encode_tree (dec2enc d))`);
 
 val wf_decode_tree = store_thm
   ("wf_decode_tree",
@@ -1197,5 +1211,13 @@ val decode_tree = store_thm
      RW_TAC std_ss
      [decode_tree_def, dec2enc_enc2dec, wf_dec2enc, wf_encode_tree]]]);
 
-val _ = export_theory ();
+val _ = computeLib.add_persistent_funs 
+         [("decode_unit",decode_unit), 
+          ("decode_bool",decode_bool), 
+          ("decode_num",decode_num)];
 
+(* decode_prod, decode_sum, decode_option, decode_list, decode_blist, 
+   decode_bnum, and decode_tree all have preconditions that need 
+   to be eliminated *)
+
+val _ = export_theory ();

@@ -93,8 +93,6 @@ fun dest_option_case tm =
  in (x,y,z)
  end
 
-
-
 (*---------------------------------------------------------------------------
          Query operations
  ---------------------------------------------------------------------------*)
@@ -108,5 +106,17 @@ val is_option_map  = can dest_option_map
 val is_option_join = can dest_option_join
 val is_option_case = can dest_option_case
 
-end
 
+(*---------------------------------------------------------------------------*)
+(* Lifting from ML options to HOL options                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun lift_option ty =
+  let val none = TypeBasePure.cinst ty none_tm
+      val some = TypeBasePure.cinst ty some_tm
+      fun lift f NONE = none
+        | lift f (SOME x) = mk_comb(some,f x)
+  in lift
+  end
+
+end

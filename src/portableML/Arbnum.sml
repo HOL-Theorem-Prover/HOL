@@ -368,6 +368,8 @@ fun toString n =
     nonzero_recurse n
   end
 
+fun pp_num ppstrm n = PP.add_string ppstrm (toString n);
+
 (*  useful test code follows
 exception ArgsBad;
 

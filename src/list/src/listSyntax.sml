@@ -170,4 +170,16 @@ fun dest_list M =
 
 val is_list = can dest_list;
 
+(*---------------------------------------------------------------------------*)
+(* Lift ML lists to HOL lists                                                *)
+(*---------------------------------------------------------------------------*)
+
+fun lift_list ty =
+  let val Nil = TypeBasePure.cinst ty nil_tm
+      val Cons = TypeBasePure.cinst ty cons_tm
+      fun lift f [] = Nil
+        | lift f (h::t) = list_mk_comb(Cons,[f h,lift f t])
+  in lift
+  end
+
 end

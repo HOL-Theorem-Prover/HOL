@@ -89,4 +89,6 @@ sig
   val strip_plus    : term -> term list
   val strip_mult    : term -> term list
 
+  val lift_num      : hol_type -> Arbnum.num -> term
+
 end

@@ -135,6 +135,12 @@ fun pp_to_string linewidth ppfn ob =
 
 val mk_consumer = fn x => x
 
+(*---------------------------------------------------------------------------*)
+(* Generate a standard ppstream                                              *)
+(*---------------------------------------------------------------------------*)
+
+fun stdOut_ppstream () = mk_ppstream (defaultConsumer());
+
 (*---------------------------------------------------------------------------
  * Print a list of items.
  *

@@ -52,21 +52,28 @@ val INV_SUC_EQ   = prim_recTheory.INV_SUC_EQ;
 val PRIM_REC_THM = prim_recTheory.PRIM_REC_THM;
 val num_Axiom    = prim_recTheory.num_Axiom;
 
-val ADD_CLAUSES   = arithmeticTheory.ADD_CLAUSES;
-val LESS_ADD_1    = arithmeticTheory.LESS_ADD_1;
-val LESS_EQ       = arithmeticTheory.LESS_EQ;
-val NOT_LESS      = arithmeticTheory.NOT_LESS;
-val LESS_EQ_ADD   = arithmeticTheory.LESS_EQ_ADD;
-val num_CASES     = arithmeticTheory.num_CASES;
-val LESS_MONO_EQ  = arithmeticTheory.LESS_MONO_EQ;
-val LESS_MONO_EQ  = arithmeticTheory.LESS_MONO_EQ;
-val ADD_EQ_0      = arithmeticTheory.ADD_EQ_0;
-val ONE           = arithmeticTheory.ONE;
+val ADD_CLAUSES  = arithmeticTheory.ADD_CLAUSES;
+val LESS_ADD_1   = arithmeticTheory.LESS_ADD_1;
+val LESS_EQ      = arithmeticTheory.LESS_EQ;
+val NOT_LESS     = arithmeticTheory.NOT_LESS;
+val LESS_EQ_ADD  = arithmeticTheory.LESS_EQ_ADD;
+val num_CASES    = arithmeticTheory.num_CASES;
+val LESS_MONO_EQ = arithmeticTheory.LESS_MONO_EQ;
+val LESS_MONO_EQ = arithmeticTheory.LESS_MONO_EQ;
+val ADD_EQ_0     = arithmeticTheory.ADD_EQ_0;
+val ONE          = arithmeticTheory.ONE;
 
-val PAIR_EQ = pairTheory.PAIR_EQ;
+val PAIR_EQ      = pairTheory.PAIR_EQ;
 
+(*---------------------------------------------------------------------------*)
+(* Declare the datatype of lists                                             *)
+(*---------------------------------------------------------------------------*)
 
 val _ = Datatype.Hol_datatype `list = NIL | CONS of 'a => list`;
+
+(*---------------------------------------------------------------------------*)
+(* Fiddle with concrete syntax                                               *)
+(*---------------------------------------------------------------------------*)
 
 val _ = set_MLname "CONS" "CONS_def";
 
@@ -78,9 +85,9 @@ val _ = add_rule {term_name = "CONS", fixity = Infixr 450,
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
 
-(* ---------------------------------------------------------------------*)
-(* Now, prove the axiomatization of lists.				*)
-(* ---------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Prove the axiomatization of lists                                         *)
+(*---------------------------------------------------------------------------*)
 
 val list_Axiom = TypeBase.axiom_of "list";
 
@@ -95,7 +102,6 @@ val list_Axiom_old = store_thm(
     HO_MATCH_MP_TAC (TypeBase.induction_of "list") THEN
     simpLib.ASM_SIMP_TAC boolSimps.bool_ss []
   ]);
-
 
 (*---------------------------------------------------------------------------
      Now some definitions.
@@ -241,15 +247,14 @@ val NULL = store_thm ("NULL",
 (*---------------------------------------------------------------------------*)
 
 val list_INDUCT0 = TypeBase.induction_of "list";
-(* only the variables have changed their names, but some proofs rely on
-   names -- bad proofs! *)
-val list_INDUCT = store_thm(
-  "list_INDUCT",
-  --`!P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l`--,
-  REWRITE_TAC [list_INDUCT0]);  (* must use REWRITE_TAC, ACCEPT_TAC refuses
-                                   to respect bound variable names *)
-val list_induction = save_thm("list_induction", list_INDUCT);
 
+val list_INDUCT = store_thm
+("list_INDUCT",
+ --`!P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l`--,
+ REWRITE_TAC [list_INDUCT0]);  (* must use REWRITE_TAC, ACCEPT_TAC refuses
+                                   to respect bound variable names *)
+
+val list_induction  = save_thm("list_induction", list_INDUCT);
 val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 
 (*---------------------------------------------------------------------------*)
@@ -257,10 +262,12 @@ val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 (*---------------------------------------------------------------------------*)
 
 val list_cases = TypeBase.nchotomy_of "list";
-val list_CASES = store_thm(
-  "list_CASES",
-  --`!l. (l = []) \/ (?t h. l = h::t)`--,
-  mesonLib.MESON_TAC [list_cases]);
+
+val list_CASES = store_thm
+("list_CASES",
+ --`!l. (l = []) \/ (?t h. l = h::t)`--,
+ mesonLib.MESON_TAC [list_cases]);
+
 val list_nchotomy = save_thm("list_nchotomy", list_CASES);
 
 (*---------------------------------------------------------------------------*)
@@ -938,7 +945,14 @@ val _ = adjoin_to_theory
    S "              FOLDL, REVERSE_DEF, EL_compute, ALL_DISTINCT,";
    S "              computeLib.lazyfy_thm list_case_compute,";
    S "              list_size_def]";
-   S "        end;"
+   S "        end;";
+   NL(); NL();
+   S "val _ =";
+   S "  let val list_info = Option.valOf (TypeBase.read \"list\")";
+   S "      val lift_list = mk_var(\"lift_list\",Parse.Type`:'type -> ('a -> 'term) -> 'a list -> 'term`)";
+   S "      val list_info' = TypeBasePure.put_lift lift_list list_info";
+   S "  in TypeBase.write [list_info']";
+   S "  end;"
  end)};
 
 val _ = BasicProvers.export_rewrites
@@ -953,7 +967,6 @@ val _ = BasicProvers.export_rewrites
            "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR", "FILTER",
            "ALL_DISTINCT"];
 
-
 val _ = export_theory();
 
-end;
+end

@@ -19,6 +19,7 @@ sig
   val defaultConsumer : unit -> {consumer : string -> unit, 
                                  flush : unit -> unit, 
                                  linewidth : int}
+  val stdOut_ppstream : unit -> ppstream
   val pr_list : ('a -> unit)
                   -> (unit -> 'b) -> (unit -> 'c) -> 'a list -> unit
 

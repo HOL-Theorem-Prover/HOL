@@ -34,4 +34,6 @@ sig
   val >          : num * num -> bool
   val >=         : num * num -> bool
 
+  val pp_num     : Portable.ppstream -> num -> unit
+
 end

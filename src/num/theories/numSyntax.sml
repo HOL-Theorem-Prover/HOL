@@ -160,4 +160,10 @@ struct
   val strip_plus = strip_binop (total dest_plus)
   val strip_mult = strip_binop (total dest_mult)
 
+(*---------------------------------------------------------------------------
+     Lifting ML Arbnums to HOL nums
+ ---------------------------------------------------------------------------*)
+
+fun lift_num ty arbnum = mk_numeral arbnum
+
 end

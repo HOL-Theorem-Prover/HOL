@@ -59,12 +59,12 @@ fun mk_strcat (s1,s2) =
 fun mk_isprefix (s1,s2) = 
   with_exn list_mk_comb (isprefix_tm,[s1,s2]) (ERR "mk_isprefix" "")
 
-val dest_implode = dest_monop implode_tm (ERR "dest_implode" "")
-val dest_explode = dest_monop explode_tm (ERR "dest_explode" "")
-val dest_string  = dest_binop string_tm  (ERR "dest_string" "")
-val dest_strlen  = dest_monop strlen_tm (ERR "dest_strlen" "")
-val dest_strcat  = dest_binop strcat_tm (ERR "dest_strcat" "")
-val dest_isprefix = dest_binop isprefix_tm (ERR "dest_isprefix" "")
+val dest_implode     = dest_monop implode_tm     (ERR "dest_implode"  "")
+val dest_explode     = dest_monop explode_tm     (ERR "dest_explode"  "")
+val dest_string      = dest_binop string_tm      (ERR "dest_string"   "")
+val dest_strlen      = dest_monop strlen_tm      (ERR "dest_strlen"   "")
+val dest_strcat      = dest_binop strcat_tm      (ERR "dest_strcat"   "")
+val dest_isprefix    = dest_binop isprefix_tm    (ERR "dest_isprefix" "")
 val dest_string_case = dest_triop string_case_tm (ERR "dest_string_case" "")
 
 val is_implode     = can dest_implode
@@ -84,5 +84,8 @@ val fromMLstring =
 
 val fromHOLstring = Literal.dest_string_lit
 val is_string_literal = Literal.is_string_lit
+
+fun lift_char ty c = fromMLchar c
+fun lift_string ty s = fromMLstring s;
 
 end

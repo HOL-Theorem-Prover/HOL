@@ -15,7 +15,8 @@
 structure arithmeticScript =
 struct
 
-open HolKernel boolLib Parse Prim_rec;
+open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib;
+
 
 (* interactive use:
    app load ["prim_recTheory", "Q"];
@@ -2255,6 +2256,14 @@ REWRITE_TAC [ONE] THEN REPEAT STRIP_TAC
     [DISJ1_TAC THEN RULE_ASSUM_TAC (REWRITE_RULE[LESS_MONO_EQ]), ALL_TAC]
     THEN ASM_REWRITE_TAC[]]);
 
+val ADD_MODULUS = Q.store_thm("ADD_MODULUS",
+`(!n x. 0 < n ==> ((x + n) MOD n = x MOD n)) /\
+ (!n x. 0 < n ==> ((n + x) MOD n = x MOD n))`,
+ METIS_TAC [ADD_SYM,MOD_PLUS,DIVMOD_ID,MOD_MOD,ADD_CLAUSES]);
+
+val ADD_MODULUS_LEFT = save_thm("ADD_MODULUS_LEFT",CONJUNCT1 ADD_MODULUS);
+val ADD_MODULUS_RIGHT = save_thm("ADD_MODULUS_RIGHT",CONJUNCT2 ADD_MODULUS);
+
 val DIV_P = store_thm(
   "DIV_P",
   ``!P p q. 0 < q ==>
@@ -2325,7 +2334,6 @@ val MOD_TIMES2 = store_thm(
   ONCE_REWRITE_TAC [MULT_COMM] THEN
   IMP_RES_THEN (fn th => REWRITE_TAC [th]) MOD_TIMES);
 
-open simpLib boolSimps
 val MOD_COMMON_FACTOR = store_thm(
   "MOD_COMMON_FACTOR",
   ``!n p q. 0 < n /\ 0 < q ==> (n * (p MOD q) = (n * p) MOD (n * q))``,
@@ -2703,6 +2711,18 @@ val FORALL_NUM = store_thm(
   ``!P. (!n. P n) = P 0 /\ !n. P (SUC n)``,
   PROVE_TAC [num_CASES]);
 
+
+val BOUNDED_THM = Q.store_thm("BOUNDED_THM",
+`!c. 0<c ==> ((!n. n < c ==> P n) = P (c-1) /\ !n. n < (c-1) ==> P n)`,
+ RW_TAC boolSimps.bool_ss [] THEN EQ_TAC THENL
+  [REPEAT STRIP_TAC 
+     THEN FIRST_ASSUM MATCH_MP_TAC THENL
+     [METIS_TAC [ONE,LESS_ADD_SUC,ADD_SYM,SUB_RIGHT_LESS],
+      MATCH_MP_TAC LESS_LESS_EQ_TRANS
+        THEN Q.EXISTS_TAC `c-1`
+        THEN ASM_REWRITE_TAC [SUB_LESS_EQ,SUB_LEFT_LESS]],
+   METIS_TAC [SUB_LESS_OR,LESS_OR_EQ]]);
+
 (* ********************************************************************** *)
 val _ = print "Miscellaneous theorems\n"
 (* ********************************************************************** *)
@@ -3014,7 +3034,8 @@ val _ = adjoin_to_theory
    S "      induction=TypeBasePure.ORIG numTheory.INDUCTION,";
    S "      nchotomy=num_CASES,";
    S "      size=SOME(Parse.Term`\\x:num. x`, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),";
-   S "      boolify=NONE,";
+   S "      encode=NONE,";
+   S "      lift=SOME(mk_var(\"lift_num\",Parse.Type`:'type -> num -> 'term`)),";
    S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
    S "      distinct=SOME numTheory.NOT_SUC}];"
  end)};

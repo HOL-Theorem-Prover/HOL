@@ -159,7 +159,7 @@ fun set_skip compset c opt =
 val bool_redns =
  strictify_thm LET_DEF
  :: List.map lazyfy_thm
-      [COND_CLAUSES, COND_ID, NOT_CLAUSES, bool_case_thm,
+      [COND_CLAUSES, COND_ID, NOT_CLAUSES, bool_case_DEF,
        AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
 
 fun bool_compset() = from_list bool_redns;
@@ -171,7 +171,7 @@ val add_convs = List.app (Lib.C add_conv the_compset);
 
 val EVAL_CONV = CBV_CONV the_compset;
 val EVAL_RULE = Conv.CONV_RULE EVAL_CONV;
-val EVAL_TAC = Tactic.CONV_TAC EVAL_CONV;
+val EVAL_TAC  = Tactic.CONV_TAC EVAL_CONV;
 
 infix Orelse;
 fun (p Orelse q) x = p x orelse q x;
@@ -197,7 +197,7 @@ fun write_datatype_info tyinfo =
         of SOME (_, ORIG def) => SOME def
          | otherwise => NONE
      val boolify_opt =
-       case boolify_of0 tyinfo
+	       case encode_of0 tyinfo
         of SOME (_, ORIG def) => SOME def
          | otherwise => NONE
      val compset_addns = [size_opt, boolify_opt]
@@ -208,13 +208,13 @@ fun write_datatype_info tyinfo =
 
 fun add_persistent_funs [] = ()
   | add_persistent_funs alist =
-    let open Portable
-        val (names,thms) = unzip alist
-    in
+     let open Portable
+         val (names,thms) = unzip alist
+     in
        add_funs thms
-     ; Theory.adjoin_to_theory
-         {sig_ps = NONE,
-          struct_ps = SOME(fn ppstrm =>
+       ; Theory.adjoin_to_theory
+          {sig_ps = NONE,
+           struct_ps = SOME(fn ppstrm =>
              (PP.begin_block ppstrm CONSISTENT 0;
               PP.add_string ppstrm "val _ = computeLib.add_funs [";
               PP.begin_block ppstrm INCONSISTENT 0;
@@ -225,6 +225,6 @@ fun add_persistent_funs [] = ()
               PP.add_string ppstrm "];";
               PP.add_break ppstrm (2,0);
               PP.end_block ppstrm))}
-    end
+     end
 
 end

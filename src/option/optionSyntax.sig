@@ -42,5 +42,5 @@ sig
   val is_is_none       : term -> bool
   val is_option_case   : term -> bool
 
+  val lift_option      : hol_type -> ('a -> term ) -> 'a option -> term
 end
-

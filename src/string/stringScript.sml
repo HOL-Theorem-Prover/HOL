@@ -41,12 +41,10 @@ val CHAR_TYPE_FACTS =
 val CHR_ORD  = save_thm("CHR_ORD", CONJUNCT1 CHAR_TYPE_FACTS);
 val ORD_CHR  = save_thm("ORD_CHR",BETA_RULE (CONJUNCT2 CHAR_TYPE_FACTS));
 
-val ORD_CHR_RWT = store_thm(
-  "ORD_CHR_RWT",
-  ``!r. r < 256 ==> (ORD (CHR r) = r)``,
-  PROVE_TAC [ORD_CHR]);
-
-val _ = export_rewrites ["ORD_CHR_RWT"]
+val ORD_CHR_RWT = Q.store_thm
+("ORD_CHR_RWT",
+ `!r. r < 256 ==> (ORD (CHR r) = r)`,
+ PROVE_TAC [ORD_CHR]);
 
 val ORD_11   = save_thm("ORD_11",prove_rep_fn_one_one CHAR_TYPE_FACTS)
 val CHR_11   = save_thm("CHR_11",
@@ -82,7 +80,6 @@ REPEAT STRIP_TAC
   THEN STRIP_ASSUME_TAC (Q.SPEC `c` CHR_ONTO)
   THEN RW_TAC bool_ss []);
 
-
 (*---------------------------------------------------------------------------
       Strings are represented as lists of characters. This gives us
       EXPLODE and IMPLODE as the functions mapping into, and from, the
@@ -110,8 +107,6 @@ val EXPLODE_IMPLODE =
   save_thm ("EXPLODE_IMPLODE",
     GEN_ALL (EQ_MP (SPEC_ALL(BETA_RULE (CONJUNCT2 STRING_TYPE_FACTS))) TRUTH));
 
-val _ = export_rewrites ["IMPLODE_EXPLODE", "EXPLODE_IMPLODE"]
-
 val EXPLODE_ONTO =
   save_thm("EXPLODE_ONTO",
     GEN_ALL
@@ -126,8 +121,6 @@ val EXPLODE_11 = save_thm("EXPLODE_11",prove_rep_fn_one_one STRING_TYPE_FACTS)
 val IMPLODE_11 =
   save_thm("IMPLODE_11",
     REWRITE_RULE [] (BETA_RULE (prove_abs_fn_one_one STRING_TYPE_FACTS)));
-
-val _ = export_rewrites ["IMPLODE_11", "EXPLODE_11"]
 
 (*---------------------------------------------------------------------------
     Definability of prim. rec. functions over strings.
@@ -258,8 +251,9 @@ val STRING_CASE_DEF = new_recursive_definition
   rec_axiom = string_Axiom};
 
 
-val STRING_CASE_CONG =
- save_thm("STRING_CASE_CONG", case_cong_thm STRING_CASES STRING_CASE_DEF);
+val STRING_CASE_CONG = save_thm
+("STRING_CASE_CONG", 
+ case_cong_thm STRING_CASES STRING_CASE_DEF);
 
 (*---------------------------------------------------------------------------
      Recursion equations for EXPLODE and IMPLODE
@@ -277,33 +271,29 @@ val IMPLODE_EQNS = Q.store_thm
   !c s. IMPLODE (c::t) = STRING c (IMPLODE t)`,
  REWRITE_TAC [EMPTYSTRING_DEF,EXPLODE_IMPLODE,IMPLODE_EXPLODE,STRING_DEF]);
 
-val _ = export_rewrites ["EXPLODE_EQNS", "IMPLODE_EQNS"]
-
 (* ----------------------------------------------------------------------
     More rewrites for IMPLODE and EXPLODE
    ---------------------------------------------------------------------- *)
 
-val EXPLODE_EQ_THM = store_thm(
-  "EXPLODE_EQ_THM",
-  ``!s h t. ((h :: t = EXPLODE s) = (s = STRING h (IMPLODE t))) /\
-            ((EXPLODE s = h :: t) = (s = STRING h (IMPLODE t)))``,
+val EXPLODE_EQ_THM = Q.store_thm
+("EXPLODE_EQ_THM",
+ `!s h t. ((h::t = EXPLODE s) = (s = STRING h (IMPLODE t))) /\
+          ((EXPLODE s = h::t) = (s = STRING h (IMPLODE t)))`,
   REPEAT GEN_TAC THEN
   CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) THEN
-  REWRITE_TAC [] THEN SRW_TAC [][EQ_IMP_THM] THEN
+  RW_TAC bool_ss [EQ_IMP_THM,EXPLODE_EQNS,IMPLODE_EQNS,EXPLODE_IMPLODE] THEN
   POP_ASSUM (MP_TAC o Q.AP_TERM `IMPLODE`) THEN
   simpLib.SIMP_TAC bool_ss [IMPLODE_EQNS, IMPLODE_EXPLODE]);
 
-val IMPLODE_EQ_THM = store_thm(
-  "IMPLODE_EQ_THM",
-  ``!c s l. ((STRING c s = IMPLODE l) = (l = c :: EXPLODE s)) /\
-            ((IMPLODE l = STRING c s) = (l = c :: EXPLODE s))``,
+val IMPLODE_EQ_THM = Q.store_thm
+("IMPLODE_EQ_THM",
+ `!c s l. ((STRING c s = IMPLODE l) = (l = c::EXPLODE s)) /\
+          ((IMPLODE l = STRING c s) = (l = c::EXPLODE s))`,
   REPEAT GEN_TAC THEN
   CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) THEN
-  REWRITE_TAC [] THEN SRW_TAC [][EQ_IMP_THM] THEN
+  RW_TAC bool_ss [EQ_IMP_THM,EXPLODE_EQNS,IMPLODE_EQNS,IMPLODE_EXPLODE] THEN
   POP_ASSUM (MP_TAC o Q.AP_TERM `EXPLODE`) THEN
   simpLib.SIMP_TAC bool_ss [EXPLODE_EQNS, EXPLODE_IMPLODE]);
-
-val _ = export_rewrites ["EXPLODE_EQ_THM", "IMPLODE_EQ_THM"]
 
 (*---------------------------------------------------------------------------
       Size of a string.
@@ -312,9 +302,9 @@ val _ = export_rewrites ["EXPLODE_EQ_THM", "IMPLODE_EQ_THM"]
 val STRLEN_DEF = new_recursive_definition
    {def = Term`(STRLEN "" = 0) /\
                (STRLEN (STRING c s) = 1 + STRLEN s)`,
-    name="STRLEN_DEF", rec_axiom = string_Axiom};
+    name = "STRLEN_DEF", 
+    rec_axiom = string_Axiom};
 
-val _ = export_rewrites ["STRLEN_DEF"]
 
 val STRLEN_THM = Q.store_thm
 ("STRLEN_THM",
@@ -325,7 +315,7 @@ val STRLEN_THM = Q.store_thm
                          arithmeticTheory.ADD1]);
 
 (*---------------------------------------------------------------------------
-       String concatenation
+                      String concatenation
  ---------------------------------------------------------------------------*)
 
 val STRCAT =
@@ -392,6 +382,12 @@ val BY_LISTOP_DEF = Q.new_definition
     Exportation
  ---------------------------------------------------------------------------*)
 
+val _ = export_rewrites 
+   ["ORD_CHR_RWT","IMPLODE_EXPLODE", "EXPLODE_IMPLODE",
+    "IMPLODE_11", "EXPLODE_11","EXPLODE_EQNS", "IMPLODE_EQNS",
+    "EXPLODE_EQ_THM", "IMPLODE_EQ_THM", "STRLEN_DEF"];
+
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
@@ -406,7 +402,8 @@ val _ = adjoin_to_theory
    S "      induction=TypeBasePure.ORIG STRING_INDUCT_THM,";
    S "      nchotomy=STRING_CASES,";
    S "      size=SOME(Parse.Term`STRLEN`,TypeBasePure.ORIG STRLEN_DEF),";
-   S "      boolify=NONE,";
+   S "      encode=NONE,";
+   S "      lift=SOME(mk_var(\"lift_string\",Parse.Type`:'type -> string -> 'term`)),";
    S "      one_one=SOME STRING_11,";
    S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];";
    S " ";

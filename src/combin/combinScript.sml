@@ -104,7 +104,11 @@ val _ = adjoin_to_theory
       fun NL() = PP.add_newline ppstrm
   in
     S "val _ ="; NL();
-    S "   computeLib.add_funs [K_DEF,S_DEF,I_THM,C_DEF,W_DEF,o_DEF]";
+    S "   let open computeLib" ; NL();
+    S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}"; NL();
+    S "   in add_funs [K_THM,S_DEF,I_THM,C_DEF,W_DEF,o_DEF];"; NL();
+    S "      set_skip the_compset K_tm (SOME 1)"; NL();
+    S "   end;";
     NL()
   end)};
 

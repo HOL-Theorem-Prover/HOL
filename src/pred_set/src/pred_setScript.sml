@@ -2981,7 +2981,10 @@ val _ = save_thm("ITSET_EMPTY",
                   REWRITE_RULE []
                       (MATCH_MP (SPEC (Term`{}`) ITSET_THM) FINITE_EMPTY));
 
+(* Could also prove by 
 
+    PROVE_TAC [FINITE_INSERT,ITSET_THM,NOT_INSERT_EMPTY]);
+*)
 val ITSET_INSERT = store_thm(
   "ITSET_INSERT",
   ``!s. FINITE s ==>

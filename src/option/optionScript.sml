@@ -293,7 +293,7 @@ val _ = adjoin_to_theory
       fun NL() = PP.add_newline ppstrm
   in
     S "val option_Induct : thm"; NL();
-    S "val option_CASES : thm"
+    S "val option_CASES : thm";  NL()
   end),
  struct_ps = SOME (fn ppstrm =>
   let val S = PP.add_string ppstrm
@@ -307,7 +307,9 @@ val _ = adjoin_to_theory
     S "      induction=TypeBasePure.ORIG option_induction,"; NL();
     S "      nchotomy=option_nchotomy,";                     NL();
     S "      size=NONE,";                                    NL();
-    S "      boolify=NONE,";                                 NL();
+    S "      encode=NONE,";                                  NL();
+    S "      lift=SOME(mk_var(\"lift_option\",Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),";
+    NL();
     S "      one_one=SOME SOME_11,";                         NL();
     S "      distinct=SOME NOT_NONE_SOME}];";                NL();
     NL();

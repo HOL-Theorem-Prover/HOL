@@ -71,4 +71,7 @@ sig
 
  val genvarstruct    : hol_type -> term
 
+ val  lift_prod      : hol_type -> ('a -> term ) -> ('b -> term) 
+                                -> 'a * 'b -> term
+
 end

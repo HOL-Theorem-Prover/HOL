@@ -317,11 +317,8 @@ val wf_coder_tree = store_thm
    ++ CONJ_TAC
    >> (Q.EXISTS_TAC `Node x []` ++ RW_TAC std_ss [lift_tree_def, EVERY_DEF])
    ++ HO_MATCH_MP_TAC tree_ind
-   ++ RW_TAC std_ss [encode_tree_def, lift_tree_def, dec2enc_enc2dec, APPEND_11]
+   ++ RW_TAC std_ss [encode_tree_def,lift_tree_def,dec2enc_enc2dec,APPEND_11]
    ++ Induct_on `ts`
    ++ RW_TAC std_ss [encode_list_def, EVERY_DEF, dec2enc_enc2dec, MEM]);
 
 val _ = export_theory ();
-
-
-

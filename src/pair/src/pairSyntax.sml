@@ -259,4 +259,14 @@ fun genvarstruct ty =
     | NONE => genvar ty;
 
 
-end;
+(*---------------------------------------------------------------------------*)
+(* Lift from ML pairs to HOL pairs                                           *)
+(*---------------------------------------------------------------------------*)
+
+fun lift_prod ty =
+  let val comma = TypeBasePure.cinst ty comma_tm
+  in 
+     fn f => fn g => fn (x,y) => list_mk_comb(comma, [f x, g y])
+  end
+
+end

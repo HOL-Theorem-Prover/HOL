@@ -419,6 +419,7 @@ val pair_case_cong = save_thm("pair_case_cong",
 
 val pair_rws = [PAIR, FST, SND];
 
+
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.
 
@@ -430,7 +431,10 @@ val pair_rws = [PAIR, FST, SND];
  ---------------------------------------------------------------------------*)
 
 val _ = adjoin_to_theory
-{sig_ps = SOME(fn ppstrm => PP.add_string ppstrm "val pair_rws : thm list"),
+{sig_ps = SOME(fn ppstrm => 
+  let val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+   in S "val pair_rws : thm list"
+   end),
  struct_ps = SOME(fn ppstrm =>
    let val S = PP.add_string ppstrm
        fun NL() = PP.add_newline ppstrm
@@ -444,7 +448,9 @@ val _ = adjoin_to_theory
       S "      induction=TypeBasePure.ORIG pair_induction,"; NL();
       S "      nchotomy=ABS_PAIR_THM,";                      NL();
       S "      size=NONE,";                                  NL();
-      S "      boolify=NONE,";                               NL();
+      S "      encode=NONE,";                                NL();
+      S "      lift=SOME(mk_var(\"lift_prod\",Parse.Type`:'type -> ('a -> 'term) -> ('b -> 'term) -> 'a # 'b -> 'term`)),";
+      NL();
       S "      one_one=SOME CLOSED_PAIR_EQ,";                NL();
       S "      distinct=NONE}];"
   end)};
@@ -541,11 +547,11 @@ val _ = adjoin_to_theory
    let val S = PP.add_string ppstrm
        fun NL() = PP.add_newline ppstrm
    in
-      S "val _ = let open computeLib";                         NL();
-      S "        in add_funs (map lazyfy_thm";                 NL();
-      S "              [CLOSED_PAIR_EQ, FST, SND,";            NL();
-      S "               CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM])"; NL();
-      S "        end;";                                        NL()
+      S "val _ = let open computeLib";                            NL();
+      S "        in add_funs (map lazyfy_thm";                    NL();
+      S "              [CLOSED_PAIR_EQ, FST, SND,pair_case_thm,"; NL();
+      S "               CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM])";    NL();
+      S "        end;";                                           NL()
   end)};
 
 
@@ -559,8 +565,9 @@ val _ = adjoin_to_theory
    let val S = PP.add_string ppstrm
        fun NL() = PP.add_newline ppstrm
    in
-      S "type term = Abbrev.term"; NL();
-      S "type conv = Abbrev.conv"; NL();NL();
+      S "type hol_type = Abbrev.hol_type"; NL();
+      S "type term     = Abbrev.term"; NL();
+      S "type conv     = Abbrev.conv"; NL();NL();
       S "val uncurry_tm       : term"; NL();
       S "val comma_tm         : term"; NL();
       S "val dest_pair        : term -> term * term"; NL();

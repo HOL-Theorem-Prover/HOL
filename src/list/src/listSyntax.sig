@@ -99,5 +99,6 @@ sig
   val is_list_case   : term -> bool
   val is_list        : term -> bool
 
-end
+  val lift_list      : hol_type -> ('a -> term) -> 'a list -> term
 
+end
