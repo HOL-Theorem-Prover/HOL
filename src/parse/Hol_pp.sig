@@ -15,8 +15,8 @@ sig
 (*
   structure Term : Public_term_sig
 *)
-  val pp_type : Portable_PrettyPrint.ppstream -> Type.hol_type -> unit
-  val pp_term : Portable_PrettyPrint.ppstream -> Term.term -> unit
+  val pp_type : Portable.ppstream -> Type.hol_type -> unit
+  val pp_term : Portable.ppstream -> Term.term -> unit
   val type_to_string : Type.hol_type -> string
   val term_to_string : Term.term -> string
   val print_type : Type.hol_type -> unit
