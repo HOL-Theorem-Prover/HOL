@@ -47,7 +47,7 @@ val S_BOOL_TRUE =
     THEN FULL_SIMP_TAC list_ss [LENGTH,EL]);
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Some lemmas about FIRST_RISE and NEXT_RISE
 ******************************************************************************)
 val S_REPEAT_BOOL_TRUE =
  store_thm
@@ -382,6 +382,9 @@ val NEXT_RISE_TRUE_EXISTS =
     THEN RW_TAC std_ss 
      [SIMP_RULE arith_ss [] (Q.SPECL[`p`,`j`,`j`](GEN_ALL NEXT_RISE_TRUE))]);
 
+(******************************************************************************
+* Structural induction rule for FL formulas
+******************************************************************************)
 val fl_induct =
   (Q.GEN
     `P`
@@ -396,6 +399,10 @@ val fl_induct =
          [`P`,`\(f1,f2). P f1 /\ P f2`,`\(f,b). P f`,`\(r,f). P f`]
          (TypeBase.induction_of "fl")))));
 
+(******************************************************************************
+* Strong clocking with T equal to weaking clocking with T:
+* p |=T!= f  <==>  p |=T= f
+******************************************************************************)
 val F_SEM_TRUE_EQ =
  store_thm
   ("F_SEM_TRUE_EQ",
@@ -410,7 +417,6 @@ val F_SEM_TRUE_EQ =
 (******************************************************************************
 * US_SEM M w r means "w is in the language of r" in the unclocked semantics
 ******************************************************************************)
-
 val US_SEM_def =
  Define
   `(US_SEM M w (S_BOOL b) = ?l. (w = [l]) /\ B_SEM M l b)
@@ -442,7 +448,6 @@ val US_SEM_def =
 * UF_SEM M p f means "p |= f"  in the unclocked semantics
 * (F_WEAK_IMP case unfolded to make totality proof go through)
 ******************************************************************************)
-
 val UF_SEM_def =
  Define
    `(UF_SEM M p (F_BOOL b) = 
@@ -489,7 +494,6 @@ val UF_SEM_def =
 * UF_SEM M p f means "p |= f"  in the unclocked semantics
 * Derivation of folded equation
 ******************************************************************************)
-
 val UF_SEM =
  store_thm
   ("UF_SEM",
@@ -534,10 +538,27 @@ val UF_SEM =
               UF_SEM M (PATH_CAT(PATH_SEG p (0,j-1),p')) f)``,
    SIMP_TAC std_ss [UF_SEM_def]);
 
+
+(******************************************************************************
+* Structural induction rule for SEREs
+******************************************************************************)
+val sere_induct =
+  (Q.GEN
+    `P`
+    (MATCH_MP
+     (DECIDE ``(A ==> (B1 /\ B2 /\ B3)) ==> (A ==> B1)``)
+     (SIMP_RULE
+       std_ss
+       [pairTheory.FORALL_PROD,
+        PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
+        PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
+       (Q.SPECL
+         [`P`,`\(r1,r2). P r1 /\ P r2`,`\(r,b). P r`]
+         (TypeBase.induction_of "sere")))));
+
 (******************************************************************************
 * S_CLOCK_FREE r means r contains no clocking statements
 ******************************************************************************)
-
 val S_CLOCK_FREE_def =
  Define
   `(S_CLOCK_FREE (S_BOOL b)          = T)
@@ -558,9 +579,11 @@ val S_CLOCK_FREE_def =
 
 (******************************************************************************
 * Proof that if S_CLOCK_FREE r then the unclocked semantics of
-* SEREs is the same as the clocked semantics with clock equal to T
+* a SERE r is the same as the clocked semantics with clock equal to T
 ******************************************************************************)
 
+(******************************************************************************
+* Old proof (now commented out)
 val S_SEM_TRUE_LEMMA =
  prove
   (``!M w r. 
@@ -583,6 +606,23 @@ val S_SEM_TRUE_LEMMA =
        THEN Q.EXISTS_TAC `wlist`
        THEN FULL_SIMP_TAC list_ss [EVERY_EL]
        THEN ZAP_TAC list_ss [EL_IS_EL]]);
+******************************************************************************)
+
+val S_SEM_TRUE_LEMMA =
+ prove
+  (``!r M w. 
+      S_CLOCK_FREE r
+      ==>
+      (S_SEM M w B_TRUE r = US_SEM M w r)``,
+   INDUCT_THEN sere_induct ASSUME_TAC
+    THEN RW_TAC std_ss [S_SEM_def, US_SEM_def, S_CLOCK_FREE_def]
+    THEN RW_TAC std_ss 
+          [B_SEM_def,CONJ_ASSOC,LENGTH1,
+           intLib.COOPER_PROVE ``n >= 1 /\ (!i. ~(1 <= i) \/ ~(i < n)) = (n = 1)``]
+       THEN EQ_TAC
+       THEN RW_TAC list_ss [LENGTH]
+       THEN RW_TAC list_ss [LENGTH]
+       THEN FULL_SIMP_TAC list_ss [LENGTH]);
 
 val S_SEM_TRUE =
  store_thm
@@ -594,7 +634,6 @@ val S_SEM_TRUE =
 (******************************************************************************
 * F_CLOCK_FREE f means f contains no clocking statements
 ******************************************************************************)
-
 val F_CLOCK_FREE_def =
  Define
   `(F_CLOCK_FREE (F_BOOL b)            = T)
@@ -619,19 +658,25 @@ val F_CLOCK_FREE_def =
    /\
    (F_CLOCK_FREE (F_STRONG_CLOCK v)    = F)`;
 
+(******************************************************************************
+* Proof that if F_CLOCK_FREE f then the unclocked semantics of
+* an FL formula f is the same as the clocked semantics with clock equal to T
+******************************************************************************)
+local
 val INIT_TAC =
  RW_TAC std_ss 
   [F_SEM_def,UF_SEM_def,F_CLOCK_FREE_def,FIRST_RISE_TRUE,RESTN_def,
-   DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``];
-
+   DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``]
+in
 val F_SEM_TRUE_LEMMA =
  store_thm
   ("F_SEM_TRUE_LEMMA",
    ``!M p f. 
       F_CLOCK_FREE f 
       ==>
-      (F_SEM M p (STRONG_CLOCK B_TRUE) f = UF_SEM M p f)``,
-   recInduct (fetch "-" "UF_SEM_ind")
+      (F_SEM M p (WEAK_CLOCK B_TRUE) f = UF_SEM M p f)``,
+   REWRITE_TAC[GSYM F_SEM_TRUE_EQ]
+    THEN recInduct (fetch "-" "UF_SEM_ind")
     THEN REPEAT CONJ_TAC
     THENL
      [(* F_STRONG_CLOCK v16 *)
@@ -655,6 +700,158 @@ val F_SEM_TRUE_LEMMA =
       (* F_WEAK_IMP f *)
       INIT_TAC THEN ZAP_TAC std_ss [S_SEM_TRUE,NEXT_RISE_TRUE_EXISTS],
       (* F_ABORT(f,b)) *)
-      INIT_TAC THEN RW_TAC std_ss [B_SEM_def]]);
+      INIT_TAC THEN RW_TAC std_ss [B_SEM_def]])
+end;
+
+(******************************************************************************
+* Rules for compiling clocked SEREs to unclocked SEREs
+* (from B.1, page 66, of Sugar 2.0 Accellera document)
+******************************************************************************)
+val S_CLOCK_COMP_def =
+ Define
+  `(S_CLOCK_COMP clk (S_BOOL b) = 
+     (S_CAT (S_REPEAT (S_BOOL (B_NOT clk)),S_BOOL(B_AND(clk, b)))))
+   /\
+   (S_CLOCK_COMP clk (S_CAT(r1,r2)) =  
+     S_CAT(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   /\
+   (S_CLOCK_COMP clk (S_FUSION(r1,r2)) = 
+     S_FUSION(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   /\
+   (S_CLOCK_COMP clk (S_OR(r1,r2)) = 
+     S_OR(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   /\
+   (S_CLOCK_COMP clk (S_RIG_AND(r1,r2))  = 
+     S_RIG_AND(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   /\
+   (S_CLOCK_COMP clk (S_FLEX_AND(r1,r2)) = 
+     S_FLEX_AND(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   /\
+   (S_CLOCK_COMP clk (S_REPEAT r) = 
+     S_REPEAT(S_CLOCK_COMP clk r))
+   /\
+   (S_CLOCK_COMP clk (S_CLOCK(r, clk1)) = 
+     S_CLOCK_COMP clk1 r)`;
+
+(******************************************************************************
+* Some ad hoc lemmas followed by a gross proof that S_CLOCK_COMP works
+******************************************************************************)
+
+val LENGTH_NIL_LEMMA =
+ prove
+  (``LENGTH l >= 1 ==> ~(l = [])``,
+   RW_TAC list_ss [DECIDE``m>=1 = ~(m=0)``,LENGTH_NIL]);
+
+val EL_BUTLAST =
+ prove
+  (``!w n. n < PRE(LENGTH w) ==> (EL n (BUTLAST w) = EL n w)``,
+   Induct
+    THEN RW_TAC list_ss [FRONT_DEF]
+    THEN Cases_on `n`
+    THEN RW_TAC list_ss [EL]);
+
+val EL_PRE_LENGTH =
+ prove
+  (``!w. LENGTH w >= 1 ==> (EL (LENGTH w - 1) w = LAST w)``,
+   Induct
+    THEN RW_TAC list_ss []
+    THEN Cases_on `LENGTH w`
+    THEN RW_TAC list_ss [EL,LAST_DEF]
+    THEN IMP_RES_TAC LENGTH_NIL
+    THEN IMP_RES_TAC(SIMP_CONV list_ss [] ``LENGTH [] = SUC n``)
+    THEN RES_TAC
+    THEN FULL_SIMP_TAC arith_ss []);
+ 
+val EVERY_EL_SINGLETON_LENGTH =
+ prove
+  (``!wlist P.
+      (!n. n < LENGTH wlist ==> ?l. (EL n wlist = [l]) /\ P l)
+      ==>
+      (LENGTH(CONCAT wlist) = LENGTH wlist)``,
+   Induct
+    THEN RW_TAC list_ss [CONCAT_def,APPEND_INFIX_def]
+    THEN ASSUM_LIST
+          (fn thl => 
+            ASSUME_TAC(Q.GEN `n` (SIMP_RULE list_ss [EL] (Q.SPEC `SUC n` (el 1 thl)))))
+    THEN ASSUM_LIST
+          (fn thl => 
+            STRIP_ASSUME_TAC(SIMP_RULE list_ss [EL] (Q.SPEC `0` (el 2 thl))))
+    THEN RES_TAC
+    THEN RW_TAC list_ss []);
+
+val EVERY_EL_SINGLETON =
+ prove
+  (``!wlist P.
+      (!n. n < LENGTH wlist ==> ?l. (EL n wlist = [l]) /\ P l)
+      ==>
+      (CONCAT wlist = MAP HD wlist)``,
+   Induct
+    THEN RW_TAC list_ss [CONCAT_def,APPEND_INFIX_def]
+    THEN ASSUM_LIST
+          (fn thl => 
+            ASSUME_TAC(Q.GEN `n` (SIMP_RULE list_ss [EL] (Q.SPEC `SUC n` (el 1 thl)))))
+    THEN ASSUM_LIST
+          (fn thl => 
+            STRIP_ASSUME_TAC(SIMP_RULE list_ss [EL] (Q.SPEC `0` (el 2 thl))))
+    THEN RES_TAC
+    THEN RW_TAC list_ss []);
+
+(******************************************************************************
+* w |=c= r  <==>  w |= (S_CLOCK_COMP c r)
+******************************************************************************)
+val S_CLOCK_COMP_ELIM =
+ store_thm
+  ("S_CLOCK_COMP_ELIM",
+   ``!r M w c. S_SEM M w c r = US_SEM M w (S_CLOCK_COMP c r)``,
+   INDUCT_THEN sere_induct ASSUME_TAC
+    THEN RW_TAC std_ss [S_SEM_def, US_SEM_def, S_CLOCK_COMP_def,APPEND_INFIX_def]   
+    THEN RW_TAC list_ss [EVERY_EL]
+    THEN EQ_TAC
+    THEN RW_TAC list_ss []
+    THEN RW_TAC list_ss [LENGTH_APPEND,DECIDE``m + SUC 0 - 1 = m``]
+    THENL
+     [Q.EXISTS_TAC `BUTLAST w`
+       THEN Q.EXISTS_TAC `[LAST w]` 
+       THEN RW_TAC list_ss []
+       THEN RW_TAC list_ss [APPEND_BUTLAST_LAST, LENGTH_NIL_LEMMA]
+       THENL
+        [Q.EXISTS_TAC `MAP(\l.[l])(BUTLAST w)`
+          THEN RW_TAC list_ss [CONCAT_MAP_SINGLETON]
+          THEN Q.EXISTS_TAC `HD(EL n (MAP (\l. [l]) (BUTLAST w)))`
+          THEN RW_TAC list_ss [HD_EL_MAP,EL_MAP]
+          THEN IMP_RES_TAC LENGTH_NIL_LEMMA
+          THEN IMP_RES_TAC LENGTH_BUTLAST
+          THEN IMP_RES_TAC(DECIDE``n < m ==> (m = PRE p) ==> (1 <= SUC n /\ SUC n < p)``)
+          THEN RES_TAC
+          THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE arith_ss [])
+          THEN RW_TAC list_ss [EL_BUTLAST],
+         IMP_RES_TAC EL_PRE_LENGTH
+          THEN POP_ASSUM(fn th => RW_TAC list_ss [GSYM th])],
+      IMP_RES_TAC
+       (SIMP_RULE std_ss []
+        (Q.SPECL
+          [`wlist`,`\l. B_SEM (M :'b # 'c # 'd # ('a -> bool) # 'e) l (B_NOT c)`]
+          (INST_TYPE[``:'a``|->``:'a->bool``]EVERY_EL_SINGLETON_LENGTH)))
+       THEN FULL_SIMP_TAC list_ss [LENGTH_APPEND]
+       THEN IMP_RES_TAC(DECIDE ``1 <= i ==> i < m + SUC 0 ==> i - 1 < m``)
+       THEN RW_TAC list_ss [EL_APPEND1]
+       THEN IMP_RES_TAC
+             (SIMP_RULE std_ss []
+              (Q.SPECL
+                [`wlist`,`\l. B_SEM (M :'b # 'c # 'd # ('a -> bool) # 'e) l (B_NOT c)`]
+                (INST_TYPE[``:'a``|->``:'a->bool``]EVERY_EL_SINGLETON)))
+       THEN RW_TAC list_ss [EL_MAP,LENGTH_MAP]
+       THEN RES_TAC
+       THEN IMP_RES_TAC EQ_SINGLETON
+       THEN RW_TAC list_ss [],
+      IMP_RES_TAC
+       (SIMP_RULE std_ss []
+        (Q.SPECL
+          [`wlist`,`\l. B_SEM (M :'b # 'c # 'd # ('a -> bool) # 'e) l (B_NOT c)`]
+          (INST_TYPE[``:'a``|->``:'a->bool``]EVERY_EL_SINGLETON_LENGTH)))
+       THEN RW_TAC list_ss [EL_APPEND2]]);
 
 val _ = export_theory();
+
+
+
