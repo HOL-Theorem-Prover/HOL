@@ -89,7 +89,6 @@ signature Parse = sig
   val clear_overloads_on : string -> unit
   val remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
   val add_record_field : string * term -> unit
-  val add_record_update : string * term -> unit
   val add_record_fupdate : string * term -> unit
 
   (* adding and removing user parsers and printers to the grammar *)
@@ -131,7 +130,6 @@ signature Parse = sig
   val temp_remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
 
   val temp_add_record_field : string * term -> unit
-  val temp_add_record_update : string * term -> unit
   val temp_add_record_fupdate : string * term -> unit
 
   val temp_add_user_printer :

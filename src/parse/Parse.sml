@@ -1018,18 +1018,6 @@ in
   overload_on(recfldname, term)
 end
 
-fun temp_add_record_update (fldname, term) = let
-  val recfldname = recupd_special ^ fldname
-in
-  temp_overload_on(recfldname, term)
-end
-
-fun add_record_update (fldname, term) = let
-  val recfldname = recupd_special ^ fldname
-in
-  overload_on(recfldname, term)
-end
-
 fun temp_add_record_fupdate (fldname, term) = let
   val recfldname = recfupd_special ^ fldname
 in

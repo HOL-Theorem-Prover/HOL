@@ -725,7 +725,7 @@ fun parse_term (G : grammar) typeparser = let
           in
             mk_list args_w_seglocs
           end
-        | _ => 
+        | _ =>
           List.foldl CCOMB (VAR (summary_toString rule),llocn') args_w_seglocs
     in
       repeatn (length rhs') pop >> push ((NonTerminal (#1 newterm),lrlocn'), XXX)
@@ -1157,9 +1157,14 @@ in
   case #1 upd1 of
     COMB((COMB((VAR s,slocn), (VAR fld,_)),sflocn), newvalue) => let
     in
-      if s = recupd_special orelse s = recfupd_special then
+      if s = recfupd_special then
         APP(locn, APP(#2 upd1, IDENT (sflocn,s^fld), remove_specials newvalue),
-             remove_recupdate' (#2 updates) updates bottom)
+            remove_recupdate' (#2 updates) updates bottom)
+      else if s = recupd_special then
+        APP(locn, APP(#2 upd1, IDENT (sflocn, recfupd_special^fld),
+                      APP(locn.Loc_None, QIDENT(locn.Loc_None, "combin", "K"),
+                          remove_specials newvalue)),
+            remove_recupdate' (#2 updates) updates bottom)
       else raise ParseTermError (recupd_errstring,slocn)
     end
   | _ =>
@@ -1177,9 +1182,17 @@ in
       else
         if s = recupd_special orelse s = recfupd_special then
           case #1 upd1 of
-            VAR fldname => APP(locn,APP(#2 upd1, IDENT (sflocn,s^fldname),
-                                     remove_specials updates),
-                                bottom)
+            VAR fldname =>
+            if s = recfupd_special then
+              APP(locn,APP(#2 upd1, IDENT (sflocn,s^fldname),
+                           remove_specials updates),
+                  bottom)
+            else
+              APP(locn,APP(#2 upd1, IDENT (sflocn, recfupd_special^fldname),
+                           APP(locn.Loc_None,
+                               QIDENT(locn.Loc_None, "combin", "K"),
+                               remove_specials updates)),
+                  bottom)
           | _ => raise ParseTermError
               ("Must have field name as first argument to update operator",#2 upd1)
         else

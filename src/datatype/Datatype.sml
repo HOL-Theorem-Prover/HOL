@@ -676,25 +676,11 @@ fun define_bigrec_functions (tyname, fldlist) = let
     val acc_defn_th = new_definition(acc_const_name, acc_defn)
     val acc_defn_const = defn_hd acc_defn_th
     val _ = add_record_field (fld, acc_defn_const)
-    (* update function *)
+    (* fupdate function *)
     val subrec_fupdname =
         tyname ^ "_" ^ subrecord_fldname tyname subn ^ "_fupd"
-    val subrec_fupd = prim_mk_const { Name = subrec_fupdname,
-                                      Thy = current_theory()}
-    val leaf_updname = leaf_accname ^ "_update"
-    val leaf_upd = prim_mk_const {Name = leaf_updname, Thy = current_theory()}
-    val upd_const_name = acc_const_name ^ "_update"
-    val upd_const =
-        mk_var(upd_const_name, field_ty --> (toprec_ty --> toprec_ty))
-    val field_valvar = mk_var("x", field_ty)
-    val upd_defn =
-        mk_eq(list_mk_comb(upd_const, [field_valvar, rvar]),
-              list_mk_comb(subrec_fupd,
-                           [mk_comb(leaf_upd, field_valvar), rvar]))
-    val upd_defn_th = new_definition(upd_const_name, upd_defn)
-    val upd_defn_const = defn_hd upd_defn_th
-    val _ = add_record_update(fld, upd_defn_const)
-    (* fupdate function *)
+    val subrec_fupd = prim_mk_const {Name = subrec_fupdname,
+                                     Thy = current_theory()}
     val leaf_fupdname = leaf_accname ^ "_fupd"
     val leaf_fupd = prim_mk_const{Name = leaf_fupdname, Thy = current_theory()}
     val fupd_const_name = acc_const_name ^ "_fupd"
@@ -709,8 +695,7 @@ fun define_bigrec_functions (tyname, fldlist) = let
     val fupd_defn_const = defn_hd fupd_defn_th
     val _ = add_record_fupdate(fld, fupd_defn_const)
   in
-    (acc_const_name, acc_defn_th) :: (upd_const_name, upd_defn_th) ::
-    (fupd_const_name, fupd_defn_th) :: acc
+    (acc_const_name, acc_defn_th) :: (fupd_const_name, fupd_defn_th) :: acc
   end
   fun foldthis (fld, (n, sthlist)) =
       (n + 1, define_functions n fld sthlist)
@@ -745,19 +730,24 @@ fun prove_bigrec_theorems tyinfos ss (tyname, fldlist) = let
   end
   val accessors = map (mk_accessor o fst) fldlist
   val (toprec_ty, _) = dom_rng (type_of (hd accessors))
-  fun mk_update fldname = let
-    val updname = tyname ^ "_" ^ fldname ^ "_update"
+  fun mk_fupdate fldname = let
+    val updname = tyname ^ "_" ^ fldname ^ "_fupd"
   in
     prim_mk_const {Name = updname, Thy = current_theory()}
   end
-  val updates = map (mk_update o fst) fldlist
-  val fld_tys = map (#1 o dom_rng o type_of) updates
+  val fupdates = map (mk_fupdate o fst) fldlist
+  val fld_tys = map (#2 o dom_rng o type_of) accessors
   fun foldthis (ty, (n,acc)) = (n + 1, mk_var("v" ^ Int.toString n, ty) :: acc)
   val fld_vars = List.rev (#2 (foldl foldthis (1, []) fld_tys))
   fun mk_literal base values = let
-    fun foldthis upd value acc = list_mk_comb(upd, [value, acc])
+    fun foldthis (upd, value, acc) = let
+      val ty = type_of value
+      val K = Term.inst [alpha |-> ty, beta |-> ty] combinSyntax.K_tm
+    in
+      list_mk_comb(upd, [mk_comb(K, value), acc])
+    end
   in
-    itlist2 foldthis updates values base
+    ListPair.foldr foldthis base (fupdates, values)
   end
   val arb = mk_arb toprec_ty
   val stdliteral = mk_literal arb fld_vars
@@ -809,6 +799,8 @@ fun prove_bigrec_theorems tyinfos ss (tyname, fldlist) = let
   end
   val subcases = map gen_cases (subvars @ subvars')
   val fn_updates = theorem (tyname ^ "_fn_updates")
+  val sub_fn_updates =
+      map (theorem o (fn s => s ^ "_fn_updates")) subtype_names
 
   val literal_nchotomy =
       store_thm(nchoto_name,
@@ -820,7 +812,9 @@ fun prove_bigrec_theorems tyinfos ss (tyname, fldlist) = let
                           SUBST_ALL_TAC arb_nchoto THEN
                 MAP_EVERY (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
                           subcases THEN
-                SIMP_TAC ss [fn_updates])
+                REWRITE_TAC (fn_updates :: combinTheory.o_THM ::
+                             combinTheory.K_THM :: sub_fn_updates) THEN
+                SIMP_TAC ss [])
 
   (* literal equality *)
   val liteq_name = tyname ^ "_updates_eq_literal"

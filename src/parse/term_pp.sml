@@ -776,7 +776,9 @@ fun pp_term (G : grammar) TyG = let
         else ()
 
       val _ = (* check for record update *)
-        if isSome recwith_info andalso isSome reclist_info then let
+        if isSome recwith_info andalso isSome reclist_info andalso
+           isSome recfupd_info andalso isSome recupd_info
+        then let
           open Overload
           (* function to determine if t is a record update *)
           fun is_record_update t =
@@ -785,11 +787,9 @@ fun pp_term (G : grammar) TyG = let
             in
               case rname of
                 SOME s =>
-                (isSome recupd_info andalso
-                 (isPrefix recupd_special s orelse
-                  (!prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
-                   is_substring (bigrec_subdivider_string ^ "sf") s))) orelse
-                (isSome recfupd_info andalso isPrefix recfupd_special s)
+                (!prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
+                 is_substring (bigrec_subdivider_string ^ "sf") s) orelse
+                isPrefix recfupd_special s
               | NONE => false
             end else false
           (* descend the rands of a term until one that is not a record
@@ -827,11 +827,19 @@ fun pp_term (G : grammar) TyG = let
             end
             fun categorise_bigrec_update (s, value) = let
               (* first strip suffix, and decide if a normal update *)
-              val (s, value_upd) =
-                  if isSuffix "_update" s then
-                    (String.extract(s, 0, SOME (size s - 7)), true)
-                  else (* suffix will be "_fupd" *)
-                    (String.extract(s, 0, SOME (size s - 5)), false)
+              val sz = size s
+              val (s, value, value_upd) = let
+                (* suffix will be "_fupd" *)
+                val (f, x) = dest_comb value
+                val {Thy, Name, ...} = dest_thy_const f
+              in
+                if Thy = "combin" andalso Name = "K" then
+                  (String.extract(s, 0, SOME (sz - 5)), x, true)
+                else
+                  (String.extract(s, 0, SOME (sz - 5)), value, false)
+              end handle HOL_ERR _ =>
+                         (String.extract(s,0,SOME (sz - 5)), value, false)
+
               val ss = Substring.all s
               val (_, ss) = (* drop initial typename *)
                   Substring.position bigrec_subdivider_string ss
@@ -856,10 +864,16 @@ fun pp_term (G : grammar) TyG = let
             val (fld, value) = dest_comb t
             val rname = valOf (Overload.overloading_of_term overload_info fld)
           in
-            if isPrefix recupd_special rname then
-              [(String.extract(rname, size recupd_special, NONE), value, true)]
-            else if isPrefix recfupd_special rname then
-              [(String.extract(rname,size recfupd_special, NONE), value,false)]
+            if isPrefix recfupd_special rname then let
+                val (f, x) = dest_comb value
+                val {Thy, Name,...} = dest_thy_const f
+                val fldname = String.extract(rname,size recfupd_special, NONE)
+              in
+                if Thy = "combin" andalso Name = "K" then [(fldname, x, true)]
+                else [(fldname, value, false)]
+              end handle HOL_ERR _ =>
+                         [(String.extract(rname,size recfupd_special, NONE),
+                           value, false)]
             else (* is a big record - examine value *)
               assert (not o null) (categorise_bigrec_updates value)
               handle HOL_ERR _ => raise NotReallyARecord
