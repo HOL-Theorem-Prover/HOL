@@ -26,8 +26,8 @@ type token =
 
 val render_token : token -> string
 
-val holtokstream : token Stream.t
+val holtokstream : in_channel -> token Stream.t
 
-val textokstream : token Stream.t
+val textokstream : in_channel -> token Stream.t
 
 

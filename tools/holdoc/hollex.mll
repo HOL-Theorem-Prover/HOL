@@ -180,8 +180,8 @@ and
 {
 
 (* build a fast stream of tokens from lexed stdin *)
-let tokstream p =
-  let lexbuf = Lexing.from_channel stdin in
+let tokstream p chan =
+  let lexbuf = Lexing.from_channel chan in
   let lex = ref p in
   let f _ = (* I hope it is valid to assume that *all*
                tokens are requested, in ascending order! *)

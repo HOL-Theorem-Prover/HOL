@@ -5,5 +5,5 @@ open Hollex
 
 let go t = print_string ((render_token t)^" ")
 
-let _ = Stream.iter go holtokstream
+let _ = Stream.iter go (holtokstream stdin)
 
