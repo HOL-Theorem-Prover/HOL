@@ -1,12 +1,14 @@
 signature arithLib =
 sig
-  local type int = arbint.int in
-
-   type term = Term.term
-   type conv = Abbrev.conv
+  local
+    open Abbrev
+    type term = Term.term
+    type thm = Thm.thm
+  in
 
    val ARITH_CONV : conv
    val ARITH_FORM_NORM_CONV : conv
+   val ARITH_PROVE : term -> thm
    val COND_ELIM_CONV : conv
    val DISJ_INEQS_FALSE_CONV : conv
    val EXISTS_ARITH_CONV : conv

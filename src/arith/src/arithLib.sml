@@ -1,12 +1,8 @@
 structure arithLib :> arithLib =
 struct
-  open arbint
-  val << = String.<
 
-  open Arith
+  open Arith basicHol90Lib
 
-  (* val _ = Lib.cons_path (!Globals.HOLdir^"library/arith/help/entries/") 
-                        Globals.help_path;
-  *)
+  val ARITH_PROVE = EQT_ELIM o ARITH_CONV
 
 end;
