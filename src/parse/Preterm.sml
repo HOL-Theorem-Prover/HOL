@@ -13,6 +13,8 @@ type pretype = TCPretype.pretype
 
 datatype preterm = Var   of {Name : string,  Ty : pretype}
                  | Const of {Name : string,  Ty : pretype}
+                 | Overloaded of {Name : string, Ty : pretype,
+                                  Info : Overload.overloaded_op_info}
                  | Comb  of {Rator: preterm, Rand : preterm}
                  | Abs   of {Bvar : preterm, Body : preterm}
                  | Constrained of preterm * pretype
@@ -42,6 +44,7 @@ fun ptremove {Name, Ty} = {Name = Name, Ty = TCPretype.toType Ty}
 
 fun to_term (Var n) = Term.mk_var (ptremove n)
   | to_term (Const r) = constify (ptremove r)
+  | to_term (Overloaded _) = raise Fail "Preterm.to_term applied to Overloaded"
   | to_term (Comb{Rator,Rand}) = Combify{Rator=to_term Rator,Rand=to_term Rand}
   | to_term (Abs{Bvar,Body}) = Term.mk_abs{Bvar=to_term Bvar,Body=to_term Body}
   | to_term (Antiq tm) = tm
@@ -51,6 +54,7 @@ fun to_term (Var n) = Term.mk_var (ptremove n)
 fun is_atom (Var _) = true
   | is_atom (Const _) = true
   | is_atom (Constrained(tm,_)) = is_atom tm
+  | is_atom (Overloaded _) = true
   | is_atom t = Term.is_numeral (to_term t)
 
 
@@ -66,6 +70,7 @@ local fun -->(ty1,ty2) = TCPretype.Tyop("fun", [ty1, ty2])
         | type_of (Abs{Bvar,Body}) = type_of Bvar --> type_of Body
         | type_of (Constrained(_,ty)) = ty
         | type_of (Antiq tm) = TCPretype.fromType (Term.type_of tm)
+        | type_of (Overloaded {Ty,...}) = Ty
 in
 fun TC printers = let
   fun default_typrinter x = "<hol_type>"
@@ -134,9 +139,48 @@ fun clean shr = let
     | cl(Abs{Bvar,Body})    = Term.mk_abs{Bvar=cl Bvar,Body=cl Body}
     | cl(Antiq tm)          = tm
     | cl(Constrained(tm,_)) = cl tm
+    | cl(Overloaded{Name,Ty,...}) = Term.mk_const{Name=Name, Ty = shr Ty}
 in
   cl
 end;
+
+infix is_instance_of
+fun pty is_instance_of ty =
+  TCPretype.can_unify pty (TCPretype.rename_typevars (TCPretype.fromType ty))
+
+
+fun remove_overloading ptm =
+  case ptm of
+    Var _ => ptm
+  | Const _ => ptm
+  | Comb{Rator,Rand} => Comb{Rator = remove_overloading Rator,
+                             Rand = remove_overloading Rand}
+  | Abs{Bvar, Body} => Abs{Bvar = remove_overloading Bvar,
+                           Body = remove_overloading Body}
+  | Antiq _ => ptm
+  | Constrained(tm,ty) => Constrained(remove_overloading tm, ty)
+  | Overloaded{Name,Ty,Info} => let
+      val actual_ops = #actual_ops Info
+      val candidates =
+        List.filter (fn (ty, _) => Ty is_instance_of ty) actual_ops
+    in
+      case candidates of
+        [] => (print ("No candidate constant for overloaded "^Name);
+               raise PRETERM_ERR "remove_overloading" "No candidate constant")
+      | (ty,n)::rest => let
+          open TCPretype
+          val pty = rename_typevars (fromType ty)
+          val _ = unify Ty pty
+          val _ =
+            case rest of
+              [] => ()
+            | _ =>
+                Lib.mesg true
+                ("Picking "^n^" from candidates for overloaded "^Name)
+        in
+          Const{Name = n, Ty = pty}
+        end
+    end
 
 
 fun has_unconstrained_uvar ty = let
@@ -157,6 +201,9 @@ fun tyVars tm =
   | Abs{Bvar,Body} => Lib.union (tyVars Bvar) (tyVars Body)
   | Antiq tm => map Type.dest_vartype (Term.type_vars_in_term tm)
   | Constrained(tm,ty) => Lib.union (tyVars tm) (TCPretype.tyvars ty)
+  | Overloaded _ => raise Fail "Preterm.tyVars: applied to Overloaded"
+
+fun cleanup0 ptm0 = remove_overloading ptm0
 
 fun cleanup tm =
   if !Globals.guessing_tyvars then let
@@ -183,6 +230,7 @@ fun cleanup tm =
            (fn Body' => return (Term.mk_abs{Bvar = Bvar', Body = Body'})))
       | Antiq t => return t
       | Constrained(tm, ty) => cleanup tm
+      | Overloaded _ => raise Fail "Preterm.cleanup: applied to Overloaded"
     end
     val (newV, result) = cleanup tm V
     val guessed_vars = List.take(newV, length newV - length V)
@@ -208,6 +256,6 @@ fun cleanup tm =
  end
 
 
-fun typecheck pfns tm = (TC pfns tm; cleanup tm);
+fun typecheck pfns tm = (TC pfns tm; cleanup (cleanup0 tm));
 
 end; (* PRETERM *)

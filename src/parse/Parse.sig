@@ -112,6 +112,9 @@ in
 
     val remove_term : string -> unit
     val remove_termtok : {term_name : string, tok : string} -> unit
+    (* overloading *)
+    val allow_for_overloading_on : string * Type.hol_type -> unit
+    val overload_on : string * term -> unit
 
     (* the following functions affect the grammar, but not so that the
        grammar exported to disk will be modified *)

@@ -88,23 +88,33 @@ datatype grammar_rule =
 | FNAPP | VSCONS
 | LISTRULE of listspec list
 
+type overload_info = Overload.overload_info
+
 type grammar = {rules : (int option * grammar_rule) list,
                 specials : {type_intro : string,
                             lambda : string,
                             endbinding : string,
                             restr_binders : (binder * string) list,
                             res_quanop : string},
-                numeral_info : (char * string option) list}
+                numeral_info : (char * string option) list,
+                overload_info : overload_info}
 
 fun specials (G: grammar) = #specials G
 fun numeral_info (G: grammar) = #numeral_info G
+fun overload_info (G: grammar) = #overload_info G
 
-fun fupdate_rules f {rules, specials, numeral_info} =
-  {rules = f rules, specials = specials, numeral_info = numeral_info}
-fun fupdate_specials f {rules, specials, numeral_info} =
-  {rules = rules, specials = f specials, numeral_info = numeral_info}
-fun fupdate_numinfo f {rules, specials, numeral_info} =
-  {rules = rules, specials = specials, numeral_info = f numeral_info}
+fun fupdate_rules f {rules, specials, numeral_info, overload_info} =
+  {rules = f rules, specials = specials, numeral_info = numeral_info,
+   overload_info = overload_info}
+fun fupdate_specials f {rules, specials, numeral_info, overload_info} =
+  {rules = rules, specials = f specials, numeral_info = numeral_info,
+   overload_info = overload_info}
+fun fupdate_numinfo f {rules, specials, numeral_info, overload_info} =
+  {rules = rules, specials = specials, numeral_info = f numeral_info,
+   overload_info = overload_info}
+fun fupdate_overload_info f {rules, specials, numeral_info, overload_info} =
+  {rules = rules, specials = specials, numeral_info = numeral_info,
+   overload_info = f overload_info}
 
 fun update_restr_binders rb
   {lambda, endbinding, type_intro, restr_binders, res_quanop} =
@@ -220,7 +230,9 @@ val stdhol : grammar =
                         paren_style = Always}])],
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
-   numeral_info = []}
+   numeral_info = [],
+   overload_info = []
+   }
 
 fun grammar_tokens G = let
   open stmonad
@@ -229,6 +241,7 @@ fun grammar_tokens G = let
   fun specials_from_elm [] = ok
     | specials_from_elm ((TOK x)::xs) = add x >> specials_from_elm xs
     | specials_from_elm (TM::xs) = specials_from_elm xs
+  val mmap = (fn f => fn args => mmap f args >> ok)
   fun rule_specials (PREFIX(STD_prefix rules)) =
         mmap (specials_from_elm o rule_elements o #elements) rules
     | rule_specials (PREFIX (BINDER b)) =

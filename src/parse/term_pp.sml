@@ -208,6 +208,7 @@ fun rule_to_rr rule =
 
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
+  val overload_info = overload_info G
   val spec_table = let
     val toks = grammar_tokens G
     val table = Polyhash.mkPolyTable(50, Fail "")
@@ -712,7 +713,11 @@ fun pp_term (G : grammar) TyG = let
           if print_type then add_type() else ();
           pend print_type; end_block()
         end
-      | CONST{Name = cname, ...} => let
+      | CONST{Name = cname0, ...} => let
+          val cname =
+            case Overload.overloading_of_term overload_info tm of
+              SOME s => s
+            | NONE => cname0
           val crules = lookup_term cname
           fun print_string_literal s = let
             val contents0 = String.substring(s, 1, size s - 2)
@@ -843,7 +848,14 @@ fun pp_term (G : grammar) TyG = let
               end
           end
         in
-          if (is_atom f) then pr_atomf (#Name (dest_atom f))
+          if (is_atom f) then let
+            val name_to_use =
+              case (Overload.overloading_of_term overload_info f) of
+                SOME s => s
+              | NONE => #Name (dest_atom f)
+          in
+            pr_atomf name_to_use
+          end
           else pr_comb tm Rator Rand
         end
       | LAMB{Bvar, Body} => pr_abs tm

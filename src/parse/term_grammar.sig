@@ -11,28 +11,28 @@ in
     RE of rule_element | LastTM | FirstTM
   (* these last two only used internally *)
 
-    datatype PhraseBlockStyle =
-      AroundSameName | AroundSamePrec | AroundEachPhrase
-    datatype ParenStyle =
-      Always | OnlyIfNecessary | ParoundName | ParoundPrec
+  datatype PhraseBlockStyle =
+    AroundSameName | AroundSamePrec | AroundEachPhrase
+  datatype ParenStyle =
+    Always | OnlyIfNecessary | ParoundName | ParoundPrec
 
   val rule_elements : pp_element list -> rule_element list
   val pp_elements_ok : pp_element list -> bool
 
-val fnapp_special : string
-val bracket_special : string
-val vs_cons_special : string
-val resquan_special : string
-val rec_special : string
-val std_binder_precedence : int
+  val fnapp_special : string
+  val bracket_special : string
+  val vs_cons_special : string
+  val resquan_special : string
+  val rec_special : string
+  val std_binder_precedence : int
 
-val reltoString : rule_element -> string
+  val reltoString : rule_element -> string
 
-type rule_record = {term_name : string,
-                    elements : pp_element list,
-                    preferred : bool,
-                    block_style : PhraseBlockStyle * block_info,
-                    paren_style : ParenStyle}
+  type rule_record = {term_name : string,
+                      elements : pp_element list,
+                      preferred : bool,
+                      block_style : PhraseBlockStyle * block_info,
+                      paren_style : ParenStyle}
 
 datatype binder = LAMBDA | BinderString of string
 datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
@@ -54,6 +54,7 @@ datatype grammar_rule =
 | LISTRULE of listspec list
 
 type grammar
+type overload_info = Overload.overload_info
 
 val rules : grammar -> (int option * grammar_rule) list
 val grammar_rules : grammar -> grammar_rule list
@@ -61,8 +62,12 @@ val specials : grammar -> {type_intro : string,
                            lambda     : string,
                            endbinding : string,
                            restr_binders : (binder * string) list,
-                           res_quanop : string}
+                           res_quanop : string
+                           }
 val numeral_info : grammar -> (char * string option) list
+val overload_info : grammar -> overload_info
+val fupdate_overload_info :
+  (overload_info -> overload_info) -> grammar -> grammar
 
 val binders : grammar -> string list
 val is_binder : grammar -> string -> bool

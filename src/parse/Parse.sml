@@ -163,17 +163,6 @@ fun print_type ty = Portable.output(Portable.std_out, type_to_string ty);
 local
   (* terms *)
   open parse_term term_grammar
-  fun restr_binding b tm s E = let
-    open Parse_support
-    (* have to return a (function of type preterm -> preterm) * env *)
-    val (oldbfn, oldbE) = b "\\" E
-    (* oldbfn takes a body and returns an abstraction *)
-    (* oldbE is the environment that records binding of var of b *)
-    val Res_rator = Lib.assoc s (binder_restrictions())
-    val (Res_t, newE) = make_atom Res_rator oldbE
-  in
-    ((fn body => Preterm.Comb{Rator = Res_t, Rand = oldbfn body}), newE)
-  end
 
   fun mk_binder vs = let
     open Parse_support
@@ -195,22 +184,19 @@ local
         "Restricted quantifications should have been eliminated at this point"
   end
 
-  fun toTermInEnv t = let
+  fun toTermInEnv oinfo t = let
     open parse_term
     open Parse_support
-    exception Foo
   in
     case t of
       COMB(COMB(VAR "gspec special", t1), t2) =>
-        make_set_abs (toTermInEnv t1, toTermInEnv t2)
-    | COMB(t1, t2) => list_make_comb (map toTermInEnv [t1, t2])
-    | VAR s => make_atom s
-    | ABS(vs, t) => bind_term "\\" [mk_binder vs] (toTermInEnv t)
-    | TYPED(t, pty) => make_constrained (toTermInEnv t) pty
+        make_set_abs (toTermInEnv oinfo t1, toTermInEnv oinfo t2)
+    | COMB(t1, t2) => list_make_comb (map (toTermInEnv oinfo) [t1, t2])
+    | VAR s => make_atom oinfo s
+    | ABS(vs, t) => bind_term "\\" [mk_binder vs] (toTermInEnv oinfo t)
+    | TYPED(t, pty) => make_constrained (toTermInEnv oinfo t) pty
     | AQ t => make_aq t
   end
-
-  fun toPreTerm pt = Parse_support.make_preterm (toTermInEnv pt)
 
   fun term_to_vs t = let
     fun ultimately s t =
@@ -359,14 +345,16 @@ in
 
   fun preTerm q = let
     val pt0 = parse_preTerm q
+    val oinfo = term_grammar.overload_info (term_grammar())
   in
-    Parse_support.make_preterm (toTermInEnv pt0)
+    Parse_support.make_preterm (toTermInEnv oinfo pt0)
   end
   fun toTerm pt = let
     val prfns = SOME(term_to_string, type_to_string)
+    val oinfo = term_grammar.overload_info (term_grammar())
     open Parse_support
   in
-    Preterm.typecheck prfns (make_preterm (toTermInEnv pt))
+    Preterm.typecheck prfns (make_preterm (toTermInEnv oinfo pt))
   end
 
   val Term = toTerm o parse_preTerm
@@ -637,6 +625,64 @@ in
     temp_clear_prefs_for_term s;
     adjoin_to_theory (toThyaddon cmdstring)
   end
+
+  (* overloading *)
+  fun temp_allow_for_overloading_on (s, ty) = let
+  in
+    the_term_grammar :=
+    term_grammar.fupdate_overload_info (Overload.add_overloaded_form s ty)
+    (term_grammar());
+    term_grammar_changed := true
+  end
+  fun allow_for_overloading_on (s, ty) = let
+    val tystring =
+      Portable.pp_to_string 75 (TheoryPP.print_type_to_SML "mkV" "mkT") ty
+    val cmdstring = String.concat [
+      "let val mkV s = Type.mk_vartype s\n",
+      "    val mkT s args = Type.mk_type{Tyop = s, Args = args}\n",
+      "    val ty = ",tystring,"\n",
+      "in  Parse.temp_allow_for_overloading_on (", quote s, ", ty) end\n"
+                                   ]
+  in
+    temp_allow_for_overloading_on (s, ty);
+    adjoin_to_theory (toThyaddon cmdstring)
+  end
+  fun temp_overload_on (s, t) =
+    if (not (is_const t)) then
+      print "Can't have non-constants as targets of overloading."
+    else let
+      val {Name,Ty} = dest_const t
+    in
+      the_term_grammar :=
+      term_grammar.fupdate_overload_info
+      (Overload.add_actual_overloading {opname = s, realname = Name,
+                                        realtype = Ty}) (term_grammar());
+      term_grammar_changed := true
+    end
+
+  fun overload_on (s, t) = let
+    val {Name, Ty} = dest_const t
+      handle HOL_ERR _ =>
+        raise ERROR "overload_on"
+          "Can't have non-constants as targets of overloading"
+    val tystring =
+      Portable.pp_to_string 75 (TheoryPP.print_type_to_SML "mkV" "mkT") Ty
+    val cmdstring = String.concat
+      [
+       "let val mkV s = Type.mk_vartype s\n",
+       "    val mkT s args = Type.mk_type{Tyop = s, Args = args}\n",
+       "    val ty = ",tystring,"\n",
+       "    val tm = Term.mk_const{Name = ", quote Name,",\n",
+       "                           Ty = ty}\n",
+       "in  Parse.overload_on (", quote s, ", tm) end\n"
+       ]
+  in
+    temp_overload_on (s,t);
+    adjoin_to_theory (toThyaddon cmdstring)
+  end
+
+
+
 
   fun pp_thm ppstrm th = let
     open Portable

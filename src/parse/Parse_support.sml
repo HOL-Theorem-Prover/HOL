@@ -169,6 +169,20 @@ in
  fun hidden s = mem s (!the_hidden)
 end;
 
+(* ----------------------------------------------------------------------
+     Treatment of overloaded identifiers
+ ---------------------------------------------------------------------- *)
+
+fun gen_overloaded_const oinfo s = let
+  open Overload
+  val opinfo = valOf (info_for_name oinfo s)
+  val base_pretype0 = TCPretype.fromType (#base_type opinfo)
+  val new_pretype = TCPretype.rename_typevars base_pretype0
+in
+  Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo}
+end
+
+
 (*---------------------------------------------------------------------------
  * Identifiers work as follows: look for the string in the scope;
  * if it's there, put the var. Otherwise, the string might be a constant that
@@ -188,17 +202,22 @@ end;
  * reserved word or not.
  *---------------------------------------------------------------------------*)
 
-fun make_atom s E = make_bvar(s,E)
+fun make_const s E = (gen_const s, E)
+
+fun make_atom oinfo s E = make_bvar(s,E)
   handle HOL_ERR _ =>
     if (hidden s) then
       make_free_var (s,E)
     else
-      (gen_const s, E)
-      handle HOL_ERR _ =>
-        if (Lexis.is_string_literal s) then
-          raise ERROR "make_atom"
-            "string literals not lexically OK until stringTheory loaded"
-        else make_free_var (s,E);
+      if Overload.is_overloaded oinfo s then
+        (gen_overloaded_const oinfo s, E)
+      else
+        (gen_const s, E)
+        handle HOL_ERR _ =>
+          if (Lexis.is_string_literal s) then
+            raise ERROR "make_atom"
+              "string literals not lexically OK until stringTheory loaded"
+          else make_free_var (s,E);
 
 (*---------------------------------------------------------------------------
  * Combs
@@ -393,7 +412,7 @@ fun make_set_abs (tm1,tm2) (E as {scope=scope0,...}:env) =
          in list_make_comb
                [(make_set_const "make_set_abs" "GSPEC"),
                 (bind_term "\\" [make_vstruct quants' NONE]
-                          (list_make_comb[make_atom ",",tm1,tm2]))] E
+                          (list_make_comb[make_const ",",tm1,tm2]))] E
          end
    end;
 
