@@ -158,38 +158,38 @@ val MUX_def =
   `MUX(sel,in1,in2,out) = !t. out t = if sel t then in1 t else in2 t`;
 
 (*
-Flip-Flop that powers up in F state
-*)
-
-val FLIP_FLOP_def =
- Define
-  `FLIP_FLOP(inp,out) = (out 0 = F) /\ !t. out(t+1) = inp t`;
-
-(*
 Unit delay component (i.e. a register): 
 value output at out is the value input at inp at the previous time.
 *)
-val PURE_DEL_def =
- Define `PURE_DEL(inp,out) = !t. out(t+1) = inp t`;
+val REG_def =
+ Define `REG(inp,out) = !t. out(t+1) = inp t`;
+
+(*
+Flip-Flop that powers up in F state
+*)
+
+val REGF_def =
+ Define
+  `REGF(inp,out) = (out 0 = F) /\ REG(inp,out)`;
 
 (*
                         inp
                          |
        |-----|           |
-       |  T  |           +--------------|
-       |-----|           |              |
-          |              |              |
-       c0 |              |              |
-          |              |              |
-    |-----------|   |----------|        |
-    | FLIP_FLOP |   | PURE_DEL |        |
-    |-----------|   |----------|        |
-          |              |              |
-       c1 |           c2 |              |
-          |              |              |
-    |-----------------------------------------|
-    |                   MUX                   |
-    |-----------------------------------------|
+       |  T  |           +-------------|
+       |-----|           |             |
+          |              |             |
+       c0 |              |             |
+          |              |             |
+    |-----------|   |---------|        |
+    |    REGF   |   |   REG   |        |
+    |-----------|   |---------|        |
+          |              |             |
+       c1 |           c2 |             |
+          |              |             |
+    |----------------------------------------|
+    |                   MUX                  |
+    |----------------------------------------|
                          |
                          |
                         out
@@ -199,13 +199,13 @@ val DEL_def =
  Define 
   `DEL(inp,out) = 
     ?c0 c1 c2. 
-     TRUE c0 /\ FLIP_FLOP(c0,c1) /\ PURE_DEL(inp,c2) /\ MUX(c1,c2,inp,out)`;
+     TRUE c0 /\ REGF(c0,c1) /\ REG(inp,c2) /\ MUX(c1,c2,inp,out)`;
 
 val DEL_THM =
  store_thm
   ("DEL_THM",
    ``DEL(inp,out) = ((out 0 = inp 0) /\ (!t. out(t+1) = inp t))``,
-   RW_TAC std_ss [DEL_def,TRUE_def,FLIP_FLOP_def,PURE_DEL_def,MUX_def]
+   RW_TAC std_ss [DEL_def,TRUE_def,REGF_def,REG_def,MUX_def]
     THEN EQ_TAC
     THEN RW_TAC std_ss []
     THEN RW_TAC std_ss []

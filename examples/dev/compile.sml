@@ -1091,6 +1091,9 @@ fun BUS_MATCH vst bus =
 (*  (v164 = v108) /\                                                         *)
 (*  COMB (UNCURRY $+) (v108 <> v107, v163)                                   *)
 (*****************************************************************************)
+val if_print_flag = ref true;
+fun if_print s = if !if_print_flag then print s else ();
+fun if_print_term tm = if !if_print_flag then print_term tm else ();
 fun COMB_SYNTH_CONV tm =
  if is_comb tm
      andalso is_comb(rator tm)
@@ -1115,7 +1118,7 @@ fun COMB_SYNTH_CONV tm =
               THEN GEN_BETA_TAC 
               THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
+           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_const bdy orelse numSyntax.is_numeral bdy
@@ -1127,7 +1130,7 @@ fun COMB_SYNTH_CONV tm =
               THEN GEN_BETA_TAC 
               THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
+           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_comb bdy andalso is_const(rator bdy)
@@ -1145,7 +1148,7 @@ fun COMB_SYNTH_CONV tm =
                THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
                THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
+           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_pair bdy andalso is_BUS_CONCAT out_bus
@@ -1164,7 +1167,7 @@ fun COMB_SYNTH_CONV tm =
              THEN EQ_TAC
              THEN RW_TAC bool_ss [])
            handle HOL_ERR _ =>
-           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
+           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_comb bdy 
@@ -1189,20 +1192,22 @@ fun COMB_SYNTH_CONV tm =
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
               THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (print "COMB_SYNTH_CONV: can't prove:\n";print_term goal;
+           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else raise ERR "COMB_SYNTH_CONV" "disallowed case"
    end
   else raise ERR "SYNTH_COMB" "not an application of COMB to args";
 
+
 (*****************************************************************************)
 (* Compile a device implementation into a netlist represented in HOL         *)
 (*****************************************************************************)
 val MAKE_NETLIST =
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ SIMP_RULE std_ss [UNCURRY]                                                o
  CONV_RULE
-  (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV COMB_SYNTH_CONV))))         o
+  (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
  Ho_Rewrite.REWRITE_RULE[BUS_CONCAT_ELIM]                                  o
  Ho_Rewrite.REWRITE_RULE
    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,

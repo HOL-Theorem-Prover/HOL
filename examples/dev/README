@@ -15,6 +15,7 @@
 == [28.01.05: MJCG more optimisations and updated README]                    ==
 == [29.01.05: MJCG added COMB_SYNTH_CONV removed SEL operators]              ==
 == [30.01.05: MJCG added dff: Melham's temporal abstraction theory]          ==
+== [01.02.05: MJCG minor tweaks to MAKE_NETLIST and COMB_SYNTH_CONV]         ==
 ===============================================================================
 
 composeScript.sml ......... definition of devices and their composition
@@ -371,5 +372,11 @@ iterated. Example:
 Note that the redundant variables are pruned by MAKE_NETLIST and also,
 for readability, the example above uses ``v709`` but COMB_SYNTH_CONV
 actually generates ``%%genvar%%709`.
+
+COMB_SYNTH_CONV may print out some diagnostic stuff if it fails to
+prove certain subgoals (though it may nevertheless still produce
+something reasonable).  This output can be switched off by setting the
+ML reference "if_print_flag" to false.
+
 
 =============================================================================== 

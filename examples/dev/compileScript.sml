@@ -33,7 +33,7 @@ open metisLib arithmeticTheory pairLib pairTheory PairRules combinTheory
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(*****************p************************************************************)
+(*****************************************************************************)
 (* Start new theory "compile"                                                *)
 (*****************************************************************************)
 val _ = new_theory "compile";
@@ -845,7 +845,39 @@ val REC =
 val DEL_Del =
  store_thm
   ("DEL_Del",
-   ``DEL(inp,out) = (out 0 = inp 0) /\ Del(inp,out)``,
+   ``!inp out. DEL(inp,out) = (out 0 = inp 0) /\ Del(inp,out)``,
    PROVE_TAC[DEL_THM,Del]);
+
+(*****************************************************************************)
+(* Refinement on clocked signals                                             *)
+(*****************************************************************************)
+val _ = set_fixity "====>" (Infixr 540);
+val CLOCKED_DEV_IMP_def =
+ xDefine 
+  "CLOCKED_DEV_IMP" 
+  `$====> f g = 
+   !load inp done out clk. 
+     f(load when Rise clk,
+       inp  when Rise clk,
+       done when Rise clk,
+       out  when Rise clk)
+     ==> 
+     g(load when Rise clk,
+       inp  when Rise clk,
+       done when Rise clk,
+       out  when Rise clk)`;
+
+val CLOCKED_DEV_IMP_REFL =
+ store_thm
+  ("CLOCKED_DEV_IMP_REFL",
+   ``!f. f ====> f``,
+   RW_TAC std_ss [CLOCKED_DEV_IMP_def]);
+
+val CLOCKED_DEV_IMP_TRANS =
+ store_thm
+  ("CLOCKED_DEV_IMP_TRANS",
+   ``!f g. (f ====> g) /\ (g ====> h) ==> (f ====> h)``,
+   RW_TAC std_ss [CLOCKED_DEV_IMP_def]);
+
      
 val _ = export_theory();
