@@ -1,6 +1,6 @@
 (*---------------------------------------------------------------------------
-       Mapping finite sets into lists. Needs a constraint that 
-       the set is finite. One might think to introduce this 
+       Mapping finite sets (and bags) into lists. Needs a constraint 
+       that the set (bag) is finite. One might think to introduce this 
        function via a constant specification, but in this case, 
        TFL technology makes an easy job of it.
  ---------------------------------------------------------------------------*)
@@ -8,7 +8,8 @@
 structure containerScript =
 struct
 
-open HolKernel boolLib pred_setTheory listTheory SingleStep BasicProvers;
+open HolKernel boolLib pred_setTheory listTheory bagTheory
+     Defn TotalDefn SingleStep BasicProvers;
 
 infix THEN; infix 8 by;
 
@@ -19,138 +20,144 @@ infix THEN; infix 8 by;
 
 val _ = new_theory "container";
 
+val _ = Defn.def_suffix := "";
+
 (*---------------------------------------------------------------------------
        Map finite sets into lists.
  ---------------------------------------------------------------------------*)
 
-val SET2LIST_defn = Defn.Hol_defn "SET2LIST"
-  `SET2LIST s = 
+val SET_TO_LIST_defn = Hol_defn "SET_TO_LIST"
+  `SET_TO_LIST s = 
      if FINITE s then 
         if s={} then []
-        else CHOICE s :: SET2LIST (REST s) 
+        else CHOICE s :: SET_TO_LIST (REST s) 
      else ARB`;
 
 (*---------------------------------------------------------------------------
-       Termination of SET2LIST.
+       Termination of SET_TO_LIST.
  ---------------------------------------------------------------------------*)
 
-val (SET2LIST_eqn0, SET2LIST_IND) =
- Defn.tprove (SET2LIST_defn,
+val (SET_TO_LIST_EQN, SET_TO_LIST_IND) =
+ Defn.tprove (SET_TO_LIST_defn,
    TotalDefn.WF_REL_TAC `measure CARD` THEN 
    PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
 
 (*---------------------------------------------------------------------------
       Desired recursion equation.
 
-      FINITE s |- SET2LIST s = if s = {} then [] 
-                               else CHOICE s::SET2LIST (REST s)
+      FINITE s |- SET_TO_LIST s = if s = {} then [] 
+                               else CHOICE s::SET_TO_LIST (REST s)
 
  ---------------------------------------------------------------------------*)
 
-val SET2LIST_THM = save_thm("SET2LIST_THM",
- DISCH_ALL (ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] SET2LIST_eqn0));
+val SET_TO_LIST_THM = save_thm("SET_TO_LIST_THM",
+ DISCH_ALL (ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] SET_TO_LIST_EQN));
 
-val SET2LIST_IND = save_thm("SET2LIST_IND",SET2LIST_IND);
+val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND",SET_TO_LIST_IND);
 
 (*---------------------------------------------------------------------------
       Map a list into a set.
  ---------------------------------------------------------------------------*)
 
-val LIST2SET = Defn.eqns_of(
-Defn.Hol_defn "LIST2SET"
-   `(LIST2SET []     = {}) 
- /\ (LIST2SET (h::t) = h INSERT (LIST2SET t))`);
+val LIST_TO_SET = 
+ Define
+   `(LIST_TO_SET []     = {}) 
+ /\ (LIST_TO_SET (h::t) = h INSERT (LIST_TO_SET t))`;
 
 
 (*---------------------------------------------------------------------------
             Some consequences
  ---------------------------------------------------------------------------*)
 
-val SET2LIST_INV = Q.store_thm("SET2LIST_INV",
-`!s. FINITE s ==> (LIST2SET(SET2LIST s) = s)`,
- recInduct SET2LIST_IND
+val SET_TO_LIST_INV = Q.store_thm("SET_TO_LIST_INV",
+`!s. FINITE s ==> (LIST_TO_SET(SET_TO_LIST s) = s)`,
+ recInduct SET_TO_LIST_IND
    THEN RW_TAC bool_ss [] 
-   THEN ONCE_REWRITE_TAC [UNDISCH SET2LIST_THM]
-   THEN RW_TAC bool_ss [LIST2SET]
+   THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
+   THEN RW_TAC bool_ss [LIST_TO_SET]
    THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]);
 
-val SET2LIST_CARD = Q.store_thm("SET2LIST_CARD",
-`!s. FINITE s ==> (LENGTH (SET2LIST s) = CARD s)`,
- recInduct SET2LIST_IND
+val SET_TO_LIST_CARD = Q.store_thm("SET_TO_LIST_CARD",
+`!s. FINITE s ==> (LENGTH (SET_TO_LIST s) = CARD s)`,
+ recInduct SET_TO_LIST_IND
    THEN RW_TAC bool_ss [] 
-   THEN ONCE_REWRITE_TAC [UNDISCH SET2LIST_THM]
+   THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
    THEN RW_TAC bool_ss [listTheory.LENGTH,CARD_EMPTY]
    THEN RW_TAC bool_ss [REST_DEF, FINITE_DELETE]
    THEN `FINITE (REST s)` by PROVE_TAC [REST_DEF,FINITE_DELETE]
    THEN PROVE_TAC[CHOICE_INSERT_REST,CARD_INSERT,CHOICE_NOT_IN_REST,REST_DEF]);
 
-val SET2LIST_IN_MEM = Q.store_thm("SET2LIST_IN_MEM",
-`!s. FINITE s ==> !x. x IN s = MEM x (SET2LIST s)`,
- recInduct SET2LIST_IND
+val SET_TO_LIST_IN_MEM = Q.store_thm("SET_TO_LIST_IN_MEM",
+`!s. FINITE s ==> !x. x IN s = MEM x (SET_TO_LIST s)`,
+ recInduct SET_TO_LIST_IND
    THEN RW_TAC bool_ss [] 
-   THEN ONCE_REWRITE_TAC [UNDISCH SET2LIST_THM]
+   THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
    THEN RW_TAC bool_ss [listTheory.MEM,NOT_IN_EMPTY]
    THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
 
 
 (*---------------------------------------------------------------------------
-     Already have SET_OF_BAG and BAG_OF_SET in bagTheory.
+    Lists and bags. Note that we also have SET_OF_BAG and BAG_OF_SET 
+    in bagTheory.
  ---------------------------------------------------------------------------*)
 
-val LIST2BAG = 
+val LIST_TO_BAG = 
   Define 
-    `(LIST2BAG [] = {||}) 
- /\  (LIST2BAG (h::t) = BAG_INSERT h (LIST2BAG t))`;
+    `(LIST_TO_BAG [] = {||}) 
+ /\  (LIST_TO_BAG (h::t) = BAG_INSERT h (LIST_TO_BAG t))`;
 
-val BAG2LIST = Hol_defn "BAG2LIST"
-    `BAG2LIST bag = 
+val BAG_TO_LIST = Hol_defn "BAG_TO_LIST"
+    `BAG_TO_LIST bag = 
        if FINITE_BAG bag
          then if bag = EMPTY_BAG then []
-              else BAG_CHOICE bag :: BAG2LIST (BAG_REST bag)
+              else BAG_CHOICE bag :: BAG_TO_LIST (BAG_REST bag)
          else ARB`;
 
-val (BAG2LIST_EQN,BAG2LIST_IND) =
+val (BAG_TO_LIST_EQN,BAG_TO_LIST_IND) =
 Defn.tprove
- (BAG2LIST,
+ (BAG_TO_LIST,
   WF_REL_TAC `measure BAG_CARD`
    THEN PROVE_TAC [PSUB_BAG_CARD, PSUB_BAG_REST]);
 
-val BAG2LIST_THM = 
- DISCH_ALL (ASM_REWRITE_RULE [ASSUME (Term`FINITE_BAG bag`)] BAG2LIST_EQN);
+val BAG_TO_LIST_THM = save_thm("BAG_TO_LIST_THM",
+ DISCH_ALL (ASM_REWRITE_RULE [ASSUME (Term`FINITE_BAG bag`)] BAG_TO_LIST_EQN));
 
-
-(*
-val BAG2LIST_INV = Q.store_thm("BAG2LIST_INV",
-`!b. FINITE_BAG b ==> (LIST2BAG(BAG2LIST b) = b)`,
- recInduct BAG2LIST_IND
-   THEN RW_TAC bool_ss [] 
-   THEN ONCE_REWRITE_TAC [UNDISCH SET2LIST_THM]
-   THEN RW_TAC bool_ss [LIST2SET]
-   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]);
-
-val SET2LIST_CARD = Q.store_thm("SET2LIST_CARD",
-`!s. FINITE s ==> (LENGTH (SET2LIST s) = CARD s)`,
- recInduct SET2LIST_IND
-   THEN RW_TAC bool_ss [] 
-   THEN ONCE_REWRITE_TAC [UNDISCH SET2LIST_THM]
-   THEN RW_TAC bool_ss [listTheory.LENGTH,CARD_EMPTY]
-   THEN RW_TAC bool_ss [REST_DEF, FINITE_DELETE]
-   THEN `FINITE (REST s)` by PROVE_TAC [REST_DEF,FINITE_DELETE]
-   THEN PROVE_TAC[CHOICE_INSERT_REST,CARD_INSERT,CHOICE_NOT_IN_REST,REST_DEF]);
-
-val SET2LIST_IN_MEM = Q.store_thm("SET2LIST_IN_MEM",
-`!s. FINITE s ==> !x. x IN s = MEM x (SET2LIST s)`,
- recInduct SET2LIST_IND
-   THEN RW_TAC bool_ss [] 
-   THEN ONCE_REWRITE_TAC [UNDISCH SET2LIST_THM]
-   THEN RW_TAC bool_ss [listTheory.MEM,NOT_IN_EMPTY]
-   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
-*)
+val BAG_TO_LIST_IND = save_thm("BAG_TO_LIST_IND",BAG_TO_LIST_IND);
 
 (*---------------------------------------------------------------------------
-      Also a connection to finite maps ?
+       Some consequences.
  ---------------------------------------------------------------------------*)
 
+val BAG_TO_LIST_INV = Q.store_thm("BAG_TO_LIST_INV",
+`!b. FINITE_BAG b ==> (LIST_TO_BAG(BAG_TO_LIST b) = b)`,
+ recInduct BAG_TO_LIST_IND
+   THEN RW_TAC bool_ss [] 
+   THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
+   THEN RW_TAC bool_ss [LIST_TO_BAG]
+   THEN PROVE_TAC [BAG_INSERT_CHOICE_REST,FINITE_SUB_BAG,SUB_BAG_REST]);
+
+
+val BAG_TO_LIST_CARD = Q.store_thm("BAG_TO_LIST_CARD",
+`!b. FINITE_BAG b ==> (LENGTH (BAG_TO_LIST b) = BAG_CARD b)`,
+ recInduct BAG_TO_LIST_IND
+   THEN RW_TAC bool_ss [] 
+   THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
+   THEN RW_TAC bool_ss [listTheory.LENGTH,CONJUNCT1 BAG_CARD_THM]
+   THEN `FINITE_BAG (BAG_REST bag)` by PROVE_TAC [FINITE_SUB_BAG,SUB_BAG_REST]
+   THEN RW_TAC bool_ss []
+   THEN `BAG_CARD bag = BAG_CARD (BAG_REST bag) + 1` by 
+        PROVE_TAC [BAG_INSERT_CHOICE_REST, BAG_CARD_THM]
+   THEN RW_TAC bool_ss [arithmeticTheory.ADD1]);
+
+
+val BAG_IN_MEM = Q.store_thm("BAG_IN_MEM",
+`!b. FINITE_BAG b ==> !x. BAG_IN x b = MEM x (BAG_TO_LIST b)`,
+ recInduct BAG_TO_LIST_IND
+   THEN RW_TAC bool_ss [] 
+   THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
+   THEN RW_TAC bool_ss [listTheory.MEM,NOT_IN_EMPTY_BAG]
+   THEN PROVE_TAC [FINITE_SUB_BAG,SUB_BAG_REST,
+                   BAG_INSERT_CHOICE_REST,BAG_IN_BAG_INSERT]);
 
 val _ = export_theory ();
 
