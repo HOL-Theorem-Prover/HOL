@@ -19,10 +19,11 @@ Satisfy.sml:   Simplistic code to try to simplify existential goals
                Available through the simpset fragment in
                SatisfySimps.
 
-Sequence.sml:  Another lazy list implementation, used only in
-               Satisfy.sml.
+Sequence.sml:  A lazy list implementation, used only in Satisfy.sml.
 
-Trace.sml:     Support
+Trace.sml:     Support for outputting trace messages, with increased
+               verbosity elicited when reference variable is set
+               higher.
 
 Traverse.sml:  High-level specification of traversal strategy.
                Roughly, this is
@@ -32,10 +33,34 @@ Traverse.sml:  High-level specification of traversal strategy.
                  there is one, loop.  Otherwise, try a decision
                  procedures.  If any succeeds, loop.
 
+Travrules.sml: Generic datatype for storing information on how to
+               traverse terms.  This types stores congruence rule
+               procedures, which come from the Opening module
+
+Unify.sml:     Implementation of first-order unification.  Used only
+               in Satisfy.sml.
+
 Unwind.sml:    One-point eliminations of variables under universal and
                existential quantifiers.  Turns
                   (?x. P x /\ (x = 4) /\ Q x)
                into
                   P 4 /\ Q 4
 
+boolSimps.sml: Basic simplification data for booleans.  Includes
+               congruence rules for implications, conditional
+               expressions and conjunctions.
 
+combinSimps.sml:
+               Simplification data for combinators.  Just a collection
+               of rewrites.
+
+pureSimps.sml: A simpset that transforms rewrites according to
+               mk_cond_rewr from Cond_rewr.sml, but wrapping each in
+               the BOUNDED/UNBOUNDED tag.
+
+selftest.sml:  Regression tests
+
+simpLib.sml:   Puts it all together. The simpset data structure is
+               implemented here, as is the code that wraps up
+               user-supplied conversions and rewrites, and makes them
+               fit into the simplifier's data structures.
