@@ -197,6 +197,9 @@ fun encode #"<" = "&lt;"
   | encode #"&" = "&amp;"
   | encode c    = String.str c;
 
+fun del_bslash #"\\" = ""
+  | del_bslash c     = String.str c;
+
 fun html (name,sectionl) ostrm =
  let fun outss ss = TextIO.output(ostrm, Substring.translate encode ss)
      fun out s = TextIO.output(ostrm,s)
@@ -218,14 +221,14 @@ fun html (name,sectionl) ostrm =
               out "<P>\n")
        | markout_section (SEEALSO sslist)
            = let fun drop_qual ss =
-                   case Substring.tokens (equal #".") ss
-                    of [strName,fnName] => fnName
-                     | [Name] => Name
-                     | other => raise Fail (string ss)
+                 case tokens (equal #".") ss
+                  of [strName,fnName] => translate del_bslash fnName
+                   | [Name] => string Name
+                   | other => raise Fail (string ss)
                  fun link s = 
                     (out "<A HREF = \""; 
                      out (Symbolic.unsymb(string s)); out ".html\">"; 
-                     out (string (drop_qual s)); out "</A>")
+                     out (drop_qual s); out "</A>")
                  fun outlinks [] = ()
                    | outlinks [s] = link s
                    | outlinks (h::t) = (link h; 

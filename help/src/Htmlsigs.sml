@@ -5,8 +5,9 @@
 fun indexbar out srcpath = out (String.concat
    ["<HR><TABLE WIDTH=100%>",
     "<TR ALIGN = CENTER>\n",
-    "<TH><A HREF=\"idIndex.html\">Identifier index</A>\n",
     "<TH><A HREF=\"", srcpath, "\">Source File</A>\n",
+    "<TH><A HREF=\"idIndex.html\">Identifier index</A>\n",
+    "<TH><A HREF=\"TheoryIndex.html\">Theory binding index</A>\n",
     "</TABLE><HR>\n"]);
 
 val smlIdCharSym = Char.contains "'_!%&$#+-/:<=>?@\\~`^|*"
@@ -23,7 +24,13 @@ fun destProperSuffix s1 s2 =
        end
  end;
 
-val destTheorysig = destProperSuffix "Theory.sig";
+fun isTheorysig path =
+  let open Path
+      val {dir,file} = splitDirFile path
+      val {base,ext} = splitBaseExt file
+  in ext=SOME "sig" andalso Option.isSome (destProperSuffix "Theory" base)
+  end
+  handle _ => false;
 
 fun assoc item =
   let fun assc ((key,ob)::rst) = if item=key then ob else assc rst
@@ -248,19 +255,7 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 		    (process ln lineno; loop lnr (lineno+1))
 	    in loop lines 1 end
 
-        val mungedSRCFILES =
-          let fun munge path = 
-             let val {dir,file} = Path.splitDirFile path
-             in case destProperSuffix "Theory" file
-                of SOME thy => (file, Path.concat(dir,thy^"Script.sml"))
-                 | NONE     => (file,path^".sml")
-             end
-          in map munge SRCFILES
-          end
-
-        fun srcfile_of sigfile = 
-            assoc (Path.base(Path.file sigfile)) mungedSRCFILES
-
+        val srcfile = assoc (Path.base(Path.file sigfile)) SRCFILES
     in
 	print "Creating "; print htmlfile; print " from ";
 	print sigfile; print "\n"
@@ -270,11 +265,11 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
         out strName; out "</TITLE></HEAD>\n";
         out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
         out "<H1>Structure "; out strName; out "</H1>\n";
-        indexbar out (srcfile_of sigfile);
+        indexbar out srcfile;
         out "<PRE>\n";
-        traverse (pass2 (Option.isSome (destTheorysig sigfile)));
+        traverse (pass2 (isTheorysig sigfile));
         out "</PRE>";
-        indexbar out (srcfile_of sigfile);
+        indexbar out srcfile;
         out "<BR><EM>"; out version; out "</EM>";
         out "</BODY></HTML>\n";
         TextIO.closeOut os
@@ -282,17 +277,17 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 
 fun processSigfile db version bgcolor stoplist
                    sigdir htmldir HOLpath SRCFILES sigfile =
-    let val {base, ext} = Path.splitBaseExt sigfile
-	val htmlfile = Path.joinBaseExt{base=base, ext=SOME "html"}
-    in 
-	case ext of
-	    SOME "sig" => 
-		if List.exists (fn name => base = name) stoplist then ()
-		else processSig db version bgcolor HOLpath SRCFILES
-		                (Path.concat(sigdir, sigfile))
-		                (Path.concat(htmldir, htmlfile))
-	  | _          => ()
-    end
+ let val {base, ext} = Path.splitBaseExt sigfile
+     val htmlfile = Path.joinBaseExt{base=base, ext=SOME "html"}
+ in 
+   case ext 
+    of SOME "sig" => 
+	if List.exists (fn name => base = name) stoplist then ()
+	else processSig db version bgcolor HOLpath SRCFILES
+	                (Path.concat(sigdir, sigfile))
+	                (Path.concat(htmldir, htmlfile))
+     | otherwise => ()
+ end
 
 fun sigsToHtml version bgcolor stoplist 
                helpfile HOLpath SRCFILES (sigdir, htmldir) =
@@ -312,7 +307,7 @@ fun sigsToHtml version bgcolor stoplist
     end
     handle exn as OS.SysErr (str, _) => (print(str ^ "\n\n"); raise exn)
 
-fun printHTMLBase version bgcolor HOLpath (sigfile, outfile) =
+fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
     let open Database
 	val db = readbase sigfile
 	val os = TextIO.openOut outfile
@@ -336,6 +331,7 @@ fun printHTMLBase version bgcolor HOLpath (sigfile, outfile) =
 	    
 	(* Insert a subheader when meeting a new initial letter *)
 	val lastc1 = ref #" "
+	val firstsymb = ref true
 	fun separator k1 = 
 	    let val c1 = Char.toUpper k1
 	    in 
@@ -344,7 +340,11 @@ fun printHTMLBase version bgcolor HOLpath (sigfile, outfile) =
 		     app out ["\n</UL>\n\n<A NAME=\"", str c1, "\">"];
 		     subheader (str c1);
 		     out "</A>\n<UL>")
-		else ()
+		else if !firstsymb andalso not (Char.isAlpha c1)
+                      then (subheader "Symbolic Identifiers";
+                            out "<UL>"; 
+                            firstsymb := false)
+                      else ()
 	    end
 	fun mkref line file = idhref file line file 
 	fun mkHOLref docfile = 
@@ -353,47 +353,35 @@ fun printHTMLBase version bgcolor HOLpath (sigfile, outfile) =
               | NONE => out "not linked"
 	fun nextfile last [] = out ")\n"
 	  | nextfile last ((e1 as {comp, file, line}) :: erest) =
-	    if comp = last then
-		(out ", "; mkref line file; nextfile last erest)
-	    else 
-		(out ")\n"; newitem e1 erest)
+	    if comp=last then (out ", "; mkref line file; nextfile last erest)
+	                 else (out ")\n"; newitem e1 erest)
 	and newitem (e1 as {comp, file, line}) erest =
 	    let val key = Database.getname e1
-	    in 
-		separator (String.sub(key, 0));
-		out "<LI><B>"; out key; out "</B> (";
-		(case comp of
-		     Str    => strhref key "structure"
-		   | Val id => (out "value; ";       
-				mkref line file)
-		   | Typ id => (out "type; ";        
-				mkref line file)
-		   | Exc id => (out "exception; ";   
-				mkref line file)
-		   | Con id => (out "constructor; "; 
-				mkref line file)
-		   | Term (id, NONE) => mkref line file
-		   | Term (id, SOME "HOL") => (out "HOL"; out "; ";
-					      mkHOLref file)
-		   | Term (id, SOME kind) => (out kind; out "; ";
-					      mkref line file);
-		nextfile comp erest)
+	    in separator (String.sub(key, 0))
+             ; out "<LI><B>"; out key; out "</B> ("
+             ; (case comp 
+                 of Str    => strhref key "structure"
+                  | Val id => (out "value; "; mkref line file)
+                  | Typ id => (out "type; ";  mkref line file)
+                  | Exc id => (out "exception; "; mkref line file)
+                  | Con id => (out "constructor; "; mkref line file)
+                  | Term (id, NONE) => mkref line file
+(*                | Term (id, SOME "HOL") => (out "HOL; "; mkHOLref file) *)
+                  | Term (id, SOME kind) => (out kind;out"; ";mkref line file)
+             ; nextfile comp erest)
 	    end
 	fun prentries []            = ()
 	  | prentries (e1 :: erest) = newitem e1 erest
 	fun prtree Empty = ()
 	  | prtree (Node(key, entries, t1, t2)) = 
 	    (prtree t1;
-	     prentries entries;
+	     prentries (List.filter pred entries);
 	     prtree t2)
     in 
-	out "<HTML>\
-	 \<HEAD><TITLE>HOL INDEX</TITLE></HEAD>\n";
+	out "<HTML><HEAD><TITLE>"; out header; out "</TITLE></HEAD>\n";
 	out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
-	out "<H1>HOL INDEX</H1>\n";
+	out "<H1>"; out header; out "</H1>\n";
 	mkalphaindex();
-	subheader "Symbolic identifiers";
-	out "<UL>";
 	prtree db; 
 	out "</UL>\n";
 	mkalphaindex();

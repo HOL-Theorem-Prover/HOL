@@ -44,8 +44,8 @@ fun find_most_appealing HOLpath docfile =
      else NONE
   end;
 
-fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
-    let val db = readbase dbfile
+fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
+  = let val db = readbase dbfile
 	val os = TextIO.openOut outfile
 	fun out s = TextIO.output(os, s)
 	fun href anchor target = 
@@ -93,7 +93,7 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
         (*------------------------------------------------------*
          * Generate index for Docfiles                          *
          *------------------------------------------------------*)
-
+(*
         val _ = let val docfileIndex = normPath
                         [HOLpath, "help/Docfiles/HTML/docfileIndex.html"]
                   val ostrm = TextIO.openOut docfileIndex
@@ -156,6 +156,7 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
 	          out "</BODY></HTML>\n";
 	          TextIO.closeOut ostrm
                 end
+*)
     in 
 	out "<HTML>\
 	 \<HEAD><TITLE>HOL Reference Page</TITLE></HEAD>\n";
@@ -176,12 +177,13 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
         out "<DD>"; prtree misc_struct_of db;
         out "<P>";
 
+(*
         out"<DT><STRONG>";
         href "DOCUMENTED FUNCTIONS AND VALUES" 
             (Path.concat(HOLpath,"help/Docfiles/HTML/docfileIndex.html"));
         out "</STRONG>";
         out "<P>";
-
+*)
         out"<DT><STRONG>SYNTAX</STRONG>";
         out"<DD>"; prtree syntax_of db;
         out "<P>";
@@ -191,8 +193,9 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
         out "<P>";
 
         out"<DT><STRONG>";
-        href "INDEX" 
-            (Path.concat(HOLpath,"help/src/htmlsigs/idIndex.html"));
+        href "IDENTIFIERS" idIndex; 
+        out "&nbsp;&nbsp;&nbsp;&nbsp;"; 
+        href "THEORY BINDINGS" TheoryIndex;
         out "</STRONG>";
         out "<P>";
 	out "</DL>\n";

@@ -8,9 +8,9 @@ val keepers =
      "Arbnum.sig", "Arbint.sig", "Portable.sig",
 
      (*0*)
-      "Type.sig", "Term.sig", "Thm.sig", 
-      "Theory.sig", "Net.sig", "Count.sig", 
-      "Feedback.sig", "Lexis.sig", "Lib.sig", "Globals.sig", 
+      "Type.sig", "Term.sig", "Thm.sig", "Theory.sig", "Definition.sig",
+      "Net.sig", "Count.sig", "Feedback.sig", "Lexis.sig", 
+      "Lib.sig", "Globals.sig",
 
      (* parse *)
      "Parse.sig",  "Hol_pp.sig", "Absyn.sig", "Preterm.sig", 

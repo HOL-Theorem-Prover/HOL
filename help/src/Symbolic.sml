@@ -11,7 +11,7 @@ val symb_map = [("Type",    "-->", "arrow"),
 
 fun unsymb "Type.-->"   = "Type.arrow"
   | unsymb "Lib.|->"    = "Lib.maplet"
-  | unsymb "Lib.##"     = "Lib.hash2"
+  | unsymb "Lib.\\#\\#" = "Lib.hash2"
   | unsymb "bossLib.&&" = "bossLib.amper2"
   | unsymb "simpLib.++" = "simpLib.plus2"
   | unsymb "Parse.--"   = "Parse.minus2"
