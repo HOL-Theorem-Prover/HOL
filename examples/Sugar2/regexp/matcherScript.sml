@@ -954,8 +954,9 @@ val da_step_regexp2na = prove
    ++ RW_TAC arith_ss []
    ++ METIS_TAC []);
 
-val amatch = prove
-  (``!r l. amatch r l = sem r l``,
+val amatch = store_thm
+  ("amatch",
+   ``!r l. amatch r l = sem r l``,
    RW_TAC std_ss
    [GSYM da_match, da_match_def, regexp2da_def, da_accepts_na2da, amatch_def]
    ++ RW_TAC std_ss [initial_regexp2na_def]

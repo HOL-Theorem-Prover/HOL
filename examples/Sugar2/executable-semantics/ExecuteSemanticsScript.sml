@@ -12,29 +12,35 @@
 (******************************************************************************
 * Load theories
 * (commented out for compilation)
-* Compile using "Holmake -I ../semantics"
+* Compile using "Holmake -I ../official-semantics -I ../regexp"
 ******************************************************************************)
 (* 
-quietdec := true;
-loadPath := "../semantics" :: !loadPath;
-map load ["intLib","res_quanTools","pred_setLib","PropertiesTheory"];
-open intLib listTheory rich_listTheory pred_setLib
-     FinitePathTheory PathTheory 
-     UnclockedSemanticsTheory ClockedSemanticsTheory PropertiesTheory;
-val _ = intLib.deprecate_int();
-quietdec := false;
 *)
+loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
+app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
+          "PropertiesTheory", "regexpLib"];
 
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open HolKernel Parse boolLib bossLib pred_setLib FinitePathTheory PathTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory PropertiesTheory;
+open HolKernel Parse boolLib;
 
 (******************************************************************************
-* Open theories
+* Open theories (comment out quietdec's for compilation)
 ******************************************************************************)
-open intLib rich_listTheory PathTheory PropertiesTheory;
+
+(* 
+*)
+quietdec := true;
+
+open bossLib metisLib rich_listTheory pred_setLib intLib;
+open FinitePathTheory PathTheory UnclockedSemanticsTheory
+     ClockedSemanticsTheory PropertiesTheory
+open regexpTheory matcherTheory;
+
+(* 
+*)
+quietdec := false;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
@@ -53,6 +59,24 @@ val resq_SS =
   [res_quanTools.resq_SS,
    rewrites
     [num_to_def,xnum_to_def,IN_DEF,num_to_def,xnum_to_def,LENGTH_def]];
+
+val arith_resq_ss = simpLib.++ (arith_ss, resq_SS);
+val list_resq_ss  = simpLib.++ (list_ss,  resq_SS);
+
+(*---------------------------------------------------------------------------*)
+(* Symbolic tacticals.                                                       *)
+(*---------------------------------------------------------------------------*)
+
+infixr 0 ++ << || THENC ORELSEC ORELSER ##;
+infix 1 >>;
+
+val op ++ = op THEN;
+val op << = op THENL;
+val op >> = op THEN1;
+val op || = op ORELSE;
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val REVERSE = Tactical.REVERSE;
 
 (******************************************************************************
 * Start a new theory called "ExecuteSemantics"
@@ -80,10 +104,11 @@ val UF_SEM_F_UNTIL_REC =
       (UF_SEM w f2
        \/
        (UF_SEM w f1 /\ UF_SEM (RESTN w 1) (F_UNTIL(f1,f2))))``,
-   RW_TAC (arith_ss ++ resq_SS) [UF_SEM_def]
+   RW_TAC arith_resq_ss [UF_SEM_def]
     THEN Cases_on `w`
     THEN ONCE_REWRITE_TAC[arithmeticTheory.ONE]
-    THEN RW_TAC (arith_ss  ++ resq_SS) [num_to_def,xnum_to_def,RESTN_def,REST_def,LENGTH_def]
+    THEN RW_TAC arith_resq_ss
+         [num_to_def,xnum_to_def,RESTN_def,REST_def,LENGTH_def]
     THEN EQ_TAC
     THEN RW_TAC arith_ss [GT]
     THENL
@@ -149,7 +174,7 @@ val UF_SEM_F_UNTIL_REC =
        THEN RW_TAC std_ss [RESTN_def]]);
 
 (******************************************************************************
-* Executable semantics of [f1 U f2] on finite paths.
+* Executable semantics of {r}(f) on finite paths.
 *
 * First define w |=_n f
 *
@@ -229,7 +254,7 @@ val UF_SEM_F_SUFFIX_IMP_FINITE_REC =
   ("UF_SEM_F_SUFFIX_IMP_FINITE_REC",
    ``UF_SEM (FINITE w) (F_SUFFIX_IMP(r,f)) = 
       UF_SEM_F_SUFFIX_IMP_FINITE_REC (FINITE w) (r,f) (LENGTH w)``,
-   RW_TAC (list_ss ++ resq_SS) [UF_SEM_def]
+   RW_TAC list_resq_ss [UF_SEM_def]
     THEN PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL]);
 
 (******************************************************************************
@@ -252,12 +277,44 @@ val UF_SEM_F_SUFFIX_IMP_REC =
    ``UF_SEM w (F_SUFFIX_IMP(r,f)) = 
       UF_SEM_F_SUFFIX_IMP_REC w (r,f) (LENGTH w)``,
    Cases_on `w`
-    THEN RW_TAC (list_ss ++ resq_SS) 
+    THEN RW_TAC list_resq_ss
           [UF_SEM_def,UF_SEM_F_SUFFIX_IMP_FINITE_REC,
            UF_SEM_F_SUFFIX_IMP_REC_def]);
 
-(* Some examples of using EVAL
+(*---------------------------------------------------------------------------*)
+(* Converting regexps from SyntaxTheory to regexpTheory.                     *)
+(*---------------------------------------------------------------------------*)
 
+val unclocked_def = Define
+  `(unclocked (S_BOOL b) = T) /\
+   (unclocked (S_CAT (r1, r2)) = unclocked r1 /\ unclocked r2) /\
+   (unclocked (S_FUSION (r1, r2)) = unclocked r1 /\ unclocked r2) /\
+   (unclocked (S_OR (r1, r2)) = unclocked r1 /\ unclocked r2) /\
+   (unclocked (S_AND (r1, r2)) = unclocked r1 /\ unclocked r2) /\
+   (unclocked (S_REPEAT r) = unclocked r) /\
+   (unclocked (S_CLOCK (r, b)) = F)`;
+
+val sere2regexp_def = Define
+  `(sere2regexp (S_BOOL b) = Atom (\l. B_SEM l b)) /\
+   (sere2regexp (S_CAT (r1, r2)) = Cat (sere2regexp r1) (sere2regexp r2)) /\
+   (sere2regexp (S_FUSION (r1, r2)) = Fuse (sere2regexp r1) (sere2regexp r2)) /\
+   (sere2regexp (S_OR (r1, r2)) = Or (sere2regexp r1) (sere2regexp r2)) /\
+   (sere2regexp (S_AND (r1, r2)) = And (sere2regexp r1) (sere2regexp r2)) /\
+   (sere2regexp (S_REPEAT r) = Repeat (sere2regexp r))`;
+
+val sere2regexp = prove
+  (``!r l. unclocked r ==> (US_SEM l r = amatch (sere2regexp r) l)``,
+   SIMP_TAC std_ss [amatch]
+   ++ Induct_on `r`
+   << [RW_TAC std_ss [US_SEM_def, sem_def, sere2regexp_def, ELEM_EL, EL],
+       Introduce `p = (r1,r2)`
+
+   THEN RW_TAC std_ss
+        [US_SEM_def, sem_def, sere2regexp_def, LENGTH_EQ_ONE, ELEM_EL, EL]
+, FinitePathTheory.RESTN_def, ]
+
+(* Some examples of using EVAL
+*)
 val _ = computeLib.add_funs 
          ([SEL_REC_AUX,
            UF_SEM_F_UNTIL_REC ,
@@ -284,18 +341,3 @@ EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_SUFFIX_IMP(r,f))``;
 *)
 
 val _ = export_theory();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -82,7 +82,7 @@ val B_SEM =
 ******************************************************************************)
 val US_SEM_def =
  Define
-  `(US_SEM w (S_BOOL b) =  (LENGTH w = 1) /\ B_SEM (ELEM w 0) b)
+  `(US_SEM w (S_BOOL b) = (LENGTH w = 1) /\ B_SEM (ELEM w 0) b)
    /\
    (US_SEM w (S_CAT(r1,r2)) = 
      ?w1 w2. (w = w1 <> w2) /\ US_SEM w1 r1 /\ US_SEM w2 r2)

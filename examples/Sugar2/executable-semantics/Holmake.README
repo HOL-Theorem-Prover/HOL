@@ -1,3 +1,1 @@
-
-Holmake -I ../official-semantics
-
+Holmake -I ../official-semantics -I ../regexp
