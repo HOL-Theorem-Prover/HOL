@@ -510,8 +510,6 @@ val int_of_num =
                    (int_of_num (SUC n) = (int_of_num n) + int_1)`};
 
 val _ = add_numeral_form(#"i", SOME "int_of_num");
-val _ = overload_on("&", ``int_of_num``);
-
 
 val INT_0 =
     store_thm("INT_0",

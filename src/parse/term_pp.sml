@@ -603,18 +603,14 @@ fun pp_term (G : grammar) TyG = let
                    Ty = numty --> numty}
         | SOME t => dest_thy_const t
       val injty = #Ty inj_record
-      val (crec as {Name = injname0, Thy = injthy}) =
-        lose_constrec_ty (inj_record)
-      val injname =
-        case overloading_of_nametype overload_info crec of
-          NONE => injname0
-        | SOME s => s
+      val is_a_real_numeral = (* i.e. doesn't need a suffix *)
+          case info_for_name overload_info fromNum_str of
+            NONE => false
+          | SOME oi => mem inj_record (#actual_ops oi)
     in
       pbegin showtypes;
       add_string (Arbnum.toString (Literal.dest_numeral tm));
-      if
-        injname <> fromNum_str orelse
-        !Globals.show_numeral_types
+      if not is_a_real_numeral orelse !Globals.show_numeral_types
       then let
         val (k, _) =
           valOf (List.find (fn (_, s') => s' = numinfo_search_string) num_info)

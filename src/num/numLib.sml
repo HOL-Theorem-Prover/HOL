@@ -165,7 +165,7 @@ end;
 (* --------------------------------------------------------------------- *)
 
 fun INDUCT_TAC g =
-  INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g 
+  INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g
   handle HOL_ERR _ => raise ERR "INDUCT_TAC" "";
 
 
@@ -187,5 +187,29 @@ local open simpLib sumTheory
 in
 val num_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss
 end;
+
+(* ----------------------------------------------------------------------
+    Parsing adjustments
+   ---------------------------------------------------------------------- *)
+
+val magic_injn = prim_mk_const {Thy = "arithmetic",
+                                Name = GrammarSpecials.nat_elim_term};
+val operators = [("+", ``$+``),
+                 ("-", ``$-``),
+                 ("*", ``$*``),
+                 ("<", ``$<``),
+                 ("<=", ``$<=``),
+                 (">", ``$>``),
+                 (">=", ``$>=``),
+                 (GrammarSpecials.fromNum_str, magic_injn)];
+
+fun deprecate_num () = let
+  fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}
+  fun doit (s, t) = Parse.temp_remove_ovl_mapping s (losety (dest_thy_const t))
+in
+  app (ignore o doit) operators
+end
+
+fun prefer_num () = app temp_overload_on operators
 
 end; (* numLib *)

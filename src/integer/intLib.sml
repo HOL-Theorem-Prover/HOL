@@ -1,6 +1,28 @@
 structure intLib :> intLib =
 struct
 
-  open Abbrev intSyntax intSimps Cooper
+  open HolKernel Abbrev intSyntax intSimps Cooper
+  val (Type,Term) = Parse.parse_from_grammars integerTheory.integer_grammars
+
+  val operators = [("+", ``$+ : int -> int -> int``),
+                   ("-", ``$- : int -> int -> int``),
+                   ("*", ``$* : int -> int -> int``),
+                   ("/", ``$/ : int -> int -> int``),
+                   ("<", ``$< : int -> int -> bool``),
+                   ("<=", ``$<= : int -> int -> bool``),
+                   (">", ``$> : int -> int -> bool``),
+                   (">=", ``$>= : int -> int -> bool``),
+                   (GrammarSpecials.fromNum_str, ``int_of_num``),
+                   (GrammarSpecials.num_injection, ``int_of_num``)];
+
+fun deprecate_int () = let
+  fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}
+  fun doit (s, t) = Parse.temp_remove_ovl_mapping s (losety (dest_thy_const t))
+in
+  app (ignore o doit) operators
+end
+
+fun prefer_int () = app Parse.temp_overload_on operators
+
 
 end;

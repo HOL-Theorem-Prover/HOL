@@ -4,6 +4,9 @@ sig
 
   val int_ss         : simpLib.simpset
 
+  val prefer_int     : unit -> unit
+  val deprecate_int  : unit -> unit
+
   val COOPER_CONV    : conv
   val COOPER_PROVE   : conv
   val COOPER_TAC     : tactic

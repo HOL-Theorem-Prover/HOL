@@ -26,16 +26,29 @@ this character specifies {s} as the ``injection function'' which is to
 be applied to the natural number denoted by the preceding digits.
 
 Secondly, the constant denoted by the {s} argument is overloaded to be
-one of the possible resolutions of the overloaded operator {&}.
-When a numeral doesn't have a character suffix, this means that it has
-been made an argument to the function {fromNum}, and so might take on
-different types, depending on the context.
+one of the possible resolutions of an internal, overloaded operator,
+which is invisibly wrapped around all numerals that appear without a
+character suffix.  After applying {add_numeral_form}, the function
+denoted by the argument {s} is now a possible resolution of this
+overloading, so numerals can now be seen as members of the range of
+the type of {s}.
+
+Finally, if {s} is not {NONE}, the constant denoted by {s} is
+overloaded to be one of the possible resolutions of the string {&}.
+This operator is thus the standard way of writing the injection
+function from {:num} into other numeric types.
+
+The injection function specifed by argument {s} is either the constant
+with name {s0}, if {s} is of the form {SOME s0}, or the identity
+function if {s} is {NONE}.  Using {add_numeral_form} with {NONE} for
+this parameter is done in the development of {arithmeticTheory}, and
+should not be done subsequently.
 
 \FAILURE
 Fails if {arithmeticTheory} is not loaded, as this is where the basic
 constants implementing natural number numerals are defined.  Also
 fails if there is no constant with the given name, or if it doesn't
-have type {`:num -> 'a`} for some {'a}.  Fails if
+have type {:num -> 'a} for some {'a}.  Fails if
 {add_bare_numeral_form} would also fail on this input.
 
 \EXAMPLE
@@ -88,8 +101,6 @@ absolutely specify the type of the numeral form:
 \COMMENTS
 Overloading on too many numeral forms is a sure recipe for confusion.
 
-
-
 \SEEALSO
-Parse.add_bare_numeral_form, Parse.show_numeral_types.
+Parse.add_bare_numeral_form, Parse.overload_on, Parse.show_numeral_types.
 \ENDDOC

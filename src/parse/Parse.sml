@@ -982,7 +982,10 @@ fun temp_add_numeral_form (c, stropt) = let
         | h::_ => lose_constrec_ty (dest_thy_const h)
 in
   temp_add_bare_numeral_form (c, stropt);
-  temp_overload_on_by_nametype (fromNum_str) const_record
+  temp_overload_on_by_nametype fromNum_str const_record;
+  if isSome stropt then
+    temp_overload_on_by_nametype num_injection const_record
+  else ()
 end
 
 fun add_numeral_form (c, stropt) = let in

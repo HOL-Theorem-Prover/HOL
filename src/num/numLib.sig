@@ -5,9 +5,9 @@
 (* ===================================================================== *)
 
 
-signature numLib = 
+signature numLib =
 sig
- include numSyntax 
+ include numSyntax
 
  val EXISTS_LEAST_CONV    : conv
  val EXISTS_GREATEST_CONV : conv
@@ -19,9 +19,12 @@ sig
  val REDUCE_RULE          : thm -> thm
  val REDUCE_TAC           : tactic
 
- val ARITH_CONV           : conv 
+ val ARITH_CONV           : conv
  val ARITH_PROVE          : conv
  val ARITH_TAC            : tactic
 
  val num_ss               : simpLib.simpset
+
+ val prefer_num           : unit -> unit
+ val deprecate_num        : unit -> unit
 end;

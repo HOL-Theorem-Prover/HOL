@@ -45,7 +45,6 @@ val real_of_num = new_prim_rec_definition("real_of_num",
       (real_of_num(SUC n) = real_of_num n + real_1)`--));
 
 val _ = add_numeral_form(#"r", SOME "real_of_num");
-val _ = overload_on("&", ``real_of_num``);
 
 val REAL_0 = prove_thm("REAL_0",
   (--`real_0 = &0`--),

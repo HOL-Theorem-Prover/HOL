@@ -16,6 +16,7 @@ sig
 
   val nat_elim_term : string
   val fromNum_str : string
+  val num_injection : string
 
   val case_special : string
   val case_split_special : string
