@@ -5,13 +5,13 @@ in
   Time.-(#usr (Timer.checkCPUTimer Globals.hol_clock), t0)
 end
 
-fun average f m n = let
+fun average (gen, test) m n = let
+  val prob = gen n
   fun recurse m acc =
       if m = 0 then acc
-      else recurse (m - 1) (Time.toReal (usr_time f n) :: acc)
-  val results = recurse m []
+      else recurse (m - 1) (Time.toReal (usr_time test prob) + acc)
 in
-  List.foldl Real.+ 0.0 results / real (length results)
+  recurse m 0.0 / real m
 end
 
 fun test_upto {f,ntrials,max_size,filename} = let
