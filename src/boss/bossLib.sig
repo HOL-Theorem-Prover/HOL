@@ -18,7 +18,7 @@ in
   val Define       : term quotation -> thm
   val xDefine      : string -> term quotation -> thm
   val Hol_defn     : string -> term quotation -> defn
-  val WF_REL_TAC   : defn -> term quotation -> tactic
+  val WF_REL_TAC   : term quotation -> tactic
  
   (* Fetch the rewrite rules for a type. *)
 
