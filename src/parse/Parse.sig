@@ -91,6 +91,7 @@ in
     open term_grammar
   in
     val parse_preTerm : term frag list -> term parse_term.preterm
+    val resolve_names : term parse_term.preterm -> Preterm.preterm
     val preTerm : term frag list -> Preterm.preterm
     val Term : term frag list -> term
     val -- : term frag list -> 'a -> term

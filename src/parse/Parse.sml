@@ -356,6 +356,13 @@ in
     remove_lets pt0
   end
 
+  fun resolve_names ppt = let
+    val _ = update_term_fns()
+    val oinfo = term_grammar.overload_info (term_grammar())
+  in
+    Parse_support.make_preterm (toTermInEnv oinfo ppt)
+  end
+
   fun preTerm q = let
     val pt0 = parse_preTerm q
     val oinfo = term_grammar.overload_info (term_grammar())
