@@ -1,7 +1,5 @@
 \chapter{Miscellaneous Features}\label{avramisc}
 
-\newcommand\holmake{\texttt{Holmake}}
-
 This section describes some of the features
 that exist for managing the interface\index{HOL system@\HOL\
 system!adjustment of user interface of} to the \HOL\ system.
@@ -174,7 +172,7 @@ The following notes may be of some further help.
 \item The filenames of theory scripts must follow the following
   convention: a HOL theory script for theory ``x'' should be named
   \texttt{xScript.sml}.  When \verb+export_theory+ is called during an
-  invocation of \verb+Holmake+, the files \texttt{xTheory.sig} and
+  invocation of \holmake, the files \texttt{xTheory.sig} and
   \texttt{xTheory.sml} will be generated and then compiled.
 
 \item In the MoscowML batch compiler, modules are not allowed to have
@@ -205,9 +203,9 @@ structure, and the contents of a structure must be
   using a regular expression. This will also remove other files with
   names containing "Theory". For example, if, in your development
   directory, you had a file of ML code named \texttt{MyTheory.sml} and
-  you also were managing a \holn{} development there with {\tt
-    Holmake}, then MyTheory.sml would get deleted if {\tt Holmake
-    clean} was invoked.
+  you also were managing a \holn{} development there with \holmake,
+  then \texttt{MyTheory.sml} would get deleted if {\tt Holmake clean}
+  was invoked.
 
 \end{enumerate}
 
@@ -280,6 +278,10 @@ with the following command-line options:
   configured to use by default.
 \item[\tt --holmakefile <file>] Use the given file as a make-file.
   See section~\ref{sec:using-Holmakefiles} below for more on this.
+\item[\texttt{--interactive} or \texttt{-i}] Causes the HOL code that
+  runs when a theory building file is executed to have the flag
+  \texttt{Globals.interactive} set to true.  This will alter the diagnostic
+  output of a number of functions within the system.
 \item[\texttt{--no\_holmakefile}]  Do not use a make-file, even if a file
   called \texttt{Holmakefile} is present in the current directory.
 \item[\texttt{--no\_overlay}] Do not use an overlay file.  All HOL
@@ -632,9 +634,9 @@ colon (\verb+:+).
 Knowledgable ML programmers will notice that the idiom {\tt
   ``}$\ldots$ {\tt ``} is not ML-typable; for that reason, it is
 implemented as a pre-processor to ML, thanks to work by Richard
-Boulton. Users who wish to use the pre-processor should invoke {\tt
-  <hol-dir>/bin/hol.unquote}. \holmake{} will accept source files
-having occurrences of \verb+``+.
+Boulton. Users who wish to use the pre-processor should invoke
+\texttt{hol.unquote} in the distributions \texttt{bin} directory.
+\holmake{} will accept source files having occurrences of \verb+``+.
 
 
 %%% Local Variables:

@@ -153,8 +153,10 @@ fun parse_command_line list = let
   val (rem13, no_overlay) = find_toggle "--no_overlay" rem12
   val (rem14, user_overlay) = find_one_pairtag "--overlay" NONE SOME rem13
   val (rem15, cmdl_MOSMLDIRs) = find_pairs "--mosmldir" rem14
+  val (rem16, interactive_flag) = find_alternative_tags ["--interactive", "-i"]
+                                                        rem15
 in
-  {targets=rem15, debug=debug, show_usage=help, show_version=show_version,
+  {targets=rem16, debug=debug, show_usage=help, show_version=show_version,
    always_rebuild_deps=rebuild_deps,
    additional_includes=includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
@@ -163,6 +165,7 @@ in
    user_hmakefile = user_hmakefile,
    no_overlay = no_overlay,
    user_overlay = user_overlay,
+   interactive_flag = interactive_flag,
    cmdl_HOLDIR =
      case cmdl_HOLDIRs of
        []  => NONE
@@ -186,7 +189,7 @@ end
 
 (* parameters which vary from run to run according to the command-line *)
 val {targets, debug, dontmakes, show_usage, show_version, allfast, fastfiles,
-     always_rebuild_deps,
+     always_rebuild_deps, interactive_flag,
      additional_includes = cline_additional_includes,
      cmdl_HOLDIR, cmdl_MOSMLDIR,
      no_sigobj = cline_no_sigobj,
@@ -791,13 +794,15 @@ in
       val _ = b orelse raise CompileFailed
       val _ = print ("Linking "^scriptuo^
                      " to produce theory-builder executable\n")
+      val objectfiles0 =
+          if allfast andalso not (member s fastfiles) orelse
+             not allfast andalso member s fastfiles
+          then ["fastbuild.uo", scriptuo]
+          else if quit_on_failure then [scriptuo]
+          else ["holmakebuild.uo", scriptuo]
       val objectfiles =
-        if allfast andalso not (member s fastfiles) orelse
-           not allfast andalso member s fastfiles
-        then ["fastbuild.uo", scriptuo]
-        else if quit_on_failure then [scriptuo]
-        else ["holmakebuild.uo", scriptuo]
-
+          if interactive_flag then "holmake_interactive.uo" :: objectfiles0
+          else objectfiles0
     in
       if compile debug (include_flags @ ["-o", script] @ objectfiles) = success
       then let
@@ -1079,6 +1084,7 @@ val _ =
      "    --help | -h          : show this message\n",
      "    --holdir <directory> : use specified directory as HOL root\n",
      "    --holmakefile <file> : use file as Holmakefile\n",
+     "    --interactive | -i   : run HOL with \"interactive\" flag set\n",
      "    --mosmldir directory : use specified directory as MoscowML root\n",
      "    --no_holmakefile     : don't use any Holmakefile\n",
      "    --no_overlay         : don't use an overlay file\n",
@@ -1089,7 +1095,7 @@ val _ =
      "    --version | -v       : show version information\n"]
   else
     if show_version then
-      print "Holmake version 3.0\n"
+      print "Holmake version 3.01\n"
     else let
       open Process
       val result = deal_with_targets targets

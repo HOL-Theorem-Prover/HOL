@@ -16,7 +16,7 @@ default:
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind description.{ps,pdf}
 
-description.dvi: description.tex $(CHAPTERS)
+description.dvi: description.tex $(CHAPTERS) ../LaTeX/commands.tex
 	(cd ../Logo ; make)  # makes the lantern logo
 	latex description.tex
 	${MAKEINDEX} description.idx

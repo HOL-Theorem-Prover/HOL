@@ -1172,11 +1172,14 @@ existing theory segment by simply importing the corresponding module.
    load : string -> unit
 \end{verbatim}\end{boxed}
 
+\noindent
 Executing {\small\verb+load +}$name${\small\verb+Theory+} imports the
 first file named $name${\small\verb+Theory.uo+} found along the
 {\small\verb+loadPath+} into the session. Any unloaded ancestors of
 $name$ will be loaded before loading of $name${\small\verb+Theory+}
-continues.
+continues.  Note that {\small\verb+load+} can not be used in ML files
+that are to be compiled; it can only be used in the interactive
+system.
 
 \begin{boxed}
 \index{new_type@\ml{new\_type}|pin}
@@ -1283,14 +1286,14 @@ file, which, after compilation, can be imported into future sessions.
 \end{verbatim}\end{boxed}
 
 When {\small\verb+export_theory+} is called, all out-of-date entities
-are removed from the current segment. Also, the parenthood of the theory
-is computed. The current theory segment is written to file
+are removed from the current segment. Also, the parenthood of the
+theory is computed. The current theory segment is written to file
 $name${\small{\tt Theory.sml}} in the current working directory.  The
 file $name${\small{\tt Theory.sig}}, which documents the contents of
 $name$, is also written to the current working directory.  Notice that
-the exported theory is not compiled by \HOL. That is left to an external
-tool, {\small\verb+Holmake+}, which maintains dependencies among
-collections of \HOL\ theory segments.
+the exported theory is not compiled by \HOL. That is left to an
+external tool, \holmake{} (see section~\ref{Holmake}), which maintains
+dependencies among collections of \HOL\ theory segments.
 
 \subsection{Functions for creating definitional extensions}\index{extension, of HOL logic@extension, of \HOL\ logic!definitional}\index{definitional extension, of HOL logic@definitional extension, of \HOL\ logic}\index{theories, in HOL logic@theories, in \HOL\ logic!extension of|(}
 \label{avra_definitional}
