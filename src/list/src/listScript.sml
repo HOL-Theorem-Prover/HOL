@@ -27,18 +27,32 @@ struct
 
 local open arithmeticTheory pairTheory in end;
 
-val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
-
 
 (*---------------------------------------------------------------------------
  * Open structures used in the body.
  *---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib Num_conv Prim_rec;
-open BasicProvers
+open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
+     simpLib boolSimps pairTheory;
+
+val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
 val _ = new_theory "list";
 
+(*---------------------------------------------------------------------------*)
+(* Define some useful support, which doesn't get defined until SingleStep    *)
+(* which is in bossLib, alas.                                                *)
+(*---------------------------------------------------------------------------*)
+
+fun (q by t) = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC THENL [t, ALL_TAC]
+
+fun genCases_on thm q = 
+  REPEAT_TCL STRIP_THM_THEN 
+    (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th) (Q.SPEC q thm)
+
+val Cases_on = genCases_on arithmeticTheory.num_CASES;
+
+val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
 val NOT_SUC      = numTheory.NOT_SUC
 and INV_SUC      = numTheory.INV_SUC
@@ -431,6 +445,13 @@ val MEM_APPEND = store_thm(
   ASM_REWRITE_TAC [APPEND, MEM, DISJ_ASSOC]);
 val _ = export_rewrites ["MEM_APPEND"]
 
+val MEM_FILTER = Q.store_thm
+("MEM_FILTER",
+ `!P L x. MEM x (FILTER P L) = P x /\ MEM x L`,
+ GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC
+   THEN RW_TAC bool_ss [MEM,FILTER]
+   THEN PROVE_TAC [MEM]);
+
 val EVERY_APPEND = store_thm(
   "EVERY_APPEND",
   ``!P (l1:'a list) l2.
@@ -723,14 +744,22 @@ val ZIP =
     end;
 
 val UNZIP = new_recursive_definition {
-  name = "UNZIP",
-  def =
-    --`(UNZIP [] = ([], [])) /\
-       (!x l. UNZIP (CONS (x:'a # 'b) l) =
+  name = "UNZIP",   rec_axiom = list_Axiom,
+  def  = ``(UNZIP [] = ([], [])) /\
+    (!x l. UNZIP (CONS (x:'a # 'b) l) =
                (CONS (FST x) (FST (UNZIP l)),
-                CONS (SND x) (SND (UNZIP l))))`--,
-  rec_axiom = list_Axiom};
+                CONS (SND x) (SND (UNZIP l))))``}
 
+val UNZIP_THM = Q.store_thm
+("UNZIP_THM",
+ `(UNZIP [] = ([]:'a list,[]:'b list)) /\
+  (UNZIP ((x:'a,y:'b)::t) = let (L1,L2) = UNZIP t in (x::L1, y::L2))`,
+ RW_TAC bool_ss [UNZIP]
+   THEN genCases_on  (INST_TYPE [alpha |-> Type`:'a list`,
+                                 beta  |-> Type`:'b list`]
+                      pairTheory.ABS_PAIR_THM) `UNZIP t`
+   THEN RW_TAC bool_ss [LET_THM,pairTheory.UNCURRY_DEF,
+                        pairTheory.FST,pairTheory.SND]);
 
 val SUC_NOT = arithmeticTheory.SUC_NOT
 val LENGTH_ZIP = store_thm("LENGTH_ZIP",
@@ -761,9 +790,6 @@ val UNZIP_ZIP = store_thm("UNZIP_ZIP",
     THEN ASM_REWRITE_TAC[UNZIP,ZIP,LENGTH,NOT_SUC,SUC_NOT,INV_SUC_EQ]
     THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC THEN REWRITE_TAC[]);
 
-open simpLib boolSimps pairTheory;
-infix ++;
-val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
 val ZIP_MAP = store_thm(
   "ZIP_MAP",
@@ -783,13 +809,6 @@ val ZIP_MAP = store_thm(
     ]
   ]);
 
-open mesonLib
-infix 8 by ;
-fun (q by t) = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC THENL [t, ALL_TAC]
-fun Cases_on q =
-  REPEAT_TCL STRIP_THM_THEN (fn th => SUBST_ALL_TAC th THEN
-                                      ASSUME_TAC th)
-  (Q.SPEC q num_CASES)
 val MEM_ZIP = store_thm(
   "MEM_ZIP",
   ``!(l1:'a list) (l2:'b list) p.
@@ -908,6 +927,12 @@ val APPEND_FRONT_LAST = store_thm(
   POP_ASSUM MP_TAC THEN Q.SPEC_THEN `l` STRUCT_CASES_TAC list_CASES THEN
   REWRITE_TAC [NOT_CONS_NIL] THEN STRIP_TAC THEN
   ASM_REWRITE_TAC [FRONT_CONS, LAST_CONS, APPEND]);
+
+val FILTER_APPEND_DISTRIB = Q.store_thm
+("FILTER_APPEND_DISTRIB",
+ `!P L M. FILTER P (APPEND L M) = APPEND (FILTER P L) (FILTER P M)`,
+   GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC
+    THEN RW_TAC bool_ss [FILTER,APPEND]);
 
 (* ----------------------------------------------------------------------
     ALL_DISTINCT
@@ -1038,12 +1063,19 @@ val _ = adjoin_to_theory
 
 val LENGTH_THM = REWRITE_RULE [arithmeticTheory.ADD1] LENGTH;
 
-val _ = Drop.exportML("list",
-         map Drop.DEFN [NULL_DEF, HD, TL, APPEND, FLAT, MAP,
-                        MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
-                        EXISTS_DEF, MAP2, ZIP, UNZIP, REVERSE_DEF,
-                        LAST_CONS, FRONT_CONS, ALL_DISTINCT, 
-                        EL_compute, LENGTH_THM]);
+val _ = 
+ let open Drop 
+ in exportML("list",
+         MLSIG "type num = numML.num"
+         :: OPEN ["num"]
+         :: MLSTRUCT "nonfix +;" 
+         ::
+         map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
+             [NULL_DEF, HD, TL, APPEND, FLAT, MAP,
+              MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
+              EXISTS_DEF, MAP2, ZIP, UNZIP_THM, REVERSE_DEF,
+              LAST_CONS, FRONT_CONS, ALL_DISTINCT, EL_compute, LENGTH_THM])
+ end;
 
 val _ = export_theory();
 
