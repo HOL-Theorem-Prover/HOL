@@ -1224,10 +1224,11 @@ fun prim_constant_definition Thy M = let
   val (lhs, rhs) = with_exn dest_eq M DEF_FORM_ERR
   val {Name, Thy, Ty} =
       if is_const lhs then let
-          val r as {Name, Thy = Thy', Ty} = dest_thy_const lhs
+          val r as {Name, Ty, ...} = dest_thy_const lhs
+          (* note how we ignore the constant's theory; this is because the
+             user may be defining another version of an earlier constant *)
         in
-          if Thy = Thy' then r
-          else raise DEF_ERR "LHS constant not in specified theory"
+          {Name = Name, Thy = Thy, Ty = Ty}
         end
       else if is_var lhs then let
           val (n, ty) = dest_var lhs

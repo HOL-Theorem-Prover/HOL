@@ -24,17 +24,6 @@ fun ax_tag r = TAG ([],[r])
 
 val isEmpty = equal empty_tag;
 
-(*---------------------------------------------------------------------------*
- * Create a tag. The input string should be an alphanumeric identifier,      *
- * starting with an alphabetic charater.                                     *
- *---------------------------------------------------------------------------*)
-
-fun read s =
- if Lexis.ok_identifier s then TAG ([s],[])
-  else raise ERR "read" (Lib.quote s^" is not an identifier");
-
-fun read_disk_tag "" = empty_tag
-  | read_disk_tag s  = TAG (Lib.words2 " " s, [])
 
 (*---------------------------------------------------------------------------
       Merge two tags
@@ -50,6 +39,19 @@ local fun smerge t1 [] = t1
 in
 fun merge (TAG(o1,ax1)) (TAG(o2,ax2)) = TAG(smerge o1 o2, Lib.union ax1 ax2)
 end;
+
+(*---------------------------------------------------------------------------*
+ * Create a tag. The input string should be an alphanumeric identifier,      *
+ * starting with an alphabetic charater.                                     *
+ *---------------------------------------------------------------------------*)
+
+fun read s =
+ if Lexis.ok_identifier s then TAG ([s],[])
+  else raise ERR "read" (Lib.quote s^" is not an identifier");
+
+val empty_disk_tag = TAG(["DISK_THM"], [])
+fun read_disk_tag "" = empty_disk_tag
+  | read_disk_tag s  = merge empty_disk_tag (TAG (Lib.words2 " " s, []))
 
 
 (*---------------------------------------------------------------------------*
