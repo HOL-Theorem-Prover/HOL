@@ -522,7 +522,7 @@ val InvSbox = Count.apply word8Define
    (InvSbox 0xFDw = 0x21w) /\
    (InvSbox 0xFEw = 0xCw)  /\
    (InvSbox 0xFFw = 0x7Dw)`;
-
+(*
 val GF256_by_2 = Count.apply word8Define
   `(GF256_by_2 0x0w = 0x0w) /\
    (GF256_by_2 0x1w = 0x2w) /\
@@ -2071,7 +2071,7 @@ val GF256_by_14 = Count.apply word8Define
    (GF256_by_14 0xFEw = 0x83w) /\
    (GF256_by_14 0xFFw = 0x8Dw)`;
 
-
+*)
 val Sbox_Inversion = Q.store_thm
 ("Sbox_Inversion",
  `!w:word8. InvSbox (Sbox w) = w`,

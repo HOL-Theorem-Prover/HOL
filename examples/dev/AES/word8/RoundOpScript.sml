@@ -12,13 +12,12 @@
 
 (* For interactive work
   quietdec := true;
-  app load ["metisLib","MultTheory"];
-  open word8Theory pairTheory metisLib;
+  app load ["metisLib", "MultTheory", "tablesTheory", "word8Lib", "word8CasesLib"];
   quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib 
-     metisLib pairTheory word8Theory tablesTheory MultTheory word8Lib;
+open HolKernel Parse boolLib bossLib;
+open metisLib pairTheory word8Theory MultTheory word8Lib;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -242,7 +241,7 @@ val InvMultCol_def = Define
 (* Table-lookup versions of MultCol and InvMultCol.Faster to use, but        *)
 (* require tables (consume space).                                           *)
 (*---------------------------------------------------------------------------*)
-
+(*
 val TabledMultCol = Q.store_thm
 ("TabledMultCol",
  `MultCol(a,b,c,d) =
@@ -264,7 +263,7 @@ val TabledInvMultCol =
  SIMP_TAC std_ss [InvMultCol_def] THEN
  SIMP_TAC std_ss (tcm_def::map SYM (CONJUNCTS (SPEC_ALL MultEquiv))));
 
-
+*)
 (*---------------------------------------------------------------------------*)
 (* Inversion lemmas for column multiplication. Proved with an ad-hoc tactic  *)
 (*                                                                           *)
@@ -278,11 +277,9 @@ fun w8Cases (asl,g) =
   end (asl,g);
 
 val BYTE_CASES_TAC = 
-  SIMP_TAC std_ss (tcm_def::map SYM (CONJUNCTS (SPEC_ALL MultEquiv)))
+  SIMP_TAC std_ss []
     THEN w8Cases 
-    THEN RW_TAC std_ss 
-        [GF256_by_14_def,GF256_by_2_def,GF256_by_11_def,
-         GF256_by_13_def,GF256_by_9_def,GF256_by_3_def,GF256_by_2_def]
+    THEN RW_TAC std_ss [fetch "Mult" "mult_tables"]
     THEN WORD_TAC;
 
 

@@ -4,11 +4,11 @@
 (*---------------------------------------------------------------------------*)
 
 (* For interactive work
-  app load ["tablesTheory", "word8Theory", "metisLib", "word8CasesLib"];
+  app load [(*"tablesTheory",*) "word8Theory", "metisLib", "word8CasesLib"];
 *)
 
 open HolKernel Parse boolLib bossLib 
-     word8Theory tablesTheory bitsTheory
+     word8Theory (*tablesTheory*) bitsTheory
      word8Lib arithmeticTheory metisLib word8CasesLib;
 
 val _ = new_theory "Mult";
@@ -131,7 +131,7 @@ val (ConstMult_def,ConstMult_ind) =
   (Hol_defn "ConstMult"
      `b1 ** b2 =
         if b1 = 0w then 0w else 
-        if (b1 & 1w) = 1w
+        if LSB b1
            then b2 # ((b1 >>> 1) ** xtime b2)
            else      ((b1 >>> 1) ** xtime b2)`,
    WF_REL_TAC `measure (w2n o FST)` THEN 
@@ -161,8 +161,7 @@ val defn = Hol_defn
   `IterConstMult (b1,b2,acc) =
      if b1 = 0w then (b1,b2,acc)
      else IterConstMult (b1 >>> 1, xtime b2,
-                         if (b1 & 1w) = 1w 
-                          then (b2 # acc) else acc)`;
+                         if LSB b1 then (b2 # acc) else acc)`;
 
 val (IterConstMult_def,IterConstMult_ind) = 
  Defn.tprove
@@ -193,7 +192,7 @@ val ConstMultEq = Q.store_thm
 (* Specialized version, with partially evaluated multiplication. Uses tables *)
 (* from tablesTheory.                                                        *)
 (*---------------------------------------------------------------------------*)
-
+(*
 val TableConstMult_def = word8Define
  `(tcm 0x2w = GF256_by_2)  /\
   (tcm 0x3w = GF256_by_3)  /\
@@ -201,12 +200,44 @@ val TableConstMult_def = word8Define
   (tcm 0xBw = GF256_by_11) /\
   (tcm 0xDw = GF256_by_13) /\
   (tcm 0xEw = GF256_by_14)`
+*)
+(*---------------------------------------------------------------------------*)
+(* Unrolled version                                                          *)
+(*---------------------------------------------------------------------------*)
 
+fun UNROLL_RULE 0 def = def
+  | UNROLL_RULE n def = 
+     SIMP_RULE arith_ss [LSR_ADD]
+     (GEN_REWRITE_RULE (RHS_CONV o DEPTH_CONV) empty_rewrites [def]
+                       (UNROLL_RULE (n - 1) def))
+val instantiate =
+ SIMP_RULE arith_ss [EOR_ID, GSYM xtime_distrib] o 
+ WORD_RULE o
+ ONCE_REWRITE_CONV [UNROLL_RULE 4 ConstMult_def]
+
+val IterMult2 = UNROLL_RULE 1 IterConstMult_def
+
+val mult_thm =
+LIST_CONJ (map instantiate [``0x2w ** x``, ``0x3w ** x``, ``0x9w ** x``,
+                            ``0xBw ** x``, ``0xDw ** x``, ``0xEw ** x``])
+
+val eval_mult =
+WORD_RULE o PURE_REWRITE_CONV [mult_thm, xtime_def]
+
+fun build_table arg1 = 
+LIST_CONJ (map (fn x => eval_mult ``^arg1 ** n2w ^(numSyntax.term_of_int x)``)
+               (upto 0 255))
+
+val mult_tables =
+LIST_CONJ (map (Count.apply build_table)
+               [``0x2w``, ``0x3w``, ``0x9w``, ``0xBw``, ``0xDw``, ``0xEw``])
+
+val _ = save_thm ("mult_tables", mult_tables)
 (*---------------------------------------------------------------------------*)
 (* Directly looking up answers in specialized tables is equivalent to        *)
 (* the multiplication algorithm each time. And should be much faster!        *)
 (*---------------------------------------------------------------------------*)
-
+(*
 val MultEquiv = Count.apply Q.store_thm
  ("MultEquiv",
   `!b. (tcm 0x2w b = 0x2w ** b) /\
@@ -219,11 +250,9 @@ val MultEquiv = Count.apply Q.store_thm
  word8Cases_on `b` THEN
  RW_TAC arith_ss [GF256_by_2_def, GF256_by_3_def,
                   GF256_by_9_def, GF256_by_11_def, GF256_by_13_def,
-                  GF256_by_14_def] THEN
- REPEAT (PURE_ONCE_REWRITE_TAC [ConstMult_def] THEN
-         PURE_ONCE_REWRITE_TAC [xtime_def] THEN
-         WORD_TAC))
-
+                  GF256_by_14_def, mult_thm] THEN
+ PURE_REWRITE_TAC [xtime_def] THEN WORD_TAC)
+*)
 (*---------------------------------------------------------------------------*)
 (* Exponentiation                                                            *)
 (*---------------------------------------------------------------------------*)
