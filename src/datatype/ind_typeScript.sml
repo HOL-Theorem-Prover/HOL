@@ -1,8 +1,8 @@
 structure ind_typeScript =
 struct
 
-open HolKernel boolLib Prim_rec Parse simpLib boolSimps;
-open numTheory prim_recTheory arithmeticTheory;
+open HolKernel boolLib Prim_rec Parse simpLib boolSimps
+     numTheory prim_recTheory arithmeticTheory InductiveDefinition;
 
 infix THEN THENC THENL |-> ++
 
@@ -180,8 +180,8 @@ val ZCONSTR_ZBOT = store_thm(
 
 val (ZRECSPACE_RULES,ZRECSPACE_INDUCT,ZRECSPACE_CASES) =
   IndDefLib.new_inductive_definition
-   ``ZRECSPACE (ZBOT:num->'a->bool) /\
-    (!c i r. (!n. ZRECSPACE (r n)) ==> ZRECSPACE (ZCONSTR c i r))``;
+   `ZRECSPACE (ZBOT:num->'a->bool) /\
+    (!c i r. (!n. ZRECSPACE (r n)) ==> ZRECSPACE (ZCONSTR c i r))`;
 
 local fun new_basic_type_definition tyname (mkname, destname) thm =
        let val (pred, witness) = dest_comb(concl thm)
@@ -198,8 +198,8 @@ local fun new_basic_type_definition tyname (mkname, destname) thm =
        end
 in
 val recspace_tydef =
-      new_basic_type_definition "recspace" ("mk_rec","dest_rec")
-                     (CONJUNCT1 ZRECSPACE_RULES)
+  new_basic_type_definition "recspace" 
+      ("mk_rec","dest_rec") (CONJUNCT1 ZRECSPACE_RULES)
 end;
 
 
@@ -300,8 +300,7 @@ val CONSTR_REC = store_thm(
   ``!Fn:num->'a->(num->'a recspace)->(num->'b)->'b.
       ?f. (!c i r. f (CONSTR c i r) = Fn c i r (\n. f (r n)))``,
   REPEAT STRIP_TAC THEN
-  (MP_TAC o InductiveDefinition.prove_nonschematic_inductive_relations_exist
-            InductiveDefinition.bool_monoset)
+  (MP_TAC o prove_nonschematic_inductive_relations_exist bool_monoset)
     ``(Z:'a recspace->'b->bool) BOTTOM b /\
      (!c i r y. (!n. Z (r n) (y n)) ==> Z (CONSTR c i r) (Fn c i r y))`` THEN
   DISCH_THEN(CHOOSE_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
