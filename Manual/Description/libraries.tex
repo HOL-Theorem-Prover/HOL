@@ -1010,7 +1010,7 @@ formulas:
 > val it = |- p /\ T \/ ~(q /\ r) = p \/ ~q \/ ~r : thm
 \end{verbatim}
 \end{session}
-In addition, to rewriting with the obvious theorems, \ml{bool\_ss} is
+In addition to rewriting with the obvious theorems, \ml{bool\_ss} is
 also capable of performing simplifications that are not expressible as
 simple theorems:
 \begin{session}
@@ -1486,8 +1486,70 @@ should be added manually to those simplification invocations that need them.
 \subsection{Rewriting with the simplifier}
 \label{sec:simplifier-rewriting}
 
+Rewriting is the simplifier's ``core operation''.  This section
+describes the action of rewriting in more detail.
+
+
+\subsubsection{Basic rewriting}
+\label{sec:basic-rewriting}
+
+Given a rewrite rule of the form \[
+\vdash \ell = r
+\]
+the simplifier will perform a top-down scan of the input term $t$,
+looking for \emph{matches}~(see Section~\ref{sec:simp-homatch} below)
+of $\ell$ inside $t$.  This match will occur at a sub-term of $t$
+(call it $t_0$) and will return an instantiation.  When this
+instantiation is applied to the rewrite rule, the result will be a new
+equation of the form \[
+\vdash t_0 = r'
+\]
+Because the system then has a theorem expressing an equivalence for
+$t_0$ it can create the new equation \[
+  \vdash \underbrace{(\dots t_0\dots)}_t = (\dots r' \dots)
+\]
+The traversal of the term to be simplified is repeated until no
+further matches for the simplifier's rewrite rules are found.  The
+traversal strategy (slightly simplified) is
+\begin{enumerate}
+\item \label{enum:simp-traverse-toplevel}%
+  While there are any matches for stored rewrite rules at this level,
+  continue to apply them.  The order in which rewrite rules are
+  applied can \emph{not} be relied on, except that when a \simpset{}
+  includes two rewrite with exactly the same left-hand sides, the
+  rewrite added later will get matched in preference.  (This allows a
+  certain amount of rewrite-overloading in the construction of
+  \simpset{}s.)
+%% may not wish to own up to above detail
+\item \label{enum:simp-traverse-recurse}%
+  Recurse into the term's sub-terms.  The way in which terms are
+  traversed at this step can be controlled by \emph{congruence
+    rules}~(an advanced feature, see Section~\ref{sec:simp-congruences}
+  below)
+\item If step~\ref{enum:simp-traverse-recurse} changed the term at
+  all, return to step~\ref{enum:simp-traverse-toplevel}.  Otherwise,
+  finish.
+\end{enumerate}
+
+\subsubsection{Generating rewrite rules from theorems}
+
+\subsubsection{Conditional rewriting}
+
+
+\subsubsection{Matching rewrite rules}
+\label{sec:simp-homatch}
+
+
+
 \subsection{Advanced features}
 \label{sec:advanced-simplifier}
+
+\subsubsection{Congruence rules}
+\label{sec:simp-congruences}
+
+\subsubsection{AC-normalisation}
+
+\subsubsection{Embedding code}
 
 \index{simplification|)}
 
