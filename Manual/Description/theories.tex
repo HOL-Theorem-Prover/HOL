@@ -83,6 +83,8 @@ logic@\ml{o} (function composition operator, in \HOL\ logic)|(}
    I_THM |- !x. I x = x
 
    I_o_ID |- !f. (I o f = f) /\ (f o I = f)
+
+   K_o_THM |- (!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))
 \end{verbatim}\end{hol}
 
 Having the symbols \ml{o}, \ml{S}, \ml{K} and \ml{I} as built-in
@@ -104,10 +106,17 @@ is intended to suppport this view of relations, but does not as yet
 provide a well-rounded collection of definitions; indeed, it is common
 to treat relations directly. For example, $R_1 \subseteq R_2$ can be
 phrased as {\small\verb+!x y. R1 x y ==> R2 x y+}. The theory {\tt
-relation} currently provides definitions and theorems about
-the transitive closure of a relation and for wellfounded relations.
+  relation} currently provides definitions and theorems about the
+reflexive, transitive and symmetric closures of a relation, for
+wellfounded relations, and for some obvious extensions of these
+properties.  For example, the constant {\small\verb!RTC!} takes the
+reflexive and transitive closure of a relation, while the predicate
+{\small\verb!WFP! is true of a relation and an element if the relation
+  is well-founded at that element.
 
 \begin{hol} \begin{verbatim}
+   RC_DEF |- !R x y. RC R x y = (x = y) \/ R x y
+   SC_DEF |- !R x y. SC R x y = R x y \/ R y x
    TC_DEF |- !R a b.
                TC R a b =
                  !P.
