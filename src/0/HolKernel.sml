@@ -105,6 +105,17 @@ fun strip_binop dest =
 
 (* For right-associative binary operators. Tail recursive. *)
 
+fun spine_binop dest = 
+ let fun strip A tm = 
+       case dest tm 
+         of NONE => rev (tm::A)
+          | SOME (l,r) => strip (l::A) r
+ in strip []
+ end;
+
+
+(* For right-associative binary operators. Tail recursive. *)
+
 fun list_mk_rbinop _ [] = raise ERR "list_mk_rbinop" "empty list"
   | list_mk_rbinop mk_binop alist =
        let val (h::t) = List.rev alist

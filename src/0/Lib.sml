@@ -243,6 +243,11 @@ fun repeat f =
 fun enumerate i [] = []
   | enumerate i (h::t) = (i,h)::enumerate (i+1) t
 
+fun upto b t = 
+  let fun up i A = if i>t then A else up (i+1) (i::A)
+  in List.rev (up b [])
+  end;
+
 fun list_compare cfn =
  let fun comp ([],[]) = EQUAL
        | comp ([], _) = LESS
