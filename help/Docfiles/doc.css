@@ -1,0 +1,38 @@
+
+BODY 
+ {background-color: white}
+
+DIV.TYPE 
+ {padding: 0.5em;
+  border: solid;
+  border-color : black;
+  color: crimson;
+  font-weight: bold;
+  font-family: Courier, monospace;
+  font-size: large}
+
+DIV.FIELD-BODY
+ {margin-bottom:1em}
+
+DIV.XMPL 
+ {font-family: Courier, monospace;
+  margin-top: -1em;
+  text-indent: 1em;
+  margin-bottom:1em}
+
+
+SPAN.TEXT
+ {}
+
+SPAN.BRKT 
+ {color: crimson;
+  font-family: Courier, monospace}
+
+SPAN.FIELD-NAME
+ {color: black;
+  font-weight: bold}
+
+SPAN.HOL
+ {font-style : italic}
+
+
