@@ -1,0 +1,56 @@
+\DOC Cases
+
+\TYPE {bossLib.Cases : tactic}
+
+\SYNOPSIS
+Performs case analysis on the variable of a universally quantified
+goal.
+
+\KEYWORDS
+tactic
+
+\LIBRARY bossLib
+
+\DESCRIBE
+When applied to a universally quantified goal, {Cases} performs a
+case-split, based on the cases theorem for the type of the universally
+quantified variable stored in the global {TypeBase} database.
+
+The cases theorem for a type {ty} will be of the form:
+{
+   |- !v:ty. (?x11...x1n1. v = C1 x11 ... x1n1) \/ .... \/
+             (?xm1...xmnm. v = Cm xm1 ... xmnm)
+}
+\noindent where there is no requirement for there to be more than one
+disjunct, nor for there to be any particular number of existentially
+quantified variables in any disjunct.  For example, the cases theorem
+for natural numbers initially in the {TypeBase} is:
+{
+   |- !n. (n = 0) \/ (?m. n = SUC m)
+}
+Case-splitting consists of specialising the cases theorem with the
+variable from the goal and then generating as many sub-goals as there
+are disjuncts in the cases theorem, where in each sub-goal the
+variable has been replaced by an expression involving the given
+``constructor'' (the {Ci}s above) applied to as many fresh variables
+as appropriate.
+
+\FAILURE
+Fails if the goal is not universally quantified, or if the type of the
+universally quantified variable does not have a case theorem in the
+{TypeBase}, as will happen, for example, with variable types.
+
+\EXAMPLE
+
+
+\USES
+
+
+\COMMENTS
+
+
+\SEEALSO
+Cases_on, Induct, STRUCT_CASES_TAC
+
+
+\ENDDOC
