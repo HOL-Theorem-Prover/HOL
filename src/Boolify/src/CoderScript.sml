@@ -1,5 +1,5 @@
 (*===========================================================================*)
-(* Defining Decoders to be inverse Encoders                                  *)
+(* Pairs of encoder/decoders.                                                *)
 (*===========================================================================*)
 
 (* Interactive mode
@@ -32,10 +32,23 @@ val REVERSE = Tactical.REVERSE;
  ---------------------------------------------------------------------------*)
 
 val wf_coder_def =
- Define `wf_coder p (e : 'a -> bool list) d = (!x. p x ==> (d (e x) = x))`;
+ Define
+ `wf_coder p (e : 'a -> bool list) d = wf_encoder p e /\ (d = enc2dec p e)`;
 
 (*---------------------------------------------------------------------------
-     Well-formed coders occur naturally from use of enc2dec.
+     decode turns a decoding parser of type
+
+       bool list -> ('a # bool list) option
+
+     into a straight function of type
+
+       bool list -> 'a
+ ---------------------------------------------------------------------------*)
+
+val decode_def = Define `decode f = FST o THE o f`;
+
+(*---------------------------------------------------------------------------
+     Well-formed coders have nice properties for boolification.
  ---------------------------------------------------------------------------*)
 
 val decode_encode = store_thm
@@ -57,16 +70,42 @@ val decode_encode = store_thm
 
 val wf_coder = store_thm
   ("wf_coder",
-   ``!p e. wf_encoder p e ==> wf_coder p e (decode (enc2dec p e))``,
+   ``!p e d.
+       wf_coder p (e : 'a -> bool list) d ==>
+       !x. p x ==> (decode d (e x) = x)``,
    RW_TAC std_ss [wf_coder_def, decode_encode]);
 
 val wf_coder_op = store_thm
   ("wf_coder_op",
    ``!p e f.
        wf_encoder p e /\ (!x. p x ==> (e x = f x)) ==>
-       wf_coder p e (decode (enc2dec p f))``,
+       wf_coder p e (enc2dec p f)``,
    RW_TAC std_ss [wf_coder_def]
-   ++ HO_METIS_TAC [decode_encode, wf_encoder_eq]);
+   ++ MATCH_MP_TAC EQ_EXT
+   ++ RW_TAC std_ss []
+   ++ Know `wf_encoder p f` >> HO_METIS_TAC [wf_encoder_eq]
+   ++ STRIP_TAC
+   ++ (Cases_on `enc2dec p e x`
+       ++ Cases_on `enc2dec p f x`
+       ++ POP_ASSUM MP_TAC
+       ++ POP_ASSUM MP_TAC
+       ++ RW_TAC std_ss [enc2dec_none, enc2dec_some_alt]) <<
+   [PROVE_TAC [],
+    PROVE_TAC [],
+    Cases_on `x'`
+    ++ Cases_on `x''`
+    ++ FULL_SIMP_TAC std_ss []
+    ++ Suff `q = q'` >> PROVE_TAC [APPEND_11]
+    ++ PROVE_TAC [wf_encoder_alt, biprefix_append, biprefix_refl]]);
+
+(*---------------------------------------------------------------------------
+     Unit coders
+ ---------------------------------------------------------------------------*)
+
+val wf_coder_unit = store_thm
+  ("wf_coder_unit",
+   ``!p. wf_coder p encode_unit (decode_unit p)``,
+   RW_TAC std_ss [wf_encode_unit, decode_unit_def, wf_coder_def]);
 
 (*---------------------------------------------------------------------------
      Boolean coders
@@ -74,8 +113,56 @@ val wf_coder_op = store_thm
 
 val wf_coder_bool = store_thm
   ("wf_coder_bool",
-   ``wf_coder total encode_bool decode_bool``,
-   RW_TAC std_ss [wf_encode_bool, decode_bool_def, wf_coder, dec_bool_def]);
+   ``!p. wf_coder p encode_bool (decode_bool p)``,
+   RW_TAC std_ss [wf_encode_bool, decode_bool_def, wf_coder_def]);
+
+(*---------------------------------------------------------------------------
+     Pair coders
+ ---------------------------------------------------------------------------*)
+
+val wf_coder_prod = store_thm
+  ("wf_coder_prod",
+   ``!p1 p2 (e1 : 'a -> bool list) (e2 : 'b -> bool list) d1 d2.
+       wf_coder p1 e1 d1 /\ wf_coder p2 e2 d2 ==>
+       wf_coder (lift_prod p1 p2) (encode_prod e1 e2)
+       (decode_prod (lift_prod p1 p2) d1 d2)``,
+   RW_TAC std_ss [decode_prod_def]
+   ++ MATCH_MP_TAC wf_coder_op
+   ++ FULL_SIMP_TAC std_ss [wf_coder_def, wf_encode_prod]
+   ++ Cases
+   ++ RW_TAC std_ss [encode_prod_def, lift_prod_def, dec2enc_enc2dec]);
+
+(*---------------------------------------------------------------------------
+     Sum coders
+ ---------------------------------------------------------------------------*)
+
+val wf_coder_sum = store_thm
+  ("wf_coder_sum",
+   ``!p1 p2 (e1 : 'a -> bool list) (e2 : 'b -> bool list) d1 d2.
+       wf_coder p1 e1 d1 /\ wf_coder p2 e2 d2 ==>
+       wf_coder (lift_sum p1 p2) (encode_sum e1 e2)
+       (decode_sum (lift_sum p1 p2) d1 d2)``,
+   RW_TAC std_ss [decode_sum_def]
+   ++ MATCH_MP_TAC wf_coder_op
+   ++ FULL_SIMP_TAC std_ss [wf_coder_def, wf_encode_sum]
+   ++ Cases
+   ++ RW_TAC std_ss [encode_sum_def, lift_sum_def, dec2enc_enc2dec]);
+
+(*---------------------------------------------------------------------------
+     Option coders
+ ---------------------------------------------------------------------------*)
+
+val wf_coder_option = store_thm
+  ("wf_coder_option",
+   ``!p (e : 'a -> bool list) d.
+       wf_coder p e d ==>
+       wf_coder (lift_option p) (encode_option e)
+       (decode_option (lift_option p) d)``,
+   RW_TAC std_ss [decode_option_def]
+   ++ MATCH_MP_TAC wf_coder_op
+   ++ FULL_SIMP_TAC std_ss [wf_coder_def, wf_encode_option]
+   ++ Induct
+   ++ RW_TAC std_ss [encode_option_def, lift_option_def, dec2enc_enc2dec]);
 
 (*---------------------------------------------------------------------------
      List coders
@@ -83,14 +170,13 @@ val wf_coder_bool = store_thm
 
 val wf_coder_list = store_thm
   ("wf_coder_list",
-   ``!p (e : 'a -> bool list).
-       wf_encoder p e ==>
-       wf_coder (EVERY p) (encode_list e)
-       (decode_list (EVERY p) (enc2dec p e))``,
-   RW_TAC std_ss [decode_list_def, dec_list_def]
+   ``!p (e : 'a -> bool list) d.
+       wf_coder p e d ==>
+       wf_coder (EVERY p) (encode_list e) (decode_list (EVERY p) d)``,
+   RW_TAC std_ss [decode_list_def]
    ++ MATCH_MP_TAC wf_coder_op
-   ++ RW_TAC std_ss [wf_encode_list]
-   ++ Induct_on `x`
+   ++ FULL_SIMP_TAC std_ss [wf_coder_def, wf_encode_list]
+   ++ Induct
    ++ RW_TAC std_ss [encode_list_def, EVERY_DEF, dec2enc_enc2dec]);
 
 (*---------------------------------------------------------------------------
@@ -99,19 +185,18 @@ val wf_coder_list = store_thm
 
 val wf_coder_tree = store_thm
   ("wf_coder_tree",
-   ``!p (e : 'a -> bool list).
-       wf_encoder p e ==>
-       wf_coder (lift_tree p) (encode_tree e)
-       (decode_tree (lift_tree p) (enc2dec p e))``,
-   RW_TAC std_ss [decode_tree_def, dec_tree_def]
+   ``!p (e : 'a -> bool list) d.
+       wf_coder p e d ==>
+       wf_coder (lift_tree p) (encode_tree e) (decode_tree (lift_tree p) d)``,
+   RW_TAC std_ss [decode_tree_def]
    ++ MATCH_MP_TAC wf_coder_op
-   ++ RW_TAC std_ss [wf_encode_tree]
-   ++ POP_ASSUM MP_TAC
-   ++ Q.SPEC_TAC (`x`, `t`)
+   ++ FULL_SIMP_TAC std_ss [wf_coder_def, wf_encode_tree]
    ++ HO_MATCH_MP_TAC tree_ind
    ++ RW_TAC std_ss [encode_tree_def, lift_tree_def, dec2enc_enc2dec, APPEND_11]
    ++ Induct_on `ts`
-   ++ RW_TAC std_ss [MEM, encode_list_def, EVERY_DEF]);
+   ++ RW_TAC std_ss [encode_list_def, EVERY_DEF, dec2enc_enc2dec, MEM]);
 
 val _ = export_theory ();
+
+
 
