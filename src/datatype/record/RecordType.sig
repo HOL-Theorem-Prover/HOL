@@ -1,14 +1,10 @@
 signature RecordType =
 sig
 
-  val create_record :
-    string -> (string * Type.hol_type) list ->
-      {acc_upd_thm : Thm.thm, accessor_fns : Thm.thm, cases_thm : Thm.thm,
-       cons_11_thm : Thm.thm, create_fn :
-         (string * Term.term) list -> Term.term, fn_upd_thm : Thm.thm list,
-       type_axiom : Thm.thm, upd_acc_thm : Thm.thm, upd_canon_thm : Thm.thm,
-       upd_upd_thm : Thm.thm, update_fns : Thm.thm}
-
-  val prim_define_recordtype :
-    string -> (string * Type.hol_type) list -> (TypeBase.tyinfo * string list)
+  (* takes a tyinfo with the basic information about the type and a
+     list of names for the record fields.  Returns a tyinfo and a list
+     of the names of the extra theorems that have been added to the
+     tyinfo as simplifications *)
+  val prove_recordtype_thms :
+    (TypeBase.tyinfo * string list) -> (TypeBase.tyinfo * string list)
 end

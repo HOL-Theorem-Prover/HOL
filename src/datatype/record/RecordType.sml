@@ -123,38 +123,44 @@ fun foldl f zero []      = zero
 (* an imperative style, as its result is not as important as the side *)
 (* effect it brings about in the state.                               *)
 in
-  fun core_rec_defn typename fieldtypelist = let
-    open Psyntax
-    val (fields, types) = split fieldtypelist
-    val typthm =
-      Define_type.dtype {save_name = typename^"_Axiom",
-                         ty_name = typename,
-                         clauses = [{constructor = typename,
-                                     args = map SOME types,
-                                     fixity = Prefix}]}
-    val type_case_def = Prim_rec.define_case_constant typthm
-    val tyinfo = TypeBase.gen_tyinfo {ax = typthm, case_def = type_case_def}
-  in
-    (tyinfo, typthm, fields, types)
-  end
-
-  fun prove_rectype_thms typename fieldtypelist = let
+  fun prove_recordtype_thms (tyinfo, fields) = let
 
     open Psyntax
     fun store_thm (n, t, tac) = save_thm(n, prove(t,tac))
 
     val app2 = C (curry op^)
-    val (tyinfo, typthm, fields, types) = core_rec_defn typename fieldtypelist
+    val typthm = TypeBase.axiom_of tyinfo
+    val typename = TypeBase.ty_name_of tyinfo
+    val constructor =
+      case TypeBase.constructors_of tyinfo of
+        [x] => x
+      | _ =>
+          raise HOL_ERR {origin_function = "prove_recordtype_thms",
+                         origin_structure = "RecordType",
+                         message =
+                         "Type to be record has more than one constructor"}
+    val (typ, types) = let
+      fun domtys acc ty = let
+        val (d1, rty) = dom_rng ty
+      in
+        domtys (d1::acc) rty
+      end handle HOL_ERR _ => (ty, List.rev acc)
+    in
+      domtys [] (type_of constructor)
+    end
+
+    val _ = length types = length fields orelse
+      raise HOL_ERR {origin_function = "prove_recordtype_thms",
+                     origin_structure = "RecordType",
+                     message =
+                     "Number of fields doesn't match number of types"}
 
     (* we now have the type actually defined in typthm *)
     fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
     val typeletters = foldl letgen [] types
-    val typ = mk_type (typename, Lib.mk_set(Type.type_varsl types))
 
     (* now generate accessor functions *)
     val accfn_types = map (fn x => Type.-->(typ, x)) types
-    val constype = List.foldr Type.--> typ types
-    val constructor = Psyntax.mk_const(typename, constype)
     local
       fun constructor_args [] = let
         fun mkarb typ = Psyntax.mk_const("ARB", typ)
@@ -183,7 +189,7 @@ in
       val access_defns =
         ListPair.map
         (fn (name, tm) => Rsyntax.new_recursive_definition
-         {def = tm, fixity = Prefix, name = name, rec_axiom = typthm})
+         {def = tm, name = name, rec_axiom = typthm})
         (access_fn_names, access_defn_terms)
       val accessor_thm =
         save_thm(typename^"_accessors", LIST_CONJ access_defns)
@@ -206,7 +212,7 @@ in
         ListPair.map
         (fn (name, tm) =>
          Rsyntax.new_recursive_definition
-         {fixity = Prefix, rec_axiom = typthm, name = name, def = tm})
+         {rec_axiom = typthm, name = name, def = tm})
         (updfn_names, updfn_defn_terms)
       val updfn_thm =
         save_thm(typename^"_updates",  LIST_CONJ updfn_defns)
@@ -417,9 +423,13 @@ in
 
       (* add to the TypeBase's simpls entry for the record type *)
       val existing_simpls = TypeBase.simpls_of tyinfo
-      val new_simpls = [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
-                        updupd_thm, updcanon_thm, accfupd_thm,
-                        literal_equality]
+      val new_simpls = let
+        val new_simpls0 =  [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
+                            updupd_thm, accfupd_thm, literal_equality]
+      in
+        if not (null upd_canon_thms) then updcanon_thm :: new_simpls0
+        else new_simpls0
+      end
       val new_tyinfo =
         TypeBase.put_simpls (existing_simpls @ new_simpls) tyinfo
 
@@ -455,78 +465,12 @@ in
 
     in
       (new_tyinfo,
-
-       (map (fn s => typename ^ s)
-        (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
-          "_accupds", "_accfupds", "_updupds"] @
-         (if not (null upd_canon_thms) then ["_updcanon"] else []))),
-
-      {type_axiom = typthm,
-       accessor_fns = accessor_thm,
-       update_fns = updfn_thm,
-       cases_thm = cases_thm,
-       fn_upd_thm = fupdfn_thms,
-       acc_upd_thm = accupd_thm,
-       upd_acc_thm = updacc_thm,
-       upd_upd_thm = updupd_thm,
-       upd_canon_thm = updcanon_thm,
-       cons_11_thm = oneone_thm,
-       create_fn = create_term})
-    end;
-
-  fun create_record typename fieldtypelist = let
-    val (tyinfo, _, results) =
-      prove_rectype_thms typename fieldtypelist
-  in
-    TypeBase.write tyinfo;
-    results
-  end
-
-  fun prim_define_recordtype typename fieldtypelist = let
-    val (tyinfo, simplnames, _) = prove_rectype_thms typename fieldtypelist
-  in
-    (tyinfo, simplnames)
-  end
-
-  fun create_term_fn_base arb str accthm = let
-    (* str is the name of a type in theory, we can pull out the appropriate
-     theorem to get a list of accessor functions, and then create a function
-     just like the create_fn field of the type returned by the function
-     above *)
-    val getfn = fst o strip_comb o lhs o snd o strip_forall o concl
-    val fldtyps = map (Psyntax.dest_const o getfn) (CONJUNCTS accthm)
-    val (fields,types) = split fldtyps
-    val types = map (el 2 o #Args o Rsyntax.dest_type) types
-    val constructor = #const (Term.const_decl str)
-    local
-      fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
-      val typeletters = foldl letgen [] types
-      fun constructor_args args =
-        case args of
-          [] => let
-            fun mkarb typ = Psyntax.mk_const("ARB", typ)
-          in
-            if (arb) then map mkarb types
-            else typeletters
-          end
-        | ((f,t)::xs) => let
-            val rest = constructor_args xs
-            val posn = findi f fields handle _ =>
-              raise Fail "Bad field name"
-          in
-            update posn t rest
-          end
-    in
-      fun create_term ftl =
-        list_mk_comb(constructor, constructor_args ftl)
+       map (fn s => typename ^ s)
+       (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
+         "_accupds", "_accfupds", "_updupds"] @
+        (if not (null upd_canon_thms) then ["_updcanon"] else [])))
     end
-  in
-    create_term
-  end;
 
-  val create_term_fn = create_term_fn_base true
-  val create_term_fn_vars = create_term_fn_base false
+end
 
-end;
-
-end;
+end
