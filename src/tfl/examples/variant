@@ -1,75 +1,134 @@
-app load ["bossLib", "tflLib", "QLib", "listSupplTheory"];
+app load ["bossLib", "QLib"];
 open bossLib;
-infix 8 by;
+infix 8 by; infix &&;
 
-val mem_def              = listSupplTheory.mem_def;
-val filter_def           = listSupplTheory.filter_def;
-val length_filter_subset = listSupplTheory.length_filter_subset;
-
-
-(*---------------------------------------------------------------------------*
- * The definition of variant.                                                *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------
+     Find an element not in a given list.
+ ---------------------------------------------------------------------------*)
 
 val variant_def = 
- Define 
-     `variant (x, L) = (mem x L => variant (SUC x, L) | x)`;
+  Hol_defn "variant" 
+     `variant x L = if MEM x L then variant (x+1) L else x`;
+
+(*---------------------------------------------------------------------------
+   Lemma required in termination proof.
+ ---------------------------------------------------------------------------*)
+
+val LENGTH_FILTER_SUBSET = Q.prove(
+`(!y. P y ==> Q y) ==> !L. LENGTH(FILTER P L) <= LENGTH (FILTER Q L)`,
+DISCH_TAC THEN Induct THEN ZAP_TAC (list_ss && [listTheory.FILTER]) []);
+
+
+(*---------------------------------------------------------------------------
+      Example of a "do-it-yourself" termination proof for variant.
+ ---------------------------------------------------------------------------*)
+
+Defn.tgoal variant_def;  
+
+e (WF_REL_TAC variant_def 
+       `measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`);
+
+(* Step-by-step way
+b();
+e (TotalDefn.TC_INTRO_TAC variant_def 
+     THEN Q.EXISTS_TAC`measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
+     THEN TotalDefn.TC_SIMP_TAC);
+*)
+e (RW_TAC std_ss []   (* ETA-conv. to be done before induction *)
+   THEN Induct_on `L` THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]
+   THEN RW_TAC arith_ss [DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
+
+val [variant_eqns,variant_ind] = CONJUNCTS (top_thm());
+
+
+(*---------------------------------------------------------------------------
+     All wrapped up after proof found.
+ ---------------------------------------------------------------------------*)
+
+val (variant_eqn, variant_ind) = 
+Defn.tprove 
+  (variant_def, WF_REL_TAC variant_def 
+      `measure \(x,L). LENGTH(FILTER (\y. x<=y) L)`
+     THEN RW_TAC std_ss []
+     THEN Induct_on `L` 
+     THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM,
+                          DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
+
+(*---------------------------------------------------------------------------
+       Properties.
+ ---------------------------------------------------------------------------*)
+
+val variant_correct = Q.prove(
+`!x L. ~MEM (variant x L) L`,
+recInduct variant_ind
+  THEN RW_TAC std_ss []
+  THEN ONCE_REWRITE_TAC [variant_eqn]
+  THEN RW_TAC std_ss []);
 
 (*---------------------------------------------------------------------------*
- * Instantiate it with a measure function. Slightly messy!                   *
- *---------------------------------------------------------------------------*)
-val vary = Q.INST [`R` |-> `measure \(x,L). LENGTH(filter (\y. x <= y) L)`]
-                  (DISCH_ALL variant_def);
-val vary' = REWRITE_RULE [WFTheory.WF_measure] vary;
-val vary'' = REWRITE_RULE pairTheory.pair_rws
-              (CONV_RULE (DEPTH_CONV Let_conv.GEN_BETA_CONV)
-               (REWRITE_RULE [WFTheory.measure_def, primWFTheory.inv_image_def]
-                             vary'));
-                     
-
-(*---------------------------------------------------------------------------*
- * The termination argument.                                                 *
- *---------------------------------------------------------------------------*)
-val variant_terminates = Q.store_thm
-("variant_terminates",
- `!x L. mem x L ==> LENGTH (filter (\y. SUC x <= y) L) 
-                    < 
-                    LENGTH (filter (\y. x <= y) L)`,
-RW_TAC bool_ss []
-  THEN Induct_on `L`
-  THEN RW_TAC list_ss 
-          [mem_def,filter_def,length_filter_subset,
-           DECIDE `!x y. x < SUC y = x <= y`]);
-
-
-(*---------------------------------------------------------------------------*
- * Removal of termination conditions.                                        *
- *---------------------------------------------------------------------------*)
-local val vary''' = REWRITE_RULE[variant_terminates] vary''
-in
-  val variant_eqn = save_thm("variant_eqn", CONJUNCT1 vary''')
-  val variant_induction = save_thm("variant_induction",CONJUNCT2 vary''')
-end;
-
-
-(*---------------------------------------------------------------------------*
- * Correctness: A variant is not in the list it is supposed to vary from.    *
- *---------------------------------------------------------------------------*)
-
-val variant_correct = Q.store_thm("variant_correct", 
-`!x L. ~mem (variant (x,L)) L`,
-tflLib.PROGRAM_TAC{induction=variant_induction, rules=variant_eqn}
- THEN RW_TAC bool_ss []);
-
-(*---------------------------------------------------------------------------*
- *   Of all the numbers that aren't in L, variant (x,L) is the               *
+ *   Of all the numbers that aren't in L, variant x L is the                 *
  *   smallest one that is greater-than-or-equal-to x.                        *
  *---------------------------------------------------------------------------*)
 
-val variant_minimal = Q.store_thm("variant_minimal",
-`!x L y. ~mem y L /\ x<=y ==> variant(x,L) <= y`,
-tflLib.PROGRAM_TAC{induction=variant_induction, rules=variant_eqn}
-  THEN RW_TAC bool_ss []
+val variant_minimal = Q.prove(
+`!x L y. ~MEM y L /\ x<=y ==> variant x L <= y`,
+recInduct variant_ind
+  THEN RW_TAC std_ss []
+  THEN ONCE_REWRITE_TAC [variant_eqn]
+  THEN RW_TAC std_ss []
   THEN `x < y` by PROVE_TAC [arithmeticTheory.LESS_OR_EQ]
   THEN RW_TAC arith_ss []);
 
+
+(*---------------------------------------------------------------------------
+         Evaluation of variant with computeLib
+ ---------------------------------------------------------------------------*)
+load "computeLib";  open computeLib;
+
+(*---------------------------------------------------------------------------
+    First, build a standard computing base, one that knows basic 
+    facts about booleans and numbers (and numerals).
+
+    Note that ">" and ">=" are not defined for numerals, so 
+    we convert to "<" and "<=" via arithmeticTheory.{GREATER_EQ, GREATER_DEF}.
+ ---------------------------------------------------------------------------*)
+
+val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES]);
+
+fun norm q = Count.apply (CBV_CONV rws) (--q--);
+
+val num_rws = 
+  let open numeralTheory Rsyntax
+      val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
+      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
+                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
+                        arithmeticTheory.ALT_ZERO])
+      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
+      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
+ in 
+  [ drws', REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
+    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
+    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
+    numeral_exp, iSQR, 
+    arithmeticTheory.GREATER_EQ, arithmeticTheory.GREATER_DEF
+  ]
+end;
+
+val _ = add_thms (true,num_rws) rws;
+
+(*---------------------------------------------------------------------------
+        recast MEM definition as if-then-else
+ ---------------------------------------------------------------------------*)
+
+local val MEM_IF = Q.prove(
+           `!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
+            RW_TAC list_ss [listTheory.MEM]);
+      val MEM_DEF' = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF
+in
+val _ = add_thms (true,[variant_eqn,MEM_DEF']) rws
+end;
+
+norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;
+norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;16;16;16;165]`;
+norm `variant (SUC 0) []`;
+norm `variant (SUC 0) [SUC(SUC 0)]`;
