@@ -482,6 +482,11 @@ in
   else (BINDER_CONV (push_exvar_to_bot v))
 end tm
 
+fun push_nthvar_to_bot n tm =
+    if n <= 0 then TRY_CONV (SWAP_VARS_CONV THENC
+                             BINDER_CONV (push_nthvar_to_bot 0)) tm
+    else BINDER_CONV (push_nthvar_to_bot (n - 1)) tm
+
 fun listlex_compare c (l1, l2) =
     (* do a lexicographic comparison of list1 and list2, using c to compare
        their elements *)
@@ -503,6 +508,64 @@ fun find_dup c l =
                                      else find_dup c tail
 
 val do_muls = ONCE_DEPTH_CONV LINEAR_MULT
+
+fun find_triangle_eliminable vset dcsts csts = let
+  (* pick an element of vset to minimise the blow-up after doing a
+     Cooper triangle elimination on the two dcsts The list csts is of
+     range constraints from the problem.
+
+     Recall that
+       m | ax + b /\ n | ux + v
+     gets turned into
+       mn | dx + vmp + bnq /\ d | av - ub
+     where
+       d = gcd(mu, an) = pum + qan
+
+     If vset has two elements, then the second conjunct of the result will
+     be a divides constraint over just one variable, and we can pick the
+     variable that results in the best performance.  It's not clear what
+     should be done if there are more variables.
+
+     For the moment, and this is probably a god-awful HACK, just return
+     the hd of the list vset.
+  *)
+in
+  if length vset > 2 then (hd vset, hd (tl vset))
+  else let
+      open Arbint
+      val dcst1 = hd dcsts
+      val dcst2 = hd (tl dcsts)
+      val (m, rhs1) = dest_divides dcst1
+      val m_i = int_of_term m
+      val (n, rhs2) = dest_divides dcst2
+      val n_i = int_of_term n
+      fun calculate_score v_to_go v_to_remain = let
+        val a_i = abs (sum_var_coeffs v_to_go rhs1)
+        val u_i = abs (sum_var_coeffs v_to_go rhs2)
+        val d0_i = gcd(m_i, n_i)
+        val b_i = sum_var_coeffs v_to_remain rhs1
+        val v_i = sum_var_coeffs v_to_remain rhs2
+        val remain0_i = a_i * v_i - u_i * b_i
+        val divide_by = gcd(d0_i, abs remain0_i)
+        val remain_i = remain0_i div divide_by
+        val d_i = d0_i div divide_by
+        val cst = valOf (List.find (is_vconstraint v_to_remain) csts)
+      in
+        constraint_size cst div d_i
+      end
+      val v1 = hd vset
+      val v2 = hd (tl vset)
+      val v1_score = calculate_score v1 v2
+      val v2_score = calculate_score v2 v1
+    in
+      if v1_score > v2_score then (v2,v1) else (v1,v2)
+    end
+end
+
+
+
+
+
 
 fun finish_pure_goal1 tm = let
   (* tm is of the form
@@ -543,7 +606,7 @@ in
       (* found a singleton divisibility constraint *)
       val v = hd vs
     in
-      push_exvar_to_bot v THENC
+      push_nthvar_to_bot (index (equal v) vars) THENC
       STRIP_QUANT_CONV (phase2_CONV v) THENC
       LAST_EXISTS_CONV simplify_constrained_disjunct THENC
       do_muls
@@ -557,35 +620,34 @@ in
           fun my_constraint tm =
               is_divides tm andalso
               canonicalise_varsets (free_vars (#2 (dest_divides tm))) = vset
+          val (var_to_eliminate, var_to_keep) =
+              find_triangle_eliminable
+                vset
+                (List.take(List.filter my_constraint div_constraints, 2))
+                constraints
         in
           STRIP_QUANT_CONV
             (move_conj_left my_constraint THENC
              RAND_CONV (move_conj_left my_constraint) THENC
              REWR_CONV CONJ_ASSOC THENC
-             LAND_CONV (phase2_CONV (hd vset) THENC
+             LAND_CONV (phase2_CONV var_to_eliminate THENC
                         REWRITE_CONV [GSYM INT_ADD_ASSOC] THENC
                         elim_paired_divides THENC
-                        phase1_CONV THENC phase2_CONV (hd (tl vset)) THENC
+                        phase1_CONV THENC phase2_CONV var_to_keep THENC
                         BINOP_CONV (TRY_CONV check_divides) THENC
                         REWRITE_CONV [INT_DIVIDES_1]))
         end
       | NONE => let
           (* look for constraint with least range *)
-          fun get_range c_tm = let
-            val (_, args) = strip_comb c_tm
-            val range_tm = hd args
-            val (lo,hi) = dest_conj range_tm
-          in
-            (hd (tl args),
-             Arbint.-(int_of_term (rand hi), int_of_term (lhand lo)))
-          end
           fun min (c_tm, acc as (accv, acci)) = let
-            val (e as (v,i)) = get_range c_tm
+            val i = constraint_size c_tm
           in
-            if Arbint.<(i,acci) then e else acc
+            if Arbint.<(i,acci) then (constraint_var c_tm, i) else acc
           end
-          val (minv, _) =
-              List.foldl min (get_range (hd constraints)) (tl constraints)
+          val init = let val c = hd constraints
+                     in (constraint_var c, constraint_size c)
+                     end
+          val (minv, _) = List.foldl min init (tl constraints)
         in
           push_exvar_to_bot minv THENC
           LAST_EXISTS_CONV vphase6_CONV THENC

@@ -21,6 +21,17 @@ val num_ty = numSyntax.num
 val true_tm = boolSyntax.T
 val false_tm = boolSyntax.F
 
+fun strip_exists tm = let
+  fun recurse acc tm = let
+    val (v, body) = dest_exists tm
+  in
+    recurse (v::acc) body
+  end handle HOL_ERR _ => (List.rev acc, tm)
+in
+  recurse [] tm
+end
+
+
 (* ---------------------------------------------------------------------- *)
 (* Generally applicable conversions                                       *)
 (* ---------------------------------------------------------------------- *)
@@ -349,6 +360,25 @@ in
   f = constraint_tm andalso length args = 2 andalso
   free_vars (hd (tl args)) = [v]
 end
+fun constraint_var tm = rand tm
+val lhand = rand o rator
+fun constraint_size tm = let
+  val (_, args) = strip_comb tm
+  val range_tm = hd args
+  val (lo,hi) = dest_conj range_tm
+in
+  Arbint.-(int_of_term (rand hi), int_of_term (lhand lo))
+end
+fun dest_constraint tm =
+    if is_constraint tm then let
+        val (_, args) = strip_comb tm
+        val (lo,hi) = dest_conj (hd args)
+      in
+        (rand tm, (lhand lo, rand hi))
+      end
+    else
+      raise ERR "dest_constraint" "Term not a constraint"
+
 
 
 val K_THM = INST_TYPE [(alpha |-> bool), (beta |-> int_ty)] combinTheory.K_THM
@@ -435,7 +465,7 @@ end tm
    expand to (?x. p) \/ (?x.q) \/ (?x.r) ...
 *)
 fun push_one_exists_over_many_disjs tm =
-  ((EXISTS_OR_CONV THENC BINOP_CONV push_one_exists_over_many_disjs) ORELSEC
+  ((myEXISTS_OR_CONV THENC BINOP_CONV push_one_exists_over_many_disjs) ORELSEC
    ALL_CONV) tm
 
 

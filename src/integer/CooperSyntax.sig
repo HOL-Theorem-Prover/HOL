@@ -6,6 +6,8 @@ signature CooperSyntax = sig
   val true_tm : term
   val false_tm : term
 
+  val strip_exists : term -> (term list * term)
+
   (* these are both basically the same function; given argument t0 they turn
        t
      into
@@ -53,6 +55,9 @@ signature CooperSyntax = sig
   val mk_constraint : term * term -> term
   val is_constraint : term -> bool
   val is_vconstraint : term -> term -> bool
+  val constraint_var : term -> term
+  val constraint_size : term -> Arbint.int
+  val dest_constraint : term -> (term * (term * term)) (*  (v, (lo, hi))  *)
 
   val MK_CONSTRAINT : conv
   val UNCONSTRAIN : conv
