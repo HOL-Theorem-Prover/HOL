@@ -27,15 +27,15 @@ fun ExistsFun_ERR {function, message} =
              origin_function = function,
              origin_structure = "ExistsFuns"}
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
 fun == q x = Type q;
 
 val lemma1 = TAC_PROOF
     (([],
-      --`!P:'a -> bool Q. (?x. P x) ==> (!x. (P x ==> Q x)) ==> ?x. Q x`--),
+      --`!P Q. (?x:'a. P x) ==> (!x. (P x ==> Q x)) ==> ?x. Q x`--),
         (REPEAT STRIP_TAC) THEN (EXISTS_TAC (--`x:'a`--)) THEN
-        (MP_TAC (Q.ASSUME `P (x:'a)`)) THEN
+        (MP_TAC (ASSUME (--`P (x:'a):bool`--))) THEN
         (ASM_REWRITE_TAC []));
 
 (*
@@ -88,7 +88,7 @@ fun EXISTS_FROM_EXISTS_RULE {exists_thm, forall_imp_thm} =
 
 val lemma2 = TAC_PROOF
     (([],
-      --`!f P Q.(?x:'a. P x) ==> (!x. (P x ==> Q (f x))) ==> ?y:'b. Q y`--),
+      --`!f P Q. (?x:'a. P x) ==> (!x. (P x ==> Q (f x))) ==> ?y:'b. Q y`--),
      (REPEAT STRIP_TAC THEN EXISTS_TAC (--`(f:'a -> 'b)(x:'a)`--) THEN
       FIRST_ASSUM MATCH_MP_IMP_TAC THEN FIRST_ASSUM ACCEPT_TAC));
 
