@@ -27,6 +27,8 @@ fun NUM_ERR{function,message} =
 infix 5 |->
 infix ##;
 
+val N = Type`:num`
+
 (* --------------------------------------------------------------------- *)
 (* ADD_CONV: addition of natural number constants (numerals).            *)
 (*                                                                       *)
@@ -43,16 +45,20 @@ infix ##;
 (* NOTE: binary numerals allow this to be done with rewriting            *)
 (* --------------------------------------------------------------------- *)
 
-fun ADD_CONV tm = let
-  val (f, args) = strip_comb tm
-  val _ = assert (fn t => #Name(dest_const t) = "+") f
-  val _ = assert (fn l => length l = 2) args
-  val _ = assert is_numeral (hd args)
-  val _ = assert is_numeral (hd (tl args))
-  open numeralTheory
+local open numeralTheory
+      val RW = REWRITE_CONV 
+         [numeral_add, numeral_distrib, numeral_suc, numeral_iisuc]
 in
-  REWRITE_CONV [numeral_add, numeral_distrib, numeral_suc, numeral_iisuc] tm
-end handle HOL_ERR _ => raise NUM_ERR{function = "ADD_CONV",message = ""}
+fun ADD_CONV tm = 
+ let val (f, args) = strip_comb tm
+     val _ = assert (fn t => #Name(dest_const t) = "+") f
+     val _ = assert (fn l => length l = 2) args
+     val _ = assert is_numeral (hd args)
+     val _ = assert is_numeral (hd (tl args))
+ in
+    RW tm
+ end handle HOL_ERR _ => raise NUM_ERR{function = "ADD_CONV",message = ""}
+end;
 
 
 (* --------------------------------------------------------------------- *)
@@ -74,21 +80,20 @@ end handle HOL_ERR _ => raise NUM_ERR{function = "ADD_CONV",message = ""}
 (*                                                                       *)
 (* --------------------------------------------------------------------- *)
 
-fun num_EQ_CONV tm = let
-  val {lhs = n, rhs = m} = dest_eq tm
-  val _ = assert (fn t => type_of t = ==`:num`==) n
-  open numeralTheory
+local open numeralTheory
+      val RW = REWRITE_CONV [numeral_eq, numeral_distrib]
 in
-  if (n = m) then
-    EQT_INTRO (REFL n)
-  else
-    if (is_numeral n) andalso (is_numeral m) then
-      REWRITE_CONV [numeral_eq, numeral_distrib] tm
-    else
-      raise NUM_ERR{function = "num_EQ_CONV",
-                    message = "Terms are neither identical nor numerals"}
-end handle HOL_ERR _ => raise NUM_ERR{function = "num_EQ_CONV",
-                                      message = ""}
+fun num_EQ_CONV tm = 
+ let val {lhs=n, rhs=m} = dest_eq tm
+     val _ = assert (fn t => type_of t = N) n
+ in
+   if n=m then EQT_INTRO (REFL n) else
+   if is_numeral n andalso is_numeral m then RW tm
+   else raise NUM_ERR{function = "num_EQ_CONV",
+               message = "Terms are neither identical nor numerals"}
+ end 
+ handle HOL_ERR _ => raise NUM_ERR{function="num_EQ_CONV",message = ""}
+end;
 
 
 (* --------------------------------------------------------------------- *)
@@ -101,12 +106,10 @@ end handle HOL_ERR _ => raise NUM_ERR{function = "num_EQ_CONV",
 (*                                                                       *)
 (* --------------------------------------------------------------------- *)
 
-local
-val wop = arithmeticTheory.WOP
-val wth = CONV_RULE (ONCE_DEPTH_CONV ETA_CONV) wop
-val N = Type`:num`
-val check = assert (fn tm => type_of tm = N)
-val acnv = RAND_CONV o ABS_CONV
+local val wop = arithmeticTheory.WOP
+      val wth = CONV_RULE (ONCE_DEPTH_CONV ETA_CONV) wop
+      val check = assert (fn tm => type_of tm = N)
+      val acnv = RAND_CONV o ABS_CONV
 in
 fun EXISTS_LEAST_CONV tm =
    let val {Bvar,Body = P} = dest_exists tm

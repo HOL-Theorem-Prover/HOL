@@ -1,4 +1,5 @@
-(*
+(*---------------------------------------------------------------------------
+
    Development of a theory of numerals, including rewrite theorems for
    the basic arithmetic operations and relations.
 
@@ -6,13 +7,17 @@
 
    Inspired by a similar development done by John Harrison for his
    HOL Light theorem prover.
- *)
+
+ ---------------------------------------------------------------------------*)
+
 
 (* for interactive development of this theory; evaluate the following
-   commands before trying to evaluate the ML that follows *)
-(* fun mload s = (print ("Loading "^s^"\n"); load s);
+   commands before trying to evaluate the ML that follows.
+
+   fun mload s = (print ("Loading "^s^"\n"); load s);
    app mload ["simpLib", "boolSimps", "arithmeticTheory", "QLib",
-              "primWFTheory", "Rsyntax", "mesonLib"] *)
+              "Rsyntax", "mesonLib"];
+*)
 
 open HolKernel basicHol90Lib arithmeticTheory simpLib Parse;
 infix THEN THENL THENC ++ |->;
@@ -36,7 +41,8 @@ and SUC_ID        = prim_recTheory.SUC_ID
 and NOT_LESS_EQ   = prim_recTheory.NOT_LESS_EQ
 and LESS_NOT_EQ   = prim_recTheory.LESS_NOT_EQ
 and LESS_SUC_SUC  = prim_recTheory.LESS_SUC_SUC
-and PRE           = prim_recTheory.PRE;
+and PRE           = prim_recTheory.PRE
+and WF_LESS       = prim_recTheory.WF_LESS;
 
 val NOT_SUC     = numTheory.NOT_SUC
 and INV_SUC     = numTheory.INV_SUC
@@ -59,9 +65,11 @@ val numeral_suc = store_thm(
   SIMP_TAC bool_ss [NUMERAL_BIT1, NUMERAL_BIT2, ALT_ZERO, ADD_CLAUSES]);
 
 (* internal markers *)
+
 (* throughout this theory, we will be using various internal markers
    that represent some intermediate result within an algorithm.  All
    such markers are constants with names that have leading i's *)
+
 val iZ = new_definition("iZ", --`iZ (x:num) = x`--);
 val iiSUC = new_definition("iiSUC", --`iiSUC n = SUC (SUC n)`--);
 
@@ -117,6 +125,7 @@ val numeral_iisuc = store_thm(
    iiSUC is used to represent carrying two (necessary with our
    formulation of numerals).
 *)
+
 val numeral_add = store_thm(
   "numeral_add",
   Term
@@ -145,6 +154,7 @@ val numeral_add = store_thm(
   REPEAT GEN_TAC THEN CONV_TAC (AC_CONV(ADD_ASSOC, ADD_SYM)));
 
 (* rewrites needed for addition *)
+
 val add_rwts = [numeral_distrib, numeral_add, numeral_suc, numeral_iisuc]
 
 val numeral_proof_rwts = [NUMERAL_BIT1, NUMERAL_BIT2, INV_SUC_EQ,
@@ -261,37 +271,14 @@ val numeral_pre = store_thm(
 
 (* first initiality *)
 
-(* this proof is taken from the WF theory in Konrad Slind's tfl library.
-   The rest of the WF theory is a bit dependent on the rest of arithmetic,
-   but this result isn't, so we can just appropriate it without having
-   to suck in all of WF as well. *)
-val WF_LESS = store_thm(
-  "WF_LESS",
-  --`WF $<`--,
-  REWRITE_TAC[primWFTheory.WF_DEF] THEN GEN_TAC THEN
-  CONV_TAC CONTRAPOS_CONV THEN
-  DISCH_THEN (fn th1 =>
-       SUBGOAL_THEN (--`^(concl th1) ==> !i j. j<i ==> ~B j`--)
-                    (fn th => MP_TAC (MP th th1))) THEN
-  CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV) THEN DISCH_TAC THENL [
-    INDUCT_THEN numTheory.INDUCTION STRIP_ASSUME_TAC THEN GEN_TAC THEN
-    REWRITE_TAC [prim_recTheory.NOT_LESS_0,
-                 prim_recTheory.LESS_THM] THEN
-    DISCH_THEN (DISJ_CASES_THENL [SUBST1_TAC, ASSUME_TAC]) THEN
-    STRIP_TAC THEN RES_TAC,
-    GEN_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
-    EXISTS_TAC (--`SUC w`--) THEN
-    MATCH_ACCEPT_TAC prim_recTheory.LESS_SUC_REFL
-  ]);
-
 (* our measure function *)
-val our_M =
- --`\f a. (a = ALT_ZERO)
-          => (zf:'a)
-          |  (?n. (a = NUMERAL_BIT1 n))
-             => (b1f:'a->num->'a) (f (@n. a = NUMERAL_BIT1 n))
-                                  (@n. a = NUMERAL_BIT1 n)
-             |  b2f (f (@n. a = NUMERAL_BIT2 n)) (@n. a = NUMERAL_BIT2 n)`--
+val our_M = Term
+ `\f a. if a = ALT_ZERO then (zf:'a) else
+        if (?n. (a = NUMERAL_BIT1 n))
+          then (b1f:'a->num->'a) 
+                  (f (@n. a = NUMERAL_BIT1 n)) (@n. a = NUMERAL_BIT1 n)
+          else b2f (f (@n. a = NUMERAL_BIT2 n)) (@n. a = NUMERAL_BIT2 n)`;
+
 
 fun AP_TAC (asl, g) =
   let open Psyntax
@@ -306,6 +293,7 @@ fun AP_TAC (asl, g) =
       if (la = ra) then AP_THM_TAC (asl, g) else
       raise Fail "One of function or argument must be equal"
   end
+
 val APn_TAC = REPEAT AP_TAC;
 
 
@@ -318,7 +306,7 @@ val bit_initiality0 = prove(Term
   REPEAT STRIP_TAC THEN
   ASSUME_TAC
     (MP (INST_TYPE [Type`:'b` |-> Type`:'a`]
-           (ISPEC (--`$<`--) primWFTheory.WF_RECURSION_THM))
+           (ISPEC (--`$<`--) relationTheory.WF_RECURSION_THM))
         WF_LESS) THEN
   POP_ASSUM (STRIP_ASSUME_TAC o CONJUNCT1 o
              SIMP_RULE bool_ss [EXISTS_UNIQUE_DEF] o
@@ -329,13 +317,13 @@ val bit_initiality0 = prove(Term
     FIRST_ASSUM
       (fn th => CONV_TAC (RATOR_CONV (RAND_CONV (REWR_CONV th)))) THEN
     SIMP_TAC bool_ss [numeral_eq] THEN AP_TAC THEN AP_TAC THEN
-    SIMP_TAC bool_ss [primWFTheory.RESTRICT_DEF, NUMERAL_BIT1] THEN
+    SIMP_TAC bool_ss [relationTheory.RESTRICT_DEF, NUMERAL_BIT1] THEN
     ONCE_REWRITE_TAC [ADD_CLAUSES] THEN REWRITE_TAC [LESS_ADD_SUC],
     GEN_TAC THEN
     FIRST_ASSUM
       (fn th => CONV_TAC (RATOR_CONV (RAND_CONV (REWR_CONV th)))) THEN
     SIMP_TAC bool_ss [numeral_eq] THEN AP_TAC THEN AP_TAC THEN
-    SIMP_TAC bool_ss [primWFTheory.RESTRICT_DEF, NUMERAL_BIT2] THEN
+    SIMP_TAC bool_ss [relationTheory.RESTRICT_DEF, NUMERAL_BIT2] THEN
     ONCE_REWRITE_TAC [ADD_CLAUSES] THEN REWRITE_TAC [LESS_ADD_SUC]
   ]);
 
@@ -363,7 +351,7 @@ val bit_initiality = prove(Term
   REPEAT GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL [
     MATCH_ACCEPT_TAC bit_initiality0,
     REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-    INDUCT_THEN (MATCH_MP primWFTheory.WF_INDUCTION_THM WF_LESS)
+    INDUCT_THEN (MATCH_MP relationTheory.WF_INDUCTION_THM WF_LESS)
                 STRIP_ASSUME_TAC THEN
     (* now do numeral cases on n *)
     REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (SPEC_ALL bit_cases) THENL [
@@ -381,6 +369,7 @@ val bit_initiality = prove(Term
 (* now with bit initiality we can define our subtraction helper
    function.  However, before doing this it's nice to have a cases
    function for the bit structure. *)
+
 val iBIT_cases = new_recursive_definition {
   def = Term`(iBIT_cases ALT_ZERO zf bf1 bf2 = zf) /\
              (iBIT_cases (NUMERAL_BIT1 n) zf bf1 bf2 = bf1 n) /\
@@ -396,6 +385,7 @@ val iBIT_cases = new_recursive_definition {
    alternative is to construct an algorithm that stops whenever it
    notices that the two arguments are equal.  This "looking ahead" would
    require a conditional rewrite, and this is not very appealing.) *)
+
 val iDUB = new_definition("iDUB", Term`iDUB x = x + x`);
 
 (* iSUB implements subtraction.  When the first argument (a boolean) is
@@ -403,6 +393,7 @@ val iDUB = new_definition("iDUB", Term`iDUB x = x + x`);
    corresponds to subtraction and then less another one (i.e., with a
    one being carried.  Note that iSUB's results include iDUB "zero
    digits"; these will be eliminated in a final phase of rewriting.) *)
+
 val iSUB_DEF = new_recursive_definition {
   def = Term`
     (iSUB b ALT_ZERO x = ALT_ZERO) /\
@@ -425,6 +416,7 @@ val iSUB_DEF = new_recursive_definition {
   fixity = Prefix,
   name = "iSUB_DEF",
   rec_axiom = bit_initiality};
+
 val bit_induction = Prim_rec.prove_induction_thm bit_initiality;
 
 val iSUB_ZERO = prove(
@@ -439,6 +431,7 @@ val iSUB_ZERO = prove(
    of the arguments to iBIT_cases.  Alternatively, the form of the
    arguments in iSUB_THM could be simply expressed as function composition
    without a lambda x present at all. *)
+
 val iSUB_THM = store_thm(
   "iSUB_THM",
   Term
@@ -466,6 +459,7 @@ val iSUB_THM = store_thm(
 
 (* rewrites for relational expressions that can be used under
    the guards of conditional operators. *)
+
 val less_less_eqs = prove(
   Term`!n m. (n < m ==> ~(m <= n) /\ (m <= SUC n = (m = SUC n)) /\
                         ~(m + m <= n)) /\
@@ -505,6 +499,7 @@ val SUB_elim = prove(Term
 (* induction over the bit structure to demonstrate that the iSUB
    function does actually implement subtraction, if the arguments are
    the "right way round" *)
+
 val iSUB_correct = prove(
   Term`!n m. (m <= n ==> (iSUB T n m = n - m)) /\
              (m < n ==>  (iSUB F n m = n - SUC m))`,
@@ -553,11 +548,7 @@ val numeral_sub = store_thm(
                     REWRITE_RULE [NUMERAL_DEF] SUB_EQ_0, LESS_EQ_CASES,
                     NUMERAL_DEF, LESS_IMP_LESS_OR_EQ, GSYM NOT_LESS]);
 
-val NOT_ZERO = prove(Term
-  `!n. ~(n = 0) = (0 < n)`,
-  GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN
-  STRIP_ASSUME_TAC (Q.SPEC `n` (GSYM LESS_0_CASES)) THEN
-  FULL_SIMP_TAC bool_ss [LESS_REFL]);
+val NOT_ZERO = arithmeticTheory.NOT_ZERO_LT_ZERO;
 
 val iDUB_removal = store_thm(
   "iDUB_removal",
@@ -568,6 +559,7 @@ val iDUB_removal = store_thm(
                     ADD_CLAUSES, ALT_ZERO]);
 
 (* rewriting for multiplication *)
+
 val _ = print "Developing numeral rewrites for multiplication\n"
 
 val numeral_mult = store_thm(
@@ -581,6 +573,7 @@ val numeral_mult = store_thm(
   REPEAT GEN_TAC THEN CONV_TAC (AC_CONV (ADD_ASSOC, ADD_SYM)));
 
 (* numeral treatment of exponentiation *)
+
 val _ = print "Developing numeral treatment of exponentiation\n";
 
 (* in order to do efficient exponentiation, we need to define the

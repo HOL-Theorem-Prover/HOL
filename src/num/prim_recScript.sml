@@ -536,6 +536,119 @@ val num_Axiom = store_thm ("num_Axiom",
     CONV_TAC FUN_EQ_CONV THEN
     INDUCT_TAC THEN ASM_REWRITE_TAC []]);
 
+
+(*---------------------------------------------------------------------------*
+ * Wellfoundedness taken as no infinite descending chains in 'a. This defn   *
+ * is conceptually simpler (to some) than the original definition of         *
+ * wellfoundedness, which is solely in terms of sets (and therefore          *
+ * logically simpler).                                                       *
+ *---------------------------------------------------------------------------*)
+
+val wellfounded_def =
+Q.new_definition
+  ("wellfounded_def",
+   `wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)`);
+
+
+(*---------------------------------------------------------------------------
+ * First half of showing that the two definitions of wellfoundedness agree.
+ *---------------------------------------------------------------------------*)
+
+val WF_IMP_WELLFOUNDED = Q.prove
+`!R. WF R ==> wellfounded R`
+(GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
+ THEN REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
+ THEN STRIP_TAC 
+ THEN Ho_rewrite.REWRITE_TAC 
+        [NOT_FORALL_THM,NOT_EXISTS_THM,boolTheory.NOT_IMP,DE_MORGAN_THM]
+ THEN Q.EXISTS_TAC`\p:'a. ?n:num. p = f n`
+ THEN BETA_TAC THEN CONJ_TAC THENL
+  [MAP_EVERY Q.EXISTS_TAC [`(f:num->'a) n`,  `n`] THEN REFL_TAC,
+   REWRITE_TAC[GSYM IMP_DISJ_THM]
+    THEN GEN_TAC THEN DISCH_THEN (CHOOSE_THEN SUBST1_TAC)
+    THEN Q.EXISTS_TAC`f(SUC n)` THEN ASM_REWRITE_TAC[]
+    THEN Q.EXISTS_TAC`SUC n` THEN REFL_TAC]);
+
+(*---------------------------------------------------------------------------
+ * Second half.
+ *---------------------------------------------------------------------------*)
+
+val WELLFOUNDED_IMP_WF = Q.prove
+`!R. wellfounded R ==> WF R`
+(REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
+  THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV 
+  THEN Ho_rewrite.REWRITE_TAC 
+        [NOT_FORALL_THM,NOT_EXISTS_THM,NOT_IMP,DE_MORGAN_THM]
+  THEN REWRITE_TAC [GSYM IMP_DISJ_THM]
+  THEN REPEAT STRIP_TAC
+  THEN Q.EXISTS_TAC`SIMP_REC w (\x. @q. R q x /\ B q)` THEN GEN_TAC
+  THEN Q.SUBGOAL_THEN `!n. B(SIMP_REC w (\x. @q. R q x /\ B q) n)`
+                      (ASSUME_TAC o SPEC_ALL)
+  THENL [INDUCT_TAC,ALL_TAC]
+  THEN ASM_REWRITE_TAC[SIMP_REC_THM] THEN BETA_TAC 
+  THEN RES_TAC
+  THEN IMP_RES_TAC(BETA_RULE
+     (Q.SPEC `\q. R q (SIMP_REC w (\x. @q. R q x /\ B q) n) /\ B q`
+              boolTheory.SELECT_AX)));
+
+
+val WF_IFF_WELLFOUNDED = Q.store_thm("WF_IFF_WELLFOUNDED",
+`!R. WF R = wellfounded R`,
+GEN_TAC THEN EQ_TAC THEN STRIP_TAC
+  THENL [IMP_RES_TAC WF_IMP_WELLFOUNDED,
+         IMP_RES_TAC WELLFOUNDED_IMP_WF]);
+
+
+val WF_PRED =
+Q.store_thm
+("WF_PRED",
+  `WF \x y. y = SUC x`,
+ REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
+  THEN CONV_TAC CONTRAPOS_CONV 
+  THEN Ho_rewrite.REWRITE_TAC 
+        [NOT_FORALL_THM,NOT_EXISTS_THM,NOT_IMP,DE_MORGAN_THM]
+  THEN REWRITE_TAC [GSYM IMP_DISJ_THM]
+  THEN DISCH_TAC
+  THEN INDUCT_TAC THEN CCONTR_TAC THEN RULE_ASSUM_TAC (REWRITE_RULE[])
+  THEN RES_TAC THEN RULE_ASSUM_TAC(REWRITE_RULE[INV_SUC_EQ, GSYM NOT_SUC])
+  THENL (map FIRST_ASSUM [ACCEPT_TAC, MATCH_MP_TAC])
+  THEN FILTER_ASM_REWRITE_TAC is_eq [] THEN ASM_REWRITE_TAC[]);
+
+
+(*----------------------------------------------------------------------------
+ * This theorem would be a lot nicer if < was defined as the transitive
+ * closure of predecessor.
+ *---------------------------------------------------------------------------*)
+
+val WF_LESS = Q.store_thm("WF_LESS", `WF $<`,
+REWRITE_TAC[relationTheory.WF_DEF]
+ THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
+ THEN DISCH_THEN (fn th1 =>
+       SUBGOAL_THEN (--`^(concl th1) ==> !i j. j<i ==> ~B j`--)
+                    (fn th => MP_TAC (MP th th1)))
+ THEN CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV) THEN DISCH_TAC THENL
+  [INDUCT_TAC THEN GEN_TAC THEN
+    REWRITE_TAC[NOT_LESS_0,LESS_THM]
+    THEN DISCH_THEN (DISJ_CASES_THENL[SUBST1_TAC, ASSUME_TAC])
+    THEN STRIP_TAC THEN RES_TAC,
+   GEN_TAC THEN FIRST_ASSUM MATCH_MP_TAC
+    THEN Q.EXISTS_TAC`SUC w`
+    THEN MATCH_ACCEPT_TAC LESS_SUC_REFL]);
+
+
+(*---------------------------------------------------------------------------
+ * Measure functions are definable as inverse image into (<). Every relation
+ * arising from a measure function is wellfounded, which is really great!
+ *---------------------------------------------------------------------------*)
+
+val measure_def = Q.new_definition ("measure_def", `measure = inv_image $<`);
+
+val WF_measure =
+Q.store_thm("WF_measure", `!m. WF (measure m)`,
+REWRITE_TAC[measure_def]
+ THEN MATCH_MP_TAC relationTheory.WF_inv_image
+ THEN ACCEPT_TAC WF_LESS);
+
 val _ = export_theory() ;
 
 end;
