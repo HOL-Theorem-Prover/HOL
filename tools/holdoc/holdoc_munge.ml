@@ -9,7 +9,7 @@ open Holdoc_init
 exception Trailing (* there is trailing info in the file *)
 exception BadLabel
 exception BadDirective (* ill-positioned directive *)
-exception BadArg (* problem parsing arg of curried fun *)
+exception BadArg of string (* problem parsing arg of curried fun *)
 
 (* ------------------------------------------------------------ *)
 (* Useful helpers                                               *)
@@ -298,8 +298,8 @@ let mdir v n ts = (* munge a directive *)
 
 let balanced = [ ("(",")"); ("[","]"); ("{","}")]
 
-let rec readbal ds ts cf = (* read a balanced arg; cf=true ==> level 1 commas to }{ and remove level 1 parens *)
-  let rec bal ps ds ts =
+let rec readbal ds ts tss cf ml = (* read a balanced arg; cf=true ==> level 1 commas to }{ and remove level 1 parens; ml=true ==> allow multi-line *)
+  let rec bal ps ds ts tss =
     let n = List.length ps
     in
     match ts with
@@ -308,41 +308,48 @@ let rec readbal ds ts cf = (* read a balanced arg; cf=true ==> level 1 commas to
                                   then ds
                                   else (Sep(s)::ds)
                         in
-                        bal (List.assoc s balanced::ps) ds' ts
+                        bal (List.assoc s balanced::ps) ds' ts tss
     | (Sep(s)::ts) when n>0 && s = List.hd ps      (* close *)
                      -> let ds' = if n=1 && cf
                                   then ds
                                   else Sep(s)::ds
                         in
                         if n=1
-                        then (List.rev ds',ts)
-                        else bal (List.tl ps) ds' ts
+                        then (List.rev ds',ts,tss)
+                        else bal (List.tl ps) ds' ts tss
     | (Sep(",")::ts) -> if n=1 && cf
-                        then bal ps (TeXNormal("}{")::ds) ts
-                        else bal ps (Sep(",")       ::ds) ts
-    | (t::ts)        -> bal ps (t::ds) ts
-    | []             -> raise BadArg
+                        then bal ps (TeXNormal("}{")::ds) ts tss
+                        else bal ps (Sep(",")       ::ds) ts tss
+    | (Indent(_)::ts) when n=1 && ml  (* strip first-level indentation of multiline *)
+                     -> bal ps ds ts tss
+    | (t::ts)        -> bal ps (t::ds) ts tss
+    | []             -> (match tss with
+                           (ts::tss) when ml -> bal ps (TeXNormal("\\\\\n")::ds) ts tss 
+                         | _                 -> raise (BadArg "1"))
   in
-  bal [] ds ts
+  bal [] ds ts tss
 
-let rec readarg cf ts = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
-  let rec sp ts =
-    match ts with
-      (White(_)::ts) -> sp ts
-    | _              -> ts
+let rec readarg cf ml ts tss = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
+  let rec sp ts tss =
+    match (ts,tss) with
+      (White(_)::ts,_)     -> sp ts tss
+    | (Indent(_)::ts,_)    -> sp ts tss
+    | ([],ts::tss) when ml -> sp ts tss
+    | _                    -> (ts,tss)
   in
-  let rec dotted ds ts =
+  let rec dotted ds ts tss =
     match ts with
-      (Sep(".")::Ident(s,true)::ts) -> dotted (Ident(s,true)::Sep(".")::ds) ts
-    | (Str(_)::_)                   -> raise BadArg
-    | (Ident(_,_)::_)               -> raise BadArg
-    | _                             -> (List.rev ds,ts)
+      (Sep(".")::Ident(s,true)::ts) -> dotted (Ident(s,true)::Sep(".")::ds) ts tss
+    | (Str(_)::_)                   -> raise (BadArg "2")
+    | (Ident(_,_)::_)               -> raise (BadArg "3")
+    | _                             -> (List.rev ds,ts,tss)
   in
-  match sp ts with
-    (Ident(s,true)::ts) -> dotted [Ident(s,true)] ts
-  | (Sep(s)::_) when List.mem_assoc s balanced
-                        -> readbal [] ts cf (* commas to add extra args? *)
-  | _                   -> raise BadArg
+  match sp ts tss with
+    (Ident(s,true)::ts,tss) -> dotted [Ident(s,true)] ts tss
+  | (Sep(s)::ts,tss) when List.mem_assoc s balanced
+                            -> readbal [] (Sep(s)::ts) tss cf ml (* commas to add extra args? *)
+  | (t::ts,tss)             -> raise (BadArg ("4: "^render_token t))
+  | ([],_)                  -> raise (BadArg "5")
 
 
 let rec mtok v t =
@@ -368,40 +375,42 @@ let rec mtok v t =
   | HolEndTeX      -> "}"
 
 
-and mcurry x c n cf v xs = (* munge n arguments of curried function c;
+and mcurry x c n cf ml v xs xss = (* munge n arguments of curried function c;
                              return string and remainder;
                              strip outer parens and turn commas to }{ if b *)
-  let wrap ys = "{"^munge v ys^"}"
+  let wrap ys = "{"^munge v ys []^"}"
   in
-  let rec go n args ts =
-    if n <= 0 then (c^String.concat "" (List.map wrap (List.rev args)),ts)
-    else match readarg cf ts with
-           (ds,ts) -> go (n-1) (ds::args) ts
+  let rec go n args ts tss =
+    if n <= 0 then (c^String.concat "" (List.map wrap (List.rev args)),ts,tss)
+    else match readarg cf ml ts tss with
+           (ds,ts,tss) -> go (n-1) (ds::args) ts tss
   in
   try
-    go n [] xs
+    go n [] xs xss
   with
-    BadArg -> (* abort curry parse; do it uncurried *)
+    BadArg(s) -> (* abort curry parse; do it uncurried *)
               let w = "curry parse failed: "^mtok v x^" ==> "^c
               in
-              write_warning w;
-              ("\n% WARNING: "^w^"\n"^mtok v x^"%\n%\n",xs)
+              write_warning (w^" "^s);
+              ("\n% WARNING: "^w^" "^s^"\n"^mtok v x^"%\n%\n",xs,xss)
 
 and munges v ls = (* munge a list of lines *)
   match ls with
-    (l::[]) -> munge v l
-  | (l::ls) -> munge v l^"{}\\\\\n{}"^munges v ls
+  | (l::ls) -> munge v l ls
   | []      -> ""
 
-and munge v xs = (* munge a line of tokens *)
+and munge v xs xss = (* munge the first line of tokens *)
   match xs with
-    (Ident(s,true)::xs) -> (match is_curried s with
-                              Some (c,n,cf) -> let (s,xs') = mcurry (Ident(s,true)) c n cf v xs
-                                               in
-                                               s^munge v xs'
-                            | None          -> mtok v (Ident(s,true))^munge v xs)
-  | (x::xs)             -> mtok v x^munge v xs
-  | []                  -> ""
+    (Ident(s,b)::xs)    -> (match is_curried s with
+                              Some (c,n,cf,ml)
+                                   -> let (s,xs',xss') = mcurry (Ident(s,b)) c n cf ml v xs xss
+                                      in
+                                      s^munge v xs' xss'
+                            | None -> mtok v (Ident(s,b))^munge v xs xss)
+  | (x::xs)             -> mtok v x^munge v xs xss
+  | []                  -> (match xss with
+                              [] -> ""
+                            | (xs::xss) -> "{}\\\\\n{}"^munge v xs xss)
 
 and munget v s = (* munge a string *)
   let hack_re1 = Str.regexp "\\[\\[" in
@@ -416,7 +425,7 @@ and mungelab v s = (* munge the label *)
     | _                     -> raise BadLabel
   and go1 xs ys =
     match xs with
-      (Ident("-->",_) :: xs) -> munge v (List.rev ys)
+      (Ident("-->",_) :: xs) -> munge v (List.rev ys) []
     | (x :: xs)              -> go1 xs (x::ys)
     | _                      -> raise BadLabel
   in
@@ -642,14 +651,14 @@ let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
   print_string ("\\newcommand{"^texname^"}{\\rrule"^(if side = [] then "n" else "c")
                          ^(match comm with Some _ -> "c" | None -> "n"));
   print_string ("{"^texify n^"}{"^texify cat^"}");
-  print_string ("{"^(match desc with Some d -> munge pvs d | None -> "")^"}\n");
+  print_string ("{"^(match desc with Some d -> munge pvs d [] | None -> "")^"}\n");
   print_string ("{"^munges pvs lhs^"}\n");
   print_string ("{"^mungelab pvs lab^"}\n");
   print_string ("{"^munges pvs rhs^"}\n");
   print_string ("{"^munges pvs side^"}\n");
   print_string "{";
   (match comm with
-     Some c -> print_string (munge pvs c)
+     Some c -> print_string (munge pvs c [])
    | None   -> ());
   print_string "}}\n\n";
   texname
@@ -682,7 +691,7 @@ let mng_latex_render () =
     match Stream.peek textokstream with
       Some _ -> let ts = parse_lineT textokstream
                 in
-                print_string (munge (potential_vars_line ts) ts);
+                print_string (munge (potential_vars_line ts) ts []);
                 go ()
     | None   -> ()
   in
@@ -698,7 +707,7 @@ let hol_latex_render () =
       Some _ -> let ts = parse_line0 holtokstream
                 in
                 pvs := potential_vars_line ts @ !pvs;
-                print_string ("\\holline{"^munge !pvs ts^"}\n");
+                print_string ("\\holline{"^munge !pvs ts []^"}\n");
                 go ()
     | None   -> ()
   in

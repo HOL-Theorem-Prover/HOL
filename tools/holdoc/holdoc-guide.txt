@@ -193,15 +193,18 @@ Note that in TeX, you should usually append a space, thus:
 
 in case the next character is not a backslash or other delimiter!
 
-(*[ HOL_CURRIED_ALIST id "\TeXery" 2 true id "\moreTexery" 3 false ]*)
+(*[ HOL_CURRIED_ALIST id "\TeXery" 2 true id "\moreTexery" 3 false false ]*)
 adds the named identifiers to the list of "curried HOL identifier",
 which have the specified number of arguments, which are passed to the
-specified TeX command.  If the flag is true, commas within an argument
+specified TeX command.  If the first flag is true, commas within an argument
 are converted to "}{", but the extra TeX args introduced this way do
 not count towards the number specified in this directive.  An argument
 is a (possibly qualified using dot notation) id, or a balanced-paren
-subsequence.  If the flag is true, the outer parentheses are stripped
-if present.
+subsequence.  If the first flag is true, the outer parentheses are stripped
+if present.  If the second flag is true, multiple-line arguments are
+permitted; if it is false, they are not.  The TeX command must be able
+to handle linebreaks in its argument.  The second flag is *optional*
+and defaults to false.
 
 
 The last two are a bit different.

@@ -47,8 +47,11 @@ let dir_proc n ts =
       (White(_)::ts)   -> go2nb ts
     | (Indent(_)::ts)  -> go2nb ts
     | (Comment(_)::ts) -> go2nb ts
+    | (Ident(s1,_)::White(_)::Str(s2)::White(_)::Ident(s3,true)::White(_)::Ident(s4,true)::White(_)::Ident(s5,true)::ts)
+                       -> (s1,(s2,int_of_string s3,bool_of_string s4,bool_of_string s5)) :: go2nb ts
     | (Ident(s1,_)::White(_)::Str(s2)::White(_)::Ident(s3,true)::White(_)::Ident(s4,true)::ts)
-                       -> (s1,(s2,int_of_string s3,bool_of_string s4)) :: go2nb ts
+                       -> (s1,(s2,int_of_string s3,bool_of_string s4,false)) :: go2nb ts
+                          (* default final parameter is =false *)
     | (t::ts)          -> prerr_endline ("Unexpected token in alist(c): "^render_token t);
                           raise BadDirective
     | []               -> []
