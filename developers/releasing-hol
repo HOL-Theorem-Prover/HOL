@@ -92,7 +92,7 @@ done
 echo Building HolSatLib documentation
 cd /tmp/hol98/src/HolSat/doc
 if (latex HolSatLib ; latex HolSatLib ; dvips -G0 -Ppdf HolSatLib ;
-    ps2pdf HolSatLib) > /tmp/holsat-latex.log 2>&1
+    ps2pdf HolSatLib.ps) > /tmp/holsat-latex.log 2>&1
 then
    :
 else
