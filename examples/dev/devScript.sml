@@ -1,3 +1,5 @@
+open HolKernel Parse boolLib bossLib metisLib;
+
 
 (*****************************************************************************)
 (* A handshaking device DEV is a SAFE_DEV which satisfies liveness.          *)
@@ -595,7 +597,6 @@ val REC_e_g_LEMMA = store_thm("REC_e_g_LEMMA",
 (* (~done t0 /\ done_e t0 /\ done_f t0 /\ done_g t0),                        *)
 (* then done will be asserted evetually                                      *)
 (*****************************************************************************)
-
 val REC_e_f_g = store_thm("REC_e_f_g",
     ``~(done t0) /\ done_e t0 /\ done_f t0 /\ done_g t0 /\
       CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
@@ -610,14 +611,48 @@ val REC_e_f_g = store_thm("REC_e_f_g",
     THENL [
     Cases_on `t0`
     THENL [
-    `c3 0` by PROVE_TAC [DEL_def]
+    `done_e 1` by REWRITE_TAC []
+    THENL [
+    `?c0 c1 start sel.
+        POSEDGE_IMP (load,c0) /\ DEL (done,c1) /\ AND (c0,c1,start) /\
+        OR (start,sel,start_e) /\ POSEDGE_IMP (done_g,sel) /\
+        MUX (sel,data_g,inp,inp_e)` by PROVE_TAC [CALL_def]
+    THEN `~(POSEDGE done_g (0+1))` by PROVE_TAC [POSEDGE]
+    THEN `~(sel (0+1))` by PROVE_TAC [POSEDGE,POSEDGE_IMPL]
+    THEN `~(c1 (0+1))` by PROVE_TAC [DEL_def]
+    THEN `1 = 0 + 1` by RW_TAC arith_ss []
+    THEN `~(POSEDGE start_e 1)` by PROVE_TAC [AND_def,OR_def,POSEDGE]
+    THEN PROVE_TAC []
+    , (* end of `done_e 1` *)
+    `done_f 1 /\ done_g 1` by REWRITE_TAC []
+    THENL [
+    `?start' not_e.
+        POSEDGE_IMP (done_e,start') /\ AND (start',data_e,start_f) /\
+        NOT (data_e,not_e) /\ AND (not_e,start',start_g)`
+        by PROVE_TAC [SELECT_def]
+    THEN `~(POSEDGE start_f (0+1))` 
+        by PROVE_TAC [POSEDGE,POSEDGE_IMPL,AND_def]
+    THEN `~(POSEDGE start_g (0+1))` 
+        by PROVE_TAC [POSEDGE,POSEDGE_IMPL,AND_def]
+    THEN `1 = 0 + 1` by RW_TAC arith_ss []
+    THEN PROVE_TAC []
+    , (* end of `done_f 1 /\ done_g 1` *)
+    `1 = 0 + 1` by RW_TAC arith_ss []
+    THEN `c3 1` by PROVE_TAC [DEL_def]
+    THEN `!t. 0 <= t /\ t < (0+1) ==> (t=0)` by RW_TAC arith_ss []
+    THEN `HOLDF (0,1) done` by PROVE_TAC [HOLDF_def]
+    THEN `1 > 0` by RW_TAC arith_ss []
+    THEN Q.EXISTS_TAC `1`
     THEN PROVE_TAC [AND_def]
+    ]
+    ]
     , (* end of Cases_on `t0` *)
     `SUC n - 1 + 1 = SUC n` by RW_TAC arith_ss []
     THEN `c3 (SUC n)` by PROVE_TAC [DEL_def]
     THEN PROVE_TAC [AND_def]
     ]
     , (* end of Cases_on `done_g (t0-1)` *)
+
     `~(POSEDGE start_e (t0+1))` by REWRITE_TAC []
     THENL [
     `?c0 c1 start sel.
@@ -679,10 +714,9 @@ val REC_e_f_g = store_thm("REC_e_f_g",
     , (* end of `!tt. t0 <= tt /\ tt < (t0+1) ==> ~(done tt)` *)
     `HOLDF (t0,t0+1) done` by PROVE_TAC [HOLDF_def]
     THEN `c3 (t0+1)` by PROVE_TAC [DEL_def,AND_def]
-    THEN `done (t0+1)` by PROVE_TAC [AND_def]
+    THEN `done (t0+1)` by PROVE_TAC [DEL_def,AND_def]
     THEN Q.EXISTS_TAC `t0+1` THEN PROVE_TAC []
     ]]]);
-
 
 
 (*****************************************************************************)

@@ -7,26 +7,25 @@
   \selectfont}%
 \fi\endgroup%
 {\renewcommand{\dashlinestretch}{30}
-\begin{picture}(866,1857)(0,-10)
-\path(370,1447)(638,1447)(638,621)
-\path(356,796)(356,714)(545,715)(545,615)
-\dashline{60.000}(12,1547)(854,1547)(854,384)
-	(12,384)(12,1547)
-\path(191,1342)(551,1342)(551,1116)
-	(191,1116)(191,1342)
-\put(277,1722){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{inp}}}}}}
-\put(499,45){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{out}}}}}}
-\put(179,652){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{1}}}}}}
-\put(228,1180){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\DEF{DEL}}}}}}
-\put(177,1000){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{0}}}}}}
-\put(354,815){\ellipse{44}{44}}
-\path(356,837)(446,927)(266,927)(356,837)
-\put(590.000,581.004){\arc{226.009}{0.0089}{3.1327}}
-\path(478,575)(478,615)(704,615)(704,578)
-\put(371,1447){\blacken\ellipse{48}{42}}
-\put(371,1447){\ellipse{48}{42}}
-\path(365,1665)(365,1347)
-\path(591,466)(591,231)
-\path(358,1118)(358,929)
+\begin{picture}(858,1824)(0,-10)
+\path(248,1438)(516,1438)(516,612)
+\path(234,787)(234,705)(423,706)(423,606)
+\path(12,1333)(475,1333)(475,1101)
+	(12,1101)(12,1333)
+\put(155,1713){\makebox(0,0)[lb]{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{inp}}}}
+\put(377,36){\makebox(0,0)[lb]{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{out}}}}
+\put(57,643){\makebox(0,0)[lb]{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{1}}}}
+\put(55,991){\makebox(0,0)[lb]{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{0}}}}
+\put(56,1166){\makebox(0,0)[lb]{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\DEF{DELT}}}}
+\put(858,346){\makebox(0,0)[lb]{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\mbox{}}}}
+\put(232,806){\ellipse{44}{44}}
+\path(234,828)(324,918)(144,918)(234,828)
+\put(468.000,572.004){\arc{226.009}{0.0089}{3.1327}}
+\path(356,566)(356,606)(582,606)(582,569)
+\put(249,1438){\blacken\ellipse{48}{42}}
+\put(249,1438){\ellipse{48}{42}}
+\path(243,1656)(243,1338)
+\path(469,457)(469,222)
+\path(236,1109)(236,920)
 \end{picture}
 }

@@ -730,7 +730,7 @@ the circuit constructs are defined by:
 
 {\begin{alltt}
 \( \vdash \DEF{DEL}(inp,out)  = {\forall}t. out(t+1) = inp t                       \)
-\( \vdash \DEF{DELF}(inp,out) = (out 0 = \DEF{T}) \wedge \DEF{DEL}(inp,out)                       \)
+\( \vdash \DEF{DELT}(inp,out) = (out 0 = \DEF{T}) \wedge \DEF{DEL}(inp,out)                       \)
 \( \vdash \DEF{DFF}(d,\VAR{sel},q)  \phantom{\hspace*{1mm}}= {\forall}t. q(t+1) = \)
 \(                        \texttt{if} \DEF{POSEDGE} \VAR{sel} (t+1) \texttt{then} d(t+1) \texttt{else} q t \)
 \end{alltt}}
@@ -1089,10 +1089,6 @@ correct implementation in this domain.
 \bibliography{tphols2005}
 %--------------------------------------------------------------------------
 
-%--------------------------------------------------------------------------
-%\section*{Appendix: The circuit constructors}
-%\label{CircuitConstructors}
-%--------------------------------------------------------------------------
 \newpage
 %--------------------------------------------------------------------------
 \section*{Appendix: The circuit constructors}
@@ -1122,8 +1118,8 @@ $
 \TURNST\ \DEF{DELT}\ (\VAR{inp},\VAR{out}) ~ = 
     (\VAR{out}\ 0 = \DEF{T})\ \AND\ 
     \forall t.\ \VAR{out} (t{+}1) = \VAR{inp}\ t\\
-\TURNST\ \DEF{DFF} (\VAR{d,clk,q})~ =~
- \forall t.\ q (t{+}1) =  \IF{\DEF{Posedge}\ \VAR{clk}\ (t{+}1)}{d (t{+}1)}{q\ t}
+\TURNST\ \DEF{DFF} (\VAR{d,sel,q})~ =~
+ \forall t.\ q (t{+}1) =  \IF{\DEF{Posedge}\ \VAR{sel}\ (t{+}1)}{d (t{+}1)}{q\ t}
 \end{array}
 $
  
@@ -1267,8 +1263,10 @@ $
 
 \begin{figure}[htb]
    \centerline{
+      \subfigure[$\DEF{POSEDGE}$]{
+         \label{figPosedge}\input{posedge.eepic}\hspace*{0.3cm}}
       \subfigure[$\DEF{ATM}\ f$]{
-         \label{figAtom}\input{atm.eepic}\hspace*{0cm}}
+         \label{figAtom}\input{atm.eepic}\hspace*{-0.4cm}}
       \subfigure[$\DEF{SEQ}\ f\ g$]{
          \label{figSeq}\input{seq.eepic}\hspace*{0cm}}
       \subfigure[$\DEF{PAR}\ f\ g$]{

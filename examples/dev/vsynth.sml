@@ -1,4 +1,3 @@
-
 (*****************************************************************************)
 (* Coversion of output of compiler to Verilog                                *)
 (*****************************************************************************)
@@ -106,6 +105,7 @@ val MUXvDef =
 \\n\
 \endmodule\n\
 \\n";
+(******************************************************************************
 
 (*****************************************************************************)
 (* Combinational boolean and-gate                                            *)
@@ -132,6 +132,20 @@ val ANDvDef =
 \\n\
 \endmodule\n\
 \\n";
+
+******************************************************************************)
+
+val ANDvDef =
+"// Combinational and-gate\n\
+\module AND (in1,in2,out);\n\
+\ input in1,in2;\n\
+\ output out;\n\
+\\n\
+\ assign out = in1 && in2;\n\
+\\n\
+\endmodule\n\
+\\n";
+
 
 (*****************************************************************************)
 (* Combinational boolean or-gate                                             *)
@@ -191,6 +205,8 @@ val DtypevDef =
 \ input  [size:0] d;\n\
 \ output [size:0] q;\n\
 \ reg    [size:0] q;\n\
+\\n\
+\ initial q = 0;\n\
 \\n\
 \ always @(posedge clk) q <= d;\n\
 \\n\
