@@ -1,4 +1,4 @@
-signature EnumType = 
+signature EnumType =
 sig
   include Abbrev
 
@@ -14,10 +14,14 @@ sig
        ABS_11   : thm,
        REP_11   : thm,
        ABS_ONTO : thm,
-       REP_ONTO : thm,
-       simpls   : thm list}
+       REP_ONTO : thm}
 
-  val enum_type_to_tyinfo : (string * string list) -> TypeBase.TypeInfo.tyinfo
+  (* Takes a string-string list pair corresponding to the name of the  *)
+  (* and its constructors.  Returns a tyinfo along with a list of the names *)
+  (* of the extra theorems that have been added to the tyinfo as *)
+  (* simplifications *)
+  val enum_type_to_tyinfo :
+      (string * string list) -> (TypeBase.TypeInfo.tyinfo * string list)
 
 end
 

@@ -244,7 +244,6 @@ fun define_enum_type(name,clist,ABS,REP) =
                              mk_comb(ABSconst,mk_int_numeral n)))
      val defs     = map (new_definition o def) nclist
      val constrs  = map (lhs o concl) defs
-     val simpls   = GSYM REP_11::num_values REP_ABS defs
  in
     {TYPE     = TYPE,
      constrs  = constrs,
@@ -256,8 +255,7 @@ fun define_enum_type(name,clist,ABS,REP) =
      ABS_11   = ABS_11,
      REP_11   = REP_11,
      ABS_ONTO = ABS_ONTO,
-     REP_ONTO = REP_ONTO,
-     simpls   = simpls
+     REP_ONTO = REP_ONTO
     }
  end;
 
@@ -308,13 +306,28 @@ fun define_case initiality =
 fun enum_type_to_tyinfo (ty, constrs) = let
   val abs = "num2"^ty
   val rep = ty^"2num"
-  val (result as {constrs,simpls,TYPE,...}) =
+  val (result as {constrs,TYPE,...}) =
       define_enum_type(ty,constrs,abs,rep)
+  val (simpl_names, simpls) = let
+    val nvs      = num_values (#REP_ABS result) (#defs result)
+    val symrep11 = let val nm = ty^"_EQ_"^ty in
+                      (nm, save_thm(nm, GSYM (#REP_11 result)))
+                    end
+    fun save_nv thm = let
+       val nm0 = #1 (dest_const (rand (lhs (concl thm))))
+       val nm = rep^"_"^nm0
+     in
+       (nm, save_thm(nm, thm))
+    end
+  in
+    ListPair.unzip (symrep11 :: map save_nv nvs)
+  end
+
   val nchotomy = prove_cases_thm (#ABS_ONTO result) (List.rev (#defs result))
   val induction = prove_induction_thm nchotomy
   val size = mk_size_definition TYPE
   val distinct =
-      if length constrs > 20 then NONE
+      if length constrs > 30 then NONE
       else SOME (prove_distinctness_thm simpls constrs)
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val case_def = define_case initiality
@@ -329,11 +342,10 @@ fun enum_type_to_tyinfo (ty, constrs) = let
                   size = size,
                   one_one = NONE,
                   distinct = distinct }
-  val simpls = case distinct of
-                 NONE => case_def :: simpls
-               | SOME thm => [case_def, CONJ thm (GSYM thm)]
 in
-  put_simpls simpls tyinfo0
+  case distinct of
+    NONE => (put_simpls (simpls_of tyinfo0 @ simpls) tyinfo0, simpl_names)
+  | SOME thm => (tyinfo0, [])
 end
 
 end (* struct *)

@@ -386,18 +386,19 @@ local fun add_record_facts (tyinfo, NONE) = (tyinfo, [])
       fun field_names_of (_,Record l) = SOME (map fst l)
         | field_names_of _ = NONE
 in
-fun primHol_datatype db q =
-   let val astl = ParseDatatype.parse q
-       val field_names_list = map field_names_of astl
-       val tyinfos =
-           if is_enum_type_spec astl then
-             build_enum_tyinfos astl
-           else
-             build_tyinfos db (new_asts_datatype astl)
-   in
+fun primHol_datatype db q = let
+  val astl = ParseDatatype.parse q
+in
+  if is_enum_type_spec astl then
+    build_enum_tyinfos astl
+  else let
+      val field_names_list = map field_names_of astl
+      val tyinfos = build_tyinfos db (new_asts_datatype astl)
+    in
       map add_record_facts (zip tyinfos field_names_list)
-   end
-end;
+    end
+end
+end (* local *)
 
 
 
