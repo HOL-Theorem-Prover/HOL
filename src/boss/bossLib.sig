@@ -1,9 +1,6 @@
 signature bossLib =
 sig
-
   include Abbrev
-  type fixity   = Parse.fixity
-  type simpset  = simpLib.simpset
 
   (* Make definitions *)
 
@@ -48,22 +45,36 @@ sig
   val DECIDE_TAC : tactic
 
   (* Simplification *)
+  type ssdata = simpLib.ssdata
+  type simpset = simpLib.simpset
 
+  val bool_ss        : simpset
   val std_ss         : simpset   (* bool + option + pair + sum *)
   val arith_ss       : simpset
   val list_ss        : simpset
+
+  val ARITH_ss       : ssdata    (* arithmetic d.p. + some rewrites *)
+  val rewrites       : thm list -> ssdata
+  val ++             : simpset * ssdata -> simpset    (* infix ++ *)
+
+  val SIMP_CONV      : simpset -> thm list -> conv
+  val SIMP_TAC       : simpset -> thm list -> tactic
+  val ASM_SIMP_TAC   : simpset -> thm list -> tactic
+  val FULL_SIMP_TAC  : simpset -> thm list -> tactic
+  val SIMP_RULE      : simpset -> thm list -> thm -> thm
+
   val &&             : simpset * thm list -> simpset  (* infix && *)
   val RW_TAC         : simpset -> thm list -> tactic
-  val SRW_TAC        : simpLib.ssdata list -> thm list -> tactic
+  val SRW_TAC        : ssdata list -> thm list -> tactic
   val srw_ss         : unit -> simpset
-  val augment_srw_ss : simpLib.ssdata list -> unit
+  val augment_srw_ss : ssdata list -> unit
 
   val EVAL           : term -> thm
   val EVAL_TAC       : tactic
 
   (* A compound automated reasoner. *)
 
-  val ZAP_TAC  : simpset -> thm list -> tactic
+  val ZAP_TAC        : simpset -> thm list -> tactic
 
 
 end;
