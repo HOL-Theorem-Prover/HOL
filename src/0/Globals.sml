@@ -25,7 +25,7 @@ val HOLDIR = Systeml.HOLDIR
  *---------------------------------------------------------------------------*)
 
 val release = "Kananaskis";
-val version = 1;
+val version = 2;
 
 (*---------------------------------------------------------------------------*
  * For showing assumptions in theorems                                       *
