@@ -61,17 +61,14 @@ Hol_datatype `altitude_vals
  * Define state-type projection and update functions.                        *
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype
-  `states = <| att_cws :off_eng;
-               cas_eng :off_eng;
-               fpa_sel :off_eng;
-               alt_eng :mode_status;
-               alt_disp:disp_status;
-               fpa_disp:disp_status;
-               cas_disp:disp_status;
-               altitude:altitude_vals |>`;
-
-
+Hol_datatype `states = <| att_cws  : off_eng;
+                          cas_eng  : off_eng;
+                          fpa_sel  : off_eng;
+                          alt_eng  : mode_status;
+                          alt_disp : disp_status;
+                          fpa_disp : disp_status;
+                          cas_disp : disp_status;
+                          altitude : altitude_vals |>`;
 
 (*---------------------------------------------------------------------------*
  * State predicates.                                                         *
