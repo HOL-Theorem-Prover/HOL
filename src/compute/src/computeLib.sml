@@ -1,11 +1,12 @@
 structure computeLib :> computeLib =
 struct
 
-open HolKernel clauses compute_rules equations;
+open HolKernel boolSyntax Abbrev clauses compute_rules equations;
 
 (* reexporting types from clauses *)
+
 type rewrite = rewrite;
-type comp_rws = comp_rws;
+type compset = comp_rws;
 
 
 type cbv_stack =
@@ -13,12 +14,10 @@ type cbv_stack =
    (thm->thm->thm) * bool * (thm * db fterm),
    (thm->thm)) stack;
 
-fun stack_out (th, Ztop) = th
-  | stack_out (th, Zrator{Rand=(mka,(thb,_)), Ctx}) =
-      stack_out (mka th thb, Ctx)
-  | stack_out (th, Zrand{Rator=(mka,_,(tha,_)), Ctx}) =
-      stack_out (mka tha th, Ctx)
-  | stack_out (th, Zabs{Bvar=mkl, Ctx}) = stack_out (mkl th, Ctx)
+fun stack_out(th, Ztop) = th
+  | stack_out(th, Zrator{Rand=(mka,(thb,_)), Ctx}) = stack_out(mka th thb,Ctx)
+  | stack_out(th,Zrand{Rator=(mka,_,(tha,_)),Ctx}) = stack_out(mka tha th, Ctx)
+  | stack_out(th, Zabs{Bvar=mkl, Ctx})             = stack_out (mkl th, Ctx)
 ;
 
 
@@ -26,23 +25,25 @@ fun initial_state rws t =
   ((refl_thm t, mk_clos([],from_term (rws,[],t))), Ztop : cbv_stack);
 
 
-(* [cbv_wk (rws,(th,cl),stk)] puts the closure cl (useful information about
+(*---------------------------------------------------------------------------
+ * [cbv_wk (rws,(th,cl),stk)] puts the closure cl (useful information about
  * the rhs of th) in head normal form (weak reduction). It returns either
  * a closure which term is an abstraction, in a context other than Zappl,
- * a variable applied to strongly
- * reduced arguments, or a constant applied to weakly reduced arguments
- * which does not match any rewriting rule.
+ * a variable applied to strongly reduced arguments, or a constant
+ * applied to weakly reduced arguments which does not match any rewriting
+ * rule.
  *
  * - substitution is propagated through applications.
  * - if the rhs is an abstraction and there is one arg on the stack,
  *   this means we found a beta redex. mka rebuilds the application of
  *   the function to its argument, and Beta does the actual beta step.
  * - for an applied constant, we look for a rewrite matching it.
- *   If we found one, then we apply the instanciated rule, and go on.
+ *   If we found one, then we apply the instantiated rule, and go on.
  *   Otherwise, we try to rebuild the thm.
  * - for an already strongly normalized term or an unapplied abstraction,
  *   we try to rebuild the thm.
- *)
+ *---------------------------------------------------------------------------*)
+
 fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
       let val (tha,stka) =
             foldl (push_in_stk (curry mk_clos Env)) (th,stk) args in
@@ -58,7 +59,8 @@ fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
   | cbv_wk (clos, stk) = cbv_up (clos,stk)
 
 
-(* Tries to rebuild the thm, knowing that the closure has been weakly
+(*---------------------------------------------------------------------------
+ * Tries to rebuild the thm, knowing that the closure has been weakly
  * normalized, until it finds term still to reduce, or if a strong reduction
  * may be required.
  *  - if we are done with a Rator, we start reducing the Rand
@@ -66,7 +68,8 @@ fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
  *    and look if it created a redex
  *  - an application to a NEUTR can be rebuilt only if the argument has been
  *    strongly reduced, which we now for sure only if itself is a NEUTR.
- *)
+ *---------------------------------------------------------------------------*)
+
 and cbv_up (hcl, Zrator{Rand=(mka,clos), Ctx})  =
       let val new_state = (clos, Zrand{Rator=(mka,false,hcl), Ctx=Ctx}) in
       if is_skip hcl then cbv_up new_state else cbv_wk new_state
@@ -78,10 +81,12 @@ and cbv_up (hcl, Zrator{Rand=(mka,clos), Ctx})  =
   | cbv_up (clos, stk) = (clos,stk)
 ;
 
-(* [strong] continues the reduction of a term in head normal form under
+(*---------------------------------------------------------------------------
+ * [strong] continues the reduction of a term in head normal form under
  * abstractions, and in the arguments of non reduced constant.
  * precondition: the closure should be the output of cbv_wk
- *)
+ *---------------------------------------------------------------------------*)
+
 fun strong ((th, CLOS{Env,Term=Abs t}), stk) =
       let val (thb,stk') = push_lam_in_stk(th,stk) in
       strong (cbv_wk((thb, mk_clos(NEUTR :: Env, t)), stk'))
@@ -108,22 +113,29 @@ and strong_up (th, Ztop) = th
 ;
 
 
-(* [CBV_CONV rws t] is a conversion that does the full normalization of t,
+(*---------------------------------------------------------------------------
+ * [CBV_CONV rws t] is a conversion that does the full normalization of t,
  * using rewrites rws.
- *)
+ *---------------------------------------------------------------------------*)
+
 fun CBV_CONV rws = evaluate o strong o cbv_wk o initial_state rws;
 
-(* WEAK_CBV_CONV is the same as CBV_CONV except that it does not reduce
+(*---------------------------------------------------------------------------
+ * WEAK_CBV_CONV is the same as CBV_CONV except that it does not reduce
  * under abstractions, and reduce weakly the arguments of constants.
  * Reduction whenever we reach a state where a strong reduction is needed.
- *)
+ *---------------------------------------------------------------------------*)
+
 fun WEAK_CBV_CONV rws =
       evaluate
     o (fn ((th,_),stk) => stack_out(th,stk))
     o cbv_wk
     o initial_state rws;
 
-(* Adding an arbitrary conv *)
+(*---------------------------------------------------------------------------
+ * Adding an arbitrary conv 
+ *---------------------------------------------------------------------------*)
+
 fun extern_of_conv rws conv tm =
   let val thm = conv tm in
   (thm, mk_clos([],from_term(rws,[],rhs(concl thm))))

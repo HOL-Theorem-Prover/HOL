@@ -1,27 +1,23 @@
-(*
-load "rules";
-*)
-local open HolKernel basicHol90Lib compute_rules
-in
-
-(* The functions in this module (except [from_term] and [inst_dterm]) are
+(*---------------------------------------------------------------------------
+ * The functions in this module (except [from_term] and [inst_dterm]) are
  * called only to build the database of rewrite rules. Therefore,
  * optimisation is not so important.
  *
  * [from_term] is the first step of normalisation, and it is not called
  * later on (except with external conv).
- *)
+ *---------------------------------------------------------------------------*)
 
-fun CL_ERR function message =
-    HOL_ERR{origin_structure = "clauses",
-		      origin_function = function,
-		      message = message};
+local open HolKernel boolSyntax Drule compute_rules
+      val CL_ERR = mk_HOL_ERR "clauses"
+      infix ##
+in
 
-
-(* Checking that a given thm is a reduction rule we can handle:
+(*---------------------------------------------------------------------------
+ * Checking that a given thm is a reduction rule we can handle:
  *         (c p1...pn) = rhs
  * with p1...pn  either a const applied to patterns or a free variable.
- *)
+ *---------------------------------------------------------------------------*)
+
 datatype pattern =
     Pvar of int
   | Papp of { Head : term, Args : pattern list}
@@ -30,7 +26,7 @@ datatype pattern =
 fun check_arg_form trm =
   let fun chk t stk free =
     if is_comb t then
-      let val {Rator,Rand} = dest_comb t
+      let val (Rator,Rand) = dest_comb t
           val (free',pat1) = chk Rand [] free in
       chk Rator (pat1::stk) free'
       end
@@ -48,8 +44,8 @@ fun check_arg_form trm =
 ;
 
 
-
-(* CLOS denotes a delayed substitution (closure).
+(*---------------------------------------------------------------------------
+ * CLOS denotes a delayed substitution (closure).
  * CST denotes an applied constant. Its first argument is the head constant;
  *   the second is the list of its arguments (we keep both the term and its
  *   abstract representation); the last one is the set of rewrites that
@@ -57,15 +53,20 @@ fun check_arg_form trm =
  *   number of applied args.
  * NEUTR is a slight improvement of CST with an empty list of rewrites, so
  *   that arguments of a variable are immediatly strongly reduced.
- *)
-datatype 'a fterm =
-  (* order of Args: outermost ahead *)
-  CST of { Head : term, Args : (term * 'a fterm) list, Rws : 'a,
-           Skip : int option }
-| NEUTR
-| CLOS of { Env : 'a fterm list, Term : 'a dterm }
+ *---------------------------------------------------------------------------*)
 
-(* An alternative representation of terms, with all information needed:
+datatype 'a fterm 
+    = (* order of Args: outermost ahead *)
+      CST of { Head : term, 
+               Args : (term * 'a fterm) list, 
+               Rws  : 'a, 
+               Skip : int option }
+    | NEUTR
+    | CLOS of { Env : 'a fterm list, Term : 'a dterm }
+
+
+(*---------------------------------------------------------------------------
+ * An alternative representation of terms, with all information needed:
  * - they are real de Bruijn terms, so that abstraction destruction is in
  *   constant time.
  * - application is n-ary (slight optimization)
@@ -74,21 +75,26 @@ datatype 'a fterm =
  *   It's a reference since dterm is used to represent rhs of rewrites,
  *   and fixpoints equations add rewrites for a constant that appear in the
  *   rhs.
- *)
-and 'a dterm =
-    Bv of int
-  | Fv
-  | Cst of term * ('a * int option) ref
-  | App of 'a dterm * 'a dterm list  (* order: outermost ahead *)
-  | Abs of 'a dterm
+ *---------------------------------------------------------------------------*)
+
+and 'a dterm 
+    = Bv of int
+    | Fv
+    | Cst of term * ('a * int option) ref
+    | App of 'a dterm * 'a dterm list  (* order: outermost ahead *)
+    | Abs of 'a dterm
 ;
 
 (* Invariant: the first arg of App never is an App. *)
+
 fun appl(App(a,l1),arg) = App(a,arg::l1)
   | appl(t,arg) = App(t,[arg])
 ;
 
-(* Type variable instantiation in dterm. Make it tail-recursive ? *)
+(*---------------------------------------------------------------------------
+ * Type variable instantiation in dterm. Make it tail-recursive ? 
+ *---------------------------------------------------------------------------*)
+
 fun inst_type_dterm ([],v) = v
   | inst_type_dterm (tysub,v) =
       let fun tyi_dt (Cst(c,dbsk)) = Cst(Term.inst tysub c, dbsk)
@@ -97,7 +103,6 @@ fun inst_type_dterm ([],v) = v
   	    | tyi_dt v           = v
       in tyi_dt v end
 ;
-
 
 
 datatype action =
@@ -130,24 +135,25 @@ fun add_in_db (n,cst,act,EndDb) =
 ;
 
 fun key_of (RW{cst, lhs, ...}) =
-  let val {Name,...} = dest_const cst in
-  (Name, length lhs, cst)
+  let val {Name,Thy,...} = dest_thy_const cst in
+  ((Name,Thy), length lhs, cst)
   end
 ;
 
 
-
-(* *)
 fun is_skip (_, CST {Skip=SOME n,Args,...}) = (n <= List.length Args)
   | is_skip _ = false
 ;
 
-(* equation database
+(*---------------------------------------------------------------------------
+ * equation database
  * We should try to factorize the rules (cf discrimination nets)
  * Rules are packed according to their head constant, and then sorted
  * according to the width of their lhs.
- *)
-datatype comp_rws = RWS of (string, (db * int option) ref) Polyhash.hash_table;
+ *---------------------------------------------------------------------------*)
+
+datatype comp_rws 
+   = RWS of (string * string, (db * int option) ref) Polyhash.hash_table;
 
 fun empty_rws () = RWS (Polyhash.mkPolyTable(29,CL_ERR "empty_rws" ""));
 
@@ -167,8 +173,8 @@ fun add_in_db_upd rws (name,arity,hcst) act =
   end
 ;
 
-fun set_skip (rws as RWS htbl) name sk =
-  let val (rl as ref(db,_)) = assoc_clause rws name in
+fun set_skip (rws as RWS htbl) (p as (name,thy)) sk =
+  let val (rl as ref(db,_)) = assoc_clause rws p in
   rl := (db,sk)
   end;
 
@@ -177,9 +183,9 @@ fun from_term (rws,env,t) =
   let fun down (env,t,c) =
         case dest_term t of
 	  VAR _ => up((Bv (index t env) handle HOL_ERR _ => Fv), c)
-  	| CONST{Name,...} => up(Cst (t,assoc_clause rws Name),c)
-  	| COMB{Rator,Rand} => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
-  	| LAMB{Bvar,Body} => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
+  	| CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
+  	| COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
+  	| LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
 
       and up (dt, Ztop) = dt
 	| up (dt, Zrator{Rand=(env,arg), Ctx=c}) =
@@ -192,12 +198,14 @@ fun from_term (rws,env,t) =
 
 
 
-(* Note: if the list of free variables of the lhs was empty, we could
+(*---------------------------------------------------------------------------
+ * Note: if the list of free variables of the lhs was empty, we could
  * evaluate (weak reduction) the rhs now. This implies that the
  * theorems must be added in dependencies order.
- *)
+ *---------------------------------------------------------------------------*)
+
 fun mk_rewrite rws eq_thm =
-  let val {lhs,rhs} = dest_eq (concl eq_thm)
+  let val (lhs,rhs) = dest_eq (concl eq_thm)
       val (fv,cst,pats) = check_arg_form lhs
       val gen_thm = foldr (uncurry GEN) eq_thm fv
       val rhsc = from_term (rws, rev fv, rhs)
@@ -219,18 +227,18 @@ fun enter_thm rws thm0 =
   in add_in_db_upd rws (key_of rw) (Rewrite [rw])
   end;
 
-fun add_thms lthm rws =
-  List.app (List.app (enter_thm rws) o Drule.BODY_CONJUNCTS) lthm;
+
+fun add_thms lthm rws = 
+  List.app (List.app (enter_thm rws) o BODY_CONJUNCTS) lthm;
 
 fun add_extern (cst,arity,fconv) rws =
-  let val {Name,...} = dest_const cst in
-  add_in_db_upd rws (Name,arity,cst) (Conv fconv)
+  let val {Name,Thy,...} = dest_thy_const cst in
+  add_in_db_upd rws ((Name,Thy),arity,cst) (Conv fconv)
   end;
-
 
 fun new_rws () =
   let val rws = empty_rws() in
-  add_thms [REFL_CLAUSE] rws;
+  add_thms [boolTheory.REFL_CLAUSE] rws;
   rws
   end;
 
@@ -241,4 +249,3 @@ fun from_list lthm =
   end;
 
 end;
-

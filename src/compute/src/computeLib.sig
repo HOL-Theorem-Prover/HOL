@@ -1,22 +1,29 @@
 signature computeLib =
 sig
 
-  type term = Term.term
+  include Abbrev
 
-  type comp_rws = clauses.comp_rws
+  (* compsets and their operations *)
 
-  val new_rws : unit -> comp_rws
-  val from_list : Thm.thm list -> comp_rws
-  val add_thms : Thm.thm list -> comp_rws -> unit
-  val add_conv : term * int * Abbrev.conv -> comp_rws -> unit
-  val set_skip : comp_rws -> string -> int option -> unit
-
+  type compset
+  val new_rws       : unit -> compset
+  val from_list     : thm list -> compset
+  val add_thms      : thm list -> compset -> unit
+  val add_conv      : term * int * conv -> compset -> unit
+  val set_skip      : compset -> string*string -> int option -> unit
   val CBV_CONV      : comp_rws -> Abbrev.conv
   val WEAK_CBV_CONV : comp_rws -> Abbrev.conv
 
-  (* Thm.thm preprocessors of rules.sml *)
-  val lazyfy_thm    : Thm.thm -> Thm.thm
-  val strictify_thm : Thm.thm -> Thm.thm
 
+  val lazyfy_thm    : thm -> thm
+  val strictify_thm : thm -> thm
+
+  val CBV_CONV      : compset -> conv
+  val WEAK_CBV_CONV : compset -> conv
+
+  (* thm preprocessors  *)
+
+  val lazyfy_thm    : thm -> thm
+  val strictify_thm : thm -> thm
 
 end;

@@ -1,12 +1,14 @@
 structure compute_rules :> compute_rules =
 struct
 
-open HolKernel basicHol90Lib boolTheory;
+open HolKernel boolTheory boolSyntax Drule Conv Abbrev;
 
-(* Useful data structure to build tail recursive functions of type 'a -> 'b
+(*---------------------------------------------------------------------------
+ * Useful data structure to build tail recursive functions of type 'a -> 'b
  * (left to right) or 'b -> 'a (right to left), when the domain has a
  * term-like  structure.
- *)
+ *---------------------------------------------------------------------------*)
+
 datatype ('a,'b,'c) stack =
     Ztop
   | Zrator of { Rand : 'a, Ctx : ('a,'b,'c) stack }
@@ -15,13 +17,15 @@ datatype ('a,'b,'c) stack =
 ;
 
 fun RULES_ERR function message =
-    HOL_ERR{origin_structure = "rules",
+    HOL_ERR{origin_structure = "compute_rules",
 		      origin_function = function,
 		      message = message};
 
-(* Serious anomaly of the code (an internal invariant was broken). We don't
+(*---------------------------------------------------------------------------
+ * Serious anomaly of the code (an internal invariant was broken). We don't
  * want these to be caught. We prefer a bug report.
- *)
+ *---------------------------------------------------------------------------*)
+
 exception DEAD_CODE of string;
 
 val rhs_concl = rand o concl;
@@ -81,11 +85,12 @@ fun try_eta' (t as (thm,_)) = ((Eta thm),true) handle HOL_ERR _ => t;
 
 fun try_eta thm = (Eta thm) handle HOL_ERR _ => thm;
 
-(* Precondition: f(arg) is a closure corresponding to b.
+(*---------------------------------------------------------------------------
+ * Precondition: f(arg) is a closure corresponding to b.
  * Given   (arg,(|- M = (a b), Stk)),
  * returns (|- a = a, (<fun>,(|- b = b, f(arg)))::Stk)
  * where   <fun> =  (|- a = a' , |- b = b') |-> |- M = (a' b')
- *)
+ *---------------------------------------------------------------------------*)
 
 fun push_in_stk f (arg,(th,stk)) =
       let val (tha,thb,mka) = Mk_comb th in
@@ -100,14 +105,20 @@ fun push_lam_in_stk (th, stk) =
 ;
 
 
-(* Does conversions between
+(*---------------------------------------------------------------------------
+  Does conversions between
                               FUNIFY
     |- (c t_1 .. t_n x) = M    --->   |- (c t_1 .. t_n) = \x. M
                                <---
                              UNFUNIFY
    In UNFUNIFY, we must avoid choosing an x that appears free in t_1..t_n.
- *)
-local open Conv
+ ---------------------------------------------------------------------------*)
+
+local fun RAND_CONV conv tm =
+        let val (Rator,Rand) = dest_comb tm in AP_TERM Rator (conv Rand) end
+      fun RATOR_CONV conv tm =
+        let val (Rator,Rand) = dest_comb tm in AP_THM (conv Rator) Rand end
+      fun CONV_RULE conv th = EQ_MP (conv(concl th)) th;
 in
 fun FUNIFY thm =
   let val x = rand (lhs (concl thm)) in
@@ -115,15 +126,14 @@ fun FUNIFY thm =
   end
   handle HOL_ERR _ => raise RULES_ERR "FUNIFY" ""
 
-and UNFUNIFY thm =
-  let val {lhs,rhs} = dest_eq (concl thm)
+fun UNFUNIFY thm =
+  let val (lhs,rhs) = dest_eq (concl thm)
       val x = variant (free_vars lhs) (bvar rhs) in
   CONV_RULE (RAND_CONV BETA_CONV) (AP_THM thm x)
   end
   handle HOL_ERR _ => raise RULES_ERR "UNFUNIFY" ""
 
 end;
-
 
 fun repeat_on_conj f thm =
   let fun iter th = iter (f th) handle HOL_ERR _ => th
@@ -135,8 +145,8 @@ val strictify_thm = repeat_on_conj UNFUNIFY;
 
 (* Ensures a theorem is an equality. *)
 fun eq_intro thm =
-  if is_eq (concl thm) then thm
-  else if is_neg (concl thm) then EQF_INTRO thm
-  else EQT_INTRO thm;
+  if is_eq (concl thm) then thm else 
+  if is_neg (concl thm) then EQF_INTRO thm
+                        else EQT_INTRO thm;
 
 end;
