@@ -35,7 +35,7 @@ fun dest tm =
       val y = rand Ry
       open pairSyntax
   in
-     foo (strip_pair y) (strip_pair x)
+     foo (spine_pair y) (spine_pair x)
   end;
 
 fun max [] m = m
