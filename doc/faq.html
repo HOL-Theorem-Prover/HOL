@@ -482,13 +482,14 @@ have the given name.
 <h2 id = "Misc">Miscellaneous</h2>
 
 <dl>
-<dt><strong>How do I quit?  (The system hangs on
-WindowsXP.)</strong></dt>
+<dt><strong>How do I quit?  (The system hangs when I type <code>quit()</code>)</strong></dt>
 
-<dd><p>Rather than use <code>quit()</code>, end your interactive
-process by sending an <code>EOF</code> signal.  On Windows, you can do
-this by typing <code>Control-Z</code>, followed by
-<code>RETURN</code>.</p></dd>
+<dd><p>This arises because the quotation-filter, which handles the
+<code>``...``</code> and <code>``:...``</code> syntax, doesn't
+understand the <code>quit</code> command&rsquo;s significance.  Rather than use <code>quit()</code>, end your interactive
+process by sending an <code>EOF</code> signal.  On Unix, type
+<code>Control-D</code>; on Windows, type <code>Control-Z</code>,
+followed by <code>RETURN</code>.</p></dd>
 
 <dt><strong>How do I create theories in more than one directory?</strong>
 <dd> <p>Both the <code>Holmake</code> program and the various <code>hol</code>
