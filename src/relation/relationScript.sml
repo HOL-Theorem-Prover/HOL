@@ -525,6 +525,47 @@ val EQC_INDUCTION = store_thm(
   HO_MATCH_MP_TAC TC_INDUCT THEN REWRITE_TAC [SC_DEF] THEN
   ASM_MESON_TAC []);
 
+val EQC_REFL = store_thm(
+  "EQC_REFL",
+  ``!R x. EQC R x x``,
+  SRW_TAC [][EQC_DEF, RC_DEF]);
+val _ = export_rewrites ["EQC_REFL"]
+
+val EQC_R = store_thm(
+  "EQC_R",
+  ``!R x y. R x y ==> EQC R x y``,
+  SRW_TAC [][EQC_DEF, RC_DEF] THEN
+  DISJ2_TAC THEN MATCH_MP_TAC TC_SUBSET THEN
+  SRW_TAC [][SC_DEF]);
+
+val EQC_SYM = store_thm(
+  "EQC_SYM",
+  ``!R x y. EQC R x y ==> EQC R y x``,
+  SRW_TAC [][EQC_DEF, RC_DEF] THEN
+  Q.SUBGOAL_THEN `symmetric (TC (SC R))` ASSUME_TAC THEN1
+     SRW_TAC [][SC_SYMMETRIC, symmetric_TC] THEN
+  PROVE_TAC [symmetric_def]);
+
+val EQC_TRANS = store_thm(
+  "EQC_TRANS",
+  ``!R x y z. EQC R x y /\ EQC R y z ==> EQC R x z``,
+  REPEAT GEN_TAC THEN
+  Q_TAC SUFF_TAC `transitive (EQC R)` THEN1 PROVE_TAC [transitive_def] THEN
+  SRW_TAC [][EQC_DEF, transitive_RC, TC_TRANSITIVE])
+
+val STRONG_EQC_INDUCTION = store_thm(
+  "STRONG_EQC_INDUCTION",
+  ``!R P. (!x y. R x y ==> P x y) /\
+          (!x. P x x) /\
+          (!x y. EQC R x y /\ P x y ==> P y x) /\
+          (!x y z. P x y /\ P y z /\ EQC R x y /\ EQC R y z ==> P x z) ==>
+          !x y. EQC R x y ==> P x y``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!x y. EQC R x y ==> EQC R x y /\ P x y`
+        THEN1 PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC EQC_INDUCTION THEN
+  PROVE_TAC [EQC_R, EQC_REFL, EQC_SYM, EQC_TRANS]);
+
 val ALT_equivalence = store_thm(
   "ALT_equivalence",
   ``!R. equivalence R = !x y. R x y = (R x = R y)``,
