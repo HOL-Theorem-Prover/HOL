@@ -1,9 +1,28 @@
 (*---------------------------------------------------------------------------
                 Parsing datatype specifications
+
+   The grammar we're parsing is:
+
+       G ::=              id "=" <form>
+       form ::=           <phrase> ( "|" <phrase> ) *  |  <record_defn>
+       phrase ::=         id  | id "of" <under_constr>
+       under_constr ::=   <ptype> ( "=>" <ptype> ) * | <record_defn>
+       record_defn ::=    "<|"  <idtype_pairs> "|>"
+       idtype_pairs ::=   id ":" <type> | id : <type> ";" <idtype_pairs>
+       ptype ::=          <type> | "(" <type> ")"
+ 
+  It had better be the case that => is not a type infix.  This is true of
+  the standard HOL distribution.  In the event that => is an infix, this
+  code will still work as long as the input puts the types in parentheses.
  ---------------------------------------------------------------------------*)
 
 structure ParseDatatype :> ParseDatatype =
 struct
+
+ type hol_type = Type.hol_type
+ type tyname   = string
+ type quote    = hol_type frag list
+
 
 fun ERR s1 s2 =
  Exception.HOL_ERR
@@ -11,19 +30,6 @@ fun ERR s1 s2 =
    origin_function = s1,
    message = s2};
 
-(* grammar we're parsing is:
-    G ::=              id "=" <form>
-    form ::=           <phrase> ( "|" <phrase> ) *  |  <record_defn>
-    phrase ::=         id  | id "of" <under_constr>
-    under_constr ::=   <ptype> ( "=>" <ptype> ) * | <record_defn>
-    record_defn ::=    "<|"  <idtype_pairs> "|>"
-    idtype_pairs ::=   id ":=" <type> | id := <type> "," <idtype_pairs>
-    ptype ::=          <type> | "(" <type> ")"
- *
- * It had better be the case that => is not a type infix.  This is true of
- * the standard HOL distribution.  In the event that => is an infix, this
- * code will still work as long as the input puts the types in parentheses.
- *)
 
 open optmonad
 open monadic_parse
@@ -34,17 +40,19 @@ datatype pretype =
   dVartype of string | dTyop of (string * pretype list) |
   dAQ of Type.hol_type
 
-type recordtype_info = (string * pretype) list
+type field = string * pretype
+type constructor = string * pretype list
 
-datatype datatypeForm =
-  WithConstructors of (string * pretype list) list |
-  RecordType of recordtype_info
-type datatypeAST = string (* type name *) * datatypeForm
+datatype datatypeForm 
+   = Constructors of constructor list
+   | Record of field list
+
+type AST = tyname * datatypeForm
 
 fun pretypeToType pty =
   case pty of
     dVartype s => Type.mk_vartype s
-  | dTyop (s, args) => Type.mk_type{Tyop = s, Args = map pretypeToType args}
+  | dTyop (s, args) => Type.mk_type{Tyop=s, Args=map pretypeToType args}
   | dAQ pty => pty
 
 fun ident0 s =
@@ -78,8 +86,8 @@ val parse_phrase =
   | SOME args => return (constr_id, args)))
 
 val parse_form =
-  (parse_record_defn >- return o RecordType) ++
-  (sepby1 (symbol "|") parse_phrase >-  return o WithConstructors)
+  (parse_record_defn >- return o Record) ++
+  (sepby1 (symbol "|") parse_phrase >-  return o Constructors)
 
 val parse_G =
   ident >-                                           (fn tyname =>
