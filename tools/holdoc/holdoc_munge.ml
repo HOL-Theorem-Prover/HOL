@@ -126,7 +126,7 @@ and ids_nocomm = parser
   | [< 'White(_)      ; ss = ids_nocomm >] -> ss
   | [<>]                                   -> []
 
-and sp' = parser
+and sp' = parser (* zero or more white space *)
     [< 'White(s)                  ; s1 = sp' >] -> White(s)     :: s1
   | [< 'Indent(n)                 ; s1 = sp' >] -> Indent(n)    :: s1
   | [< 'Comment(c)                ; s1 = sp' >] -> Comment(c)   :: s1
@@ -555,7 +555,7 @@ type rule =
     Rule of string list * string * string list * token list option (* v, n, cat, desc, *)
         * token list list * token list * token list list (* lhs, lab, rhs, *)
         * token list list * token list option (* side, comm *)
-  | Definition of token list list
+  | Definition of token list list * string option
 
 (* debugging rule printer *)
 
@@ -593,8 +593,8 @@ let print_rule ruleordefn =
                    print_newline()
       |  None   -> ());
       print_newline()
-  | Definition(e) ->
-      print_string "Definition:\n";
+  | Definition(e,no) ->
+      print_string ("Definition"^(match no with None -> "" | Some(s)-> "("^s^")")^":\n");
       ignore (List.map print_tokenline e);
       print_newline()
 
@@ -635,8 +635,8 @@ and parse_rule1 = parser
          Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)
   | [<>] -> raise (Stream.Error("!"));
 
-and parse_definition = parser
-    [< e = parse_wholechunk >] -> Definition(e)
+and parse_definition no = parser
+    [< e = parse_wholechunk >] -> Definition(e,no)
   | [<>] -> raise (Stream.Error("Couldn't parse definition!"));
 
 and rule_vars = parser
@@ -658,7 +658,9 @@ and rule_name = parser
 
 and parse_rules_and_process p = parser
     [< 'Ident("Net_Hol_reln",_); _ = sp'; rs = parse_rules_ap0 p; rest = parse_rules_and_process p >] -> rs @ rest
-  | [< 'Ident("Define",_); _ = sp'; r = parse_definition_ap0 p; rs = parse_rules_and_process p >] -> r :: rs
+  | [< 'Ident("Define",_); _ = sp'; r = parse_definition_ap0 None p; rs = parse_rules_and_process p >] -> r :: rs
+  | [< 'Ident("xDefine",_); _ = sp'; 'Str(s); _ = sp'; r = parse_definition_ap0 (Some(s)) p; rs = parse_rules_and_process p >] -> r :: rs
+  | [< 'Ident("Hol_datatype",_); _ = sp'; r = parse_definition_ap0 None p; rs = parse_rules_and_process p >] -> r :: rs  (* this is a hack for the moment *)
   | [< 'DirBlk(n,ts) when (dir_proc n ts; true) (* cheat: make it happen right now *)
                                ; rs = parse_rules_and_process p  >] -> rs
   | [< '_                      ; rs = parse_rules_and_process p  >] -> rs
@@ -675,8 +677,8 @@ and parse_rules_ap2 p = parser
        rs = parse_rules_ap1 p >] -> rs
   | [< 'Backtick >]              -> []
   | [<>]                         -> raise (Stream.Error("expected /\\ or `"))
-and parse_definition_ap0 p = parser
-    [< 'Backtick; _ = sp'; r = (function ts -> p (parse_definition ts)) >] -> r
+and parse_definition_ap0 no p = parser
+    [< 'Backtick; _ = sp'; r = (function ts -> p (parse_definition no ts)) >] -> r
   | [<>] -> raise (Stream.Error("expected ` after Define"))
 
 
@@ -749,7 +751,7 @@ let potential_vars ruleordefn =
       @ pot_s rhs
       @ pot_s side
       @ (match comm with Some c -> pot_l c | None -> [])
-  | Definition(e) ->
+  | Definition(e,no) ->
       pot_s e
 
 (* choose names for definitions *)
@@ -817,10 +819,13 @@ let latex_rule ruleordefn =
        | None   -> ());
       print_string "}}\n\n";
       texname
-  | Definition(e) ->
+  | Definition(e,no) ->
       let pvs      = pot_s e
       in
-      let namepart = match getname e with
+      let namepart = match no with
+                       Some n -> texify n
+                     | None ->
+                     match getname e with
                        Some t -> mtok pvs t
                      | None   -> "{}"
       in
