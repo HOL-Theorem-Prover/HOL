@@ -28,14 +28,15 @@ fun dest_pair tm =
 
 val is_pair = Lib.can dest_pair;
 
-fun mk_pair (fst,snd) =
- let infix -->
-     val fsty = type_of fst
-     val sndty = type_of snd
-     val c = mk_thy_const{Name=",",Thy="pair",
-              Ty=fsty --> sndty --> mk_type{Tyop="prod",Args=[fsty,sndty]}}
- in list_mk_comb(c,[fst,snd])
- end;
+fun mk_pair (fst,snd) = let
+  infixr -->
+  val fsty = type_of fst
+  val sndty = type_of snd
+  val commaty = fsty --> sndty --> mk_type{Tyop="prod",Args=[fsty,sndty]}
+  val c = mk_thy_const{Name = ",", Thy = "pair", Ty = commaty}
+in
+  list_mk_comb(c,[fst,snd])
+end;
 
 fun acc_strip_comb M rands =
  let val {Rator,Rand} = dest_comb M
