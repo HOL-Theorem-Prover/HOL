@@ -2535,7 +2535,8 @@ val TOPNUM_DEF = new_definition("TOPNUM",`TOPNUM = 2**WL`);
 val MAXNUM_DEF = new_definition("MAXNUM",`MAXNUM = TOPNUM - 1`);
 val wH_def = new_definition("wH",`wH = 2**HB`);
 val wL_def = new_definition("wL",`wL = 2**HB - 1`);
-
+val fromNum = new_definition("fromNum", `fromNum n = n2w(MOD_WL n)`);
+val toNum   = new_definition("toNum", `toNum = w2n`);
 val _ = 
  let open arithmeticTheory numeral_bitsTheory bitsTheory EmitML
      val THE_WL = SIMP_RULE arith_ss [HB_def,ADD1] WL_def
@@ -2617,11 +2618,10 @@ val _ =
         ADD_EVAL2, MUL_EVAL2, word_sub_def,
         LSL_EVAL, LSR_THM, ASR_EVAL, ROR_THM, RRX_EVAL3,
         LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL, 
-        LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL]
+        LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
+        fromNum, toNum]
      @ 
-     [MLSIG (String.concat["val fromNum : num -> ",wordn]),
-      MLSIG (String.concat["val toNum : ",wordn," -> num"]),
-      MLSIG (String.concat["val fromBinString : string -> ",wordn]),
+     [MLSIG (String.concat["val fromBinString : string -> ",wordn]),
       MLSIG (String.concat["val fromOctString : string -> ",wordn]),
       MLSIG (String.concat["val fromDecString : string -> ",wordn]),
       MLSIG (String.concat["val fromHexString : string -> ",wordn]),
@@ -2638,10 +2638,6 @@ val _ =
 \ (* Supplementary ML, not generated from HOL theorems, aimed at supporting    *) \n\
 \ (* parsing and pretty printing of numerals.                                  *) \n\
 \ (*---------------------------------------------------------------------------*) \n\
-\ \n\
-\ fun fromNum n = n2w (MOD_WL n) \n\
-\  \n\
-\ val toNum = w2n; \n\
 \  \n\
 \ infix o; \n\
 \ \n\
