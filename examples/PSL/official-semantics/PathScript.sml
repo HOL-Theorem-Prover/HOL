@@ -474,7 +474,7 @@ val SEL_REC_SUC =
 val SEL_def = Define `SEL p (m,n) = SEL_REC (n-m+1) m p`;
 
 (******************************************************************************
-* CONS(x,p) add x to the fron of p
+* CONS(x,p) add x to the front of p
 ******************************************************************************)
 val CONS_def = 
  Define 
