@@ -74,5 +74,6 @@ src/HolSat
 src/muddy/muddyC
 src/muddy
 src/HolBdd
+src/HolCheck
 src/temporal/src
 src/temporal/smv.2.4.3
