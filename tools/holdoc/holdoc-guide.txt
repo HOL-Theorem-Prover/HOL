@@ -208,6 +208,15 @@ to handle linebreaks in its argument.  The second flag is *optional*
 and defaults to false.
 
 
+In the above, you will sometimes want to define symbols that include
+nonaggregating characters (i.e., characters in the string
+"()[]{}~.,;").  By default, this will give an error message.  But you
+can teach the parser about such symbols as follows:
+
+(*[ SPECIAL ";;" "\;" ]*) defines ;; and \; as HOL identifiers from
+now on.  Zero or more strings may be listed.
+
+
 The last few are a bit different.
 
 (*[ ECHO ]*) turns on echo mode *after the next token* (including
