@@ -1,0 +1,108 @@
+#!/bin/sh
+
+# A shell script to build the various examples distributed with HOL.
+# These represent a valuable regression test.  At the moment, those tests
+# that don't use Holmake can fail without this script being able to notice.
+# The developer has to watch the output and check that everything looks
+# reasonable.
+
+holmake=`pwd`/../bin/Holmake
+
+toplevel () {
+  ../bin/hol < autopilot.sml
+  ../bin/hol.unquote < euclid.sml
+  ../bin/hol < fol.sml
+  ../bin/hol.unquote < root2.sml
+  ../bin/hol < Thery.sml
+}
+
+simple_example () {
+  cd $1
+  $holmake cleanAll
+  if $holmake
+  then
+    echo Done Example $1
+    cd ..
+  else
+    echo "***** Failed in $1"
+    cd ..
+    exit 1
+  fi
+}
+
+MLsyntax () { simple_example MLsyntax; }
+RSA ()      { simple_example RSA; }
+ind_def ()  { simple_example ind_def; }
+lambda ()   { simple_example lambda; }
+sunrise ()  { simple_example sunrise/src; }
+
+bmark () {
+  cd bmark
+  ./run_bmark ../../bin/hol.bare
+  cd ..
+}
+
+parity () {
+  cd parity
+  ../../bin/hol.unquote < PARITY.sml
+  cd ..
+}
+
+miller () {
+  cd miller
+  ./m
+  cd ..
+}
+
+fast () {
+    for i in toplevel MLsyntax RSA ind_def lambda bmark parity
+    do
+        buildit $i
+    done
+}
+
+buildit () {
+  logfile=/tmp/example-build-log-$1
+  echo "Building $1 - output in $logfile"
+  eval $1 | tee /tmp/example-build-log-$1
+}
+
+check_cwd () {
+  if [ -f Thery.sml -a -f README -a -f fol.sml -a -d miller ]
+  then
+     :
+  else
+     return 1
+  fi
+}
+
+
+if check_cwd
+then
+   :
+else
+   echo "This doesn't look like the examples directory; please cd there and"
+   echo "try again."
+   exit 1
+fi
+
+if [ $# -eq 0 ]
+then
+    echo Building all examples
+    for i in toplevel MLsyntax RSA ind_def lambda bmark parity miller
+    do
+        buildit $i
+    done
+elif [ $# -ne 1 ]
+then
+    echo "Must have 0 or 1 argument" >&2
+    exit 1
+else
+    buildit $1
+fi
+
+
+
+# Local variables:
+# mode: shell-script
+# end:
