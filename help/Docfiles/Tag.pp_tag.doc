@@ -34,5 +34,6 @@ In MoscowML, {Meta.installPP} won't install {pp_tag} in the top-level
 loop.
 
 \SEEALSO
-Parse.pp_thm.
+Hol_pp.pp_thm.
+
 \ENDDOC

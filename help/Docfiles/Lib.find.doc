@@ -21,5 +21,6 @@ element {xi} of the list.
 {Lib.first} is equivalent.
 
 \SEEALSO
-Lib.first, Lib.tryfind, Lib.mem, Lib.exists, hol88Lib.forall, Lib.assoc, Lib.rev_assoc.
+Lib.first, Lib.tryfind, Lib.mem, Lib.exists, Lib.assoc, Lib.rev_assoc.
+
 \ENDDOC

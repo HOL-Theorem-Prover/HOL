@@ -23,7 +23,8 @@ message first).
 {
 - val foo = save_thm("foo", REFL (Term `x:bool`));
 > val foo = |- x = x : thm
-- current_thms();
+
+- current_theorems();
 > val it = [("foo", |- x = x)] : (string * thm) list
 }
 
@@ -43,5 +44,9 @@ the result of {save_thm} to an ML variable makes it easy
 to access the theorem in the remainder of the current session.
 
 \SEEALSO
-Theory.new_theory, Tactical.store_thm, DB.fetch, DB.thy, Theory.current_defs, Theory.current_thms, Theory.uptodate_thm, Theory.new_axiom, Definition, new_type_definition, Definition.new_definition, Definition.new_specification.
+Theory.new_theory, Tactical.store_thm, DB.fetch, DB.thy, 
+Theory.current_definitions, Theory.current_theorems, Theory.uptodate_thm,
+Theory.new_axiom, Definition.new_type_definition, 
+Definition.new_definition, Definition.new_specification.
+
 \ENDDOC

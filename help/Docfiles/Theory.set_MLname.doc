@@ -68,5 +68,8 @@ It is probably simpler to proceed by using alphanumeric names when
 defining constants, and to use overloading to get the desired name.
 
 \SEEALSO
-bossLib.Hol_reln, bossLib.Hol_datatype, Theory.export_theory, Theory.current_defs, Theory.current_thms, Theory.current_axioms, DB.thy.
+bossLib.Hol_reln, bossLib.Hol_datatype, Theory.export_theory,
+Theory.current_definitions, Theory.current_theoremms, 
+Theory.current_axioms, DB.thy, DB.dest_theory.
+
 \ENDDOC

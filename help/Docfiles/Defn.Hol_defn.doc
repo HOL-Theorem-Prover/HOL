@@ -82,15 +82,12 @@ Here we attempt to define a quick-sort function {qsort}:
          1. !rst x ord. R (ord,FILTER ($~ o ord x) rst) (ord,x::rst)
          2. !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
 }
-
-
 In the following we give an example of how to use {Hol_defn} to define a
 nested recursion.  In processing this definition, an auxiliary function
 {N_aux} is defined.  The termination conditions of {N} are phrased in
 terms of {N_aux} for technical reasons.
-
 {
-   Hol_defn "ninety1"
+   - Hol_defn "ninety1"
        `N x = if x>100 then x-10
                        else N(N(x+11))`;
 
@@ -113,9 +110,6 @@ terms of {N_aux} for technical reasons.
          1. !x. ~(x > 100) ==> R (x + 11) x
          2. !x. ~(x > 100) ==> R (N_aux R (x + 11)) x
 }
-
-
-
 
 \COMMENTS
 An invocation of {Hol_defn} is usually the first step in a multi-step
@@ -193,20 +187,25 @@ calls under either branch of an `if-then-else`. Thus the extracted
 termination conditions for {fact} are
 {
    0. WF R
-   1. !n. ~(n = 0) ==> R (n - 1) n.
+   1. !n. ~(n = 0) ==> R (n - 1) n
 }
+and are easy to prove. 
 
-A `higher-order` recursion is one in which a higher-order function is
+Now we discuss congruence theorems for higher-order functions. A 
+`higher-order` recursion is one in which a higher-order function is
 used to apply the recursive function to arguments. In order for the
-correct termination conditions to be proved, congruence rules for the
-higher order function must be known to the termination condition
-extraction mechanism. Congruence rules for common higher-order
-functions, e.g., those on lists, are already known to the
-mechanism. However, at times, one must manually prove and install a
-congruence theorem for a higher-order function. For example, suppose we
-define a higher-order function {SIGMA} for summing the results of a
-function in a list. We then use {SIGMA} in the definition of a similar
-function on a type of arbitrarily (finitely) branching trees.
+correct termination conditions to be proved for such a recursion, 
+congruence rules for the higher order function must be known to 
+the termination condition extraction mechanism. Congruence rules for 
+common higher-order functions, e.g., {MAP}, {EVERY}, and {EXISTS} for 
+lists, are already known to the mechanism. However, at times, one must 
+manually prove and install a congruence theorem for a higher-order 
+function. 
+
+For example, suppose we define a higher-order function {SIGMA} for
+summing the results of a function in a list. We then use {SIGMA} in 
+the definition of a function for summing the results of a function 
+in a arbitrarily (finitely) branching tree.
 {
    - Define `(SIGMA f [] = 0) /\
              (SIGMA f (h::t) = f h + SIGMA f t)`;
@@ -215,8 +214,8 @@ function on a type of arbitrarily (finitely) branching trees.
    - Hol_datatype `ltree = Node of 'a => ltree list`;
    > val it = () : unit
 
-   - Defn.Hol_defn
-        "ltree_sigma"
+   - Defn.Hol_defn  
+        "ltree_sigma"     (* higher order recursion *)
         `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
 
    > val it =
@@ -234,7 +233,6 @@ function on a type of arbitrarily (finitely) branching trees.
          0. WF R
          1. !tl v f a. R (f,a) (f,Node v tl) : defn
 }
-
 The termination conditions for {ltree_sigma} seem to require finding a
 wellfounded relation {R} such that the pair {(f,a)} is {R}-less than
 {(f, Node v tl)}. However, this is a hopeless task, since there is no
@@ -248,10 +246,9 @@ congruence theorem is the following:
          (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x)) ==>
          (SIGMA f l1 = SIGMA g l2)
 }
-
-After telling {Hol_defn} about this theorem, the termination conditions
-extracted for the definition are provable, since {a} is a proper subterm
-of {Node v tl}.
+Once {Hol_defn} has been told about this theorem, via {write_congs}, the
+termination conditions extracted for the definition are provable, 
+since {a} is a proper subterm of {Node v tl}.
 {
    - local open DefnBase
      in
@@ -273,10 +270,10 @@ of {Node v tl}.
          1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
 }
 
-For every HOL datatype defined by application of {Hol_datatype}, a
-congruence theorem is automatically proved for the `case` constant for
-that type, and stored in the {TypeBase}. For example, the following
-congruence theorem for {num_case} is stored in the {TypeBase}:
+One final point : for every HOL datatype defined by application of 
+{Hol_datatype}, a congruence theorem is automatically proved for the 
+`case' constant for that type, and stored in the {TypeBase}. For example, 
+the following congruence theorem for {num_case} is stored in the {TypeBase}:
 {
     |- !f' f b' b M' M.
          (M = M') /\
@@ -285,8 +282,12 @@ congruence theorem for {num_case} is stored in the {TypeBase}:
         ==>
          (num_case b f M = num_case b' f' M')
 }
-
+This allows the contexts of recursive calls in branches of
+`case' expressions to be tracked. 
 
 \SEEALSO
-Defn.tgoal, Defn.tprove, TotalDefn.WF_REL_TAC, TotalDefn.Define, TotalDefn.xDefine, read_congs, write_congs, Hol_datatype.
+Defn.tgoal, Defn.tprove, TotalDefn.WF_REL_TAC, TotalDefn.Define, 
+TotalDefn.xDefine, DefnBase.read_congs, DefnBase.write_congs, 
+bossLib.Hol_datatype.
+
 \ENDDOC

@@ -6,8 +6,7 @@
 General-purpose function definition facility.
 
 \KEYWORDS
-definition, abbreviation, recursive function,
-          mutual recursion, recursion schemas.
+definition, abbreviation, recursive function, mutual recursion.
 
 \DESCRIBE
 {Define} takes a high-level specification of an HOL function, and
@@ -155,13 +154,13 @@ that uses "destructors" in the recursive call. Since {fact} is not
 primitive recursive, an induction theorem for {fact} is generated and 
 stored in the current theory.
 {
-   Define `fact x = if x = 0 then 1 else x * fact(x-1)`
+   Define `fact x = if x = 0 then 1 else x * fact(x-1)`;
 
    Equations stored under "fact_def".
    Induction stored under "fact_ind".
    > val it = |- fact x = (if x = 0 then 1 else x * fact (x - 1)) : thm
 
-   - theorem "fact_ind";
+   - DB.fetch "-" "fact_ind";
 
    > val it =
      |- !P. (!x. (~(x = 0) ==> P (x - 1)) ==> P x) ==> !v. P v : thm
@@ -202,8 +201,7 @@ Next we make a primitive recursive definition. Note that no
 induction theorem is generated in this case.
 {
    Define `(filter P [] = [])
-     /\    (filter P (h::t) = if P h then h::filter P t
-                                     else filter P t)`
+     /\    (filter P (h::t) = if P h then h::filter P t else filter P t)`;
 
    <<HOL message: inventing new type variable names: 'a>>
    Definition has been stored under "filter_def".
@@ -213,10 +211,10 @@ induction theorem is generated in this case.
          !P h t. filter P (h::t) =
                   (if P h then h::filter P t else filter P t) : thm
 }
-{Define} may be used to define mutually recursive functions. 
-We can define a datatype of propositions and a function for putting a
-proposition into negation normal form as follows.  First we define a
-datatype for boolean formulae ({prop}):
+{Define} may also be used to define mutually recursive functions. 
+For example, we can define a datatype of propositions and a function for
+putting a proposition into negation normal form as follows.  
+First we define a datatype for boolean formulae ({prop}):
 {
    - Hol_datatype
        `prop = VAR of 'a

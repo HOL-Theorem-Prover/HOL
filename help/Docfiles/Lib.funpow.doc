@@ -11,7 +11,7 @@ Iterates a function a fixed number of times.
 positive, the result is {x}.
 
 \FAILURE
-{funpow n f x} fails if any of the {n} applications of f fail.
+{funpow n f x} fails if any of the {n} applications of {f} fail.
 
 \EXAMPLE
 Apply {tl} three times to a list:

@@ -27,7 +27,8 @@ current theory.
 > val it = [`$o`, `W`, `S`, `K`, `I`, `combin$C`] : term list
 }
 
-
 \SEEALSO
-Theory.types, Theory.current_axioms, Theory.current_defs, Theory.current_thms.
+Theory.types, Theory.current_axioms, 
+Theory.current_definitions, Theory.current_theorems.
+
 \ENDDOC

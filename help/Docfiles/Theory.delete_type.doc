@@ -9,24 +9,25 @@ Remove a type operator from the signature.
 type, delete.
 
 \DESCRIBE
-An invocation {delete_type s} will attempt to remove the type
-constant denoted by {s} from the current HOL segment. All types, terms, and 
-theorems that depend on that type thereby become suspect. The implementation
-of HOL tracks the currency of type and term constants, so that 
-consistency is maintained.
+An invocation {delete_type s} removes the type constant denoted by {s}
+from the current HOL segment. All types, terms, and theorems that 
+depend on that type should therefore disappear, as though they hadn't been
+constructed in the first place. Conceptually, they have become "garbage"
+and need to be collected. However, because of the way that HOL is
+implemented in ML, it is not possible to have them automatically collected.
+Instead, HOL tracks the currency of type and term constants and provides
+some consistency maintenance support.
 
-In particular, the implementation takes care that a deleted type
+In particular, the implementation ensures that a deleted type
 operator is never equal to a subsequently declared type operator
-with the same name (and arity). Furthermore, although suspect types,
-terms, and theorems may exist in a session, no theorem, definition, or axiom
-that is suspect is exported when {export_theory} is invoked. 
+with the same name (and arity). Furthermore, although garbage types,
+terms, and theorems may exist in a session, no theorem, definition, 
+or axiom that is garbage is exported when {export_theory} is invoked. 
 
-The notion "suspect" is hereditary. If a type operator is suspect, then
-all types, terms, and theorems built from that operator are suspect.
-Furthermore, if a type or term is defined, and its witness theorem is
-suspect, then that type or term is suspect.
-
-
+The notion of garbage is hereditary. Any type, term, definition, or theorem
+is garbage if any of its constituents are. Furthermore, if a type operator or 
+term constant had been defined, and its witness theorem later later becomes
+garbage, then that type or term is garbage, as is anything built from it.
 
 \FAILURE
 If a type constant named {s} has not been declared in the current segment,
@@ -54,11 +55,14 @@ Exception raised at type_pp.pp_type:
 old->foo<-old: no such type operator in grammar
 }
 
-
 \COMMENTS
-It's rather dodgy to withdraw constants from the HOL signature. This
-entrypoint and its relatives are occasionally useful however.
+It's rather dodgy to withdraw constants from the HOL signature. 
+
+It is not possible to delete constants from ancestor theories.
 
 \SEEALSO
-Theory.delete_const, Theory.delete_axiom, Theory.delete_definition, Theory.delete_thm.
+Theory.delete_const, Theory.delete_axiom, Theory.delete_definition,
+Theory.delete_theorem, Theory.uptodate_type, Theory.uptodate_term, 
+Theory.uptodate_thm, Theory.scrub. 
+
 \ENDDOC

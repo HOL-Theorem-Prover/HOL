@@ -13,7 +13,7 @@ type constructors declared in the named theory, in the form of arity-name
 pairs.
 
 \FAILURE
-Fails unless the named theory is an ancestor.
+Fails unless the named theory is an ancestor, or the current theory.
 
 \EXAMPLE
 {
@@ -22,12 +22,14 @@ Fails unless the named theory is an ancestor.
 
 - itlist union (map types (ancestry "-")) [];
 > val it =
-    [("one", 0), ("option", 1), ("prod", 2), ("sum", 2), ("fun", 2),
-     ("ind", 0), ("bool", 0), ("num", 0), ("recspace", 1), ("list", 1)] :
-  (string * int) list
+    [("one", 0), ("option", 1), ("prod", 2), ("sum", 2), 
+     ("fun", 2), ("ind", 0), ("bool", 0), ("num", 0), 
+     ("recspace", 1), ("list", 1)] : (string * int) list
 }
 
-
 \SEEALSO
-Theory.current_axioms, Theory.current_defs, Theory.current_thms, Theory.new_type, Theory.constants, Definition.new_type_definition, Theory.parents, Theory.ancestry.
+Theory.constants, Theory.current_axioms, Theory.current_definitions, 
+Theory.current_theorems, Theory.new_type, Definition.new_type_definition, 
+Theory.parents, Theory.ancestry.
+
 \ENDDOC

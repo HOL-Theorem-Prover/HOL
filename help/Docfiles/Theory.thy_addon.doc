@@ -9,10 +9,10 @@ Type of theory additions.
 theory, addition.
 
 \DESCRIBE
-The type abbreviation
+The type abbreviation {thy_addon}, declared as
 {
-   thy_addon = {sig_ps : (ppstream -> unit) option,
-                struct_ps : (ppstream -> unit) option}
+   type thy_addon = {{sig_ps : (ppstream -> unit) option,
+                     struct_ps : (ppstream -> unit) option}}
 }
 
 packages up the arguments to {adjoin_to_theory}. The {sig_ps}

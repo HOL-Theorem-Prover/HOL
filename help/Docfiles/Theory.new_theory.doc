@@ -69,7 +69,8 @@ the current segment so that we have a clean slate to work from.
    - val def = new_definition("foo", Term `foo x = x + x`);
    > val def = |- !x. foo x = x + x : thm
 
-   val thm = Q.store_thm("foo_thm", `foo x = 2 * x`, RW_TAC arith_ss [def]);
+   val thm = Q.store_thm("foo_thm", `foo x = 2 * x`, 
+                                    RW_TAC arith_ss [def]);
    > val thm = |- foo x = 2 * x : thm
 
    - new_theory "foo";
@@ -80,7 +81,8 @@ the current segment so that we have a clean slate to work from.
    > val def = |- !x. twice x = x + x : thm
 
    - curr_defs();
-   > val it = [("twice", |- !x. twice x = x + x)] : (string * thm) list
+   > val it = [("twice", |- !x. twice x = x + x)] 
+              : (string * thm) list
 }
 
 
@@ -96,5 +98,11 @@ required if definitions, etc., need to be changed is minimized.
 Only the associated segment and its descendants need be redefined.
 
 \SEEALSO
-Theory.current_theory, Theory.new_axiom, Theory.parents, boolSyntax.new_binder, Theory.new_constant, Definition.new_definition, boolSyntax.new_infix, Definition.new_specification, Theory.new_type, print_theory, Theory.save_thm, Theory.export_theory, Theory.after_new_theory.
+Theory.current_theory, Theory.new_axiom, Theory.parents,
+boolSyntax.new_binder, Theory.new_constant, 
+Definition.new_definition, boolSyntax.new_infix, 
+Definition.new_specification, Theory.new_type, 
+DB.print_theory, Theory.save_thm, Theory.export_theory,
+Theory.after_new_theory.
+
 \ENDDOC

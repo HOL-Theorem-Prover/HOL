@@ -11,17 +11,17 @@ oracle, theorem.
 \DESCRIBE
 In principle, nearly every theorem of interest can be proved in HOL by
 using only the axioms and primitive rules of inference. The use of ML
-as a way to orchestrate larger inference steps, along with the support 
-for goal-directed proof, considerably eases the task of formal proof. 
-Every theorem can therefore be produced as the end product of a chain 
-of primitive inference steps, and HOL implementations strive to keep this
-purity.
+to orchestrate larger inference steps from the primitives, along with 
+support in HOL for goal-directed proof, considerably eases the task 
+of formal proof. Nearly every theorem of interest can therefore be
+produced as the end product of a chain of primitive inference steps, 
+and HOL implementations strive to keep this purity.
 
 However, it is occasionally useful to interface HOL with trusted 
-external tools that also produce, in some manner, theorems. It 
-is clearly a burden to require that HOL proofs accompany such 
-theorems so that they can be derived in HOL. In order to support
-greater interoperation of proof tools, therefore, HOL provides 
+external tools that also produce, in some sense, theorems that would be
+derivable in HOL. It is clearly a burden to require that HOL proofs
+accompany such theorems so that they can be (re-)derived in HOL. In order
+to support greater interoperation of proof tools, therefore, HOL provides 
 the notion of a `tagged' theorem. 
 
 A tagged theorem is manufactured by invoking {mk_oracle_thm tag (A,w)}, 
