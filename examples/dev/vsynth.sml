@@ -1245,12 +1245,15 @@ fun MAKE_NET_VERILOG name thm out =
  end;
 
 (*****************************************************************************)
-(* User resettable paths of Icaraus Verilog and GTKWave                      *)
+(* User resettable paths of Verilog simulator and waveform viewer            *)
 (*****************************************************************************)
 
-val iverilog_path = ref "/usr/bin/iverilog";
-val vvp_path      = ref "/usr/bin/vvp";
-val gtkwave_path  = ref "/usr/bin/gtkwave";
+val iverilog_path   = ref "/usr/bin/iverilog";
+val vvp_path        = ref "/usr/bin/vvp";
+val gtkwave_path    = ref "/usr/bin/gtkwave -a";
+val cver_path       = ref "./gplcver-2.10c.linux.bin/bin/cver";
+val dinotrace_path  = ref "./gplcver-2.10c.linux.bin/bin/dinotrace";
+
 
 (*
 ** Test for success of the result of Process.system
@@ -1261,6 +1264,84 @@ val gtkwave_path  = ref "/usr/bin/gtkwave";
 
 fun isSuccess s = (s = Process.success);
 
+(*****************************************************************************)
+(* Run iverilog on name.vl                                                   *)
+(*****************************************************************************)
+fun iverilog name =
+ let val vvp_file = (name ^ ".vvp")
+     val iverilog_command = ((!iverilog_path) ^ " -o " ^ vvp_file 
+                             ^ " " ^ name ^ ".vl")
+     val code1 = Process.system iverilog_command
+     val _ = if isSuccess code1
+              then print(iverilog_command ^ "\n")
+              else print
+                    ("Warning:\n Process.system reports failure signal returned by\n "
+                     ^ iverilog_command ^ "\n")
+     val vvp_command = ((!vvp_path) ^ " " ^ vvp_file)
+     val code2 = Process.system vvp_command
+     val _ = if isSuccess code2
+              then print(vvp_command ^ "\n")
+              else print
+                    ("Warning:\n Process.system reports failure signal returned by\n "
+                     ^ vvp_command ^ "\n")
+ in
+  ()
+ end;
+
+(*****************************************************************************)
+(* Run cver on name.vl                                                       *)
+(*****************************************************************************)
+fun cver name =
+ let val cver_command = ((!cver_path) ^ " " ^ name ^ ".vl")
+     val code = Process.system cver_command
+     val _ = if isSuccess code
+              then print(cver_command ^ "\n")
+              else print
+                    ("Warning:\n Process.system reports failure signal returned by\n "
+                     ^ cver_command ^ "\n")
+ in
+  ()
+ end;
+
+(*****************************************************************************)
+(* Run gtkwave on name.vcd                                                   *)
+(*****************************************************************************)
+fun gtkwave name =
+ let val vcd_file = (name ^ ".vcd")
+     val gtkwave_command = ((!gtkwave_path) ^ " " ^ vcd_file ^ "&")
+     val code = Process.system gtkwave_command
+     val _ = if isSuccess code
+              then print(gtkwave_command ^ "\n")
+              else print
+                    ("Warning:\n Process.system reports failure signal returned by\n "
+                     ^ gtkwave_command ^ "\n")
+ in
+  ()
+ end;
+
+(*****************************************************************************)
+(* Run dinotrace on name.vcd                                                 *)
+(*****************************************************************************)
+fun dinotrace name =
+ let val vcd_file = (name ^ ".vcd")
+     val dinotrace_command = ((!dinotrace_path) ^ " " ^ vcd_file ^ "&")
+     val code = Process.system dinotrace_command
+     val _ = if isSuccess code
+              then print(dinotrace_command ^ "\n")
+              else print
+                    ("Warning:\n Process.system reports failure signal returned by\n "
+                     ^ dinotrace_command ^ "\n")
+ in
+  ()
+ end;
+
+(*
+val verilog_simulator = ref iverilog;
+val waveform_viewer   = ref gtkwave;
+*)
+
+val verilog_simulator = ref cver;
+val waveform_viewer   = ref dinotrace;
 
 (* Example for testing
 use "Ex3.ml";
@@ -1276,25 +1357,10 @@ and inputs = [("inp", "5")];
 val period_default   = ref 5;
 
 fun SIMULATE thm stimulus =
- let val name = fst(dest_const(#1(dest_cir thm)))
-     val vvp_file = (name ^ ".vvp")
-     val vcd_file = (name ^ ".vcd")
-     val _ = PRINT_SIMULATION thm (!period_default) stimulus
-     val iverilog_command = ((!iverilog_path) ^ " -o " ^ vvp_file ^ " " ^ name ^ ".vl")
-     val code1 = Process.system iverilog_command
-     val _ = if isSuccess code1
-              then print(iverilog_command ^ "\n")
-              else print("Warning:\n Process.system reports failure signal returned by\n " ^ iverilog_command ^ "\n")
-     val vvp_command = ((!vvp_path) ^ " " ^ vvp_file)
-     val code2 = Process.system vvp_command
-     val _ = if isSuccess code2
-              then print(vvp_command ^ "\n")
-              else print("Warning:\n Process.system reports failure signal returned by\n " ^ vvp_command ^ "\n")
-     val gtkwave_command = ((!gtkwave_path) ^ " -a " ^ vcd_file ^ "&")
-     val code3 = Process.system gtkwave_command
-     val _ = if isSuccess code3
-              then print(gtkwave_command ^ "\n")
-              else print("Warning:\n Process.system reports failure signal returned by\n " ^ gtkwave_command ^ "\n")
+ let val _ = PRINT_SIMULATION thm (!period_default) stimulus
+     val name = fst(dest_const(#1(dest_cir thm)))
+     val _ = (!verilog_simulator) name
+     val _ = (!waveform_viewer) name
  in
   ()
  end;

@@ -365,19 +365,49 @@ dumps Verilog using
 
  PRINT_SIMULATION thm (!period_default) [("inp1","val1"),...,("inpn","valn")]
 
-(see below). It then runs Icarus Verilog on fun.vl and then calls
-gtkwave on fun.vcd. It assumes the following are where iverilog, vvp
-and gtk are located:
+(see below). It then runs a Verilog simulator on fun.vl and then calls
+a waveform viewer on fun.vcd.
 
- val iverilog_path = ref "/usr/bin/iverilog";
- val vvp_path      = ref "/usr/bin/vvp";
- val gtkwave_path  = ref "/usr/bin/gtkwave";
+Currently iverilog (Icarus Verilog:
+http://www.icarus.com/eda/verilog/) and cver (GPL Cver:
+http://www.pragmatic-c.com/gpl-cver/) are supported as Verilog
+simulators and gtkwave (GTKWave:
+ftp://ftp.cs.man.ac.uk/pub/amulet/balsa/other-software/gtkwave-2.0.0pre5.tar.gz)
+and dinotrace (which comes with GPS Cver) as waveform viewers.
 
-Update these references if your versions are installed at different
-places. You can also change the references maxtime_default,
-period_default and stimulus_default, which are initially set by:
+GPS Cver and dinotrace are particularly easy to install, and are now
+the default.  To install them, connect to examples/dev and execute:
+
+ wget http://www.pragmatic-c.com/gpl-cver/downloads/gplcver-2.10c.linux.bin.tar.bz2;
+ bunzip2 gplcver-2.10c.linux.bin.tar.bz2;
+ tar -xf gplcver-2.10c.linux.bin.tar
+
+which should create a directory gplcver-2.10c.linux.bin.
+
+SIMULATE should then just work. Test by evaluating "use Fact.ml;" in hol,
+which should launch dinotrace showing a trace of FACT 4 being computed.
+
+You can change the default clock period, which is held in a reference
 
  val period_default   = ref 5;
+
+To change the default simulator and viewer change the references
+verilog_simulator and waveform_viewer. For example, to change to
+iverilog and gtkwave do:
+
+ val verilog_simulator = ref iverilog;
+ val waveform_viewer   = ref gtkwave;
+
+The executables are held in references, which have default values:
+
+ val iverilog_path   = ref "/usr/bin/iverilog";
+ val vvp_path        = ref "/usr/bin/vvp";
+ val gtkwave_path    = ref "/usr/bin/gtkwave -a";
+ val cver_path       = ref "./gplcver-2.10c.linux.bin/bin/cver";
+ val dinotrace_path  = ref "./gplcver-2.10c.linux.bin/bin/dinotrace";
+
+Note that cver_path and dinotrace_path are correct if the installation
+described above is performed.
 
 
 PRINT_SIMULATION : thm -> int -> (string * string) list -> unit
