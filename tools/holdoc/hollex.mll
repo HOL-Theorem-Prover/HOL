@@ -277,12 +277,11 @@ and
   textoken = parse
 
 (* this would be nice up front, but as the note says above, it's
-   wrong; instead, we put it at the end and break up the TeX into much
-   smaller fragments :-(
-
-    tnormal+ { TeXNormal (Lexing.lexeme lexbuf) }
-  |
-   *)
+ * wrong; instead, we put it at the end and break up the TeX into much
+ * smaller fragments :-(
+ *
+ *  tnormal+ { TeXNormal (Lexing.lexeme lexbuf) }
+ *)
 
     tstarthol      { fun _  -> ToHol(DelimHolTex) }
   | tstarthol0     { fun _  -> ToHol(DelimHolTexMath) }

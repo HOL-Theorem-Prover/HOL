@@ -10,6 +10,8 @@ open Simpledump
 open Mngdump
 
 
+(* see Net/TCP/Spec1/tags.txt for format and tag descriptions *)
+
 (* -------------------------------------------------------------------- *)
 (*  Diagnostics                                                         *)
 (* -------------------------------------------------------------------- *)
@@ -55,6 +57,11 @@ let ($) : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c
     = fun f g x ->
       f (g x)
 
+(* turn Not_found into None *)
+let maybe : ('a -> 'b) -> 'a -> 'b option
+  = fun f x
+ -> try Some(f x) with Not_found -> None
+
 
 (* -------------------------------------------------------------------- *)
 (*  High-level document model                                           *)
@@ -75,7 +82,7 @@ type rule_body =
 
 type rulesectioncomment_body =
     { c_name : string;
-      c_body : hol_content;
+      c_body : texdoc;
     }
 
 type definition_body =
@@ -310,19 +317,16 @@ let parse_Net_Hol_reln : hol_content list -> item list
         match ds with
           (HolSep("(") :: _) ->
             (let (r,ds) = parse_rule ds in
-            prerr_string ("Read rule "^r.r_name^"\n");
             let vs = Rule r :: vs in
             match ds with
               (HolIdent(false,"/\\")::ds) -> go vs ds
             | []                          -> List.rev vs
             | _ -> parsefail "/\\ or end of input" ("after parsing rule "^r.r_name) ds)
               (* section comment not allowed here; that belongs *above* the rules *)
-        | ((HolText _ as d) :: ds)
-        | ((HolTex  _ as d) :: ds) ->
+        | (HolTex ts :: ds) ->
             let ds = parse_sp' ds in
-            prerr_string ("Read section comment\n");
             go (RuleSectionComment { c_name = "";  (* filled in later  *)
-                                     c_body = d }::vs) ds
+                                     c_body = ts }::vs) ds
         | (HolIndent _ :: ds) ->
             go vs ds
         | (HolWhite _ :: ds) ->
@@ -413,6 +417,145 @@ let parseltsdoc : mosmldoc -> item list
       List.rev (parseltsdoc0 d [])
 
 
+(* -------------------------------------------------------------------- *)
+(*  LTS documentation mid-level model                                   *)
+(* -------------------------------------------------------------------- *)
+
+type ldoctag =
+    (* cluster comment tags *)
+    LdocPreamble
+  | LdocSection of string
+  | LdocErrors
+  | LdocError of string
+  | LdocSeealso of string
+  | LdocCommoncases
+  | LdocApi
+  | LdocModeldetails
+    (* rule comment tags *)
+  | LdocDescription
+(*| LdocModeldetails - as above *)
+  | LdocVariation of string
+  | LdocInternal
+
+
+(* list of tag, body pairs *)
+type ldoc_mid = (ldoctag * texdoc) list
+
+
+(* -------------------------------------------------------------------- *)
+(*  Parse LTS documentation - mid-level                                 *)
+(* -------------------------------------------------------------------- *)
+
+let white_re = Str.regexp "[ \t]+"
+let dir_re = Str.regexp "@\\([A-Za-z0-9_]*\\)"
+
+let rec parse_line0_rev : texdoc -> texdoc -> texdoc * texdoc
+    = fun seen ds ->
+      match ds with
+        []                         -> (seen,[])
+      | ((TexHol _    ) as d :: ds)
+      | ((TexDir _    ) as d :: ds) -> parse_line0_rev (d::seen) ds
+      | ((TexContent s) as d :: ds) ->
+          match maybe (String.index s) '\n' with
+            None                    -> parse_line0_rev (d::seen) ds
+          | Some i ->
+              (TexContent (String.sub s 0 i) :: seen,
+               TexContent (String.sub s (i+1) (String.length s - (i+1))) :: ds)
+
+(* returns the REVERSED parsed line and the remainder *)
+let parse_line_rev : texdoc -> texdoc * texdoc
+    = fun ds ->
+      parse_line0_rev [] ds
+
+
+let tidy : string -> string
+    = fun s ->
+      if Str.string_match white_re s 0 then
+        Str.string_after s (Str.match_end ())
+      else
+        s
+
+let assertempty : string -> string -> unit
+    = fun tag s ->
+      if tidy s <> "" then raise (ParseFail ("LDoc tag "^tag^": unexpected argument(s) "^s)) else ()
+
+
+let rec hasTag1 : string -> string -> texdoc -> ldoctag
+    = fun tag s ds ->
+      match ds with
+        (TexContent s' :: ds) -> hasTag1 tag (s^s') ds
+      | (d :: ds) -> raise (ParseFail ("LDoc tag "^tag^" given non-TeX argument "^dumptexdoc_content d))
+      | [] ->
+          match tag with
+            "section"      -> LdocSection (tidy s)
+          | "errors"       -> assertempty tag s; LdocErrors
+          | "error"        -> LdocError (tidy s)
+          | "seealso"      -> LdocSeealso (tidy s)
+          | "commoncases"  -> assertempty tag s; LdocCommoncases
+          | "api"          -> assertempty tag s; LdocApi
+          | "modeldetails" -> assertempty tag s; LdocModeldetails
+          | "description"  -> assertempty tag s; LdocDescription
+          | "variation"    -> LdocVariation (tidy s)
+          | "internal"     -> assertempty tag s; LdocInternal 
+          | _ -> raise (ParseFail ("unrecognised LDoc tag "^tag))
+
+
+(* assumes directive won't be broken across TexContent items *)
+let rec hasTag : texdoc -> ldoctag option
+    = fun ds ->
+      match ds with
+        [] -> None
+      | (TexHol _     :: ds)
+      | (TexDir _     :: ds) -> None
+      | (TexContent s :: ds) ->
+          if Str.string_match white_re s 0 then
+            let s' = Str.string_after s (Str.match_end ()) in
+            if s' = "" then hasTag ds else hasTag (TexContent s' :: ds)
+          else if Str.string_match dir_re s 0 then
+            let s' = Str.matched_group 1 s in
+            let s'' = Str.string_after s (Str.match_end ()) in
+            Some (hasTag1 s' s'' ds)
+          else
+            None
+            
+
+let rec ltsdoc0 : ldoctag -> texdoc -> texdoc -> ldoc_mid -> ldoc_mid
+    = fun tag seen ds ls ->
+      match ds with
+        [] -> List.rev ((tag,List.rev seen)::ls)
+      | _  ->
+          let (line_rev,ds) = parse_line_rev ds in
+          match hasTag (List.rev line_rev) with
+            None      -> ltsdoc0 tag (line_rev @ seen) ds ls
+          | Some tag' -> ltsdoc0 tag' [] ds ((tag,List.rev seen)::ls)
+                
+let ltsdoc : texdoc -> ldoc_mid
+    = fun ds ->
+      ltsdoc0 LdocPreamble [] ds []
+
+
+(* -------------------------------------------------------------------- *)
+(*  LTS documentation high-level model                                  *)
+(* -------------------------------------------------------------------- *)
+
+type ldoc_cluster =
+    { ldc_sectionname : string;
+      ldc_preamble : texdoc;
+      ldc_errors_preamble : texdoc;
+      ldc_errors : (string * texdoc) list;
+      ldc_seealso : (string * texdoc) list;
+      ldc_commoncases : texdoc;
+      ldc_api : texdoc;
+      ldc_modeldetails : texdoc;
+    }
+
+type ldoc_rule =
+    { ldr_description : texdoc;
+      ldr_modeldetails : texdoc;
+      ldr_variation : (string * texdoc) list;
+      ldr_internal : texdoc;
+    }
+
 
 (* -------------------------------------------------------------------- *)
 (*  Render whole file                                                   *)
@@ -470,7 +613,7 @@ let renderitem : item -> string option
       | RuleSectionComment c ->
           let cmd = texify_command "seccomm" c.c_name in
           wrap ("\\newcommand{"^cmd^"}{\\seccomm{") "}}\n\n"
-            (munge_hol_content []) c.c_body;
+            (munge_hol_content []) (HolTex c.c_body);
           Some cmd
       | Definition d ->
           let cmd = texify_command "defn" d.d_name in
