@@ -158,7 +158,6 @@ val is_pairmap = can dest_pairmap;
 (* Constructor, destructor and discriminator functions for paired            *)
 (* abstractions and ordinary abstractions.                                   *)
 (* [JRH 91.07.17]                                                            *)
-(* Intentionally named so as to replace the existing operations on binders.  *)
 (*---------------------------------------------------------------------------*)
 
 fun mk_pabs(vstruct,body) =
@@ -246,8 +245,6 @@ val strip_pexists = strip (total dest_pexists);
 
 (*---------------------------------------------------------------------------
      A "vstruct" is a tuple of variables, with no duplicate occurrences.
-     Later in this file, we lift definition principles so that they 
-     allow varstructs on the left-hand-sides of definitions.
  ---------------------------------------------------------------------------*)
 
 local fun check [] = true

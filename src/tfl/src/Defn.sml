@@ -577,7 +577,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      (* make parameterized definition *)
      val (Name,Ty) = Lib.trye dest_var f
      val aux_name = Name^"_aux"
-     val faux = mk_var(aux_name,itlist (curry (op-->))(map type_of (R1::SV)) Ty)
+     val faux = mk_var(aux_name,itlist(curry(op-->)) (map type_of (R1::SV)) Ty)
      val aux_bindstem = auxStem bindstem
      val (def,theory) =
            make_definition thy (defSuffix aux_bindstem)
@@ -744,10 +744,10 @@ fun mutrec thy bindstem eqns =
       val mut_name = unionStem bindstem
       val mut = mk_var(mut_name, mut_dom --> mut_rng)
       fun inform (f,(doml,rng)) =
-         let val s = fst(dest_atom f)
-         in if 1<length doml
-             then (f, (mk_var(s^"_tupled",list_mk_prod_type doml --> rng),doml))
-             else (f, (f,doml))
+        let val s = fst(dest_atom f)
+        in if 1<length doml
+            then (f, (mk_var(s^"_tupled",list_mk_prod_type doml --> rng),doml))
+            else (f, (f,doml))
          end
       val eqns' = tuple_args (map inform lhs_info1) eqns
       val eqnl' = strip_conj eqns'
