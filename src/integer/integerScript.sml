@@ -3045,7 +3045,7 @@ val INT_EXP_REDUCE = store_thm(
   "INT_EXP_REDUCE",
   Term`!n m p:int.
           (p ** 0 = 1) /\
-          (&(NUMERAL n):int ** m = &(n EXP m)) /\
+          (&(NUMERAL n):int ** (NUMERAL m) = &(NUMERAL (n EXP m))) /\
           (~&(NUMERAL n) ** NUMERAL (NUMERAL_BIT1 m) =
              ~&(NUMERAL (n EXP NUMERAL_BIT1 m))) /\
           (~&(NUMERAL n) ** NUMERAL (NUMERAL_BIT2 m) =
