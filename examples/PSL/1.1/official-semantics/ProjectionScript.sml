@@ -27,6 +27,8 @@ map load
   "LemmasTheory","RewritesPropertiesTheory"];
 open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
+     arithmeticTheory whileTheory listTheory rich_listTheory 
+     res_quanLib res_quanTheory
      arithmeticTheory listTheory whileTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory LemmasTheory RewritesPropertiesTheory;
 val _ = intLib.deprecate_int();
@@ -44,6 +46,8 @@ open HolKernel Parse boolLib bossLib;
 ******************************************************************************)
 open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
+     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
+     whileTheory ClockedSemanticsTheory LemmasTheory RewritesPropertiesTheory
      arithmeticTheory listTheory whileTheory rich_listTheory res_quanLib 
      res_quanTheory ClockedSemanticsTheory LemmasTheory 
      RewritesPropertiesTheory;
