@@ -94,6 +94,7 @@ val pp_flags = {show_types     = ref false,
  *---------------------------------------------------------------------------*)
 
 val show_types = #show_types pp_flags;
+val show_types_verbosely = ref false;
 
 
 (*---------------------------------------------------------------------------*
