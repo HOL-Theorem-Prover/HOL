@@ -99,70 +99,73 @@ end
 (* NEQ_CONV "[x] = [y]" = |- ([x] = [y]) = [x=y -> T | F]                *)
 (*-----------------------------------------------------------------------*)
 
-fun NEQ_CONV tm = let
+local val NEQ_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_eq])
 in
-  case (dest_op neqop tm) of
-    [xn,yn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_eq]) tm
-                handle HOL_ERR _ => failwith "NEQ_CONV")
-  | _ => failwith "NEQ_CONV"
+fun NEQ_CONV tm = 
+  case dest_op neqop tm
+   of [xn,yn] => (NEQ_RW tm handle HOL_ERR _ => failwith "NEQ_CONV")
+    |    _    => failwith "NEQ_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
 (* LT_CONV "[x] < [y]" = |- ([x] < [y]) = [x<y -> T | F]                 *)
 (*-----------------------------------------------------------------------*)
 
-fun LT_CONV tm = let
+local val LT_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lt])
 in
-  case (dest_op ltop tm) of
-    [xn,yn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lt]) tm
-                handle HOL_ERR _ => failwith "LT_CONV")
-  | _ => failwith "LT_CONV"
+fun LT_CONV tm = 
+  case dest_op ltop tm
+   of [xn,yn] => (LT_RW tm handle HOL_ERR _ => failwith "LT_CONV")
+    |   _     => failwith "LT_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
 (* GT_CONV "[x] > [y]" = |- ([x] > [y]) = [x>y -> T | F]                 *)
 (*-----------------------------------------------------------------------*)
 
-fun GT_CONV tm = let
+local val GT_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lt])
 in
-  case (dest_op gtop tm) of
-    [_, _] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lt]) tm
-               handle HOL_ERR _ => failwith "GT_CONV")
-    | _ => failwith "GT_CONV"
+fun GT_CONV tm =
+  case dest_op gtop tm
+   of [_, _] => (GT_RW tm handle HOL_ERR _ => failwith "GT_CONV")
+    |   _    => failwith "GT_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
 (* LE_CONV "[x] <= [y]" = |- ([x]<=> [y]) = [x<=y -> T | F]              *)
 (*-----------------------------------------------------------------------*)
 
-fun LE_CONV tm = let
+local val LE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lte])
 in
-  case (dest_op leop tm) of
-    [xn,yn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lte]) tm
-                handle HOL_ERR _ => failwith "LE_CONV")
-    | _ => failwith "LE_CONV"
+fun LE_CONV tm =
+  case dest_op leop tm
+   of [xn,yn] => (LE_RW tm handle HOL_ERR _ => failwith "LE_CONV")
+    |    _    => failwith "LE_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
 (* GE_CONV "[x] >= [y]" = |- ([x] >= [y]) = [x>=y -> T | F]              *)
 (*-----------------------------------------------------------------------*)
 
-fun GE_CONV tm = let
+local val GE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lte])
 in
-  case (dest_op geop tm) of
-    [xn,yn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lte]) tm
-                handle HOL_ERR _ => failwith "GE_CONV")
-    | _ => failwith "GE_CONV"
+fun GE_CONV tm =
+  case dest_op geop tm 
+   of [xn,yn] => (GE_RW tm handle HOL_ERR _ => failwith "GE_CONV")
+    |    _    => failwith "GE_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
 (* SUC_CONV "SUC [x]" = |- SUC [x] = [x+1]                               *)
 (*-----------------------------------------------------------------------*)
 
+local val SUC_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_suc])
+in
 fun SUC_CONV tm =
- case (dest_op sucop tm) of
-   [xn] => TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_suc]) tm
- | _ => failwith "SUC_CONV"
+ case dest_op sucop tm
+  of [xn] => SUC_RW tm
+   |  _   => failwith "SUC_CONV"
+end;
 
 (*-----------------------------------------------------------------------*)
 (* PRE_CONV "PRE [n]" = |- PRE [n] = [n-1]                               *)
@@ -171,63 +174,77 @@ fun SUC_CONV tm =
 val save_zero = prove(Term`NUMERAL ALT_ZERO = 0`,
                       REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
                                    arithmeticTheory.ALT_ZERO]);
-
+local 
+ val PRE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_pre,save_zero])
+in
 fun PRE_CONV tm =
-  case (dest_op preop tm) of
-    [xn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_pre,
-                                     save_zero]) tm
-             handle HOL_ERR _ => failwith "PRE_CONV")
-  | _ => failwith "PRE_CONV"
+  case dest_op preop tm
+   of [xn] => (PRE_RW tm handle HOL_ERR _ => failwith "PRE_CONV")
+    |  _   => failwith "PRE_CONV"
+end;
 
 (*-----------------------------------------------------------------------*)
 (* SBC_CONV "[x] - [y]" = |- ([x] - [y]) = [x - y]                       *)
 (*-----------------------------------------------------------------------*)
 
+local 
+ val SBC_RW = 
+   TFN_CONV (REWRITE_CONV 
+       [numeral_distrib, numeral_sub,iSUB_THM, 
+        iDUB_removal,numeral_pre, numeral_lt])
+in
 fun SBC_CONV tm =
-  case (dest_op minusop tm) of
-    [xn,yn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_sub,
-                                        iSUB_THM, iDUB_removal,
-                                        numeral_pre, numeral_lt]) tm
-                handle HOL_ERR _ => failwith "SBC_CONV")
-    | _ => failwith "SBC_CONV"
+  case dest_op minusop tm
+   of [xn,yn] => (SBC_RW tm handle HOL_ERR _ => failwith "SBC_CONV")
+    |    _    => failwith "SBC_CONV"
+end;
 
 (*-----------------------------------------------------------------------*)
 (* ADD_CONV "[x] + [y]" = |- [x] + [y] = [x+y]                           *)
 (*-----------------------------------------------------------------------*)
 
+local 
+ val ADD_RW = 
+   TFN_CONV (REWRITE_CONV 
+      [numeral_distrib, numeral_add,numeral_suc, numeral_iisuc])
+in
 fun ADD_CONV tm =
-  case (dest_op plusop tm) of
-    [xn, yn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_add,
-                                         numeral_suc, numeral_iisuc]) tm
-                 handle HOL_ERR _ => failwith "ADD_CONV")
-  | _ => failwith "ADD_CONV"
+  case dest_op plusop tm 
+   of [xn, yn] => (ADD_RW tm handle HOL_ERR _ => failwith "ADD_CONV")
+    |    _     => failwith "ADD_CONV"
+end;
 
 (*-----------------------------------------------------------------------*)
 (* MUL_CONV "[x] * [y]" = |- [x] * [y] = [x * y]                         *)
 (*-----------------------------------------------------------------------*)
 
+local
+  val MUL_RW = 
+    TFN_CONV (REWRITE_CONV 
+      [numeral_distrib, numeral_add, numeral_suc, 
+       numeral_iisuc, numeral_mult, iDUB_removal, numeral_pre])
+in
 fun MUL_CONV tm =
-  case (dest_op multop tm) of
-    [xn,yn] => (TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_add,
-                                        numeral_suc, numeral_iisuc,
-                                        numeral_mult, iDUB_removal,
-                                        numeral_pre]) tm
-                handle HOL_ERR _ => failwith "MUL_CONV")
-  | _ => failwith "MUL_CONV"
+  case dest_op multop tm
+   of [xn,yn] => (MUL_RW tm handle HOL_ERR _ => failwith "MUL_CONV")
+    |    _    => failwith "MUL_CONV"
+end;
 
 (*-----------------------------------------------------------------------*)
 (* EXP_CONV "[x] EXP [y]" = |- [x] EXP [y] = [x ** y]                    *)
 (*-----------------------------------------------------------------------*)
 
+local 
+ val RW1 = REWRITE_CONV [numeral_distrib, numeral_exp]
+ val RW2 = REWRITE_CONV [numeral_add, numeral_suc, numeral_iisuc,
+                         numeral_mult, iDUB_removal, numeral_pre, iSQR]
+ val EXP_RW = TFN_CONV (RW1 THENC RW2)
+in
 fun EXP_CONV tm =
-  case (dest_op expop tm) of
-    [xn,yn] => (TFN_CONV
-                (REWRITE_CONV [numeral_distrib, numeral_exp] THENC
-                 REWRITE_CONV [numeral_add, numeral_suc, numeral_iisuc,
-                               numeral_mult, iDUB_removal, numeral_pre,
-                               iSQR]) tm
-                handle HOL_ERR _ => failwith "EXP_CONV")
-   | _ => failwith "EXP_CONV"
+  case dest_op expop tm
+   of [xn,yn] => (EXP_RW tm handle HOL_ERR _ => failwith "EXP_CONV")
+    |    _    => failwith "EXP_CONV"
+end;
 
 (*-----------------------------------------------------------------------*)
 (* DIV_CONV "[x] DIV [y]" = |- [x] DIV [y] = [x div y]                   *)
@@ -284,7 +301,7 @@ let val modt =
 	  REPEAT DISCH_TAC THEN
 	  MATCH_MP_TAC (arithmeticTheory.MOD_UNIQUE) THEN
 	  EXISTS_TAC (--`q:num`--) THEN ASM_REWRITE_TAC[])
-    and modop = (--`$MOD`--)
+    and modop  = (--`$MOD`--)
     and multop = (--`$*`--)
     and plusop = (--`$+`--)
 in
