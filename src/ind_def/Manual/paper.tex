@@ -1,4 +1,5 @@
-\documentstyle[alltt,twocolumn,fleqn,layout]{article}
+\documentclass[twocolumn,fleqn,layout]{article}
+\usepackage{alltt}
 
 \pagestyle{plain}
 \flushbottom
@@ -26,7 +27,7 @@ Cambridge, CB2 3QG, England.\\
 \vskip3mm
 \end{center}]
 
-\subsection*{\centering Abstract} 
+\subsection*{\centering Abstract}
 
 {\it\sloppy This paper describes a set of theorem proving tools based on a new
 derived principle of definition in HOL, namely the introduction of relations
@@ -89,7 +90,7 @@ closure of $R$ can be defined to be the least relation $R^{*} \subseteq A
    \hbox{{\small\bf R}\bf 1}\quad\Rule{}{R^{*}(x,y)}\;\; R(x,y) \\[6mm]
    \hbox{{\small\bf R}\bf 2}\quad\Rule{}{R^{*}(x,x)}\\[8mm]
    \hbox{{\small\bf R}\bf 3}\quad\Rule{R^{*}(x,z)\qquad R^{*}(z,y)}
-         {R^{*}(x,y)} 
+         {R^{*}(x,y)}
 \end{array} \]
 
 \medskip
@@ -117,7 +118,7 @@ then one can show that the intersection of any set of relations that satisfy
 the rules also satisfies the rules.  Moreover, at least one binary relation
 satisfies the rules, namely the maximal relation $A \times A$. The `least' or
 smallest relation that satisfies the rules may therefore legitimately be
-defined to be the intersection of all such relations.  
+defined to be the intersection of all such relations.
 
 In general, an inductive definition of an $n$-place \mbox{relation} $R$
 consists of a set of rules of the form:
@@ -145,17 +146,17 @@ By virtue of its definition as the {\it least\/} relation closed under a set of
 rules, every inductively defined relation comes with an associated induction
 principle.  This principle of {\it rule induction\/} is essential for many
 proofs involving such relations. (The term `rule induction' was coined by Glynn
-Winskel in~\cite{winskel}). 
+Winskel in~\cite{winskel}).
 
 The principle of rule induction for an inductively defined relation may be
 stated briefly as follows. Let $R$ be an $n$-place relation inductively defined
 by a set of rules, and suppose we wish to show that every element in $R$ has a
 certain property $P$:
 
-{\samepage 
+{\samepage
 \begin{equation}\label{fact1}
 \hbox{\rm
-if}\;\;R(x_1,\dots,x_n)\;\;\hbox{then}\;\;P[x_1,\dots,x_n] 
+if}\;\;R(x_1,\dots,x_n)\;\;\hbox{then}\;\;P[x_1,\dots,x_n]
 \end{equation}
 
 \noindent Since $R$ is} \pagebreak[3] the least relation closed under the
@@ -178,7 +179,7 @@ $x$ and $y$ for which $R^{*}(x,y)$, it suffices to show that:
 
 \item for all $x$ and $y$, $R(x,y)$ implies $P[x,y]$
 
-\item for all $x$, $P[x,x]$ 
+\item for all $x$, $P[x,x]$
 
 \item for all $x$, $y$, and $z$, $P[x,z]$ and $P[z,y]$ imply $P[x,y]$
 
@@ -211,7 +212,7 @@ closed under the rules defining the reflexive-transitive closure of $R$:
 \[\begin{array}[t]{@{}l}
  (\forall x\:y.\:R\;x\;y \supset P\;x\;y)\; \wedge \\
  (\forall x.\:P\;x\;x)\; \wedge \\
- (\forall x\:y.\:(\exists z.\:P\;x\;z \wedge P\;z\;y) \supset P\;x\;y) 
+ (\forall x\:y.\:(\exists z.\:P\;x\;z \wedge P\;z\;y) \supset P\;x\;y)
 \end{array}\]
 \smallskip
 
@@ -272,7 +273,7 @@ obligation is to show that:
    \vdash \forall R\:x.\:{\sf Rtc}\;R\;x\;x \\[2mm]
    \vdash \forall R\:x\:y.\:
         (\exists z.\:{\sf Rtc}\;R\;x\;z \wedge {\sf Rtc}\;R\;z\;y) \supset
-        {\sf Rtc}\;R\;x\;y 
+        {\sf Rtc}\;R\;x\;y
 \end{array}\]
 
 \noindent That is, one must prove that the rules {{\small\bf R}\bf 1},
@@ -372,7 +373,7 @@ The following example {\small HOL} session shows how the function
 even natural numbers.
 
 \begin{session}\begin{verbatim}
-#let (rules,ind) = 
+#let (rules,ind) =
    let Even = "Even:num->bool" in
    new_inductive_definition false `Even`
    ("^Even n", [])
@@ -395,12 +396,13 @@ are \mbox{exactly} those numbers obtainable from zero by adding multiples of
 two, these rules inductively define `\verb!Even n!' such that it holds
 \mbox{precisely} when \verb!n! is even.
 
-The value supplied for the pattern in this example is the pair \verb!("Even
-n",[])!.  The first component of this pair indicates that the constant to be
-defined, namely \verb!Even!, is a one-place function with typical argument
-\verb!n!.  In general, the second component of a pattern is a non-empty list
-only when a {\it class\/} of relations is being defined (see below).  In this
-example, {\verb!Even!} is a single inductively-defined predicate, and the list
+The value supplied for the pattern in this example is the pair
+\verb!("Even n",[])!.  The first component of this pair indicates that
+the constant to be defined, namely \verb!Even!, is a one-place
+function with typical argument \verb!n!.  In general, the second
+component of a pattern is a non-empty list only when a {\it class\/}
+of relations is being defined (see below).  In this example,
+{\verb!Even!} is a single inductively-defined predicate, and the list
 component of the pattern is therefore empty.
 
 
@@ -411,11 +413,11 @@ predicate closed under the given list of rules and then defines the constant
 theorems about \verb!Even! are then returned:
 
 \begin{session}\begin{alltt}
-rules = 
-[\(\vdash\) Even 0; 
+rules =
+[\(\vdash\) Even 0;
  \(\vdash\) \(\forall\,\)n. Even n \(\supset\) Even(n + 2)] : thm list
-ind = 
-\(\vdash\) \(\forall\,\)P. P 0 \(\wedge\) (\(\forall\,\)n. P n \(\supset\) P(n + 2)) \(\supset\) 
+ind =
+\(\vdash\) \(\forall\,\)P. P 0 \(\wedge\) (\(\forall\,\)n. P n \(\supset\) P(n + 2)) \(\supset\)
       \(\,\)(\(\forall\,\)n. Even n \(\supset\) P n)
 \end{alltt}\end{session}
 
@@ -436,7 +438,7 @@ The constant {\sf Rtc} defined in section~\ref{in-logic} is not itself an
 inductively-defined relation, but rather a function that maps an arbitrary
 relation $R$ to an inductively-defined relation ${\sf Rtc}\;R$.  The function
 {\sf Rtc} therefore represents an entire class of inductively-defined
-relations, one for each possible value of $R$.  
+relations, one for each possible value of $R$.
 
 The information that is required by the derived rule
 \verb!new_inductive_definition! in order to handle the definition of such
@@ -462,10 +464,10 @@ is provided by the following definition of reflexive-transitive closure in
 #let (rules,ind) =
    let Rtc = "Rtc:(*->*->bool)->*->*->bool"
  in
-   new_inductive_definition false `Rtc` 
+   new_inductive_definition false `Rtc`
    ("^Rtc R x y", ["R:*->*->bool"])
 
-   [ [      "R (x:*) (y:*):bool"          
+   [ [      "R (x:*) (y:*):bool"
      % ----------------------------- % ],
                "^Rtc R x y"          ;
 
@@ -473,7 +475,7 @@ is provided by the following definition of reflexive-transitive closure in
      %------------------------------ % ],
                "^Rtc R x x"          ;
 
-     [  "^Rtc R x z";  "^Rtc R z y"  
+     [  "^Rtc R x z";  "^Rtc R z y"
      %------------------------------ % ],
                "^Rtc R x y"          ];;
 \end{verbatim}\end{session}
@@ -499,17 +501,17 @@ The result of evaluating this inductive definition in {\small HOL} is the
 following collection of theorems:
 
 \begin{session}\begin{alltt}
-rules = 
+rules =
 [\(\vdash\) \(\forall\,\)R x y. R x y \(\supset\) Rtc R x y;
  \(\vdash\) \(\forall\,\)R x. Rtc R x x;
- \(\vdash\) \(\forall\,\)R x y. (\(\exists\,\)z. Rtc R x z \(\wedge\) Rtc R z y) 
+ \(\vdash\) \(\forall\,\)R x y. (\(\exists\,\)z. Rtc R x z \(\wedge\) Rtc R z y)
               \(\supset\)
             Rtc R x y] : thm list
-ind = 
+ind =
 \(\vdash\) \(\forall\,\)R P.
    (\(\forall\,\)x y. R x y \(\supset\) P x y) \(\wedge\)
    (\(\forall\,\)x. P x x) \(\wedge\)
-   (\(\forall\,\)x y. (\(\exists\,\)z. P x z \(\wedge\) P z y) \(\supset\) P x y) 
+   (\(\forall\,\)x y. (\(\exists\,\)z. P x z \(\wedge\) P z y) \(\supset\) P x y)
       \(\supset\)
    (\(\forall\,\)x y. Rtc R x y \(\supset\) P x y)
 \end{alltt}\end{session}
@@ -526,7 +528,7 @@ In addition to the use of the pattern argument, the \verb!Rtc! example also
 illustrates a restriction on the form in which the premisses and conclusions of
 rules must be supplied to \verb!new_inductive_definition!.  As was mentioned
 above, premisses and conclusions must be positive assertions of membership of
-the form 
+the form
 
 \medskip
 
@@ -542,15 +544,15 @@ occur at \mbox{positions} which, according to the supplied pattern,
 the terms that occur at these positions must be the same variables given in the
 pattern itself.
 
-The rules for reflexive-transitive closure shown in box 3 conform to this
-restriction.  Here, the pattern indicates that in the typical assertion of
-membership \verb!"Rtc R x y"! (i.e.\ the first component of the pattern), the
-variable \verb!R! marks the position of a parameter to the class of relations
-to be defined.  Every premiss and conclusion mentioned in the rules must
-therefore be a term of the form $\hbox{\verb!"Rtc
-R!}\;\,t_1\;\,t_2\hbox{\verb!"!}$, where the arguments $t_1$ and $t_2$ may be
-arbitrary terms but the parameter \verb!R! must be the variable given in the
-pattern.
+The rules for reflexive-transitive closure shown in box 3 conform to
+this restriction.  Here, the pattern indicates that in the typical
+assertion of membership \verb!"Rtc R x y"! (i.e.\ the first component
+of the pattern), the variable \verb!R! marks the position of a
+parameter to the class of relations to be defined.  Every premiss and
+conclusion mentioned in the rules must therefore be a term of the form
+$\hbox{\verb!"Rtc R!}\;\,t_1\;\,t_2\hbox{\verb!"!}$, where the
+arguments $t_1$ and $t_2$ may be arbitrary terms but the parameter
+\verb!R! must be the variable given in the pattern.
 
 \section{A tactic for rule induction}
 
@@ -598,7 +600,7 @@ the rules that inductively define $R$.  The rule induction theorem for
 \(\vdash\) \(\forall\,\)R P.
    (\(\forall\,\)x y. R x y \(\supset\) P x y) \(\wedge\)
    (\(\forall\,\)x. P x x) \(\wedge\)
-   (\(\forall\,\)x y. (\(\exists\,\)z. P x z \(\wedge\) P z y) \(\supset\) P x y) 
+   (\(\forall\,\)x y. (\(\exists\,\)z. P x z \(\wedge\) P z y) \(\supset\) P x y)
       \(\supset\)
    (\(\forall\,\)x y. Rtc R x y \(\supset\) P x y)
 \end{alltt}\end{session}
@@ -607,7 +609,7 @@ the rules that inductively define $R$.  The rule induction theorem for
 theorem by making the simple {\small ML} definition:
 
 \begin{session}\begin{alltt}
-#let Rtc_INDUCT_TAC = 
+#let Rtc_INDUCT_TAC =
    RULE_INDUCT_THEN ind
       ASSUME_TAC ASSUME_TAC;;
 Rtc_INDUCT_TAC = - : tactic
@@ -774,7 +776,7 @@ inference rule:
 $\Gamma_1\;{\vdash}\;$\verb!Rtc!$\;R\;x\;z$\qquad
 $\Gamma_2\;{\vdash}\;$\verb!Rtc!$\;R\;z\;y$\\
 \rrule{62mm}\\
-$\Gamma_1 \cup \Gamma_2\;{\vdash}\;$\verb!Rtc!$\;R\;x\;y$ 
+$\Gamma_1 \cup \Gamma_2\;{\vdash}\;$\verb!Rtc!$\;R\;x\;y$
 \end{tabular}
 
 \bigskip
@@ -821,14 +823,14 @@ bindings shown above in box~4.
 #derive_cases_thm (rules,ind);;
 \(\vdash\) \(\forall\,\)R x y.
     Rtc R x y \(\supset\)
-      R x y   \(\vee\) 
-      (y = x) \(\vee\) 
+      R x y   \(\vee\)
+      (y = x) \(\vee\)
       (\(\exists\,\)z. Rtc R x z \(\wedge\) Rtc R z y)
 \end{alltt}\end{session}
 
 \smallskip
 
-\noindent Roughly speaking, the resulting theorem states that if 
+\noindent Roughly speaking, the resulting theorem states that if
 \verb!Rtc R x y! holds, then either:
 
 \begin{itemize}
@@ -871,20 +873,20 @@ examples will be made available to interested users.
 
 \begin{thebibliography}{9}
 
-\bibitem{description} 
+\bibitem{description}
 DSTO, The University of Cambridge, and SRI
 \mbox{International}, {\it The HOL System: DESCRIPTION} (1991).
 
-\bibitem{melham} 
-T.\ F.\ Melham, `Automating Recursive Type Definitions 
+\bibitem{melham}
+T.\ F.\ Melham, `Automating Recursive Type Definitions
 in Higher Order Logic',
 in: {\it Current Trends in Hardware Verification and
-Automated Theorem Proving\/}, edited by G.\ Birtwistle 
+Automated Theorem Proving\/}, edited by G.\ Birtwistle
 and P.A.\ Subrahmanyam
 (Springer-Verlag, 1989), pp.\ 341--386.
 
 \bibitem{pitts}
-A.\ M.\ Pitts, `Semantics of Programming Languages', 
+A.\ M.\ Pitts, `Semantics of Programming Languages',
 unpublished lecture notes, University of Cambridge Computer Laboratory
 (October 1989).
 
