@@ -323,6 +323,19 @@ Wish list
   symbols bracket-match which other eg to cope with <<   <=  >>
   correctly.
 
+- have munging be modal - eg, in the semantics notes, sometimes I'm
+  writing general rules etc, in which x,y,z denote metavariables that
+  should be typeset italic, and sometimes concrete expressions in
+  which x,y,z are object variables that should be set upright.  At
+  present I define extra xx,yy, etc for the concrete ones, which is a
+  usable workaround.  In this case the modes share almost all of the
+  .imn.   Not sure how to invoke - maybe <[* ... ]> <[** ...]> etc?
+  (ie, mode names are strings of non-alphanumerics that don't clash
+  too badly with brackets...).
+
+
+
+
 
  --==[ THE END ]==--
 
