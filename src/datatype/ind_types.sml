@@ -4,15 +4,25 @@
 (*       John Harrison, University of Cambridge Computer Laboratory          *)
 (*                                                                           *)
 (*            (c) Copyright, University of Cambridge 1998                    *)
+(*                                                                           *)
+(* ported from Caml Light source by Michael Norrish, November 1999           *)
 (* ========================================================================= *)
 
-(* ported from Caml Light source by Michael Norrish, November 1999           *)
+(* 
+   app load ["HOLSimps", "Q", "numLib", "IndDefLib", "tautLib"] 
+*)
 
-(* app load ["HOLSimps", "Q", "numLib", "IndDefLib", "tautLib"] *)
+structure ind_types :> ind_types =
+struct
 
 open HolKernel basicHol90Lib Parse Psyntax
 open numTheory arithmeticTheory prim_recTheory simpLib boolSimps
 open jrh_simplelib ind_typeTheory
+
+type hol_type     = Type.hol_type
+type thm          = Thm.thm
+type constructor  = string * hol_type list
+type tyspec       = hol_type * constructor list
 
 infix F_F THEN THENC THENL |-> ORELSEC
 infixr -->;
@@ -1404,7 +1414,9 @@ in
     and rth1 = GENL tavs (SUBS cdefs (SPECL tavs rth0))
     val retval = (p,ith1,rth1)
   in
-    (fn (a,b,c) => (munge_ind_thm b, canonicalise_tyvars def c)) retval
+    {induction = munge_ind_thm ith1,
+     recursion = canonicalise_tyvars def rth1}
+(*     (fn (a,b,c) => (munge_ind_thm b, canonicalise_tyvars def c)) retval *)
   end
 end
 
@@ -1447,3 +1459,4 @@ val define_type = define_type_nested
    val (bozz_ind, bozz_rec) = define_type_nested def;
 
 *)
+end;
