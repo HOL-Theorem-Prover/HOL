@@ -1,12 +1,11 @@
-\DOC ##
+\DOC {##}
 
 \TYPE {## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd}
 
 \SYNOPSIS Combinator that pairs two functions
 
 \DESCRIBE
-
-An application {(f ## g) (x,y)} equals {(f x, g y)}. 
+An application {(f ## g) (x,y)} equals {(f x, g y)}.
 
 \FAILURE
 
@@ -20,9 +19,9 @@ An application {(f ## g) (x,y)} fails if {f x} fails or {g y} fails.
 }
 
 \COMMENTS
-
 The {##} function can be understood as a `map' operation on pairs.
 
-\SEEALSO Lib, fst, snd
+\SEEALSO
+Lib, fst, snd
 
 \ENDDOC
