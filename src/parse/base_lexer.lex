@@ -58,7 +58,7 @@ let locpragma = "(*#loc" space+ numeric* space+ numeric* space* "*)"
 rule base_token =
    parse
 
-   ident `$` anysymb  { fn st =>
+   ident `$` (anysymb|numeric+)  { fn st =>
      let val l = String.tokens (fn c => c = #"$") (getLexeme lexbuf)
      in (BT_QIdent (hd l, hd (tl l)),getLoc st lexbuf) end }
  | locpragma { dolocpragma base_token lexbuf } (* must come before paren-star *)
