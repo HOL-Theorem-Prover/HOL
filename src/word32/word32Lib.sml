@@ -56,7 +56,7 @@ local
   fun to_hex_char n = let
       val p = Arbnum.toInt (Arbnum.mod(n,base))
     in
-      str (if p < 10 then chr (ord #"0" + p) else chr (ord #"a" + p - 10))
+      str (if p < 10 then chr (ord #"0" + p) else chr (ord #"A" + p - 10))
     end
   fun to_hex_string n = let
       val s = to_hex_char n
