@@ -129,9 +129,9 @@ val bool_ss = pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss;
 
 
 val COND_COND_SAME = prove(
-  Term`!P (f:'a->'b) g x y. 
-        (COND P f g) (COND P x y) 
-           = 
+  Term`!P (f:'a->'b) g x y.
+        (COND P f g) (COND P x y)
+           =
         COND P (f x) (g y)`,
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
 
@@ -152,6 +152,23 @@ val COND_elim_ss =
                    dprocs = [], filter = NONE,
                    rewrs = [boolTheory.COND_RATOR, boolTheory.COND_EXPAND,
                             COND_COND_SAME]}
+
+(* ----------------------------------------------------------------------
+ * CONJ_ss
+ *
+ * A congruence rule for /\.  This allows one side of a conjunction to be
+ * assumed while rewriting the other.  This is typically useful when
+ * attacking a goal of the form (x = ..) /\ ... x ...
+ *
+ * Very inefficient on terms with many conjunctions chained together
+ *)
+
+val CONJ_ss = SIMPSET {
+  ac = [],
+  congs = [TAUT ``(P ==> (Q = Q')) ==> (Q' ==> (P = P')) ==>
+                  ((P /\ Q) = (P' /\ Q'))``],
+  convs = [], dprocs = [], filter = NONE, rewrs = []}
+
 
 end (* struct *)
 
