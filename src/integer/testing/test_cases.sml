@@ -6,6 +6,7 @@ open HolKernel Parse;
 
 fun test_term c (n,t) = let
   val _ = print (StringCvt.padRight #" " 25 n)
+  val _ = Profile.reset_all()
   val timer = Timer.startCPUTimer ()
   val result = SOME (SOME (c t))
     handle Interrupt => SOME NONE
@@ -19,7 +20,17 @@ fun test_term c (n,t) = let
   val _ = print (StringCvt.padRight #" " 17 verdict)
   val pl = StringCvt.padLeft #" " 6
   val _ = print (pl (Time.toString usr)^" "^pl (Time.toString sys)^" "^
-                 pl (Time.toString gc)^"\n")
+                 pl (Time.toString gc))
+  val pushtime =
+      #usr (Lib.assoc "push_in" (Profile.results()))
+      handle HOL_ERR _ => Time.fromReal 0.0
+  val usrms = Time.toReal usr
+  val pushms = Time.toReal pushtime
+  val percent =
+      StringCvt.padLeft #" " 4
+                        (Real.fmt (StringCvt.FIX (SOME 1))
+                                  (100.0 * (pushms / usrms)) handle Div => "?")
+  val _ = print (" (" ^ pl (Time.toString pushtime) ^ " " ^percent^"%)\n")
 in
   ()
 end

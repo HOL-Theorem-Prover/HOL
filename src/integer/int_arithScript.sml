@@ -4,7 +4,7 @@ open HolKernel boolLib Parse
 infix THEN THENC THENL |-> ORELSE
 infixr -->
 
-open integerTheory intSyntax intSimps Psyntax dividesTheory
+open integerTheory intSyntax intSimps dividesTheory
 
 open simpLib boolSimps BasicProvers SingleStep
 infix ++
@@ -1090,20 +1090,61 @@ val NOT_INT_DIVIDES_POS = store_thm(
   `~(&n = 0)` by ASM_SIMP_TAC bool_ss [INT_INJ] THEN
   ASM_SIMP_TAC bool_ss [NOT_INT_DIVIDES, INT_ABS_NUM, CONJ_ASSOC]);
 
-val context_rwt1 = store_thm(
-  "context_rwt1",
-  ``0 <= c + x /\ x <= y ==> (0 <= c + y = T)``,
+val le_context_rwt1 = store_thm(
+  "le_context_rwt1",
+  ``0 <= c + x ==> x <= y ==> (0 <= c + y = T)``,
   PROVE_TAC [INT_LE_LADD, INT_ADD_COMM, INT_ADD_ASSOC, INT_LE_ADD2,
              INT_ADD_LID]);
 
-val context_rwt2 = store_thm(
-  "context_rwt2",
-  ``0 <= c + x /\ y < ~x ==> (0 <= ~c + y = F)``,
+val le_context_rwt2 = store_thm(
+  "le_context_rwt2",
+  ``0 <= c + x ==> y < ~x ==> (0 <= ~c + y = F)``,
   REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
   `c <= y` by PROVE_TAC [le_move_all_right, INT_ADD_COMM] THEN
   `~x <= c` by PROVE_TAC [INT_NEGNEG, le_move_all_right, INT_ADD_COMM] THEN
   PROVE_TAC [INT_LE_TRANS, INT_NOT_LE]);
 
+val le_context_rwt3 = store_thm(
+  "le_context_rwt3",
+  ``0 <= c + x ==> x < y ==> ((0 = c + y) = F)``,
+  REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
+  PROVE_TAC [INT_LE_LADD, INT_LET_TRANS, INT_LT_REFL]);
+
+val le_context_rwt4 = store_thm(
+  "le_context_rwt4",
+  ``0 <= c + x ==> x < ~y  ==> ((0 = ~c + y) = F)``,
+  REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
+  POP_ASSUM (SUBST_ALL_TAC o
+             REWRITE_RULE [INT_NEG_0, INT_NEG_ADD, INT_NEGNEG] o
+             AP_TERM ``$~ : int -> int``) THEN
+  PROVE_TAC [INT_LE_LADD, INT_LET_TRANS, INT_LT_REFL]);
+
+val le_context_rwt5 = store_thm(
+  "le_context_rwt5",
+  ``0 <= c + x ==> (0 <= ~c + ~x = (0 = c + x))``,
+  STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    POP_ASSUM (ASSUME_TAC o REWRITE_RULE [INT_NEG_0, INT_NEG_ADD, INT_NEGNEG] o
+               CONV_RULE (REWR_CONV (GSYM INT_LE_NEG))) THEN
+    IMP_RES_TAC INT_LE_ANTISYM,
+    POP_ASSUM (SUBST_ALL_TAC o
+               REWRITE_RULE [INT_NEG_0, INT_NEG_ADD, INT_NEGNEG] o
+               AP_TERM ``$~ : int -> int``) THEN
+    REWRITE_TAC [INT_LE_REFL]
+  ]);
+
+
+val eq_context_rwt1 = store_thm(
+  "eq_context_rwt1",
+  ``(0i = c + x) ==> (0 <= c + y = x <= y)``,
+  STRIP_TAC THEN ASM_REWRITE_TAC [INT_LE_LADD]);
+
+val eq_context_rwt2 = store_thm(
+  "eq_context_rwt2",
+  ``(0 = c + x) ==> (0 <= ~c + y = ~x <= y)``,
+  STRIP_TAC THEN
+  POP_ASSUM (ASSUME_TAC o REWRITE_RULE [INT_NEG_0, INT_NEG_ADD] o
+             AP_TERM ``$~ : int -> int``) THEN
+  ASM_REWRITE_TAC [INT_LE_LADD]);
 
 val _ = hide "bmarker";
 

@@ -23,6 +23,10 @@ fun c1 ORELSEC c2 = ORELSEQC c1 c2
 val BINOP_CONV = BINOP_QCONV
 val ALL_CONV = ALL_QCONV
 val TRY_CONV = TRY_QCONV
+val CHANGED_CONV = CHANGED_QCONV
+val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_QCONV bool_rewrites
+val DEPTH_CONV = DEPTH_QCONV
+val TOP_DEPTH_CONV = TOP_DEPTH_QCONV
 fun EVERY_DISJ_CONV c tm =
     if is_disj tm then BINOP_CONV (EVERY_DISJ_CONV c) tm
     else c tm
@@ -48,7 +52,8 @@ val check_for_early_equalities = OmegaMath.OmegaEq
 
 
 
-fun ISCONST_CONV tm = if is_const tm then ALL_CONV tm else NO_CONV tm
+
+fun IS_NOT_EXISTS_CONV tm = if is_exists tm then NO_CONV tm else ALL_CONV tm
 
 (* ----------------------------------------------------------------------
     normalise t
@@ -69,11 +74,12 @@ val normalise = let
   open OmegaMath
 in
   STRIP_QUANT_CONV (Canon.NNF_CONV leaf_normalise false THENC
-                    CSimp.csimp (TRY_CONV leaf_normalise)) THENC
+                    REPEATC (CHANGED_CONV CSimp.csimp THENC
+                             REWRITE_CONV [])) THENC
   push_exs THENC
   EVERY_DISJ_CONV
     (check_for_early_equalities THENC
-     (ISCONST_CONV ORELSEC
+     (IS_NOT_EXISTS_CONV ORELSEC
       (STRIP_QUANT_CONV Canon.PROP_DNF_CONV THENC
        push_exs THENC
        EVERY_DISJ_CONV (TRY_CONV eliminate_negative_divides) THENC
@@ -96,9 +102,9 @@ val simple =
   TRY_CONV (STRIP_QUANT_CONV OmegaMath.cond_removal) THENC
   normalise THENC
   EVERY_DISJ_CONV (REWRITE_CONV [] THENC
-                   (ISCONST_CONV ORELSEC
+                   (IS_NOT_EXISTS_CONV ORELSEC
                     (OmegaMath.OmegaEq THENC
-                     (ISCONST_CONV ORELSEC callsimple))))
+                     (IS_NOT_EXISTS_CONV ORELSEC callsimple))))
 
 
 (* decide strategy is given a goal term which has already been prenexed *)
@@ -109,7 +115,7 @@ in
   case goal_qtype tm of
     qsUNIV => PRENEX_CONV THENC flip_foralls THENC
               RAND_CONV simple THENC CooperMath.REDUCE_CONV
-  | qsEXISTS => PRENEX_CONV THENC simple
+  | qsEXISTS => PRENEX_CONV THENC simple THENC CooperMath.REDUCE_CONV
   | EITHER => CooperMath.REDUCE_CONV
   | NEITHER => OmegaSymbolic.findelim_deep_existential THENC
                REWRITE_CONV [] THENC decide_strategy

@@ -34,6 +34,7 @@ $biggest_improvement = 0;
 foreach (@keys) {
   $file1 = $file1_hash{$_};
   $file2 = $file2_hash{$_};
+  next if (!defined $file2) ;
   $absolute_improvement = $file1 - $file2;
   if ($absolute_improvement >= 0) {
     if ($absolute_improvement > $biggest_improvement) {

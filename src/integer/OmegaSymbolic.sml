@@ -29,6 +29,7 @@ fun c1 ORELSEC c2 = ORELSEQC c1 c2
 val BINOP_CONV = BINOP_QCONV
 val ALL_CONV = ALL_QCONV
 val TRY_CONV = TRY_QCONV
+val CHANGED_CONV = CHANGED_QCONV
 val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_QCONV bool_rewrites
 val DEPTH_CONV = DEPTH_QCONV
 
@@ -653,7 +654,8 @@ val sym_normalise = let
                 RAND_CONV leaf_normalise
 in
   STRIP_QUANT_CONV (Canon.NNF_CONV leaf_normalise false THENC
-                    CSimp.csimp (TRY_CONV leaf_normalise)) THENC
+                    REPEATC (CHANGED_CONV CSimp.csimp THENC
+                             REWRITE_CONV [])) THENC
   push_exs THENC
   EVERY_DISJ_CONV (OmegaEq THENC DEPTH_CONV elim_eq THENC
                    (ISCONST_CONV ORELSEC

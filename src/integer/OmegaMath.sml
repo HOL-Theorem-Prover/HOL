@@ -656,7 +656,11 @@ in
         mult_ok acc r andalso rhs_ok (SOME (rand r)) l
       end handle HOL_ERR _ => mult_ok acc tm
     in
-      if is_int_literal rr andalso rhs_ok NONE rl then NO_CONV
+      if is_int_literal rr andalso rhs_ok NONE rl then
+        if is_eq tm andalso is_negated (lhand (hd (strip_plus rl))) then
+          REWR_CONV (GSYM INT_EQ_NEG) THENC
+          LAND_CONV (REWR_CONV INT_NEG_0) THENC base_normaliser
+        else NO_CONV
       else base_normaliser
     end
     else if is_int_literal (rand tm) then CooperMath.REDUCE_CONV
@@ -1171,7 +1175,8 @@ in
   push_exvar_to_bot to_elim THENC LAST_EXISTS_CONV unwinder THENC
   STRIP_QUANT_CONV
     (BLEAF_CONV (op THENC)
-                (TRY_CONV (RAND_CONV S_AND_G_MULT THENC gcd_check))) THENC
+                (TRY_CONV (RAND_CONV S_AND_G_MULT THENC
+                           TRY_CONV gcd_check))) THENC
   REWRITE_CONV [EXISTS_SIMP] THENC
   ifVarsRemain OmegaEq
 end t
