@@ -2213,9 +2213,9 @@ fun decide_pure_presburger_term tm0 = let
     | EITHER => REDUCE_CONV tm
     | qsUNIV =>
         (move_quants_up THENC
-         TRY_CONV counter_example THENC
-         flip_foralls THENC
-         RAND_CONV pure_goal THENC REDUCE_CONV) tm
+         (counter_example ORELSEC
+          (flip_foralls THENC
+           RAND_CONV pure_goal THENC REDUCE_CONV))) tm
     | qsEXISTS => (move_quants_up THENC pure_goal) tm
 in
   TRANS initial_thm (strategy tm)
