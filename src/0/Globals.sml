@@ -36,19 +36,28 @@ val show_assums = ref false
 (*---------------------------------------------------------------------------*
  * For showing oracles used to prove theorems.                               *
  *---------------------------------------------------------------------------*)
+
 val show_tags = ref false
 
 (*---------------------------------------------------------------------------*
  * For showing the axioms used in the proof of a theorem.                    *
  *---------------------------------------------------------------------------*)
+
 val show_axioms = ref true
 
 (*---------------------------------------------------------------------------*
  * For showing the time taken to "scrub" the current theory of out-of-date   *
  * items. For developers.                                                    *
  *---------------------------------------------------------------------------*)
+
 val show_scrub = ref true
 
+(*---------------------------------------------------------------------------*
+ * For showing information on how aliases introduced by overload_on are      *
+ * resolved when grammars are merged.                                        *
+ *---------------------------------------------------------------------------*)
+
+val show_aliases = ref false
 
 (*---------------------------------------------------------------------------*
  * Assignable function for printing errors.                                  *
