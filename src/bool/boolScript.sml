@@ -80,14 +80,14 @@ val _ = add_rule{term_name = "COND", fixity = Infix (HOLgrammars.RIGHT, 3),
                  block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))};
 
 val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
-                 pp_elements = [PPBlock([TOK "if", BreakSpace(1,0), TM,
+                 pp_elements = [PPBlock([TOK "if", BreakSpace(1,2), TM,
                                          BreakSpace(1,0),
                                          TOK "then"], (PP.CONSISTENT, 0)),
-                                BreakSpace(1,0), TM, BreakSpace(1,0),
+                                BreakSpace(1,2), TM, BreakSpace(1,0),
                                 BeginFinalBlock(PP.CONSISTENT, 2),
                                 TOK "else", BreakSpace(1,0)],
                  paren_style = OnlyIfNecessary,
-                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
+                 block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))};
 
 val ONE_ONE_DEF =
  new_definition
