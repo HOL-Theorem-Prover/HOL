@@ -61,6 +61,7 @@ sig
 
   val is_absval      : term -> bool
   val mk_absval      : term -> term
+  val dest_absval    : term -> term
 
   val is_less        : term -> bool
   val dest_less      : term -> (term * term)

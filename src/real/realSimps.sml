@@ -293,6 +293,148 @@ val _ = let open computeLib in
 
 val _ = BasicProvers.augment_srw_ss [REAL_REDUCE_ss]
 
+(* ----------------------------------------------------------------------
+    REAL_ARITH_ss
+
+    embedding RealArith into a simpset fragment.
+    Derived from code to do the same for the natural numbers, which is in
+      src/num/arith/src/numSimps.sml
+    and
+      src/num/arith/src/Gen_arith.sml
+   ---------------------------------------------------------------------- *)
+
+fun contains_var tm =
+    if is_var tm then true
+    else if is_real_literal tm then false
+    else let
+        val (l, r) = dest_plus tm
+                     handle HOL_ERR _ =>
+                            dest_mult tm
+                            handle HOL_ERR _ => dest_minus tm
+      in
+          contains_var l orelse contains_var r
+      end handle HOL_ERR _ => contains_var (dest_absval tm)
+                              handle HOL_ERR _ => true
+
+fun is_linear_mult tm = let
+  val (l,r) = dest_mult tm
+in
+  not (contains_var l andalso contains_var r)
+end
+
+fun arg1 tm = rand (rator tm)
+val arg2 = rand
+
+fun non_presburger_subterms tm =
+   (non_presburger_subterms (#2 (dest_forall tm))) handle _ =>
+   (non_presburger_subterms (dest_neg tm)) handle _ =>
+   (if (is_conj tm) orelse (is_disj tm) orelse (is_imp tm) orelse
+       (is_eq tm) orelse
+       (is_less tm) orelse (is_leq tm) orelse
+       (is_great tm) orelse (is_geq tm) orelse
+       (is_plus tm) orelse (is_minus tm) orelse
+       (is_linear_mult tm handle _ => false)
+    then Lib.union (non_presburger_subterms (arg1 tm))
+                   (non_presburger_subterms (arg2 tm))
+    else if (is_real_literal tm) then []
+    else [tm]);
+
+fun is_num_var tm = is_var tm andalso type_of tm = real_ty
+val is_presburger = (all is_num_var) o non_presburger_subterms;
+
+
+
+fun cond_has_arith_components tm =
+  if boolSyntax.is_cond tm then let
+    val {cond,rarm,larm} = Rsyntax.dest_cond tm
+  in
+    List.all is_arith [cond, rarm, larm]
+  end
+  else true
+and is_arith tm =
+    is_presburger tm orelse
+    List.all (fn t => type_of t = real_ty andalso cond_has_arith_components t)
+             (non_presburger_subterms tm)
+
+fun contains_forall sense tm =
+  if is_conj tm orelse is_disj tm then
+    List.exists (contains_forall sense) (#2 (strip_comb tm))
+  else if is_neg tm then
+    contains_forall (not sense) (rand tm)
+  else if is_imp tm then
+    contains_forall (not sense) (rand (rator tm)) orelse
+    contains_forall sense (rand tm)
+  else if is_forall tm then
+    sense orelse contains_forall sense (#2 (dest_forall tm))
+  else if is_exists tm then
+    not sense orelse contains_forall sense (#2 (dest_exists tm))
+  else false
+
+(* This function determines whether or not to add something as context
+   to the arithmetic decision procedure.  Because the d.p. can't
+   handle implications with nested foralls on the left hand side, we
+   eliminate those here.  More generally, we can't allow the formula
+   to be added to have any positive universals, because these will
+   translate into negative ones in the context of the wider goal, and
+   thus cause the goal to be rejected.  *)
+
+fun is_arith_thm thm =
+  not (null (hyp thm)) andalso is_arith (concl thm) andalso
+   (not (contains_forall true (concl thm)));
+
+val is_arith_asm = is_arith_thm o ASSUME
+
+val ARITH = RealArith.REAL_ARITH
+
+open Trace Cache Traverse
+fun CTXT_ARITH thms tm = let
+  val context = map concl thms
+  fun try gl = let
+    val gl' = list_mk_imp(context,gl)
+    val _ = trace (5, LZ_TEXT (fn () => "Trying cached arithmetic d.p. on "^
+                                        term_to_string gl'))
+  in
+    rev_itlist (C MP) thms (ARITH gl')
+  end
+  val thm = EQT_INTRO (try tm)
+      handle (e as HOL_ERR _) =>
+             if tm <> F then EQF_INTRO (try(mk_neg tm)) else raise e
+in
+  trace(1,PRODUCE(tm,"REAL_ARITH",thm)); thm
+end
+
+val (CACHED_ARITH,arith_cache) = let
+  fun check tm =
+    let val ty = type_of tm
+    in
+       (ty=Type.bool andalso (is_arith tm orelse tm = F))
+    end;
+in
+  CACHE (check,CTXT_ARITH)
+  (* the check function determines whether or not a term might be handled
+     by the decision procedure -- we want to handle F, because it's possible
+     that we have accumulated a contradictory context. *)
+end;
+
+val ARITH_REDUCER = let
+  exception CTXT of thm list;
+  fun get_ctxt e = (raise e) handle CTXT c => c
+  fun add_ctxt(ctxt, newthms) = let
+    val addthese = filter is_arith_thm (flatten (map CONJUNCTS newthms))
+  in
+    CTXT (addthese @ get_ctxt ctxt)
+  end
+in
+  REDUCER {addcontext = add_ctxt,
+           apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
+           initial = CTXT []}
+end;
+
+val REAL_ARITH_ss =
+    simpLib.SIMPSET
+    { convs = [], rewrs = [], congs = [],
+      filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+
 
 
 end;

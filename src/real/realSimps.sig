@@ -13,6 +13,9 @@ sig
   (* AC rewrites for + and *: occasionally useful *)
   val real_ac_SS : simpLib.ssdata
 
+  (* the RealArith decision procedure *)
+  val REAL_ARITH_ss : simpLib.ssdata
+
   (* Incorporates the real simpset *)
   val real_ac_ss : simpLib.simpset
 
