@@ -1267,73 +1267,13 @@ in
     NONE
 end
 
-
-val boolcases_elim_thm = tautLib.TAUT_PROVE
-  (Term`!p Q Q1 Q2. (p ==> (Q = Q1)) /\ (~p ==> (Q = Q2)) ==>
-                    (Q = p /\ Q1 \/ ~p /\ Q2)`);
-
-val specialised_cond_elim = let
-  fun eliminate_cond ctm tm = let
-    (* given a ctm, a boolean valued term that is the guard of some
-       conditional expression(s), transform the term by doing case
-       analysis on ctm and using boolcases_elim_thm above *)
-    val pos_case = DISCH_ALL (REWRITE_CONV [ASSUME ctm] tm)
-    val neg_case = DISCH_ALL (REWRITE_CONV [ASSUME (mk_neg ctm)] tm)
-  in
-    CONV_RULE (REWRITE_CONV [])
-      (MATCH_MP boolcases_elim_thm (CONJ pos_case neg_case))
-  end
-  fun find_minimal_cond_guard curpos ctxt tm = let
-    (* either returns NONE, or returns SOME(tm, cval) where tm is the
-       guard of a conditional expression, and cval is the conversional
-       pointing to a point in the term where eliminate_cond tm will
-       succeed *)
-    (* ctxt is a list of pairs of variables and cvals.  The variables are
-       bound names, and the cval points at the body underneath the binder
-       for that name.  The deeper the variable, the earlier in the list.
-    *)
-    (* curpos is a cval pointing to our current position *)
-  in
-    if is_forall tm orelse is_exists tm orelse is_uexists tm then let
-      val (bvar, body) = dest_abs (rand tm)
-      val bodypos = curpos o BINDER_CONV
-    in
-      find_minimal_cond_guard bodypos ((bvar, bodypos)::ctxt) body
-    end
-    else if is_cond tm then let
-      val (guard, _, _) = dest_cond tm
-      val guardpos = curpos o RATOR_CONV o RATOR_CONV o RAND_CONV
-    in
-      case find_minimal_cond_guard guardpos ctxt guard of
-        NONE => let
-        in
-          case List.find (fn (v,_) => free_in v guard) ctxt of
-            NONE => SOME (guard, I)
-          | SOME (_, c) => SOME(guard, c)
-        end
-      | x => x
-    end
-    else if is_comb tm then
-      case find_minimal_cond_guard (curpos o RATOR_CONV) ctxt (rator tm) of
-        NONE => find_minimal_cond_guard (curpos o RAND_CONV) ctxt (rand tm)
-      | x => x
-    else NONE
-  end
-  fun COND_ELIM_CONV tm =
-    case find_minimal_cond_guard I [] tm of
-      NONE => NO_CONV tm
-    | SOME (ctm,c) => c (eliminate_cond ctm) tm
-in
-  DEPTH_CONV (REWR_CONV COND_ID) THENC REPEATC COND_ELIM_CONV
-end
-
 val decide_pure_presburger_term = let
   (* no free variables allowed *)
   open boolSimps simpLib
   infix ++
   val phase0_CONV =
     (* rewrites out conditional expression and absolute value terms *)
-    SIMP_CONV bool_ss [INT_ABS] THENC specialised_cond_elim
+    REWRITE_CONV [INT_ABS] THENC Sub_and_cond.COND_ELIM_CONV
   fun mainwork tm = let
   in
     case find_low_quantifier tm of
@@ -1426,45 +1366,47 @@ in
   GSYM (BETA_CONV (mk_comb(mk_abs(gv,tm1), inj_n)))
 end
 
-val dealwith_nats = let
-  open arithmeticTheory simpLib boolSimps
-  val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
-                  GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
-                  GSYM INT_MUL, INT_NUM_SUB, INT, PRE_SUB1, INT_NUM_COND,
-                  ODD_EXISTS, EVEN_EXISTS]
-  fun seek_natqs tm = let
+fun eliminate_nat_quants tm = let
+in
+  if is_forall tm orelse is_exists tm orelse is_uexists tm then let
+    val (bvar, body) = dest_abs (rand tm)
   in
-    if is_forall tm orelse is_exists tm orelse is_uexists tm then let
-      val (bvar, body) = dest_abs (rand tm)
+    if type_of bvar = num_ty then let
+      val inj_bvar = mk_comb(int_injection, bvar)
+      val rewrite_qaway =
+        REWR_CONV (if is_forall tm then INT_NUM_FORALL
+        else if is_exists tm then INT_NUM_EXISTS
+             else INT_NUM_UEXISTS) THENC
+        BINDER_CONV (RAND_CONV BETA_CONV)
     in
-      if type_of bvar = num_ty then let
-        val inj_bvar = mk_comb(int_injection, bvar)
-        val rewrite_qaway =
-          REWR_CONV (if is_forall tm then INT_NUM_FORALL
-          else if is_exists tm then INT_NUM_EXISTS
-               else INT_NUM_UEXISTS) THENC
-          BINDER_CONV (RAND_CONV BETA_CONV)
-      in
-        BINDER_CONV (abs_inj inj_bvar) THENC rewrite_qaway THENC
-        BINDER_CONV seek_natqs
-      end
-      else
-        BINDER_CONV seek_natqs
+      BINDER_CONV (abs_inj inj_bvar) THENC rewrite_qaway THENC
+      BINDER_CONV eliminate_nat_quants
     end
+    else
+      BINDER_CONV eliminate_nat_quants
+  end
     else if is_neg tm then (* must test for is_neg before is_imp *)
-      RAND_CONV seek_natqs
+      RAND_CONV eliminate_nat_quants
     else if (is_conj tm orelse is_disj tm orelse is_eq tm orelse
              is_imp tm) then
-      BINOP_CONV seek_natqs
+      BINOP_CONV eliminate_nat_quants
     else if is_cond tm then
-      RATOR_CONV (RATOR_CONV (RAND_CONV seek_natqs))
+      RATOR_CONV (RATOR_CONV (RAND_CONV eliminate_nat_quants))
     else ALL_CONV
-  end tm handle HOL_ERR {origin_function = "REWR_CONV", ...} =>
-    raise ERR "ARITH_CONV" "Uneliminable natural number term remains"
-in
-  PURE_REWRITE_CONV rewrites THENC seek_natqs
-end
+end tm handle HOL_ERR {origin_function = "REWR_CONV", ...} =>
+  raise ERR "ARITH_CONV" "Uneliminable natural number term remains"
 
+
+val dealwith_nats = let
+  open arithmeticTheory
+  val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
+                  GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
+                  GSYM INT_MUL, INT, INT_NUM_COND, INT_NUM_EVEN,
+                  INT_NUM_ODD]
+in
+  Sub_and_cond.SUB_AND_COND_ELIM_CONV THENC PURE_REWRITE_CONV rewrites THENC
+  eliminate_nat_quants
+end
 
 (* subterms is a list of subterms all of integer type *)
 fun decide_nonpbints_presburger subterms tm = let
