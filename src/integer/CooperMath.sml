@@ -309,14 +309,9 @@ fun check_divides tm = let
   val (l,r) = dest_divides tm
   val rterms = strip_plus r
   fun getc t = Arbint.abs (int_of_term (rand (rator t)))
-  fun pull_out_divisor tm = let
-    val (l,r) = dest_plus tm
-  in
-    if is_plus l then
-      LAND_CONV pull_out_divisor THENQC REWR_CONV (GSYM INT_LDISTRIB)
-    else
-      REWR_CONV (GSYM INT_LDISTRIB)
-  end tm handle HOL_ERR _ => ALL_QCONV tm
+  fun pull_out_divisor tm =
+    TRY_QCONV (BINOP_QCONV pull_out_divisor THENQC
+               REWR_CONV (GSYM INT_LDISTRIB)) tm
 in
   case List.mapPartial (Lib.total getc) rterms of
     [] => CHANGED_QCONV REDUCE_CONV tm
@@ -642,7 +637,7 @@ in
         TRY_QCONV (REWR_CONV (GSYM INT_NEG_LMUL) THENQC
                    REWR_CONV INT_NEG_RMUL THENQC
                    RAND_CONV (REWR_CONV INT_NEG_LMUL)) tm
-      end handle HOL_ERR _ => BINOP_CONV fiddle_negs tm
+      end handle HOL_ERR _ => BINOP_QCONV fiddle_negs tm
 
       fun reduce_by_gcd tm = let
         val (l,r) = (land tm, rand tm)
