@@ -197,11 +197,13 @@ fun completeInduct_on qtm g =
  ---------------------------------------------------------------------------*)
 
 local open WFTheory primWFTheory
-      val ind_thm0 = GEN (Term `m:'a -> num`)
+      val mvar = mk_var{Name="m", Ty=Type`:'a -> num`}
+      val measure_m = mk_comb{Rator= #const(const_decl"measure"),Rand=mvar}
+      val ind_thm0 = GEN mvar
           (BETA_RULE
-             (REWRITE_RULE[WF_measure,measure_def,inv_image_def] 
-                 (MATCH_MP (SPEC (Term`measure m`) WF_INDUCTION_THM)
-                           (SPEC_ALL WF_measure))))
+             (REWRITE_RULE[WF_measure,measure_def,inv_image_def]
+                 (MATCH_MP (SPEC measure_m WF_INDUCTION_THM)
+                         (SPEC_ALL WF_measure))))
 in
 fun measureInduct_on q g =
  let val tm = Lib.with_flag
