@@ -1,9 +1,9 @@
 OPTIONS = NO_OVERLAY
 
-all: Sig.uo Raw-sig.uo Type.uo Term.uo Tag.uo Thm.uo TheoryPP.uo Theory.uo \
-     Definition.uo Net.uo Type-sig.uo Term-sig.uo Tag-sig.uo Thm-sig.uo \
-     TheoryPP-sig.uo Theory-sig.uo Definition-sig.uo Net-sig.uo Overlay.uo \
-     HolKernel.uo
+all: Globals.uo Sig.uo Raw-sig.uo Type.uo Term.uo Tag.uo Thm.uo \
+     TheoryPP.uo Theory.uo Definition.uo Net.uo Type-sig.uo Term-sig.uo \
+     Tag-sig.uo Thm-sig.uo TheoryPP-sig.uo Theory-sig.uo Definition-sig.uo \
+     Net-sig.uo Overlay.uo HolKernel.uo
 
 Sig.uo: Sig.sml KernelTypes.ui Feedback.ui
 	HOLMOSMLC -c -toplevel Sig.sml
@@ -14,8 +14,8 @@ Raw-sig.uo: Raw-sig.sml Sig.uo Lib.uo
 Type.uo: Type.sml Raw-sig.uo Lexis.ui
 	HOLMOSMLC -c -toplevel Raw-sig.ui Sig.ui Type.sml
 
-Term.uo: Term.sml Type.uo
-	HOLMOSMLC -c -toplevel Type.ui Raw-sig.ui Sig.ui Term.sml
+Term.uo: Term.sml Type.uo Globals.ui
+	HOLMOSMLC -c -toplevel Globals.ui Type.ui Raw-sig.ui Sig.ui Term.sml
 
 Tag.uo: Tag.sml Raw-sig.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Tag.sml
