@@ -1,5 +1,6 @@
 
 \chapter{Euclid's theorem}
+\label{chap:euclid}
 
 In this chapter, we prove in \holn\ that for every number, there is a
 prime number that is larger, \ie, that the prime numbers form an
@@ -1409,8 +1410,10 @@ In order to do this we need to create a file with the name
 $x$\ml{Script.sml}, where $x$ is the name of the theory we wish to
 export.  This file then needs to be compiled.  In fact, we really do
 use the Moscow ML compiler, carefully augmented with the appropriate
-logical context, and the language accepted by the compiler is not
-quite the same as that accepted by the interactive system.
+logical context.  However, the language accepted by the compiler is
+not quite the same as that accepted by the interactive system, so we
+will need to do a little work to massage the original script into the
+correct form.
 
 We'll give an illustration of converting to a form that can be
 compiled using the script
@@ -1588,7 +1591,7 @@ support development was required to set the stage for Euclid's classic
 argument.
 
 \item The proof support offered by \ml{bossLib}
-(\verb+RW_TAC+, \ml{PROVE\_TAC}, \ml{DECIDE\_TAC}, \verb+DECIDE+,
+(\verb+RW_TAC+, \ml{PROVE\_TAC}, \ml{DECIDE\_TAC}, \ml{DECIDE},
 \ml{Cases\_on}, \ml{Induct\_on}, and the ``\ml{by}'' construct) was
 nearly complete for this example: it was rarely necessary to resort to
 lower-level tactics.
