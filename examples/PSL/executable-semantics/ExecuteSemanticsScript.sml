@@ -17,7 +17,7 @@
 (* 
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
-          "PropertiesTheory", "regexpLib"];
+          "rich_listTheory", "regexpLib", "PropertiesTheory"];
 *)
 
 (******************************************************************************
@@ -544,89 +544,7 @@ val F_SERE_NEVER_amatch = store_thm
 * Generating FSA checkers for the simple subset of PSL.
 ******************************************************************************)
 
-val boolean_def = Define
-  `(boolean (F_BOOL _) = T) /\
-   (boolean (F_NOT f) = boolean f) /\
-   (boolean (F_AND (f,g)) = boolean f /\ boolean g) /\
-   (boolean _ = F)`;
-
-(*
-  Cannot allow unrestricted F_AND, because
-
-    F_AND (F_STRONG_IMP (S_TRUE, S_CAT (S_REPEAT (S_BOOL P), S_BOOL Q)),
-           F_STRONG_IMP (S_TRUE, S_CAT (S_REPEAT (S_BOOL P), S_BOOL (B_NOT Q))))
-
-  is "pathologically safe" [Kuperferman, Vardi 1999], meaning that the path
-
-    P P P P P P P P ...
-
-  has a bad prefix [] for the property, but there are no bad prefixes for
-  either of the conjuncts.
-*)
-
-val simple_def = Define
-  `(simple (F_BOOL b) = boolean (F_BOOL b)) /\
-   (simple (F_NOT (F_NOT f)) = simple f) /\
-   (simple (F_NOT (F_AND (f,g))) = simple (F_NOT f) /\ simple (F_NOT g)) /\
-   (simple (F_NOT f) = boolean f) /\
-   (simple (F_AND (f,g)) = boolean f /\ simple g) /\
-   (simple (F_NEXT f) = simple f) /\
-   (simple (F_UNTIL (f,g)) = simple f /\ boolean g) /\
-   (simple (F_SUFFIX_IMP (r,f)) = S_CLOCK_FREE r /\ simple f) /\
-   (simple (F_STRONG_IMP (r1,r2)) = F) /\
-   (simple (F_WEAK_IMP (r1,r2)) = F) /\
-   (simple (F_ABORT _) = F) /\
-   (simple (F_STRONG_CLOCK _) = F)`;
-
-val simple_ind = theorem "simple_ind";
-
-val bool_checker_def = Define
-  `(bool_checker (F_BOOL b) = b) /\
-   (bool_checker (F_NOT f) = B_NOT (bool_checker f)) /\
-   (bool_checker (F_AND (f,g)) = B_AND (bool_checker f, bool_checker g))`;
-
-val boolean_checker_def = Define
-  `boolean_checker f = S_BOOL (bool_checker (F_NOT f))`;
-
-val checker_def = Define
-  `(checker (F_BOOL b) = boolean_checker (F_BOOL b)) /\
-   (checker (F_NOT (F_NOT f)) = checker f) /\
-   (checker (F_NOT (F_AND (f,g))) =
-    S_FLEX_AND (checker (F_NOT f), checker (F_NOT g))) /\
-   (checker (F_NOT f) = boolean_checker (F_NOT f)) /\
-   (checker (F_AND (f,g)) = S_OR (boolean_checker f, checker g)) /\
-   (checker (F_NEXT f) = S_CAT (S_TRUE, checker f)) /\
-   (checker (F_UNTIL (f,g)) =
-    if (!p. IS_INFINITE p ==> ~UF_SEM p g) then S_TRUE else
-      S_CAT
-      (S_REPEAT (boolean_checker g),
-       S_FLEX_AND (checker f,
-                   S_CAT (boolean_checker g, boolean_checker g)))) /\
-   (checker (F_SUFFIX_IMP (r,f)) = S_FUSION (r, checker f))`;
-
-val boolean_CLOCK_FREE = prove
-  (``!f. boolean f ==> S_CLOCK_FREE (boolean_checker f)``,
-   Induct
-   ++ RW_TAC std_ss [simple_def, S_CLOCK_FREE_def, boolean_checker_def]);
-
-val simple_CLOCK_FREE = prove
-  (``!f. simple f ==> S_CLOCK_FREE (checker f)``,
-   recInduct simple_ind
-   ++ REPEAT CONJ_TAC
-   ++ RW_TAC std_ss [simple_def, S_CLOCK_FREE_def, checker_def, S_TRUE_def,
-                     boolean_CLOCK_FREE, S_FLEX_AND_def, S_FALSE_def]
-   ++ PROVE_TAC [boolean_def, boolean_CLOCK_FREE]);
-
-val safety_violation_def = Define
-  `safety_violation p f =
-   ?n. !q. IS_INFINITE q ==> ~UF_SEM (CAT (SEL p (0,n), q)) f`;
-
-val safety_violation_alt = prove
-  (``safety_violation p f = ?n. !w. ~UF_SEM (CAT (SEL p (0,n), INFINITE w)) f``,
-   RW_TAC std_ss [safety_violation_def]
-   ++ EQ_TAC
-   ++ RW_TAC std_ss []
-   ++ PROVE_TAC [IS_INFINITE_EXISTS, path_nchotomy, IS_INFINITE_def]);
+(* Lemmas *)
 
 val ELEM_SEL = prove
   (``!w i. ELEM (SEL w (0,i)) 0 = ELEM w 0``,
@@ -673,18 +591,6 @@ val S_FLEX_AND_EMPTY = prove
    ++ RW_TAC (simpLib.++ (arith_ss, boolSimps.CONJ_ss)) [LENGTH]
    ++ RW_TAC std_ss [ALL_EL_F]);
 
-val checker_initially_ok = prove
-  (``!f. simple f ==> ~US_SEM [] (checker f)``,
-   recInduct simple_ind
-   ++ REPEAT CONJ_TAC
-   ++ RW_TAC arith_ss [simple_def, checker_def, boolean_checker_def,
-                       bool_checker_def]
-   ++ ONCE_REWRITE_TAC [US_SEM_def]
-   ++ ONCE_REWRITE_TAC [US_SEM_def]
-   ++ RW_TAC arith_ss [listTheory.LENGTH, US_SEM_REPEAT_TRUE,
-                       listTheory.APPEND_eq_NIL, S_FLEX_AND_EMPTY]
-   ++ RW_TAC std_ss [US_SEM_def, S_TRUE_def, LENGTH]);
-
 val SEL_NIL = prove
   (``!n p. ~(SEL p (0,n) = [])``,
    RW_TAC arith_suc_ss [SEL_def, SEL_REC_def]);
@@ -727,71 +633,6 @@ val SEL_INIT_APPEND = prove
 val CAT_APPEND = prove
   (``!a b c. CAT (a, CAT (b,c)) = CAT (a <> b, c)``,
    Induct ++ RW_TAC std_ss [APPEND, CAT_def]);
-
-val UF_SEM_boolean = prove
-  (``!f p.
-       boolean f /\ LENGTH p > 0 ==>
-       (UF_SEM (FINITE [ELEM p 0]) f = UF_SEM p f)``,
-   INDUCT_THEN fl_induct ASSUME_TAC
-   ++ RW_TAC std_ss
-      [boolean_def, UF_SEM_def, LENGTH, ELEM_def,
-       RESTN_def, GT, LENGTH_SEL, LENGTH_def, HEAD_def, HD]);
-
-val boolean_safety_violation = prove
-  (``!p f.
-       boolean f /\ IS_INFINITE p ==>
-       (safety_violation p f = ~UF_SEM (FINITE [ELEM p 0]) f)``,
-   GEN_TAC
-   ++ Know `!P : num -> (num -> 'a -> bool) -> ('a -> bool) path.
-              (!n w. LENGTH (P n w) > 0) ==>
-              !f. boolean f ==>
-                !n w. ~UF_SEM (P n w) f = ~UF_SEM (FINITE [ELEM (P n w) 0]) f`
-   >> (RW_TAC std_ss [] ++ PROVE_TAC [UF_SEM_boolean])
-   ++ DISCH_THEN (MP_TAC o Q.SPEC `\n w. CAT (SEL p (0,n), INFINITE w)`)
-   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> (a ==> b) ==> c``)
-   ++ CONJ_TAC >> RW_TAC std_ss [LENGTH_def, LENGTH_CAT, GT]
-   ++ BETA_TAC
-   ++ STRIP_TAC
-   ++ INDUCT_THEN fl_induct (K ALL_TAC)
-   ++ RW_TAC std_ss [boolean_def, safety_violation_alt, ELEM_CAT_SEL]);
-
-val boolean_checker = store_thm
-  ("boolean_checker",
-   ``!f p.
-       boolean f /\ IS_INFINITE p ==>
-       (safety_violation p f =
-        ?n. amatch (sere2regexp (boolean_checker f)) (SEL p (0,n)))``,
-   SIMP_TAC arith_ss
-     [amatch, GSYM sere2regexp, boolean_CLOCK_FREE, boolean_safety_violation,
-      boolean_checker_def, bool_checker_def, US_SEM_def, B_SEM, UF_SEM_def,
-      LENGTH_SEL, ELEM_SEL]
-   ++ INDUCT_THEN fl_induct ASSUME_TAC
-   ++ REPEAT (POP_ASSUM MP_TAC)
-   ++ SIMP_TAC arith_ss
-      [boolean_def, bool_checker_def, UF_SEM_def, LENGTH_def, HD,
-       ELEM_def, GT, B_SEM_def, RESTN_def, HEAD_def, listTheory.LENGTH]);
-
-val boolean_checker_US_SEM = store_thm
-  ("boolean_checker_US_SEM",
-   ``!f p.
-       boolean f /\ IS_INFINITE p ==>
-       (safety_violation p f = ?n. US_SEM (SEL p (0,n)) (boolean_checker f))``,
-   SIMP_TAC std_ss
-     [boolean_checker, amatch, GSYM sere2regexp, boolean_CLOCK_FREE]);
-
-val US_SEM_boolean_checker = prove
-  (``!f p.
-       (?w. US_SEM w (boolean_checker f) /\ p w f) =
-       (?x. US_SEM [x] (boolean_checker f) /\ p [x] f)``,
-   RW_TAC std_ss [US_SEM_def, boolean_checker_def]
-   ++ MATCH_MP_TAC EQ_SYM
-   ++ MP_TAC
-      (PROVE [list_CASES]
-       ``!p q. (q = p [] \/ ?t (h : 'a -> bool). p (h::t)) ==> (q = ?l. p l)``)
-   ++ DISCH_THEN (fn th => HO_MATCH_MP_TAC th ++ ASSUME_TAC th)
-   ++ SIMP_TAC std_ss [LENGTH]
-   ++ POP_ASSUM HO_MATCH_MP_TAC
-   ++ RW_TAC arith_ss [LENGTH]);
 
 val REST_CAT = prove
   (``!l p. ~(l = []) ==> (REST (CAT (l,p)) = CAT (TL l, p))``,
@@ -1010,6 +851,186 @@ val S_FLEX_AND = prove
            ++ RW_TAC arith_ss [SEL_REC_SPLIT]
            ++ PROVE_TAC [APPEND_LENGTH_EQ, LENGTH_SEL_REC]]]);
 
+(* Safety violations *)
+
+val safety_violation_def = Define
+  `safety_violation p (f : 'a fl) =
+   ?n. !q. IS_INFINITE q ==> ~UF_SEM (CAT (SEL_REC n 0 p, q)) f`;
+
+val safety_violation_alt = prove
+  (``!p f.
+       safety_violation p f =
+       ?n. !w. ~UF_SEM (CAT (SEL_REC n 0 p, INFINITE w)) f``,
+   REPEAT STRIP_TAC
+   ++ REWRITE_TAC [safety_violation_def]
+   ++ PROVE_TAC [IS_INFINITE_EXISTS, path_nchotomy, IS_INFINITE_def]);
+
+val safety_violation = prove
+  (``!p f.
+       safety_violation p f =
+       ?n. !q. IS_INFINITE q ==> ~UF_SEM (CAT (SEL p (0,n), q)) f``,
+   REPEAT STRIP_TAC
+   ++ SIMP_TAC arith_ss [safety_violation_def, SEL_def]
+   ++ REVERSE EQ_TAC >> PROVE_TAC []
+   ++ STRIP_TAC
+   ++ POP_ASSUM MP_TAC
+   ++ REVERSE (Cases_on `n`) >> PROVE_TAC [ADD1]
+   ++ SIMP_TAC std_ss [SEL_REC_def, CAT_def]
+   ++ PROVE_TAC [IS_INFINITE_CAT]);
+
+(* The simple subset *)
+
+val boolean_def = Define
+  `(boolean (F_BOOL _) = T) /\
+   (boolean (F_NOT f) = boolean f) /\
+   (boolean (F_AND (f,g)) = boolean f /\ boolean g) /\
+   (boolean _ = F)`;
+
+(*
+  Cannot allow unrestricted F_AND, because
+
+    F_AND (F_STRONG_IMP (S_TRUE, S_CAT (S_REPEAT (S_BOOL P), S_BOOL Q)),
+           F_STRONG_IMP (S_TRUE, S_CAT (S_REPEAT (S_BOOL P), S_BOOL (B_NOT Q))))
+
+  is "pathologically safe" [Kuperferman & Vardi 1999], meaning that the path
+
+    P P P P P P P P ...
+
+  has a bad prefix [] for the property, but there are no bad prefixes for
+  either of the conjuncts.
+*)
+val simple_def = Define
+  `(simple (F_BOOL b) = boolean (F_BOOL b)) /\
+   (simple (F_NOT (F_NOT f)) = simple f) /\
+   (simple (F_NOT (F_AND (f,g))) = simple (F_NOT f) /\ simple (F_NOT g)) /\
+   (simple (F_NOT f) = boolean f) /\
+   (simple (F_AND (f,g)) = boolean f /\ simple g) /\
+   (simple (F_NEXT f) = simple f) /\
+   (simple (F_UNTIL (f,g)) = simple f /\ boolean g) /\
+   (simple (F_SUFFIX_IMP (r,f)) = S_CLOCK_FREE r /\ simple f) /\
+   (simple (F_STRONG_IMP (r1,r2)) = F) /\
+   (simple (F_WEAK_IMP (r1,r2)) = F) /\
+   (simple (F_ABORT _) = F) /\
+   (simple (F_STRONG_CLOCK _) = F)`;
+
+val simple_ind = theorem "simple_ind";
+
+val UF_SEM_boolean = prove
+  (``!f p.
+       boolean f /\ LENGTH p > 0 ==>
+       (UF_SEM (FINITE [ELEM p 0]) f = UF_SEM p f)``,
+   INDUCT_THEN fl_induct ASSUME_TAC
+   ++ RW_TAC std_ss
+      [boolean_def, UF_SEM_def, LENGTH, ELEM_def,
+       RESTN_def, GT, LENGTH_SEL, LENGTH_def, HEAD_def, HD]);
+
+val boolean_safety_violation = prove
+  (``!p f.
+       boolean f /\ IS_INFINITE p ==>
+       (safety_violation p f = ~UF_SEM (FINITE [ELEM p 0]) f)``,
+   GEN_TAC
+   ++ Know `!P : num -> (num -> 'a -> bool) -> ('a -> bool) path.
+              (!n w. LENGTH (P n w) > 0) ==>
+              !f. boolean f ==>
+                !n w. ~UF_SEM (P n w) f = ~UF_SEM (FINITE [ELEM (P n w) 0]) f`
+   >> (RW_TAC std_ss [] ++ PROVE_TAC [UF_SEM_boolean])
+   ++ DISCH_THEN (MP_TAC o Q.SPEC `\n w. CAT (SEL p (0,n), INFINITE w)`)
+   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> (a ==> b) ==> c``)
+   ++ CONJ_TAC >> RW_TAC std_ss [LENGTH_def, LENGTH_CAT, GT]
+   ++ BETA_TAC
+   ++ STRIP_TAC
+   ++ INDUCT_THEN fl_induct (K ALL_TAC)
+   ++ RW_TAC std_ss [boolean_def, safety_violation_alt, ELEM_CAT_SEL]);
+
+(* The regexp checker *)
+
+val bool_checker_def = Define
+  `(bool_checker (F_BOOL b) = b) /\
+   (bool_checker (F_NOT f) = B_NOT (bool_checker f)) /\
+   (bool_checker (F_AND (f,g)) = B_AND (bool_checker f, bool_checker g))`;
+
+val boolean_checker_def = Define
+  `boolean_checker f = S_BOOL (bool_checker (F_NOT f))`;
+
+val checker_def = Define
+  `(checker (F_BOOL b) = boolean_checker (F_BOOL b)) /\
+   (checker (F_NOT (F_NOT f)) = checker f) /\
+   (checker (F_NOT (F_AND (f,g))) =
+    S_FLEX_AND (checker (F_NOT f), checker (F_NOT g))) /\
+   (checker (F_NOT f) = boolean_checker (F_NOT f)) /\
+   (checker (F_AND (f,g)) = S_OR (boolean_checker f, checker g)) /\
+   (checker (F_NEXT f) = S_CAT (S_TRUE, checker f)) /\
+   (checker (F_UNTIL (f,g)) =
+    if (!p. IS_INFINITE p ==> ~UF_SEM p g) then S_TRUE else
+      S_CAT
+      (S_REPEAT (boolean_checker g),
+       S_FLEX_AND (checker f,
+                   S_CAT (boolean_checker g, boolean_checker g)))) /\
+   (checker (F_SUFFIX_IMP (r,f)) = S_FUSION (r, checker f))`;
+
+val boolean_checker_CLOCK_FREE = prove
+  (``!f. boolean f ==> S_CLOCK_FREE (boolean_checker f)``,
+   Induct
+   ++ RW_TAC std_ss [simple_def, S_CLOCK_FREE_def, boolean_checker_def]);
+
+val boolean_checker = store_thm
+  ("boolean_checker",
+   ``!f p.
+       boolean f /\ IS_INFINITE p ==>
+       (safety_violation p f =
+        ?n. amatch (sere2regexp (boolean_checker f)) (SEL p (0,n)))``,
+   SIMP_TAC arith_ss
+     [amatch, GSYM sere2regexp, boolean_checker_CLOCK_FREE, boolean_safety_violation,
+      boolean_checker_def, bool_checker_def, US_SEM_def, B_SEM, UF_SEM_def,
+      LENGTH_SEL, ELEM_SEL]
+   ++ INDUCT_THEN fl_induct ASSUME_TAC
+   ++ REPEAT (POP_ASSUM MP_TAC)
+   ++ SIMP_TAC arith_ss
+      [boolean_def, bool_checker_def, UF_SEM_def, LENGTH_def, HD,
+       ELEM_def, GT, B_SEM_def, RESTN_def, HEAD_def, listTheory.LENGTH]);
+
+val boolean_checker_US_SEM = store_thm
+  ("boolean_checker_US_SEM",
+   ``!f p.
+       boolean f /\ IS_INFINITE p ==>
+       (safety_violation p f = ?n. US_SEM (SEL p (0,n)) (boolean_checker f))``,
+   SIMP_TAC std_ss
+     [boolean_checker, amatch, GSYM sere2regexp, boolean_checker_CLOCK_FREE]);
+
+val US_SEM_boolean_checker = prove
+  (``!f p.
+       (?w. US_SEM w (boolean_checker f) /\ p w f) =
+       (?x. US_SEM [x] (boolean_checker f) /\ p [x] f)``,
+   RW_TAC std_ss [US_SEM_def, boolean_checker_def]
+   ++ MATCH_MP_TAC EQ_SYM
+   ++ MP_TAC
+      (PROVE [list_CASES]
+       ``!p q. (q = p [] \/ ?t (h : 'a -> bool). p (h::t)) ==> (q = ?l. p l)``)
+   ++ DISCH_THEN (fn th => HO_MATCH_MP_TAC th ++ ASSUME_TAC th)
+   ++ SIMP_TAC std_ss [LENGTH]
+   ++ POP_ASSUM HO_MATCH_MP_TAC
+   ++ RW_TAC arith_ss [LENGTH]);
+
+val checker_initially_ok = prove
+  (``!f. simple f ==> ~US_SEM [] (checker f)``,
+   recInduct simple_ind
+   ++ REPEAT CONJ_TAC
+   ++ RW_TAC arith_ss [simple_def, checker_def, boolean_checker_def,
+                       bool_checker_def]
+   ++ ONCE_REWRITE_TAC [US_SEM_def]
+   ++ ONCE_REWRITE_TAC [US_SEM_def]
+   ++ RW_TAC arith_ss [listTheory.LENGTH, US_SEM_REPEAT_TRUE,
+                       listTheory.APPEND_eq_NIL, S_FLEX_AND_EMPTY]
+   ++ RW_TAC std_ss [US_SEM_def, S_TRUE_def, LENGTH]);
+
+val checker_CLOCK_FREE = prove
+  (``!f. simple f ==> S_CLOCK_FREE (checker f)``,
+   recInduct simple_ind
+   ++ REPEAT CONJ_TAC
+   ++ RW_TAC std_ss [simple_def, S_CLOCK_FREE_def, checker_def, S_TRUE_def,
+                     boolean_checker_CLOCK_FREE, S_FLEX_AND_def, S_FALSE_def]
+   ++ PROVE_TAC [boolean_def, boolean_checker_CLOCK_FREE]);
+
 (*** In progress 
 val checker_NOT_AND = prove
   (``!f g.
@@ -1120,13 +1141,12 @@ val checker_NOT_AND = prove
            ++ REVERSE CONJ_TAC >> PROVE_TAC []
            ++ RW_TAC arith_ss [arithmeticTheory.MAX_DEF]]]);
 
-val checker = store_thm
-  ("checker",
-   ``!f p.
+val checker_SEL_REC = prove
+  (``!f p.
        simple f /\ IS_INFINITE p ==>
        (safety_violation p f =
-        ?n. amatch (sere2regexp (checker f)) (SEL p (0,n)))``,
-   SIMP_TAC std_ss [amatch, GSYM sere2regexp, simple_CLOCK_FREE]
+        ?n. amatch (sere2regexp (checker f)) (SEL_REC n 0 p))``,
+   SIMP_TAC std_ss [amatch, GSYM sere2regexp, checker_CLOCK_FREE]
    ++ Know
       `!f p.
          simple f ==>
@@ -1287,6 +1307,25 @@ safety_violation_alt
 , US_SEM_def]
 , LENGTH_CAT, S_TRUE_def,
           GT, B_SEM, RESTN_def, REST_CAT, SEL_NIL]
+
+val checker = store_thm
+  ("checker",
+   ``!f p.
+       simple f /\ IS_INFINITE p ==>
+       (safety_violation p f =
+        ?n. amatch (sere2regexp (checker f)) (SEL p (0,n)))``,
+   SIMP_TAC std_ss [amatch, GSYM sere2regexp, checker_CLOCK_FREE]
+   ++ Know
+      `!f p.
+         simple f ==>
+         ((?n. US_SEM (SEL p (0,n)) (checker f)) =
+          (?n. US_SEM (SEL_REC n 0 p) (checker f)))`
+   >> (RW_TAC arith_ss [SEL_def]
+       ++ EQ_TAC >> PROVE_TAC []
+       ++ RW_TAC arith_ss [GSYM ADD1]
+       ++ REVERSE (Cases_on `n`) >> PROVE_TAC []
+       ++ PROVE_TAC [SEL_REC_def, checker_initially_ok])
+   ++ DISCH_THEN (fn th => SIMP_TAC std_ss [th])
 ***)
 
 (******************************************************************************
