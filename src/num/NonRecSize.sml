@@ -15,7 +15,7 @@ local
   local open pairTheory sumTheory optionTheory arithmeticTheory in end;
 
   val bool_info = Option.valOf(TypeBase.read "bool")
-  val bool_size_info = (rator(mk_bool_case(zero_tm,zero_tm,mk_var("b",bool))),
+  val bool_size_info = (rator(mk_bool_case(zero_tm,zero_tm,mk_arb bool)),
                         TypeBase.ORIG boolTheory.bool_case_ID)
   val bool_info' = TypeBase.put_size bool_size_info bool_info
 
