@@ -4,8 +4,8 @@ val _ = new_theory "amba";
 
 open boolSyntax;
 open bossLib;
-open ctl2muTheory;
-open cearTools;
+(*open ctl2muTheory;
+open cearTools;*)
 open Ho_Rewrite;
 open amba_ahbTheory;
 open amba_apbTheory;

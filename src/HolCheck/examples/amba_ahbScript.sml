@@ -2,21 +2,6 @@ open HolKernel Parse boolLib bossLib
 
 val _ = new_theory "amba_ahb"; 
 
-open boolSyntax;
-open bossLib;
-open ctl2muTheory;
-open cearTools;
-open Ho_Rewrite;
-open Tactical;
-open Tactic;
-open PairRules;
-open holCheckTools
-open bddTools
-open ctlTheory
-open ctlSyntax
-open ksTools
-
-
 (* transfer types {3-9} *)
 val m_idle = Define `IDLE  (htrans_0,htrans_1) =  ~htrans_0 /\ ~htrans_1`;
 val m_busy = Define `BUSY  (htrans_0,htrans_1) =   htrans_0 /\ ~htrans_1`;

@@ -1,6 +1,6 @@
 
 (* user interface to HolCheck *)
-structure holCheck =
+structure holCheck :> holCheck =
 struct
 
 local 
@@ -16,6 +16,8 @@ open boolTheory
 open holCheckTools
 open bddTools
 open boolSyntax
+
+in 
 
 val dbghc = holCheckTools.dbgall
 
@@ -83,8 +85,6 @@ fun holCheck_aux (I1,T1,_,ksname,_,_) state apl vm (CTL_INIT init_cache) f =
 |   holCheck_aux (I1,T1,Ric,ksname,_,_) state apl vm (ABS_INIT init_cache) f = 
     let val (results,init_cache) =  absCheck I1 T1 state Ric vm apl ksname init_cache f 
     in (results, SOME (ABS_INIT init_cache)) end
-
-in 
 
 (*FIXME: should return mu model as well even if mc only done for ctl *)
 fun holCheck  (TR as (I1,T1,_,_,bvm,state)) fl apl init_cache = 

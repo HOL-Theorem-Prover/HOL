@@ -24,7 +24,7 @@ open DerivedBddRules;
 open Binarymap;
 open PairRules;
 open pairTools;
-open setLemmasTheory;
+(*open setLemmasTheory;*)
 open boolSyntax;
 open Drule;
 open Tactical;
@@ -92,7 +92,7 @@ fun getVarForInt vm (i:int) =
     let val l = List.filter (fn (ks,ki) => ki=i) (Binarymap.listItems vm)
 in if List.null l then NONE else SOME (fst(List.hd l)) end
 
-fun termToBdd vm t = let val (_,_,_,b) = PrimitiveBddRules.dest_term_bdd(DerivedBddRules.GenTermToTermBdd (!DerivedBddRules.termToTermBddFun) vm t) in b end
+fun termToBdd vm t = PrimitiveBddRules.getBdd(DerivedBddRules.GenTermToTermBdd (!DerivedBddRules.termToTermBddFun) vm t) 
 
 (* transform term part of term-bdd using the supplied conversion; suppress UNCHANGED exceptions *)
 fun BddConv conv tb = DerivedBddRules.BddApConv conv tb handle Conv.UNCHANGED => tb;

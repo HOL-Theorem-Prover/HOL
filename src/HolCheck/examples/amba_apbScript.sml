@@ -2,21 +2,6 @@ open HolKernel Parse boolLib bossLib
 
 val _ = new_theory "amba_apb"; 
 
-open boolSyntax;
-open bossLib;
-open ctl2muTheory;
-open cearTools;
-open Ho_Rewrite;
-open Tactical;
-open Tactic;
-open PairRules;
-open holCheckTools
-open bddTools
-open ctlTheory
-open ctlSyntax
-open ksTools
-
-
 val I1p = Define `INIT_APB (paddr_0:bool,pwrite:bool,psel_0:bool,penable:bool,pdata_0:bool,m_0_0:bool,s_0_0_0:bool) = ~psel_0 /\ ~penable`;
 
 (* TODO: transitions for pdata of the form pdata_0' = ... , so we can use pdata in the defs of m' and s' *)

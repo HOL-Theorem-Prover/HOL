@@ -1,17 +1,11 @@
-structure holCheckLib = 
+structure holCheckLib :> holCheckLib = 
 
 struct
 
-local 
-
     open ksTools
-
-in 
-
-    open holCheck
+    open holCheck 
 
     val mk_state = ksTools.mk_state
-
-end
+    val holCheck = holCheck.holCheck
 
 end
