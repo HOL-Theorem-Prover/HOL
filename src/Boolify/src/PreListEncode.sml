@@ -36,7 +36,7 @@ val bool_info' = TypeBasePure.put_boolify bool_boolify_info bool_info;
 
 val prod_info = Option.valOf (TypeBase.read "prod");
 val prod_boolify_info =
-  (Term`encode_prod:('a->bool list)->('b->bool list)-> 'a # 'b ->bool list`,
+  (Term`encode_prod:('a->bool list)->('b->bool list)-> 'a # 'b -> bool list`,
    TypeBasePure.ORIG encode_prod_def);
 val prod_info' = TypeBasePure.put_boolify prod_boolify_info prod_info;
 
@@ -46,7 +46,7 @@ val prod_info' = TypeBasePure.put_boolify prod_boolify_info prod_info;
 
 val sum_info = Option.valOf (TypeBase.read "sum");
 val sum_boolify_info =
-  (Term`encode_sum:('a->bool list)->('b->bool list)-> 'a + 'b ->bool list`,
+  (Term`encode_sum:('a->bool list)->('b->bool list)-> 'a + 'b -> bool list`,
    TypeBasePure.ORIG encode_sum_def);
 val sum_info' = TypeBasePure.put_boolify sum_boolify_info sum_info;
 
@@ -83,13 +83,10 @@ val num_info' = TypeBasePure.put_boolify num_boolify_info num_info;
       Units
  ---------------------------------------------------------------------------*)
 
-(* This is waiting to spring into action when there's a proper TypeBase
-   entry for units.
 val one_info = Option.valOf (TypeBase.read "one");
 val one_boolify_info =
   (Term`encode_unit`, TypeBasePure.ORIG encode_unit_def);
 val one_info' = TypeBasePure.put_boolify one_boolify_info one_info;
-*)
 
 (*---------------------------------------------------------------------------
       Writing all the boolification information to the typebase.
@@ -101,9 +98,8 @@ val _ = TypeBase.write [sum_info']
 val _ = TypeBase.write [option_info']
 val _ = TypeBase.write [list_info']
 val _ = TypeBase.write [num_info']
-(* See comment in unit section
 val _ = TypeBase.write [one_info']
-*)
+
 
 val () = computeLib.add_funs
   [encode_bool_def, encode_prod_def, encode_sum_def, encode_option_def,

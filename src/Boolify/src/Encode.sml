@@ -76,7 +76,7 @@ fun tyboolify_env db =
      Option.composePartial (TypeBasePure.boolify_of, TypeBasePure.get db)
 
 (*---------------------------------------------------------------------------*
-  Term boolification, another type-based translation.
+         Term boolification, another type-based translation
  *---------------------------------------------------------------------------*)
 
 fun bool_lists n =
@@ -114,7 +114,7 @@ fun tyboolify (theta,omega,gamma) clause ty =
                    let val vty = drop Args (type_of f)
                        val sigma = Type.match_type vty ty
                     in list_mk_comb(inst sigma f,
-                                map (tyboolify (theta,omega,gamma) clause) Args)
+                            map (tyboolify (theta,omega,gamma) clause) Args)
                     end
                 | NONE => Kzero ty
              end
@@ -244,36 +244,33 @@ fun define_boolify ax db =
  ---------------------------------------------------------------------------*)
 
 fun insert_boolify {def, const_tyopl} tyinfol =
-  (case tyinfol of [] => raise ERR "build_tyinfos" "empty tyinfo list"
+ case tyinfol 
+  of [] => raise ERR "build_tyinfos" "empty tyinfo list"
    | tyinfo::rst =>
-     let
-       val first_tyname = TypeBasePure.ty_name_of tyinfo
-       fun ins_boolify info boolify_eqs =
-         let
-           val tyname = TypeBasePure.ty_name_of info
-         in
-           case assoc2 tyname const_tyopl of SOME(c,tyop)
-             => TypeBasePure.put_boolify(c,boolify_eqs) info
-           | NONE => (HOL_MESG
-                      ("Can't find boolify constant for"^tyname);
-                      raise ERR "build_tyinfos" "")
-         end
+     let val first_tyname = TypeBasePure.ty_name_of tyinfo
+         fun ins_boolify info boolify_eqs =
+          let val tyname = TypeBasePure.ty_name_of info
+          in case assoc2 tyname const_tyopl 
+              of SOME(c,tyop) => TypeBasePure.put_boolify(c,boolify_eqs) info
+               | NONE => (HOL_MESG ("Can't find boolify constant for"^tyname);
+                         raise ERR "build_tyinfos" "")
+          end
      in
        ins_boolify tyinfo (TypeBasePure.ORIG def) ::
        map (C ins_boolify (TypeBasePure.COPY (first_tyname,def))) rst
      end
-     handle HOL_ERR _ => tyinfol);
+     handle HOL_ERR _ => tyinfol;
 
 fun add_boolify tyinfol =
-  if List.exists (Option.isSome o TypeBasePure.boolify_of0) tyinfol then tyinfol
-  else
-    let
+  if List.exists (Option.isSome o TypeBasePure.boolify_of0) tyinfol 
+   then tyinfol
+   else let
       val db = TypeBase.theTypeBase ()
       val recursion = TypeBasePure.axiom_of (hd tyinfol)
     in
-      case define_boolify recursion db of SOME s
-        => insert_boolify s tyinfol
-      | NONE => (HOL_MESG "Couldn't define boolify function"; tyinfol)
+      case define_boolify recursion db 
+       of SOME s => insert_boolify s tyinfol
+        | NONE => (HOL_MESG "Couldn't define boolify function"; tyinfol)
     end;
 
 val () = TypeBase.register_update_fn add_boolify;
