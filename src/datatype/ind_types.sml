@@ -31,7 +31,7 @@ infixr --> ##;
 (* Handy utility to produce "SUC o SUC o SUC ..." form of numeral.           *)
 (* ------------------------------------------------------------------------- *)
 
-fun ERR f s = 
+fun ERR f s =
   HOL_ERR{origin_structure="ind_types",
           origin_function=f,message=s};
 
@@ -40,10 +40,10 @@ fun -- q x = Term q
 fun == q x = Type q
 
 (*---------------------------------------------------------------------------
-   First some JRH HOL-Light portability stuff. This was in jrh_simple_lib, 
+   First some JRH HOL-Light portability stuff. This was in jrh_simple_lib,
    but I got rid of that ... probably the wrong thing to do.
  ---------------------------------------------------------------------------*)
-   
+
 fun chop_list 0 l      = ([], l)
   | chop_list n []     = raise ERR "chop_list" "Empty list"
   | chop_list n (h::t) = let val (m,l') = chop_list (n-1) t in (h::m, l') end;
@@ -52,56 +52,56 @@ val lhand = rand o rator;
 val LAND_CONV = RATOR_CONV o RAND_CONV;
 val RIGHT_BETAS = rev_itlist(fn a=>CONV_RULE(RAND_CONV BETA_CONV) o C AP_THM a)
 
-val sucivate = 
+val sucivate =
   let val zero = Term`0` and suc = Term`SUC`
   in fn n => funpow n (curry mk_comb suc) zero
   end
 
-val make_args = 
+val make_args =
   let fun margs n s avoid [] = []
         | margs n s avoid (h::t) =
            let val v = variant avoid (mk_var(s^Int.toString n, h))
            in v::margs (n + 1) s (v::avoid) t
            end
   in fn s => fn avoid => fn tys =>
-       if length tys = 1 
+       if length tys = 1
          then [variant avoid (mk_var(s, hd tys))]
          else margs 0 s avoid tys
    end handle _ => raise ERR "make_args" "";
 
 fun mk_binop op_t tm1 tm2 = list_mk_comb(op_t, [tm1, tm2])
-fun mk_const (n, theta) = 
+fun mk_const (n, theta) =
   let val c = #const (const_decl n)
       val ty = type_of c
   in
     Term.mk_const{Name = n, Ty = Type.type_subst theta ty}
   end;
 
-fun mk_icomb(tm1,tm2) = 
+fun mk_icomb(tm1,tm2) =
    let val (ty, _) = Type.dom_rng (type_of tm1)
        val tyins = Type.match_type ty (type_of tm2)
    in
       mk_comb(Term.inst tyins tm1, tm2)
    end;
 
-fun list_mk_icomb cname = 
+fun list_mk_icomb cname =
   let val cnst = mk_const(cname,[])
   in fn args => rev_itlist (C (curry mk_icomb)) args cnst
   end;
 
-val variables = 
+val variables =
   let fun vars(acc,tm) =
         if is_var tm then insert tm acc
         else if is_const tm then acc
-        else if is_abs tm 
+        else if is_abs tm
              then let val (v, bod) = dest_abs tm in vars(insert v acc,bod) end
              else let val (l,r)    = dest_comb tm in vars(vars(acc,l),r)   end
   in
     fn tm => vars([],tm)
   end;
 
-fun striplist dest = 
-  let fun strip x acc = 
+fun striplist dest =
+  let fun strip x acc =
         let val (l,r) = dest x
         in strip l (strip r acc)
         end handle HOL_ERR _ => x::acc
@@ -110,12 +110,12 @@ fun striplist dest =
   end;
 
 fun SUBS_CONV [] tm = REFL tm
-  | SUBS_CONV ths tm = 
+  | SUBS_CONV ths tm =
      let val lefts = map (lhand o concl) ths
          val gvs = map (genvar o type_of) lefts
          val pat = Term.subst (map2 (curry op|->) lefts gvs) tm
          val abs = list_mk_abs(gvs,pat)
-         val th = rev_itlist (fn y => fn x => 
+         val th = rev_itlist (fn y => fn x =>
                    CONV_RULE (RAND_CONV BETA_CONV THENC
                            (RATOR_CONV o RAND_CONV) BETA_CONV)(MK_COMB(x,y)))
                    ths (REFL abs)
@@ -129,17 +129,17 @@ val GEN_REWRITE_CONV = fn c => fn thl => GEN_REWRITE_CONV c empty_rewrites thl
 fun SIMPLE_EXISTS v th = EXISTS (mk_exists(v, concl th),v) th;
 fun SIMPLE_CHOOSE v th = CHOOSE(v,ASSUME (mk_exists(v, hd(hyp th)))) th;
 
-fun new_basic_type_definition tyname (mkname, destname) thm = 
+fun new_basic_type_definition tyname (mkname, destname) thm =
   let open Rsyntax
       val {Rator=pred, Rand=witness} = dest_comb(concl thm)
       val predty = type_of pred
       val dom_ty = #1 (dom_rng predty)
       val x = mk_var{Name="x", Ty=dom_ty}
-      val witness_exists = EXISTS 
+      val witness_exists = EXISTS
             (mk_exists{Bvar=x, Body=mk_comb{Rator=pred, Rand=x}},witness) thm
       val tyax = new_type_definition{name=tyname, pred=pred,
                                           inhab_thm=witness_exists}
-      val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections 
+      val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections
               {name=(tyname^"_repfns"), ABS=mkname, REP=destname, tyax=tyax})
   in
       (SPEC_ALL mk_dest, SPEC_ALL dest_mk)
@@ -150,7 +150,7 @@ fun new_basic_type_definition tyname (mkname, destname) thm =
 (* Eliminate local "definitions" in hyps.                                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun SCRUB_EQUATION eq th = 
+fun SCRUB_EQUATION eq th =
    let val (l,r) = dest_eq eq
    in MP (Rsyntax.INST [l |-> r] (DISCH eq th)) (REFL r)
    end;
@@ -167,7 +167,7 @@ val justify_inductive_type_model = let
   val aty = Type.alpha
   val T_tm = Term`T` and n_tm = Term`n:num` and beps_tm = Term`@x:bool. T`
   fun munion [] s2 = s2
-    | munion (h1::s1') s2 = 
+    | munion (h1::s1') s2 =
        let val (_,s2') = Lib.pluck (fn h2 => h2 = h1) s2
        in h1::munion s1' s2'
        end handle HOL_ERR _ => h1::munion s1' s2
@@ -301,7 +301,8 @@ fun define_inductive_type cdefs exth = let
   val th2 = TRANS th1 (SUBS_CONV cdefs (rand(concl th1)))
   val th3 = EQ_MP (AP_THM th2 (rand extm)) exth
   val th4 = itlist SCRUB_EQUATION (hyp th3) th3
-  val mkname = "mk_"^ename and destname = "dest_"^ename
+  val mkname = "ii_internal_mk_"^ename
+  and destname = "ii_internal_dest_"^ename
   val (bij1,bij2) = new_basic_type_definition ename (mkname,destname) th4
   val bij2a = AP_THM th2 (rand(rand(concl bij2)))
   val bij2b = TRANS bij2a bij2
@@ -1230,8 +1231,8 @@ val SIMPLE_ISO_EXPAND_RULE = CONV_RULE(REWR_CONV ISO);
 fun REWRITE_FUN_EQ_RULE thl = SIMP_RULE bool_ss (FUN_EQ_THM::thl)
 
 
-fun get_nestedty_info tyname = 
-  let fun hol98_to_jrh_ind ind0 = 
+fun get_nestedty_info tyname =
+  let fun hol98_to_jrh_ind ind0 =
        let fun CONJUNCTS_CONV c tm =
              if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
        in
@@ -1241,7 +1242,7 @@ fun get_nestedty_info tyname =
                              (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
        end
  in
-  case TypeBase.read tyname 
+  case TypeBase.read tyname
    of SOME tyinfo => SOME (length (TypeBase.constructors_of tyinfo),
                          hol98_to_jrh_ind (TypeBase.induction_of tyinfo),
                          TypeBase.axiom_of tyinfo)
