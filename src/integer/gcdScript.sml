@@ -154,48 +154,6 @@ val P_EUCLIDES = store_thm(
   `gcd p a = 1` by PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,PRIME_GCD] THEN
   PROVE_TAC[L_EUCLIDES,GCD_SYM]);
 
-
-val gcd_lemma1 = prove(
-  ``!mx n m.
-       (mx = MAX m n) /\
-       (gcd m n = 1) /\ ~(m = 0) /\ ~(n = 0) ==>
-       ?p q. p * m = q * n + 1``,
-  GEN_TAC THEN completeInduct_on `mx` THEN
-  REPEAT STRIP_TAC THEN ARW[] THEN
-  Cases_on `m = n` THENL [
-    `m = 1` by PROVE_TAC [GCD_REF] THEN ARW[],
-    ALL_TAC
-  ] THEN
-  `MIN m n < MAX m n` by PROVE_TAC [MIN_MAX_LT] THEN
-  `?k. MAX m n = MIN m n + (k + 1)` by PROVE_TAC [LESS_ADD_1] THEN
-  Q.ABBREV_TAC `j = k + 1` THEN
-  `~(j = 0)` by ARW[] THEN
-  `~(MIN m n = 0)` by PROVE_TAC
-                       [BETA_RULE (Q.SPEC `\x. ~(x = 0)` MIN_MAX_PRED)] THEN
-  `j < MAX m n` by ARW[] THEN
-  FIRST_X_ASSUM (Q.SPEC_THEN `MAX j (MIN m n)` MP_TAC) THEN
-  `MAX j (MIN m n) < MAX m n` by
-     PROVE_TAC [BETA_RULE (Q.SPEC `\x. x < MAX m n` MIN_MAX_PRED)] THEN
-  DISCH_THEN (fn th1 => POP_ASSUM (ASSUME_TAC o MP th1)) THEN
-  Q.ABBREV_TAC `i = MIN m n` THEN
-  FIRST_X_ASSUM (fn th => MP_TAC (Q.SPECL [`i`, `j`] th) THEN
-                          MP_TAC (Q.SPECL [`j`, `i`] th)) THEN
-  ASM_SIMP_TAC bool_ss [MAX_COMM] THEN
-  Cases_on `m < n` THENL [
-    FULL_SIMP_TAC bool_ss [MIN_DEF, MAX_DEF] THEN
-    `gcd i j = 1` by PROVE_TAC [GCD_ADD_R, GCD_REF] THEN
-    ASM_SIMP_TAC bool_ss [] THEN REPEAT STRIP_TAC THEN
-    MAP_EVERY Q.EXISTS_TAC [`p + q`, `q`],
-    `n < m` by ARW[] THEN FULL_SIMP_TAC bool_ss [MIN_DEF, MAX_DEF] THEN
-    `gcd j i = 1` by PROVE_TAC [GCD_ADD_L, GCD_REF, GCD_SYM] THEN
-    ASM_SIMP_TAC bool_ss [] THEN REPEAT STRIP_TAC THEN
-    MAP_EVERY Q.EXISTS_TAC [`p`, `p + q`]
-  ] THEN
-  ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB, LEFT_ADD_DISTRIB] THEN
-  SIMP_TAC arith_ss []);
-
-val gcd_lemma = SIMP_RULE bool_ss [] gcd_lemma1;
-
 val FACTOR_OUT_GCD = store_thm(
   "FACTOR_OUT_GCD",
   ``!n m. ~(n = 0) /\ ~(m = 0) ==>
@@ -222,31 +180,49 @@ val FACTOR_OUT_GCD = store_thm(
   `gcd n m = 0` by PROVE_TAC [DIVIDES_MULT_LEFT] THEN
   FULL_SIMP_TAC bool_ss [GCD_EQ_0]);
 
-val LINEAR_GCD = store_thm(
+open labelLib
+
+val simple_facts = map DECIDE [``~(x = y) /\ x < y = ~(y - x = 0)``,
+                               ``x < y = ~(y <= x)``,
+                               ``x <= y = (x = y) \/ (x < y)``]
+
+(* proof of LINEAR_GCD{_AUX} due to Laurent Thery *)
+val LINEAR_GCD_AUX = prove(
+ ``!m n. ~(n = 0)/\ ~(m = 0) ==>
+      (?p q. p * n = q * m + gcd m n) /\ ?p q. p * m = q * n + gcd m n``,
+ recInduct gcd_ind THEN SIMP_TAC bool_ss [DECIDE ``~(SUC x = 0)``] THEN
+ REPEAT (GEN_TAC ORELSE DISCH_THEN STRIP_ASSUME_TAC) THEN
+ Q.PAT_ASSUM `y <= x ==> P x y` (ASSUME_NAMED_TAC "ind_le") THEN
+ Q.PAT_ASSUM `~(y <= x) ==> P x y` (ASSUME_NAMED_TAC "ind_nle") THEN
+ Cases_on `x=y` THEN1 (CONJ_TAC THEN MAP_EVERY Q.EXISTS_TAC [`1`,`0`] THEN
+                       ASM_SIMP_TAC arith_ss [GCD_REF]) THEN
+ Cases_on `x < y` THEN ASM_SIMP_TAC arith_ss [GCD] THENL [
+   `SUC y = (y - x) + SUC x` by ARW [],
+   `SUC x = (x - y) + SUC y` by ARW []
+ ] THEN REPEAT CONJ_TAC THENL [
+   `?p q. p * (y - x) = q * SUC x + gcd (SUC x) (y - x)` by
+       PROVE_TAC (LB "ind_nle"::simple_facts) THEN
+   MAP_EVERY Q.EXISTS_TAC [`p`, `p + q`],
+   `?p q. p * SUC x = q * (y - x) + gcd (SUC x) (y - x)` by
+       PROVE_TAC (LB "ind_nle"::simple_facts) THEN
+   MAP_EVERY Q.EXISTS_TAC [`p + q`, `q`],
+   `?p q. p * SUC y = q * (x - y) + gcd (x - y) (SUC y)` by
+       PROVE_TAC (LB "ind_le"::simple_facts) THEN
+   MAP_EVERY Q.EXISTS_TAC [`p + q`, `q`],
+   `?p q. p * (x - y) = q * SUC y + gcd (x - y) (SUC y)` by
+       PROVE_TAC (LB "ind_le"::simple_facts) THEN
+   MAP_EVERY Q.EXISTS_TAC [`p`, `p + q`]
+ ] THEN
+ ASM_SIMP_TAC bool_ss [RIGHT_ADD_DISTRIB, LEFT_ADD_DISTRIB] THEN
+ SIMP_TAC arith_ss []);
+
+val LINEAR_GCD= store_thm(
   "LINEAR_GCD",
   ``!n m. ~(n = 0) ==> ?p q. p * n = q * m + gcd m n``,
-  REPEAT STRIP_TAC THEN
-  Cases_on `m = 0` THENL [
-    POP_ASSUM SUBST1_TAC THEN ARW[GCD] THEN PROVE_TAC [MULT_CLAUSES],
-    ALL_TAC
-  ] THEN
-  MP_TAC (Q.SPECL [`m`, `n`] FACTOR_OUT_GCD) THEN
-  ASM_REWRITE_TAC [] THEN
-  DISCH_THEN (Q.X_CHOOSE_THEN `i` (Q.X_CHOOSE_THEN `j` STRIP_ASSUME_TAC)) THEN
-  Q.ABBREV_TAC `g = gcd m n` THEN
-  ASM_REWRITE_TAC [] THEN
-  `!p. p * (j * g) = g * (p * j)` by
-     (GEN_TAC THEN CONV_TAC (AC_CONV(MULT_ASSOC, MULT_COMM))) THEN
-  POP_ASSUM (REWRITE_TAC o C cons []) THEN
-  `!q. q * (i * g) + g = g * (q * i + 1)` by
-     (GEN_TAC THEN REWRITE_TAC [LEFT_ADD_DISTRIB, EQ_ADD_RCANCEL,
-                                MULT_RIGHT_1] THEN
-      CONV_TAC (AC_CONV(MULT_ASSOC, MULT_COMM))) THEN
-  POP_ASSUM (REWRITE_TAC o C cons []) THEN
-  SIMP_TAC bool_ss [EQ_MULT_LCANCEL, EXISTS_OR_THM] THEN
-  `~(i = 0)` by (STRIP_TAC THEN FULL_SIMP_TAC arith_ss []) THEN
-  `~(j = 0)` by (STRIP_TAC THEN FULL_SIMP_TAC arith_ss []) THEN
-  PROVE_TAC [GCD_SYM, gcd_lemma]);
+  REPEAT STRIP_TAC THEN Cases_on `m=0` THENL [
+    Q.EXISTS_TAC `1` THEN ARW[GCD_0L],
+    PROVE_TAC[LINEAR_GCD_AUX]
+  ]);
 
 val gcd_lemma0 = prove(
   ``!a b. gcd a b = if b <= a then gcd (a - b) b
