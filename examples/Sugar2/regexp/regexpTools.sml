@@ -234,6 +234,12 @@ end;
 (* Export a regular expression as a Verilog state machine.                   *)
 (*---------------------------------------------------------------------------*)
 
+val LINE_LENGTH = ref 79;
+
+local fun dup _ 0 l = l | dup x n l = dup x (n - 1) (x :: l);
+in fun chs x n = implode (dup x n []);
+end;
+
 fun DISCH_CONJ [] = I
   | DISCH_CONJ [x] = DISCH x
   | DISCH_CONJ (x :: (xs as _ :: _)) =
@@ -390,22 +396,29 @@ in
 end;
 
 local
-  fun claim r =
-    "------------------------------- " ^
-    "Checker ------------------------------------\n" ^
-    "The following regular expression as a Verilog state machine\n" ^
-    term_to_string r;
+  fun separator s =
+    let
+      val seps = !LINE_LENGTH - 4 - (size s + 2)
+      val m = seps div 2 - 3
+      val n = seps - m
+    in
+      chs #"-" m ^ " " ^ s ^ " " ^ chs #"-" n
+    end;
+
+  fun claim r = PP.pp_to_string (!LINE_LENGTH - 3) pp_term r;
 
   fun comment s =
     String.concat
     (map (fn x => "// " ^ x ^ "\n") (String.fields (fn c => c = #"\n") s));
 in
-  fun header r = comment (claim r);
+  fun header n r = comment (separator n ^ "\n" ^ claim r);
 end;
 
 local
   fun log2 n =
-    Int.toString (Real.ceil (Math.ln (Real.fromInt n) / Math.ln 2.0));
+    Int.toString (Real.ceil (Math.ln (Real.fromInt n) / Math.ln 2.0) - 1);
+
+  fun width l = "[" ^ log2 (length l) ^ ":0]";
 
   open PP;
 
@@ -431,39 +444,42 @@ local
      end_block pp;
      end_block pp);
 
-  fun pp_case pp (i,_,(a,_),t) =
+  fun pp_case pp name (i,_,(a,_),t) =
     (begin_block pp CONSISTENT 2;
      add_string pp (Int.toString i ^ ":");
      add_break pp (1,0);
      if a then
        add_string pp
-         "begin $display (\"Checker: property violated!\"); $finish; end"
+         ("begin $display (\"" ^ name ^
+          ": property violated!\"); $finish; end")
      else pp_condition pp t;
      end_block pp;
      add_newline pp;
      add_newline pp)
 
-  fun pp_module pp (alph,table) =
+  fun pp_module pp (name,alph,table) =
     (begin_block pp CONSISTENT 0;
 
-     begin_block pp INCONSISTENT (size "module Checker (");
-     add_string pp "module Checker (";
-     pp_alphs "," pp (alph @ ["state"]);
+     begin_block pp INCONSISTENT (size ("module " ^ name ^ " ("));
+     add_string pp ("module " ^ name ^ " (");
+     pp_alphs "," pp (alph (*@ ["state"]*));
      add_string pp ");";
      end_block pp;
      add_newline pp;
      add_newline pp;
 
-     begin_block pp INCONSISTENT (size "input ");
-     add_string pp "input  ";
+     begin_block pp INCONSISTENT (size "output" + size (width table) + 2);
+     add_string pp ("input" ^ chs #" " (size (width table) + 3));
      pp_alphs "," pp alph;
      add_string pp ";";
      end_block pp;
      add_newline pp;
 
-     add_string pp ("output [" ^ log2 (length table) ^ ":0] state;");
+(*
+     add_string pp ("output " ^ width table ^ " state;");
      add_newline pp;
-     add_string pp ("reg    [" ^ log2 (length table) ^ ":0] state;");
+*)
+     add_string pp ("reg    " ^ width table ^ " state;");
      add_newline pp;
      add_newline pp;
 
@@ -480,12 +496,15 @@ local
      begin_block pp INCONSISTENT 2;
      add_string pp "begin";
      add_newline pp;
+     add_string pp ("$display (\"" ^ name ^ ": state = %0d\", state);");
+     add_newline pp;
      begin_block pp INCONSISTENT 2;
      add_string pp "case (state)";
      add_newline pp;
-     app (pp_case pp) table;
+     app (pp_case pp name) table;
      add_string pp
-       "default: begin $display (\"Checker: unknown state\"); $finish; end";
+       ("default: begin $display (\"" ^ name ^
+        ": unknown state\"); $finish; end");
      end_block pp;
      add_newline pp;
      add_string pp "endcase";
@@ -500,10 +519,12 @@ local
      
      end_block pp);
 in
-  fun module a r =
-    pp_to_string 79 pp_module (map (#Name o dest_thy_const) a, extract_dfa a r);
+  fun module n a r =
+    pp_to_string (!LINE_LENGTH) pp_module
+      (n, map (#Name o dest_thy_const) a, extract_dfa a r);
 end;
 
-fun verilog_dfa alph r = header r ^ "\n" ^ module alph r;
+fun verilog_dfa {name = n, alphabet = a, regexp = r} =
+  header n r ^ "\n" ^ module n a r;
 
 end

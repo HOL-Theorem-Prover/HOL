@@ -43,6 +43,9 @@ val extract_dfa :
   Term.term list -> Term.term ->
   (int * Term.term * (bool * Thm.thm) * (int * Thm.thm) condition) list
 
-val verilog_dfa : Term.term list -> Term.term -> string
+val LINE_LENGTH : int ref
+
+val verilog_dfa :
+  {name : string, alphabet : Term.term list, regexp : Term.term} -> string
 
 end

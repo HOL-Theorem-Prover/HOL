@@ -515,6 +515,26 @@ val F_ALWAYS_def = Define
 val F_NEVER_def = Define
   `F_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
 
+val F_NEVER_amatch = store_thm
+  ("F_NEVER_amatch",
+   ``!r w.
+       S_CLOCK_FREE r /\ IS_INFINITE w ==>
+       (UF_SEM w (F_NEVER r) =
+        !n. ~amatch (sere2regexp (S_CAT (S_REPEAT S_TRUE,r))) (SEL w (0,n)))``,
+   RW_TAC std_ss [F_NEVER_def]
+   ++ Know `LENGTH w = INFINITY`
+   >> PROVE_TAC [PathTheory.IS_INFINITE_EXISTS, PathTheory.LENGTH_def]
+   ++ RW_TAC list_resq_ss [UF_SEM_def, xnum_to_def]
+   ++ Know `!l. US_SEM l S_FALSE = F`
+   >> RW_TAC std_ss [US_SEM_def, S_FALSE_def, B_SEM]
+   ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
+   ++ ONCE_REWRITE_TAC [EVAL_US_SEM]
+   ++ RW_TAC std_ss [S_CLOCK_FREE_def, S_TRUE_def]
+   ++ Suff `!j : num. (!k : num. ~(j <= k)) = F` 
+   >> DISCH_THEN (fn th => REWRITE_TAC [th])
+   ++ RW_TAC std_ss []
+   ++ PROVE_TAC [arithmeticTheory.LESS_EQ_REFL]);
+
 (******************************************************************************
 * Beginning of some stuff that turned out to be useless for execution.
 * Leaving it here as just conceivably a future use might appear!

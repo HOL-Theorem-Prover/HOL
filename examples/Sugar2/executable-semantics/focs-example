@@ -834,7 +834,9 @@ val r1 = regexp_ra ``StoB_REQ`` ``BtoS_ACK``;
 
 val d1 = try (extract_dfa alph) r1;
 
-val s1 = print ("\n\n" ^ verilog_dfa alph r1 ^ "\n");
+val inp1 = {name = "Checker1", alphabet = alph, regexp = r1};
+
+val s1 = print ("\n\n" ^ verilog_dfa inp1 ^ "\n");
 
 val r2 =
   ``sere2regexp
@@ -849,7 +851,9 @@ val r2 =
 
 val d2 = try (extract_dfa alph) r2;
 
-val s2 = print ("\n\n" ^ verilog_dfa alph r2 ^ "\n");
+val inp2 = {name = "Checker2", alphabet = alph, regexp = r2};
+
+val s2 = print ("\n\n" ^ verilog_dfa inp2 ^ "\n");
 
 (******************************************************************************
 * vunit four_phase_handskake_left (page 23, FoCs User's Manual, Version 1.0)
