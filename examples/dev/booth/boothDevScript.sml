@@ -467,11 +467,11 @@ val MULTd_CORRECT = store_thm("MULTd_CORRECT",
 val MULTd_dev = save_thm("MULTd",
         REWRITE_RULE [MULTd_CORRECT] MULTd_dev);
 
+(* runtime: 39.867s,    gctime: 14.104s,     systime: 0.155s.   *)
 val MULTd_net = time MAKE_NETLIST MULTd_dev;
 
 (* Takes rather a long time:
-   runtime: 100.657s,    gctime: 37.392s,     systime: 0.433s.
-
+   runtime: 552.044s,    gctime: 211.142s,     systime: 1.755s.
 val MULTd_cir = time MAKE_CIRCUIT MULTd_dev;
 *)
 

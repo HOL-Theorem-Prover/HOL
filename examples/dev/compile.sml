@@ -1637,7 +1637,17 @@ val MAKE_NETLIST =
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
 
-(* This needs fixing, so have put backer older version *)
+(*****************************************************************************)
+(* The first definition of MAKE_CIRCUIT below invokes EXISTS_OUT_CONV twice  *)
+(* (once in MAKE_NETLIST then once after expanding DEL and DFF).             *)
+(*                                                                           *)
+(* The monolitlic version after it is a bit faster by folding together       *)
+(* stages (e.g. only one invocation of EXISTS_OUT_CONV) and it seems to      *)
+(* sometimes make smaller circuits (fewe variables, e.g. for MULTd_cir       *)
+(* in booth/boothDevScript.sml -- I'm not sure why (needs investigation).    *)
+(*****************************************************************************)
+
+(*********************** Next definition commented out ***********************
 val MAKE_CIRCUIT =
  DISCH_ALL                                                                 o
  LIST_ANTE_EXISTS_INTRO                                                    o 
@@ -1646,8 +1656,16 @@ val MAKE_CIRCUIT =
  at_SPEC_ALL ``clk:num->bool``                                             o
  Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
  DEV_IMP_FORALL                                                            o
+ CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ Ho_Rewrite.REWRITE_RULE
+  [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
+   DEL_IMP_def,GSYM DEL_IMP_THM]                                           o
+ ABS_DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                     o
+ REWRITE_RULE[DFF_IMP_def,GSYM DEL_IMP_THM,DEL_IMP_def]                    o
  MAKE_NETLIST;
+******************************************************************************)
 
+(**************** Monolithic version, slightly more efficient ****************)
 val MAKE_CIRCUIT =
  DISCH_ALL                                                                 o
  LIST_ANTE_EXISTS_INTRO                                                    o 
