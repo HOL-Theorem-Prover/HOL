@@ -7,21 +7,32 @@
 (* October 20, 2004                                                          *)
 (*===========================================================================*)
 
-open TotalDefn listTheory;
+load "metisLib";
+open TotalDefn listTheory metisLib;
+
+(*---------------------------------------------------------------------------*)
+(* Syntax fiddling so that HOL identifiers, which are almost all upper-case, *)
+(* are spelt the same as their ML counterparts.                              *)
+(*---------------------------------------------------------------------------*)
+
+val _ = overload_on ("null",  listSyntax.null_tm);
+val _ = overload_on ("map",   listSyntax.map_tm);
+val _ = overload_on ("filter",listSyntax.filter_tm);
+val _ = overload_on ("flat",  listSyntax.flat_tm);
 
 (*---------------------------------------------------------------------------*)
 (* Trivial lemmas, should be in listTheory already                           *)
 (*---------------------------------------------------------------------------*)
 
 val NULL_ELIM = Q.prove
-(`!l. NULL l = (l=[])`, Cases THEN RW_TAC list_ss []);
+(`!l. null l = (l=[])`, Cases THEN RW_TAC list_ss []);
 
 val FLAT_CONS_DISTRIB = Q.prove
-(`!L1 L2. FLAT (L1 :: L2) = L1 ++ FLAT L2`,
+(`!L1 L2. flat (L1 :: L2) = L1 ++ FLAT L2`,
  Induct THEN RW_TAC list_ss []);
 
 val FLAT_APPEND_DISTRIB = Q.prove
-(`!L1 L2. FLAT (L1 ++ L2) = FLAT L1 ++ FLAT L2`,
+(`!L1 L2. flat (L1 ++ L2) = flat L1 ++ flat L2`,
  Induct THEN RW_TAC list_ss []);
 
 (*---------------------------------------------------------------------------*)
@@ -32,16 +43,19 @@ val unfold_def =
  DefineSchema 
    `unfold (x:'a) = if d(x) then [] else f(x)::unfold (g x)`;
 
-
 (*---------------------------------------------------------------------------*)
 (* Join the schema with its induction theorem.                               *)
+(*                                                                           *)
+(*   |- WF R /\ (!x. ~d x ==> R (g x) x) ==>                                 *)
+(*     (unfold d f g x = (if d x then [] else f x::unfold d f g (g x))) /\   *)
+(*     !P. (!x. (~d x ==> P (g x)) ==> P x) ==> !v. P v                      *)
 (*---------------------------------------------------------------------------*)
 
 val unfold_facts = REWRITE_RULE [AND_IMP_INTRO] 
                      (DISCH_ALL (CONJ unfold_def (fetch "-" "unfold_ind")));
 
 (*---------------------------------------------------------------------------*)
-(* Type of n-ary tree we'll be searching in. In ML the type would be defined *)
+(* Type of n-ary tree to be searched in. In ML the type would be defined     *)
 (*                                                                           *)
 (*  datatype 'a tree = Node of 'a * 'a tree list                             *)
 (*                                                                           *)
@@ -53,37 +67,37 @@ val _ = Hol_datatype `tree = Node of 'a => tree list`;
 (* Destructors for trees                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val ROOT_def     = Define `ROOT (Node a tlist) = a`;
-val SUBTREES_def = Define `SUBTREES (Node a tlist) = tlist`;
+val root_def     = Define `root (Node a tlist) = a`;
+val subtrees_def = Define `subtrees (Node a tlist) = tlist`;
 
 (*---------------------------------------------------------------------------*)
 (* Breadth-first search as an unfold from lists of trees                     *)
 (*---------------------------------------------------------------------------*)
 
-val BFS_def = 
+val bfs_def = 
  Define 
-   `BFS (P:'a -> bool) x = unfold NULL (FILTER P o MAP ROOT)
-                                       (FLAT o MAP SUBTREES) x`;
+   `bfs (P:'a -> bool) x = unfold null (filter P o map root)
+                                       (flat o map subtrees) x`;
 
 (*---------------------------------------------------------------------------*)
-(* Instantiate unfold facts with BFS parameters                              *)
+(* Instantiate unfold facts with bfs parameters                              *)
 (*---------------------------------------------------------------------------*)
 
-val unfold_as_BFS = 
+val unfold_as_bfs = 
   PART_MATCH (lhs o fst o dest_conj o snd o dest_imp)
              unfold_facts
-             (rhs(snd(strip_forall(concl BFS_def))));
+             (rhs(snd(strip_forall(concl bfs_def))));
 
 (*---------------------------------------------------------------------------*)
-(* Derive the BFS recursion equations and induction theorem from the unfold. *)
-(* Amounts to showing that BFS parameters cause the unfold to terminate.     *)
+(* Derive the bfs recursion equations and induction theorem from the unfold. *)
+(* Amounts to showing that bfs parameters cause the unfold to terminate.     *)
 (*                                                                           *)
-(* BFS_EQN =                                                                 *)
-(*  |- BFS P x = if NULL x then []                                           *)
-(*               else FILTER (P o ROOT) x::BFS P ((FLAT o MAP SUBTREES) x)   *)
+(* bfs_eqn =                                                                 *)
+(*  |- bfs P x = if null x then []                                           *)
+(*               else filter (P o root) x::bfs P ((flat o map subtrees) x)   *)
 (*                                                                           *)
-(*  BFS_IND =                                                                *)
-(*    |- !P. (!x. (~NULL x ==> P ((FLAT o MAP SUBTREES) x)) ==> P x)         *)
+(*  bfs_ind =                                                                *)
+(*    |- !P. (!x. (~null x ==> P ((flat o map subtrees) x)) ==> P x)         *)
 (*           ==> !v. P v                                                     *)
 (*---------------------------------------------------------------------------*)
 
@@ -94,36 +108,36 @@ val tsize_def =  (* Need a bespoke termination measure *)
    (ltsize f (h::t) = tsize f h + ltsize f t)`;
 
 val SUBTREES_SMALLER = Q.prove
-(`!t f. ltsize f (SUBTREES t) < tsize f t`,
- Cases THEN RW_TAC list_ss [SUBTREES_def, tsize_def]);
+(`!t f. ltsize f (subtrees t) < tsize f t`,
+ Cases THEN RW_TAC list_ss [subtrees_def, tsize_def]);
 
 val ltsize_append = Q.prove
 (`!L1 L2. ltsize f (L1 ++ L2) = ltsize f L1 + ltsize f L2`,
  Induct THEN RW_TAC list_ss [tsize_def]);
 
-val [BFS_EQN, BFS_IND] = CONJUNCTS
- (REWRITE_RULE [GSYM BFS_def]
- (prove (snd(dest_imp(concl unfold_as_BFS)),
- MATCH_MP_TAC (GEN_ALL unfold_as_BFS)
+val [bfs_eqn, bfs_ind] = CONJUNCTS
+ (REWRITE_RULE [GSYM bfs_def]
+ (prove (snd(dest_imp(concl unfold_as_bfs)),
+ MATCH_MP_TAC (GEN_ALL unfold_as_bfs)
   THEN WF_REL_TAC `measure (ltsize (K 0))`
   THEN Induct THEN RW_TAC list_ss [tsize_def,ltsize_append]
-  THEN Cases_on `NULL x` THEN FULL_SIMP_TAC list_ss [NULL_ELIM]
+  THEN Cases_on `null x` THEN FULL_SIMP_TAC list_ss [NULL_ELIM]
   THEN PROVE_TAC [DECIDE(Term`a<b /\ c<d ==> a+c < b+d`),SUBTREES_SMALLER])));
 
 (*---------------------------------------------------------------------------*)
-(* Queue-based BFS ... nifty!                                                *)
+(* Queue-based bfs ... nifty!                                                *)
 (*---------------------------------------------------------------------------*)
 
-val BFSq_defn = 
+val bfsq_defn = 
  Hol_defn "BFSq"
-  `(BFSq [] = []) /\
-   (BFSq (Node (x:'a) tlist::rst) = 
-         if P x then x::BFSq (rst ++ tlist)
-                else BFSq (rst ++ tlist))`;
+  `(bfsq [] = []) /\
+   (bfsq (Node (x:'a) tlist::rst) = 
+         if P x then x::bfsq (rst ++ tlist)
+                   else bfsq (rst ++ tlist))`;
 
-val (BFSq_EQN, BFSq_IND) = 
+val (bfsq_eqn, bfsq_ind) = 
  Defn.tprove 
-  (BFSq_defn,
+  (bfsq_defn,
    WF_REL_TAC `measure (ltsize (K 0))` THEN
    RW_TAC list_ss [tsize_def, ltsize_append]);
 
@@ -140,9 +154,9 @@ val (BFSq_EQN, BFSq_IND) =
 
 val lem = Q.prove
 (`!L1 L2.
-   BFSq P (L1 ++ FLAT (MAP SUBTREES L2)) 
+   bfsq P (L1 ++ flat (map subtrees L2)) 
    =
- FILTER P (MAP ROOT L1) ++ BFSq P (FLAT (MAP SUBTREES L2 ++ MAP SUBTREES L1))`,
+ filter P (map root L1) ++ bfsq P (flat (map subtrees L2 ++ map subtrees L1))`,
  Induct THEN RW_TAC list_ss [] 
    THEN Q.PAT_ASSUM `$!M` (ASSUME_TAC o Q.SPEC `L2 ++ [h]`)
    THEN FULL_SIMP_TAC list_ss []
@@ -150,32 +164,25 @@ val lem = Q.prove
    THEN POP_ASSUM (SUBST_ALL_TAC o SYM)
    THEN Cases_on `h` 
    THEN FULL_SIMP_TAC list_ss
-          [Once BFSq_EQN, ROOT_def, SUBTREES_def,FLAT_APPEND_DISTRIB]);
+          [Once bfsq_eqn, root_def, subtrees_def, FLAT_APPEND_DISTRIB]);
 
 (*---------------------------------------------------------------------------*)
-(* Property of BFSq                                                          *)
+(* Property of bfsq                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val BFSq_LEM = Q.prove
-(`!l.(FILTER P o MAP ROOT) l ++ BFSq P ((FLAT o MAP SUBTREES) l) = BFSq P l`,
- recInduct BFSq_IND
-    THEN RW_TAC list_ss [ROOT_def,SUBTREES_def]
-    THENL [RW_TAC list_ss [Once BFSq_EQN],RW_TAC list_ss [Once BFSq_EQN]]
-    THEN POP_ASSUM (SUBST_ALL_TAC o SYM)
-    THEN RW_TAC list_ss [FILTER_APPEND_DISTRIB]
-    THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND_11]
-    THEN PROVE_TAC [lem]);
+val bfsq_lem = Q.prove
+(`!l. (filter P o map root) l ++ bfsq P ((flat o map subtrees) l) = bfsq P l`,
+ recInduct bfsq_ind
+    THEN RW_TAC list_ss [root_def,subtrees_def]
+    THENL [RW_TAC list_ss [Once bfsq_eqn],RW_TAC list_ss [Once bfsq_eqn]]
+    THEN METIS_TAC [FILTER_APPEND_DISTRIB, APPEND_ASSOC, APPEND_11,lem]);
 
 (*---------------------------------------------------------------------------*)
 (* Desired equality                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val BFS_EQ_BFSq = Q.prove
-(`!tlist:'a tree list. FLAT (BFS P tlist) = BFSq P tlist`,
- recInduct BFS_IND THEN Cases THENL
- [RW_TAC list_ss [Once BFSq_EQN, Once BFS_EQN],
-  REWRITE_TAC [NULL_DEF] 
-   THEN STRIP_TAC
-   THEN ONCE_REWRITE_TAC [BFS_EQN]
-   THEN REWRITE_TAC [NULL_DEF,FLAT_CONS_DISTRIB]
-   THEN PROVE_TAC [BFSq_LEM]]);;
+val bfs_eq_bfsq = Q.prove
+(`!tlist:'a tree list. flat (bfs P tlist) = bfsq P tlist`,
+ recInduct bfs_ind THEN Cases THENL
+ [RW_TAC list_ss [Once bfsq_eqn, Once bfs_eqn],
+  METIS_TAC [NULL_DEF, bfs_eqn, FLAT_CONS_DISTRIB, bfsq_lem]]);

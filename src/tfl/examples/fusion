@@ -2,19 +2,15 @@
     Transformation of programs involving "unfold" : the fusion law. 
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib", "Q", "pairTools"]; open bossLib TotalDefn pairTools; 
-
-infix 8 by; infix &&;
 show_assums := true;
-
+open arithmeticTheory;
 
 (*---------------------------------------------------------------------------
      Datatype of binary trees with data at each internal node.
  ---------------------------------------------------------------------------*)
 
-Hol_datatype `btree 
-                = LEAF 
-                | NODE of btree => 'a => btree`;
+Hol_datatype `btree = LEAF 
+                    | NODE of btree => 'a => btree`;
 
 
 (*---------------------------------------------------------------------------
@@ -32,9 +28,10 @@ val btreeRec_def =
      "unfold" into a btree. The following is not correct, because "more" 
      and "dest" are not arguments to the function (i.e. things that
      are recursed on), but rather parameters that have to be filled in
-     before the definition makes sense.
+     before the definition makes sense in a logic of total functions
+     like HOL.
 
-            unfold more f x = 
+         fun unfold more f x = 
               if more x 
                then let (y,a,z) = dest x
                     in 
@@ -43,12 +40,12 @@ val btreeRec_def =
 
      Following is the right way to define the unfold schema. Since dest 
      and more are only free in the right hand side, they are treated
-     as parameters.
+     as parameters in a schematic definition.
  ---------------------------------------------------------------------------*)
 
 val unfold_def = 
- DefineSchema
-     `unfold (x:'a) = 
+ TotalDefn.DefineSchema
+     `unfold (x:'a) : 'b btree = 
         if more x 
           then let (y1,b,y2) = dest x 
                in 
@@ -78,7 +75,7 @@ val unfold_ind = theorem "unfold_ind";
  ---------------------------------------------------------------------------*)
 
 val fusion_def = 
- DefineSchema
+ TotalDefn.DefineSchema
      `fusion (x:'a) = 
          if more x 
            then let (y,i,z) = dest x
@@ -89,27 +86,8 @@ val fusion_def =
 
 (*---------------------------------------------------------------------------
      Prove that unfolding and then reducing is the same as doing 
-     a fusion. We want to lift "let" bindings from the goal and 
-     put them on the assumptions. To do that, we need to supply
-     the following rewrite rules that lift a let that binds
-     3 values. 
+     a fusion. 
  ---------------------------------------------------------------------------*)
-
-val LET3_RAND = Q.prove
-(`!(P:'d->'e) (M:'a#'b#'c) N.
-       P (let (x,y,z) = M in N x y z) = (let (x,y,z) = M in P (N x y z))`,
-REWRITE_TAC[boolTheory.LET_DEF] 
- THEN CONV_TAC (DEPTH_CONV pairLib.GEN_BETA_CONV)
- THEN REWRITE_TAC[]);
-
-
-val LET3_RATOR = Q.prove
-(`!(M:'a1#'a2#'a3) (N:'a1->'a2->'a3->'b->'c) (b:'b). 
-      (let (x,y,z) = M in N x y z) b = let (x,y,z) = M in N x y z b`,
-REWRITE_TAC[boolTheory.LET_DEF] 
- THEN CONV_TAC (DEPTH_CONV pairLib.GEN_BETA_CONV)
- THEN REWRITE_TAC[]);
-
 
 val fusion_law = Q.prove
 (`!R dest more.
@@ -120,9 +98,113 @@ val fusion_law = Q.prove
         !x c g. 
            btreeRec (unfold dest more x) c g = fusion c dest g more x`,
 REPEAT GEN_TAC THEN STRIP_TAC 
-  THEN recInduct unfold_ind THEN RW_TAC std_ss []
-  THEN ONCE_REWRITE_TAC[unfold_def] THEN ONCE_REWRITE_TAC[fusion_def] 
-  THEN LET_EQ_TAC [LET3_RATOR,LET3_RAND]
-  THEN Q.PAT_ASSUM `x = y` (SUBST_ALL_TAC o SYM) 
-  THEN RW_TAC std_ss [btreeRec_def]
-  THEN PROVE_TAC []);
+  THEN recInduct unfold_ind 
+  THEN RW_TAC std_ss []
+  THEN RW_TAC std_ss [Once unfold_def, Once fusion_def]
+  THEN RW_TAC std_ss [btreeRec_def]);
+
+
+
+(*---------------------------------------------------------------------------
+   Now consider a different type: n-ary trees with data at each internal node.
+ ---------------------------------------------------------------------------*)
+
+Hol_datatype `tree = Nde of 'a => tree list`;
+
+val Root_def = Define `Root (Nde a tlist) = a`;
+val Kids_def = Define `Kids (Nde a tlist) = tlist`;
+
+val tree_size_def = snd (TypeBase.size_of "tree");
+
+(*---------------------------------------------------------------------------
+    Recursor over tree.
+ ---------------------------------------------------------------------------*)
+
+val treeRec_defn = Hol_defn
+   "treeRec"
+   `treeRec (Nde x tlist) = f x (MAP treeRec tlist)`;
+
+val (treeRec_def', treeRec_ind) = Defn.tprove
+(treeRec_defn,
+ WF_REL_TAC `^(Lib.el 2 (TotalDefn.guessR treeRec_defn))` THEN
+ Induct THEN RW_TAC list_ss [tree_size_def] THENL
+ [DECIDE_TAC, RES_TAC THEN DECIDE_TAC]);
+
+val treeRec_def = CONV_RULE (DEPTH_CONV ETA_CONV) treeRec_def';
+
+(*---------------------------------------------------------------------------
+     unfold into a list
+ ---------------------------------------------------------------------------*)
+
+val listUnfold_def = 
+ TotalDefn.DefineSchema
+     `listUnfold (x:'a) : 'b list = 
+        if done x then []
+         else f x :: listUnfold (g x)`;
+
+
+(*---------------------------------------------------------------------------
+    List a forest of trees out by levels. The nth element in the result 
+    is the concatentation of the nth levels in the trees.
+ ---------------------------------------------------------------------------*)
+
+val forestLevels_def = 
+ Define
+   `forestLevels = listUnfold NULL (MAP Root) (FLAT o MAP Kids)`;
+
+val tree_size_thm = Q.prove
+(`!t. tree1_size f (Kids t) < tree_size f t`,
+ recInduct treeRec_ind
+  THEN RW_TAC list_ss [tree_size_def, Kids_def]);
+
+
+val tree_size_thm1 = Q.prove
+(`!L1 L2. tree1_size f (L1 ++ L2) = tree1_size f L1 + tree1_size f L2`,
+ Induct THEN RW_TAC list_ss [tree_size_def]);
+
+
+val term_lem = Q.prove
+(`!x :'a tree list.
+      ~NULL x ==>
+          tree1_size (\v.0) (FLAT (MAP Kids x)) < tree1_size (\v.0) x`,
+ Induct THEN RW_TAC list_ss []
+   THEN FULL_SIMP_TAC list_ss [tree_size_def]
+   THEN Cases_on `x` THENL
+   [RW_TAC list_ss [tree_size_def]
+     THEN PROVE_TAC [tree_size_thm,LESS_TRANS,DECIDE (Term `x < x+1`)],
+   RW_TAC std_ss [tree_size_thm1] 
+     THEN FULL_SIMP_TAC std_ss [listTheory.NULL]
+     THEN MATCH_MP_TAC (DECIDE (Term`c<b /\ a<d ==> a+c < b+d`))
+     THEN PROVE_TAC [tree_size_thm,LESS_TRANS,DECIDE (Term `x < x+1`)]]);
+
+
+val listUnfold_def' = 
+ SIMP_RULE arith_ss [prim_recTheory.measure_thm,
+                     prim_recTheory.WF_measure,
+                     term_lem]
+   (Q.INST [`R`    |-> `measure (tree1_size (\v.0))`,
+            `done` |-> `NULL`,
+            `f`    |-> `MAP Root`,
+            `g`    |-> `FLAT o MAP Kids`] 
+         (INST_TYPE [alpha |-> Type `:'a tree list`,
+                     beta  |-> Type `:'a list`] 
+                   (DISCH_ALL listUnfold_def)));
+
+val forestLevels_eqns = Q.prove
+(`forestLevels tlist =
+    if NULL tlist then [] 
+     else MAP Root tlist::forestLevels (FLAT (MAP Kids tlist))`,
+ MATCH_ACCEPT_TAC (REWRITE_RULE [GSYM forestLevels_def] listUnfold_def'));
+
+val treeLevels_def = 
+ Define
+   `treeLevels tree = forestLevels [tree]`;
+
+
+(*---------------------------------------------------------------------------
+    Breadth-first traversal is just flattening the result of treeLevels.
+    But you could ask for more efficiency, and derive this by using
+    "deforestation", or fusion.
+ ---------------------------------------------------------------------------*)
+
+
