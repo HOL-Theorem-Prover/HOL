@@ -54,7 +54,7 @@ val NUMERAL_BIT2 =
 (*---------------------------------------------------------------------------*
  * After this call, numerals parse into `NUMERAL( ... )`                     *
  *---------------------------------------------------------------------------*)
-val _ = Globals.assert_nums_defined();
+val _ = add_numeral_form (#"n", NONE);
 
 val SUB = new_recursive_definition
    {name = "SUB",
@@ -2055,8 +2055,7 @@ val _ = adjoin_to_theory
    S "      nchotomy=num_CASES,";
    S "      size=SOME(Parse.Term`\\x:num. x`, boolTheory.REFL_CLAUSE),";
    S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
-   S "      distinct=SOME numTheory.NOT_SUC});";
-   S "val _ = Globals.assert_nums_defined();"
+   S "      distinct=SOME numTheory.NOT_SUC});"
  end)};
 
 
