@@ -4,7 +4,7 @@ open HolKernel boolLib intSyntax integerTheory int_arithTheory
 
 open CooperMath QConv
 
-infix THENC ORELSEC ##
+infix THEN THENL THENC ORELSEC ##
 
 val (Type, Term) = parse_from_grammars int_arith_grammars
 
@@ -149,5 +149,116 @@ fun gcd_check tm =
       "int_le" => gcd_le_check tm
     | "=" => gcd_eq_check tm
     | _ => raise ERR "gcd_check" "Term not an = or <="
+
+(* ----------------------------------------------------------------------
+    addzero t
+
+    if t (of integer type and not a numeral itself) does not have a
+    numeral as its 'rand, then return thm |- t = t + 0, otherwise
+    ALL_QCONV.
+   ---------------------------------------------------------------------- *)
+
+fun addzero t =
+    if is_int_literal t orelse  is_int_literal (rand t) then ALL_QCONV t
+    else SYM (SPEC t INT_ADD_RID)
+
+
+(* ----------------------------------------------------------------------
+    RLIB_INT_NORM_CONV tm
+
+    returns a normalised term, with coefficients collected over all
+    variables, etc.  Uses integerRingLib.INT_NORM_CONV but
+    post-processes the result, because the ringLib code can return
+    terms including subtractions, associates the additions to the
+    right, and puts the numeral in the left-most position (if there is
+    one; it will drop trailing + 0 terms)
+   ---------------------------------------------------------------------- *)
+
+val RLIB_INT_NORM_CONV = let
+  val move_numeral_right = prove(
+    ``!n y z:int. (&n + y = y + &n) /\ (~&n + y = y + ~&n) /\
+                  (y + &n + z = y + z + &n) /\
+                  (y + ~&n + z = y + z + ~&n)``,
+    REPEAT STRIP_TAC THEN REWRITE_TAC [GSYM INT_ADD_ASSOC, INT_EQ_LADD] THEN
+    MATCH_ACCEPT_TAC INT_ADD_COMM);
+  fun put_in_times1 t =
+      if is_plus t then BINOP_QCONV put_in_times1 t
+      else if is_var t then SYM (SPEC t INT_MUL_LID)
+      else if is_negated t andalso is_var (rand t) then
+        SPEC (rand t) INT_NEG_MINUS1
+      else ALL_QCONV t
+in
+  Profile.profile "INC.ringLib" integerRingLib.INT_NORM_CONV THENC
+  Profile.profile "INC.rewriting"
+    (REWRITE_CONV [int_sub, INT_NEG_LMUL, INT_ADD_ASSOC,
+                   move_numeral_right]) THENC
+  Profile.profile "INC.final" (addzero THENC put_in_times1)
+end
+
+(* ----------------------------------------------------------------------
+    NAIVE_INT_NORM_CONV tm
+
+    as the above, but naively done.  Is intended to be quicker on small
+    terms, where the overhead of the ringLib solution is too great.
+   ---------------------------------------------------------------------- *)
+
+val NAIVE_INT_NORM_CONV = let
+  fun partition R acc l = let
+    fun insert x [] = [[x]]
+      | insert x (p1 :: ps) = if R (x, hd p1) then (x::p1) :: ps
+                              else p1 :: insert x ps
+  in
+    case l of
+      [] => acc
+    | (x::xs) => partition R (insert x acc) xs
+  end
+  fun collect_vars tm = let
+    val summands = strip_plus tm
+    val dm = total (#2 o dest_mult)
+    val collected = partition (op= o (dm ## dm)) [] summands
+    val newrhs = let
+      val (nums, vars) = Lib.pluck (fn p => is_int_literal (hd p)) collected
+    in
+      mk_plus (list_mk_plus (map list_mk_plus vars), list_mk_plus nums)
+    end handle HOL_ERR _ => list_mk_plus (map list_mk_plus collected)
+    val newrhs_th = EQT_ELIM(AC_CONV (INT_ADD_ASSOC, INT_ADD_COMM)
+                                     (mk_eq(tm, newrhs)))
+  in
+    K newrhs_th THENC REWRITE_CONV [GSYM INT_RDISTRIB] THENC
+    REDUCE_CONV
+  end tm
+
+in
+  REWRITE_CONV [INT_LDISTRIB, INT_RDISTRIB, INT_MUL_ASSOC] THENC
+  REDUCE_CONV THENC
+  (* to this point have expanded all multiplications, and have reduced
+     all coefficients; still need to collect vars together *)
+  collect_vars THENC addzero
+end
+
+(* ----------------------------------------------------------------------
+    INT_NORM_CONV tm
+
+    picks the better of the two above, depending on the size of the term.
+    Experiments suggest that the crossover point is at about 100 summands.
+   ---------------------------------------------------------------------- *)
+
+fun INT_NORM_CONV tm = let
+  fun tmsize acc tm = let
+    val (l,r) = dest_plus tm
+  in
+    tmsize (tmsize acc r) l
+  end handle HOL_ERR _ => let
+               val (l,r) = dest_mult tm
+             in
+               if is_var r then 1 + acc
+               else tmsize acc r
+             end handle HOL_ERR _ => acc + 1
+in
+  if tmsize 0 tm < 100 then NAIVE_INT_NORM_CONV tm
+  else RLIB_INT_NORM_CONV tm
+end
+
+
 
 end

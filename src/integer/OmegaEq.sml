@@ -53,41 +53,6 @@ fun myfind f [] = NONE
 fun lhand t = rand (rator t)
 
 (* ----------------------------------------------------------------------
-    INT_NORM_CONV tm
-
-    returns a normalised term, with coefficients collected over all
-    variables, etc.  Don't use integerRingLib.INT_NORM_CONV directly
-    because this can return terms including subtractions, associates the
-    additions to the right, and puts the numeral in the left-most
-    position (if there is one; it will drop trailing + 0 terms)
-   ---------------------------------------------------------------------- *)
-
-val INT_NORM_CONV = let
-  val move_numeral_right = prove(
-    ``!n y z:int. (&n + y = y + &n) /\ (~&n + y = y + ~&n) /\
-                  (y + &n + z = y + z + &n) /\
-                  (y + ~&n + z = y + z + ~&n)``,
-    REPEAT STRIP_TAC THEN REWRITE_TAC [GSYM INT_ADD_ASSOC, INT_EQ_LADD] THEN
-    MATCH_ACCEPT_TAC INT_ADD_COMM);
-  fun addzero t =
-      if is_int_literal (rand t) then ALL_QCONV t
-      else SYM (SPEC t INT_ADD_RID)
-  fun put_in_times1 t =
-      if is_plus t then BINOP_QCONV put_in_times1 t
-      else if is_var t then SYM (SPEC t INT_MUL_LID)
-      else if is_negated t andalso is_var (rand t) then
-        SPEC (rand t) INT_NEG_MINUS1
-      else ALL_QCONV t
-in
-  Profile.profile "INC.ringLib" integerRingLib.INT_NORM_CONV THENC
-  Profile.profile "INC.rewriting"
-    (REWRITE_CONV [int_sub, INT_NEG_LMUL, INT_ADD_ASSOC,
-                   move_numeral_right]) THENC
-  Profile.profile "INC.final" (addzero THENC put_in_times1)
-end
-
-
-(* ----------------------------------------------------------------------
     rel_coeff v tm
 
     returns the coefficient (a term that is a numeral) of variable v in
@@ -256,7 +221,7 @@ fun OmegaEq t = let
   val (exvars, body) = strip_exists t
   val exv_set = HOLset.addList(empty_tmset, exvars)
   val gcd_check = Profile.profile "gcd_check" OmegaMath.gcd_check
-  val INT_NORM_CONV = Profile.profile "INT_NORM_CONV" INT_NORM_CONV
+  val INT_NORM_CONV = Profile.profile "INT_NORM_CONV" OmegaMath.INT_NORM_CONV
   val _ = length exvars > 0 orelse
           raise ERR "OmegaEq" "Term not existentially quantified"
   val conjns = strip_conj body
@@ -284,6 +249,14 @@ in
                                      gcd_check)) THENC
   OmegaEq
 end t
+
+(* some test terms:
+
+   ``?x y z. 0 <= 2 * x + ~3 * y + 5 * z + 10 /\
+             (0  = 3 * x + 4 * y + ~7 * z + 3)``
+
+
+*)
 
 
 end;

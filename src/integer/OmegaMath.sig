@@ -4,6 +4,7 @@ sig
   val gcd_eq_check : conv
   val gcd_le_check : conv
   val gcd_check    : conv
+  val INT_NORM_CONV: conv
 
 end;
 
@@ -31,6 +32,9 @@ end;
 
    [gcd_check tm] applies either gcd_eq_check or gcd_le_check depending
    on tm's relational operator.  Fails with HOL_ERR otherwise.
+
+   [INT_NORM_CONV tm] normalises tm, distributing multiplications over
+   sums and collecting up variable coefficients.
 
 *)
 
