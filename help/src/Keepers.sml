@@ -26,7 +26,7 @@ val keepers =
      "IndDefLib.sig", "InductiveDefinition.sig", "IndDefRules.sig",
 
      (* HolBdd *)
-     "HolBddLib.sig", "MachineTransitionTheory.sig", 
+     "MachineTransitionTheory.sig", 
      "PrimitiveBddRules.sig", "DerivedBddRules.sig",
      "PrintBdd.sig", "Varmap.sig",
 
