@@ -52,15 +52,15 @@ val fl_def =
  Hol_datatype
   `fl = F_STRONG_BOOL  of 'a bexp                (* b!                       *)
       | F_WEAK_BOOL    of 'a bexp                (* b                        *)
-      | F_NOT          of fl                     (* \neg f                   *)
-      | F_AND          of fl # fl                (* f1 \wedge f2             *)
-      | F_STRONG_SERE  of 'a sere                (* {r}!                     *)
-      | F_WEAK_SERE    of 'a sere                (* {r}                      *)
+      | F_NOT          of fl                     (* not f                    *)
+      | F_AND          of fl # fl                (* f1 and f2                *)
+      | F_STRONG_SERE  of 'a sere                (* r!                       *)
+      | F_WEAK_SERE    of 'a sere                (* r                        *)
       | F_NEXT         of fl                     (* X! f                     *)
       | F_UNTIL        of fl # fl                (* [f1 U f2]                *)
       | F_ABORT        of fl # 'a bexp           (* f abort b                *)
       | F_CLOCK        of fl # 'a bexp           (* f@b                      *)
-      | F_SUFFIX_IMP   of 'a sere # fl`;         (* {r} |-> f                *)
+      | F_SUFFIX_IMP   of 'a sere # fl`;         (* r |-> f                  *)
 
 (******************************************************************************
 * Formulas of Sugar Optional Branching Extension (OBE)
@@ -68,8 +68,8 @@ val fl_def =
 val obe_def =
  Hol_datatype
   `obe = O_BOOL        of 'a bexp                (* boolean expression       *)
-       | O_NOT         of obe                    (* \neg f                   *)
-       | O_AND         of obe # obe              (* f1 \wedge f2             *)
+       | O_NOT         of obe                    (* not f                    *)
+       | O_AND         of obe # obe              (* f1 and f2                *)
        | O_EX          of obe                    (* EX f                     *)
        | O_EU          of obe # obe              (* E[f1 U f2]               *)
        | O_EG          of obe`;                  (* EG f                     *)
