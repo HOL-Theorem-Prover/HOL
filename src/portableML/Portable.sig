@@ -71,4 +71,5 @@ sig
   type 'a quotation = 'a frag list
   type 'a frag = 'a frag
 
+  val norm_quote : 'a quotation -> 'a quotation
 end

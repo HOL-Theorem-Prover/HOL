@@ -167,4 +167,15 @@ fun pr_list pfun dfun bfun =
 type 'a frag = 'a General.frag;
 type 'a quotation = 'a frag list;
 
+(*---------------------------------------------------------------------------
+      MoscowML returns lists of QUOTE'd strings when a quote is spread
+      over more than one line. "norm_quote" concatenates all adjacent
+      QUOTE elements in this list. 
+ ---------------------------------------------------------------------------*)
+
+fun norm_quote [] = []
+  | norm_quote [x] = [x]
+  | norm_quote (QUOTE s1::QUOTE s2::rst) = norm_quote (QUOTE(s1^s2)::rst)
+  | norm_quote (h::rst) = h::norm_quote rst;
+
 end (* Portable *)
