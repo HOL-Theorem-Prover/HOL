@@ -1,10 +1,10 @@
 + =====================================================================	+
 |									|
-| LIBRARY	: ind_def_new						|
+| LIBRARY	: IndDefLib						|
 |									|
 | DESCRIPTION   : Inductive definitions package.		        |
 |									|
-| AUTHOR	: J.R.Harrison						|
+| AUTHOR	: J.R.Harrison, T.F. Melham				|
 | DATE		: 1996							|
 |									|
 | PORTED BY	: D.R.Syme						|
@@ -12,6 +12,9 @@
 |									|
 | MODIFIED      : R.J.Boulton						|
 | DATE		: 6 August 1996						|
+|									|
+| MODIFIED      : K. Slind						|
+| DATE		: Jan. 02. 2000						|
 + =====================================================================	+
 
 Inductive definitions package.
@@ -25,10 +28,8 @@ See the following paper:
    Volume 971 of Lecture Notes in Computer Science, Springer-Verlag,
    pages 200-213.
 
-Relevant structures: Ind_defs
+Relevant structures: IndDefLib
 
 Functions:
-   val new_inductive_definition : <as for ind_def library>
-   val gen_new_inductive_definition : ...
-   val new_simple_inductive_definition : ...
+   "new_inductive_definition" and functions in IndDefRules.
 
