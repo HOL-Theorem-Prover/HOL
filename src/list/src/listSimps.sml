@@ -25,6 +25,13 @@ val list_ss = rewrites
    MAP_EQ_NIL, gMAP_EQ_NIL, listTheory.APPEND_NIL,listTheory.CONS_ACYCLIC,
    listTheory.list_case_def, listTheory.APPEND_eq_NIL];
 
-
+val list_rws = computeLib.add_thms
+    (true,[ listTheory.APPEND,listTheory.APPEND_NIL, listTheory.EL_compute,
+	    listTheory.EVERY_DEF, listTheory.FLAT, listTheory.HD,
+	    listTheory.LENGTH, listTheory.MAP, listTheory.MAP2,
+	    listTheory.NULL_DEF, listTheory.SUM, listTheory.TL,
+	    listTheory.CONS_11, listTheory.NOT_CONS_NIL,
+	    listTheory.NOT_NIL_CONS, EQT_INTRO(REFL(--`[]:'a list`--)),
+	    computeLib.lazyfy_thm (SPEC_ALL listTheory.list_case_compute) ]);
 
 end (* struct *)

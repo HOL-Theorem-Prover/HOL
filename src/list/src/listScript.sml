@@ -61,7 +61,6 @@ val NOT_LESS      = arithmeticTheory.NOT_LESS;
 val LESS_EQ_ADD   = arithmeticTheory.LESS_EQ_ADD;
 val num_CASES     = arithmeticTheory.num_CASES;
 val LESS_MONO_EQ  = arithmeticTheory.LESS_MONO_EQ;
-val ADD_CLAUSES   = arithmeticTheory.ADD_CLAUSES;
 val LESS_MONO_EQ  = arithmeticTheory.LESS_MONO_EQ;
 val ADD_EQ_0      = arithmeticTheory.ADD_EQ_0;
 val ONE           = arithmeticTheory.ONE;
@@ -446,6 +445,15 @@ val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 val list_CASES = save_thm("list_CASES", prove_cases_thm list_INDUCT);
 
 (*---------------------------------------------------------------------------*)
+(* Definition of list_case more suitable to call-by-value computations       *)
+(*---------------------------------------------------------------------------*)
+
+val list_case_compute = store_thm("list_case_compute",
+ --`!(l:'a list). list_case (b:'b) f l =
+                  if NULL l then b else f (HD l) (TL l)`--,
+   LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [list_case_def,HD, TL,NULL_DEF]);
+
+(*---------------------------------------------------------------------------*)
 (* CONS11:  |- !h t h' t'. (h::t = h' :: t') = (h = h') /\ (t = t')          *)
 (*---------------------------------------------------------------------------*)
 
@@ -584,6 +592,11 @@ CONJ_TAC THEN
   INDUCT_THEN list_INDUCT STRIP_ASSUME_TAC
    THEN REWRITE_TAC [CONS_11,NOT_NIL_CONS, NOT_CONS_NIL,APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
+
+(* Computing EL when n is in numeral representation *)
+val EL_compute = store_thm("EL_compute",
+Term `!n. EL n l = if n=0 then HD l else EL (PRE n) (TL l)`,
+INDUCT_TAC THEN ASM_REWRITE_TAC [NOT_SUC, EL, PRE]);
 
 
 val list_case_cong =
