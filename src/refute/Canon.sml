@@ -1,34 +1,28 @@
 structure Canon :> Canon =
 struct
 
-open HolKernel Parse basicHol90Lib liteLib AC Ho_rewrite Ho_resolve Psyntax;
-
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
- type term = Term.term
- type thm = Thm.thm
- type conv = Abbrev.conv
-
-
-val EXISTS_DEF        = boolTheory.EXISTS_DEF;
-val EXISTS_UNIQUE_DEF = boolTheory.EXISTS_UNIQUE_DEF;
-val LEFT_AND_EXISTS_THM = GSYM LEFT_EXISTS_AND_THM;
-val AND_FORALL_THM      = GSYM FORALL_AND_THM;
-val LEFT_OR_FORALL_THM  = GSYM LEFT_FORALL_OR_THM;
-val RIGHT_OR_FORALL_THM = GSYM RIGHT_FORALL_OR_THM;
-val LEFT_IMP_FORALL_THM = GSYM LEFT_EXISTS_IMP_THM;
-val RIGHT_IMP_FORALL_THM = GSYM boolTheory.RIGHT_FORALL_IMP_THM;
-val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
-val OR_EXISTS_THM = GSYM EXISTS_OR_THM;
-val LEFT_IMP_EXISTS_THM  = boolTheory.LEFT_EXISTS_IMP_THM;
-val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
-
-infix 5 |-> -->
+open HolKernel boolLib liteLib AC Ho_Rewrite Abbrev tautLib;
+infixr 5 |-> -->
 infix THEN THENL THENC THENCQC THENQC
 fun ERR x = STRUCT_ERR "Canon" x;
 fun WRAP_ERR x = STRUCT_WRAP "Canon" x;
+
+val (Type,Term) = Parse.parse_from_grammars combinTheory.combin_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+val EXISTS_DEF           = boolTheory.EXISTS_DEF
+val EXISTS_UNIQUE_DEF    = boolTheory.EXISTS_UNIQUE_DEF
+val LEFT_AND_EXISTS_THM  = GSYM LEFT_EXISTS_AND_THM
+val AND_FORALL_THM       = GSYM FORALL_AND_THM
+val LEFT_OR_FORALL_THM   = GSYM LEFT_FORALL_OR_THM
+val RIGHT_OR_FORALL_THM  = GSYM RIGHT_FORALL_OR_THM
+val LEFT_IMP_FORALL_THM  = GSYM LEFT_EXISTS_IMP_THM
+val RIGHT_IMP_FORALL_THM = GSYM boolTheory.RIGHT_FORALL_IMP_THM
+val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM
+val OR_EXISTS_THM        = GSYM EXISTS_OR_THM
+val LEFT_IMP_EXISTS_THM  = boolTheory.LEFT_EXISTS_IMP_THM
+val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
 
 (* -------------------------------------------------------------------------
  * Sometimes useful: a 1-way Skolemization conversion, introducing defs for
@@ -37,9 +31,9 @@ fun WRAP_ERR x = STRUCT_WRAP "Canon" x;
  * Taken directly from GTT.
  * ------------------------------------------------------------------------- *)
 
-val conj_tm = (--`$/\`--);
-val disj_tm = (--`$\/`--);
-val false_tm = (--`F`--);
+val conj_tm = boolSyntax.conjunction;
+val disj_tm = boolSyntax.disjunction;
+val false_tm = boolSyntax.F
 
 val (args,ONEWAY_SKOLEM_CONV) =
   let val args = ref []
@@ -60,7 +54,8 @@ val (args,ONEWAY_SKOLEM_CONV) =
 	val fvs = free_vars bod
     in if mem v fvs then
 	let val nfvs = intersect fvs gvs
-	    val eps = mk_const("@",(type_of v --> Type.bool) --> type_of v)
+	    val eps = mk_thy_const("@","min",
+                         (type_of v --> Type.bool) --> type_of v)
 	    val etm = mk_comb(eps,atm)
 	    val stm = list_mk_abs(nfvs,etm)
 	    val gv = genvar(type_of stm)
@@ -111,23 +106,23 @@ val (args,ONEWAY_SKOLEM_CONV) =
 val (NNF_CONV,NNF_SKOLEM_CONV) =
     let val p = (--`p:bool`--) and q = (--`q:bool`--) and q' = (--`q':bool`--)
 	val P = (--`P:'a->bool`--) and aty = (==`:'a`==)
-	val pth_pimp = TAUT (--`(p ==> q) = q \/ ~p`--)
-	val pth_peq1 = TAUT (--`(p = q) = (p \/ ~q) /\ (~p \/ q)`--)
-	val pth_peq2 = TAUT (--`(p = q) = (p /\ q) \/ (~p /\ ~q)`--)
+	val pth_pimp = TAUT`(p ==> q) = q \/ ~p`
+	val pth_peq1 = TAUT`(p = q) = (p \/ ~q) /\ (~p \/ q)`
+	val pth_peq2 = TAUT`(p = q) = (p /\ q) \/ (~p /\ ~q)`
 	val pth_pcond1 =
-          TAUT (--`(if p then q else q') = (p \/ q') /\ (~p \/ q)`--)
+          TAUT`(if p then q else q') = (p \/ q') /\ (~p \/ q)`
 	val pth_pcond2 =
-          TAUT (--`(if p then q else q') = (p /\ q) \/ (~p /\ q')`--)
-	val pth_nnot = TAUT (--`~~p:bool = p`--)
-	val pth_nand = TAUT (--`~(p /\ q) = ~p \/ ~q`--)
-	val pth_nor = TAUT (--`~(p \/ q) = ~p /\ ~q`--)
-	val pth_nimp = TAUT (--`~(p ==> q) = ~q /\ p`--)
-	val pth_neq1 = TAUT (--`~(p = q) = (p \/ q) /\ (~p \/ ~q)`--)
-	val pth_neq2 = TAUT (--`~(p = q) = (p /\ ~q) \/ (~p /\ q)`--)
+          TAUT`(if p then q else q') = (p /\ q) \/ (~p /\ q')`
+	val pth_nnot = TAUT`~~p:bool = p`
+	val pth_nand = TAUT`~(p /\ q) = ~p \/ ~q`
+	val pth_nor = TAUT`~(p \/ q) = ~p /\ ~q`
+	val pth_nimp = TAUT`~(p ==> q) = ~q /\ p`
+	val pth_neq1 = TAUT`~(p = q) = (p \/ q) /\ (~p \/ ~q)`
+	val pth_neq2 = TAUT`~(p = q) = (p /\ ~q) \/ (~p /\ q)`
 	val pth_ncond1 =
-          TAUT (--`~(if p then q else q') = (p \/ ~q') /\ (~p \/ ~q)`--)
+          TAUT`~(if p then q else q') = (p \/ ~q') /\ (~p \/ ~q)`
 	val pth_ncond2 =
-          TAUT (--`~(if p then q else q') = (p /\ ~q) \/ (~p /\ ~q')`--)
+          TAUT`~(if p then q else q') = (p /\ ~q) \/ (~p /\ ~q')`
 	val EXISTS_UNIQUE_THM2 = prove
 	    ((--`!P. (?!x:'a. P x) = (?x. P x /\ !y. P y ==> (y = x))`--),
 		GEN_TAC THEN REWRITE_TAC [EXISTS_UNIQUE_DEF,
@@ -179,15 +174,15 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
 	    let fun NNF_CONV_P emb bvs tm =
 		let val (ll,r) = dest_comb tm
 		in let val s = name_of_const ll
-		   in if s = "~" then NNF_CONV_N emb bvs r
-		      else if s = "?" then
+		   in if s = ("~","bool") then NNF_CONV_N emb bvs r
+		      else if s = ("?","bool") then
 			  if skolemize then
 			      RIGHT_NNF emb bvs (ONEWAY_SKOLEM_CONV bvs tm)
 			  else
 			      let val (v,bod) = dest_abs r
 			      in AP_TERM ll (ABS v (NNF_CONV_P emb bvs bod))
 			      end
-		      else if s = "!" then
+		      else if s = ("!","bool") then
 			  let val (v,bod) = dest_abs r
 			  in AP_TERM ll (ABS v (NNF_CONV_P true (v::bvs) bod))
 			  end
@@ -196,12 +191,12 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
 	           handle HOL_ERR _ =>
 		   let val (oper,l) = dest_comb ll
 		   in let val s = name_of_const oper
-		       in if s = "/\\" orelse s = "\\/" then
+		       in if s = ("/\\","bool") orelse s = ("\\/","bool") then
 			   MK_COMB(AP_TERM oper (NNF_CONV_P emb bvs l),
 				   NNF_CONV_P emb bvs r)
-			  else if s = "==>" then
+			  else if s = ("==>","min") then
 		           RIGHT_NNF emb bvs (INST [p |-> l, q |-> r] pth_pimp)
-			  else if s = "=" then
+			  else if s = ("=","min") then
 			      let val pth =
 				  if cnflag andalso emb then
 				      INST [p |-> l, q |-> r] pth_peq1
@@ -212,7 +207,7 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
 		       end
   		       handle HOL_ERR _ =>
 		       let val (b,c) = dest_comb oper
-		       in if name_of_const b = "COND" then
+		       in if name_of_const b = ("COND","bool") then
 			   if cnflag andalso emb then
 			       INST [p |-> b, q |-> l, q' |-> r] pth_pcond1
 			   else INST [p |-> b, q |-> l, q' |-> r] pth_pcond2
@@ -225,24 +220,24 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
 		and NNF_CONV_N emb bvs tm =
 		    let val (ll,r) = dest_comb tm
 		    in let val s = name_of_const ll
-		       in if s = "~" then
+		       in if s = ("~","bool") then
 			   RIGHT_NNF emb bvs (INST [p |-> r] pth_nnot)
-		       else if s = "?" then
+		       else if s = ("?","bool") then
 			   RIGHT_NNF emb bvs (LOCAL_NOT_EXISTS_CONV tm)
-		       else if s = "!" then
+		       else if s = ("!","bool") then
 			   RIGHT_NNF emb bvs (LOCAL_NOT_FORALL_CONV tm)
 		       else NNF_CONV_TERMINAL emb bvs(mk_neg tm)
 		       end
 		       handle HOL_ERR _ =>
 		       let val (oper,l) = dest_comb ll
 		       in let val s = name_of_const oper
-			  in if s = "/\\" then
+			  in if s = ("/\\","bool") then
 			      RIGHT_NNF emb bvs (INST [p|->l, q|-> r] pth_nand)
-			     else if s = "\\/" then
+			     else if s = ("\\/","bool") then
 				 RIGHT_NNF emb bvs (INST [p|->l,q|->r] pth_nor)
-			     else if s = "==>" then
+			     else if s = ("==>","min") then
 				RIGHT_NNF emb bvs (INST [p|->l,q|->r] pth_nimp)
-			     else if s = "=" then
+			     else if s = ("=","min") then
 				 let val pth =
 				     if cnflag andalso emb then
 					 INST [p |-> l, q |-> r] pth_neq1
@@ -253,7 +248,7 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
 			  end
 		          handle HOL_ERR _ =>
 			  let val (b,c) = dest_comb oper
-			  in if name_of_const b = "COND" then
+			  in if name_of_const b = ("COND","bool") then
 			      if cnflag andalso emb then
 				  INST [p |-> b, q |-> l, q' |-> r] pth_ncond1
 			      else INST [p |-> b, q |-> l, q' |-> r] pth_ncond2
@@ -319,16 +314,17 @@ val PRENEX_CONV =
 	      exception DEST_CONST
 	  in let val cname = name_of_const lop
                   handle HOL_ERR _ => raise DEST_CONST
-	     in if cname = "!" orelse cname = "?"
+	     in if cname = ("!","bool") orelse cname = ("?","bool")
                 then AP_TERM lop (ABS_CONV PRENEX_QCONV r)
-		else if cname = "~"
+		else if cname = ("~","bool")
                      then (RAND_CONV PRENEX_QCONV THENQC PRENEX2_QCONV) tm
 		     else failwith "unchanged"
 	     end
 	     handle DEST_CONST =>
 	     let val (oper,l) = dest_comb lop
 		 val cname = name_of_const oper
-	     in if cname = "/\\" orelse cname = "\\/" orelse cname = "==>"
+	     in if cname = ("/\\","bool") orelse
+                   cname = ("\\/","bool") orelse cname = ("==>","min")
                 then let val th =
 		           let val lth = PRENEX_QCONV l
 		           in let val rth = PRENEX_QCONV r
@@ -357,13 +353,13 @@ val PRENEX_CONV =
  * ------------------------------------------------------------------------- *)
 
 val PROP_CNF_CONV =
-  let val th1 = TAUT (--`a \/ (b /\ c) = (a \/ b) /\ (a \/ c)`--)
-      and th2 = TAUT (--`(a /\ b) \/ c = (a \/ c) /\ (b \/ c)`--)
+  let val th1 = TAUT`a \/ (b /\ c) = (a \/ b) /\ (a \/ c)`
+      and th2 = TAUT`(a /\ b) \/ c = (a \/ c) /\ (b \/ c)`
       val f =  DISTRIB_CONV(th1,th2) THENC
 	  DEPTH_BINOP_CONV conj_tm (ASSOC_CONV DISJ_ASSOC) THENC
 	  ASSOC_CONV CONJ_ASSOC
   in fn tm => f tm
-      handle e as (HOL_ERR _) => WRAP_ERR("PROP_CNF_CONV",e)
+      handle e => WRAP_ERR("PROP_CNF_CONV",e)
   end;
 
 
@@ -372,13 +368,13 @@ val PROP_CNF_CONV =
  * ------------------------------------------------------------------------- *)
 
 val PROP_DNF_CONV =
-    let val th1 = TAUT (--`a /\ (b \/ c) = (a /\ b) \/ (a /\ c)`--)
-	and th2 = TAUT (--`(a \/ b) /\ c = (a /\ c) \/ (b /\ c)`--)
+    let val th1 = TAUT`a /\ (b \/ c) = (a /\ b) \/ (a /\ c)`
+	and th2 = TAUT`(a \/ b) /\ c = (a /\ c) \/ (b /\ c)`
 	val f =  DISTRIB_CONV(th1,th2) THENC
 	    DEPTH_BINOP_CONV disj_tm (ASSOC_CONV CONJ_ASSOC) THENC
 	    ASSOC_CONV DISJ_ASSOC
     in fn tm => f tm
-	handle e as (HOL_ERR _) => WRAP_ERR("PROP_DNF_CONV",e)
+	handle e => WRAP_ERR("PROP_DNF_CONV",e)
     end;
 
 
@@ -396,7 +392,7 @@ val CNF_CONV =
 		 DEPTH_BINOP_CONV conj_tm (ASSOC_CONV DISJ_ASSOC) THENC
 		 ASSOC_CONV CONJ_ASSOC)
   in fn tm => f tm
-      handle e as (HOL_ERR _) => WRAP_ERR("CNF_CONV",e)
+      handle e => WRAP_ERR("CNF_CONV",e)
   end;;
 
 (* ------------------------------------------------------------------------- *)
@@ -410,7 +406,7 @@ val DNF_CONV =
 		 DEPTH_BINOP_CONV disj_tm (ASSOC_CONV CONJ_ASSOC) THENC
 		 ASSOC_CONV DISJ_ASSOC)
   in fn tm => f tm
-      handle e as (HOL_ERR _) => WRAP_ERR("DNF_CONV",e)
+      handle e => WRAP_ERR("DNF_CONV",e)
   end;;
 
 
@@ -462,7 +458,7 @@ val RATSKOL =
 		end
 	    handle HOL_ERR _ => findreps sks th
     in fn th => findreps (hyp th) th
-	handle e as (HOL_ERR _) => WRAP_ERR("RATSKOL",e)
+	handle e => WRAP_ERR("RATSKOL",e)
     end;;
 
 (* ------------------------------------------------------------------------- *)
@@ -489,7 +485,7 @@ val SKELIM =
 	    val sskols = take [] markup
 	in itlist skelim sskols th
 	end
-    handle e as (HOL_ERR _) => WRAP_ERR("SKELIM",e)
+    handle e => WRAP_ERR("SKELIM",e)
     end;
 
 (* ------------------------------------------------------------------------- *)
@@ -507,6 +503,7 @@ fun CONV_THEN_REFUTE (conv:conv) refuter tm =
 (* -------------------------------------------------------------------------
  * Wrapper for a refuter which takes a list of theorems in CNF.
  * ------------------------------------------------------------------------- *)
+
 fun thm_eq th1 th2 = (dest_thm th1 = dest_thm th2);
 
 local fun split_thms [] dun = dun
@@ -522,7 +519,7 @@ local fun split_thms [] dun = dun
                    end
 in
 fun CNF_THEN_REFUTE cnfrefuter tm = cnfrefuter (split_thms [ASSUME tm] [])
-	handle e as (HOL_ERR _) => WRAP_ERR("CNF_THEN_REFUTE",e)
+	handle e => WRAP_ERR("CNF_THEN_REFUTE",e)
 end;;
 
 
@@ -533,13 +530,14 @@ end;;
 (* The expectation is that "refute p" gives "p |- F".                        *)
 (* ------------------------------------------------------------------------- *)
 (* used for debugging refutation provers *)
+
 val latest = ref (NONE: (thm * thm * term) option);
 
 val REFUTE =
-  let val pth = TAUT (--`(~p ==> F) ==> p`--)
-      val p = (--`p:bool`--)
+  let val pth = TAUT`(~p ==> F) ==> p`
+      val p = Term`p:bool`
       val CONJ_AC = EQT_ELIM o AC_CONV(CONJ_ASSOC,CONJ_SYM)
-      val pth_d = TAUT (--`(a \/ b) /\ c = (a /\ c) \/ (b /\ c)`--)
+      val pth_d = TAUT`(a \/ b) /\ c = (a /\ c) \/ (b /\ c)`
       fun refute refuter tm =
 	  let (* val _ = trace (1,"refute -- ",tm)  *)
 	      val (l,r) = dest_disj tm
@@ -578,7 +576,7 @@ val REFUTE =
 
 fun CNF_REFUTE baseconv afterconv refuter tm =
   REFUTE baseconv afterconv true (CNF_THEN_REFUTE refuter) tm
-      handle e as (HOL_ERR _) => WRAP_ERR("CNF_REFUTE",e);;
+  handle e => WRAP_ERR("CNF_REFUTE",e);;
 
 (* -------------------------------------------------------------------------
  * Produce a conversion which throws theorems into a proof procedure.
@@ -590,7 +588,7 @@ fun CONV_OF_PROVER prover ths tm =
 	val th' = prover tm'
     in EQT_INTRO (itlist (C MP) (rev ths) th')
     end
-handle e as (HOL_ERR _) => WRAP_ERR("CONV_OF_PROVER",e);;
+handle e => WRAP_ERR("CONV_OF_PROVER",e);;
 
 (* ------------------------------------------------------------------------- *)
 (* Equate lambda-reduced and universally quantified applied definitions.     *)
@@ -617,7 +615,7 @@ val UNLAMB_CONV =
 	    EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
 	    FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC)
 	and P_tm = (--`P:'a->bool`--) and t_tm = (--`t:'a`--)
-        and aty = (==`:'a`==)
+        and aty = Type.alpha
     in fn tm =>
 	let val t = find_term is_abs tm
 	    val gv = genvar(type_of t)
@@ -683,7 +681,7 @@ val FOL_CONV =
 		    val maxterm = list_mk_comb(v,args)
 		    fun mk_instance n t =
 			if n = hnum then REFL t
-                      else (APP_CONV THENC (LAND_CONV (mk_instance (n - 1)))) t
+                      else (APP_CONV THENC (LAND_CONV (mk_instance (n-1)))) t
 		    val instances = map (fn n => mk_instance n maxterm) tnums
 		    val frozen = map (ADD_ASSUM (mk_eq(v,v))) instances
 		    val thm = GEN_REWRITE_CONV DEPTH_CONV frozen tm

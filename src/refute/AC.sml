@@ -5,17 +5,12 @@
 structure AC :> AC = 
 struct
 
-open HolKernel Drule Conv Psyntax liteLib Ho_rewrite Ho_match;
+open HolKernel boolSyntax Drule Conv Psyntax liteLib Ho_Rewrite Abbrev;
 
-
- type term = Term.term
- type thm = Thm.thm
- type conv = Abbrev.conv
-
-  infix 5 |->
-  infix THENCQC THENQC
-  fun ERR x = STRUCT_ERR "AC" x;
-  fun WRAP_ERR x = STRUCT_WRAP "AC" x;
+infix 5 |->
+infix THENCQC THENQC
+fun ERR x = STRUCT_ERR "AC" x;
+fun WRAP_ERR x = STRUCT_WRAP "AC" x;
 
 fun AC thms = EQT_ELIM o AC_CONV thms;
 
@@ -45,27 +40,27 @@ val CONJ_ACI =
 fun list_mk_binop oper = end_foldr (mk_binop oper);;
 
 fun AC_CANON_GEN_CONV acthms =
-  let val oper = rator(rator(rand(repeat (body o rand) (concl (snd acthms)))))
-      val AC_fn = AC acthms
-  in fn order => fn tm =>
-      let val op' = repeat rator tm
-      in if can (match_term [] oper) op' then
-	  let val op' = repeat rator tm
-	      val tmlist = binops op' tm
-	      val stmlist = sort order tmlist
-	      val tm' = list_mk_binop op' stmlist
-	  in AC_fn(mk_eq(tm,tm'))
-	  end
-      handle HOL_ERR _ => REFL tm
-	 else failwith "AC_CANON_GEN_CONV"
-      end
-  end;
+ let val oper = rator(rator(rand(repeat (body o rand) (concl (snd acthms)))))
+     val AC_fn = AC acthms
+ in fn order => fn tm =>
+    let val op' = repeat rator tm
+    in if can (ho_match_term [] oper) op' 
+       then let val op' = repeat rator tm
+                val tmlist = binops op' tm
+                val stmlist = Listsort.sort order tmlist
+                val tm' = list_mk_binop op' stmlist
+            in AC_fn(mk_eq(tm,tm'))
+            end
+            handle HOL_ERR _ => REFL tm
+       else failwith "AC_CANON_GEN_CONV"
+    end
+ end;
 
 (* ------------------------------------------------------------------------- *)
 (* And under the arbitrary term ordering.                                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun AC_CANON_CONV acthms = AC_CANON_GEN_CONV acthms term_lt;
+fun AC_CANON_CONV acthms = AC_CANON_GEN_CONV acthms Term.compare;
 
 
 (*- -------------------------------------------------------------------------*
@@ -100,7 +95,7 @@ val DISTRIB_CONV =
         end
   in 
   fn (lth0,rth0) =>
-     case (strip_comb(rand(snd(strip_forall(concl lth0)))))
+     case boolSyntax.strip_comb(rand(snd(strip_forall(concl lth0))))
       of (lop0,[_,htm]) =>
           (let val hop0 = rator(rator htm)
            in if type_vars_in_term hop0 = []
@@ -164,10 +159,10 @@ val ASSOC_CONV =
          then MK_ASSOC_CONV oper assoc t1 t2 t3 
 	 else fn tm =>
 	     let val xop = rator(rator tm)
-             in case (match_term [] oper xop)
+             in case ho_match_term [] oper xop
 		 of ([],tyin) =>
-                     (let val inst_fn = inst tyin
-                          val assoc' = INST_TYPE tyin assoc
+                     (let val inst_fn = Term.inst tyin
+                          val assoc' = Thm.INST_TYPE tyin assoc
                           and t1' = inst_fn t1 
                           and t2' = inst_fn t2 
                           and t3' = inst_fn t3
