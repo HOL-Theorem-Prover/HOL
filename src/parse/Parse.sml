@@ -570,7 +570,7 @@ end
     val {term_name, fixity, pp_elements, paren_style, block_style} = r
   in
     case fixity of
-      Prefix => ()
+      Prefix => Lib.mesg true "Fixities of Prefix do not affect the grammar"
     | Binder => let
       in
         temp_add_binder(term_name, std_binder_precedence);
@@ -715,7 +715,9 @@ end
   fun temp_set_fixity s f = let
   in
     remove_termtok {term_name = s, tok = s};
-    temp_add_rule (standard_spacing s f)
+    case f of
+      Prefix => ()
+    | _ => temp_add_rule (standard_spacing s f)
   end
   fun set_fixity s f = let
     val cmdstring =
@@ -1098,7 +1100,9 @@ fun new_gen_definition (s, t, f) = let
   val t_name = atom_name (get_head_tm t)
 in
   new_definition(s,t) before
-  add_rule(standard_spacing t_name f)
+  (case f of
+     Prefix => ()
+   | _ => add_rule(standard_spacing t_name f))
 end
 
 fun new_specification {name,sat_thm,consts} = let
@@ -1108,7 +1112,8 @@ fun new_specification {name,sat_thm,consts} = let
   val res =
     Const_spec.prim_new_specification
     {name = name, sat_thm = sat_thm, consts = List.rev newconsts}
-  fun do_parse_stuff (name, fixity) = (add_rule(standard_spacing name fixity);
+  fun add_rule' r = if #fixity r = Prefix then () else add_rule r
+  fun do_parse_stuff (name, fixity) = (add_rule'(standard_spacing name fixity);
                                        reveal name;
                                        remember_const name)
 in
