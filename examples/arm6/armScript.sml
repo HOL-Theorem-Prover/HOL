@@ -166,7 +166,7 @@ val TO_W30_def = Define`TO_W30 n = w30 (BITSw 31 2 n)`;
 val MEMREAD_def = Define `MEMREAD mem addr = mem (TO_W30 addr)`;
 
 val MEM_READ_WORD_def = Define`
-  MEM_READ_WORD mem addr = mem (TO_W30 addr) #>> (8 * BITSw 1 0 addr)`;
+  MEM_READ_WORD mem addr = MEMREAD mem addr #>> (8 * BITSw 1 0 addr)`;
 
 val MEM_READ_BYTE_def = Define`
   MEM_READ_BYTE mem addr =
@@ -536,7 +536,7 @@ val CONDITION_PASSED2_def = Define`
     || HI -> C /\ ~Z
     || GE -> N = V
     || GT -> ~Z /\ (N = V)
-    || _ -> T`;
+    || AL -> T`;
  
 val CONDITION_PASSED_def = Define`
   CONDITION_PASSED N Z C V n =

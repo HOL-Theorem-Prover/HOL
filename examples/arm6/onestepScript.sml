@@ -410,6 +410,13 @@ val IMAP_COMP = store_thm("IMAP_COMP",
     THEN RW_TAC arith_ss [GSYM ADD1]
 );
 
+val UIMMERSION_ONE = store_thm("UIMMERSION_ONE",
+  `!f init next imm dur.
+     IMAP f init next /\ UIMMERSION imm f dur ==>
+     !a. imm a 1 = dur (init a)`,
+  RW_TAC bool_ss [UIMMERSION_def,IMAP_def,ONE,ADD_0]
+);
+
 (* --------------------------------------------------------*)
 (* --------------------------------------------------------*)
 

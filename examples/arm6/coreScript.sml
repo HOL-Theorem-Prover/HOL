@@ -1,5 +1,4 @@
-(* app load ["bossLib","combinTheory","pairTheory","onestepTheory",
-             "word32Theory","word32Lib","armTheory"]; *)
+(* app load ["onestepTheory","word32Theory","armTheory"]; *)
 open HolKernel boolLib Q bossLib Parse arithmeticTheory
      onestepTheory word32Theory armTheory;
 
@@ -537,7 +536,7 @@ val NEXT_ARM6_def = Define`
      let psrdat = PSRDAT ic is ireg nbs aregn cpsr psrfb' alu shcout
      and data = if nrw then ARB else MEMREAD mem areg
      in
-     let mem' = if nrw /\ (pcchange \/ ~(PIPECHANGE areg apipea apipeb))
+     let mem' = if nrw /\ (pcchange \/ ~PIPECHANGE areg apipea apipeb)
                    then MEM_WRITE (~nbw) mem busb areg else mem
      and reg' = if pcwa then REG_WRITE reg nbs 15 inc else reg
      and psr' = if FST psrwa then
@@ -613,12 +612,10 @@ val DUR_ARM6_def = Define`
    DUR_ARM6 (ARM6 mem (DP reg psr areg din alua alub)
              (CTRL pipea pipeaval pipeb pipebval ireg iregval apipea apipeb
                ointstart onewinst opipebll nxtic nxtis aregn nbw nrw sctrlreg psrfb oareg)) =
-     let cpsr = CPSR_READ psr in
-     let (n,z,c,v,nbs) = DECODE_PSR cpsr in
+     let (n,z,c,v,nbs) = DECODE_PSR (CPSR_READ psr) in
      let abortinst = ABORTINST iregval onewinst ointstart ireg n z c v in
      let ic = IC abortinst nxtic in
-     let rwa = RWA ic t3 ireg in
-     let pcchange = PCCHANGE rwa
+     let pcchange = PCCHANGE (RWA ic t3 ireg)
      in
      if ic = undef then
        4
