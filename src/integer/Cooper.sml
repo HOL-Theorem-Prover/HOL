@@ -67,50 +67,7 @@ val T_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 1))
 val F_or_l = GEN_ALL (List.nth(OR_CLAUSES0, 2))
 val F_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 3))
 
-fun boolsimp_CONV tm =
-  if is_neg tm then
-    if rand tm = boolSyntax.T then T_not
-    else if rand tm = boolSyntax.F then F_not
-    else ALL_CONV tm
-  else if is_conj tm then let
-    val (l,r) = dest_conj tm
-  in
-    if r = boolSyntax.T then SPEC l T_and_r
-    else if r = boolSyntax.F then SPEC l F_and_r
-    else if l = boolSyntax.T then SPEC r T_and_l
-    else if l = boolSyntax.F then SPEC r F_and_l
-    else ALL_CONV tm
-  end
-  else if is_disj tm then let
-    val (l,r) = dest_disj tm
-  in
-    if r = boolSyntax.T then SPEC l T_or_r
-    else if r = boolSyntax.F then SPEC l F_or_r
-    else if l = boolSyntax.T then SPEC r T_or_l
-    else if l = boolSyntax.F then SPEC r F_or_l
-    else ALL_CONV tm
-  end
-  else ALL_CONV tm
-
-fun is_int_op tm =
-  is_plus tm orelse is_mult tm orelse is_minus tm orelse is_less tm orelse
-  is_divides tm orelse is_leq tm orelse
-  (is_eq tm andalso type_of (rand tm) = int_ty)
-
-fun REDUCE_CONV tm =
-  if is_disj tm orelse is_conj tm then
-    (BINOP_CONV REDUCE_CONV THENC boolsimp_CONV) tm
-  else if is_neg tm then
-    (RAND_CONV REDUCE_CONV THENC boolsimp_CONV) tm
-  else if is_int_op tm then
-    (BINOP_CONV REDUCE_CONV THENC
-     (fn t => if is_int_literal (rand t) andalso
-                 is_int_literal (rand (rator t))
-              then
-                intSimps.REDUCE_CONV t
-              else
-                ALL_CONV t)) tm
-  else ALL_CONV tm
+val REDUCE_CONV = intSimps.REDUCE_CONV
 
 fun remove_bare_vars tm =
   if is_conj tm orelse is_disj tm orelse is_less tm orelse is_plus tm orelse
