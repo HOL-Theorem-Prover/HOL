@@ -78,8 +78,7 @@ fun lemma m = EQ_MP (SPEC m ORD_CHAR_IMP) (cond m);
 
 
 (*---------------------------------------------------------------------------
-      Declare all the character constants. Also, show that, 
-      for 0<=n<=255, 
+      Show that, for 0<=n<=255, 
 
            ORD (CHAR n) = n. 
 
@@ -93,13 +92,7 @@ val _ =
       val nums = upto 0 255
       val int2term = mk_numeral o Arbnum.fromInt 
       val num_tms = map int2term nums
-      fun def_tm (i,rhs) = 
-         let val name = "CHAR_"^int_to_string i
-             val def = mk_eq(mk_var(name, char_ty),mk_char rhs)
-         in new_definition(name, def)
-         end
   in
-    map def_tm (zip nums num_tms);
     save_thm ("ORD_CHAR", LIST_CONJ (map lemma num_tms))
   end;
 
