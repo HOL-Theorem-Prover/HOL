@@ -301,8 +301,7 @@ fun pp_struct info_record ppstrm =
      fun pparent (s,i,j) = Thry s
 
      fun pp_tm tm =
-         (add_string "$";
-          Term.pp_raw_term (fn t => Map.find(#termmap tmtable, t)) ppstrm tm)
+         Term.pp_raw_term (fn t => Map.find(#termmap tmtable, t)) ppstrm tm
      fun pr_bind(s, th) = let
        val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
      in
@@ -317,14 +316,18 @@ fun pp_struct info_record ppstrm =
        end_block()
      end
 
+     fun stringbrk s = (add_string s; add_break(1,0))
      fun bind_theorems () =
          if null thml then ()
          else
            (begin_block CONSISTENT 0;
-            add_string "local"; add_break(1,0);
+            stringbrk "local";
             begin_block CONSISTENT 0;
-            add_string"val DT = Thm.disk_thm"; add_break(1,0);
-            add_string"val $ = Term.parse_raw tmvector";
+            stringbrk"val DT = Thm.disk_thm";
+            stringbrk"val op & = Term.mk_comb";
+            stringbrk"infix &";
+            stringbrk"val \\\\ = Term.mk_abs";
+            stringbrk"fun % n = Vector.sub(tmvector, n)";
             end_block();
             add_newline();
             add_string"in"; add_newline();

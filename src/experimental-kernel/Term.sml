@@ -1038,101 +1038,18 @@ fun pp_raw_term index pps tm =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
      fun pp (Abs(Bvar,Body)) =
-          ( add_string "(\\";
-            pp Bvar; add_string dot; add_break(1,0);
+          ( add_string "\\\\(";
+            pp Bvar; add_string ","; add_break(1,0);
             pp Body; add_string ")" )
       | pp (App(Rator,Rand)) =
          ( add_string "("; pp Rator; add_break(1,0);
+                           add_string "& ";
                            pp Rand; add_string ")")
       | pp a      = add_string (percent^Lib.int_to_string (index a))
  in
    begin_block INCONSISTENT 0;
-   add_string "`";
    pp tm;
-   add_string "`";
    end_block()
  end;
-
-
-(*---------------------------------------------------------------------------*
- * Fetching theorems from disk. The following parses the "raw" term          *
- * representation found in exported theory files.                            *
- *---------------------------------------------------------------------------*)
-
-datatype lexeme
-   = dot
-   | lamb
-   | lparen
-   | rparen
-   | ident of int
-
-local val numeric = Char.contains "0123456789"
-in
-fun take_numb ss0 =
-  let val (ns, ss1) = Substring.splitl numeric ss0
-  in case Int.fromString (Substring.string ns)
-      of SOME i => (i,ss1)
-       | NONE   => raise ERR "take_numb" ""
-  end
-end;
-  (* we don't allow numbers to be split across fragments; think this is reasonab
-le *)
-
-fun lexer (ss1,qs1) =
-  case Substring.getc (Lib.deinitcommentss ss1) of
-    NONE => (case qs1 of
-               (QUOTE s::qs2) => lexer (Substring.all s,qs2)
-             | []             => NONE
-             | _              => raise ERR "raw lexer" "expected a quotation")
-  | SOME (c,ss2) =>
-    case c of
-      #"."  => SOME(dot,   (ss2,qs1))
-    | #"\\" => SOME(lamb,  (ss2,qs1))
-    | #"("  => SOME(lparen,(ss2,qs1))
-    | #")"  => SOME(rparen,(ss2,qs1))
-    | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, (ss3,qs1)) end
-    |   _   => raise ERR "raw lexer" "bad character";
-
-fun eat_rparen ss =
-  case lexer ss
-   of SOME (rparen, ss') => ss'
-    |   _ => raise ERR "eat_rparen" "expected right parenthesis";
-
-fun eat_dot ss =
-  case lexer ss
-   of SOME (dot, ss') => ss'
-    |   _ => raise ERR "eat_dot" "expected a \".\"";
-
-fun parse_raw table =
- let fun index i = Vector.sub(table,i)
-     fun parse (stk,ss) =
-      case lexer ss
-       of SOME (ident n, rst) => (index n::stk,rst)
-        | SOME (lparen,  rst) =>
-           (case lexer rst
-             of SOME (lamb, rst') => parse (glamb (stk,rst'))
-              |    _              => parse (parsel (parse (stk,rst))))
-        |  _ => (stk,ss)
-     and
-     parsel (stk,ss) =
-        case parse (stk,ss)
-         of (h1::h2::t, ss') => (App(h2,h1)::t, eat_rparen ss')
-          |   _              => raise ERR "raw.parsel" "impossible"
-     and
-     glamb(stk,ss) =
-      case lexer ss
-       of SOME (ident n, rst) =>
-            (case parse (stk, eat_dot rst)
-              of (h::t,rst1) => (mk_abs(index n,h)::t, eat_rparen rst1)
-               |   _         => raise ERR "glamb" "impossible")
-        | _ => raise ERR "glamb" "expected an identifier"
- in
-  fn (QUOTE s::qs) =>
-       (case parse ([], (Substring.all s,qs))
-         of ([v], _)  => v
-          | otherwise => raise ERR "raw term parser" "parse failed")
-   | otherwise => raise ERR "raw term parser" "expected a quotation"
- end;
-
 
 end (* struct *)
