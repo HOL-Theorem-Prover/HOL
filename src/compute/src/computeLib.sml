@@ -164,7 +164,9 @@ val bool_redns =
 
 fun bool_compset() = let
   val base = from_list bool_redns
-  val _ = set_skip base boolSyntax.conditional (SOME 1)
+  val _ = set_skip base boolSyntax.conditional NONE
+          (* change last parameter to SOME 1 to stop CBV_CONV looking at
+             conditionals' branches before the guard is fully true or false *)
 in
   base
 end

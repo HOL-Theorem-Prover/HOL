@@ -331,29 +331,6 @@ html1/DTD/xhtml1-strict.dtd">
 <li> <p> The constant <code>LIST_TO_SET</code> is now defined in
     <code>listTheory</code>.</p></li>
 
-<li> <p> The standard repositories of theorems and conversions used by
-    <code>CBV_CONV</cocde> (and thus, <code>EVAL</code>) now include
-    code to stop evaluation looking at the branches of conditional
-    expressions until guards have evaluated to true or false. Thus,
-    the following no longer puts <code>EVAL</code> into an infinite
-    loop: </p>
-<pre>
-         Define`f x = if x &lt; 2 then 1 else x * f(x - 1)`;
-         EVAL ``f x``;
-</pre>
-    <p> Instead, the call to <code>EVAL</code> does this: </p>
-<pre>
-         - EVAL ``f x``;
-         &gt; val it = |- f x = (if x &lt; 2 then 1 else x * f (x - 1)) : thm
-</pre>
-    <p> The old behaviour can be restored to affected
-    <code>compset</code>s with the following: </p>
-<pre>
-         computeLib.set_skip compset ``COND`` NONE;
-</pre>
-    <p> (The <code>compset</code> used by <code>EVAL</code> is
-    <code>computeLib.the_compset</code>.) </p>
-
 </ul>
 
 
