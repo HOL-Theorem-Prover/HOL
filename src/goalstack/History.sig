@@ -3,6 +3,7 @@ sig
   type 'a history
 
   exception CANT_BACKUP_ANYMORE
+
   val new_history : {obj:'a, limit:int} -> 'a history
   val apply       : ('a -> 'a) -> 'a history -> 'a history
   val set_limit   : 'a history -> int -> 'a history  

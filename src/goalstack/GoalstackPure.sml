@@ -1,17 +1,9 @@
 structure GoalstackPure :> GoalstackPure =
 struct
 
-open Exception Lib History;
+open Feedback Lib History Abbrev;
 
-type thm = Thm.thm
-type goal = Abbrev.goal;
-type tactic = Abbrev.tactic;
-type ppstream = Portable.ppstream;
-
-fun ERR func mesg =
-     HOL_ERR{origin_structure = "GoalstackPure",
-             origin_function = func,
-             message = mesg}
+val ERR = mk_HOL_ERR "GoalstackPure";
 
 fun rotl (a::rst) = rst@[a]
   | rotl [] = raise ERR "rotl" "empty list"
@@ -19,6 +11,7 @@ fun rotl (a::rst) = rst@[a]
 (*---------------------------------------------------------------------------
  *  Add a notion of "undo" to the bare type of gstks.
  *---------------------------------------------------------------------------*)
+
 datatype goalstack = GOALSTACK of Bwd.gstk history;
 
 fun prim_set_goal g f = 

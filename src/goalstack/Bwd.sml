@@ -3,20 +3,16 @@
 structure Bwd :> Bwd =
 struct
 
-
 open HolKernel Abbrev;
+
 infix 0 before;
 
-fun ERR func mesg =
-    HOL_ERR{origin_structure = "Bwd",
-            origin_function = func,
-            message = mesg}
+val ERR = mk_HOL_ERR "Bwd";
 
 val chatting = ref true;
 val show_nsubgoals = ref 100;
 
-
-val _ = Lib.register_trace "Subgoal number" show_nsubgoals;
+val _ = Feedback.register_trace "Subgoal number" show_nsubgoals;
 
 fun say s = if !chatting then Lib.say s else ();
 
@@ -27,10 +23,10 @@ fun rotl (a::rst) = rst@[a]
   | rotl [] = raise ERR "rotl" "empty list"
 
 fun rotr lst =
-   let val (front,back) = Lib.front_last lst
-   in (back::front)
-   end
-   handle _ => raise ERR "rotr" "empty list"
+  let val (front,back) = Lib.front_last lst
+  in (back::front)
+  end
+  handle HOL_ERR _ => raise ERR "rotr" "empty list"
 
 
 
@@ -44,8 +40,8 @@ fun rotr lst =
  * system of ML is not strong enough to check that.
  ---------------------------------------------------------------------------*)
 
-type tac_result = {goals : goal list,
-                   validation : Thm.thm list -> Thm.thm}
+type tac_result = {goals      : goal list,
+                   validation : thm list -> thm}
 
 (*---------------------------------------------------------------------------
    Need both initial goal and final theorem in PROVED case, because
@@ -53,11 +49,14 @@ type tac_result = {goals : goal list,
    transform it into a second theorem. Destructing that second theorem
    wouldn't deliver the original goal.
  ---------------------------------------------------------------------------*)
-datatype proposition = POSED of goal
-                     | PROVED of Thm.thm * goal;
 
-datatype gstk = GSTK of {prop: proposition, final: thm -> thm,
+datatype proposition = POSED of goal
+                     | PROVED of thm * goal;
+
+datatype gstk = GSTK of {prop  : proposition, 
+                         final : thm -> thm,
                          stack : tac_result list}
+
 
 fun depth(GSTK{stack,...}) = length stack;
 
@@ -71,16 +70,14 @@ fun top_goals(GSTK{prop=POSED g, stack=[], ...}) = [g]
 val top_goal = hd o top_goals;
 
 fun new_goal (g as (asl,w)) f =
-   if all (fn tm => Term.type_of tm = Type.bool) (w::asl)
+   if all (fn tm => type_of tm = bool) (w::asl)
     then GSTK{prop=POSED g, stack=[], final=f}
     else raise ERR "set_goal" "not a proposition; new goal not added";
-
 
 fun finalizer(GSTK{final,...}) = final;
 
 fun initial_goal(GSTK{prop = POSED g,...}) = g
   | initial_goal(GSTK{prop = PROVED (th,g),...}) = g;
-
 
 fun rotate(GSTK{prop=PROVED _, ...}) _ =
         raise ERR "rotate" "goal has already been proved"
@@ -89,34 +86,35 @@ fun rotate(GSTK{prop=PROVED _, ...}) _ =
      else
       case stack
        of [] => raise ERR"rotate" "No goals to rotate"
-        | ({goals,validation}::rst) =>
+        | {goals,validation}::rst =>
            if n > length goals
            then raise ERR "rotate"
-                        "More rotations than goals -- no rotation done"
+                 "More rotations than goals -- no rotation done"
            else GSTK{prop=prop, final=final,
                      stack={goals=funpow n rotl goals,
                             validation=validation o funpow n rotr} :: rst};
 
 
 local fun imp_err s = raise ERR "expandf" ("implementation error: "^s)
-fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g,final}) =
-    let val th = validation []
-    in case rst
-       of [] => (let val thm = final th
-                     (* val _ = sanity check : g = dest_thm(th) *)
-                 in GSTK{prop=PROVED (thm,g), stack=[], final=final}
-                 end handle e as HOL_ERR _
-                  => (cr_add_string_cr "finalization failed"; raise e))
-       | ({goals = _::rst_o_goals, validation}::rst') =>
-           ( cr_add_string_cr "Goal proved.";
-             Parse.print_thm th; say "\n";
-             return(GSTK{prop=prop, final=final,
-                         stack={goals=rst_o_goals,
-                                  validation=fn thl => validation(th::thl)}
-                                :: rst'}))
-       | _ => imp_err (quote "return")
-    end
-  | return gstk = gstk
+      fun return(GSTK{stack={goals=[],validation}::rst, 
+                      prop as POSED g,final}) =
+       let val th = validation []
+       in case rst
+           of [] => 
+              (let val thm = final th
+               in GSTK{prop=PROVED (thm,g), stack=[], final=final}
+               end handle e as HOL_ERR _
+                => (cr_add_string_cr "finalization failed"; raise e))
+            | {goals = _::rst_o_goals, validation}::rst' =>
+                ( cr_add_string_cr "Goal proved.";
+                  Parse.print_thm th; say "\n";
+                  return(GSTK{prop=prop, final=final,
+                              stack={goals=rst_o_goals,
+                                     validation=fn thl => validation(th::thl)}
+                                    :: rst'}))
+            | _ => imp_err (quote "return")
+       end
+     | return gstk = gstk
 in
 fun expandf (GSTK{prop=PROVED _, ...}) _ =
        raise ERR "expandf" "goal has already been proved"
@@ -148,14 +146,10 @@ end;
 
 fun expand gs = expandf gs o Tactical.VALID;
 
-fun extract_thm (GSTK{prop = PROVED (th,_), ...}) = th
+fun extract_thm (GSTK{prop=PROVED(th,_), ...}) = th
   | extract_thm _ = raise ERR "extract_thm" "no theorem proved";
 
 (* Prettyprinting *)
-
-fun enum i [] = []
-  | enum i (h::t) = (i,h)::enum (i+1) t;
-fun enumerate l = enum 0 l;
 
 local
 fun ppgoal ppstrm (asl,w) =
@@ -170,7 +164,7 @@ fun ppgoal ppstrm (asl,w) =
        fun pr_indexes [] = raise ERR "pr_indexes" ""
          | pr_indexes [x] = pr x
          | pr_indexes L = pr_list pr_index (fn () => ()) add_newline
-                                  (enumerate (rev asl));
+                                  (Lib.enumerate 0 (rev asl));
    in
      begin_block CONSISTENT 0;
      pr w;
@@ -180,8 +174,7 @@ fun ppgoal ppstrm (asl,w) =
          | _  => ( begin_block CONSISTENT 2;
                    add_string (!Globals.goal_line);
                    add_newline ();
-                   pr_indexes asl;
-                   end_block ()));
+                   pr_indexes asl; end_block ()));
      add_newline ();
      end_block ()
    end

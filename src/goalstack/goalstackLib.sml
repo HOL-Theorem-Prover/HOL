@@ -11,22 +11,18 @@ structure goalstackLib :> goalstackLib =
 struct
 
 
-open HolKernel;
+open HolKernel Abbrev;
 
-type term = Term.term
-type thm = Thm.thm
-type tactic = Abbrev.tactic
-type goal = Abbrev.goal
 type goalstack = GoalstackPure.goalstack
-type proofs = GoalstackPure.proofs
-type 'a quotation = 'a frag list
+type proofs    = GoalstackPure.proofs
+
 
 val chatting = Bwd.chatting;
 fun say s = if !chatting then Lib.say s else ();
 
 val the_proofs = ref (GoalstackPure.initial_proofs());
 
-fun proofs() = (!the_proofs);
+fun proofs() = !the_proofs;
 
 fun set_goal g = 
    (the_proofs := GoalstackPure.add (GoalstackPure.set_goal g) (proofs());
@@ -63,13 +59,13 @@ fun expandf tac =
    (say "OK..\n";
     the_proofs := GoalstackPure.hd_opr (GoalstackPure.expandf tac) (proofs());
     GoalstackPure.current_goalstack(proofs()))
-  handle e => Exception.Raise e;
+  handle e => Raise e;
 
 fun expand tac = 
    (say "OK..\n";
     the_proofs := GoalstackPure.hd_opr (GoalstackPure.expand tac) (proofs());
     GoalstackPure.current_goalstack(proofs()))
-  handle e => Exception.Raise e;
+  handle e => Raise e;
 
 val e = expand;
 
@@ -88,11 +84,13 @@ val status = proofs;
 fun rotate i = 
   (the_proofs := GoalstackPure.hd_opr (GoalstackPure.rotate i) (proofs());
    GoalstackPure.current_goalstack(proofs()));
+
 val r = rotate;
 
 fun rotate_proofs i = 
    (the_proofs := GoalstackPure.rotate_proofs i (proofs()); 
     proofs());
+
 val R = rotate_proofs;
 
 val set_goal_pp  = GoalstackPure.set_goal_pp
