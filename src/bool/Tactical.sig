@@ -13,12 +13,7 @@
 
 signature Tactical =
 sig
-
-  type term = Term.term
-  type thm  = Thm.thm
-  type goal = Abbrev.goal
-  type tactic = Abbrev.tactic
-  type thm_tactic = Abbrev.thm_tactic
+  include Abbrev
 
   val TAC_PROOF      : goal * tactic -> thm
   val prove          : term * tactic -> thm

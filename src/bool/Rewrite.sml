@@ -14,6 +14,7 @@ structure Rewrite :> Rewrite =
 struct
 
 open HolKernel boolTheory boolSyntax Drule Abbrev;
+type pred = term -> bool  
 
 infix 3 ##
 

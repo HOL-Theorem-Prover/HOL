@@ -11,7 +11,10 @@
 structure Ho_Rewrite :> Ho_Rewrite =
 struct
 
-open HolKernel boolTheory boolSyntax Abbrev Drule Conv Tactic Tactical Ho_Net;
+open HolKernel boolTheory boolSyntax Abbrev 
+     Drule Conv Tactic Tactical Ho_Net;
+
+type pred = term -> bool;
 
 infix ## |->;
 

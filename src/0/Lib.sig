@@ -107,12 +107,6 @@ sig
 
   val say           : string -> unit
 
-  (* quote puts double quotes around a string;
-
-     mlquote does this and also quotes all of the characters in the string
-     so that the resulting string could be printed out in a way that would
-     make it a valid ML lexeme  (e.g., newlines turn into \n)
-  *)
   val quote         : string -> string
   val mlquote       : string -> string
 

@@ -11,10 +11,7 @@
 
 signature Drule =
 sig
-  type thm = Thm.thm
-  type term = Term.term
-  type hol_type = Type.hol_type
-  type ('a,'b)subst = ('a,'b) Lib.subst
+  include Abbrev
 
   val EXT              : thm -> thm
   val MK_ABS           : thm -> thm

@@ -12,12 +12,7 @@
 
 signature Tactic =
 sig
-  type thm = Thm.thm
-  type term = Term.term
-  type conv = Abbrev.conv
-  type tactic = Abbrev.tactic
-  type thm_tactic = Abbrev.thm_tactic
-  type thm_tactical = Abbrev.thm_tactical
+  include Abbrev
 
   val ACCEPT_TAC          : thm_tactic
   val DISCARD_TAC         : thm -> tactic

@@ -15,11 +15,7 @@
 
 signature Conv =
 sig
-   type tactic = Abbrev.tactic;
-   type conv   = Abbrev.conv
-   type thm    = Thm.thm
-   type term   = Term.term
-   type hol_type = Type.hol_type
+   include Abbrev
 
    val REWR_CONV             : thm -> conv
    val HO_REWR_CONV          : thm -> conv

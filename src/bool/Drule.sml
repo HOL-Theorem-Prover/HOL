@@ -13,7 +13,7 @@
 structure Drule :> Drule =
 struct
 
-open Feedback HolKernel Parse boolTheory boolSyntax;
+open Feedback HolKernel Parse boolTheory boolSyntax Abbrev;
 
 infix 5 ## |-> -->;
 

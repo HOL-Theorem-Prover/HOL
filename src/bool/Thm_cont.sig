@@ -13,11 +13,7 @@
 signature Thm_cont =
 sig
 
-  type thm = Thm.thm
-  type term = Term.term
-  type tactic = Abbrev.tactic
-  type thm_tactic = Abbrev.thm_tactic
-  type thm_tactical = Abbrev.thm_tactical
+  include Abbrev
 
   val THEN_TCL         : thm_tactical * thm_tactical -> thm_tactical
   val ORELSE_TCL       : thm_tactical * thm_tactical -> thm_tactical
