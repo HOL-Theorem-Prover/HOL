@@ -28,7 +28,7 @@ val LSL_TWO = store_thm("LSL_TWO",
 
 val ROR2_THM = store_thm("ROR2_THM",
   `!a n c. SND (ROR a n c) = a #>> n`,
-  RW_TAC bool_ss [ROR_def,LSL_def,ZERO_SHIFT2,FUNPOW]
+  RW_TAC std_ss [ROR_def,LSL_def,ZERO_SHIFT2,FUNPOW]
     THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
     THEN SIMP_TAC arith_ss [ROR_THM,HB_def,WL_def,ADD1,BITS_ZERO3,MOD_MOD]
 );
