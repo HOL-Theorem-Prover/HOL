@@ -112,3 +112,84 @@ i.e. [[ __ ]] shows up in red.)
 J
 
 * ------------------------------------------------------------------ *
+
+Expanded version of thoughts on possible 3rd Generation munger design,
+in response to Gilles' desire for sort checking:
+
+>> 1) check membership in the various inter-defined grammars of the
+>> hash-system, treating metavariables 'properly', ie with T'' in the
+>> type grammar, e2' in the expression grammar etc.
+>That's what I have in mind.
+
+but by the time you're doing all this, I wonder whether you're almost
+doing a reimplementation of the whole munger, which could include also
+some of its wishlist points...
+
+...thinking a bit more about that, I don't know much about classes of
+grammars, LALR etc, but perhaps yacc is enough, and what one should do
+is a front-end to ocamllex and yacc that takes a more structured .umn
+file, strips out the tokens to feed to lex and strips out the grammar
+to feed to yac.  I'm imagining the new .umn source to be something like:
+
+e ::=
+   ()                  { () }
+   ( COMMALIST(es) )   { ( COMMALIST(es) ) }
+   \x:T.e              { \lambda x : T. e }
+   col e hm T          { [ e ]_{ hm }^{ T } }
+
+From that we produce lex source with symbols
+
+  (  )  \ : . col e{index} T{index} etc
+
+and yacc source a bit like the above but with recursive munging on the
+right (and error reporting!) and with all the syntactic noise that
+means we don't want to write yacc source ourselves.
+
+If LALR(1) is not up to our informal grammars (or if yacc is too
+tiresome), we could think of taking advantage of the fact that we
+rarely want to munge much code at a time, so could use a class of
+grammars that is less efficiently (more simply?) parsable.
+
+
+notes:
+- metavariables on the right of a clause logically have [[ ]] around them
+
+- we do away with having to have definitions of latex macros such as
+    \newcommand{\Mcolour}[3]{[#1]_{#2}^{#3}}
+
+- some special magic needed for lists of things, I guess
+
+- by looking at the collection of all grammars we can pick out e, T
+    etc (and allow them to be subscripted and primed)
+
+- we want to retain the property that this can cope with hol-style lexing too
+
+- don't really want to have to write out the grammars twice, once in
+    .umn and once in the document, so should allow also commentary and
+    some way to produce tex output (either have the grammars in .umn and
+    have the munger define a tex command to generate the typeset version
+    of each, or (better?) have them in the .mng and have the munger-setup
+    pull them out.   eg
+
+      \x:T.e              { \lambda x : T. e }  {function abstraction}
+
+- need to allow interspersed latexery anywhere in expressions.  At least
+    & and \\ and spacing.  Maybe arbitrary latex commands that don't
+    clash with abstracted variables??  Maybe allow nesting cutting across
+    the expression grammar structure (eg for colouring etc)???
+
+- need some nice way of typesetting partial expressions (isolated
+    keywords [[if]] and things like [[if e then ...]], used in exposition,
+    which shouldn't be sort-checked much).  For keywords, have grammar
+    clauses as below, and use recursive munging?
+
+       if e then e1 else e2    { if \; e \; then \; e1 \; else \; e2 }
+       if                      { \kw{if} }
+       then                    { \kw{then} }
+
+    (but the if and then on the rhs shouldn't be recursively munged!)
+
+- need good control over conflicts - want the munger to warn if we
+    type an ambiguous expression, not just rely on yacc's random
+    resolution of shift/reduce conflicts??
+
