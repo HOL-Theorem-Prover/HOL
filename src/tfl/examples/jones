@@ -1,0 +1,97 @@
+(*---------------------------------------------------------------------------
+
+      Examples (some typed in by Ken Larsen) from 
+
+        "The Size-Change Principle for Program Termination",
+           Lee, Jones, Ben-Amram, Proceedings of POPL 2001
+ ---------------------------------------------------------------------------*)
+
+        
+
+(*---------------------------------------------------------------------------
+  1.   Reverse function, with accumulating parameter. Automatic.
+ ---------------------------------------------------------------------------*)
+
+val REV = Define `(REV [] A = A)
+           /\     (REV (h::t) A = REV t (h::A))`;
+
+(*---------------------------------------------------------------------------
+  2.   Program with indirect recursion. We treat this as mutual recursion.
+       Need to define a type of s-expressions for this to be well-typed.
+       Not easy for TFL currently.
+ ---------------------------------------------------------------------------*)
+
+Hol_datatype `sexp = Nil | Cons of sexp => sexp`;
+
+val indirect_defn =
+ Hol_defn "indirect"
+      `(f Nil x = x)
+   /\  (f (Cons h t) x = g t x (Cons h t))
+   /\  (g a b c = f a (Cons b c))`;
+
+val (indirect_eqns,indirect_ind) = Defn.tprove
+(indirect_defn,
+ WF_REL_TAC `inv_image ($< LEX $<)
+     (\s. (sum_case (\(x,y). sexp_size x) (\(a,b,c). sexp_size a) s,
+           sum_case (\v.0) (\v.1) s))`);
+
+
+(*---------------------------------------------------------------------------
+  3.   Function with lexically ordered parameters. Easy but not automatic.
+ ---------------------------------------------------------------------------*)
+
+val ack_defn = 
+   Hol_defn "ack"
+      `(ack (0,n) = n+1)
+   /\  (ack (SUC m,0) = ack(m,1))
+   /\  (ack (SUC m, SUC n) = ack(m,ack(SUC m,n)))`;
+
+val (ack_eqns,ack_ind) = Defn.tprove(ack_defn, WF_REL_TAC `$< LEX $<`);
+
+(*---------------------------------------------------------------------------
+  4.   Program with permuted parameters. Automatic.
+ ---------------------------------------------------------------------------*)
+
+val pparam = Define 
+              `pparam m n r = 
+                  if r > 0 then pparam m (r-1) n else
+                  if n > 0 then pparam r (n-1) m 
+                           else m`;
+
+(*---------------------------------------------------------------------------
+  5.   Program with permuted and possibly discarded parameters.
+       Not easy for TFL currently. (measure function courtesy of Joe Hurd.)
+ ---------------------------------------------------------------------------*)
+
+val perm_defn =
+    Defn.Hol_defn "perm"
+        `  (perm x []         = x)
+        /\ (perm [] (y :: ys) = perm (y::ys) ys)
+        /\ (perm (h :: xs) z  = perm z xs)`;
+
+
+val (perm_eqns,perm_ind) = Defn.tprove
+(perm_defn,
+ WF_REL_TAC 
+    `measure (\(l1,l2). 
+        if NULL l1 then 2 * LENGTH l2 else LENGTH l1 + LENGTH l2)`
+  THEN RW_TAC list_ss []);
+
+
+(*---------------------------------------------------------------------------
+  6.  Program with late-starting sequence of descending parameter 
+      values. Automatic.
+
+      Note: late_g and late_g are defined in the reverse order in 
+            the paper.
+ ---------------------------------------------------------------------------*)
+
+val late_g = 
+    Define
+        `  (late_g [] d        = d)
+        /\ (late_g (c :: cs) d = late_g cs (c :: d))`; 
+
+val late_f = 
+    Define
+        `  (late_f a []      = late_g a [])
+        /\ (late_f a (x::xs) = late_f (x::a) xs)`;
