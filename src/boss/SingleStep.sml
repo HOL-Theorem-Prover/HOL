@@ -359,6 +359,20 @@ fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
 fun exists_p [] _ = false
   | exists_p (p :: ps) x = p x orelse exists_p ps x;
 
+fun find_subterm p =
+  let
+    val f = find_term (can p)
+    fun g t =
+      if is_comb t then
+        g (f (rator t))
+        handle HOL_ERR _ => (g (f (rand t)) handle HOL_ERR _ => t)
+      else if is_abs t then
+        g (f (body t)) handle HOL_ERR _ => t
+      else t
+  in
+    fn t => p (g (f t))
+  end;
+
 local
   fun rator_n 0 f tm = f tm
     | rator_n n f tm = is_comb tm andalso rator_n (n - 1) f (rator tm);
@@ -372,12 +386,29 @@ local
     exists_p o map (case_p o TypeBasePure.case_const_of) o
     TypeBasePure.listItems o TypeBase.theTypeBase;
 
-  fun free_cases tm =
-    let val cp = cases_p ()
-    in fn t => is_comb t andalso cp t andalso free_in t tm
-    end;
+  fun free_thing tm = 
+    let
+      val free_case =
+        let
+          val cp = cases_p ()
+          fun test t = is_comb t andalso cp t andalso free_in t tm
+        in
+          fn t => if test t then SOME (rand t) else NONE
+        end
 
-  fun find_free_case tm = rand (find_term (free_cases tm) tm);
+      val free_cond =
+        let fun test t = is_cond t andalso free_in t tm
+        in fn t => if test t then SOME (rand (rator (rator t))) else NONE
+        end
+    in
+      fn t =>
+      (case free_case t of SOME x => x
+       | NONE =>
+         (case free_cond t of SOME x => x
+          | NONE => raise ERR "CASE_TAC" ""))
+    end;
+    
+  fun find_free_thing tm = find_subterm (free_thing tm) tm;
 
   fun case_rws tyi =
     List.mapPartial I
@@ -389,11 +420,11 @@ local
     flatten o map case_rws o TypeBasePure.listItems o TypeBase.theTypeBase;
 in
   fun PURE_CASE_TAC g =
-    let val t = find_free_case (snd g) in Cases_on `^t` g end;
+    let val t = find_free_thing (snd g) in Cases_on `^t` g end;
 
   fun CASE_TAC g =
     (PURE_CASE_TAC THEN
-     simpLib.SIMP_TAC boolSimps.bool_ss (all_case_rws ())) g;
+     simpLib.ASM_SIMP_TAC boolSimps.bool_ss (all_case_rws ())) g;
 end;
 
 end;
