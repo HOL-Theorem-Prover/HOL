@@ -43,11 +43,17 @@ val current_theory = Theory.current_theory;
 fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm)
 
 fun mk_exists (absrec as {Bvar,Body}) = 
-  mk_comb{Rator=mk_thy_const{Name="?",Thy="bool",Ty=type_of Bvar --> bool},
+  mk_comb{Rator=mk_thy_const
+                  {Name="?",Thy="bool", Ty=(type_of Bvar-->bool)-->bool},
           Rand=mk_abs absrec}
 
-fun dest_exists M = let val {Rator,Rand} = dest_comb M in dest_abs Rand end;
-
+fun dest_exists M = 
+ let val {Rator,Rand} = with_exn dest_comb M (TYDEF_ERR"dest_exists")
+ in case total dest_thy_const Rator
+     of SOME{Name="?",Thy="bool",...} => dest_abs Rand 
+      | otherwise => raise TYDEF_ERR"dest_exists"
+ end
+ 
 fun nstrip_exists 0 t = ([],t) 
   | nstrip_exists n t =
      let val {Bvar, Body} = dest_exists t
@@ -154,8 +160,8 @@ fun new_specification (name, cnames, th) =
                      (SPEC_ERR "too few existentially quantified variables")
      fun vOK V v   = check_tyvars V (type_of v) SPEC_ERR
      val checked   = List.app (vOK (type_vars_in_term body)) V
-     fun mangle v  = let val {Name,Ty} = dest_var v in v |-> bind Name Ty end
-     val (wit,def) = mk_def (THEOREM th, subst (map mangle V) body)
+     fun addc v s  = let val {Ty,...} = dest_var v in v |-> bind s Ty end
+     val (wit,def) = mk_def (THEOREM th, subst (map2 addc V cnames) body)
  in 
     Theory.store_definition (name, cnames, wit, def)
  end
