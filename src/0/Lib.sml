@@ -235,6 +235,13 @@ fun funpow n f x =
      if (n<0) then x else iter(n,x)
    end;
 
+fun repeat f = 
+  let fun loop x = loop (f x) 
+                  handle Interrupt => raise Interrupt
+                      |  Exception.HOL_ERR _ => x
+  in loop
+  end;
+
 fun enumerate i [] = []
   | enumerate i (h::t) = (i,h)::enumerate (i+1) t
 
@@ -260,6 +267,12 @@ fun list_of_array A = for 0 (Array.length A - 1) (fn i => Array.sub(A,i));
 
 fun assoc item =
    let fun assc ((key,ob)::rst) = if (item = key) then ob else assc rst
+         | assc [] = raise LIB_ERR "assoc" "not found"
+   in assc
+   end
+
+fun rev_assoc item =
+   let fun assc ((ob,key)::rst) = if (item = key) then ob else assc rst
          | assc [] = raise LIB_ERR "assoc" "not found"
    in assc
    end

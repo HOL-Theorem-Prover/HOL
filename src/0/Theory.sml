@@ -927,10 +927,11 @@ fun mk_type{Tyop, Args} =
 fun prim_mk_const name =
    let val {name,htype,...} = lookup_const (theCT()) name
                (THEORY_ERR "mk_const" (Lib.quote name^" has not been defined"))
-       val poly = Type.polymorphic htype
        val c = Const(name,htype)
-   in fn [] => c
-       | theta => if poly then Const(name, Type.type_subst theta htype) else c
+   in 
+    if Type.polymorphic htype
+    then (fn theta => Const(name, Type.type_subst theta htype))
+    else (fn _ => c)
    end;
 
 

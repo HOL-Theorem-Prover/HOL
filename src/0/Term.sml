@@ -211,9 +211,9 @@ end;
  *---------------------------------------------------------------------------*)
 local val inST_ref  = ref (fn _:string => false)
       val mk_const_ref  = ref (fn _:{Name:string,Ty:Type.hol_type}
-                                => Fv{Name="",Ty=Type.mk_vartype"'a"})
+                                => Fv{Name="",Ty=Type.alpha})
       val const_decl_ref  = ref (fn _:string =>
-          {const = Fv{Name="",Ty=Type.mk_vartype"'a"},theory=""})
+          {const = Fv{Name="",Ty=Type.alpha},theory=""})
       val started = ref false
 in
   fun init f g h = if !started then ()

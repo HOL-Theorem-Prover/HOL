@@ -55,7 +55,9 @@ sig
   val flatten : 'a list list -> 'a list
   val pluck : ('a -> bool) -> 'a list -> 'a * 'a list
   val enumerate : int -> 'a list -> (int * 'a) list
+  val repeat : ('a -> 'a) -> 'a -> 'a
   val assoc : ''a -> (''a * 'b) list -> 'b
+  val rev_assoc : ''a -> ('b * ''a) list -> 'b
   val assoc1 : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2 : ''a -> ('b * ''a) list -> ('b * ''a) option
   type ('a,'b) subst = {redex:'a, residue:'b} list
