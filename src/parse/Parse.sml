@@ -314,6 +314,11 @@ in
 
   fun do_parse G ty = let
     val pt = parse_term G ty
+      handle PrecConflict(st1, st2) =>
+        raise ERROR "Term"
+          ("Grammar introduces precedence conflict between tokens "^
+           term_grammar.STtoString G st1^" and "^
+           term_grammar.STtoString G st2)
   in
     fn q => let
       val ((cs, p), _) = pt (q, PStack {lookahead = [], stack = [],

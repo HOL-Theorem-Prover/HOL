@@ -203,6 +203,13 @@ fun rule_to_rr rule =
 
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,endbinding,type_intro} = specials G
+  val spec_table = let
+    val toks = grammar_tokens G
+    val table = Polyhash.mkPolyTable(50, Fail "")
+  in
+    app (fn s => Polyhash.insert table (s, ())) toks;
+    table
+  end
   val num_info = numeral_info G
   val resquan_op = case (resquans G) of [] => NONE | (x::_) => SOME x
   val rule_table = Polyhash.mkPolyTable(50, Fail "")
@@ -287,9 +294,8 @@ fun pp_term (G : grammar) TyG = let
        can print out all of the vstruct items in a row, and then
        finish off with a single :: <tm>. For example \x y z::Q.
 
-       The accompany can_print_vstructl function spots when the situation as
-       described above pertains.
-     *)
+       The accompanying can_print_vstructl function spots when the
+       situation as described above pertains.  *)
     fun pr_res_vstructl restrictor res_op vsl = let
       val simples = map (Simple o bv2term) vsl
     in
@@ -425,7 +431,9 @@ fun pp_term (G : grammar) TyG = let
         in
           case rules of
             [LISTRULE _] => add_string n
-          | _ => add_string ("$"^n)
+          | _ =>
+              if isSome (Polyhash.peek spec_table n) then add_string ("$"^n)
+              else add_string n
         end
     end
 
@@ -669,7 +677,11 @@ fun pp_term (G : grammar) TyG = let
         in
           begin_block INCONSISTENT 2; pbegin print_type;
           if isSome vrule then pr_sole_name vname (map #2 (valOf vrule))
-          else add_string vname;
+          else
+            if isSome (Polyhash.peek spec_table vname) then
+              add_string ("$"^vname)
+            else
+              add_string vname;
           if print_type then add_type() else ();
           pend print_type; end_block()
         end
