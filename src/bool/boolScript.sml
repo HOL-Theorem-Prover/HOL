@@ -3206,6 +3206,10 @@ val SKOLEM_THM = save_thm("SKOLEM_THM",
 
 (*---------------------------------------------------------------------------
     Support for pattern matching on booleans.
+
+    bool_case_thm =
+        |- (!e0 e1. bool_case e0 e1 T = e0) /\ 
+            !e0 e1. bool_case e0 e1 F = e1
  ---------------------------------------------------------------------------*)
 
 val bool_case_thm = save_thm("bool_case_thm",

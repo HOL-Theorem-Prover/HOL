@@ -8,7 +8,7 @@ structure boolLib =
 struct
 
  open boolTheory boolSyntax 
-      Drule Tactical Tactic Thm_cont Conv Rewrite Abbrev;
+      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev;
 
  local open DefnBase TypeBase Ho_Net Ho_Rewrite Psyntax Rsyntax in end
 
