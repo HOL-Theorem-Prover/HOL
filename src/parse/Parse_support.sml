@@ -237,7 +237,9 @@ local val num_ty = Pretype.Tyop{Thy="num", Tyop = "num", Args = []}
                                 Thy="arithmetic",Ty=funty num_ty num_ty}}
 in
 fun make_string_literal s =
-    if not (mem "string" (ancestry "-")) then
+    if not (mem "string" (ancestry "-")) andalso
+       current_theory() <> "string"
+    then
       Raise (ERROR "make_string_literal"
                    ("String literals not allowed - "^
                     "load \"stringTheory\" first."))
