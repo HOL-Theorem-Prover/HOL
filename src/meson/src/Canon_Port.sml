@@ -1,8 +1,8 @@
 structure Canon_Port :> Canon_Port =
 struct
 
-open ho_matchLib Parse HolKernel basicHol90Lib
-     liteLib Ho_rewrite Ho_theorems Psyntax;
+open Parse HolKernel basicHol90Lib liteLib Psyntax Ho_rewrite Ho_boolTheory;
+
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
 fun == q x = Type q
@@ -16,6 +16,17 @@ type tactic = Abbrev.tactic
 type conv = Abbrev.conv
 type thm_tactic = Abbrev.thm_tactic;
 
+
+val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
+val LEFT_AND_EXISTS_THM  = GSYM LEFT_EXISTS_AND_THM;
+val OR_EXISTS_THM        = GSYM EXISTS_OR_THM;
+val AND_FORALL_THM       = GSYM FORALL_AND_THM;
+val LEFT_OR_FORALL_THM   = GSYM LEFT_FORALL_OR_THM;
+val RIGHT_OR_FORALL_THM  = GSYM RIGHT_FORALL_OR_THM;
+val LEFT_IMP_FORALL_THM  = GSYM LEFT_EXISTS_IMP_THM;
+val RIGHT_IMP_FORALL_THM = GSYM RIGHT_FORALL_IMP_THM;
+val LEFT_IMP_EXISTS_THM  = boolTheory.LEFT_EXISTS_IMP_THM;
+val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
 
 fun TAUT q = Ho_rewrite.TAUT(Parse.Term q);
 fun freesl tml = itlist (union o free_vars) tml [];;
@@ -119,8 +130,7 @@ end
 local
   val NOT_EXISTS_UNIQUE_THM = Tactical.prove(
     --`~(?!x:'a. P x) = (!x. ~P x) \/ ?x x'. P x /\ P x' /\ ~(x = x')`--,
-    REWRITE_TAC [Ho_theorems.EXISTS_UNIQUE_THM, DE_MORGAN_THM,
-                 Ho_theorems.NOT_EXISTS_THM]
+    REWRITE_TAC [EXISTS_UNIQUE_THM, DE_MORGAN_THM,NOT_EXISTS_THM]
      THEN CONV_TAC (REDEPTH_CONV NOT_FORALL_CONV)
      THEN REWRITE_TAC [NOT_IMP, CONJ_ASSOC])
   val common_tauts =
