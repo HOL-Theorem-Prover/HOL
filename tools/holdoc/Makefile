@@ -9,7 +9,7 @@ DVIPS=dvips
 
 # main target:
 
-all: simpledump simpletexdump lts_to_latex mng_to_latex hostlts.ps
+all: simpledump simpletexdump lts_to_latex mng_to_latex
 
 # program targets:
 
