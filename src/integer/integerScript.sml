@@ -428,7 +428,7 @@ in
 		     [TINT_ADD_LID, TINT_MUL_LID, TINT_ADD_LINV,
 		      TINT_LT_TOTAL, TINT_LT_REFL, TINT_LT_TRANS,
 		      TINT_LT_ADD, TINT_LT_MUL])}
-end
+end;
 
 val int_tybij = definition "int_tybij";
 
@@ -518,46 +518,6 @@ val INT_1 =
 	      Term `int_1 = 1`,
 	      REWRITE_TAC[num_CONV (Term `1n`), int_of_num, INT_ADD_LID]);
 
-(*--------------------------------------------------------------------------*)
-(* Set up a nice interface map. Use & for the inclusion homomorphism, adjust*)
-(* theorems retrospectively to use &n as Term `notation` for int constants. *)
-(*--------------------------------------------------------------------------*)
-
-(* Have been included above for now
-new_special_symbol "--";
-
-set_interface_map
-[               "--","int_neg",
- "num_add","+",  "+_","int_add",
- "num_mul","*",  "*_","int_mul",
- "num_sub","-",  "-_","int_sub",
- "num_lt","<" ,  "<_","int_lt",
- "num_le","<=", "<=_","int_le",
- "num_gt",">" ,  ">_","int_gt",
- "num_ge",">=", ">=_","int_ge",
-                 "&","int_of_num"];
-*)
-
-(*fun reeducate (s,t) = save_thm(s,REWRITE_RULE[INT_0, INT_1] t);
-
-val thlist =
- ["INT_10",INT_10,
-  "INT_ADD_SYM",INT_ADD_SYM,
-  "INT_MUL_SYM",INT_MUL_SYM,
-  "INT_ADD_ASSOC",INT_ADD_ASSOC,
-  "INT_MUL_ASSOC",INT_MUL_ASSOC,
-  "INT_ADD_LID",INT_ADD_LID,
-  "INT_MUL_LID",INT_MUL_LID,
-  "INT_ADD_LINV",INT_ADD_LINV,
-  "INT_LDISTRIB",INT_LDISTRIB,
-  "INT_LT_TOTAL",INT_LT_TOTAL,
-  "INT_LT_REFL",INT_LT_REFL,
-  "INT_LT_TRANS",INT_LT_TRANS,
-  "INT_LT_LADD_IMP",INT_LT_LADD_IMP,
-  "INT_LT_MUL",INT_LT_MUL] in
-
-do (map reeducate thlist, map (load_theorem "-" o fst) thlist);
-*)
 (*--------------------------------------------------------------------------*)
 (* Prove lots of boring field theorems                                      *)
 (*--------------------------------------------------------------------------*)
