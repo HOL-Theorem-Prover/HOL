@@ -44,7 +44,7 @@ fun PROVE_LCOMM (assoc,sym) =
  (* be given as input.                                                       *)
  (*--------------------------------------------------------------------------*)
 
- val (comm_tm,assoc_tm) = 
+ val (comm_tm,assoc_tm) =
     let val f = mk_var("f",Type.alpha --> Type.alpha --> Type.alpha)
         val x = mk_var("x",Type.alpha)
         val y = mk_var("y",Type.alpha)
@@ -66,24 +66,24 @@ fun PROVE_LCOMM (assoc,sym) =
          then if is_assoc tm1 then (th1,th2) else
               let val th1a = GSYM th1
               in if is_assoc (concl (SPEC_ALL th1a)) then (th1a,th2)
-                 else (HOL_MESG "unable to AC-normalize input"; 
+                 else (HOL_MESG "unable to AC-normalize input";
                        ERR ("norm_ac", "failed"))
               end
-         else if is_comm tm1 
+         else if is_comm tm1
                  then if is_assoc tm2 then (th2,th1) else
                       let val th2a = GSYM th2
                       in if is_assoc (concl (SPEC_ALL th2a)) then (th2a,th1)
                          else (HOL_MESG "unable to AC-normalize input";
                                ERR ("norm_ac", "failed"))
                       end
-         else (HOL_MESG "unable to AC-normalize input"; 
+         else (HOL_MESG "unable to AC-normalize input";
                ERR ("norm_ac", "failed"))
     end;
 
- fun mk_ac (th1,th2) A = 
+ fun mk_ac (th1,th2) A =
    let val (a,c) = norm_ac(th1,th2)
        val lcomm = PROVE_LCOMM (a,c)
-   in 
+   in
      GSYM a::c::lcomm::A
    end
    handle HOL_ERR _ => A;
@@ -159,7 +159,7 @@ with
   (* ---------------------------------------------------------------------
    * USER_CONV wraps a bit of tracing around a user conversion.
    *
-   * net_add_convs (internal function) adds conversions to the 
+   * net_add_convs (internal function) adds conversions to the
    * initial context net.
    * ---------------------------------------------------------------------*)
 
@@ -193,12 +193,12 @@ with
 
  fun add_to_ss
     (SIMPSET {convs,rewrs,filter,ac,dprocs,congs},
-     SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'}) 
+     SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'})
   = let val mk_rewrs = case filter of SOME f => f oo mk_rewrs' | _ => mk_rewrs'
         val rewrs' = ac_rewrites ac @ flatten (map mk_rewrs rewrs)
         val newconvdata = convs @ map mk_rewr_convdata rewrs'
         val net = net_add_convs initial_net newconvdata
-    in 
+    in
        SS {mk_rewrs=mk_rewrs,
 	initial_net=net,
              dprocs=dprocs @ dprocs',
@@ -252,7 +252,11 @@ end (* abstype for SS *)
     * ---------------------------------------------------------------------*)
 
    fun SIMP_TAC ss l = CONV_TAC (SIMP_CONV ss l);
-   fun ASM_SIMP_TAC ss l (asms,gl) = SIMP_TAC ss (l@map ASSUME asms) (asms,gl);
+   fun ASM_SIMP_TAC ss l (asms,gl) = let
+     val working = labelLib.LLABEL_RESOLVE l asms
+   in
+     SIMP_TAC ss working (asms,gl)
+   end
 
    fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
    fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;

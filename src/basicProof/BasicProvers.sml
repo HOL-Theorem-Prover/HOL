@@ -8,6 +8,7 @@ structure BasicProvers :> BasicProvers =
 struct
 
 open HolKernel boolLib;
+open labelLib
 type simpset = simpLib.simpset;
 
 infix THEN THENL ORELSE ++;
@@ -24,17 +25,21 @@ in
 fun PROVE thl tm = Tactical.prove (tm,
   EXPAND_COND_TAC THEN mesonLib.MESON_TAC (map EXPAND_COND thl))
 
-fun PROVE_TAC thl =
-  REPEAT (POP_ASSUM MP_TAC)
-    THEN EXPAND_COND_TAC
-    THEN mesonLib.ASM_MESON_TAC (map EXPAND_COND thl)
+fun PROVE_TAC thl (asl, w) = let
+  val working = LLABEL_RESOLVE thl asl
+in
+  EXPAND_COND_TAC THEN CONV_TAC (DEST_LABELS_CONV) THEN
+  mesonLib.MESON_TAC (map EXPAND_COND working)
+end (asl, w)
 
-fun GEN_PROVE_TAC x y z thl =   (* for ZAP_TAC *)
-  REPEAT (POP_ASSUM MP_TAC)
-    THEN EXPAND_COND_TAC
-    THEN mesonLib.GEN_MESON_TAC x y z (map EXPAND_COND thl)
+fun GEN_PROVE_TAC x y z thl (asl, w) = let
+  val working = LLABEL_RESOLVE thl asl
+in
+  EXPAND_COND_TAC THEN CONV_TAC (DEST_LABELS_CONV) THEN
+  mesonLib.GEN_MESON_TAC x y z (map EXPAND_COND working)
+end (asl, w)
 
-end;
+end; (* local *)
 
 
 (*---------------------------------------------------------------------------*
@@ -92,12 +97,12 @@ fun ASSUMS_TAC f P = W (fn (asl,_) =>
 
 fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 
-fun LIFT_SIMP ss tm = 
+fun LIFT_SIMP ss tm =
   UNDISCH_THEN tm (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
 
 val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
 
-local 
+local
   fun DTHEN ttac = fn (asl,w) =>
    let val (ant,conseq) = dest_imp_only w
        val (gl,prf) = ttac (ASSUME ant) (asl,conseq)
@@ -172,24 +177,24 @@ fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
 
 fun hash_const c = Polyhash.hash (#Name(dest_thy_const c));
 
-fun mkCSET () = 
+fun mkCSET () =
  let val CSET = Polyhash.mkTable (hash_const, uncurry same_const)
                                  (31, ERR "CSET" "not found")
      val inCSET = Option.isSome o Polyhash.peek CSET
      fun addCSET c = Polyhash.insert CSET (c,c)
-     val _ = List.app 
+     val _ = List.app
                (List.app addCSET o TypeBasePure.constructors_of) (tyinfol())
      fun constructed tm =
       let val (lhs,rhs) = dest_eq tm
       in aconv lhs rhs orelse
          let val maybe1 = fst(strip_comb lhs)
              val maybe2 = fst(strip_comb rhs)
-         in is_const maybe1 andalso is_const maybe2 
+         in is_const maybe1 andalso is_const maybe2
             andalso
             inCSET maybe1 andalso inCSET maybe2
          end
       end handle HOL_ERR _ => false
-  in 
+  in
     Lib.can (find_term constructed)
  end;
 
@@ -219,7 +224,7 @@ fun PRIM_STP_TAC ss finisher =
     Also, no conditionals should occur in the resulting goal.
     This seems to be an expensive test, especially since the work
     in detecting the conditional is replicated in IF_CASES_TAC.
- 
+
     Continuing in this light, it seems possible to eliminate all
     case expressions in the goal, but that hasn't been implemented yet.
  ---------------------------------------------------------------------------*)
@@ -261,15 +266,15 @@ fun PRIM_NORM_TAC ss =
     PRIM_STP tac instead.
  ---------------------------------------------------------------------------*)
 
-fun STP_TAC ss finisher 
+fun STP_TAC ss finisher
   = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
 
 fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
 
-fun NORM_TAC ss thl 
+fun NORM_TAC ss thl
   = PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol()) (ss && thl))
 
-val bool_ss = boolSimps.bool_ss; 
+val bool_ss = boolSimps.bool_ss;
 
 (*---------------------------------------------------------------------------
        Stateful version of RW_TAC: doesn't load the constructor
@@ -299,7 +304,7 @@ fun augment_srw_ss ssdl =
     else
       pending_updates := !pending_updates @ ssdl
 
-fun update_fn tyi 
+fun update_fn tyi
   = augment_srw_ss [simpLib.rewrites (TypeBasePure.simpls_of tyi)]
 
 val _ = TypeBase.register_update_fn update_fn
