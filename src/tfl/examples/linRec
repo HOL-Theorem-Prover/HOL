@@ -45,7 +45,7 @@ val [cpRec_eqn, cpRec_ind] = CONJUNCTS
         (Rsyntax.INST [Term`R :'a # ('b -> 'c) -> 'a # ('b -> 'c) -> bool`
                 |->
                Term`inv_image R (FST :'a # ('b -> 'c) -> 'a)`]
-         (DISCH_ALL (CONJ cpRec_def0 (theorem "cpRec_ind")))))))));
+         (DISCH_ALL (CONJ cpRec_def0 (fetch "-" "cpRec_ind")))))))));
 
 val [accRec_eqn, accRec_ind] = CONJUNCTS
 (UNDISCH

@@ -33,7 +33,7 @@ val THM = Q.prove
  (H b1 b2 g o G b1 g = H b1 b2 g)`,
 RW_TAC std_ss [combinTheory.o_DEF,FUN_EQ_THM] 
  THEN Q.ID_SPEC_TAC `x`
- THEN recInduct (theorem "H_ind")
+ THEN recInduct (fetch "-" "H_ind")
  THEN RW_TAC std_ss []
  THEN `!x. b1 x ==> R (g x) x` by PROVE_TAC[]
  THEN ONCE_REWRITE_TAC [G_def]

@@ -353,7 +353,7 @@ val Value_def =
 
 val Value_distrib_disj = Q.prove
 (`!p q P. Value P (distrib p q) = Value P p \/ Value P q`,
- recInduct (theorem "distrib_ind")
+ recInduct (fetch "-" "distrib_ind")
    THEN RW_TAC std_ss [distrib_def, Value_def]
    THEN PROVE_TAC []);
 

@@ -30,5 +30,5 @@ val WhileRule = Q.prove(
          Spec (P, While B C, \s. P s /\ ~B s)`,
 REPEAT GEN_TAC THEN STRIP_TAC 
   THEN REWRITE_TAC [Spec_def] THEN BETA_TAC THEN DISCH_TAC
-  THEN recInduct (theorem "While_ind") 
+  THEN recInduct (fetch "-" "While_ind") 
   THEN PROVE_TAC [While_scheme]);

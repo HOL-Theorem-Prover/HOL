@@ -47,7 +47,7 @@ val H_def = TotalDefn.DefineSchema `H x = if p x then x else H (H (g x))`;
 
 val H_fact = TAC_PROOF
 ((hyp H_def, Term`!x. H g p (H g p x) = H g p x`),
- recInduct (theorem "H_ind") 
+ recInduct (fetch "-" "H_ind") 
     THEN RW_TAC std_ss []
     THEN ONCE_REWRITE_TAC [H_def] 
     THEN PROVE_TAC [H_def]);
