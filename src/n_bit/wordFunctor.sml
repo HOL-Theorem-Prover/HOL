@@ -2,14 +2,14 @@ functor wordFunctor (val bits : int) =
 struct
 
 (*
-   app load ["EquivType","pairTheory",
+   app load ["EquivType","pairTheory", "metisLib",
              "numeralTheory","wordUtil","bitsTheory","numeral_bitsTheory"];
 val bits = 8;
 *)
 
 open HolKernel boolLib wordUtil Q Parse EquivType
      computeLib bossLib simpLib numLib pairTheory numeralTheory
-     arithmeticTheory prim_recTheory bitsTheory;
+     arithmeticTheory prim_recTheory bitsTheory metisLib;
 
 val PROVE = fn thl => fn q => PROVE thl (Term q);
 
@@ -318,6 +318,22 @@ val AND_ABSORB_QT = (GEN `a` o GEN `b`)
 val AND_IDEM_QT =
   GEN_ALL (SIMP_RULE bool_ss [AND_CLAUSES,GSYM AND_def] (SPECL [`a`,`$/\`,`a`,`a`] BITWISE_THM2));
 
+val EOR_ASSOC_QT = prove (
+`!a b c. EOR a (EOR b c) == EOR (EOR a b) c`,
+RW_TAC bool_ss [EOR_def, GSYM BITWISE_THM2, BITWISE_THM] THEN METIS_TAC []);
+
+val EOR_COMM_QT = prove (
+`!a b. EOR a b == EOR b a`,
+RW_TAC bool_ss [EOR_def, GSYM BITWISE_THM2, BITWISE_THM] THEN METIS_TAC []);
+
+val EOR_ID_QT = prove (
+`(!a. EOR a 0 == a) /\ (!a. EOR 0 a == a)`,
+RW_TAC bool_ss [EOR_def, GSYM BITWISE_THM2, BITWISE_THM, BIT_ZERO]);
+
+val EOR_INV_QT = prove (
+`!a. EOR a a == 0`,
+RW_TAC bool_ss [EOR_def, GSYM BITWISE_THM2, BITWISE_THM, BIT_ZERO]);
+
 val OR_COMP_QT =
   GEN_ALL (SIMP_RULE bool_ss [EXCLUDED_MIDDLE,ONE_COMP_TRUE,ONE_COMP_THM,GSYM OR_def,GSYM COMP0_def]
           (SPECL [`ONE_COMP 0`,`$\/`,`a`,`ONE_COMP a`] BITWISE_THM2));
@@ -521,7 +537,8 @@ val word_thms = define_equivalence_type
                MULT_COMM_QT, MULT_CLAUSES_QT,MOD_WL_QT,WORD_ADD_RINV_QT,
                WORD_NEG_QT,WORD_NEG_1_QT,OR_ASSOC_QT,OR_COMM_QT,OR_IDEM_QT,
                OR_ABSORB_QT,OR_COMP_QT,AND_ASSOC_QT,AND_COMM_QT,AND_IDEM_QT,
-               AND_ABSORB_QT,AND_COMP_QT,ONE_COMP_QT,RIGHT_AND_OVER_OR_QT,
+               AND_ABSORB_QT,EOR_ASSOC_QT,EOR_COMM_QT,EOR_ID_QT,EOR_INV_QT,
+               AND_COMP_QT,ONE_COMP_QT,RIGHT_AND_OVER_OR_QT,
                RIGHT_OR_OVER_AND_QT,DE_MORGAN_THM_QT]
   };
 
@@ -572,7 +589,8 @@ val [WORD_ADD, WORD_ADD_0, WORD_ADD1, WORD_ADD_ASSOC, WORD_ADD_CLAUSES,
      WORD_LEFT_ADD_DISTRIB, WORD_MULT_ASSOC, WORD_MULT_COMM, WORD_MULT_CLAUSES,
      MOD_WL_ELIM, WORD_ADD_RINV, WORD_NEG, WORD_NEG_1,
      WORD_OR_ASSOC, WORD_OR_COMM, WORD_OR_IDEM, WORD_OR_ABSORB, WORD_OR_COMP,
-     WORD_AND_ASSOC, WORD_AND_COMM, WORD_AND_IDEM, WORD_AND_ABSORB, WORD_AND_COMP,
+     WORD_AND_ASSOC, WORD_AND_COMM, WORD_AND_IDEM, WORD_AND_ABSORB,
+     WORD_EOR_ASSOC, WORD_EOR_COMM, WORD_EOR_ID, WORD_EOR_INV,  WORD_AND_COMP,
      WORD_NOT_NOT, WORD_RIGHT_AND_OVER_OR, WORD_RIGHT_OR_OVER_AND, WORD_DE_MORGAN_THM] =
    map (REWRITE_RULE [word_0,word_1]) word_thms;
 
@@ -601,6 +619,10 @@ val _ = save_thm("WORD_AND_COMM",WORD_AND_COMM);
 val _ = save_thm("WORD_AND_IDEM",WORD_AND_IDEM);
 val _ = save_thm("WORD_AND_ABSORB",WORD_AND_ABSORB);
 val _ = save_thm("WORD_AND_COMP",WORD_AND_COMP);
+val _ = save_thm("WORD_EOR_ASSOC",WORD_EOR_ASSOC);
+val _ = save_thm("WORD_EOR_COMM",WORD_EOR_COMM);
+val _ = save_thm("WORD_EOR_ID",WORD_EOR_ID);
+val _ = save_thm("WORD_EOR_INV",WORD_EOR_INV);
 val _ = save_thm("WORD_NOT_NOT",WORD_NOT_NOT);
 val _ = save_thm("WORD_RIGHT_AND_OVER_OR",WORD_RIGHT_AND_OVER_OR);
 val _ = save_thm("WORD_RIGHT_OR_OVER_AND",WORD_RIGHT_OR_OVER_AND);
