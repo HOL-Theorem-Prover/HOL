@@ -22,9 +22,9 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 (* ************************************************************	*)
 
 
-val NEXT = new_definition("NEXT", --`NEXT P = \t. P(SUC t):bool`--);
+val NEXT     = new_definition("NEXT", --`NEXT P = \t. P(SUC t):bool`--);
 
-val ALWAYS = new_definition("ALWAYS", --`ALWAYS P t0 = !t:num.P(t+t0)`--);
+val ALWAYS   = new_definition("ALWAYS", --`ALWAYS P t0 = !t:num.P(t+t0)`--);
 
 val EVENTUAL = new_definition("EVENTUAL", --`EVENTUAL P t0 = ?t:num.P(t+t0)`--);
 
