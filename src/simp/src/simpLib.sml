@@ -13,6 +13,8 @@ struct
 
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net;
 
+local open labelTheory in end;
+
 infix |>;
 
 fun ERR x      = STRUCT_ERR "simpLib" x ;
