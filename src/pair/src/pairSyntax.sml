@@ -167,6 +167,10 @@ fun mk_pabs(vstruct,body) =
                   mk_pabs(fst,mk_pabs(snd,body)))
        end handle HOL_ERR _ => raise ERR "mk_pabs" "";
 
+fun mk_plet (p as (vstruct,rhs,body)) = 
+  mk_let (mk_pabs (vstruct,body),rhs) 
+  handle HOL_ERR _ => raise ERR "mk_plet" "";
+
 fun mk_pforall (p as (vstruct,_)) =
  mk_comb(inst [alpha |-> type_of vstruct] universal, mk_pabs p)
  handle HOL_ERR _ => raise ERR "mk_pforall" "";
@@ -199,7 +203,8 @@ fun pbvar tm = fst (dest_pabs tm) handle HOL_ERR _ => failwith "pbvar"
 and pbody tm = snd (dest_pabs tm) handle HOL_ERR _ => failwith "pbody" ;
 
 
-local val FORALL_ERR  = ERR "dest_pforall"  "not a (possibly paired) \"!\""
+local val LET_ERR     = ERR "dest_plet"     "not a (possibly paired) \"let\""
+      val FORALL_ERR  = ERR "dest_pforall"  "not a (possibly paired) \"!\""
       val EXISTS_ERR  = ERR "dest_pexists"  "not a (possibly paired) \"?\""
       val EXISTS1_ERR = ERR "dest_pexists1" "not a (possibly paired) \"?!\""
       val SELECT_ERR  = ERR "dest_pselect"  "not a (possibly paired) \"@\""
@@ -211,13 +216,15 @@ fun dest_pbinder c e M =
      else raise e
   end
 
+val dest_plet     = dest_pbinder let_tm      LET_ERR
 val dest_pforall  = dest_pbinder universal   FORALL_ERR
 val dest_pexists  = dest_pbinder existential EXISTS_ERR
 val dest_pexists1 = dest_pbinder exists1     EXISTS1_ERR
 val dest_pselect  = dest_pbinder select      SELECT_ERR
 end;
 
-val is_pabs     = can dest_pabs;
+val is_pabs     = can dest_pabs
+val is_plet     = can dest_plet
 val is_pforall  = can dest_pforall
 val is_pexists  = can dest_pexists
 val is_pexists1 = can dest_pexists1

@@ -25,6 +25,7 @@ sig
  val mk_pexists      : term * term -> term
  val mk_pexists1     : term * term -> term
  val mk_pselect      : term * term -> term
+ val mk_plet         : term * term * term -> term
 
  val dest_pair       : term -> term * term
  val dest_fst        : term -> term
@@ -35,6 +36,7 @@ sig
  val dest_pabs       : term -> term * term
  val pbvar           : term -> term
  val pbody           : term -> term
+ val dest_plet       : term -> term * term
  val dest_pforall    : term -> term * term
  val dest_pexists    : term -> term * term
  val dest_pexists1   : term -> term * term
@@ -58,6 +60,7 @@ sig
  val is_uncurry      : term -> bool
  val is_pairmap      : term -> bool
  val is_pabs         : term -> bool
+ val is_plet         : term -> bool
  val is_pforall      : term -> bool
  val is_pexists      : term -> bool
  val is_pexists1     : term -> bool
