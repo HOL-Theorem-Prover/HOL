@@ -79,9 +79,11 @@ val _ = add_infix_type {Prec = 60, ParseName = SOME "+", Name = "sum",
                         Assoc = HOLgrammars.RIGHT}
 
 
-(* Define a representation function, REP_sum, from the type ( 'a,'b )sum to *)
-(* the representing type bool->'a->'b->bool, and the inverse abstraction    *)
-(* function ABS_sum, and prove some trivial lemmas about them.              *)
+(*---------------------------------------------------------------------------*)
+(* Define a representation function, REP_sum, from the type ('a,'b)sum to    *)
+(* the representing type bool->'a->'b->bool, and the inverse abstraction     *)
+(* function ABS_sum, and prove some trivial lemmas about them.               *)
+(*---------------------------------------------------------------------------*)
 
 val sum_ISO_DEF = define_new_type_bijections
                   {name = "sum_ISO_DEF",
@@ -223,7 +225,7 @@ val sum_distinct = store_thm("sum_distinct",
   Term`!x:'a y:'b. ~(INL x = INR y)`,
   REPEAT STRIP_TAC THEN
   STRIP_ASSUME_TAC ((BETA_RULE o REWRITE_RULE [EXISTS_UNIQUE_DEF] o
-                     ISPECL [``\x:'a. T``, ``\y:'b. F``]) sum_Axiom) THEN
+                     Q.ISPECL [`\x:'a. T`, `\y:'b. F`]) sum_Axiom) THEN
   FIRST_X_ASSUM (MP_TAC o AP_TERM (Term`h:'a + 'b -> bool`)) THEN
   ASM_REWRITE_TAC []);
 
@@ -382,9 +384,37 @@ val _ = adjoin_to_theory
       S "        end;"
    end)};
 
+val _ = TypeBase.write
+  [TypeBasePure.mk_tyinfo
+     {ax=TypeBasePure.ORIG sum_Axiom,
+      case_def=sum_case_def,
+      case_cong=sum_case_cong,
+      induction=TypeBasePure.ORIG sum_INDUCT,
+      nchotomy=sum_CASES,
+      size=NONE,
+      encode=NONE,
+      lift=SOME(mk_var("sumSyntax.lift_sum",
+                       Parse.Type`:'type -> ('a -> 'term) -> 
+                                            ('b -> 'term) -> ('a,'b)sum -> 'term`)),
+      one_one=SOME INR_INL_11,
+      distinct=SOME sum_distinct}];
+
 val _ = BasicProvers.export_rewrites ["ISL", "ISR", "OUTL", "OUTR",
                                       "sum_distinct", "INR_INL_11",
-                                      "sum_case_def", "INL", "INR"]
+                                      "sum_case_def", "INL", "INR"];
+
+val ISL_THM = Q.prove
+(`(!x. ISL (INL x) = T) /\ !y. ISL (INR y) = F`,
+ REWRITE_TAC[ISL]);
+
+val ISR_THM = Q.prove
+(`(!x. ISR (INL x) = F) /\ !y. ISR (INR y) = T`,
+ REWRITE_TAC[ISR]);
+
+val _ = Drop.exportML ("sum",
+    Drop.DATATYPE (ParseDatatype.parse `sum = INL of 'a | INR of 'b`)
+    :: map Drop.DEFN [OUTL, OUTR, ISL_THM, ISR_THM]);
+
 
 
 val _ = export_theory();
