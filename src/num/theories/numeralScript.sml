@@ -20,7 +20,6 @@
 *)
 
 open HolKernel boolLib arithmeticTheory simpLib Parse Prim_rec;
-infix THEN THENL THENC ++ |->;
 
 val _ = new_theory "numeral";
 
@@ -606,20 +605,33 @@ val numeral_evenodd = store_thm(
 
 val numeral_fact = store_thm(
   "numeral_fact",
-  Term `!n. FACT n = if n = 0 then 1 else n * FACT (PRE n)`,
- GEN_TAC
-   THEN STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES)
-   THENL [ALL_TAC, POP_ASSUM SUBST_ALL_TAC]
-   THEN  ASM_REWRITE_TAC[FACT,PRE,NOT_SUC]);
+  Term `(FACT 0 = 1) /\
+        (!n. FACT (NUMERAL (NUMERAL_BIT1 n)) =
+                  (NUMERAL (NUMERAL_BIT1 n)) *
+                  FACT (PRE (NUMERAL (NUMERAL_BIT1 n)))) /\
+        (!n. FACT (NUMERAL (NUMERAL_BIT2 n)) =
+                  (NUMERAL (NUMERAL_BIT2 n)) *
+                  FACT (NUMERAL (NUMERAL_BIT1 n)))`,
+ REPEAT STRIP_TAC THEN REWRITE_TAC [FACT] THEN
+ (STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES) THENL [
+    ALL_TAC,
+    POP_ASSUM SUBST_ALL_TAC
+  ] THEN ASM_REWRITE_TAC[FACT,PRE,NOT_SUC, NUMERAL_DEF,
+                         NUMERAL_BIT1, NUMERAL_BIT2, ADD_CLAUSES]));
 
 
 val numeral_funpow = store_thm(
   "numeral_funpow",
-  Term `!n. FUNPOW f n x =
-             if n = 0 then x else FUNPOW f (n-1) (f x)`,
- GEN_TAC
-   THEN STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES)
-   THENL [ALL_TAC, POP_ASSUM SUBST_ALL_TAC]
-   THEN  ASM_REWRITE_TAC[FUNPOW,SUC_SUB1,NOT_SUC]);
+  Term `(FUNPOW f 0 x = x) /\
+        (FUNPOW f (NUMERAL (NUMERAL_BIT1 n)) x =
+          FUNPOW f (PRE (NUMERAL (NUMERAL_BIT1 n))) (f x)) /\
+        (FUNPOW f (NUMERAL (NUMERAL_BIT2 n)) x =
+          FUNPOW f (NUMERAL (NUMERAL_BIT1 n)) (f x))`,
+ REPEAT STRIP_TAC THEN REWRITE_TAC [FUNPOW] THEN
+ (STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES) THENL [
+    ALL_TAC,
+    POP_ASSUM SUBST_ALL_TAC
+  ] THEN  ASM_REWRITE_TAC[FUNPOW,PRE,ADD_CLAUSES, NUMERAL_DEF,
+                          NUMERAL_BIT1, NUMERAL_BIT2]));
 
 val _ = export_theory();
