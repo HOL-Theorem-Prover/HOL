@@ -3053,6 +3053,104 @@ val SUM_SET_THM = store_thm(
     ]
   ]);
 
+val SUM_SET_SING = store_thm(
+  "SUM_SET_SING",
+  ``!n. SUM_SET {n} = n``,
+  SIMP_TAC arith_ss [FINITE_EMPTY, SUM_SET_THM, EMPTY_DELETE]);
+
+val SUM_SET_SUBSET_LE = store_thm(
+  "SUM_SET_SUBSET_LE",
+  ``!s t. FINITE t /\ s SUBSET t ==> SUM_SET s <= SUM_SET t``,
+  Q_TAC SUFF_TAC
+     `!t. FINITE t ==> !s. s SUBSET t ==> SUM_SET s <= SUM_SET t` THEN1
+     PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][SUBSET_EMPTY, SUM_SET_THM, delete_non_element] THEN
+  Cases_on `e IN s` THENL [
+    Q.ABBREV_TAC `u = s DELETE e` THEN
+    `s = e INSERT u` by SRW_TAC [][INSERT_DELETE] THEN
+    `FINITE u` by PROVE_TAC [FINITE_DELETE, SUBSET_FINITE, FINITE_INSERT] THEN
+    `~(e IN u)` by PROVE_TAC [IN_DELETE] THEN
+    ASM_SIMP_TAC arith_ss [SUM_SET_THM, delete_non_element] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    FULL_SIMP_TAC bool_ss [SUBSET_INSERT_DELETE],
+    FULL_SIMP_TAC bool_ss [SUBSET_INSERT] THEN
+    RES_TAC THEN ASM_SIMP_TAC arith_ss []
+  ]);
+
+val SUM_SET_IN_LE = store_thm(
+  "SUM_SET_IN_LE",
+  ``!x s. FINITE s /\ x IN s ==> x <= SUM_SET s``,
+  REPEAT STRIP_TAC THEN
+  `{x} SUBSET s` by ASM_SIMP_TAC bool_ss [IN_SING, SUBSET_DEF] THEN
+  `SUM_SET {x} <= SUM_SET s` by PROVE_TAC [SUM_SET_SUBSET_LE] THEN
+  PROVE_TAC [SUM_SET_SING]);
+
+val SUM_SET_DELETE = store_thm(
+  "SUM_SET_DELETE",
+  ``!s. FINITE s ==> !e. SUM_SET (s DELETE e) = if e IN s then SUM_SET s - e
+                                                else SUM_SET s``,
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][SUM_SET_THM, EMPTY_DELETE, IN_INSERT, DELETE_INSERT] THEN
+  COND_CASES_TAC THENL [
+    POP_ASSUM SUBST_ALL_TAC THEN ASM_SIMP_TAC arith_ss [],
+    ASM_SIMP_TAC bool_ss [SUM_SET_THM, FINITE_DELETE, IN_DELETE,
+                          delete_non_element] THEN
+    COND_CASES_TAC THENL [
+      REWRITE_TAC [] THEN
+      `e' <= SUM_SET s` by PROVE_TAC [SUM_SET_IN_LE] THEN
+      FULL_SIMP_TAC arith_ss [],
+      REWRITE_TAC []
+    ]
+  ]);
+
+val SUM_SET_UNION = store_thm(
+  "SUM_SET_UNION",
+  ``!s t. FINITE s /\ FINITE t ==>
+          (SUM_SET (s UNION t) =
+             SUM_SET s + SUM_SET t - SUM_SET (s INTER t))``,
+  Q_TAC SUFF_TAC `!s. FINITE s ==>
+                      !t. FINITE t ==>
+                          (SUM_SET (s UNION t) =
+                           SUM_SET s + SUM_SET t - SUM_SET (s INTER t))` THEN1
+    PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SIMP_TAC arith_ss [SUM_SET_THM, INSERT_UNION_EQ, UNION_EMPTY,
+                     FINITE_UNION, delete_non_element, INTER_EMPTY] THEN
+  REPEAT STRIP_TAC THEN
+  Cases_on `e IN t` THEN
+  ASM_SIMP_TAC arith_ss [INSERT_INTER, INTER_FINITE, FINITE_INSERT,
+                         SUM_SET_THM, IN_UNION, delete_non_element]
+  THENL [
+    `s UNION t DELETE e = s UNION (t DELETE e)` by
+       (SRW_TAC [][EXTENSION, IN_UNION, IN_DELETE] THEN PROVE_TAC []) THEN
+    ASM_SIMP_TAC bool_ss [FINITE_DELETE, SUM_SET_DELETE, INTER_FINITE,
+                          IN_INTER] THEN
+    `s INTER (t DELETE e) = s INTER t DELETE e` by
+       (SRW_TAC [][EXTENSION, IN_INTER, IN_DELETE] THEN PROVE_TAC []) THEN
+    ASM_SIMP_TAC bool_ss [SUM_SET_DELETE, INTER_FINITE, IN_INTER] THEN
+    `e <= SUM_SET t` by PROVE_TAC [SUM_SET_IN_LE] THEN
+    `s INTER t SUBSET t` by PROVE_TAC [INTER_SUBSET] THEN
+    `SUM_SET (s INTER t) <= SUM_SET t` by PROVE_TAC [SUM_SET_SUBSET_LE] THEN
+    Q_TAC SUFF_TAC `e + SUM_SET (s INTER t) <= SUM_SET t` THEN1
+       ASM_SIMP_TAC arith_ss [] THEN
+    Q_TAC SUFF_TAC
+          `e + SUM_SET (s INTER t) = SUM_SET (e INSERT s INTER t)` THEN1
+          ASM_SIMP_TAC bool_ss [SUM_SET_SUBSET_LE,
+                                SUBSET_DEF, IN_INTER, IN_INSERT,
+                                DISJ_IMP_THM, FORALL_AND_THM] THEN
+    ASM_SIMP_TAC bool_ss [INTER_FINITE, SUM_SET_THM, IN_INTER,
+                          delete_non_element],
+    `s INTER t SUBSET t` by PROVE_TAC [INTER_SUBSET] THEN
+    `SUM_SET (s INTER t) <= SUM_SET t` by PROVE_TAC [SUM_SET_SUBSET_LE] THEN
+    ASM_SIMP_TAC arith_ss []
+  ]);
+
+
+
+
+
+
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
