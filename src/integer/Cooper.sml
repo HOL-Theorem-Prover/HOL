@@ -30,6 +30,22 @@ in
   GSYM (BETA_CONV newrhs)
 end
 
+fun EXIN_CONJ_CONV t = let
+  val (var,bdy) = dest_exists t
+  val conjs = strip_conj bdy
+in
+  case partition (free_in var) conjs of
+    ([], _) => REWR_CONV EXISTS_SIMP t
+  | (_, []) => NO_CONV t
+  | (there, notthere) => let
+      val newbdy = mk_conj(list_mk_conj there, list_mk_conj notthere)
+      val newthm = EQT_ELIM(AC_CONV (CONJ_ASSOC, CONJ_COMM)
+                            (mk_eq(bdy, newbdy)))
+    in
+      BINDER_CONV (K newthm) THENC EXISTS_AND_CONV
+    end t
+end
+
 val elim_le = GSYM INT_NOT_LT
 val elim_gt = int_gt
 val elim_ge = int_ge
@@ -1386,9 +1402,16 @@ in
   in
     if is_disj body then
       EXISTS_OR_CONV THENC (RAND_CONV eliminate_existential) THENC
-      RATOR_CONV (RAND_CONV eliminate_existential)
+      (LAND_CONV eliminate_existential)
     else
-      base_case THENC obvious_improvements
+      (EXIN_CONJ_CONV THENC
+       (* if EXIN_CONJ_CONV pushes the existential out entirely, then
+          we're done, and can finish directly (eliminate_existential will
+          fail directly if there isn't an exists on the right).
+          EXIN_CONJ_CONV will fail if all conjuncts below the exists
+          have the free variable *)
+       (LAND_CONV eliminate_existential ORELSEC ALL_CONV)) ORELSEC
+      (base_case THENC obvious_improvements)
   end tm
 end
 
