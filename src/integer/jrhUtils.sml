@@ -1,4 +1,4 @@
-structure useful :> useful=
+structure jrhUtils :> jrhUtils=
 struct
 
 (* Standard libs *)
@@ -6,10 +6,14 @@ open HolKernel basicHol90Lib
      Psyntax hol88Lib numLib reduceLib
      pairTheory prim_recTheory numTheory arithmeticTheory;
 
+type term = Term.term
+type thm = Thm.thm
+type tactic = Abbrev.tactic;
+
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
 
-fun ERR f s = HOL_ERR{origin_structure="useful",
+fun ERR f s = HOL_ERR{origin_structure="jrhUtils",
                       origin_function=f,message=s};
 
 (*---------------------------------------------------------------------------*)

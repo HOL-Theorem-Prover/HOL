@@ -18,14 +18,18 @@ infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
 val _ = new_theory "integer";
 
-open useful EquivType hol88Lib arithLib Psyntax
+(* interactive mode
+  app load ["jrhUtils", "EquivType", "hol88Lib", "liteLib", "QLib",
+        "SingleStep", "BasicProvers", "boolSimps", "pairSimps", "arithSimps",
+        "numLib", "arithLib"];
+*)
+open jrhUtils EquivType hol88Lib arithLib Psyntax
      arithmeticTheory prim_recTheory numTheory
-     simpLib Num_conv Num_induct boolTheory liteLib;
+     simpLib numLib boolTheory liteLib;
 
 infix ++;
 
-val int_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss ++
-             UnwindSimps.UNWIND_ss;
+val int_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss;
 
 val DECIDE_TAC = CONV_TAC ARITH_CONV;
 
@@ -1599,6 +1603,7 @@ val NUM_POSINT =
 		  EXISTS_TAC (Term `n:num`) THEN REWRITE_TAC[NUM_DECOMPOSE]);
 
 open SingleStep BasicProvers
+
 val NUM_POSINT_EXISTS = store_thm(
   "NUM_POSINT_EXISTS",
   Term`!i. 0 <= i ==> ?n. i = &n`,
@@ -1618,7 +1623,7 @@ val INT_NUM_CASES = store_thm(
            (p = 0)`,
   GEN_TAC THEN Cases_on `0 <= p` THENL [
     Cases_on `p = 0` THENL [
-      ASM_SIMP_TAC bool_ss [],
+      ASM_SIMP_TAC int_ss [],
       PROVE_TAC [NUM_POSINT_EXISTS]
     ],
     `?n. p = ~&n` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE, INT_LE_LT] THEN
@@ -1682,7 +1687,7 @@ val INT_DIV_NEG = store_thm(
   Term`!p q. ~(q = 0) ==> ((~p / q = ~(p / q)) /\ (p/~q = ~p/q))`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Cases_on `0 <= q` THENL [
-    `?n. q = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
+    `?n. q = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN 
     POP_ASSUM SUBST_ALL_TAC THEN
     Cases_on `0 <= p` THENL [
       `?m. p = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
@@ -1691,8 +1696,9 @@ val INT_DIV_NEG = store_thm(
       ASM_SIMP_TAC int_ss [int_div, INT_INJ, INT_LE, INT_LT,
                            INT_NEG_GE0, NUM_OF_INT, INT_NEGNEG, INT_NEG_EQ0,
                            INT_NEG_GT0, INT_NEG_0] THEN
-      ASM_SIMP_TAC (int_ss ++ COND_elim_ss ++ NOT_ss) [
-        ZERO_DIV, INT_NEG_EQ0, INT_NEG_0, INT_NEG_EQ, INT_NEGNEG],
+      ASM_SIMP_TAC (int_ss ++ boolSimps.COND_elim_ss) [
+        GSYM IMP_DISJ_THM, ZERO_DIV, INT_NEG_EQ0, 
+        INT_NEG_0, INT_NEG_EQ, INT_NEGNEG],
       `?m. p = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
                                   INT_LE_LT] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
@@ -1712,7 +1718,8 @@ val INT_DIV_NEG = store_thm(
       ASM_SIMP_TAC int_ss [int_div, INT_NEGNEG, INT_LT, INT_LE, INT_INJ,
                            NUM_OF_INT, INT_NEG_EQ0, INT_NEG_GE0,
                            INT_NEG_GT0, INT_NEG_0, INT_NEG_LT0] THEN
-      ASM_SIMP_TAC (int_ss ++ COND_elim_ss ++ NOT_ss) [ZERO_DIV, INT_NEG_0],
+      ASM_SIMP_TAC (int_ss ++ boolSimps.COND_elim_ss)
+         [GSYM IMP_DISJ_THM, ZERO_DIV, INT_NEG_0],
       `?m. p = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
                                   INT_LE_LT] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
@@ -1861,8 +1868,8 @@ val INT_ABS_NEG = store_thm(
   "INT_ABS_NEG",
   Term`!p. ABS ~p = ABS p`,
   GEN_TAC THEN
-  SIMP_TAC (bool_ss ++ COND_elim_ss) [INT_ABS, INT_NEG_LT0, INT_NEGNEG,
-                                      INT_NEG_EQ, INT_NEG_SAME_EQ] THEN
+  SIMP_TAC (bool_ss ++ boolSimps.COND_elim_ss)
+    [INT_ABS, INT_NEG_LT0, INT_NEGNEG, INT_NEG_EQ, INT_NEG_SAME_EQ] THEN
   PROVE_TAC [INT_LT_NEGTOTAL, INT_NOT_LT, INT_LE_LT]);
 
 val INT_ABS_ABS = store_thm(
@@ -2308,23 +2315,15 @@ val INT_EXP_SUBTRACT_EXPONENTS = store_thm(
   Induct THENL [
     REPEAT STRIP_TAC THEN
     `n = 0` by ASM_SIMP_TAC int_ss [] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    SIMP_TAC int_ss [int_exp, ONE, INT_EXP, DIV_ONE, INT_DIV],
-    REPEAT GEN_TAC THEN Cases_on `n = SUC m` THENL [
-      ASM_SIMP_TAC int_ss [int_exp, INT_DIV_ID, INT_ENTIRE, INT_EXP_EQ0],
-      STRIP_TAC THEN
-      `n <= m` by ASM_SIMP_TAC int_ss [] THEN
-      ASM_SIMP_TAC int_ss [SUB, int_exp] THEN
-      `p ** m % p ** n = 0` by PROVE_TAC [INT_EXP_MOD] THEN
-      Q.SUBGOAL_THEN `p * p ** m / p ** n = p * (p ** m / p ** n)`
-      ASSUME_TAC THENL [
-        MATCH_MP_TAC INT_MUL_DIV THEN
-        ASM_SIMP_TAC int_ss [INT_EXP_EQ0],
-        POP_ASSUM SUBST_ALL_TAC THEN
-        ASM_SIMP_TAC int_ss []
-      ]
-    ]
-  ]);
+    RW_TAC int_ss [int_exp, ONE, INT_EXP, DIV_ONE, INT_DIV],
+    REPEAT GEN_TAC THEN Cases_on `n = SUC m` THENL 
+    [ASM_SIMP_TAC int_ss [int_exp, INT_DIV_ID, INT_ENTIRE, INT_EXP_EQ0],
+     STRIP_TAC THEN `n <= m` by ASM_SIMP_TAC int_ss [] 
+       THEN ASM_SIMP_TAC int_ss [SUB, int_exp] THEN
+       `p ** m % p ** n = 0` by PROVE_TAC [INT_EXP_MOD] THEN
+       `p * p ** m / p ** n = p * (p ** m / p ** n)`
+         by (MATCH_MP_TAC INT_MUL_DIV THEN ASM_SIMP_TAC int_ss [INT_EXP_EQ0])
+       THEN RW_TAC int_ss []]]);
 
 (*----------------------------------------------------------------------*)
 (* Prove rewrites for calculation with integers                         *)
@@ -2340,7 +2339,7 @@ val INT_ADD_CALCULATE = store_thm(
           (&n + ~&m = if m <= n then &(n - m) else ~&(m - n)) /\
           (~&n + &m = if n <= m then &(m - n) else ~&(n - m)) /\
           (~&n + ~&m = ~&(n + m))`,
-  SIMP_TAC (int_ss ++ COND_elim_ss) [
+  SIMP_TAC (int_ss ++ boolSimps.COND_elim_ss) [
     INT_ADD_LID, INT_ADD_RID, INT_ADD, GSYM INT_NEG_ADD, INT_ADD_COMM,
     GSYM int_sub, INT_EQ_SUB_RADD, INT_INJ, INT_SUB
   ]);
@@ -2365,7 +2364,6 @@ val ODD_NB1 = prove(
 val EVEN_NB2 = prove(
   Term`!n. EVEN(NUMERAL_BIT2 n)`,
   SIMP_TAC bool_ss [NUMERAL_BIT2, ADD_CLAUSES, EVEN, EVEN_ADD]);
-
 
 val INT_EXP_CALCULATE = store_thm(
   "INT_EXP_CALCULATE",
