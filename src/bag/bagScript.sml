@@ -1628,8 +1628,8 @@ val (ITBAG_eqn0, ITBAG_IND) =
                        else ITBAG f (BAG_REST b) (f (BAG_CHOICE b) a))
 *)
 val ITBAG_THM =
-    W (GENL o rev o free_vars o concl)
-      (DISCH_ALL (ASM_REWRITE_RULE [Q.ASSUME `FINITE_BAG b`] ITBAG_eqn0))
+    GENL [``b: 'a -> num``, ``f:'a -> 'b -> 'b``, ``acc:'b``]
+         (DISCH_ALL (ASM_REWRITE_RULE [Q.ASSUME `FINITE_BAG b`] ITBAG_eqn0))
 
 val _ = save_thm("ITBAG_IND", ITBAG_IND);
 val _ = save_thm("ITBAG_THM", ITBAG_THM);
