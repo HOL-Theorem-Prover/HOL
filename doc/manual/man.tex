@@ -1178,14 +1178,14 @@ variant records, nor for records to be recursive.
 
 Done correctly, record types provide useful maintainability features.
 If one can always access the {\tt fieldn} field of a record type by
-simply writing {\tt fieldn record}, then changes to the type that
-result in the addition or deletion of other fields, will not
-invalidate this reference.  One failing in SML's record types is that
-they do not allow the same maintainability as far as (functional)
-updates of records are concerned.  The HOL implementation allows one
-to write {\tt fieldn\_update new\_value rec}, which replaces the old
-value of {\tt fieldn} in the record {\tt rec} with {\tt new\_value}.
-This expression will not need to be changed if another field is added,
+simply writing {\tt record.fieldn}, then changes to the type that
+result in the addition or deletion of other fields will not invalidate
+this reference.  One failing in SML's record types is that they do not
+allow the same maintainability as far as (functional) updates of
+records are concerned.  The HOL implementation allows one to write
+{\tt rec with fieldn := new\_value}, which replaces the old value of
+{\tt fieldn} in the record {\tt rec} with {\tt new\_value}.  This
+expression will not need to be changed if another field is added,
 modified or deleted from the record's original definition.
 
 \subsubsection{Defining a record type in Hol98}
@@ -1204,71 +1204,76 @@ val person_result =
                           ("age",      ``:num``),
                           ("name",     ``:string``)];
 \end{verbatim}
-The order in which the fields are entered is not significant. As well as
-defining the type (called {\tt person}), the \createrec{} function also
-defines three other sets of constants.  These are the field access
-functions, update functions, and functional update functions.  The
-access functions are given the same name as the fields
-chosen,\footnote{Note that this means that a field name can not be
-re-used from one record type to another, as there can only ever be one
-constant of a given name.} so that one would use the expression:
-\mbox{\tt (employed bob)} in order to return the value of {\tt bob}'s
-{\tt employed} field.
+The order in which the fields are entered is not significant. As well
+as defining the type (called {\tt person}), the \createrec{} function
+also defines three other sets of constants.  These are the field
+access functions, update functions, and functional update functions.
+The field access functions have names of the form
+``$\langle$\textsl{record-type\/}$\rangle$\_$\langle$\textsl{field\/}$\rangle$''.
+These functions can be used directly, or one can use standard field
+selection notation to access the values of a record's field.  Thus,
+one would write the expression: \mbox{\tt ``bob.employed``} in order
+to return the value of {\tt bob}'s {\tt employed} field.  The
+alternative, \texttt{``person\_employed bob``}, works, but would be
+printed using the first syntax, with the full-stop.
 
-The update functions are given the names {\it field\tt\_update} for
-each field in the type.  They take a value of the type of the field in
+The update functions are given the names
+\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
+$\langle$\textsl{field\/}$\rangle$\_\texttt{update}''} for each
+field in the type.  They take a value of the type of the field in
 question and a record value to be modified.  They return a new record
 value that is otherwise the same as the old value but with the
-specified field having the new value.  Having the record value as the
-second parameter means that chains of updates are easy to write, thus:
+specified field having the new value.  They can be written with the
+keyword \texttt{with} and the \texttt{:=} operator:
 \begin{verbatim}
-employed_update T
-  (age_update 10
-     (name_update "Child_labourer" bob))
+  ``bob with employed := T``
+\end{verbatim}
+\noindent If a chain of updates is desired, then multiple updates can
+be specified inside \texttt{<|}-\texttt{|>} pairs, separated by
+semi-colons, thus:
+
+\begin{verbatim}
+  ``bob with <| age := 10; name := "Child labourer" |>``
 \end{verbatim}
 
-The functional update functions have the names {\it field\tt\_fupd}.
-Rather than specifying a new value for the record, these functions
-take a function as their first parameter, which will be an
-endomorphism on the field type, so that the resulting record is the
-same as the original, except that the specified field has had the
-given function applied to it to generate the new value for that
-field.  The functional update functions allow more concision when
-writing updates on a record that depend on the field's old value.
+\noindent Finally, the second sort of update functions, the so-called
+``functional'' updates have names of the form
+\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
+$\langle$\textsl{field\/}$\rangle$\_\texttt{fupd}''}. Rather than
+specifying a new value for the record, these functions take a function
+as their first parameter, which will be an endomorphism on the field
+type, so that the resulting record is the same as the original, except
+that the specified field has had the given function applied to it to
+generate the new value for that field.  The functional update
+functions allow more concision when writing updates on a record that
+depend on the field's old value.
+
+The special syntax for writing these updates is to again use the
+\texttt{with} keyword, but to use the infix \texttt{updated\_by}
+rather than \texttt{:=}.  Thus
+\begin{alltt}
+  ``bob with employed updated_by \$~``
+\end{alltt} \noindent
+is a record value with the opposite boolean value in the
+\texttt{employed} field as held by \texttt{bob}.
 
 \subsubsection{Specifying record literals}
 
-In the absence of any dedicated parsing support for record values
-(which may change in future releases), there are two ways of
-specifying record values directly.  The representing type for records
-is constructed using the standard datatype package to define a type
-with one constructor that takes arguments corresponding to the fields.
-This means that one can specify literal values by remembering the
-order of types as given in the original definition, and using the
-constructor, which has the same name as the type.  Thus, one might
-write:
+The parser accepts lists of field specifications between
+\texttt{<|}-\texttt{|>} pairs without the \texttt{with} keyword.
+These translate to sequences of updates of an arbitrary value
+(literally, the HOL value \texttt{ARB}), and are treated as literals.
+Thus,
 \begin{verbatim}
-(person T 10 "Child_labourer")
+  ``<| age := 21; employed := F; name = "Layabout" |>``
 \end{verbatim}
-This does not win many prizes for maintainability.  Marginally better
-is an ML function provided in the {\tt RecordType} structure, {\tt
-  create\_term\_fn}.  This takes a string specifying the name of the
-type, the accessors theorem for the type (see below), and a list of
-string-value pairs.  Thus, one might write:
-\begin{verbatim}
-val t = create_term_fn "person" (#accessor_fns person_result)
-          [("age", ``10``), ("employed", ``T``),
-           ("name", ``Child_labourer``)];
-\end{verbatim}
-If a field is omitted in this specification, then the value given to
-that field in the final record value is {\tt ARB}.
 
 \subsubsection{Using the theorems produced by \createrec}
 
 As well as defining the type and the functions described above, record
-type definition, also proves a suite of useful theorems.  Most of
-these are returned in a big record; all are stored using {\tt
-  save\_thm} so that they can be recovered.
+type definition also proves a suite of useful theorems.  Most of these
+are returned in a big record; all are stored using {\tt save\_thm} so
+that they can be recovered.
 
 The record returned has the following fields:
 \newcommand{\rewruse}{This theorem should be included in rewrites used
@@ -1309,15 +1314,6 @@ The record returned has the following fields:
   pre-applied to the relevant arguments, so that it is of the type
   string-value list to term.
 \end{description}
-
-\subsubsection{To do}
-
-\begin{itemize}
-\item Parsing and pretty-printing support would be nice.
-\item Need to have the package automatically prove that equality of
-  records is equivalent to equality of all the fields.
-\end{itemize}
-
 
 \section{A simple proof manager}\label{goalstack}
 
