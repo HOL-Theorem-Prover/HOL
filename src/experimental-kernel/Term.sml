@@ -65,7 +65,7 @@ fun prim_delete_const (k as {Thy, Name}) = let
   val {Name = oldname, Thy, base_type, uptodate} = !v
 in
   const_table := newtable;
-  v := {Name = !Globals.old oldname, Thy = Thy, base_type = base_type,
+  v := {Name = Globals.old oldname, Thy = Thy, base_type = base_type,
         uptodate = false}
 end handle Map.NotFound =>
            raise ERR "prim_delete_const" "No such constant"

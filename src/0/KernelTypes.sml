@@ -16,7 +16,7 @@ fun mk_id p = ref p
 fun dest_id ((ref p):id) = p
 fun name_of id = #1(dest_id id)
 fun seg_of id  = #2(dest_id id)
-fun retire r = let val (n,t) = dest_id r in r := (!Globals.old n, t) end
+fun retire r = let val (n,t) = dest_id r in r := (Globals.old n, t) end
 val same_id = (op=);
 fun compare (id1,id2) =
   case String.compare (name_of id1, name_of id2)

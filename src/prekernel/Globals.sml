@@ -130,12 +130,19 @@ val guessing_overloads = ref true;
 
 val notify_on_tyvar_guess = ref true;
 
-(*---------------------------------------------------------------------------*
- * The syntax used to highlight out-of-date constants in the prettyprinters  *
- * for types and terms.                                                      *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    The syntax used to highlight out-of-date constants in the
+    prettyprinters for types and terms - must generate unique names
+    because this determines the name of out-of-date constants, which
+    might otherwise overlap, and be identified.
+   ---------------------------------------------------------------------- *)
 
-val old = ref (fn s => String.concat["old->",s,"<-old"]);
+val old = let
+  val c = ref 0
+in
+  (fn s => String.concat["old", Int.toString (!c), "->",s,"<-old"] before
+           c := !c + 1)
+end
 
 (*---------------------------------------------------------------------------*
  * Flag used to tell how to do renaming: if it's NONE, do priming; if it's   *

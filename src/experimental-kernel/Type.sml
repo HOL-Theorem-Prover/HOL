@@ -27,7 +27,7 @@ fun prim_delete_type (k as {Thy, Tyop}) = let
       Map.remove(!operator_table, k)
 in
   operator_table := newtable;
-  v := {key = {Tyop = !Globals.old Tyop, Thy = Thy}, arity = arity,
+  v := {key = {Tyop = Globals.old Tyop, Thy = Thy}, arity = arity,
         uptodate = false}
 end handle Map.NotFound => raise ERR "prim_delete_type" "No such type"
 
