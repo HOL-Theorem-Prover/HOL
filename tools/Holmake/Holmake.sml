@@ -345,17 +345,26 @@ fun extra_rule_for t = List.find(fn r => #target r = t) extra_rules
 infix in_target
 fun (s in_target t) = case extra_deps t of NONE => false | SOME l => member s l
 
-fun run_extra_command c = let
-  open Holmake_types
-  val (echo_command, c) =
-      if size c > 0 andalso String.sub(c, 0) = #"@" then
-        (false, String.extract(c, 1, NONE))
-      else (true, c)
-  val (ignore_error, c) =
-      if echo_command andalso size c > 0 andalso String.sub(c, 0) = #"-" then
-        (true, String.extract(c, 1, NONE))
-      else (false, c)
+fun process_hypat_options s = let
+  open Substring
+  val ss = all s
+  fun recurse (noecho, ignore_error, ss) =
+      if noecho andalso ignore_error then
+        (true, true, string (dropl (fn c => c = #"@" orelse c = #"-") ss))
+      else
+        case getc ss of
+          NONE => (noecho, ignore_error, "")
+        | SOME (c, ss') =>
+          if c = #"@" then recurse (true, ignore_error, ss')
+          else if c = #"-" then recurse (noecho, true, ss')
+          else (noecho, ignore_error, string ss)
+in
+  recurse (false, false, ss)
+end
 
+fun run_extra_command tgt c = let
+  open Holmake_types
+  val (noecho, ignore_error, c) = process_hypat_options c
   fun vref_ify cmd s =
       if String.isPrefix cmd s then let
           val rest = String.extract(s, size cmd, NONE)
@@ -374,13 +383,14 @@ fun run_extra_command c = let
   val c = dovrefs ["HOLMOSMLC-C", "HOLMOSMLC", "MOSMLC", "MOSMLLEX",
                    "MOSMLYAC"] c
   val () =
-      if echo_command then (TextIO.output(TextIO.stdOut, c ^ "\n");
-                            TextIO.flushOut TextIO.stdOut)
+      if not noecho then (TextIO.output(TextIO.stdOut, c ^ "\n");
+                          TextIO.flushOut TextIO.stdOut)
       else ()
   val result = Process.system c
 in
   if result <> Process.success andalso ignore_error then
-    Process.success
+    (warn ("Holmake: ["^tgt^"] Error (ignored)\n");
+     Process.success)
   else result
 end
 
@@ -389,7 +399,7 @@ fun run_extra_commands tgt commands =
   case commands of
     [] => Process.success
   | (c::cs) =>
-      if run_extra_command c = Process.success then
+      if run_extra_command tgt c = Process.success then
         run_extra_commands tgt cs
       else
         (TextIO.output(TextIO.stdOut, "Failed. Couldn't build "^tgt^"\n");
