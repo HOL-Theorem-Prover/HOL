@@ -44,7 +44,9 @@ html1/DTD/xhtml1-strict.dtd">
     correctly.</p></li>
 
 <li> <p> Adding a user-supplied pretty-printer caused polymorphic terms to
-    fail to print.</p></li>
+    fail to print.  (The interface for adding pretty-printers is also
+    now slightly richer, see the REFERENCE manual for details.)
+    </p></li>
 
 <li> <p><code>DECIDE_TAC</code> didn't pay attention to goal
     assumptions.</p></li>
@@ -255,7 +257,16 @@ html1/DTD/xhtml1-strict.dtd">
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
-<ul>
+<ul> <li> <p> The four HOL executables have had their names adjusted.
+We now think that using HOL with the quotation filter is the
+appropriate default for all users.  To reflect this, the executable
+<code>hol</code> now includes the quotation filter.  (This executable
+used to be called <code>hol.unquote</code>.)  To avoid using the
+quotation filter, use <code>hol.noquote</code>.  Analogous changes
+have been made to <code>hol.bare</code>; <em>i.e.,</em>
+<code>hol.bare</code> now includes the filter, and
+<code>hol.bare.noquote</code> does not. </p>
+
 <li> <p> The rewrite theorem for <code>LET</code>, </p>
 <pre>
          LET f v = f v
