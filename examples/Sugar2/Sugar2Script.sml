@@ -641,12 +641,6 @@ val INIT_TAC =
   [F_SEM_def,UF_SEM_def,F_CLOCK_FREE_def,FIRST_RISE_TRUE,RESTN_def,
    DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``];
 
-(* Proof in progress
-fun g t = set_goal([],t);
-fun CHEAT(asl,t) = ([],fn [] => mk_thm([],t));
-fun step () = e(CHEAT);
-*)
-
 val F_SEM_TRUE_LEMMA =
  store_thm
   ("F_SEM_TRUE_LEMMA",
