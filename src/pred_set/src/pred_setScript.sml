@@ -2722,6 +2722,7 @@ val CROSS_EMPTY = store_thm(
   "CROSS_EMPTY",
   ``!P. (P CROSS {} = {}) /\ ({} CROSS P = {})``,
   SIMP_TAC bool_ss [EXTENSION, IN_CROSS, NOT_IN_EMPTY]);
+val _ = BasicProvers.export_rewrites ["CROSS_EMPTY"]
 
 val CROSS_INSERT_LEFT = store_thm(
   "CROSS_INSERT_LEFT",
@@ -2758,6 +2759,7 @@ val CROSS_SINGS = store_thm(
   ``!x y. {x} CROSS {y} = {(x,y)}``,
   SIMP_TAC bool_ss [EXTENSION, IN_INSERT, IN_CROSS, NOT_IN_EMPTY] THEN
   MESON_TAC [PAIR, FST, SND]);
+val _ = BasicProvers.export_rewrites ["CROSS_SINGS"]
 
 val CARD_SING_CROSS = store_thm(
   "CARD_SING_CROSS",
