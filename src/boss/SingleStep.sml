@@ -1,7 +1,7 @@
 structure SingleStep :> SingleStep =
 struct
 
-open HolKernel Parse boolLib pairLib;
+open HolKernel Parse boolLib pairSyntax PairedLambda;
 
 infix THEN THENL ORELSE |-> ##;
 infixr -->;
