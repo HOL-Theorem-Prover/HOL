@@ -385,6 +385,9 @@ val THE_NONE = Q.prove
 val _ = 
  let open EmitML combinSyntax
  in exportML("option",
+        MLSIG "datatype option = datatype Option.option" ::
+        MLSTRUCT "datatype option = datatype Option.option"
+        ::
         map DEFN
          [OPTION_MAP_DEF, IS_SOME_DEF, IS_NONE_DEF, 
           CONJ THE_NONE THE_DEF, OPTION_JOIN_DEF])
