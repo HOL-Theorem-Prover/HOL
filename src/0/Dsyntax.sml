@@ -11,7 +11,7 @@ structure Dsyntax :> Dsyntax =
 struct
 
 
-fun DSYNTAX_ERR function message =
+fun ERR function message =
     Exception.HOL_ERR{origin_structure = "Dsyntax",
 		      origin_function = function,
 		      message = message};
@@ -28,28 +28,32 @@ fun select_ty ty = (ty --> bool) --> ty;
 fun quant_ty ty =  (ty --> bool) --> bool;
 val b2b2b = infix_ty bool bool;
 
-exception BAD
+(*---------------------------------------------------------------------------
+          General destructor operations
+ ---------------------------------------------------------------------------*)
 
-fun dest_monop M s e =
-   let val {Rator=c, Rand=tm} = Term.dest_comb M
-   in if #Name(dest_const c) = s then (c,tm) else raise e
-   end
-   handle HOL_ERR _ => raise e;
-
-fun dest_binop M s e =
-  let val {Rator,Rand=tm2} = Term.dest_comb M
-      val {Rator=c,Rand=tm1} = Term.dest_comb Rator
+fun dest_monop s e M =
+   let val {Rator,Rand} = Term.dest_comb M handle HOL_ERR _ => raise e
+       val _ = if #Name(dest_const Rator) = s then () else raise e
+   in 
+     (Rator,Rand)
+   end;
+   
+fun dest_binop s e M =
+  let val {Rator,Rand=tm2} = Term.dest_comb M handle HOL_ERR _ => raise e
+      val {Rator=c,Rand=tm1} = Term.dest_comb Rator handle HOL_ERR _ => raise e
+      val _ = if #Name(dest_const c) = s then () else raise e
   in
-    if #Name(dest_const c) = s then (c,tm1,tm2) else raise e
-  end
-  handle HOL_ERR _ => raise e
+    (c,tm1,tm2)
+  end;
 
-fun dest_binder M s e =
-  let val {Rator=c, Rand} = Term.dest_comb M
+fun dest_binder s e M =
+  let val {Rator=c, Rand} = Term.dest_comb M handle HOL_ERR _ => raise e
+      val _ = if #Name(dest_const c) = s then () else raise e
+      val rcd = dest_abs Rand handle HOL_ERR _ => raise e
   in
-     if #Name(dest_const c) = s then dest_abs Rand else raise e
-  end
-  handle HOL_ERR _ => raise e
+     rcd
+  end;
 
 
 (*---------------------------------------------------------------------------
@@ -58,41 +62,47 @@ fun dest_binder M s e =
 
 fun mk_eq{lhs,rhs} =
    list_mk_comb(mk_const{Name="=",Ty=infix_ty(type_of lhs) bool},[lhs,rhs])
-   handle HOL_ERR _ => raise DSYNTAX_ERR "mk_eq" "lhs and rhs have different types"
+   handle HOL_ERR _ => raise ERR "mk_eq" "lhs and rhs have different types"
 
 fun mk_imp{ant,conseq} =
- list_mk_comb(mk_const{Name="==>",Ty=b2b2b},[ant,conseq])
- handle HOL_ERR _ => raise DSYNTAX_ERR "mk_imp" "Non-boolean argument"
+   list_mk_comb(mk_const{Name="==>",Ty=b2b2b},[ant,conseq])
+    handle HOL_ERR _ => raise ERR "mk_imp" "Non-boolean argument"
 
 fun mk_select(s as {Bvar, Body}) =
    mk_comb{Rator = mk_const{Name="@",Ty=select_ty (type_of Bvar)},
            Rand = mk_abs s}
-   handle HOL_ERR _ => raise DSYNTAX_ERR"mk_select" "";
+   handle HOL_ERR _ => raise ERR"mk_select" "";
 
+local val deq = dest_binop "=" (ERR"dest_eq" "not an \"=\"")
+in
 fun dest_eq_ty M =
-   let val (c,tm1,tm2) = dest_binop M "=" (DSYNTAX_ERR"dest_eq" "not an \"=\"")
+   let val (c,tm1,tm2) = deq M 
    in {lhs=tm1, rhs=tm2, ty = #1 (Type.dom_rng (type_of c))}
-   end;
+   end
 
 fun dest_eq M =
-   let val (_,tm1,tm2) = dest_binop M "=" (DSYNTAX_ERR"dest_eq" "not an \"=\"")
+   let val (_,tm1,tm2) = deq M
    in {lhs=tm1, rhs=tm2}
-   end;
+   end
+end;
+
 val lhs = #lhs o dest_eq
 and rhs = #rhs o dest_eq
 
-local val err = DSYNTAX_ERR"dest_imp" "not an \"==>\""
+local val err = ERR"dest_imp" "not an \"==>\""
+      val dneg = dest_monop "~"   err
+      val dimp = dest_binop "==>" err
 in
 fun dest_imp M =
-   let val (_,tm1,tm2) = dest_binop M "==>" err
+   let val (_,tm1,tm2) = dimp M 
    in {ant=tm1, conseq=tm2}
    end handle HOL_ERR _
-   => let val (_,tm) = dest_monop M "~" err
+   => let val (_,tm) = dneg M 
       in {ant=tm,conseq=mk_const{Name="F",Ty=bool}}
       end
 end;
 
-fun dest_select M = dest_binder M "@" (DSYNTAX_ERR"dest_select" "not a \"@\"");
+val dest_select = dest_binder "@" (ERR"dest_select" "not a \"@\"");
 
 
 (*---------------------------------------------------------------------------
@@ -101,14 +111,14 @@ fun dest_select M = dest_binder M "@" (DSYNTAX_ERR"dest_select" "not a \"@\"");
 
 local fun mk_quant s (a as {Bvar,...}) =
    mk_comb{Rator=mk_const{Name=s, Ty=quant_ty (type_of Bvar)}, Rand=mk_abs a}
-   handle HOL_ERR _ => raise DSYNTAX_ERR"mk_quant" ("not a "^s)
+   handle HOL_ERR _ => raise ERR"mk_quant" ("not a "^s)
 in
   val mk_forall = mk_quant "!"
   and mk_exists = mk_quant "?"
 end;
 
-fun dest_forall M = dest_binder M "!" (DSYNTAX_ERR"dest_forall" "not a \"!\"");
-fun dest_exists M = dest_binder M "?" (DSYNTAX_ERR"dest_exists" "not a \"?\"");
+val dest_forall = dest_binder "!" (ERR"dest_forall" "not a \"!\"")
+val dest_exists = dest_binder "?" (ERR"dest_exists" "not a \"?\"");
 
 
 (*---------------------------------------------------------------------------
@@ -117,7 +127,10 @@ fun dest_exists M = dest_binder M "?" (DSYNTAX_ERR"dest_exists" "not a \"?\"");
 
 fun mk_neg M = mk_comb{Rator=mk_const{Name="~",Ty=bool-->bool}, Rand=M};
 
-fun dest_neg M = Lib.snd(dest_monop M "~" (DSYNTAX_ERR"dest_neg" "not a neg"));
+local val dneg = dest_monop "~" (ERR"dest_neg" "not a neg")
+in
+fun dest_neg M = Lib.snd (dneg M)
+end;
 
 (*---------------------------------------------------------------------------
  *   /\  \/
@@ -125,21 +138,21 @@ fun dest_neg M = Lib.snd(dest_monop M "~" (DSYNTAX_ERR"dest_neg" "not a neg"));
 
 fun mk_conj{conj1,conj2} =
    list_mk_comb(mk_const{Name="/\\",Ty=b2b2b},[conj1,conj2])
-   handle HOL_ERR _ => raise DSYNTAX_ERR "mk_conj" "Non-boolean argument"
+   handle HOL_ERR _ => raise ERR "mk_conj" "Non-boolean argument"
 
 fun mk_disj{disj1,disj2} =
    list_mk_comb(mk_const{Name="\\/",Ty=b2b2b},[disj1,disj2])
-   handle HOL_ERR _ => raise DSYNTAX_ERR "mk_disj" "Non-boolean argument"
+   handle HOL_ERR _ => raise ERR "mk_disj" "Non-boolean argument"
 
-fun dest_conj M =
- let val (_,tm1,tm2) = dest_binop M "/\\" (DSYNTAX_ERR"dest_conj" "not a conj")
- in {conj1=tm1, conj2=tm2}
- end
+local val dconj = dest_binop "/\\" (ERR"dest_conj" "not a conj")
+in
+fun dest_conj M = let val (_,tm1,tm2) = dconj M in {conj1=tm1, conj2=tm2} end
+end;
 
-fun dest_disj M =
- let val (_,tm1,tm2) = dest_binop M "\\/" (DSYNTAX_ERR"dest_disj" "not a disj")
- in {disj1=tm1, disj2=tm2}
- end;
+local val ddisj = dest_binop "\\/" (ERR"dest_disj" "not a disj")
+in
+fun dest_disj M = let val (_,tm1,tm2) = ddisj M in {disj1=tm1, disj2=tm2} end
+end;
 
 (*---------------------------------------------------------------------------
  * Conditional
@@ -148,14 +161,15 @@ local fun cond_ty ty = bool --> ty --> ty --> ty
 in
 fun mk_cond {cond,larm,rarm} =
   list_mk_comb(mk_const{Name="COND",Ty=cond_ty(type_of larm)},[cond,larm,rarm])
-  handle HOL_ERR _ => raise DSYNTAX_ERR"mk_cond" ""
+  handle HOL_ERR _ => raise ERR"mk_cond" ""
 end;
 
-local val NOT_A_COND = DSYNTAX_ERR"dest_cond" "not a cond"
+local val NOT_A_COND = ERR"dest_cond" "not a cond"
+      val dcond = dest_binop "COND" NOT_A_COND
 in
 fun dest_cond M =
   let val {Rator,Rand=t2} = dest_comb M handle HOL_ERR _ => raise NOT_A_COND
-      val (_,b,t1) = dest_binop Rator "COND" NOT_A_COND
+      val (_,b,t1) = dcond Rator
   in
     {cond=b, larm=t1, rarm=t2}
   end
@@ -170,16 +184,16 @@ fun prod_ty ty1 ty2 = Type.mk_type{Tyop="prod",Args=[ty1,ty2]};
 fun comma_ty ty1 ty2 = ty1 --> ty2 --> prod_ty ty1 ty2;
 
 fun mk_pair{fst, snd} =
-  let val ty1 = type_of fst  and ty2 = type_of snd
+  let val ty1 = type_of fst  
+      and ty2 = type_of snd
   in
     list_mk_comb(mk_const{Name=",", Ty=comma_ty ty1 ty2},[fst,snd])
   end;
 
-fun dest_pair M =
-  let val (_,tm1,tm2) = dest_binop M ","
-                          (DSYNTAX_ERR"dest_pair" "not a pair")
-  in {fst=tm1, snd=tm2}
-  end;
+local val dpair = dest_binop "," (ERR"dest_pair" "not a pair")
+in
+fun dest_pair M = let val (_,tm1,tm2) = dpair M in {fst=tm1, snd=tm2} end
+end;
 
 
 (* ===================================================================== *)
@@ -195,14 +209,12 @@ fun mk_let{func, arg} =
    in
      list_mk_comb(c,[func,arg])
    end
-  handle HOL_ERR _ => raise DSYNTAX_ERR"mk_let" "";
+  handle HOL_ERR _ => raise ERR"mk_let" "";
 
-fun dest_let M =
-  let val (_,f,x) = dest_binop M "LET"
-                      (DSYNTAX_ERR"dest_let" "not a let term")
-  in
-    {func=f, arg=x}
-  end;
+local val dlet = dest_binop "LET" (ERR"dest_let" "not a let term")
+in
+fun dest_let M = let val (_,f,x) = dlet M in {func=f, arg=x} end
+end;
 
 
 (* ===================================================================== *)
@@ -220,18 +232,18 @@ fun mk_cons{hd, tl} =
        and tty = type_of tl
    in list_mk_comb(mk_const{Name="CONS",Ty=cons_ty hty tty},[hd,tl])
    end
-   handle HOL_ERR _ => raise DSYNTAX_ERR"mk_cons" ""
+   handle HOL_ERR _ => raise ERR"mk_cons" ""
 end;
 
 (*---------------------------------------------------------------------------
  * dest_cons "[t;t1;...;tn]" ----> ("t","[t1;...;tn]")
  *---------------------------------------------------------------------------*)
 
-fun dest_cons M =
-  let val (_,h,t) = dest_binop M "CONS" (DSYNTAX_ERR"dest_cons" "not a cons")
-  in
-     {hd=h,tl=t}
-  end;
+local val dcons = dest_binop "CONS" (ERR"dest_cons" "not a cons")
+in
+fun dest_cons M = let val (_,h,t) = dcons M in {hd=h,tl=t} end
+end;
+
 val is_cons = Lib.can dest_cons;
 
 (*---------------------------------------------------------------------------
@@ -241,7 +253,7 @@ val is_cons = Lib.can dest_cons;
 fun mk_list{els,ty} =
    Lib.itlist (fn h => fn t => mk_cons{hd=h, tl=t})
           els (mk_const{Name="NIL",Ty=Type.mk_type{Tyop="list",Args = [ty]}})
-   handle HOL_ERR _ => raise DSYNTAX_ERR "mk_list" "";
+   handle HOL_ERR _ => raise ERR "mk_list" "";
 
 (*---------------------------------------------------------------------------
  * dest_list "[t1;...;tn]:(ty)list" ----> (["t1";...;"tn"],":ty")
@@ -253,12 +265,12 @@ fun dest_list tm =
         in {els = hd::els, ty = ty}
         end
    else case (dest_const tm handle _
-               => raise DSYNTAX_ERR "dest_list" "not a list term")
+               => raise ERR "dest_list" "not a list term")
          of {Name="NIL", Ty} =>
               (case (Type.dest_type Ty)
                 of {Args=[ty],...} => {els = [], ty = ty}
-                 | _ => raise DSYNTAX_ERR "dest_list" "implementation error")
-          | _ => raise DSYNTAX_ERR "dest_list" "not a list term";
+                 | _ => raise ERR "dest_list" "implementation error")
+          | _ => raise ERR "dest_list" "not a list term";
 
 val is_list = Lib.can dest_list;
 
@@ -397,7 +409,7 @@ local fun mk_uncurry(xt,yt,zt) =
               end
 in
 fun mk_pabs{varstruct,body} = mpa(Lib.assert is_pair varstruct, body)
-   handle HOL_ERR _ => raise DSYNTAX_ERR"mk_pabs" ""
+   handle HOL_ERR _ => raise ERR"mk_pabs" ""
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -420,7 +432,7 @@ in
 fun dest_pabs tm =
    let val (pr as {varstruct, ...}) = dpa tm
    in if (is_pair varstruct) then pr
-      else raise DSYNTAX_ERR "dest_pabs" "not a paired abstraction"
+      else raise ERR "dest_pabs" "not a paired abstraction"
    end
 end;
 
@@ -444,7 +456,7 @@ fun find_term P =
            else if (is_comb tm)
                 then find_tm (#Rator(dest_comb tm))
                      handle HOL_ERR _ => find_tm (#Rand(dest_comb tm))
-                else raise DSYNTAX_ERR "find_term" ""
+                else raise ERR "find_term" ""
    in find_tm
    end;
 
@@ -507,7 +519,7 @@ fun rev_itlist3 f L1 L2 L3 base_value =
  let fun rev_it3 (a::rst1) (b::rst2) (c::rst3) base =
              rev_it3 rst1 rst2 rst3 (f a b c base)
        | rev_it3 [] [] [] base = base
-       | rev_it3 _ _ _ _ = raise DSYNTAX_ERR "rev_itlist3"
+       | rev_it3 _ _ _ _ = raise ERR "rev_itlist3"
                                   "not all lists have same size"
  in rev_it3 L1 L2 L3 base_value
  end
@@ -548,26 +560,26 @@ fun associate_restriction(p as (binder_str,const_name)) =
           of {place=Binder,...} =>
              if (Lib.can Term.const_decl const_name)
               then restricted_binders := p :: !restricted_binders
-              else raise DSYNTAX_ERR"restrict_binder"
+              else raise ERR"restrict_binder"
                   (Lib.quote const_name^" is not the name of a constant")
-           | _ => raise DSYNTAX_ERR"restrict_binder"
+           | _ => raise ERR"restrict_binder"
                    (Lib.quote binder_str^" is not the name of a binder"))
-          handle HOL_ERR _ => raise DSYNTAX_ERR"restrict_binder"
+          handle HOL_ERR _ => raise ERR"restrict_binder"
                   (Lib.quote binder_str^" is not the name of a constant"))
 
-      | SOME _ => raise DSYNTAX_ERR"restrict_binder"
+      | SOME _ => raise ERR"restrict_binder"
                    ("Binder "^Lib.quote binder_str^" is already restricted")
 
 fun delete_restriction binder =
    if (Lib.mem binder basic_binders)
-   then raise DSYNTAX_ERR "delete_restriction"
+   then raise ERR "delete_restriction"
             (Lib.quote binder^" cannot have its restriction deleted")
    else
    restricted_binders :=
      Lib.set_diff (!restricted_binders)
                   [(binder,Lib.assoc binder(!restricted_binders))]
                   handle HOL_ERR _
-                  => raise DSYNTAX_ERR"delete_restriction"
+                  => raise ERR "delete_restriction"
                              (Lib.quote binder^" is not restricted")
 end;
 *)
