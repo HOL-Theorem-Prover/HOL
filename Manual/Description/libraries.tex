@@ -20,11 +20,11 @@
  \newcommand{\charseq}   {\mbox{\it charseq}}
 
 A \emph{library} is intended to provide a higher level of
-organization for HOL applications. In general, a library 
-can contain a collection of theories, proof procedures, 
+organization for HOL applications. In general, a library
+can contain a collection of theories, proof procedures,
 and supporting material, such as documentation. Some libraries
 simply provide proof procedures, such as {\small\verb+simpLib+},
-while others provide theories and proof procedures, such as 
+while others provide theories and proof procedures, such as
 {\small\verb+intLib+}. Libraries can include other libraries.
 
 In the \HOL{} system, libraries are represented by ML structures named
@@ -37,7 +37,7 @@ When the \HOL{} system is invoked in its normal configuration, several
 useful libraries are automatically loaded. The most basic \HOL{}
 library is {\small\verb+boolLib+}, which supports the definitions of
 the \HOL{} logic, found in the theory \theoryimp{bool}, and provides a
-useful suite of definition and reasoning tools. 
+useful suite of definition and reasoning tools.
 
 Another pervasively used library is found in the structure
 {\small\verb+Parse+} (the reader can see that we are not strictly
@@ -52,11 +52,11 @@ system starts up. It includes {\small\verb+boolLib+} and
 {\small\verb+Parse+}. Theories provided include \theoryimp{pair},
 \theoryimp{sum}, \theoryimp{option}; the arithmetic theories
 \theoryimp{num}, \theoryimp{prim\_rec}, \theoryimp{arithmetic},
-and \theoryimp{numeral}; and \theoryimp{list}. Other libraries 
-included in \verb+bossLib+ are \verb+goalstackLib+, which provides 
+and \theoryimp{numeral}; and \theoryimp{list}. Other libraries
+included in \verb+bossLib+ are \verb+goalstackLib+, which provides
 a proof manager for tactic proofs; \verb+simpLib+, which provides
 a variety of simplifiers; \verb+numLib+, which provides a decision
-procedure for arithmetic; \verb+Datatype+, which provides 
+procedure for arithmetic; \verb+Datatype+, which provides
 high-level support for defining algebraic datatypes; \verb+tflLib+,
 which provides support for defining recursive functions.
 
@@ -82,7 +82,7 @@ behaviour of the parser is therefore usually altered by grammar
 manipulations. These can be of two kinds: \emph{temporary} or
 \emph{permanent}.  Temporary changes do not persist after the current
 session, while permanent changes will be in force in all descendant
-theories.  Functions making temporary alterations are signified 
+theories.  Functions making temporary alterations are signified
 by a leading \verb+temp_+.
 
 \subsection{Parsing Types}
@@ -95,7 +95,7 @@ for types.
 
 The HOL grammar gets extended when a new constant is introduced. The
 introduction of new constants is discussed in
-Sections~\ref{sec:constant-definitions} and \ref{conspec}. 
+Sections~\ref{sec:constant-definitions} and \ref{conspec}.
 
 \subsection{Type constraints}
 
@@ -760,7 +760,7 @@ appear as abbreviations\index{abbreviations!tactic-based proof} in the
 assumptions.
 
 The tactic \texttt{SRW\_TAC} is similar to \texttt{RW\_TAC}, but works
-with respect to an underlying \simpset (accessible through the
+with respect to an underlying \simpset{} (accessible through the
 function \texttt{srw\_ss}) that is updated as new context is loaded.
 This \simpset{} can be augmented through the addition of ``\simpset{}
 fragments'' (\texttt{ssdata} values) and theorems.  In situations
