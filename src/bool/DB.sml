@@ -86,7 +86,7 @@ fun norm_thyname "-" = current_theory()
      find : Look up something by name fragment
  ---------------------------------------------------------------------------*)
 
-fun thy s = 
+fun thy s =
    map snd (filter (equal(toLower(norm_thyname s)) o fst o fst) (CT()));
 
 fun find s = map snd (filter (occurs(toLower s) o snd o fst) (CT()));
@@ -119,7 +119,7 @@ fun listDB () = map snd (CT());
       Some other lookup functions
  ---------------------------------------------------------------------------*)
 
-fun thm_class thy name = 
+fun thm_class thy name =
   case filter (equal (norm_thyname thy,name) o fst o snd) (CT())
    of [(_,p)] => snd p
     | [] => raise ERR "thm_class" "not found"
@@ -136,7 +136,29 @@ val theorems    = rev o List.map thm_of o Lib.filter (is Thm) o thy
 val definitions = rev o List.map thm_of o Lib.filter (is Def) o thy
 val axioms      = rev o List.map thm_of o Lib.filter (is Axm) o thy
 
+fun theorem s = let
+  val (thm,c) = thm_class "-" s
+      handle HOL_ERR _ => raise ERR "theorem" "No theorem of that name"
+in
+  if c = Thm  then thm
+  else raise ERR "theorem" "No theorem of that name"
+end
 
+fun definition s = let
+  val (thm,c) = thm_class "-" s
+      handle HOL_ERR _ => raise ERR "definition" "No definition of that name"
+in
+  if c = Def then thm
+  else raise ERR "theorem" "No definition of that name"
+end
+
+fun axiom s = let
+  val (thm,c) = thm_class "-" s
+      handle HOL_ERR _ => raise ERR "axiom" "No axiom of that name"
+in
+  if c = Axm then thm
+  else raise ERR "axiom" "No axiom of that name"
+end
 (*---------------------------------------------------------------------------
      Support for print_theory
  ---------------------------------------------------------------------------*)
@@ -160,12 +182,12 @@ fun outstreamConsumer ostrm =
      linewidth = !Globals.linewidth};
 
 fun print_theory_to_outstream thy ostrm =
- PP.with_pp (outstreamConsumer ostrm) 
+ PP.with_pp (outstreamConsumer ostrm)
             (C Hol_pp.pp_theory (dest_theory thy));
 
 fun print_theory thy = print_theory_to_outstream thy TextIO.stdOut;
 
-fun print_theory_to_file thy file = 
+fun print_theory_to_file thy file =
   let open TextIO
       val ostrm = openOut file
   in print_theory_to_outstream thy ostrm
@@ -178,7 +200,7 @@ fun print_theory_to_file thy file =
     Refugee from Parse structure
  ---------------------------------------------------------------------------*)
 
-fun export_theory_as_docfiles dirname = 
+fun export_theory_as_docfiles dirname =
     Parse.export_theorems_as_docfiles dirname (theorems "-");
 
 end

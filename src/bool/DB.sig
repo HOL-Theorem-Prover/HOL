@@ -12,14 +12,19 @@ sig
   val thy         : string -> data list
   val fetch       : string -> string -> thm
   val thms        : string -> (string * thm) list
+
+  val theorem     : string -> thm
+  val definition  : string -> thm
+  val axiom       : string -> thm
+
   val axioms      : string -> (string * thm) list
   val theorems    : string -> (string * thm) list
   val definitions : string -> (string * thm) list
   val find        : string -> data list
   val matchp      : (thm -> bool) -> string list -> data list
   val matcher     : (term -> term -> 'a) -> string list -> term -> data list
-  val match       : string list -> term -> data list 
-  val apropos     : term -> data list 
+  val match       : string list -> term -> data list
+  val apropos     : term -> data list
   val listDB      : unit -> data list
 
   val dest_theory  : string -> theory
