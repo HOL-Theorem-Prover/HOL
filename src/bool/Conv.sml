@@ -115,30 +115,47 @@ end
 (* remember this as "left-hand conv", where RAND_CONV is "right-hand conv". *)
 fun LAND_CONV c = RATOR_CONV (RAND_CONV c)
 
-(* ---------------------------------------------------------------------*)
-(* ABS_CONV conv "\x. t[x]" applies conv to t[x]			*)
-(* 									*)
-(* Added TFM 88.03.31							*)
-(* Revised RJB 91.04.17							*)
-(* Revised Michael Norrish 2000.03.27                                   *)
-(*    now passes on information about nested failure                    *)
-(* ---------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    ABS_CONV conv "\x. t[x]" applies conv to t[x]
 
-fun ABS_CONV conv tm = let
-   val {Bvar,Body} = dest_abs tm
-     handle (HOL_ERR _) => raise ERR "ABS_CONV" "not an abs"
-   val newbody = conv Body
-     handle HOL_ERR {origin_function, origin_structure, message} =>
-       if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-          andalso origin_structure = "Conv"
-       then
-         raise ERR "ABS_CONV" message
-       else
-         raise ERR "ABS_CONV" (origin_function ^ ": " ^ message)
-in
-  ABS Bvar newbody handle (HOL_ERR {message,...}) =>
-    raise ERR"ABS_CONV" ("Application of ABS failed: "^message)
-end;
+    Added TFM 88.03.31
+    Revised RJB 91.04.17
+    Revised Michael Norrish 2000.03.27
+       now passes on information about nested failure
+    Revised Michael Norrish 2003.03.20
+       now does SUB_CONV-like tricks to handle ABS failing
+   ---------------------------------------------------------------------- *)
+
+fun ABS_CONV conv tm =
+    case dest_term tm of
+      LAMB{Bvar,Body} => (let
+        val newbody = conv Body
+      in
+        ABS Bvar newbody
+      end
+        handle HOL_ERR _ =>
+               let
+                 val v = genvar (type_of Bvar)
+                 val th1 = ALPHA_CONV v tm
+                 val r = rhs (concl th1)
+                 val {Body = Body',...} = dest_abs r
+                 val eq_thm' = ABS v (conv Body')
+                 val at = rhs (concl eq_thm')
+                 val v' = variant (free_vars at) Bvar
+                 val th2 = ALPHA_CONV v' at
+               in
+                 TRANS (TRANS th1 eq_thm') th2
+               end
+                 handle HOL_ERR {origin_function, origin_structure, message} =>
+                        if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV",
+                                                     "ABS_CONV"]
+                           andalso origin_structure = "Conv"
+                        then
+                          raise ERR "ABS_CONV" message
+                        else
+                          raise ERR "ABS_CONV"
+                                    (origin_function ^ ": " ^ message))
+    | _ => raise ERR "ABS_CONV" "Term not an abstraction"
 
 (* -------------------------------------------------------------------- *)
 (* LHS_CONV conv "t1 = t2" applies conv to t1                           *)
@@ -337,10 +354,35 @@ fun EVERY_CONJ_CONV c tm =
 fun QUANT_CONV conv  = RAND_CONV(ABS_CONV conv);
 fun BINDER_CONV conv = ABS_CONV conv ORELSEC QUANT_CONV conv;
 
-fun STRIP_BINDER_CONV opt conv tm =
-  let val (vlist,M) = strip_binder opt tm
-  in GEN_ABS opt vlist (conv M)
-  end
+fun STRIP_BINDER_CONV opt conv tm = let
+  val (vlist,M) = strip_binder opt tm
+in
+  GEN_ABS opt vlist (conv M)
+  handle HOL_ERR _ => let
+           val gvs = map (genvar o type_of) vlist
+           fun rename vs t =
+               case vs of
+                 [] => ALL_CONV t
+               | (v::vs) =>
+                 (GEN_ALPHA_CONV v THENC BINDER_CONV (rename vs)) t
+           fun variant_list acc avds [] = List.rev acc
+             | variant_list acc avds (v::vs) = let
+                 val v' = variant avds v
+               in
+                 variant_list (v'::acc) (v'::avds) vs
+               end
+           val th1 = rename gvs tm
+           val {rhs,...} = Rsyntax.dest_eq(Thm.concl th1)
+           val (_, M') = strip_binder opt rhs (* v = Bvar *)
+           val eq_thm' = GEN_ABS opt gvs (conv M')
+           val at  = #rhs(Rsyntax.dest_eq(concl eq_thm'))
+           val vs'  = variant_list [] (free_vars at) vlist
+           val th2 = rename vs' at
+         in
+           TRANS (TRANS th1 eq_thm') th2
+         end
+end
+
 
 fun STRIP_QUANT_CONV conv tm =
  (if is_forall tm then STRIP_BINDER_CONV (SOME boolSyntax.universal) else
