@@ -373,6 +373,8 @@ val EMPTY_UNION = store_thm("EMPTY_UNION",
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY,IN_UNION,DE_MORGAN_THM] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC);
 
+
+
 (* ===================================================================== *)
 (* Intersection								 *)
 (* ===================================================================== *)
@@ -1998,6 +2000,13 @@ val NOT_IN_FINITE =
       REPEAT STRIP_TAC THEN RES_THEN STRIP_ASSUME_TAC THEN
       ASSUME_TAC (SPEC (--`x:'a`--) IN_UNIV) THEN RES_TAC]);
 
+val INFINITE_INHAB = store_thm(
+  "INFINITE_INHAB",
+  Term`!P. INFINITE P ==> ?x. x IN P`,
+  REWRITE_TAC [MEMBER_NOT_EMPTY, INFINITE_DEF] THEN REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM SUBST_ALL_TAC THEN POP_ASSUM MP_TAC THEN
+  REWRITE_TAC [FINITE_EMPTY]);
+
 val INVERSE_LEMMA =
     TAC_PROOF
     (([], (--`!f:'a->'b. (!x y. (f x = f y) ==> (x = y)) ==>
@@ -2464,6 +2473,189 @@ val FINITE_ISO_NUM =
        (ASSUME (--`x:'a = (if n < CARD (s:^set) then f n else e)`--)) THEN
      DISJ2_TAC THEN EXISTS_TAC (--`n:num`--) THEN
      REWRITE_TAC [ASSUME (--`n < CARD (s:^set)`--)]]]]);
+
+open simpLib boolSimps mesonLib SingleStep
+infix ++
+infix 8 by
+val AP = numLib.ARITH_PROVE
+val arith_ss = bool_ss ++ arithSimps.ARITH_ss
+val FINITE_WEAK_ENUMERATE = store_thm(
+  "FINITE_WEAK_ENUMERATE",
+  ``!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)``,
+  ONCE_REWRITE_TAC [EQ_IMP_THM] THEN
+  SIMP_TAC bool_ss [FORALL_AND_THM] THEN CONJ_TAC THENL [
+    Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+    SIMP_TAC bool_ss [IN_INSERT, NOT_IN_EMPTY] THEN
+    REPEAT STRIP_TAC THENL [
+      Q.EXISTS_TAC `f` THEN Q.EXISTS_TAC `0` THEN
+      SIMP_TAC arith_ss [],
+      Q.EXISTS_TAC `\n. if n = b then e else f n` THEN
+      Q.EXISTS_TAC `b + 1` THEN GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+        Q.EXISTS_TAC `b` THEN ASM_SIMP_TAC arith_ss [],
+        RES_TAC THEN Q.EXISTS_TAC `n` THEN ASM_SIMP_TAC arith_ss [],
+        POP_ASSUM MP_TAC THEN BETA_TAC THEN COND_CASES_TAC THEN
+        ASM_MESON_TAC [AP ``~(x = y) /\ x < y + 1 ==> x < y``]
+      ]
+    ],
+
+    SIMP_TAC bool_ss [GSYM LEFT_FORALL_IMP_THM] THEN REPEAT GEN_TAC THEN
+    MAP_EVERY Q.ID_SPEC_TAC [`f`, `s`, `b`] THEN numLib.INDUCT_TAC THENL [
+      SIMP_TAC (bool_ss ++ arithSimps.ARITH_ss) [] THEN
+      GEN_TAC THEN
+      STRIP_ASSUME_TAC (Q.SPEC `s` SET_CASES) THEN
+      ASM_SIMP_TAC bool_ss [IN_INSERT, FINITE_EMPTY] THEN
+      DISCH_THEN (MP_TAC o Q.SPEC `x`) THEN REWRITE_TAC [],
+      REPEAT STRIP_TAC THEN
+      Q.ASM_CASES_TAC `?x. x IN s /\ !m. m < b ==> ~(f m = x)` THENL [
+        POP_ASSUM STRIP_ASSUME_TAC THEN
+        Q.SUBGOAL_THEN `f b = x` ASSUME_TAC THENL [
+          `?n. n < SUC b /\ (x = f n)` by ASM_MESON_TAC [] THEN
+          `~(n < b)` by ASM_MESON_TAC [] THEN
+          `n = b` by ASM_SIMP_TAC arith_ss [] THEN
+          ASM_SIMP_TAC bool_ss [],
+          ALL_TAC
+        ] THEN
+        `s = x INSERT (s DELETE x)` by ASM_MESON_TAC [INSERT_DELETE] THEN
+        POP_ASSUM SUBST1_TAC THEN
+        SIMP_TAC bool_ss [FINITE_INSERT] THEN
+        FIRST_X_ASSUM MATCH_MP_TAC THEN
+        Q.EXISTS_TAC `f` THEN SIMP_TAC bool_ss [IN_DELETE] THEN
+        GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+          `?n. n < SUC b /\ (e = f n)` by ASM_MESON_TAC [] THEN
+          `~(n = b)` by ASM_MESON_TAC [] THEN
+          `n < b` by ASM_SIMP_TAC arith_ss [] THEN
+          ASM_MESON_TAC [],
+          `n < SUC b` by ASM_SIMP_TAC arith_ss [] THEN
+          ASM_MESON_TAC []
+        ],
+        FIRST_X_ASSUM MATCH_MP_TAC THEN Q.EXISTS_TAC `f` THEN
+        POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss []) THEN
+        ASM_MESON_TAC [AP ``!x y. x < y ==> x < SUC y``]
+      ]
+    ]
+  ]);
+
+
+
+
+
+(* ===================================================================== *)
+(* Big union (union of set of sets)                                      *)
+(* ===================================================================== *)
+
+val BIGUNION = new_definition(
+  "BIGUNION",
+  Term`BIGUNION P = \x. ?p. p IN P /\ x IN p`);
+
+val IN_BIGUNION = store_thm(
+  "IN_BIGUNION",
+  ``!x sos. x IN (BIGUNION sos) = ?s. x IN s /\ s IN sos``,
+  SIMP_TAC bool_ss [SPECIFICATION, BIGUNION] THEN MESON_TAC []);
+
+val BIGUNION_EMPTY = store_thm(
+  "BIGUNION_EMPTY",
+  ``BIGUNION EMPTY = EMPTY``,
+  SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, NOT_IN_EMPTY]);
+
+val BIGUNION_SING = store_thm(
+  "BIGUNION_SING",
+  ``!x. BIGUNION {x} = x``,
+  SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, IN_INSERT, NOT_IN_EMPTY] THEN
+  SIMP_TAC bool_ss [GSYM EXTENSION]);
+
+val BIGUNION_UNION = store_thm(
+  "BIGUNION_UNION",
+  ``!s1 s2. BIGUNION (s1 UNION s2) = (BIGUNION s1) UNION (BIGUNION s2)``,
+  SIMP_TAC bool_ss [EXTENSION, IN_UNION, IN_BIGUNION, LEFT_AND_OVER_OR,
+                    EXISTS_OR_THM]);
+
+val DISJOINT_BIGUNION_lemma = prove(
+  ``!s t. DISJOINT (BIGUNION s) t =
+          !s'. s' IN s ==> DISJOINT s' t``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  SIMP_TAC bool_ss [DISJOINT_DEF, EXTENSION, IN_BIGUNION, IN_INTER,
+                    NOT_IN_EMPTY] THEN MESON_TAC []);
+
+(* above with DISJOINT x y both ways round *)
+val DISJOINT_BIGUNION = save_thm(
+  "DISJOINT_BIGUNION",
+  CONJ DISJOINT_BIGUNION_lemma
+       (ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_BIGUNION_lemma));
+
+(* ====================================================================== *)
+(* Cross product of sets                                                  *)
+(* ====================================================================== *)
+
+open pairTheory
+val CROSS_DEF = new_definition(
+  "CROSS_DEF",
+  ``CROSS P Q = { p | FST p IN P /\ SND p IN Q }``);
+val _ = set_fixity "CROSS" (Infixl 600);
+
+val IN_CROSS = store_thm(
+  "IN_CROSS",
+  ``!P Q x. x IN (P CROSS Q) = FST x IN P /\ SND x IN Q``,
+  SIMP_TAC bool_ss [GSPECIFICATION, CROSS_DEF, PAIR_EQ]);
+
+val CROSS_EMPTY = store_thm(
+  "CROSS_EMPTY",
+  ``!P. (P CROSS {} = {}) /\ ({} CROSS P = {})``,
+  SIMP_TAC bool_ss [EXTENSION, IN_CROSS, NOT_IN_EMPTY]);
+
+val CROSS_INSERT_LEFT = store_thm(
+  "CROSS_INSERT_LEFT",
+  ``!P Q x. (x INSERT P) CROSS Q = ({x} CROSS Q) UNION (P CROSS Q)``,
+  SIMP_TAC bool_ss [EXTENSION, IN_CROSS, IN_UNION, IN_INSERT,
+                    NOT_IN_EMPTY] THEN
+  MESON_TAC []);
+
+val CROSS_INSERT_RIGHT = store_thm(
+  "CROSS_INSERT_RIGHT",
+  ``!P Q x. P CROSS (x INSERT Q) = (P CROSS {x}) UNION (P CROSS Q)``,
+  SIMP_TAC bool_ss [EXTENSION, IN_CROSS, IN_UNION, IN_INSERT,
+                    NOT_IN_EMPTY] THEN
+  MESON_TAC []);
+
+val FINITE_CROSS = store_thm(
+  "FINITE_CROSS",
+  ``!P Q. FINITE P /\ FINITE Q ==> FINITE (P CROSS Q)``,
+  SIMP_TAC bool_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
+  Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+  SIMP_TAC bool_ss [CROSS_EMPTY, FINITE_EMPTY] THEN
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [CROSS_INSERT_LEFT] THEN
+  ASM_SIMP_TAC bool_ss [FINITE_UNION] THEN
+  REWRITE_TAC [FINITE_WEAK_ENUMERATE] THEN
+  `?f b. !x. x IN Q = ?n. n < b /\ (x = f n)`
+     by ASM_MESON_TAC [FINITE_WEAK_ENUMERATE] THEN
+  Q.EXISTS_TAC `\m. (e, f m)` THEN Q.EXISTS_TAC `b` THEN
+  ASM_SIMP_TAC bool_ss [IN_CROSS, IN_INSERT, NOT_IN_EMPTY] THEN
+  GEN_TAC THEN Cases_on `e'` THEN
+  SIMP_TAC bool_ss [PAIR_EQ, FST, SND] THEN MESON_TAC []);
+
+val CROSS_SINGS = store_thm(
+  "CROSS_SINGS",
+  ``!x y. {x} CROSS {y} = {(x,y)}``,
+  SIMP_TAC bool_ss [EXTENSION, IN_INSERT, IN_CROSS, NOT_IN_EMPTY] THEN
+  MESON_TAC [PAIR, FST, SND]);
+
+val CARD_SING_CROSS = store_thm(
+  "CARD_SING_CROSS",
+  ``!x P. FINITE P ==> (CARD ({x} CROSS P) = CARD P)``,
+  GEN_TAC THEN Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+  SIMP_TAC bool_ss [CROSS_EMPTY, CARD_EMPTY] THEN REPEAT STRIP_TAC THEN
+  ONCE_REWRITE_TAC [CROSS_INSERT_RIGHT] THEN
+  ASM_SIMP_TAC bool_ss [CROSS_SINGS, GSYM INSERT_SING_UNION] THEN
+  `FINITE ({x} CROSS P)` by ASM_MESON_TAC [FINITE_SING, FINITE_CROSS] THEN
+  `~((x,e) IN ({x} CROSS P))`
+     by ASM_MESON_TAC [IN_CROSS, FST, SND, IN_SING] THEN
+  ASM_SIMP_TAC bool_ss [CARD_INSERT]);
+
+(*
+val CARD_CROSS = store_thm(
+  "CARD_CROSS",
+  ``!P Q. FINITE P /\ FINITE Q ==> (CARD (P CROSS Q) = CARD P * CARD Q)``,
+
+*)
 
 
 val _ = export_theory();
