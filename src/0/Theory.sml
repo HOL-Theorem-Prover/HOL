@@ -307,6 +307,38 @@ fun add_type_entry {name, theory, arity}
      overwritten = overwritten orelse !changed}
  end;
 
+
+fun add_term_entry {name,theory,htype}
+                   {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
+ let val _ = (changed := false)
+     val (ST,hasher) = STH
+     val i = hasher name
+     val L = Array.sub(ST, i)
+     val entry = TERM{name=ref name, utd=ref true,
+                theory=theory,htype=htype,witness=NONE}
+    fun del [] = [entry]  (* new addition *)
+      | del ((e as TYPE _)::rst) = e::del rst
+      | del ((e as TERM{name = n1, theory=thy1,
+                        htype=ty1,witness,utd})::rst) =
+          if name = !n1 andalso (theory=thy1) (* repl. an existing resident *)
+          then (changed := true; 
+                n1 := !Globals.old (!n1);
+                entry::rst) 
+          else if (name = !n1) andalso (theory<>thy1)
+               then raise THEORY_ERR"add_entry"
+                          ("attempt to redeclare constant "
+                                ^Lib.quote name^" from theory "
+                                ^Lib.quote thy1)
+               else e::del rst
+ in
+   Array.update(ST, i, del L);
+    {thid=thid,STH=STH,GR=GR,facts=facts,
+     con_wrt_disk=con_wrt_disk, adjoin=adjoin,
+     overwritten = overwritten orelse !changed}
+ end;
+end;
+
+(*
 fun add_term_entry {name,theory,htype}
                    {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
  let val _ = (changed := false)
@@ -334,6 +366,7 @@ fun add_term_entry {name,theory,htype}
      overwritten = overwritten orelse !changed}
  end;
 end;
+*)
 
 (*---------------------------------------------------------------------------*
  * We've made a definition and should now note that the constant has a       *
@@ -399,7 +432,7 @@ fun del_type (name,thyname)
           if (name=n1) andalso (thyname=thy1) then rst else e::del rst
        | del ((e as TERM _)::rst) = e::del rst
        | del [] = raise THEORY_ERR "del_type"
-              (Lib.quote name^" not found in current theory")
+                    (Lib.quote name^" not found in current theory")
  in
     Array.update(ST, i, del L);
     {thid=thid,STH=STH,GR=GR,facts=facts,
@@ -407,6 +440,7 @@ fun del_type (name,thyname)
      overwritten = true}
  end;
 
+(*
 fun del_const (name,thyname)
      {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
  let val (ST,hasher) = STH
@@ -417,6 +451,27 @@ fun del_const (name,thyname)
        | del ((e as TYPE _)::rst) = e::del rst
        | del [] = raise THEORY_ERR "del_const"
                 (Lib.quote name^" not found in current theory")
+ in
+   Array.update(ST, i, del L);
+   {thid=thid,STH=STH,GR=GR,facts=facts,
+    con_wrt_disk=con_wrt_disk,adjoin=adjoin,
+    overwritten = true}
+
+ end;
+*)
+
+fun del_const (name,thyname)
+              {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
+ let val (ST,hasher) = STH
+     val i = hasher name
+     val L = Array.sub(ST, i)
+     fun del ((e as TERM{name = n1, theory=thy1,...})::rst) =
+          if (name = !n1) andalso (thyname=thy1) 
+            then (n1 := !Globals.old (!n1); rst)
+            else e::del rst
+       | del ((e as TYPE _)::rst) = e::del rst
+       | del [] = raise THEORY_ERR "del_const"
+                      (Lib.quote name^" not found in current theory")
  in
    Array.update(ST, i, del L);
    {thid=thid,STH=STH,GR=GR,facts=facts,
@@ -925,8 +980,8 @@ fun set_ct_consistency b = makeCT(set_consistency b (theCT()))
 fun new_type {Name,Arity} =
   if Lexis.allowed_type_constant Name
   then add_typeCT {name=Name, arity=Arity, theory = CTname()}
-  else raise THEORY_ERR"new_type"
-               (Lib.quote Name^" is not an allowed type name");
+  else Lib.mesg true
+        ("new_type: "^Lib.quote Name^ " is not a standard type name");
 
 fun install_type(s,a,thy) = add_typeCT {name=s, arity=a, theory=thy};
 
@@ -935,17 +990,16 @@ fun install_type(s,a,thy) = add_typeCT {name=s, arity=a, theory=thy};
  * Installing term constants.                                                *
  *---------------------------------------------------------------------------*)
 
-local fun dollar {name, theory, htype} =
-       {name = "$"^name, theory=theory, htype=htype};
-fun write_constant err_str (c as {Name,Ty}) =
-  (if (Lexis.allowed_term_constant Name) then ()
-   else raise THEORY_ERR err_str
-                 (Lib.quote Name^ " is not an allowed constant name");
-   let val trec = {name=Name, htype=Ty, theory=CTname()}
-       val dtrec = dollar trec
-   in
-      add_termCT trec; add_termCT dtrec
-   end)
+local fun dollar{name,theory,htype} = {name="$"^name,theory=theory,htype=htype}
+      fun write_constant err_str (c as {Name,Ty}) =
+        (if (Lexis.allowed_term_constant Name) then ()
+         else Lib.mesg true
+             (err_str ^" "^Lib.quote Name^ " is not a standard constant name");
+         let val trec = {name=Name, htype=Ty, theory=CTname()}
+             val dtrec = dollar trec
+         in
+           add_termCT trec; add_termCT dtrec
+         end)
 in
   val new_constant = write_constant "new_constant"
 
