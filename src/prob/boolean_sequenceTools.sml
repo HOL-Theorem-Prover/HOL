@@ -6,7 +6,7 @@ structure boolean_sequenceTools :> boolean_sequenceTools =
 struct
 
 open HolKernel Parse boolLib;
-open bossLib probUtil prob_extraTheory boolean_sequenceTheory;
+open bossLib prob_extraTheory boolean_sequenceTheory probUtil;
 
 infixr 0 ++ || ORELSEC ## THENC;
 infix 1 >>;
@@ -20,8 +20,7 @@ val op>> = op THEN1;
 (* Error handling.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun ERROR f s = HOL_ERR{origin_structure = "boolean_sequenceTools",
-                        origin_function = f, message = s};
+val ERROR = mk_HOL_ERR "boolean_sequenceTools";
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
 
