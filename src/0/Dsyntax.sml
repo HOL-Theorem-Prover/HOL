@@ -67,6 +67,11 @@ fun mk_select(s as {Bvar, Body}) =
            Rand = mk_abs s}
    handle HOL_ERR _ => raise DSYNTAX_ERR"mk_select" "";
 
+fun dest_eq_ty M =
+   let val (c,tm1,tm2) = dest_binop M "=" (DSYNTAX_ERR"dest_eq" "not an \"=\"")
+   in {lhs=tm1, rhs=tm2, ty = #1 (Type.dom_rng (type_of c))}
+   end;
+
 fun dest_eq M =
    let val (_,tm1,tm2) = dest_binop M "=" (DSYNTAX_ERR"dest_eq" "not an \"=\"")
    in {lhs=tm1, rhs=tm2}

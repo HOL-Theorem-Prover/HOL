@@ -60,20 +60,27 @@ sig
   val subst : (term,term) Lib.subst -> term -> term
   val inst  : (Type.hol_type,Type.hol_type) Lib.subst -> term -> term
   val beta_conv   : term -> term
+  val eta_conv    : term -> term
   val term_reduce : term -> term ->
              (term,term)Lib.subst * (Type.hol_type,Type.hol_type)Lib.subst ->
              (term,term)Lib.subst * (Type.hol_type,Type.hol_type)Lib.subst
   val match_term  : term -> term ->
                   (term,term)Lib.subst * (Type.hol_type,Type.hol_type)Lib.subst
 
+  (* Explicit substitutions primitives *)
+  val is_clos        : term -> bool
+  val push_clos      : term -> term
+  val norm_clos      : term -> term
+  val lazy_beta_conv : term -> term
+
   (* Miscellaneous *)
 
-  datatype lambda = VAR   of {Name  : string, Ty : Type.hol_type}
-                  | CONST of {Name  : string, Ty : Type.hol_type}
-                  | COMB  of {Rator : term, Rand : term}
-                  | LAMB  of {Bvar  : term, Body : term};
+  datatype 'a lambda = VAR   of {Name  : string, Ty : Type.hol_type}
+                     | CONST of {Name  : string, Ty : Type.hol_type}
+                     | COMB  of {Rator : 'a, Rand : 'a}
+                     | LAMB  of {Bvar  : term, Body : 'a};
 
-  val dest_term : term -> lambda
+  val dest_term : term -> term lambda
 
   val const_decl : string -> {const:term, theory:string}
 
@@ -103,7 +110,7 @@ sig
                  (unit -> (string * string) list) (* binder_restrictions *)
                  -> unit
 
-  val Net_init : ((term -> {Bvar:term, Body:term}) ref) -> unit
+  val Net_init : ((term -> term) ref) -> unit
   val Preterm_init : ({Name:string, Ty:Type.hol_type} -> term) ref (* Const *)
                       -> ({Rator:term, Rand:term} -> term) ref     (* Comb *)
                        -> unit

@@ -31,7 +31,43 @@ datatype term = Fv of {Name:string, Ty:Type.hol_type}
               | Bv of int
               | Const of string ref * Type.hol_type
               | Comb of {Rator:term, Rand:term}
-              | Abs of {Bvar:term, Body:term};
+              | Abs of {Bvar:term, Body:term}
+              | Clos of {Env:term Subst.subs, Body:term};
+
+
+(*---------------------------------------------------------------------------*
+ * Useful functions to hide substitutions                                    *
+ *---------------------------------------------------------------------------*)
+fun is_clos (Clos _) = true | is_clos _ = false;
+
+(* Important invariant: never delay subst on atoms, and compose Clos.
+ * Therefore, in Clos{Env,Body}, Body is either a Comb or an Abs.
+ * This invariant is enforced if we always use mk_clos instead of Clos.
+ *)
+fun mk_clos (s, Bv i) =
+        (case (Subst.exp_rel(s,i)) of
+          (0, SOME t) => t
+        | (k, SOME t) => mk_clos (Subst.shift(k,Subst.id), t)
+        | (v, NONE)   => Bv v)
+  | mk_clos (s, t as Fv _)      = t
+  | mk_clos (s, t as Const _)   = t
+  | mk_clos (s, Clos{Env,Body}) =
+      Clos{Env=Subst.comp mk_clos (s,Env), Body=Body}
+  | mk_clos (s, t)              = Clos{Env=s, Body=t}
+;
+
+val subs_comp = Subst.comp mk_clos;
+
+(* Propagate substitutions so that we are sure the head of the term is
+ * not a delayed substitution.
+ *)
+fun push_clos (Clos{Env, Body=Comb{Rator,Rand}}) =
+        Comb{Rator = mk_clos(Env,Rator), Rand = mk_clos(Env,Rand)}
+  | push_clos (Clos{Env, Body=Abs{Bvar,Body}}) =
+        Abs{Bvar = Bvar, Body = mk_clos (Subst.lift(1,Env), Body)}
+  | push_clos _ = raise TERM_ERR "push_clos" "not a subst"
+;
+
 
 (*---------------------------------------------------------------------------*
  * Computing the type of a term.                                             *
@@ -47,6 +83,7 @@ local fun range ty = case (Type.dest_type ty)
         | ty_of (Bv i)        E      = lookup i E
         | ty_of (Comb{Rator, ...}) E = range (ty_of Rator E)
         | ty_of (Abs{Bvar = Fv{Ty,...},Body}) E = Ty --> ty_of Body (Ty::E)
+	| ty_of (t as Clos _) E = ty_of (push_clos t) E
         | ty_of _ _ = raise TERM_ERR "type_of" "term construction"
 in
   fun type_of tm = ty_of tm []
@@ -62,6 +99,7 @@ fun type_vars_in_term (Fv{Ty, ...}) = Type.type_vars Ty
                                                  (type_vars_in_term Rand)
   | type_vars_in_term (Abs{Bvar,Body}) = union (type_vars_in_term Bvar)
                                                (type_vars_in_term Body)
+  | type_vars_in_term (t as Clos _) = type_vars_in_term (push_clos t)
   | type_vars_in_term (Bv _) = [];
 
 
@@ -74,6 +112,7 @@ fun frees(v as Fv _) free_list =
       if (mem v free_list) then free_list else v::free_list
   | frees(Comb{Rator, Rand}) free_list = frees Rand (frees Rator free_list)
   | frees(Abs{Body,...}) free_list = frees Body free_list
+  | frees(t as Clos _) free_list = frees (push_clos t) free_list
   | frees _ free_list = free_list
 in
   fun free_vars tm = frees tm []
@@ -87,6 +126,7 @@ fun free_vars_lr tm =
   let fun frees(v as Fv _) A = insert v A
         | frees(Comb{Rator, Rand}) A = frees Rator (frees Rand A)
         | frees(Abs{Body,...}) A = frees Body A
+	| frees(t as Clos _) A = frees (push_clos t) A
         | frees _ A = A
   in frees tm []
 end;
@@ -98,6 +138,7 @@ end;
 local fun vars (v as Fv _) vlist        = insert v vlist
         | vars(Comb{Rator, Rand}) vlist = vars Rand (vars Rator vlist)
         | vars(Abs{Bvar, Body}) vlist   = vars Body (vars Bvar vlist)
+	| vars(t as Clos _) vlist       = vars (push_clos t) vlist
         | vars _ vlist = vlist
 in
   fun all_vars tm = vars tm []
@@ -113,6 +154,7 @@ fun all_varsl tm_list  = itlist (union o all_vars) tm_list [];
 fun free_in tm M =
    let fun f1 (Comb{Rator,Rand}) = (f2 Rator) orelse (f2 Rand)
          | f1 (Abs{Body,...}) = f2 Body
+	 | f1 (t as Clos _) = f2 (push_clos t)
          | f1 _ = false
        and f2 t = (t=tm) orelse (f1 t)
    in f2 M
@@ -129,7 +171,10 @@ local fun atom_lt {Name=(s1:string),Ty=ty1}  {Name=s2,Ty=ty2}
                | EQUAL => Type.type_lt ty1 ty2
                | GREATER => false
 in
-fun term_lt (Fv v1) (Fv v2) = atom_lt v1 v2
+fun term_lt (t1 as Clos _) t2 = term_lt (push_clos t1) t2
+  | term_lt t1 (t2 as Clos _) = term_lt t1 (push_clos t2)
+
+  | term_lt (Fv v1) (Fv v2) = atom_lt v1 v2
   | term_lt (Fv _) _ = true
 
   | term_lt (Bv _)  (Fv _)  = false
@@ -194,11 +239,9 @@ fun subscripts x s =
    end
 end;
 
-fun prime s = s^"'";
-
 fun primes s =
    let val current = ref s
-       fun next () = (current := prime (!current); !current)
+       fun next () = (current := Lib.prime (!current); !current)
    in
      next
    end;
@@ -251,8 +294,7 @@ local fun away L incr =
       fun var_name(Fv{Name,...}) = Name
         | var_name _ = raise TERM_ERR "variant.var_name" "not a variable"
 in
-fun variant [] v = v
-  | variant vlist (Fv{Name,Ty}) =
+fun variant vlist (Fv{Name,Ty}) =
     let val next = nameStrm Name
         val awayf = away (map var_name vlist) next
         fun loop name =
@@ -262,6 +304,8 @@ fun variant [] v = v
     in mk_var{Name=loop Name, Ty=Ty}
     end
   | variant _ _ = raise TERM_ERR "variant" "2nd arg. should be a variable"
+
+
 
 (*---------------------------------------------------------------------------
      Returned value may have same name as a constant in the signature.
@@ -273,6 +317,34 @@ fun prim_variant [] v = v
   | prim_variant _ _ = raise TERM_ERR "prim_variant"
                                       "2nd arg. should be a variable"
 end;
+
+
+(* Normalizing names (before pretty-printing with pp_raw, or trav) and full
+ * propagation of substitutions, so that no 
+ *)
+fun vars_sigma_norm (s,t) =
+  case t of
+    Comb{Rator,Rand} =>
+      let val (a,fva) = vars_sigma_norm (s,Rator)
+	  val (b,fvb) = vars_sigma_norm (s,Rand)
+      in (Comb{Rator = a, Rand = b}, union fva fvb)
+      end
+  | Bv i =>
+      (case Subst.exp_rel(s,i) of
+	(0, SOME v)    => vars_sigma_norm (Subst.id, v)
+      |	(lams, SOME v) => vars_sigma_norm (Subst.shift(lams,Subst.id), v)
+      |	(lams, NONE)   => (Bv lams, []))
+  | Abs{Bvar,Body} =>
+      let val (bd,fv) = vars_sigma_norm (Subst.lift(1,s), Body)
+      in (Abs{Bvar = variant fv Bvar, Body = bd}, fv)
+      end
+  | Fv _ => (t,[t])
+  | Clos{Env,Body} => vars_sigma_norm (subs_comp(s,Env), Body)
+  | _ => (t, [])
+;
+
+fun norm_clos tm = fst (vars_sigma_norm(Subst.id,tm));
+
 
 
 (*---------------------------------------------------------------------------
@@ -300,6 +372,8 @@ fun list_mk_comb (f,L) =
  * the bound variable.
  *---------------------------------------------------------------------------*)
 fun mk_comb(r as {Rator = Abs{Bvar = Fv{Ty,...},...}, Rand}) =
+      if (type_of Rand = Ty) then Comb r else raise INCOMPAT_TYPES1
+  | mk_comb(r as {Rator = Clos{Body=Abs{Bvar=Fv{Ty,...},...},...}, Rand}) =
       if (type_of Rand = Ty) then Comb r else raise INCOMPAT_TYPES1
   | mk_comb{Rator,Rand} = list_mk_comb (Rator,[Rand])
                           handle HOL_ERR _ => raise INCOMPAT_TYPES1
@@ -354,17 +428,29 @@ fun dest_var (Fv v) = v
 fun dest_const (Const (ref name,ty)) = {Name=name,Ty=ty}
   | dest_const _ = raise TERM_ERR"dest_const" "not a const"
 fun dest_comb (Comb cmb) = cmb
+  | dest_comb (t as Clos _) = dest_comb (push_clos t)
   | dest_comb _ = raise TERM_ERR "dest_comb" "not a comb"
 
-fun dest_abs(Abs{Bvar,Body}) =
-  let fun dest i (v as Bv j) = if (i=j) then Bvar else v
-        | dest i (Comb{Rator,Rand}) = Comb{Rator=dest i Rator, Rand=dest i Rand}
-        | dest i (Abs{Bvar,Body}) = Abs{Bvar=Bvar,Body=dest (i+1) Body}
-        | dest _ tm = tm
-  in
-     {Bvar=Bvar, Body=dest 0 Body}
-  end
- | dest_abs _ = raise TERM_ERR "dest_abs" "not a lambda abstraction";
+local exception CLASH
+in
+fun dest_abs(Abs{Bvar as Fv{Name,Ty},Body}) =
+   let fun dest (v as (Bv j), i) = if (i=j) then Bvar else v
+         | dest (v as Fv{Name = s,...}, _) = 
+               if (Name = s) then raise CLASH else v
+         | dest (Comb{Rator,Rand},i) =
+             Comb{Rator = dest(Rator,i), Rand = dest(Rand,i)}
+         | dest (Abs{Bvar,Body},i) =
+	     Abs{Bvar=Bvar,Body = dest(Body,i+1)}
+	 | dest (t as Clos _, i) = dest (push_clos t, i)
+         | dest (tm,_) = tm
+   in {Bvar = Bvar, Body = dest(Body,0)}
+      handle CLASH => 
+      dest_abs(Abs{Bvar = variant (free_vars Body) Bvar,
+		   Body = Body})
+   end
+  | dest_abs (t as Clos _) = dest_abs (push_clos t)
+  | dest_abs _ = raise TERM_ERR "dest_abs" "not a lambda abstraction"
+end;
 
 
 (*---------------------------------------------------------------------------
@@ -383,30 +469,37 @@ val is_ty_antiq = can dest_ty_antiq
 fun is_bvar (Bv _)    = true  | is_bvar _  = false;
 fun is_var  (Fv _)    = true  | is_var _   = false;
 fun is_const(Const _) = true  | is_const _ = false;
-fun is_comb (Comb _)  = true  | is_comb _  = false;
-fun is_abs  (Abs _)   = true  | is_abs _   = false;
+fun is_comb (Comb _)  = true 
+  | is_comb (Clos{Body=Comb _,...}) = true
+  | is_comb _  = false;
+fun is_abs  (Abs _)   = true 
+  | is_abs  (Clos{Body=Abs _,...}) = true
+  | is_abs _   = false;
 
 (*---------------------------------------------------------------------------
  * Derived operations
  *---------------------------------------------------------------------------*)
 fun rator (Comb{Rator, ...}) = Rator
+  | rator (Clos{Env, Body=Comb{Rator,...}}) = mk_clos(Env,Rator)
   | rator _ = raise TERM_ERR "rator" "not a comb"
 
 fun rand (Comb{Rand, ...}) = Rand
+  | rand (Clos{Env, Body=Comb{Rand,...}}) = mk_clos(Env,Rand)
   | rand _ = raise TERM_ERR "rand" "not a comb"
 
 val bvar = #Bvar o dest_abs;
 val body = #Body o dest_abs;
 
-datatype lambda = VAR   of {Name  : string, Ty : Type.hol_type}
-                | CONST of {Name  : string, Ty : Type.hol_type}
-                | COMB  of {Rator : term, Rand : term}
-                | LAMB  of {Bvar  : term, Body : term};
+datatype 'a lambda = VAR   of {Name  : string, Ty : Type.hol_type}
+                   | CONST of {Name  : string, Ty : Type.hol_type}
+                   | COMB  of {Rator : 'a, Rand : 'a}
+                   | LAMB  of {Bvar  : term, Body : 'a};
 
 fun dest_term (Fv a) = VAR a
   | dest_term (Const(ref name,ty)) = CONST{Name=name,Ty=ty}
   | dest_term (Comb r) = COMB r
   | dest_term (a as Abs _) = LAMB(dest_abs a)
+  | dest_term (t as Clos _) = dest_term (push_clos t)
   | dest_term (Bv _) = raise TERM_ERR "dest_term" "mangled term"
 
 (*---------------------------------------------------------------------------*
@@ -425,6 +518,8 @@ fun aconv t1 t2 = EQ(t1,t2) orelse
    (Comb{Rator=M,Rand=N},Comb{Rator=P,Rand=Q}) => aconv N Q andalso aconv M P
  | (Abs{Bvar=Fv{Ty=ty1,...}, Body=M},
     Abs{Bvar=Fv{Ty=ty2,...}, Body=N}) => (ty1=ty2) andalso (aconv M N)
+ | (Clos _, _) => aconv (push_clos t1) t2
+ | (_, Clos _) => aconv t1 (push_clos t2)
  | (M,N) => (M=N))
 end;
 
@@ -490,107 +585,31 @@ fun term_compare tm1 tm2 =
  *
  *---------------------------------------------------------------------------*)
 
-type binding = {redex : term,
-                incoming : {residue:term,
-                            fn_residue : string Binaryset.set option ref}};
-
-val empty_string_set = Binaryset.empty String.compare;
-
-local open Binaryset
-      fun frees (Fv{Name,...})      FN = add (FN, Name)
-        | frees (Comb{Rator, Rand}) FN = frees Rand (frees Rator FN)
-        | frees (Abs{Body,...})     FN = frees Body FN
-        | frees _ FN = FN
-      fun all (Fv{Name,...})      AN = add (AN, Name)
-        | all (Comb{Rator, Rand}) AN = all Rand (all Rator AN)
-        | all (Abs{Bvar,Body})    AN = all Body (all Bvar AN)
-        | all _ AN = AN
-in
-fun free_names tm = frees tm empty_string_set
-fun all_names tm  = all tm empty_string_set
-fun vary S init next =
-   let fun spin s = if member(S,s) then spin (next()) else s
-   in spin init end
-end;
-
-(* The numbers of lambdas to go back through. *)
-exception CLASH of int;
-
-fun check ([],S) = S
-  | check ({redex,residue}::rst, S) =
-     if (type_of redex = type_of residue)
-     then check(rst,{redex=redex,
-                     incoming={residue=residue,
-                               fn_residue=ref NONE}}::S)
-     else raise TERM_ERR "subst" "redex and residue have different types";
-
-local val incoming_names = ref NONE:string Binaryset.set option ref
-      fun opr {residue, fn_residue as ref NONE} =
-             let val S = free_names residue
-             in fn_residue := SOME S;  S
-             end
-        | opr {fn_residue = ref (SOME S), ...} = S
+local
+ fun check [] = ()
+   | check ({redex,residue}::rst) =
+       if (type_of redex = type_of residue) then check rst
+       else raise TERM_ERR "subst" "redex has different type than residue"
+ fun assc ([],_) = NONE
+        | assc ({redex,residue}::rst, tm) =
+                  if (aconv tm redex) then SOME residue else assc (rst,tm)
 in
 fun subst [] tm = tm
   | subst theta tm =
-    let val bindings = check (theta,[])
-        val _ = incoming_names := NONE
-        fun mk_incoming() =
-             case !incoming_names
-              of SOME N => N   (* already computed *)
-               | NONE   =>
-                  let val N = rev_itlist(fn x => fn S =>
-                      Binaryset.union (opr(#incoming x),S))
-                         bindings empty_string_set
-                  in incoming_names := SOME N;
-                      N
-                  end
-        fun lookup (tm, scope) =
-         let fun check_for_clash({residue,...},[]) = SOME residue
-               | check_for_clash(rcd as {residue,...},scope) =
-                  let val names = opr rcd
-                      fun itr ([],_,NONE) = SOME residue
-                        | itr ([],_, SOME i) = (mk_incoming();  raise CLASH i)
-                        | itr (s::S,n,top) =
-                           itr(S, n+1, if Binaryset.member(names,s)
-                                       then (SOME n) else top)
-                    in  itr(scope,0,NONE)
-                    end
-             fun assc [] = NONE
-               | assc ({redex,incoming}::rst) =
-                  if (aconv tm redex)
-                  then check_for_clash(incoming,scope)
-                  else assc rst
-         in
-             assc bindings
-         end
-
-    fun subs(tm,scope) =
-     case lookup(tm,scope)
-       of SOME residue => residue
-        | NONE => case tm
-          of Comb{Rator,Rand} =>
-                 Comb{Rator=subs(Rator,scope), Rand=subs(Rand,scope)}
-          | Abs{Bvar as Fv{Name,Ty},Body}
-              => (Abs{Bvar=Bvar,Body=subs(Body,Name::scope)}
-                  handle CLASH 0
-                  => let open Binaryset
-                         val taken0 = union(all_names Body, mk_incoming())
-                         val taken = addList(taken0,scope)
-                         val Name' = vary taken Name (nameStrm Name)
-                     in
-                       Abs{Bvar = Fv{Name=Name',Ty=Ty},
-                           Body = subs(Body,Name'::scope)}
-                       handle CLASH i => raise CLASH (i-1)
-                      (* not due to this abstraction (we just renamed) *)
-                     end
-                  | CLASH i => raise CLASH(i-1))
-          | _ => tm
+    let val _ = check theta
+        fun subs tm =
+          case assc (theta,tm) of
+            SOME residue => residue
+	  | NONE =>
+	    (case tm of
+	      Comb{Rator,Rand} => Comb{Rator=subs Rator, Rand=subs Rand}
+            | Abs{Bvar,Body} => Abs{Bvar=Bvar,Body=subs Body}
+	    | Clos _ => subs(push_clos tm)
+            | _ => tm)
     in
-      subs (tm,[])
+      subs tm
     end
 end;
-
 
 (*----------------------------------------------------------------------------
  * Tests
@@ -668,176 +687,73 @@ end;
 
  *---------------------------------------------------------------------------*)
 
-
 (*---------------------------------------------------------------------------
- * General term substitution without renaming
- *local
- *fun check [] = ()
- *  | check ({redex,residue}::rst) =
- *      if (type_of redex = type_of residue)
- *      then check rst
- *      else raise TERM_ERR{function = "subst",
- *                          message = "redex has different type than residue"}
- *fun aconv_assoc item =
- *   let fun assc ({redex,residue}::rst) =
- *            if (aconv item redex)
- *            then SOME residue
- *            else assc rst
- *         | assc _ = NONE
- *   in assc
- *   end
- *in
- *fun subst [] = Lib.I
- *  | subst s =
- *      let val _ = check s
- *          fun subs tm =
- *             case (aconv_assoc tm s)
- *               of (SOME residue) => residue
- *                | NONE =>
- *                  (case tm
- *                   of (Comb{Rator,Rand}) => Comb{Rator = subs Rator,
- *                                                 Rand = subs Rand}
- *                    | (Abs{Bvar,Body}) => Abs{Bvar = Bvar,
- *                                              Body = subs Body}
- *                    | _ => tm)
- *      in subs
- *      end
- *end;
+ * Non-renaming betaconv.
  *---------------------------------------------------------------------------*)
-
-
-local val fn_rand = ref NONE
-in
 fun beta_conv (Comb{Rator = Abs{Body,...}, Rand}) =
- let val _ = fn_rand := NONE
-     fun free_rand_names() =
-          case !fn_rand
-           of SOME S => S
-            | NONE => let val S = free_names Rand
-                      in  fn_rand := SOME S; S end
-     fun check [] = Rand
-       | check scope =
-            let val names = free_rand_names()
-                fun itr([],_,NONE) = Rand
-                  | itr ([],_, SOME i) = raise CLASH i
-                  | itr (s::S,n,top) =
-                     itr(S, n+1, if Binaryset.member(names,s)
-                                 then (SOME n) else top)
-            in  itr(scope,0,NONE)
-            end
-     fun subs ((tm as Bv j),i,scope) = if (i=j) then check scope else tm
-       | subs (Comb{Rator,Rand},i,scope) =
-                Comb{Rator=subs(Rator,i,scope), Rand=subs(Rand,i,scope)}
-       | subs (Abs{Bvar as Fv{Name,Ty},Body},i,scope) =
-                (Abs{Bvar=Bvar,Body=subs(Body,i+1,Name::scope)}
-                 handle CLASH 0
-                   => let val taken0 = Binaryset.union
-                                         (all_names Body,free_rand_names())
-                          val taken = Binaryset.addList(taken0,scope)
-                          val Name' = vary taken Name (nameStrm Name)
-                      in
-                        Abs{Bvar=Fv{Name=Name', Ty=Ty},
-                            Body=subs(Body,i+1,Name'::scope)}
-                        handle CLASH i => raise CLASH(i-1)
-                      end
-                 | CLASH i => raise CLASH(i-1))
-       | subs (tm,_,_) = tm
+ let fun subs ((tm as Bv j),i) = if (i=j) then Rand else tm
+       | subs (Comb{Rator,Rand},i) =
+	   Comb{Rator=subs(Rator,i), Rand=subs(Rand,i)}
+       | subs (Abs{Bvar as Fv{Name,Ty},Body},i) =
+           Abs{Bvar=Bvar,Body=subs(Body,i+1)}
+       | subs (tm as Clos _,i) = subs(push_clos tm,i)
+       | subs (tm,_) = tm
  in
-   subs (Body,0,[])
+   subs (Body,0)
  end
-| beta_conv _ = raise TERM_ERR "beta_conv" "not a beta-redex"
+| beta_conv _ = raise TERM_ERR "beta_conv" "not a beta-redex";
+
+
+(* beta-reduction without propagation of the explicit substitution
+ * until the next abstraction.
+ *)
+fun lazy_beta_conv (Comb{Rator=Abs{Body,...},Rand}) =
+      mk_clos(Subst.cons(Subst.id,Rand), Body)
+  | lazy_beta_conv (Comb{Rator=Clos{Env, Body=Abs{Body,...}},Rand}) =
+      mk_clos(Subst.cons(Env,Rand), Body)
+  | lazy_beta_conv (t as Clos _) = lazy_beta_conv (push_clos t)
+  | lazy_beta_conv _ = raise TERM_ERR "lazy_beta_conv" "not a beta-redex";
+
+
+(* eta-conversion: being in the kernel, it can be implemented without the
+ * heavy dest_abs.
+ *)
+local
+fun pop (t as Bv i, k) =
+      if i=k then raise TERM_ERR "eta_conv" "not a eta-redex"
+      else t
+  | pop (Comb{Rator,Rand}, k) = Comb{Rator=pop(Rator,k), Rand=pop(Rand,k)}
+  | pop (Abs{Bvar,Body}, k) = Abs{Bvar=Bvar,Body=pop(Body, k+1)}
+  | pop (t as Clos _, k) = pop (push_clos t, k)
+  | pop (t,k) = t
+fun eta_body (Comb{Rator,Rand=Bv 0}) = pop (Rator,0)
+  | eta_body (t as Clos _) = eta_body (push_clos t)
+  | eta_body _ = raise TERM_ERR "eta_conv" "not a eta-redex"
+in
+fun eta_conv (Abs{Body,...}) = eta_body Body
+  | eta_conv (t as Clos _) = eta_conv (push_clos t)
+  | eta_conv _ = raise TERM_ERR "eta_conv" "not a eta-redex"
 end;
 
 
-(*---------------------------------------------------------------------------
- * Non-renaming betaconv.
- * fun beta_conv (Comb{Rator = Abs{Body,...}, Rand}) =
- *   let fun bconv (tm as (Bv j)) i = if (i=j) then Rand else tm
- *         | bconv (Comb{Rator,Rand}) i = Comb{Rator = bconv Rator i,
- *                                             Rand = bconv Rand i}
- *         | bconv (Abs{Bvar,Body}) i = Abs{Bvar=Bvar,Body=bconv Body (i+1)}
- *         | bconv tm _ = tm
- *   in
- *   bconv Body 0
- *   end;
- *---------------------------------------------------------------------------*)
-
-(* Compute lambda to get thrown out to.  *)
-fun capture_depth (v,scope) =
-   let fun it ([],_) = ~1  (* aka infinity *)
-         | it (s::S,n) = if (s=v) then n else it(S, n+1)
-   in it(scope,0)
-   end;
-
-exception INST_CLASH of {var:term, scope:term list};
-
-
-fun inst [] tm = tm |
-inst theta tm =
- let fun inst1 ((bv as Bv _),_,_) = bv
-       | inst1 (c as Const(r,Ty),_,_) =
+fun inst [] tm = tm
+  | inst theta tm =
+ let fun inst1 (bv as Bv _) = bv
+       | inst1 (c as Const(r,Ty)) =
             (case (Type.ty_sub theta Ty)
                of Type.SAME => c
                 | Type.DIFF ty => Const(r, ty))
-       | inst1 (v as Fv{Name,Ty},scope1,scope2) =
-            let val v' = case (Type.ty_sub theta Ty)
-                          of Type.SAME => v
-                           | Type.DIFF ty => Fv{Name=Name, Ty=ty}
-            in if (capture_depth(v',scope2) = ~1) then v'
-               else raise INST_CLASH{var=v', scope=scope2}
-            end
-       | inst1 (Comb{Rator,Rand},scope1,scope2) =
-                Comb{Rator = inst1(Rator,scope1,scope2),
-                     Rand  = inst1(Rand,scope1,scope2)}
-       | inst1 (Abs{Bvar as Fv{Name,Ty},Body},scope1,scope2) =
-            let val v = Fv{Name=Name,Ty=Type.type_subst theta Ty}
-                val Bvar' =
-                  if (capture_depth(Bvar,scope1)=capture_depth(v,scope2))
-                  then v
-                  else variant scope2 v
-            in Abs{Bvar=Bvar',Body=inst1(Body,Bvar::scope1,Bvar'::scope2)}
-                handle e as INST_CLASH{var,scope}
-                => if (var = Bvar')
-                   then let val Bvar'' = variant (v::scope) Bvar'
-                        in
-                          Abs{Bvar = Bvar'',
-                              Body = inst1(Body,Bvar::scope1,Bvar''::scope2)}
-                        end
-                   else raise e
-            end
-       | inst1 (_, _,_) = raise TERM_ERR "inst.inst1" "badly formed term"
+       | inst1 (v as Fv{Name,Ty}) =
+            (case (Type.ty_sub theta Ty)
+            of Type.SAME => v
+            | Type.DIFF ty => Fv{Name=Name, Ty=ty})
+       | inst1 (Comb{Rator,Rand}) =
+                Comb{Rator = inst1 Rator, Rand  = inst1 Rand }
+       | inst1 (Abs{Bvar,Body}) = Abs{Bvar=inst1 Bvar,Body=inst1 Body}
+       | inst1 (t as Clos _) = inst1(push_clos t)
  in
-   inst1 (tm,[],[])
+   inst1 tm
  end;
-
-
-(*---------------------------------------------------------------------------
- * Non renaming version of inst: different from hol88 inst, in that no
- * "away-from" list required
- *local
- *val check : Type.hol_type subst -> bool =
- *    Lib.all (fn {redex,...} => Type.is_vartype redex)
- *in
- *fun inst [] tm = tm
- *  | inst theta tm =
- *     if (check theta)
- *     then let fun inst1 (Fv{Name,Ty}) = Fv{Name=Name,
- *                                           Ty = Type.type_subst theta Ty}
- *                | inst1 (Const{Name,Ty}) = Const{Name=Name,
- *                                                 Ty=Type.type_subst theta Ty}
- *                | inst1 (Comb{Rator,Rand}) = Comb{Rator = inst1 Rator,
- *                                                  Rand = inst1 Rand}
- *                | inst1 (Abs{Bvar,Body}) = Abs{Bvar = inst1 Bvar,
- *                                               Body = inst1 Body}
- *                | inst1 (bv as Bv _) = bv
- *                | inst1 (ty_antiq _) = raise TY_ANTIQ_ERR "inst"
- *          in
- *          inst1 tm
- *          end
- *     else raise TERM_ERR{function = "inst",
- *			 message = "redex in type substitution not a variable"}
- *end;
- *---------------------------------------------------------------------------*)
 
 
 (*---------------------------------------------------------------------------*
@@ -857,6 +773,7 @@ fun seen v tm theta =
 local fun free (Bv i) n = i<n
         | free (Comb{Rator,Rand}) n = free Rator n andalso free Rand n
         | free (Abs{Body,...}) n = free Body (n+1)
+	| free (t as Clos _) n = free (push_clos t) n
         | free _ _ = true
 in
   fun is_free tm = free tm 0
@@ -868,7 +785,7 @@ fun tm_reduce (v as Fv{Ty,...}) tm (tm_theta,ty_theta) =
             Type.type_reduce Ty (type_of tm) ty_theta)
        else raise MTM_ERR
   | tm_reduce (Const(r1, ty1))
-              (Const(r2, ty2)) (tm_theta,ty_theta) =
+                (Const(r2, ty2)) (tm_theta,ty_theta) =
        if (r1=r2)
        then (tm_theta,Type.type_reduce ty1 ty2 ty_theta)
        else raise MTM_ERR
@@ -878,6 +795,8 @@ fun tm_reduce (v as Fv{Ty,...}) tm (tm_theta,ty_theta) =
               (Abs{Bvar=Fv{Ty=ty2,...}, Body=N}) (tm_theta,ty_theta) =
         tm_reduce M N (tm_theta,Type.type_reduce ty1 ty2 ty_theta)
   | tm_reduce (Bv i) (Bv j) S = if (i=j) then S else raise MTM_ERR
+  | tm_reduce (pt as Clos _) tm S = tm_reduce (push_clos pt) tm S
+  | tm_reduce pt (tm as Clos _) S = tm_reduce pt (push_clos tm) S
   | tm_reduce _ _ _ = raise MTM_ERR;
 
 val term_reduce = tm_reduce
@@ -897,7 +816,7 @@ local fun del [] A = A
          end
 in
 fun match_term pat ob =
-   let val (tm_subst,ty_subst) = tm_reduce pat ob ([],[])
+   let val (tm_subst,ty_subst) = term_reduce pat ob ([],[])
    in
       (del1 ty_subst tm_subst [], del ty_subst [])
    end
@@ -1056,7 +975,7 @@ let open Portable
       | pr_term a = add_string(percent^Lib.int_to_string (index a))
 in
   begin_block INCONSISTENT 0;
-  add_string"`"; pr_term tm; add_string"`"; end_block()
+  add_string"`"; pr_term (norm_clos tm); add_string"`"; end_block()
 end;
 
 
@@ -1066,7 +985,8 @@ end;
  * break terms apart when they are accessed, and it is slow to do this
  * by use of dest_abs.
  *---------------------------------------------------------------------------*)
-local fun break_abs(Abs r) = r
+local fun break_abs(Abs{Body,...}) = Body
+        | break_abs(t as Clos _) = break_abs (push_clos t)
         | break_abs _ = raise TERM_ERR"hidden.break_abs" "not an abstraction"
       val used = ref false
 in
@@ -1115,7 +1035,7 @@ fun trav f =
         | trv (Abs{Bvar, Body})  = (trv Bvar; trv Body)
         | trv _ = ()
   in
-    trv
+    trv o norm_clos
   end;
 
 local val used = ref false

@@ -74,6 +74,12 @@ sig
   val NOT_ELIM  : thm -> thm
   val CCONTR : Term.term -> thm -> thm
 
+  (* Computing with explicit substitutions *)
+  val Beta    : thm -> thm
+  val Eta     : thm -> thm
+  val Mk_comb : thm -> thm * thm * (thm -> thm -> thm)
+  val Mk_abs  : thm -> Term.term * thm * (thm -> thm)
+  val Spec    : Term.term -> thm -> thm
 
   (* Oracles and "system" theorems *)
   val mk_oracle_thm : tag -> Term.term list * Term.term -> thm

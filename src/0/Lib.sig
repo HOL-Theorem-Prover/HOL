@@ -100,6 +100,7 @@ sig
   val quote : string -> string
   val words2 : string -> string -> string list
   val commafy : string list -> string list
+  val prime : string -> string
 
   val front_last : 'a list -> 'a list * 'a
   val last : 'a list -> 'a 

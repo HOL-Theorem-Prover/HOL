@@ -17,6 +17,8 @@ open Exception Lib Dsyntax Term;
 
 infix 5 |->;
 
+val EQ = Portable.pointer_eq;
+
 local fun thm_err s1 s2 =
            HOL_ERR {origin_structure="Thm",origin_function=s1, message=s2}
 in
@@ -38,10 +40,14 @@ fun make_thm R seq = (Count.inc_count R; THM seq);
 (*---------------------------------------------------------------------------*
  * Miscellaneous syntax routines.                                            *
  *---------------------------------------------------------------------------*)
+fun insert_hyp h asl = if exists (aconv h) asl then asl else h::asl;
+fun union_hyp asl1 asl2 =
+  if EQ(asl1,asl2) orelse asl2 = [] then asl1
+  else itlist insert_hyp asl1 asl2;
 
 val bool = Type.bool;
 fun thm_free_vars (THM(_,asl,c)) = free_varsl (c::asl);
-fun hyp_union thm_list = itlist (union o hyp) thm_list [];
+fun hyp_union thm_list = itlist (union_hyp o hyp) thm_list [];
 fun dom_ty ty = fst (Type.dom_rng ty)
 fun rng_ty ty = snd (Type.dom_rng ty)
 
@@ -114,6 +120,9 @@ in
        else (r1 := std_tag; used := true)
 end;
 
+fun refl_nocheck ty tm =
+  make_thm Count.Refl (std_tag, [], mk_eq_nocheck ty tm tm);
+
 
 (*---------------------------------------------------------------------------
  *                THE PRIMITIVE RULES OF INFERENCE
@@ -148,7 +157,7 @@ fun SUBST replacements template (th as THM(O,asl,c)) =
                           val {lhs,rhs} = dest_eq c
                       in ({redex=redex, residue=lhs}::ltheta,
                           {redex=redex, residue=rhs}::rtheta,
-                          union h hyps,
+                          union_hyp h hyps,
                           Tag.merge ocls Ocls)
                       end)
                 replacements ([],[],asl,O)
@@ -201,7 +210,7 @@ fun MP (THM(o1,asl1,c1)) (THM(o2,asl2,c2)) =
    in
      Assert (aconv ant c2)
        "MP" "antecedent of first thm not aconv to concl of second";
-     make_thm Count.Mp (Tag.merge o1 o2, union asl1 asl2, conseq)
+     make_thm Count.Mp (Tag.merge o1 o2, union_hyp asl1 asl2, conseq)
    end;
 
 
@@ -254,7 +263,7 @@ fun TRANS th1 th2 =
    let val {lhs=lhs1, rhs=rhs1} = dest_eq (concl th1)
        and {lhs=lhs2, rhs=rhs2} = dest_eq (concl th2)
        val _ = Assert (aconv rhs1 lhs2) "" ""
-       val hyps = union (hyp th1) (hyp th2)
+       val hyps = union_hyp (hyp th1) (hyp th2)
        val ocls = Tag.merge (tag th1) (tag th2)
    in
      make_thm Count.Trans
@@ -313,7 +322,7 @@ fun MK_COMB (funth,argth) =
       of ({Name="=",Ty}, [f,g])
           => make_thm Count.MkComb
                    (Tag.merge (tag funth) (tag argth),
-                    union (hyp funth) (hyp argth),
+                    union_hyp (hyp funth) (hyp argth),
                     mk_eq_nocheck (rng_ty (dom_ty Ty))
                                   (mk_comb{Rator=f, Rand=x})
                                   (mk_comb{Rator=g, Rand=y}))
@@ -400,7 +409,7 @@ fun EQ_MP th1 th2 =
        val _ = Assert (aconv lhs (concl th2)) "" ""
    in
     make_thm Count.EqMp (Tag.merge (tag th1) (tag th2),
-                         union (hyp th1) (hyp th2), rhs)
+                         union_hyp (hyp th1) (hyp th2), rhs)
    end
    handle HOL_ERR _ => THM_ERR "EQ_MP" "";
 
@@ -554,14 +563,8 @@ fun GEN x th =
  *
  *---------------------------------------------------------------------------*)
 fun ETA_CONV tm =
- let val {Bvar,Body} = dest_abs tm
-     val {Rator, Rand} = dest_comb Body
-     val _ = Assert ((Bvar=Rand) andalso
-                     not(mem Bvar (free_vars Rator))) "ETA_CONV" ""
-   in
-    make_thm Count.EtaConv
-      (std_tag, [], mk_eq_nocheck (type_of tm) tm Rator)
-   end
+   make_thm Count.EtaConv
+      (std_tag, [], mk_eq_nocheck (type_of tm) tm (eta_conv tm))
    handle HOL_ERR _ => THM_ERR"ETA_CONV" "";
 
 
@@ -650,7 +653,7 @@ fun CHOOSE (v,xth) bth =
                            Lib.all (not o free_in v)
                              ((concl xth::hyp xth)@(concl bth::bhyp))) "" ""
    in make_thm Count.Choose (Tag.merge (tag xth) (tag bth),
-                   union (hyp xth) bhyp,  concl bth)
+                   union_hyp (hyp xth) bhyp,  concl bth)
    end
    handle HOL_ERR _ => THM_ERR "CHOOSE" "";
 
@@ -668,7 +671,7 @@ fun CHOOSE (v,xth) bth =
  *---------------------------------------------------------------------------*)
 fun CONJ th1 th2 =
    make_thm Count.Conj(Tag.merge (tag th1) (tag th2),
-                union (hyp th1) (hyp th2),
+                union_hyp (hyp th1) (hyp th2),
                 mk_conj{conj1=concl th1, conj2=concl th2})
    handle HOL_ERR _ => THM_ERR "CONJ" "";
 
@@ -766,8 +769,8 @@ fun DISJ_CASES dth ath bth =
   in
    make_thm Count.DisjCases
                 (mergel [tag dth, tag ath, tag bth],
-                 union (hyp dth) (union (disch(disj1, hyp ath))
-                                        (disch(disj2, hyp bth))),
+                 union_hyp (hyp dth) (union_hyp (disch(disj1, hyp ath))
+                                                (disch(disj2, hyp bth))),
                  concl ath)
   end
   handle HOL_ERR _ => THM_ERR "DISJ_CASES" "";
@@ -868,6 +871,97 @@ fun INST [] th = th
       make_thm Count.Inst (tag th, asl, subst inst_list (concl th))
        handle HOL_ERR _ => THM_ERR "INST" ""
      end
+
+
+(*---------------------------------------------------------------------------
+ * Derived rules optimized for computations, avoiding most of useless
+ * type-checking, using pointer equality and delayed substitutions
+ * (see computeLib).
+ *---------------------------------------------------------------------------*)
+
+(*    A |- t = (\x.m) n
+ *  ---------------------
+ *     A |- t = m{n}
+ *)
+fun Beta th =
+   let val {lhs, rhs, ty} = dest_eq_ty (concl th)
+   in make_thm Count.Beta (std_tag, hyp th,
+			   mk_eq_nocheck ty lhs (lazy_beta_conv rhs))
+   end
+   handle HOL_ERR _ => THM_ERR "Beta" "";
+
+(*    A |- t = (\x.f x)
+ *  --------------------- x not free in f
+ *     A |- t = f
+ *)
+fun Eta th =
+   let val {lhs, rhs, ty} = dest_eq_ty (concl th)
+   in make_thm Count.EtaConv (std_tag, hyp th,
+		          mk_eq_nocheck ty lhs (eta_conv rhs))
+   end
+   handle HOL_ERR _ => THM_ERR "Eta" "";
+
+
+(*                     |- u = u        |- v = v
+ *                         ...            ...
+ *    A |- t = u v    A' |- u = u'    A'' |- v = v'
+ *  ------------------------------------------------
+ *            A u A' u A'' |- t = u' v'
+ *)
+fun Mk_comb thm =
+   let val {lhs, rhs, ty} = dest_eq_ty (concl thm)
+       val {Rator,Rand} = dest_comb rhs
+       fun mkthm th1' th2' =
+         let val {lhs=lhs1, rhs=rhs1} = dest_eq (concl th1')
+             val _ = Assert (EQ(lhs1,Rator)) "" ""
+             val {lhs=lhs2, rhs=rhs2} = dest_eq (concl th2')
+             val _ = Assert (EQ(lhs2,Rand)) "" ""
+             val hyps = hyp_union [thm, th1', th2']
+	     val ocls = Tag.merge (tag thm) (Tag.merge (tag th1') (tag th2'))
+         in make_thm Count.MkComb
+	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb{Rator=rhs1,Rand=rhs2}))
+         end
+	 handle HOL_ERR _ => THM_ERR "Mk_comb" "";
+       val aty = type_of Rand    (* typing! *)
+       val th1 = refl_nocheck (Type.--> (aty,ty)) Rator
+       val th2 = refl_nocheck aty Rand
+   in (th1,th2,mkthm)
+   end
+   handle HOL_ERR _ => THM_ERR "Mk_comb" "";
+
+(*                      |- u = u
+ *                          ...
+ *    A |- t = \x.u    A' |- u = u'
+ *  ----------------------------------
+ *            A u A' |- t = \x.u'
+ *)
+fun Mk_abs thm =
+   let val {lhs, rhs, ty} = dest_eq_ty (concl thm)
+       val {Bvar,Body} = dest_abs rhs
+       fun mkthm th1' =
+         let val {lhs=lhs1, rhs=rhs1,...} = dest_eq_ty (concl th1')
+             val _ = Assert (EQ(lhs1,Body)) "" ""
+             val _ = Assert (not(mem Bvar (free_varsl (hyp th1')))) "" ""
+             val hyps = hyp_union [thm, th1']
+             val ocls = Tag.merge (tag thm) (tag th1')
+         in make_thm Count.Abs
+	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs{Bvar=Bvar, Body=rhs1}))
+         end
+	 handle HOL_ERR _ => THM_ERR "Mk_abs" ""
+       val th1 = refl_nocheck (rng_ty ty) Body
+   in (Bvar,th1,mkthm)
+   end
+   handle HOL_ERR _ => THM_ERR "Mk_abs" "";
+
+(* Same as SPEC, but without propagating the substitution. *)
+fun Spec t th =
+   let val {Rator,Rand} = dest_comb(concl th)
+       val _ = Assert ("!" = #Name(dest_const Rator)) "" ""
+   in
+     make_thm Count.Spec (tag th, hyp th,
+                 lazy_beta_conv(mk_comb{Rator=Rand, Rand=t}))
+   end
+   handle HOL_ERR _ => THM_ERR"Spec" "";
 
 
 

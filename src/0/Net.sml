@@ -23,7 +23,7 @@ Exception.HOL_ERR{origin_structure = "Nut",
                   message = message};
 
 local val dummy = Term.mk_var{Name ="dummy",Ty = Type.mk_vartype"'x"}
-      val break_abs_ref = ref (fn _:Term.term => {Bvar=dummy,Body=dummy})
+      val break_abs_ref = ref (fn _:Term.term => dummy)
 in
   val _ = Term.Net_init break_abs_ref
   val break_abs = !break_abs_ref
@@ -89,7 +89,7 @@ local
             case label
              of V => []
               | Cnst _ => [net_assoc label net] 
-              | Lam => mtch (#Body(break_abs tm)) (net_assoc Lam net)
+              | Lam => mtch (break_abs tm) (net_assoc Lam net)
               | Cmb => let val {Rator,Rand} = Term.dest_comb tm
                        in itlist(append o mtch Rand)
                                 (mtch Rator (net_assoc Cmb net)) [] 
@@ -118,7 +118,7 @@ let
          of NONE => NONE
           | SOME (_,net) => 
              case label
-              of Lam => appl defd (#Body (break_abs tm)) net
+              of Lam => appl defd (break_abs tm) net
                | Cmb => let val {Rator,Rand} = Term.dest_comb tm
                         in appl (Rand::defd) Rator net end
                |  _  => let fun exec_defd [] (NODE _) = raise ERR "appl" 
@@ -156,7 +156,7 @@ let fun enter _ _  (LEAF _) = raise ERR "insert" "LEAF: cannot insert"
             case label
              of Cmb => let val {Rator,Rand} = Term.dest_comb tm
                        in enter (Rand::defd) Rator child end
-              | Lam => enter defd (#Body (break_abs tm)) child
+              | Lam => enter defd (break_abs tm) child
               | _   => let fun exec [] (LEAF L)  = LEAF(p::L)
                              | exec [] (NODE _)  = LEAF[p]
                              | exec (h::rst) net = enter rst h net
@@ -195,7 +195,7 @@ let fun del [] = []
          val (left,(_,childnet),right) = split_assoc pred L
          val childnet' = 
            case label
-            of Lam => remv defd (#Body (break_abs tm)) childnet
+            of Lam => remv defd (break_abs tm) childnet
              | Cmb => let val {Rator,Rand} = Term.dest_comb tm
                       in remv (Rand::defd) Rator childnet end
              |  _  => let fun exec_defd [] (NODE _) = raise ERR "remv" 
@@ -270,7 +270,7 @@ let fun update _ _ (LEAF _) = raise ERR "net_update" "cannot update a tip"
                    of Cmb => let val {Rator, Rand} = Term.dest_comb tm
                              in update (Rator::defd) Rand child
                              end
-                    | Lam => update defd (#Body(break_abs tm)) child
+                    | Lam => update defd (break_abs tm) child
                     | _   => exec_defd defd child 
            in NODE (overwrite (label,new_child) edges)
            end
@@ -284,7 +284,7 @@ fun follow tm net =
        case (label_of tm)
        of (label as Cnst _) => [get_edge label net] 
         | V   => [] 
-        | Lam => follow (#Body(break_abs tm)) (get_edge Lam net)
+        | Lam => follow (break_abs tm) (get_edge Lam net)
         | Cmb => let val {Rator,Rand} = Term.dest_comb tm
                  in Lib.itlist(fn i => fn A => (follow Rator i @ A))
                               (follow Rand (get_edge Cmb net)) []

@@ -19,6 +19,7 @@ sig
 
   (* Destruction routines *)
   val dest_eq:Term.term -> {lhs:Term.term, rhs:Term.term}
+  val dest_eq_ty:Term.term -> {lhs:Term.term, rhs:Term.term, ty:Type.hol_type}
   val lhs:Term.term -> Term.term
   val rhs:Term.term -> Term.term
   val dest_imp:Term.term -> {ant:Term.term, conseq:Term.term}
