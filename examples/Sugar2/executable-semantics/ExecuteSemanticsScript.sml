@@ -303,20 +303,30 @@ val RESTN_is_BUTFIRSTN = prove
       [LENGTH, BUTFIRSTN, FinitePathTheory.RESTN_def,
        FinitePathTheory.REST_def, TL]);
 
-val SEL_FINITE_0_is_FIRSTN = prove
-  (``!n l. n < LENGTH l ==> (SEL (FINITE l) (0,n) = FIRSTN (SUC n) l)``,
+val SEL_FINITE_is_BUTFIRSTN_FIRSTN = prove
+  (``!j k l.
+       j <= k /\ k < LENGTH l ==>
+       (SEL (FINITE l) (j,k) = BUTFIRSTN j (FIRSTN (SUC k) l))``,
    SIMP_TAC std_ss [SEL_def]
    ++ Induct_on `l` >> RW_TAC arith_ss [LENGTH, FIRSTN]
+   ++ GEN_TAC
    ++ GEN_TAC
    ++ Cases
    >> (ONCE_REWRITE_TAC [SEL_REC_AUX]
        ++ RW_TAC arith_ss [LENGTH, FIRSTN, HEAD_def, HD]
        ++ ONCE_REWRITE_TAC [SEL_REC_AUX]
-       ++ RW_TAC arith_ss [])
+       ++ RW_TAC arith_ss [BUTFIRSTN])
    ++ FULL_SIMP_TAC arith_ss [LENGTH]
    ++ ONCE_REWRITE_TAC [SEL_REC_AUX]
    ++ RW_TAC arith_ss 
-      [LENGTH, FIRSTN, arithmeticTheory.ADD1, HEAD_def, HD, REST_def, TL]);
+      [LENGTH, FIRSTN, arithmeticTheory.ADD1, HEAD_def, HD, REST_def, TL,
+       BUTFIRSTN]
+   << [Q.PAT_ASSUM `!j. P j` (MP_TAC o Q.SPECL [`0`, `n`])
+       ++ RW_TAC arith_ss [BUTFIRSTN, arithmeticTheory.ADD1],
+       Q.PAT_ASSUM `!j. P j` (MP_TAC o Q.SPECL [`j - 1`, `n`])
+       ++ RW_TAC arith_ss [BUTFIRSTN, arithmeticTheory.ADD1]
+       ++ Cases_on `j`
+       ++ RW_TAC arith_ss [BUTFIRSTN]]);
 
 val sere2regexp_def = Define
   `(sere2regexp (S_BOOL b) = Atom (\l. B_SEM l b)) /\
@@ -341,7 +351,6 @@ val EVAL_US_SEM = store_thm
        if S_CLOCK_FREE r then amatch (sere2regexp r) l else US_SEM l r``,
    RW_TAC std_ss [GSYM sere2regexp, amatch]);
 
-
 (******************************************************************************
 * w |= {r1} |-> {r2}!  <==>  w |= {r1}(not({r2}(F)))
 ******************************************************************************)
@@ -352,7 +361,8 @@ val EVAL_UF_SEM_F_SUFFIX_IMP = store_thm
        if S_CLOCK_FREE r then acheck (sere2regexp r) (\x. UF_SEM (FINITE x) f) w
        else UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f))``,
    RW_TAC list_resq_ss [acheck, UF_SEM_def, sere2regexp, RESTN_FINITE]
-   ++ RW_TAC arith_ss [RESTN_is_BUTFIRSTN, SEL_FINITE_0_is_FIRSTN]
+   ++ RW_TAC arith_ss
+      [RESTN_is_BUTFIRSTN, SEL_FINITE_is_BUTFIRSTN_FIRSTN, BUTFIRSTN]
    ++ METIS_TAC []);
 
 val FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
@@ -410,16 +420,99 @@ val UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
            INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
 
 (******************************************************************************
+* Weak implication                                    
+******************************************************************************)
+val BUTFIRSTN_FIRSTN = prove
+  (``!n k l.
+       k + n <= LENGTH l ==>
+       (BUTFIRSTN n (FIRSTN (k + n) l) = FIRSTN k (BUTFIRSTN n l))``,
+   Induct
+   ++ GEN_TAC
+   ++ Cases
+   ++ RW_TAC arith_ss [BUTFIRSTN, FIRSTN, HD, TL, LENGTH, arithmeticTheory.ADD]
+   ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o GSYM o Q.SPECL [`k`, `t`])
+   ++ RW_TAC arith_ss []
+   ++ RW_TAC arith_ss [BUTFIRSTN, FIRSTN, arithmeticTheory.ADD_CLAUSES]);
+
+val UF_SEM_F_WEAK_IMP_FINITE = prove
+  (``!w r1 r2.
+       UF_SEM (FINITE w) (F_WEAK_IMP (r1,r2)) =
+       !j :: (0 to LENGTH w).
+         US_SEM (SEL (FINITE w) (0,j)) r1
+         ==>
+         (?k :: (j to LENGTH w). US_SEM (SEL (FINITE w) (j,k)) r2)
+         \/
+         ?w'. US_SEM (SEL (FINITE w) (j, LENGTH w - 1) <> w') r2``,
+   RW_TAC list_resq_ss [UF_SEM_def]
+   ++ ONCE_REWRITE_TAC [PROVE [] ``a \/ b = ~a ==> b``]
+   ++ REWRITE_TAC [AND_IMP_INTRO]
+   ++ HO_MATCH_MP_TAC
+      (METIS_PROVE []
+       ``(!j. A j ==> (B j = C j)) ==> ((!j. A j ==> B j) = !j. A j ==> C j)``)
+   ++ RW_TAC std_ss []
+   ++ EQ_TAC
+   >> (DISCH_THEN (MP_TAC o Q.SPEC `LENGTH (w : ('a -> bool) list) - 1`)
+       ++ RW_TAC arith_ss [])
+   ++ RW_TAC std_ss []
+   ++ Cases_on `k = LENGTH w - 1` >> METIS_TAC []
+   ++ Q.EXISTS_TAC `SEL (FINITE w) (k + 1, LENGTH w - 1) <> w'`
+   ++ RW_TAC arith_ss [APPEND_ASSOC, GSYM SEL_SPLIT]);
+
+val EVAL_UF_SEM_F_WEAK_IMP = store_thm
+  ("EVAL_UF_SEM_F_WEAK_IMP",
+   ``!w r1 r2.
+       UF_SEM (FINITE w) (F_WEAK_IMP (r1,r2)) =
+       if S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2 then
+         acheck (sere2regexp r1)
+         (\x.
+            UF_SEM (FINITE x) (F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))) \/
+            amatch (Prefix (sere2regexp r2)) x) w
+       else UF_SEM (FINITE w) (F_WEAK_IMP (r1,r2))``,
+   RW_TAC list_resq_ss
+     [UF_SEM_F_WEAK_IMP_FINITE, acheck, amatch, sere2regexp]
+   ++ ONCE_REWRITE_TAC [UF_SEM_def]
+   ++ ONCE_REWRITE_TAC [EVAL_UF_SEM_F_SUFFIX_IMP]
+   ++ RW_TAC arith_ss
+        [acheck, RESTN_is_BUTFIRSTN, SEL_FINITE_is_BUTFIRSTN_FIRSTN, sem_def,
+         BUTFIRSTN]
+   ++ RW_TAC std_ss [AND_IMP_INTRO]
+   ++ HO_MATCH_MP_TAC
+      (METIS_PROVE []
+       ``(!j. A j ==> (B j = C j)) ==> ((!j. A j ==> B j) = !j. A j ==> C j)``)
+   ++ RW_TAC std_ss []
+   ++ MATCH_MP_TAC (PROVE [] ``(a = b) /\ (c = d) ==> (a \/ c = b \/ d)``)
+   ++ CONJ_TAC
+   >> (RW_TAC arith_ss [UF_SEM_def, B_SEM]
+       ++ HO_MATCH_MP_TAC
+          (METIS_PROVE []
+           ``!f.
+               (!j. A j ==> ?x. f x = j) /\ (!j. A (f j) = B j) ==>
+               ((?j. A j) = ?j. B j)``)
+       ++ Q.EXISTS_TAC `\k. k + n`
+       ++ RW_TAC arith_ss [] >> (Q.EXISTS_TAC `k - n` ++ RW_TAC arith_ss [])
+       ++ RW_TAC arith_ss [LENGTH_BUTFIRSTN]
+       ++ Cases_on `k + n < LENGTH w`
+       ++ RW_TAC arith_ss [SEL_FINITE_is_BUTFIRSTN_FIRSTN]
+       ++ AP_TERM_TAC
+       ++ Know `SUC (k + n) <= LENGTH w` >> DECIDE_TAC
+       ++ POP_ASSUM_LIST (K ALL_TAC)
+       ++ Know `SUC (k + n) = SUC k + n` >> DECIDE_TAC
+       ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+       ++ METIS_TAC [BUTFIRSTN_FIRSTN])
+   ++ Know `SUC (LENGTH w - 1) = LENGTH w` >> DECIDE_TAC
+   ++ RW_TAC std_ss [FIRSTN_LENGTH_ID]);
+
+(******************************************************************************
 * always{r} = {T[*]} |-> {r}
 ******************************************************************************)
-val F_ALWAYS_def =
- pureDefine `F_ALWAYS r = F_WEAK_IMP(S_REPEAT S_TRUE, r)`;
+val F_ALWAYS_def = Define
+  `F_ALWAYS r = F_WEAK_IMP(S_REPEAT S_TRUE, r)`;
 
 (******************************************************************************
 * never{r} = {T[*];r} |-> {F}
 ******************************************************************************)
-val F_NEVER_def =
- pureDefine `F_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
+val F_NEVER_def = Define
+  `F_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
 
 (******************************************************************************
 * Beginning of some stuff that turned out to be useless for execution.

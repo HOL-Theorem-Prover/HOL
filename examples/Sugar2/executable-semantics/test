@@ -66,6 +66,7 @@ val _ = computeLib.add_funs
            B_SEM,
            EVAL_US_SEM,
            EVAL_UF_SEM_F_SUFFIX_IMP,
+           EVAL_UF_SEM_F_WEAK_IMP,
            UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
 
 (******************************************************************************

@@ -124,5 +124,13 @@ FCHECK NoRepeats "bb";
 TCHECK NoRepeats "ababababababababababababababababababababababababababab";
 FCHECK NoRepeats "abababababababababababbababababababababababababababab";
 
-val 
+(* Some tests of the Prefix operator *)
+val Prefix12 = Term `Prefix ^r0`;
+val PrefixExactlyTwo_a =
+  Term `Prefix (Repeat ^b # ^a # Repeat ^b # ^a # Repeat ^b)`;
+
+TCHECK Prefix12 "1";
+FCHECK Prefix12 "11";
+TCHECK PrefixExactlyTwo_a "";
+
 (*---------------------------------------------------------------------------*)

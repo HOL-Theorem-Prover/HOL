@@ -6,12 +6,14 @@
 
 (*
 app load
-["bossLib", "rich_listTheory", "metisLib", "pred_setTheory", "regexpTheory"];
+["bossLib", "rich_listTheory", "metisLib", "pred_setTheory", "stringTheory",
+ "regexpTheory"];
 *)
 
 open HolKernel Parse boolLib;
-open bossLib metisLib pairTheory combinTheory listTheory rich_listTheory
-     pred_setTheory arithmeticTheory;
+open bossLib metisLib
+open pairTheory combinTheory listTheory rich_listTheory
+     stringTheory pred_setTheory arithmeticTheory;
 open regexpTheory;
 
 val () = new_theory "matcher";
@@ -174,6 +176,25 @@ val BUTFIRSTN_TL = store_thm
    ++ RW_TAC arith_ss [EL, BUTFIRSTN, LENGTH, HD, TL]);
 
 (*---------------------------------------------------------------------------*)
+(* Theorems for reducing character equations.                                *)
+(*---------------------------------------------------------------------------*)
+
+val chr_11 = store_thm
+  ("chr_11",
+   ``!m n x. (m = ORD x) /\ (n = ORD x) = (m = n) /\ (m = ORD x)``,
+   METIS_TAC []);
+   
+val chr_suff = store_thm
+  ("chr_suff",
+   ``!n p. (?x. (n = ORD x) \/ p x) = n < 256 \/ ?x. p x``,
+   METIS_TAC [ORD_ONTO]);
+
+val chr_suff1 = store_thm
+  ("chr_suff1",
+   ``!n. (?x. (n = ORD x)) = n < 256``,
+   METIS_TAC [ORD_ONTO]);
+
+(*---------------------------------------------------------------------------*)
 (* Dijkstra's reachability algorithm.                                        *)
 (*---------------------------------------------------------------------------*)
 
@@ -239,6 +260,8 @@ val (dijkstra_def, dijkstra_ind) = Defn.tprove
   ++ POP_ASSUM (ASSUME_TAC o SYM)
   ++ MP_TAC (Q.SPECL [`(t : 'a->'a->bool) s`, `w`, `x`, `y`] LENGTH_partition)
   ++ RW_TAC arith_ss []);
+
+val _ = save_thm ("dijkstra_def", dijkstra_def);
 
 val dijkstra = store_thm
   ("dijkstra",
@@ -1201,7 +1224,7 @@ val (accept_regexp2na_prefix_def, accept_regexp2na_prefix_ind) = Defn.tprove
 val accept_regexp2na_prefix_ind1 = hd (GCONJUNCTS accept_regexp2na_prefix_ind);
 *)
 
-val exists_transition_regexp2na_def = Define
+val exists_transition_regexp2na_def = pureDefine
   `exists_transition_regexp2na r s s' = ?x. transition_regexp2na r s x s'`;
 
 val transition_regexp2na_fuse_def = Define
