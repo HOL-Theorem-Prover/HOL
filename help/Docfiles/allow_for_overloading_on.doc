@@ -29,12 +29,12 @@ entirely disappears during the first phase of parsing, leaving only
 instances of {CONS}.
 
 Attempts to allow for overloading on a string that has already been so
-allowed have no effect; the first type specified as the pattern for
-this string takes precedence.
+allowed can cause the range of allowed types to become broader if the
+new type can be instantiated to the new type.
 
 \FAILURE
-Never fails, but see above for behaviour when repeated attempts to
-allow for overloading of same string occur.
+Fails if a string is already overloaded with a type that is either
+more general than or incomparable with that provided.
 
 \COMMENTS
 There is a companion {temp_allow_for_overloading_on} function, which
