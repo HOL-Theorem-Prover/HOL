@@ -433,13 +433,20 @@ end;
  ---------------------------------------------------------------------------*)
 
 val _ =
- let val _ = echo "Setting up the help Makefile."
-     val src    = fullPath [holdir, "tools", "makebase.src"]
-     val target = fullPath [holdir, "help", "src", "makebase.sml"]
+ let val _ = echo "Setting up the help source directory."
+     val src     = fullPath [holdir, "tools", "makebase.src"]
+     val target  = fullPath [holdir, "help", "src", "makebase.sml"]
+     val src1    = fullPath [holdir, "tools", "Holmakefile.help.src"]
+     val target1 = fullPath [holdir, "help", "src", "Holmakefile"]
  in
   fill_holes (src,target)
    ["val HOLpath = __;\n"
-      --> String.concat["val HOLpath = ", quote holdir, ";\n"]]
+      --> String.concat["val HOLpath = ", quote holdir, ";\n"]];
+  fill_holes (src1,target1)
+   ["(1)\n" --> String.concat["\tHOLMOSMLC -o ", 
+                              xable_string "makebase", " makebase.uo\n"],
+    "(2)\n" --> String.concat["\tHOLMOSMLC -o ", 
+                              xable_string "Doc2Html", " Doc2Html.uo\n"]]
  end;
 
 val _ = print "\nFinished configuration!\n";
