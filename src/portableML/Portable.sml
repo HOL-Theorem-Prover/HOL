@@ -1,7 +1,6 @@
 (* ===================================================================== *)
 (* FILE          : Portable.sml                                          *)
 (* DESCRIPTION   : Structure for SML System dependent functions.         *)
-(*                 (Please look at the structures Portable_* as well)    *)
 (* AUTHOR        : Ken Larsen, University of Cambridge (or DTU)          *)
 (*                 based on code by                                      *)
 (*                 Elsa L. Gunter, AT&T Bell Laboratories                *)
@@ -13,7 +12,7 @@
 
 (* Share and Enjoy *)
 
-structure Portable = 
+structure Portable :> Portable = 
 struct
 
 exception Div = General.Div
@@ -38,19 +37,21 @@ val explode = map Char.toString o String.explode;
 (*---------------------------------------------------------------------------
     System
  ---------------------------------------------------------------------------*)
-val getEnv = Process.getEnv
-val cd     = FileSys.chDir
-val pwd    = FileSys.getDir
-val listDir = Mosml.listDir
+
+val getEnv   = Process.getEnv
+val cd       = FileSys.chDir
+val pwd      = FileSys.getDir
+val listDir  = Mosml.listDir
 fun system s = if Process.system s = Process.success then 0 else 1
 val getArgs  = CommandLine.arguments
 val argv     = getArgs
-fun exit() = Process.exit Process.success
+fun exit()   = Process.exit Process.success
 
 
 (*---------------------------------------------------------------------------
     IO
  ---------------------------------------------------------------------------*)
+
 exception Io of string;
 type instream      = TextIO.instream 
 type outstream     = TextIO.outstream 
@@ -74,13 +75,16 @@ val end_of_stream  = TextIO.endOfStream
     Efficiency hack.
  ---------------------------------------------------------------------------*)
 
-local val cast : 'a -> int = Obj.magic in
+local val cast : 'a -> int = Obj.magic 
+in
 fun pointer_eq (x:'a, y:'a) = (cast x = cast y)
 end;
 
 (*---------------------------------------------------------------------------
     Time
  ---------------------------------------------------------------------------*)
+
+type time = Time.time
 
 local open Time
 in
@@ -104,7 +108,7 @@ end
 
 open PP
 
-type ppstream = ppstream;
+type ppstream = General.ppstream;
 	    
 fun with_ppstream ppstrm = 
   {add_string     = add_string ppstrm, 
@@ -138,13 +142,12 @@ val mk_consumer = fn x => x
  *     dfun = delim_function
  *     bfun = break_function
  *---------------------------------------------------------------------------*)
+
 fun pr_list_to_ppstream ppstrm pfun dfun bfun =
  let fun pr [] = ()
        | pr [i] = pfun ppstrm i
        | pr (i::rst) = ( pfun ppstrm i; dfun ppstrm ; bfun ppstrm ; pr rst )
- in 
-    pr 
- end;
+ in pr end;
 
 
 (*---------------------------------------------------------------------------
@@ -153,17 +156,15 @@ fun pr_list_to_ppstream ppstrm pfun dfun bfun =
  * dfun = delimiter printing function
  * bfun = break printer function
  *---------------------------------------------------------------------------*)
+
 fun pr_list pfun dfun bfun =
    let fun pr [] = ()
          | pr [i] = pfun i
          | pr (i::rst) = ( pfun i; dfun() ; bfun() ; pr rst )
-   in
-      pr 
-   end;
-
+   in pr end;
 
 
 type 'a frag = 'a General.frag;
 type 'a quotation = 'a frag list;
 
-end (* structure Portable *)
+end (* Portable *)

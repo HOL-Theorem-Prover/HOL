@@ -25,8 +25,7 @@ val two = [2];
 
 fun plus1 [] = raise Fail "Should never happen"
   | plus1 [n] = if n = BASEless1 then [0, 1] else [n + 1]
-  | plus1 (n::xs) = if n = BASEless1 then 0::(plus1 xs)
-                    else (n + 1)::xs
+  | plus1 (n::xs) = if n = BASEless1 then 0::plus1 xs else (n + 1)::xs
 
 fun less1 [] = raise Fail "arbnum invariant falsified"
   | less1 [x] = if x = 0 then raise Fail "Can't take one off zero"
