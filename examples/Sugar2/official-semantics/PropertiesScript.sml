@@ -19,10 +19,10 @@
 quietdec := true;
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 map load 
- ["bossLib", "KripkeTheory", "UnclockedSemanticsTheory",
-  "ClockedSemanticsTheory", "RewritesTheory", "rich_listTheory", "intLib",
-  "res_quanLib", "res_quanTheory"];
-open KripkeTheory FinitePathTheory PathTheory SyntaxTheory 
+ ["bossLib", "KripkeTheory", "UnclockedSemanticsTheory", 
+  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", 
+  "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory"];
+open KripkeTheory FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory;
@@ -38,7 +38,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open KripkeTheory FinitePathTheory PathTheory SyntaxTheory 
+open KripkeTheory FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory;

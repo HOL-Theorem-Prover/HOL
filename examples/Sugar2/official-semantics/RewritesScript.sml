@@ -1,6 +1,6 @@
 
 (*****************************************************************************)
-(* Create "RewritesTheory" containing SEM_1 rewrites semantics               *)
+(* Create "RewritesTheory" containing rewrites semantics (LRM B.5)           *)
 (*                                                                           *)
 (* Created Wed Jan 1 2003                                                    *)
 (*****************************************************************************)
@@ -12,9 +12,10 @@
 (*
 quietdec := true;
 map load 
- ["SyntaxTheory", "FinitePathTheory", "PathTheory", 
+ ["SyntaxTheory", "SyntacticSugarTheory", "FinitePathTheory", "PathTheory", 
    "UnclockedSemanticsTheory","intLib","res_quanTools"];
-open SyntaxTheory FinitePathTheory PathTheory UnclockedSemanticsTheory
+open SyntaxTheory SyntacticSugarTheory FinitePathTheory PathTheory 
+     UnclockedSemanticsTheory
      listTheory rich_listTheory intLib res_quanTools;
 val _ = intLib.deprecate_int();
 quietdec := false;
@@ -29,7 +30,7 @@ open HolKernel Parse boolLib bossLib;
 * Open theories
 ******************************************************************************)
 open SyntaxTheory FinitePathTheory PathTheory UnclockedSemanticsTheory
-     listTheory rich_listTheory intLib res_quanTools;
+     SyntacticSugarTheory listTheory rich_listTheory intLib res_quanTools;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
@@ -84,41 +85,6 @@ val S_CLOCK_COMP_def =
 (******************************************************************************
 * Some abbreviations needed for definition of F_CLOCK_COMP
 ******************************************************************************)
-
-(******************************************************************************
-* Formula disjunction: f1 \/ f2
-******************************************************************************)
-val F_OR_def =
- Define
-  `F_OR(f1,f2) = F_NOT(F_AND(F_NOT f1, F_NOT f2))`;
-
-(******************************************************************************
-* Formula implication: f1 --> f2
-******************************************************************************)
-val F_IMPLIES_def =
- Define 
-  `F_IMPLIES(f1,f2) = F_OR(F_NOT f1, f2)`;
-
-(******************************************************************************
-* Eventually: F f
-******************************************************************************)
-val F_F_def =
- Define
-  `F_F f = F_UNTIL(F_BOOL B_TRUE, f)`;
-      
-(******************************************************************************
-* Always: G f
-******************************************************************************)
-val F_G_def =
- Define
-  `F_G f = F_NOT(F_F(F_NOT f))`;
-
-(******************************************************************************
-* Weak until: [f1 W f2]
-******************************************************************************)
-val F_W_def =
- Define
-  `F_W(f1,f2) = F_OR(F_UNTIL(f1,f2), F_G f1)`;
 
 (******************************************************************************
 * Strongly on first posedge.
