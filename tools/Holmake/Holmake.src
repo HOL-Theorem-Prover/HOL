@@ -424,15 +424,20 @@ datatype buildcmds = MOSMLC
      Support for handling the preprocessing of files containing ``
  ---------------------------------------------------------------------------*)
 
-fun has_dq istrm =   (* does the file have an occurrence of `` *)
-  let fun loop() =
-       case TextIO.input1 istrm
-        of NONE => false
-         | SOME #"`" => (case TextIO.input1 istrm
-                          of NONE => false | SOME #"`" => true | _ => loop())
-         | _ => loop()
-  in loop()
-  end;
+(* does the file have an occurrence of `` *)
+fun has_dq filename = let
+  val istrm = TextIO.openIn filename
+  fun loop() =
+    case TextIO.input1 istrm of
+      NONE => false
+    | SOME #"`" => (case TextIO.input1 istrm of
+                      NONE => false
+                    | SOME #"`" => true
+                    | _ => loop())
+    | _ => loop()
+in
+  loop() before TextIO.closeIn istrm
+end
 
 fun variant str =  (* get an unused file name in the current directory *)
  if FileSys.access(str,[])
@@ -462,20 +467,24 @@ in
       val _ = print ("Compiling "^file^"\n")
       open Process
       val res =
-        if has_dq (TextIO.openIn(normPath file)) (* handle double-backquotes *)
-        then let val clone = variant file
-                 val _ = FileSys.rename {old=file, new=clone}
-             in if unquote_to clone file = Process.success
-                then let
-                   val res = compile debug ("-q"::(include_flags@["-c",file]))
-                   val _ = FileSys.remove file
-                   val _ = FileSys.rename{old=clone, new=file}
-                   in  res  end
-                else (FileSys.remove file handle _ => ();
-                      FileSys.rename{old=clone, new=file};
-                      raise Fail("Quote filter failed on: "^file^"\n"))
-             end
-        else compile debug ("-q"::(include_flags@["-c",file]))
+        if has_dq (normPath file) (* handle double-backquotes *) then let
+          val clone = variant file
+          val _ = FileSys.rename {old=file, new=clone}
+        in
+          if unquote_to clone file = Process.success then let
+            val res = compile debug ("-q"::(include_flags@["-c",file]))
+            val _ = FileSys.remove file
+            val _ = FileSys.rename{old=clone, new=file}
+          in
+            res
+          end
+          else
+            (FileSys.remove file handle _ => ();
+              FileSys.rename{old=clone, new=file};
+              raise Fail("Quote filter failed on: "^file^"\n"))
+        end
+        else
+          compile debug ("-q"::(include_flags@["-c",file]))
     in
       res = success
     end
@@ -658,7 +667,7 @@ fun deal_with_targets list =
         print("Generated targets are: "^print_list (map fromFile targets)^"\n")
         else ()
     in
-      alltrue (map (make_up_to_date []) targets)
+      alltrue (map (do_target o fromFile) targets)
     end
   | x =>  alltrue (map do_target x)
 
