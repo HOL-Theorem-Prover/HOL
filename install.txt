@@ -1,31 +1,46 @@
-Getting and Building the Hol98 system (Working Version).
----------------------------------------------------------
+Getting and Building the HOL system
+-----------------------------------
 
-Get the Hol98 sources by WWW from
+Get the HOL sources by WWW from
 
-     http://www.cl.cam.ac.uk/ftp/hvg/hol98/working.tar.gz
+     http://www.cl.cam.ac.uk/Research/HVG/FTP/
 
-and the Moscow ML compiler (version 2.00) from
+or from SourceForge (links to which are on the page above).
+
+You will also need the Moscow ML compiler (version 2.00) from
 
      http://www.dina.kvl.dk/~sestoft/mosml.html
 
 First, however, please read the rest of these instructions carefully.
 
+Windows users can also build the system by running a self-installing
+executable (available from the above places).  To do this,
+
+   1.  Ensure that Moscow ML is installed first
+   2.  Run the executable and follow the on-screen instructions.
+
+The instructions that follow are how to build from sources, on any of
+the supported operating systems
 
 
-Building the Hol98 system.
+Building the HOL system.
 --------------------------
 
 A. First, install Moscow ML. This is usually straightforward. The
    directory where it lives will be called <mosml-dir> in the following.
 
-   * If you intend to use ML embeddings of C libraries, like the HolBdd
-     library, you are so far restricted to running on Linux, Solaris,
-     and other Unix implementations. You will have to build MoscowML
-     from *source* in order to dynamically load C libraries, as is
-     required by, e.g., HolBddLib. In this case, you will have to set a
-     few shell variables; this is explained in the MoscowML installation
-     directions.
+   * If you intend to use ML embeddings of C libraries, like the
+     HolBdd library, you are so far restricted to running on Linux,
+     Solaris, and other Unix implementations. You will have to build
+     MoscowML from *source* in order to dynamically load C libraries,
+     as is required by, e.g., HolBddLib. In this case, you will have
+     to set a few shell variables; this is explained in the MoscowML
+     installation directions.
+
+     Further, if HolBdd etc are to build, the <mosml-dir> value must
+     be a directory that includes the src/runtime directory.  This is
+     because that directory includes various C header files that Muddy
+     needs to compile against.
 
      The upshot: if you are working on a Unix system, you should build
      MoscowML from source, making the necessary tweaks that enable
@@ -33,20 +48,21 @@ A. First, install Moscow ML. This is usually straightforward. The
      work; the "binary distribution" is known not to.
 
    * If you are running on Windows, you must set the PATH and MOSMLLIB
-     environment variables as described in the installation instructions
-     for Moscow ML.  Windows won't find the MoscowML DLL without the
-     appropriate entry in PATH, and Moscow ML won't run without knowing
-     where its library is.
+     environment variables as described in the installation
+     instructions for Moscow ML.  Windows won't find the MoscowML DLL
+     without the appropriate entry in PATH, and Moscow ML won't run
+     without knowing where its library is.
 
 
-B. Unpack Hol98 with the commands
+B. Unpack HOL with the commands
 
        gunzip release.tar.gz; tar xf release.tar
 
-   in Unix, or the appropriate clicking activity in Windows NT. The
-   resulting directory will be called <hol-dir> in the following.  When
-   fully built, <hol-dir> takes approximately 35M of disk space, so be
-   sure you have enough before starting.
+   in Unix, or the appropriate clicking activity in Windows NT (use a
+   program like Winzip). The resulting directory will be called
+   <hol-dir> in the following.  When fully built, <hol-dir> takes
+   approximately 35M of disk space, so be sure you have enough before
+   starting.
 
 
 C. Enter the "tools" directory and edit the file "configure.sml".
@@ -62,6 +78,17 @@ C. Enter the "tools" directory and edit the file "configure.sml".
             val mosmldir = "/home/kxs/mosml";
             val holdir   = "/home/kxs/hol98";
 
+        Under Windows, it's easier to use forward-slashes, as above,
+        rather than backwards slashes, because backwards slashes will
+        need to be doubled in order get the same effect.  E.g., prefer
+
+           val mosmldir = "c:/program files/mosml"
+
+        to
+
+           val mosmldir = "c:\\program files\\mosml"
+
+
     (2) The following parameter tells the build procedure what operating
         system is being used.
 
@@ -71,41 +98,24 @@ C. Enter the "tools" directory and edit the file "configure.sml".
         If you are on a unix operating system that is not Linux or
         Solaris, it is OK to just put "unix"; however, this will imply
         that the robdd library will not be usable (it currently only
-        builds on linux and solaris).
+        builds on linux and solaris).  "winNT" stands in for all
+        versions of "Windows NT", "Windows 2000", and (we believe)
+        "Windows XP".
 
-    (3) The following parameter gives the path to a C compiler, which is
-        used to compile the quotation preprocessor.
-
-           val CC = "gcc";
-
-        This parameter may need to be changed, if "gcc" is not on your
-        machine, or can't be found along your path.  For Windows
-        machines, we supply a prebuilt executable of the quotation
-        preprocessoer, so if you have selected "winNT" for your OS
-        value, then you can ignore this.
-
-        Another tool that requires a C compiler to be built is the
-        SMV tool, found in temporalLib. If a C compiler is not
-        designated, temporalLib is still usable, but some proof
-        procedures in it will not work.
-
-
-    (4) The following parameter gives the path to the "gnumake" program,
+    (3) The following parameter gives the path to the "gnumake" program,
         which is required to build the muddy library.
 
            val GNUMAKE = "gnumake";
 
-        If you are building Hol98 on an OS that is *not* Solaris or
+        If you are building HOL on an OS that is *not* Solaris or
         Linux, the muddy library is not currently accessible. In such a
         case, the value of GNUMAKE does not matter.
 
-
-    (5) The following parameter gives the name of the local directory
+    (4) The following parameter gives the name of the local directory
         that Holmake uses to store its dependencies in. On Unix and
         WindowsNT, this name does not have to be changed.
 
            val DEPDIR = ".HOLMK";
-
 
 D. Perform the following 2 shell commands:
 
@@ -131,7 +141,7 @@ D. Perform the following 2 shell commands:
 E. If bin/build completes, successfully, you are done. From <hol-dir>
    you can now access
 
-      bin/hol              * The standard Hol98 interactive system;
+      bin/hol              * The standard HOL interactive system;
       bin/hol.unquote      * The interactive system with quote preprocessing;
       bin/hol.bare         * A "stripped down" version of hol
       bin/hol.bare.unquote * A "stripped down" version of hol.unquote
@@ -144,7 +154,7 @@ E. If bin/build completes, successfully, you are done. From <hol-dir>
 External tools.
 ----------------
 
-The Hol98 installation currently includes a C library (in HolBddLib) and
+The HOL installation currently includes a C library (in HolBddLib) and
 the C sources for the SMV model-checker (in temporalLib). Both of these
 require a C compiler to have been specified in tools/configure.sml.
 
@@ -161,7 +171,7 @@ Dealing with failure.
 
            . hardware/OS the build failed on
            . version of MoscowML being used
-           . version of Hol98 being built
+           . version of HOL being built
 
    * If a build attempt fails for some reason, you should attempt to invoke
 
