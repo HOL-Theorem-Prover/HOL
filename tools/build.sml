@@ -2,6 +2,9 @@
                 An ML script for building HOL
  ---------------------------------------------------------------------------*)
 
+
+(* utitlities *)
+
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f [x] = x
@@ -10,6 +13,14 @@ fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 fun quote s = String.concat["\"", s, "\""];
+fun die s =
+    let open TextIO
+    in
+      output(stdErr, s);
+      flushOut stdErr;
+      Process.exit Process.failure
+    end
+fun warn s = let open TextIO in output(stdErr, s); flushOut stdErr end;
 
 (*---------------------------------------------------------------------------
      The following lines are written at configuration time.
@@ -77,19 +88,16 @@ fun Holmake dir =
        then
          print "Self-test was successful\n"
        else
-         (print ("Selftest failed in directory "^dir);
-          raise Fail "Couldn't do selftest"))
+         die ("Selftest failed in directory "^dir))
     else
       ()
-  else (print ("Build failed in directory "^dir^"\n");
-        raise Fail "Couldn't make directory");
+  else die ("Build failed in directory "^dir^"\n");
 
 
 fun Gnumake dir =
-  if SYSTEML [GNUMAKE] = Process.success then ()
-  else (print ("Build failed in directory "^dir
-                ^" ("^GNUMAKE^" failed).\n");
-        raise Fail "Couldn't make directory");
+  if SYSTEML [GNUMAKE] = Process.success then true
+  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).\n");
+        false)
 
 (* ----------------------------------------------------------------------
    Some useful file-system utility functions
@@ -103,10 +111,8 @@ fun map_dir f dir =  (* map a function over the files in a directory *)
           | SOME file => (f (dir,file) ; loop())
   in loop()
   end handle OS.SysErr(s, erropt) =>
-    (print ("OS error: "^s^" - "^
-            (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
-     Process.exit Process.failure);
-
+    die ("OS error: "^s^" - "^
+         (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
 
 fun copy file path =  (* Dead simple file copy *)
  let open TextIO
@@ -132,8 +138,7 @@ fun bincopy file path =  (* Dead simple file copy - binary version *)
 fun link b s1 s2 =
   let open Process
   in if SYSTEML ["ln", "-s", s1, s2] = success then ()
-     else (print ("Unable to link file "^quote s1^" to file "^quote s2^".\n");
-           raise Fail "link")
+     else die ("Unable to link file "^quote s1^" to file "^quote s2^".\n")
   end
 
 (* f is either bincopy or copy *)
@@ -207,26 +212,29 @@ fun build_dir dir = let
   val _ = print ("Working in directory "^dir^"\n")
 in
   case #file(Path.splitDirFile dir) of
-    "muddyC" =>
-      (case OS
-        of "winNT" =>
-             bincopy (fullPath [HOLDIR, "tools", "win-binaries", "muddy.so"])
-                     (fullPath [HOLDIR, "sigobj", "muddy.so"])
-         | other => Gnumake dir handle _ =>
-                           print(String.concat
-                                 ["\nmuddyLib has NOT been built!! ",
-                                  "(continuing anyway).\n\n"]))
-  | "smv.2.4.3" => (Gnumake dir
-                    handle _ => print(String.concat
-                                      ["\nCompilation of SMV fails!!",
-                                       " temporal Lib has NOT been built!! ",
-                                       "(continuing anyway).\n\n"]))
+    "muddyC" => let
+    in
+      case OS of
+        "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
+                                      "muddy.so"])
+                           (fullPath [HOLDIR, "sigobj", "muddy.so"])
+      | other => if not (Gnumake dir) then
+                   print(String.concat
+                           ["\nmuddyLib has NOT been built!! ",
+                            "(continuing anyway).\n\n"])
+                 else ()
+    end
+  | "smv.2.4.3" => if not (Gnumake dir) then
+                     print(String.concat
+                             ["\nCompilation of SMV fails!!",
+                              " temporal Lib has NOT been built!! ",
+                              "(continuing anyway).\n\n"])
+                   else ()
   | _ => Holmake dir
 end
 handle OS.SysErr(s, erropt) =>
-  (print ("OS error: "^s^" - "^
-          (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
-   Process.exit Process.failure);
+       die ("OS error: "^s^" - "^
+            (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
 
 
 (*---------------------------------------------------------------------------
@@ -240,10 +248,9 @@ fun upload (src,target,symlink) =
   (print ("Uploading files to "^target^"\n");
    map_dir (transfer_file symlink target) src)
         handle OS.SysErr(s, erropt) =>
-          (print ("OS error: "^s^" - "^
-                  (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
-           Process.exit Process.failure)
-
+               die ("OS error: "^s^" - "^
+                    (case erropt of SOME s' => OS.errorMsg s'
+                                  | _ => "") ^ "\n");
 
 (*---------------------------------------------------------------------------
     For each element in SRCDIRS, build it, then upload it to SIGOBJ.
@@ -328,12 +335,10 @@ fun build_help () =
    print "Generating HTML versions of Docfiles...\n"
  ;
    if SYSTEML cmd1  = Process.success then print "...HTML Docfiles done\n"
-   else (print ("Build failed in directory "^dir^"\n");
-         raise Fail "Couldn't make html versions of Docfiles")
+   else die "Couldn't make html versions of Docfiles"
  ;
    if (print "Building Help DB\n"; SYSTEML cmd2) = Process.success then ()
-   else (print ("Build failed in directory "^dir^"\n");
-        raise Fail "Couldn't make help database")
+   else die "Couldn't make help database"
  end;
 
 fun make_buildstamp () =
@@ -434,8 +439,7 @@ val _ = check_against "tools/Holmake/Systeml.sig"
 
 fun symlink_check() =
     if OS = "winNT" then
-      (print "Sorry; symbolic linking isn't available under Windows NT";
-       Process.exit Process.failure)
+      die "Sorry; symbolic linking isn't available under Windows NT"
     else link
 
 
