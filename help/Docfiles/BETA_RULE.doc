@@ -27,7 +27,7 @@ renaming:
    - Globals.show_assums := true;
    val it = () : unit
 
-   - local val tm = Parse.term_parser `f = ((\x y. x + y) y)`
+   - local val tm = Parse.Term `f = ((\x y. x + y) y)`
      in
      val x = ASSUME tm
      end;

@@ -30,10 +30,10 @@ boolean, and either {t1} and {t2} are syntactically identical terms or one of
 
 \EXAMPLE
 {
-    - bool_EQ_CONV (Parse.term_parser `T = F`);
+    - bool_EQ_CONV (Parse.Term `T = F`);
     val it = |- (T = F) = F : thm
 
-    - bool_EQ_CONV (Parse.term_parser `(0 < n) = T`);
+    - bool_EQ_CONV (Parse.Term `(0 < n) = T`);
     val it = |- (0 < n = T) = 0 < n : thm
 }
 \ENDDOC

@@ -27,8 +27,8 @@ where {x}, {y} and {z} have type {:'a},
 the theorem {x = y, y = z |- x = z} can, first, be inferred by
 forward proof
 {
-   let val eq1 = Parse.term_parser `(x:'a) = y`
-       val eq2 = Parse.term_parser `(y:'a) = z`
+   let val eq1 = Parse.Term `(x:'a) = y`
+       val eq2 = Parse.Term `(y:'a) = z`
    in
    TRANS (ASSUME eq1) (ASSUME eq2)
    end;
@@ -37,9 +37,9 @@ forward proof
 the explicit text of the assumptions, as well as invocation of
 the rule {ASSUME}:
 {
-   let val eq1 = Parse.term_parser `(x:'a) = y`
-       val eq2 = Parse.term_parser `(y:'a) = z`
-       val goal = ([eq1,eq2],Parse.term_parser `P:bool`)
+   let val eq1 = Parse.Term `(x:'a) = y`
+       val eq2 = Parse.Term `(y:'a) = z`
+       val goal = ([eq1,eq2],Parse.Term `P:bool`)
    in
    ASSUME_TAC (TRANS (ASSUME eq1) (ASSUME eq2)) goal
    end;
@@ -54,9 +54,9 @@ same effect, but this is a perfectly correct technique in itself.
 Alternatively, the axiom {EQ_TRANS} could be added to the
 assumptions of {g}:
 {
-   let val eq1 = Parse.term_parser `(x:'a) = y`
-       val eq2 = Parse.term_parser `(y:'a) = z`
-       val goal = ([eq1,eq2],Parse.term_parser `P:bool`)
+   let val eq1 = Parse.Term `(x:'a) = y`
+       val eq2 = Parse.Term `(y:'a) = z`
+       val goal = ([eq1,eq2],Parse.Term `P:bool`)
    in
    ASSUME_TAC EQ_TRANS goal
    end;

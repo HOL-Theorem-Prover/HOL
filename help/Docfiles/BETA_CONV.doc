@@ -23,13 +23,13 @@ the HOL system.
 
 \EXAMPLE
 {
-- let val tm = Parse.term_parser `(\x.x+1)y`
+- let val tm = Parse.Term `(\x.x+1)y`
   in
   BETA_CONV tm
   end;
  val it = |- (\x. x + 1)y = y + 1 :thm
 
-- let val tm = Parse.term_parser `(\x y. x+y)y`
+- let val tm = Parse.Term `(\x y. x+y)y`
   in
   BETA_CONV tm
   end;

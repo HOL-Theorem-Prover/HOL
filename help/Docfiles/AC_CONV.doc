@@ -27,7 +27,7 @@ term is not an equation between AC-equivalent terms.
 
 \EXAMPLE
 {
-   - let val M = Parse.term_parser 
+   - let val M = Parse.Term 
                  `x + (SUC t) + ((3 + y) + z) = 3 + (SUC t) + x + y + z`
      in 
      AC_CONV(ADD_ASSOC,ADD_SYM) M

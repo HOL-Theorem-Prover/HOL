@@ -27,7 +27,7 @@ function returned by {ABS_CONV c} may also fail if the ML function
 
 \EXAMPLE
 {
-- let val M = Parse.term_parser `\x. 1 = x`
+- let val M = Parse.Term `\x. 1 = x`
   in 
   ABS_CONV SYM_CONV M
   end;

@@ -30,8 +30,8 @@ have boolean type.
 The tactic {ASM_CASES_TAC u} can be used to produce a case analysis
 on {u}:
 {
-  - let val u = Parse.term_parser `u:bool`
-        val g = Parse.term_parser `(P:bool -> bool) u`
+  - let val u = Parse.Term `u:bool`
+        val g = Parse.Term `(P:bool -> bool) u`
     in
     ASM_CASES_TAC u ([],g)
     end;

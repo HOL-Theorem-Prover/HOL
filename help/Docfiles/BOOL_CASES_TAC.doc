@@ -33,7 +33,7 @@ The goal:
 {b}, then simply rewriting the two subgoals using only the inbuilt tautologies,
 i.e. by applying the following tactic:
 {
-   BOOL_CASES_TAC (Parse.term_parser `b:bool`) THEN REWRITE_TAC[]
+   BOOL_CASES_TAC (Parse.Term `b:bool`) THEN REWRITE_TAC[]
 }
 \USES
 Avoiding fiddly logical proofs by brute-force case analysis, possibly only

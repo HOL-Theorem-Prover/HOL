@@ -29,16 +29,16 @@ eventually proved.
 The use of assumptions in rewriting, specially when they are not in an
 obvious equational form, is illustrated below:
 {
-   - let val asm = [Parse.term_parser `(P:'a->bool) x`]
-         val goal = Parse.term_parser `(P:'a->bool) x = (Q:'a -> bool) x`
+   - let val asm = [Parse.Term `(P:'a->bool) x`]
+         val goal = Parse.Term `(P:'a->bool) x = (Q:'a -> bool) x`
      in
      ASM_REWRITE_TAC[](asm, goal)
      end;
 
    val it = ([([--`P x`--], --`Q x`--)], fn) : tactic_result
 
-   - let val asm = [Parse.term_parser `~(P:'a->bool) x`]
-         val goal = Parse.term_parser `(P:'a->bool) x = (Q:'a -> bool) x`
+   - let val asm = [Parse.Term `~(P:'a->bool) x`]
+         val goal = Parse.Term `(P:'a->bool) x = (Q:'a -> bool) x`
      in
      ASM_REWRITE_TAC[](asm, goal)
      end;
