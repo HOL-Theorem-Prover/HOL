@@ -5,21 +5,13 @@
 structure TotalDefn :> TotalDefn =
 struct
 
-open HolKernel Parse boolLib arithLib NonRecSize DefnBase Rsyntax;
-infixr 3 -->;
+open HolKernel Parse boolLib pairLib arithLib NonRecSize DefnBase Rsyntax;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
-type thm    = Thm.thm;
-type conv   = Abbrev.conv
-type tactic = Abbrev.tactic;
-type proofs = GoalstackPure.proofs
-type defn   = DefnBase.defn;
-type 'a quotation = 'a Portable.frag list
+infixr 3 -->;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 
-fun ERR f m =
-  HOL_ERR{origin_structure="TotalDefn", origin_function=f, message=m};
+val ERR = mk_HOL_ERR "TotalDefn";
 
 fun mk_pabs{varstruct,body} = pairSyntax.mk_abs(varstruct,body)
 fun mk_pair{fst,snd} = pairSyntax.mk_pair(fst,snd)
@@ -93,14 +85,11 @@ fun strip_prod_ty [] _ = raise ERR "strip_prod_ty" ""
   | strip_prod_ty [x] ty = [(x,ty)]
   | strip_prod_ty (h::t) ty =
      if is_vartype ty then raise ERR "strip_prod_ty" "expected a product type"
-     else case dest_type ty
-           of {Tyop="prod", Args=[x,y]} => (h,x)::strip_prod_ty t y
+     else case dest_thy_type ty
+           of {Tyop="prod", Thy="pair",Args=[x,y]} => (h,x)::strip_prod_ty t y
             | _ => raise ERR "strip_prod_ty" "expected a product type"
 
-val numty = mk_type{Tyop="num", Args=[]};
-val Zero = Term`0n`;
-val Plus = mk_const{Name="+", Ty=Type`:num -> num -> num`};
-fun mk_plus x y = list_mk_comb(Plus,[x,y]);
+val Zero = numSyntax.zero_tm
 fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero};
 
 fun list_mk_prod_tyl L =
@@ -112,10 +101,11 @@ fun list_mk_prod_tyl L =
      let val x = mk_var{Name="x",Ty=ty1}
          val y = mk_var{Name="y",Ty=fst(dom_rng (type_of M))}
      in
-       mk_pabs {varstruct=mk_pair{fst=x,snd=y},
-                 body = mk_plus (mk_comb{Rator=(if b then tysize else K0) ty1,
-                                         Rand=x})
-                                (mk_comb{Rator=M,Rand=y})}
+       mk_pabs
+          (mk_pair(x,y),
+           numSyntax.mk_plus
+               (mk_comb{Rator=(if b then tysize else K0) ty1,Rand=x},
+                mk_comb{Rator=M,Rand=y}))
      end) front last'
  end;
 
@@ -186,8 +176,8 @@ fun TC_SIMP_CONV simps tm =
  * Trivial wellfoundedness prover for combinations of wellfounded relations.
  *--------------------------------------------------------------------------*)
 
-local fun BC_TAC th =
-        if (is_imp (#2 (boolSyntax.strip_forall (concl th))))
+local fun BC_TAC th = 
+        if (is_imp (#2 (strip_forall (concl th))))
         then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
         else MATCH_ACCEPT_TAC th;
       open relationTheory prim_recTheory pairTheory

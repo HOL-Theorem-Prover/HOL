@@ -1,8 +1,6 @@
 signature wfrecUtils =
 sig
-  type hol_type = Type.hol_type
-  type term     = Term.term
-  type ('a,'b)subst = ('a,'b)Lib.subst
+  include Abbrev
 
   val zip3              : 'a list -> 'b list -> 'c list -> ('a * 'b * 'c) list
   val unzip3            : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
@@ -22,13 +20,10 @@ sig
   val strip_imp         : term -> term list * term
   val dest_relation     : term -> term * term * term
   val is_WFR            : term -> bool
-  val mk_arb            : hol_type -> term
   val func_of_cond_eqn  : term -> term
   val vary              : term list -> hol_type -> term
-  val match_type     : 'a -> hol_type -> hol_type -> (hol_type,hol_type) subst
-  val match_term     : 'a -> term -> term 
-                          -> (term,term) subst * (hol_type,hol_type) subst
-
-  val norm_quote     : 'a frag list -> 'a frag list
+  val match_type        :'a -> hol_type -> hol_type -> (hol_type,hol_type)subst
+  val match_term        : 'a -> term -> term 
+                            -> (term,term) subst * (hol_type,hol_type) subst
 
 end;

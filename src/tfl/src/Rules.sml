@@ -1,17 +1,10 @@
 structure Rules :> Rules =
 struct
 
-open HolKernel Drule Conv Rewrite wfrecUtils boolSyntax Rsyntax
+open HolKernel boolLib pairLib wfrecUtils Rsyntax;
 
-type ('a,'b) subst = ('a,'b)Lib.subst
-type term = Term.term
-type thm = Thm.thm
 
-val GEN_BETA_CONV = pairSyntax.GEN_BETA_CONV
-
-fun ERR func mesg =
-      HOL_ERR{origin_structure = "Rules",
-              origin_function=func,message=mesg};
+val ERR = mk_HOL_ERR "Rules";
 
 fun sthat P x = P x handle Interrupt => raise Interrupt
                          |     _     => false;
@@ -24,39 +17,23 @@ fun simpl_conv thl =
                     Congs[boolTheory.IMP_CONG],
                     Solver always_fails)
       fun simpl tm =
-       let infix THENC
-           val th = (RWC THENC DEPTH_CONV GEN_BETA_CONV) tm
+       let val th = Conv.THENC(RWC,Conv.DEPTH_CONV GEN_BETA_CONV) tm
            val {lhs,rhs} = dest_eq(concl th)
        in if (aconv lhs rhs) then th else TRANS th (simpl rhs)
        end
   in simpl
   end;
 
-(*
-fun simpl_conv thl =
-  let open RW
-      val RWC = Rewrite Fully
-                   (Simpls(std_simpls,thl),
-                    Context([],DONT_ADD),Congs[],Solver always_fails)
-      fun simpl tm =
-       let val th = Conv.THENC(RWC, Conv.DEPTH_CONV GEN_BETA_CONV) tm
-           val {lhs,rhs} = dest_eq(concl th)
-       in if (aconv lhs rhs) then th else TRANS th (simpl rhs)
-       end
-  in simpl
-  end;
-*)
-
-fun simplify thl =
-  let val rewrite = PURE_REWRITE_RULE thl
-      fun simpl th =
-       let val th' = CONV_RULE (DEPTH_CONV GEN_BETA_CONV) (rewrite th)
-           val (_,c1) = dest_thm th
-           val (_,c2) = dest_thm th'
-       in if (aconv c1 c2) then th else simpl th'
-       end
-  in simpl
-  end;
+fun simplify thl = 
+ let val rewrite = PURE_REWRITE_RULE thl
+     fun simpl th =
+      let val th' = GEN_BETA_RULE (rewrite th)
+          val (_,c1) = dest_thm th
+          val (_,c2) = dest_thm th'
+      in if (aconv c1 c2) then th else simpl th'
+      end
+ in simpl
+ end;
 
 
 val RIGHT_ASSOC = PURE_REWRITE_RULE [GSYM boolTheory.DISJ_ASSOC];
@@ -142,7 +119,7 @@ fun LEFT_ABS_VSTRUCT thm =
  ----------------------------------------------------------------------------*)
 
 
-local fun !!v M = boolSyntax.mk_forall{Bvar=v, Body=M}
+local fun !!v M = mk_forall{Bvar=v, Body=M}
       val mem = Lib.op_mem aconv
       fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
 in

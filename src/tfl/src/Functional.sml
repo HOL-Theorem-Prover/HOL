@@ -1,17 +1,16 @@
 structure Functional :> Functional =
 struct
 
-open HolKernel wfrecUtils boolSyntax
+open HolKernel boolSyntax wfrecUtils Rsyntax;
 
-type term   = Term.term
 type thry   = TypeBase.typeBase
 
 infixr 3 -->;
 infix 3 |->;
 infix 4 ##;
 
-fun ERR func mesg = HOL_ERR{origin_structure = "Functional",
-                                origin_function = func, message = mesg};
+val ERR = mk_HOL_ERR "Functional";
+
 
 (*---------------------------------------------------------------------------
       Miscellaneous support
@@ -146,8 +145,8 @@ fun mk_case ty_info ty_match FV range_ty =
  val fresh_var = wfrecUtils.vary FV
  val divide = partition fresh_var ty_match
  fun expand constructors ty ((_,[]), _) = mk_case_fail"expand_var_row"
-   | expand constructors ty (row as ((prefix, p::rst), rhs)) =
-       if (is_var p)
+   | expand constructors ty (row as ((prefix, p::rst), rhs)) = 
+       if is_var p
        then let val fresh = fresh_constr ty_match ty fresh_var
                 fun expnd (c,gvs) =
                   let val capp = list_mk_comb(c,gvs)
@@ -210,12 +209,12 @@ fun mk_case ty_info ty_match FV range_ty =
      Repeated variable occurrences in a pattern are not allowed.
  ---------------------------------------------------------------------------*)
 
-fun FV_multiset tm =
-   case (dest_term tm)
-     of HolKernel.VAR v => [mk_var v]
-      | HolKernel.CONST _ => []
-      | HolKernel.COMB{Rator, Rand} => FV_multiset Rator @ FV_multiset Rand
-      | HolKernel.LAMB _ => raise ERR"FV_multiset" "lambda";
+fun FV_multiset tm = 
+   case dest_term tm
+     of VAR v => [mk_var v]
+      | CONST _ => []
+      | COMB{Rator,Rand} => FV_multiset Rator @ FV_multiset Rand
+      | LAMB _ => raise ERR"FV_multiset" "lambda";
 
 fun no_repeat_vars thy pat =
  let fun check [] = true

@@ -18,36 +18,29 @@
 structure RW :> RW =
 struct
 
-open HolKernel Parse Drule Tactical Tactic Conv boolSyntax
+open HolKernel Parse boolLib pairLib Rsyntax;
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
 fun == q x = Type q
-
-type term = Term.term;
-type thm = Thm.thm;
-type tactic = Abbrev.tactic;
-type conv = Abbrev.conv;
 
 infix ##;
 infix |->;
 infix THEN;
 
 
-fun RW_ERR func mesg =
-   HOL_ERR{origin_structure = "RW",
-            origin_function = func,
-                    message = mesg};
+val RW_ERR = mk_HOL_ERR "RW";
 
 val monitoring = ref false;
 
 (*----------------------------------------------------------------------------
  * |- !x y z. w   --->  |- w[x|->g1][y|->g2][z|->g3]
- * This belongs in drule.sml.
+ * This belongs in Drule.sml.
  *---------------------------------------------------------------------------*)
+
 fun GSPEC_ALL th =
-   (case (dest_const(rator (concl th)))
-     of {Name = "!",Ty} =>
+   (case (dest_thy_const(rator (concl th)))
+     of {Name = "!",Thy="bool",Ty} =>
           GSPEC_ALL (SPEC (genvar (#1(dom_rng(#1(dom_rng Ty))))) th)
      | _ => th)
     handle HOL_ERR _ => th;
@@ -129,11 +122,11 @@ fun strip_imp tm =
   let val istrue = mk_const{Name="T",Ty=bool}
       fun mk_rewrs th =
       let val tm = Thm.concl th
-      in  if (boolSyntax.is_eq tm) then [th] else
-          if (boolSyntax.is_neg tm) then [EQF_INTRO th] else
-          if (boolSyntax.is_conj tm)
+      in  if (is_eq tm) then [th] else
+          if (is_neg tm) then [EQF_INTRO th] else
+          if (is_conj tm)
           then (op @ o (mk_rewrs ## mk_rewrs) o Drule.CONJ_PAIR) th else
-          if (boolSyntax.is_imp tm)
+          if (is_imp tm)
           then let val ant = list_mk_conj (fst(strip_imp tm))
                    fun step imp cnj =
                        step (MP imp (CONJUNCT1 cnj)) (CONJUNCT2 cnj)
@@ -177,9 +170,9 @@ fun dest_choice (COND th)   = th
  * instantiated rule. Handles conditional rules.
  *---------------------------------------------------------------------------*)
 fun PRIM_RW_CONV th =
- let val (has_condition,eq) = ((not o null)##I)(boolSyntax.strip_imp (concl th))
-     val pat = boolSyntax.lhs eq
-     val matcher = Term.match_term pat
+ let val (has_condition,eq) = ((not o null)##I)(strip_imp (concl th))
+     val pat = lhs eq
+     val matcher = match_term pat
      fun match_then_inst tm =
         let val (tm_theta, ty_theta) = matcher tm
             val th' = INST tm_theta (INST_TYPE ty_theta th)
@@ -201,10 +194,10 @@ fun PRIM_RW_CONV th =
  * certainly exist.
  *---------------------------------------------------------------------------*)
 fun CONGR th =
-   let val (ants,eq) = boolSyntax.strip_imp (concl th)
+   let val (ants,eq) = strip_imp (concl th)
        (* TODO: Check that it is a congruence rule *)
-       val pat = boolSyntax.lhs eq
-       val matcher = Term.match_term pat
+       val pat = lhs eq
+       val matcher = match_term pat
        fun match_then_inst tm =
           let val (tm_theta, ty_theta) = matcher tm
           in INST tm_theta (INST_TYPE ty_theta th) end
@@ -230,7 +223,7 @@ fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
  RW{thms   = thl::thms,
     congs  = congs, cong_net = cong_net,
     rw_net = itlist Net.insert
-             (map (fn th => let val left = boolSyntax.lhs(#2(strip_imp(concl th)))
+             (map (fn th => let val left = lhs(#2(strip_imp(concl th)))
                             in  (left,  PRIM_RW_CONV th)
                             end)
                   (flatten (map MK_RULES_APART thl)))        rw_net}
@@ -246,7 +239,7 @@ fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
                 let val c = concl th
                     val eq = #conseq(dest_imp c) handle _ => c
                 in
-                   (boolSyntax.lhs eq,  CONGR th)
+                   (lhs eq,  CONGR th)
                 end)
               (map (GSPEC_ALL o GEN_ALL) thl))         cong_net}
   handle HOL_ERR _ =>
@@ -447,6 +440,7 @@ fun variant_theta away0 vlist =
  * the free variables are in the pairs, they are replaced in the pairs
  * by variants.  The final pairs are returned.
  *---------------------------------------------------------------------------*)
+
 fun vstrl_variants away0 vstrl =
   let val fvl = free_varsl vstrl
       val clashes = op_intersect aconv away0 fvl
@@ -505,16 +499,17 @@ let val ant_frees = free_vars ant
     val (vlist,ceqn) = strip_forall ant
     val {lhs,rhs} = dest_eq(snd(strip_imp ceqn))
     val (f,args) = (I##rev) (dest_combn lhs (length vlist))
-    val _ = assert (can pairTools.dest_aabs) f
+    val _ = assert is_pabs f
     val (rhsv,_) = dest_combn rhs (length vlist)
-    val vstrl = #1(pairTools.strip_aabs f)
+    val vstrl = #1(strip_pabs f)
     val vstrl1 = vstrl_variants ant_frees vstrl
     val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
     val (L,{lhs,rhs}) = (I##dest_eq) (strip_imp ceqn')
     val outcome =
      if (aconv lhs rhs) then NO_CHANGE (L,lhs)
-     else let val lhs_beta_maybe = Conv.DEPTH_CONV pairSyntax.GEN_BETA_CONV lhs
-                                   handle HOL_ERR _ => REFL lhs
+     else let val lhs_beta_maybe = 
+                     Conv.DEPTH_CONV GEN_BETA_CONV lhs
+                     handle HOL_ERR _ => REFL lhs
               val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
               val cps' =
                case L of []  => cps
@@ -531,9 +526,9 @@ in
  case outcome
   of CHANGE th =>
       let val Mnew = boolSyntax.rhs(concl th)
-          val g = pairTools.list_mk_aabs(vstrl1,Mnew)
+          val g = list_mk_pabs(vstrl1,Mnew)
           val gvstrl1 = list_mk_comb(g,vstrl1)
-          val eq = SYM(DEPTH_CONV pairTools.GEN_BETA_CONV gvstrl1
+          val eq = SYM(DEPTH_CONV GEN_BETA_CONV gvstrl1
                        handle HOL_ERR _ => REFL gvstrl1)
           val thm = TRANS th eq (* f vstrl1 = g vstrl1 *)
           val pairs = zip args vstrl1
@@ -668,6 +663,7 @@ fun ABST f cntxt tm =
  * the simpls get computed and after that the traverser moves around the     *
  * term and applies RW_STEP at nodes.                                        *
  *---------------------------------------------------------------------------*)
+
 fun RW_STEPS traverser (simpls,context,congs,prover) thl =
    let val simpls' = add_congs(add_rws simpls thl) congs
    in
@@ -679,11 +675,13 @@ fun RW_STEPS traverser (simpls,context,congs,prover) thl =
  * Define an implicit set of rewrites, so that common rewrite rules don't    *
  * need to be constantly given by the user.                                  *
  *---------------------------------------------------------------------------*)
- local val implicit = ref std_simpls
- in
+
+local val implicit = ref std_simpls
+in
    fun implicit_simpls() = !implicit
    fun set_implicit_simpls rws = (implicit := rws)
- end
+end
+
 val add_implicit_rws = fn thl => set_implicit_simpls
                                        (add_rws (implicit_simpls()) thl)
 val add_implicit_congs = fn thl => set_implicit_simpls
@@ -814,8 +812,9 @@ end end;
  * Make a recursive invocation of rewriting. Can be magically useful, but    *
  * also can loop. In which case, use the std_solver.                         *
  *---------------------------------------------------------------------------*)
-local val untrue = Term`F`
-      val istrue = Term`T`
+
+local val untrue = boolSyntax.F
+      val istrue = boolSyntax.T
 in
 fun rw_solver simpls context tm =
  let val _ = if !monitoring
@@ -845,13 +844,13 @@ fun rw_solver simpls context tm =
 end;
 
 (* The rest is commented out and should be thought of as documentation
-(*----------------------------------------------------------------------------*
- * The following are all instantiations of the above routines, to make them   *
- * easier to invoke. Some of these are holdovers from unconditional           *
- * rewriting and may not make a whole lot of sense. The "C" versions stand    *
- * for using context as rewrite rules, and proving conditions via             *
- * recursive invocations of the rewriter.                                     *
- *----------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*
+ * The following are all instantiations of the above routines, to make them  *
+ * easier to invoke. Some of these are holdovers from unconditional          *
+ * rewriting and may not make a whole lot of sense. The "C" versions stand   *
+ * for using context as rewrite rules, and proving conditions via            *
+ * recursive invocations of the rewriter.                                    *
+ *---------------------------------------------------------------------------*)
 
 (* Rewrite a term *)
 

@@ -1,9 +1,6 @@
 signature RW = 
 sig
-  type term = Term.term;
-  type thm = Thm.thm;
-  type tactic = Abbrev.tactic;
-  type conv = Abbrev.conv;
+  include Abbrev
 
   (* Simplification sets *)
   type simpls

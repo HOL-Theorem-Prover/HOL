@@ -1,18 +1,15 @@
 structure Induction :> Induction =
 struct
 
-open HolKernel Drule Rules wfrecUtils boolSyntax;
+open HolKernel boolLib Rules wfrecUtils Rsyntax;
 
-type term = Term.term
-type thm  = Thm.thm
 type thry = TypeBase.typeBase
 
 infixr 3 -->;
 infix 3 |->;
 infix 4 ##;
 
-fun ERR func mesg = HOL_ERR{origin_structure = "Induction",
-                                origin_function = func, message = mesg};
+val ERR = mk_HOL_ERR "Induction";
 
 
 fun induct_info db s =

@@ -1,27 +1,18 @@
 structure Defn :> Defn =
 struct
 
-open HolKernel Parse Drule Conv boolSyntax
-     Rules wfrecUtils Functional Induction pairTools DefnBase;
+open HolKernel Parse boolLib pairLib
+     Rules wfrecUtils Functional Induction DefnBase Rsyntax;
 
-type hol_type     = Type.hol_type
-type term         = Term.term
-type thm          = Thm.thm
-type conv         = Abbrev.conv
-type tactic       = Abbrev.tactic
-type thry         = TypeBase.typeBase
-type proofs       = GoalstackPure.proofs
-type defn         = DefnBase.defn
-type absyn        = Absyn.absyn
-type ppstream     = Portable.ppstream
-type 'a quotation = 'a Portable.frag list
+type thry   = TypeBase.typeBase
+type proofs = GoalstackPure.proofs
+type absyn  = Absyn.absyn;
 
 infixr 3 -->;
 infix 3 |->;
 infix 4 ##;
 
-fun ERR func mesg = HOL_ERR{origin_structure = "Defn",
-                            origin_function = func, message = mesg};
+val ERR = mk_HOL_ERR "Defn";
 
 (*---------------------------------------------------------------------------
       Miscellaneous support
@@ -48,7 +39,8 @@ fun variants FV vlist =
 fun make_definition thry s tm = (new_definition(s,tm), thry)
 
 fun head tm = head (rator tm) handle _ => tm;
-fun all_fns eqns =
+
+fun all_fns eqns = 
   mk_set (map (head o lhs o #2 o strip_forall) (strip_conj eqns));
 
 fun dest_hd_eqn eqs =
@@ -109,8 +101,8 @@ val imp_elim =
 local open Psyntax
 in
 fun inject ty [v] = [v]
-  | inject ty (v::vs) =
-     let val {Args = [lty,rty],...} = Type.dest_type ty
+  | inject ty (v::vs) = 
+     let val (_,[lty,rty]) = dest_type ty 
          val res = mk_comb(mk_const("INL", lty-->ty),v)
          val inr = curry mk_comb (mk_const("INR", rty-->ty))
      in
@@ -119,8 +111,8 @@ fun inject ty [v] = [v]
 
 fun project ty M =
  if is_vartype ty then [M]
- else case dest_type ty
-       of ("sum",[lty,rty]) =>
+ else case dest_thy_type ty 
+       of {Tyop="sum",Thy="sum",Args=[lty,rty]} =>
             mk_comb(mk_const("OUTL", type_of M-->lty),M)
             :: project rty (mk_comb(mk_const("OUTR", type_of M-->rty),M))
         |  _  => [M];
@@ -534,10 +526,10 @@ fun wfrec_eqns thy eqns =
      val (case_rewrites,context_congs) = extraction_thms thy
      val corollaries' = map (simplify case_rewrites) corollaries
      val Xtract = extract [R1] context_congs f (proto_def,WFR)
- in
-    {proto_def=proto_def,
+ in 
+    {proto_def=proto_def, 
      SV=Listsort.sort Term.compare SV,
-     WFR=WFR,
+     WFR=WFR, 
      pats=pats,
      extracta = map Xtract (zip given_pats corollaries')}
  end;
@@ -702,7 +694,7 @@ fun tuple_args alist =
      val find = Lib.C assoc1 alist
    fun tupelo tm =
       case dest_term tm
-      of LAMB{Bvar,Body} => mk_abs(Bvar, tupelo Body)
+      of LAMB(Bvar,Body) => mk_abs(Bvar, tupelo Body)
        | _ =>
          let val (g,args) = strip_comb tm
              val args' = map tupelo args
@@ -870,7 +862,7 @@ fun mutrec thy bindstem eqns =
               val V = drop (#SV wfrec_res) V0
               val P = vary (mk_var("P"^Lib.int_to_string i,
                                    list_mk_fun_type (tyl@[bool])))
-           in (P, mk_aabs(list_mk_pair V,list_mk_comb(P, V)))
+           in (P, mk_pabs(list_mk_pair V,list_mk_comb(P, V)))
           end
       val (Plist,preds) = unzip (map2 mkP pindices defns)
       val Psum_case = end_itlist (fn P => fn tm =>
@@ -956,10 +948,11 @@ fun pairf (stem,eqs0) =
              let val P   = #Name(dest_var(#Bvar(dest_forall(concl induction))))
                  val Qty = itlist (curry Type.-->) argtys Type.bool
                  val Q   = mk_primed_var{Name=P, Ty=Qty}
-                 val tm  = mk_pabs{varstruct=list_mk_pair defvars,
-                                   body=list_mk_comb(Q,defvars)}
+                 val tm  = mk_pabs
+                             (list_mk_pair defvars,
+                              list_mk_comb(Q,defvars))
              in
-               GEN Q (CONV_RULE(DEPTH_CONV pairSyntax.GEN_BETA_CONV)
+               GEN Q (PairedLambda.GEN_BETA_RULE
                   (SPEC tm (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)))
              end
       in
@@ -975,8 +968,8 @@ in
 fun non_wfrec_defn (facts,bind,eqns) =
  let val ((_,args),_) = dest_hd_eqn eqns
  in if Lib.exists is_constructor args
-    then case TypeBase.get facts
-                 (#Tyop(Type.dest_type(type_of(first is_constructor args))))
+    then case TypeBase.get facts 
+                 (#Tyop(dest_type(type_of(first is_constructor args))))
        of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
         | SOME tyinfo =>
            let val def = Prim_rec.new_recursive_definition
@@ -1105,13 +1098,14 @@ end;
 
 local open Absyn
 in
-fun vnames_of (VAQ tm) S = union (map (#Name o Term.dest_var) (all_vars tm)) S
+fun vnames_of (VAQ tm) S = union (map (fst o Term.dest_var) (all_vars tm)) S
   | vnames_of (VIDENT s) S = union [s] S
   | vnames_of (VPAIR(v1,v2)) S = vnames_of v1 (vnames_of v2 S)
   | vnames_of (VTYPED(v,_)) S = vnames_of v S
 
-fun names_of (AQ tm) S = union (map (#Name o Term.dest_var) (all_vars tm)) S
+fun names_of (AQ tm) S = union (map (fst o Term.dest_var) (all_vars tm)) S
   | names_of (IDENT s) S = union [s] S
+  | names_of (QIDENT (s,_)) S = union [s] S
   | names_of (APP(M,N)) S = names_of M (names_of N S)
   | names_of (LAM (v,M)) S = names_of M (vnames_of v S)
   | names_of (TYPED(M,_)) S = names_of M S
@@ -1119,21 +1113,19 @@ fun names_of (AQ tm) S = union (map (#Name o Term.dest_var) (all_vars tm)) S
 end;
 
 local val v_vary = vary "v"
-      fun tm_exp tm S =
-       let open Term Psyntax
-       in case dest_term tm
-          of VAR{Name=s,Ty} =>
+      fun tm_exp tm S = 
+        case dest_term tm
+         of VAR{Name=s,Ty} => 
               if wildcard s
-              then let val (s',S') = v_vary S in (mk_var(s',Ty),S') end
+              then let val (s',S') = v_vary S in (Term.mk_var(s',Ty),S') end
               else (tm,S)
-          | CONST{Name,...}  => (tm,S)
-          | COMB{Rator,Rand} =>
+         | CONST _  => (tm,S)
+         | COMB{Rator,Rand} => 
              let val (Rator',S')  = tm_exp Rator S
                  val (Rand', S'') = tm_exp Rand S
              in (mk_comb(Rator', Rand'), S'')
              end
-          | LAMB _ => raise ERR "tm_exp" "abstraction in pattern"
-       end
+         | LAMB _ => raise ERR "tm_exp" "abstraction in pattern"
        open Absyn
 in
 fun exp (AQ tm) S = let val (tm',S') = tm_exp tm S in (AQ tm',S') end
@@ -1141,8 +1133,11 @@ fun exp (AQ tm) S = let val (tm',S') = tm_exp tm S in (AQ tm',S') end
       if wildcard s
         then let val (s',S') = v_vary S in (IDENT s', S') end
         else (IDENT s, S)
-  | exp (APP(M,N)) S =
-      let val (M',S')   = exp M S
+  | exp (QIDENT (p as (s,_))) S = 
+      if wildcard s then raise ERR "exp" "wildcard in long id. in pattern"
+      else (QIDENT p, S)
+  | exp (APP(M,N)) S = 
+      let val (M',S')   = exp M S 
           val (N', S'') = exp N S'
       in (APP (M',N'), S'')
       end
@@ -1200,7 +1195,7 @@ fun Hol_defn bindstem q =
       val is_constant = not o null o decls
       val def_thm = mk_defn bindstem def
         handle e => (Parse.set_known_constants
-                     (Lib.union kcs (filter is_constant fn_names));
+                       (Lib.union kcs (filter (not o null o decls) fn_names));
                      raise e)
           (* if an exception is raised after a constant is defined, then
              the union-ing above will ensure that the new constants are
@@ -1237,8 +1232,7 @@ fun mangle th [] = th
  ---------------------------------------------------------------------------*)
 
 fun TC_TAC defn =
- let open Tactic Drule Tactical
-     infix THEN
+ let infix THEN
      val E = eqns_of defn
      val I = Option.valOf (ind_of defn)
      val th = CONJ E I
@@ -1254,29 +1248,25 @@ fun tgoal0 defn =
    if null (tcs_of defn)
    then raise ERR "tgoal" "no termination conditions"
    else let val (g,validation) = TC_TAC defn
-            val goalstack = GoalstackPure.prim_set_goal g validation
-        in
-          goalstackLib.add goalstack
-        end
-        handle HOL_ERR _ => raise ERR "tgoal" "";
-
-fun tgoal defn =
-  Lib.with_flag (goalstackLib.chatting,false)
-       tgoal0 defn;
+        in goalstackLib.add (GoalstackPure.prim_set_goal g validation)
+        end handle HOL_ERR _ => raise ERR "tgoal" "";
 
 
+(*---------------------------------------------------------------------------
+     The error handling here is pretty coarse.
+ ---------------------------------------------------------------------------*)
 fun tprove0 (defn,tactic) =
-   let val _ = tgoal defn
-       val _ = goalstackLib.expand tactic  (* should finish proof off *)
-       val th = goalstackLib.top_thm ()
-       val _ = goalstackLib.drop()
-   in
+  let val _ = tgoal0 defn
+      val _ = goalstackLib.expand tactic  (* should finish proof off *)
+      val th = goalstackLib.top_thm ()
+      val _ = goalstackLib.drop()
+  in
       (CONJUNCT1 th, CONJUNCT2 th)
-   end
-   handle HOL_ERR _ => raise ERR "tprove" "Termination proof failed.";
+  end
+  handle e => (goalstackLib.drop(); raise (wrap_exn "Defn" "tprove" e))
 
-fun tprove p =
-  Lib.with_flag (goalstackLib.chatting,false)
-       tprove0 p;
+
+fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
+fun tprove p   = Lib.with_flag (goalstackLib.chatting,false) tprove0 p;
 
 end; (* Defn *)
