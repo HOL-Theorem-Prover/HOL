@@ -1670,6 +1670,46 @@ val IMAGE_FINITE =
      [REWRITE_TAC [IMAGE_EMPTY,FINITE_EMPTY],
       ASM_REWRITE_TAC [IMAGE_INSERT,FINITE_INSERT]]);
 
+open metisLib
+
+val finite_image0 = prove(
+  ``(!x y. (f x = f y) = (x = y)) ==>
+    !s. FINITE s ==> !s'. (s = IMAGE f s') ==> FINITE s'``,
+  STRIP_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][] THENL [
+    FULL_SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
+    METIS_TAC [SET_CASES, IN_INSERT,
+               NOT_IN_EMPTY, FINITE_EMPTY],
+    `?x. x IN s' /\ (f x = e)`
+        by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
+            METIS_TAC []) THEN
+    Q_TAC SUFF_TAC `?s0. (s' = x INSERT s0) /\ (s = IMAGE f s0)` THEN1
+          NTAC 2 (SRW_TAC [][]) THEN
+    Q.EXISTS_TAC `s' DELETE x` THEN
+    SRW_TAC [][INSERT_DELETE] THEN
+    SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
+    Q.X_GEN_TAC `y` THEN EQ_TAC THENL [
+      STRIP_TAC THEN
+      `?u. u IN s' /\ (y = f u)`
+         by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
+             METIS_TAC []) THEN
+      Q.EXISTS_TAC `u` THEN SRW_TAC [][IN_DELETE] THEN METIS_TAC [],
+      SRW_TAC [][IN_DELETE] THEN
+      `f x'' IN IMAGE f s'` by SRW_TAC [][IN_IMAGE] THEN
+      `f x'' IN (f x INSERT s)` by ASM_REWRITE_TAC [] THEN
+      POP_ASSUM MP_TAC THEN SRW_TAC [][]
+    ]
+  ]);
+
+val INJECTIVE_IMAGE_FINITE = store_thm(
+  "INJECTIVE_IMAGE_FINITE",
+  ``!f. (!x y. (f x = f y) = (x = y)) ==>
+        !s. FINITE (IMAGE f s) = FINITE s``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN
+  SRW_TAC [][EQ_IMP_THM, IMAGE_FINITE] THEN
+  IMP_RES_TAC finite_image0 THEN METIS_TAC []);
+val _ = export_rewrites ["INJECTIVE_IMAGE_FINITE"]
+
 (* =====================================================================*)
 (* Cardinality 								*)
 (* =====================================================================*)
@@ -3393,7 +3433,6 @@ val GSPEC_OR = store_thm(
     a relation that is reflexive, symmetric and transitive over that set)
    ---------------------------------------------------------------------- *)
 
-open metisLib
 val equiv_on_def = new_definition(
   "equiv_on_def",
   ``(equiv_on) R s =
@@ -3464,7 +3503,6 @@ val partition_elements_interrelate = store_thm(
     A proof of Koenig's Lemma
    ---------------------------------------------------------------------- *)
 
-open metisLib
 val finitely_branching_def = new_definition(
   "finitely_branching_def",
   ``finitely_branching R = !x. FINITE {y | R x y}``);
