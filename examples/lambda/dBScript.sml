@@ -8,7 +8,7 @@
  ---------------------------------------------------------------------------*)
 
 (* Interactive use:
-   app load ["bossLib", "Q", "pred_setTheory", "stringTheory", "IndDefLib"];
+   app load ["bossLib", "Q", "pred_setTheory", "stringTheory"];
 *)
 
 structure dBScript =

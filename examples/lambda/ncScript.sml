@@ -8,15 +8,14 @@
  ---------------------------------------------------------------------------*)
 
 (* Interactive use:
-   app load ["bossLib", "Q", "IndDefLib",
-             "pred_setTheory", "stringTheory", "dBTheory"];
+   app load ["bossLib", "Q", "pred_setTheory", "stringTheory", "dBTheory"];
 *)
 
 structure ncScript =
 struct
 
 open HolKernel Parse boolLib
-     IndDefLib bossLib arithmeticTheory pred_setTheory dBTheory;
+     bossLib arithmeticTheory pred_setTheory dBTheory;
 
 infixr 3 -->;
 infix && ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
