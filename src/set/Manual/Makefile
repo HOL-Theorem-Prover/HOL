@@ -1,5 +1,5 @@
 # =====================================================================
-# Makefile for the sets library documentation 
+# Makefile for the sets library documentation
 # =====================================================================
 
 # ---------------------------------------------------------------------
@@ -8,18 +8,15 @@
 Help=../help
 
 # ---------------------------------------------------------------------
-# Pathname to the doc-to-tex script and doc-to-tex.sed file 
+# Pathname to the doc-to-tex script and doc-to-tex.sed file
 # ---------------------------------------------------------------------
-#DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
-#DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
-
-DOCTOTEX=/home/kxs/hol98/doc/man/Reference/bin/doc-to-tex
-DOCTOTEXSED=/home/kxs/hol98/doc/man/Reference/bin/doc-to-tex.sed
+DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
+DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
 # ---------------------------------------------------------------------
-MAKEINDEX=../../../Manual/LaTeX/makeindex ../../../
+MAKEINDEX=makeindex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
@@ -28,10 +25,7 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg
-	@echo "\begin{theindex}" > index.tex
-	@echo "\mbox{}" >> index.tex
-	@echo "\end{theindex}" >> index.tex
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind
 
 tex: theorems ids
 	@echo "TeX files made"
@@ -74,12 +68,12 @@ theorems:
 	@echo "\section{Cardinality of sets}">>theorems.tex
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms/card theorems.tex
 
-index: 
-	${MAKEINDEX} sets.idx index.tex
+index:
+	${MAKEINDEX} sets.idx
 
-sets: 
-	latex sets.tex 
+sets:
+	latex sets.tex
 
-all: 
+all:
 	make clean; make tex; make sets; make index; make sets
 
