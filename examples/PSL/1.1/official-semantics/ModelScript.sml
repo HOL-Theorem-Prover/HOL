@@ -170,9 +170,9 @@ val PATH_TO_MODEL_def =
 val automaton_def =
  Hol_datatype
   `automaton = 
-    <| Sigma: 'alphabet -> bool;
+    <| Sigma: 'letter -> bool;
        Q:     'state -> bool;
-       Delta: 'state # ('alphabet -> bool) # 'state -> bool;
+       Delta: 'state # 'letter # 'state -> bool;
        Q0:    'state -> bool;
        F:     'state -> bool |>`;
 
@@ -183,7 +183,7 @@ val automaton_def =
 val MODEL_TO_AUTOMATON_def =
  Define
   `MODEL_TO_AUTOMATON (M:('state,'prop)model) =
-    <| Sigma := {p : 'prop | p IN M.P};
+    <| Sigma := {a | a SUBSET {p : 'prop | p IN M.P}};
        Q     := {SOME s : ('state)option | s IN M.S} UNION {NONE};
        Delta := {(SOME s, a, SOME s') | s IN M.S /\ s' IN M.S /\ 
                                         (s,s') IN M.R /\ (a = M.L s')}
@@ -201,13 +201,8 @@ SIMP_CONV (srw_ss()) [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def]
 ``MODEL_TO_AUTOMATON(PATH_TO_MODEL(FINITE l))``;
 
 SIMP_CONV (srw_ss()) 
- [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,PROD_def]
- ``MODEL_TO_AUTOMATON(PATH_TO_MODEL(INFINITE f) || M)``;
-
-SIMP_CONV (srw_ss()) 
   [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,PROD_def]
-  ``MODEL_TO_AUTOMATON
-    (PATH_TO_MODEL(FINITE l) || 
+  ``(PATH_TO_MODEL(FINITE l) || 
      <| S  := states;
         S0 := initial_states;
         R  := trans;
@@ -216,7 +211,8 @@ SIMP_CONV (srw_ss())
 
 SIMP_CONV (srw_ss()) 
   [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,PROD_def]
-  ``(PATH_TO_MODEL(INFINITE f) || 
+  ``MODEL_TO_AUTOMATON
+    (PATH_TO_MODEL(FINITE l) || 
      <| S  := states;
         S0 := initial_states;
         R  := trans;
