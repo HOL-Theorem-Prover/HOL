@@ -1,7 +1,7 @@
 structure computeLib :> computeLib =
-struct 
+struct
 
-open HolKernel clauses rules equations;
+open HolKernel clauses compute_rules equations;
 
 (* reexporting types from clauses *)
 type rewrite = rewrite;
@@ -32,7 +32,7 @@ fun initial_state rws t =
  * a variable applied to strongly
  * reduced arguments, or a constant applied to weakly reduced arguments
  * which does not match any rewriting rule.
- * 
+ *
  * - substitution is propagated through applications.
  * - if the rhs is an abstraction and there is one arg on the stack,
  *   this means we found a beta redex. mka rebuilds the application of
@@ -43,7 +43,7 @@ fun initial_state rws t =
  * - for an already strongly normalized term or an unapplied abstraction,
  *   we try to rebuild the thm.
  *)
-fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) = 
+fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
       let val (tha,stka) =
             foldl (push_in_stk (curry mk_clos Env)) (th,stk) args in
       cbv_wk ((tha, mk_clos(Env,a)), stka)
@@ -81,7 +81,7 @@ and cbv_up (hcl, Zrator{Rand=(mka,clos), Ctx})  =
 (* [strong] continues the reduction of a term in head normal form under
  * abstractions, and in the arguments of non reduced constant.
  * precondition: the closure should be the output of cbv_wk
- *) 
+ *)
 fun strong ((th, CLOS{Env,Term=Abs t}), stk) =
       let val (thb,stk') = push_lam_in_stk(th,stk) in
       strong (cbv_wk((thb, mk_clos(NEUTR :: Env, t)), stk'))

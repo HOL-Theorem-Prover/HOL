@@ -1,4 +1,4 @@
-structure rules :> rules =
+structure compute_rules :> compute_rules =
 struct
 
 open HolKernel basicHol90Lib boolTheory;

@@ -1,13 +1,13 @@
 (*
 load "rules";
 *)
-local open HolKernel basicHol90Lib rules
+local open HolKernel basicHol90Lib compute_rules
 in
 
 (* The functions in this module (except [from_term] and [inst_dterm]) are
  * called only to build the database of rewrite rules. Therefore,
  * optimisation is not so important.
- * 
+ *
  * [from_term] is the first step of normalisation, and it is not called
  * later on (except with external conv).
  *)
@@ -198,7 +198,7 @@ fun from_term (rws,env,t) =
  *)
 fun mk_rewrite rws eq_thm =
   let val {lhs,rhs} = dest_eq (concl eq_thm)
-      val (fv,cst,pats) = check_arg_form lhs 
+      val (fv,cst,pats) = check_arg_form lhs
       val gen_thm = foldr (uncurry GEN) eq_thm fv
       val rhsc = from_term (rws, rev fv, rhs)
   in RW{ cst=cst,

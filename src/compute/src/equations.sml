@@ -1,5 +1,5 @@
 
-local open HolKernel basicHol90Lib rules clauses
+local open HolKernel basicHol90Lib compute_rules clauses
 in
 
 (* The First order matching functions.
@@ -49,7 +49,7 @@ and match_solve bds (Pvar var)           arg = match_var bds var arg
 
 (* Try a sequence of rewrite rules. No attempt to factorize patterns! *)
 fun try_rwn ibds lt =
-  let fun try_rec []                         = raise No_match 
+  let fun try_rec []                         = raise No_match
         | try_rec ((rw as RW{lhs,npv,...})::rwn) =
 	    (let val env = Array.array(npv,NONE) in
 	     {Rule=rw, Inst=match_list (env,ibds) lhs lt}

@@ -1,4 +1,4 @@
-signature rules =
+signature compute_rules =
 sig
 
 local open Term in
