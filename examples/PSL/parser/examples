@@ -1,6 +1,6 @@
 (*****************************************************************************)
 (* Examples of parsing the PSL/Sugar semantics                               *)
-(* Run hol na dthen do "use examples;"                                       *)
+(* Run hol and then do "use examples;"                                       *)
 (*****************************************************************************)
 
 quietdec := true;
@@ -13,6 +13,9 @@ load "ParserTools";
 open ParserTools;
 quietdec := false;
 
+(******************************************************************************
+* Random examples just to check something is working!
+******************************************************************************)
 EvalSERE "{x}{y}       |= x;y";
 EvalSERE "{p}{q}       |= p;q";
 EvalSERE "{x}{y}{p}    |= x;T;p";
@@ -24,3 +27,40 @@ EvalFL "{x}{y}{p}{q}   |= {x;y} |-> {p;q}";
 EvalFL "{x}{y}{p}{q}   |= {x;y} |=> {p;q}";
 EvalFL "{x}{y}{p}{q}   |= {x;y;p} |-> {p;q}";
 EvalFL "{x}{y}{p}{q}   |= {x;y;T} |-> {p;q}";
+
+
+(******************************************************************************
+* Example 1 (LRM Version 1.0, page 45)
+*
+* time  0  1  2  3  4  5  6  7  8  9
+* ----------------------------------
+* clk   0  1  0  1  0  1  0  1  0  1
+* a     0  0  0  1  1  1  0  0  0  0
+* b     0  0  0  0  0  1  0  1  1  0
+*
+* {}{clk}{}{clk;a}{a}{clk;a;b}{}{clk;b}{b}{clk}
+*
+******************************************************************************)
+
+EvalFL "{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= a until! b"; (* w^0 *)
+EvalFL "  {clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= a until! b"; (* w^1 *)
+EvalFL "       {}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= a until! b"; (* w^2 *)
+EvalFL "         {clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= a until! b"; (* w^3 *)
+EvalFL "                {a}{clk,a,b}{}{clk,b}{b}{clk} |= a until! b"; (* w^4 *)
+EvalFL "                   {clk,a,b}{}{clk,b}{b}{clk} |= a until! b"; (* w^5 *)
+EvalFL "                            {}{clk,b}{b}{clk} |= a until! b"; (* w^6 *)
+EvalFL "                              {clk,b}{b}{clk} |= a until! b"; (* w^7 *)
+EvalFL "                                     {b}{clk} |= a until! b"; (* w^8 *)
+EvalFL "                                        {clk} |= a until! b"; (* w^9 *)
+
+
+EvalFL "{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^0 *)
+EvalFL "  {clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^1 *)
+EvalFL "       {}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^2 *)
+EvalFL "         {clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^3 *)
+EvalFL "                {a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^4 *)
+EvalFL "                   {clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^5 *)
+EvalFL "                            {}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^6 *)
+EvalFL "                              {clk,b}{b}{clk} |= (a until! b)@clk"; (* w^7 *)
+EvalFL "                                     {b}{clk} |= (a until! b)@clk"; (* w^8 *)
+EvalFL "                                        {clk} |= (a until! b)@clk"; (* w^9 *)
