@@ -738,7 +738,13 @@ fun tuple_args alist =
      for mut. 
  ---------------------------------------------------------------------------*)
 
-
+fun ndom_rng ty 0 = ([],ty)
+  | ndom_rng ty n = 
+      let val (dom,rng) = dom_rng ty
+          val (L,last) = ndom_rng rng (n-1)
+      in (dom::L, last)
+      end;
+  
 fun mutrec thy bindstem eqns =
   let open Psyntax
       val dom_rng = Type.dom_rng
@@ -751,27 +757,26 @@ fun mutrec thy bindstem eqns =
       val CONJ = Thm.CONJ
       fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm);
       val eqnl = strip_conj eqns
-      val fnl = mk_set (map (fst o strip_comb o lhs) eqnl)
-      val (nl,tyl) = unzip (map Psyntax.dest_var fnl)
-      val div_tys = map strip_fun_type tyl
+      val lhs_info = mk_set(map ((I##length) o strip_comb o lhs) eqnl)
+      val div_tys = map (fn (tm,i) => ndom_rng (type_of tm) i) lhs_info
+      val lhs_info1 = zip (map fst lhs_info) div_tys
       val dom_tyl = map (list_mk_prod_type o fst) div_tys
       val rng_tyl = mk_set (map snd div_tys)
       val mut_dom = end_itlist mk_sum_type dom_tyl
       val mut_rng = end_itlist mk_sum_type rng_tyl
       val mut_name = unionStem bindstem
       val mut = mk_var(mut_name, mut_dom --> mut_rng)
-      fun inform f = 
-         let val (s,ty) = dest_atom f
-             val (doml,rng) = strip_fun_type ty
+      fun inform (f,(doml,rng)) = 
+         let val s = fst(dest_atom f)
          in if 1<length doml 
-            then (f, (mk_var(s^"_tupled",list_mk_prod_type doml --> rng),doml))
-            else (f, (f,doml))
+             then (f, (mk_var(s^"_tupled",list_mk_prod_type doml --> rng),doml))
+             else (f, (f,doml))
          end
-      val eqns' = tuple_args (map inform fnl) eqns
+      val eqns' = tuple_args (map inform lhs_info1) eqns
       val eqnl' = strip_conj eqns'
       val (L,R) = unzip (map dest_eq eqnl')
       val fnl' = mk_set (map (fst o strip_comb o lhs) eqnl')
-      val fnvar_map = zip fnl fnl'
+      val fnvar_map = zip lhs_info1 fnl'
       val gvl = map genvar dom_tyl
       val gvr = map genvar rng_tyl
       val injmap = zip fnl' (map2 (C (curry mk_abs)) (inject mut_dom gvl) gvl)
@@ -816,11 +821,10 @@ fun mutrec thy bindstem eqns =
       val mut_rules = #rules defn
       val mut_constSV = #1(dest_comb(lhs(#1(dest_conj(concl mut_rules)))))
       val (mut_const,params) = strip_comb mut_constSV
-      fun define_subfn (n,(fvar,ftupvar)) thy =
+      fun define_subfn (n,((fvar,(argtys,rng)),ftupvar)) thy =
          let val inbar  = assoc ftupvar injmap
              val outbar = assoc ftupvar RNG_OUTS
-             val (fvarname,ty) = dest_var fvar
-             val (argtys,rng) = strip_fun_type ty
+             val (fvarname,_) = dest_atom fvar
              val defvars = rev 
                   (Lib.with_flag (Globals.priming, SOME"") (variants [fvar])
                      (map (curry Psyntax.mk_var "x") argtys))
