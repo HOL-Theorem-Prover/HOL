@@ -1178,25 +1178,26 @@ fun pp_term (G : grammar) TyG = let
           val ldelim = #leftdelim r
           (* list will never be empty *)
           fun pr_list tm = let
-            fun recurse tm = let
+            fun recurse depth tm = let
               val (_, args) = strip_comb tm
               val head = hd args
               val tail = List.nth(args, 1)
             in
-              if has_name G nilstr tail then
+              if depth = 0 then add_string "..."
+              else if has_name G nilstr tail then
                 (* last element *)
                 pr_term head Top Top Top (depth - 1)
               else let
               in
                 pr_term head Top Top Top (depth - 1);
                 print_ellist (Top,Top,Top) (sep, []);
-                recurse tail
+                recurse (depth - 1) tail
               end
             end
           in
             print_ellist (Top,Top,Top) (ldelim, []) ;
             begin_block INCONSISTENT 0;
-            recurse tm;
+            recurse depth tm;
             end_block();
             ignore (print_ellist (Top,Top,Top) (rdelim, []))
           end
