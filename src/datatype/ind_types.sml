@@ -14,7 +14,8 @@ open HolKernel basicHol90Lib Parse Psyntax
 open numTheory arithmeticTheory prim_recTheory simpLib boolSimps
 open jrh_simplelib ind_typeTheory
 
-infix F_F THEN THENC THENL |-> ORELSEC
+infix F_F THEN THENC THENL |-> ORELSEC 
+infixr -->;
 
 (* ------------------------------------------------------------------------- *)
 (* Handy utility to produce "SUC o SUC o SUC ..." form of numeral.           *)
@@ -443,9 +444,9 @@ in
   down [] n
 end
 local
-  val s = Term`s:num->'Z`
   val zty = Type`:'Z`
   val numty = Type`:num`
+  val s = mk_var("s",numty --> zty)
   fun extract_arg tup v =
     if v = tup then REFL tup
     else let
