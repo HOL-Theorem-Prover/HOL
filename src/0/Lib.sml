@@ -556,4 +556,42 @@ fun delta_pair f g (x,y) =
     | (DIFF x', DIFF y') => DIFF (x', y');
 
 
+(*---------------------------------------------------------------------------
+    A function that strips leading (nested) comments and whitespace
+    from a string.
+ ---------------------------------------------------------------------------*)
+
+fun deinitcomment0 ss n =
+    case Substring.getc ss of
+        NONE => ss
+      | SOME (c,ss') =>
+        if Char.isSpace c then
+            deinitcomment0 ss' n
+        else if c = #"(" then
+            case Substring.getc ss' of
+                NONE => ss
+              | SOME (c,ss'') =>
+                if c = #"*" then
+                    deinitcomment0 ss'' (n+1)
+                else if n = 0 then
+                    ss
+                else
+                    deinitcomment0 ss'' n
+        else if n > 0 andalso c = #"*" then
+            case Substring.getc ss' of
+                NONE => ss
+              | SOME (c,ss'') =>
+                if c = #")" then
+                    deinitcomment0 ss'' (n-1)
+                else
+                    deinitcomment0 ss'' n
+        else if n = 0 then
+            ss
+        else
+            deinitcomment0 ss' n
+
+fun deinitcommentss ss =                   deinitcomment0               ss  0
+fun deinitcomment   s  = Substring.string (deinitcomment0 (Substring.all s) 0)
+
+
 end (* Lib *)

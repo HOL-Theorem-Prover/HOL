@@ -55,7 +55,7 @@ val DISJ2    = Thm.DISJ2 o btm;
 
 fun GEN [QUOTE s] th =
      let val V = free_vars (concl th)
-     in case Lib.assoc2 s (Lib.zip V (map (fst o Term.dest_var) V))
+     in case Lib.assoc2 (Lib.deinitcomment s) (Lib.zip V (map (fst o Term.dest_var) V))
          of NONE => raise Q_ERR "GEN" "variable not found"
          | SOME (v,_) => Thm.GEN v th
      end
@@ -273,10 +273,10 @@ fun ABBREV_TAC q (g as (asl,w)) =
     g
  end;
 
-fun UNABBREV_TAC [QUOTE s] =
+fun UNABBREV_TAC [QUOTE s] = let val s' = Lib.deinitcomment s in
         FIRST_ASSUM(SUBST1_TAC o SYM o
-             assert(curry op = s o fst o dest_var o rhs o concl))
-         THEN BETA_TAC
+             assert(curry op = s' o fst o dest_var o rhs o concl))
+         THEN BETA_TAC end
   | UNABBREV_TAC _ = raise Q_ERR "UNABBREV_TAC" "unexpected quote format"
 
 end; (* Q *)

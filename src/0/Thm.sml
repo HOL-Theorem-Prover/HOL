@@ -1160,18 +1160,23 @@ fun take_numb ss0 =
        | NONE   => ERR "take_numb" ""
   end
 end;
+  (* we don't allow numbers to be split across fragments; think this is reasonable *)
 
-fun lexer ss1 =
-  case Substring.getc (Substring.dropl Char.isSpace ss1)
-   of NONE         => NONE
+fun lexer (ss1,qs1) =
+  case Substring.getc (Lib.deinitcommentss ss1)
+                      (* was: (Substring.dropl Char.isSpace ss1) *)
+   of NONE         => (case qs1 of
+                           (QUOTE s::qs2) => lexer (Substring.all s,qs2)
+                         | []             => NONE
+                         | _              => ERR "raw lexer" "expected a quotation")
     | SOME (c,ss2) =>
        case c
-        of #"."  => SOME(dot,   ss2)
-         | #"\\" => SOME(lamb,  ss2)
-         | #"("  => SOME(lparen,ss2)
-         | #")"  => SOME(rparen,ss2)
-         | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, ss3) end
-         | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  ss3) end
+        of #"."  => SOME(dot,   (ss2,qs1))
+         | #"\\" => SOME(lamb,  (ss2,qs1))
+         | #"("  => SOME(lparen,(ss2,qs1))
+         | #")"  => SOME(rparen,(ss2,qs1))
+         | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, (ss3,qs1)) end
+         | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  (ss3,qs1)) end
          |   _   => ERR "raw lexer" "bad character";
 
 fun eat_rparen ss =
@@ -1209,8 +1214,8 @@ fun parse_raw table =
                |   _         => ERR "glamb" "impossible")
         | _ => ERR "glamb" "expected an identifier"
  in
-  fn [QUOTE s] =>
-       (case parse ([], Substring.all s)
+  fn (QUOTE s::qs) =>
+       (case parse ([], (Substring.all s,qs))
          of ([v], _)  => v
           | otherwise => ERR "raw term parser" "parse failed")
    | otherwise => ERR "raw term parser" "expected a quotation"

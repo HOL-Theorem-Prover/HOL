@@ -118,4 +118,8 @@ sig
   val delta_map     : ('a -> 'a delta) -> 'a list -> 'a list delta
   val delta_pair    : ('a -> 'a delta) -> ('b -> 'b delta) 
                        -> 'a * 'b -> ('a * 'b) delta
+
+  val deinitcommentss : substring -> substring
+  val deinitcomment : string -> string
+
 end

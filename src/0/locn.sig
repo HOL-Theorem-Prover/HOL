@@ -4,10 +4,15 @@ signature locn = sig
   datatype locn_point = LocP of int (* fragment  (0-origin) *)
                               * int (* line      (0-origin) *)
                               * int (* character (0-origin) *)
+                      | LocA of int (* absolute line number in file (0-origin) *)
+                              * int (* absolute column number in file (0-origin) *)
                       | LocPBeg of int (* beginning of fragment *)
                       | LocPEnd of int (* end of fragment *)
 
   val locn_point_toString : locn_point -> string
+
+  (* add a line,char pair to a relative location point *)                                          
+  val rel_to_abs : int -> int -> locn_point -> locn_point
 
   (* a type representing a location (region) in the source file *)
   datatype locn = Loc of locn_point * locn_point (* start and end character *)

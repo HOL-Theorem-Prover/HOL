@@ -4,16 +4,28 @@ struct
   datatype locn_point = LocP of int
                               * int
                               * int
+                      | LocA of int
+                              * int
                       | LocPBeg of int
                       | LocPEnd of int
 
   fun locn_point_toString (LocP(nf,r,c))
       = "frag "^Int.toString(nf)^" row "^Int.toString(r)^" col "^Int.toString(c)
+    | locn_point_toString (LocA(r,c))
+      = "line "^Int.toString(r+1)^", character "^Int.toString(c+1)
     | locn_point_toString (LocPBeg(nf))
       = "beginning of frag "^Int.toString(nf)
     | locn_point_toString (LocPEnd(nf))
       = "end of frag "^Int.toString(nf)
 
+  fun rel_to_abs row col (LocP(nf,r,c))
+      = if r = 0 then
+            LocA(row,col+c)
+        else
+            LocA(row+r,c)
+    | rel_to_abs row col locp
+      = locp
+      
   datatype locn = Loc of locn_point * locn_point (* start and end character *)
                 | Loc_None                       (* compiler-generated *)
                 | Loc_Unknown
@@ -37,6 +49,18 @@ struct
             Int.toString(c1)^" and "^Int.toString(c2)
         else
             "at frag "^Int.toString(nf1)^" row "^Int.toString(r1)^" col "^Int.toString(c1)
+  fun toString (Loc(LocA(r1,c1),LocA(r2,c2)))
+      = if r1 <> r2 then
+            "between line "^
+            Int.toString(r1+1)^", character "^Int.toString(c1+1)^
+            " and line "^
+            Int.toString(r2+1)^", character "^Int.toString(c2+1)
+        else if c1 <> c2 then
+            "on line "^Int.toString(r1+1)^
+            ", characters "^
+            Int.toString(c1+1)^"-"^Int.toString(c2+1)
+        else
+            "at line "^Int.toString(r1+1)^", character "^Int.toString(c1+1)
     | toString (Loc(s,e))
       = if s = e then
             "at "^locn_point_toString s

@@ -12,7 +12,7 @@ val () =
 
 app load ["Datatype", "listTheory", "PreListBoolify"];
 
-fun first_token (QUOTE s :: _) = hd (String.tokens Char.isSpace s);
+fun first_token (QUOTE s :: _) = hd (String.tokens Char.isSpace (Lib.deinitcomment s));
 val size_of = Lib.total TypeBase.size_of;
 val boolify_of = Lib.total TypeBase.boolify_of;
 

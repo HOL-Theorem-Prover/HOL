@@ -15,7 +15,7 @@ app load
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun first_token (QUOTE s :: _) = hd (String.tokens Char.isSpace s)
+fun first_token (QUOTE s :: _) = hd (String.tokens Char.isSpace (Lib.deinitcomment s))
   | first_token _ = "if_you_can_read_this_then_first_token_probably_failed";
 val size_of = Lib.total TypeBase.size_of;
 val boolify_of = Lib.total TypeBase.boolify_of;
