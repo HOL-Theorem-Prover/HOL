@@ -214,7 +214,7 @@ fun pp_gstk ppstrm  =
                                 (if num_elided = 1 then "" else "s") ^
                                 " elided...");
                     add_newline(); add_newline())),
-                  List.take (rev goals, !show_nsubgoals))
+                  rev (List.take (goals, !show_nsubgoals)))
                end
                else
                  ((fn () => ()), rev goals)
