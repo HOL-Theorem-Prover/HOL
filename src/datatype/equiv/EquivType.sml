@@ -237,7 +237,9 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
                   end
           val def = mk_eq(l,r)
       in
-        Parse.add_rule (Parse.standard_spacing fname fixity);
+        if fixity <> Prefix then
+          Parse.add_rule (Parse.standard_spacing fname fixity)
+        else ();
         new_definition(def_name, def)
      end
   val newdefs = map define_fun fnlist
