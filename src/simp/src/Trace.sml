@@ -7,8 +7,6 @@ val print_thm = Parse.print_thm
 val concl = Thm.concl
 val say = Lib.say
 
-val hol_clock = Timer.startCPUTimer()
-
    (* ---------------------------------------------------------------------
     * Tracing utilities
     * ---------------------------------------------------------------------*)
@@ -58,7 +56,7 @@ val _ = trace_hook :=
                        (say "[";
                         say (Int.toString
                              (Time.toMilliseconds
-                              (#usr (Timer.checkCPUTimer hol_clock))));
+                              (#usr (Timer.checkCPUTimer Globals.hol_clock))));
                         say "]: ";
                         tty_trace a)
                      else ())
