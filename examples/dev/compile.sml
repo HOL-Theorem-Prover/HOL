@@ -13,7 +13,7 @@
 (*
 quietdec := true;
 map load  ["composeTheory","compileTheory", "hol88Lib" (*for subst*)];
-open arithmeticTheory pairLib pairTheory PairRules combinTheory 
+open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
      composeTheory compileTheory;
 quietdec := false;
 *)
@@ -26,7 +26,7 @@ open HolKernel Parse boolLib bossLib compileTheory;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open arithmeticTheory pairLib pairTheory PairRules combinTheory 
+open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
      composeTheory compileTheory;
 
 (*****************************************************************************)
@@ -409,7 +409,7 @@ fun CompileExp tm =
                       handle HOL_ERR _ 
                       => raise ERR "CompileExp" "bad expression"
  in
-  if null args
+  if null args orelse SIMPLE tm
    then ISPEC ``DEV ^tm`` DEV_IMP_REFL
    else
     case fst(dest_const opr) of
@@ -437,7 +437,7 @@ fun CompileExp tm =
  end;
 
 (*****************************************************************************)
-(* CompileProg prog tm --> rewrite tm with prog, then compile result         *)
+(* CompileProg prog tm --> rewrite tm with prog, then compiles the result    *)
 (*****************************************************************************)
 fun CompileProg prog tm =
  let val expand_th = REWRITE_CONV prog tm
@@ -459,7 +459,6 @@ fun Compile th =
  in
   CompileProg [th] func
  end;
-
 
 (*****************************************************************************)
 (*  ``(f = \(x1,x2,...,xn). B)``                                             *)
