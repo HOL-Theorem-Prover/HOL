@@ -107,34 +107,39 @@ end;
 
 
 (*---------------------------------------------------------------------------*
- * The type variables of a lambda term. This is a terrible implementation!   *
+ * The type variables of a lambda term. Tail recursive (from Ken Larsen).    *
  *---------------------------------------------------------------------------*)
 
-fun type_vars_in_term (Fv(_,Ty))         = Type.type_vars Ty
-  | type_vars_in_term (Const(_,GRND _))  = []
-  | type_vars_in_term (Const(_,POLY Ty)) = Type.type_vars Ty
-  | type_vars_in_term (Comb(Rator,Rand))
-    = union (type_vars_in_term Rator) (type_vars_in_term Rand)
-  | type_vars_in_term (Abs(Bvar,Body))
-    = union (type_vars_in_term Bvar) (type_vars_in_term Body)
-  | type_vars_in_term (t as Clos _) = type_vars_in_term (push_clos t)
-  | type_vars_in_term (Bv _) = [];
-
+local fun union [] S k = k S
+        | union S [] k = k S
+        | union (a::rst) S2 k = union rst (insert a S2) k
+      fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
+        | tyV (Bv _) k             = k []
+        | tyV (Const(_,GRND _)) k  = k []
+        | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
+        | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 => tyV Rator 
+                                              (fn q2 => union q2 q1 k))
+        | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 => tyV Bvar
+                                              (fn q2 => union q2 q1 k))
+        | tyV (t as Clos _) k      = tyV (push_clos t) k
+in
+fun type_vars_in_term tm = tyV tm Lib.I
+end;
 
 (*---------------------------------------------------------------------------*
  * The free variables of a lambda term. This could be implemented more       *
  * efficiently, but that would probably break subsequent code.               *
+ * Tail recursive (from Ken Larsen).                                         *
  *---------------------------------------------------------------------------*)
 
-local fun FV (v as Fv _) A   = Lib.insert v A
-        | FV (Comb(f,x)) A   = FV x (FV f A)
-        | FV (Abs(_,Body)) A = FV Body A
-        | FV (t as Clos _) A = FV (push_clos t) A
-        | FV _ A = A
+local fun FV (v as Fv _) A k   = k (Lib.insert v A)
+        | FV (Comb(f,x)) A k   = FV f A (fn q => FV x q k)
+        | FV (Abs(_,Body)) A k = FV Body A k
+        | FV (t as Clos _) A k = FV (push_clos t) A k
+        | FV _ A k = k A
 in
-fun free_vars tm = FV tm []
+fun free_vars tm = FV tm [] Lib.I
 end;
-
 
 (*---------------------------------------------------------------------------*
  * The free variables of a lambda term, in textual order.                    *
@@ -250,28 +255,6 @@ fun existsTYV P =
    in occ end
    handle HOL_ERR _ => raise ERR "existsTYV" "";
 
-(*---------------------------------------------------------------------------*
- * Renaming support. We allow renaming by priming, and by attaching          *
- * numeric subscripts.                                                       *
- *---------------------------------------------------------------------------*)
-
-local fun num2name s i = s^Lib.int_to_string i
-      fun subscripts x s =
-        let val project = num2name (s^x)
-            val cnt = ref 0
-            fun incr() = (cnt := !cnt + 1; project (!cnt))
-        in incr
-        end
-      fun primes s =
-        let val current = ref s
-            fun next () = (current := Lib.prime (!current); !current)
-        in next
-        end
-in
-fun nameStrm s =
-  (case !Globals.priming of NONE => primes | SOME x => subscripts x) s
-end;
-
 
 (*---------------------------------------------------------------------------*
  * Making variables                                                          *
@@ -282,66 +265,63 @@ val mk_var = Fv
 fun inST s = not(null(TermSig.resolve s));
 
 fun mk_primed_var (Name,Ty) =
-   let val next   = nameStrm Name
-       fun spin s = if inST s then spin (next()) else s
-   in mk_var(spin Name, Ty)
-   end;
+  let val next = Lexis.nameStrm Name
+      fun spin s = if inST s then spin (next()) else s
+  in mk_var(spin Name, Ty)
+  end;
+
+(*---------------------------------------------------------------------------*
+ *   "genvars" are a Lisp-style "gensym" for HOL variables.                  *
+ *---------------------------------------------------------------------------*)
 
 local val genvar_prefix = "%%genvar%%"
       fun num2name i = genvar_prefix^Lib.int_to_string i
-      val nameStrm   = Lib.mk_istream (fn x => x+1) 0 num2name
+      val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
 in
 fun genvar ty = Fv(state(next nameStrm), ty)
 
-fun is_genvar (Fv(Name,_)) = String.isPrefix genvar_prefix Name
-  | is_genvar _ = false;
-
 fun genvars  _ 0 = []
   | genvars ty n = genvar ty::genvars ty (n-1);
+
+fun is_genvar (Fv(Name,_)) = String.isPrefix genvar_prefix Name
+  | is_genvar _ = false;
 end;
 
 
 (*---------------------------------------------------------------------------*
  * Given a variable and a list of variables, if the variable does not exist  *
  * on the list, then return the variable. Otherwise, rename the variable and *
- * try again.                                                                *
+ * try again. Note well that the variant uses only the name of the variable  *
+ * as a basis for testing equality. Experience has shown that basing the     *
+ * comparison on both the name and the type of the variable resulted in      *
+ * needlessly confusing formulas occasionally being displayed in interactive *
+ * sessions.                                                                 *
  *---------------------------------------------------------------------------*)
 
-local fun away L incr =
-       let fun vary A [] s = s
-             | vary A (h::t) s =
-                case String.compare(h,s)
-                 of LESS => vary A t s
-                  | EQUAL => vary [] (A@t) (incr())
-                  | GREATER => vary (h::A) t s
-       in vary [] L
-       end
-      fun var_name(Fv(Name,_)) = Name
-        | var_name _ = raise ERR "variant.var_name" "not a variable"
-in
-fun variant A (Fv(Name,Ty)) =
-    let val next = nameStrm Name
-        val awayf = away (map var_name A) next
-        fun loop name =
-           let val s = awayf name
-           in if inST s then loop (next()) else s
-           end
-    in mk_var(loop Name, Ty)
-    end
-  | variant _ _ = raise ERR "variant" "2nd arg. should be a variable"
+fun gen_variant P caller =
+  let fun var_name _ (Fv(Name,_)) = Name
+        | var_name caller _ = raise ERR caller "not a variable"
+      fun vary vlist (Fv(Name,Ty)) =
+          let val next = Lexis.nameStrm Name
+              val L = map (var_name caller) vlist
+              fun away A [] s = s
+                | away A (h::t) s =
+                   case String.compare(h,s)
+                    of LESS => away A t s
+                     | EQUAL => away [] (A@t) (next())
+                     | GREATER => away (h::A) t s
+              fun loop name =
+                 let val s = away [] L name
+                 in if P s then loop (next()) else s
+                 end
+          in mk_var(loop Name, Ty)
+          end
+        | vary _ _ = raise ERR caller "2nd argument should be a variable"
+  in vary
+  end;
 
-
-(*---------------------------------------------------------------------------
-     Returned value may have same name as a constant in the signature.
- ---------------------------------------------------------------------------*)
-
-fun prim_variant [] v = v
-  | prim_variant A (Fv(Name,Ty)) =
-       mk_var(away (map var_name A) (nameStrm Name) Name, Ty)
-  | prim_variant _ _ = raise ERR "prim_variant"
-                                 "2nd arg. should be a variable"
-end;
-
+val variant      = gen_variant inST "variant"
+val prim_variant = gen_variant (fn _ => false) "prim_variant";
 
 (*---------------------------------------------------------------------------
    Normalizing names (before pretty-printing with pp_raw, or trav) and

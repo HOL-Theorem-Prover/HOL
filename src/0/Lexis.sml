@@ -15,9 +15,7 @@
 structure Lexis :> Lexis =
 struct
 
-fun ERR func mesg =
-   Feedback.HOL_ERR{origin_structure="Lexis",
-                    origin_function=func, message=mesg};
+val ERR = Feedback.mk_HOL_ERR "Lexis";
 
 (*---------------------------------------------------------------------------
  * Here we use extra space to get better runtimes. Strings are not exploded;
@@ -67,6 +65,7 @@ fun setup table P =
  * Various familiar predicates, used only to build the tables, so we can
  * afford to write them naively.
  *---------------------------------------------------------------------------*)
+
 val is_alphabetic = Char.isAlpha
 val is_numeric    = Char.isDigit
 
@@ -99,6 +98,7 @@ val is_hol_symbol = in_string hol_symbolics
 val is_sml_symbol = in_string sml_symbolics;
 
 (* Build the character tables *)
+
 val _ = setup hol_symbols is_hol_symbol;
 val _ = setup sml_symbols is_sml_symbol;
 val _ = setup alphabet is_alphabetic;
@@ -173,6 +173,7 @@ fun ok_sml_identifier str =
  * acceptable name. Note that this function does not recognize members of
  * constant families (just those that serve to define such families).
  *---------------------------------------------------------------------------*)
+
 fun allowed_term_constant "let"        = false
   | allowed_term_constant "in"         = false
   | allowed_term_constant "and"        = false
@@ -188,7 +189,7 @@ fun allowed_term_constant "let"        = false
   | allowed_term_constant "0"          = true  (* only this numeral is OK *)
   | allowed_term_constant str =
     if Word8Array.sub(alphabet,ordof(str,0)) = bone then ok_identifier str else
-    if (Word8Array.sub(hol_symbols,ordof(str,0)) = bone) then ok_symbolic str
+    if Word8Array.sub(hol_symbols,ordof(str,0)) = bone then ok_symbolic str
     else false;
 
 
@@ -211,6 +212,29 @@ in
 fun is_string_literal s = String.size s > 1
     andalso (String.substring(s,0,1) = dquote)
     andalso (String.substring(s,String.size s - 1,1) = dquote)
+end;
+
+
+(*---------------------------------------------------------------------------*
+ * Renaming support. We allow renaming by priming, and by attaching          *
+ * numeric subscripts.                                                       *
+ *---------------------------------------------------------------------------*)
+
+local fun num2name s i = s^Lib.int_to_string i
+      fun subscripts x s =
+        let val project = num2name (s^x)
+            val cnt = ref 0
+            fun incr() = (cnt := !cnt + 1; project (!cnt))
+        in incr
+        end
+      fun primes s =
+        let val current = ref s
+            fun next () = (current := Lib.prime (!current); !current)
+        in next
+        end
+in
+fun nameStrm s =
+  (case !Globals.priming of NONE => primes | SOME x => subscripts x) s
 end;
 
 

@@ -8,7 +8,7 @@
 (*                 symtab.sml, which is now gone.                        *)
 (* Modified      : September 22, 1997, Ken Larsen  (functor removal)     *)
 (*                 April 12, 1998, Konrad Slind                          *)
-(*                 July, 2000 Konrad Slind        (functor restoration)  *)
+(*                 July, 2000, Konrad Slind                              *)
 (* ===================================================================== *)
 
 structure Type : RawType =

@@ -35,6 +35,8 @@ fun pp_type mvartype mtype pps ty =
   then case dest_vartype ty 
         of "'a" => add_string "alpha"
          | "'b" => add_string "beta"
+         | "'c" => add_string "gamma"
+         | "'d" => add_string "delta"
          |  s   => add_string (mvartype^quote s)
   else 
   case dest_thy_type ty
