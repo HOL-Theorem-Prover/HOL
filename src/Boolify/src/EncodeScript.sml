@@ -203,28 +203,32 @@ val IS_PREFIX_APPENDS = store_thm
    ++ RW_TAC std_ss [APPEND, IS_PREFIX]);
 
 (*---------------------------------------------------------------------------
-        Datatype of polymorphic n-ary trees.
-
-        A challenging example for boolification.
+        biprefix is a bi-directional version of IS_PREFIX.
  ---------------------------------------------------------------------------*)
 
-val () = Hol_datatype `tree = Node of 'a => tree list`;
+val biprefix_def = Define `biprefix a b = IS_PREFIX a b \/ IS_PREFIX b a`;
 
-val tree_size_def  = fetch "-" "tree_size_def";
-val tree_induction = fetch "-" "tree_induction";
+val biprefix_refl = store_thm
+  ("biprefix_refl",
+   ``!x. biprefix x x``,
+   RW_TAC std_ss [biprefix_def, IS_PREFIX_REFL]);
 
-val tree_ind = store_thm
-  ("tree_ind",
-   ``!p. (!a ts. (!t. MEM t ts ==> p t) ==> p (Node a ts)) ==> (!t. p t)``,
-   GEN_TAC
-   ++ REPEAT DISCH_TAC
-   ++ Suff `(!t. p t) /\ (!l : 'a tree list. EVERY p l)` >> PROVE_TAC []
-   ++ HO_MATCH_MP_TAC tree_induction
-   ++ RW_TAC std_ss [EVERY_DEF]
-   ++ Q.PAT_ASSUM `!x. Q x` MATCH_MP_TAC
-   ++ Induct_on `l`
-   ++ RW_TAC std_ss [EVERY_DEF, MEM]
-   ++ METIS_TAC []);
+val biprefix_append = store_thm
+  ("biprefix_append",
+   ``!a b c d. biprefix (APPEND a b) (APPEND c d) ==> biprefix a c``,
+   RW_TAC std_ss [biprefix_def] ++
+   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
+
+val biprefix_cons = store_thm
+  ("biprefix_cons",
+   ``!a b c d. biprefix (a :: b) (c :: d) = (a = c) /\ biprefix b d``,
+   RW_TAC std_ss [biprefix_def, IS_PREFIX] ++
+   PROVE_TAC []);
+
+val biprefix_appends = store_thm
+  ("biprefix_appends",
+   ``!a b c. biprefix (APPEND a b) (APPEND a c) = biprefix b c``,
+   RW_TAC std_ss [biprefix_def, IS_PREFIX_APPENDS]);
 
 (*---------------------------------------------------------------------------
         An always true predicate for total encodings.
@@ -284,30 +288,6 @@ val wf_pred_def = Define `wf_pred p = ?x. p x`;
 (*---------------------------------------------------------------------------
         A well-formed encoder is prefix-free and injective.
  ---------------------------------------------------------------------------*)
-
-val biprefix_def = Define `biprefix a b = IS_PREFIX a b \/ IS_PREFIX b a`;
-
-val biprefix_refl = store_thm
-  ("biprefix_refl",
-   ``!x. biprefix x x``,
-   RW_TAC std_ss [biprefix_def, IS_PREFIX_REFL]);
-
-val biprefix_append = store_thm
-  ("biprefix_append",
-   ``!a b c d. biprefix (APPEND a b) (APPEND c d) ==> biprefix a c``,
-   RW_TAC std_ss [biprefix_def] ++
-   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
-
-val biprefix_cons = store_thm
-  ("biprefix_cons",
-   ``!a b c d. biprefix (a :: b) (c :: d) = (a = c) /\ biprefix b d``,
-   RW_TAC std_ss [biprefix_def, IS_PREFIX] ++
-   PROVE_TAC []);
-
-val biprefix_appends = store_thm
-  ("biprefix_appends",
-   ``!a b c. biprefix (APPEND a b) (APPEND a c) = biprefix b c``,
-   RW_TAC std_ss [biprefix_def, IS_PREFIX_APPENDS]);
 
 val wf_encoder_def = Define
   `wf_encoder p (e : 'a -> bool list) =
@@ -392,7 +372,8 @@ val encode_sum_def =
    (encode_sum xb yb (INR (y : 'b)) = F :: yb y)`;
 
 val lift_sum_def = Define
-  `lift_sum p1 p2 x = case x of INL x1 -> p1 x1 || INR x2 -> p2 x2`;
+  `lift_sum (p1 : 'a->bool) p2 x =
+   case x of INL x1 -> p1 x1 || INR x2 -> p2 x2`;
 
 val wf_encode_sum = store_thm
   ("wf_encode_sum",
@@ -579,7 +560,7 @@ val wf_pred_bnum_def =
 val wf_pred_bnum_total = store_thm
   ("wf_pred_bnum_total",
    ``!m. wf_pred_bnum m (\x. x < 2 ** m)``,
-   RW_TAC std_ss [wf_pred_bnum_def]
+   RW_TAC std_ss [wf_pred_bnum_def, wf_pred_def]
    ++ Q.EXISTS_TAC `0`
    ++ REWRITE_TAC [ZERO_LESS_EXP, TWO]);
 
@@ -685,8 +666,28 @@ val wf_encode_bnum = store_thm
    PROVE_TAC [wf_encode_bnum_collision_free, wf_pred_bnum_collision_free]);
 
 (*---------------------------------------------------------------------------
-        Polymorphic n-ary trees.
+        Datatype of polymorphic n-ary trees.
+
+        A challenging example for boolification.
  ---------------------------------------------------------------------------*)
+
+val () = Hol_datatype `tree = Node of 'a => tree list`;
+
+val tree_size_def  = fetch "-" "tree_size_def";
+val tree_induction = fetch "-" "tree_induction";
+
+val tree_ind = store_thm
+  ("tree_ind",
+   ``!p. (!a ts. (!t. MEM t ts ==> p t) ==> p (Node a ts)) ==> (!t. p t)``,
+   GEN_TAC
+   ++ REPEAT DISCH_TAC
+   ++ Suff `(!t. p t) /\ (!l : 'a tree list. EVERY p l)` >> PROVE_TAC []
+   ++ HO_MATCH_MP_TAC tree_induction
+   ++ RW_TAC std_ss [EVERY_DEF]
+   ++ Q.PAT_ASSUM `!x. Q x` MATCH_MP_TAC
+   ++ Induct_on `l`
+   ++ RW_TAC std_ss [EVERY_DEF, MEM]
+   ++ METIS_TAC []);
 
 val (encode_tree_def, _) =
   Defn.tprove
