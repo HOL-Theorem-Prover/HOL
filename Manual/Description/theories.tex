@@ -1,0 +1,1636 @@
+\chapter{Commonly-used Theories}\label{HOLtheories}
+
+\index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
+The collection of theories distributed with the \HOL\ system
+\index{ancestry, of HOL system theories@ancestry, of \HOL\ system
+theories}
+is:
+The theories listed in Table \ref{nativeTheories} come
+pre-built in the system (we have omitted a few of the less commonly used
+ones).
+\begin{table}
+\begin{center}
+\begin{tabular}{|r|l|} \hline
+minTheory & the origin theory \\
+boolTheory & definitions of logical operators and basic axioms \\
+combinTheory & combinators \\
+pairTheory & basic theory of pairs \\
+relationTheory & transitive closure and wellfoundedness \\
+numTheory & Peano's axioms derived from the axiom of infinity \\
+prim\_recTheory, & the primitive recursion theorem \\
+arithmeticTheory & Peano arithmetic development \\
+integerTheory & integers \\
+setTheory & sets as a separate type (includes finite sets) \\
+pred\_setTheory & sets as predicates (includes finite sets) \\
+bagTheory & bags (also known as \emph{multisets})\\
+listTheory & lists  \\
+rich\_listTheory & extended theory of lists \\
+optionTheory & the {\tt option} type \\
+finite\_mapTheory & finite maps from $\alpha$ to $\beta$ \\
+ltreeTheory & polymorphic finitely branching trees \\
+sumTheory & disjoint sums \\
+restr\_binderTheory & definitions of binder restrictions \\
+res\_quanTheory & restricted quantifier support \\
+asciiTheory & ascii \\
+stringTheory & strings \\
+wordTheory & ({\it plus several others}) theory of bitstrings \\
+realTheory & ({\it plus several others}) real numbers and analysis \\
+HOLTheory & equivalent to HOL theory from hol88/90\\  \hline
+\end{tabular}
+\caption{Native Theories}\label{nativeTheories}
+\end{center}
+\end{table}
+
+% \begin{center}\index{BASIC-HOL@\ml{BASIC-HOL}}\index{bool, the HOL
+% theory@\ml{bool}, the \HOL\ theory}\index{ind, the theory@\ml{ind},
+% the theory}
+
+\noindent In the rest of this section, each of these theories is briefly
+described.  A complete list of all the definitions and theorems in each
+theory is not given here; the sections that follow provide only an
+overview of the contents of each theory.  For a complete list of all the
+built-in axioms, definitions and theorems in \HOL, see \REFERENCE.
+
+\section{Combinators and the theory {\tt combin}}
+
+\index{function composition, in HOL logic@function composition, in \HOL\
+logic|(}
+
+The theory \ml{combin}\index{combin@\ml{combin}}\index{combinators, in HOL
+logic@combinators, in \HOL\ logic} contains the definitions of function
+composition (infixed \ml{o})\index{ function composition operator, in HOL
+logic@\ml{o} (function composition operator, in \HOL\ logic)|(}
+ and the combinators \ml{S}\index{S, constant in HOL logic@\ml{S}, constant in
+\HOL\ logic}, \ml{K}\index{K, the constant in HOL logic@\ml{K}, the constant in
+\HOL\ logic}
+ and \ml{I}\index{I, constant in HOL logic@\ml{I}, constant in \HOL\ logic}.
+
+
+\begin{hol} \index{K_DEF@\ml{K\_DEF}} \index{S_DEF@\ml{S\_DEF}}
+\index{I_DEF@\ml{I\_DEF}} \begin{verbatim}
+   o_DEF |- !f g. f o g = (\x. f(g x))
+
+   K_DEF |- K = (\x y. x)
+
+   S_DEF |- S = (\f g x. f x(g x))
+
+   I_DEF |- I = S K K \end{verbatim}\end{hol}
+
+
+\noindent The following elementary properties are pre-proved in the theory
+\ml{combin}:
+
+\begin{hol} \index{K_THM@\ml{K\_THM}} \index{S_THM@\ml{S\_THM}}
+\index{I_THM@\ml{I\_THM}} \index{I_o_ID@\ml{I\_o\_ID}} \begin{verbatim}
+   o_THM |- !f g x. (f o g)x = f(g x)
+
+   o_ASSOC |- !f g h. f o (g o h) = (f o g) o h
+
+   K_THM |- !x y. K x y = x
+
+   S_THM |- !f g x. S f g x = f x (g x)
+
+   I_THM |- !x. I x = x
+
+   I_o_ID |- !f. (I o f = f) /\ (f o I = f) \end{verbatim}\end{hol}
+
+Having the symbols \ml{o}, \ml{S}, \ml{K} and \ml{I} as built-in
+constants\index{variables, in HOL logic@variables, in \HOL\ logic!with constant
+names} is sometimes inconvenient because they are often wanted as mnemonic
+names for variables (\eg\ \ml{S} to range over sets and \ml{o} to range over
+outputs).  Variables
+(though not constants) with these names can be used in the current system if
+\ml{o}, \ml{S}, \ml{K} and \ml{I} are first hidden (see Section~\ref{hidden}).
+\index{ function composition operator, in HOL logic@\ml{o} (function
+composition operator, in \HOL\ logic)|)} \index{function composition, in HOL
+logic@function composition, in \HOL\ logic|)}
+
+\section{The theory {\tt relation}}\label{relation}
+
+Mathematical relations can be directly represented in \HOL\ by the type
+{\small\verb+:'a -> 'a -> bool+}. The theory {\small\verb+relation+}
+inductively defines the transitive closure of a relation and also the
+basic notion of a relation being wellfounded. 
+
+\begin{hol} \begin{verbatim}
+   TC_DEF |- !R a b.
+               TC R a b =
+                 !P.
+                   (!x y. R x y ==> P x y) /\ 
+                   (!x y z. P x y /\ P y z ==> P x z) 
+                   ==>
+                     P a b
+   
+   WF_DEF |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
+\end{verbatim}\end{hol}
+
+Wellfoundedness is then used to justify the principle of wellfounded
+induction and also a general recursion theorem. The statement of the 
+recursion theorem requires that the notion of a function restriction be
+defined as well. 
+
+\begin{hol} \begin{verbatim}
+   WF_INDUCTION_THM
+   |- !R:'a -> 'a -> bool. 
+          WF R 
+            ==> !P. (!x. (!y. R y x ==> P y) ==> P x) 
+            ==> !x. P x
+   
+   RESTRICT_DEF |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
+
+   WFREC_COROLLARY
+   |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
+   
+   WF_RECURSION_THM |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
+
+\end{verbatim}\end{hol}
+
+\noindent A few basic combinators for wellfounded relations are also
+provided in this theory.
+
+\begin{hol} \begin{verbatim}
+   Empty_def      |- !x y. Empty x y = F
+   inv_image_def  |- !R f. inv_image R f = \x y. R (f x) (f y)
+
+   WF_Empty       |- WF Empty
+   WF_SUBSET      |- !R P. WF R /\ (!x y. P x y ==> R x y) ==> WF P
+   WF_TC          |- !R. WF R ==> WF (TC R)
+   WF_inv_image   |- !R f. WF R ==> WF (inv_image R f)
+
+\end{verbatim}\end{hol}
+
+\section{Pairs and the type {\tt prod}}\label{prod}
+
+\index{representing types, in HOL logic@representing types, in \HOL\ logic!pair example of|(}
+\index{pairs, in HOL logic@pairs, in \HOL\ logic|(}
+\index{product types!in HOL logic@in \HOL\ logic|(}
+The Cartesian  product  type  operator\index{type operators, in HOL
+logic@type operators, in \HOL\ logic!for pairs}
+\ml{prod}\index{prod@\ml{prod}} is  defined  in  the  theory \ml{pair}.
+Values of type
+{\small\verb%(%}$\sigma_1${\small\verb%,%}$\sigma_2${\small\verb%)prod%} are
+ordered pairs  whose  first  component  has  type  $\sigma_1$  and whose second
+component has type $\sigma_2$.  The \HOL\ parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of pairs}
+converts type expressions of the
+form \ml{`:}$\sigma_1${\small\verb%#%}$\sigma_2$\ml{`}\index{ product type operator, in HOL logic@{\small\verb+#+} (product
+type operator, in \HOL\ logic)} into
+\ml{(}$\sigma_1$\ml{,}$\sigma_2$\ml{)prod}\index{ pair constructor, in HOL
+logic@\ml{,} (pair constructor, in \HOL\ logic)}, and   the   printer
+inverts  this transformation. Pairs\index{pairing constructor, in HOL
+logic@pairing constructor, in \HOL\ logic} are constructed with an infixed
+comma symbol
+
+
+\begin{hol}\begin{verbatim}
+   $, : 'a -> 'b -> 'a # 'b
+\end{verbatim}\end{hol}
+
+\noindent so, for example, if $t_1$ and $t_2$ have types $\sigma_1$ and
+$\sigma_2$
+respectively, then $t_1$\ml{,}$t_2$ is a term with type
+$\sigma_1${\small\verb%#%}$\sigma_2$. It is usual, but not necessary, to write
+pairs within brackets:
+\ml{(}$t_1$\ml{,}$t_2$\ml{)}. The comma symbol associates\index{pairing
+constructor, in HOL logic@pairing constructor, in \HOL\
+logic!associativity of} to the right, so  that
+\ml{(}$t_1$\ml{,}$t_2$\ml{,}$\ldots$\ml{,}$t_n$\ml{)}
+means
+\ml{(}$t_1$\ml{,(}$t_2$\ml{,}$\ldots$\ml{,}$t_n$\ml{))}.
+
+Cartesian products are defined by representing a pair
+{\small\verb%(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%} by the function
+
+\begin{hol}\begin{alltt}
+   \verb!\!a b. (a=\m{t\sb{1}}) /\verb!\! (b=\m{t\sb{2}})
+\end{alltt}\end{hol}
+
+\noindent The
+representing type of $\sigma_1${\small\verb%#%}$\sigma_2$ is thus
+$\sigma_1${\small\verb%->%}$\sigma_2${\small\verb%->bool%}.  To define
+pairs this way, the constants \ml{MK\_PAIR} and
+\ml{IS\_PAIR}\index{IS_PAIR@\ml{IS\_PAIR}} are first defined.
+
+
+\begin{hol}
+\index{MK_PAIR_DEF@\ml{MK\_PAIR\_DEF}}
+\index{IS_PAIR_DEF@\ml{IS\_PAIR\_DEF}}
+\begin{verbatim}
+   MK_PAIR_DEF   |- !x y. MK_PAIR x y = (\a b. (a = x) /\ (b = y))
+
+   IS_PAIR_DEF   |- !p. IS_PAIR p = (?x y. p = MK_PAIR x y)
+\end{verbatim}\end{hol}
+
+\noindent From these two definitions it is easy to prove that:
+
+\begin{hol}\begin{verbatim}
+   |- ?p:'a->'b->bool. IS_PAIR p
+\end{verbatim}\end{hol}
+
+\noindent since {\small\verb%|- IS_PAIR(MK_PAIR x y)%} follows  easily from the
+definition of  \ml{IS\_PAIR}.    The  existence  theorem shown  above is called
+{\small\verb%PAIR_EXISTS%}\index{PAIR_EXISTS@\ml{PAIR\_EXISTS}}.
+ Given this theorem, the type operator
+{\small\verb%prod%} is defined by evaluating:
+
+\begin{hol}\begin{verbatim}
+   new_type_definition(`prod`, "IS_PAIR:(*->**->bool)->bool", PAIR_EXISTS)
+\end{verbatim}\end{hol}
+
+\noindent which results in the definitional axiom\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic}\index{axioms!in bool theory@in \ml{bool} theory} \ml{prod\_TY\_DEF} shown
+below being asserted in the theory \ml{bool}.
+
+\begin{hol}\begin{verbatim}
+   prod_TY_DEF  |- ?rep. TYPE_DEFINITION IS_PAIR rep
+\end{verbatim}\end{hol}
+
+Next, a new constant {\small\verb%REP_prod%} is defined, which
+maps a pair to its representation as a function:
+
+\begin{hol}
+\index{REP_prod@\ml{REP\_prod}}
+\begin{verbatim}
+   REP_prod    |- REP_prod =
+                  (@rep : 'a # 'b -> 'a -> 'b -> bool.
+                    (!p' p''. (rep p' = rep p'') ==> (p' = p'')) /\
+                    (!p. IS_PAIR p = (?p'. p = rep p')))
+\end{verbatim}\end{hol}
+
+The infix constructor `{\small\verb%,%}'
+and the selectors
+{\small\verb%FST:'a#'b->'a%} and {\small\verb%SND:'a#'b->'b%} are then
+defined by the equations shown below.
+
+
+\begin{hol}\index{COMMA_DEF@\ml{COMMA\_DEF}}
+\index{FST_DEF@\ml{FST\_DEF}}
+\index{SND_DEF@\ml{SND\_DEF}}
+\index{pairing constructor, in HOL logic@pairing constructor, in \HOL\ logic!definition of}
+\index{FST, the constant in HOL logic@\ml{FST}, the constant in \HOL\ logic!definition of}
+\index{selectors, in HOL logic@selectors, in \HOL\ logic}
+\begin{verbatim}
+   COMMA_DEF  |- !x y. x,y = (@p. REP_prod p = MK_PAIR x y)
+
+   FST_DEF    |- !p. FST p = (@x. ?y. MK_PAIR x y = REP_prod p)
+
+   SND_DEF    |- !p. SND p = (@y. ?x. MK_PAIR x y = REP_prod p)
+\end{verbatim}\end{hol}
+
+The following standard theorems about pairs follow easily from these
+definitions and the axiom \ml{prod\_TY\_DEF}.  Although these theorems could
+be derived by formal proof, they are (for implementation reasons) asserted as
+axioms in the theory \ml{bool} .
+
+\begin{hol}
+\index{PAIR@\ml{PAIR}}
+\index{FST, the axiom in HOL logic@\ml{FST}, the axiom in \HOL\ logic}
+\index{SND, the axiom in HOL logic@\ml{SND}, the axiom in \HOL\ logic}
+\index{PAIR_EQ@\ml{PAIR\_EQ}}
+\begin{verbatim}
+   PAIR     |- !x. (FST x,SND x) = x
+
+   FST      |- !x y. FST(x,y) = x
+
+   SND      |- !x y. SND(x,y) = y
+
+   PAIR_EQ  |- !x y a b. (x,y = a,b)  =  (x = a) /\ (y = b)
+\end{verbatim}\end{hol}
+\index{pairs, in HOL logic@pairs, in \HOL\ logic|)}
+\index{product types!in HOL logic@in \HOL\ logic|)}
+\index{representing types, in HOL logic@representing types, in \HOL\ logic!pair example of|)}
+\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory|)}
+
+
+\subsection{Paired abstractions}
+\label{HOL-varstruct}
+\index{pairs, in HOL logic@pairs, in \HOL\ logic!in abstractions|(}
+\index{UNCURRY@\ml{UNCURRY}|(}
+
+\index{terms, in HOL logic@terms, in \HOL\ logic!pair|(}
+\index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax|(}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired|(}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!uncurrying, in paired|(}
+The quotation parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of function abstractions}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!abbreviation for multiple}\index{terms, in HOL logic@terms, in \HOL\ logic!function abstraction}
+ will convert\footnote{Only when the theory of pairs is loaded.}
+{\small\verb%"\(%}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%"%}
+to {\small\verb%"UNCURRY(\%}$x_1\ x_2${\small\verb%.%}$t${\small\verb%)"%},
+where the constant {\small\verb%UNCURRY%}
+is defined by:
+
+\begin{hol}\begin{verbatim}
+   UNCURRY f (x,y)  =  f x y
+\end{verbatim}\end{hol}
+
+\noindent See Section~\ref{prod} for more details and an explanation
+of pair terms \ml{($t_1$,$t_2$)}.
+The transformation is done recursively so that, for example,
+
+
+\begin{hol}\begin{alltt}
+   "\verb%\%(\m{x\sb{1}},\m{x\sb{2}},\m{x\sb{3}}).\m{t}"
+\end{alltt}\end{hol}
+
+\noindent is converted to
+
+\begin{hol}\begin{alltt}
+   "UNCURRY \verb%\%\m{x\sb{1}}.UNCURRY(\verb%\%\m{x\sb{2}},\m{x\sb{3}}.\m{t}))"
+\end{alltt}\end{hol}
+
+\noindent More generally,
+the quotation parser repeatedly applies the transformation:
+
+\begin{hol}\begin{alltt}
+   "\verb%\%(\m{v\sb{1}},\m{v\sb{2}}).\m{t}"\m{\quad \leadsto\quad }"UNCURRY(\verb%\%\m{v\sb{1}}.\verb%\%\m{v\sb{2}}.\m{t})"
+\end{alltt}\end{hol}
+
+\noindent until no more variable structures remain. For example:
+
+\begin{flushleft}
+\begin{tabular}{@{}ll}
+{\small\verb%   "\(%}$x${\small\verb%,%}$y${\small\verb%).%}$t${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"UNCURRY(\%}$x\
+y${\small\verb%.%}$t${\small\verb%)"%}\\
+{\small\verb%   "\(%}$x_1${\small\verb%,%}$x_2${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).%}$t${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"UNCURRY(\%}$x_1${\small\verb%.\(%}$x_2${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).%}$t${\small\verb%)"%}\\
+{\small\verb%   "\((%}$x_1${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%),%}$y_1${\small\verb%,%}$\ldots${\small\verb%,%}$y_m${\small\verb%).%}t{\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"UNCURRY(\(%}$x_1${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).\(%}$y_1${\small\verb%,%}$\ldots${\small\verb%,%}$y_m${\small\verb%).%}$t${\small\verb%)"%}\\
+\end{tabular}
+\end{flushleft}
+
+\index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax|)}
+The \HOL\ top-level printer\index{printing, in HOL logic@printing, in \HOL\ logic!of function abstractions}
+ inverts these transformations. For example:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#"\((a,b),(x,y)). a+b < x*y";;
+"\((a,b),x,y). a + b < x * y" : term
+
+#set_flag(`print_uncurry`,false);;
+true : bool
+
+#"\((a,b),(x,y)). (a+b) < (x*y)";;
+"UNCURRY(UNCURRY(\a b. UNCURRY(\x y. (a + b) < (x * y))))" : term
+\end{verbatim}\end{session}
+
+Note that a variable structure like \ml{"(x,y)"} in
+{\small\verb%"\(x,y).x+y"%}
+is not a subterm
+of the abstraction\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!subterms of} in which it occurs; it disappears on parsing\index{binders, in HOL logic@binders, in \HOL\ logic!parsing of}\index{parsing, of HOL logic@parsing, of \HOL\ logic!of binders}. This can
+lead to unexpected errors (accompanied by obscure error messages).
+For example:
+
+\begin{session}\begin{verbatim}
+#"\(x,y).x+y";;
+"\(x,y). x + y" : term
+
+#let p = "(x:num,y:num)";;
+p = "x,y" : term
+
+#"\^p.x+y";;
+evaluation failed     mk_abs in quotation
+\end{verbatim}\end{session}
+
+Furthermore, if the type checker complains, it may print out
+diagnostic messages referring to the transformed term:
+
+\begin{session}\begin{verbatim}
+#"\(x,y). x+1";;
+Indeterminate types:
+    "UNCURRY:(num -> (?1 -> num)) -> (num * ?2 -> num)"
+
+evaluation failed     types indeterminate in quotation
+\end{verbatim}\end{session}
+
+If $b$ is a binder, then
+\ml{"}$b$\ml{(}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%"%}
+is parsed as
+{\small\verb%"$%}$b${\small\verb%(\(%}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%)"%}, and hence transformed as above.
+For example, {\small\verb%"!(x,y).x>y"%} parses to
+{\small\verb%"$!(UNCURRY(\x.\y.$> x y))"%} (where {\small{\tt >}} is an infixed
+constant of the theory {\small\verb%num%} meaning `is greater than')\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired|)}.
+\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!uncurrying, in paired|)}\index{pairs, in HOL logic@pairs, in \HOL\ logic!in abstractions|)}\index{terms, in HOL logic@terms, in \HOL\ logic!pair|)}\index{UNCURRY@\ml{UNCURRY}|)}
+
+
+%A good exercise for the reader would be to understand why this use
+%of \ml{UNCURRY} supports the intuitive meaning suggested by the surface
+%notation.
+
+Applications of paired abstraction to tuples can be $\beta$-reduced using
+\ml{PAIRED\_BETA\_CONV} (see Section~\ref{genbeta}).
+
+
+\subsection{{\tt let}-terms}
+\label{let-exp}
+
+
+The quotation parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of let-terms@of \ml{let}-terms}
+ accepts \ml{let}-terms\index{terms, in HOL logic@terms, in \HOL\ logic!let-@\ml{let}-}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!as abbreviations} superficially similar to those in
+\ML. For example, the following term is allowed:
+
+\begin{hol}\begin{verbatim}
+   "let x = 1 and y = 2 in x+y"
+
+   "let f(x,y) = (x*x)+(y*y) and a = 20*20 and b = 50*49 in f(a,b)"
+\end{verbatim}\end{hol}
+
+\ml{let}-terms are actually abbreviations for ordinary  terms which are
+specially supported by the parser and pretty printer.
+The constant \ml{LET}\index{LET@\ml{LET}} is defined (in the theory \ml{bool}) by:
+
+\begin{hol}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!relation to let-terms@relation to \ml{let}-terms}
+\begin{verbatim}
+   LET = (\f x. f x)
+\end{verbatim}\end{hol}
+
+\noindent and is used to encode \ml{let}-terms in the logic. The parser
+repeatedly applies the transformations:
+
+\bigskip
+
+\noindent
+{\small\begin{tabular}{@{}ll}
+{\small\verb%   "let %}$f\ v_1\ \ldots\ v_n${\small\verb% = %}$t_1${\small\verb% in %}$t_2${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"LET(\%}$f${\small\verb%.%}$t_2$
+{\small\verb%)(\%}$v_1\ \ldots\ v_n${\small\verb%.%}$t_1${\small\verb%)"%}\\
+{\small\verb%   "let (%}$v_1${\small\verb%,%}$\ldots${\small\verb%,%}$v_n${\small\verb%) = %}$t_1${\small\verb% in %}$t_2${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"LET(\(%}$v_1${\small\verb%,%}$\ldots${\small\verb%,%}$v_n${\small\verb%).%}$t_2${\small\verb%)%}$t_1${\small\verb%"%}\\
+{\small\verb%   "let %}$v_1${\small\verb%=%}$t_1${\small\verb% and %}$\ldots${\small\verb% and %}$v_n${\small\verb%=%}$t_n${\small\verb% in %}$t${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"LET(%}$\ldots${\small\verb%(LET(LET(\%}$v_1\ldots v_n${\small\verb%.%}$t${\small\verb%)%}$t_1${\small\verb%)%}$t_2${\small\verb%)%}$\ldots${\small\verb%)%}$t_n${\small\verb%"%}\\
+\end{tabular}}
+
+\bigskip
+
+
+\noindent The printer\index{printing, in HOL logic@printing, in \HOL\ logic!of let-terms@of \ml{let}-terms} inverts these transformations if the flag
+\ml{print\_let} is \ml{true}.  For example:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#"let x = 1 and y = 2 in x+y";;
+"let x = 1 and y = 2 in x + y" : term
+
+#set_flag(`print_let`,false);;
+true : bool
+
+#"let x = 1 and y = 2 in x+y";;
+"LET(LET(\x y. x + y)1)2"
+
+#"let (x,y) = (1,2) in x+y";;
+"LET(UNCURRY(\x y. x + y))(1,2)" : term
+\end{verbatim}\end{session}
+
+Note that, as with uncurried terms, the underlying representation in \HOL\ can
+manifest itself in error messages. For example:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#"let x = y in z";;
+Indeterminate types:  "LET:(?1 -> ?2) -> (?3 -> ?4)"
+
+evaluation failed     types indeterminate in quotation
+\end{verbatim}\end{session}
+
+The reader is recommended to convince himself or herself that the
+translations of \ml{let}-terms represent the intuitive meaning suggested by
+the surface syntax.\index{quotation, in HOL logic@quotation, in \HOL\ logic|)}\index{quotation, in HOL logic@quotation, in \HOL\ logic!of non-primitive terms|)}\index{terms, in HOL logic@terms, in \HOL\ logic!syntax of|)}\index{type checking, in HOL logic@type checking, in \HOL\ logic!special forms in|)}
+
+\ml{let}-terms can be simplified with \ml{let\_CONV} -- see Section~\ref{let-terms}.
+
+\section{Disjoint sums}\label{sum}
+
+The theory \ml{sum}\index{sum@\ml{sum}}
+ defines the binary  disjoint union\index{disjoint union theory, in HOL
+logic@disjoint union theory, in \HOL\ logic|(}  type operator \ml{sum}.
+A type  {\small\verb%(%}$\sigma_1${\small\verb%,%}$\sigma_2${\small\verb%)sum%}
+denotes the  disjoint  union  of  types  $\sigma_1$  and $\sigma_2$.   The type
+operator {\small\verb%sum%} can be defined just as {\small\verb%prod%} was, but
+the details are omitted here.\footnote{The definition of disjoint  unions in
+the
+HOL system is due to Tom Melham. The technical details of this definition can
+be found in~\cite{Melham-banff}.}  The \HOL\ parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of sum types}
+converts
+\ml{":}$\sigma_1${\small\verb%+%}$\sigma_2$\ml{"}\index{ disjoint union
+type operator, in HOL logic@\ml{+} (disjoint union
+type operator, in HOL logic)} into
+\ml{(}$\sigma_1$\ml{,}$\sigma_2$\ml{)sum}, and the printer inverts this.
+
+The standard operations on sums are:
+
+
+\begin{hol}
+\index{disjoint union theory, in HOL logic@disjoint union theory, in \HOL\ logic|)}
+\index{INL, the constant in HOL logic@\ml{INL}, the constant in \HOL\ logic}
+\index{INR, the constant in HOL logic@\ml{INR}, the constant in \HOL\ logic}
+\index{ISL, the constant in HOL logic@\ml{ISL}, the constant in \HOL\ logic}
+\index{ISR, the constant in HOL logic@\ml{ISR}, the constant in \HOL\ logic}
+\index{OUTL, the constant in HOL logic@\ml{OUTL}, the constant in \HOL\ logic}
+\index{OUTR, the constant in HOL logic@\ml{OUTR}, the constant in \HOL\ logic}
+\begin{verbatim}
+   INL  : 'a      -> 'a + 'b
+   INR  : 'b     -> 'a + 'b
+   ISL  : 'a + 'b -> bool
+   ISR  : 'a + 'b -> bool
+   OUTL : 'a + 'b -> 'a
+   OUTR : 'a + 'b -> 'b
+\end{verbatim}\end{hol}
+
+\noindent These are all defined as constants in the theory \ml{sum}.  The
+constants \ml{INL} and \ml{INR} inject into the left and right summands,
+respectively. The constants \ml{ISL} and \ml{ISR} test for membership of the
+left and right summands, respectively. The constants \ml{OUTL} and \ml{OUTR}
+project from a sum to the left and right summands, respectively.
+
+The following two theorems, which are minor variants of each other, are
+pre-proved in the built-in theory \ml{sum}. Each one, on its own, provides a
+complete and abstract characterization of the disjoint sum type.
+
+\begin{hol}
+\index{sum_Axiom@\ml{sum\_Axiom}}
+\index{sum_axiom@\ml{sum\_axiom}}
+\begin{verbatim}
+   sum_axiom   |- !f g. ?! h. (h o INL = f) /\ (h o INR = g)
+
+   sum_Axiom = |- !f g. ?! h. (!x. h(INL x) = f x) /\ (!x. h(INR x) = g x)
+\end{verbatim}\end{hol}
+
+\noindent Also provided as built-in, are the following theorems having to
+do with the discriminator functions \ml{ISL} and \ml{ISR}:
+
+\begin{hol}
+\index{ISL, the theorem in HOL logic@\ml{ISL}, the theorem in \HOL\ logic}
+\index{ISR, the theorem in HOL logic@\ml{ISR}, the theorem in \HOL\ logic}
+\index{ISL_OR_ISR@\ml{ISL\_OR\_ISR}}
+\begin{verbatim}
+   ISL         |- (!x. ISL(INL x)) /\ (!y. ~ISL(INR y))
+
+   ISR         |- (!x. ISR(INR x)) /\ (!y. ~ISR(INL y))
+
+   ISL_OR_ISR  |- !x. ISL x \/ ISR x
+\end{verbatim}\end{hol}
+
+\noindent The \ml{sum} theory also provides the following built-in theorems:
+
+\begin{hol}
+\index{OUTL, the theorem in HOL logic@\ml{OUTL}, the theorem in \HOL\ logic}
+\index{OUTR, the theorem in HOL logic@\ml{OUTR}, the theorem in \HOL\ logic}
+\index{INL, the theorem in HOL logic@\ml{INL}, the theorem in \HOL\ logic}
+\index{INR, the theorem in HOL logic@\ml{INR}, the theorem in \HOL\ logic}
+\begin{verbatim}
+   OUTL        |- !x. OUTL(INL x) = x
+
+   OUTR        |- !x. OUTR(INR x) = x
+
+   INL         |- !x. ISL x ==> (INL(OUTL x) = x)
+
+   INR         |- !x. ISR x ==> (INR(OUTR x) = x)
+\end{verbatim}\end{hol}
+
+\noindent which describe the projection functions \ml{OUTL} and \ml{OUTR}.
+
+\section{The theory {\tt one}}%
+\index{one, the HOL theory@\ml{one}, the \HOL\ theory}%
+\index{one, the HOL type@\ml{one}, the \HOL\ type}%
+
+The theory \ml{one} defines  the type  \ml{":one"} which  contains one element.
+The constant  \ml{one}  is specified  to denote  this element.   The pre-proved
+theorems in the theory \ml{one} are:
+
+\begin{hol}
+\index{one_axiom@\ml{one\_axiom}}
+\index{one, the HOL theorem@\ml{one}, the \HOL\ theorem}
+\index{one_Axiom@\ml{one\_Axiom}}
+\begin{verbatim}
+   one_axiom   |- !(f:'a -> one) (g:'a -> one). f = g
+   one         |- !(v:one). v = one
+   one_Axiom   |- !(e:'a). ?!(fn:one->'a). fn one = e
+\end{verbatim}\end{hol}
+
+\noindent These three theorems are equivalent characterizations of the type
+with only one value.
+
+
+\section{Natural numbers}
+
+\subsection{The theory {\tt num}}
+
+The theory \ml{num}\index{num, the theory in HOL logic@\ml{num}, the theory in \HOL\ logic}
+defines the type \ml{num} of natural numbers to be
+isomorphic to a countable subset of the primitive type \ml{ind}.  In this
+theory, the constants \ml{0}\index{ zero, in HOL logic@\ml{0} ( zero, in \HOL\ logic)}
+ and \ml{SUC} (the successor function) are defined
+and Peano's axioms\index{axioms!in num theory@in \ml{num} theory}\index{Peano's axioms}\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic} pre-proved in the form:
+
+
+\begin{hol}
+\index{NOT_SUC@\ml{NOT\_SUC}}
+\index{INV_SUC@\ml{INV\_SUC}}
+\index{INDUCTION@\ml{INDUCTION}}
+\begin{verbatim}
+   NOT_SUC    |- !n. ~(SUC n = 0)
+   INV_SUC    |- !m n. (SUC m = SUC n) ==> (m = n)
+   INDUCTION  |- !P. P 0 /\ (!n. P n ==> P(SUC n)) ==> (!n. P n)
+\end{verbatim}\end{hol}
+
+In higher order logic, Peano's axioms are sufficient for developing number
+theory because addition and multiplication can be defined. In first order
+logic these must be taken as primitive.  Note also that
+{\small\verb%INDUCTION%}\index{induction rule!for numbers, in HOL logic@for numbers, in \HOL\ logic} could not be stated as a single axiom in
+first order logic because predicates (\eg\ {\small\verb%P%}) cannot be
+quantified.
+
+Uses of the theorem \ml{INDUCTION} are supported by the 
+tactic \ml{numLib.INDUCT\_TAC}\index{INDUCT_TAC@\ml{INDUCT\_TAC}}
+(see the documentation in \REFERENCE\ for details).
+
+\subsection{The theory {\tt prim\_rec}}\label{prim_rec}
+
+\index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL\ logic!automated|(}
+\index{primitive recursion theorem!for numbers|(}
+\index{prim_rec@\ml{prim\_rec}|(}
+In classical logic, unlike domain theory logics such as \PPL\index{PPlambda (same as PPLAMBDA), of LCF system@\ml{PP}$\lambda$ (same as \ml{PPLAMBDA}), of \ml{LCF} system},
+arbitrary recursive definitions\index{recursive definitions, in classical logics} are not allowed. For example, there is no
+function $f$ (of type \ml{num->num}) such that
+
+\begin{hol}
+{\small\verb%   !%}$x${\small\verb%. %}$f$ $x${\small\verb%  =  (%}$f$ $x${\small\verb%) + 1%}
+\end{hol}
+
+\noindent Certain restricted forms of recursive\index{primitive recursive
+functions}
+definition do, however, uniquely
+define functions. An important example are the {\it primitive recursive\/}
+functions.\footnote{In higher order logic, primitive recursion
+is much more powerful than in first order logic;
+for example, Ackermann's function can be defined
+by primitive recursion in higher order logic.} For
+any $x$ and $f$ the {\it primitive
+recursion theorem\/} tells us that there is a unique function
+{\small\verb%fn%} such that:
+
+\begin{hol}
+{\small\verb%   %}\ml{fn}{\small\verb% 0 = %}$x${\small\verb%) /\ (!%}$n${\small\verb%.%}\ml{fn}{\small\verb%(%}\ml{SUC} $n${\small\verb%) = %}$f${\small\verb% (%}\ml{fn} $n${\small\verb%)%} $n${\small\verb%)%}
+\end{hol}
+
+The primitive recursion theorem follows from Peano's\index{Peano's axioms}
+ axioms. When the \HOL\ system is built, the following theorem is proved
+ and stored in the theory {\small\verb%prim_rec%}:
+
+
+\begin{hol}\index{num_Axiom@\ml{num\_Axiom}}
+\index{characterizing theorem!for numbers}
+\begin{verbatim}
+   num_Axiom   |- !x f. ?!fn. (fn 0 = x) /\ (!n. fn(SUC n) = f (fn n) n)
+\end{verbatim}\end{hol}
+
+\noindent The theorem states the validity of primitive recursive
+definitions on the natural numbers: for any \ml{x} and \ml{f} there exists a
+corresponding total function \ml{fn} which satisfies
+the primitive recursive definition whose form is determined by \ml{x} and
+\ml{f}.
+
+\subsubsection{Primitive recursive definitions}\label{num-prim-rec}
+
+\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!primitive recursive|(}
+\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for numbers|(}
+\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system|(}
+The primitive\index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL\ logic!justification of} recursion theorem
+can be used to justify any  definition of a
+function on the  natural numbers  by primitive  recursion.   For example, a
+primitive recursive definition in higher order
+logic of the form
+
+\begin{hol}\begin{alltt}
+   fun 0       x\(\sb{1}\) \m{\dots} x\(\sb{i}\) = \m{f\sb{1}[}x\(\sb{1}\)\m{,\ldots,\,} x\(\sb{i}]\)
+   fun (SUC n) x\(\sb{1}\) \m{\dots} x\(\sb{i}\) = \m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\m{,} x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
+\end{alltt}\end{hol}
+
+\noindent where all the free variables in the  terms $t_1$,
+\dots, $t_i$ are contained in $\{$\ml{n}, $\ml{x}_1$, \dots, $\ml{x}_i\}$,
+is logically equivalent to:
+
+\begin{hol}\begin{alltt}
+   fun 0       = \verb!\!x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
+   fun (SUC n) = \verb!\!x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\m{,}x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
+               = (\verb!\!f n x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\m{,} x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)) (fun n) n
+\end{alltt}\end{hol}
+
+The existence  of  a  recursive  function  \ml{fun} which  satisfies these two
+equations follows directly from the primitive recursion theorem
+\ml{num\_Axiom} shown above.   Specializing the  quantified variables \verb!x!
+and \verb!f!  in  a suitably  type-instantiated version  of \ml{num\_Axiom} so
+that 
+
+\begin{hol}\begin{alltt}
+   x\m{=}\verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)  {\rm and}  f\(=\)\verb!\!f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\))
+\end{alltt}\end{hol}
+
+\noindent yields (ignoring the uniqueness of \ml{fn})
+the existence theorem shown below:
+
+\begin{hol}\begin{alltt}
+   |- ?fn. fn 0       = \verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
+           fn (SUC n) = (\verb!\!f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)) (fn n) n
+\end{alltt}\end{hol}
+
+\noindent This theorem allows a constant \ml{fun} to be introduced (via the
+definitional mechanism of constant specifications---see Section~\ref{conspec})
+to denote the recursive function that satisfies the two equations in the body
+of the theorem. Introducing a constant \ml{fun} to name the function asserted
+to exist by the theorem shown above, and simplifying using $\beta$-reduction,
+yields the following theorem:
+
+\begin{hol}\begin{alltt}
+   |- fun 0       = \verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
+      fun (SUC n) = \verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
+\end{alltt}\end{hol}
+
+\noindent It follows immediately from this theorem that the constant \ml{fun}
+satisfies the primitive recursive defining equations given by the theorem shown
+below:
+
+\begin{hol}\begin{alltt}
+   |- fun 0 x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
+      fun (SUC n) x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
+\end{alltt}\end{hol}
+
+To automate the use of the primitive recursion theorem in deriving recursive
+definitions of this kind, the \HOL\ system provides two functions which,
+together, first do automatic proofs of the existence of primitive recursive
+functions and then make constant specifications to introduce constants that
+denote such functions:
+
+\begin{boxed}
+\index{new_prim_rec_definition@\ml{new\_prim\_rec\_definition}|pin}
+\index{new_infix_prim_rec_definition@\ml{new\_infix\_prim\_rec\_definition}|pin}
+\begin{verbatim}
+   new_prim_rec_definition       : (string # term) -> thm
+   new_infix_prim_rec_definition : (string # term) -> thm
+\end{verbatim}\end{boxed}
+
+\noindent Evaluating
+
+\begin{hol}\begin{alltt}
+   new_prim_rec_definition
+    (`fun_DEF`,
+     "(fun 0 x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
+      (fun (SUC n) x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\))");;
+\end{alltt}\end{hol}
+
+\noindent automatically proves the theorem:
+
+\begin{hol}\begin{alltt}
+   |-  ?fun. !x\(\sb{1}\) \(\dots\) x\(\sb{i}\). fun 0 x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
+             !x\(\sb{1}\) \(\dots\) x\(\sb{i}\). fun (SUC n) x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
+\end{alltt}\end{hol}
+
+\noindent and then declares a new constant \ml{fun} with this property as its
+specification. This constant specification is returned as a theorem by
+\ml{new\_prim\_rec\_definition} and is saved with name \ml{fun\_DEF}\index{DEF@$\ldots$\ml{\_DEF}}
+in the current theory segment. Failure occurs if:
+
+\begin{myenumerate}
+\item \HOL\ cannot prove there is a function satisfying the specification
+(\ie\ if the term supplied to \ml{new\_prim\_rec\_definition}
+ is not a well-formed primitive recursive definition);
+\item any other condition for making a constant specification is violated
+(see the failure conditions for \ml{new\_specification} in
+Section~\ref{conspec}).
+\end{myenumerate}
+
+The \ML\  function \ml{new\_prim\_rec\_definition}  is, in  fact, slightly more
+general than  is  indicated  by  the  example  application  shown  above.    In
+particular, a  curried\index{currying, in ML@currying, in \ML!in primitive recursive definitions}
+primitive  recursive  function defined  using this \ML\
+function can be defined  by primitive  recursion on  any one  of its arguments.
+For example, a curried  addition function  \ml{plus:num->num->num} can be
+defined by primitive recursion on its first argument:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#let PLUS = new_prim_rec_definition
+#           (`PLUS`,
+#            "(plus 0 n = n) /\
+#             (plus (SUC m) n = SUC(plus m n))");;
+PLUS = |- (!n. plus 0 n = n) /\ (!m n. plus(SUC m)n = SUC(plus m n))
+\end{verbatim}\end{session}
+
+\noindent or by primitive recursion on its second argument:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#let PLUS = new_prim_rec_definition
+#            (`PLUS`,
+#             "(plus m 0 = m) /\
+#              (plus m (SUC n) = SUC(plus m n))");;
+PLUS = |- (!m. plus m 0 = m) /\ (!m n. plus m(SUC n) = SUC(plus m n))
+\end{verbatim}\end{session}
+
+The \ML\ function \ml{new\_prim\_rec\_definition} also allows the user to
+partially specify the value of a function defined (possibly recursively) on the
+natural numbers by giving its value for only one of \ml{0} or \ml{SUC n}.  For
+example, a decrement function \ml{DEC}, whose value is specified for only
+positive natural numbers, can be defined using \ml{new\_prim\_rec\_definition}
+as follows
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#let DEC = new_prim_rec_definition
+#            (`DEC`, "DEC (SUC n) = n");;
+DEC = |- !n. DEC(SUC n) = n
+\end{verbatim}\end{session}
+
+\noindent This definition specifies the value of the function \ml{DEC} only for
+positive natural numbers. In particular, the value of \ml{DEC 0} is left
+unspecified, and the only non-trivial property that can be proved to hold of
+the constant \ml{DEC} is the property stated by the theorem returned by the
+call to \ml{new\_prim\_rec\_definition} shown in the session above.
+
+The function  \ml{new\_infix\_prim\_rec\_definition}\index{new_infix_prim_rec_definition@\ml{new\_infix\_prim\_rec\_definition}}
+ can  be used  to define an
+infixed\index{infixes, in HOL logic@infixes, in \HOL\ logic!primitive recursive definitions}
+ function by primitive recursion on the natural numbers.  It takes its
+arguments in the same form as \ml{new\_prim\_rec\_definition} and has similar
+failure conditions; the only difference is that the resulting function constant
+has infix status.  Here, for example, is the recursive definition of the
+constant \ml{+} used by the system:
+
+\begin{hol}\begin{verbatim}
+   new_infix_prim_rec_definition
+    (`ADD`,
+     "($+ 0 n = n) /\
+      ($+ (SUC m) n = SUC($+ m n))")
+\end{verbatim}\end{hol}
+
+\noindent The  {\small\verb%$%}'s  are  there (as documentation)
+  to  indicate  that  the constant
+{\small\verb%+%}\index{ addition, in HOL logic@\ml{+} (addition, in \HOL\ logic)}
+is  being  declared  to  be  an  infix.   Evaluating this \ML\
+expression will  create  the  following  constant specification  in the current
+theory:
+
+\begin{hol}\index{ADD@\ml{ADD}}
+\begin{verbatim}
+   ADD   |- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n))
+\end{verbatim}\end{hol}
+
+For further details about recursive definitions, see
+Section~\ref{prim-rec-defs}, or the \REFERENCE\ documentation
+on
+\ml{new\_prim\_rec\_definition} and \ml{new\_infix\_prim\_rec\_definition}.
+\index{prim_rec@\ml{prim\_rec}|)}
+\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system|)}
+\index{primitive recursion theorem!for numbers|)}
+\index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL\ logic!automated|)}
+\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for numbers|)}
+\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!primitive recursive|)}
+
+\subsubsection{The less-than relation}
+
+The less-than relation `{\small{\tt\verb+<+}}'\index{ less than, in HOL logic@\ml{<} (less than, in \HOL\ logic)}
+  is most  naturally defined by
+primitive recursion. However, it  is  needed for
+the proof of the primitive recursion theorem,
+so  it  must  be  defined
+before definition  by primitive recursion is available.
+The theory \ml{prim\_rec} therefore  contains the following
+non-recursive definition\index{less than, in HOL logic@less than, in \HOL\ logic} of \ml{<}:
+
+\begin{hol}
+\index{LESS@\ml{LESS}}
+\begin{verbatim}
+   LESS  |- !m n. m < n = (?P. (!n'. P(SUC n') ==> P n') /\ P m /\ ~P n)
+\end{verbatim}\end{hol}
+
+\noindent
+This definition says that {\small\verb%"m < n%"} if there exists a set (with
+characteristic function {\small\verb%P%}) that is downward
+closed\footnote{A set of numbers is {\it downward closed\/} if whenever it
+contains the successor of a number, it also contains the number.} and
+contains {\small\verb%m%} but not {\small\verb%n%}.
+
+\subsection{The theory {\tt arithmetic}}
+
+The built-in theory {\small\verb%arithmetic%}\index{number theory, in HOL logic@number theory, in \HOL\ logic}
+\index{arithmetic@\ml{arithmetic}} contains primitive recursive
+definitions of following standard arithmetic operators.
+
+\begin{hol}
+\index{ADD@\ml{ADD}}
+\index{SUB@\ml{SUB}}
+\index{MULT@\ml{MULT}}
+\index{EXP@\ml{EXP}}
+\index{ subtraction, in HOL logic@\ml{-} (subtraction, in \HOL\ logic)}
+\index{ multiplication, in HOL logic@\ml{*} (multiplication, in \HOL\ logic)}
+\begin{verbatim}
+   ADD            |- (!n. 0 + n = n) /\
+                     (!m n. (SUC m) + n = SUC(m + n))
+
+   SUB            |- (!m. 0 - m = 0) /\
+                     (!m n. (SUC m) - n = (m < n => 0 | SUC(m - n)))
+
+   MULT           |- (!n. 0 * n = 0) /\
+                     (!m n. (SUC m) * n = (m * n) + n)
+
+   EXP            |- (!m. m EXP 0 = 1) /\
+                     (!m n. m EXP (SUC n) = m * (m EXP n))
+\end{verbatim}\end{hol}
+
+\noindent It also contains the following non-recursive definitions.
+
+\begin{hol}
+\index{arithmetic, in HOL logic@arithmetic, in \HOL\ logic}
+\index{ greater than, in HOL logic@\ml{>} (greater than, in \HOL\ logic)}
+\index{ less or equal, in HOL logic@\ml{<=} (less or equal, in \HOL\ logic)}
+\index{ greater or equal, in HOL logic@\ml{>=} (greater or equal, in \HOL\ logic)}
+\index{MOD@\ml{MOD}}
+\index{DIV@\ml{DIV}}
+\begin{verbatim}
+   GREATER        |- !m n. m > n = n < m
+
+   LESS_OR_EQ     |- !m n. m <= n = m < n \/ (m = n)
+
+   GREATER_OR_EQ  |- !m n. m >= n = m > n \/ (m = n)
+
+   DIVISION       |- !n. 0 < n ==> (!k. (k = ((k DIV n) * n) + (k MOD n)) /\
+                                        (k MOD n) < n)
+\end{verbatim}\end{hol}
+
+An \adhoc\ but useful collection of over a hundred elementary theorems of
+arithmetic are pre-proved when \HOL\ is built and stored in the theory
+{\small\verb%arithmetic%}.  Each theorem will be autoloaded when its name is
+first mentioned during any \HOL\ session. For a complete list of available
+theorems, see \REFERENCE.
+
+\subsection{The theory {\tt numeral}}\label{numeral}\index{numeral,
+the construction of in HOL logic@\ml{numeral}, the construction of in \HOL\ logic}
+
+The type \ml{:num}\index{num, the type in \HOL\
+  logic@\ml{num}, the type in \HOL\ logic}, is typically thought of as
+  being supplied with an infinite collection of numerals: \ml{1},
+  \ml{2}, \ml{3}, \etc.  However, the \HOL\ logic has no way to define
+  such infinite families of constants, thus all numerals other than $0$ 
+  are actually built up from the constants introduced by the following 
+  definitions:
+\begin{itemize}
+\item $\vdash \forall x.\, \ml{NUMERAL}(x) = x$
+\item $\vdash \forall x.\, \ml{NUMERAL\_BIT1}(x) = 2x + 1$
+\item $\vdash \forall x.\, \ml{NUMERAL\_BIT2}(x) = 2x + 2$
+\item $\vdash \ml{ALT\_ZERO} = 0$
+\end{itemize}
+
+\noindent For example, the numeral $5$ is represented by the term
+\[
+   \ml{NUMERAL}(\ml{NUMERAL\_BIT1}(\ml{NUMERAL\_BIT2}(\ml{ALT\_ZERO})))
+\]
+but the \HOL\ parser and pretty-printer make such terms
+appear as numerals. This binary representation for numerals allows for
+asymptotically efficient calculation. Theorems supporting arithmetic 
+calculations involving numerals can be found in the \ml{numeral} theory;
+these are mechanized by the \ml{reduce} library.
+
+Numerals are related to numbers via the derived inference rule
+\ml{num\_CONV}, found in the \ml{numLib} library.
+
+\begin{boxed}
+\index{num_CONV@\ml{num\_CONV}|pin}
+\begin{verbatim}
+   numLib.num_CONV : term -> thm
+\end{verbatim}\end{boxed}
+
+\noindent \ml{num\_CONV} can be used to generate the ``\ml{SUC}''
+equation for any non-zero numeral.  For example:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+- load "numLib"; open numLib;
+
+- num_CONV (Term `1`);
+> val it = |- 1 = SUC 0 : thm
+
+- num_CONV (Term `2`);
+> val it = |- 2 = SUC 1 : thm
+
+- num_CONV (Term `3141592653`);
+> val it = |- 3141592653 = SUC 3141592652 : thm
+\end{verbatim}\end{session}
+
+\noindent The \ml{num\_CONV} function works purely by inference, using
+the definitions provided above.\footnote{In previous versions of \HOL,
+\ml{num\_CONV} would not prove its result, which was not in keeping with
+the \LCF\ approach, and which moreover made \ml{num\_CONV} dependent on
+the underlying implementation of numbers. This made \ml{num\_CONV}
+incomplete on \ML\ systems without arbitrary-sized numbers.}
+
+When other numeric theories are loaded (such as those for the reals or
+integers), numerals are overloaded so that the numeral {\small\verb+1+} can
+actually stand for a natural number, an integer or a real value.  In
+order to precisely specify the desired type, the user can use single
+character suffixes (`\ml{n}' for the natural numbers, and `\ml{i}' for
+the integers): 
+
+\begin{session}
+\begin{verbatim}
+- load "integerTheory";
+> val it = () : unit
+
+- Term`2`;
+<<HOL message: more than one resolution of overloading was possible.>>
+> val it = `2` : term
+
+- type_of it;
+> val it = `:int` : hol_type
+
+- Term`2n`;
+> val it = `2` : term
+
+- type_of it;
+> val it = `:num` : hol_type
+
+- type_of (Term `42i`);
+> val it = `:int` : hol_type
+\end{verbatim}\end{session}
+
+Question: what does $42i$ mean? There's a different map for the
+integers. Need to discuss it in the theory of integers.
+
+Question: are the character suffixes recognized by the direct
+construction routines?
+
+Question: how are new character suffixes created?
+
+\section{Integers}
+\section{Real numbers and analysis}
+
+\section{Lists}
+
+\subsection{The theory {\tt list}}\label{avra_list}\index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL\ logic}
+
+\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated for lists|(}
+\index{types, in HOL logic@types, in \HOL\ logic!tools for construction of}
+\index{lists, in HOL logic@lists, in \HOL\ logic|(}
+\index{list theory, in HOL logic@\ml{list} theory, in \HOL\ logic|(}
+\index{ lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL\ logic)|(}
+The theory \ml{list} introduces the unary type operator \ml{list} by a type
+definition.\footnote{For details of the definition,
+see~\cite{HOL-paper,Melham-banff}.}  The standard list processing functions
+are then defined on this type:
+
+\begin{hol}
+\index{NIL@\ml{NIL}}
+\index{CONS@\ml{CONS}}
+\index{HD, the constant in HOL logic@\ml{HD}, the constant in \HOL\ logic}
+\index{TL, the constant in HOL logic@\ml{TL}, the constant in \HOL\ logic}
+\index{NULL, the constant in HOL logic@\ml{NULL}, the constant in \HOL\ logic}
+\begin{verbatim}
+   NIL  : 'a list
+   CONS : 'a -> 'a list -> 'a list
+   HD   : 'a list -> 'a
+   TL   : 'a list -> 'a list
+   NULL : 'a list -> bool
+\end{verbatim}\end{hol}
+
+The \HOL\ parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of list expressions} has been specially  modified to  parse the expression
+ {\small\verb%[]%} into
+{\small\verb%NIL%} and to parse the expression
+{\small\verb%[%}$t_1${\small\verb%;%}$t_2${\small\verb%;%}$\ldots${\small\verb%;%}$t_n${\small\verb%]%}
+into {\small\verb%CONS %}$t_1${\small\verb% (CONS %}$t_2 \cdots\
+${\small\verb%(CONS %}$t_n${\small\verb%  NIL)%}$\  \cdots\ ${\small\verb%)%}.
+The \HOL\ printer\index{printing, in HOL logic@printing, in \HOL\ logic!of list expressions}
+ reverses these transformations.
+
+The functions \ml{NIL} and \ml{CONS} are defined in terms of the representing
+type of lists. From their definitions, the following fundamental theorems about
+lists\index{list theorems, in HOL logic@list theorems, in \HOL\ logic|(}
+are proved and stored in the theory \ml{list}.
+
+\begin{hol}
+\index{list_Axiom@\ml{list\_Axiom}}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic}
+\index{axioms!in list theory@in \ml{list} theory}
+\index{list_INDUCT@\ml{list\_INDUCT}}
+\index{list_CASES@\ml{list\_CASES}}
+\index{CONS_11@\ml{CONS\_{11}}}
+\index{NOT_NIL_CONS@\ml{NOT\_NIL\_CONS}}
+\index{NOT_CONS_NIL@\ml{NOT\_CONS\_NIL}}
+\index{characterizing theorem!for lists}
+\begin{verbatim}
+   list_Axiom    |- !x f. ?!fn.(fn[] = x) /\ (!h t. fn(CONS h t) = f(fn t)h t)
+
+   list_INDUCT   |- !P. P[] /\ (!t. P t ==> (!h. P(CONS h t))) ==> (!l. P l)
+
+   list_CASES    |- !l. (l = []) \/ (?t h. l = CONS h t)
+
+   CONS_11       |- !h t h' t'. (CONS h t = CONS h' t') = (h = h') /\ (t = t')
+
+   NOT_NIL_CONS  |- !h t. ~([] = CONS h t)
+
+   NOT_CONS_NIL  |- !h t. ~(CONS h t = [])
+\end{verbatim}\end{hol}
+
+The theorem  \ml{list\_Axiom}  shown  above  is  analogous   to  the  primitive
+recursion theorem\index{primitive recursion theorem!for lists} on the
+natural numbers discussed above in
+Section~\ref{num-prim-rec}.  It  states  the  validity  of  primitive recursive
+definitions on lists, and can be used to justify any such definition.  The \ML\
+function
+
+\begin{boxed}
+\index{new_recursive_definition@\ml{new\_recursive\_definition}|pin}
+\begin{verbatim}
+   new_recursive_definition : fixity -> thm -> string -> term -> thm
+\end{verbatim}\end{boxed}
+
+\noindent uses this theorem to do automatic\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system}
+ proofs of the existence of primitive
+recursive functions on lists and then make constant specifications to introduce
+constants that  denote  such  functions.  For example, the \HOL\ system defines
+a length function, \ml{LENGTH}, on lists by the primitive recursive
+definition on lists shown below:
+
+\begin{hol}\begin{verbatim}
+   new_recursive_definition Prefix list_Axiom "LENGTH"
+      (Term `(LENGTH NIL = 0) /\
+             (!h t. LENGTH (h::t) = SUC (LENGTH t))`)
+\end{verbatim}\end{hol}
+
+\noindent When this \ML\
+expression is evaluated, \HOL\ uses \ml{list\_Axiom} to prove existence
+of a function that satisfies the given primitive recursive definition,
+introduces a constant to name this function using a constant specification, and
+stores the resulting theorem:
+
+\begin{hol}\begin{verbatim}
+    LENGTH   |- (LENGTH[] = 0) /\ (!h t. LENGTH(h::t) = SUC(LENGTH t))
+\end{verbatim}\end{hol}
+
+\noindent in the current theory (in this case, the theory \ml{list}).
+
+The predicate \ml{NULL}  and  the
+selectors \ml{HD} and  \ml{TL} are  defined\index{list definitions, in HOL logic@list definitions, in \HOL\ logic}
+ in  the theory  \ml{list} by the
+specifications:
+
+
+\begin{hol}
+\index{NULL, the definition in HOL logic@\ml{NULL}, the definition in \HOL\ logic}
+\index{HD, the definition in HOL logic@\ml{HD}, the definition in \HOL\ logic}
+\index{TL, the definition in HOL logic@\ml{TL}, the definition in \HOL\ logic}
+\begin{verbatim}
+   NULL |- NULL[] /\ (!h t. ~NULL(CONS h t))
+
+   HD   |- !h t. HD(CONS h t) = h
+
+   TL   |- !h t. TL(CONS h t) = t
+\end{verbatim}\end{hol}
+
+\noindent The following primitive recursive definitions of functions on lists
+are also made in the theory \ml{list}:
+
+
+\begin{hol}
+\index{SUM, the theorem in HOL logic@\ml{SUM}, the theorem in \HOL\ logic}
+\index{APPEND, the theorem in HOL logic@\ml{APPEND}, the theorem in \HOL\ logic}
+\index{concatenation, of lists!in HOL logic@in \HOL\ logic}
+\index{FLAT, the theorem in HOL logic@\ml{FLAT}, the theorem in \HOL\ logic}
+\index{LENGTH, the theorem in HOL logic@\ml{LENGTH}, the theorem in \HOL\ logic}
+\index{MAP, the theorem in HOL logic@\ml{MAP}, the theorem in \HOL\ logic}
+\index{EL, the theorem in HOL logic@\ml{EL}, the theorem in \HOL\ logic}
+
+\index{SUM, the constant in HOL logic@\ml{SUM}, the constant in \HOL\ logic}
+\index{APPEND, the constant in HOL logic@\ml{APPEND}, the constant in \HOL\ logic}
+\index{FLAT, the constant in HOL logic@\ml{FLAT}, the constant in \HOL\ logic}
+\index{LENGTH, the constant in HOL logic@\ml{LENGTH}, the constant in \HOL\ logic}
+\index{MAP, the constant in HOL logic@\ml{MAP}, the constant in \HOL\ logic}
+\index{EL, the constant in HOL logic@\ml{EL}, the constant in \HOL\ logic}
+\index{EVERY, the HOL constant@\ml{EVERY}, the \HOL\ constant}
+\index{EVERY_DEF@\ml{EVERY\_DEF}}
+\begin{verbatim}
+   SUM        |- (SUM [] = 0) /\ (!h t. SUM(h::t) = h + SUM t)
+
+   APPEND     |- (!l. APPEND [] l = l) /\
+                 (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)
+
+   FLAT       |- (FLAT[] = []) /\ (!h t. FLAT(h::t) = APPEND h (FLAT t))
+
+   LENGTH     |- (LENGTH [] = 0) /\ (!h t. LENGTH (h::t) = SUC(LENGTH t))
+
+   MAP        |- (!f. MAP f [] = []) /\
+                 (!f h t. MAP f (h::t) = f h::MAP f t)
+
+   EL         |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n)l = EL n (TL l))
+
+   EVERY_DEF  |- (!P. EVERY P [] = T) /\
+                 (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
+\end{verbatim}\end{hol}
+
+\noindent For a complete list of available theorems in
+{\small\verb+listTheory+}, see \REFERENCE. 
+
+\index{list theorems, in HOL logic@list theorems, in \HOL\ logic|)} \index{
+lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL\
+logic)|)} \index{list theory, in HOL logic@\ml{list} theory, in \HOL\ logic|)}
+\index{lists, in HOL logic@lists, in \HOL\ logic|)} \index{recursive
+definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated for
+lists|)}
+
+\subsection{The theory {\tt rich\_list}}\label{rich_list}
+
+The theory {\small\verb+list+} is relatively compact, largely because of
+how the system developed. An extensive theory of lists can be found in 
+{\small\verb+rich_listTheory+}, in which the following
+well-known functions over lists are defined:
+
+\begin{hol}
+\begin{verbatim}
+\end{verbatim}\end{hol}
+
+A gazillion theorems are proved about them too.
+
+\section{Trees}
+
+The theories {\tt tree} and {\tt ltree} \index{recursive
+definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for
+trees|(}
+
+\index{labelled tree theory, in HOL logic@labelled \ml{tree} theory, in \HOL\
+logic|(} The theories \ml{tree}\index{tree, the HOL theory@\ml{tree}, the \HOL\
+theory}
+ and \ml{ltree}\index{ltree, the HOL theory@\ml{ltree}, the \HOL\ theory|(}
+ contain the definitions of two structurally-isomorphic types of
+finitely-branching ordered trees.  The types defined in these theories are used
+by Tom Melham's\index{Melham, T.} type definition package (see
+Section~\ref{types-package}) to construct representations for arbitrary
+concrete recursive types.  The following is a summary of the main
+theorems which are available in the theories \ml{tree} and \ml{ltree},
+and which may be of use in certain specialized applications.  For full
+details of the logical basis for these two theories, see~\cite{Melham-banff}.
+
+\subsection{The theory {\tt tree}}
+
+In the theory \ml{tree}, a type \ml{tree}\index{tree, the HOL type@\ml{tree},
+the \HOL\ type} is defined to denote the set of all ordered trees whose nodes
+can branch any (finite) number of times.  A constructor function
+
+\index{node@\ml{node}} \begin{hol}\begin{verbatim}
+   node : (tree)list -> tree \end{verbatim}\end{hol}
+
+\noindent is then defined in the theory \ml{tree}.  This function can be used
+to construct any tree-structured value of type \ml{tree}.  The expression
+\ml{"node []"} denotes the tree consisting of a single leaf node with no
+subtrees.  If $tl\ml{:(tree)list}$ is a non-empty list of trees, then the term
+$\ml{"node }tl\ml{"}$ denotes the tree whose immediate subtrees are the trees
+in the list $tl$.  Using \ml{node}, it is possible to construct a tree of any
+shape.  For example, the tree
+
+\begin{center}
+{\setlength{\unitlength}{0.75mm}
+\begin{picture}(60,25)
+\thicklines
+\put(10,10){\makebox(0,0){$\bullet$}}
+\put(30,10){\makebox(0,0){$\bullet$}}
+\put(50,10){\makebox(0,0){$\bullet$}}
+\put(30,20){\makebox(0,0){$\bullet$}}
+\put(44,0){\makebox(0,0){$\bullet$}}
+\put(56,0){\makebox(0,0){$\bullet$}}
+\put(30,20){\line(0,-1){10}}
+\put(30,20){\line(2,-1){20}}
+\put(30,20){\line(-2,-1){20}}
+\put(50,10){\line(3,-5){6}}
+\put(50,10){\line(-3,-5){6}}
+\end{picture}}
+\end{center}
+
+\noindent is denoted by the term
+\ml{"node[node[]; node[]; node[node[]; node[]]"}.
+
+The next two theorems follow from the formal definition of \ml{node} and
+are stored in the theory \ml{tree}:
+
+\begin{hol}
+\index{node_11@\ml{node\_{11}}}
+\index{tree_Induct@\ml{tree\_Induct}}
+\index{induction rule!for trees, in HOL logic@for \ml{trees}, in \HOL\ logic}
+\begin{verbatim}
+   node_11      |- !tl1 tl2. (node tl1 = node tl2) = (tl1 = tl2)
+   tree_Induct  |- !P. (!tl. EVERY P tl ==> P(node tl)) ==> (!t. P t)
+\end{verbatim}\end{hol}
+
+\noindent These  two  theorems are  analogous to  the Peano\index{Peano's axioms}  postulates for the
+natural numbers, and are used to prove the  following abstract characterization
+of the defined type \ml{tree}.
+
+
+\begin{hol}
+\index{tree_Axiom@\ml{tree\_Axiom}}
+\index{characterizing theorem!for finitely-branching ordered trees}
+\begin{verbatim}
+   tree_Axiom  |- !f. ?! fn. !tl. fn(node tl) = f(MAP fn tl)tl
+\end{verbatim}\end{hol}
+
+\noindent This theorem states the validity of general `primitive recursive'
+definitions of functions over finitely-branching ordered trees.
+
+\subsection{The theory {\tt ltree}}
+
+In the theory \ml{ltree}\index{ltree@$\ldots$\ml{ltree}}, a type of {\it
+labelled\/} trees (called \ml{'a ltree}) is defined. Labelled trees have the
+same sort of structure as values of the defined type \ml{tree} discussed above.
+The only difference is that a tree of type \ml{'a ltree} has a value or `label'
+of type \ml{'a} associated with each of its nodes.  A constructor
+
+\begin{hol}
+\index{Node@\ml{Node}}
+\begin{verbatim}
+   Node : 'a -> 'a ltree list -> 'a ltree
+\end{verbatim}\end{hol}
+
+\noindent is defined in the theory \ml{ltree}.  The function \ml{Node}
+constructs labelled trees by mapping a label of type \ml{'a} and a list of
+labelled subtrees to a labelled tree of type \ml{'a ltree}.
+The following theorems  about labelled trees are pre-proved and stored in the
+theory \ml{ltree}.
+
+
+\begin{hol}
+\index{Node_11@\ml{Node\_{11}}}
+\index{ltree_Induct@\ml{ltree\_Induct}}
+\index{ltree_Axiom@\ml{ltree\_Axiom}}
+\begin{verbatim}
+   Node_11       |- !v1 v2 trl1 trl2.
+                    (Node v1 trl1 = Node v2 trl2) = (v1 = v2) /\ (trl1 = trl2)
+   ltree_Induct  |- !P. (!t. EVERY P t ==> (!h. P(Node h t))) ==> (!l. P l)
+   ltree_Axiom   |- !f. ?! fn. !v tl. fn(Node v tl) = f(MAP fn tl)v tl
+\end{verbatim}\end{hol}
+
+\noindent These  theorems  are  analogous to  their counterparts  in the theory
+\ml{tree} discussed  above.    The theorems  \ml{Node\_{11}}
+and \ml{ltree\_Induct} amount to a Peano-type characterization of labelled
+trees, and the theorem \ml{ltree\_Axiom} is a primitive recursion theorem for
+labelled trees.
+\index{labelled tree theory, in HOL logic@labelled \ml{tree} theory, in \HOL\ logic|)}
+\index{ltree, the HOL theory@\ml{ltree}, the \HOL\ theory|)}
+\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for trees|)}
+
+
+\section{Partial functions and the {\tt option} type}
+\section{Finite maps}
+\section{Strings}
+\subsection{The theory {\tt ascii}}
+\subsection{The theory {\tt string}}
+\section{Sets}
+\subsection{The theory {\tt set}}
+\subsection{The theory {\tt pred\_set}}
+\subsection{The theory {\tt finset}}
+\subsection{Syntax for sets}\index{set theory notation}
+
+The special purpose set-theoretic notations
+{\small\verb%"{%}$t_1,t_2,\ldots,t_n${\small\verb%}"%} and
+{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%} are available.
+The normal interpretation of the former is the finite set containing
+$t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
+is the set of all $t$s such that $p$.
+
+For example,
+\begin{hol}\begin{verbatim}
+   "{1,2,3,4}"
+\end{verbatim}\end{hol}
+
+\noindent parses to
+
+\begin{hol}\begin{verbatim}
+   "1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))"
+\end{verbatim}\end{hol}
+
+\noindent Similarly, {\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%}
+parses to:
+
+\medskip
+
+\noindent{\small
+{\verb%   `%}}{\small{\verb%GSPEC(\(%}$x_1${\verb%,%}$\ldots${\verb%,%}$x_n${\verb%).(%}$t${\verb%,%}$p${\verb%))"%}
+}
+
+\medskip
+
+\noindent where $x_1$, $\ldots$ , $x_n$ are the free variables occurring in both $t$
+and $p$.  If there are no such free variables then an error results.
+The order in which the variables are listed in the variable structure
+of the paired abstraction is an unspecified function of the structure
+of $t$ (it is approximately left to right).
+
+For example,
+
+\begin{hol}\begin{verbatim}
+   "{x+y | (x < y) /\ (y < z)}"
+\end{verbatim}\end{hol}
+
+\noindent parses to:
+
+\begin{hol}\begin{verbatim}
+   "GSPEC(\(x,y). ((x+y), (x < y) /\ (y < z)))"
+\end{verbatim}\end{hol}
+
+\noindent where \ml{GSPEC} is defined by:
+
+\begin{hol}\begin{verbatim}
+   |- !f. GSPEC f = SPEC(\x. ?y. x,T = f y)
+\end{verbatim}\end{hol}
+
+\noindent and \ml{SPEC} abstracts a predicate to a set (it is the abstraction
+bijection used in the definition of the type operator \ml{set}).
+Other examples are:
+
+\begin{hol}\begin{verbatim}
+   "{x+y+z | (x < y) /\ (y < z)}"
+\end{verbatim}\end{hol}
+
+\noindent will parse to:
+
+\begin{hol}\begin{verbatim}
+   "GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))"
+\end{verbatim}\end{hol}
+
+\noindent and
+
+\begin{hol}\begin{verbatim}
+   "{x+y+w | (x < y) /\ (y < z)}"
+\end{verbatim}\end{hol}
+
+\noindent will parse to:
+
+\begin{hol}\begin{verbatim}
+   "GSPEC(\(x,y). (x+(y+w), (x < y /\ y < z)))"
+\end{verbatim}\end{hol}
+
+\section{Multisets}
+
+\section{Restricted binders}\label{res-quant}
+
+\index{types, in HOL logic@types, in \HOL\ logic!dependent}
+\index{dependent types in HOL logic@dependent types in \HOL\ logic}
+\index{quantifiers!restricted}
+
+The theory \ml{res\_quan} contains the definitions of the constants
+{\small\verb!RES_FORALL!}, {\small\verb!RES_EXISTS!},
+{\small\verb!RES_SELECT!}, and {\small\verb!RES_ABSTRACT!},
+which are used to support restricted
+quantification\index{quantifiers!restricted} in the \HOL\ logic.  This
+implements a method of simulating subtypes and dependent types with
+predicates. The definitions are:
+
+\begin{hol}
+\index{RES_FORALL@\ml{RES\_FORALL}}
+\index{RES_EXISTS@\ml{RES\_EXISTS}}
+\index{RES_SELECT@\ml{RES\_SELECT}}
+\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}
+\index{ARB@\ml{ARB}}
+\begin{verbatim}
+   RES_FORALL   |- !P B. RES_FORALL P B = (!x. P x ==> B x)
+
+   RES_EXISTS   |- !P B. RES_EXISTS P B = (?x. P x /\ B x)
+
+   RES_SELECT   |- !P B. RES_SELECT P B = (@x. P x /\ B x)
+
+   RES_ABSTRACT |- !P B. RES_ABSTRACT P B = (\x. if P x then B x else ARB)
+\end{verbatim}\end{hol}
+
+
+The new syntax automatically translates as follows:
+
+\begin{hol}
+{\small\verb%   \%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_ABSTRACT %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+{\small\verb%   !%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_FORALL   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+{\small\verb%   ?%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_EXISTS   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+{\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_SELECT   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}
+\end{hol}
+
+Anything can be written between the binder and `\ml{::}' that can be
+written between the binder and `\ml{.}`. See the examples below.
+
+Currently no derived rules are provided to support this notation, so
+any inferences will need to work on the underlying semantic
+representation.
+
+User-defined binders can also have restricted forms, which are set up
+with the function:
+
+\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}|pin}
+\begin{verbatim}
+   associate_restriction : (string * string) -> *
+\end{verbatim}\end{boxed}
+
+
+\noindent If \m{c} is the name
+of a binder and \ml{RES\_}\m{c} is the name of a suitable constant (which
+must be explicitly defined), then executing:
+
+\begin{hol}
+{\small\verb%   associate_restriction(`%}$c${\small\verb%`, `RES_%}$c${\small\verb%`)%}
+\end{hol}
+
+\noindent will cause the parser and pretty-printer to support:
+
+\begin{hol}
+{\small\verb%   %}$c$ $v${\small\verb%::%}$P${\small\verb%. %}$B${\small\verb%    <---->   RES_%}$c$ $P${\small\verb% (\%}$v${\small\verb%. %}$B${\small\verb%)%}
+\end{hol}
+
+Here is an example session:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#"!x y::P. x<y";;
+"!x y :: P. x < y" : term
+
+#set_flag(`print_restrict`, false);;
+true : bool
+
+#"!x y::P. x<y";;
+"RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
+
+#"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
+"RES_EXISTS
+ (\(m,n). m < n)
+ (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
+: term
+
+#"\x y z::P.[0;x;y;z]";;
+"RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
+: term
+\end{verbatim}\end{session}
+
+A conversion that rewrites away the constants \ml{RES\_ABSTRACT},
+\ml{RES\_FORALL}, \ml{RES\_EXISTS} and \ml{RES\_SELECT} is:
+
+\begin{hol}\begin{verbatim}
+   let RESTRICT_CONV =
+        (PURE_REWRITE_CONV [definition `bool` `RES_ABSTRACT`;
+                            definition `bool` `RES_FORALL`;
+                            definition `bool` `RES_EXISTS`;
+                            definition `bool` `RES_SELECT`])
+        THENC (DEPTH_CONV BETA_CONV)
+\end{verbatim}\end{hol}
+
+\noindent This is a bit unsatisfactory, as is shown by the artificial
+example below:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
+t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
+
+#RESTRICT_CONV t;;
+|- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
+   (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
+\end{verbatim}\end{session}
+
+The variable $x$ in the definitions of the constants
+\ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
+\ml{RES\_SELECT} gets confused with the variable in the supplied term.
+This can be avoided by changing \ml{RESTRICT\_CONV} to perform
+explicit alpha-conversion. For example, by implementing a conversion:
+
+\begin{hol}
+{\small\verb%   RES_FORALL %}$P${\small\verb% (\%}$v$\ml{.}$B$\ml{[}$v$\ml{])  ---->  !}$v$\ml{. }$P$ $v$\ml{ ==> }$B$\ml{[}$v$\ml{]}
+\end{hol}
+
+\noindent Dealing with the case when
+$v$ is a variable structure is also desirable. For example:
+
+\begin{session}\begin{verbatim}
+#let t1 = "!(m,n)::P. m<n";;
+t1 = "!(m,n) :: P. m < n" : term
+
+#RESTRICT_CONV t1;;
+|- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
+
+\end{verbatim}\end{session}
+
+\noindent If anyone writes the desired conversions please let us know!
+
+Here is an example of a user-defined restriction:
+
+\begin{session}\begin{verbatim}
+#new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
+|- !p. $DURING p = $! p
+
+#"DURING x::(m,n). p x";;
+no restriction constant associated with DURING
+skipping: x " ;; parse failed
+
+#new_definition
+# (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
+|- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
+
+#associate_restriction(`DURING`,`RES_DURING`);;
+() : void
+
+#"DURING x::(m,n). p x";;
+"DURING x :: (m,n). p x" : term
+
+#set_flag(`print_restrict`,false);;
+true : bool
+
+#"DURING x::(m,n). p x";;
+"RES_DURING(m,n)(\x. p x)" : term
+\end{verbatim}\end{session}
+
