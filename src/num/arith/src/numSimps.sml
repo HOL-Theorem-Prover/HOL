@@ -288,15 +288,18 @@ local open arithmeticTheory
       val add_sym = Rewrite.ONCE_REWRITE_RULE [ADD_SYM]
 in
 val arithmetic_rewrites = [
+   (* suc *)
+   ARITH(Term `!x. ((SUC x = 1) = (x=0)) /\ ((1 = SUC x) = (x = 0))`),
+   ARITH(Term`!x. ((SUC x = 2) = (x=1)) /\ ((2 = SUC x) = (x=1))`),
+   (* addition *)
+   ADD_0, add_sym ADD_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
+   ADD_INV_0_EQ, add_sym ADD_INV_0_EQ,
    (* multiplication *)
-   MULT_EQ_0, sym_lhs MULT_EQ_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
+   MULT_EQ_0, sym_lhs MULT_EQ_0,
    MULT_EQ_1, sym_lhs MULT_EQ_1,
    MULT_0, ONCE_REWRITE_RULE [MULT_COMM] MULT_0,
    one_suc MULT_EQ_1, one_suc (sym_lhs MULT_EQ_1),
    MULT_RIGHT_1, MULT_LEFT_1,
-   ARITH(Term `!x. ((SUC x = 1) = (x=0)) /\ ((1 = SUC x) = (x = 0))`),
-   ARITH(Term`!x. ((SUC x = 2) = (x=1)) /\ ((2 = SUC x) = (x=1))`),
-   ADD_INV_0_EQ, add_sym ADD_INV_0_EQ,
    (* subtraction *)
    SUB_EQUAL_0, SUC_SUB1, SUB_0, ADD_SUB, SUB_EQ_0, sym_lhs SUB_EQ_0,
    SUB_LESS_EQ, SUB_MONO_EQ, SUB_RIGHT_GREATER, SUB_RIGHT_LESS,
