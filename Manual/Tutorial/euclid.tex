@@ -2,7 +2,7 @@
 \chapter{Euclid's theorem}
 \label{chap:euclid}
 
-In this chapter, we prove in \holn\ that for every number, there is a
+In this chapter, we prove in \holn{} that for every number, there is a
 prime number that is larger, \ie, that the prime numbers form an
 infinite sequence. This proof has been excerpted and adapted from a
 much larger example due to John Harrison, in which he proved the $n =
@@ -104,7 +104,7 @@ We now begin the formalization. In order to define the concept of  \emph
     the name \ml{divides} to the definition. In the usual way of
     interacting with \HOL, such an \ML binding is made for each
     definition and (useful) proved theorem: the \ML environment is
-    thus being used as a convenient place to hold definitions and 
+    thus being used as a convenient place to hold definitions and
     theorems for later reference in the session.
 
 We want to treat \ml{divides} as a (right associative) infix:
@@ -226,10 +226,10 @@ Then a simplification step finishes the proof.
 - e (ARW_TAC []);
 
 > OK..
-> 
+>
 > Goal proved.
 > |- (x = 0) \/ (0 = 0)
-> 
+>
 > Goal proved.
 > |- ?x'. (x = 0) \/ (x' = 0)
 > val it =
@@ -408,7 +408,7 @@ be whether $m$ is $0$ or a successor.
 > 2 subgoals:
 > val it =
 >     SUC n <= SUC n * x \/ (SUC n * x = 0)
-> 
+>
 >    0 <= 0 * x \/ (0 * x = 0)
 \end{verbatim}\end{session}
 \noindent The first subgoal (the last one printed) is trivial:
@@ -417,10 +417,10 @@ be whether $m$ is $0$ or a successor.
 - e (ARW_TAC []);
 
 > OK..
-> 
+>
 > Goal proved.
 >   ...
-> 
+>
 > Remaining subgoals:
 > val it =
 >     SUC n <= SUC n * x \/ (SUC n * x = 0)
@@ -443,9 +443,9 @@ multiplication are not in \verb+arith_ss+ because uncontrolled
 application of them by the rewriter seems, in general, to make some
 proofs \emph{more} complicated, rather than simpler. OK, so let's
 add in the definition of multiplication. This uncovers a new problem: how
-to locate this definition. The function 
+to locate this definition. The function
 \begin{boxed}\begin{verbatim}
-   DB.match : string list -> term 
+   DB.match : string list -> term
                 -> ((string * string) * (thm * DB.class)) list
 \end{verbatim}\end{boxed}
 
@@ -497,7 +497,7 @@ rule:
 
 Either {\small\verb+arithmeticTheory.MULT+} or
 {\small\verb+arithmeticTheory.MULT_CLAUSES+} would be acceptable; we
-choose the latter. 
+choose the latter.
 
 \begin{session}\begin{verbatim}
 - e (ARW_TAC [MULT_CLAUSES]);
@@ -543,7 +543,7 @@ Now we can go forward and do case analysis on $x$. We will
 - e (Cases_on `x` THEN ARW_TAC [MULT_CLAUSES]);
 
 > OK..
-> 
+>
 > Goal proved.
 > |- m <= m * x \/ (m * x = 0)
 > val it =
@@ -680,7 +680,7 @@ trivial goal; if it is a successor, then we can use the definition of
 >     SUC n divides FACT (SUC n)
 >     ------------------------------------
 >       0 < SUC n
-> 
+>
 >     0 divides FACT 0
 >     ------------------------------------
 >       0 < 0
@@ -697,10 +697,10 @@ trivial goal; if it is a successor, then we can use the definition of
 
 > OK..
 > Meson search level: ..
-> 
+>
 > Goal proved.
 >  [.] |- 0 divides FACT 0
-> 
+>
 > Remaining subgoals:
 > val it =
 >     SUC n divides FACT (SUC n)
@@ -714,9 +714,9 @@ be proved with \ml{ARW\_TAC}.
 - e (ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
 
 > OK..
-> 
+>
 > Goal proved.   ...
-> 
+>
 > Remaining subgoals:
 > val it =
 >     m divides FACT (m + SUC p)
@@ -897,7 +897,7 @@ it leads to somewhat less natural goals.
 >     !n m. (SUC v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
 >     ------------------------------------
 >       !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
-> 
+>
 >     !n m. (0 = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
 \end{verbatim}\end{session}
     This is slighly hard to read, so we use \ml{STRIP\_TAC} and
@@ -919,7 +919,7 @@ it leads to somewhat less natural goals.
 >       1.  SUC v = n - m
 >       2.  0 < m
 >       3.  m <= n
-> 
+>
 >     m divides FACT n
 >     ------------------------------------
 >       0.  0 = n - m
@@ -983,15 +983,15 @@ printed:
 >     2. Incomplete:
 >          Initial goal:
 >          !m n. 0 < m /\ m <= n ==> m divides FACT n
-> 
-> 
+>
+>
 >          Current goal:
 >          m divides FACT m
 >          ------------------------------------
 >            0.  0 = m - m
 >            1.  0 < m
 >            2.  m <= m
-> 
+>
 >     1. Incomplete:
 >          Initial goal:
 >          !m. 0 < m ==> ?k. m = SUC k
@@ -1038,9 +1038,9 @@ current sub-goal of the proof can be displayed using the function
 
 > OK..
 > Meson search level: ...
-> 
+>
 > Goal proved.   ...
-> 
+>
 > Remaining subgoals:
 > val it =
 >     m divides FACT n
@@ -1077,7 +1077,7 @@ current sub-goal of the proof can be displayed using the function
 - e (ARW_TAC [FACT, DIVIDES_LMUL]);
 
 > OK..
-> 
+>
 > Goal proved.  ...
 > val it =
 >     Initial goal proved.
@@ -1126,7 +1126,7 @@ primes are positive. These are all quite simple to prove.
 
 Now we are in position to prove a more substantial lemma: every number
 other than $1$ has a prime factor. The proof proceeds by a
-\emph{complete induction} on $n$. Complete induction is 
+\emph{complete induction} on $n$. Complete induction is
 necessary since a prime factor won't be the predecessor. After
 induction, the proof splits into cases on whether $n$ is prime or
 not. The first case ($n$ is prime) is
@@ -1192,7 +1192,7 @@ divisibility:
 
 > OK..
 > Meson search level: ...
-> 
+>
 > Goal proved.  ...
 \end{verbatim}\end{session}
 \noindent
@@ -1234,7 +1234,7 @@ assert $x < n \lor n = 0$ and thus split the proof into two cases:
 >       4.  ~(x = 1)
 >       5.  ~(x = n)
 >       6.  n = 0
-> 
+>
 >     ?p. prime p /\ p divides n
 >     ------------------------------------
 >       0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
@@ -1297,7 +1297,7 @@ all we have to do is exhibit a prime. And we already have one to hand:
 
 > OK..
 > Meson search level: ..
-> 
+>
 > Goal proved.   ...
 > val it =
 >     Initial goal proved.
@@ -1403,7 +1403,7 @@ situ}. We choose the latter approach.
 >     ------------------------------------
 >       0.  !p. n < p ==> ~prime p
 >       1.  prime p
-> 
+>
 >     ~(FACT n = 0)
 >     ------------------------------------
 >       !p. n < p ==> ~prime p
@@ -1429,14 +1429,14 @@ can all be packaged into a single invocation of \ml{PROVE\_TAC}:
                 DIVIDES_ADDL, DIVIDES_ONE, NOT_PRIME_1]);
 > OK..
 > Meson search level: ............
-> 
+>
 > Goal proved.
 >  [..] |- ~(p divides FACT n + 1)
-> 
+>
 > Goal proved.
 >  [.]
 > |- (~(FACT n + 1 = 1) ==> ?p. prime p /\ p divides FACT n + 1) ==> F
-> 
+>
 > Goal proved.
 >  [.] |- F
 > val it =
