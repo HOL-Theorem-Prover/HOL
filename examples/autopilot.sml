@@ -63,23 +63,15 @@ Hol_datatype `altitude_vals
  * State-type projection and update functions.                               *
  *---------------------------------------------------------------------------*)
 
-val {create_fn=create_states, 
-  accessor_fns=select_states,
-   acc_upd_thm=select_update_states, 
-   upd_acc_thm=update_select_states,
- upd_canon_thm=update_canon_states, 
-   upd_upd_thm=update_update_states,
-    fn_upd_thm=fn_update_states,...} 
-  = 
-    RecordType.create_record "states"
-              [ ("att_cws",  Type`:off_eng`),
-                ("cas_eng",  Type`:off_eng`),
-                ("fpa_sel",  Type`:off_eng`),
-                ("alt_eng",  Type`:mode_status`),
-                ("alt_disp", Type`:disp_status`),
-                ("fpa_disp", Type`:disp_status`),
-                ("cas_disp", Type`:disp_status`),
-                ("altitude", Type`:altitude_vals`) ];
+RecordType.create_record "states"
+     [ ("att_cws",  Type`:off_eng`),
+       ("cas_eng",  Type`:off_eng`),
+       ("fpa_sel",  Type`:off_eng`),
+       ("alt_eng",  Type`:mode_status`),
+       ("alt_disp", Type`:disp_status`),
+       ("fpa_disp", Type`:disp_status`),
+       ("cas_disp", Type`:disp_status`),
+       ("altitude", Type`:altitude_vals`) ];
 
 
 (*---------------------------------------------------------------------------*
@@ -89,108 +81,112 @@ val {create_fn=create_states,
 val tran_att_cws_def = 
  Define 
      `tran_att_cws st =
-        (att_cws st = off 
-         => att_cws_update engaged
-              (fpa_sel_update off
-                (alt_eng_update (Mode off)
-                  (fpa_disp_update current 
-                     (alt_disp_update current st))))
-         | st)`;
+         if st.att_cws = off 
+         then st with
+                 <| att_cws := engaged; 
+                    fpa_sel := off; 
+                    alt_eng := Mode off;
+                    fpa_disp := current; 
+                    alt_disp := current|>
+         else st`;
 
 
 val tran_cas_eng_def = 
  Define 
-     `tran_cas_eng st =
-        (cas_eng st = off 
-         => cas_eng_update engaged st
-         |  cas_disp_update current (cas_eng_update off st))`;
+    `tran_cas_eng st =
+        if st.cas_eng = off 
+          then st with cas_eng := engaged
+          else (st with <|cas_disp := current; cas_eng := off|>)`;
 
 
 val tran_fpa_sel_def = 
  Define 
-     `tran_fpa_sel st =
-        (fpa_sel st = off 
-        => fpa_sel_update engaged 
-            (att_cws_update off
-              (alt_eng_update (Mode off) (alt_disp_update current st)))
-        |  fpa_sel_update off 
-             (fpa_disp_update current
-               (att_cws_update engaged 
-                 (alt_eng_update (Mode off) (alt_disp_update current st)))))`;
-
+    `tran_fpa_sel st =
+       if st.fpa_sel = off 
+       then st with
+               <| fpa_sel := engaged; 
+                  att_cws := off; 
+                  alt_eng := Mode off;
+                 alt_disp := current|>
+       else (st with
+                <| fpa_sel := off; 
+                  fpa_disp := current; 
+                   att_cws := engaged;
+                   alt_eng := Mode off; 
+                   alt_disp := current|>)`;
 
 val tran_alt_eng_def = 
  Define 
      `tran_alt_eng st =
-        ((alt_eng st = Mode off) /\ (alt_disp st = pre_selected) 
-        => (~(altitude st = away) 
-            => att_cws_update off 
-                 (fpa_sel_update off
-                   (alt_eng_update (Mode engaged) 
-                     (fpa_disp_update current st)))
-            |  att_cws_update off
-                 (fpa_sel_update engaged 
-                   (alt_eng_update armed st))
-           )
-        | st)`;
-
+         if (st.alt_eng = Mode off) /\ 
+            (st.alt_disp = pre_selected) 
+         then (if ~(st.altitude = away) 
+               then st with
+                       <| att_cws := off; 
+                          fpa_sel := off; 
+                          alt_eng := Mode engaged;
+                         fpa_disp := current|>
+               else (st with
+                        <|att_cws := off; 
+                          fpa_sel := engaged; 
+                          alt_eng := armed|>))
+         else st`;
 
 val tran_input_alt_def = 
  Define 
      `tran_input_alt st =
-        (alt_eng st = Mode off 
-         => alt_disp_update pre_selected st
-         |  ((alt_eng st = armed) \/ (alt_eng st = Mode engaged) 
-            => alt_eng_update (Mode off) 
-                (alt_disp_update pre_selected
-                  (att_cws_update engaged 
-                     (fpa_sel_update off (fpa_disp_update current st))))
-            |  st))`;
-   
+         if st.alt_eng = Mode off 
+         then st with alt_disp := pre_selected
+         else if (st.alt_eng = armed) \/ (st.alt_eng = Mode engaged) 
+              then st with
+                    <|alt_eng := Mode off; 
+                      alt_disp := pre_selected;
+                      att_cws := engaged; 
+                      fpa_sel := off; 
+                      fpa_disp := current|>
+              else st`;
 
 val tran_input_fpa_def = 
  Define 
      `tran_input_fpa st =
-        (fpa_sel st = off 
-         => fpa_disp_update pre_selected st
-         |  st)`;
+         if st.fpa_sel = off 
+         then st with fpa_disp := pre_selected 
+         else st`;
 
 
 val tran_input_cas_def = 
  Define 
      `tran_input_cas st =
-        (cas_eng st = off 
-         => cas_disp_update pre_selected st 
-         |  st)`;
+         if st.cas_eng = off then st with cas_disp := pre_selected else st`;
 
 
 val tran_alt_gets_near_def = 
  Define 
      `tran_alt_gets_near st =
-        (alt_eng st = armed 
-         => altitude_update near_pre_selected 
-             (alt_eng_update (Mode engaged)
-               (fpa_sel_update off 
-                 (fpa_disp_update current st)))
-         |  altitude_update near_pre_selected st)`;
-
+         if st.alt_eng = armed 
+         then st with
+                <|altitude := near_pre_selected; 
+                  alt_eng := Mode engaged;
+                  fpa_sel := off; 
+                  fpa_disp := current|>
+         else
+           (st with altitude := near_pre_selected)`;
 
 val tran_alt_reached_def = 
  Define 
-     `tran_alt_reached st = 
-        (alt_eng st = armed 
-         => altitude_update at_pre_selected 
-             (alt_disp_update current
-               (alt_eng_update (Mode engaged)
-                 (fpa_sel_update off 
-                   (fpa_disp_update current st))))
-         |  altitude_update at_pre_selected 
-               (alt_disp_update current st))`;
-
+     `tran_alt_reached st =
+        if st.alt_eng = armed 
+        then st with
+              <|altitude := at_pre_selected; 
+                alt_disp := current;
+                alt_eng := Mode engaged; 
+                fpa_sel := off; 
+                fpa_disp := current|>
+        else (st with <|altitude := at_pre_selected; alt_disp := current|>)`;
 
 val tran_fpa_reached_def = 
  Define 
-      `tran_fpa_reached st = fpa_disp_update current st`;
+     `tran_fpa_reached st = (st with fpa_disp := current)`;
 
 
 val tran_defs = 
@@ -233,25 +229,25 @@ val st0_def =
 val is_initial_def = 
  Define 
      `is_initial st =
-         (att_cws st  = engaged)  /\
-         (cas_eng st  = off)      /\
-         (fpa_sel st  = off)      /\
-         (alt_eng st  = Mode off) /\
-         (alt_disp st = current)  /\
-         (fpa_disp st = current)  /\
-         (cas_disp st = current)`;
+         (st.att_cws = engaged)  /\ 
+         (st.cas_eng = off)      /\
+         (st.fpa_sel = off)      /\
+         (st.alt_eng = Mode off) /\ 
+         (st.alt_disp = current) /\
+         (st.fpa_disp = current) /\ 
+         (st.cas_disp = current)`;
 
 
 val valid_state_def = 
  Define 
      `valid_state st =
-         ((att_cws st = engaged) 
-          \/ (fpa_sel st = engaged) \/ (alt_eng st = Mode engaged))
-      /\ (~(alt_eng st = Mode engaged) \/ ~(fpa_sel st = engaged)) 
-      /\ ((att_cws st = engaged)
-            ==> ~(alt_eng st = Mode engaged) /\ ~(fpa_sel st = engaged))
-      /\ ((alt_eng st = armed) ==> (fpa_sel st = engaged))`;
-
+         ((st.att_cws = engaged) \/ (st.fpa_sel = engaged) \/ 
+          (st.alt_eng = Mode engaged)) 
+     /\  (~(st.alt_eng = Mode engaged) \/ ~(st.fpa_sel = engaged)) 
+     /\  ((st.att_cws = engaged) 
+           ==> ~(st.alt_eng = Mode engaged) /\ 
+               ~(st.fpa_sel = engaged)) 
+     /\  ((st.alt_eng = armed) ==> (st.fpa_sel = engaged))`;
 
 
 (*---------------------------------------------------------------------------*
@@ -331,25 +327,25 @@ val is_reachable_valid_state = prove
  * A couple of safety properties.                                            *
  *---------------------------------------------------------------------------*)
 
-val safety1 = prove
-(Term`!event st. 
-       valid_state st 
-       /\ (fpa_sel st = engaged) 
-       /\ (fpa_sel (nextstate st event) = off)
-         ==> 
-          (fpa_disp (nextstate st event) = current)`,
+val safety1 = prove(Term 
+`!event st.
+     valid_state st
+  /\ (st.fpa_sel = engaged)
+  /\ ((nextstate st event).fpa_sel = off) 
+    ==>
+     ((nextstate st event).fpa_disp = current)`,
 Induct 
   THEN ZAP_TAC (ap_ss && tran_defs)  (tl (type_rws "off_eng")));
 
 
 val safety2 = prove
-(Term`!event st. 
-       valid_state st 
-       /\ (alt_eng st = Mode engaged)
-       /\ ~(event = input_alt)
-       /\ (alt_eng(nextstate st event) = Mode off)
-         ==>
-          (alt_disp (nextstate st event) = current)`,
+(Term`!event st.
+           valid_state st 
+        /\ (st.alt_eng = Mode engaged) 
+        /\ ~(event = input_alt) 
+        /\ ((nextstate st event).alt_eng = Mode off) 
+          ==>
+           ((nextstate st event).alt_disp = current)`,
 Induct 
   THEN ZAP_TAC (ap_ss && tran_defs) 
              (tl(type_rws "off_eng") @ tl(type_rws "mode_status")));
