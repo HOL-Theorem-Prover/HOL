@@ -47,7 +47,7 @@ a constant of arity $n$ applied to a list of $n$ types.
 \]
 Type constants are also known as type operators. They must be
 alphanumeric. Type variables are alphanumerics written with a leading
-prime ('). In Hol98, the type constants {\tt bool}, {\tt fun}, and
+prime ('). In \holn{}, the type constants {\tt bool}, {\tt fun}, and
 {\tt ind} are primitive. The introduction of new type constants is
 described in Chapter \ref{thy-ops}. {\tt bool} is the two element type
 of truth values. The binary operator {\tt fun} is used to denote
@@ -71,7 +71,7 @@ is identical to
 \end{verbatim}
 The product (\verb+#+) and sum (\verb!+!) are other infix type
 operators, also right associative; however, they are not loaded by
-default in Hol98. How to load in useful logical context is dealt with
+default in \holn{}. How to load in useful logical context is dealt with
 in Chapter~\ref{context}.
 
 \section{Terms}
@@ -312,8 +312,8 @@ this, we can deduce that the type of `x' must be \verb+bool+.
 Ignoring the jargon ("scheme" and "instance") in the previous
 paragraph, we have conducted a type assignment to the term structure,
 ending up with a well-typed term. It would be very tedious for users
-to conduct such argumentation by hand for each term entered to Hol98.
-Thus, Hol98 uses an adaptation of Milner's type inference algorithm
+to conduct such argumentation by hand for each term entered to \holn{}.
+Thus, \holn{} uses an adaptation of Milner's type inference algorithm
 for ML when constructing terms via parsing. At the end of type
 inference, unconstrained type variables get assigned by the system.
 Usually, this assignment does the right thing. However, at times, the

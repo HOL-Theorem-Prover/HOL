@@ -124,7 +124,6 @@ Often we want to switch our attention to a different goal in the current
 proof, or a different proof. The functions that do this are
 \verb+rotate+ and \verb+rotate_proofs+, respectively. The abbreviations
 \verb+r+ and \verb+R+ are simpler to type in.
-
 \section{The {\tt boss} library}
 \newcommand\bossLib{{\tt bossLib}}
 
@@ -140,32 +139,48 @@ arithmetic, and lists.
 \subsection{Datatype definition}
 
 There are several useful consequences of an object logic datatype
-definition: structural induction, rewrite rules for constructors, \etc\
-However, these have not traditionally been automatically derived
+definition: structural induction, rewrite rules for constructors,
+\etc\ However, these have not traditionally been automatically derived
 at the invocation of the definition package: the user would have to
 build the required theorems by explicitly invoking various proof
-procedures.  To remedy this, \bossLib\ offers the
-\verb+Hol_datatype+ function.\footnote{\bossLib\ does not yet
-support mutually recursive or nested datatypes.} The syntax of
-declarations that \verb+Hol_datatype+ accepts is found in Table
+procedures.  To remedy this, \bossLib\ offers the \verb+Hol_datatype+
+function.  This function allows for the definition of mutually
+recursive types, nested recursive types and record types.  The syntax
+of declarations that \verb+Hol_datatype+ accepts is found in Table
 \ref{datatype}.
 
 \newcommand{\ident}      {\mbox{\it ident}}
 \newcommand{\clause}      {\mbox{\it clause}}
 \newcommand{\type}       {\mbox{\it hol\_type}}
+{
+\newcommand{\binding} {\mbox{\it binding}}
+\newcommand{\recdspec}  {\mbox{\it record-spec}}
+\newcommand{\constr} {\mbox{\it constructor-spec}}
 
 \begin{table}[h]
 \begin{center}
-\begin{tabular}{|rcl|} \hline
-\verb+Hol_datatype `+ \ident & \verb+=+ & [\clause\ \verb+|+]* \clause\verb+`+ \\
-       & & \\
+\begin{tabular}{|rcl|}
+\hline
+\multicolumn{3}{|l|}
+{\texttt{Hol\_datatype `}[\binding\ \texttt{;}]* \binding\texttt{`}}\\
+& &\\
+\binding & \verb+::=+ & \ident\ \verb+=+ \constr\\
+         & \verb+|+ & \ident\ \verb+=+ \recdspec\\
+& & \\
+\constr & \verb+::=+ & [\clause\ \verb+|+]* \clause \\
+& & \\
 \clause & \verb+::=+ & \ident \\
-        & \verb+|+ & \ident\ \verb+of+\ [\type\ \verb+=>+]* \type\\ \hline
+        & \verb+|+ & \ident\ \verb+of+\ [\type\ \verb+=>+]* \type\\
+& & \\
+\recdspec & \verb+::=+ & \verb+<|+ [\ident\ \verb+:+ \type\ \verb+;+]*
+                                   \ident\ \verb+:+ \type\ \verb+|>+\\
+
+\hline
 \end{tabular}
 \caption{Datatype Declaration}\label{datatype}
 \end{center}
 \end{table}
-
+}
 There is an underlying database of datatype facts that supports the
 activities of \verb+bossLib+. This database already contains the
 relevant entries for the types \verb+bool+, \verb+prod+, \verb+num+,
@@ -187,7 +202,7 @@ the database.
 \subsection{Support for high-level proof steps}
 
 The following functions use information in the database to ease the
-application of Hol98's underlying functionality:
+application of \holn{}'s underlying functionality:
 
 \begin{verbatim}
         type_rws     : string -> thm list
@@ -262,7 +277,7 @@ $n$, one is allowed to assume the property holds for {\it all\/} $m$
 smaller than $n$. Formally: $\forall P.\ (\forall x.\ (\forall y.\ y < x
 \supset P\, y) \supset P\,x) \supset \forall x.\ P\,x$. This allows the
 inductive hypothesis to be used more than once, and also allows
-instantiating the inductive hypothesis to other than the predecessor. 
+instantiating the inductive hypothesis to other than the predecessor.
 
 \item [measureInduct\_on] takes a quotation, and breaks it apart
 to find a term and a measure function with which to induct. For
@@ -284,7 +299,7 @@ The \underline{\tt Define} function is a general-purpose function definition
 mechanism. The \underline{\tt xDefine} function is identical to
 {\small\verb+Define+} except that it takes an explicit name to use when
 storing the definition in the current theory. {\small\tt Define}
-accepts the following syntax: 
+accepts the following syntax:
 
 \begin{enumerate}
 
@@ -305,8 +320,8 @@ accepts the following syntax:
 \item Non-recursive definition, over complex patterns:
 
 \begin{verbatim}
-Define 
-    `(g (0,x,y,z) = 1) 
+Define
+    `(g (0,x,y,z) = 1)
   /\ (g (w,0,y,z) = 2)
   /\ (g (w,x,0,z) = 3)
   /\ (g (w,x,y,0) = 4)`;
@@ -324,12 +339,12 @@ Define
 \begin{verbatim}
  Define `N x = if x>100 then x-10 else N(N(x+11))`;
 \end{verbatim}
- 
+
 \item Mutual recursion.
 \begin{verbatim}
   xDefine "even_odd"
      `(even 0 = T)
-  /\  (even (SUC n) = odd n) 
+  /\  (even (SUC n) = odd n)
   /\  (odd 0 = F)
   /\  (odd (SUC n) = even n)`;
 \end{verbatim}
@@ -349,13 +364,13 @@ some basic simplifications and then attempts to automatically prove the
 termination constraints.  If this termination proof fails, then the
 definition attempt fails. If the termination proof succeeds, an
 induction theorem for the function is also automatically derived and
-stored in the current theory.  
+stored in the current theory.
 
 \noindent {\bf Example.} Invoking
 \begin{verbatim}
       Define
-        `(gcd 0 y = y)  
-    /\   (gcd (SUC x) 0 = SUC x) 
+        `(gcd 0 y = y)
+    /\   (gcd (SUC x) 0 = SUC x)
     /\   (gcd (SUC x) (SUC y) =
              if y <= x then gcd (x-y)   (SUC y)
                        else gcd (SUC x) (y-x))`;
@@ -369,7 +384,7 @@ proves all termination conditions and stores the theorem
                         else gcd (SUC x) (y - x))
 \end{verbatim}
 \noindent in the current theory under the name \verb+"gcd_def"+ and
-also stores the theorem  
+also stores the theorem
 \begin{verbatim}
           !P. (!y. P 0 y)       /\
               (!x. P (SUC x) 0) /\
@@ -393,7 +408,7 @@ function \verb+Hol_defn+ should be used.
 
 \verb+Hol_defn+ makes the requested definition, but defers the proof of
 termination to the user. For setting up termination proofs, there are
-several useful entrypoints, namely 
+several useful entrypoints, namely
 
 \begin{verbatim}
    Defn.tgoal  : Defn.defn -> GoalstackPure.proofs
@@ -401,18 +416,18 @@ several useful entrypoints, namely
 \end{verbatim}
 
 {\small\verb+Defn.tgoal+} is analogous to {\small\verb+set_goal+} and
-{\small\verb+Defn.tprove+} is analogous to {\small\verb+prove+}. 
+{\small\verb+Defn.tprove+} is analogous to {\small\verb+prove+}.
 
-\noindent {\bf Example.} An invocation of {\small\verb+Define+} on 
-the following equations for Quicksort will currently fail, since the 
+\noindent {\bf Example.} An invocation of {\small\verb+Define+} on
+the following equations for Quicksort will currently fail, since the
 termination proof is beyond the capabilities of our naive termination
 prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 
 \begin{verbatim}
-    val qsort_def = 
+    val qsort_def =
       Hol_defn "qsort"
         `(qsort r [] = []) /\
-         (qsort r (h::t) = 
+         (qsort r (h::t) =
              APPEND (qsort r (FILTER (\x. r x h) t))
                (h :: qsort r (FILTER (\x. ~(r x h)) t)))`;
 \end{verbatim}
@@ -421,7 +436,7 @@ termination. Although it is possible to directly work with elements of
 type {\small\verb+defn+}, it is more convenient to invoke
 `{\small\tt Defn.tgoal qsort\_def}', which sets up a termination
 proof in a goalstack. The goal is just to get the unrestricted recursion
-equations and induction theorem.  
+equations and induction theorem.
 
 \begin{verbatim}
 Defn.tgoal qsort_def;
@@ -450,12 +465,12 @@ both of which are easy to prove.
 \begin{verbatim}
     - e (WF_REL_TAC qsort_def `measure (LENGTH o SND)`
 >   OK..
-> 
+>
 >   2 subgoals:
 >   val it =
 >      !t h r. LENGTH (FILTER (\x. r x h) t) < LENGTH (h::t)
-> 
-> 
+>
+>
 >      !t h r. LENGTH (FILTER (\x. ~r x h) t) < LENGTH (h::t)
 \end{verbatim}
 
@@ -467,7 +482,7 @@ given tactic, and, if the initial goal is proved, returns a pair
 comprising the requested equations and the induction theorem.
 
 \begin{verbatim}
-   val (qsort_eqns,qsort_ind) = 
+   val (qsort_eqns,qsort_ind) =
       Defn.tprove
        (qsort_def,
         WF_REL_TAC qsort_def `measure (LENGTH o SND)`
@@ -482,14 +497,14 @@ comprising the requested equations and the induction theorem.
    >  val qsort_ind =
    >   |- !P.
    >      (!r. P r []) /\
-   >      (!r h t. P r (FILTER (\x. r x h) t) /\ 
+   >      (!r h t. P r (FILTER (\x. r x h) t) /\
    >               P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
    >      ==> !v v1. P v v1
 \end{verbatim}
 
 \subsection{Automated reasoners}
 
-\verb+bossLib+ brings together the most powerful reasoners in Hol98 and
+\verb+bossLib+ brings together the most powerful reasoners in \holn{} and
 tries to make it easy to compose them in a simple way. We take our basic
 reasoners from \verb+mesonLib+, \verb+simpLib+, and \verb+decisionLib+,
 but the point of \verb+bossLib+ is to provide a layer of abstraction so
@@ -583,20 +598,177 @@ build and apply a tactic.
 \noindent{\bf Note.} When the library \verb+bossLib+ is loaded, the
 infix parsing status of \verb+&&+ and ``{\tt by}'' must be re-asserted
 by the user.
+\section{Record types}
+
+Record types are convenient ways of bundling together a number of component
+types, and giving those components names so as to facilitate access to
+them.  Record types are semantically equivalent to big pair
+(cross-product) types, but the ability to label the fields with names of
+one's own choosing is a great convenience.  Record types as implemented
+in \holn{} are similar to C's {\tt struct} types and to Pascal's records.
+However, the current HOL implementation doesn't allow the equivalent of
+variant records, nor for records to be recursive.
+
+Done correctly, record types provide useful maintainability features.
+If one can always access the {\tt fieldn} field of a record type by
+simply writing {\tt record.fieldn}, then changes to the type that
+result in the addition or deletion of other fields will not invalidate
+this reference.  One failing in SML's record types is that they do not
+allow the same maintainability as far as (functional) updates of
+records are concerned.  The HOL implementation allows one to write
+{\tt rec with fieldn := new\_value}, which replaces the old value of
+{\tt fieldn} in the record {\tt rec} with {\tt new\_value}.  This
+expression will not need to be changed if another field is added,
+modified or deleted from the record's original definition.
+
+\subsection{Defining a record type}
+
+Defining a record type is achieved with the function
+\texttt{Hol\_datatype}, as previously discussed.  For example, to
+create a record type called {\tt person} with boolean, string and
+number fields called {\tt employed}, {\tt name} and {\tt age}, one
+would enter:
+\begin{verbatim}
+val _ = Hol_datatype `person = <| employed : bool ; age : num ;
+                                  name : string
+                               |>`;
+\end{verbatim}
+The order in which the fields are entered is not significant. As well
+as defining the type (called {\tt person}), the datatype definition
+function also defines three other sets of constants.  These are the
+field access functions, update functions, and functional update
+functions.  The field access functions have names of the form
+``$\langle$\textsl{record-type\/}$\rangle$\_$\langle$\textsl{field\/}$\rangle$''.
+These functions can be used directly, or one can use standard field
+selection notation to access the values of a record's field.  Thus,
+one would write the expression: \mbox{\tt ``bob.employed``} in order
+to return the value of {\tt bob}'s {\tt employed} field.  The
+alternative, \texttt{``person\_employed bob``}, works, but would be
+printed using the first syntax, with the full-stop.
+
+The update functions are given the names
+\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
+$\langle$\textsl{field\/}$\rangle$\_\texttt{update}''} for each
+field in the type.  They take a value of the type of the field in
+question and a record value to be modified.  They return a new record
+value that is otherwise the same as the old value but with the
+specified field having the new value.  They can be written with the
+keyword \texttt{with} and the \texttt{:=} operator:
+\begin{verbatim}
+  ``bob with employed := T``
+\end{verbatim}
+\noindent If a chain of updates is desired, then multiple updates can
+be specified inside \texttt{<|}-\texttt{|>} pairs, separated by
+semi-colons, thus:
+
+\begin{verbatim}
+  ``bob with <| age := 10; name := "Child labourer" |>``
+\end{verbatim}
+
+\noindent Finally, the second sort of update functions, the so-called
+``functional'' updates have names of the form
+\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
+$\langle$\textsl{field\/}$\rangle$\_\texttt{fupd}''}. Rather than
+specifying a new value for the record, these functions take a function
+as their first parameter, which will be an endomorphism on the field
+type, so that the resulting record is the same as the original, except
+that the specified field has had the given function applied to it to
+generate the new value for that field.  The functional update
+functions allow more concision when writing updates on a record that
+depend on the field's old value.
+
+The special syntax for writing these updates is to again use the
+\texttt{with} keyword, but to use the infix \texttt{updated\_by}
+rather than \texttt{:=}.  Thus
+\begin{alltt}
+  ``bob with employed updated_by \$~``
+\end{alltt} \noindent
+is a record value with the opposite boolean value in the
+\texttt{employed} field as held by \texttt{bob}.
+
+\subsection{Specifying record literals}
+
+The parser accepts lists of field specifications between
+\texttt{<|}-\texttt{|>} pairs without the \texttt{with} keyword.
+These translate to sequences of updates of an arbitrary value
+(literally, the HOL value \texttt{ARB}), and are treated as literals.
+Thus,
+\begin{verbatim}
+  ``<| age := 21; employed := F; name := "Layabout" |>``
+\end{verbatim}
+
+\subsection{Using the theorems produced by record definition}
+
+As well as defining the type and the functions described above, record
+type definition also proves a suite of useful theorems.  Most of these
+are returned in a big record; all are stored using {\tt save\_thm} so
+that they can be recovered.
+
+The record returned has the following fields:
+\newcommand{\rewruse}{This theorem should be included in rewrites used
+  for this type.}
+\newcommand{\field}[1]{\mbox{\it field}_{#1}}
+\newcommand{\update}{\mbox{\tt\_update}}
+\begin{description}
+\item[{\tt type\_axiom}] The type axiom for the record type, as
+  returned by the standard datatype definition package.
+\item[{\tt accessor\_fns}] The definitions of the accessor functions.
+  \rewruse
+\item[{\tt update\_fns}] The definitions of the update functions.
+  \rewruse
+\item[{\tt cases\_thm}] The usual cases theorem for a type, stating
+  that for all record values, there exist component values making it
+  up.
+\item[{\tt fn\_upd\_thm}] The definitions of the functional update
+  functions.  \rewruse
+\item[{\tt acc\_upd\_thm}] A theorem stating simpler forms for
+  expressions of the form $\field{i}\, (\field{j}\update\;v\; r)$.  If
+  $i = j$, then the RHS is $v$, if not, it is $(\field{i}\;r)$.
+  \rewruse
+\item[{\tt upd\_acc\_thm}] A theorem stating that $\field{i}\update
+  \;(\field{i}\;r)\;r = r$ for all of
+  the fields defined in the type. \rewruse
+\item[{\tt upd\_upd\_thm}] A thereom stating that $\field{i}\update
+  \;v_1 \,(\field{i}\update \;v_2\;r) = \field{i}\update\;v_1\;r$.
+  \rewruse
+\item[{\tt upd\_canon\_thm}] A theorem that states commutativity results
+  for all possible pairs of field updates.  They are constructed in
+  such a way that if used as rewrites, they will canonicalise
+  sequences of updates. \rewruse
+\item[{\tt cons\_11\_thm}] The standard result stating the type
+  constructor is injective.  \rewruse
+\item[{\tt create\_term}] This last component of the record returned
+  is not a theorem, but rather an ML function.  It is identical to the
+  {\tt create\_term\_fn} already defined in {\tt RecordType}, but is
+  pre-applied to the relevant arguments, so that it is of the type
+  string-value list to term.
+\end{description}
+
 
 \section{The {\tt meson} library}
 \section{The {\tt simp} library}
 \section{The {\tt num} library}
 
-
+\newpage
 \section{The type definition package}\label{types-package}\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|(}
 \index{type definition package, in HOL system@type definition package, in \HOL\ system|(}
 
+\begin{center}
+\framebox{\parbox{0.8\textwidth}{\it All of this section of the
+    documentation is out of date.  Users of \holn{} should use
+    \texttt{Hol\_datatype} to define types, and \texttt{Define} or
+    \texttt{xDefine} to define functions over them.  The functions
+    described here do exist in \holn{} but generally with different
+    types.  This section was written for HOL88 and has not been
+    updated since.}}
+\end{center}
+
 In the \HOL\ system, new types and type operators can be
-introduced\index{extension, of HOL logic@extension, of \HOL\ logic} 
-using the  consistency-preserving definitional  mechanism  of
-type  definitions\index{type definition extension, in HOL logic@type definition extension, in \HOL\ logic|(} (see Sections~\ref{tydefs} and~\ref{type-defs}).  The \ML\
-rule for introducing a new type is:
+introduced\index{extension, of HOL logic@extension, of \HOL\ logic}
+using the consistency-preserving definitional mechanism of type
+definitions\index{type definition extension, in HOL logic@type
+  definition extension, in \HOL\ logic|(} (see Sections~\ref{tydefs}
+and~\ref{type-defs}).  The \ML\ rule for introducing a new type is:
 
 \begin{hol}
 \index{new_type_definition@\ml{new\_type\_definition}}
@@ -1348,7 +1520,7 @@ Chapter~\ref{tactics-and-tacticals} and \REFERENCE) can also be used\index{theor
 \index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, to build induction tools|)}\index{induction tactics!derivation of|)}
 
 \subsection{Other tools}
- 
+
 The function
 
 \begin{boxed}
@@ -1448,153 +1620,9 @@ btree_cases = |- !b. (?x. b = LEAF x) \/ (?b1 b2. b = NODE b1 b2)
 \index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|)}
 \index{type definition package, in HOL system@type definition package, in \HOL\ system|)}
 
-\section{Record types}
 
-Record types are convenient ways of bundling together a number of component
-types, and giving those components names so as to facilitate access to
-them.  Record types are semantically equivalent to big pair
-(cross-product) types, but the ability to label the fields with names of
-one's own choosing is a great convenience.  Record types as implemented
-in HOL98 are similar to C's {\tt struct} types and to Pascal's records.
-However, the current HOL implementation doesn't allow the equivalent of
-variant records, nor for records to be recursive.
 
-Done correctly, record types provide useful maintainability features.
-If one can always access the {\tt fieldn} field of a record type by
-simply writing {\tt record.fieldn}, then changes to the type that
-result in the addition or deletion of other fields will not invalidate
-this reference.  One failing in SML's record types is that they do not
-allow the same maintainability as far as (functional) updates of
-records are concerned.  The HOL implementation allows one to write
-{\tt rec with fieldn := new\_value}, which replaces the old value of
-{\tt fieldn} in the record {\tt rec} with {\tt new\_value}.  This
-expression will not need to be changed if another field is added,
-modified or deleted from the record's original definition.
-
-\subsection{Defining a record type}
-
-\newcommand{\createrec}{{\tt create\_record}} The record type package
-is defined in the structure {\tt RecordType}.  Defining a record type
-is achieved with the function \createrec, which is in that structure.
-This takes two parameters, a string which is the name of the new type,
-and a list of string-type pairs, which are the names and types of the
-record type's fields.  For example, to create a record type called
-{\tt person} with boolean, string and number fields called {\tt
-  employed}, {\tt name} and {\tt age}, one would enter:
-\begin{verbatim}
-val person_result =
-  create_record "person" [("employed", ``:bool``),
-                          ("age",      ``:num``),
-                          ("name",     ``:string``)];
-\end{verbatim}
-The order in which the fields are entered is not significant. As well
-as defining the type (called {\tt person}), the \createrec{} function
-also defines three other sets of constants.  These are the field
-access functions, update functions, and functional update functions.
-The field access functions have names of the form
-``$\langle$\textsl{record-type\/}$\rangle$\_$\langle$\textsl{field\/}$\rangle$''.
-These functions can be used directly, or one can use standard field
-selection notation to access the values of a record's field.  Thus,
-one would write the expression: \mbox{\tt ``bob.employed``} in order
-to return the value of {\tt bob}'s {\tt employed} field.  The
-alternative, \texttt{``person\_employed bob``}, works, but would be
-printed using the first syntax, with the full-stop.
-
-The update functions are given the names
-\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
-$\langle$\textsl{field\/}$\rangle$\_\texttt{update}''} for each
-field in the type.  They take a value of the type of the field in
-question and a record value to be modified.  They return a new record
-value that is otherwise the same as the old value but with the
-specified field having the new value.  They can be written with the
-keyword \texttt{with} and the \texttt{:=} operator:
-\begin{verbatim}
-  ``bob with employed := T``
-\end{verbatim}
-\noindent If a chain of updates is desired, then multiple updates can
-be specified inside \texttt{<|}-\texttt{|>} pairs, separated by
-semi-colons, thus:
-
-\begin{verbatim}
-  ``bob with <| age := 10; name := "Child labourer" |>``
-\end{verbatim}
-
-\noindent Finally, the second sort of update functions, the so-called
-``functional'' updates have names of the form
-\mbox{``$\langle$\textsl{record-type\/}$\rangle$\_%
-$\langle$\textsl{field\/}$\rangle$\_\texttt{fupd}''}. Rather than
-specifying a new value for the record, these functions take a function
-as their first parameter, which will be an endomorphism on the field
-type, so that the resulting record is the same as the original, except
-that the specified field has had the given function applied to it to
-generate the new value for that field.  The functional update
-functions allow more concision when writing updates on a record that
-depend on the field's old value.
-
-The special syntax for writing these updates is to again use the
-\texttt{with} keyword, but to use the infix \texttt{updated\_by}
-rather than \texttt{:=}.  Thus
-\begin{alltt}
-  ``bob with employed updated_by \$~``
-\end{alltt} \noindent
-is a record value with the opposite boolean value in the
-\texttt{employed} field as held by \texttt{bob}.
-
-\subsection{Specifying record literals}
-
-The parser accepts lists of field specifications between
-\texttt{<|}-\texttt{|>} pairs without the \texttt{with} keyword.
-These translate to sequences of updates of an arbitrary value
-(literally, the HOL value \texttt{ARB}), and are treated as literals.
-Thus,
-\begin{verbatim}
-  ``<| age := 21; employed := F; name := "Layabout" |>``
-\end{verbatim}
-
-\subsection{Using the theorems produced by \createrec}
-
-As well as defining the type and the functions described above, record
-type definition also proves a suite of useful theorems.  Most of these
-are returned in a big record; all are stored using {\tt save\_thm} so
-that they can be recovered.
-
-The record returned has the following fields:
-\newcommand{\rewruse}{This theorem should be included in rewrites used
-  for this type.}
-\newcommand{\field}[1]{\mbox{\it field}_{#1}}
-\newcommand{\update}{\mbox{\tt\_update}}
-\begin{description}
-\item[{\tt type\_axiom}] The type axiom for the record type, as
-  returned by the standard datatype definition package.
-\item[{\tt accessor\_fns}] The definitions of the accessor functions.
-  \rewruse
-\item[{\tt update\_fns}] The definitions of the update functions.
-  \rewruse
-\item[{\tt cases\_thm}] The usual cases theorem for a type, stating
-  that for all record values, there exist component values making it
-  up.
-\item[{\tt fn\_upd\_thm}] The definitions of the functional update
-  functions.  \rewruse
-\item[{\tt acc\_upd\_thm}] A theorem stating simpler forms for
-  expressions of the form $\field{i}\, (\field{j}\update\;v\; r)$.  If
-  $i = j$, then the RHS is $v$, if not, it is $(\field{i}\;r)$.
-  \rewruse
-\item[{\tt upd\_acc\_thm}] A theorem stating that $\field{i}\update
-  \;(\field{i}\;r)\;r = r$ for all of
-  the fields defined in the type. \rewruse
-\item[{\tt upd\_upd\_thm}] A thereom stating that $\field{i}\update
-  \;v_1 \,(\field{i}\update \;v_2\;r) = \field{i}\update\;v_1\;r$.
-  \rewruse
-\item[{\tt upd\_canon\_thm}] A theorem that states commutativity results
-  for all possible pairs of field updates.  They are constructed in
-  such a way that if used as rewrites, they will canonicalise
-  sequences of updates. \rewruse
-\item[{\tt cons\_11\_thm}] The standard result stating the type
-  constructor is injective.  \rewruse
-\item[{\tt create\_term}] This last component of the record returned
-  is not a theorem, but rather an ML function.  It is identical to the
-  {\tt create\_term\_fn} already defined in {\tt RecordType}, but is
-  pre-applied to the relevant arguments, so that it is of the type
-  string-value list to term.
-\end{description}
-
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

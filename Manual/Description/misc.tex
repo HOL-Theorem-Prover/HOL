@@ -20,7 +20,7 @@ the parsers for \HOL\ types and terms.
 
 \section{Help}
 
- There are several kinds of help available in Hol98, all accessible
+ There are several kinds of help available in \holn{}, all accessible
  through the same incantation:
  \begin{verbatim}
      help <string>;
@@ -35,14 +35,14 @@ the parsers for \HOL\ types and terms.
    via \verb+help "Lib"+.
 
 \item [HOL overview.] This is a short summary of important information
-  about Hol98.
+  about \holn{}.
 
 \item [HOL help.] This is the on-line help from Hol88 and Hol90, and
   is intended to document all HOL-specific functions available to the
   user. It is very detailed and often accurate; however, it can be
   out-of-date, refer to HOL90 or HOL88, or even be missing!
 
-\item [HOL structure information.]  For most structures in the Hol98
+\item [HOL structure information.]  For most structures in the \holn{}
   source, one can get a listing of the entrypoints found in the
   accompanying signature. This is helpful for locating functions and
   is automatically derived from the system sources, so it is alway
@@ -51,7 +51,7 @@ the parsers for \HOL\ types and terms.
 \item [Theory facts.] These are automatically derived from theory
   files, so they are always up-to-date. The signature of each theory
   is available (since theories are represented by structures in
-  Hol98). Also, each axiom, definition, and theorem in the theory can
+  \holn{}). Also, each axiom, definition, and theorem in the theory can
   be accessed by name in the help system; the theorem itself is given.
  \end{description}
 
@@ -61,7 +61,7 @@ the parsers for \HOL\ types and terms.
 \begin{center}
  \begin{tabular}{|l|l|} \hline
   \verb+help "installPP"+ & Moscow ML help \\
-  \verb+help "hol"+ &  Hol98 overview \\
+  \verb+help "hol"+ &  \holn{} overview \\
   \verb+help "aconv"+ &  on-line HOL help \\
   \verb+help "Tactic"+ & HOL source structure information \\
   \verb+help "boolTheory"+ &  theory structure signature \\
@@ -75,7 +75,7 @@ the parsers for \HOL\ types and terms.
 
 The purpose of \verb+Holmake+\footnote{{\tt Holmake} was first written
   by Ken Larsen and then extended by Michael Norrish.} is to maintain
-dependencies in a Hol98 source directory. A single invocation of {\tt
+dependencies in a \holn{} source directory. A single invocation of {\tt
   Holmake} will compute dependencies between files, (re-)compile plain
 ML code, (re-)compile and execute theory scripts, and (re-)compile the
 resulting theory modules. {\tt Holmake} does not require the user to
@@ -199,7 +199,7 @@ To make Moscow ML happy, one must instead write something like
   \verb+load+ is only defined for the interactive system.
 
 \item Take care not to have the string "Theory" embedded in the name
-  of any of your files. Hol98 generates files containing this string,
+  of any of your files. \holn{} generates files containing this string,
   and when it cleans up after itself, it removes such files using a
   regular expression. This will also remove other files with names
   containing "Theory". For example, if, in your development directory,
@@ -207,7 +207,7 @@ To make Moscow ML happy, one must instead write something like
 \begin{verbatim}
    MyTheory.sml
 \end{verbatim}
-  and you also were managing a Hol98 development there with {\tt
+  and you also were managing a \holn{} development there with {\tt
     Holmake}, then MyTheory.sml would get deleted if {\tt Holmake
     clean} was invoked.
 
@@ -515,7 +515,7 @@ setting the flag \ml{timing} to the value $b$.
 
 \section{Quotation preprocessing}
 
-A person usually works with Hol98 by interacting with the ML top level
+A person usually works with \holn{} by interacting with the ML top level
 loop in order to build formalizations and perform proofs. In this
 setting, the user often needs to enter expressions of the HOL logic to
 ML, and interpret the resulting responses. Since the ML representations
@@ -537,7 +537,7 @@ would.\footnote{Quotations were a feature in the original LCF
 system. See the MoscowML User's Manual for more information.}
 
 For added convenience, the \HOL\ system distribution supplies a version 
-of Hol98 that features a {\it combined parser\/} that accepts both types
+of \holn{} that features a {\it combined parser\/} that accepts both types
 and terms. Enclosing some object language concrete syntax between
 occurrences of \verb+``+ will result in the correct parser being
 invoked. For example  
