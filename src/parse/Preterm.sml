@@ -6,9 +6,18 @@ open Feedback Lib GrammarSpecials;
 val ERR = mk_HOL_ERR "Preterm"
 
 
+
 type pretype = Pretype.pretype
 type hol_type = Type.hol_type
 type term = Term.term
+
+val mk_functional_ref = ref (NONE : (term -> term) option)
+
+fun provide_case_information f =
+    case !mk_functional_ref of
+      NONE => mk_functional_ref := SOME f
+    | SOME f =>
+      raise ERR "provide_case_information" "can only call this function once"
 
 datatype preterm = Var   of {Name:string,  Ty:pretype}
                  | Const of {Name:string,  Thy:string, Ty:pretype}

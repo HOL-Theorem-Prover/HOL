@@ -41,5 +41,10 @@ sig
   val typecheck:
     ((term -> string) * (hol_type -> string)) option -> preterm -> term
 
+  (* intended to be called by code in TypeBase only *)
+  val provide_case_information : (term -> term) -> unit
+
+
+
 end;
 
