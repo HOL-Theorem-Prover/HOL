@@ -743,6 +743,10 @@ val _ =
                                         | BIT1 of num
                                         | BIT2 of num`)
       ::
+     OPEN ["combin"]
+      ::
+     MLSTRUCT "nonfix o;"
+      ::
     (DEFN NUMERAL_DEF ::
       map (DEFN o PURE_REWRITE_RULE [NUMERAL_DEF])
          [numeral_suc,iZ,iiSUC,addition_thms,
@@ -756,19 +760,18 @@ val _ =
       MLSIG "val TWO :num",
       MLSIG "val BASE : num -> num -> num list",
       MLSIG "val toBinString   : num -> string",
-      MLSIG "val fromBinString : string -> num",
-      MLSIG "val toDecString   : num -> string",
-      MLSIG "val fromDecString : string -> num",
       MLSIG "val toOctString   : num -> string",
-      MLSIG "val fromOctString : string -> num",
+      MLSIG "val toDecString   : num -> string",
       MLSIG "val toHexString   : num -> string",
+      MLSIG "val fromBinString : string -> num",
+      MLSIG "val fromOctString : string -> num",
+      MLSIG "val fromDecString : string -> num",
       MLSIG "val fromHexString : string -> num",
       MLSIG "val ppBin : ppstream -> num -> unit",
       MLSIG "val ppOct : ppstream -> num -> unit",
       MLSIG "val ppDec : ppstream -> num -> unit",
       MLSIG "val ppHex : ppstream -> num -> unit",
-      MLSTRUCT   
-  "\n\
+      MLSTRUCT "\n\
 \ (*---------------------------------------------------------------------------*) \n\
 \ (* Supplementary ML, not generated from HOL theorems, aimed at supporting    *) \n\
 \ (* parsing and pretty printing of numerals.                                  *) \n\

@@ -71,6 +71,9 @@ val equivalence_def = new_definition(
   ``equivalence (R:'a->'a->bool) = reflexive R /\ symmetric R /\
                                    transitive R``);
 
+val total_def = new_definition 
+("total_def", Term`total (R:'a->'a->bool) = !x y. R x y \/ R y x`);
+
 val SC_SYMMETRIC = store_thm(
   "SC_SYMMETRIC",
   ``!R. symmetric (SC R)``,

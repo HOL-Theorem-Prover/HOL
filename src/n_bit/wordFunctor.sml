@@ -2595,14 +2595,14 @@ val _ =
         ["(*---------------------------------------------------------------------------\n",
          "         WL = ", WLstr, "\n",
          "         HB = ", HBstr, "\n",
-         "          L = ", Lstr, "\n",
-         "          H = ", Hstr, "\n",
+         "         wL = ", Lstr, "\n",
+         "         wH = ", Hstr, "\n",
          "     TOPNUM = ", TOPstr, "\n",
          "     MAXNUM = ", MAXstr, "\n",
          "  ---------------------------------------------------------------------------*)\n"])
-    :: DEFN HB_def :: DEFN WL_def
-    :: DEFN TOPNUM_DEF :: DEFN MAXNUM_DEF 
-    :: DEFN wL_def :: DEFN wH_def
+    :: DEFN HB_THM :: DEFN WL_def
+    :: DEFN TOPNUM_THM :: DEFN MAXNUM_THM 
+    :: DEFN wL_thm :: DEFN wH_thm
     :: map (DEFN o PURE_REWRITE_RULE [SYM HB_THM, SYM THE_WL_THM, SYM wL_thm, SYM wH_thm]
                  o PURE_REWRITE_RULE [NUMERAL_DEF, SYM TOPNUM_THM, SYM MAXNUM_THM])
        [word_T_thm, word_0, word_1, 
@@ -2636,16 +2636,13 @@ val _ =
 \ (* parsing and pretty printing of numerals.                                  *) \n\
 \ (*---------------------------------------------------------------------------*) \n\
 \ \n\
-\ local val k = EXP TWO WL \n\
-\ in \n\
-\ fun fromNum n = n2w (MOD n k) \n\
-\ end; \n\
+\ fun fromNum n = n2w (MOD_WL n) \n\
 \  \n\
 \ val toNum = w2n; \n\
 \  \n\
-\ val fromBinString = fromNum o numML.fromBinString \n\
-\ val fromOctString = fromNum o numML.fromOctString \n\
-\ val fromDecString = fromNum o numML.fromDecString \n\
+\ val fromBinString = fromNum o numML.fromBinString  \n\
+\ val fromOctString = fromNum o numML.fromOctString  \n\
+\ val fromDecString = fromNum o numML.fromDecString  \n\
 \ val fromHexString = fromNum o numML.fromHexString; \n\
 \  \n\
 \ val toBinString = numML.toBinString o toNum; \n\
