@@ -312,9 +312,13 @@ in
                                         in_vstruct = false})
     in
       case pstack p of
-        [(NonTerminal pt, _), (Terminal BOS, _)] => remove_specials pt
+        [(NonTerminal pt, _), (Terminal BOS, _)] =>
+          if List.all (fn ANTIQUOTE _ => false | QUOTE s => size s = 0) cs then
+            remove_specials pt
+          else
+            raise ERROR "Term" ("Parse failed with \""^ftoString cs^"\" remaining")
       | _ =>
-          raise ERROR "Termparse" ("Parse failed with \""^ftoString cs^"\" remaining")
+          raise ERROR "Term" ("Parse failed with \""^ftoString cs^"\" remaining")
     end
   end
 
@@ -672,9 +676,9 @@ in
   res
 end
 
-fun new_theory s = Theory.new_theory (SOME pp_thm) s
-fun export_theory () = Theory.export_theory (SOME pp_thm)
-fun print_theory () = Theory.print_theory {pp_thm = pp_thm, pp_type = pp_type}
+fun new_theory s = Theory.new_theory0 (SOME pp_thm) s
+fun export_theory () = Theory.export_theory0 (SOME pp_thm)
+fun print_theory () = Theory.print_theory0 {pp_thm = pp_thm, pp_type = pp_type}
 
 (* constrain parsed term to have a given type *)
 fun typedTerm qtm ty =

@@ -12,5 +12,5 @@ fun ITEM c x = x = c
 val empty = fn c => false
 
 (* we put _ into both sets *)
-val HOLsym = Char.isPunct ANDNOT ITEMS "$'"
+val HOLsym = Char.isPunct ANDNOT ITEMS "$'\""
 val HOLid = Char.isAlphaNum OR ITEMS "_'"

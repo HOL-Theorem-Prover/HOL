@@ -82,7 +82,8 @@ fun itemP P = let
         val (c, ss) = valOf (getc (all s))
       in
         if P c then
-          pushback (QUOTE (string ss)) >> return c
+          (if size ss <> 0 then pushback (QUOTE (string ss)) else ok)  >>
+          return c
         else
           fail
       end

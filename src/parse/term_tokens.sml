@@ -5,13 +5,47 @@ datatype 'a term_token =
 open optmonad monadic_parse
 open fragstr
 
-infix >- >> ++
+infix >- >> ++ >->
 
 open HOLtokens
 infix OR
 
 fun member x [] = false
   | member x (y::ys) = x = y orelse member x ys
+
+val quotec = #"\"" and bslashc = #"\\" and nlc = #"\n"
+fun q_ok c = c <> quotec andalso c <> bslashc andalso c <> nlc
+fun strip_eqs strm =
+  (many
+   (monadic_parse.itemP (fn ANTIQUOTE _ => false | QUOTE s => size s = 0)))
+  strm
+fun bslash_error strm =
+  (strip_eqs >> get >-
+   (fn x =>
+    case x of
+      QUOTE s =>
+        (print ("Don't recognise \\"^String.substring(s,0,1)^
+                " as a valid backslash escape.\n");
+         pushback x >> fail)
+    | ANTIQUOTE _ => (print "Must not have antiquotations inside strings.\n";
+                      pushback x >> fail))) strm
+
+fun failwith s x = (print s ; fail) x
+fun qstring_contents strm =
+  (many (many1_charP q_ok ++
+         (string "\\\\" >> return "\\") ++
+         (string "\\\"" >> return "\"") ++
+         (string "\\n" >> return "\n") ++
+         (item #"\\" >> bslash_error) ++
+         (item #"\n" >>
+          failwith "Newlines must not appear inside strings.\n") ++
+         (antiq >>
+          failwith "Must not have antiquotations inside strings.\n")) >-
+   (fn slist => return (String.concat slist))) strm;
+
+fun quoted_string strm =
+  ((item #"\"" >> qstring_contents >-> item #"\"") >-
+   (fn c => return ("\""^c^"\""))) strm
 
 (* Terminology and basic algorithm
    -------------------------------
@@ -120,6 +154,7 @@ fun lex keywords0 = let
 
 in
   (token antiq >- return o Antiquote) ++
+  (token quoted_string >- return o Ident) ++
   (token ((optional (item #"$")) >- return o isSome >-   (fn b =>
           many1_charP (HOLsym OR HOLid) >- doit b)))
 end

@@ -88,19 +88,22 @@ end;
 (*---------------------------------------------------------------------------
  * Binding occurrences of variables
  *---------------------------------------------------------------------------*)
-fun make_binding_occ tyvars s "\\" E =
-     let val ntv = Lib.state(Lib.next tyvars)
-     in ((fn b => Preterm.Abs{Bvar = Preterm.Var{Name = s, Ty = ntv},
-                              Body = b}),
-         add_scope((s,ntv),E))
-     end
-  | make_binding_occ tyvars s binder E =
-     let val ntv = Lib.state(Lib.next tyvars)
-     in ((fn b => Preterm.Comb{Rator=gen_const tyvars binder,
-                             Rand=Preterm.Abs{Bvar=Preterm.Var{Name=s,Ty=ntv},
-                                              Body = b}}),
-         add_scope((s,ntv),E))
-     end;
+fun make_binding_occ tyvars s binder E = let
+  val _ = Lexis.ok_identifier s orelse
+    raise PARSE_SUPPORT_ERR "make_binding_occ"
+      (s ^ " is not lexically permissible as a binding variable")
+  val ntv = Lib.state(Lib.next tyvars)
+in
+  case binder of
+    "\\" => ((fn b => Preterm.Abs{Bvar = Preterm.Var{Name = s, Ty = ntv},
+                                  Body = b}),
+             add_scope((s,ntv),E))
+  | _ => ((fn b => Preterm.Comb{Rator=gen_const tyvars binder,
+                                Rand=Preterm.Abs{Bvar=Preterm.Var{Name=s,
+                                                                  Ty=ntv},
+                                                 Body = b}}),
+          add_scope((s,ntv),E))
+end
 
 fun make_aq_binding_occ _ aq "\\" E =
      ((fn b => Preterm.Abs{Bvar=Preterm.Antiq aq,Body=b}), E)
@@ -187,7 +190,11 @@ fun make_atom tyvars s E =
            handle HOL_ERR _
              => if (Lexis.is_num_literal s)
                 then make_num_literal tyvars (s,E)
-                else make_free_var tyvars (s,E);
+                else
+                  if (Lexis.is_string_literal s) then
+                    raise PARSE_SUPPORT_ERR "make_atom"
+                      "strings not lexically OK until stringTheory loaded"
+                  else make_free_var tyvars (s,E);
 
 
 (*---------------------------------------------------------------------------

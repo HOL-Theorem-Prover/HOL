@@ -659,10 +659,23 @@ fun pp_term (G : grammar) TyG = let
         end
       | CONST{Name = cname, ...} => let
           val crules = lookup_term cname
+          fun print_string_literal s = let
+            val contents0 = String.substring(s, 1, size s - 2)
+            fun tr #"\\" = "\\\\"
+              | tr #"\"" = "\\\""
+              | tr #"\n" = "\\n"
+              | tr c = str c
+            val contents = String.translate tr contents0
+          in
+            add_string "\""; add_string contents; add_string "\""
+          end
         in
           if isSome crules then pr_sole_name cname (map #2 (valOf crules))
           else if cname = "ZERO" then add_string "0"
-               else add_string cname
+               else
+                 if Lexis.is_string_literal cname then
+                   print_string_literal cname
+                 else add_string cname
         end
       | COMB{Rator, Rand} => let
           val (f, args) = strip_comb Rator
