@@ -20,7 +20,7 @@ open HolKernel Parse boolLib pairLib;
   type compset = computeLib.compset
 
 
-infix ORELSE;
+infix THEN ORELSE;
 
 val BOSS_ERR = mk_HOL_ERR "bossLib";
 
@@ -84,8 +84,15 @@ end
 val DECIDE     = decisionLib.DECIDE o Parse.Term
 val DECIDE_TAC = decisionLib.DECIDE_TAC
 *)
-val DECIDE     = arithLib.ARITH_PROVE o Parse.Term
-val DECIDE_TAC = CONV_TAC arithLib.ARITH_CONV
+fun DECIDE q = 
+ let val tm = Parse.Term q
+ in arithLib.ARITH_PROVE tm handle HOL_ERR _ => 
+    tautLib.TAUT_PROVE tm
+ end;
+
+fun DECIDE_TAC (g as (asl,_)) = 
+((MAP_EVERY UNDISCH_TAC (filter arithSimps.is_arith asl) THEN numLib.ARITH_TAC)
+  ORELSE tautLib.TAUT_TAC) g;
 
 fun ZAP_TAC ss thl =
    BasicProvers.STP_TAC ss
