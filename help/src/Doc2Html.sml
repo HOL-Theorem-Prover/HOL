@@ -13,38 +13,15 @@
 
 open Substring;
 
-fun I x = x;
-
 fun curry f x y = f (x,y)
 fun equal x y = (x=y)
 infix ##;
 fun (f##g) (x,y) = (f x, g y);
 
-val equal = curry (op=);
-
-fun butlast [] = raise Fail "butlast"
-  | butlast [x] = []
-  | butlast (h::t) = h::butlast t;
-
-fun flat [] = []
-  | flat ([]::rst) = flat rst
-  | flat ((h::t)::rst) = h::flat(t::rst);
-
 infixr 4 \/
 infixr 5 /\
 fun (f \/ g) x = f x orelse g x
 fun (f /\ g) x = f x andalso g x;
-
-fun occurs s ss = not (isEmpty (#2 (position s ss)));
-
-fun fetch_contents docfile =
-  let val istrm = TextIO.openIn docfile
-      val contents = Substring.all (TextIO.inputAll istrm)
-      val _ = TextIO.closeIn istrm
-  in contents
-  end;
-
-fun fetch str = Substring.string (fetch_contents str);
 
 open ParseDoc
 
