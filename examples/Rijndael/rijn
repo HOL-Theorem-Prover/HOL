@@ -1,4 +1,4 @@
-app load ["sboxTheory","RoundOpTheory","pairTools"]; 
+app load ["sboxTheory", "RoundOpTheory", "pairTools"]; 
 
 open RoundOpTheory pairTools;
 
@@ -14,8 +14,9 @@ val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 (*                                                                           *)
 (* (Round 0 [key] state = AddRoundKey key (ShiftRows (SubBytes state))) /\   *)
 (* (Round n (key::keys) state = Round (n-1) keys                             *)
-(*                                  (AddRoundKey key (MixColumns             *)
-(*                                     (ShiftRows (SubBytes state)))))`;     *)
+(*                                (AddRoundKey key                           *)
+(*                                  (MixColumns                              *)
+(*                                    (ShiftRows (SubBytes state)))))`;      *)
 (*---------------------------------------------------------------------------*)
 
 val (Round_def, Round_ind) = Defn.tprove
@@ -47,11 +48,14 @@ val (InvRound_def,InvRound_ind) = Defn.tprove
       if n=0 
        then (case keys 
               of [key] -> AddRoundKey key 
-                            (InvSubBytes(InvShiftRows state)))
+                            (InvSubBytes
+                               (InvShiftRows state)))
        else (case keys
-              of k0::rst -> InvRound (n-1) rst
-                              (InvMixColumns (AddRoundKey k0 
-                                (InvSubBytes (InvShiftRows state)))))`,
+              of k::rst -> InvRound (n-1) rst
+                              (InvMixColumns 
+                                 (AddRoundKey k 
+                                   (InvSubBytes 
+                                     (InvShiftRows state)))))`,
   WF_REL_TAC `measure FST`);
 
 

@@ -7,3 +7,16 @@ and Daemen. The AES homepage is
 Unlike most implementations, no arrays or vectors are used in our
 code. The main datastructure operated on is the `state', which is a 4x4
 block of bytes (8 bit words). We model it by a 16-tuple of bytes. 
+
+The dependencies are:
+
+      sboxTheory     (definition of Sboxes)
+         |
+         |
+      RoundOpTheory  (basic operations that happen during a round)
+         |
+         |
+      rijn           (defn of rounds and key schedule, correctness)
+         |
+         |
+      rijn.alt       (alternative decryptor, correctness)

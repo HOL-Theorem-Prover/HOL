@@ -243,6 +243,14 @@ val ShiftRows_SubBytes_Commute = Q.store_thm
                    v10,v11,v12,v13,v14,v15):state`) THEN EVAL_TAC);
 
 
+val InvShiftRows_InvSubBytes_Commute = Q.store_thm
+ ("InvShiftRows_InvSubBytes_Commute",
+  `!s. InvShiftRows (InvSubBytes s) = InvSubBytes (InvShiftRows s)`,
+  PGEN_TAC (Term `(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,
+                   v10,v11,v12,v13,v14,v15):state`) THEN EVAL_TAC);
+
+
+
 (*---------------------------------------------------------------------------
         Shift a byte left and right
  ---------------------------------------------------------------------------*)
@@ -654,8 +662,8 @@ val InvMixColumns_Distrib = Q.store_thm
  PGEN_TAC (Term `(k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,
                   k10,k11,k12,k13,k14,k15):key`) THEN
  RW_TAC (std_ss ++ simpLib.ac_ss [(c,a)]) 
-        [AddRoundKey_def,InvMixColumns_def,
-         genMixColumns_def,InvMultCol_def, ConstMultDistrib]);
+        [AddRoundKey_def, InvMixColumns_def,
+         genMixColumns_def, InvMultCol_def, ConstMultDistrib]);
 
 
 val _ = export_theory();
