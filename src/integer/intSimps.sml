@@ -19,20 +19,14 @@ fun is_int_literal t =
   (rator t = int_negation andalso is_int_literal (rand t))
   handle HOL_ERR _ => false
 
-val elim_thms = [INT_ADD_CALCULATE, INT_SUB_CALCULATE, INT_MUL_CALCULATE,
-                 INT_DIV_CALCULATE, INT_MOD_CALCULATE, INT_EXP_CALCULATE,
-                 INT_LT_CALCULATE, INT_LE_CALCULATE, INT_EQ_CALCULATE,
-                 INT_GT_CALCULATE, INT_GE_CALCULATE, INT_DIVIDES_MOD0]
-val elim_ints =
-  simpLib.SIMP_CONV (simpLib.++(boolSimps.bool_ss, arithSimps.REDUCE_ss))
-  elim_thms
+val elim_thms = [INT_ADD_REDUCE, INT_SUB_REDUCE, INT_MUL_REDUCE,
+                 INT_DIV_REDUCE, INT_MOD_REDUCE, INT_EXP_REDUCE,
+                 INT_LT_REDUCE, INT_LE_REDUCE, INT_EQ_REDUCE,
+                 INT_GT_REDUCE, INT_GE_REDUCE, INT_DIVIDES_REDUCE]
 
-fun reducer t = let
-  val (_, args) = strip_comb t
-  fun reducible t = is_int_literal t orelse numSyntax.is_numeral t
-in
-  if List.all reducible args then elim_ints t else Conv.NO_CONV t
-end
+val int_reduce_rws = reduceLib.reduce_rws()
+val _ = computeLib.add_thms elim_thms int_reduce_rws
+val REDUCE_CONV = computeLib.CBV_CONV int_reduce_rws
 
 val x = mk_var{Name = "x", Ty = int_ty}
 and y = mk_var{Name = "y", Ty = int_ty}
@@ -47,6 +41,14 @@ val basic_rel_patterns =
 val exp_pattern = list_mk_comb(mk_const{Name = "int_exp",
                                         Ty = int_ty --> (num_ty --> int_ty)},
                                [x,n])
+
+fun reducer t = let
+  val (_, args) = strip_comb t
+  fun reducible t = is_int_literal t orelse numSyntax.is_numeral t
+in
+  if List.all reducible args then REDUCE_CONV t else Conv.NO_CONV t
+end
+
 fun mk_conv pat = {name = "Integer calculation", key = SOME([], pat),
                    trace = 2, conv = K (K reducer)}
 
@@ -61,8 +63,6 @@ val INT_REDUCE_ss = simpLib.SIMPSET
    used. *)
 
 val int_ss = simpLib.++(boolSimps.bool_ss, INT_REDUCE_ss)
-
-val REDUCE_CONV = simpLib.SIMP_CONV int_ss [];
 
 fun collect_additive_consts tm = let
   val summands = strip_plus tm
@@ -79,7 +79,7 @@ in
       | (numerals, non_numerals) => let
           val reorder_t = Psyntax.mk_eq(tm,
                            mk_plus(list_mk_plus non_numerals,
-                                   list_mk_plus numerals));
+                                   list_mk_plus numerals))
           val reorder_thm =
             EQT_ELIM(AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM) reorder_t)
         in

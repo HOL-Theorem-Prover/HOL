@@ -12,7 +12,6 @@ val _ = new_theory "int_arith";
 
 
 val int_ss = bool_ss ++ intSimps.INT_REDUCE_ss
-val REDUCE_CONV = SIMP_CONV int_ss []
 
 val not_less = store_thm(
   "not_less",
@@ -146,8 +145,7 @@ val can_get_small = store_thm(
     POP_ASSUM SUBST_ALL_TAC THEN
     ASM_REWRITE_TAC [INT_LT_SUB_RADD, INT_LT_ADDR, INT_MUL_LID],
     ASM_SIMP_TAC int_ss [INT_MUL_SIGN_CASES, INT_SUB_LDISTRIB,
-                                 INT_SUB_RDISTRIB, INT_SUB_LT,
-                                 INT_SUB_SUB3] THEN
+                         INT_SUB_RDISTRIB, INT_SUB_LT, INT_SUB_SUB3] THEN
     `x < y` by PROVE_TAC [INT_LT_TOTAL] THEN
     ASM_REWRITE_TAC [GSYM move_sub, INT_LT_ADD_SUB] THEN
     `2 * y * d = y * (2 * d)` by PROVE_TAC [INT_MUL_SYM, INT_MUL_ASSOC] THEN
@@ -155,7 +153,7 @@ val can_get_small = store_thm(
     `2 * x * d = x * (2 * d)` by PROVE_TAC [INT_MUL_SYM, INT_MUL_ASSOC] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
     CONV_TAC
-     (BINOP_CONV (RATOR_CONV (RAND_CONV (REWR_CONV (GSYM INT_MUL_RID))))) THEN
+     (BINOP_CONV (LAND_CONV (REWR_CONV (GSYM INT_MUL_RID)))) THEN
     REWRITE_TAC [GSYM INT_SUB_LDISTRIB] THEN
     ONCE_REWRITE_TAC [GSYM INT_LT_NEG] THEN
     REWRITE_TAC [INT_NEG_RMUL, INT_NEG_SUB] THEN

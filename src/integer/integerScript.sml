@@ -1,4 +1,4 @@
-structure integerScript = 
+structure integerScript =
 struct
 
 (*==========================================================================*)
@@ -1815,6 +1815,19 @@ val INT_MOD_NEG = store_thm(
     ]
   ]);
 
+val INT_MOD0 = store_thm(
+  "INT_MOD0",
+  Term`!p. ~(p = 0) ==> (0 % p = 0)`,
+  GEN_TAC THEN
+  Cases_on `0 <= p` THENL [
+    `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    SIMP_TAC int_ss [INT_MOD, INT_INJ, ZERO_MOD],
+    `?n. p = ~&n` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE, INT_LE_LT] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    SIMP_TAC int_ss [INT_MOD_NEG, INT_NEG_EQ0, INT_MOD, INT_INJ, ZERO_MOD]
+  ]);
+
 val INT_DIV_MUL_ID = store_thm(
   "INT_DIV_MUL_ID",
   Term`!p q. ~(q = 0) /\ (p % q = 0) ==> (p / q * q = p)`,
@@ -2474,7 +2487,7 @@ val INT_ADD_CALCULATE = store_thm(
   "INT_ADD_CALCULATE",
   Term`!p:int n m.
           (0 + p = p) /\ (p + 0 = p) /\
-          (&n + &m = &(n + m)) /\
+          (&n + &m:int = &(n + m)) /\
           (&n + ~&m = if m <= n then &(n - m) else ~&(m - n)) /\
           (~&n + &m = if n <= m then &(m - n) else ~&(n - m)) /\
           (~&n + ~&m = ~&(n + m))`,
@@ -2483,19 +2496,103 @@ val INT_ADD_CALCULATE = store_thm(
     GSYM int_sub, INT_EQ_SUB_RADD, INT_INJ, INT_SUB
   ]);
 
+val INT_ADD_REDUCE = store_thm(
+  "INT_ADD_REDUCE",
+  Term`!p:int n m.
+          (0 + p = p) /\ (p + 0 = p) /\ (~0 = 0) /\ (~~p = p) /\
+          (&(NUMERAL n) + &(NUMERAL m):int = &(NUMERAL (iZ (n + m)))) /\
+          (&(NUMERAL n) + ~&(NUMERAL m):int =
+             if m <= n then &(NUMERAL (n - m)) else ~&(NUMERAL (m - n))) /\
+          (~&(NUMERAL n) + &(NUMERAL m):int =
+             if n <= m then &(NUMERAL (m - n)) else ~&(NUMERAL (n - m))) /\
+          (~&(NUMERAL n) + ~&(NUMERAL m):int = ~&(NUMERAL (iZ (n + m))))`,
+  SIMP_TAC (int_ss ++ boolSimps.COND_elim_ss) [
+    INT_ADD_LID, INT_ADD_RID, INT_ADD, GSYM INT_NEG_ADD, INT_ADD_COMM,
+    GSYM int_sub, INT_EQ_SUB_RADD, INT_INJ, INT_SUB, numeralTheory.iZ,
+    NUMERAL_DEF, INT_NEG_0, INT_NEGNEG
+  ]);
+
 val INT_SUB_CALCULATE = save_thm("INT_SUB_CALCULATE", int_sub);
+
+val INT_SUB_REDUCE = store_thm(
+  "INT_SUB_REDUCE",
+  Term`!m n p:int.
+        (p - 0 = p) /\ (0 - p = ~p) /\
+        (&(NUMERAL m) - &(NUMERAL n):int = &(NUMERAL m) + ~&(NUMERAL n)) /\
+        (~&(NUMERAL m) - &(NUMERAL n):int = ~&(NUMERAL m) + ~&(NUMERAL n)) /\
+        (&(NUMERAL m) - ~&(NUMERAL n):int = &(NUMERAL m) + &(NUMERAL n)) /\
+        (~&(NUMERAL m) - ~&(NUMERAL n):int = ~&(NUMERAL m) + &(NUMERAL n))`,
+  REWRITE_TAC [int_sub, INT_NEG_0, INT_ADD_LID, INT_ADD_RID, INT_NEGNEG]);
 
 val INT_MUL_CALCULATE = save_thm(
   "INT_MUL_CALCULATE",
   LIST_CONJ [INT_MUL, GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, INT_NEGNEG]);
 
+val INT_MUL_REDUCE = store_thm(
+  "INT_MUL_REDUCE",
+  Term`!m n p.
+         (p * 0i = 0) /\ (0 * p = 0) /\
+         (&(NUMERAL m) * &(NUMERAL n):int = &(NUMERAL (m * n))) /\
+         (~&(NUMERAL m) * &(NUMERAL n) = ~&(NUMERAL (m * n))) /\
+         (&(NUMERAL m) * ~&(NUMERAL n) = ~&(NUMERAL (m * n))) /\
+         (~&(NUMERAL m) * ~&(NUMERAL n) = &(NUMERAL (m * n)))`,
+  REWRITE_TAC [INT_MUL, GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, INT_NEGNEG,
+               NUMERAL_DEF, INT_MUL_LZERO, INT_MUL_RZERO]);
+
 val INT_DIV_CALCULATE = save_thm(
   "INT_DIV_CALCULATE",
   LIST_CONJ [INT_DIV, INT_DIV_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG]);
 
+val INT_DIV_REDUCE = store_thm(
+  "INT_DIV_REDUCE",
+  Term`!m n.
+         (0i / &(NUMERAL (NUMERAL_BIT1 n)) = 0i) /\
+         (0i / &(NUMERAL (NUMERAL_BIT2 n)) = 0i) /\
+         (&(NUMERAL m) / &(NUMERAL (NUMERAL_BIT1 n)) =
+            &(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+         (&(NUMERAL m) / &(NUMERAL (NUMERAL_BIT2 n)) =
+            &(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n))) /\
+         (~&(NUMERAL m) / &(NUMERAL (NUMERAL_BIT1 n)) =
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+         (~&(NUMERAL m) / &(NUMERAL (NUMERAL_BIT2 n)) =
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n))) /\
+         (&(NUMERAL m) / ~&(NUMERAL (NUMERAL_BIT1 n)) =
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+         (&(NUMERAL m) / ~&(NUMERAL (NUMERAL_BIT2 n)) =
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n))) /\
+         (~&(NUMERAL m) / ~&(NUMERAL (NUMERAL_BIT1 n)) =
+            &(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+         (~&(NUMERAL m) / ~&(NUMERAL (NUMERAL_BIT2 n)) =
+            &(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n)))`,
+  SIMP_TAC int_ss [INT_DIV, INT_DIV_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG,
+                   NUMERAL_DEF, NUMERAL_BIT1, NUMERAL_BIT2, ZERO_DIV]);
+
 val INT_MOD_CALCULATE = save_thm(
   "INT_MOD_CALCULATE",
   LIST_CONJ [INT_MOD, INT_MOD_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0]);
+
+val INT_MOD_REDUCE = store_thm(
+  "INT_MOD_REDUCE",
+  Term`!m n. (0i % &(NUMERAL (NUMERAL_BIT1 n)) = 0i) /\
+             (0i % &(NUMERAL (NUMERAL_BIT2 n)) = 0i) /\
+             (&(NUMERAL m) % &(NUMERAL (NUMERAL_BIT1 n)) =
+                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
+             (&(NUMERAL m) % &(NUMERAL (NUMERAL_BIT2 n)) =
+                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n))) /\
+             (~&(NUMERAL m) % &(NUMERAL (NUMERAL_BIT1 n)) =
+                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
+             (~&(NUMERAL m) % &(NUMERAL (NUMERAL_BIT2 n)) =
+                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n))) /\
+             (&(NUMERAL m) % ~&(NUMERAL (NUMERAL_BIT1 n)) =
+                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
+             (&(NUMERAL m) % ~&(NUMERAL (NUMERAL_BIT2 n)) =
+                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n))) /\
+             (~&(NUMERAL m) % ~&(NUMERAL (NUMERAL_BIT1 n)) =
+                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
+             (~&(NUMERAL m) % ~&(NUMERAL (NUMERAL_BIT2 n)) =
+                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n)))`,
+  SIMP_TAC int_ss [INT_MOD_CALCULATE, NUMERAL_BIT1, NUMERAL_BIT2,
+                   NUMERAL_DEF, ALT_ZERO, ZERO_MOD]);
 
 val ODD_NB1 = prove(
   Term`!n. ODD(NUMERAL_BIT1 n)`,
@@ -2509,15 +2606,26 @@ val INT_EXP_CALCULATE = store_thm(
   Term`!p:int n m.
         (p ** 0 = 1) /\ (&n ** m = &(n EXP m)) /\
         (~&n ** NUMERAL (NUMERAL_BIT1 m) =
-           ~&(n EXP NUMERAL (NUMERAL_BIT1 m))) /\
+           ~&(NUMERAL (n EXP NUMERAL (NUMERAL_BIT1 m)))) /\
         (~&n ** NUMERAL (NUMERAL_BIT2 m) =
-            &(n EXP NUMERAL (NUMERAL_BIT2 m)))`,
+            &(NUMERAL (n EXP NUMERAL (NUMERAL_BIT2 m))))`,
   SIMP_TAC int_ss [INT_EXP, int_exp] THEN
   SIMP_TAC int_ss [NUMERAL_DEF, ODD_NB1, EVEN_NB2, INT_EXP_NEG]);
 
+val INT_EXP_REDUCE = store_thm(
+  "INT_EXP_REDUCE",
+  Term`!n m p:int.
+          (p ** 0 = 1) /\
+          (&(NUMERAL n):int ** m = &(n EXP m)) /\
+          (~&(NUMERAL n) ** NUMERAL (NUMERAL_BIT1 m) =
+             ~&(NUMERAL (n EXP NUMERAL_BIT1 m))) /\
+          (~&(NUMERAL n) ** NUMERAL (NUMERAL_BIT2 m) =
+             &(NUMERAL (n EXP NUMERAL_BIT2 m)))`,
+  SIMP_TAC int_ss [INT_EXP_CALCULATE, NUMERAL_DEF]);
+
 val INT_LT_CALCULATE = store_thm(
   "INT_LT_CALCULATE",
-  Term`!n m.  (&n < &m = n < m) /\ (~&n < ~&m = m < n) /\
+  Term`!n m.  (&n:int < &m = n < m) /\ (~&n < ~&m = m < n) /\
               (~&n < &m = ~(n = 0) \/ ~(m = 0)) /\ (&n < ~&m = F)`,
   SIMP_TAC int_ss [INT_LT, INT_LT_NEG] THEN
   Induct THENL [
@@ -2530,9 +2638,25 @@ val INT_LT_CALCULATE = store_thm(
     ]
   ]);
 
+val INT_LT_REDUCE = store_thm(
+  "INT_LT_REDUCE",
+  Term`!n m. (0i < &(NUMERAL (NUMERAL_BIT1 n)) = T) /\
+             (0i < &(NUMERAL (NUMERAL_BIT2 n)) = T) /\
+             (0i < 0i = F) /\
+             (0i < ~&(NUMERAL n) = F) /\
+             (&(NUMERAL n) < 0i = F) /\
+             (~&(NUMERAL (NUMERAL_BIT1 n)) < 0i = T) /\
+             (~&(NUMERAL (NUMERAL_BIT2 n)) < 0i = T) /\
+             (&(NUMERAL n) :int < &(NUMERAL m) = n < m) /\
+             (~&(NUMERAL (NUMERAL_BIT1 n)) < &(NUMERAL m) = T) /\
+             (~&(NUMERAL (NUMERAL_BIT2 n)) < &(NUMERAL m) = T) /\
+             (&(NUMERAL n) < ~&(NUMERAL m) = F) /\
+             (~&(NUMERAL n) < ~&(NUMERAL m) = m < n)`,
+  SIMP_TAC bool_ss [INT_LT_CALCULATE, NUMERAL_DEF, NUMERAL_BIT1,
+                    NUMERAL_BIT2] THEN
+  CONV_TAC ARITH_CONV);
+
 val INT_LE_CALCULATE = save_thm("INT_LE_CALCULATE", INT_LE_LT);
-val INT_GT_CALCULATE = save_thm("INT_GT_CALCULATE", int_gt);
-val INT_GE_CALCULATE = save_thm("INT_GE_CALCULATE", int_ge);
 
 val int_eq_calculate = prove(
   Term`!n m. ((&n = ~&m) = (n = 0) /\ (m = 0)) /\
@@ -2547,9 +2671,87 @@ val int_eq_calculate = prove(
     ]
   ]);
 
+val INT_LE_REDUCE = store_thm(
+  "INT_LE_REDUCE",
+  Term`!n m. (0i <= 0i = T) /\ (0i <= &(NUMERAL n) = T) /\
+             (0i <= ~&(NUMERAL (NUMERAL_BIT1 n)) = F) /\
+             (0i <= ~&(NUMERAL (NUMERAL_BIT2 n)) = F) /\
+             (&(NUMERAL(NUMERAL_BIT1 n)) <= 0i = F) /\
+             (&(NUMERAL(NUMERAL_BIT2 n)) <= 0i = F) /\
+             (~&(NUMERAL(NUMERAL_BIT1 n)) <= 0i = T) /\
+             (~&(NUMERAL(NUMERAL_BIT2 n)) <= 0i = T) /\
+             (&(NUMERAL n):int <= &(NUMERAL m) = n <= m) /\
+             (&(NUMERAL n) <= ~&(NUMERAL (NUMERAL_BIT1 m)) = F) /\
+             (&(NUMERAL n) <= ~&(NUMERAL (NUMERAL_BIT2 m)) = F) /\
+             (~&(NUMERAL n) <= &(NUMERAL m) = T) /\
+             (~&(NUMERAL n) <= ~&(NUMERAL m) = m <= n)`,
+  SIMP_TAC bool_ss [NUMERAL_DEF, INT_LE_CALCULATE, INT_LT_CALCULATE,
+                    int_eq_calculate, INT_INJ, INT_EQ_NEG, NUMERAL_BIT1,
+                    NUMERAL_BIT2] THEN
+  CONV_TAC ARITH_CONV);
+
+val INT_GT_CALCULATE = save_thm("INT_GT_CALCULATE", int_gt);
+val INT_GT_REDUCE = save_thm(
+  "INT_GT_REDUCE",
+  PURE_REWRITE_RULE [GSYM int_gt] INT_LT_REDUCE);
+val INT_GE_CALCULATE = save_thm("INT_GE_CALCULATE", int_ge);
+val INT_GE_REDUCE = save_thm(
+  "INT_GE_REDUCE",
+  PURE_REWRITE_RULE [GSYM int_ge] INT_LE_REDUCE);
+
 val INT_EQ_CALCULATE = save_thm(
   "INT_EQ_CALCULATE",
   LIST_CONJ [INT_INJ, INT_EQ_NEG, int_eq_calculate]);
+val INT_EQ_REDUCE = store_thm(
+  "INT_EQ_REDUCE",
+  Term`!n m. ((0i = 0i) = T) /\
+             ((0i = &(NUMERAL (NUMERAL_BIT1 n))) = F) /\
+             ((0i = &(NUMERAL (NUMERAL_BIT2 n))) = F) /\
+             ((0i = ~&(NUMERAL (NUMERAL_BIT1 n))) = F) /\
+             ((0i = ~&(NUMERAL (NUMERAL_BIT2 n))) = F) /\
+             ((&(NUMERAL (NUMERAL_BIT1 n)) = 0i) = F) /\
+             ((&(NUMERAL (NUMERAL_BIT2 n)) = 0i) = F) /\
+             ((~&(NUMERAL (NUMERAL_BIT1 n)) = 0i) = F) /\
+             ((~&(NUMERAL (NUMERAL_BIT2 n)) = 0i) = F) /\
+             ((&(NUMERAL n) :int = &(NUMERAL m)) = (n = m)) /\
+             ((&(NUMERAL (NUMERAL_BIT1 n)) = ~&(NUMERAL m)) = F) /\
+             ((&(NUMERAL (NUMERAL_BIT2 n)) = ~&(NUMERAL m)) = F) /\
+             ((~&(NUMERAL (NUMERAL_BIT1 n)) = &(NUMERAL m)) = F) /\
+             ((~&(NUMERAL (NUMERAL_BIT2 n)) = &(NUMERAL m)) = F) /\
+             ((~&(NUMERAL n) :int = ~&(NUMERAL m)) = (n = m))`,
+  SIMP_TAC bool_ss [INT_EQ_CALCULATE, NUMERAL_DEF, NUMERAL_BIT1,
+                    NUMERAL_BIT2] THEN
+  CONV_TAC ARITH_CONV);
+
+val INT_DIVIDES_REDUCE = store_thm(
+  "INT_DIVIDES_REDUCE",
+  Term`!n m p:int.
+          (0 int_divides 0 = T) /\
+          (0 int_divides &(NUMERAL (NUMERAL_BIT1 n)) = F) /\
+          (0 int_divides &(NUMERAL (NUMERAL_BIT2 n)) = F) /\
+          (p int_divides 0 = T) /\
+          (&(NUMERAL (NUMERAL_BIT1 n)) int_divides &(NUMERAL m) =
+           (NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n) = 0)) /\
+          (&(NUMERAL (NUMERAL_BIT2 n)) int_divides &(NUMERAL m) =
+           (NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n) = 0)) /\
+          (&(NUMERAL (NUMERAL_BIT1 n)) int_divides ~&(NUMERAL m) =
+           (NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n) = 0)) /\
+          (&(NUMERAL (NUMERAL_BIT2 n)) int_divides ~&(NUMERAL m) =
+           (NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n) = 0)) /\
+          (~&(NUMERAL (NUMERAL_BIT1 n)) int_divides &(NUMERAL m) =
+           (NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n) = 0)) /\
+          (~&(NUMERAL (NUMERAL_BIT2 n)) int_divides &(NUMERAL m) =
+           (NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n) = 0)) /\
+          (~&(NUMERAL (NUMERAL_BIT1 n)) int_divides ~&(NUMERAL m) =
+           (NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n) = 0)) /\
+          (~&(NUMERAL (NUMERAL_BIT2 n)) int_divides ~&(NUMERAL m) =
+           (NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n) = 0))`,
+  SIMP_TAC bool_ss [INT_DIVIDES_MOD0, INT_EQ_CALCULATE,
+                    INT_MOD_REDUCE] THEN
+  SIMP_TAC int_ss [NUMERAL_DEF, NUMERAL_BIT1, NUMERAL_BIT2] THEN
+  PROVE_TAC [INT_MOD0]);
+
+
 
 (* val _ = Globals.show_numeral_types := true *)
 
