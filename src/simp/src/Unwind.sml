@@ -266,9 +266,11 @@ val strip_univ = strip_univ_pos []
      SOME NONE     indicates that the et term was exactly ~tm
      SOME (SOME t) indicates that after removing et from tm, t was left
    If elim_term returns SOME (SOME t) then et ==> t is equivalent to tm;
-   it eliminates et from negative positions with tm.
+   it eliminates et from a negative position with tm.
+   If elim_term returns SOME NONE then et ==> F is equivalent to tm.
 
    If elim_term_neg returns SOME (SOME t) then et /\ t is equivalent to tm.
+   If elim_term_neg returns SOME NONE then et is equivalent to tm
 *)
 fun elim_term_neg et tm =
   if is_conj tm then let
