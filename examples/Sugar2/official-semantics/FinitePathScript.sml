@@ -313,11 +313,25 @@ val SEL_ELEM =
     THEN RW_TAC simp_arith_ss [SEL_def,SEL_REC_def,ELEM_def,
                                RESTN_def, SEL_REC_SUC]);
 
-val APPEND_CANCEL =
+val APPEND_LAST_CANCEL =
  store_thm
-  ("APPEND_CANCEL",
+  ("APPEND_LAST_CANCEL",
    ``(APPEND l1 [x1] = APPEND l2 [x2]) = (l1 = l2) /\ (x1 = x2)``,
    ZAP_TAC list_ss [GSYM SNOC_APPEND,SNOC_11]);
+
+val APPEND_RIGHT_CANCEL =
+ store_thm
+  ("APPEND_RIGHT_CANCEL",
+   ``(APPEND l1 l = APPEND l2 l) = (l1 = l2)``,
+   Induct_on `l`
+    THEN ZAP_TAC list_ss [GSYM SNOC_APPEND,SNOC_11]);
+
+val APPEND_LEFT_CANCEL =
+ store_thm
+  ("APPEND_LEFT_CANCEL",
+   ``(APPEND l l1 = APPEND l l2) = (l1 = l2)``,
+   Induct_on `l`
+    THEN ZAP_TAC list_ss []);
 
 val SEL_APPEND_SINGLETON_IMP =
  store_thm
@@ -332,7 +346,7 @@ val SEL_APPEND_SINGLETON_IMP =
     THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(TRANS (GSYM(el 5 thl)) (el 1 thl)))
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(SIMP_RULE std_ss [SEL_ELEM,el 3 thl] (el 1 thl)))
-    THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [APPEND_CANCEL])
+    THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [APPEND_LAST_CANCEL])
     THEN RW_TAC std_ss []);
 
 val SEL_APPEND_SINGLETON =
@@ -352,7 +366,7 @@ val SEL_APPEND_SINGLETON =
     THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
     THEN IMP_RES_TAC(DECIDE``j:num > i:num ==> (j - 1 + 1 = j)``)
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(SIMP_RULE std_ss [SEL_ELEM,el 1 thl] (el 2 thl)))
-    THEN ZAP_TAC arith_ss [APPEND_CANCEL,SEL_ELEM]);
+    THEN ZAP_TAC arith_ss [APPEND_LAST_CANCEL,SEL_ELEM]);
 
 val LENGTH_SEL_REC =
  store_thm

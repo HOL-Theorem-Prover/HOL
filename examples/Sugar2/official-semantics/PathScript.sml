@@ -756,7 +756,7 @@ val SEL_APPEND_SINGLETON_IMP =
     THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(TRANS (GSYM(el 5 thl)) (el 1 thl)))
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(SIMP_RULE std_ss [SEL_ELEM,el 3 thl] (el 1 thl)))
-    THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [APPEND_CANCEL])
+    THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [APPEND_LAST_CANCEL])
     THEN RW_TAC std_ss []);
 
 val SEL_APPEND_SINGLETON =
@@ -776,7 +776,7 @@ val SEL_APPEND_SINGLETON =
     THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
     THEN IMP_RES_TAC(DECIDE``j:num > i:num ==> (j - 1 + 1 = j)``)
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(SIMP_RULE std_ss [SEL_ELEM,el 1 thl] (el 2 thl)))
-    THEN ZAP_TAC arith_ss [APPEND_CANCEL,SEL_ELEM]);
+    THEN ZAP_TAC arith_ss [APPEND_LAST_CANCEL,SEL_ELEM]);
 
 val LENGTH_SEL_REC =
  store_thm

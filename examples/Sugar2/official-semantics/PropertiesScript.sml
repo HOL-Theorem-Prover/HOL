@@ -1466,12 +1466,79 @@ val S_CAT_ASSOC =
    RW_TAC simp_list_ss [US_SEM_def]
     THEN PROVE_TAC[APPEND_ASSOC]);
 
+val S_NONEMPTY_def =
+ Define `S_NONEMPTY r = !w. US_SEM w r ==> ~(NULL w)`;
+
+val TL_APPEND =
+ store_thm
+  ("TL_APPEND",
+   ``~(NULL l1) ==> (TL(l1 <> l2) = TL l1 <> l2)``,
+   Induct_on `l1`
+    THEN RW_TAC simp_list_ss []);
+
+(******************************************************************************
+* (r1:r2);r3 = r1:(r2;r3)
+******************************************************************************)
+
+val S_CAT_FUSION_ASSOC =
+ store_thm
+  ("S_CAT_FUSION_ASSOC",
+   ``!w r1 r2 r3.
+      S_NONEMPTY r2
+      ==>
+      (US_SEM w (S_CAT(S_FUSION(r1,r2),r3)) =
+       US_SEM w (S_FUSION(r1, S_CAT(r2,r3))))``,
+   RW_TAC simp_list_ss [US_SEM_def]
+    THEN EQ_TAC
+    THEN RW_TAC simp_list_ss [APPEND_ASSOC]
+    THEN FULL_SIMP_TAC simp_list_ss [S_NONEMPTY_def]
+    THENL
+     [Q.EXISTS_TAC `w1'` THEN Q.EXISTS_TAC `w2'<>w2` THEN Q.EXISTS_TAC `l`
+       THEN RW_TAC std_ss [APPEND_ASSOC]
+       THEN Q.EXISTS_TAC `l::w2'` THEN Q.EXISTS_TAC `w2`
+       THEN RW_TAC simp_list_ss [APPEND_ASSOC],
+      Q.EXISTS_TAC `w1<>[l]<>(TL w1')` THEN Q.EXISTS_TAC `w2'`
+       THEN ASSUM_LIST
+             (fn thl =>
+               ASSUME_TAC
+                (SIMP_RULE simp_list_ss [](Q.AP_TERM `TL` (el 3 thl))))
+       THEN RW_TAC simp_list_ss [APPEND_ASSOC]
+       THENL
+        [PROVE_TAC[TL_APPEND,APPEND_ASSOC],
+         Q.EXISTS_TAC `w1` THEN Q.EXISTS_TAC `TL w1'` THEN Q.EXISTS_TAC `l`
+          THEN RW_TAC simp_list_ss [APPEND_ASSOC]
+          THEN RES_TAC 
+          THEN IMP_RES_TAC TL_APPEND
+          THEN POP_ASSUM(fn th => ASSUME_TAC(Q.SPEC `w2'` th))
+          THEN PROVE_TAC[APPEND_RIGHT_CANCEL,APPEND_ASSOC,APPEND]]]);
+
 val CONCAT_APPEND =
  store_thm
   ("CONCAT_APPEND",
    ``!ll1 ll2. CONCAT(ll1<>ll2) = (CONCAT ll1)<>(CONCAT ll2)``,
    Induct
     THEN RW_TAC simp_list_ss [CONCAT_def]);
+
+(******************************************************************************
+* Idempotency  of r[*]: r[*];r[*] = [*]
+******************************************************************************)
+
+val S_REPEAT_IDEMPOTENT =
+ store_thm
+  ("S_REPEAT_IDEMPOTENT",
+   ``!w r. US_SEM w (S_CAT(S_REPEAT r,S_REPEAT r)) = US_SEM w (S_REPEAT r)``,
+   RW_TAC simp_list_ss [US_SEM_def,B_SEM]
+    THEN EQ_TAC
+    THEN RW_TAC simp_list_ss []
+    THENL
+     [Q.EXISTS_TAC `wlist<>wlist'`
+       THEN RW_TAC simp_list_ss [ALL_EL_APPEND,CONCAT_APPEND],
+      Q.EXISTS_TAC `[]` THEN Q.EXISTS_TAC `CONCAT wlist`
+       THEN RW_TAC simp_list_ss []
+       THENL
+        [Q.EXISTS_TAC `[]`
+          THEN RW_TAC simp_list_ss [CONCAT_def],
+         PROVE_TAC[]]]);
 
 (******************************************************************************
 * Idempotency  of r[*]: r[*];r[*] = r[*]
