@@ -67,5 +67,5 @@ Overlay.uo: Overlay.sml Type-sig.uo Term-sig.uo Tag-sig.uo Thm-sig.uo \
           Theory-sig.ui Definition-sig.ui Net-sig.ui Type.ui Term.ui Tag.ui \
           Thm.ui TheoryPP.ui Theory.ui Definition.ui Net.ui Overlay.sml
 
-HolKernel.uo: Overlay.uo
+HolKernel.uo: Overlay.uo HolKernel.sml
 	HOLMOSMLC -c -structure Overlay.ui HolKernel.sml
