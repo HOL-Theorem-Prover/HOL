@@ -67,8 +67,6 @@ infix &&;
      simplification is quick.
  ---------------------------------------------------------------------------*)
 
-(* val bool_ss = boolSimps.bool_ss *)
-
 local open simpLib sumTheory
       infix ++
 in
@@ -82,10 +80,7 @@ end
 
 val EVAL = computeLib.EVAL o Parse.Term;
 
-(* 
-val DECIDE     = decisionLib.DECIDE o Parse.Term
-val DECIDE_TAC = decisionLib.DECIDE_TAC
-*)
+
 fun DECIDE q = 
  let val tm = Parse.Term q
  in arithLib.ARITH_PROVE tm handle HOL_ERR _ => 
@@ -93,8 +88,10 @@ fun DECIDE q =
  end;
 
 fun DECIDE_TAC (g as (asl,_)) = 
-((MAP_EVERY UNDISCH_TAC (filter arithSimps.is_arith asl) THEN numLib.ARITH_TAC)
-  ORELSE tautLib.TAUT_TAC) g;
+((MAP_EVERY UNDISCH_TAC (filter arithSimps.is_arith asl) 
+      THEN numLib.ARITH_TAC) 
+ ORELSE 
+ tautLib.TAUT_TAC) g;
 
 fun ZAP_TAC ss thl =
    BasicProvers.STP_TAC ss
