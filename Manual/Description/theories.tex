@@ -521,8 +521,7 @@ $t\ t_1 \cdots t_n$ &
 \ml{list\_mk\_conj}\index{list_mk_conj@\ml{list\_mk\_conj}},
 \ml{list\_mk\_disj}\index{list_mk_disj@\ml{list\_mk\_disj}},
 \ml{list\_mk\_imp}\index{list_mk_imp@\ml{list\_mk\_imp}} and
-\ml{list\_mk\_pair}\index{list_mk_pair@\ml{list\_mk\_pair}}
-for conjunctions, disjunctions, implications and tuples respectively.
+for conjunctions, disjunctions, and implications respectively.
 The corresponding destructor functions are called \ml{strip\_comb}, \etc,
 \index{term constructors, in HOL logic@term constructors, in \HOL\ logic|)}
 \index{terms, in HOL logic@terms, in \HOL\ logic!constructors for|)}
@@ -542,27 +541,30 @@ theorems supporting quantifier movement.
  LEFT_EXISTS_AND_THM  |- !P Q. (?x. P x /\ Q) = (?x. P x) /\ Q
  RIGHT_EXISTS_AND_THM |- !P Q. (?x. P /\ Q x) = P /\ ?x. Q x
 
- LEFT_EXISTS_IMP_THM  |- !P Q. (?x. P x ==> Q) = (!x. P x) ==> Q
- RIGHT_EXISTS_IMP_THM |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
-
  LEFT_FORALL_IMP_THM  |- !P Q. (!x. P x ==> Q) = (?x. P x) ==> Q
  RIGHT_FORALL_IMP_THM |- !P Q. (!x. P ==> Q x) = P ==> !x. Q x
+
+ LEFT_EXISTS_IMP_THM  |- !P Q. (?x. P x ==> Q) = (!x. P x) ==> Q
+ RIGHT_EXISTS_IMP_THM |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
 
  LEFT_FORALL_OR_THM   |- !Q P. (!x. P x \/ Q) = (!x. P x) \/ Q
  RIGHT_FORALL_OR_THM  |- !P Q. (!x. P \/ Q x) = P \/ !x. Q x
 
  LEFT_OR_EXISTS_THM   |- !P Q. (?x. P x) \/ Q = ?x. P x \/ Q
- RIGHT_OR_EXISTS_THM  |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
+ RIGHT_OR_EXISTS_THM  |- !P Q. P \/ (?x. Q x) = ?x. P \/ Q x
 
  EXISTS_OR_THM        |- !P Q. (?x. P x \/ Q x) = (?x. P x) \/ ?x. Q x
  FORALL_AND_THM       |- !P Q. (!x. P x /\ Q x) = (!x. P x) /\ !x. Q x
 
  NOT_EXISTS_THM       |- !P. ~(?x. P x) = !x. ~P x
  NOT_FORALL_THM       |- !P. ~(!x. P x) = ?x. ~P x
+
+ SKOLEM_THM           |- !P. (!x. ?y. P x y) = ?f. !x. P x (f x)
 \end{verbatim}
 \end{boxed}
 
-\noindent Many other theorems may be found in \theoryimp{bool} theory.
+Also, a theorem justifying Skolemization ({\small\verb+SKOLEM_THM+}) is 
+proved. Many other theorems may be found in \theoryimp{bool} theory.
 
 \subsection{Combinators}
 
@@ -1191,7 +1193,7 @@ one to inspect option values in a ``pattern-matching'' style.
        || SOME x -> f x
 \end{verbatim}
 }
-The constant underlying this syntactic sugar is \verb+option\_case+
+The constant underlying this syntactic sugar is \verb+option_case+
 with definition
 {\small
 \begin{verbatim}
@@ -1860,9 +1862,9 @@ Term `1i = &(1n + 0n)`;
 \subsection{Real numbers}
 
 There is an extensive collection of theories that make up the
-development of real numbers and analysis in HOL,
-due to John Harrison \cite{jrh:thesis}. We will only give a sketchy overview of
-the development; the interested reader should consult \REFERENCE\ and
+development of real numbers and analysis in HOL, due to John Harrison
+\cite{jrh:thesis}. We will only give a sketchy overview of the
+development; the interested reader should consult \REFERENCE\ and
 Harrison's thesis.
 
 The axioms for the real numbers are derived from the `half reals' which
@@ -2260,8 +2262,9 @@ of a non-empty list is dropped by {\small\verb+FRONT+}.
     |- !l. ~(l = []) ==> (FRONT l ++ [LAST l] = l)
 \end{verbatim}}
 %
-Joining the front part and the last element of a non-empty list yields the original list.
-Both {\small\verb+LAST+} and {\small\verb+FRONT+} are unspecified on empty lists.
+Joining the front part and the last element of a non-empty list yields
+the original list.  Both {\small\verb+LAST+} and {\small\verb+FRONT+}
+are unspecified on empty lists. 
 
 
 \noindent For a complete list of available theorems in
@@ -2881,54 +2884,102 @@ multiplicity of each element in the multiset.
 \subsection{Relations (\theoryimp{relation})}\label{relation}
 
 Mathematical relations can be represented in \HOL{} by the type
-{\small\verb+:'a -> 'b -> bool+}. The theory {\small\verb+relation+}
-is intended to suppport this view of relations, but does not as yet
-provide a well-rounded collection of definitions; indeed, it is common
-to treat relations directly. For example, $R_1 \subseteq R_2$ can be
-phrased as {\small\verb+!x y. R1 x y ==> R2 x y+}. The theory
-\theoryimp{relation} currently provides definitions and theorems about
-the reflexive, transitive and symmetric closures of a relation, for
-wellfounded relations, and for some obvious extensions of these
-properties.  For example, the constant {\small\verb+RTC+} takes the
-reflexive and transitive closure of a relation, while the predicate
-{\small\verb+WFP+} is true of a relation and an element if the
-relation is well-founded at that element.
+{\small\verb+:'a -> 'b -> bool+}. The theory \theoryimp{relation}
+currently provides definitions and theorems about the reflexive,
+transitive and symmetric closures of a relation, develops wellfounded
+relations including the wellfounded recursion theorem, provides a
+collection of common operations on relations, and develops some
+abstract results used in Term Rewriting.
 
+\paragraph{Predicates on relations}
+
+The following basic properties of relations are defined:
+%
 \begin{hol}
+{\small
 \begin{verbatim}
-   RC_DEF |- !R x y. RC R x y = (x = y) \/ R x y
-   SC_DEF |- !R x y. SC R x y = R x y \/ R y x
-   TC_DEF |- !R a b.
-               TC R a b =
-                 !P.
-                   (!x y. R x y ==> P x y) /\
-                   (!x y z. P x y /\ P y z ==> P x z)
-                   ==>
-                     P a b
+  transitive_def
+    |- transitive R = !x y z. R x y /\ R y z ==> R x z
 
-   WF_DEF |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
-\end{verbatim}
+  reflexive_def
+    |- reflexive R = (!x. R x x)
+
+  irreflexive_def
+    |- irreflexive R = (!x. ~R x x)
+
+  symmetric_def
+    |- symmetric R = (!x y. R x y = R y x)
+
+  antisymmetric_def
+    |- antisymmetric R = (!x y. R x y /\ R y x ==> (x = y))
+
+  equivalence_def
+    |- equivalence R = reflexive R /\ symmetric R /\ transitive R
+
+  total_def
+    |- total R = (!x y. R x y \/ R y x)
+\end{verbatim}}
 \end{hol}
 
-Wellfoundedness is used to justify the principle of wellfounded
-induction and also a general recursion theorem. The statement of the
-recursion theorem requires that the notion of a function restriction be
-defined as well.
+
+\paragraph {Closures}
+
+The transitive closure ({\small\verb+TC+}) of a relation $R : \alpha
+\to\alpha\to\konst{bool}$ is defined inductively, as the least
+relation including $R$ and closed under transitivity. Similarly, the
+reflexive-transitive closure ({\small\verb+RTC+}) is defined to be the least
+relation closed under transitivity and reflexivity.
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  TC_DEF 
+    |- TC R a b =
+         !P. (!x y. R x y ==> P x y) /\
+             (!x y z. P x y /\ P y z ==> P x z) ==> P a b
+
+  RTC_DEF 
+    |- RTC R a b =
+         !P. (!x. P x x) /\
+             (!x y z. R x y /\ P y z ==> P x z) ==> P a b
+\end{verbatim}}
+\end{hol}
+
+The reflexive ({\small\verb+RC+}) and symmetric closures
+({\small\verb+RC+}) are straightforward to define. The equivalence
+closure ({\small\verb+EQC+}) is the symmetric then transitive then
+reflexive closure of $R$.
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  RC_DEF   |- RC R x y = (x = y) \/ R x y
+  SC_DEF   |- SC R x y = R x y \/ R y x
+  EQC_DEF  |- EQC R = RC (TC (SC R))
+\end{verbatim}}
+\end{hol}
+
+\paragraph {Wellfounded relations}
+
+A relation $R$ is wellfounded ({\small\verb+WF+}) if every non-empty set
+has an $R$-minimal element. Wellfoundedness is used to justify the
+principle of wellfounded induction and also a general recursion
+theorem. The statement of the recursion theorem requires that the
+notion of a function restriction be defined as well.
 
 \begin{hol}
 \begin{verbatim}
-   WF_INDUCTION_THM
-   |- !R:'a->'a->bool.
-          WF R
-            ==> !P. (!x. (!y. R y x ==> P y) ==> P x)
-            ==> !x. P x
+  WF_DEF |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
 
-   RESTRICT_DEF |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
+  WF_INDUCTION_THM
+    |- !R WF R ==> !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x
 
-   WFREC_COROLLARY
-   |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
+  RESTRICT_DEF |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
 
-   WF_RECURSION_THM |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
+  WFREC_COROLLARY
+    |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
+
+  WF_RECURSION_THM |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
 \end{verbatim}
 \end{hol}
 
@@ -2939,19 +2990,19 @@ this theory.
 
 \begin{hol}
 \begin{verbatim}
-   Empty_def      |- !x y. Empty x y = F
+   EMPTY_REL_DEF  |- !x y. EMPTY_REL x y = F
+   WF_Empty       |- WF EMPTY_REL
 
    inv_image_def  |- !R f. inv_image R f = \x y. R (f x) (f y)
-
-   WF_Empty       |- WF Empty
+   WF_inv_image   |- !R f. WF R ==> WF (inv_image R f)
 
    WF_SUBSET      |- !R P. WF R /\ (!x y. P x y ==> R x y) ==> WF P
-
    WF_TC          |- !R. WF R ==> WF (TC R)
-
-   WF_inv_image   |- !R f. WF R ==> WF (inv_image R f)
 \end{verbatim}
 \end{hol}
+
+\paragraph {Common operations}
+
 
 \subsection{Finite maps (\theoryimp{finite\_map})}\label{finite_map}
 
@@ -2969,7 +3020,6 @@ collection of operations on polynomials, and theorems about them, are
 also derived.
 
 \subsection{Probability}
-
 \subsection{Temporal Logic}
 \subsection{$\mu$-Calculus}
 \subsection{Computation Tree Logic (CTL)}
