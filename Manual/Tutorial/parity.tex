@@ -332,7 +332,7 @@ device {\small\verb|ONE|} via the lower multiplexer.  For all subsequent cycles
 stored parity value (if the current input is {\small\verb|F|}) or the
 complement of this value (if the current input is {\small\verb|T|}).
 
-
+%BEGIN IMAGE
 \setlength{\unitlength}{5mm}
 \begin{center}
 \begin{picture}(14,30)(0,0.5)
@@ -378,7 +378,8 @@ complement of this value (if the current input is {\small\verb|T|}).
 \end{picture}
 \end{center}
 \setlength{\unitlength}{1mm}
-
+%END IMAGE
+%HEVEA \imageflush
 
 The devices making up this schematic will be modelled with predicates
 \cite{Why-HOL-paper}. For example, the predicate {\small\verb|ONE|} is true
@@ -598,6 +599,7 @@ expects a theorem and returns a tactic.  Here it is in action:
 \begin{verbatim}
 - e (PAT_ASSUM ``!t. out t = X t``
        (fn th => REWRITE_TAC [SPEC ``SUC t`` th]))
+<<HOL message: inventing new type variable names: 'a, 'b.>>
 OK..
 1 subgoal:
 > val it =
