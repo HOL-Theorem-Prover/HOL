@@ -2,10 +2,16 @@
 
 let alpha = [ `A` - `Z` `a` - `z` `_` `'` ]
 let numeric = [ `0` - `9` ]
-let symbol = [ `|` `!` `#` `%` `&` `*` `(` `)` `-` `=` `+` `[` `]` `{`
+
+(* symbol is as one would expect less '(' and '*' to enable handling of
+   comments *)
+let symbol = [ `|` `!` `#` `%` `&` `)` `-` `=` `+` `[` `]` `{`
                `}` `;` `:` `@` `~` `\\` `,` `.` `<` `>` `?` `/` ]
+let fullsymbol = symbol | `(` | `*`
+let nonparen = symbol | `*`
+let nonstar = symbol | `(`
 let ident = alpha (alpha | numeric)*
-let anysymb = ident | symbol +
+let anysymb = ident | nonparen * `(` | (nonparen | `(` nonstar) *
 let space = [` ` `\n` `\t` `\r`]
 
 rule base_token =
