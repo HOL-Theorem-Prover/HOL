@@ -411,14 +411,15 @@ in
           map2 (fn upd => fn v => mk_comb(upd, v)) updfn_terms value_vars
         val lhs = List.foldr mk_comb var updfns
         val rhs = List.foldr mk_comb arb updfns
-        val goal = gen_all (mk_eq(lhs, rhs))
+        val goal = mk_eq(lhs, rhs)
+
         val tactic =
-          REPEAT GEN_TAC THEN
-          MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm) [var, arb] THEN
+          MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm) [arb, var] THEN
           REWRITE_TAC [updfn_thm]
         val thmname = typename ^ "_updates_eq_literal"
+        val thm = GEN_ALL (prove(goal, tactic))
       in
-        val literal_equality = store_thm(thmname, goal, tactic)
+        val literal_equality = save_thm(thmname, thm)
       end
 
       (* add to the TypeBase's simpls entry for the record type *)
