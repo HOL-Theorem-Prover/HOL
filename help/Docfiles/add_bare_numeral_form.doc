@@ -11,7 +11,6 @@ Parsing, pretty-printing.
 \LIBRARY Parse
 
 \DESCRIBE
-
 The function {add_bare_numeral_form} allows the user to give special
 meaning to strings of digits that are suffixed with single characters.
 A call to this function with pair argument {(c, s)} adds {c} as a
