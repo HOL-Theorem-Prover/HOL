@@ -2,9 +2,9 @@ local
   open HolKernel HOLgrammars
 in
 
-  datatype fixity 
-     = RF of term_grammar.rule_fixity 
-     | Prefix 
+  datatype fixity
+     = RF of term_grammar.rule_fixity
+     | Prefix
      | Binder
 
   val fromTGfixity : term_grammar.rule_fixity -> fixity
@@ -33,6 +33,8 @@ in
 
   val OnlyIfNecessary : term_grammar.ParenStyle
   val ParoundName : term_grammar.ParenStyle
+  val ParoundPrec : term_grammar.ParenStyle
+  val Always : term_grammar.ParenStyle
 
   val AroundEachPhrase : term_grammar.PhraseBlockStyle
   val AroundSamePrec   : term_grammar.PhraseBlockStyle

@@ -1065,13 +1065,16 @@ val TOK = term_grammar.RE o term_grammar.TOK
 
 val BreakSpace = term_grammar.BreakSpace
 val HardSpace = term_grammar.HardSpace
-val PPBlock = term_grammar.PPBlock
 
 val OnlyIfNecessary = term_grammar.OnlyIfNecessary
 val ParoundName = term_grammar.ParoundName
+val ParoundPrec = term_grammar.ParoundPrec
+val Always = term_grammar.Always
 
 val AroundSamePrec = term_grammar.AroundSamePrec
 val AroundSameName = term_grammar.AroundSameName
 val AroundEachPhrase = term_grammar.AroundEachPhrase
+
+val PPBlock = term_grammar.PPBlock
 val BeginFinalBlock = term_grammar.BeginFinalBlock
 val EndInitialBlock = term_grammar.EndInitialBlock
