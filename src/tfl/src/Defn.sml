@@ -1210,9 +1210,8 @@ fun elim_wildcards eqs =
    the grammar further (ultimately using add_const).
 *)
 
-fun parse_defn q =
- let val absyn0 = Parse.Absyn q
-     val (absyn,fn_names) = elim_wildcards absyn0
+fun parse_defn absyn0 =
+ let val (absyn,fn_names) = elim_wildcards absyn0
      val restore_these = map (fn s => (s, Parse.hide s)) fn_names
      fun restore() =
        List.app (fn (s, data) => Parse.update_overload_maps s data)
@@ -1224,8 +1223,13 @@ fun parse_defn q =
    (tm, fn_names)
  end;
 
-fun Hol_defn bindstem q = mk_defn bindstem (fst (parse_defn q))
-      handle e => raise (wrap_exn "Defn" "Hol_defn" e);
+fun Hol_defn bindstem q =
+    let val absyn0 = Parse.Absyn q
+        val loc = Absyn.locn_of_absyn absyn0
+    in
+        mk_defn bindstem (fst (parse_defn absyn0))
+          handle e => raise (wrap_exn_loc "Defn" "Hol_defn" loc e)
+    end
 
 fun Hol_Rdefn bindstem Rquote eqs_quote =
   let val defn = Hol_defn bindstem eqs_quote

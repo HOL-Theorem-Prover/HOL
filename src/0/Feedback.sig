@@ -8,6 +8,7 @@ sig
     val mk_HOL_ERR        : string -> string -> string -> exn
     val mk_HOL_ERRloc     : string -> string -> locn.locn -> string -> exn
     val wrap_exn          : string -> string -> exn -> exn
+    val wrap_exn_loc      : string -> string -> locn.locn -> exn -> exn
 
     val emit_ERR          : bool ref
     val emit_MESG         : bool ref

@@ -124,6 +124,11 @@ fun wrap_exn s f General.Interrupt = raise General.Interrupt
         mk_HOL_ERR s f (format_err_rec err_rec)
   | wrap_exn s f exn = mk_HOL_ERR s f (General.exnMessage exn);
 
+fun wrap_exn_loc s f l General.Interrupt = raise General.Interrupt
+  | wrap_exn_loc s f l (HOL_ERR err_rec) =
+        mk_HOL_ERRloc s f l (format_err_rec err_rec)
+  | wrap_exn_loc s f l exn = mk_HOL_ERRloc s f l (General.exnMessage exn);
+
 fun HOL_MESG s =
   if !emit_MESG
   then (output(!MESG_outstream, !MESG_to_string s);

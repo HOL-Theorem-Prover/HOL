@@ -35,7 +35,7 @@ sig
 
   val save_defn  : defn -> unit
 
-  val parse_defn : term quotation -> term * string list
+  val parse_defn : absyn -> term * string list
 
   val tgoal      : defn -> proofs
   val tprove     : defn * tactic -> thm * thm

@@ -12,6 +12,7 @@ infixr 3 -->;
 
 
 val ERR = mk_HOL_ERR "TotalDefn";
+val ERRloc = mk_HOL_ERRloc "TotalDefn";
 val WARN = HOL_WARNING "TotalDefn";
 
 fun proper_subterm tm1 tm2 =
@@ -309,12 +310,14 @@ local fun msg alist invoc = String.concat
             handle HOL_ERR _ => (Lib.say (msg alist invoc); raise exn)
 in
 fun define q =
-   let val (tm,names) = Defn.parse_defn q
-       val bindstem = mk_bindstem (ERR "Define" "")
+   let val absyn0 = Parse.Absyn q
+       val locn = Absyn.locn_of_absyn absyn0
+       val (tm,names) = Defn.parse_defn absyn0
+       val bindstem = mk_bindstem (ERRloc "Define" locn "")
             "xDefine <alphanumeric-stem> <eqns-quotation>" names
    in
        fst (primDefine (Defn.mk_defn bindstem tm))
-       handle e => raise (wrap_exn "TotalDefn" "Define" e)
+       handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
    end
 val Define = Lib.try define
 end;
