@@ -10,7 +10,7 @@ tactic, Hilbert-choice, select.
 
 \DESCRIBE
 {SELECT_ELIM_TAC} searches the goal it is applied to for terms
-involving the Hilbet-choice operator, of the form {@x. ...}.  If such
+involving the Hilbert-choice operator, of the form {@x. ...}.  If such
 a term is found, then the tactic will produce a new goal, where the
 choice term has disappeared.  The resulting goal will require the
 proof of the non-emptiness of the choice term's predicate, and that
