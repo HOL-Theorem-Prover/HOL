@@ -19,7 +19,8 @@ val lem = prove(
 
 val DUR_ARM6_WELL = store_thm("DUR_ARM6_WELL",
   `!a. 0 < DUR_ARM6 a`,
-  Cases_on `a`
+  Cases
+    THEN Cases_on `d`
     THEN Cases_on `c`
     THEN SIMP_TAC pureSimps.pure_ss [DUR_ARM6_def,lem]
     THEN PBETA_TAC
@@ -29,7 +30,7 @@ val DUR_ARM6_WELL = store_thm("DUR_ARM6_WELL",
  
 val IMM_ARM6_UNIFORM = store_thm("IMM_ARM6_UNIFORM",
   `UIMM IMM_ARM6 STATE_ARM6 DUR_ARM6`,
-  RW_TAC std_ss [UIMM_def,DUR_ARM6_WELL,IMM_ARM6_def]
+  REWRITE_TAC [UIMM_def,DUR_ARM6_WELL,IMM_ARM6_def]
 );
  
 (* -------------------------------------------------------- *)
@@ -37,9 +38,9 @@ val IMM_ARM6_UNIFORM = store_thm("IMM_ARM6_UNIFORM",
 
 val ARM6_ONTO_INIT = store_thm("ARM6_ONTO_INIT",
   `ONTO_INIT ABS_ARM6 I INIT_ARM6`,
-  RW_TAC std_ss [ONTO_INIT_def,I_THM]
-   THEN Cases_on `a`
-   THEN EXISTS_TAC `ARM6 f (ADD8_PC r) p (DP ARB ARB ARB ARB)
+  REWRITE_TAC [ONTO_INIT_def,I_THM]
+   THEN Cases
+   THEN EXISTS_TAC `ARM6 f (DP (ADD8_PC r) p ARB ARB ARB ARB)
              (CTRL ARB ARB ARB ARB ARB ARB ARB ARB
                ARB ARB ARB ARB ARB ARB ARB ARB ARB ARB ARB)`
    THEN SIMP_TAC std_ss [ABS_ARM6_def,SUB8_INV,INIT_ARM6_def]
@@ -49,31 +50,31 @@ val ARM6_ONTO_INIT = store_thm("ARM6_ONTO_INIT",
 (* -------------------------------------------------------- *)
 
 val ARM6_TCON_LEM0 = store_thm("ARM6_TCON_LEM0",
-  `!a. (a = ARM6 mem reg psr (DP areg din alua alub)
+  `!a. (a = ARM6 mem (DP reg psr areg din alua alub)
                (CTRL pipea pipeaval pipeb pipebval ireg iregval
                   apipea apipeb ointstart onewinst opipebll nxtic nxtis aregn
                   nbw nrw sctrl psrfb oareg)) ==>
    (INIT_ARM6 (STATE_ARM6 (IMM_ARM6 a 0) a) = STATE_ARM6 (IMM_ARM6 a 0) a)`,
-   RW_TAC std_ss []
+   RW_TAC bool_ss []
      THEN SIMP_TAC std_ss [STATE_ARM6_def,IMM_ARM6_def,INIT_ARM6_def,NXTIC_def]
 );
 
-val ARM6_TCON_ZERO = GEN_ALL (SIMP_RULE std_ss [] ARM6_TCON_LEM0);
+val ARM6_TCON_ZERO = GEN_ALL (SIMP_RULE bool_ss [] ARM6_TCON_LEM0);
 
 val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
-  `!a. (a = ARM6 mem reg psr (DP areg din alua alub)
+  `!a. (a = ARM6 mem (DP reg psr areg din alua alub)
                (CTRL pipea pipeaval pipeb pipebval ireg iregval
                   apipea apipeb ointstart onewinst opipebll nxtic nxtis aregn
                   nbw nrw sctrl psrfb oareg)) ==>
    (INIT_ARM6 (STATE_ARM6 (IMM_ARM6 a 1) a) = STATE_ARM6 (IMM_ARM6 a 1) a)`,
-  RW_TAC std_ss []
+  RW_TAC bool_ss []
      THEN ABBREV_TAC `a = STATE_ARM6
      (IMM_ARM6
-        (ARM6 mem reg psr (DP areg din alua alub)
+        (ARM6 mem (DP reg psr areg din alua alub)
            (CTRL pipea pipeaval pipeb pipebval ireg iregval
               apipea apipeb ointstart onewinst opipebll nxtic nxtis aregn
               nbw nrw sctrl psrfb oareg)) 1)
-     (ARM6 mem reg psr (DP areg din alua alub)
+     (ARM6 mem (DP reg psr areg din alua alub)
         (CTRL pipea pipeaval pipeb pipebval ireg iregval
            apipea apipeb ointstart onewinst opipebll nxtic nxtis aregn nbw
            nrw sctrl psrfb oareg))`
@@ -314,7 +315,7 @@ val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
     ]
 );
  
-val ARM6_TCON_ONE = GEN_ALL (SIMP_RULE std_ss [] ARM6_TCON_LEM1);
+val ARM6_TCON_ONE = GEN_ALL (SIMP_RULE bool_ss [] ARM6_TCON_LEM1);
 
 val ARM6_TIME_CON_IMM = store_thm("ARM6_TIME_CON_IMM",
   `TCON_IMM STATE_ARM6 IMM_ARM6`,
@@ -337,30 +338,30 @@ val BIT_W32_NUM = GSYM BITw_def;
 val BITS_W32_NUM = GSYM BITSw_def;
 
 val ARM6_COR_LEM0 = store_thm("ARM6_COR_LEM0",
-  `!a. (a = ARM6 mem reg psr (DP areg din alua alub)
+  `!a. (a = ARM6 mem (DP reg psr areg din alua alub)
                (CTRL pipea pipeaval pipeb pipebval ireg iregval
                   apipea apipeb ointstart onewinst opipebll nxtic nxtis aregn
                   nbw nrw sctrl psrfb oareg)) ==>
    (STATE_ARM 0 (ABS_ARM6 a) = ABS_ARM6 (STATE_ARM6 (IMM_ARM6 a 0) a))`,
-  RW_TAC std_ss []
+  RW_TAC bool_ss []
     THEN SIMP_TAC std_ss [STATE_ARM6_def,IMM_ARM6_def,INIT_ARM6_def,ABS_ARM6_def,STATE_ARM_def]
 );
 
-val ARM6_COR_ZERO = GEN_ALL (SIMP_RULE std_ss [] ARM6_COR_LEM0);
+val ARM6_COR_ZERO = GEN_ALL (SIMP_RULE bool_ss [] ARM6_COR_LEM0);
 
 val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
-  `!a. (a = ARM6 mem reg psr (DP areg din alua alub)
+  `!a. (a = ARM6 mem (DP reg psr areg din alua alub)
                (CTRL pipea pipeaval pipeb pipebval ireg iregval
                   apipea apipeb ointstart onewinst opipebll nxtic nxtis aregn
                   nbw nrw sctrl psrfb oareg)) ==>
    (STATE_ARM 1 (ABS_ARM6 a) = ABS_ARM6 (STATE_ARM6 (IMM_ARM6 a 1) a))`,
-  RW_TAC std_ss []
+  RW_TAC bool_ss []
     THEN ONCE_REWRITE_TAC [IMM_ARM6_COR]
     THEN SIMP_TAC arith_ss [IMM_ARM6_def,STATE_ARM6_def,INIT_ARM6_def,NXTIC_def]
     THEN ABBREV_TAC `pc = REG_READ6 reg usr 15 - w32 8`
     THEN ABBREV_TAC `i = MEMREAD mem pc`
     THEN ABBREV_TAC `cpsr = w2n (CPSR_READ psr)`
-    THEN SIMP_TAC std_ss [ABS_ARM6_def]
+    THEN SIMP_TAC bool_ss [ABS_ARM6_def]
     THEN UNFOLD_SPEC
     THEN Cases_on `~CONDITION_PASSED (BIT 31 cpsr) (BIT 30 cpsr)
                                      (BIT 29 cpsr) (BIT 28 cpsr) (BITSw 31 28 i)`
@@ -938,7 +939,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
     ]
 );
 
-val ARM6_COR_ONE = GEN_ALL (SIMP_RULE std_ss [] ARM6_COR_LEM1);
+val ARM6_COR_ONE = GEN_ALL (SIMP_RULE bool_ss [] ARM6_COR_LEM1);
 
 val CORRECT_ARM6 = store_thm("CORRECT_ARM6",
   `CORRECT STATE_ARM STATE_ARM6 IMM_ARM6 ABS_ARM6`,

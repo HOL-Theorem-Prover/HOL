@@ -26,7 +26,8 @@ val _ = Hol_datatype `reg_und = r13_und | r14_und`;
 val _ = Hol_datatype `reg = REG of (reg_usr->word32)=>(reg_fiq->word32)=>(reg_irq->word32)=>
                                    (reg_svc->word32)=>(reg_abt->word32)=>(reg_und->word32)`;
 val _ = Hol_datatype `psr = PSR of word32=>(spsr->word32)`;
-val _ = Hol_datatype `state_ARM = ARM of (word30->word32)=>reg=>psr`;
+val _ = type_abbrev("mem", ``:word30->word32``);
+val _ = Hol_datatype `state_ARM = ARM of mem=>reg=>psr`;
 
 val _ = Hol_datatype `iclass = swp | mrs_msr | data_proc | reg_shift |
                                ldr | str | br | swi_ex | undef | unexec`;
@@ -76,8 +77,8 @@ val DECODE_MODE_def = Define`
      if m = 27 then und else safe`;
 
 val DECODE_PSR_def = Define`
-  DECODE_PSR cpsr =
-    (BIT 31 cpsr,BIT 30 cpsr,BIT 29 cpsr,BIT 28 cpsr,DECODE_MODE cpsr)`;
+  DECODE_PSR cpsr = let n = w2n cpsr in
+    (BIT 31 n,BIT 30 n,BIT 29 n,BIT 28 n,DECODE_MODE n)`;
 
 val MODE_SPSR_def = Define`
    MODE_SPSR mode =
@@ -565,7 +566,7 @@ val NEXT_ARM_def = Define`
   NEXT_ARM (ARM mem reg psr) =
     let n = w2n (MEM_READ_WORD mem (WORD_ALIGN (FETCH_PC reg))) in
     let ic = DECODE_INST n
-    and (N,Z,C,V,mode) = DECODE_PSR (w2n (CPSR_READ psr)) in
+    and (N,Z,C,V,mode) = DECODE_PSR (CPSR_READ psr) in
       if ~(CONDITION_PASSED N Z C V (BITS 31 28 n)) then
         ARM mem (INC_PC reg) psr
       else if ic = mrs_msr then

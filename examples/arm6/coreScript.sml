@@ -10,14 +10,14 @@ val _ = new_theory "core";
 (* -------------------------------------------------------- *)
 
 val _ = Hol_datatype `iseq = t3 | t4 | t5 | t6`;
-val _ = Hol_datatype `dp = DP of word32=>word32=>word32=>word32`;
-(* areg,din,alua,alub *)
+val _ = Hol_datatype `dp = DP of reg=>psr=>word32=>word32=>word32=>word32`;
+(* reg,psr,areg,din,alua,alub *)
 val _ = Hol_datatype
   `ctrl = CTRL of word32=>bool=>word32=>bool=>word32=>bool=>word32=>word32=>bool=>bool=>bool=>
                   iclass=>iseq=>num=>bool=>bool=>word32=>word32=>num`;
 (* pipea,pipeaval,pipeb,pipebval,ireg,iregval,apipea,apipeb,ointstart,onewinst,opipebll,
    nxtic,nxtis,aregn,nbw,nrw,sctrlreg,psrfb,oareg *)
-val _ = Hol_datatype `state_ARM6 = ARM6 of (word30->word32)=>reg=>psr=>dp=>ctrl`;
+val _ = Hol_datatype `state_ARM6 = ARM6 of mem=>dp=>ctrl`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -502,12 +502,12 @@ val MEMREAD = Define`
 (* -------------------------------------------------------- *)
 
 val NEXT_ARM6_def = Define`
-   NEXT_ARM6 (ARM6 mem reg psr (DP areg din alua alub)
+   NEXT_ARM6 (ARM6 mem (DP reg psr areg din alua alub)
           (CTRL pipea pipeaval pipeb pipebval ireg iregval apipea apipeb
                 ointstart onewinst opipebll nxtic nxtis aregn nbw nrw sctrlreg psrfb oareg)) =
      let cpsr = CPSR_READ psr
      in
-     let (n,z,c,v,nbs) = DECODE_PSR (w2n cpsr)
+     let (n,z,c,v,nbs) = DECODE_PSR cpsr
      in
      let abortinst = ABORTINST iregval onewinst ointstart ireg n z c v
      in
@@ -590,14 +590,14 @@ val NEXT_ARM6_def = Define`
      and nbw'  = NBW ic is ireg      (* Word access on next cycle *)
      and nrw'  = NRW ic is           (* Mem write on next cycle *)
      in
-   ARM6 mem' reg'' psr' (DP areg' nxtdin alua' alub')
+   ARM6 mem' (DP reg'' psr' areg' nxtdin alua' alub')
         (CTRL pipea' pipeaval' pipeb' pipebval' pipec iregval' apipea' apipeb'
               intseq newinst pipebll nxtic' nxtis' aregn' nbw' nrw' sctrlreg' psrfb' oareg')`;
 
 (* --------------- *)
 
 val INIT_ARM6_def = Define`
-   INIT_ARM6 (ARM6 mem reg psr (DP areg din alua alub)
+   INIT_ARM6 (ARM6 mem (DP reg psr areg din alua alub)
           (CTRL pipea pipeaval pipeb pipebval ireg iregval apipea apipeb
                  ointstart onewinst opipebll nxtic nxtis aregn nbw nrw sctrlreg psrfb oareg)) =
     let pc = REG_READ6 reg usr 15
@@ -607,7 +607,7 @@ val INIT_ARM6_def = Define`
     let pipeb' = MEMREAD mem apipeb'
     and ireg'  = MEMREAD mem (pc - w32 8)
     in
-  ARM6 mem reg psr (DP pc ireg' alua alub)
+  ARM6 mem (DP reg psr pc ireg' alua alub)
        (CTRL pipeb' T pipeb' T ireg' T apipeb' apipeb' F T T
          (NXTIC F T nxtic ireg') t3 (AREGN1 F) T F sctrlreg psrfb oareg)`;
 
@@ -630,14 +630,14 @@ val ADD8_PC_def = Define`
       REG (SUBST reg_usr (w4 15,pc + w32 8)) reg_fiq reg_irq reg_svc reg_abt reg_und`;
 
 val ABS_ARM6_def = Define`
-   ABS_ARM6 (ARM6 mem reg psr dp ctrl) = ARM mem (SUB8_PC reg) psr`;
+   ABS_ARM6 (ARM6 mem (DP reg psr areg din alua alub) ctrl) = ARM mem (SUB8_PC reg) psr`;
 
 val DUR_ARM6_def = Define`
-   DUR_ARM6 (ARM6 mem reg psr dp
+   DUR_ARM6 (ARM6 mem (DP reg psr areg din alua alub)
              (CTRL pipea pipeaval pipeb pipebval ireg iregval apipea apipeb
                ointstart onewinst opipebll nxtic nxtis aregn nbw nrw sctrlreg psrfb oareg)) =
      let cpsr = CPSR_READ psr in
-     let (n,z,c,v,nbs) = DECODE_PSR (w2n cpsr) in
+     let (n,z,c,v,nbs) = DECODE_PSR cpsr in
      let abortinst = ABORTINST iregval onewinst ointstart ireg n z c v in
      let ic = IC abortinst nxtic in
      let rwa = RWA ic t3 ireg in
