@@ -76,7 +76,7 @@ val OK_ss = std_ss && [OK_REP, OK_REP_ABS, dOK_DEF, ABS_REP, dOK_dSUB];
 val CON =  Define  `CON c   = ABS_nc (dCON c)`
 val VARR = Define  `VAR x   = ABS_nc (dVAR x)`
 val LAM =  Define  `LAM x m = ABS_nc (dLAMBDA x (REP_nc m))`;
-val APP =  xDefine 
+val APP =  xDefine
             "APP"  `$@@ m n = ABS_nc (dAPP (REP_nc m) (REP_nc n))`
 
 val _ = set_fixity "@@" (Infixl 901);
@@ -490,13 +490,30 @@ val nc_RECURSION = Q.store_thm ("nc_RECURSION",
                                    (\y. [VAR y/x] u))`,
      REWRITE_TAC [COPY_THEOREM]);
 
+val nc_RECURSION_WEAK = Q.store_thm(
+  "nc_RECURSION_WEAK",
+  `!con var app lam.
+      ?hom : 'a nc -> 'b.
+        (!k. hom (CON k) = con k) /\
+        (!x. hom (VAR x) = var x) /\
+        (!t u. hom (t @@ u) = app t u (hom t) (hom u)) /\
+        (!x u. hom (LAM x u) =
+                 lam (\y. [VAR y / x] u) (\y. hom ([VAR y / x]u)))`,
+  REPEAT GEN_TAC THEN
+  STRIP_ASSUME_TAC ((CONJUNCT1 o CONV_RULE EXISTS_UNIQUE_CONV o
+                     Q.SPECL [`con`, `var`, `\ht hu t u. app t u ht hu`,
+                              `\hu u. lam u hu`])
+                    nc_RECURSION) THEN
+  RULE_ASSUM_TAC BETA_RULE THEN
+  Q.EXISTS_TAC `hom` THEN ASM_REWRITE_TAC []);
+
 (* ===================================================================== *)
 (* Definition of destructors. These are derivable from recursion.        *)
 (* ===================================================================== *)
 
 fun nc_recDefine s q =
   new_recursive_definition
-     {fixity = Prefix, rec_axiom = nc_RECURSION, name=s, def=Term q};
+     {rec_axiom = nc_RECURSION_WEAK, name=s, def=Term q};
 
 val VNAME_DEF = nc_recDefine "VNAME_DEF" `VNAME (VAR s) = s`;
 val CNAME_DEF = nc_recDefine "CNAME_DEF" `CNAME (CON k) = k`;
