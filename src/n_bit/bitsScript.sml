@@ -435,12 +435,9 @@ val SLICE_ZERO = store_thm("SLICE_ZERO",
 
 (* -------------------------------------------------------- *)
 
-val ssd = SIMPSET {ac = [(SPEC_ALL MULT_ASSOC, SPEC_ALL MULT_COMM)],
-                congs = [], convs = [], dprocs = [], filter = NONE, rewrs = []};
-val arith2_ss = arith_ss++ssd;
-
 val lem  = prove(`!c a b. (a = b) ==> (a DIV c = b DIV c)`, A_RW_TAC []);
-val lem2 = prove(`!a b c. a * (b * c) = a * c * b`, SIMP_TAC arith2_ss []);
+val lem2 = prove(`!a b c. a * (b * c) = a * c * b`, 
+                 SIMP_TAC arith_ss [AC MULT_ASSOC MULT_COMM]);
 
 val lem3 = prove(
   `!a m n. n <= m ==> (a * 2 EXP m DIV 2 EXP n = a * 2 EXP (m - n))`,
