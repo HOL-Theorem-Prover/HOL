@@ -363,6 +363,12 @@ Wish list
   too badly with brackets...).
 
 
+- want a way to drop needless brackets, but preserve them if they are
+  meaningful.  E.g.,   S_BOOL(req)  (where S_BOOL is a coercion)
+  should render as   req  but S_BOOL(req /\ req)   should render as
+  (req /\ req).  (here S_BOOL is defined as a curried operator with
+  one arg).
+
 
 
 
