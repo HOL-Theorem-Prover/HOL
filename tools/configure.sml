@@ -68,7 +68,7 @@ val SRCDIRS =
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
   "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
-  "src/robdd","src/muddy"];
+  "src/robdd","src/muddy", "src/HolBdd"];
 
 
 (*---------------------------------------------------------------------------
