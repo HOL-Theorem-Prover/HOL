@@ -173,9 +173,7 @@ val INFINITY_AX =
  * Miscellaneous utility definitions, of use in some packages.               *
  *---------------------------------------------------------------------------*)
 
-val ARB_DEF =
- Definition.new_definition
-   ("ARB_DEF",        Term `ARB = @x:'a. T`);
+val arb = new_constant("ARB",alpha);  (* Doesn't have to be defined at all. *)
 
 val bool_case_DEF =
  Definition.new_definition
@@ -232,7 +230,17 @@ val BOUNDED_DEF =
     ("BOUNDED_DEF",
      Term `BOUNDED = \(b:bool) (v:bool). b`);
 
-val _ = List.app add_const ["UNBOUNDED", "BOUNDED"];
+
+(*---------------------------------------------------------------------------*)
+(* Support for detecting datatypes in theory files                           *)
+(*---------------------------------------------------------------------------*)
+
+val DATATYPE_TAG_DEF = 
+  Definition.new_definition
+    ("DATATYPE_TAG_DEF",
+     Term`DATATYPE = \x. T`);
+
+val _ = List.app add_const ["UNBOUNDED", "BOUNDED", "DATATYPE"];
 
 (*---------------------------------------------------------------------------*
  *                   THEOREMS                                                *
@@ -249,12 +257,12 @@ val conjunction = prim_mk_const{Name="/\\", Thy="bool"}
 val disjunction = prim_mk_const{Name="\\/", Thy="bool"}
 val negation    = prim_mk_const{Name="~",   Thy="bool"};
 
-val dest_neg    = sdest_monop ("~","bool") (ERR"dest_neg" "");
-val dest_eq     = sdest_binop("=","min") (ERR"dest_eq" "");
+val dest_neg    = sdest_monop("~","bool")   (ERR"dest_neg" "");
+val dest_eq     = sdest_binop("=","min")    (ERR"dest_eq" "");
 val dest_disj   = sdest_binop("\\/","bool") (ERR"dest_disj" "");
 val dest_conj   = sdest_binop("/\\","bool") (ERR"dest_conj" "");
-val dest_forall = sdest_binder("!","bool") (ERR"dest_forall" "");
-val dest_exists = sdest_binder("?","bool") (ERR"dest_exists" "");
+val dest_forall = sdest_binder("!","bool")  (ERR"dest_forall" "");
+val dest_exists = sdest_binder("?","bool")  (ERR"dest_exists" "");
 fun strip_forall fm =
    if can dest_forall fm
    then let val (Bvar,Body) = dest_forall fm
@@ -3954,6 +3962,20 @@ val LCOMM_THM = save_thm("LCOMM_THM",
      val th3 = AP_TERM (mk_comb(f,y)) (SPECL[z,x] comm_thm)
  in
    GEN f (DISCH assoc (DISCH comm (GENL [x,y,z] (TRANS th2 th3))))
+ end);
+
+
+val DATATYPE_TAG_THM = save_thm("DATATYPE_TAG_THM",
+    let val x = mk_var("x",alpha)
+    in GEN x (RIGHT_BETA (AP_THM DATATYPE_TAG_DEF x))
+    end);
+
+
+val DATATYPE_BOOL = save_thm("DATATYPE_BOOL",
+ let val thm1 = INST_TYPE [alpha |-> bool] DATATYPE_TAG_THM
+     val bvar = mk_var("bool",bool--> bool-->bool)
+ in 
+    SPEC (list_mk_comb(bvar,[T,F])) thm1
  end);
 
 
