@@ -161,14 +161,6 @@ val UNCURRY_DEF = Q.store_thm
   `!f x y. UNCURRY f (x,y) :'c = f x y`,
   REWRITE_TAC [UNCURRY,FST,SND])
 
-(* ------------------------------------------------------------------------- *)
-(* pair_Axiom = |- !f. ?fn. !x y. fn (x,y) = f x y                           *)
-(* ------------------------------------------------------------------------- *)
-
-val pair_Axiom = Q.store_thm("pair_Axiom",
- `!f:'a->'b->'c. ?fn. !x y. fn (x,y) = f x y`,
- GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN
- REWRITE_TAC[UNCURRY_DEF]);
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_UNCURRY_THM = |- !f. CURRY(UNCURRY f) = f                           *)
@@ -247,6 +239,15 @@ val UNCURRY_ONE_ONE_THM =
 
 val _ = save_thm("UNCURRY_ONE_ONE_THM",UNCURRY_ONE_ONE_THM);
 
+(* ------------------------------------------------------------------------- *)
+(* pair_Axiom = |- !f. ?fn. !x y. fn (x,y) = f x y                           *)
+(* ------------------------------------------------------------------------- *)
+
+val pair_Axiom = Q.store_thm("pair_Axiom",
+ `!f:'a->'b->'c. ?fn. !x y. fn (x,y) = f x y`,
+ GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN
+ REWRITE_TAC[UNCURRY_DEF]);
+
 (* -------------------------------------------------------------------------*)
 (*   UNCURRY_CONG =                                                         *)
 (*           |- !f' f M' M.                                                 *)
@@ -288,17 +289,13 @@ val EXISTS_PROD = Q.store_thm("EXISTS_PROD",
 val FORALL_PROD = Q.store_thm("FORALL_PROD",
  `(!p. P p) = !p_1 p_2. P (p_1,p_2)`,
  EQ_TAC THENL
- [DISCH_THEN(fn th =>
-     REPEAT GEN_TAC THEN ASSUME_TAC (SPEC (Term`p_1, p_2`) th)),
-  REPEAT STRIP_TAC
-    THEN REPEAT_TCL CHOOSE_THEN SUBST_ALL_TAC
-                (SPEC (Term`p:'a#'b`) ABS_PAIR_THM)]
-    THEN ASM_REWRITE_TAC[]);
+   [DISCH_THEN(fn th => REPEAT GEN_TAC THEN ASSUME_TAC (Q.SPEC `p_1, p_2` th)),
+    REPEAT STRIP_TAC
+      THEN REPEAT_TCL CHOOSE_THEN SUBST_ALL_TAC (Q.SPEC `p` ABS_PAIR_THM)
+   ]
+ THEN ASM_REWRITE_TAC[]);
 
-val pair_induction =
- save_thm("pair_induction",
-          #2(EQ_IMP_RULE FORALL_PROD));
-
+val pair_induction = save_thm("pair_induction", #2 (EQ_IMP_RULE FORALL_PROD));
 
 (* ------------------------------------------------------------------------- *)
 (* PFORALL_THM = |- !P. (!x y. P x y) = (!(x,y). P x y)                      *)
@@ -502,8 +499,10 @@ REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
   THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
   THEN REWRITE_TAC[]);
 
+
+
 val _ = export_theory();
-val _ =
-  export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))
+
+val _ = export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))
 
 end;
