@@ -1,0 +1,25 @@
+
+This directory contains an experimentation semantics supplied by Johan
+Martensson and (mostly) translated into HOL by Mike Gordon.
+
+ Johan Martensson, PhD            Office: +46 31 7451913
+ R&D                              Mobile: +46 703749681
+ Safelogic AB                     Fax: +46 31 7451939
+ Arvid Hedvalls Backe 4           johan.martensson@safelogic.se
+ SE-411 33 Gothenburg, SWEDEN
+ PGP key ID A8857A60
+ www.safelogic.se
+
+Currently there is just one file, SERE.ml, that defines the syntax and
+semantics of regular expressions, and proves some properties suggested
+by Johan. This file can be read into HOL with the "use" function.
+Script files for use with Holmake will be added eventually.
+
+
+The contents of this directory are
+
+README ......................... This file
+SERE.ml ........................ Syntax and semantics of SEREs
+
+Mike Gordon
+Mon Apr 26, 2004
