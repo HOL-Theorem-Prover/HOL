@@ -21,6 +21,9 @@ fun ERR f s = HOL_ERR { origin_function = f,
                         origin_structure = "CooperMath",
                         message = s};
 
+fun lhand t = rand (rator t)
+
+
 (*---------------------------------------------------------------------------*)
 (* Function to compute the Greatest Common Divisor of two integers.          *)
 (*---------------------------------------------------------------------------*)
@@ -407,11 +410,70 @@ in
                                (REDUCE_CONV gcd_term))
                 end
               else
-                NO_CONV
+                ALL_QCONV
             end
         end
     end tm
 end
+
+fun EVERY_SUMMAND_CONV c t =
+    if is_plus t then BINOP_QCONV (EVERY_SUMMAND_CONV c) t
+    else c t
+
+
+fun minimise_divides tm = let
+  val (l,r) = dest_divides tm
+  val l_i = int_of_term l
+  val _ = Arbint.<(Arbint.zero, l_i) orelse
+          raise ERR "minimise_divides" "LHS of divides not positive"
+  fun rhs_ok t = let
+    val (l,r) = dest_plus t
+  in
+    rhs_ok l andalso rhs_ok r
+  end handle HOL_ERR _ => let
+               val c = #1 (dest_mult t) handle HOL_ERR _ => t
+               val ci = int_of_term c
+               open Arbint
+             in
+               zero <= ci andalso ci < l_i
+             end
+  val _ = not (rhs_ok r) orelse raise UNCHANGED
+  fun split_summand t = let
+    val ((c, v), cval) = (dest_mult t, LAND_CONV)
+        handle HOL_ERR _ => ((t, one_tm), I)
+    val c_i = int_of_term c
+    val (d, m) = Arbint.divmod(c_i, l_i)
+    val _ = d <> Arbint.zero orelse raise UNCHANGED
+    val ld_pl_m =
+        SYM (REDUCE_CONV (mk_plus(mk_mult(l, term_of_int d), term_of_int m)))
+  in
+    cval (K ld_pl_m) THENQC
+    TRY_QCONV (REWR_CONV INT_RDISTRIB THENC
+               LAND_CONV (REWR_CONV (GSYM INT_MUL_ASSOC)))
+  end t
+  fun sort1 tm = let
+    (* tm is of form (l * x + y) + z, Here we add z to the appropriate
+       sub-term *)
+    val z = rand tm
+  in
+    if (lhand z = l handle HOL_ERR _ => false) then
+      REWR_CONV INT_ADD_COMM THENC REWR_CONV INT_ADD_ASSOC THENC
+      LAND_CONV (REWR_CONV (GSYM INT_LDISTRIB))
+    else REWR_CONV (GSYM INT_ADD_ASSOC)
+  end tm
+  fun sort tm =
+      if is_plus tm then (LAND_CONV sort THENC sort1) tm
+      else (REWR_CONV (GSYM INT_ADD_LID) THENC
+            LAND_CONV (REWR_CONV (GSYM INT_ADD_LID) THENC
+                       LAND_CONV (K (SYM (SPEC l INT_MUL_RZERO)))) THENC
+            sort1) tm
+in
+  RAND_CONV (EVERY_SUMMAND_CONV split_summand THENQC
+             REWRITE_CONV [INT_ADD_ASSOC] THENQC sort) THENQC
+  REWR_CONV int_arithTheory.justify_divides3 THENQC
+  REWRITE_CONV [INT_ADD_LID, INT_ADD_RID, INT_MUL_LZERO]
+end tm
+
 
 fun elim_paired_divides tm = let
   val (c1, c2) = dest_conj tm

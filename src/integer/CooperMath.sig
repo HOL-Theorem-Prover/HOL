@@ -35,6 +35,12 @@ signature CooperMath = sig
   (* Is a "QConv"; raises QConv.UNCHANGED if a term doesn't change *)
   val check_divides  : term -> thm
 
+
+  (* for terms of form c int_divides n * x + ... , minimises the coefficients
+     and any bare numeric literals to be their old value mod c.  c must be
+     positive *)
+  val minimise_divides : conv
+
   (* replaces
        m | a * x + b
      with
