@@ -1,13 +1,14 @@
 
-BODY 
+BODY
  {background-color: white}
 
-DIV.TYPE 
- {padding: 0.5em;
+DIV.TYPE
+ {padding-left: 0.5em;
+  padding-right: 0.5em;
   border: solid;
   border-color : black;
   color: crimson;
-  width : 100%;
+  width : 95%;
   font-weight: bold;
   font-family: Courier, monospace;
   font-size: large}
@@ -15,7 +16,7 @@ DIV.TYPE
 DIV.FIELD-BODY
  {margin-bottom:1em}
 
-DIV.XMPL 
+DIV.XMPL
  {font-family: Courier, monospace;
   margin-top: -1em;
   text-indent: 1em;
@@ -25,7 +26,7 @@ DIV.XMPL
 SPAN.TEXT
  {}
 
-SPAN.BRKT 
+SPAN.BRKT
  {color: blue;
   font-family: Courier, monospace}
 
