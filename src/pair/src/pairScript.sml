@@ -347,14 +347,14 @@ val _ = save_thm("PEXISTS_THM",PEXISTS_THM);
         Map for pairs
  ---------------------------------------------------------------------------*)
 
-val PAIRMAP = Q.new_infixr_definition
- ("PAIRMAP",
+val PAIR_MAP = Q.new_infixr_definition
+ ("PAIR_MAP",
   `## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 50);
 
-val PAIRMAP_THM = Q.store_thm
-("PAIRMAP_THM",
+val PAIR_MAP_THM = Q.store_thm
+("PAIR_MAP_THM",
  `!f g x y. (f##g) (x,y) = (f x, g y)`,
- REWRITE_TAC [PAIRMAP,FST,SND]);
+ REWRITE_TAC [PAIR_MAP,FST,SND]);
 
 (*---------------------------------------------------------------------------
         Distribution laws for paired lets. Only will work for the
@@ -515,11 +515,11 @@ val _ = adjoin_to_theory
    let val S = PP.add_string ppstrm
        fun NL() = PP.add_newline ppstrm
    in
-      S "val _ = let open computeLib";                        NL();
-      S "        in add_funs (map lazyfy_thm";                NL();
-      S "              [CLOSED_PAIR_EQ, FST, SND,";           NL();
-      S "               CURRY_DEF,UNCURRY_DEF,PAIRMAP_THM])"; NL();
-      S "        end;";                                       NL()
+      S "val _ = let open computeLib";                         NL();
+      S "        in add_funs (map lazyfy_thm";                 NL();
+      S "              [CLOSED_PAIR_EQ, FST, SND,";            NL();
+      S "               CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM])"; NL();
+      S "        end;";                                        NL()
   end)};
 
 

@@ -20,7 +20,7 @@ val PAIR_ss = SIMPSET
    rewrs = pairTheory.pair_rws @ 
            [CLOSED_PAIR_EQ, CURRY_UNCURRY_THM, UNCURRY_CURRY_THM,
             CURRY_ONE_ONE_THM, UNCURRY_ONE_ONE_THM,CURRY_DEF, 
-            PAIRMAP_THM, UNCURRY_DEF],
+            PAIR_MAP_THM, UNCURRY_DEF],
    filter=NONE,ac=[],dprocs=[],congs=[]};
 
 end (* struct *)
