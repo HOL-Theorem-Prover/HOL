@@ -167,7 +167,7 @@ val REAL_RDISTRIB = prove_thm("REAL_RDISTRIB",
 val REAL_EQ_LADD = prove_thm("REAL_EQ_LADD",
   (--`!x y z. (x + y = x + z) = (y = z)`--),
   REPEAT GEN_TAC THEN EQ_TAC THENL
-   [DISCH_THEN(MP_TAC o AP_TERM (--`$+ ~x)`--)) THEN
+   [DISCH_THEN(MP_TAC o AP_TERM (--`$+ ~x`--)) THEN
     REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID],
     DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
 
@@ -358,7 +358,7 @@ val REAL_LTE_ANTSYM = prove_thm("REAL_LTE_ANTSYM",
 
 val REAL_NEG_LT0 = prove_thm("REAL_NEG_LT0",
   (--`!x. ~x < 0 = 0 < x`--),
-  GEN_TAC THEN 
+  GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [(--`~x`--), (--`0`--), (--`x:real`--)] REAL_LT_RADD))
   THEN REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]);
 
@@ -386,7 +386,7 @@ val REAL_LT_NEGTOTAL = prove_thm("REAL_LT_NEGTOTAL",
 val REAL_LE_NEGTOTAL = prove_thm("REAL_LE_NEGTOTAL",
   (--`!x. 0 <= x \/ 0 <= ~x`--),
   GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
-  REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC 
+  REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
           (SPEC (--`x:real`--) REAL_LT_NEGTOTAL) THEN
   ASM_REWRITE_TAC[]);
 
@@ -451,7 +451,7 @@ val REAL_LT_ADD = prove_thm("REAL_LT_ADD",
 val REAL_LT_ADDNEG = prove_thm("REAL_LT_ADDNEG",
   (--`!x y z. y < x + ~z = y+z < x`--),
   REPEAT GEN_TAC THEN  SUBST1_TAC
-  (SYM(SPECL [(--`y:real`--), (--`x + ~z`--), (--`z:real`--)] REAL_LT_RADD)) 
+  (SYM(SPECL [(--`y:real`--), (--`x + ~z`--), (--`z:real`--)] REAL_LT_RADD))
   THEN REWRITE_TAC[GSYM REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_RID]);
 
 val REAL_LT_ADDNEG2 = prove_thm("REAL_LT_ADDNEG2",
@@ -767,7 +767,7 @@ val REAL_LE = prove_thm("REAL_LE",
 
 val REAL_LT = prove_thm("REAL_LT",
   (--`!m n. &m < &n = m < n`--),
-  REPEAT GEN_TAC THEN MATCH_ACCEPT_TAC 
+  REPEAT GEN_TAC THEN MATCH_ACCEPT_TAC
     ((REWRITE_RULE[] o AP_TERM (--`$~:bool->bool`--) o
     REWRITE_RULE[GSYM NOT_LESS, GSYM REAL_NOT_LT]) (SPEC_ALL REAL_LE)));
 
@@ -2221,7 +2221,7 @@ val SUM_SUBST = prove_thm("SUM_SUBST",
 val SUM_NSUB = prove_thm("SUM_NSUB",
   (--`!n f c.
       sum(0,n) f - (&n * c)
-        = 
+        =
       sum(0,n)(\p. f(p) - c)`--),
   INDUCT_TAC THEN REWRITE_TAC[sum, REAL_MUL_LZERO, REAL_SUB_REFL] THEN
   REWRITE_TAC[ADD_CLAUSES, REAL, REAL_RDISTRIB] THEN BETA_TAC THEN
