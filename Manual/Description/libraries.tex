@@ -980,7 +980,7 @@ it by \ml{step}, and gives up when $d$ exceeds \ml{max}.
 
 \section{Simplification---\texttt{simpLib}}
 \label{sec:simpLib}
-\index{simplification}
+\index{simplification|(}
 
 The \ml{simp} library implements \HOL's most sophisticated rewriting
 engine, the simplifier.  It is recommended as a general purpose
@@ -1050,8 +1050,90 @@ intermediate \ml{(p * 1)} term, but also re-ordered the addition to
 put the simpler term on the left.
 
 \subsection{Simplification tactics}
+\label{sec:simplification-tactics}
+\index{simplification!tactics}
+
+The simplifier is implemented around the conversion \ml{SIMP\_CONV},
+which is a function for `converting' terms into theorems.  To apply
+the simplifier to goals (alternatively, to perform tactic-based proofs
+with the simplifier), \HOL{} provides five tactics, all of which are
+available in \ml{bossLib}.
+
+\begin{boxed}
+\index{SIMP_TAC@\ml{SIMP\_TAC}}
+\begin{verbatim}
+   SIMP_TAC : simpset -> thm list -> tactic
+\end{verbatim}
+\end{boxed}
+\noindent
+\ml{SIMP\_TAC} is the simplest simplification tactic: it attempts to
+simplify the current goal (ignoring the assumptions) using the given
+\simpset{} and the additional theorems.  It is no more than the
+lifting of the underlying \ml{SIMP\_CONV} conversion to the tactic
+level through the use of the standard function \ml{CONV\_TAC}.
+
+\begin{boxed}
+\index{ASM_SIMP_TAC@\ml{ASM\_SIMP\_TAC}}
+\begin{verbatim}
+   ASM_SIMP_TAC : simpset -> thm list -> tactic
+\end{verbatim}
+\end{boxed}
+\noindent
+Like \ml{SIMP\_TAC}, \ml{ASM\_SIMP\_TAC} simplifies the current goal
+(leaving the assumptions untouched), but includes the goal's
+assumptions as extra rewrite rules.  Thus:
+\begin{session}
+\begin{verbatim}
+1 subgoal:
+> val it =
+    P x
+    ------------------------------------
+      x = 3
+     : goalstack
+
+- e (ASM_SIMP_TAC bool_ss []);
+OK..
+1 subgoal:
+> val it =
+    P 3
+    ------------------------------------
+      x = 3
+     : goalstack
+\end{verbatim}
+\end{session}
+\noindent
+In this example, \ml{ASM\_SIMP\_TAC} used \holtxt{x = 3} as an
+additional rewrite rule, and replaced the \holtxt{x} of \holtxt{P x}
+with \holtxt{3}.
+
+\begin{boxed}
+\index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
+\begin{verbatim}
+   FULL_SIMP_TAC : simpset -> thm list -> tactic
+\end{verbatim}
+\end{boxed}
+
+\noindent
+The tactic \ml{FULL\_SIMP\_TAC} simplifies not only a goal's
+conclusion but its assumptions as well.  It proceeds by simplifying
+each assumption in turn, additionally assuming earlier assumptions to
+help in the simplification of later assumptions.  Each assumption is
+added back into the goal's assumption list with the tactic
+\ml{STRIP\_ASSUME\_TAC}.  This means that assumptions that become
+conjunctions will have each conjunct assumed separately.  Assumptions
+that become disjunctions, will cause one new sub-goal to be created
+for each disjunct.  If an assumption is simplified to false, this will
+solve the goal.
+
+\ml{FULL\_SIMP\_TAC} attacks the assumptions in the order in which
+they appear in the list of terms that represent the goal's
+assumptions.  Typically then, the first assumption to be simplified
+will be the assumption most recently added.  Viewed in the light of
+\ml{goalstackLib}'s printing of goals, \ml{FULL\_SIMP\_TAC} works its
+way up the list of assumptions, from bottom to top.
 
 \subsection{The standard \simpset{}s}
+\label{sec:standard-simpsets}
 
 \HOL{} comes with a number of standard \simpset{}s.  All of these are
 accessible from within \ml{bossLib}, though some originate in other
@@ -1301,10 +1383,12 @@ should be added manually to those simplification invocations that need them.
 \subsection{Advanced features}
 \label{sec:advanced-simplifier}
 
+\index{simplification|)}
+
 \section{Efficient Applicative Order Reduction---\texttt{computeLib}}
 \label{sec:computeLib}
 
-\section{Manipulation of Arithmetic Formulas---\texttt{numLib}}
+\section{Arithmetic Libraries---\texttt{numLib}, \texttt{intLib} and \texttt{realLib}}
 \label{sec:numLib}
 \index{decision procedures!Presburger arithmetic over natural numbers}
 
