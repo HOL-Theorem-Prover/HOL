@@ -172,9 +172,10 @@ fun RAND_CONV conv tm =
    in AP_TERM Rator (conv Rand)
    end;
 fun RATOR_CONV conv tm =
-   let val {Rator,Rand} = dest_comb tm
-   in AP_THM (conv Rator) Rand
-   end;
+   let val {Rator,Rand} = dest_comb tm in AP_THM (conv Rator) Rand end;
+fun ABS_CONV conv tm =
+   let val {Bvar,Body} = dest_abs tm in ABS Bvar (conv Body) end;
+fun QUANT_CONV conv = RAND_CONV(ABS_CONV conv);
 fun RIGHT_BETA th = TRANS th (BETA_CONV(#rhs(dest_eq(concl th))));
 fun UNDISCH th = MP th (ASSUME(#ant(dest_imp(concl th))));
 
@@ -955,6 +956,27 @@ val EQ_EXT =
 val _ = save_thm("EQ_EXT",EQ_EXT);
 
 (*---------------------------------------------------------------------------
+      FUN_EQ_THM  |- !f g. (f = g) = !x. f x = g x
+ ---------------------------------------------------------------------------*)
+
+val FUN_EQ_THM =
+  let val f = mk_var{Name="f", Ty=Type.alpha --> Type.beta}
+      val g = mk_var{Name="g", Ty=Type.alpha --> Type.beta}
+      val x = mk_var{Name="x", Ty=Type.alpha}
+      val f_eq_g = mk_eq{lhs=f,rhs=g};
+      val fx_eq_gx = mk_eq{lhs=mk_comb{Rator=f,Rand=x},
+                           rhs=mk_comb{Rator=g,Rand=x}};
+      val uq_f_eq_g = mk_forall{Bvar=x,Body=fx_eq_gx};
+      val th1 = GEN x (AP_THM (ASSUME f_eq_g) x);
+      val th2 = MP (SPEC_ALL EQ_EXT) (ASSUME uq_f_eq_g);
+  in
+    GEN f (GEN g
+        (IMP_ANTISYM_RULE (DISCH_ALL th1) (DISCH_ALL th2)))
+  end;
+
+val _ = save_thm("FUN_EQ_THM",FUN_EQ_THM);
+
+(*---------------------------------------------------------------------------
  *    |- !x y z. x=y  /\  y=z  ==>  x=z
  *---------------------------------------------------------------------------*)
 val EQ_TRANS =
@@ -1182,6 +1204,17 @@ val COND_ID =
 
 val _ = save_thm("COND_ID", COND_ID);
 
+(*---------------------------------------------------------------------------
+      SELECT_THM = |- !P. P (@x. P x) = ?x. P x
+ ---------------------------------------------------------------------------*)
+
+val SELECT_THM =
+  GEN (Term`P:'a->bool`)
+   (SYM (RIGHT_BETA(RIGHT_BETA
+          (AP_THM EXISTS_DEF (Term`\x:'a. P x:bool`)))));
+
+val _ = save_thm("SELECT_THM", SELECT_THM);
+
 (* ---------------------------------------------------------------------*)
 (* SELECT_REFL = |- !x. (@y. y = x) = x                                 *)
 (* ---------------------------------------------------------------------*)
@@ -1198,6 +1231,22 @@ val SELECT_REFL =
   end;
 
 val _ = save_thm("SELECT_REFL", SELECT_REFL);
+
+val SELECT_REFL_2 =
+  let val x = mk_var{Name ="x", Ty = Type.alpha}
+      val y = mk_var{Name ="y", Ty = Type.alpha}
+      val th1 = REFL x
+      val th2 = EXISTS(mk_exists{Bvar=y,Body=mk_eq{lhs=x,rhs=y}},x) th1
+      val th3 = SPEC y
+                 (SPEC (mk_abs{Bvar=y,Body=mk_eq{lhs=x,rhs=y}}) SELECT_AX)
+     val th4 = UNDISCH th3
+     val th5 = DISCH_ALL(SYM (EQ_MP (BETA_CONV (concl th4)) th4))
+     val th6 = UNDISCH(CONV_RULE (RATOR_CONV (RAND_CONV BETA_CONV)) th5)
+ in
+   GEN x (CHOOSE(y,th2) th6)
+ end;
+
+val _ = save_thm("SELECT_REFL_2", SELECT_REFL_2);
 
 (*---------------------------------------------------------------------------*)
 (* SELECT_UNIQUE = |- !P x. (!y. P y = (y = x)) ==> ($@ P = x)               *)
@@ -2355,6 +2404,72 @@ val LET_RATOR = save_thm("LET_RATOR",
                       (Thm.INST_TYPE [beta |-> Type`:'c`] LET_THM)))
  in TRANS LET_THM1 (SYM LET_THM2)
  end);
+
+
+(*---------------------------------------------------------------------------
+           !P:'a->'b->bool. (!x y. P x y) = (!y x. P x y)
+ ---------------------------------------------------------------------------*)
+
+val SWAP_FORALL_THM =
+  let val P = mk_var{Name="P", Ty = Type `:'a->'b->bool`}
+      val x = mk_var{Name="x", Ty=Type.alpha}
+      val y = mk_var{Name="y", Ty=Type.beta}
+      val Pxy = list_mk_comb (P,[x,y])
+      val th1 = ASSUME (list_mk_forall([x,y],Pxy))
+      val th2 = DISCH_ALL (GEN y (GEN x (SPEC y (SPEC x th1))))
+      val th3 = ASSUME (list_mk_forall([y,x],Pxy))
+      val th4 = DISCH_ALL (GEN x (GEN y (SPEC x (SPEC y th3))))
+  in
+     GEN P (IMP_ANTISYM_RULE th2 th4)
+  end;
+
+val _ = save_thm("SWAP_FORALL_THM", SWAP_FORALL_THM);
+
+(*---------------------------------------------------------------------------
+           !P:'a->'b->bool. (?x y. P x y) = (?y x. P x y)
+ ---------------------------------------------------------------------------*)
+
+val SWAP_EXISTS_THM =
+  let val P = mk_var{Name="P", Ty=Type `:'a->'b->bool`}
+      val x = mk_var{Name="x", Ty=Type.alpha}
+      val y = mk_var{Name="y", Ty=Type.beta}
+      val Pxy = list_mk_comb (P,[x,y])
+      val tm1 = list_mk_exists([x],Pxy)
+      val tm2 = list_mk_exists([y],tm1)
+      val tm3 = list_mk_exists([y],Pxy)
+      val tm4 = list_mk_exists([x],tm3)
+      val th1 = ASSUME Pxy
+      val th2 = EXISTS(tm2,y) (EXISTS (tm1,x) th1)
+      val th3 = ASSUME (list_mk_exists([y],Pxy))
+      val th4 = CHOOSE(y,th3) th2
+      val th5 = CHOOSE(x,ASSUME (list_mk_exists([x,y],Pxy))) th4
+      val th6 = EXISTS(tm4,x) (EXISTS (tm3,y) th1)
+      val th7 = ASSUME (list_mk_exists([x],Pxy))
+      val th8 = CHOOSE(x,th7) th6
+      val th9 = CHOOSE(y,ASSUME (list_mk_exists([y,x],Pxy))) th8
+  in
+     GEN P (IMP_ANTISYM_RULE (DISCH_ALL th5) (DISCH_ALL th9))
+  end;
+
+val _ = save_thm("SWAP_EXISTS_THM", SWAP_EXISTS_THM);
+
+
+(*---------------------------------------------------------------------------
+   EXISTS_UNIQUE_THM 
+
+     !P. (?!x:'a. P x) = (?x. P x) /\ (!x y. P x /\ P y ==> (x = y))
+ ---------------------------------------------------------------------------*)
+val EXISTS_UNIQUE_THM =
+ let val th1 = RIGHT_BETA (AP_THM EXISTS_UNIQUE_DEF (Term`\x:'a. P x:bool`))
+     val th2 = CONV_RULE (RAND_CONV (RAND_CONV 
+                (QUANT_CONV (QUANT_CONV (RATOR_CONV
+                    (RAND_CONV (RAND_CONV BETA_CONV))))))) th1
+ in
+   CONV_RULE (RAND_CONV (RAND_CONV (QUANT_CONV (QUANT_CONV (RATOR_CONV 
+               (RAND_CONV (RATOR_CONV (RAND_CONV BETA_CONV)))))))) th2
+ end;
+
+val _ = save_thm("EXISTS_UNIQUE_THM", EXISTS_UNIQUE_THM);
 
 
 (* TO BE ADDED.
