@@ -11,24 +11,27 @@ structure finsetScript =
 struct
 
 open HolKernel Parse basicHol90Lib
-     arithmeticTheory prim_recTheory numTheory Num_induct Num_conv
-     setTheory bossLib setLib simpLib;
+     arithmeticTheory prim_recTheory numTheory numLib
+     setTheory setLib simpLib BasicProvers SingleStep;
 
 type thm = Thm.thm
 infix THEN THENL THENC ORELSE ORELSEC ## --> ++
 
-val hol_ss =
-  boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss ++
-  UnwindSimps.UNWIND_ss
+val fin_ss =
+  boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss;
+
 
 
 (* --------------------------------------------------------------------- *)
 (* Create the new theory.                                                *)
 (* --------------------------------------------------------------------- *)
-(*
- Used for interactivity *)
-(* load "bossLib";load "setTheory"; load "setLib"; load "simpLib"; load "HOLSimps";
- load "Q"; open bossLib setTheory simpLib;*)
+
+
+(* For interactive use: 
+  app load ["BasicProvers", "SingleStep", "setTheory", "setLib", "Q"];
+  open BasicProvers setTheory simpLib;
+*)
+
 val _ = new_theory "finset";
 
 exception F_error of string;
@@ -96,7 +99,7 @@ val IMP_finset =store_thm(
   "IMP_finset",
   ``!P. (!s:'a set. FINITE s ==> P s) =
         (!fs. P (finset_REP fs))``,
-  PROVE_TAC[FINITE_EXISTS]);
+  BasicProvers.PROVE_TAC[FINITE_EXISTS]);
 
 val REV_IMP_finset = store_thm(
   "REV_IMP_finset",
@@ -138,13 +141,16 @@ in
 end
 
 fun set_absorb_list ty =
-(* given a type 'a -> 'b set ... ->'o, returns ([(false, 'a), (true, 'b) ...], 'o) *)
-(* This does not catch 'a -> ('a set -> 'a set) -> 'a so some formulas won't be translated *)
+(* given a type 'a -> 'b set ... -> 'o, 
+   returns ([(false, 'a), (true, 'b) ...], 'o) *)
+(* This does not catch 'a -> ('a set -> 'a set) -> 'a so some
+   formulas won't be translated *)
     if is_fun ty then
         let val (Arg, Rest) = dom_rng ty
             val (bl, tyend) = set_absorb_list Rest
         in
-            ((if is_set Arg then (true, dest_set Arg) else (false, Arg))::bl, tyend)
+            ((if is_set Arg then (true, dest_set Arg) 
+              else (false, Arg))::bl, tyend)
         end
     else ([], ty)
 
@@ -197,7 +203,7 @@ local
     in
         fun prover t =
     (* Proves theorems to transform functions ranging over sets to
-    functions ranging over finsets *)
+       functions ranging over finsets *)
             let val (to_be_proved, hint, to_find) = to_prove t
             in
                 (let val vl = fst (strip_abs to_find)
@@ -325,7 +331,7 @@ val fGSPEC_DEF = new_specification
      sat_thm = let
        val th =
          PROVE[finset_ISO_DEF]
-         `!d. FINITE (GSPEC d) ==> ?s:'a finset. s = finset_ABS (GSPEC d)`
+         ``!d. FINITE (GSPEC d) ==> ?s:'a finset. s = finset_ABS (GSPEC d)``
      in
        EQ_MP ((DEPTH_CONV RIGHT_IMP_EXISTS_CONV THENC SKOLEM_CONV) (concl th))
        th
@@ -429,7 +435,7 @@ val finset_INDUCT = save_thm(
 val SPEC_GSPEC = store_thm (
   "SPEC_GSPEC",
   ``SPEC P=GSPEC (\x. (x, P x))``,
-  SIMP_TAC hol_ss [GSPEC_DEF]);
+  SIMP_TAC fin_ss [GSPEC_DEF]);
 
 val TRANSLATE_THMS =
   ref ([IMP_finset, SPEC_GSPEC, GSPEC_fGSPEC, EMPTY_fEMPTY, INSERT_fINSERT,
@@ -514,7 +520,7 @@ val lemma = prove(
       (ODD  n = ?fs. 0 fIN fs /\ ~(n fIN fs) /\
                      (!m. m <n ==> (m fIN fs = ~(SUC m fIN fs))))``,
   GEN_TAC THEN Induct_on `n` THENL [
-    REPEAT STRIP_TAC THEN SIMP_TAC hol_ss [EVEN, ODD_EVEN] THEN
+    REPEAT STRIP_TAC THEN SIMP_TAC fin_ss [EVEN, ODD_EVEN] THEN
     Q.EXISTS_TAC `0 fINSERT fEMPTY` THEN
     SIMP_TAC BasicProvers.bool_ss [TRANSLATE_RULE [] IN_SING],
     POP_ASSUM STRIP_ASSUME_TAC THEN REPEAT STRIP_TAC THENL
@@ -523,13 +529,13 @@ val lemma = prove(
         SIMP_TAC BasicProvers.bool_ss [EVEN, th1] THEN EQ_TAC THENL [
           RW_TAC BasicProvers.bool_ss [] THEN
           Q.EXISTS_TAC ptm THEN
-          ASM_SIMP_TAC hol_ss [TRANSLATE_RULE [] th2] THEN
+          ASM_SIMP_TAC fin_ss [TRANSLATE_RULE [] th2] THEN
           GEN_TAC THEN
           DISCH_THEN (STRIP_ASSUME_TAC o
                       CONV_RULE (REWR_CONV prim_recTheory.LESS_THM)) THEN
-          ASM_SIMP_TAC hol_ss [],
-          STRIP_TAC THEN ASM_SIMP_TAC hol_ss [] THEN Q.EXISTS_TAC `fs` THEN
-          ASM_SIMP_TAC hol_ss []
+          ASM_SIMP_TAC fin_ss [],
+          STRIP_TAC THEN ASM_SIMP_TAC fin_ss [] THEN Q.EXISTS_TAC `fs` THEN
+          ASM_SIMP_TAC fin_ss []
         ]
      in
         map prover [(EVEN_ODD, IN_INSERT, `SUC n fINSERT fs`),
