@@ -1,4 +1,5 @@
 \documentclass[10pt]{article}
+\usepackage{charter}
 \addtolength\textwidth{1cm}
 \addtolength\textheight{2cm}
 \pagestyle{empty}
@@ -33,7 +34,7 @@ All of these commands are executed by first typing the HOL prefix
   to define new ML bindings, and to evaluate epxressions.
 \item [M-v ``hol-scroll-down''] Scrolls the HOL window.
 \item [b   ``hol-backup''] Backs up one stage in the goalstack.
-\item [d  ``hol-drop-goal''] Drops the current goal, removing it from
+\item [d r ``hol-drop-goal''] Drops the current goal, removing it from
   the goal-stack entirely.
 \item [e ``expand-hol-tactic''] Sends the region to the HOL process as
   a tactic, where it is applied to the current goal.
