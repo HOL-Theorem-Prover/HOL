@@ -1,3 +1,6 @@
+structure markerLib :> markerLib =
+struct
+
 open HolKernel boolLib
 
 open markerTheory
@@ -61,3 +64,4 @@ fun move_conj_right P = stmark_conjunct P THENC move_stmarked_conj_right
 fun move_disj_left P = stmark_disjunct P THENC move_stmarked_disj_left
 fun move_disj_right P = stmark_disjunct P THENC move_stmarked_disj_right
 
+end (* struct *)
