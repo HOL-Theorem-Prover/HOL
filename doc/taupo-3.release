@@ -9,3 +9,9 @@ Bugs fixed:
 New theories:
 -------------
 
+New tools:
+----------
+  * A new decision procedure for Presburger arithmetic over the
+    integers and natural numbers.  This is an implementation of
+    Cooper's algorithm, and is complete.  It allows any alternation of
+    quantifiers including ?! (exists unique).
