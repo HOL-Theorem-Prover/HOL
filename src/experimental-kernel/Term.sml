@@ -478,9 +478,18 @@ in
   recurse N
 end
 
-fun var_occurs v M =
-    if not (is_var v) then raise ERR "var_occurs" "Term not a variable"
-    else free_in v M
+fun var_occurs M = let
+  val v = case M of
+            Var v => v
+          | _ => raise ERR "var_occurs" "Term not a variable"
+  fun occ (Var u) = (v = u)
+    | occ (Const _) = false
+    | occ (App(f, x)) = occ f orelse occ x
+    | occ (Abs(Var u, body)) = u <> v andalso occ body
+    | occ (Abs _) = raise Fail "catastrophic invariant failure"
+in
+  occ
+end
 
 fun type_vars_in_term t = let
   fun tyv t k =
