@@ -27,6 +27,7 @@ val DISJ_CASES_THEN2 : Abbrev.thm_tactic -> Abbrev.thm_tactical
 val DISJ_CASES_THEN : Abbrev.thm_tactical
 val DISJ_CASES_THENL : Abbrev.thm_tactic list -> Abbrev.thm_tactic
 val DISCH_THEN : Abbrev.thm_tactic -> Abbrev.tactic
+val UNDISCH_THEN : Term.term -> Abbrev.thm_tactic -> Abbrev.tactic
 val X_CHOOSE_THEN : Term.term -> Abbrev.thm_tactical
 val CHOOSE_THEN : Abbrev.thm_tactical
 val X_CASES_THENL : (('a list -> 'b list -> ('a * 'b) list) ->

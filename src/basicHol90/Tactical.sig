@@ -36,6 +36,7 @@ sig
   val MAP_FIRST      : ('a -> tactic) -> 'a list -> tactic
   val EVERY_ASSUM    : thm_tactic -> tactic
   val FIRST_ASSUM    : thm_tactic -> tactic
+  val FIRST_X_ASSUM  : thm_tactic -> tactic
   val ASSUM_LIST     : (Thm.thm list -> tactic) -> tactic
   val POP_ASSUM      : thm_tactic -> tactic
   val PAT_ASSUM      : Term.term -> thm_tactic -> tactic

@@ -252,6 +252,23 @@ fun FIRST_ASSUM ttac (A,g) =
      find ttac A
    end;
 
+(*----------------------------------------------------------------------
+ * Call a thm-tactic for the first assumption at which it succeeds and
+ * remove that assumption from the list.
+ *----------------------------------------------------------------------*)
+
+(* UNDISCH_THEN is actually defined for public consumption in Thm_cont.sml,
+   but we can't use that here because Thm_cont builds on this module.
+   Arguably all of the ASSUM tactics are not tacticals at all, and
+   shouldn't be here along with THEN etc. *)
+fun UNDISCH_THEN tm ttac (asl, w) = let
+  val (_, asl') = Lib.pluck (fn a => a = tm) asl
+in
+  ttac (ASSUME tm) (asl', w)
+end
+fun FIRST_X_ASSUM ttac =
+  FIRST_ASSUM (fn th => UNDISCH_THEN (concl th) ttac)
+
 
 (*---------------------------------------------------------------------------
  * Split off a new subgoal and provide it as a theorem to a tactic

@@ -42,7 +42,7 @@ fun THM_CONT_ERR function message =
 
 infix THEN_TCL ORELSE_TCL;
 
-fun (ttcl1:thm_tactical) THEN_TCL (ttcl2:thm_tactical) =  fn ttac =>  
+fun (ttcl1:thm_tactical) THEN_TCL (ttcl2:thm_tactical) =  fn ttac =>
      ttcl1 (ttcl2 ttac);
 
 fun (ttcl1:thm_tactical) ORELSE_TCL (ttcl2:thm_tactical) = fn ttac => fn th =>
@@ -55,8 +55,8 @@ fun REPEAT_TCL ttcl ttac th =
 (* New version of REPEAT for ttcl's.  Designed for use with IMP_RES_THEN.*)
 (* TFM 91.01.20.                                                         *)
 (* --------------------------------------------------------------------- *)
-fun REPEAT_GTCL (ttcl: thm_tactical) ttac th (A,g) =  
-    ttcl (REPEAT_GTCL ttcl ttac) th (A,g) 
+fun REPEAT_GTCL (ttcl: thm_tactical) ttac th (A,g) =
+    ttcl (REPEAT_GTCL ttcl ttac) th (A,g)
     handle HOL_ERR _ => ttac th (A,g);
 
 val ALL_THEN :thm_tactical = I;
@@ -90,7 +90,7 @@ fun FIRST_TCL ttcll = itlist (curry (op ORELSE_TCL)) ttcll NO_THEN;
  *       ...
  *---------------------------------------------------------------------------*)
 
-fun CONJUNCTS_THEN2 ttac1 ttac2 = fn cth => 
+fun CONJUNCTS_THEN2 ttac1 ttac2 = fn cth =>
   let val (th1,th2) = CONJ_PAIR cth
   in
     Tactical.THEN (ttac1 th1, ttac2 th2)
@@ -135,18 +135,18 @@ val CONJUNCTS_THEN :thm_tactical = fn ttac => CONJUNCTS_THEN2 ttac ttac;;
 (* -------------------------------------------------------------------------*)
 fun DISJ_CASES_THEN2 ttac1 ttac2 = fn disth =>
    let val {disj1,disj2} = Dsyntax.dest_disj (Thm.concl disth)
-   in fn (g as (asl,w)) 
+   in fn (g as (asl,w))
      =>
-    let val (gl1,prf1) = 
+    let val (gl1,prf1) =
               ttac1 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj1)) g
-          and (gl2,prf2) = 
+          and (gl2,prf2) =
               ttac2 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj2)) g
       in
-      ((gl1 @ gl2), 
-       (fn thl => 
-         let val (thl1,thl2) = split_after (length gl1) thl 
+      ((gl1 @ gl2),
+       (fn thl =>
+         let val (thl1,thl2) = split_after (length gl1) thl
          in DISJ_CASES disth (prf1 thl1) (prf2 thl2) end))
-      end 
+      end
    end
    handle HOL_ERR _ => raise THM_CONT_ERR "DISJ_CASES_THEN2" "";
 
@@ -155,7 +155,7 @@ fun DISJ_CASES_THEN2 ttac1 ttac2 = fn disth =>
  * Single-, multi-tactic versions                                            *
  *---------------------------------------------------------------------------*)
 val DISJ_CASES_THEN  : thm_tactical = fn ttac => DISJ_CASES_THEN2 ttac ttac;
-val DISJ_CASES_THENL : thm_tactic list -> thm_tactic 
+val DISJ_CASES_THENL : thm_tactic list -> thm_tactic
      = end_itlist DISJ_CASES_THEN2 ;
 
 
@@ -180,12 +180,26 @@ val DISJ_CASES_THENL : thm_tactic list -> thm_tactic
 (* Added: TFM 88.03.31  (bug fix)					*)
 
 fun DISCH_THEN ttac (asl,w) =
-   let val {ant,conseq} = Dsyntax.dest_imp w 
-       val (gl,prf) = ttac (ASSUME ant) (asl,conseq) 
+   let val {ant,conseq} = Dsyntax.dest_imp w
+       val (gl,prf) = ttac (ASSUME ant) (asl,conseq)
    in
    (gl, (if (Dsyntax.is_neg w) then NEG_DISCH ant else DISCH ant) o prf)
    end
    handle HOL_ERR _ => raise THM_CONT_ERR "DISCH_THEN" "";
+
+(* DISCH_THEN's "dual"                                                  *)
+(*                                                                      *)
+(* ported from John Harrison's HOL Light                                *)
+(*        -- Michael Norrish 30 June 1999                               *)
+
+fun UNDISCH_THEN tm ttac (asl, w) = let
+  val (_, asl') = Lib.pluck (fn a => a = tm) asl
+    handle HOL_ERR _ =>
+      raise THM_CONT_ERR "UNDISCH_THEN" "Term given not an assumption"
+in
+  ttac (ASSUME tm) (asl', w)
+end
+
 
 
 (*---------------------------------------------------------------------------
@@ -203,7 +217,7 @@ fun X_CHOOSE_THEN y (ttac:thm_tactic) : thm_tactic = fn xth =>
    in fn (asl,w) =>
     let val th = itlist ADD_ASSUM (Thm.hyp xth)
                   (ASSUME (Term.subst[Bvar |-> y] Body))
-        val (gl,prf) = ttac th (asl,w) 
+        val (gl,prf) = ttac th (asl,w)
     in
         (gl, (CHOOSE (y,xth)) o prf)
     end
@@ -242,13 +256,13 @@ val CHOOSE_THEN :thm_tactical = fn ttac => fn xth =>
  *
  *---------------------------------------------------------------------------*)
 fun X_CASES_THENL varsl (ttacl:thm_tactic list) =
-    DISJ_CASES_THENL 
+    DISJ_CASES_THENL
        (map (fn (vars,ttac) => EVERY_TCL (map X_CHOOSE_THEN vars) ttac)
             (varsl zip ttacl));
 
 
 fun X_CASES_THEN varsl ttac =
-    DISJ_CASES_THENL 
+    DISJ_CASES_THENL
        (map (fn vars => EVERY_TCL (map X_CHOOSE_THEN vars) ttac) varsl);
 
 
