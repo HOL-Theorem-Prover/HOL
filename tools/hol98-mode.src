@@ -346,6 +346,7 @@ that the buffer has already had HOL terms, comments and strings removed."
         (save-excursion
           (set-buffer tmpbuf)
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
+          (setq case-fold-search nil) ; buffer-local version
           (insert string)
           (goto-char (point-min))
           (remove-sml-junk (point-min) (point-max))
