@@ -80,38 +80,6 @@ fun net_assoc label =
  end;
 
 
-(*---------------------------------------------------------------------------*
- * The patterns in a term net. "follow" decomposes a term from the top down, *
- * and uses each constructor to decide which subnet to descend into. In      *
- * general, this probe may not get to a LEAF, so the return type is a list   *
- * of nets.                                                                  *
- *---------------------------------------------------------------------------*)
-
-fun follow tm net =
- let val nets = 
-       case label_of tm
-        of V => [] 
-         | (l as Cnst _) => [net_assoc l net] 
-         | Lam => follow (#Body(break_abs tm)) (net_assoc Lam net)
-         | Cmb => let val {Rator,Rand} = Term.dest_comb tm
-                  in itlist(append o follow Rand)
-                           (follow Rator (net_assoc Cmb net)) [] end
-     val Vnet = net_assoc V net
- in 
-   gather (not o is_empty) (Vnet::nets)
- end;
-
-(*---------------------------------------------------------------------------
-    Collects the elements in the net that have been added with keys that
-    could match tm.
- ---------------------------------------------------------------------------*)
-
-fun match tm net = 
-   itlist (fn (LEAF L) => append (map #2 L)
-            | (NODE _) => I)
-      (follow tm net)  [];
-
-
 fun match tm net =
  let fun mtch tm net =
       let val label = label_of tm
@@ -270,9 +238,8 @@ fun itnet f (LEAF L) b = itlist f (List.map #2 L) b
 fun size net = itnet (fn x => fn y => y+1) net 0;
 
 
-
 (*---------------------------------------------------------------------------
-     Compatibility mode.
+                Compatibility mode.
  ---------------------------------------------------------------------------*)
 
 fun get_tip_list (LEAF L) = L

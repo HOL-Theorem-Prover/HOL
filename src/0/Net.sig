@@ -62,8 +62,8 @@ sig
    [index tm net]
 
     An alternative use of term nets ignores any paths in the net
-    arising from clearly non-alpha-convertible terms. "equiv" is a more
-    discriminating entrypoint than "matches", in the sense that the set
+    arising from clearly non-alpha-convertible terms. "index" is a more
+    discriminating entrypoint than "match", in the sense that the set
     of results is always a subset of those returned for matches.
 
    [delete (tm,P) net] uses tm as an index into the net. There can be
