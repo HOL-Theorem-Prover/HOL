@@ -155,7 +155,7 @@ $t${\small\verb% |- %}$t$. Note, however, that the \ML{} printer prints each
   assumption as a dot (but this default can be changed; see below).
   The function {\small\verb|dest_thm|} decomposes a theorem into a
   pair consisting of list of assumptions and the conclusion. The \ML\
-  type \ml{goal} abbreviates {\small\verb|(term)list # term|}, this is
+  type \ml{goal} abbreviates {\small\verb|(term)list * term|}, this is
   motivated in Section~\ref{tactics}.
 
 \begin{session}
@@ -750,10 +750,10 @@ by rewriting with these equations together with
 
 \begin{session}\begin{verbatim}
 - val goal2 = ([]:term list, ``T /\ x ==> x \/ (y /\ F)``);
-> val goal2 = ([], ``T /\ x ==> x \/ y /\ F``) : (term list # term)
+> val goal2 = ([], ``T /\ x ==> x \/ y /\ F``) : (term list * term)
 
 - REWRITE_TAC [] goal2;
-> val it = ([], -) : (term list * term) list * (thm list -> thm)
+> val it = ([], fn) : (term list * term) list * (thm list -> thm)
 
 - #2 it [];
 > val it =  [] |- T /\ x ==> x \/ y /\ F : thm
@@ -1359,7 +1359,7 @@ then {\small\verb|STRIP_TAC|} makes each $t_i$ into a separate assumption.
 Often the best thing to do first is {\small\verb|REPEAT STRIP_TAC|}.
 \end{itemize}
 
-\subsection{\tt SUBST\_TAC : thm list -> thm}
+\subsection{\tt SUBST\_TAC : thm list -> tactic}
 
 \begin{itemize}
 

@@ -540,7 +540,7 @@ Now we can go forward and do case analysis on $x$. We will
      ``!m n. m divides n ==> m <= n \/ (n = 0)``,
      ARW_TAC [divides]
        THEN Cases_on `x`
-       THEN ARW_TAC [MULT]);
+       THEN ARW_TAC [MULT_CLAUSES]);
 
 > val DIVIDES_LE = |- !m n. m divides n ==> m <= n \/ (n = 0) : Thm.thm
 \end{verbatim}\end{session}
