@@ -21,7 +21,10 @@ open HolKernel Parse boolLib pairLib simpLib;
    This is because the listSimps and optionSimps signatures do not change
    in the event of listTheory and optionTheory changing. *)
 
-local open listTheory optionTheory in end;
+local open listTheory optionTheory 
+           listSyntax optionSyntax numSyntax oneSyntax sumSyntax
+           EvalRef Lift Drop
+in end;
 
 infix THEN ORELSE;
 
