@@ -1,24 +1,20 @@
 structure IndDefLib :> IndDefLib =
 struct
 
- type term = Term.term
- type fixity = Parse.fixity
- type thm = Thm.thm
- type tactic = Abbrev.tactic
- type thm_tactic = Abbrev.thm_tactic
+open HolKernel Parse boolLib liteLib refuteLib AC Ho_Rewrite;
 
-
-open refuteLib ; (* ancestor libraries *)
-open HolKernel Parse boolLib liteLib AC Ho_Rewrite Psyntax;
-
-infix |->;
-infix THEN THENC
+infix |-> THEN THENC;
+infixr -->
 
 fun WRAP_ERR x = STRUCT_WRAP "Ind_defs" x;
 
 val (Type,Term) = parse_from_grammars combinTheory.combin_grammars
 fun -- q x = Term q
 fun == q x = Type q
+
+
+val conj_tm = boolSyntax.conjunction;
+val imp_tm = boolSyntax.implication;
 
 (* ------------------------------------------------------------------------- *)
 (* Apply a destructor as many times as elements in list.                     *)
@@ -28,7 +24,8 @@ fun nsplit dest clist x =
   if null clist then ([],x) else
       let val (l,r) = dest x
           val (ll,y) = nsplit dest (tl clist) r
-      in (l::ll,y) end;;
+      in (l::ll,y) 
+      end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Strip off exactly n arguments from combination.                           *)
@@ -40,7 +37,8 @@ val strip_ncomb =
             let val (l,r) = dest_comb tm
             in strip(n - 1,l,r::acc)
             end
-    in fn n => fn tm => strip(n,tm,[]) end;;
+    in fn n => fn tm => strip(n,tm,[])
+    end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Share out list according to pattern in list-of-lists.                     *)
@@ -49,7 +47,8 @@ val strip_ncomb =
 fun shareout pat all =
   if pat = [] then [] else
       let val (l,r) = split_after (length (hd pat)) all
-      in l::(shareout (tl pat) r) end;;
+      in l::shareout (tl pat) r
+      end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Gets all variables (free and/or bound) in a term.                         *)
@@ -57,9 +56,9 @@ fun shareout pat all =
 
 val variables =
   let fun vars(acc,tm) =
-    if is_var tm then insert tm acc
-    else if is_const tm then acc
-    else if is_abs tm then
+    if is_var tm then insert tm acc else 
+    if is_const tm then acc else 
+    if is_abs tm then
       let val (v,bod) = dest_abs tm
       in vars(insert v acc,bod)
       end
@@ -67,7 +66,8 @@ val variables =
         let val (l,r) = dest_comb tm
         in vars(vars(acc,l),r)
         end
-  in fn tm => vars([],tm) end;;
+  in fn tm => vars([],tm)
+  end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Produce a set of reasonably readable arguments, using variants if needed. *)
@@ -84,16 +84,11 @@ val make_args =
 (* ------------------------------------------------------------------------- *)
 (* Grabs conclusion of rule, whether or not it has an antecedant.            *)
 (* ------------------------------------------------------------------------- *)
-fun repeat f pty =
-    (repeat f (f pty)
-     handle Interrupt => raise Interrupt
-          |         _ => pty);
-
 
 fun getconcl tm =
     let val bod = repeat (snd o dest_forall) tm
-    in snd(dest_imp bod) handle Interrupt => raise Interrupt
-                              |         _ => bod end;;
+    in snd(dest_imp bod) handle HOL_ERR _ => bod 
+    end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Likewise, but quantify afterwards.                                        *)
@@ -113,13 +108,8 @@ fun SIMPLE_DISJ_PAIR th =
 (* ------------------------------------------------------------------------- *)
 (* Iterated FORALL_IMP_CONV: (!x1..xn. P[xs] ==> Q) => (?x1..xn. P[xs]) ==> Q*)
 (* ------------------------------------------------------------------------- *)
+
 val lhand = rand o rator;;
-
-fun SIMPLE_CHOOSE v th =
-  CHOOSE(v,ASSUME (mk_exists(v,hd(hyp th)))) th;
-
-fun SIMPLE_EXISTS v th =
-  EXISTS (mk_exists(v,concl th),v) th;
 
 fun FORALL_IMPS_CONV tm =
   let val (avs,bod) = strip_forall tm
@@ -137,9 +127,6 @@ fun FORALL_IMPS_CONV tm =
 (*    (!x1..xn. P1[xs] ==> Q[xs]) /\ ... /\ (!x1..xn. Pm[xs] ==> Q[xs])      *)
 (* => (!x1..xn. P1[xs] \/ ... \/ Pm[xs] ==> Q[xs])                           *)
 (* ------------------------------------------------------------------------- *)
-
-fun SIMPLE_DISJ_CASES th1 th2 =
-  DISJ_CASES (ASSUME(mk_disj(hd(hyp th1),hd(hyp th2)))) th1 th2;
 
 fun AND_IMPS_CONV tm =
   let val ths = CONJUNCTS(ASSUME tm)
@@ -188,100 +175,80 @@ val EXISTS_EQUATION =
 (* Translates a single clause to have variable arguments, simplifying.       *)
 (* ------------------------------------------------------------------------- *)
 
-
-infixr -->;
-fun a --> b = mk_type("fun",[a,b]);
-
-val MK_FORALL =
-    let val aty = mk_vartype "'a"
-    in fn v => fn th => AP_TERM (mk_const("!",(type_of v --> bool) --> bool))
-(ABS v th)
-    end;;
-
-val conj_tm = (--`$/\`--);
-
 (* ------------------------------------------------------------------------- *)
 (*  [JRH] Removed "Fail" constructor from handle trap.                       *)
 (* ------------------------------------------------------------------------- *)
 
 
-local fun getequs(avs,plis) =
-            if null plis then [] else
-                let val h::t = plis
-                    val r = redex h
-                in if mem r avs then
-                    h::(getequs(avs,filter (fn x => not (r = redex x)) t))
-                   else
-                       getequs(avs,t)
-                end
+local fun getequs(avs,[]) = []
+        | getequs(avs,(h as {redex=r,residue})::t) = 
+            if mem r avs 
+            then let val rst = filter(fn{redex,residue} => not(r=redex)) t
+                 in h::getequs(avs,rst)
+                 end
+            else getequs(avs,t)
       fun calculate_simp_sequence avs plis =
         let val oks = getequs(avs,plis)
         in (oks,subtract plis oks)
         end
+      fun mk_eq_of_bind{redex,residue} = mk_eq(residue,redex)
 in
 fun canonicalize_clause clause carg =
-        let val (avs,bimp) = strip_forall clause
-            val (ant,con) = dest_imp bimp
-              handle Interrupt => raise Interrupt
-                   |         _ => ((--`T`--),bimp)
-            val (rel,xargs) = strip_comb con
-            val plis = map2 (curry op |->) xargs carg
-            val (yes,no) = calculate_simp_sequence avs plis
-            val nvs = filter (not o C mem (map redex yes)) avs
-            val eth =
-                if is_imp bimp then
-                    let val atm = itlist (curry mk_conj o mk_eq) (yes@no) ant
-
-                    val (ths,tth) = nsplit CONJ_PAIR plis (ASSUME atm)
-                    val thl = map
-                      (fn t => first (fn th => lhs(concl th) = t) ths) carg
-                    val th0 = MP (SPECL avs (ASSUME clause)) tth
-                    val th1 = rev_itlist (C (curry MK_COMB)) thl (REFL rel)
-                    val th2 = EQ_MP (SYM th1) th0
-                    val th3 = INST yes (DISCH atm th2)
-                    val tm4 = funpow (length yes) rand (lhand(concl th3))
-                    val th4 = itlist (CONJ o REFL o residue) yes (ASSUME tm4)
-                    val th5 = GENL carg (GENL nvs (DISCH tm4 (MP th3 th4)))
-                    val th6 = SPECL nvs
-                      (SPECL (map redex plis) (ASSUME (concl th5)))
-                    val th7 = itlist (CONJ o REFL o redex) no (ASSUME ant)
-                    val th8 = GENL avs (DISCH ant (MP th6 th7))
-                    in IMP_ANTISYM_RULE (DISCH_ALL th5) (DISCH_ALL th8)
-                    end
-                else
-                        let val atm = list_mk_conj(map mk_eq (yes@no))
-                        val ths = CONJUNCTS (ASSUME atm)
-                        val thl = map
-                          (fn t => first (fn th => lhs(concl th) = t) ths) carg
-                        val th0 = SPECL avs (ASSUME clause)
-                        val th1 = rev_itlist (C (curry MK_COMB)) thl (REFL rel)
-                        val th2 = EQ_MP (SYM th1) th0
-                        val th3 = INST yes (DISCH atm th2)
-                        val tm4 = funpow (length yes) rand (lhand(concl th3))
-                        val th4 = itlist (CONJ o REFL o residue) yes
-                                         (ASSUME tm4)
-                        val th5 = GENL carg (GENL nvs (DISCH tm4 (MP th3 th4)))
-                        val th6 = SPECL nvs (SPECL (map redex plis)
-                                    (ASSUME (concl th5)))
-                        val th7 = end_itlist CONJ (map (REFL o redex) no)
-                        val th8 = GENL avs (MP th6 th7)
-                    in IMP_ANTISYM_RULE (DISCH_ALL th5) (DISCH_ALL th8)
-                    end
-            val ftm = funpow (length carg) (body o rand) (rand(concl eth))
-        in TRANS eth (itlist MK_FORALL carg (FORALL_IMPS_CONV ftm))
-        end
-    handle Interrupt => raise Interrupt
-          |        e => WRAP_ERR("canonicalize_clause",e)
+ let val (avs,bimp)  = strip_forall clause
+     val (ant,con)   = dest_imp bimp handle HOL_ERR _ => (T,bimp)
+     val (rel,xargs) = strip_comb con
+     val plis        = map2 (curry op |->) xargs carg
+     val (yes,no)    = calculate_simp_sequence avs plis
+     val nvs         = filter (not o C mem (map #redex yes)) avs
+     val eth = 
+        if is_imp bimp then
+          let val atm = itlist (curry mk_conj o mk_eq_of_bind) (yes@no) ant
+              val (ths,tth) = nsplit CONJ_PAIR plis (ASSUME atm)
+              val thl = map
+                     (fn t => first (fn th => lhs(concl th) = t) ths) carg
+              val th0 = MP (SPECL avs (ASSUME clause)) tth
+              val th1 = rev_itlist (C (curry MK_COMB)) thl (REFL rel)
+              val th2 = EQ_MP (SYM th1) th0
+              val th3 = INST yes (DISCH atm th2)
+              val tm4 = funpow (length yes) rand (lhand(concl th3))
+              val th4 = itlist (CONJ o REFL o #residue) yes (ASSUME tm4)
+              val th5 = GENL carg (GENL nvs (DISCH tm4 (MP th3 th4)))
+              val th6 = SPECL nvs (SPECL (map #redex plis) (ASSUME(concl th5)))
+              val th7 = itlist (CONJ o REFL o #redex) no (ASSUME ant)
+              val th8 = GENL avs (DISCH ant (MP th6 th7))
+          in IMP_ANTISYM_RULE (DISCH_ALL th5) (DISCH_ALL th8)
+          end
+        else
+          let val atm = list_mk_conj(map mk_eq_of_bind (yes@no))
+              val ths = CONJUNCTS (ASSUME atm)
+              val thl = map(fn t => first(fn th => lhs(concl th) = t) ths) carg
+              val th0 = SPECL avs (ASSUME clause)
+              val th1 = rev_itlist (C (curry MK_COMB)) thl (REFL rel)
+              val th2 = EQ_MP (SYM th1) th0
+              val th3 = INST yes (DISCH atm th2)
+              val tm4 = funpow (length yes) rand (lhand(concl th3))
+              val th4 = itlist (CONJ o REFL o #residue) yes (ASSUME tm4)
+              val th5 = GENL carg (GENL nvs (DISCH tm4 (MP th3 th4)))
+              val th6 = SPECL nvs (SPECL (map #redex plis) (ASSUME(concl th5)))
+              val th7 = end_itlist CONJ (map (REFL o #redex) no)
+              val th8 = GENL avs (MP th6 th7)
+          in IMP_ANTISYM_RULE (DISCH_ALL th5) (DISCH_ALL th8)
+          end
+     val ftm = funpow (length carg) (body o rand) (rand(concl eth))
+ in TRANS eth (itlist MK_FORALL carg (FORALL_IMPS_CONV ftm))
+ end
+ handle e => WRAP_ERR("canonicalize_clause",e)
 end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Canonicalizes the set of clauses, disjoining compatible antecedants.      *)
 (* ------------------------------------------------------------------------- *)
 
+local fun assoc2 x (h1::t1,h2::t2) = if (x = h1) then h2 else assoc2 x (t1,t2)
+        | assoc2 x _ = fail()
+in
 fun canonicalize_clauses clauses =
-  let fun assoc2 x ([],_) = fail()
-        | assoc2 x (h1::t1,h2::t2) = if (x = h1) then h2 else assoc2 x (t1,t2)
-      val concls = map getconcl clauses
+  let val concls = map getconcl clauses
       val uncs = map strip_comb concls
       val rels = itlist (insert o fst) uncs []
       val xargs = map (C assoc uncs) rels
@@ -303,8 +270,8 @@ fun canonicalize_clauses clauses =
           (CONJ_ACI(mk_eq(oclauses,cclauses)))
   in TRANS pth (end_itlist MK_CONJ (map AND_IMPS_CONV cclausel))
   end
-handle Interrupt => raise Interrupt
-     |         e => WRAP_ERR("canonicalize_clauses",e);;
+  handle e => WRAP_ERR("canonicalize_clauses",e)
+end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Produces a sequence of variants, considering previous inventions.         *)
@@ -324,7 +291,7 @@ fun mySPEC_ALL thm =
      constant names - this was causing grief when attempting to define
      inductive relations with constant names that already existed. *)
   if is_forall (concl thm) then
-    mySPEC_ALL (SPEC (#Bvar (Rsyntax.dest_forall (concl thm))) thm)
+    mySPEC_ALL (SPEC (fst (dest_forall (concl thm))) thm)
   else
     thm
 
@@ -399,8 +366,7 @@ fun derive_canon_inductive_relations pclauses =
                (map2 mk_case (CONJUNCTS fthm) (CONJUNCTS ruvalhm))
     in CONJ ruvalhm (CONJ indthm casethm)
     end
-handle Interrupt => raise Interrupt
-     |         e => WRAP_ERR("derive_canon_inductive_relations",e);
+handle e => WRAP_ERR("derive_canon_inductive_relations",e);
 
 (* ------------------------------------------------------------------------- *)
 (* General case for nonschematic relations; monotonicity & defn hyps.        *)
@@ -419,8 +385,7 @@ fun derive_nonschematic_inductive_relations tm =
       and indthm' = CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV canonthm')) indthm
   in CONJ ruvalhm' (CONJ indthm' casethm)
   end
-handle Interrupt => raise Interrupt
-     |         e => WRAP_ERR("derive_nonschematic_inductive_relations",e);;
+handle e => WRAP_ERR("derive_nonschematic_inductive_relations",e);;
 
 (* ========================================================================= *)
 (* Part 2: Tactic-integrated tools for proving monotonicity automatically.   *)
@@ -432,8 +397,6 @@ handle Interrupt => raise Interrupt
 (* ==================================================                        *)
 (*     ?- !x1. P[x1] x2 .. xn ==> Q[x1] x2 .. xn                             *)
 (* ------------------------------------------------------------------------- *)
-
-val imp_tm = (--`$==>`--);
 
 fun MONO_ABS_TAC (asl,w) =
     let val (ant,con) = dest_imp w
@@ -503,38 +466,35 @@ val MONO_FORALL_TAC =
 end;
 
 val bool_monoset =
- [("/\\",BACKCHAIN_TAC MONO_AND THEN CONJ_TAC),
-  ("\\/",BACKCHAIN_TAC MONO_OR THEN CONJ_TAC),
-  ("?",MONO_EXISTS_TAC),
-  ("!",MONO_FORALL_TAC),
-
-  ("",MONO_ABS_TAC),
-  ("==>",BACKCHAIN_TAC MONO_IMP THEN CONJ_TAC),
-  ("~",BACKCHAIN_TAC MONO_NOT)];;
+ [("/\\", BACKCHAIN_TAC MONO_AND THEN CONJ_TAC),
+  ("\\/", BACKCHAIN_TAC MONO_OR THEN CONJ_TAC),
+  ("?",   MONO_EXISTS_TAC),
+  ("!",   MONO_FORALL_TAC),
+  ("==>", BACKCHAIN_TAC MONO_IMP THEN CONJ_TAC),
+  ("~",   BACKCHAIN_TAC MONO_NOT),
+  ("",    MONO_ABS_TAC)];;
 
 val APPLY_MONOTAC =
-    let val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
-    in fn monoset => fn (asl,w) =>
-        let val (a,c) = dest_imp w
-        in if aconv a c then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w) else
-            let val cn = fst (dest_const(repeat rator c))
-                         handle Interrupt => raise Interrupt
-                              |         _ => ""
-            in tryfind (fn (k,t) => if k = cn then t (asl,w) else fail())
-                monoset
-            end
-        end
-    end;;
+ let val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
+ in fn monoset => fn (asl,w) =>
+     let val (a,c) = dest_imp w
+     in if aconv a c 
+        then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w) 
+        else let val cn = fst (dest_const(repeat rator c)) 
+                          handle HOL_ERR _ => ""
+             in tryfind (fn (k,t) => if k = cn then t (asl,w) else fail())
+                       monoset
+             end
+     end
+ end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics to prove monotonicity automatically.                              *)
 (* ------------------------------------------------------------------------- *)
 
-fun MONO_STEP_TAC monoset =
-  REPEAT GEN_TAC THEN (APPLY_MONOTAC monoset);;
+fun MONO_STEP_TAC monoset = REPEAT GEN_TAC THEN (APPLY_MONOTAC monoset);;
 
-fun MONO_TAC monoset =
-  REPEAT (MONO_STEP_TAC monoset) THEN ASM_REWRITE_TAC[];;
+fun MONO_TAC monoset = REPEAT (MONO_STEP_TAC monoset) THEN ASM_REWRITE_TAC[];;
 
 (* =========================================================================*)
 (* Part 3: Utility functions to modify the basic theorems in various ways.  *)
@@ -566,8 +526,7 @@ fun prove_monotonicity_hyps monoset =
         in itlist PROVE_HYP mths th
         end
     end
-handle Interrupt => raise Interrupt
-     |         e => WRAP_ERR("prove_monotonicity_hyps",e);;
+handle e => WRAP_ERR("prove_monotonicity_hyps",e);;
 
 (* ------------------------------------------------------------------------- *)
 (* Generalize definitions and theorem over given variables (all the same!)   *)
@@ -657,8 +616,7 @@ fun prove_nonschematic_inductive_relations_exist monoset tm =
         val th1 = prove_monotonicity_hyps monoset th0
     in derive_existence th1
     end
-handle Interrupt => raise Interrupt
-     |         e => WRAP_ERR("prove_nonschematic_inductive_relations_exist",e);;
+handle e => WRAP_ERR("prove_nonschematic_inductive_relations_exist",e);;
 
 (* ------------------------------------------------------------------------- *)
 (* The schematic case.                                                       *)
@@ -677,8 +635,7 @@ fun prove_inductive_relations_exist monoset tm =
         val th2 = generalize_schematic_variables fvs th1
     in derive_existence th2
     end
-handle Interrupt => raise Interrupt
-     |         e => WRAP_ERR("prove_inductive_relations_exist",e);;
+handle e => WRAP_ERR("prove_inductive_relations_exist",e);;
 
 fun gen_new_inductive_definition monoset tm =
     let val clauses = strip_conj tm
@@ -693,8 +650,7 @@ fun gen_new_inductive_definition monoset tm =
         val (i,c) = CONJ_PAIR ic
     in (GENL avs r,GENL avs i,GENL avs c)
     end
-handle Interrupt => raise Interrupt
-     |         e => WRAP_ERR("gen_new_inductive_definition",e);;
+handle e => WRAP_ERR("gen_new_inductive_definition",e);;
 
 (* ------------------------------------------------------------------------- *)
 (* A rule induction tactic.                                                  *)
@@ -713,12 +669,13 @@ fun RULE_INDUCT_TAC indthm = RULE_INDUCT_THEN indthm ASSUME_TAC;;
  * ------------------------------------------------------------------------- *)
 
 fun new_simple_inductive_definition specs =
-    let fun mk_spec spec =
+ let fun mk_spec spec =
         let val R = fst(strip_comb(snd(strip_imp spec)))
         in list_mk_forall (subtract (free_vars spec) [R], spec)
         end
-    in gen_new_inductive_definition bool_monoset (list_mk_conj (map mk_spec specs))
-    end;
+ in gen_new_inductive_definition bool_monoset 
+            (list_mk_conj (map mk_spec specs))
+ end;
 
 (* ------------------------------------------------------------------------- *)
 (* [JRH] Wrapper for approximate compatibility with hol90 library.           *)
