@@ -19,7 +19,7 @@ val compare_def = Define `
 /\ (compare EQUAL   lt eq gt = eq)
 /\ (compare GREATER lt eq gt = gt) `
 
-fun type_rws tyn = TypeBase.simpls_of tyn
+fun type_rws tyn = #rewrs (TypeBase.simpls_of tyn)
 
 val thms =
   LIST_CONJ

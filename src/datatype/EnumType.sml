@@ -301,22 +301,45 @@ fun define_case initiality =
        sat_thm = gexists}
  end;
 
+fun enum_eq_CONV eq_elim_th repth t = let
+  (* keying will have already ensured that t is an equality between two
+     values in the enumerated type *)
+  val (l, r) = dest_eq t
+  val _ = is_const l andalso is_const r orelse
+          raise ERR "enum_eq_CONV" "Equality not between constants"
+in
+  REWR_CONV eq_elim_th THENC REWRITE_CONV [repth] THENC
+  numLib.REDUCE_CONV
+end t
+
+fun update_tyinfo tyname eqth repth tyinfo0 = let
+  open TypeBasePure
+  val ty = type_of (hd (#1 (strip_forall (concl eqth))))
+  val x = mk_var("x", ty) and y = mk_var("y", ty)
+  val {convs, rewrs} = simpls_of tyinfo0
+  val new_conv = {name = tyname ^ "const_eq_CONV",
+                  key = SOME ([], mk_eq(x, y)),
+                  trace = 3,
+                  conv = K (K (enum_eq_CONV eqth repth))}
+in
+  put_simpls {convs = new_conv::convs, rewrs = rewrs} tyinfo0
+end
+
 
 fun enum_type_to_tyinfo (ty, constrs) = let
   val abs = "num2"^ty
   val rep = ty^"2num"
   val (result as {constrs,TYPE,...}) = define_enum_type(ty,constrs,abs,rep)
   val abs_thm = save_thm(abs ^ "_thm", LIST_CONJ (map SYM (#defs result)))
-  val (simpl_names, simpls) = let
+  val rep_name = rep ^ "_thm"
+  val rep_thm = let
     val nvs      = num_values (#REP_ABS result) (#defs result)
-    val nv_name  = rep ^ "_thm"
-    val nv_thm   = (nv_name, save_thm(nv_name, LIST_CONJ nvs))
-    val symrep11 = let val nm = ty^"_EQ_"^ty in
-                      (nm, save_thm(nm, GSYM (#REP_11 result)))
-                    end
   in
-    ListPair.unzip [symrep11, nv_thm]
+    save_thm(rep_name, LIST_CONJ nvs)
   end
+  val eq_elim_name = ty^"_EQ_"^ty
+  val eq_elim_th = save_thm(eq_elim_name, GSYM (#REP_11 result))
+  val simpls = [rep_thm, eq_elim_th]
 
   val nchotomy = prove_cases_thm (#ABS_ONTO result) (List.rev (#defs result))
   val induction = prove_induction_thm nchotomy
@@ -340,8 +363,10 @@ fun enum_type_to_tyinfo (ty, constrs) = let
                   distinct = distinct }
 in
   case distinct of
-    NONE => (put_simpls (simpls_of tyinfo0 @ simpls) tyinfo0, simpl_names)
-  | SOME thm => (tyinfo0, [])
+    NONE => (update_tyinfo ty eq_elim_th rep_thm tyinfo0,
+             "EnumType.update_tyinfo "^mlquote ty^" "^
+             eq_elim_name^" "^rep_name^" ")
+  | SOME thm => (tyinfo0, "")
 end
 
 end (* struct *)

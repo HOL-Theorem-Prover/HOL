@@ -199,8 +199,9 @@ fun write_datatype_info tyinfo =
         of SOME (_, ORIG def) => SOME def
          | otherwise => NONE
      val compset_addns = [size_opt, boolify_opt]
+     val simpls = #rewrs (simpls_of tyinfo)
  in
-    add_funs (mapfilter Option.valOf compset_addns @ simpls_of tyinfo)
+    add_funs (mapfilter Option.valOf compset_addns @ simpls)
  end
 
 fun add_persistent_funs [] = ()

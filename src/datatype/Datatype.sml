@@ -384,7 +384,7 @@ in
     end;
 end;
 
-local fun add_record_facts (tyinfo, NONE) = (tyinfo, [])
+local fun add_record_facts (tyinfo, NONE) = (tyinfo, "")
         | add_record_facts (tyinfo, SOME fields) =
                RecordType.prove_recordtype_thms (tyinfo, fields);
       fun field_names_of (_,Record l) = SOME (map fst l)
@@ -450,15 +450,10 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
                in S ("         boolify="^line); NL();
                   S ("                   "^s^"),")
                end
-          fun do_simpls record_rw_names =
-            (S "["; app S (Lib.commafy record_rw_names); S "]")
-          fun do_field_rws record_rw_names =
-            if null record_rw_names then ()
-            else (S "      val tyinfo0 = put_simpls (";
-                  do_simpls record_rw_names;
-                  S " @ simpls_of tyinfo0) tyinfo0"; NL())
+          fun do_extras extra_string =
+              (S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"); NL())
           fun do_string_etc ({ax,case_def,case_cong,induction,nchotomy,
-            one_one,distinct,boolify,size}, record_rw_names) =
+            one_one,distinct,boolify,size}, extra_simpls_string) =
             (S "    let";                                               NL();
              S "      open TypeBasePure";                               NL();
              S "      val tyinfo0 = mk_tyinfo";                         NL();
@@ -471,7 +466,7 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
              do_boolify boolify;                                        NL();
              S("         one_one="^one_one^",");                        NL();
              S("         distinct="^distinct^"}");                      NL();
-             do_field_rws record_rw_names;
+             do_extras extra_simpls_string;
              S "      val () = computeLib.write_datatype_info tyinfo0"; NL();
              S "    in";                                                NL();
              S "      tyinfo0";                                         NL();

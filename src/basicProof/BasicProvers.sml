@@ -115,9 +115,17 @@ end;
 
 infix &&;
 
-fun (ss && thl) = simpLib.++(ss,simpLib.rewrites thl);
+fun (ss && thl) = ss ++ simpLib.rewrites thl;
 
-fun add_simpls tyinfo ss = ss && TypeBasePure.simpls_of tyinfo;
+fun tyi_to_ssdata tyinfo = let
+  open simpLib
+  val {rewrs, convs} = TypeBasePure.simpls_of tyinfo;
+in
+  SIMPSET {convs = convs, rewrs = rewrs, filter = NONE,
+           dprocs = [], ac = [], congs = []}
+end
+
+fun add_simpls tyinfo ss = ss ++ tyi_to_ssdata tyinfo
 
 fun is_dneg tm = 1 < snd(strip_neg tm);
 
@@ -305,8 +313,7 @@ fun augment_srw_ss ssdl =
     else
       pending_updates := !pending_updates @ ssdl;
 
-fun update_fn tyi
-  = augment_srw_ss [simpLib.rewrites (TypeBasePure.simpls_of tyi)];
+fun update_fn tyi = augment_srw_ss [tyi_to_ssdata tyi]
 
 val () =
   TypeBase.register_update_fn (fn tyinfos => (app update_fn tyinfos; tyinfos))

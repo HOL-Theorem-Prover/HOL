@@ -121,6 +121,15 @@ fun foldl f zero []      = zero
         nfilter (fn (n,_) => not (n mod diaglength = 1)) cross
     end;
 
+fun update_tyinfo new_simpls tyinfo = let
+  open TypeBasePure
+  val existing_simpls = simpls_of tyinfo
+  fun add_rwts {convs, rewrs} newrwts =
+      {convs = convs, rewrs = rewrs @ newrwts}
+in
+  put_simpls (add_rwts existing_simpls new_simpls) tyinfo
+end
+
 (* The following function is huge and revolting.  I don't attempt to  *)
 (* make any excuses for it.  However, it's very much a function in    *)
 (* an imperative style, as its result is not as important as the side *)
@@ -512,7 +521,6 @@ fun foldl f zero []      = zero
     end
 
     (* add to the TypeBase's simpls entry for the record type *)
-    val existing_simpls = TypeBasePure.simpls_of tyinfo
     val new_simpls = let
       val new_simpls0 =  [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
                           updupd_thm, accfupd_thm, literal_equality,
@@ -521,8 +529,7 @@ fun foldl f zero []      = zero
       if not (null upd_canon_thms) then updcanon_thm :: new_simpls0
       else new_simpls0
     end
-    val new_tyinfo =
-      TypeBasePure.put_simpls (existing_simpls @ new_simpls) tyinfo
+    val new_tyinfo = update_tyinfo new_simpls tyinfo
 
     (* set up parsing for the record type *)
     val _ = ListPair.app add_record_field (fields, accfn_terms)
@@ -550,13 +557,16 @@ fun foldl f zero []      = zero
     val _ = ListPair.app do_fupdfn (fields, fupdfn_terms)
     val _ = ListPair.app add_record_fupdate (fields, fupdfn_terms)
 
+    val thm_str_list =
+       map (concat typename)
+       (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
+         "_accupds", "_accfupds", "_updupds", "_fn_updates",
+         "_literal_11"] @
+        (if not (null upd_canon_thms) then ["_updcanon"] else []))
     in
       (new_tyinfo,
-       map (concat typename)
-          (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
-            "_accupds", "_accfupds", "_updupds", "_fn_updates",
-            "_literal_11"] @
-          (if not (null upd_canon_thms) then ["_updcanon"] else [])))
+       "RecordType.update_tyinfo ["^String.concat (Lib.commafy thm_str_list)^
+       "] ")
     end
 
 end (* struct *)

@@ -24,7 +24,7 @@ sig
    val nchotomy_of        : string -> thm
    val distinct_of        : string -> thm
    val one_one_of         : string -> thm
-   val simpls_of          : string -> thm list
+   val simpls_of          : string -> simpfrag.simpfrag
    val size_of            : string -> term * thm
    val boolify_of         : string -> term * thm
 

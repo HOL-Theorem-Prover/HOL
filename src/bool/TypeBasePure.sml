@@ -11,7 +11,7 @@ type ppstream = Portable.ppstream
 
 val ERR = mk_HOL_ERR "TypeBasePure";
 
-
+type simpfrag = simpfrag.simpfrag
 datatype shared_thm
     = ORIG of thm
     | COPY of string * thm;
@@ -32,7 +32,7 @@ datatype tyinfo =
                      boolify      : (term * shared_thm) option,
                      distinct     : thm option,
                      one_one      : thm option,
-                     simpls       : thm list};
+                     simpls       : simpfrag};
 
 (*---------------------------------------------------------------------------
                   Projections
@@ -109,7 +109,7 @@ fun put_boolify (boolify_tm,boolify_rw) (FACTS(s,
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=simpls, 
+            one_one=one_one, simpls=simpls,
             size=size, boolify=SOME(boolify_tm,boolify_rw)});
 
 
@@ -154,7 +154,7 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
       nchotomy     = nchotomy,
       one_one      = one_one,
       distinct     = distinct,
-      simpls       = case_def :: (D@map GSYM D@inj),
+      simpls       = { rewrs = case_def :: (D@map GSYM D@inj), convs = []},
       size         = size,
       boolify      = boolify,
       axiom        = ax})
@@ -242,7 +242,7 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
          (case boolify_def
            of COPY(s,th) => add_string ("see "^Lib.quote s)
             | ORIG th    => if is_const tm
-                            then pp_thm th else pp_term tm); 
+                            then pp_thm th else pp_term tm);
           end_block();
           add_break(1,0));
 
@@ -289,11 +289,11 @@ val listItems = Binaryset.listItems;
 
 
 (*---------------------------------------------------------------------------
-      General facility for interpreting types as terms. It takes a 
-      couple of environments (theta,gamma); theta maps type variables 
-      to (term) functions on those type variables, and gamma maps 
+      General facility for interpreting types as terms. It takes a
+      couple of environments (theta,gamma); theta maps type variables
+      to (term) functions on those type variables, and gamma maps
       type operators to (term) functions on elements of the given type.
-      The interpretation is partial: for types that are not mapped, 
+      The interpretation is partial: for types that are not mapped,
       the supplied function undef is applied.
  ---------------------------------------------------------------------------*)
 
@@ -301,7 +301,7 @@ local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty))
 in
 fun typeValue (theta,gamma,undef) =
- let fun tyValue ty = 
+ let fun tyValue ty =
       case theta ty
        of SOME fvar => fvar
         | NONE =>
@@ -326,7 +326,7 @@ local fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
       fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
         handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
       fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()};
-      fun tysize_env db = Option.map fst o 
+      fun tysize_env db = Option.map fst o
                           Option.composePartial (size_of,get db)
 in
 fun type_size db ty =

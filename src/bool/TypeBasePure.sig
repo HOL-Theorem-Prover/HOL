@@ -7,14 +7,15 @@ sig
 
    type tyinfo
    type typeBase
-   datatype shared_thm = ORIG of thm 
+   type simpfrag = simpfrag.simpfrag
+   datatype shared_thm = ORIG of thm
                        | COPY of string * thm
 
-   val gen_tyinfo      : {ax  : thm, 
-                          ind : thm, 
+   val gen_tyinfo      : {ax  : thm,
+                          ind : thm,
                           case_defs : thm list} -> tyinfo list
 
-   val mk_tyinfo       : {ax        : shared_thm, 
+   val mk_tyinfo       : {ax        : shared_thm,
                           induction : shared_thm,
                           case_def  : thm,
                           case_cong : thm,
@@ -34,7 +35,7 @@ sig
    val nchotomy_of     : tyinfo -> thm
    val distinct_of     : tyinfo -> thm option
    val one_one_of      : tyinfo -> thm option
-   val simpls_of       : tyinfo -> thm list
+   val simpls_of       : tyinfo -> simpfrag
    val size_of         : tyinfo -> (term * thm) option
    val boolify_of         : tyinfo -> (term * thm) option
 
@@ -46,7 +47,7 @@ sig
    val pp_tyinfo       : ppstream -> tyinfo -> unit
 
    val put_nchotomy    : thm -> tyinfo -> tyinfo
-   val put_simpls      : thm list -> tyinfo -> tyinfo
+   val put_simpls      : simpfrag -> tyinfo -> tyinfo
    val put_induction   : shared_thm -> tyinfo -> tyinfo
    val put_size        : term * shared_thm -> tyinfo -> tyinfo
    val put_boolify     : term * shared_thm -> tyinfo -> tyinfo
@@ -61,7 +62,7 @@ sig
   (* Support for polytypism *)
 
    val typeValue
-      : (hol_type -> term option) * 
+      : (hol_type -> term option) *
         (string -> term option)   *
         (hol_type -> term)
         -> hol_type -> term
