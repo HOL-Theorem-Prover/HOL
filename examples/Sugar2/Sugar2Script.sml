@@ -467,7 +467,7 @@ val FIRST_RISE_RESTN =
 
 val NEXT_RISE_FIRST_RISE =
  store_thm
-  ("FIRST_RISE_RESTN",
+  ("NEXT_RISE_FIRST_RISE",
    ``!i j. i <= j 
            ==> 
            (NEXT_RISE M p c (i,j) = FIRST_RISE M (RESTN p i) c (j-i))``,
