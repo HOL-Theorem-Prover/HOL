@@ -76,8 +76,8 @@ end
 
 val _ =
 TextIO.output(TextIO.stdOut,
-  "\n-----------------------------------------------------------\n"
-  ^"           HOL98 ["
+  "\n-----------------------------------------------------------------\n"
+  ^"                 HOL98 ["
   ^Globals.release^" "^Lib.int_to_string(Globals.version)
-  ^"]\n\n   For introductory HOL help, type: help \"hol\";\n"
-  ^"-----------------------------------------------------------\n\n");
+  ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
+  ^"-----------------------------------------------------------------\n\n");

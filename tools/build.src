@@ -67,27 +67,6 @@ fun build_dir dir =
             (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
      Process.exit Process.failure)
 
-(*
-fun build_dir dir =
-  let val _ = FileSys.chDir dir
-      val _ = print ("Working in directory "^dir^"\n")
-  in
-    case Path.splitDirFile dir
-     of {file="robdd",...} =>
-          (let val buddy_dir = Path.concat(dir,"buddy16")
-           in
-             FileSys.chDir buddy_dir;
-             print ("Working in directory "^buddy_dir^"\n");
-             gnumake buddy_dir;
-             FileSys.chDir dir;
-             print ("Working in directory "^dir^"\n");
-             Holmake dir;
-             gnumake dir
-           end handle _ =>
-             print"\nrobddLib has NOT been built!! (continuing anyway).\n\n")
-      | otherwise => Holmake dir
-  end
-*)
 
 (*---------------------------------------------------------------------------
       Arrange for all executables and relevant .sig files

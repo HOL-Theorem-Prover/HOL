@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/local/scratch/kxs/144";
-val holdir   = "/local/scratch/kxs/working";
+val mosmldir = 
+val holdir   = 
 val OS       = "linux"           (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -322,12 +322,12 @@ val _ =
 
 val _ =
  let val _ = echo "Generating bin/hol.unquote."
-     val qfilter     = fullPath [holdir, "bin/unquote"]
-     val target      = fullPath [holdir, "bin/hol.unquote"]
+     val qfilter     = fullPath [holdir,   "bin/unquote"]
+     val target      = fullPath [holdir,   "bin/hol.unquote"]
      val mosml       = fullPath [mosmldir, "bin/mosml"]
-     val std_prelude = fullPath [holdir, "std.prelude"]
-     val qinit       = fullPath [holdir, "tools/unquote-init.sml"]
-     val qend        = fullPath [holdir, "tools/end-init.sml"]
+     val std_prelude = fullPath [holdir,   "std.prelude"]
+     val qinit       = fullPath [holdir,   "tools/unquote-init.sml"]
+     val qend        = fullPath [holdir,   "tools/end-init.sml"]
  in
    emit_hol_unquote_script target qfilter mosml std_prelude qinit qend
  end;
