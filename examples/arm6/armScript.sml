@@ -42,11 +42,11 @@ val SUBST_def = Define`SUBST m (a,w) b = if (a = b) then w else m b`;
 
 val SET_NZC_def = Define`
   SET_NZC N Z C n =
-    w32 (SET N 31 + SET Z 30 + SET C 29 + BITSw 28 0 n)`;
+    w32 (SBIT N 31 + SBIT Z 30 + SBIT C 29 + BITSw 28 0 n)`;
     
 val SET_NZCV_def = Define`
   SET_NZCV N Z C V n =
-    w32 (SET N 31 + SET Z 30 + SET C 29 + SET V 28 + BITSw 27 0 n)`;
+    w32 (SBIT N 31 + SBIT Z 30 + SBIT C 29 + SBIT V 28 + BITSw 27 0 n)`;
     
 val SET_MODE_def = Define`
   SET_MODE mode cpsr =
@@ -61,7 +61,7 @@ val SET_MODE_def = Define`
 
 val SET_IFMODE_def = Define`
   SET_IFMODE irq' fiq' mode n =
-    SET_MODE mode (w32 (SLICEw 31 8 n + SET irq' 7 + SET fiq' 6 + SLICEw 5 5 n))`;
+    SET_MODE mode (w32 (SLICEw 31 8 n + SBIT irq' 7 + SBIT fiq' 6 + SLICEw 5 5 n))`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -184,7 +184,7 @@ val TO_W30_def = Define`TO_W30 n = w30 (BITSw 31 2 n)`;
 val WORD_ALIGN_def = Define`WORD_ALIGN n = w32 (SLICEw 31 2 n)`;
 
 val MEM_READ_WORD_def = Define`
-  MEM_READ_WORD mem addr = mem (TO_W30 addr) ROR (8 * BITSw 1 0 addr)`;
+  MEM_READ_WORD mem addr = mem (TO_W30 addr) #>> (8 * BITSw 1 0 addr)`;
 
 val MEM_READ_BYTE_def = Define`
   MEM_READ_BYTE mem addr =
@@ -296,20 +296,20 @@ val ASR_def = Define`
               else
                 (MSB m,m >> 32)`;
 
-val ROR2_def = Define`
-  ROR2 m n c = if n = 0 then
+val ROR_def = Define`
+  ROR m n c = if n = 0 then
                 LSL m 0 c
               else if n <= 32 then
-                (BITw (n - 1) m,m ROR n)
+                (BITw (n - 1) m,m #>> n)
               else let n' = BITS 4 0 n in
-                (BITw (n' - 1) m,m ROR n')`;
+                (BITw (n' - 1) m,m #>> n')`;
 
 val RRX2_def = Define `RRX2 m c = (LSB m,RRX c m)`;
 
 val IMMEDIATE_def = Define`
   IMMEDIATE C opnd2 =
     let (rot,imm) = DIVMOD_2EXP 8 opnd2 in
-       ROR2 (w32 imm) (2 * rot) C`;
+       ROR (w32 imm) (2 * rot) C`;
 
 val SHIFT_IMMEDIATE2_def = Define`
   SHIFT_IMMEDIATE2 shift sh rm c =
@@ -322,14 +322,14 @@ val SHIFT_IMMEDIATE2_def = Define`
       if sh = 0 then LSL rm shift c else
       if sh = 1 then LSR rm shift c else
       if sh = 2 then ASR rm shift c else
-      (* sh = 3 *)   ROR2 rm shift c`;
+      (* sh = 3 *)   ROR rm shift c`;
 
 val SHIFT_REGISTER2_def = Define`
   SHIFT_REGISTER2 shift sh rm c =
       if sh = 0 then LSL rm shift c else
       if sh = 1 then LSR rm shift c else
       if sh = 2 then ASR rm shift c else
-      (* sh = 3 *)   ROR2 rm shift c`;
+      (* sh = 3 *)   ROR rm shift c`;
 
 val SHIFT_IMMEDIATE_def = Define`
   SHIFT_IMMEDIATE reg mode C opnd2 =
@@ -366,9 +366,9 @@ val ALU_logic_def = Define`
   ALU_logic res = (MSB res,w2n res = 0,F,F,res)`;
 
 val SUB_def = Define`
-  SUB a b c = let c' = SET c 0 in ALU_arith (\x y.x+y+c'-1) a ~b`;
+  SUB a b c = let c' = SBIT c 0 in ALU_arith (\x y.x+y+c'-1) a ~b`;
 val ADD_def = Define`
-  ADD a b c = let c' = SET c 0 in ALU_arith (\x y.x+y+c') a b`;
+  ADD a b c = let c' = SBIT c 0 in ALU_arith (\x y.x+y+c') a b`;
 val AND_def = Define`AND a b = ALU_logic (a & b)`;
 val EOR_def = Define`EOR a b = ALU_logic (a # b)`;
 val ORR_def = Define`ORR a b = ALU_logic (a | b)`;
@@ -379,14 +379,14 @@ val ALU_def = Define`
    if (opc = 1) \/ (opc = 9)  then EOR rn op2    else
    if (opc = 2) \/ (opc = 10) then SUB rn op2 T  else
    if (opc = 4) \/ (opc = 11) then ADD rn op2 F  else
-   if opc = 3  then ADD (word_1comp rn) op2 T    else
+   if opc = 3  then ADD (NOT rn) op2 T    else
    if opc = 5  then ADD rn op2 c                 else
    if opc = 6  then SUB rn op2 c                 else
-   if opc = 7  then ADD (word_1comp rn) op2 c    else
+   if opc = 7  then ADD (NOT rn) op2 c    else
    if opc = 12 then ORR rn op2                   else
    if opc = 13 then ALU_logic op2                else
-   if opc = 14 then AND rn (word_1comp op2)      else
-   (* opc = 15 *)   ALU_logic (word_1comp op2)`;
+   if opc = 14 then AND rn (NOT op2)      else
+   (* opc = 15 *)   ALU_logic (NOT op2)`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)

@@ -208,7 +208,7 @@ val SHIFTER_def = Define`
     let bits118 = bits117 DIV 2 in
       if is = t3 then
         if bit25 /\ ((ic = data_proc) \/ (ic = mrs_msr)) then
-          ROR2 busb (2 * bits118) c
+          ROR busb (2 * bits118) c
         else if (ic = swp) \/ ~bit25 /\ ((ic = ldr) \/ (ic = str) \/ (ic = mrs_msr)) then
           LSL busb 0 c
         else if (~bit25 /\ (ic = data_proc)) \/ (bit25 /\ ((ic = ldr) \/ (ic = str))) then
@@ -220,7 +220,7 @@ val SHIFTER_def = Define`
       else if (is = t4) /\ (ic = reg_shift) then
         SHIFT_REGISTER2 (BITSw 7 0 sctrlreg) bits65 busb c
       else if (is = t5) /\ (ic = ldr) \/ (is = t6) /\ (ic = swp) then
-        ROR2 busb (8 * oareg) c
+        ROR busb (8 * oareg) c
       else if (is = t5) /\ ((ic = br) \/ (ic = swi_ex)) then
         LSL busb 0 c
       else
@@ -474,10 +474,10 @@ val ALU6_def = Define`
    else if ic = br then
      if is = t3 then ADD alua alub F               else
      if is = t4 then ALU_logic alua                else
-     if is = t5 then ADD (word_1comp alua) alub F  else ARB
+     if is = t5 then ADD (NOT alua) alub F  else ARB
    else if ic = swi_ex then
      if is = t4 then ALU_logic alua                else
-     if is = t5 then ADD (word_1comp alua) alub F  else ARB
+     if is = t5 then ADD (NOT alua) alub F  else ARB
    else if ic = swp then
      ALU_logic alub
    else ARB`;

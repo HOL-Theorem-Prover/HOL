@@ -12,6 +12,7 @@ infix THEN THENC THENL ++;
 val _ = new_theory "correct";
 
 (* -------------------------------------------------------- *)
+(* val _ = Count.counting_thms true; *)
 (* -------------------------------------------------------- *)
 
 val lem = prove(
@@ -62,7 +63,7 @@ val ARM6_TCON_LEM0 = store_thm("ARM6_TCON_LEM0",
 
 val ARM6_TCON_ZERO = GEN_ALL (SIMP_RULE std_ss [] ARM6_TCON_LEM0);
 
-val ARM6_TCON_LEM1 = store_thm("ARM6_TCON_LEM1",
+val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
   `!a. (a = ARM6 mem reg psr (DP areg din alua alub)
                (CTRL pipea pipeaval pipeb pipebval ireg iregval
                   apipea apipeb ointstart onewinst opipebll nxtic nxtis aregn
@@ -350,7 +351,7 @@ val ARM6_COR_LEM0 = store_thm("ARM6_COR_LEM0",
 
 val ARM6_COR_ZERO = GEN_ALL (SIMP_RULE std_ss [] ARM6_COR_LEM0);
 
-val ARM6_COR_LEM1 = store_thm("ARM6_COR_LEM1",
+val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
   `!a. (a = ARM6 mem reg psr (DP areg din alua alub)
                (CTRL pipea pipeaval pipeb pipebval ireg iregval
                   apipea apipeb ointstart onewinst opipebll nxtic nxtis aregn
