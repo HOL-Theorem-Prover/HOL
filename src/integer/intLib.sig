@@ -11,6 +11,8 @@ sig
   val COOPER_PROVE   : conv
   val COOPER_TAC     : tactic
 
+  val REDUCE_CONV    : conv
+
 
   val int_ty         : hol_type
   val zero_tm        : term
