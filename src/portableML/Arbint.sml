@@ -6,6 +6,8 @@ struct
 type num = Arbnum.num
 type int = bool * num
 
+(* representation has first component true if the integer is >= 0 *)
+
 val ++ = Arbnum.+
 val -- = Arbnum.-
 val ** = Arbnum.*
@@ -63,10 +65,10 @@ fun toString (true, n) = Arbnum.toString n ^ "i"
 
 fun fromString s = let
   open Substring
-  val (pfx, rest) = splitl (fn c => c = #"-") (all s)
-  val neg = Int.mod(size pfx, 2) = 1
+  val (pfx, rest) = splitl (fn c => c = #"-" orelse c = #"~") (all s)
+  val is_positive = Int.mod(size pfx, 2) = 0
 in
-  (neg, Arbnum.fromString (string rest))
+  (is_positive, Arbnum.fromString (string rest))
 end
 
 fun toInt (true, n) = Arbnum.toInt n
