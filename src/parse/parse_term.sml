@@ -57,7 +57,7 @@ and 'a preterm
   | AQ of 'a
   | TYPED of ('a preterm locn.located * Pretype.pretype locn.located)
 
-fun CCOMB(x,y) = (COMB(y,x),locn.between (#2 x) (#2 y))
+fun CCOMB(x,y) = (COMB(y,x),locn.between (#2 y) (#2 x))
 
 infix --
 fun (l1 -- []) = l1
@@ -675,6 +675,8 @@ fun parse_term (G : grammar) typeparser = let
 
          Below, the variable top_was_tm is true if a TM was popped in this
          way. *)
+      (* NB: terminology: each stack item is either a TM (=term, i.e.,
+         nonterminal) or a TOK (=token, i.e., terminal). *)
       fun stack_item_to_rule_element (Terminal (STD_HOL_TOK s),_) = TOK s
         | stack_item_to_rule_element (NonTerminal _,_) = TM
         | stack_item_to_rule_element (_,locn) = FAILloc locn "perform_reduction: gak!"
@@ -686,20 +688,20 @@ fun parse_term (G : grammar) typeparser = let
           (TM::rest) => (rest, true)
         | _ => (translated_rhs0, false)
       val ((_,llocn),_) = List.hd (if top_was_tm then List.tl rhs else rhs)
-      val locn = locn.between llocn rlocn
+      val lrlocn = locn.between llocn rlocn
       val rule = valOf (Polyhash.peek rule_db translated_rhs)
         handle Option => let
           val errmsg = "No rule for "^listtoString reltoString translated_rhs
         in
           valOf (handle_list_reduction translated_rhs)
-          handle Option => FAILloc locn errmsg
+          handle Option => FAILloc lrlocn errmsg
         end
       val _ =
         case rule of
           infix_rule s => top_was_tm orelse
-            FAILloc locn ("missing left argument to "^s)
+            FAILloc lrlocn ("missing left argument to "^s)
         | suffix_rule s => top_was_tm orelse
-              FAILloc locn ("missing first argument to "^s)
+              FAILloc lrlocn ("missing first argument to "^s)
         | _ => true
       fun item_to_pterm ((NonTerminal p,locn), _) = SOME (p,locn)
         | item_to_pterm _ = NONE
@@ -710,8 +712,8 @@ fun parse_term (G : grammar) typeparser = let
         case rule of
           listfix_rule r => let
             val args = mapP item_to_pterm rhs
-            fun mk_list [] = (VAR (#nilstr r),rlocn)
-              | mk_list (x::xs) = (COMB((COMB((VAR (#cons r),#2 x), x),#2 x), mk_list xs),locn.between llocn (#2 x))
+            fun mk_list [] = (VAR (#nilstr r),locn.Loc_None)
+              | mk_list (x::xs) = (COMB((COMB((VAR (#cons r),locn.Loc_None), x),#2 x), mk_list xs),locn.between (#2 x) rlocn)
           in
             (lrhs - n, mk_list args)
           end
@@ -722,12 +724,14 @@ fun parse_term (G : grammar) typeparser = let
               | prefix_rule s => (mapP item_to_pterm (tl rhs), lrhs - n, s)
               | suffix_rule s => (mapP item_to_pterm rhs, lrhs, s)
               | closefix_rule s => (mapP item_to_pterm (tl rhs), lrhs - n, s)
-              | _ => FAILloc locn "parse_term : can't happen"
+              | _ => FAILloc lrlocn "parse_term : can't happen"
           in
-            (numtopop, List.foldl CCOMB (VAR head,llocn) args)
+            (numtopop, List.foldl CCOMB (VAR head,locn.Loc_None) args)
+            (* using Loc_None allows for the head to be either at left or right *)
           end
     in
-      repeatn numtopop pop >> push (liftlocn NonTerminal newterm, XXX)
+      repeatn numtopop pop >> push ((NonTerminal (#1 newterm),lrlocn), XXX)
+                                    (* force location to entire RHS, including tokens *)
     end
   else
     case rhs of
@@ -808,13 +812,13 @@ fun parse_term (G : grammar) typeparser = let
     | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
        ((NonTerminal t,llocn), _)::rest) => let
       in
-        repeatn 3 pop >> push ((NonTerminal (TYPED ((t,llocn), (ty,locn.Loc_Unknown(*TODO*)))),locn.between llocn rlocn),
+        repeatn 3 pop >> push ((NonTerminal (TYPED ((t,llocn), (ty,rlocn))),locn.between llocn rlocn),
                                XXX)
       end
     | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
        ((NonTermVS vsl,llocn), _)::rest) => let
        in
-         repeatn 3 pop >> push ((NonTermVS (map (fn (v as (_,locn)) => (TYPEDV(v,(ty,locn.Loc_Unknown(*TODO*))),locn)) vsl),locn.between llocn rlocn),
+         repeatn 3 pop >> push ((NonTermVS (map (fn (v as (_,locn)) => (TYPEDV(v,(ty,rlocn)),locn)) vsl),locn.between llocn rlocn),
                                 XXX)
        end
     | (((NonTerminal t,rlocn), _)::((Terminal EndBinding,_), _)::
