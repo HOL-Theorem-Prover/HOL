@@ -113,7 +113,6 @@ fun term_to_ML thy ppstrm =
      val const_map = const_map thy
   fun pp i tm =
      if is_var tm then pp_var tm else
-     if is_const tm then pp_const tm else
      if is_cond tm then pp_cond i tm else
      if !is_num_literal_hook tm then pp_num_literal tm else
      if !is_int_literal_hook tm then pp_int_literal tm else
@@ -128,6 +127,7 @@ fun term_to_ML thy ppstrm =
      if !is_pabs_hook tm then pp_abs i tm else
      if !is_one_hook tm  then pp_one tm else
      if TypeBase.is_case tm then pp_case i (TypeBase.dest_case tm) else
+     if is_const tm then pp_const tm else
      if is_comb tm then pp_comb i tm 
      else raise ERR "term_to_ML" 
                     ("Unknown syntax with term: "^Parse.term_to_string tm)
@@ -501,7 +501,9 @@ fun pp_datatype_as_ML ppstrm decls =
 
 datatype elem 
     = DEFN of thm
-    | DATATYPE of ParseDatatype.AST list;
+    | DATATYPE of ParseDatatype.AST list
+(*    | ABSTYPE of ParseDatatype.AST list *)
+;
 
 
 (*---------------------------------------------------------------------------*)
@@ -523,6 +525,13 @@ fun pp_sig strm (s,elems) =
          begin_block,end_block,flush_ppstream,...} = with_ppstream strm
     val ppty = pp_type_as_ML strm
     val pp_datatype = pp_datatype_as_ML strm
+    fun pp_abstype astl = (* doesn't yet deal with polymorphism *)
+     let val tynames = map fst astl
+         fun pp_tydec s = add_string ("type "^s)
+     in begin_block CONSISTENT 0;
+        pr_list pp_tydec (fn () => ()) add_newline tynames;
+        end_block()
+     end
     fun pp_valdec c =
      let val (_,name,ty) = ConstMapML.apply c
      in begin_block CONSISTENT 0;
@@ -532,6 +541,7 @@ fun pp_sig strm (s,elems) =
         end_block()
      end
     fun pp_el (DATATYPE astl) = pp_datatype astl
+(*      | pp_el (ABSTYPE astl) = pp_abstype astl *)
       | pp_el (DEFN thm) = 
          pr_list pp_valdec (fn () => ()) add_newline (consts_of_def thm)
  in 
@@ -555,7 +565,8 @@ fun pp_struct strm (s,elems,cnames) =
     val pp_datatype = pp_datatype_as_ML strm
     val pp_defn = pp_defn_as_ML s strm
     fun pp_el (DATATYPE astl) = pp_datatype astl
-      | pp_el (DEFN thm) =  pp_defn (concl thm)
+(*      | pp_el (ABSTYPE astl) = pp_datatype astl (* fails *) *)
+      | pp_el (DEFN thm) = pp_defn (concl thm)
  in 
    begin_block CONSISTENT 0;
    add_string ("structure "^ML s^" :> "^ML s^" ="); add_newline();
@@ -674,8 +685,7 @@ fun install_consts _ [] = []
        in clist @ install_consts s rst
        end
   | install_consts s (DATATYPE ty::rst) = 
-      let open ParseDatatype
-          val consts = U (map (Term.decls o fst) (constructors ty))
+      let val consts = U (map (Term.decls o fst) (constructors ty))
           val _ = List.app (add s) consts
       in consts @ install_consts s rst
       end;
@@ -709,8 +719,10 @@ fun emit_adjoin_call thy consts =
   Theory.adjoin_to_theory
   {sig_ps = NONE,
    struct_ps = SOME (fn ppstrm =>
-    let val S = PP.add_string ppstrm
-        fun NL() = PP.add_newline ppstrm
+    let open PP
+        val S = add_string ppstrm
+        fun NL() = add_newline ppstrm
+        val BR = add_break ppstrm
     in 
      S "val _ = let fun foo thy c = "; NL();
      S "              let val {Name,Ty,...} = Term.dest_thy_const c"; NL();
@@ -718,14 +730,15 @@ fun emit_adjoin_call thy consts =
      S "              end"; NL();
      S"             val clist = map (fn (n,thy) => prim_mk_const{Name=n,Thy=thy})"; 
      NL();
-     S  (String.concat ("    [" :: 
-              (commafy (map (paren2 o (Lib.quote##Lib.quote)) clist)
-              @ ["]"]))); 
-     NL();
+     S"             ["; 
+     begin_block ppstrm INCONSISTENT 0;
+     Portable.pr_list S (fn () => S",") (fn () => BR(1,0))
+             (map (paren2 o (Lib.quote##Lib.quote)) clist);
+     end_block ppstrm;
+     S"]"; NL();
      S "    in "; NL();
-     S ("List.app ConstMapML.prim_insert (map (foo "^Lib.quote thy^") clist)"); NL();
-     S "end"; NL();
-     NL(); NL()
+     S ("        List.app ConstMapML.prim_insert (map (foo "^Lib.quote thy^") clist)"); NL();
+     S "    end"; NL(); NL(); NL()
         end)}
    handle e => raise ERR "emit_adjoin_call" ""
  end;

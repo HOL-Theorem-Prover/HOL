@@ -53,7 +53,22 @@ end;
 
 fun theConstMap () = !ConstMapRef;
 
-fun prim_insert (c,t) = (ConstMapRef := insert(theConstMap(),c,t));
+local fun check_name(Thy,Name,Ty) =
+       let val Name' = if String.sub(Name,0) = #"*" orelse
+                          String.sub(Name,String.size Name -1) = #"*"
+                       then " "^Name^" "
+                       else Name
+       in (Thy,Name',Ty)
+       end
+in
+fun prim_insert (c,t) = (ConstMapRef := insert(theConstMap(),c,check_name t))
+end;
+
+(*---------------------------------------------------------------------------*)
+(* Checks for "*" are to avoid situation where prefix multiplication has an  *)
+(* open paren just before it ... which is interpreted as beginning of a      *)
+(* comment.                                                                  *)
+(*---------------------------------------------------------------------------*)
 
 fun insert c = 
  let val {Name,Thy,Ty} = dest_thy_const c

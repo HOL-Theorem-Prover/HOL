@@ -660,7 +660,7 @@ val (even,odd) =
 val _ = ConstMapML.prim_insert(Term`0n`,("num","ZERO",Type`:num`));
 
 val _ = 
-  let open Drop arithmeticTheory whileTheory
+  let open Drop arithmeticTheory whileTheory pairSyntax
   in 
     exportML("num",
      DATATYPE (ParseDatatype.parse `num = ZERO 
@@ -674,7 +674,7 @@ val _ =
           numeral_pre,iDUB_removal,iSUB_THM, numeral_sub,
           numeral_mult,iSQR,numeral_exp,even,odd,
           numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
-          WHILE,LEAST_DEF])
+          WHILE,LEAST_DEF,DIVMOD_DEF])
   end;
      
 val _ = adjoin_to_theory

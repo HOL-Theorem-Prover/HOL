@@ -9,8 +9,8 @@ sig
   val pre_tm        : term
   val numeral_tm    : term
   val alt_zero_tm   : term
-  val bit1          : term
-  val bit2          : term
+  val bit1_tm       : term
+  val bit2_tm       : term
   val plus_tm       : term
   val minus_tm      : term
   val mult_tm       : term

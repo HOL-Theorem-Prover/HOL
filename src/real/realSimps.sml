@@ -90,8 +90,8 @@ val num_eq_0 = prove(
 
 fun two_nats  rv nv th = let
   open numSyntax
-  val nb1_t = mk_injected (mk_comb(numeral_tm, mk_comb(bit1, nv)))
-  val nb2_t = mk_injected (mk_comb(numeral_tm, mk_comb(bit2, nv)))
+  val nb1_t = mk_injected (mk_comb(numeral_tm, mk_comb(bit1_tm, nv)))
+  val nb2_t = mk_injected (mk_comb(numeral_tm, mk_comb(bit2_tm, nv)))
 in
   [INST [rv |-> nb1_t] th, INST [rv |-> nb2_t] th]
 end

@@ -1439,7 +1439,7 @@ val ODD_EXISTS = store_thm("ODD_EXISTS",
     DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN MATCH_ACCEPT_TAC ODD_DOUBLE]);
 
 (* --------------------------------------------------------------------- *)
-(* Theorems moved from the "more_arithmetic' library      [RJB 92.09.28] *)
+(* Theorems moved from the "more_arithmetic" library      [RJB 92.09.28] *)
 (* --------------------------------------------------------------------- *)
 
 val EQ_LESS_EQ = store_thm ("EQ_LESS_EQ",
@@ -1489,9 +1489,6 @@ val SUC_ONE_ADD = store_thm ("SUC_ONE_ADD",
    ONCE_REWRITE_TAC [ADD1,ADD_SYM] THEN
    REFL_TAC);
 
-(* Didn't go through in hol90, probably becuase of non-confluence, so
-** proof changed. kls
-*)
 val SUC_ADD_SYM = store_thm ("SUC_ADD_SYM",
    --`!m n. SUC (m + n) = (SUC n) + m`--,
    REPEAT GEN_TAC THEN
@@ -2982,6 +2979,108 @@ val EXP2_LT = store_thm
           REWRITE_TAC [DOUBLE_LT]
           THEN REWRITE_TAC [TWO, ADD_0, LESS_MULT_MONO]]);
 
+
+val SUB_LESS = Q.store_thm
+("SUB_LESS",
+ `!m n. 0 < n /\ n <= m ==> m-n < m`,
+ REPEAT STRIP_TAC THEN 
+   ``?p. m = p+n`` via METIS_TAC [LESS_EQ_EXISTS,ADD_SYM]
+   THEN RW_TAC bool_ss [ADD_SUB]
+   THEN METIS_TAC [LESS_ADD_NONZERO,NOT_ZERO_LT_ZERO]);
+
+val SUB_MOD = Q.store_thm
+("SUB_MOD",
+ `!m n. 0<n /\ n <= m ==> ((m-n) MOD n = m MOD n)`,
+ METIS_TAC [ADD_MODULUS,ADD_SUB,LESS_EQ_EXISTS,ADD_SYM]);
+
+(*---------------------------------------------------------------------------*)
+(* Calculating DIV and MOD by repeated subtraction. We define a              *)
+(* tail-recursive function DIVMOD by wellfounded recursion. Unfortunately,   *)
+(* TFL isn't available at this point (it uses pairs, but the natural number  *)
+(* theories don't) so we hand-roll the definition and induction theorem.     *)
+(* Note that using DIVMOD can be slow (dividing 4 billion by 2 will result   *)
+(* in 4 billion/2 invocations of subtraction). A faster version ala Knuth    *)
+(* would be good but probably heroic in its proof.                           *)
+(*                                                                           *)
+(* Ooops, I lied about pairs .... Duh. This stuff will be stuck here until   *)
+(* I figure out where DIVMOD should go (if anywhere).                        *)
+(*---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* DIVMOD m n a = if n=0 then (0,0) else                                     *)
+(*                if m<n then (a,m) else DIVMOD (m-n) n (a+1)                *)
+(*---------------------------------------------------------------------------*)
+
+val DIVMOD_DEF =
+ let open relationTheory pairTheory
+     val M = Term `\f m n a. if n=0 then (0,0) else
+                             if m<n then (a,m) else
+                             f (m-n) n (a+1)`
+     val DM_DEF = new_definition("DIVMOD_PRIM_DEF", Term`DIVMOD = WFREC $< ^M`)
+     val th = MP (MP (ISPEC (Term`DIVMOD`) 
+                     (ISPEC (Term `$<`) (ISPEC M WFREC_COROLLARY))) DM_DEF)
+                 prim_recTheory.WF_LESS
+     val th1 = BETA_RULE (REWRITE_RULE [RESTRICT_DEF] (BETA_RULE th))
+     val th2 = SIMP_RULE bool_ss [SUB_LESS,NOT_LESS,NOT_ZERO_LT_ZERO] th1
+ in
+   save_thm("DIVMOD_DEF",
+            BETA_RULE (Q.AP_THM (Q.AP_THM (Q.SPEC `m` th2) `n`) `a`))
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* DIVMOD_IND =                                                              *)
+(* |- !P.                                                                    *)
+(*      (!m n a. (~(n = 0) /\ ~(m < n) ==> P (m - n) n (a + 1)) ==> P m n a) *)
+(*      ==> !v v1 v2. P v v1 v2                                              *)
+(*---------------------------------------------------------------------------*)
+
+local 
+  open relationTheory prim_recTheory
+  val th0 = MP (SPEC (Term `$<`) 
+               (INST_TYPE [alpha |-> Type`:num`] WF_INDUCTION_THM)) WF_LESS
+  val th1 = BETA_RULE (SPEC (Term `\m:num. !n:num. !a:num. P m n a`) th0)
+in
+val DIVMOD_IND = Q.store_thm
+("DIVMOD_IND",
+ `!P. (!m n a. (~(n = 0) /\ ~(m < n) ==> P (m - n) n (a + 1)) ==> P m n a) 
+      ==> !v v1 v2. P v v1 v2`,
+ GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC th1
+   THEN GEN_TAC THEN DISCH_THEN 
+     (fn th => REPEAT GEN_TAC THEN POP_ASSUM MATCH_MP_TAC THEN ASSUME_TAC th)
+   THEN DISCH_THEN (fn th => POP_ASSUM MATCH_MP_TAC THEN ASSUME_TAC th)
+   THEN METIS_TAC [SUB_LESS,NOT_LESS,NOT_ZERO_LT_ZERO])
+end;
+
+(*---------------------------------------------------------------------------*)
+(* Correctness of DIVMOD                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val DIVMOD_THM = Q.store_thm
+("DIVMOD_THM",
+ `!m n a. 0<n ==> (DIVMOD m n a = (a + (m DIV n), m MOD n))`,
+ HO_MATCH_MP_TAC DIVMOD_IND 
+   THEN REPEAT STRIP_TAC 
+   THEN PURE_ONCE_REWRITE_TAC [DIVMOD_DEF]
+   THEN RW_TAC bool_ss [] THENL
+   [METIS_TAC [LESS_REFL],
+    METIS_TAC [LESS_REFL],
+    METIS_TAC [LESS_DIV_EQ_ZERO,ADD_CLAUSES],
+    METIS_TAC [LESS_MOD,ADD_CLAUSES],
+    ``?p. m = p+n`` via METIS_TAC [NOT_LESS,LESS_EQ_EXISTS,ADD_SYM]
+    THEN RW_TAC bool_ss [GSYM ADD_ASSOC,EQ_ADD_LCANCEL,ADD_SUB]
+    THEN RW_TAC bool_ss [DIVMOD_ID,ADD_DIV_RWT]
+    THEN METIS_TAC [ADD_SYM],
+    METIS_TAC [SUB_MOD,NOT_LESS]]);
+
+(*---------------------------------------------------------------------------*)
+(* For calculation                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val DIVMOD_CALC = Q.store_thm
+("DIVMOD_CALC",
+ `(!m n. 0<n ==> (m DIV n = FST(DIVMOD m n 0))) /\
+  (!m n. 0<n ==> (m MOD n = SND(DIVMOD m n 0)))`,
+ METIS_TAC [DIVMOD_THM,ADD_CLAUSES,pairTheory.FST,pairTheory.SND]);
 
 
 val _ = adjoin_to_theory

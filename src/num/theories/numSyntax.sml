@@ -20,8 +20,8 @@ struct
   val pre_tm       = prim_mk_const {Name="PRE",     Thy="prim_rec"}
   val numeral_tm   = prim_mk_const {Name="NUMERAL", Thy="arithmetic"}
   val alt_zero_tm  = prim_mk_const {Name="ZERO",    Thy="arithmetic"}
-  val bit1         = prim_mk_const {Name="BIT1",    Thy="arithmetic"}
-  val bit2         = prim_mk_const {Name="BIT2",    Thy="arithmetic"}
+  val bit1_tm      = prim_mk_const {Name="BIT1",    Thy="arithmetic"}
+  val bit2_tm      = prim_mk_const {Name="BIT2",    Thy="arithmetic"}
   val plus_tm      = prim_mk_const {Name="+",       Thy="arithmetic"}
   val minus_tm     = prim_mk_const {Name="-",       Thy="arithmetic"}
   val mult_tm      = prim_mk_const {Name="*",       Thy="arithmetic"}
@@ -157,8 +157,8 @@ struct
     ALT_ZERO = alt_zero_tm,
     ZERO     = zero_tm,
     NUMERAL  = numeral_tm,
-    BIT1     = bit1,
-    BIT2     = bit2
+    BIT1     = bit1_tm,
+    BIT2     = bit2_tm
   };
 
   val dest_numeral = Literal.dest_numeral
