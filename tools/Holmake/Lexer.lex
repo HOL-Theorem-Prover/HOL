@@ -186,8 +186,10 @@ and SkipString = parse
       { SkipString lexbuf }
 
 and Quotation = parse
-    [^`\``]* `\`` { () }
+    "`" { () }
+  | _ { Quotation lexbuf }
 and DQuotation = parse
-    [^`\``]* "``" { () }
+    "``" { () }
+  | _ {DQuotation lexbuf }
 
 ;
