@@ -3,8 +3,8 @@
 In this chapter, the concrete representation of the \HOL\ logic is
 described.  This involves describing the \ML\ functions that comprise
 the interface to the logic (up to and including
-Section~\ref{avra_terms}); the quotation, printing and parsing of
-logical terms (Section~\ref{quotation}); the representation of
+Section~\ref{avra_terms}); the quotation, parsing, and printing of
+logical types and terms (Section~\ref{quotation}); the representation of
 theorems (Section~\ref{sec:theorems-in-ml}); the representation of theories
 (Section~\ref{theoryfns}); the fundamental \HOL\ theory \texttt{bool}
 (Section~\ref{boolfull}); the primitive rules of inference
@@ -61,22 +61,22 @@ A \HOL\ identifier can be of two forms:
 \item A finite sequence of alphanumerics starting with a letter.
 \item A \emph{symbolic} identifier, \ie, a finite sequence formed by any
 combination of the following characters:
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
   #  ?  +  *  /  \  =  <  >  &  %  @  !  ,  :  ;  _  |  ~  -
 \end{verbatim}\end{hol}
-
 \end{myenumerate}
-
-\noindent A letter is a member of the list:
-
+%
+A letter is a member of the list:
+%
 \begin{hol}
 \begin{verbatim}
    a b c d e f g h i j k l m n o p q r s t u v w x y z
    A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
 \end{verbatim}
 \end{hol}
-
-\noindent \HOL\ is case-sensitive: upper and lower case letters are
+%
+\HOL\ is case-sensitive: upper and lower case letters are
 considered to be different.
 
 Alphanumerics are letters or digits or underscores (\ml{\_}) or primes
@@ -89,7 +89,7 @@ distinguish different kinds of numbers a single character suffix may
 be used: for example \verb+3n+ is a natural number while \verb+3i+ is
 an integer.
 
-\subsubsection{Separators}
+\paragraph{Separators}
 
 The separators used by the \HOL\ lexical analyser are (with ascii codes in
 brackets):
@@ -100,24 +100,22 @@ space (32), carriage return (13), line feed (10), tab ({\verb+^+}I, 9),
 form feed ({\verb+^+}L, 12)
 
 
-\subsubsection{Special identifiers}
+\paragraph{Special identifiers}
 
 The following valid identifiers should not be used as the name of
 a variable or a constant.
-
-{\small
+%
 \begin{verbatim}
    let  in  and  \  ;  =>  |  :  :=  with  updated_by
 \end{verbatim}
-}
 
-\subsubsection{Type variable names}\label{tyvars}
+\paragraph {Type variable names}\label{tyvars}
 
 The name of a type variable in the \HOL\ logic is a string
 beginning with a prime (\ml{'}) followed by an alphanumeric which itself
 contains no prime; for example all of the following are valid type
 variable names except for the last:
-
+%
 \begin{hol}
 \begin{verbatim}
    'a   'b   'cat   'A11   'g_a_p   'f'oo
@@ -135,8 +133,7 @@ declarations are made. There are two primitive constructor
 \index{types, in HOL logic@types, in \HOL\ logic!constructors for}
 \index{type constructors!in HOL logic@in \HOL\ logic} 
 functions for values of type \ml{hol\_type}:
-
-
+%
 \index{function types, in HOL logic@function types, in \HOL\ logic!constructors for}
 \index{mk_vartype@\ml{mk\_vartype}|pin}
 \index{mk_type@\ml{mk\_type}|pin}
@@ -146,7 +143,7 @@ functions for values of type \ml{hol\_type}:
    mk_thy_type : {Tyop:string, Thy:string, Args:hol_type list} -> hol_type
 \end{verbatim}
 \end{boxed}
-
+%
 The function \ml{mk\_vartype}
  constructs a type variable\index{type variables, in HOL logic@type
  variables, in \HOL\ logic!constructor for} with a given name;
@@ -170,21 +167,44 @@ $\mathtt{mk\_thy\_type}\{\mathtt{Tyop} = \mathit{name},\
 \mathtt{Thy} = \mathit{thyname},\ 
 \mathtt{Args} = [\sigma_1, \cdots ,\sigma_n]\}$
 fails if
+%
 \begin{myenumerate}
 \item $\mathit{name}$ is not a type operator of theory $\mathit{thyname}$
 \item $\mathit{name}$ is a type operator of theory $\mathit{thyname}$,
 but its arity is not $n$.
 \end{myenumerate}
-
+%
 For example, \ml{mk\_thy\_type\{Tyop="bool", Thy="bool", Args=[]\}}
 \index{truth values, in HOL logic@truth values, in \HOL\ logic}
 \index{bool, the type in HOL logic@\ml{bool}, the type in \HOL\ logic}
 evaluates to an \ML\ value of type \ml{term} representing the type
 \ty{bool}.
+%
+%\paragraph{Support for constructing types}
 
-There are two primitive destructor\index{types, in HOL logic@types, in
-\HOL\ logic!destructors for}\index{type destructors, in HOL logic@type
-destructors, in \HOL\ logic}  functions for values of type \ml{hol\_type}:
+Type constants may be
+bound to \ML\ values and need not be repeatedly constructed: \eg, the type built by 
+\ml{mk\_thy\_type\{Tyop="bool", Thy="bool", Args=[]\}} is abbreviated  
+by the \ML\ value \ml{bool}. Similarly, function types may be constructed
+with the infix \ML\ function \ml{-->}. A few common type variables
+have been constructed and bound to \ML{} identifers, \eg, \ml{alpha}
+is the type variable \ml{'a} and \ml{beta} is the type variable
+\ml{'b}.  Thus the \ML\ code \ml{alpha --> bool} is equal to, but much more concise than
+%
+{\small
+\begin{verbatim}
+  mk_thy_type{Tyop="fun", Thy="min", 
+              Args=[mk_vartype "'a", 
+                    mk_thy_type{Tyop="bool", Thy="bool", Args=[]}}
+\end{verbatim}
+}
+
+%\paragraph{Taking types apart}
+
+\noindent There are two primitive destructor\index
+{types, in HOL logic@types, in \HOL\ logic!destructors for}
+\index{type destructors, in HOL logic@type destructors, in \HOL\ logic}
+functions for values of type \ml{hol\_type}:
 \begin{boxed}
 \index{function types, in HOL logic@function types, in \HOL\ logic!destructors for}
 \index{dest_vartype@\ml{dest\_vartype}|pin}
@@ -194,37 +214,17 @@ destructors, in \HOL\ logic}  functions for values of type \ml{hol\_type}:
   dest_thy_type : hol_type -> {Tyop:string, Thy:string, Args:hol_type list}
 \end{verbatim}\end{boxed}
 
-\noindent The function \ml{dest\_vartype}\index{type variables, in HOL
- logic@type variables, in \HOL\ logic!destructors for}\index{compound
- types, in HOL logic@compound types, in \HOL\ logic!destructors for}
- extracts the name of a type variable.
-The function \ml{dest\_thy\_type}  destructs a  compound type  into the  name
+\noindent The function \ml{dest\_vartype}
+\index{type variables, in HOL logic@type variables, in \HOL\ logic!destructors for}
+\index{compound types, in HOL logic@compound types, in \HOL\ logic!destructors for}
+extracts the name of a type variable.
+A compound type is destructed by the function \ml{dest\_thy\_type} into the  name
  of the type operator, the name of the theory it was declared in, and
  a  list  of  the  argument  types; 
  \ml{dest\_vartype}  and \ml{dest\_thy\_type} are  thus the  inverses of
  \ml{mk\_vartype} and \ml{mk\_thy\_type}, respectively.  The destructors fail
  on arguments of the wrong form.
 
-Most theories in the \HOL\ system are accompanied by a collection of
-\ML\ functions which support the construction and destruction of
-compound types declared in that theory. Also, type constants are often
-declared as \ML\ values and need not be repeatedly constructed. For
-example, the type constructed by the expression
-\ml{mk\_thy\_type\{Tyop="bool", Thy="bool", Args=[]\}} is abbreviated
-by the \ML\ value \ml{bool}. Also, function types may be constructed
-with the infix \ML\ function \ml{-->}. A few common type variables
-have been constructed and bound to \ML{} identifers, \eg, \ml{alpha}
-is the type variable \ml{'a} and \ml{beta} is the type variable
-\ml{'b}.  Thus the \ML\ code \ml{alpha --> bool} is equal to, but much more concise than,
-the far more verbose
-%
-{\small
-\begin{verbatim}
-  mk_thy_type{Tyop="fun", Thy="min", 
-              Args=[mk_vartype "'a", 
-                    mk_thy_type{Tyop="bool", Thy="bool", Args=[]}}
-\end{verbatim}
-}
 
 \section{Terms}\label{avra_terms}
 
@@ -335,9 +335,7 @@ The function
 
 \noindent returns the type
 \index{types, in HOL logic@types, in \HOL\ logic!determination of} 
-of a term. 
-
-The function
+of a term. The function
 
 \begin{boxed}\index{aconv@\ml{aconv}|pin}
 \begin{verbatim}
@@ -348,7 +346,11 @@ The function
 $\lambda$-calculus terms.
 \index{$\alpha$-convertibility, in HOL logic@$\alpha$-convertibility, in \HOL\ logic!determination of}  
 From the point of view of the \HOL{} logic, $\alpha$-convertible terms
-are identical.
+are identical. A variety of other functions are available for
+performing substitution (\verb+subst+), type instantiation
+(\verb+inst+), $\beta$-reduction (\verb+beta_conv+), $\eta$-reduction
+(\verb+eta_conv+), computation of free variables (\verb+free_vars+)
+and other common term operations.  See \REFERENCE{} for more details.
 
 
 \section{Quotation}
@@ -364,10 +366,10 @@ approach taken in \LCF\index{LCF@\LCF}, has special
 quotation
 \index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax} 
-parsers for \HOL\ types and terms which enables types and terms
+parsers for \HOL\ types and terms which enable types and terms
 to be input using a fairly standard syntax. For example, the \ML{}
 expression $\holquote{\ml{:bool -> bool}}$ denotes exactly the same
-value (of \ML\ type \ml{hol\_type} as 
+value (of \ML\ type \ml{hol\_type}) as 
 
 \begin{hol}
 \index{bool, the type in HOL logic@\ml{bool}, the type in \HOL\ logic}
@@ -403,33 +405,28 @@ can be accomplished by {\tt load "arithmeticTheory"}.}
 \end{verbatim}
 }
 
- The \HOL{} printer also outputs types and terms using this syntax
-\index{printing, in HOL logic@printing, in \HOL{} logic!of quotation syntax}.
+ The \HOL{} printer, which is integrated into the \ML{} toplevel loop,
+also outputs types and terms using this syntax.
+\index{printing, in HOL logic@printing, in \HOL{} logic!of quotation syntax}
 Types are printed
 \index{printing, in HOL logic@printing, in \HOL\ logic!of types} 
-in the form $\holquote{:\mathit{type}}$
-
-For example, the \ML\ value of type \ml{hol\_type} representing
-$\alpha\fun(\ty{ind}\fun\ty{bool})$ would be printed
+in the form $\holquote{:\mathit{type}}$. For example, the \ML\ value
+of type \ml{hol\_type} representing 
+$\alpha\fun(\ty{ind}\fun\ty{bool})$ would be printed out 
 as $\holquote{: \ml{\ensuremath{{}^\prime\!} a -> ind -> bool}}$.
 Similarly, terms are printed in the form $\holquote{\,\mathit{term}\,}$. 
-For example, the term representing
-%
-\[ \holquote{\uquant{x\ y}x<y \imp\equant{z}x+z = y} \]
-%
+Thus, the term representing $\holquote{\uquant{x\ y}x<y \imp\equant{z}x+z = y}$
 would be printed as:
 %
-
 \[ \holquote{\ml{!x y. x < y ==> ?z. x + z = y}} \]
 %
-Note that a leading colon
-\index{ type constraint, in HOL logic@\ml{:} (type constraint, in \HOL\ logic)}
-is used to distinguish a type quotation from a term quotation:
+A leading colon is used to distinguish a type quotation from a term quotation:
 the former have the form \ml{`:}$\ \cdots\ $\ml{`} and the latter have
 the form \ml{`}$\ \cdots\ $\ml{`}.
 
-\index{type constraint!in HOL logic@in \HOL\ logic|(}
+\index{type inference!in HOL parser@in \HOL\ parser|(}
 
+\paragraph {Type inference}
 Notice that there is no explicit type information in
 \verb!\x.x+1!.  The \HOL\ type checker knows that \ml{1} has
 type \ml{num} and \ml{+} has type \ml{num->(num->num)}.  From this
@@ -439,12 +436,12 @@ type assignment; for example, the first occurrence of \ml{x} could
 have type \ml{bool} and the second one have type \ml{num}.  In that
 case there would be two \emph{different} variables with name
 \ml{x}, namely \ml{x}$_{\tt bool}$ and
-\ml{x}$_{\tt num}$, the second of which is free.  In fact,
-as mentioned, the only way to construct a term with this second type
+\ml{x}$_{\tt num}$, the second of which is free.  However, the only
+way to construct a term with this second type 
 assignment is by using constructors, since the type checker uses the
 heuristic that all variables in a term with the same name have the
 same type.  This is illustrated in the following session.
-
+%
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
@@ -513,7 +510,7 @@ Within a quotation, expressions of the form {\small\verb+^(+}$t${\small\verb+)+}
 An antiquotation {\small\verb+^(+}$t${\small\verb+)+} evaluates to the
 \ML\ value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}
 evaluates to the same term as {\small\verb+``x \/ (y /\ z)``+}. The
-most common use of antiquotation is when the term $t$ is just an \ML\
+most common use of antiquotation is when the term $t$ is bound to an \ML\
 variable $x$. In this case {\small\verb+^(+}$x${\small\verb+)+} can be
 abbreviated by {\small\verb+^+}$x$.
 
@@ -546,8 +543,8 @@ val z = ``y = ^y``;
 \end{verbatim}
 \end{session}
 
-Antiquoting a type into a term quotation requires the use of {\small\verb+ty_antiq+}. 
-For example, 
+\noindent Antiquoting a type into a term quotation requires the use of
+{\verb+ty_antiq+}. For example, 
 
 \begin{session}
 \begin{verbatim}
@@ -566,6 +563,121 @@ For example,
 \end{verbatim}
 \end{session}
 
+\subsection{Viewing the grammar}
+
+The behaviour of the \HOL{} quotation parser and printer is determined
+by the current grammar. Thus, a familiarity with the basic
+vocabulary of the standard collection of \HOL{} theories is important
+if one is to use \HOL effectively. One can examine the current grammar used by the
+parser with the functions \verb+type_grammar+ and \verb+term_grammar+.
+
+For example, in the following session, we see that the type grammar
+used in the startup context of \HOL{} has the type operators
+\verb+fun+, \verb+sum+, \verb+prod+, \verb+list+, \verb+recspace+, 
+\verb+num+, \verb+option+, \verb+one+, \verb+label+, \verb+ind+, and
+\verb+bool+. 
+
+\setcounter{sessioncount}{1}
+\begin{session}
+\begin{verbatim}
+- type_grammar();
+> val it = 
+    Rules:
+    (50)   TY  ::=  TY -> TY [fun] (R-associative)
+    (60)   TY  ::=  TY + TY [sum] (R-associative)
+    (70)   TY  ::=  TY # TY [prod] (R-associative)
+    (100)  TY  ::=  TY list | TY recspace | num | (TY, TY)prod | TY option |
+                    one | (TY, TY)sum | label | (TY, TY)fun | ind | bool
+     : grammar
+\end{verbatim}
+\end{session}
+
+Also, \verb+fun+, \verb+sum+, and \verb+prod+ have infix 
+notation (\verb+->+), (\verb|+|), and (\verb+#+), respectively, with 
+different binding strengths: \verb+#+ (with 70) binds stronger than
+\verb|+| (60), which  binds stronger than \verb+->+ (50). All postfix
+type operators (with 100) bind more strongly than the infixes.
+
+The next session shows the (abbreviated) output from invoking
+\verb+term_grammar+ in the startup \HOL{} environment. The deleted output
+includes a listing of  all constants known to the system, 
+including prefix operators, along with all overloadings currrently in
+force. The portrayed grammar ranges from binding operators at very low (0) binding
+strength, through to function application (2000) and record selection
+(2500), which bind very tightly.
+
+
+\begin{session}
+\begin{verbatim}
+- term_grammar();
+> val it =
+    (0)    TM  ::=  "LEAST" <..binders..>  "." TM |
+                    "?!" <..binders..>  "." TM | "?" <..binders..>  "." TM |
+                    "!" <..binders..>  "." TM | "@" <..binders..>  "." TM |
+                    "\" <..binders..>  "." TM
+    (2)    TM  ::=  "let" TM "in" TM  [let]
+    (3)    TM  ::=  TM "=>" TM "|" TM  [COND]   (R-associative)
+    (4)    TM  ::=  TM "::" TM (restricted quantification operator)
+    (5)    TM  ::=  TM TM  (binder argument concatenation)
+    (7)    TM  ::=  "case" TM "of" TM  [case__magic]
+    (8)    TM  ::=  TM "||" TM  [case_split__magic]   (R-associative)
+    (9)    TM  ::=  TM "and" TM   (L-associative)
+    (10)   TM  ::=  TM "->" TM  [case_arrow__magic]   (R-associative)
+    (50)   TM  ::=  TM "##" TM | TM "," TM   (R-associative)
+    (70)   TM  ::=  "if" TM "then" TM "else" TM  [COND]
+    (80)   TM  ::=  TM ":-" TM   (non-associative)
+    (100)  TM  ::=  TM "=" TM   (non-associative)
+    (200)  TM  ::=  TM "==>" TM   (R-associative)
+    (300)  TM  ::=  TM "\/" TM   (R-associative)
+    (400)  TM  ::=  TM "/\" TM   (R-associative)
+    (425)  TM  ::=  TM "IN" TM   (non-associative)
+    (440)  TM  ::=  TM "++" TM   (L-associative)
+    (450)  TM  ::=  TM "::" TM  [CONS] | TM ">=;" TM | TM "<=" TM |
+                    TM ">" TM | TM "<;" TM | TM ">=" TM | TM "<=" TM |
+                    TM ">" TM | TM "<" TM | TM "LEX" TM | TM "RSUBSET" TM |
+                    TM ":=" TM  [record field update] |
+                    TM "updated_by" TM  [functional record update] |
+                    TM "with" TM  [record update]
+                    (R-associative)
+    (500)  TM  ::=  TM "-" TM | TM "+" TM | TM "RUNION" TM   (L-associative)
+    (600)  TM  ::=  TM "DIV" TM | TM "*" TM | TM "RINTER" TM
+                    (L-associative)
+    (650)  TM  ::=  TM "MOD" TM   (L-associative)
+    (700)  TM  ::=  TM "**" TM | TM "EXP" TM   (R-associative)
+    (800)  TM  ::=  TM "O" TM | TM "o" TM   (R-associative)
+    (900)  TM  ::=  "~" TM
+    (1000) TM  ::=  TM ":" TY  (type annotation)
+    (2000) TM  ::=  TM TM  (function application) |    (L-associative)
+    (2500) TM  ::=  TM "." TM  [record field selection]   (L-associative)
+           TM  ::=  "[" ... "]"  (separator = ";") |
+                    "<|" ... "|>"  (separator = ";")
+           TM  ::=  "(" ")"  [one] |
+                    "(" TM ")"  [just parentheses, no term produced]
+    ... <further output omitted>
+  : grammar
+\end{verbatim}
+\end{session}
+
+\subsection{Namespace control}
+
+In order to provide convenience, the parser deals with overloading and
+ambiguity. Overloading of numeric literals is discussed in Section
+\ref{arith-overloading}, although any symbol may be overloaded, not
+just numerals. At times such flexibility is quite useful; however, it
+can happen that one wishes to explicitly designate a particular
+constant. In that case, the notation
+$\mathit{thy}$\verb+$+$\mathit{const}$ may be used in the parser to
+designate the constant $\mathit{const}$ declared in theory
+$\mathit{thy}$. In the following example, the less-than operator is
+explicitly specified.
+
+\setcounter{sessioncount}{1}
+\begin{session}
+\begin{verbatim}
+- ``x prim_rec$< y``
+> val it = ``x < y`` : term
+\end{verbatim}
+\end{session}
 
 
 \section{Ways to construct types and terms}
@@ -591,21 +703,31 @@ The expressions in the same row are equivalent.
 \multicolumn{3}{|c|}{ } \\
 \multicolumn{3}{|c|}{\bf Types} \\
 \multicolumn{3}{|c|}{ } \\
-{\it Kind of type} & {\it \ML\ quotation} &
-{\it Constructor expression}  \\ \hline
+{\it Kind of type} & {\it \ML\ quotation} & {\it Constructor expression}  \\ \hline
  & & \\
 Type variable &
 {\small\verb+: '+}{\small $alphanum$}  & {\small\verb+mk_vartype("'+$alphanum$\verb+")+}   \\ \hline
-Type constant &
-$:op$ & {\small\verb+mk_type("+}$op${\small\verb+",[])+}   \\ \hline
-Function type &
-$: \sigma_1$ {\small\verb+->+} $\sigma_2$ &
-{\small\verb+mk_type("fun", [+} $\sigma_1$ {\small\verb+,+} $\sigma_2$ {\small\verb+])+} \\ \hline
+Type constant & $:op$ & {\small\verb+mk_type("+}$op${\small\verb+",[])+}   \\ \hline
+ & $:\mathit{thy}$\verb+$+$\mathit{op}$ 
+  & {\small\verb+mk_thy_type{Thy="+}$\mathit{thy}${\small\verb+",Tyop="+}$\mathit{op}${\small\verb+",Args=[]}+}   \\ \hline
+Function type & $: \sigma_1$ {\small\verb+->+} $\sigma_2$ &
+$\sigma_1$ {\small\verb+-->+} $\sigma_2$ \\ 
+\hline
 Compound type &
 {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$op$ &
 {\small\verb+mk_type("+}$op${\small\verb+", [+}
  $\sigma_1$ {\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+])+}
+\\ 
+\hline
+& {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$\mathit{thy}$\verb+$+$\mathit{op}$ 
+& \begin{tabular}{l}
+   {\small\verb+mk_thy_type{Thy="+}$\mathit{thy}${\small\verb+",+} \\
+\quad \qquad {\small\verb+Tyop="+}$\mathit{op}${\small\verb+", Args=[+}
+ $\sigma_1$ {\small\verb+,+} $\ldots$ {\small\verb+,+}
+  $\sigma_n${\small\verb+]}+}
+\end{tabular}
 \\ \hline
+
 \end{tabular}
 \end{center}
 
@@ -643,6 +765,8 @@ Variable & $var${\small\verb+:+}$\sigma$ &
 {\small\verb+mk_var("+}$var${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
 Constant & $const${\small\verb+:+}$\sigma$ &
 {\small\verb+mk_const("+}$const${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
+Constant & $\mathit{thy}$\verb+$+$\mathit{const}${\small\verb+:+}$\sigma$ &
+{\small\verb+mk_thy_const{Name="+}$\mathit{const}${\small\verb+",Thy="+}$\mathit{thy}${\small\verb+",Ty=+}$\sigma${\small\verb+}+} \\ \hline
 Combination & $t_1\ t_2$ &
 {\small\verb+mk_comb(+}$t_1${\small\verb+, +}$t_2${\small\verb+)+} \\ \hline
 Abstraction & {\small\verb+\+}$x${\small\verb+.+}$t$ &
@@ -728,20 +852,22 @@ conclusion $(\Gamma,t)$.
 
 A formula\index{formulas as terms, in HOL logic@formulas as terms, in
   \HOL\ logic} in the abstract is represented concretely in \HOL\ by a
-term whose \HOL\ type is {\small\verb+``:bool``+}.  Therefore, a
-term\index{terms, in HOL logic@terms, in \HOL\ logic!as logical
-  formulas} of type {\small\verb+``:bool``+} is used to represent a
+term whose \HOL\ type is {\small\verb+:bool+}.  Therefore, a
+term
+\index{terms, in HOL logic@terms, in \HOL\ logic!as logical formulas} 
+of type {\small\verb+:bool+} is used to represent a
 member of the set of hypotheses of a sequent; and likewise to
 represent the conclusion of a sequent.  Sets in this context are
 represented by an implementation of the \ML{} signature \ml{HOLset}
 supporting operations such as \ml{member} and
-\ml{union}.\index{sequents!representation of, in HOL
-  logic@representation of, in \HOL\ logic}
+\ml{union}.
+\index{sequents!representation of, in HOL logic@representation of, in \HOL\ logic}
 
 A theorem in the abstract is represented concretely in the \HOL\
 system by a value with the \ML\ abstract type
-{\small\verb+thm+}\index{thm@\ml{thm}}.  The type {\small\verb+thm+}
-has a destructor function
+{\small\verb+thm+}
+\index{thm@\ml{thm}}.
+The type {\verb+thm+} has a destructor function
 
 \begin{boxed}
 \index{dest_thm@\ml{dest\_thm}|pin}
@@ -750,8 +876,10 @@ has a destructor function
 \end{verbatim}\end{boxed}
 
 \noindent which returns a pair consisting of a list of the
-hypothesese\index{hypotheses!of theorems} and the
-conclusion\index{conclusions!of theorems}, respectively, of a theorem.
+hypotheses
+\index{hypotheses!of theorems} 
+and the conclusion
+\index{conclusions!of theorems}, respectively, of a theorem.
 The order of assumptions in the list should not be relied on.  A
 theorem's hypotheses are also available in the set form with the
 function
@@ -763,9 +891,9 @@ function
 \end{verbatim}
 \end{boxed}
 
-Using \ml{dest\_thm}, two further destructor\index{theorems, in HOL
-  logic@theorems, in \HOL\ logic!destructors for} functions are
-derived
+Using \ml{dest\_thm}, two further destructor
+\index{theorems, in HOL logic@theorems, in \HOL\ logic!destructors for} 
+functions are derived
 
 \begin{boxed}
 \index{hyp@\ml{hyp}|pin}
@@ -782,8 +910,9 @@ a primitive constructor function.  In this way, the \ML\ type system protects
 the \HOL\ logic
 from the arbitrary and unrecorded construction
 of theorems, which would compromise
-the consistency\index{consistency, of HOL logic@consistency, of \HOL\ logic} of the logic. (Functions which return theorems as values,
-\eg\ functions representing primitive inferences,
+the consistency
+\index{consistency, of HOL logic@consistency, of \HOL\ logic} of the logic.
+(Functions which return theorems as values, \eg\ functions representing primitive inferences,
 are discussed first in Section~\ref{rules}, and further in
 Chapter\ref{derived-rules}.)
 
@@ -832,11 +961,11 @@ The session below illustrates the use of the destructor functions:
 \index{turnstile notation|)}
 
 \noindent In addition to the print conventions mentioned above, the
-printing of theorems prints hypotheses\index{printing, in HOL
-  logic@printing, in \HOL\ logic!of hypotheses of theorems} as periods
-(\ie\ full stops or dots).  The flag
-\ml{show\_assums}\index{show_assums@\ml{show\_assums}} prints theorems
-with hypotheses shown in full. These points are illustrated with a
+printing of theorems prints hypotheses
+\index{printing, in HOL logic@printing, in \HOL\ logic!of hypotheses of theorems}
+as periods (\ie\ full stops or dots).  The flag \ml{show\_assums}
+\index{show_assums@\ml{show\_assums}} allows theorems
+to be printed with hypotheses shown in full. These points are illustrated with a
 theorem inferred, for example purposes, from another axiom mentioned
 in Chapter~\ref{logic}: \ml{SELECT\_AX}.
 
@@ -854,858 +983,6 @@ in Chapter~\ref{logic}: \ml{SELECT\_AX}.
 \end{verbatim}
 \end{session}
 \index{theorem notation, in HOL logic@theorem notation, in \HOL\ logic|)}
-
-\section{Theories}
-\index{theories, in HOL logic@theories, in \HOL\ logic!representation of|(}
-\label{theoryfns}
-
-In Chapter~\ref{logic} a theory is described as a $4$-tuple
-
-\[ {\cal T}\ =\ \langle{\sf Struc}_{\cal T},\
-                {\sf Sig}_{\cal T},\
-                {\sf Axioms}_{\cal T},\
-                {\sf Theorems}_{\cal T}\rangle \]
-
-\noindent where
-\begin{myenumerate}
-\item ${\sf Struc}_{\cal T}$ is
-the type structure of ${\cal T}$;
-\item ${\sf Sig}_{\cal T}$ is
-the signature of ${\cal T}$;
-\item ${\sf Axioms}_{\cal T}$ is
-the set of axioms of ${\cal T}$;
-\item ${\sf Theorems}_{\cal T}$ is the set of
-theorems of ${\cal T}$.
-\end{myenumerate}
-
-Theories are structured hierarchically to represent sequences of
-extensions called \emph{segments}\index{theory segments} of an initial
-theory (see Section~\ref{extensions}) called
-\ml{min}\index{min@\ml{min}}. A theory segment is not really a logical
-concept, but rather a concept of the representation of theories in the
-\HOL\ system. Each segment records some types, constants, axioms and
-theorems, together with pointers to other segments called its {\it
-parents\/}\index{parents, of HOL theories@parents, of \HOL\ theories}.
-The theory represented by a segment is obtained by taking the
-union of all the types, constants, axioms and theorems in the segment,
-together with the types, constants, axioms and theorems in all the
-segments reachable by following pointers to parents. This collection
-of reachable segments is called the \textit{ancestry}
-\index{ancestry, of HOL system theories@ancestry, of \HOL\ system theories}
-\index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
-of the segment.
-
-\subsection{The theory {\tt min}}\label{minTheory}
-
-The theory \ml{min}\index{min, the HOL theory@\ml{min}, the \HOL\
-theory|(} declares the type constant {\small\verb+bool+} of booleans,
-the binary type operator {\small\verb+fun+} of functions, and the type
-constant {\small\verb+ind+} of individuals.  Building on this, three
-primitive constants\index{constants, in HOL
- logic@constants, in \HOL\ logic!primitive logical}\index{primitive
- constants, of HOL logic@primitive constants, of \HOL\ logic}
-are declared in the theory {\small\verb+min+}: equality, implication, and a choice operator.
-\index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}
-\index{equality, in HOL logic@equality, in \HOL\ logic}
-
-
-Equality ({\small\verb+$= : 'a -> 'a -> bool+}) parses as an infix with
-low binding precedence (100).
-
-Implication ({\small\verb+$==> : bool -> bool -> bool+}) parses as a
-right-associative infix with binding precedence 200.
-
-Equality
-\index{equality, in HOL logic@equality, in \HOL\ logic}
-\index{implication, in HOL logic@implication, in \HOL\ logic}
-and implication are standard predicate calculus notions, but choice is
-more exotic:
-if $t$ is a term having type $\sigma${\small\verb+->bool+},
-then {\small\verb+@x.+}$t${\small\verb+ x+} (or, equivalently,
-{\small\verb+$@+}$t$) denotes {\it some\/} member of the set whose
-characteristic\index{characteristic predicate, of type definitions}
- function is $t$. If the set is empty, then
-{\small\verb+@x.+}$t${\small\verb+ x+} denotes an arbitrary member of the
-set denoted by $\sigma$. The constant {\small\verb+@+} is a higher order
-version of Hilbert's
-\index{Hilbert, D.}
-\index{epsilon operator}
- $\hilbert$-operator; it is related to the constant
-$\iota$ in Church's formulation of higher order logic. For more details,
-see Church's
-\index{Church, A.}
-original paper \cite{Church}, Leisenring's
-\index{Leisenring, A.}
-book on Hilbert's $\hilbert$-symbol \cite{Leisenring}, or Andrews'
-textbook on type theory \cite{Andrews}.
-
-
-\subsection{ML functions for theory operations}
-\label{theoryprims}
-
-A typical\index{HOL system@\HOL\ system!typical work in} piece of work
-with the \HOL\ system consists in a number of sessions\index{sessions
-with HOL system@sessions, with \HOL\ system}.  In the first of these, a
-new theory, ${\cal T}$ say, is created by importing some existing theory
-segments, making a number of definitions, and perhaps proving and
-storing some theorems in the current segment. Then the current segment
-(named $name$ say) is exported. The concrete result will be an \ML\
-module $name$\ml{Theory} whose contents is the current theory segment
-created during the session and whose ancestry represents the desired
-logical theory ${\cal T}$. Subsequent work sessions can access the
-definitions and theorems of ${\cal T}$ by importing $name$\ml{Theory};
-this avoids having to load the tools and replay
-the proofs that created $name$\ml{Theory} in the first place.
-
-The naming of data in theories is based on the names given to segments.
-Specifically an axiom, definition, specification or theorem is
-accessed\index{theories, in HOL logic@theories, in \HOL\ logic!naming of}
-by an \ML\ long identifier $thy${\small\verb+Theory.+}$name$, where
-$thy$ is the name of the theory segment current when the item was
-declared and $name$ is a specific name supplied by the user (see the
-functions \ml{new\_axiom}, \ml{new\_definition}, below). Different items
-can have the same specific name if the associated segment is different.
-Thus each theory segment provides a separate namespace of ML bindings of
-\HOL\ items.
-
-Various additional pieces of information are stored in a theory
-segment, including the parsing status of the constants (\eg\ whether
-they are infixes or binders).
-
-There is always a \emph{current theory} which is the theory
-represented by the current theory segment together with its
-ancestry. The name of the current theory segment is returned by the \ML\
-function:
-
-\begin{boxed}\index{current_theory@\ml{current\_theory}|pin}
-\begin{verbatim}
-   current_theory : unit -> string
-\end{verbatim}\end{boxed}
-
-  When an interactive \HOL{} session begins, some theories will
-  already be in the logical context. The exact set of theories in
-  context will vary.  If the executable used is \texttt{hol.bare},
-  then only \theoryimp{min} and \theoryimp{bool} will be loaded.  When
-  the \texttt{hol} executable is used, a richer context is loaded.
-  The exact set of theories loaded can be determined with the
-  \ml{ancestry}\index{ancestry function@\ml{ancestry} function} command.
-
-The \ML{} function, \ml{ancestry}, of type \verb+string -> string list+,
-provides a general mechanism for examining the structure of the
-theory hierarchy.  The argument is the name of a theory (or
-\texttt{"-"} as an abbreviation for the current theory), to which
-\texttt{ancestry} will return with a list of the argument's ancestors
-in the theory hierarchy.
-
-
-On startup, the current theory segment of \HOL\ is named \ml{scratch},
-which is an empty theory, having the theory {\small\verb+bool+} as its sole
-parent. This is a very simple logical setting; for example, common types
-such as numbers and pairs are not present. Typically, a user would begin
-by loading whatever specific logical context is required.
-
-The \ML\ functions for creating theories and manipulating
-\index{theories, in HOL logic@theories, in \HOL\ logic!creation of|(}
-are listed below.
-
-\begin{boxed}
-\index{new_theory@\ml{new\_theory}|pin}
-\begin{verbatim}
-   new_theory : string -> unit
-\end{verbatim}\end{boxed}
-
-\noindent One creates a new theory segment by a call to
-\verb+new_theory+.  This allocates a new `area' where subsequent theory
-operations take effect. If the current theory ($thy_1$ say) at the time
-of a call to {\small\verb+new_theory +}$thy_2$ is non-empty, \ie, has
-had an axiom, definition, or theorem stored in it, then $thy_1$ is
-exported before $thy_2$ is allocated. Furthermore, $thy_2$ will obtain
-$thy_1$ as a parent. If {\small\verb+new_theory +}$thy$ is called when
-the current theory segment is already named $thy$, then that is
-interpreted as a request merely to clear the current theory segment
-(nothing will be exported).
-
-A call to {\small\verb+new_theory "+}$name${\small\verb+"+} fails if:
-\begin{itemize}
-
-\item $name$ is not an alphanumeric starting with a letter.
-
-\item there is a theory already named $name$ in the ancestry of the
-current segment.
-
-\item if it is necessary to export the current segment before creating
-the new theory and the export attempt fails.
-
-\end{itemize}
-
-The current theory segment acts as a kind of scratchpad. Elements stored
-in the current segment may be overwritten by subsequent additions, or
-deleted outright. Any theory elements that were built from overwritten
-or deleted elements are now held to be {\it out-of-date}, and will not
-be included in the theory when it is finally exported.  Out-of-date
-constants and types are detected by the \HOL\ printer, which will print
-them surrounded by odd-looking syntax to alert the user.
-
-In contrast to the current segment, (proper) ancestor segments may not
-be altered.
-
-Since \HOL\ theories are represented by \ML\ modules, one imports an
-existing theory segment by simply importing the corresponding module.
-
-\begin{boxed}
-\index{load@\ml{load}|pin}
-\begin{verbatim}
-   load : string -> unit
-\end{verbatim}\end{boxed}
-
-\noindent
-Executing {\small\verb+load +}$name${\small\verb+Theory+} imports the
-first file named $name${\small\verb+Theory.uo+} found along the
-{\small\verb+loadPath+} into the session. Any unloaded ancestors of
-$name$ will be loaded before loading of $name${\small\verb+Theory+}
-continues.  Note that {\small\verb+load+} can not be used in ML files
-that are to be compiled; it can only be used in the interactive
-system.
-
-\begin{boxed}
-\index{new_type@\ml{new\_type}|pin}
-\begin{verbatim}
-   new_type : int -> string -> unit
-\end{verbatim}\end{boxed}
-
-
-\noindent Executing \ml{new\_type}$\ n\ \ml{"\ty{op}"}$ makes \ty{op}
-a new $n$-ary type operator\index{type operators, in HOL logic@type
-operators, in \HOL\ logic!declaration} in the current theory.
-Failure if:
-\begin{myenumerate}
-\item there already exists a type operator named $\ty{op}$ in an ancestor
-      theory segment.
-\item \ty{op} is not an allowed name for a type.
-\end{myenumerate}
-
-
-\begin{boxed}
-\index{new_constant@\ml{new\_constant}|pin}
-\begin{verbatim}
-   new_constant : (string * type) -> unit
-\end{verbatim}\end{boxed}
-
-\noindent Executing {\small\verb+new_constant("+}$c${\small\verb+",+}$\sigma${\small\verb+)+} makes
-$c_{\sigma'}$ a new constant\index{constants, in HOL logic@constants, in \HOL\ logic!declaration of} of the current theory,
-for all $c_{\sigma'}$ where $\sigma'$ is an instance of $\sigma$.
-The type $\sigma$ is
-called the {\it generic type\/}\index{generic types, in HOL logic@generic types, in \HOL\ logic} of $c$. Failure if:
-\begin{myenumerate}
-\item there already exists a constant named $c$ in an ancestor theory segment.
-\end{myenumerate}
-
-\begin{boxed}
-\index{new_infix@\ml{new\_infix}|pin}
-\begin{verbatim}
-   new_infix : (string * type) -> unit
-\end{verbatim}\end{boxed}
-
-
-\noindent Executing \ml{new\_infix("}$ix$\ml{",}$\sigma$\ml{)}
-declares $ix$ to be a new constant with generic type $\sigma$ and
-infix status.
-Failure if:
-\begin{myenumerate}
-\item there already exists a constant named $ix$ in an ancestor theory segment;
-\item $\sigma$ not of the form \ml{$\sigma_1$->$\sigma_2$->$\sigma_3$}.
-\end{myenumerate}
-
-
-\begin{boxed}
-\index{new_binder@\ml{new\_binder}|pin}
-\begin{verbatim}
-   new_binder : (string * type) -> unit
-\end{verbatim}\end{boxed}
-
-
-\noindent Executing \ml{new\_binder("}$b$\ml{",}$\sigma$\ml{)}\index{binders, in HOL logic@binders, in \HOL\ logic!declaration of}
-declares $b$ to be a new constant with generic type $\sigma$ and
-binder status.
-Failure if:
-\begin{myenumerate}
-\item there already exists a constant named $b$ an ancestor theory segment;
-\item $\sigma$ not of the form \ml{($\sigma_1$->$\sigma_2$)->$\sigma_3$}.
-\end{myenumerate}
-
-\begin{boxed}
-\index{new_axiom@\ml{new\_axiom}|pin}
-\begin{verbatim}
-   new_axiom : (string * term) -> thm
-\end{verbatim}\end{boxed}
-
-
-\noindent Executing \ml{new\_axiom("}$name$\ml{",}$t$\ml{)} declares the
-sequent
-\ml{(\{\},$t$)} to be an axiom\index{axioms!declaration of, in HOL logic@declaration of, in \HOL\ logic} of the current theory with name $name$.
-Failure if:
-\begin{myenumerate}
-\item $t$ contains out-of-date constants or types.
-\end{myenumerate}
-
-
-Once a theorem has been proved, it can be saved with the function
-
-\begin{boxed}
-\index{save_thm@\ml{save\_thm}|pin}
-\begin{verbatim}
-   save_thm : (string * thm) -> thm
-\end{verbatim}\end{boxed}
-
-\noindent Evaluating \ml{save\_thm("}$name$\ml{",}$th$\ml{)} will save
-the theorem\index{theorems, in HOL logic@theorems, in \HOL\ logic!saving
-of}\index{saving theorems} $th$ with name $name$ in the current theory
-segment.
-
-Once a theory segment has been constructed, it can be written out to a
-file, which, after compilation, can be imported into future sessions.
-
-\begin{boxed}
-\index{export_theory@\ml{export\_theory}|pin}
-\begin{verbatim}
-    export_theory : unit -> unit
-\end{verbatim}\end{boxed}
-
-When {\small\verb+export_theory+} is called, all out-of-date entities
-are removed from the current segment. Also, the parenthood of the
-theory is computed. The current theory segment is written to file
-$name${\small{\tt Theory.sml}} in the current working directory.  The
-file $name${\small{\tt Theory.sig}}, which documents the contents of
-$name$, is also written to the current working directory.  Notice that
-the exported theory is not compiled by \HOL. That is left to an
-external tool, \holmake{} (see section~\ref{Holmake}), which maintains
-dependencies among collections of \HOL\ theory segments.
-
-
-\subsection{ML functions for accessing theories}
-
-\index{theories, in HOL logic@theories, in \HOL\ logic!functions for
-  accessing|(} \index{axioms!retrieval of, in HOL system@retrieval of,
-  in \HOL\ system|(} The arguments of \ML{} type \ml{string} to
-\ml{new\_axiom}, \ml{new\_definition} \etc\ are the names of the
-corresponding axioms and definitions. These names are used when
-accessing theories with the functions \ml{axiom}, \ml{definition},
-\etc, described below.
-
-The current theory\index{theories, in HOL logic@theories, in \HOL\
-  logic!hierarchies of} can be extended by adding new parents, types,
-constants, axioms and definitions. Theories that are in the ancestry
-of the current theory cannot be extended in this way; they can be
-thought of as \emph{frozen}.
-
-There are various functions for loading the contents of theory files:
-
-\begin{boxed}
-\index{parents@\ml{parents}|pin}
-\index{types@\ml{types}|pin}
-\index{constants@\ml{constants}|pin}
-\begin{verbatim}
-   parents     : string -> string list
-   types       : string -> (int * string) list
-   constants   : string -> term list
-\end{verbatim}\end{boxed}
-
-\noindent The first argument is the name of a theory (which must be in the
-ancestry of the current theory segment); the result is a list of the
-components of the theory. The name of the current theory can be
-abbreviated by \ml{"-"}.\index{ abbreviation, of HOL theory part
-  names@\ml{-} (abbreviation, of \HOL\ theory part names)} For
-example, \ml{parents "-"} returns the parents of the current theory.
-
-In the case of \ml{types} a list of arity-name pairs is returned.
-Individual axioms, definitions and theorems can be read from the
-current theory using the following \ML\ functions:
-
-\begin{boxed}
-\index{axiom@\ml{axiom}|pin}
-\index{definition@\ml{definition}|pin}
-\index{theorem@\ml{theorem}|pin}
-\begin{verbatim}
-   axiom      : string -> thm
-   definition : string -> thm
-   theorem    : string -> thm
-\end{verbatim}\end{boxed}
-
-\noindent The first argument is the user supplied name of the axiom,
-definition or theorem in the current theory.  Further, a list of all
-of a theory's axioms, definitions and theorems can be retreived with
-the \ML{} functions:
-
-\begin{boxed}
-\index{axioms@\ml{axioms}|pin}
-\index{theorems@\ml{theorems}|pin}
-\index{definitions@\ml{definitions}|pin}
-\begin{verbatim}
-   axioms      : string -> (string * thm) list
-   definitions : string -> (string * thm) list
-   theorems    : string -> (string * thm) list
-\end{verbatim}\end{boxed}
-
-The contents of the current theory can be printed in a readable format using the function
-{\small\verb+print_theory+}\index{printing, in HOL logic@printing, in \HOL\ logic!of theories}\index{print_theory@\ml{print\_theory}}.
-\index{axioms!retrieval of, in HOL system@retrieval of, in \HOL\
-system|)}\index{theories, in HOL logic@theories, in \HOL\
-logic!functions for accessing|)}
-
-\subsection{Functions for creating definitional extensions}\index{extension, of HOL logic@extension, of \HOL\ logic!definitional}\index{definitional extension, of HOL logic@definitional extension, of \HOL\ logic}\index{theories, in HOL logic@theories, in \HOL\ logic!extension of|(}
-\label{avra_definitional}
-
-There are three kinds of definitional extensions:
-constant definitions, constant specifications and type definitions.
-
-\subsubsection{Constant definitions}
-\label{sec:constant-definitions}
-
-In Section~\ref{defs} a constant definition\index{extension, of HOL logic@extension, of \HOL\ logic!by constant definition}\index{constant definition extension, of HOL logic@constant definition extension, of \HOL\ logic!ML function for@\ML\ function for|(}
-over a signature $\Sigma_{\Omega}$ is defined to be
-an equation, \ie\ a formula of the form $c_{\sigma}=t_{\sigma}$,
-such that:
-\begin{myenumerate}
-\item $c$ is not the name of any constant in $\Sigma_{\Omega}$;
-\item $t_{\sigma}$ is a closed term in ${\sf Terms}_{\Sigma_{\Omega}}$;
-\item all the type variables occurring in $t_{\sigma}$ occur in $\sigma$.
-\end{myenumerate}
-
-In \HOL, definitions can be slightly more general than this, in that
-an equation:
-
-\[ c\ v_1\ \cdots\ v_n\ =\ t \]
-
-\noindent is  allowed  to  be a  definition where  $v_1$, $\dots$, $v_n$ are
-variable structures (\ie\ tuples of distinct variables).   Such  an equation is
-logically equivalent to:
-
-\[ c\ =\ \lambda v_1\ \cdots\ v_n.\  t \]
-
-\noindent which is a definition in the sense of  Section~\ref{defs} if (i),
-(ii) and (iii) hold.
-
-The following  \ML\ function  creates\index{defining mechanisms, for HOL logic@defining mechanisms, for \HOL\ logic} a  new definition in
-the current theory.
-
-\begin{boxed}
-\index{new_definition@\ml{new\_definition}|pin}
-\begin{verbatim}
-   new_definition : (string * term) -> thm
-\end{verbatim}\end{boxed}
-
-
-\noindent Evaluating
- \ml{new\_definition("}$name$\ml{",\ }$c\ v_1\ \cdots\ v_n\ =\ t$\ml{)},
-where $c$ is not already a constant, declares the sequent
-\ml{(\{\},$\lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition\index{definitions, adding to HOL logic@definitions, adding to \HOL\ logic}
-of the current theory. The name associated with the definition in
-this theory is $name$.
-Failure if:
-\begin{myenumerate}
-\item $c$ is already a constant in an ancestor current theory;
-\item $t$ contains free variables that are not in any of
-the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent
-to requiring $\lambda v_1\ \cdots\ v_n.\  t$ to be a closed term);
-\item there is a type variable in  $v_1$, $\dots$, $v_n$ or $t$
-that does not occur in the type of $c$.
-\end{myenumerate}
-
-\subsubsection{Constant specifications}
-\label{conspec}
-
-\index{specification of constants, in HOL logic@specification of constants, in \HOL\ logic|(}
-\index{extension, of HOL logic@extension, of \HOL\ logic!by constant specification}
-In Section~\ref{specs} a constant specification\index{constant specification extension, of HOL logic@constant specification extension, of \HOL\ logic!ML function for@\ML\ function for} for a theory ${\cal T}$
-is defined to be a pair:
-
-\[ \langle(c_1,\ldots,c_n),\ \lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\rangle \]
-
-\noindent such that:
-
-\begin{myenumerate}
-\item $c_1$, $\dots$, $c_n$ are distinct names.
-\item $\lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
-\item $tyvars(\lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ for
-$1\leq i\leq n$.
-\item $\equant{{x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}}t
-\ \in\ {\sf Theorems}_{\cal T}$.
-\end{myenumerate}
-
-The following \ML\ function is used to make constant specifications in
-the \HOL\ system.
-
-\begin{boxed}
-\index{new_specification@\ml{new\_specification}|pin}
-\begin{verbatim}
-   new_specification : string -> ((string*string)list) -> thm -> thm
-\end{verbatim}\end{boxed}
-
-Evaluating:
-
-\medskip
-
-\begin{tabular}{l}
-   \ml{new\_specification}\\
-\ \ml{"}$name$\ml{"}\\
-\ \ml{[}$flag_1$\ml{,"}$c_1$\ml{",\ }$\ldots$\ml{\ ,\ "}$flag_n$\ml{","}$c_n$\ml{"]}\\
-\ \ml{|-\ ?}$x_1\ \cdots\ x_n$\ml{.}\  $t$\ml{[}$x_1$\ml{,}$\ \ldots\
-$\ml{,}$x_n$\ml{]}\\
-\end{tabular}
-
-\medskip
-
-\noindent simultaneously  introduces  new constants  named $c_1$, $\dots$,
-$c_n$ satisfying the property:
-
-\[ \ml{|- }t\ml{[}c_1\ml{,}\ \ldots\ \ml{,}c_n\ml{]} \]
-
-\noindent If $flag_i$ is \ml{constant}
-then $c_i$ is declared an ordinary constant, if it is
-\ml{infixl}$\ n$ then $c_i$ is declared a left associative infix with
-binding strength $n$, if it is
-\ml{infixr}$\ n$ then $c_i$ is declared a right associative infix with
-binding strength $n$, and if it is
-\ml{binder}\index{binders, in HOL logic@binders, in \HOL\ logic} then $\ml{c}_i$ is declared
-a binder.  This theorem is stored,
-with name $name$, as a definition in the current theory segment. A call to
-\ml{new\_specification} fails if:
-
-\begin{myenumerate}
-\item the theorem argument has a non-empty assumption list;
-\item there are free variables in the theorem argument;
-\item $c_1$, $\dots$, $c_n$ are not distinct variables;
-\item some $c_i$ is already a constant in an ancestor theory;
-\item some $c_i$ is not an allowed name for a constant;
-\item some $flag_i$ is not either \ml{constant}, \ml{infix}
-or \ml{binder};
-\item the type of $c_i$ is not suitable for a constant with the syntactic
-status specified by $flag_i$;
-\item the type of some $c_i$ does not contain all the type
-variables which occur in the term
-{\small\verb+\+}$x_1\ \cdots\ x_n$\ml{.}\  $t$\ml{[}$x_1$\ml{,}$\ \ldots\
-$\ml{,}$x_n$\ml{]}.
-\end{myenumerate}
-
-\subsubsection{Type definitions}\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|(}
-\label{type-defs}\index{type definitions, in HOL logic@type definitions, in \HOL\ logic|(}
-
-In Section~\ref{tydefs} it is explained that
-defining\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!introduction of}\index{type definition extension, in HOL logic@type definition extension, in \HOL\ logic!ML function for@\ML\ function for|(}
-a new type $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in a theory ${\cal T}$ consists
-of introducing $\ty{op}$ as a new $n$-ary type operator and
-
-\[\turn \equant{f_{(\alpha_1,\ldots,\alpha_n)\ty{op}\fun\sigma}}\TyDef\ p\ f\]
-
-\noindent as a new axiom, where $p$ is a predicate
-characterizing\index{characteristic predicate, of type definitions} a
-non-empty subset of an existing type $\sigma$.  Formally, a type definition
-for a theory ${\cal T}$ is a $3$-tuple
-
-\[ \langle \sigma,\ (\alpha_1,\ldots,\alpha_n)\ty{op},
-    \ p_{\sigma\fun\ty{bool}}\rangle \]
-
-\noindent where:
-
-\begin{myenumerate}
-\item $\sigma\in{\sf Types}_{\cal T}$  and
-$tyvars(\sigma)\in\{\alpha_1, \ldots , \alpha_n\}$.
-\item \ty{op} is not the name of a type constant in ${\sf Struc}_{\cal T}$.
-\item $p\in{\sf Terms}_{\cal T}$ is a closed term of
-type $\sigma\fun\ty{bool}$  and
-$tyvars(p)\subseteq\{\alpha_1, \ldots , \alpha_n\}$.
-\item $\equant{x_{\sigma}}p\ x \ \subseteq\ {\sf Theorems}_{\cal T}$.
-\end{myenumerate}
-
-The following \ML\ function makes a type definition in the \HOL\ system.
-
-\begin{boxed}
-\index{new_type_definition@\ml{new\_type\_definition}|pin}
-\begin{verbatim}
-   new_type_definition : (string * term * thm) -> thm
-\end{verbatim}\end{boxed}
-
-\noindent If $t$ is a term of type
-$\sigma$\ml{->bool} containing $n$ distinct type variables, then
-evaluating:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
-   new_type_definition("{\op}", \m{t}, |- ?\m{x}.\m{\:t \;x})
-\end{alltt}\end{hol}}
-
-\noindent results in \ty{op} being declared as a new $n$-ary type operator
-characterized by the definitional\index{definitional axioms}\index{type operators, in HOL logic@type operators, in \HOL\ logic!definitional axioms for} axiom:
-
-\begin{hol}\begin{alltt}
-   |- ?rep. TYPE\_DEFINITION \m{t} rep
-\end{alltt}\end{hol}
-
-\noindent which is stored as a definition with the automatically
-generated name
-\ty{op}\ml{\_TY\_DEF}.\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}. The constant
-\ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}
-is defined in the theory \ml{bool} by:
-
-\begin{hol}\begin{verbatim}
-   |- TYPE_DEFINITION (P:*->bool) (rep:**->*) =
-       (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
-       (!x. P x = (?x'. x = rep x'))
-\end{verbatim}\end{hol}
-
-\noindent Executing \ml{new\_type\_definition("\ty{op}",\ }$t$\ml{,\
-|- ?}$x$\ml{.}\ $t\ x$\ml{)} fails if:
-\begin{myenumerate}
-\item $\ty{op}$ is already the name of a type or type operator
-in an ancestor theory;
-\item $t$ does not have a type of the form $\sigma$\ml{->bool}.
-\end{myenumerate}
-\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|)}
-\index{theories, in HOL logic@theories, in \HOL\ logic!extension of|)}\index{type definition extension, in HOL logic@type definition extension, in \HOL\ logic!ML function for@\ML\ function for|)}\index{type definitions, in HOL logic@type definitions, in \HOL\ logic|)}
-
-\subsubsection{Defining bijections}
-\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!defining bijections for|(}
-
-The result of a type definition using \ml{new\_type\_definition} is a theorem
-which asserts only the {\it existence\/} of a
-bijection\index{bijection of types, in HOL logic@bijection of types, in \HOL\ logic}
-from the type it defines to the corresponding subset of an existing type.  To
-introduce constants that in fact denote such a bijection and its inverse, the
-following \ML\ function is provided:
-
-\begin{boxed}
-\index{define_new_type_bijections@\ml{define\_new\_type\_bijections}|pin}
-\begin{verbatim}
-   define_new_type_bijections : string -> string -> string -> thm -> thm
-\end{verbatim}\end{boxed}
-
-\noindent This function takes three string arguments and a theorem argument.
-The theorem argument must be a definitional axiom of the form returned by
-\ml{new\_type\_definition}.  The first string argument is the name under which
-the constant definition (a constant specification, in fact) made by
-{\small\verb!define_new_type_bijections!} will be stored in the current theory
-segment, and the second and third string arguments are user-specified names for
-the two constants that are to be defined. These constants are defined so as to
-denote mutually inverse bijections between the defined type, whose definition
-is given by the supplied theorem, and the representing type of this defined
-type.
-
-Evaluating:
-
-\medskip
-{\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
-   define\_new\_type\_bijections "\m{name}" "\m{abs}" "\m{rep}"
-           |- ?rep:newty->ty. TYPE\_DEFINITION \m{P} rep
-\end{alltt}\end{hol}}
-
-\medskip
-
-\noindent automatically defines two new constants
-\m{abs}{\small\verb!:ty->newty!} and \m{rep}{\small\verb!:ty->newty!}
-such that:
-
-{\def\bk{\char'134}
-\begin{hol}\begin{alltt}
-   |- (!a. \m{abs}(\m{rep} a) = a) /\bk (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
-\end{alltt}\end{hol}}
-
-\noindent This theorem, which is the defining property for the constants
-\m{abs} and \m{rep}, is stored under the name "\m{name}" in the current theory
-segment.  It is also the value returned by \ml{define\_new\_type\_bijections}.
-The theorem states that \m{abs} is the left inverse of \m{rep} and---for
-values satisfying \m{P}---that \m{rep} is the left inverse of \m{abs}.
-
-A call to
-\ml{define\_new\_type\_bijections \m{name} \m{abs} \m{rep} \m{th}}
-fails if:
-
-\begin{myenumerate}
-\item either $abs$ or $rep$ is already the name of a constant in
-an ancestor theory;
-\item $th$ is not a theorem of the form returned by
-\ml{new\_type\_definition}.
-\end{myenumerate}%
-\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!defining bijections for|)}
-
-\subsubsection{Properties of type bijections}
-\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!properties of bijections for|(}
-
-The following \ML\ functions are provided for proving that the bijections
-introduced by \ml{define\_new\_type\_isomorphisms} are injective (one-to-one)
-and surjective (onto):
-
-\begin{boxed}
-\index{prove_rep_fn_one_one@\ml{prove\_rep\_fn\_one\_one}|pin}
-\index{prove_rep_fn_onto@\ml{prove\_rep\_fn\_onto}|pin}
-\index{prove_abs_fn_one_one@\ml{prove\_abs\_fn\_one\_one}|pin}
-\index{prove_abs_fn_onto@\ml{prove\_abs\_fn\_onto}|pin}
-\begin{verbatim}
-   prove_rep_fn_one_one : thm -> thm
-   prove_rep_fn_onto    : thm -> thm
-   prove_abs_fn_one_one : thm -> thm
-   prove_abs_fn_onto    : thm -> thm
-\end{verbatim}\end{boxed}
-
-\noindent The theorem argument to each of these functions must be a theorem
-of the form returned by \ml{define\_new\_type\_bijections}:
-
-{\def\bk{\char'134}
-\begin{hol}\begin{alltt}
-   |- (!a. \m{abs}(\m{rep} a) = a) /\bk (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
-\end{alltt}\end{hol}}
-
-\noindent If \m{th} is a theorem of this form, then evaluating
-\ml{prove\_rep\_fn\_one\_one \m{th}} proves that the function \m{rep} is
-one-to-one, and returns the theorem:
-
-\begin{hol}\begin{alltt}
-   |- !a a'. (\m{rep} a = \m{rep} a') = (a = a')
-\end{alltt}\end{hol}
-
-\noindent Likewise, \ml{prove\_rep\_fn\_onto \m{th}} proves that \m{rep} is
-onto the set of values that satisfy \m{P}:
-
-{\def\bk{\char'134}
-\begin{hol}\begin{alltt}
-   |- !r. \m{P} r = (?a. r = \m{rep} a)
-\end{alltt}\end{hol}}
-
-\noindent Evaluating \ml{prove\_abs\_fn\_one\_one \m{th}} proves that \m{abs}
-is one-to-one for values that satisfy \m{P}, and returns the theorem:
-
-{\def\bk{\char'134}
-\begin{hol}\begin{alltt}
-   |- !r r'. \m{P} r ==> \m{P} r' ==> ((\m{abs} r = \m{abs} r') = (r = r'))
-\end{alltt}\end{hol}}
-
-\noindent And evaluating \ml{prove\_abs\_fn\_onto \m{th}} proves that \m{abs}
-is onto, returning the theorem:
-
-{\def\bk{\char'134}
-\begin{hol}\begin{alltt}
-   |- !a. ?r. (a = \m{abs} r) /\bk \m{P} r
-\end{alltt}\end{hol}}
-
-\noindent All four functions will fail if applied to any theorem that does not
-have the form of a theorem returned by \ml{define\_new\_type\_bijections}.
-None of these functions saves anything in the current theory.
-
-\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!properties of bijections for|)}
-
-
-%\subsection{Type abbreviations}\label{typeabbrev}\index{types, in HOL logic@types, in \HOL\ logic!abbreviation of}\index{type abbreviations!in HOL logic@in \HOL\ logic}\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|(}
-%It is possible to introduce an abbreviation for a monomorphic type using the
-%function:
-%
-%\begin{boxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
-%\begin{verbatim}
-%   new_type_abbrev : (string * type) -> unit
-%\end{verbatim}\end{boxed}
-%
-%\noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
-%enables $name$ to be used in quotations instead of $\sigma$. The evaluation
-%fails
-%if $\sigma$ is polymorphic. Type abbreviations
-%are recorded in theory files, so that
-%when a theory is loaded, any type abbreviations made are
-%activated. The list of currently active abbreviations in a theory
-%is given by the function:
-%
-%\begin{boxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
-%\begin{verbatim}
-%   type_abbrevs : string -> (string * type) list
-%\end{verbatim}\end{boxed}
-%
-%
-%Note that abbreviation can also be made using antiquotation\index{antiquotation, in HOL logic terms@antiquotation, in \HOL\ logic terms}, without the
-%restriction to monomorphic types. Such \ML\ abbreviations are not, of course,
-%stored in theory files and so do not persist beyond a single session.
-%The following session illustrates various ways of
-%abbreviating types:
-%
-%\setcounter{sessioncount}{1}
-%\begin{session}\begin{verbatim}
-%*new_theory `numpair`;;
-%() : unit
-%
-%#new_type_abbrev(`numpair`, ":num*num");;
-%() : unit
-%
-%#let t1 = "x:numpair";;
-%t1 = "x" : term
-%
-%#type_of t1;;
-%":num * num" : type
-%
-%#":numpair" = ":num*num";;
-%true : bool
-%\end{verbatim}\end{session}
-%
-%\noindent The alternative to introducing a type abbreviation is
-%to give an \ML\ name to the type, and then to use this name via antiquotation.
-%Continuing the session:\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|)}
-%
-%\begin{session}\begin{verbatim}
-%#let ty = ":num*num";;
-%ty = ":num * num" : type
-%
-%#let t2 = "x:^ty";;
-%t2 = "x" : term
-%
-%#t1 = t2;;
-%true : bool
-%\end{verbatim}\end{session}
-%
-%\pagebreak[2]
-%
-%\noindent The type abbreviation is stored in the theory file and so
-%persists across sessions. This can be seen by the result of printing
-%the theory \ml{numpair}:
-%
-%\begin{session}\begin{verbatim}
-%#print_theory`numpair`;;
-%The Theory numpair
-%Parents --  HOL
-%Type Abbreviations --  numpair ":num * num"
-%******************** numpair ********************
-%
-%() : unit
-%\end{verbatim}\end{session}
-%
-%\noindent If the session is then ended:
-%
-%\begin{session}\begin{verbatim}
-%#close_theory();;
-%() : unit
-%
-%#quit();;
-%\end{verbatim}\end{session}
-%
-%\noindent and a new session is started in which the theory \ml{numpair} is
-%loaded:
-%
-%\setcounter{sessioncount}{1}
-%\begin{session}\begin{verbatim}
-%#load_theory`numpair`;;
-%Theory numpair loaded
-%() : unit
-%
-%#"x:numpair";;
-%"x" : term
-%
-%#type_abbrevs `-`;;
-%[(`numpair`, ":num * num")] : (string * type) list
-%\end{verbatim}\end{session}
-%
-%\noindent then the type abbreviation persists.
-%
-%Type abbreviations tend to be little used in practice; the antiquotation
-%method is usually sufficient.
-
 
 \section{Primitive rules of inference of the HOL Logic}
 \label{rules}
@@ -2056,7 +1333,791 @@ can be extracted by
 \end{verbatim}\end{boxed}
 
 
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "description"
-%%% End:
+\section{Theories}
+\index{theories, in HOL logic@theories, in \HOL\ logic!representation of|(}
+\label{theoryfns}
+
+In Chapter~\ref{logic} a theory is described as a $4$-tuple
+
+\[ {\cal T}\ =\ \langle{\sf Struc}_{\cal T},\
+                {\sf Sig}_{\cal T},\
+                {\sf Axioms}_{\cal T},\
+                {\sf Theorems}_{\cal T}\rangle \]
+
+\noindent where
+\begin{myenumerate}
+\item ${\sf Struc}_{\cal T}$ is
+the type structure of ${\cal T}$;
+\item ${\sf Sig}_{\cal T}$ is
+the signature of ${\cal T}$;
+\item ${\sf Axioms}_{\cal T}$ is
+the set of axioms of ${\cal T}$;
+\item ${\sf Theorems}_{\cal T}$ is the set of
+theorems of ${\cal T}$.
+\end{myenumerate}
+
+In the implementation of \HOL, theories are structured hierarchically
+to represent sequences of extensions called
+\emph{segments}
+\index{theory segments} 
+of an initial theory (see Section~\ref{extensions}) called
+\ml{min}\index{min@\ml{min}}. A theory segment is not really a logical
+concept, but rather a means of representating theories in the
+\HOL\ system. Each segment records some types, constants, axioms and
+theorems, together with pointers to other segments called its 
+\emph{parents}
+\index{parents, of HOL theories@parents, of \HOL\ theories}.
+The theory represented by a segment is obtained by taking the
+union of all the types, constants, axioms and theorems in the segment,
+together with the types, constants, axioms and theorems in all the
+segments reachable by following pointers to parents. This collection
+of reachable segments is called the \emph{ancestry}
+\index{ancestry, of HOL system theories@ancestry, of \HOL\ system theories}
+\index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
+of the segment.
+
+\subsection{ML functions for theory operations}
+\label{theoryprims}
+
+A typical\index{HOL system@\HOL\ system!typical work in} piece of work
+with the \HOL\ system consists in a number of sessions\index{sessions
+with HOL system@sessions, with \HOL\ system}.  In the first of these, a
+new theory, ${\cal T}$ say, is created by importing some existing theory
+segments, making a number of definitions, and perhaps proving and
+storing some theorems in the current segment. Then the current segment
+(named $name$ say) is exported. The concrete result will be an \ML\
+module $name$\ml{Theory} whose contents is the current theory segment
+created during the session and whose ancestry represents the desired
+logical theory ${\cal T}$. Subsequent work sessions can access the
+definitions and theorems of ${\cal T}$ by importing $name$\ml{Theory};
+this avoids having to load the tools and replay
+the proofs that created $name$\ml{Theory} in the first place.
+
+The naming of data in theories is based on the names given to segments.
+Specifically an axiom, definition, specification or theorem is
+accessed\index{theories, in HOL logic@theories, in \HOL\ logic!naming of}
+by an \ML\ long identifier $thy${\small\verb+Theory.+}$name$, where
+$thy$ is the name of the theory segment current when the item was
+declared and $name$ is a specific name supplied by the user (see the
+functions \ml{new\_axiom}, \ml{new\_definition}, below). Different items
+can have the same specific name if the associated segment is different.
+Thus each theory segment provides a separate namespace of ML bindings of
+\HOL\ items.
+
+Various additional pieces of information are stored in a theory
+segment, including the parsing status of the constants (\eg\ whether
+they are infixes or binders).
+
+\paragraph {Determining the context}
+
+There is always a \emph{current theory} which is the theory
+represented by the current theory segment together with its
+ancestry. The name of the current theory segment is returned by the \ML\
+function:
+
+\begin{boxed}\index{current_theory@\ml{current\_theory}|pin}
+\begin{verbatim}
+   current_theory : unit -> string
+\end{verbatim}\end{boxed}
+
+  When an interactive \HOL{} session begins, some theories will
+  already be in the logical context. The exact set of theories in
+  context will vary.  If the executable used is \texttt{hol.bare},
+  then only \theoryimp{min} and \theoryimp{bool} will be loaded.  When
+  the \texttt{hol} executable is used, a richer context is loaded.
+
+The exact set of theories loaded can be determined with the
+\ml{ancestry} command.
+%
+\begin{boxed}
+\index{ancestry@\ml{ancestry}|pin}
+\begin{verbatim}
+  ancestry : string -> string list
+\end{verbatim}\end{boxed}
+
+This function provides a general mechanism for examining the structure
+of the theory hierarchy.  The argument is the name of a theory (or
+\texttt{"-"} as an abbreviation for the current theory), to which
+\texttt{ancestry} will respondwith a list of the argument's ancestors
+in the theory hierarchy.
+
+\begin{boxed}
+{\small
+\begin{verbatim}
+ ancestry "-";
+ > val it =
+    ["num", "prim_rec", "normalForms", "relation", "pair",
+      "arithmetic", "while", "numeral", "label", "combin", "sum", "min",
+      "bool", "marker", "one", "option", "ind_type", "list"] : string list
+\end{verbatim}}
+\end{boxed}
+
+
+\paragraph{Creating a theory segment}
+
+\index{theories, in HOL logic@theories, in \HOL\ logic!creation of|(}
+
+One creates a new theory segment by a call to \verb+new_theory+. 
+%
+\begin{boxed}
+\index{new_theory@\ml{new\_theory}|pin}
+\begin{verbatim}
+   new_theory : string -> unit
+\end{verbatim}\end{boxed}
+%
+This allocates a new `area' where subsequent theory
+operations take effect. If the current theory ($thy_1$ say) at the time
+of a call to {\small\verb+new_theory +}$thy_2$ is non-empty, \ie, has
+had an axiom, definition, or theorem stored in it, then $thy_1$ is
+exported before $thy_2$ is allocated. Furthermore, $thy_2$ will obtain
+$thy_1$ as a parent. If {\small\verb+new_theory +}$thy$ is called when
+the current theory segment is already named $thy$, then that is
+interpreted as a request merely to clear the current theory segment
+(nothing will be exported).
+
+A call to {\small\verb+new_theory "+}$name${\small\verb+"+} fails if:
+\begin{itemize}
+
+\item $name$ is not an alphanumeric starting with a letter.
+
+\item there is a theory already named $name$ in the ancestry of the
+current segment.
+
+\item if it is necessary to export the current segment before creating
+the new theory and the export attempt fails.
+\end{itemize}
+
+On startup, the current theory segment of \HOL\ is named \ml{scratch},
+which is an empty theory, having a useful collection of theories in
+its ancestry. Typically, a user would begin by loading whatever extra
+logical context is required for the work at hand.
+
+The current theory segment acts as a kind of scratchpad. Elements stored
+in the current segment may be overwritten by subsequent additions, or
+deleted outright. Any theory elements that were built from overwritten
+or deleted elements would then be held to be {\it out-of-date}, and would not
+be included in the theory when it is finally exported.  Out-of-date
+constants and types are detected by the \HOL\ printer, which will print
+them surrounded by odd-looking syntax to alert the user.
+
+In contrast to the current segment, (proper) ancestor segments may not
+be altered.
+
+\paragraph{Loading prebuilt theories}
+
+Since \HOL\ theories are represented by \ML\ modules, one imports an
+existing theory segment by simply importing the corresponding module.
+
+\begin{boxed}
+\index{load@\ml{load}|pin}
+\begin{verbatim}
+   load : string -> unit
+\end{verbatim}\end{boxed}
+
+\noindent
+Executing {\small\verb+load +}$name${\small\verb+Theory+} imports the
+first file named $name${\small\verb+Theory.uo+} found along the
+{\small\verb+loadPath+} into the session. Any unloaded ancestors of
+$name$ will be loaded before loading of $name${\small\verb+Theory+}
+continues.  Note that {\small\verb+load+} can not be used in ML files
+that are to be compiled; it can only be used in the interactive
+system.
+
+\paragraph{Adding to the current theory}
+
+The following \ML{} functions add types and terms to the current
+theory segment. In typical usage, these functions will not be 
+needed since higher-level definition facilities will invoke these as 
+necessary. However, these functions can be useful for those writing
+proof tools and derived definition principles.
+
+\begin{boxed}
+\index{new_type@\ml{new\_type}|pin}
+\begin{verbatim}
+   new_type : int -> string -> unit
+\end{verbatim}\end{boxed}
+
+
+\noindent Executing \ml{new\_type}$\ n\ \ml{"\ty{op}"}$ makes \ty{op}
+a new $n$-ary type operator\index{type operators, in HOL logic@type
+operators, in \HOL\ logic!declaration} in the current theory. If 
+\ty{op} is not an allowed name for a type, a warning will be issued.
+
+
+\begin{boxed}
+\index{new_constant@\ml{new\_constant}|pin}
+\begin{verbatim}
+   new_constant : (string * type) -> unit
+\end{verbatim}\end{boxed}
+
+\noindent Executing {\small\verb+new_constant("+}$c${\small\verb+",+}$\sigma${\small\verb+)+} makes
+$c_{\sigma'}$ a new constant\index{constants, in HOL logic@constants, in \HOL\ logic!declaration of} of the current theory,
+for all $c_{\sigma'}$ where $\sigma'$ is an instance of $\sigma$.
+The type $\sigma$ is
+called the {\it generic type\/}\index{generic types, in HOL
+  logic@generic types, in \HOL\ logic} of $c$. 
+If $c$ is not an allowed name for a constant, a warning will be issued.
+
+\begin{boxed}
+\index{new_axiom@\ml{new\_axiom}|pin}
+\begin{verbatim}
+   new_axiom : (string * term) -> thm
+\end{verbatim}\end{boxed}
+
+\noindent Executing \ml{new\_axiom("}$name$\ml{",}$t$\ml{)} declares the
+sequent
+\ml{(\{\},$t$)} to be an axiom\index{axioms!declaration of, in HOL logic@declaration of, in \HOL\ logic} of the current theory with name $name$.
+Failure if:
+\begin{myenumerate}
+\item the type of $t$ is not \verb+bool+.
+
+\item $t$ contains out-of-date constants or types, \ie, constants or
+  types that have been re-declared after $t$ was built.
+\end{myenumerate}
+
+Once a theorem has been proved, it can be saved with the function
+
+\begin{boxed}
+\index{save_thm@\ml{save\_thm}|pin}
+\begin{verbatim}
+   save_thm : (string * thm) -> thm
+\end{verbatim}\end{boxed}
+
+\noindent Evaluating \ml{save\_thm("}$name$\ml{",}$th$\ml{)} will save
+the theorem\index{theorems, in HOL logic@theorems, in \HOL\ logic!saving
+of}\index{saving theorems} $th$ with name $name$ in the current theory
+segment.
+
+\paragraph{Exporting a theory}
+
+Once a theory segment has been constructed, it can be written out to a
+file, which, after compilation, can be imported into future sessions.
+
+\begin{boxed}
+\index{export_theory@\ml{export\_theory}|pin}
+\begin{verbatim}
+    export_theory : unit -> unit
+\end{verbatim}\end{boxed}
+
+When {\small\verb+export_theory+} is called, all out-of-date entities
+are removed from the current segment. Also, the parenthood of the
+theory is computed. The current theory segment is written to file
+$name${\small{\tt Theory.sml}} in the current working directory.  The
+file $name${\small{\tt Theory.sig}}, which documents the contents of
+$name$, is also written to the current working directory.  Notice that
+the exported theory is not compiled by \HOL. That is left to an
+external tool, \holmake{} (see section~\ref{Holmake}), which maintains
+dependencies among collections of \HOL\ theory segments.
+
+
+\subsection{ML functions for accessing theories}
+
+\index{theories, in HOL logic@theories, in \HOL\ logic!functions for
+  accessing|(} \index{axioms!retrieval of, in HOL system@retrieval of,
+  in \HOL\ system|(} The arguments of \ML{} type \ml{string} to
+\ml{new\_axiom}, \ml{new\_definition} \etc\ are the names of the
+corresponding axioms and definitions. These names are used when
+accessing theories with the functions \ml{axiom}, \ml{definition},
+\etc, described below.
+
+The current theory\index{theories, in HOL logic@theories, in \HOL\
+  logic!hierarchies of} can be extended by adding new parents, types,
+constants, axioms and definitions. Theories that are in the ancestry
+of the current theory cannot be extended in this way; they can be
+thought of as \emph{frozen}.
+
+There are various functions for loading the contents of theory files:
+
+\begin{boxed}
+\index{parents@\ml{parents}|pin}
+\index{types@\ml{types}|pin}
+\index{constants@\ml{constants}|pin}
+\begin{verbatim}
+   parents     : string -> string list
+   types       : string -> (int * string) list
+   constants   : string -> term list
+\end{verbatim}\end{boxed}
+
+\noindent The first argument is the name of a theory (which must be in the
+ancestry of the current theory segment); the result is a list of the
+components of the theory. The name of the current theory can be
+abbreviated by \ml{"-"}.\index{ abbreviation, of HOL theory part
+  names@\ml{-} (abbreviation, of \HOL\ theory part names)} For
+example, \ml{parents "-"} returns the parents of the current theory.
+
+In the case of \ml{types} a list of arity-name pairs is returned.
+Individual axioms, definitions and theorems can be read from the
+current theory using the following \ML\ functions:
+
+\begin{boxed}
+\index{axiom@\ml{axiom}|pin}
+\index{definition@\ml{definition}|pin}
+\index{theorem@\ml{theorem}|pin}
+\begin{verbatim}
+   axiom      : string -> thm
+   definition : string -> thm
+   theorem    : string -> thm
+\end{verbatim}\end{boxed}
+
+\noindent The first argument is the user supplied name of the axiom,
+definition or theorem in the current theory.  Further, a list of all
+of a theory's axioms, definitions and theorems can be retreived with
+the \ML{} functions:
+
+\begin{boxed}
+\index{axioms@\ml{axioms}|pin}
+\index{theorems@\ml{theorems}|pin}
+\index{definitions@\ml{definitions}|pin}
+\begin{verbatim}
+   axioms      : string -> (string * thm) list
+   definitions : string -> (string * thm) list
+   theorems    : string -> (string * thm) list
+\end{verbatim}\end{boxed}
+
+The contents of the current theory can be printed in a readable format using the function
+{\small\verb+print_theory+}\index{printing, in HOL logic@printing, in \HOL\ logic!of theories}\index{print_theory@\ml{print\_theory}}.
+\index{axioms!retrieval of, in HOL system@retrieval of, in \HOL\
+system|)}\index{theories, in HOL logic@theories, in \HOL\
+logic!functions for accessing|)}
+
+\subsection{Functions for creating definitional extensions}\index{extension, of HOL logic@extension, of \HOL\ logic!definitional}\index{definitional extension, of HOL logic@definitional extension, of \HOL\ logic}\index{theories, in HOL logic@theories, in \HOL\ logic!extension of|(}
+\label{avra_definitional}
+
+There are three kinds of definitional extensions:
+constant definitions, constant specifications and type definitions.
+
+\subsubsection{Constant definitions}
+\label{sec:constant-definitions}
+
+In Section~\ref{defs} a constant definition\index{extension, of HOL logic@extension, of \HOL\ logic!by constant definition}\index{constant definition extension, of HOL logic@constant definition extension, of \HOL\ logic!ML function for@\ML\ function for|(}
+over a signature $\Sigma_{\Omega}$ is defined to be
+an equation, \ie\ a formula of the form $c_{\sigma}=t_{\sigma}$,
+such that:
+\begin{myenumerate}
+\item $c$ is not the name of any constant in $\Sigma_{\Omega}$;
+\item $t_{\sigma}$ is a closed term in ${\sf Terms}_{\Sigma_{\Omega}}$;
+\item all the type variables occurring in $t_{\sigma}$ occur in $\sigma$.
+\end{myenumerate}
+
+In \HOL, definitions can be slightly more general than this, in that
+an equation:
+
+\[ c\ v_1\ \cdots\ v_n\ =\ t \]
+
+\noindent is  allowed  to  be a  definition where  $v_1$, $\dots$, $v_n$ are
+variable structures (\ie\ tuples of distinct variables).   Such  an equation is
+logically equivalent to:
+
+\[ c\ =\ \lambda v_1\ \cdots\ v_n.\  t \]
+
+\noindent which is a definition in the sense of  Section~\ref{defs} if (i),
+(ii) and (iii) hold.
+
+The following  \ML\ function  creates\index{defining mechanisms, for HOL logic@defining mechanisms, for \HOL\ logic} a  new definition in
+the current theory.
+
+\begin{boxed}
+\index{new_definition@\ml{new\_definition}|pin}
+\begin{verbatim}
+   new_definition : (string * term) -> thm
+\end{verbatim}\end{boxed}
+
+
+\noindent Evaluating
+ \ml{new\_definition("}$name$\ml{",\ }$c\ v_1\ \cdots\ v_n\ =\ t$\ml{)},
+declares the sequent
+\ml{(\{\},$\lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition
+\index{definitions, adding to HOL logic@definitions, adding to \HOL\ logic}
+of the current theory. The name associated with the definition in
+this theory is $name$.
+Failure if:
+\begin{myenumerate}
+\item $t$ contains free variables that are not in any of
+the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent
+to requiring $\lambda v_1\ \cdots\ v_n.\  t$ to be a closed term);
+\item there is a type variable in  $v_1$, $\dots$, $v_n$ or $t$
+that does not occur in the type of $c$.
+\end{myenumerate}
+
+\subsubsection{Constant specifications}
+\label{conspec}
+
+\index{specification of constants, in HOL logic@specification of constants, in \HOL\ logic|(}
+\index{extension, of HOL logic@extension, of \HOL\ logic!by constant specification}
+In Section~\ref{specs} a constant specification\index{constant specification extension, of HOL logic@constant specification extension, of \HOL\ logic!ML function for@\ML\ function for} for a theory ${\cal T}$
+is defined to be a pair:
+
+\[ \langle(c_1,\ldots,c_n),\ \lquant{{x_1}_{\sigma_1}
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\rangle \]
+
+\noindent such that:
+
+\begin{myenumerate}
+\item $c_1$, $\dots$, $c_n$ are distinct names.
+\item $\lquant{{x_1}_{\sigma_1}
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
+\item $tyvars(\lquant{{x_1}_{\sigma_1}
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ for
+$1\leq i\leq n$.
+\item $\equant{{x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}}t
+\ \in\ {\sf Theorems}_{\cal T}$.
+\end{myenumerate}
+
+The following \ML\ function is used to make constant specifications in
+the \HOL\ system.
+
+\begin{boxed}
+\index{new_specification@\ml{new\_specification}|pin}
+\begin{verbatim}
+   new_specification : string -> string list -> thm -> thm
+\end{verbatim}\end{boxed}
+
+Evaluating:
+
+\medskip
+
+\begin{tabular}{l}
+   \ml{new\_specification}\\
+\ \ml{"}$name$\ml{"}\\
+\ \ml{[}\ml{"}$c_1$\ml{"\ }$\ldots$\ml{\ ,}\ml{"}$c_n$\ml{"]}\\
+\ \ml{|-\ ?}$x_1\ \cdots\ x_n$\ml{.}\  $t$\ml{[}$x_1$\ml{,}$\ \ldots\
+$\ml{,}$x_n$\ml{]}\\
+\end{tabular}
+
+\medskip
+
+\noindent simultaneously  introduces  new constants  named $c_1$, $\dots$,
+$c_n$ satisfying the property:
+
+\[ \ml{|- }t\ml{[}c_1\ml{,}\ \ldots\ \ml{,}c_n\ml{]} \]
+
+\noindent This theorem is stored,
+with name $name$, as a definition in the current theory segment. A call to
+\ml{new\_specification} fails if:
+
+\begin{myenumerate}
+\item the theorem argument has a non-empty assumption list;
+\item there are free variables in the theorem argument;
+\item $c_1$, $\dots$, $c_n$ are not distinct variables;
+\item the type of some $c_i$ does not contain all the type
+variables which occur in the term
+{\small\verb+\+}$x_1\ \cdots\ x_n$\ml{.}\  $t$\ml{[}$x_1$\ml{,}$\ \ldots\
+$\ml{,}$x_n$\ml{]}.
+\end{myenumerate}
+
+\subsubsection{Type definitions}\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|(}
+\label{type-defs}\index{type definitions, in HOL logic@type definitions, in \HOL\ logic|(}
+
+In Section~\ref{tydefs} it is explained that
+defining\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!introduction of}\index{type definition extension, in HOL logic@type definition extension, in \HOL\ logic!ML function for@\ML\ function for|(}
+a new type $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in a theory ${\cal T}$ consists
+of introducing $\ty{op}$ as a new $n$-ary type operator and
+
+\[\turn \equant{f_{(\alpha_1,\ldots,\alpha_n)\ty{op}\fun\sigma}}\TyDef\ p\ f\]
+
+\noindent as a new axiom, where $p$ is a predicate
+characterizing\index{characteristic predicate, of type definitions} a
+non-empty subset of an existing type $\sigma$.  Formally, a type definition
+for a theory ${\cal T}$ is a $3$-tuple
+
+\[ \langle \sigma,\ (\alpha_1,\ldots,\alpha_n)\ty{op},
+    \ p_{\sigma\fun\ty{bool}}\rangle \]
+
+\noindent where:
+
+\begin{myenumerate}
+\item $\sigma\in{\sf Types}_{\cal T}$  and
+$tyvars(\sigma)\in\{\alpha_1, \ldots , \alpha_n\}$.
+\item \ty{op} is not the name of a type constant in ${\sf Struc}_{\cal T}$.
+\item $p\in{\sf Terms}_{\cal T}$ is a closed term of
+type $\sigma\fun\ty{bool}$  and
+$tyvars(p)\subseteq\{\alpha_1, \ldots , \alpha_n\}$.
+\item $\equant{x_{\sigma}}p\ x \ \subseteq\ {\sf Theorems}_{\cal T}$.
+\end{myenumerate}
+
+The following \ML\ function makes a type definition in the \HOL\ system.
+
+\begin{boxed}
+\index{new_type_definition@\ml{new\_type\_definition}|pin}
+\begin{verbatim}
+   new_type_definition : (string * term * thm) -> thm
+\end{verbatim}\end{boxed}
+
+\noindent If $t$ is a term of type
+$\sigma$\ml{->bool} containing $n$ distinct type variables, then
+evaluating:
+
+{\def\op{{\normalsize\sl op}}
+\begin{hol}\begin{alltt}
+   new_type_definition("{\op}", \m{t}, |- ?\m{x}.\m{\:t \;x})
+\end{alltt}\end{hol}}
+
+\noindent results in \ty{op} being declared as a new $n$-ary type operator
+characterized by the definitional\index{definitional axioms}\index{type operators, in HOL logic@type operators, in \HOL\ logic!definitional axioms for} axiom:
+
+\begin{hol}\begin{alltt}
+   |- ?rep. TYPE\_DEFINITION \m{t} rep
+\end{alltt}\end{hol}
+
+\noindent which is stored as a definition with the automatically
+generated name
+\ty{op}\ml{\_TY\_DEF}.\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}. The constant
+\ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}
+is defined in the theory \ml{bool} by:
+
+\begin{hol}\begin{verbatim}
+   |- TYPE_DEFINITION (P:*->bool) (rep:**->*) =
+       (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
+       (!x. P x = (?x'. x = rep x'))
+\end{verbatim}\end{hol}
+
+\noindent Executing \ml{new\_type\_definition("\ty{op}",\ }$t$\ml{,\
+|- ?}$x$\ml{.}\ $t\ x$\ml{)} fails if:
+\begin{myenumerate}
+\item $t$ does not have a type of the form $\sigma$\ml{->bool}.
+\end{myenumerate}
+\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|)}
+\index{theories, in HOL logic@theories, in \HOL\ logic!extension of|)}\index{type definition extension, in HOL logic@type definition extension, in \HOL\ logic!ML function for@\ML\ function for|)}\index{type definitions, in HOL logic@type definitions, in \HOL\ logic|)}
+
+\paragraph{Defining bijections}
+\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!defining bijections for|(}
+
+The result of a type definition using \ml{new\_type\_definition} is a theorem
+which asserts only the {\it existence\/} of a
+bijection\index{bijection of types, in HOL logic@bijection of types, in \HOL\ logic}
+from the type it defines to the corresponding subset of an existing type.  To
+introduce constants that in fact denote such a bijection and its inverse, the
+following \ML\ function is provided:
+
+\begin{boxed}
+\index{define_new_type_bijections@\ml{define\_new\_type\_bijections}|pin}
+\begin{verbatim}
+   define_new_type_bijections 
+      : {name:string, ABS:string, REP:string, tyax:thm} -> thm
+\end{verbatim}\end{boxed}
+
+\noindent This function takes a record {\small\verb+{ABS, REP, name, tyax}+}
+The {\verb+tyax+} argument must be a definitional axiom of the form returned by
+\ml{new\_type\_definition}.  The {\verb+name+} argument is the name under which
+the constant definition (a constant specification, in fact) made by
+{\small\verb!define_new_type_bijections!} will be stored in the current theory
+segment, and the {\small\verb+ABS+} and {\small\verb+REP+} arguments
+are user-specified names for the two constants that are to be
+defined. These constants are defined so as to denote mutually inverse 
+bijections between the defined type, whose definition is given by the
+supplied theorem, and the representing type of this defined 
+type.
+
+Evaluating:
+
+\medskip
+{\def\op{{\normalsize\sl op}}
+\begin{hol}\begin{alltt}
+  define\_new\_type\_bijections 
+       \{name="\m{name}", ABS="\m{abs}", REP="\m{rep}",
+         tyax = |- ?rep:newty->ty. TYPE\_DEFINITION \m{P} rep \}
+\end{alltt}\end{hol}}
+
+\medskip
+
+\noindent automatically defines two new constants
+\m{abs}{\small\verb!:ty->newty!} and \m{rep}{\small\verb!:ty->newty!}
+such that:
+
+{\def\bk{\char'134}
+\begin{hol}\begin{alltt}
+   |- (!a. \m{abs}(\m{rep} a) = a) /\bk (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
+\end{alltt}\end{hol}}
+
+\noindent This theorem, which is the defining property for the constants
+\m{abs} and \m{rep}, is stored under the name "\m{name}" in the current theory
+segment.  It is also the value returned by \ml{define\_new\_type\_bijections}.
+The theorem states that \m{abs} is the left inverse of \m{rep} and---for
+values satisfying \m{P}---that \m{rep} is the left inverse of \m{abs}.
+
+A call to
+\ml{define\_new\_type\_bijections \m{name} \m{abs} \m{rep} \m{th}}
+fails if:
+
+\begin{myenumerate}
+\item $th$ is not a theorem of the form returned by
+\ml{new\_type\_definition}.
+\end{myenumerate}%
+\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!defining bijections for|)}
+
+\paragraph{Properties of type bijections}
+
+\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!properties of bijections for|(}
+
+The following \ML\ functions are provided for proving that the bijections
+introduced by \ml{define\_new\_type\_bijections} are injective (one-to-one)
+and surjective (onto):
+
+\begin{boxed}
+\index{prove_rep_fn_one_one@\ml{prove\_rep\_fn\_one\_one}|pin}
+\index{prove_rep_fn_onto@\ml{prove\_rep\_fn\_onto}|pin}
+\index{prove_abs_fn_one_one@\ml{prove\_abs\_fn\_one\_one}|pin}
+\index{prove_abs_fn_onto@\ml{prove\_abs\_fn\_onto}|pin}
+\begin{verbatim}
+   prove_rep_fn_one_one : thm -> thm
+   prove_rep_fn_onto    : thm -> thm
+   prove_abs_fn_one_one : thm -> thm
+   prove_abs_fn_onto    : thm -> thm
+\end{verbatim}\end{boxed}
+
+\noindent The theorem argument to each of these functions must be a theorem
+of the form returned by \ml{define\_new\_type\_bijections}:
+
+{\def\bk{\char'134}
+\begin{hol}\begin{alltt}
+   |- (!a. \m{abs}(\m{rep} a) = a) /\bk (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
+\end{alltt}\end{hol}}
+
+\noindent If \m{th} is a theorem of this form, then evaluating
+\ml{prove\_rep\_fn\_one\_one \m{th}} proves that the function \m{rep} is
+one-to-one, and returns the theorem:
+
+\begin{hol}\begin{alltt}
+   |- !a a'. (\m{rep} a = \m{rep} a') = (a = a')
+\end{alltt}\end{hol}
+
+\noindent Likewise, \ml{prove\_rep\_fn\_onto \m{th}} proves that \m{rep} is
+onto the set of values that satisfy \m{P}:
+
+{\def\bk{\char'134}
+\begin{hol}\begin{alltt}
+   |- !r. \m{P} r = (?a. r = \m{rep} a)
+\end{alltt}\end{hol}}
+
+\noindent Evaluating \ml{prove\_abs\_fn\_one\_one \m{th}} proves that \m{abs}
+is one-to-one for values that satisfy \m{P}, and returns the theorem:
+
+{\def\bk{\char'134}
+\begin{hol}\begin{alltt}
+   |- !r r'. \m{P} r ==> \m{P} r' ==> ((\m{abs} r = \m{abs} r') = (r = r'))
+\end{alltt}\end{hol}}
+
+\noindent And evaluating \ml{prove\_abs\_fn\_onto \m{th}} proves that \m{abs}
+is onto, returning the theorem:
+
+{\def\bk{\char'134}
+\begin{hol}\begin{alltt}
+   |- !a. ?r. (a = \m{abs} r) /\bk \m{P} r
+\end{alltt}\end{hol}}
+
+\noindent All four functions will fail if applied to any theorem that does not
+have the form of a theorem returned by \ml{define\_new\_type\_bijections}.
+None of these functions saves anything in the current theory.
+
+\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!properties of bijections for|)}
+
+
+%\subsection{Type abbreviations}\label{typeabbrev}\index{types, in HOL logic@types, in \HOL\ logic!abbreviation of}\index{type abbreviations!in HOL logic@in \HOL\ logic}\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|(}
+%It is possible to introduce an abbreviation for a monomorphic type using the
+%function:
+%
+%\begin{boxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
+%\begin{verbatim}
+%   new_type_abbrev : (string * type) -> unit
+%\end{verbatim}\end{boxed}
+%
+%\noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
+%enables $name$ to be used in quotations instead of $\sigma$. The evaluation
+%fails
+%if $\sigma$ is polymorphic. Type abbreviations
+%are recorded in theory files, so that
+%when a theory is loaded, any type abbreviations made are
+%activated. The list of currently active abbreviations in a theory
+%is given by the function:
+%
+%\begin{boxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
+%\begin{verbatim}
+%   type_abbrevs : string -> (string * type) list
+%\end{verbatim}\end{boxed}
+%
+%
+%Note that abbreviation can also be made using antiquotation\index{antiquotation, in HOL logic terms@antiquotation, in \HOL\ logic terms}, without the
+%restriction to monomorphic types. Such \ML\ abbreviations are not, of course,
+%stored in theory files and so do not persist beyond a single session.
+%The following session illustrates various ways of
+%abbreviating types:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%*new_theory `numpair`;;
+%() : unit
+%
+%#new_type_abbrev(`numpair`, ":num*num");;
+%() : unit
+%
+%#let t1 = "x:numpair";;
+%t1 = "x" : term
+%
+%#type_of t1;;
+%":num * num" : type
+%
+%#":numpair" = ":num*num";;
+%true : bool
+%\end{verbatim}\end{session}
+%
+%\noindent The alternative to introducing a type abbreviation is
+%to give an \ML\ name to the type, and then to use this name via antiquotation.
+%Continuing the session:\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|)}
+%
+%\begin{session}\begin{verbatim}
+%#let ty = ":num*num";;
+%ty = ":num * num" : type
+%
+%#let t2 = "x:^ty";;
+%t2 = "x" : term
+%
+%#t1 = t2;;
+%true : bool
+%\end{verbatim}\end{session}
+%
+%\pagebreak[2]
+%
+%\noindent The type abbreviation is stored in the theory file and so
+%persists across sessions. This can be seen by the result of printing
+%the theory \ml{numpair}:
+%
+%\begin{session}\begin{verbatim}
+%#print_theory`numpair`;;
+%The Theory numpair
+%Parents --  HOL
+%Type Abbreviations --  numpair ":num * num"
+%******************** numpair ********************
+%
+%() : unit
+%\end{verbatim}\end{session}
+%
+%\noindent If the session is then ended:
+%
+%\begin{session}\begin{verbatim}
+%#close_theory();;
+%() : unit
+%
+%#quit();;
+%\end{verbatim}\end{session}
+%
+%\noindent and a new session is started in which the theory \ml{numpair} is
+%loaded:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%#load_theory`numpair`;;
+%Theory numpair loaded
+%() : unit
+%
+%#"x:numpair";;
+%"x" : term
+%
+%#type_abbrevs `-`;;
+%[(`numpair`, ":num * num")] : (string * type) list
+%\end{verbatim}\end{session}
+%
+%\noindent then the type abbreviation persists.
+%
+%Type abbreviations tend to be little used in practice; the antiquotation
+%method is usually sufficient.
+

@@ -15,6 +15,58 @@ complete list of all the axioms, definitions and theorems in \HOL, see
 \REFERENCE.
 
 
+\section{The theory {\tt min}}\label{minTheory}
+
+The starting theory of \HOL{} is the theory \ml{min}.
+\index{min, the HOL theory@\ml{min}, the \HOL\ theory|(} 
+In this theory, the type constant {\small\verb+bool+} of booleans,
+the binary type operator $(\alpha,\beta)${\small\verb+fun+} of functions, and the type
+constant {\small\verb+ind+} of individuals are declared. Building on
+these types, three primitive constants
+\index{constants, in HOL logic@constants, in \HOL\ logic!primitive logical}
+\index{primitive constants, of HOL logic@primitive constants, of \HOL\ logic}
+are declared: equality, implication, and a choice operator:
+\index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}
+\index{equality, in HOL logic@equality, in \HOL\ logic}
+\begin{description}
+\item [Equality] Equality ({\small\verb+= : 'a -> 'a -> bool+}) is an
+  infix operator.
+\index{equality, in HOL logic@equality, in \HOL\ logic}
+\item [Implication] Implication
+  ({\small\verb+==> : bool -> bool -> bool+}) is the 
+  \emph{material implication} and is an infix operator that is
+  right-associative, \ie, \verb+x ==> y ==> z+ parses to the same term
+  as \verb+x ==> (y ==> z)+.
+\index{implication, in HOL logic@implication, in \HOL\ logic}
+\item [Choice] Equality
+and implication are standard predicate calculus notions, but choice is
+more exotic: if $t$ is a term having type $\sigma${\small\verb+->bool+},
+then {\small\verb+@x.+}$t${\small\verb+ x+} (or, equivalently,
+{\small\verb+$@+}$t$) denotes {\it some\/} member of the set whose
+characteristic\index{characteristic predicate, of type definitions}
+ function is $t$. If the set is empty, then
+{\small\verb+@x.+}$t${\small\verb+ x+} denotes an arbitrary member of the
+set denoted by $\sigma$. The constant {\small\verb+@+} is a higher order
+version of Hilbert's
+\index{Hilbert, D.}
+\index{epsilon operator}
+ $\hilbert$-operator; it is related to the constant
+$\iota$ in Church's formulation of higher order logic. For more details,
+see Church's
+\index{Church, A.}
+original paper \cite{Church}, Leisenring's
+\index{Leisenring, A.}
+book on Hilbert's $\hilbert$-symbol \cite{Leisenring}, or Andrews'
+textbook on type theory \cite{Andrews}.
+\end{description}
+
+\medskip
+
+\noindent No theorems or axioms are placed in theory \theoryimp{min}.
+The primitive rules of inference of \HOL{} depend on the presence of 
+\theoryimp{min}.
+
+
 \section{Basic Theories}
 
 The most basic theories in HOL provide support for a standard
@@ -167,8 +219,8 @@ definitions are:
    ONTO_DEF    |- ONTO f    = (!y. ?x. y = f x)
 \end{verbatim}\end{hol}
 
-The Axiom of Infinity\index{axioms!in bool theory@in \ml{bool} theory} is
-
+\noindent The Axiom of Infinity\index{axioms!in bool theory@in \ml{bool} theory} is
+%
 {\begin{hol}
 \index{INFINITY_AX@\ml{INFINITY\_AX}}
 \index{axiom of infinity}
@@ -176,7 +228,7 @@ The Axiom of Infinity\index{axioms!in bool theory@in \ml{bool} theory} is
 \begin{verbatim}
   INFINITY_AX  |- ?f:ind->ind. ONE_ONE f /\ ~(ONTO f)
 \end{verbatim}\end{hol}}
-
+%
 \noindent
 This asserts that there exists a one-to-one map from {\small\verb+ind+} to
 itself that is not onto. This implies that the type {\small\verb+ind+}
@@ -192,6 +244,8 @@ very tempting to take the risk of introducing new axioms because
 deriving them from definitions can be tedious---proving that `axioms'
 follow from definitions amounts to proving their consistency.
 
+\paragraph {Further definitions}
+
 The theory {\small\verb+bool+} also supplies the definitions of a number of
 useful constants.
 \begin{hol}
@@ -203,17 +257,16 @@ useful constants.
 \index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
 \begin{verbatim}
    LET_DEF  |- LET  = \f x. f x
-
    COND_DEF |- COND = \t t1 t2.@x.((t=T)==>(x=t1))/\((t=F)==>(x=t2))
-
    IN_DEF   |- IN   = \x (f:'a -> bool). f x
 \end{verbatim}
 \end{hol}
 
 The constant {\small\verb+LET+}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for} is used in representing terms
 containing local variable bindings (\ie\
-{\small\verb+let+}-terms\index{let-terms, in HOL logic@\ml{let}-terms,
-in \HOL\ logic!definitional axiom for}. For example, the concrete syntax
+{\small\verb+let+}-terms)
+\index{let-terms, in HOL logic@\ml{let}-terms,in \HOL\ logic!definitional axiom for}. 
+For example, the concrete syntax
 {\small\verb+let v = M in N+} is translated by the parser to the term
 {\small\verb+LET (\v.N) M+}. For the full description of how
 {\small\verb+let+} expressions are translated, see Section \ref{prod}.
@@ -234,9 +287,9 @@ $x\texttt{ IN }P$ can be read as ``$x$ is an element of the set
 $P$'', or (more in line with its definition) as ``the predicate $P$ is
 true of $x$''.
 
-The polymorphic constant {\small\verb+ARB+} is used to denote a fixed
-but arbitrary element. {\small\verb+ARB+} is occasionally useful when
-attempting to deal with the issue of partiality.
+Finally, the polymorphic constant {\small\verb+ARB+}$:\alpha$ denotes 
+a fixed but arbitrary element. {\small\verb+ARB+} is occasionally 
+useful when attempting to deal with the issue of partiality.
 
 \subsubsection{Restricted quantifiers}\label{res-quant}
 
@@ -282,10 +335,10 @@ The definition of \ml{RES\_EXISTS\_UNIQUE} uses the restricted
 quantification syntax with the {\small\verb+::+} symbol, referring to
 the earlier definitions \ml{RES\_EXISTS} and \ml{RES\_FORALL}.
 The \texttt{::} syntax is used with restricted quantifiers to allow
-arbitrary predicates to restrict binding variables.  Further to the
-above, the default grammar also allows restricted quantification of
-all of a sequence of binding variables by putting the restriction at
-the end of the sequence, thus with a universal quantification:
+arbitrary predicates to restrict binding variables. The \HOL{} parser
+allows restricted quantification of all of a sequence of binding
+variables by putting the restriction at the end of the sequence, thus
+with a universal quantification: 
 %
 \[
 \forall x \, y \, z \, {\tt ::} \; P \, . \; Q(x,y,z)
@@ -736,7 +789,7 @@ are proved.
 In \HOL{}, a function of type $\alpha \# \beta\to\gamma$ always has a
 counterpart of type $\alpha\to\beta\to\gamma$, and \emph{vice versa}.
 This conversion is accomplished by the functions {\small\verb+CURRY+}
-and {\small\verb+CURRY+}. These functions are inverses.
+and {\small\verb+UNCURRY+}. These functions are inverses.
 %
 \begin{hol}
 \index{CURRY@\ml{CURRY}}
@@ -745,7 +798,6 @@ and {\small\verb+CURRY+}. These functions are inverses.
 {\small
 \begin{verbatim}
   CURRY_DEF    |- !f x y. CURRY f x y = f (x,y)
-
   UNCURRY_DEF  |- !f x y. UNCURRY f (x,y) = f x y
 
   CURRY_UNCURRY_THM |- !f. CURRY (UNCURRY f) = f
@@ -838,7 +890,7 @@ The transformation is done recursively so that, for example,
 \begin{hol}
 {\small
 \begin{alltt}
-  UNCURRY \bs\m{x\sb{1}}. UNCURRY(\bs\m{x\sb{2}},\m{x\sb{3}}.\m{t}))
+  UNCURRY \bs\m{x\sb{1}}. UNCURRY(\bs\m{x\sb{2}} \m{x\sb{3}}.\m{t}))
 \end{alltt}}
 \end{hol}
 %
@@ -1467,7 +1519,7 @@ arithmetic operators.
              (!m n. (SUC m) + n = SUC(m + n))
 
    SUB    |- (!m. 0 - m = 0) /\
-             (!m n. (SUC m) - n = (m < n => 0 | SUC(m - n)))
+             (!m n. (SUC m) - n = if m < n then 0 else SUC(m - n))
 
    MULT   |- (!n. 0 * n = 0) /\
              (!m n. (SUC m) * n = (m * n) + n)
@@ -1476,6 +1528,10 @@ arithmetic operators.
              (!m n. m EXP (SUC n) = m * (m EXP n))
 \end{verbatim}}
 \end{hol}
+%
+Note that {\small\verb+EXP+} is an infix. The infix notation
+{\verb+**+} may be used in place of {\small\verb+EXP+}. Thus 
+({\small\verb+x EXP y+}) means $x^y$, and so does ({\verb+x ** y+}).
 
 \paragraph{Comparison operators}
 
@@ -1488,16 +1544,17 @@ A full set of comparison operators is defined in terms of \verb+<+.
 \index{ greater or equal, in HOL logic@\ml{>=} (greater or equal, in \HOL{} logic)}
 {\small
 \begin{verbatim}
-   GREATER        |- !m n. m > n = n < m
-   LESS_OR_EQ     |- !m n. m <= n = m < n \/ (m = n)
-   GREATER_OR_EQ  |- !m n. m >= n = m > n \/ (m = n)
+   GREATER        |- !m n. m > n = (n < m)
+   LESS_OR_EQ     |- !m n. m <= n = (m < n \/ (m = n))
+   GREATER_OR_EQ  |- !m n. m >= n = (m > n \/ (m = n))
 \end{verbatim}}
 \end{hol}
 
 \paragraph{Division and modulus}
 
-A constant specification is used to introduce {\small\verb+DIV+} and
-{\small\verb+MOD+} together with their characterizing property.
+A constant specification is used to introduce division ({\small\verb+DIV+}, infix) and
+modulus ({\small\verb+MOD+}, infix) operators, together with their
+characterizing property.  
 \begin{hol}
 \index{MOD@\ml{MOD}}
 \index{DIV@\ml{DIV}}
@@ -1555,7 +1612,7 @@ The factorial of a number is a primitive recursive definition.
 
 The iterated application $f^n x$ of a function $f : \konst{num} \to
 \konst{num}$ is defined by primitive recursion. The definition
-({\small\verb+FUNPOW+}) is tail-recursive. A alternative presentation
+({\small\verb+FUNPOW+}) is tail-recursive. An alternative presentation
 of the recursion ({\small\verb+FUNPOW_SUC+}) may be simpler to reason
 about in some cases.
 %
@@ -1570,12 +1627,12 @@ about in some cases.
 \end{verbatim}}
 \end{hol}
 
+\medskip
 
-
-An \adhoc\ but useful collection of over two hundred and fifty
-elementary theorems of arithmetic are proved when \HOL{} is built and
-stored in the theory {\small\verb%arithmetic%}.  For a complete list
-of the available theorems, see \REFERENCE.
+On this basis, an \adhoc\ but useful collection of over two hundred
+and fifty elementary theorems of arithmetic are proved when \HOL{} is
+built and stored in the theory {\small\verb%arithmetic%}.  For a
+complete list of the available theorems, see \REFERENCE.
 
 \subsubsection{Grammar information}
 
@@ -1602,13 +1659,13 @@ Operator & Strength & Associativity \\ \hline
 \subsection{Numerals}\label{numeral}\index{numeral,
 the construction of in HOL logic@\ml{numeral}, the construction of in \HOL{} logic}
 
-The type \ml{num}\index{num, the type in \HOL\
-  logic@\ml{num}, the type in \HOL{} logic}, is usually thought of as
-  being supplied with an infinite collection of numerals: \ml{1},
-  \ml{2}, \ml{3}, \etc.  However, the \HOL{} logic has no way to define
-  such infinite families of constants; instead all numerals other
-  than $0$ are actually built up from the constants introduced by
-  the following definitions:
+The type \ml{num}
+\index{num, the type in \HOL\ logic@\ml{num}, the type in \HOL{} logic}
+is usually thought of as being supplied with an infinite collection of
+numerals: \ml{1}, \ml{2}, \ml{3}, \etc.  However, the \HOL{} logic has
+no way to define such infinite families of constants; instead, all
+numerals other than $0$ are actually built up from the constants
+introduced by the following definitions:
 \begin{verbatim}
    NUMERAL_DEF |- !x. NUMERAL x = x
 
@@ -1622,55 +1679,74 @@ The type \ml{num}\index{num, the type in \HOL\
 \[
    \ml{NUMERAL}(\ml{BIT1}(\ml{BIT2}(\ml{ALT\_ZERO})))
 \]
-but the \HOL{} parser and pretty-printer make such terms appear as
+and the \HOL{} parser and pretty-printer make such terms appear as
 numerals. This binary representation for numerals allows for
 asymptotically efficient calculation. Theorems supporting arithmetic
 calculations on numerals can be found in the \theoryimp{numeral}
-theory; these are mechanized by the \texttt{reduce} library. Numerals
-may of course be built using \ml{mk\_comb}, and taken apart with
-\ml{dest\_comb}. A more convenient interface to this functionality is
-provided by \ml{mk\_numeral}, \ml{dest\_numeral}, and
-\ml{is\_numeral}. These functions (all themselves in the structure
-\ml{numSyntax}) make use of an \ML{} structure \ml{Arbnum} which
-implements arbitrary precision numbers.
+theory; these are mechanized by the \verb+reduce+ library. Thus,
+arithmetic calculations are performed by deductive steps in \HOL.
+For example the following calculation of $2 ^{(1023 + 14)/9}$ takes 
+approximately 70,000 primitive inference steps and returns in two
+seconds. 
+%
+\begin{boxed}
+{\small
+\begin{verbatim}
+ - reduceLib.REDUCE_CONV ``2 EXP ((1023 + 14) DIV 9)``;
+
+ > val it = |- 2 ** ((1023 + 14) DIV 9) = 41538374868278621028243970633760768
+\end{verbatim}}
+\end{boxed}
+
+\paragraph {Construction of numerals}
+
+Numerals may of course be built using \ml{mk\_comb}, and taken apart with
+\ml{dest\_comb}; however, a more convenient interface to this
+functionality is provided by the functions \ml{mk\_numeral},
+\ml{dest\_numeral}, and \ml{is\_numeral} (found in the structure
+\ml{numSyntax}). These entrypoints make use of an \ML{} structure
+\ml{Arbnum} which implements arbitrary precision numbers {\verb+num+}. The
+following session shows how \HOL{} numerals are constructed from elements of
+type \verb+num+ and how numerals are destructed. The structure
+{\small\verb+Arbnum+} provides a full collection of arithmetic
+operations, using the usual names for the operations, \eg \verb|+|,
+\verb|*|, \verb|-|, \etc.
 
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
-- numSyntax.mk_numeral (Arbnum.fromString "3432432423423423234");
-> val it = ``3432432423423423234`` : term
+  - numSyntax.mk_numeral 
+       (Arbnum.fromString "3432432423423423234");
+  > val it = ``3432432423423423234`` : term
 
-- numSyntax.dest_numeral it;
-> val it = 3432432423423423234 : num
+  - numSyntax.dest_numeral it;
+  > val it = 3432432423423423234 : num
 
-- Arbnum.+(it,it);
-> val it = 6864864846846846468 : num
-
-- numSyntax.mk_numeral it;
-> val it = ``6864864846846846468`` : term
+  - Arbnum.+(it,it);
+  > val it = 6864864846846846468 : num
 \end{verbatim}
 \end{session}
 
-Numerals are related to numbers via the derived inference rule
+\paragraph{Numerals and Peano numbers}
+
+Numerals are related to numbers built from {\small\verb+0+} and
+{\small\verb+SUC+} via the derived inference rule
 \ml{num\_CONV}, found in the \ml{numLib} library.
 
 \begin{boxed}
 \index{num_CONV@\ml{num\_CONV}|pin}
 \begin{verbatim}
-   numLib.num_CONV : term -> thm
+   num_CONV : term -> thm
 \end{verbatim}
 \end{boxed}
 
-\noindent \ml{num\_CONV} can be used to generate the ``\ml{SUC}''
+\noindent \ml{num\_CONV} can be used to generate the `\ml{SUC}'
 equation for any non-zero numeral.  For example:
 
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
 - load "numLib"; open numLib;
-
-- num_CONV ``1``;
-> val it = |- 1 = SUC 0 : thm
 
 - num_CONV ``2``;
 > val it = |- 2 = SUC 1 : thm
@@ -1680,52 +1756,59 @@ equation for any non-zero numeral.  For example:
 \end{verbatim}
 \end{session}
 
-\noindent The \ml{num\_CONV} function works purely by inference, using
-the definitions provided above.
+\noindent The \ml{num\_CONV} function works purely by inference.
 
 \subsubsection{Overloading of arithmetic operators}
+\label{arith-overloading}
 
 When other numeric theories are loaded (such as those for the reals or
 integers), numerals are overloaded so that the numeral {\small\verb+1+} can
-actually stand for a natural number, an integer or a real value.  In
-order to precisely specify the desired type, the user can use single
-character suffixes (`\ml{n}' for the natural numbers, and `\ml{i}' for
-the integers):
-
+actually stand for a natural number, an integer or a real value. The
+parser has a pass of overloading resolution in which it attempts to 
+determine the actual type to give to a numeral. For example, in the
+following session, the theory of integers is loaded, whereupon the 
+numeral \verb+2+ is taken to be an integer.
+%
 \begin{session}
+{\small
 \begin{verbatim}
-- load "integerTheory";
-> val it = () : unit
+  - load "integerTheory";
+  > val it = () : unit
 
-- Term`2`;
-<<HOL message: more than one resolution of overloading was possible.>>
-> val it = `2` : term
+  - ``2``;
+  <<HOL message: more than one resolution of overloading was possible.>>
+  > val it = `2` : term
 
-- type_of it;
-> val it = `:int` : hol_type
-
-- Term`2n`;
-> val it = `2` : term
-
-- type_of it;
-> val it = `:num` : hol_type
-
-- type_of (Term `42i`);
-> val it = `:int` : hol_type
-\end{verbatim}
+  - type_of it;
+  > val it = `:int` : hol_type
+\end{verbatim}}
 \end{session}
 
-A numeric literal such as $42i$ is represented by the application of an
+ In order to precisely specify the desired type, the user can use single
+character suffixes (`\ml{n}' for the natural numbers, and `\ml{i}' for
+the integers):
+\begin{session}
+{\small
+\begin{verbatim}
+- type_of ``2n``;
+> val it = `:num` : hol_type
+
+- type_of ``42i``;
+> val it = `:int` : hol_type
+\end{verbatim}}
+\end{session}
+
+A numeric literal for a \HOL{} type other than \verb+num+, such as
+\verb+42i+,  is represented by the application of an
 \emph{injection} function of type {\small\verb+num -> ty+} to a
 numeral. The injection function is different for each type
 {\small\verb+ty+}. See Section \ref{integers} for further discussion.
 
-The functions {\small\verb+mk_numeral+},
-{\small\verb+dest_numeral+}, and {\small\verb+is_numeral+} only work for
-numerals, and not for numeric literals with character suffixes other
-than {\small\verb+n+}. For information on how to install new character
-suffixes, consult the {\small\verb+add_numeral_info+} entry in
-\REFERENCE.
+The functions {\verb+mk_numeral+}, {\verb+dest_numeral+}, and
+{\verb+is_numeral+} only work for numerals, and not for numeric
+literals with character suffixes other than {\small\verb+n+}. For
+information on how to install new character suffixes, consult the
+{\small\verb+add_numeral_info+} entry in \REFERENCE.
 
 \subsection{Integers}\label{integers}
 
@@ -1814,16 +1897,16 @@ On the basis of {\small\verb+realTheory+}, the following  sequence of
 theories is constructed:
 
 \begin{description}
-\item [topologyTheory] Topologies and metric spaces, including metric on
+\item [topology] Topologies and metric spaces, including metric on
 the real line.
-\item [netsTheory] Moore-Smith covergence nets, and special cases like
+\item [nets] Moore-Smith covergence nets, and special cases like
 sequences.
-\item [seqTheory] Sequences and series of real numbers.
-\item [limTheory] Limits, continuity and differentiation.
-\item [powserTheory] Power series.
-\item [transcTheory] Transcendental functions, \emph{e.g.}, exp, sin,
+\item [seq] Sequences and series of real numbers.
+\item [lim] Limits, continuity and differentiation.
+\item [powser] Power series.
+\item [transc] Transcendental functions, \emph{e.g.}, exp, sin,
 cos, ln, root, sqrt, pi, tan, asn, acs, atn. Also the Kurzweil-Henstock
-gauge integral and the fundamental theorem of calculus, McLaurin's
+gauge integral the fundamental theorem of calculus, and McLaurin's
 theorem.
 
 \end{description}
