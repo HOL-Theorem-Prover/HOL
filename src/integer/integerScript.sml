@@ -460,21 +460,18 @@ val _ = Theory.save_thm ("INT_LT_MUL",INT_LT_MUL)
 
 val int_tybij = definition "int_tybij";
 
-val natplus = Term`$+`;
-val _ = overload_on("+", natplus);
 val _ = overload_on ("+", Term`$int_add`);
-
-val natless = Term`$<`;
-val _ = overload_on ("<", natless);
 val _ = overload_on ("<", Term`$int_lt`);
+val _ = overload_on ("*", Term`$int_mul`);
 
+
+(* this is a slightly tricky case; we don't have to call overload_on
+   on the boolean negation, but we're doing so to put it back at the
+   top of the list of possible resolutions. *)
 val bool_not = Term`$~`
 val _ = overload_on ("~", Term`$int_neg`);
 val _ = overload_on ("~", bool_not);
 
-val natmult = Term`$*`;
-val _ = overload_on ("*", natmult);
-val _ = overload_on ("*", Term`$int_mul`);
 
 
 (*--------------------------------------------------------------------------*)
