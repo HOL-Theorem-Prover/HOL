@@ -809,7 +809,7 @@ val _ =
      "  additional command-line options are:\n",
      "    -I file             : include directory (can be repeated)\n",
      "    -d file             : ignore file (can be repeated)\n",
-     "    -f file             : toggles fast build (can be repeated)\n",
+     "    -f theory           : toggles fast build (can be repeated)\n",
      "    --debug             : print debugging information\n",
      "    --fast              : files default to fast build; -f toggles\n",
      "    --help | -h         : show this message\n",
