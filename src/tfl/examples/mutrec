@@ -69,7 +69,7 @@ val list_contains_ltree_lem = Q.prove
 (`!ltr l f. MEM ltr l ==> ltree_size f ltr <= list_size (ltree_size f) l`,
  Induct_on `l` 
    THEN RW_TAC list_ss [listTheory.MEM,listTheory.list_size_def]
-   THENL [DECIDE_TAC, PROVE_TAC [DECIDE `x <= y ==> x <= y+z`]]);
+   THENL [DECIDE_TAC, PROVE_TAC [DECIDE `x:num <= y ==> x <= y+z`]]);
 
 (*---------------------------------------------------------------------------
       Termination proof for Fringe
@@ -80,11 +80,11 @@ local val [_,guess] = TotalDefn.guessR Fringe_def
 in
 val (Fringe_eqns,Fringe_ind) =
  Defn.tprove(Fringe_def,
-   WF_REL_TAC Fringe_def `^guess`
+   WF_REL_TAC `^guess`
      THEN RW_TAC list_ss [MEM,ltree_size_def,list_size_def]
      THENL [numLib.ARITH_TAC,
             PROVE_TAC [list_contains_ltree_lem, 
-                       DECIDE`x<=y ==> x < y + (w+2)`]])
+                       DECIDE`x:num <= y ==> x < y + (w+2)`]])
 end;
 
 
@@ -153,8 +153,10 @@ val ELBdefn =
     `(E (env, VAR x:^exp)   = FST env x)
  /\  (E (env, IF b e1 e2)   = if EB (env,b) then E (env,e1) else E (env,e2))
  /\  (E (env, APP f l)      = (SND env f) (ELL (env, l)))
+
  /\  (ELL (env, [])         = [])
  /\  (ELL (env, a::t)       = E (env, a) :: ELL (env, t))
+
  /\  (EB (env, EQ e1 e2)    = (E (env, e1) = E (env, e2)))
  /\  (EB (env, LEQ e1 e2)   = E (env, e1) <= E (env, e2))
  /\  (EB (env, NOT b:^bexp) = ~EB (env, b))
@@ -166,7 +168,7 @@ val SOME(_,size_def) = TypeBase.size_of(valOf(TypeBase.read "exp"));
 
 val [_,guess] = TotalDefn.guessR ELBdefn;
 Defn.tgoal ELBdefn;
-e (WF_REL_TAC ELBdefn `^guess` THEN RW_TAC arith_ss [size_def]);
+e (WF_REL_TAC `^guess` THEN RW_TAC arith_ss [size_def]);
 e (Induct_on `l` THEN RW_TAC list_ss [size_def,listTheory.list_size_def]);
 
 
@@ -174,7 +176,7 @@ e (Induct_on `l` THEN RW_TAC list_ss [size_def,listTheory.list_size_def]);
     A version of the same functions, featuring higher-order 
     recursion and schema variables. The definition process 
     actually helps write the function, by threading the environment 
-    through all the calls.  Currently fails on re-definition attempt.
+    through all the calls.  
  ---------------------------------------------------------------------------*)
 
 val Evals_defn =
@@ -194,7 +196,7 @@ val Evals_defn =
 val (Evals_def,Evals_ind) = 
  let val [_,guess] = TotalDefn.guessR Evals_defn
  in Defn.tprove(Evals_defn,
-     WF_REL_TAC Evals_defn `^guess` 
+     WF_REL_TAC `^guess` 
         THEN RW_TAC arith_ss [size_def]
         THEN Induct_on `l` 
         THEN RW_TAC list_ss [size_def,listTheory.MEM]

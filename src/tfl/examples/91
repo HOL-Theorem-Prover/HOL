@@ -119,7 +119,7 @@ val eqn2 = Q.prove
  ---------------------------------------------------------------------------*)
 
 val (N_eqn, N_ind) = Defn.tprove(N_defn,
-WF_REL_TAC N_defn `measure \x. 101 - x`  (* non-nested TC proved here *)
+WF_REL_TAC `measure \x. 101 - x`  (* non-nested TC proved here *)
   THEN RW_TAC bool_ss [GSYM Nine1_def', lem]
   THEN measureInduct_on `(\m. 101 - m) x`
   THEN RW_TAC bool_ss [] 

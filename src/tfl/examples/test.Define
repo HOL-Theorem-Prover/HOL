@@ -111,7 +111,7 @@ val div_def = Define
                      in (y <= SUC r => (SUC q,0) 
                         | (*otherwise*) (q, SUC r)))`;
 
-(* Test and nested ifs *)
+(* Test nested ifs *)
 val smaller_def = Define
   `(smaller((0,i), z) = (i:num))    /\
    (smaller((SUC x, i), (0,j)) = j) /\
@@ -356,9 +356,8 @@ val Meas_def =
 
 val (Pr_eqns, Pr_ind) = Defn.tprove 
 (Pr_def,
- WF_REL_TAC Pr_def
-    `measure \(w:'a list, x:'a prop list, y:'a prop list, z:'a list). 
-                      list_size Meas x + list_size Meas y`
+ WF_REL_TAC `measure \(w:'a list, x:'a prop list, y:'a prop list, z:'a list). 
+                       list_size Meas x + list_size Meas y`
   THEN RW_TAC arith_ss [Meas_def,listTheory.list_size_def]);
 
 
@@ -491,11 +490,12 @@ xDefine "even_odd_again"
    (!! (SUC n) = && n)`;
 
 val nnf_mutrec_eqns =
- xDefine "nnf1"
+ xDefine "nnfs"
      `(nnfpos (VAR x)   = VAR x)
  /\   (nnfpos (NOT p)   = nnfneg p)
  /\   (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
  /\   (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
+
  /\   (nnfneg (VAR x)   = NOT (VAR x))
  /\   (nnfneg (NOT p)   = nnfpos p)
  /\   (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
@@ -518,7 +518,7 @@ val sumf_cong = prove
 Induct 
   THEN NTAC 2 (RW_TAC list_ss [sumf_def,listTheory.MEM]));
 
-local open Defn0
+local open DefnBase
 in 
   val _ = write_congs (sumf_cong::read_congs())
 end;
@@ -538,7 +538,7 @@ val ltree_map_def =
 val (ltree_map_eqn, ltree_map_ind) =
  Defn.tprove
  (ltree_map_def, 
-   WF_REL_TAC ltree_map_def `^(hd(tl (TotalDefn.guessR ltree_map_def)))`
+   WF_REL_TAC `^(hd(tl (TotalDefn.guessR ltree_map_def)))`
     THEN Induct 
     THEN RW_TAC list_ss [MEM,list_size_def,ltreeTheory.ltree_size_def]
     THENL [ARITH_TAC,
@@ -555,15 +555,21 @@ val ltree_occurs_def =
  Hol_defn "ltree_occurs"
     `ltree_occurs x (Node v tl) = (x=v) \/ EXISTS (ltree_occurs x) tl`;
 
-val collect_def =
+(*---------------------------------------------------------------------------
+    Can also obtain the same result with the schematic :
+
+       `ltree_occurs (Node v tl) = (x=v) \/ EXISTS ltree_occurs tl`
+ ---------------------------------------------------------------------------*)
+
+val collect_defn =
  Hol_defn "collect"
     `collect f (Node v tl) 
        = FOLDR (\h a. APPEND (collect f h) a) [f v] tl`;
 
 val (collect_eqn, collect_ind) =
  Defn.tprove
- (collect_def,
-  WF_REL_TAC collect_def `^(Lib.el 2 (TotalDefn.guessR ltree_map_def))`
+ (collect_defn,
+  WF_REL_TAC `^(Lib.el 2 (TotalDefn.guessR ltree_map_def))`
     THEN Induct 
     THEN RW_TAC list_ss [MEM,list_size_def,ltreeTheory.ltree_size_def]
     THENL [ARITH_TAC,

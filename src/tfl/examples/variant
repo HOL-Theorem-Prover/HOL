@@ -26,14 +26,12 @@ DISCH_TAC THEN Induct THEN ZAP_TAC (list_ss && [listTheory.FILTER]) []);
 
 Defn.tgoal variant_def;  
 
-e (WF_REL_TAC variant_def 
-       `measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`);
+e (WF_REL_TAC `measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`);
 
 (* Step-by-step way
 b();
-e (TotalDefn.TC_INTRO_TAC variant_def 
-     THEN Q.EXISTS_TAC`measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
-     THEN TotalDefn.TC_SIMP_TAC);
+e (Q.EXISTS_TAC`measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
+     THEN TotalDefn.TC_SIMP_TAC [] []);
 *)
 e (RW_TAC std_ss []   (* ETA-conv. to be done before induction *)
    THEN Induct_on `L` THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]
@@ -48,8 +46,8 @@ val [variant_eqns,variant_ind] = CONJUNCTS (top_thm());
 
 val (variant_eqn, variant_ind) = 
 Defn.tprove 
-  (variant_def, WF_REL_TAC variant_def 
-      `measure \(x,L). LENGTH(FILTER (\y. x<=y) L)`
+  (variant_def, 
+   WF_REL_TAC `measure \(x,L). LENGTH(FILTER (\y. x<=y) L)`
      THEN RW_TAC std_ss []
      THEN Induct_on `L` 
      THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM,
