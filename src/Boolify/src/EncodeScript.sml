@@ -25,14 +25,6 @@ val REVERSE = Tactical.REVERSE;
         Theorems that should be somewhere else.
  ---------------------------------------------------------------------------*)
 
-val MOD_1 = store_thm
-  ("MOD_1",
-   ``!n. n MOD 1 = 0``,
-   GEN_TAC
-   ++ MATCH_MP_TAC MOD_UNIQUE
-   ++ Q.EXISTS_TAC `n`
-   ++ RW_TAC arith_ss []);
-
 val MOD_2 = store_thm
   ("MOD_2",
    ``!n. n MOD 2 = if EVEN n then 0 else 1``,
@@ -284,7 +276,7 @@ val lift_tree_total = store_thm
 *)
 
 (*---------------------------------------------------------------------------
-        Well-formed predicates are non-empty.            
+        Well-formed predicates are non-empty.
  ---------------------------------------------------------------------------*)
 
 val wf_pred_def = Define `wf_pred p = ?x. p x`;
@@ -337,7 +329,7 @@ val wf_encode_bool = store_thm
   ("wf_encode_bool",
    ``!p. wf_encoder p encode_bool``,
    RW_TAC std_ss [wf_encoder_def, encode_bool_def, IS_PREFIX]);
-   
+
 (*---------------------------------------------------------------------------
         Pairs
  ---------------------------------------------------------------------------*)
@@ -413,7 +405,7 @@ val wf_encode_option = store_thm
         Lists
  ---------------------------------------------------------------------------*)
 
-val encode_list_def = 
+val encode_list_def =
   TotalDefn.Define
   `(encode_list xb [] = [F]) /\
    (encode_list xb (x :: xs) = T :: APPEND (xb x) (encode_list xb xs))`;
@@ -444,7 +436,7 @@ val wf_encode_list = store_thm
 val encode_list_cong = store_thm
  ("encode_list_cong",
   ``!l1 l2 f1 f2.
-      (l1=l2) /\ (!x. MEM x l2 ==> (f1 x = f2 x)) 
+      (l1=l2) /\ (!x. MEM x l2 ==> (f1 x = f2 x))
               ==>
       (encode_list f1 l1 = encode_list f2 l2)``,
   Induct ++
@@ -507,7 +499,7 @@ val wf_encode_blist = store_thm
 val (encode_num_def, encode_num_ind) =
   Defn.tprove
   (Defn.Hol_defn "encode_num"
-   `encode_num (n:num) = 
+   `encode_num (n:num) =
     if n = 0 then [T; T]
     else if EVEN n then F :: encode_num ((n - 2) DIV 2)
     else T :: F :: encode_num ((n - 1) DIV 2)`,
@@ -523,9 +515,9 @@ val (encode_num_def, encode_num_ind) =
 
 val _ = save_thm ("encode_num_def", encode_num_def);
 val _ = save_thm ("encode_num_ind", encode_num_ind);
-  
+
   (*--------------------------------------------------------------------
-       Termination proof can also go: 
+       Termination proof can also go:
            WF_REL_TAC `$<` THEN intLib.COOPER_TAC
        but then we'd need integers.
    ----------------------------------------------------------------------*)

@@ -475,8 +475,7 @@ val BIT_SET_NOT_ZERO_COR = prove(
   REPEAT STRIP_TAC THEN ASM_B_SIMP_TAC [BITWISE_COR,BIT_SET_NOT_ZERO]
 );
 
-val DIV1 = REDUCE_RULE DIV_ONE;
-val BIT_SET_NOT_ZERO_COR2 = REWRITE_RULE [DIV1,EXP] (SPEC `0` BIT_SET_NOT_ZERO_COR);
+val BIT_SET_NOT_ZERO_COR2 = REWRITE_RULE [DIV_1,EXP] (SPEC `0` BIT_SET_NOT_ZERO_COR);
 
 val ADD_DIV_ADD_DIV2 = ONCE_REWRITE_RULE [MULT_COMM] (SIMP_RULE arith_ss [] (SPEC `2` ADD_DIV_ADD_DIV));
 
@@ -1124,7 +1123,7 @@ val LSR_EVAL = store_thm("LSR_EVAL",
   `!n. (n2w a) >>> n = n2w (MODw a DIV 2 EXP n)`,
   Induct_on `n`
     THENL [
-       B_SIMP_TAC [FUNPOW,word_lsr_def,EXP,DIV1,MODw_ELIM],
+       B_SIMP_TAC [FUNPOW,word_lsr_def,EXP,DIV_1,MODw_ELIM],
        B_FULL_SIMP_TAC [word_lsr_def,FUNPOW_THM2,LSR_ONE_EVAL,LSR_ONE_def,MOD_MOD_DIV_2EXP]
     ]
 );
@@ -1204,7 +1203,7 @@ val lem7 = PROVE [MULT_COMM,MULT_ASSOC] `!(a:num) b c. a * (b * c) = (a * c) * b
 val BITS_DIV_THM2 = (REWRITE_RULE [EXP_1] o GEN_ALL o INST [`n` |-> `1`] o SPEC_ALL) BITS_DIV_THM;
 
 (* |- !n. BITS 0 0 n = n MOD 2 *)
-val BITS00 = GEN_ALL (REWRITE_CONV [SUC_SUB,DIV1,EXP,EXP_1,SYM TWO,BITS_THM] (Term`BITS 0 0 n`));
+val BITS00 = GEN_ALL (REWRITE_CONV [SUC_SUB,DIV_1,EXP,EXP_1,SYM TWO,BITS_THM] (Term`BITS 0 0 n`));
 
 val SPEC_MOD_PLUS_1 = REWRITE_RULE [WL_POS] (SPEC `WL` MOD_PLUS_1);
 val SPEC_MOD_ADD_1  = REWRITE_RULE [WL_POS] (SPEC `WL` MOD_ADD_1);
@@ -1317,7 +1316,7 @@ val lem6c = prove(
 val lem7 = prove(
   `!x n. LSR_ONE (2 EXP WL - 2 EXP (WL - x) + BITS HB x n) =
            (2 EXP WL - 2 EXP (WL - x) + BITS HB x n) DIV 2`,
-  B_RW_TAC [LSR_ONE_def,MODw_THM,EXP,DIV1,REWRITE_RULE [GSYM WL_def] (SPEC `HB` BITS_LT_HIGH),lem6b]
+  B_RW_TAC [LSR_ONE_def,MODw_THM,EXP,DIV_1,REWRITE_RULE [GSYM WL_def] (SPEC `HB` BITS_LT_HIGH),lem6b]
 );
 
 val lem8 = prove(
@@ -1340,7 +1339,7 @@ val lem9 = prove(
   B_RW_TAC [MSBn_def,BIT_def,REWRITE_RULE [GSYM WL_def] (SPEC `HB` BITS_LT_HIGH),lem6b]
     THEN Cases_on `x = 0`
     THENL [
-       ASM_A_SIMP_TAC [BITS_THM,CONJUNCT1 EXP,DIV1]
+       ASM_A_SIMP_TAC [BITS_THM,CONJUNCT1 EXP,DIV_1]
          THEN ASM_REWRITE_TAC [GSYM BITS_THM2],
        IMP_RES_TAC NOT_ZERO_ADD1
          THEN ASM_A_SIMP_TAC [EXP,WL_def]
@@ -1440,7 +1439,7 @@ val lem2 = PROVE [MULT_COMM,MULT_ASSOC] `!(a:num) b c. a * (b * c) = b * (a * c)
 val lem3 = prove(
   `!m n. (2 EXP (m + n) - 1) DIV 2 EXP n = 2 EXP m - 1`,
   Induct_on `n`
-    THEN A_FULL_SIMP_TAC [EXP_ADD,EXP,ZERO_LT_TWOEXP,GSYM DIV_DIV_DIV_MULT,DIV1,lem,lem2]
+    THEN A_FULL_SIMP_TAC [EXP_ADD,EXP,ZERO_LT_TWOEXP,GSYM DIV_DIV_DIV_MULT,DIV_1,lem,lem2]
 );
 
 val lem3b = prove(

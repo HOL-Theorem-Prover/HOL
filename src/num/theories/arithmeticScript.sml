@@ -1844,6 +1844,9 @@ val MOD_ONE = store_thm("MOD_ONE",
             (REWRITE_RULE [LESS_SUC_REFL] (SPEC (--`SUC 0`--) DIVISION)))) THEN
    REWRITE_TAC [LESS_THM,NOT_LESS_0]);
 
+val MOD_1 = save_thm("MOD_1", REWRITE_RULE [SYM ONE] MOD_ONE);
+
+
 val DIV_LESS_EQ = store_thm("DIV_LESS_EQ",
  --`!n. 0<n ==> !k. (k DIV n) <= k`--,
    REPEAT STRIP_TAC THEN
@@ -2116,6 +2119,8 @@ val DIV_ONE = save_thm("DIV_ONE",
     GEN_ALL (REWRITE_RULE[REWRITE_RULE[ONE] MULT_RIGHT_1]
     (MP (SPECL [(--`SUC 0`--), (--`q:num`--)] MULT_DIV)
         (SPEC (--`0`--) LESS_0))));
+
+val DIV_1 = save_thm("DIV_1", REWRITE_RULE [SYM ONE] DIV_ONE);
 
 val DIVMOD_ID = store_thm(
   "DIVMOD_ID",

@@ -46,8 +46,8 @@ val BITWISE_def =
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-val MOD1 = REDUCE_RULE MOD_ONE;
-val DIV1 = REDUCE_RULE DIV_ONE;
+val MOD1 = MOD_1
+val DIV1 = DIV_1
 
 val SUC_SUB = save_thm("SUC_SUB",SIMP_CONV arithr_ss [ADD1] ``SUC a - a``);
 
