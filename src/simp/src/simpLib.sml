@@ -45,12 +45,11 @@ fun appconv (c,UNBOUNDED) tm     = c tm
   | appconv (c,BOUNDED(ref 0)) _ = failwith "exceeded rewrite bound"
   | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r;
 
-fun dest_tagged_rewrite thm =
-   (UNBOUNDED, DEST_UNBOUNDED thm)
- handle HOL_ERR _ =>
-   let val (th,n) = DEST_BOUNDED thm
-   in (BOUNDED (ref n), th)
-   end handle HOL_ERR _ => (UNBOUNDED, thm)
+fun dest_tagged_rewrite thm = let
+  val (th,n) = DEST_BOUNDED thm
+in
+  (BOUNDED (ref n), th)
+end handle HOL_ERR _ => (UNBOUNDED, thm)
 
 fun mk_rewr_convdata thm =
  let val (tag,thm') = dest_tagged_rewrite thm
