@@ -11,7 +11,7 @@ app load ["hol88Lib",
           "reduceLib",
           "pairTheory",
           "arithmeticTheory",
-          "EquivType",
+          "quotient",
           "jrhUtils",
           "hratTheory",
           "hrealTheory"];
@@ -426,6 +426,10 @@ val TREAL_BIJ_WELLDEF = prove_thm("TREAL_BIJ_WELLDEF",
 (* Prove that the operations on representatives are well-defined             *)
 (*---------------------------------------------------------------------------*)
 
+val TREAL_OF_HREAL_WELLDEF = prove_thm("TREAL_NEG_WELLDEF",
+  (--`!x y. (x = y) ==> (treal_of_hreal x) treal_eq (treal_of_hreal y)`--),
+  REPEAT GEN_TAC THEN DISCH_TAC THEN PURE_ASM_REWRITE_TAC[TREAL_EQ_REFL]);
+
 val TREAL_NEG_WELLDEF = prove_thm("TREAL_NEG_WELLDEF",
   (--`!x1 x2. x1 treal_eq x2 ==> (treal_neg x1) treal_eq (treal_neg x2)`--),
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_neg, treal_eq] THEN
@@ -534,7 +538,7 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
      REAL_LT_TRANS, REAL_LT_IADD, REAL_LT_MUL, REAL_BIJ, REAL_ISO,REAL_INV_0] =
  let fun mk_def (d,t,n,f) = {def_name=d, fixity=f, fname=n, func=t}
  in
-  EquivType.define_equivalence_type
+  quotient.define_equivalence_type
    {name = "real",
     equiv = TREAL_EQ_EQUIV,
     defs = [mk_def("real_0",   Term`treal_0`,   "real_0", Prefix),
@@ -546,7 +550,8 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
             mk_def("real_lt",  Term`$treal_lt`,  "real_lt",  Infixr 450),
             mk_def("real_of_hreal",Term`$treal_of_hreal`, "real_of_hreal",Prefix),
             mk_def("hreal_of_real", Term`$hreal_of_treal`,"hreal_of_real",Prefix)],
-    welldefs = [TREAL_NEG_WELLDEF, TREAL_INV_WELLDEF, TREAL_LT_WELLDEF,
+    welldefs = [TREAL_OF_HREAL_WELLDEF,
+                TREAL_NEG_WELLDEF, TREAL_INV_WELLDEF, TREAL_LT_WELLDEF,
                 TREAL_ADD_WELLDEF, TREAL_MUL_WELLDEF, TREAL_BIJ_WELLDEF],
     old_thms = ([TREAL_10]
                 @ (map (GEN_ALL o MATCH_MP TREAL_EQ_AP o SPEC_ALL)
@@ -556,7 +561,7 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
                    TREAL_MUL_LINV, TREAL_LT_TOTAL, TREAL_LT_REFL,
                    TREAL_LT_TRANS, TREAL_LT_ADD, TREAL_LT_MUL, TREAL_BIJ,
                    TREAL_ISO,TREAL_INV_0])}
- end;
+ end handle e => Raise e;
 
 (*---------------------------------------------------------------------------
        Overload arithmetic operations.

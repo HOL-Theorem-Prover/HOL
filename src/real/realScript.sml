@@ -8,7 +8,6 @@ struct
 
 (*
 app load ["numLib",
-          "EquivType",
           "PairedLambda",
           "listTheory",
           "mesonLib",

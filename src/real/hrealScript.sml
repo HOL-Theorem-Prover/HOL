@@ -11,7 +11,6 @@ app load ["hol88Lib",
           "reduceLib",
           "pairTheory",
           "arithmeticTheory",
-          "EquivType",
           "jrhUtils",
           "hratTheory"];
 *)

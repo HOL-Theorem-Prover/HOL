@@ -12,9 +12,9 @@ infix THEN THENL ORELSE;
 app load ["hol88Lib",
           "numLib",
           "reduceLib",
-          "pairLib";
+          "pairLib",
           "arithmeticTheory",
-          "EquivType",
+          "quotient",
           "jrhUtils"];
 *)
 
@@ -156,6 +156,11 @@ val TRAT_MUL_WELLDEFINED2 = prove_thm("TRAT_MUL_WELLDEFINED2",
   CONJ_TAC THENL [ONCE_REWRITE_TAC[TRAT_MUL_SYM_EQ], ALL_TAC] THEN
   MATCH_MP_TAC TRAT_MUL_WELLDEFINED THEN ASM_REWRITE_TAC[]);
 
+val TRAT_SUCINT_WELLDEFINED = prove_thm("TRAT_SUCINT_WELLDEFINED",
+  (--`!n m. (n = m) ==> (trat_sucint n) trat_eq (trat_sucint m)`--),
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  ASM_REWRITE_TAC[TRAT_EQ_REFL]);
+
 (*---------------------------------------------------------------------------*)
 (* Now theorems for the representatives.                                     *)
 (*---------------------------------------------------------------------------*)
@@ -287,7 +292,7 @@ val TRAT_EQ_EQUIV = prove_thm("TRAT_EQ_EQUIV",
 val [HRAT_ADD_SYM, HRAT_ADD_ASSOC, HRAT_MUL_SYM, HRAT_MUL_ASSOC,
      HRAT_LDISTRIB, HRAT_MUL_LID, HRAT_MUL_LINV, HRAT_NOZERO,
      HRAT_ADD_TOTAL, HRAT_ARCH, HRAT_SUCINT] =
-  EquivType.define_equivalence_type
+  quotient.define_equivalence_type
     {name = "hrat",
      equiv = TRAT_EQ_EQUIV, defs =
      [{def_name="hrat_1",   fname="hrat_1", 
@@ -301,7 +306,7 @@ val [HRAT_ADD_SYM, HRAT_ADD_ASSOC, HRAT_MUL_SYM, HRAT_MUL_ASSOC,
       {def_name="hrat_sucint", fname="hrat_sucint", 
        func=Term`trat_sucint`, fixity=Prefix}],
      welldefs = [TRAT_INV_WELLDEFINED, TRAT_ADD_WELLDEFINED2,
-                 TRAT_MUL_WELLDEFINED2],
+                 TRAT_MUL_WELLDEFINED2, TRAT_SUCINT_WELLDEFINED],
      old_thms = [TRAT_ADD_SYM, TRAT_ADD_ASSOC, TRAT_MUL_SYM, TRAT_MUL_ASSOC,
                  TRAT_LDISTRIB, TRAT_MUL_LID, TRAT_MUL_LINV, TRAT_NOZERO,
                  TRAT_ADD_TOTAL, TRAT_ARCH, TRAT_SUCINT]};

@@ -35,6 +35,8 @@ val _ = add_implicit_rewrites pairTheory.pair_rws;
 
 val geq = Term `$>= : num->num->bool`;
 
+val _ = hide "-->";  (* hide previous definition in quotient library *)
+
 val tends_num_real = new_infixr_definition("tends_num_real",
   (--`$--> x x0 = (x tends x0)(mtop(mr1), ^geq)`--),750);
 
