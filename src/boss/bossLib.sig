@@ -34,17 +34,17 @@ sig
 
   (* Support for assertional-style proofs *)
 
-  val by  : term quotation * tactic -> tactic   (* infix *)
+  val by : term quotation * tactic -> tactic   (* infix *)
 
 
   (* First order proof automation *)
 
-  val PROVE     : thm list -> term quotation -> thm
+  val PROVE     : thm list -> term -> thm
   val PROVE_TAC : thm list -> tactic
 
   (* Cooperating decision procedures *)
 
-  val DECIDE     : term quotation -> thm
+  val DECIDE     : term -> thm
   val DECIDE_TAC : tactic
 
   (* Simplification *)
@@ -54,7 +54,7 @@ sig
   val list_ss  : simpset
   val &&       : simpset * thm list -> simpset  (* infix && *)
   val RW_TAC   : simpset -> thm list -> tactic
-  val EVAL     : term quotation -> thm
+  val EVAL     : term -> thm
 
   (* A compound automated reasoner. *)
 

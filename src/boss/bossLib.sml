@@ -48,9 +48,10 @@ val WF_REL_TAC = TotalDefn.WF_REL_TAC;
             Automated proof operations
  ---------------------------------------------------------------------------*)
 
-fun PROVE thl q = BasicProvers.PROVE thl (Parse.Term q);
-val PROVE_TAC   = BasicProvers.PROVE_TAC
-val RW_TAC      = BasicProvers.RW_TAC
+val PROVE     = BasicProvers.PROVE
+val PROVE_TAC = BasicProvers.PROVE_TAC
+val RW_TAC    = BasicProvers.RW_TAC
+val EVAL      = computeLib.EVAL_CONV;
 
 val && = BasicProvers.&&;
 infix &&;
@@ -78,14 +79,9 @@ val arith_ss = std_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
 val list_ss  = arith_ss ++ listSimps.list_ss
 end
 
-val EVAL = computeLib.EVAL o Parse.Term;
+fun DECIDE tm =
+ arithLib.ARITH_PROVE tm handle HOL_ERR _ => tautLib.TAUT_PROVE tm;
 
-
-fun DECIDE q =
- let val tm = Parse.Term q
- in arithLib.ARITH_PROVE tm handle HOL_ERR _ =>
-    tautLib.TAUT_PROVE tm
- end;
 
 fun DECIDE_TAC (g as (asl,_)) =
 ((MAP_EVERY UNDISCH_TAC (filter arithSimps.is_arith asl)
