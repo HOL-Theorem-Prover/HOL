@@ -448,8 +448,8 @@ fun vstrl_variants away0 vstrl =
      else let val theta =
                #1(rev_itlist (fn v => fn (theta, pool) =>
                      let val v' = variant pool v
-                     in if (v=v') then (theta,pool)
-                                  else ((v|->v')::theta, v'::pool)
+                     in if v=v' then (theta,pool)
+                                else ((v|->v')::theta, v'::pool)
                      end) clashes ([], op_union aconv away0 fvl))
           in map (subst theta) vstrl
           end
@@ -472,12 +472,6 @@ fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 
 (*---------------------------------------------------------------------------*)
 (* Handler for simple cong. rule antecedents: ones without quantification.   *)
-(* Most antecedents will be of the form "M = N", but we also allow, after    *)
-(* all other antecedents, non-equality formulas. These are simply assumed.   *)
-(* I call this "congruence rule loading", since the rules are then used      *)
-(* both to find instantiations for existential variables, and also to add    *)
-(* necessary extra termination conditions. See the work on bool list         *)
-(* decoders for an example. Probably this idea can be generalized more.      *)
 (*---------------------------------------------------------------------------*)
 
 fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
@@ -503,6 +497,7 @@ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
      end
   | NONE => (CHANGE(ASSUME ant), rst)    (* Not an equality, so just assume *)
 
+
 fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 let val ant_frees = free_vars ant
     val (vlist,ceqn) = strip_forall ant
@@ -515,7 +510,7 @@ let val ant_frees = free_vars ant
     val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
     val (L,{lhs,rhs}) = (I##dest_eq) (strip_imp ceqn')
     val outcome =
-     if (aconv lhs rhs) then NO_CHANGE (L,lhs)
+     if aconv lhs rhs then NO_CHANGE (L,lhs)
      else let val lhs_beta_maybe = 
                      Conv.DEPTH_CONV GEN_BETA_CONV lhs
                      handle HOL_ERR _ => REFL lhs
@@ -526,9 +521,9 @@ let val ant_frees = free_vars ant
                                  prover  = prover,
                                  simpls  = add_cntxt b simpls (map ASSUME L)}
           in CHANGE(TRANS lhs_beta_maybe (cnv cps' lhs'))
-             handle HOL_ERR _ => if (aconv lhs lhs') then NO_CHANGE (L,lhs)
+             handle HOL_ERR _ => if aconv lhs lhs' then NO_CHANGE (L,lhs)
                                  else CHANGE lhs_beta_maybe
-                  | UNCHANGED => if (aconv lhs lhs') then NO_CHANGE (L,lhs)
+                  | UNCHANGED => if aconv lhs lhs' then NO_CHANGE (L,lhs)
                                  else CHANGE lhs_beta_maybe
          end
 in
@@ -568,19 +563,17 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun do_cong cnv cps th =
- let val (_,c) = dest_thm th
-     val ants = strip_conj (#ant(dest_imp c))
-     (* This loop proves each antecedent in turn. *)
-     fun loop [] = []
+ let fun mk_ant (NO_CHANGE (L,tm)) = itlist DISCH L (REFL tm)
+       | mk_ant (CHANGE th) = th
+     fun loop [] = []    (* loop proves each antecedent in turn. *)
        | loop (ant::rst) =
          let val (outcome',rst') =
               if not(is_forall ant) then simple cnv cps (ant,rst)
                                     else complex cnv cps (ant,rst)
          in outcome'::loop rst'
          end
+     val ants = strip_conj (#ant(dest_imp (concl th)))
      val ants' = loop ants
-     fun mk_ant (NO_CHANGE (L,tm)) = itlist DISCH L (REFL tm)
-       | mk_ant (CHANGE th) = th
  in
     if Lib.all unchanged ants' then raise UNCHANGED
     else MATCH_MP th (LIST_CONJ (map mk_ant ants'))

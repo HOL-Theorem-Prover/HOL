@@ -1,8 +1,8 @@
 structure Defn :> Defn =
 struct
 
-open HolKernel Parse boolLib pairLib
-     Rules wfrecUtils Functional Induction DefnBase;
+open HolKernel Parse boolLib;
+open pairLib Rules wfrecUtils Functional Induction DefnBase;
 
 type thry   = TypeBasePure.typeBase
 type proofs = GoalstackPure.proofs
@@ -410,7 +410,7 @@ fun extract FV context_congs f (proto_def,WFR) =
                    (mk_restr p, f,FV@free_vars(concl th), nested_ref)
                    {thms=[CUT_LEM], congs=context_congs, th=th}
     in
-      (th', Lib.op_set_diff aconv (hyp th') [proto_def,WFR],!nested_ref)
+      (th', Lib.op_set_diff aconv (hyp th') [proto_def,WFR], !nested_ref)
     end
 end;
 
@@ -538,13 +538,12 @@ fun wfrec_eqns thy eqns =
      val corollary' = funpow 2 UNDISCH WFREC_THM
      val given_pats = givens pats
      val corollaries = map (C SPEC corollary') given_pats
-     val eqns_consts = find_terms is_const functional
+     val eqns_consts = find_terms is_const functional (* could be a set *)
      val (case_rewrites,context_congs) = extraction_thms eqns_consts thy
      val RW = REWRITES_CONV (add_rewrites empty_rewrites case_rewrites)
      val rule = RIGHT_CONV_RULE
                   (LIST_BETA_CONV THENC REPEATC (RW THENC LIST_BETA_CONV))
      val corollaries' = map rule corollaries
-(*      val corollaries' = map (simplify case_rewrites) corollaries *)
      val Xtract = extract [R1] context_congs f (proto_def,WFR)
  in
     {proto_def=proto_def,
@@ -600,7 +599,7 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
               (rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) def'),
      full_pats_TCs = merge (map pat_of pats) (zip (givens pats) TCl),
      patterns = pats}
- end;
+ end
 
 
 (*---------------------------------------------------------------------------
@@ -1060,7 +1059,7 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
 
 fun mk_defn stem eqns =
  let val _ = if Lexis.ok_identifier stem then ()
-             else raise ERR "define"
+             else raise ERR "mk_defn"
                    (String.concat[Lib.quote stem," is not alphanumeric"])
      val facts = TypeBase.theTypeBase()
  in
@@ -1069,9 +1068,8 @@ fun mk_defn stem eqns =
   => if 1 < length(all_fns eqns)
      then mutrec_defn (facts,stem,eqns)
      else
-     let
-       val ((f, args), rhs) = dest_hd_eqn eqns
-       val _ =
+     let val ((f,args),rhs) = dest_hd_eqn eqns
+         val _ =
            length args > 0 orelse
            (free_in f rhs andalso
             raise ERR "mk_defn" "Simple nullary definition recurses") orelse
@@ -1084,16 +1082,17 @@ fun mk_defn stem eqns =
                      ") on RHS of nullary definition")
             end) orelse
            raise ERR "mk_defn" "Nullary definition failed - giving up"
-       val (tup_eqs,stem',untuple) = pairf(stem,eqns)
-          handle HOL_ERR _ => raise ERR "mk_defn"
+         val (tup_eqs,stem',untuple) = pairf(stem,eqns)
+            handle HOL_ERR _ => raise ERR "mk_defn"
                "failure in internal translation to tupled format"
-       val wfrec_res = wfrec_eqns facts tup_eqs
+         val wfrec_res = wfrec_eqns facts tup_eqs
      in
         if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
         then nestrec_defn (facts,(stem,stem'),wfrec_res,untuple)
         else stdrec_defn  (facts,(stem,stem'),wfrec_res,untuple)
      end
- end;
+ end
+ handle e => raise wrap_exn "Defn" "mk_defn" e;
 
 
 fun mk_Rdefn stem R eqs =
@@ -1226,7 +1225,7 @@ fun elim_wildcards eqs =
    (Absyn.list_mk_conj (rev eql), rev fset)
  end;
 
-(* to parse a purported definition, we have to convince the parser that the
+(* To parse a purported definition, we have to convince the parser that the
    names to be defined aren't constants.  We can do this using "hide".
    After the parsing has been done, the grammar has to be put back the
    way it was.  If a definition is subsequently made, this will update

@@ -152,4 +152,4 @@ fun CONTEXT_REWRITE_RULE (restrf,f,G,nr) {thms,congs,th} =
           Solver(solver (restrf,f,G,nr))) th
   end;
 
-end; (* Rules *)
+end (* Rules *)

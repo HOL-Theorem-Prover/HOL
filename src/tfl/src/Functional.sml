@@ -1,7 +1,7 @@
 structure Functional :> Functional =
 struct
 
-open HolKernel boolSyntax wfrecUtils Rsyntax;
+open HolKernel boolSyntax wfrecUtils;
 
 type thry = TypeBasePure.typeBase
 
@@ -57,7 +57,7 @@ val givens = mapfilter not_omitted;
  *---------------------------------------------------------------------------*)
 
 fun fresh_constr ty_match colty gv c =
-  let val {Ty,...} = dest_const c
+  let val (_,Ty) = dest_const c
       val (L,ty) = strip_fun_type Ty
       val ty_theta = ty_match ty colty
       val c' = inst ty_theta c
@@ -74,7 +74,7 @@ fun fresh_constr ty_match colty gv c =
 fun mk_group Name rows =
   let fun func (row as ((prefix, p::rst), rhs)) (in_group,not_in_group) =
             let val (pc,args) = strip_comb p
-            in if ((#Name(dest_const pc) = Name) handle HOL_ERR _ => false)
+            in if ((fst(dest_const pc) = Name) handle HOL_ERR _ => false)
                then (((prefix,args@rst), rhs)::in_group, not_in_group)
                else (in_group, row::not_in_group)
             end
@@ -95,7 +95,7 @@ let val fresh = fresh_constr ty_match colty gv
      fun part {constrs = [],      rows, A} = rev A
        | part {constrs = c::crst, rows, A} =
          let val (c',gvars) = fresh c
-             val {Name,Ty} = dest_const c'
+             val (Name,Ty) = dest_const c'
              val (in_group, not_in_group) = mk_group Name rows
              val in_group' =
                  if (null in_group)  (* Constructor not given *)
@@ -154,7 +154,7 @@ fun mk_case ty_info ty_match FV range_ty =
                   end
             in map expnd (map fresh constructors)  end
        else [row]
- fun mk{rows=[],...} = mk_case_fail"no rows"
+ fun mk{rows=[],...} = mk_case_fail "no rows"
    | mk{path=[], rows = ((prefix, []), rhs)::_} =  (* Done *)
         let val (tag,tm) = dest_pattern rhs
         in ([(prefix,tag,[])], tm)
@@ -176,12 +176,12 @@ fun mk_case ty_info ty_match FV range_ty =
           end
      else
      let val pty = type_of p
-         val ty_name = (#Tyop o dest_type) pty
+         val ty_name = (fst o dest_type) pty
      in
      case ty_info ty_name
      of NONE => mk_case_fail("Not a known datatype: "^ty_name)
       | SOME{case_const,constructors} =>
-        let val case_const_name = #Name(dest_const case_const)
+        let val case_const_name = fst(dest_const case_const)
             val nrows = flatten (map (expand constructors pty) rows)
             val subproblems = divide(constructors, pty, range_ty, nrows)
             val groups      = map #group subproblems
@@ -193,8 +193,7 @@ fun mk_case ty_info ty_match FV range_ty =
             val (pat_rect,dtrees) = unzip rec_calls
             val case_functions = map list_mk_abs(zip new_formals dtrees)
             val types = map type_of (case_functions@[u]) @ [range_ty]
-            val case_const' = mk_const{Name = case_const_name,
-                                       Ty   = list_mk_fun_type types}
+            val case_const' = mk_const(case_const_name,list_mk_fun_type types)
             val tree = list_mk_comb(case_const', case_functions@[u])
             val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
         in
@@ -213,7 +212,7 @@ fun FV_multiset tm =
    case dest_term tm
      of VAR v => [mk_var v]
       | CONST _ => []
-      | COMB{Rator,Rand} => FV_multiset Rator @ FV_multiset Rand
+      | COMB(Rator,Rand) => FV_multiset Rator @ FV_multiset Rand
       | LAMB _ => raise ERR"FV_multiset" "lambda";
 
 fun no_repeat_vars thy pat =
@@ -221,30 +220,27 @@ fun no_repeat_vars thy pat =
        | check (v::rst) =
          if Lib.op_mem aconv v rst
          then raise ERR"no_repeat_vars"
-              (concat(quote(#Name(dest_var v)))
+              (concat(quote(fst(dest_var v)))
                      (concat" occurs repeatedly in the pattern "
                       (quote(Hol_pp.term_to_string pat))))
          else check rst
  in check (FV_multiset pat)
  end;
 
-local fun paired1{lhs,rhs} = (lhs,rhs)
-      and paired2{Rator,Rand} = (Rator,Rand)
-      fun err s = raise ERR "mk_functional" s
+local fun err s = raise ERR "mk_functional" s
       fun msg s = HOL_MESG ("mk_functional: "^s)
 in
 fun mk_functional thy eqs =
  let val clauses = strip_conj eqs
-     val (L,R) = unzip (map (paired1 o dest_eq o snd o strip_forall)
-                              clauses)
-     val (funcs,pats) = unzip(map (paired2 o dest_comb) L)
+     val (L,R) = unzip (map (dest_eq o snd o strip_forall) clauses)
+     val (funcs,pats) = unzip(map dest_comb L)
      val fs = Lib.op_mk_set aconv funcs
      val f0 = if length fs = 1 then hd fs else err "function name not unique"
      val f  = if is_var f0 then f0 else mk_var(dest_const f0)
      val _  = map (no_repeat_vars thy) pats
      val rows = zip (map (fn x => ([],[x])) pats) (map GIVEN (enumerate R))
-     val fvs = free_varsl R
-     val a = variant fvs (mk_var{Name="a", Ty = type_of(Lib.trye hd pats)})
+     val fvs = free_varsl (L@R)
+     val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
      val FV = a::fvs
      val range_ty = type_of (Lib.trye hd R)
      val (patts, case_tm) = mk_case (match_info thy) (match_type thy)
@@ -258,15 +254,18 @@ fun mk_functional thy eqs =
      fun int_eq i1 (i2:int) =  (i1=i2)
      val inaccessibles = gather(fn x => not(op_mem int_eq x finals)) originals
      fun accessible p = not(op_mem int_eq (row_of_pat p) inaccessibles)
-     val patts3 = (case inaccessibles of [] => patts2
-                        |  _ => filter accessible patts2)
-     val _ = case inaccessibles of [] => ()
-             | _ => msg("The following input rows (counting from zero) are\
-       \ inaccessible: "^stringize inaccessibles^".\nThey have been ignored.")
+     val patts3 = (if null inaccessibles then I else filter accessible) patts2 
+     val _ = if null patts3 
+                then err "patterns in definition aren't acceptable" else
+             if null inaccessibles then () 
+             else msg("\n   The following input rows (counting from zero) in\
+                 \ the definition\n   are inaccessible: "^stringize inaccessibles
+     ^".\n   This is because of overlapping patterns. Those rows have been ignored."
+     ^ "\n   The definition is probably malformed, but we will continue anyway.")
  in
    {functional = list_mk_abs ([f,a], case_tm),
     pats = patts3}
  end
 end;
 
-end;
+end
