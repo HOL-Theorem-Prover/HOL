@@ -299,7 +299,7 @@ fun build_help () =
                     else (print ("Creating directory "^htmlpath^"\n");
                           FileSys.mkDir htmlpath)
      val cmd1     = [doc2html, docpath, htmlpath]
-     val cmd2     = [fullPath [dir,"makebase"]]
+     val cmd2     = [fullPath [dir,"makebase.exe"]]
      val _ = print "Generating ASCII versions of Docfiles...\n"
      val _ = if build_adoc_files () then print "...ASCII Docfiles done\n"
              else ()
