@@ -22,6 +22,7 @@ sig
   val NEG_SUM_CONV          : conv
   val NORMALISE_MULT        : conv
 
+  val leaf_normalise        : conv
 end;
 
 (*
@@ -102,6 +103,11 @@ end;
    v2 * ... vn), where n is a numeral and the v's are the variables
    in the term, sorted into the order specified by Term.compare.
    Works over both :num and :int.
+
+   [leaf_normalise t] normalises a "leaf term" t (a relational
+   operator over integer values) to either an equality, a <= or a
+   disjunction of two normalised <= leaves.  (The latter happens if
+   called onto normalise ~(x = y)).
 
 *)
 

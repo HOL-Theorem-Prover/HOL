@@ -578,4 +578,78 @@ val NORMALISE_MULT  =
     REWRITE_CONV [INT_NEG_LMUL]
 
 
-end
+(* ----------------------------------------------------------------------
+    leaf_normalise t
+
+    Takes a "leaf term" (a relational operator over integer values) and
+    normalises it to either an equality, a <= or a disjunction of two
+    (un-normalised) <= leaves.  (The latter happens if called onto
+    normalise ~(x = y)).
+   ---------------------------------------------------------------------- *)
+
+fun EVERY_SUMMAND c tm =
+  if is_plus tm then BINOP_CONV (EVERY_SUMMAND c) tm
+  else c tm
+
+local
+  val lt_elim = SPEC_ALL int_arithTheory.less_to_leq_samer
+  val tac = REWRITE_TAC [GSYM int_le, INT_NOT_LE, lt_elim, int_gt,
+                         INT_LE_RADD, int_ge, GSYM INT_LE_ANTISYM,
+                         DE_MORGAN_THM]
+  val not_le = prove(``~(x <= y) = (y + 1i <= x)``, tac)
+  val not_lt = prove(``~(x:int < y) = y <= x``, tac)
+  val not_gt = prove(``~(x:int > y) = x <= y``, tac)
+  val not_ge = prove(``~(x >= y) = x + 1i <= y``, tac)
+  val not_eq = prove(``~(x = y:int) = y + 1 <= x \/ x + 1 <= y``, tac)
+  val ge_elim = prove(``x:int >= y = y <= x``, tac)
+  val gt_elim = prove(``x > y = y + 1i <= x``, tac)
+  val eq_elim = prove(``(x:int = y) = (x <= y /\ y <= x)``, tac)
+in
+
+fun normalise_numbers tm = let
+  val MK_LEQ =
+    TRY_CONV (FIRST_CONV (map REWR_CONV [lt_elim, not_le, not_lt, not_gt,
+                                         not_ge, ge_elim, gt_elim])) THENC
+    (REWR_CONV int_arithTheory.le_move_all_right ORELSEC
+     REWR_CONV int_arithTheory.eq_move_all_right)
+  val base_normaliser =
+    RAND_CONV (REWRITE_CONV [INT_NEG_ADD, INT_LDISTRIB, INT_RDISTRIB,
+                             INT_NEG_LMUL, INT_NEGNEG, INT_NEG_0,
+                             int_sub] THENC
+               EVERY_SUMMAND (TRY_CONV NORMALISE_MULT) THENC
+               REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
+                             INT_NEGNEG] THENC
+               REWRITE_CONV [INT_NEG_LMUL] THENC
+               SORT_AND_GATHER_CONV)
+in
+  if (is_leq tm orelse is_eq tm) andalso lhand tm = zero_tm then
+    if is_plus (rand tm) then let
+      val (rl, rr) = dest_plus (rand tm)
+      fun mult_ok acc tm = let
+        val (c,v) = dest_mult tm
+      in
+        is_int_literal c andalso is_var v andalso
+        (case acc of
+           NONE => true
+         | SOME v0 => Term.compare(v0, v) = GREATER)
+      end handle HOL_ERR _ => false
+      fun rhs_ok acc tm = let
+        val (l,r) = dest_plus tm
+      in
+        mult_ok acc r andalso rhs_ok (SOME (rand r)) l
+      end handle HOL_ERR _ => mult_ok acc tm
+    in
+      if is_int_literal rr andalso rhs_ok NONE rl then NO_CONV
+      else base_normaliser
+    end
+    else if is_int_literal (rand tm) then CooperMath.REDUCE_CONV
+         else base_normaliser
+  else MK_LEQ THENC base_normaliser
+end tm
+
+val leaf_normalise =
+    (REWR_CONV not_eq THENC BINOP_CONV normalise_numbers) ORELSEC
+    normalise_numbers
+end (* local *)
+
+end (* struct *)
