@@ -47,11 +47,11 @@ val SUBST_def = Define`SUBST m (a,w) b = if a = b then w else m b`;
 
 val SET_NZC_def = Define`
   SET_NZC N Z C n =
-    w32 (SBIT N 31 + SBIT Z 30 + SBIT C 29 + BITSw 28 0 n)`;
+    w32 (SBIT N 31 + SBIT Z 30 + SBIT C 29 + WORD_BITS 28 0 n)`;
  
 val SET_NZCV_def = Define`
   SET_NZCV N Z C V n =
-    w32 (SBIT N 31 + SBIT Z 30 + SBIT C 29 + SBIT V 28 + BITSw 27 0 n)`;
+    w32 (SBIT N 31 + SBIT Z 30 + SBIT C 29 + SBIT V 28 + WORD_BITS 27 0 n)`;
 
 val SET_MODE_def = Define`
   SET_MODE mode cpsr =
@@ -63,11 +63,11 @@ val SET_MODE_def = Define`
             || abt -> 23
             || und -> 27
             || _ -> 0 in
-  w32 (SLICEw 31 5 cpsr + m)`;
+  w32 (WORD_SLICE 31 5 cpsr + m)`;
 
 val SET_IFMODE_def = Define`
   SET_IFMODE irq' fiq' mode n =
-    SET_MODE mode (w32 (SLICEw 31 8 n + SBIT irq' 7 + SBIT fiq' 6 + SLICEw 5 5 n))`;
+    SET_MODE mode (w32 (WORD_SLICE 31 8 n + SBIT irq' 7 + SBIT fiq' 6 + WORD_SLICE 5 5 n))`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -144,17 +144,17 @@ val REG_WRITE_def = Define`
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-val TO_W30_def = Define`TO_W30 n = w30 (BITSw 31 2 n)`;
+val TO_W30_def = Define`TO_W30 n = w30 (WORD_BITS 31 2 n)`;
 
 val MEMREAD_def = Define `MEMREAD mem addr = mem (TO_W30 addr)`;
 
 val MEM_READ_WORD_def = Define`
-  MEM_READ_WORD mem addr = MEMREAD mem addr #>> (8 * BITSw 1 0 addr)`;
+  MEM_READ_WORD mem addr = MEMREAD mem addr #>> (8 * WORD_BITS 1 0 addr)`;
 
 val MEM_READ_BYTE_def = Define`
   MEM_READ_BYTE mem addr =
-    let align = 8 * BITSw 1 0 addr in
-      w32 (BITSw (align+7) align (mem (TO_W30 addr)))`;
+    let align = 8 * WORD_BITS 1 0 addr in
+      w32 (WORD_BITS (align+7) align (mem (TO_W30 addr)))`;
 
 val MEM_READ_def = Define`
   MEM_READ b = if b then MEM_READ_BYTE else MEM_READ_WORD`;
@@ -162,14 +162,14 @@ val MEM_READ_def = Define`
 val SET_BYTE_def = Define`
   SET_BYTE align byte word =
     if align = 0 then
-       w32 (SLICEw 31 8 word + byte)
+       w32 (WORD_SLICE 31 8 word + byte)
     else
-       w32 (SLICEw 31 (align+8) word + TIMES_2EXP align byte + BITSw (align-1) 0 word)`;
+       w32 (WORD_SLICE 31 (align+8) word + TIMES_2EXP align byte + WORD_BITS (align-1) 0 word)`;
 
 val MEM_WRITE_BYTE_def = Define`
   MEM_WRITE_BYTE mem word addr =
     let addr' = TO_W30 addr in
-      SUBST mem (addr',SET_BYTE (8 * BITSw 1 0 addr) (BITSw 7 0 word) (mem addr'))`;
+      SUBST mem (addr',SET_BYTE (8 * WORD_BITS 1 0 addr) (WORD_BITS 7 0 word) (mem addr'))`;
 
 val MEM_WRITE_WORD_def = Define`
   MEM_WRITE_WORD mem word addr = SUBST mem (TO_W30 addr,word)`;
@@ -205,7 +205,7 @@ val exception2mode_def = Define`
 val EXCEPTION_def = Define`
   EXCEPTION (ARM mem reg psr) type =
     let cpsr = CPSR_READ psr in
-    let fiq' = if (type = reset) \/ (type = fast) then T else BITw 6 cpsr
+    let fiq' = if (type = reset) \/ (type = fast) then T else WORD_BIT 6 cpsr
     and mode' = exception2mode type
     and pc' = w32 (4 * exception2num type) in
    let reg' = REG_WRITE reg mode' 14 (FETCH_PC reg + w32 4) in
@@ -247,7 +247,7 @@ val BRANCH_def = Define`
 val LSL_def = Define`
   LSL m n c = if n = 0 then (c,m)
               else if n <= 32 then
-                (BITw (32 - n) m,m << n)
+                (WORD_BIT (32 - n) m,m << n)
               else
                 (F,w32 0)`;
 
@@ -255,7 +255,7 @@ val LSR_def = Define`
   LSR m n c = if n = 0 then
                 LSL m 0 c
               else if n <= 32 then
-                (BITw (n - 1) m,m >>> n)
+                (WORD_BIT (n - 1) m,m >>> n)
               else
                 (F,w32 0)`;
 
@@ -263,7 +263,7 @@ val ASR_def = Define`
   ASR m n c = if n = 0 then
                 LSL m 0 c
               else if n <= 32 then
-                (BITw (n - 1) m,m >> n)
+                (WORD_BIT (n - 1) m,m >> n)
               else
                 (MSB m,m >> 32)`;
 
@@ -271,9 +271,9 @@ val ROR_def = Define`
   ROR m n c = if n = 0 then
                 LSL m 0 c
               else if n <= 32 then
-                (BITw (n - 1) m,m #>> n)
+                (WORD_BIT (n - 1) m,m #>> n)
               else let n' = BITS 4 0 n in
-                (BITw (n' - 1) m,m #>> n')`;
+                (WORD_BIT (n' - 1) m,m #>> n')`;
 
 val RRX2_def = Define `RRX2 m c = (LSB m,RRX c m)`;
 
@@ -309,7 +309,7 @@ val SHIFT_IMMEDIATE_def = Define`
 
 val SHIFT_REGISTER_def = Define`
   SHIFT_REGISTER reg mode C opnd2 =
-    let shift = BITSw 7 0 (REG_READ reg mode (BITS 11 8 opnd2))
+    let shift = WORD_BITS 7 0 (REG_READ reg mode (BITS 11 8 opnd2))
     and rm = REG_READ (INC_PC reg) mode (BITS 3 0 opnd2) in
       SHIFT_REGISTER2 shift (BITS 6 5 opnd2) rm C`;
 
@@ -406,7 +406,7 @@ val MRS_def = Define`
 (* -------------------------------------------------------- *)
 
 val SPLIT_WORD_def = Define`
-  SPLIT_WORD a = (BITSw 31 28 a,BITSw 27 8 a,BITSw 7 0 a)`;
+  SPLIT_WORD a = (WORD_BITS 31 28 a,WORD_BITS 27 8 a,WORD_BITS 7 0 a)`;
 
 val CONCAT_BYTES_def = Define`
   CONCAT_BYTES a b c = w32 (TIMES_2EXP 28 a + TIMES_2EXP 8 b + c)`;
@@ -448,7 +448,7 @@ val DECODE_LDR_STR_def = Define`
      (BIT 25 n,BIT 24 n,BIT 23 n,BIT 22 n,BIT 21 n,BIT 20 n,
       BITS 19 16 n,BITS 15 12 n,BITS 11 0 n)`;
 
-val WORD_ALIGN_def = Define`WORD_ALIGN n = SLICEw 31 2 n`;
+val WORD_ALIGN_def = Define`WORD_ALIGN n = WORD_SLICE 31 2 n`;
 
 val PIPE_OKAY_def = Define`
   PIPE_OKAY addr pc =

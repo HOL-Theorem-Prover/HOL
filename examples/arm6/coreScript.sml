@@ -132,7 +132,7 @@ val PIPECHANGE_def = Define`
 (* Memory access on next cycle: Byte (F) or word (T) *)
 
 val NBW_def = Define`
-  NBW ic is ireg = ~(BITw 22 ireg /\
+  NBW ic is ireg = ~(WORD_BIT 22 ireg /\
                      ((is = t3) /\ ((ic = ldr) \/ (ic = str) \/ (ic = swp)) \/
                       (is = t4) /\ (ic = swp)))`;
 
@@ -168,25 +168,25 @@ val DIN_def = Define`
 val DINWIRTE_def = Define`
   DINWRITE ic is = ~((ic = swp) /\ (is = t5))`;
 
-(* oareg = BITw 1 0 areg i.e. alignment bits of previous areg *)
+(* oareg = WORD_BIT 1 0 areg i.e. alignment bits of previous areg *)
 (* Gives din' *)
 
 val FIELD_def = Define`
   FIELD ic is ireg oareg din =
     if is = t3 then
       if ic = br then
-         SIGN_EX_OFFSET (BITSw 23 0 din)
+         SIGN_EX_OFFSET (WORD_BITS 23 0 din)
       else if (ic = ldr) \/ (ic = str) then
-         w32 (BITSw 11 0 din)
+         w32 (WORD_BITS 11 0 din)
       else if (ic = mrs_msr) \/ (ic = data_proc) then
-         w32 (BITSw 7 0 din)
+         w32 (WORD_BITS 7 0 din)
       else
          ARB
     else if (is = t5) /\ (ic = ldr) \/ (is = t6) /\ (ic = swp) then
-      if ~BITw 22 ireg then
+      if ~WORD_BIT 22 ireg then
          din
       else let a = 8 * oareg in
-         w32 (SLICEw (a + 7) a din)
+         w32 (WORD_SLICE (a + 7) a din)
     else
        ARB`;
 
@@ -195,9 +195,9 @@ val FIELD_def = Define`
 
 val SHIFTER_def = Define`
   SHIFTER ic is ireg oareg sctrlreg busb c =
-    let bit25 = BITw 25 ireg
-    and bits117 = BITSw 11 7 ireg
-    and bits65 = BITSw 6 5 ireg in
+    let bit25 = WORD_BIT 25 ireg
+    and bits117 = WORD_BITS 11 7 ireg
+    and bits65 = WORD_BITS 6 5 ireg in
     let bits118 = bits117 DIV 2 in
       if is = t3 then
         if bit25 /\ ((ic = data_proc) \/ (ic = mrs_msr)) then
@@ -211,7 +211,7 @@ val SHIFTER_def = Define`
         else
           ARB
       else if (is = t4) /\ (ic = reg_shift) then
-        SHIFT_REGISTER2 (BITSw 7 0 sctrlreg) bits65 busb c
+        SHIFT_REGISTER2 (WORD_BITS 7 0 sctrlreg) bits65 busb c
       else if (is = t5) /\ (ic = ldr) \/ (is = t6) /\ (ic = swp) then
         ROR busb (8 * oareg) c
       else if (is = t5) /\ ((ic = br) \/ (ic = swi_ex)) then
@@ -228,11 +228,11 @@ val RBA_def = Define`
     if (is = t3) /\ ((ic = data_proc) \/ (ic = mrs_msr) \/ (ic = ldr) \/ (ic = str)) \/
        (is = t4) /\ (ic = reg_shift) \/
        (is = t5) /\ (ic = swp) then
-       BITSw 3 0 ireg
+       WORD_BITS 3 0 ireg
     else if (is = t3) /\ (ic = swp) then
-       BITSw 19 16 ireg
+       WORD_BITS 19 16 ireg
     else if (is = t4) /\ (ic = str) then
-       BITSw 15 12 ireg
+       WORD_BITS 15 12 ireg
     else if (is = t5) /\ ((ic = br) \/ (ic = swi_ex)) then
        14
     else ARB`;
@@ -243,14 +243,14 @@ val RAA_def = Define`
   RAA ic is ireg =
     if is = t3 then
        if (ic = data_proc) \/ (ic = ldr) \/ (ic = str) then
-         BITSw 19 16 ireg
+         WORD_BITS 19 16 ireg
        else if ic = reg_shift then
-         BITSw 11 8 ireg
+         WORD_BITS 11 8 ireg
        else if (ic = br) \/ (ic = swi_ex) then
          15
        else ARB
     else if (is = t4) /\ (ic = reg_shift) then
-       BITSw 19 16 ireg
+       WORD_BITS 19 16 ireg
     else ARB`;
       
 
@@ -258,17 +258,17 @@ val RAA_def = Define`
 
 val RWA_def = Define`
   RWA ic is ireg =
-    let bit21 = BITw 21 ireg
-    and bit23 = BITw 23 ireg
-    and bit24 = BITw 24 ireg in
+    let bit21 = WORD_BIT 21 ireg
+    and bit23 = WORD_BIT 23 ireg
+    and bit24 = WORD_BIT 24 ireg in
       if ((is = t3) /\ (ic = data_proc) \/
           (is = t4) /\ (ic = reg_shift)) /\ (~bit24 \/ bit23) \/
          (is = t3) /\ (ic = mrs_msr) /\ ~bit21 \/
          (is = t5) /\ (ic = ldr) \/
          (is = t6) /\ (ic = swp) then
-         (T,BITSw 15 12 ireg)
+         (T,WORD_BITS 15 12 ireg)
       else if (is = t4) /\ ((ic = ldr) \/ (ic = str)) /\ (~bit24 \/ bit21) then
-         (T,BITSw 19 16 ireg)
+         (T,WORD_BITS 19 16 ireg)
       else if ((is = t4) \/ (is = t5)) /\ (((ic = br) /\ bit24) \/ (ic = swi_ex)) then
          (T,14)
       else (F,ARB)`;
@@ -277,9 +277,9 @@ val RWA_def = Define`
 
 val PCWA_def = Define`
   PCWA ic is ireg =
-    let bits2423 = BITSw 24 23 ireg
-    and bit21    = BITw 21 ireg
-    and bits1512 = BITSw 15 12 ireg in
+    let bits2423 = WORD_BITS 24 23 ireg
+    and bit21    = WORD_BIT 21 ireg
+    and bits1512 = WORD_BITS 15 12 ireg in
       ((is = t3) /\ ~(((ic = data_proc) /\ ~(bits2423 = 2) /\ (bits1512 = 15)) \/
             ((ic = mrs_msr) /\ ~bit21 /\ (bits1512 = 15)) \/ (ic = undef))) \/
       (ic = br) \/ (ic = swi_ex)`;
@@ -288,19 +288,19 @@ val PCWA_def = Define`
 
 val PSRA_def = Define`
   PSRA ic is ireg =
-    let bit22 = BITw 22 ireg
-    and bit20 = BITw 20 ireg in
+    let bit22 = WORD_BIT 22 ireg
+    and bit20 = WORD_BIT 20 ireg in
       ((is = t3) /\ ((ic = swi_ex) \/ (~bit22 /\ ((ic = mrs_msr) \/ ((ic = data_proc) /\ ~bit20))))) \/
       ((is = t4) /\ ~bit22 /\ (ic = reg_shift) /\ ~bit20)`;
 
 (* PSR write address *)
 val PSRWA_def = Define`
   PSRWA ic is ireg nbs =
-    let bit22 = BITw 22 ireg
-    and bit21 = BITw 21 ireg
-    and bit20 = BITw 20 ireg
-    and bit19 = BITw 19 ireg
-    and bit16 = BITw 16 ireg in
+    let bit22 = WORD_BIT 22 ireg
+    and bit21 = WORD_BIT 21 ireg
+    and bit20 = WORD_BIT 20 ireg
+    and bit19 = WORD_BIT 19 ireg
+    and bit16 = WORD_BIT 16 ireg in
       if bit20 /\ (((is = t3) /\ (ic = data_proc)) \/ ((is = t4) /\ (ic = reg_shift))) \/
          (is = t3) /\ (ic = swi_ex) then
          (T,T)
@@ -325,14 +325,14 @@ val NZCV_def = Define`
 (* PSR write bus *)
 val PSRDAT_def = Define`
   PSRDAT ic is ireg nbs aregn cpsrl psrfb alu sctlc =
-    let bit24 = BITw 24 ireg
-    and bit23 = BITw 23 ireg
-    and bit22 = BITw 22 ireg
-    and bit21 = BITw 21 ireg
-    and bit20 = BITw 20 ireg
-    and bit19 = BITw 19 ireg
-    and bit16 = BITw 16 ireg
-    and bits1512 = BITSw 15 12 ireg
+    let bit24 = WORD_BIT 24 ireg
+    and bit23 = WORD_BIT 23 ireg
+    and bit22 = WORD_BIT 22 ireg
+    and bit21 = WORD_BIT 21 ireg
+    and bit20 = WORD_BIT 20 ireg
+    and bit19 = WORD_BIT 19 ireg
+    and bit16 = WORD_BIT 16 ireg
+    and bits1512 = WORD_BITS 15 12 ireg
     in
       if bit20 /\ (((is = t3) /\ (ic = data_proc)) \/ ((is = t4) /\ (ic = reg_shift))) then
          if bits1512 = 15 then
@@ -349,22 +349,22 @@ val PSRDAT_def = Define`
         let aluout = ALUOUT alu in
          if USER nbs then
             if ~bit22 /\ bit19 then
-               w32 (SLICEw 31 28 aluout + BITSw 27 0 psrfb)
+               w32 (WORD_SLICE 31 28 aluout + WORD_BITS 27 0 psrfb)
             else
                ARB
          else
             if bit19 then
                if bit16 then
-                  w32 (SLICEw 31 28 aluout + SLICEw 27 8 psrfb + BITSw 7 0 aluout)
+                  w32 (WORD_SLICE 31 28 aluout + WORD_SLICE 27 8 psrfb + WORD_BITS 7 0 aluout)
                else
-                  w32 (SLICEw 31 28 aluout + BITSw 27 0 psrfb)
+                  w32 (WORD_SLICE 31 28 aluout + WORD_BITS 27 0 psrfb)
             else
                if bit16 then
-                  w32 (SLICEw 31 8 psrfb + BITSw 7 0 aluout)
+                  w32 (WORD_SLICE 31 8 psrfb + WORD_BITS 7 0 aluout)
                else
                   ARB
       else if (is = t3) /\ (ic = swi_ex) then
-         SET_IFMODE T (if (aregn = 0) \/ (aregn = 7) then T else BITw 6 cpsrl)
+         SET_IFMODE T (if (aregn = 0) \/ (aregn = 7) then T else WORD_BIT 6 cpsrl)
                     (exception2mode (num2exception aregn)) cpsrl
       else if (is = t4) /\ (ic = swi_ex) then
          psrfb
@@ -390,7 +390,7 @@ val BUSA_def = Define`
 
 val BUSB_def = Define`
   BUSB ic is ireg din' rb =
-    let bit25 = BITw 25 ireg in
+    let bit25 = WORD_BIT 25 ireg in
       if (is = t3) /\
          ((ic = br) \/ (bit25 /\ ((ic = data_proc) \/ (ic = mrs_msr))) \/
                       (~bit25 /\ ((ic = ldr) \/ (ic = str)))) \/
@@ -405,11 +405,11 @@ val BUSB_def = Define`
 
 val AREG_def = Define`
   AREG ic is ireg aregn inc reg15 aluout =
-    let bits1916 = BITSw 19 16 ireg
-    and bits1512 = BITSw 15 12 ireg
-    and bit21 = BITw 21 ireg
-    and bit23 = BITw 23 ireg
-    and bit24 = BITw 24 ireg
+    let bits1916 = WORD_BITS 19 16 ireg
+    and bits1512 = WORD_BITS 15 12 ireg
+    and bit21 = WORD_BIT 21 ireg
+    and bit23 = WORD_BIT 23 ireg
+    and bit24 = WORD_BIT 24 ireg
     in
     if (is = t4) /\ (ic = reg_shift)  then
       if (~bit24 \/ bit23) /\ (bits1512 = 15) then
@@ -440,7 +440,7 @@ val AREG_def = Define`
 
 val ALU6_def = Define`
  ALU6 ic is ireg alua alub c =
-  let opc = BITSw 24 21 ireg in
+  let opc = WORD_BITS 24 21 ireg in
    if ((ic = data_proc) /\ (is = t3)) \/
       ((ic = reg_shift) /\ (is = t4)) then
      ALU opc alua alub c
@@ -545,7 +545,7 @@ val NEXT_ARM6_def = Define`
      in
      let reg'' = if FST rwa then REG_WRITE reg' nbs (SND rwa) aluout else reg'
      in
-     let oareg' = BITSw 1 0 areg
+     let oareg' = WORD_BITS 1 0 areg
      and areg' = AREG ic is ireg aregn inc pcbus aluout
      and pipea' = if PIPEAWRITE pipeall then data else pipea
      and apipea' = if PIPEAWRITE pipeall then areg else apipea
@@ -617,20 +617,20 @@ val DUR_ARM6_def = Define`
          if pcchange then 3 else 1
        else
          if ic = reg_shift then
-            if (BITSw 15 12 ireg = 15) /\ (~(BITw 24 ireg) \/ BITw 23 ireg) then 4 else 2
+            if (WORD_BITS 15 12 ireg = 15) /\ (~(WORD_BIT 24 ireg) \/ WORD_BIT 23 ireg) then 4 else 2
          else
             if ic = ldr then
-               if (BITSw 15 12 ireg = 15) \/
-                  (BITSw 19 16 ireg = 15) /\ (~(BITw 24 ireg) \/ BITw 21 ireg) then 5 else 3
+               if (WORD_BITS 15 12 ireg = 15) \/
+                  (WORD_BITS 19 16 ireg = 15) /\ (~(WORD_BIT 24 ireg) \/ WORD_BIT 21 ireg) then 5 else 3
             else
                if ic = str then
-                  if (BITSw 19 16 ireg = 15) /\ (~(BITw 24 ireg) \/ BITw 21 ireg) then 4 else 2
+                  if (WORD_BITS 19 16 ireg = 15) /\ (~(WORD_BIT 24 ireg) \/ WORD_BIT 21 ireg) then 4 else 2
                else
                   if (ic = br) \/ (ic = swi_ex) then
                      3
                    else 
                       if ic = swp then
-                        if BITSw 15 12 ireg = 15 then 6 else 4
+                        if WORD_BITS 15 12 ireg = 15 then 6 else 4
                       else (* unexec *)
                         1`;
 

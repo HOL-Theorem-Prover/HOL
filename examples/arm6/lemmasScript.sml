@@ -36,26 +36,26 @@ val ROR2_THM2 = store_thm("ROR2_THM2",
 val DIV1 = REDUCE_RULE DIV_ONE;
 
 val IMMEDIATE_THM = store_thm("IMMEDIATE_THM",
-  `!c i. IMMEDIATE c (BITSw 11 0 i) =
-           ROR (w32 (BITSw 7 0 i)) (2 * BITSw 11 8 i) c`,
-  RW_TAC arith_ss [DIVMOD_2EXP_def,IMMEDIATE_def,BITSw_COMP_THM,
+  `!c i. IMMEDIATE c (WORD_BITS 11 0 i) =
+           ROR (w32 (WORD_BITS 7 0 i)) (2 * WORD_BITS 11 8 i) c`,
+  RW_TAC arith_ss [DIVMOD_2EXP_def,IMMEDIATE_def,WORD_BITS_COMP_THM,
                    GSYM (SIMP_CONV arith_ss [BITS_THM,DIV1] ``BITS 7 0 n``),
-                   REDUCE_RULE (SPECL [`11`,`0`,`8`] BITSw_DIV_THM)]
+                   REDUCE_RULE (SPECL [`11`,`0`,`8`] WORD_BITS_DIV_THM)]
 );
 
 val SHIFT_IMMEDIATE_THM2 = store_thm("SHIFT_IMMEDIATE_THM2",
-  `!r m c i. SHIFT_IMMEDIATE r m c (BITSw 11 0 i) =
-    let rm = REG_READ r m (BITSw 3 0 i) in
-       SHIFT_IMMEDIATE2 (BITSw 11 7 i) (BITSw 6 5 i) rm c`,
-  RW_TAC arith_ss [SHIFT_IMMEDIATE_def,BITSw_COMP_THM]
+  `!r m c i. SHIFT_IMMEDIATE r m c (WORD_BITS 11 0 i) =
+    let rm = REG_READ r m (WORD_BITS 3 0 i) in
+       SHIFT_IMMEDIATE2 (WORD_BITS 11 7 i) (WORD_BITS 6 5 i) rm c`,
+  RW_TAC arith_ss [SHIFT_IMMEDIATE_def,WORD_BITS_COMP_THM]
 );
 
 val SHIFT_REGISTER_THM2 = store_thm("SHIFT_REGISTER_THM2",
-  `!r m c i. SHIFT_REGISTER r m c (BITSw 11 0 i) =
-               let shift = BITSw 7 0 (REG_READ r m (BITSw 11 8 i))
-               and rm = REG_READ (INC_PC r) m (BITSw 3 0 i) in
-                 SHIFT_REGISTER2 shift (BITSw 6 5 i) rm c`,
-  RW_TAC arith_ss [SHIFT_REGISTER_def,BITSw_COMP_THM]
+  `!r m c i. SHIFT_REGISTER r m c (WORD_BITS 11 0 i) =
+               let shift = WORD_BITS 7 0 (REG_READ r m (WORD_BITS 11 8 i))
+               and rm = REG_READ (INC_PC r) m (WORD_BITS 3 0 i) in
+                 SHIFT_REGISTER2 shift (WORD_BITS 6 5 i) rm c`,
+  RW_TAC arith_ss [SHIFT_REGISTER_def,WORD_BITS_COMP_THM]
 );
 
 (* -------------------------------------------------------- *)
@@ -105,18 +105,18 @@ val BV_TWO = store_thm("BV_TWO",
 );
 
 val TEST_OR_COMP_THM2 = store_thm("TEST_OR_COMP_THM2",
-  `!i. (BITSw 24 23 i = 2) = BITw 24 i /\ ~BITw 23 i`,
+  `!i. (WORD_BITS 24 23 i = 2) = WORD_BIT 24 i /\ ~WORD_BIT 23 i`,
   STRIP_TAC
-    THEN ASSUME_TAC (SPEC `i` (REDUCE_RULE (SPECL [`24`,`23`] BITSwLT_THM)))
-    THEN `BITw 24 i = BIT 1 (BITSw 24 23 i)` by SIMP_TAC arith_ss [BITSw_COMP_THM,BITw_THM,BIT_def]
-    THEN `BITw 23 i = BIT 0 (BITSw 24 23 i)` by SIMP_TAC arith_ss [BITSw_COMP_THM,BITw_THM,BIT_def]
+    THEN ASSUME_TAC (SPEC `i` (REDUCE_RULE (SPECL [`24`,`23`] WORD_BITSLT_THM)))
+    THEN `WORD_BIT 24 i = BIT 1 (WORD_BITS 24 23 i)` by SIMP_TAC arith_ss [WORD_BITS_COMP_THM,WORD_BIT_THM,BIT_def]
+    THEN `WORD_BIT 23 i = BIT 0 (WORD_BITS 24 23 i)` by SIMP_TAC arith_ss [WORD_BITS_COMP_THM,WORD_BIT_THM,BIT_def]
     THEN ASM_SIMP_TAC arith_ss [BV_TWO]
 );
 
 val TEST_OR_COMP_THM3 = store_thm("TEST_OR_COMP_THM3",
-  `!i. TEST_OR_COMP (BITSw 24 21 i) = BITw 24 i /\ ~BITw 23 i`,
-  ASSUME_TAC (REDUCE_RULE (SPECL [`24`,`21`] BITSwLT_THM))
-    THEN RW_TAC arith_ss [BITSw_COMP_THM,TEST_OR_COMP_THM,TEST_OR_COMP_THM2]
+  `!i. TEST_OR_COMP (WORD_BITS 24 21 i) = WORD_BIT 24 i /\ ~WORD_BIT 23 i`,
+  ASSUME_TAC (REDUCE_RULE (SPECL [`24`,`21`] WORD_BITSLT_THM))
+    THEN RW_TAC arith_ss [WORD_BITS_COMP_THM,TEST_OR_COMP_THM,TEST_OR_COMP_THM2]
 );
 
 val ARITHMETIC_THM = store_thm("ARITHMETIC_THM",
@@ -136,30 +136,30 @@ val ARITHMETIC_THM = store_thm("ARITHMETIC_THM",
 );
 
 val ARITHMETIC_THM2 = store_thm("ARITHMETIC_THM2",
-  `!i. ARITHMETIC (BITSw 24 21 i) =
-           (BITw 23 i \/ BITw 22 i) /\ (~BITw 24 i \/ ~BITw 23 i)`,
-  ASSUME_TAC (REDUCE_RULE (SPECL [`24`,`21`] BITSwLT_THM))
-    THEN RW_TAC arith_ss [ARITHMETIC_THM,BITw_THM,BIT_def,BITSw_COMP_THM]
+  `!i. ARITHMETIC (WORD_BITS 24 21 i) =
+           (WORD_BIT 23 i \/ WORD_BIT 22 i) /\ (~WORD_BIT 24 i \/ ~WORD_BIT 23 i)`,
+  ASSUME_TAC (REDUCE_RULE (SPECL [`24`,`21`] WORD_BITSLT_THM))
+    THEN RW_TAC arith_ss [ARITHMETIC_THM,WORD_BIT_THM,BIT_def,WORD_BITS_COMP_THM]
 );
 
 (* -------------------------------------------------------- *)
 
 val ADD4_SUB8_THM = store_thm("ADD4_SUB8_THM",
   `!a. a + w32 4 - w32 8 = a - w32 4`,
-  STRIP_TAC THEN REWRITE_TAC [ADD_SUB_ASSOC] THEN WORD_TAC
+  STRIP_TAC THEN REWRITE_TAC [WORD_ADD_SUB_ASSOC] THEN WORD_TAC
 );
 
 (*
 val SUB8_ADD4_SUB8_THM = store_thm("SUB8_ADD4_SUB8_THM",
   `!a. a - w32 8 + w32 4 + w32 8 = a + w32 4`,
-  REWRITE_TAC [GSYM ADD_SUB_SYM,ADD_SUBw]
+  REWRITE_TAC [GSYM WORD_ADD_SUB_SYM,WORD_ADD_SUB]
 );
 *)
 
 val ADD4_ADD4_SUB8_THM = store_thm("ADD4_ADD4_SUB8_THM",
   `!a. a + w32 4 + w32 4 - w32 8 = a`,
-  REWRITE_TAC [ADD_SUB_SYM,GSYM ADD_ASSOCw]
-    THEN SIMP_TAC arith_ss [ADD_EVAL,GSYM ADD_SUB_SYM,ADD_SUBw]
+  REWRITE_TAC [WORD_ADD_SUB_SYM,GSYM WORD_ADD_ASSOC]
+    THEN SIMP_TAC arith_ss [ADD_EVAL,GSYM WORD_ADD_SUB_SYM,WORD_ADD_SUB]
 );
 
 (* -------------------------------------------------------- *)
@@ -171,7 +171,7 @@ val NOT_FA_EQ_FB = prove(
 
 val WORD_ALIGN_LEM = store_thm("WORD_ALIGN_LEM",
   `!a b. ~(WORD_ALIGN a = WORD_ALIGN b) ==> ~(TO_W30 a = TO_W30 b)`,
-  RW_TAC arith_ss [WORD_ALIGN_def,TO_W30_def,SLICEw_THM]
+  RW_TAC arith_ss [WORD_ALIGN_def,TO_W30_def,WORD_SLICE_THM]
 );
 
 val MEM_WRITE_READ = store_thm("MEM_WRITE_READ",
@@ -185,8 +185,8 @@ val MEM_WRITE_READ = store_thm("MEM_WRITE_READ",
 val MEMREAD_ALIGNED = store_thm("MEMREAD_ALIGNED",
   `!m a. MEM_READ_WORD m (WORD_ALIGN a) = MEMREAD m a`,
   SIMP_TAC arith_ss [MEM_READ_WORD_def,MEMREAD_def,WORD_ALIGN_def,TO_W30_def,
-                     HB_def,BITS_EVAL,MODw_THM,BITS_COMP_THM,BITS_SLICEw_THM]
-    THEN SIMP_TAC arith_ss [SLICEw_THM,BITSw_COMP_THM,MOD_EQ_0,ZERO_SHIFT2,
+                     HB_def,BITS_EVAL,MOD_WL_THM,BITS_COMP_THM,WORD_BITS_SLICE_THM]
+    THEN SIMP_TAC arith_ss [WORD_SLICE_THM,WORD_BITS_COMP_THM,MOD_EQ_0,ZERO_SHIFT2,
                             SIMP_RULE arith_ss [DIV1] (SPECL [`1`,`0`] BITS_THM2)]
 );
 *)
@@ -196,10 +196,10 @@ val MEMREAD_ALIGNED = store_thm("MEMREAD_ALIGNED",
 val REGISTER_RANGES = save_thm("REGISTER_RANGES",
   let fun conj (a,b) = CONJ a b in
    foldl conj (DECIDE ``14 < 16``)
-     (map REDUCE_RULE [SPECL [`19`,`16`] BITSwLT_THM,
-                       SPECL [`15`,`12`] BITSwLT_THM,
-                       SPECL [`11`,`8`] BITSwLT_THM,
-                       SPECL [`3`,`0`] BITSwLT_THM])
+     (map REDUCE_RULE [SPECL [`19`,`16`] WORD_BITSLT_THM,
+                       SPECL [`15`,`12`] WORD_BITSLT_THM,
+                       SPECL [`11`,`8`] WORD_BITSLT_THM,
+                       SPECL [`3`,`0`] WORD_BITSLT_THM])
   end
 );
 
@@ -260,18 +260,18 @@ val REG_WRITE_WRITE_R14 = store_thm("REG_WRITE_WRITE_R14",
 (* -------------------------------------------------------- *)
 
 val BIT0_OPC = store_thm("BIT0_OPC",
-  `!a. BIT 0 (BITSw 24 21 a) = BITw 21 a`,
-  SIMP_TAC arith_ss [BIT_def,BITw_THM,BITSw_COMP_THM]
+  `!a. BIT 0 (WORD_BITS 24 21 a) = WORD_BIT 21 a`,
+  SIMP_TAC arith_ss [BIT_def,WORD_BIT_THM,WORD_BITS_COMP_THM]
 );
  
 val BIT2_OPC = store_thm("BIT2_OPC",
-  `!i. BIT 2 (BITSw 24 21 i) = BITw 23 i`,
-  SIMP_TAC arith_ss [BIT_def,BITw_THM,BITSw_COMP_THM]
+  `!i. BIT 2 (WORD_BITS 24 21 i) = WORD_BIT 23 i`,
+  SIMP_TAC arith_ss [BIT_def,WORD_BIT_THM,WORD_BITS_COMP_THM]
 );
 
 val BIT3_OPC = store_thm("BIT3_OPC",
-  `!i. BIT 3 (BITSw 24 21 i) = BITw 24 i`,
-  SIMP_TAC arith_ss [BIT_def,BITw_THM,BITSw_COMP_THM]
+  `!i. BIT 3 (WORD_BITS 24 21 i) = WORD_BIT 24 i`,
+  SIMP_TAC arith_ss [BIT_def,WORD_BIT_THM,WORD_BITS_COMP_THM]
 );
 
 val ALUOUT_ALU_logic = store_thm("ALUOUT_ALU_logic",
@@ -302,7 +302,7 @@ val SUBST_EQ2 = store_thm("SUBST_EQ2",
  
 val SUB8_INV = store_thm("SUB8_INV",
   `!r. SUB8_PC (ADD8_PC r) = r`,
-  RW_TAC bool_ss [ADD_SUBw,SUB8_PC_def,ADD8_PC_def,SUBST_EQ,SUBST_EQ2,SUBST_def]
+  RW_TAC bool_ss [WORD_ADD_SUB,SUB8_PC_def,ADD8_PC_def,SUBST_EQ,SUBST_EQ2,SUBST_def]
 );
  
 val FETCH_SUB8 = store_thm("FETCH_SUB8",
@@ -315,7 +315,7 @@ val mode_num2register_15 = GEN_ALL (SIMP_RULE arith_ss [SYM r15] (SPECL [`m`,`15
 val REG_READ_SUB8_PC = store_thm("REG_READ_SUB8_PC",
   `!r m n. n < 16 ==> (REG_READ (SUB8_PC r) m n = REG_READ6 r m n)`,
   RW_TAC bool_ss [REG_READ_def,REG_READ6_def,SUB8_PC_def,FETCH_PC_def]
-    THEN ASM_SIMP_TAC arith_ss [SUBST_def,ONCE_REWRITE_RULE [ADD_SUB_SYM] ADD_SUBw]
+    THEN ASM_SIMP_TAC arith_ss [SUBST_def,WORD_SUB_ADD]
     THEN SUBST_TAC [SYM (SPEC `m` mode_num2register_15)]
     THEN ASM_SIMP_TAC bool_ss [NOT_PC_THM]
 );
@@ -323,7 +323,7 @@ val REG_READ_SUB8_PC = store_thm("REG_READ_SUB8_PC",
 val NOOP_REG = store_thm("NOOP_REG",
   `!r m.  INC_PC (SUB8_PC r) = SUB8_PC (REG_WRITE r m 15 (REG_READ6 r usr 15 + w32 4))`,
   RW_TAC bool_ss [INC_PC_def,SUB8_PC_def,REG_WRITE_def,REG_READ6_def,mode_num2register_def,
-                  SYM r15,FETCH_PC_def,SUBST_def,SUBST_EQ,ADD_SUB_SYM]
+                  SYM r15,FETCH_PC_def,SUBST_def,SUBST_EQ,WORD_ADD_SUB_SYM]
 );
  
 val OP_REG_LEM = store_thm("OP_REG_LEM",
@@ -407,13 +407,13 @@ val BRANCH_REG = store_thm("BRANCH_REG",
 (* -------------------------------------------------------- *)
 
 val MSR_ALU = store_thm("MSR_ALU",
-  `!i alua alub c. BITw 21 i ==> (ALU6 mrs_msr t3 i alua alub c = ALU_logic alub)`,
-  RW_TAC arith_ss [BITw_THM,BIT_def,BITSw_COMP_THM,ALU6_def]
+  `!i alua alub c. WORD_BIT 21 i ==> (ALU6 mrs_msr t3 i alua alub c = ALU_logic alub)`,
+  RW_TAC arith_ss [WORD_BIT_THM,BIT_def,WORD_BITS_COMP_THM,ALU6_def]
 );
  
 val MRS_ALU = store_thm("MRS_ALU",
-  `!i alua alub c. ~BITw 21 i ==> (ALU6 mrs_msr t3 i alua alub c = ALU_logic alua)`,
-  RW_TAC arith_ss [BITw_THM,BIT_def,BITSw_COMP_THM,ALU6_def]
+  `!i alua alub c. ~WORD_BIT 21 i ==> (ALU6 mrs_msr t3 i alua alub c = ALU_logic alua)`,
+  RW_TAC arith_ss [WORD_BIT_THM,BIT_def,WORD_BITS_COMP_THM,ALU6_def]
 );
 
 val ALUOUT_ALU_logic = store_thm("ALUOUT_ALU_logic",
@@ -421,18 +421,18 @@ val ALUOUT_ALU_logic = store_thm("ALUOUT_ALU_logic",
   RW_TAC std_ss [ALU_logic_def,ALUOUT_def]
 );
 
-val BITSw118_LEM = save_thm("BITSw118_LEM",REDUCE_RULE (SPECL [`11`,`7`,`1`] BITSw_DIV_THM));
+val WORD_BITS118_LEM = save_thm("WORD_BITS118_LEM",REDUCE_RULE (SPECL [`11`,`7`,`1`] WORD_BITS_DIV_THM));
 
-val SLICEw_COMP_MSR1 = store_thm("SLICEw_COMP_MSR1",
-  `!a. SLICEw 27 8 a + BITSw 7 0 a = BITSw 27 0 a`,
+val WORD_SLICE_COMP_MSR1 = store_thm("WORD_SLICE_COMP_MSR1",
+  `!a. WORD_SLICE 27 8 a + WORD_BITS 7 0 a = WORD_BITS 27 0 a`,
   SIMP_TAC bool_ss [DECIDE ``SUC 7 <= 27``,DECIDE ``8 = SUC 7``,
-                    ZERO_LESS_EQ,GSYM SLICEw_ZERO_THM,SLICEw_COMP_THM]
+                    ZERO_LESS_EQ,GSYM WORD_SLICE_ZERO_THM,WORD_SLICE_COMP_THM]
 );
 
-val SLICEw_COMP_MSR2 = store_thm("SLICEw_COMP_MSR2",
-  `!a. SLICEw 31 28 a + SLICEw 27 8 a = SLICEw 31 8 a`,
+val WORD_SLICE_COMP_MSR2 = store_thm("WORD_SLICE_COMP_MSR2",
+  `!a. WORD_SLICE 31 28 a + WORD_SLICE 27 8 a = WORD_SLICE 31 8 a`,
   SIMP_TAC bool_ss [DECIDE ``SUC 27 <= 31``,DECIDE ``28 = SUC 27``,
-                    DECIDE ``8 <= 27``,SLICEw_COMP_THM]
+                    DECIDE ``8 <= 27``,WORD_SLICE_COMP_THM]
 );
 
 val IF_NEG = store_thm("IF_NEG",
@@ -468,25 +468,25 @@ val NZCV_ALUOUT_THM = store_thm("NZCV_ALUOUT_THM",
 );
 
 val DATA_PROC_IMP_NOT_BIT4 = store_thm("DATA_PROC_IMP_NOT_BIT4",
-  `!i. (DECODE_INST (w2n i) = data_proc) /\ (~BITw 25 i) ==> ~BIT 4 (BITSw 11 0 i)`,
-  RW_TAC arith_ss [DECODE_INST_def,BIT_def,BITSw_def,BITSw_COMP_THM]
-    THEN FULL_SIMP_TAC bool_ss [BITw_def,BIT_def]
+  `!i. (DECODE_INST (w2n i) = data_proc) /\ (~WORD_BIT 25 i) ==> ~BIT 4 (WORD_BITS 11 0 i)`,
+  RW_TAC arith_ss [DECODE_INST_def,BIT_def,WORD_BITS_def,WORD_BITS_COMP_THM]
+    THEN FULL_SIMP_TAC bool_ss [WORD_BIT_def,BIT_def]
 );
 
 val REG_SHIFT_IMP_BITS = store_thm("REG_SHIFT_IMP_BITS",
-  `!i. (DECODE_INST (w2n i) = reg_shift) ==> ~BITw 25 i /\ BIT 4 (BITSw 11 0 i)`,
-  RW_TAC arith_ss [DECODE_INST_def,BIT_def,BITSw_def,BITSw_COMP_THM]
-    THEN FULL_SIMP_TAC bool_ss [BITw_def,BIT_def]
+  `!i. (DECODE_INST (w2n i) = reg_shift) ==> ~WORD_BIT 25 i /\ BIT 4 (WORD_BITS 11 0 i)`,
+  RW_TAC arith_ss [DECODE_INST_def,BIT_def,WORD_BITS_def,WORD_BITS_COMP_THM]
+    THEN FULL_SIMP_TAC bool_ss [WORD_BIT_def,BIT_def]
 );
 
 val LDR_IMP_BITS = store_thm("LDR_IMP_BITS",
-  `!i. (DECODE_INST (w2n i) = ldr) ==> BITw 20 i`,
-  RW_TAC arith_ss [DECODE_INST_def,BITw_def]
+  `!i. (DECODE_INST (w2n i) = ldr) ==> WORD_BIT 20 i`,
+  RW_TAC arith_ss [DECODE_INST_def,WORD_BIT_def]
 );
 
 val STR_IMP_BITS = store_thm("STR_IMP_BITS",
-  `!i. (DECODE_INST (w2n i) = str) ==> ~BITw 20 i`,
-  RW_TAC arith_ss [DECODE_INST_def,BITw_def]
+  `!i. (DECODE_INST (w2n i) = str) ==> ~WORD_BIT 20 i`,
+  RW_TAC arith_ss [DECODE_INST_def,WORD_BIT_def]
 );
 
 (* -------------------------------------------------------- *)
@@ -497,7 +497,7 @@ val ALUOUT_ADD = store_thm("ALUOUT_ADD",
     THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
     THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
     THEN RW_TAC arith_ss [ALUOUT_def,ADD_def,ALU_arith_def,DIVMOD_2EXP_def,SBIT_def,
-                          GSYM MODw_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MODw_ELIM]
+                          GSYM MOD_WL_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MOD_WL_ELIM]
 );
 
 val ALUOUT_SUB = store_thm("ALUOUT_SUB",
@@ -505,8 +505,8 @@ val ALUOUT_SUB = store_thm("ALUOUT_SUB",
   REPEAT STRIP_TAC
     THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
     THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
-    THEN RW_TAC arith_ss [ALUOUT_def,SUB_def,ALU_arith_def,DIVMOD_2EXP_def,SBIT_def,GSYM MODw_EVAL,
-                          word_sub,TWO_COMP_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MODw_ELIM]
+    THEN RW_TAC arith_ss [ALUOUT_def,SUB_def,ALU_arith_def,DIVMOD_2EXP_def,SBIT_def,GSYM MOD_WL_EVAL,
+                          word_sub,TWO_COMP_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MOD_WL_ELIM]
 );
 
 (* -------------------------------------------------------- *)
@@ -518,23 +518,23 @@ val lem = prove(
 );
 
 val SLICE_ROR_THM = store_thm("SLICE_ROR_THM",
-  `!h l a. w32 (SLICEw h l a) #>> l = w32 (BITSw h l a)`,
+  `!h l a. w32 (WORD_SLICE h l a) #>> l = w32 (WORD_BITS h l a)`,
   REPEAT STRIP_TAC
     THEN Cases_on `l = 0`
     THENL [
-       ASM_REWRITE_TAC [SLICEw_ZERO_THM,ZERO_SHIFT2],
+       ASM_REWRITE_TAC [WORD_SLICE_ZERO_THM,ZERO_SHIFT2],
        STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
-         THEN RW_TAC arith_ss [MIN_DEF,SLICEw_def,BITSw_def,BITS_COMP_THM2,SLICE_THM,w2n_EVAL,MODw_THM]
+         THEN RW_TAC arith_ss [MIN_DEF,WORD_SLICE_def,WORD_BITS_def,BITS_COMP_THM2,SLICE_THM,w2n_EVAL,MOD_WL_THM]
          THENL [
            Cases_on `HB < l`
              THENL [
-                ASM_SIMP_TAC arith_ss [BITS_ZERO,SYM w_0,ZERO_SHIFT],
+                ASM_SIMP_TAC arith_ss [BITS_ZERO,SYM word_0,ZERO_SHIFT],
                 RW_TAC arith_ss [ROR_THM,BITS_ZERO3,ADD1,ZERO_LT_TWOEXP,MOD_EQ_0,lem]
                   THEN REWRITE_TAC [GSYM SLICE_THM,BITS_SLICE_THM]
              ],
            Cases_on `h < l`
              THENL [
-                ASM_SIMP_TAC arith_ss [BITS_ZERO,SYM w_0,ZERO_SHIFT],
+                ASM_SIMP_TAC arith_ss [BITS_ZERO,SYM word_0,ZERO_SHIFT],
                 `l <= HB` by DECIDE_TAC
                   THEN RW_TAC arith_ss [ROR_THM,BITS_ZERO3,ADD1,ZERO_LT_TWOEXP,MOD_EQ_0,lem]
                   THEN ASM_SIMP_TAC arith_ss [GSYM SLICE_THM,BITS_SLICE_THM2]
@@ -547,20 +547,20 @@ val SLICE_ROR_THM = store_thm("SLICE_ROR_THM",
 (* -------------------------------------------------------- *)
 
 val LDR_SHIFT_REG_T3 = store_thm("LDR_SHIFT_REG_T3",
-  `!i oareg sctrl busb c. BITw 25 i ==>
+  `!i oareg sctrl busb c. WORD_BIT 25 i ==>
           (SHIFTER ldr t3 i oareg sctrl busb c =
-               SHIFT_IMMEDIATE2 (BITSw 11 7 i) (BITSw 6 5 i) busb c)`,
+               SHIFT_IMMEDIATE2 (WORD_BITS 11 7 i) (WORD_BITS 6 5 i) busb c)`,
   RW_TAC std_ss [SHIFTER_def]
 );
 
 val LDR_SHIFT_IMM_T3 = store_thm("LDR_SHIFT_IMM_T3",
-  `!i oareg sctrl busb c. ~BITw 25 i ==>
+  `!i oareg sctrl busb c. ~WORD_BIT 25 i ==>
           (SND (SHIFTER ldr t3 i oareg sctrl busb c) = busb)`,
   RW_TAC std_ss [SHIFTER_def,LSL_def]
 );
 
 val LDR_FIELD_T3 = store_thm("LDR_FIELD_T3",
-  `!i oareg din.  FIELD ldr t3 i oareg din = w32 (BITSw 11 0 din)`,
+  `!i oareg din.  FIELD ldr t3 i oareg din = w32 (WORD_BITS 11 0 din)`,
   RW_TAC bool_ss [FIELD_def]
 );
 
@@ -575,15 +575,15 @@ val SWP_ALU6_T = store_thm("SWP_ALU6_T",
 );
 
 val SWP_SHIFT = store_thm("SWP_SHIFT",
-  `!a b c. SND (ROR a (8 * BITSw 1 0 b) c) = a #>> (8 * BITSw 1 0 b)`,
+  `!a b c. SND (ROR a (8 * WORD_BITS 1 0 b) c) = a #>> (8 * WORD_BITS 1 0 b)`,
   REPEAT STRIP_TAC
-    THEN ASSUME_TAC (SIMP_RULE arith_ss [] (SPECL [`1`,`0`,`b`] BITSwLT_THM))
-    THEN `8 * BITSw 1 0 b < 32` by DECIDE_TAC
+    THEN ASSUME_TAC (SIMP_RULE arith_ss [] (SPECL [`1`,`0`,`b`] WORD_BITSLT_THM))
+    THEN `8 * WORD_BITS 1 0 b < 32` by DECIDE_TAC
     THEN ASM_SIMP_TAC std_ss [ROR2_THM]
 );
 
 val MUST_BE_BIT21 = store_thm("MUST_BE_BIT21",
-  `!i. ~(BITw 24 i /\ ~BITw 21 i) /\ BITw 24 i ==> BITw 21 i`,
+  `!i. ~(WORD_BIT 24 i /\ ~WORD_BIT 21 i) /\ WORD_BIT 24 i ==> WORD_BIT 21 i`,
   PROVE_TAC []
 );
 
@@ -591,10 +591,10 @@ val MUST_BE_BIT21 = store_thm("MUST_BE_BIT21",
 
 val ONE_COMPw_THREE_ADD = store_thm("ONE_COMPw_THREE_ADD",
   `!a. a - w32 8 + w32 4 = NOT (w32 3) + a`,
-  GEN_REWRITE_TAC (ONCE_DEPTH_CONV o RAND_CONV) empty_rewrites  [ADD_COMMw]
-    THEN RW_TAC bool_ss [ONE_COMP_TWO_COMP,w_1]
+  GEN_REWRITE_TAC (ONCE_DEPTH_CONV o RAND_CONV) empty_rewrites  [WORD_ADD_COMM]
+    THEN RW_TAC bool_ss [WORD_NOT,word_1]
     THEN WORD_TAC
-    THEN REWRITE_TAC [GSYM ADD_ASSOCw]
+    THEN REWRITE_TAC [GSYM WORD_ADD_ASSOC]
     THEN WORD_TAC
 );
  
@@ -611,7 +611,7 @@ val DECODE_MODE_LEM = store_thm("DECODE_MODE_LEM",
                 case m of usr -> 16 || fiq -> 17
                        || irq -> 18 || svc -> 19
                        || abt -> 23 || und -> 27 || _ -> 0`,
-  Cases THEN RW_TAC arith_ss [w2n_EVAL,SET_MODE_def,MODw_THM,HB_def,BITS_COMP_THM,SLICEw_THM]
+  Cases THEN RW_TAC arith_ss [w2n_EVAL,SET_MODE_def,MOD_WL_THM,HB_def,BITS_COMP_THM,WORD_SLICE_THM]
     THEN SIMP_TAC std_ss [MOD_TIMES,MOD_EQ_0,SIMP_RULE arith_ss [DIV1] (SPECL [`4`,`0`] BITS_THM2)]
 );
 
