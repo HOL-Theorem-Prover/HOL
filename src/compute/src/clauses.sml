@@ -206,7 +206,6 @@ fun mk_rewrite rws eq_thm =
 	 npv=length fv,
 	 thm=gen_thm }
   end
-  handle HOL_ERR _ => raise CL_ERR "mk_rewrite" "cannot use this thm"
 ;
 
 
@@ -219,12 +218,16 @@ fun norm_thm thm =
   else ONCE_REWRITE_RULE [eqT_thm] thm
 end;
 
-fun enter_thm rws str thm =
-  let val thm = Drule.SPEC_ALL thm
+fun enter_thm rws str thm0 =
+  let val thm = Drule.SPEC_ALL thm0
       val thm = norm_thm thm
       val thm = if str then thm else lazyfy_thm thm
-      val rw = mk_rewrite rws thm in
-  add_in_db_upd rws (key_of rw) (Rewrite [rw])
+      val rw =
+ 	mk_rewrite rws thm
+  	handle HOL_ERR _ =>
+	  raise CL_ERR "enter_thm"
+	    ("computeLib cannot use thm\n"^Parse.thm_to_string thm0)
+  in add_in_db_upd rws (key_of rw) (Rewrite [rw])
   end;
 
 fun enter_one_thm rws str thm =
