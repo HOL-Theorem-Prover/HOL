@@ -34,7 +34,13 @@ fun assoc2 item =
 
 fun allpairs f l1 l2 = itlist (union o C map l2 o f) l1 [];;
 
-fun thm_eq th1 th2 = (dest_thm th1 = dest_thm th2);
+fun thm_eq th1 th2 = let
+  val (h1, c1) = dest_thm th1
+  val (h2, c2) = dest_thm th2
+in
+  ListPair.all (uncurry aconv) (h1, h2) andalso aconv c1 c2
+end
+
 val the_true = T
 val the_false = F
 
@@ -647,7 +653,7 @@ val fol_of_hol_clauses =
         else basics
       end
     fun eek (x1,(i1,th1)) (x2,(i2,th2)) =
-           (x1=x2) andalso (i1=i2) andalso (dest_thm th1=dest_thm th2)
+        (x1=x2) andalso (i1=i2) andalso thm_eq th1 th2
   in
     fn thms =>
     let
