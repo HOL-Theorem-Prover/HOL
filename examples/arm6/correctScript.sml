@@ -4,6 +4,9 @@ open HolKernel boolLib bossLib Q simpLib PairRules
      arithmeticTheory onestepTheory word32Theory
      armTheory coreTheory lemmasTheory lemmasLib;
 
+open OldAbbrevTactics
+    (* override new implementations of ABBREV_TAC and friends in Q *)
+
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "correct";

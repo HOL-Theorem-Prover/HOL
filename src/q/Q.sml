@@ -278,12 +278,12 @@ fun ABBREV_TAC q (g as (asl,w)) =
     ABB lhs rhs g
  end;
 
-fun UNABBREV_TAC [QUOTE s] = let val s' = Lib.deinitcomment s in
-        FIRST_ASSUM(SUBST1_TAC o SYM o
-             assert(curry op = s' o fst o dest_var o rhs o concl))
-         THEN BETA_TAC end
-  | UNABBREV_TAC _ = raise Q_ERR "UNABBREV_TAC" "unexpected quote format"
-
+fun UNABBREV_TAC q (g as (asl, w))= let
+  val v = Parse.parse_in_context (free_varsl (w::asl)) q
+in
+  FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o assert(equal v o rhs o concl)) THEN
+  BETA_TAC
+end g
 
 fun PAT_ABBREV_TAC q (g as (asl, w)) =
     let val fv_set = FVL (w::asl) empty_tmset
