@@ -31,4 +31,4 @@ sig
 
   val write_datatype_info : TypeBase.TypeInfo.tyinfo -> unit
 
-end;
+end
