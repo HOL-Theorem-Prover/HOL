@@ -140,7 +140,7 @@ $\vdash e_C \FIMP \DEF{Dev}~f$
 
 A function $f$ which is combinational (i.e.~can be implemented
 directly with logic gates without using registers) can be packaged as
-a handshaking device using a contructor \DEF{ATM} which creates a
+a handshaking device using a constructor \DEF{ATM} which creates a
 simple handshake interface and satisfies:
 
 \vspace*{-4mm}
@@ -173,11 +173,11 @@ $f$. The definitions are:
 \vspace*{3mm}
 
 $\begin{array}{l}
-\DEF{PRECEDE}~f~d~(load,inp,done,out)  =\\
-~~ \exists v.~ \DEF{COMB}~f~(inp,v) ~\wedge~ d(load,v,done,out)\\
+\DEF{PRECEDE}~f~d~(\VAR{load},inp,done,out)  =\\
+~~ \exists v.~ \DEF{COMB}~f~(inp,v) ~\wedge~ d(\VAR{load},v,done,out)\\
  \\
-\DEF{FOLLOW}~d~f~ (load,inp,done,out)  =\\
-~~ \exists v.~d(load,inp,done,v) ~\wedge~ \DEF{COMB}~f~(v,out)
+\DEF{FOLLOW}~d~f~ (\VAR{load},inp,done,out)  =\\
+~~ \exists v.~d(\VAR{load},inp,done,v) ~\wedge~ \DEF{COMB}~f~(v,out)
 \end{array}$
 \vspace*{3mm}
 
@@ -198,8 +198,8 @@ is rewritten with the definitions of these constructors (see their
 definitions in the appendix) we get a circuit built out of standard
 kinds of gates (\DEF{AND}, \DEF{OR}, \DEF{NOT} and \DEF{MUX}) a
 generic combinational component $\DEF{COMB}~g$ (where $g$ will be a
-combinational function reprensted as a HOL $\lambda$-expression) and two
-kinds of synchonous elements:
+combinational function represented as a HOL $\lambda$-expression) and two
+kinds of synchronous elements:
 \DEF{DEL} and \DEF{DFF}. 
 
 The next phase of compilation converts terms of the form $\DEF{COMB}~g~(inp,out)$
@@ -213,9 +213,9 @@ combinational circuits. For example:
 \vspace*{-2mm}
 
 {\begin{alltt}
-\( \vdash \DEF{COMB}({\lambda}(m,n). (m<n, m+1))(inp1\texttt{<>}inp2,out1\texttt{<>}out2) =              \)
-\(     {\exists}v0. \DEF{COMB}({<})(inp1\texttt{<>}inp2,out1) \wedge \DEF{CONSTANT} 1 v0 \wedge \)
-\(          \DEF{COMB}({+})(inp1\texttt{<>}v0,out2)                                              \)
+\( \vdash \DEF{COMB}\ ({\lambda}(m,n). (m<n, m+1))\ (inp1\texttt{<>}inp2,out1\texttt{<>}out2) =              \)
+\(     {\exists}v0. \DEF{COMB}\ ({<})\ (inp1\texttt{<>}inp2,out1) \wedge \DEF{CONSTANT} 1 v0 \wedge \)
+\(         \! \DEF{COMB}\ ({+})\ (inp1\texttt{<>}v0,out2)                                              \)
 \end{alltt}}
 \vspace*{-2mm}
 
@@ -232,15 +232,15 @@ the circuit constructs are defined by:
 
 {\begin{alltt}
 \( \vdash \DEF{DEL}(inp,out) = (out 0 = inp 0) \wedge {\forall}t. out(t+1) = inp t                       \)
-\( \vdash \DEF{DFF}(d,clk,q) =                                                                           \)
-\(     {\forall}t. q(t+1) = (\texttt{if} \DEF{POSEDGE} clk (t+1) \texttt{then} d(t+1) \texttt{else} q t) \)
+\( \vdash \DEF{DFF}(d,\VAR{clk},q) =                                                                           \)
+\(     {\forall}t. q(t+1) = (\texttt{if} \DEF{POSEDGE} \VAR{clk} (t+1) \texttt{then} d(t+1) \texttt{else} q t) \)
 \end{alltt}}
 
 \vspace*{-2mm}
 
 These definitions were chosen for convenience in defining
 \DEF{ATM}, \DEF{SEQ}, \DEF{PAR}, \DEF{ITE} and \DEF{REC}, but they are not standard:
-\DEF{DEL} is not explicity clocked, and it is transparent at time $0$,
+\DEF{DEL} is not explicitly clocked, and it is transparent at time $0$,
 and
 \DEF{DFF} is transparent on the positive edge of clock. 
 However, we can implement \DEF{DEL} and \DEF{DFF} in terms of more
@@ -255,7 +255,7 @@ Both \DEF{DEL} and \DEF{DFF} can be realised by combinations of
 \DEF{REG} and \DEF{REGF} (and some combinational logic). We omit
 details here. The final part of Step~3 is to refine with the
 definitions of \DEF{DEL}, \DEF{DFF} and $\FIMP$ to get an implication
-theorem $\vdash {\it{Imp}}_C \IMP \DEF{Dev}~f~(load,inp,done,out)$, where ${\it{Imp}}_C$
+theorem $\vdash {\it{Imp}}_C \IMP \DEF{Dev}~f~(\VAR{load},inp,done,out)$, where ${\it{Imp}}_C$
 is an existentially quantified conjunction of predicates describing
 primitive components (combinational components plus \DEF{REG} and
 \DEF{REGF}).
@@ -289,31 +289,31 @@ $\DEF{Dff}(ck,d,q) ~ = ~ (q~0~ =~F)~\wedge~\DEF{Dtype}(ck,d,q)$
 
 \vspace*{2mm}
 
-If $s$ is a signal, then $s~\DEF{at}~clk$ is the temporal
+If $s$ is a signal, then $s~\DEF{at}~\VAR{clk}$ is the temporal
 abstraction consisting of the values of $s$ at positive edges of
-$clk$. 
+$\VAR{clk}$. 
 Melham has described in his monograph that:
 
 
 
 
 {\baselineskip14pt\begin{alltt}
-\( \vdash \DEF{InfRise} clk \Rightarrow {\forall}d q. \DEF{Dtype}(clk,d,q) \Rightarrow \DEF{REG}(d \DEF{at} clk, q \DEF{at} clk) \)
-\( \vdash \DEF{InfRise} clk \Rightarrow {\forall}d q. \DEF{Dff}(clk,d,q) \Rightarrow \DEF{REGF}(d \DEF{at} clk, q \DEF{at} clk)  \)
+\( \vdash \DEF{InfRise} \VAR{clk} \Rightarrow {\forall}d q. \DEF{Dtype}(\VAR{clk},d,q) \Rightarrow \DEF{REG}(d \DEF{at} \VAR{clk}, q \DEF{at} \VAR{clk}) \)
+\( \vdash \DEF{InfRise} \VAR{clk} \Rightarrow {\forall}d q. \DEF{Dff}(\VAR{clk},d,q) \Rightarrow \DEF{REGF}(d \DEF{at} \VAR{clk}, q \DEF{at} \VAR{clk})  \)
 \end{alltt}}
 
 
 
-By instantiating $load$, $inp$, $done$ and $out$ in the theorem
-obtained by Step~3 to $load~\DEF{at}~clk$, $inp~\DEF{at}~clk$,
-$done~\DEF{at}~clk$ and $out~\DEF{at}~clk$, respectively, and then
+By instantiating $\VAR{load}$, $inp$, $done$ and $out$ in the theorem
+obtained by Step~3 to $\VAR{load}~\DEF{at}~\VAR{clk}$, $inp~\DEF{at}~\VAR{clk}$,
+$done~\DEF{at}~\VAR{clk}$ and $out~\DEF{at}~\VAR{clk}$, respectively, and then
 performing some deductions involving Melham's theorems above (and the
 monotonicity of existential quantification and conjunction with
 respect to implication) we obtain a theorem
 
 \vspace*{2mm}
 
-$\vdash \DEF{InfRise}~clk~\IMP~{\it{Imp}}~\IMP~\DEF{Dev}~f~(load~\DEF{at}~clk,inp~\DEF{at}~clk,done~\DEF{at}~clk,out~\DEF{at}~clk)$.
+$\vdash \DEF{InfRise}~\VAR{clk}~\IMP~{\it{Imp}}~\IMP~\DEF{Dev}~f~(\VAR{load}~\DEF{at}~\VAR{clk},inp~\DEF{at}~\VAR{clk},done~\DEF{at}~\VAR{clk},out~\DEF{at}~\VAR{clk})$.
 
 \vspace*{2mm}
 
