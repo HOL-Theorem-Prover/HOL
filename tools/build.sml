@@ -101,53 +101,68 @@ fun bincopy file path =  (* Dead simple file copy - binary version *)
   end;
 
 
-fun link s1 s2 =
+fun link b s1 s2 =
   let open Process
   in if SYSTEML ["ln", "-s", s1, s2] = success then ()
      else (print ("Unable to link file "^quote s1^" to file "^quote s2^".\n");
            raise Fail "link")
-  end;
+  end
 
-fun transfer_file symlink targetdir (df as (dir,file)) =
-  let val cp = if symlink then link else copy
-      fun mv s1 s2 =
-        let val s1' = normPath s1
-            val s2' = normPath s2
-        in
-          if symlink then link s1' s2' else FileSys.rename{old=s1', new=s2'}
-        end
-      fun transfer f (dir,file1,file2) =
-               f (fullPath [dir,file1])
-                 (fullPath [targetdir,file2])
-      fun idtransfer f (dir,file) = transfer f (dir,file,file)
-      fun digest_sig file =
-        let val b = Path.base file
-        in if (String.extract(b,String.size b -4,NONE) = "-sig"
-               handle _ => false)
-           then SOME (String.extract(b,0,SOME (String.size b - 4)))
-           else NONE
-        end
-      fun augmentSRCFILES file =
-         let open TextIO
-             val ostrm = openAppend (Path.concat(SIGOBJ,"SRCFILES"))
-         in output(ostrm,fullPath[dir,file]^"\n")
-          ; closeOut ostrm
-         end
+(* f is either bincopy or copy *)
+fun update_copy f src dest = let
+  val t0 = FileSys.modTime src
+in
+  f src dest;
+  FileSys.setTime(dest, SOME t0)
+end
+fun cp b = if b then update_copy bincopy else update_copy copy
 
+fun mv0 s1 s2 = let
+  val s1' = normPath s1
+  val s2' = normPath s2
+in
+  FileSys.rename{old=s1', new=s2'}
+end
+
+fun mv b = if b then mv0 else cp b
+
+(* uploadfn is of type : bool -> string -> string -> unit
+     the boolean is whether or not the arguments are binary files
+     the strings are source and destination file-names, in that order
+*)
+fun transfer_file uploadfn targetdir (df as (dir,file)) = let
+  fun transfer binaryp (dir,file1,file2) =
+    uploadfn binaryp (fullPath [dir,file1]) (fullPath [targetdir,file2])
+  fun idtransfer binaryp (dir,file) = transfer binaryp (dir,file,file)
+  fun digest_sig file =
+      let val b = Path.base file
+      in if (String.extract(b,String.size b -4,NONE) = "-sig"
+             handle _ => false)
+         then SOME (String.extract(b,0,SOME (String.size b - 4)))
+         else NONE
+      end
+  fun augmentSRCFILES file = let
+    open TextIO
+    val ostrm = openAppend (Path.concat(SIGOBJ,"SRCFILES"))
   in
-   case Path.ext file
-    of SOME"ui"     => idtransfer mv df
-     | SOME"uo"     => idtransfer mv df
-     | SOME"so"     => idtransfer mv df   (* for dynlibs *)
-     | SOME"xable"  => idtransfer mv df   (* for executables *)
-     | SOME"sig"    => (idtransfer cp df; augmentSRCFILES (Path.base file))
-     | SOME"sml"    => (case digest_sig file
-                         of NONE => ()
-                          | SOME file' =>
-                              (transfer cp (dir,file, file' ^".sig");
-                               augmentSRCFILES file'))
-     |    _         => ()
-  end;
+    output(ostrm,fullPath[dir,file]^"\n") ;
+    closeOut ostrm
+  end
+
+in
+  case Path.ext file of
+    SOME"ui"     => idtransfer true df
+  | SOME"uo"     => idtransfer true df
+  | SOME"so"     => idtransfer true df   (* for dynlibs *)
+  | SOME"xable"  => idtransfer true df   (* for executables *)
+  | SOME"sig"    => (idtransfer false df; augmentSRCFILES (Path.base file))
+  | SOME"sml"    => (case digest_sig file of
+                       NONE => ()
+                     | SOME file' =>
+                       (transfer false (dir,file, file' ^".sig");
+                        augmentSRCFILES file'))
+  |    _         => ()
+end;
 
 
 (*---------------------------------------------------------------------------
@@ -364,15 +379,17 @@ fun clean_dirs f = clean_sigobj() before List.app f SRCDIRS;
 
 fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
 val help_mesg = "Usage: build\n\
-                                \  or: build -symlink\n\
-                                \  or: build -dir <fullpath>\n\
-                                \  or: build -dir <fullpath> -symlink\n\
-                                \  or: build -clean\n\
-                                \  or: build -cleanAll\n\
-                                \  or: build symlink\n\
-                                \  or: build clean\n\
-                                \  or: build cleanAll\n\
-                                \  or: build help.";
+                \   or: build -symlink\n\
+                \   or: build -small\n\
+                \   or: build -dir <fullpath>\n\
+                \   or: build -dir <fullpath> -symlink\n\
+                \   or: build -clean\n\
+                \   or: build -cleanAll\n\
+                \   or: build symlink\n\
+                \   or: build small\n\
+                \   or: build clean\n\
+                \   or: build cleanAll\n\
+                \   or: build help.";
 
 fun check_against s = let
   open Time
@@ -392,16 +409,25 @@ val _ = check_against "tools/configure.sml"
 val _ = check_against "tools/build.sml"
 val _ = check_against "tools/Holmake/Systeml.sig"
 
+fun symlink_check() =
+    if OS = "winNT" then
+      (print "Sorry; symbolic linking isn't available under Windows NT";
+       Process.exit Process.failure)
+    else link
+
 val _ =
   case Mosml.argv ()
-   of [_]             => build_hol false (* no symbolic linking *)
-    | [_,"-symlink"]  => build_hol true  (*    symbolic linking *)
-    | [_,"-dir",path] => buildDir false path
+   of [_]             => build_hol cp                (* no symbolic linking *)
+    | [_,"-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
+    | [_,"-small"]    => build_hol mv                (* by renaming *)
+    | [_,"-dir",path] => buildDir cp path
     | [_,"-dir",path,
-         "-symlink"]  => buildDir true path
+         "-symlink"]  => buildDir link path
     | [_,"-clean"]    => clean_dirs cleandir
     | [_,"-cleanAll"] => clean_dirs cleanAlldir
     | [_,"clean"]     => clean_dirs cleandir
     | [_,"cleanAll"]  => clean_dirs cleanAlldir
+    | [_,"symlink"]   => build_hol (symlink_check())
+    | [_,"small"]     => build_hol mv
     | [_,"help"]      => build_help()
     | otherwise       => errmsg help_mesg
