@@ -13,9 +13,9 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir =
-val holdir   =
-val OS       =            (* Operating system; choices are:
+val mosmldir = "/local/scratch/kxs/144";
+val holdir   = "/local/scratch/kxs/working";
+val OS       = "linux"       (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
@@ -29,7 +29,7 @@ val LN_S     = "ln -s";   (* only change if you are a HOL developer.       *)
  ---------------------------------------------------------------------------*)
 
 
-app load ["FileSys", "Process", "Path"];
+app load ["FileSys", "Process", "Path", "Substring"];
 
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
@@ -58,17 +58,16 @@ val SRCDIRS =
   "src/bool", "src/basicHol90", "src/goalstack", "src/q", "src/combin",
   "src/lite", "src/ho_match", "src/refute", "src/simp/src", "src/meson/src",
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
-  "src/num", "src/reduce/src", "src/arith/src",
-  "src/list/src", "src/tree",
+  "src/num", "src/reduce/src", "src/arith/src", "src/list/src", "src/tree",
   "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/basicrec",
   "src/utils", "src/datatype/mutrec", "src/datatype/nestrec",
   "src/datatype/mutual", "src/datatype", "src/datatype/record",
-  "src/decision/src", "src/tfl/src", "src/unwind",
+  "src/decision/src", "src/tfl/src", "src/unwind", "src/boss", 
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
-  "src/hol90", "src/boss", "src/finite_map", "src/real", "src/bag",
+  "src/hol90", "src/finite_map", "src/real", "src/bag", 
   "src/robdd"];
 
 
@@ -76,14 +75,16 @@ val SRCDIRS =
           String and path operations.
  ---------------------------------------------------------------------------*)
 
-val space = " ";
-fun echo s  = TextIO.output(TextIO.stdOut, s^"\n");
+val space  = " ";
+fun echo s = TextIO.output(TextIO.stdOut, s^"\n");
 
-local
-  val munge =
-    String.translate (fn #"\\" => "\\\\" | #"\"" => "\\\"" | ch => str ch)
+local val expand_backslash =
+            String.translate 
+                (fn #"\\" => "\\\\" 
+                  | #"\"" => "\\\"" 
+                  | ch => String.str ch)
 in
-  fun quote s = String.concat["\"", munge s, "\""]
+fun quote s = String.concat["\"", expand_backslash s, "\""]
 end;
 
 (*---------------------------------------------------------------------------
@@ -94,22 +95,23 @@ end;
       once; the replacements occur in order. After the last replacement
       is done, the rest of the source is copied to the target.
  ---------------------------------------------------------------------------*)
-val _ = load "Substring";
-fun processLinesUntil (istrm,ostrm) (redex,residue) = let
-  open TextIO
-  fun loop () =
-    case inputLine istrm of
-      ""   => ()
-    | line => let
-        val ssline = Substring.all line
-        val (pref, suff) = Substring.position redex ssline
-      in
-        if Substring.size suff > 0 then output(ostrm, residue)
-        else (output(ostrm, line); loop())
-      end
-in
-  loop()
-end;
+
+fun processLinesUntil (istrm,ostrm) (redex,residue) = 
+ let open TextIO
+     fun loop () =
+       case inputLine istrm 
+        of ""   => ()
+         | line => 
+            let val ssline = Substring.all line
+                val (pref, suff) = Substring.position redex ssline
+            in
+              if Substring.size suff > 0 
+              then output(ostrm, residue)
+              else (output(ostrm, line); loop())
+            end
+ in
+   loop()
+ end;
 
 fun fill_holes (src,target) repls =
  let open TextIO
@@ -198,52 +200,60 @@ val _ =
    mk_xable bin
   end;
 
-val _ = let
-  open TextIO
-  val _ = echo "Making hol98-mode.el (for Emacs)"
-  val src = fullPath [holdir, "tools/hol98-mode.src"]
-  val target = fullPath [holdir, "tools/hol98-mode.el"]
-in
-  fill_holes (src, target)
-  ["(defvar hol98-executable HOL98-EXECUTABLE\n" -->
-   ("(defvar hol98-executable \n  "^
-    quote (fullPath [holdir, "bin/hol.unquote"])^
-    "\n")]
-end;
+
+(*---------------------------------------------------------------------------
+    Instantiate tools/hol98-mode.src, and put it in tools/hol98-mode.el
+ ---------------------------------------------------------------------------*)
+
+val _ = 
+ let open TextIO
+     val _ = echo "Making hol98-mode.el (for Emacs)"
+     val src = fullPath [holdir, "tools/hol98-mode.src"]
+    val target = fullPath [holdir, "tools/hol98-mode.el"]
+ in
+    fill_holes (src, target)
+      ["(defvar hol98-executable HOL98-EXECUTABLE\n" 
+        -->
+       ("(defvar hol98-executable \n  "^
+        quote (fullPath [holdir, "bin/hol.unquote"])^"\n")]
+ end;
+
 
 (*---------------------------------------------------------------------------
     Fill in some slots in the Standard Prelude file, and write it to
     std.prelude in the top level of the distribution directory.
  ---------------------------------------------------------------------------*)
 
-val _ = let
-  open TextIO
-  val _ = echo "Setting up the standard prelude."
-  val src    = fullPath [holdir, "tools/std.prelude.src"]
-  val target = fullPath [holdir, "std.prelude"]
-  val docdirs = let
-    open TextIO
-    val docfile = fullPath[holdir, "tools", "documentation-directories"]
-    val instr  = TextIO.openIn docfile
-    val wholefile = TextIO.inputAll instr
-    val _ = TextIO.closeIn instr
-  in
-    map (fn s => Path.concat(holdir, s)) (String.tokens Char.isSpace wholefile)
-  end
-  fun listtostring acc [] = String.concat ("["::List.rev ("]\n"::acc))
-    | listtostring acc [x] = String.concat ("["::List.rev ("]\n"::x::acc))
-    | listtostring acc (x::xs) = listtostring (", \n     "::x::acc) xs
-  val docdirs_str = listtostring [] (map quote docdirs)
-in
-     fill_holes (src,target)
-         ["val SIGOBJ = __"
-              -->
-          String.concat["      val SIGOBJ = toString(fromString(concat\n",
-         "                    (", quote holdir, ",", quote"sigobj",")))\n"],
-          "val docdirs = __" -->
-          ("  val docdirs = map (Path.toString o Path.fromString)\n    "^
+val _ = 
+ let open TextIO
+     val _ = echo "Setting up the standard prelude."
+     val src    = fullPath [holdir, "tools/std.prelude.src"]
+     val target = fullPath [holdir, "std.prelude"]
+     val docdirs = 
+        let val docfile = fullPath[holdir,"tools","documentation-directories"]
+            val instr  = openIn docfile
+            val wholefile = inputAll instr
+            val _ = closeIn instr
+        in
+          map (fn s => Path.concat(holdir, s))
+              (String.tokens Char.isSpace wholefile)
+        end
+     fun listtostring acc [] = String.concat ("["::List.rev ("]\n"::acc))
+       | listtostring acc [x] = String.concat ("["::List.rev ("]\n"::x::acc))
+       | listtostring acc (x::xs) = listtostring (", \n     "::x::acc) xs
+     val docdirs_str = listtostring [] (map quote docdirs)
+ in
+   fill_holes (src,target)
+     ["val SIGOBJ = __"
+        -->
+      String.concat["      val SIGOBJ = toString(fromString(concat\n",
+                     "                    (", quote holdir, 
+                     ",", quote"sigobj",")))\n"],
+      "val docdirs = __" 
+      -->
+      ("  val docdirs = map (Path.toString o Path.fromString)\n    "^
            docdirs_str)]
-  end;
+ end;
 
 (*---------------------------------------------------------------------------
      Set the location of HOLDIR in Globals.src and write it to
