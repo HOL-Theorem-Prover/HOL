@@ -20,7 +20,7 @@ let add_to_list r xs = (r := !r @ xs)
 %token < string  >       Real     /* M.... */
 %token < string  >       Word     /* M.... */
 %token < string  >       Char     /* M.... */
-%token < int  >          Indent   /* MH... */
+%token < int  >          Indent   /* MH..D */
 %token < string  >       White    /* MH..D */
 %token < string  >       Sep      /* MH..D */
 %token < string  >       Content  /* ..TX. */
@@ -65,8 +65,9 @@ let add_to_list r xs = (r := !r @ xs)
 
 /* low precedence (loosest) */
 
-%nonassoc below_mosmlwhitetok_nonl
-%nonassoc Indent White ToHol ToText ToTex ToDir
+%nonassoc below_mosmlwhitetok
+%nonassoc Indent
+%nonassoc White ToHol ToText ToTex ToDir
 
 /* high precedence (tightest) */
 
@@ -101,18 +102,11 @@ tex_content :
 | ToDir directive From    { TexDir $2 }
 
 mosml_parse :
-  mosml_parse_rev             { let (l0,ls) = $1 in (l0, List.rev ls) }
+  mosml_parse_rev             { List.rev $1 }
 
 mosml_parse_rev :
-  mosml_line0_rev             { (List.rev $1,[]) }
-| mosml_parse_rev mosml_line  { let (l0,ls) = $1 in (l0,$2::ls) }
-
-mosml_line :
-  Indent mosml_line0_rev  { ($1,List.rev $2) }
-
-mosml_line0_rev :
   /* empty */                     { [] }
-| mosml_line0_rev mosml_token_rev { $2 @ $1 }
+| mosml_parse_rev mosml_token_rev { $2 @ $1 }
 
 /* note horrible hackery to allow whitespace between Ident and
    backtick.  This whitespace (incl. comments or TeX or directives)
@@ -135,10 +129,10 @@ mosml_token_rev :
                                        | DelimHolMosmlD -> MosmlHolBTBT
                                        | _ -> raise (NeverHappen "mosml_token_rev")),
                                       $2)] }
-| mosmlwhitetok_nonl      { [$1] }
+| mosmlwhitetok           { [$1] }
 
 mosml_to_hol_rev :
-  /* empty */ %prec below_mosmlwhitetok_nonl
+  /* empty */ %prec below_mosmlwhitetok
                           { fun (x,y) -> y @ [MosmlContent (fst x)] }
 | ToHol hol_parse From    { fun (x,y) -> MosmlHol(Some (fst x),
                                                   (match $1 with
@@ -152,34 +146,25 @@ opt_mosml_whitestuff_rev :
 | opt_mosml_whitestuff_rev mosmlwhitetok  { $2 :: $1 }
 
 mosmlwhitetok :
-  mosmlwhitetok_nonl       { $1 }
-| Indent                   { MosmlContent (make_indent $1) }  /* UGLY HACK */
-
-mosmlwhitetok_nonl :
   White                    { MosmlContent $1 }
+| Indent                   { MosmlIndent $1 }
 | ToTex tex_parse From     { MosmlTex $2 }
 | ToText text_parse From   { MosmlText $2 }
 | ToDir directive From     { MosmlDir $2 }
 
 
 hol_parse :
-  hol_parse_rev           { let (l0,ls) = $1 in (l0, List.rev ls) }
+  hol_parse_rev            { List.rev $1 }
                                                  
 hol_parse_rev :
-  hol_line0_rev               { (List.rev $1,[]) }
-| hol_parse_rev hol_line      { let (l0,ls) = $1 in (l0,$2::ls) }
-
-hol_line :
-  Indent hol_line0_rev        { ($1, List.rev $2) }
-
-hol_line0_rev :
-  /* empty */                { [] }
-| hol_line0_rev hol_token    { $2 :: $1 }
+  /* empty */              { [] }
+| hol_parse_rev hol_token  { $2 :: $1 }
 
 hol_token :
   Ident                   { HolIdent(snd $1, fst $1) }
 | Str                     { HolStr $1 }
 | White                   { HolWhite $1 }
+| Indent                  { HolIndent $1 }
 | Sep                     { HolSep $1 }
 | ToText text_parse From  { HolText $2 }
 | ToTex tex_parse From    { HolTex $2 }
@@ -215,25 +200,33 @@ directive0 :
 | HOL_ID_ALIST      ident_alist     { DirThunk (fun () -> add_to_list (!curmodals.hOL_ID_ALIST     ) $2) }
 | HOL_CURRIED_ALIST curryspec_alist { DirThunk (fun () -> add_to_list (!curmodals.hOL_CURRIED_ALIST) $2) }
 /* other modals: */
-| SMART_PREFIX      { DirThunk (fun () -> !curmodals.sMART_PREFIX := true ) }
-| NO_SMART_PREFIX   { DirThunk (fun () -> !curmodals.sMART_PREFIX := false) }
-| INDENT            { DirThunk (fun () -> !curmodals.iNDENT       := true ) }
-| NOINDENT          { DirThunk (fun () -> !curmodals.iNDENT       := false) }
-| RULES             { DirThunk (fun () -> !curmodals.rULES        := true ) }
-| NORULES           { DirThunk (fun () -> !curmodals.rULES        := false) }
-| COMMENTS          { DirThunk (fun () -> !curmodals.cOMMENTS     := true ) }
-| NOCOMMENTS        { DirThunk (fun () -> !curmodals.cOMMENTS     := false) }
+| SMART_PREFIX      opt_whitestuff { DirThunk (fun () -> !curmodals.sMART_PREFIX := true ) }
+| NO_SMART_PREFIX   opt_whitestuff { DirThunk (fun () -> !curmodals.sMART_PREFIX := false) }
+| INDENT            opt_whitestuff { DirThunk (fun () -> !curmodals.iNDENT       := true ) }
+| NOINDENT          opt_whitestuff { DirThunk (fun () -> !curmodals.iNDENT       := false) }
+| RULES             opt_whitestuff { DirThunk (fun () -> !curmodals.rULES        := true ) }
+| NORULES           opt_whitestuff { DirThunk (fun () -> !curmodals.rULES        := false) }
+| COMMENTS          opt_whitestuff { DirThunk (fun () -> !curmodals.cOMMENTS     := true ) }
+| NOCOMMENTS        opt_whitestuff { DirThunk (fun () -> !curmodals.cOMMENTS     := false) }
 /* other non-modals: */
-| ECHO                         { DirThunk (fun () -> eCHO  := true ) }
-| NOECHO                       { DirThunk (fun () -> eCHO  := false) }
-| RCSID opt_whitestuff Str     { DirThunk (fun () -> rCSID := Some $3) }
-| HOLDELIM opt_whitestuff Str opt_whitestuff Str
+| ECHO opt_whitestuff                         { DirThunk (fun () -> eCHO  := true ) }
+| NOECHO opt_whitestuff                       { DirThunk (fun () -> eCHO  := false) }
+| RCSID opt_whitestuff Str opt_whitestuff     { DirThunk (fun () -> rCSID := Some $3) }
+| HOLDELIM opt_whitestuff Str opt_whitestuff Str opt_whitestuff
                                { DirThunk (fun () -> hOLDELIMOPEN := $3; hOLDELIMCLOSE := $5) }
-| NEWMODE opt_whitestuff Ident { DirThunk (fun () -> new_mode    (fst $3)) }
-| MODE    opt_whitestuff Ident { DirThunk (fun () -> change_mode (fst $3)) }
-| SPECIAL string_list          { DirThunk (fun () -> add_to_list Holdoc_init.nonagg_specials $2) }
+| NEWMODE opt_whitestuff Ident opt_whitestuff { DirThunk (fun () -> new_mode    (fst $3)) }
+| MODE    opt_whitestuff Ident opt_whitestuff { DirThunk (fun () -> change_mode (fst $3)) }
+| SPECIAL string_list          { (* must happen immediately, since it affects lexing *)
+                                 add_to_list Holdoc_init.nonagg_specials $2;
+                                 DirThunk (fun () -> ()) }
 /* special handling: */
 | VARS ident_list_b  { DirVARS $2 }  /* ignore for now */
+/* unrecognised things: */
+| Ident dirstuff     { if fst $1 = "C" then
+                         DirThunk (fun () -> ())  (* ignore comment *)
+                       else
+                         raise Parse_error  (* unrecognised directive *) }
+                         
 
 ident_list :
   ident_list_b       { List.map snd $1 }
@@ -265,13 +258,16 @@ curryspec_alist :
 
 curryspec_alist_rev :
   opt_whitestuff { [] }
-| curryspec_alist_rev curryspec_one Indent opt_whitestuff_nonl { $2 :: $1 }  
+| curryspec_alist_rev curryspec_one Indent opt_whitestuff { $2 :: $1 }  
 
 curryspec_one :
     Ident opt_whitestuff_nonl Str opt_whitestuff_nonl Ident opt_whitestuff_nonl Ident opt_whitestuff_nonl opt_ident
-    { (fst $1,($3,int_of_string (fst $5),bool_of_string (fst $7),
-               match $9 with None -> false | Some (b,_) -> bool_of_string b)) }
-      /* default final parameter is =false */
+    { (fst $1,{ cy_cmd = $3;
+                cy_arity = int_of_string (fst $5);
+                cy_commas = bool_of_string (fst $7);
+                cy_multiline = match $9 with None -> false
+                                           | Some (b,_) -> bool_of_string b }) }
+      /* default for cy_multiline is false */
 
 opt_ident :
   /* empty */                 { None }
@@ -295,11 +291,22 @@ whitetok :
 
 opt_whitestuff_nonl :
   /* empty */                        { () }
-| opt_whitestuff_nonl whitetok_nonl  { $1 }
+| opt_whitestuff_nonl whitetok_nonl  { () }
 
 whitetok_nonl :
   White                    { () }
 | ToText text_parse From   { () }
+
+dirstuff :
+  /* empty */           { () }
+| dirstuff dirstufftok  { () }
+
+dirstufftok :
+  Ident   { () }
+| Str     { () }
+| White   { () }
+| Sep     { () }
+| Indent  { () }
 
 %%
 

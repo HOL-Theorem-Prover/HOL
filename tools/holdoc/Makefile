@@ -25,7 +25,7 @@ GENMLISOURCES=holparse.mli
 
 # main target:
 
-all: simplemngdump simplemosmldump lts_to_latex mng_to_latex hol_to_latex
+all: simplemngdump simplemosmldump mng_to_latex
 
 # program targets:
 
@@ -38,7 +38,7 @@ simplemosmldump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpl
 lts_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx lts_to_latex.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
-mng_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx mng_to_latex.cmx
+mng_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx mng_to_latex.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
 hol_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx hol_to_latex.cmx

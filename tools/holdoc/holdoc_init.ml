@@ -3,6 +3,14 @@
 
 (* these are now always initialised from a file; there are no defaults *)
 
+type curried_info = {
+    cy_cmd : string;     (* the TeX command to use *)
+    cy_arity : int;      (* the arity ( *before* converting commas) *)
+    cy_commas : bool;    (* turn first-level commas into "}{"
+                            and remove first-level parens *)
+    cy_multiline : bool; (* allow multi-line *)
+}
+
 (* modal settings first (these depend on the current mode) *)
 
 type modalsettings = {
@@ -17,7 +25,7 @@ type modalsettings = {
   hOL_OP_LIST : string list ref;
   hOL_SYM_ALIST : (string * string) list ref;
   hOL_ID_ALIST : (string * string) list ref;
-  hOL_CURRIED_ALIST : (string * (string * int * bool * bool)) list ref;
+  hOL_CURRIED_ALIST : (string * curried_info) list ref;
   sMART_PREFIX : bool ref;
   iNDENT : bool ref;
   rULES : bool ref;

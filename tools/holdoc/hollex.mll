@@ -1,8 +1,9 @@
 (* hollex.mll  --  (approximate) HOL lexer *)
-(* Keith Wansbrough 2001 *)
+(* Keith Wansbrough 2001-4 *)
 
 {
 
+open Holdoc_init
 open Holparsesupp
 open Holparse
 
@@ -11,14 +12,14 @@ exception BadChar of string      (* bad character *)
 exception EOF                    (* attempt to read past (already-reported) EOF *)
 
 
-let check_close expected got =
+let check_close expected got lexbuf =
   if expected = got then
     From
   else
-    raise (Mismatch ("Mismatched delimiters: "^(delim_info expected).sopen^" closed by "^(delim_info got).sclose))
+    raise (Mismatch ("Mismatched delimiters: "^(delim_info expected).sopen^" closed by "^(delim_info got).sclose ^ " at " ^ pretty_pos lexbuf))
 
 let bad_char mode lexbuf =
-  raise (BadChar ("didn't expect char '"^Lexing.lexeme lexbuf^"' at char " ^ string_of_int (Lexing.lexeme_start lexbuf) ^ " in " ^ render_mode mode ^ " mode."))
+  raise (BadChar ("didn't expect char '"^Lexing.lexeme lexbuf^"' at " ^ pretty_pos lexbuf ^ " in " ^ render_mode mode ^ " mode."))
   
 let indent_width s =
   let l = String.length s in
@@ -237,7 +238,7 @@ rule
   | backtick backtick      { fun _  -> ToHol(DelimHolMosmlD) }
   | starttex               { fun _  -> ToTex(DelimTex) }
   | startcom               { fun _  -> ToText(DelimText) }
-  | eof                    { fun ed -> check_close ed DelimEOF }
+  | eof                    { fun ed -> check_close ed DelimEOF lexbuf }
   | _                      { fun _  -> bad_char ModeMosml lexbuf }
     
 and
@@ -248,17 +249,17 @@ and
                              register_newlines lexbuf s;
                              fun _  -> Str (String.sub s 1 (String.length s - 2)) }
   | startdir               { fun _  -> ToDir(DelimDir) }
-  | tendhol                { fun ed -> check_close ed DelimHolTex }
-  | tendhol0               { fun ed -> check_close ed DelimHolTexMath }
+  | tendhol                { fun ed -> check_close ed DelimHolTex lexbuf }
+  | tendhol0               { fun ed -> check_close ed DelimHolTexMath lexbuf }
   | starttex               { fun _  -> ToTex(DelimTex) }
   | startcom               { fun _  -> ToText(DelimText) }
   | dollar? anysymb        { fun _  -> Ident (Lexing.lexeme lexbuf,true) }
   | newline white*         { register_newline lexbuf;
                              fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
   | white+                 { fun _  -> White (Lexing.lexeme lexbuf) }
-  | backtick               { fun ed -> check_close ed DelimHolMosml }
-  | backtick backtick      { fun ed -> check_close ed DelimHolMosmlD }
-  | eof                    { fun ed -> check_close ed DelimEOF }
+  | backtick               { fun ed -> check_close ed DelimHolMosml lexbuf }
+  | backtick backtick      { fun ed -> check_close ed DelimHolMosmlD lexbuf }
+  | eof                    { fun ed -> check_close ed DelimEOF lexbuf }
   | _                      { fun _  -> bad_char ModeHol lexbuf }
 
 and
@@ -267,8 +268,8 @@ and
                      register_newlines lexbuf s;
                      fun _  -> Content s }
   | startcom       { fun _  -> ToText(DelimText) }
-  | stopcom        { fun ed -> check_close ed DelimText }
-  | eof            { fun ed -> check_close ed DelimEOF }
+  | stopcom        { fun ed -> check_close ed DelimText lexbuf }
+  | eof            { fun ed -> check_close ed DelimEOF lexbuf }
   | _              { fun _  -> bad_char ModeText lexbuf }
 
 and
@@ -284,7 +285,7 @@ and
 
     tstarthol      { fun _  -> ToHol(DelimHolTex) }
   | tstarthol0     { fun _  -> ToHol(DelimHolTexMath) }
-  | endtex         { fun ed -> check_close ed DelimTex }
+  | endtex         { fun ed -> check_close ed DelimTex lexbuf }
   | tstartdir      { fun _  -> ToDir(DelimDir) }  (* recognised as an alias; closedelim is the same *)
   | startdir       { fun _  -> ToDir(DelimDir) }
 
@@ -299,7 +300,7 @@ and
                    { let s = Lexing.lexeme lexbuf in
                      register_newlines lexbuf s;
                      fun _  -> Content s }
-  | eof            { fun ed -> check_close ed DelimEOF }
+  | eof            { fun ed -> check_close ed DelimEOF lexbuf }
   | _              { let s = Lexing.lexeme lexbuf in
                      register_newlines lexbuf s;
                      fun _  -> Content s }
@@ -310,7 +311,7 @@ and
                            { let s = Lexing.lexeme lexbuf in
                              register_newlines lexbuf s;
                              fun _  -> Str (String.sub s 1 (String.length s - 2)) }
-  | enddir                 { fun ed -> check_close ed DelimDir }
+  | enddir                 { fun ed -> check_close ed DelimDir lexbuf }
   | startcom               { fun _  -> ToText(DelimText) }
   | dollar? anysymb        { fun _  ->
                              let s = Lexing.lexeme lexbuf in
@@ -319,7 +320,7 @@ and
   | white+                 { fun _  -> White (Lexing.lexeme lexbuf) }
   | newline white*         { register_newline lexbuf;
                              fun _  -> Indent (indent_width (Lexing.lexeme lexbuf)) }
-  | eof                    { fun ed -> check_close ed DelimEOF }
+  | eof                    { fun ed -> check_close ed DelimEOF lexbuf }
   | _                      { fun _  -> bad_char ModeDir lexbuf }
 
 
@@ -337,139 +338,6 @@ let to_token_mode t =
   | ToDir   _ -> ModeDir  
   | _         -> raise (NeverHappen "to_token_mode: not To* token")
 
-(* map from mode names to parsers *)
-let modeparser m =
-  List.assoc m
-    [
-     (ModeMosml, mosmltoken);
-     (ModeHol  , holtoken);
-     (ModeText , texttoken);
-     (ModeTex  , textoken);
-     (ModeDir  , dirtoken);
-     (ModeNone , fun _ _ -> raise (NeverHappen "modeparser: ModeNone"));
-   ]
-
-(* nonagg_specials is defined in Holdoc_init.  This is the set of 
-   symbolic identifiers that contain nonaggregating characters; user-extensible *)
-let nonagg_specials = ref ["()"; "[]"; ".."; "..."]
-
-let nonagg_re = Str.regexp "[]()[{}~.,;]"
-
-(* given a string that has matched as a HOL identifier, split an
-   identifier or other token off the front, returning the token and
-   the number of characters consumed.  The remaining characters should
-   be pushed back and re-lexed.  Do this respecting nonaggregating
-   characters but modulo known nonagg_specs (operators containing
-   nonagg chars). *)
-(* cf HOL98 src/parse/term_tokens.sml *)
-
-let rec split_ident ed nonagg_specs s
-    = match String.get s 0 with
-        '"'  -> (Ident(s,true),String.length s)
-      | '_'  -> (Ident(s,true),String.length s)
-      | '\'' -> (Ident(s,true),String.length s)  (* this is a type token *)
-      | '$'  -> let rest = Str.string_after s 1 in
-                (if rest = "" then
-                  raise (BadChar "expected ident after $")
-                else
-                  match split_ident ed nonagg_specs rest with
-                    (Ident(s',b),r) -> (Ident("$"^s',b),1+r)
-                  | _               -> raise (BadChar "expected ident after $"))
-      | c    -> let possible_nonaggs = List.filter (function spec -> isPrefix spec s)
-                                                   nonagg_specs in
-                if possible_nonaggs = [] then
-                  try
-                    let i = Str.search_forward nonagg_re s 0 in
-                    if i = 0 then
-                      match
-                        findfirst (fun delim ->
-                          let ds = (delim_info delim).sclose in
-                          if isPrefix ds s then Some (check_close ed delim, String.length ds) else None)
-                          [DelimHolTex; DelimHolTexMath; DelimHolMosml; DelimHolMosmlD; DelimDir] with
-                        Some x -> x
-                      | None ->
-                          (Sep(String.make 1 c), 1)
-                    else
-                       (Ident(Str.string_before s i,isAlphaNum c),i)
-                  with
-                    Not_found -> (Ident(s,isAlphaNum c),String.length s)
-                else
-                  (let compare s1 s2 = String.length s2 - String.length s1 in
-                   let best = List.hd (List.stable_sort compare possible_nonaggs) in
-                   let sz = String.length best in
-                   (Ident(best,isAlphaNum c),sz))
-
-
-(* internal state for "token", the multiplexed parser *)
-type hollexstate = {
-    lexbuf : Lexing.lexbuf;
-    mutable curmode : mode;
-    mutable curparser : (Lexing.lexbuf -> delim -> token);
-    mutable curdelim : delim;
-    mutable stack : (mode * (Lexing.lexbuf -> delim -> token) * delim) list;
-  }
-
-(* create a hollexstate *)
-let token_init mode lexbuf =
-  { lexbuf = lexbuf;
-    curmode = mode;
-    curparser = modeparser mode;
-    curdelim = DelimEOF;
-    stack = [] }
-
-(* given a hollexstate, return the next token in the stream *)
-let token lst =
-  let t0 = lst.curparser lst.lexbuf lst.curdelim in
-  let t1 =
-    match t0 with
-    | Ident(s,_) when (lst.curmode = ModeHol || lst.curmode = ModeDir) ->
-        let (t',r) = split_ident lst.curdelim !nonagg_specials s in
-        rewind_partial lst.lexbuf r;
-        t'
-    | _ -> t0
-  in
-  match t1 with
-  | ToMosml(delim)
-  | ToHol  (delim)
-  | ToText (delim)
-  | ToTex  (delim)
-  | ToDir  (delim) ->
-      let mode = to_token_mode t1 in
-(*      print_string ("\nPUSH "^render_mode lst.curmode^" -> "^render_mode mode^"\n"); *)
-      lst.stack     <- (lst.curmode,lst.curparser,lst.curdelim) :: lst.stack;
-      lst.curmode   <- mode;
-      lst.curparser <- modeparser mode;
-      lst.curdelim  <- delim;
-      t1
-  | From ->
-      (match lst.stack with
-        [] ->
-(*          print_string ("\nPOP - hit bottom\n");*)
-          lst.curparser <- (fun _ _ -> raise EOF);
-          t1
-      | ((m,p,d)::pds) ->
-(*          print_string ("\nPOP "^render_mode lst.curmode^" -> "^render_mode m^"\n"); *)
-          lst.curmode <- m;
-          lst.curparser <- p;
-          lst.curdelim <- d;
-          lst.stack <- pds;
-          t1)
-  | _ ->
-      t1
-
-
-(* build a fast stream of tokens from lexed stdin, doing the
-   second-pass of lexing on the way *)
-let tokstream m chan =
-  let lexbuf = Lexing.from_channel chan in
-  let lst = token_init m lexbuf in
-  (* I hope it is valid to assume that *all* tokens are requested, in ascending order! *)
-  let next _ = try Some (token lst) with EOF -> None in
-  Stream.from next
-
-let holtokstream = tokstream ModeHol
-
-let textokstream = tokstream ModeTex
 
 (* eds is stack of enclosing delimiters *)
 let print_token eds t =
@@ -523,6 +391,140 @@ let render_token t =
   | NOCOMMENTS | ECHO | NOECHO | RCSID | HOLDELIM | NEWMODE | MODE
   | SPECIAL | VARS
                -> "R:" ^ List.assoc t (List.map (fun (x,y) -> (y,x)) directive_alist)
+
+
+(* map from mode names to parsers *)
+let modeparser m =
+  List.assoc m
+    [
+     (ModeMosml, mosmltoken);
+     (ModeHol  , holtoken);
+     (ModeText , texttoken);
+     (ModeTex  , textoken);
+     (ModeDir  , dirtoken);
+     (ModeNone , fun _ _ -> raise (NeverHappen "modeparser: ModeNone"));
+   ]
+
+(* nonagg_specials is defined in Holdoc_init.  This is the set of 
+   symbolic identifiers that contain nonaggregating characters; user-extensible *)
+
+let nonagg_re = Str.regexp "[]()[{}~.,;]"
+
+(* given a string that has matched as a HOL identifier, split an
+   identifier or other token off the front, returning the token and
+   the number of characters consumed.  The remaining characters should
+   be pushed back and re-lexed.  Do this respecting nonaggregating
+   characters but modulo known nonagg_specs (operators containing
+   nonagg chars). *)
+(* cf HOL98 src/parse/term_tokens.sml *)
+
+let rec split_ident ed nonagg_specs s lexbuf (* lexbuf for error reporting only *)
+    = match String.get s 0 with
+        '"'  -> (Ident(s,true),String.length s)
+      | '_'  -> (Ident(s,true),String.length s)
+      | '\'' -> (Ident(s,true),String.length s)  (* this is a type token *)
+      | '$'  -> let rest = Str.string_after s 1 in
+                (if rest = "" then
+                  raise (BadChar "expected ident after $")
+                else
+                  match split_ident ed nonagg_specs rest lexbuf with
+                    (Ident(s',b),r) -> (Ident("$"^s',b),1+r)
+                  | _               -> raise (BadChar "expected ident after $"))
+      | c    -> let possible_nonaggs = List.filter (function spec -> isPrefix spec s)
+                                                   nonagg_specs in
+                if possible_nonaggs = [] then
+                  try
+                    let i = Str.search_forward nonagg_re s 0 in
+                    if i = 0 then
+                      match
+                        findfirst (fun delim ->
+                          let ds = (delim_info delim).sclose in
+                          if isPrefix ds s then Some (check_close ed delim lexbuf, String.length ds) else None)
+                          [DelimHolTex; DelimHolTexMath; DelimHolMosml; DelimHolMosmlD; DelimDir] with
+                        Some x -> x
+                      | None ->
+                          (Sep(String.make 1 c), 1)
+                    else
+                       (Ident(Str.string_before s i,isAlphaNum c),i)
+                  with
+                    Not_found -> (Ident(s,isAlphaNum c),String.length s)
+                else
+                  (let compare s1 s2 = String.length s2 - String.length s1 in
+                   let best = List.hd (List.stable_sort compare possible_nonaggs) in
+                   let sz = String.length best in
+                   (Ident(best,isAlphaNum c),sz))
+
+
+(* internal state for "token", the multiplexed parser *)
+type hollexstate = {
+    lexbuf : Lexing.lexbuf;
+    mutable curmode : mode;
+    mutable curparser : (Lexing.lexbuf -> delim -> token);
+    mutable curdelim : delim;
+    mutable stack : (mode * (Lexing.lexbuf -> delim -> token) * delim) list;
+  }
+
+(* create a hollexstate *)
+let token_init mode lexbuf =
+  { lexbuf = lexbuf;
+    curmode = mode;
+    curparser = modeparser mode;
+    curdelim = DelimEOF;
+    stack = [] }
+
+(* given a hollexstate, return the next token in the stream *)
+let token lst =
+  let t0 = lst.curparser lst.lexbuf lst.curdelim in
+  let t1 =
+    match t0 with
+    | Ident(s,_) when (lst.curmode = ModeHol || lst.curmode = ModeDir) ->
+        let (t',r) = split_ident lst.curdelim !nonagg_specials s lst.lexbuf in
+        rewind_partial lst.lexbuf r;
+        t'
+    | _ -> t0
+  in
+  match t1 with
+  | ToMosml(delim)
+  | ToHol  (delim)
+  | ToText (delim)
+  | ToTex  (delim)
+  | ToDir  (delim) ->
+      let mode = to_token_mode t1 in
+(*      print_string ("\nPUSH "^render_mode lst.curmode^" -> "^render_mode mode^"\n"); *)
+      lst.stack     <- (lst.curmode,lst.curparser,lst.curdelim) :: lst.stack;
+      lst.curmode   <- mode;
+      lst.curparser <- modeparser mode;
+      lst.curdelim  <- delim;
+      t1
+  | From ->
+      (match lst.stack with
+        [] ->
+(*          print_string ("\nPOP - hit bottom\n");*)
+          lst.curparser <- (fun _ _ -> raise EOF);
+          t1
+      | ((m,p,d)::pds) ->
+(*          print_string ("\nPOP "^render_mode lst.curmode^" -> "^render_mode m^"\n"); *)
+          lst.curmode <- m;
+          lst.curparser <- p;
+          lst.curdelim <- d;
+          lst.stack <- pds;
+          t1)
+  | _ ->
+      t1
+
+
+(* build a fast stream of tokens from lexed stdin, doing the
+   second-pass of lexing on the way *)
+let tokstream m chan =
+  let lexbuf = Lexing.from_channel chan in
+  let lst = token_init m lexbuf in
+  (* I hope it is valid to assume that *all* tokens are requested, in ascending order! *)
+  let next _ = try Some (token lst) with EOF -> None in
+  Stream.from next
+
+let holtokstream = tokstream ModeHol
+
+let textokstream = tokstream ModeTex
 
 }
 

@@ -16,30 +16,25 @@ and textdoc_content =
   | TextText of textdoc
   | TextDir of directive
 
-and 'a lines = 'a               (* first line *)
-              * (int * 'a) list  (* subsequent lines with indents *)
-
-and mosmldoc = mosml_line lines
-
-and mosml_line = mosml_content list
+and mosmldoc = mosml_content list
 
 and mosmlholmode = MosmlHolBT | MosmlHolBTBT
 
 and mosml_content =
      MosmlContent of string
+   | MosmlIndent of int
    | MosmlHol of string option * mosmlholmode * holdoc  (* ident preceding delim *)
    | MosmlText of textdoc
    | MosmlTex of texdoc
    | MosmlDir of directive
 
-and holdoc = hol_line lines
-
-and hol_line = hol_content list
+and holdoc = hol_content list
 
 and hol_content =
      HolIdent of bool * string
    | HolStr of string
    | HolWhite of string
+   | HolIndent of int
    | HolSep of string
    | HolText of textdoc
    | HolTex of texdoc

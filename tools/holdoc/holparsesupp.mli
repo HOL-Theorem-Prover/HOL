@@ -27,3 +27,4 @@ val delim_info : delim -> delim_info
 
 val make_indent : int -> string
 
+val pretty_pos : Lexing.lexbuf -> string

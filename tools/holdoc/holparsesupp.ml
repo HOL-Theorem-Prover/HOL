@@ -47,3 +47,10 @@ let delim_info d =
 
 let make_indent n = "\n" ^ String.make n ' '
 
+(* display the current position in filename:line:col format *)
+let pretty_pos lexbuf =
+  let p = Lexing.lexeme_start_p lexbuf in
+  p.Lexing.pos_fname ^ ":" 
+  ^ string_of_int p.Lexing.pos_lnum ^ ":"
+  ^ string_of_int (p.Lexing.pos_cnum - p.Lexing.pos_bol)
+
