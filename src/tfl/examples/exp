@@ -1,4 +1,4 @@
-app load ["bossLib", "QLib", "numLib"];
+app load ["bossLib", "numLib"];
 
 open bossLib arithmeticTheory numLib;
 infix 8 by;
@@ -6,15 +6,16 @@ infix 8 by;
 
 (*---------------------------------------------------------------------------
      An efficient divide-and-conquer-style exponentiation function.
+     The definition is schematic in "x".
  ---------------------------------------------------------------------------*)
 
-val exp_def = 
+val exp_defn = 
  Hol_defn "exp"
-     `(exp x 0       = 1) 
-  /\  (exp x (SUC 0) = x)
-  /\  (exp x n       = if n MOD 2 = 0 
-                        then let v = exp x (n DIV 2) in v * v
-                         else  x * exp x (n-1))`;
+     `(exp 0       = 1) 
+  /\  (exp (SUC 0) = x)
+  /\  (exp n = if n MOD 2 = 0 
+                 then let v = exp (n DIV 2) in v * v
+                 else x * exp (n-1))`;
 
 
 (*---------------------------------------------------------------------------
@@ -22,13 +23,12 @@ val exp_def =
  ---------------------------------------------------------------------------*)
 
 val (exp_eqns, exp_ind) = Defn.tprove 
-(exp_def,
- WF_REL_TAC exp_def `measure SND` THENL
-   [RW_TAC arith_ss [], 
-    RW_TAC std_ss []
-      THEN MP_TAC (Q.SPEC `SUC(SUC v4)` 
+ (exp_defn,
+  WF_REL_TAC `$<` 
+    THEN RW_TAC std_ss []
+    THEN MP_TAC (Q.SPEC `SUC(SUC v2)` 
                   (REWRITE_RULE [DECIDE `0<2`] (Q.SPEC`2` DIVISION)))
-      THEN RW_TAC arith_ss []]);
+    THEN RW_TAC arith_ss []);
 
 
 (*---------------------------------------------------------------------------*
@@ -42,11 +42,13 @@ val (exp_eqns, exp_ind) = Defn.tprove
 
 val EXP_eq_exp = Q.prove
 (`!x m. x EXP m = exp x m`,
- recInduct exp_ind THEN REPEAT CONJ_TAC 
+ GEN_TAC 
+   THEN recInduct exp_ind 
+   THEN REPEAT CONJ_TAC
    THEN RW_TAC arith_ss [EXP, exp_eqns]
    THEN POP_ASSUM (SUBST1_TAC o SYM)
    THEN RW_TAC arith_ss [GSYM EXP_ADD] 
-   THEN `2 * (SUC(SUC v4) DIV 2) = SUC(SUC v4)` 
+   THEN `2 * (SUC(SUC v2) DIV 2) = SUC(SUC v2)` 
         by PROVE_TAC [DIVISION,DECIDE `0<2`,ADD_0,MULT_SYM]
    THEN PROVE_TAC [EXP]);
 
@@ -57,23 +59,16 @@ val EXP_eq_exp = Q.prove
       lhs of the recursion equation.
  ---------------------------------------------------------------------------*)
 
-val alt_exp_eqns = Q.prove(
-  `exp x n = 
+val alt_exp_eqns = Q.prove
+(`exp x n = 
       if n=0 then 1 else 
       if n=1 then x else
       if n MOD 2 = 0 
          then let v = exp x (n DIV 2) in v * v
          else  x * exp x (n-1)`,
-RW_TAC std_ss [] 
-  THENL [RW_TAC arith_ss [exp_eqns],
-         RW_TAC arith_ss [ONE,exp_eqns],
-         ALL_TAC, ALL_TAC]
-  THEN `?k. n = SUC(SUC k)` 
-         by 
-        (Q.EXISTS_TAC `PRE(PRE n)`
-            THEN REPEAT (Q.PAT_ASSUM `~P` MP_TAC) THEN ARITH_TAC)
-  THEN RW_TAC std_ss []
-  THEN RW_TAC std_ss [exp_eqns]);
+Cases_on `n` 
+  THENL [ALL_TAC,  Cases_on `n'`]
+  THEN RW_TAC arith_ss [exp_eqns]);
 
 
 local open computeLib
