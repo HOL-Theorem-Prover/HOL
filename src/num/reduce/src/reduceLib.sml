@@ -2,7 +2,7 @@ structure reduceLib :> reduceLib =
 struct
 
   open HolKernel Parse basicHol90Lib Boolconv Arithconv
-       pairTheory arithmeticTheory numeralTheory computeLib;
+       arithmeticTheory numeralTheory computeLib;
   infix THEN |-> ;
 
 type conv   = Abbrev.conv
@@ -108,16 +108,6 @@ fun reduce_rws () =
 local val rws = reduce_rws() in
 val REDUCE_CONV = CBV_CONV rws
 end;
-
-(* Define a basic computeLib.comp_rws extending reduce_rws with
- * simplifications about LET, pairs, curryfication, ...
- *)
-fun basic_rws () =
-  let val rws = reduce_rws ()
-      val _ = add_thms (true, [strictify_thm LET_DEF, FST, SND])
-      val _ = add_thms (false, [CURRY_DEF, UNCURRY_DEF])
-  in rws end;
-
 
 (*-----------------------------------------------------------------------*)
 (* REDUCE_RULE and REDUCE_TAC - Inference rule and tactic versions.      *)

@@ -33,6 +33,5 @@ sig
     val REDUCE_TAC  : tactic
 
     val reduce_rws : unit -> computeLib.comp_rws
-    val basic_rws  : unit -> computeLib.comp_rws
 
 end
