@@ -80,20 +80,23 @@ tex_main :
 
 tex_render :
   /* empty */             { "" }
-| tex_render Content      { print_string $2; $1 ^ $2 }
+| tex_render tex_content  { $1 ^ $2 }
+
+tex_content :
+  Content                 { $1 }
 | ToHol hol_render From   { delim_wrap $1 $2 }
 | ToDir directive From    { "" }
 
 hol_render :
-  /* empty */             { "" }
+  hol_line0               { $1 }
 | hol_render hol_line     { $1 ^ $2 }
 
 hol_line :
-  opt_indent hol_line0    { print_string ($1 ^ $2); $1 ^ $2 }
+  Indent hol_line0        { make_indent $1 ^ $2 }
 
 hol_line0 :
   /* empty */             { "" }
-| hol_line0 hol_token     { print_string "TOKEN: $2\n"; $1 ^ $2 }
+| hol_line0 hol_token     { $1 ^ $2 }
 
 hol_token :
   Ident                   { fst $1 }
@@ -104,10 +107,6 @@ hol_token :
 | ToTex tex_render From   { delim_wrap $1 $2 }
 | ToDir directive From    { "" }
 
-opt_indent :
-  /* empty */             { "" }
-| Indent                  { String.make $1 ' ' }
-
 text_render :
   /* empty */             { "" }
 | text_render Content     { $1 ^ $2 }
@@ -115,7 +114,7 @@ text_render :
 | ToDir directive From    { "" }
 
 directive :
-  opt_whitestuff directive0 opt_whitestuff { $2 }
+  opt_whitestuff directive0 { $2 }
 
 directive0 :
 /* category lists: */
@@ -148,7 +147,7 @@ directive0 :
                                { hOLDELIMOPEN := $3; hOLDELIMCLOSE := $5 }
 | NEWMODE opt_whitestuff Ident { new_mode    (fst $3) }
 | MODE    opt_whitestuff Ident { change_mode (fst $3) }
-| SPECIAL string_list          { add_to_list Hollex.nonagg_specials $2 }
+| SPECIAL string_list          { add_to_list Holdoc_init.nonagg_specials $2 }
 
 ident_list :
   ident_list0 { List.rev $1 }
@@ -156,8 +155,8 @@ ident_list :
 ident_list0 :
   opt_whitestuff
     { [] }
-| ident_list0 opt_whitestuff Ident
-    { fst $3 :: $1 }
+| ident_list0 Ident opt_whitestuff
+    { fst $2 :: $1 }
 
 ident_alist :
   ident_alist0 { List.rev $1 }
@@ -165,37 +164,53 @@ ident_alist :
 ident_alist0 :
   opt_whitestuff
     { [] }
-| ident_alist0 opt_whitestuff Ident opt_whitestuff Str
-    { (fst $3,$5) :: $1 }
+| ident_alist0 Ident opt_whitestuff_nonl Str opt_whitestuff
+    { (fst $2,$4) :: $1 }
+
+/* curried list: note that each entry is terminated by newline,
+   including the last one (ugh).  So the closing delimiter *must*
+   be on a new line */
 
 curryspec_alist :
-    curryspec_alist0 { List.rev $1 }
+  curryspec_alist0 { List.rev $1 }
 
 curryspec_alist0 :
-  opt_whitestuff
-    { [] }
-| curryspec_alist0 opt_whitestuff Ident opt_whitestuff Str opt_whitestuff Ident opt_whitestuff Ident opt_whitestuff Ident
-    { (fst $3,($5,int_of_string (fst $7),bool_of_string (fst $9),bool_of_string (fst $11))) :: $1 }
-| curryspec_alist0 opt_whitestuff Ident opt_whitestuff Str opt_whitestuff Ident opt_whitestuff Ident
-    { (fst $3,($5,int_of_string (fst $7),bool_of_string (fst $9),false)) :: $1 }
-    /* default final parameter is =false */
+  opt_whitestuff { [] }
+| curryspec_alist0 curryspec_one Indent opt_whitestuff_nonl { $2 :: $1 }  
+
+curryspec_one :
+    Ident opt_whitestuff_nonl Str opt_whitestuff_nonl Ident opt_whitestuff_nonl Ident opt_whitestuff_nonl opt_ident
+    { (fst $1,($3,int_of_string (fst $5),bool_of_string (fst $7),
+               match $9 with None -> false | Some (b,_) -> bool_of_string b)) }
+      /* default final parameter is =false */
+
+opt_ident :
+  /* empty */                 { None }
+| Ident opt_whitestuff_nonl   { Some $1 }
 
 string_list :
   string_list0 { List.rev $1 }
 
 string_list0 :
   opt_whitestuff                  { [] }
-| string_list0 opt_whitestuff Str { $3 :: $1 }
+| string_list0 Str opt_whitestuff { $2 :: $1 }
 
 opt_whitestuff :
-  /* empty */             { () }
-| opt_whitestuff whitetok { () }
+  /* empty */              { () }
+| opt_whitestuff whitetok  { $1 }
 
 whitetok :
   White                    { () }
 | Indent                   { () }
 | ToText text_render From  { () }
 
-%%
+opt_whitestuff_nonl :
+  /* empty */                        { () }
+| opt_whitestuff_nonl whitetok_nonl  { $1 }
 
+whitetok_nonl :
+  White                    { () }
+| ToText text_render From  { () }
+
+%%
 

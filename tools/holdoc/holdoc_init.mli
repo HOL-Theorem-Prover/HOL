@@ -35,4 +35,5 @@ val rCSID : string option ref
 val hOLDELIMOPEN : string ref
 val hOLDELIMCLOSE : string ref
 
+val nonagg_specials : string list ref
 

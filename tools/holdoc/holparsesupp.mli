@@ -1,3 +1,6 @@
+
+exception NeverHappen of string  (* bad error *)
+
 type mode =
     ModeMosml
   | ModeHol
@@ -21,3 +24,6 @@ type delim =
 type delim_info = { imode : mode; sopen : string; sclose : string }
 
 val delim_info : delim -> delim_info
+
+val make_indent : int -> string
+

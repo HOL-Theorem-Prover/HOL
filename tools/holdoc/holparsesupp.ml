@@ -1,4 +1,6 @@
 
+exception NeverHappen of string  (* bad error *)
+
 type mode =
     ModeMosml
   | ModeHol
@@ -42,4 +44,6 @@ let delim_info d =
      (DelimDir       ,{imode=ModeDir ;sopen="(*["  ;sclose="]*)"  });
      (DelimEOF       ,{imode=ModeNone;sopen="<bof>";sclose="<eof>"});
    ]
+
+let make_indent n = String.make n ' '
 

@@ -84,3 +84,8 @@ let rCSID = ref None
 let hOLDELIMOPEN  = ref "$" (* [[ *)
 let hOLDELIMCLOSE = ref "$" (* ]] *)
 
+
+(* this is a lexer parameter, and is a bit special:
+   symbolic identifiers that contain nonaggregating characters; user-extensible *)
+let nonagg_specials = ref ["()"; "[]"; ".."; "..."]
+

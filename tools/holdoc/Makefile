@@ -16,7 +16,7 @@ DVIPS=dvips
 # files:
 
 MLSOURCES=hol_to_latex.ml holdoc_init.ml holdoc_munge.ml holparsesupp.ml \
-	lts_to_latex.ml mng_to_latex.ml simpledump.ml simpletexdump.ml 
+	lts_to_latex.ml mng_to_latex.ml simpledump.ml simpletexdump.ml
 MLISOURCES=holdoc_init.mli holdoc_munge.mli holparsesupp.mli hollex.mli
 OTHERSOURCES=hollex.mll holparse.mly
 GENMLSOURCES=hollex.ml holparse.ml
@@ -62,7 +62,8 @@ clean:
 	      *.cm[iox] *.cmxa *~ '#*#' \
 	      *.o \
               .depend Net_hostLTSScript.tex hostlts.{dvi,ps} \
-              *.{aux,log} hol_to_latex mng_to_latex
+              *.{aux,log} hol_to_latex mng_to_latex simplemngdump \
+	      *.output
 
 depend:	.depend
 
@@ -98,9 +99,11 @@ depend:	.depend
 # extra dependencies:
 
 # weirdly, OCaml-3.06 ocamldep can't handle .mll files!
+# - and even if I include $(GENMLSOURCES) $(GENMLISOURCES), these are handled wrongly.
 .depend: $(MLSOURCES) $(MLISOURCES) $(GENMLSOURCES) $(GENMLISOURCES)
 	$(OCAMLDEP) $(MLSOURCES) $(MLISOURCES) $(GENMLSOURCES) $(GENMLISOURCES) > $@
 
 -include .depend
 
 # end
+

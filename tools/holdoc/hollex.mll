@@ -9,7 +9,6 @@ open Holparse
 exception Mismatch of string     (* mismatched delimiters *)
 exception BadChar of string      (* bad character *)
 exception EOF                    (* attempt to read past (already-reported) EOF *)
-exception NeverHappen of string  (* bad error *)
 
 
 let check_close expected got =
@@ -285,6 +284,16 @@ and
 
 {
 
+(* map from open-delimiter tokens to modes *)
+let to_token_mode t =
+  match t with
+  | ToMosml _ -> ModeMosml
+  | ToHol   _ -> ModeHol  
+  | ToText  _ -> ModeText 
+  | ToTex   _ -> ModeTex  
+  | ToDir   _ -> ModeDir  
+  | _         -> raise (NeverHappen "to_token_mode: not To* token")
+
 (* map from mode names to parsers *)
 let modeparser m =
   List.assoc m
@@ -297,16 +306,8 @@ let modeparser m =
      (ModeNone , fun _ _ -> raise (NeverHappen "modeparser: ModeNone"));
    ]
 
-let to_token_mode t =
-  match t with
-  | ToMosml _ -> ModeMosml
-  | ToHol   _ -> ModeHol  
-  | ToText  _ -> ModeText 
-  | ToTex   _ -> ModeTex  
-  | ToDir   _ -> ModeDir  
-  | _         -> raise (NeverHappen "to_token_mode: not To* token")
-
-(* symbolic identifiers that contain nonaggregating characters; user-extensible *)
+(* nonagg_specials is defined in Holdoc_init.  This is the set of 
+   symbolic identifiers that contain nonaggregating characters; user-extensible *)
 let nonagg_specials = ref ["()"; "[]"; ".."; "..."]
 
 let nonagg_re = Str.regexp "[]()[{}~.,;]"
@@ -427,7 +428,6 @@ let holtokstream = tokstream ModeHol
 
 let textokstream = tokstream ModeTex
 
-
 let print_token eds t =
   match t with
   | Ident(s,b) -> (s                     , eds)
@@ -437,7 +437,7 @@ let print_token eds t =
   | Real(s)    -> (s                     , eds)
   | Word(s)    -> (s                     , eds)
   | Char(s)    -> (s                     , eds)
-  | Indent(n)  -> (String.make n ' '     , eds)
+  | Indent(n)  -> (make_indent n         , eds)
   | White(s)   -> (s                     , eds)
   | Sep(s)     -> (s                     , eds)
   | Content(s) -> (s                     , eds)
@@ -464,9 +464,6 @@ let render_token t =
   | ToMosml(d) | ToHol(d) | ToText(d) | ToTex(d) | ToDir(d)
                -> "{D:"^render_mode (to_token_mode t)^(delim_info d).sopen
   | From       -> ":D}"
-
-
-
 
 }
 
