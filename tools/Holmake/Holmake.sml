@@ -339,8 +339,23 @@ fun extra_commands t =
 
 val extra_targets = map #target extra_rules
 
+fun extra_rule_for t = List.find(fn r => #target r = t) extra_rules
+
+(* treat targets as sets *)
+infix in_target
+fun (s in_target t) = case extra_deps t of NONE => false | SOME l => member s l
+
 fun run_extra_command c = let
   open Holmake_types
+  val (echo_command, c) =
+      if size c > 0 andalso String.sub(c, 0) = #"@" then
+        (false, String.extract(c, 1, NONE))
+      else (true, c)
+  val (ignore_error, c) =
+      if echo_command andalso size c > 0 andalso String.sub(c, 0) = #"-" then
+        (true, String.extract(c, 1, NONE))
+      else (false, c)
+
   fun vref_ify cmd s =
       if String.isPrefix cmd s then let
           val rest = String.extract(s, size cmd, NONE)
@@ -358,14 +373,6 @@ fun run_extra_command c = let
      "foobar" *)
   val c = dovrefs ["HOLMOSMLC-C", "HOLMOSMLC", "MOSMLC", "MOSMLLEX",
                    "MOSMLYAC"] c
-  val (echo_command, c) =
-      if size c > 0 andalso String.sub(c, 0) = #"@" then
-        (false, String.extract(c, 1, NONE))
-      else (true, c)
-  val (ignore_error, c) =
-      if echo_command andalso size c > 0 andalso String.sub(c, 0) = #"-" then
-        (true, String.extract(c, 1, NONE))
-      else (false, c)
   val () =
       if echo_command then (TextIO.output(TextIO.stdOut, c ^ "\n");
                             TextIO.flushOut TextIO.stdOut)
@@ -967,55 +974,39 @@ in
           cache_insert (target, false)
       end
       else let
-          val secondaries = get_explicit_dependencies target
-          val _ =
-            (print ("Secondary dependencies for "^fromFile target^" are: ");
-             print (print_list (map fromFile secondaries) ^ "\n"))
           val tgt_str = fromFile target
         in
-          if null secondaries then
-            case extra_commands tgt_str of
-              NONE => if FileSys.access(tgt_str, [FileSys.A_READ]) then
-                        (if am_at_top then
-                           warn ("*** Nothing to be done for `"^tgt_str^"'.\n")
-                         else ();
-                         cache_insert(target, true))
-                      else
-                        (warn ("*** No rule to make target `"^tgt_str^"'.\n");
-                         cache_insert(target, false))
-            | SOME cs => cache_insert(target, run_extra_commands tgt_str cs =
-                                              Process.success)
-          else if List.all (make_up_to_date false (target::ctxt))
-                           secondaries
-          then
-            if not (FileSys.access(tgt_str, [FileSys.A_READ])) orelse
-               List.exists
-                 (fn dep => (fromFile dep) forces_update_of (fromFile target))
-                 secondaries
-            then
-              case extra_commands (fromFile target) of
-                (* NONE is impossible because for something to have
-                   secondary dependencies, they will have come from
-                   a Holmakefile or from automatic dependency analysis.
-                   The latter is done for everything with primary dependents,
-                   but in this branch, we either have no primary dependent or
-                   have some extra commands.
-
-                   For everything with Holmakefile induced
-                   dependencies, extra_commands x will return SOME cl
-                   for every x.  cl may be the null list, but it will
-                   still be there.
-
-                   Recall the example of target "all", which can quite
-                   reasonably have no commands, but just dependencies. *)
-                NONE => raise Fail "Impossible situation #1"
-              | SOME cs => cache_insert(target,
-                                        run_extra_commands tgt_str cs =
-                                        Process.success)
-            else
-              cache_insert(target, true)
-          else
-            cache_insert(target, false)
+          case extra_rule_for tgt_str of
+            NONE => if FileSys.access(tgt_str, [FileSys.A_READ]) then
+                      (if am_at_top then
+                         warn ("*** Nothing to be done for `"^tgt_str^"'.\n")
+                       else ();
+                       cache_insert(target, true))
+                    else
+                      (warn ("*** No rule to make target `"^tgt_str^"'.\n");
+                       cache_insert(target, false))
+          | SOME {dependencies, commands, ...} => let
+              val _ =
+                  (print ("Secondary dependencies for "^tgt_str^" are: ");
+                   print (print_list dependencies ^ "\n"))
+              val depfiles = map toFile dependencies
+            in
+              if List.all (make_up_to_date false (target::ctxt)) depfiles
+              then
+                if not (FileSys.access(tgt_str, [FileSys.A_READ])) orelse
+                   List.exists
+                     (fn dep => dep forces_update_of tgt_str)
+                     dependencies orelse
+                   tgt_str in_target ".PHONY"
+                then
+                  cache_insert(target,
+                               run_extra_commands tgt_str commands =
+                               Process.success)
+                else (* target is up-to-date wrts its dependencies already *)
+                  cache_insert(target, true)
+              else (* failed to make a dependency *)
+                cache_insert(target, false)
+            end
         end
 end handle CircularDependency => cache_insert (target, false)
          | Fail s => raise Fail s
@@ -1051,7 +1042,7 @@ fun do_target x = let
       | _ => false
     fun quiet_remove s = FileSys.remove s handle e => ()
   in
-    read_files cdstream to_delete FileSys.remove;
+    read_files cdstream to_delete quiet_remove;
     app quiet_remove extra_cleans;
     true
   end
@@ -1059,8 +1050,9 @@ fun do_target x = let
     val depds = FileSys.openDir DEPDIR handle
       OS.SysErr _ => raise DirNotFound
   in
-    read_files depds (fn _ => true)
-    (fn s => FileSys.remove (fullPath [DEPDIR, s]));
+    read_files depds
+               (fn _ => true)
+               (fn s => FileSys.remove (fullPath [DEPDIR, s]));
     FileSys.rmDir DEPDIR;
     true
   end handle OS.SysErr (mesg, _) => let
@@ -1070,18 +1062,20 @@ fun do_target x = let
              end
            | DirNotFound => true
 in
-  case x of
-    "clean" => (let
-    in
-      print "Cleaning directory of object files\n";
-      clean_action();
-      true
-    end handle _ => false)
-  | "cleanDeps" => clean_deps()
-  | "cleanAll" => clean_action() andalso clean_deps()
-  | _ => if (not (member x dontmakes))
-         then make_up_to_date true [] (toFile x)
-         else true
+  if not (member x dontmakes) then
+    case extra_rule_for x of
+      NONE => let
+      in
+        case x of
+          "clean" => ((print "Cleaning directory of object files\n";
+                       clean_action();
+                       true) handle _ => false)
+        | "cleanDeps" => clean_deps()
+        | "cleanAll" => clean_action() andalso clean_deps()
+        | _ => make_up_to_date true [] (toFile x)
+      end
+    | SOME _ => make_up_to_date true [] (toFile x)
+  else true
 end
 
 fun generate_all_plausible_targets () = let
