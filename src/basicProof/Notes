@@ -1,0 +1,263 @@
+(*---------------------------------------------------------------------------
+   Implementation of NOTES. A note is usually just a renaming of either
+   the I or K combinators. An example of an I-instance is something 
+   like NUMERAL. Other parts of the system are hardwired to know how to 
+   treat occurrences of NUMERAL, e.g., the parser and prettyprinter 
+   treat its argument as a number. In the following, we are going to
+   add a facility for naming assumptions in goals via a new logical 
+   constant NAMED, which is an instance of the K combinator. This allows
+   it to be semantically transparent.
+ ---------------------------------------------------------------------------*)
+
+infixr OR ;
+fun (P OR Q) x = P x orelse Q x;
+
+val _ = new_theory "named"
+
+val NAMED_ERR = mk_HOL_ERR "NAMED";
+ 
+val NAMED_DEF = new_definition("NAMED", Term `NAMED x y = x`);
+
+val named_tm = prim_mk_const{Name="NAMED", Thy="named"};
+
+fun mk_named (n,tm) =
+  let val v = mk_var(n,alpha)
+      val NAMED = inst [alpha |-> type_of tm, beta |-> alpha] named_tm
+  in list_mk_comb(NAMED,[tm,v])
+  end;
+
+datatype 'a named = NOT of term | NAMED of 'a * term;
+
+(*---------------------------------------------------------------------------
+    Try to take a term P of the form `NAMED M n` apart, returning 
+    the ML value NAMED(n,M). If that's not possible, return NOT P.
+ ---------------------------------------------------------------------------*)
+
+fun dest_named tm = 
+  case strip_comb tm
+   of (c,[x,y]) => 
+       (case total dest_const c
+         of SOME("NAMED",_) => 
+               (case total dest_var y
+                 of SOME (n,_) => NAMED(n,x)
+                  | otherwise => raise NAMED_ERR "dest_named"
+                    (String.concat ["expected ", 
+                         Lib.quote "NAMED <term> <var>"]))
+          | otherwise => NOT tm)
+   | otherwise => NOT tm;
+
+fun is_named tm = 
+ (case dest_named tm 
+   of NOT _ => false
+    | NAMED _ => true) handle HOL_ERR _ => false;
+
+(*---------------------------------------------------------------------------
+    Lookup a term by name in a list of terms. If looking for
+    a term named "foo", and a term `NAMED <term> foo` is found
+    in the list, then 
+
+       SOME (`NAMED <term> foo`, ("foo",M))
+
+    is returned.
+ ---------------------------------------------------------------------------*)
+
+fun name_assoc s [] = NONE
+  | name_assoc s (tm::rst) = 
+     case dest_named tm 
+      of NOT _ => name_assoc s rst
+       | NAMED(n,tm') => if s=n then SOME(tm,(n,tm'))
+                                else name_assoc s rst;
+
+(*---------------------------------------------------------------------------
+    Lookup a term M in a list of terms. If M is an element of the
+    list, it is returned. If a term P = `NAMED M <name>` is an element
+    of the list (for some <name>), P is returned.
+ ---------------------------------------------------------------------------*)
+
+fun term_assoc M [] = NONE
+  | term_assoc M (N::rst) = 
+     case dest_named N 
+      of NOT _ => if aconv M N then SOME N else term_assoc M rst
+       | NAMED(_,tm') => if aconv M tm' then SOME N else term_assoc M rst;
+
+
+(*---------------------------------------------------------------------------
+    Attach and detach names and terms. Could make naming be idempotent.
+ ---------------------------------------------------------------------------*)
+
+fun NAME_CONV name tm = SYM (ISPECL [tm, mk_var(name,alpha)] NAMED_DEF)
+val UN_NAME_CONV = REWR_CONV (SPEC_ALL NAMED_DEF);
+
+val NAME = CONV_RULE o NAME_CONV;
+val UN_NAME = CONV_RULE UN_NAME_CONV;
+
+
+(*---------------------------------------------------------------------------
+      Some proof routines that can deal with named hypotheses. 
+ ---------------------------------------------------------------------------*)
+
+val ASSUME_NAMED = ASSUME o mk_named;
+
+(*===========================================================================
+    Fetch an assumption and stick a name on it before putting it back
+    in the assumptions. It will not in general be put back in the 
+    same spot, although it could be (with a little extra work). We 
+    also do not check that a name does not already occur free in the goal.
+ ===========================================================================*)
+
+fun NAME_ASSUM (s,tm) th =
+  if mem tm (hyp th)
+  then UNDISCH (CONV_RULE (LAND_CONV (NAME_CONV s)) (DISCH tm th))
+  else raise NAMED_ERR "NAME_ASSUM" "term is not in the assumptions";
+
+
+fun gen_name H0 vlist thm = 
+ let val (A,c) = dest_thm thm
+     val v = with_flag (Globals.priming,SOME "")
+                       (variant (free_varsl (H0::c::A) @ vlist))
+                        H0
+ in  fst(dest_var v)
+ end;
+     
+fun X_NAME_ASSUM H0 tm th =
+  NAME_ASSUM (gen_name H0 (free_vars tm) th,tm) th
+
+val NAME_ASSUM_AUTO = X_NAME_ASSUM (mk_var("H",alpha));
+
+fun ADD_ASSUM_NAMED th (s,tm) =
+  MP (DISCH (mk_named (s,tm)) th) 
+     (ASSUME_NAMED (s,tm));
+   
+(*===========================================================================
+       Discharge a term, and remove the name, if it has one. 
+ ===========================================================================*)
+
+local fun DISCH_TERM tm thm = 
+       CONV_RULE (TRY_CONV (LAND_CONV UN_NAME_CONV))
+                 (DISCH tm thm)
+in
+(*===========================================================================
+     Look up an assumption by name and discharge it.
+ ===========================================================================*)
+
+fun DISCH_NAMED name thm =
+  case name_assoc name (hyp thm)
+   of SOME (tm,_) => DISCH_TERM tm thm
+    | NONE => raise NAMED_ERR "DISCH_NAMED" 
+                 ("Couldn't find hypothesis named "^Lib.quote name);
+
+fun DISCHARGE tm thm =
+ DISCH_TERM 
+   (case term_assoc tm (hyp thm) of NONE => tm | SOME tm' => tm')
+    thm
+end (* local *);
+
+(*---------------------------------------------------------------------------
+    Use the conclusion of the first theorem to delete a named hypothesis 
+    of  the second theorem.
+ 
+       A |- t1   B, NAMED t1 H |- t2
+       ------------------------------
+            A u B |- t2
+ ---------------------------------------------------------------------------*)
+
+fun PROVE_HYP_NAMED ath bth = MP (DISCHARGE (concl ath) bth) ath;
+
+(*===========================================================================
+           A ?- M
+    -----------------------   ASSUME_NAMED_TAC (s, B|-N)
+    A, NAMED N s ?- M
+ ===========================================================================*)
+
+fun ASSUME_NAMED_TAC s bth : tactic = 
+ fn (asl,w) =>
+   ([(mk_named (s,concl bth)::asl,w)], 
+    (fn [th] => PROVE_HYP_NAMED bth th));
+
+
+fun ASSUME_NAMED_AUTO_TAC th =
+  ASSUME_NAMED_TAC (gen_name (mk_var("H",alpha)) [] th) th;
+
+fun ASSUME_NAMED_AUTO_REF_TAC r th = 
+  let val list = !r
+      val name = gen_name (mk_var("H",alpha)) list th
+      val () = r := mk_var(name,alpha)::list
+  in ASSUME_NAMED_TAC name th
+  end;
+
+(*---------------------------------------------------------------------------
+    A version of UNDISCH_THEN that uses names to index hypotheses
+ ---------------------------------------------------------------------------*)
+
+fun WITH_ASSUM s ttac : tactic = 
+ fn (asl,w) =>
+   case name_assoc s asl
+    of NONE => raise NAMED_ERR "NAMED_THEN" 
+                ("Can't find term named by "^Lib.quote s^" in assumptions")
+     | SOME(named_tm,(_,core)) 
+         => ttac (UN_NAME(ASSUME_NAMED (s,core)))
+                 (op_set_diff aconv asl [named_tm],w);
+
+val DISCH_NAMED_TAC = DISCH_THEN o ASSUME_NAMED_TAC;
+
+(*---------------------------------------------------------------------------
+         STRIP_NAMED_TAC
+ ---------------------------------------------------------------------------*)
+
+fun STRIP_NAMED_TAC (g as (asl,w)) = 
+ let val vars = ref (free_varsl(w::asl))
+     fun CHECK_ASSUME_NAMED_TAC th =
+        FIRST [CONTR_TAC th, 
+               ACCEPT_TAC th, 
+               DISCARD_TAC th, 
+               ASSUME_NAMED_AUTO_REF_TAC vars th]
+     val STRIP_ASSUME_NAMED_TAC = 
+         REPEAT_TCL STRIP_THM_THEN CHECK_ASSUME_NAMED_TAC
+ in
+   STRIP_GOAL_THEN STRIP_ASSUME_NAMED_TAC g
+ end;
+
+fun RULE_ASSUM_NAMED_TAC f = 
+  let fun wrap f th = 
+       (case dest_named (concl th)
+         of NOT _ => f th
+          | NAMED(n,_) => NAME n (f (UN_NAME th))) 
+       handle e as HOL_ERR _ => raise (wrap_exn "RULE_ASSUM_NAMED_TAC" "" e)
+  in RULE_ASSUM_TAC (wrap f)
+  end;
+
+
+val NAMED_ASSUM_TAC s f = WITH_ASSUM s (ASSUME_NAMED_TAC s o f);
+
+(*---------------------------------------------------------------------------
+      Robust POP_ASSUM
+ ---------------------------------------------------------------------------*)
+
+fun POP_ASSUM_NAMED ttac = 
+  POP_ASSUM (ttac o CONV_RULE (TRY_CONV UN_NAME_CONV));
+
+
+to do: STRIP_ASSUME_TAC
+       ASSUM_LIST
+       POP_ASSUM
+       PROVE_TAC 
+       WEAKEN_TAC
+       SIMP_TAC
+Some of these are for backwards compatibility, and others provide
+new functionality. For PROVE_TAC and SIMP_TAC, we can use WEAKEN_TAC
+to get rid of any non-named hypotheses.
+
+idea: dualization, so that all non-named hypotheses get named, and 
+all named hypotheses have their names removed.
+
+idea: NAME_ASSUMS_TAC, UN_NAME_ASSUMS_TAC
+
+
+idea: MATCH_STRIP_TAC takes a goal 
+
+           A ?- M ==> N
+
+and a pattern M' and matches M to M'. The resulting instantiations will
+get turned into named assumptions.
+
+   MATCH_STRIP_TAC 
