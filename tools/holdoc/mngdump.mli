@@ -1,0 +1,24 @@
+exception BadArg of string
+val write_warning : string -> unit
+val wrap : string -> string -> ('a -> 'b) -> 'a -> unit
+val replicate : int -> 'a -> 'a list
+val texify_command : string -> string
+val texify_math : string -> string
+val texify_text : string -> string
+type pvars = string list
+val munge_ident : pvars -> string -> unit
+val munge_symbol : pvars -> string -> unit
+val munge_texify_text : string -> unit
+val munge_texify_math : string -> unit
+val munge_indent : int -> unit
+val munge_hol_content : pvars -> Holdocmodel.hol_content -> unit
+val munge_curried :
+  pvars ->
+  Holdocmodel.hol_content ->
+  Holdoc_init.curried_info -> Holdocmodel.holdoc -> Holdocmodel.holdoc
+val munge_holdoc : pvars -> Holdocmodel.holdoc -> unit
+val rendertexdoc : Holdocmodel.texdoc -> unit
+val rendertexdoc_content : Holdocmodel.texdoc_content -> unit
+val texrenderdirective : Holdocmodel.directive -> unit
+val texrenderdirective_content : Holdocmodel.directive -> unit
+val renderholdoc : Holdocmodel.holdoc -> unit

@@ -17,15 +17,15 @@ DVIPS=dvips
 
 MLSOURCES=hol_to_latex.ml holdoc_init.ml holdoc_munge.ml holparsesupp.ml \
 	lts_to_latex.ml mng_to_latex.ml simpledump.ml simplemosmldump.ml simplemngdump.ml \
-	holdocmodel.ml holparsetools.ml
-MLISOURCES=holdoc_init.mli holdoc_munge.mli holparsesupp.mli hollex.mli simpledump.mli holparsetools.mli
+	holdocmodel.ml holparsetools.ml mngdump.ml
+MLISOURCES=holdoc_init.mli holdoc_munge.mli holparsesupp.mli hollex.mli simpledump.mli holparsetools.mli mngdump.mli
 OTHERSOURCES=hollex.mll holparse.mly
 GENMLSOURCES=hollex.ml holparse.ml
 GENMLISOURCES=holparse.mli
 
 # main target:
 
-all: simplemngdump simplemosmldump mng_to_latex
+all: simplemngdump simplemosmldump mng_to_latex lts_to_latex
 
 # program targets:
 
@@ -35,10 +35,10 @@ simplemngdump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpled
 simplemosmldump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx simplemosmldump.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
-lts_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx lts_to_latex.cmx
+lts_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx mngdump.cmx lts_to_latex.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
-mng_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx mng_to_latex.cmx
+mng_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx mngdump.cmx mng_to_latex.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
 hol_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx hol_to_latex.cmx
