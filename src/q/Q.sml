@@ -200,7 +200,12 @@ fun PAT_ASSUM q ttac (g as (asl,w)) = let
 in
   Tactical.PAT_ASSUM (ptm_with_ctxtty ctxt Type.bool q) ttac g
 end
-val UNDISCH_TAC = Tactic.UNDISCH_TAC o btm;
+
+fun UNDISCH_TAC q (g as (asl, w)) = let
+  val ctxt = free_varsl (w::asl)
+in
+  Tactic.UNDISCH_TAC (ptm_with_ctxtty ctxt Type.bool q) g
+end
 
 fun SUBGOAL_THEN q ttac (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)
