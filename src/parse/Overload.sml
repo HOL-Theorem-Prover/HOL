@@ -306,9 +306,10 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
           | GREATER => merge_cops (r2::acc) cop1s r2s
           | EQUAL => let
             in
-              if #2 r1 <> #2 r2 then
+              if #2 r1 <> #2 r2 andalso !show_aliases
+              then
                 HOL_MESG ("Symbol "^quote(#2 r2)^
-                          " denotes "^ #Thy (#1 r1)^"$"^ #Name (#1 r1))
+                     " now denotes constant"^ #Thy (#1 r1)^"$"^ #Name (#1 r1))
               else ();
               merge_cops (r1::acc) r1s r2s
             end
