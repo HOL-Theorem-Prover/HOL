@@ -485,7 +485,7 @@ fun CONSTANTvInst
  in
  (out " CONSTANT   "; out inst_name;
   out " (";out out_name; out ");\n";
-  out "   defparam ";out inst_name; out ".size  = "; out size; 
+  out "   defparam ";out inst_name; out ".size  = "; out size; out ";";
   out "\n";
   out "   defparam ";out inst_name; out ".value = "; out value; 
   out ";\n\n")
@@ -826,8 +826,8 @@ fun MAKE_VERILOG name thm out =
                     raise ERR "MAKE_VERILOG" "unknown modules in circuit")
               else ()
  in
- (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n// Definitions of components\n\n");
-  
+ (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
+  out("// Definitions of components used in " ^ name ^ "\n\n");
   map            (* Print definition of components *)
    (fn(_,(def,_)) => out def)
    (filter
@@ -980,9 +980,10 @@ fun PRINT_VERILOG thm =
 ** (fails if Spec isn't a constant)
 *)
 
-fun PRINT_SIMULATON thm maxtime period stimulus =
+fun PRINT_SIMULATION thm maxtime period stimulus =
  let val name = fst(dest_const(#1(dest_cir thm)))
  in
   printToFile (name ^ ".vl") (MAKE_SIMULATION name thm maxtime period stimulus)
  end;
 
+ 

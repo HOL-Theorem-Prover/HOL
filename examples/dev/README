@@ -388,19 +388,17 @@ Each such tuple specifies a transaction:
  5. delay of end_delay;
  6. "load" is driven high.
 
-Example (assumes thm implements a function with two arguments):
-
+Example:
 
  PRINT_SIMULATION
-  thm
+ (|- InfRise clk ==>
+     <circuit>   ==>
+     DEV Mult (load at clk,(inp1 <> inp2) at clk,done at clk,out at clk))
   1000 
   5 
   [(10, 12, [("inp1", "5"),("inp2","7")], 15),
    (10, 12, [("inp1", "5"),("inp2","0")], 15),
-   (10, 12, [("inp1", "3"),("inp2","3")], 15)])
-
-
-Current code is extremely "alpha" having only been tested on one example!
+   (10, 12, [("inp1", "3"),("inp2","3")], 15)]
 
 I am using Icarus Verilog for simulation
 (http://www.icarus.com/eda/verilog/) and GTKWave

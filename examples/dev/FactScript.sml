@@ -12,9 +12,9 @@
 (*
 quietdec := true;
 loadPath :="dff" :: !loadPath;
-map load  ["compile","intLib"];
+map load  ["compile","intLib","vsynth"];
 open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
-     devTheory composeTheory compileTheory compile;
+     devTheory composeTheory compileTheory compile vsynth;
 infixr 3 THENR;
 infixr 3 ORELSER;
 val _ = intLib.deprecate_int();
@@ -30,7 +30,7 @@ open HolKernel Parse boolLib bossLib;
 * Open theories
 ******************************************************************************)
 open arithmeticTheory pairLib pairTheory PairRules combinTheory 
-     composeTheory compile;
+     composeTheory compile vsynth;
 infixr 3 THENR;
 infixr 3 ORELSER;
 
@@ -191,6 +191,11 @@ val FACT_cir =
  save_thm
   ("Fact_cir",
    time MAKE_CIRCUIT FACT_dev);
+
+(*****************************************************************************)
+(* Print Verilog to file FACT.vl                                             *)
+(*****************************************************************************)
+val _ = PRINT_VERILOG FACT_cir;
 
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)
