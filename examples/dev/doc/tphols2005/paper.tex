@@ -731,8 +731,8 @@ the circuit constructs are defined by:
 {\begin{alltt}
 \( \vdash \DEF{DEL}(inp,out)  = {\forall}t. out(t+1) = inp t                       \)
 \( \vdash \DEF{DELF}(inp,out) = (out 0 = \DEF{T}) \wedge \DEF{DEL}(inp,out)                       \)
-\( \vdash \DEF{DFF}(d,\VAR{load},q) = {\forall}t. q(t+1) = \)
-\(                        \texttt{if} \DEF{POSEDGE} \VAR{load} (t+1) \texttt{then} d(t+1) \texttt{else} q t \)
+\( \vdash \DEF{DFF}(d,\VAR{sel},q)  \phantom{\hspace*{1mm}}= {\forall}t. q(t+1) = \)
+\(                        \texttt{if} \DEF{POSEDGE} \VAR{sel} (t+1) \texttt{then} d(t+1) \texttt{else} q t \)
 \end{alltt}}
 
 \vspace*{-1mm}
