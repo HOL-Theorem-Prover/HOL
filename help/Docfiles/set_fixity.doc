@@ -20,12 +20,13 @@ to terms of the same name.
 \FAILURE
 This function fails if the new fixity causes a clash with existing
 rules, as happens if the precedence level of the specified fixity is
-already taken by rules using a fixity of a different type.  Even
-though the application of {set_fixity} may succeed, it may also cause
-the first subsequent application of the {Term} parsing function to
-fail.  This latter will happen if the new rule causes a conflict in
-the precedence matrix.
-
+already taken by rules using a fixity of a different type.  Even if
+the application of {set_fixity} succeeds, it may cause the next
+subsequent application of the {Term} parsing function to complain
+about precedence conflicts in the operator precedence matrix.  These
+problems may cause the parser to behave oddly on terms involving the
+token whose fixity was set.  Excessive parentheses will usually cure
+even these problems.
 
 \EXAMPLE
 After a new constant is defined, {set_fixity} can be used to give them
