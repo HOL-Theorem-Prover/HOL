@@ -2,10 +2,12 @@
  *     The multiplier example from the LCF_LSM paper.                        *
  *---------------------------------------------------------------------------*)
 
-app load ["unwindLib", "arithmeticTheory", "pairTheory", "Num_conv"];
+app load ["unwindLib", "arithmeticTheory", "pairTheory",
+          "Num_conv", "Rewrite0"];
 open Prim_rec Num_conv unwindLib;
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+
 
 (*---------------------------------------------------------------------------*
  * Do some profiling.                                                        *
