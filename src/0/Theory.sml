@@ -484,11 +484,7 @@ type term_recd = {name:string ref, theory:string, place:Term.fixity,
                   htype:Type.hol_type, witness:Thm.thm option,utd:bool ref};
 
 local datatype family = Num | String
-      fun mk Num thy e n  = (* this case never called *)
-          {name=ref n, theory="num", place=Term.Prefix, utd=ref true,
-           htype=mk_type{Tyop="num",Args=[]},
-           witness = #witness(lookup_tmc thy "0" e)}
-        | mk String thy e n =
+      fun mkString thy e n =
           {name=ref n, theory="string", place=Term.Prefix, utd=ref true,
            htype=mk_type{Tyop="string",Args=[]},
            witness = #witness(lookup_tmc thy "emptystring" e)}
@@ -508,10 +504,10 @@ local datatype family = Num | String
 in
 fun lookup_const thy s e = lookup_tmc thy s e
   handle HOL_ERR _ =>  (* handle the family cases, if necessary *)
-    (case Globals.strings_defined()
-     of false => raise e
-      | true => if (Lexis.is_string_literal s)
-                  then mkX (mk String thy e) s else raise e)
+    if Globals.strings_defined() andalso Lexis.is_string_literal s then
+      if (s="\"\"") then lookup_const thy "emptystring" e
+      else mkX (mkString thy e) s
+    else raise e
 end;
 
 (*---------------------------------------------------------------------------
