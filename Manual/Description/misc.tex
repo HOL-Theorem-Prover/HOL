@@ -154,8 +154,13 @@ script, the following ``boilerplate'':
     open HolKernel Parse boolLib;
 \end{verbatim}
 This will duplicate the starting environment that one obtains with
-\verb+<holdir>/bin/hol+ and \verb+<holdir>/bin/hol.unquote+.
-
+\verb+<holdir>/bin/hol.bare+ and
+\verb+<holdir>/bin/hol.bare.unquote+.  If the script was developed
+interactively with \texttt{hol} or \texttt{hol.unquote}, then one must
+also add
+\begin{verbatim}
+    open bossLib
+\end{verbatim}
 Now the script should be separately compilable. Invoke \holmake{}
 to check; MoscowML will flag any unaccounted-for identifiers it finds.
 The user has to resolve these, either by using the `dot' notation to

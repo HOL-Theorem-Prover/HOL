@@ -12,14 +12,15 @@ clean:
 	rm -f *.dvi *.aux *.toc *.log tutorial.ps tutorial.pdf
 
 tutorial.dvi: tutorial.tex $(CHAPTERS)
+	(cd ../Logo ; make)  # makes the lantern logo
 	latex tutorial.tex ; latex tutorial.tex
 
 tutorial.ps:     tutorial.dvi
-	dvips -f tutorial.dvi > tutorial.ps
+	dvips -Ppdf -G0 -f tutorial.dvi > tutorial.ps
 
 tutorial.pdf: tutorial.ps
 	ps2pdf tutorial.ps
 
-all: tutorial.dvi tutorial.ps tutorial.pdf
+all: tutorial.ps tutorial.pdf
 
 

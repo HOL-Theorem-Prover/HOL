@@ -62,21 +62,19 @@ theorems:
 	@echo "\section{Theorems used to define types}" >> theorems.tex
 	/bin/sh bin/doc-to-tex ${D2TSED} ${Helpd}/THEOREMS/tydefs theorems.tex
 
-reference:
+reference.dvi: ids reference.tex
+	(cd ../Logo ; make)  # makes the lantern logo
+	latex reference.tex
+	${MAKEINDEX} reference.idx
 	latex reference.tex
 
-pdf:
-	pdflatex reference.tex
+reference.pdf: reference.ps
+	ps2pdf reference.ps
 
-ps:
-	dvips -f reference.dvi > reference.ps
+reference.ps: reference.dvi
+	dvips -Ppdf -G0 -f reference.dvi > reference.ps
 
-index:
-	${MAKEINDEX}  reference.idx
-
-all:
-	make clean; make tex && (make reference; make index; make reference; \
-                                 make pdf ps)
+all: reference.ps reference.pdf
 
 thmdoc:
 	(cd $(THMDIR)axioms;    make thmdoc) ;
