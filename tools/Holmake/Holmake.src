@@ -414,7 +414,7 @@ in
         if FileSys.access(fromFile (SIG x), []) andalso
            List.all (fn f => f <> SIG x) file_dependencies
         then
-           SIG x :: file_dependencies
+           UI x :: file_dependencies
         else
            file_dependencies
     | _ => file_dependencies
