@@ -56,9 +56,9 @@ val prod_TY_DEF = new_type_definition
                      pred = --`IS_PAIR`--,
                      inhab_thm = PAIR_EXISTS};
 
-val _ = add_infix_type 
-         {Prec = 70, 
-          ParseName = SOME "#", 
+val _ = add_infix_type
+         {Prec = 70,
+          ParseName = SOME "#",
           Name = "prod",
           Assoc = HOLgrammars.RIGHT};
 
@@ -334,13 +334,9 @@ val _ = save_thm("PEXISTS_THM",PEXISTS_THM);
 
 
 val pair_Axiom = store_thm("pair_Axiom",
---`!f:'a->'b->'c. ?!fn. !x y. fn (x,y) = f x y`--,
-GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL
- [EXISTS_TAC(--`UNCURRY f :'a#'b ->'c`--) THEN REWRITE_TAC[UNCURRY_DEF],
-  REPEAT STRIP_TAC THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN GEN_TAC
-   THEN CHOOSE_THEN(CHOOSE_THEN SUBST1_TAC) (ISPEC(--`p:'a#'b`--) ABS_PAIR_THM)
-   THEN ASM_REWRITE_TAC[]]);
-
+  --`!f:'a->'b->'c. ?fn. !x y. fn (x,y) = f x y`--,
+  GEN_TAC THEN EXISTS_TAC(--`UNCURRY f :'a#'b ->'c`--) THEN
+  REWRITE_TAC[UNCURRY_DEF]);
 
 val UNCURRY_CONG =
   save_thm("UNCURRY_CONG", Prim_rec.case_cong_thm ABS_PAIR_THM UNCURRY_DEF);
@@ -496,10 +492,10 @@ REWRITE_TAC[boolTheory.LET_DEF] THEN REPEAT GEN_TAC THEN BETA_TAC
  THEN REWRITE_TAC[UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
 
 val LET2_RATOR = store_thm("LET2_RATOR",
-Term`!(M:'a1#'a2) (N:'a1->'a2->'b->'c) (b:'b). 
+Term`!(M:'a1#'a2) (N:'a1->'a2->'b->'c) (b:'b).
       (let (x,y) = M in N x y) b = let (x,y) = M in N x y b`,
-REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC 
-  THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC 
+REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
+  THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
   THEN REWRITE_TAC[]);
 
 val _ = export_theory();

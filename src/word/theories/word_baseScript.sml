@@ -10,7 +10,7 @@
 
 
 open HolKernel Parse basicHol90Lib Let_conv Num_conv Num_induct;
-open Define_type Base;
+open Base Datatype;
 open arithLib numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 infix THEN THENL THENC ORELSE ORELSEC;
@@ -128,23 +128,31 @@ val LASTN_BUTLASTN_APPEND = prove(
 (* word_Ax |- !f. ?! fn. !l. fn(WORD l) = f l				*)
 (* ---------------------------------------------------------------------*)
 
-val word_Ax = define_type
-   {fixities=[Prefix],
-    name="word_Ax",
-    type_spec=`word = WORD of 'a list`};
+val _ = Hol_datatype `word = WORD of 'a list`;
+val wordinfo = valOf (TypeBase.read "word");
+val word_Ax = save_thm("word_Ax", TypeBase.axiom_of wordinfo);
 
 (* ---------------------------------------------------------------------*)
 (* Some basic theorems about the type ('a)word				*)
 (* ---------------------------------------------------------------------*)
 
 (* WORD_11 |- !l l'. (WORD l = WORD l') = (l = l')			*)
-val WORD_11 = save_thm("WORD_11", prove_constructors_one_one word_Ax);
+val WORD_11 = store_thm(
+  "WORD_11",
+  --`!l l'. (WORD l = WORD l') = (l = l')`--,
+  REWRITE_TAC [valOf (TypeBase.one_one_of wordinfo)]);
 
 (* word_induct |- !P. (!l. P(WORD l)) ==> (!w. P w)			*)
-val word_induct = save_thm("word_induct", prove_induction_thm word_Ax);
+val word_induct = store_thm(
+  "word_induct",
+  --`!P. (!l. P (WORD l)) ==> !w. P w`--,
+  REWRITE_TAC [TypeBase.induction_of wordinfo]);
 
 (* word_cases |- !w. ?l. w = WORD l  					*)
-val word_cases = save_thm("word_cases", prove_cases_thm word_induct);
+val word_cases = store_thm(
+  "word_cases",
+  --`!w. ?l. w = WORD l`--,
+  REWRITE_TAC [TypeBase.nchotomy_of wordinfo]);
 
 (* ---------------------------------------------------------------------*)
 (* Define some bit accessing functions					*)
@@ -162,7 +170,6 @@ val WORD_BITS = store_thm("WORD_BITS",
 
 val WORDLEN_DEF = new_recursive_definition {
  name = "WORDLEN_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`
@@ -174,11 +181,10 @@ val WORDLEN_DEF = new_recursive_definition {
 
 val PWORDLEN_DEF = new_recursive_definition {
  name = "PWORDLEN_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`
-   PWORDLEN n ((WORD l):'a word) = (n = LENGTH l)
+   !n l. PWORDLEN n ((WORD l):'a word) = (n = LENGTH l)
  `--
  };
 
@@ -231,7 +237,6 @@ val PWORDLEN1 = save_thm("PWORDLEN1",
 
 val WSEG_DEF = new_recursive_definition {
  name = "WSEG_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`
@@ -275,7 +280,6 @@ val WSEG_WORD_LENGTH = store_thm("WSEG_WORD_LENGTH",
 
 val BIT_DEF = new_recursive_definition {
  name = "BIT_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`
@@ -325,7 +329,6 @@ val BIT_WSEG = store_thm("BIT_WSEG",
 
 val MSB_DEF = new_recursive_definition {
  name = "MSB_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`
@@ -349,7 +352,6 @@ val MSB = store_thm("MSB",
 
 val LSB_DEF = new_recursive_definition {
  name = "LSB_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`
@@ -372,7 +374,6 @@ val LSB = store_thm("LSB",
 
 val WSPLIT_DEF = new_recursive_definition {
  name = "WSPLIT_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`

@@ -14,9 +14,10 @@ fun ERR s1 s2 =
 (* grammar we're parsing is:
     G ::=              id "=" <form>
     form ::=           <phrase> ( "|" <phrase> ) *  |  <record_defn>
+    phrase ::=         id  | id "of" <under_constr>
+    under_constr ::=   <ptype> ( "=>" <ptype> ) * | <record_defn>
     record_defn ::=    "<|"  <idtype_pairs> "|>"
     idtype_pairs ::=   id ":=" <type> | id := <type> "," <idtype_pairs>
-    phrase ::=         id  | id "of" <ptype> ( "=>" <ptype> ) *
     ptype ::=          <type> | "(" <type> ")"
  *
  * It had better be the case that => is not a type infix.  This is true of
@@ -33,24 +34,24 @@ datatype pretype =
   dVartype of string | dTyop of (string * pretype list) |
   dAQ of Type.hol_type
 
+type recordtype_info = (string * pretype) list
+
+datatype datatypeForm =
+  WithConstructors of (string * pretype list) list |
+  RecordType of recordtype_info
+type datatypeAST = string (* type name *) * datatypeForm
+
 fun pretypeToType pty =
   case pty of
     dVartype s => Type.mk_vartype s
   | dTyop (s, args) => Type.mk_type{Tyop = s, Args = map pretypeToType args}
   | dAQ pty => pty
 
-datatype datatypeForm =
-  WithConstructors of ((string * pretype list) list) |
-  RecordType of (string * pretype) list
-type datatypeAST = string (* type name *) * datatypeForm
-
-
 fun ident0 s =
   (itemP Char.isAlpha >-                                      (fn char1 =>
    many_charP (fn c => Char.isAlphaNum c orelse c = #"_")  >- (fn rest =>
    return (str char1 ^ rest)))) s
 fun ident s = token ident0 s
-
 
 fun parse_type strm =
   parse_type.parse_type {vartype = dVartype, tyop = dTyop, antiq = dAQ} true
@@ -60,24 +61,24 @@ fun parse_constructor_id s =
    ++
    ident) s
 
-val parse_phrase =
-  parse_constructor_id >-                            (fn constr_id =>
-  optional (symbol "of" >>
-            sepby1 (symbol "=>") parse_type) >-     (fn optlist =>
-  case optlist of
-    NONE => return (constr_id, [])
-  | SOME tylist => return (constr_id, tylist)))
-
 val parse_record_fld =
   ident >-
   (fn fldname => symbol ":" >>
    parse_type >-
    (fn pty => return (fldname, pty)))
 
+val parse_record_defn =
+  (symbol "<|" >> sepby1 (symbol ";") parse_record_fld >-> symbol "|>")
+
+val parse_phrase =
+  parse_constructor_id >-                            (fn constr_id =>
+  optional (symbol "of" >> sepby1 (symbol "=>") parse_type) >- (fn optargs =>
+  case optargs of
+    NONE => return (constr_id, [])
+  | SOME args => return (constr_id, args)))
 
 val parse_form =
-  (symbol "<|" >> sepby1 (symbol ";") parse_record_fld >-
-   (fn flds => symbol "|>" >> return (RecordType flds))) ++
+  (parse_record_defn >- return o RecordType) ++
   (sepby1 (symbol "|") parse_phrase >-  return o WithConstructors)
 
 val parse_G =

@@ -198,7 +198,7 @@ REPEAT (FILTER_STRIP_TAC (--`x:('a,'b)sum->'c`--)) THENL
 (* use with the recursive type definition tools.			*)
 (* ---------------------------------------------------------------------*)
 
-val sum_Axiom = store_thm("sum_Axiom",
+val sum_Axiom0 = prove(
    --`!f:'a->'c.
       !g:'b->'c.
       ?!h. (!x. h(INL x) = f x) /\
@@ -209,8 +209,19 @@ val sum_Axiom = store_thm("sum_Axiom",
    MATCH_ACCEPT_TAC rew
    end);
 
-val sum_INDUCT = save_thm("sum_INDUCT", prove_induction_thm sum_Axiom)
-val sum_CASES = save_thm("sum_CASES", prove_cases_thm sum_INDUCT);
+val sum_INDUCT = save_thm("sum_INDUCT", prove_induction_thm sum_Axiom0);
+val sum_Axiom = store_thm(
+  "sum_Axiom",
+  Term`!(f:'a -> 'c) (g:'b -> 'c).
+          ?h. (!x. h (INL x) = f x) /\ (!y. h (INR y) = g y)`,
+  REPEAT GEN_TAC THEN
+  STRIP_ASSUME_TAC
+    ((SPECL [Term`f:'a -> 'c`, Term`g:'b -> 'c`] o
+      Ho_rewrite.REWRITE_RULE [Ho_theorems.EXISTS_UNIQUE_THM])
+     sum_Axiom0) THEN
+  EXISTS_TAC (Term`h:'a + 'b -> 'c`) THEN
+  ASM_REWRITE_TAC []);
+val sum_CASES = save_thm("sum_CASES", hd (prove_cases_thm sum_INDUCT));
 val sum_distinct = store_thm(
   "sum_distinct",
   Term`!x:'a y:'b. ~(INL x = INR y)`,
@@ -357,7 +368,6 @@ val INR = store_thm("INR",
 val sum_case_def = new_recursive_definition{
   def = Term`(sum_case f g (INL x) = f x) /\
              (sum_case f g (INR y) = g y)`,
-  fixity = Prefix,
   name = "sum_case_def",
   rec_axiom = sum_Axiom};
 

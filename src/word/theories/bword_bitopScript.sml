@@ -9,7 +9,7 @@
 (* PC 18/11/93: SEG ->WSEG *)
 
 open HolKernel Parse basicHol90Lib Let_conv Num_conv Num_induct;
-open Define_type Base;
+open Base;
 open arithLib numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 infix THEN THENL THENC ORELSE ORELSEC;
@@ -88,7 +88,6 @@ val LASTN_MAP2 = prove(
 
 val WNOT_DEF = new_recursive_definition {
  name = "WNOT_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`

@@ -125,11 +125,7 @@ val SNOC_INDUCT_TAC =
 (* --------------------------------------------------------------------*)
 
 fun new_list_rec_definition (name,tm) =
-  new_recursive_definition{name=name,rec_axiom=list_Axiom,def=tm,fixity=Prefix}
-
-fun new_infix_list_rec_definition (name,tm,prec) =
-   new_recursive_definition {name=name,rec_axiom=list_Axiom,def=tm,
-                             fixity=Infixr prec};
+  new_recursive_definition{name=name,rec_axiom=list_Axiom,def=tm}
 
 fun dcons tm = snd(((fn c => #Name(dest_const c)="CONS")##I)(strip_comb tm))
 fun cend tm = if (#Name(dest_const tm) = "NIL")

@@ -277,9 +277,9 @@ val numeral_pre = store_thm(
 val our_M = Term
  `\f a. if a = ALT_ZERO then (zf:'a) else
         if (?n. (a = NUMERAL_BIT1 n))
-          then (b1f:'a->num->'a)
-                  (f (@n. a = NUMERAL_BIT1 n)) (@n. a = NUMERAL_BIT1 n)
-          else b2f (f (@n. a = NUMERAL_BIT2 n)) (@n. a = NUMERAL_BIT2 n)`;
+          then (b1f:num->'a->'a)
+                  (@n. a = NUMERAL_BIT1 n) (f (@n. a = NUMERAL_BIT1 n))
+          else b2f  (@n. a = NUMERAL_BIT2 n) (f (@n. a = NUMERAL_BIT2 n))`;
 
 
 fun AP_TAC (asl, g) =
@@ -299,12 +299,14 @@ fun AP_TAC (asl, g) =
 val APn_TAC = REPEAT AP_TAC;
 
 
-val bit_initiality0 = prove(Term
+val bit_initiality = store_thm(
+  "bit_initiality",
+  Term
   `!zf b1f b2f.
       ?f.
         (f ALT_ZERO = zf) /\
-        (!n. f (NUMERAL_BIT1 n) = b1f (f n) n) /\
-        (!n. f (NUMERAL_BIT2 n) = b2f (f n) n)`,
+        (!n. f (NUMERAL_BIT1 n) = b1f n (f n)) /\
+        (!n. f (NUMERAL_BIT2 n) = b2f n (f n))`,
   REPEAT STRIP_TAC THEN
   ASSUME_TAC
     (MP (INST_TYPE [Type`:'b` |-> Type`:'a`]
@@ -316,15 +318,13 @@ val bit_initiality0 = prove(Term
   Q.EXISTS_TAC `f` THEN REPEAT CONJ_TAC THENL [
     ASM_SIMP_TAC bool_ss [],
     GEN_TAC THEN
-    FIRST_ASSUM
-      (fn th => CONV_TAC (RATOR_CONV (RAND_CONV (REWR_CONV th)))) THEN
-    SIMP_TAC bool_ss [numeral_eq] THEN AP_TAC THEN AP_TAC THEN
+    FIRST_ASSUM (fn th => CONV_TAC (LHS_CONV (REWR_CONV th))) THEN
+    SIMP_TAC bool_ss [numeral_eq] THEN AP_TAC THEN
     SIMP_TAC bool_ss [relationTheory.RESTRICT_DEF, NUMERAL_BIT1] THEN
     ONCE_REWRITE_TAC [ADD_CLAUSES] THEN REWRITE_TAC [LESS_ADD_SUC],
     GEN_TAC THEN
-    FIRST_ASSUM
-      (fn th => CONV_TAC (RATOR_CONV (RAND_CONV (REWR_CONV th)))) THEN
-    SIMP_TAC bool_ss [numeral_eq] THEN AP_TAC THEN AP_TAC THEN
+    FIRST_ASSUM (fn th => CONV_TAC (LHS_CONV (REWR_CONV th))) THEN
+    SIMP_TAC bool_ss [numeral_eq] THEN AP_TAC THEN
     SIMP_TAC bool_ss [relationTheory.RESTRICT_DEF, NUMERAL_BIT2] THEN
     ONCE_REWRITE_TAC [ADD_CLAUSES] THEN REWRITE_TAC [LESS_ADD_SUC]
   ]);
@@ -344,14 +344,16 @@ INDUCT_TAC THENL [
   ]
 ]);
 
-val bit_initiality = prove(Term
+val old_style_bit_initiality = prove(Term
   `!zf b1f b2f.
       ?!f.
         (f ALT_ZERO = zf) /\
         (!n. f (NUMERAL_BIT1 n) = b1f (f n) n) /\
         (!n. f (NUMERAL_BIT2 n) = b2f (f n) n)`,
   REPEAT GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL [
-    MATCH_ACCEPT_TAC bit_initiality0,
+    STRIP_ASSUME_TAC
+      (Q.SPECL [`zf`, `\n a. b1f a n`, `\n a. b2f a n`] bit_initiality) THEN
+    RULE_ASSUM_TAC BETA_RULE THEN mesonLib.ASM_MESON_TAC [],
     REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
     INDUCT_THEN (MATCH_MP relationTheory.WF_INDUCTION_THM WF_LESS)
                 STRIP_ASSUME_TAC THEN
@@ -376,7 +378,6 @@ val iBIT_cases = new_recursive_definition {
   def = Term`(iBIT_cases ALT_ZERO zf bf1 bf2 = zf) /\
              (iBIT_cases (NUMERAL_BIT1 n) zf bf1 bf2 = bf1 n) /\
              (iBIT_cases (NUMERAL_BIT2 n) zf bf1 bf2 = bf2 n)`,
-  fixity = Prefix,
   name = "iBIT_cases",
   rec_axiom = bit_initiality};
 
@@ -415,11 +416,10 @@ val iSUB_DEF = new_recursive_definition {
         |  iBIT_cases x (NUMERAL_BIT1 n)
            (* BIT1 m *) (\m. iDUB (iSUB T n m))
            (* BIT2 m *) (\m. NUMERAL_BIT1 (iSUB F n m))))`,
-  fixity = Prefix,
   name = "iSUB_DEF",
   rec_axiom = bit_initiality};
 
-val bit_induction = Prim_rec.prove_induction_thm bit_initiality;
+val bit_induction = Prim_rec.prove_induction_thm old_style_bit_initiality;
 
 val iSUB_ZERO = prove(
   Term`(!n b. iSUB b ALT_ZERO n = ALT_ZERO) /\ (!n. iSUB T n ALT_ZERO = n)`,
@@ -602,307 +602,5 @@ val numeral_evenodd = store_thm(
            ~ODD ALT_ZERO /\ ~ODD (NUMERAL_BIT2 n) /\ ODD (NUMERAL_BIT1 n)`,
   SIMP_TAC bool_ss [NUMERAL_BIT1, ALT_ZERO, NUMERAL_BIT2, ADD_CLAUSES,
                     EVEN, ODD, EVEN_ADD, ODD_ADD]);
-
-(*
-val _ = print "Developing numeral rewrites for division\n"
-
-val iLOG_DEF = new_recursive_definition{
-  def = Term
-    `(iLOG b (NUMERAL_BIT1 n) =
-      iBIT_cases n (b => 1 | 0) (\k. SUC (iLOG b n)) (\k. SUC (iLOG b n))) /\
-     (iLOG b (NUMERAL_BIT2 n) =
-      iBIT_cases n 1 (\k. SUC (iLOG T n)) (\k. SUC (iLOG T n)))`,
-  fixity = Prefix,
-  name = "iLOG_DEF",
-  rec_axiom = bit_initiality};
-
-val iLOG_THM = store_thm(
-  "iLOG_THM", Term
-  `(iLOG F (NUMERAL_BIT1 ALT_ZERO) = 0) /\
-   (iLOG T (NUMERAL_BIT1 ALT_ZERO) = 1) /\
-   (!b. iLOG b (NUMERAL_BIT2 ALT_ZERO) = 1) /\
-   (!n b. iLOG b (NUMERAL_BIT1 (NUMERAL_BIT1 n)) =
-          SUC (iLOG b (NUMERAL_BIT1 n))) /\
-   (!n b. iLOG b (NUMERAL_BIT1 (NUMERAL_BIT2 n)) =
-          SUC (iLOG b (NUMERAL_BIT2 n))) /\
-   (!n b. iLOG b (NUMERAL_BIT2 (NUMERAL_BIT1 n)) =
-          SUC (iLOG T (NUMERAL_BIT1 n))) /\
-   (!n b. iLOG b (NUMERAL_BIT2 (NUMERAL_BIT2 n)) =
-          SUC (iLOG T (NUMERAL_BIT2 n)))`,
-  SIMP_TAC bool_ss [iLOG_DEF, iBIT_cases]);
-
-fun bcases n =
-  REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC [QUOTE n] bit_cases)
-
-val iALL_ONES = new_recursive_definition {
-  def = Term`(iALL_ONES ALT_ZERO = T) /\
-             (iALL_ONES (NUMERAL_BIT1 n) = iALL_ONES n) /\
-             (iALL_ONES (NUMERAL_BIT2 n) = F)`,
-  fixity = Prefix,
-  name = "iALL_ONEs",
-  rec_axiom = bit_initiality};
-
-val not_bit_0 = Q.prove
-  `!n. ~(NUMERAL_BIT1 n = 0) /\ ~(NUMERAL_BIT2 n = 0)`
-  (REWRITE_TAC [NUMERAL_DEF, numeral_eq]);
-val LHS_CONV = RATOR_CONV o RAND_CONV
-
-val one = prove(
-  Term`1 = SUC 0`,
-  REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1, ADD_CLAUSES]);
-val two = prove(
-  Term`2 = SUC 1`,
-  REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT2, one, ADD_CLAUSES, NUMERAL_BIT1])
-(* don't use the following as a rewrite; it loops!! *)
-val numbits_mult = Q.prove
-  `(!n. NUMERAL_BIT1 n = 2 * n + 1) /\
-   (!n. NUMERAL_BIT2 n = 2 * n + 2)`
-  (SIMP_TAC bool_ss [MULT_CLAUSES, ADD_CLAUSES, two, one] THEN
-   SIMP_TAC bool_ss [NUMERAL_BIT1, NUMERAL_BIT2, ADD_CLAUSES])
-
-
-val MULT_LE = Q.prove
-  `!n k. k * n <= k = (n = 0) \/ (n = 1) \/ (k = 0)`
-  (REPEAT GEN_TAC THEN ncases "n" "n0" THEN
-   SIMP_TAC bool_ss [MULT_CLAUSES, ZERO_LESS_EQ, SUC_NOT, one,
-                     INV_SUC_EQ] THEN
-   EQ_TAC THENL [
-     CONV_TAC (LHS_CONV (RAND_CONV (REWR_CONV (GSYM ADD_0)))) THEN
-     ONCE_REWRITE_TAC [ADD_SYM] THEN
-     SIMP_TAC bool_ss [LESS_EQ_MONO_ADD_EQ, LESS_EQ_0, MULT_EQ_0] THEN
-     REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [],
-     STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
-     SIMP_TAC bool_ss [ADD_CLAUSES, MULT_CLAUSES, LESS_EQ_REFL]
-   ])
-
-val iALL_ONES_characterised = store_thm(
-  "iALL_ONES_characterised", Term
-  `!n. iALL_ONES n /\ ~(n = 0) ==> (n = 2 EXP (iLOG T n) - 1)`,
-  INDUCT_THEN bit_induction STRIP_ASSUME_TAC THENL [
-    SIMP_TAC bool_ss [NUMERAL_DEF],
-    bcases "n" THENL [
-      SIMP_TAC bool_ss ([iLOG_THM, iALL_ONES, numeral_eq] @
-                        exp_rwts @ sub_rwts) THEN
-      REWRITE_TAC [NUMERAL_DEF],
-      FULL_SIMP_TAC bool_ss [iLOG_THM, iALL_ONES, EXP', not_bit_0] THEN
-      DISCH_THEN (fn iALL_ONESb1 =>
-        POP_ASSUM (fn imp_thm => let
-          val result = MP imp_thm iALL_ONESb1
-        in
-          CONV_TAC (LHS_CONV (RAND_CONV (REWR_CONV result)))
-        end)) THEN
-      CONV_TAC (LHS_CONV (REWR_CONV (CONJUNCT1 numbits_mult))) THEN
-      SIMP_TAC bool_ss [LEFT_SUB_DISTRIB, MULT_CLAUSES, SUB_RIGHT_ADD] THEN
-      SIMP_TAC bool_ss [
-        GSYM (REWRITE_RULE ([COND_RAND, COND_RATOR, COND_EXPAND,
-                             numeral_lte] @ sub_rwts)
-              (GEN_ALL (Q.SPECL [`m`, `2`, `1`] SUB_LEFT_SUB))),
-        COND_RAND, COND_RATOR, MULT_LE, numeral_distrib, numeral_eq] THEN
-      STRIP_TAC THENL [
-        FULL_SIMP_TAC bool_ss [two, NOT_EXP_0],
-        POP_ASSUM SUBST_ALL_TAC THEN
-        SIMP_TAC bool_ss (mult_rwts @ sub_rwts)
-      ],
-      SIMP_TAC bool_ss [iALL_ONES]
-    ],
-    SIMP_TAC bool_ss [iALL_ONES]
-  ]);
-
-val zero = Q.prove `0 = ZERO`  (REWRITE_TAC [NUMERAL_DEF])
-
-val iALL_ONES_iLOG = store_thm(
-  "NOT_iALL_ONES", Term
-  `!n. (iALL_ONES n /\ ~(n = 0) ==> (iLOG T n = iLOG F n + 1)) /\
-       (~(iALL_ONES n) ==> (iLOG T n = iLOG F n))`,
-  INDUCT_THEN bit_induction STRIP_ASSUME_TAC THEN
-  SIMP_TAC bool_ss [iALL_ONES, iLOG_THM, zero] THENL [
-    bcases "n" THEN
-    FULL_SIMP_TAC bool_ss [iALL_ONES, iLOG_THM, not_bit_0] THENL [
-      SIMP_TAC bool_ss (add_rwts @ [NUMERAL_DEF, numeral_eq]),
-      STRIP_TAC THEN SIMP_TAC bool_ss [ADD_CLAUSES]
-    ],
-    bcases "n" THEN
-    FULL_SIMP_TAC bool_ss [iALL_ONES, iLOG_THM, not_bit_0]
-  ]);
-
-val lt_thm = Q.prove `!m n k c. m <= n ==> k * m <= k * n + c`
-  (GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THENL [
-     SIMP_TAC bool_ss [MULT_CLAUSES, ZERO_LESS_EQ],
-     REWRITE_TAC [MULT_CLAUSES] THEN REPEAT STRIP_TAC THEN
-     REWRITE_TAC [GSYM ADD_ASSOC] THEN
-     CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV [ADD_SYM]))) THEN
-     REWRITE_TAC [ADD_ASSOC] THEN MATCH_MP_TAC LESS_EQ_LESS_EQ_MONO THEN
-     ASM_SIMP_TAC bool_ss []
-   ])
-
-val num_less = prove(
-  Term`!n. n < NUMERAL_BIT1 n /\ n < NUMERAL_BIT2 n /\
-           ~(NUMERAL_BIT1 n < n) /\ ~(NUMERAL_BIT2 n < n) /\
-           ~(NUMERAL_BIT1 n = n) /\ ~(NUMERAL_BIT2 n = n) /\
-           ~(n = NUMERAL_BIT1 n) /\ ~(n = NUMERAL_BIT2 n)`,
-  INDUCT_THEN bit_induction STRIP_ASSUME_TAC THEN
-  ASM_SIMP_TAC bool_ss [numeral_lt, numeral_eq] THEN STRIP_TAC THEN
-  IMP_RES_TAC LESS_ANTISYM);
-
-fun C f x y = f y x
-
-val COND_EXPAND' = prove(
-  Term`!P Q R. (P => Q | R) = (P ==> Q) /\ (~P ==> R)`,
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC [] THEN EQ_TAC THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC []);
-val TWO_EXP_NOT_0 = prove(
-  Term`!n. ~(2 EXP n = 0)`,
-  SIMP_TAC bool_ss [two, NOT_EXP_0])
-
-val sub_cancel = prove(
-  Term`!n m. (n + m) - m = n`,
-  INDUCT_TAC THEN
-  ASM_SIMP_TAC bool_ss [ADD_CLAUSES, SUB_EQUAL_0, SUB, COND_RAND,
-                        COND_RATOR, GSYM NOT_SUC, NOT_LESS] THEN
-  ONCE_REWRITE_TAC [ADD_SYM] THEN REWRITE_TAC [LESS_EQ_ADD])
-
-val TWO_iLOG_NOT_TOO_BIG = store_thm(
-  "TWO_ILOG_NOT_TOO_BIG", Term
-  `!n. 0 < n ==> 2 EXP (iLOG F n) <= n`,
-  Ho_resolve.MATCH_MP_TAC COMPLETE_INDUCTION THEN REPEAT STRIP_TAC THEN
-  bcases "n" THENL [
-    POP_ASSUM MP_TAC THEN SIMP_TAC bool_ss [NUMERAL_DEF, LESS_REFL],
-    POP_ASSUM (MP_TAC o SIMP_RULE bool_ss [NUMERAL_DEF, numeral_lt]) THEN
-    bcases "b1" THENL [
-      REWRITE_TAC [iLOG_THM, EXP', NUMERAL_DEF, numeral_lte],
-      SIMP_TAC bool_ss [EXP, iLOG_THM] THEN
-      POP_ASSUM (STRIP_ASSUME_TAC o
-                 SIMP_RULE bool_ss [zero, numeral_lt, num_less] o
-                 Q.SPEC `NUMERAL_BIT1 b1'`) THEN
-      CONV_TAC (RAND_CONV (REWR_CONV (CONJUNCT1 numbits_mult))) THEN
-      MATCH_MP_TAC lt_thm THEN ASM_REWRITE_TAC [],
-      SIMP_TAC bool_ss [EXP, iLOG_THM] THEN
-      POP_ASSUM (STRIP_ASSUME_TAC o
-                 SIMP_RULE bool_ss [zero, numeral_lt, num_less] o
-                 Q.SPEC `NUMERAL_BIT2 b2`) THEN
-      CONV_TAC (RAND_CONV (REWR_CONV (CONJUNCT1 numbits_mult))) THEN
-      MATCH_MP_TAC lt_thm THEN ASM_REWRITE_TAC []
-    ],
-    POP_ASSUM (MP_TAC o SIMP_RULE bool_ss [NUMERAL_DEF, numeral_lt]) THEN
-    bcases "b2" THEN REWRITE_TAC [] THENL [
-      SIMP_TAC bool_ss ([iLOG_THM, NUMERAL_DEF, numeral_lte] @ exp_rwts),
-      SIMP_TAC bool_ss [iLOG_THM, EXP] THEN
-      CONV_TAC (RAND_CONV (REWR_CONV (CONJUNCT2 numbits_mult))) THEN
-      POP_ASSUM (STRIP_ASSUME_TAC o
-                 SIMP_RULE bool_ss [zero, numeral_lt, num_less] o
-                 Q.SPEC `NUMERAL_BIT1 b1`) THEN
-      ASM_CASES_TAC (Term`iALL_ONES b1`) THENL [
-        ((ASSUME_TAC o C MP (Q.ASSUME `iALL_ONES b1`) o
-          SIMP_RULE bool_ss [iALL_ONES, not_bit_0] o
-          Q.SPEC `NUMERAL_BIT1 b1`) iALL_ONES_characterised) THEN
-        POP_ASSUM (CONV_TAC o RAND_CONV o LHS_CONV o RAND_CONV o
-                   REWR_CONV) THEN
-        SIMP_TAC bool_ss [LEFT_SUB_DISTRIB] THEN
-        REWRITE_TAC mult_rwts THEN SIMP_TAC bool_ss [SUB_RIGHT_ADD] THEN
-        SIMP_TAC bool_ss [MULT_LE, COND_EXPAND', COND_RAND, COND_RATOR] THEN
-        SIMP_TAC bool_ss [numeral_distrib, numeral_eq, TWO_EXP_NOT_0,
-                          sub_cancel, LESS_EQ_REFL],
-        ASM_SIMP_TAC bool_ss [iALL_ONES_iLOG, iALL_ONES] THEN
-        MATCH_MP_TAC LESS_EQ_TRANS THEN
-        Q.EXISTS_TAC `2 * NUMERAL_BIT1 b1` THEN
-        SIMP_TAC bool_ss [LESS_EQ_ADD] THEN
-        CONV_TAC (LHS_CONV (LHS_CONV (REWR_CONV two)) THENC
-                  RAND_CONV (LHS_CONV (REWR_CONV two))) THEN
-        ASM_REWRITE_TAC [GSYM MULT_LESS_EQ_SUC]
-      ],
-      SIMP_TAC bool_ss [EXP, iLOG_THM, iALL_ONES_iLOG, iALL_ONES] THEN
-      CONV_TAC (RAND_CONV (REWR_CONV (CONJUNCT2 numbits_mult))) THEN
-      MATCH_MP_TAC LESS_EQ_TRANS THEN
-      Q.EXISTS_TAC `2 * NUMERAL_BIT2 b2'` THEN
-      SIMP_TAC bool_ss [LESS_EQ_ADD] THEN
-      CONV_TAC (LHS_CONV (LHS_CONV (REWR_CONV two)) THENC
-                RAND_CONV (LHS_CONV (REWR_CONV two))) THEN
-      REWRITE_TAC [GSYM MULT_LESS_EQ_SUC] THEN
-      POP_ASSUM (STRIP_ASSUME_TAC o
-                 REWRITE_RULE [numeral_distrib, numeral_lt, zero, num_less] o
-                 Q.SPEC `NUMERAL_BIT2 b2'`)
-    ]
-  ]);
-
-val ONE_MOD = prove(
-  Term`!p. 0 < p ==> (1 MOD p = ((p = 1) => 0 | 1))`,
-  REPEAT STRIP_TAC THEN COND_CASES_TAC THENL [
-    POP_ASSUM SUBST_ALL_TAC THEN ASM_SIMP_TAC bool_ss [MOD_ONE, one],
-    STRIP_ASSUME_TAC
-      (GSYM (Q.SPEC `1` (MATCH_MP DIVISION (Q.ASSUME `0 < p`)))) THEN
-    FULL_SIMP_TAC bool_ss [ADD_EQ_1, MULT_EQ_1] THEN RES_TAC
-  ]);
-
-val MOD_ZERO = GEN_ALL (SIMP_RULE bool_ss [ADD_CLAUSES,
-                                           GSYM RIGHT_FORALL_IMP_THM]
-                        (Q.SPECL [`n`, `0`] MOD_MULT))
-
-val PRE_SUC = prove(
-  Term`!n. 0 < n ==> (SUC (PRE n) = n)`,
-  REPEAT STRIP_TAC THEN IMP_RES_TAC PRE_SUC_EQ THEN
-  FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC);
-
-
-val SIMP_ERR = HOL_ERR {message = "", origin_function = "",
-                        origin_structure = ""}
-val DIV_subtract_progress = prove(
-  Term`!n m p. 0 < m /\ p * m <= n ==> (n DIV m = p + (n - p * m) DIV m)`,
-  REPEAT STRIP_TAC THEN IMP_RES_TAC LESS_EQUAL_ADD THEN
-  POP_ASSUM SUBST_ALL_TAC THEN
-  STRIP_ASSUME_TAC (GSYM (Q.SPEC `p * m + p'`
-                          (MATCH_MP DIVISION (Q.ASSUME `0 < m`)))) THEN
-  REWRITE_TAC [ONCE_REWRITE_RULE [ADD_SYM] SUB_elim] THEN
-  RULE_ASSUM_TAC
-    (ONCE_REWRITE_RULE [GSYM (MATCH_MP MOD_PLUS (Q.ASSUME `0 < m`))]) THEN
-  RULE_ASSUM_TAC
-    (REWRITE_RULE [MATCH_MP MOD_ZERO (Q.ASSUME `0 < m`), ADD_CLAUSES,
-                   MATCH_MP MOD_MOD (Q.ASSUME `0 < m`)]) THEN
-  MATCH_MP_TAC (SIMP_RULE bool_ss [EQ_IMP_THM] MULT_MONO_EQ) THEN
-  Q.EXISTS_TAC `PRE m` THEN ASM_SIMP_TAC bool_ss [PRE_SUC] THEN
-  CONV_TAC (LHS_CONV (REWR_CONV MULT_SYM)) THEN
-  MATCH_MP_TAC (SIMP_RULE bool_ss [EQ_IMP_THM] EQ_MONO_ADD_EQ) THEN
-  Q.EXISTS_TAC `p' MOD m` THEN
-  ASM_SIMP_TAC bool_ss [LEFT_ADD_DISTRIB, GSYM ADD_ASSOC] THEN
-  CONV_TAC (LHS_CONV (LHS_CONV (REWR_CONV MULT_SYM))) THEN
-  CONV_TAC (LHS_CONV (REWR_CONV ADD_SYM) THENC
-            RAND_CONV (REWR_CONV ADD_SYM)) THEN
-  SIMP_TAC bool_ss [EQ_MONO_ADD_EQ] THEN
-  STRIP_ASSUME_TAC (Q.SPEC `p'`
-                    (MATCH_MP DIVISION (Q.ASSUME `0 < m`))) THEN
-  CONV_TAC (RAND_CONV (LHS_CONV (REWR_CONV MULT_SYM))) THEN
-  FIRST_ASSUM ACCEPT_TAC);
-
-(* val numeral_div = store_thm(
-  "numeral_div", Term
-  `!n m. 0 < m ==>
-         (n DIV m = (n < m
-                     => 0
-                     |  let v = iLOG F n - iLOG F m in
-                        let expv = 2 EXP v in
-                        m * expv <= n
-                        => expv + ((n - m * expv) DIV m)
-                        |  let v' = v - 1 in
-                           let expv' = 2 EXP v' in
-                           (expv' + (n - m * expv') DIV m)))`,
-  REPEAT STRIP_TAC THEN COND_CASES_TAC THENL [
-    STRIP_ASSUME_TAC (Q.SPEC `n` (MATCH_MP DIVISION (Q.ASSUME `0 < m`))) THEN
-    REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `n DIV m` num_CASES)
-    THENL [
-      REFL_TAC,
-      FULL_SIMP_TAC bool_ss [NOT_SUC, MULT_CLAUSES] THEN
-      Q.SUBGOAL_THEN `~(n < m)` (fn th => ASSUME_TAC th THEN RES_TAC) THEN
-      SIMP_TAC bool_ss [NOT_LESS] THEN FIRST_ASSUM SUBST_ALL_TAC THEN
-      CONV_TAC (RAND_CONV (LHS_CONV (REWR_CONV ADD_SYM))) THEN
-      REWRITE_TAC [GSYM ADD_ASSOC, LESS_EQ_ADD]
-    ],
-    SIMP_TAC bool_ss [LET_DEF] THEN COND_CASES_TAC THENL [
-      ASM_SIMP_TAC bool_ss [ONCE_REWRITE_RULE [MULT_SYM]
-                            DIV_subtract_progress],
-      ALL_TAC
-    ]
-  ]); *)
-
-
-*)
 
 val _ = export_theory();

@@ -21,6 +21,7 @@ local
 open HolKernel boolTheory Parse Define_type Psyntax
      Drule Conv Rewrite Prim_rec
      DecisionSupport DecisionNormConvs;
+open Prim_rec_Compat;
 
 infix ## THENC ORELSEC
 
@@ -512,7 +513,7 @@ val list_type_info : thm hol_type_info =
 fun define_type_info {name,type_spec,fixities,selectors,discriminators} =
    let fun define_function axiom (name,tm) =
           (name,Rsyntax.new_recursive_definition
-                   {name = name,fixity = Prefix,rec_axiom = axiom,def = tm})
+                   {name = name,rec_axiom = old_style_to_new axiom,def = tm})
        fun mk_def_eq (name,comb,arg) =
           let val ty = mk_type ("fun",[type_of comb,type_of arg])
           in  mk_eq (mk_comb (Rsyntax.mk_var {Name = name,Ty = ty},comb),arg)

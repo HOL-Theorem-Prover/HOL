@@ -1,4 +1,5 @@
 open HolKernel basicHol90Lib Psyntax Parse;
+open Prim_rec_Compat;
 
 local
   val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars

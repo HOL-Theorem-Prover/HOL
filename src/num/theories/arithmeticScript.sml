@@ -53,10 +53,10 @@ and PRE           = prim_recTheory.PRE;
 
 val ADD = new_recursive_definition
    {name = "ADD",
-    fixity = Infixl 500,
     rec_axiom = num_Axiom,
     def = --`($+ 0 n = n) /\
              ($+ (SUC m) n = SUC($+ m n))`--};
+val _ = set_fixity "+" (Infixl 500);
 
 (*---------------------------------------------------------------------------*
  * Define NUMERAL, a tag put on numeric literals, and the basic constructors *
@@ -80,24 +80,24 @@ val _ = add_numeral_form (#"n", NONE);
 
 val SUB = new_recursive_definition
    {name = "SUB",
-    fixity = Infixl 500,
     rec_axiom = num_Axiom,
     def = --`($- 0 m = 0) /\
              ($- (SUC m) n = ((m < n) => 0 | SUC($- m n)))`--};
+val _ = set_fixity "-" (Infixl 500);
 
 val MULT = new_recursive_definition
    {name = "MULT",
-    fixity = Infixl 600,
     rec_axiom = num_Axiom,
     def = --`($* 0 n = 0) /\
              ($* (SUC m) n = ($* m n) + n)`--};
+val _ = set_fixity "*" (Infixl 600);
 
 val EXP = new_recursive_definition
    {name = "EXP",
-    fixity = Infixr 700,
     rec_axiom = num_Axiom,
     def = --`($EXP m 0 = 1) /\
              ($EXP m (SUC n) = m * ($EXP m n))`--};
+val _ = set_fixity "EXP" (Infixr 700);
 
 val GREATER_DEF = new_infixr_definition
   ("GREATER_DEF", --`$> m n = n < m`--,   450);
@@ -110,28 +110,24 @@ val GREATER_OR_EQ = new_infixr_definition
 
 val EVEN = new_recursive_definition
    {name = "EVEN",
-    fixity = Prefix,
     rec_axiom = num_Axiom,
     def = --`(EVEN 0 = T) /\
              (EVEN (SUC n) = ~EVEN n)`--};
 
 val ODD = new_recursive_definition
    {name = "ODD",
-    fixity = Prefix,
     rec_axiom = num_Axiom,
     def = --`(ODD 0 = F) /\
              (ODD (SUC n) = ~ODD n)`--};
 
 val num_case_def = new_recursive_definition
    {name = "num_case_def",
-    fixity = Prefix,
     rec_axiom = num_Axiom,
     def = --`(num_case b f 0 = (b:'a)) /\
              (num_case b f (SUC n) = f n)`--};
 
 val FUNPOW = new_recursive_definition
    {name = "FUNPOW",
-    fixity = Prefix,
     rec_axiom = num_Axiom,
     def = --`(FUNPOW f 0 x = x) /\
              (FUNPOW f (SUC n) x = FUNPOW f n (f x))`--};
@@ -1341,7 +1337,6 @@ val LESS_LESS_EQ_TRANS = store_thm("LESS_LESS_EQ_TRANS",
 
 val FACT = new_recursive_definition
    {name = "FACT",
-    fixity = Prefix,
     rec_axiom = num_Axiom,
     def = --`(FACT 0 = 1) /\
              (FACT (SUC n) = (SUC n) * FACT(n))`--};

@@ -885,9 +885,10 @@ fun define_type def_type_spec recursor_thms =
                                 let
                                     fun prim_def_fun s t =
                                         new_recursive_definition
-                                        {fixity = Prefix,
-                                         name = s,
-                                         rec_axiom = rec_thm,
+                                        {name = s,
+                                         rec_axiom =
+                                         Prim_rec_Compat.old_style_to_new
+                                         rec_thm,
                                          def = t}
                                     fun mut_def_fun s t =
                                         define_mutual_functions

@@ -29,9 +29,8 @@ val _ = new_theory "string";
 (* ---------------------------------------------------------------------*)
 
 val string_info =
- Datatype.primHol_datatype
-   (TypeBase.theTypeBase())  `string = emptystring  (* empty string *)
-                                     | STRING of ascii => string`;
+ Datatype.Hol_datatype `string = emptystring  (* empty string *)
+                               | STRING of ascii => string`;
 
 
 (*---------------------------------------------------------------------------

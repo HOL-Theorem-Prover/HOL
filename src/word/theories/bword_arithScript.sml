@@ -105,7 +105,6 @@ val ADD_MONO_EQ = ARITH_PROVE (--`!m n p. ((p + m) = (p + n)) = (m = n)`--);
 
 val ACARRY_DEF = new_recursive_definition {
  name = "ACARRY_DEF",
- fixity = Prefix,
  rec_axiom = num_Axiom,
  def =
  --`
@@ -123,7 +122,6 @@ val ACARRY_DEF = new_recursive_definition {
 
 val ICARRY_DEF = new_recursive_definition {
  name = "ICARRY_DEF",
- fixity = Prefix,
  rec_axiom = num_Axiom,
  def =
  --`

@@ -135,7 +135,7 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
                     val ind1 = SPEC tm
                          (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)
                 in
-                 SOME 
+                 SOME
                    (GEN Q (CONV_RULE(DEPTH_CONV Let_conv.GEN_BETA_CONV) ind1))
                 end
       in
@@ -247,7 +247,7 @@ fun define stem eqs0 =
            of NONE => raise ERR "define" "unexpected lhs in definition"
             | SOME tyinfo =>
                let val def = new_recursive_definition
-                                {name=stem,def=eqs0,fixity=Parse.Prefix,
+                                {name=stem,def=eqs0,
                                  rec_axiom=TypeBase.axiom_of tyinfo}
                    val ind = TypeBase.induction_of tyinfo
                in
@@ -568,13 +568,13 @@ fun prove_tcs (STDREC {eqs, ind, R, SV}) tac =
 local open parse_term
 in
 fun dest_binop str =
-  let fun dest (COMB(COMB(VAR s, l),r)) 
-           = if s=str then (l,r) 
+  let fun dest (COMB(COMB(VAR s, l),r))
+           = if s=str then (l,r)
              else raise ERR "dest_binop" ("Expected a "^Lib.quote str)
         | dest  _ = raise ERR "dest_binop"  ""
   in dest end
 fun dest_binder str =
-  let fun dest (COMB(VAR s, ABS p)) 
+  let fun dest (COMB(VAR s, ABS p))
            = if s=str then p
              else raise ERR "dest_binder" ("Expected a "^Lib.quote str)
         | dest  _ = raise ERR "dest_binder"  ""
@@ -595,7 +595,7 @@ fun ptm_is_eq tm = Lib.can ptm_dest_eq tm;
 
 fun ptm_strip dest =
   let fun strip ptm =
-       let val (l,r) = dest ptm 
+       let val (l,r) = dest ptm
        in l::strip r
        end handle HOL_ERR _ => [ptm];
   in strip
@@ -605,7 +605,7 @@ fun ptm_strip_conj ptm = ptm_strip ptm_dest_conj ptm;
 
 fun ptm_strip_comb ptm =
    let fun strip ptm A =
-         let val (l,r) = ptm_dest_comb ptm 
+         let val (l,r) = ptm_dest_comb ptm
          in strip l (r::A)
          end handle HOL_ERR _ => (ptm,A)
   in strip ptm []
@@ -614,7 +614,7 @@ fun ptm_strip_comb ptm =
 
 fun ptm_strip_binder dest =
   let fun strip ptm =
-       let val (l,r) = dest ptm 
+       let val (l,r) = dest ptm
            val (L,M) = strip r
        in (l::L,M)
        end handle HOL_ERR _ => ([],ptm)
@@ -646,17 +646,17 @@ fun preview qthing =
           in
             map (atom_name o fst o strip_comb) L
           end
- in 
+ in
     mk_set (map drop_dollar (preev qthing))
-     handle HOL_ERR _ 
-     => raise ERR  "preview" 
+     handle HOL_ERR _
+     => raise ERR  "preview"
              "unable to find name of function(s) to be defined"
 end;
 
 (*---------------------------------------------------------------------------
-      MoscowML returns lists of QUOTE'd strings when a quote is spread 
+      MoscowML returns lists of QUOTE'd strings when a quote is spread
       over more than one line. "norm_quotel" concatenates all adjacent
-      QUOTE elements in this list. 
+      QUOTE elements in this list.
  ---------------------------------------------------------------------------*)
 
 fun norm_quote [] = []
@@ -664,17 +664,17 @@ fun norm_quote [] = []
   | norm_quote (QUOTE s1::QUOTE s2::rst) = norm_quote (QUOTE(s1^s2)::rst)
   | norm_quote (h::rst) = h::norm_quote rst;
 
-fun Hol_defn bindstem q = 
+fun Hol_defn bindstem q =
  let fun eqs qtm =
            let val names = preview qtm
                val allnames = map dollar names @ names
                val _ = List.app Parse.hide allnames
-               val eqs = Parse.Term qtm 
+               val eqs = Parse.Term qtm
                      handle e => (List.app Parse.reveal allnames; raise e)
                val _ = List.app Parse.reveal allnames
-           in 
+           in
              eqs
-           end 
+           end
  in
     define bindstem (eqs (norm_quote q))
  end;
@@ -694,8 +694,8 @@ fun tgoal0 defn =
         end
         handle HOL_ERR _ => raise ERR "tgoal" "";
 
-fun tgoal defn = 
-  Lib.with_flag (goalstackLib.chatting,false) 
+fun tgoal defn =
+  Lib.with_flag (goalstackLib.chatting,false)
        tgoal0 defn;
 
 
@@ -709,8 +709,8 @@ fun tprove0 (defn,tactic) =
    end
    handle HOL_ERR _ => raise ERR "tprove" "Termination proof failed.";
 
-fun tprove p = 
-  Lib.with_flag (goalstackLib.chatting,false) 
+fun tprove p =
+  Lib.with_flag (goalstackLib.chatting,false)
        tprove0 p;
 
 
@@ -722,8 +722,8 @@ fun tprove p =
 fun TC_INTRO_TAC defn =
  let val E = eqns_of defn
      val I = Option.valOf (ind_of defn)
- in MATCH_MP_TAC 
-       (REWRITE_RULE [AND_IMP_INTRO] 
+ in MATCH_MP_TAC
+       (REWRITE_RULE [AND_IMP_INTRO]
              (GEN_ALL(DISCH_ALL (CONJ E I))))
  end;
 

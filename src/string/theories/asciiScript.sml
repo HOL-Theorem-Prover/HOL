@@ -12,38 +12,42 @@
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
 (* ---------------------------------------------------------------------*)
-open HolKernel Parse Define_type Prim_rec;
+open HolKernel Parse Datatype;
 
 val _ = new_theory "ascii";
 
 (* ---------------------------------------------------------------------*)
 (* define the type :ascii						*)
 (* ---------------------------------------------------------------------*)
-val ascii_Axiom = define_type{name="ascii_Axiom",
- type_spec=`ascii = ASCII of bool=>bool=>bool=>bool=>bool=>bool=>bool=>bool`,
- fixities = [Prefix]};
 
-(* ---------------------------------------------------------------------*)
-(* prove induction theorem for ascii.					*)
-(* ---------------------------------------------------------------------*)
-val ascii_Induct = save_thm ("ascii_Induct", prove_induction_thm ascii_Axiom);
+val _ = Hol_datatype
+  `ascii = ASCII of bool=>bool=>bool=>bool=>bool=>bool=>bool=>bool`;
 
-(* ---------------------------------------------------------------------*)
-(* prove cases theorem for ascii.					*)
-(* ---------------------------------------------------------------------*)
-val ascii_CASES = save_thm ("ascii_CASES", prove_cases_thm ascii_Induct);
 
-(* ---------------------------------------------------------------------*)
-(* prove that the constructor ASCII is one-to-one			*)
-(* ---------------------------------------------------------------------*)
-val ASCII_11 = save_thm ("ASCII_11", prove_constructors_one_one ascii_Axiom);
+(*---------------------------------------------------------------------------
 
-val ascii_case_def =
-new_recursive_definition {name="ascii_case_def",
-  def = Term`ascii_case f (ASCII v1 v2 v3 v4 v5 v6 v7 v8)
-                             = f v1 v2 v3 v4 v5 v6 v7 v8`,
-  rec_axiom = ascii_Axiom,
-  fixity = Prefix};
+     For backwards compatibility : the Hol_datatype package invents
+     its own names in a regular format, which differ in this case
+     from the ones that the original author had.
+
+ ---------------------------------------------------------------------------*)
+
+val _ = adjoin_to_theory
+{sig_ps = SOME (fn ppstrm =>
+    let val S = PP.add_string ppstrm
+        fun NL() = PP.add_newline ppstrm
+    in
+        S "(* For backward compatibility of theorem names *)"; NL();
+        S "val ASCII_11        : thm"; NL()
+    end),
+ struct_ps = SOME(fn ppstrm =>
+    let val S = PP.add_string ppstrm
+        fun NL() = PP.add_newline ppstrm
+    in
+        S "(* For backward compatibility of theorem names *)"; NL();
+        S "val ASCII_11        = ascii_11"; NL()
+    end)};
+
 
 val _ = export_theorems_as_docfiles "../help/thms" (theorems())
 val _ = export_theorems_as_docfiles "../help/defs" (definitions())

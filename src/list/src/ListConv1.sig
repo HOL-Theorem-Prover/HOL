@@ -11,7 +11,6 @@ sig
   val EQ_LENGTH_INDUCT_TAC : tactic
   val EQ_LENGTH_SNOC_INDUCT_TAC : tactic
   val new_list_rec_definition : string * term -> thm
-  val new_infix_list_rec_definition : string * term * int -> thm
   val list_EQ_CONV : conv -> conv
   val LENGTH_CONV : conv
   val APPEND_CONV : conv

@@ -18,7 +18,8 @@ struct
 
 local
 
-open HolKernel Parse basicHol90Lib Abbrev Define_type Psyntax;
+open HolKernel Parse basicHol90Lib Abbrev Prim_rec_Compat Psyntax;
+open Define_type;
 infix ##;
 
 fun failwith function =
@@ -261,7 +262,7 @@ fun define_shell {name,type_spec,fixities,accessors} =
           end
        fun define_accessor axiom (name,tm) =
           (name,Rsyntax.new_recursive_definition
-                   {name = name,fixity = Prefix,rec_axiom = axiom,def = tm})
+                   {name = name,rec_axiom = axiom,def = tm})
        fun define_accessors axiom (comb,specs) =
           map (fn (name,arg) =>
                   define_accessor axiom (name,mk_def_eq (name,comb,arg)))

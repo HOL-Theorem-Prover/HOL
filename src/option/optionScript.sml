@@ -79,25 +79,27 @@ GEN_TAC THEN PURE_REWRITE_TAC[SOME_DEF,NONE_DEF]
   DISJ2_TAC THEN IMP_RES_TAC sumTheory.INR THEN POP_ASSUM (SUBST1_TAC o SYM)
       THEN ONCE_REWRITE_TAC[oneTheory.one] THEN REFL_TAC]);
 
-val option_Axiom_orig = prove
-(Term`!(f:'a -> 'b) e.
-           ?!fn. (!x. fn (SOME x) = f x) /\ (fn NONE = e)`,
-REPEAT GEN_TAC
-  THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL
-  [PURE_REWRITE_TAC[SOME_DEF,NONE_DEF]
-     THEN STRIP_ASSUME_TAC (EXISTENCE (BETA_RULE
+val option_Axiom = store_thm (
+  "option_Axiom",
+  Term`!e f:'a -> 'b. ?fn. (!x. fn (SOME x) = f x) /\ (fn NONE = e)`,
+  REPEAT GEN_TAC THEN
+  PURE_REWRITE_TAC[SOME_DEF,NONE_DEF] THEN
+  STRIP_ASSUME_TAC
+     (BETA_RULE
         (ISPECL [--`\x. f x`--, --`\x:one.(e:'b)`--]
-                (INST_TYPE [Type`:'b` |-> Type`:one`] sumTheory.sum_Axiom))))
-     THEN EXISTS_TAC (--`\x:'a option. h(option_REP x):'b`--) THEN BETA_TAC
-     THEN ASM_REWRITE_TAC[reduce option_REP_ABS_DEF],
-   REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC
-    THEN STRIP_ASSUME_TAC (SPEC (Term`o':'a option`) option_CASES_orig)
-    THEN ASM_REWRITE_TAC[]]);
+         (INST_TYPE [Type`:'b` |-> Type`:one`] sumTheory.sum_Axiom))) THEN
+  EXISTS_TAC (--`\x:'a option. h(option_REP x):'b`--) THEN BETA_TAC THEN
+  ASM_REWRITE_TAC[reduce option_REP_ABS_DEF]);
 
-val option_Induct_orig = Prim_rec.prove_induction_thm option_Axiom_orig;
-
-val option_induction = save_thm ("option_induction",
-  ONCE_REWRITE_RULE [CONJ_SYM] option_Induct_orig);
+val option_induction = store_thm (
+  "option_induction",
+  Term`!P. P NONE /\ (!a. P (SOME a)) ==> !x. P x`,
+  GEN_TAC THEN PURE_REWRITE_TAC [SOME_DEF, NONE_DEF] THEN
+  REPEAT STRIP_TAC THEN
+  ONCE_REWRITE_TAC [GSYM (CONJUNCT1 option_REP_ABS_DEF)] THEN
+  SPEC_TAC (Term`option_REP (x:'a option)`, Term`s:'a + one`) THEN
+  Ho_resolve.MATCH_MP_TAC sumTheory.sum_INDUCT THEN
+  ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []);
 
 val SOME_11 = store_thm("SOME_11",
   Term`!x y :'a. (SOME x = SOME y) = (x=y)`,
@@ -115,16 +117,9 @@ val (NOT_NONE_SOME,NOT_SOME_NONE) =
 val option_nchotomy = save_thm("option_nchotomy",
  ONCE_REWRITE_RULE [DISJ_SYM] option_CASES_orig);
 
-val option_Axiom = save_thm("option_Axiom",
- let val V = fst(strip_forall(concl option_Axiom_orig))
- in GENL (rev V)
-      (ONCE_REWRITE_RULE [CONJ_SYM] (SPEC_ALL option_Axiom_orig))
- end);
-
 val option_case_def =
  new_recursive_definition
     {name="option_case_def",
-     fixity=Prefix,
      rec_axiom=option_Axiom,
      def = Term`(option_case u f NONE = u) /\
                 (option_case (u:'b) f (SOME (x:'a)) = f x)`};
@@ -132,27 +127,24 @@ val option_case_def =
 val option_APPLY_DEF =
  new_recursive_definition
  {name="option_APPLY_DEF",
-  fixity=Prefix,
-  rec_axiom=option_Axiom_orig,
+  rec_axiom=option_Axiom,
   def =
   Term`(option_APPLY (f:'a->'b) (SOME x) = SOME (f x)) /\
        (option_APPLY f NONE = NONE)`};
 
 val IS_SOME_DEF =
- new_recursive_definition {name="IS_SOME_DEF", fixity=Prefix,
-    rec_axiom=option_Axiom_orig,
-    def = Term`(IS_SOME (SOME x) = T)
-            /\ (IS_SOME NONE = F)`};
+ new_recursive_definition {name="IS_SOME_DEF",
+    rec_axiom=option_Axiom,
+    def = Term`(IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F)`};
 
-val IS_NONE_DEF =
- new_recursive_definition {name="IS_NONE_DEF", fixity=Prefix,
-    rec_axiom=option_Axiom_orig,
-    def = Term`(IS_NONE (SOME x) = F)
-            /\ (IS_NONE NONE = T)`};
+val IS_NONE_DEF = new_recursive_definition {
+  name = "IS_NONE_DEF",
+   rec_axiom = option_Axiom,
+   def = Term`(IS_NONE (SOME x) = F) /\ (IS_NONE NONE = T)`};
 
 val THE_DEF =
- new_recursive_definition {name="THE_DEF", fixity=Prefix,
-    rec_axiom=option_Axiom_orig,
+ new_recursive_definition {name="THE_DEF",
+    rec_axiom=option_Axiom,
     def = Term `THE (SOME x) = x`};
 
 val option_rws =

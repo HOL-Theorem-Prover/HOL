@@ -102,7 +102,7 @@ val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-fun INDUCT_ERR s = 
+fun INDUCT_ERR s =
       HOL_ERR{origin_structure="ltreeScript",
               origin_function=s, message=""};
 
@@ -191,7 +191,7 @@ val ltree_TY_DEF =
 (* function ABS_tree, and prove some trivial lemmas about them.		*)
 (* ---------------------------------------------------------------------*)
 
-val ltree_ISO_DEF = 
+val ltree_ISO_DEF =
   define_new_type_bijections
      {name = "ltree_ISO_DEF",
       ABS = "ABS_ltree",
@@ -263,7 +263,6 @@ val MAP_size_LENGTH = prove
 
 val AP = new_recursive_definition
      {name = "AP",
-      fixity = Prefix,
       rec_axiom = list_Axiom,
       def = --`(!l. AP NIL l = NIL) /\
                (!h t l. AP (CONS h t) l = CONS (h (HD l:'a):'b)
@@ -271,7 +270,6 @@ val AP = new_recursive_definition
 
 val SPLIT = new_recursive_definition
      {name = "SPLIT",
-      fixity = Prefix,
       rec_axiom = num_Axiom,
       def = --`(SPLIT 0 l = (NIL, (l:'a list))) /\
                (SPLIT (SUC n) l = (CONS (HD l) (FST(SPLIT n (TL l))),
@@ -279,7 +277,6 @@ val SPLIT = new_recursive_definition
 
 val PART = new_recursive_definition
      {name = "PART",
-      fixity = Prefix,
       rec_axiom = list_Axiom,
       def = --`(PART NIL (l:('a)list) = NIL) /\
                (PART (CONS n t) l = (CONS (FST (SPLIT n l))
@@ -668,10 +665,17 @@ val th0 =
      (SPEC (Term`\(rl:'b list) (v:'a) (tl:'a ltree list). g v tl:'b`)
            ltree_Axiom));
 
+val th0 = prove(
+  --`!g. ?f. !v tl. f (Node v tl) = g v tl`--,
+  GEN_TAC THEN
+  STRIP_ASSUME_TAC (CONV_RULE EXISTS_UNIQUE_CONV (Q.SPEC `g` th0)) THEN
+  Q.EXISTS_TAC `fn` THEN FIRST_ASSUM ACCEPT_TAC);
+
+
+
 val ltree_case_def =
   Lib.try new_recursive_definition
     {name = "ltree_case_def",
-     fixity = Prefix,
      rec_axiom = th0,
      def = Term `ltree_case f (Node v l) = f v l`};
 
@@ -691,14 +695,14 @@ REPEAT GEN_TAC
 (*---------------------------------------------------------------------------
      The (parameterized) size of an ltree. The desired equation is:
 
-         ltree_size f (Node v tl) 
-             = 
+         ltree_size f (Node v tl)
+             =
          1 + f v + list_size (ltree_size f) tl
  ---------------------------------------------------------------------------*)
 
 val th =
  BETA_RULE
-   (SPEC 
+   (SPEC
      (Term`\(rl:num list) (v:'a) (l:'a ltree list).
          SUM rl + (LENGTH l + (f v + 1))`)
      (INST_TYPE [Type.beta |-> Type`:num`] ltree_Axiom));
@@ -707,9 +711,9 @@ val th1 = CONJUNCT1 (CONV_RULE (ONCE_DEPTH_CONV EXISTS_UNIQUE_CONV) th);
 val th2 = CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) (GEN_ALL th1);
 
 val lem = prove
- (Term`?ltree_size. !f v l. 
-     ltree_size f (Node v l) 
-        = 
+ (Term`?ltree_size. !f v l.
+     ltree_size f (Node v l)
+        =
      SUM (MAP (ltree_size f) l) + (LENGTH l + (f v + 1))`,
 STRIP_ASSUME_TAC th2
    THEN EXISTS_TAC (Term`fn:('a->num) -> 'a ltree -> num`) THEN BETA_TAC
@@ -720,9 +724,9 @@ STRIP_ASSUME_TAC th2
 local open arithmeticTheory
 in
 val ltree_size_eqns = prove(Term
-  `?ltree_size. 
-     !l v f. ltree_size f (Node v l) 
-                 = 
+  `?ltree_size.
+     !l v f. ltree_size f (Node v l)
+                 =
              list_size (ltree_size f) l + (f v + 1)`
  ,
 STRIP_ASSUME_TAC lem
@@ -731,7 +735,7 @@ STRIP_ASSUME_TAC lem
    THEN LIST_INDUCT_TAC THENL
    [REWRITE_TAC [MAP,SUM,LENGTH,listTheory.list_size_def,ADD_CLAUSES],
     RULE_ASSUM_TAC GSYM
-     THEN ASM_REWRITE_TAC 
+     THEN ASM_REWRITE_TAC
         [MAP,SUM,LENGTH,listTheory.list_size_def,GSYM ADD_ASSOC, ADD_CLAUSES]
      THEN REWRITE_TAC [ONCE_REWRITE_RULE[ADD_SYM] ADD1]])
 end;

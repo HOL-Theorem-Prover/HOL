@@ -151,7 +151,6 @@ val PBITBOP_EXISTS = store_thm("PBITBOP_EXISTS",
 
 val WMAP_DEF = new_recursive_definition {
  name = "WMAP_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`
@@ -217,7 +216,6 @@ val WMAP_o = store_thm("WMAP_o",
 
 val FORALLBITS_DEF = new_recursive_definition {
  name = "FORALLBITS_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`
@@ -289,7 +287,6 @@ val FORALLBITS_WCAT = store_thm("FORALLBITS_WCAT",
 
 val EXISTSABIT_DEF = new_recursive_definition
 {
- fixity = Prefix,
  rec_axiom = word_Ax,
  name = "EXISTSABIT_DEF",
  def =   (--`!P:'a->bool. !l.

@@ -49,7 +49,6 @@ val BV_DEF = new_definition("BV_DEF",
 
 val BNVAL_DEF = new_recursive_definition {
  name = "BNVAL_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def =
  --`

@@ -12,7 +12,7 @@
 
 
 open HolKernel Parse basicHol90Lib Let_conv Num_conv Num_induct;
-open Define_type Base;
+open Base;
 open arithLib numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 infix THEN THENL THENC ORELSE ORELSEC;
@@ -51,7 +51,6 @@ val LVAL_DEF = new_definition ("LVAL_DEF",
 
 val NVAL_DEF = new_recursive_definition {
  name = "NVAL_DEF",
- fixity = Prefix,
  rec_axiom = word_Ax,
  def = --`NVAL f b (WORD l:'a word) = LVAL f b l`--
  };
@@ -197,7 +196,6 @@ val NVAL_WCAT = store_thm("NVAL_WCAT",
 
 val NLIST_DEF = new_recursive_definition {
  name = "NLIST_DEF",
- fixity = Prefix,
  rec_axiom = num_Axiom,
  def =
  --`

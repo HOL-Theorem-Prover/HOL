@@ -524,9 +524,10 @@ end;
 (*									*)
 (* ADDED TFM 88.04.02							*)
 (*----------------------------------------------------------------------*)
-val num_Axiom = store_thm ("num_Axiom",
- --`!e:'a. !f. ?! fn1. (fn1 0 = e) /\
-                   (!n. fn1 (SUC n) = f (fn1 n) n)`--,
+val num_Axiom_old = store_thm(
+  "num_Axiom_old",
+   --`!e:'a. !f. ?! fn1. (fn1 0 = e) /\
+                         (!n. fn1 (SUC n) = f (fn1 n) n)`--,
    REPEAT GEN_TAC THEN
    CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL
    [EXISTS_TAC (--`PRIM_REC (e:'a) (f:'a->num->'a)`--) THEN
@@ -536,6 +537,15 @@ val num_Axiom = store_thm ("num_Axiom",
     CONV_TAC FUN_EQ_CONV THEN
     INDUCT_TAC THEN ASM_REWRITE_TAC []]);
 
+val num_Axiom = store_thm(
+  "num_Axiom",
+  Term`!(e:'a) f. ?fn. (fn 0 = e) /\ !n. fn (SUC n) = f n (fn n)`,
+  REPEAT GEN_TAC THEN
+  STRIP_ASSUME_TAC
+     (CONV_RULE EXISTS_UNIQUE_CONV
+        (SPECL [Term`e:'a`, Term`\a:'a n:num. f n a:'a`] num_Axiom_old)) THEN
+  EXISTS_TAC (Term`fn1 : num -> 'a`) THEN
+  RULE_ASSUM_TAC BETA_RULE THEN ASM_REWRITE_TAC []);
 
 (*---------------------------------------------------------------------------*
  * Wellfoundedness taken as no infinite descending chains in 'a. This defn   *

@@ -61,11 +61,13 @@ val disjuncts = Dsyntax.strip_disj
 
 
 fun new_prim_rec_definition (name,tm) =
-  Psyntax.new_recursive_definition Parse.Prefix prim_recTheory.num_Axiom name tm
+  Psyntax.new_recursive_definition prim_recTheory.num_Axiom name tm
 
-fun new_infix_prim_rec_definition(name,tm,prec) =
-   Psyntax.new_recursive_definition
-         (Parse.Infixr prec) prim_recTheory.num_Axiom name tm;
+fun new_infix_prim_rec_definition(name,tm,prec) = let
+in
+  Psyntax.new_recursive_definition prim_recTheory.num_Axiom name tm before
+  Lib.mesg true "Term not defined as infix - use set_fixity to do this"
+end
 
 
 val PROVE = Tactical.prove;
