@@ -56,7 +56,10 @@ exception BadLabel
 exception BadDirective (* ill-positioned directive *)
 exception BadArg (* problem parsing arg of curried fun *)
 
-(* a useful helper *)
+(* ------------------------------------------------------------ *)
+(* Useful helpers                                               *)
+(* ------------------------------------------------------------ *)
+
 let isIndent t =
   match t with
     Indent(n) -> true
@@ -67,48 +70,9 @@ let isDirEnd t =
     DirEnd    -> true
   | _         -> false
 
-let print_tokenline toks =
-    let f t = print_string ((render_token t)^" ")
-    in
-    ignore (List.map f toks);
-    print_newline()
-
-
-
-(*
-The standard format for a rule is:
-
-  (! universally-quantified variables.
-
-  rule_name /* rule_category (* optional rule description *) */
-    rule_lhs
-  -- rule_label -->
-    rule_rhs
-
-  <==
-
-    rule_side_condition
-
-  (*
-  optional rule commentary
-  *)
-  )
-
-Note that blank lines are to be respected, and preferably indents also.
-
-LaTeX is permitted in comments, and Hol source can be enclosed in
-double square brackets like this: [[Flags(T,F)]].
-
-*)
-
-(* now for the parsers *)
-
-
-type rule =
-    Rule of string list * string * string * token list option (* v, n, cat, desc, *)
-        * token list list * token list * token list list (* lhs, lab, rhs, *)
-        * token list list * token list option (* side, comm *)
-
+(* ------------------------------------------------------------ *)
+(* Parsers                                                      *)
+(* ------------------------------------------------------------ *)
 
 let rec parse_line = parser
     [< 'Indent(n); e = parse_line1 >] -> Indent(n) :: e
@@ -161,12 +125,6 @@ and optind = parser
     [< 'Indent(n) ; is = optind >] -> Indent(n) :: is
   | [<>]                           -> []
 
-and dir_block = parser
-    [< _ = wopt; 'Ident(n,_); ts = dir_block1 >] -> (n,ts)
-and dir_block1 = parser
-    [< 't when not (isDirEnd t) ; ts = dir_block1 >] -> t :: ts
-  | [< 'DirEnd >]                                    -> []
-
 and dir_var_vars ts =
   let rec go ts =
     match ts with
@@ -178,108 +136,10 @@ and dir_var_vars ts =
   in
   go ts
 
-(* and parse_rule = parser [<>] -> Rule([],"","",None,[],[],[],[],None) *)
 
-and parse_rule = parser
-    [< 'Sep("("); _ = sp; r1 = parse_rule1 >] -> r1
-  | [<>] -> raise (Stream.Error("rule begin: `('"));
-and parse_rule1 = parser
-    [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? "."; _ = sp; 
-       'Indent(_);
-       (n,cat,desc) = rule_name;
-       l_lab_r = parse_chunk;
-       'Indent(_);
-       _ = sp'; 'Ident("<==",_) ?? n^": <=="; _ = sp;
-       'Indent(_);
-       side = parse_chunk;
-       'Indent(_); _ = optind;
-       comm = optcomm;
-       _ = optind;
-       _ = sp; 'Sep(")") ?? n^": rule end: `)'"; _ = sp >]
-      -> let rec isLab ts =
-            match ts with
-              (Indent(_)     :: ts) -> isLab ts
-            | (White(_)      :: ts) -> isLab ts
-            | (Ident("--",_) :: _ ) -> true
-            | _                   -> false
-         in
-         let rec go c lhs =
-            match c with
-              (x::xs) when isLab x -> (List.rev lhs,x,xs)
-            | (x::xs)              -> go xs (x::lhs)
-            | _                    -> ([],[],[])
-         in
-         let (lhs,lab,rhs) = go l_lab_r []
-         in
-         Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)
-  | [<>] -> raise (Stream.Error("!"));
-
-and rule_vars = parser
-    [< 'White(_)                  ; r = rule_vars >] -> r
-  | [< 'Comment(_)                ; r = rule_vars >] -> r
-  | [< 'DirBlk("VARS",ts)         ; r = rule_vars >] -> dir_var_vars ts @ r
-  | [< 'DirBlk(n,ts) when (dir_proc n ts; true) (* cheat: make it happen right now *)
-                                  ; r = rule_vars >] -> r
-  | [< 'Ident(s,_)                ; r = rule_vars >] -> s :: r
-  | [<>]                                         -> []
-
-and rule_name = parser
-    [< 'Indent(_); 'Ident(n,_) ?? "rule name"; _ = sp; 'Ident("/*",_) ?? "/*"; _ = sp; 'Ident(cat,_) ?? "category"; _ = wopt;
-       desc = optcomm; _ = sp; 'Ident("*/",_) ?? "*/"; _ = sp >]
-      -> (n,cat,desc)
-  | [<>] -> raise (Stream.Error("rule name on new line"));
-
-
-and parse_rules_and_process p = parser
-    [< 'Ident("Net_Hol_reln",_); _ = sp'; rs = parse_rules_ap0 p >] -> rs
-  | [< 'DirBlk(n,ts) when (dir_proc n ts; true) (* cheat: make it happen right now *)
-                               ; rs = parse_rules_and_process p  >] -> rs
-  | [< '_                      ; rs = parse_rules_and_process p  >] -> rs
-and parse_rules_ap0 p = parser
-    [< 'Backtick; _ = sp'; rs = parse_rules_ap1 p >] -> rs
-  | [< rs = parse_rules_and_process p             >] -> rs
-and parse_rules_ap1 p = parser
-    [< 'Sep("("); _ = sp; r = (function ts -> p (parse_rule1 ts)); _ = sp';
-       rs = parse_rules_ap2 p >] -> r :: rs
-  | [<>]                         -> []
-and parse_rules_ap2 p = parser
-    [< 'Ident("/\\",_); _ = sp';
-       rs = parse_rules_ap1 p >] -> rs
-  | [< 'Backtick >]              -> []
-  | [<>]                         -> raise (Stream.Error("expected /\\ or `"))
-
-(* let's do this thing *)
-
-(* debugging rule printer *)
-
-let print_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
-  print_string ("Rule "^n^" ("^cat);
-  (match desc with
-     Some d -> print_string " ";
-               print_tokenline d
-   | None   -> ());
-  print_string ")\n";
-  print_string "Vars:\n";
-  ignore (List.map (function s -> print_string (s^" ")) v);
-  print_newline() ;
-  print_string "LHS:\n";
-  ignore (List.map print_tokenline lhs);
-  print_string "Label:\n";
-  print_tokenline lab;
-  print_string "RHS:\n";
-  ignore (List.map print_tokenline rhs);
-  print_string "Side:\n";
-  ignore (List.map print_tokenline side);
-  (match comm with
-     Some c -> print_string "Comments:\n";
-               print_tokenline c;
-               print_newline()
-  |  None   -> ());
-  print_newline()
-
-
-
-(* now for the pretty-printing *)
+(* ------------------------------------------------------------ *)
+(* Now for the pretty-printing                                  *)
+(* ------------------------------------------------------------ *)
 
 (* converting a string to a TeX-printable form (assuming math mode in some cases) *)
 
@@ -543,6 +403,147 @@ and mungelab v s = (* munge the label *)
   in
   "\\inp{"^go s^"}"
 
+
+(* ------------------------------------------------------------ *)
+(* Rule-specific stuff                                          *)
+(* ------------------------------------------------------------ *)
+
+(*
+The standard format for a rule is:
+
+  (! universally-quantified variables.
+
+  rule_name /* rule_category (* optional rule description *) */
+    rule_lhs
+  -- rule_label -->
+    rule_rhs
+
+  <==
+
+    rule_side_condition
+
+  (*
+  optional rule commentary
+  *)
+  )
+
+Note that blank lines are to be respected, and preferably indents also.
+
+LaTeX is permitted in comments, and Hol source can be enclosed in
+double square brackets like this: [[Flags(T,F)]].
+
+*)
+
+(* the rule type *)
+
+type rule =
+    Rule of string list * string * string * token list option (* v, n, cat, desc, *)
+        * token list list * token list * token list list (* lhs, lab, rhs, *)
+        * token list list * token list option (* side, comm *)
+
+(* debugging rule printer *)
+
+let print_tokenline toks =
+    let f t = print_string ((render_token t)^" ")
+    in
+    ignore (List.map f toks);
+    print_newline()
+
+let print_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
+  print_string ("Rule "^n^" ("^cat);
+  (match desc with
+     Some d -> print_string " ";
+               print_tokenline d
+   | None   -> ());
+  print_string ")\n";
+  print_string "Vars:\n";
+  ignore (List.map (function s -> print_string (s^" ")) v);
+  print_newline() ;
+  print_string "LHS:\n";
+  ignore (List.map print_tokenline lhs);
+  print_string "Label:\n";
+  print_tokenline lab;
+  print_string "RHS:\n";
+  ignore (List.map print_tokenline rhs);
+  print_string "Side:\n";
+  ignore (List.map print_tokenline side);
+  (match comm with
+     Some c -> print_string "Comments:\n";
+               print_tokenline c;
+               print_newline()
+  |  None   -> ());
+  print_newline()
+
+(* parsing a rule *)
+
+let rec parse_rule = parser
+    [< 'Sep("("); _ = sp; r1 = parse_rule1 >] -> r1
+  | [<>] -> raise (Stream.Error("rule begin: `('"));
+and parse_rule1 = parser
+    [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? "."; _ = sp; 
+       'Indent(_);
+       (n,cat,desc) = rule_name;
+       l_lab_r = parse_chunk;
+       'Indent(_);
+       _ = sp'; 'Ident("<==",_) ?? n^": <=="; _ = sp;
+       'Indent(_);
+       side = parse_chunk;
+       'Indent(_); _ = optind;
+       comm = optcomm;
+       _ = optind;
+       _ = sp; 'Sep(")") ?? n^": rule end: `)'"; _ = sp >]
+      -> let rec isLab ts =
+            match ts with
+              (Indent(_)     :: ts) -> isLab ts
+            | (White(_)      :: ts) -> isLab ts
+            | (Ident("--",_) :: _ ) -> true
+            | _                   -> false
+         in
+         let rec go c lhs =
+            match c with
+              (x::xs) when isLab x -> (List.rev lhs,x,xs)
+            | (x::xs)              -> go xs (x::lhs)
+            | _                    -> ([],[],[])
+         in
+         let (lhs,lab,rhs) = go l_lab_r []
+         in
+         Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)
+  | [<>] -> raise (Stream.Error("!"));
+
+and rule_vars = parser
+    [< 'White(_)                  ; r = rule_vars >] -> r
+  | [< 'Comment(_)                ; r = rule_vars >] -> r
+  | [< 'DirBlk("VARS",ts)         ; r = rule_vars >] -> dir_var_vars ts @ r
+  | [< 'DirBlk(n,ts) when (dir_proc n ts; true) (* cheat: make it happen right now *)
+                                  ; r = rule_vars >] -> r
+  | [< 'Ident(s,_)                ; r = rule_vars >] -> s :: r
+  | [<>]                                         -> []
+
+and rule_name = parser
+    [< 'Indent(_); 'Ident(n,_) ?? "rule name"; _ = sp; 'Ident("/*",_) ?? "/*"; _ = sp; 'Ident(cat,_) ?? "category"; _ = wopt;
+       desc = optcomm; _ = sp; 'Ident("*/",_) ?? "*/"; _ = sp >]
+      -> (n,cat,desc)
+  | [<>] -> raise (Stream.Error("rule name on new line"));
+
+
+and parse_rules_and_process p = parser
+    [< 'Ident("Net_Hol_reln",_); _ = sp'; rs = parse_rules_ap0 p >] -> rs
+  | [< 'DirBlk(n,ts) when (dir_proc n ts; true) (* cheat: make it happen right now *)
+                               ; rs = parse_rules_and_process p  >] -> rs
+  | [< '_                      ; rs = parse_rules_and_process p  >] -> rs
+and parse_rules_ap0 p = parser
+    [< 'Backtick; _ = sp'; rs = parse_rules_ap1 p >] -> rs
+  | [< rs = parse_rules_and_process p             >] -> rs
+and parse_rules_ap1 p = parser
+    [< 'Sep("("); _ = sp; r = (function ts -> p (parse_rule1 ts)); _ = sp';
+       rs = parse_rules_ap2 p >] -> r :: rs
+  | [<>]                         -> []
+and parse_rules_ap2 p = parser
+    [< 'Ident("/\\",_); _ = sp';
+       rs = parse_rules_ap1 p >] -> rs
+  | [< 'Backtick >]              -> []
+  | [<>]                         -> raise (Stream.Error("expected /\\ or `"))
+
 (* get a list of the potential variables in a rule, ie, all idents
    that are bound somewhere *)
 
@@ -605,7 +606,7 @@ let potential_vars (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
     @ pot_s side
     @ (match comm with Some c -> pot_l c | None -> [])
 
-(* munge a whole rule *)
+(* output (munge) a whole rule *)
 
 let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
   let pvs = potential_vars r in
@@ -623,7 +624,11 @@ let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
    | None   -> ());
   print_string "}}\n\n"
 
-(* render LTS from whole input stream *)
+(* ------------------------------------------------------------ *)
+(* renderer entry points                                        *)
+(* ------------------------------------------------------------ *)
+
+(* render LTS (rules) from whole input stream *)
 let lts_latex_render () =
   print_string "%%%% AUTOGENERATED FILE (from LTS source) -- DO NOT EDIT! %%%%\n";
   ignore (parse_rules_and_process latex_rule holtokstream)
@@ -642,3 +647,6 @@ let mng_latex_render () =
                                                else ())
               textokstream
 
+(* ------------------------------------------------------------ *)
+(* end                                                          *)
+(* ------------------------------------------------------------ *)
