@@ -23,18 +23,19 @@
 <dl>
 <dt>
 <strong>HOL is failing to complete the build process.  It stops when trying
- to create the HolBdd theory.  Why is this, and what should I do?</strong>
-<dd> The problem is almost certainly that your copy of MoscowML hasn't
+ to create the HolBdd theory.  Why is this, and what should I do?</strong></dt>
+<dd> <p> The problem is almost certainly that your copy of MoscowML hasn't
      been built with dynamic linking correctly enabled.  This in turn
      means that the Muddy BDD package that HolBdd uses can't load.
      You can test that this is the problem by running hol, and then
-     trying
-<pre>   - load "HolBdd";
+     trying</p>
+<pre>
+    - load "HolBdd";
 </pre>
-     This should fail with an error message about not being able to
-     load <code>muddy.so</code>.
-<p>
-     If you decide you do want HolBdd (there is nothing else in HOL
+<p>     This should fail with an error message about not being able to
+     load <code>muddy.so</code>.</p>
+
+    <p>If you decide you do want HolBdd (there is nothing else in HOL
      that depends on dynamic linking) you will probably need to build
      Moscow ML yourself.  Binaries from the central site in Denmark
      don't seem to work.  However the install.txt file in the
@@ -43,39 +44,77 @@
      interesting to hear that someone had got this to work.  In any
      case, to build from sources, you must make sure that you alter
      the src/Makefile.inc in the MoscowML distribution in line with
-     the instructions in the comments there.
-<p><p>
+     the instructions in the comments there.</p>
+<p>
      This advice seems to solve this problem for 90% of the people
      reporting it.  If it doesn't in your case, please get back to us.
-<p>
+</p></dd>
 <dt>
 <strong> Are error messages during the build like the following a
 source for concern? </strong>
-<pre>   &gt; File "Term.sml", line 1328, characters 10-42:
-   &gt; !   let val {const=Const(r1,_),theory,place} = const_decl name
-   &gt; !           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   &gt; ! Warning: pattern matching is not exhaustive
+<pre>
+    &gt; File "Term.sml", line 1328, characters 10-42:
+    &gt; !   let val {const=Const(r1,_),theory,place} = const_decl name
+    &gt; !           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    &gt; ! Warning: pattern matching is not exhaustive
 </pre>
-<p>
+</dt>
 <dd> No.  Nor is the following sort of output, when configuring the
 system before building:
-<pre>   &gt; /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
+<pre>
+    &gt; /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
 </pre>
-<p>
+</dd>
+
+    <dt><strong> How do I build old versions of HOL, such as Taupo-6
+    and Kananaskis-1?</strong></dt>
+    <dd> <p> These versions of the system no longer build successfully
+    because of the <code>Overflow</code> bug, caused by the fact that
+    more than 2<sup>31</sup> seconds have passed since 1 January
+    1970. </p>
+
+   <p> In the file src/portableML/Portable.sml, replace the
+   <code>local-in-end</code> block that defines <code>mk_time</code>,
+   <code>dest_time</code> and some others with</p>
+<pre>
+    local open Time
+          val two_30 = Math.pow(2.0, 30.0)
+    in
+      val timestamp : unit -&gt; time = now
+      val time_to_string : time -&gt; string = toString
+      fun dest_time t =
+         let val adjusted = Real.-(toReal t, two_30)
+             val sec = Real.trunc adjusted
+         in
+            {sec=sec, usec=0}
+         end
+      fun mk_time {sec,usec} = fromReal (Real.+(real sec, two_30))
+      fun time_eq (t1:time) t2 = (t1 = t2)
+      fun time_lt (t1:time) t2 = Time.&lt;(t1,t2)
+    end
+</pre>
+
+<p> (In Kananaskis-1 this is at line 89; in Taupo-6, it is at line 85.)</p>
+
+<p> If you are using Windows, you will also have to upgrade to Moscow ML
+ 2.01. </p></dd>
+
 </dl>
 
-<p><hr><p>
-<h2><a name = "Quotes">Quotes and Antiquotes</a></h2>
+<hr>
+<h2 id= "Quotes">Quotes and Antiquotes</h2>
 
 <dl>
 <dt><strong>How do I antiquote types?</strong>
 
 <dd> Antiquoting types works as you would expect when parsing types,
      so that it is fine to write:
-<pre>   - val ty = Type`:bool`;
+<pre>
+    - val ty = Type`:bool`;
 </pre>
      and then
-<pre>   - Type`:num -&gt; ^ty`;
+<pre>
+    - Type`:num -&gt; ^ty`;
 </pre>
      However, you may wish to also introduce type antiquotations into
      term parses (as a type constraint on a variable for example).
@@ -84,20 +123,24 @@ system before building:
      antiquotes be of type term.  You must use the
      <code>ty_antiq</code> function, which magically makes a type
      appear as a term:
-<pre>   - val antity = ty_antiq ty;
-   &gt; val antity = `(ty_antiq(`:bool`))` : term
+<pre>
+    - val antity = ty_antiq ty;
+    &gt; val antity = `(ty_antiq(`:bool`))` : term
 </pre>
      Then:
-<pre>   - val x = Term `x:^antity`;
+<pre>
+    - val x = Term `x:^antity`;
 </pre>
      It's quite easy to figure out when and why <code>ty_antiq</code>
      is required if one understands the type of the parsing functions.
      For example, <code>Term</code> and <code>(fn q =&gt; -- q --)</code>
      have type
-<pre>   term frag list -&gt; term
+<pre>
+    term frag list -&gt; term
 </pre>
      While <code>Type</code> and <code>(fn q =&gt; == q ==)</code> have type
-<pre>   hol_type frag list -&gt; hol_type
+<pre>
+    hol_type frag list -&gt; hol_type
 </pre>
      The <code>frag list</code> refers to the fact that there is a
      quotation being consumed.  A quotation is something that appears
@@ -124,19 +167,20 @@ system before building:
      quotations it takes, you will not need to use
      <code>ty_antiq</code>.
 </dl>
-<P>
-<HR>
+<hr>
 <h2><a name = "Parsing">Parsing</a></h2>
 
 <dl>
 <dt><strong>Why can't I write <code>``MAP ~ x``</code>?</strong>
 <dd> When you attempt this, you will get the error message
-<pre>   No rule for [~]
+<pre>
+    No rule for [~]
 </pre>
      meaning that the parser wants to do a reduction involving just
      the special symbol <code>~</code>, and it can't find a rule that
      allows this. The rule in the grammar is
-<pre>   TM ::= ~ TM
+<pre>
+    TM ::= ~ TM
 </pre>
 <p>
      <code>~</code> is treated specially, and not just as a function
@@ -158,45 +202,50 @@ system before building:
      list</code>.
 <p>
 
-<dt><strong> I'd like to use MEM as an infix, not a Prefix.</strong>
-<p>
-<dd> Use grammar manipulation functions such as
+<dt><strong> I'd like to use MEM as an infix, not a Prefix.</strong></dt>
+<dd> <p> Use grammar manipulation functions such as
      <code>set_fixity</code> to alter its parsing information.
      These changes can be made to persist when the current
-     theory is exported.  For example: 
-<pre>   - load "listTheory";
-   - set_fixity "MEM" (Infixr 450);
-   &gt; val it = () : unit
-   - listTheory.MEM;
-   &gt; val it =
-           |- (!x. x MEM [] = F) /\ !x h t. x MEM (h::t) = (x = h) \/ x MEM t
-           : thm
+     theory is exported.  For example:</p>
+<pre>
+    - load "listTheory";
+    - set_fixity "MEM" (Infixr 450);
+    &gt; val it = () : unit
+    - listTheory.MEM;
+    &gt; val it =
+            |- (!x. x MEM [] = F) /\ !x h t. x MEM (h::t) = (x = h) \/ x MEM t
+            : thm
 </pre>
 
 <dt><strong>I want to have the parser transform the concrete syntax
-<code>``P[e/v]``</code> into <code>``(\v. P) e``</code>.</strong>
+<code>``P[e/v]``</code> into <code>``(\v. P) e``</code>.</strong></dt>
 
 <dd>
-First a warning: this is not likely to do  what you want. For example, 
+<p> First a warning: this is not likely to do  what you want. For example,
 you wouldn't get any nice way of stating the Hoare assignment axiom.
-<pre>   { P[e/v] } v := e { P }
+<pre>
+    { P[e/v] } v := e { P }
 </pre>
 In order to state the above, you'd need to actually write
-<pre>   { (P v)[e/v] } v := e { P v }
+<pre>
+    { (P v)[e/v] } v := e { P v }
 </pre>
-to make it clear that v might exist in the post-condition.<p>
+to make it clear that v might exist in the post-condition.</p>
 
-And given this, you might as well write:
-</p><pre>   { P e } v := e { P v }
+<p>And given this, you might as well write:
+</p>
+<pre>
+    { P e } v := e { P v }
 </pre>
 (The problem boils down to the fact that the literal HOL term
-<pre>   ``(\v. P) x``
+<pre>
+    ``(\v. P) x``
 </pre>
 where P is a variable, reduces under beta-conversion to <code>P</code>.)<p>
 
 Incidentally, if this is the sort of thing you are doing, you might be
 interested in looking at Peter Homeier's Sunrise system which
-implements a VCG in HOL.  This is available 
+implements a VCG in HOL.  This is available
 <a href="http://www.cis.upenn.edu/%7Ehol/sunrise/index.html">here</a>.
 <p>
 If you really do want to implement your parsing trick above (turning
@@ -242,16 +291,17 @@ Parse.sml is just
 
 So all you are doing is inserting an extra phase into the process
 after calling <code>Absyn</code>, but before calling
-<code>absyn_to_term</code>. 
+<code>absyn_to_term</code>.
 </dl>
 <p><hr><p>
-<h2><a name = "Assumptions">Manipulating Hypotheses</a></h2>
+<h2 id = "Assumptions">Manipulating Hypotheses</h2>
 <dl>
 <dt><strong>How do I put HOL in a state so that theorem assumptions are
    printed?</strong>
 
 <dd> Use
-<pre>   show_assums := true;
+<pre>
+    show_assums := true;
 </pre>
 <p>
      This flag, along with several others that control HOL behaviour can
@@ -264,14 +314,15 @@ This has been a much-discussed topic by HOL users over the
 years. The info-hol archives have the details. The received opinion
 seemed to be that numbered assumptions were great at proof-creation
 time, but had potential for being a nightmare when existing proofs had
-to be changed. 
+to be changed.
 <P>
 In any case, the assumptions have to be dealt with. My current favourite
 approach is to use "PAT_ASSUM", as follows:
-<PRE>
-  PAT_ASSUM tm MATCH_MP_TAC, or
-
-  Q.PAT_ASSUM q MATCH_MP_TAC
+<pre>
+    PAT_ASSUM tm MATCH_MP_TAC
+</pre> or
+<pre>
+    Q.PAT_ASSUM q MATCH_MP_TAC
 </PRE>
 
 PAT_ASSUM is like UNDISCH_THEN in that it removes an assumption and
@@ -279,7 +330,7 @@ makes it available as a theorem. However, it is better than UNDISCH_THEN
 since the quotation argument it takes is treated as a pattern to match
 against. The free variables of the goal to help constrain the match. It
 is often the case that very complex assumptions can be singled out by
-giving quite simple patterns to PAT_ASSUM. 
+giving quite simple patterns to PAT_ASSUM.
 
 <P>
 
@@ -287,30 +338,32 @@ If you are unsatisfied with the way hypotheses are handled in proofs,
 numbered (or named) assumptions can be added in a number of ways. Perhaps
 the simplest is to write a version of UNDISCH_THEN, call it UNDISCH_NTH
 having type
-<PRE>
+<pre>
     int -> (thm -> tactic) -> tactic
-</PRE>
-UNDISCH_NTH k ttac grabs the kth assumption, converts it to a theorem
-thk, and applies ttac to thk to get the desired tactic.
-Here's one way to define it:
-<PRE>
-   fun UNDISCH_NTH k ttac (g as (asl,_)) =
-       UNDISCH_THEN (Lib.el (k+1)(rev asl)) ttac g;
-</PRE>
+</pre>
+
+<code>UNDISCH_NTH k ttac</code> grabs the <em>k</em>th assumption,
+converts it to a theorem <em>thk</em>, and applies <em>ttac</em> to
+<em>thk</em> to get the desired tactic.  Here's one way to define it:
+<pre>
+    fun UNDISCH_NTH k ttac (g as (asl,_)) =
+        UNDISCH_THEN (Lib.el (k+1)(rev asl)) ttac g;
+</pre>
 </dl>
 
-<P><HR><P>
+<hr>
 
-<h2><a name = "HOL_ERR">HOL_ERR</a></h2>
+<h2 id = "HOL_ERR">HOL_ERR</h2>
 
 <dl>
 <dt><strong> How can I find out more information about a HOL_ERR
 exception?</strong>
 
 <dd> If expression <code>M</code> is causing the grief, then write
-<pre>     (M) handle e =&gt; Raise e
+<pre>
+    (M) handle e =&gt; Raise e
 </pre>
-Often the parentheses around <code>M</code> will not be required. 
+Often the parentheses around <code>M</code> will not be required.
 <P>
 It is sometimes convenient to use the <code>try</code> function as
 well. It takes a function and an argument, applies the function to the
@@ -321,45 +374,50 @@ arising from the evaluations that lead to <code>f</code> or
 
 </dl>
 
-<P><HR><P>
+<HR>
 
-<h2><a name = "Locating">Locating Things</a></h2>
+<h2 id = "Locating">Locating Things</h2>
 
 <dl>
 <dt><strong> How do I get a datatype's axiom after using
              Hol_datatype?</strong>
 
-<dd> 
-Use <pre>   TypeBase.axiom_of (valOf (TypeBase.read "mytypename"))
+<dd>
+Use
+<pre>
+    TypeBase.axiom_of "mytypename"
 </pre> Hopefully you won't need to do this very much because many of the
      contexts in which you previously needed the axiom will be dealt
      with more smoothly.  For example, cases, induction, one-one and
      distinctness theorems are now proved automatically, and are
      available from the TypeBase.  For example,
-<pre>   TypeBase.one_one_of (valOf (TypeBase.read "mytypename"))
+<pre>
+    TypeBase.one_one_of "mytypename"
 </pre>
 <p>
 
 <dt><strong> Is there documentation on
 <code>computeLib.add_convs</code></strong>?
-<dd>  
+<dd>
 Best thing currently is to look at the implementation of
 <code>REDUCE_CONV</code>, which uses add_convs to deal with
-<code>DIV</code> and <code>MOD</code>: the invocation 
-<pre>   add_conv (M,n,c) compset
+<code>DIV</code> and <code>MOD</code>: the invocation
+<pre>
+    add_conv (M,n,c) compset
 </pre>
 
 means (roughly):
-   "when you see constant M applied to n subterms (i.e., M is
-    fully applied to its arguments), apply conversion c".
+    <blockquote> when you see constant <em>M</em> applied to
+    <em>n</em> subterms (i.e., <em>M</em> is fully applied to its
+    arguments), apply conversion c </blockquote>
 
 <p>
 <dt><strong> I can't find help on <code>IN</code>. What theory defined
-is it defined in?</strong> 
-<dd> 
+is it defined in?</strong>
+<dd>
 <code>IN</code> is declared in <code>boolTheory</code>. <code>IN</code>
 is not an ML identifier, so we don't index it. Perhaps we could index
-constants to their place of definition though. 
+constants to their place of definition though.
 <p>
 You can always figure out the originating theory by
 
@@ -400,22 +458,15 @@ could write:
    &gt; val it = |- (if "foo" = "bar" then 3 else 1) = 1 : Thm.thm
 </pre>
 
-<p>
-
-<dt><strong> What's with all this "cut looping" stuff?</strong>
-
-<dd> It's the simplifier, and it's turned off in Taupo releases
-     onwards unless you set the trace level to one or higher.
-<p>
 </dl>
-<p><HR><P>
+<hr>
 <center>
-<font size="-1">
+<small>
 <!-- Source file: faq.html<BR> !-->
-Page last updated on Mon Jun 24 11:57:24 BST 2002 by Konrad Slind
+Page last updated on $Date$ by $Author$
 <br>
 Maintained by Konrad Slind
- (<a href="mailto:slind@cs.utah.edu">slind@cs.utah.edu</a>)</font><br>
+ (<a href="mailto:slind@cs.utah.edu">slind@cs.utah.edu</a>)</small><br>
 </center>
 </body>
 </html>
