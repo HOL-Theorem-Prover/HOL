@@ -331,6 +331,7 @@ Hol_datatype `prop = VAR of 'a
                    | NOT of prop
                    | AND of prop => prop
                    | OR  of prop => prop`;
+
 val Pr_def = 
  Defn.Hol_defn "Pr"
     `(Pr vl [] (VAR v::r)   vr = Pr vl [] r (v::vr))
@@ -486,7 +487,6 @@ val N = Define `N x = if x>100 then x-10 else N(N(x+11))`; (* Fails *)
 val Ndef = Hol_defn "ninety1"
                     `N x = if x>100 then x-10 else N(N(x+11))`;
 
-
 xDefine "percentage" `% x = if x>100 then x-10 else %(%(x+11))`;  
 
 (*---------------------------------------------------------------------------
@@ -556,7 +556,6 @@ val ltree_size_def = snd (TypeBase.size_of "ltree");
 val ltree_map_def =
   Defn.Hol_defn "ltree_map"
     `ltree_map f (LNODE v tl) = LNODE (f v) (MAP (ltree_map f) tl)`;
-
 
 val (ltree_map_eqn, ltree_map_ind) =
  Defn.tprove

@@ -54,8 +54,8 @@ val ltree_size_def = Q.prove
     THEN RW_TAC list_ss [ltree_size_def_0,listTheory.list_size_def]);
 
 val _ = TypeBase.write 
-          (TypeBasePure.put_size (size_tm,TypeBasePure.ORIG ltree_size_def) 
-                (valOf (TypeBase.read "ltree")));
+          [TypeBasePure.put_size (size_tm,TypeBasePure.ORIG ltree_size_def) 
+                (valOf (TypeBase.read "ltree"))];
 
 val fringe_fns_def = 
  xDefine "fringe_fns"
@@ -159,10 +159,9 @@ val bexp   = ty_antiq bexpty;
 
 
 (*---------------------------------------------------------------------------
-     The following is a bit slow to be processed. The argument "env"
-     comprises two maps: one for variables, and one for functions.
-     Termination should be proved automatically, but it's not (currently),
-     so we have to do a manual proof.
+     The argument "env" comprises two maps: one for variables, and one 
+     for functions. Termination should be proved automatically, but it's 
+     not (currently), so we have to do a manual proof.
  ---------------------------------------------------------------------------*)
 
 val ELBdefn = 
@@ -217,6 +216,6 @@ val (Evals_def,Evals_ind) =
         THEN RW_TAC arith_ss [size_def]
         THEN Induct_on `l` 
         THEN RW_TAC list_ss [size_def,listTheory.MEM]
-        THENL [PROVE_TAC [DECIDE (Term`x < y+(x+2)`)],
-               PROVE_TAC [DECIDE (Term `x < y+1 ==> x < y+(z+2)`)]])
+        THENL [PROVE_TAC [DECIDE (Term`x < y+(x+2n)`)],
+               PROVE_TAC [DECIDE (Term `x < y+1n ==> x < y+(z+2)`)]])
  end;
