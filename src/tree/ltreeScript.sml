@@ -22,6 +22,7 @@ local open treeTheory combinTheory in end;
 (*---------------------------------------------------------------------------
  * Open structures used in the body.
  *---------------------------------------------------------------------------*)
+
 open HolKernel Parse basicHol90Lib;
 infix THEN ORELSE ORELSEC THENL |->;
 
@@ -32,6 +33,7 @@ val _ = new_theory "ltree";
 (*---------------------------------------------------------------------------
  * Fetch theorems from tree theory.
  *---------------------------------------------------------------------------*)
+
 val node_11	 = treeTheory.node_11 and
     tree_Induct  = treeTheory.tree_Induct and
     tree_Axiom   = treeTheory.tree_Axiom;
@@ -39,6 +41,7 @@ val node_11	 = treeTheory.node_11 and
 (*---------------------------------------------------------------------------
  * Fetch definitions and theorems from list theory.
  *---------------------------------------------------------------------------*)
+
 val SUM       = listTheory.SUM and
     LENGTH    = listTheory.LENGTH and
     MAP       = listTheory.MAP and
@@ -57,11 +60,13 @@ val list_Axiom		 = listTheory.list_Axiom and
 (*---------------------------------------------------------------------------
  * Fetch theorems from combinator theory.
  *---------------------------------------------------------------------------*)
+
 val o_THM = combinTheory.o_THM;
 
 (*---------------------------------------------------------------------------
  * Fetch theorems from arithmetic theory.
  *---------------------------------------------------------------------------*)
+
 val ADD_CLAUSES = arithmeticTheory.ADD_CLAUSES and
     ADD_EQ_0    = arithmeticTheory.ADD_EQ_0;
 
@@ -69,17 +74,20 @@ val ADD_CLAUSES = arithmeticTheory.ADD_CLAUSES and
 (*---------------------------------------------------------------------------
  * Fetch theorems from prim_rec theory.
  *---------------------------------------------------------------------------*)
+
 val num_Axiom  = prim_recTheory.num_Axiom and
     INV_SUC_EQ = prim_recTheory.INV_SUC_EQ;
 
 (*---------------------------------------------------------------------------
  * Fetch theorems from pair theory.
  *---------------------------------------------------------------------------*)
+
 val PAIR = pairTheory.PAIR;
 
 (*---------------------------------------------------------------------------
  * Create induction tactics.
  *---------------------------------------------------------------------------*)
+
 val INDUCT_TAC = INDUCT_THEN numTheory.INDUCTION ASSUME_TAC;
 val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 
@@ -94,57 +102,42 @@ val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-exception tree_INDUCT_ERR;
-local val b = genvar (==`:bool`==)
-      val node = (--`node`--)
-in
-fun tree_INDUCT th =
- let val {Bvar,Body} = dest_forall(concl th)
-     val {ant,conseq} = dest_imp Body
-     val (EVERY, [P, tll]) = strip_comb ant
-     val concth = SYM(RIGHT_BETA
-                   (REFL(mk_comb{Rator=P,Rand=mk_comb{Rator=node,Rand=Bvar}})))
-     and IND' = SPEC P tree_Induct
-     and th' = SPEC Bvar th
-     val EVERY_P = mk_comb{Rator=EVERY, Rand=P}
-     val right = mk_imp{ant=mk_comb{Rator=EVERY_P,  Rand=Bvar}, conseq = b}
-     val th1 = SUBST [b |-> concth] (mk_eq{lhs=concl th', rhs=right})
-                     (REFL (concl th'))
-      val th2 = GEN Bvar (EQ_MP th1 th')
-   in
-   CONV_RULE (ONCE_DEPTH_CONV BETA_CONV) (MP IND' th2)
-   end
-   handle _ => raise tree_INDUCT_ERR
-end;
+fun INDUCT_ERR s = 
+      HOL_ERR{origin_structure="ltreeScript",
+              origin_function=s, message=""};
 
-(* ---------------------------------------------------------------------*)
-(*									*)
-(* tree_INDUCT_TAC							*)
-(*									*)
-(*             [A] !t.P[t]						*)
-(*  ================================					*)
-(*    [A,EVERY \t.P[t] trl] |- P[node trl]				*)
-(*									*)
-(* ---------------------------------------------------------------------*)
-
-exception tree_INDUCT_TAC_ERR;
-local
-val trl = --`trl : tree list`--
-val node = --`node`--
+local val b = genvar Type.bool
+      val node = Term`node`
+      val trl  = Term`trl:tree list`
+      fun tree_INDUCT th =
+        let val {Bvar,Body} = dest_forall(concl th)
+            val {ant,conseq} = dest_imp Body
+            val (EVERY, [P, tll]) = strip_comb ant
+            val concth = SYM(RIGHT_BETA
+                (REFL(mk_comb{Rator=P,Rand=mk_comb{Rator=node,Rand=Bvar}})))
+            and IND' = SPEC P tree_Induct
+            and th' = SPEC Bvar th
+            val EVERY_P = mk_comb{Rator=EVERY, Rand=P}
+            val right = mk_imp{ant=mk_comb{Rator=EVERY_P,Rand=Bvar},conseq=b}
+            val th1 = SUBST [b |-> concth] (mk_eq{lhs=concl th', rhs=right})
+                            (REFL (concl th'))
+            val th2 = GEN Bvar (EQ_MP th1 th')
+        in
+          CONV_RULE (ONCE_DEPTH_CONV BETA_CONV) (MP IND' th2)
+        end
 in
 fun tree_INDUCT_TAC (A,term) =
    let val {Bvar,Body} = dest_forall term
        val Afrees = free_varsl A
-       val t' = variant (free_vars term@Afrees) Bvar
-       val body' = subst [{redex = Bvar, residue = t'}] Body
-       val trl = variant (free_vars body'@Afrees) trl
-       val asm = --`EVERY (\^t'.^body') trl`--
+       val t'     = variant (free_vars term@Afrees) Bvar
+       val body'  = subst [Bvar |-> t'] Body
+       val trl    = variant (free_vars body'@Afrees) trl
+       val asm    = Term`EVERY (\^t'.^body') trl`
    in
-   ([(asm::A, subst[{redex = t',residue = mk_comb{Rator = node,Rand = trl}}]
-                   body')],
+   ([(asm::A, subst[t' |-> mk_comb{Rator=node,Rand=trl}] body')],
     fn [thm] => tree_INDUCT (GEN trl (DISCH asm thm)))
    end
-  handle _ => raise tree_INDUCT_TAC_ERR
+  handle _ => raise INDUCT_ERR "tree_INDUCT_TAC"
 end;
 
 
@@ -152,6 +145,7 @@ end;
 (* Define a function size on trees that gives the number of nodes in 	*)
 (* a tree.								*)
 (*----------------------------------------------------------------------*)
+
 val size = new_definition("size",
  --`size = @fn. (!tl. fn (node tl:tree) = SUC(SUM (MAP fn tl)))`--);
 
@@ -176,7 +170,7 @@ val size_thm = prove
 val Is_ltree = new_definition("Is_ltree",
   --`Is_ltree (t,l) = (size (t:tree) = LENGTH (l:'a list))`--);
 
-val ty = ==`:tree#'a list`==;
+val ty = Type`:tree # 'a list`;
 
 (* Show that a ltree representation exists.				*)
 val Exists_ltree_REP = prove
@@ -186,9 +180,10 @@ val Exists_ltree_REP = prove
 
 (* Define the new type.							*)
 val ltree_TY_DEF =
-  new_type_definition{name = "ltree",
-                      pred = rator(#Body(dest_exists(concl Exists_ltree_REP))),
-                      inhab_thm = Exists_ltree_REP};
+  new_type_definition
+     {name = "ltree",
+      pred = rator(#Body(dest_exists(concl Exists_ltree_REP))),
+      inhab_thm = Exists_ltree_REP};
 
 (* ---------------------------------------------------------------------*)
 (* Define a representation function, REP_tree, from the type tree to 	*)
@@ -196,20 +191,22 @@ val ltree_TY_DEF =
 (* function ABS_tree, and prove some trivial lemmas about them.		*)
 (* ---------------------------------------------------------------------*)
 
-val ltree_ISO_DEF = define_new_type_bijections
-                       {name = "ltree_ISO_DEF",
-                        ABS = "ABS_ltree",
-                        REP = "REP_ltree",
-                        tyax = ltree_TY_DEF};
+val ltree_ISO_DEF = 
+  define_new_type_bijections
+     {name = "ltree_ISO_DEF",
+      ABS = "ABS_ltree",
+      REP = "REP_ltree",
+      tyax = ltree_TY_DEF};
 
 val R_11   = prove_rep_fn_one_one ltree_ISO_DEF  and
     R_ONTO = prove_rep_fn_onto ltree_ISO_DEF     and
     A_11   = prove_abs_fn_one_one ltree_ISO_DEF  and
     A_ONTO = prove_abs_fn_onto ltree_ISO_DEF     and
-    A_R = CONJUNCT1 ltree_ISO_DEF                and
-    R_A = CONJUNCT2 ltree_ISO_DEF;
+    A_R    = CONJUNCT1 ltree_ISO_DEF             and
+    R_A    = CONJUNCT2 ltree_ISO_DEF;
 
 (* Definition of Node.							*)
+
 val Node = new_definition("Node",
  --`Node (v:'a) (tl: 'a ltree list) =
         (ABS_ltree ((node (MAP (FST o REP_ltree) tl)),
@@ -589,11 +586,10 @@ val Node_11 = store_thm("Node_11",
  --`!(v1:'a). !v2 trl1 trl2.
            ((Node v1 trl1) = (Node v2 trl2)) = ((v1 = v2) /\ (trl1 = trl2))`--,
     MP_TAC (SPEC (--`\(l:'a list). \(v:'a). \(trl:'a ltree list). v`--)
-	   (INST_TYPE [{redex = ==`:'b`==, residue = ==`:'a`==}]
-                      exists_lemma)) THEN
+	   (INST_TYPE [Type.beta |-> Type.alpha] exists_lemma)) THEN
     MP_TAC (SPEC (--`\l:'a ltree list list.\v:'a.\trl:'a ltree list.trl`--)
-	   (INST_TYPE [{redex = ==`:'b`==, residue = ==`:'a ltree list`==}]
-                      (GEN_ALL exists_lemma))) THEN
+	   (INST_TYPE [Type.beta |-> Type`:'a ltree list`]
+              (GEN_ALL exists_lemma))) THEN
     CONV_TAC (REDEPTH_CONV BETA_CONV) THEN
     REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
     [POP_ASSUM (MP_TAC o (AP_TERM (--`(fn':'a ltree->'a)`--))) THEN
@@ -602,6 +598,7 @@ val Node_11 = store_thm("Node_11",
      ASM_REWRITE_TAC[],
      ASM_REWRITE_TAC[]]);
 
+
 (* ---------------------------------------------------------------------*)
 (*   ltree_INDUCT: thm  -> thm						*)
 (*									*)
@@ -609,34 +606,6 @@ val Node_11 = store_thm("Node_11",
 (* ----------------------------------------------------------		*)
 (*               A |- !t. P[t]						*)
 (*									*)
-(* ---------------------------------------------------------------------*)
-
-exception ltree_INDUCT_ERR;
-local
-val b = genvar(==`:bool`==)
-val alpha = ==`:'a`==
-in
-fun ltree_INDUCT th =
-   let val {Bvar,Body} = dest_forall(concl th)
-       val {ant,conseq} = dest_imp Body
-       val {Bvar = v, Body = con} = dest_forall conseq
-       val (EVERY, [P, tll]) = strip_comb ant
-       val concth = SYM(RIGHT_BETA(REFL (--`^P(Node ^v ^Bvar)`--)))
-       val IND' = SPEC P (INST_TYPE [{redex = alpha, residue = type_of v}]
-                                    ltree_Induct)
-       val th' = DISCH ant (SPEC v (UNDISCH(SPEC Bvar th)))
-       val th1 = SUBST [b |->  concth]
-                       (--`^(concl th') = (EVERY ^P ^Bvar ==> ^b)`--)
-                       (REFL (concl th'))
-      val th2 = GEN Bvar (DISCH ant (GEN v (UNDISCH (EQ_MP th1 th'))))
-  in
-  CONV_RULE (ONCE_DEPTH_CONV BETA_CONV) (MP IND' th2)
-  end
-  handle _ => raise ltree_INDUCT_ERR
-end;
-
-
-(* ---------------------------------------------------------------------*)
 (*									*)
 (* ltree_INDUCT_TAC							*)
 (*									*)
@@ -646,8 +615,23 @@ end;
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-exception ltree_INDUCT_TAC_ERR;
-
+local val b = genvar Type.bool
+      fun ltree_INDUCT th =
+        let val {Bvar,Body} = dest_forall(concl th)
+            val {ant,conseq} = dest_imp Body
+            val {Bvar=v, Body=con} = dest_forall conseq
+            val (EVERY, [P, tll]) = strip_comb ant
+            val concth = SYM(RIGHT_BETA(REFL (--`^P(Node ^v ^Bvar)`--)))
+            val IND' = SPEC P (INST_TYPE [Type.alpha |-> type_of v] ltree_Induct)
+            val th' = DISCH ant (SPEC v (UNDISCH(SPEC Bvar th)))
+            val th1 = SUBST [b |->  concth]
+                        (--`^(concl th') = (EVERY ^P ^Bvar ==> ^b)`--)
+                        (REFL (concl th'))
+            val th2 = GEN Bvar (DISCH ant (GEN v (UNDISCH (EQ_MP th1 th'))))
+        in
+          CONV_RULE (ONCE_DEPTH_CONV BETA_CONV) (MP IND' th2)
+        end
+in
 fun ltree_INDUCT_TAC (A,tm) =
    let val {Bvar,Body} = dest_forall tm
        val Afrees = free_varsl A
@@ -663,12 +647,11 @@ fun ltree_INDUCT_TAC (A,tm) =
        val trl = variant fv vtrl
        val asm = --`EVERY (\^t'.^body') trl`--
    in
-   ([(asm::A,mk_forall{Bvar = v',
-                       Body = subst[{redex=t',residue= --`(Node ^v' ^trl)`--}]
-                                   body'})],
+   ([(asm::A,
+      mk_forall{Bvar=v', Body=subst[t' |-> Term`Node ^v' ^trl`] body'})],
     fn [th] => ltree_INDUCT (GEN trl (DISCH asm th)))
    end
-   handle _ => raise ltree_INDUCT_TAC_ERR;
+end;
 
 
 (* Need this theorem						*)
@@ -705,6 +688,61 @@ REPEAT GEN_TAC
   THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC);
 
 
+(*---------------------------------------------------------------------------
+     The (parameterized) size of an ltree. The desired equation is:
+
+         ltree_size f (Node v tl) 
+             = 
+         1 + f v + list_size (ltree_size f) tl
+ ---------------------------------------------------------------------------*)
+
+val th =
+ BETA_RULE
+   (SPEC 
+     (Term`\(rl:num list) (v:'a) (l:'a ltree list).
+         SUM rl + (LENGTH l + (f v + 1))`)
+     (INST_TYPE [Type.beta |-> Type`:num`] ltree_Axiom));
+
+val th1 = CONJUNCT1 (CONV_RULE (ONCE_DEPTH_CONV EXISTS_UNIQUE_CONV) th);
+val th2 = CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) (GEN_ALL th1);
+
+val lem = prove
+ (Term`?ltree_size. !f v l. 
+     ltree_size f (Node v l) 
+        = 
+     SUM (MAP (ltree_size f) l) + (LENGTH l + (f v + 1))`,
+STRIP_ASSUME_TAC th2
+   THEN EXISTS_TAC (Term`fn:('a->num) -> 'a ltree -> num`) THEN BETA_TAC
+   THEN ONCE_ASM_REWRITE_TAC[]
+   THEN CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)
+   THEN REWRITE_TAC[]);
+
+local open arithmeticTheory
+in
+val ltree_size_eqns = prove(Term
+  `?ltree_size. 
+     !l v f. ltree_size f (Node v l) 
+                 = 
+             list_size (ltree_size f) l + (f v + 1)`
+ ,
+STRIP_ASSUME_TAC lem
+   THEN EXISTS_TAC (Term`ltree_size:('a->num) -> 'a ltree -> num`)
+   THEN ONCE_ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC)
+   THEN LIST_INDUCT_TAC THENL
+   [REWRITE_TAC [MAP,SUM,LENGTH,listTheory.list_size_def,ADD_CLAUSES],
+    RULE_ASSUM_TAC GSYM
+     THEN ASM_REWRITE_TAC 
+        [MAP,SUM,LENGTH,listTheory.list_size_def,GSYM ADD_ASSOC, ADD_CLAUSES]
+     THEN REWRITE_TAC [ONCE_REWRITE_RULE[ADD_SYM] ADD1]])
+end;
+
+val ltree_size_def =
+ new_specification
+    {sat_thm = ltree_size_eqns,
+     name = "ltree_size_def",
+     consts = [{const_name="ltree_size", fixity=Prefix}]};
+
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME (fn ppstrm =>
@@ -718,7 +756,8 @@ val _ = adjoin_to_theory
     S "      case_cong=ltree_case_cong,";   NL();
     S "      induction=ltree_Induct,";      NL();
     S "      nchotomy=Node_onto,";          NL();
-    S "      size=NONE,";                   NL();
+    S "      size=SOME(Parse.Term`ltree_size:('a->num)->'a ltree->num`,"; NL();
+    S "                ltree_size_def),";   NL();
     S "      one_one=SOME Node_11,";        NL();
     S "      distinct=NONE});"
   end)};
