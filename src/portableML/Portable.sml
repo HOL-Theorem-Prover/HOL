@@ -164,5 +164,6 @@ fun pr_list pfun dfun bfun =
 
 
 type 'a frag = 'a General.frag;
+type 'a quotation = 'a frag list;
 
 end (* structure Portable *)
