@@ -2443,7 +2443,7 @@ $bnind&computeTrace%
 computeTrace : (int->term_bdd->'a) -> varmap -> thm -> thm*thm -> term_bdd list
 
 (*****************************************************************************)
-(*  TraceBack vm                                                             *)
+(*  traceBack vm                                                             *)
 (*   [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 0 s`` |--> b0]               *)
 (*   (|- p s = ... s ...)                                                    *)
 (*   (|- R((v1,...,vn),(v1',...,vn')) = ...)                                 *)
@@ -2471,8 +2471,8 @@ computeTrace : (int->term_bdd->'a) -> varmap -> thm -> thm*thm -> term_bdd list
 (* If [s0,...,si] is the sequence of states, then                            *)
 (* R(s0,s1), R(s1,s2),...,R(s(i-1),sj) and sj satisfies bj and p si          *)
 (*****************************************************************************)
-$bnind&TraceBack%
-TraceBack : varmap 
+$bnind&traceBack%
+traceBack : varmap 
              -> term_bdd list 
              -> thm -> thm -> (term_bdd * (term_bdd * term_bdd) list) list
 \end{Verbatim}

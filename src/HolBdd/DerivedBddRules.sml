@@ -610,7 +610,7 @@ fun BddSatone tb =
 (*         |- f 0 s  = ... s ...                                             *)
 (*         |- f (SUC n) s = ... f n ... s ...                                *)
 (*  ---------------------------------------------------------                *)
-(*  [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 1 s`` |--> b1]                *)
+(*  [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 0 s`` |--> b0]                *)
 (*                                                                           *)
 (* where i is the first number such that |- f i s ==> p s                    *)
 (*****************************************************************************)
@@ -648,7 +648,7 @@ val trl = computeTrace report vm pth (th0,thsuc);
 *)
 
 (*****************************************************************************)
-(*  TraceBack                                                                *)
+(*  traceBack                                                                *)
 (*   vm                                                                      *)
 (*   [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 0 s`` |--> b0]               *)
 (*   (|- p s = ... s ...)                                                    *)
@@ -681,11 +681,10 @@ val trl = computeTrace report vm pth (th0,thsuc);
 (* and p si                                                                  *)
 (*****************************************************************************)
 
-val TraceBackPrevThm = ref TRUTH;
+val traceBackPrevThm = ref TRUTH;
 
-fun TraceBack vm trl pth Rth =
- let val ptb = eqToTermBdd (fn tm => raise computeFixedpointError) vm pth
-     val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
+fun traceBack vm trl pth Rth =
+ let val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
      val (s,s') = pairSyntax.dest_pair s_s'
      val _ = print "Computing simplified backward image theorem ...\n"
      val PrevTh =
@@ -694,16 +693,19 @@ fun TraceBack vm trl pth Rth =
         boolSimps.bool_ss
         [pairTheory.EXISTS_PROD,MachineTransitionTheory.Eq_def,pairTheory.PAIR_EQ,Rth])
        (ISPECL[Rcon,``Eq ^s'``,s]MachineTransitionTheory.Prev_def)
-     val _ = (TraceBackPrevThm := PrevTh)
-     val PrevThTb = eqToTermBdd failfn vm PrevTh
-     val _ = print "done.\nSimplified theorem is !TraceBackPrevThm\n";
-     val lasttb = BddOp(And, hd trl, ptb)
+     val _ = (traceBackPrevThm := PrevTh)
+     val vm' = extendVarmap (filter (fn v => type_of v = bool) (all_vars(concl PrevTh))) vm
+     val trl' = map (BddExtendVarmap vm') trl
+     val ptb = eqToTermBdd (fn tm => raise computeFixedpointError) vm' pth
+     val PrevThTb = eqToTermBdd failfn vm' PrevTh
+     val _ = print "done.\nSimplified theorem is !traceBackPrevThm\n";
+     val lasttb = BddOp(And, hd trl', ptb)
      val prime_ass =
       map 
        (fn (tb,tb')=>
-         (BddVar true vm ((mk_var o (prime ## I) o dest_var o getTerm) tb), tb'))
+         (BddVar true vm' ((mk_var o (prime ## I) o dest_var o getTerm) tb), tb'))
      fun stepback(tb, ass) =
-      let val tb' = BddOp(And,tb,BddRestrict (prime_ass ass) PrevThTb)
+      let val tb' = BddOp(And, tb, BddRestrict (prime_ass ass) PrevThTb)
       in
        (tb', BddSatone tb')
       end
@@ -712,7 +714,7 @@ fun TraceBack vm trl pth Rth =
       List.foldl
        (fn (tb,assl) => (print "."; stepback(tb, snd(hd assl)) :: assl))
        [(lasttb, BddSatone lasttb)]
-       (tl trl)
+       (tl trl')
      val _ = print " done.\n"
 in
  assl
