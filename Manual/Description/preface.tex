@@ -18,22 +18,22 @@ This document, \DESCRIPTION, is intended to serve both as a definition of \HOL\
 and as an advanced guide for users with some prior experience of the system.
 Beginners should start with the companion document \TUTORIAL.
 
-The \HOL\ system is designed to support interactive theorem proving in higher
-order logic (hence the acronym `\HOL').  To this end, the formal logic is
-interfaced to a general purpose programming language (\ML, for meta-language)
-in which terms and theorems of the logic can be denoted, proof strategies
-expressed and applied, and logical theories developed.  This document presents
-the definitions of the meta-language and the logic, and it explains the means
-by which meta-language functions can be used to generate proofs in the logic.
+The \HOL\ system is designed to support interactive theorem proving in
+higher order logic (hence the acronym `\HOL').  To this end, the formal
+logic is interfaced to a general purpose programming language (\ML, for
+meta-language) in which terms and theorems of the logic can be denoted,
+proof strategies expressed and applied, and logical theories developed.
+The version of higher order logic used in \HOL\ is predicate calculus
+with terms from the typed lambda calculus (\ie\ simple type
+theory). This was originally developed as a foundation for mathematics
+\cite{Church}.  The primary application area of \HOL\ was initially
+intended to be the specification and verification of hardware designs.
+(The use of higher order logic for this purpose was first advocated by
+Keith Hanna \cite{Hanna-Daeche}.)  However, the logic does not restrict
+applications to hardware; \HOL\ has been applied to many other areas.
 
-The version of higher order logic used in \HOL\ is predicate calculus with
-terms from the typed lambda calculus (\ie\ simple type theory). This was
-originally developed as a foundation for mathematics \cite{Church}.  The
-primary application area of \HOL\ was initially intended to be the
-specification and verification of hardware designs.  (The use of higher order
-logic for this purpose was first advocated by Keith Hanna \cite{Hanna-Daeche}.)
-However, the logic does not restrict applications to hardware; \HOL\ has been
-applied to many other areas.
+This document presents the \HOL\ logic, and it explains the means by which
+meta-language functions can be used to generate proofs in the logic.
 
 The approach to mechanizing formal proof used in \HOL\ is due to Robin Milner
 \cite{Edinburgh-LCF}, who also headed the team that designed and implemented
@@ -58,36 +58,21 @@ inherited by \HOL. For example, the axiomatization of higher order logic used
 is not the classical one due to Church, but an equivalent formulation
 influenced by \LCF.
 
-The language \ML\ has now achieved status as a programming language in its own
-right, although it was originally designed as the proof management language for
-\LCF.  It is a functional language distinguished particularly for its type
-inference mechanism, that gives type security without overburdening the user.
-Types, and especially abstract types, are the basis for distinguishing the
-theorems of a logic from arbitrary formulae, in a secure way.
-
-A standard has now been established for \ML\ (\cite{sml}), but for
-historical reasons, the \HOL\ system originally included an earlier
-version of \ML.  The version documented here is \HOL 98, which is
-written entirely in SML.
+An enhanced and rationalized version of \HOL, called \HOL 88, was
+released (in 1988), after the original \HOL\ system had been in use for
+several years.  \HOL 90 (released in 1990) was a port of \HOL 88 to SML
+\cite{sml} by Konrad Slind at the University of Calgary. It has been
+further developed through the 1990's. \HOL 98 is the latest version of
+\HOL, and is also implemented in SML; it features a number of novelties
+compared to its predecessors.  \HOL 98 is intended to serve as a stable
+platform for a number of research projects and technology transfer
+activities that are in progress at Cambridge, and elsewhere, at the time
+of writing.  It is also the supported version of the system for the
+international \HOL\ community.  The main differences between the various
+versions and releases of \HOL\ are described in Appendix~\ref{appendix}.
 
 In this document, the acronym `\HOL' refers to both the interactive theorem
 proving system and to the version of higher order logic that the system
 supports; where there is serious ambiguity, the former is called `the \HOL\
 system' and the latter `the \HOL\ logic'.
 
-An enhanced and rationalized version of \HOL, called \HOL 88, was
-released (in 1988), after the original \HOL\ system had been in use
-for several years.  \HOL 90 was written by Konrad Slind and was a port
-of \HOL 88 to SML.  \HOL 98 is the latest version of \HOL\ and has a
-number of new and interesting features compared to its predecessors.
-This is intended to serve as a stable platform for a number of
-research projects and technology transfer activities that are in
-progress at Cambridge, and elsewhere, at the time of writing.  It is
-also the supported version of the system for the international \HOL\
-community.  The main differences between the various versions and
-releases of \HOL\ are described in Appendix~\ref{appendix}.
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "description"
-%%% End:

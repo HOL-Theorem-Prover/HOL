@@ -19,5 +19,8 @@ index:
 description:
 	latex description.tex
 
+ps:
+	dvips -f description.dvi > description.ps
+
 all:
-	make clean; make description; make index; make description
+	make clean; make description; make index; make description; make ps

@@ -1,23 +1,22 @@
 \chapter{The HOL Logic in ML}\label{HOLsyschapter}
 
-In this chapter, the concrete representation of the \HOL\ logic is described.
-This involves describing the \ML\ functions that comprise the interface to the
-logic (up to and including Section~\ref{avra_terms}); the quotation, printing
-and parsing of logical terms (Section~\ref{quotation}); the representation of
-theorems (Section~\ref{avra_theorems}); the representation of theories
-(Section~\ref{theoryfns}); the basic \HOL\ theories that are built into the
-\HOL\ system (Sections~\ref{HOL-theory} and \ref{rules}); the methods for
-extending theories (throughout Section~\ref{HOL-ancestry} and in
-Section~\ref{types-package}); and the \ML\ system functions concerning the
-logic (Section~\ref{HOLflags}).  It is assumed that the reader is familiar
-with \ML.  If  not, the introduction to \ML\ in {\sl Getting  Started with
-HOL\/} in \TUTORIAL\ should be read first.
+In this chapter, the concrete representation of the \HOL\ logic is
+described.  This involves describing the \ML\ functions that comprise
+the interface to the logic (up to and including
+Section~\ref{avra_terms}); the quotation, printing and parsing of
+logical terms (Section~\ref{quotation}); the representation of theorems
+(Section~\ref{avra_theorems}); the representation of theories
+(Section~\ref{theoryfns}); some useful \HOL\ theories
+(Sections~\ref{HOL-theory} and \ref{rules}); the methods for extending
+theories (throughout Section~\ref{HOL-ancestry} and in
+Section~\ref{types-package}); and the \ML\ system functions concerning
+the logic (Section~\ref{HOLflags}).  It is assumed that the reader is
+familiar with \ML.  If not, the introduction to \ML\ in {\sl Getting
+Started with HOL\/} in \TUTORIAL\ should be read first.
 
-The \HOL\ system provides \ML\ types \ml{type} and \ml{term} to represent
+The \HOL\ system provides \ML\ types \ml{hol\_type} and \ml{term} to represent
 types and terms of the \HOL\ logic, as defined in Sections~\ref{types} and
-\ref{terms}, respectively.\footnote{Care must be taken to avoid confusion
-between ML types and types of the HOL logic: the ML type {\tt type} represents
-types of the HOL logic in ML.} It also provides primitive \ML\ functions for
+\ref{terms}, respectively. It also provides primitive \ML\ functions for
 creating and manipulating values of these types.  The key idea of the \HOL\
 system, due to Robin Milner\index{Milner, R.}, and discussed in this chapter,
 is that theorems are represented as an abstract \ML\ type whose only
@@ -26,60 +25,49 @@ inference. This means that the only way to construct theorems in \HOL\ is
 to apply rules of inference to axioms or existing theorems; hence the
 consistency of the logic is preserved.
 
-The purpose of the meta-language \ML\ is to provide a programming environment
-in which to build theorem proving tools to assist in the construction of
-proofs.  When the \HOL\ system is built, a range of useful theorems are
-pre-proved and a set of tools pre-defined. The basic system thus offers a rich
-initial environment; users can further enrich it by implementing their own
-application specific tools and building their own application specific
-theories.
+The purpose of the meta-language \ML\ is to provide a programming
+environment in which to build theorem proving tools to assist in the
+construction of proofs.  When the \HOL\ system is built, a range of
+useful theorems is pre-proved and a set of tools pre-defined. The basic
+system thus offers a rich initial environment; users can further enrich
+it by implementing their own application specific tools and building
+their own application specific theories.
 
 
 \section{Lexical matters}
 \label{HOL-lex}
 
-\index{identifiers, in HOL logic@identifiers, in \HOL\ logic|(}
-The name of a \HOL\  variable\index{variables, in HOL logic@variables, in \HOL\ logic!names of|(}
-can be any  \ML\ string, but the quotation
-mechanism will parse  only names that are
-identifiers (see Section~\ref{ident} below).
-The use of non-identifiers as  variable names  is discouraged except
-in special  circumstances  (for example, when  writing
-derived   rules  that  generate
-variables with names that are guaranteed to be different from existing names).
-The names of type
-variables\index{type variables, in HOL logic@type variables, in \HOL\ logic!names of} in the \HOL\ logic are strings
-of \ml{*}s optionally followed by a number or an identifier (see
-Section~\ref{tyvars} for examples).
-The name of a type constant or a term constant of the \HOL\ logic can
-be any identifier.
+\index{identifiers, in HOL logic@identifiers, in \HOL\ logic|(} The name
+of a \HOL\ variable\index{variables, in HOL logic@variables, in \HOL\
+logic!names of|(} can be any \ML\ string, but the quotation mechanism
+will parse only names that are identifiers (see Section~\ref{ident}
+below).  The use of non-identifiers as variable names is discouraged
+except in special circumstances (for example, when writing derived rules
+that generate variables with names that are guaranteed to be different
+from existing names). The name of a type variable\index{type variables,
+in HOL logic@type variables, in \HOL\ logic!names of} in the \HOL\ logic
+is formed by a prime (\ml{'}) followed by an alphanumeric which itself
+contains no prime (see Section~\ref{tyvars} for examples).  The name of
+a type constant or a term constant in the \HOL\ logic can be any
+identifier, although some names are treated specially by the HOL parser
+and printer and should therefore be avoided. 
 \index{identifiers, in HOL logic@identifiers, in \HOL\ logic|)}
 
 \subsection{Identifiers}
 \label{ident}
 
-The structure of \HOL\ identifiers is partly programmable. The default
-is that an identifier can be of two forms:
+A \HOL\ identifier can be of two forms:
 \begin{myenumerate}
-\item A sequence of alphanumerics starting with a letter,
-where the default structure of an alphanumeric is that it is a letter,
-a digit, a prime (\ml{'}) or an underbar (\ty{\_}).
-\item A special symbol chosen from the following list
-
-{\small \begin{verbatim}
-   **     ++     <--    <->    -->    ---    ><     >>
-
-   >=     <==    <=>    ===    ==>    \/     //     /\
-
-   !?     !!     !\     ?!     ??     ?\     :=     <>
-
-   <-     <<     <=     --     ->     =>     ==
-\end{verbatim}}
+\item A finite sequence of alphanumerics starting with a letter.
+\item A \emph{symbolic} identifier, \ie, a finite sequence formed by any
+combination of the following characters:
+\begin{hol}\begin{verbatim}
+  #  ?  +  *  /  \  =  <  >  &  %  @  !  ,  :  ;  _  |  ~  -
+\end{verbatim}\end{hol}
 
 \end{myenumerate}
 
 \noindent A letter is a member of the list:
-
 
 \begin{hol}\begin{verbatim}
    a b c d e f g h i j k l m n o p q r s t u v w x y z
@@ -90,99 +78,12 @@ a digit, a prime (\ml{'}) or an underbar (\ty{\_}).
 \noindent \HOL\ is case-sensitive: upper and lower case letters are
 considered to be different.
 
-The function
-
-\begin{boxed}\index{new_letter@\ml{new\_letter}|pin}
-\begin{verbatim}
-   new_letter : string -> void
-\end{verbatim}\end{boxed}
-
-\noindent makes a new character behave like a letter. For example:
-
-\begin{hol}\begin{verbatim}
-   new_letter `+`;;
-\end{verbatim}\end{hol}
-
-\noindent will make \ml{+int} and \ml{foo+bar} become allowable identifiers.
-Failure occurs if the argument string is longer than one character.
-
-The function
-
-\begin{boxed}\index{is_letter@\ml{is\_letter}|pin}
-\begin{verbatim}
-   is_letter : string -> bool
-\end{verbatim}\end{boxed}
-
-\noindent tests if a unit string is a letter; it fails if the string has more
-than one character.
-
-Alphanumerics are, by default, letters or digits.  A digit is one of
+Alphanumerics are letters or digits or underscores (\ml{\_}) or primes
+(\ml{'}).  A digit is one of 
 {\small\verb%0%}, {\small\verb%1%}, {\small\verb%2%}, {\small\verb%3%},
 {\small\verb%4%}, {\small\verb%5%}, {\small\verb%6%}, {\small\verb%7%},
 {\small\verb%8%}, or {\small\verb%9%}.
 A {\it number\/} is a string of one or more digits.
-The function
-
-\begin{boxed}\index{new_alphanum@\ml{new\_alphanum}|pin}
-\begin{verbatim}
-   new_alphanum : string -> void
-\end{verbatim}\end{boxed}
-
-\noindent makes a new character behave like an alphanumeric. For example:
-
-\begin{hol}\begin{verbatim}
-   new_alphanum `+`;;
-\end{verbatim}\end{hol}
-
-\noindent will make \ml{foo+bar} and \ml{foo+} become allowable names (but not
-\ml{+bar}). Failure occurs if the argument string is longer than one
-character.
-
-The function
-
-\begin{boxed}\index{is_alphanum@\ml{is\_alphanum}|pin}
-\begin{verbatim}
-   is_alphanum : string -> bool
-\end{verbatim}\end{boxed}
-
-\noindent tests if a unit string is an alphanumeric; it fails if the string
-has more than one character.
-
-It is a consequence of the way lexical analysis is implemented that any
-initial subsequence of a special symbol is also a special symbol (e.g. since
-\ml{==>} is a special symbol, so are \ml{==} and \ml{=}). The function
-
-\begin{boxed}\index{new_special_symbol@\ml{new\_special\_symbol}|pin}
-\begin{verbatim}
-   new_special_symbol : string -> bool
-\end{verbatim}\end{boxed}
-
-\noindent makes the argument string, and all its substrings, special symbols;
-it fails if
-\begin{myenumerate}
-\item the argument string is a single character, or
-\item it starts with a letter or an alphanumeric.
-\end{myenumerate}
-
-\noindent For example:
-
-\begin{hol}\begin{verbatim}
-   new_special_symbol `===>>>`;;
-\end{verbatim}\end{hol}
-
-\noindent makes \ml{===>>>}, \ml{===>>}, \ml{===>} and \ml{===}
-into new special symbols
-(\ml{==} is already a special symbol because \ml{==>} is).
-
-The function
-
-\begin{boxed}\index{special_symbols@\ml{special\_symbols}|pin}
-\begin{verbatim}
-   special_symbols : void -> string list
-\end{verbatim}\end{boxed}
-
-\noindent  gives the list of currently declared special symbols\index{variables, in HOL logic@variables, in \HOL\ logic!names of|)} .
-
 
 \subsubsection{Separators}
 
@@ -195,127 +96,148 @@ space (32), carriage return (13), line feed (10), tab ({\verb%^%}I, 9),
 form feed ({\verb%^%}L, 12)
 
 
+\subsubsection{Special identifiers}
+
+The following valid identifiers should not be used as the name of
+a variable or a constant.
+
+{\small \begin{verbatim}
+   let  in  and  \  ;  =>  |  :  :=  with  updated_by
+\end{verbatim}}
 
 \subsection{Type variable names}
 \label{tyvars}
 
-The names of type variables in the \HOL\ logic are strings
-of \ml{*}s optionally followed by a number or by an identifier; for example:
+The name of a type variable in the \HOL\ logic is a string
+beginning with a prime (\ml{'}) followed by an alphanumeric which itself
+contains no prime; for example all of the following are valid type
+variable names except for the last:
 
 \begin{hol}\begin{verbatim}
-   *   **   ***   *'   **'   **25   ***thing
+   'a   'b   'cat   'A11   'g_a_p   'f'oo
 \end{verbatim}\end{hol}
 
 
 \section{Types}\index{types, in HOL logic@types, in \HOL\ logic}
 
-The allowed types\index{type constraint!in HOL logic@in \HOL\ logic} depend on which type constants\index{type constants, in HOL logic@type constants, in \HOL\ logic} have been declared in the
+The allowed types\index{type constraint!in HOL logic@in \HOL\ logic}
+depend on which type constants\index{type constants, in HOL logic@type
+constants, in \HOL\ logic} have been declared in the 
 current theory. See Section~\ref{theoryfns} for details of how such
 declarations are made.
 
 
 There are two primitive constructor\index{types, in HOL logic@types, in \HOL\ logic!constructors for}
-\index{type constructors!in HOL logic@in \HOL\ logic} functions for values of type
-\ml{type}:
+\index{type constructors!in HOL logic@in \HOL\ logic} functions for
+values of type \ml{hol\_type}: 
 
 
 \begin{boxed}
-\index{function types, in HOL logic@function types, in \HOL\ logic!constructors for}\index{mk_vartype@\ml{mk\_vartype}|pin}
+\index{function types, in HOL logic@function types, in \HOL\
+logic!constructors for}\index{mk_vartype@\ml{mk\_vartype}|pin} 
 \index{mk_type@\ml{mk\_type}|pin}
 \begin{verbatim}
-   mk_vartype : string -> type
-   mk_type    : (string # type list) -> type
+   mk_vartype : string -> hol_type
+   mk_type    : (string * hol_type list) -> hol_type
 \end{verbatim}\end{boxed}
 
 The function \ml{mk\_vartype}
- constructs a type variable\index{type variables, in HOL logic@type variables, in \HOL\ logic!constructor for} with a given name;
+ constructs a type variable\index{type variables, in HOL logic@type
+ variables, in \HOL\ logic!constructor for} with a given name; 
 it fails if the name is not an allowable type variable name (\ie\ not
-a string of \ml{*}s followed by a number or identifier).
+a \ml{'} followed by an alphanumeric).
 
-The function \ml{mk\_type} constructs a compound type\index{compound types, in HOL logic@compound types, in \HOL\ logic!constructors for}
+The function \ml{mk\_type} constructs a compound type\index{compound
+ types, in HOL logic@compound types, in \HOL\ logic!constructors for} 
  from a string
 representing the name of the type operator and a list of types representing the
-arguments to   the  operator.     Function   types  $\sigma_1\fun\sigma_2$
+arguments to   the  operator.     Function types  $\sigma_1\fun\sigma_2$
 of the logic are
 represented in \ML\ as though they were compound types
 $(\sigma_1,\sigma_2)$\ml{fun} (in  Section~\ref{types}, however,
 function types were not regarded as compound types).
 
 The evaluation of
-\ml{mk\_type(`}$name$\ml{`,\ [}$\sigma_1$\ml{;}$\cdots$\ml{;}$\sigma_n$\ml{])}
+\ml{mk\_type("}$name$\ml{",\ [}$\sigma_1$\ml{,}$\cdots$\ml{,}$\sigma_n$\ml{])}
 fails if
 \begin{myenumerate}
-\item $name$ is not an identifier;
+% \item $name$ is not an identifier;
 \item $name$ is not a type operator of the current theory;
 \item $name$ is a type operator of the current theory,
 but its arity is not $n$.
 \end{myenumerate}
 
-For example, \ml{mk\_type(`bool`,[])}\index{truth values, in HOL logic@truth values, in \HOL\ logic}\index{bool, the type in HOL logic@\ml{bool}, the type in \HOL\ logic} evaluates to
+For example, \ml{mk\_type("bool",[])}\index{truth values, in HOL logic@truth values, in \HOL\ logic}\index{bool, the type in HOL logic@\ml{bool}, the type in \HOL\ logic} evaluates to
 an \ML\ value of type term representing the type \ty{bool} and
-{\small\verb%mk_type(`fun`, [mk_type(`ind`,[]); mk_type(`bool`,[])])%}
+{\small\verb%mk_type("fun", [mk_type("ind",[]), mk_type("bool",[])])%}
 evaluates to a value representing $\ty{ind}\fun\ty{bool}$.
 (These types are introduced in Section~\ref{boolthy}).
 
 There are two primitive destructor\index{types, in HOL logic@types, in
-\HOL\ logic!destructors for}\index{type destructors, in HOL logic@type destructors, in \HOL\ logic}
- functions for values of type
-\ml{type}:
+\HOL\ logic!destructors for}\index{type destructors, in HOL logic@type
+destructors, in \HOL\ logic}  functions for values of type \ml{hol\_type}:
 
 
 \begin{boxed}
-\index{function types, in HOL logic@function types, in \HOL\ logic!destructors for}
+\index{function types, in HOL logic@function types, in \HOL\
+logic!destructors for} 
 \index{dest_vartype@\ml{dest\_vartype}|pin}
 \index{dest_type@\ml{dest\_type}|pin}
 \begin{verbatim}
-   dest_vartype : type -> string
-   dest_type    : type -> (string # type list)
+   dest_vartype : hol_type -> string
+   dest_type    : hol_type -> (string * hol_type list)
 \end{verbatim}\end{boxed}
 
-\noindent The function \ml{dest\_vartype}\index{type variables, in HOL logic@type variables, in \HOL\ logic!destructors for}\index{compound types, in HOL logic@compound types, in \HOL\ logic!destructors for}
+\noindent The function \ml{dest\_vartype}\index{type variables, in HOL
+ logic@type variables, in \HOL\ logic!destructors for}\index{compound
+ types, in HOL logic@compound types, in \HOL\ logic!destructors for} 
  extracts the name of a type variable.
-The function \ml{dest\_type}  destructs a  compound type  into the  name of the
-type operator  and  a  list  of  the  argument  types;  \ml{dest\_vartype}  and
-\ml{dest\_type} are  thus the  inverses of  \ml{mk\_vartype} and \ml{mk\_type},
-respectively.  The destructors fail on arguments of the wrong form.
+The function \ml{dest\_type}  destructs a  compound type  into the  name
+ of the type operator  and  a  list  of  the  argument  types;
+ \ml{dest\_vartype}  and \ml{dest\_type} are  thus the  inverses of
+ \ml{mk\_vartype} and \ml{mk\_type}, respectively.  The destructors fail
+ on arguments of the wrong form. 
 
 
-Types are printed\index{ type constraint, in HOL logic@\ml{:} (type constraint, in \HOL\ logic)}
-\index{printing, in HOL logic@printing, in \HOL\ logic!of types} in the form \ml{":}$\ \cdots\ $\ml{"}
+Types are printed\index{ type constraint, in HOL logic@\ml{:} (type
+constraint, in \HOL\ logic)} \index{printing, in HOL logic@printing, in
+\HOL\ logic!of types} in the form \ml{`:}$\ \cdots\ $\ml{`} 
 using the quotation syntax described in Section~\ref{quotation}.
-For example, the \ML\ value of type \ml{type} representing
+For example, the \ML\ value of type \ml{hol\_type} representing
 $\ty{ind}\fun(\ty{ind}\fun\ty{bool})$ would be printed
-as \ml{":ind -> ind -> bool"}.
+as \ml{`:ind -> ind -> bool`}.
 
 \section{Terms}
 \label{avra_terms}
 
-The four primitive kinds of  terms of the logic
-are  described in  Section~\ref{terms}.  The
-\ML\ functions for manipulating these are described in this section.  There are
-also various derived terms that are described in Section~\ref{derived-terms}.
+The four primitive kinds of terms of the logic are described in
+Section~\ref{terms}.  The \ML\ functions for manipulating these are
+described in this section.  There are also various derived terms that
+are described in Section~\ref{derived-terms}.
 
 The allowed terms depend on which constants have been declared
 in the current theory. See Section~\ref{theoryfns} for details
 of how such declarations are made.
 
-There are four primitive constructor\index{variables, in HOL logic@variables, in \HOL\ logic!constructor for}\index{terms, in HOL logic@terms, in \HOL\ logic!constructors for}\index{term constructors, in HOL logic@term constructors, in \HOL\ logic}
-functions for values of type
-\ml{term}:
+There are four primitive constructor\index{variables, in HOL
+logic@variables, in \HOL\ logic!constructor for}\index{terms, in HOL
+logic@terms, in \HOL\ logic!constructors for}\index{term constructors,
+in HOL logic@term constructors, in \HOL\ logic} functions for values of
+type \ml{term}:
 
 \begin{boxed}
 \index{mk_var@\ml{mk\_var}|pin}
 \begin{verbatim}
-   mk_var : (string # type) -> term
+   mk_var : (string * hol_type) -> term
 \end{verbatim}\end{boxed}
 
-\noindent\ml{mk\_var(}$x$\ml{,}$\sigma$\ml{)} evaluates to a variable with name
-$x$ and type $\sigma$; it always succeeds.
+\noindent\ml{mk\_var(}$x$\ml{,}$\sigma$\ml{)} evaluates to a variable
+with name $x$ and type $\sigma$; it always succeeds.
 
 \begin{boxed}
 \index{mk_const@\ml{mk\_const}|pin}
 \begin{verbatim}
-   mk_const : (string # type) -> term
+   mk_const : (string * hol_type) -> term
 \end{verbatim}\end{boxed}
 
 
@@ -323,7 +245,7 @@ $x$ and type $\sigma$; it always succeeds.
 term representing
 the constant\index{constants, in HOL logic@constants, in \HOL\ logic!constructor for} with name $c$ and type $\sigma$; it fails if:
 \begin{myenumerate}
-\item $c$ is not an allowable constant name;
+% \item $c$ is not an allowable constant name;
 \item $c$ is not the name of a constant in the current theory;
 \item $\sigma$ is not an instance of the generic type of $c$
 (the generic type of a constant is established when the constant is defined;
@@ -332,7 +254,7 @@ see Section~\ref{theoryfns}).
 
 \begin{boxed}\index{mk_comb@\ml{mk\_comb}|pin}
 \begin{verbatim}
-   mk_comb : (term # term) -> term
+   mk_comb : (term * term) -> term
 \end{verbatim}\end{boxed}
 
 \noindent\ml{mk\_comb(}$t_1$\ml{,}$t_2$\ml{)}\index{function application, in HOL logic@function application, in \HOL\ logic!constructor for} evaluates to a term
@@ -347,7 +269,7 @@ type of $t_2$ is not equal to $\sigma'$.
 \begin{boxed}
 \index{mk_abs@\ml{mk\_abs}|pin}
 \begin{verbatim}
-   mk_abs : (term # term) -> term
+   mk_abs : (term * term) -> term
 \end{verbatim}\end{boxed}
 
 \noindent\ml{mk\_abs(}$x$\ml{,}$t$\ml{)} evaluates to a term representing
@@ -363,10 +285,10 @@ There are four primitive destructor\index{term destructors, in HOL logic@term de
 \index{dest_comb@\ml{dest\_comb}|pin}
 \index{dest_abs@\ml{dest\_abs}|pin}
 \begin{verbatim}
-   dest_var   : term -> (string # type)
-   dest_const : term -> (string # type)
-   dest_comb  : term -> (term # term)
-   dest_abs   : term -> (term # term)
+   dest_var   : term -> (string * hol_type)
+   dest_const : term -> (string * hol_type)
+   dest_comb  : term -> (term * term)
+   dest_abs   : term -> (term * term)
 \end{verbatim}\end{boxed}
 
 These are the inverses of \ml{mk\_var}, \ml{mk\_const},
@@ -374,7 +296,7 @@ These are the inverses of \ml{mk\_var}, \ml{mk\_const},
 to terms of the wrong form. Other useful destructor functions are
 \ml{rator}\index{rator@\ml{rator}},
 \ml{rand}\index{rand@\ml{rand}},
-\ml{bndvar}\index{bndvar@\ml{bndvar}},
+\ml{bvar}\index{bvar@\ml{bvar}},
 \ml{body}\index{body@\ml{body}},
 \ml{lhs}\index{lhs@\ml{lhs}} and
 \ml{rhs}\index{rhs@\ml{rhs}}.
@@ -384,14 +306,14 @@ The function
 
 \begin{boxed}\index{type_of@\ml{type\_of}|pin}
 \begin{verbatim}
-   type_of : term -> type
+   type_of : term -> hol_type
 \end{verbatim}\end{boxed}
 
-\noindent returns the type\index{types, in HOL logic@types, in \HOL\ logic!determination of} of a term. It could be defined (recursively)
-in terms of the
-destructors but is predefined for convenience.
+\noindent returns the type\index{types, in HOL logic@types, in \HOL\
+logic!determination of} of a term. It could be defined (recursively) 
+in terms of the destructors but is predefined for convenience.
 
-Terms are printed in the form \ml{"}$\ \cdots\ $\ml{"}
+Terms are printed in the form \ml{`}$\ \cdots\ $\ml{`}
 using the quotation syntax\index{quotation, in HOL logic@quotation, in \HOL\ logic} described in Section~\ref{quotation}.
 For example, the term representing
 
@@ -399,12 +321,12 @@ For example, the term representing
 
 \noindent would be printed as:
 
-\[ \ml{"!x y. x < y ==> ?z. x + z = y"} \]
+\[ \ml{`!x y. x < y ==> ?z. x + z = y`} \]
 
 Note that a colon\index{ type constraint, in HOL logic@\ml{:} (type constraint, in \HOL\ logic)}
  is used to distinguish type quotation from term quotation;
-the former have the form \ml{":}$\ \cdots\ $\ml{"} and the latter have
- the form \ml{"}$\ \cdots\ $\ml{"}.
+the former have the form \ml{`:}$\ \cdots\ $\ml{`} and the latter have
+ the form \ml{`}$\ \cdots\ $\ml{`}.
 
 
 \section{Quotation}
@@ -415,124 +337,216 @@ the former have the form \ml{":}$\ \cdots\ $\ml{"} and the latter have
 \index{ type quotes, in ML@\ml{"":$\cdots$""} (type quotes, in \ML)|(}
 \index{ term quotes, in ML@\ml{""$\cdots$""} (term quotes, in \ML)|(}
 \HOL\ types and terms can be input\index{terms, in HOL logic@terms, in \HOL\ logic!input of} to the system in two ways:  by using
-constructor functions, or by using {\it quotation\/}.  The
-former
+constructor functions, or by using {\it quotation\/}.  The former
 allows some terms to be built which cannot be  constructed using quotation.
-For example, a term containing two variables with  the same  name but different
+For example, a term containing two variables with  the same name but different
 types, \eg\ the term  $x_{\ty{bool}}=(x_{\ty{num}}=1)$,
  can be built only by using
 constructors.
 
 It would be tedious, however, to always have to input types and terms using the
-constructor functions. The \HOL\ system, following \LCF\index{LCF@\LCF}, has a special
-quotation\index{quotation, in HOL logic@quotation, in \HOL\ logic!parser for}\index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax} parser and
-type checker that enables terms to be input using a fairly standard syntax.  The
-\HOL\ printer also outputs types and terms using this syntax\index{printing, in HOL logic@printing, in \HOL\ logic!of quotation syntax}.
+constructor functions. The \HOL\ system, adapting the approach taken in
+\LCF, \index{LCF@\LCF}, has special quotation\index{quotation, in HOL
+logic@quotation, in \HOL\ logic!parser for}\index{parsing, of HOL
+logic@parsing, of \HOL\ logic!of quotation syntax} parsers for \HOL\
+types and terms (named {\small\verb%Type%} and  {\small\verb%Term%}, respectively) 
+which enables types and terms to be input using a fairly standard
+syntax.  The \HOL\ printer also outputs types and terms using this
+syntax\index{printing, in HOL logic@printing, in \HOL\ logic!of quotation syntax}. 
 
-For example, the \ML\ expression {\small\verb%":bool->bool"%} denotes
+For example, the \ML\ expression {\small\verb%Type `:bool -> bool`%} denotes
 exactly the same value (of \ML\ type {\small\verb%type%}) as
 
-\begin{hol}\index{bool, the type in HOL logic@\ml{bool}, the type in \HOL\ logic}
+\begin{hol}\index{bool, the type in HOL logic@\ml{bool}, the type in
+\HOL\ logic} 
 \begin{verbatim}
-   mk_type(`fun`,[mk_type(`bool`,[]);mk_type(`bool`,[])])
+   mk_type("fun",[mk_type("bool",[]), mk_type("bool",[])])
 \end{verbatim}\end{hol}
 
 \noindent and
-{\small\verb%"\x.x+1"%}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic} can be used instead of
+{\small\verb%Term `\x.x+1`%}\index{function abstraction, in HOL
+logic@function abstraction, in \HOL\ logic} can be used
+instead of\footnote{In order to be processed successfully, the latter
+quotation (which features a numeral) requires the theory of arithmetic
+to have already been loaded. This can be accomplished by 
+{\tt load "arithmeticTheory"}.}
+%{\small\verb%load "arithmeticTheory"%}.}
+
 
 \newpage %PBHACK
 
 {\small\baselineskip\HOLSpacing\begin{verbatim}
 
    mk_abs
-    (mk_var(`x`,mk_type(`num`,[])),
+    (mk_var("x",mk_type("num",[])),
      mk_comb
      (mk_comb
       (mk_const
-       (`+`,
-        mk_type(`fun`,[mk_type(`num`,[]);
-                       mk_type(`fun`,[mk_type(`num`,[]);
-                                      mk_type(`num`,[])])])),
-       mk_var(`x`, mk_type(`num`,[]))),
-      mk_const(`1`, mk_type(`num`,[]))))
+       ("+",
+        mk_type("fun",[mk_type("num",[]),
+                       mk_type("fun",[mk_type("num",[]),
+                                      mk_type("num",[])])])),
+       mk_var("x", mk_type("num",[]))),
+      mk_numeral (Arbnum.fromString "1")))
 \end{verbatim}}
 
 \index{type constraint!in HOL logic@in \HOL\ logic|(}It should be noted
-that there is no  explicit type  information in {\small\verb%"\x.x+1"%}.
+that there is no  explicit type  information in {\small\verb%\x.x+1%}.
 The \HOL\ type checker knows that \ml{1} has type \ml{num} and  \ml{+} has type
 \ml{num->(num->num)}.  From this information it can infer that both occurrences
-of {\small\verb%x%} in {\small\verb%"\x.x+1"%} could have type
+of {\small\verb%x%} in {\small\verb%\x.x+1%} could have type
 {\small\verb%num%}.  This  is  not  the  only  possible type  assignment;  for
 example, the first occurrence of {\small\verb%x%} could have type \ml{bool} and
 the second one have type {\small\verb%num%}.  In that  case there  would be two
 {\it different\/} variables with name {\small\verb%x%}, namely
 {\small\verb%x%}$_{\tt bool}$ and  {\small\verb%x%}$_{\tt num}$,  the second of
-which is free.  In fact, as mentioned,
-the only  way to  construct a  term with this
-second type assignment is  by using  constructors, since  the type checker uses
-the heuristic that all variables in a term
- with the same name  have the  same type.   This is
-illustrated in the following session.
+which is free.  In fact, as mentioned, the only  way to  construct a
+term with this second type assignment is  by using  constructors, since
+the type checker uses the heuristic that all variables in a term with
+the same name  have the  same type.   This is illustrated in the
+following session. 
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-#"x = (x = 1)";;
-Badly typed application of:  "$= x"
-   which has type:           ":num -> bool"
-to the argument term:        "x = 1"
-   which has type:           ":bool"
+  - Term `x = (x = 1)`;
+  Type inference failure: unable to infer a type for the application of
 
-evaluation failed     mk_comb in quotation
+  $= (x :num)
 
-#mk_eq
-# (mk_var(`x`,mk_type(`bool`,[])),
-#  mk_eq
-#   (mk_var(`x`,mk_type(`num`,[])),
-#    mk_const(`1`,mk_type(`num`,[]))));;
-"x = (x = 1)" : term
+  which has type
+
+  :num -> bool
+
+  to
+
+  (x :num) = (1 :num)
+
+  which has type
+
+  :bool
+
+  unification failure message: unify failed
+
+  - mk_eq
+     (mk_var("x",mk_type("bool",[])),
+      mk_eq
+       (mk_var("x",mk_type("num",[])),
+        mk_numeral (Arbnum.fromString "1")));
+  > val it = `x = x = 1` : Term.term
 \end{verbatim}\end{session}
 
-The quotation type checker was designed  and implemented  by Robin  Milner\index{Milner, R.}.  It
-employs heuristics  like  the  one  above  to  infer  a  sensible  type for all
-variables occurring in a term.  If there are not enough clues,  then the system
-will complain with an error message.
+The original quotation type checker was designed and implemented by
+Robin Milner\index{Milner, R.}.  It employs heuristics like the one
+above to infer a sensible type for all variables occurring in a term.
 
-To give the system a hint, types can be  explicitly indicated  by following any
-subterm with a colon and then a type.  For example,
-{\small\verb%"f(x:num):bool"%} will   type check   with   {\small\verb%f%}   and
-{\small\verb%x%} getting types  {\small\verb%num->bool%} and {\small\verb%num%}
-respectively.  If  there  are polymorphic  constants in  a term,  there must be
-enough type  information  to uniquely  identify a  type instance  for each such
-constant.  There is  also a  feature called  {\it sticky  types\/} that enables
-variables to be given default types; this is described in
-Section~\ref{stickytypes}.
-
-The type checking\index{type checker, for HOL logic vs ML@type checker, for \HOL\ logic {\it vs} \ML} algorithm used for the \HOL\ logic differs from that used
-for \ML. For example, the \ML\ expression {\small\verb%\x.x%}\index{terms, in HOL logic@terms, in \HOL\ logic!function abstraction}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!type checking of}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!syntax of}
- will get \ML\
-type {\small\verb%*->*%}, but the \HOL\ term {\small\verb%"\x.x"%} will
-fail to type check, as shown in the session below.
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"\x. x";;
-Indeterminate types:  "x:?"
-
-evaluation failed     types indeterminate in quotation
-\end{verbatim}\end{session}
-
-\noindent To get the term {\small\verb%\x.x%}
-to type check, the type of the variable \ml{x} must be  given explicitly,
-for example by writing {\small\verb%"\x:*.x"%}.
-
-\begin{session}\begin{verbatim}
-#"\x:*. x";;
-"\x. x" : term
-\end{verbatim}\end{session}
-
-\noindent This treatment of types within quotations is inherited from \LCF\index{LCF@\LCF}.
+At times, the user may want to
+control the exact type of a subterm. To support such functionality,
+types can be  explicitly indicated by following any subterm with a colon
+and then a type.  For example, {\small\verb%Term `f(x:num):bool`%} will
+type check with {\small\verb%f%} and {\small\verb%x%} getting types  {\small\verb%num->bool%} and {\small\verb%num%}
+respectively.  \noindent This treatment of types within quotations is inherited from \LCF\index{LCF@\LCF}.
 \index{type constraint!in HOL logic@in \HOL\ logic|)}
-\index{ term quotes, in ML@\ml{""$\cdots$""} (term quotes, in \ML)|)}
+\index{ term quotes, in ML@\ml{`$\cdots$`} (term quotes, in \ML)|)}
+
+The type inference \index{type checker, for HOL logic vs ML@type checker,
+for \HOL\ logic {\it vs} \ML} algorithm used for the \HOL\ logic is
+almost identical to that used for \ML. For example, the \ML\ expression
+{\small\verb%fn x => x%}\index{terms, in HOL logic@terms, in \HOL\ logic!function abstraction}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!type checking of}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!syntax of}
+will be ascribed \ML\ type {\small\verb%'a -> 'a%}, and the \HOL\ term constructed by
+{\small\verb%Term `\x.x`%} will get an analogous type, as shown in the
+session below. This session also shows that a \HOL\ term has both an \ML\ type
+(namely {\small\verb%hol_type%}) and a \HOL\ type ({\small\verb%: 'a -> 'a%}
+in this case).
+
+\begin{session}\begin{verbatim}
+- Term `\x. x`;
+<<HOL message: inventing new type variable names: 'a.>>
+> val it = `\x. x` : Term.term
+
+- type_of it;
+> val it = `:'a -> 'a` : Type.hol_type
+\end{verbatim}\end{session}
+
+\noindent For terms of polymorphic type, \ie, terms whose types have
+type variables, the type checker will invent names for the type
+variables (as in the above session).  This is further shown in the
+following session (in which we first tell the \HOL\ printer to output
+type information):
+
+\begin{session}\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- Term `f x`;
+<<HOL message: inventing new type variable names: 'a, 'b.>>
+> val it = `(f :'a -> 'b) (x :'a)` : Term.term
+\end{verbatim}\end{session}
+
+\noindent In this example, {\small\verb%x%} is unconstrained in the term
+{\small\verb+f x+}, since it appears only as an argument. The system assigns
+it the type variable {\small\verb%'a%}. On the other hand, {\small\verb%f%} is a function,
+since it is applied to {\small\verb%x%}. Thus {\small\verb%f%} has a
+function type, the domain of which is {\small\verb%'a%}; moreover, since
+the result of the application is also unconstrained, the range of the
+function type is chosen to be the next type variable different from
+{\small\verb%'a%}, \ie, {\small\verb%'b%}.
+
+Allowing the system to invent type variables introduces a degree of
+non-determinism that may not be suitable for some applications. In such 
+cases, explicit type constraints should be used. The system can be
+prevented from inventing type variables by setting the flag
+{\small\verb+Globals.guessing_tyvars+} to {\small\verb+false+}.
+
+\subsection{Overloading}
+
+A limited amount of overloading resolution is performed by the quotation
+parser for terms. For example, the tilde symbol ({\small\verb+~+})
+denotes boolean negation in the initial theory of \HOL\, and it also denotes
+the additive inverse in the {\small\verb+integer+} and
+{\small\verb+real+} theories. If we load the {\small\verb+integer+}
+theory and enter an ambiguous term featuring {\small\verb+~+}, the
+system will inform us that overloading resolution is being performed.
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+- load "integerTheory";
+> val it = () : unit
+
+- Term `~~x`;
+<<HOL message: more than one resolution of overloading was possible.>>
+> val it = `~~x` : Term.term
+
+- type_of it;
+> val it = `:bool` : Type.hol_type
+\end{verbatim}\end{session}
+
+A priority mechanism is used to resolve multiple possible choices. In
+the example, {\small\verb+~+} could be consistently chosen to have type
+{\small\verb+:bool -> bool+} or {\small\verb+:int -> int+}, and the
+mechanism has chosen the former. For finer control, explicit type
+constraints may be used. In the following session, the 
+{\small\verb+~~x+} in the first quotation has type {\small\verb+:bool+},
+while in the second, a type constraint ensures that {\small\verb+~~x+} has
+type {\small\verb+:int+}. 
+
+\begin{session}\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- Term `~(x = ~~x)`;
+<<HOL message: more than one resolution of overloading was possible.>>
+> val it = `~((x :bool) = ~~x)` : Term.term
+
+- Term `~(x:int = ~~x)`;
+> val it = `~((x :int) = ~~x)` : Term.term
+\end{verbatim}\end{session}
+
+Note that the symbol {\small\verb+~+} stands for two different constants in
+the second quotation; its first occurrence is boolean negation, while
+the other two occurrences are the additive inverse operation for integers.
+For more information on how to set up and use overloading, consult the
+reference manual.
+
 
 \subsection{Type quotation}
 
@@ -562,20 +576,49 @@ The expressions in the same row are equivalent.
 {\it Constructor expression}  \\ \hline
  & & \\
 Type variable &
-{\small\verb%":*%}$\cdots${\small\verb%"%} & {\small\verb%mk_vartype(`*%}$\cdots${\small\verb%`)%}   \\ \hline
+{\small\verb+: '+}$alphanum$  & {\small\verb%mk_vartype("'%$alphanum$\verb%")%}   \\ \hline
 Type constant &
-{\small\verb%":%}$op${\small\verb%"%} & {\small\verb%mk_type(`%}$op${\small\verb%`,[])%}   \\ \hline
+$:op$ & {\small\verb%mk_type("%}$op${\small\verb%",[])%}   \\ \hline
 Function type &
-{\small\verb%":%}$\sigma_1${\small\verb%->%}$\sigma_2${\small\verb%"%} &
-{\small\verb%mk_type(`fun`, [":%}$\sigma_1${\small\verb%";":%}$\sigma_2${\small\verb%"])%} \\ \hline
+$: \sigma_1$ {\small\verb%->%} $\sigma_2$ & 
+{\small\verb%mk_type("fun", [%} $\sigma_1$ {\small\verb%,%} $\sigma_2$ {\small\verb%])%} \\ \hline
 Compound type &
-{\small\verb%":(%}$\sigma_1${\small\verb%,%} $\ldots$ {\small\verb%,%} $\sigma_n${\small\verb%)%}$op${\small\verb%"%} &
-{\small\verb%mk_type(`%}$op${\small\verb%`, [":%}$\sigma_1${\small\verb%";%} $\ldots$ {\small\verb%;":%}$\sigma_n${\small\verb%"])%}
+{\small\verb+:(+}$\sigma_1${\small\verb%,%} $\ldots$ {\small\verb%,%} $\sigma_n${\small\verb%)%}$op$ &
+{\small\verb%mk_type("%}$op${\small\verb%", [%}
+ $\sigma_1$ {\small\verb%,%} $\ldots$ {\small\verb%,%} $\sigma_n${\small\verb%])%}
 \\ \hline
 \end{tabular}
 \end{center}
 
-\index{ type quotes, in ML@\ml{"":$\cdots$""} (type quotes, in \ML)|)}
+% \begin{center}
+% \index{compound types, in HOL logic@compound types, in \HOL\ logic!constructors for}
+% \index{ type variables, in HOL logic@\ml{*,\,**,\,}$\ldots$ (type variables, in \HOL\ logic)}
+% \index{types, in HOL logic@types, in \HOL\ logic!constructors for}
+% \index{ function type operator, in HOL logic@\ml{->} (function type operator, in \HOL\ logic)}
+% \index{mk_vartype@\ml{mk\_vartype}}
+% \index{mk_type@\ml{mk\_type}}
+% \begin{tabular}{|l|l|l|} \hline
+% \multicolumn{3}{|c|}{ } \\
+% \multicolumn{3}{|c|}{\bf Types} \\
+% \multicolumn{3}{|c|}{ } \\
+% {\it Kind of type} & {\it \ML\ quotation} &
+% {\it Constructor expression}  \\ \hline
+%  & & \\
+% Type variable &
+% {\small\verb%`:'%}$ident${\small\verb%`%} & {\small\verb%mk_vartype('%}$ident${\small\verb%)%}   \\ \hline
+% Type constant &
+% {\small\verb%`:%}$op${\small\verb%`%} & {\small\verb%mk_type(`%}$op${\small\verb%`,[])%}   \\ \hline
+% Function type &
+% {\small\verb%`:%}$\sigma_1${\small\verb%->%}$\sigma_2${\small\verb%`%} &
+% {\small\verb%mk_type("fun", [`:%}$\sigma_1${\small\verb%`, `:%}$\sigma_2${\small\verb%`])%} \\ \hline
+% Compound type &
+% {\small\verb%`:(%}$\sigma_1${\small\verb%,%} $\ldots$ {\small\verb%,%} $\sigma_n${\small\verb%)%}$op${\small\verb%`%} &
+% {\small\verb%mk_type("%}$op${\small\verb%", [":%}$\sigma_1${\small\verb%`,%} $\ldots$ {\small\verb%,`:%}$\sigma_n${\small\verb%`])%}
+% \\ \hline
+% \end{tabular}
+% \end{center}
+
+\index{ type quotes, in ML@\ml{`:$\cdots$`} (type quotes, in \ML)|)}
 
 \subsection{Term quotation}
 
@@ -606,27 +649,30 @@ the next table.
 {\it Kind of term} & {\it \ML\ quotation} &
 {\it Constructor expression}  \\ \hline
  & & \\
-Variable & {\small\verb%"%}$var${\small\verb%:%}$\sigma${\small\verb%"%} &
-{\small\verb%mk_var(`%}$var${\small\verb%`,":%}$\sigma${\small\verb%")%} \\ \hline
-Constant & {\small\verb%"%}$const${\small\verb%:%}$\sigma${\small\verb%"%} &
-{\small\verb%mk_const(`%}$const${\small\verb%`,":%}$\sigma${\small\verb%")%} \\ \hline
-Combination & {\small\verb%"%}$t_1\ t_2${\small\verb%"%} &
-{\small\verb%mk_comb("%}$t_1${\small\verb%","%}$t_2${\small\verb%")%} \\ \hline
-Abstraction & {\small\verb%"\%}$x${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%mk_abs("%}$x${\small\verb%","%}$t${\small\verb%")%} \\ \hline
+Variable & $var${\small\verb%:%}$\sigma$ &
+{\small\verb%mk_var("%}$var${\small\verb%",%}$\sigma${\small\verb%)%} \\ \hline
+Constant & $const${\small\verb%:%}$\sigma$ &
+{\small\verb%mk_const("%}$const${\small\verb%",%}$\sigma${\small\verb%)%} \\ \hline
+Combination & $t_1\ t_2$ &
+{\small\verb%mk_comb(%}$t_1${\small\verb%, %}$t_2${\small\verb%)%} \\ \hline
+Abstraction & {\small\verb%\%}$x${\small\verb%.%}$t$ &
+{\small\verb%mk_abs(%}$x${\small\verb%, %}$t${\small\verb%)%} \\ \hline
 \end{tabular}
 \end{center}\index{type checking, in HOL logic@type checking, in \HOL\ logic!of quotation syntax|)}
 
-\subsection{Special syntactic forms}
+\subsection{Derived syntactic forms}
 \label{derived-terms}
 
 \index{type checking, in HOL logic@type checking, in \HOL\ logic!special forms in|(}
 \index{quotation, in HOL logic@quotation, in \HOL\ logic!of non-primitive terms|(}
 The \HOL\ quotation parser\index{quotation, in HOL logic@quotation, in \HOL\ logic!parser for} can translate
-various standard logical
-notations\index{parsing, of HOL logic@parsing, of \HOL\ logic!of standard notations} into primitive terms. For example, if {\small\verb%+%} has been
-declared an infix\index{infixes, in HOL logic@infixes, in \HOL\ logic} (as explained in Section~\ref{theoryfns}), then
-{\small\verb%"x+1"%} is translated to {\small\verb%"$+ x 1"%}. The escape
+various standard logical notations\index{parsing, of HOL logic@parsing,
+of \HOL\ logic!of standard notations} into primitive terms. For example,
+if {\small\verb%+%} has been 
+declared an infix\index{infixes, in HOL logic@infixes, in \HOL\ logic}
+(as explained in Section~\ref{theoryfns}) (as it is when
+{\small\verb+arithmeticTheory+} has been loaded), then
+{\small\verb%`x+1`%} is translated to {\small\verb%`$+ x 1`%}. The escape
 character {\small\verb%$%}\index{ escape, in HOL logic parser@{\small\verb+$+} (escape, in \HOL\ logic parser)}\index{declared constants, in HOL logic@declared constants, in \HOL\ logic}\index{infixes, in HOL logic@infixes, in \HOL\ logic}
  suppresses the infix behaviour of
 {\small\verb%+%} and prevents the quotation parser getting confused.  In
@@ -683,27 +729,27 @@ quotations in the same row.
 {\it Primitive term} &
 {\it Constructor expression} \\ \hline
  & & & \\
-Negation & {\small\verb%"~%}$t${\small\verb%"%} & {\small\verb%"$~ %}$t${\small\verb%"%} & {\small\verb%mk_neg("%}$t${\small\verb%")%} \\ \hline
-Disjunction & {\small\verb%"%}$t_1${\small\verb%\/%}$t_2${\small\verb%"%} & {\small\verb%"$\/ %}$t_1\ t_2${\small\verb%"%} &
-{\small\verb%mk_disj("%}$t_1${\small\verb%","%}$t_2${\small\verb%")%} \\ \hline
-Conjunction & {\small\verb%"%}$t_1${\small\verb%/\%}$t_2${\small\verb%"%} & {\small\verb%"$/\ %}$t_1\ t_2${\small\verb%"%} &
-{\small\verb%mk_conj("%}$t_1${\small\verb%","%}$t_2${\small\verb%")%} \\ \hline
-Implication & {\small\verb%"%}$t_1${\small\verb%==>%}$t_2${\small\verb%"%} & {\small\verb%"$==> %}$t_1\ t_2${\small\verb%"%} &
-{\small\verb%mk_imp("%}$t_1${\small\verb%","%}$t_2${\small\verb%")%} \\ \hline
-Equality & {\small\verb%"%}$t_1${\small\verb%=%}$t_2${\small\verb%"%} & {\small\verb%"$= %}$t_1\ t_2${\small\verb%"%} &
-{\small\verb%mk_eq("%}$t_1${\small\verb%","%}$t_2${\small\verb%")%} \\ \hline
-$\forall$-quantification & {\small\verb%"!%}$x${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%"$!(\%}$x${\small\verb%.%}$t${\small\verb%)"%} & {\small\verb%mk_forall("%}$x${\small\verb%","%}$t${\small\verb%")%} \\ \hline
-$\exists$-quantification & {\small\verb%"?%}$x${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%"$?(\%}$x${\small\verb%.%}$t${\small\verb%)"%} & {\small\verb%mk_exists("%}$x${\small\verb%","%}$t${\small\verb%")%} \\ \hline
-$\hilbert$-term & {\small\verb%"@%}$x${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%"$@(\%}$x${\small\verb%.%}$t${\small\verb%)"%} & {\small\verb%mk_select("%}$x${\small\verb%","%}$t${\small\verb%")%} \\ \hline
-Conditional\index{COND@\ml{COND}} & {\small\verb%"(%}$t${\small\verb%=>%}$t_1${\small\verb%|%}$t_2${\small\verb%)"%} &
-{\small\verb%"COND %}$t\ t_1\ t_2${\small\verb%"%} & {\small\verb%mk_cond("%}$t${\small\verb%","%}$t_1${\small\verb%","%}$t_2${\small\verb%")%}
+Negation & {\small\verb%~%}$t$ & {\small\verb%$~ %}$t$ & {\small\verb%mk_neg(%}$t${\small\verb%)%} \\ \hline
+Disjunction & $t_1${\small\verb%\/%}$t_2$ & {\small\verb%$\/ %}$t_1\ t_2$ &
+{\small\verb%mk_disj(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%} \\ \hline
+Conjunction & $t_1${\small\verb%/\%}$t_2$ & {\small\verb%$/\ %}$t_1\ t_2$ &
+{\small\verb%mk_conj(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%} \\ \hline
+Implication & $t_1${\small\verb%==>%}$t_2$ & {\small\verb%$==> %}$t_1\ t_2$ &
+{\small\verb%mk_imp(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%} \\ \hline
+Equality & $t_1${\small\verb%=%}$t_2$ & {\small\verb%$= %}$t_1\ t_2$ &
+{\small\verb%mk_eq(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%} \\ \hline
+$\forall$-quantification & {\small\verb%!%}$x${\small\verb%.%}$t$ &
+{\small\verb%$!(\%}$x${\small\verb%.%}$t${\small\verb%)%} & {\small\verb%mk_forall(%}$x${\small\verb%,%}$t${\small\verb%)%} \\ \hline
+$\exists$-quantification & {\small\verb%?%}$x${\small\verb%.%}$t$ &
+{\small\verb%$?(\%}$x${\small\verb%.%}$t${\small\verb%)%} & {\small\verb%mk_exists(%}$x${\small\verb%,%}$t${\small\verb%)%} \\ \hline
+$\hilbert$-term & {\small\verb%@%}$x${\small\verb%.%}$t$ &
+{\small\verb%$@(\%}$x${\small\verb%.%}$t${\small\verb%)%} & {\small\verb%mk_select(%}$x${\small\verb%,%}$t${\small\verb%)%} \\ \hline
+Conditional\index{COND@\ml{COND}} & {\small\verb%(%}$t${\small\verb%=>%}$t_1${\small\verb%|%}$t_2${\small\verb%)%} &
+{\small\verb%COND %}$t\ t_1\ t_2$ & {\small\verb%mk_cond(%}$t${\small\verb%,%}$t_1${\small\verb%,%}$t_2${\small\verb%)%}
  \\ \hline
-{\small\verb%let%}-expression & {\small\verb%"let %}$x${\small\verb%=%}$t_1${\small\verb% in %}$t_2${\small\verb%"%} &
-{\small\verb%"LET(\%}$x${\small\verb%.%}$t_2${\small\verb%)%}$t_1${\small\verb%"%} &
-{\small\verb%mk_let("\%}$x${\small\verb%.%}$t_1${\small\verb%","%}$t_2${\small\verb%")%} \\ \hline
+{\small\verb%let%}-expression & {\small\verb%let %}$x${\small\verb%=%}$t_1${\small\verb% in %}$t_2$ &
+{\small\verb%LET(\%}$x${\small\verb%.%}$t_2${\small\verb%)%}$t_1$ &
+{\small\verb%mk_let(\%}$x${\small\verb%.%}$t_1${\small\verb%,%}$t_2${\small\verb%)%} \\ \hline
 \end{tabular}
 \end{center}
 
@@ -713,7 +759,7 @@ There are constructors, destructors and indicators for all the
 obvious constructs. (Indicators, \eg\ \ml{is\_neg}, return truth
 values indicating whether or not a term belongs to the syntax
 class in question.) In addition to the constructors listed in the table there
-are constructors for pairs and lists, namely
+are constructors, destructors, and indicators for pairs and lists, namely
 \ml{mk\_pair}\index{mk_pair@\ml{mk\_pair}},
 \ml{mk\_cons}\index{mk_cons@\ml{mk\_cons}} and
 \ml{mk\_list}\index{mk_list@\ml{mk\_list}} (see \REFERENCE).
@@ -723,15 +769,15 @@ The constants {\small\verb%\/%}\index{disjunction, in HOL logic@disjunction, in 
 {\small\verb%==>%} and {\small\verb%=%} are examples of {\it infixes\/}
 and represent $\vee$, $\wedge$, $\imp$ and equality, respectively. If
 $c$ is declared to be an infix, then the \HOL\ parser will translate
-{\small\verb%"%}$t_1\ c\ t_2${\small\verb%"%} to
-{\small\verb%"$%}$c\ t_1\ t_2${\small\verb%"%}.
+$t_1\ c\ t_2$ to
+{\small\verb%$%}$c\ t_1\ t_2$.
 
 The constants {\small\verb%!%}, {\small\verb%?%} and {\small\verb%@%} are examples
 of \label{binder} {\it binders\/}\index{binders, in HOL logic@binders, in \HOL\ logic}
  and represent $\forall$, $\exists$ and $\hilbert$, respectively.  If $c$
 is declared to be a binder, then the
-\HOL\ parser will translate {\small\verb%"%}$c\ x${\small\verb%.%}$t${\small\verb%"%} to the combination
-{\small\verb%"$%}$c${\small\verb%(\%}$x${\small\verb%.%}$t${\small\verb%)"%}
+\HOL\ parser will translate $c\ x${\small\verb%.%}$t$ to the combination
+{\small\verb%$%}$c${\small\verb%(\%}$x${\small\verb%.%}$t${\small\verb%)%}
 (\ie\ the application of the constant $c$ to the representation of
 the abstraction $\lquant{x}t$)\index{ function abstraction binder, in HOL logic@{\small\verb+\+} (function abstraction binder, in \HOL\ logic)}.
 
@@ -756,20 +802,20 @@ the parser also supports the following syntactic abbreviations.
 {\it Abbreviated term} & {\it Meaning} &
 {\it Constructor expression} \\ \hline
  & &  \\
-{\small\verb%"%}$t\ t_1 \cdots t_n${\small\verb%"%} &
-{\small\verb%"(%}$\cdots${\small\verb%(%}$t\ t_1${\small\verb%)%}$\cdots t_n${\small\verb%)"%} &
-{\small\verb%list_mk_comb("%}$t${\small\verb%",["%}$t_1${\small\verb%"; %}$\ldots${\small\verb% ;"%}$t_n${\small\verb%"])%} \\ \hline
-{\small\verb%"\%}$x_1\cdots x_n${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%"\%}$x_1${\small\verb%. %}$\cdots${\small\verb% \%}$x_n${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%list_mk_abs(["%}$x_1${\small\verb%"; %}$\ldots${\small\verb% ;"%}$x_n${\small\verb%"],"%}$t${\small\verb%")%}
+$t\ t_1 \cdots t_n$ &
+{\small\verb%(%}$\cdots${\small\verb%(%}$t\ t_1${\small\verb%)%}$\cdots t_n${\small\verb%)%} &
+{\small\verb%list_mk_comb(%}$t${\small\verb%,[%}$t_1${\small\verb%, %}$\ldots${\small\verb% ,%}$t_n${\small\verb%])%} \\ \hline
+{\small\verb%\%}$x_1\cdots x_n${\small\verb%.%}$t$ &
+{\small\verb%\%}$x_1${\small\verb%. %}$\cdots${\small\verb% \%}$x_n${\small\verb%.%}$t$ &
+{\small\verb%list_mk_abs([%}$x_1${\small\verb%, %}$\ldots${\small\verb% ,%}$x_n${\small\verb%],%}$t${\small\verb%)%}
 \\ \hline
-{\small\verb%"!%}$x_1\cdots x_n${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%"!%}$x_1${\small\verb%. %}$\cdots${\small\verb% !%}$x_n${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%list_mk_forall(["%}$x_1${\small\verb%"; %}$\ldots${\small\verb% ;"%}$x_n${\small\verb%"],"%}$t${\small\verb%")%}
+{\small\verb%!%}$x_1\cdots x_n${\small\verb%.%}$t$ &
+{\small\verb%!%}$x_1${\small\verb%. %}$\cdots${\small\verb% !%}$x_n${\small\verb%.%}$t$ &
+{\small\verb%list_mk_forall([%}$x_1${\small\verb%, %}$\ldots${\small\verb% ,%}$x_n${\small\verb%],%}$t${\small\verb%)%}
 \\ \hline
-{\small\verb%"?%}$x_1\cdots x_n${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%"?%}$x_1${\small\verb%. %}$\cdots${\small\verb% ?%}$x_n${\small\verb%.%}$t${\small\verb%"%} &
-{\small\verb%list_mk_exists(["%}$x_1${\small\verb%"; %}$\ldots${\small\verb% ;"%}$x_n${\small\verb%"],"%}$t${\small\verb%")%} \\
+{\small\verb%?%}$x_1\cdots x_n${\small\verb%.%}$t$ &
+{\small\verb%?%}$x_1${\small\verb%. %}$\cdots${\small\verb% ?%}$x_n${\small\verb%.%}$t$ &
+{\small\verb%list_mk_exists([%}$x_1${\small\verb%, %}$\ldots${\small\verb% ,%}$x_n${\small\verb%],%}$t${\small\verb%)%} \\
 \hline
 \end{tabular}
 \end{center}
@@ -787,186 +833,6 @@ that these are not proper inverses of \ml{list\_mk\_conj} and
 \ml{list\_mk\_disj}.
 \index{term constructors, in HOL logic@term constructors, in \HOL\ logic|)}
 \index{terms, in HOL logic@terms, in \HOL\ logic!constructors for|)}
-
-
-\section{Syntax for restricted quantification}\label{res-quant}
-\index{types, in HOL logic@types, in \HOL\ logic!dependent}
-\index{dependent types in HOL logic@dependent types in \HOL\ logic}
-\index{quantifiers!restricted}
-
-Syntactic support for restricted quantification and abstraction is
-provided. This follows a suggestion discussed at the Second \HOL\ Users
-Meeting and implements a method of simulating subtypes and dependent
-types with predicates.
-
-Currently no derived rules are provided to support this notation, so
-any inferences will need to work on the underlying semantic
-representation.
-
-The new syntax automatically translates as follows:
-
-\begin{hol}
-{\small\verb%   \%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_ABSTRACT %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-{\small\verb%   !%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_FORALL   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-{\small\verb%   ?%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_EXISTS   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-{\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_SELECT   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}
-\end{hol}
-
-Anything can be written between the binder and `\ml{::}' that can be
-written between the binder and `\ml{.}`. See the examples below.
-
-The flag \ml{print\_restrict} has default \ml{true}, but if set to \ml{false}
-will disable the pretty printing. This is useful for seeing what the semantics
-of particular restricted abstractions are.
-
-The constants \ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
-\ml{RES\_SELECT} are
-defined in the theory \ml{bool} by:
-
-
-\begin{hol}\index{RES_FORALL@\ml{RES\_FORALL}}
-\index{RES_EXISTS@\ml{RES\_EXISTS}}
-\index{RES_SELECT@\ml{RES\_SELECT}}
-\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}\begin{verbatim}
-   RES_ABSTRACT P B  =  \x:*. (P x => B x | ARB:**)
-
-   RES_FORALL   P B  =  !x:*. P x ==> B x
-
-   RES_EXISTS   P B  =  ?x:*. P x /\ B x
-
-   RES_SELECT   P B  =  @x:*. P x /\ B x
-\end{verbatim}\end{hol}
-
-\noindent where the constant \ml{ARB}\index{ARB@\ml{ARB}},
-which is also defined in the theory \ml{bool}, has the definition:
-
-\begin{hol}\begin{verbatim}
-   ARB  =  @x:*. T
-\end{verbatim}\end{hol}
-
-User-defined binders can also have restricted forms, which are set up
-with the function:
-
-\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}|pin}
-\begin{verbatim}
-   associate_restriction : (string # string) -> *
-\end{verbatim}\end{boxed}
-
-
-\noindent If \m{c} is the name
-of a binder and \ml{RES\_}\m{c} is the name of a suitable constant (which
-must be explicitly defined), then executing:
-
-\begin{hol}
-{\small\verb%   associate_restriction(`%}$c${\small\verb%`, `RES_%}$c${\small\verb%`)%}
-\end{hol}
-
-\noindent will cause the parser and pretty-printer to support:
-
-\begin{hol}
-{\small\verb%   %}$c$ $v${\small\verb%::%}$P${\small\verb%. %}$B${\small\verb%    <---->   RES_%}$c$ $P${\small\verb% (\%}$v${\small\verb%. %}$B${\small\verb%)%}
-\end{hol}
-
-Here is an example session:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"!x y::P. x<y";;
-"!x y :: P. x < y" : term
-
-#set_flag(`print_restrict`, false);;
-true : bool
-
-#"!x y::P. x<y";;
-"RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
-
-#"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
-"RES_EXISTS
- (\(m,n). m < n)
- (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
-: term
-
-#"\x y z::P.[0;x;y;z]";;
-"RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
-: term
-\end{verbatim}\end{session}
-
-A conversion that rewrites away the constants \ml{RES\_ABSTRACT},
-\ml{RES\_FORALL}, \ml{RES\_EXISTS} and \ml{RES\_SELECT} is:
-
-\begin{hol}\begin{verbatim}
-   let RESTRICT_CONV =
-        (PURE_REWRITE_CONV [definition `bool` `RES_ABSTRACT`;
-                            definition `bool` `RES_FORALL`;
-                            definition `bool` `RES_EXISTS`;
-                            definition `bool` `RES_SELECT`])
-        THENC (DEPTH_CONV BETA_CONV)
-\end{verbatim}\end{hol}
-
-\noindent This is a bit unsatisfactory, as is shown by the artificial
-example below:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
-t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
-
-#RESTRICT_CONV t;;
-|- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
-   (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
-\end{verbatim}\end{session}
-
-The variable $x$ in the definitions of the constants
-\ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
-\ml{RES\_SELECT} gets confused with the variable in the supplied term.
-This can be avoided by changing \ml{RESTRICT\_CONV} to perform
-explicit alpha-conversion. For example, by implementing a conversion:
-
-\begin{hol}
-{\small\verb%   RES_FORALL %}$P${\small\verb% (\%}$v$\ml{.}$B$\ml{[}$v$\ml{])  ---->  !}$v$\ml{. }$P$ $v$\ml{ ==> }$B$\ml{[}$v$\ml{]}
-\end{hol}
-
-\noindent Dealing with the case when
-$v$ is a variable structure is also desirable. For example:
-
-\begin{session}\begin{verbatim}
-#let t1 = "!(m,n)::P. m<n";;
-t1 = "!(m,n) :: P. m < n" : term
-
-#RESTRICT_CONV t1;;
-|- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
-
-\end{verbatim}\end{session}
-
-\noindent If anyone writes the desired conversions please let us know!
-
-Here is an example of a user-defined restriction:
-
-\begin{session}\begin{verbatim}
-#new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
-|- !p. $DURING p = $! p
-
-#"DURING x::(m,n). p x";;
-no restriction constant associated with DURING
-skipping: x " ;; parse failed
-
-#new_definition
-# (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
-|- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
-
-#associate_restriction(`DURING`,`RES_DURING`);;
-() : void
-
-#"DURING x::(m,n). p x";;
-"DURING x :: (m,n). p x" : term
-
-#set_flag(`print_restrict`,false);;
-true : bool
-
-#"DURING x::(m,n). p x";;
-"RES_DURING(m,n)(\x. p x)" : term
-\end{verbatim}\end{session}
-
 
 
 
@@ -1013,7 +879,7 @@ t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
 \index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired|(}
 \index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!uncurrying, in paired|(}
 The quotation parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of function abstractions}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!abbreviation for multiple}\index{terms, in HOL logic@terms, in \HOL\ logic!function abstraction}
- will convert
+ will convert\footnote{Only when the theory of pairs is loaded.}
 {\small\verb%"\(%}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%"%}
 to {\small\verb%"UNCURRY(\%}$x_1\ x_2${\small\verb%.%}$t${\small\verb%)"%},
 where the constant {\small\verb%UNCURRY%}
@@ -1061,14 +927,12 @@ y${\small\verb%.%}$t${\small\verb%)"%}\\
 
 \index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax|)}
 The \HOL\ top-level printer\index{printing, in HOL logic@printing, in \HOL\ logic!of function abstractions}
- inverts these transformations if the
-flag
-\ml{print\_uncurry} is \ml{true}. For example:
+ inverts these transformations. For example:
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-#"\((a,b),(x,y)). (a+b) < (x*y)";;
-"\((a,b),x,y). (a + b) < (x * y)" : term
+#"\((a,b),(x,y)). a+b < x*y";;
+"\((a,b),x,y). a + b < x * y" : term
 
 #set_flag(`print_uncurry`,false);;
 true : bool
@@ -1101,7 +965,7 @@ diagnostic messages referring to the transformed term:
 \begin{session}\begin{verbatim}
 #"\(x,y). x+1";;
 Indeterminate types:
-    "UNCURRY:(num -> (?1 -> num)) -> (num # ?2 -> num)"
+    "UNCURRY:(num -> (?1 -> num)) -> (num * ?2 -> num)"
 
 evaluation failed     types indeterminate in quotation
 \end{verbatim}\end{session}
@@ -1200,155 +1064,6 @@ the surface syntax.\index{quotation, in HOL logic@quotation, in \HOL\ logic|)}\i
 
 \ml{let}-terms can be simplified with \ml{let\_CONV} -- see Section~\ref{let-terms}.
 
-\section{Syntax for sets}\index{set theory notation}
-
-The special purpose set-theoretic notations
-{\small\verb%"{%}$t_1,t_2,\ldots,t_n${\small\verb%}"%} and
-{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%} are available.
-The normal interpretation of the former is the finite set containing
-$t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
-is the set of all $t$s such that $p$. These interpretations are predefined for
-the library \ml{sets}, but the user can use the syntax for other purposes if
-he or she wishes, using the functions:
-
-\begin{boxed}
-\index{define_finite_set_syntax@\ml{define\_finite\_set\_syntax}|pin}
-\index{define_set_abstraction_syntax@\ml{define\_set\_abstraction\_syntax}|pin}
-\begin{alltt}
-   define_finite_set_syntax      : (string # string) -> void
-   define_set_abstraction_syntax : string -> void
-\end{alltt}\end{boxed}
-
-\noindent Executing:
-
-\begin{hol}\begin{alltt}
-   define_finite_set_syntax(`\(c\sb{1}\)`,`\(c\sb{2}\)`)
-\end{alltt}\end{hol}
-
-\noindent causes {\small\verb%"{%}$t_1,\ldots,t_n${\small\verb%}"%}
-to parse to:
-
-\begin{hol}\begin{alltt}
-   "\(c\sb{2}\) \(t\sb{1}\) (\(c\sb{2}\) \(t\sb{2}\) \(\cdots\) (\(c\sb{2}\) \(t\sb{n}\) \(c\sb{1}\)) \(\cdots\) ))"
-\end{alltt}\end{hol}
-
-\noindent with failure if either $c_1$ or $c_2$ is not the name of a constant.
-
-In the library \ml{sets}, the empty set is \ml{EMPTY} and
-the infixed function \ml{INSERT} adds an element to a set.
-Executing:
-
-\begin{hol}\begin{verbatim}
-   define_finite_set_syntax(`EMPTY`,`INSERT`)
-\end{verbatim}\end{hol}
-
-\noindent will cause
-
-\begin{hol}\begin{verbatim}
-   "{1,2,3,4}"
-\end{verbatim}\end{hol}
-
-\noindent to parse to
-
-\begin{hol}\begin{verbatim}
-   "1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))"
-\end{verbatim}\end{hol}
-
-
-Executing:
-
-\begin{hol}\begin{alltt}
-   define_set_abstraction_syntax `\(c\)`
-\end{alltt}\end{hol}
-
-\noindent causes  {\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%}
-to parse to:
-
-\medskip
-
-\noindent{\small
-{\verb%   "%}}$c${\small{\verb%(\(%}$x_1${\verb%,%}$\ldots${\verb%,%}$x_n${\verb%).(%}$t${\verb%,%}$p${\verb%))"%}
-}
-
-\medskip
-
-\noindent where $x_1$, $\ldots$ , $x_n$ are the free variables occurring in both $t$
-and $p$.  If there are no such free variables then an error results.
-The order in which the variables are listed in the variable structure
-of the paired abstraction is an unspecified function of the structure
-of $t$ (it is approximately left to right). Failure if $c$ is not the
-name of a constant.
-
-For example, if the library \ml{sets} (i.e. what used to be \ml{all\_sets})
-is loaded, then
-
-\begin{hol}\begin{verbatim}
-   define_set_abstraction_syntax `GSPEC`
-\end{verbatim}\end{hol}
-
-\noindent will cause
-
-\begin{hol}\begin{verbatim}
-   "{x+y | (x < y) /\ (y < z)}"
-\end{verbatim}\end{hol}
-
-\noindent to parse to:
-
-\begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y). ((x+y), (x < y) /\ (y < z)))"
-\end{verbatim}\end{hol}
-
-\noindent where \ml{GSPEC} is defined by:
-
-\begin{hol}\begin{verbatim}
-   |- !f. GSPEC f = SPEC(\x. ?y. x,T = f y)
-\end{verbatim}\end{hol}
-
-\noindent and \ml{SPEC} abstracts a predicate to a set (it is the abstraction
-bijection used in the definition of the type operator \ml{set}).
-Other examples are:
-
-\begin{hol}\begin{verbatim}
-   "{x+y+z | (x < y) /\ (y < z)}"
-\end{verbatim}\end{hol}
-
-\noindent will parse to:
-
-\begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))"
-\end{verbatim}\end{hol}
-
-\noindent and
-
-\begin{hol}\begin{verbatim}
-   "{x+y+w | (x < y) /\ (y < z)}"
-\end{verbatim}\end{hol}
-
-\noindent will parse to:
-
-\begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y). (x+(y+w), (x < y /\ y < z)))"
-\end{verbatim}\end{hol}
-
-
-Note that the precedence of comma is increased in the contexts
-``{\small\verb%{%}$\cdots${\small\verb%}%}'' and
-``{\small\verb%{%}$\cdots${\small\verb%|%}''.
-Terms will be printed in set notation if the flag \ml{print\_set} is
-\ml{true}.
-Note that
-
-\medskip
-
-\ml{"}$c${\small\verb%(\(%}$x_1$\ml{,}$\ldots$\ml{,}$x_n$\ml{).(}$t$\ml{,}$p$\ml{))"}
-
-\medskip
-
-\noindent will only print as
-{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%}
-if the variables $x_1$, $\ldots$ ,
-$x_n$ occur free in both $t$ and $p$ (and \ml{print\_set} is \ml{true}) .
-
 
 \subsection{Antiquotation}
 
@@ -1377,91 +1092,6 @@ z = "y = x + 1" : term
 #"!x:num.?y:num.^z";;
 "!x. ?y. y = x + 1" : term
 \end{verbatim}\end{session}
-
-
-\subsection{User-programmable quotation typechecker}
-\index{quotation, in HOL logic@quotation, in \HOL\ logic!typechecker for|(}
-
-The typechecker for \HOL\ quotations contains a number of arbitrary
-design decisions. Several people have suggested changes, e.g. that
-full Hindley/Milner type inference be performed. Rather than try to
-create a single new improved typechecker, a facility is now provided
-that enables the user to write his or her own one and then to install
-it in the system.
-
-\index{preterms|(}
-The \ML\ abstract type {\small\verb%preterm%} represents the parse trees of \HOL\
-terms. A typechecker is a function of type {\small\verb%preterm->term%}. If the flag
-\ml{preterm} is set to \ml{true} (the default is \ml{false}), then \HOL\ will use
-whatever \ML\ function is currently bound to the name
-\ml{preterm\_handler} as
-the quotation typechecker. The way this works is that when
-\ml{preterm} is true the parser produces a preterm rather than a term,
-and then wraps a call of \ml{preterm\_handler}
-around the quotation.\index{type checking, in HOL logic@type checking,
-in \HOL\ logic!user programmed} Other uses of preterms are possible, for example
-as patterns for describing terms.
-
-The definition of the \ML\ type {\small\verb%preterm%} is:
-
-\begin{hol}\index{preterm@\ml{preterm}!the type}\begin{alltt}
-   rectype preterm =
-     preterm_var      of string                        \({\it Variables}\)
-   | preterm_const    of string                        \({\it Constants}\)
-   | preterm_comb     of preterm # preterm             \({\it Combinations}\)
-   | preterm_abs      of preterm # preterm             \({\it Abstractions}\)
-   | preterm_typed    of preterm # type                \({\it Explicit typing}\)
-   | preterm_antiquot of term                          \({\it Antiquotation}\)
-\end{alltt}\end{hol}
-
-The function:
-
-\begin{boxed}\index{preterm_to_term@\ml{preterm\_to\_term}|pin}
-\begin{verbatim}
-   preterm_to_term : preterm -> term
-\end{verbatim}\end{boxed}
-
-\noindent invokes the standard \HOL\ typechecker on a preterm and returns the
-resulting typechecked term (or causes the standard error message).\index{preterms|)}
-
-
-
-The following is a rather contrived example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\index{preterm_handler@\ml{preterm\_handler}|pin}
-\begin{verbatim}
-#letref p_reg = preterm_var `x`;;
-p_reg = preterm_var `x` : preterm
-
-#let preterm_handler p = p_reg:=p;
-                         print_string `Typechecking ... `;
-                         print_newline();
-                         preterm_to_term p;;
-preterm_handler = - : (preterm -> term)
-\end{verbatim}\end{session}
-
-\begin{session}
-\begin{verbatim}
-#set_flag(`preterm`,true);;
-false : bool
-
-#"x+y";;
-Typechecking ...
-"x + y" : term
-
-#p_reg;;
-preterm_comb((preterm_comb((preterm_const `+`), preterm_var `x`)),
-             preterm_var `y`)
-: preterm
-\end{verbatim}\end{session}
-
-\noindent Different top-level typechecking can be defined by using a
-different definition of the function
-\ml{preterm\_handler}. Note that quotations and their typechecking
-is purely a `user interface' feature, so changing the typechecker does
-not compromise the logical soundness of \HOL.\index{quotation, in HOL logic@quotation, in \HOL\ logic!typechecker for|)}
-
 
 
 \section{Theorems}
@@ -1529,7 +1159,7 @@ The type {\small\verb%thm%} has a primitive destructor function
 \begin{boxed}
 \index{dest_thm@\ml{dest\_thm}|pin}
 \begin{verbatim}
-   dest_thm : thm -> (term list # term)
+   dest_thm : thm -> (term list * term)
 \end{verbatim}\end{boxed}
 
 \noindent which returns a pair consisting of the hypothesis\index{hypotheses!of theorems} list and
@@ -1621,6 +1251,8 @@ th = . |- P($@ P)
 P x |- P($@ P)() : void
 \end{verbatim}\end{session}\index{theorem notation, in HOL logic@theorem notation, in \HOL\ logic|)}
 
+\subsection{Oracles}
+\label{avra_theorems}
 
 \section{Theories}\index{theories, in HOL logic@theories, in \HOL\ logic!representation of|(}
 \label{theoryfns}
@@ -1776,7 +1408,7 @@ theory.
 \begin{boxed}
 \index{new_constant@\ml{new\_constant}|pin}
 \begin{verbatim}
-   new_constant : (string # type) -> void
+   new_constant : (string * type) -> void
 \end{verbatim}\end{boxed}
 
 \noindent Executing {\small\verb%new_constant(`%}$c${\small\verb%`,%}$\sigma${\small\verb%)%} makes
@@ -1793,7 +1425,7 @@ theory.
 \begin{boxed}
 \index{new_infix@\ml{new\_infix}|pin}
 \begin{verbatim}
-   new_infix : (string # type) -> void
+   new_infix : (string * type) -> void
 \end{verbatim}\end{boxed}
 
 
@@ -1811,7 +1443,7 @@ Failure if:
 \begin{boxed}
 \index{new_binder@\ml{new\_binder}|pin}
 \begin{verbatim}
-   new_binder : (string # type) -> void
+   new_binder : (string * type) -> void
 \end{verbatim}\end{boxed}
 
 
@@ -1828,7 +1460,7 @@ Failure if:
 \begin{boxed}
 \index{new_axiom@\ml{new\_axiom}|pin}
 \begin{verbatim}
-   new_axiom : (string # term) -> thm
+   new_axiom : (string * term) -> thm
 \end{verbatim}\end{boxed}
 
 
@@ -1848,7 +1480,7 @@ Once a theorem has been proved, it can be saved with the function
 \begin{boxed}
 \index{save_thm@\ml{save\_thm}|pin}
 \begin{verbatim}
-   save_thm : (string # thm) -> thm
+   save_thm : (string * thm) -> thm
 \end{verbatim}\end{boxed}
 
 \noindent
@@ -1906,7 +1538,7 @@ the current theory.
 \begin{boxed}
 \index{new_definition@\ml{new\_definition}|pin}
 \begin{verbatim}
-   new_definition : (string # term) -> thm
+   new_definition : (string * term) -> thm
 \end{verbatim}\end{boxed}
 
 
@@ -1941,8 +1573,8 @@ the appropriate form (\ml{$\sigma_1$->$\sigma_2$->$\sigma_3$} for infixes and
 \index{new_infix_definition@\ml{new\_infix\_definition}|pin}
 \index{new_binder_definition@\ml{new\_binder\_definition}|pin}
 \begin{verbatim}
-   new_infix_definition  : (string # term) -> thm
-   new_binder_definition : (string # term) -> thm
+   new_infix_definition  : (string * term) -> thm
+   new_binder_definition : (string * term) -> thm
 \end{verbatim}\end{boxed}
 
 \noindent Note that until an infix or binder declaration has been processed the
@@ -2010,7 +1642,7 @@ the \HOL\ system.
 \begin{boxed}
 \index{new_specification@\ml{new\_specification}|pin}
 \begin{verbatim}
-   new_specification : string -> ((string#string)list) -> thm -> thm
+   new_specification : string -> ((string*string)list) -> thm -> thm
 \end{verbatim}\end{boxed}
 
 Evaluating:
@@ -2030,10 +1662,7 @@ $\ml{,}$x_n$\ml{]}\\
 \noindent simultaneously  introduces  new constants  named $c_1$, $\dots$,
 $c_n$ satisfying the property:
 
-
-
 \[ \ml{|- }t\ml{[}c_1\ml{,}\ \ldots\ \ml{,}c_n\ml{]} \]
-
 
 \noindent If \ml{`}$flag_i$\ml{`} is \ml{`constant`}
 then $c_i$ is declared an ordinary constant, if it is
@@ -2162,7 +1791,7 @@ The following \ML\ function makes a type definition in the \HOL\ system.
 \begin{boxed}
 \index{new_type_definition@\ml{new\_type\_definition}|pin}
 \begin{verbatim}
-   new_type_definition : (string # term # thm) -> thm
+   new_type_definition : (string * term * thm) -> thm
 \end{verbatim}\end{boxed}
 
 \noindent If $t$ is a term of type
@@ -2358,34 +1987,11 @@ names are used when accessing theories with the functions
 %example session in Section~\ref{example}.
 
 
-
-A theory with no descendants\index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
+The current theory\index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
 can be extended by adding new parents, types,
 constants, axioms and definitions. Theories that are already the parents of
-other theories cannot be extended in this way.\footnote{It
-would be difficult
-to implement the necessary checks to ensure that added types,
-constants \etc\ did not invalidate declarations in the descendant theories.}
-When a new theory is being created or an existing one extended it is necessary
-to be in draft mode.\index{draft mode, in HOL system@draft mode, in \HOL\ system}
-In proof mode\index{proof mode, in HOL system@proof mode, in \HOL\ system} the
-functions with prefix `{\small\verb%new_%}'\index{new_@\ml{new\_}$\ldots$}
-listed above are not available.
-
-The functions for entering an already existing theory in either draft mode
-or proof mode are, respectively:
-
-
-\begin{boxed}\index{extend_theory@\ml{extend\_theory}|pin}
-\index{load_theory@\ml{load\_theory}|pin}
-\begin{verbatim}
-   extend_theory : string -> void
-   load_theory   : string -> void
-\end{verbatim}\end{boxed}
-
-The function \ml{close\_theory}\index{close_theory@\ml{close\_theory}}
- (see Section~\ref{theoryprims}) is used
-to finish a session and write all new declarations to the theory file.
+other theories cannot be extended in this way; they can be thought of as
+\emph{frozen}. 
 
 There are various functions for loading the contents of theory files:
 
@@ -2400,13 +2006,13 @@ There are various functions for loading the contents of theory files:
 \index{theorems@\ml{theorems}|pin}
 \begin{verbatim}
    parents     : string -> string list
-   types       : string -> (int # string) list
+   types       : string -> (int * string) list
    constants   : string -> term list
    infixes     : string -> term list
    binders     : string -> term list
-   axioms      : string -> (string # thm) list
-   definitions : string -> (string # thm) list
-   theorems    : string -> (string # thm) list
+   axioms      : string -> (string * thm) list
+   definitions : string -> (string * thm) list
+   theorems    : string -> (string * thm) list
 \end{verbatim}\end{boxed}
 
 \noindent The first argument is the name of a theory (which must be in the
@@ -2425,11 +2031,8 @@ specifications and type definitions are both retrieved using the function
 \ml{definitions}.
 
 
-
 Individual axioms, definitions and theorems can be read (from the current or
 ancestor theories) using the following \ML\ functions:
-
-
 
 \begin{boxed}
 \index{axiom@\ml{axiom}|pin}
@@ -2451,30 +2054,16 @@ which takes a theory name and then
 prints out the named theory in a readable format.\index{axioms!retrieval of, in HOL system@retrieval of, in \HOL\ system|)}\index{theories, in HOL logic@theories, in \HOL\ logic!functions for accessing|)}
 
 
-\subsection{The theory {\tt HOL}}
-\label{HOL-theory}
-
-%The types and constants in the built-in theories are listed here.  The axioms,
-%definitions and pre-proved theorems are not listed; they can be found in
-%Section~\ref{preproved-theories}.
+\subsection{The theory {\tt bool}}
+\label{boolthy}
 
 \index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|(}
 At start-up,  the  initial  theory  for  users  of  the \HOL\  system is called
-\ml{HOL}\index{HOL@\ml{HOL}}, which is constructed when the \HOL\ system is made.   The ancestry of
-this theory is quite complicated and reflects, to  some extent,  the history of
-\HOL\ as  it  evolved  from  \LCF.\index{LCF@\LCF}    This ancestry, which
-is described  in detail in
-Section~\ref{HOL-ancestry},  contains two important  theories: \ml{bool}\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory} and
-\ml{ind}. These define the primitive logical basis of the \HOL\ logic.
-
-\subsubsection{The theory {\tt bool}}
-\label{boolthy}
-
+\ml{bool}\index{HOL@\ml{HOL}}, which is constructed when the \HOL\ system is built.  
 The theory {\small\verb%bool%} introduces the type
  {\small\verb%bool%} and
-contains four of the five axioms\index{axioms!in bool theory@in \ml{bool} theory}
-for higher order logic (the fifth axiom is
-in the theory {\small\verb%ind%}).  These axioms, together with the rules
+contains the five axioms\index{axioms!in bool theory@in \ml{bool} theory}
+for higher order logic. These axioms, together with the rules
 of inference described later in Section~\ref{rules}, constitute the core of the
 \HOL\ logic.  Because of the way the \HOL\ system evolved from
 \LCF,\index{LCF@\LCF}\footnote{To simplify the porting of the LCF theorem-proving
@@ -2482,10 +2071,13 @@ tools to the HOL system, the HOL logic was made as like PP$\lambda$ (the logic
 built-in to LCF) as possible.} the particular axiomatization\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic} of
 higher order logic it uses differs from the classical
 axiomatization due to Church\index{Church, A.} \cite{Church}.  The biggest difference is that
-in Church's formulation type variables\index{type variables, in HOL logic@type variables, in \HOL\ logic!differences from classical} are in the meta-language, whereas
-in the \HOL\ logic they are part of the object language.
+in Church's formulation type variables\index{type variables, in HOL
+ logic@type variables, in \HOL\ logic!differences from classical} are in
+ the meta-language, whereas in the \HOL\ logic they are part of the object language.
 
-There are three primitive constants\index{constants, in HOL logic@constants, in \HOL\ logic!primitive logical}\index{primitive constants, of HOL logic@primitive constants, of \HOL\ logic}
+There are three primitive constants\index{constants, in HOL
+ logic@constants, in \HOL\ logic!primitive logical}\index{primitive
+ constants, of HOL logic@primitive constants, of \HOL\ logic} 
  in the theory {\small\verb%bool%}\index{bool, the type in HOL logic@\ml{bool}, the type in \HOL\ logic}:
 {\small\verb%=%}\index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}\index{equality, in HOL logic@equality, in \HOL\ logic}
  (equality, an infix), {\small\verb%==>%}\index{ implication, in HOL logic@{\small\verb+==>+} (implication, in \HOL\ logic)} (implication, an
@@ -2581,7 +2173,7 @@ There are four\index{universal quantifier, in HOL logic@universal quantifier, in
 
    ETA_AX          |- !t. (\x. t x) = t
 
-   SELECT_AX       |- !P:*->bool x. P x ==> P($@ P)
+   SELECT_AX       |- !P:'a->bool x. P x ==> P($@ P)
 \end{verbatim}\end{hol}
 
 \noindent
@@ -2608,31 +2200,8 @@ definitions:
    LET_DEF      |- LET       = \f x. f x
 
    COND_DEF     |- COND      = \t t1 t2.@x.((t=T)==>(x=t1))/\((t=F)==>(x=t2))
-\end{verbatim}\end{hol}
-
-\noindent The theory \ml{bool} also contains the definitions of the constants
-{\small\verb!RES_FORALL!}, {\small\verb!RES_EXISTS!},
-{\small\verb!RES_SELECT!}, {\small\verb!ARB!} and {\small\verb!RES_ABSTRACT!},
-which are used to support restricted
-quantification\index{quantifiers!restricted} in the \HOL\ logic (see
-Section~\ref{res-quant}).  The definitions are:
-
-\begin{hol}
-\index{RES_FORALL@\ml{RES\_FORALL}}
-\index{RES_EXISTS@\ml{RES\_EXISTS}}
-\index{RES_SELECT@\ml{RES\_SELECT}}
-\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}
-\index{ARB@\ml{ARB}}
-\begin{verbatim}
-   RES_FORALL   |- !P B. RES_FORALL P B = (!x. P x ==> B x)
-
-   RES_EXISTS   |- !P B. RES_EXISTS P B = (?x. P x /\ B x)
-
-   RES_SELECT   |- !P B. RES_SELECT P B = (@x. P x /\ B x)
 
    ARB          |- ARB = (@x. T)
-
-   RES_ABSTRACT |- !P B. RES_ABSTRACT P B = (\x. (P x => B x | ARB))
 \end{verbatim}\end{hol}
 
 \noindent The theory \ml{bool} also contains the definitions of
@@ -2650,16 +2219,14 @@ the constants {\small\verb%ONE_ONE%} and
    ONTO_DEF    |- ONTO f    = (!y. ?x. y = f x)
 \end{verbatim}\end{hol}
 
-\noindent For further discussion of the
-theory \ml{bool} see Section~\ref{boolfull}.
+% \subsubsection{The theory {\tt ind}}
+% \label{ind}
 
-\subsubsection{The theory {\tt ind}}
-\label{ind}
-
-The theory {\small\verb%ind%}\index{ind, the theory@\ml{ind}, the theory} introduces the type {\small\verb%ind%}\index{ind, the type@\ml{ind}, the type} of
+The theory {\small\verb%bool%}\index{ind, the theory@\ml{ind}, the
+theory} also introduces the type {\small\verb%ind%}\index{ind, the type@\ml{ind}, the type} of
 {\it individuals\/}\index{individuals}
  and the {\it Axiom of Infinity\/}\index{axiom of infinity}. This axiom states
-that the set denoted by {\small\verb%ind%} is infinite. The four axioms of
+that the set denoted by {\small\verb%ind%} is infinite. The four other axioms of
 the theory {\small\verb%bool%}, the rules of inference in
 Section~\ref{rules} and the Axiom of Infinity are, together, sufficient for
 developing all of standard mathematics. Thus, in principle, the user of the
@@ -2670,7 +2237,6 @@ axioms because deriving them from definitions can be tedious---proving that
 
 
 The Axiom of Infinity\index{axioms!in ind theory@in \ml{ind} theory} is
-
 
 {\begin{hol}
 \index{INFINITY_AX@\ml{INFINITY\_AX}}
@@ -2684,6 +2250,9 @@ The Axiom of Infinity\index{axioms!in ind theory@in \ml{ind} theory} is
 This asserts that there exists a one-to-one map from {\small\verb%ind%} to
 itself that is not onto. This implies that the type {\small\verb%ind%}
 denotes an infinite set.\index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|)}
+
+\noindent For further discussion of the
+theory \ml{bool} see Section~\ref{boolfull}.
 
 \subsection{Primitive rules of inference of the HOL Logic}
 \label{rules}
@@ -2795,7 +2364,7 @@ of the form {\small\verb%(\%}$x${\small\verb%.%}$t_1${\small\verb%)%}$t_2${\smal
 
 \begin{boxed}
 \begin{verbatim}
-   SUBST : (thm # term)list -> term -> thm -> thm
+   SUBST : (thm * term)list -> term -> thm -> thm
 \end{verbatim}\end{boxed}
 
 \begin{center}
@@ -2878,7 +2447,7 @@ Failure if $x$ is not a variable, or $x$
 
 \begin{boxed}\index{INST_TYPE@\ml{INST\_TYPE}|pin}
 \begin{verbatim}
-   INST_TYPE : (type#type) list -> thm -> thm
+   INST_TYPE : (type*type) list -> thm -> thm
 \end{verbatim}\end{boxed}
 
 \begin{center}
@@ -2970,7 +2539,7 @@ function:
 
 \begin{boxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
 \begin{verbatim}
-   new_type_abbrev : (string # type) -> void
+   new_type_abbrev : (string * type) -> void
 \end{verbatim}\end{boxed}
 
 \noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
@@ -2984,7 +2553,7 @@ is given by the function:
 
 \begin{boxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
 \begin{verbatim}
-   type_abbrevs : string -> (string # type) list
+   type_abbrevs : string -> (string * type) list
 \end{verbatim}\end{boxed}
 
 
@@ -2996,19 +2565,19 @@ abbreviating types:
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-#new_theory `numpair`;;
+*new_theory `numpair`;;
 () : void
 
-#new_type_abbrev(`numpair`, ":num#num");;
+#new_type_abbrev(`numpair`, ":num*num");;
 () : void
 
 #let t1 = "x:numpair";;
 t1 = "x" : term
 
 #type_of t1;;
-":num # num" : type
+":num * num" : type
 
-#":numpair" = ":num#num";;
+#":numpair" = ":num*num";;
 true : bool
 \end{verbatim}\end{session}
 
@@ -3017,8 +2586,8 @@ to give an \ML\ name to the type, and then to use this name via antiquotation.
 Continuing the session:\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|)}
 
 \begin{session}\begin{verbatim}
-#let ty = ":num#num";;
-ty = ":num # num" : type
+#let ty = ":num*num";;
+ty = ":num * num" : type
 
 #let t2 = "x:^ty";;
 t2 = "x" : term
@@ -3037,7 +2606,7 @@ the theory \ml{numpair}:
 #print_theory`numpair`;;
 The Theory numpair
 Parents --  HOL
-Type Abbreviations --  numpair ":num # num"
+Type Abbreviations --  numpair ":num * num"
 ******************** numpair ********************
 
 () : void
@@ -3065,7 +2634,7 @@ Theory numpair loaded
 "x" : term
 
 #type_abbrevs `-`;;
-[(`numpair`, ":num # num")] : (string # type) list
+[(`numpair`, ":num * num")] : (string * type) list
 \end{verbatim}\end{session}
 
 \noindent then the type abbreviation persists.
@@ -3073,12 +2642,13 @@ Theory numpair loaded
 Type abbreviations tend to be little used in practice; the antiquotation
 method is usually sufficient.
 
-\section{The ancestry of the theory {\tt HOL}}
-\label{HOL-ancestry}
+\section{Standard theories}
 
 \index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
-The ancestry\index{ancestry, of HOL system theories@ancestry, of \HOL\ system theories}
-of the theory \ml{HOL}\index{HOL@\ml{HOL}} is:
+The collection of theories distributed with the \HOL\ system
+\index{ancestry, of HOL system theories@ancestry, of \HOL\ system
+theories} 
+is:
 
 \begin{center}\index{BASIC-HOL@\ml{BASIC-HOL}}\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory}\index{ind, the theory@\ml{ind}, the theory}
 \begin{picture}(65,115)
@@ -3143,22 +2713,18 @@ of the theory \ml{HOL}\index{HOL@\ml{HOL}} is:
 \end{picture}
 \end{center}
 
-\noindent In the rest of this section, each of the theories in  the ancestry of
-\ml{HOL} is  briefly described.   A  complete list  of all  the definitions and
-theorems in each theory is  not given  here; the sections  that follow provide
-only an overview of the contents of each theory.  For a complete list of
-all the built-in axioms, definitions and theorems in \HOL, see \REFERENCE.
+\noindent In the rest of this section, each of these theories is briefly
+described.  A complete list of all the definitions and theorems in each
+theory is not given here; the sections that follow provide only an
+overview of the contents of each theory.  For a complete list of all the
+built-in axioms, definitions and theorems in \HOL, see \REFERENCE.
 
-\subsection{The theory {\tt PPLAMB}}
+\subsection{The theory {\tt min}}\label{minTheory}
 
-The most primitive theory is called \ml{PPLAMB}\index{PPLAMB@\ml{PPLAMB}} and is a stripped down
-version of the theory underlying \LCF.\index{LCF@\LCF}  The \HOL\ theory \ml{PPLAMB}
-does not represent any logical principles but is an interface between the \HOL\
-and \LCF\ systems (it contains the declaration of the primitive
-type operator \ml{->}).\index{ function type operator, in HOL logic@\ml{->} (function type operator, in \HOL\ logic)}
-For a while the two systems developed in parallel, upgrades in \LCF\ from
-Gerard Huet\index{Huet, G.} of {\small INRIA} or Larry Paulson\index{Paulson, L.} of Cambridge resulting in
-upgrades in \HOL.
+The theory \ml{min}\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory|(} has already been partly described in
+Section~\ref{boolthy}.
+It contains the declarations of the constants for equality, implication,
+and choice.
 
 \subsection{The theory {\tt bool}}\label{boolfull}
 
@@ -3227,8 +2793,7 @@ see Section~\ref{res-quant}).
 (see Section~\ref{prod} below).
 \end{myenumerate}
 
-\subsubsection{Pairs and the type {\tt prod}}
-\label{prod}
+\subsection{Pairs and the type {\tt prod}}\label{prod}
 
 \index{representing types, in HOL logic@representing types, in \HOL\ logic!pair example of|(}
 \index{pairs, in HOL logic@pairs, in \HOL\ logic|(}
@@ -3253,7 +2818,7 @@ comma symbol
 
 
 \begin{hol}\begin{verbatim}
-   $, : * -> ** -> *#**
+   $, : 'a -> 'b -> 'a # 'b
 \end{verbatim}\end{hol}
 
 \noindent so, for example, if $t_1$ and $t_2$ have types $\sigma_1$ and
@@ -3305,7 +2870,7 @@ pairs this way, the constants \ml{MK\_PAIR} and
 \noindent From these two definitions it is easy to prove that:
 
 \begin{hol}\begin{verbatim}
-   |- ?p:*->**->bool. IS_PAIR p
+   |- ?p:'a->'b->bool. IS_PAIR p
 \end{verbatim}\end{hol}
 
 \noindent since {\small\verb%|- IS_PAIR(MK_PAIR x y)%} follows  easily from the
@@ -3332,14 +2897,14 @@ maps a pair to its representation as a function:
 \index{REP_prod@\ml{REP\_prod}}
 \begin{verbatim}
    REP_prod    |- REP_prod =
-                  (@rep : * # ** -> (* -> (** -> bool)).
+                  (@rep : 'a # 'b -> 'a -> 'b -> bool.
                     (!p' p''. (rep p' = rep p'') ==> (p' = p'')) /\
                     (!p. IS_PAIR p = (?p'. p = rep p')))
 \end{verbatim}\end{hol}
 
 The infix constructor `{\small\verb%,%}'
 and the selectors
-{\small\verb%FST:*#**->*%} and {\small\verb%SND:*#**->**%} are then
+{\small\verb%FST:'a#'b->'a%} and {\small\verb%SND:'a#'b->'b%} are then
 defined by the equations shown below.
 
 
@@ -3383,21 +2948,7 @@ axioms in the theory \ml{bool} .
 \index{representing types, in HOL logic@representing types, in \HOL\ logic!pair example of|)}
 \index{bool, the HOL theory@\ml{bool}, the \HOL\ theory|)}
 
-\subsection{The theory {\tt BASIC-HOL}}
-
-The theory \ml{BASIC-HOL}\index{BASIC-HOL@\ml{BASIC-HOL}} roughly corresponds to the theory
-\theory{INIT}\index{initial theory, of HOL logic@initial theory, of \HOL\ logic}\index{INIT@\ml{INIT}!as BASIC_HOL@as \ml{BASIC\_HOL}} described in Section~\ref{INIT}. It consists of the data
-in the theories \ml{bool} and \ml{ind}, together with one pre-proved theorem
-called \ml{ABS\_REP\_THM}\index{ABS_REP_THM@\ml{ABS\_REP\_THM}}, which establishes various standard properties
-of isomorphisms\index{isomorphism of types, in HOL logic@isomorphism of types, in \HOL\ logic} and is used for deriving consequences of type definitions (see
-Section~\ref{type-defs}).
-
-The descendents of \ml{BASIC-HOL} are obtained by definitional extension.
-There are, however, a few impurities in these extensions, with the result that
-not all of them could be built purely by using the definitional mechanisms of
-\HOL. The theory \ml{num}, for example, contains an infinite family of
-constants \ml{0}, \ml{1}, \ml{2} \etc, but there is currently no
-mechanism that allows users to define such infinite families.
+\subsection{The theory {\tt relation}}
 
 \subsection{The theory {\tt num}}
 
@@ -3431,45 +2982,6 @@ inference rule \ml{INDUCT}\index{INDUCT@\ml{INDUCT}}
 and the built-in
 tactic \ml{INDUCT\_TAC}\index{INDUCT_TAC@\ml{INDUCT\_TAC}}
 (see the documentation on these functions in \REFERENCE\ for details).
-
-\subsubsection{Numerals}
-
-Associated with the theory \ml{num} are the numerals of type
-\ml{:num}\index{num, the type in HOL logic@\ml{num}, the type in \HOL\ logic},
-an infinite family of constants: \ml{1}, \ml{2}, \ml{3}, etc. These can
-be regarded logically as an infinite collection of defined
-constants, introduced by the infinite series of  definitional axioms:
-
-\begin{hol}\begin{alltt}
-   |- 1 = SUC 0{\rm ,  } |- 2 = SUC 1{\rm ,  } |- 3 = SUC 2{\rm ,\normalsize   etc.}
-\end{alltt}\end{hol}
-
-\noindent This infinite list of theorems cannot, of course, actually be
-stored in the theory \ml{num}.  \HOL\ therefore provides the \ML\ function:
-
-\begin{boxed}
-\index{num_CONV@\ml{num\_CONV}|pin}
-\begin{verbatim}
-   num_CONV : term -> thm
-\end{verbatim}\end{boxed}
-
-\noindent which can be used to generate the defining equation for any
-constant number of type \ml{num}.  For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#let thm1 = num_CONV "1";;
-thm1 = |- 1 = SUC 0
-
-#let thm2 = num_CONV "2";;
-thm2 = |- 2 = SUC 1
-
-#let thm3 = num_CONV "3141592653";;
-thm3 = |- 3141592653 = SUC 3141592652
-\end{verbatim}\end{session}
-
-\noindent The defining equation for any numeral of type \ml{num} can likewise
-be obtained using \ml{num\_CONV}.
 
 \subsection{The theory {\tt prim\_rec}}
 \label{prim_rec}
@@ -3795,6 +3307,47 @@ arithmetic are pre-proved when \HOL\ is built and stored in the theory
 first mentioned during any \HOL\ session. For a complete list of available
 theorems, see \REFERENCE.
 
+\subsubsection{The theory {\tt numeral}}\label{numeral}\index{numeral,
+the construction of in HOL logic@\ml{numeral}, the construction of in \HOL\ logic}
+
+Associated with the theory \ml{num} are the numerals of type
+\ml{:num}\index{num, the type in HOL logic@\ml{num}, the type in \HOL\ logic},
+conceptually an infinite family of constants: \ml{1}, \ml{2}, \ml{3}, etc. These can
+be regarded logically as an infinite collection of defined
+constants, introduced by the infinite series of  definitional axioms:
+
+\begin{hol}\begin{alltt}
+   |- 1 = SUC 0{\rm ,  } |- 2 = SUC 1{\rm ,  } |- 3 = SUC 2{\rm ,\normalsize   etc.}
+\end{alltt}\end{hol}
+
+\noindent This infinite list of theorems cannot, of course, actually be
+stored in the theory \ml{num}.  \HOL\ therefore provides the \ML\ function:
+
+\begin{boxed}
+\index{num_CONV@\ml{num\_CONV}|pin}
+\begin{verbatim}
+   num_CONV : term -> thm
+\end{verbatim}\end{boxed}
+
+\noindent which can be used to generate the defining equation for any
+constant number of type \ml{num}.  For example:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#let thm1 = num_CONV "1";;
+thm1 = |- 1 = SUC 0
+
+#let thm2 = num_CONV "2";;
+thm2 = |- 2 = SUC 1
+
+#let thm3 = num_CONV "3141592653";;
+thm3 = |- 3141592653 = SUC 3141592652
+\end{verbatim}\end{session}
+
+\noindent The defining equation for any numeral of type \ml{num} can likewise
+be obtained using \ml{num\_CONV}.
+
+
 \subsection{The theory {\tt list}}\label{avra_list}\index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL\ logic}
 
 \index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated for lists|(}
@@ -3814,11 +3367,11 @@ are then defined on this type:
 \index{TL, the constant in HOL logic@\ml{TL}, the constant in \HOL\ logic}
 \index{NULL, the constant in HOL logic@\ml{NULL}, the constant in \HOL\ logic}
 \begin{verbatim}
-   NIL  : (*)list
-   CONS : * -> (*)list -> (*)list
-   HD   : (*)list -> *
-   TL   : (*)list -> (*)list
-   NULL : (*)list -> bool
+   NIL  : 'a list
+   CONS : 'a -> 'a list -> 'a list
+   HD   : 'a list -> 'a
+   TL   : 'a list -> 'a list
+   NULL : 'a list -> bool
 \end{verbatim}\end{hol}
 
 The \HOL\ parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of list expressions} has been specially  modified to  parse the expression
@@ -4289,10 +3842,275 @@ theorems in the theory \ml{one} are:
 \noindent These three theorems are equivalent characterizations of the type
 with only one value.
 
+\subsection{The theory {\tt res\_quan}}\label{res-quant}
+
+\index{types, in HOL logic@types, in \HOL\ logic!dependent}
+\index{dependent types in HOL logic@dependent types in \HOL\ logic}
+\index{quantifiers!restricted}
+
+The theory \ml{res\_quan} contains the definitions of the constants
+{\small\verb!RES_FORALL!}, {\small\verb!RES_EXISTS!},
+{\small\verb!RES_SELECT!}, and {\small\verb!RES_ABSTRACT!},
+which are used to support restricted
+quantification\index{quantifiers!restricted} in the \HOL\ logic.  This
+implements a method of simulating subtypes and dependent types with
+predicates. The definitions are:
+
+\begin{hol}
+\index{RES_FORALL@\ml{RES\_FORALL}}
+\index{RES_EXISTS@\ml{RES\_EXISTS}}
+\index{RES_SELECT@\ml{RES\_SELECT}}
+\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}
+\index{ARB@\ml{ARB}}
+\begin{verbatim}
+   RES_FORALL   |- !P B. RES_FORALL P B = (!x. P x ==> B x)
+
+   RES_EXISTS   |- !P B. RES_EXISTS P B = (?x. P x /\ B x)
+
+   RES_SELECT   |- !P B. RES_SELECT P B = (@x. P x /\ B x)
+
+   RES_ABSTRACT |- !P B. RES_ABSTRACT P B = (\x. if P x then B x else ARB)
+\end{verbatim}\end{hol}
+
+
+The new syntax automatically translates as follows:
+
+\begin{hol}
+{\small\verb%   \%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_ABSTRACT %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+{\small\verb%   !%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_FORALL   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+{\small\verb%   ?%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_EXISTS   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+{\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_SELECT   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}
+\end{hol}
+
+Anything can be written between the binder and `\ml{::}' that can be
+written between the binder and `\ml{.}`. See the examples below.
+
+Currently no derived rules are provided to support this notation, so
+any inferences will need to work on the underlying semantic
+representation.
+
+User-defined binders can also have restricted forms, which are set up
+with the function:
+
+\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}|pin}
+\begin{verbatim}
+   associate_restriction : (string * string) -> *
+\end{verbatim}\end{boxed}
+
+
+\noindent If \m{c} is the name
+of a binder and \ml{RES\_}\m{c} is the name of a suitable constant (which
+must be explicitly defined), then executing:
+
+\begin{hol}
+{\small\verb%   associate_restriction(`%}$c${\small\verb%`, `RES_%}$c${\small\verb%`)%}
+\end{hol}
+
+\noindent will cause the parser and pretty-printer to support:
+
+\begin{hol}
+{\small\verb%   %}$c$ $v${\small\verb%::%}$P${\small\verb%. %}$B${\small\verb%    <---->   RES_%}$c$ $P${\small\verb% (\%}$v${\small\verb%. %}$B${\small\verb%)%}
+\end{hol}
+
+Here is an example session:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#"!x y::P. x<y";;
+"!x y :: P. x < y" : term
+
+#set_flag(`print_restrict`, false);;
+true : bool
+
+#"!x y::P. x<y";;
+"RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
+
+#"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
+"RES_EXISTS
+ (\(m,n). m < n)
+ (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
+: term
+
+#"\x y z::P.[0;x;y;z]";;
+"RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
+: term
+\end{verbatim}\end{session}
+
+A conversion that rewrites away the constants \ml{RES\_ABSTRACT},
+\ml{RES\_FORALL}, \ml{RES\_EXISTS} and \ml{RES\_SELECT} is:
+
+\begin{hol}\begin{verbatim}
+   let RESTRICT_CONV =
+        (PURE_REWRITE_CONV [definition `bool` `RES_ABSTRACT`;
+                            definition `bool` `RES_FORALL`;
+                            definition `bool` `RES_EXISTS`;
+                            definition `bool` `RES_SELECT`])
+        THENC (DEPTH_CONV BETA_CONV)
+\end{verbatim}\end{hol}
+
+\noindent This is a bit unsatisfactory, as is shown by the artificial
+example below:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
+t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
+
+#RESTRICT_CONV t;;
+|- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
+   (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
+\end{verbatim}\end{session}
+
+The variable $x$ in the definitions of the constants
+\ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
+\ml{RES\_SELECT} gets confused with the variable in the supplied term.
+This can be avoided by changing \ml{RESTRICT\_CONV} to perform
+explicit alpha-conversion. For example, by implementing a conversion:
+
+\begin{hol}
+{\small\verb%   RES_FORALL %}$P${\small\verb% (\%}$v$\ml{.}$B$\ml{[}$v$\ml{])  ---->  !}$v$\ml{. }$P$ $v$\ml{ ==> }$B$\ml{[}$v$\ml{]}
+\end{hol}
+
+\noindent Dealing with the case when
+$v$ is a variable structure is also desirable. For example:
+
+\begin{session}\begin{verbatim}
+#let t1 = "!(m,n)::P. m<n";;
+t1 = "!(m,n) :: P. m < n" : term
+
+#RESTRICT_CONV t1;;
+|- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
+
+\end{verbatim}\end{session}
+
+\noindent If anyone writes the desired conversions please let us know!
+
+Here is an example of a user-defined restriction:
+
+\begin{session}\begin{verbatim}
+#new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
+|- !p. $DURING p = $! p
+
+#"DURING x::(m,n). p x";;
+no restriction constant associated with DURING
+skipping: x " ;; parse failed
+
+#new_definition
+# (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
+|- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
+
+#associate_restriction(`DURING`,`RES_DURING`);;
+() : void
+
+#"DURING x::(m,n). p x";;
+"DURING x :: (m,n). p x" : term
+
+#set_flag(`print_restrict`,false);;
+true : bool
+
+#"DURING x::(m,n). p x";;
+"RES_DURING(m,n)(\x. p x)" : term
+\end{verbatim}\end{session}
+
+
+
+\subsection{The theory {\tt option}}
+\subsection{The theory {\tt finite\_map}}
+\subsection{The theory {\tt ascii}}
+\subsection{The theory {\tt string}}
+\subsection{The theory {\tt bag}}
+\subsection{The theory {\tt integer}}
+\subsection{Theories for the real numbers}
+\subsection{Theories for sets}
+\subsubsection{The theory {\tt set}}
+\subsubsection{The theory {\tt pred\_set}}
+\subsubsection{The theory {\tt finset}}
+\section{Syntax for sets}\index{set theory notation}
+
+The special purpose set-theoretic notations
+{\small\verb%"{%}$t_1,t_2,\ldots,t_n${\small\verb%}"%} and
+{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%} are available.
+The normal interpretation of the former is the finite set containing
+$t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
+is the set of all $t$s such that $p$. 
+
+For example,
+\begin{hol}\begin{verbatim}
+   "{1,2,3,4}"
+\end{verbatim}\end{hol}
+
+\noindent parses to
+
+\begin{hol}\begin{verbatim}
+   "1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))"
+\end{verbatim}\end{hol}
+
+\noindent Similarly, {\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%}
+parses to:
+
+\medskip
+
+\noindent{\small
+{\verb%   `%}}{\small{\verb%GSPEC(\(%}$x_1${\verb%,%}$\ldots${\verb%,%}$x_n${\verb%).(%}$t${\verb%,%}$p${\verb%))"%}
+}
+
+\medskip
+
+\noindent where $x_1$, $\ldots$ , $x_n$ are the free variables occurring in both $t$
+and $p$.  If there are no such free variables then an error results.
+The order in which the variables are listed in the variable structure
+of the paired abstraction is an unspecified function of the structure
+of $t$ (it is approximately left to right). 
+
+For example, 
+
+\begin{hol}\begin{verbatim}
+   "{x+y | (x < y) /\ (y < z)}"
+\end{verbatim}\end{hol}
+
+\noindent parses to:
+
+\begin{hol}\begin{verbatim}
+   "GSPEC(\(x,y). ((x+y), (x < y) /\ (y < z)))"
+\end{verbatim}\end{hol}
+
+\noindent where \ml{GSPEC} is defined by:
+
+\begin{hol}\begin{verbatim}
+   |- !f. GSPEC f = SPEC(\x. ?y. x,T = f y)
+\end{verbatim}\end{hol}
+
+\noindent and \ml{SPEC} abstracts a predicate to a set (it is the abstraction
+bijection used in the definition of the type operator \ml{set}).
+Other examples are:
+
+\begin{hol}\begin{verbatim}
+   "{x+y+z | (x < y) /\ (y < z)}"
+\end{verbatim}\end{hol}
+
+\noindent will parse to:
+
+\begin{hol}\begin{verbatim}
+   "GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))"
+\end{verbatim}\end{hol}
+
+\noindent and
+
+\begin{hol}\begin{verbatim}
+   "{x+y+w | (x < y) /\ (y < z)}"
+\end{verbatim}\end{hol}
+
+\noindent will parse to:
+
+\begin{hol}\begin{verbatim}
+   "GSPEC(\(x,y). (x+(y+w), (x < y /\ y < z)))"
+\end{verbatim}\end{hol}
+
+
 \section{The type definition package}\label{types-package}\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|(}
 \index{type definition package, in HOL system@type definition package, in \HOL\ system|(}
 
-In the \HOL\  system, new types and type operators can be introduced\index{extension, of HOL logic@extension, of \HOL\ logic}
+In the \HOL\ system, new types and type operators can be introduced\index{extension, of HOL logic@extension, of \HOL\ logic}
 using the  consistency-preserving definitional  mechanism  of
 type  definitions\index{type definition extension, in HOL logic@type definition extension, in \HOL\ logic|(} (see Sections~\ref{tydefs} and~\ref{type-defs}).  The \ML\
 rule for introducing a new type is:
@@ -5607,94 +5425,6 @@ allow the relative precedences of user-defined infixes to be adjusted.
 \index{HOL system@\HOL\ system!interface maps in|)}
 \index{interface maps|)}
 
-\subsection{Changing the lambda symbol}
-\label{change-lambda}
-
-\index{lambda symbol in HOL logic, resetting@lambda symbol, in \HOL\ logic, resetting|(}
-\index{customization of HOL system@customization of \HOL\ system|(}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!changing symbol for|(}
-\index{HOL system@\HOL\ system!changeable symbols of|(}
-\index{symbols in HOL logic, changeable@symbols in \HOL\ logic, changeable|(}
-
-The \ML\ function:
-
-\begin{boxed}
-\index{set_lambda@\ml{set\_lambda}|pin}
-\begin{verbatim}
-   set_lambda : string -> string
-\end{verbatim}\end{boxed}
-
-\noindent allows  an  alternative symbol  (or string)  to be  used to represent
-lambda ($\lambda$)  inside  quotations.\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!changing symbol for}
-The  previous $\lambda$-representing
-string is returned.  Note that after calling \ml{set\_lambda}:
-
-\begin{itemize}
-
-\item  The symbol  {\small\verb%\%}\index{ function abstraction binder, in HOL logic@{\small\verb+\+} (function abstraction binder, in \HOL\ logic)}
- is  still available for input.
-
-\item All abstractions will be printed with the new string.
-
-
-\item It is necessary to use:
-{\verb%set_lambda `\\`%}
-to restore the alternative lambda to {\small\verb%\%}\index{ escape, in ML strings@{\small\verb+\+} (escape, in \ML\ strings)}
-(since {\small\verb%\%} is the escape character inside \ML\ strings).
-\end{itemize}
-
-\noindent For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#set_lambda `Lambda`;;
-`\` : string
-
-#"Lambda x.x+1";;
-"Lambda x. x + 1" : term
-
-#"\x.x+1";;
-"Lambda x. x + 1" : term
-\end{verbatim}\end{session}
-\index{lambda symbol in HOL logic, resetting@lambda symbol, in \HOL\ logic, resetting|)}
-
-\subsection{Changing the turnstile symbol}
-\label{turnstile}
-
-The turnstile symbol {\small\verb%|-%}, which is used as an {\small ASCII}
-approximation to $\vdash$ when printing  theorems, can  be changed  with the
-\ML\ function:
-
-\begin{boxed}
-\index{set_turnstile@\ml{set\_turnstile}|pin}
-\begin{verbatim}
-   set_turnstile : string -> string
-\end{verbatim}\end{boxed}
-
-\noindent The previous representation of turnstile is returned. For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#REFL "x:num";;
-|- x = x
-
-#set_turnstile `Proved! `;;
-`|- ` : string
-
-#REFL "x:num";;
-Proved! x = x
-
-#set_turnstile `       |-  `;;
-`Proved! ` : string
-
-#REFL "x:num";;
-       |-  x = x
-\end{verbatim}\end{session}
-\index{customization of HOL system@customization of \HOL\ system|)}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!changing symbol for|)}
-\index{HOL system@\HOL\ system!changeable symbols of|)}
-\index{symbols in HOL logic, changeable@symbols in \HOL\ logic, changeable|)}
-
 \subsection{Hiding constants}
 \label{hidden}
 
@@ -5747,88 +5477,6 @@ The function:
 \index{HOL system@\HOL\ system!adjustment of user interface of|)}
 \index{HOL system@\HOL\ system!hiding constants in|)}
 \index{parsing, of HOL logic@parsing, of \HOL\ logic!hiding constant status in|)}
-
-\subsection{Autoloading of axioms, definitions and theorems}\index{axioms!autoloading of, in HOL system@autoloading of, in \HOL\ system}
-
-It is possible to mark the name of an axiom, definition or  theorem so that
-if it occurs in an \ML\ expression  then the  named item  will be automatically
-loaded\index{loading, of HOL theories@loading, of \HOL\ theories}\index{automatic loading, of HOL theory components@automatic loading, of \HOL\ theory components} from  the appropriate  theory before  the \ML\  expression is evaluated.
-This provides a kind of crude `paging'\index{theories, in HOL logic@theories, in \HOL\ logic!paging of} of theories.   Many standard definitions
-and theorems are set up to autoload
- if they are used.
-
-The function to set up an autoloading action is:
-
-\begin{boxed}
-\index{autoload_theory@\ml{autoload\_theory}|pin}
-\begin{verbatim}
-   autoload_theory : (string # string # string) -> void
-\end{verbatim}\end{boxed}
-
-\noindent Evaluating
-\ml{autoload\_theory(`}$kind$\ml{`,`}$thy$\ml{`,`}$name$\ml{`)}, where   $kind$
-is \ml{axiom}, \ml{definition} or \ml{theorem}, has the  side effect of setting
-the name  $name$  so  that  when  it  is  encountered by  the  \ML\ parser the
-appropriate sort of object will be autoloaded from the theory $thy$.   Note that
-constant specifications\index{constant specifications, in HOL logic@constant specifications, in \HOL\ logic!autoloading of}\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!autoloading of} and type definitions are  regarded as  special cases of
-definitions.
-
-An autoloading action set up with \ml{autoload\_theory} will only be done once,
-namely the first time the name is encountered in the session.  Autoload actions
-can be removed from a name using the function:
-
-\begin{boxed}
-\index{undo_autoload@\ml{undo\_autoload}|pin}
-\begin{verbatim}
-   undo_autoload : string -> bool
-\end{verbatim}\end{boxed}
-
-The value \ml{true} is returned
-if an autoload action had been set up, \ml{false} is returned otherwise.
-
-\subsection{Cached theories}
-
-When a  theory  is  first  accessed  using   the  functions  \ml{load\_theory},
-\ml{axiom}, \ml{definition}, \ml{theorem} \etc, the  whole theory  is read from
-disk into a data-structure in memory called a {\it theory cache\/}.\index{theories, in HOL logic@theories, in \HOL\ logic!caching of}\index{caching}\index{theory caching}\index{HOL system@\HOL\ system!caching theories in}  Subsequent
-accesses then refer to this in-memory cache  and are  therefore faster.   Theories,
-however, can be very large, and on machines with limited memory,
-this can  lead to a lot of
-garbage collection, or even running out of space.  To deal with
-this problem, the \ML\ function:
-
-\begin{boxed}
-\index{delete_cache@\ml{delete\_cache}|pin}
-\begin{verbatim}
-   delete_cache : string -> void
-\end{verbatim}\end{boxed}
-
-
-\noindent can be used to delete the theory cache (but not the theory
-file on disk), thereby
-freeing up some space (at the cost of making the next theory access slower).
-For example, a function that fetches a single theorem without
-bringing in the whole theory is:
-
-\begin{hol}\begin{verbatim}
-   let fetch_thm_without_caching thy thm =
-       let th = theorem thy thm
-       in  (delete_cache thy; th);;
-\end{verbatim}\end{hol}
-
-Whether  a theory has been cached or not can be discovered with the function:
-
-\begin{boxed}
-\index{cached_theories@\ml{cached\_theories}|pin}
-\begin{verbatim}
-   cached_theories : void -> (string # bool) list
-\end{verbatim}\end{boxed}
-
-\noindent This returns a list of pairs
-\ml{(}$thy$\ml{,}$b$\ml{)} where $thy$ is the name of
-a theory that has been loaded and
-$b$ is a truth value that is \ml{true} if $thy$'s cache has been deleted with
-\ml{delete\_cache} and \ml{false} otherwise.
 
 \subsection{Adjusting the pretty-print depth}
 
@@ -5923,12 +5571,87 @@ previous setting  is
 returned.    Executing  \ml{timer}$\ b$  is equivalent to
 setting the flag \ml{timing} to the value $b$.
 
+\subsection{User-programmable quotation typechecker}
+\index{quotation, in HOL logic@quotation, in \HOL\ logic!typechecker for|(}
+
+The typechecker for \HOL\ quotations contains a number of arbitrary
+design decisions. Several people have suggested changes, e.g. that
+full Hindley/Milner type inference be performed. Rather than try to
+create a single new improved typechecker, a facility is now provided
+that enables the user to write his or her own one and then to install
+it in the system.
+
+\index{preterms|(}
+The \ML\ abstract type {\small\verb%preterm%} represents the parse trees of \HOL\
+terms. A typechecker is a function of type {\small\verb%preterm->term%}. If the flag
+\ml{preterm} is set to \ml{true} (the default is \ml{false}), then \HOL\ will use
+whatever \ML\ function is currently bound to the name
+\ml{preterm\_handler} as
+the quotation typechecker. The way this works is that when
+\ml{preterm} is true the parser produces a preterm rather than a term,
+and then wraps a call of \ml{preterm\_handler}
+around the quotation.\index{type checking, in HOL logic@type checking,
+in \HOL\ logic!user programmed} Other uses of preterms are possible, for example
+as patterns for describing terms.
+
+The definition of the \ML\ type {\small\verb%preterm%} is:
+
+\begin{hol}\index{preterm@\ml{preterm}!the type}\begin{alltt}
+   rectype preterm =
+     preterm_var      of string                        \({\it Variables}\)
+   | preterm_const    of string                        \({\it Constants}\)
+   | preterm_comb     of preterm * preterm             \({\it Combinations}\)
+   | preterm_abs      of preterm * preterm             \({\it Abstractions}\)
+   | preterm_typed    of preterm * type                \({\it Explicit typing}\)
+   | preterm_antiquot of term                          \({\it Antiquotation}\)
+\end{alltt}\end{hol}
+
+The function:
+
+\begin{boxed}\index{preterm_to_term@\ml{preterm\_to\_term}|pin}
+\begin{verbatim}
+   preterm_to_term : preterm -> term
+\end{verbatim}\end{boxed}
+
+\noindent invokes the standard \HOL\ typechecker on a preterm and returns the
+resulting typechecked term (or causes the standard error message).\index{preterms|)}
 
 
 
+The following is a rather contrived example:
 
+\setcounter{sessioncount}{1}
+\begin{session}\index{preterm_handler@\ml{preterm\_handler}|pin}
+\begin{verbatim}
+#letref p_reg = preterm_var `x`;;
+p_reg = preterm_var `x` : preterm
 
+#let preterm_handler p = p_reg:=p;
+                         print_string `Typechecking ... `;
+                         print_newline();
+                         preterm_to_term p;;
+preterm_handler = - : (preterm -> term)
+\end{verbatim}\end{session}
 
+\begin{session}
+\begin{verbatim}
+#set_flag(`preterm`,true);;
+false : bool
 
+#"x+y";;
+Typechecking ...
+"x + y" : term
+
+#p_reg;;
+preterm_comb((preterm_comb((preterm_const `+`), preterm_var `x`)),
+             preterm_var `y`)
+: preterm
+\end{verbatim}\end{session}
+
+\noindent Different top-level typechecking can be defined by using a
+different definition of the function
+\ml{preterm\_handler}. Note that quotations and their typechecking
+is purely a `user interface' feature, so changing the typechecker does
+not compromise the logical soundness of \HOL.\index{quotation, in HOL logic@quotation, in \HOL\ logic!typechecker for|)}
 
 
