@@ -1,6 +1,6 @@
 structure bagLib :> bagLib = struct
 
-open HolKernel Parse basicHol90Lib
+open HolKernel Parse boolLib
 open Psyntax simpLib boolSimps
 infixr -->
 infix |-> THENC

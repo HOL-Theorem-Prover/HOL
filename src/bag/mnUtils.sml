@@ -1,7 +1,6 @@
 
 local
-  open HolKernel basicHol90Lib Psyntax Parse;
-  open Prim_rec_Compat;
+  open HolKernel boolLib Psyntax Parse;
   val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
   fun -- q x = Term q
   fun == q x = Type q
@@ -78,7 +77,7 @@ fun get_conn_dest t = if (is_conj t) then dest_conj else
                       if (is_disj t) then dest_disj else
                       if (is_imp t)  then dest_imp
                       else failwith "get_conn_dest" "Bad connective";
-fun get_const_type str = type_of (#const (Term.const_decl str));
+fun get_const_type str = type_of (hd (Term.decls str));
 fun myis_imp t = is_imp t andalso not (is_neg t)
 (* Copyright 1993, Laboratory for Applied Logic, Brigham Young
    University. All rights reserved. Reproduction of all or part of this
@@ -172,7 +171,7 @@ infix >-
 fun f >- g          = g o f;
 fun dub x           = (x,x);
 fun my_distinct thm =
-  let val base = prove_constructors_distinct thm in
+  let val base = valOf (hd (Prim_rec.prove_constructors_distinct thm)) in
     CONJ base (GSYM base)
   end;
 val ETA_RULE = CONV_RULE (DEPTH_CONV ETA_CONV);
@@ -236,8 +235,8 @@ val lhs_CONV   = binop_CONV 1 is_eq   "Term not an equality";
 val rhs_CONV   = binop_CONV 2 is_eq   "Term not an equality";
 val ant_CONV   = binop_CONV 1 is_imp  "Term not an implication";
 val consq_CONV = binop_CONV 2 is_imp  "Term not an implication";
-val fst_CONV   = binop_CONV 1 is_pair "Term not a pair";
-val snd_CONV   = binop_CONV 2 is_pair "Term not a pair";
+val fst_CONV   = binop_CONV 1 pairSyntax.is_pair "Term not a pair";
+val snd_CONV   = binop_CONV 2 pairSyntax.is_pair "Term not a pair";
 fun neg_CONV c term =
    if (is_neg term) then RAND_CONV c term
                     else failwith "neg_CONV" "Term not a negation";
@@ -422,7 +421,6 @@ fun REPEATNC n c = if n < 1 then REFL
 val multi_exists = MAP_EVERY EXISTS_TAC;
 infix THEN_TAC
 fun (f THEN_TAC g) x = f x THEN g x
-val HO_MATCH_MP_TAC = Ho_resolve.MATCH_MP_TAC
 local
   val not_not = tautLib.TAUT_PROVE (--`!p. p = ~~p`--)
 in
@@ -522,7 +520,8 @@ val ELIM1_TAC =
                 if (is_eq con) then
                   if (chkeq thm) then ([thm],[]) else
                   if (chkeq (SYM thm)) then ([SYM thm], []) else
-                  if (is_pair (lhs con) andalso is_pair (rhs con)) then
+                  if (pairSyntax.is_pair (lhs con) andalso
+                      pairSyntax.is_pair (rhs con)) then
                     let val conjs = CONJUNCTS (REWRITE_RULE [PAIR_EQ] thm)
                         val (ys,ns) = unzip (map check conjs)
                     in

@@ -1,4 +1,4 @@
-open HolKernel Parse basicHol90Lib mnUtils Psyntax;
+open HolKernel Parse boolLib Prim_rec mnUtils Psyntax;
 
 infix THEN ORELSE THENL THENC ORELSEC >- ++ |->;
 
