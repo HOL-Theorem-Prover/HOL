@@ -2,9 +2,9 @@
            An example from Peter Homeier.
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib", "stringTheory", "pred_setTheory", "Mutual"];
+app load ["bossLib", "stringTheory", "pred_setTheory"];
 
-open bossLib pred_setTheory Mutual;
+open bossLib pred_setTheory;
 
 (*=======================================================================*)
 (* First we define the datatypes for assertion expressions.              *)
@@ -81,8 +81,6 @@ val FREE_VARS_def =
     (FVa (AEXISTS x a)    = (FVa a) DELETE x)`;
 
 
-val exp_induct = TypeBase.induction_of (valOf (TypeBase.read "vexp"));
-
 (*===========================================================================*)
 (* We now prove that each of the sets returned by the above free variable    *)
 (* functions is finite.                                                      *)
@@ -94,7 +92,7 @@ val FINITE_FVav =
    Term `(!v.   FINITE (FVv v)) /\
          (!vs.  FINITE (FVvs vs)) /\
          (!a.   FINITE (FVa a))`,
- MUTUAL_INDUCT_TAC exp_induct THEN 
+ Induct THEN 
  ASM_REWRITE_TAC[FREE_VARS_def, FINITE_EMPTY,
                  FINITE_INSERT, FINITE_UNION, FINITE_DELETE]);
 
@@ -173,7 +171,7 @@ val AV_EQUIVALENCE =
      (!x. x IN (FVvs vs) ==> (s1 x = s2 x)) ==> (VS vs f s1 = VS vs f s2)) /\
    (!a f s1 s2. 
        (!x. x IN (FVa a) ==> (s1 x = s2 x)) ==> (A a f s1 = A a f s2))`,
- MUTUAL_INDUCT_TAC exp_induct
+ Induct
   THEN RW_TAC std_ss 
        [AV_DEF,FREE_VARS_def,NOT_IN_EMPTY,IN_INSERT,IN_UNION,IN_DELETE]
   THEN ((AP_TERM_TAC THEN CONV_TAC FUN_EQ_CONV THEN RW_TAC std_ss [])
