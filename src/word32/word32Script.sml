@@ -255,157 +255,61 @@ val TWO_COMP_ONE_COMP_QT = store_thm("TWO_COMP_ONE_COMP_QT",
 
 (* -------------------------------------------------------- *)
 
-val SUC_SUB = SIMP_CONV arithr_ss [ADD1] ``SUC a - a``;
-
-val NOT_BIT = prove(
-  `!n a. ~BIT n a = (BITS n n a = 0)`,
-  RW_TAC std_ss [BIT_def,BITS_THM,SUC_SUB,EXP_1,GSYM NOT_MOD2_LEM]
-);
-
-val NOT_BITS = prove(
-  `!n a. ~(BITS n n a = 0) = (BITS n n a = 1)`,
-  RW_TAC std_ss [GSYM NOT_BIT,GSYM BIT_def]
-);
-
-
-val BIT_SLICE = store_thm("BIT_SLICE",
-  `!n a b. (BIT n a = BIT n b) = (SLICE n n a = SLICE n n b)`,
-  REPEAT STRIP_TAC THEN EQ_TAC
-    THENL [
-      Cases_on `BIT n a`
-        THEN FULL_SIMP_TAC arith_ss [BIT_def,SLICE_THM]
-        THEN FULL_SIMP_TAC arith_ss [GSYM NOT_BITS],
-      Cases_on `BITS n n a = 1`
-        THEN Cases_on `BITS n n b = 1`
-        THEN FULL_SIMP_TAC arith_ss [BIT_def,SLICE_THM]
-        THEN FULL_SIMP_TAC arith_ss [GSYM NOT_BITS,MULT_CLAUSES,
-                                     REWRITE_RULE [GSYM NOT_ZERO_LT_ZERO] ZERO_LT_TWOEXP]
-    ]
-);
-
+(* !h n. BITS h 0 n = n MOD 2 EXP SUC h *)
 val BITS_COR = GEN_ALL (SIMP_RULE arithr_ss [DIV1] (SPECL [`h`,`0`] BITS2_THM));
-val SLICE_COR = GEN_ALL (SIMP_RULE arithr_ss [] (SPECL [`n`,`h`,`0`] SLICE_THM));
-
-val BITS_SUC = store_thm("BITS_SUC",
-  `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
-  RW_TAC arith_ss [GSYM SLICE_COR,SLICE_COMP_THM]
-);
-
-val DECEND_LEMMA = prove(
-  `!P y.  (!x. x <= SUC y ==> P x) ==> (!x. x <= y ==> P x)`,
-  RW_TAC arith_ss []
-);
-
-val SUB_BITS = prove(
-  `!n a b. (BITS (SUC n) 0 a = BITS (SUC n) 0 b) ==> (BITS n 0 a = BITS n 0 b)`,
-  REPEAT STRIP_TAC
-    THEN ONCE_REWRITE_TAC [GSYM (SIMP_RULE arith_ss [] (SPECL [`SUC n`,`0`,`n`,`0`] BITS_COMP_THM))]
-    THEN ASM_REWRITE_TAC []
-);
-
-val BIT_BITS_THM = store_thm("BIT_BITS_THM",
-  `!n a b. (!x. x <= n ==> (BIT x a = BIT x b)) = (BITS n 0 a = BITS n 0 b)`,
-  Induct_on `n`
-    THEN REPEAT STRIP_TAC
-    THENL [
-      RW_TAC arith_ss [REWRITE_RULE [SLICE_COR] (SPEC `0` BIT_SLICE)],
-      EQ_TAC
-        THENL [
-          RW_TAC std_ss [BITS_SUC]
-            THEN POP_ASSUM (fn th => SIMP_TAC arith_ss [SIMP_RULE arith_ss [BIT_SLICE] (SPEC `SUC n` th)]
-                                       THEN ASSUME_TAC th)
-            THEN IMP_RES_TAC (BETA_RULE (SPECL [`\x. BIT x a = BIT x b`,`n`] DECEND_LEMMA))
-            THEN PROVE_TAC [],
-          REPEAT STRIP_TAC
-            THEN IMP_RES_TAC SUB_BITS
-            THEN FULL_SIMP_TAC arith_ss [BITS_SUC,GSYM BIT_SLICE]
-            THEN PAT_ASSUM `!a b.  (!x. x <= n ==> (BIT x a = BIT x b)) = (BITS n 0 a = BITS n 0 b)`
-                   (fn th => RULE_ASSUM_TAC (REWRITE_RULE [SYM (SPECL [`a`,`b`] th)]))
-            THEN Cases_on `x <= n`
-            THEN ASM_SIMP_TAC arith_ss []
-            THEN `x = SUC n` by ASM_SIMP_TAC arith_ss []
-            THEN ASM_SIMP_TAC arith_ss []
-        ]
-    ]
-);
-
+ 
+(* !n a b. (!x. x <= n ==> (BIT x a = BIT x b)) = (BITS n 0 a = BITS n 0 b) *)
+val BIT_BITS_THM_0 = GEN `n` (SIMP_RULE arith_ss [] (SPECL [`n`,`0`] BIT_BITS_THM));
+ 
 (* BIT_EQUIV_THM: |- !a b. (!x. x < WL ==> (BIT x a = BIT x b)) = a EQUIVw b *)
 val BIT_EQUIV_THM = save_thm("BIT_EQUIV_THM",
    SIMP_RULE std_ss [BITS_COR,GSYM MODw_def,GSYM WL_def,GSYM EQUIVw_def,LESS_EQ_IMP_LESS_SUC,
-                REWRITE_RULE [GSYM LESS_EQ,GSYM WL_def] (ONCE_REWRITE_CONV [GSYM LESS_EQ_MONO] ``x <= HB``)]
-                    (SPEC `HB` BIT_BITS_THM)
+            REWRITE_RULE [GSYM LESS_EQ,GSYM WL_def] (ONCE_REWRITE_CONV [GSYM LESS_EQ_MONO] ``x <= HB``)]
+                (SPEC `HB` BIT_BITS_THM_0)
 );
 
 (* -------------------------------------------------------- *)
 
-val EXP_EVEN  = prove(
-  `!n. 0 < n ==> EVEN (2 EXP n)`,
-  RW_TAC std_ss [EVEN_EXISTS]
-    THEN EXISTS_TAC `2 EXP PRE n`
-    THEN RW_TAC arith_ss [GSYM EXP,SIMP_RULE std_ss [] (SPECL [`PRE n`,`n`] PRE_SUC_EQ)]
+val SLICE_COR = GEN_ALL (SIMP_RULE arithr_ss [] (SPECL [`n`,`h`,`0`] SLICE_THM));
+ 
+val BITS_SUC2 = store_thm("BITS_SUC2",
+  `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
+  RW_TAC arith_ss [GSYM SLICE_COR,SLICE_COMP_THM]
 );
-
-val TWOEXP_SUB_MOD = prove(
-  `!m n. 1 <= 2 EXP n - (a MOD 2 EXP n)`,
-  REPEAT STRIP_TAC
-    THEN ASSUME_TAC (CONJUNCT2 (SPEC `a` (SIMP_RULE std_ss [ZERO_LT_TWOEXP] (SPEC `2 EXP n` DIVISION))))
-    THEN IMP_RES_TAC LESS_ADD_1
-    THEN POP_ASSUM (fn th => SUBST_OCCS_TAC [([1],th)])
-    THEN SIMP_TAC arith_ss []
+ 
+val lemma1 = prove(
+  `!n a. a < 2 EXP SUC n ==> ~(2 EXP SUC n < a + 1)`,
+  RW_TAC arith_ss [NOT_LESS,EXP]
 );
-
-(* TWOEXP_SUB_MOD2: |- !a n. ~(2 EXP SUC n - 2 * a MOD 2 EXP n < 2) *)
-val TWOEXP_SUB_MOD2 =
-      let val th = REWRITE_RULE [SYM TWO] (GEN_ALL (SPECL [`m`,`n`,`1`] MULT_LESS_EQ_SUC)) in
-          GEN_ALL (REWRITE_RULE [GSYM NOT_LESS,MULT_RIGHT_1,LEFT_SUB_DISTRIB,GSYM EXP]
-             (ONCE_REWRITE_RULE [th] (SPEC_ALL TWOEXP_SUB_MOD)))
-      end;
 
 val BITWISE_ONE_COMP_LEM = prove(
-  `!n a b. BITWISE n (\x y. ~x) a b = 2 EXP n - 1 - a MOD 2 EXP n`,
-  let val th1 = GSYM (ONCE_REWRITE_RULE [MULT_COMM] (
-                SIMP_RULE arithr_ss [SLICE_THM,DIV1,BITS_THM] 
-                         (SPECL [`n`,`0`,`0`,`a`] SLICE_COMP_THM))) 
-  in
+  `!n a b. BITWISE (SUC n) (\x y. ~x) a b = 2 EXP (SUC n) - 1 - BITS n 0 a`,
   Induct_on `n`
     THEN REPEAT STRIP_TAC
     THENL [
-      SIMP_TAC arith_ss [BITWISE_def,EXP,REWRITE_RULE [SYM ONE] MOD_ONE],
-      Cases_on `n = 0`
-        THENL [RW_TAC arith_ss [BITWISE_def,EXP,
-                        REWRITE_RULE [SYM ONE] MOD_ONE,LSB_ODD,ODD_MOD2_LEM]
-               THEN POP_ASSUM (fn th => SIMP_TAC arith_ss 
-                                 [REWRITE_RULE [GSYM NOT_MOD2_LEM] th]),
-          RW_TAC std_ss [BITWISE_def,LSB_ODD,ODD_MOD2_LEM] THEN 
-          RW_TAC arith_ss [GSYM (CONJUNCT2 EXP)]
-            THEN `SUC 0 <= n` by ASM_SIMP_TAC arith_ss []
-            THENL [
-               RULE_ASSUM_TAC (REWRITE_RULE [GSYM NOT_MOD2_LEM])
-                 THEN ASM_SIMP_TAC arith_ss [th1]
-                 THEN SIMP_TAC std_ss [SUB_PLUS]
-                 THEN REPEAT (WEAKEN_TAC (K true))
-                 THEN Cases_on `2 EXP SUC n - 2 * (a DIV 2) MOD 2 EXP n = 2`
-                 THENL [
-                   ASM_SIMP_TAC arithr_ss [],
-                   ASSUME_TAC (SPECL [`n`,`a DIV 2`] TWOEXP_SUB_MOD2)
-                     THEN IMP_RES_TAC LESS_CASES_IMP
-                     THEN POP_ASSUM (fn th => 
-                            ASSUME_TAC (REWRITE_RULE [GSYM NOT_LESS_EQUAL] th))
-                     THEN ONCE_REWRITE_TAC [SUB_RIGHT_ADD]
-                     THEN ASM_SIMP_TAC std_ss [GSYM SUB_SUB,
-                              REDUCE_CONV ``2 - 1``,DECIDE ``1 <= 2``] 
-                 ],
-               RULE_ASSUM_TAC (SIMP_RULE std_ss [])
-                 THEN ASM_SIMP_TAC arith_ss [th1]
-            ]
+      RW_TAC arithr_ss [SET_def,BIT_def,BITWISE_def,GSYM NOT_BITS],
+      RW_TAC arith_ss [BITWISE_def,SET_def,REWRITE_RULE [SLICE_THM] BITS_SUC2]
+        THEN RULE_ASSUM_TAC (SIMP_RULE std_ss [NOT_BIT,NOT_BITS,BIT_def])
+        THEN ASM_SIMP_TAC arith_ss [MULT_CLAUSES]
+        THENL [
+           Cases_on `2 EXP SUC n = BITS n 0 a + 1`
+             THENL [
+               ASM_SIMP_TAC arith_ss [SUB_RIGHT_ADD,EXP],
+               ASSUME_TAC (SIMP_RULE std_ss [SIMP_RULE arith_ss [] (SPECL [`n`,`0`] BITSLT_THM)]
+                             (SPECL [`n`,`BITS n 0 a`] lemma1))
+                 THEN `~(2 EXP SUC n <= BITS n 0 a + 1)` by ASM_SIMP_TAC arith_ss []
+                 THEN ASM_SIMP_TAC arith_ss [SUB_RIGHT_ADD,EXP]
+             ],
+           SIMP_TAC std_ss [REWRITE_CONV [ADD_SUB,TIMES2] ``2 * a - a``,SUB_PLUS,EXP]
         ]
     ]
-  end
 );
+
+(* -------------------------------------------------------- *)
 
 val BITWISE_ONE_COMP_THM = store_thm("BITWISE_ONE_COMP_THM",
   `!a b. BITWISE WL (\x y. ~x) a b = ONE_COMP a`,
-  RW_TAC std_ss [SPEC `WL` BITWISE_ONE_COMP_LEM,ONE_COMP_def,MODw_def]
+  RW_TAC std_ss [WL_def,SPEC `HB` BITWISE_ONE_COMP_LEM,ONE_COMP_def,MODw_THM]
 );
 
 val ONE_COMP_THM = store_thm("ONE_COMP_THM",
@@ -423,10 +327,13 @@ val ONE_COMP_TRUE = REWRITE_RULE [ZERO_IS_FALSE] (SPEC `0` ONE_COMP_THM);
 
 (* -------------------------------------------------------- *)
 
-val OR_def = Define`OR = BITWISE WL $\/`;
-val AND_def = Define`AND = BITWISE WL $/\`;
-val EOR_def = Define`EOR = BITWISE WL (\x y. ~(x = y))`;
-val ATRUE_def = Define`ATRUE = ONE_COMP 0`;
+val OR_def    = Define `OR = BITWISE WL $\/`;
+
+val AND_def   = Define `AND = BITWISE WL $/\`;
+
+val EOR_def   = Define `EOR = BITWISE WL (\x y. ~(x = y))`;
+
+val ATRUE_def = Define `ATRUE = ONE_COMP 0`;
 
 (* -------------------------------------------------------- *)
 
@@ -559,41 +466,44 @@ val BIT_SET_NOT_ZERO_COR = prove(
   REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss [BITWISE_COR,BIT_SET_NOT_ZERO]
 );
 
-val BITWISE_COR0 = REWRITE_RULE [GSYM LESS_EQ,ONE,EXP_1] (SPEC `1` BITWISE_NOT_COR);
-val BITWISE_COR1 = REWRITE_RULE [GSYM LESS_EQ,ONE,EXP_1] (SPEC `1` BITWISE_COR);
-val BITWISE_COR2 = SIMP_RULE arith_ss [GSYM LESS_EQ,DIV1,EXP] (SPEC `0` BITWISE_NOT_COR);
-val BITWISE_COR3 = SIMP_RULE arith_ss [GSYM LESS_EQ,DIV1,EXP] (SPEC `0` BITWISE_COR);
-val BIT_SET_NOT_ZERO_COR1 = REWRITE_RULE [GSYM LESS_EQ,REWRITE_RULE [ONE] EXP_1]
-                                         (SPEC `SUC 0` BIT_SET_NOT_ZERO_COR);
 val BIT_SET_NOT_ZERO_COR2 = REWRITE_RULE [DIV1,EXP] (SPEC `0` BIT_SET_NOT_ZERO_COR);
-val MULT_DIV2 = ONCE_REWRITE_RULE [MULT_COMM] (SIMP_RULE arithr_ss [] (SPEC `2` MULT_DIV));
 
-val ADD2_EXP = prove(
-  `!n p. (n = p + 2) ==> (2 EXP n = 2 * (2 * 2 EXP p))`,
-  RW_TAC arithr_ss [EXP_ADD]
+val ADD_DIV_ADD_DIV2 = ONCE_REWRITE_RULE [MULT_COMM] (SIMP_RULE arith_ss [] (SPEC `2` ADD_DIV_ADD_DIV))
+ 
+val BIT_DIV2 = prove(
+  `!i. BIT n (i DIV 2) = BIT (SUC n) i`,
+  RW_TAC arithr_ss [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]
+);
+ 
+val lemma1 = prove(
+  `!a b n. 0 < n ==> ((a + SET b n) DIV 2 = a DIV 2 + SET b (n - 1))`,
+  RW_TAC arith_ss [SET_def]
+    THEN IMP_RES_TAC LESS_ADD_1
+    THEN FULL_SIMP_TAC arith_ss [GSYM ADD1,ADD_DIV_ADD_DIV2,EXP]
+);
+ 
+val lemma2 = prove(
+  `!b n. 2 * (SET b n) = SET b (n + 1)`,
+  RW_TAC std_ss [MULT_CLAUSES,SET_def,GSYM ADD1,EXP]
+);
+ 
+val lemma3 = prove(
+  `!n op a b. 0 < n ==> (BITWISE n op a b MOD 2 = SET (op (LSB a) (LSB b)) 0)`,
+  RW_TAC std_ss [LSB_def]
+    THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC [SIMP_RULE std_ss [th]
+                               ((GSYM o SPECL [`0`,`n`,`op`,`a`,`b`]) BITWISE_THM)])
+    THEN RW_TAC std_ss [GSYM LSB_def,LSB_ODD,ODD_MOD2_LEM,SET_def,EXP]
+    THEN FULL_SIMP_TAC std_ss [GSYM NOT_MOD2_LEM]
 );
 
-val REARRANGE = prove(
-  `!a b c. b <= a ==> (((a - b) + c) + b = (c + a))`,
-  REPEAT STRIP_TAC
-    THEN ONCE_REWRITE_TAC [GSYM ADD_ASSOC]
-    THEN ONCE_REWRITE_TAC [ADD_COMM]
-    THEN ONCE_REWRITE_TAC [GSYM ADD_ASSOC]
-    THEN REWRITE_TAC [SPECL [`b`,`a - b`] ADD_COMM]
-    THEN ASM_SIMP_TAC arith_ss [SUB_ADD]
+val lemma4 = prove(
+  `!n op a b. 0 < n /\ BITWISE n op a b <= SET (op (LSB a) (LSB b)) 0 ==>
+              (BITWISE n op a b = SET (op (LSB a) (LSB b)) 0)`,
+  RW_TAC arith_ss [LSB_def,SET_def,EXP]
+    THEN IMP_RES_TAC BIT_SET_NOT_ZERO_COR2
+    THEN ASM_SIMP_TAC arith_ss []
 );
-
-val REARRANGE2 = prove(`!a b c. a + (b + c) = (a + c) + b`,RW_TAC arith_ss []);
-
-val something = prove(
-  `!n. 1 < n ==> (2 EXP (n - 1) = 2 EXP n DIV 2)`,
-  REPEAT STRIP_TAC
-    THEN IMP_RES_TAC LESS_ADD
-    THEN POP_ASSUM (fn th => SIMP_TAC arith_ss [SYM th,EXP_ADD,EXP_1,MULT_DIV])
-);
-
-val something = REWRITE_RULE [ONE] something;
-
+ 
 val BITWISE_ISTEP = store_thm("BITWISE_ISTEP",
   `!n op a b. 0 < n ==> (BITWISE n op (a DIV 2) (b DIV 2) =
                         (BITWISE n op a b) DIV 2 + SET (op (BIT n a) (BIT n b)) (n - 1))`,
@@ -601,110 +511,61 @@ val BITWISE_ISTEP = store_thm("BITWISE_ISTEP",
     THEN REPEAT STRIP_TAC
     THENL [
        FULL_SIMP_TAC arith_ss [],
-       Cases_on `1 < n`
+       Cases_on `n = 0`
          THENL [
-           FULL_SIMP_TAC arith_ss []
-             THEN IMP_RES_TAC LESS_ADD_1
-             THEN RULE_ASSUM_TAC (SIMP_RULE arith_ss [])
-             THEN POP_ASSUM (fn th => ASSUME_TAC (MATCH_MP ADD2_EXP th))
-             THEN RULE_ASSUM_TAC (SIMP_RULE std_ss [ONE])
-             THEN RW_TAC arithr_ss [BITWISE_def,LSB_def,BIT_DIV2,SET_def,something,
-                                    ADD_DIV_ADD_DIV3,MULT_DIV2]
-             THEN ASM_SIMP_TAC std_ss [ADD_DIV_ADD_DIV3,MULT_DIV2,LEFT_ADD_DISTRIB]
-             THEN ASM_SIMP_TAC std_ss [MULT_DIV2,SYM ONE,EXP,DIV_MULT_THM2,BITWISE_COR0,BITWISE_COR1]
-             THEN IMP_RES_TAC BIT_SET_NOT_ZERO_COR1
-             THEN SIMP_TAC std_ss [REARRANGE2]
-             THEN ASM_SIMP_TAC arith_ss [REARRANGE],
-           `(n = 0) \/ (n = 1)` by ASM_SIMP_TAC arith_ss []
-             THEN RW_TAC arithr_ss [ONE,SET_def,BITWISE_def,LSB_def,BIT_DIV2]
+            RW_TAC arithr_ss [BITWISE_def,SET_def,BIT_DIV2],
+            FULL_SIMP_TAC std_ss [NOT_ZERO_LT_ZERO,BITWISE_def,SUC_SUB1,BIT_DIV2,lemma1]
          ]
     ]
 );
 
-val BITWISE_ISTEP2 = store_thm("BITWISE_ISTEP2",
- `!n op a b. n <= WL ==> (BITWISE n op a c EQUIVw BITWISE n op b d =
-                         (BITWISE n op a c = BITWISE n op b d))`,
+val BITWISE_EVAL = store_thm("BITWISE_def2",
+  `!n op a b. BITWISE (SUC n) op a b =
+         2 * (BITWISE n op (a DIV 2) (b DIV 2)) + SET (op (LSB a) (LSB b)) 0`,
   REPEAT STRIP_TAC
-    THEN POP_ASSUM (fn th => ASSUME_TAC (MATCH_MP TWOEXP_MONO2 th))
-    THEN ASSUME_TAC (SPECL [`n`,`op`,`a`,`c`] BITWISE_LT_2EXP)
-    THEN ASSUME_TAC (SPECL [`n`,`op`,`b`,`d`] BITWISE_LT_2EXP)
-    THEN IMP_RES_TAC LESS_LESS_EQ_TRANS
-    THEN ASM_SIMP_TAC std_ss [EQUIVw_def,MODw_def,LESS_MOD]
-);
-
-val SAME_OP = prove(
-  `!op a b c d. (BIT 0 c = BIT 0 d) /\ (BIT 0 a = BIT 0 b) /\
-                op (BIT 0 b) (BIT 0 d) ==> op (BIT 0 a) (BIT 0 c)`,
-  RW_TAC std_ss []
-);
-
-val SAME_OP2 = prove(
-  `!op a b c d. (BIT 0 c = BIT 0 d) /\ (BIT 0 a = BIT 0 b) /\
-                ~(op (BIT 0 b) (BIT 0 d)) ==> ~(op (BIT 0 a) (BIT 0 c))`,
-  RW_TAC std_ss []
-);
-
-val SPEC_MOD_TIMES2 = prove(
-  `!p. 2 * (2 EXP (p + WL)) = (2 * 2 EXP p) * 2 EXP WL`,
-  RW_TAC arith_ss [EXP_ADD,MULT_ASSOC]
-);
-
-val DIV_TIMES = prove(
-  `!n. 0 < n ==> (2 * (2 EXP n DIV 2) = 2 EXP n)`,
-  RW_TAC arith_ss [DIV_MULT_THM2,SIMP_RULE std_ss [EVEN_MOD2_LEM] (SPEC `n` EXP_EVEN)]
-);
-
-val SPEC_DIV_TIMES = SIMP_RULE std_ss [WL_POS] (SPEC `WL` DIV_TIMES);
-
-val something2 = REWRITE_RULE [GSYM WL_def,GSYM ADD1] (SIMP_CONV arith_ss [WL_def,ADD1] ``SUC (WL - 1)``);
-
-val BITWISE_WELLDEF = store_thm("BITWISE_WELLDEF",
-  `!n op a b c d. a EQUIVw b /\ c EQUIVw d ==> (BITWISE n op) a c EQUIVw (BITWISE n op) b d`,
-  let val tac = Cases_on `n <= WL`
-        THENL [
-          `BITWISE n op a c EQUIVw BITWISE n op b d` by PROVE_TAC []
-            THEN `BITWISE n op a c = BITWISE n op b d` by IMP_RES_TAC BITWISE_ISTEP2
-            THEN ASM_SIMP_TAC std_ss []
-            THEN Cases_on `n = WL`
-            THENL [
-               RW_TAC arith_ss [SET_def,something2,
-                  MULT_CLAUSES,GSYM EXP,MODw_def,SPEC_MOD_TIMES,SPEC_DIV_TIMES],
-               `n < WL` by ASM_SIMP_TAC arith_ss []
-                  THEN IMP_RES_TAC BIT_EQUIV
-                  THEN ASM_SIMP_TAC std_ss []
-            ],
-          RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS_EQUAL])
-            THEN IMP_RES_TAC LESS_ADD_1
-            THEN POP_ASSUM (K ALL_TAC)
-            THEN RW_TAC arith_ss [ADD_CLAUSES,MULT_CLAUSES,MODw_def,SET_def,
-                                ONCE_REWRITE_RULE [ADD_COMM] MOD_TIMES,
-                                MOD_TIMES,SPEC_MOD_TIMES2,ZERO_LT_TWOEXP]
-            THEN RULE_ASSUM_TAC (SIMP_RULE arith_ss [EQUIVw_def,MODw_def])
-            THEN FULL_SIMP_TAC std_ss []
-        ] in
-  Induct_on `n`
-    THEN REPEAT STRIP_TAC
-    THEN IMP_RES_TAC LSB_WELLDEF
-    THEN NTAC 4 (WEAKEN_TAC (K true))
-    THEN SIMP_TAC arith_ss [BITWISE_def,EQUIVw_def]
     THEN Cases_on `n = 0`
     THENL [
-      ASM_SIMP_TAC arith_ss [BITWISE_def,EQUIVw_def],
-      RULE_ASSUM_TAC (REWRITE_RULE [NOT_ZERO_LT_ZERO])
-        THEN FULL_SIMP_TAC std_ss [LSB_def,BITWISE_ISTEP,LEFT_ADD_DISTRIB,DIV_MULT_THM2]
-        THEN RW_TAC std_ss [BITWISE_COR2,BITWISE_COR3,SUB_0]
-        THENL [
-           `op (BIT 0 a) (BIT 0 c)` by IMP_RES_TAC SAME_OP
-             THEN IMP_RES_TAC BIT_SET_NOT_ZERO_COR2
-             THEN NTAC 2 (POP_ASSUM (K ALL_TAC))
-             THEN SIMP_TAC std_ss [REARRANGE2]
-             THEN ASM_SIMP_TAC arith_ss [REARRANGE]
-             THEN tac,
-           `~(op (BIT 0 a) (BIT 0 c))` by IMP_RES_TAC SAME_OP2
-             THEN tac
-        ]
+       RW_TAC arith_ss [BITWISE_def,MULT_CLAUSES,LSB_def],
+       FULL_SIMP_TAC arith_ss [BITWISE_def,NOT_ZERO_LT_ZERO,BITWISE_ISTEP,
+                               DIV_MULT_THM2,LEFT_ADD_DISTRIB,SUB_ADD,lemma2,lemma3]
+         THEN RW_TAC arith_ss [SUB_RIGHT_ADD,lemma4]
     ]
-  end
+);
+
+(* -------------------------------------------------------- *)
+
+val MODw_2EXP_GT_WL = prove(
+  `!n. WL <= n ==> (MODw (2 EXP n) = 0)`,
+  RW_TAC std_ss [MODw_def]
+    THEN IMP_RES_TAC LESS_EQ_EXP_MULT
+    THEN ASM_SIMP_TAC std_ss [ZERO_LT_TWOEXP,MOD_EQ_0]
+);
+ 
+val BITWISE_WELLDEF = store_thm("BITWISE_WELLDEF",
+  `!n op a b c d. a EQUIVw b /\ c EQUIVw d ==> (BITWISE n op) a c EQUIVw (BITWISE n op) b d`,
+  Induct_on `n`
+    THEN REPEAT STRIP_TAC
+    THENL [
+       SIMP_TAC arith_ss [BITWISE_def,EQUIVw_def],
+       PAT_ASSUM `!op a b c d.  a EQUIVw b /\ c EQUIVw d ==>
+                                BITWISE n op a c EQUIVw BITWISE n op b d`
+            (fn th => `!op. BITWISE n op a c EQUIVw BITWISE n op b d` by
+                        IMP_RES_TAC (SPECL [`op`,`a`,`b`,`c`,`d`] th))
+         THEN ASM_SIMP_TAC std_ss [BITWISE_def]
+         THEN Cases_on `n < WL`
+         THENL [
+            IMP_RES_TAC BIT_EQUIV THEN NTAC 4 (POP_ASSUM (K ALL_TAC))
+              THEN RW_TAC arith_ss [SET_def]
+              THEN FULL_SIMP_TAC std_ss [EQUIVw_def]
+              THEN ONCE_REWRITE_TAC [MOD_ADD]
+              THEN ASM_SIMP_TAC std_ss [],
+            RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS])
+              THEN RW_TAC arith_ss [SET_def]
+              THEN FULL_SIMP_TAC std_ss [EQUIVw_def]
+              THEN ONCE_REWRITE_TAC [MOD_ADD]
+              THEN ASM_SIMP_TAC arith_ss [MODw_IDEM2,MODw_2EXP_GT_WL]
+         ]
+    ]
 );
 
 val BITWISEw_WELLDEF = save_thm("BITWISEw_WELLDEF",SPEC `WL` BITWISE_WELLDEF);
@@ -712,60 +573,6 @@ val BITWISEw_WELLDEF = save_thm("BITWISEw_WELLDEF",SPEC `WL` BITWISE_WELLDEF);
 val OR_WELLDEF = REWRITE_RULE [GSYM OR_def] (SPEC `$\/` BITWISEw_WELLDEF);
 val AND_WELLDEF = REWRITE_RULE [GSYM AND_def] (SPEC `$/\` BITWISEw_WELLDEF);
 val EOR_WELLDEF = REWRITE_RULE [GSYM EOR_def] (SPEC `(\x y. ~(x = y))` BITWISEw_WELLDEF);
-
-(* -------------------------------------------------------- *)
-
-(*
-val BITWISE_IDEM = prove(
-  `!n op a b. n <= WL ==> INw (BITWISE n op a b)`,
-  RW_TAC std_ss [INw_def]
-    THEN POP_ASSUM (fn th => ASSUME_TAC (MATCH_MP TWOEXP_MONO2 th))
-    THEN ASSUME_TAC (SPEC_ALL BITWISE_LT_2EXP)
-    THEN IMP_RES_TAC LESS_LESS_EQ_TRANS
-);
-
-val BITWISE_IDEM2 = prove(
-  `!n op a b. n <= WL ==> (MODw (BITWISE n op a b) = BITWISE n op a b)`,
-  RW_TAC std_ss [BITWISE_IDEM,TOw_IDEM]
-);
-
-val SPEC_MOD_TIMES2 = prove(
-  `!p n r. (n = WL + (p + 1)) ==> (MODw (2 EXP n + r) = MODw r)`,
-  RW_TAC std_ss [MODw_def,EXP_ADD,ZERO_LT_TWOEXP,ONCE_REWRITE_RULE [MULT_COMM] MOD_TIMES]
-);
-
-val BITWISE_CHOP = prove(
-  `!n op a b. ~(n <= WL) ==> (BITWISE n op a b EQUIVw BITWISE WL op a b)`,
-  REWRITE_TAC [NOT_LESS_EQUAL]
-    THEN Induct_on `n`
-    THEN REPEAT STRIP_TAC
-    THENL [
-       FULL_SIMP_TAC arithr_ss [],
-       Cases_on `WL < n`
-         THENL [
-           FULL_SIMP_TAC std_ss [EQUIVw_def]
-             THEN `0 < n` by ASM_SIMP_TAC arithr_ss [WL_POS,LESS_TRANS]
-             THEN RW_TAC arith_ss [BITWISE_def,LSB_def,BITWISE_ISTEP,SET_def,DIV_TIMES]
-             THEN IMP_RES_TAC BIT_SET_NOT_ZERO_COR2
-             THEN ASM_SIMP_TAC arith_ss [DIV_MULT_THM2,REARRANGE,BITWISE_COR2,BITWISE_COR3]
-             THEN IMP_RES_TAC (SPECL [`n`,`WL`] LESS_ADD_1)
-             THEN PAT_ASSUM `n = WL + (p + 1)`
-                    (fn th => SIMP_TAC std_ss [MATCH_MP SPEC_MOD_TIMES2 th,EQUIVw_def])
-             THEN FULL_SIMP_TAC std_ss [],
-           `n = WL` by ASM_SIMP_TAC arithr_ss []
-             THEN POP_ASSUM_LIST (fn thl => ASSUME_TAC (hd thl))
-             THEN `0 < n` by ASM_SIMP_TAC std_ss [WL_POS]
-             THEN RW_TAC arith_ss [BITWISE_def,LSB_def,BITWISE_ISTEP,SET_def,SPEC_DIV_TIMES]
-             THEN IMP_RES_TAC BIT_SET_NOT_ZERO_COR2
-             THEN ASM_SIMP_TAC arith_ss [DIV_MULT_THM2,REARRANGE,BITWISE_COR2,BITWISE_COR3,
-                                         MODw_def,SPEC_MOD_TIMES,EQUIVw_def]
-         ]
-    ]
-);
-
-(* BITWISE_CHOP2: |- !n op a b. ~(n <= WL) ==> (MODw (BITWISE n op a b) = BITWISE WL op a b) *)
-val BITWISE_CHOP2 = REWRITE_RULE [EQUIVw_def,SIMP_RULE arith_ss [] (SPEC `WL` BITWISE_IDEM2)] BITWISE_CHOP;
-*)
 
 (* -------------------------------------------------------- *)
 
@@ -980,33 +787,33 @@ val w_T = save_thm("w_T",SIMP_RULE arithr_ss [GSYM wn_def,ATRUE_def,ONE_COMP_def
 val ADD_TWO_COMP = save_thm("ADD_TWO_COMP",REWRITE_RULE [TOw_ELIM] ADD_TWO_COMP);
 val ADD_TWO_COMP2 = save_thm("ADD_TWO_COMP2",ONCE_REWRITE_RULE [ADD_COMMw] ADD_TWO_COMP);
 
-val ADDw_def = definition "ADDw_def";
-val MULw_def = definition "MULw_def";
+val ADDw_def      = definition "ADDw_def";
+val MULw_def      = definition "MULw_def";
 val ONE_COMPw_def = definition "ONE_COMPw_def";
 val TWO_COMPw_def = definition "TWO_COMPw_def";
-val LSR_ONEw_def = definition "LSR_ONEw_def";
-val ASR_ONEw_def = definition "ASR_ONEw_def";
-val ROR_ONEw_def = definition "ROR_ONEw_def";
-val RRXw_def = definition "RRXw_def";
-val LSBw_def = definition "LSBw_def";
-val MSBw_def = definition "MSBw_def";
-val ORw_def = definition "ORw_def";
-val ANDw_def = definition "ANDw_def";
-val EORw_def = definition "EORw_def";
+val LSR_ONEw_def  = definition "LSR_ONEw_def";
+val ASR_ONEw_def  = definition "ASR_ONEw_def";
+val ROR_ONEw_def  = definition "ROR_ONEw_def";
+val RRXw_def      = definition "RRXw_def";
+val LSBw_def      = definition "LSBw_def";
+val MSBw_def      = definition "MSBw_def";
+val ORw_def       = definition "ORw_def";
+val ANDw_def      = definition "ANDw_def";
+val EORw_def      = definition "EORw_def";
 
 (* -------------------------------------------------------- *)
 
 val SUBw_def = 
   new_infixl_definition 
    ("SUBw_def",`a SUBw b = a ADDw (TWO_COMPw b)`,500);
-val LSLw_def = Define`LSLw n x = x MULw wn (2 EXP n)`;
-val LSRw_def = Define`LSRw n a = FUNPOW LSR_ONEw n a`;
-val ASRw_def = Define`ASRw n a = FUNPOW ASR_ONEw n a`;
-val RORw_def = Define`RORw n a = FUNPOW ROR_ONEw n a`;
+val LSLw_def = Define `LSLw n x = x MULw wn (2 EXP n)`;
+val LSRw_def = Define `LSRw n a = FUNPOW LSR_ONEw n a`;
+val ASRw_def = Define `ASRw n a = FUNPOW ASR_ONEw n a`;
+val RORw_def = Define `RORw n a = FUNPOW ROR_ONEw n a`;
 
-val BITw_def = Define`BITw b n = BIT b (NUMw n)`;
-val BITSw_def = Define`BITSw h l n = BITS h l (NUMw n)`;
-val SLICEw_def = Define`SLICEw h l n = SLICE h l (NUMw n)`;
+val BITw_def   = Define `BITw b n = BIT b (NUMw n)`;
+val BITSw_def  = Define `BITSw h l n = BITS h l (NUMw n)`;
+val SLICEw_def = Define `SLICEw h l n = SLICE h l (NUMw n)`;
  
 (* -------------------------------------------------------- *)
 
@@ -1422,15 +1229,14 @@ val EOR_EVAL2 = save_thm("EOR_EVAL2",GEN_ALL (SIMP_RULE std_ss [EOR_def,THE_WL] 
 val BITWISE_EVAL2 = store_thm("BITWISE_EVAL2",
   `!n op x y. BITWISE n op x y =
                  if n = 0 then 0
-                 else let r = BITWISE (n - 1) op (x DIV 2) (y DIV 2) in
-                   if op (LSB x) (LSB y) then r + r + 1 else r + r`,
+                 else 2 * BITWISE (n - 1) op (x DIV 2) (y DIV 2) +
+                      (if op (ODD x) (ODD y) then 1 else 0)`,
   REPEAT STRIP_TAC
     THEN Cases_on `n = 0`
     THEN ASM_SIMP_TAC std_ss [BITWISE_def]
     THEN RULE_ASSUM_TAC (REWRITE_RULE [NOT_ZERO_LT_ZERO])
     THEN IMP_RES_TAC LESS_ADD_1
-    THEN `n = SUC p` by RW_TAC arith_ss []
-    THEN ASM_SIMP_TAC arith_ss [BITWISE_def]
+    THEN FULL_SIMP_TAC arith_ss [GSYM ADD1,BITWISE_EVAL,SET_def,EXP,LSB_ODD]
 );
 
 (* -------------------------------------------------------- *)

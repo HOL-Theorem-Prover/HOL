@@ -20,7 +20,7 @@ fun armword_rws () =
       REDUCE_RULE ONE_COMP_EVAL2,
       REDUCE_RULE TWO_COMP_EVAL2,
       SUBw_def,
-      REWRITE_RULE [LSB_ODD] BITWISE_EVAL2,
+      BITWISE_EVAL2,
       AND_EVAL2,
       OR_EVAL2,
       EOR_EVAL2,
