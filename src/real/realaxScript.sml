@@ -123,8 +123,10 @@ fun intro th =
 
 val lhs_rator2 = rator o rator o lhs o snd o strip_forall o concl;
 
-fun rmel i [] = []
-  | rmel i (h::t) = if (i=h) then t else h::rmel i t
+fun rmel i list =
+    case list of
+      [] => []
+    | h::t => if aconv h i then t else h :: rmel i t
 
 fun ERR s = HOL_ERR{origin_structure = "realaxScript",
                      origin_function = "CANCEL_CONV", message = s};
@@ -141,31 +143,33 @@ fun CANCEL_CONV(assoc,sym,lcancelthms) tm =
       val list_mk_binop = end_itlist mk_binop
       val (c,alist) = strip_comb tm
       val _ = assert (curry op = eqop) c
-  in case alist
-      of [l1,r1] =>
-          let val l = strip_binop l1
-              and r = strip_binop r1
-              val i = intersect l r
+  in
+    case alist of
+      [l1,r1] => let
+        val l = strip_binop l1
+        and r = strip_binop r1
+        val i = op_intersect aconv l r
+      in
+        if (i = []) then raise ERR "unchanged"
+        else let
+            val itm = list_mk_binop i
+            val l' = end_itlist (C (curry op o)) (map rmel i) l
+            and r' = end_itlist (C (curry op o)) (map rmel i) r
+            fun mk ts = mk_binop itm (list_mk_binop ts)
+                handle HOL_ERR _ => itm
+            val l2 = mk l'
+            val r2 = mk r'
+            val le = (EQT_ELIM o AC_CONV(assoc,sym) o mk_eq) (l1,l2)
+            val re = (EQT_ELIM o AC_CONV(assoc,sym) o mk_eq) (r1,r2)
+            val eqv = MK_COMB(AP_TERM eqop le,re)
           in
-            if (i = []) then raise ERR "unchanged"
-            else let val itm = list_mk_binop i
-                     val l' = end_itlist (C (curry op o)) (map rmel i) l
-                     and r' = end_itlist (C (curry op o)) (map rmel i) r
-                     fun mk ts = mk_binop itm (list_mk_binop ts)
-                                     handle HOL_ERR _ => itm
-                     val l2 = mk l'
-                     val r2 = mk r'
-                     val le = (EQT_ELIM o AC_CONV(assoc,sym) o mk_eq) (l1,l2)
-                     val re = (EQT_ELIM o AC_CONV(assoc,sym) o mk_eq) (r1,r2)
-                     val eqv = MK_COMB(AP_TERM eqop le,re)
-                 in
-                   CONV_RULE(RAND_CONV
-                     (end_itlist (curry op ORELSEC) (map REWR_CONV lcthms)))
+            CONV_RULE(RAND_CONV
+                        (end_itlist (curry op ORELSEC) (map REWR_CONV lcthms)))
                      eqv
-                 end
           end
-       | _ => raise ERR ""
-  end;
+      end
+    | _ => raise ERR ""
+  end
 
 (*---------------------------------------------------------------------------*)
 (* Tactic to do all the obvious simplifications via cancellation etc.        *)
