@@ -804,6 +804,7 @@ end
       val {Name,Ty} = dest_const t
     in
       temp_overload_on_by_nametype (s, Name, Ty)
+      handle Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
     end
 
   fun overload_on (s, t) = let
@@ -813,6 +814,7 @@ end
           "Can't have non-constants as targets of overloading"
   in
     overload_on_by_nametype (s, Name, Ty)
+    handle Overload.OVERLOAD_ERR s => raise ERROR "overload_on" s
   end
 
   fun temp_clear_overloads_on s = let

@@ -745,7 +745,10 @@ fun parse_term (G : grammar) typeparser afn = let
                     if Overload.is_overloaded overload_info fns then
                       NonTerminal (inject_np (SOME fns))
                     else
-                      NonTerminal (inject_np (#2 (hd num_info)))
+                      (Lib.mesg true ("No overloadings exist for "^fns^
+                                      ": use character suffix for numerals");
+                       raise Temp)
+                      (* NonTerminal (inject_np (#2 (hd num_info))) *)
                   end
               end
             | (VSRES_VS, _) => NonTermVS [SIMPLE (token_string tt)]
