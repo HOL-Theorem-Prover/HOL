@@ -12,6 +12,38 @@ fun indexbar out =
 val smlIdCharSym = Char.contains "'_!%&$#+-/:<=>?@\\~`^|*"
 fun smlIdChar c = Char.isAlphaNum c orelse smlIdCharSym c
 
+fun destProperSuffix s1 s2 = 
+  let val sz1 = String.size s1
+      val sz2 = String.size s2
+      open Substring
+ in
+   if sz1 >= sz2 then NONE
+   else let val (prefix, suffix) = splitAt(all s2, sz2 - sz1)
+        in if string suffix = s1 then SOME (string prefix) else NONE
+       end
+ end;
+
+val destTheorysig = destProperSuffix "Theory.sig";
+
+(*---------------------------------------------------------------------------
+   This won't work on a file system without symbolic links. So we will
+   have to think of a better way, in order to get this to work on 
+   Windows.
+ ---------------------------------------------------------------------------*)
+
+fun srcfile sigfile = 
+  if FileSys.isLink sigfile
+  then let val linkpath = FileSys.readLink sigfile
+       in case destTheorysig linkpath
+           of SOME path => SOME (path^"Script.sml")
+            | NONE => let val {dir,file} = Path.splitDirFile linkpath
+                          val {base,ext} = Path.splitBaseExt file
+                      in SOME (Path.concat(dir, 
+                               Path.joinBaseExt{base=base,ext=SOME"sml"}))
+                      end
+       end
+  else NONE;
+
 
 fun processSig db version bgcolor sigfile htmlfile =
     let val strName = Path.base (Path.file sigfile)
@@ -120,8 +152,58 @@ fun processSig db version bgcolor sigfile htmlfile =
 
 	fun idhref link id = 
 	    (out "<A HREF=\"#"; out link; out "\">"; out id; out"</A>")
+	fun idhref_full link id = 
+	    (out "<A HREF=\""; out link; out "\">"; out id; out"</A>")
 
-	fun declaration lineno space1 decl kindtag =
+(*
+        fun locate_docfile id =
+           let open FileSys Path Database
+           in case lookup(db,id) 
+               of {comp=Database.Term(content,SOME "HOL"),file,line} :: _ => 
+                   let val {dir,file=docfile} = splitDirFile file
+                       val {base, ...} = splitBaseExt docfile
+                       val htmldir = Path.concat(dir,"html")
+                       val html = joinBaseExt{base=base,ext=SOME"html"}
+                       val adoc = joinBaseExt{base=base,ext=SOME"adoc"}
+                       val html_docfile = joinDirFile{dir=htmldir,file=html}
+                       val adocfile = joinDirFile{dir=dir,file=adoc}
+                   in
+                     if FileSys.access(html_docfile,[A_READ])
+                        then SOME html_docfile else
+                     if FileSys.access(adocfile,[A_READ])
+                        then SOME adocfile else 
+                     if FileSys.access(file,[A_READ])
+                        then SOME file 
+                        else NONE
+                   end
+              | otherwise => NONE
+           end
+*)
+        fun locate_docfile id =
+           let open FileSys Path Database
+           in case lookup(db,id) 
+               of {comp=Database.Term(dir,SOME "HOL"),file,line} :: _ => 
+                   let val {base, ...} = splitBaseExt file
+                       val htmldir = Path.concat(dir,"html")
+                       val html = joinBaseExt{base=base,ext=SOME"html"}
+                       val adoc = joinBaseExt{base=base,ext=SOME"adoc"}
+                       val html_docfile = joinDirFile{dir=htmldir,file=html}
+                       val adocfile = joinDirFile{dir=dir,file=adoc}
+                   in
+print ("Looking for "^html_docfile^"\n");
+                     if FileSys.access(html_docfile,[A_READ])
+                        then SOME html_docfile else
+                     if FileSys.access(adocfile,[A_READ])
+                        then SOME adocfile else 
+                     if FileSys.access(file,[A_READ])
+                        then SOME file 
+                        else NONE
+                   end
+              | otherwise => NONE
+           end
+
+          
+	fun declaration isThryFile lineno space1 decl kindtag =
 	    let open Substring 
 		fun isKind c = Char.isAlpha c orelse c = #"_"
 		val (kind, rest) = splitl isKind decl
@@ -131,15 +213,16 @@ fun processSig db version bgcolor sigfile htmlfile =
 		val link = id ^ "-" ^ kindtag
 	    in 
 		outSubstr space1;
-		outSubstr preid;
-		if id="" then () else 
-                if Polyhash.peek anchors link = NONE 
-                then (case Database.lookup(db,id)  (* look for HOL-doc *)
-                       of [] => out id
-                        | [{Term(] => idhref link id
-                        | c::rst => idhref link id
-                      )
-		else idhref link id;
+		outSubstr preid
+               ;
+		if id = "" then () 
+                 else if Polyhash.peek anchors link = NONE 
+                      then if isThryFile then out id (* shouldn't happen *)
+                           else case locate_docfile id
+                                 of NONE => out id
+                                  | SOME file => idhref_full file id
+                      else idhref link id
+               ;
 		outSubstr after
 	    end
 
@@ -157,16 +240,16 @@ fun processSig db version bgcolor sigfile htmlfile =
 		outSubstr after
 	    end
 	    
-	fun pass2 susline lineno = 
+	fun pass2 isThryFile susline lineno = 
 	    let open Substring
 	    in 
-		(if isPrefix "   [" susline then 		    
-		     (definition susline outSubstr outisdef; 
-		      seenDefinition := true)
+		(if isPrefix "   [" susline 
+                 then (definition susline outSubstr outisdef; 
+		       seenDefinition := true)
 		 else if not (!seenDefinition) then
 		     (name "" ("line" ^ Int.toString lineno);
 		      let val (space, suff) = splitl Char.isSpace susline
-			  val dec = declaration lineno space suff
+			  val dec = declaration isThryFile lineno space suff
 		      in
 			  if isPrefix "val " suff 
 			      orelse isPrefix "prim_val " suff then
@@ -196,23 +279,29 @@ fun processSig db version bgcolor sigfile htmlfile =
 	    in loop lines 1 end
     in
 	print "Creating "; print htmlfile; print " from "; 
-	print sigfile; print "\n"; 
-	traverse pass1;
-	out "<HTML><HEAD><TITLE>Structure ";
-	out strName; out "</TITLE></HEAD>\n";
-	out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
-	out "<H1>Structure "; out strName; out "</H1>\n";
-	indexbar out;
-	out "<PRE>\n";
-	traverse pass2;
-	out "</PRE>";
-	indexbar out;
-	out "<BR><EM>"; out version; out "</EM>";
-	out "</BODY></HTML>\n";
-	TextIO.closeOut os
+	print sigfile; print "\n"
+       ; 
+        traverse pass1;
+        out "<HTML><HEAD><TITLE>Structure ";
+        out strName; out "</TITLE></HEAD>\n";
+        out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
+        out "<H1>Structure "; out strName; out "</H1>\n";
+        indexbar out;
+        out "<PRE>\n";
+        traverse (pass2 (Option.isSome (destTheorysig sigfile)));
+        out "</PRE>"
+       ;
+        case srcfile sigfile
+          of SOME file => out (String.concat
+                 ["\n<A HREF=\"", file,"\">Source File</A>\n"])
+           | NONE => ();
+        indexbar out;
+        out "<BR><EM>"; out version; out "</EM>";
+        out "</BODY></HTML>\n";
+        TextIO.closeOut os
     end
 
-fun processSigfile db version bgcolor stoplist sigdir htmldir docdirs sigfile =
+fun processSigfile db version bgcolor stoplist sigdir htmldir sigfile =
     let val {base, ext} = Path.splitBaseExt sigfile
 	val htmlfile = Path.joinBaseExt{base=base, ext=SOME "html"}
     in 
@@ -276,7 +365,14 @@ fun printHTMLBase version bgcolor (sigfile, outfile) =
 		else ()
 	    end
 	fun mkref line file = idhref file line file 
-	fun nextfile last []                                   = out ")\n"
+	fun mkHOLref docfile = 
+            let val frontpath = Path.base docfile
+                val {dir,file} = Path.splitDirFile frontpath
+                val dir' = Path.concat(dir,"html")
+                val file' = Path.concat (dir',file)
+            in strhref file' "Docfile"
+            end
+	fun nextfile last [] = out ")\n"
 	  | nextfile last ((e1 as {comp, file, line}) :: erest) =
 	    if comp = last then
 		(out ", "; mkref line file; nextfile last erest)
@@ -298,6 +394,8 @@ fun printHTMLBase version bgcolor (sigfile, outfile) =
 		   | Con id => (out "constructor; "; 
 				mkref line file)
 		   | Term (id, NONE) => mkref line file
+		   | Term (id, SOME "HOL") => (out "HOL"; out "; ";
+					      mkHOLref file)
 		   | Term (id, SOME kind) => (out kind; out "; ";
 					      mkref line file);
 		nextfile comp erest)

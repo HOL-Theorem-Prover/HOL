@@ -1,7 +1,7 @@
 # Makefile for help utility recompilation
 #include ../../Makefile.inc
 
-MOSMLHOME=/local/scratch/kxs/200
+MOSMLHOME=/home/kxs/200
 MOSMLBIN=$(MOSMLHOME)/bin
 MOSMLTOOLS=$(MOSMLBIN)/camlrunm $(MOSMLHOME)/tools
 MOSMLC=$(MOSMLBIN)/mosmlc -c 

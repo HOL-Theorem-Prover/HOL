@@ -8,13 +8,13 @@ val version = "<A HREF=\"http://www.cl.cam.ac.uk/Research/HVG/FTP/\">\
 
 (* HOL distribution directory: *)
 
-val HOLpath = "/local/scratch/kxs/kanan"
+val HOLpath = "/home/kxs/kanan"
 
 (* Default directory containing the signature files: *)
 val libdirDef = Path.concat(HOLpath,"sigobj")
 
 (* Default filename for the resulting help database: *)
-val helpfileDef = "HOL.Help"
+val helpfileDef = Path.concat(Path.concat(HOLpath, "help"),"HOL.Help")
 
 (* Default filename for the ASCII format database: *)
 val txtIndexDef = "index.txt"
@@ -98,7 +98,7 @@ fun mkbase (entries : Database.entry list) =
 (* Additional stuff specific to HOL.                                         *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_HOLdocfile_entry s = 
+fun mk_HOLdocfile_entry (dir,s) = 
  let val content = 
       let val (pfx,sfx) = Substring.position "-lc.doc" (Substring.all s)
       in if Substring.size sfx = 0 orelse Substring.size sfx <> 7
@@ -121,7 +121,7 @@ fun docdir_to_entries path (endpath, entries) =
       val L0 = Mosml.listDir dir
       val L1 = List.filter is_docfile L0
   in
-    List.foldl (fn (e,l) => (mk_HOLdocfile_entry e::l)) entries L1
+    List.foldl (fn (s,l) => mk_HOLdocfile_entry (dir,s)::l) entries L1
   end
 end;
 
@@ -159,8 +159,7 @@ fun process (libdir, helpfile, txtIndex, texIndex, htmldir, htmlIndex) =
      print ("\nWriting Latex signature index in file " ^ texIndex ^ "\n");
      Printbase.printLatexBase(helpfile, texIndex);
      print ("\nCreating HTML versions of signature files\n");
-     Htmlsigs.sigsToHtml version bgcolor stoplist helpfile 
-                         (libdir, docdirs, htmldir);
+     Htmlsigs.sigsToHtml version bgcolor stoplist helpfile (libdir, htmldir);
      print ("\nWriting HTML signature index in file " ^ htmlIndex ^ "\n");
      Htmlsigs.printHTMLBase version bgcolor (helpfile, htmlIndex)
      (*  ;
