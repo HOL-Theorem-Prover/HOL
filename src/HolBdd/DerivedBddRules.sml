@@ -150,6 +150,10 @@ fun GenTermToTermBdd leaffn vm tm =
  end
 end;
 
+exception fail;
+
+fun failfn _ = raise fail;
+
 (*****************************************************************************)
 (* Extend a varmap with a list of variables                                  *)
 (*****************************************************************************)
@@ -188,6 +192,20 @@ fun bddToTerm varmap =
                               bddToTerm_aux(bdd.low bdd))
  in
   bddToTerm_aux
+ end;
+
+(*****************************************************************************)
+(*               vm tm |--> b                                                *)
+(*  --------------------------------------------                             *)
+(*  [oracles: HolBdd]  |- tm = ^(bddToTerm vm b)                             *)
+(*****************************************************************************)
+
+fun TermBddToEqThm tb =
+ let val (vm,tm,b) = dest_term_bdd tb
+     val tm' = bddToTerm vm b
+     val tb' = GenTermToTermBdd failfn vm tm'
+ in
+  BddThmOracle(BddOp(Biimp,tb,tb'))
  end;
 
 (*****************************************************************************)
@@ -497,7 +515,7 @@ fun iterate p f =
  let fun iter n x =
       let val x'  = f n x
       in
-       if p x' then x else iter (n+1) x'
+       if p x' then x' else iter (n+1) x'
       end
  in
   iter 0

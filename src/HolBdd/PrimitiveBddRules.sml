@@ -111,13 +111,13 @@ fun name v =
 (*         |- t                                                              *)
 (*****************************************************************************)
 
-val TermBddTag = Tag.read "TermBdd";
+val HolBddTag = Tag.read "HolBdd";
 
 exception BddThmOracleError;
 
 fun BddThmOracle(TermBdd(_,tm,bdd)) =
  if bdd.equal bdd bdd.TRUE 
-  then mk_oracle_thm TermBddTag ([],tm) 
+  then mk_oracle_thm HolBddTag ([],tm) 
   else raise BddThmOracleError;
 
 (*****************************************************************************)
