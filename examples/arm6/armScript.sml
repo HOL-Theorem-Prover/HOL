@@ -86,7 +86,7 @@ val MODE_SPSR_def = Define`
      || svc -> spsr_svc
      || abt -> spsr_abt
      || und -> spsr_und
-     || otherwise -> ARB`;
+     || _   -> ARB`;
 
 val USER_def = Define`
    USER mode = (mode = usr) \/ (mode = safe)`;
@@ -131,31 +131,27 @@ val REG_READ_def = Define`
       reg_usr (w4 15) + w32 8
     else if USER mode \/ (mode = fiq) /\ n < 8 \/ ~(mode = fiq) /\ n < 13 then
       reg_usr (w4 n)
-    else if mode = fiq then
-      reg_fiq (NUM_REG_fiq n)
-    else if mode = irq then
-      reg_irq (NUM_REG_irq n)
-    else if mode = svc then
-      reg_svc (NUM_REG_svc n)
-    else if mode = abt then
-      reg_abt (NUM_REG_abt n)
-    else (* mode = und *)
-      reg_und (NUM_REG_und n)`;
+    else
+      case mode of
+         fiq -> reg_fiq (NUM_REG_fiq n)
+      || irq -> reg_irq (NUM_REG_irq n)
+      || svc -> reg_svc (NUM_REG_svc n)
+      || abt -> reg_abt (NUM_REG_abt n)
+      || und -> reg_und (NUM_REG_und n)
+      || _ -> ARB`;
 
 val REG_WRITE_def = Define`
   REG_WRITE (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) mode n d =
     if (n = 15) \/ USER mode \/ (mode = fiq) /\ n < 8 \/ ~(mode = fiq) /\ n < 13 then
       REG (SUBST reg_usr (w4 n,d)) reg_fiq reg_irq reg_svc reg_abt reg_und
-    else if (mode = fiq) then
-      REG reg_usr (SUBST reg_fiq (NUM_REG_fiq n,d)) reg_irq reg_svc reg_abt reg_und
-    else if mode = irq then
-      REG reg_usr reg_fiq (SUBST reg_irq (NUM_REG_irq n,d)) reg_svc reg_abt reg_und
-    else if mode = svc then
-      REG reg_usr reg_fiq reg_irq (SUBST reg_svc (NUM_REG_svc n,d)) reg_abt reg_und
-    else if mode = abt then
-      REG reg_usr reg_fiq reg_irq reg_svc (SUBST reg_abt (NUM_REG_abt n,d)) reg_und
-    else (* mode = und *)
-      REG reg_usr reg_fiq reg_irq reg_svc reg_abt (SUBST reg_und (NUM_REG_und n,d))`;
+    else
+      case mode of
+         fiq -> REG reg_usr (SUBST reg_fiq (NUM_REG_fiq n,d)) reg_irq reg_svc reg_abt reg_und
+      || irq -> REG reg_usr reg_fiq (SUBST reg_irq (NUM_REG_irq n,d)) reg_svc reg_abt reg_und
+      || svc -> REG reg_usr reg_fiq reg_irq (SUBST reg_svc (NUM_REG_svc n,d)) reg_abt reg_und
+      || abt -> REG reg_usr reg_fiq reg_irq reg_svc (SUBST reg_abt (NUM_REG_abt n,d)) reg_und
+      || und -> REG reg_usr reg_fiq reg_irq reg_svc reg_abt (SUBST reg_und (NUM_REG_und n,d))
+      || _ -> ARB`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)

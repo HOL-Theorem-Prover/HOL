@@ -3,9 +3,6 @@
 open HolKernel boolLib Q bossLib Parse arithmeticTheory
      onestepTheory word32Theory armTheory;
 
-infix 8 by;
-infix THEN THENC THENL ++;
-
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "core";

@@ -3,9 +3,6 @@ open HolKernel boolLib Q Parse bossLib numLib
      arithmeticTheory bitsTheory word32Theory word32Lib
      armTheory coreTheory;
 
-infix 8 by;
-infix THEN THENC THENL ++;
-
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "lemmas";
@@ -194,8 +191,7 @@ val MEMREAD_ALIGNED = store_thm("MEMREAD_ALIGNED",
 
 val PC_WRITE_MODE_FREE = store_thm("PC_WRITE_MODE_FREE",
   `!r m p. REG_WRITE r m 15 p = REG_WRITE r usr 15 p`,
-  Cases_on `r`
-    THEN RW_TAC std_ss [REG_WRITE_def]
+  Cases THEN RW_TAC std_ss [REG_WRITE_def]
 );
 
 val PC_READ_MODE_FREE = store_thm("PC_READ_MODE_FREE",
@@ -204,15 +200,13 @@ val PC_READ_MODE_FREE = store_thm("PC_READ_MODE_FREE",
 );
 
 val REG_WRITE_READ_PC = store_thm("REG_WRITE_READ_PC",
-  `!reg mode pc. REG_READ6 (REG_WRITE reg mode 15 pc) usr 15 = pc`,
-  Cases_on `reg`
-    THEN RW_TAC std_ss [REG_READ6_def,FETCH_PC_def,REG_WRITE_def,SUBST_def]
+  `!r m p. REG_READ6 (REG_WRITE r m 15 p) usr 15 = p`,
+  Cases THEN RW_TAC std_ss [REG_READ6_def,FETCH_PC_def,REG_WRITE_def,SUBST_def]
 );
 
 val REG_WRITE_WRITE_PC = store_thm("REG_WRITE_WRITE_PC",
   `!r m1 m2 p1 p2. REG_WRITE (REG_WRITE r m1 15 p1) m2 15 p2 = REG_WRITE r m2 15 p2`,
-  Cases_on `r`
-    THEN RW_TAC std_ss [REG_WRITE_def,SUBST_EQ]
+  Cases THEN RW_TAC std_ss [REG_WRITE_def,SUBST_EQ]
 );
 
 val REG_WRITE_COMMUTES = store_thm("REG_WRITE_COMMUTES",
@@ -220,7 +214,8 @@ val REG_WRITE_COMMUTES = store_thm("REG_WRITE_COMMUTES",
   REPEAT STRIP_TAC
     THEN ONCE_REWRITE_TAC [PC_WRITE_MODE_FREE]
     THEN Cases_on `r`
-    THEN RW_TAC std_ss [REG_WRITE_def,SUBST_NE_COMMUTES]
+    THEN Cases_on `m2`
+    THEN RW_TAC std_ss [REG_WRITE_def,SUBST_NE_COMMUTES,USER_def]
 );
 
 val REG_WRITE_READ_R14 = store_thm("REG_WRITE_READ_R14",
@@ -229,13 +224,13 @@ val REG_WRITE_READ_R14 = store_thm("REG_WRITE_READ_R14",
     THEN ONCE_REWRITE_TAC [PC_WRITE_MODE_FREE]
     THEN SIMP_TAC arith_ss [GSYM REG_WRITE_COMMUTES]
     THEN Cases_on `r`
-    THEN RW_TAC arith_ss [REG_READ6_def,REG_READ_def,REG_WRITE_def,SUBST_def]
+    THEN Cases_on `m`
+    THEN RW_TAC arith_ss [REG_READ6_def,REG_READ_def,REG_WRITE_def,SUBST_def,USER_def]
 );
 
 val REG_WRITE_WRITE_R14 = store_thm("REG_WRITE_WRITE_R14",
   `!r m d1 d2. REG_WRITE (REG_WRITE r m 14 d1) m 14 d2 = REG_WRITE r m 14 d2`,
-  Cases_on `r`
-    THEN RW_TAC std_ss [REG_WRITE_def,SUBST_EQ]
+  Cases THEN Cases THEN RW_TAC std_ss [REG_WRITE_def,SUBST_EQ,USER_def]
 );
 
 (* -------------------------------------------------------- *)
@@ -283,41 +278,36 @@ val SUBST_EQ2 = store_thm("SUBST_EQ2",
 
 val SUB8_INV = store_thm("SUB8_INV",
   `!r. SUB8_PC (ADD8_PC r) = r`,
-  Cases_on `r`
-    THEN RW_TAC std_ss [ADD_SUBw,SUB8_PC_def,ADD8_PC_def,SUBST_EQ,SUBST_EQ2,SUBST_def]
+  Cases THEN RW_TAC std_ss [ADD_SUBw,SUB8_PC_def,ADD8_PC_def,SUBST_EQ,SUBST_EQ2,SUBST_def]
 );
 
 val FETCH_SUB8 = store_thm("FETCH_SUB8",
   `!r.  FETCH_PC (SUB8_PC r) = REG_READ6 r usr 15 - w32 8`,
-  Cases_on `r`
-    THEN RW_TAC std_ss [FETCH_PC_def,REG_READ6_def,SUB8_PC_def,SUBST_def]
+  Cases THEN RW_TAC std_ss [FETCH_PC_def,REG_READ6_def,SUB8_PC_def,SUBST_def]
 );
 
 val REG_READ_SUB8_PC = store_thm("REG_READ_SUB8_PC",
   `!r m n. REG_READ (SUB8_PC r) m n = REG_READ6 r m n`,
-  Cases_on `r`
-    THEN RW_TAC std_ss [SUBST_def,REG_READ_def,REG_READ6_def,SUB8_PC_def,FETCH_PC_def,
-                        ONCE_REWRITE_RULE [ADD_SUB_SYM] ADD_SUBw]
+  Cases THEN RW_TAC std_ss [SUBST_def,REG_READ_def,REG_READ6_def,SUB8_PC_def,FETCH_PC_def,
+                            ONCE_REWRITE_RULE [ADD_SUB_SYM] ADD_SUBw]
 );
 
 val NOOP_REG = store_thm("NOOP_REG",
   `!r m.  INC_PC (SUB8_PC r) = SUB8_PC (REG_WRITE r m 15 (REG_READ6 r usr 15 + w32 4))`,
-  Cases_on `r`
-    THEN RW_TAC std_ss [INC_PC_def,SUB8_PC_def,REG_WRITE_def,REG_READ6_def,
-                        FETCH_PC_def,SUBST_def,SUBST_EQ,ADD_SUB_SYM]
+  Cases THEN RW_TAC std_ss [INC_PC_def,SUB8_PC_def,REG_WRITE_def,REG_READ6_def,
+                            FETCH_PC_def,SUBST_def,SUBST_EQ,ADD_SUB_SYM]
 );
 
 val OP_REG_LEM = store_thm("OP_REG_LEM",
   `!r m d. REG_WRITE (SUB8_PC r) m 15 d = SUB8_PC (REG_WRITE r m 15 (d + w32 4 + w32 4))`,
   ONCE_REWRITE_TAC [PC_WRITE_MODE_FREE]
-    THEN Cases_on `r`
+    THEN Cases
     THEN RW_TAC std_ss [REG_WRITE_def,SUB8_PC_def,SUBST_def,SUBST_EQ,ADD4_ADD4_SUB8_THM]
 );
 
 val INC_REG_LEM = store_thm("INC_REG_LEM",
   `!r m n d. ~(n = 15) ==> (REG_WRITE (SUB8_PC r) m n d = SUB8_PC (REG_WRITE r m n d))`,
-  Cases_on `r`
-    THEN RW_TAC std_ss [SUBST_NE_COMMUTES,FETCH_PC_def,SUB8_PC_def,REG_WRITE_def,SUBST_def]
+  Cases THEN Cases THEN RW_TAC std_ss [SUBST_NE_COMMUTES,FETCH_PC_def,SUB8_PC_def,REG_WRITE_def,SUBST_def,USER_def]
 );
 
 val OP_REG = store_thm("OP_REG",
@@ -430,9 +420,7 @@ val DISJ_TO_CONJ = store_thm("DISJ_TO_CONJ",
 val SPSR_READ_THM = store_thm("SPSR_READ_THM",
   `!psr mode. (if USER mode then CPSR_READ psr else SPSR_READ psr mode)
                     = SPSR_READ psr mode`,
-  REPEAT STRIP_TAC
-    THEN Cases_on `psr`
-    THEN RW_TAC std_ss [CPSR_READ_def,SPSR_READ_def]
+  Cases THEN RW_TAC std_ss [CPSR_READ_def,SPSR_READ_def]
 );
 
 val NZCV_ALUOUT_THM = store_thm("NZCV_ALUOUT_THM",
@@ -600,22 +588,18 @@ val DECODE_MODE_LEM = store_thm("DECODE_MODE_LEM",
                 case m of usr -> 16 || fiq -> 17
                        || irq -> 18 || svc -> 19
                        || abt -> 23 || und -> 27 || _ -> 0`,
-  Cases
-    THEN RW_TAC arith_ss [w2n_EVAL,SET_MODE_def,MODw_THM,HB_def,BITS_COMP_THM,SLICEw_THM]
+  Cases THEN RW_TAC arith_ss [w2n_EVAL,SET_MODE_def,MODw_THM,HB_def,BITS_COMP_THM,SLICEw_THM]
     THEN SIMP_TAC std_ss [MOD_TIMES,MOD_EQ_0,SIMP_RULE arith_ss [DIV1] (SPECL [`4`,`0`] BITS2_THM)]
 );
 
 val DECODE_MODE_THM = store_thm("DECODE_MODE_THM",
   `!m psr x y. DECODE_MODE (w2n (SET_IFMODE x y m psr)) = m`,
-  REPEAT STRIP_TAC
-    THEN Cases_on `m`
-    THEN RW_TAC arith_ss [SET_IFMODE_def,DECODE_MODE_def,DECODE_MODE_LEM]
+  Cases THEN RW_TAC arith_ss [SET_IFMODE_def,DECODE_MODE_def,DECODE_MODE_LEM]
 );
   
 val PSR_WRITE_COMM = store_thm("PSR_WRITE_COMM",
   `!psr m x y. SPSR_WRITE (CPSR_WRITE psr x) m y = CPSR_WRITE (SPSR_WRITE psr m y) x`,
-  Cases_on `psr`
-    THEN RW_TAC std_ss [SPSR_WRITE_def,CPSR_WRITE_def]
+  Cases THEN RW_TAC std_ss [SPSR_WRITE_def,CPSR_WRITE_def]
 );
 
 (* -------------------------------------------------------- *)

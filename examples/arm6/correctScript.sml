@@ -4,9 +4,6 @@ open HolKernel boolLib Q Parse bossLib simpLib combinTheory PairRules
      arithmeticTheory onestepTheory word32Theory word32Lib
      armTheory coreTheory lemmasTheory lemmasLib;
 
-infix 8 by;
-infix THEN THENC THENL ++;
- 
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "correct";

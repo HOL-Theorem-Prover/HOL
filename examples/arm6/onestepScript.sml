@@ -2,9 +2,6 @@
 open HolKernel boolLib Q Parse bossLib simpLib numLib
      combinTheory arithmeticTheory prim_recTheory;
 
-infix 8 by;
-infix THEN THENL ++;
-
 (* --------------------------------------------------------*)
 
 val _ = new_theory "onestep";
