@@ -75,6 +75,10 @@ sig
   val strip_disj:Term.term -> Term.term list
   val strip_pair:Term.term -> Term.term list
 
+  (* Construction and destruction of function types from/to lists of types *)
+  val list_mk_fun_ty : Type.hol_type list * Type.hol_type -> Type.hol_type
+  val strip_fun_ty : Type.hol_type -> Type.hol_type list * Type.hol_type
+
 
   (* Miscellaneous *)
   val disch:Term.term * Term.term list -> Term.term list

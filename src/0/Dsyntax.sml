@@ -441,6 +441,20 @@ end;
 
 val is_pabs = Lib.can dest_pabs;
 
+(* Construction and destruction of function types from/to lists of types *)
+(* Michael Norrish - December 1999 *)
+
+fun list_mk_fun_ty (dtys, rty) = List.foldr op--> rty dtys
+local
+  fun recurse acc ty = let
+    val (dom,rng) = dom_rng ty
+  in
+    recurse (dom::acc) rng
+  end handle HOL_ERR _ => (List.rev acc, ty)
+in
+  fun strip_fun_ty ty = recurse [] ty
+end
+
 (*---------------------------------------------------------------------------*
  * Used to implement natural deduction style discharging of hypotheses. All  *
  * hypotheses alpha-convertible to the dischargee are removed.               *
