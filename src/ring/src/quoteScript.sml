@@ -29,7 +29,7 @@ val index_discr = tl (type_rws "index");
 val compare_index_equal = store_thm("compare_index_equal",
   --` !i1 i2. (index_compare i1 i2 = EQUAL) = i1 = i2 `--,
 Induct THEN Induct THEN
-RW_TAC bool_ss (index_compare_def :: index_discr));
+RW_TAC base_ss (index_compare_def :: index_discr));
 
 
 val compare_list_index =

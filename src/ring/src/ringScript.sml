@@ -104,13 +104,13 @@ val semi_ring_of_def = Define
 val ring_is_semi_ring = asm_store_thm
     ("ring_is_semi_ring",
      --` is_semi_ring semi_ring_of`--,
-RW_TAC bool_ss [ semi_ring_of_def, semi_ringTheory.is_semi_ring_def,
+RW_TAC base_ss [ semi_ring_of_def, semi_ringTheory.is_semi_ring_def,
 		 semi_ringTheory.semi_ring_accessors] THEN
 MAP_FIRST MATCH_ACCEPT_TAC
   [ plus_sym,plus_assoc,mult_sym,mult_assoc,plus_zero_left,mult_one_left,
     mult_zero_left, distr_left ]);
 
-(* Thus, we import the thms of HALFringTheory *)
+(* Thus, we import the thms of semi_ringTheory *)
 (* TODO: reexport these lemmas *)
 val { plus_permute, plus_rotate, mult_permute, mult_rotate, distr_right,
       mult_one_right,...} =

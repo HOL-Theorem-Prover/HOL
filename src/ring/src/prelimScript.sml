@@ -42,7 +42,7 @@ DISCH_THEN (fn tha =>
 (Induct THENL [ALL_TAC,GEN_TAC]) THEN
 (Induct THENL [ALL_TAC,GEN_TAC]) THEN
 TRY (REWRITE_TAC[GSYM tha] THEN Cases_on `(cmp (h:'a) (h':'a)):ordering`) THEN
-RW_TAC bool_ss [list_compare_def, compare_def, GSYM tha, thms]));
+RW_TAC base_ss [list_compare_def, compare_def, GSYM tha, thms]));
 
 
 

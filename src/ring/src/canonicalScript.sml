@@ -32,7 +32,7 @@ val { plus_sym, plus_assoc, mult_sym, mult_assoc, distr_left,
 
 (* useful tacs *)
 val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);
-fun ARW_TAC l = RW_TAC bool_ss
+fun ARW_TAC l = RW_TAC base_ss
     ([ mult_one_left, mult_one_right,
        plus_zero_left, plus_zero_right,
        mult_zero_left, mult_zero_right, compare_def ]@l);

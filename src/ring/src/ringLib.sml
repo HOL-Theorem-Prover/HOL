@@ -1,11 +1,13 @@
+structure ringLib :> ringLib =
+struct
+
 (*
 load "ringNormTheory";
 load "quote";
 load "computeLib";
 *)
-local open HolKernel Parse basicHol90Lib prelimTheory quoteTheory
-           quote computeLib
-in
+
+open HolKernel Parse basicHol90Lib prelimTheory quoteTheory quote computeLib;
 
 infix ORELSE THEN THENL THENC o |->;
 
@@ -49,7 +51,7 @@ end;
 fun ring_field q = 
   rhs(concl(REWRITE_CONV[ringTheory.ring_accessors] (--q--)));
 
-fun hring_field q = 
+fun sring_field q = 
   rhs(concl(REWRITE_CONV[semi_ringTheory.semi_ring_accessors] (--q--)));
 
 (* name is a prefix for the new constant names. *)
@@ -108,8 +110,8 @@ fun import_ring ty ring th =
   end
 end;
 *)
-fun import_semi_ring name ty hring th =
-  let val [P,M] = map hring_field [`SRP ^hring`,`SRM ^hring`]
+fun import_semi_ring name ty sring th =
+  let val [P,M] = map sring_field [`SRP ^sring`,`SRM ^sring`]
       val {Vars,Csts,Plus,Mult} = spolynom_cst ty
       val { ics_aux_def, interp_cs_def, interp_m_def, interp_vl_def,
 	    ivl_aux_def, interp_sp_def,
@@ -120,7 +122,7 @@ fun import_semi_ring name ty hring th =
 	    spolynom_normalize_def, spolynom_simplify_def,
 	    spolynomial_simplify_ok, ... } =
 	canonicalTheory.IMPORT
-	  { Vals = [hring],
+	  { Vals = [sring],
 	    Inst = [th],
 	    Rule = REWRITE_RULE[semi_ringTheory.semi_ring_accessors ],
 	    Rename = fn s => SOME(name^s) }
@@ -141,21 +143,21 @@ fun import_semi_ring name ty hring th =
 ;
 
 (* TODO: find a prefix name, instead of toto titi! *)
-fun dest_ring th =
+fun dest_ring nm th =
   let val {Rator,Rand} = dest_comb (concl th)
       val {Name=c,Ty} = dest_const Rator in
   (case (c, dest_type (fst (dom_rng Ty))) of
     ("is_ring", {Tyop="ring", Args=[ty]}) =>
-      import_ring "toto_" ty Rand th 
+      import_ring(nm^"_") ty Rand th 
   | ("is_semi_ring", {Tyop="semi_ring", Args=[ty]}) =>
-      import_semi_ring "titi_" ty Rand th
+      import_semi_ring (nm^"_") ty Rand th
   | _ => raise RING_ERR "" "")
   handle HOL_ERR _ => raise RING_ERR "dest_ring" "mal-formed thm"
   end
 ;
 (*
-dest_ring(ASSUME(--`is_ring(ring int_0 int_1 $+_ $*_ --)`--))
-dest_ring(ASSUME(--`is_semi_ring(semi_ring 0 1 $+ $* )`--))
+dest_ring "int" (ASSUME(--`is_ring(ring int_0 int_1 $+_ $*_ --)`--))
+dest_ring "num" (ASSUME(--`is_semi_ring(semi_ring 0 1 $+ $* )`--))
 *)
 
 
@@ -183,8 +185,8 @@ fun binop_eq ty =
   end;
 
 
-fun compile_ring_infos { Theory=thm, Const=is_cst, Rewrites=rws } =
-  let val ring_elts = dest_ring thm
+fun compile_ring_infos { Name, Theory=thm, Const=is_cst, Rewrites=rws } =
+  let val ring_elts = dest_ring Name thm
       val reify_fun = meta_expr (#Ty ring_elts) is_cst (#Meta ring_elts)
       val (lhs_rws,rhs_rws) =
  	comp_rws rws (#LhsThm ring_elts) (#RhsThm ring_elts)
