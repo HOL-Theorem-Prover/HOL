@@ -18,7 +18,7 @@ val ERR = mk_HOL_ERR "Defn";
       Miscellaneous support
  ---------------------------------------------------------------------------*)
 
-val monitoring = ref true;
+val monitoring = ref false;
 
 fun enumerate l = map (fn (x,y) => (y,x)) (Lib.enumerate 0 l);
 

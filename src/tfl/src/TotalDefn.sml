@@ -149,7 +149,9 @@ end;
 
 
 fun proveTotal tac defn =
-  Defn.elim_tcs defn (CONJUNCTS (prove(list_mk_conj (Defn.tcs_of defn), tac)))
+  Defn.elim_tcs defn 
+    (CONJUNCTS (Tactical.default_prover
+                  (list_mk_conj (Defn.tcs_of defn), tac)));
 
 (*---------------------------------------------------------------------------
       Default TC simplifier and prover. Terribly terribly naive, but
@@ -183,8 +185,8 @@ local fun BC_TAC th =
         then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
         else MATCH_ACCEPT_TAC th;
       open relationTheory prim_recTheory pairTheory
-      val WFthms =  [WF_inv_image, WF_measure, WF_LESS, WF_Empty,
-                     WF_PRED, WF_RPROD, WF_LEX, WF_TC]
+      val WFthms = [WF_inv_image, WF_measure, WF_LESS, WF_Empty,
+                    WF_PRED, WF_RPROD, WF_LEX, WF_TC]
 in
 fun WF_TAC thms = REPEAT (MAP_FIRST BC_TAC (thms@WFthms) ORELSE CONJ_TAC)
 end;
@@ -234,10 +236,16 @@ fun WF_REL_TAC Rquote = PRIM_WF_REL_TAC Rquote [] default_simps;
  ---------------------------------------------------------------------------*)
 
 local open prim_recTheory relationTheory
+      fun mesg tac (g as (_,tm)) = 
+        (if !Defn.monitoring 
+           then print(String.concat
+                   ["\nCalling ARITH on\n",term_to_string tm,"\n"])
+           else ();
+         tac g)
 in
 fun default_prover g =
  (CONV_TAC (TC_SIMP_CONV (WF_measure::WF_LESS::WF_Empty::default_simps))
-   THEN ASM_ARITH_TAC) g
+   THEN mesg ASM_ARITH_TAC) g
 end;
 
 
@@ -245,7 +253,10 @@ local val term_prover = proveTotal default_prover
       open Defn
       fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
       fun should_try_to_prove_termination defn =
-            not(null(tcs_of defn)) andalso null(params_of defn)
+        let val tcs = tcs_of defn
+        in not(null tcs) andalso 
+           null(intersect (free_varsl tcs) (params_of defn))
+        end
 in
 fun primDefine defn =
  let val defn' =
