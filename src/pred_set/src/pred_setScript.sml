@@ -517,6 +517,9 @@ val DISJOINT_EMPTY_REFL =
     ("DISJOINT_EMPTY_REFL",
      (--`!s:'a set. (s = EMPTY) = (DISJOINT s s)`--),
      REWRITE_TAC [DISJOINT_DEF,INTER_IDEMPOT]);
+val DISJOINT_EMPTY_REFL_RWT = save_thm(
+  "DISJOINT_EMPTY_REFL_RWT",
+  ONCE_REWRITE_RULE [EQ_SYM_EQ] DISJOINT_EMPTY_REFL)
 
 (* --------------------------------------------------------------------- *)
 (* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)
@@ -538,6 +541,14 @@ val DISJOINT_UNION_BOTH = store_thm(
         (DISJOINT (s UNION t) u = DISJOINT s u /\ DISJOINT t u) /\
         (DISJOINT u (s UNION t) = DISJOINT s u /\ DISJOINT t u)``,
   PROVE_TAC [DISJOINT_UNION, DISJOINT_SYM]);
+
+val DISJOINT_SUBSET = store_thm(
+  "DISJOINT_SUBSET",
+  ``!s t u. DISJOINT s t /\ u SUBSET t ==> DISJOINT s u``,
+  REWRITE_TAC [DISJOINT_DEF, SUBSET_DEF, IN_INTER, NOT_IN_EMPTY,
+               EXTENSION] THEN
+  PROVE_TAC [])
+
 
 (* ===================================================================== *)
 (* Set difference							 *)
@@ -591,6 +602,11 @@ val DIFF_EQ_EMPTY =
      REWRITE_TAC [EXTENSION,IN_DIFF,NOT_IN_EMPTY,DE_MORGAN_THM] THEN
      PURE_ONCE_REWRITE_TAC [DISJ_SYM] THEN
      REWRITE_TAC [EXCLUDED_MIDDLE]);
+
+val DIFF_SUBSET = store_thm(
+  "DIFF_SUBSET",
+  ``!s t. (s DIFF t) SUBSET s``,
+  REWRITE_TAC [SUBSET_DEF, IN_DIFF] THEN PROVE_TAC []);
 
 
 (* ===================================================================== *)
@@ -3459,8 +3475,10 @@ val _ = export_rewrites
      "IN_DELETE", "DELETE_DELETE", "DELETE_EQ_SING", "DELETE_SUBSET",
      (* "DIFF" theorems *)
      "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV", "EMPTY_DIFF",
+     "DIFF_SUBSET",
      (* "DISJOINT" theorems *)
      "DISJOINT_EMPTY", "DISJOINT_INSERT", "DISJOINT_UNION_BOTH",
+     "DISJOINT_EMPTY_REFL_RWT",
      (* "IMAGE" theorems *)
      "IMAGE_EMPTY", "IMAGE_DELETE", "IMAGE_FINITE", "IMAGE_ID", "IMAGE_IN",
      "IMAGE_INSERT", "IMAGE_SUBSET", "IMAGE_UNION", "IN_IMAGE",
