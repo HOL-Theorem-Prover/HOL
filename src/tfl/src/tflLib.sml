@@ -102,20 +102,6 @@ fun pairf (f,name,argtys,range_ty,eqs0) =
     rebuild eqs0
  end;
 
-(* test
-val eqs0 = Term`(filter (P:'a -> bool) [] = []) /\ 
-                (filter P (CONS h t) = (P h => CONS h (filter P t) 
-                                              | filter P t))`;
-val eqs0 = Term`(f a b c:bool = Q (f (a:num)) ([b;c]:num list))`;
-val eqs0 = Term`(f a (b,c) d:bool = Q (f (a:num)) ([b;c;d]:num list))`;
-val lhs1 = #lhs(dest_eq(hd(strip_conj eqs0)))
-val (f,args) = strip_comb lhs1
-val argtys = map type_of args
-val range_ty = type_of lhs1
-val unc_argty = prod_tyl argtys
-val curried = not(length args = 1)
-val unc_eqs = if curried then pairf(f,argtys,range_ty,eqs0) else eqs0
-*)
 
 (*---------------------------------------------------------------------------*
  * Find the name of a to-be-defined constant from a quotation. Or at         *
@@ -144,15 +130,15 @@ fun grab_first_ident s =
  end;
 
 
- (*---------------------------------------------------------------------------*
-  * "rfunction" is one of the main entrypoints to the definition mechanisms.  *
-  * "rfunction" is not for normal use, only for when "Rfunction" is not       *
-  * satisfactory. "rfunction" is parameterized by a postprocessor and yet     *
-  * another simplifier ("reducer"). This reducer attempts to eliminate        *
-  * (or simplify, when that's not possible) solved termination conditions,    *
-  * in the definition and induction theorems. This reducer is only invoked    *
-  * on the results of defining a nested recursion.                            *
-  *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*
+ * "rfunction" is one of the main entrypoints to the definition mechanisms.  *
+ * "rfunction" is not for normal use, only for when "Rfunction" is not       *
+ * satisfactory. "rfunction" is parameterized by a postprocessor and yet     *
+ * another simplifier ("reducer"). This reducer attempts to eliminate        *
+ * (or simplify, when that's not possible) solved termination conditions,    *
+ * in the definition and induction theorems. This reducer is only invoked    *
+ * on the results of defining a nested recursion.                            *
+ *---------------------------------------------------------------------------*)
 local fun id_thm th = 
        let val {lhs,rhs} = dest_eq(#2(strip_forall(concl th)))
        in aconv lhs rhs
@@ -293,7 +279,7 @@ fun std_postprocessor p =
   Tfl.postprocess{WFtac = WF_TAC[],
              terminator = terminator, 
              simplifier = tc_simplifier datatype_simpls} fbase p
-  end
+  end;
 
 
 
@@ -321,6 +307,7 @@ fun std_postprocessor p =
   * termination relation doesn't need to be given; however, one will later 
   * have to be given in order to eliminate the termination conditions.
   *--------------------------------------------------------------------------*)
+
 fun lazyR_def name (qtm as QUOTE s::_) = 
  let val nm = grab_first_ident s
      val dnm = "$"^nm

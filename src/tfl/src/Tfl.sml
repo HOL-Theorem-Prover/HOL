@@ -65,6 +65,8 @@ fun list_to_string p delim =
 
 val stringize = list_to_string int_to_string ", ";
 
+fun func_of_cond_eqn tm =
+    #1(strip_comb(#lhs(dest_eq(#2 (strip_forall(#2(strip_imp tm)))))));
 
 (*---------------------------------------------------------------------------
  * The next function is common to pattern-match translation and 
@@ -899,6 +901,7 @@ handle HOL_ERR _ => raise TFL_ERR "mk_induction" "failed derivation";
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
+(*
 fun simplify_induction thy hth ind = 
   let val tych = Thry.typecheck thy
       val (asl,_) = Thm.dest_thm ind
@@ -906,12 +909,33 @@ fun simplify_induction thy hth ind =
       val tc = lhs tc_eq_tc'
       fun loop [] = ind
         | loop (asm::rst) = 
-          if (can (Thry.match_term thy asm) tc)
+          if can (Thry.match_term thy (#2 (strip_forall asm))) tc
           then UNDISCH
                  (MATCH_MP
                      (MATCH_MP simp_thm (DISCH (tych asm) ind)) 
                      hth)
          else loop rst
+  in loop asl
+end;
+*)
+
+fun simplify_induction thy hth ind = 
+  let val tych = Thry.typecheck thy
+      val (asl,_) = Thm.dest_thm ind
+      val (_,tc_eq_tc') = Thm.dest_thm hth
+      val tc = lhs tc_eq_tc'
+      fun loop [] = ind
+        | loop (asm::rst) = 
+           let val hypcore = #2 (strip_forall asm)
+           in if can (Thry.match_term thy hypcore) tc
+              then let val thm = DISCH (tych asm) ind
+                       open Rewrite
+                       val asm_eq_asm' = PURE_ONCE_REWRITE_CONV [hth] asm
+                   in UNDISCH
+                        (MATCH_MP (MATCH_MP simp_thm thm) asm_eq_asm')
+                   end
+              else loop rst
+           end
   in loop asl
 end;
 
@@ -921,7 +945,18 @@ end;
  * assumption to the theorem.
  *---------------------------------------------------------------------------*)
 fun elim_tc tcthm (rule,induction) = 
-   (MP rule (SPEC_ALL tcthm), PROVE_HYP tcthm induction)
+   (MP rule tcthm, 
+    let val (asl,_) = Thm.dest_thm induction
+        fun loop [] = induction
+          | loop (asm::rst) = 
+              let val (V,hypcore) = strip_forall asm
+              in if can (Term.match_term hypcore) (concl tcthm)
+                 then PROVE_HYP (GENL V tcthm) induction
+                 else loop rst
+              end
+     in loop asl
+     end);
+
 
 
 fun postprocess{WFtac, terminator, simplifier} theory {rules,induction,TCs} =
@@ -946,7 +981,7 @@ let val tych = Thry.typecheck theory
     *   3. replace tc by tc' in both the rules and the induction theorem.
     *---------------------------------------------------------------------*)
    fun simplify_tc tc (r,ind) =
-       let val tc_eq = simplifier (tych tc)
+       let val tc_eq = simplifier (tych (#2 (strip_forall tc)))
        in 
          elim_tc (MATCH_MP eqT tc_eq) (r,ind)
          handle HOL_ERR _ 
@@ -988,14 +1023,16 @@ let val tych = Thry.typecheck theory
     * in the induction theorem.
     *-------------------------------------------------------------------*)
    fun strip_imp tm = if is_neg tm then ([],tm) else USyntax.strip_imp tm
+   val f = func_of_cond_eqn (hd (strip_conj(concl rules)))
+   fun nested tm = can(find_term (aconv f)) tm handle HOL_ERR _ => false
    fun loop ([],extras,R,ind) = (rev R, ind, extras)
      | loop ((r,ftcs)::rst, nthms, R, ind) =
         let val tcs = map gen_all (#1(strip_imp (concl r)))
-            val extra_tcs = op_set_diff aconv ftcs tcs
-            val extra_tc_thms = map simplify_nested_tc extra_tcs
+            val nested_tcs = filter nested ftcs
+            val nested_tc_thms = map simplify_nested_tc nested_tcs
             val (r1,ind1) = rev_itlist simplify_tc tcs (r,ind)
             val r2 = FILTER_DISCH_ALL(not o is_WFR) r1
-        in loop(rst, nthms@extra_tc_thms, r2::R, ind1)
+        in loop(rst, nthms@nested_tc_thms, r2::R, ind1)
         end
    val rules_tcs = zip (CONJUNCTS rules1) TCs
    val (rules2,ind2,extras) = loop(rules_tcs,[],[],induction1)
