@@ -227,7 +227,9 @@ val goals_to_test = [
   ("van Leeuwen",
    ([``0i <= i``, ``i :int < maxchar``,
      ``!n. 0i <= n /\ n < i ==> (skips ArrayApp n = 0i)``],
-    ``maxchar - i > 0i``))
+    ``maxchar - i > 0i``)),
+  ("natural number",
+   ([``n:num > 4``], ``n:num > 3``))
 ]
 
 fun test_goal tac (name, g) = let
