@@ -1,6 +1,6 @@
 This is the examples directory for Hol98.
 
-Currently on offer are the following:
+Currently here are the following:
 
   * MLSyntax
 
@@ -48,10 +48,6 @@ Currently on offer are the following:
        process algebra, and combinatory logic with its type system. The
        files are extensively commented.  
 
-       NB. Most of the proofs in these theories can now be done much more
-       easily by using some of the recently developed proof tools, 
-       namely the simplifier and the first order prover.  
-
   * lambda
 
        This directory develops a "de Bruijn" style lambda calculus, and
@@ -61,6 +57,19 @@ Currently on offer are the following:
            "5 Axioms of Alpha Conversion",
             Andy Gordon and Tom Melham,
             Proceedings of TPHOLs'96, Springer LNCS 1125.
+
+  * root2.sml
+
+       An adaptation of a proof by John Harrison that the square 
+       root of two is not rational.
+
+  * sunrise 
+
+       This directory provides a very thorough implementation of 
+       Hoare logic for a simple imperative language with mutually 
+       recursive procedures. Verification condition generators are 
+       supplied (and proved correct in HOL). The development includes 
+       illustrative examples and documentation. Author: Peter Homeier.
 
   * taut.sml
 
@@ -85,3 +94,4 @@ Currently on offer are the following:
      
          "Types summer school'99: Theory and practice of formal proofs",
          Giens, France, August 30 - September 10, 1999.
+

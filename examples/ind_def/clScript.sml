@@ -9,10 +9,10 @@ val _ = new_theory "cl";
 
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;
 
-val _ = set_fixity "#"   (Infixl 1100);
-val _ = set_fixity "-->" (Infix(NONASSOC, 510));
+val _ = set_fixity "#"  (Infixl 1100);
+val _ = set_MLname "#"  "HASH";
 
-val _ = set_MLname "#" "HASH";
+val _ = set_fixity "-->" (Infix(NONASSOC, 510));
 
 val (redn_rules, redn_ind, redn_cases) =
   IndDefLib.Hol_reln `
@@ -31,12 +31,13 @@ val _ = app (uncurry set_MLname) [
         ];
 
 val _ = hide "RTC";
+
 val (RTC_rules, RTC_ind, RTC_cases) =
   IndDefLib.Hol_reln `
     (!x.     RTC R x x) /\
     (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
 
-val normform_def = Define`normform R x = !y. ~R x y`;
+val normform_def = Define `normform R x = !y. ~R x y`;
 
 val confluent_def = Define`
   confluent R =
