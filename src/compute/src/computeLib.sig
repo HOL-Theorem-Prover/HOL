@@ -3,6 +3,8 @@ sig
   include Abbrev
   type compset
 
+  val auto_import_definitions : bool ref
+
   val monitoring      : (term -> bool) option ref
   val stoppers        : (term -> bool) option ref
 

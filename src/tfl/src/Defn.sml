@@ -348,25 +348,26 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
    what is assumed at present.
  ---------------------------------------------------------------------------*)
 
-fun add_persistent_funs l = let
-  val has_lhs_SUC =
-      List.exists (can (find_term numLib.is_suc) o lhs o #2 o strip_forall) o
-      strip_conj o concl
-  fun f (s, th) = [(s, th)] @
-                  (if has_lhs_SUC th then
-                     [("(Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV "^s
-                       ^")",
-                       CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV th)]
-                   else [])
-in
-  computeLib.add_persistent_funs (List.concat (map f l))
-end
+fun add_persistent_funs l =
+  if not (!computeLib.auto_import_definitions) then () else
+    let
+      val has_lhs_SUC =
+        List.exists (can (find_term numLib.is_suc) o lhs o #2 o strip_forall) o
+        strip_conj o concl
+      fun f (s, th) =
+        [(s, th)] @
+        (if has_lhs_SUC th then
+           [("(Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV " ^ s ^ ")",
+             CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV th)]
+         else [])
+    in
+      computeLib.add_persistent_funs (List.concat (map f l))
+    end;
 
 fun been_stored s thm =
   (add_persistent_funs [(s,thm)];
    Lib.say ("Definition has been stored under "^Lib.quote s^".\n")
    );
-
 
 fun store(stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
