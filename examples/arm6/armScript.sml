@@ -134,7 +134,7 @@ val mode_num2register_def = Define`
 val REG_READ_def = Define`
   REG_READ reg m n =
     if n = 15 then
-      reg r15 + w32 8
+      reg r15 + 8w
     else
       reg (mode_num2register m n)`;
  
@@ -182,7 +182,7 @@ val MEM_WRITE_def = Define`
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-val INC_PC_def   = Define `INC_PC reg = SUBST reg (r15,reg r15 + w32 4)`;
+val INC_PC_def   = Define `INC_PC reg = SUBST reg (r15,reg r15 + 4w)`;
 val FETCH_PC_def = Define `FETCH_PC reg = reg r15`;
 
 (* FETCH_PC needed because (REG_READ reg usr 15) gives PC+8 *)
@@ -208,7 +208,7 @@ val EXCEPTION_def = Define`
     let fiq' = if (type = reset) \/ (type = fast) then T else WORD_BIT 6 cpsr
     and mode' = exception2mode type
     and pc' = w32 (4 * exception2num type) in
-   let reg' = REG_WRITE reg mode' 14 (FETCH_PC reg + w32 4) in
+   let reg' = REG_WRITE reg mode' 14 (FETCH_PC reg + 4w) in
      ARM mem (REG_WRITE reg' usr 15 pc')
          (CPSR_WRITE (SPSR_WRITE psr mode' cpsr) (SET_IFMODE T fiq' mode' cpsr))`;
 
@@ -235,7 +235,7 @@ val BRANCH_def = Define`
     let pc' = pc + SIGN_EX_OFFSET offset << 2 in
     let reg' = REG_WRITE reg usr 15 pc' in
       if L then
-        ARM mem (REG_WRITE reg' mode 14 (FETCH_PC reg + w32 4)) psr
+        ARM mem (REG_WRITE reg' mode 14 (FETCH_PC reg + 4w)) psr
       else
         ARM mem reg' psr`;
 
@@ -249,7 +249,7 @@ val LSL_def = Define`
               else if n <= 32 then
                 (WORD_BIT (32 - n) m,m << n)
               else
-                (F,w32 0)`;
+                (F,0w)`;
 
 val LSR_def = Define`
   LSR m n c = if n = 0 then
@@ -257,7 +257,7 @@ val LSR_def = Define`
               else if n <= 32 then
                 (WORD_BIT (n - 1) m,m >>> n)
               else
-                (F,w32 0)`;
+                (F,0w)`;
 
 val ASR_def = Define`
   ASR m n c = if n = 0 then
@@ -338,7 +338,7 @@ val ALU_arith_neg_def = Define`
     let  sign = MSB rn
     and (q,r) = DIVMOD_2EXP 32 (op (w2n rn) (w2n ~op2)) in
     let   res = w32 r in
-      (MSB res,r = 0,ODD q \/ (op2 = word_0),
+      (MSB res,r = 0,ODD q \/ (op2 = 0w),
         ~(MSB op2 = sign) /\ ~(MSB res = sign),res)`;
 
 val ALU_logic_def = Define`
@@ -461,8 +461,8 @@ val WORD_ALIGN_def = Define`WORD_ALIGN n = WORD_SLICE 31 2 n`;
 val PIPE_OKAY_def = Define`
   PIPE_OKAY addr pc =
      let aaddr = WORD_ALIGN addr in
-       ~((aaddr = WORD_ALIGN (pc + w32 4)) \/
-         (aaddr = WORD_ALIGN (pc + w32 8)))`;
+       ~((aaddr = WORD_ALIGN (pc + 4w)) \/
+         (aaddr = WORD_ALIGN (pc + 8w)))`;
 
 val LDR_STR_def = Define`
   LDR_STR (ARM mem reg psr) C mode n =

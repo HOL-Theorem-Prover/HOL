@@ -384,7 +384,7 @@ val BUSA_def = Define`
     else if (is = t4) /\ (ic = reg_shift) then
        ra
     else if (is = t5) /\ ((ic = br) \/ (ic = swi_ex)) then
-       w32 3
+       3w
     else
        ARB`;
 
@@ -529,7 +529,7 @@ val NEXT_ARM6_def = Define`
      let alu = ALU6 ic is ireg alua' alub' c
      in
      let aluout = ALUOUT alu
-     and inc = areg + w32 4
+     and inc = areg + 4w
      and pcbus = REG_READ6 reg usr 15
      and psrwa = PSRWA ic is ireg nbs
      in
@@ -578,10 +578,10 @@ val INIT_ARM6_def = Define`
                  ointstart onewinst opipebll nxtic nxtis aregn nbw nrw sctrlreg psrfb oareg)) =
     let pc = REG_READ6 reg usr 15
     in
-    let apipeb' = pc - w32 4
+    let apipeb' = pc - 4w
     in
     let pipeb' = MEMREAD mem apipeb'
-    and ireg'  = MEMREAD mem (pc - w32 8)
+    and ireg'  = MEMREAD mem (pc - 8w)
     in
   ARM6 mem (DP reg psr pc ireg' alua alub)
        (CTRL pipeb' T pipeb' T ireg' T apipeb' apipeb' F T T
@@ -595,8 +595,8 @@ val STATE_ARM6_def = Define`
  
 (* -------------------------------------------------------- *)
 
-val SUB8_PC_def = Define `SUB8_PC reg = SUBST reg (r15,reg r15 - w32 8)`;
-val ADD8_PC_def = Define `ADD8_PC reg = SUBST reg (r15,reg r15 + w32 8)`;
+val SUB8_PC_def = Define `SUB8_PC reg = SUBST reg (r15,reg r15 - 8w)`;
+val ADD8_PC_def = Define `ADD8_PC reg = SUBST reg (r15,reg r15 + 8w)`;
 
 val ABS_ARM6_def = Define`
    ABS_ARM6 (ARM6 mem (DP reg psr areg din alua alub) ctrl) = ARM mem (SUB8_PC reg) psr`;
