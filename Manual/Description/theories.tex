@@ -898,8 +898,11 @@ The type \ml{num}\index{num, the type in \HOL\
   the following definitions:
 \begin{verbatim}
    NUMERAL_DEF    !x. NUMERAL x = x
+
    NUMERAL_BIT1   !x. NUMERAL_BIT1 n = n + (n + SUC 0)
+
    NUMERAL_BIT2   !x. NUMERAL_BIT2 n = n + (n + SUC(SUC 0))
+
    ALT_ZERO       ALT_ZERO = 0
 \end{verbatim}
 
@@ -1023,39 +1026,98 @@ following table.
 Constant & Overloaded symbol & Strength & Associativity \\ \hline
 {\small\verb+int_ge+} &{\small\verb+>=+} & 450 & right \\
 {\small\verb+int_le+} &{\small\verb+<=+} & 450 & right \\
-{\small\verb+int_gt+} &{\small\verb+>+} & 450  & right \\
-{\small\verb+int_lt+} &{\small\verb+<+} & 450  & right \\
+{\small\verb+int_gt+} &{\small\verb+>+}  & 450 & right \\
+{\small\verb+int_lt+} &{\small\verb+<+}  & 450 & right \\
 {\small\verb+int_add+} &{\small\verb%+%} & 500 & left \\
 {\small\verb+int_sub+} &{\small\verb%-%} & 500 & left \\
-{\small\verb+int_neg+} &{\small\verb%~%} & 900 & prefix \\
+{\small\verb+int_neg+} &{\small\verb%~%} & 900 & trueprefix \\
 {\small\verb+int_mul+} &{\small\verb%*%} & 600 & left \\
 {\small\verb%/%} & & 600 & left \\
 {\small\verb+%+} & & 650 & left \\
 {\small\verb+int_exp+} &{\small\verb%**%} & 700 & right \\
+{\small\verb+int_of_num+} &{\small\verb%&%} & & prefix \\
 \end{tabular}}
 \end{center}
 
-The constant {\small\verb+& : num -> int+} denotes the injection
-function from natural numbers to integers. For some reason it can 
-be printed out as {\small\verb+fromNum : num -> int+}, although 
-{\small\verb+fromNum+} is not a constant. What is going on here?
+The overloaded symbol {\small\verb+& : num -> int+} denotes the
+injection function from natural numbers to integers. The following
+session illustrates how overloading and integers literals are treated.
 
+\begin{session}
+\begin{verbatim}
+Term `1i = &(1n + 0n)`;
+> val it = `1 = & (1 + 0)` : term
 
-% Term `1i = &(1n + 0n)`;
-%> val it = `1 = fromNum (1 + 0)` : Term.term
-%- show_numeral_types := true;
-%> val it = () : unit
-%- Term `&1 = &(1n + 0n)`;
-%> val it = `1i = fromNum (1n + 0n)` : Term.term
+- show_numeral_types := true;
+> val it = () : unit
+
+- Term `&1 = &(1n + 0n)`;
+<<HOL message: more than one resolution of overloading was possible.>>
+> val it = `1i = & (1n + 0n)` : Term.term
+\end{verbatim}
+\end{session}
+
 
 \section{Real numbers and analysis}
 
-There is an extensive theory of real numbers and analysis in HOL, 
-due to John Harrison \cite{jrh:thesis}.
+There is an extensive collection of theories that make up the
+development of real numbers and analysis in HOL, 
+due to John Harrison \cite{jrh:thesis}. We will only give an overview of
+the development; the interested reader should consult \REFERENCE\ and
+Harrison's thesis.
 
-\section{Lists}
+The axioms for the real numbers are derived from the `half reals' which
+are constructed from the `half rationals'. This part of the development
+is recorded in {\small\verb+hratTheory+} and
+{\small\verb+hrealTheory+}, but is not used once the reals have been
+constructed. The real axioms are derived in the theory
+{\small\verb+realaxTheory+}. A standard collection of operators on the
+reals, and theorems about them, is found in {\small\verb+realaxTheory+}
+and {\small\verb+realTheory+}. The operators and their parse status are
+listed in the following table.
 
-\subsection{The theory {\tt list}}\label{avra_list}\index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL\ logic}
+\begin{center}
+{\small
+\begin{tabular}{@{}cccc}
+Constant & Overloaded symbol & Strength & Associativity \\ \hline
+{\small\verb+real_ge+} &{\small\verb+>=+} & 450 & right \\
+{\small\verb+real_lte+} &{\small\verb+<=+} & 450 & right \\
+{\small\verb+real_gt+} &{\small\verb+>+}  & 450 & right \\
+{\small\verb+real_lt+} &{\small\verb+<+}  & 450 & right \\
+{\small\verb+real_add+} &{\small\verb%+%} & 500 & left \\
+{\small\verb+real_sub+} &{\small\verb%-%} & 500 & left \\
+{\small\verb+real_neg+} &{\small\verb%~%} & 900 & trueprefix \\
+{\small\verb+real_mul+} &{\small\verb%*%} & 600 & left \\
+{\small\verb+real_div+} & {\small\verb%/%} & 600 & left \\
+{\small\verb+pow+} & &700 & right \\
+{\small\verb+real_of_num+} &{\small\verb%&%} & & prefix \\
+\end{tabular}}
+\end{center}
+
+On the basis of {\small\verb+realTheory+}, the following  sequence of
+theories is constructed:
+
+\begin{description}
+\item [topologyTheory] Topologies and metric spaces, including metric on
+the real line.
+\item [netsTheory] Moore-Smith covergence nets, and special cases like
+sequences.
+\item [seqTheory] Sequences and series of real numbers.
+\item [limTheory] Limits, continuity and differentiation.
+\item [powserTheory] Power series.
+\item [transcTheory] Transcendental functions, \emph{e.g.}, exp, sin,
+cos, ln, root, sqrt, pi, tan, asn, acs, atn. Also the Kurzweil-Henstock
+gauge integral and the fundamental theorem of calculus, McLaurin's
+theorem. 
+
+\end{description}
+
+A separate development that depends only on {\small\verb+realTheory+} is
+a theory of polynomials, found in {\small\verb+polyTheory+}. A standard
+collection of operations on polynomials, and theorems about them, are
+also derived. 
+
+\section{The theory {\tt list}}\label{avra_list}\index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL\ logic}
 
 \index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated for lists|(}
 \index{types, in HOL logic@types, in \HOL\ logic!tools for construction of}
@@ -1237,7 +1299,10 @@ are also made in the theory \ml{list}:
 \end{verbatim}\end{hol}
 
 \noindent For a complete list of available theorems in
-{\small\verb+listTheory+}, see \REFERENCE. 
+{\small\verb+listTheory+}, see \REFERENCE.  The theory
+{\small\verb+list+} is relatively compact, largely because of 
+how the \HOL\ system has evolved. A more extensive theory of lists can
+be found in {\small\verb+rich_listTheory+}.
 
 \index{list theorems, in HOL logic@list theorems, in \HOL\ logic|)} \index{
 lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL\
@@ -1246,18 +1311,122 @@ logic)|)} \index{list theory, in HOL logic@\ml{list} theory, in \HOL\ logic|)}
 definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated for
 lists|)}
 
-\subsection{The theory {\tt rich\_list}}\label{rich_list}
-
-The theory {\small\verb+list+} is relatively compact, largely because of
-how the system developed. An extensive theory of lists can be found in 
-{\small\verb+rich_listTheory+}, in which the following
-well-known functions over lists are defined:
-
-\begin{hol}
-\begin{verbatim}
-\end{verbatim}\end{hol}
-
-A gazillion theorems are proved about them too.
+%\subsection{The theory {\tt rich\_list}}\label{rich_list}
+%
+%The theory {\small\verb+list+} is relatively compact, largely because of
+%how the \HOL\ system has evolved. A more extensive theory of lists can be
+%found in {\small\verb+rich_listTheory+}, in which the following
+%list operations are defined:
+%
+%\begin{hol}
+%\begin{verbatim}
+%  [ALL_EL]
+%  |- (!P. ALL_EL P [] = T) /\
+%     !P x l. ALL_EL P (x::l) = P x /\ ALL_EL P l
+%  
+%  [BUTFIRSTN]
+%  |- (!l. BUTFIRSTN 0 l = l) /\
+%     !n x l. BUTFIRSTN (SUC n) (x::l) = BUTFIRSTN n l
+%  
+%  [BUTLASTN]
+%  |- (!l. BUTLASTN 0 l = l) /\
+%     !n x l. BUTLASTN (SUC n) (SNOC x l) = BUTLASTN n l
+%  
+%  [BUTLAST_DEF] |- !l. BUTLAST l = SEG (PRE (LENGTH l)) 0 l
+%  
+%  [ELL]
+%  |- (!l. ELL 0 l = LAST l) /\ 
+%     !n l. ELL (SUC n) l = ELL n (BUTLAST l)
+%  
+%  [FIRSTN]
+%  |- (!l. FIRSTN 0 l = []) /\ 
+%     !n x l. FIRSTN (SUC n) (x::l) = x::FIRSTN n l
+%  
+%  [GENLIST]
+%  |- (!f. GENLIST f 0 = []) /\
+%     !f n. GENLIST f (SUC n) = SNOC (f n) (GENLIST f n)
+%  
+%  [IS_EL_DEF] 
+%  |- !x l. IS_EL x l = SOME_EL ($= x) l
+%  
+%  [IS_PREFIX]
+%  |- (!l. IS_PREFIX l [] = T) /\ 
+%     (!x l. IS_PREFIX [] (x::l) = F) /\
+%     !x1 l1 x2 l2. IS_PREFIX (x1::l1) (x2::l2) = (x1 = x2) /\ IS_PREFIX l1 l2
+%  
+%  [IS_SUBLIST]
+%  |- (!l. IS_SUBLIST l [] = T) /\
+%     (!x l. IS_SUBLIST [] (x::l) = F) /\
+%     !x1 l1 x2 l2.
+%       IS_SUBLIST (x1::l1) (x2::l2) =
+%       (x1 = x2) /\ IS_PREFIX l1 l2 \/ IS_SUBLIST l1 (x2::l2)
+%  
+%  [IS_SUFFIX]
+%  |- (!l. IS_SUFFIX l [] = T) /\
+%     (!x l. IS_SUFFIX [] (SNOC x l) = F) /\
+%     !x1 l1 x2 l2.
+%       IS_SUFFIX (SNOC x1 l1) (SNOC x2 l2) = (x1 = x2) /\ IS_SUFFIX l1 l2
+%  
+%  [LASTN]
+%  |- (!l. LASTN 0 l = []) /\
+%     !n x l. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
+%  
+%  [LAST_DEF]
+%  |- !l. LAST l = HD (SEG 1 (PRE (LENGTH l)) l)
+%  
+%  [OR_EL_DEF] |- OR_EL = SOME_EL I
+%  
+%  [PREFIX_DEF] |- !P l. PREFIX P l = FST (SPLITP ($~ o P) l)
+%  
+%  [REPLICATE]
+%  |- (!x. REPLICATE 0 x = []) /\ 
+%     !n x. REPLICATE (SUC n) x = x::REPLICATE n x
+%  
+%  [REVERSE]
+%  |- (REVERSE [] = []) /\ 
+%     !x l. REVERSE (x::l) = SNOC x (REVERSE l)
+%  
+%  [SCANL]
+%  |- (!f e. SCANL f e [] = [e]) /\
+%     !f e x l. SCANL f e (x::l) = e::SCANL f (f e x) l
+%  
+%  [SCANR]
+%  |- (!f e. SCANR f e [] = [e]) /\
+%     !f e x l. SCANR f e (x::l) = f x (HD (SCANR f e l))::SCANR f e l
+%  
+%  [SEG]
+%  |- (!k l. SEG 0 k l = []) /\
+%     (!m x l. SEG (SUC m) 0 (x::l) = x::SEG m 0 l) /\
+%     !m k x l. SEG (SUC m) (SUC k) (x::l) = SEG (SUC m) k l
+%  
+%  [SNOC]
+%  |- (!x. SNOC x [] = [x]) /\ 
+%     !x x' l. SNOC x (x'::l) = x'::SNOC x l
+%  
+%  [SOME_EL]
+%  |- (!P. SOME_EL P [] = F) /\ 
+%     !P x l. SOME_EL P (x::l) = P x \/ SOME_EL P l
+%  
+%  [SPLITP]
+%  |- (!P. SPLITP P [] = ([],[])) /\
+%     !P x l.
+%       SPLITP P (x::l) =
+%       (if P x then ([],x::l) else (x::FST (SPLITP P l),SND (SPLITP P l)))
+%  
+%  [SUFFIX_DEF]
+%  |- !P l. SUFFIX P l = FOLDL (\l' x. (if P x then SNOC x l' else [])) [] l
+%  
+%  [UNZIP]
+%  |- (UNZIP [] = ([],[])) /\
+%     !x l. UNZIP (x::l) = (FST x::FST (UNZIP l),SND x::SND (UNZIP l))
+%  
+%  [ZIP]
+%   |- (ZIP ([],[]) = []) /\
+%       !x1 l1 x2 l2. ZIP (x1::l1,x2::l2) = (x1,x2)::ZIP (l1,l2)
+%\end{verbatim}\end{hol}
+%
+%A large number of theorems about these constants can be found in 
+%{\small\verb+rich_listTheory+}.
 
 \section{Trees}
 
@@ -1357,9 +1526,8 @@ of type \ml{'a} associated with each of its nodes.  A constructor
 \noindent is defined in the theory \ml{ltree}.  The function \ml{Node}
 constructs labelled trees by mapping a label of type \ml{'a} and a list of
 labelled subtrees to a labelled tree of type \ml{'a ltree}.
-The following theorems  about labelled trees are pre-proved and stored in the
+The following theorems about labelled trees are pre-proved and stored in the
 theory \ml{ltree}.
-
 
 \begin{hol}
 \index{Node_11@\ml{Node\_{11}}}
@@ -1382,265 +1550,269 @@ labelled trees.
 \index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for trees|)}
 
 
-\section{Partial functions and the {\tt option} type}
-
-\section{Finite maps}
-\section{Strings}
-\subsection{The theory {\tt ascii}}
-\subsection{The theory {\tt string}}
-\section{Sets}
-\subsection{The theory {\tt set}}
-\subsection{The theory {\tt pred\_set}}
-\subsection{The theory {\tt finset}}
-\subsection{Syntax for sets}\index{set theory notation}
-
-The special purpose set-theoretic notations
-{\small\verb%"{%}$t_1,t_2,\ldots,t_n${\small\verb%}"%} and
-{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%} are available.
-The normal interpretation of the former is the finite set containing
-$t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
-is the set of all $t$s such that $p$.
-
-For example,
-\begin{hol}\begin{verbatim}
-   "{1,2,3,4}"
-\end{verbatim}\end{hol}
-
-\noindent parses to
-
-\begin{hol}\begin{verbatim}
-   "1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))"
-\end{verbatim}\end{hol}
-
-\noindent Similarly, {\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%}
-parses to:
-
-\medskip
-
-\noindent{\small
-{\verb%   `%}}{\small{\verb%GSPEC(\(%}$x_1${\verb%,%}$\ldots${\verb%,%}$x_n${\verb%).(%}$t${\verb%,%}$p${\verb%))"%}
-}
-
-\medskip
-
-\noindent where $x_1$, $\ldots$ , $x_n$ are the free variables occurring in both $t$
-and $p$.  If there are no such free variables then an error results.
-The order in which the variables are listed in the variable structure
-of the paired abstraction is an unspecified function of the structure
-of $t$ (it is approximately left to right).
-
-For example,
-
-\begin{hol}\begin{verbatim}
-   "{x+y | (x < y) /\ (y < z)}"
-\end{verbatim}\end{hol}
-
-\noindent parses to:
-
-\begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y). ((x+y), (x < y) /\ (y < z)))"
-\end{verbatim}\end{hol}
-
-\noindent where \ml{GSPEC} is defined by:
-
-\begin{hol}\begin{verbatim}
-   |- !f. GSPEC f = SPEC(\x. ?y. x,T = f y)
-\end{verbatim}\end{hol}
-
-\noindent and \ml{SPEC} abstracts a predicate to a set (it is the abstraction
-bijection used in the definition of the type operator \ml{set}).
-Other examples are:
-
-\begin{hol}\begin{verbatim}
-   "{x+y+z | (x < y) /\ (y < z)}"
-\end{verbatim}\end{hol}
-
-\noindent will parse to:
-
-\begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))"
-\end{verbatim}\end{hol}
-
-\noindent and
-
-\begin{hol}\begin{verbatim}
-   "{x+y+w | (x < y) /\ (y < z)}"
-\end{verbatim}\end{hol}
-
-\noindent will parse to:
-
-\begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y). (x+(y+w), (x < y /\ y < z)))"
-\end{verbatim}\end{hol}
-
-\section{Multisets}
-
-\section{Restricted binders}\label{res-quant}
-
-\index{types, in HOL logic@types, in \HOL\ logic!dependent}
-\index{dependent types in HOL logic@dependent types in \HOL\ logic}
-\index{quantifiers!restricted}
-
-The theory \ml{res\_quan} contains the definitions of the constants
-{\small\verb!RES_FORALL!}, {\small\verb!RES_EXISTS!},
-{\small\verb!RES_SELECT!}, and {\small\verb!RES_ABSTRACT!},
-which are used to support restricted
-quantification\index{quantifiers!restricted} in the \HOL\ logic.  This
-implements a method of simulating subtypes and dependent types with
-predicates. The definitions are:
-
-\begin{hol}
-\index{RES_FORALL@\ml{RES\_FORALL}}
-\index{RES_EXISTS@\ml{RES\_EXISTS}}
-\index{RES_SELECT@\ml{RES\_SELECT}}
-\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}
-\index{ARB@\ml{ARB}}
-\begin{verbatim}
-   RES_FORALL   |- !P B. RES_FORALL P B = (!x. P x ==> B x)
-
-   RES_EXISTS   |- !P B. RES_EXISTS P B = (?x. P x /\ B x)
-
-   RES_SELECT   |- !P B. RES_SELECT P B = (@x. P x /\ B x)
-
-   RES_ABSTRACT |- !P B. RES_ABSTRACT P B = (\x. if P x then B x else ARB)
-\end{verbatim}\end{hol}
-
-
-The new syntax automatically translates as follows:
-
-\begin{hol}
-{\small\verb%   \%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_ABSTRACT %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-{\small\verb%   !%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_FORALL   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-{\small\verb%   ?%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_EXISTS   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-{\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_SELECT   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}
-\end{hol}
-
-Anything can be written between the binder and `\ml{::}' that can be
-written between the binder and `\ml{.}`. See the examples below.
-
-Currently no derived rules are provided to support this notation, so
-any inferences will need to work on the underlying semantic
-representation.
-
-User-defined binders can also have restricted forms, which are set up
-with the function:
-
-\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}|pin}
-\begin{verbatim}
-   associate_restriction : (string * string) -> *
-\end{verbatim}\end{boxed}
-
-
-\noindent If \m{c} is the name
-of a binder and \ml{RES\_}\m{c} is the name of a suitable constant (which
-must be explicitly defined), then executing:
-
-\begin{hol}
-{\small\verb%   associate_restriction(`%}$c${\small\verb%`, `RES_%}$c${\small\verb%`)%}
-\end{hol}
-
-\noindent will cause the parser and pretty-printer to support:
-
-\begin{hol}
-{\small\verb%   %}$c$ $v${\small\verb%::%}$P${\small\verb%. %}$B${\small\verb%    <---->   RES_%}$c$ $P${\small\verb% (\%}$v${\small\verb%. %}$B${\small\verb%)%}
-\end{hol}
-
-Here is an example session:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"!x y::P. x<y";;
-"!x y :: P. x < y" : term
-
-#set_flag(`print_restrict`, false);;
-true : bool
-
-#"!x y::P. x<y";;
-"RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
-
-#"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
-"RES_EXISTS
- (\(m,n). m < n)
- (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
-: term
-
-#"\x y z::P.[0;x;y;z]";;
-"RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
-: term
-\end{verbatim}\end{session}
-
-A conversion that rewrites away the constants \ml{RES\_ABSTRACT},
-\ml{RES\_FORALL}, \ml{RES\_EXISTS} and \ml{RES\_SELECT} is:
-
-\begin{hol}\begin{verbatim}
-   let RESTRICT_CONV =
-        (PURE_REWRITE_CONV [definition `bool` `RES_ABSTRACT`;
-                            definition `bool` `RES_FORALL`;
-                            definition `bool` `RES_EXISTS`;
-                            definition `bool` `RES_SELECT`])
-        THENC (DEPTH_CONV BETA_CONV)
-\end{verbatim}\end{hol}
-
-\noindent This is a bit unsatisfactory, as is shown by the artificial
-example below:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
-t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
-
-#RESTRICT_CONV t;;
-|- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
-   (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
-\end{verbatim}\end{session}
-
-The variable $x$ in the definitions of the constants
-\ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
-\ml{RES\_SELECT} gets confused with the variable in the supplied term.
-This can be avoided by changing \ml{RESTRICT\_CONV} to perform
-explicit alpha-conversion. For example, by implementing a conversion:
-
-\begin{hol}
-{\small\verb%   RES_FORALL %}$P${\small\verb% (\%}$v$\ml{.}$B$\ml{[}$v$\ml{])  ---->  !}$v$\ml{. }$P$ $v$\ml{ ==> }$B$\ml{[}$v$\ml{]}
-\end{hol}
-
-\noindent Dealing with the case when
-$v$ is a variable structure is also desirable. For example:
-
-\begin{session}\begin{verbatim}
-#let t1 = "!(m,n)::P. m<n";;
-t1 = "!(m,n) :: P. m < n" : term
-
-#RESTRICT_CONV t1;;
-|- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
-
-\end{verbatim}\end{session}
-
-\noindent If anyone writes the desired conversions please let us know!
-
-Here is an example of a user-defined restriction:
-
-\begin{session}\begin{verbatim}
-#new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
-|- !p. $DURING p = $! p
-
-#"DURING x::(m,n). p x";;
-no restriction constant associated with DURING
-skipping: x " ;; parse failed
-
-#new_definition
-# (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
-|- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
-
-#associate_restriction(`DURING`,`RES_DURING`);;
-() : void
-
-#"DURING x::(m,n). p x";;
-"DURING x :: (m,n). p x" : term
-
-#set_flag(`print_restrict`,false);;
-true : bool
-
-#"DURING x::(m,n). p x";;
-"RES_DURING(m,n)(\x. p x)" : term
-\end{verbatim}\end{session}
+%\section{Partial functions and the {\tt option} type}
+
+
+%\section{Finite maps}
+
+%\section{Strings}
+%\subsection{The theory {\tt ascii}}
+%\subsection{The theory {\tt string}}
+
+%\section{Sets}
+%\subsection{The theory {\tt set}}
+%\subsection{The theory {\tt pred\_set}}
+%%\subsection{The theory {\tt finset}}
+%
+%\subsection{Syntax for sets}\index{set theory notation}
+%
+%The special purpose set-theoretic notations
+%{\small\verb%"{%}$t_1,t_2,\ldots,t_n${\small\verb%}"%} and
+%{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%} are available.
+%The normal interpretation of the former is the finite set containing
+%$t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
+%is the set of all $t$s such that $p$.
+%
+%For example,
+%\begin{hol}\begin{verbatim}
+%   "{1,2,3,4}"
+%\end{verbatim}\end{hol}
+%
+%\noindent parses to
+%
+%\begin{hol}\begin{verbatim}
+%   "1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))"
+%\end{verbatim}\end{hol}
+%
+%\noindent Similarly, {\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%}
+%parses to:
+%
+%\medskip
+%
+%\noindent{\small
+%{\verb%   `%}}{\small{\verb%GSPEC(\(%}$x_1${\verb%,%}$\ldots${\verb%,%}$x_n${\verb%).(%}$t${\verb%,%}$p${\verb%))"%}
+%}
+%
+%\medskip
+%
+%\noindent where $x_1$, $\ldots$ , $x_n$ are the free variables occurring in both $t$
+%and $p$.  If there are no such free variables then an error results.
+%The order in which the variables are listed in the variable structure
+%of the paired abstraction is an unspecified function of the structure
+%of $t$ (it is approximately left to right).
+%
+%For example,
+%
+%\begin{hol}\begin{verbatim}
+%   "{x+y | (x < y) /\ (y < z)}"
+%\end{verbatim}\end{hol}
+%
+%\noindent parses to:
+%
+%\begin{hol}\begin{verbatim}
+%   "GSPEC(\(x,y). ((x+y), (x < y) /\ (y < z)))"
+%\end{verbatim}\end{hol}
+%
+%\noindent where \ml{GSPEC} is defined by:
+%
+%\begin{hol}\begin{verbatim}
+%   |- !f. GSPEC f = SPEC(\x. ?y. x,T = f y)
+%\end{verbatim}\end{hol}
+%
+%\noindent and \ml{SPEC} abstracts a predicate to a set (it is the abstraction
+%bijection used in the definition of the type operator \ml{set}).
+%Other examples are:
+%
+%\begin{hol}\begin{verbatim}
+%   "{x+y+z | (x < y) /\ (y < z)}"
+%\end{verbatim}\end{hol}
+%
+%\noindent will parse to:
+%
+%\begin{hol}\begin{verbatim}
+%   "GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))"
+%\end{verbatim}\end{hol}
+%
+%\noindent and
+%
+%\begin{hol}\begin{verbatim}
+%   "{x+y+w | (x < y) /\ (y < z)}"
+%\end{verbatim}\end{hol}
+%
+%\noindent will parse to:
+%
+%\begin{hol}\begin{verbatim}
+%   "GSPEC(\(x,y). (x+(y+w), (x < y /\ y < z)))"
+%\end{verbatim}\end{hol}
+%
+%%\section{Multisets}
+%
+%\section{Restricted binders}\label{res-quant}
+%
+%\index{types, in HOL logic@types, in \HOL\ logic!dependent}
+%\index{dependent types in HOL logic@dependent types in \HOL\ logic}
+%\index{quantifiers!restricted}
+%
+%The theory \ml{res\_quan} contains the definitions of the constants
+%{\small\verb!RES_FORALL!}, {\small\verb!RES_EXISTS!},
+%{\small\verb!RES_SELECT!}, and {\small\verb!RES_ABSTRACT!},
+%which are used to support restricted
+%quantification\index{quantifiers!restricted} in the \HOL\ logic.  This
+%implements a method of simulating subtypes and dependent types with
+%predicates. The definitions are:
+%
+%\begin{hol}
+%\index{RES_FORALL@\ml{RES\_FORALL}}
+%\index{RES_EXISTS@\ml{RES\_EXISTS}}
+%\index{RES_SELECT@\ml{RES\_SELECT}}
+%\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}
+%\index{ARB@\ml{ARB}}
+%\begin{verbatim}
+%   RES_FORALL   |- !P B. RES_FORALL P B = (!x. P x ==> B x)
+%
+%   RES_EXISTS   |- !P B. RES_EXISTS P B = (?x. P x /\ B x)
+%
+%   RES_SELECT   |- !P B. RES_SELECT P B = (@x. P x /\ B x)
+%
+%   RES_ABSTRACT |- !P B. RES_ABSTRACT P B = (\x. if P x then B x else ARB)
+%\end{verbatim}\end{hol}
+%
+%
+%The new syntax automatically translates as follows:
+%
+%\begin{hol}
+%{\small\verb%   \%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_ABSTRACT %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+%{\small\verb%   !%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_FORALL   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+%{\small\verb%   ?%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_EXISTS   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+%{\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_SELECT   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}
+%\end{hol}
+%
+%Anything can be written between the binder and `\ml{::}' that can be
+%written between the binder and `\ml{.}`. See the examples below.
+%
+%Currently no derived rules are provided to support this notation, so
+%any inferences will need to work on the underlying semantic
+%representation.
+%
+%User-defined binders can also have restricted forms, which are set up
+%with the function:
+%
+%\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}|pin}
+%\begin{verbatim}
+%   associate_restriction : (string * string) -> *
+%\end{verbatim}\end{boxed}
+%
+%
+%\noindent If \m{c} is the name
+%of a binder and \ml{RES\_}\m{c} is the name of a suitable constant (which
+%must be explicitly defined), then executing:
+%
+%\begin{hol}
+%{\small\verb%   associate_restriction(`%}$c${\small\verb%`, `RES_%}$c${\small\verb%`)%}
+%\end{hol}
+%
+%\noindent will cause the parser and pretty-printer to support:
+%
+%\begin{hol}
+%{\small\verb%   %}$c$ $v${\small\verb%::%}$P${\small\verb%. %}$B${\small\verb%    <---->   RES_%}$c$ $P${\small\verb% (\%}$v${\small\verb%. %}$B${\small\verb%)%}
+%\end{hol}
+%
+%Here is an example session:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%#"!x y::P. x<y";;
+%"!x y :: P. x < y" : term
+%
+%#set_flag(`print_restrict`, false);;
+%true : bool
+%
+%#"!x y::P. x<y";;
+%"RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
+%
+%#"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
+%"RES_EXISTS
+% (\(m,n). m < n)
+% (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
+%: term
+%
+%#"\x y z::P.[0;x;y;z]";;
+%"RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
+%: term
+%\end{verbatim}\end{session}
+%
+%A conversion that rewrites away the constants \ml{RES\_ABSTRACT},
+%\ml{RES\_FORALL}, \ml{RES\_EXISTS} and \ml{RES\_SELECT} is:
+%
+%\begin{hol}\begin{verbatim}
+%   let RESTRICT_CONV =
+%        (PURE_REWRITE_CONV [definition `bool` `RES_ABSTRACT`;
+%                            definition `bool` `RES_FORALL`;
+%                            definition `bool` `RES_EXISTS`;
+%                            definition `bool` `RES_SELECT`])
+%        THENC (DEPTH_CONV BETA_CONV)
+%\end{verbatim}\end{hol}
+%
+%\noindent This is a bit unsatisfactory, as is shown by the artificial
+%example below:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%#let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
+%t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
+%
+%#RESTRICT_CONV t;;
+%|- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
+%   (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
+%\end{verbatim}\end{session}
+%
+%The variable $x$ in the definitions of the constants
+%\ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
+%\ml{RES\_SELECT} gets confused with the variable in the supplied term.
+%This can be avoided by changing \ml{RESTRICT\_CONV} to perform
+%explicit alpha-conversion. For example, by implementing a conversion:
+%
+%\begin{hol}
+%{\small\verb%   RES_FORALL %}$P${\small\verb% (\%}$v$\ml{.}$B$\ml{[}$v$\ml{])  ---->  !}$v$\ml{. }$P$ $v$\ml{ ==> }$B$\ml{[}$v$\ml{]}
+%\end{hol}
+%
+%\noindent Dealing with the case when
+%$v$ is a variable structure is also desirable. For example:
+%
+%\begin{session}\begin{verbatim}
+%#let t1 = "!(m,n)::P. m<n";;
+%t1 = "!(m,n) :: P. m < n" : term
+%
+%#RESTRICT_CONV t1;;
+%|- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
+%
+%\end{verbatim}\end{session}
+%
+%\noindent If anyone writes the desired conversions please let us know!
+%
+%Here is an example of a user-defined restriction:
+%
+%\begin{session}\begin{verbatim}
+%#new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
+%|- !p. $DURING p = $! p
+%
+%#"DURING x::(m,n). p x";;
+%no restriction constant associated with DURING
+%skipping: x " ;; parse failed
+%
+%#new_definition
+%# (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
+%|- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
+%
+%#associate_restriction(`DURING`,`RES_DURING`);;
+%() : void
+%
+%#"DURING x::(m,n). p x";;
+%"DURING x :: (m,n). p x" : term
+%
+%#set_flag(`print_restrict`,false);;
+%true : bool
+%
+%#"DURING x::(m,n). p x";;
+%"RES_DURING(m,n)(\x. p x)" : term
+%\end{verbatim}\end{session}
