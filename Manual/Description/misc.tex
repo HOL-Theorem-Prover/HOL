@@ -1,5 +1,7 @@
 \chapter{Miscellaneous Features}\label{avramisc}
 
+\newcommand\holmake{\texttt{Holmake}}
+
 This section describes some of the features
 that exist for managing the interface\index{HOL system@\HOL\
 system!adjustment of user interface of} to the \HOL\ system.
@@ -71,44 +73,45 @@ the parsers for \HOL\ types and terms.
 \end{center}
  \end{table}
 
-\section{Holmake --- a tool for maintaining \HOL\ formalizations}\label{Holmake}  
+\section{\holmake---a tool for maintaining \HOL\ formalizations}
+\label{Holmake}
 
-The purpose of \verb+Holmake+\footnote{{\tt Holmake} was first written
-  by Ken Larsen and then extended by Michael Norrish.} is to maintain
-dependencies in a \holn{} source directory. A single invocation of {\tt
-  Holmake} will compute dependencies between files, (re-)compile plain
+The purpose of \holmake\footnote{{\tt Holmake} was first written by
+  Ken Larsen and then extended by Michael Norrish.} is to maintain
+dependencies in a \holn{} source directory. A single invocation of
+\holmake{} will compute dependencies between files, (re-)compile plain
 ML code, (re-)compile and execute theory scripts, and (re-)compile the
-resulting theory modules. {\tt Holmake} does not require the user to
-provide any dependency information,\eg, a Makefile. {\tt Holmake} can
+resulting theory modules. \holmake{} does not require the user to
+provide any dependency information,\eg, a Makefile. \holmake{} can
 be very convenient to use, but there are some conventions and
 restrictions on it that must be followed, which we will describe in
 the sequel.
 
-{\tt Holmake} can be accessed through
+\holmake{} can be accessed through
 \begin{verbatim}
    <hol-dir>/bin/Holmake.
 \end{verbatim}
 
-The development model that {\tt Holmake} is designed to support is that
+The development model that \holmake{} is designed to support is that
 there are two modes of work: theory construction and system revision.
 In `theory construction' mode, the user builds up a theory by
 interacting with HOL, perhaps over many sessions. In `system rebuild'
 mode, a component that others depend on has been altered, so all modules
 dependent on it have to be brought up to date. System rebuild mode is
-simpler so we deal with it first.  
+simpler so we deal with it first.
 
-\subsubsection{System Rebuild}
+\subsection{System Rebuild}
 
 A system rebuild happens when an existing theory has been improved in
 some way (augmented with a new theorem, a change to a definition, etc.),
 or perhaps some support ML code has been modified or added to the
 formalization under development. The user needs to find and recompile
 just those modules affected by the change. This is what an invocation of
-{\tt Holmake} does, by identifying the out-of-date modules and
-re-compiling and re-executing them.  
+\holmake{} does, by identifying the out-of-date modules and
+re-compiling and re-executing them.
 
 
-\subsubsection{Theory construction}
+\subsection{Theory construction}
 
 To start a theory construction, some context (semantic, and also proof
 support) is established, typically by loading parent theories and
@@ -124,12 +127,12 @@ Once the user finishes the perhaps long and arduous task of constructing
 a theory, the user should
 \begin{enumerate}
 \item make the script separately compilable;
-\item invoke {\tt Holmake}. This will (a) compile and execute the
+\item invoke \holmake{}. This will (a) compile and execute the
   script file; and (b) compile the resulting theory file. After this,
   the theory file is available for use.
 \end{enumerate}
 
-\subsubsection{Making the script separately compilable}
+\subsection{Making the script separately compilable}
 
 First, the invocation
 \begin{verbatim}
@@ -142,7 +145,7 @@ Second, we address a crucial environmental issue: if a theory script
 has been constructed using\verb+ <holdir>/bin/hol+, then it has been
 developed in an environment where some commonly used structures, \eg,
 \verb+Tactic+, have already been loaded and opened for the user's
-convenience. When we wish to apply {\tt Holmake} to a script developed
+convenience. When we wish to apply \holmake{} to a script developed
 in this way, we have to take some extra steps to ensure that the
 compilation environment also provides these structures.  In the common
 case, this is simple; one must only add, at the head of the theory
@@ -155,29 +158,21 @@ script, the following ``boilerplate'':
 This will duplicate the starting environment that one obtains with
 \verb+<holdir>/bin/hol+ and \verb+<holdir>/bin/hol.unquote+.
 
-Now the script should be separately compilable. Invoke {\tt Holmake}
+Now the script should be separately compilable. Invoke \holmake{}
 to check; MoscowML will flag any unaccounted-for identifiers it finds.
 The user has to resolve these, either by using the `dot' notation to
 locate the identifier for the compiler, or by \verb+open+ing the
 relevant module. This ``compile/resolve-identifier'' loop should
-continue until {\tt Holmake} succeeds in compiling the module.
+continue until \holmake{} succeeds in compiling the module.
 
 The following notes may be of some further help.
 
 \begin{enumerate}
 \item The filenames of theory scripts must follow the following
   convention: a HOL theory script for theory ``x'' should be named
-\begin{verbatim}
-  xScript.sml.
-\end{verbatim}
-  If there is a corresponding signature (and there needn't be), it
-  should---following Moscow ML convention---be named
-  \verb+xScript.sig+. When \verb+export_theory+ is called during an
-  invocation of \verb+Holmake+, the files
-\begin{verbatim}
-    xTheory.{sig,sml}
-\end{verbatim}
-will be generated and then compiled.
+  \texttt{xScript.sml}.  When \verb+export_theory+ is called during an
+  invocation of \verb+Holmake+, the files \texttt{xTheory.sig} and
+  \texttt{xTheory.sml} will be generated and then compiled.
 
 \item In the MoscowML batch compiler, modules are not allowed to have
   unbound top-level expressions. Hence, something like the following
@@ -199,15 +194,12 @@ To make Moscow ML happy, one must instead write something like
   \verb+load+ is only defined for the interactive system.
 
 \item Take care not to have the string "Theory" embedded in the name
-  of any of your files. \holn{} generates files containing this string,
-  and when it cleans up after itself, it removes such files using a
-  regular expression. This will also remove other files with names
-  containing "Theory". For example, if, in your development directory,
-  you had a file of ML code named
-\begin{verbatim}
-   MyTheory.sml
-\end{verbatim}
-  and you also were managing a \holn{} development there with {\tt
+  of any of your files. \holn{} generates files containing this
+  string, and when it cleans up after itself, it removes such files
+  using a regular expression. This will also remove other files with
+  names containing "Theory". For example, if, in your development
+  directory, you had a file of ML code named \texttt{MyTheory.sml} and
+  you also were managing a \holn{} development there with {\tt
     Holmake}, then MyTheory.sml would get deleted if {\tt Holmake
     clean} was invoked.
 
@@ -220,35 +212,35 @@ To make Moscow ML happy, one must instead write something like
 
 \end{enumerate}
 
-\subsubsection{Summary}
+\subsection{Summary}
 
 A complete theory construction is performed by the following steps:
 \begin{itemize}
 \item Construct theory script, perhaps over many sessions;
 \item Transform script into separately compilable form;
-\item Invoke {\tt Holmake} to generate the theory and compile it.
+\item Invoke \holmake{} to generate the theory and compile it.
 \end{itemize}
 
 After that, the theory is usable as an ML module.
 
-\subsubsection{What {\tt Holmake} doesn't do}
+\subsection{What \holmake{} doesn't do}
 
-{\tt Holmake} only works properly on the current directory.  Holmake
+\holmake{} only works properly on the current directory.  \holmake{}
 will rebuild files in the current directory if something it depends on
 from another directory is fresher than it is, but it will not do any
 analysis on files in other directories.  If one is developing a system
 over more than one directory, one should write a master Makefile (or
-shell script) that invokes {\tt Holmake} in the subsidiary
+shell script) that invokes \holmake{} in the subsidiary
 directories, in the correct order, \ie., such that there never is an
 out-of-date dependence leading outside of the current directory. This
 should always be achievable, simply by ordering the directories in the
 order that one would have to ``\verb+use+'' files in them.
 
-\subsubsection{{\tt Holmake}'s command-line arguments}
+\subsection{\holmake{}'s command-line arguments}
 
-Like {\tt make}, {\tt Holmake} takes command-line arguments
+Like {\tt make}, \holmake{} takes command-line arguments
 corresponding to the targets that the user desires to build.  If there
-are none, then {\tt Holmake} will attempt to build all ML modules and
+are none, then \holmake{} will attempt to build all ML modules and
 HOL theories it can detect in the current directory.  In addition,
 there are three special targets that can be used:
 \begin{description}
@@ -261,7 +253,7 @@ there are three special targets that can be used:
   the hidden dependency information.
 \end{description}
 
-Finally, the user can directly affect the workings of \verb+Holmake+
+\noindent Finally, the user can directly affect the workings of \verb+Holmake+
 with the following command-line options:
 \begin{description}
 \item[\tt -I <directory>] Look in specified directory for additional
@@ -273,19 +265,34 @@ with the following command-line options:
   depend on it.  This is useful to stop Holmake from attempting to
   compile files that are interactive scripts (include use of {\tt
   load} or {\tt use}, for example).
+\item[\texttt{-f <theory>}] Toggles whether or not a theory should be
+  built in ``fast'' mode.  Fast building causes tactic proofs
+  (invocations of \texttt{prove} and \texttt{store\_thm}) to
+  automatically succeed.  This lack of soundness is marked by the
+  \texttt{fast\_proof} oracle tag.  This tag will appear on all
+  theorems proved in this way and all subsequent theorems that depend
+  on such theorems.  \holmake's default is not to build in fast mode.
+\item[\texttt{--fast}] Makes \holmake's default be to build in fast
+  mode (see above).
 \item[{\tt --help} or {\tt -h}] Prints out a useful option summary and
   exits.
 \item[\tt --holdir <directory>] Associate this build with the given
-  HOL directory, rather than the one this version of {\tt Holmake} was
+  HOL directory, rather than the one this version of \holmake{} was
   configured to use by default.
-\item[{\tt --rebuild\_deps} or {\tt -r}] Forces {\tt Holmake} to
+\item[\texttt{--no\_sigobj}] Do not link against HOL system's
+  directory of HOL system files.  Use of this option goes some way
+  towards turning
+  \holmake{} into a general MoscowML \textsf{make} system.  However,
+  it will still attempt to do ``HOL things'' with files whose names
+  end in \texttt{Script} and \texttt{Theory}.
+\item[{\tt --rebuild\_deps} or {\tt -r}] Forces \holmake{} to
   always rebuild the dependency information, whether or not it thinks
   it needs to.
 \item[{\tt --version} or {\tt -v}] Show some brief version
-  information.  As of this writing, {\tt Holmake} is at version 2.04.
+  information.  As of this writing, \holmake{} is at version 2.1.
 \end{description}
 
-{\tt Holmake} should never exit with the MoscowML message ``Uncaught
+\noindent \holmake{} should never exit with the MoscowML message ``Uncaught
 exception''.  Such behaviour is a bug, please report it!
 
 
@@ -523,7 +530,7 @@ of the types, terms, and theorems of the HOL logic are quite unreadable
 in their `raw' form, so-called {\it prettyprinters\/} for HOL logic
 expressions are automatically invoked by the ML top level when printing
 output.
- 
+
 Similarly, types and terms often have to be constructed by the user,
 \eg, in order to make definitions, state goals to prove, provide
 existential witnesses, \etc\ Since it would be unbearable to make a type
@@ -536,11 +543,11 @@ requiring awkward backslashes, as an ML string
 would.\footnote{Quotations were a feature in the original LCF
 system. See the MoscowML User's Manual for more information.}
 
-For added convenience, the \HOL\ system distribution supplies a version 
+For added convenience, the \HOL\ system distribution supplies a version
 of \holn{} that features a {\it combined parser\/} that accepts both types
 and terms. Enclosing some object language concrete syntax between
 occurrences of \verb+``+ will result in the correct parser being
-invoked. For example  
+invoked. For example
 
 \begin{verbatim}
     ``x /\ y /\ z ==> ?p. p``
@@ -555,7 +562,7 @@ invoked. For example
 \noindent parses as an HOL type. Note that the concrete syntax given in
 the quotation for a type needs to provide a hint: the type parser will
 only be called if the first character after the leading {\tt ``} is a
-colon (\verb+:+). 
+colon (\verb+:+).
 
 Knowledgable ML programmers will notice that the idiom {\tt ``}$\ldots$ {\tt
   ``} is not ML-typable; for that reason, it is implemented as a
@@ -564,3 +571,8 @@ Knowledgable ML programmers will notice that the idiom {\tt ``}$\ldots$ {\tt
   <hol-dir>/bin/hol.unquote}. {\small\verb+Holmake+} will accept
   source files having occurrences of \verb+``+.
 
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
