@@ -19,7 +19,7 @@ app load ["hol88Lib",
 
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory topologyTheory netsTheory;
+     jrhUtils realTheory topologyTheory netsTheory BasicProvers;
 
 infix THEN THENL ORELSE ORELSEC ##;
 
@@ -1360,6 +1360,90 @@ val SER_RATIO = prove_thm("SER_RATIO",
       MATCH_MP_TAC(CONV_RULE(ONCE_DEPTH_CONV ETA_CONV) GP) THEN
       ASSUME_TAC(MATCH_MP REAL_LT_IMP_LE (ASSUME (--`&0 <  c`--))) THEN
       ASM_REWRITE_TAC[abs]]]);
+
+(*---------------------------------------------------------------------------*)
+(* Useful lemmas for proving inequalities of limits                          *)
+(*---------------------------------------------------------------------------*)
+
+val LE_SEQ_IMP_LE_LIM = store_thm
+  ("LE_SEQ_IMP_LE_LIM",
+   ``!x y f. (!n. x <= f n) /\ f --> y ==> x <= y``,
+   RW_TAC boolSimps.bool_ss [SEQ]
+   THEN MATCH_MP_TAC REAL_LE_EPSILON
+   THEN RW_TAC boolSimps.bool_ss []
+   THEN Q.PAT_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+   THEN RW_TAC boolSimps.bool_ss []
+   THEN POP_ASSUM (MP_TAC o Q.SPEC `N`)
+   THEN Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+   THEN RW_TAC boolSimps.bool_ss
+        [GREATER_EQ, LESS_EQ_REFL, abs, REAL_LE_SUB_LADD, REAL_ADD_LID]
+   THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
+        [REAL_NOT_LE, REAL_NEG_SUB, REAL_LT_SUB_RADD]
+   THEN PROVE_TAC [REAL_LET_TRANS, REAL_LT_ADDR, REAL_LTE_TRANS, REAL_LE_TRANS,
+                   REAL_LT_LE, REAL_ADD_SYM]);
+
+val SEQ_LE_IMP_LIM_LE = store_thm
+  ("SEQ_LE_IMP_LIM_LE",
+   ``!x y f. (!n. f n <= x) /\ f --> y ==> y <= x``,
+   RW_TAC boolSimps.bool_ss [SEQ]
+   THEN MATCH_MP_TAC REAL_LE_EPSILON
+   THEN RW_TAC boolSimps.bool_ss []
+   THEN Q.PAT_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+   THEN RW_TAC boolSimps.bool_ss []
+   THEN POP_ASSUM (MP_TAC o Q.SPEC `N`)
+   THEN Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+   THEN (RW_TAC boolSimps.bool_ss
+         [GREATER_EQ, LESS_EQ_REFL, abs, REAL_LE_SUB_LADD, REAL_ADD_LID]
+         THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
+              [REAL_NOT_LE, REAL_NEG_SUB, REAL_LT_SUB_RADD])
+   THENL [MATCH_MP_TAC REAL_LE_TRANS
+          THEN Q.EXISTS_TAC `x`
+          THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_LE_TRANS])
+          THEN PROVE_TAC [REAL_LE_ADDR, REAL_LT_LE],
+          MATCH_MP_TAC REAL_LE_TRANS
+          THEN Q.EXISTS_TAC `f N + e`
+          THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_LT_LE, REAL_ADD_SYM])
+          THEN PROVE_TAC [REAL_LE_ADD2, REAL_LE_REFL]]);
+
+val SEQ_MONO_LE = store_thm
+  ("SEQ_MONO_LE",
+   ``!f x n. (!n. f n <= f (n + 1)) /\ f --> x ==> f n <= x``,
+   RW_TAC boolSimps.bool_ss [SEQ]
+   THEN MATCH_MP_TAC REAL_LE_EPSILON
+   THEN RW_TAC boolSimps.bool_ss []
+   THEN Q.PAT_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+   THEN RW_TAC boolSimps.bool_ss [GREATER_EQ]
+   THEN MP_TAC (Q.SPECL [`N`, `n`] LESS_EQ_CASES)
+   THEN (STRIP_TAC
+         THEN1 (Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`)
+                THEN RW_TAC boolSimps.bool_ss
+                     [abs, REAL_LE_SUB_LADD, REAL_LT_SUB_RADD, REAL_ADD_LID,
+                      REAL_NEG_SUB]
+                THENL [PROVE_TAC [REAL_LT_LE, REAL_ADD_SYM],
+                       simpLib.FULL_SIMP_TAC boolSimps.bool_ss [REAL_NOT_LE]
+                       THEN MATCH_MP_TAC REAL_LE_TRANS
+                       THEN Q.EXISTS_TAC `x`
+                       THEN PROVE_TAC [REAL_LT_LE, REAL_LE_ADDR]]))
+   THEN (SUFF_TAC ``!i : num. f (N - i) <= x + (e : real)``
+         THEN1 PROVE_TAC [LESS_EQUAL_DIFF])
+   THEN numLib.INDUCT_TAC
+   THENL [Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+          THEN RW_TAC boolSimps.bool_ss [abs, LESS_EQ_REFL, SUB_0]
+          THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
+               [REAL_LT_SUB_RADD, REAL_NEG_SUB, REAL_NOT_LE, REAL_ADD_LID,
+                REAL_LE_SUB_LADD]
+          THEN PROVE_TAC
+               [REAL_LT_LE, REAL_ADD_SYM, REAL_LE_TRANS, REAL_LE_ADDR],
+          MP_TAC (numLib.ARITH_PROVE
+                  ``(N - i = N - SUC i) \/ (N - i = (N - SUC i) + 1)``)
+          THEN PROVE_TAC [REAL_LE_REFL, REAL_LE_TRANS]]);
+
+val SEQ_LE_MONO = store_thm
+  ("SEQ_LE_MONO",
+   ``!f x n. (!n. f (n + 1) <= f n) /\ f --> x ==> x <= f n``,
+   REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPECL [`\n. ~f n`, `~x`, `n`] SEQ_MONO_LE)
+   THEN RW_TAC boolSimps.bool_ss [GSYM SEQ_NEG, REAL_LE_NEG]);
 
 val _ = export_theory();
 

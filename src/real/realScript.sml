@@ -2526,6 +2526,22 @@ val REAL_ABS_MUL = save_thm ("REAL_ABS_MUL", ABS_MUL);
 
 val REAL_ABS_POS = save_thm ("REAL_ABS_POS", ABS_POS);
 
+val REAL_LE_EPSILON = store_thm
+  ("REAL_LE_EPSILON",
+   ``!x y : real. (!e. 0 < e ==> x <= y + e) ==> x <= y``,
+   RW_TAC boolSimps.bool_ss []
+   THEN (SUFF_TAC ``~(0r < x - y)``
+         THEN1 RW_TAC boolSimps.bool_ss
+               [REAL_NOT_LT, REAL_LE_SUB_RADD, REAL_ADD_LID])
+   THEN STRIP_TAC
+   THEN Q.PAT_ASSUM `!e. P e` MP_TAC
+   THEN RW_TAC boolSimps.bool_ss []
+   THEN (KNOW_TAC ``!a b c : real. ~(a <= b + c) = c < a - b``
+         THEN1 (RW_TAC boolSimps.bool_ss [REAL_LT_SUB_LADD, REAL_NOT_LE]
+                THEN PROVE_TAC [REAL_ADD_SYM]))
+   THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   THEN PROVE_TAC [REAL_DOWN]);
+
 (* ------------------------------------------------------------------------- *)
 (* Define a constant for extracting "the positive part" of real numbers.     *)
 (* ------------------------------------------------------------------------- *)
