@@ -794,6 +794,31 @@ val FOUR_PHASE_def =
       S_BOOL(B_AND(B_PROP ack,B_PROP req)) ;;
       S_BOOL(B_NOT(B_PROP ack)))`;
 
+(* Version without S_REPEAT S_TRUE
+val FOUR_PHASE_def =
+ Define
+  `FOUR_PHASE req ack =
+    F_NEVER
+     (
+      S_BOOL(B_AND(B_NOT(B_PROP req),B_PROP ack)) ;;
+      S_BOOL(B_PROP req))
+    &
+    F_NEVER
+     (
+      S_BOOL(B_AND(B_PROP req,B_NOT(B_PROP ack))) ;;
+      S_BOOL(B_NOT(B_PROP req)))
+    &
+    F_NEVER
+     (
+      S_BOOL(B_AND(B_NOT(B_PROP ack),B_NOT(B_PROP req))) ;;
+      S_BOOL(B_PROP ack))
+    &
+    F_NEVER
+     (
+      S_BOOL(B_AND(B_PROP ack,B_PROP req)) ;;
+      S_BOOL(B_NOT(B_PROP ack)))`;
+*)
+
 (******************************************************************************
 * Making Verilog finite state machines from FOUR_PHASE regular expressions.
 ******************************************************************************)
