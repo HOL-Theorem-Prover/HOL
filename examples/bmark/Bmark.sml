@@ -2,10 +2,9 @@
  *     The multiplier example from the LCF_LSM paper.                        *
  *---------------------------------------------------------------------------*)
 
-app load ["unwindLib", "arithmeticTheory", "pairTheory",
-          "Num_conv", "PairedDefinition"];
+app load ["unwindLib", "numLib", "pairTheory"];
 
-open Prim_rec Num_conv unwindLib Rsyntax;
+open Prim_rec numLib unwindLib Rsyntax;
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
@@ -529,7 +528,8 @@ val MULT_IMP_PRUNE =
   save_thm("MULT_IMP_PRUNE", 
        unwindLib.PRUNE_RIGHT_RULE MULT_IMP_UNWIND);
 
-val _ = save_thm("MULT_IMP_EXPAND", 
+val MULT_IMP_EXPAND = 
+  save_thm("MULT_IMP_EXPAND", 
          unwindLib.EXPAND_AUTO_RIGHT_RULE prims MULT_IMP);
 
 val COND_ADD_LEMMA = store_thm("COND_ADD_LEMMA",
@@ -576,8 +576,6 @@ val NEXT_MULT_LEMMA1 = save_thm("NEXT_MULT_LEMMA1",
                                     (o1:num->num) x,
                                     (done:num->bool) x)`--]
                            NEXT_THM')));
-
-val MULT_IMP_EXPAND = theorem "MULT_IMP_EXPAND";
 
 val NEXT_MULT_LEMMA2 = store_thm("NEXT_MULT_LEMMA2",
    --`MULT_IMP(i1,i2,o1,o2,done) 

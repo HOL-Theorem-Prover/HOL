@@ -3,11 +3,11 @@ export MPATH="$MPATH -> groups"
 if test "$1" = "clean"
 then
         echo -n "$MPATH: cleaning... "
-        Holmake cleanAll
+        $Holmake cleanAll
         echo "done."
         exit 0
 fi
 
 echo -n "$MPATH: building... "
-Holmake -I ../ho_prover -I ../subtypes -I ../RSA -I ../formalize --qof
+$Holmake -I ../ho_prover -I ../subtypes -I ../RSA -I ../formalize --qof
 echo "done."

@@ -125,14 +125,11 @@ val dFV =
  /\  (dFV (dAPP t u) = (dFV t) UNION (dFV u))`;
 
 
-val FINITE_dFV = Q.store_thm("FINITE_dFV",
-`!t. FINITE (dFV t)`,
-Induct
-  THEN RW_TAC std_ss [dFV, FINITE_UNION, FINITE_EMPTY, FINITE_SING]);
+val FINITE_dFV = Q.store_thm("FINITE_dFV", `!t. FINITE (dFV t)`,
+Induct THEN RW_TAC std_ss [dFV, FINITE_UNION, FINITE_EMPTY, FINITE_SING]);
 
 val FRESH_VAR = Q.store_thm("FRESH_VAR", `!t. ?x. ~(x IN dFV t)`,
-PROVE_TAC
-  [FRESH_string, SPEC_ALL FINITE_dFV]);
+                            PROVE_TAC [FRESH_string, SPEC_ALL FINITE_dFV]);
 
 (* --------------------------------------------------------------------- *)
 (* Functions defined by recursion on de Bruijn terms.                    *)
@@ -267,7 +264,7 @@ val dDEG_dABS_dLAMBDA = Q.store_thm("dDEG_dABS_dLAMBDA",
 RW_TAC arith_ss [dLAMBDA]
   THEN Q.X_CHOOSE_TAC `x` (Q.SPEC `t:'a dB` FRESH_VAR)
   THEN Q.ID_EX_TAC THEN Q.EXISTS_TAC `Inst 0 t (dVAR x)`
-  THEN RW_TAC arith_ss [dWT,dWT_Inst,dDEG_Inst,dDEG_Abst_Inst, GSYM LESS_EQ_0]);
+  THEN RW_TAC arith_ss [dWT,dWT_Inst,dDEG_Inst,dDEG_Abst_Inst,GSYM LESS_EQ_0]);
 
 val Backwards = Q.store_thm("Backwards",
 `!n t. (dDEG t = 0) /\ (dWT t = n) ==> dOK t`,
@@ -283,9 +280,7 @@ PROVE_TAC [Forwards,Backwards]);
 (* Substitution.                                                         *)
 (* --------------------------------------------------------------------- *)
 
-val dSUB =
- Define
-     `dSUB x u t = Inst 0 (Abst 0 x t) u`;
+val dSUB = Define `dSUB x u t = Inst 0 (Abst 0 x t) u`;
 
 val _ = add_rule {term_name = "dSUB", fixity = Parse.Closefix,
                   pp_elements = [TOK "[", TM, HardSpace 1, TOK "|->",

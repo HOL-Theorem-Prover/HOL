@@ -119,7 +119,8 @@ Induct_on `n`
              + (summation 1 n
                  (\k. a * (binomial n k * (a EXP (n - k) * b EXP k)))
              + (summation (SUC 0) n
-                 (\n'. b * (binomial n (n' - 1) * (a EXP (n - (n' - 1)) * b EXP (n' - 1))))
+                 (\n'. b * (binomial n (n'-1) * 
+                           (a EXP (n-(n'-1)) * b EXP (n' - 1))))
              + b * b EXP n)))
           =
              (a * a EXP n

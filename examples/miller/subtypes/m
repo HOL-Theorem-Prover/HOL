@@ -3,10 +3,10 @@ export MPATH="$MPATH -> subtypes"
 if test "$1" = "clean"
 then
         echo -n "$MPATH: cleaning... "
-        Holmake cleanAll
+        $Holmake cleanAll
         echo "done."
 else
         echo -n "$MPATH: building... "
-        Holmake -I ../ho_prover --qof
+        $Holmake -I ../ho_prover --qof
         echo "done."
 fi
