@@ -50,7 +50,7 @@ val numeral_rewrites =
   [ numeral_distrib, REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
     numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
     numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
-    numeral_exp, iSQR ];
+    numeral_exp, numeral_evenodd, iSQR ];
 
 val div_thm =
     prove
