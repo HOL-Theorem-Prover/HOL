@@ -6,14 +6,7 @@ open simpLib listTheory;
 (*---------------------------------------------------------------------------
         For the simplifier.
  ---------------------------------------------------------------------------*)
-val LIST_ss = rewrites
-       [APPEND, APPEND_11, EL, EVERY_DEF, FLAT, HD, LENGTH, MAP, MAP2,
-        MEM, NULL_DEF, REVERSE_DEF, SUM, TL, APPEND_ASSOC, CONS, CONS_11,
-        LENGTH_APPEND, LENGTH_MAP, MAP_APPEND, NOT_CONS_NIL,
-        NOT_NIL_CONS, MAP_EQ_NIL, APPEND_NIL, CONS_ACYCLIC,
-        list_case_def, APPEND_eq_NIL, ZIP, UNZIP,
-        EVERY_APPEND, EXISTS_APPEND, MEM_APPEND, LAST_CONS, FRONT_CONS];
-
+val LIST_ss = listTheory.list_rwts
 
  val list_rws = computeLib.add_thms
      [ APPEND,APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2,
