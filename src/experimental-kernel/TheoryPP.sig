@@ -24,8 +24,8 @@ sig
      -> unit
 
  val pp_struct
-   : {theory      : string*int*int,
-      parents     : (string*int*int) list,
+   : {theory      : string*Arbnum.num*Arbnum.num,
+      parents     : (string*Arbnum.num*Arbnum.num) list,
       types       : (string*int) list,
       constants   : (string*hol_type) list,
       axioms      : (string * thm) list,

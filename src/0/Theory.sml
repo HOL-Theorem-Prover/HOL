@@ -55,6 +55,7 @@ open Feedback Lib KernelTypes ;
 type ppstream = Portable.ppstream
 type pp_type  = ppstream -> hol_type -> unit
 type pp_thm   = ppstream -> thm -> unit
+type num      = Arbnum.num
 
 infix ##;
 
@@ -74,27 +75,33 @@ val pp_thm = ref (fn _:ppstream => fn _:thm => ())
  * loading from disk.                                                        *
  *---------------------------------------------------------------------------*)
 
-abstype thyid = UID of {name:string, timestamp:Time.time}
+local
+  open Arbnum
+in
+abstype thyid = UID of {name:string, sec: num, usec : num}
 with
   fun thyid_eq x (y:thyid) = (x=y);
-  fun new_thyid s = UID{name=s, timestamp=Portable.timestamp()};
+  fun new_thyid s =
+      let val {sec,usec} = Portable.dest_time (Portable.timestamp())
+      in
+        UID{name=s, sec = sec, usec = usec}
+      end
 
-  fun dest_thyid (UID{name, timestamp}) =
-    let val {sec,usec} = Portable.dest_time(timestamp)
-    in (name,sec,usec) end;
+  fun dest_thyid (UID{name, sec, usec}) = (name,sec,usec)
 
   val thyid_name = #1 o dest_thyid;
 
-  local val mk_time = Portable.mk_time
-  in fun make_thyid(s,i1,i2) = UID{name=s, timestamp=mk_time{sec=i1,usec=i2}}
-  end;
+  fun make_thyid(s,i1,i2) = UID{name=s, sec=i1,usec=i2}
 
-  fun thyid_to_string (UID{name,timestamp}) =
-     String.concat["(",Lib.quote name,",",Time.toString timestamp,")"]
+  fun thyid_to_string (UID{name,sec,usec}) =
+     String.concat["(",Lib.quote name,",",toString sec, ",",
+                   toString usec, ")"]
 
-  val min_thyid = UID{name="min",timestamp=Time.zeroTime};    (* Ur-theory *)
+  val min_thyid =
+      UID{name="min", sec = fromInt 0, usec = fromInt 0}  (* Ur-theory *)
 
 end;
+end (* local *)
 
 fun thyid_assoc x [] = raise ERR "thyid_assoc" "not found"
   | thyid_assoc x ((a,b)::t) = if thyid_eq x a then b else thyid_assoc x t;

@@ -18,7 +18,7 @@ val ERR = mk_HOL_ERR "TheoryPP";
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
-val thid_sort = Lib.sort (fn (s1:string,_:int,_:int) => fn (s2,_,_) => s1<=s2);
+val thid_sort = Lib.sort (fn (s1:string,_,_) => fn (s2,_,_) => s1<=s2);
 fun thm_atoms acc th k = let
   open Term
   fun term_atoms acc t k =
@@ -277,8 +277,10 @@ fun pp_struct info_record ppstrm =
      fun pp_thid(s,i,j) =
           (begin_block CONSISTENT 0; add_string"(";
             add_string (stringify s); add_string",";
-            add_break(0,0); add_string(Lib.int_to_string i); add_string",";
-            add_break(0,0); add_string(Lib.int_to_string j);
+            add_break(0,0);
+            add_string("Arbnum.fromString \""^Arbnum.toString i^"\"");
+            add_string","; add_break(0,0);
+            add_string("Arbnum.fromString \""^Arbnum.toString j^"\"");
             add_string")"; end_block())
      fun pp_incorporate_upto_types theory parents types =
          (begin_block CONSISTENT 8;

@@ -19,8 +19,12 @@ sig
   val toString   : num -> string
   val toHexString: num -> string
   val fromString : string -> num
-  val fromInt    : int -> num
-  val toInt      : num -> int    (* may raise Overflow *)
+  val fromInt    : int -> num    (* raises Overflow if i < 0 *)
+  val toInt      : num -> int    (* raises Overflow if n > maxInt *)
+
+  val floor      : real -> num   (* raises Overflow if r < 0 *)
+  val toReal     : num -> real
+
   val asList     : num -> int list
 
   val +          : num * num -> num
@@ -37,6 +41,6 @@ sig
   val >          : num * num -> bool
   val >=         : num * num -> bool
 
-  val pp_num     : Portable.ppstream -> num -> unit
+  val pp_num     : ppstream -> num -> unit
 
 end

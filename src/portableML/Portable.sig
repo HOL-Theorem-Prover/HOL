@@ -6,25 +6,25 @@ sig
   type outstream = TextIO.outstream
   include PP where type break_style = PP.break_style
 
-  val with_ppstream : ppstream 
-                       -> {add_break      : int * int -> unit, 
+  val with_ppstream : ppstream
+                       -> {add_break      : int * int -> unit,
                            add_newline    : unit -> unit,
-                           add_string     : string -> unit, 
+                           add_string     : string -> unit,
                            begin_block    : break_style -> int -> unit,
-                           clear_ppstream : unit -> unit, 
+                           clear_ppstream : unit -> unit,
                            end_block      : unit -> unit,
                            flush_ppstream : unit -> unit}
 
   val mk_consumer : 'a -> 'a
-  val defaultConsumer : unit -> {consumer : string -> unit, 
-                                 flush : unit -> unit, 
+  val defaultConsumer : unit -> {consumer : string -> unit,
+                                 flush : unit -> unit,
                                  linewidth : int}
   val stdOut_ppstream : unit -> ppstream
-  val pr_list : ('a -> unit) -> (unit -> 'b) -> (unit -> 'c) 
+  val pr_list : ('a -> unit) -> (unit -> 'b) -> (unit -> 'c)
                 -> 'a list -> unit
-  val pr_list_to_ppstream 
+  val pr_list_to_ppstream
      : ppstream -> (ppstream -> 'a -> unit)
-                  -> (ppstream -> unit) 
+                  -> (ppstream -> unit)
                    -> (ppstream -> unit) -> 'a list -> unit
   val pprint : (ppstream -> 'a -> unit) -> 'a -> unit
 
@@ -37,9 +37,9 @@ sig
 
   val time_eq: time -> time -> bool
   val timestamp: unit -> time
-  val mk_time: {sec : int, usec : int} -> time
+  val mk_time: {sec : Arbnum.num, usec : Arbnum.num} -> time
   val time_to_string: time -> string
-  val dest_time: time -> {sec : int, usec : int}
+  val dest_time: time -> {sec : Arbnum.num, usec : Arbnum.num}
   val time_lt: time -> time -> bool
 
   val getEnv: string -> string option

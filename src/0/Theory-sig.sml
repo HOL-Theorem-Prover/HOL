@@ -7,6 +7,7 @@ sig
   type ppstream  = Portable.ppstream
   type thy_addon = {sig_ps    : (ppstream -> unit) option,
                     struct_ps : (ppstream -> unit) option}
+  type num = Arbnum.num
 
 (* Create a new theory *)
 
@@ -56,7 +57,7 @@ sig
 (* For internal use *)
 
   val pp_thm             : (ppstream -> thm -> unit) ref
-  val link_parents       : string*int*int -> (string*int*int)list -> unit
+  val link_parents       : string*num*num -> (string*num*num)list -> unit
   val incorporate_types  : string -> (string*int) list -> unit
   val incorporate_consts : string -> (string*hol_type)list -> unit
 

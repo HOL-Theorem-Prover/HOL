@@ -65,7 +65,7 @@ fun mod2 (x::_) = [x mod 2]
   | mod2 [] = raise Fail "arbnum representation invariant violated"
 
 fun fromInt n = let
-  val _ = n >= 0 orelse raise Fail "nums only work with positive numbers"
+  val _ = n >= 0 orelse raise Overflow
   val dividend = n div BASE
   val rem = n mod BASE
 in
@@ -76,7 +76,7 @@ fun toInt [] = 0
   | toInt (x::xs) = Int.+(x, Int.*(BASE, toInt xs))
 
 
-(* addition is wrong on 78826 + 3251 *)
+
 fun (x + y) = addwc x y false
 and
 (* add with carry *)
@@ -102,6 +102,28 @@ and
           rem::(addwc xs ys carry)
         end
     end
+
+fun floor r = let
+  val _ = 0.0 <= r orelse raise Overflow
+  fun count_base_powers r =
+      (Real.floor r, 0)
+      handle Overflow => let
+               val (res, n) = count_base_powers (r / real BASE)
+             in
+               (res, Int.+(n,1))
+             end
+  val (sig_part, exp) = count_base_powers r
+  fun shl n a = if n = 0 then a else shl (n - 1) (0 :: a)
+  fun exp_r n r = if n = 0 then r else exp_r (n - 1) (r * real BASE)
+  val sig_anum = shl exp (fromInt sig_part)
+  val sig_real = exp_r exp (real sig_part)
+in
+  if exp > 0 then sig_anum + floor (r - sig_real)
+  else sig_anum
+end
+
+fun toReal anum = List.foldl (fn (i,acc) => Real.+(acc * real BASE, real i))
+                             0.0 (List.rev anum)
 
 (*   x0 + 1000x < y0 + 1000y   (where x,y < BASE
    =

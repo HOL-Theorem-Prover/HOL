@@ -223,6 +223,7 @@ sig
  type thm      = KernelTypes.thm
  type hol_type = KernelTypes.hol_type
  type ppstream = Portable.ppstream
+ type num = Arbnum.num
 
  val pp_type : string -> string -> ppstream -> hol_type -> unit
  val pp_sig :
@@ -237,8 +238,8 @@ sig
     -> unit
 
  val pp_struct :
-   {theory      : string*int*int,
-    parents     : (string*int*int) list,
+   {theory      : string*num*num,
+    parents     : (string*num*num) list,
     types       : (string*int) list,
     constants   : (string*hol_type) list,
     axioms      : (string * thm) list,
@@ -259,6 +260,7 @@ sig
   type ppstream = Portable.ppstream
   type thy_addon = {sig_ps    : (ppstream -> unit) option,
                     struct_ps : (ppstream -> unit) option}
+  type num = Arbnum.num
 
   val new_type       : string * int -> unit
   val new_constant   : string * hol_type -> unit
@@ -280,7 +282,7 @@ sig
   val adjoin_to_theory : thy_addon -> unit
   val export_theory    : unit -> unit
   val pp_thm           : (ppstream -> thm -> unit) ref
-  val link_parents     : string*int*int -> (string*int*int)list -> unit
+  val link_parents     : string*num*num -> (string*num*num)list -> unit
   val incorporate_types  : string -> (string*int) list -> unit
   val incorporate_consts : string -> (string*hol_type)list -> unit
   val uptodate_type      : hol_type -> bool

@@ -10,6 +10,7 @@ sig
  type thm
  type hol_type
  type ppstream = Portable.ppstream
+ type num = Arbnum.num
 
  val pp_type : string -> string -> ppstream -> hol_type -> unit
 
@@ -25,8 +26,8 @@ sig
      -> unit
 
  val pp_struct
-   : {theory      : string*int*int,
-      parents     : (string*int*int) list,
+   : {theory      : string*num*num,
+      parents     : (string*num*num) list,
       types       : (string*int) list,
       constants   : (string*hol_type) list,
       axioms      : (string * thm) list,
