@@ -1,15 +1,22 @@
-app load ["tflLib", "bossLib", "listXTheory", "QLib"];
-open tflLib bossLib;
+app load ["bossLib", "Q"];
+open bossLib;
 infix 8 by;
 
 
-(*---------------------------------------------------------------------------*
- * Define the function.                                                      *
- *---------------------------------------------------------------------------*)
-val iota_def = 
-  Rfunction "iota_def"  `measure \(b,t). SUC t - b`
+(*---------------------------------------------------------------------------
+            An APL-style "iota" function.
+ ---------------------------------------------------------------------------*)
 
-    `iota bot top = (bot > top => [] | CONS bot (iota (bot+1) top))`;
+val iota_def = 
+  Defn.Hol_defn "iota" 
+    `iota bot top = if bot > top then [] else bot::iota (bot+1) top`;
+
+
+val (iota_eqn, iota_ind) =
+TotalDefn.tprove 
+ (iota_def,
+  WF_REL_TAC iota_def `measure \(b,t). SUC t - b`
+    THEN DECIDE_TAC);
 
 
 (*---------------------------------------------------------------------------*
@@ -17,28 +24,74 @@ val iota_def =
  *---------------------------------------------------------------------------*)
 
 val iota_bounds = Q.prove
-`!bot top n. mem n (iota bot top) ==> bot <= n /\ n <= top`
-(PROGRAM_TAC{induction = #induction iota_def, 
-             rules = GEN_ALL (#rules iota_def)} 
-  THEN RW_TAC list_ss [listXTheory.mem_def]
+(`!bot top n. MEM n (iota bot top) ==> bot <= n /\ n <= top`,
+ recInduct iota_ind
+  THEN REPEAT GEN_TAC THEN NTAC 2 STRIP_TAC
+  THEN ONCE_REWRITE_TAC [iota_eqn]
+  THEN RW_TAC list_ss [listTheory.MEM]
   THENL [DECIDE_TAC, 
          DECIDE_TAC, 
-         RES_TAC THEN DECIDE_TAC,
+         PROVE_TAC [DECIDE `x+y <= z ==> x<=z`],
          PROVE_TAC[]]);
 
 
 val iota_length = Q.prove
-`!bot top. bot <= top ==> (LENGTH(iota bot top) = SUC(top-bot))`
-(PROGRAM_TAC{induction = #induction iota_def, 
-             rules = GEN_ALL (#rules iota_def)} THENL
- [DECIDE_TAC,
-  RW_TAC arith_ss [listTheory.LENGTH] 
-   THEN Cases_on `bot:num = top` THENL
-   [RW_TAC bool_ss [] 
-      THEN ONCE_REWRITE_TAC [#rules iota_def]
-      THEN RW_TAC list_ss [],
-    `bot+1 <= top` by DECIDE_TAC THEN
-    `LENGTH (iota (bot + 1) top) = SUC (top - (bot + 1))` by RES_TAC 
-      THEN RW_TAC bool_ss [] 
-      THEN DECIDE_TAC]]);
+(`!bot top. bot <= top ==> (LENGTH(iota bot top) = (top-bot)+1)`,
+ recInduct iota_ind
+  THEN REPEAT GEN_TAC THEN NTAC 2 STRIP_TAC
+  THEN ONCE_REWRITE_TAC [iota_eqn]
+  THEN RW_TAC base_ss [listTheory.LENGTH]
+  THENL [DECIDE_TAC,
+         RW_TAC base_ss [arithmeticTheory.ONE,arithmeticTheory.ADD_CLAUSES] 
+           THEN RW_TAC base_ss [arithmeticTheory.ADD1] THEN
+           Cases_on `bot = top` 
+           THENL [RW_TAC base_ss [] 
+                    THEN ONCE_REWRITE_TAC [iota_eqn]
+                    THEN RW_TAC list_ss [],
+                  `bot+1 <= top` by DECIDE_TAC THEN
+                  `LENGTH (iota (bot+1) top) = (top - (bot+1)) + 1` by RES_TAC
+                     THEN Q.PAT_ASSUM `x = y` SUBST_ALL_TAC
+                     THEN Q.PAT_ASSUM `x ==> y` (K ALL_TAC)
+                     THEN DECIDE_TAC]]);
 
+(*---------------------------------------------------------------------------
+      Some computations with iota.
+ ---------------------------------------------------------------------------*)
+
+load "computeLib"; open computeLib;
+
+(*---------------------------------------------------------------------------
+      Build a standard computing base, one that knows basic 
+      facts about booleans and numbers (and numerals).
+ ---------------------------------------------------------------------------*)
+
+val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES]);
+
+fun norm q = Count.apply (CBV_CONV rws) (--q--);
+
+val num_rws = 
+  let open numeralTheory Rsyntax
+      val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
+      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
+                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
+                        arithmeticTheory.ALT_ZERO])
+      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
+      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
+ in 
+  [ drws', REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
+    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
+    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
+    numeral_exp, iSQR, 
+    GEN_ALL (EQF_INTRO (SPEC_ALL prim_recTheory.LESS_REFL))
+  ]
+end;
+
+val _ = add_thms (true,num_rws) rws;
+val _ = add_thms (true,[iota_eqn]) rws;
+
+norm `iota 0 0`;
+norm `iota 0 12`;
+norm `iota 12 10`;
+norm `iota 12 100`;
+norm `iota 250 351`;
+norm `iota 0 1000`;

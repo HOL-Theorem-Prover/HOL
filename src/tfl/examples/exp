@@ -1,35 +1,35 @@
-app load ["bossLib", "tflLib", "QLib"];
-open bossLib arithmeticTheory;
+app load ["bossLib", "QLib"];
+open bossLib arithmeticTheory TotalDefn;
 infix 8 by;
 
-(*---------------------------------------------------------------------------*
- *                                                                           *
- *     fun Exp x 0 = 1                                                       *
- *       | Exp x 1 = x                                                       *
- *       | Exp x n = if (n mod 2 = 0)                                        *
- *                    then Exp x (n div 2) * Exp x (n div 2)                 *
- *                     else x * Exp x (n-1);                                 *
- *                                                                           *
- *---------------------------------------------------------------------------*)
 
-val exp_def = Lib.try (tflLib.Rfunction "exp_def" `measure SND`) 
-  `(exp x 0       = 1) 
-/\ (exp x (SUC 0) = x)
-/\ (exp x n       = (n MOD 2 = 0 
-                      => exp x (n DIV 2) * exp x (n DIV 2)
-                       |  x * exp x (n-1)))`;
+(*---------------------------------------------------------------------------
+     An efficient divide-and-conquer-style exponentiation function.
+ ---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------*
- * |- !v4. (SUC (SUC v4) MOD 2 = 0) ==> SUC (SUC v4) DIV 2 < SUC (SUC v4)    *
- *---------------------------------------------------------------------------*)
-val terminates = tflLib.prove_termination exp_def
-(REPEAT STRIP_TAC 
-   THEN MP_TAC (Q.SPEC `SUC(SUC v4)` 
-            (REWRITE_RULE [DECIDE `0<2`] (Q.SPEC`2` DIVISION)))
-   THEN RW_TAC arith_ss []);
+val exp_def = 
+ Defn.Hol_defn "exp"
+     `(exp x 0       = 1) 
+  /\  (exp x (SUC 0) = x)
+  /\  (exp x n       = if n MOD 2 = 0 
+                        then let v = exp x (n DIV 2) in v * v
+                         else  x * exp x (n-1))`;
 
-val induction = PROVE_HYP terminates (#induction exp_def);
-val rules     = REWRITE_RULE [terminates] (#rules exp_def);
+
+(*---------------------------------------------------------------------------
+        Remove termination constraints.
+ ---------------------------------------------------------------------------*)
+
+val (exp_eqns, exp_ind) = tprove 
+(exp_def,
+ WF_REL_TAC exp_def `measure SND` 
+   THEN CONJ_TAC THENL 
+   [RW_TAC arith_ss [], 
+    RW_TAC base_ss []
+      THEN MP_TAC (Q.SPEC `SUC(SUC v4)` 
+                  (REWRITE_RULE [DECIDE `0<2`] (Q.SPEC`2` DIVISION)))
+      THEN RW_TAC arith_ss []]);
+
 
 (*---------------------------------------------------------------------------*
  * A form of correctness: exp is equal to the prim. rec defn. of EXP         *
@@ -40,14 +40,95 @@ val rules     = REWRITE_RULE [terminates] (#rules exp_def);
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
-val EXP_eq_exp = Q.prove`!x m. x EXP m = exp x m`
-(tflLib.REC_INDUCT_TAC induction 
-  THEN REPEAT CONJ_TAC THENL
-  [RW_TAC arith_ss [EXP, rules], RW_TAC arith_ss [EXP, rules],
-   RW_TAC arith_ss [rules]] THENL
-   [POP_ASSUM (SUBST1_TAC o SYM)
-      THEN RW_TAC arith_ss [GSYM EXP_ADD] 
-      THEN ONCE_REWRITE_TAC [MULT_SYM]
-      THEN AP_TERM_TAC
-      THEN PROVE_TAC [DIVISION,DECIDE `0<2`,ADD_0],
-    PROVE_TAC [EXP]]);
+val EXP_eq_exp = Q.prove
+(`!x m. x EXP m = exp x m`,
+ recInduct exp_ind THEN REPEAT CONJ_TAC 
+   THEN RW_TAC arith_ss [EXP, exp_eqns]
+   THEN POP_ASSUM (SUBST1_TAC o SYM)
+   THEN RW_TAC arith_ss [GSYM EXP_ADD] 
+   THEN `2 * (SUC(SUC v4) DIV 2) = SUC(SUC v4)` 
+        by PROVE_TAC [DIVISION,DECIDE `0<2`,ADD_0,MULT_SYM]
+   THEN PROVE_TAC [EXP]);
+
+
+(*---------------------------------------------------------------------------
+      Some computations with exp.
+ ---------------------------------------------------------------------------*)
+
+load "computeLib"; open computeLib;
+
+(*---------------------------------------------------------------------------
+      Build a computing base that knows basic 
+      facts about booleans and numbers (and numerals).
+ ---------------------------------------------------------------------------*)
+
+val bool_rewrites =
+  [ Rsyntax.INST_TYPE [Type.alpha |-> Type.bool] REFL_CLAUSE,
+    COND_CLAUSES, COND_ID, NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES,
+    IMP_CLAUSES, EQ_CLAUSES ];
+
+val rws = from_list (false,bool_rewrites);
+
+local open numeralTheory
+      val REFL_EQ_0 = Rsyntax.INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
+      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
+                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
+                        arithmeticTheory.ALT_ZERO])
+      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
+      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
+      val num_rws = [ drws', 
+        REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
+        numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
+         numeral_sub, numeral_lt, numeral_lte, iSUB_THM, numeral_exp, iSQR, 
+         GEN_ALL (EQF_INTRO (SPEC_ALL prim_recTheory.LESS_REFL)) ]
+
+      val div_thm =
+        prove (--` !x y q r. x DIV y =
+                    if (x = r + q * y) /\ (r < y) then q else x DIV y `--,
+           ZAP_TAC base_ss [DIV_UNIQUE] THEN
+           MATCH_MP_TAC (DIV_UNIQUE) THEN
+           EXISTS_TAC (--`r:num`--) THEN ZAP_TAC arith_ss []);
+
+      val mod_thm =
+         prove (--` !x y q r. x MOD y = 
+                       if (x = r + q * y) /\ (r < y) then r else x MOD y `--,
+          ZAP_TAC base_ss [] THEN
+          MATCH_MP_TAC (arithmeticTheory.MOD_UNIQUE) THEN
+          EXISTS_TAC (--`q:num`--) THEN ZAP_TAC arith_ss []);
+
+      fun dest_op opr tm =
+        let val (opr',arg) = Dsyntax.strip_comb tm in
+        if (opr=opr') then arg else raise Fail "dest_op"
+        end;
+
+      val divop = (--`$DIV`--) val modop = (--`$MOD`--)
+
+      fun DIV_CONV tm =
+        case dest_op divop tm
+         of [x,y] => 
+              let open Arbnum
+                  val (q,r) = divmod (dest_numeral x, dest_numeral y) 
+              in SPECL [x, y, mk_numeral q, mk_numeral r] div_thm
+              end handle HOL_ERR _ => raise Fail "DIV_CONV"
+          | _ => raise Fail "DIV_CONV"
+
+      fun MOD_CONV tm =
+        case dest_op modop tm
+         of [x,y] => 
+              let open Arbnum
+                  val (q,r) = divmod (dest_numeral x, dest_numeral y) 
+              in SPECL [x, y, mk_numeral q, mk_numeral r] mod_thm
+              end handle HOL_ERR _ => raise Fail "MOD_CONV"
+          | _ => raise Fail "MOD_CONV"
+in
+val _ = add_thms (true,num_rws) rws;
+val _ = add_conv (--`$DIV`--, 2, DIV_CONV) rws;
+val _ = add_conv (--`$MOD`--, 2, MOD_CONV) rws;
+end;
+
+val _ = add_thms (true,[exp_eqns]) rws;
+
+fun norm q = Count.apply (CBV_CONV rws) (--q--);
+
+norm `exp 2 1`;
+norm `exp 2 4`;

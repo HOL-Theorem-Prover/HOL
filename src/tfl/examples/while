@@ -31,7 +31,7 @@ val WhileRule = Q.prove(
 REPEAT GEN_TAC THEN STRIP_TAC 
   THEN REWRITE_TAC [Spec_def] THEN BETA_TAC THEN DISCH_TAC
   THEN recInduct (theorem "While_ind") 
-  THEN RW_TAC base_ss [] 
-  THEN ONCE_REWRITE_TAC [While_scheme] 
-  THEN RW_TAC base_ss []);
+  THEN PROVE_TAC [While_scheme]);
+
+
 
