@@ -8,7 +8,6 @@ open Portable HolKernel term_grammar
 
 
 val PP_ERR = mk_HOL_ERR "term_pp";
-infixr -->;
 
 (*---------------------------------------------------------------------------
    Miscellaneous syntax stuff.
@@ -373,15 +372,25 @@ fun pp_term (G : grammar) TyG = let
       | _ => raise PP_ERR "my_dest_abs" "term not an abstraction"
 
   fun my_is_abs tm = can my_dest_abs tm
+  fun my_strip_abs tm = let
+    fun recurse acc t = let
+      val (v, body) = my_dest_abs t
+    in
+      recurse (v::acc) body
+    end handle HOL_ERR _ => (List.rev acc, t)
+  in
+    recurse [] tm
+  end
 
   (* allow any constant that overloads to the string "LET" to be treated as
      a let. *)
-  fun is_let tm = let
+  fun is_let0 n tm = let
     val (let_tm,f_tm) = dest_comb(rator tm)
   in
     Overload.overloading_of_term overload_info let_tm = SOME "LET" andalso
-    my_is_abs f_tm
-  end handle HOL_ERR _ => false;
+    (length (#1 (my_strip_abs f_tm)) >= n orelse is_let0 (n + 1) f_tm)
+  end handle HOL_ERR _ => false
+  val is_let = is_let0 1
 
 
 
@@ -1209,6 +1218,7 @@ fun pp_term (G : grammar) TyG = let
         val bvars_seen_here = List.concat (map (free_vars o bv2term) args)
         val old_seen = (free_vars (bv2term bv)) @ (!bvars_seen)
       in
+        begin_block INCONSISTENT 2;
         pr_vstruct bv; spacep true;
         pr_list pr_vstruct (fn () => ()) (fn () => spacep true) args;
         bvars_seen := bvars_seen_here @ old_seen;
@@ -1217,7 +1227,8 @@ fun pp_term (G : grammar) TyG = let
         begin_block INCONSISTENT 2;
         pr_term rhs_t Top Top Top (depth - 1);
         end_block();
-        bvars_seen := old_seen
+        bvars_seen := old_seen;
+        end_block()
       end
       val (values, abstr) = find_base [] tm
       val (varnames, body) =
