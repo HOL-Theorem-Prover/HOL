@@ -177,16 +177,19 @@ fun ok_sml_identifier str =
  * acceptable name. Note that this function does not recognize members of
  * constant families (just those that serve to define such families).
  *---------------------------------------------------------------------------*)
-fun allowed_term_constant "let" = false
-  | allowed_term_constant "in"  = false
-  | allowed_term_constant "and" = false
-  | allowed_term_constant "of"  = false
-  | allowed_term_constant "\\"  = false
-  | allowed_term_constant ";"   = false
-  | allowed_term_constant "=>"  = false
-  | allowed_term_constant "|"   = false
-  | allowed_term_constant ":"   = false
-  | allowed_term_constant "0"   = true  (* only this numeral is OK *)
+fun allowed_term_constant "let"         = false
+  | allowed_term_constant "in"          = false
+  | allowed_term_constant "and"         = false
+  | allowed_term_constant "of"          = false
+  | allowed_term_constant "\\"          = false
+  | allowed_term_constant ";"           = false
+  | allowed_term_constant "=>"          = false
+  | allowed_term_constant "|"           = false
+  | allowed_term_constant ":"           = false
+  | allowed_term_constant ":="          = false
+  | allowed_term_constant "with"        = false
+  | allowed_term_constant "updated_by"  = false
+  | allowed_term_constant "0"           = true  (* only this numeral is OK *)
   | allowed_term_constant str =
      if (Word8Array.sub(alphabet,ordof(str,0)) = bone)
      then ok_identifier str
