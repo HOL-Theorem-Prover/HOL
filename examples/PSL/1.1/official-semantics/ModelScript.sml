@@ -83,7 +83,7 @@ val MODEL_def =
   `MODEL M =
     M.S0 SUBSET M.S /\
     (!s s'. (s,s') IN M.R ==> s IN M.S /\ s' IN M.S) /\
-    (!s. s IN M.S ==> !p. p IN M.L s ==> p IN M.P)`;
+    (!s. s IN M.S ==> M.L s SUBSET M.P)`;
 
 (******************************************************************************
 * A useful special case (possibly the only one we'll need) is to identify 
@@ -99,7 +99,7 @@ val SIMPLE_MODEL_def =
        S0 := B;
        R  := R; 
        P  := {p | T}; 
-       L  := (\(s:'state). {f:'state -> bool | f s}) |>`;
+       L  := (\(s:'state). {p:'state -> bool | s IN p}) |>`;
 
 val MODEL_SIMPLE_MODEL =
  store_thm
@@ -207,11 +207,11 @@ val MODEL_PATH_TO_MODEL =
    ``!p. 0 < LENGTH p ==>  MODEL(PATH_TO_MODEL p)``,
    GEN_TAC
     THEN Cases_on `p`
-    THEN RW_TAC list_ss [MODEL_def,PATH_TO_MODEL_def]   
+    THEN RW_TAC list_ss [SUBSET_DEF,MODEL_def,PATH_TO_MODEL_def]   
     THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_UNIV,LENGTH_def,LS]);
 
 (*****************************************************************************)
-(* Definition of an automation: ``: ('label,'state)automaton``               *)
+(* Definition of an automaton: ``: ('label,'state)automaton``                *)
 (* (e.g. Clarke/Grumberg/Peled "Model Checking" Chapter 9)                   *)
 (*****************************************************************************)
 val automaton_def =
@@ -228,7 +228,7 @@ val AUTOMATON_def =
   `AUTOMATON A =
     A.Q0 SUBSET A.Q /\
     (!s a s'. (s,a,s') IN A.Delta ==> s IN A.Q /\ a IN A.Sigma /\ s' IN A.Q) /\
-    (!s. s IN A.F ==> s IN A.Q)`;
+    A.F SUBSET A.Q`;
 
 (*****************************************************************************)
 (* Convert a model to an automaton                                           *)
@@ -237,10 +237,9 @@ val AUTOMATON_def =
 val MODEL_TO_AUTOMATON_def =
  Define
   `MODEL_TO_AUTOMATON (M:('state,'prop)model) =
-    <| Sigma := {a | a SUBSET {p : 'prop | p IN M.P}};
+    <| Sigma := {a | a SUBSET M.P};
        Q     := {SOME s : ('state)option | s IN M.S} UNION {NONE};
-       Delta := {(SOME s, a, SOME s') | s IN M.S /\ s' IN M.S /\ 
-                                        (s,s') IN M.R /\ (a = M.L s')}
+       Delta := {(SOME s, a, SOME s') | (s,s') IN M.R /\ (a = M.L s')}
                 UNION
                 {(NONE, a, SOME s) | s IN M.S0 /\ (a = M.L s)};
        Q0    := {NONE :  ('state)option};
@@ -299,11 +298,7 @@ val AUTOMATON_PROD_def =
     <| Sigma := {(a1,a2) | a1 IN A1.Sigma  /\ a2 IN A2.Sigma };
        Q     := {(q1,q2) | q1 IN A1.Q  /\ q2 IN A2.Q};
        Delta := {((q1,q2),(a1,a2),(q1',q2')) | 
-                 q1  IN A1.Q     /\ q2  IN A2.Q     /\
-                 a1  IN A1.Sigma /\ a2  IN A2.Sigma /\
-                 q1' IN A1.Q     /\ q2' IN A2.Q     /\
-                 (q1,a1,q1') IN A1.Delta            /\ 
-                 (q2,a2,q2') IN A2.Delta};
+                 (q1,a1,q1') IN A1.Delta /\ (q2,a2,q2') IN A2.Delta};
        Q0    := {(q1,q2) | q1 IN A1.Q0  /\ q2 IN A2.Q0};
        F     := {(q1,q2) | q1 IN A1.F  /\ q2 IN A2.F} |>`;
 
@@ -315,7 +310,8 @@ val AUTOMATON_AUTOMATON_PROD =
    ``!A1 A2. AUTOMATON A1 /\ AUTOMATON A2 ==> AUTOMATON(A1 || A2)``,
    RW_TAC list_ss [AUTOMATON_def,AUTOMATON_PROD_def]
     THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]
-    THEN RW_TAC list_ss []);
+    THEN RW_TAC list_ss []
+    THEN PROVE_TAC[]);
 
 (* Examples
 
@@ -376,7 +372,7 @@ val PATH_def =
     (LENGTH l > 0) /\ (s = HD l) /\ s IN M.S /\
     (!n :: (LESS(LENGTH l - 1)). 
       EL n l IN M.S /\ EL (SUC n) l IN M.S /\ (EL n l, EL (SUC n) l) IN M.R) /\
-    ~(?s. s IN M.S /\ (EL (LENGTH l - 1) l, s) IN M.R))
+    !s. ~((EL (LENGTH l - 1) l, s) IN M.R))
    /\
    (PATH M s (INFINITE f) = 
      (s = f 0) /\ !n. f n IN M.S /\ (f n, f(SUC n)) IN M.R)`;
@@ -390,11 +386,10 @@ val LANGUAGE_def =
     (LENGTH l > 0)                                                         /\
     EL 0 l IN A.Q0                                                         /\
     (!n :: (LESS(LENGTH l - 1)). ?a. (EL n l, a, EL (SUC n) l) IN A.Delta) /\
-    ~(?a s. s IN A.Q /\ (EL (LENGTH l - 1) l, a, s) IN A.Delta))
+    !a s. ~((EL (LENGTH l - 1) l, a, s) IN A.Delta))
    /\
    (LANGUAGE A (INFINITE f) = 
-     f 0 IN A.Q0 /\ 
-     !n. ?a. f n IN A.Q /\ f(SUC n) IN A.Q /\ (f n, a, f(SUC n)) IN A.Delta)`;
+     f 0 IN A.Q0 /\ !n. ?a. (f n, a, f(SUC n)) IN A.Delta)`;
 
 (*****************************************************************************)
 (* MODEL_TO_AUTOMATON adds a value -- "iota" in Clarke/Grumberg/Peled -- to  *)
@@ -418,6 +413,188 @@ val PATH_ADD_IOTA_def =
   `(PATH_ADD_IOTA(FINITE l) = FINITE(MAP SOME l))
    /\
    (PATH_ADD_IOTA(INFINITE f) = INFINITE(SOME o f))`;
+
+(*****************************************************************************)
+(* Should have proved FINITE_PATH_LANGUAGE directly, but now too lazy to     *)
+(* tweak the rather tedious proof.                                           *)
+(*****************************************************************************)
+val FINITE_PATH_LANGUAGE_LEMMA = 
+ store_thm
+  ("FINITE_PATH_LANGUAGE_LEMMA",
+   ``!M s l.
+      MODEL M /\ s IN M.S0 /\ (s = HD l)
+      ==>
+      (PATH M s (FINITE l) = 
+        LANGUAGE 
+         (MODEL_TO_AUTOMATON M) 
+         (CONS(NONE, (PATH_ADD_IOTA (FINITE l)))))``,
+   REPEAT GEN_TAC
+    THEN SIMP_TAC (list_ss++resq_SS) 
+          [MODEL_def,PATH_def,LANGUAGE_def,MODEL_TO_AUTOMATON_def,
+           PATH_ADD_IOTA_def,CONS_def]
+    THEN RW_TAC (srw_ss()) []
+    THEN EQ_TAC
+    THEN RW_TAC list_ss []
+    THENL
+     [Cases_on `n`
+       THEN RW_TAC list_ss []
+       THENL
+        [Q.EXISTS_TAC `HD l`
+          THEN RW_TAC list_ss []
+          THEN Cases_on `l`
+          THEN RW_TAC list_ss []
+          THEN FULL_SIMP_TAC list_ss [],
+         Q.EXISTS_TAC `M.L(EL (SUC n') l)` 
+          THEN DISJ1_TAC
+          THEN Q.EXISTS_TAC `EL n' l` 
+          THEN Q.EXISTS_TAC `EL (SUC n') l`
+          THEN `n' < LENGTH l` by DECIDE_TAC
+          THEN RW_TAC list_ss [EL_MAP]
+          THEN Cases_on `l`
+          THEN RW_TAC list_ss []
+          THEN FULL_SIMP_TAC list_ss []
+          THEN `n' < LENGTH t` by DECIDE_TAC
+          THEN RW_TAC list_ss [EL_MAP]],
+      Cases_on `(~(EL (LENGTH l) (NONE::MAP SOME l) = SOME s') \/ ~(a = M.L s'') \/
+                ~(s = SOME s'')) \/ ~((s',s'') IN M.R)`
+       THEN FULL_SIMP_TAC list_ss []
+       THEN RW_TAC list_ss []
+       THEN `LENGTH l = SUC(LENGTH l - 1)` by DECIDE_TAC
+       THEN `EL (LENGTH l - 1) (MAP SOME l) = SOME s'` by PROVE_TAC[TL,EL]
+       THEN `LENGTH l - 1  < LENGTH l` by DECIDE_TAC
+       THEN `SOME(EL (LENGTH l - 1) l) = SOME s'` by PROVE_TAC[EL_MAP]
+       THEN FULL_SIMP_TAC list_ss []
+       THEN PROVE_TAC[],
+      Cases_on `(~(EL (LENGTH l) (NONE::MAP SOME l) = NONE) \/ ~(a = M.L s') \/
+                ~(s = SOME s')) \/ ~(s' IN M.S0)`
+       THEN FULL_SIMP_TAC list_ss []
+       THEN RW_TAC list_ss []
+       THEN `LENGTH l = SUC(LENGTH l - 1)` by DECIDE_TAC
+       THEN `EL (LENGTH l - 1) (MAP SOME l) = NONE` by PROVE_TAC[TL,EL]
+       THEN `LENGTH l - 1  < LENGTH l` by DECIDE_TAC
+       THEN `SOME(EL (LENGTH l - 1) l) = NONE` by PROVE_TAC[EL_MAP]
+       THEN FULL_SIMP_TAC list_ss [],
+      Cases_on `LENGTH l = 0`
+       THEN RW_TAC list_ss []
+       THEN POP_ASSUM(fn th => FULL_SIMP_TAC list_ss [th]),
+      FULL_SIMP_TAC list_ss [SUBSET_DEF],
+      `SUC n < LENGTH l` by DECIDE_TAC
+       THEN RES_TAC
+       THEN `n < LENGTH l` by DECIDE_TAC
+       THEN FULL_SIMP_TAC list_ss [EL_MAP]
+       THEN PROVE_TAC[],
+      `SUC n < LENGTH l` by DECIDE_TAC
+       THEN RES_TAC
+       THEN `n < LENGTH l` by DECIDE_TAC
+       THEN FULL_SIMP_TAC list_ss [EL_MAP]
+       THEN Cases_on `l`
+       THEN RW_TAC list_ss []
+       THEN FULL_SIMP_TAC list_ss []
+       THEN `EL n (MAP SOME t) = SOME (EL n t)` by PROVE_TAC[EL_MAP]
+               (* Above needed, I think, for mysterious type variable reasons *)
+       THEN `SOME(EL n t) = SOME s''` by PROVE_TAC[]
+       THEN FULL_SIMP_TAC list_ss []
+       THEN PROVE_TAC[],
+      `SUC n < LENGTH l` by DECIDE_TAC
+       THEN RES_TAC
+       THEN FULL_SIMP_TAC list_ss [EL_MAP]
+       THEN `n < LENGTH l` by DECIDE_TAC
+       THEN `EL n (MAP SOME l) = SOME (EL n l)` by PROVE_TAC[EL_MAP] 
+       THENL
+        [`SOME(EL n l) = SOME s'` by PROVE_TAC[]
+          THEN FULL_SIMP_TAC list_ss []
+          THEN Cases_on `l`
+          THEN RW_TAC list_ss []
+          THEN FULL_SIMP_TAC list_ss []
+          THEN `EL n (MAP SOME t) = SOME (EL n t)` by PROVE_TAC[EL_MAP] 
+               (* Above needed, I think, for mysterious type variable reasons *)
+          THEN `SOME(EL n t) = SOME s''` by PROVE_TAC[]
+          THEN FULL_SIMP_TAC list_ss [],
+         `SOME(EL n l) = NONE` by PROVE_TAC[]
+          THEN FULL_SIMP_TAC list_ss []],
+      Cases_on `LENGTH l = 0`
+       THEN RW_TAC list_ss []
+       THEN FULL_SIMP_TAC list_ss []
+       THEN `LENGTH l - 1 < LENGTH l` by DECIDE_TAC
+       THEN RES_TAC
+       THENL
+        [`!a s.
+            (!s' s''.
+               (~(EL (LENGTH l) (NONE::MAP SOME l) = SOME s') \/
+                ~(a = M.L s'') \/ ~(s = SOME s'')) \/ ~((s',s'') IN M.R))` 
+           by PROVE_TAC[]
+          THEN POP_ASSUM
+                (fn th => 
+                  ASSUME_TAC(Q.SPECL[`M.L s`,`SOME s`,`EL (LENGTH l - 1) l`,`s`]th))
+          THEN FULL_SIMP_TAC list_ss []
+          THEN `LENGTH l = SUC(LENGTH l - 1)` by DECIDE_TAC
+          THEN `LENGTH l - 1 < LENGTH l` by DECIDE_TAC
+          THEN PROVE_TAC[EL,TL,EL_MAP],
+         `!a s.
+            (!s' s''.
+               (~(EL (LENGTH l) (NONE::MAP SOME l) = SOME s') \/
+                ~(a = M.L s'') \/ ~(s = SOME s'')) \/ ~((s',s'') IN M.R))` 
+           by PROVE_TAC[]
+          THEN POP_ASSUM
+                (fn th => 
+                  ASSUME_TAC(Q.SPECL[`M.L s`,`SOME s`,`EL (LENGTH l - 1) l`,`s`]th))
+          THEN FULL_SIMP_TAC list_ss []
+          THEN `LENGTH l = SUC(LENGTH l - 1)` by DECIDE_TAC
+          THEN `LENGTH l - 1 < LENGTH l` by DECIDE_TAC
+          THEN PROVE_TAC[EL,TL,EL_MAP]]]);
+
+(*****************************************************************************)
+(*     |- !M l.                                                              *)
+(*          MODEL M /\ HD l IN M.S0 ==>                                      *)
+(*          (PATH M (HD l) (FINITE l) =                                      *)
+(*           LANGUAGE (MODEL_TO_AUTOMATON M)                                 *)
+(*             (CONS (NONE,PATH_ADD_IOTA (FINITE l))))                       *)
+(*****************************************************************************)
+val FINITE_PATH_LANGUAGE =
+ save_thm
+  ("FINITE_PATH_LANGUAGE",
+   ((Q.GEN `M` o Q.GEN `l`)
+    (SIMP_RULE list_ss []
+     (Q.SPECL[`M`,`HD l`,`l`]FINITE_PATH_LANGUAGE_LEMMA))));
+ 
+val INFINITE_PATH_LANGUAGE =
+ store_thm
+  ("INFINITE_PATH_LANGUAGE",
+   ``!M f.
+      MODEL M /\ f 0 IN M.S0
+      ==>
+      (PATH M (f 0) (INFINITE f) = 
+        LANGUAGE 
+         (MODEL_TO_AUTOMATON M) 
+         (CONS(NONE, (PATH_ADD_IOTA (INFINITE f)))))``,
+   REPEAT GEN_TAC
+    THEN SIMP_TAC (list_ss++resq_SS) 
+          [MODEL_def,PATH_def,LANGUAGE_def,MODEL_TO_AUTOMATON_def,
+           PATH_ADD_IOTA_def,CONS_def]
+    THEN RW_TAC (srw_ss()) []
+    THEN EQ_TAC
+    THEN RW_TAC list_ss []
+    THENL
+     [Cases_on `n`
+       THEN RW_TAC list_ss [],
+      Cases_on `n`
+       THEN ZAP_TAC list_ss [SUBSET_DEF],
+      POP_ASSUM(STRIP_ASSUME_TAC o Q.SPEC `SUC n`)
+       THEN FULL_SIMP_TAC list_ss []]);
+
+val PATH_LANGUAGE =
+ store_thm
+  ("PATH_LANGUAGE",
+   ``!M w.
+      MODEL M /\ (ELEM w 0) IN M.S0
+      ==>
+      (PATH M (ELEM w 0) w = 
+        LANGUAGE (MODEL_TO_AUTOMATON M) (CONS(NONE, (PATH_ADD_IOTA w))))``,
+   REPEAT GEN_TAC
+    THEN Cases_on `w`
+    THEN SIMP_TAC (list_ss++resq_SS) 
+          [ELEM_def,HEAD_def,REST_def,RESTN_def,
+           FINITE_PATH_LANGUAGE,INFINITE_PATH_LANGUAGE]);
 
 val _ = export_theory();
 
