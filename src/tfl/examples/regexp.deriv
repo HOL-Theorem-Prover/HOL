@@ -1,11 +1,11 @@
 (*---------------------------------------------------------------------------*)
 (* Brzozowski's paper on taking the derivative of a regular expression       *)
 (* allows the language of regular expressions to be expanded to include      *)
-(* any boolean operator (beyond the standard disjunction).                   *)
+(* any boolean operator.                                                     *)
 (*---------------------------------------------------------------------------*)
 
-load "metisLib"; open metisLib;
-open listTheory;
+load "metisLib"; 
+open arithmeticTheory listTheory metisLib;
 
 (*---------------------------------------------------------------------------*)
 (* Make list append into an infix recognized by the parser                   *)
@@ -13,6 +13,10 @@ open listTheory;
 
 val _ = set_fixity "<>" (Infixl 500);
 val _ = overload_on ("<>", Term`APPEND`);
+
+(*---------------------------------------------------------------------------*)
+(* Basic list facts                                                          *)
+(*---------------------------------------------------------------------------*)
 
 val NULL_EQ_NIL = Q.prove
 (`!l. NULL l = (l = [])`,
@@ -93,8 +97,130 @@ val sem_def =
 
 
 (*---------------------------------------------------------------------------*)
-(* Is Epsilon in the generated language of a regular expression. We bail out *)
-(* in the case of Prefix, by appealing to the semantics.                     *)
+(* Basic identities                                                          *)
+(*---------------------------------------------------------------------------*)
+
+val OrEmpty = Q.prove
+(`(!r. sem (r | Empty) = sem r) /\ (!r. sem (Empty | r) = sem r)`,
+ RW_TAC list_ss [FUN_EQ_THM,sem_def]);
+
+val OrIdem = Q.prove
+(`!r. sem (r | r) = sem r`,
+ RW_TAC list_ss [FUN_EQ_THM,sem_def]);
+
+val ThenEmpty = Q.prove
+(`(!r. sem (r#Empty) = sem Empty) /\ (!r. sem (Empty#r) = sem Empty)`,
+ RW_TAC list_ss [FUN_EQ_THM,sem_def]);
+
+val ThenEpsilon = Q.prove
+(`(!r. sem (r#Epsilon) = sem r) /\ (!r. sem (Epsilon#r) = sem r)`,
+ RW_TAC list_ss [FUN_EQ_THM,sem_def]);
+
+val OrAssoc = Q.prove
+(`!r1 r2 r3. sem ((r1 | r2) | r3) = sem (r1 | (r2 | r3))`,
+ RW_TAC list_ss [FUN_EQ_THM,sem_def] THEN METIS_TAC []);
+
+val AndAssoc = Q.prove
+(`!r1 r2 r3. sem ((r1 & r2) & r3) = sem (r1 & (r2 & r3))`,
+ RW_TAC list_ss [FUN_EQ_THM,sem_def] THEN METIS_TAC []);
+
+val ThenAssoc = Q.prove
+(`!r1 r2 r3. sem ((r1 # r2) # r3) = sem (r1 # (r2 # r3))`,
+ RW_TAC list_ss [FUN_EQ_THM,sem_def] THEN METIS_TAC [APPEND_ASSOC]);
+
+val StarDisjThm = Q.prove
+(`!r w.sem (Star r) w = sem (Epsilon | (r # Star r)) w`,
+ RW_TAC std_ss [] THEN EQ_TAC THEN RW_TAC list_ss [sem_def, FLAT] 
+ THENL [Cases_on `wlist` THEN RW_TAC list_ss [FLAT], ALL_TAC, ALL_TAC]
+ THEN METIS_TAC [FLAT,EVERY_DEF]);
+
+val StarThenThm = Q.prove
+(`!r w.sem (Star r) w ==> ?n.sem (FUNPOW ($# r) n Epsilon) w`,
+ RW_TAC list_ss [sem_def, FLAT, FUNPOW_SUC] 
+   THEN Q.EXISTS_TAC `LENGTH wlist` 
+   THEN Induct_on `wlist` 
+   THEN RW_TAC list_ss [sem_def, FLAT, FUNPOW_SUC]
+   THEN EVAL_TAC THEN METIS_TAC []);
+
+val ThenStarThm = Q.prove
+(`!r w n. sem (FUNPOW ($# r) n Epsilon) w ==> sem (Star r) w`,
+ Induct_on `n` THENL [ALL_TAC, POP_ASSUM MP_TAC] THEN EVAL_TAC
+   THEN RW_TAC list_ss [sem_def,FUNPOW_SUC] THENL
+   [METIS_TAC [FLAT, EVERY_DEF],
+    RES_TAC THEN Q.EXISTS_TAC `w1::wlist` 
+      THEN METIS_TAC [EVERY_DEF,FLAT]]);
+
+val Star_equals_nThen = Q.prove
+(`!r w. sem (Star r) w = ?n. sem (FUNPOW ($# r) n Epsilon) w`,
+ METIS_TAC [ThenStarThm, StarThenThm]);
+
+val StarMonotone = Q.prove
+(`!r w. sem r w ==> sem (Star r) w`,
+ RW_TAC list_ss [sem_def]
+  THEN Q.EXISTS_TAC `[w]` 
+  THEN RW_TAC list_ss []);
+
+val StarIdem = Q.prove
+(`!r. sem (Star(Star r)) = sem (Star r)`,
+ RW_TAC list_ss [sem_def,FUN_EQ_THM]
+   THEN EQ_TAC THEN RW_TAC list_ss [] THENL
+   [Induct_on `wlist` THENL
+    [RW_TAC list_ss [] THEN METIS_TAC [FLAT,EVERY_DEF],
+     RW_TAC list_ss [] THEN RES_TAC 
+      THEN RULE_ASSUM_TAC (REWRITE_RULE [sem_def])
+      THEN RW_TAC std_ss []
+      THEN Q.EXISTS_TAC `wlist'' <> wlist'`
+      THEN RW_TAC list_ss [FLAT_APPEND_DISTRIB]],
+    METIS_TAC [EVERY_MEM,StarMonotone]]);
+
+val StarThenStar = Q.prove
+(`!r. sem (Star r # Star r) = sem (Star r)`,
+ RW_TAC list_ss [sem_def,FUN_EQ_THM]
+   THEN EQ_TAC THEN RW_TAC list_ss [] THENL
+   [METIS_TAC [EVERY_APPEND,FLAT_APPEND_DISTRIB],
+    Cases_on `wlist` THENL
+    [METIS_TAC [FLAT,EVERY_DEF,APPEND],
+     MAP_EVERY Q.EXISTS_TAC [`FLAT [h]`, `FLAT t`]
+      THEN RW_TAC list_ss [] THENL
+      [Q.EXISTS_TAC `[h]` THEN FULL_SIMP_TAC list_ss [],
+       METIS_TAC [EVERY_DEF]]]]);
+
+(*---------------------------------------------------------------------------*)
+(* "Smart" constructors, which build in some trivial optimizations.          *)
+(*---------------------------------------------------------------------------*)
+
+val SimpDisj_def = Define
+ `SimpDisj r1 r2 = if r1 = Empty then r2 else
+                   if r2 = Empty then r1 else
+                   if r1 = r2 then r1 else (r1 | r2)`;
+
+val SimpAnd_def = Define
+ `SimpAnd r1 r2 = if (r1 = Empty) \/ (r2 = Empty) then Empty else
+                  if r1 = r2 then r1 else (r1 & r2)`;
+
+val SimpThen_def = Define
+ `SimpThen r1 r2 = if (r1 = Empty) \/ (r2 = Empty) then Empty else
+                   if r1 = Epsilon then r2 else
+                   if r2 = Epsilon then r1 else (r1 # r2)`;
+
+val SimpDisjCorrect = Q.prove
+(`!r1 r2. sem (SimpDisj r1 r2) = sem (r1 | r2)`,
+ RW_TAC list_ss [SimpDisj_def,sem_def,FUN_EQ_THM]);
+
+val SimpAndCorrect = Q.prove
+(`!r1 r2. sem (SimpAnd r1 r2) = sem (r1 & r2)`,
+ RW_TAC list_ss [SimpAnd_def,sem_def,FUN_EQ_THM] THEN
+ RW_TAC list_ss [sem_def]);
+
+val SimpThenCorrect = Q.prove
+(`!r1 r2. sem (SimpThen r1 r2) = sem (r1 # r2)`,
+ RW_TAC list_ss [SimpThen_def,sem_def,FUN_EQ_THM] THEN
+ RW_TAC list_ss [sem_def]);
+    
+
+(*---------------------------------------------------------------------------*)
+(* Is Epsilon in the generated language of a regular expression?             *)
+(* We bail out in the case of Prefix, by appealing to the semantics.         *)
 (*---------------------------------------------------------------------------*)
 
 val hasEpsilon_def = Define
@@ -109,6 +235,12 @@ val hasEpsilon_def = Define
    (hasEpsilon (Star _)   = T) /\
    (hasEpsilon (Prefix r) = ~(sem r = sem Empty))`;
 
+val hasEpsilon_sem = Q.prove
+(`!r. hasEpsilon r = sem r []`,
+ Induct THEN RW_TAC list_ss [hasEpsilon_def,sem_def]
+        THENL [METIS_TAC [EVERY_DEF,FLAT],
+               RW_TAC list_ss [FUN_EQ_THM,sem_def]]);
+
 (*---------------------------------------------------------------------------*)
 (* Deriv x r finds a regex that generates the language obtained after taking *)
 (* symbol x off the front of all strings in L(r). Starting from r, we can    *)
@@ -122,25 +254,12 @@ val Deriv_def = Define
 /\ (Deriv x Any        = Epsilon)
 /\ (Deriv x (Symbol a) = if x=a then Epsilon else Empty)
 /\ (Deriv x (Not P)    = Not (Deriv x P))
-/\ (Deriv x (P|Q)      = Deriv x P | Deriv x Q)
-/\ (Deriv x (P&Q)      = Deriv x P & Deriv x Q)
-/\ (Deriv x (P#Q)      = (Deriv x P # Q) | 
-                         if hasEpsilon P then Deriv x Q else Empty)
-/\ (Deriv x (Star P)   = Deriv x P # Star P)
+/\ (Deriv x (P|Q)      = SimpDisj (Deriv x P) (Deriv x Q))
+/\ (Deriv x (P&Q)      = SimpAnd (Deriv x P) (Deriv x Q))
+/\ (Deriv x (P#Q)      = SimpDisj(SimpThen (Deriv x P) Q)
+                                 (if hasEpsilon P then Deriv x Q else Empty))
+/\ (Deriv x (Star P)   = SimpThen (Deriv x P) (Star P))
 /\ (Deriv x (Prefix P) = Prefix (Deriv x P))`;
-
-
-val DerivString_def = Define
-  `(DerivString [] r = r) /\
-   (DerivString (h::t) r = DerivString t (Deriv h r))`;
-
-val Matches_def = Define `Matches r w = hasEpsilon (DerivString w r)`;
-
-val hasEpsilon_sem = Q.prove
-(`!r. hasEpsilon r = sem r []`,
- Induct THEN RW_TAC list_ss [hasEpsilon_def,sem_def]
-        THENL [METIS_TAC [EVERY_DEF,FLAT],
-               RW_TAC list_ss [FUN_EQ_THM,sem_def]]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -155,9 +274,9 @@ val semDeriv = Q.prove
   RW_TAC list_ss [Deriv_def, sem_def],
   RW_TAC list_ss [Deriv_def, sem_def],
   RW_TAC list_ss [Deriv_def, sem_def],
-  RW_TAC list_ss [Deriv_def, sem_def],
-  RW_TAC list_ss [Deriv_def, sem_def],
-  RW_TAC list_ss [Deriv_def, sem_def] THENL
+  RW_TAC list_ss [Deriv_def, sem_def,SimpDisjCorrect],
+  RW_TAC list_ss [Deriv_def, sem_def,SimpAndCorrect],
+  RW_TAC list_ss [Deriv_def, sem_def,SimpThenCorrect,SimpDisjCorrect] THENL
   [REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RW_TAC list_ss [] THENL
    [MAP_EVERY Q.EXISTS_TAC [`x::w1`, `w2`] THEN RW_TAC list_ss [],
     FULL_SIMP_TAC list_ss [hasEpsilon_sem] 
@@ -170,7 +289,8 @@ val semDeriv = Q.prove
     Cases_on `w1` THENL
     [FULL_SIMP_TAC list_ss [hasEpsilon_sem],
      FULL_SIMP_TAC list_ss [] THEN METIS_TAC []]]],
-  RW_TAC list_ss [Deriv_def, sem_def] THEN WEAKEN_TAC (K true) 
+  RW_TAC list_ss [Deriv_def, sem_def,SimpThenCorrect] 
+    THEN WEAKEN_TAC (K true) 
     THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RW_TAC list_ss [] THENL
     [Q.EXISTS_TAC `(x::w1) :: wlist` THEN RW_TAC list_ss [],
      Cases_on `NULL (FLAT wlist)` THENL
@@ -194,26 +314,39 @@ val semDeriv = Q.prove
 
 
 (*---------------------------------------------------------------------------*)
+(* Take the derivative with respect to a string.                             *)
+(*---------------------------------------------------------------------------*)
+
+val DerivString_def = Define
+  `(DerivString [] r = r) /\
+   (DerivString (h::t) r = DerivString t (Deriv h r))`;
+
+(*---------------------------------------------------------------------------*)
+(* The matching algorithm just runs DerivString and checks for Epsilon.      *)
+(*---------------------------------------------------------------------------*)
+
+val Matches_def = Define `Matches r w = hasEpsilon (DerivString w r)`;
+
+
+(*---------------------------------------------------------------------------*)
 (* Correctness of matcher follows by induction.                              *)
 (*---------------------------------------------------------------------------*)
 
 val MatchesCorrect = Q.prove
 (`!r w. sem r w =  Matches r w`,
  SIMP_TAC list_ss [Matches_def] 
-  THEN Induct_on `w`
-  THEN RW_TAC list_ss [DerivString_def]
-  THENL [METIS_TAC [hasEpsilon_sem],
-         RW_TAC list_ss [GSYM semDeriv]]);
-
+  THEN Induct_on `w` THEN RW_TAC list_ss [DerivString_def]
+  THENL [METIS_TAC [hasEpsilon_sem],RW_TAC list_ss [GSYM semDeriv]]);
 
 
 (*---------------------------------------------------------------------------*)
-(* Test the matcher:                                                         *)
+(* Simple tests for the matcher:                                             *)
 (*---------------------------------------------------------------------------*)
 (*
 load "stringLib";
 fun CHECK r s = Count.apply EVAL 
-                  (Term `Matches ^r (EXPLODE ^(stringSyntax.fromMLstring s))`);
+                  (Term `Matches (^r : char regex)
+                                 (EXPLODE ^(stringSyntax.fromMLstring s))`);
 
 val Zero = rhs(concl(EVAL(Term`Symbol(HD(EXPLODE "0"))`))); 
 val One = rhs(concl(EVAL(Term`Symbol(HD(EXPLODE "1"))`))); 
@@ -222,7 +355,6 @@ val Three = rhs(concl(EVAL(Term`Symbol(HD(EXPLODE "3"))`)));
 val a = rhs(concl(EVAL(Term`Symbol(HD(EXPLODE "a"))`))); 
 val b = rhs(concl(EVAL(Term`Symbol(HD(EXPLODE "b"))`))); 
 val c = rhs(concl(EVAL(Term`Symbol(HD(EXPLODE "c"))`)));
-(* val Any = Term `^Zero | ^One | ^Two | ^Three | ^a | ^b | ^c `; *)
 
 val r0 = Term `^One # ^Two`;
 val r1 = Term `Star (^One # ^Two)`
@@ -232,8 +364,9 @@ val r3 = Term `^r2 # ^r1`;
 (* val true  = *) CHECK r0 "12";
 (* val true  = *) CHECK r1 "12";
 (* val true  = *) CHECK r1 "1212";
-(* val true  = *) CHECK r1 "121212121212121212121212";
+(* val true  = *) CHECK r1 "12121212121212121212121212121212";
 (* val false = *) CHECK r1 "12123";
+(* val false = *) CHECK r1 "121212121212121212121212121212122";
 (* val false = *) CHECK r2 "";
 (* val true  = *) CHECK r2 "1";
 (* val true  = *) CHECK r2 "0001";
@@ -241,11 +374,11 @@ val r3 = Term `^r2 # ^r1`;
 (* val true  = *) CHECK r3 "00011212";
 (* val false = *) CHECK r3 "00011213";
 (* val true  = *) CHECK (Term`Star(Star Any)`) "";
-(* val true  = *) CHECK (Term`Star(Star Any)`) "0";
-(* val true  = *) CHECK (Term`Star(Star Any)`) "0123";
-(* val true  = *) CHECK (Term`Star (^Any # Star ^Any)`) "0";
-(* val true  = *) CHECK (Term`Star (^Any # Star ^Any)`) "01";
-(* val true  = *) CHECK (Term`Star (^Any # Star ^Any)`) "012";
+(* val true  = *) CHECK (Term`Star(Star Any):char regex`) "0";
+(* val true  = *) CHECK (Term`Star(Star Any):char regex`) "0123";
+(* val true  = *) CHECK (Term`Star (Any # Star Any): char regex`) "0";
+(* val true  = *) CHECK (Term`Star (Any # Star Any):char regex`) "01";
+(* val true  = *) CHECK (Term`Star (Any # Star Any):char regex`) "012";
 (* val true  = *) CHECK (Term`^a # Star(^a | ^b) # Star(^b # ^a)`) "abba";
 
 (* At most 2 a's. Alphabet = {a,b} *)
@@ -278,7 +411,7 @@ val ExactlyTwo_a = Term `Star ^b # ^a # Star ^b # ^a # Star ^b`;
 (* false *) CHECK ExactlyTwo_a "abbbbabbbab";
 
 (* All strings of length 0-3 *)
-val UpTo3 = Term `Epsilon | ^Any | ^Any#^Any | ^Any#^Any#^Any`;
+val UpTo3 = Term `(Epsilon | Any | Any#Any | Any#Any#Any) : char regex`;
 
 (* true *) CHECK UpTo3 "";
 (* true *) CHECK UpTo3 "b";
@@ -287,19 +420,48 @@ val UpTo3 = Term `Epsilon | ^Any | ^Any#^Any | ^Any#^Any#^Any`;
 (* false *) CHECK UpTo3 "abbbbabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 (* All strings with no occurrences of aa or bb *)
-val NoStars = Term `^Any | Star (^a # ^b) | Star (^b # ^a)`;
+val NoDouble = Term `Any | Star (^a # ^b) | Star (^b # ^a)`;
 
-(* true *)  CHECK NoStars "";
-(* true *)  CHECK NoStars "a";
-(* true *)  CHECK NoStars "b";
-(* false *) CHECK NoStars "aa";
-(* true *)  CHECK NoStars "ab";
-(* true *)  CHECK NoStars "ba";
-(* false *) CHECK NoStars "bb";
-(* true *)  CHECK NoStars 
+(* true *)  CHECK NoDouble "";
+(* true *)  CHECK NoDouble "a";
+(* true *)  CHECK NoDouble "b";
+(* false *) CHECK NoDouble "aa";
+(* true *)  CHECK NoDouble "ab";
+(* true *)  CHECK NoDouble "ba";
+(* false *) CHECK NoDouble "bb";
+(* true *)  CHECK NoDouble 
               "ababababababababababababababababababababababababababab";
-(* false *) CHECK NoStars 
+(* false *) CHECK NoDouble 
               "abababababababababababbababababababababababababababab";
+
+(* All strings with at least two consecutive zeros and not ending in 01 *)
+
+val pat = Term `(Star Any # ^Zero # ^Zero # Star Any) & 
+                Not (Star Any # ^Zero # ^One | )`;
+
+(*true *) CHECK pat "00";
+(*false *) CHECK pat "001";
+(*true *) CHECK pat "0111010101010111111000000";
+(*true *) CHECK pat "011101010101011111100000010101000111111111111111111111";
+(*true *) CHECK pat "0011010101010111111000000101010001111111111111111111110";
+(*false *) CHECK pat "0011010101010111111000000101010001111111111111111111101";
+
+(* All strings with at least three consecutive ones and not ending in 01 or
+   consisting of all ones *)
+
+val pat = Term `(Star Any # ^One # ^One # ^One # Star Any) & 
+                Not (Star Any # ^Zero # ^One | ^One # Star ^One)`;
+
+(*true *)  CHECK pat "01110";
+(*false *) CHECK pat "1";
+(*false *) CHECK pat "11";
+(*false *) CHECK pat "111";
+(*false *) CHECK pat "11111111111111111111111111111111111111111111111111111111";
+(*true *)  CHECK pat "0111010101010111111000000";
+(*true *)  CHECK pat "01101010101011111100000010101000111111111111111111111";
+(*true *)  CHECK pat "10001101010101011000000101010001111111111111111111110";
+(*false *) CHECK pat "0011010101010111111000000101010001111111111111111111101";
+
 
 *)
 (*---------------------------------------------------------------------------*)
