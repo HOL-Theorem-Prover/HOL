@@ -42,6 +42,6 @@ has the same effect on the global grammar, but which does not cause
 this effect to persist when the current theory is exported.
 
 \SEEALSO
-Term, overload_on, add_numeral_form
+Term, overload_on, add_numeral_form, clear_overloads_on.
 
 \ENDDOC

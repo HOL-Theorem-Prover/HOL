@@ -86,6 +86,6 @@ Overloading with abandon can lead to input that is very hard to make
 sense of, and so should be used with caution.
 
 \SEEALSO
-allow_for_overloading_on, clear_overloads_on
+allow_for_overloading_on, clear_overloads_on.
 
 \ENDDOC
