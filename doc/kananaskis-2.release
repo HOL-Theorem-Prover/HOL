@@ -108,3 +108,20 @@ Incompatibilities:
     to
        p <= MIN m n = p <= m /\ p <= n
 
+  * For reasons of efficiency, all conversions in the system may now
+    potentially raise the special exception Conv.UNCHANGED to indicate
+    that they haven't changed the input term, and that they should be
+    treated as if they had returned the theorem |- t = t, for input t.
+    Conversion connectives (such as THENC, ORELSEC and TRY_CONV) all
+    do the appropriate thing in the presence of this exception.
+    Previously, sub-systems such as the simplifier, rewriter and
+    arithmetic decision procedures have used this idea to make them
+    work faster, but couldn't share information about unchangedness.
+
+    For interactive use, CONV_RULE and CONV_TAC handle the exception
+    appropriately, and the new function QCONV (of type : conv -> conv)
+    can make any conversion handle UNCHANGED.  QCONV's implementation
+    is
+
+       fun QCONV c t = c t handle UNCHANGED => REFL t
+
