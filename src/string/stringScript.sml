@@ -252,7 +252,7 @@ val STRING_CASE_DEF = new_recursive_definition
 
 
 val STRING_CASE_CONG = save_thm
-("STRING_CASE_CONG", 
+("STRING_CASE_CONG",
  case_cong_thm STRING_CASES STRING_CASE_DEF);
 
 (*---------------------------------------------------------------------------
@@ -274,6 +274,28 @@ val IMPLODE_EQNS = Q.store_thm
 (* ----------------------------------------------------------------------
     More rewrites for IMPLODE and EXPLODE
    ---------------------------------------------------------------------- *)
+
+val IMPLODE_EQ_EMPTYSTRING = store_thm(
+  "IMPLODE_EQ_EMPTYSTRING",
+  ``((IMPLODE l = "") = (l = [])) /\
+    (("" = IMPLODE l) = (l = []))``,
+  CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) THEN
+  REWRITE_TAC [] THEN
+  RW_TAC bool_ss [EQ_IMP_THM, IMPLODE_EQNS, IMPLODE_EXPLODE] THEN
+  POP_ASSUM (MP_TAC o Q.AP_TERM `EXPLODE`) THEN
+  RW_TAC bool_ss [EXPLODE_EQNS, EXPLODE_IMPLODE]);
+
+val EXPLODE_EQ_NIL = store_thm(
+  "EXPLODE_EQ_NIL",
+  ``((EXPLODE s = []) = (s = "")) /\
+    (([] = EXPLODE s) = (s = ""))``,
+  CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) THEN
+  REWRITE_TAC [] THEN
+  RW_TAC bool_ss [EQ_IMP_THM, EXPLODE_EQNS, EXPLODE_IMPLODE] THEN
+  POP_ASSUM (MP_TAC o Q.AP_TERM `IMPLODE`) THEN
+  RW_TAC bool_ss [IMPLODE_EQNS, IMPLODE_EXPLODE]);
+
+
 
 val EXPLODE_EQ_THM = Q.store_thm
 ("EXPLODE_EQ_THM",
@@ -302,7 +324,7 @@ val IMPLODE_EQ_THM = Q.store_thm
 val STRLEN_DEF = new_recursive_definition
    {def = Term`(STRLEN "" = 0) /\
                (STRLEN (STRING c s) = 1 + STRLEN s)`,
-    name = "STRLEN_DEF", 
+    name = "STRLEN_DEF",
     rec_axiom = string_Axiom};
 
 
@@ -382,10 +404,11 @@ val BY_LISTOP_DEF = Q.new_definition
     Exportation
  ---------------------------------------------------------------------------*)
 
-val _ = export_rewrites 
+val _ = export_rewrites
    ["ORD_CHR_RWT","IMPLODE_EXPLODE", "EXPLODE_IMPLODE",
     "IMPLODE_11", "EXPLODE_11","EXPLODE_EQNS", "IMPLODE_EQNS",
-    "EXPLODE_EQ_THM", "IMPLODE_EQ_THM", "STRLEN_DEF"];
+    "EXPLODE_EQ_THM", "IMPLODE_EQ_THM", "STRLEN_DEF",
+    "IMPLODE_EQ_EMPTYSTRING", "EXPLODE_EQ_NIL"];
 
 
 val _ = adjoin_to_theory
