@@ -1,10 +1,11 @@
 (*===========================================================================*)
 (* Simple theory of bytes.                                                   *)
 (*===========================================================================*)
-val _ = new_theory "word8Cases"
 
 load "word8Lib";
 open HolKernel Parse boolLib bossLib word8Lib word8Theory
+
+val _ = new_theory "word8Cases"
 
 fun fold_term f [x] = x
   | fold_term f (h::t) = f (h, (fold_term f t))
@@ -23,10 +24,7 @@ val consts = map (fn n => ``n2w ^(numSyntax.term_of_int n)``) nums
 
 local
 
-val not_eq_lem = Q.prove (
-`!x y. ~(x = y) /\ x < 256 /\ y < 256 ==> ~(n2w x = n2w y)`,
-RW_TAC std_ss [] THEN WORD_TAC THEN
-RW_TAC arith_ss [fetch "bits" "MOD_2EXP_def"])
+val i_t = numSyntax.term_of_int
 
 val bound_thm = Q.prove (
 `!x. ?y. y < 256 /\ (x = n2w y)`,
@@ -36,8 +34,16 @@ RW_TAC arith_ss [fetch "arithmetic" "DIVISION",
 
 val pr_body_eqns = map2 (fn c => fn v => ``fn ^c = ^v``) 
                         (rev consts) (rev vars)
-val pr_witness_eqns = map (fn c => ``x = ^c``) consts
-val pr_witness = ``\x. ^(foldr2 mk_cond ``ARB`` pr_witness_eqns vars)``
+fun mk_witness low hi = 
+  if low = hi then
+    List.nth (vars, low)
+  else
+    let val mid = (hi + low) div 2 in
+      mk_cond (``w2n x <= ^(i_t mid)``,
+               mk_witness low mid,
+               mk_witness (mid + 1) hi)
+    end
+val pr_witness = ``\x. ^(mk_witness 0 255)``
 
 val use_top_assum = POP_ASSUM (fn thm => PURE_ONCE_REWRITE_TAC [GSYM thm])
 val use_top_assum2 = POP_ASSUM (fn thm => SIMP_TAC arith_ss [thm])
@@ -48,8 +54,7 @@ foldr mk_forall ``?!fn. (\fn. ^(fold_term mk_conj pr_body_eqns)) fn``
 REPEAT GEN_TAC THEN REWRITE_TAC [EXISTS_UNIQUE_THM] THEN BETA_TAC THEN
 REPEAT STRIP_TAC
 THENL
- [EXISTS_TAC pr_witness THEN REPEAT STRIP_TAC THEN
-   BETA_TAC THEN SIMP_TAC arith_ss [not_eq_lem],
+ [EXISTS_TAC pr_witness THEN REPEAT STRIP_TAC THEN BETA_TAC THEN WORD_TAC,
   ALL_TAC] THEN
 NTAC 256 (POP_ASSUM MP_TAC) THEN
 NTAC 256 use_top_assum THEN
@@ -67,7 +72,7 @@ THEN FULL_SIMP_TAC arith_ss [])
 
 in 
 
-word8PrimRec = BETA_RULE prim_rec
+val word8PrimRec = BETA_RULE prim_rec
 
 end
 
