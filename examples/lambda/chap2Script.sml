@@ -813,6 +813,7 @@ val (is_abs_thm, _) = define_recursive_term_function
    (is_abs (t1 @@ t2) = F) /\
    (is_abs (LAM v t) = T)`;
 val _ = export_rewrites ["is_abs_thm"]
+val _ = prove_vsubst_result is_abs_thm NONE
 
 val (is_comb_thm, _) = define_recursive_term_function
   `(is_comb (VAR s) = F) /\
@@ -820,6 +821,7 @@ val (is_comb_thm, _) = define_recursive_term_function
    (is_comb (t1 @@ t2) = T) /\
    (is_comb (LAM v t) = F)`;
 val _ = export_rewrites ["is_comb_thm"]
+val _ = prove_vsubst_result is_comb_thm NONE
 
 val (is_var_thm, _) = define_recursive_term_function
   `(is_var (VAR s) = T) /\
@@ -827,6 +829,7 @@ val (is_var_thm, _) = define_recursive_term_function
    (is_var (t1 @@ t2) = F) /\
    (is_var (LAM v t) = F)`;
 val _ = export_rewrites ["is_var_thm"]
+val _ = prove_vsubst_result is_var_thm NONE
 
 val (is_const_thm,_) = define_recursive_term_function
   `(is_const (VAR s) = F) /\
@@ -834,6 +837,7 @@ val (is_const_thm,_) = define_recursive_term_function
    (is_const (t @@ u) = F) /\
    (is_const (LAM v t) = F)`;
 val _ = export_rewrites ["is_const_thm"]
+val _ = prove_vsubst_result is_const_thm NONE
 
 val (dest_const_thm, _) =
     define_recursive_term_function `dest_const (CON k:'a nc) = k`;
@@ -845,6 +849,7 @@ val (bnf_thm, _) = define_recursive_term_function
    (bnf (t1 @@ t2) = bnf t1 /\ bnf t2 /\ ~is_abs t1) /\
    (bnf (LAM v t) = bnf t)`;
 val _ = export_rewrites ["bnf_thm"]
+val _ = prove_vsubst_result bnf_thm NONE
 
 val (rand_thm, _) = define_recursive_term_function `rand (t1 @@ t2) = t2`;
 val _ = export_rewrites ["rand_thm"]
@@ -857,7 +862,6 @@ val swap_is_const2 = store_thm(
   ``is_const t ==> (swap x y t = t)``,
   Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
   SRW_TAC [][swap_thm, is_const_thm]);
-val _ = export_rewrites ["swap_is_const2"]
 
 val is_comb_APP_EXISTS = store_thm(
   "is_comb_APP_EXISTS",
@@ -875,6 +879,12 @@ val rand_subst_commutes = store_thm(
   ``!t u v. is_comb t ==> ([u/v] (rand t) = rand ([u/v] t))``,
   REPEAT STRIP_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [is_comb_APP_EXISTS, SUB_THM, rand_thm]);
+
+val rator_subst_commutes = store_thm(
+  "rator_subst_commutes",
+  ``!t u x. is_comb t ==> ([u/v] (rator t) = rator ([u/v] t))``,
+  SRW_TAC [][is_comb_APP_EXISTS, rator_thm, SUB_THM] THEN
+  SRW_TAC [][is_comb_APP_EXISTS, rator_thm, SUB_THM]);
 
 
 val extra_LAM_DISJOINT = store_thm(
@@ -900,6 +910,37 @@ val (enf_thm, _) = define_recursive_term_function
    (enf (LAM v t) = enf t /\ (is_comb t /\ (rand t = VAR v) ==>
                               v IN FV (rator t)))`
 val _ = export_rewrites ["enf_thm"]
+
+val swap_eq_var = store_thm(
+  "swap_eq_var",
+  ``(swap x y t = VAR s) = (t = VAR (swapstr x y s))``,
+  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
+  SRW_TAC [][swap_thm]);
+
+val subst_eq_var = store_thm(
+  "subst_eq_var",
+  ``([v/u] t = VAR s) = (t = VAR u) /\ (v = VAR s) \/
+                        (t = VAR s) /\ ~(u = s)``,
+  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
+  SRW_TAC [][SUB_VAR, SUB_THM] THEN PROVE_TAC []);
+
+val enf_vsubst_invariant = store_thm(
+  "enf_vsubst_invariant",
+  ``!t v u. enf ([VAR v/u] t) = enf t``,
+  HO_MATCH_MP_TAC simple_induction THEN
+  SIMP_TAC (srw_ss()) [SUB_THM, enf_thm] THEN CONJ_TAC THENL [
+    SRW_TAC [][enf_thm, SUB_VAR],
+    MAP_EVERY Q.X_GEN_TAC [`x`, `t`] THEN STRIP_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`v`, `u`] THEN
+    Q_TAC (NEW_TAC "z") `{u;v;x} UNION FV t` THEN
+    `LAM x t = LAM z (swap z x t)` by SRW_TAC [][swap_ALPHA] THEN
+    SRW_TAC [][SUB_THM, enf_thm, swap_subst_out, swap_thm, swap_eq_var] THEN
+    `~(swapstr z x v = x)` by SRW_TAC [][swapstr_def] THEN
+    `~(swapstr z x u = x)` by SRW_TAC [][swapstr_def] THEN
+    SRW_TAC [boolSimps.CONJ_ss][GSYM rand_subst_commutes, subst_eq_var] THEN
+    SRW_TAC [][GSYM rator_subst_commutes, FV_SUB]
+  ]);
+val _ = export_rewrites ["enf_vsubst_invariant"]
 
 val FV_RENAMING = store_thm(
   "FV_RENAMING",

@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib bossLib ncTheory ncLib chap2Theory
 
 open BasicProvers pred_setTheory
+open swapTheory
 
 val _ = new_theory "term_posns";
 
@@ -111,17 +112,8 @@ val (valid_posns_thm, _) = define_recursive_term_function`
                                     IMAGE (CONS Rt) (valid_posns u)) /\
   (valid_posns (LAM v t) = [] INSERT IMAGE (CONS In) (valid_posns t))
 `;
+val _ = prove_vsubst_result valid_posns_thm NONE
 
-val valid_posns_vsubst = store_thm(
-  "valid_posns_vsubst",
-  ``!t u v. valid_posns ([VAR v/u] t) = valid_posns t``,
-  HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][SUB_THM, valid_posns_thm, SUB_VAR] THEN
-  Q_TAC (NEW_TAC "z") `{u;v;x} UNION FV t` THEN
-  `LAM x t = LAM z (swap z x t)` by SRW_TAC [][swapTheory.swap_ALPHA] THEN
-  SRW_TAC [][SUB_THM, swapTheory.swap_subst_out, valid_posns_thm,
-             swapTheory.swap_thm])
-val _ = export_rewrites ["valid_posns_vsubst"]
 
 val NIL_always_valid = store_thm(
   "NIL_always_valid",
@@ -148,6 +140,7 @@ val (var_posns_thm, _) = define_recursive_term_function`
    (var_posns (t @@ u) = IMAGE (CONS Lt) (var_posns t) UNION
                          IMAGE (CONS Rt) (var_posns u)) /\
    (var_posns (LAM v t) = IMAGE (CONS In) (var_posns t))`;
+val var_posns_vsubst_invariant = prove_vsubst_result var_posns_thm NONE
 
 val var_posns_FINITE = store_thm(
   "var_posns_FINITE",
@@ -169,25 +162,7 @@ val vp'_lam = ``\rt u:string t:'a nc v.
                     if u = v then {}
                     else IMAGE (CONS In) (rt v)``
 
-val swapstr_lemma = prove(
-  ``~(x = v) /\ ~(y = v) ==> ((v = swapstr x y s) = (v = s))``,
-  SRW_TAC [][swapTheory.swapstr_def]);
-
-val swapstr_lemma2 = prove(
-  ``(v = swapstr x y u) = (swapstr x y v = u)``,
-  SRW_TAC [][swapstr_def] THEN PROVE_TAC []);
-
-val v_posns_exists =
-    (SIMP_RULE (srw_ss()) [swapTheory.null_swapping, swapstr_lemma] o
-     Q.INST [`rswap` |-> `\x y z. z`, `rFV` |-> `\x. {}`,
-              `X` |-> `{v}`, `var` |-> `^vp_var`,
-              `con` |-> `^vp_con`,
-              `app` |-> `^vp_app`,
-              `lam` |-> `^vp_lam`] o
-     INST_TYPE [beta |-> ``:redpos list set``])
-    swapTheory.swap_RECURSION_generic
-
-open swapTheory metisLib
+open metisLib
 
 val stupid_lemma2 = prove(
   ``(f x = v) /\ (f y = v) ==> ((\s. f (swapstr x y s)) = f)``,
@@ -207,9 +182,9 @@ val stupid_lemma5 = prove(
 
 val v_posns'_exists =
     (SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss)
-               [swapping_def, swapstr_lemma, IMAGE_EQ_EMPTY,
-                GSPEC_OR, swapstr_lemma2, Q.ISPEC `(=)` COND_RAND,
-                COND_RATOR, GSPEC_AND, stupid_lemma1,
+               [swapping_def, IMAGE_EQ_EMPTY,
+                GSPEC_OR, Q.ISPEC `(=)` COND_RAND,
+                COND_RATOR, GSPEC_AND,
                 stupid_lemma2, stupid_lemma3, stupid_lemma4,
                 stupid_lemma5] o
      Q.INST [`rswap` |->
@@ -335,7 +310,15 @@ val var_posns_subst = store_thm(
   ]);
 
 val (bv_posns_thm, _) = define_recursive_term_function
-  `bv_posns (LAM v t : 'a nc) = IMAGE (CONS In) (v_posns v t)`;
+  `(bv_posns (LAM v t : 'a nc) = IMAGE (CONS In) (v_posns v t)) /\
+   (bv_posns (CON k) = {}) /\
+   (bv_posns (VAR s) = {}) /\
+   (bv_posns (t @@ u) = {})`;
+
+
+val bv_posns_vsubst =
+    prove_vsubst_result bv_posns_thm
+                        (SOME (NEW_ELIM_TAC THEN SRW_TAC [][v_posns_vsubst]))
 
 val (lam_posns_thm, _) = define_recursive_term_function`
   (lam_posns (VAR s : 'a nc) = {}) /\
@@ -344,6 +327,7 @@ val (lam_posns_thm, _) = define_recursive_term_function`
                         IMAGE (CONS Rt) (lam_posns u)) /\
   (lam_posns (LAM v t) = [] INSERT IMAGE (CONS In) (lam_posns t))
 `;
+val lam_posns_vsubst = prove_vsubst_result lam_posns_thm NONE
 
 val lam_posns_SUBSET_valid_posns = store_thm(
   "lam_posns_SUBSET_valid_posns",
@@ -369,72 +353,77 @@ val (redex_posns_thm, _) = define_recursive_term_function`
   (redex_posns (LAM v t) = IMAGE (CONS In) (redex_posns t))
 `;
 
+val redex_posns_vsubst_invariant = prove_vsubst_result redex_posns_thm NONE
+
 val redex_posns_are_valid = store_thm(
   "redex_posns_are_valid",
   ``!t p. p IN redex_posns t ==> p IN valid_posns t``,
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][valid_posns_thm, redex_posns_thm]);
 
-val (ncbody_def, _) = define_recursive_term_function`ncbody (LAM v t) = t`;
+val bv_posns_at_exists0 =
+    (SIMP_RULE (srw_ss()) [GSYM swap_thm] o
+     SIMP_RULE (srw_ss()) [] o
+     Q.INST [`var` |-> `\s l. {}`,
+             `con` |-> `\k l. {}`,
+             `app` |-> `\rt ru t u l.
+                           case l of
+                              Lt::rest -> IMAGE (CONS Lt) (rt rest)
+                           || Rt::rest -> IMAGE (CONS Rt) (ru rest)
+                           || _ -> {}`,
+             `lam` |-> `\rt v t l.
+                           case l of
+                              [] -> bv_posns (LAM v t)
+                           || In::rest -> IMAGE (CONS In) (rt rest)
+                           || _ -> {}`] o
+     INST_TYPE [beta |-> ``:redpos list -> redpos list set``])
+    swap_RECURSION_simple
 
-val bv_posns_at_def = Define`
-  (bv_posns_at [] t = bv_posns t) /\
-  (bv_posns_at (In::p) t = IMAGE (CONS In) (bv_posns_at p (ncbody t))) /\
-  (bv_posns_at (Lt::p) t = IMAGE (CONS Lt) (bv_posns_at p (rator t))) /\
-  (bv_posns_at (Rt::p) t = IMAGE (CONS Rt) (bv_posns_at p (rand t)))
-`;
+val bv_posns_at_exists = prove(
+  ``?bv_posns_at.
+       ((!s l. bv_posns_at l (VAR s) = {}) /\
+        (!k l. bv_posns_at l (CON k) = {}) /\
+        (!t u l. bv_posns_at l (t @@ u) =
+                   case l of
+                      (Lt::rest) -> IMAGE (CONS Lt) (bv_posns_at rest t)
+                   || (Rt::rest) -> IMAGE (CONS Rt) (bv_posns_at rest u)
+                   || _ -> {}) /\
+        (!v t l. bv_posns_at l (LAM v t) =
+                   case l of
+                      [] -> bv_posns (LAM v t)
+                   || In::rest -> IMAGE (CONS In) (bv_posns_at rest t)
+                   || _ -> {})) /\
+       !t l x y. bv_posns_at l (swap x y t) = bv_posns_at l t``,
+  STRIP_ASSUME_TAC bv_posns_at_exists0 THEN
+  Q.EXISTS_TAC `\l t. hom t l` THEN SRW_TAC [][]);
 
-val pqr_lemma = prove(
-  ``!p q r. (p ==> q /\ r) = (p ==> q) /\ (p ==> r)``,
-  SRW_TAC [][EQ_IMP_THM]);
+val bv_posns_at_def = new_specification("bv_posns_at_def", ["bv_posns_at"],
+                                        bv_posns_at_exists)
+
+val bv_posns_at_thm = save_thm("bv_posns_at_thm", CONJUNCT1 bv_posns_at_def)
+
+val bv_posns_at_swap_invariant = save_thm(
+  "bv_posns_at_swap_invariant",
+  CONJUNCT2 bv_posns_at_def);
+val _ = export_rewrites ["bv_posns_at_swap_invariant"]
 
 val bv_posns_at_vsubst = store_thm(
   "bv_posns_at_vsubst",
-  ``!t v u p. p IN lam_posns t ==>
-              (bv_posns_at p ([VAR v/u] t) = bv_posns_at p t)``,
-  GEN_TAC THEN completeInduct_on `size t` THEN
-  FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
-  ASM_SIMP_TAC (srw_ss() ++ ARITH_ss)
-               [lam_posns_thm, DISJ_IMP_THM, GSYM LEFT_FORALL_IMP_THM,
-                FORALL_AND_THM, bv_posns_at_def, SUB_THM,
-                size_thm, pqr_lemma, GSYM RIGHT_FORALL_IMP_THM] THEN
-  REPEAT STRIP_TAC THENL [
-    Q_TAC (NEW_TAC "z") `{u'; v'; x} UNION FV u` THEN
-    `LAM x u = LAM z ([VAR z/x] u)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    ASM_SIMP_TAC (srw_ss()) [SUB_THM, bv_posns_thm, v_posns_vsubst,
-                             v_posns_FV],
-    VAR_EQ_TAC THEN
-    Q_TAC (NEW_TAC "z") `{u'; v'; x} UNION FV u` THEN
-    `LAM x u = LAM z ([VAR z/x] u)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [SUB_THM, ncbody_def]
-  ]);
-
+  ``!t v u p. bv_posns_at p ([VAR v/u] t) = bv_posns_at p t``,
+  vsubst_tac bv_posns_at_thm THEN
+  NEW_ELIM_TAC THEN SRW_TAC [][bv_posns_thm, v_posns_vsubst]);
 val _ = export_rewrites ["bv_posns_at_vsubst"]
-
-val bv_posns_at_thm = store_thm(
-  "bv_posns_at_thm",
-  ``(!v t. bv_posns_at [] (LAM v t) = IMAGE (CONS In) (v_posns v t)) /\
-    (!v t p. p IN lam_posns t ==>
-                (bv_posns_at (In::p) (LAM v t) =
-                 IMAGE (CONS In) (bv_posns_at p t))) /\
-    (!t u p. p IN lam_posns t ==>
-                (bv_posns_at (Lt::p) (t @@ u) =
-                 IMAGE (CONS Lt) (bv_posns_at p t))) /\
-    (!t u p. p IN lam_posns u ==>
-                (bv_posns_at (Rt::p) (t @@ u) =
-                 IMAGE (CONS Rt) (bv_posns_at p u)))``,
-  SRW_TAC [][bv_posns_at_def, bv_posns_thm, ncbody_def, bv_posns_at_vsubst]);
 
 val bv_posns_at_SUBSET_var_posns = store_thm(
   "bv_posns_at_SUBSET_var_posns",
   ``!t p1 p2. p1 IN lam_posns t /\ p2 IN bv_posns_at p1 t ==>
               p2 IN var_posns t``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN
-  SRW_TAC [][lam_posns_thm, var_posns_thm, bv_posns_at_thm,
-             GSYM AND_IMP_INTRO] THEN
-  Q.PAT_ASSUM `X IN bv_posns_at Y Z` MP_TAC THEN
-  SRW_TAC [][bv_posns_at_thm] THEN
+  HO_MATCH_MP_TAC simple_induction THEN
+  SIMP_TAC (srw_ss()) [lam_posns_thm, var_posns_thm, bv_posns_at_thm,
+                       DISJ_IMP_THM, GSYM LEFT_FORALL_IMP_THM,
+                       FORALL_AND_THM, RIGHT_AND_OVER_OR,
+                       GSYM LEFT_EXISTS_AND_THM,
+                       GSYM RIGHT_EXISTS_AND_THM, bv_posns_thm] THEN
   PROVE_TAC [v_posns_SUBSET_var_posns]);
 
 val lam_posns_subst = store_thm(
@@ -442,15 +431,18 @@ val lam_posns_subst = store_thm(
   ``!t u v. lam_posns ([u/v] t) = lam_posns t UNION
                                   {APPEND p1 p2 | p1 IN v_posns v t /\
                                                   p2 IN lam_posns u}``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN
-  SRW_TAC [][SUB_THM, SUB_VAR, lam_posns_thm, v_posns_thm] THENL [
-    SRW_TAC [][EXTENSION],
-    SRW_TAC [][EXTENSION],
+  HO_MATCH_MP_TAC simple_induction THEN
+  SIMP_TAC (srw_ss()) [SUB_THM, SUB_VAR, lam_posns_thm, v_posns_thm] THEN
+  REPEAT CONJ_TAC THENL [
+    SRW_TAC [][EXTENSION, lam_posns_thm],
     SRW_TAC [][EXTENSION],
     SIMP_TAC (srw_ss() ++ DNF_ss) [EXTENSION] THEN PROVE_TAC [],
+    MAP_EVERY Q.X_GEN_TAC [`x`, `t`] THEN STRIP_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`u`, `v`] THEN
     Q_TAC (NEW_TAC "z") `{v; x} UNION FV u UNION FV t` THEN
-    `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [DNF_ss][SUB_THM, lam_posns_thm, v_posns_thm, EXTENSION] THEN
+    `LAM x t = LAM z (swap z x t)` by SRW_TAC [][swap_ALPHA] THEN
+    SRW_TAC [DNF_ss][SUB_THM, lam_posns_thm, v_posns_thm, EXTENSION,
+                     swap_subst_out, v_posns_FV] THEN
     PROVE_TAC []
   ]);
 
@@ -462,8 +454,16 @@ val v_posns_subst = store_thm(
               else v_posns v t UNION
                    { APPEND p1 p2 | p1 IN v_posns w t /\ p2 IN v_posns v u}``,
   HO_MATCH_MP_TAC nc_INDUCTION THEN
-  SRW_TAC [][SUB_VAR, SUB_THM, v_posns_thm, EXTENSION] THENL [
-    SRW_TAC [DNF_ss][] THEN REPEAT (POP_ASSUM (K ALL_TAC)) THEN PROVE_TAC [],
+  SIMP_TAC (srw_ss())[SUB_VAR, SUB_THM, v_posns_thm, EXTENSION] THEN
+  REPEAT CONJ_TAC THENL [
+    REPEAT GEN_TAC THEN REPEAT COND_CASES_TAC THEN
+    REPEAT VAR_EQ_TAC THEN ASM_SIMP_TAC (srw_ss()) [v_posns_thm] THEN
+    FULL_SIMP_TAC (srw_ss()) [],
+    SRW_TAC [DNF_ss][] THEN REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+COND_CASES_TAC THEN VAR_EQ_TAC
+
+
+PROVE_TAC [],
     Q_TAC (NEW_TAC "z") `{v;w;x} UNION FV u UNION FV t` THEN
     `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
     SRW_TAC [DNF_ss][SUB_THM, v_posns_thm] THEN
@@ -629,15 +629,6 @@ val v_posns_FINITE = store_thm(
 
 val _ = export_rewrites ["v_posns_FINITE"]
 
-val bv_posns_vsubst = store_thm(
-  "bv_posns_vsubst",
-  ``!t u v. bv_posns ([VAR v/u] t) = bv_posns t``,
-  REPEAT GEN_TAC THEN
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
-  SRW_TAC [][SUB_THM, SUB_VAR, bv_posns_thm, bv_posns_def] THEN
-  Q_TAC (NEW_TAC "z") `{v;u;x} UNION FV u'` THEN
-  `LAM x u' = LAM z ([VAR z/x] u')` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][SUB_THM, bv_posns_thm, v_posns_vsubst, v_posns_FV]);
 
 
 

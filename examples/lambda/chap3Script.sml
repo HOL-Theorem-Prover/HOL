@@ -1372,12 +1372,6 @@ val lameta_consistent = store_thm(
   `S = K` by PROVE_TAC [corollary3_2_1] THEN
   FULL_SIMP_TAC (srw_ss()) [S_def, K_def]);
 
-val rator_subst_commutes = store_thm(
-  "rator_subst_commutes",
-  ``!t u x. is_comb t ==> ([u/v] (rator t) = rator ([u/v] t))``,
-  SRW_TAC [][is_comb_APP_EXISTS, rator_thm, SUB_THM] THEN
-  SRW_TAC [][is_comb_APP_EXISTS, rator_thm, SUB_THM]);
-
 val is_comb_subst = store_thm(
   "is_comb_subst",
   ``!t u v. is_comb t ==> is_comb ([u/v]t)``,

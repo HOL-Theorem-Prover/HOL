@@ -378,6 +378,16 @@ val swap_subst_out = store_thm(
   ``[N/v] (swap x y M) = swap x y ([swap x y N/swapstr x y v] M)``,
   METIS_TAC [swap_subst, swap_inverse]);
 
+val SUB_LAM_SWAP_RWT = store_thm(
+  "SUB_LAM_SWAP_RWT",
+  ``!u v x t. [VAR v/u] (LAM x t) =
+              let z = NEW ({v;u;x} UNION FV t) in
+                LAM z ([VAR v/u](swap z x t))``,
+  REPEAT GEN_TAC THEN
+  Q_TAC (NEW_TAC "z") `{v;u;x} UNION FV t`  THEN
+  `LAM x t = LAM z (swap z x t)` by SRW_TAC [][swap_ALPHA] THEN
+  SRW_TAC [][SUB_THM]);
+
 val swap_11 = store_thm(
   "swap_11",
   ``((swap x y t1 = swap x y t2) = (t1 = t2)) /\

@@ -12,6 +12,42 @@ fun ERR f msg = raise (HOL_ERR {origin_function = f,
                                 message = msg})
 
 
+fun vsubst_tac defthm =
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][SUB_LAM_SWAP_RWT, SUB_THM, SUB_VAR, defthm,
+             swap_subst_out, swap_thm]
+
+exception ProofFailed of (term list * term) list
+local
+  val string_ty = stringSyntax.string_ty
+  val v = mk_var("v", string_ty)
+  val u = mk_var("u", string_ty)
+  val anc_ty = mk_thy_type{Tyop = "nc", Thy = "nc", Args = [alpha]}
+  val t = mk_var("t", anc_ty)
+  val sub = mk_thy_const{Name = "SUB", Thy = "nc",
+                         Ty = anc_ty --> string_ty --> anc_ty --> anc_ty}
+  val VAR_t = mk_thy_const{Name = "VAR", Thy = "nc",
+                           Ty = string_ty --> anc_ty}
+in
+fun prove_vsubst_result defthm extra_tac = let
+  val cs = strip_conj (concl defthm)
+  val f = #1 (strip_comb (lhs (#2 (strip_forall (hd cs)))))
+  val goal0 = mk_eq(mk_comb(f, list_mk_comb(sub, [mk_comb(VAR_t, v), u, t])),
+                    mk_comb(f, t))
+  val goal = list_mk_forall ([t,u,v], goal0)
+  val extra_tac = case extra_tac of NONE => ALL_TAC | SOME t => t
+  val whole_tac = vsubst_tac defthm THEN extra_tac
+  val prove_goal = prove(goal, whole_tac)
+      handle HOL_ERR _ => raise ProofFailed (#1 (whole_tac ([], goal)))
+  val thm_name = #Name (dest_thy_const f) ^ "_vsubst_invariant"
+in
+  save_thm(thm_name, prove_goal);
+  BasicProvers.export_rewrites [thm_name];
+  prove_goal
+end
+
+end (* local *)
+
 
 (* ----------------------------------------------------------------------
     prove_recursive_term_function_exists tm
@@ -152,7 +188,7 @@ in
    swapping = swapping}
 end
 
-exception InfoProofFailed of thm
+exception InfoProofFailed of term
 fun with_info_prove_recn_exists f nc_ty lookup info = let
   val nc_arg_ty = hd (#Args (dest_thy_type nc_ty))
   val {nullfv, fv, swap, recursion, swapping} = info
@@ -227,7 +263,9 @@ fun with_info_prove_recn_exists f nc_ty lookup info = let
         recursion_exists
 in
   MP precondition_discharged TRUTH
-     handle HOL_ERR _ => raise InfoProofFailed precondition_discharged
+     handle HOL_ERR _ =>
+            raise InfoProofFailed (#1 (dest_imp
+                                         (concl precondition_discharged)))
 end;
 
 
@@ -267,12 +305,12 @@ in
       case Binarymap.peek(database, tyop) of
         NONE => callthis null_info
       | SOME i => callthis (inst_info rhs_ty i)
-        handle InfoProofFailed th =>
+        handle InfoProofFailed tm =>
                (HOL_WARNING
                   "ncLib"
                   "prove_recursive_term_function_exists"
                   ("Couldn't prove function with swap over range - \n\
-                   \goal was "^thm_to_string th^"\n\
+                   \goal was "^term_to_string tm^"\n\
                    \trying null range assumption");
                 callthis null_info)
     end
@@ -300,10 +338,10 @@ fun prove_recursive_term_function_exists tm = let
   val result = EQT_ELIM (SIMP_CONV bool_ss [defining_body] tm)
 in
   CHOOSE (f_v, f_thm) (EXISTS (mk_exists(f_v, tm), f_v) result)
-end handle InfoProofFailed th =>
+end handle InfoProofFailed tm =>
            raise ERR "prove_recursive_term_function_exists"
                      ("Couldn't prove function with swap over range - \n\
-                      \goal was "^thm_to_string th)
+                      \goal was "^term_to_string tm)
 
 fun define_recursive_term_function q = let
   val a = Absyn q
