@@ -259,30 +259,14 @@ val _ =
      val _ = echo "Setting up the standard prelude."
      val src    = fullPath [holdir, "tools/std.prelude.src"]
      val target = fullPath [holdir, "std.prelude"]
-     val docdirs =
-        let val docfile = fullPath[holdir,"tools","documentation-directories"]
-            val instr  = openIn docfile
-            val wholefile = inputAll instr
-            val _ = closeIn instr
-        in
-          map (fn s => Path.concat(holdir, s))
-              (String.tokens Char.isSpace wholefile)
-        end
-     fun listtostring acc [] = String.concat ("["::List.rev ("]\n"::acc))
-       | listtostring acc [x] = String.concat ("["::List.rev ("]\n"::x::acc))
-       | listtostring acc (x::xs) = listtostring (", \n     "::x::acc) xs
-     val docdirs_str = listtostring [] (map quote docdirs)
  in
    fill_holes (src,target)
      ["val SIGOBJ = __"
         -->
       String.concat["      val SIGOBJ = toString(fromString(concat\n",
                      "                    (", quote holdir,
-                     ",", quote"sigobj",")))\n"],
-      "val docdirs = __"
-      -->
-      ("  val docdirs = map (Path.toString o Path.fromString)\n    "^
-           docdirs_str)]
+                     ",", quote"sigobj",")))\n"]
+     ]
  end;
 
 (*---------------------------------------------------------------------------
