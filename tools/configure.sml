@@ -69,8 +69,9 @@ val SRCDIRS =
   "src/llist", "src/integer", "src/res_quan/src",
   "src/set/src", "src/pred_set/src",  "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src",
-  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
-  "src/temporal/src", "src/temporal/smv.2.4.3", "src/BoyerMoore"]
+  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src", 
+  "src/temporal/src", "src/temporal/smv.2.4.3", "src/BoyerMoore",
+  "src/prob"]
   @
   (if OS="linux" orelse OS="solaris"
    then ["src/muddy/muddyC", "src/muddy", "src/HolBdd"]
