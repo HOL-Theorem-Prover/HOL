@@ -349,6 +349,13 @@ fun STRIP_QUANT_CONV conv tm =
 
 fun BINDER_CONV conv   = ABS_CONV conv ORELSEC QUANT_CONV conv;
 
+fun LAST_EXISTS_CONV c tm = let
+  val (bv, body) = Psyntax.dest_exists tm
+in
+  if is_exists body then BINDER_CONV (LAST_EXISTS_CONV c) tm
+  else c tm
+end
+
 val DEPTH_CONV = QCONV o DEPTH_QCONV;;
 val REDEPTH_CONV = QCONV o REDEPTH_QCONV;;
 val TOP_DEPTH_CONV = QCONV o TOP_DEPTH_QCONV;
