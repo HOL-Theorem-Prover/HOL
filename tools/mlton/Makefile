@@ -3,7 +3,7 @@
 # Created by Joe Hurd, October 2003
 ###############################################################################
 
-.PHONY: all clean reallyclean world depend
+.PHONY: all clean reallyclean world
 
 all: basic metis psl
 
@@ -29,19 +29,19 @@ MOSML2MLTON = scripts/mosml2mlton.pl
 MLC = mlton -basis 1997 -verbose 3
 
 PRE = \
-  pre/mosmllex/LexBuffer.sig pre/mosmllex/LexBuffer.sml \
-  pre/Binaryset.sig pre/Binaryset.sml \
-  pre/Binarymap.sig pre/Binarymap.sml \
-  pre/Intset.sig pre/Intset.sml \
-  pre/Intmap.sig pre/Intmap.sml \
-  pre/PP.sig pre/PP.sml \
-  pre/Random.sig pre/Random.sml \
-  pre/Susp.sig pre/Susp.sml \
-  pre/Listsort.sig pre/Listsort.sml \
-  pre/MD5.sig pre/MD5.sml \
-  pre/Polyhash.sig pre/Polyhash.sml \
-  pre/Mosml2mlton.sml \
-  ../../tools/Holmake/Systeml.sig ../../tools/Holmake/Systeml.sml
+  pre/LexBuffer.sig                pre/LexBuffer.sml                \
+  pre/Binaryset.sig                pre/Binaryset.sml                \
+  pre/Binarymap.sig                pre/Binarymap.sml                \
+  pre/Intset.sig                   pre/Intset.sml                   \
+  pre/Intmap.sig                   pre/Intmap.sml                   \
+  pre/PP.sig                       pre/PP.sml                       \
+  pre/Random.sig                   pre/Random.sml                   \
+  pre/Susp.sig                     pre/Susp.sml                     \
+  pre/Listsort.sig                 pre/Listsort.sml                 \
+  pre/MD5.sig                      pre/MD5.sml                      \
+  pre/Polyhash.sig                 pre/Polyhash.sml                 \
+                                   pre/Mosml2mlton.sml              \
+  ../../tools/Holmake/Systeml.sig  ../../tools/Holmake/Systeml.sml
 
 include Makefile.src
 
@@ -49,7 +49,7 @@ POST = src/std.prelude
 
 # Basic HOL tests
 
-basic: bin/basic1.out
+basic: bin/basic1.out bin/basic2.out
 
 Makefile.basic:
 	scripts/deps.pl BASIC ../../src/portableML ../../src/experimental-kernel ../../src/parse ../../src/bool ../../src/goalstack >Makefile.basic
@@ -66,6 +66,18 @@ bin/basic1.sml: $(PRE) $(BASIC) $(POST) $(BASIC1)
 	wc $@
 
 bin/basic1.out: bin/basic1
+	$+ | tee $@
+
+BASIC2 = test/basic-test2.sml
+
+bin/basic2: bin/basic2.sml
+	$(MLC) $+
+
+bin/basic2.sml: $(PRE) $(BASIC) $(POST) $(BASIC2)
+	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
+	wc $@
+
+bin/basic2.out: bin/basic2
 	$+ | tee $@
 
 # Metis test problems
@@ -94,11 +106,11 @@ bin/metis1.out: bin/metis1
 psl: bin/psl1.out
 
 Makefile.psl:
-	scripts/deps.pl PSL ../../examples/PSL/regexp ../../examples/PSL/official-semantics ../../examples/PSL/executable-semantics >Makefile.psl
+	scripts/deps.pl PSL ../../examples/PSL/regexp ../../examples/PSL/path ../../examples/PSL/1.01/official-semantics ../../examples/PSL/1.01/executable-semantics >Makefile.psl
 
 include Makefile.psl
 
-PSL1 = ../../examples/PSL/executable-semantics/test
+PSL1 = ../../examples/PSL/1.01/executable-semantics/test
 
 bin/psl1: bin/psl1.sml
 	$(MLC) $+

@@ -14,26 +14,22 @@ sub avoid_dir {
 
 sub src_dirs {
     @dirs = ("../../src/portableML", "../../src/experimental-kernel");
-    $state = 0;
     open BUILDFILE, "$BUILD_FILE";
     while ($line = <BUILDFILE>) {
         chomp $line;
-        if ($line =~ s/^val +SRCDIRS0 *=//) {
-            ($state == 0) or die;
-            $state = 1;
-        }
         
-        if ($state == 1 and $line =~ s/^ *\[//) { $state = 2; }
-        
-        if ($state == 2) {
-            while ($line =~ s/^[, ]*\"([^\"]*)\"//) {
-                $dir = "../../$1";
-                if (avoid_dir $dir) { next; }
-                push @dirs, $dir;
-            }
-        }
-        
-        if ($state == 2 and $line =~ s/^ *\]//) { $state = 3; }
+        $line =~ s/ *\#.*$//;
+        $line =~ s/^ +//;
+
+        ($line !~ / /) or die;
+
+        ($line ne "") or next;
+
+        $dir = "../../$line";
+
+        if (avoid_dir $dir) { next; }
+
+        push @dirs, $dir;
     }
     close BUILDFILE;
 }
@@ -73,11 +69,11 @@ sub rewrite {
 
 #    check $dir,$file;
     
-    $r = "$dir/$file";
     $f = $file;
 
-    if ($f =~ s/\.sml$/-mlton/ and -f "$dir/$f") { $r = "$dir/$f"; }
-    elsif (-f "src/$file") { $r = "src/$file"; }
+    if (-f "src/$file") { $r = "src/$file"; }
+    elsif (-f "$dir/$f") { $r = "$dir/$f"; }
+    else { die "deps.pl: no matching file for $dir/$file\n"; }
 
     if ($r ne "$dir/$file") { print STDERR "  $dir/$file -> $r\n"; }
 
@@ -167,7 +163,7 @@ sub process_dirs {
     print STDOUT "\n";
 }
 
-$BUILD_FILE = "../../tools/build.sml";
+$BUILD_FILE = "../../tools/build-sequence";
 
 if (scalar @ARGV == 0) {
     $name = "SRC";
