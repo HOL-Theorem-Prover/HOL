@@ -58,7 +58,7 @@ fun buildDb holpath = let
      "IndDefLib.sig",
 
      (* Integer *)
-     "integerTheory.sig", "useful.sig",
+     "integerTheory.sig", (* "useful.sig", *)
 
      (* arithLib *)
      "Arith.sig","Norm_arith.sig","Sol_ranges.sig","Term_coeffs.sig",
@@ -151,7 +151,7 @@ fun buildDb holpath = let
 
      (* Res_quan *)
      "Cond_rewrite.sig","Res_quan.sig","res_quanLib.sig",
-     "res_quanTheory.sig","restr_binderTheory.sig",
+     "res_quanTheory.sig",
 
      (* set *)
      "Fset_conv.sig","Gspec.sig","Set_ind.sig",
@@ -160,7 +160,7 @@ fun buildDb holpath = let
      (* simpLib *)
      "Cache.sig","SatisfySimps.sig","Unify.sig","listSimps.sig",
      "Cond_rewr.sig","Sequence.sig","Unwind.sig","pairSimps.sig",
-     "HOLSimps.sig","simpLib.sig","UnwindSimps.sig","sumSimps.sig",
+     "HOLSimps.sig","simpLib.sig","sumSimps.sig",
      "rich_listSimps.sig","Termtable.sig","arithSimps.sig",
      "Opening.sig","Traverse.sig","boolSimps.sig",
      "Satisfy.sig","Travrules.sig","combinSimps.sig","Trace.sig",
@@ -178,18 +178,15 @@ fun buildDb holpath = let
      (* TFL *)
      "Context.sig","Thry.sig",(* "listTools.sig" *)"RW.sig",
      "USyntax.sig","pairTools.sig","Rules.sig",
-     "arithTools.sig", "Defn.sig",
-     "relationTheory.sig", "Tfl.sig","boolTools.sig","tflLib.sig",
-     "Thms.sig",  (* "datatypeRW.sig", *)
+     "Defn.sig",
+     "relationTheory.sig", "Tfl.sig","tflLib.sig",
+     "Thms.sig",
 
      (* tree theories *)
      "treeTheory.sig", "ltreeTheory.sig",
 
      (* unwind *)
      "unwindLib.sig",
-
-     (* utils *)
-     "utilsLib.sig",
 
      (* phb *)
      "bossLib.sig",
