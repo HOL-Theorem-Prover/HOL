@@ -1,0 +1,11 @@
+Bugs fixed:
+-----------
+  * The type pretty-printer printed "<blah>" for all type operators
+    with arities greater than two.
+
+  * Hol_datatype didn't allow a constructor of a new type "ty" to be
+    "mk_ty".
+
+New theories:
+-------------
+
