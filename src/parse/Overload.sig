@@ -34,4 +34,6 @@ sig
 
   val merge_oinfos : overload_info -> overload_info -> overload_info
 
+  val known_constants : overload_info -> string list
+
 end

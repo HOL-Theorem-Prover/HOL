@@ -100,40 +100,31 @@ datatype grammar = GCONS of
                restr_binders : (binder * string) list,
                res_quanop : string},
    numeral_info : (char * string option) list,
-   overload_info : overload_info,
-   constants : string list}
+   overload_info : overload_info}
 
 fun specials (GCONS G) = #specials G
 fun numeral_info (GCONS G) = #numeral_info G
 fun overload_info (GCONS G) = #overload_info G
-fun known_constants (GCONS G) = #constants G
+fun known_constants (GCONS G) = Overload.known_constants (#overload_info G)
 fun grammar_rules (GCONS G) = map #2 (#rules G)
 fun rules (GCONS G) = (#rules G)
 
-fun fupdate_rules f (GCONS{rules, specials, numeral_info,
-                           overload_info, constants}) =
+fun fupdate_rules f (GCONS{rules, specials, numeral_info, overload_info}) =
   GCONS{rules = f rules, specials = specials, numeral_info = numeral_info,
-        overload_info = overload_info, constants = constants}
-fun fupdate_specials f (GCONS{rules, specials, numeral_info,
-                              overload_info, constants}) =
+        overload_info = overload_info}
+fun fupdate_specials f (GCONS{rules, specials, numeral_info, overload_info}) =
   GCONS {rules = rules, specials = f specials, numeral_info = numeral_info,
-         overload_info = overload_info, constants = constants}
-fun fupdate_numinfo f (GCONS {rules, specials, numeral_info,
-                              overload_info, constants}) =
+         overload_info = overload_info}
+fun fupdate_numinfo f (GCONS {rules, specials, numeral_info, overload_info}) =
   GCONS {rules = rules, specials = specials, numeral_info = f numeral_info,
-         overload_info = overload_info, constants = constants}
+         overload_info = overload_info}
 fun fupdate_overload_info f (GCONS {rules, specials, numeral_info,
-                                    overload_info, constants}) =
+                                    overload_info}) =
   GCONS {rules = rules, specials = specials, numeral_info = numeral_info,
-         overload_info = f overload_info, constants = constants}
-fun fupdate_constants f (GCONS {rules, specials, numeral_info,
-                                overload_info, constants}) =
-  GCONS {rules = rules, specials = specials, numeral_info = numeral_info,
-         overload_info = overload_info, constants = f constants}
+         overload_info = f overload_info}
 
-fun hide_constant s = fupdate_constants (Lib.C Lib.subtract [s])
-fun show_constant s = fupdate_constants (Lib.insert s)
-val fupdate_known_constants = fupdate_constants
+fun hide_constant s =
+  fupdate_overload_info (Overload.remove_overloaded_form s)
 
 fun update_restr_binders rb
   {lambda, endbinding, type_intro, restr_binders, res_quanop} =
@@ -272,8 +263,7 @@ val stdhol : grammar =
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
-   overload_info = [],
-   constants = []
+   overload_info = []
    }
 
 local
@@ -697,8 +687,7 @@ fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
     Overload.merge_oinfos (overload_info G1) (overload_info G2)
 in
   GCONS {rules = newrules, specials = newspecials, numeral_info = new_numinfo,
-         overload_info = new_oload_info,
-         constants = Lib.union (known_constants G1) (known_constants G2)}
+         overload_info = new_oload_info}
 end
 
 (* ----------------------------------------------------------------------
@@ -829,7 +818,7 @@ fun prettyprint_grammar pstrm (G :grammar) = let
     end_block()
   end
   fun print_overloading oinfo0 =
-    if null oinfo0 then ()
+    if List.all (fn r => length (#actual_ops r) <= 1) oinfo0 then ()
     else let
       open Lib infix ##
       fun nblanks n = String.implode (List.tabulate(n, (fn _ => #" ")))

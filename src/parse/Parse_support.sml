@@ -223,10 +223,11 @@ fun make_qconst _ (p as (thy,s)) E =
                 "string literals not lexically OK until stringTheory loaded"
   else (gen_thy_const p, E);
 
-fun make_atom (oinfo, kcs) s E =
+fun make_atom oinfo s E =
  make_bvar(s,E) handle HOL_ERR _
   =>
-  if Lib.mem s kcs then (gen_overloaded_const oinfo s, E)
+  if Lib.mem s (Overload.known_constants oinfo) then
+    (gen_overloaded_const oinfo s, E)
   else
   case List.find (fn rfn => String.isPrefix rfn s)
                  [recsel_special, recupd_special, recfupd_special]

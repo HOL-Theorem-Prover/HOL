@@ -224,5 +224,8 @@ in
   merge [] O1_sorted O2_sorted
 end
 
+fun known_constants (oi:overload_info) = map #overloaded_op oi
+
+
 
 end (* Overload *)

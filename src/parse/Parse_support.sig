@@ -13,17 +13,17 @@ sig
   val make_aq             : term -> preterm_in_env
   val make_binding_occ    : string -> binder_in_env
   val make_aq_binding_occ : term -> binder_in_env
-  val make_atom           : (term_grammar.overload_info * string list) 
+  val make_atom           : term_grammar.overload_info
                              -> string -> preterm_in_env
-  val make_qconst         : (term_grammar.overload_info * string list) 
+  val make_qconst         : term_grammar.overload_info
                              -> string * string -> preterm_in_env
   val list_make_comb      : preterm_in_env list -> preterm_in_env
-  val bind_term           : string -> binder_in_env list 
+  val bind_term           : string -> binder_in_env list
                               -> preterm_in_env -> preterm_in_env
   val bind_restr_term     : string -> binder_in_env list
                              -> preterm_in_env -> preterm_in_env
                               -> preterm_in_env
-  val make_vstruct        : binder_in_env list 
+  val make_vstruct        : binder_in_env list
                              -> pretype option -> binder_in_env
   val make_constrained    : preterm_in_env -> pretype -> preterm_in_env
   val make_let            : (binder_in_env list * preterm_in_env) list
