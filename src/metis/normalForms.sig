@@ -231,11 +231,18 @@ val condify_SS : ssdata
 val condify_ss : simpset      (* pure + condify *)
   
 (* ------------------------------------------------------------------------- *)
-(* Definitional CNF for feeding higher-order goals to a first-order prover.  *)
+(* Definitional CNF minimizing number of clauses.                            *)
 (*                                                                           *)
 (* Example:                                                                  *)
+(* |- (p /\ q /\ r) \/ (s /\ t /\ u)                                         *)
+(*    -->                                                                    *)
+(* ([``d``],                                                                 *)
+(*   [[.] |- (d \/ s) /\ (d \/ t) /\ (d \/ u),                               *)
+(*    [.] |- (d \/ ~p \/ ~q \/ ~r) /\ (~d \/ p) /\ (~d \/ q) /\ (~d \/ r)])  *)
+(*                                                                           *)
+(* where the assumption [.] in both theorems is d = (p /\ q /\ r).           *)
 (* ------------------------------------------------------------------------- *)
 
-val MIN_CNF : thm list -> thm list
+val MIN_CNF : thm list -> term list * thm list
 
 end

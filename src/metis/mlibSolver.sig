@@ -52,13 +52,11 @@ val pp_solver_node : solver_node pp
 
 val SLICE : limit ref
 
-type cost_fn = meter_reading -> real
-
-val once_only : cost_fn                 (* Time taken (in seconds) *)
-val time1     : cost_fn                 (* Time taken (in seconds) *)
-val time2     : cost_fn                 (* Time squared *)
-val infs1     : cost_fn                 (* Number of inferences made*)
-val infs2     : cost_fn                 (* Inferences squared *)
+type cost_fn
+val once_only  : cost_fn          (* The solver is used for one slice         *)
+val time_power : real -> cost_fn  (* Time used (in seconds) raised to a power *)
+val infs_power : real -> cost_fn  (* Inferences used raised to a power        *)
+val pp_cost_fn : cost_fn pp
 
 (* This allows us to hierarchically arrange solver nodes. *)
 

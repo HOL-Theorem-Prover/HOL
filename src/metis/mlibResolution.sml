@@ -14,15 +14,13 @@ app load
 structure mlibResolution :> mlibResolution =
 struct
 
-open mlibUseful mlibTerm mlibMatch mlibMeter mlibSolver mlibClause;
+open mlibUseful mlibTerm mlibMeter mlibSolver;
 
 infix |-> ::> @> oo ## ::* ::@;
 
-structure O = Option; local open Option in end;
 structure S = mlibStream; local open mlibStream in end;
-structure U = mlibUnits; local open mlibUnits in end;
-structure A = mlibSupport; local open mlibSupport in end;
-structure B = mlibClauseset; local open mlibClauseset in end;
+
+type clause = mlibClause.clause;
 
 (* ------------------------------------------------------------------------- *)
 (* Chatting.                                                                 *)
@@ -40,16 +38,16 @@ fun chat s = (trace s; true)
 type parameters =
   {restart     : int option,
    clause_parm : mlibClause.parameters,
-   sos_parm    : mlibSupport.parameters,
-   set_parm    : mlibClauseset.parameters};
+   set_parm    : mlibClauseset.parameters,
+   sos_parm    : mlibSupport.parameters};
 
 val defaults : parameters =
   {restart     = NONE,
    clause_parm = mlibClause.defaults,
-   sos_parm    = mlibSupport.defaults,
-   set_parm    = mlibClauseset.defaults};
+   set_parm    = mlibClauseset.defaults,
+   sos_parm    = mlibSupport.defaults};
 
-type 'a Parmupdate = ('a -> 'a) -> parameters -> parameters;
+type 'a parmupdate = ('a -> 'a) -> parameters -> parameters;
 
 fun update_restart f (parm : parameters) : parameters =
   let val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
@@ -61,133 +59,261 @@ fun update_clause_parm f (parm : parameters) : parameters =
   in {restart = r, clause_parm = f c, sos_parm = a, set_parm = b}
   end;
 
-fun update_sos_parm f (parm : parameters) : parameters =
-  let val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
-  in {restart = r, clause_parm = c, sos_parm = f a, set_parm = b}
-  end;
-
 fun update_set_parm f (parm : parameters) : parameters =
   let val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
   in {restart = r, clause_parm = c, sos_parm = a, set_parm = f b}
   end;
 
-(* ------------------------------------------------------------------------- *)
-(* Helper functions.                                                         *)
-(* ------------------------------------------------------------------------- *)
-
-fun state_info (sos,used) =
-  let
-    val a = int_to_string (A.size sos)
-    val b = int_to_string (B.size used)
-    val r = int_to_string (mlibRewrite.size (B.rewrites used))
-  in
-    "(" ^ a ^ "->" ^ b ^ (if r = "0" then "" else "=" ^ r) ^ ")"
+fun update_sos_parm f (parm : parameters) : parameters =
+  let val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
+  in {restart = r, clause_parm = c, sos_parm = f a, set_parm = b}
   end;
+
+(* ------------------------------------------------------------------------- *)
+(* Helper functions                                                          *)
+(* ------------------------------------------------------------------------- *)
 
 fun ofilt _ NONE = NONE | ofilt p (s as SOME x) = if p x then s else NONE;
 
-(* ------------------------------------------------------------------------- *)
-(* An ugly way to get hold of the current state.                             *)
-(* ------------------------------------------------------------------------- *)
-
-val current_state = ref (mlibClauseset.empty (mlibClause.defaults,mlibClauseset.defaults));
-
-(* ------------------------------------------------------------------------- *)
-(* The resolution procedure as a solver_node.                                *)
-(* ------------------------------------------------------------------------- *)
-
-local
-  fun comment (n,x) =
-    (0 < n andalso chatting 2 andalso chat ("x" ^ int_to_string n); x);
-  fun select units used =
-    let
-      fun remove n sos =
-        case A.remove sos of NONE => (n,NONE)
-        | SOME (dcl,sos) => check n sos dcl
-      and check n sos (d,cl) =
-        case ofilt (not o B.subsumed used) (B.strengthen used units cl) of
-          NONE => remove (n + 1) sos
-        | SOME cl => (n, SOME ((d,cl),(sos,used)))
-    in
-      remove 0
-    end;
-in
-  fun select_clause units (sos,used) = comment (select units used sos);
+local fun ins (c,i) = Intmap.insert (i, #id (mlibClause.dest_clause c), c);
+in fun insert cls init = foldl ins init cls;
 end;
 
-fun resolve record units_ref (sos,used) (d,cl) =
-  let
-    val _ = chatting 4 andalso
-            chat ("\ngiven clause:\n" ^ B.id_clause_to_string cl ^ "\n")
-    val (cls,used) = B.add used (!units_ref) cl
-    val _ = chatting 2 andalso chat ("-" ^ int_to_string (length cls))
-    val (cls,used,units) = B.initialize (cls,used,!units_ref)
-    val () = units_ref := units
-    val infs = length cls
-    val _ = chatting 4 andalso
-            chat ("\nnew clauses:\n" ^ B.id_clauses_to_string cls ^ "\n")
-    val _ = (record infs; chatting 1 andalso chat ("+" ^ int_to_string infs))
-    val sos = A.add (d + log2 (Real.fromInt (1 + infs))) cls sos
-  in
-    (sos,used)
+fun clause_to_string cl =
+  PP.pp_to_string (!LINE_LENGTH) mlibClause.pp_clause cl;
+
+fun clauses_to_string cls =
+  PP.pp_to_string (!LINE_LENGTH) (pp_list mlibClause.pp_clause) cls;
+
+(* ------------------------------------------------------------------------- *)
+(* mlibResolution                                                                *)
+(* ------------------------------------------------------------------------- *)
+
+datatype resolution = RES of
+  {parm : parameters,
+   init : mlibClause.clause Intmap.intmap,
+   iter : int,
+   max  : int option,
+   set  : mlibClauseset.clauseset,
+   sos  : mlibSupport.sos};
+
+fun update_init i res =
+  let val RES {parm = z, init = _, iter = n, max = m, set = b, sos = a} = res
+  in RES {parm = z, init = i, iter = n, max = m, set = b, sos = a}
   end;
 
-fun resolution_stream (parm : parameters) slice_ref units_ref inits =
+fun update_iter n res =
+  let val RES {parm = z, init = i, iter = _, max = m, set = b, sos = a} = res
+  in RES {parm = z, init = i, iter = n, max = m, set = b, sos = a}
+  end;
+
+fun update_max m res =
+  let val RES {parm = z, init = i, iter = n, max = _, set = b, sos = a} = res
+  in RES {parm = z, init = i, iter = n, max = m, set = b, sos = a}
+  end;
+
+fun update_set b res =
+  let val RES {parm = z, init = i, iter = n, max = m, set = _, sos = a} = res
+  in RES {parm = z, init = i, iter = n, max = m, set = b, sos = a}
+  end;
+
+fun update_sos a res =
+  let val RES {parm = z, init = i, iter = n, max = m, set = b, sos = _} = res
+  in RES {parm = z, init = i, iter = n, max = m, set = b, sos = a}
+  end;
+
+(* ------------------------------------------------------------------------- *)
+(* Basic operations.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+type components = {iter : int, set : mlibClauseset.clauseset, sos : mlibSupport.sos};
+
+fun new parm =
   let
-    fun thk func state () =
-      (chatting 3 andalso chat (state_info state); func state)
-    fun reset N =
+    val {restart,clause_parm,sos_parm,set_parm,...} = parm
+    val set = mlibClauseset.empty (clause_parm,set_parm)
+    val sos = mlibSupport.empty sos_parm
+  in
+    RES {parm = parm, init = Intmap.empty (), iter = 0,
+         max = restart, set = set, sos = sos}
+  end;
+
+fun dest (RES {iter,set,sos,...}) = {iter = iter, set = set, sos = sos};
+
+fun overlay {iter,set,sos} res =
+  let
+    val res = update_iter iter res
+    val res = update_set set res
+    val res = update_sos sos res
+  in
+    res
+  end;
+
+fun size (RES {set,sos,...}) =
+  {used = mlibClauseset.size set, waiting = mlibSupport.size sos,
+   rewrites = mlibClause.size (mlibClauseset.rewrites set)};
+
+fun weight res =
+  let
+    val RES {iter,...} = res
+    val {used,waiting,...} = size res
+  in 
+    iter + used + waiting
+  end;
+
+fun add_init dist cls res =
+  let
+    val _ = chatting 2 andalso chat ("-" ^ int_to_string (length cls))
+    val RES {set,sos,...} = res
+    val (cls,set) = mlibClauseset.initialize cls set
+    val _ = chatting 4 andalso
+            chat ("\nnew clauses:\n" ^ clauses_to_string cls ^ "\n")
+    val infs = length cls
+    val _ = chatting 1 andalso chat ("+" ^ int_to_string (length cls))
+    val sos = mlibSupport.add (dist infs, cls) sos
+    val res = update_set set res
+    val res = update_sos sos res
+  in
+    res
+  end;
+
+fun add cls res =
+  let
+    val RES {init,...} = res
+    val res = update_init (insert cls init) res
+  in
+    add_init (K 0.0) cls res
+  end;
+
+fun check res =
+  let val RES {max,...} = res
+  in case max of NONE => true | SOME bound => weight res <= bound
+  end;
+
+fun calibrate f res =
+  let
+    val RES {max,...} = res
+  in
+    case max of NONE => res
+    | SOME m => update_max (SOME (f (Int.max (m, weight res)))) res
+  end;
+
+fun restart (res as RES {iter = 0, ...}) = res
+  | restart res =
+  let
+    val RES {parm,init,set,sos,...} = res
+    val res = update_iter 0 res
+    val res = update_set (mlibClauseset.clear set) res
+    val res = update_sos (mlibSupport.reset sos) res
+    val init = insert (mlibClause.eqns (mlibClauseset.rewrites set)) init
+    val cls = map snd (Intmap.listItems init)
+  in
+    add_init (K 0.0) cls res
+  end;
+
+fun recalibrate res =
+  if check res then res else restart (calibrate (fn n => 2 * n) res);
+
+local
+  fun beef_up set = mlibClauseset.strengthen set o mlibClauseset.simplify set;
+
+  fun max_to_string max =
+    "|" ^ (case max of NONE => "*" | SOME m => int_to_string m) ^ "|";
+
+  fun inc_iter res =
+    let
+      val RES {iter,max,...} = res
+      val _ = chatting 1 andalso iter = 0 andalso chat (max_to_string max)
+    in
+      update_iter (iter + 1) res
+    end;
+
+  fun get_clause set sos n =
+    case mlibSupport.remove sos of NONE => (n,NONE)
+    | SOME (dcl,sos) => check set sos n dcl
+  and check set sos n (d,cl) =
+    case ofilt (not o mlibClauseset.subsumed set) (beef_up set cl) of
+      NONE => get_clause set sos (n + 1)
+    | SOME cl => (n, SOME ((d,cl),sos));
+in
+  fun select res =
+    let
+      val res = inc_iter res
+      val RES {set,sos,...} = res
+      val (n,dcl_sos) = get_clause set sos 0
+      val _ = chatting 2 andalso 0 < n andalso chat ("x" ^ int_to_string n)
+    in
+      case dcl_sos of NONE => NONE
+      | SOME (dcl,sos) => SOME (dcl, update_sos sos res)
+    end
+end;
+
+fun deduce0 record ((d,cl),res) =
+  let
+    fun dist infs = (record infs; d + log2 (Real.fromInt (1 + infs)))
+    val _ = chatting 4 andalso
+            chat ("\ngiven clause:\n" ^ clause_to_string cl ^ "\n")
+    val RES {set,...} = res
+    val set = mlibClauseset.add cl set
+    val res = update_set set res
+    val cl = mlibClause.FRESH_VARS cl
+    val cls = mlibClauseset.deduce set cl
+  in
+    add_init dist cls res
+  end;
+
+val deduce = deduce0 (K ());
+
+fun advance res =
+  case select (recalibrate res) of NONE => NONE
+  | SOME dcl_res => SOME (deduce dcl_res);
+
+fun resolution_to_string res =
+  let
+    val {used = u, waiting = w, rewrites = r} = size res
+  in
+    "(" ^ int_to_string u ^ "<-" ^ int_to_string w
+    ^ (if r = 0 then "" else "=" ^ int_to_string r) ^ ")"
+  end;
+
+val pp_resolution = pp_map resolution_to_string pp_string;
+
+(* ------------------------------------------------------------------------- *)
+(* The resolution procedure as a solver_node                                 *)
+(* ------------------------------------------------------------------------- *)
+
+fun resolution_stream slice_ref units_ref =
+  let
+    fun stat func res () =
+      (chatting 3 andalso chat (resolution_to_string res); func res)
+
+    fun shove res =
       let
-        fun f 0 state = S.CONS (NONE, thk (reset (2 * N)) state)
-          | f n state = g (n - 1) (select_clause (!units_ref) state)
-        and g _ NONE = S.NIL
-          | g n (SOME (dcl,state)) =
-          case B.empty_id_clause (snd dcl) of NONE => h n (dcl,state)
-          | SOME ecl => S.CONS (SOME ecl, thk (h n o pair dcl) state)
-        and h n (dcl,state) =
-          let
-            val state = resolve (record_infs (!slice_ref)) units_ref state dcl
-            val () = current_state := snd state
-          in
-            if check_meter (!slice_ref) then f n state
-            else S.CONS (NONE, thk (f n) state)
-          end
+        val {iter,set,sos} = dest res
+        val set = mlibClauseset.new_units (!units_ref) set
       in
-        fn (sos,used) =>
-        let
-          val _ = chatting 1 andalso chat
-            ("|" ^ (if N < 0 then "*" else int_to_string N) ^ "|")
-          val (initials,used) =
-            let
-              val (rewrs,used) = B.reset used
-              val (init_ids,used,units) = B.initialize (inits,used,!units_ref)
-              val () = units_ref := units
-            in
-              (rewrs @ init_ids, used)
-            end
-          val sos = A.add 0.0 initials (A.reset sos)
-          val _ = chatting 4 andalso chat
-            ("\nresolution: initials =\n"^B.id_clauses_to_string initials^"\n")
-        in
-          f N (sos,used)
-        end
+        overlay {iter = iter, set = set, sos = sos} res
       end
 
-    val {clause_parm, sos_parm, set_parm, restart, ...} = parm
-    val initial_state = (A.empty sos_parm, B.empty (clause_parm,set_parm))
-  in
-    thk (reset (case restart of SOME n => n | NONE => ~1)) initial_state ()
-  end;
+    fun swipe res = units_ref := mlibClauseset.units (#set (dest res))
 
-fun lift_f cl = [clause_thm cl];
+    fun record infs = record_infs (!slice_ref) infs
 
-fun lift_g g cl =
-  let
-    val gs = map (pair g) (interval 0 (length g))
-    val ths = map (clause_thm o C dest_coherents cl o wrap) gs
+    fun f res =
+      case select (recalibrate res) of NONE => (swipe res; S.NIL)
+      | SOME dcl_res => g dcl_res
+    and g (dcl as (_,cl), res) =
+      if not (mlibClause.is_empty cl) then h dcl res
+      else (swipe res; S.CONS (SOME cl, stat (h dcl o shove) res))
+    and h dcl res =
+      let
+        val res = deduce0 record (dcl,res)
+      in
+        if check_meter (!slice_ref) then f res
+        else (swipe res; S.CONS (NONE, stat (f o shove) res))
+      end;
   in
-    case List.find mlibThm.is_contradiction ths of NONE => ths
-    | SOME th => map (fn l => mlibThm.CONTR l th) g
+    fn (parm,initials) => stat (f o add initials o shove) (new parm) ()
   end;
 
 fun resolution' (parm : parameters) =
@@ -196,19 +322,14 @@ fun resolution' (parm : parameters) =
    solver_con =
    fn {slice = slice_ref, units = units_ref, thms, hyps} =>
    let
-     val {clause_parm, ...} = parm
-     fun stream f i =
-       S.map (O.map f) (resolution_stream parm slice_ref units_ref i)
-     val initials = map (NEQ_SIMP o mk_clause clause_parm) (thms @ hyps)
+     val initials = map (mlibClause.mk_clause (#clause_parm parm)) (thms @ hyps)
      val _ = chatting 3 andalso chat
       ("resolution--initializing--#initials=" ^
        int_to_string (length initials) ^ ".\n")
+     val lift = S.map (Option.map (fn cl => [#thm (mlibClause.dest_clause cl)]))
    in
-     fn [False] => stream lift_f initials
-      | g =>
-        let val c = map negate g
-        in stream (lift_g c) (mk_coherent clause_parm c :: initials)
-        end
+     fn [False] => lift (resolution_stream slice_ref units_ref (parm,initials))
+      | _ => S.NIL
    end};
 
 val resolution = resolution' defaults;

@@ -101,11 +101,6 @@ type 'a iparser  = (string, 'a) parser;
 type 'a iprinter = ('a * bool) pp;
 
 local
-  val sort_ops : infixities -> infixities =
-    let fun order ({prec = p,  tok = _, left_assoc = _},
-                   {prec = p', tok = _, left_assoc = _}) = Int.compare (p, p')
-    in sort order
-    end;
   fun unflatten ({tok, prec, left_assoc}, ([], _)) =
     ([(left_assoc, [tok])], prec)
     | unflatten ({tok, prec, left_assoc}, ((a, l) :: dealt, p)) =
@@ -115,11 +110,11 @@ local
     else
       ((left_assoc, [tok]) :: (a, l) :: dealt, prec);
 in
-  val layerops = fst o foldl unflatten ([], 0) o sort_ops;
+  val layerops = fst o foldl unflatten ([], 0) o sort_map #prec Int.compare;
 end;
 
 local
-  fun chop (#" " :: chs) = (curry op+ 1 ## I) (chop chs) | chop chs = (0, chs);
+  fun chop (#" " :: chs) = (curry op+ 1 ## I) (chop chs) | chop chs = (0,chs);
   fun nspaces n = funpow n (curry op^ " ") "";
   fun spacify tok =
     let

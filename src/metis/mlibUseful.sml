@@ -273,12 +273,12 @@ fun lex_compare f =
 
 fun min cmp =
   let
-    fun min_acc (l, x, r) _ [] = (x, List.revAppend (l, r))
-      | min_acc (best as (_, x, _)) l (h :: t) =
-      min_acc (case cmp (h, x) of LESS => (l, h, t) | _ => best) (h :: l) t
+    fun min_acc (l,m,r) _ [] = (m, List.revAppend (l,r))
+      | min_acc (best as (_,m,_)) l (x :: r) =
+      min_acc (case cmp (x,m) of LESS => (l,x,r) | _ => best) (x :: l) r
   in
     fn [] => raise ERR "min" "empty list"
-     | h :: t => min_acc ([], h, t) [] t
+     | h :: t => min_acc ([],h,t) [h] t
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -290,7 +290,7 @@ fun merge cmp =
     fun mrg acc [] ys = List.revAppend (acc, ys)
       | mrg acc xs [] = List.revAppend (acc, xs)
       | mrg acc (xs as x :: xt) (ys as y :: yt) =
-      (case cmp (x, y) of GREATER => mrg (y :: acc) xs yt
+      (case cmp (x,y) of GREATER => mrg (y :: acc) xs yt
        | _ => mrg (x :: acc) xt ys)
   in
     mrg []
@@ -305,7 +305,7 @@ fun sort cmp =
     val m = merge cmp
     fun f [] = []
       | f (xs as [_]) = xs
-      | f xs = let val (l, r) = split xs (length xs div 2) in m (f l) (f r) end
+      | f xs = let val (l,r) = split xs (length xs div 2) in m (f l) (f r) end
   in
     f
   end;
@@ -414,6 +414,8 @@ fun mk_prefix p s = p ^ s;
 (* ------------------------------------------------------------------------- *)
 
 val real_to_string = Real.toString;
+
+fun pos r = Real.max (r,0.0);
 
 local val ln2 = Math.ln 2.0 in fun log2 x = Math.ln x / ln2 end;
 
@@ -604,7 +606,7 @@ val today = Date.fmt "%d/%m/%Y" o Date.fromTimeLocal o Time.now;
 exception Optionexit of {message : string option, usage : bool, success : bool};
 
 type Opt = {switches : string list, arguments : string list,
-            description : string, processor : string list -> unit};
+            description : string, processor : string * string list -> unit};
 
 type Allopts = {name : string, head : string, foot : string, opts : Opt list};
 
@@ -625,14 +627,14 @@ fun version_information () =
 val basic_options : Opt list =
   [{switches = ["--verbosity"], arguments = ["0..10"],
     description = "the degree of verbosity",
-    processor = fn l => trace_level := string_to_int (hd l)},
+    processor = fn (_,l) => trace_level := string_to_int (hd l)},
    {switches = ["--secret"], arguments = [],
     description = "process then hide the next option",
     processor = fn _ => raise Fail "basic_options: --secret"},
    {switches = ["--"], arguments = [],
     description = "no more options",
     processor = fn _ => raise Fail "basic_options: --"},
-   {switches = ["-?","--help"], arguments = [],
+   {switches = ["-?","-h","--help"], arguments = [],
     description = "display all options and exit",
     processor = fn _ => raise Optionexit
     {message = SOME "displaying all options", usage = true, success = true}},
@@ -645,6 +647,7 @@ fun process_options ({name, head, foot, opts} : Allopts) =
     fun exit true = OS.Process.exit OS.Process.success
       | exit false = OS.Process.exit OS.Process.failure
     fun join _ [] = raise Fail "process_options"
+      | join s ("" :: t) = "  " ^ join s t
       | join s (h :: t) = foldl (fn (x,y) => y ^ s ^ x) h t
     fun list_opts {switches = n, arguments = r, description = s, ...} =
       (foldl (fn (x,y) => y ^ " " ^ x) (join ", " n) r, s)
@@ -683,7 +686,7 @@ fun process_options ({name, head, foot, opts} : Allopts) =
                            ^ " (" ^ join " " r ^ ")"),
                           usage = true, success = false}
            val (ys,xs) = split xs m
-           val () = f ys
+           val () = f (x,ys)
          in
            (cons (x,ys) ## I) (process xs)
          end)

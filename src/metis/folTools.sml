@@ -243,42 +243,39 @@ fun add_const s {parm, axioms, thms, hyps, consts} : logic_map =
 val add_thms = C (foldl (uncurry add_thm));
 
 local
+  fun is_def cs tm =
+    case total (fst o dest_var o lhs) tm of NONE => false | SOME c => mem c cs;
+
   fun iconst (cs,th) =
     let val c = (genvar o type_of o fst o dest_exists o concl) th
     in (fst (dest_var c) :: cs, SKOLEM_CONST_RULE c th)
     end;
 
-  fun ithm th =
+  fun ithm (th,(cs,vths)) =
     let
-      val (h,c) = (hyp th, concl th)
-      val tyV = subtract (type_vars_in_term c) (type_vars_in_terms h)
-      val (cs,th) = repeat iconst ([],th)
+      val h = List.filter (not o is_def cs) (hyp th)
+      val tyV = subtract (type_vars_in_term (concl th)) (type_vars_in_terms h)
+      val (cs,th) = repeat iconst (cs,th)
       val (tmV,th) = GSPEC' th
-      val vths = map (mlibUseful.pair (tmV,tyV)) (CONJUNCTS' th)
+      val vths' = map (pair (tmV,tyV)) (CONJUNCTS' th)
     in
-      (cs, vths)
+      (cs, vths @ vths')
     end;
-
-  fun append2 (a,b) (c,d) = (a @ c, b @ d);
 
   fun carefully s f t m = f t m
     handle HOL_ERR _ =>
       (chatting 1 andalso chat
        ("metis: raised exception adding " ^ s ^ ": dropping.\n"); m);
-
 in
-  fun build_map (parm, thmhyps) =
+  fun build_map (parm,cs,thmhyps) =
     let
       val _ = chatting 3 andalso chat "metis: beginning build_map.\n"
       val (thms, hyps) = partition (null o hyp) thmhyps
-      val _ = chatting 3 andalso
-              chat "metis: partitioned theorems and hypotheses.\n"
-      val (cs, thms) = foldl (uncurry (C append2 o ithm)) ([], []) thms
-      val _ = chatting 3 andalso
-              chat "metis: applied ithm to theorems.\n"
-      val (cs, hyps) = foldl (uncurry (C append2 o ithm)) (cs, []) hyps
-      val _ = chatting 3 andalso
-              chat "metis: applied ithm to hypotheses.\n"
+      val _ = chatting 3 andalso chat "metis: partitioned thms and hyps.\n"
+      val (cs,thms) = foldl ithm (cs,[]) thms
+      val _ = chatting 3 andalso chat "metis: applied ithm to theorems.\n"
+      val (cs,hyps) = foldl ithm (cs,[]) hyps
+      val _ = chatting 3 andalso chat "metis: applied ithm to hypotheses.\n"
       val lmap = new_map parm
       val lmap = foldl (fn(t,m)=>carefully"a theorem"add_thm t m) lmap thms
       val lmap = foldl (fn(t,m)=>carefully"an assumption"add_hyp t m) lmap hyps
@@ -603,14 +600,15 @@ fun FOL_TACTIC slv lmap lim = ACCEPT_TAC (FOL_REFUTE slv lmap lim);
 (* HOL normalization to first-order form.                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val FOL_NORM = MIN_CNF;
+val FOL_NORM = (map (fst o dest_var) ## I) o MIN_CNF;
 
 (* Normalization tactic = Stripping + Elimination of @ *)
 
 fun NEW_CHOOSE_THEN ttac th =
   (X_CHOOSE_THEN o genvar o type_of o bvar o rand o concl) th ttac th;
 
-val FOL_STRIP_THM_THEN = FIRST_TCL [CONJUNCTS_THEN, NEW_CHOOSE_THEN];
+val FOL_STRIP_THM_THEN =
+  FIRST_TCL [CONJUNCTS_THEN, NEW_CHOOSE_THEN, DISJ_CASES_THEN];
 
 val FOL_STRIP_ASSUME_TAC = REPEAT_TCL FOL_STRIP_THM_THEN CHECK_ASSUME_TAC;
 
@@ -640,4 +638,3 @@ fun FOL_NORM_TTAC tac ths =
   end;
 
 end
-

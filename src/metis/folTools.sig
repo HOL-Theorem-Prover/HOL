@@ -46,7 +46,7 @@ val empty_map    : logic_map                      (* Uses defaults *)
 val add_thm      : vars * thm -> logic_map -> logic_map
 val add_hyp      : vars * thm -> logic_map -> logic_map
 val add_const    : string -> logic_map -> logic_map
-val build_map    : parameters * thm list -> logic_map
+val build_map    : parameters * string list * thm list -> logic_map
 val pp_logic_map : logic_map pp
 
 (* A pure interface to the first-order solver: no normalization *)
@@ -58,8 +58,8 @@ val FOL_REFUTE : solver_node -> logic_map -> limit -> thm
 val FOL_TACTIC : solver_node -> logic_map -> limit -> tactic
 
 (* HOL normalization to conjunctive normal form *)
-val FOL_NORM      : thm list -> thm list   (* Minimal conversion to CNF *)
-val FOL_NORM_TAC  : tactic                 (* Stripping + Elimination of @ *)
-val FOL_NORM_TTAC : (thm list -> tactic) -> thm list -> tactic
+val FOL_NORM      : thm list -> string list * thm list  (* Definitional CNF *)
+val FOL_NORM_TAC  : tactic                  (* Stripping + Elimination of @ *)
+val FOL_NORM_TTAC : (string list * thm list -> tactic) -> thm list -> tactic
 
 end

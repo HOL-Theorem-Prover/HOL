@@ -21,17 +21,14 @@ type solver      = mlibSolver.solver
 type solver_node = mlibSolver.solver_node
 
 (* Tuning parameters *)
-type parameters =
-  {resolution_parms : mlibResolution.parameters list,
-   meson_parms      : mlibMeson.parameters list,
-   delta_parms      : mlibMeson.parameters list}
+datatype prover =
+  mlibResolution of mlibResolution.parameters
+| mlibMeson of mlibMeson.parameters
+| Delta of mlibMeson.parameters
+type parameters = (mlibSolver.cost_fn * prover) list
 
-type 'a Parmupdate = ('a -> 'a) -> parameters -> parameters
-val defaults                : parameters
-val update_resolution_parms : mlibResolution.parameters list Parmupdate
-val update_meson_parms      : mlibMeson.parameters list Parmupdate
-val update_delta_parms      : mlibMeson.parameters list Parmupdate
-val parameters_to_string    : parameters -> string
+val defaults             : parameters
+val parameters_to_string : parameters -> string
 
 (* The metis combination of solvers *)
 val metis' : parameters -> solver_node

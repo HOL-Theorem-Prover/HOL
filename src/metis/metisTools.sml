@@ -116,7 +116,8 @@ in
   fun PROLOG_SOLVE ths =
     let
       val _ = (chatting 1 andalso chat "prolog: "; chatting 2 andalso chat "\n")
-      val lmap = build_map (prolog_parm, FOL_NORM ths)
+      val (cs,ths) = FOL_NORM ths
+      val lmap = build_map (prolog_parm,cs,ths)
     in
       FOL_SOLVE mlibMeson.prolog lmap mlibMeter.unlimited
     end;
@@ -131,7 +132,8 @@ fun GEN_METIS_SOLVE parm ths =
     val {interface, solver, limit, ...} : parameters = parm
     val _ = (chatting 1 andalso chat "metis solver: ";
              chatting 2 andalso chat "\n")
-    val lmap = build_map (interface, FOL_NORM ths)
+    val (cs,ths) = FOL_NORM ths
+    val lmap = build_map (interface,cs,ths)
   in
     FOL_SOLVE (mlibMetis.metis' solver) lmap limit
   end;
@@ -144,10 +146,10 @@ fun X_METIS_TAC ttac ths goal =
   (chatting 1 andalso chat "metis: "; chatting 2 andalso chat "\n";
    FOL_NORM_TTAC ttac ths goal);
 
-fun GEN_METIS_TTAC parm ths =
+fun GEN_METIS_TTAC parm (cs,ths) =
   let
     val {interface, solver, limit, ...} : parameters = parm
-    val lmap = timed_fn "logic map build" build_map (interface,ths)
+    val lmap = timed_fn "logic map build" build_map (interface,cs,ths)
   in
     FOL_TACTIC (mlibMetis.metis' solver) lmap limit
   end;
@@ -240,7 +242,7 @@ local
   fun mk_set ts = Binaryset.addList (Binaryset.empty compare, ts);
   fun member x s = Binaryset.member (s,x);
 
-  val empty : (term,int) Binarymap.dict = Binarymap.mkDict compare;
+  val empty : (term, bool * int) Binarymap.dict = Binarymap.mkDict compare;
   fun update ts x n = Binarymap.insert (ts,x,n);
   fun lookup ts x = Binarymap.peek (ts,x);
 
@@ -249,21 +251,23 @@ local
     | bump Higher _ = Higher
     | bump First cl = cl;
 
-  fun ord [] state = state
-    | ord (tm :: tms) (c,g,l,t,v) =
+  fun ord _ [] state = state
+    | ord top (tm :: tms) (c,g,l,t,v) =
     let
       val (f,xs) = strip_comb tm
       val n = length xs
+      val tn = (top,n)
       val tms = xs @ tms
     in
-      ord tms
-      (if member f v then ((if n = 0 then c else bump Higher c), g, l, t, v)
+      ord false tms
+      (if member f v then
+         ((if n <> 0 orelse top then bump Higher c else c), g, l, t, v)
        else if member f t then
-         (case lookup l f of NONE => (c, g, update l f n, t, v)
-          | SOME n' => ((if n = n' then c else bump Higher c), g, l, t, v))
+         (case lookup l f of NONE => (c, g, update l f tn, t, v)
+          | SOME tn' => ((if tn = tn' then c else bump Higher c), g, l, t, v))
        else
-         (case lookup g f of NONE => (c, update g f n, l, t, v)
-          | SOME n' => ((if n = n' then c else bump Higher c), g, l, t, v)))
+         (case lookup g f of NONE => (c, update g f tn, l, t, v)
+          | SOME tn' => ((if tn = tn' then c else bump Higher c), g, l, t, v)))
     end;
 
   fun order_lit [] state = state
@@ -271,8 +275,7 @@ local
     let
       val atom = case total dest_neg lit of NONE => lit | SOME lit => lit
     in
-      order_lit lits
-      (if member atom v then (bump Higher c, g, l, t, v) else ord [atom] state)
+      order_lit lits (ord true [atom] state)
     end;
     
   fun order_cl (cl,gs,_,_,_) [] = (cl,gs)
@@ -282,24 +285,25 @@ local
   fun order (cl,_) [] = cl
     | order (cl,cs) (fm :: fms) =
     let
-      val (ts, fm) = strip_exists fm
-      val (vs, fm) = strip_forall fm
+      val (ts,fm) = strip_exists fm
+      val (vs,fm) = strip_forall fm
       val cls = strip_conj fm
     in
       order (order_cl (cl, cs, empty, mk_set ts, mk_set vs) cls) fms
     end;
 in
   fun classify fms = order (First,empty) fms
-    handle HOL_ERR _ => raise mlibUseful.BUG "metisTools.classify" "shouldn't fail";
+    handle HOL_ERR _ =>
+      raise mlibUseful.BUG "metisTools.classify" "shouldn't fail";
 end;
 
-fun METIS_TTAC ths =
+fun METIS_TTAC (cs,ths) =
   let
     val class = timed_fn "problem classification" classify (map concl ths)
     val _ = chatting 2 andalso
             chat ("metis: a " ^ class_str class ^ " problem.\n")
   in
-    class_tac class ths
+    class_tac class (cs,ths)
   end;
 
 val METIS_TAC = X_METIS_TAC METIS_TTAC;

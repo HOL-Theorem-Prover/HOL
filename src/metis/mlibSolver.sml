@@ -4,9 +4,7 @@
 (* ========================================================================= *)
 
 (*
-app load
- ["mlibUseful", "Mosml", "mlibTerm", "mlibThm", "mlibCanon", "mlibMatch", "mlibMeter", "mlibUnits",
-  "mlibSolver"];
+app load ["mlibUseful", "Mosml", "mlibThm", "mlibCanon", "mlibMatch", "mlibMeter", "mlibUnits"];
 *)
 
 (*
@@ -159,17 +157,21 @@ val pp_solver_node = pp_map (fn mlibSolver_node {name, ...} => name) pp_string;
 
 val SLICE : limit ref = ref {time = SOME (1.0 / 3.0), infs = NONE};
 
-type cost_fn = mlibMeter.meter_reading -> real;
+type cost_fn = string * (mlibMeter.meter_reading -> real);
 
-local
-  fun sq x : real = x * x;
-in
-  val once_only : cost_fn = fn {infs, ...} => if infs = 0 then 0.0 else 1.0e30;
-  val time1     : cost_fn = fn {time, ...} => time;
-  val time2     : cost_fn = fn {time, ...} => sq time;
-  val infs1     : cost_fn = fn {infs, ...} => Real.fromInt infs;
-  val infs2     : cost_fn = fn {infs, ...} => sq (Real.fromInt infs);
-end;
+val once_only : cost_fn =
+  ("once only",
+   fn {infs, ...} => if infs = 0 then 0.0 else ~1.0);
+
+fun time_power n : cost_fn =
+  ("time power " ^ Real.toString n,
+   fn {time, ...} => Real.abs (Math.pow (time, n)));
+
+fun infs_power n : cost_fn =
+  ("infs power " ^ Real.toString n,
+   fn {infs, ...} => Real.abs (Math.pow (Real.fromInt infs, n)));
+
+val pp_cost_fn = pp_map fst pp_string;
 
 (* ------------------------------------------------------------------------- *)
 (* This allows us to hierarchically arrange solver nodes.                    *)
@@ -188,7 +190,7 @@ end;
 datatype subnode = Subnode of
   {name   : string,
    used   : meter_reading,
-   cost   : meter_reading -> real,
+   cost   : cost_fn,
    solns  : (unit -> thm list option stream) option};
 
 fun init_subnode (cost, (name, solver : solver)) goal =
@@ -198,15 +200,16 @@ fun init_subnode (cost, (name, solver : solver)) goal =
    cost = cost,
    solns = SOME (fn () => solver goal)};
 
-fun least_cost [] = K NONE
-  | least_cost _ =
-  (SOME o snd o fst o min (fn ((r, _), (s, _)) => Real.compare (r, s)) o
-   map (fn (n, Subnode {used, cost, ...}) => (cost used, n)))
-
-val choose_subnode =
-  W least_cost o
-  List.filter (fn (_, Subnode {solns, ...}) => Option.isSome solns) o
-  enumerate 0;
+local
+  fun order ((r,_),(s,_)) = Real.compare (r,s);
+  fun munge_node (n, Subnode {solns, cost = (_,f), used, ...}) =
+    case solns of NONE => NONE | SOME _ =>
+      let val c = f used in if c < 0.0 then NONE else SOME (c,n) end;
+in
+  fun choose_subnode l =
+    case List.mapPartial munge_node (enumerate 0 l) of [] => NONE
+    | l => SOME (snd (fst (min order l)))
+end;
 
 fun subnode_info (Subnode {name, used = {time, infs}, solns, ...}) =
   name_to_string name ^ "(" ^ time_to_string time ^ "," ^
@@ -327,7 +330,7 @@ fun initialize (mlibSolver_node {solver_con, ...}) {limit, thms, hyps} =
   | NONE =>
     let
       val meter = ref (new_meter expired)
-      val units = ref (U.empty ())
+      val units = ref U.empty
       val solver =
         solver_con {slice = meter, units = units, thms = thms, hyps = hyps}
     in

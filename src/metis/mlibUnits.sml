@@ -45,7 +45,7 @@ fun psym lit =
 
 type uns = thm N.literalnet;
 
-fun uempty () : uns = N.empty ();
+val uempty : uns = N.empty ();
 
 fun usubsumes uns lit =
   List.find (fn t => can (match_literals (dest_unit t)) lit)
@@ -86,7 +86,7 @@ fun udemod uns =
 
 type units = (thm, uns) sum;
 
-fun empty () : units = INR (uempty ());
+val empty : units = INR uempty;
 
 fun subsumes (INL th) = K (SOME th)
   | subsumes (INR uns) = usubsumes uns;

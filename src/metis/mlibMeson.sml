@@ -337,15 +337,16 @@ fun spend m f c (s as {depth = n, ...} : state) =
   end;
 
 local
-  fun unify env (th, asms, c) g = (th, asms, unify_literals env c g)
+  fun unify env (th,asms,c) g = (th, asms, unify_literals env c g)
 
-  fun match env (th, asms, c) g =
+  fun match env (th,asms,c) g =
     let val sub = match_literals c g
     in (INST sub th, map (formula_subst sub) asms, env)
     end;
 in
   fun next_state false env r g = unify env r g
-    | next_state true env r g = match env r g handle ERR_EXN _ => unify env r g;
+    | next_state true env r g =
+      match env r g handle ERR_EXN _ => unify env r g;
 end;
 
 local

@@ -117,6 +117,7 @@ val mk_prefix   : string -> string -> string
 
 (* Reals *)
 val real_to_string : real -> string
+val pos            : real -> real
 val log2           : real -> real                 (* Domain *)
 
 (* Pretty-printing *)
@@ -170,7 +171,7 @@ val today : unit -> string
 (* Processing command line arguments *)
 exception Optionexit of {message : string option, usage : bool, success : bool}
 type Opt = {switches : string list, arguments : string list,
-            description : string, processor : string list -> unit}
+            description : string, processor : string * string list -> unit}
 type Allopts = {name : string, head : string, foot : string, opts : Opt list}
 val version_string  : string ref
 val basic_options   : Opt list

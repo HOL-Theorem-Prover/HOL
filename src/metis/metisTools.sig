@@ -52,11 +52,11 @@ val HOT_METIS_TAC  : thm list -> tactic           (* + types *)
 val FULL_METIS_TAC : thm list -> tactic           (* + combinator reductions *)
 
 (* Simple user interface to the metis prover *)
-val FO_METIS_PROVE   : thm list -> term -> thm
-val FOT_METIS_PROVE  : thm list -> term -> thm
-val HO_METIS_PROVE   : thm list -> term -> thm
-val HOT_METIS_PROVE  : thm list -> term -> thm
-val FULL_METIS_PROVE : thm list -> term -> thm
+val FO_METIS_PROVE   : thm list -> term -> thm    (* First-order *)
+val FOT_METIS_PROVE  : thm list -> term -> thm    (* + types *)
+val HO_METIS_PROVE   : thm list -> term -> thm    (* Higher-order *)
+val HOT_METIS_PROVE  : thm list -> term -> thm    (* + types *)
+val FULL_METIS_PROVE : thm list -> term -> thm    (* + combinator reductions *)
 
 (* Uses heuristics to apply one of FO_, HO_ or FULL_. *)
 val METIS_TAC   : thm list -> tactic

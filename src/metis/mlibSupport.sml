@@ -18,11 +18,9 @@ open mlibUseful mlibTerm;
 
 structure H = mlibHeap; local open mlibHeap in end;
 structure C = mlibClause; local open mlibClause in end;
-structure S = mlibClauseset; local open mlibClauseset in end;
 
 type 'a heap   = 'a H.heap;
 type clause    = C.clause;
-type id_clause = S.id_clause;
 
 (* ------------------------------------------------------------------------- *)
 (* Chatting.                                                                 *)
@@ -63,10 +61,10 @@ local
     | sz n (Fn (_,l) :: tms)          = sz (n + 1) (l @ tms);
   fun lsz (l,n) = sz n [dest_atom (literal_atom l)];
 in
-  val clause_size = Real.fromInt o foldl lsz 0 o C.clause_lits;
+  val clause_size = Real.fromInt o foldl lsz 0 o C.literals;
 end;
 
-val clause_lits = Real.fromInt o length o C.clause_lits;
+val clause_lits = Real.fromInt o length o C.literals;
 
 (* ------------------------------------------------------------------------- *)
 (* mlibClause weights.                                                           *)
@@ -75,14 +73,14 @@ val clause_lits = Real.fromInt o length o C.clause_lits;
 local
   fun priority n = 1e~12 * Real.fromInt n;
 in
-  fun clause_weight (parm : parameters) dist icl =
+  fun clause_weight (parm : parameters) dist cl =
     let
       val {size_power, literal_power, ...} = parm
-      val (i,cl) = S.dest_id_clause icl
+      val {id, ...} = C.dest_clause cl
       val siz = Math.pow (clause_size cl, size_power)
       val lit = Math.pow (clause_lits cl, literal_power)
     in
-      siz * lit * (1.0 + dist) + priority i
+      siz * lit * (1.0 + dist) + priority id
     end;
 end;
 
@@ -92,12 +90,12 @@ end;
 
 datatype sos = SOS of
   {parm    : parameters,
-   clauses : (real * (real * id_clause)) heap};
+   clauses : (real * (real * clause)) heap};
 
 fun update_clauses c sos =
   let val SOS {parm = p, clauses = _} = sos in SOS {parm = p, clauses = c} end;
 
-val empty_heap : (real * (real * id_clause)) heap =
+val empty_heap : (real * (real * clause)) heap =
   H.empty (fn ((m,_),(n,_)) => Real.compare (m,n));
 
 fun empty p = SOS {parm = p, clauses = empty_heap};
@@ -116,7 +114,7 @@ local
       sos
     end;
 in
-  fun add dist cls sos = foldl (add1 dist) sos cls;
+  fun add (dist,cls) sos = foldl (add1 dist) sos cls;
 end;
 
 fun remove sos =
@@ -131,5 +129,15 @@ fun remove sos =
         SOME (dcl,sos)
       end
   end;
+
+local
+  fun f acc sos =
+    case remove sos of NONE => rev acc
+    | SOME ((_,cl),sos) => f (cl :: acc) sos;
+in
+  val to_list = f [];
+end;
+
+val pp_sos = pp_map (fn sos => "S<" ^ int_to_string (size sos) ^ ">") pp_string;
 
 end

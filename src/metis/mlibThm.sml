@@ -215,7 +215,7 @@ local
         | x => x
       end;
 in
-  val thm_compare = cm o wrap;
+  fun thm_compare th1_th2 = cm [th1_th2];
 end;
 
 local

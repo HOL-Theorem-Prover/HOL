@@ -1,5 +1,5 @@
 (* ========================================================================= *)
-(* CLAUSE = THEOREM + CONSTRAINTS                                            *)
+(* CLAUSE = ID + THEOREM + CONSTRAINTS                                       *)
 (* Created by Joe Hurd, September 2002                                       *)
 (* ========================================================================= *)
 
@@ -12,52 +12,61 @@ type term           = mlibTerm.term
 type formula        = mlibTerm.formula
 type subst          = mlibSubst.subst
 type thm            = mlibThm.thm
-type units          = mlibUnits.units
+type termorder      = mlibTermorder.termorder
 
 type parameters =
   {literal_order  : bool,
    term_order     : bool,
    termorder_parm : mlibTermorder.parameters}
 
-type 'a Parmupdate = ('a -> 'a) -> parameters -> parameters
+type 'a parmupdate = ('a -> 'a) -> parameters -> parameters
 val defaults              : parameters
-val update_literal_order  : bool Parmupdate
-val update_term_order     : bool Parmupdate
-val update_termorder_parm : mlibTermorder.parameters Parmupdate
+val update_literal_order  : bool parmupdate
+val update_term_order     : bool parmupdate
+val update_termorder_parm : mlibTermorder.parameters parmupdate
 
 type clause
 
 (* Basic operations *)
+type bits = {parm : parameters, id : int, thm : thm, order : termorder}
 val mk_clause    : parameters -> thm -> clause
-val empty_clause : clause -> bool
-val clause_parm  : clause -> parameters
-val clause_thm   : clause -> thm  (* fails if there are coherence constraints *)
-val clause_lits  : clause -> formula list
-val active_lits  : clause -> (clause * int, formula) maplet list
-val active_eqs   : clause -> (clause * int * bool, term) maplet list
-val active_tms   : clause -> (clause * int * int list, term) maplet list
+val dest_clause  : clause -> bits
+val literals     : clause -> formula list
+val is_empty     : clause -> bool
+val is_rewr      : clause -> bool
+
+(* Using ordering constraints to cut down the set of possible inferences *)
+val largest_lits : clause -> (clause * int, formula) maplet list
+val largest_eqs  : clause -> (clause * int * bool, term) maplet list
+val largest_tms  : clause -> (clause * int * int list, term) maplet list
+
+(* Subsumption *)
 val subsumes     : clause -> clause -> bool
-val demodulate   : units -> clause -> clause
 
-(* mlibClauses with coherence constraints *)
-val mk_coherent    : parameters -> formula list -> clause
-val list_coherents : clause -> formula list list
-val dest_coherents : (formula list * int) list -> clause -> clause
+(* mlibClause rewriting *)
+type rewrs
+val empty    : parameters -> rewrs
+val size     : rewrs -> int
+val add      : clause -> rewrs -> clause * rewrs
+val reduce   : rewrs -> rewrs
+val eqns     : rewrs -> clause list
+val pp_rewrs : rewrs pp
 
-(* Rules of inference *)
+(* Simplifying rules: these preserve the clause id *)
 val INST         : subst -> clause -> clause
 val FRESH_VARS   : clause -> clause
-val SYM          : clause * int -> clause
-val NEQ_SIMP     : clause -> clause
+val NEQ_VARS     : clause -> clause
+val DEMODULATE   : mlibUnits.units -> clause -> clause
+val REWRITE      : rewrs -> clause -> clause
+
+(* Ordered resolution and paramodulation: these generate new clause ids *)
 val FACTOR       : clause -> clause list
 val RESOLVE      : clause * int -> clause * int -> clause
 val PARAMODULATE : clause * int * bool -> clause * int * int list -> clause
-val REWRITE      : mlibRewrite.rewrs -> int * clause -> clause
 
 (* Pretty printing *)
-val show_constraints  : bool ref
-val pp_clause         : clause pp
-val clause_to_string' : int -> clause -> string        (* purely functional *)
-val clause_to_string  : clause -> string               (* uses !LINE_LENGTH *)
+val show_id          : bool ref
+val show_constraint  : bool ref
+val pp_clause        : clause pp
 
 end

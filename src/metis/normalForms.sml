@@ -1094,9 +1094,16 @@ val condify_SS =
 val condify_ss = simpLib.++ (pureSimps.pure_ss, condify_SS);
 
 (* ------------------------------------------------------------------------- *)
-(* Conjunctive Normal Form for a first-order logic prover                    *)
+(* Definitional CNF minimizing number of clauses.                            *)
 (*                                                                           *)
 (* Example:                                                                  *)
+(* |- (p /\ q /\ r) \/ (s /\ t /\ u)                                         *)
+(*    -->                                                                    *)
+(* ([``d``],                                                                 *)
+(*   [[.] |- (d \/ s) /\ (d \/ t) /\ (d \/ u),                               *)
+(*    [.] |- (d \/ ~p \/ ~q \/ ~r) /\ (~d \/ p) /\ (~d \/ q) /\ (~d \/ r)])  *)
+(*                                                                           *)
+(* where the assumption [.] in both theorems is d = (p /\ q /\ r).           *)
 (* ------------------------------------------------------------------------- *)
 
 val COND_BOOL = prove
@@ -1112,7 +1119,7 @@ local
       val def_tm = list_mk_abs (vs,tm)
     in
       case List.find (aconv def_tm o fst) defs of
-        SOME (_, (vs, tm, def)) =>
+        SOME (_,(vs,tm,def)) =>
         let
           val _ = chatting 2 andalso chat "min_cnf: reusing definition.\n"
         in
@@ -1345,8 +1352,9 @@ fun MIN_CNF ths =
     val defs = []
     val (defs,ths) = min_cnf_prep defs [] ths
     val (defs,ths) = min_cnf_norm defs [] ths
+    val cs = map (lhs o hd o hyp o #3 o snd) defs
   in
-    ths
+    (cs,ths)
   end;
 
 (* Quick testing

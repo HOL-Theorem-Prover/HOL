@@ -6,7 +6,7 @@
 signature mlibSupport =
 sig
 
-type id_clause = mlibClauseset.id_clause
+type 'a pp = 'a mlibUseful.pp
 
 type parameters = {size_power : real, literal_power : real}
 
@@ -16,10 +16,12 @@ val update_literal_power : (real -> real) -> parameters -> parameters
 
 type sos
 
-val empty  : parameters -> sos
-val reset  : sos -> sos
-val size   : sos -> int
-val add    : real -> id_clause list -> sos -> sos
-val remove : sos -> ((real * id_clause) * sos) option
+val empty   : parameters -> sos
+val reset   : sos -> sos
+val size    : sos -> int
+val add     : real * mlibClause.clause list -> sos -> sos
+val remove  : sos -> ((real * mlibClause.clause) * sos) option
+val to_list : sos -> mlibClause.clause list
+val pp_sos  : sos pp
 
 end

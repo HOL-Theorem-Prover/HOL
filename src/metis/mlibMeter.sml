@@ -82,10 +82,10 @@ fun new_time_meter () =
   let
     val tmr = Timer.startCPUTimer ()
     fun read () =
-      (fn {usr, sys, ...} => Time.toReal (Time.+ (usr, sys)))
+      (fn {usr, sys, ...} => Time.+ (usr, sys))
       (Timer.checkCPUTimer tmr)
   in
-    read
+    pos o Time.toReal o read
   end;
 
 fun new_inference_meter () =
@@ -99,7 +99,7 @@ fun new_inference_meter () =
 fun new_meter lim : meter =
   let
     val tread = new_time_meter ()
-    val (iread, ilog) = new_inference_meter ()
+    val (iread,ilog) = new_inference_meter ()
   in
     {read = (fn () => {time = tread (), infs = iread ()}),
      log = ilog, lim = lim}
@@ -108,7 +108,8 @@ fun new_meter lim : meter =
 fun sub_meter {read, log, lim = _} lim =
   let
     val {time = init_time : real, infs = init_infs} = read ()
-    fun sub {time, infs} = {time = time - init_time, infs = infs - init_infs}
+    fun sub {time, infs} =
+      {time = pos (time - init_time), infs = infs - init_infs}
   in
     {read = sub o read, log = log, lim = lim}
   end;
