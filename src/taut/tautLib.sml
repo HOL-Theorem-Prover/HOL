@@ -43,6 +43,15 @@ infix THEN THENL THENC ## |->;
 
 val ERR = mk_HOL_ERR "tautLib"
 
+
+(*---------------------------------------------------------------------------
+     Set the parsers to a fixed grammar for the duration of this file.
+ ---------------------------------------------------------------------------*)
+
+val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q handle e => Raise e;
+fun == q x = Type q handle e => Raise e;
+
 val BOOL_CASES_AX = boolTheory.BOOL_CASES_AX;
 
 
@@ -595,6 +604,6 @@ val ASM_TAUT_TAC = REPEAT (POP_ASSUM MP_TAC) THEN TAUT_TAC
 fun TAUT_PROVE tm = 
  EQT_ELIM (TAUT_CONV tm) handle HOL_ERR _ => raise ERR "TAUT_PROVE" "";
 
-fun TAUT q = TAUT_PROVE (Parse.Term q);
+fun TAUT q = TAUT_PROVE (Term q);
 
 end; (* tautLib *)
