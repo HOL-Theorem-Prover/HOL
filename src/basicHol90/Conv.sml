@@ -188,13 +188,24 @@ end;
 (* Added TFM 88.03.31							*)
 (* Revised TFM 91.03.08							*)
 (* Revised RJB 91.04.17							*)
+(* Revised Michael Norrish 2000.03.27                                   *)
+(*    now passes on information about nested failure                    *)
 (* ---------------------------------------------------------------------*)
-fun RAND_CONV conv tm =
-   let val {Rator,Rand} = dest_comb tm handle (HOL_ERR _)
-        => raise CONV_ERR "RAND_CONV" "not a comb"
-   in AP_TERM Rator (conv Rand) handle (HOL_ERR _)
-        => raise CONV_ERR"RAND_CONV" ""
-   end
+fun RAND_CONV conv tm = let
+  val {Rator,Rand} =
+    dest_comb tm handle (HOL_ERR _) => raise CONV_ERR "RAND_CONV" "not a comb"
+  val newrand = conv Rand
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
+         andalso origin_structure = "Conv"
+      then
+        raise CONV_ERR "RAND_CONV" message
+      else
+        raise CONV_ERR "RAND_CONV" (origin_function ^ ": " ^ message)
+in
+  AP_TERM Rator newrand handle (HOL_ERR {message,...}) =>
+    raise CONV_ERR "RAND_CONV" ("Application of AP_TERM failed: "^message)
+end
 
 
 (* ---------------------------------------------------------------------*)
@@ -203,27 +214,48 @@ fun RAND_CONV conv tm =
 (* Added TFM 88.03.31							*)
 (* Revised TFM 91.03.08							*)
 (* Revised RJB 91.04.17							*)
+(* Revised Michael Norrish 2000.03.27                                   *)
+(*    now passes on information about nested failure                    *)
 (* ---------------------------------------------------------------------*)
-fun RATOR_CONV conv tm =
-   let val {Rator,Rand} = dest_comb tm handle (HOL_ERR _)
-       => raise CONV_ERR "RATOR_CONV" "not a comb"
-   in AP_THM (conv Rator) Rand handle (HOL_ERR _)
-       => raise CONV_ERR "RATOR_CONV" ""
-   end
-
+fun RATOR_CONV conv tm = let
+  val {Rator,Rand} =
+    dest_comb tm handle (HOL_ERR _) => raise CONV_ERR "RATOR_CONV" "not a comb"
+  val newrator = conv Rator
+    handle HOL_ERR {origin_function, origin_structure, message} =>
+      if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
+         andalso origin_structure = "Conv"
+      then
+        raise CONV_ERR "RATOR_CONV" message
+      else
+        raise CONV_ERR "RATOR_CONV" (origin_function ^ ": " ^ message)
+in
+  AP_THM newrator Rand handle  (HOL_ERR {message,...}) =>
+    raise CONV_ERR "RATOR_CONV" ("Application of AP_THM failed: "^message)
+end
 
 (* ---------------------------------------------------------------------*)
 (* ABS_CONV conv "\x. t[x]" applies conv to t[x]			*)
 (* 									*)
 (* Added TFM 88.03.31							*)
 (* Revised RJB 91.04.17							*)
+(* Revised Michael Norrish 2000.03.27                                   *)
+(*    now passes on information about nested failure                    *)
 (* ---------------------------------------------------------------------*)
-fun ABS_CONV conv tm =
-   let val {Bvar,Body} = dest_abs tm handle (HOL_ERR _)
-        => raise CONV_ERR"ABS_CONV" "not an abs"
-   in ABS Bvar (conv Body) handle (HOL_ERR _)
-        => raise CONV_ERR"ABS_CONV" ""
-   end;
+fun ABS_CONV conv tm = let
+   val {Bvar,Body} = dest_abs tm
+     handle (HOL_ERR _) => raise CONV_ERR "ABS_CONV" "not an abs"
+   val newbody = conv Body
+     handle HOL_ERR {origin_function, origin_structure, message} =>
+       if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
+          andalso origin_structure = "Conv"
+       then
+         raise CONV_ERR "ABS_CONV" message
+       else
+         raise CONV_ERR "ABS_CONV" (origin_function ^ ": " ^ message)
+in
+  ABS Bvar newbody handle (HOL_ERR {message,...}) =>
+    raise CONV_ERR"ABS_CONV" ("Application of ABS failed: "^message)
+end;
 
 (* -------------------------------------------------------------------- *)
 (* LHS_CONV conv "t1 = t2" applies conv to t1                           *)
