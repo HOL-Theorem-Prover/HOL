@@ -31,7 +31,7 @@ open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory
      mesonLib tautLib simpLib Ho_Rewrite Arithconv
      jrhUtils Canon_Port AC hratTheory hrealTheory realaxTheory
-     BasicProvers SingleStep TotalDefn;
+     BasicProvers SingleStep TotalDefn metisLib;
 
 val _ = new_theory "real";
 
@@ -2565,6 +2565,55 @@ val REAL_INV_INJ = store_thm
    ``!x y : real. (inv x = inv y) = (x = y)``,
    PROVE_TAC [REAL_INV_INV])
 
+val REAL_DIV_RMUL_CANCEL = store_thm
+  ("REAL_DIV_RMUL_CANCEL",
+   ``!c a b : real. ~(c = 0) ==> ((a * c) / (b * c) = a / b)``,
+   RW_TAC boolSimps.bool_ss [real_div]
+   THEN Cases_on `b = 0`
+   THEN RW_TAC boolSimps.bool_ss
+      [REAL_MUL_LZERO, REAL_INV_0, REAL_INV_MUL, REAL_MUL_RZERO,
+       REAL_EQ_MUL_LCANCEL, GSYM REAL_MUL_ASSOC]
+   THEN DISJ2_TAC
+   THEN (KNOW_TAC ``!a b c : real. a * (b * c) = (a * c) * b``
+         THEN1 PROVE_TAC [REAL_MUL_ASSOC, REAL_MUL_SYM])
+   THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   THEN RW_TAC boolSimps.bool_ss [REAL_MUL_RINV, REAL_MUL_LID]);
+
+val REAL_DIV_LMUL_CANCEL = store_thm
+  ("REAL_DIV_LMUL_CANCEL",
+   ``!c a b : real. ~(c = 0) ==> ((c * a) / (c * b) = a / b)``,
+   METIS_TAC [REAL_DIV_RMUL_CANCEL, REAL_MUL_SYM]);
+
+val REAL_DIV_ADD = store_thm
+  ("REAL_DIV_ADD",
+   ``!x y z : real. y / x + z / x = (y + z) / x``,
+   RW_TAC boolSimps.bool_ss [real_div, REAL_ADD_RDISTRIB]);
+
+val REAL_ADD_RAT = store_thm
+  ("REAL_ADD_RAT",
+   ``!a b c d : real.
+       ~(b = 0) /\ ~(d = 0) ==>
+       (a / b + c / d = (a * d + b * c) / (b * d))``,
+   RW_TAC boolSimps.bool_ss
+   [GSYM REAL_DIV_ADD, REAL_DIV_RMUL_CANCEL, REAL_DIV_LMUL_CANCEL]);
+
+val REAL_SUB_RAT = store_thm
+  ("REAL_SUB_RAT",
+   ``!a b c d : real.
+       ~(b = 0) /\ ~(d = 0) ==>
+       (a / b - c / d = (a * d - b * c) / (b * d))``,
+   RW_TAC boolSimps.bool_ss [real_sub, real_div, REAL_NEG_LMUL]
+   THEN RW_TAC boolSimps.bool_ss [GSYM real_div]
+   THEN METIS_TAC [REAL_ADD_RAT, REAL_NEG_LMUL, REAL_NEG_RMUL]);
+
+val REAL_SUB = store_thm
+  ("REAL_SUB",
+   ``!m n : num.
+       (& m : real) - & n = if m - n = 0 then ~(& (n - m)) else & (m - n)``,
+   RW_TAC bossLib.arith_ss [REAL_EQ_SUB_RADD, REAL_ADD]
+   THEN ONCE_REWRITE_TAC [REAL_ADD_SYM]
+   THEN RW_TAC bossLib.arith_ss [GSYM real_sub, REAL_EQ_SUB_LADD, REAL_ADD]);
+
 (* ------------------------------------------------------------------------- *)
 (* Define a constant for extracting "the positive part" of real numbers.     *)
 (* ------------------------------------------------------------------------- *)
@@ -3188,11 +3237,6 @@ val REAL_THIRDS_BETWEEN = store_thm
    THEN RW_TAC boolSimps.bool_ss [REAL_MUL_LINV, REAL_INJ]
    THEN RW_TAC boolSimps.bool_ss [REAL_MUL, REAL_LE]
    THEN numLib.ARITH_TAC);
-
-val REAL_DIV_ADD = store_thm
-  ("REAL_DIV_ADD",
-   ``!x y z : real. y / x + z / x = (y + z) / x``,
-   RW_TAC boolSimps.bool_ss [real_div, REAL_ADD_RDISTRIB]);
 
 val REAL_LE_SUB_CANCEL2 = store_thm
   ("REAL_LE_SUB_CANCEL2",
