@@ -290,6 +290,7 @@ val F_SEM_defn =
                   ?j :: PL p. i < j         /\ 
                     NEXT_RISE M p c (i+1,j) /\
                     F_SEM M (RESTN p j) (STRONG_CLOCK c) f)
+(*
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
       ?i k :: PL p. k >= i                                               /\
@@ -300,6 +301,17 @@ val F_SEM_defn =
                           F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL c) 
                           ==>
                           F_SEM M (RESTN p j) (STRONG_CLOCK c) f1)
+*)
+    /\
+    (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
+      ?i :: PL p. (?k :: PL p. i <= k                /\ 
+                               NEXT_RISE M p c (i,k) /\ 
+                               F_SEM M (RESTN p k) (STRONG_CLOCK c) f2)
+                  /\
+                  !j :: PL p. j < i ==>
+                              ?k :: PL p. j <= k                /\ 
+                                          NEXT_RISE M p c (j,k) /\ 
+                                          F_SEM M (RESTN p k) (STRONG_CLOCK c) f1)
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
       ?i :: PL p. FIRST_RISE M p c i /\ 
@@ -355,6 +367,7 @@ val F_SEM_defn =
                   ?j :: PL p. i < j         /\
                     NEXT_RISE M p c (i+1,j) /\
                     F_SEM M (RESTN p j) (WEAK_CLOCK c) f)
+(*
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
       F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2))  
@@ -368,6 +381,25 @@ val F_SEM_defn =
                     F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL c)
                     ==>
                     F_SEM M (RESTN p j) (WEAK_CLOCK c) f1))
+*)
+    /\
+    (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
+      ?i :: PL p. ((?k :: PL p. i <= k                /\ 
+                                NEXT_RISE M p c (i,k) /\ 
+                                F_SEM M (RESTN p k) (WEAK_CLOCK c) f2)
+                   \/
+                   !k :: PL p. i <= k
+                               ==>
+                               F_SEM M (RESTN p k) (WEAK_CLOCK B_TRUE) (F_BOOL(B_NOT c)))
+                  /\
+                  !j :: PL p. j < i ==>
+                              (?k :: PL p. j <= k                /\ 
+                                           NEXT_RISE M p c (j,k) /\ 
+                                           F_SEM M (RESTN p k) (WEAK_CLOCK c) f1)
+                              \/
+                              !k :: PL p. j <= k
+                                          ==>
+                                          F_SEM M (RESTN p k) (WEAK_CLOCK B_TRUE) (F_BOOL(B_NOT c)))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
       !i :: PL p. FIRST_RISE M p c i ==>
