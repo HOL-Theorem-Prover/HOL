@@ -1329,10 +1329,13 @@ fun tprove0 (defn,tactic) =
 fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
 
 fun tprove p   =
-  let val (eqns,ind) = Lib.with_flag (goalstackLib.chatting,false) tprove0 p
-  in computeLib.add_funs [eqns, 
-                          CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
-   ; (eqns, ind)
+  let
+    val (eqns,ind) = Lib.with_flag (goalstackLib.chatting,false) tprove0 p
+    val () = if not (!computeLib.auto_import_definitions) then ()
+             else computeLib.add_funs
+                    [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
+  in 
+    (eqns, ind)
   end
 
 fun tstore_defn (d,t) =
