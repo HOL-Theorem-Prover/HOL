@@ -1,0 +1,946 @@
+<HTML>
+<HEAD><TITLE>Theory: Omega</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "Omega"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "integerTheory.html"><STRONG><font color="black">integer</font></STRONG></A>
+    <A HREF = "listTheory.html"><STRONG><font color="black">list</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">dark_shadow_cond_row_tupled</font></STRONG>
+                                         <td>
+                                         :(num # int) # (num # int) list ->
+                                          bool
+    <tr><td>
+        <STRONG><font color="black">evallower</font></STRONG>
+        <td>
+        :int -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">sumc_tupled</font></STRONG>
+        <td>
+        :int list # int list -> int
+    <tr><td>
+        <STRONG><font color="black">nightmare_tupled</font></STRONG>
+        <td>
+        :int # num # (num # int) list # (num # int) list # (num # int) list ->
+         bool
+    <tr><td>
+        <STRONG><font color="black">dark_shadow_condition</font></STRONG>
+        <td>
+        :(num # int) list -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">dark_shadow_tupled</font></STRONG>
+        <td>
+        :(num # int) list # (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">evalupper</font></STRONG>
+        <td>
+        :int -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">MAP2</font></STRONG>
+        <td>
+        :'b -> ('b -> 'b -> 'a) -> 'b list -> 'b list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">evalupper_tupled</font></STRONG>
+        <td>
+        :int # (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">dark_shadow_row</font></STRONG>
+        <td>
+        :num -> int -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">modhat</font></STRONG>
+        <td>
+        :int -> int -> int
+    <tr><td>
+        <STRONG><font color="black">dark_shadow_condition_tupled</font></STRONG>
+        <td>
+        :(num # int) list # (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">rshadow_row</font></STRONG>
+        <td>
+        :num # int -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">calc_nightmare</font></STRONG>
+        <td>
+        :int -> num -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">fst1</font></STRONG>
+        <td>
+        :num # 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">calc_nightmare_tupled</font></STRONG>
+        <td>
+        :int # num # (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">nightmare</font></STRONG>
+        <td>
+        :int ->
+         num ->
+         (num # int) list -> (num # int) list -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">MAP2_tupled</font></STRONG>
+        <td>
+        :'b # ('b -> 'b -> 'a) # 'b list # 'b list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">dark_shadow</font></STRONG>
+        <td>
+        :(num # int) list -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">evallower_tupled</font></STRONG>
+        <td>
+        :int # (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">sumc</font></STRONG>
+        <td>
+        :int list -> int list -> int
+    <tr><td>
+        <STRONG><font color="black">rshadow_row_tupled</font></STRONG>
+        <td>
+        :(num # int) # (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">dark_shadow_cond_row</font></STRONG>
+        <td>
+        :num # int -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">real_shadow</font></STRONG>
+        <td>
+        :(num # int) list -> (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">dark_shadow_row_tupled</font></STRONG>
+        <td>
+        :num # int # (num # int) list -> bool
+    <tr><td>
+        <STRONG><font color="black">fst_nzero</font></STRONG>
+        <td>
+        :num # 'a -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">MAP2_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- MAP2_tupled =
+   WFREC
+     (@R.
+        WF R /\ (!y ys f pad. R (pad,f,[],ys) (pad,f,[],y::ys)) /\
+        (!x xs f pad. R (pad,f,xs,[]) (pad,f,x::xs,[])) /\
+        !y x ys xs f pad. R (pad,f,xs,ys) (pad,f,x::xs,y::ys))
+     (\MAP2_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v3 of
+                     (v4,v5) ->
+                       case v4 of
+                          [] ->
+                            (case v5 of
+                                [] -> []
+                             || v8::v9 -> v2 v v8::MAP2_tupled' (v,v2,[],v9))
+                       || v6::v7 ->
+                            case v5 of
+                               [] -> v2 v6 v::MAP2_tupled' (v,v2,v7,[])
+                            || v10::v11 ->
+                                 v2 v6 v10::MAP2_tupled' (v,v2,v7,v11))
+</PRE>
+
+<DT><STRONG><font color="black">MAP2_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2 x3. MAP2 x x1 x2 x3 = MAP2_tupled (x,x1,x2,x3)
+</PRE>
+
+<DT><STRONG><font color="black">sumc_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- sumc_tupled =
+   WFREC (@R. WF R /\ !v c vs cs. R (cs,vs) (c::cs,v::vs))
+     (\sumc_tupled' a.
+        case a of
+           (v1,v2) ->
+             case v1 of
+                [] -> (case v2 of [] -> 0 || v9::v10 -> 0)
+             || v5::v6 ->
+                  case v2 of
+                     [] -> 0
+                  || v11::v12 -> v5 * v11 + sumc_tupled' (v6,v12))
+</PRE>
+
+<DT><STRONG><font color="black">sumc_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1. sumc x x1 = sumc_tupled (x,x1)
+</PRE>
+
+<DT><STRONG><font color="black">modhat_def</font></STRONG>
+<DD>
+<PRE>
+|- !x y. modhat x y = x - y * ((2 * x + y) / (2 * y))
+</PRE>
+
+<DT><STRONG><font color="black">evalupper_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- evalupper_tupled =
+   WFREC (@R. WF R /\ !y c cs x. R (x,cs) (x,(c,y)::cs))
+     (\evalupper_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                [] -> T
+             || v2::v3 ->
+                  case v2 of
+                     (v4,v5) -> $& v4 * v <= v5 /\ evalupper_tupled' (v,v3))
+</PRE>
+
+<DT><STRONG><font color="black">evalupper_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1. evalupper x x1 = evalupper_tupled (x,x1)
+</PRE>
+
+<DT><STRONG><font color="black">evallower_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- evallower_tupled =
+   WFREC (@R. WF R /\ !y c cs x. R (x,cs) (x,(c,y)::cs))
+     (\evallower_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                [] -> T
+             || v2::v3 ->
+                  case v2 of
+                     (v4,v5) -> v5 <= $& v4 * v /\ evallower_tupled' (v,v3))
+</PRE>
+
+<DT><STRONG><font color="black">evallower_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1. evallower x x1 = evallower_tupled (x,x1)
+</PRE>
+
+<DT><STRONG><font color="black">fst_nzero_def</font></STRONG>
+<DD>
+<PRE>
+|- !x. fst_nzero x = 0 < FST x
+</PRE>
+
+<DT><STRONG><font color="black">fst1_def</font></STRONG>
+<DD>
+<PRE>
+|- !x. fst1 x = (FST x = 1)
+</PRE>
+
+<DT><STRONG><font color="black">rshadow_row_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- rshadow_row_tupled =
+   WFREC
+     (@R.
+        WF R /\
+        !lowery lowerc rs uppery upperc.
+          R ((upperc,uppery),rs) ((upperc,uppery),(lowerc,lowery)::rs))
+     (\rshadow_row_tupled' a.
+        case a of
+           (v,v1) ->
+             case v of
+                (v2,v3) ->
+                  case v1 of
+                     [] -> T
+                  || v4::v5 ->
+                       case v4 of
+                          (v6,v7) ->
+                            $& v2 * v7 <= $& v6 * v3 /\
+                            rshadow_row_tupled' ((v2,v3),v5))
+</PRE>
+
+<DT><STRONG><font color="black">rshadow_row_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1. rshadow_row x x1 = rshadow_row_tupled (x,x1)
+</PRE>
+
+<DT><STRONG><font color="black">real_shadow_def</font></STRONG>
+<DD>
+<PRE>
+|- (!lowers. real_shadow [] lowers = T) /\
+   !upper ls lowers.
+     real_shadow (upper::ls) lowers =
+     rshadow_row upper lowers /\ real_shadow ls lowers
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_cond_row_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- dark_shadow_cond_row_tupled =
+   WFREC (@R'. WF R' /\ !R d t L c. R' ((c,L),t) ((c,L),(d,R)::t))
+     (\dark_shadow_cond_row_tupled' a.
+        case a of
+           (v,v1) ->
+             case v of
+                (v2,v3) ->
+                  case v1 of
+                     [] -> T
+                  || v4::v5 ->
+                       case v4 of
+                          (v6,v7) ->
+                            ~(?i.
+                                $& v2 * $& v6 * i < $& v2 * v7 /\
+                                $& v2 * v7 <= $& v6 * v3 /\
+                                $& v6 * v3 < $& v2 * $& v6 * (i + 1)) /\
+                            dark_shadow_cond_row_tupled' ((v2,v3),v5))
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_cond_row_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1. dark_shadow_cond_row x x1 = dark_shadow_cond_row_tupled (x,x1)
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_condition_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- dark_shadow_condition_tupled =
+   WFREC
+     (@R.
+        WF R /\ !L c lowers uppers. R (uppers,lowers) ((c,L)::uppers,lowers))
+     (\dark_shadow_condition_tupled' a.
+        case a of
+           (v,v1) ->
+             case v of
+                [] -> T
+             || v2::v3 ->
+                  case v2 of
+                     (v4,v5) ->
+                       dark_shadow_cond_row (v4,v5) v1 /\
+                       dark_shadow_condition_tupled' (v3,v1))
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_condition_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1. dark_shadow_condition x x1 = dark_shadow_condition_tupled (x,x1)
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_row_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- dark_shadow_row_tupled =
+   WFREC (@R'. WF R' /\ !R d rs L c. R' (c,L,rs) (c,L,(d,R)::rs))
+     (\dark_shadow_row_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v3 of
+                     [] -> T
+                  || v4::v5 ->
+                       case v4 of
+                          (v6,v7) ->
+                            $& v6 * v2 - $& v * v7 >=
+                            ($& v - 1) * ($& v6 - 1) /\
+                            dark_shadow_row_tupled' (v,v2,v5))
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_row_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2. dark_shadow_row x x1 x2 = dark_shadow_row_tupled (x,x1,x2)
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- dark_shadow_tupled =
+   WFREC
+     (@R.
+        WF R /\ !L c lowers uppers. R (uppers,lowers) ((c,L)::uppers,lowers))
+     (\dark_shadow_tupled' a.
+        case a of
+           (v,v1) ->
+             case v of
+                [] -> T
+             || v2::v3 ->
+                  case v2 of
+                     (v4,v5) ->
+                       dark_shadow_row v4 v5 v1 /\
+                       dark_shadow_tupled' (v3,v1))
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1. dark_shadow x x1 = dark_shadow_tupled (x,x1)
+</PRE>
+
+<DT><STRONG><font color="black">nightmare_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- nightmare_tupled =
+   WFREC
+     (@R'.
+        WF R' /\
+        !R d rs lowers uppers c x.
+          R' (x,c,uppers,lowers,rs) (x,c,uppers,lowers,(d,R)::rs))
+     (\nightmare_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v3 of
+                     (v4,v5) ->
+                       case v5 of
+                          (v6,v7) ->
+                            case v7 of
+                               [] -> F
+                            || v8::v9 ->
+                                 case v8 of
+                                    (v10,v11) ->
+                                      (?i.
+                                         (0 <= i /\
+                                          i <=
+                                          ($& v2 * $& v10 - $& v2 - $& v10) /
+                                          $& v2) /\ ($& v10 * v = v11 + i) /\
+                                         evalupper v v4 /\ evallower v v6) \/
+                                      nightmare_tupled' (v,v2,v4,v6,v9))
+</PRE>
+
+<DT><STRONG><font color="black">nightmare_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2 x3 x4. nightmare x x1 x2 x3 x4 = nightmare_tupled (x,x1,x2,x3,x4)
+</PRE>
+
+<DT><STRONG><font color="black">calc_nightmare_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- calc_nightmare_tupled =
+   WFREC (@R'. WF R' /\ !R d rs c x. R' (x,c,rs) (x,c,(d,R)::rs))
+     (\calc_nightmare_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v3 of
+                     [] -> F
+                  || v4::v5 ->
+                       case v4 of
+                          (v6,v7) ->
+                            (?i.
+                               (0 <= i /\
+                                i <=
+                                ($& v2 * $& v6 - $& v2 - $& v6) / $& v2) /\
+                               ($& v6 * v = v7 + i)) \/
+                            calc_nightmare_tupled' (v,v2,v5))
+</PRE>
+
+<DT><STRONG><font color="black">calc_nightmare_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2. calc_nightmare x x1 x2 = calc_nightmare_tupled (x,x1,x2)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">MAP2_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!pad f. P pad f [] []) /\
+     (!pad f y ys. P pad f [] ys ==> P pad f [] (y::ys)) /\
+     (!pad f x xs. P pad f xs [] ==> P pad f (x::xs) []) /\
+     (!pad f x xs y ys. P pad f xs ys ==> P pad f (x::xs) (y::ys)) ==>
+     !v v1 v2 v3. P v v1 v2 v3
+</PRE>
+
+<DT><STRONG><font color="black">MAP2_def</font></STRONG>
+<DD>
+<PRE>
+|- (MAP2 pad f [] [] = []) /\
+   (MAP2 pad f [] (y::ys) = f pad y::MAP2 pad f [] ys) /\
+   (MAP2 pad f (x::xs) [] = f x pad::MAP2 pad f xs []) /\
+   (MAP2 pad f (x::xs) (y::ys) = f x y::MAP2 pad f xs ys)
+</PRE>
+
+<DT><STRONG><font color="black">MAP2_zero_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !xs. (MAP2 0 $+ [] xs = xs) /\ (MAP2 0 $+ xs [] = xs)
+</PRE>
+
+<DT><STRONG><font color="black">sumc_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!v3 v4. P (v3::v4) []) /\ P [] [] /\ (!v7 v8. P [] (v7::v8)) /\
+     (!c cs v vs. P cs vs ==> P (c::cs) (v::vs)) ==>
+     !v v1. P v v1
+</PRE>
+
+<DT><STRONG><font color="black">sumc_def</font></STRONG>
+<DD>
+<PRE>
+|- (sumc (v3::v4) [] = 0) /\ (sumc [] [] = 0) /\ (sumc [] (v7::v8) = 0) /\
+   (sumc (c::cs) (v::vs) = c * v + sumc cs vs)
+</PRE>
+
+<DT><STRONG><font color="black">sumc_thm</font></STRONG>
+<DD>
+<PRE>
+|- !cs vs c v.
+     (sumc [] vs = 0) /\ (sumc cs [] = 0) /\
+     (sumc (c::cs) (v::vs) = c * v + sumc cs vs)
+</PRE>
+
+<DT><STRONG><font color="black">sumc_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !cs vs ds. sumc cs vs + sumc ds vs = sumc (MAP2 0 $+ cs ds) vs
+</PRE>
+
+<DT><STRONG><font color="black">sumc_MULT</font></STRONG>
+<DD>
+<PRE>
+|- !cs vs f. f * sumc cs vs = sumc (MAP (\x. f * x) cs) vs
+</PRE>
+
+<DT><STRONG><font color="black">sumc_singleton</font></STRONG>
+<DD>
+<PRE>
+|- !f c. sumc (MAP f [c]) [1] = f c
+</PRE>
+
+<DT><STRONG><font color="black">sumc_nonsingle</font></STRONG>
+<DD>
+<PRE>
+|- !f cs c v vs. sumc (MAP f (c::cs)) (v::vs) = f c * v + sumc (MAP f cs) vs
+</PRE>
+
+<DT><STRONG><font color="black">equality_removal</font></STRONG>
+<DD>
+<PRE>
+|- !c x cs vs.
+     0 < c ==>
+     ((0 = c * x + sumc cs vs) =
+      ?s.
+        (x = ~(c + 1) * s + sumc (MAP (\x. modhat x (c + 1)) cs) vs) /\
+        (0 = c * x + sumc cs vs))
+</PRE>
+
+<DT><STRONG><font color="black">evalupper_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!x. P x []) /\ (!x c y cs. P x cs ==> P x ((c,y)::cs)) ==> !v v1. P v v1
+</PRE>
+
+<DT><STRONG><font color="black">evalupper_def</font></STRONG>
+<DD>
+<PRE>
+|- (evalupper x [] = T) /\
+   (evalupper x ((c,y)::cs) = $& c * x <= y /\ evalupper x cs)
+</PRE>
+
+<DT><STRONG><font color="black">evallower_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!x. P x []) /\ (!x c y cs. P x cs ==> P x ((c,y)::cs)) ==> !v v1. P v v1
+</PRE>
+
+<DT><STRONG><font color="black">evallower_def</font></STRONG>
+<DD>
+<PRE>
+|- (evallower x [] = T) /\
+   (evallower x ((c,y)::cs) = y <= $& c * x /\ evallower x cs)
+</PRE>
+
+<DT><STRONG><font color="black">smaller_satisfies_uppers</font></STRONG>
+<DD>
+<PRE>
+|- !uppers x y. evalupper x uppers /\ y < x ==> evalupper y uppers
+</PRE>
+
+<DT><STRONG><font color="black">bigger_satisfies_lowers</font></STRONG>
+<DD>
+<PRE>
+|- !lowers x y. evallower x lowers /\ x < y ==> evallower y lowers
+</PRE>
+
+<DT><STRONG><font color="black">onlylowers_satisfiable</font></STRONG>
+<DD>
+<PRE>
+|- !lowers. ALL_EL fst_nzero lowers ==> ?x. evallower x lowers
+</PRE>
+
+<DT><STRONG><font color="black">onlyuppers_satisfiable</font></STRONG>
+<DD>
+<PRE>
+|- !uppers. ALL_EL fst_nzero uppers ==> ?x. evalupper x uppers
+</PRE>
+
+<DT><STRONG><font color="black">rshadow_row_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!upperc uppery. P (upperc,uppery) []) /\
+     (!upperc uppery lowerc lowery rs.
+        P (upperc,uppery) rs ==> P (upperc,uppery) ((lowerc,lowery)::rs)) ==>
+     !v v1. P v v1
+</PRE>
+
+<DT><STRONG><font color="black">rshadow_row_def</font></STRONG>
+<DD>
+<PRE>
+|- (rshadow_row (upperc,uppery) [] = T) /\
+   (rshadow_row (upperc,uppery) ((lowerc,lowery)::rs) =
+    $& upperc * lowery <= $& lowerc * uppery /\
+    rshadow_row (upperc,uppery) rs)
+</PRE>
+
+<DT><STRONG><font color="black">singleton_real_shadow</font></STRONG>
+<DD>
+<PRE>
+|- !c L x.
+     $& c * x <= L /\ 0 < c ==>
+     !lowers.
+       ALL_EL fst_nzero lowers /\ evallower x lowers ==>
+       rshadow_row (c,L) lowers
+</PRE>
+
+<DT><STRONG><font color="black">real_shadow_revimp_uppers1</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers L x.
+     rshadow_row (1,L) lowers /\ evallower x lowers /\ evalupper x uppers /\
+     ALL_EL fst_nzero lowers /\ ALL_EL fst1 uppers ==>
+     ?x. x <= L /\ evalupper x uppers /\ evallower x lowers
+</PRE>
+
+<DT><STRONG><font color="black">real_shadow_revimp_lowers1</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers c L x.
+     0 < c /\ rshadow_row (c,L) lowers /\ evalupper x uppers /\
+     evallower x lowers /\ ALL_EL fst_nzero uppers /\ ALL_EL fst1 lowers ==>
+     ?x. $& c * x <= L /\ evalupper x uppers /\ evallower x lowers
+</PRE>
+
+<DT><STRONG><font color="black">real_shadow_always_implied</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers x.
+     evalupper x uppers /\ evallower x lowers /\ ALL_EL fst_nzero uppers /\
+     ALL_EL fst_nzero lowers ==>
+     real_shadow uppers lowers
+</PRE>
+
+<DT><STRONG><font color="black">exact_shadow_case</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers.
+     ALL_EL fst_nzero uppers /\ ALL_EL fst_nzero lowers ==>
+     ALL_EL fst1 uppers \/ ALL_EL fst1 lowers ==>
+     ((?x. evalupper x uppers /\ evallower x lowers) =
+      real_shadow uppers lowers)
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_cond_row_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!c L. P (c,L) []) /\ (!c L d R t. P (c,L) t ==> P (c,L) ((d,R)::t)) ==>
+     !v v1. P v v1
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_cond_row_def</font></STRONG>
+<DD>
+<PRE>
+|- (dark_shadow_cond_row (c,L) [] = T) /\
+   (dark_shadow_cond_row (c,L) ((d,R)::t) =
+    ~(?i.
+        $& c * $& d * i < $& c * R /\ $& c * R <= $& d * L /\
+        $& d * L < $& c * $& d * (i + 1)) /\ dark_shadow_cond_row (c,L) t)
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_condition_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!lowers. P [] lowers) /\
+     (!c L uppers lowers. P uppers lowers ==> P ((c,L)::uppers) lowers) ==>
+     !v v1. P v v1
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_condition_def</font></STRONG>
+<DD>
+<PRE>
+|- (dark_shadow_condition [] lowers = T) /\
+   (dark_shadow_condition ((c,L)::uppers) lowers =
+    dark_shadow_cond_row (c,L) lowers /\ dark_shadow_condition uppers lowers)
+</PRE>
+
+<DT><STRONG><font color="black">basic_shadow_equivalence</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers.
+     ALL_EL fst_nzero uppers /\ ALL_EL fst_nzero lowers ==>
+     ((?x. evalupper x uppers /\ evallower x lowers) =
+      real_shadow uppers lowers /\ dark_shadow_condition uppers lowers)
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_row_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!c L. P c L []) /\ (!c L d R rs. P c L rs ==> P c L ((d,R)::rs)) ==>
+     !v v1 v2. P v v1 v2
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_row_def</font></STRONG>
+<DD>
+<PRE>
+|- (dark_shadow_row c L [] = T) /\
+   (dark_shadow_row c L ((d,R)::rs) =
+    $& d * L - $& c * R >= ($& c - 1) * ($& d - 1) /\ dark_shadow_row c L rs)
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!lowers. P [] lowers) /\
+     (!c L uppers lowers. P uppers lowers ==> P ((c,L)::uppers) lowers) ==>
+     !v v1. P v v1
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_def</font></STRONG>
+<DD>
+<PRE>
+|- (dark_shadow [] lowers = T) /\
+   (dark_shadow ((c,L)::uppers) lowers =
+    dark_shadow_row c L lowers /\ dark_shadow uppers lowers)
+</PRE>
+
+<DT><STRONG><font color="black">nightmare_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!x c uppers lowers. P x c uppers lowers []) /\
+     (!x c uppers lowers d R rs.
+        P x c uppers lowers rs ==> P x c uppers lowers ((d,R)::rs)) ==>
+     !v v1 v2 v3 v4. P v v1 v2 v3 v4
+</PRE>
+
+<DT><STRONG><font color="black">nightmare_def</font></STRONG>
+<DD>
+<PRE>
+|- (nightmare x c uppers lowers [] = F) /\
+   (nightmare x c uppers lowers ((d,R)::rs) =
+    (?i.
+       (0 <= i /\ i <= ($& c * $& d - $& c - $& d) / $& c) /\
+       ($& d * x = R + i) /\ evalupper x uppers /\ evallower x lowers) \/
+    nightmare x c uppers lowers rs)
+</PRE>
+
+<DT><STRONG><font color="black">nightmare_implies_LHS</font></STRONG>
+<DD>
+<PRE>
+|- !rs x uppers lowers c.
+     nightmare x c uppers lowers rs ==>
+     evalupper x uppers /\ evallower x lowers
+</PRE>
+
+<DT><STRONG><font color="black">dark_shadow_FORALL</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers.
+     dark_shadow uppers lowers =
+     !c d L R.
+       IS_EL (c,L) uppers /\ IS_EL (d,R) lowers ==>
+       $& d * L - $& c * R >= ($& c - 1) * ($& d - 1)
+</PRE>
+
+<DT><STRONG><font color="black">real_shadow_FORALL</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers.
+     real_shadow uppers lowers =
+     !c d L R.
+       IS_EL (c,L) uppers /\ IS_EL (d,R) lowers ==> $& c * R <= $& d * L
+</PRE>
+
+<DT><STRONG><font color="black">evalupper_FORALL</font></STRONG>
+<DD>
+<PRE>
+|- !uppers x. evalupper x uppers = !c L. IS_EL (c,L) uppers ==> $& c * x <= L
+</PRE>
+
+<DT><STRONG><font color="black">evallower_FORALL</font></STRONG>
+<DD>
+<PRE>
+|- !lowers x. evallower x lowers = !d R. IS_EL (d,R) lowers ==> R <= $& d * x
+</PRE>
+
+<DT><STRONG><font color="black">nightmare_EXISTS</font></STRONG>
+<DD>
+<PRE>
+|- !rs x c uppers lowers.
+     nightmare x c uppers lowers rs =
+     ?i d R.
+       0 <= i /\ i <= ($& d * $& c - $& c - $& d) / $& c /\ IS_EL (d,R) rs /\
+       evalupper x uppers /\ evallower x lowers /\ ($& d * x = R + i)
+</PRE>
+
+<DT><STRONG><font color="black">final_equivalence</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers m.
+     ALL_EL fst_nzero uppers /\ ALL_EL fst_nzero lowers /\
+     ALL_EL (\p. FST p <= m) uppers ==>
+     ((?x. evalupper x uppers /\ evallower x lowers) =
+      real_shadow uppers lowers /\
+      (dark_shadow uppers lowers \/ ?x. nightmare x m uppers lowers lowers))
+</PRE>
+
+<DT><STRONG><font color="black">darkrow_implies_realrow</font></STRONG>
+<DD>
+<PRE>
+|- !lowers c L.
+     0 < c /\ ALL_EL fst_nzero lowers /\ dark_shadow_row c L lowers ==>
+     rshadow_row (c,L) lowers
+</PRE>
+
+<DT><STRONG><font color="black">dark_implies_real</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers.
+     ALL_EL fst_nzero uppers /\ ALL_EL fst_nzero lowers /\
+     dark_shadow uppers lowers ==>
+     real_shadow uppers lowers
+</PRE>
+
+<DT><STRONG><font color="black">alternative_equivalence</font></STRONG>
+<DD>
+<PRE>
+|- !uppers lowers m.
+     ALL_EL fst_nzero uppers /\ ALL_EL fst_nzero lowers /\
+     ALL_EL (\p. FST p <= m) uppers ==>
+     ((?x. evalupper x uppers /\ evallower x lowers) =
+      dark_shadow uppers lowers \/ ?x. nightmare x m uppers lowers lowers)
+</PRE>
+
+<DT><STRONG><font color="black">eval_base</font></STRONG>
+<DD>
+<PRE>
+|- p = ((evalupper x [] /\ evallower x []) /\ T) /\ p
+</PRE>
+
+<DT><STRONG><font color="black">eval_step_upper1</font></STRONG>
+<DD>
+<PRE>
+|- ((evalupper x ups /\ evallower x lows) /\ ex) /\ $& c * x <= r =
+   (evalupper x ((c,r)::ups) /\ evallower x lows) /\ ex
+</PRE>
+
+<DT><STRONG><font color="black">eval_step_upper2</font></STRONG>
+<DD>
+<PRE>
+|- ((evalupper x ups /\ evallower x lows) /\ ex) /\ $& c * x <= r /\ p =
+   ((evalupper x ((c,r)::ups) /\ evallower x lows) /\ ex) /\ p
+</PRE>
+
+<DT><STRONG><font color="black">eval_step_lower1</font></STRONG>
+<DD>
+<PRE>
+|- ((evalupper x ups /\ evallower x lows) /\ ex) /\ r <= $& c * x =
+   (evalupper x ups /\ evallower x ((c,r)::lows)) /\ ex
+</PRE>
+
+<DT><STRONG><font color="black">eval_step_lower2</font></STRONG>
+<DD>
+<PRE>
+|- ((evalupper x ups /\ evallower x lows) /\ ex) /\ r <= $& c * x /\ p =
+   ((evalupper x ups /\ evallower x ((c,r)::lows)) /\ ex) /\ p
+</PRE>
+
+<DT><STRONG><font color="black">eval_step_extra1</font></STRONG>
+<DD>
+<PRE>
+|- ((evalupper x ups /\ evallower x lows) /\ T) /\ ex' =
+   (evalupper x ups /\ evallower x lows) /\ ex'
+</PRE>
+
+<DT><STRONG><font color="black">eval_step_extra2</font></STRONG>
+<DD>
+<PRE>
+|- ((evalupper x ups /\ evallower x lows) /\ ex) /\ ex' =
+   (evalupper x ups /\ evallower x lows) /\ ex /\ ex'
+</PRE>
+
+<DT><STRONG><font color="black">eval_step_extra3</font></STRONG>
+<DD>
+<PRE>
+|- ((evalupper x ups /\ evallower x lows) /\ T) /\ ex' /\ p =
+   ((evalupper x ups /\ evallower x lows) /\ ex') /\ p
+</PRE>
+
+<DT><STRONG><font color="black">eval_step_extra4</font></STRONG>
+<DD>
+<PRE>
+|- ((evalupper x ups /\ evallower x lows) /\ ex) /\ ex' /\ p =
+   ((evalupper x ups /\ evallower x lows) /\ ex /\ ex') /\ p
+</PRE>
+
+<DT><STRONG><font color="black">calc_nightmare_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!x c. P x c []) /\ (!x c d R rs. P x c rs ==> P x c ((d,R)::rs)) ==>
+     !v v1 v2. P v v1 v2
+</PRE>
+
+<DT><STRONG><font color="black">calc_nightmare_def</font></STRONG>
+<DD>
+<PRE>
+|- (calc_nightmare x c [] = F) /\
+   (calc_nightmare x c ((d,R)::rs) =
+    (?i.
+       (0 <= i /\ i <= ($& c * $& d - $& c - $& d) / $& c) /\
+       ($& d * x = R + i)) \/ calc_nightmare x c rs)
+</PRE>
+
+<DT><STRONG><font color="black">calculational_nightmare</font></STRONG>
+<DD>
+<PRE>
+|- !rs.
+     nightmare x c uppers lowers rs =
+     calc_nightmare x c rs /\ evalupper x uppers /\ evallower x lowers
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

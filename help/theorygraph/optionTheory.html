@@ -1,0 +1,229 @@
+<HTML>
+<HEAD><TITLE>Theory: option</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "option"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "sumTheory.html"><STRONG><font color="black">sum</font></STRONG></A>
+    <A HREF = "oneTheory.html"><STRONG><font color="black">one</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">option</font></STRONG>
+                                          <td>
+                                          1
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">option_case</font></STRONG>
+                                         <td>
+                                         :'b -> ('a -> 'b) -> 'a option -> 'b
+    <tr><td> <STRONG><font color="black">NONE</font></STRONG> <td> :'a option
+    <tr><td>
+        <STRONG><font color="black">SOME</font></STRONG>
+        <td>
+        :'a -> 'a option
+    <tr><td>
+        <STRONG><font color="black">IS_NONE</font></STRONG>
+        <td>
+        :'a option -> bool
+    <tr><td>
+        <STRONG><font color="black">option_ABS</font></STRONG>
+        <td>
+        :'a + one -> 'a option
+    <tr><td>
+        <STRONG><font color="black">IS_SOME</font></STRONG>
+        <td>
+        :'a option -> bool
+    <tr><td>
+        <STRONG><font color="black">option_REP</font></STRONG>
+        <td>
+        :'a option -> 'a + one
+    <tr><td>
+        <STRONG><font color="black">THE</font></STRONG>
+        <td>
+        :'a option -> 'a
+    <tr><td>
+        <STRONG><font color="black">OPTION_JOIN</font></STRONG>
+        <td>
+        :'a option option -> 'a option
+    <tr><td>
+        <STRONG><font color="black">OPTION_MAP</font></STRONG>
+        <td>
+        :('a -> 'b) -> 'a option -> 'b option
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">option_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep. TYPE_DEFINITION (\x. T) rep
+</PRE>
+
+<DT><STRONG><font color="black">option_REP_ABS_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!a. option_ABS (option_REP a) = a) /\
+   !r. (\x. T) r = (option_REP (option_ABS r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">SOME_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !x. SOME x = option_ABS (INL x)
+</PRE>
+
+<DT><STRONG><font color="black">NONE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- NONE = option_ABS (INR ())
+</PRE>
+
+<DT><STRONG><font color="black">option_case_def</font></STRONG>
+<DD>
+<PRE>
+|- (!u f. case u f NONE = u) /\ !u f x. case u f (SOME x) = f x
+</PRE>
+
+<DT><STRONG><font color="black">OPTION_MAP_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!f x. OPTION_MAP f (SOME x) = SOME (f x)) /\ !f. OPTION_MAP f NONE = NONE
+</PRE>
+
+<DT><STRONG><font color="black">IS_SOME_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!x. IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F)
+</PRE>
+
+<DT><STRONG><font color="black">IS_NONE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!x. IS_NONE (SOME x) = F) /\ (IS_NONE NONE = T)
+</PRE>
+
+<DT><STRONG><font color="black">THE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !x. THE (SOME x) = x
+</PRE>
+
+<DT><STRONG><font color="black">OPTION_JOIN_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (OPTION_JOIN NONE = NONE) /\ !x. OPTION_JOIN (SOME x) = x
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">option_Axiom</font></STRONG>
+<DD>
+<PRE>
+|- !e f. ?fn. (!x. fn (SOME x) = f x) /\ (fn NONE = e)
+</PRE>
+
+<DT><STRONG><font color="black">option_induction</font></STRONG>
+<DD>
+<PRE>
+|- !P. P NONE /\ (!a. P (SOME a)) ==> !x. P x
+</PRE>
+
+<DT><STRONG><font color="black">SOME_11</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (SOME x = SOME y) = (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_NONE_SOME</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(NONE = SOME x)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_SOME_NONE</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(SOME x = NONE)
+</PRE>
+
+<DT><STRONG><font color="black">option_nchotomy</font></STRONG>
+<DD>
+<PRE>
+|- !opt. (opt = NONE) \/ ?x. opt = SOME x
+</PRE>
+
+<DT><STRONG><font color="black">option_CLAUSES</font></STRONG>
+<DD>
+<PRE>
+|- (!x y. (SOME x = SOME y) = (x = y)) /\ (!x. THE (SOME x) = x) /\
+   (!x. ~(NONE = SOME x)) /\ (!x. ~(SOME x = NONE)) /\
+   (!x. IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F) /\
+   (!x. IS_NONE x = (x = NONE)) /\ (!x. ~IS_SOME x = (x = NONE)) /\
+   (!x. IS_SOME x ==> (SOME (THE x) = x)) /\ (!x. case NONE SOME x = x) /\
+   (!x. case x SOME x = x) /\ (!x. IS_NONE x ==> (case e f x = e)) /\
+   (!x. IS_SOME x ==> (case e f x = f (THE x))) /\
+   (!x. IS_SOME x ==> (case e SOME x = x)) /\ (!u f. case u f NONE = u) /\
+   (!u f x. case u f (SOME x) = f x) /\
+   (!f x. OPTION_MAP f (SOME x) = SOME (f x)) /\
+   (!f. OPTION_MAP f NONE = NONE) /\ (OPTION_JOIN NONE = NONE) /\
+   !x. OPTION_JOIN (SOME x) = x
+</PRE>
+
+<DT><STRONG><font color="black">option_case_compute</font></STRONG>
+<DD>
+<PRE>
+|- case e f x = (if IS_SOME x then f (THE x) else e)
+</PRE>
+
+<DT><STRONG><font color="black">OPTION_MAP_EQ_SOME</font></STRONG>
+<DD>
+<PRE>
+|- !f x y. (OPTION_MAP f x = SOME y) = ?z. (x = SOME z) /\ (y = f z)
+</PRE>
+
+<DT><STRONG><font color="black">OPTION_MAP_EQ_NONE</font></STRONG>
+<DD>
+<PRE>
+|- !f x. (OPTION_MAP f x = NONE) = (x = NONE)
+</PRE>
+
+<DT><STRONG><font color="black">OPTION_JOIN_EQ_SOME</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (OPTION_JOIN x = SOME y) = (x = SOME (SOME y))
+</PRE>
+
+<DT><STRONG><font color="black">option_case_cong</font></STRONG>
+<DD>
+<PRE>
+|- !M M' u f.
+     (M = M') /\ ((M' = NONE) ==> (u = u')) /\
+     (!x. (M' = SOME x) ==> (f x = f' x)) ==>
+     (case u f M = case u' f' M')
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

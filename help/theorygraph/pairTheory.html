@@ -1,0 +1,349 @@
+<HTML>
+<HEAD><TITLE>Theory: pair</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "pair"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "relationTheory.html"><STRONG><font color="black">relation</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">prod</font></STRONG>
+                                          <td>
+                                          2
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">,</font></STRONG>
+                                         <td>
+                                         :'a -> 'b -> 'a # 'b
+    <tr><td>
+        <STRONG><font color="black">##</font></STRONG>
+        <td>
+        :('a -> 'c) -> ('b -> 'd) -> 'a # 'b -> 'c # 'd
+    <tr><td>
+        <STRONG><font color="black">CURRY</font></STRONG>
+        <td>
+        :('a # 'b -> 'c) -> 'a -> 'b -> 'c
+    <tr><td>
+        <STRONG><font color="black">UNCURRY</font></STRONG>
+        <td>
+        :('a -> 'b -> 'c) -> 'a # 'b -> 'c
+    <tr><td>
+        <STRONG><font color="black">REP_prod</font></STRONG>
+        <td>
+        :'a # 'b -> 'a -> 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">ABS_prod</font></STRONG>
+        <td>
+        :('a -> 'b -> bool) -> 'a # 'b
+    <tr><td>
+        <STRONG><font color="black">IS_PAIR</font></STRONG>
+        <td>
+        :('a -> 'b -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">MK_PAIR</font></STRONG>
+        <td>
+        :'a -> 'b -> 'a -> 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">FST</font></STRONG>
+        <td>
+        :'a # 'b -> 'a
+    <tr><td>
+        <STRONG><font color="black">LEX</font></STRONG>
+        <td>
+        :('a -> 'a -> bool) ->
+         ('b -> 'b -> bool) -> 'a # 'b -> 'a # 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">pair_case</font></STRONG>
+        <td>
+        :('a -> 'b -> 'c) -> 'a # 'b -> 'c
+    <tr><td>
+        <STRONG><font color="black">SND</font></STRONG>
+        <td>
+        :'a # 'b -> 'b
+    <tr><td>
+        <STRONG><font color="black">RPROD</font></STRONG>
+        <td>
+        :('a -> 'a -> bool) ->
+         ('b -> 'b -> bool) -> 'a # 'b -> 'a # 'b -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">MK_PAIR_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !x y. MK_PAIR x y = (\a b. (a = x) /\ (b = y))
+</PRE>
+
+<DT><STRONG><font color="black">IS_PAIR_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !P. IS_PAIR P = ?x y. P = MK_PAIR x y
+</PRE>
+
+<DT><STRONG><font color="black">prod_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep. TYPE_DEFINITION IS_PAIR rep
+</PRE>
+
+<DT><STRONG><font color="black">ABS_REP_prod</font></STRONG>
+<DD>
+<PRE>
+|- (!a. ABS_prod (REP_prod a) = a) /\
+   !r. IS_PAIR r = (REP_prod (ABS_prod r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">COMMA_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x,y) = ABS_prod (MK_PAIR x y)
+</PRE>
+
+<DT><STRONG><font color="black">PAIR</font></STRONG>
+<DD>
+<PRE>
+|- !x. (FST x,SND x) = x
+</PRE>
+
+<DT><STRONG><font color="black">CURRY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f x y. CURRY f x y = f (x,y)
+</PRE>
+
+<DT><STRONG><font color="black">UNCURRY</font></STRONG>
+<DD>
+<PRE>
+|- !f v. UNCURRY f v = f (FST v) (SND v)
+</PRE>
+
+<DT><STRONG><font color="black">PAIR_MAP</font></STRONG>
+<DD>
+<PRE>
+|- !f g p. (f ## g) p = (f (FST p),g (SND p))
+</PRE>
+
+<DT><STRONG><font color="black">pair_case_def</font></STRONG>
+<DD>
+<PRE>
+|- case = UNCURRY
+</PRE>
+
+<DT><STRONG><font color="black">LEX_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !R1 R2. R1 LEX R2 = (\(s,t) (u,v). R1 s u \/ (s = u) /\ R2 t v)
+</PRE>
+
+<DT><STRONG><font color="black">RPROD_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !R1 R2. RPROD R1 R2 = (\(s,t) (u,v). R1 s u /\ R2 t v)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">PAIR_EQ</font></STRONG>
+<DD>
+<PRE>
+|- ((x,y) = (a,b)) = (x = a) /\ (y = b)
+</PRE>
+
+<DT><STRONG><font color="black">CLOSED_PAIR_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y a b. ((x,y) = (a,b)) = (x = a) /\ (y = b)
+</PRE>
+
+<DT><STRONG><font color="black">ABS_PAIR_THM</font></STRONG>
+<DD>
+<PRE>
+|- !x. ?q r. x = (q,r)
+</PRE>
+
+<DT><STRONG><font color="black">FST</font></STRONG>
+<DD>
+<PRE>
+|- !x y. FST (x,y) = x
+</PRE>
+
+<DT><STRONG><font color="black">SND</font></STRONG>
+<DD>
+<PRE>
+|- !x y. SND (x,y) = y
+</PRE>
+
+<DT><STRONG><font color="black">UNCURRY_VAR</font></STRONG>
+<DD>
+<PRE>
+|- !f v. UNCURRY f v = f (FST v) (SND v)
+</PRE>
+
+<DT><STRONG><font color="black">ELIM_UNCURRY</font></STRONG>
+<DD>
+<PRE>
+|- !f. UNCURRY f = (\x. f (FST x) (SND x))
+</PRE>
+
+<DT><STRONG><font color="black">UNCURRY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f x y. UNCURRY f (x,y) = f x y
+</PRE>
+
+<DT><STRONG><font color="black">CURRY_UNCURRY_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f. CURRY (UNCURRY f) = f
+</PRE>
+
+<DT><STRONG><font color="black">UNCURRY_CURRY_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f. UNCURRY (CURRY f) = f
+</PRE>
+
+<DT><STRONG><font color="black">CURRY_ONE_ONE_THM</font></STRONG>
+<DD>
+<PRE>
+|- (CURRY f = CURRY g) = (f = g)
+</PRE>
+
+<DT><STRONG><font color="black">UNCURRY_ONE_ONE_THM</font></STRONG>
+<DD>
+<PRE>
+|- (UNCURRY f = UNCURRY g) = (f = g)
+</PRE>
+
+<DT><STRONG><font color="black">pair_Axiom</font></STRONG>
+<DD>
+<PRE>
+|- !f. ?fn. !x y. fn (x,y) = f x y
+</PRE>
+
+<DT><STRONG><font color="black">UNCURRY_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !M M' f.
+     (M = M') /\ (!x y. (M' = (x,y)) ==> (f x y = f' x y)) ==>
+     (UNCURRY f M = UNCURRY f' M')
+</PRE>
+
+<DT><STRONG><font color="black">LAMBDA_PROD</font></STRONG>
+<DD>
+<PRE>
+|- !P. (\p. P p) = (\(p1,p2). P (p1,p2))
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_PROD</font></STRONG>
+<DD>
+<PRE>
+|- (?p. P p) = ?p_1 p_2. P (p_1,p_2)
+</PRE>
+
+<DT><STRONG><font color="black">FORALL_PROD</font></STRONG>
+<DD>
+<PRE>
+|- (!p. P p) = !p_1 p_2. P (p_1,p_2)
+</PRE>
+
+<DT><STRONG><font color="black">pair_induction</font></STRONG>
+<DD>
+<PRE>
+|- (!p_1 p_2. P (p_1,p_2)) ==> !p. P p
+</PRE>
+
+<DT><STRONG><font color="black">ELIM_PEXISTS</font></STRONG>
+<DD>
+<PRE>
+|- (?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2
+</PRE>
+
+<DT><STRONG><font color="black">ELIM_PFORALL</font></STRONG>
+<DD>
+<PRE>
+|- (!p. P (FST p) (SND p)) = !p1 p2. P p1 p2
+</PRE>
+
+<DT><STRONG><font color="black">PFORALL_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P. (!x y. P x y) = !(x,y). P x y
+</PRE>
+
+<DT><STRONG><font color="black">PEXISTS_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P. (?x y. P x y) = ?(x,y). P x y
+</PRE>
+
+<DT><STRONG><font color="black">PAIR_MAP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f g x y. (f ## g) (x,y) = (f x,g y)
+</PRE>
+
+<DT><STRONG><font color="black">LET2_RAND</font></STRONG>
+<DD>
+<PRE>
+|- !P M N. P (let (x,y) = M in N x y) = (let (x,y) = M in P (N x y))
+</PRE>
+
+<DT><STRONG><font color="black">LET2_RATOR</font></STRONG>
+<DD>
+<PRE>
+|- !M N b. (let (x,y) = M in N x y) b = (let (x,y) = M in N x y b)
+</PRE>
+
+<DT><STRONG><font color="black">pair_case_thm</font></STRONG>
+<DD>
+<PRE>
+|- case f (x,y) = f x y
+</PRE>
+
+<DT><STRONG><font color="black">pair_case_cong</font></STRONG>
+<DD>
+<PRE>
+|- !M M' f.
+     (M = M') /\ (!x y. (M' = (x,y)) ==> (f x y = f' x y)) ==>
+     (case f M = case f' M')
+</PRE>
+
+<DT><STRONG><font color="black">WF_LEX</font></STRONG>
+<DD>
+<PRE>
+|- !R Q. WF R /\ WF Q ==> WF (R LEX Q)
+</PRE>
+
+<DT><STRONG><font color="black">WF_RPROD</font></STRONG>
+<DD>
+<PRE>
+|- !R Q. WF R /\ WF Q ==> WF (RPROD R Q)
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,127 @@
+<HTML>
+<HEAD><TITLE>Theory: num</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "num"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "boolTheory.html"><STRONG><font color="black">bool</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">num</font></STRONG>
+                                          <td>
+                                          0
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">0</font></STRONG>
+                                         <td>
+                                         :num
+    <tr><td> <STRONG><font color="black">ZERO_REP</font></STRONG> <td> :ind
+    <tr><td>
+        <STRONG><font color="black">SUC_REP</font></STRONG>
+        <td>
+        :ind -> ind
+    <tr><td>
+        <STRONG><font color="black">REP_num</font></STRONG>
+        <td>
+        :num -> ind
+    <tr><td>
+        <STRONG><font color="black">ABS_num</font></STRONG>
+        <td>
+        :ind -> num
+    <tr><td> <STRONG><font color="black">SUC</font></STRONG> <td> :num -> num
+    <tr><td>
+        <STRONG><font color="black">IS_NUM_REP</font></STRONG>
+        <td>
+        :ind -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">SUC_REP_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ONE_ONE SUC_REP /\ ~ONTO SUC_REP
+</PRE>
+
+<DT><STRONG><font color="black">ZERO_REP_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !y. ~(ZERO_REP = SUC_REP y)
+</PRE>
+
+<DT><STRONG><font color="black">IS_NUM_REP</font></STRONG>
+<DD>
+<PRE>
+|- !m. IS_NUM_REP m = !P. P ZERO_REP /\ (!n. P n ==> P (SUC_REP n)) ==> P m
+</PRE>
+
+<DT><STRONG><font color="black">num_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep. TYPE_DEFINITION IS_NUM_REP rep
+</PRE>
+
+<DT><STRONG><font color="black">num_ISO_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!a. ABS_num (REP_num a) = a) /\
+   !r. IS_NUM_REP r = (REP_num (ABS_num r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">ZERO_DEF</font></STRONG>
+<DD>
+<PRE>
+|- 0 = ABS_num ZERO_REP
+</PRE>
+
+<DT><STRONG><font color="black">SUC_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !m. SUC m = ABS_num (SUC_REP (REP_num m))
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">NOT_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !n. ~(SUC n = 0)
+</PRE>
+
+<DT><STRONG><font color="black">INV_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !m n. (SUC m = SUC n) ==> (m = n)
+</PRE>
+
+<DT><STRONG><font color="black">INDUCTION</font></STRONG>
+<DD>
+<PRE>
+|- !P. P 0 /\ (!n. P n ==> P (SUC n)) ==> !n. P n
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

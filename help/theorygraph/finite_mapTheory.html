@@ -1,0 +1,695 @@
+<HTML>
+<HEAD><TITLE>Theory: finite_map</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "finite_map"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "pairTheory.html"><STRONG><font color="black">pair</font></STRONG></A>
+    <A HREF = "oneTheory.html"><STRONG><font color="black">one</font></STRONG></A>
+    <A HREF = "numeralTheory.html"><STRONG><font color="black">numeral</font></STRONG></A>
+    <A HREF = "sumTheory.html"><STRONG><font color="black">sum</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">fmap</font></STRONG>
+                                          <td>
+                                          2
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">FEMPTY</font></STRONG>
+                                         <td>
+                                         :'a |-> 'b
+    <tr><td>
+        <STRONG><font color="black">FUNION</font></STRONG>
+        <td>
+        :('a |-> 'b) -> ('a |-> 'b) -> ('a |-> 'b)
+    <tr><td>
+        <STRONG><font color="black">FUN_FMAP</font></STRONG>
+        <td>
+        :('a -> 'b) -> ('a -> bool) -> ('a |-> 'b)
+    <tr><td>
+        <STRONG><font color="black">f_o</font></STRONG>
+        <td>
+        :('b |-> 'c) -> ('a -> 'b) -> ('a |-> 'c)
+    <tr><td>
+        <STRONG><font color="black">FINITE_PRED</font></STRONG>
+        <td>
+        :('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">fmap_ABS</font></STRONG>
+        <td>
+        :('a -> 'b + one) -> ('a |-> 'b)
+    <tr><td>
+        <STRONG><font color="black">FUPDATE</font></STRONG>
+        <td>
+        :('a |-> 'b) -> 'a # 'b -> ('a |-> 'b)
+    <tr><td>
+        <STRONG><font color="black">o_f</font></STRONG>
+        <td>
+        :('b -> 'c) -> ('a |-> 'b) -> ('a |-> 'c)
+    <tr><td>
+        <STRONG><font color="black">rep</font></STRONG>
+        <td>
+        :('a |-> 'b) -> 'a -> 'b + one
+    <tr><td>
+        <STRONG><font color="black">FEVERY</font></STRONG>
+        <td>
+        :('a # 'b -> bool) -> ('a |-> 'b) -> bool
+    <tr><td>
+        <STRONG><font color="black">f_o_f</font></STRONG>
+        <td>
+        :('b |-> 'c) -> ('a |-> 'b) -> ('a |-> 'c)
+    <tr><td>
+        <STRONG><font color="black">FRANGE</font></STRONG>
+        <td>
+        :('a |-> 'b) -> 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">fmap_REP</font></STRONG>
+        <td>
+        :('a |-> 'b) -> 'a -> 'b + one
+    <tr><td>
+        <STRONG><font color="black">SUBMAP</font></STRONG>
+        <td>
+        :('a |-> 'b) -> ('a |-> 'b) -> bool
+    <tr><td>
+        <STRONG><font color="black">RRESTRICT</font></STRONG>
+        <td>
+        :('a |-> 'b) -> ('b -> bool) -> ('a |-> 'b)
+    <tr><td>
+        <STRONG><font color="black">DRESTRICT</font></STRONG>
+        <td>
+        :('a |-> 'b) -> ('a -> bool) -> ('a |-> 'b)
+    <tr><td>
+        <STRONG><font color="black">FDOMDEL</font></STRONG>
+        <td>
+        :('a -> bool) -> 'a -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">FAPPLY</font></STRONG>
+        <td>
+        :('a |-> 'b) -> 'a -> 'b
+    <tr><td>
+        <STRONG><font color="black">is_fmap</font></STRONG>
+        <td>
+        :('a -> 'b + one) -> bool
+    <tr><td>
+        <STRONG><font color="black">FLOOKUP</font></STRONG>
+        <td>
+        :('a |-> 'b) -> 'a -> 'b + one
+    <tr><td>
+        <STRONG><font color="black">FCARD</font></STRONG>
+        <td>
+        :('a |-> 'b) -> num
+    <tr><td>
+        <STRONG><font color="black">FDOM</font></STRONG>
+        <td>
+        :('a |-> 'b) -> 'a -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">is_fmap</font></STRONG>
+<DD>
+<PRE>
+|- is_fmap =
+   (\a0.
+      !is_fmap'.
+        (!a0.
+           (a0 = (\a. INR ())) \/
+           (?f a b.
+              (a0 = (\x. (if x = a then INL b else f x))) /\ is_fmap' f) ==>
+           is_fmap' a0) ==>
+        is_fmap' a0)
+</PRE>
+
+<DT><STRONG><font color="black">fmap_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep'. TYPE_DEFINITION is_fmap rep'
+</PRE>
+
+<DT><STRONG><font color="black">fmap_ISO_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!a. fmap_ABS (fmap_REP a) = a) /\
+   !r. is_fmap r = (fmap_REP (fmap_ABS r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">FUPDATE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f x y.
+     FUPDATE f (x,y) = fmap_ABS (\a. (if a = x then INL y else fmap_REP f a))
+</PRE>
+
+<DT><STRONG><font color="black">FEMPTY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- FEMPTY = fmap_ABS (\a. INR ())
+</PRE>
+
+<DT><STRONG><font color="black">FAPPLY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f x. FAPPLY f x = OUTL (fmap_REP f x)
+</PRE>
+
+<DT><STRONG><font color="black">FDOM_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f x. FDOM f x = ISL (fmap_REP f x)
+</PRE>
+
+<DT><STRONG><font color="black">FDOMDEL_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !d x a. FDOMDEL d x a = d a /\ ~(a = x)
+</PRE>
+
+<DT><STRONG><font color="black">FCARD_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (FCARD FEMPTY = 0) /\
+   !f x y.
+     FCARD (FUPDATE f (x,y)) = (if FDOM f x then FCARD f else SUC (FCARD f))
+</PRE>
+
+<DT><STRONG><font color="black">SUBMAP_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f g. f SUBMAP g = !x. FDOM f x ==> FDOM g x /\ (FAPPLY f x = FAPPLY g x)
+</PRE>
+
+<DT><STRONG><font color="black">DRESTRICT_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f r.
+     (!x. FDOM (DRESTRICT f r) x = FDOM f x /\ r x) /\
+     !x.
+       FAPPLY (DRESTRICT f r) x =
+       (if FDOM f x /\ r x then FAPPLY f x else FAPPLY FEMPTY x)
+</PRE>
+
+<DT><STRONG><font color="black">FUNION_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f g.
+     (!x. FDOM (FUNION f g) x = FDOM f x \/ FDOM g x) /\
+     !x. FAPPLY (FUNION f g) x = (if FDOM f x then FAPPLY f x else FAPPLY g x)
+</PRE>
+
+<DT><STRONG><font color="black">lookup_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f x. FLOOKUP f x = (if FDOM f x then INL (FAPPLY f x) else INR ())
+</PRE>
+
+<DT><STRONG><font color="black">FEVERY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !P f. FEVERY P f = !x. FDOM f x ==> P (x,FAPPLY f x)
+</PRE>
+
+<DT><STRONG><font color="black">rep</font></STRONG>
+<DD>
+<PRE>
+|- !f. rep f = (\x. (if FDOM f x then INL (FAPPLY f x) else INR ()))
+</PRE>
+
+<DT><STRONG><font color="black">f_o_f_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f g.
+     (!x. FDOM (f f_o_f g) x = FDOM g x /\ FDOM f (FAPPLY g x)) /\
+     !x. FDOM (f f_o_f g) x ==> (FAPPLY (f f_o_f g) x = FAPPLY f (FAPPLY g x))
+</PRE>
+
+<DT><STRONG><font color="black">o_f_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f g.
+     (!x. FDOM (f o_f g) x = FDOM g x) /\
+     !x. FDOM (f o_f g) x ==> (FAPPLY (f o_f g) x = f (FAPPLY g x))
+</PRE>
+
+<DT><STRONG><font color="black">FRANGE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f y. FRANGE f y = ?x. FDOM f x /\ (FAPPLY f x = y)
+</PRE>
+
+<DT><STRONG><font color="black">RRESTRICT_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f r.
+     (!x. FDOM (RRESTRICT f r) x = FDOM f x /\ r (FAPPLY f x)) /\
+     !x.
+       FAPPLY (RRESTRICT f r) x =
+       (if FDOM f x /\ r (FAPPLY f x) then FAPPLY f x else FAPPLY FEMPTY x)
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_PRED</font></STRONG>
+<DD>
+<PRE>
+|- FINITE_PRED =
+   (\a0.
+      !FINITE_PRED'.
+        (!a0.
+           (a0 = (\a. F)) \/
+           (?f a. (a0 = (\x. (x = a) \/ f x)) /\ FINITE_PRED' f) ==>
+           FINITE_PRED' a0) ==>
+        FINITE_PRED' a0)
+</PRE>
+
+<DT><STRONG><font color="black">FUN_FMAP_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f P.
+     FINITE_PRED P ==>
+     (!x. FDOM (FUN_FMAP f P) x = P x) /\
+     !x. P x ==> (FAPPLY (FUN_FMAP f P) x = f x)
+</PRE>
+
+<DT><STRONG><font color="black">f_o_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f g. f f_o g = f f_o_f FUN_FMAP g (\x. FDOM f (g x))
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">is_fmap_rules</font></STRONG>
+<DD>
+<PRE>
+|- is_fmap (\a. INR ()) /\
+   !f a b. is_fmap f ==> is_fmap (\x. (if x = a then INL b else f x))
+</PRE>
+
+<DT><STRONG><font color="black">is_fmap_ind</font></STRONG>
+<DD>
+<PRE>
+|- !is_fmap'.
+     is_fmap' (\a. INR ()) /\
+     (!f a b.
+        is_fmap' f ==> is_fmap' (\x. (if x = a then INL b else f x))) ==>
+     !a0. is_fmap a0 ==> is_fmap' a0
+</PRE>
+
+<DT><STRONG><font color="black">is_fmap_cases</font></STRONG>
+<DD>
+<PRE>
+|- !a0.
+     is_fmap a0 =
+     (a0 = (\a. INR ())) \/
+     ?f a b. (a0 = (\x. (if x = a then INL b else f x))) /\ is_fmap f
+</PRE>
+
+<DT><STRONG><font color="black">FAPPLY_FUPDATE</font></STRONG>
+<DD>
+<PRE>
+|- !f x y. FAPPLY (FUPDATE f (x,y)) x = y
+</PRE>
+
+<DT><STRONG><font color="black">NOT_EQ_FAPPLY</font></STRONG>
+<DD>
+<PRE>
+|- !f a x y. ~(a = x) ==> (FAPPLY (FUPDATE f (x,y)) a = FAPPLY f a)
+</PRE>
+
+<DT><STRONG><font color="black">FUPDATE_COMMUTES</font></STRONG>
+<DD>
+<PRE>
+|- !f a b c d.
+     ~(a = c) ==>
+     (FUPDATE (FUPDATE f (a,b)) (c,d) = FUPDATE (FUPDATE f (c,d)) (a,b))
+</PRE>
+
+<DT><STRONG><font color="black">FUPDATE_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !f a b c. FUPDATE (FUPDATE f (a,b)) (a,c) = FUPDATE f (a,c)
+</PRE>
+
+<DT><STRONG><font color="black">FDOM_FEMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !a. FDOM FEMPTY a = F
+</PRE>
+
+<DT><STRONG><font color="black">FDOM_FUPDATE</font></STRONG>
+<DD>
+<PRE>
+|- !f a b x. FDOM (FUPDATE f (a,b)) x = (x = a) \/ FDOM f x
+</PRE>
+
+<DT><STRONG><font color="black">FAPPLY_FUPDATE_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f a b x. FAPPLY (FUPDATE f (a,b)) x = (if x = a then b else FAPPLY f x)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_EQ_FEMPTY_FUPDATE</font></STRONG>
+<DD>
+<PRE>
+|- !f a b. ~(FEMPTY = FUPDATE f (a,b))
+</PRE>
+
+<DT><STRONG><font color="black">FDOM_EQ_FDOM_FUPDATE</font></STRONG>
+<DD>
+<PRE>
+|- !f x. FDOM f x ==> !y. FDOM (FUPDATE f (x,y)) = FDOM f
+</PRE>
+
+<DT><STRONG><font color="black">fmap_SIMPLE_INDUCT</font></STRONG>
+<DD>
+<PRE>
+|- !P. P FEMPTY /\ (!f. P f ==> !x y. P (FUPDATE f (x,y))) ==> !f. P f
+</PRE>
+
+<DT><STRONG><font color="black">FDOM_F_FEMPTY1</font></STRONG>
+<DD>
+<PRE>
+|- !f. (!a. ~FDOM f a) = (f = FEMPTY)
+</PRE>
+
+<DT><STRONG><font color="black">FCARD_FEMPTY</font></STRONG>
+<DD>
+<PRE>
+|- FCARD FEMPTY = 0
+</PRE>
+
+<DT><STRONG><font color="black">FCARD_FUPDATE</font></STRONG>
+<DD>
+<PRE>
+|- !f x y.
+     FCARD (FUPDATE f (x,y)) = (if FDOM f x then FCARD f else SUC (FCARD f))
+</PRE>
+
+<DT><STRONG><font color="black">FCARD_0_FEMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !f. (FCARD f = 0) = (f = FEMPTY)
+</PRE>
+
+<DT><STRONG><font color="black">fmap_INDUCT</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     P FEMPTY /\ (!f. P f ==> !x y. ~FDOM f x ==> P (FUPDATE f (x,y))) ==>
+     !f. P f
+</PRE>
+
+<DT><STRONG><font color="black">NOT_FDOM_FAPPLY_FEMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !f x. ~FDOM f x ==> (FAPPLY f x = FAPPLY FEMPTY x)
+</PRE>
+
+<DT><STRONG><font color="black">fmap_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !f g. (FDOM f = FDOM g) /\ (FAPPLY f = FAPPLY g) = (f = g)
+</PRE>
+
+<DT><STRONG><font color="black">fmap_EQ_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f g.
+     (FDOM f = FDOM g) /\ (!x. FDOM f x ==> (FAPPLY f x = FAPPLY g x)) =
+     (f = g)
+</PRE>
+
+<DT><STRONG><font color="black">SUBMAP_FEMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !f. FEMPTY SUBMAP f
+</PRE>
+
+<DT><STRONG><font color="black">SUBMAP_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !f. f SUBMAP f
+</PRE>
+
+<DT><STRONG><font color="black">SUBMAP_ANTISYM</font></STRONG>
+<DD>
+<PRE>
+|- !f g. f SUBMAP g /\ g SUBMAP f = (f = g)
+</PRE>
+
+<DT><STRONG><font color="black">DRESTRICT_FEMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !r. DRESTRICT FEMPTY r = FEMPTY
+</PRE>
+
+<DT><STRONG><font color="black">DRESTRICT_FUPDATE</font></STRONG>
+<DD>
+<PRE>
+|- !f r x y.
+     DRESTRICT (FUPDATE f (x,y)) r =
+     (if r x then FUPDATE (DRESTRICT f r) (x,y) else DRESTRICT f r)
+</PRE>
+
+<DT><STRONG><font color="black">STRONG_DRESTRICT_FUPDATE</font></STRONG>
+<DD>
+<PRE>
+|- !f r x y.
+     r x ==>
+     (DRESTRICT (FUPDATE f (x,y)) r =
+      FUPDATE (DRESTRICT f (\v. ~(v = x) /\ r v)) (x,y))
+</PRE>
+
+<DT><STRONG><font color="black">FDOM_DRESTRICT</font></STRONG>
+<DD>
+<PRE>
+|- !f r x. ~r x ==> ~FDOM (DRESTRICT f r) x
+</PRE>
+
+<DT><STRONG><font color="black">NOT_FDOM_DRESTRICT</font></STRONG>
+<DD>
+<PRE>
+|- !f x. ~FDOM f x ==> (DRESTRICT f (\a. ~(a = x)) = f)
+</PRE>
+
+<DT><STRONG><font color="black">DRESTRICT_SUBMAP</font></STRONG>
+<DD>
+<PRE>
+|- !f r. DRESTRICT f r SUBMAP f
+</PRE>
+
+<DT><STRONG><font color="black">DRESTRICT_DRESTRICT</font></STRONG>
+<DD>
+<PRE>
+|- !f P Q. DRESTRICT (DRESTRICT f P) Q = DRESTRICT f (\x. P x /\ Q x)
+</PRE>
+
+<DT><STRONG><font color="black">DRESTRICT_IS_FEMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !r. (!x. ~r x) ==> !f. DRESTRICT f r = FEMPTY
+</PRE>
+
+<DT><STRONG><font color="black">FUPDATE_DRESTRICT</font></STRONG>
+<DD>
+<PRE>
+|- !f x y. FUPDATE f (x,y) = FUPDATE (DRESTRICT f (\v. ~(v = x))) (x,y)
+</PRE>
+
+<DT><STRONG><font color="black">STRONG_DRESTRICT_FUPDATE_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f r x y.
+     DRESTRICT (FUPDATE f (x,y)) r =
+     (if r x then
+        FUPDATE (DRESTRICT f (\v. ~(v = x) /\ r v)) (x,y)
+      else
+        DRESTRICT f (\v. ~(v = x) /\ r v))
+</PRE>
+
+<DT><STRONG><font color="black">FUNION_FEMPTY_1</font></STRONG>
+<DD>
+<PRE>
+|- !g. FUNION FEMPTY g = g
+</PRE>
+
+<DT><STRONG><font color="black">FUNION_FEMPTY_2</font></STRONG>
+<DD>
+<PRE>
+|- !f. FUNION f FEMPTY = f
+</PRE>
+
+<DT><STRONG><font color="black">FUNION_FUPDATE_1</font></STRONG>
+<DD>
+<PRE>
+|- !f g x y. FUNION (FUPDATE f (x,y)) g = FUPDATE (FUNION f g) (x,y)
+</PRE>
+
+<DT><STRONG><font color="black">FUNION_FUPDATE_2</font></STRONG>
+<DD>
+<PRE>
+|- !f g x y.
+     FUNION f (FUPDATE g (x,y)) =
+     (if FDOM f x then FUNION f g else FUPDATE (FUNION f g) (x,y))
+</PRE>
+
+<DT><STRONG><font color="black">FDOM_FUNION</font></STRONG>
+<DD>
+<PRE>
+|- !f g x. FDOM (FUNION f g) x = FDOM f x \/ FDOM g x
+</PRE>
+
+<DT><STRONG><font color="black">DRESTRICT_FUNION</font></STRONG>
+<DD>
+<PRE>
+|- !f r q.
+     DRESTRICT f (\x. r x \/ q x) = FUNION (DRESTRICT f r) (DRESTRICT f q)
+</PRE>
+
+<DT><STRONG><font color="black">DRESTRICT_TRUE</font></STRONG>
+<DD>
+<PRE>
+|- !f. DRESTRICT f (\x. T) = f
+</PRE>
+
+<DT><STRONG><font color="black">FUPDATE_EXISTING</font></STRONG>
+<DD>
+<PRE>
+|- !f v t. FDOM f v /\ (FAPPLY f v = t) = (f = FUPDATE f (v,t))
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_FMAP</font></STRONG>
+<DD>
+<PRE>
+|- !f. ?g n. !x. FDOM f x = ?i. i < n /\ (g i = x)
+</PRE>
+
+<DT><STRONG><font color="black">f_o_f_FEMPTY_1</font></STRONG>
+<DD>
+<PRE>
+|- !f. FEMPTY f_o_f f = FEMPTY
+</PRE>
+
+<DT><STRONG><font color="black">f_o_f_FEMPTY_2</font></STRONG>
+<DD>
+<PRE>
+|- !f. f f_o_f FEMPTY = FEMPTY
+</PRE>
+
+<DT><STRONG><font color="black">o_f_FDOM</font></STRONG>
+<DD>
+<PRE>
+|- !f g x. FDOM g x = FDOM (f o_f g) x
+</PRE>
+
+<DT><STRONG><font color="black">o_f_APPLY</font></STRONG>
+<DD>
+<PRE>
+|- !f g x. FDOM g x ==> (FAPPLY (f o_f g) x = f (FAPPLY g x))
+</PRE>
+
+<DT><STRONG><font color="black">FRANGE_FEMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~FRANGE FEMPTY x
+</PRE>
+
+<DT><STRONG><font color="black">FRANGE_FUPDATE</font></STRONG>
+<DD>
+<PRE>
+|- !f x y b.
+     FRANGE (FUPDATE f (x,y)) b =
+     (y = b) \/ FRANGE (DRESTRICT f (\a. ~(a = x))) b
+</PRE>
+
+<DT><STRONG><font color="black">SUBMAP_FRANGE</font></STRONG>
+<DD>
+<PRE>
+|- !f g. f SUBMAP g ==> !x. FRANGE f x ==> FRANGE g x
+</PRE>
+
+<DT><STRONG><font color="black">RRESTRICT_FEMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !r. RRESTRICT FEMPTY r = FEMPTY
+</PRE>
+
+<DT><STRONG><font color="black">RRESTRICT_FUPDATE</font></STRONG>
+<DD>
+<PRE>
+|- !f r x y.
+     RRESTRICT (FUPDATE f (x,y)) r =
+     (if r y then
+        FUPDATE (RRESTRICT f r) (x,y)
+      else
+        RRESTRICT (DRESTRICT f (\a. ~(a = x))) r)
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_PRED_rules</font></STRONG>
+<DD>
+<PRE>
+|- FINITE_PRED (\a. F) /\
+   !f a. FINITE_PRED f ==> FINITE_PRED (\x. (x = a) \/ f x)
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_PRED_ind</font></STRONG>
+<DD>
+<PRE>
+|- !FINITE_PRED'.
+     FINITE_PRED' (\a. F) /\
+     (!f a. FINITE_PRED' f ==> FINITE_PRED' (\x. (x = a) \/ f x)) ==>
+     !a0. FINITE_PRED a0 ==> FINITE_PRED' a0
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_PRED_cases</font></STRONG>
+<DD>
+<PRE>
+|- !a0.
+     FINITE_PRED a0 =
+     (a0 = (\a. F)) \/ ?f a. (a0 = (\x. (x = a) \/ f x)) /\ FINITE_PRED f
+</PRE>
+
+<DT><STRONG><font color="black">FDOM_f_o</font></STRONG>
+<DD>
+<PRE>
+|- !f g.
+     FINITE_PRED (\x. FDOM f (g x)) ==> !x. FDOM (f f_o g) x = FDOM f (g x)
+</PRE>
+
+<DT><STRONG><font color="black">FAPPLY_f_o</font></STRONG>
+<DD>
+<PRE>
+|- !f g.
+     FINITE_PRED (\x. FDOM f (g x)) ==>
+     !x. FDOM (f f_o g) x ==> (FAPPLY (f f_o g) x = FAPPLY f (g x))
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_PRED_11</font></STRONG>
+<DD>
+<PRE>
+|- !g. (!x y. (g x = g y) = (x = y)) ==> !f. FINITE_PRED (\x. FDOM f (g x))
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

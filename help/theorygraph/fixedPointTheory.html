@@ -1,0 +1,212 @@
+<HTML>
+<HEAD><TITLE>Theory: fixedPoint</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "fixedPoint"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "listTheory.html"><STRONG><font color="black">list</font></STRONG></A>
+    <A HREF = "pred_setTheory.html"><STRONG><font color="black">pred_set</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">gfp</font></STRONG>
+                                         <td>
+                                         :(('a -> bool) -> 'a -> bool) ->
+                                          'a -> bool
+    <tr><td>
+        <STRONG><font color="black">lfp</font></STRONG>
+        <td>
+        :(('a -> bool) -> 'a -> bool) -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">dense</font></STRONG>
+        <td>
+        :(('a -> bool) -> 'a -> bool) -> ('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">monotone</font></STRONG>
+        <td>
+        :(('a -> bool) -> 'b -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">closed</font></STRONG>
+        <td>
+        :(('a -> bool) -> 'a -> bool) -> ('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">empty</font></STRONG>
+        <td>
+        :'a -> 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">fnsum</font></STRONG>
+        <td>
+        :('b -> 'a -> bool) -> ('b -> 'a -> bool) -> 'b -> 'a -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">monotone_def</font></STRONG>
+<DD>
+<PRE>
+|- !f. monotone f = !X Y. X SUBSET Y ==> f X SUBSET f Y
+</PRE>
+
+<DT><STRONG><font color="black">lfp_def</font></STRONG>
+<DD>
+<PRE>
+|- !f. lfp f = BIGINTER {X | f X SUBSET X}
+</PRE>
+
+<DT><STRONG><font color="black">gfp_def</font></STRONG>
+<DD>
+<PRE>
+|- !f. gfp f = BIGUNION {X | X SUBSET f X}
+</PRE>
+
+<DT><STRONG><font color="black">closed_def</font></STRONG>
+<DD>
+<PRE>
+|- !f X. closed f X = f X SUBSET X
+</PRE>
+
+<DT><STRONG><font color="black">dense_def</font></STRONG>
+<DD>
+<PRE>
+|- !f X. dense f X = X SUBSET f X
+</PRE>
+
+<DT><STRONG><font color="black">fnsum_def</font></STRONG>
+<DD>
+<PRE>
+|- !f1 f2 X. (f1 ++ f2) X = f1 X UNION f2 X
+</PRE>
+
+<DT><STRONG><font color="black">empty_def</font></STRONG>
+<DD>
+<PRE>
+|- empty = (\X. {})
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">lfp_least_closed</font></STRONG>
+<DD>
+<PRE>
+|- !f. monotone f ==> closed f (lfp f) /\ !X. closed f X ==> lfp f SUBSET X
+</PRE>
+
+<DT><STRONG><font color="black">gfp_greatest_dense</font></STRONG>
+<DD>
+<PRE>
+|- !f. monotone f ==> dense f (gfp f) /\ !X. dense f X ==> X SUBSET gfp f
+</PRE>
+
+<DT><STRONG><font color="black">lfp_fixedpoint</font></STRONG>
+<DD>
+<PRE>
+|- !f. monotone f ==> (lfp f = f (lfp f)) /\ !X. (X = f X) ==> lfp f SUBSET X
+</PRE>
+
+<DT><STRONG><font color="black">gfp_greatest_fixedpoint</font></STRONG>
+<DD>
+<PRE>
+|- !f. monotone f ==> (gfp f = f (gfp f)) /\ !X. (X = f X) ==> X SUBSET gfp f
+</PRE>
+
+<DT><STRONG><font color="black">lfp_induction</font></STRONG>
+<DD>
+<PRE>
+|- !f. monotone f ==> !X. f X SUBSET X ==> lfp f SUBSET X
+</PRE>
+
+<DT><STRONG><font color="black">gfp_coinduction</font></STRONG>
+<DD>
+<PRE>
+|- !f. monotone f ==> !X. X SUBSET f X ==> X SUBSET gfp f
+</PRE>
+
+<DT><STRONG><font color="black">lfp_strong_induction</font></STRONG>
+<DD>
+<PRE>
+|- !f. monotone f ==> !X. f (X INTER lfp f) SUBSET X ==> lfp f SUBSET X
+</PRE>
+
+<DT><STRONG><font color="black">gfp_strong_coinduction</font></STRONG>
+<DD>
+<PRE>
+|- !f. monotone f ==> !X. X SUBSET f (X UNION gfp f) ==> X SUBSET gfp f
+</PRE>
+
+<DT><STRONG><font color="black">fnsum_monotone</font></STRONG>
+<DD>
+<PRE>
+|- !f1 f2. monotone f1 /\ monotone f2 ==> monotone (f1 ++ f2)
+</PRE>
+
+<DT><STRONG><font color="black">empty_monotone</font></STRONG>
+<DD>
+<PRE>
+|- monotone empty
+</PRE>
+
+<DT><STRONG><font color="black">fnsum_empty</font></STRONG>
+<DD>
+<PRE>
+|- !f. (f ++ empty = f) /\ (empty ++ f = f)
+</PRE>
+
+<DT><STRONG><font color="black">fnsum_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !f g h. f ++ (g ++ h) = f ++ g ++ h
+</PRE>
+
+<DT><STRONG><font color="black">fnsum_COMM</font></STRONG>
+<DD>
+<PRE>
+|- !f g. f ++ g = g ++ f
+</PRE>
+
+<DT><STRONG><font color="black">fnsum_SUBSET</font></STRONG>
+<DD>
+<PRE>
+|- !f g X. f X SUBSET (f ++ g) X /\ g X SUBSET (f ++ g) X
+</PRE>
+
+<DT><STRONG><font color="black">lfp_fnsum</font></STRONG>
+<DD>
+<PRE>
+|- !f1 f2.
+     monotone f1 /\ monotone f2 ==>
+     lfp f1 SUBSET lfp (f1 ++ f2) /\ lfp f2 SUBSET lfp (f1 ++ f2)
+</PRE>
+
+<DT><STRONG><font color="black">lfp_rule_applied</font></STRONG>
+<DD>
+<PRE>
+|- !f X y. monotone f /\ X SUBSET lfp f /\ y IN f X ==> y IN lfp f
+</PRE>
+
+<DT><STRONG><font color="black">lfp_empty</font></STRONG>
+<DD>
+<PRE>
+|- !f x. monotone f /\ x IN f {} ==> x IN lfp f
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

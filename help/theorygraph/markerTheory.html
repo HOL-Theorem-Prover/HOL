@@ -1,0 +1,82 @@
+<HTML>
+<HEAD><TITLE>Theory: marker</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "marker"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "boolTheory.html"><STRONG><font color="black">bool</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">stmarker</font></STRONG>
+                                         <td>
+                                         :'a -> 'a
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">stmarker_def</font></STRONG>
+<DD>
+<PRE>
+|- !x. stmarker x = x
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">move_left_conj</font></STRONG>
+<DD>
+<PRE>
+|- !p q m.
+     (p /\ stmarker m = stmarker m /\ p) /\
+     ((stmarker m /\ p) /\ q = stmarker m /\ p /\ q) /\
+     (p /\ stmarker m /\ q = stmarker m /\ p /\ q)
+</PRE>
+
+<DT><STRONG><font color="black">move_right_conj</font></STRONG>
+<DD>
+<PRE>
+|- !p q m.
+     (stmarker m /\ p = p /\ stmarker m) /\
+     (p /\ q /\ stmarker m = (p /\ q) /\ stmarker m) /\
+     ((p /\ stmarker m) /\ q = (p /\ q) /\ stmarker m)
+</PRE>
+
+<DT><STRONG><font color="black">move_left_disj</font></STRONG>
+<DD>
+<PRE>
+|- !p q m.
+     (p \/ stmarker m = stmarker m \/ p) /\
+     ((stmarker m \/ p) \/ q = stmarker m \/ p \/ q) /\
+     (p \/ stmarker m \/ q = stmarker m \/ p \/ q)
+</PRE>
+
+<DT><STRONG><font color="black">move_right_disj</font></STRONG>
+<DD>
+<PRE>
+|- !p q m.
+     (stmarker m \/ p = p \/ stmarker m) /\
+     (p \/ q \/ stmarker m = (p \/ q) \/ stmarker m) /\
+     ((p \/ stmarker m) \/ q = (p \/ q) \/ stmarker m)
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

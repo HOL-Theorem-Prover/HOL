@@ -1,0 +1,362 @@
+<HTML>
+<HEAD><TITLE>Theory: word_bitop</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "word_bitop"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "word_baseTheory.html"><STRONG><font color="black">word_base</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">EXISTSABIT</font></STRONG>
+                                         <td>
+                                         :('a -> bool) -> 'a word -> bool
+    <tr><td>
+        <STRONG><font color="black">FORALLBITS</font></STRONG>
+        <td>
+        :('a -> bool) -> 'a word -> bool
+    <tr><td>
+        <STRONG><font color="black">PBITBOP</font></STRONG>
+        <td>
+        :('a word -> 'b word -> 'c word) -> bool
+    <tr><td>
+        <STRONG><font color="black">WMAP</font></STRONG>
+        <td>
+        :('a -> 'b) -> 'a word -> 'b word
+    <tr><td>
+        <STRONG><font color="black">PBITOP</font></STRONG>
+        <td>
+        :('a word -> 'b word) -> bool
+    <tr><td>
+        <STRONG><font color="black">SHL</font></STRONG>
+        <td>
+        :bool -> 'a word -> 'a -> 'a # 'a word
+    <tr><td>
+        <STRONG><font color="black">SHR</font></STRONG>
+        <td>
+        :bool -> 'a -> 'a word -> 'a word # 'a
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">PBITOP_def</font></STRONG>
+<DD>
+<PRE>
+|- PBITOP =
+   {op
+    |
+    !n (w::PWORDLEN n).
+      op w IN PWORDLEN n /\
+      !m k. m + k <= n ==> (op (WSEG m k w) = WSEG m k (op w))}
+</PRE>
+
+<DT><STRONG><font color="black">PBITBOP_def</font></STRONG>
+<DD>
+<PRE>
+|- PBITBOP =
+   {op
+    |
+    !n (w1::PWORDLEN n) (w2::PWORDLEN n).
+      op w1 w2 IN PWORDLEN n /\
+      !m k.
+        m + k <= n ==> (op (WSEG m k w1) (WSEG m k w2) = WSEG m k (op w1 w2))}
+</PRE>
+
+<DT><STRONG><font color="black">WMAP_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f l. WMAP f (WORD l) = WORD (MAP f l)
+</PRE>
+
+<DT><STRONG><font color="black">FORALLBITS_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !P l. FORALLBITS P (WORD l) = ALL_EL P l
+</PRE>
+
+<DT><STRONG><font color="black">EXISTSABIT_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !P l. EXISTSABIT P (WORD l) = SOME_EL P l
+</PRE>
+
+<DT><STRONG><font color="black">SHR_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f b w.
+     SHR f b w =
+     (WCAT
+        ((if f then WSEG 1 (PRE (WORDLEN w)) w else WORD [b]),
+         WSEG (PRE (WORDLEN w)) 1 w),BIT 0 w)
+</PRE>
+
+<DT><STRONG><font color="black">SHL_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f w b.
+     SHL f w b =
+     (BIT (PRE (WORDLEN w)) w,
+      WCAT (WSEG (PRE (WORDLEN w)) 0 w,(if f then WSEG 1 0 w else WORD [b])))
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">IN_PBITOP</font></STRONG>
+<DD>
+<PRE>
+|- !op.
+     op IN PBITOP =
+     !n (w::PWORDLEN n).
+       op w IN PWORDLEN n /\
+       !m k. m + k <= n ==> (op (WSEG m k w) = WSEG m k (op w))
+</PRE>
+
+<DT><STRONG><font color="black">PBITOP_PWORDLEN</font></STRONG>
+<DD>
+<PRE>
+|- !(op::PBITOP) n (w::PWORDLEN n). op w IN PWORDLEN n
+</PRE>
+
+<DT><STRONG><font color="black">PBITOP_WSEG</font></STRONG>
+<DD>
+<PRE>
+|- !(op::PBITOP) n (w::PWORDLEN n) m k.
+     m + k <= n ==> (op (WSEG m k w) = WSEG m k (op w))
+</PRE>
+
+<DT><STRONG><font color="black">PBITOP_BIT</font></STRONG>
+<DD>
+<PRE>
+|- !(op::PBITOP) n (w::PWORDLEN n) k.
+     k < n ==> (op (WORD [BIT k w]) = WORD [BIT k (op w)])
+</PRE>
+
+<DT><STRONG><font color="black">IN_PBITBOP</font></STRONG>
+<DD>
+<PRE>
+|- !op.
+     op IN PBITBOP =
+     !n (w1::PWORDLEN n) (w2::PWORDLEN n).
+       op w1 w2 IN PWORDLEN n /\
+       !m k.
+         m + k <= n ==> (op (WSEG m k w1) (WSEG m k w2) = WSEG m k (op w1 w2))
+</PRE>
+
+<DT><STRONG><font color="black">PBITBOP_PWORDLEN</font></STRONG>
+<DD>
+<PRE>
+|- !(op::PBITBOP) n (w1::PWORDLEN n) (w2::PWORDLEN n). op w1 w2 IN PWORDLEN n
+</PRE>
+
+<DT><STRONG><font color="black">PBITBOP_WSEG</font></STRONG>
+<DD>
+<PRE>
+|- !(op::PBITBOP) n (w1::PWORDLEN n) (w2::PWORDLEN n) m k.
+     m + k <= n ==> (op (WSEG m k w1) (WSEG m k w2) = WSEG m k (op w1 w2))
+</PRE>
+
+<DT><STRONG><font color="black">PBITBOP_EXISTS</font></STRONG>
+<DD>
+<PRE>
+|- !f. ?fn. !l1 l2. fn (WORD l1) (WORD l2) = WORD (MAP2 f l1 l2)
+</PRE>
+
+<DT><STRONG><font color="black">WMAP_PWORDLEN</font></STRONG>
+<DD>
+<PRE>
+|- !(w::PWORDLEN n) f. WMAP f w IN PWORDLEN n
+</PRE>
+
+<DT><STRONG><font color="black">WMAP_0</font></STRONG>
+<DD>
+<PRE>
+|- !f. WMAP f (WORD []) = WORD []
+</PRE>
+
+<DT><STRONG><font color="black">WMAP_BIT</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) k. k < n ==> !f. BIT k (WMAP f w) = f (BIT k w)
+</PRE>
+
+<DT><STRONG><font color="black">WMAP_WSEG</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) m k.
+     m + k <= n ==> !f. WMAP f (WSEG m k w) = WSEG m k (WMAP f w)
+</PRE>
+
+<DT><STRONG><font color="black">WMAP_PBITOP</font></STRONG>
+<DD>
+<PRE>
+|- !f. WMAP f IN PBITOP
+</PRE>
+
+<DT><STRONG><font color="black">WMAP_WCAT</font></STRONG>
+<DD>
+<PRE>
+|- !w1 w2 f. WMAP f (WCAT (w1,w2)) = WCAT (WMAP f w1,WMAP f w2)
+</PRE>
+
+<DT><STRONG><font color="black">WMAP_o</font></STRONG>
+<DD>
+<PRE>
+|- !w f g. WMAP g (WMAP f w) = WMAP (g o f) w
+</PRE>
+
+<DT><STRONG><font color="black">FORALLBITS</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) P. FORALLBITS P w = !k. k < n ==> P (BIT k w)
+</PRE>
+
+<DT><STRONG><font color="black">FORALLBITS_WSEG</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) P.
+     FORALLBITS P w ==> !m k. m + k <= n ==> FORALLBITS P (WSEG m k w)
+</PRE>
+
+<DT><STRONG><font color="black">FORALLBITS_WCAT</font></STRONG>
+<DD>
+<PRE>
+|- !w1 w2 P. FORALLBITS P (WCAT (w1,w2)) = FORALLBITS P w1 /\ FORALLBITS P w2
+</PRE>
+
+<DT><STRONG><font color="black">NOT_EXISTSABIT</font></STRONG>
+<DD>
+<PRE>
+|- !P w. ~EXISTSABIT P w = FORALLBITS ($~ o P) w
+</PRE>
+
+<DT><STRONG><font color="black">NOT_FORALLBITS</font></STRONG>
+<DD>
+<PRE>
+|- !P w. ~FORALLBITS P w = EXISTSABIT ($~ o P) w
+</PRE>
+
+<DT><STRONG><font color="black">EXISTSABIT</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) P. EXISTSABIT P w = ?k. k < n /\ P (BIT k w)
+</PRE>
+
+<DT><STRONG><font color="black">EXISTSABIT_WSEG</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) m k.
+     m + k <= n ==> !P. EXISTSABIT P (WSEG m k w) ==> EXISTSABIT P w
+</PRE>
+
+<DT><STRONG><font color="black">EXISTSABIT_WCAT</font></STRONG>
+<DD>
+<PRE>
+|- !w1 w2 P. EXISTSABIT P (WCAT (w1,w2)) = EXISTSABIT P w1 \/ EXISTSABIT P w2
+</PRE>
+
+<DT><STRONG><font color="black">SHR_WSEG</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) m k.
+     m + k <= n ==>
+     0 < m ==>
+     !f b.
+       SHR f b (WSEG m k w) =
+       ((if f then
+           WCAT (WSEG 1 (k + (m - 1)) w,WSEG (m - 1) (k + 1) w)
+         else
+           WCAT (WORD [b],WSEG (m - 1) (k + 1) w)),BIT k w)
+</PRE>
+
+<DT><STRONG><font color="black">SHR_WSEG_1F</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) b m k.
+     m + k <= n ==>
+     0 < m ==>
+     (SHR F b (WSEG m k w) = (WCAT (WORD [b],WSEG (m - 1) (k + 1) w),BIT k w))
+</PRE>
+
+<DT><STRONG><font color="black">SHR_WSEG_NF</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) m k.
+     m + k < n ==>
+     0 < m ==>
+     (SHR F (BIT (m + k) w) (WSEG m k w) = (WSEG m (k + 1) w,BIT k w))
+</PRE>
+
+<DT><STRONG><font color="black">SHL_WSEG</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) m k.
+     m + k <= n ==>
+     0 < m ==>
+     !f b.
+       SHL f (WSEG m k w) b =
+       (BIT (k + (m - 1)) w,
+        (if f then
+           WCAT (WSEG (m - 1) k w,WSEG 1 k w)
+         else
+           WCAT (WSEG (m - 1) k w,WORD [b])))
+</PRE>
+
+<DT><STRONG><font color="black">SHL_WSEG_1F</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) b m k.
+     m + k <= n ==>
+     0 < m ==>
+     (SHL F (WSEG m k w) b =
+      (BIT (k + (m - 1)) w,WCAT (WSEG (m - 1) k w,WORD [b])))
+</PRE>
+
+<DT><STRONG><font color="black">SHL_WSEG_NF</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) m k.
+     m + k <= n ==>
+     0 < m ==>
+     0 < k ==>
+     (SHL F (WSEG m k w) (BIT (k - 1) w) =
+      (BIT (k + (m - 1)) w,WSEG m (k - 1) w))
+</PRE>
+
+<DT><STRONG><font color="black">WSEG_SHL</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN (SUC n)) m k.
+     0 < k /\ m + k <= SUC n ==>
+     !b. WSEG m k (SND (SHL f w b)) = WSEG m (k - 1) w
+</PRE>
+
+<DT><STRONG><font color="black">WSEG_SHL_0</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN (SUC n)) m b.
+     0 < m /\ m <= SUC n ==>
+     (WSEG m 0 (SND (SHL f w b)) =
+      WCAT (WSEG (m - 1) 0 w,(if f then WSEG 1 0 w else WORD [b])))
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,685 @@
+<HTML>
+<HEAD><TITLE>Theory: realax</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "realax"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "hrealTheory.html"><STRONG><font color="black">hreal</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">real</font></STRONG>
+                                          <td>
+                                          0
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">real_neg</font></STRONG>
+                                         <td>
+                                         :real -> real
+    <tr><td>
+        <STRONG><font color="black">treal_mul</font></STRONG>
+        <td>
+        :hreal # hreal -> hreal # hreal -> hreal # hreal
+    <tr><td>
+        <STRONG><font color="black">mk_real</font></STRONG>
+        <td>
+        :(hreal # hreal -> bool) -> real
+    <tr><td>
+        <STRONG><font color="black">real_mul</font></STRONG>
+        <td>
+        :real -> real -> real
+    <tr><td>
+        <STRONG><font color="black">inv</font></STRONG>
+        <td>
+        :real -> real
+    <tr><td>
+        <STRONG><font color="black">dest_real</font></STRONG>
+        <td>
+        :real -> hreal # hreal -> bool
+    <tr><td>
+        <STRONG><font color="black">treal_0</font></STRONG>
+        <td>
+        :hreal # hreal
+    <tr><td>
+        <STRONG><font color="black">treal_1</font></STRONG>
+        <td>
+        :hreal # hreal
+    <tr><td>
+        <STRONG><font color="black">real_of_hreal</font></STRONG>
+        <td>
+        :hreal -> real
+    <tr><td>
+        <STRONG><font color="black">real_lt</font></STRONG>
+        <td>
+        :real -> real -> bool
+    <tr><td>
+        <STRONG><font color="black">hreal_of_treal</font></STRONG>
+        <td>
+        :hreal # hreal -> hreal
+    <tr><td>
+        <STRONG><font color="black">hreal_of_real</font></STRONG>
+        <td>
+        :real -> hreal
+    <tr><td>
+        <STRONG><font color="black">treal_of_hreal</font></STRONG>
+        <td>
+        :hreal -> hreal # hreal
+    <tr><td> <STRONG><font color="black">real_0</font></STRONG> <td> :real
+    <tr><td> <STRONG><font color="black">real_1</font></STRONG> <td> :real
+    <tr><td>
+        <STRONG><font color="black">treal_add</font></STRONG>
+        <td>
+        :hreal # hreal -> hreal # hreal -> hreal # hreal
+    <tr><td>
+        <STRONG><font color="black">real_add</font></STRONG>
+        <td>
+        :real -> real -> real
+    <tr><td>
+        <STRONG><font color="black">treal_eq</font></STRONG>
+        <td>
+        :hreal # hreal -> hreal # hreal -> bool
+    <tr><td>
+        <STRONG><font color="black">treal_inv</font></STRONG>
+        <td>
+        :hreal # hreal -> hreal # hreal
+    <tr><td>
+        <STRONG><font color="black">treal_lt</font></STRONG>
+        <td>
+        :hreal # hreal -> hreal # hreal -> bool
+    <tr><td>
+        <STRONG><font color="black">treal_neg</font></STRONG>
+        <td>
+        :hreal # hreal -> hreal # hreal
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">treal_0</font></STRONG>
+<DD>
+<PRE>
+|- treal_0 = (hreal_1,hreal_1)
+</PRE>
+
+<DT><STRONG><font color="black">treal_1</font></STRONG>
+<DD>
+<PRE>
+|- treal_1 = (hreal_1 hreal_add hreal_1,hreal_1)
+</PRE>
+
+<DT><STRONG><font color="black">treal_neg</font></STRONG>
+<DD>
+<PRE>
+|- !x y. treal_neg (x,y) = (y,x)
+</PRE>
+
+<DT><STRONG><font color="black">treal_add</font></STRONG>
+<DD>
+<PRE>
+|- !x1 y1 x2 y2. (x1,y1) treal_add (x2,y2) = (x1 hreal_add x2,y1 hreal_add y2)
+</PRE>
+
+<DT><STRONG><font color="black">treal_mul</font></STRONG>
+<DD>
+<PRE>
+|- !x1 y1 x2 y2.
+     (x1,y1) treal_mul (x2,y2) =
+     (x1 hreal_mul x2 hreal_add y1 hreal_mul y2,
+      x1 hreal_mul y2 hreal_add y1 hreal_mul x2)
+</PRE>
+
+<DT><STRONG><font color="black">treal_lt</font></STRONG>
+<DD>
+<PRE>
+|- !x1 y1 x2 y2.
+     (x1,y1) treal_lt (x2,y2) = x1 hreal_add y2 hreal_lt x2 hreal_add y1
+</PRE>
+
+<DT><STRONG><font color="black">treal_inv</font></STRONG>
+<DD>
+<PRE>
+|- !x y.
+     treal_inv (x,y) =
+     (if x = y then
+        treal_0
+      else
+        (if y hreal_lt x then
+           (hreal_inv (x hreal_sub y) hreal_add hreal_1,hreal_1)
+         else
+           (hreal_1,hreal_inv (y hreal_sub x) hreal_add hreal_1)))
+</PRE>
+
+<DT><STRONG><font color="black">treal_eq</font></STRONG>
+<DD>
+<PRE>
+|- !x1 y1 x2 y2.
+     (x1,y1) treal_eq (x2,y2) = (x1 hreal_add y2 = x2 hreal_add y1)
+</PRE>
+
+<DT><STRONG><font color="black">treal_of_hreal</font></STRONG>
+<DD>
+<PRE>
+|- !x. treal_of_hreal x = (x hreal_add hreal_1,hreal_1)
+</PRE>
+
+<DT><STRONG><font color="black">hreal_of_treal</font></STRONG>
+<DD>
+<PRE>
+|- !x y. hreal_of_treal (x,y) = @d. x = y hreal_add d
+</PRE>
+
+<DT><STRONG><font color="black">real_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep. TYPE_DEFINITION (\c. ?x. c = $treal_eq x) rep
+</PRE>
+
+<DT><STRONG><font color="black">real_tybij</font></STRONG>
+<DD>
+<PRE>
+|- (!a. mk_real (dest_real a) = a) /\
+   !r. (\c. ?x. c = $treal_eq x) r = (dest_real (mk_real r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">real_0</font></STRONG>
+<DD>
+<PRE>
+|- real_0 = mk_real ($treal_eq treal_0)
+</PRE>
+
+<DT><STRONG><font color="black">real_1</font></STRONG>
+<DD>
+<PRE>
+|- real_1 = mk_real ($treal_eq treal_1)
+</PRE>
+
+<DT><STRONG><font color="black">real_neg</font></STRONG>
+<DD>
+<PRE>
+|- !T1. ~T1 = mk_real ($treal_eq (treal_neg ($@ (dest_real T1))))
+</PRE>
+
+<DT><STRONG><font color="black">real_inv</font></STRONG>
+<DD>
+<PRE>
+|- !T1. inv T1 = mk_real ($treal_eq (treal_inv ($@ (dest_real T1))))
+</PRE>
+
+<DT><STRONG><font color="black">real_add</font></STRONG>
+<DD>
+<PRE>
+|- !T1 T2.
+     T1 + T2 =
+     mk_real ($treal_eq ($@ (dest_real T1) treal_add $@ (dest_real T2)))
+</PRE>
+
+<DT><STRONG><font color="black">real_mul</font></STRONG>
+<DD>
+<PRE>
+|- !T1 T2.
+     T1 * T2 =
+     mk_real ($treal_eq ($@ (dest_real T1) treal_mul $@ (dest_real T2)))
+</PRE>
+
+<DT><STRONG><font color="black">real_lt</font></STRONG>
+<DD>
+<PRE>
+|- !T1 T2. T1 < T2 = $@ (dest_real T1) treal_lt $@ (dest_real T2)
+</PRE>
+
+<DT><STRONG><font color="black">real_of_hreal</font></STRONG>
+<DD>
+<PRE>
+|- !T1. real_of_hreal T1 = mk_real ($treal_eq (treal_of_hreal T1))
+</PRE>
+
+<DT><STRONG><font color="black">hreal_of_real</font></STRONG>
+<DD>
+<PRE>
+|- !T1. hreal_of_real T1 = hreal_of_treal ($@ (dest_real T1))
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">HREAL_RDISTRIB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x hreal_add y) hreal_mul z = x hreal_mul z hreal_add y hreal_mul z
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_EQ_ADDR</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x hreal_add y = x)
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_EQ_ADDL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x = x hreal_add y)
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_EQ_LADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x hreal_add y = x hreal_add z) = (y = z)
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_LT_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x hreal_lt x)
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_LT_ADDL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x hreal_lt x hreal_add y
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_LT_NE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x hreal_lt y ==> ~(x = y)
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_LT_ADDR</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x hreal_add y hreal_lt x)
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_LT_GT</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x hreal_lt y ==> ~(y hreal_lt x)
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_LT_ADD2</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2 y1 y2.
+     x1 hreal_lt y1 /\ x2 hreal_lt y2 ==>
+     x1 hreal_add x2 hreal_lt y1 hreal_add y2
+</PRE>
+
+<DT><STRONG><font color="black">HREAL_LT_LADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x hreal_add y hreal_lt x hreal_add z = y hreal_lt z
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_EQ_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. x treal_eq x
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_EQ_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x treal_eq y = y treal_eq x
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_EQ_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x treal_eq y /\ y treal_eq z ==> x treal_eq z
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_EQ_EQUIV</font></STRONG>
+<DD>
+<PRE>
+|- !p q. p treal_eq q = ($treal_eq p = $treal_eq q)
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_EQ_AP</font></STRONG>
+<DD>
+<PRE>
+|- !p q. (p = q) ==> p treal_eq q
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_10</font></STRONG>
+<DD>
+<PRE>
+|- ~(treal_1 treal_eq treal_0)
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_ADD_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x treal_add y = y treal_add x
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_MUL_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x treal_mul y = y treal_mul x
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_ADD_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x treal_add (y treal_add z) = x treal_add y treal_add z
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_MUL_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x treal_mul (y treal_mul z) = x treal_mul y treal_mul z
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_LDISTRIB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x treal_mul (y treal_add z) = x treal_mul y treal_add x treal_mul z
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_ADD_LID</font></STRONG>
+<DD>
+<PRE>
+|- !x. treal_0 treal_add x treal_eq x
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_MUL_LID</font></STRONG>
+<DD>
+<PRE>
+|- !x. treal_1 treal_mul x treal_eq x
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_ADD_LINV</font></STRONG>
+<DD>
+<PRE>
+|- !x. treal_neg x treal_add x treal_eq treal_0
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_INV_0</font></STRONG>
+<DD>
+<PRE>
+|- treal_inv treal_0 treal_eq treal_0
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_MUL_LINV</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x treal_eq treal_0) ==> treal_inv x treal_mul x treal_eq treal_1
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_LT_TOTAL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x treal_eq y \/ x treal_lt y \/ y treal_lt x
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_LT_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x treal_lt x)
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_LT_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x treal_lt y /\ y treal_lt z ==> x treal_lt z
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_LT_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. y treal_lt z ==> x treal_add y treal_lt x treal_add z
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_LT_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y.
+     treal_0 treal_lt x /\ treal_0 treal_lt y ==>
+     treal_0 treal_lt x treal_mul y
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_BIJ</font></STRONG>
+<DD>
+<PRE>
+|- (!h. hreal_of_treal (treal_of_hreal h) = h) /\
+   !r. treal_0 treal_lt r = treal_of_hreal (hreal_of_treal r) treal_eq r
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_ISO</font></STRONG>
+<DD>
+<PRE>
+|- !h i. h hreal_lt i ==> treal_of_hreal h treal_lt treal_of_hreal i
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_BIJ_WELLDEF</font></STRONG>
+<DD>
+<PRE>
+|- !h i. h treal_eq i ==> (hreal_of_treal h = hreal_of_treal i)
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_NEG_WELLDEF</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2. x1 treal_eq x2 ==> treal_neg x1 treal_eq treal_neg x2
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_ADD_WELLDEFR</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2 y. x1 treal_eq x2 ==> x1 treal_add y treal_eq x2 treal_add y
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_ADD_WELLDEF</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2 y1 y2.
+     x1 treal_eq x2 /\ y1 treal_eq y2 ==>
+     x1 treal_add y1 treal_eq x2 treal_add y2
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_MUL_WELLDEFR</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2 y. x1 treal_eq x2 ==> x1 treal_mul y treal_eq x2 treal_mul y
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_MUL_WELLDEF</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2 y1 y2.
+     x1 treal_eq x2 /\ y1 treal_eq y2 ==>
+     x1 treal_mul y1 treal_eq x2 treal_mul y2
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_LT_WELLDEFR</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2 y. x1 treal_eq x2 ==> (x1 treal_lt y = x2 treal_lt y)
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_LT_WELLDEFL</font></STRONG>
+<DD>
+<PRE>
+|- !x y1 y2. y1 treal_eq y2 ==> (x treal_lt y1 = x treal_lt y2)
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_LT_WELLDEF</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2 y1 y2.
+     x1 treal_eq x2 /\ y1 treal_eq y2 ==> (x1 treal_lt y1 = x2 treal_lt y2)
+</PRE>
+
+<DT><STRONG><font color="black">TREAL_INV_WELLDEF</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2. x1 treal_eq x2 ==> treal_inv x1 treal_eq treal_inv x2
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ISO_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !h i. h hreal_lt i = real_of_hreal h < real_of_hreal i
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POS</font></STRONG>
+<DD>
+<PRE>
+|- !X. real_0 < real_of_hreal X
+</PRE>
+
+<DT><STRONG><font color="black">SUP_ALLPOS_LEMMA1</font></STRONG>
+<DD>
+<PRE>
+|- !P y.
+     (!x. P x ==> real_0 < x) ==>
+     ((?x. P x /\ y < x) = ?X. P (real_of_hreal X) /\ y < real_of_hreal X)
+</PRE>
+
+<DT><STRONG><font color="black">SUP_ALLPOS_LEMMA2</font></STRONG>
+<DD>
+<PRE>
+|- !P X. P (real_of_hreal X) = (\h. P (real_of_hreal h)) X
+</PRE>
+
+<DT><STRONG><font color="black">SUP_ALLPOS_LEMMA3</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!x. P x ==> real_0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
+     (?X. (\h. P (real_of_hreal h)) X) /\
+     ?Y. !X. (\h. P (real_of_hreal h)) X ==> X hreal_lt Y
+</PRE>
+
+<DT><STRONG><font color="black">SUP_ALLPOS_LEMMA4</font></STRONG>
+<DD>
+<PRE>
+|- !y. ~(real_0 < y) ==> !x. y < real_of_hreal x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUP_ALLPOS</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!x. P x ==> real_0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
+     ?s. !y. (?x. P x /\ y < x) = y < s
+</PRE>
+
+<DT><STRONG><font color="black">REAL_10</font></STRONG>
+<DD>
+<PRE>
+|- ~(real_1 = real_0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x + y = y + x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x * y = y * x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x + (y + z) = x + y + z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x * (y * z) = x * y * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LDISTRIB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x * (y + z) = x * y + x * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_LID</font></STRONG>
+<DD>
+<PRE>
+|- !x. real_0 + x = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_LID</font></STRONG>
+<DD>
+<PRE>
+|- !x. real_1 * x = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_LINV</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~x + x = real_0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_LINV</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x = real_0) ==> (inv x * x = real_1)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_TOTAL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x = y) \/ x < y \/ y < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x < x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x < y /\ y < z ==> x < z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_IADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. y < z ==> x + y < x + z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. real_0 < x /\ real_0 < y ==> real_0 < x * y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV_0</font></STRONG>
+<DD>
+<PRE>
+|- inv real_0 = real_0
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

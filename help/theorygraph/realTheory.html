@@ -1,0 +1,2103 @@
+<HTML>
+<HEAD><TITLE>Theory: real</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "real"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "realaxTheory.html"><STRONG><font color="black">realax</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">real_lte</font></STRONG>
+                                         <td>
+                                         :real -> real -> bool
+    <tr><td>
+        <STRONG><font color="black">/</font></STRONG>
+        <td>
+        :real -> real -> real
+    <tr><td>
+        <STRONG><font color="black">abs</font></STRONG>
+        <td>
+        :real -> real
+    <tr><td>
+        <STRONG><font color="black">real_sub</font></STRONG>
+        <td>
+        :real -> real -> real
+    <tr><td>
+        <STRONG><font color="black">pow</font></STRONG>
+        <td>
+        :real -> num -> real
+    <tr><td>
+        <STRONG><font color="black">sum</font></STRONG>
+        <td>
+        :num # num -> (num -> real) -> real
+    <tr><td>
+        <STRONG><font color="black">sup</font></STRONG>
+        <td>
+        :(real -> bool) -> real
+    <tr><td>
+        <STRONG><font color="black">real_ge</font></STRONG>
+        <td>
+        :real -> real -> bool
+    <tr><td>
+        <STRONG><font color="black">real_gt</font></STRONG>
+        <td>
+        :real -> real -> bool
+    <tr><td>
+        <STRONG><font color="black">real_of_num</font></STRONG>
+        <td>
+        :num -> real
+    <tr><td>
+        <STRONG><font color="black">sumc</font></STRONG>
+        <td>
+        :num -> num -> (num -> real) -> real
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">real_of_num</font></STRONG>
+<DD>
+<PRE>
+|- (0 = real_0) /\ !n. $& (SUC n) = $& n + real_1
+</PRE>
+
+<DT><STRONG><font color="black">real_sub</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x - y = x + ~y
+</PRE>
+
+<DT><STRONG><font color="black">real_lte</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x <= y = ~(y < x)
+</PRE>
+
+<DT><STRONG><font color="black">real_gt</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x > y = y < x
+</PRE>
+
+<DT><STRONG><font color="black">real_ge</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x >= y = y <= x
+</PRE>
+
+<DT><STRONG><font color="black">real_div</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x / y = x * inv y
+</PRE>
+
+<DT><STRONG><font color="black">abs</font></STRONG>
+<DD>
+<PRE>
+|- !x. abs x = (if 0 <= x then x else ~x)
+</PRE>
+
+<DT><STRONG><font color="black">pow</font></STRONG>
+<DD>
+<PRE>
+|- (!x. x pow 0 = 1) /\ !x n. x pow SUC n = x * x pow n
+</PRE>
+
+<DT><STRONG><font color="black">sup</font></STRONG>
+<DD>
+<PRE>
+|- !P. sup P = @s. !y. (?x. P x /\ y < x) = y < s
+</PRE>
+
+<DT><STRONG><font color="black">sumc</font></STRONG>
+<DD>
+<PRE>
+|- (!n f. sumc n 0 f = 0) /\ !n m f. sumc n (SUC m) f = sumc n m f + f (n + m)
+</PRE>
+
+<DT><STRONG><font color="black">SUM_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !m n f. sum (m,n) f = sumc m n f
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">REAL_0</font></STRONG>
+<DD>
+<PRE>
+|- real_0 = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_1</font></STRONG>
+<DD>
+<PRE>
+|- real_1 = 1
+</PRE>
+
+<DT><STRONG><font color="black">REAL_10</font></STRONG>
+<DD>
+<PRE>
+|- ~(1 = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x + y = y + x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x + (y + z) = x + y + z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_LID</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 + x = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_LINV</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~x + x = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LDISTRIB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x * (y + z) = x * y + x * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_TOTAL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x = y) \/ x < y \/ y < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x < x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x < y /\ y < z ==> x < z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_IADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. y < z ==> x + y < x + z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUP_ALLPOS</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!x. P x ==> 0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
+     ?s. !y. (?x. P x /\ y < x) = y < s
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x * y = y * x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x * (y * z) = x * y * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_LID</font></STRONG>
+<DD>
+<PRE>
+|- !x. 1 * x = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_LINV</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x = 0) ==> (inv x * x = 1)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 < x /\ 0 < y ==> 0 < x * y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV_0</font></STRONG>
+<DD>
+<PRE>
+|- inv 0 = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_RID</font></STRONG>
+<DD>
+<PRE>
+|- !x. x + 0 = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_RINV</font></STRONG>
+<DD>
+<PRE>
+|- !x. x + ~x = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_RID</font></STRONG>
+<DD>
+<PRE>
+|- !x. x * 1 = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_RINV</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x = 0) ==> (x * inv x = 1)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_RDISTRIB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x + y) * z = x * z + y * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_LADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x + y = x + z) = (y = z)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_RADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x + z = y + z) = (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_LID_UNIQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x + y = y) = (x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_RID_UNIQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x + y = x) = (y = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LNEG_UNIQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x + y = 0) = (x = ~y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_RNEG_UNIQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x + y = 0) = (y = ~x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x + y) = ~x + ~y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_LZERO</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 * x = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_RZERO</font></STRONG>
+<DD>
+<PRE>
+|- !x. x * 0 = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_LMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x * y) = ~x * y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_RMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x * y) = x * ~y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEGNEG</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~~x = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_MUL2</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~x * ~y = x * y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ENTIRE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x * y = 0) = (x = 0) \/ (y = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_LADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x + y < x + z = y < z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_RADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x + z < y + z = x < y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NOT_LT</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x < y) = y <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_ANTISYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x < y /\ y < x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_GT</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x < y ==> ~(y < x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NOT_LE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x <= y) = y < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_TOTAL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x <= y \/ y <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LET_TOTAL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x <= y \/ y < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LTE_TOTAL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x < y \/ y <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. x <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_LT</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x <= y = x < y \/ (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_LE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x < y = x <= y /\ ~(x = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_IMP_LE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x < y ==> x <= y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LTE_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x < y /\ y <= z ==> x < z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LET_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x <= y /\ y < z ==> x < z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x <= y /\ y <= z ==> x <= z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_ANTISYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x <= y /\ y <= x = (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LET_ANTISYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x < y /\ y <= x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LTE_ANTSYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x <= y /\ y < x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_LT0</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~x < 0 = 0 < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_GT0</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 < ~x = x < 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_LE0</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~x <= 0 = 0 <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_GE0</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= ~x = x <= 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_NEGTOTAL</font></STRONG>
+<DD>
+<PRE>
+|- !x. (x = 0) \/ 0 < x \/ 0 < ~x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_NEGTOTAL</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= x \/ 0 <= ~x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 <= x /\ 0 <= y ==> 0 <= x * y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_SQUARE</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= x * x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_01</font></STRONG>
+<DD>
+<PRE>
+|- 0 <= 1
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_01</font></STRONG>
+<DD>
+<PRE>
+|- 0 < 1
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_LADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x + y <= x + z = y <= z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_RADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x + z <= y + z = x <= y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_ADD2</font></STRONG>
+<DD>
+<PRE>
+|- !w x y z. w < x /\ y < z ==> w + y < x + z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_ADD2</font></STRONG>
+<DD>
+<PRE>
+|- !w x y z. w <= x /\ y <= z ==> w + y <= x + z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 <= x /\ 0 <= y ==> 0 <= x + y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 < x /\ 0 < y ==> 0 < x + y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_ADDNEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. y < x + ~z = y + z < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_ADDNEG2</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x + ~y < z = x < z + y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_ADD1</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x <= y ==> x < y + 1
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x - y + y = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_ADD2</font></STRONG>
+<DD>
+<PRE>
+|- !x y. y + (x - y) = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. x - x = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_0</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x - y = 0) = (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_DOUBLE</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= x + x = 0 <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_NEGL</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~x <= x = 0 <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_NEGR</font></STRONG>
+<DD>
+<PRE>
+|- !x. x <= ~x = x <= 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_EQ0</font></STRONG>
+<DD>
+<PRE>
+|- !x. (~x = 0) = (x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_0</font></STRONG>
+<DD>
+<PRE>
+|- ~0 = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_SUB</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x - y) = y - x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_LT</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 < x - y = y < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_LE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 <= x - y = y <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_SUB</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x + y - x = y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_LMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x * y = x * z) = (x = 0) \/ (y = z)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_RMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x * z = y * z) = (z = 0) \/ (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_LDISTRIB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x * (y - z) = x * y - x * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_RDISTRIB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x - y) * z = x * z - y * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (~x = y) = (x = ~y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_MINUS1</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~x = ~1 * x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV_NZ</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x = 0) ==> ~(inv x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INVINV</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x = 0) ==> (inv (inv x) = x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_IMP_NE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x < y ==> ~(x = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV_POS</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 < x ==> 0 < inv x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_LMUL_0</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 < x ==> (0 < x * y = 0 < y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_RMUL_0</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 < y ==> (0 < x * y = 0 < x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_LMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < x ==> (x * y < x * z = y < z)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_RMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < z ==> (x * z < y * z = x < y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_RMUL_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x < y /\ 0 < z ==> x * z < y * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_LMUL_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. y < z /\ 0 < x ==> x * y < x * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LINV_UNIQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x * y = 1) ==> (x = inv y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_RINV_UNIQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x * y = 1) ==> (y = inv x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV_INV</font></STRONG>
+<DD>
+<PRE>
+|- !x. inv (inv x) = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV_EQ_0</font></STRONG>
+<DD>
+<PRE>
+|- !x. (inv x = 0) = (x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_INV</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x = 0) ==> (~inv x = inv ~x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV_1OVER</font></STRONG>
+<DD>
+<PRE>
+|- !x. inv x = 1 / x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_INV_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 < inv x = 0 < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_INV_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= inv x = 0 <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_INV</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= x ==> 0 <= inv x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_ADDR</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x <= x + y = 0 <= y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_ADDL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. y <= x + y = 0 <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_ADDR</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x < x + y = 0 < y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_ADDL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. y < x + y = 0 < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL</font></STRONG>
+<DD>
+<PRE>
+|- !n. $& (SUC n) = $& n + 1
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POS</font></STRONG>
+<DD>
+<PRE>
+|- !n. 0 <= $& n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE</font></STRONG>
+<DD>
+<PRE>
+|- !m n. $& m <= $& n = m <= n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT</font></STRONG>
+<DD>
+<PRE>
+|- !m n. $& m < $& n = m < n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INJ</font></STRONG>
+<DD>
+<PRE>
+|- !m n. ($& m = $& n) = (m = n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !m n. $& m + $& n = $& (m + n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !m n. $& m * $& n = $& (m * n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV1</font></STRONG>
+<DD>
+<PRE>
+|- inv 1 = 1
+</PRE>
+
+<DT><STRONG><font color="black">REAL_OVER1</font></STRONG>
+<DD>
+<PRE>
+|- !x. x / 1 = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_DIV_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x = 0) ==> (x / x = 1)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_DIV_LZERO</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 / x = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_NZ</font></STRONG>
+<DD>
+<PRE>
+|- !n. ~($& n = 0) = 0 < $& n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NZ_IMP_LT</font></STRONG>
+<DD>
+<PRE>
+|- !n. ~(n = 0) ==> 0 < $& n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_RDIV_0</font></STRONG>
+<DD>
+<PRE>
+|- !y z. 0 < z ==> (0 < y / z = 0 < y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_RDIV</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < z ==> (x / z < y / z = x < y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_FRACTION_0</font></STRONG>
+<DD>
+<PRE>
+|- !n d. ~(n = 0) ==> (0 < d / $& n = 0 < d)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_MULTIPLE</font></STRONG>
+<DD>
+<PRE>
+|- !n d. 1 < n ==> (d < $& n * d = 0 < d)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_FRACTION</font></STRONG>
+<DD>
+<PRE>
+|- !n d. 1 < n ==> (d / $& n < d = 0 < d)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_HALF1</font></STRONG>
+<DD>
+<PRE>
+|- !d. 0 < d / 2 = 0 < d
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_HALF2</font></STRONG>
+<DD>
+<PRE>
+|- !d. d / 2 < d = 0 < d
+</PRE>
+
+<DT><STRONG><font color="black">REAL_DOUBLE</font></STRONG>
+<DD>
+<PRE>
+|- !x. x + x = 2 * x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_DIV_LMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(y = 0) ==> (y * (x / y) = x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_DIV_RMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(y = 0) ==> (x / y * y = x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_HALF_DOUBLE</font></STRONG>
+<DD>
+<PRE>
+|- !x. x / 2 + x / 2 = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_DOWN</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 < x ==> ?y. 0 < y /\ y < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_DOWN2</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 < x /\ 0 < y ==> ?z. 0 < z /\ z < x /\ z < y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_SUB</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x - y - x = ~y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_ADD_SUB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x + y < z = x < z - y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_SUB_RADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x - y < z = x < z + y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_SUB_LADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x < y - z = x + z < y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_SUB_LADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x <= y - z = x + z <= y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_SUB_RADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x - y <= z = x <= z + y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_NEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~x < ~y = y < x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_NEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~x <= ~y = y <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD2_SUB2</font></STRONG>
+<DD>
+<PRE>
+|- !a b c d. a + b - (c + d) = a - c + (b - d)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_LZERO</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 - x = ~x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_RZERO</font></STRONG>
+<DD>
+<PRE>
+|- !x. x - 0 = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LET_ADD2</font></STRONG>
+<DD>
+<PRE>
+|- !w x y z. w <= x /\ y < z ==> w + y < x + z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LTE_ADD2</font></STRONG>
+<DD>
+<PRE>
+|- !w x y z. w < x /\ y <= z ==> w + y < x + z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LET_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 <= x /\ 0 < y ==> 0 < x + y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LTE_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 < x /\ 0 <= y ==> 0 < x + y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_MUL2</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2 y1 y2.
+     0 <= x1 /\ 0 <= y1 /\ x1 < x2 /\ y1 < y2 ==> x1 * y1 < x2 * y2
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_INV</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 < x /\ x < y ==> inv y < inv x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_LNEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~x - y = ~(x + y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_RNEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x - ~y = x + y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_NEG2</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~x - ~y = y - x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_TRIANGLE</font></STRONG>
+<DD>
+<PRE>
+|- !a b c. a - b + (b - c) = a - c
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_SUB_LADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x = y - z) = (x + z = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_SUB_RADD</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x - y = z) = (x = z + y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x = 0) /\ ~(y = 0) ==> (inv (x * y) = inv x * inv y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_LMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < x ==> (x * y <= x * z = y <= z)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_RMUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < z ==> (x * z <= y * z = x <= y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_INV2</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(x = 0) /\ ~(y = 0) ==> (inv x - inv y = (y - x) / (x * y))
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_SUB2</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x - (x - y) = y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_SUB2</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x - (x + y) = ~y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MEAN</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x < y ==> ?z. x < z /\ z < y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_LMUL2</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. ~(x = 0) ==> ((y = z) = (x * y = x * z))
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_MUL2</font></STRONG>
+<DD>
+<PRE>
+|- !x1 x2 y1 y2.
+     0 <= x1 /\ 0 <= y1 /\ x1 <= x2 /\ y1 <= y2 ==> x1 * y1 <= x2 * y2
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_LDIV</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < x /\ y <= z * x ==> y / x <= z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_RDIV</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < x /\ y * x <= z ==> y <= z / x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_DIV</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 < x /\ 0 < y ==> 0 < x / y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_DIV</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 <= x /\ 0 <= y ==> 0 <= x / y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_1</font></STRONG>
+<DD>
+<PRE>
+|- !x y. 0 <= x /\ x < y ==> x / y < 1
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_LMUL_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 <= x /\ y <= z ==> x * y <= x * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_RMUL_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 <= x /\ y <= z ==> y * x <= z * x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_IMP_LE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x = y) ==> x <= y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_INV_LT1</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 < x /\ x < 1 ==> 1 < inv x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POS_NZ</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 < x ==> ~(x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_RMUL_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. ~(z = 0) /\ (x * z = y * z) ==> (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_LMUL_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. ~(x = 0) /\ (x * y = x * z) ==> (y = z)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_FACT_NZ</font></STRONG>
+<DD>
+<PRE>
+|- !n. ~($& (FACT n) = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_DIFFSQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x + y) * (x - y) = x * x - y * y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POASQ</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 < x * x = ~(x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUMSQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x * x + y * y = 0) = (x = 0) /\ (y = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_NEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (~x = ~y) = (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_DIV_MUL2</font></STRONG>
+<DD>
+<PRE>
+|- !x z. ~(x = 0) /\ ~(z = 0) ==> !y. y / z = x * y / (x * z)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MIDDLE1</font></STRONG>
+<DD>
+<PRE>
+|- !a b. a <= b ==> a <= (a + b) / 2
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MIDDLE2</font></STRONG>
+<DD>
+<PRE>
+|- !a b. a <= b ==> (a + b) / 2 <= b
+</PRE>
+
+<DT><STRONG><font color="black">ABS_ZERO</font></STRONG>
+<DD>
+<PRE>
+|- !x. (abs x = 0) = (x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">ABS_0</font></STRONG>
+<DD>
+<PRE>
+|- abs 0 = 0
+</PRE>
+
+<DT><STRONG><font color="black">ABS_1</font></STRONG>
+<DD>
+<PRE>
+|- abs 1 = 1
+</PRE>
+
+<DT><STRONG><font color="black">ABS_NEG</font></STRONG>
+<DD>
+<PRE>
+|- !x. abs ~x = abs x
+</PRE>
+
+<DT><STRONG><font color="black">ABS_TRIANGLE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs (x + y) <= abs x + abs y
+</PRE>
+
+<DT><STRONG><font color="black">ABS_POS</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= abs x
+</PRE>
+
+<DT><STRONG><font color="black">ABS_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs (x * y) = abs x * abs y
+</PRE>
+
+<DT><STRONG><font color="black">ABS_LT_MUL2</font></STRONG>
+<DD>
+<PRE>
+|- !w x y z. abs w < y /\ abs x < z ==> abs (w * x) < y * z
+</PRE>
+
+<DT><STRONG><font color="black">ABS_SUB</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs (x - y) = abs (y - x)
+</PRE>
+
+<DT><STRONG><font color="black">ABS_NZ</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x = 0) = 0 < abs x
+</PRE>
+
+<DT><STRONG><font color="black">ABS_INV</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~(x = 0) ==> (abs (inv x) = inv (abs x))
+</PRE>
+
+<DT><STRONG><font color="black">ABS_ABS</font></STRONG>
+<DD>
+<PRE>
+|- !x. abs (abs x) = abs x
+</PRE>
+
+<DT><STRONG><font color="black">ABS_LE</font></STRONG>
+<DD>
+<PRE>
+|- !x. x <= abs x
+</PRE>
+
+<DT><STRONG><font color="black">ABS_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. (abs x = x) = 0 <= x
+</PRE>
+
+<DT><STRONG><font color="black">ABS_N</font></STRONG>
+<DD>
+<PRE>
+|- !n. abs ($& n) = $& n
+</PRE>
+
+<DT><STRONG><font color="black">ABS_BETWEEN</font></STRONG>
+<DD>
+<PRE>
+|- !x y d. 0 < d /\ x - d < y /\ y < x + d = abs (y - x) < d
+</PRE>
+
+<DT><STRONG><font color="black">ABS_BOUND</font></STRONG>
+<DD>
+<PRE>
+|- !x y d. abs (x - y) < d ==> y < x + d
+</PRE>
+
+<DT><STRONG><font color="black">ABS_STILLNZ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs (x - y) < abs y ==> ~(x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">ABS_CASES</font></STRONG>
+<DD>
+<PRE>
+|- !x. (x = 0) \/ 0 < abs x
+</PRE>
+
+<DT><STRONG><font color="black">ABS_BETWEEN1</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x < z /\ abs (y - x) < z - x ==> y < z
+</PRE>
+
+<DT><STRONG><font color="black">ABS_SIGN</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs (x - y) < y ==> 0 < x
+</PRE>
+
+<DT><STRONG><font color="black">ABS_SIGN2</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs (x - y) < ~y ==> x < 0
+</PRE>
+
+<DT><STRONG><font color="black">ABS_DIV</font></STRONG>
+<DD>
+<PRE>
+|- !y. ~(y = 0) ==> !x. abs (x / y) = abs x / abs y
+</PRE>
+
+<DT><STRONG><font color="black">ABS_CIRCLE</font></STRONG>
+<DD>
+<PRE>
+|- !x y h. abs h < abs y - abs x ==> abs (x + h) < abs y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUB_ABS</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs x - abs y <= abs (x - y)
+</PRE>
+
+<DT><STRONG><font color="black">ABS_SUB_ABS</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs (abs x - abs y) <= abs (x - y)
+</PRE>
+
+<DT><STRONG><font color="black">ABS_BETWEEN2</font></STRONG>
+<DD>
+<PRE>
+|- !x0 x y0 y.
+     x0 < y0 /\ abs (x - x0) < (y0 - x0) / 2 /\
+     abs (y - y0) < (y0 - x0) / 2 ==>
+     x < y
+</PRE>
+
+<DT><STRONG><font color="black">ABS_BOUNDS</font></STRONG>
+<DD>
+<PRE>
+|- !x k. abs x <= k = ~k <= x /\ x <= k
+</PRE>
+
+<DT><STRONG><font color="black">POW_0</font></STRONG>
+<DD>
+<PRE>
+|- !n. 0 pow SUC n = 0
+</PRE>
+
+<DT><STRONG><font color="black">POW_NZ</font></STRONG>
+<DD>
+<PRE>
+|- !c n. ~(c = 0) ==> ~(c pow n = 0)
+</PRE>
+
+<DT><STRONG><font color="black">POW_INV</font></STRONG>
+<DD>
+<PRE>
+|- !c. ~(c = 0) ==> !n. inv (c pow n) = inv c pow n
+</PRE>
+
+<DT><STRONG><font color="black">POW_ABS</font></STRONG>
+<DD>
+<PRE>
+|- !c n. abs c pow n = abs (c pow n)
+</PRE>
+
+<DT><STRONG><font color="black">POW_PLUS1</font></STRONG>
+<DD>
+<PRE>
+|- !e. 0 < e ==> !n. 1 + $& n * e <= (1 + e) pow n
+</PRE>
+
+<DT><STRONG><font color="black">POW_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !c m n. c pow (m + n) = c pow m * c pow n
+</PRE>
+
+<DT><STRONG><font color="black">POW_1</font></STRONG>
+<DD>
+<PRE>
+|- !x. x pow 1 = x
+</PRE>
+
+<DT><STRONG><font color="black">POW_2</font></STRONG>
+<DD>
+<PRE>
+|- !x. x pow 2 = x * x
+</PRE>
+
+<DT><STRONG><font color="black">POW_ONE</font></STRONG>
+<DD>
+<PRE>
+|- !n. 1 pow n = 1
+</PRE>
+
+<DT><STRONG><font color="black">POW_POS</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= x ==> !n. 0 <= x pow n
+</PRE>
+
+<DT><STRONG><font color="black">POW_LE</font></STRONG>
+<DD>
+<PRE>
+|- !n x y. 0 <= x /\ x <= y ==> x pow n <= y pow n
+</PRE>
+
+<DT><STRONG><font color="black">POW_M1</font></STRONG>
+<DD>
+<PRE>
+|- !n. abs (~1 pow n) = 1
+</PRE>
+
+<DT><STRONG><font color="black">POW_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !n x y. (x * y) pow n = x pow n * y pow n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_POW2</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= x pow 2
+</PRE>
+
+<DT><STRONG><font color="black">ABS_POW2</font></STRONG>
+<DD>
+<PRE>
+|- !x. abs (x pow 2) = x pow 2
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POW2_ABS</font></STRONG>
+<DD>
+<PRE>
+|- !x. abs x pow 2 = x pow 2
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE1_POW2</font></STRONG>
+<DD>
+<PRE>
+|- !x. 1 <= x ==> 1 <= x pow 2
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT1_POW2</font></STRONG>
+<DD>
+<PRE>
+|- !x. 1 < x ==> 1 < x pow 2
+</PRE>
+
+<DT><STRONG><font color="black">POW_POS_LT</font></STRONG>
+<DD>
+<PRE>
+|- !x n. 0 < x ==> 0 < x pow SUC n
+</PRE>
+
+<DT><STRONG><font color="black">POW_2_LE1</font></STRONG>
+<DD>
+<PRE>
+|- !n. 1 <= 2 pow n
+</PRE>
+
+<DT><STRONG><font color="black">POW_2_LT</font></STRONG>
+<DD>
+<PRE>
+|- !n. $& n < 2 pow n
+</PRE>
+
+<DT><STRONG><font color="black">POW_MINUS1</font></STRONG>
+<DD>
+<PRE>
+|- !n. ~1 pow (2 * n) = 1
+</PRE>
+
+<DT><STRONG><font color="black">POW_LT</font></STRONG>
+<DD>
+<PRE>
+|- !n x y. 0 <= x /\ x < y ==> x pow SUC n < y pow SUC n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POW_LT</font></STRONG>
+<DD>
+<PRE>
+|- !x n. 0 < x ==> 0 < x pow n
+</PRE>
+
+<DT><STRONG><font color="black">POW_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !n x y. 0 <= x /\ 0 <= y /\ (x pow SUC n = y pow SUC n) ==> (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">POW_ZERO</font></STRONG>
+<DD>
+<PRE>
+|- !n x. (x pow n = 0) ==> (x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">POW_ZERO_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !n x. (x pow SUC n = 0) = (x = 0)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POW_LT2</font></STRONG>
+<DD>
+<PRE>
+|- !n x y. ~(n = 0) /\ 0 <= x /\ x < y ==> x pow n < y pow n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POW_MONO_LT</font></STRONG>
+<DD>
+<PRE>
+|- !m n x. 1 < x /\ m < n ==> x pow m < x pow n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POW_POW</font></STRONG>
+<DD>
+<PRE>
+|- !x m n. (x pow m) pow n = x pow (m * n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUP_SOMEPOS</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (?x. P x /\ 0 < x) /\ (?z. !x. P x ==> x < z) ==>
+     ?s. !y. (?x. P x /\ y < x) = y < s
+</PRE>
+
+<DT><STRONG><font color="black">SUP_LEMMA1</font></STRONG>
+<DD>
+<PRE>
+|- !P s d.
+     (!y. (?x. (\x. P (x + d)) x /\ y < x) = y < s) ==>
+     !y. (?x. P x /\ y < x) = y < s + d
+</PRE>
+
+<DT><STRONG><font color="black">SUP_LEMMA2</font></STRONG>
+<DD>
+<PRE>
+|- !P. (?x. P x) ==> ?d x. (\x. P (x + d)) x /\ 0 < x
+</PRE>
+
+<DT><STRONG><font color="black">SUP_LEMMA3</font></STRONG>
+<DD>
+<PRE>
+|- !d. (?z. !x. P x ==> x < z) ==> ?z. !x. (\x. P (x + d)) x ==> x < z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUP_EXISTS</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
+     ?s. !y. (?x. P x /\ y < x) = y < s
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUP</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
+     !y. (?x. P x /\ y < x) = y < sup P
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUP_UBOUND</font></STRONG>
+<DD>
+<PRE>
+|- !P. (?x. P x) /\ (?z. !x. P x ==> x < z) ==> !y. P y ==> y <= sup P
+</PRE>
+
+<DT><STRONG><font color="black">SETOK_LE_LT</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (?x. P x) /\ (?z. !x. P x ==> x <= z) =
+     (?x. P x) /\ ?z. !x. P x ==> x < z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUP_LE</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (?x. P x) /\ (?z. !x. P x ==> x <= z) ==>
+     !y. (?x. P x /\ y < x) = y < sup P
+</PRE>
+
+<DT><STRONG><font color="black">REAL_SUP_UBOUND_LE</font></STRONG>
+<DD>
+<PRE>
+|- !P. (?x. P x) /\ (?z. !x. P x ==> x <= z) ==> !y. P y ==> y <= sup P
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ARCH</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 < x ==> !y. ?n. y < $& n * x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ARCH_LEAST</font></STRONG>
+<DD>
+<PRE>
+|- !y. 0 < y ==> !x. 0 <= x ==> ?n. $& n * y <= x /\ x < $& (SUC n) * y
+</PRE>
+
+<DT><STRONG><font color="black">sum</font></STRONG>
+<DD>
+<PRE>
+|- !f n m. (sum (n,0) f = 0) /\ (sum (n,SUC m) f = sum (n,m) f + f (n + m))
+</PRE>
+
+<DT><STRONG><font color="black">SUM_TWO</font></STRONG>
+<DD>
+<PRE>
+|- !f n p. sum (0,n) f + sum (n,p) f = sum (0,n + p) f
+</PRE>
+
+<DT><STRONG><font color="black">SUM_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- !f m n. sum (m,n) f = sum (0,m + n) f - sum (0,m) f
+</PRE>
+
+<DT><STRONG><font color="black">ABS_SUM</font></STRONG>
+<DD>
+<PRE>
+|- !f m n. abs (sum (m,n) f) <= sum (m,n) (\n. abs (f n))
+</PRE>
+
+<DT><STRONG><font color="black">SUM_LE</font></STRONG>
+<DD>
+<PRE>
+|- !f g m n.
+     (!r. m <= r /\ r < n + m ==> f r <= g r) ==> sum (m,n) f <= sum (m,n) g
+</PRE>
+
+<DT><STRONG><font color="black">SUM_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !f g m n.
+     (!r. m <= r /\ r < n + m ==> (f r = g r)) ==> (sum (m,n) f = sum (m,n) g)
+</PRE>
+
+<DT><STRONG><font color="black">SUM_POS</font></STRONG>
+<DD>
+<PRE>
+|- !f. (!n. 0 <= f n) ==> !m n. 0 <= sum (m,n) f
+</PRE>
+
+<DT><STRONG><font color="black">SUM_POS_GEN</font></STRONG>
+<DD>
+<PRE>
+|- !f m. (!n. m <= n ==> 0 <= f n) ==> !n. 0 <= sum (m,n) f
+</PRE>
+
+<DT><STRONG><font color="black">SUM_ABS</font></STRONG>
+<DD>
+<PRE>
+|- !f m n. abs (sum (m,n) (\m. abs (f m))) = sum (m,n) (\m. abs (f m))
+</PRE>
+
+<DT><STRONG><font color="black">SUM_ABS_LE</font></STRONG>
+<DD>
+<PRE>
+|- !f m n. abs (sum (m,n) f) <= sum (m,n) (\n. abs (f n))
+</PRE>
+
+<DT><STRONG><font color="black">SUM_ZERO</font></STRONG>
+<DD>
+<PRE>
+|- !f N. (!n. n >= N ==> (f n = 0)) ==> !m n. m >= N ==> (sum (m,n) f = 0)
+</PRE>
+
+<DT><STRONG><font color="black">SUM_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !f g m n. sum (m,n) (\n. f n + g n) = sum (m,n) f + sum (m,n) g
+</PRE>
+
+<DT><STRONG><font color="black">SUM_CMUL</font></STRONG>
+<DD>
+<PRE>
+|- !f c m n. sum (m,n) (\n. c * f n) = c * sum (m,n) f
+</PRE>
+
+<DT><STRONG><font color="black">SUM_NEG</font></STRONG>
+<DD>
+<PRE>
+|- !f n d. sum (n,d) (\n. ~f n) = ~sum (n,d) f
+</PRE>
+
+<DT><STRONG><font color="black">SUM_SUB</font></STRONG>
+<DD>
+<PRE>
+|- !f g m n. sum (m,n) (\n. f n - g n) = sum (m,n) f - sum (m,n) g
+</PRE>
+
+<DT><STRONG><font color="black">SUM_SUBST</font></STRONG>
+<DD>
+<PRE>
+|- !f g m n.
+     (!p. m <= p /\ p < m + n ==> (f p = g p)) ==> (sum (m,n) f = sum (m,n) g)
+</PRE>
+
+<DT><STRONG><font color="black">SUM_NSUB</font></STRONG>
+<DD>
+<PRE>
+|- !n f c. sum (0,n) f - $& n * c = sum (0,n) (\p. f p - c)
+</PRE>
+
+<DT><STRONG><font color="black">SUM_BOUND</font></STRONG>
+<DD>
+<PRE>
+|- !f k m n.
+     (!p. m <= p /\ p < m + n ==> f p <= k) ==> sum (m,n) f <= $& n * k
+</PRE>
+
+<DT><STRONG><font color="black">SUM_GROUP</font></STRONG>
+<DD>
+<PRE>
+|- !n k f. sum (0,n) (\m. sum (m * k,k) f) = sum (0,n * k) f
+</PRE>
+
+<DT><STRONG><font color="black">SUM_1</font></STRONG>
+<DD>
+<PRE>
+|- !f n. sum (n,1) f = f n
+</PRE>
+
+<DT><STRONG><font color="black">SUM_2</font></STRONG>
+<DD>
+<PRE>
+|- !f n. sum (n,2) f = f n + f (n + 1)
+</PRE>
+
+<DT><STRONG><font color="black">SUM_OFFSET</font></STRONG>
+<DD>
+<PRE>
+|- !f n k. sum (0,n) (\m. f (m + k)) = sum (0,n + k) f - sum (0,k) f
+</PRE>
+
+<DT><STRONG><font color="black">SUM_REINDEX</font></STRONG>
+<DD>
+<PRE>
+|- !f m k n. sum (m + k,n) f = sum (m,n) (\r. f (r + k))
+</PRE>
+
+<DT><STRONG><font color="black">SUM_0</font></STRONG>
+<DD>
+<PRE>
+|- !m n. sum (m,n) (\r. 0) = 0
+</PRE>
+
+<DT><STRONG><font color="black">SUM_PERMUTE_0</font></STRONG>
+<DD>
+<PRE>
+|- !n p.
+     (!y. y < n ==> ?!x. x < n /\ (p x = y)) ==>
+     !f. sum (0,n) (\n. f (p n)) = sum (0,n) f
+</PRE>
+
+<DT><STRONG><font color="black">SUM_CANCEL</font></STRONG>
+<DD>
+<PRE>
+|- !f n d. sum (n,d) (\n. f (SUC n) - f n) = f (n + d) - f n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_RNEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x * ~y = ~(x * y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_MUL_LNEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~x * y = ~(x * y)
+</PRE>
+
+<DT><STRONG><font color="black">real_lt</font></STRONG>
+<DD>
+<PRE>
+|- !y x. x < y = ~(y <= x)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_LADD_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. y <= z ==> x + y <= x + z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_LNEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~x <= y = 0 <= x + y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_NEG2</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~x <= ~y = y <= x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_NEG_NEG</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~~x = x
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_RNEG</font></STRONG>
+<DD>
+<PRE>
+|- !x y. x <= ~y = x + y <= 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POW_INV</font></STRONG>
+<DD>
+<PRE>
+|- !x n. inv x pow n = inv (x pow n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POW_DIV</font></STRONG>
+<DD>
+<PRE>
+|- !x y n. (x / y) pow n = x pow n / y pow n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_POW_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !x m n. x pow (m + n) = x pow m * x pow n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_RDIV_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < z ==> (x <= y / z = x * z <= y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LE_LDIV_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < z ==> (x / z <= y = x <= y * z)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_RDIV_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < z ==> (x < y / z = x * z < y)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_LT_LDIV_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < z ==> (x / z < y = x < y * z)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_RDIV_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < z ==> ((x = y / z) = (x * z = y))
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_LDIV_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. 0 < z ==> ((x / z = y) = (x = y * z))
+</PRE>
+
+<DT><STRONG><font color="black">REAL_OF_NUM_POW</font></STRONG>
+<DD>
+<PRE>
+|- !x n. $& x pow n = $& (x ** n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_LDISTRIB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x * (y + z) = x * y + x * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ADD_RDISTRIB</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x + y) * z = x * z + y * z
+</PRE>
+
+<DT><STRONG><font color="black">REAL_OF_NUM_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !m n. $& m + $& n = $& (m + n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_OF_NUM_LE</font></STRONG>
+<DD>
+<PRE>
+|- !m n. $& m <= $& n = m <= n
+</PRE>
+
+<DT><STRONG><font color="black">REAL_OF_NUM_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !m n. $& m * $& n = $& (m * n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_OF_NUM_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !n. $& n + 1 = $& (SUC n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_OF_NUM_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !m n. ($& m = $& n) = (m = n)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_EQ_MUL_LCANCEL</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x * y = x * z) = (x = 0) \/ (y = z)
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ABS_0</font></STRONG>
+<DD>
+<PRE>
+|- abs 0 = 0
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ABS_TRIANGLE</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs (x + y) <= abs x + abs y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ABS_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !x y. abs (x * y) = abs x * abs y
+</PRE>
+
+<DT><STRONG><font color="black">REAL_ABS_POS</font></STRONG>
+<DD>
+<PRE>
+|- !x. 0 <= abs x
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

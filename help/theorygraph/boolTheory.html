@@ -1,0 +1,1049 @@
+<HTML>
+<HEAD><TITLE>Theory: bool</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "bool"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "minTheory.html"><STRONG><font color="black">min</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">!</font></STRONG>
+                                         <td>
+                                         :('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">?</font></STRONG>
+        <td>
+        :('a -> bool) -> bool
+    <tr><td> <STRONG><font color="black">F</font></STRONG> <td> :bool
+    <tr><td> <STRONG><font color="black">T</font></STRONG> <td> :bool
+    <tr><td> <STRONG><font color="black">~</font></STRONG> <td> :bool -> bool
+    <tr><td>
+        <STRONG><font color="black">/\</font></STRONG>
+        <td>
+        :bool -> bool -> bool
+    <tr><td>
+        <STRONG><font color="black">?!</font></STRONG>
+        <td>
+        :('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">RES_EXISTS</font></STRONG>
+        <td>
+        :('a -> bool) -> ('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">IN</font></STRONG>
+        <td>
+        :'a -> ('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">case_split__magic</font></STRONG>
+        <td>
+        :('a -> 'b) -> ('a -> 'b) -> 'a -> 'b
+    <tr><td>
+        <STRONG><font color="black">\/</font></STRONG>
+        <td>
+        :bool -> bool -> bool
+    <tr><td>
+        <STRONG><font color="black">case__magic</font></STRONG>
+        <td>
+        :'a -> ('a -> 'b) -> 'b
+    <tr><td>
+        <STRONG><font color="black">ONTO</font></STRONG>
+        <td>
+        :('a -> 'b) -> bool
+    <tr><td>
+        <STRONG><font color="black">RES_EXISTS_UNIQUE</font></STRONG>
+        <td>
+        :('a -> bool) -> ('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">ONE_ONE</font></STRONG>
+        <td>
+        :('a -> 'b) -> bool
+    <tr><td>
+        <STRONG><font color="black">TYPE_DEFINITION</font></STRONG>
+        <td>
+        :('a -> bool) -> ('b -> 'a) -> bool
+    <tr><td>
+        <STRONG><font color="black">RES_FORALL</font></STRONG>
+        <td>
+        :('a -> bool) -> ('a -> bool) -> bool
+    <tr><td> <STRONG><font color="black">ARB</font></STRONG> <td> :'a
+    <tr><td>
+        <STRONG><font color="black">UNBOUNDED</font></STRONG>
+        <td>
+        :bool -> bool
+    <tr><td>
+        <STRONG><font color="black">LET</font></STRONG>
+        <td>
+        :('a -> 'b) -> 'a -> 'b
+    <tr><td>
+        <STRONG><font color="black">case_arrow__magic</font></STRONG>
+        <td>
+        :'a -> 'b -> 'a -> 'b
+    <tr><td>
+        <STRONG><font color="black">bool_case</font></STRONG>
+        <td>
+        :'a -> 'a -> bool -> 'a
+    <tr><td>
+        <STRONG><font color="black">BOUNDED</font></STRONG>
+        <td>
+        :bool -> bool -> bool
+    <tr><td>
+        <STRONG><font color="black">RES_SELECT</font></STRONG>
+        <td>
+        :('a -> bool) -> ('a -> bool) -> 'a
+    <tr><td>
+        <STRONG><font color="black">COND</font></STRONG>
+        <td>
+        :bool -> 'a -> 'a -> 'a
+    <tr><td>
+        <STRONG><font color="black">RES_ABSTRACT</font></STRONG>
+        <td>
+        :('a -> bool) -> ('a -> 'b) -> 'a -> 'b
+    
+</table>
+</center>
+
+<H1><font color="black">Axioms</font></H1>
+<DL>
+<DT><STRONG><font color="black">BOOL_CASES_AX</font></STRONG>
+<DD>
+<PRE>
+|- !t. (t = T) \/ (t = F)
+</PRE>
+
+<DT><STRONG><font color="black">ETA_AX</font></STRONG>
+<DD>
+<PRE>
+|- !t. (\x. t x) = t
+</PRE>
+
+<DT><STRONG><font color="black">SELECT_AX</font></STRONG>
+<DD>
+<PRE>
+|- !P x. P x ==> P ($@ P)
+</PRE>
+
+<DT><STRONG><font color="black">INFINITY_AX</font></STRONG>
+<DD>
+<PRE>
+|- ?f. ONE_ONE f /\ ~ONTO f
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">T_DEF</font></STRONG>
+<DD>
+<PRE>
+|- T = ((\x. x) = (\x. x))
+</PRE>
+
+<DT><STRONG><font color="black">FORALL_DEF</font></STRONG>
+<DD>
+<PRE>
+|- $! = (\P. P = (\x. T))
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_DEF</font></STRONG>
+<DD>
+<PRE>
+|- $? = (\P. P ($@ P))
+</PRE>
+
+<DT><STRONG><font color="black">AND_DEF</font></STRONG>
+<DD>
+<PRE>
+|- $/\ = (\t1 t2. !t. (t1 ==> t2 ==> t) ==> t)
+</PRE>
+
+<DT><STRONG><font color="black">OR_DEF</font></STRONG>
+<DD>
+<PRE>
+|- $\/ = (\t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t)
+</PRE>
+
+<DT><STRONG><font color="black">F_DEF</font></STRONG>
+<DD>
+<PRE>
+|- F = !t. t
+</PRE>
+
+<DT><STRONG><font color="black">NOT_DEF</font></STRONG>
+<DD>
+<PRE>
+|- $~ = (\t. t ==> F)
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_UNIQUE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- $?! = (\P. $? P /\ !x y. P x /\ P y ==> (x = y))
+</PRE>
+
+<DT><STRONG><font color="black">LET_DEF</font></STRONG>
+<DD>
+<PRE>
+|- LET = (\f x. f x)
+</PRE>
+
+<DT><STRONG><font color="black">COND_DEF</font></STRONG>
+<DD>
+<PRE>
+|- COND = (\t t1 t2. @x. ((t = T) ==> (x = t1)) /\ ((t = F) ==> (x = t2)))
+</PRE>
+
+<DT><STRONG><font color="black">ONE_ONE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ONE_ONE = (\f. !x1 x2. (f x1 = f x2) ==> (x1 = x2))
+</PRE>
+
+<DT><STRONG><font color="black">ONTO_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ONTO = (\f. !y. ?x. y = f x)
+</PRE>
+
+<DT><STRONG><font color="black">TYPE_DEFINITION</font></STRONG>
+<DD>
+<PRE>
+|- TYPE_DEFINITION =
+   (\P rep.
+      (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
+      !x. P x = ?x'. x = rep x')
+</PRE>
+
+<DT><STRONG><font color="black">ARB_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ARB = @x. T
+</PRE>
+
+<DT><STRONG><font color="black">bool_case_DEF</font></STRONG>
+<DD>
+<PRE>
+|- case = (\x y b. (if b then x else y))
+</PRE>
+
+<DT><STRONG><font color="black">IN_DEF</font></STRONG>
+<DD>
+<PRE>
+|- $IN = (\x f. f x)
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL_DEF</font></STRONG>
+<DD>
+<PRE>
+|- RES_FORALL = (\p m. !x. x IN p ==> m x)
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_DEF</font></STRONG>
+<DD>
+<PRE>
+|- RES_EXISTS = (\p m. ?x. x IN p /\ m x)
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_UNIQUE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- RES_EXISTS_UNIQUE = (\p m. (?x::p. m x) /\ !x y::p. m x /\ m y ==> (x = y))
+</PRE>
+
+<DT><STRONG><font color="black">RES_SELECT_DEF</font></STRONG>
+<DD>
+<PRE>
+|- RES_SELECT = (\p m. @x. x IN p /\ m x)
+</PRE>
+
+<DT><STRONG><font color="black">UNBOUNDED_DEF</font></STRONG>
+<DD>
+<PRE>
+|- UNBOUNDED = (\b. b)
+</PRE>
+
+<DT><STRONG><font color="black">BOUNDED_DEF</font></STRONG>
+<DD>
+<PRE>
+|- BOUNDED = (\b v. b)
+</PRE>
+
+<DT><STRONG><font color="black">RES_ABSTRACT_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!p m x. x IN p ==> (RES_ABSTRACT p m x = m x)) /\
+   !p m1 m2.
+     (!x. x IN p ==> (m1 x = m2 x)) ==>
+     (RES_ABSTRACT p m1 = RES_ABSTRACT p m2)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">TRUTH</font></STRONG>
+<DD>
+<PRE>
+|- T
+</PRE>
+
+<DT><STRONG><font color="black">IMP_ANTISYM_AX</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 = t2)
+</PRE>
+
+<DT><STRONG><font color="black">FALSITY</font></STRONG>
+<DD>
+<PRE>
+|- !t. F ==> t
+</PRE>
+
+<DT><STRONG><font color="black">ETA_THM</font></STRONG>
+<DD>
+<PRE>
+|- !M. (\x. M x) = M
+</PRE>
+
+<DT><STRONG><font color="black">EXCLUDED_MIDDLE</font></STRONG>
+<DD>
+<PRE>
+|- !t. t \/ ~t
+</PRE>
+
+<DT><STRONG><font color="black">BETA_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f y. (\x. f x) y = f y
+</PRE>
+
+<DT><STRONG><font color="black">LET_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f x. LET f x = f x
+</PRE>
+
+<DT><STRONG><font color="black">FORALL_THM</font></STRONG>
+<DD>
+<PRE>
+|- $! f = !x. f x
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_THM</font></STRONG>
+<DD>
+<PRE>
+|- $? f = ?x. f x
+</PRE>
+
+<DT><STRONG><font color="black">ABS_SIMP</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. (\x. t1) t2 = t1
+</PRE>
+
+<DT><STRONG><font color="black">FORALL_SIMP</font></STRONG>
+<DD>
+<PRE>
+|- !t. (!x. t) = t
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_SIMP</font></STRONG>
+<DD>
+<PRE>
+|- !t. (?x. t) = t
+</PRE>
+
+<DT><STRONG><font color="black">AND_INTRO_THM</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. t1 ==> t2 ==> t1 /\ t2
+</PRE>
+
+<DT><STRONG><font color="black">AND1_THM</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. t1 /\ t2 ==> t1
+</PRE>
+
+<DT><STRONG><font color="black">AND2_THM</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. t1 /\ t2 ==> t2
+</PRE>
+
+<DT><STRONG><font color="black">CONJ_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. t1 /\ t2 = t2 /\ t1
+</PRE>
+
+<DT><STRONG><font color="black">CONJ_COMM</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. t1 /\ t2 = t2 /\ t1
+</PRE>
+
+<DT><STRONG><font color="black">CONJ_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2 t3. t1 /\ t2 /\ t3 = (t1 /\ t2) /\ t3
+</PRE>
+
+<DT><STRONG><font color="black">OR_INTRO_THM1</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. t1 ==> t1 \/ t2
+</PRE>
+
+<DT><STRONG><font color="black">OR_INTRO_THM2</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. t2 ==> t1 \/ t2
+</PRE>
+
+<DT><STRONG><font color="black">OR_ELIM_THM</font></STRONG>
+<DD>
+<PRE>
+|- !t t1 t2. t1 \/ t2 ==> (t1 ==> t) ==> (t2 ==> t) ==> t
+</PRE>
+
+<DT><STRONG><font color="black">IMP_F</font></STRONG>
+<DD>
+<PRE>
+|- !t. (t ==> F) ==> ~t
+</PRE>
+
+<DT><STRONG><font color="black">F_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !t. ~t ==> t ==> F
+</PRE>
+
+<DT><STRONG><font color="black">NOT_F</font></STRONG>
+<DD>
+<PRE>
+|- !t. ~t ==> (t = F)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_AND</font></STRONG>
+<DD>
+<PRE>
+|- ~(t /\ ~t)
+</PRE>
+
+<DT><STRONG><font color="black">AND_CLAUSES</font></STRONG>
+<DD>
+<PRE>
+|- !t.
+     (T /\ t = t) /\ (t /\ T = t) /\ (F /\ t = F) /\ (t /\ F = F) /\
+     (t /\ t = t)
+</PRE>
+
+<DT><STRONG><font color="black">OR_CLAUSES</font></STRONG>
+<DD>
+<PRE>
+|- !t.
+     (T \/ t = T) /\ (t \/ T = T) /\ (F \/ t = t) /\ (t \/ F = t) /\
+     (t \/ t = t)
+</PRE>
+
+<DT><STRONG><font color="black">IMP_CLAUSES</font></STRONG>
+<DD>
+<PRE>
+|- !t.
+     (T ==> t = t) /\ (t ==> T = T) /\ (F ==> t = T) /\ (t ==> t = T) /\
+     (t ==> F = ~t)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_CLAUSES</font></STRONG>
+<DD>
+<PRE>
+|- (!t. ~~t = t) /\ (~T = F) /\ (~F = T)
+</PRE>
+
+<DT><STRONG><font color="black">EQ_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. x = x
+</PRE>
+
+<DT><STRONG><font color="black">REFL_CLAUSE</font></STRONG>
+<DD>
+<PRE>
+|- !x. (x = x) = T
+</PRE>
+
+<DT><STRONG><font color="black">EQ_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x = y) ==> (y = x)
+</PRE>
+
+<DT><STRONG><font color="black">EQ_SYM_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (x = y) = (y = x)
+</PRE>
+
+<DT><STRONG><font color="black">EQ_EXT</font></STRONG>
+<DD>
+<PRE>
+|- !f g. (!x. f x = g x) ==> (f = g)
+</PRE>
+
+<DT><STRONG><font color="black">FUN_EQ_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f g. (f = g) = !x. f x = g x
+</PRE>
+
+<DT><STRONG><font color="black">EQ_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. (x = y) /\ (y = z) ==> (x = z)
+</PRE>
+
+<DT><STRONG><font color="black">BOOL_EQ_DISTINCT</font></STRONG>
+<DD>
+<PRE>
+|- ~(T = F) /\ ~(F = T)
+</PRE>
+
+<DT><STRONG><font color="black">EQ_CLAUSES</font></STRONG>
+<DD>
+<PRE>
+|- !t. ((T = t) = t) /\ ((t = T) = t) /\ ((F = t) = ~t) /\ ((t = F) = ~t)
+</PRE>
+
+<DT><STRONG><font color="black">COND_CLAUSES</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. ((if T then t1 else t2) = t1) /\ ((if F then t1 else t2) = t2)
+</PRE>
+
+<DT><STRONG><font color="black">COND_ID</font></STRONG>
+<DD>
+<PRE>
+|- !b t. (if b then t else t) = t
+</PRE>
+
+<DT><STRONG><font color="black">SELECT_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P. P (@x. P x) = ?x. P x
+</PRE>
+
+<DT><STRONG><font color="black">SELECT_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !x. (@y. y = x) = x
+</PRE>
+
+<DT><STRONG><font color="black">SELECT_REFL_2</font></STRONG>
+<DD>
+<PRE>
+|- !x. (@y. x = y) = x
+</PRE>
+
+<DT><STRONG><font color="black">SELECT_UNIQUE</font></STRONG>
+<DD>
+<PRE>
+|- !P x. (!y. P y = (y = x)) ==> ($@ P = x)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_FORALL_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P. ~(!x. P x) = ?x. ~P x
+</PRE>
+
+<DT><STRONG><font color="black">NOT_EXISTS_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P. ~(?x. P x) = !x. ~P x
+</PRE>
+
+<DT><STRONG><font color="black">FORALL_AND_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (!x. P x /\ Q x) = (!x. P x) /\ !x. Q x
+</PRE>
+
+<DT><STRONG><font color="black">LEFT_AND_FORALL_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (!x. P x) /\ Q = !x. P x /\ Q
+</PRE>
+
+<DT><STRONG><font color="black">RIGHT_AND_FORALL_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. P /\ (!x. Q x) = !x. P /\ Q x
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_OR_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (?x. P x \/ Q x) = (?x. P x) \/ ?x. Q x
+</PRE>
+
+<DT><STRONG><font color="black">LEFT_OR_EXISTS_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (?x. P x) \/ Q = ?x. P x \/ Q
+</PRE>
+
+<DT><STRONG><font color="black">RIGHT_OR_EXISTS_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. P \/ (?x. Q x) = ?x. P \/ Q x
+</PRE>
+
+<DT><STRONG><font color="black">BOTH_EXISTS_AND_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (?x. P /\ Q) = (?x. P) /\ ?x. Q
+</PRE>
+
+<DT><STRONG><font color="black">LEFT_EXISTS_AND_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (?x. P x /\ Q) = (?x. P x) /\ Q
+</PRE>
+
+<DT><STRONG><font color="black">RIGHT_EXISTS_AND_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (?x. P /\ Q x) = P /\ ?x. Q x
+</PRE>
+
+<DT><STRONG><font color="black">BOTH_FORALL_OR_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (!x. P \/ Q) = (!x. P) \/ !x. Q
+</PRE>
+
+<DT><STRONG><font color="black">LEFT_FORALL_OR_THM</font></STRONG>
+<DD>
+<PRE>
+|- !Q P. (!x. P x \/ Q) = (!x. P x) \/ Q
+</PRE>
+
+<DT><STRONG><font color="black">RIGHT_FORALL_OR_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (!x. P \/ Q x) = P \/ !x. Q x
+</PRE>
+
+<DT><STRONG><font color="black">BOTH_FORALL_IMP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (!x. P ==> Q) = (?x. P) ==> !x. Q
+</PRE>
+
+<DT><STRONG><font color="black">LEFT_FORALL_IMP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (!x. P x ==> Q) = (?x. P x) ==> Q
+</PRE>
+
+<DT><STRONG><font color="black">RIGHT_FORALL_IMP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (!x. P ==> Q x) = P ==> !x. Q x
+</PRE>
+
+<DT><STRONG><font color="black">BOTH_EXISTS_IMP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (?x. P ==> Q) = (!x. P) ==> ?x. Q
+</PRE>
+
+<DT><STRONG><font color="black">LEFT_EXISTS_IMP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (?x. P x ==> Q) = (!x. P x) ==> Q
+</PRE>
+
+<DT><STRONG><font color="black">RIGHT_EXISTS_IMP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
+</PRE>
+
+<DT><STRONG><font color="black">OR_IMP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !A B. (A = B \/ A) = B ==> A
+</PRE>
+
+<DT><STRONG><font color="black">NOT_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !A B. ~(A ==> B) = A /\ ~B
+</PRE>
+
+<DT><STRONG><font color="black">DISJ_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !A B C. A \/ B \/ C = (A \/ B) \/ C
+</PRE>
+
+<DT><STRONG><font color="black">DISJ_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !A B. A \/ B = B \/ A
+</PRE>
+
+<DT><STRONG><font color="black">DISJ_COMM</font></STRONG>
+<DD>
+<PRE>
+|- !A B. A \/ B = B \/ A
+</PRE>
+
+<DT><STRONG><font color="black">DE_MORGAN_THM</font></STRONG>
+<DD>
+<PRE>
+|- !A B. (~(A /\ B) = ~A \/ ~B) /\ (~(A \/ B) = ~A /\ ~B)
+</PRE>
+
+<DT><STRONG><font color="black">LEFT_AND_OVER_OR</font></STRONG>
+<DD>
+<PRE>
+|- !A B C. A /\ (B \/ C) = A /\ B \/ A /\ C
+</PRE>
+
+<DT><STRONG><font color="black">RIGHT_AND_OVER_OR</font></STRONG>
+<DD>
+<PRE>
+|- !A B C. (B \/ C) /\ A = B /\ A \/ C /\ A
+</PRE>
+
+<DT><STRONG><font color="black">LEFT_OR_OVER_AND</font></STRONG>
+<DD>
+<PRE>
+|- !A B C. A \/ B /\ C = (A \/ B) /\ (A \/ C)
+</PRE>
+
+<DT><STRONG><font color="black">RIGHT_OR_OVER_AND</font></STRONG>
+<DD>
+<PRE>
+|- !A B C. B /\ C \/ A = (B \/ A) /\ (C \/ A)
+</PRE>
+
+<DT><STRONG><font color="black">IMP_DISJ_THM</font></STRONG>
+<DD>
+<PRE>
+|- !A B. A ==> B = ~A \/ B
+</PRE>
+
+<DT><STRONG><font color="black">DISJ_IMP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q R. P \/ Q ==> R = (P ==> R) /\ (Q ==> R)
+</PRE>
+
+<DT><STRONG><font color="black">IMP_F_EQ_F</font></STRONG>
+<DD>
+<PRE>
+|- !t. t ==> F = (t = F)
+</PRE>
+
+<DT><STRONG><font color="black">AND_IMP_INTRO</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2 t3. t1 ==> t2 ==> t3 = t1 /\ t2 ==> t3
+</PRE>
+
+<DT><STRONG><font color="black">EQ_IMP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. (t1 = t2) = (t1 ==> t2) /\ (t2 ==> t1)
+</PRE>
+
+<DT><STRONG><font color="black">EQ_EXPAND</font></STRONG>
+<DD>
+<PRE>
+|- !t1 t2. (t1 = t2) = t1 /\ t2 \/ ~t1 /\ ~t2
+</PRE>
+
+<DT><STRONG><font color="black">COND_RATOR</font></STRONG>
+<DD>
+<PRE>
+|- !b f g x. (if b then f else g) x = (if b then f x else g x)
+</PRE>
+
+<DT><STRONG><font color="black">COND_RAND</font></STRONG>
+<DD>
+<PRE>
+|- !f b x y. f (if b then x else y) = (if b then f x else f y)
+</PRE>
+
+<DT><STRONG><font color="black">COND_ABS</font></STRONG>
+<DD>
+<PRE>
+|- !b f g. (\x. (if b then f x else g x)) = (if b then f else g)
+</PRE>
+
+<DT><STRONG><font color="black">COND_EXPAND</font></STRONG>
+<DD>
+<PRE>
+|- !b t1 t2. (if b then t1 else t2) = (~b \/ t1) /\ (b \/ t2)
+</PRE>
+
+<DT><STRONG><font color="black">TYPE_DEFINITION_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P rep.
+     TYPE_DEFINITION P rep =
+     (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\ !x. P x = ?x'. x = rep x'
+</PRE>
+
+<DT><STRONG><font color="black">ONTO_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f. ONTO f = !y. ?x. y = f x
+</PRE>
+
+<DT><STRONG><font color="black">ONE_ONE_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f. ONE_ONE f = !x1 x2. (f x1 = f x2) ==> (x1 = x2)
+</PRE>
+
+<DT><STRONG><font color="black">ABS_REP_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (?rep. TYPE_DEFINITION P rep) ==>
+     ?rep abs. (!a. abs (rep a) = a) /\ !r. P r = (rep (abs r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">LET_RAND</font></STRONG>
+<DD>
+<PRE>
+|- P (let x = M in N x) = (let x = M in P (N x))
+</PRE>
+
+<DT><STRONG><font color="black">LET_RATOR</font></STRONG>
+<DD>
+<PRE>
+|- (let x = M in N x) b = (let x = M in N x b)
+</PRE>
+
+<DT><STRONG><font color="black">SWAP_FORALL_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P. (!x y. P x y) = !y x. P x y
+</PRE>
+
+<DT><STRONG><font color="black">SWAP_EXISTS_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P. (?x y. P x y) = ?y x. P x y
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_UNIQUE_THM</font></STRONG>
+<DD>
+<PRE>
+|- (?!x. P x) = (?x. P x) /\ !x y. P x /\ P y ==> (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">LET_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !f g M N. (M = N) /\ (!x. (x = N) ==> (f x = g x)) ==> (LET f M = LET g N)
+</PRE>
+
+<DT><STRONG><font color="black">IMP_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !x x' y y'. (x = x') /\ (x' ==> (y = y')) ==> (x ==> y = x' ==> y')
+</PRE>
+
+<DT><STRONG><font color="black">AND_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !P P' Q Q'. (Q ==> (P = P')) /\ (P' ==> (Q = Q')) ==> (P /\ Q = P' /\ Q')
+</PRE>
+
+<DT><STRONG><font color="black">OR_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !P P' Q Q'. (~Q ==> (P = P')) /\ (~P' ==> (Q = Q')) ==> (P \/ Q = P' \/ Q')
+</PRE>
+
+<DT><STRONG><font color="black">COND_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !P Q x x' y y'.
+     (P = Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) ==>
+     ((if P then x else y) = (if Q then x' else y'))
+</PRE>
+
+<DT><STRONG><font color="black">MONO_AND</font></STRONG>
+<DD>
+<PRE>
+|- (x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w
+</PRE>
+
+<DT><STRONG><font color="black">MONO_OR</font></STRONG>
+<DD>
+<PRE>
+|- (x ==> y) /\ (z ==> w) ==> x \/ z ==> y \/ w
+</PRE>
+
+<DT><STRONG><font color="black">MONO_IMP</font></STRONG>
+<DD>
+<PRE>
+|- (y ==> x) /\ (z ==> w) ==> (x ==> z) ==> y ==> w
+</PRE>
+
+<DT><STRONG><font color="black">MONO_NOT</font></STRONG>
+<DD>
+<PRE>
+|- (y ==> x) ==> ~x ==> ~y
+</PRE>
+
+<DT><STRONG><font color="black">MONO_ALL</font></STRONG>
+<DD>
+<PRE>
+|- (!x. P x ==> Q x) ==> (!x. P x) ==> !x. Q x
+</PRE>
+
+<DT><STRONG><font color="black">MONO_EXISTS</font></STRONG>
+<DD>
+<PRE>
+|- (!x. P x ==> Q x) ==> (?x. P x) ==> ?x. Q x
+</PRE>
+
+<DT><STRONG><font color="black">MONO_COND</font></STRONG>
+<DD>
+<PRE>
+|- (x ==> y) ==> (z ==> w) ==> (if b then x else z) ==> (if b then y else w)
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !a. ?x. x = a
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_UNIQUE_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !a. ?!x. x = a
+</PRE>
+
+<DT><STRONG><font color="black">UNWIND_THM1</font></STRONG>
+<DD>
+<PRE>
+|- !P a. (?x. (a = x) /\ P x) = P a
+</PRE>
+
+<DT><STRONG><font color="black">UNWIND_THM2</font></STRONG>
+<DD>
+<PRE>
+|- !P a. (?x. (x = a) /\ P x) = P a
+</PRE>
+
+<DT><STRONG><font color="black">UNWIND_FORALL_THM1</font></STRONG>
+<DD>
+<PRE>
+|- !f v. (!x. (v = x) ==> f x) = f v
+</PRE>
+
+<DT><STRONG><font color="black">UNWIND_FORALL_THM2</font></STRONG>
+<DD>
+<PRE>
+|- !f v. (!x. (x = v) ==> f x) = f v
+</PRE>
+
+<DT><STRONG><font color="black">SKOLEM_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P. (!x. ?y. P x y) = ?f. !x. P x (f x)
+</PRE>
+
+<DT><STRONG><font color="black">bool_case_thm</font></STRONG>
+<DD>
+<PRE>
+|- (!e0 e1. (case T of T -> e0 || F -> e1) = e0) /\
+   !e0 e1. (case F of T -> e0 || F -> e1) = e1
+</PRE>
+
+<DT><STRONG><font color="black">bool_case_ID</font></STRONG>
+<DD>
+<PRE>
+|- !x b. (case b of T -> x || F -> x) = x
+</PRE>
+
+<DT><STRONG><font color="black">boolAxiom</font></STRONG>
+<DD>
+<PRE>
+|- !e0 e1. ?fn. (fn T = e0) /\ (fn F = e1)
+</PRE>
+
+<DT><STRONG><font color="black">bool_INDUCT</font></STRONG>
+<DD>
+<PRE>
+|- !P. P T /\ P F ==> !b. P b
+</PRE>
+
+<DT><STRONG><font color="black">UEXISTS_OR_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (?!x. P x \/ Q x) ==> (?!x. P x) \/ ?!x. Q x
+</PRE>
+
+<DT><STRONG><font color="black">UEXISTS_SIMP</font></STRONG>
+<DD>
+<PRE>
+|- (?!x. t) = t /\ !x y. x = y
+</PRE>
+
+<DT><STRONG><font color="black">BOOL_FUN_CASES_THM</font></STRONG>
+<DD>
+<PRE>
+|- !f. (f = (\b. T)) \/ (f = (\b. F)) \/ (f = (\b. b)) \/ (f = (\b. ~b))
+</PRE>
+
+<DT><STRONG><font color="black">BOOL_FUN_INDUCT</font></STRONG>
+<DD>
+<PRE>
+|- !P. P (\b. T) /\ P (\b. F) /\ P (\b. b) /\ P (\b. ~b) ==> !f. P f
+</PRE>
+
+<DT><STRONG><font color="black">BOUNDED_THM</font></STRONG>
+<DD>
+<PRE>
+|- !b v. BOUNDED b v = b
+</PRE>
+
+<DT><STRONG><font color="black">UNBOUNDED_THM</font></STRONG>
+<DD>
+<PRE>
+|- !b. UNBOUNDED b = b
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

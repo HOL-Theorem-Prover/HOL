@@ -1,0 +1,167 @@
+<HTML>
+<HEAD><TITLE>Theory: state_transformer</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "state_transformer"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "pairTheory.html"><STRONG><font color="black">pair</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">JOIN</font></STRONG>
+                                         <td>
+                                         :('a -> ('a -> 'b # 'a) # 'a) ->
+                                          'a -> 'b # 'a
+    <tr><td>
+        <STRONG><font color="black">MMAP</font></STRONG>
+        <td>
+        :('c -> 'b) -> ('a -> 'c # 'a) -> 'a -> 'b # 'a
+    <tr><td>
+        <STRONG><font color="black">UNIT</font></STRONG>
+        <td>
+        :'b -> 'a -> 'b # 'a
+    <tr><td>
+        <STRONG><font color="black">BIND</font></STRONG>
+        <td>
+        :('a -> 'b # 'a) -> ('b -> 'a -> 'c # 'a) -> 'a -> 'c # 'a
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">UNIT_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !x. UNIT x = (\s. (x,s))
+</PRE>
+
+<DT><STRONG><font color="black">BIND_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !g f. BIND g f = UNCURRY f o g
+</PRE>
+
+<DT><STRONG><font color="black">MMAP_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f m. MMAP f m = BIND m (UNIT o f)
+</PRE>
+
+<DT><STRONG><font color="black">JOIN_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !z. JOIN z = BIND z I
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">BIND_LEFT_UNIT</font></STRONG>
+<DD>
+<PRE>
+|- !k x. BIND (UNIT x) k = k x
+</PRE>
+
+<DT><STRONG><font color="black">UNIT_UNCURRY</font></STRONG>
+<DD>
+<PRE>
+|- !s. UNCURRY UNIT s = s
+</PRE>
+
+<DT><STRONG><font color="black">BIND_RIGHT_UNIT</font></STRONG>
+<DD>
+<PRE>
+|- !k. BIND k UNIT = k
+</PRE>
+
+<DT><STRONG><font color="black">BIND_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !k m n. BIND k (\a. BIND (m a) n) = BIND (BIND k m) n
+</PRE>
+
+<DT><STRONG><font color="black">MMAP_ID</font></STRONG>
+<DD>
+<PRE>
+|- MMAP I = I
+</PRE>
+
+<DT><STRONG><font color="black">MMAP_COMP</font></STRONG>
+<DD>
+<PRE>
+|- !f g. MMAP (f o g) = MMAP f o MMAP g
+</PRE>
+
+<DT><STRONG><font color="black">MMAP_UNIT</font></STRONG>
+<DD>
+<PRE>
+|- !f. MMAP f o UNIT = UNIT o f
+</PRE>
+
+<DT><STRONG><font color="black">MMAP_JOIN</font></STRONG>
+<DD>
+<PRE>
+|- !f. MMAP f o JOIN = JOIN o MMAP (MMAP f)
+</PRE>
+
+<DT><STRONG><font color="black">JOIN_UNIT</font></STRONG>
+<DD>
+<PRE>
+|- JOIN o UNIT = I
+</PRE>
+
+<DT><STRONG><font color="black">JOIN_MMAP_UNIT</font></STRONG>
+<DD>
+<PRE>
+|- JOIN o MMAP UNIT = I
+</PRE>
+
+<DT><STRONG><font color="black">JOIN_MAP_JOIN</font></STRONG>
+<DD>
+<PRE>
+|- JOIN o MMAP JOIN = JOIN o JOIN
+</PRE>
+
+<DT><STRONG><font color="black">JOIN_MAP</font></STRONG>
+<DD>
+<PRE>
+|- !k m. BIND k m = JOIN (MMAP m k)
+</PRE>
+
+<DT><STRONG><font color="black">FST_o_UNIT</font></STRONG>
+<DD>
+<PRE>
+|- !x. FST o UNIT x = K x
+</PRE>
+
+<DT><STRONG><font color="black">SND_o_UNIT</font></STRONG>
+<DD>
+<PRE>
+|- !x. SND o UNIT x = I
+</PRE>
+
+<DT><STRONG><font color="black">FST_o_MMAP</font></STRONG>
+<DD>
+<PRE>
+|- !f g. FST o MMAP f g = f o FST o g
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

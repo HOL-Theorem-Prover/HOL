@@ -1,0 +1,222 @@
+<HTML>
+<HEAD><TITLE>Theory: sum</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "sum"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "combinTheory.html"><STRONG><font color="black">combin</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">sum</font></STRONG>
+                                          <td>
+                                          2
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">IS_SUM_REP</font></STRONG>
+                                         <td>
+                                         :(bool -> 'a -> 'b -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">OUTL</font></STRONG>
+        <td>
+        :'a + 'b -> 'a
+    <tr><td>
+        <STRONG><font color="black">OUTR</font></STRONG>
+        <td>
+        :'a + 'b -> 'b
+    <tr><td>
+        <STRONG><font color="black">sum_case</font></STRONG>
+        <td>
+        :('b -> 'a) -> ('c -> 'a) -> 'b + 'c -> 'a
+    <tr><td>
+        <STRONG><font color="black">INL</font></STRONG>
+        <td>
+        :'a -> 'a + 'b
+    <tr><td>
+        <STRONG><font color="black">INR</font></STRONG>
+        <td>
+        :'b -> 'a + 'b
+    <tr><td>
+        <STRONG><font color="black">ISL</font></STRONG>
+        <td>
+        :'a + 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">ISR</font></STRONG>
+        <td>
+        :'a + 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">REP_sum</font></STRONG>
+        <td>
+        :'a + 'b -> bool -> 'a -> 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">ABS_sum</font></STRONG>
+        <td>
+        :(bool -> 'a -> 'b -> bool) -> 'a + 'b
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">IS_SUM_REP</font></STRONG>
+<DD>
+<PRE>
+|- !f.
+     IS_SUM_REP f =
+     ?v1 v2. (f = (\b x y. (x = v1) /\ b)) \/ (f = (\b x y. (y = v2) /\ ~b))
+</PRE>
+
+<DT><STRONG><font color="black">sum_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep. TYPE_DEFINITION IS_SUM_REP rep
+</PRE>
+
+<DT><STRONG><font color="black">sum_ISO_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!a. ABS_sum (REP_sum a) = a) /\
+   !r. IS_SUM_REP r = (REP_sum (ABS_sum r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">INL_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !e. INL e = ABS_sum (\b x y. (x = e) /\ b)
+</PRE>
+
+<DT><STRONG><font color="black">INR_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !e. INR e = ABS_sum (\b x y. (y = e) /\ ~b)
+</PRE>
+
+<DT><STRONG><font color="black">ISL</font></STRONG>
+<DD>
+<PRE>
+|- (!x. ISL (INL x)) /\ !y. ~ISL (INR y)
+</PRE>
+
+<DT><STRONG><font color="black">ISR</font></STRONG>
+<DD>
+<PRE>
+|- (!x. ISR (INR x)) /\ !y. ~ISR (INL y)
+</PRE>
+
+<DT><STRONG><font color="black">OUTL</font></STRONG>
+<DD>
+<PRE>
+|- !x. OUTL (INL x) = x
+</PRE>
+
+<DT><STRONG><font color="black">OUTR</font></STRONG>
+<DD>
+<PRE>
+|- !x. OUTR (INR x) = x
+</PRE>
+
+<DT><STRONG><font color="black">sum_case_def</font></STRONG>
+<DD>
+<PRE>
+|- (!f g x. case f g (INL x) = f x) /\ !f g y. case f g (INR y) = g y
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">INR_INL_11</font></STRONG>
+<DD>
+<PRE>
+|- (!y x. (INL x = INL y) = (x = y)) /\ !y x. (INR x = INR y) = (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">INR_neq_INL</font></STRONG>
+<DD>
+<PRE>
+|- !v1 v2. ~(INR v2 = INL v1)
+</PRE>
+
+<DT><STRONG><font color="black">sum_axiom</font></STRONG>
+<DD>
+<PRE>
+|- !f g. ?!h. (h o INL = f) /\ (h o INR = g)
+</PRE>
+
+<DT><STRONG><font color="black">sum_INDUCT</font></STRONG>
+<DD>
+<PRE>
+|- !P. (!x. P (INL x)) /\ (!y. P (INR y)) ==> !s. P s
+</PRE>
+
+<DT><STRONG><font color="black">sum_Axiom</font></STRONG>
+<DD>
+<PRE>
+|- !f g. ?h. (!x. h (INL x) = f x) /\ !y. h (INR y) = g y
+</PRE>
+
+<DT><STRONG><font color="black">sum_CASES</font></STRONG>
+<DD>
+<PRE>
+|- !s. (?x. s = INL x) \/ ?y. s = INR y
+</PRE>
+
+<DT><STRONG><font color="black">sum_distinct</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(INL x = INR y)
+</PRE>
+
+<DT><STRONG><font color="black">sum_distinct1</font></STRONG>
+<DD>
+<PRE>
+|- !x y. ~(INR y = INL x)
+</PRE>
+
+<DT><STRONG><font color="black">ISL_OR_ISR</font></STRONG>
+<DD>
+<PRE>
+|- !x. ISL x \/ ISR x
+</PRE>
+
+<DT><STRONG><font color="black">INL</font></STRONG>
+<DD>
+<PRE>
+|- !x. ISL x ==> (INL (OUTL x) = x)
+</PRE>
+
+<DT><STRONG><font color="black">INR</font></STRONG>
+<DD>
+<PRE>
+|- !x. ISR x ==> (INR (OUTR x) = x)
+</PRE>
+
+<DT><STRONG><font color="black">sum_case_cong</font></STRONG>
+<DD>
+<PRE>
+|- !M M' f g.
+     (M = M') /\ (!x. (M' = INL x) ==> (f x = f' x)) /\
+     (!y. (M' = INR y) ==> (g y = g' y)) ==>
+     (case f g M = case f' g' M')
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

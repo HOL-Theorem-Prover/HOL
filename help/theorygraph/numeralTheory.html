@@ -1,0 +1,308 @@
+<HTML>
+<HEAD><TITLE>Theory: numeral</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "numeral"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "arithmeticTheory.html"><STRONG><font color="black">arithmetic</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">iDUB</font></STRONG>
+                                         <td>
+                                         :num -> num
+    <tr><td> <STRONG><font color="black">iSQR</font></STRONG> <td> :num -> num
+    <tr><td>
+        <STRONG><font color="black">iSUB</font></STRONG>
+        <td>
+        :bool -> num -> num -> num
+    <tr><td> <STRONG><font color="black">iZ</font></STRONG> <td> :num -> num
+    <tr><td>
+        <STRONG><font color="black">iBIT_cases</font></STRONG>
+        <td>
+        :num -> 'a -> (num -> 'a) -> (num -> 'a) -> 'a
+    <tr><td>
+        <STRONG><font color="black">iiSUC</font></STRONG>
+        <td>
+        :num -> num
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">iZ</font></STRONG>
+<DD>
+<PRE>
+|- !x. iZ x = x
+</PRE>
+
+<DT><STRONG><font color="black">iiSUC</font></STRONG>
+<DD>
+<PRE>
+|- !n. iiSUC n = SUC (SUC n)
+</PRE>
+
+<DT><STRONG><font color="black">iBIT_cases</font></STRONG>
+<DD>
+<PRE>
+|- (!zf bf1 bf2. iBIT_cases ALT_ZERO zf bf1 bf2 = zf) /\
+   (!n zf bf1 bf2. iBIT_cases (NUMERAL_BIT1 n) zf bf1 bf2 = bf1 n) /\
+   !n zf bf1 bf2. iBIT_cases (NUMERAL_BIT2 n) zf bf1 bf2 = bf2 n
+</PRE>
+
+<DT><STRONG><font color="black">iDUB</font></STRONG>
+<DD>
+<PRE>
+|- !x. iDUB x = x + x
+</PRE>
+
+<DT><STRONG><font color="black">iSUB_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!b x. iSUB b ALT_ZERO x = ALT_ZERO) /\
+   (!b n x.
+      iSUB b (NUMERAL_BIT1 n) x =
+      (if b then
+         iBIT_cases x (NUMERAL_BIT1 n) (\m. iDUB (iSUB T n m))
+           (\m. NUMERAL_BIT1 (iSUB F n m))
+       else
+         iBIT_cases x (iDUB n) (\m. NUMERAL_BIT1 (iSUB F n m))
+           (\m. iDUB (iSUB F n m)))) /\
+   !b n x.
+     iSUB b (NUMERAL_BIT2 n) x =
+     (if b then
+        iBIT_cases x (NUMERAL_BIT2 n) (\m. NUMERAL_BIT1 (iSUB T n m))
+          (\m. iDUB (iSUB T n m))
+      else
+        iBIT_cases x (NUMERAL_BIT1 n) (\m. iDUB (iSUB T n m))
+          (\m. NUMERAL_BIT1 (iSUB F n m)))
+</PRE>
+
+<DT><STRONG><font color="black">iSQR</font></STRONG>
+<DD>
+<PRE>
+|- !x. iSQR x = x * x
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">numeral_suc</font></STRONG>
+<DD>
+<PRE>
+|- (SUC ALT_ZERO = NUMERAL_BIT1 ALT_ZERO) /\
+   (!n. SUC (NUMERAL_BIT1 n) = NUMERAL_BIT2 n) /\
+   !n. SUC (NUMERAL_BIT2 n) = NUMERAL_BIT1 (SUC n)
+</PRE>
+
+<DT><STRONG><font color="black">numeral_distrib</font></STRONG>
+<DD>
+<PRE>
+|- (!n. 0 + n = n) /\ (!n. n + 0 = n) /\
+   (!n m. NUMERAL n + NUMERAL m = NUMERAL (iZ (n + m))) /\ (!n. 0 * n = 0) /\
+   (!n. n * 0 = 0) /\ (!n m. NUMERAL n * NUMERAL m = NUMERAL (n * m)) /\
+   (!n. 0 - n = 0) /\ (!n. n - 0 = n) /\
+   (!n m. NUMERAL n - NUMERAL m = NUMERAL (n - m)) /\
+   (!n. 0 ** NUMERAL (NUMERAL_BIT1 n) = 0) /\
+   (!n. 0 ** NUMERAL (NUMERAL_BIT2 n) = 0) /\ (!n. n ** 0 = 1) /\
+   (!n m. NUMERAL n ** NUMERAL m = NUMERAL (n ** m)) /\ (SUC 0 = 1) /\
+   (!n. SUC (NUMERAL n) = NUMERAL (SUC n)) /\ (PRE 0 = 0) /\
+   (!n. PRE (NUMERAL n) = NUMERAL (PRE n)) /\
+   (!n. (NUMERAL n = 0) = (n = ALT_ZERO)) /\
+   (!n. (0 = NUMERAL n) = (n = ALT_ZERO)) /\
+   (!n m. (NUMERAL n = NUMERAL m) = (n = m)) /\ (!n. n < 0 = F) /\
+   (!n. 0 < NUMERAL n = ALT_ZERO < n) /\
+   (!n m. NUMERAL n < NUMERAL m = n < m) /\ (!n. 0 > n = F) /\
+   (!n. NUMERAL n > 0 = ALT_ZERO < n) /\
+   (!n m. NUMERAL n > NUMERAL m = m < n) /\ (!n. 0 <= n = T) /\
+   (!n. NUMERAL n <= 0 = n <= ALT_ZERO) /\
+   (!n m. NUMERAL n <= NUMERAL m = n <= m) /\ (!n. n >= 0 = T) /\
+   (!n. 0 >= n = (n = 0)) /\ (!n m. NUMERAL n >= NUMERAL m = m <= n) /\
+   (!n. ODD (NUMERAL n) = ODD n) /\ (!n. EVEN (NUMERAL n) = EVEN n) /\
+   ~ODD 0 /\ EVEN 0
+</PRE>
+
+<DT><STRONG><font color="black">numeral_iisuc</font></STRONG>
+<DD>
+<PRE>
+|- (iiSUC ALT_ZERO = NUMERAL_BIT2 ALT_ZERO) /\
+   (iiSUC (NUMERAL_BIT1 n) = NUMERAL_BIT1 (SUC n)) /\
+   (iiSUC (NUMERAL_BIT2 n) = NUMERAL_BIT2 (SUC n))
+</PRE>
+
+<DT><STRONG><font color="black">numeral_add</font></STRONG>
+<DD>
+<PRE>
+|- !n m.
+     (iZ (ALT_ZERO + n) = n) /\ (iZ (n + ALT_ZERO) = n) /\
+     (iZ (NUMERAL_BIT1 n + NUMERAL_BIT1 m) = NUMERAL_BIT2 (iZ (n + m))) /\
+     (iZ (NUMERAL_BIT1 n + NUMERAL_BIT2 m) = NUMERAL_BIT1 (SUC (n + m))) /\
+     (iZ (NUMERAL_BIT2 n + NUMERAL_BIT1 m) = NUMERAL_BIT1 (SUC (n + m))) /\
+     (iZ (NUMERAL_BIT2 n + NUMERAL_BIT2 m) = NUMERAL_BIT2 (SUC (n + m))) /\
+     (SUC (ALT_ZERO + n) = SUC n) /\ (SUC (n + ALT_ZERO) = SUC n) /\
+     (SUC (NUMERAL_BIT1 n + NUMERAL_BIT1 m) = NUMERAL_BIT1 (SUC (n + m))) /\
+     (SUC (NUMERAL_BIT1 n + NUMERAL_BIT2 m) = NUMERAL_BIT2 (SUC (n + m))) /\
+     (SUC (NUMERAL_BIT2 n + NUMERAL_BIT1 m) = NUMERAL_BIT2 (SUC (n + m))) /\
+     (SUC (NUMERAL_BIT2 n + NUMERAL_BIT2 m) = NUMERAL_BIT1 (iiSUC (n + m))) /\
+     (iiSUC (ALT_ZERO + n) = iiSUC n) /\ (iiSUC (n + ALT_ZERO) = iiSUC n) /\
+     (iiSUC (NUMERAL_BIT1 n + NUMERAL_BIT1 m) = NUMERAL_BIT2 (SUC (n + m))) /\
+     (iiSUC (NUMERAL_BIT1 n + NUMERAL_BIT2 m) =
+      NUMERAL_BIT1 (iiSUC (n + m))) /\
+     (iiSUC (NUMERAL_BIT2 n + NUMERAL_BIT1 m) =
+      NUMERAL_BIT1 (iiSUC (n + m))) /\
+     (iiSUC (NUMERAL_BIT2 n + NUMERAL_BIT2 m) = NUMERAL_BIT2 (iiSUC (n + m)))
+</PRE>
+
+<DT><STRONG><font color="black">numeral_eq</font></STRONG>
+<DD>
+<PRE>
+|- !n m.
+     ((ALT_ZERO = NUMERAL_BIT1 n) = F) /\ ((NUMERAL_BIT1 n = ALT_ZERO) = F) /\
+     ((ALT_ZERO = NUMERAL_BIT2 n) = F) /\ ((NUMERAL_BIT2 n = ALT_ZERO) = F) /\
+     ((NUMERAL_BIT1 n = NUMERAL_BIT2 m) = F) /\
+     ((NUMERAL_BIT2 n = NUMERAL_BIT1 m) = F) /\
+     ((NUMERAL_BIT1 n = NUMERAL_BIT1 m) = (n = m)) /\
+     ((NUMERAL_BIT2 n = NUMERAL_BIT2 m) = (n = m))
+</PRE>
+
+<DT><STRONG><font color="black">numeral_lt</font></STRONG>
+<DD>
+<PRE>
+|- !n m.
+     (ALT_ZERO < NUMERAL_BIT1 n = T) /\ (ALT_ZERO < NUMERAL_BIT2 n = T) /\
+     (n < ALT_ZERO = F) /\ (NUMERAL_BIT1 n < NUMERAL_BIT1 m = n < m) /\
+     (NUMERAL_BIT2 n < NUMERAL_BIT2 m = n < m) /\
+     (NUMERAL_BIT1 n < NUMERAL_BIT2 m = ~(m < n)) /\
+     (NUMERAL_BIT2 n < NUMERAL_BIT1 m = n < m)
+</PRE>
+
+<DT><STRONG><font color="black">numeral_lte</font></STRONG>
+<DD>
+<PRE>
+|- !n m.
+     (ALT_ZERO <= n = T) /\ (NUMERAL_BIT1 n <= ALT_ZERO = F) /\
+     (NUMERAL_BIT2 n <= ALT_ZERO = F) /\
+     (NUMERAL_BIT1 n <= NUMERAL_BIT1 m = n <= m) /\
+     (NUMERAL_BIT1 n <= NUMERAL_BIT2 m = n <= m) /\
+     (NUMERAL_BIT2 n <= NUMERAL_BIT1 m = ~(m <= n)) /\
+     (NUMERAL_BIT2 n <= NUMERAL_BIT2 m = n <= m)
+</PRE>
+
+<DT><STRONG><font color="black">numeral_pre</font></STRONG>
+<DD>
+<PRE>
+|- (PRE ALT_ZERO = ALT_ZERO) /\ (PRE (NUMERAL_BIT1 ALT_ZERO) = ALT_ZERO) /\
+   (!n.
+      PRE (NUMERAL_BIT1 (NUMERAL_BIT1 n)) =
+      NUMERAL_BIT2 (PRE (NUMERAL_BIT1 n))) /\
+   (!n.
+      PRE (NUMERAL_BIT1 (NUMERAL_BIT2 n)) = NUMERAL_BIT2 (NUMERAL_BIT1 n)) /\
+   !n. PRE (NUMERAL_BIT2 n) = NUMERAL_BIT1 n
+</PRE>
+
+<DT><STRONG><font color="black">bit_initiality</font></STRONG>
+<DD>
+<PRE>
+|- !zf b1f b2f.
+     ?f.
+       (f ALT_ZERO = zf) /\ (!n. f (NUMERAL_BIT1 n) = b1f n (f n)) /\
+       !n. f (NUMERAL_BIT2 n) = b2f n (f n)
+</PRE>
+
+<DT><STRONG><font color="black">bit_induction</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     P ALT_ZERO /\ (!n. P n ==> P (NUMERAL_BIT1 n)) /\
+     (!n. P n ==> P (NUMERAL_BIT2 n)) ==>
+     !n. P n
+</PRE>
+
+<DT><STRONG><font color="black">iSUB_THM</font></STRONG>
+<DD>
+<PRE>
+|- !b n m.
+     (iSUB b ALT_ZERO x = ALT_ZERO) /\ (iSUB T n ALT_ZERO = n) /\
+     (iSUB F (NUMERAL_BIT1 n) ALT_ZERO = iDUB n) /\
+     (iSUB T (NUMERAL_BIT1 n) (NUMERAL_BIT1 m) = iDUB (iSUB T n m)) /\
+     (iSUB F (NUMERAL_BIT1 n) (NUMERAL_BIT1 m) = NUMERAL_BIT1 (iSUB F n m)) /\
+     (iSUB T (NUMERAL_BIT1 n) (NUMERAL_BIT2 m) = NUMERAL_BIT1 (iSUB F n m)) /\
+     (iSUB F (NUMERAL_BIT1 n) (NUMERAL_BIT2 m) = iDUB (iSUB F n m)) /\
+     (iSUB F (NUMERAL_BIT2 n) ALT_ZERO = NUMERAL_BIT1 n) /\
+     (iSUB T (NUMERAL_BIT2 n) (NUMERAL_BIT1 m) = NUMERAL_BIT1 (iSUB T n m)) /\
+     (iSUB F (NUMERAL_BIT2 n) (NUMERAL_BIT1 m) = iDUB (iSUB T n m)) /\
+     (iSUB T (NUMERAL_BIT2 n) (NUMERAL_BIT2 m) = iDUB (iSUB T n m)) /\
+     (iSUB F (NUMERAL_BIT2 n) (NUMERAL_BIT2 m) = NUMERAL_BIT1 (iSUB F n m))
+</PRE>
+
+<DT><STRONG><font color="black">numeral_sub</font></STRONG>
+<DD>
+<PRE>
+|- !n m. NUMERAL (n - m) = (if m < n then NUMERAL (iSUB T n m) else 0)
+</PRE>
+
+<DT><STRONG><font color="black">iDUB_removal</font></STRONG>
+<DD>
+<PRE>
+|- !n.
+     (iDUB (NUMERAL_BIT1 n) = NUMERAL_BIT2 (iDUB n)) /\
+     (iDUB (NUMERAL_BIT2 n) = NUMERAL_BIT2 (NUMERAL_BIT1 n)) /\
+     (iDUB ALT_ZERO = ALT_ZERO)
+</PRE>
+
+<DT><STRONG><font color="black">numeral_mult</font></STRONG>
+<DD>
+<PRE>
+|- !n m.
+     (ALT_ZERO * n = ALT_ZERO) /\ (n * ALT_ZERO = ALT_ZERO) /\
+     (NUMERAL_BIT1 n * m = iZ (iDUB (n * m) + m)) /\
+     (NUMERAL_BIT2 n * m = iDUB (iZ (n * m + m)))
+</PRE>
+
+<DT><STRONG><font color="black">numeral_exp</font></STRONG>
+<DD>
+<PRE>
+|- (!n. n ** ALT_ZERO = NUMERAL_BIT1 ALT_ZERO) /\
+   (!n m. n ** NUMERAL_BIT1 m = n * iSQR (n ** m)) /\
+   !n m. n ** NUMERAL_BIT2 m = iSQR n * iSQR (n ** m)
+</PRE>
+
+<DT><STRONG><font color="black">numeral_evenodd</font></STRONG>
+<DD>
+<PRE>
+|- !n.
+     EVEN ALT_ZERO /\ EVEN (NUMERAL_BIT2 n) /\ ~EVEN (NUMERAL_BIT1 n) /\
+     ~ODD ALT_ZERO /\ ~ODD (NUMERAL_BIT2 n) /\ ODD (NUMERAL_BIT1 n)
+</PRE>
+
+<DT><STRONG><font color="black">numeral_fact</font></STRONG>
+<DD>
+<PRE>
+|- !n. FACT n = (if n = 0 then 1 else n * FACT (PRE n))
+</PRE>
+
+<DT><STRONG><font color="black">numeral_funpow</font></STRONG>
+<DD>
+<PRE>
+|- !n. FUNPOW f n x = (if n = 0 then x else FUNPOW f (n - 1) (f x))
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

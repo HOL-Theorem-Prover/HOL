@@ -1,0 +1,321 @@
+<HTML>
+<HEAD><TITLE>Theory: prim_rec</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "prim_rec"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "numTheory.html"><STRONG><font color="black">num</font></STRONG></A>
+    <A HREF = "relationTheory.html"><STRONG><font color="black">relation</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black"><</font></STRONG>
+                                         <td>
+                                         :num -> num -> bool
+    <tr><td>
+        <STRONG><font color="black">PRIM_REC_FUN</font></STRONG>
+        <td>
+        :'a -> ('a -> num -> 'a) -> num -> num -> 'a
+    <tr><td>
+        <STRONG><font color="black">measure</font></STRONG>
+        <td>
+        :('a -> num) -> 'a -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">SIMP_REC</font></STRONG>
+        <td>
+        :'a -> ('a -> 'a) -> num -> 'a
+    <tr><td>
+        <STRONG><font color="black">SIMP_REC_REL</font></STRONG>
+        <td>
+        :(num -> 'a) -> 'a -> ('a -> 'a) -> num -> bool
+    <tr><td>
+        <STRONG><font color="black">wellfounded</font></STRONG>
+        <td>
+        :('a -> 'a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">PRIM_REC</font></STRONG>
+        <td>
+        :'a -> ('a -> num -> 'a) -> num -> 'a
+    <tr><td> <STRONG><font color="black">PRE</font></STRONG> <td> :num -> num
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">LESS_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !m n. m < n = ?P. (!n. P (SUC n) ==> P n) /\ P m /\ ~P n
+</PRE>
+
+<DT><STRONG><font color="black">SIMP_REC_REL</font></STRONG>
+<DD>
+<PRE>
+|- !fun x f n.
+     SIMP_REC_REL fun x f n =
+     (fun 0 = x) /\ !m. m < n ==> (fun (SUC m) = f (fun m))
+</PRE>
+
+<DT><STRONG><font color="black">SIMP_REC</font></STRONG>
+<DD>
+<PRE>
+|- !x f' n. ?g. SIMP_REC_REL g x f' (SUC n) /\ (SIMP_REC x f' n = g n)
+</PRE>
+
+<DT><STRONG><font color="black">PRE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !m. PRE m = (if m = 0 then 0 else @n. m = SUC n)
+</PRE>
+
+<DT><STRONG><font color="black">PRIM_REC_FUN</font></STRONG>
+<DD>
+<PRE>
+|- !x f. PRIM_REC_FUN x f = SIMP_REC (\n. x) (\fun n. f (fun (PRE n)) n)
+</PRE>
+
+<DT><STRONG><font color="black">PRIM_REC</font></STRONG>
+<DD>
+<PRE>
+|- !x f m. PRIM_REC x f m = PRIM_REC_FUN x f m (PRE m)
+</PRE>
+
+<DT><STRONG><font color="black">wellfounded_def</font></STRONG>
+<DD>
+<PRE>
+|- !R. wellfounded R = ~?f. !n. R (f (SUC n)) (f n)
+</PRE>
+
+<DT><STRONG><font color="black">measure_def</font></STRONG>
+<DD>
+<PRE>
+|- measure = inv_image $<
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">INV_SUC_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !m n. (SUC m = SUC n) = (m = n)
+</PRE>
+
+<DT><STRONG><font color="black">LESS_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !n. ~(n < n)
+</PRE>
+
+<DT><STRONG><font color="black">SUC_LESS</font></STRONG>
+<DD>
+<PRE>
+|- !m n. SUC m < n ==> m < n
+</PRE>
+
+<DT><STRONG><font color="black">NOT_LESS_0</font></STRONG>
+<DD>
+<PRE>
+|- !n. ~(n < 0)
+</PRE>
+
+<DT><STRONG><font color="black">LESS_0_0</font></STRONG>
+<DD>
+<PRE>
+|- 0 < SUC 0
+</PRE>
+
+<DT><STRONG><font color="black">LESS_MONO</font></STRONG>
+<DD>
+<PRE>
+|- !m n. m < n ==> SUC m < SUC n
+</PRE>
+
+<DT><STRONG><font color="black">LESS_SUC_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !n. n < SUC n
+</PRE>
+
+<DT><STRONG><font color="black">LESS_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !m n. m < n ==> m < SUC n
+</PRE>
+
+<DT><STRONG><font color="black">LESS_LEMMA1</font></STRONG>
+<DD>
+<PRE>
+|- !m n. m < SUC n ==> (m = n) \/ m < n
+</PRE>
+
+<DT><STRONG><font color="black">LESS_LEMMA2</font></STRONG>
+<DD>
+<PRE>
+|- !m n. (m = n) \/ m < n ==> m < SUC n
+</PRE>
+
+<DT><STRONG><font color="black">LESS_THM</font></STRONG>
+<DD>
+<PRE>
+|- !m n. m < SUC n = (m = n) \/ m < n
+</PRE>
+
+<DT><STRONG><font color="black">LESS_SUC_IMP</font></STRONG>
+<DD>
+<PRE>
+|- !m n. m < SUC n ==> ~(m = n) ==> m < n
+</PRE>
+
+<DT><STRONG><font color="black">LESS_0</font></STRONG>
+<DD>
+<PRE>
+|- !n. 0 < SUC n
+</PRE>
+
+<DT><STRONG><font color="black">EQ_LESS</font></STRONG>
+<DD>
+<PRE>
+|- !n. (SUC m = n) ==> m < n
+</PRE>
+
+<DT><STRONG><font color="black">SUC_ID</font></STRONG>
+<DD>
+<PRE>
+|- !n. ~(SUC n = n)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_LESS_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !m n. (m = n) ==> ~(m < n)
+</PRE>
+
+<DT><STRONG><font color="black">LESS_NOT_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !m n. m < n ==> ~(m = n)
+</PRE>
+
+<DT><STRONG><font color="black">SIMP_REC_EXISTS</font></STRONG>
+<DD>
+<PRE>
+|- !x f n. ?fun. SIMP_REC_REL fun x f n
+</PRE>
+
+<DT><STRONG><font color="black">SIMP_REC_REL_UNIQUE</font></STRONG>
+<DD>
+<PRE>
+|- !x f g1 g2 m1 m2.
+     SIMP_REC_REL g1 x f m1 /\ SIMP_REC_REL g2 x f m2 ==>
+     !n. n < m1 /\ n < m2 ==> (g1 n = g2 n)
+</PRE>
+
+<DT><STRONG><font color="black">SIMP_REC_REL_UNIQUE_RESULT</font></STRONG>
+<DD>
+<PRE>
+|- !x f n. ?!y. ?g. SIMP_REC_REL g x f (SUC n) /\ (y = g n)
+</PRE>
+
+<DT><STRONG><font color="black">LESS_SUC_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !m. m < SUC m /\ m < SUC (SUC m)
+</PRE>
+
+<DT><STRONG><font color="black">SIMP_REC_THM</font></STRONG>
+<DD>
+<PRE>
+|- !x f. (SIMP_REC x f 0 = x) /\ !m. SIMP_REC x f (SUC m) = f (SIMP_REC x f m)
+</PRE>
+
+<DT><STRONG><font color="black">PRE</font></STRONG>
+<DD>
+<PRE>
+|- (PRE 0 = 0) /\ !m. PRE (SUC m) = m
+</PRE>
+
+<DT><STRONG><font color="black">PRIM_REC_EQN</font></STRONG>
+<DD>
+<PRE>
+|- !x f.
+     (!n. PRIM_REC_FUN x f 0 n = x) /\
+     !m n. PRIM_REC_FUN x f (SUC m) n = f (PRIM_REC_FUN x f m (PRE n)) n
+</PRE>
+
+<DT><STRONG><font color="black">PRIM_REC_THM</font></STRONG>
+<DD>
+<PRE>
+|- !x f.
+     (PRIM_REC x f 0 = x) /\ !m. PRIM_REC x f (SUC m) = f (PRIM_REC x f m) m
+</PRE>
+
+<DT><STRONG><font color="black">DC</font></STRONG>
+<DD>
+<PRE>
+|- !P R a.
+     P a /\ (!x. P x ==> ?y. P y /\ R x y) ==>
+     ?f. (f 0 = a) /\ !n. P (f n) /\ R (f n) (f (SUC n))
+</PRE>
+
+<DT><STRONG><font color="black">num_Axiom_old</font></STRONG>
+<DD>
+<PRE>
+|- !e f. ?!fn1. (fn1 0 = e) /\ !n. fn1 (SUC n) = f (fn1 n) n
+</PRE>
+
+<DT><STRONG><font color="black">num_Axiom</font></STRONG>
+<DD>
+<PRE>
+|- !e f. ?fn. (fn 0 = e) /\ !n. fn (SUC n) = f n (fn n)
+</PRE>
+
+<DT><STRONG><font color="black">WF_IFF_WELLFOUNDED</font></STRONG>
+<DD>
+<PRE>
+|- !R. WF R = wellfounded R
+</PRE>
+
+<DT><STRONG><font color="black">WF_PRED</font></STRONG>
+<DD>
+<PRE>
+|- WF (\x y. y = SUC x)
+</PRE>
+
+<DT><STRONG><font color="black">WF_LESS</font></STRONG>
+<DD>
+<PRE>
+|- WF $<
+</PRE>
+
+<DT><STRONG><font color="black">WF_measure</font></STRONG>
+<DD>
+<PRE>
+|- !m. WF (measure m)
+</PRE>
+
+<DT><STRONG><font color="black">measure_thm</font></STRONG>
+<DD>
+<PRE>
+|- !f x y. measure f x y = f x < f y
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,1159 @@
+<HTML>
+<HEAD><TITLE>Theory: canonical</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "canonical"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "quoteTheory.html"><STRONG><font color="black">quote</font></STRONG></A>
+    <A HREF = "semi_ringTheory.html"><STRONG><font color="black">semi_ring</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">canonical_sum</font></STRONG>
+                                          <td>
+                                          1
+    <tr><td> <STRONG><font color="black">spolynom</font></STRONG> <td> 1
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">canonical_sum_simplify</font></STRONG>
+                                         <td>
+                                         :'a semi_ring ->
+                                          'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">canonical_sum_scalar</font></STRONG>
+        <td>
+        :'a semi_ring -> 'a -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">spolynom_case</font></STRONG>
+        <td>
+        :(index -> 'b) ->
+         ('a -> 'b) ->
+         ('a spolynom -> 'a spolynom -> 'b) ->
+         ('a spolynom -> 'a spolynom -> 'b) -> 'a spolynom -> 'b
+    <tr><td>
+        <STRONG><font color="black">interp_m</font></STRONG>
+        <td>
+        :'a semi_ring -> 'a varmap -> 'a -> index list -> 'a
+    <tr><td>
+        <STRONG><font color="black">canonical_sum_scalar2</font></STRONG>
+        <td>
+        :'a semi_ring -> index list -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">canonical_sum_scalar3</font></STRONG>
+        <td>
+        :'a semi_ring ->
+         'a -> index list -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">spolynom_simplify</font></STRONG>
+        <td>
+        :'a semi_ring -> 'a spolynom -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">canonical_sum_merge</font></STRONG>
+        <td>
+        :'a semi_ring ->
+         'a canonical_sum -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">canonical_sum_case</font></STRONG>
+        <td>
+        :'b ->
+         ('a -> index list -> 'a canonical_sum -> 'b) ->
+         (index list -> 'a canonical_sum -> 'b) -> 'a canonical_sum -> 'b
+    <tr><td>
+        <STRONG><font color="black">Cons_varlist</font></STRONG>
+        <td>
+        :index list -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">dest_spolynom</font></STRONG>
+        <td>
+        :'a spolynom -> (index # 'a) recspace
+    <tr><td>
+        <STRONG><font color="black">spolynom_normalize</font></STRONG>
+        <td>
+        :'a semi_ring -> 'a spolynom -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">SPvar</font></STRONG>
+        <td>
+        :index -> 'a spolynom
+    <tr><td>
+        <STRONG><font color="black">Nil_monom</font></STRONG>
+        <td>
+        :'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">SPconst</font></STRONG>
+        <td>
+        :'a -> 'a spolynom
+    <tr><td>
+        <STRONG><font color="black">canonical_sum_merge_tupled</font></STRONG>
+        <td>
+        :'a semi_ring # 'a canonical_sum # 'a canonical_sum ->
+         'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">SPmult</font></STRONG>
+        <td>
+        :'a spolynom -> 'a spolynom -> 'a spolynom
+    <tr><td>
+        <STRONG><font color="black">SPplus</font></STRONG>
+        <td>
+        :'a spolynom -> 'a spolynom -> 'a spolynom
+    <tr><td>
+        <STRONG><font color="black">ivl_aux</font></STRONG>
+        <td>
+        :'a semi_ring -> 'a varmap -> index -> index list -> 'a
+    <tr><td>
+        <STRONG><font color="black">interp_cs</font></STRONG>
+        <td>
+        :'a semi_ring -> 'a varmap -> 'a canonical_sum -> 'a
+    <tr><td>
+        <STRONG><font color="black">interp_sp</font></STRONG>
+        <td>
+        :'a semi_ring -> 'a varmap -> 'a spolynom -> 'a
+    <tr><td>
+        <STRONG><font color="black">interp_vl</font></STRONG>
+        <td>
+        :'a semi_ring -> 'a varmap -> index list -> 'a
+    <tr><td>
+        <STRONG><font color="black">varlist_insert_tupled</font></STRONG>
+        <td>
+        :'a semi_ring # index list # 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">canonical0</font></STRONG>
+        <td>
+        :'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">canonical1</font></STRONG>
+        <td>
+        :'a -> index list -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">canonical2</font></STRONG>
+        <td>
+        :index list -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">canonical3</font></STRONG>
+        <td>
+        :index -> 'a spolynom
+    <tr><td>
+        <STRONG><font color="black">ics_aux</font></STRONG>
+        <td>
+        :'a semi_ring -> 'a varmap -> 'a -> 'a canonical_sum -> 'a
+    <tr><td>
+        <STRONG><font color="black">canonical4</font></STRONG>
+        <td>
+        :'a -> 'a spolynom
+    <tr><td>
+        <STRONG><font color="black">canonical5</font></STRONG>
+        <td>
+        :'a spolynom -> 'a spolynom -> 'a spolynom
+    <tr><td>
+        <STRONG><font color="black">canonical6</font></STRONG>
+        <td>
+        :'a spolynom -> 'a spolynom -> 'a spolynom
+    <tr><td>
+        <STRONG><font color="black">spolynom_size</font></STRONG>
+        <td>
+        :('a -> num) -> 'a spolynom -> num
+    <tr><td>
+        <STRONG><font color="black">canonical_sum_prod</font></STRONG>
+        <td>
+        :'a semi_ring ->
+         'a canonical_sum -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">mk_canonical_sum</font></STRONG>
+        <td>
+        :('a # index list) recspace -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">varlist_insert</font></STRONG>
+        <td>
+        :'a semi_ring -> index list -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">canonical_sum_size</font></STRONG>
+        <td>
+        :('a -> num) -> 'a canonical_sum -> num
+    <tr><td>
+        <STRONG><font color="black">Cons_monom</font></STRONG>
+        <td>
+        :'a -> index list -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">monom_insert_tupled</font></STRONG>
+        <td>
+        :'a semi_ring # 'a # index list # 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">monom_insert</font></STRONG>
+        <td>
+        :'a semi_ring ->
+         'a -> index list -> 'a canonical_sum -> 'a canonical_sum
+    <tr><td>
+        <STRONG><font color="black">dest_canonical_sum</font></STRONG>
+        <td>
+        :'a canonical_sum -> ('a # index list) recspace
+    <tr><td>
+        <STRONG><font color="black">mk_spolynom</font></STRONG>
+        <td>
+        :(index # 'a) recspace -> 'a spolynom
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">canonical_sum_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep.
+     TYPE_DEFINITION
+       (\a0'.
+          !'canonical_sum'.
+            (!a0'.
+               (a0' = CONSTR 0 ((@v. T),@v. T) (\n. BOTTOM)) \/
+               (?a0 a1 a2.
+                  (a0' =
+                   (\a0 a1 a2. CONSTR (SUC 0) (a0,a1) (FCONS a2 (\n. BOTTOM)))
+                     a0 a1 a2) /\ 'canonical_sum' a2) \/
+               (?a0 a1.
+                  (a0' =
+                   (\a0 a1.
+                      CONSTR (SUC (SUC 0)) ((@v. T),a0)
+                        (FCONS a1 (\n. BOTTOM))) a0 a1) /\
+                  'canonical_sum' a1) ==>
+               'canonical_sum' a0') ==>
+            'canonical_sum' a0') rep
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_repfns</font></STRONG>
+<DD>
+<PRE>
+|- (!a. mk_canonical_sum (dest_canonical_sum a) = a) /\
+   !r.
+     (\a0'.
+        !'canonical_sum'.
+          (!a0'.
+             (a0' = CONSTR 0 ((@v. T),@v. T) (\n. BOTTOM)) \/
+             (?a0 a1 a2.
+                (a0' =
+                 (\a0 a1 a2. CONSTR (SUC 0) (a0,a1) (FCONS a2 (\n. BOTTOM)))
+                   a0 a1 a2) /\ 'canonical_sum' a2) \/
+             (?a0 a1.
+                (a0' =
+                 (\a0 a1.
+                    CONSTR (SUC (SUC 0)) ((@v. T),a0) (FCONS a1 (\n. BOTTOM)))
+                   a0 a1) /\ 'canonical_sum' a1) ==>
+             'canonical_sum' a0') ==>
+          'canonical_sum' a0') r =
+     (dest_canonical_sum (mk_canonical_sum r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">canonical0_def</font></STRONG>
+<DD>
+<PRE>
+|- canonical0 = mk_canonical_sum (CONSTR 0 ((@v. T),@v. T) (\n. BOTTOM))
+</PRE>
+
+<DT><STRONG><font color="black">canonical1_def</font></STRONG>
+<DD>
+<PRE>
+|- canonical1 =
+   (\a0 a1 a2.
+      mk_canonical_sum
+        ((\a0 a1 a2. CONSTR (SUC 0) (a0,a1) (FCONS a2 (\n. BOTTOM))) a0 a1
+           (dest_canonical_sum a2)))
+</PRE>
+
+<DT><STRONG><font color="black">canonical2_def</font></STRONG>
+<DD>
+<PRE>
+|- canonical2 =
+   (\a0 a1.
+      mk_canonical_sum
+        ((\a0 a1. CONSTR (SUC (SUC 0)) ((@v. T),a0) (FCONS a1 (\n. BOTTOM)))
+           a0 (dest_canonical_sum a1)))
+</PRE>
+
+<DT><STRONG><font color="black">Nil_monom</font></STRONG>
+<DD>
+<PRE>
+|- Nil_monom = canonical0
+</PRE>
+
+<DT><STRONG><font color="black">Cons_monom</font></STRONG>
+<DD>
+<PRE>
+|- Cons_monom = canonical1
+</PRE>
+
+<DT><STRONG><font color="black">Cons_varlist</font></STRONG>
+<DD>
+<PRE>
+|- Cons_varlist = canonical2
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_case_def</font></STRONG>
+<DD>
+<PRE>
+|- (!v f f1. case v f f1 Nil_monom = v) /\
+   (!v f f1 a0 a1 a2. case v f f1 (Cons_monom a0 a1 a2) = f a0 a1 a2) /\
+   !v f f1 a0 a1. case v f f1 (Cons_varlist a0 a1) = f1 a0 a1
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_size_def</font></STRONG>
+<DD>
+<PRE>
+|- (!f. canonical_sum_size f Nil_monom = 0) /\
+   (!f a0 a1 a2.
+      canonical_sum_size f (Cons_monom a0 a1 a2) =
+      1 + (f a0 + (list_size index_size a1 + canonical_sum_size f a2))) /\
+   !f a0 a1.
+     canonical_sum_size f (Cons_varlist a0 a1) =
+     1 + (list_size index_size a0 + canonical_sum_size f a1)
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_merge_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- canonical_sum_merge_tupled =
+   WFREC
+     (@R.
+        WF R /\
+        (!l2 c2 t2 t1 l1 c1 sr.
+           R (sr,Cons_monom c1 l1 t1,t2)
+             (sr,Cons_monom c1 l1 t1,Cons_monom c2 l2 t2)) /\
+        (!l1 c1 t2 l2 c2 t1 sr.
+           R (sr,t1,Cons_monom c2 l2 t2)
+             (sr,Cons_monom c1 l1 t1,Cons_monom c2 l2 t2)) /\
+        (!l2 c2 l1 c1 t2 t1 sr.
+           R (sr,t1,t2) (sr,Cons_monom c1 l1 t1,Cons_monom c2 l2 t2)) /\
+        (!l2 t2 t1 l1 c1 sr.
+           R (sr,Cons_monom c1 l1 t1,t2)
+             (sr,Cons_monom c1 l1 t1,Cons_varlist l2 t2)) /\
+        (!l1 c1 t2 l2 t1 sr.
+           R (sr,t1,Cons_varlist l2 t2)
+             (sr,Cons_monom c1 l1 t1,Cons_varlist l2 t2)) /\
+        (!l2 l1 c1 t2 t1 sr.
+           R (sr,t1,t2) (sr,Cons_monom c1 l1 t1,Cons_varlist l2 t2)) /\
+        (!l2 c2 t2 t1 l1 sr.
+           R (sr,Cons_varlist l1 t1,t2)
+             (sr,Cons_varlist l1 t1,Cons_monom c2 l2 t2)) /\
+        (!l1 t2 l2 c2 t1 sr.
+           R (sr,t1,Cons_monom c2 l2 t2)
+             (sr,Cons_varlist l1 t1,Cons_monom c2 l2 t2)) /\
+        (!l2 c2 l1 t2 t1 sr.
+           R (sr,t1,t2) (sr,Cons_varlist l1 t1,Cons_monom c2 l2 t2)) /\
+        (!l2 l1 t2 t1 sr.
+           R (sr,t1,t2) (sr,Cons_varlist l1 t1,Cons_varlist l2 t2)) /\
+        (!l1 t2 l2 t1 sr.
+           R (sr,t1,Cons_varlist l2 t2)
+             (sr,Cons_varlist l1 t1,Cons_varlist l2 t2)) /\
+        !l2 t2 t1 l1 sr.
+          R (sr,Cons_varlist l1 t1,t2)
+            (sr,Cons_varlist l1 t1,Cons_varlist l2 t2))
+     (\canonical_sum_merge_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v2 of
+                     Nil_monom ->
+                       (case v3 of
+                           Nil_monom -> Nil_monom
+                        || Cons_monom v19 v20 v21 -> Cons_monom v19 v20 v21
+                        || Cons_varlist v22 v23 -> Cons_varlist v22 v23)
+                  || Cons_monom v9 v10 v11 ->
+                       (case v3 of
+                           Nil_monom -> Cons_monom v9 v10 v11
+                        || Cons_monom v24 v25 v26 ->
+                             compare (list_compare index_compare v10 v25)
+                               (Cons_monom v9 v10
+                                  (canonical_sum_merge_tupled'
+                                     (v,v11,Cons_monom v24 v25 v26)))
+                               (Cons_monom (SRP v v9 v24) v10
+                                  (canonical_sum_merge_tupled' (v,v11,v26)))
+                               (Cons_monom v24 v25
+                                  (canonical_sum_merge_tupled'
+                                     (v,Cons_monom v9 v10 v11,v26)))
+                        || Cons_varlist v27 v28 ->
+                             compare (list_compare index_compare v10 v27)
+                               (Cons_monom v9 v10
+                                  (canonical_sum_merge_tupled'
+                                     (v,v11,Cons_varlist v27 v28)))
+                               (Cons_monom (SRP v v9 (SR1 v)) v10
+                                  (canonical_sum_merge_tupled' (v,v11,v28)))
+                               (Cons_varlist v27
+                                  (canonical_sum_merge_tupled'
+                                     (v,Cons_monom v9 v10 v11,v28))))
+                  || Cons_varlist v12 v13 ->
+                       case v3 of
+                          Nil_monom -> Cons_varlist v12 v13
+                       || Cons_monom v29 v30 v31 ->
+                            compare (list_compare index_compare v12 v30)
+                              (Cons_varlist v12
+                                 (canonical_sum_merge_tupled'
+                                    (v,v13,Cons_monom v29 v30 v31)))
+                              (Cons_monom (SRP v (SR1 v) v29) v12
+                                 (canonical_sum_merge_tupled' (v,v13,v31)))
+                              (Cons_monom v29 v30
+                                 (canonical_sum_merge_tupled'
+                                    (v,Cons_varlist v12 v13,v31)))
+                       || Cons_varlist v32 v33 ->
+                            compare (list_compare index_compare v12 v32)
+                              (Cons_varlist v12
+                                 (canonical_sum_merge_tupled'
+                                    (v,v13,Cons_varlist v32 v33)))
+                              (Cons_monom (SRP v (SR1 v) (SR1 v)) v12
+                                 (canonical_sum_merge_tupled' (v,v13,v33)))
+                              (Cons_varlist v32
+                                 (canonical_sum_merge_tupled'
+                                    (v,Cons_varlist v12 v13,v33))))
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_merge_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2.
+     canonical_sum_merge x x1 x2 = canonical_sum_merge_tupled (x,x1,x2)
+</PRE>
+
+<DT><STRONG><font color="black">monom_insert_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- monom_insert_tupled =
+   WFREC
+     (@R.
+        WF R /\
+        (!l2 c2 t2 l1 c1 sr.
+           R (sr,c1,l1,t2) (sr,c1,l1,Cons_monom c2 l2 t2)) /\
+        !l2 t2 l1 c1 sr. R (sr,c1,l1,t2) (sr,c1,l1,Cons_varlist l2 t2))
+     (\monom_insert_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v3 of
+                     (v4,v5) ->
+                       case v5 of
+                          Nil_monom -> Cons_monom v2 v4 Nil_monom
+                       || Cons_monom v11 v12 v13 ->
+                            compare (list_compare index_compare v4 v12)
+                              (Cons_monom v2 v4 (Cons_monom v11 v12 v13))
+                              (Cons_monom (SRP v v2 v11) v4 v13)
+                              (Cons_monom v11 v12
+                                 (monom_insert_tupled' (v,v2,v4,v13)))
+                       || Cons_varlist v14 v15 ->
+                            compare (list_compare index_compare v4 v14)
+                              (Cons_monom v2 v4 (Cons_varlist v14 v15))
+                              (Cons_monom (SRP v v2 (SR1 v)) v4 v15)
+                              (Cons_varlist v14
+                                 (monom_insert_tupled' (v,v2,v4,v15))))
+</PRE>
+
+<DT><STRONG><font color="black">monom_insert_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2 x3. monom_insert x x1 x2 x3 = monom_insert_tupled (x,x1,x2,x3)
+</PRE>
+
+<DT><STRONG><font color="black">varlist_insert_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- varlist_insert_tupled =
+   WFREC
+     (@R.
+        WF R /\ (!l2 c2 t2 l1 sr. R (sr,l1,t2) (sr,l1,Cons_monom c2 l2 t2)) /\
+        !l2 t2 l1 sr. R (sr,l1,t2) (sr,l1,Cons_varlist l2 t2))
+     (\varlist_insert_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v3 of
+                     Nil_monom -> Cons_varlist v2 Nil_monom
+                  || Cons_monom v9 v10 v11 ->
+                       compare (list_compare index_compare v2 v10)
+                         (Cons_varlist v2 (Cons_monom v9 v10 v11))
+                         (Cons_monom (SRP v (SR1 v) v9) v2 v11)
+                         (Cons_monom v9 v10
+                            (varlist_insert_tupled' (v,v2,v11)))
+                  || Cons_varlist v12 v13 ->
+                       compare (list_compare index_compare v2 v12)
+                         (Cons_varlist v2 (Cons_varlist v12 v13))
+                         (Cons_monom (SRP v (SR1 v) (SR1 v)) v2 v13)
+                         (Cons_varlist v12
+                            (varlist_insert_tupled' (v,v2,v13))))
+</PRE>
+
+<DT><STRONG><font color="black">varlist_insert_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2. varlist_insert x x1 x2 = varlist_insert_tupled (x,x1,x2)
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_scalar_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr c0 c l t.
+      canonical_sum_scalar sr c0 (Cons_monom c l t) =
+      Cons_monom (SRM sr c0 c) l (canonical_sum_scalar sr c0 t)) /\
+   (!sr c0 l t.
+      canonical_sum_scalar sr c0 (Cons_varlist l t) =
+      Cons_monom c0 l (canonical_sum_scalar sr c0 t)) /\
+   !sr c0. canonical_sum_scalar sr c0 Nil_monom = Nil_monom
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_scalar2_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr l0 c l t.
+      canonical_sum_scalar2 sr l0 (Cons_monom c l t) =
+      monom_insert sr c (list_merge index_lt l0 l)
+        (canonical_sum_scalar2 sr l0 t)) /\
+   (!sr l0 l t.
+      canonical_sum_scalar2 sr l0 (Cons_varlist l t) =
+      varlist_insert sr (list_merge index_lt l0 l)
+        (canonical_sum_scalar2 sr l0 t)) /\
+   !sr l0. canonical_sum_scalar2 sr l0 Nil_monom = Nil_monom
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_scalar3_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr c0 l0 c l t.
+      canonical_sum_scalar3 sr c0 l0 (Cons_monom c l t) =
+      monom_insert sr (SRM sr c0 c) (list_merge index_lt l0 l)
+        (canonical_sum_scalar3 sr c0 l0 t)) /\
+   (!sr c0 l0 l t.
+      canonical_sum_scalar3 sr c0 l0 (Cons_varlist l t) =
+      monom_insert sr c0 (list_merge index_lt l0 l)
+        (canonical_sum_scalar3 sr c0 l0 t)) /\
+   !sr c0 l0. canonical_sum_scalar3 sr c0 l0 Nil_monom = Nil_monom
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_prod_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr c1 l1 t1 s2.
+      canonical_sum_prod sr (Cons_monom c1 l1 t1) s2 =
+      canonical_sum_merge sr (canonical_sum_scalar3 sr c1 l1 s2)
+        (canonical_sum_prod sr t1 s2)) /\
+   (!sr l1 t1 s2.
+      canonical_sum_prod sr (Cons_varlist l1 t1) s2 =
+      canonical_sum_merge sr (canonical_sum_scalar2 sr l1 s2)
+        (canonical_sum_prod sr t1 s2)) /\
+   !sr s2. canonical_sum_prod sr Nil_monom s2 = Nil_monom
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_simplify_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr c l t.
+      canonical_sum_simplify sr (Cons_monom c l t) =
+      (if c = SR0 sr then
+         canonical_sum_simplify sr t
+       else
+         (if c = SR1 sr then
+            Cons_varlist l (canonical_sum_simplify sr t)
+          else
+            Cons_monom c l (canonical_sum_simplify sr t)))) /\
+   (!sr l t.
+      canonical_sum_simplify sr (Cons_varlist l t) =
+      Cons_varlist l (canonical_sum_simplify sr t)) /\
+   !sr. canonical_sum_simplify sr Nil_monom = Nil_monom
+</PRE>
+
+<DT><STRONG><font color="black">ivl_aux_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr vm x. ivl_aux sr vm x [] = varmap_find x vm) /\
+   !sr vm x x' t'.
+     ivl_aux sr vm x (x'::t') =
+     SRM sr (varmap_find x vm) (ivl_aux sr vm x' t')
+</PRE>
+
+<DT><STRONG><font color="black">interp_vl_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr vm. interp_vl sr vm [] = SR1 sr) /\
+   !sr vm x t. interp_vl sr vm (x::t) = ivl_aux sr vm x t
+</PRE>
+
+<DT><STRONG><font color="black">interp_m_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr vm c. interp_m sr vm c [] = c) /\
+   !sr vm c x t. interp_m sr vm c (x::t) = SRM sr c (ivl_aux sr vm x t)
+</PRE>
+
+<DT><STRONG><font color="black">ics_aux_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr vm a. ics_aux sr vm a Nil_monom = a) /\
+   (!sr vm a l t.
+      ics_aux sr vm a (Cons_varlist l t) =
+      SRP sr a (ics_aux sr vm (interp_vl sr vm l) t)) /\
+   !sr vm a c l t.
+     ics_aux sr vm a (Cons_monom c l t) =
+     SRP sr a (ics_aux sr vm (interp_m sr vm c l) t)
+</PRE>
+
+<DT><STRONG><font color="black">interp_cs_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr vm. interp_cs sr vm Nil_monom = SR0 sr) /\
+   (!sr vm l t.
+      interp_cs sr vm (Cons_varlist l t) =
+      ics_aux sr vm (interp_vl sr vm l) t) /\
+   !sr vm c l t.
+     interp_cs sr vm (Cons_monom c l t) = ics_aux sr vm (interp_m sr vm c l) t
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep.
+     TYPE_DEFINITION
+       (\a0'.
+          !'spolynom'.
+            (!a0'.
+               (?a. a0' = (\a. CONSTR 0 (a,@v. T) (\n. BOTTOM)) a) \/
+               (?a. a0' = (\a. CONSTR (SUC 0) ((@v. T),a) (\n. BOTTOM)) a) \/
+               (?a0 a1.
+                  (a0' =
+                   (\a0 a1.
+                      CONSTR (SUC (SUC 0)) ((@v. T),@v. T)
+                        (FCONS a0 (FCONS a1 (\n. BOTTOM)))) a0 a1) /\
+                  'spolynom' a0 /\ 'spolynom' a1) \/
+               (?a0 a1.
+                  (a0' =
+                   (\a0 a1.
+                      CONSTR (SUC (SUC (SUC 0))) ((@v. T),@v. T)
+                        (FCONS a0 (FCONS a1 (\n. BOTTOM)))) a0 a1) /\
+                  'spolynom' a0 /\ 'spolynom' a1) ==>
+               'spolynom' a0') ==>
+            'spolynom' a0') rep
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_repfns</font></STRONG>
+<DD>
+<PRE>
+|- (!a. mk_spolynom (dest_spolynom a) = a) /\
+   !r.
+     (\a0'.
+        !'spolynom'.
+          (!a0'.
+             (?a. a0' = (\a. CONSTR 0 (a,@v. T) (\n. BOTTOM)) a) \/
+             (?a. a0' = (\a. CONSTR (SUC 0) ((@v. T),a) (\n. BOTTOM)) a) \/
+             (?a0 a1.
+                (a0' =
+                 (\a0 a1.
+                    CONSTR (SUC (SUC 0)) ((@v. T),@v. T)
+                      (FCONS a0 (FCONS a1 (\n. BOTTOM)))) a0 a1) /\
+                'spolynom' a0 /\ 'spolynom' a1) \/
+             (?a0 a1.
+                (a0' =
+                 (\a0 a1.
+                    CONSTR (SUC (SUC (SUC 0))) ((@v. T),@v. T)
+                      (FCONS a0 (FCONS a1 (\n. BOTTOM)))) a0 a1) /\
+                'spolynom' a0 /\ 'spolynom' a1) ==>
+             'spolynom' a0') ==>
+          'spolynom' a0') r =
+     (dest_spolynom (mk_spolynom r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">canonical3_def</font></STRONG>
+<DD>
+<PRE>
+|- canonical3 = (\a. mk_spolynom ((\a. CONSTR 0 (a,@v. T) (\n. BOTTOM)) a))
+</PRE>
+
+<DT><STRONG><font color="black">canonical4_def</font></STRONG>
+<DD>
+<PRE>
+|- canonical4 =
+   (\a. mk_spolynom ((\a. CONSTR (SUC 0) ((@v. T),a) (\n. BOTTOM)) a))
+</PRE>
+
+<DT><STRONG><font color="black">canonical5_def</font></STRONG>
+<DD>
+<PRE>
+|- canonical5 =
+   (\a0 a1.
+      mk_spolynom
+        ((\a0 a1.
+            CONSTR (SUC (SUC 0)) ((@v. T),@v. T)
+              (FCONS a0 (FCONS a1 (\n. BOTTOM)))) (dest_spolynom a0)
+           (dest_spolynom a1)))
+</PRE>
+
+<DT><STRONG><font color="black">canonical6_def</font></STRONG>
+<DD>
+<PRE>
+|- canonical6 =
+   (\a0 a1.
+      mk_spolynom
+        ((\a0 a1.
+            CONSTR (SUC (SUC (SUC 0))) ((@v. T),@v. T)
+              (FCONS a0 (FCONS a1 (\n. BOTTOM)))) (dest_spolynom a0)
+           (dest_spolynom a1)))
+</PRE>
+
+<DT><STRONG><font color="black">SPvar</font></STRONG>
+<DD>
+<PRE>
+|- SPvar = canonical3
+</PRE>
+
+<DT><STRONG><font color="black">SPconst</font></STRONG>
+<DD>
+<PRE>
+|- SPconst = canonical4
+</PRE>
+
+<DT><STRONG><font color="black">SPplus</font></STRONG>
+<DD>
+<PRE>
+|- SPplus = canonical5
+</PRE>
+
+<DT><STRONG><font color="black">SPmult</font></STRONG>
+<DD>
+<PRE>
+|- SPmult = canonical6
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_case_def</font></STRONG>
+<DD>
+<PRE>
+|- (!f f1 f2 f3 a. case f f1 f2 f3 (SPvar a) = f a) /\
+   (!f f1 f2 f3 a. case f f1 f2 f3 (SPconst a) = f1 a) /\
+   (!f f1 f2 f3 a0 a1. case f f1 f2 f3 (SPplus a0 a1) = f2 a0 a1) /\
+   !f f1 f2 f3 a0 a1. case f f1 f2 f3 (SPmult a0 a1) = f3 a0 a1
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_size_def</font></STRONG>
+<DD>
+<PRE>
+|- (!f a. spolynom_size f (SPvar a) = 1 + index_size a) /\
+   (!f a. spolynom_size f (SPconst a) = 1 + f a) /\
+   (!f a0 a1.
+      spolynom_size f (SPplus a0 a1) =
+      1 + (spolynom_size f a0 + spolynom_size f a1)) /\
+   !f a0 a1.
+     spolynom_size f (SPmult a0 a1) =
+     1 + (spolynom_size f a0 + spolynom_size f a1)
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_normalize_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr i. spolynom_normalize sr (SPvar i) = Cons_varlist [i] Nil_monom) /\
+   (!sr c. spolynom_normalize sr (SPconst c) = Cons_monom c [] Nil_monom) /\
+   (!sr l r.
+      spolynom_normalize sr (SPplus l r) =
+      canonical_sum_merge sr (spolynom_normalize sr l)
+        (spolynom_normalize sr r)) /\
+   !sr l r.
+     spolynom_normalize sr (SPmult l r) =
+     canonical_sum_prod sr (spolynom_normalize sr l) (spolynom_normalize sr r)
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_simplify_def</font></STRONG>
+<DD>
+<PRE>
+|- !sr x.
+     spolynom_simplify sr x =
+     canonical_sum_simplify sr (spolynom_normalize sr x)
+</PRE>
+
+<DT><STRONG><font color="black">interp_sp_def</font></STRONG>
+<DD>
+<PRE>
+|- (!sr vm c. interp_sp sr vm (SPconst c) = c) /\
+   (!sr vm i. interp_sp sr vm (SPvar i) = varmap_find i vm) /\
+   (!sr vm p1 p2.
+      interp_sp sr vm (SPplus p1 p2) =
+      SRP sr (interp_sp sr vm p1) (interp_sp sr vm p2)) /\
+   !sr vm p1 p2.
+     interp_sp sr vm (SPmult p1 p2) =
+     SRM sr (interp_sp sr vm p1) (interp_sp sr vm p2)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">canonical_sum_11</font></STRONG>
+<DD>
+<PRE>
+|- (!a0 a1 a2 a0' a1' a2'.
+      (Cons_monom a0 a1 a2 = Cons_monom a0' a1' a2') =
+      (a0 = a0') /\ (a1 = a1') /\ (a2 = a2')) /\
+   !a0 a1 a0' a1'.
+     (Cons_varlist a0 a1 = Cons_varlist a0' a1') = (a0 = a0') /\ (a1 = a1')
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_distinct</font></STRONG>
+<DD>
+<PRE>
+|- (!a2 a1 a0. ~(Nil_monom = Cons_monom a0 a1 a2)) /\
+   (!a1 a0. ~(Nil_monom = Cons_varlist a0 a1)) /\
+   !a2 a1' a1 a0' a0. ~(Cons_monom a0 a1 a2 = Cons_varlist a0' a1')
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_case_cong</font></STRONG>
+<DD>
+<PRE>
+|- !M M' v f f1.
+     (M = M') /\ ((M' = Nil_monom) ==> (v = v')) /\
+     (!a0 a1 a2. (M' = Cons_monom a0 a1 a2) ==> (f a0 a1 a2 = f' a0 a1 a2)) /\
+     (!a0 a1. (M' = Cons_varlist a0 a1) ==> (f1 a0 a1 = f1' a0 a1)) ==>
+     (case v f f1 M = case v' f' f1' M')
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_nchotomy</font></STRONG>
+<DD>
+<PRE>
+|- !c.
+     (c = Nil_monom) \/ (?a l c'. c = Cons_monom a l c') \/
+     ?l c'. c = Cons_varlist l c'
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_Axiom</font></STRONG>
+<DD>
+<PRE>
+|- !f0 f1 f2.
+     ?fn.
+       (fn Nil_monom = f0) /\
+       (!a0 a1 a2. fn (Cons_monom a0 a1 a2) = f1 a0 a1 a2 (fn a2)) /\
+       !a0 a1. fn (Cons_varlist a0 a1) = f2 a0 a1 (fn a1)
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_induction</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     P Nil_monom /\ (!c. P c ==> !l a. P (Cons_monom a l c)) /\
+     (!c. P c ==> !l. P (Cons_varlist l c)) ==>
+     !c. P c
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_merge_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!sr c1 l1 t1 c2 l2 t2.
+        P sr t1 t2 /\ P sr t1 (Cons_monom c2 l2 t2) /\
+        P sr (Cons_monom c1 l1 t1) t2 ==>
+        P sr (Cons_monom c1 l1 t1) (Cons_monom c2 l2 t2)) /\
+     (!sr c1 l1 t1 l2 t2.
+        P sr t1 t2 /\ P sr t1 (Cons_varlist l2 t2) /\
+        P sr (Cons_monom c1 l1 t1) t2 ==>
+        P sr (Cons_monom c1 l1 t1) (Cons_varlist l2 t2)) /\
+     (!sr l1 t1 c2 l2 t2.
+        P sr t1 t2 /\ P sr t1 (Cons_monom c2 l2 t2) /\
+        P sr (Cons_varlist l1 t1) t2 ==>
+        P sr (Cons_varlist l1 t1) (Cons_monom c2 l2 t2)) /\
+     (!sr l1 t1 l2 t2.
+        P sr t1 t2 /\ P sr t1 (Cons_varlist l2 t2) /\
+        P sr (Cons_varlist l1 t1) t2 ==>
+        P sr (Cons_varlist l1 t1) (Cons_varlist l2 t2)) /\
+     (!sr v7 v8. P sr (Cons_varlist v7 v8) Nil_monom) /\
+     (!sr v4 v5 v6. P sr (Cons_monom v4 v5 v6) Nil_monom) /\
+     (!sr. P sr Nil_monom Nil_monom) /\
+     (!sr v17 v18. P sr Nil_monom (Cons_varlist v17 v18)) /\
+     (!sr v14 v15 v16. P sr Nil_monom (Cons_monom v14 v15 v16)) ==>
+     !v v1 v2. P v v1 v2
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_merge_def</font></STRONG>
+<DD>
+<PRE>
+|- (canonical_sum_merge sr (Cons_monom c1 l1 t1) (Cons_monom c2 l2 t2) =
+    compare (list_compare index_compare l1 l2)
+      (Cons_monom c1 l1 (canonical_sum_merge sr t1 (Cons_monom c2 l2 t2)))
+      (Cons_monom (SRP sr c1 c2) l1 (canonical_sum_merge sr t1 t2))
+      (Cons_monom c2 l2 (canonical_sum_merge sr (Cons_monom c1 l1 t1) t2))) /\
+   (canonical_sum_merge sr (Cons_monom c1 l1 t1) (Cons_varlist l2 t2) =
+    compare (list_compare index_compare l1 l2)
+      (Cons_monom c1 l1 (canonical_sum_merge sr t1 (Cons_varlist l2 t2)))
+      (Cons_monom (SRP sr c1 (SR1 sr)) l1 (canonical_sum_merge sr t1 t2))
+      (Cons_varlist l2 (canonical_sum_merge sr (Cons_monom c1 l1 t1) t2))) /\
+   (canonical_sum_merge sr (Cons_varlist l1 t1) (Cons_monom c2 l2 t2) =
+    compare (list_compare index_compare l1 l2)
+      (Cons_varlist l1 (canonical_sum_merge sr t1 (Cons_monom c2 l2 t2)))
+      (Cons_monom (SRP sr (SR1 sr) c2) l1 (canonical_sum_merge sr t1 t2))
+      (Cons_monom c2 l2 (canonical_sum_merge sr (Cons_varlist l1 t1) t2))) /\
+   (canonical_sum_merge sr (Cons_varlist l1 t1) (Cons_varlist l2 t2) =
+    compare (list_compare index_compare l1 l2)
+      (Cons_varlist l1 (canonical_sum_merge sr t1 (Cons_varlist l2 t2)))
+      (Cons_monom (SRP sr (SR1 sr) (SR1 sr)) l1
+         (canonical_sum_merge sr t1 t2))
+      (Cons_varlist l2 (canonical_sum_merge sr (Cons_varlist l1 t1) t2))) /\
+   (canonical_sum_merge sr (Cons_varlist v7 v8) Nil_monom =
+    Cons_varlist v7 v8) /\
+   (canonical_sum_merge sr (Cons_monom v4 v5 v6) Nil_monom =
+    Cons_monom v4 v5 v6) /\
+   (canonical_sum_merge sr Nil_monom Nil_monom = Nil_monom) /\
+   (canonical_sum_merge sr Nil_monom (Cons_varlist v17 v18) =
+    Cons_varlist v17 v18) /\
+   (canonical_sum_merge sr Nil_monom (Cons_monom v14 v15 v16) =
+    Cons_monom v14 v15 v16)
+</PRE>
+
+<DT><STRONG><font color="black">monom_insert_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!sr c1 l1 c2 l2 t2.
+        P sr c1 l1 t2 ==> P sr c1 l1 (Cons_monom c2 l2 t2)) /\
+     (!sr c1 l1 l2 t2. P sr c1 l1 t2 ==> P sr c1 l1 (Cons_varlist l2 t2)) /\
+     (!sr c1 l1. P sr c1 l1 Nil_monom) ==>
+     !v v1 v2 v3. P v v1 v2 v3
+</PRE>
+
+<DT><STRONG><font color="black">monom_insert_def</font></STRONG>
+<DD>
+<PRE>
+|- (monom_insert sr c1 l1 (Cons_monom c2 l2 t2) =
+    compare (list_compare index_compare l1 l2)
+      (Cons_monom c1 l1 (Cons_monom c2 l2 t2))
+      (Cons_monom (SRP sr c1 c2) l1 t2)
+      (Cons_monom c2 l2 (monom_insert sr c1 l1 t2))) /\
+   (monom_insert sr c1 l1 (Cons_varlist l2 t2) =
+    compare (list_compare index_compare l1 l2)
+      (Cons_monom c1 l1 (Cons_varlist l2 t2))
+      (Cons_monom (SRP sr c1 (SR1 sr)) l1 t2)
+      (Cons_varlist l2 (monom_insert sr c1 l1 t2))) /\
+   (monom_insert sr c1 l1 Nil_monom = Cons_monom c1 l1 Nil_monom)
+</PRE>
+
+<DT><STRONG><font color="black">varlist_insert_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!sr l1 c2 l2 t2. P sr l1 t2 ==> P sr l1 (Cons_monom c2 l2 t2)) /\
+     (!sr l1 l2 t2. P sr l1 t2 ==> P sr l1 (Cons_varlist l2 t2)) /\
+     (!sr l1. P sr l1 Nil_monom) ==>
+     !v v1 v2. P v v1 v2
+</PRE>
+
+<DT><STRONG><font color="black">varlist_insert_def</font></STRONG>
+<DD>
+<PRE>
+|- (varlist_insert sr l1 (Cons_monom c2 l2 t2) =
+    compare (list_compare index_compare l1 l2)
+      (Cons_varlist l1 (Cons_monom c2 l2 t2))
+      (Cons_monom (SRP sr (SR1 sr) c2) l1 t2)
+      (Cons_monom c2 l2 (varlist_insert sr l1 t2))) /\
+   (varlist_insert sr l1 (Cons_varlist l2 t2) =
+    compare (list_compare index_compare l1 l2)
+      (Cons_varlist l1 (Cons_varlist l2 t2))
+      (Cons_monom (SRP sr (SR1 sr) (SR1 sr)) l1 t2)
+      (Cons_varlist l2 (varlist_insert sr l1 t2))) /\
+   (varlist_insert sr l1 Nil_monom = Cons_varlist l1 Nil_monom)
+</PRE>
+
+<DT><STRONG><font color="black">ivl_aux_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm v i.
+       ivl_aux sr vm i v = SRM sr (varmap_find i vm) (interp_vl sr vm v)
+</PRE>
+
+<DT><STRONG><font color="black">varlist_merge_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm x y.
+       interp_vl sr vm (list_merge index_lt x y) =
+       SRM sr (interp_vl sr vm x) (interp_vl sr vm y)
+</PRE>
+
+<DT><STRONG><font color="black">ics_aux_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm x s. ics_aux sr vm x s = SRP sr x (interp_cs sr vm s)
+</PRE>
+
+<DT><STRONG><font color="black">interp_m_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm x l. interp_m sr vm x l = SRM sr x (interp_vl sr vm l)
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_merge_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm x y.
+       interp_cs sr vm (canonical_sum_merge sr x y) =
+       SRP sr (interp_cs sr vm x) (interp_cs sr vm y)
+</PRE>
+
+<DT><STRONG><font color="black">monom_insert_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm a l s.
+       interp_cs sr vm (monom_insert sr a l s) =
+       SRP sr (SRM sr a (interp_vl sr vm l)) (interp_cs sr vm s)
+</PRE>
+
+<DT><STRONG><font color="black">varlist_insert_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm l s.
+       interp_cs sr vm (varlist_insert sr l s) =
+       SRP sr (interp_vl sr vm l) (interp_cs sr vm s)
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_scalar_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm a s.
+       interp_cs sr vm (canonical_sum_scalar sr a s) =
+       SRM sr a (interp_cs sr vm s)
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_scalar2_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm l s.
+       interp_cs sr vm (canonical_sum_scalar2 sr l s) =
+       SRM sr (interp_vl sr vm l) (interp_cs sr vm s)
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_scalar3_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm c l s.
+       interp_cs sr vm (canonical_sum_scalar3 sr c l s) =
+       SRM sr (SRM sr c (interp_vl sr vm l)) (interp_cs sr vm s)
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_prod_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm x y.
+       interp_cs sr vm (canonical_sum_prod sr x y) =
+       SRM sr (interp_cs sr vm x) (interp_cs sr vm y)
+</PRE>
+
+<DT><STRONG><font color="black">canonical_sum_simplify_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm s. interp_cs sr vm (canonical_sum_simplify sr s) = interp_cs sr vm s
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_11</font></STRONG>
+<DD>
+<PRE>
+|- (!a a'. (SPvar a = SPvar a') = (a = a')) /\
+   (!a a'. (SPconst a = SPconst a') = (a = a')) /\
+   (!a0 a1 a0' a1'.
+      (SPplus a0 a1 = SPplus a0' a1') = (a0 = a0') /\ (a1 = a1')) /\
+   !a0 a1 a0' a1'. (SPmult a0 a1 = SPmult a0' a1') = (a0 = a0') /\ (a1 = a1')
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_distinct</font></STRONG>
+<DD>
+<PRE>
+|- (!a' a. ~(SPvar a = SPconst a')) /\
+   (!a1 a0 a. ~(SPvar a = SPplus a0 a1)) /\
+   (!a1 a0 a. ~(SPvar a = SPmult a0 a1)) /\
+   (!a1 a0 a. ~(SPconst a = SPplus a0 a1)) /\
+   (!a1 a0 a. ~(SPconst a = SPmult a0 a1)) /\
+   !a1' a1 a0' a0. ~(SPplus a0 a1 = SPmult a0' a1')
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_case_cong</font></STRONG>
+<DD>
+<PRE>
+|- !M M' f f1 f2 f3.
+     (M = M') /\ (!a. (M' = SPvar a) ==> (f a = f' a)) /\
+     (!a. (M' = SPconst a) ==> (f1 a = f1' a)) /\
+     (!a0 a1. (M' = SPplus a0 a1) ==> (f2 a0 a1 = f2' a0 a1)) /\
+     (!a0 a1. (M' = SPmult a0 a1) ==> (f3 a0 a1 = f3' a0 a1)) ==>
+     (case f f1 f2 f3 M = case f' f1' f2' f3' M')
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_nchotomy</font></STRONG>
+<DD>
+<PRE>
+|- !s.
+     (?i. s = SPvar i) \/ (?a. s = SPconst a) \/ (?s' s0. s = SPplus s' s0) \/
+     ?s' s0. s = SPmult s' s0
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_Axiom</font></STRONG>
+<DD>
+<PRE>
+|- !f0 f1 f2 f3.
+     ?fn.
+       (!a. fn (SPvar a) = f0 a) /\ (!a. fn (SPconst a) = f1 a) /\
+       (!a0 a1. fn (SPplus a0 a1) = f2 a0 a1 (fn a0) (fn a1)) /\
+       !a0 a1. fn (SPmult a0 a1) = f3 a0 a1 (fn a0) (fn a1)
+</PRE>
+
+<DT><STRONG><font color="black">spolynom_induction</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!i. P (SPvar i)) /\ (!a. P (SPconst a)) /\
+     (!s s0. P s /\ P s0 ==> P (SPplus s s0)) /\
+     (!s s0. P s /\ P s0 ==> P (SPmult s s0)) ==>
+     !s. P s
+</PRE>
+
+<DT><STRONG><font color="black">spolynomial_normalize_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm p. interp_cs sr vm (spolynom_normalize sr p) = interp_sp sr vm p
+</PRE>
+
+<DT><STRONG><font color="black">spolynomial_simplify_ok</font></STRONG>
+<DD>
+<PRE>
+|- !sr.
+     is_semi_ring sr ==>
+     !vm p. interp_cs sr vm (spolynom_simplify sr p) = interp_sp sr vm p
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,174 @@
+<HTML>
+<HEAD><TITLE>Theory: powser</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "powser"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "limTheory.html"><STRONG><font color="black">lim</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">diffs</font></STRONG>
+                                         <td>
+                                         :(num -> real) -> num -> real
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">diffs</font></STRONG>
+<DD>
+<PRE>
+|- !c. diffs c = (\n. $& (SUC n) * c (SUC n))
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">POWDIFF_LEMMA</font></STRONG>
+<DD>
+<PRE>
+|- !n x y.
+     sum (0,SUC n) (\p. x pow p * y pow (SUC n - p)) =
+     y * sum (0,SUC n) (\p. x pow p * y pow (n - p))
+</PRE>
+
+<DT><STRONG><font color="black">POWDIFF</font></STRONG>
+<DD>
+<PRE>
+|- !n x y.
+     x pow SUC n - y pow SUC n =
+     (x - y) * sum (0,SUC n) (\p. x pow p * y pow (n - p))
+</PRE>
+
+<DT><STRONG><font color="black">POWREV</font></STRONG>
+<DD>
+<PRE>
+|- !n x y.
+     sum (0,SUC n) (\p. x pow p * y pow (n - p)) =
+     sum (0,SUC n) (\p. x pow (n - p) * y pow p)
+</PRE>
+
+<DT><STRONG><font color="black">POWSER_INSIDEA</font></STRONG>
+<DD>
+<PRE>
+|- !f x z.
+     summable (\n. f n * x pow n) /\ abs z < abs x ==>
+     summable (\n. abs (f n) * z pow n)
+</PRE>
+
+<DT><STRONG><font color="black">POWSER_INSIDE</font></STRONG>
+<DD>
+<PRE>
+|- !f x z.
+     summable (\n. f n * x pow n) /\ abs z < abs x ==>
+     summable (\n. f n * z pow n)
+</PRE>
+
+<DT><STRONG><font color="black">DIFFS_NEG</font></STRONG>
+<DD>
+<PRE>
+|- !c. diffs (\n. ~c n) = (\n. ~diffs c n)
+</PRE>
+
+<DT><STRONG><font color="black">DIFFS_LEMMA</font></STRONG>
+<DD>
+<PRE>
+|- !n c x.
+     sum (0,n) (\n. diffs c n * x pow n) =
+     sum (0,n) (\n. $& n * (c n * x pow (n - 1))) +
+     $& n * (c n * x pow (n - 1))
+</PRE>
+
+<DT><STRONG><font color="black">DIFFS_LEMMA2</font></STRONG>
+<DD>
+<PRE>
+|- !n c x.
+     sum (0,n) (\n. $& n * (c n * x pow (n - 1))) =
+     sum (0,n) (\n. diffs c n * x pow n) - $& n * (c n * x pow (n - 1))
+</PRE>
+
+<DT><STRONG><font color="black">DIFFS_EQUIV</font></STRONG>
+<DD>
+<PRE>
+|- !c x.
+     summable (\n. diffs c n * x pow n) ==>
+     (\n. $& n * (c n * x pow (n - 1))) sums suminf (\n. diffs c n * x pow n)
+</PRE>
+
+<DT><STRONG><font color="black">TERMDIFF_LEMMA1</font></STRONG>
+<DD>
+<PRE>
+|- !m z h.
+     sum (0,m) (\p. (z + h) pow (m - p) * z pow p - z pow m) =
+     sum (0,m) (\p. z pow p * ((z + h) pow (m - p) - z pow (m - p)))
+</PRE>
+
+<DT><STRONG><font color="black">TERMDIFF_LEMMA2</font></STRONG>
+<DD>
+<PRE>
+|- !z h n.
+     ~(h = 0) ==>
+     (((z + h) pow n - z pow n) / h - $& n * z pow (n - 1) =
+      h *
+      sum (0,n - 1)
+        (\p.
+           z pow p *
+           sum (0,n - 1 - p) (\q. (z + h) pow q * z pow (n - 2 - p - q))))
+</PRE>
+
+<DT><STRONG><font color="black">TERMDIFF_LEMMA3</font></STRONG>
+<DD>
+<PRE>
+|- !z h n k'.
+     ~(h = 0) /\ abs z <= k' /\ abs (z + h) <= k' ==>
+     abs (((z + h) pow n - z pow n) / h - $& n * z pow (n - 1)) <=
+     $& n * ($& (n - 1) * (k' pow (n - 2) * abs h))
+</PRE>
+
+<DT><STRONG><font color="black">TERMDIFF_LEMMA4</font></STRONG>
+<DD>
+<PRE>
+|- !f k' k.
+     0 < k /\ (!h. 0 < abs h /\ abs h < k ==> abs (f h) <= k' * abs h) ==>
+     (f -> 0) 0
+</PRE>
+
+<DT><STRONG><font color="black">TERMDIFF_LEMMA5</font></STRONG>
+<DD>
+<PRE>
+|- !f g k.
+     0 < k /\ summable f /\
+     (!h. 0 < abs h /\ abs h < k ==> !n. abs (g h n) <= f n * abs h) ==>
+     ((\h. suminf (g h)) -> 0) 0
+</PRE>
+
+<DT><STRONG><font color="black">TERMDIFF</font></STRONG>
+<DD>
+<PRE>
+|- !c k' x.
+     summable (\n. c n * k' pow n) /\ summable (\n. diffs c n * k' pow n) /\
+     summable (\n. diffs (diffs c) n * k' pow n) /\ abs x < abs k' ==>
+     ((\x. suminf (\n. c n * x pow n)) diffl suminf (\n. diffs c n * x pow n))
+       x
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

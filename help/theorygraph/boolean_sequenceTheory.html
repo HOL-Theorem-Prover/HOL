@@ -1,0 +1,142 @@
+<HTML>
+<HEAD><TITLE>Theory: boolean_sequence</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "boolean_sequence"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "prob_extraTheory.html"><STRONG><font color="black">prob_extra</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">STAKE</font></STRONG>
+                                         <td>
+                                         :num -> (num -> bool) -> bool list
+    <tr><td>
+        <STRONG><font color="black">SCONST</font></STRONG>
+        <td>
+        :bool -> num -> bool
+    <tr><td>
+        <STRONG><font color="black">SDEST</font></STRONG>
+        <td>
+        :(num -> bool) -> bool # (num -> bool)
+    <tr><td>
+        <STRONG><font color="black">SCONS</font></STRONG>
+        <td>
+        :bool -> (num -> bool) -> num -> bool
+    <tr><td>
+        <STRONG><font color="black">SDROP</font></STRONG>
+        <td>
+        :num -> (num -> bool) -> num -> bool
+    <tr><td>
+        <STRONG><font color="black">SHD</font></STRONG>
+        <td>
+        :(num -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">STL</font></STRONG>
+        <td>
+        :(num -> bool) -> num -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">SHD_def</font></STRONG>
+<DD>
+<PRE>
+|- !f. SHD f = f 0
+</PRE>
+
+<DT><STRONG><font color="black">STL_def</font></STRONG>
+<DD>
+<PRE>
+|- !f n. STL f n = f (SUC n)
+</PRE>
+
+<DT><STRONG><font color="black">SCONS_def</font></STRONG>
+<DD>
+<PRE>
+|- (!h t. SCONS h t 0 = h) /\ !h t n. SCONS h t (SUC n) = t n
+</PRE>
+
+<DT><STRONG><font color="black">SDEST_def</font></STRONG>
+<DD>
+<PRE>
+|- SDEST = (\s. (SHD s,STL s))
+</PRE>
+
+<DT><STRONG><font color="black">SCONST_def</font></STRONG>
+<DD>
+<PRE>
+|- SCONST = K
+</PRE>
+
+<DT><STRONG><font color="black">STAKE_def</font></STRONG>
+<DD>
+<PRE>
+|- (!s. STAKE 0 s = []) /\ !n s. STAKE (SUC n) s = SHD s::STAKE n (STL s)
+</PRE>
+
+<DT><STRONG><font color="black">SDROP_def</font></STRONG>
+<DD>
+<PRE>
+|- (SDROP 0 = I) /\ !n. SDROP (SUC n) = SDROP n o STL
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">SCONS_SURJ</font></STRONG>
+<DD>
+<PRE>
+|- !x. ?h t. x = SCONS h t
+</PRE>
+
+<DT><STRONG><font color="black">SHD_STL_ISO</font></STRONG>
+<DD>
+<PRE>
+|- !h t. ?x. (SHD x = h) /\ (STL x = t)
+</PRE>
+
+<DT><STRONG><font color="black">SHD_SCONS</font></STRONG>
+<DD>
+<PRE>
+|- !h t. SHD (SCONS h t) = h
+</PRE>
+
+<DT><STRONG><font color="black">STL_SCONS</font></STRONG>
+<DD>
+<PRE>
+|- !h t. STL (SCONS h t) = t
+</PRE>
+
+<DT><STRONG><font color="black">SHD_SCONST</font></STRONG>
+<DD>
+<PRE>
+|- !b. SHD (SCONST b) = b
+</PRE>
+
+<DT><STRONG><font color="black">STL_SCONST</font></STRONG>
+<DD>
+<PRE>
+|- !b. STL (SCONST b) = SCONST b
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

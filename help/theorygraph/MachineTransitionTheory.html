@@ -1,0 +1,635 @@
+<HTML>
+<HEAD><TITLE>Theory: MachineTransition</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "MachineTransition"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "optionTheory.html"><STRONG><font color="black">option</font></STRONG></A>
+    <A HREF = "listTheory.html"><STRONG><font color="black">list</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">Reachable</font></STRONG>
+                                         <td>
+                                         :('a # 'a -> bool) ->
+                                          ('a -> bool) -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">Eq</font></STRONG>
+        <td>
+        :'a -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">MooreTrans</font></STRONG>
+        <td>
+        :('a # 'b -> 'b) -> ('a # 'b) # 'a # 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">FinPath_tupled</font></STRONG>
+        <td>
+        :(('a # 'a -> bool) # 'a) # (num -> 'a) # num -> bool
+    <tr><td>
+        <STRONG><font color="black">Totalise</font></STRONG>
+        <td>
+        :('a # 'a -> bool) -> 'a # 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">ReachBy</font></STRONG>
+        <td>
+        :('a # 'a -> bool) -> ('a -> bool) -> num -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">ReachIn</font></STRONG>
+        <td>
+        :('a # 'a -> bool) -> ('a -> bool) -> num -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">ChoosePath</font></STRONG>
+        <td>
+        :('a # 'a -> bool) -> 'a -> num -> 'a
+    <tr><td>
+        <STRONG><font color="black">Total</font></STRONG>
+        <td>
+        :('a # 'b -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">Stable</font></STRONG>
+        <td>
+        :('a # 'a -> bool) -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">FnPair</font></STRONG>
+        <td>
+        :('c -> 'a) -> ('c -> 'b) -> 'c -> 'a # 'b
+    <tr><td>
+        <STRONG><font color="black">Live</font></STRONG>
+        <td>
+        :('a # 'b -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">Moore</font></STRONG>
+        <td>
+        :('a # 'b -> 'b) -> (num -> 'a) # (num -> 'b) -> bool
+    <tr><td>
+        <STRONG><font color="black">IsTrace_tupled</font></STRONG>
+        <td>
+        :('a # 'a -> bool) # ('a -> bool) # ('a -> bool) # 'a list -> bool
+    <tr><td>
+        <STRONG><font color="black">Next</font></STRONG>
+        <td>
+        :('a # 'b -> bool) -> ('a -> bool) -> 'b -> bool
+    <tr><td>
+        <STRONG><font color="black">Path</font></STRONG>
+        <td>
+        :('a # 'a -> bool) # 'a -> (num -> 'a) -> bool
+    <tr><td>
+        <STRONG><font color="black">Prev</font></STRONG>
+        <td>
+        :('a # 'b -> bool) -> ('b -> bool) -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">IsTrace</font></STRONG>
+        <td>
+        :('a # 'a -> bool) -> ('a -> bool) -> ('a -> bool) -> 'a list -> bool
+    <tr><td>
+        <STRONG><font color="black">FinPath</font></STRONG>
+        <td>
+        :('a # 'a -> bool) # 'a -> (num -> 'a) -> num -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">Next_def</font></STRONG>
+<DD>
+<PRE>
+|- !R B state. Next R B state = ?state_. B state_ /\ R (state_,state)
+</PRE>
+
+<DT><STRONG><font color="black">Prev_def</font></STRONG>
+<DD>
+<PRE>
+|- !R Q state. Prev R Q state = ?state'. R (state,state') /\ Q state'
+</PRE>
+
+<DT><STRONG><font color="black">Eq_def</font></STRONG>
+<DD>
+<PRE>
+|- !state0 state. Eq state0 state = (state0 = state)
+</PRE>
+
+<DT><STRONG><font color="black">ReachIn_def</font></STRONG>
+<DD>
+<PRE>
+|- (!R B. ReachIn R B 0 = B) /\
+   !R B n. ReachIn R B (SUC n) = Next R (ReachIn R B n)
+</PRE>
+
+<DT><STRONG><font color="black">Reachable_def</font></STRONG>
+<DD>
+<PRE>
+|- !R B state. Reachable R B state = ?n. ReachIn R B n state
+</PRE>
+
+<DT><STRONG><font color="black">ReachBy_def</font></STRONG>
+<DD>
+<PRE>
+|- !R B n state. ReachBy R B n state = ?m. m <= n /\ ReachIn R B m state
+</PRE>
+
+<DT><STRONG><font color="black">IsTrace_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- IsTrace_tupled =
+   WFREC
+     (@R'. WF R' /\ !s0 B tr Q s1 R. R' (R,Eq s1,Q,s1::tr) (R,B,Q,s0::s1::tr))
+     (\IsTrace_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v3 of
+                     (v4,v5) ->
+                       case v5 of
+                          [] -> F
+                       || v6::v7 ->
+                            case v7 of
+                               [] -> v2 v6 /\ v4 v6
+                            || v8::v9 ->
+                                 v2 v6 /\ v (v6,v8) /\
+                                 IsTrace_tupled' (v,Eq v8,v4,v8::v9))
+</PRE>
+
+<DT><STRONG><font color="black">IsTrace_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2 x3. IsTrace x x1 x2 x3 = IsTrace_tupled (x,x1,x2,x3)
+</PRE>
+
+<DT><STRONG><font color="black">Stable_def</font></STRONG>
+<DD>
+<PRE>
+|- !R state. Stable R state = !state'. R (state,state') ==> (state' = state)
+</PRE>
+
+<DT><STRONG><font color="black">Live_def</font></STRONG>
+<DD>
+<PRE>
+|- !R. Live R = !state. ?state'. R (state,state')
+</PRE>
+
+<DT><STRONG><font color="black">FnPair_def</font></STRONG>
+<DD>
+<PRE>
+|- !f g x. FnPair f g x = (f x,g x)
+</PRE>
+
+<DT><STRONG><font color="black">Path_def</font></STRONG>
+<DD>
+<PRE>
+|- !R s f. Path (R,s) f = (f 0 = s) /\ !n. R (f n,f (n + 1))
+</PRE>
+
+<DT><STRONG><font color="black">FinPath_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- FinPath_tupled =
+   WFREC (@R'. WF R' /\ !n f s R. R' ((R,s),f,n) ((R,s),f,SUC n))
+     (\FinPath_tupled' a.
+        case a of
+           (v,v1) ->
+             case v of
+                (v2,v3) ->
+                  case v1 of
+                     (v4,v5) ->
+                       case v5 of
+                          0 -> v4 0 = v3
+                       || SUC v6 ->
+                            FinPath_tupled' ((v2,v3),v4,v6) /\
+                            v2 (v4 v6,v4 (v6 + 1)))
+</PRE>
+
+<DT><STRONG><font color="black">FinPath_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2. FinPath x x1 x2 = FinPath_tupled (x,x1,x2)
+</PRE>
+
+<DT><STRONG><font color="black">Total_def</font></STRONG>
+<DD>
+<PRE>
+|- !R. Total R = !s. ?s'. R (s,s')
+</PRE>
+
+<DT><STRONG><font color="black">ChoosePath_def</font></STRONG>
+<DD>
+<PRE>
+|- (!R s. ChoosePath R s 0 = s) /\
+   !R s n. ChoosePath R s (SUC n) = @s'. R (ChoosePath R s n,s')
+</PRE>
+
+<DT><STRONG><font color="black">Totalise_def</font></STRONG>
+<DD>
+<PRE>
+|- !R s s'. Totalise R (s,s') = R (s,s') \/ ~(?s''. R (s,s'')) /\ (s = s')
+</PRE>
+
+<DT><STRONG><font color="black">Moore_def</font></STRONG>
+<DD>
+<PRE>
+|- !nextfn inputs states.
+     Moore nextfn (inputs,states) =
+     !t. states (t + 1) = nextfn (inputs t,states t)
+</PRE>
+
+<DT><STRONG><font color="black">MooreTrans_def</font></STRONG>
+<DD>
+<PRE>
+|- !nextfn input state input' state'.
+     MooreTrans nextfn ((input,state),input',state') =
+     (state' = nextfn (input,state))
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">ReachIn_rec</font></STRONG>
+<DD>
+<PRE>
+|- (!R B state. ReachIn R B 0 state = B state) /\
+   !R B n state.
+     ReachIn R B (SUC n) state =
+     ?state_. ReachIn R B n state_ /\ R (state_,state)
+</PRE>
+
+<DT><STRONG><font color="black">ReachBy_rec</font></STRONG>
+<DD>
+<PRE>
+|- (!R B state. ReachBy R B 0 state = B state) /\
+   !R B n state.
+     ReachBy R B (SUC n) state =
+     ReachBy R B n state \/ ?state_. ReachBy R B n state_ /\ R (state_,state)
+</PRE>
+
+<DT><STRONG><font color="black">ReachBy_ReachIn</font></STRONG>
+<DD>
+<PRE>
+|- (!R B state. ReachBy R B 0 state = B state) /\
+   !R B n state.
+     ReachBy R B (SUC n) state =
+     ReachBy R B n state \/ ReachIn R B (SUC n) state
+</PRE>
+
+<DT><STRONG><font color="black">Reachable_ReachBy</font></STRONG>
+<DD>
+<PRE>
+|- Reachable R B state = ?n. ReachBy R B n state
+</PRE>
+
+<DT><STRONG><font color="black">ReachBy_fixedpoint</font></STRONG>
+<DD>
+<PRE>
+|- !R B n.
+     (ReachBy R B n = ReachBy R B (SUC n)) ==> (Reachable R B = ReachBy R B n)
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_IMP_EQ</font></STRONG>
+<DD>
+<PRE>
+|- (?x. P x) ==> Q = !x. P x ==> Q
+</PRE>
+
+<DT><STRONG><font color="black">EQ_COND</font></STRONG>
+<DD>
+<PRE>
+|- ((x = (if b then y else z)) = (if b then x = y else x = z)) /\
+   (((if b then y else z) = x) = (if b then y = x else z = x))
+</PRE>
+
+<DT><STRONG><font color="black">COND_SIMP</font></STRONG>
+<DD>
+<PRE>
+|- ((if b then F else F) = F) /\ ((if b then F else T) = ~b) /\
+   ((if b then T else F) = b) /\ ((if b then T else T) = T) /\
+   ((if b then x else x) = x) /\ ((if b then b' else ~b') = (b = b')) /\
+   ((if b then ~b' else b') = (b = ~b'))
+</PRE>
+
+<DT><STRONG><font color="black">IsTrace_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!R B Q. P R B Q []) /\ (!R B Q s. P R B Q [s]) /\
+     (!R B Q s0 s1 tr. P R (Eq s1) Q (s1::tr) ==> P R B Q (s0::s1::tr)) ==>
+     !v v1 v2 v3. P v v1 v2 v3
+</PRE>
+
+<DT><STRONG><font color="black">IsTrace_def</font></STRONG>
+<DD>
+<PRE>
+|- (IsTrace R B Q [] = F) /\ (IsTrace R B Q [s] = B s /\ Q s) /\
+   (IsTrace R B Q (s0::s1::tr) =
+    B s0 /\ R (s0,s1) /\ IsTrace R (Eq s1) Q (s1::tr))
+</PRE>
+
+<DT><STRONG><font color="black">Reachable_Stable</font></STRONG>
+<DD>
+<PRE>
+|- Live R /\ (!state. ReachIn R B n state ==> Stable R state) ==>
+   !state. Reachable R B state /\ Stable R state = ReachIn R B n state
+</PRE>
+
+<DT><STRONG><font color="black">TraceReachIn</font></STRONG>
+<DD>
+<PRE>
+|- !R B tr. B (tr 0) /\ (!n. R (tr n,tr (n + 1))) ==> !n. ReachIn R B n (tr n)
+</PRE>
+
+<DT><STRONG><font color="black">ModelCheckAlways</font></STRONG>
+<DD>
+<PRE>
+|- !R B P.
+     (!s. Reachable R B s ==> P s) ==>
+     !tr. B (tr 0) /\ (!t. R (tr t,tr (t + 1))) ==> !t. P (tr t)
+</PRE>
+
+<DT><STRONG><font color="black">ModelCheckAlwaysCor1</font></STRONG>
+<DD>
+<PRE>
+|- (!s1 s2. Reachable R B (s1,s2) ==> P s1) ==>
+   !tr. B (tr 0) /\ (!t. R (tr t,tr (t + 1))) ==> !t. P (FST (tr t))
+</PRE>
+
+<DT><STRONG><font color="black">ModelCheckAlwaysCor2</font></STRONG>
+<DD>
+<PRE>
+|- !R B P.
+     (!s1 s2. Reachable R B (s1,s2) ==> P s1) ==>
+     !tr1.
+       (?tr2.
+          B (tr1 0,tr2 0) /\
+          !t. R ((tr1 t,tr2 t),tr1 (t + 1),tr2 (t + 1))) ==>
+       !t. P (tr1 t)
+</PRE>
+
+<DT><STRONG><font color="black">FnPairAbs</font></STRONG>
+<DD>
+<PRE>
+|- (!tr. FnPair (\n. FST (tr n)) (\n. SND (tr n)) = tr) /\
+   !tr1 tr2. (\n. (tr1 n,tr2 n)) = FnPair tr1 tr2
+</PRE>
+
+<DT><STRONG><font color="black">FnPairExists</font></STRONG>
+<DD>
+<PRE>
+|- !P. (?tr. P tr) = ?tr1 tr2. P (FnPair tr1 tr2)
+</PRE>
+
+<DT><STRONG><font color="black">FnPairForall</font></STRONG>
+<DD>
+<PRE>
+|- !P. (!tr. P tr) = !tr1 tr2. P (FnPair tr1 tr2)
+</PRE>
+
+<DT><STRONG><font color="black">ABS_EXISTS_THM</font></STRONG>
+<DD>
+<PRE>
+|- !P rep.
+     TYPE_DEFINITION P rep ==>
+     ?abs. (!a. abs (rep a) = a) /\ !r. P r = (rep (abs r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">FORALL_REP</font></STRONG>
+<DD>
+<PRE>
+|- !abs rep P Q.
+     (!a. abs (rep a) = a) /\ (!r. P r = (rep (abs r) = r)) ==>
+     ((!a. Q a) = !r. P r ==> Q (abs r))
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_REP</font></STRONG>
+<DD>
+<PRE>
+|- !abs rep P Q.
+     (!a. abs (rep a) = a) /\ (!r. P r = (rep (abs r) = r)) ==>
+     ((?a. Q a) = ?r. P r /\ Q (abs r))
+</PRE>
+
+<DT><STRONG><font color="black">ABS_ONE_ONE</font></STRONG>
+<DD>
+<PRE>
+|- !abs rep.
+     (!a. abs (rep a) = a) /\ (!r. range r = (rep (abs r) = r)) ==>
+     !r. range r /\ range r' ==> ((abs r = abs r') = (r = r'))
+</PRE>
+
+<DT><STRONG><font color="black">FinPath_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!R s f. P (R,s) f 0) /\
+     (!R s f n. P (R,s) f n ==> P (R,s) f (SUC n)) ==>
+     !v v1 v2. P v v1 v2
+</PRE>
+
+<DT><STRONG><font color="black">FinPath_def</font></STRONG>
+<DD>
+<PRE>
+|- (FinPath (R,s) f 0 = (f 0 = s)) /\
+   (FinPath (R,s) f (SUC n) = FinPath (R,s) f n /\ R (f n,f (n + 1)))
+</PRE>
+
+<DT><STRONG><font color="black">FinFunEq</font></STRONG>
+<DD>
+<PRE>
+|- (!m. m <= n + 1 ==> (f1 m = f2 m)) =
+   (!m. m <= n ==> (f1 m = f2 m)) /\ (f1 (n + 1) = f2 (n + 1))
+</PRE>
+
+<DT><STRONG><font color="black">FinPathThm</font></STRONG>
+<DD>
+<PRE>
+|- !n. FinPath (R,s) f n = (f 0 = s) /\ !m. m < n ==> R (f m,f (m + 1))
+</PRE>
+
+<DT><STRONG><font color="black">FinPathLemma</font></STRONG>
+<DD>
+<PRE>
+|- !f1 f2 n.
+     (!m. m <= n ==> (f1 m = f2 m)) ==>
+     (FinPath (R,s) f1 n = FinPath (R,s) f2 n)
+</PRE>
+
+<DT><STRONG><font color="black">ReachInFinPath</font></STRONG>
+<DD>
+<PRE>
+|- !R B n s. ReachIn R B n s = ?f s0. B s0 /\ FinPath (R,s0) f n /\ (s = f n)
+</PRE>
+
+<DT><STRONG><font color="black">ReachableFinPath</font></STRONG>
+<DD>
+<PRE>
+|- !R B s. Reachable R B s = ?f s0 n. B s0 /\ FinPath (R,s0) f n /\ (s = f n)
+</PRE>
+
+<DT><STRONG><font color="black">ReachIn_revrec</font></STRONG>
+<DD>
+<PRE>
+|- (!R B state. ReachIn R B 0 state = B state) /\
+   !R B n state.
+     ReachIn R B (SUC n) state =
+     ?state1 state2.
+       B state1 /\ R (state1,state2) /\ ReachIn R (Eq state2) n state
+</PRE>
+
+<DT><STRONG><font color="black">TotalPathExists</font></STRONG>
+<DD>
+<PRE>
+|- Total R ==> !s. Path (R,s) (ChoosePath R s)
+</PRE>
+
+<DT><STRONG><font color="black">FinPathPathExists</font></STRONG>
+<DD>
+<PRE>
+|- !R B f s n.
+     Total R /\ FinPath (R,s) f n ==>
+     ?g. (!m. m <= n ==> (f m = g m)) /\ Path (R,s) g
+</PRE>
+
+<DT><STRONG><font color="black">ReachInPath</font></STRONG>
+<DD>
+<PRE>
+|- !R B n s.
+     Total R ==> (ReachIn R B n s = ?f s0. B s0 /\ Path (R,s0) f /\ (s = f n))
+</PRE>
+
+<DT><STRONG><font color="black">ReachablePath</font></STRONG>
+<DD>
+<PRE>
+|- !R B s.
+     Total R ==>
+     (Reachable R B s = ?f s0. B s0 /\ Path (R,s0) f /\ ?n. s = f n)
+</PRE>
+
+<DT><STRONG><font color="black">TotalTotalise</font></STRONG>
+<DD>
+<PRE>
+|- Total (Totalise R)
+</PRE>
+
+<DT><STRONG><font color="black">TotalImpTotaliseLemma</font></STRONG>
+<DD>
+<PRE>
+|- Total R ==> !s s'. R (s,s') = Totalise R (s,s')
+</PRE>
+
+<DT><STRONG><font color="black">TotalImpTotalise</font></STRONG>
+<DD>
+<PRE>
+|- Total R ==> (Totalise R = R)
+</PRE>
+
+<DT><STRONG><font color="black">TotaliseReachBy</font></STRONG>
+<DD>
+<PRE>
+|- !n s. ReachBy (Totalise R) B n s = ReachBy R B n s
+</PRE>
+
+<DT><STRONG><font color="black">ReachableTotalise</font></STRONG>
+<DD>
+<PRE>
+|- Reachable (Totalise R) = Reachable R
+</PRE>
+
+<DT><STRONG><font color="black">ReachablePathThm</font></STRONG>
+<DD>
+<PRE>
+|- !R B s.
+     Reachable R B s = ?f s0. B s0 /\ Path (Totalise R,s0) f /\ ?n. s = f n
+</PRE>
+
+<DT><STRONG><font color="black">MooreTransEq</font></STRONG>
+<DD>
+<PRE>
+|- MooreTrans nextfn =
+   (\((input,state),input',state'). state' = nextfn (input,state))
+</PRE>
+
+<DT><STRONG><font color="black">MoorePath</font></STRONG>
+<DD>
+<PRE>
+|- Moore nextfn (inputs,states) =
+   Path (MooreTrans nextfn,inputs 0,states 0) (\t. (inputs t,states t))
+</PRE>
+
+<DT><STRONG><font color="black">TotalMooreTrans</font></STRONG>
+<DD>
+<PRE>
+|- Total (MooreTrans nextfn)
+</PRE>
+
+<DT><STRONG><font color="black">ReachableMooreTrans</font></STRONG>
+<DD>
+<PRE>
+|- !B s.
+     Reachable (MooreTrans nextfn) B s =
+     ?f s0. B s0 /\ Path (MooreTrans nextfn,s0) f /\ ?n. s = f n
+</PRE>
+
+<DT><STRONG><font color="black">MooreReachable1</font></STRONG>
+<DD>
+<PRE>
+|- (!inputs states.
+      B (inputs 0,states 0) /\ Moore nextfn (inputs,states) ==>
+      !t. P (inputs t,states t)) ==>
+   !s. Reachable (MooreTrans nextfn) B s ==> P s
+</PRE>
+
+<DT><STRONG><font color="black">MooreReachable2</font></STRONG>
+<DD>
+<PRE>
+|- (!s. Reachable (MooreTrans nextfn) B s ==> P s) ==>
+   !inputs states.
+     B (inputs 0,states 0) /\ Moore nextfn (inputs,states) ==>
+     !t. P (inputs t,states t)
+</PRE>
+
+<DT><STRONG><font color="black">MooreReachable</font></STRONG>
+<DD>
+<PRE>
+|- !B nextfn P.
+     (!inputs states.
+        B (inputs 0,states 0) /\ Moore nextfn (inputs,states) ==>
+        !t. P (inputs t,states t)) =
+     !s. Reachable (MooreTrans nextfn) B s ==> P s
+</PRE>
+
+<DT><STRONG><font color="black">MooreReachableExists</font></STRONG>
+<DD>
+<PRE>
+|- (?inputs states.
+      (B (inputs 0,states 0) /\ Moore nextfn (inputs,states)) /\
+      ?t. P (inputs t,states t)) =
+   ?s. Reachable (MooreTrans nextfn) B s /\ P s
+</PRE>
+
+<DT><STRONG><font color="black">MooreReachableCor1</font></STRONG>
+<DD>
+<PRE>
+|- !B nextfn.
+     (!inputs states.
+        B (inputs 0,states 0) /\
+        (!t. states (t + 1) = nextfn (inputs t,states t)) ==>
+        !t. P (inputs t,states t)) =
+     !s. Reachable (\((i,s),i',s'). s' = nextfn (i,s)) B s ==> P s
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

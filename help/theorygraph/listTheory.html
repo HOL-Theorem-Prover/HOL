@@ -1,0 +1,776 @@
+<HTML>
+<HEAD><TITLE>Theory: list</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "list"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "ind_typeTheory.html"><STRONG><font color="black">ind_type</font></STRONG></A>
+    <A HREF = "pairTheory.html"><STRONG><font color="black">pair</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">list</font></STRONG>
+                                          <td>
+                                          1
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">FLAT</font></STRONG>
+                                         <td>
+                                         :'a list list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">LENGTH</font></STRONG>
+        <td>
+        :'a list -> num
+    <tr><td>
+        <STRONG><font color="black">dest_list</font></STRONG>
+        <td>
+        :'a list -> 'a recspace
+    <tr><td>
+        <STRONG><font color="black">LAST</font></STRONG>
+        <td>
+        :'a list -> 'a
+    <tr><td>
+        <STRONG><font color="black">MAP2</font></STRONG>
+        <td>
+        :('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
+    <tr><td>
+        <STRONG><font color="black">EL</font></STRONG>
+        <td>
+        :num -> 'a list -> 'a
+    <tr><td>
+        <STRONG><font color="black">HD</font></STRONG>
+        <td>
+        :'a list -> 'a
+    <tr><td>
+        <STRONG><font color="black">TL</font></STRONG>
+        <td>
+        :'a list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">FOLDL</font></STRONG>
+        <td>
+        :('b -> 'a -> 'b) -> 'b -> 'a list -> 'b
+    <tr><td>
+        <STRONG><font color="black">FOLDR</font></STRONG>
+        <td>
+        :('a -> 'b -> 'b) -> 'b -> 'a list -> 'b
+    <tr><td>
+        <STRONG><font color="black">UNZIP</font></STRONG>
+        <td>
+        :('a # 'b) list -> 'a list # 'b list
+    <tr><td>
+        <STRONG><font color="black">list_size</font></STRONG>
+        <td>
+        :('a -> num) -> 'a list -> num
+    <tr><td>
+        <STRONG><font color="black">EVERY</font></STRONG>
+        <td>
+        :('a -> bool) -> 'a list -> bool
+    <tr><td>
+        <STRONG><font color="black">NULL</font></STRONG>
+        <td>
+        :'a list -> bool
+    <tr><td> <STRONG><font color="black">list0</font></STRONG> <td> :'a list
+    <tr><td>
+        <STRONG><font color="black">list1</font></STRONG>
+        <td>
+        :'a -> 'a list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">FRONT</font></STRONG>
+        <td>
+        :'a list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">REVERSE</font></STRONG>
+        <td>
+        :'a list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">FILTER</font></STRONG>
+        <td>
+        :('a -> bool) -> 'a list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">list_case</font></STRONG>
+        <td>
+        :'b -> ('a -> 'a list -> 'b) -> 'a list -> 'b
+    <tr><td>
+        <STRONG><font color="black">MAP</font></STRONG>
+        <td>
+        :('a -> 'b) -> 'a list -> 'b list
+    <tr><td>
+        <STRONG><font color="black">MEM</font></STRONG>
+        <td>
+        :'a -> 'a list -> bool
+    <tr><td> <STRONG><font color="black">NIL</font></STRONG> <td> :'a list
+    <tr><td>
+        <STRONG><font color="black">EXISTS</font></STRONG>
+        <td>
+        :('a -> bool) -> 'a list -> bool
+    <tr><td>
+        <STRONG><font color="black">APPEND</font></STRONG>
+        <td>
+        :'a list -> 'a list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">SUM</font></STRONG>
+        <td>
+        :num list -> num
+    <tr><td>
+        <STRONG><font color="black">ZIP</font></STRONG>
+        <td>
+        :'a list # 'b list -> ('a # 'b) list
+    <tr><td>
+        <STRONG><font color="black">mk_list</font></STRONG>
+        <td>
+        :'a recspace -> 'a list
+    <tr><td>
+        <STRONG><font color="black">CONS</font></STRONG>
+        <td>
+        :'a -> 'a list -> 'a list
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">MAP2</font></STRONG>
+<DD>
+<PRE>
+|- (!f. MAP2 f [] [] = []) /\
+   !f h1 t1 h2 t2. MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2
+</PRE>
+
+<DT><STRONG><font color="black">EL</font></STRONG>
+<DD>
+<PRE>
+|- (!l. EL 0 l = HD l) /\ !l n. EL (SUC n) l = EL n (TL l)
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!P. SOME_EL P [] = F) /\ !P h t. SOME_EL P (h::t) = P h \/ SOME_EL P t
+</PRE>
+
+<DT><STRONG><font color="black">EVERY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!P. ALL_EL P [] = T) /\ !P h t. ALL_EL P (h::t) = P h /\ ALL_EL P t
+</PRE>
+
+<DT><STRONG><font color="black">FOLDL</font></STRONG>
+<DD>
+<PRE>
+|- (!f e. FOLDL f e [] = e) /\ !f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l
+</PRE>
+
+<DT><STRONG><font color="black">FOLDR</font></STRONG>
+<DD>
+<PRE>
+|- (!f e. FOLDR f e [] = e) /\ !f e x l. FOLDR f e (x::l) = f x (FOLDR f e l)
+</PRE>
+
+<DT><STRONG><font color="black">FILTER</font></STRONG>
+<DD>
+<PRE>
+|- (!P. FILTER P [] = []) /\
+   !P h t. FILTER P (h::t) = (if P h then h::FILTER P t else FILTER P t)
+</PRE>
+
+<DT><STRONG><font color="black">MEM</font></STRONG>
+<DD>
+<PRE>
+|- (!x. IS_EL x [] = F) /\ !x h t. IS_EL x (h::t) = (x = h) \/ IS_EL x t
+</PRE>
+
+<DT><STRONG><font color="black">MAP</font></STRONG>
+<DD>
+<PRE>
+|- (!f. MAP f [] = []) /\ !f h t. MAP f (h::t) = f h::MAP f t
+</PRE>
+
+<DT><STRONG><font color="black">LENGTH</font></STRONG>
+<DD>
+<PRE>
+|- (LENGTH [] = 0) /\ !h t. LENGTH (h::t) = SUC (LENGTH t)
+</PRE>
+
+<DT><STRONG><font color="black">FLAT</font></STRONG>
+<DD>
+<PRE>
+|- (FLAT [] = []) /\ !h t. FLAT (h::t) = APPEND h (FLAT t)
+</PRE>
+
+<DT><STRONG><font color="black">APPEND</font></STRONG>
+<DD>
+<PRE>
+|- (!l. APPEND [] l = l) /\ !l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2
+</PRE>
+
+<DT><STRONG><font color="black">SUM</font></STRONG>
+<DD>
+<PRE>
+|- (SUM [] = 0) /\ !h t. SUM (h::t) = h + SUM t
+</PRE>
+
+<DT><STRONG><font color="black">TL</font></STRONG>
+<DD>
+<PRE>
+|- !h t. TL (h::t) = t
+</PRE>
+
+<DT><STRONG><font color="black">HD</font></STRONG>
+<DD>
+<PRE>
+|- !h t. HD (h::t) = h
+</PRE>
+
+<DT><STRONG><font color="black">NULL_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (NULL [] = T) /\ !h t. NULL (h::t) = F
+</PRE>
+
+<DT><STRONG><font color="black">list_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep.
+     TYPE_DEFINITION
+       (\a0'.
+          !'list'.
+            (!a0'.
+               (a0' = CONSTR 0 (@v. T) (\n. BOTTOM)) \/
+               (?a0 a1.
+                  (a0' =
+                   (\a0 a1. CONSTR (SUC 0) a0 (FCONS a1 (\n. BOTTOM))) a0
+                     a1) /\ 'list' a1) ==>
+               'list' a0') ==>
+            'list' a0') rep
+</PRE>
+
+<DT><STRONG><font color="black">list_repfns</font></STRONG>
+<DD>
+<PRE>
+|- (!a. mk_list (dest_list a) = a) /\
+   !r.
+     (\a0'.
+        !'list'.
+          (!a0'.
+             (a0' = CONSTR 0 (@v. T) (\n. BOTTOM)) \/
+             (?a0 a1.
+                (a0' =
+                 (\a0 a1. CONSTR (SUC 0) a0 (FCONS a1 (\n. BOTTOM))) a0 a1) /\
+                'list' a1) ==>
+             'list' a0') ==>
+          'list' a0') r =
+     (dest_list (mk_list r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">list0_def</font></STRONG>
+<DD>
+<PRE>
+|- list0 = mk_list (CONSTR 0 (@v. T) (\n. BOTTOM))
+</PRE>
+
+<DT><STRONG><font color="black">list1_def</font></STRONG>
+<DD>
+<PRE>
+|- list1 =
+   (\a0 a1.
+      mk_list
+        ((\a0 a1. CONSTR (SUC 0) a0 (FCONS a1 (\n. BOTTOM))) a0
+           (dest_list a1)))
+</PRE>
+
+<DT><STRONG><font color="black">NIL</font></STRONG>
+<DD>
+<PRE>
+|- [] = list0
+</PRE>
+
+<DT><STRONG><font color="black">CONS_def</font></STRONG>
+<DD>
+<PRE>
+|- CONS = list1
+</PRE>
+
+<DT><STRONG><font color="black">list_case_def</font></STRONG>
+<DD>
+<PRE>
+|- (!v f. case v f [] = v) /\ !v f a0 a1. case v f (a0::a1) = f a0 a1
+</PRE>
+
+<DT><STRONG><font color="black">list_size_def</font></STRONG>
+<DD>
+<PRE>
+|- (!f. list_size f [] = 0) /\
+   !f a0 a1. list_size f (a0::a1) = 1 + (f a0 + list_size f a1)
+</PRE>
+
+<DT><STRONG><font color="black">ZIP</font></STRONG>
+<DD>
+<PRE>
+|- (ZIP ([],[]) = []) /\
+   !x1 l1 x2 l2. ZIP (x1::l1,x2::l2) = (x1,x2)::ZIP (l1,l2)
+</PRE>
+
+<DT><STRONG><font color="black">UNZIP</font></STRONG>
+<DD>
+<PRE>
+|- (UNZIP [] = ([],[])) /\
+   !x l. UNZIP (x::l) = (FST x::FST (UNZIP l),SND x::SND (UNZIP l))
+</PRE>
+
+<DT><STRONG><font color="black">REVERSE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (REVERSE [] = []) /\ !h t. REVERSE (h::t) = APPEND (REVERSE t) [h]
+</PRE>
+
+<DT><STRONG><font color="black">LAST_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !h t. LAST (h::t) = (if t = [] then h else LAST t)
+</PRE>
+
+<DT><STRONG><font color="black">FRONT_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !h t. BUTLAST (h::t) = (if t = [] then [] else h::BUTLAST t)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">list_CASES</font></STRONG>
+<DD>
+<PRE>
+|- !l. (l = []) \/ ?t h. l = h::t
+</PRE>
+
+<DT><STRONG><font color="black">list_induction</font></STRONG>
+<DD>
+<PRE>
+|- !P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l
+</PRE>
+
+<DT><STRONG><font color="black">list_Axiom</font></STRONG>
+<DD>
+<PRE>
+|- !f0 f1. ?fn. (fn [] = f0) /\ !a0 a1. fn (a0::a1) = f1 a0 a1 (fn a1)
+</PRE>
+
+<DT><STRONG><font color="black">list_INDUCT</font></STRONG>
+<DD>
+<PRE>
+|- !P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l
+</PRE>
+
+<DT><STRONG><font color="black">NULL</font></STRONG>
+<DD>
+<PRE>
+|- NULL [] /\ !h t. ~NULL (h::t)
+</PRE>
+
+<DT><STRONG><font color="black">list_Axiom_old</font></STRONG>
+<DD>
+<PRE>
+|- !x f. ?!fn1. (fn1 [] = x) /\ !h t. fn1 (h::t) = f (fn1 t) h t
+</PRE>
+
+<DT><STRONG><font color="black">list_11</font></STRONG>
+<DD>
+<PRE>
+|- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') = (a0 = a0') /\ (a1 = a1')
+</PRE>
+
+<DT><STRONG><font color="black">list_distinct</font></STRONG>
+<DD>
+<PRE>
+|- !a1 a0. ~([] = a0::a1)
+</PRE>
+
+<DT><STRONG><font color="black">list_case_cong</font></STRONG>
+<DD>
+<PRE>
+|- !M M' v f.
+     (M = M') /\ ((M' = []) ==> (v = v')) /\
+     (!a0 a1. (M' = a0::a1) ==> (f a0 a1 = f' a0 a1)) ==>
+     (case v f M = case v' f' M')
+</PRE>
+
+<DT><STRONG><font color="black">list_nchotomy</font></STRONG>
+<DD>
+<PRE>
+|- !l. (l = []) \/ ?t h. l = h::t
+</PRE>
+
+<DT><STRONG><font color="black">list_case_compute</font></STRONG>
+<DD>
+<PRE>
+|- !l. case b f l = (if NULL l then b else f (HD l) (TL l))
+</PRE>
+
+<DT><STRONG><font color="black">CONS_11</font></STRONG>
+<DD>
+<PRE>
+|- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') = (a0 = a0') /\ (a1 = a1')
+</PRE>
+
+<DT><STRONG><font color="black">NOT_NIL_CONS</font></STRONG>
+<DD>
+<PRE>
+|- !a1 a0. ~([] = a0::a1)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_CONS_NIL</font></STRONG>
+<DD>
+<PRE>
+|- !a1 a0. ~(a0::a1 = [])
+</PRE>
+
+<DT><STRONG><font color="black">LIST_NOT_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2. ~(l1 = l2) ==> !h1 h2. ~(h1::l1 = h2::l2)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_EQ_LIST</font></STRONG>
+<DD>
+<PRE>
+|- !h1 h2. ~(h1 = h2) ==> !l1 l2. ~(h1::l1 = h2::l2)
+</PRE>
+
+<DT><STRONG><font color="black">EQ_LIST</font></STRONG>
+<DD>
+<PRE>
+|- !h1 h2. (h1 = h2) ==> !l1 l2. (l1 = l2) ==> (h1::l1 = h2::l2)
+</PRE>
+
+<DT><STRONG><font color="black">CONS</font></STRONG>
+<DD>
+<PRE>
+|- !l. ~NULL l ==> (HD l::TL l = l)
+</PRE>
+
+<DT><STRONG><font color="black">APPEND_NIL</font></STRONG>
+<DD>
+<PRE>
+|- !l. APPEND l [] = l
+</PRE>
+
+<DT><STRONG><font color="black">APPEND_ASSOC</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2 l3. APPEND l1 (APPEND l2 l3) = APPEND (APPEND l1 l2) l3
+</PRE>
+
+<DT><STRONG><font color="black">LENGTH_APPEND</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2. LENGTH (APPEND l1 l2) = LENGTH l1 + LENGTH l2
+</PRE>
+
+<DT><STRONG><font color="black">MAP_APPEND</font></STRONG>
+<DD>
+<PRE>
+|- !f l1 l2. MAP f (APPEND l1 l2) = APPEND (MAP f l1) (MAP f l2)
+</PRE>
+
+<DT><STRONG><font color="black">LENGTH_MAP</font></STRONG>
+<DD>
+<PRE>
+|- !l f. LENGTH (MAP f l) = LENGTH l
+</PRE>
+
+<DT><STRONG><font color="black">MAP_EQ_NIL</font></STRONG>
+<DD>
+<PRE>
+|- !l f. ((MAP f l = []) = (l = [])) /\ (([] = MAP f l) = (l = []))
+</PRE>
+
+<DT><STRONG><font color="black">EVERY_EL</font></STRONG>
+<DD>
+<PRE>
+|- !l P. ALL_EL P l = !n. n < LENGTH l ==> P (EL n l)
+</PRE>
+
+<DT><STRONG><font color="black">EVERY_CONJ</font></STRONG>
+<DD>
+<PRE>
+|- !l. ALL_EL (\x. P x /\ Q x) l = ALL_EL P l /\ ALL_EL Q l
+</PRE>
+
+<DT><STRONG><font color="black">EVERY_MEM</font></STRONG>
+<DD>
+<PRE>
+|- !P l. ALL_EL P l = !e. IS_EL e l ==> P e
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_MEM</font></STRONG>
+<DD>
+<PRE>
+|- !P l. SOME_EL P l = ?e. IS_EL e l /\ P e
+</PRE>
+
+<DT><STRONG><font color="black">MEM_APPEND</font></STRONG>
+<DD>
+<PRE>
+|- !e l1 l2. IS_EL e (APPEND l1 l2) = IS_EL e l1 \/ IS_EL e l2
+</PRE>
+
+<DT><STRONG><font color="black">EVERY_APPEND</font></STRONG>
+<DD>
+<PRE>
+|- !P l1 l2. ALL_EL P (APPEND l1 l2) = ALL_EL P l1 /\ ALL_EL P l2
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_APPEND</font></STRONG>
+<DD>
+<PRE>
+|- !P l1 l2. SOME_EL P (APPEND l1 l2) = SOME_EL P l1 \/ SOME_EL P l2
+</PRE>
+
+<DT><STRONG><font color="black">NOT_EVERY</font></STRONG>
+<DD>
+<PRE>
+|- !P l. ~ALL_EL P l = SOME_EL ($~ o P) l
+</PRE>
+
+<DT><STRONG><font color="black">NOT_EXISTS</font></STRONG>
+<DD>
+<PRE>
+|- !P l. ~SOME_EL P l = ALL_EL ($~ o P) l
+</PRE>
+
+<DT><STRONG><font color="black">MEM_MAP</font></STRONG>
+<DD>
+<PRE>
+|- !l f x. IS_EL x (MAP f l) = ?y. (x = f y) /\ IS_EL y l
+</PRE>
+
+<DT><STRONG><font color="black">LENGTH_NIL</font></STRONG>
+<DD>
+<PRE>
+|- !l. (LENGTH l = 0) = (l = [])
+</PRE>
+
+<DT><STRONG><font color="black">LENGTH_CONS</font></STRONG>
+<DD>
+<PRE>
+|- !l n. (LENGTH l = SUC n) = ?h l'. (LENGTH l' = n) /\ (l = h::l')
+</PRE>
+
+<DT><STRONG><font color="black">LENGTH_EQ_CONS</font></STRONG>
+<DD>
+<PRE>
+|- !P n.
+     (!l. (LENGTH l = SUC n) ==> P l) =
+     !l. (LENGTH l = n) ==> (\l. !x. P (x::l)) l
+</PRE>
+
+<DT><STRONG><font color="black">LENGTH_EQ_NIL</font></STRONG>
+<DD>
+<PRE>
+|- !P. (!l. (LENGTH l = 0) ==> P l) = P []
+</PRE>
+
+<DT><STRONG><font color="black">CONS_ACYCLIC</font></STRONG>
+<DD>
+<PRE>
+|- !l x. ~(l = x::l) /\ ~(x::l = l)
+</PRE>
+
+<DT><STRONG><font color="black">APPEND_eq_NIL</font></STRONG>
+<DD>
+<PRE>
+|- (!l1 l2. ([] = APPEND l1 l2) = (l1 = []) /\ (l2 = [])) /\
+   !l1 l2. (APPEND l1 l2 = []) = (l1 = []) /\ (l2 = [])
+</PRE>
+
+<DT><STRONG><font color="black">APPEND_11</font></STRONG>
+<DD>
+<PRE>
+|- (!l1 l2 l3. (APPEND l1 l2 = APPEND l1 l3) = (l2 = l3)) /\
+   !l1 l2 l3. (APPEND l2 l1 = APPEND l3 l1) = (l2 = l3)
+</PRE>
+
+<DT><STRONG><font color="black">EL_compute</font></STRONG>
+<DD>
+<PRE>
+|- !n. EL n l = (if n = 0 then HD l else EL (PRE n) (TL l))
+</PRE>
+
+<DT><STRONG><font color="black">WF_LIST_PRED</font></STRONG>
+<DD>
+<PRE>
+|- WF (\L1 L2. ?h. L2 = h::L1)
+</PRE>
+
+<DT><STRONG><font color="black">list_size_cong</font></STRONG>
+<DD>
+<PRE>
+|- !M N f f'.
+     (M = N) /\ (!x. IS_EL x N ==> (f x = f' x)) ==>
+     (list_size f M = list_size f' N)
+</PRE>
+
+<DT><STRONG><font color="black">FOLDR_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !l l' b b' f f'.
+     (l = l') /\ (b = b') /\ (!x a. IS_EL x l' ==> (f x a = f' x a)) ==>
+     (FOLDR f b l = FOLDR f' b' l')
+</PRE>
+
+<DT><STRONG><font color="black">FOLDL_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !l l' b b' f f'.
+     (l = l') /\ (b = b') /\ (!x a. IS_EL x l' ==> (f a x = f' a x)) ==>
+     (FOLDL f b l = FOLDL f' b' l')
+</PRE>
+
+<DT><STRONG><font color="black">MAP_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2 f f'.
+     (l1 = l2) /\ (!x. IS_EL x l2 ==> (f x = f' x)) ==> (MAP f l1 = MAP f' l2)
+</PRE>
+
+<DT><STRONG><font color="black">EXISTS_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2 P P'.
+     (l1 = l2) /\ (!x. IS_EL x l2 ==> (P x = P' x)) ==>
+     (SOME_EL P l1 = SOME_EL P' l2)
+</PRE>
+
+<DT><STRONG><font color="black">EVERY_CONG</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2 P P'.
+     (l1 = l2) /\ (!x. IS_EL x l2 ==> (P x = P' x)) ==>
+     (ALL_EL P l1 = ALL_EL P' l2)
+</PRE>
+
+<DT><STRONG><font color="black">EVERY_MONOTONIC</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. (!x. P x ==> Q x) ==> !l. ALL_EL P l ==> ALL_EL Q l
+</PRE>
+
+<DT><STRONG><font color="black">LENGTH_ZIP</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2.
+     (LENGTH l1 = LENGTH l2) ==>
+     (LENGTH (ZIP (l1,l2)) = LENGTH l1) /\ (LENGTH (ZIP (l1,l2)) = LENGTH l2)
+</PRE>
+
+<DT><STRONG><font color="black">LENGTH_UNZIP</font></STRONG>
+<DD>
+<PRE>
+|- !pl.
+     (LENGTH (FST (UNZIP pl)) = LENGTH pl) /\
+     (LENGTH (SND (UNZIP pl)) = LENGTH pl)
+</PRE>
+
+<DT><STRONG><font color="black">ZIP_UNZIP</font></STRONG>
+<DD>
+<PRE>
+|- !l. ZIP (UNZIP l) = l
+</PRE>
+
+<DT><STRONG><font color="black">UNZIP_ZIP</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2. (LENGTH l1 = LENGTH l2) ==> (UNZIP (ZIP (l1,l2)) = (l1,l2))
+</PRE>
+
+<DT><STRONG><font color="black">ZIP_MAP</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2 f1 f2.
+     (LENGTH l1 = LENGTH l2) ==>
+     (ZIP (MAP f1 l1,l2) = MAP (\p. (f1 (FST p),SND p)) (ZIP (l1,l2))) /\
+     (ZIP (l1,MAP f2 l2) = MAP (\p. (FST p,f2 (SND p))) (ZIP (l1,l2)))
+</PRE>
+
+<DT><STRONG><font color="black">MEM_ZIP</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2 p.
+     (LENGTH l1 = LENGTH l2) ==>
+     (IS_EL p (ZIP (l1,l2)) = ?n. n < LENGTH l1 /\ (p = (EL n l1,EL n l2)))
+</PRE>
+
+<DT><STRONG><font color="black">EL_ZIP</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2 n.
+     (LENGTH l1 = LENGTH l2) /\ n < LENGTH l1 ==>
+     (EL n (ZIP (l1,l2)) = (EL n l1,EL n l2))
+</PRE>
+
+<DT><STRONG><font color="black">MAP2_ZIP</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2.
+     (LENGTH l1 = LENGTH l2) ==>
+     !f. MAP2 f l1 l2 = MAP (UNCURRY f) (ZIP (l1,l2))
+</PRE>
+
+<DT><STRONG><font color="black">MEM_EL</font></STRONG>
+<DD>
+<PRE>
+|- !l x. IS_EL x l = ?n. n < LENGTH l /\ (x = EL n l)
+</PRE>
+
+<DT><STRONG><font color="black">REVERSE_APPEND</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2. REVERSE (APPEND l1 l2) = APPEND (REVERSE l2) (REVERSE l1)
+</PRE>
+
+<DT><STRONG><font color="black">REVERSE_REVERSE</font></STRONG>
+<DD>
+<PRE>
+|- !l. REVERSE (REVERSE l) = l
+</PRE>
+
+<DT><STRONG><font color="black">LAST_CONS</font></STRONG>
+<DD>
+<PRE>
+|- (!x. LAST [x] = x) /\ !x y z. LAST (x::y::z) = LAST (y::z)
+</PRE>
+
+<DT><STRONG><font color="black">FRONT_CONS</font></STRONG>
+<DD>
+<PRE>
+|- (!x. BUTLAST [x] = []) /\ !x y z. BUTLAST (x::y::z) = x::BUTLAST (y::z)
+</PRE>
+
+<DT><STRONG><font color="black">APPEND_FRONT_LAST</font></STRONG>
+<DD>
+<PRE>
+|- !l. ~(l = []) ==> (APPEND (BUTLAST l) [LAST l] = l)
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

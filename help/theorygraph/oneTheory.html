@@ -1,0 +1,78 @@
+<HTML>
+<HEAD><TITLE>Theory: one</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "one"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "boolTheory.html"><STRONG><font color="black">bool</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">one</font></STRONG>
+                                          <td>
+                                          0
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">one</font></STRONG>
+                                         <td>
+                                         :one
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">one_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep. TYPE_DEFINITION (\b. b) rep
+</PRE>
+
+<DT><STRONG><font color="black">one_DEF</font></STRONG>
+<DD>
+<PRE>
+|- () = @x. T
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">one_axiom</font></STRONG>
+<DD>
+<PRE>
+|- !f g. f = g
+</PRE>
+
+<DT><STRONG><font color="black">one</font></STRONG>
+<DD>
+<PRE>
+|- !v. v = ()
+</PRE>
+
+<DT><STRONG><font color="black">one_Axiom</font></STRONG>
+<DD>
+<PRE>
+|- !e. ?!fn. fn () = e
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

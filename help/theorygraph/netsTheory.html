@@ -1,0 +1,294 @@
+<HTML>
+<HEAD><TITLE>Theory: nets</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "nets"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "topologyTheory.html"><STRONG><font color="black">topology</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">dorder</font></STRONG>
+                                         <td>
+                                         :('a -> 'a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">bounded</font></STRONG>
+        <td>
+        :'a metric # ('b -> 'b -> bool) -> ('b -> 'a) -> bool
+    <tr><td>
+        <STRONG><font color="black">tends</font></STRONG>
+        <td>
+        :('b -> 'a) -> 'a -> 'a topology # ('b -> 'b -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">tendsto</font></STRONG>
+        <td>
+        :'a metric # 'a -> 'a -> 'a -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">dorder</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g =
+     !x y. g x x /\ g y y ==> ?z. g z z /\ !w. g w z ==> g w x /\ g w y
+</PRE>
+
+<DT><STRONG><font color="black">tends</font></STRONG>
+<DD>
+<PRE>
+|- !s l top g.
+     (s tends l) (top,g) =
+     !N. neigh top (N,l) ==> ?n. g n n /\ !m. g m n ==> N (s m)
+</PRE>
+
+<DT><STRONG><font color="black">bounded</font></STRONG>
+<DD>
+<PRE>
+|- !m g f. bounded (m,g) f = ?k x N. g N N /\ !n. g n N ==> dist m (f n,x) < k
+</PRE>
+
+<DT><STRONG><font color="black">tendsto</font></STRONG>
+<DD>
+<PRE>
+|- !m x y z.
+     tendsto (m,x) y z = 0 < dist m (x,y) /\ dist m (x,y) <= dist m (x,z)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">DORDER_LEMMA</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !P Q.
+       (?n. g n n /\ !m. g m n ==> P m) /\
+       (?n. g n n /\ !m. g m n ==> Q m) ==>
+       ?n. g n n /\ !m. g m n ==> P m /\ Q m
+</PRE>
+
+<DT><STRONG><font color="black">DORDER_NGE</font></STRONG>
+<DD>
+<PRE>
+|- dorder $>=
+</PRE>
+
+<DT><STRONG><font color="black">DORDER_TENDSTO</font></STRONG>
+<DD>
+<PRE>
+|- !m x. dorder (tendsto (m,x))
+</PRE>
+
+<DT><STRONG><font color="black">MTOP_TENDS</font></STRONG>
+<DD>
+<PRE>
+|- !d g x x0.
+     (x tends x0) (mtop d,g) =
+     !e. 0 < e ==> ?n. g n n /\ !m. g m n ==> dist d (x m,x0) < e
+</PRE>
+
+<DT><STRONG><font color="black">MTOP_TENDS_UNIQ</font></STRONG>
+<DD>
+<PRE>
+|- !g d.
+     dorder g ==>
+     (x tends x0) (mtop d,g) /\ (x tends x1) (mtop d,g) ==>
+     (x0 = x1)
+</PRE>
+
+<DT><STRONG><font color="black">SEQ_TENDS</font></STRONG>
+<DD>
+<PRE>
+|- !d x x0.
+     (x tends x0) (mtop d,$>=) =
+     !e. 0 < e ==> ?N. !n. n >= N ==> dist d (x n,x0) < e
+</PRE>
+
+<DT><STRONG><font color="black">LIM_TENDS</font></STRONG>
+<DD>
+<PRE>
+|- !m1 m2 f x0 y0.
+     limpt (mtop m1) x0 re_universe ==>
+     ((f tends y0) (mtop m2,tendsto (m1,x0)) =
+      !e.
+        0 < e ==>
+        ?d.
+          0 < d /\
+          !x.
+            0 < dist m1 (x,x0) /\ dist m1 (x,x0) <= d ==>
+            dist m2 (f x,y0) < e)
+</PRE>
+
+<DT><STRONG><font color="black">LIM_TENDS2</font></STRONG>
+<DD>
+<PRE>
+|- !m1 m2 f x0 y0.
+     limpt (mtop m1) x0 re_universe ==>
+     ((f tends y0) (mtop m2,tendsto (m1,x0)) =
+      !e.
+        0 < e ==>
+        ?d.
+          0 < d /\
+          !x.
+            0 < dist m1 (x,x0) /\ dist m1 (x,x0) < d ==> dist m2 (f x,y0) < e)
+</PRE>
+
+<DT><STRONG><font color="black">MR1_BOUNDED</font></STRONG>
+<DD>
+<PRE>
+|- !g f. bounded (mr1,g) f = ?k N. g N N /\ !n. g n N ==> abs (f n) < k
+</PRE>
+
+<DT><STRONG><font color="black">NET_NULL</font></STRONG>
+<DD>
+<PRE>
+|- !g x x0. (x tends x0) (mtop mr1,g) = ((\n. x n - x0) tends 0) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_CONV_BOUNDED</font></STRONG>
+<DD>
+<PRE>
+|- !g x x0. (x tends x0) (mtop mr1,g) ==> bounded (mr1,g) x
+</PRE>
+
+<DT><STRONG><font color="black">NET_CONV_NZ</font></STRONG>
+<DD>
+<PRE>
+|- !g x x0.
+     (x tends x0) (mtop mr1,g) /\ ~(x0 = 0) ==>
+     ?N. g N N /\ !n. g n N ==> ~(x n = 0)
+</PRE>
+
+<DT><STRONG><font color="black">NET_CONV_IBOUNDED</font></STRONG>
+<DD>
+<PRE>
+|- !g x x0.
+     (x tends x0) (mtop mr1,g) /\ ~(x0 = 0) ==>
+     bounded (mr1,g) (\n. inv (x n))
+</PRE>
+
+<DT><STRONG><font color="black">NET_NULL_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !x y.
+       (x tends 0) (mtop mr1,g) /\ (y tends 0) (mtop mr1,g) ==>
+       ((\n. x n + y n) tends 0) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_NULL_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !x y.
+       bounded (mr1,g) x /\ (y tends 0) (mtop mr1,g) ==>
+       ((\n. x n * y n) tends 0) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_NULL_CMUL</font></STRONG>
+<DD>
+<PRE>
+|- !g k x. (x tends 0) (mtop mr1,g) ==> ((\n. k * x n) tends 0) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !x x0 y y0.
+       (x tends x0) (mtop mr1,g) /\ (y tends y0) (mtop mr1,g) ==>
+       ((\n. x n + y n) tends (x0 + y0)) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_NEG</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !x x0. (x tends x0) (mtop mr1,g) = ((\n. ~x n) tends ~x0) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_SUB</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !x x0 y y0.
+       (x tends x0) (mtop mr1,g) /\ (y tends y0) (mtop mr1,g) ==>
+       ((\n. x n - y n) tends (x0 - y0)) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_MUL</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !x y x0 y0.
+       (x tends x0) (mtop mr1,g) /\ (y tends y0) (mtop mr1,g) ==>
+       ((\n. x n * y n) tends (x0 * y0)) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_INV</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !x x0.
+       (x tends x0) (mtop mr1,g) /\ ~(x0 = 0) ==>
+       ((\n. inv (x n)) tends inv x0) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_DIV</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !x x0 y y0.
+       (x tends x0) (mtop mr1,g) /\ (y tends y0) (mtop mr1,g) /\ ~(y0 = 0) ==>
+       ((\n. x n / y n) tends (x0 / y0)) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_ABS</font></STRONG>
+<DD>
+<PRE>
+|- !g x x0.
+     (x tends x0) (mtop mr1,g) ==> ((\n. abs (x n)) tends abs x0) (mtop mr1,g)
+</PRE>
+
+<DT><STRONG><font color="black">NET_LE</font></STRONG>
+<DD>
+<PRE>
+|- !g.
+     dorder g ==>
+     !x x0 y y0.
+       (x tends x0) (mtop mr1,g) /\ (y tends y0) (mtop mr1,g) /\
+       (?N. g N N /\ !n. g n N ==> x n <= y n) ==>
+       x0 <= y0
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,323 @@
+<HTML>
+<HEAD><TITLE>Theory: prob_uniform</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "prob_uniform"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "prob_indepTheory.html"><STRONG><font color="black">prob_indep</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">uniform_tupled</font></STRONG>
+                                         <td>
+                                         :num # num # (num -> bool) ->
+                                          num # (num -> bool)
+    <tr><td>
+        <STRONG><font color="black">unif_tupled</font></STRONG>
+        <td>
+        :num # (num -> bool) -> num # (num -> bool)
+    <tr><td>
+        <STRONG><font color="black">unif</font></STRONG>
+        <td>
+        :num -> (num -> bool) -> num # (num -> bool)
+    <tr><td>
+        <STRONG><font color="black">unif_bound</font></STRONG>
+        <td>
+        :num -> num
+    <tr><td>
+        <STRONG><font color="black">uniform</font></STRONG>
+        <td>
+        :num -> num -> (num -> bool) -> num # (num -> bool)
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">unif_bound_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- unif_bound =
+   WFREC (@R. WF R /\ !v. R (SUC v DIV 2) (SUC v))
+     (\unif_bound' a.
+        case a of 0 -> 0 || SUC v1 -> SUC (unif_bound' (SUC v1 DIV 2)))
+</PRE>
+
+<DT><STRONG><font color="black">unif_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- unif_tupled =
+   WFREC (@R. WF R /\ !s v2. R (SUC v2 DIV 2,s) (SUC v2,s))
+     (\unif_tupled' a.
+        case a of
+           (v,v1) ->
+             case v of
+                0 -> (0,v1)
+             || SUC v3 ->
+                  (let (m,s') = unif_tupled' (SUC v3 DIV 2,v1) in
+                     ((if SHD s' then 2 * m + 1 else 2 * m),STL s')))
+</PRE>
+
+<DT><STRONG><font color="black">unif_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1. unif x x1 = unif_tupled (x,x1)
+</PRE>
+
+<DT><STRONG><font color="black">uniform_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- uniform_tupled =
+   WFREC
+     (@R.
+        WF R /\
+        !t s n res s'.
+          ((res,s') = unif n s) /\ ~(res < SUC n) ==>
+          R (t,SUC n,s') (SUC t,SUC n,s))
+     (\uniform_tupled' a.
+        case a of
+           (v,v1) ->
+             case v of
+                0 ->
+                  (case v1 of
+                      (v3,v4) -> case v3 of 0 -> ARB || SUC v5 -> (0,v4))
+             || SUC v2 ->
+                  case v1 of
+                     (v7,v8) ->
+                       case v7 of
+                          0 -> ARB
+                       || SUC v9 ->
+                            (let (res,s') = unif v9 v8 in
+                               (if res < SUC v9 then
+                                  (res,s')
+                                else
+                                  uniform_tupled' (v2,SUC v9,s'))))
+</PRE>
+
+<DT><STRONG><font color="black">uniform_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2. uniform x x1 x2 = uniform_tupled (x,x1,x2)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">unif_bound_def</font></STRONG>
+<DD>
+<PRE>
+|- (unif_bound 0 = 0) /\ (unif_bound (SUC v) = SUC (unif_bound (SUC v DIV 2)))
+</PRE>
+
+<DT><STRONG><font color="black">unif_bound_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P. P 0 /\ (!v. P (SUC v DIV 2) ==> P (SUC v)) ==> !v. P v
+</PRE>
+
+<DT><STRONG><font color="black">unif_def</font></STRONG>
+<DD>
+<PRE>
+|- (unif 0 s = (0,s)) /\
+   (unif (SUC v2) s =
+    (let (m,s') = unif (SUC v2 DIV 2) s in
+       ((if SHD s' then 2 * m + 1 else 2 * m),STL s')))
+</PRE>
+
+<DT><STRONG><font color="black">unif_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!s. P 0 s) /\ (!v2 s. P (SUC v2 DIV 2) s ==> P (SUC v2) s) ==>
+     !v v1. P v v1
+</PRE>
+
+<DT><STRONG><font color="black">uniform_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!t v10. P (SUC t) 0 v10) /\ (!v6. P 0 0 v6) /\ (!n s. P 0 (SUC n) s) /\
+     (!t n s.
+        (!res s'.
+           ((res,s') = unif n s) /\ ~(res < SUC n) ==> P t (SUC n) s') ==>
+        P (SUC t) (SUC n) s) ==>
+     !v v1 v2. P v v1 v2
+</PRE>
+
+<DT><STRONG><font color="black">uniform_def</font></STRONG>
+<DD>
+<PRE>
+|- (uniform 0 (SUC n) s = (0,s)) /\
+   (uniform (SUC t) (SUC n) s =
+    (let (res,s') = unif n s in
+       (if res < SUC n then (res,s') else uniform t (SUC n) s')))
+</PRE>
+
+<DT><STRONG><font color="black">SUC_DIV_TWO_ZERO</font></STRONG>
+<DD>
+<PRE>
+|- !n. (SUC n DIV 2 = 0) = (n = 0)
+</PRE>
+
+<DT><STRONG><font color="black">UNIF_BOUND_LOWER</font></STRONG>
+<DD>
+<PRE>
+|- !n. n < 2 ** unif_bound n
+</PRE>
+
+<DT><STRONG><font color="black">UNIF_BOUND_LOWER_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !n. SUC n <= 2 ** unif_bound n
+</PRE>
+
+<DT><STRONG><font color="black">UNIF_BOUND_UPPER</font></STRONG>
+<DD>
+<PRE>
+|- !n. ~(n = 0) ==> 2 ** unif_bound n <= 2 * n
+</PRE>
+
+<DT><STRONG><font color="black">UNIF_BOUND_UPPER_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !n. 2 ** unif_bound n <= SUC (2 * n)
+</PRE>
+
+<DT><STRONG><font color="black">UNIF_DEF_MONAD</font></STRONG>
+<DD>
+<PRE>
+|- (unif 0 = UNIT 0) /\
+   !n.
+     unif (SUC n) =
+     BIND (unif (SUC n DIV 2))
+       (\m. BIND SDEST (\b. UNIT (if b then 2 * m + 1 else 2 * m)))
+</PRE>
+
+<DT><STRONG><font color="black">UNIFORM_DEF_MONAD</font></STRONG>
+<DD>
+<PRE>
+|- (!n. uniform 0 (SUC n) = UNIT 0) /\
+   !t n.
+     uniform (SUC t) (SUC n) =
+     BIND (unif n) (\m. (if m < SUC n then UNIT m else uniform t (SUC n)))
+</PRE>
+
+<DT><STRONG><font color="black">INDEP_UNIF</font></STRONG>
+<DD>
+<PRE>
+|- !n. indep (unif n)
+</PRE>
+
+<DT><STRONG><font color="black">INDEP_UNIFORM</font></STRONG>
+<DD>
+<PRE>
+|- !t n. indep (uniform t (SUC n))
+</PRE>
+
+<DT><STRONG><font color="black">PROB_UNIF</font></STRONG>
+<DD>
+<PRE>
+|- !n k.
+     prob (\s. FST (unif n s) = k) =
+     (if k < 2 ** unif_bound n then (1 / 2) pow unif_bound n else 0)
+</PRE>
+
+<DT><STRONG><font color="black">UNIF_RANGE</font></STRONG>
+<DD>
+<PRE>
+|- !n s. FST (unif n s) < 2 ** unif_bound n
+</PRE>
+
+<DT><STRONG><font color="black">PROB_UNIF_PAIR</font></STRONG>
+<DD>
+<PRE>
+|- !n k k'.
+     (prob (\s. FST (unif n s) = k) = prob (\s. FST (unif n s) = k')) =
+     (k < 2 ** unif_bound n = k' < 2 ** unif_bound n)
+</PRE>
+
+<DT><STRONG><font color="black">PROB_UNIF_BOUND</font></STRONG>
+<DD>
+<PRE>
+|- !n k.
+     k <= 2 ** unif_bound n ==>
+     (prob (\s. FST (unif n s) < k) = $& k * (1 / 2) pow unif_bound n)
+</PRE>
+
+<DT><STRONG><font color="black">PROB_UNIF_GOOD</font></STRONG>
+<DD>
+<PRE>
+|- !n. 1 / 2 <= prob (\s. FST (unif n s) < SUC n)
+</PRE>
+
+<DT><STRONG><font color="black">UNIFORM_RANGE</font></STRONG>
+<DD>
+<PRE>
+|- !t n s. FST (uniform t (SUC n) s) < SUC n
+</PRE>
+
+<DT><STRONG><font color="black">PROB_UNIFORM_LOWER_BOUND</font></STRONG>
+<DD>
+<PRE>
+|- !b.
+     (!k. k < SUC n ==> prob (\s. FST (uniform t (SUC n) s) = k) < b) ==>
+     !m.
+       m < SUC n ==>
+       prob (\s. FST (uniform t (SUC n) s) < SUC m) < $& (SUC m) * b
+</PRE>
+
+<DT><STRONG><font color="black">PROB_UNIFORM_UPPER_BOUND</font></STRONG>
+<DD>
+<PRE>
+|- !b.
+     (!k. k < SUC n ==> b < prob (\s. FST (uniform t (SUC n) s) = k)) ==>
+     !m.
+       m < SUC n ==>
+       $& (SUC m) * b < prob (\s. FST (uniform t (SUC n) s) < SUC m)
+</PRE>
+
+<DT><STRONG><font color="black">PROB_UNIFORM_PAIR_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !t n k k'.
+     k < SUC n /\ k' < SUC n ==>
+     abs
+       (prob (\s. FST (uniform t (SUC n) s) = k) -
+        prob (\s. FST (uniform t (SUC n) s) = k')) <= (1 / 2) pow t
+</PRE>
+
+<DT><STRONG><font color="black">PROB_UNIFORM_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !t n k.
+     k < SUC n ==>
+     abs (prob (\s. FST (uniform t (SUC n) s) = k) - 1 / $& (SUC n)) <=
+     (1 / 2) pow t
+</PRE>
+
+<DT><STRONG><font color="black">PROB_UNIFORM</font></STRONG>
+<DD>
+<PRE>
+|- !t n k.
+     k < n ==>
+     abs (prob (\s. FST (uniform t n s) = k) - 1 / $& n) <= (1 / 2) pow t
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

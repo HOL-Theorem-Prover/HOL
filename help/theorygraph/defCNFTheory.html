@@ -1,0 +1,197 @@
+<HTML>
+<HEAD><TITLE>Theory: defCNF</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "defCNF"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "optionTheory.html"><STRONG><font color="black">option</font></STRONG></A>
+    <A HREF = "rich_listTheory.html"><STRONG><font color="black">rich_list</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">OK</font></STRONG>
+                                         <td>
+                                         :num ->
+                                          (bool -> bool -> bool) #
+                                          (num + bool) # (num + bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">OKDEF</font></STRONG>
+        <td>
+        :num ->
+         ((bool -> bool -> bool) # (num + bool) # (num + bool)) list -> bool
+    <tr><td>
+        <STRONG><font color="black">UNIQUE_tupled</font></STRONG>
+        <td>
+        :(num -> bool) #
+         num # (bool -> bool -> bool) # (num + bool) # (num + bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">OK_tupled</font></STRONG>
+        <td>
+        :num # (bool -> bool -> bool) # (num + bool) # (num + bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">DEF</font></STRONG>
+        <td>
+        :(num -> bool) ->
+         num ->
+         ((bool -> bool -> bool) # (num + bool) # (num + bool)) list -> bool
+    <tr><td>
+        <STRONG><font color="black">UNIQUE</font></STRONG>
+        <td>
+        :(num -> bool) ->
+         num -> (bool -> bool -> bool) # (num + bool) # (num + bool) -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">UNIQUE_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- UNIQUE_tupled =
+   WFREC (@R. WF R)
+     (\UNIQUE_tupled' a'.
+        case a' of
+           (v1,v2) ->
+             case v2 of
+                (v3,v4) ->
+                  case v4 of
+                     (v5,v6) ->
+                       case v6 of
+                          (v7,v8) ->
+                            case v7 of
+                               INL v9 ->
+                                 (case v8 of
+                                     INL v11 -> v1 v3 = v5 (v1 v9) (v1 v11)
+                                  || INR v12 -> v1 v3 = v5 (v1 v9) v12)
+                            || INR v10 ->
+                                 case v8 of
+                                    INL v13 -> v1 v3 = v5 v10 (v1 v13)
+                                 || INR v14 -> v1 v3 = v5 v10 v14)
+</PRE>
+
+<DT><STRONG><font color="black">UNIQUE_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2. UNIQUE x x1 x2 = UNIQUE_tupled (x,x1,x2)
+</PRE>
+
+<DT><STRONG><font color="black">DEF_def</font></STRONG>
+<DD>
+<PRE>
+|- (!v n. DEF v n [] = T) /\
+   !v n x xs. DEF v n (x::xs) = UNIQUE v n x /\ DEF v (SUC n) xs
+</PRE>
+
+<DT><STRONG><font color="black">OK_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- OK_tupled =
+   WFREC (@R. WF R)
+     (\OK_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v3 of
+                     (v4,v5) ->
+                       case v4 of
+                          INL v6 ->
+                            (case v5 of
+                                INL v8 -> v6 < v /\ v8 < v
+                             || INR v9 -> v6 < v)
+                       || INR v7 ->
+                            case v5 of INL v10 -> v10 < v || INR v11 -> T)
+</PRE>
+
+<DT><STRONG><font color="black">OK_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1. OK x x1 = OK_tupled (x,x1)
+</PRE>
+
+<DT><STRONG><font color="black">OKDEF_def</font></STRONG>
+<DD>
+<PRE>
+|- (!n. OKDEF n [] = T) /\
+   !n x xs. OKDEF n (x::xs) = OK n x /\ OKDEF (SUC n) xs
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">UNIQUE_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!v n conn i j. P v n (conn,INL i,INL j)) /\
+     (!v n conn i b. P v n (conn,INL i,INR b)) /\
+     (!v n conn a j. P v n (conn,INR a,INL j)) /\
+     (!v n conn a b. P v n (conn,INR a,INR b)) ==>
+     !v v1 v2. P v v1 v2
+</PRE>
+
+<DT><STRONG><font color="black">UNIQUE_def</font></STRONG>
+<DD>
+<PRE>
+|- (UNIQUE v n (conn,INL i,INL j) = (v n = conn (v i) (v j))) /\
+   (UNIQUE v n (conn,INL i,INR b) = (v n = conn (v i) b)) /\
+   (UNIQUE v n (conn,INR a,INL j) = (v n = conn a (v j))) /\
+   (UNIQUE v n (conn,INR a,INR b) = (v n = conn a b))
+</PRE>
+
+<DT><STRONG><font color="black">OK_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!n conn i j. P n (conn,INL i,INL j)) /\
+     (!n conn i b. P n (conn,INL i,INR b)) /\
+     (!n conn a j. P n (conn,INR a,INL j)) /\
+     (!n conn a b. P n (conn,INR a,INR b)) ==>
+     !v v1. P v v1
+</PRE>
+
+<DT><STRONG><font color="black">OK_def</font></STRONG>
+<DD>
+<PRE>
+|- (OK n (conn,INL i,INL j) = i < n /\ j < n) /\
+   (OK n (conn,INL i,INR b) = i < n) /\ (OK n (conn,INR a,INL j) = j < n) /\
+   (OK n (conn,INR a,INR b) = T)
+</PRE>
+
+<DT><STRONG><font color="black">DEF_SNOC</font></STRONG>
+<DD>
+<PRE>
+|- !n x l v. DEF v n (SNOC x l) = DEF v n l /\ UNIQUE v (n + LENGTH l) x
+</PRE>
+
+<DT><STRONG><font color="black">OKDEF_SNOC</font></STRONG>
+<DD>
+<PRE>
+|- !n x l. OKDEF n (SNOC x l) = OKDEF n l /\ OK (n + LENGTH l) x
+</PRE>
+
+<DT><STRONG><font color="black">CONSISTENCY</font></STRONG>
+<DD>
+<PRE>
+|- !n l. OKDEF n l ==> ?v. DEF v n l
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

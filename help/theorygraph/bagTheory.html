@@ -1,0 +1,1044 @@
+<HTML>
+<HEAD><TITLE>Theory: bag</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "bag"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "pred_setTheory.html"><STRONG><font color="black">pred_set</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">BAG_CARD_RELn</font></STRONG>
+                                         <td>
+                                         :('a -> num) -> num -> bool
+    <tr><td>
+        <STRONG><font color="black">BAG_REST</font></STRONG>
+        <td>
+        :('a -> num) -> 'a -> num
+    <tr><td>
+        <STRONG><font color="black">EMPTY_BAG</font></STRONG>
+        <td>
+        :'a -> num
+    <tr><td>
+        <STRONG><font color="black">BAG_IN</font></STRONG>
+        <td>
+        :'a -> ('a -> num) -> bool
+    <tr><td>
+        <STRONG><font color="black">BAG_INTER</font></STRONG>
+        <td>
+        :('a -> num) -> ('a -> num) -> 'a -> num
+    <tr><td>
+        <STRONG><font color="black">FINITE_BAG</font></STRONG>
+        <td>
+        :('a -> num) -> bool
+    <tr><td>
+        <STRONG><font color="black">BAG_INSERT</font></STRONG>
+        <td>
+        :'a -> ('a -> num) -> 'a -> num
+    <tr><td>
+        <STRONG><font color="black">BAG_INN</font></STRONG>
+        <td>
+        :'a -> num -> ('a -> num) -> bool
+    <tr><td>
+        <STRONG><font color="black">BAG_CHOICE</font></STRONG>
+        <td>
+        :('a -> num) -> 'a
+    <tr><td>
+        <STRONG><font color="black">PSUB_BAG</font></STRONG>
+        <td>
+        :('a -> num) -> ('a -> num) -> bool
+    <tr><td>
+        <STRONG><font color="black">BAG_DELETE</font></STRONG>
+        <td>
+        :('a -> num) -> 'a -> ('a -> num) -> bool
+    <tr><td>
+        <STRONG><font color="black">BAG_CARD</font></STRONG>
+        <td>
+        :('a -> num) -> num
+    <tr><td>
+        <STRONG><font color="black">BAG_DISJOINT</font></STRONG>
+        <td>
+        :('a -> num) -> ('a -> num) -> bool
+    <tr><td>
+        <STRONG><font color="black">BAG_MERGE</font></STRONG>
+        <td>
+        :('a -> num) -> ('a -> num) -> 'a -> num
+    <tr><td>
+        <STRONG><font color="black">BAG_DIFF</font></STRONG>
+        <td>
+        :('a -> num) -> ('a -> num) -> 'a -> num
+    <tr><td>
+        <STRONG><font color="black">SING_BAG</font></STRONG>
+        <td>
+        :('a -> num) -> bool
+    <tr><td>
+        <STRONG><font color="black">SUB_BAG</font></STRONG>
+        <td>
+        :('a -> num) -> ('a -> num) -> bool
+    <tr><td>
+        <STRONG><font color="black">EL_BAG</font></STRONG>
+        <td>
+        :'a -> 'a -> num
+    <tr><td>
+        <STRONG><font color="black">BAG_UNION</font></STRONG>
+        <td>
+        :('a -> num) -> ('a -> num) -> 'a -> num
+    <tr><td>
+        <STRONG><font color="black">SET_OF_BAG</font></STRONG>
+        <td>
+        :('a -> num) -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">BAG_delta</font></STRONG>
+        <td>
+        :('a -> num) # ('a -> num) -> ('a -> num) -> 'a -> num
+    <tr><td>
+        <STRONG><font color="black">BAG_OF_SET</font></STRONG>
+        <td>
+        :('a -> bool) -> 'a -> num
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">BAG_MERGE</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. BAG_MERGE b1 b2 = (\x. (if b1 x < b2 x then b2 x else b1 x))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INTER</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. BAG_INTER b1 b2 = (\x. (if b1 x < b2 x then b1 x else b2 x))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !e b. BAG_INSERT e b = (\x. (if x = e then b e + 1 else b x))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. BAG_DIFF b1 b2 = (\x. b1 x - b2 x)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !b c. BAG_UNION b c = (\x. b x + c x)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_IN</font></STRONG>
+<DD>
+<PRE>
+|- !e b. BAG_IN e b = BAG_INN e 1 b
+</PRE>
+
+<DT><STRONG><font color="black">PSUB_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. PSUB_BAG b1 b2 = SUB_BAG b1 b2 /\ ~(b1 = b2)
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SUB_BAG b1 b2 = !x n. BAG_INN x n b1 ==> BAG_INN x n b2
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INN</font></STRONG>
+<DD>
+<PRE>
+|- !e n b. BAG_INN e n b = b e >= n
+</PRE>
+
+<DT><STRONG><font color="black">EMPTY_BAG</font></STRONG>
+<DD>
+<PRE>
+|- {||} = K 0
+</PRE>
+
+<DT><STRONG><font color="black">EL_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !e. EL_BAG e = {|e|}
+</PRE>
+
+<DT><STRONG><font color="black">SING_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !b. SING_BAG b = ?x. b = {|x|}
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE</font></STRONG>
+<DD>
+<PRE>
+|- !b0 e b. BAG_DELETE b0 e b = (b0 = BAG_INSERT e b)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_delta</font></STRONG>
+<DD>
+<PRE>
+|- !B1 B2 B3.
+     BAG_delta (B1,B2) B3 =
+     BAG_DIFF (BAG_UNION B3 (BAG_DIFF B2 B1)) (BAG_DIFF B1 B2)
+</PRE>
+
+<DT><STRONG><font color="black">SET_OF_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !b. SET_OF_BAG b = (\x. BAG_IN x b)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_OF_SET</font></STRONG>
+<DD>
+<PRE>
+|- !P. BAG_OF_SET P = (\x. (if x IN P then 1 else 0))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DISJOINT</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. BAG_DISJOINT b1 b2 = DISJOINT (SET_OF_BAG b1) (SET_OF_BAG b2)
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !b.
+     FINITE_BAG b = !P. P {||} /\ (!b. P b ==> !e. P (BAG_INSERT e b)) ==> P b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_CARD_RELn</font></STRONG>
+<DD>
+<PRE>
+|- !b n.
+     BAG_CARD_RELn b n =
+     !P.
+       P {||} 0 /\ (!b n. P b n ==> !e. P (BAG_INSERT e b) (SUC n)) ==> P b n
+</PRE>
+
+<DT><STRONG><font color="black">BAG_CARD</font></STRONG>
+<DD>
+<PRE>
+|- !b. FINITE_BAG b ==> BAG_CARD_RELn b (BAG_CARD b)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_CHOICE_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !b. ~(b = {||}) ==> BAG_IN (BAG_CHOICE b) b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_REST_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !b. BAG_REST b = BAG_DIFF b (EL_BAG (BAG_CHOICE b))
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">COMM_BAG_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. BAG_UNION b1 b2 = BAG_UNION b2 b1
+</PRE>
+
+<DT><STRONG><font color="black">BAG_UNION_LEFT_CANCEL</font></STRONG>
+<DD>
+<PRE>
+|- !b b1 b2. (BAG_UNION b b1 = BAG_UNION b b2) = (b1 = b2)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INSERT_commutes</font></STRONG>
+<DD>
+<PRE>
+|- !b e1 e2. BAG_INSERT e1 (BAG_INSERT e2 b) = BAG_INSERT e2 (BAG_INSERT e1 b)
+</PRE>
+
+<DT><STRONG><font color="black">C_BAG_INSERT_ONE_ONE</font></STRONG>
+<DD>
+<PRE>
+|- !x y b. (BAG_INSERT x b = BAG_INSERT y b) = (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INSERT_ONE_ONE</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 x. (BAG_INSERT x b1 = BAG_INSERT x b2) = (b1 = b2)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INSERT_NOT_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !x b. ~(BAG_INSERT x b = {||})
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INSERT_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- !x b. ~(BAG_INSERT x b = b)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_UNION_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !e b1 b2.
+     (BAG_UNION (BAG_INSERT e b1) b2 = BAG_INSERT e (BAG_UNION b1 b2)) /\
+     (BAG_UNION b1 (BAG_INSERT e b2) = BAG_INSERT e (BAG_UNION b1 b2))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_EXTENSION</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. (b1 = b2) = !n e. BAG_INN e n b1 = BAG_INN e n b2
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INN_BAG_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !n e b1 b2.
+     BAG_INN e n (BAG_UNION b1 b2) =
+     ?m1 m2. (n = m1 + m2) /\ BAG_INN e m1 b1 /\ BAG_INN e m2 b2
+</PRE>
+
+<DT><STRONG><font color="black">BAG_IN_BAG_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 e. BAG_IN e (BAG_UNION b1 b2) = BAG_IN e b1 \/ BAG_IN e b2
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INN_BAG_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !b e1 e2.
+     BAG_INN e1 n (BAG_INSERT e2 b) =
+     BAG_INN e1 (n - 1) b /\ (e1 = e2) \/ BAG_INN e1 n b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_IN_BAG_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !b e1 e2. BAG_IN e1 (BAG_INSERT e2 b) = (e1 = e2) \/ BAG_IN e1 b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INN_LESS</font></STRONG>
+<DD>
+<PRE>
+|- !b e n m. BAG_INN e n b /\ m < n ==> BAG_INN e m b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INN_0</font></STRONG>
+<DD>
+<PRE>
+|- !b e. BAG_INN e 0 b
+</PRE>
+
+<DT><STRONG><font color="black">EMPTY_BAG_alt</font></STRONG>
+<DD>
+<PRE>
+|- {||} = (\x. 0)
+</PRE>
+
+<DT><STRONG><font color="black">move_BAG_UNION_over_eq</font></STRONG>
+<DD>
+<PRE>
+|- !X Y Z. (BAG_UNION X Y = Z) ==> (X = BAG_DIFF Z Y)
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_UNION_eliminate</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 b3.
+     (SUB_BAG (BAG_UNION b1 b2) (BAG_UNION b1 b3) = SUB_BAG b2 b3) /\
+     (SUB_BAG (BAG_UNION b1 b2) (BAG_UNION b3 b1) = SUB_BAG b2 b3) /\
+     (SUB_BAG (BAG_UNION b2 b1) (BAG_UNION b1 b3) = SUB_BAG b2 b3) /\
+     (SUB_BAG (BAG_UNION b2 b1) (BAG_UNION b3 b1) = SUB_BAG b2 b3)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DIFF_UNION_eliminate</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 b3.
+     (BAG_DIFF (BAG_UNION b1 b2) (BAG_UNION b1 b3) = BAG_DIFF b2 b3) /\
+     (BAG_DIFF (BAG_UNION b1 b2) (BAG_UNION b3 b1) = BAG_DIFF b2 b3) /\
+     (BAG_DIFF (BAG_UNION b2 b1) (BAG_UNION b1 b3) = BAG_DIFF b2 b3) /\
+     (BAG_DIFF (BAG_UNION b2 b1) (BAG_UNION b3 b1) = BAG_DIFF b2 b3)
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_BAG_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- !X Y Y' Z W'.
+     SUB_BAG (BAG_DIFF X Y) (BAG_DIFF Z W') ==>
+     SUB_BAG (BAG_DIFF X (BAG_UNION Y Y')) (BAG_DIFF Z (BAG_UNION W' Y'))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DIFF_2R</font></STRONG>
+<DD>
+<PRE>
+|- !A B C'.
+     SUB_BAG C' B ==>
+     (BAG_DIFF A (BAG_DIFF B C') = BAG_DIFF (BAG_UNION A C') B)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DIFF_2L</font></STRONG>
+<DD>
+<PRE>
+|- !X Y Z. BAG_DIFF (BAG_DIFF X Y) Z = BAG_DIFF X (BAG_UNION Y Z)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_UNION_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- !X Y Z.
+     SUB_BAG Z Y ==>
+     (BAG_UNION X (BAG_DIFF Y Z) = BAG_DIFF (BAG_UNION X Y) Z) /\
+     (BAG_UNION (BAG_DIFF Y Z) X = BAG_DIFF (BAG_UNION X Y) Z)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_UNION_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- (!b. BAG_UNION b {||} = b) /\ (!b. BAG_UNION {||} b = b) /\
+   !b1 b2. (BAG_UNION b1 b2 = {||}) = (b1 = {||}) /\ (b2 = {||})
+</PRE>
+
+<DT><STRONG><font color="black">NOT_IN_BAG_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- !x b1 b2. ~BAG_IN x b1 ==> (BAG_DIFF b1 (BAG_INSERT x b2) = BAG_DIFF b1 b2)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DIFF_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !x b1 b2.
+     ~BAG_IN x b1 ==>
+     (BAG_DIFF (BAG_INSERT x b2) b1 = BAG_INSERT x (BAG_DIFF b2 b1))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DIFF_INSERT_same</font></STRONG>
+<DD>
+<PRE>
+|- !x b1 b2. BAG_DIFF (BAG_INSERT x b1) (BAG_INSERT x b2) = BAG_DIFF b1 b2
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DIFF_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- (!b. BAG_DIFF b b = {||}) /\ (!b. BAG_DIFF b {||} = b) /\
+   (!b. BAG_DIFF {||} b = {||}) /\
+   !b1 b2. SUB_BAG b1 b2 ==> (BAG_DIFF b1 b2 = {||})
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_LEQ</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SUB_BAG b1 b2 = !x. b1 x <= b2 x
+</PRE>
+
+<DT><STRONG><font color="black">PSUB_BAG_NOT_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. PSUB_BAG b1 b2 ==> ~(b1 = b2)
+</PRE>
+
+<DT><STRONG><font color="black">PSUB_BAG_SUB_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. PSUB_BAG b1 b2 ==> SUB_BAG b1 b2
+</PRE>
+
+<DT><STRONG><font color="black">PSUB_BAG_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 b3. PSUB_BAG b1 b2 /\ PSUB_BAG b2 b3 ==> PSUB_BAG b1 b3
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 b3. SUB_BAG b1 b2 /\ SUB_BAG b2 b3 ==> SUB_BAG b1 b3
+</PRE>
+
+<DT><STRONG><font color="black">PSUB_BAG_ANTISYM</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. ~(PSUB_BAG b1 b2 /\ PSUB_BAG b2 b1)
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_ANTISYM</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SUB_BAG b1 b2 /\ SUB_BAG b2 b1 ==> (b1 = b2)
+</PRE>
+
+<DT><STRONG><font color="black">PSUB_BAG_IRREFL</font></STRONG>
+<DD>
+<PRE>
+|- !b. ~PSUB_BAG b b
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !b. SUB_BAG b b
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- (!b. SUB_BAG {||} b) /\ !b. SUB_BAG b {||} = (b = {||})
+</PRE>
+
+<DT><STRONG><font color="black">MEMBER_NOT_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !b. (?x. BAG_IN x b) = ~(b = {||})
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INN_EMPTY_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !e n. BAG_INN e n {||} = (n = 0)
+</PRE>
+
+<DT><STRONG><font color="black">NOT_IN_EMPTY_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !x. ~BAG_IN x {||}
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_SING</font></STRONG>
+<DD>
+<PRE>
+|- !b e. BAG_DELETE b e {||} ==> SING_BAG b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INSERT_EQ_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !e b1 b2 b.
+     (BAG_INSERT e b = BAG_UNION b1 b2) ==> BAG_IN e b1 \/ BAG_IN e b2
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INSERT_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !b e. BAG_INSERT e b = BAG_UNION (EL_BAG e) b
+</PRE>
+
+<DT><STRONG><font color="black">SING_EL_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !e. SING_BAG (EL_BAG e)
+</PRE>
+
+<DT><STRONG><font color="black">EL_BAG_INSERT_squeeze</font></STRONG>
+<DD>
+<PRE>
+|- !x b y. (EL_BAG x = BAG_INSERT y b) ==> (x = y) /\ (b = {||})
+</PRE>
+
+<DT><STRONG><font color="black">EL_BAG_11</font></STRONG>
+<DD>
+<PRE>
+|- !x y. (EL_BAG x = EL_BAG y) ==> (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">SING_BAG_THM</font></STRONG>
+<DD>
+<PRE>
+|- !e. SING_BAG {|e|}
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_TWICE</font></STRONG>
+<DD>
+<PRE>
+|- !b0 e1 e2 b1 b2.
+     BAG_DELETE b0 e1 b1 /\ BAG_DELETE b0 e2 b2 /\ ~(b1 = b2) ==>
+     ?b. BAG_DELETE b1 e2 b /\ BAG_DELETE b2 e1 b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_concrete</font></STRONG>
+<DD>
+<PRE>
+|- !b0 b e.
+     BAG_DELETE b0 e b =
+     b0 e > 0 /\ (b = (\x. (if x = e then b0 e - 1 else b0 x)))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_BAG_IN</font></STRONG>
+<DD>
+<PRE>
+|- !b0 b e. BAG_DELETE b0 e b ==> BAG_IN e b0
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_BAG_IN_down</font></STRONG>
+<DD>
+<PRE>
+|- !b0 b e1 e2.
+     BAG_DELETE b0 e1 b /\ ~(e1 = e2) /\ BAG_IN e2 b0 ==> BAG_IN e2 b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_BAG_IN_up</font></STRONG>
+<DD>
+<PRE>
+|- !b0 b e. BAG_DELETE b0 e b ==> !e'. BAG_IN e' b ==> BAG_IN e' b0
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !x y b1 b2.
+     BAG_DELETE (BAG_INSERT x b1) y b2 ==>
+     (x = y) /\ (b1 = b2) \/ (?b3. BAG_DELETE b1 y b3) /\ ~(x = y)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_IN_BAG_DELETE</font></STRONG>
+<DD>
+<PRE>
+|- !b e. BAG_IN e b ==> ?b'. BAG_DELETE b e b'
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INN_BAG_DELETE</font></STRONG>
+<DD>
+<PRE>
+|- !b n e. BAG_INN e n b /\ n > 0 ==> ?b'. BAG_DELETE b e b'
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_11</font></STRONG>
+<DD>
+<PRE>
+|- !b0 e1 e2 b1 b2.
+     BAG_DELETE b0 e1 b1 /\ BAG_DELETE b0 e2 b2 ==> ((e1 = e2) = (b1 = b2))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_commutes</font></STRONG>
+<DD>
+<PRE>
+|- !b0 b1 b2 e1 e2.
+     BAG_DELETE b0 e1 b1 /\ BAG_DELETE b1 e2 b2 ==>
+     ?b'. BAG_DELETE b0 e2 b' /\ BAG_DELETE b' e1 b2
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !e b. ~BAG_DELETE {||} e b
+</PRE>
+
+<DT><STRONG><font color="black">ASSOC_BAG_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 b3. BAG_UNION b1 (BAG_UNION b2 b3) = BAG_UNION (BAG_UNION b1 b2) b3
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_UNION</font></STRONG>
+<DD>
+<PRE>
+|- (!b1 b2. SUB_BAG b1 b2 ==> !b. SUB_BAG b1 (BAG_UNION b2 b)) /\
+   (!b1 b2. SUB_BAG b1 b2 ==> !b. SUB_BAG b1 (BAG_UNION b b2)) /\
+   (!b1 b2 b3.
+      SUB_BAG b1 (BAG_UNION b2 b3) ==>
+      !b. SUB_BAG b1 (BAG_UNION (BAG_UNION b2 b) b3)) /\
+   (!b1 b2 b3.
+      SUB_BAG b1 (BAG_UNION b2 b3) ==>
+      !b. SUB_BAG b1 (BAG_UNION (BAG_UNION b b2) b3)) /\
+   (!b1 b2 b3.
+      SUB_BAG b1 (BAG_UNION b3 b2) ==>
+      !b. SUB_BAG b1 (BAG_UNION b3 (BAG_UNION b2 b))) /\
+   (!b1 b2 b3.
+      SUB_BAG b1 (BAG_UNION b3 b2) ==>
+      !b. SUB_BAG b1 (BAG_UNION b3 (BAG_UNION b b2))) /\
+   (!b1 b2 b3 b4.
+      SUB_BAG b1 b3 ==>
+      SUB_BAG b2 b4 ==>
+      SUB_BAG (BAG_UNION b1 b2) (BAG_UNION b3 b4)) /\
+   (!b1 b2 b3 b4.
+      SUB_BAG b1 b4 ==>
+      SUB_BAG b2 b3 ==>
+      SUB_BAG (BAG_UNION b1 b2) (BAG_UNION b3 b4)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG b1 (BAG_UNION b3 b5) ==>
+      SUB_BAG b2 b4 ==>
+      SUB_BAG (BAG_UNION b1 b2) (BAG_UNION (BAG_UNION b3 b4) b5)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG b1 (BAG_UNION b4 b5) ==>
+      SUB_BAG b2 b3 ==>
+      SUB_BAG (BAG_UNION b1 b2) (BAG_UNION (BAG_UNION b3 b4) b5)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG b2 (BAG_UNION b3 b5) ==>
+      SUB_BAG b1 b4 ==>
+      SUB_BAG (BAG_UNION b1 b2) (BAG_UNION (BAG_UNION b3 b4) b5)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG b2 (BAG_UNION b4 b5) ==>
+      SUB_BAG b1 b3 ==>
+      SUB_BAG (BAG_UNION b1 b2) (BAG_UNION (BAG_UNION b3 b4) b5)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG b1 (BAG_UNION b5 b3) ==>
+      SUB_BAG b2 b4 ==>
+      SUB_BAG (BAG_UNION b2 b1) (BAG_UNION b5 (BAG_UNION b3 b4))) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG b1 (BAG_UNION b5 b4) ==>
+      SUB_BAG b2 b3 ==>
+      SUB_BAG (BAG_UNION b2 b1) (BAG_UNION b5 (BAG_UNION b3 b4))) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG b2 (BAG_UNION b5 b3) ==>
+      SUB_BAG b1 b4 ==>
+      SUB_BAG (BAG_UNION b2 b1) (BAG_UNION b5 (BAG_UNION b3 b4))) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG b2 (BAG_UNION b5 b4) ==>
+      SUB_BAG b1 b3 ==>
+      SUB_BAG (BAG_UNION b2 b1) (BAG_UNION b5 (BAG_UNION b3 b4))) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG (BAG_UNION b1 b2) b4 ==>
+      SUB_BAG b3 b5 ==>
+      SUB_BAG (BAG_UNION (BAG_UNION b1 b3) b2) (BAG_UNION b4 b5)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG (BAG_UNION b1 b2) b5 ==>
+      SUB_BAG b3 b4 ==>
+      SUB_BAG (BAG_UNION (BAG_UNION b1 b3) b2) (BAG_UNION b4 b5)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG (BAG_UNION b3 b2) b4 ==>
+      SUB_BAG b1 b5 ==>
+      SUB_BAG (BAG_UNION (BAG_UNION b1 b3) b2) (BAG_UNION b4 b5)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG (BAG_UNION b3 b2) b5 ==>
+      SUB_BAG b1 b4 ==>
+      SUB_BAG (BAG_UNION (BAG_UNION b1 b3) b2) (BAG_UNION b4 b5)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG (BAG_UNION b2 b1) b4 ==>
+      SUB_BAG b3 b5 ==>
+      SUB_BAG (BAG_UNION b2 (BAG_UNION b1 b3)) (BAG_UNION b5 b4)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG (BAG_UNION b2 b1) b5 ==>
+      SUB_BAG b3 b4 ==>
+      SUB_BAG (BAG_UNION b2 (BAG_UNION b1 b3)) (BAG_UNION b5 b4)) /\
+   (!b1 b2 b3 b4 b5.
+      SUB_BAG (BAG_UNION b2 b3) b4 ==>
+      SUB_BAG b1 b5 ==>
+      SUB_BAG (BAG_UNION b2 (BAG_UNION b1 b3)) (BAG_UNION b5 b4)) /\
+   !b1 b2 b3 b4 b5.
+     SUB_BAG (BAG_UNION b2 b3) b5 ==>
+     SUB_BAG b1 b4 ==>
+     SUB_BAG (BAG_UNION b2 (BAG_UNION b1 b3)) (BAG_UNION b5 b4)
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_EL_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !e b. SUB_BAG (EL_BAG e) b = BAG_IN e b
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !e b1 b2. SUB_BAG (BAG_INSERT e b1) (BAG_INSERT e b2) = SUB_BAG b1 b2
+</PRE>
+
+<DT><STRONG><font color="black">NOT_IN_SUB_BAG_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 e. ~BAG_IN e b1 ==> (SUB_BAG b1 (BAG_INSERT e b2) = SUB_BAG b1 b2)
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_BAG_IN</font></STRONG>
+<DD>
+<PRE>
+|- !x b1 b2. SUB_BAG (BAG_INSERT x b1) b2 ==> BAG_IN x b2
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_EXISTS</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SUB_BAG b1 b2 = ?b. b2 = BAG_UNION b1 b
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_UNION_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 b3.
+     SUB_BAG b1 b3 ==>
+     (SUB_BAG b2 (BAG_DIFF b3 b1) = SUB_BAG (BAG_UNION b1 b2) b3)
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_UNION_down</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2 b3. SUB_BAG (BAG_UNION b1 b2) b3 ==> SUB_BAG b1 b3 /\ SUB_BAG b2 b3
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- (!b1 b2. SUB_BAG b1 b2 ==> !b3. SUB_BAG (BAG_DIFF b1 b3) b2) /\
+   !b1 b2 b3 b4.
+     SUB_BAG b2 b1 ==>
+     SUB_BAG b4 b3 ==>
+     (SUB_BAG (BAG_DIFF b1 b2) (BAG_DIFF b3 b4) =
+      SUB_BAG (BAG_UNION b1 b4) (BAG_UNION b2 b3))
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_delta</font></STRONG>
+<DD>
+<PRE>
+|- (!A B0 B. SUB_BAG B0 A ==> SUB_BAG B (BAG_delta (B0,B) A)) /\
+   !A B0 B. SUB_BAG A B0 ==> SUB_BAG (BAG_delta (B0,B) A) B
+</PRE>
+
+<DT><STRONG><font color="black">BAG_delta_eliminate</font></STRONG>
+<DD>
+<PRE>
+|- (!A BU BD X.
+      SUB_BAG X A ==>
+      (BAG_delta (A,BAG_DIFF (BAG_UNION A BU) BD) X =
+       BAG_DIFF (BAG_UNION X BU) BD)) /\
+   !A BU BD X.
+     SUB_BAG X A ==>
+     (BAG_delta (A,BAG_DIFF (BAG_UNION BU A) BD) X =
+      BAG_DIFF (BAG_UNION BU X) BD)
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_PSUB_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SUB_BAG b1 b2 = PSUB_BAG b1 b2 \/ (b1 = b2)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DELETE_PSUB_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !b0 e b. BAG_DELETE b0 e b ==> PSUB_BAG b b0
+</PRE>
+
+<DT><STRONG><font color="black">SET_OF_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- BAG_OF_SET {} = {||}
+</PRE>
+
+<DT><STRONG><font color="black">BAG_OF_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- SET_OF_BAG {||} = {}
+</PRE>
+
+<DT><STRONG><font color="black">SET_BAG_I</font></STRONG>
+<DD>
+<PRE>
+|- !s. SET_OF_BAG (BAG_OF_SET s) = s
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_SET</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SUB_BAG b1 b2 ==> SET_OF_BAG b1 SUBSET SET_OF_BAG b2
+</PRE>
+
+<DT><STRONG><font color="black">SET_OF_BAG_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SET_OF_BAG (BAG_UNION b1 b2) = SET_OF_BAG b1 UNION SET_OF_BAG b2
+</PRE>
+
+<DT><STRONG><font color="black">SET_OF_BAG_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !e b. SET_OF_BAG (BAG_INSERT e b) = e INSERT SET_OF_BAG b
+</PRE>
+
+<DT><STRONG><font color="black">SET_OF_EL_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !e. SET_OF_BAG (EL_BAG e) = {e}
+</PRE>
+
+<DT><STRONG><font color="black">SET_OF_BAG_DIFF_SUBSET_down</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SET_OF_BAG b1 DIFF SET_OF_BAG b2 SUBSET SET_OF_BAG (BAG_DIFF b1 b2)
+</PRE>
+
+<DT><STRONG><font color="black">SET_OF_BAG_DIFF_SUBSET_up</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SET_OF_BAG (BAG_DIFF b1 b2) SUBSET SET_OF_BAG b1
+</PRE>
+
+<DT><STRONG><font color="black">IN_SET_OF_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !x b. x IN SET_OF_BAG b = BAG_IN x b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DISJOINT_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !b. BAG_DISJOINT b {||} /\ BAG_DISJOINT {||} b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_DISJOINT_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- !B1 B2. BAG_DISJOINT (BAG_DIFF B1 B2) (BAG_DIFF B2 B1)
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_EMPTY_BAG</font></STRONG>
+<DD>
+<PRE>
+|- FINITE_BAG {||}
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_BAG_INSERT</font></STRONG>
+<DD>
+<PRE>
+|- !b. FINITE_BAG b ==> !e. FINITE_BAG (BAG_INSERT e b)
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_BAG_INDUCT</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     P {||} /\ (!b. P b ==> !e. P (BAG_INSERT e b)) ==>
+     !b. FINITE_BAG b ==> P b
+</PRE>
+
+<DT><STRONG><font color="black">STRONG_FINITE_BAG_INDUCT</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     P {||} /\ (!b. FINITE_BAG b /\ P b ==> !e. P (BAG_INSERT e b)) ==>
+     !b. FINITE_BAG b ==> P b
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_BAG_THM</font></STRONG>
+<DD>
+<PRE>
+|- FINITE_BAG {||} /\ !e b. FINITE_BAG (BAG_INSERT e b) = FINITE_BAG b
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_BAG_DIFF</font></STRONG>
+<DD>
+<PRE>
+|- !b1. FINITE_BAG b1 ==> !b2. FINITE_BAG (BAG_DIFF b1 b2)
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_BAG_DIFF_dual</font></STRONG>
+<DD>
+<PRE>
+|- !b1. FINITE_BAG b1 ==> !b2. FINITE_BAG (BAG_DIFF b2 b1) ==> FINITE_BAG b2
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_BAG_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. FINITE_BAG (BAG_UNION b1 b2) = FINITE_BAG b1 /\ FINITE_BAG b2
+</PRE>
+
+<DT><STRONG><font color="black">FINITE_SUB_BAG</font></STRONG>
+<DD>
+<PRE>
+|- !b1. FINITE_BAG b1 ==> !b2. SUB_BAG b2 b1 ==> FINITE_BAG b2
+</PRE>
+
+<DT><STRONG><font color="black">BAG_cases</font></STRONG>
+<DD>
+<PRE>
+|- !b. (b = {||}) \/ ?b0 e. b = BAG_INSERT e b0
+</PRE>
+
+<DT><STRONG><font color="black">BCARD_0</font></STRONG>
+<DD>
+<PRE>
+|- !b. FINITE_BAG b ==> ((BAG_CARD b = 0) = (b = {||}))
+</PRE>
+
+<DT><STRONG><font color="black">BAG_CARD_THM</font></STRONG>
+<DD>
+<PRE>
+|- (BAG_CARD {||} = 0) /\
+   !b. FINITE_BAG b ==> !e. BAG_CARD (BAG_INSERT e b) = BAG_CARD b + 1
+</PRE>
+
+<DT><STRONG><font color="black">BCARD_SUC</font></STRONG>
+<DD>
+<PRE>
+|- !b.
+     FINITE_BAG b ==>
+     !n.
+       (BAG_CARD b = SUC n) =
+       ?b0 e. (b = BAG_INSERT e b0) /\ (BAG_CARD b0 = n)
+</PRE>
+
+<DT><STRONG><font color="black">BAG_CARD_BAG_INN</font></STRONG>
+<DD>
+<PRE>
+|- !b. FINITE_BAG b ==> !n e. BAG_INN e n b ==> n <= BAG_CARD b
+</PRE>
+
+<DT><STRONG><font color="black">BAG_INSERT_CHOICE_REST</font></STRONG>
+<DD>
+<PRE>
+|- !b. ~(b = {||}) ==> (b = BAG_INSERT (BAG_CHOICE b) (BAG_REST b))
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_REST</font></STRONG>
+<DD>
+<PRE>
+|- !b. SUB_BAG (BAG_REST b) b
+</PRE>
+
+<DT><STRONG><font color="black">PSUB_BAG_REST</font></STRONG>
+<DD>
+<PRE>
+|- !b. ~(b = {||}) ==> PSUB_BAG (BAG_REST b) b
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_DIFF_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. SUB_BAG b1 b2 ==> (b2 = BAG_UNION b1 (BAG_DIFF b2 b1))
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_CARD</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. FINITE_BAG b2 /\ SUB_BAG b1 b2 ==> BAG_CARD b1 <= BAG_CARD b2
+</PRE>
+
+<DT><STRONG><font color="black">SUB_BAG_UNION_MONO</font></STRONG>
+<DD>
+<PRE>
+|- !x y. SUB_BAG x (BAG_UNION x y)
+</PRE>
+
+<DT><STRONG><font color="black">PSUB_BAG_CARD</font></STRONG>
+<DD>
+<PRE>
+|- !b1 b2. FINITE_BAG b2 /\ PSUB_BAG b1 b2 ==> BAG_CARD b1 < BAG_CARD b2
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

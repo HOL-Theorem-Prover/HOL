@@ -1,0 +1,85 @@
+<HTML>
+<HEAD><TITLE>Theory: prob_pseudo</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "prob_pseudo"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "boolean_sequenceTheory.html"><STRONG><font color="black">boolean_sequence</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">pseudo_linear1</font></STRONG>
+                                         <td>
+                                         :num -> num -> bool
+    <tr><td>
+        <STRONG><font color="black">pseudo</font></STRONG>
+        <td>
+        :num -> num -> bool
+    <tr><td>
+        <STRONG><font color="black">pseudo_linear_hd</font></STRONG>
+        <td>
+        :num -> bool
+    <tr><td>
+        <STRONG><font color="black">pseudo_linear_tl</font></STRONG>
+        <td>
+        :num -> num -> num -> num -> num
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">pseudo_linear_hd_def</font></STRONG>
+<DD>
+<PRE>
+|- pseudo_linear_hd = EVEN
+</PRE>
+
+<DT><STRONG><font color="black">pseudo_linear_tl_def</font></STRONG>
+<DD>
+<PRE>
+|- !a b n x. pseudo_linear_tl a b n x = (a * x + b) MOD (2 * n + 1)
+</PRE>
+
+<DT><STRONG><font color="black">pseudo_linear1_def</font></STRONG>
+<DD>
+<PRE>
+|- (!x. SHD (pseudo_linear1 x) = pseudo_linear_hd x) /\
+   !x. STL (pseudo_linear1 x) = pseudo_linear1 (pseudo_linear_tl 103 95 79 x)
+</PRE>
+
+<DT><STRONG><font color="black">pseudo_def</font></STRONG>
+<DD>
+<PRE>
+|- pseudo = pseudo_linear1
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">PSEUDO_LINEAR1_EXECUTE</font></STRONG>
+<DD>
+<PRE>
+|- ?g.
+     (!x. SHD (g x) = pseudo_linear_hd x) /\
+     !x. STL (g x) = g (pseudo_linear_tl 103 95 79 x)
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

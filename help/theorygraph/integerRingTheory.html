@@ -1,0 +1,459 @@
+<HTML>
+<HEAD><TITLE>Theory: integerRing</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "integerRing"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "ringNormTheory.html"><STRONG><font color="black">ringNorm</font></STRONG></A>
+    <A HREF = "integerTheory.html"><STRONG><font color="black">integer</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">int_r_ivl_aux</font></STRONG>
+                                         <td>
+                                         :int varmap ->
+                                          index -> index list -> int
+    <tr><td>
+        <STRONG><font color="black">int_r_interp_cs</font></STRONG>
+        <td>
+        :int varmap -> int canonical_sum -> int
+    <tr><td>
+        <STRONG><font color="black">int_r_interp_sp</font></STRONG>
+        <td>
+        :int varmap -> int spolynom -> int
+    <tr><td>
+        <STRONG><font color="black">int_r_interp_vl</font></STRONG>
+        <td>
+        :int varmap -> index list -> int
+    <tr><td>
+        <STRONG><font color="black">int_r_spolynom_normalize</font></STRONG>
+        <td>
+        :int spolynom -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_varlist_insert</font></STRONG>
+        <td>
+        :index list -> int canonical_sum -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_ics_aux</font></STRONG>
+        <td>
+        :int varmap -> int -> int canonical_sum -> int
+    <tr><td>
+        <STRONG><font color="black">int_interp_p</font></STRONG>
+        <td>
+        :int varmap -> int polynom -> int
+    <tr><td>
+        <STRONG><font color="black">int_r_interp_m</font></STRONG>
+        <td>
+        :int varmap -> int -> index list -> int
+    <tr><td>
+        <STRONG><font color="black">int_polynom_normalize</font></STRONG>
+        <td>
+        :int polynom -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_canonical_sum_merge</font></STRONG>
+        <td>
+        :int canonical_sum -> int canonical_sum -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_polynom_simplify</font></STRONG>
+        <td>
+        :int polynom -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_canonical_sum_scalar</font></STRONG>
+        <td>
+        :int -> int canonical_sum -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_canonical_sum_prod</font></STRONG>
+        <td>
+        :int canonical_sum -> int canonical_sum -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_canonical_sum_simplify</font></STRONG>
+        <td>
+        :int canonical_sum -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_canonical_sum_scalar2</font></STRONG>
+        <td>
+        :index list -> int canonical_sum -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_canonical_sum_scalar3</font></STRONG>
+        <td>
+        :int -> index list -> int canonical_sum -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_spolynom_simplify</font></STRONG>
+        <td>
+        :int spolynom -> int canonical_sum
+    <tr><td>
+        <STRONG><font color="black">int_r_monom_insert</font></STRONG>
+        <td>
+        :int -> index list -> int canonical_sum -> int canonical_sum
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">int_interp_p_def</font></STRONG>
+<DD>
+<PRE>
+|- int_interp_p = interp_p (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_polynom_simplify_def</font></STRONG>
+<DD>
+<PRE>
+|- int_polynom_simplify = polynom_simplify (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_polynom_normalize_def</font></STRONG>
+<DD>
+<PRE>
+|- int_polynom_normalize = polynom_normalize (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_canonical_sum_merge_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_canonical_sum_merge =
+   r_canonical_sum_merge (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_monom_insert_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_monom_insert = r_monom_insert (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_varlist_insert_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_varlist_insert = r_varlist_insert (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_canonical_sum_scalar_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_canonical_sum_scalar =
+   r_canonical_sum_scalar (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_canonical_sum_scalar2_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_canonical_sum_scalar2 =
+   r_canonical_sum_scalar2 (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_canonical_sum_scalar3_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_canonical_sum_scalar3 =
+   r_canonical_sum_scalar3 (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_canonical_sum_prod_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_canonical_sum_prod = r_canonical_sum_prod (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_canonical_sum_simplify_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_canonical_sum_simplify =
+   r_canonical_sum_simplify (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_ivl_aux_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_ivl_aux = r_ivl_aux (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_interp_vl_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_interp_vl = r_interp_vl (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_interp_m_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_interp_m = r_interp_m (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_ics_aux_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_ics_aux = r_ics_aux (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_interp_cs_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_interp_cs = r_interp_cs (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_spolynom_normalize_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_spolynom_normalize = r_spolynom_normalize (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_spolynom_simplify_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_spolynom_simplify = r_spolynom_simplify (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_r_interp_sp_def</font></STRONG>
+<DD>
+<PRE>
+|- int_r_interp_sp = r_interp_sp (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">int_is_ring</font></STRONG>
+<DD>
+<PRE>
+|- is_ring (ring int_0 int_1 $+ $* $~)
+</PRE>
+
+<DT><STRONG><font color="black">int_ring_thms</font></STRONG>
+<DD>
+<PRE>
+|- is_ring (ring int_0 int_1 $+ $* $~) /\
+   (!vm p. int_interp_p vm p = int_r_interp_cs vm (int_polynom_simplify p)) /\
+   (((!vm c. int_interp_p vm (Pconst c) = c) /\
+     (!vm i. int_interp_p vm (Pvar i) = varmap_find i vm) /\
+     (!vm p1 p2.
+        int_interp_p vm (Pplus p1 p2) =
+        int_interp_p vm p1 + int_interp_p vm p2) /\
+     (!vm p1 p2.
+        int_interp_p vm (Pmult p1 p2) =
+        int_interp_p vm p1 * int_interp_p vm p2) /\
+     !vm p1. int_interp_p vm (Popp p1) = ~int_interp_p vm p1) /\
+    (varmap_find End_idx (Node_vm x v1 v2) = x) /\
+    (varmap_find (Right_idx i1) (Node_vm x v1 v2) = varmap_find i1 v2) /\
+    (varmap_find (Left_idx i1) (Node_vm x v1 v2) = varmap_find i1 v1) /\
+    (varmap_find End_idx Empty_vm = @x. T) /\
+    (varmap_find (Right_idx v5) Empty_vm = @x. T) /\
+    (varmap_find (Left_idx v4) Empty_vm = @x. T)) /\
+   ((int_r_canonical_sum_merge (Cons_monom c1 l1 t1) (Cons_monom c2 l2 t2) =
+     compare (list_compare index_compare l1 l2)
+       (Cons_monom c1 l1 (int_r_canonical_sum_merge t1 (Cons_monom c2 l2 t2)))
+       (Cons_monom (c1 + c2) l1 (int_r_canonical_sum_merge t1 t2))
+       (Cons_monom c2 l2
+          (int_r_canonical_sum_merge (Cons_monom c1 l1 t1) t2))) /\
+    (int_r_canonical_sum_merge (Cons_monom c1 l1 t1) (Cons_varlist l2 t2) =
+     compare (list_compare index_compare l1 l2)
+       (Cons_monom c1 l1 (int_r_canonical_sum_merge t1 (Cons_varlist l2 t2)))
+       (Cons_monom (c1 + int_1) l1 (int_r_canonical_sum_merge t1 t2))
+       (Cons_varlist l2
+          (int_r_canonical_sum_merge (Cons_monom c1 l1 t1) t2))) /\
+    (int_r_canonical_sum_merge (Cons_varlist l1 t1) (Cons_monom c2 l2 t2) =
+     compare (list_compare index_compare l1 l2)
+       (Cons_varlist l1 (int_r_canonical_sum_merge t1 (Cons_monom c2 l2 t2)))
+       (Cons_monom (int_1 + c2) l1 (int_r_canonical_sum_merge t1 t2))
+       (Cons_monom c2 l2
+          (int_r_canonical_sum_merge (Cons_varlist l1 t1) t2))) /\
+    (int_r_canonical_sum_merge (Cons_varlist l1 t1) (Cons_varlist l2 t2) =
+     compare (list_compare index_compare l1 l2)
+       (Cons_varlist l1 (int_r_canonical_sum_merge t1 (Cons_varlist l2 t2)))
+       (Cons_monom (int_1 + int_1) l1 (int_r_canonical_sum_merge t1 t2))
+       (Cons_varlist l2
+          (int_r_canonical_sum_merge (Cons_varlist l1 t1) t2))) /\
+    (int_r_canonical_sum_merge (Cons_varlist v7 v8) Nil_monom =
+     Cons_varlist v7 v8) /\
+    (int_r_canonical_sum_merge (Cons_monom v4 v5 v6) Nil_monom =
+     Cons_monom v4 v5 v6) /\
+    (int_r_canonical_sum_merge Nil_monom Nil_monom = Nil_monom) /\
+    (int_r_canonical_sum_merge Nil_monom (Cons_varlist v17 v18) =
+     Cons_varlist v17 v18) /\
+    (int_r_canonical_sum_merge Nil_monom (Cons_monom v14 v15 v16) =
+     Cons_monom v14 v15 v16)) /\
+   ((int_r_monom_insert c1 l1 (Cons_monom c2 l2 t2) =
+     compare (list_compare index_compare l1 l2)
+       (Cons_monom c1 l1 (Cons_monom c2 l2 t2)) (Cons_monom (c1 + c2) l1 t2)
+       (Cons_monom c2 l2 (int_r_monom_insert c1 l1 t2))) /\
+    (int_r_monom_insert c1 l1 (Cons_varlist l2 t2) =
+     compare (list_compare index_compare l1 l2)
+       (Cons_monom c1 l1 (Cons_varlist l2 t2)) (Cons_monom (c1 + int_1) l1 t2)
+       (Cons_varlist l2 (int_r_monom_insert c1 l1 t2))) /\
+    (int_r_monom_insert c1 l1 Nil_monom = Cons_monom c1 l1 Nil_monom)) /\
+   ((int_r_varlist_insert l1 (Cons_monom c2 l2 t2) =
+     compare (list_compare index_compare l1 l2)
+       (Cons_varlist l1 (Cons_monom c2 l2 t2)) (Cons_monom (int_1 + c2) l1 t2)
+       (Cons_monom c2 l2 (int_r_varlist_insert l1 t2))) /\
+    (int_r_varlist_insert l1 (Cons_varlist l2 t2) =
+     compare (list_compare index_compare l1 l2)
+       (Cons_varlist l1 (Cons_varlist l2 t2))
+       (Cons_monom (int_1 + int_1) l1 t2)
+       (Cons_varlist l2 (int_r_varlist_insert l1 t2))) /\
+    (int_r_varlist_insert l1 Nil_monom = Cons_varlist l1 Nil_monom)) /\
+   ((!c0 c l t.
+       int_r_canonical_sum_scalar c0 (Cons_monom c l t) =
+       Cons_monom (c0 * c) l (int_r_canonical_sum_scalar c0 t)) /\
+    (!c0 l t.
+       int_r_canonical_sum_scalar c0 (Cons_varlist l t) =
+       Cons_monom c0 l (int_r_canonical_sum_scalar c0 t)) /\
+    !c0. int_r_canonical_sum_scalar c0 Nil_monom = Nil_monom) /\
+   ((!l0 c l t.
+       int_r_canonical_sum_scalar2 l0 (Cons_monom c l t) =
+       int_r_monom_insert c (list_merge index_lt l0 l)
+         (int_r_canonical_sum_scalar2 l0 t)) /\
+    (!l0 l t.
+       int_r_canonical_sum_scalar2 l0 (Cons_varlist l t) =
+       int_r_varlist_insert (list_merge index_lt l0 l)
+         (int_r_canonical_sum_scalar2 l0 t)) /\
+    !l0. int_r_canonical_sum_scalar2 l0 Nil_monom = Nil_monom) /\
+   ((!c0 l0 c l t.
+       int_r_canonical_sum_scalar3 c0 l0 (Cons_monom c l t) =
+       int_r_monom_insert (c0 * c) (list_merge index_lt l0 l)
+         (int_r_canonical_sum_scalar3 c0 l0 t)) /\
+    (!c0 l0 l t.
+       int_r_canonical_sum_scalar3 c0 l0 (Cons_varlist l t) =
+       int_r_monom_insert c0 (list_merge index_lt l0 l)
+         (int_r_canonical_sum_scalar3 c0 l0 t)) /\
+    !c0 l0. int_r_canonical_sum_scalar3 c0 l0 Nil_monom = Nil_monom) /\
+   ((!c1 l1 t1 s2.
+       int_r_canonical_sum_prod (Cons_monom c1 l1 t1) s2 =
+       int_r_canonical_sum_merge (int_r_canonical_sum_scalar3 c1 l1 s2)
+         (int_r_canonical_sum_prod t1 s2)) /\
+    (!l1 t1 s2.
+       int_r_canonical_sum_prod (Cons_varlist l1 t1) s2 =
+       int_r_canonical_sum_merge (int_r_canonical_sum_scalar2 l1 s2)
+         (int_r_canonical_sum_prod t1 s2)) /\
+    !s2. int_r_canonical_sum_prod Nil_monom s2 = Nil_monom) /\
+   ((!c l t.
+       int_r_canonical_sum_simplify (Cons_monom c l t) =
+       (if c = int_0 then
+          int_r_canonical_sum_simplify t
+        else
+          (if c = int_1 then
+             Cons_varlist l (int_r_canonical_sum_simplify t)
+           else
+             Cons_monom c l (int_r_canonical_sum_simplify t)))) /\
+    (!l t.
+       int_r_canonical_sum_simplify (Cons_varlist l t) =
+       Cons_varlist l (int_r_canonical_sum_simplify t)) /\
+    (int_r_canonical_sum_simplify Nil_monom = Nil_monom)) /\
+   ((!vm x. int_r_ivl_aux vm x [] = varmap_find x vm) /\
+    !vm x x' t'.
+      int_r_ivl_aux vm x (x'::t') =
+      varmap_find x vm * int_r_ivl_aux vm x' t') /\
+   ((!vm. int_r_interp_vl vm [] = int_1) /\
+    !vm x t. int_r_interp_vl vm (x::t) = int_r_ivl_aux vm x t) /\
+   ((!vm c. int_r_interp_m vm c [] = c) /\
+    !vm c x t. int_r_interp_m vm c (x::t) = c * int_r_ivl_aux vm x t) /\
+   ((!vm a. int_r_ics_aux vm a Nil_monom = a) /\
+    (!vm a l t.
+       int_r_ics_aux vm a (Cons_varlist l t) =
+       a + int_r_ics_aux vm (int_r_interp_vl vm l) t) /\
+    !vm a c l t.
+      int_r_ics_aux vm a (Cons_monom c l t) =
+      a + int_r_ics_aux vm (int_r_interp_m vm c l) t) /\
+   ((!vm. int_r_interp_cs vm Nil_monom = int_0) /\
+    (!vm l t.
+       int_r_interp_cs vm (Cons_varlist l t) =
+       int_r_ics_aux vm (int_r_interp_vl vm l) t) /\
+    !vm c l t.
+      int_r_interp_cs vm (Cons_monom c l t) =
+      int_r_ics_aux vm (int_r_interp_m vm c l) t) /\
+   ((!i. int_polynom_normalize (Pvar i) = Cons_varlist [i] Nil_monom) /\
+    (!c. int_polynom_normalize (Pconst c) = Cons_monom c [] Nil_monom) /\
+    (!pl pr.
+       int_polynom_normalize (Pplus pl pr) =
+       int_r_canonical_sum_merge (int_polynom_normalize pl)
+         (int_polynom_normalize pr)) /\
+    (!pl pr.
+       int_polynom_normalize (Pmult pl pr) =
+       int_r_canonical_sum_prod (int_polynom_normalize pl)
+         (int_polynom_normalize pr)) /\
+    !p.
+      int_polynom_normalize (Popp p) =
+      int_r_canonical_sum_scalar3 (~int_1) [] (int_polynom_normalize p)) /\
+   !x.
+     int_polynom_simplify x =
+     int_r_canonical_sum_simplify (int_polynom_normalize x)
+</PRE>
+
+<DT><STRONG><font color="black">int_calculate</font></STRONG>
+<DD>
+<PRE>
+|- ($& n + $& m = $& (n + m)) /\
+   (~$& n + $& m = (if n <= m then $& (m - n) else ~$& (n - m))) /\
+   ($& n + ~$& m = (if m <= n then $& (n - m) else ~$& (m - n))) /\
+   (~$& n + ~$& m = ~$& (n + m)) /\ ($& n * $& m = $& (n * m)) /\
+   (~$& n * $& m = ~$& (n * m)) /\ ($& n * ~$& m = ~$& (n * m)) /\
+   (~$& n * ~$& m = $& (n * m)) /\ (($& n = $& m) = (n = m)) /\
+   (($& n = ~$& m) = (n = 0) /\ (m = 0)) /\
+   ((~$& n = $& m) = (n = 0) /\ (m = 0)) /\ ((~$& n = ~$& m) = (n = m)) /\
+   (~~x = x) /\ (~0 = 0)
+</PRE>
+
+<DT><STRONG><font color="black">int_rewrites</font></STRONG>
+<DD>
+<PRE>
+|- (($& n + $& m = $& (n + m)) /\
+    (~$& n + $& m = (if n <= m then $& (m - n) else ~$& (n - m))) /\
+    ($& n + ~$& m = (if m <= n then $& (n - m) else ~$& (m - n))) /\
+    (~$& n + ~$& m = ~$& (n + m)) /\ ($& n * $& m = $& (n * m)) /\
+    (~$& n * $& m = ~$& (n * m)) /\ ($& n * ~$& m = ~$& (n * m)) /\
+    (~$& n * ~$& m = $& (n * m)) /\ (($& n = $& m) = (n = m)) /\
+    (($& n = ~$& m) = (n = 0) /\ (m = 0)) /\
+    ((~$& n = $& m) = (n = 0) /\ (m = 0)) /\ ((~$& n = ~$& m) = (n = m)) /\
+    (~~x = x) /\ (~0 = 0)) /\ (int_0 = 0) /\ (int_1 = 1) /\
+   (!n m.
+      (ALT_ZERO < NUMERAL_BIT1 n = T) /\ (ALT_ZERO < NUMERAL_BIT2 n = T) /\
+      (n < ALT_ZERO = F) /\ (NUMERAL_BIT1 n < NUMERAL_BIT1 m = n < m) /\
+      (NUMERAL_BIT2 n < NUMERAL_BIT2 m = n < m) /\
+      (NUMERAL_BIT1 n < NUMERAL_BIT2 m = ~(m < n)) /\
+      (NUMERAL_BIT2 n < NUMERAL_BIT1 m = n < m)) /\
+   (!n m.
+      (ALT_ZERO <= n = T) /\ (NUMERAL_BIT1 n <= ALT_ZERO = F) /\
+      (NUMERAL_BIT2 n <= ALT_ZERO = F) /\
+      (NUMERAL_BIT1 n <= NUMERAL_BIT1 m = n <= m) /\
+      (NUMERAL_BIT1 n <= NUMERAL_BIT2 m = n <= m) /\
+      (NUMERAL_BIT2 n <= NUMERAL_BIT1 m = ~(m <= n)) /\
+      (NUMERAL_BIT2 n <= NUMERAL_BIT2 m = n <= m)) /\
+   (!n m. NUMERAL (n - m) = (if m < n then NUMERAL (iSUB T n m) else 0)) /\
+   (!b n m.
+      (iSUB b ALT_ZERO x = ALT_ZERO) /\ (iSUB T n ALT_ZERO = n) /\
+      (iSUB F (NUMERAL_BIT1 n) ALT_ZERO = iDUB n) /\
+      (iSUB T (NUMERAL_BIT1 n) (NUMERAL_BIT1 m) = iDUB (iSUB T n m)) /\
+      (iSUB F (NUMERAL_BIT1 n) (NUMERAL_BIT1 m) =
+       NUMERAL_BIT1 (iSUB F n m)) /\
+      (iSUB T (NUMERAL_BIT1 n) (NUMERAL_BIT2 m) =
+       NUMERAL_BIT1 (iSUB F n m)) /\
+      (iSUB F (NUMERAL_BIT1 n) (NUMERAL_BIT2 m) = iDUB (iSUB F n m)) /\
+      (iSUB F (NUMERAL_BIT2 n) ALT_ZERO = NUMERAL_BIT1 n) /\
+      (iSUB T (NUMERAL_BIT2 n) (NUMERAL_BIT1 m) =
+       NUMERAL_BIT1 (iSUB T n m)) /\
+      (iSUB F (NUMERAL_BIT2 n) (NUMERAL_BIT1 m) = iDUB (iSUB T n m)) /\
+      (iSUB T (NUMERAL_BIT2 n) (NUMERAL_BIT2 m) = iDUB (iSUB T n m)) /\
+      (iSUB F (NUMERAL_BIT2 n) (NUMERAL_BIT2 m) =
+       NUMERAL_BIT1 (iSUB F n m))) /\
+   !t.
+     (T /\ t = t) /\ (t /\ T = t) /\ (F /\ t = F) /\ (t /\ F = F) /\
+     (t /\ t = t)
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,154 @@
+<HTML>
+<HEAD><TITLE>Theory: word_num</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "word_num"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "word_baseTheory.html"><STRONG><font color="black">word_base</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">NLIST</font></STRONG>
+                                         <td>
+                                         :num ->
+                                          (num -> 'a) -> num -> num -> 'a list
+    <tr><td>
+        <STRONG><font color="black">LVAL</font></STRONG>
+        <td>
+        :('a -> num) -> num -> 'a list -> num
+    <tr><td>
+        <STRONG><font color="black">NVAL</font></STRONG>
+        <td>
+        :('a -> num) -> num -> 'a word -> num
+    <tr><td>
+        <STRONG><font color="black">NWORD</font></STRONG>
+        <td>
+        :num -> (num -> 'a) -> num -> num -> 'a word
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">LVAL_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f b l. LVAL f b l = FOLDL (\e x. b * e + f x) 0 l
+</PRE>
+
+<DT><STRONG><font color="black">NVAL_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !f b l. NVAL f b (WORD l) = LVAL f b l
+</PRE>
+
+<DT><STRONG><font color="black">NLIST_DEF</font></STRONG>
+<DD>
+<PRE>
+|- (!frep b m. NLIST 0 frep b m = []) /\
+   !n frep b m.
+     NLIST (SUC n) frep b m = SNOC (frep (m MOD b)) (NLIST n frep b (m DIV b))
+</PRE>
+
+<DT><STRONG><font color="black">NWORD_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !n frep b m. NWORD n frep b m = WORD (NLIST n frep b m)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">LVAL</font></STRONG>
+<DD>
+<PRE>
+|- (!f b. LVAL f b [] = 0) /\
+   !l f b x. LVAL f b (x::l) = f x * b ** LENGTH l + LVAL f b l
+</PRE>
+
+<DT><STRONG><font color="black">LVAL_SNOC</font></STRONG>
+<DD>
+<PRE>
+|- !l h f b. LVAL f b (SNOC h l) = LVAL f b l * b + f h
+</PRE>
+
+<DT><STRONG><font color="black">LVAL_MAX</font></STRONG>
+<DD>
+<PRE>
+|- !l f b. (!x. f x < b) ==> LVAL f b l < b ** LENGTH l
+</PRE>
+
+<DT><STRONG><font color="black">NVAL_MAX</font></STRONG>
+<DD>
+<PRE>
+|- !f b. (!x. f x < b) ==> !n (w::PWORDLEN n). NVAL f b w < b ** n
+</PRE>
+
+<DT><STRONG><font color="black">NVAL0</font></STRONG>
+<DD>
+<PRE>
+|- !f b. NVAL f b (WORD []) = 0
+</PRE>
+
+<DT><STRONG><font color="black">NVAL1</font></STRONG>
+<DD>
+<PRE>
+|- !f b x. NVAL f b (WORD [x]) = f x
+</PRE>
+
+<DT><STRONG><font color="black">NVAL_WORDLEN_0</font></STRONG>
+<DD>
+<PRE>
+|- !(w::PWORDLEN 0) fv r. NVAL fv r w = 0
+</PRE>
+
+<DT><STRONG><font color="black">NVAL_WCAT1</font></STRONG>
+<DD>
+<PRE>
+|- !w f b x. NVAL f b (WCAT (w,WORD [x])) = NVAL f b w * b + f x
+</PRE>
+
+<DT><STRONG><font color="black">NVAL_WCAT2</font></STRONG>
+<DD>
+<PRE>
+|- !n (w::PWORDLEN n) f b x.
+     NVAL f b (WCAT (WORD [x],w)) = f x * b ** n + NVAL f b w
+</PRE>
+
+<DT><STRONG><font color="black">NVAL_WCAT</font></STRONG>
+<DD>
+<PRE>
+|- !n m (w1::PWORDLEN n) (w2::PWORDLEN m) f b.
+     NVAL f b (WCAT (w1,w2)) = NVAL f b w1 * b ** m + NVAL f b w2
+</PRE>
+
+<DT><STRONG><font color="black">NWORD_LENGTH</font></STRONG>
+<DD>
+<PRE>
+|- !n f b m. WORDLEN (NWORD n f b m) = n
+</PRE>
+
+<DT><STRONG><font color="black">NWORD_PWORDLEN</font></STRONG>
+<DD>
+<PRE>
+|- !n f b m. NWORD n f b m IN PWORDLEN n
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

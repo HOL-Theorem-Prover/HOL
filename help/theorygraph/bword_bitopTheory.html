@@ -1,0 +1,113 @@
+<HTML>
+<HEAD><TITLE>Theory: bword_bitop</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "bword_bitop"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "word_bitopTheory.html"><STRONG><font color="black">word_bitop</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">WAND</font></STRONG>
+                                         <td>
+                                         :bool word -> bool word -> bool word
+    <tr><td>
+        <STRONG><font color="black">WNOT</font></STRONG>
+        <td>
+        :bool word -> bool word
+    <tr><td>
+        <STRONG><font color="black">WXOR</font></STRONG>
+        <td>
+        :bool word -> bool word -> bool word
+    <tr><td>
+        <STRONG><font color="black">WOR</font></STRONG>
+        <td>
+        :bool word -> bool word -> bool word
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">WNOT_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !l. WNOT (WORD l) = WORD (MAP $~ l)
+</PRE>
+
+<DT><STRONG><font color="black">WAND_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2. WORD l1 WAND WORD l2 = WORD (MAP2 $/\ l1 l2)
+</PRE>
+
+<DT><STRONG><font color="black">WOR_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2. WORD l1 WOR WORD l2 = WORD (MAP2 $\/ l1 l2)
+</PRE>
+
+<DT><STRONG><font color="black">WXOR_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !l1 l2. WORD l1 WXOR WORD l2 = WORD (MAP2 (\x y. ~(x = y)) l1 l2)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">PBITOP_WNOT</font></STRONG>
+<DD>
+<PRE>
+|- WNOT IN PBITOP
+</PRE>
+
+<DT><STRONG><font color="black">WNOT_WNOT</font></STRONG>
+<DD>
+<PRE>
+|- !w. WNOT (WNOT w) = w
+</PRE>
+
+<DT><STRONG><font color="black">WCAT_WNOT</font></STRONG>
+<DD>
+<PRE>
+|- !n1 n2 (w1::PWORDLEN n1) (w2::PWORDLEN n2).
+     WCAT (WNOT w1,WNOT w2) = WNOT (WCAT (w1,w2))
+</PRE>
+
+<DT><STRONG><font color="black">PBITBOP_WAND</font></STRONG>
+<DD>
+<PRE>
+|- $WAND IN PBITBOP
+</PRE>
+
+<DT><STRONG><font color="black">PBITBOP_WOR</font></STRONG>
+<DD>
+<PRE>
+|- $WOR IN PBITBOP
+</PRE>
+
+<DT><STRONG><font color="black">PBITBOP_WXOR</font></STRONG>
+<DD>
+<PRE>
+|- $WXOR IN PBITBOP
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,357 @@
+<HTML>
+<HEAD><TITLE>Theory: prelim</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "prelim"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "optionTheory.html"><STRONG><font color="black">option</font></STRONG></A>
+    <A HREF = "listTheory.html"><STRONG><font color="black">list</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">ordering</font></STRONG>
+                                          <td>
+                                          0
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">list_compare_tupled</font></STRONG>
+                                         <td>
+                                         :('a -> 'b -> ordering) #
+                                          'a list # 'b list -> ordering
+    <tr><td> <STRONG><font color="black">LESS</font></STRONG> <td> :ordering
+    <tr><td>
+        <STRONG><font color="black">list_compare</font></STRONG>
+        <td>
+        :('a -> 'b -> ordering) -> 'a list -> 'b list -> ordering
+    <tr><td>
+        <STRONG><font color="black">GREATER</font></STRONG>
+        <td>
+        :ordering
+    <tr><td> <STRONG><font color="black">EQUAL</font></STRONG> <td> :ordering
+    <tr><td>
+        <STRONG><font color="black">ordering_size</font></STRONG>
+        <td>
+        :ordering -> num
+    <tr><td>
+        <STRONG><font color="black">compare</font></STRONG>
+        <td>
+        :ordering -> 'a -> 'a -> 'a -> 'a
+    <tr><td>
+        <STRONG><font color="black">list_merge</font></STRONG>
+        <td>
+        :('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+    <tr><td>
+        <STRONG><font color="black">ordering_case</font></STRONG>
+        <td>
+        :'a -> 'a -> 'a -> ordering -> 'a
+    <tr><td>
+        <STRONG><font color="black">ordering2num</font></STRONG>
+        <td>
+        :ordering -> num
+    <tr><td>
+        <STRONG><font color="black">num2ordering</font></STRONG>
+        <td>
+        :num -> ordering
+    <tr><td>
+        <STRONG><font color="black">list_merge_tupled</font></STRONG>
+        <td>
+        :('a -> 'a -> bool) # 'a list # 'a list -> 'a list
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">ordering_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep. TYPE_DEFINITION (\n. n < 3) rep
+</PRE>
+
+<DT><STRONG><font color="black">ordering_BIJ</font></STRONG>
+<DD>
+<PRE>
+|- (!a. num2ordering (ordering2num a) = a) /\
+   !r. (\n. n < 3) r = (ordering2num (num2ordering r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">LESS_def</font></STRONG>
+<DD>
+<PRE>
+|- LESS = num2ordering 0
+</PRE>
+
+<DT><STRONG><font color="black">EQUAL_def</font></STRONG>
+<DD>
+<PRE>
+|- EQUAL = num2ordering 1
+</PRE>
+
+<DT><STRONG><font color="black">GREATER_def</font></STRONG>
+<DD>
+<PRE>
+|- GREATER = num2ordering 2
+</PRE>
+
+<DT><STRONG><font color="black">ordering_size_def</font></STRONG>
+<DD>
+<PRE>
+|- !x. ordering_size x = 0
+</PRE>
+
+<DT><STRONG><font color="black">ordering_case_def</font></STRONG>
+<DD>
+<PRE>
+|- (!x0 x1 x2.
+      (case LESS of LESS -> x0 || EQUAL -> x1 || GREATER -> x2) = x0) /\
+   (!x0 x1 x2.
+      (case EQUAL of LESS -> x0 || EQUAL -> x1 || GREATER -> x2) = x1) /\
+   !x0 x1 x2.
+     (case GREATER of LESS -> x0 || EQUAL -> x1 || GREATER -> x2) = x2
+</PRE>
+
+<DT><STRONG><font color="black">compare_def</font></STRONG>
+<DD>
+<PRE>
+|- (!lt eq gt. compare LESS lt eq gt = lt) /\
+   (!lt eq gt. compare EQUAL lt eq gt = eq) /\
+   !lt eq gt. compare GREATER lt eq gt = gt
+</PRE>
+
+<DT><STRONG><font color="black">list_compare_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- list_compare_tupled =
+   WFREC (@R. WF R /\ !y x l2 l1 cmp. R (cmp,l1,l2) (cmp,x::l1,y::l2))
+     (\list_compare_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v2 of
+                     [] -> (case v3 of [] -> EQUAL || v10::v11 -> LESS)
+                  || v6::v7 ->
+                       case v3 of
+                          [] -> GREATER
+                       || v12::v13 ->
+                            compare (v v6 v12) LESS
+                              (list_compare_tupled' (v,v7,v13)) GREATER)
+</PRE>
+
+<DT><STRONG><font color="black">list_compare_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2. list_compare x x1 x2 = list_compare_tupled (x,x1,x2)
+</PRE>
+
+<DT><STRONG><font color="black">list_merge_tupled_primitive_def</font></STRONG>
+<DD>
+<PRE>
+|- list_merge_tupled =
+   WFREC
+     (@R.
+        WF R /\
+        (!l2 l1 y x a_lt.
+           ~a_lt x y ==> R (a_lt,x::l1,l2) (a_lt,x::l1,y::l2)) /\
+        !l2 l1 y x a_lt. a_lt x y ==> R (a_lt,l1,y::l2) (a_lt,x::l1,y::l2))
+     (\list_merge_tupled' a.
+        case a of
+           (v,v1) ->
+             case v1 of
+                (v2,v3) ->
+                  case v2 of
+                     [] -> (case v3 of [] -> [] || v10::v11 -> v10::v11)
+                  || v6::v7 ->
+                       case v3 of
+                          [] -> v6::v7
+                       || v12::v13 ->
+                            (if v v6 v12 then
+                               v6::list_merge_tupled' (v,v7,v12::v13)
+                             else
+                               v12::list_merge_tupled' (v,v6::v7,v13)))
+</PRE>
+
+<DT><STRONG><font color="black">list_merge_curried_def</font></STRONG>
+<DD>
+<PRE>
+|- !x x1 x2. list_merge x x1 x2 = list_merge_tupled (x,x1,x2)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">num2ordering_ordering2num</font></STRONG>
+<DD>
+<PRE>
+|- !a. num2ordering (ordering2num a) = a
+</PRE>
+
+<DT><STRONG><font color="black">ordering2num_num2ordering</font></STRONG>
+<DD>
+<PRE>
+|- !r. r < 3 = (ordering2num (num2ordering r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">num2ordering_11</font></STRONG>
+<DD>
+<PRE>
+|- !r r'. r < 3 ==> r' < 3 ==> ((num2ordering r = num2ordering r') = (r = r'))
+</PRE>
+
+<DT><STRONG><font color="black">ordering2num_11</font></STRONG>
+<DD>
+<PRE>
+|- !a a'. (ordering2num a = ordering2num a') = (a = a')
+</PRE>
+
+<DT><STRONG><font color="black">num2ordering_ONTO</font></STRONG>
+<DD>
+<PRE>
+|- !a. ?r. (a = num2ordering r) /\ r < 3
+</PRE>
+
+<DT><STRONG><font color="black">ordering2num_ONTO</font></STRONG>
+<DD>
+<PRE>
+|- !r. r < 3 = ?a. r = ordering2num a
+</PRE>
+
+<DT><STRONG><font color="black">ordering_EQ_ordering</font></STRONG>
+<DD>
+<PRE>
+|- !a a'. (a = a') = (ordering2num a = ordering2num a')
+</PRE>
+
+<DT><STRONG><font color="black">ordering2num_LESS</font></STRONG>
+<DD>
+<PRE>
+|- ordering2num LESS = 0
+</PRE>
+
+<DT><STRONG><font color="black">ordering2num_EQUAL</font></STRONG>
+<DD>
+<PRE>
+|- ordering2num EQUAL = 1
+</PRE>
+
+<DT><STRONG><font color="black">ordering2num_GREATER</font></STRONG>
+<DD>
+<PRE>
+|- ordering2num GREATER = 2
+</PRE>
+
+<DT><STRONG><font color="black">ordering_distinct</font></STRONG>
+<DD>
+<PRE>
+|- ~(LESS = EQUAL) /\ ~(LESS = GREATER) /\ ~(EQUAL = GREATER)
+</PRE>
+
+<DT><STRONG><font color="black">ordering_case_cong</font></STRONG>
+<DD>
+<PRE>
+|- !M M' x0 x1 x2.
+     (M = M') /\ ((M' = LESS) ==> (x0 = x0')) /\
+     ((M' = EQUAL) ==> (x1 = x1')) /\ ((M' = GREATER) ==> (x2 = x2')) ==>
+     ((case M of LESS -> x0 || EQUAL -> x1 || GREATER -> x2) =
+      case M' of LESS -> x0' || EQUAL -> x1' || GREATER -> x2')
+</PRE>
+
+<DT><STRONG><font color="black">ordering_nchotomy</font></STRONG>
+<DD>
+<PRE>
+|- !a. (a = LESS) \/ (a = EQUAL) \/ (a = GREATER)
+</PRE>
+
+<DT><STRONG><font color="black">ordering_Axiom</font></STRONG>
+<DD>
+<PRE>
+|- !x0 x1 x2. ?f. (f LESS = x0) /\ (f EQUAL = x1) /\ (f GREATER = x2)
+</PRE>
+
+<DT><STRONG><font color="black">ordering_induction</font></STRONG>
+<DD>
+<PRE>
+|- !P. P EQUAL /\ P GREATER /\ P LESS ==> !a. P a
+</PRE>
+
+<DT><STRONG><font color="black">ordering_eq_dec</font></STRONG>
+<DD>
+<PRE>
+|- (!x. (x = x) = T) /\ ((LESS = EQUAL) = F) /\ ((LESS = GREATER) = F) /\
+   ((EQUAL = GREATER) = F) /\ ((EQUAL = LESS) = F) /\
+   ((GREATER = LESS) = F) /\ ((GREATER = EQUAL) = F)
+</PRE>
+
+<DT><STRONG><font color="black">list_compare_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!cmp. P cmp [] []) /\ (!cmp v8 v9. P cmp [] (v8::v9)) /\
+     (!cmp v4 v5. P cmp (v4::v5) []) /\
+     (!cmp x l1 y l2. P cmp l1 l2 ==> P cmp (x::l1) (y::l2)) ==>
+     !v v1 v2. P v v1 v2
+</PRE>
+
+<DT><STRONG><font color="black">list_compare_def</font></STRONG>
+<DD>
+<PRE>
+|- (list_compare cmp [] [] = EQUAL) /\
+   (list_compare cmp [] (v8::v9) = LESS) /\
+   (list_compare cmp (v4::v5) [] = GREATER) /\
+   (list_compare cmp (x::l1) (y::l2) =
+    compare (cmp x y) LESS (list_compare cmp l1 l2) GREATER)
+</PRE>
+
+<DT><STRONG><font color="black">compare_equal</font></STRONG>
+<DD>
+<PRE>
+|- (!x y. (cmp x y = EQUAL) = (x = y)) ==>
+   !l1 l2. (list_compare cmp l1 l2 = EQUAL) = (l1 = l2)
+</PRE>
+
+<DT><STRONG><font color="black">list_merge_ind</font></STRONG>
+<DD>
+<PRE>
+|- !P.
+     (!a_lt v4 v5. P a_lt (v4::v5) []) /\ (!a_lt. P a_lt [] []) /\
+     (!a_lt v8 v9. P a_lt [] (v8::v9)) /\
+     (!a_lt x l1 y l2.
+        (~a_lt x y ==> P a_lt (x::l1) l2) /\
+        (a_lt x y ==> P a_lt l1 (y::l2)) ==>
+        P a_lt (x::l1) (y::l2)) ==>
+     !v v1 v2. P v v1 v2
+</PRE>
+
+<DT><STRONG><font color="black">list_merge_def</font></STRONG>
+<DD>
+<PRE>
+|- (list_merge a_lt (v4::v5) [] = v4::v5) /\ (list_merge a_lt [] [] = []) /\
+   (list_merge a_lt [] (v8::v9) = v8::v9) /\
+   (list_merge a_lt (x::l1) (y::l2) =
+    (if a_lt x y then
+       x::list_merge a_lt l1 (y::l2)
+     else
+       y::list_merge a_lt (x::l1) l2))
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,200 @@
+<HTML>
+<HEAD><TITLE>Theory: res_quan</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "res_quan"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "pred_setTheory.html"><STRONG><font color="black">pred_set</font></STRONG></A>
+
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">RES_SELECT_UNIV</font></STRONG>
+<DD>
+<PRE>
+|- !p. RES_SELECT UNIV p = $@ p
+</PRE>
+
+<DT><STRONG><font color="black">RES_SELECT_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !p. RES_SELECT {} p = @x. F
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_UNIQUE_ALT</font></STRONG>
+<DD>
+<PRE>
+|- !p m. RES_EXISTS_UNIQUE p m = ?x::p. m x /\ !y::p. m y ==> (y = x)
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_UNIQUE_NULL</font></STRONG>
+<DD>
+<PRE>
+|- !p m. (?!x::p. m) = (?x. p = {x}) /\ m
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_UNIQUE_UNIV</font></STRONG>
+<DD>
+<PRE>
+|- !p. RES_EXISTS_UNIQUE UNIV p = $?! p
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_UNIQUE_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !p. ~RES_EXISTS_UNIQUE {} p
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_ALT</font></STRONG>
+<DD>
+<PRE>
+|- !p m. RES_EXISTS p m = RES_SELECT p m IN p /\ m (RES_SELECT p m)
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_NULL</font></STRONG>
+<DD>
+<PRE>
+|- !p m. (?x::p. m) = ~(p = {}) /\ m
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_UNIV</font></STRONG>
+<DD>
+<PRE>
+|- !p. RES_EXISTS UNIV p = $? p
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !p. ~RES_EXISTS {} p
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_REORDER</font></STRONG>
+<DD>
+<PRE>
+|- !P Q R. (?(i::P) (j::Q). R i j) = ?(j::Q) (i::P). R i j
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_EQUAL</font></STRONG>
+<DD>
+<PRE>
+|- !P j. (?i::$= j. P i) = P j
+</PRE>
+
+<DT><STRONG><font color="black">RES_DISJ_EXISTS_DIST</font></STRONG>
+<DD>
+<PRE>
+|- !P Q R. (?i::(\i. P i \/ Q i). R i) = (?i::P. R i) \/ ?i::Q. R i
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_DISJ_DIST</font></STRONG>
+<DD>
+<PRE>
+|- !P Q R. (?i::P. Q i \/ R i) = (?i::P. Q i) \/ ?i::P. R i
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL_NULL</font></STRONG>
+<DD>
+<PRE>
+|- !p m. (!x::p. m) = (p = {}) \/ m
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL_UNIV</font></STRONG>
+<DD>
+<PRE>
+|- !p. RES_FORALL UNIV p = $! p
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL_EMPTY</font></STRONG>
+<DD>
+<PRE>
+|- !p. RES_FORALL {} p
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL_REORDER</font></STRONG>
+<DD>
+<PRE>
+|- !P Q R. (!(i::P) (j::Q). R i j) = !(j::Q) (i::P). R i j
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL_FORALL</font></STRONG>
+<DD>
+<PRE>
+|- !P R x. (!x (i::P). R i x) = !(i::P) x. R i x
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL_UNIQUE</font></STRONG>
+<DD>
+<PRE>
+|- !P j. (!i::$= j. P i) = P j
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL_DISJ_DIST</font></STRONG>
+<DD>
+<PRE>
+|- !P Q R. (!i::(\j. P j \/ Q j). R i) = (!i::P. R i) /\ !i::Q. R i
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL_CONJ_DIST</font></STRONG>
+<DD>
+<PRE>
+|- !P Q R. (!i::P. Q i /\ R i) = (!i::P. Q i) /\ !i::P. R i
+</PRE>
+
+<DT><STRONG><font color="black">RES_FORALL</font></STRONG>
+<DD>
+<PRE>
+|- !p m. RES_FORALL p m = !x. x IN p ==> m x
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS</font></STRONG>
+<DD>
+<PRE>
+|- !p m. RES_EXISTS p m = ?x. x IN p /\ m x
+</PRE>
+
+<DT><STRONG><font color="black">RES_EXISTS_UNIQUE</font></STRONG>
+<DD>
+<PRE>
+|- !p m.
+     RES_EXISTS_UNIQUE p m = (?x::p. m x) /\ !x y::p. m x /\ m y ==> (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">RES_SELECT</font></STRONG>
+<DD>
+<PRE>
+|- !p m. RES_SELECT p m = @x. x IN p /\ m x
+</PRE>
+
+<DT><STRONG><font color="black">RES_ABSTRACT</font></STRONG>
+<DD>
+<PRE>
+|- !p m x. x IN p ==> (RES_ABSTRACT p m x = m x)
+</PRE>
+
+<DT><STRONG><font color="black">RES_ABSTRACT_EQUAL</font></STRONG>
+<DD>
+<PRE>
+|- !p m1 m2.
+     (!x. x IN p ==> (m1 x = m2 x)) ==>
+     (RES_ABSTRACT p m1 = RES_ABSTRACT p m2)
+</PRE>
+
+<DT><STRONG><font color="black">RES_ABSTRACT_IDEMPOT</font></STRONG>
+<DD>
+<PRE>
+|- !p m. RES_ABSTRACT p (RES_ABSTRACT p m) = RES_ABSTRACT p m
+</PRE>
+
+<DT><STRONG><font color="black">RES_ABSTRACT_EQUAL_EQ</font></STRONG>
+<DD>
+<PRE>
+|- !p m1 m2.
+     (RES_ABSTRACT p m1 = RES_ABSTRACT p m2) = !x. x IN p ==> (m1 x = m2 x)
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,58 @@
+<HTML>
+<HEAD><TITLE>Theory: prime</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "prime"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "dividesTheory.html"><STRONG><font color="black">divides</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">prime</font></STRONG>
+                                         <td>
+                                         :num -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">prime_def</font></STRONG>
+<DD>
+<PRE>
+|- !a. prime a = ~(a = 1) /\ !b. divides b a ==> (b = a) \/ (b = 1)
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">NOT_PRIME_0</font></STRONG>
+<DD>
+<PRE>
+|- ~prime 0
+</PRE>
+
+<DT><STRONG><font color="black">NOT_PRIME_1</font></STRONG>
+<DD>
+<PRE>
+|- ~prime 1
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>

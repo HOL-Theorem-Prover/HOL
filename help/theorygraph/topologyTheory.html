@@ -1,0 +1,447 @@
+<HTML>
+<HEAD><TITLE>Theory: topology</TITLE></HEAD>
+<BODY bgcolor=linen text=midnightblue>
+<H1><font color="black">Theory "topology"</font></H1>
+<STRONG><font size=+3 color="black">Parents</font></STRONG>&nbsp;&nbsp;&nbsp;&nbsp;
+    <A HREF = "realTheory.html"><STRONG><font color="black">real</font></STRONG></A>
+
+<H1><font color="black">Signature</font></H1>
+<center>
+<table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+
+    <tr>
+    <th>
+    <font color="crimson">Type</font>
+    <th>
+    <font color="crimson">Arity</font><tr><td>
+                                          <STRONG><font color="black">metric</font></STRONG>
+                                          <td>
+                                          1
+    <tr><td> <STRONG><font color="black">topology</font></STRONG> <td> 1
+    <tr>
+    <th>
+    <font color="crimson">Constant</font>
+    <th>
+    <font color="crimson">Type</font><tr><td>
+                                         <STRONG><font color="black">B</font></STRONG>
+                                         <td>
+                                         :'a metric -> 'a # real -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">istopology</font></STRONG>
+        <td>
+        :(('a -> bool) -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">re_subset</font></STRONG>
+        <td>
+        :('a -> bool) -> ('a -> bool) -> bool
+    <tr><td> <STRONG><font color="black">mr1</font></STRONG> <td> :real metric
+    <tr><td>
+        <STRONG><font color="black">re_null</font></STRONG>
+        <td>
+        :'a -> bool
+    <tr><td>
+        <STRONG><font color="black">ismet</font></STRONG>
+        <td>
+        :('a # 'a -> real) -> bool
+    <tr><td>
+        <STRONG><font color="black">closed</font></STRONG>
+        <td>
+        :'a topology -> ('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">re_intersect</font></STRONG>
+        <td>
+        :('a -> bool) -> ('a -> bool) -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">dist</font></STRONG>
+        <td>
+        :'a metric -> 'a # 'a -> real
+    <tr><td>
+        <STRONG><font color="black">limpt</font></STRONG>
+        <td>
+        :'a topology -> 'a -> ('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">re_compl</font></STRONG>
+        <td>
+        :('a -> bool) -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">topology</font></STRONG>
+        <td>
+        :(('a -> bool) -> bool) -> 'a topology
+    <tr><td>
+        <STRONG><font color="black">neigh</font></STRONG>
+        <td>
+        :'a topology -> ('a -> bool) # 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">re_Union</font></STRONG>
+        <td>
+        :(('a -> bool) -> bool) -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">re_union</font></STRONG>
+        <td>
+        :('a -> bool) -> ('a -> bool) -> 'a -> bool
+    <tr><td>
+        <STRONG><font color="black">metric</font></STRONG>
+        <td>
+        :('a # 'a -> real) -> 'a metric
+    <tr><td>
+        <STRONG><font color="black">mtop</font></STRONG>
+        <td>
+        :'a metric -> 'a topology
+    <tr><td>
+        <STRONG><font color="black">open</font></STRONG>
+        <td>
+        :'a topology -> ('a -> bool) -> bool
+    <tr><td>
+        <STRONG><font color="black">re_universe</font></STRONG>
+        <td>
+        :'a -> bool
+    
+</table>
+</center>
+
+<H1><font color="black">Definitions</font></H1>
+<DL>
+<DT><STRONG><font color="black">re_Union</font></STRONG>
+<DD>
+<PRE>
+|- !P. re_Union P = (\x. ?s. P s /\ s x)
+</PRE>
+
+<DT><STRONG><font color="black">re_union</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. P re_union Q = (\x. P x \/ Q x)
+</PRE>
+
+<DT><STRONG><font color="black">re_intersect</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. P re_intersect Q = (\x. P x /\ Q x)
+</PRE>
+
+<DT><STRONG><font color="black">re_null</font></STRONG>
+<DD>
+<PRE>
+|- re_null = (\x. F)
+</PRE>
+
+<DT><STRONG><font color="black">re_universe</font></STRONG>
+<DD>
+<PRE>
+|- re_universe = (\x. T)
+</PRE>
+
+<DT><STRONG><font color="black">re_subset</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. P re_subset Q = !x. P x ==> Q x
+</PRE>
+
+<DT><STRONG><font color="black">re_compl</font></STRONG>
+<DD>
+<PRE>
+|- !P. re_compl P = (\x. ~P x)
+</PRE>
+
+<DT><STRONG><font color="black">istopology</font></STRONG>
+<DD>
+<PRE>
+|- !L.
+     istopology L =
+     L re_null /\ L re_universe /\
+     (!a b. L a /\ L b ==> L (a re_intersect b)) /\
+     !P. P re_subset L ==> L (re_Union P)
+</PRE>
+
+<DT><STRONG><font color="black">topology_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep. TYPE_DEFINITION istopology rep
+</PRE>
+
+<DT><STRONG><font color="black">topology_tybij</font></STRONG>
+<DD>
+<PRE>
+|- (!a. topology (open a) = a) /\ !r. istopology r = (open (topology r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">neigh</font></STRONG>
+<DD>
+<PRE>
+|- !top N x. neigh top (N,x) = ?P. open top P /\ P re_subset N /\ P x
+</PRE>
+
+<DT><STRONG><font color="black">closed</font></STRONG>
+<DD>
+<PRE>
+|- !L S'. closed L S' = open L (re_compl S')
+</PRE>
+
+<DT><STRONG><font color="black">limpt</font></STRONG>
+<DD>
+<PRE>
+|- !top x S'.
+     limpt top x S' = !N. neigh top (N,x) ==> ?y. ~(x = y) /\ S' y /\ N y
+</PRE>
+
+<DT><STRONG><font color="black">ismet</font></STRONG>
+<DD>
+<PRE>
+|- !m.
+     ismet m =
+     (!x y. (m (x,y) = 0) = (x = y)) /\ !x y z. m (y,z) <= m (x,y) + m (x,z)
+</PRE>
+
+<DT><STRONG><font color="black">metric_TY_DEF</font></STRONG>
+<DD>
+<PRE>
+|- ?rep. TYPE_DEFINITION ismet rep
+</PRE>
+
+<DT><STRONG><font color="black">metric_tybij</font></STRONG>
+<DD>
+<PRE>
+|- (!a. metric (dist a) = a) /\ !r. ismet r = (dist (metric r) = r)
+</PRE>
+
+<DT><STRONG><font color="black">mtop</font></STRONG>
+<DD>
+<PRE>
+|- !m.
+     mtop m =
+     topology (\S'. !x. S' x ==> ?e. 0 < e /\ !y. dist m (x,y) < e ==> S' y)
+</PRE>
+
+<DT><STRONG><font color="black">ball</font></STRONG>
+<DD>
+<PRE>
+|- !m x e. topology$B m (x,e) = (\y. dist m (x,y) < e)
+</PRE>
+
+<DT><STRONG><font color="black">mr1</font></STRONG>
+<DD>
+<PRE>
+|- mr1 = metric (\(x,y). abs (y - x))
+</PRE>
+
+</DL>
+
+
+<HR>
+
+<HR>
+<H1><font color="black">Theorems</font></H1>
+<DL>
+<DT><STRONG><font color="black">SUBSET_REFL</font></STRONG>
+<DD>
+<PRE>
+|- !P. P re_subset P
+</PRE>
+
+<DT><STRONG><font color="black">COMPL_MEM</font></STRONG>
+<DD>
+<PRE>
+|- !P x. P x = ~re_compl P x
+</PRE>
+
+<DT><STRONG><font color="black">SUBSET_ANTISYM</font></STRONG>
+<DD>
+<PRE>
+|- !P Q. P re_subset Q /\ Q re_subset P = (P = Q)
+</PRE>
+
+<DT><STRONG><font color="black">SUBSET_TRANS</font></STRONG>
+<DD>
+<PRE>
+|- !P Q R. P re_subset Q /\ Q re_subset R ==> P re_subset R
+</PRE>
+
+<DT><STRONG><font color="black">TOPOLOGY</font></STRONG>
+<DD>
+<PRE>
+|- !L.
+     open L re_null /\ open L re_universe /\
+     (!x y. open L x /\ open L y ==> open L (x re_intersect y)) /\
+     !P. P re_subset open L ==> open L (re_Union P)
+</PRE>
+
+<DT><STRONG><font color="black">TOPOLOGY_UNION</font></STRONG>
+<DD>
+<PRE>
+|- !L P. P re_subset open L ==> open L (re_Union P)
+</PRE>
+
+<DT><STRONG><font color="black">OPEN_OWN_NEIGH</font></STRONG>
+<DD>
+<PRE>
+|- !S' top x. open top S' /\ S' x ==> neigh top (S',x)
+</PRE>
+
+<DT><STRONG><font color="black">OPEN_UNOPEN</font></STRONG>
+<DD>
+<PRE>
+|- !S' top. open top S' = (re_Union (\P. open top P /\ P re_subset S') = S')
+</PRE>
+
+<DT><STRONG><font color="black">OPEN_SUBOPEN</font></STRONG>
+<DD>
+<PRE>
+|- !S' top. open top S' = !x. S' x ==> ?P. P x /\ open top P /\ P re_subset S'
+</PRE>
+
+<DT><STRONG><font color="black">OPEN_NEIGH</font></STRONG>
+<DD>
+<PRE>
+|- !S' top. open top S' = !x. S' x ==> ?N. neigh top (N,x) /\ N re_subset S'
+</PRE>
+
+<DT><STRONG><font color="black">CLOSED_LIMPT</font></STRONG>
+<DD>
+<PRE>
+|- !top S'. closed top S' = !x. limpt top x S' ==> S' x
+</PRE>
+
+<DT><STRONG><font color="black">METRIC_ISMET</font></STRONG>
+<DD>
+<PRE>
+|- !m. ismet (dist m)
+</PRE>
+
+<DT><STRONG><font color="black">METRIC_ZERO</font></STRONG>
+<DD>
+<PRE>
+|- !m x y. (dist m (x,y) = 0) = (x = y)
+</PRE>
+
+<DT><STRONG><font color="black">METRIC_SAME</font></STRONG>
+<DD>
+<PRE>
+|- !m x. dist m (x,x) = 0
+</PRE>
+
+<DT><STRONG><font color="black">METRIC_POS</font></STRONG>
+<DD>
+<PRE>
+|- !m x y. 0 <= dist m (x,y)
+</PRE>
+
+<DT><STRONG><font color="black">METRIC_SYM</font></STRONG>
+<DD>
+<PRE>
+|- !m x y. dist m (x,y) = dist m (y,x)
+</PRE>
+
+<DT><STRONG><font color="black">METRIC_TRIANGLE</font></STRONG>
+<DD>
+<PRE>
+|- !m x y z. dist m (x,z) <= dist m (x,y) + dist m (y,z)
+</PRE>
+
+<DT><STRONG><font color="black">METRIC_NZ</font></STRONG>
+<DD>
+<PRE>
+|- !m x y. ~(x = y) ==> 0 < dist m (x,y)
+</PRE>
+
+<DT><STRONG><font color="black">mtop_istopology</font></STRONG>
+<DD>
+<PRE>
+|- !m.
+     istopology (\S'. !x. S' x ==> ?e. 0 < e /\ !y. dist m (x,y) < e ==> S' y)
+</PRE>
+
+<DT><STRONG><font color="black">MTOP_OPEN</font></STRONG>
+<DD>
+<PRE>
+|- !S' m.
+     open (mtop m) S' =
+     !x. S' x ==> ?e. 0 < e /\ !y. dist m (x,y) < e ==> S' y
+</PRE>
+
+<DT><STRONG><font color="black">BALL_OPEN</font></STRONG>
+<DD>
+<PRE>
+|- !m x e. 0 < e ==> open (mtop m) (topology$B m (x,e))
+</PRE>
+
+<DT><STRONG><font color="black">BALL_NEIGH</font></STRONG>
+<DD>
+<PRE>
+|- !m x e. 0 < e ==> neigh (mtop m) (topology$B m (x,e),x)
+</PRE>
+
+<DT><STRONG><font color="black">MTOP_LIMPT</font></STRONG>
+<DD>
+<PRE>
+|- !m x S'.
+     limpt (mtop m) x S' =
+     !e. 0 < e ==> ?y. ~(x = y) /\ S' y /\ dist m (x,y) < e
+</PRE>
+
+<DT><STRONG><font color="black">ISMET_R1</font></STRONG>
+<DD>
+<PRE>
+|- ismet (\(x,y). abs (y - x))
+</PRE>
+
+<DT><STRONG><font color="black">MR1_DEF</font></STRONG>
+<DD>
+<PRE>
+|- !x y. dist mr1 (x,y) = abs (y - x)
+</PRE>
+
+<DT><STRONG><font color="black">MR1_ADD</font></STRONG>
+<DD>
+<PRE>
+|- !x d. dist mr1 (x,x + d) = abs d
+</PRE>
+
+<DT><STRONG><font color="black">MR1_SUB</font></STRONG>
+<DD>
+<PRE>
+|- !x d. dist mr1 (x,x - d) = abs d
+</PRE>
+
+<DT><STRONG><font color="black">MR1_ADD_POS</font></STRONG>
+<DD>
+<PRE>
+|- !x d. 0 <= d ==> (dist mr1 (x,x + d) = d)
+</PRE>
+
+<DT><STRONG><font color="black">MR1_SUB_LE</font></STRONG>
+<DD>
+<PRE>
+|- !x d. 0 <= d ==> (dist mr1 (x,x - d) = d)
+</PRE>
+
+<DT><STRONG><font color="black">MR1_ADD_LT</font></STRONG>
+<DD>
+<PRE>
+|- !x d. 0 < d ==> (dist mr1 (x,x + d) = d)
+</PRE>
+
+<DT><STRONG><font color="black">MR1_SUB_LT</font></STRONG>
+<DD>
+<PRE>
+|- !x d. 0 < d ==> (dist mr1 (x,x - d) = d)
+</PRE>
+
+<DT><STRONG><font color="black">MR1_BETWEEN1</font></STRONG>
+<DD>
+<PRE>
+|- !x y z. x < z /\ dist mr1 (x,y) < z - x ==> y < z
+</PRE>
+
+<DT><STRONG><font color="black">MR1_LIMPT</font></STRONG>
+<DD>
+<PRE>
+|- !x. limpt (mtop mr1) x re_universe
+</PRE>
+
+</DL>
+
+
+
+<HR>
+</BODY>
+</HTML>
