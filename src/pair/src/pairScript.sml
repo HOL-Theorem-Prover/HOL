@@ -343,20 +343,41 @@ GEN_TAC THEN EQ_TAC
 val _ = save_thm("PEXISTS_THM",PEXISTS_THM);
 
 (*---------------------------------------------------------------------------
-     Standard helpful combinator
+        Map for pairs
  ---------------------------------------------------------------------------*)
 
-val PRODFUN = Q.new_infixr_definition
- ("PRODFUN",
+val PAIRMAP = Q.new_infixr_definition
+ ("PAIRMAP",
   `## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 50);
 
-val PRODFUN_THM = Q.store_thm
-("PRODFUN_THM",
+val PAIRMAP_THM = Q.store_thm
+("PAIRMAP_THM",
  `!f g x y. (f##g) (x,y) = (f x, g y)`,
- REWRITE_TAC [PRODFUN,FST,SND]);
+ REWRITE_TAC [PAIRMAP,FST,SND]);
 
 (*---------------------------------------------------------------------------
-    For TFL support.
+        Distribution laws for paired lets. Only will work for the
+        exact form given. See also boolTheory.
+ ---------------------------------------------------------------------------*)
+
+val LET2_RAND = Q.store_thm("LET2_RAND",
+`!(P:'c->'d) (M:'a#'b) N.
+    P (let (x,y) = M in N x y) = (let (x,y) = M in P (N x y))`,
+REWRITE_TAC[boolTheory.LET_DEF] THEN REPEAT GEN_TAC THEN BETA_TAC
+ THEN REPEAT_TCL CHOOSE_THEN SUBST_ALL_TAC
+       (SPEC (Term `M:'a#'b`) ABS_PAIR_THM)
+ THEN REWRITE_TAC[UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
+
+val LET2_RATOR = Q.store_thm("LET2_RATOR",
+`!(M:'a1#'a2) (N:'a1->'a2->'b->'c) (b:'b).
+      (let (x,y) = M in N x y) b = let (x,y) = M in N x y b`,
+REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
+  THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
+  THEN REWRITE_TAC[]);
+
+
+(*---------------------------------------------------------------------------
+       TFL support.
  ---------------------------------------------------------------------------*)
 
 val pair_case_def =
@@ -480,28 +501,6 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
          THEN REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC
          THEN REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC
          THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]]);
-
-
-(*---------------------------------------------------------------------------
-        Distribution laws for paired lets. Only will work for the
-        exact form!
- ---------------------------------------------------------------------------*)
-
-val LET2_RAND = Q.store_thm("LET2_RAND",
-`!(P:'c->'d) (M:'a#'b) N.
-    P (let (x,y) = M in N x y) = (let (x,y) = M in P (N x y))`,
-REWRITE_TAC[boolTheory.LET_DEF] THEN REPEAT GEN_TAC THEN BETA_TAC
- THEN REPEAT_TCL CHOOSE_THEN SUBST_ALL_TAC
-       (SPEC (Term `M:'a#'b`) ABS_PAIR_THM)
- THEN REWRITE_TAC[UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
-
-val LET2_RATOR = Q.store_thm("LET2_RATOR",
-`!(M:'a1#'a2) (N:'a1->'a2->'b->'c) (b:'b).
-      (let (x,y) = M in N x y) b = let (x,y) = M in N x y b`,
-REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
-  THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
-  THEN REWRITE_TAC[]);
-
 
 
 val _ = export_theory();

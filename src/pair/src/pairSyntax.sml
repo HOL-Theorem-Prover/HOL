@@ -36,7 +36,7 @@ val fst_tm      = prim_mk_const {Name="FST",     Thy="pair"};
 val snd_tm      = prim_mk_const {Name="SND",     Thy="pair"};
 val uncurry_tm  = prim_mk_const {Name="UNCURRY", Thy="pair"};
 val curry_tm    = prim_mk_const {Name="CURRY",   Thy="pair"};
-val pairfun_tm  = prim_mk_const {Name="##",      Thy="pair"};
+val pairmap_tm  = prim_mk_const {Name="##",      Thy="pair"};
 
 
 (*---------------------------------------------------------------------------
@@ -124,11 +124,11 @@ fun mk_uncurry (f,x) =
    of ([a,b],c) => mk_comb(mk_comb(mk_uncurry_tm(a,b,c),f),x)
     | other => raise ERR "mk_uncurry" "";
 
-fun mk_pairfun(f,g,p) =
+fun mk_pairmap(f,g,p) =
  let val (df,rf) = dom_rng (type_of f)
      val (dg,rg) = dom_rng (type_of g)
  in list_mk_comb(inst[alpha |-> df, beta  |-> dg, 
-                      gamma |-> rf, delta |-> rg] pairfun_tm, [f,g,p])
+                      gamma |-> rf, delta |-> rg] pairmap_tm, [f,g,p])
  end;
 
 
@@ -141,9 +141,9 @@ fun dest_curry tm =
   in (f,x,y)
   end;
 
-fun dest_pairfun tm = 
-  let val (M,p) = with_exn dest_comb tm (ERR "dest_pairfun" "")
-      val (f,g) = dest_binop ("##","pair") (ERR "dest_pairfun" "") M
+fun dest_pairmap tm = 
+  let val (M,p) = with_exn dest_comb tm (ERR "dest_pairmap" "")
+      val (f,g) = dest_binop ("##","pair") (ERR "dest_pairmap" "") M
   in (f,g,p)
   end;
 
@@ -151,7 +151,7 @@ val is_fst = can dest_fst
 val is_snd = can dest_snd
 val is_curry = can dest_curry
 val is_uncurry = can dest_uncurry
-val is_pairfun = can dest_pairfun;
+val is_pairmap = can dest_pairmap;
 
 
 (*---------------------------------------------------------------------------*)

@@ -12,14 +12,14 @@ sig
  val snd_tm           : term 
  val uncurry_tm       : term
  val curry_tm         : term
- val pairfun_tm       : term
+ val pairmap_tm       : term
 
  val mk_pair          : term * term -> term
  val mk_fst           : term -> term
  val mk_snd           : term -> term
  val mk_curry         : term * term * term -> term
  val mk_uncurry       : term * term -> term
- val mk_pairfun       : term * term * term -> term
+ val mk_pairmap       : term * term * term -> term
  val mk_pabs          : term * term -> term
  val mk_pforall       : term * term -> term
  val mk_pexists       : term * term -> term
@@ -31,7 +31,7 @@ sig
  val dest_snd         : term -> term
  val dest_curry       : term -> term * term * term
  val dest_uncurry     : term -> term * term
- val dest_pairfun     : term -> term * term * term
+ val dest_pairmap     : term -> term * term * term
  val dest_pabs        : term -> term * term
  val pbvar            : term -> term
  val pbody            : term -> term
@@ -56,7 +56,7 @@ sig
  val is_snd           : term -> bool
  val is_curry         : term -> bool
  val is_uncurry       : term -> bool
- val is_pairfun       : term -> bool
+ val is_pairmap       : term -> bool
  val is_pabs          : term -> bool
  val is_pforall       : term -> bool
  val is_pexists       : term -> bool
