@@ -1,5 +1,7 @@
+structure int_arithScript = struct
+
 open HolKernel boolLib Parse
-infix THEN THENC THENL |->
+infix THEN THENC THENL |-> ORELSE
 infixr -->
 
 open integerTheory intSyntax intSimps Psyntax listTheory
@@ -421,5 +423,292 @@ val elim_neg_ones = store_thm(
   Term`!x. x + ~1 + 1 = x`,
   REWRITE_TAC [GSYM INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_RID]);
 
+open gcdTheory
+
+val INT_NUM_DIVIDES = store_thm(
+  "INT_NUM_DIVIDES",
+  ``!n m. &n int_divides &m = divides n m``,
+  SIMP_TAC bool_ss [INT_DIVIDES, dividesTheory.divides_def, EQ_IMP_THM,
+                    FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
+  REPEAT STRIP_TAC THENL [
+    STRIP_ASSUME_TAC (Q.SPEC `m'` INT_NUM_CASES) THEN
+    FULL_SIMP_TAC bool_ss [INT_MUL_CALCULATE, INT_INJ, INT_EQ_CALCULATE,
+                           MULT_CLAUSES] THENL [
+      PROVE_TAC [],
+      PROVE_TAC [MULT_CLAUSES],
+      PROVE_TAC [MULT_CLAUSES]
+    ],
+    Q.EXISTS_TAC `&q` THEN SIMP_TAC bool_ss [INT_MUL]
+  ]);
+
+val INT_LINEAR_GCD = store_thm(
+  "INT_LINEAR_GCD",
+  ``!n m. ?p:int q. p * &n + q * &m = &(gcd n m)``,
+  REPEAT GEN_TAC THEN
+  Cases_on `n = 0` THENL [
+    POP_ASSUM SUBST1_TAC THEN
+    SIMP_TAC bool_ss [INT_MUL_RZERO, GCD_0L, INT_ADD_LID] THEN
+    PROVE_TAC [INT_MUL_LID],
+    ALL_TAC
+  ] THEN Cases_on `m = 0` THENL [
+    POP_ASSUM SUBST1_TAC THEN
+    SIMP_TAC bool_ss [INT_MUL_RZERO, GCD_0R, INT_ADD_RID] THEN
+    PROVE_TAC [INT_MUL_LID],
+    ALL_TAC
+  ] THEN
+  `?i j. i * n = j * m + gcd m n` by PROVE_TAC [LINEAR_GCD] THEN
+  MAP_EVERY Q.EXISTS_TAC [`&i`, `~&j`] THEN
+  ASM_SIMP_TAC bool_ss [INT_MUL_CALCULATE, GSYM eq_move_left_left,
+                        GCD_SYM, INT_ADD]);
+
+val INT_DIVIDES_LRMUL = store_thm(
+  "INT_DIVIDES_LRMUL",
+  ``!p q r. ~(q = 0) ==> ((p * q) int_divides (r * q) = p int_divides r)``,
+  REPEAT GEN_TAC THEN SIMP_TAC bool_ss [INT_DIVIDES] THEN
+  STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    `(m * p) * q = r * q` by PROVE_TAC [INT_MUL_ASSOC] THEN
+    PROVE_TAC [INT_EQ_RMUL],
+    PROVE_TAC [INT_MUL_ASSOC]
+  ]);
+
+
+val INT_DIVIDES_RELPRIME_MUL = store_thm(
+  "INT_DIVIDES_RELPRIME_MUL",
+  ``!p q r.
+      (gcd p q = 1) ==>
+      (&p int_divides &q * r = &p int_divides r)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    STRIP_ASSUME_TAC (Q.SPEC `r` INT_NUM_CASES) THEN
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC bool_ss [INT_NUM_DIVIDES, INT_MUL_CALCULATE,
+                           INT_DIVIDES_NEG] THEN
+    PROVE_TAC [L_EUCLIDES, GCD_SYM],
+    PROVE_TAC [INT_DIVIDES_RMUL]
+  ]);
+
+val INT_MUL_DIV' = prove(
+  ``!p q k.
+       ~(q = 0) /\ q int_divides p ==> (k * (p / q) = k * p / q)``,
+  REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC bool_ss [INT_DIVIDES_MOD0] THEN FULL_SIMP_TAC bool_ss [] THEN
+  PROVE_TAC [INT_MUL_DIV]);
+
+val fractions = prove(
+  ``!p q r.
+       ~(r = 0) /\ r int_divides p /\ r int_divides q ==>
+       (p / r + q / r = (p + q) / r)``,
+  REPEAT STRIP_TAC THEN
+  `?i. p = i * r` by PROVE_TAC [INT_DIVIDES] THEN POP_ASSUM SUBST1_TAC THEN
+  `?j. q = j * r` by PROVE_TAC [INT_DIVIDES] THEN POP_ASSUM SUBST1_TAC THEN
+  `i * r + j * r = (i + j) * r` by REWRITE_TAC [INT_RDISTRIB] THEN
+  POP_ASSUM SUBST1_TAC THEN
+  ASM_SIMP_TAC bool_ss [INT_MUL_DIV, INT_MOD_ID, INT_DIV_ID, INT_MUL_RID]);
+
+val gcdthm2 = store_thm(
+  "gcdthm2",
+  ``!m:num a:num x b d p q.
+       (d = gcd a m) /\ (&d = p * &a + q * &m) /\ ~(d = 0) /\
+       ~(m = 0) /\ ~(a = 0) ==>
+       (&m int_divides (&a * x) + b =
+        &d int_divides b /\
+        ?t. x = ~p * (b / &d) + t * (&m / &d))``,
+  REPEAT STRIP_TAC THEN EQ_TAC THENL [
+    STRIP_TAC THEN
+    `&d int_divides &a /\ &d int_divides &m` by
+       PROVE_TAC [INT_NUM_DIVIDES, GCD_IS_GCD, is_gcd_def] THEN
+    `&d int_divides &a * x + b` by PROVE_TAC [INT_DIVIDES_TRANS] THEN
+    `&d int_divides &a * x` by PROVE_TAC [INT_DIVIDES_LMUL] THEN
+    `&d int_divides b` by PROVE_TAC [INT_DIVIDES_LADD] THEN CONJ_TAC THENL [
+      ASM_REWRITE_TAC [],
+      ALL_TAC
+    ] THEN  (* existential goal remains *)
+    Cases_on `d = 1` THENL [
+      POP_ASSUM SUBST_ALL_TAC THEN SIMP_TAC bool_ss [INT_DIV_1],
+      `?b'. b = b' * &d` by PROVE_TAC [INT_DIVIDES] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      REPEAT (FIRST_X_ASSUM (MP_TAC o assert (is_eq o concl))) THEN
+      REPEAT (DISCH_THEN (ASSUME_TAC o SYM)) THEN
+      ASM_SIMP_TAC bool_ss [INT_MUL_DIV, INT_MOD_ID, INT_INJ, INT_DIV_ID,
+                            INT_MUL_RID] THEN
+      MP_TAC (Q.SPECL [`m`, `a`] FACTOR_OUT_GCD) THEN
+      ASM_REWRITE_TAC [] THEN
+      DISCH_THEN (Q.X_CHOOSE_THEN `m'`
+                  (Q.X_CHOOSE_THEN `a'` STRIP_ASSUME_TAC)) THEN
+      `gcd m a = d` by PROVE_TAC [GCD_SYM] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      POP_ASSUM MP_TAC THEN
+      NTAC 2 (POP_ASSUM SUBST_ALL_TAC) THEN
+      FULL_SIMP_TAC bool_ss [MULT_EQ_0] THEN
+      ASM_SIMP_TAC bool_ss [INT_MUL_DIV, GSYM INT_MUL, INT_MOD_ID, INT_INJ,
+                            INT_DIV_ID, INT_MUL_RID] THEN
+      FULL_SIMP_TAC bool_ss [GSYM INT_MUL] THEN
+      `&m' int_divides &a' * x + b'` by
+          (`&a' * &d * x = &a' * x * &d` by
+              CONV_TAC(AC_CONV(INT_MUL_ASSOC, INT_MUL_COMM)) THEN
+           POP_ASSUM SUBST_ALL_TAC THEN
+           `&m' * &d int_divides (&a' * x + b') * &d` by
+              ASM_SIMP_TAC bool_ss [INT_RDISTRIB] THEN
+           POP_ASSUM MP_TAC THEN
+           ASM_SIMP_TAC bool_ss [INT_DIVIDES_LRMUL, INT_INJ]) THEN
+      NTAC 2 (POP_ASSUM MP_TAC) THEN POP_ASSUM (K ALL_TAC) THEN
+      REPEAT (Q.PAT_ASSUM `y int_divides z` (K ALL_TAC)) THEN
+      Q.PAT_ASSUM `T` (K ALL_TAC) THEN
+      REWRITE_TAC [INT_MUL_ASSOC, GSYM INT_RDISTRIB] THEN
+      CONV_TAC (LAND_CONV (RHS_CONV (REWR_CONV (GSYM INT_MUL_LID)))) THEN
+      ASM_SIMP_TAC bool_ss [INT_INJ, INT_EQ_RMUL] THEN
+      REPEAT (DISCH_THEN (ASSUME_TAC o GSYM)) THEN
+      Q.ABBREV_TAC `b = b'` THEN POP_ASSUM (K ALL_TAC) THEN
+      Q.ABBREV_TAC `m = m'` THEN POP_ASSUM (K ALL_TAC) THEN
+      Q.ABBREV_TAC `a = a'` THEN POP_ASSUM (K ALL_TAC) THEN
+      POP_ASSUM (ASSUME_TAC o ONCE_REWRITE_RULE [GCD_SYM])
+    ] THEN
+
+    `b * 1 = b * (p * &a + q * &m)` by (AP_TERM_TAC THEN
+                                        ASM_REWRITE_TAC []) THEN
+    POP_ASSUM (fn th =>
+      `b = b * (p * &a) + b * (q * &m)` by
+          PROVE_TAC [th, INT_LDISTRIB, INT_MUL_RID]) THEN
+    POP_ASSUM (fn th =>
+      `b + ~(b * (q * &m)) = b * (p * &a)` by
+          MP_TAC th THEN
+          SIMP_TAC bool_ss [GSYM eq_move_left_left] THEN
+          SIMP_TAC bool_ss [INT_ADD_COMM]) THEN
+    POP_ASSUM (fn th =>
+      `&a * (b * p) = b + ~(b * (q * &m))` by
+         (REWRITE_TAC [th] THEN
+          CONV_TAC (AC_CONV(INT_MUL_ASSOC, INT_MUL_COMM)))) THEN
+    POP_ASSUM (fn th =>
+      `&m int_divides &a * (x + b * p)` by
+         (SIMP_TAC bool_ss [INT_LDISTRIB, th] THEN
+          REWRITE_TAC [INT_ADD_ASSOC] THEN
+          ASM_SIMP_TAC bool_ss [INT_DIVIDES_LADD] THEN
+          SIMP_TAC bool_ss [INT_NEG_LMUL, INT_DIVIDES_RMUL,
+                            INT_DIVIDES_REFL])) THEN
+    `&m int_divides x + b*p`
+       by PROVE_TAC [GCD_SYM, INT_DIVIDES_RELPRIME_MUL] THEN
+    `?j. j * &m = x + p * b` by PROVE_TAC [INT_DIVIDES, INT_MUL_COMM] THEN
+    `x = j * &m + ~(p * b)` by PROVE_TAC [eq_move_left_left, INT_ADD_COMM] THEN
+    PROVE_TAC [INT_MUL_CALCULATE, INT_ADD_COMM],
+
+    STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
+    REPEAT (FIRST_X_ASSUM (MP_TAC o assert (is_eq o concl))) THEN
+    REPEAT (DISCH_THEN (ASSUME_TAC o SYM)) THEN
+    `&d int_divides &m /\ &d int_divides &a` by
+       PROVE_TAC [INT_NUM_DIVIDES, GCD_IS_GCD, is_gcd_def] THEN
+    REWRITE_TAC [INT_LDISTRIB] THEN
+    `&a * (~p * (b / &d)) = b * (~p * &a / &d)` by
+       (ASM_SIMP_TAC bool_ss [INT_MUL_DIV', INT_DIVIDES_LMUL,
+                              INT_DIVIDES_RMUL, INT_INJ] THEN
+        REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC) THEN
+        CONV_TAC (AC_CONV(INT_MUL_ASSOC, INT_MUL_COMM))) THEN
+    POP_ASSUM SUBST1_TAC THEN
+    `&a * (t * (&m / &d)) = &m * (t * &a / &d)` by
+       (ASM_SIMP_TAC bool_ss [INT_MUL_DIV', INT_DIVIDES_LMUL,
+                              INT_DIVIDES_RMUL, INT_INJ] THEN
+        REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC) THEN
+        CONV_TAC (AC_CONV(INT_MUL_ASSOC, INT_MUL_COMM))) THEN
+    POP_ASSUM SUBST1_TAC THEN
+    `b * (~p * &a / &d) + &m * (t * &a / &d) + b =
+     &m * (t * &a / &d) + b * (1 + ~p * &a / &d)` by
+        (REWRITE_TAC [INT_LDISTRIB, INT_MUL_RID] THEN
+         CONV_TAC (AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM))) THEN
+    POP_ASSUM SUBST1_TAC THEN
+    SIMP_TAC bool_ss [INT_DIVIDES_LADD, INT_DIVIDES_LMUL,
+                      INT_DIVIDES_REFL] THEN
+    Q.SUBGOAL_THEN `1 = &d / &d` SUBST1_TAC THENL [
+      ASM_SIMP_TAC bool_ss [INT_INJ, INT_DIV_ID],
+      ALL_TAC
+    ] THEN
+    ASM_SIMP_TAC bool_ss [fractions, INT_DIVIDES_RMUL, INT_DIVIDES_REFL,
+                          INT_INJ] THEN
+    Q.SUBGOAL_THEN `&d + ~p * &a = q * &m` SUBST1_TAC THENL [
+      REWRITE_TAC [INT_MUL_CALCULATE] THEN
+      PROVE_TAC [eq_move_left_left],
+      ALL_TAC
+    ] THEN
+    Q.SUBGOAL_THEN `b * (q * &m / &d) = &m * (q * b / &d)`
+    (fn th => SUBST1_TAC th THEN
+              SIMP_TAC bool_ss [INT_DIVIDES_LMUL, INT_DIVIDES_REFL]) THEN
+    ASM_SIMP_TAC bool_ss [INT_MUL_DIV', INT_DIVIDES_LMUL, INT_DIVIDES_RMUL,
+                          INT_INJ] THEN
+    REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
+    CONV_TAC (AC_CONV(INT_MUL_ASSOC, INT_MUL_COMM))
+  ]);
+
+val arith_ss = bool_ss ++ arithSimps.ARITH_ss
+val elim_lt_coeffs1 = store_thm(
+  "elim_lt_coeffs1",
+  ``!n m x:int.  ~(m = 0) ==> (&n < &m * x = &n / &m < x)``,
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC bool_ss [INT_DIV] THEN
+  `0 < m` by ASM_SIMP_TAC arith_ss [] THEN
+  POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `n` o MATCH_MP DIVISION) THEN
+  Q.ABBREV_TAC `r = n MOD m` THEN
+  Q.ABBREV_TAC `i = n DIV m` THEN
+  EQ_TAC THEN STRIP_TAC THENL [
+    SPOSE_NOT_THEN (ASSUME_TAC o REWRITE_RULE [INT_NOT_LT]) THEN
+    Q.SUBGOAL_THEN `&m * x <= &m * &i` ASSUME_TAC THENL [
+      ASM_SIMP_TAC arith_ss [INT_LE_CALCULATE, INT_EQ_LMUL, INT_INJ,
+                             GSYM lt_justify_multiplication, INT_LT] THEN
+      ASM_SIMP_TAC bool_ss [GSYM INT_LE_CALCULATE],
+      ALL_TAC
+    ] THEN
+    `&n < &i * &m` by PROVE_TAC [INT_LTE_TRANS, INT_MUL_COMM] THEN
+    POP_ASSUM MP_TAC THEN ASM_SIMP_TAC arith_ss [INT_LT, INT_MUL],
+
+    Q.SPEC_THEN `x` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC arith_ss [INT_LT, INT_INJ, INT_LT_CALCULATE, INT_MUL] THEN
+    `i + 1 <= n'` by ASM_SIMP_TAC arith_ss [] THEN
+    POP_ASSUM (MP_TAC o EQ_MP (Q.SPECL [`i + 1`, `n'`, `PRE m`]
+                               MULT_LESS_EQ_SUC)) THEN
+    `~(m = 0)` by ASM_SIMP_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN
+    SIMP_TAC bool_ss [
+      numLib.ARITH_PROVE ``~(x = 0) ==> (SUC (PRE x) = x)``] THEN
+    Q.SUBGOAL_THEN `i * m = m * i` SUBST1_TAC THENL [
+      CONV_TAC (AC_CONV(MULT_ASSOC, MULT_COMM)),
+      ALL_TAC
+    ] THEN
+    MP_TAC (Q.ASSUME `r:num < m`) THEN
+    SIMP_TAC arith_ss [LEFT_ADD_DISTRIB]
+  ]);
+
+val elim_lt_coeffs2 = store_thm(
+  "elim_lt_coeffs2",
+  ``!n m x:int. ~(m = 0) ==>
+                 (&m * x < &n = x < if &m int_divides &n then &n / &m
+                                    else &n / &m + 1)``,
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC bool_ss [INT_DIV, INT_DIVIDES_MOD0, INT_INJ,
+                        INT_MOD] THEN
+  `0 < m` by ASM_SIMP_TAC arith_ss [] THEN
+  POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `n` o MATCH_MP DIVISION) THEN
+  Q.ABBREV_TAC `r = n MOD m` THEN
+  Q.ABBREV_TAC `i = n DIV m` THEN
+  `i * m = m * i` by CONV_TAC (AC_CONV(MULT_ASSOC, MULT_COMM)) THEN
+  POP_ASSUM SUBST_ALL_TAC THEN
+  EQ_TAC THEN COND_CASES_TAC THEN STRIP_TAC THEN
+  REPEAT (FIRST_X_ASSUM SUBST_ALL_TAC) THENL [
+    FULL_SIMP_TAC arith_ss [GSYM INT_MUL] THEN
+    PROVE_TAC [lt_justify_multiplication, INT_LT],
+    FULL_SIMP_TAC arith_ss [GSYM INT_MUL, GSYM INT_ADD] THEN
+    `&m * &i + &r < &m * (&i + 1)` by
+       ASM_SIMP_TAC bool_ss [INT_LDISTRIB, INT_LT_LADD, INT_LT,
+                             INT_MUL_RID] THEN
+    `&m * x < &m * (&i + 1)` by PROVE_TAC [INT_LT_TRANS] THEN
+    `0i < &m` by ASM_SIMP_TAC arith_ss [INT_LT] THEN
+    PROVE_TAC [lt_justify_multiplication],
+    REWRITE_TAC [GSYM INT_MUL, GSYM INT_ADD, INT_ADD_RID] THEN
+    PROVE_TAC [lt_justify_multiplication, INT_LT],
+    `x <= &i` by ASM_SIMP_TAC bool_ss [GSYM INT_NOT_LT, not_less] THEN
+    `&m * x <= &m * &i` by
+       (FULL_SIMP_TAC bool_ss [INT_LE_CALCULATE, INT_EQ_LMUL, INT_INJ] THEN
+        ASM_SIMP_TAC arith_ss [INT_LT, GSYM lt_justify_multiplication]) THEN
+    `&m * &i < &(m * i + r)` by
+       ASM_SIMP_TAC arith_ss [INT_LT, INT_MUL] THEN
+    PROVE_TAC [INT_LET_TRANS]
+  ]);
 
 val _ = export_theory();
+
+end (* structure *)
