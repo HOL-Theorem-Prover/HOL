@@ -559,6 +559,8 @@ fun save_thm (name,th) =
       (check_name ("save_thm",name)
        ; if uptodate_thm th then add_thmCT(name,th)
          else raise DATED_ERR "save_thm" name
+       ; if !Globals.interactive then ()
+         else Lib.say ("Saving theorem " ^ name ^ "\n")
        ; th)
 
 fun new_axiom (name,tm) =

@@ -82,7 +82,8 @@ val skew = ref 3;;              (* Skew proof bias (one side is <= n / skew) *)
 
 val cache = ref true;;          (* Cache continuations                       *)
 
-val chatting = ref 1;           (* Gives intermediate info as proof runs.
+val chatting = ref (if !Globals.interactive then 1 else 0);
+                                (* Gives intermediate info as proof runs.
                                    When the number is 1, then minimal output
                                    is given. When the number is 0, no output
                                    is given. Otherwise, jrh's original output

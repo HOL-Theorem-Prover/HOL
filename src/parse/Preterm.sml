@@ -100,6 +100,7 @@ fun to_term tm =
     val guessed_vars = List.take(newV, length newV - length V)
     val _ =
       if not (null guessed_vars) andalso !Globals.notify_on_tyvar_guess
+         andalso !Globals.interactive
       then Feedback.HOL_MESG (String.concat
               ("inventing new type variable names: "
                :: Lib.commafy (List.rev guessed_vars)))
@@ -261,10 +262,12 @@ in
           | SOME _ => let in
               if not (!Globals.guessing_overloads)
                  then raise ERR "do_overloading_removal"
-                         "More than one resolution of overloading possble"
+                         "More than one resolution of overloading possible"
                  else ();
-              Feedback.HOL_MESG
-                    "more than one resolution of overloading was possible";
+              if !Globals.interactive then
+                Feedback.HOL_MESG
+                  "more than one resolution of overloading was possible"
+              else ();
               apply_subst env;
               #1 (do_csubst clist ptm)
             end
