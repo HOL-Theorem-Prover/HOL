@@ -121,6 +121,16 @@ fun dest_BddOp tm =
                           | _      => raise dest_BddOpError)
     | _              => raise dest_BddOpError;
 
+
+(*****************************************************************************)
+(* Function that always raises exception fail                                *)
+(* (useful as argument (leaffn) to GenTermToTermBdd)                         *)
+(*****************************************************************************)
+
+exception fail;
+
+fun failfn _ = raise fail;
+
 (*****************************************************************************)
 (* Scan a term and construct a term_bdd using the primitive operations       *)
 (* when applicable, and a supplied function otherwise                        *)
@@ -162,10 +172,6 @@ fun GenTermToTermBdd leaffn vm tm =
   recfn tm
  end
 end;
-
-exception fail;
-
-fun failfn _ = raise fail;
 
 (*****************************************************************************)
 (* Extend a varmap with a list of variables                                  *)
@@ -559,6 +565,20 @@ fun intToTerm n = numSyntax.mk_numeral(Arbnum.fromInt n);
 fun BddApConv conv tb = BddEqMp (conv(getTerm tb)) tb;
 
 (*****************************************************************************)
+(*   |- t1 = t2                                                              *)
+(*   ----------                                                              *)
+(*     |- t1                                                                 *)
+(*                                                                           *)
+(* if the BDD of t2 (using GenTermToTermBdd) is TRUE                         *)
+(*****************************************************************************)
+
+fun BddRhsOracle leaffn vm eqth =
+ let val (t1,t2) = dest_eq(concl(SPEC_ALL eqth))
+ in
+  EQ_MP (SYM eqth) (BddThmOracle(GenTermToTermBdd leaffn vm t2))
+ end;
+
+(*****************************************************************************)
 (* Iterate a function                                                        *)
 (*                                                                           *)
 (*   f : int -> 'a -> 'a                                                     *)
@@ -760,9 +780,7 @@ fun extendSat varlist vm tbl =
 val traceBackPrevThm = ref TRUTH;
 
 fun traceBack vm trl pth Rth =  
- let val svars = List.map 
-                  (fn v => mk_var(fst(dest_var v),bool))
-                  (strip_pair(Term.rand(lhs(concl(SPEC_ALL pth)))))
+ let val svars = strip_pair(Term.rand(lhs(concl(SPEC_ALL pth))))
      val PrevTh = MkPrevThm Rth
      val _ = (traceBackPrevThm := PrevTh)
      val vl = filter (fn v => type_of v = bool) (all_vars(concl PrevTh)) @ svars
@@ -790,6 +808,38 @@ in
  assl
 end;
 
+(*****************************************************************************)
+(*  findTrace                                                                *)
+(*   (|- R((v1,...,vn),(v1',...,vn')) = ...)                                 *)
+(*   (|- P(v1,...,vn) = ...)                                                 *)
+(*   (|- Q(v1,...,vn) = ...)                                                 *)
+(*  =                                                                        *)
+(*   ((|- P s_0), [(|- R(s_0,s_1)),...,(|- R(s_(n-1),s_n))], (|- Q s_n))     *)
+(*****************************************************************************)
 
+fun findTrace vm Rth Pth Qth =
+ let val (in_th0,in_thsuc) = 
+      (REWRITE_RULE[Pth,pairTheory.PAIR_EQ] ## REWRITE_RULE[Rth])
+      (MkIterThms 
+        MachineTransitionTheory.ReachIn_rec 
+        (lhs(concl(SPEC_ALL Rth)))
+        (lhs(concl(SPEC_ALL Pth))))
+     val tr = computeTrace (fn n=>fn tb=>print".") vm Qth (in_th0,in_thsuc)
+     val soln = traceBack vm tr Qth Rth
+     val cl = 
+      List.map 
+       (fn(_,tbl)=> list_mk_pair(List.map (fn(_,tb)=> getTerm tb) tbl))
+       soln
+     val initth = BddRhsOracle failfn vm (SPECL (strip_pair(hd cl)) Pth)
+     val transthl = 
+      map 
+       (fn (t,t') =>
+         BddRhsOracle failfn vm (SPECL (strip_pair t @ strip_pair t') Rth)) 
+       (zip (List.take(cl, length cl - 1)) (tl cl))
+     val finalth = BddRhsOracle failfn vm (SPECL (strip_pair(last cl)) Qth)
+ in
+  (initth, transthl, finalth)
+ end;
+ 
 end;
 
