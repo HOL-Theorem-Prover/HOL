@@ -19,9 +19,6 @@ and semantics of the particular logical system supported by \HOL\ is
 described in detail in \DESCRIPTION.  The table below summarizes the
 notation used.
 
-
-\bigskip
-
 \begin{center}
 \begin{tabular}{|l|l|l|l|} \hline
 \multicolumn{4}{|c|}{ } \\
@@ -31,131 +28,149 @@ notation used.
 {\it Standard notation} &
 {\it Description} \\ \hline
  & & & \\
-Truth & {\small\verb%T%} & $\top$ & {\it true}\\ \hline
-Falsity & {\small\verb%F%} & $\bot$ & {\it false}\\ \hline
-Negation & {\small\verb%~%}$t$ & $\neg t$ & {\it not}$\ t$\\ \hline
-Disjunction & $t_1${\small\verb%\/%}$t_2$ & $t_1\vee t_2$ &
+Truth & {\small\verb|T|} & $\top$ & {\it true}\\ \hline
+Falsity & {\small\verb|F|} & $\bot$ & {\it false}\\ \hline
+Negation & {\small\verb|~|}$t$ & $\neg t$ & {\it not}$\ t$\\ \hline
+Disjunction & $t_1${\small\verb|\/|}$t_2$ & $t_1\vee t_2$ &
 $t_1\ ${\it or}$\ t_2$ \\ \hline
-Conjunction & $t_1${\small\verb%/\%}$t_2$ & $t_1\wedge t_2$ &
+Conjunction & $t_1${\small\verb|/\|}$t_2$ & $t_1\wedge t_2$ &
 $t_1\ ${\it and}$\ t_2$ \\ \hline
-Implication & $t_1${\small\verb%==>%}$t_2$ & $t_1\imp t_2$ &
+Implication & $t_1${\small\verb|==>|}$t_2$ & $t_1\imp t_2$ &
 $t_1\ ${\it implies}$\ t_2$ \\ \hline
-Equality & $t_1${\small\verb%=%}$t_2$ & $t_1 = t_2$ &
+Equality & $t_1${\small\verb|=|}$t_2$ & $t_1 = t_2$ &
 $t_1\ ${\it equals}$\ t_2$ \\ \hline
-$\forall$-quantification & {\small\verb%!%}$x${\small\verb%.%}$t$ &
+$\forall$-quantification & {\small\verb|!|}$x${\small\verb|.|}$t$ &
 $\uquant{x}t$ & {\it for\ all\ }$x: t$ \\ \hline
-$\exists$-quantification & {\small\verb%?%}$x${\small\verb%.%}$t$ &
+$\exists$-quantification & {\small\verb|?|}$x${\small\verb|.|}$t$ &
 $\equant{x}\ t$ & {\it for\ some\ }$x: t$ \\ \hline
-$\hilbert$-term & {\small\verb%@%}$x${\small\verb%.%}$t$ &
+$\hilbert$-term & {\small\verb|@|}$x${\small\verb|.|}$t$ &
 $\hquant{x}t$ & {\it an}$\ x\ ${\it such\ that:}$\ t$ \\ \hline
-Conditional & {\small\verb%(%}$t${\small\verb%=>%}$t_1${\small\verb%|%}$t_2${\small\verb%)%} &
+Conditional & {\small\verb|(if|} $t$ {\small\verb|then|} $t_1$
+              {\small\verb|else|} $t_2${\small\verb|)|} &
 $(t\rightarrow t_1, t_2)$ & {\it if\ }$t${\it \ then\ }$t_1${\it\ else\ }$t_2$
  \\ \hline
 \end{tabular}
 \end{center}\label{logic-table}
 
+\paragraph{Note on HOL example sessions}
+All of the examples below assume that you are running
+\texttt{hol.unquote}, the executable for which is in the \texttt{bin/}
+directory along with that for \texttt{hol}.  Further, you need to
+execute the following commands before starting the sessions below:
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- app load ["arithmeticTheory", "pairTheory", "Psyntax"];
+> val it = () : unit
+- open Psyntax;
+\end{verbatim}
+\end{session}
+
 \bigskip
 
-
 Terms of the \HOL\ logic are represented in \ML\ by an {\it abstract
-type\/}\footnote{Abstract types appear to  the user  as primitive  types with a
-collection of operations; they are described in
-\DESCRIPTION} called {\small\verb%term%}. They are normally input between
-quotation marks, and anything between a pair of quotation symbols is parsed as
-a logical term.   For example, the expression {\small\verb%"x /\ y ==> z"%}
-evaluates in \ML\ to a term representing
-{\small\verb%x%}$\wedge${\small\verb%y%}$\Rightarrow${\small\verb%z%}.  Terms
-can be manipulated by various built-in \ML\ functions. For  example, the \ML\
-function \ml{dest\_imp} with \ML\ type {\small\verb%term -> term # term%}
-splits an implication into a pair of terms consisting of its antecedent and
-consequent, and the \ML\ function \ml{dest\_conj} of type
-{\small\verb%term -> term * term%} splits a conjunction into its two conjuncts.
+  type\/}\footnote{Abstract types appear to the user as primitive
+  types with a collection of operations; they are described in
+  \DESCRIPTION} called {\small\verb|term|}. They are normally input
+between double back-quote marks.  For example, the expression
+{\small\verb|``x /\ y ==> z``|} evaluates in \ML\ to a term representing
+{\small\verb|x|}$\wedge${\small\verb|y|}$\Rightarrow${\small\verb|z|}.
+Terms can be manipulated by various built-in \ML\ functions. For
+example, the \ML\ function \ml{dest\_imp} with \ML\ type
+{\small\verb|term -> term * term|} splits an implication into a pair
+of terms consisting of its antecedent and consequent, and the \ML\
+function \ml{dest\_conj} of type {\small\verb|term -> term * term|}
+splits a conjunction into its two conjuncts.
+
 
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
-#"x /\ y ==> z";;
-"x /\ y ==> z" : term
+- ``x /\ y ==> z``;
+> val it = `x /\ y ==> z` : term
 
-#dest_imp it;;
-("x /\ y", "z") : (term # term)
+- dest_imp it;
+> val it = (`x /\ y`, `z`) : term * term
 
-#dest_conj(fst it);;
-("x", "y") : (term # term)
+- dest_conj(#1 it);
+> val it = (`x`, `y`) : term * term
 \end{verbatim}
 \end{session}
 
-Terms of the \HOL\ logic are quite similar to \ML\ expressions, and this can at
-first be confusing.  Indeed, terms of the logic have types similar  to those of
-\ML\ expressions.   For example,  {\small\verb%"(1,2)"%} is  an \ML\ expression
-with \ML\ type {\small\verb%term%}.  The \HOL\ type of this term is
-{\small\verb%num#num%}.  By contrast, the \ML\ expression
-{\small\verb%("1","2")%} has type {\small\verb%term#term%}.
+Terms of the \HOL\ logic are quite similar to \ML\ expressions, and
+this can at first be confusing.  Indeed, terms of the logic have types
+similar to those of \ML\ expressions.  For example,
+{\small\verb|``(1,2)``|} is an \ML\ expression with \ML\ type
+{\small\verb|term|}.  The \HOL\ type of this term is
+{\small\verb|num # num|}.  By contrast, the \ML\ expression
+{\small\verb|(``1``, ``2``)|} has type {\small\verb|term * term|}.
 
-The types of \HOL\ terms form an \ML\ type called {\small\verb%type%}.
-Expressions having the form {\small\verb%": %}$\cdots${\small\verb% "%}
-evaluate to logical types.  The built-in function {\small\verb%type_of%}
-has \ML\ type {\small\verb%term->type%} and returns the logical type of a
-term.
+The types of \HOL\ terms form an \ML\ type called
+{\small\verb|hol_type|}.  Types are usually input by applying the
+parsing functionExpressions having the form
+{\small\verb|``: |}$\cdots${\small\verb| ``|} evaluate to logical
+types.
+The built-in function {\small\verb|type_of|} has \ML\ type
+{\small\verb|term->type|} and returns the logical type of a term.
 
 \begin{session}
 \begin{verbatim}
-#"(1,2)";;
-"1,2" : term
+- ``(1,2)``;
+> val it = `(1,2)` : term
 
-#type_of it;;
-":num # num" : type
+- type_of it;
+> val it = `:num # num` : hol_type
 
-#("1","2");;
-("1", "2") : (term # term)
+- (``1``, ``2``);
+> val it = (`1`, `2`) : term * term
 
-#type_of(fst it);;
-":num" : type
+- type_of(#1 it);
+> val it = `:num` : hol_type
 \end{verbatim}
 \end{session}
 
 To try to minimise confusion between the logical types of \HOL\ terms and
 the \ML\ types of \ML\ expressions, the former will be referred to as {\it object
 language types\/} and the latter as {\it meta-language types\/}.  For example,
-{\small\verb%"(1,T)"%} is an \ML\ expression that has meta-language type
-{\small\verb%term%} and evaluates to a term with object language type
-{\small\verb%":num#bool"%}.
+{\small\verb|``(1,T)``|} is an \ML\ expression that has meta-language type
+{\small\verb|term|} and evaluates to a term with object language type
+{\small\verb|``:num#bool``|}.
 
 
 \begin{session}
 \begin{verbatim}
-#"(1,T)";;
-"1,T" : term
+- ``(1,T)``;
+> val it = `(1,T)` : term
 
-#type_of it;;
-":num # bool" : type
+- type_of it;
+> val it = `:num * bool` : hol_type
 \end{verbatim}
 \end{session}
 
 \HOL\ terms can be input using explicit {\it quotation\/}, as above, or
 they can be constructed using \ML\ constructor functions. The function
-{\small\verb%mk_var%} constructs a variable from a string and a type.  In
-the example below, three variables of type {\small\verb%bool%} are
+{\small\verb|mk_var|} constructs a variable from a string and a type.  In
+the example below, three variables of type {\small\verb|bool|} are
 constructed.  These are used later.
 
 \begin{session}
 \begin{verbatim}
-#let x = mk_var(`x`,":bool")
-#and y = mk_var(`y`,":bool")
-#and z = mk_var(`z`,":bool");;
-x = "x" : term
-y = "y" : term
-z = "z" : term
+- val x = mk_var("x", ``:bool``)
+  and y = mk_var("y", ``:bool``)
+  and z = mk_var("z", ``:bool``);
+> val x = `x` : term
+  val y = `y` : term
+  val z = `z` : term
 \end{verbatim}
 \end{session}
 
-The constructors {\small\verb%mk_conj%} and {\small\verb%mk_imp%} construct
+The constructors {\small\verb|mk_conj|} and {\small\verb|mk_imp|} construct
 conjunctions and implications respectively.
 
 \begin{session}
 \begin{verbatim}
-#let t = mk_imp(mk_conj(x,y),z);;
-t = "x /\ y ==> z" : term
+- val t = mk_imp(mk_conj(x,y),z);
+> val t = `x /\ y ==> z` : term
 \end{verbatim}
 \end{session}
 
@@ -165,75 +180,85 @@ There are only four different kinds of terms:
 \begin{enumerate}
 \item Variables.
 \item Constants.
-\item Function applications: \ml{"$t_1$\ $t_2$"}.
-\item $\lambda$-abstractions: {\small\verb%"\%}$x$\ml{.}$t$\ml{"}.
+\item Function applications: \ml{``$t_1$\ $t_2$``}.
+\item $\lambda$-abstractions: {\small\verb|``\|}$x$\ml{.}$t$\ml{``}.
 \end{enumerate}
 
-Both variables and constants have a name and a type; the difference is that
-constants cannot be bound by quantifiers, and their type is fixed when they are
-declared (see below). The type checking algorithm uses the types of constants to
-infer the types of variables in the same quotation. If there is not enough type
-information a type checking error results:
-
+Both variables and constants have a name and a type; the difference is
+that constants cannot be bound by quantifiers, and their type is fixed
+when they are declared (see below). The type checking algorithm uses
+the types of constants to infer the types of variables in the same
+quotation. If there is not enough type information type variables will
+be guessed:
 
 \begin{session}\begin{verbatim}
-#"~x";;
-"~x" : term
+- ``~x``;
+val it = `~x` : term
 
-#"x";;
-Indeterminate types:  "x:?"
-
-evaluation failed     types indeterminate in quotation
+- ``x``;
+<<HOL message: inventing new type variable names: 'a.>>
+> val it = `x` : Term.term
+- type_of it;
+> val it = `:'a` : hol_type
 \end{verbatim}\end{session}
 
-In the first case, the \HOL\ type checker  used the  known type \ml{bool->bool}
-of {\small\verb%~%}  to  deduce  that  the  variable  \ml{x}   must  have  type
-\ml{bool}.  In the second case, it cannot deduce the type of \ml{x}.  Unlike in
-\ML, there must be  enough information  in a  quotation to  fully determine the
-type of  all  subterms.    The  default  `scope'  of type  information for type
-checking is a single quotation, so a  type in  one quotation  cannot affect the
-type-checking of another.  This scoping can be altered by using the {\it sticky
-type\/} facility, which can be used to give default types to variables (see the
-appropriate section  of  \DESCRIPTION\ for  details).   If there  is not enough
-contextually-determined type information to resolve the types  of all variables
-in a quotation, then it is necessary to explicitly indicate  the required types
-by using \ml{"$term$:$type$"} as illustrated below.
+    In the first case, the \HOL\ type checker used the known type
+    \ml{bool->bool} of {\small\verb|~|} to deduce that the variable
+    \ml{x} must have type \ml{bool}.  In the second case, it cannot
+    deduce the type of \ml{x}.  The default `scope' of type
+    information for type checking is a single quotation, so a type in
+    one quotation cannot affect the type-checking of another.  If
+    there is not enough contextually-determined type information to
+    resolve the types of all variables in a quotation, then the system
+    will guess different type variables for all the unconstrained
+    variables.  Alternatively, it is possible to explicitly indicate
+    the required types by using \ml{``$term$:$type$``} as illustrated
+    below.
 
 \begin{session}\begin{verbatim}
-#"x:num";;
-"x" : term
+- ``(x,y)``;
+<<HOL message: inventing new type variable names: 'a, 'b.>>
+> val it = `(x,y)` : term
+- type_of it;
+> val it = `:'a # 'b` : hol_type
 
-#type_of it;;
-":num" : type
+- ``x:num``;
+> val it = `x` : term
+- type_of it;
+> val it = `:num` : hol_type
 \end{verbatim}\end{session}
 
-Functions have types of the form \ml{$\sigma_1$->$\sigma_2$}, where
-$\sigma_1$ and $\sigma_2$ are the types of the domain and range of the function,
-respectively.
+    Functions have types of the form \ml{$\sigma_1$->$\sigma_2$},
+    where $\sigma_1$ and $\sigma_2$ are the types of the domain and
+    range of the function, respectively.
 
 \begin{session}\begin{verbatim}
-#type_of "==>";;
-":bool -> (bool -> bool)" : type
+- type_of ``$==>``;
+> val it = `:bool -> bool -> bool` : hol_type
 
-#type_of "+";;
-":num -> (num -> num)" : type
+- type_of ``$+``;
+> val it = `:num -> num -> num` : hol_type
 \end{verbatim}\end{session}
 
-\noindent Both \ml{+} and \ml{==>} are infixes.  The  session below illustrates
-this; it also illustrates object language versus meta-language types.
+\noindent Both \ml{+} and \ml{==>} are infixes, so their use in
+contexts where they are not being used as such requires their
+prefixing by the \texttt{\$}-sign.  This is analogous to the way in
+which \texttt{op} is used in \ML. The session below illustrates the
+use of these constants as infixes; it also illustrates object language
+versus meta-language types.
 
 \begin{session}\begin{verbatim}
-#"(x+1), (t1==>t2)";;
-"x + 1,(t1 ==> t2)" : term
+- ``(x + 1, t1 ==> t2)``;
+> val it = `(x + 1,t1 ==> t2)` : term
 
-#type_of it;;
-":num # bool" : type
+- type_of it;
+> val it = `:num # bool` : hol_type
 
-#"x=1","t1==>t2";;
-("x = 1", "t1 ==> t2") : (term # term)
+- (``x=1``, ``t1==>t2``);
+> val it = (`x = 1`, `t1 ==> t2`) : term * term
 
-#type_of(fst it), type_of(snd it);;
-(":bool", ":bool") : (type # type)
+- (type_of (#1 it), type_of (#2 it));
+> val it = (`:bool`, `:bool`) : hol_type * hol_type
 \end{verbatim}\end{session}
 
 \noindent The types of constants are declared in {\it theories}; this is
@@ -242,130 +267,143 @@ described in Section~\ref{theories}.
 An application $t_1\ t_2$ is badly typed if $t_1$ is not a function:
 
 \begin{session}\begin{verbatim}
-#"1 2";;
-Badly typed application of:  "1"
-   which has type:           ":num"
-to the argument term:        "2"
-   which has type:           ":num"
+- ``1 2``;
 
-evaluation failed     mk_comb in quotation
+Type inference failure: unable to infer a type for the application of
+
+(1 :num)
+
+to
+
+(2 :num)
+
+unification failure message: unify failed
+! Uncaught exception:
+! HOL_ERR <poly>
 \end{verbatim}\end{session}
 
 \noindent or if it is a function, but $t_2$ is not in its range:
 
 \begin{session}\begin{verbatim}
-#"~1";;
-Badly typed application of:  "$~"
-   which has type:           ":bool -> bool"
-to the argument term:        "1"
-   which has type:           ":num"
+- ``~1``;
 
-evaluation failed     mk_comb in quotation
+Type inference failure: unable to infer a type for the application of
+
+$~
+
+to
+
+(1 :num)
+
+unification failure message: unify failed
+! Uncaught exception:
+! HOL_ERR <poly>
 \end{verbatim}\end{session}
 
-The dollar in front of {\small\verb%~%} indicates that the constant has a special
-syntactic status (in this case a non-standard precedence). Putting
-{\small\verb%$%} in front of any symbol causes the parser to ignore any special
-syntactic status (like being an infix) it might have.
+    As before, the dollar in front of {\small\verb|~|} indicates that
+    the constant has a special syntactic status (in this case a
+    non-standard precedence). Putting {\small\verb|$|} in front of any
+    symbol causes the parser to ignore any special syntactic status
+    (like being an infix) it might have.
 
 \begin{session}\begin{verbatim}
-#"$==> t1 t2";;
-"t1 ==> t2" : term
+- ``$==> t1 t2``;
+> val it = `t1 ==> t2` : term
 \end{verbatim}\end{session}
 
 Lambda-terms, or $\lambda$-terms, denote functions. The
-symbol `{\small\verb%\%}'
+symbol `{\small\verb|\|}'
 is used as an {\small ASCII} approximation to $\lambda$.
-Thus `{\small\verb%\%}$x$\ml{.}$t$' should be read
+Thus `{\small\verb|\|}$x$\ml{.}$t$' should be read
 as `$\lquant{x}t$'. For example,
-{\small\verb%"\x. x+1"%} is a term that denotes the function
+{\small\verb|"\x. x+1"|} is a term that denotes the function
 $n\mapsto n{+}1$.
 
 \begin{session}\begin{verbatim}
-#"\x.x+1";;
-"\x. x + 1" : term
+- ``\x. x + 1``;
+> val it = `\x. x + 1` : term
 
-#type_of it;;
-":num -> num" : type
+- type_of it;
+> val it = `:num -> num` : hol_type
 \end{verbatim}\end{session}
 
 \section{Theories}
 \label{theories}
 
-The result of a session with the \HOL\ system is an object called a {\it
-theory\/}.  This object is closely related to what a logician would call a
-theory, but there are some differences arising from the needs of mechanical
-proof.  A \HOL\ theory, like a logician's theory, contains sets of types,
-constants, definitions and axioms.  In addition, however, a \HOL\ theory
-contains an explicit list of theorems that have been proved from the axioms
-and definitions. Logicians normally do not need to distinguish theorems that
-have actually been proved from those that could be proved, hence they do not
-normally consider sets of proven theorems as part of a theory; rather, they
-take the theorems of a theory to be the (often infinite) set of all
-consequences of the axioms and definitions.  Another difference between
-logicians' theories and \HOL\ theories is that, for logicians, theories are
-relatively static objects, but in \HOL\ they can be thought of as potentially
-extendable. For example, the \HOL\ system provides tools for adding to
-theories and combining theories.  A typical interaction with \HOL\ consists in
-combining some existing theories, making some definitions, proving some
-theorems and then saving the resulting new theory.
+The result of a session with the \HOL\ system is an object called a
+{\it theory\/}.  This object is closely related to what a logician
+would call a theory, but there are some differences arising from the
+needs of mechanical proof.  A \HOL\ theory, like a logician's theory,
+contains sets of types, constants, definitions and axioms.  In
+addition, however, a \HOL\ theory contains an explicit list of
+theorems that have been proved from the axioms and definitions.
+Logicians normally do not need to distinguish theorems that have
+actually been proved from those that could be proved, hence they do
+not normally consider sets of proven theorems as part of a theory;
+rather, they take the theorems of a theory to be the (often infinite)
+set of all consequences of the axioms and definitions.  Another
+difference between logicians' theories and \HOL\ theories is that, for
+logicians, theories are relatively static objects, but in \HOL\ they
+can be thought of as potentially extendable. For example, the \HOL\
+system provides tools for adding to theories and combining theories.
+A typical interaction with \HOL\ consists in combining some existing
+theories, making some definitions, proving some theorems and then
+saving the resulting new theory.
 
-The purpose of the \HOL\ system is to provide tools to enable well-formed
-theories to be constructed.  All the theorems of such theories are logical
-consequences of the definitions and axioms of the theory.  The \HOL\ system
-ensures that only well-formed theories can be constructed by allowing
-theorems to be created by {\it formal proof\/} only.
+The purpose of the \HOL\ system is to provide tools to enable
+well-formed theories to be constructed.  All the theorems of such
+theories are logical consequences of the definitions and axioms of the
+theory.  The \HOL\ system ensures that only well-formed theories can
+be constructed by allowing theorems to be created by {\it formal
+  proof\/} only.
 
-A theory is represented in the \HOL\  system as  a collection  of files, called
-theory files.  Each file has a name of the form $name$\ml{.th}, where $name$ is
-a string supplied by the user.
+A theory is represented in the \HOL\ system as a collection of files,
+called theory files.  Each file has a name of the form $name$\ml{.th},
+where $name$ is a string supplied by the user.
 
-Theory files are structured hierarchically to represent sequences of extensions of
-an initial theory called \ml{HOL}.
-Each theory file making up a theory records
-some types, constants, axioms and
-theorems, together with
-pointers to other theory files called its {\it parents\/}.
-This collection of reachable files is called the {\it
-ancestry\/} of the theory file. Axioms, definitions
-and theorems are named in the \HOL\ system by two strings: the name of the theory
-file where they are stored, together with a name within that file supplied by the
-user.
-Specifically,
-axioms, definitions and theorems
-are named by a pair of strings $\langle thy,name\rangle$
-where $thy$ is the name of the
-theory current when the item was declared and $name$
-is a specific name supplied by the user (see the functions
-\ml{new\_axiom}, \ml{new\_definition} \etc\ below).
+Theory files are structured hierarchically to represent sequences of
+extensions of an initial theory called \ml{HOL}.  Each theory file
+making up a theory records some types, constants, axioms and theorems,
+together with pointers to other theory files called its {\it
+  parents\/}.  This collection of reachable files is called the {\it
+  ancestry\/} of the theory file. Axioms, definitions and theorems are
+named in the \HOL\ system by two strings: the name of the theory file
+where they are stored, together with a name within that file supplied
+by the user.  Specifically, axioms, definitions and theorems are named
+by a pair of strings $\langle thy,name\rangle$ where $thy$ is the name
+of the theory current when the item was declared and $name$ is a
+specific name supplied by the user (see the functions \ml{new\_axiom},
+\ml{new\_definition} \etc\ below).
 
-A typical piece of work with the \HOL\ system consists in a number of sessions. In
-the first of these a new theory, ${\cal T}$ say, is created by extending existing
-theories with a number of definitions. The concrete result of the session will be a
-theory file ${\cal T}$\ml{.th} whose contents are created during the
-session and whose ancestry represents the desired logical theory.  In subsequent
-sessions this theory is extended by proving new theorems which will be stored in
-the file ${\cal T}$\ml{.th}. The logical meaning of these sessions is that a new
-extension to ${\cal T}$ is created which replaces the old version.  Subsequent
-pieces of work can build on (\ie\ extend) the definitions and theorems of ${\cal
-T}$ by making it a parent of new theories.
+A typical piece of work with the \HOL\ system consists in a number of
+sessions. In the first of these a new theory, ${\cal T}$ say, is
+created by extending existing theories with a number of definitions.
+The concrete result of the session will be a theory file ${\cal
+  T}$\ml{.th} whose contents are created during the session and whose
+ancestry represents the desired logical theory.  In subsequent
+sessions this theory is extended by proving new theorems which will be
+stored in the file ${\cal T}$\ml{.th}. The logical meaning of these
+sessions is that a new extension to ${\cal T}$ is created which
+replaces the old version.  Subsequent pieces of work can build on
+(\ie\ extend) the definitions and theorems of ${\cal T}$ by making it
+a parent of new theories.
 
-There are two modes of working with \HOL:   {\it  draft mode\/}  and {\it proof
-mode\/}.  In  draft  mode,  inconsistencies  can  be  introduced  by  asserting
-inconsistent axioms,  but  in  proof  mode only  consistency preserving actions
-(namely valid proof) can be done.  Draft mode is analogous to `super user mode'
-in Unix, in that it gives access to dangerous facilities.   Everything that can
-be done in proof mode can be done in draft mode, but not vice versa.
+There are two modes of working with \HOL: {\it draft mode\/} and {\it
+  proof mode\/}.  In draft mode, inconsistencies can be introduced by
+asserting inconsistent axioms, but in proof mode only consistency
+preserving actions (namely valid proof) can be done.  Draft mode is
+analogous to `super user mode' in Unix, in that it gives access to
+dangerous facilities.  Everything that can be done in proof mode can
+be done in draft mode, but not vice versa.
 
-There is always a {\it current theory\/}, whose name  is given  by the function
-\ml{current\_theory}.  This function maps the value void, written
-`\ml{()}' in \ML, to a string giving the name of the current theory.
-Thus the \ML\ expression
-\ml{current\_theory ()} evaluates to a string giving the name of the current
-theory.  Initially  \HOL\  is in  proof mode  with current theory
-called \ml{HOL}.  So evaluating \ml{current\_theory ()} immediately after
-initiating a \HOL\ session gives the value \ml{`HOL`}, as can be seen in
-the session shown below:
+There is always a {\it current theory\/}, whose name is given by the
+function \ml{current\_theory}.  This function maps the value void,
+written `\ml{()}' in \ML, to a string giving the name of the current
+theory.  Thus the \ML\ expression \ml{current\_theory ()} evaluates to
+a string giving the name of the current theory.  Initially \HOL\ is in
+proof mode with current theory called \ml{HOL}.  So evaluating
+\ml{current\_theory ()} immediately after initiating a \HOL\ session
+gives the value \ml{`HOL`}, as can be seen in the session shown below:
 
 
 \setcounter{sessioncount}{1}
@@ -384,11 +422,11 @@ the session shown below:
 #
 \end{verbatim}\end{session}
 
-Executing \ml{new\_theory`$thy$`} creates a new  theory called  $thy$; it fails
-if there already exists a file $thy$\ml{.th} in the current working
-directory (or in any directory on the current \HOL\ {\it search path\/},
-for a description of  which, see  the appropriate  section of
-\DESCRIPTION).
+    Executing \ml{new\_theory`$thy$`} creates a new theory called
+    $thy$; it fails if there already exists a file $thy$\ml{.th} in
+    the current working directory (or in any directory on the current
+    \HOL\ {\it search path\/}, for a description of which, see the
+    appropriate section of \DESCRIPTION).
 
 \begin{session}\begin{verbatim}
 #new_theory `Peano`;;
@@ -397,9 +435,9 @@ for a description of  which, see  the appropriate  section of
 
 \noindent This starts a theory called \ml{Peano},  which is  to be  made into a
 theory containing Peano's postulates as axioms for the natural
-numbers.\footnote{An elaborate theory of numbers is built into \HOL, in which
-Peano's postulates  are  in  fact  derived  theorems rather  than postulated as
-axioms.}  These postulates, stated informally, are:
+numbers.\footnote{An elaborate theory of numbers is built into \HOL,
+  in which Peano's postulates are in fact derived theorems rather than
+  postulated as axioms.}  These postulates, stated informally, are:
 
 \begin{list}{{\small\bf P\arabic{Peano}}}{\usecounter{Peano}
 \setlength{\leftmargin}{12mm}
@@ -428,24 +466,23 @@ To fomalize this in \HOL\ a new type is introduced called \ml{nat}:
 () : void
 \end{verbatim}\end{session}
 
-In general \ml{new\_type}$\ n\ \ml{`\ty{op}`}$ makes \ty{op}
-a new $n$-ary type operator in the current theory.
-Constant types are regarded as degenerate type operators with no arguments, thus
-the new type \ml{nat}
-is declared to be a $0$-ary type operator. The type operator \ml{list} is
-an example of a $1$-ary operator,
-types built with \ml{list} are written as \ml{$\sigma\ $list}. The type
-operator {\small\verb%prod%} is $2$-ary, types using it are written
-as \ml{($\sigma_1$,$\sigma_2$)prod} (which can, in fact, be written as
-$\sigma_1${\small\verb%#%}$\sigma_2$).
+    In general \ml{new\_type}$\ n\ \ml{`\ty{op}`}$ makes \ty{op} a new
+    $n$-ary type operator in the current theory.  Constant types are
+    regarded as degenerate type operators with no arguments, thus the
+    new type \ml{nat} is declared to be a $0$-ary type operator. The
+    type operator \ml{list} is an example of a $1$-ary operator, types
+    built with \ml{list} are written as \ml{$\sigma\ $list}. The type
+    operator {\small\verb|prod|} is $2$-ary, types using it are
+    written as \ml{($\sigma_1$,$\sigma_2$)prod} (which can, in fact,
+    be written as $\sigma_1${\small\verb|#|}$\sigma_2$).
 
-The axioms {\small\bf P1} and {\small\bf P2} can now be formalized by declaring
-two new constants of type \ml{nat}
-to represent $0$ and \Suc.
+    The axioms {\small\bf P1} and {\small\bf P2} can now be formalized
+    by declaring two new constants of type \ml{nat} to represent $0$
+    and \Suc.
 
-Evaluating \ml{new\_constant(`\con{c}`,}$\sigma$\ml{)} makes
-$\con{c}$ a new constant of type $\sigma$ in the current theory.
-This fails if:
+    Evaluating \ml{new\_constant(`\con{c}`,}$\sigma$\ml{)} makes
+    $\con{c}$ a new constant of type $\sigma$ in the current theory.
+    This fails if:
 
 \begin{myenumerate}
 \item not in draft mode;
@@ -741,3 +778,8 @@ Theorems --
 
 
 
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:

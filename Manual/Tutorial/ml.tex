@@ -1,34 +1,36 @@
 \chapter{Introduction to ML}
 \label{ML}
 
-This chapter is a brief introduction to the meta-language \ML.  The aim is just
-to give a feel  for what  it is  like to  interact with  the language.   A more
-detailed introduction can be found in \DESCRIPTION.
+This chapter is a brief introduction to the meta-language \ML.  The
+aim is just to give a feel for what it is like to interact with the
+language.  A more detailed introduction can be found in numerous
+textbooks and web-pages; see for example the list of resources
+on the MoscowML home-page, or the \texttt{comp.lang.ml} FAQ.
 
 \section{How to interact with ML}
 
-\ML\ is an interactive programming language like Lisp. At top level one can
-evaluate expressions and perform declarations. The former results in the
-expression's value and type being printed, the latter in a value being
-bound to a name.
+\ML\ is an interactive programming language like Lisp. At top level
+one can evaluate expressions and perform declarations. The former
+results in the expression's value and type being printed, the latter
+in a value being bound to a name.
 
-The normal way to interact with \ML\ is to configure the workstation screen so that
-there are two windows:
+A standard way to interact with \ML\ is to configure the workstation
+screen so that there are two windows:
 \begin{myenumerate}
-\item An editor window into which \ML\ commands are initially typed and recorded.
-\item A shell window (or non-Unix equivalent) which is used to evaluate the
-commands.
+\item An editor window into which \ML\ commands are initially typed
+  and recorded.
+\item A shell window (or non-Unix equivalent) which is used to
+  evaluate the commands.
 \end{myenumerate}
 
-\noindent A common way to achieve this is to work inside \ml{Emacs} with a text
+\noindent
+A common way to achieve this is to work inside \ml{Emacs} with a text
 window and a shell window.
 
 After typing a command into the edit (text) window it can be
 transferred to the shell and evaluated in \HOL\ by `cut-and-paste'. In
 \ml{Emacs} this is done by copying the text into a buffer and then
-`yanking' it into the shell. On an {\small IBM PC} it can be done
-using a proprietary window system; on a Macintosh it can be done using
-the Mac's window system. The advantage of working via an editor is
+`yanking' it into the shell. The advantage of working via an editor is
 that if the command has an error, then the text can simply be edited
 and used again; it also records the commands in a file which can then
 be used again (via a batch load) later. In \ml{Emacs}, the shell
@@ -39,215 +41,225 @@ with a number in their top right hand corner (to indicate their
 position in the complete session).
 
 The interactions in these boxes should be understood as occurring in
-sequence.  For example, variable bindings made in earlier boxes are assumed
-to persist to later ones.  To enter the \HOL\ system one types
-{\small\verb%hol%} to Unix.\footnote{The Unix prompt is {\small\tt \%}.}
-The \HOL\ system then prints a sign-on message and puts one into \ML.  The
-\ML\ prompt is {\small\verb%#%}, so lines beginning with {\small\verb%#%}
-are typed by the user and other lines are the system's response.
+sequence.  For example, variable bindings made in earlier boxes are
+assumed to persist to later ones.  To enter the \HOL\ system one types
+{\small\verb|hol|} to Unix.\footnote{The Unix prompt is {\small\tt
+    \$}.}  The \HOL\ system then prints a sign-on message and puts one
+into \ML.  The \ML\ prompt is {\small\verb|-|}, so lines beginning
+with {\small\verb|-|} are typed by the user and other lines are the
+system's responses.
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-% hol
+$ hol
+Moscow ML version 1.44 (August 1999)
+Enter `quit();' to quit.
+For HOL help, type: help "hol";
+Loaded Hol Kernel.
 
-          _  _    __    _      __    __
-   |___   |__|   |  |   |     |__|  |__|
-   |      |  |   |__|   |__   |__|  |__|
+        HHH                 LL
+        HHH                  LL
+        HHH                   LL
+        HHH                    LL
+        HHH          OOOO       LL
+        HHHHHHH     OO  OO       LL
+        HHHHHHH     OO  OO       LLL
+        HHH          OOOO        LLLL
+        HHH                     LL  LL
+        HHH                    LL    LL
+        HHH                   LL      LL
+        HHH                  LL        LL98 [Taupo 1]
 
-          Version 2.0 (Sun3/Franz), built on Sep 1 1991
-
-#1.[2;3;4;5];;
-[1; 2; 3; 4; 5] : int list
+[closing file "/local/scratch/mn200/Work/hol98/std.prelude"]
+- 1 :: [2,3,4,5];
+> val it = [1, 2, 3, 4, 5] : int list
 \end{verbatim}
 \end{session}
 
-The \ML\ expression {\small\verb%1.[2;3;4;5]%} has the form $e_1\ op\ e_2$ where
-$e_1$ is the expression {\small\verb%1%} (whose value is the integer $1$), $e_2$ is
-the expression {\small\verb%[2;3;4;5]%} (whose value is a list of four integers)
-and $op$ is the infixed operator `{\small\verb%.%}' which is like Lisp's {\it cons}
-function. Other list processing functions include {\small\verb%hd%} ($car$ in
-Lisp), {\small\verb%tl%} ($cdr$ in Lisp) and {\small\verb%null%} ($null$ in Lisp).
-The double semicolon `{\small\verb%;;%}' terminates a top-level phrase.  The
-system's response is shown on the line not starting with a prompt.  It consists of
-the value of the expression followed, after a colon, by its type. The \ML\
-type
-checker infers the type of expressions using methods invented by Robin Milner
-\cite{Milner-types}. The type {\small\verb%int list%} is the type of `lists of
-integers'; {\small\verb%list%} is a unary type operator.  The type system of \ML\
-is very similar to the type system of the \HOL\ logic which is explained in
-Chapter~\ref{HOLlogic}.
+The \ML\ expression {\small\verb|1 :: [2,3,4,5]|} has the form $e_1\
+op\ e_2$ where $e_1$ is the expression {\small\verb|1|} (whose value
+is the integer $1$), $e_2$ is
+the expression {\small\verb%[2,3,4,5]%} (whose value is a list of four
+  integers)
+  and $op$ is the infixed operator `{\small\verb%::%}' which is like Lisp's {\it cons}
+    function. Other list processing functions include {\small\verb%hd%} ($car$ in
+      Lisp), {\small\verb%tl%} ($cdr$ in Lisp) and {\small\verb%null%} ($null$ in Lisp).
+The semicolon `{\small\verb%;%}' terminates a top-level phrase.  The
+system's response is shown on the line starting with the
+{\small\verb|>|} prompt.  It consists of the value of the expression
+followed, after a colon, by its type. The \ML\ type checker infers
+the type of expressions using methods invented by Robin Milner
+\cite{Milner-types}. The type {\small\verb%int list%} is the type of
+`lists of integers'; {\small\verb|list|} is a unary type operator.  The type system of \ML\
+              is very similar to the type system of the \HOL\ logic
+              which is explained in Chapter~\ref{HOLlogic}.
 
 The value of the last expression evaluated at top-level in \ML\ is always
-remembered in a variable called {\small\verb%it%}.
+remembered in a variable called {\small\verb|it|}.
 
 \begin{session}
 \begin{verbatim}
-#let l = it;;
-l = [1; 2; 3; 4; 5] : int list
+- val l = it;
+> val l = [1, 2, 3, 4, 5] : int list
 
-#tl l;;
-[2; 3; 4; 5] : int list
+- tl l;
+> val it = [2, 3, 4, 5] : int list
 
-#hd it;;
-2 : int
+- hd it;
+> val it = 2 : int
 
-#tl(tl(tl(tl(tl l))));;
-[] : int list
+- tl(tl(tl(tl(tl l))));
+> val it = [] : int list
 \end{verbatim}
 \end{session}
 
 Following standard $\lambda$-calculus usage, the application of a function
 $f$ to an argument $x$ can be written without brackets as $f\ x$ (although
-the more conventional $f${\small\verb%(%}$x${\small\verb%)%} is also
+the more conventional $f${\small\verb|(|}$x${\small\verb|)|} is also
 allowed).  The expression $f\ x_1\ x_2\ \cdots\ x_n$ abbreviates the less
-intelligible expression {\small\verb%(%}$\cdots${\small\verb%((%}$f\ x_1$%
-{\small\verb%)%}$x_2${\small\verb%)%}$\cdots${\small\verb%)%}$x_n$
+intelligible expression {\small\verb|(|}$\cdots${\small\verb|((|}$f\ x_1$%
+{\small\verb|)|}$x_2${\small\verb|)|}$\cdots${\small\verb|)|}$x_n$
 (function application is left associative).
 
-Declarations have the form {\small\verb%let %}$x_1${\small\verb%=%}$e_1${\small\verb% and %}$\cdots
-${\small\verb% and %}$x_n${\small\verb%=%}$e_n$ and result in the value of
+Declarations have the form {\small\verb|val |}$x_1${\small\verb|=|}$e_1${\small\verb| and |}$\cdots
+${\small\verb| and |}$x_n${\small\verb|=|}$e_n$ and result in the value of
 each expression $e_i$ being bound to the name $x_i$.
 
 \begin{session}
 \begin{verbatim}
-#let l1 = [1;2;3] and l2 = [`a`;`b`;`c`];;
-l1 = [1; 2; 3] : int list
-l2 = [`a`; `b`; `c`] : string list
+- val l1 = [1,2,3] and l2 = ["a","b","c"];
+> val l1 = [1, 2, 3] : int list
+  val l2 = ["a", "b", "c"] : string list
 \end{verbatim}
 \end{session}
 
-\ML\ expressions like {\small\verb%`a`%}, {\small\verb%`b`%},
-{\small\verb%`foo`%} \etc\ are {\it strings\/} and have type
-{\small\verb%string%}. Any sequence of {\small ASCII} characters can be
-written between the quotes. The function {\small\verb%words%} splits a
-single string into a list of single character strings, using space as
-separator.
+\ML\ expressions like {\small\verb|"a"|}, {\small\verb|"b"|},
+{\small\verb|"foo"|} \etc\ are {\it strings\/} and have type
+{\small\verb|string|}. Any sequence of {\small ASCII} characters can be
+written between the quotes. The function {\small\verb|explode|} splits a
+string into a list of single characters, which are written like single
+character strings, with a {\small\verb|#|} character prepended.
 
 \begin{session}
 \begin{verbatim}
-#words`a b c`;;
-[`a`; `b`; `c`] : string list
+- explode "a b c";
+> val it = [#"a", #" ", #"b", #" ", #"c"] : char list
 \end{verbatim}
 \end{session}
 
 An expression of the form
-{\small\verb%(%}$e_1${\small\verb%,%}$e_2${\small\verb%)%} evaluates to a
-pair of the values of $e_1$ and $e_2$. If $e_1$ has type $\sigma_1$ and
-$e_2$ has type $\sigma_2$ then
-{\small\verb%(%}$e_1${\small\verb%,%}$e_2${\small\verb%)%} has type
-$\sigma_1${\small\verb%#%}$\sigma_2$.  A tuple
-{\small\verb%(%}$e_1${\small\verb%,%}$\ldots${\small\verb%,%}$e_n${\small\verb%)%}
-is equivalent to
-{\small\verb%(%}$e_1${\small\verb%,(%}$e_2${\small\verb%,%}$\ldots${\small\verb%,%}$e_n${\small\verb%))%}
-(\ie\ `{\small\verb%,%}' is right associative).  The brackets around pairs
-and tuples are optional; the system doesn't print them. The first and
-second components of a pair can be extracted with the \ML\ functions
-{\small\verb%fst%} and {\small\verb%snd%} respectively.
+{\small\verb|(|}$e_1${\small\verb|,|}$e_2${\small\verb|)|} evaluates
+to a pair of the values of $e_1$ and $e_2$. If $e_1$ has type
+$\sigma_1$ and $e_2$ has type $\sigma_2$ then
+{\small\verb|(|}$e_1${\small\verb|,|}$e_2${\small\verb|)|} has type
+$\sigma_1${\small\verb|*|}$\sigma_2$.  The first and second components
+of a pair can be extracted with the \ML\ functions {\small\verb|#1|}
+and {\small\verb|#2|} respectively.  If a tuple has more than two
+components, its $n$-th component can be extracted with a function
+{\small\verb|#|$n$}.
+
+The values {\small\verb|(1,2,3)|}, {\small\verb|(1,(2,3))|} and
+{\small\verb|((1,2), 3)|} are all distinct and have types
+\linebreak{} {\small\verb|int * int * int|}, {\small\verb|int * (int * int)|} and
+{\small\verb|(int * int) * int|} respectively.
 
 \begin{session}
 \begin{verbatim}
-#(1,true,`abc`);;
-(1,true, `abc`) : (int # bool # string)
+- val triple1 = (1,true,"abc");
+> val triple1 = (1, true, "abc") : int * bool * string
+- #2 triple1;
+> val it = true : bool
 
-#snd it;;
-(true, `abc`) : (bool # string)
-
-
-#fst it;;
-true : bool
+- val triple2 = (1, (true, "abc"));
+> val triple2 = (1, (true, "abc")) : int * (bool * string)
+- #2 triple2;;
+> val it = (true, "abc") : bool * string
 \end{verbatim}
 \end{session}
 
-\noindent The \ML\ expressions {\small\verb%true%} and {\small\verb%false%}
-denote the two truth values of type {\small\verb%bool%}.
+\noindent The \ML\ expressions {\small\verb|true|} and {\small\verb|false|}
+denote the two truth values of type {\small\verb|bool|}.
 
-\ML\ types can contain the {\it type variables\/} {\small\verb%*%},
-{\small\verb%**%}, {\small\verb%***%}, \etc\ Such types are called {\it
+\ML\ types can contain the {\it type variables\/} {\small\verb|'a|},
+{\small\verb|'b|}, {\small\verb|'c|}, \etc\ Such types are called {\it
 polymorphic\/}. A function with a polymorphic type should be thought of as
 possessing all the types obtainable by replacing type variables by types.
-This is illustrated below with the function {\small\verb%zip%}.
+This is illustrated below with the function {\small\verb|zip|}.
 
-Functions are defined with declarations of the form {\small\verb%let%}$\ f\
+Functions are defined with declarations of the form {\small\verb|fun|}$\ f\
 v_1\ \ldots\ v_n$ \ml{=} $e$ where each $v_i$ is either a variable or a pattern
-built out of variables.\footnote{The chapters on ML in \DESCRIPTION\ give
-exact details.} Recursive functions are declared with
-{\small\verb%letrec%} instead of {\small\verb%let%}.
+built out of variables.
 
-The function {\small\verb%zip%}, below, converts a pair of lists
-{\small\verb%([%}$x_1${\small\verb%;%}$\ldots${\small\verb%;%}$x_n$%
-{\small\verb%], [%}$y_1${\small\verb%;%}$\ldots${\small\verb%;%}$y_n$%
-{\small\verb%])%} to a list of pairs
-{\small\verb%[(%}$x_1${\small\verb%,%}$y_1${\small\verb%);%}$\ldots$%
-{\small\verb%;(%}$x_n${\small\verb%,%}$y_n${\small\verb%)]%}.
+The function {\small\verb|zip|}, below, converts a pair of lists
+{\small\verb|([|}$x_1${\small\verb|,|}$\ldots${\small\verb|,|}$x_n$%
+{\small\verb|], [|}$y_1${\small\verb|,|}$\ldots${\small\verb|,|}$y_n$%
+{\small\verb|])|} to a list of pairs
+{\small\verb|[(|}$x_1${\small\verb|,|}$y_1${\small\verb|),|}$\ldots$%
+{\small\verb|,(|}$x_n${\small\verb|,|}$y_n${\small\verb|)]|}.
 
 \begin{session}
 \begin{verbatim}
-#letrec zip(l1,l2) =
-#if null l1 or null l2
-# then []
-# else (hd l1,hd l2).zip(tl l1,tl l2);;
-zip = - : ((* list # ** list) -> (* # **) list)
+- fun zip(l1,l2) =
+    if null l1 orelse null l2 then []
+    else (hd l1,hd l2) :: zip(tl l1,tl l2);
+> val zip = fn : 'a list * 'b list -> ('a * 'b) list
 
-#zip([1;2;3],[`a`;`b`;`c`]);;
-[(1,`a`); (2,`b`); (3,`c`)] : (int # string) list
+- zip([1,2,3],["a","b","c"]);
+> val it = [(1, "a"), (2, "b"), (3, "c")] : (int * string) list
 \end{verbatim}
 \end{session}
 
 Functions may be {\it curried\/}, \ie\ take their arguments `one at a time'
 instead of as a tuple.  This is illustrated with the function
-{\small\verb%curried_zip%} below:
+{\small\verb|curried_zip|} below:
 
 \begin{session}
 \begin{verbatim}
-#let curried_zip l1 l2 = zip(l1,l2);;
-curried_zip = - : (* list -> ** list -> (* # **) list)
+- fun curried_zip l1 l2 = zip(l1,l2);
+> val curried_zip = fn : 'a list -> 'b list -> ('a * 'b) list)
 
-#let zip_num = curried_zip [0;1;2];;
-zip_num = - : (* list -> (int # *) list)
+- fun zip_num l2 = curried_zip [0,1,2] l2;
+> val zip_num = fn : 'a list -> (int * 'a) list
 
-#zip_num [`a`;`b`;`c`];;
-[(0, `a`); (1, `b`); (2, `c`)] : (int # string) list
+- zip_num ["a","b","c"];
+> val it = [(0, "a"), (1, "b"), (2, "c")] : (int * string) list
 \end{verbatim}
 \end{session}
 
-
-Curried functions are useful because they can be `partially applied' as
-illustrated above by the partial application of {\small\verb%curried_zip%}
-to {\small\verb%[0;1;2]%} which results in the function
-{\small\verb%zip_num%}.
-
-The evaluation of an expression either {\it succeeds\/} or {\it fails\/}.
-In the former case, the evaluation returns a value; in the latter case the
-evaluation is aborted and a failure string (usually the name of the
-function that caused the failure) is passed to whatever invoked the
-evaluation. This context can either propagate the failure (this is the
-default) or it can {\it trap\/} it. These two possibilities are illustrated
-below.  A failure trap is an expression of the form
-$e_1${\small\verb%?%}$e_2$. An expression of this form is evaluated by
-first evaluating $e_1$. If the evaluation succeeds (\ie\ doesn't fail) then
-the value of $e_1${\small\verb%?%}$e_2$ is the value of $e_1$.  If the
-evaluation of $e_1$ fails, then the value of $e_1${\small\verb%?%}$e_2$ is
-obtained by evaluating $e_2$.
+The evaluation of an expression either {\it succeeds\/} or {\it
+  fails\/}.  In the former case, the evaluation returns a value; in
+the latter case the evaluation is aborted and an \emph{exception} is
+raised.  This exception passed to whatever invoked the evaluation.
+This context can either propagate the failure (this is the default) or
+it can {\it trap\/} it. These two possibilities are illustrated below.
+An exception trap is an expression of the form
+$e_1${\small\verb|handle _ => |}$e_2$. An expression of this form is
+evaluated by first evaluating $e_1$. If the evaluation succeeds (\ie\
+doesn't fail) then the value of the whole expressionis the value of
+$e_1$.  If the evaluation of $e_1$ raises an exception, then the value
+of the whole is obtained by evaluating $e_2$.\footnote{This
+  description of exception handling is actually a gross simplification
+  of the way exceptions can be handled in \ML{}; consult a proper text
+  for a better explanation.}
 
 \begin{session}
 \begin{verbatim}
-#hd[];;
-evaluation failed     hd
+- 3 div 0;
+! Uncaught exception:
+! Div
 
-#hd[] ? `hd applied to empty list`;;
-`hd applied to empty list` : string
+- 3 div 0 handle _ => 0;
+> val it = 0 : int
 \end{verbatim}
 \end{session}
 
-The sessions  above  are enough  to give  a feel  for \ML.   For  a much longer
-example, which illustrates most of the main features  of the  language, see the
-introduction to \ML\ in  \DESCRIPTION.
+The sessions above are enough to give a feel for \ML.  For a much
+longer example, which illustrates most of the main features of the
+language, see the introduction to \ML\ in \DESCRIPTION.
 
-In the  next chapter,  the logic  supported by  the \HOL\  system (higher order
-logic) will be introduced, together with the tools in \ML\ for manipulating it.
-
-
-
+In the next chapter, the logic supported by the \HOL\ system (higher
+order logic) will be introduced, together with the tools in \ML\ for
+manipulating it.
 
 
 
@@ -256,3 +268,11 @@ logic) will be introduced, together with the tools in \ML\ for manipulating it.
 
 
 
+
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:
