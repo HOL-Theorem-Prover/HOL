@@ -47,7 +47,7 @@ val impl_param_cstr = ref ([]:(string * term list) list);
 fun add_impl_param x p =
   impl_param_cstr := (x,p)::(!impl_param_cstr);
 fun impl_of x =
-  map parse_term.AQ (assoc x (!impl_param_cstr)) handle HOL_ERR _ => []
+  map Absyn.AQ (assoc x (!impl_param_cstr)) handle HOL_ERR _ => []
 
 
 

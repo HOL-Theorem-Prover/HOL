@@ -12,7 +12,7 @@ sig
   val gen_assums : thm -> thm
 
   val add_impl_param : string -> term list -> unit
-  val impl_of : string -> term parse_term.preterm list
+  val impl_of : string -> Absyn.absyn list
 
   val param_eq : term -> term
 

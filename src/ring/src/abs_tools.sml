@@ -7,13 +7,13 @@ in
 (* My stuffs: adding implicit arguments to preterms and TotalDefn.Define *)
 
 
-local open parse_term in
+local open Absyn in
 
 val add_ip =
-  let fun add_ip (c as VAR s) =
-            foldl (fn (v,pt) => COMB(pt,v)) c (impl_of s)
-  	| add_ip (COMB(Rator,Rand)) = COMB(add_ip Rator, add_ip Rand)
-  	| add_ip (ABS(vs,body)) = ABS(vs, add_ip body)
+  let fun add_ip (c as IDENT s) =
+            foldl (fn (v,pt) => APP(pt,v)) c (impl_of s)
+  	| add_ip (APP(Rator,Rand)) = APP(add_ip Rator, add_ip Rand)
+  	| add_ip (LAM(vs,body)) = LAM(vs, add_ip body)
   	| add_ip (TYPED(pt,ty)) = TYPED(add_ip pt ,ty)
   	| add_ip pt = pt
   in add_ip
@@ -43,7 +43,7 @@ fun asm_store_thm(x,cl,tac) =
 
 
 fun Term q = let
-    val pt = parse_preTerm q
+    val pt = Parse.parse_preTerm q
     val pt' = add_ip pt
     val prfns = SOME(term_to_string, type_to_string)
   in
