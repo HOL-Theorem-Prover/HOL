@@ -211,7 +211,7 @@ fun IMP_EQ_CANON thm =
        val undisch_rewrites =
         if (is_eq conc)
         then if (loops undisch_thm)
-             then (trace(0,IGNORE("looping rewrite",thm)); [])
+             then (trace(1,IGNORE("looping rewrite",thm)); [])
              else if null (subtract (free_vars (rhs conc))
 			   (free_varsl (hyp thm)@free_vars(lhs conc)))
 		      then [undisch_thm]
