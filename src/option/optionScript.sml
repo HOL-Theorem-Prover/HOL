@@ -153,20 +153,12 @@ val option_JOIN_DEF = new_recursive_definition {
   name = "option_JOIN_DEF",
   rec_axiom = option_Axiom,
   def = Term`(option_JOIN NONE = NONE) /\
-             (option_JOIN (SOME x) =
-                if IS_SOME x then SOME (THE x) else NONE)`};
-
-val option_JOIN_THM = store_thm(
-  "option_JOIN_THM",
-  Term`(option_JOIN NONE = NONE) /\
-       (option_JOIN (SOME NONE) = NONE) /\
-       !x:'a. option_JOIN (SOME (SOME x)) = SOME x`,
-  REWRITE_TAC [option_JOIN_DEF, IS_SOME_DEF, THE_DEF]);
+             (option_JOIN (SOME x) = x)`};
 
 val option_rws =
     [IS_SOME_DEF, THE_DEF, IS_NONE_DEF, option_nchotomy,
      NOT_NONE_SOME,NOT_SOME_NONE, SOME_11, option_case_def,
-     option_APPLY_DEF, option_JOIN_THM];
+     option_APPLY_DEF, option_JOIN_DEF];
 
 val ex1_rw = prove(Term`!x. (?y. x = y) /\ (?y. y = x)`,
    GEN_TAC THEN CONJ_TAC THEN EXISTS_TAC (Term`x`) THEN REFL_TAC);
