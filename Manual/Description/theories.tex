@@ -109,37 +109,37 @@ logic@function composition, in \HOL\ logic|)}
 Mathematical relations can be directly represented in \HOL\ by the type
 {\small\verb+:'a -> 'a -> bool+}. The theory {\small\verb+relation+}
 inductively defines the transitive closure of a relation and also the
-basic notion of a relation being wellfounded. 
+basic notion of a relation being wellfounded.
 
 \begin{hol} \begin{verbatim}
    TC_DEF |- !R a b.
                TC R a b =
                  !P.
-                   (!x y. R x y ==> P x y) /\ 
-                   (!x y z. P x y /\ P y z ==> P x z) 
+                   (!x y. R x y ==> P x y) /\
+                   (!x y z. P x y /\ P y z ==> P x z)
                    ==>
                      P a b
-   
+
    WF_DEF |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
 \end{verbatim}\end{hol}
 
 Wellfoundedness is then used to justify the principle of wellfounded
-induction and also a general recursion theorem. The statement of the 
+induction and also a general recursion theorem. The statement of the
 recursion theorem requires that the notion of a function restriction be
-defined as well. 
+defined as well.
 
 \begin{hol} \begin{verbatim}
    WF_INDUCTION_THM
-   |- !R:'a -> 'a -> bool. 
-          WF R 
-            ==> !P. (!x. (!y. R y x ==> P y) ==> P x) 
+   |- !R:'a -> 'a -> bool.
+          WF R
+            ==> !P. (!x. (!y. R y x ==> P y) ==> P x)
             ==> !x. P x
-   
+
    RESTRICT_DEF |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
 
    WFREC_COROLLARY
    |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
-   
+
    WF_RECURSION_THM |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
 
 \end{verbatim}\end{hol}
@@ -637,7 +637,7 @@ logic these must be taken as primitive.  Note also that
 first order logic because predicates (\eg\ {\small\verb%P%}) cannot be
 quantified.
 
-Uses of the theorem \ml{INDUCTION} are supported by the 
+Uses of the theorem \ml{INDUCTION} are supported by the
 tactic \ml{numLib.INDUCT\_TAC}\index{INDUCT_TAC@\ml{INDUCT\_TAC}}
 (see the documentation in \REFERENCE\ for details).
 
@@ -717,7 +717,7 @@ The existence  of  a  recursive  function  \ml{fun} which  satisfies these two
 equations follows directly from the primitive recursion theorem
 \ml{num\_Axiom} shown above.   Specializing the  quantified variables \verb!x!
 and \verb!f!  in  a suitably  type-instantiated version  of \ml{num\_Axiom} so
-that 
+that
 
 \begin{hol}\begin{alltt}
    x\m{=}\verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)  {\rm and}  f\(=\)\verb!\!f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\))
@@ -1020,8 +1020,8 @@ The type \ml{:num}\index{num, the type in \HOL\
   logic@\ml{num}, the type in \HOL\ logic}, is typically thought of as
   being supplied with an infinite collection of numerals: \ml{1},
   \ml{2}, \ml{3}, \etc.  However, the \HOL\ logic has no way to define
-  such infinite families of constants, thus all numerals other than $0$ 
-  are actually built up from the constants introduced by the following 
+  such infinite families of constants, thus all numerals other than $0$
+  are actually built up from the constants introduced by the following
   definitions:
 \begin{itemize}
 \item $\vdash \forall x.\, \ml{NUMERAL}(x) = x$
@@ -1036,7 +1036,7 @@ The type \ml{:num}\index{num, the type in \HOL\
 \]
 but the \HOL\ parser and pretty-printer make such terms
 appear as numerals. This binary representation for numerals allows for
-asymptotically efficient calculation. Theorems supporting arithmetic 
+asymptotically efficient calculation. Theorems supporting arithmetic
 calculations involving numerals can be found in the \ml{numeral} theory;
 these are mechanized by the \ml{reduce} library.
 
@@ -1078,7 +1078,7 @@ integers), numerals are overloaded so that the numeral {\small\verb+1+} can
 actually stand for a natural number, an integer or a real value.  In
 order to precisely specify the desired type, the user can use single
 character suffixes (`\ml{n}' for the natural numbers, and `\ml{i}' for
-the integers): 
+the integers):
 
 \begin{session}
 \begin{verbatim}
@@ -1276,7 +1276,7 @@ are also made in the theory \ml{list}:
 \end{verbatim}\end{hol}
 
 \noindent For a complete list of available theorems in
-{\small\verb+listTheory+}, see \REFERENCE. 
+{\small\verb+listTheory+}, see \REFERENCE.
 
 \index{list theorems, in HOL logic@list theorems, in \HOL\ logic|)} \index{
 lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL\
@@ -1288,7 +1288,7 @@ lists|)}
 \subsection{The theory {\tt rich\_list}}\label{rich_list}
 
 The theory {\small\verb+list+} is relatively compact, largely because of
-how the system developed. An extensive theory of lists can be found in 
+how the system developed. An extensive theory of lists can be found in
 {\small\verb+rich_listTheory+}, in which the following
 well-known functions over lists are defined:
 
@@ -1686,3 +1686,8 @@ true : bool
 "RES_DURING(m,n)(\x. p x)" : term
 \end{verbatim}\end{session}
 
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
