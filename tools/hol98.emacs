@@ -10,9 +10,26 @@
 
 (define-prefix-command 'hol-map)
 (make-variable-buffer-local 'hol-buffer-name)
+(make-variable-buffer-local 'hol-buffer-ready)
+(set-default 'hol-buffer-ready nil)
 (set-default 'hol-buffer-name nil)
-(defvar hol98-executable "/home/kxs/hol98/bin/hol.enquote"
+
+(defvar hol98-executable "/local/scratch/kxs/hol98.3/bin/hol.enquote"
   "*Path-name for the HOL98 executable.")
+
+(put 'hol-term 'end-op
+     (function (lambda () (skip-chars-forward "^`"))))
+(put 'hol-term 'beginning-op
+     (function (lambda () (skip-chars-backward "^`"))))
+(defun hol-term-at-point () (thing-at-point 'hol-term))
+
+;;; makes buffer hol aware.  Currently this consists of no more than
+;;; altering the syntax table if its major is sml-mode.
+(defun make-buffer-hol-ready ()
+  (if (eq major-mode 'sml-mode)
+      (progn
+        (modify-syntax-entry ?` "$")
+        (modify-syntax-entry ?\\ "\\"))))
 
 (defun hol-buffer-ok (string)
   "Checks a string to see if it is the name of a good HOL buffer.
@@ -37,7 +54,55 @@ process in it."
       (sleep-for 1)
       (setq hol-buffer-name
             (read-buffer "HOL buffer: " nil t)))
-    hol-buffer-name))
+    hol-buffer-name)
+  (if (not hol-buffer-ready)
+      (progn (make-buffer-hol-ready) (setq hol-buffer-ready t))))
+
+
+(defun is-a-then (s)
+  (and s (or (string-equal s "THEN") (string-equal s "THENL"))))
+
+(defun next-hol-lexeme-terminates-tactic ()
+  (skip-syntax-forward " ")
+  (or (char-equal (following-char) ?,) (is-a-then (word-at-point))))
+
+(defun previous-hol-lexeme-terminates-tactic ()
+  (save-excursion
+    (skip-syntax-backward " ")
+    (or (char-equal (preceding-char) ?,)
+        (and (condition-case nil
+                 (progn (backward-char 1) t)
+                 (error nil))
+             (is-a-then (word-at-point))))))
+
+;;; returns true and moves forward a sexp if this is possible, returns nil
+;;; and stays where it is otherwise
+(defun my-forward-sexp ()
+  (condition-case nil
+      (progn (forward-sexp 1) t)
+    (error nil)))
+(defun my-backward-sexp()
+  (condition-case nil
+      (progn (backward-sexp 1) t)
+    (error nil)))
+
+(defun find-tactic-extent ()
+  (interactive)
+  (let* (;; first search forward
+         (endpt
+          (save-excursion
+            (while (and (not (next-hol-lexeme-terminates-tactic))
+                        (my-forward-sexp)) nil)
+            (skip-syntax-backward " ")
+            (point)))
+         (startpt
+          (save-excursion
+            (while (and (not (previous-hol-lexeme-terminates-tactic))
+                        (my-backward-sexp)) nil)
+            (point))))
+    (goto-char endpt)
+    (push-mark startpt nil t)))
+
 
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
@@ -48,24 +113,29 @@ process in it."
           (format "%s (%s) handle e => Raise e" e-string region-string)))
     (send-string-to-hol tactic-string)))
 
-(defun copy-region-as-hol-goal (start end arg)
-  "Send selected region to HOL process as goal.
-Replace existing goal with ARG."
-  (interactive "r\nP")
-  (let* ((region-string (buffer-substring start end))
-         (drop-string (if arg "goalstackLib.drop(); " ""))
-         (goal-string (format "%sgoalstackLib.g `%s`"
-                              drop-string
-                              region-string)))
+(defun send-string-as-hol-goal (s)
+  (let ((goal-string
+         (format  "goalstackLib.g `%s`" s)))
     (send-string-to-hol goal-string)
     (send-string-to-hol "goalstackLib.set_backup 100;")))
+
+(defun hol-do-goal (arg)
+  "Send term around point to HOL process as goal.
+If prefix ARG is true, or if in transient mark mode and region is active
+then send region instead."
+  (interactive "P")
+  (if (or (and mark-active transient-mark-mode) arg)
+      (send-string-as-hol-goal
+       (buffer-substring (region-beginning) (region-end)))
+    (send-string-as-hol-goal (hol-term-at-point))))
+
 
 (defun copy-region-as-hol-definition (start end arg)
   "Send selected region to HOL process as definition/expression."
   (interactive "r\nP")
   (let* ((buffer-string (buffer-substring start end))
          (send-string (if arg
-                         (concat buffer-string "handle e => Raise e")
+                         (concat "(" buffer-string ") handle e => Raise e")
                        buffer-string)))
     (send-string-to-hol send-string)))
 
@@ -102,9 +172,9 @@ Replace existing goal with ARG."
   "Display the HOL window in such a way that it displays most text."
   (interactive)
   (ensure-hol-buffer-ok)
-  (save-excursion
+  (save-selected-window
     (select-window (get-buffer-window hol-buffer-name t))
-    (delete-other-windows)
+    ;; (delete-other-windows)
     (raise-frame)
     (goto-char (point-max))
     (recenter -1)))
@@ -146,10 +216,21 @@ Replace existing goal with ARG."
   (interactive "fFile to use: ")
   (send-string-to-hol (concat "use \"" filename "\";")))
 
-(defun hol-load-file (filename)
-  "Gets HOL session to \"load\" a file."
-  (interactive "sLibrary to load: ")
-  (send-string-to-hol (concat "load \"" filename "\";")))
+(defun hol-load-string (s)
+  (send-string-to-hol
+   (concat "(print  \"Loading " s "\\n\"; " "load \"" s "\");")))
+
+(defun hol-load-file (arg)
+  "Gets HOL session to \"load\" the file at point.
+If there is no filename at point, then prompt for file.
+If the region is active (in transient mark mode) then send region instead.
+With prefix ARG prompt for a file-name to load.  "
+  (interactive "P")
+  (let* ((wap (word-at-point))
+         (s (if (and mark-active transient-mark-mode)
+                (buffer-substring (region-beginning) (region-end))
+              (if (or (not wap) arg) (read-string "Library to load: ") wap))))
+    (hol-load-string s)))
 
 ;** hol map keys and function definitions
 
@@ -169,7 +250,8 @@ or at level 10 with a bare prefix. "
                     (t (make-comint "HOL98" hol98-executable)))))
     (setq hol-buffer-name (buffer-name buf))
     (switch-to-buffer buf)
-    (setq hol-buffer-name (buffer-name buf))))
+    (setq hol-buffer-name (buffer-name buf))
+    (setq comint-scroll-show-maximum-output t)))
 
 (defun run-program (filename niceness)
   "Runs a PROGRAM in a comint window, with a given (optional) NICENESS."
@@ -189,6 +271,27 @@ or at level 10 with a bare prefix. "
                                    nil)))))
     (switch-to-buffer buf)))
 
+(defun hol-toggle-show-types ()
+  "Toggles the globals show_types variable."
+  (interactive)
+  (message "Toggling show_types")
+  (send-string-to-hol "Globals.show_types := not (!Globals.show_types)"))
+
+(defun set-hol-executable (filename)
+  "Sets the HOL executable variable to be equal to FILENAME."
+  (interactive "fHOL executable: ")
+  (setq hol98-executable filename))
+
+(defun hol-restart-goal ()
+  "Restarts the current goal."
+  (interactive)
+  (send-string-to-hol "goalstackLib.restart()"))
+
+(defun hol-drop-goal ()
+  "Drops the current goal."
+  (interactive)
+  (send-string-to-hol "goalstackLib.drop()"))
+
 (define-key global-map "\M-h" 'hol-map)
 
 (define-key hol-map "\C-c" 'hol-interrupt)
@@ -196,14 +299,17 @@ or at level 10 with a bare prefix. "
 (define-key hol-map "\C-v" 'hol-scroll-up)
 (define-key hol-map "\M-v" 'hol-scroll-down)
 (define-key hol-map "b"    'hol-backup)
-(define-key hol-map "d"    'copy-region-as-hol-definition)
+(define-key hol-map "d"    'hol-drop-goal)
 (define-key hol-map "e"    'copy-region-as-hol-tactic)
-(define-key hol-map "g"    'copy-region-as-hol-goal)
+(define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "h"    'hol98)
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'copy-region-as-wmizar-tactic)
 (define-key hol-map "n"    'hol-name-top-theorem)
 (define-key hol-map "p"    'hol-print)
+(define-key hol-map "\M-r" 'copy-region-as-hol-definition)
 (define-key hol-map "r"    'hol-rotate)
+(define-key hol-map "R"    'hol-restart-goal)
 (define-key hol-map "s"    'send-string-to-hol)
+(define-key hol-map "t"    'hol-toggle-show-types)
 (define-key hol-map "u"    'hol-use-file)
