@@ -24,7 +24,7 @@ struct
 
 *)
 
-open HolKernel Net Conv Psyntax;
+open HolKernel Conv Psyntax;
 
 type robdd = Robdd.robdd;
 type 'a net = 'a Net.net;
@@ -161,7 +161,7 @@ val current_bdd_map:bdd_map =
       {origin_structure = "BDDOracle",
        origin_function  = "Polyhash.find",
        message          = "Hash table lookup failure"}),
-  Net.empty_net);
+  Net.empty);
 
         
 fun lookup_var var_map name =
@@ -217,7 +217,7 @@ fun find_data msg htbl []      = ERR msg "find_data"
 (*****************************************************************************)
 
 fun NetPeek var_map (htbl,net) tm =
- let val netl = Net.lookup tm net
+ let val netl = Net.match tm net
  in
   if null netl
    then NONE
@@ -435,7 +435,7 @@ fun BDD_CONV (htbl,net) tm =
 (*****************************************************************************)
 
 and NetPrePeek (htbl,net) tm =
- let val netl = Net.lookup tm net
+ let val netl = Net.match tm net
  in
   if null netl
    then NONE
@@ -534,7 +534,7 @@ fun reset_state var_order =
  in
   (map (fn(tm,_) => Polyhash.remove htbl tm) (Polyhash.listItems htbl);
    bdd_state := (add_names_to_table empty_table var_order,
-                 (htbl,Net.empty_net)))
+                 (htbl,Net.empty)))
  end;
 
 (*****************************************************************************)
@@ -610,7 +610,7 @@ fun add_definition defn (tab,bdd_map)
                              end
      val (htbl,net)    = bdd_map
      val bdd_map'      = ((Polyhash.insert htbl (tm_descr,tm_bdd);htbl),
-                          Net.enter(tm_descr,tm_descr)net)
+                          Net.insert(tm_descr,tm_descr)net)
  in
   ((tm_descr,tm_bdd),((c',var_map'), bdd_map'))
  end;
