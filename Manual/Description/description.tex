@@ -5,6 +5,10 @@
 \documentclass[12pt]{book}
 \usepackage{charter}
 \usepackage{latexsym}
+%\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{amsbsy}
+%\usepackage{amsthm}
 \usepackage{makeidx}
 \usepackage{fleqn}
 \usepackage{alltt}
@@ -19,11 +23,11 @@
 %\includeonly{title,contents,preface,ML,logic,semantics,system,drules,conv,see}
 
 %\includeonly{title,contents,preface,ML,logic,semantics,system,drules,conv,index,see}
-
 %\includeonly{title,contents,preface,ML}
 %\includeonly{tactics}
 %\includeonly{preface,ack}
 %\includeonly{logic,semantics}
+%\includeonly{system,theories,libraries}
 
 \makeindex
 
@@ -67,6 +71,7 @@
 
    \include{system}                      % embedding HOL logic in ML
    \include{theories}
+   \include{definitions}
    \include{libraries}
 %   \include{map}
    \include{misc}
@@ -75,12 +80,12 @@
    % part 3: Theorem Proving with HOL
    % ---------------------------------------------------------------------
 
-   \part{Theorem Proving with HOL}       % new part
+%   \part{Theorem Proving with HOL}       % new part
 
-   \include{syntax}
-   \include{drules}                      % derived rules
-   \include{conv}                        % conversions
-   \include{tactics}                     % tactics
+%   \include{syntax}
+%   \include{drules}                      % derived rules
+%   \include{conv}                        % conversions
+%   \include{tactics}                     % tactics
 %   \include{see}
 
    % ---------------------------------------------------------------------
@@ -104,8 +109,3 @@
 \printindex
 
 \end{document}
-
-
-
-
-

@@ -1,6 +1,559 @@
-\chapter{Commonly-used Libraries}\label{HOLlibraries}
+\chapter{Libraries}\label{HOLlibraries}
 
 \newcommand{\simpset}{simpset}
+{
+ \newcommand{\term}      {\mbox{\it term}}
+ \newcommand{\IMP}       {\mbox{\tt ==>}}
+ \newcommand{\ALL}       {\mbox{\tt !}}
+ \newcommand{\EXISTS}    {\mbox{\tt ?}}
+ \newcommand{\CHOOSE}    {\mbox{\tt @}}
+ \newcommand{\EXISTSONE} {\mbox{\tt ?!}}
+ \newcommand{\LET}       {\mbox{\tt let}}
+ \newcommand{\und}       {\mbox{\tt and}}
+ \newcommand{\IN}        {\mbox{\tt in}}
+ \newcommand{\CONS}      {\mbox{\tt CONS}}
+ \newcommand{\INSERT}    {\mbox{\tt INSERT}}
+ \newcommand{\SUC}       {\mbox{\tt SUC}}
+ \newcommand{\vstr}      {\mbox{\it vstr}}
+ \newcommand{\numeral}   {\mbox{\it numeral}}
+ \newcommand{\charseq}   {\mbox{\it charseq}}
+
+
+\section{Parsing and Prettyprinting}
+
+\HOL{} types and terms are ultimately built by application of the
+primitive (abstract) constructors for types and terms. However, in
+order to accomodate the wide variety of mathematical expression,
+\HOL{} has flexible infrastracture for parsing and prettyprinting 
+types and terms.
+
+\subsection{Parsing Types}
+
+\subsection{Parsing Terms}
+
+The HOL grammar gets extended when a new constant is introduced. The
+introduction of new constants is discussed in
+Sections~\ref{sec:constant-definitions} and \ref{conspec}. 
+
+The type inference \index{type checker, for HOL logic vs ML@type
+  checker, for \HOL{} logic \emph{vs} \ML} algorithm used for the
+\HOL{} logic is almost identical to that used for \ML. For example,
+the \ML{} expression \ml{fn~x~=>~x} will be ascribed \ML{} type
+\ml{'a~->~'a}, and the \HOL{} term constructed by \verb+``\x.x``+ will
+get an analogous type, as shown in the session below.  This session
+also shows that a \HOL{} term has both an \ML{} type (namely
+\ml{term}) and a \HOL{} type (\ml{:'a~->~'a} in this case).
+
+\begin{session}
+\begin{verbatim}
+- ``\x. x``;
+<<HOL message: inventing new type variable names: 'a.>>
+> val it = ``\x. x`` : term
+
+- type_of it;
+> val it = ``:'a -> 'a`` : hol_type
+\end{verbatim}
+\end{session}
+
+\noindent For terms of polymorphic type, \ie, terms whose types have
+type variables, the type checker will invent names for the type
+variables (as in the above session).  This is further shown in the
+following session (in which we first tell the \HOL\ printer to output
+type information):
+
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- Term `f x`;
+<<HOL message: inventing new type variable names: 'a, 'b.>>
+> val it = `(f :'a -> 'b) (x :'a)` : term
+\end{verbatim}
+\end{session}
+
+\noindent In this example, {\small\verb+x+} is unconstrained in the term
+{\small\verb+f x+}, since it appears only as an argument. The system assigns
+it the type variable {\small\verb+'a+}. On the other hand, {\small\verb+f+} is a function,
+since it is applied to {\small\verb+x+}. Thus {\small\verb+f+} has a
+function type, the domain of which is {\small\verb+'a+}; moreover, since
+the result of the application is also unconstrained, the range of the
+function type is chosen to be the next type variable different from
+{\small\verb+'a+}, \ie, {\small\verb+'b+}.
+
+Allowing the system to invent type variables introduces a degree of
+non-determinism that may not be suitable for some applications. In such
+cases, explicit type constraints should be used. The system can be
+prevented from inventing type variables by setting the flag
+{\small\verb+Globals.guessing_tyvars+} to {\small\verb+false+}.
+
+\subsection{Type constraints}
+
+A term can be constrained to be of a certain type.  For example,
+\verb+X:bool+ constrains the variable \verb+X+ to have type
+\verb+bool+. Similarly, \verb+T:bool+ performs a (vacuous) constraint
+of the constant \verb+T+ to \verb+bool+. An attempt to constrain a
+term inappropriately will raise an exception: for example,
+\begin{verbatim}
+  if T then (X:ind) else (Y:bool)
+\end{verbatim}
+will fail because both branches of a conditional must be of the same
+type.  Type constraints can be seen as a suffix that binds more
+tightly than everything except function application.  Thus $\term\
+\ldots\ \term \ : \type$ is equal to $(\term\ \ldots\ \term)\ :
+\type$, but $x < y:\mbox{\tt num}$ is a legitimate (though, again
+redundant) constraint on just the variable $y$.
+
+The inclusion of \verb+:+ in the symbolic identifiers means that some
+constraints may need to be separated by white space. For example,
+\begin{verbatim}
+    $=:bool->bool->bool
+\end{verbatim}
+will be broken up by the HOL lexer as
+\begin{verbatim}
+    $=: bool -> bool -> bool
+\end{verbatim}
+and parsed as an application of the symbolic identifier \verb+$=:+ to
+the argument list of terms [\verb+bool+, \verb+->+, \verb+bool+,
+\verb+->+, \verb+bool+]. A well-placed space will avoid this problem:
+\begin{verbatim}
+    $= :bool->bool->bool
+\end{verbatim}
+is parsed as the symbolic identifier "=" constrained by a type.
+
+\subsubsection{Type inference}
+
+Consider the term \verb+x = T+.  Each term (and all of its subterms),
+has a type in the HOL logic. Now, \verb+T+ has type \verb+bool+. This
+means that the constant \verb+=+ has type \verb+xty -> bool -> bool+,
+for some type \verb+xty+. Since the type scheme for \verb+=+ is
+\verb+'a -> 'a -> bool+, we know that \verb+xty+ must in fact be
+\verb+bool+ in order for the type instance to be well-formed. Knowing
+this, we can deduce that the type of `x' must be \verb+bool+.
+
+Ignoring the jargon ("scheme" and "instance") in the previous
+paragraph, we have conducted a type assignment to the term structure,
+ending up with a well-typed term. It would be very tedious for users
+to conduct such argumentation by hand for each term entered to \HOL{}.
+Thus, \HOL{} uses an adaptation of Milner's type inference algorithm
+for ML when constructing terms via parsing. At the end of type
+inference, unconstrained type variables get assigned by the system.
+Usually, this assignment does the right thing. However, at times, the
+most general type is not what is desired and the user must add type
+constraints to the relevant subterms. For tricky situations, the
+global variable \verb+show_types+ can be assigned. When this flag is
+set, the prettyprinters for terms and theorems will show how types
+have been assigned to subterms. If you do not want the system to
+assign type variables for you, the global variable
+\verb+guessing_tyvars+ can be set to \verb+false+, in which case the
+existence of unassigned type variables at the end of type inference
+will raise an exception.
+
+\subsection{Overloading}
+
+A limited amount of overloading resolution is performed by the quotation
+parser for terms. For example, the tilde symbol ({\small\verb+~+})
+denotes boolean negation in the initial theory of \HOL\, and it also denotes
+the additive inverse in the {\small\verb+integer+} and
+{\small\verb+real+} theories. If we load the {\small\verb+integer+}
+theory and enter an ambiguous term featuring {\small\verb+~+}, the
+system will inform us that overloading resolution is being performed.
+
+\setcounter{sessioncount}{1}
+\begin{session}
+\begin{verbatim}
+- load "integerTheory";
+> val it = () : unit
+
+- Term `~~x`;
+<<HOL message: more than one resolution of overloading was possible.>>
+> val it = `~~x` : term
+
+- type_of it;
+> val it = `:bool` : hol_type
+\end{verbatim}
+\end{session}
+
+A priority mechanism is used to resolve multiple possible choices. In
+the example, {\small\verb+~+} could be consistently chosen to have type
+{\small\verb+:bool -> bool+} or {\small\verb+:int -> int+}, and the
+mechanism has chosen the former. For finer control, explicit type
+constraints may be used. In the following session, the
+{\small\verb+~~x+} in the first quotation has type {\small\verb+:bool+},
+while in the second, a type constraint ensures that {\small\verb+~~x+} has
+type {\small\verb+:int+}.
+
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- Term `~(x = ~~x)`;
+<<HOL message: more than one resolution of overloading was possible.>>
+> val it = `~((x :bool) = ~~x)` : term
+
+- Term `~(x:int = ~~x)`;
+> val it = `~((x :int) = ~~x)` : term
+\end{verbatim}
+\end{session}
+
+Note that the symbol {\small\verb+~+} stands for two different constants in
+the second quotation; its first occurrence is boolean negation, while
+the other two occurrences are the additive inverse operation for integers.
+For more information on how to set up and use overloading, consult
+\REFERENCE.
+
+In order to provide some notational flexibility, constants come in
+various flavours or {\it fixities}: besides being an ordinary constant
+(with a fixity of {\sf Prefix}), constants can also be {\it binders},
+{\it true prefixes}\footnote{The use of the term ``true prefix'' is
+forced upon us by the history of the system, which reserved the
+classification ``prefix'' for terms without any special syntactic
+features.}, {\it suffixes}, {\it infixes}, or {\it closefixes}.  More
+generally, terms can also be represented using reasonably arbitrary
+{\it mixfix} specifications.  The degree to which terms bind their
+associated arguments is known as precedence.  The higher this number,
+the tighter the binding.  For example, when introduced, \verb-+- has a
+precedence of 500, while the tighter binding multiplication (\verb+*+)
+has a precedence of 600.
+
+\subsubsection{Binders}
+
+A binder is a construct that binds a variable; for example, the
+universal quantifier. In HOL, this is represented using a trick that
+goes back to Alonzo Church: a binder is a constant that takes a lambda
+abstraction as its argument. The lambda binding is used to implement
+the binding of the construct. This is an elegant and uniform solution.
+Thus the concrete syntax \verb+!v. M+ is represented by the
+application of the constant \verb+!+ to the abstraction \verb+(\v. M)+.
+
+The most common binders are \verb+!+, \verb+?+, \verb+?!+, and
+\verb+@+. Sometimes one wants to iterate applications of the same
+binder, \eg,
+\begin{alltt}
+  !x. !y. ?p. ?q. ?r. \term.
+\end{alltt}
+This can instead be rendered
+\begin{alltt}
+  !x y. ?p q r. \term.
+\end{alltt}
+
+\subsubsection{Infixes}
+
+Infix constants can associate in one of three different ways: right,
+left or not at all.  (If \verb-+- were non-associative, then {\tt 3 +
+  4 + 5} would fail to parse; one would have to write {\tt (3 + 4) +
+  5} or {\tt 3 + (4 + 5)} depending on the desired meaning).  The
+precedence ordering for the initial set of infixes is \verb+/\+,
+\verb+\/+, \verb+==>+, \verb+=+,
+ \begin{Large}\verb+,+\end{Large} (comma\footnote{When {\tt pairTheory} has
+   been loaded.}). Moreover, all of these constants are right
+ associative. Thus
+\begin{verbatim}
+     X /\ Y ==> C \/ D, P = E, Q
+\end{verbatim}
+ is equal to
+\begin{verbatim}
+     ((X /\ Y) ==> (C \/ D)), ((P = E), Q).
+\end{verbatim}
+
+\noindent An expression \[\term\ \verb+<infix>+\ \term\] is internally
+represented as \[((\verb+<infix>+\ \term)\ \term)\].
+
+\subsubsection{True prefixes}
+
+Where infixes appear between their arguments, true prefixes appear
+before theirs.  This might initially appear to be the same thing as
+happens with normal function application (is $f$ in $f(x)$ not acting
+as a prefix?), but in fact, it is useful to allow for prefixes to have
+binding power less than that associated with function application.  An
+example of this is \verb+~+, logical negation.  This is a prefix with
+lower precedence than function application.  Normally
+\[
+   f\;x\; y\qquad \mbox{is parsed as}\qquad (f\; x)\; y
+\] but \[
+  \mbox{\tt \~{}}\; x\; y\qquad\mbox{is parsed as}\qquad
+  \mbox{\tt \~{}}\; (x\; y)
+\] because the precedence of \verb+~+ is lower than that of function
+application.  The unary negation symbol would also typically be
+defined as a true prefix, if only to allow one to write \[ {\it
+  negop}\,{\it negop}\,3
+\] (whatever {\it negop} happened to be) without needing extra parentheses.
+
+\subsubsection{Suffixes}
+
+Suffixes appear after their arguments.  There are no suffixes
+introduced into the standard theories available in HOL, but users are
+always able to introduce their own if they choose.  Suffixes are
+associated with a precedence just as infixes and true prefixes are.
+If \verb+p+ is a true prefix, \verb+i+ an infix, and \verb+s+ a
+suffix, then there are six possible orderings for the three different
+operators based on their precedences, giving five parses for
+$\verb+p+\; t_1\; \verb+i+\; t_2\; \verb+s+$ depending on the relative
+precedences:
+\[
+\begin{array}{cl}
+\mbox{\begin{tabular}{c}Precedences\\(lowest to highest)\end{tabular}} &
+\multicolumn{1}{c}{\mbox{Parses}}\\
+\hline
+p,\;i,\;s & \verb+p+\;(t_1\;\verb+i+\;(t_2\;\verb+s+))\\
+p,\;s,\;i & \verb+p+\;((t_1\;\verb+i+\;t_2)\;\verb+s+)\\
+i,\;p,\;s & (\verb+p+\;t_1)\;\verb+i+\;(t_2\;\verb+s+)\\
+i,\;s,\;p & (\verb+p+\;t_1)\;\verb+i+\;(t_2\;\verb+s+)\\
+s,\;p,\;i & (\verb+p+\;(t_1\;\verb+i+\;t_2))\;\verb+s+\\
+s,\;i,\;p & ((\verb+p+\;t_1)\;\verb+i+\;t_2)\;\verb+s+\\
+\end{array}
+\]
+
+\subsubsection{Closefixes}
+
+Closefix terms are operators that completely enclose their arguments.
+An example one might use in the development of a theory of
+denotational semantics is semantic brackets.  Thus, the HOL parsing
+facilities can be configured to allow one to write \texttt{denotation x}
+as \texttt{[| x |]}.  Closefixes are not associated with precedences
+because they can not compete for arguments with other operators.
+
+There is some further syntax that is specially treated by the parser.
+The theory of pairs introduces the infix pairing operator
+(\begin{Large}\verb+,+\end{Large}) as well as the corresponding infix
+product (\verb+#+) type operator. The theory of sets introduces
+notation for the empty set \verb+{}+ (or \verb+EMPTY+), insertion (the infix \verb+INSERT+), set
+comprehension, enumerated sets, and many other defined constants. The
+theory of lists introduces the constants \verb+NIL+ (the surface
+syntax \verb+[]+ can be used) and \verb+CONS+, as well as notation for
+enumerated lists. The theories of (Peano) numbers and strings
+introduce the constructors \verb+0+, \verb+SUC+, \verb+""+, and
+\verb+STRING+, as well as literals for numbers and strings.
+
+Thus, if the theories of pairs, sets, numbers, strings, and lists are
+loaded, the HOL grammar is an extension of that in
+Table~\ref{expanded-grammar}.
+
+\begin{table}
+  \[
+  \begin{array}{rclr}
+    \term & ::= & \term : \type & \mbox{(type constraint)} \\
+    & | & \term\ \term & \mbox{(application)} \\
+    & | & \CONS\ \term \ \term & \mbox{(list builder)} \\
+    & | & \term\ \verb|::|\ \term & \mbox{(list builder)}\\
+    & | & \term \ \INSERT\ \term & \mbox{(set builder)} \\
+    & | & \SUC\ \term & \mbox{(successor)} \\
+    & | & \verb+~+ \term & \mbox{(negation)} \\
+    & | & \term\ =\ \term & \mbox{(equality)} \\
+    & | & \term\ \IMP\ \term & \mbox{(implication)} \\
+    & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
+    & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
+    & | & \term\ \verb+<+ \ \term & \mbox{(less-than)} \\
+    & | & \term\ \verb!+! \ \term & \mbox{(addition)} \\
+    & | & \term\ \verb!*! \ \term & \mbox{(multiplication)} \\
+    & | & \term\ \verb!-! \ \term & \mbox{(subtraction)} \\
+    & | & \term\ \verb+=>+\ \term\ |\ \term & \mbox{(conditional)} \\
+    & | & \verb|if|\ \term\ \verb|then|\ \term\ \verb|else|\ \term & \mbox{(conditional)}\\
+    & | & \bs\vstr_1\ldots\vstr_n.\ \term & \mbox{(lambda abstraction)} \\
+    & | & \ALL \vstr_1\ldots\vstr_n.\ \term & \mbox{(forall)} \\
+    & | & \EXISTS \vstr_1\ldots\vstr_n.\ \term & \mbox{(exists)} \\
+    & | & \CHOOSE \vstr_1\ldots\vstr_n.\ \term & \mbox{(choose)} \\
+    & | & \EXISTSONE \vstr_1\ldots\vstr_n.\ \term &\mbox{(exists-unique)} \\
+    & | & \LET\; \vstr = \term  & \\
+    &   & [\und\ \vstr = \term]^{*}\ \IN\ \term & \mbox{(let expression)} \\
+    & | & \verb+T+ & \mbox{(truth)} \\
+    & | & \verb+F+ & \mbox{(falsity)} \\
+    & | & \verb+[]+ & \mbox{(empty list)} \\
+    & | & \verb+{}+ & \mbox{(empty set)} \\
+    & | & \verb+(+ \term \verb+,+ \term \verb+)+ & \mbox{(pair)} \\
+    & | & \ident & \mbox{(constant or variable)} \\
+    & | & \numeral & \mbox{(numeric literal)} \\
+    & | & \verb+"+\charseq \verb+"+& \mbox{(string literal)} \\
+    & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)} \\
+    & | & \verb+[+ \term \verb+;+ \ldots \verb+;+ \term \verb+]+ &
+    \mbox{(enumerated list)} \\
+    & | & \verb+{+ \term \verb+;+ \ldots \verb+;+ \term \verb+}+ &
+    \mbox{(enumerated set)} \\
+    & | & \verb+{+ \term \ \verb+|+\  \term \verb+}+ & \mbox{(set comprehension)}
+  \end{array}
+  \]
+  \caption{Expanded Term Grammar} \label{expanded-grammar}
+\end{table}
+
+In the table, the varstruct ({\it vstr\/}) construct is used. A
+varstruct is an arbitrarily nested tuple of variables,
+where each variable only occurs once. The translation of varstructs
+into the internal abstract syntax trees is complex.
+\[
+\begin{array}{rcl}
+  \vstr & ::= & \ident : \type \\
+  & | & \ident  \\
+  & | & \vstr \verb+,+ \vstr \\
+  & | & \verb+(+ \vstr \verb+)+\\
+  & | & \verb+(+\vstr {\tt ::} \term\verb+)+\\
+\end{array}
+\]
+
+Also, in the term grammar a \charseq\ is just a finite sequence of
+characters.
+
+The current term grammar is available interactively through a call to
+the function \texttt{term\_grammar()}.
+
+\subsection{Parser tricks and magic}
+
+Here we describe how to achieve some useful effects with the
+parser in \HOL{}.
+
+\begin{description}
+\item [Mix-fix syntax for {\it if-then-else}:] The first step in
+  bringing this about is to look at the general shape of expressions
+  of this form.  In this case, it will be:
+  \[
+  \mbox{\tt if}\;\; \dots \;\;\mbox{\tt then}\;\;\dots\;\;
+  \mbox{\tt else}\;\;\dots
+  \]
+  Because there needs to be a ``dangling'' term to the right, the
+  appropriate fixity is \texttt{TruePrefix}.  Knowing that the
+  underlying term constant is called \texttt{COND}, the simplest way
+  to achieve the desired syntax is:
+  \begin{verbatim}
+val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
+                 pp_elements = [TOK "if", BreakSpace(1,0), TM,
+                                BreakSpace(1,0),
+                                TOK "then", BreakSpace(1,0), TM,
+                                BreakSpace(1,0),
+                                TOK "else", BreakSpace(1,0)],
+                 paren_style = Always,
+                 block_style =
+                   (AroundEachPhrase, (PP.CONSISTENT, 0))};
+\end{verbatim}
+  \noindent The actual rule is slightly more complicated, and is
+  in \texttt{src/bool/boolScript.sml}.
+
+
+\item[Mix-fix syntax for term substitution:] Here the desire is to be able
+  to write something like:
+  \[
+  \mbox{\texttt{[}}\,t_1\,\mbox{\texttt{/}}\,t_2\,\mbox{\texttt{]}}\,t_3
+  \]
+  denoting the substitution of $t_1$ for $t_2$ in $t_3$, perhaps
+  translating to \mbox{\texttt{SUB} $t_1$ $t_2$ $t_3$}.  This looks
+like it should be another \texttt{TruePrefix}, but the choice of the
+square brackets (\texttt{[} and \texttt{]}) as delimiters would
+conflict with the concrete syntax for list literals if this was done.
+Given that list literals are effectively of the \texttt{CloseFix}
+class, the new syntax must be of the same class.  This is easy enough
+to do: we set up syntax \[
+\mbox{\texttt{[}}\,t_1\,\mbox{\texttt{/}}\,t_2\,\mbox{\texttt{]}}
+  \] to map to \mbox{\texttt{SUB} $t_1$ $t_2$} a value of a functional
+  type, that when applied to a third argument will look
+  right.\footnote{Note that doing the same thing for the
+    \textit{if-then-else} example in the previous example would be
+    inappropriate, as it would allow one to write \[
+    \texttt{if}\,P\,\texttt{then}\,Q\,\texttt{else}
+    \] without the trailing argument}
+  The rule for this is thus:
+  \begin{verbatim}
+val _ = add_rule {term_name = "SUB", fixity = Closefix,
+                  pp_elements = [TOK "[", TM, TOK "/", TM, TOK "]"],
+                  paren_style = OnlyIfNecessary,
+                  block_style =
+                    (AroundEachPhrase, (PP.INCONSISTENT, 2))};
+\end{verbatim}
+
+\item[Aliasing] If one wants a special syntax to be an ``alias'' for a
+  normal HOL form, this is easy to achieve; both examples so far have
+  effectively done this.  However, if one just wants to have a normal
+  one-for-one substitution of one string for another, one can't use
+  the grammar/syntax phase of parsing to do this.  Instead, one can
+  use the overloading mechanism.  For example, let us alias
+  \texttt{MEM} for \texttt{IS\_EL}.  We need to use the function
+  \texttt{overload\_on} to overload the original constant for the new
+  name:
+  \begin{verbatim}
+val _ = overload_on ("MEM", Term`IS_EL`);
+\end{verbatim}
+
+\item[Making addition right associative] If one has a number of old
+  scripts that assume addition is right associative because this is
+  how HOL used to be, it might be too much pain to convert.  The trick
+  is to remove all of the rules at the given level of the grammar, and
+  put them back as right associative infixes.  The easiest way to tell
+  what rules are in the grammar is by inspection (use
+  \texttt{term\_grammar()}).  With just \texttt{arithmeticTheory}
+  loaded, the only infixes at level 500 are \texttt{+} and
+  \texttt{-}.  So, we remove the rules for them:
+  \begin{verbatim}
+val _ = app temp_remove_rules_for_term ["+", "-"];
+\end{verbatim}
+  \noindent And then we put them back with the appropriate
+  associativity:
+\begin{verbatim}
+val _ = app (fn s => temp_add_infix(s, 500, RIGHT)) ["+", "-"];
+\end{verbatim}
+\noindent Note that we use the \texttt{temp\_} versions of these two
+functions so that other theories depending on this one won't be
+affected.  Further note that we can't have two infixes at the same
+level of precedence with different associativities, so we have to
+remove both operators, not just addition.
+
+\end{description}
+
+}
+
+\subsection{Backwards compatibility of syntax}
+
+This section of the manual documents the (extensive) changes made to
+the parsing of HOL terms and types in the Taupo release (one of the
+HOL3 releases) and beyond from the point of view of a user who doesn't
+want to know how to use the new facilities, but wants to make sure
+that their old code continues to work cleanly.
+
+The changes which may cause old terms to fail to parse are:
+\begin{itemize}
+\newcommand\condexp{\mbox{$p \; {\tt =>} \; q \; {\tt |} \; r$}}
+\item The precedence of type annotations has completely changed.  It
+  is now a very tight suffix (though with a precedence weaker than
+  that associated with function application), instead of a weak one.
+  This means that \mbox{\tt (x,y:bool \# bool)} should now be written
+  as \mbox{\tt (x,y):bool \# bool}. The previous form will now be
+  parsed as a type annotation applying to just the \verb+y+.  This
+  change brings the syntax of the logic closer to that of SML and
+  should make it generally easier to annotate tuples, as one can now
+  write \[ (x\,:\,\tau_1,\;y\,:\,\tau_2,\dots z\,:\,\tau_n)
+  \] instead of \[
+  (x\,:\,\tau_1, \;(y\,:\,\tau_2, \dots (z\,:\,\tau_n)))
+  \] where extra parentheses have had to be added just to allow one to
+  write a frequently occurring form of constraint.
+\item Most arithmetic operators are now left associative instead of
+  right associative.  In particular, $+$, $-$, $*$ and {\tt DIV} are
+  all left associative.  Similarly, the analogous operators in other
+  numeric theories such as {\tt integer} and {\tt real} are also left
+  associative.  This brings the HOL parser in line with standard
+  mathematical practice.
+\item The binding equality in {\tt let} expressions is treated exactly
+  the same way as equalities in other contexts.  In previous versions
+  of HOL, equalities in this context have a different, weak binding
+  precedence.  This difference can be seen in the following expression
+  which parses successfully in the old version:
+  \[ {\tt let} \; x \; = \; \condexp \; {\tt
+  in} \;Q \] In Taupo releases and later, this expression will not
+  parse because the conditional expression binds to the left more
+  weakly than the equality binds to the right, and the parser ends up
+  believing that the binding between the \verb+let+ and the \verb+in+
+  is not an equality after all, as it should be.
+\item Old style conditional expressions in the right half of set
+  comprehensions have to be parenthesised to avoid confusing the
+  parser.  Thus \[
+  \{ \; x \; | \; \condexp \; \}
+   \qquad\mbox{must be written} \qquad
+  \{ \; x \; | \; (\condexp) \; \}
+  \] Better yet, {\tt if}-{\tt then}-{\tt else} syntax could be used
+  for the conditional expression.
+\item Some lexical categories are more strictly policed.  String
+  literals (strings inside double quotes) and numerals can't be used
+  unless the relevant theories have been loaded.  Nor can these
+  literals be used as variables inside binding scopes.
+\end{itemize}
+
+
 
 \section{A simple proof manager}\label{sec:goalstack}
 
@@ -33,7 +586,6 @@ focus of further operations.
 A shorthand for \verb+set_goal+ is the function \verb+g+: it
 invokes the parser automatically, and it doesn't allow the the goal to
 have any assumptions.
-
 
 Calling \verb+set_goal+, or \verb+g+, adds a new proof attempt to the
 existing ones, \textit{i.e.}, rather than overwriting the current
@@ -126,6 +678,7 @@ Often we want to switch our attention to a different goal in the current
 proof, or a different proof. The functions that do this are
 \verb+rotate+ and \verb+rotate_proofs+, respectively. The abbreviations
 \verb+r+ and \verb+R+ are simpler to type in.
+
 \section{The {\tt boss} library}
 \label{sec:bossLib}
 \newcommand\bossLib{{\tt bossLib}}
@@ -137,239 +690,6 @@ definition of datatypes and functions; high-level interactive proof
 operations, and composition of automated reasoners. Loading \bossLib\
 commits one to working in a context that already supplies the theories
 of booleans, pairs, sums, the option type, arithmetic, and lists.
-
-\subsection{Datatype definition}
-
-There are several useful consequences of an object logic datatype
-definition: structural induction, rewrite rules for constructors,
-\etc\ However, these have not traditionally been automatically derived
-at the invocation of the definition package: the user would have to
-build the required theorems by explicitly invoking various proof
-procedures.  To remedy this, \bossLib\ offers the \verb+Hol_datatype+
-function.  This function allows for the definition of mutually
-recursive types, nested recursive types and record types.  The syntax
-of declarations that \verb+Hol_datatype+ accepts is found in Table
-\ref{datatype}.
-
-\newcommand{\ident}      {\mbox{\it ident}}
-\newcommand{\clause}      {\mbox{\it clause}}
-\newcommand{\type}       {\mbox{\it hol\_type}}
-{
-\newcommand{\binding} {\mbox{\it binding}}
-\newcommand{\recdspec}  {\mbox{\it record-spec}}
-\newcommand{\constr} {\mbox{\it constructor-spec}}
-
-\begin{table}[htbp]
-\begin{center}
-\begin{tabular}{|rcl|}
-\hline
-\multicolumn{3}{|l|}
-{\texttt{Hol\_datatype `}[\binding\ \texttt{;}]* \binding\texttt{`}}\\
-& &\\
-\binding & \verb+::=+ & \ident\ \verb+=+ \constr\\
-         & \verb+|+ & \ident\ \verb+=+ \recdspec\\
-& & \\
-\constr & \verb+::=+ & [\clause\ \verb+|+]* \clause \\
-& & \\
-\clause & \verb+::=+ & \ident \\
-        & \verb+|+ & \ident\ \verb+of+\ [\type\ \verb+=>+]* \type\\
-& & \\
-\recdspec & \verb+::=+ & \verb+<|+ [\ident\ \verb+:+ \type\ \verb+;+]*
-                                   \ident\ \verb+:+ \type\ \verb+|>+\\
-
-\hline
-\end{tabular}
-\caption{Datatype Declaration}\label{datatype}
-\end{center}
-\end{table}
-}
-There is an underlying database of datatype facts that supports the
-activities of \verb+bossLib+. This database already contains the
-relevant entries for the types \verb+bool+, \verb+prod+, \verb+num+,
-\verb+option+, and \verb+list+.  When a datatype is defined by
-\verb+Hol_datatype+, the following information is derived and stored in
-the database.
-
-\begin{itemize}
-\item initiality theorem for the type
-\item injectivity of the constructors
-\item distinctness of the constructors
-\item structural induction theorem
-\item case analysis theorem
-\item definition of the `case' constant for the type
-\item congruence theorem for the case constant
-\item definition of the `size' of the type
-\end{itemize}
-
-
-\subsubsection{Record types}
-
-Record types are convenient ways of bundling together a number of
-component types, and giving those components names so as to facilitate
-access to them.  Record types are semantically equivalent to big pair
-(cross-product) types, but the ability to label the fields with names
-of one's own choosing is a great convenience.  Record types as
-implemented in \HOL{} are similar to C's {\tt struct} types and to
-Pascal's records.
-
-Done correctly, record types provide useful maintainability features.
-If one can always access the {\tt fieldn} field of a record type by
-simply writing {\tt record.fieldn}, then changes to the type that
-result in the addition or deletion of other fields will not invalidate
-this reference.  One failing in SML's record types is that they do not
-allow the same maintainability as far as (functional) updates of
-records are concerned.  The HOL implementation allows one to write
-\begin{verbatim}
-  rec with fieldn := new_value
-\end{verbatim}
-which replaces the old value of {\tt fieldn} in the record {\tt rec}
-with {\tt new\_value}.  This expression will not need to be changed if
-another field is added, modified or deleted from the record's original
-definition.
-
-\paragraph{Defining a record type}
-Record types are defined with the function \texttt{Hol\_datatype}, as
-previously discussed.  For example, to create a record type called
-{\tt person} with boolean, string and number fields called {\tt
-  employed}, {\tt name} and {\tt age}, one would enter:
-\begin{verbatim}
-val _ = Hol_datatype `person = <| employed : bool ; age : num ;
-                                  name : string
-                               |>`;
-\end{verbatim}
-The order in which the fields are entered is not significant. As well
-as defining the type (called {\tt person}), the datatype definition
-function also defines two other sets of constants.  These are the
-field access functions and functional update functions.  The field
-access functions have names of the form
-``$\langle$\textsl{record-type\/}$\rangle$\verb|_|$\langle$\textsl{field\/}$\rangle$''.
-These functions can be used directly, or one can use standard field
-selection notation to access the values of a record's field.  Thus,
-one would write the expression: \mbox{\tt ``bob.employed``} in order
-to return the value of {\tt bob}'s {\tt employed} field.  The
-alternative, \texttt{``person\_employed bob``}, works, but would be
-printed using the first syntax, with the full-stop.
-
-The functional update functions are given the names
-\mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}%
-  $\langle$\textsl{field}$\rangle$\texttt{\_fupd}''} for each field in
-the type.  They take two arguments, a function and a record to be
-updated.  The function parameter is an endomorphism on the field type,
-so that the resulting record is the same as the original, except that
-the specified field has had the given function applied to it to
-generate the new value for that field.  They can be written with the
-keyword \texttt{with} and the \texttt{updated\_by} operator.  Thus
-\begin{alltt}
-  ``bob with employed updated_by \$~``
-\end{alltt} \noindent
-is a record value identical to the \texttt{bob} except that the
-boolean value in the \texttt{employed} field has been inverted.
-
-Additionally, there is syntactic sugar available to let one write a
-record with one of its fields replaced by a specific value.  This is
-done by using the \texttt{:=} operator instead of
-\texttt{updated\_by}:
-\begin{verbatim}
-  ``bob with employed := T``
-\end{verbatim}
-This form is translated at parse-time to be a use of the corresponding
-functional update, along with a use of the \textsf{K}-combinator from
-the \texttt{combin} theory.  Thus, the above example  is really
-\begin{verbatim}
-  ``bob with employed updated_by (K T)``
-\end{verbatim}
-which is in turn a pretty form of
-\begin{verbatim}
-  ``person_employed_fupd (K T) bob``
-\end{verbatim}
-If a chain of updates is desired, then multiple updates can be
-specified inside \texttt{<|}-\texttt{|>} pairs, separated by
-semi-colons, thus:
-
-\begin{verbatim}
-  ``bob with <| age := 10; name := "Child labourer" |>``
-\end{verbatim}
-Both update forms (using \texttt{updated\_by} and \texttt{:=}) can be
-used in a chain of updates.
-
-\paragraph{Specifying record literals}
-
-The parser accepts lists of field specifications between
-\texttt{<|}-\texttt{|>} pairs without the \texttt{with} keyword.
-These translate to sequences of updates of an arbitrary value
-(literally, the HOL value \texttt{ARB}), and are treated as literals.
-Thus,
-\begin{verbatim}
-  ``<| age := 21; employed := F; name := "Layabout" |>``
-\end{verbatim}
-
-\paragraph{Using the theorems produced by record definition}
-
-As well as defining the type and the functions described above, record
-type definition also proves a suite of useful theorems.  These are all
-are saved (using {\tt save\_thm}) in the current segment.  Some are
-also added to the \texttt{TypeBase}'s simplifications for the type, so
-they will be automatically applied when simplifying with the
-\texttt{srw\_ss()} \simpset, or with the tactics \texttt{RW\_TAC} and
-\texttt{SRW\_TAC} (see Sections~\ref{sec:automated-reasoners}
-and~\ref{sec:simpLib}).
-
-All of the theorems are saved under names that begin with the name of
-the type.  The list below is a sample of the theorems proved.  The
-identifying strings are suffixes appended to the name of the type in
-order to generate the final name of the theorem.
-
-\newcommand{\rewruse}{This theorem is installed in the \texttt{TypeBase}.}
-\newcommand{\field}[1]{\mbox{\it field}_{#1}}
-\newcommand{\update}{\mbox{\tt\_fupd}}
-
-\begin{description}
-\item[\texttt{\_accessors}] The definitions of the accessor functions.
-  \rewruse
-\item[\texttt{\_fn\_updates}] The definitions of the functional update
-  functions.
-\item[\texttt{\_accfupds}] A theorem stating simpler forms for
-  expressions of the form $\field{i}\, (\field{j}\update\;f\; r)$.  If
-  $i = j$, then the RHS is $f (\field{i}(r))$, if not, it is $(\field{i}\;r)$.
-  \rewruse
-\item[\texttt{\_component\_equality}] A theorem stating that $(r_1 =
-  r_2) \equiv \bigwedge_i (\field{i}(r_1) = \field{i}(r_2))$.
-\item[\texttt{\_fupdfupds}] A thereom stating that $\field{i}\update
-  \;f \,(\field{i}\update \;g\;r) = \field{i}\update\;(f \circ g)\;r$.
-  \rewruse
-\item[\texttt{\_fupdcanon}] A theorem that states commutativity results
-  for all possible pairs of field updates.  They are constructed in
-  such a way that if used as rewrites, they will canonicalise
-  sequences of updates. Thus, for all $i < j$, \[
-  \field{j}\update\;f\;(\field{i}\update\;g\;r) =
-  \field{i}\update\;g\;(\field{j}\update\;f\;r)
-  \] is generated.
- \rewruse
-\end{description}
-
-\paragraph{``Big'' records} The size of certain theorems proved in the
-record type package increases as the square of the number of fields in
-the record.  (In particular, the update canonicalisation and
-\texttt{acc\_fupd} theorems have this property.) To avoid inefficieny
-with big records, the implementation of record types uses a more
-efficient underlying representation when the number of fields grows
-too large.  The exact point at which this optimisation is applied is
-controlled by the reference variable
-\texttt{Datatype.big\_record\_size}.  This value is initialised to 20,
-but users can change it as they choose.
-
-Unfortunately, the big record representation has the drawback that
-every update and accessor function has two forms: different terms that
-are printed the same.  One form is a simple constant, and is the form
-produced when a term is parsed.  The other is more complicated, but
-allows for the use of smaller theorems when record values are
-simplified.  Therefore, it is recommended that new, user-proved
-theorems that mention big records' fields or field updates be passed
-through a phase of simplification (\texttt{SIMP\_RULE}), applying the
-\texttt{TypeBase}'s rewrites, before they are saved.
-
-The pretty-printing of big records can be controlled with the
-\texttt{pp\_bigrecs} trace-flag.
 
 
 \subsection{Support for high-level proof steps}
@@ -461,220 +781,6 @@ inductions:
 
 \end{description}
 
-\subsection{Function definition}
-
-\begin{verbatim}
-    Define   : term quotation -> thm
-    xDefine  : string -> term quotation -> thm
-    Hol_defn : string -> term quotation -> Defn.defn
-\end{verbatim}
-
-The \texttt{Define} function is a general-purpose function definition
-mechanism. The \texttt{xDefine} function is identical to
-{\small\verb+Define+} except that it takes an explicit name to use when
-storing the definition in the current theory. {\small\tt Define}
-accepts the following syntax:
-
-\begin{enumerate}
-
-\item Non-recursive definition, varstructs allowed on lhs.
-\begin{verbatim}
-         Define `f w (x, y, z) = x + y / w + z`;
-\end{verbatim}
-
-\item Primitive recursive (or non-recursive) over known datatype.
-
-\begin{verbatim}
- Define
-     `(fold b f [] = b) /\
-      (fold b f (h::t) = f h (fold b f t))`;
-
-\end{verbatim}
-
-\item Non-recursive definition, over complex patterns:
-
-\begin{verbatim}
-Define
-    `(g (0,x,y,z) = 1)
-  /\ (g (w,0,y,z) = 2)
-  /\ (g (w,x,0,z) = 3)
-  /\ (g (w,x,y,0) = 4)`;
-\end{verbatim}
-
-\item Recursions (not mutual or nested) that aren't handled by 2.
-
-\begin{verbatim}
-  Define `(flatten  []           = [])
-     /\   (flatten ([]::rst)     = flatten rst)
-     /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
-\end{verbatim}
-
-\item Nested recursions.
-\begin{verbatim}
- Define `N x = if x>100 then x-10 else N(N(x+11))`;
-\end{verbatim}
-
-\item Mutual recursion.
-\begin{verbatim}
-  xDefine "even_odd"
-     `(even 0 = T)
-  /\  (even (SUC n) = odd n)
-  /\  (odd 0 = F)
-  /\  (odd (SUC n) = even n)`;
-\end{verbatim}
-
-\item Schematic definitions (mutual and nested recursive schemata are
-         accepted).
-\begin{verbatim}
-      Define `While s = if B s then While (C s) else s`;
-\end{verbatim}
-\end{enumerate}
-
-For complex recursions, {\small\verb+Define+} attempts to find a measure
-under which recursive calls become smaller (and to prove that they do
-indeed become smaller). Currently, it examines the domain type of the
-function being defined and synthesizes a ``size'' measure.  Then it does
-some basic simplifications and then attempts to automatically prove the
-termination constraints.  If this termination proof fails, then the
-definition attempt fails. If the termination proof succeeds, an
-induction theorem for the function is also automatically derived and
-stored in the current theory.
-
-\noindent {\bf Example.} Invoking
-\begin{verbatim}
-      Define
-        `(gcd 0 y = y)
-    /\   (gcd (SUC x) 0 = SUC x)
-    /\   (gcd (SUC x) (SUC y) =
-             if y <= x then gcd (x-y)   (SUC y)
-                       else gcd (SUC x) (y-x))`;
-\end{verbatim}
-proves all termination conditions and stores the theorem
-\begin{verbatim}
-      |- (gcd 0 y = y)           /\
-         (gcd (SUC x) 0 = SUC x) /\
-         (gcd (SUC x) (SUC y) =
-              if y <= x then gcd (x - y) (SUC y)
-                        else gcd (SUC x) (y - x))
-\end{verbatim}
-\noindent in the current theory under the name \verb+"gcd_def"+ and
-also stores the theorem
-\begin{verbatim}
-          !P. (!y. P 0 y)       /\
-              (!x. P (SUC x) 0) /\
-              (!x y. (~(y <= x) ==> P (SUC x) (y - x)) /\
-                       (y <= x  ==> P (x - y) (SUC y))
-                        ==> P (SUC x) (SUC y))
-                 ==>
-                   !v v1. P v v1.
-\end{verbatim}
-\noindent in the current theory under the name \verb+"gcd_ind"+ before
-returning the requested recursion equations.
-
-Recall that, if the termination proof fails, an invocation of
-\verb+Define+  (or \verb+xDefine+) fails. In such situations, the \ML\
-function \verb+Hol_defn+ should be used.
-
-\begin{verbatim}
-   Hol_defn     : string -> term quotation -> Defn.defn
-   WF_REL_TAC   : Defn.defn -> term quotation -> tactic
-\end{verbatim}
-
-\verb+Hol_defn+ makes the requested definition, but defers the proof of
-termination to the user. For setting up termination proofs, there are
-several useful entrypoints, namely
-
-\begin{verbatim}
-   Defn.tgoal  : Defn.defn -> GoalstackPure.proofs
-   Defn.tprove : Defn.defn * tactic -> thm * thm
-\end{verbatim}
-
-{\small\verb+Defn.tgoal+} is analogous to {\small\verb+set_goal+} and
-{\small\verb+Defn.tprove+} is analogous to {\small\verb+prove+}.
-
-\noindent {\bf Example.} An invocation of {\small\verb+Define+} on
-the following equations for Quicksort will currently fail, since the
-termination proof is beyond the capabilities of our naive termination
-prover. Instead, we make an application of {\small\verb+Hol_defn+}:
-
-\begin{verbatim}
-    val qsort_def =
-      Hol_defn "qsort"
-        `(qsort r [] = []) /\
-         (qsort r (h::t) =
-             APPEND (qsort r (FILTER (\x. r x h) t))
-               (h :: qsort r (FILTER (\x. ~(r x h)) t)))`;
-\end{verbatim}
-which returns a {\small\verb+defn+}, but does not try to prove
-termination. Although it is possible to directly work with elements of
-type {\small\verb+defn+}, it is more convenient to invoke
-`{\small\tt Defn.tgoal qsort\_def}', which sets up a termination
-proof in a goalstack. The goal is just to get the unrestricted recursion
-equations and induction theorem.
-
-\begin{verbatim}
-Defn.tgoal qsort_def;
-
-> val it =
->    Proof manager status: 1 proof.
->    1. Incomplete:
->         Initial goal:
->         ((qsort r [] = []) /\
->          (qsort r (h::t) =
->           APPEND (qsort r (FILTER (\x. r x h) t))
->             (h::qsort r (FILTER (\x. ~r x h) t)))) /\
->         !P.
->           (!r. P r []) /\
->           (!r h t. P r (FILTER (\x. r x h) t) /\
->                    P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
->           ==> !v v1. P v v1
-\end{verbatim}
-
-How to proceed? The function {\small\verb+WF_REL_TAC+} now shows its
-utility. When given a {\small\verb+defn+} and a quotation denoting a
-termination relation for the function, {\small\verb+WF_REL_TAC+}
-initiates the termination proof. For our example, we obtain two subgoals
-both of which are easy to prove.
-
-\begin{verbatim}
-    - e (WF_REL_TAC qsort_def `measure (LENGTH o SND)`
->   OK..
->
->   2 subgoals:
->   val it =
->      !t h r. LENGTH (FILTER (\x. r x h) t) < LENGTH (h::t)
->
->
->      !t h r. LENGTH (FILTER (\x. ~r x h) t) < LENGTH (h::t)
-\end{verbatim}
-
-
-Both goals are provable; once the proof is completed, we can encapsulate
-it with {\small\verb+Defn.tprove+}, which takes a
-{\small\verb+defn+}, builds a termination goal from it, applies the
-given tactic, and, if the initial goal is proved, returns a pair
-comprising the requested equations and the induction theorem.
-
-\begin{verbatim}
-   val (qsort_eqns,qsort_ind) =
-      Defn.tprove
-       (qsort_def,
-        WF_REL_TAC qsort_def `measure (LENGTH o SND)`
-        THEN ...);
-
-   > val qsort_eqns =
-   >  |- (qsort r [] = []) /\
-   >     (qsort r (h::t) =
-   >        APPEND (qsort r (FILTER (\x. r x h) t))
-   >           (h::qsort r (FILTER (\x. ~r x h) t)))  : thm
-
-   >  val qsort_ind =
-   >   |- !P.
-   >      (!r. P r []) /\
-   >      (!r h t. P r (FILTER (\x. r x h) t) /\
-   >               P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
-   >      ==> !v v1. P v v1
-\end{verbatim}
 
 \subsection{Automated reasoners}
 \label{sec:automated-reasoners}
@@ -828,14 +934,22 @@ $d$ exceeds the value stored in the reference value
 \ml{GEN\_MESON\_TAC~min~max~step} starts $d$ at \ml{min}, increments
 it by \ml{step}, and gives up when $d$ exceeds \ml{max}.
 
+
+
 \section{The \texttt{simp} library}
 \label{sec:simpLib}
 
-
+\section{The \texttt{compute} library}
+\label{sec:computeLib}
 
 \section{The {\tt num} library}
 \label{sec:numLib}
 \index{decision procedures!Presburger arithmetic over natural numbers}
+
+
+\section{The \texttt{HolSat} library}\label{sec:HolSatLib}
+\section{The \texttt{HolBdd} library}\label{sec:HolBddLib}
+\section{The \texttt{HolCheck} library}\label{sec:HolCheckLib}
 
 
 %%% Local Variables:

@@ -1,52 +1,675 @@
-\chapter{Commonly-used Theories}\label{HOLtheories}
+\chapter{Theories}\label{HOLtheories}
 
-\index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies of}
-A useful subset of the collection of theories distributed with the
-\HOL{} system is listed in Table~\ref{CommonTheories}.  In the rest of
-this section, each of these theories is briefly described.  A complete
-list of all the definitions and theorems in each theory is not given
-here; the sections that follow provide only an overview of the
-contents of each theory.  For a complete list of all the built-in
-axioms, definitions and theorems in \HOL, see \REFERENCE.
+\index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies
+of} The \HOL{} system provides a collection of theories to base
+verification tools or further theory development on.  In the rest of
+this section, these theories are briefly described.  It is,
+unfortunately, not possible to provide a complete list of all the
+definitions and theorems in each theory. Therefore, the sections that
+follow provide only an overview of the contents of each theory.  For a
+complete list of all the axioms, definitions and theorems in \HOL, see
+\REFERENCE.
 
 
-\begin{table}
+\section{Basic Theories}
+
+The most basic theories in HOL provide support for a standard
+collection of types. The theory \theoryimp{bool} defines the basis of
+the \HOL{} logic, including the boolean operations and
+quantifiers. On this platform, quite a bit of theorem-proving
+infrastructure can already be built. Further basic types are developed
+in the theory of pairs (\theoryimp{prod}), disjoint sums
+(\theoryimp{sum}), the one-element type (\theoryimp{one}), and the
+{\theoryimp{option}) type.
+
+
+\subsection{The theory \theoryimp{bool}}\label{boolfull}
+
+\index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|(} At
+start-up, the initial theory for users of the \HOL\ system is called
+\ml{bool}\index{HOL@\ml{HOL}}, which is constructed when the \HOL\
+system is built. The theory \theoryimp{bool} is an extension of the
+combination of the ``conceptual'' theories \theory{LOG} and
+\theory{INIT}, described in Chapter~\ref{semantics}.  Thus it contains
+the four axioms\index{axioms!in bool theory@in \ml{bool} theory} for
+higher order logic. These axioms, together with the rules of inference
+described in Section~\ref{rules}, constitute the core of the \HOL\
+logic.  Because of the way the \HOL\ system evolved from
+\LCF,\index{LCF@\LCF}\footnote{To simplify the porting of the LCF
+  theorem-proving tools to the HOL system, the HOL logic was made as
+  like PP$\lambda$ (the logic built-in to LCF) as possible.} the
+particular axiomatization\index{axioms!non-primitive, of HOL
+  logic@non-primitive, of \HOL\ logic} of higher order logic it uses
+differs from the classical axiomatization due to Church\index{Church,
+  A.} \cite{Church}.  The biggest difference is that in Church's
+formulation type variables\index{type variables, in HOL logic@type
+  variables, in \HOL\ logic!differences from classical} are in the
+meta-language, whereas in the \HOL\ logic they are part of the object
+language.
+
+The logical constants\index{logical constants, in HOL logic@logical
+  constants, in \HOL\ logic} {\small\verb+T+}\index{truth values, in
+  HOL logic@truth values, in \HOL\ logic!constants
+  for}\index{T@\ml{T}!defined in terms of primitives} (truth),
+{\small\verb+F+}\index{F@\ml{F}!defined in terms of primitives}
+(falsity), {\small\verb+~+} (negation)\index{ negation, in HOL
+  logic@{\small\verb+~+} (negation, in \HOL\ logic)},
+{\small\verb+/\+} (conjunction)\index{ conjunction, in HOL
+  logic@{\small\verb+/\+} (conjunction, in \HOL\
+  logic)}\index{conjunction, in HOL logic@conjunction, in \HOL\
+  logic!defined in terms of primitives},
+{\small\verb+\/+} (disjunction)\index{ disjunction, in HOL logic@{\small\verb+\/+} (disjunction, in \HOL\ logic)}\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!defined in terms of primitives}, {\small\verb+!+} (universal
+  quantification)\index{ universal quantifier, in HOL
+    logic@{\small\verb+"!+} (universal quantifier, in \HOL\
+    logic)}\index{universal quantifier, in HOL logic@universal
+    quantifier, in \HOL\ logic!defined in terms of primitives},
+  {\small\verb+?+} (existential quantification)\index{ existential
+    quantifier, in HOL logic@{\small\verb+?+} (existential quantifier,
+    in \HOL\ logic)}\index{existential quantifier, in HOL
+    logic@existential quantifier, in \HOL\ logic!defined in terms of
+    primitives} and {\small\verb+?!+} (unique existence
+  quantifier)\index{ exists unique, in HOL logic@{\small\verb+?"!+}
+    (exists unique, in \HOL\ logic)}\index{exists unique, in HOL
+    logic@exists unique, in \HOL\ logic!defined in terms of
+    primitives} can all be defined in terms of
+  equality\index{equality, in HOL logic@equality, in \HOL\ logic},
+  implication and choice.  The definitions listed below are fairly
+  standard; each one is preceded by its \ML\ name.  Later definitions
+  sometimes build on earlier ones.
+
+
+\begin{hol}
+\index{truth values, in HOL logic@truth values, in \HOL\ logic!definition of}
+\index{T_DEF@\ml{T\_DEF}}
+\index{T@\ml{T}!definitional axiom for}
+\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!definitional axiom for}
+\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!definitional axiom for}
+\index{iff, in HOL logic@iff, in \HOL\ logic!definitional axiom for}
+\index{negation, in HOL logic@negation, in \HOL\ logic!definitional axiom for}
+\index{exists unique, in HOL logic@exists unique, in \HOL\ logic}
+\index{F@\ml{F}!axiom for}
+\index{F@\ml{F}!definitional axiom for}
+\index{ exists unique, in HOL logic@{\small\verb+?"!+} (exists unique, in \HOL\ logic)}
+\index{T_DEF@\ml{T\_DEF}}
+\index{FORALL_DEF@\ml{FORALL\_DEF}}
+\index{EXISTS_DEF@\ml{EXISTS\_DEF}}
+\index{AND_DEF@\ml{AND\_DEF}}
+\index{OR_DEF@\ml{OR\_DEF}}
+\index{F_DEF@\ml{F\_DEF}}
+\index{NOT_DEF@\ml{NOT\_DEF}}
+\index{EXISTS_UNIQUE_DEF@\ml{EXISTS\_UNIQUE\_DEF}}
+\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!definitional axiom for}
+\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!definitional axiom for}
+\index{equality, in HOL logic@equality, in \HOL\ logic!primitive axiom for}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!definitional axiom for}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!definitional axiom for}
+\index{exists unique, in HOL logic@exists unique, in \HOL\ logic!definitional axiom for}
+\begin{verbatim}
+   T_DEF              |- T   = ((\x:bool. x) = (\x. x))
+
+   FORALL_DEF         |- $!  = \P:'a->bool. P = (\x. T)
+
+   EXISTS_DEF         |- $?  = \P:'a->bool. P($@ P)
+
+   AND_DEF            |- $/\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t
+
+   OR_DEF             |- $\/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t
+
+   F_DEF              |- F   = !t. t
+
+   NOT_DEF            |- $~  = \t. t ==> F
+
+   EXISTS_UNIQUE_DEF  |- $?! = (\P. $? P /\ (!x y. P x /\ P y ==> (x = y)))
+\end{verbatim}
+\end{hol}
+
+
+There are four
+\index{universal quantifier, in HOL logic@universalquantifier,
+       in \HOL\ logic!in four primitive axioms}
+axioms in the theory {\small\verb+bool+}\index{bool, the HOL
+theory@\ml{bool}, the \HOL\ theory}; the first three are the following:
+
+\begin{hol}
+\index{BOOL_CASES_AX@\ml{BOOL\_CASES\_AX}}
+\index{ETA_AX@\ml{ETA\_AX}}
+\index{SELECT_AX@\ml{SELECT\_AX}}
+\index{implication, in HOL logic@implication, in \HOL\ logic!primitive axiom for}
+\index{ choice function, in HOL logic@{\small\verb+"@+} (choice function, in \HOL\ logic)}
+\index{choice axiom}
+\index{choice operator, in HOL logic@choice operator, in \HOL\ logic!primitive axiom for}
+\begin{verbatim}
+   BOOL_CASES_AX   |- !t. (t = T) \/ (t = F)
+
+   ETA_AX          |- !t. (\x. t x) = t
+
+   SELECT_AX       |- !P:'a->bool x. P x ==> P($@ P)
+\end{verbatim}\end{hol}
+
+\noindent
+The fourth and last axiom of the \HOL\ logic is the Axiom of
+Infinity\index{axiom of infinity}. Its statement is phrased in terms of
+the function properties {\small\verb+ONE_ONE+} and {\small\verb+ONTO+}. The
+definitions are:
+
+\begin{hol}
+\index{ONE_ONE_DEF@\ml{ONE\_ONE\_DEF}}
+\index{ONTO_DEF@\ml{ONTO\_DEF}}
+\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL\ logic!definitional axiom for}
+\index{onto predicate, in HOL logic@onto predicate, in \HOL\ logic!definitional axiom for}
+\begin{verbatim}
+   ONE_ONE_DEF |- ONE_ONE f = (!x1 x2. (f x1 = f x2) ==> (x1 = x2))
+
+   ONTO_DEF    |- ONTO f    = (!y. ?x. y = f x)
+\end{verbatim}\end{hol}
+
+The Axiom of Infinity\index{axioms!in bool theory@in \ml{bool} theory} is
+
+{\begin{hol}
+\index{INFINITY_AX@\ml{INFINITY\_AX}}
+\index{axiom of infinity}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!in infinity axiom}
+\begin{verbatim}
+  INFINITY_AX  |- ?f:ind->ind. ONE_ONE f /\ ~(ONTO f)
+\end{verbatim}\end{hol}}
+
+\noindent
+This asserts that there exists a one-to-one map from {\small\verb+ind+} to
+itself that is not onto. This implies that the type {\small\verb+ind+}
+denotes an infinite set.\index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|)}
+
+The three other axioms of the theory {\small\verb+bool+}, the rules of
+inference in Section~\ref{rules} and the Axiom of Infinity are,
+together, sufficient for developing all of standard mathematics. Thus,
+in principle, the user of the \HOL\ system should never need to make a
+non-definitional\index{axioms!dispensibility of
+adding}\index{definitional theories} theory. In practice, it is often
+very tempting to take the risk of introducing new axioms because
+deriving them from definitions can be tedious---proving that `axioms'
+follow from definitions amounts to proving their consistency.
+
+The theory {\small\verb+bool+} also supplies the definitions of a number of
+useful constants.
+\begin{hol}
+\index{LET_DEF@\ml{LET\_DEF}}
+\index{COND_DEF@\ml{COND\_DEF}}
+\index{COND@\ml{COND}}
+\index{LET@\ml{LET}}
+\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic!definitional axiom for}
+\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
+\begin{verbatim}
+   LET_DEF      |- LET    = \f x. f x
+
+   COND_DEF     |- COND   = \t t1 t2.@x.((t=T)==>(x=t1))/\((t=F)==>(x=t2))
+
+   ARB_DEF      |- ARB    = @x. T
+
+   IN_DEF       |- IN     = \x (f:'a -> bool). f x
+\end{verbatim}
+\end{hol}
+
+The constant {\small\verb+LET+}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for} is used in representing terms
+containing local variable bindings (\ie\
+{\small\verb+let+}-terms\index{let-terms, in HOL logic@\ml{let}-terms,
+in \HOL\ logic!definitional axiom for}. For example, the concrete syntax
+{\small\verb+let v = M in N+} is translated by the parser to the term
+{\small\verb+LET (\v.N) M+}. For the full description of how
+{\small\verb+let+} expressions are translated, see Section \ref{prod}.
+
+The constant {\small\verb+COND+} is used in representing conditional
+expressions. The concrete syntax \index{terms, in HOL logic@terms, in
+  \HOL\ logic!conditional}\index{conditional predicate, in HOL
+  logic@conditional predicate, in \HOL\ logic}\index{conditionals, in
+  HOL logic@conditionals, in \HOL\ logic} \ml{`if $t_1\ $then$\ t_2\
+  $else$\ t_3$`} abbreviates the application \ml{COND\ $t_1\ t_2\
+  t_3$}. The syntax \ml{$t_1\; $=>$\;t_2\;$|$\;t_3$} is also
+permitted. The system prints out conditionals in the "if $t_1$ then
+$t_2$ else $t_3$" form.
+
+The polymorphic constant {\small\verb+ARB+} is used to denote a fixed
+but arbitrary element in a type, which is occasionally useful when
+attempting to deal with the issue of partiality.
+
+The constant {\small\verb+IN+} (written as an infix) is the basis of
+the modelling of sets by their characteristic functions.  The term
+$x\texttt{ IN }P$ can be read as ``$x$ is an element of the set
+$P$'', or (more in line with its definition) as ``the predicate $P$ is
+true of $x$''.
+
+\subsection{Restricted quantifiers}\label{res-quant}
+ 
+\index{restricted quantification}
+%
+The theory \theoryimp{bool} also defines constants that implement
+\emph{restricted quantification}. This provides a means of simulating
+subtypes and dependent types with predicates. The most heavily used
+are restrictions of the existential and universal quantifiers:
+%
+\begin{verbatim}
+  RES_FORALL_DEF |- RES_FORALL = \P m. !x. x IN P ==> m x
+
+  RES_EXISTS_DEF |- RES_EXISTS = \P m. ?x. x IN P /\ m x
+
+  RES_ABSTRACT_DEF |- (!P m x. x IN P ==> (RES_ABSTRACT P m x = m x) /\
+                      (!P m1 m2.
+                          (!x. x IN P ==> (m1 x = m2 x)) ==>
+                           (RES_ABSTRACT P m1 = RES_ABSTRACT P m2)
+\end{verbatim}
+%
+For completeness, restricted versions of unique existence and 
+indefinite description are provided, although hardly used.
+\begin{verbatim}
+  RES_EXISTS_UNIQUE_DEF |- RES_EXISTS_UNIQUE =
+                            \P m. (?x :: P. m x) /\
+                                  !x y :: P. m x /\ m y ==> (x = y)
+
+   RES_SELECT_DEF   |- RES_SELECT = \P m. @x. x IN P /\ m x
+\end{verbatim}
+
+The definition of \ml{RES\_EXISTS\_UNIQUE} uses the restricted
+quantification syntax with the {\small\verb+::+} symbol, referring to
+the earlier definitions \ml{RES\_EXISTS} and \ml{RES\_FORALL}.  The
+definition of \ml{RES\_ABSTRACT} is a characterising formula, rather
+than a direct equation.  There are two important properties
+\begin{itemize}
+\item if $y$ is an element of $P$ then $(${\small\verb+\+}$x :: P.\; M)
+  y = M[y/x]$
+\item If two restricted abstractions agree on all values over their
+  (common) restricting set, then they are equal.
+\end{itemize}
+
+The \texttt{::} syntax is used with restricted quantifiers to allow
+arbitrary predicates to restrict binding variables.  Further to the
+above, the default grammar also allows restricted quantification of
+all of a sequence of binding variables by putting the restriction at
+the end of the sequence, thus with a universal quantification: 
+%
+\[
+\forall x \, y \, z \, {\tt ::} \; P \, . \; Q(x,y,z)
+\] 
+%
+Here the predicate $P$ restricts all of $x$, $y$ and $z$.
+
+%
+%\index{types, in HOL logic@types, in \HOL{} logic!dependent}
+%\index{dependent types in HOL logic@dependent types in \HOL{} logic}
+%\index{quantifiers!restricted}
+%
+%The theory \ml{res\_quan} contains the definitions of the constants
+%{\small\verb!RES_FORALL!}, {\small\verb!RES_EXISTS!},
+%{\small\verb!RES_SELECT!}, and {\small\verb!RES_ABSTRACT!},
+%which are used to support restricted
+%quantification\index{quantifiers!restricted} in the \HOL{} logic.  This
+%implements a method of simulating subtypes and dependent types with
+%predicates. The definitions are:
+%
+%\begin{hol}
+%\index{RES_FORALL@\ml{RES\_FORALL}}
+%\index{RES_EXISTS@\ml{RES\_EXISTS}}
+%\index{RES_SELECT@\ml{RES\_SELECT}}
+%\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}
+%\index{ARB@\ml{ARB}}
+%\begin{verbatim}
+%   RES_FORALL   |- !P B. RES_FORALL P B = (!x. P x ==> B x)
+%
+%   RES_EXISTS   |- !P B. RES_EXISTS P B = (?x. P x /\ B x)
+%
+%   RES_SELECT   |- !P B. RES_SELECT P B = (@x. P x /\ B x)
+%
+%   RES_ABSTRACT |- !P B. RES_ABSTRACT P B = (\x. if P x then B x else ARB)
+%\end{verbatim}\end{hol}
+%
+%
+%The new syntax automatically translates as follows:
+%
+%\begin{hol}
+%{\small\verb%   \%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_ABSTRACT %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+%{\small\verb%   !%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_FORALL   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+%{\small\verb%   ?%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_EXISTS   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
+%{\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_SELECT   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}
+%\end{hol}
+%
+%Anything can be written between the binder and `\ml{::}' that can be
+%written between the binder and `\ml{.}`. See the examples below.
+%
+%Currently no derived rules are provided to support this notation, so
+%any inferences will need to work on the underlying semantic
+%representation.
+%
+%User-defined binders can also have restricted forms, which are set up
+%with the function:
+%
+%\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}|pin}
+%\begin{verbatim}
+%   associate_restriction : (string * string) -> *
+%\end{verbatim}\end{boxed}
+%
+%
+%\noindent If \m{c} is the name
+%of a binder and \ml{RES\_}\m{c} is the name of a suitable constant (which
+%must be explicitly defined), then executing:
+%
+%\begin{hol}
+%{\small\verb%   associate_restriction(`%}$c${\small\verb%`, `RES_%}$c${\small\verb%`)%}
+%\end{hol}
+%
+%\noindent will cause the parser and pretty-printer to support:
+%
+%\begin{hol}
+%{\small\verb%   %}$c$ $v${\small\verb%::%}$P${\small\verb%. %}$B${\small\verb%    <---->   RES_%}$c$ $P${\small\verb% (\%}$v${\small\verb%. %}$B${\small\verb%)%}
+%\end{hol}
+%
+%Here is an example session:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%#"!x y::P. x<y";;
+%"!x y :: P. x < y" : term
+%
+%#set_flag(`print_restrict`, false);;
+%true : bool
+%
+%#"!x y::P. x<y";;
+%"RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
+%
+%#"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
+%"RES_EXISTS
+% (\(m,n). m < n)
+% (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
+%: term
+%
+%#"\x y z::P.[0;x;y;z]";;
+%"RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
+%: term
+%\end{verbatim}\end{session}
+%
+%A conversion that rewrites away the constants \ml{RES\_ABSTRACT},
+%\ml{RES\_FORALL}, \ml{RES\_EXISTS} and \ml{RES\_SELECT} is:
+%
+%\begin{hol}\begin{verbatim}
+%   let RESTRICT_CONV =
+%        (PURE_REWRITE_CONV [definition `bool` `RES_ABSTRACT`;
+%                            definition `bool` `RES_FORALL`;
+%                            definition `bool` `RES_EXISTS`;
+%                            definition `bool` `RES_SELECT`])
+%        THENC (DEPTH_CONV BETA_CONV)
+%\end{verbatim}\end{hol}
+%
+%\noindent This is a bit unsatisfactory, as is shown by the artificial
+%example below:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%#let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
+%t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
+%
+%#RESTRICT_CONV t;;
+%|- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
+%   (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
+%\end{verbatim}\end{session}
+%
+%The variable $x$ in the definitions of the constants
+%\ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
+%\ml{RES\_SELECT} gets confused with the variable in the supplied term.
+%This can be avoided by changing \ml{RESTRICT\_CONV} to perform
+%explicit alpha-conversion. For example, by implementing a conversion:
+%
+%\begin{hol}
+%{\small\verb%   RES_FORALL %}$P${\small\verb% (\%}$v$\ml{.}$B$\ml{[}$v$\ml{])  ---->  !}$v$\ml{. }$P$ $v$\ml{ ==> }$B$\ml{[}$v$\ml{]}
+%\end{hol}
+%
+%\noindent Dealing with the case when
+%$v$ is a variable structure is also desirable. For example:
+%
+%\begin{session}\begin{verbatim}
+%#let t1 = "!(m,n)::P. m<n";;
+%t1 = "!(m,n) :: P. m < n" : term
+%
+%#RESTRICT_CONV t1;;
+%|- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
+%
+%\end{verbatim}\end{session}
+%
+%\noindent If anyone writes the desired conversions please let us know!
+%
+%Here is an example of a user-defined restriction:
+%
+%\begin{session}\begin{verbatim}
+%#new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
+%|- !p. $DURING p = $! p
+%
+%#"DURING x::(m,n). p x";;
+%no restriction constant associated with DURING
+%skipping: x " ;; parse failed
+%
+%#new_definition
+%# (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
+%|- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
+%
+%#associate_restriction(`DURING`,`RES_DURING`);;
+%() : void
+%
+%#"DURING x::(m,n). p x";;
+%"DURING x :: (m,n). p x" : term
+%
+%#set_flag(`print_restrict`,false);;
+%true : bool
+%
+%#"DURING x::(m,n). p x";;
+%"RES_DURING(m,n)(\x. p x)" : term
+%\end{verbatim}\end{session}
+
+\subsection{Derived syntactic forms}\label{derived-terms}
+
+\index{type checking, in HOL logic@type checking, in \HOL\
+  logic!special forms in|(} \index{quotation, in HOL logic@quotation,
+  in \HOL\ logic!of non-primitive terms|(} The \HOL{} quotation
+parser\index{quotation, in HOL logic@quotation, in \HOL\ logic!parser
+  for} can translate various standard logical notations\index{parsing,
+  of HOL logic@parsing, of \HOL\ logic!of standard notations} into
+primitive terms. For example, if \ml{+} has been declared an
+infix\index{infixes, in HOL logic@infixes, in \HOL\ logic} (as
+explained in Section~\ref{theoryfns}) (as it is when
+\ml{arithmeticTheory} has been loaded), then \ml{``x+1``} is
+translated to \ml{``\$+~x~1``}. The escape character \ml{\$}\index{
+  escape, in HOL logic parser@\ml{\$} (escape, in \HOL\ logic
+  parser)}\index{declared constants, in HOL logic@declared constants,
+  in \HOL\ logic}\index{infixes, in HOL logic@infixes, in \HOL\ logic}
+suppresses the infix behaviour of \ml{+} and prevents the quotation
+parser getting confused.  In general, \ml{\$} can be used to suppress
+any special syntactic behaviour a token (such as \texttt{if},
+\texttt{+} or \texttt{let}) \index{tokens@tokens!supressing parsing
+  behaviour of} might have. This is illustrated in the table below, in
+which the terms in the column headed \textit{`\ML{} quotation'} are
+translated by the quotation parser to the corresponding terms in the
+column headed \textit{`Primitive term'}.  Conversely, the terms in the
+latter column are always printed in the form shown in the former one.
+The \ML{} constructor expressions in the rightmost column evaluate to
+the same values (of type \ml{term}) as the other quotations in the
+same row.
+
+\bigskip
+
 \begin{center}
-\begin{tabular}{|l|l|}
-\hline
-min         & the origin theory \\
-bool        & definitions of logical operators and basic axioms \\
-combin      & combinators \\
-pair        & theory of pairs \\
-sum         & disjoint sums \\
-relation    & transitive closure and wellfoundedness \\
-one         & the singleton type \\
-option      & the {\tt option} type \\
-num         & Peano's axioms derived from the axiom of infinity \\
-prim\_rec   & the primitive recursion theorem \\
-arithmetic  & Peano arithmetic development \\
-numeral     & numerals \\
-integer     & integers \\
-pred\_set   & sets as predicates (includes finite sets) \\
-bag         & bags (also known as \emph{multisets})\\
-list        & lists \\
-rich\_list  & extended theory of lists \\
-llist       & possibly infinite sequences (``lazy lists'')\\
-path        & labelled paths/transition sequences\\
-finite\_map & finite functions \\
-ltree       & polymorphic finitely branching trees \\
-res\_quan   & restricted quantifier support \\
-ascii       & ascii \\
-string      & strings \\
-word        & (\emph{plus several others}) theory of bitstrings \\
-real        & (\emph{plus several others}) real numbers and analysis \\
+\index{choice operator, in HOL logic@choice operator, in \HOL\ logic!syntax of}
+\index{ negation, in HOL logic@{\small\verb+~+} (negation, in \HOL\ logic)}
+\index{ disjunction, in HOL logic@{\small\verb+\/+} (disjunction, in \HOL\ logic)}
+\index{ conjunction, in HOL logic@{\small\verb+/\+} (conjunction, in \HOL\ logic)}
+\index{ implication, in HOL logic@{\small\verb+==>+} (implication, in \HOL\ logic)}
+\index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}
+\index{ universal quantifier, in HOL logic@{\small\verb+"!+} (universal quantifier, in \HOL\ logic)}
+\index{ existential quantifier, in HOL logic@{\small\verb+?+} (existential quantifier, in \HOL\ logic)}
+\index{ choice function, in HOL logic@{\small\verb+"@+} (choice function, in \HOL\ logic)}
+\index{terms, in HOL logic@terms, in \HOL\ logic!non-primitive}
+\index{terms, in HOL logic@terms, in \HOL\ logic!constructors for}
+\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic}
+\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
+\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!constructor for}
+\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!constructor for}
+\index{equality, in HOL logic@equality, in \HOL\ logic!syntax of}
+\index{negation, in HOL logic@negation, in \HOL\ logic!syntax of}
+\index{negation, in HOL logic@negation, in \HOL\ logic!constructor for}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!syntax of}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!syntax of}
+\index{implication, in HOL logic@implication, in \HOL\ logic!syntax of}
+\index{mk_neg@\ml{mk\_neg}}
+\index{mk_disj@\ml{mk\_disj}}
+\index{mk_conj@\ml{mk\_conj}}
+\index{mk_imp@\ml{mk\_imp}}
+\index{mk_eq@\ml{mk\_eq}}
+\index{mk_forall@\ml{mk\_forall}}
+\index{mk_exists@\ml{mk\_exists}}
+\index{mk_select@\ml{mk\_select}}
+\index{mk_cond@\ml{mk\_cond}}
+\index{mk_let@\ml{mk\_let}}
+\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!syntax of}
+\begin{tabular}{|l|l|l|l|} \hline
+\multicolumn{4}{|c|}{ } \\
+\multicolumn{4}{|c|}{\bf Non-primitive terms} \\
+\multicolumn{4}{|c|}{ } \\
+{\it Kind of term} & {\it \ML\ quotation} &
+{\it Primitive term} &
+{\it Constructor expression} \\ \hline
+ & & & \\
+ & {\small\verb+~+}$t$ & {\small\verb+$~ +}$t$ & {\small\verb+mk_neg(+}$t${\small\verb+)+} \\ \hline
+Disjunction & $t_1${\small\verb+\/+}$t_2$ & {\small\verb+$\/ +}$t_1\ t_2$ &
+{\small\verb+mk_disj(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+Conjunction & $t_1${\small\verb+/\+}$t_2$ & {\small\verb+$/\ +}$t_1\ t_2$ &
+{\small\verb+mk_conj(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+Implication & $t_1${\small\verb+==>+}$t_2$ & {\small\verb+$==> +}$t_1\ t_2$ &
+{\small\verb+mk_imp(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+Equality & $t_1${\small\verb+=+}$t_2$ & {\small\verb+$= +}$t_1\ t_2$ &
+{\small\verb+mk_eq(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+$\forall$-quantification & {\small\verb+!+}$x${\small\verb+.+}$t$ &
+{\small\verb+$!(\+}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_forall(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
+$\exists$-quantification & {\small\verb+?+}$x${\small\verb+.+}$t$ &
+{\small\verb+$?(\+}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_exists(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
+$\hilbert$-term & {\small\verb+@+}$x${\small\verb+.+}$t$ &
+{\small\verb+$@(\+}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_select(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
+Conditional\index{COND@\ml{COND}} & {\small\verb+if +}$t\ ${\small\verb+then +}$t_1${\small\verb+ else +}$t_2$ &
+{\small\verb+COND +}$t\ t_1\ t_2$ & {\small\verb+mk_cond(+}$t${\small\verb+,+}$t_1${\small\verb+,+}$t_2${\small\verb+)+}
+ \\ \hline
+{\small\verb+let+}-expression & {\small\verb+let +}$x${\small\verb+=+}$t_1${\small\verb+ in +}$t_2$ &
+{\small\verb+LET(\+}$x${\small\verb+.+}$t_2${\small\verb+)+}$t_1$ &
+{\small\verb+mk_let(\+}$x${\small\verb+.+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+\end{tabular}
+\end{center}
+
+\bigskip
+
+There are constructors, destructors and indicators for all the obvious
+constructs. (Indicators, \eg\ \ml{is\_neg}, return truth values
+indicating whether or not a term belongs to the syntax class in
+question.) In addition to the constructors listed in the table there
+are constructors, destructors, and indicators for pairs and lists,
+namely \ml{mk\_pair}\index{mk_pair@\ml{mk\_pair}},
+\ml{mk\_cons}\index{mk_cons@\ml{mk\_cons}} and
+\ml{mk\_list}\index{mk_list@\ml{mk\_list}} (see \REFERENCE).  The
+constants {\small\verb+COND+}\index{COND@\ml{COND}} and
+{\small\verb+LET+} are explained in Section~\ref{boolfull}.  The
+constants {\small\verb+\/+}\index{disjunction, in HOL
+  logic@disjunction, in \HOL\ logic!syntax of}, {\small\verb+/\+},
+{\small\verb+==>+} and {\small\verb+=+} are examples of {\it
+  infixes\/} and represent $\vee$, $\wedge$, $\imp$ and equality,
+respectively. If $c$ is declared to be an infix, then the \HOL\ parser
+will translate $t_1\ c\ t_2$ to {\small\verb+$+}$c\ t_1\ t_2$.
+
+The constants {\small\verb+!+}, {\small\verb+?+} and {\small\verb+@+} are examples
+of \label{binder} \textit{binders}\index{binders, in HOL logic@binders, in \HOL\ logic}
+ and represent $\forall$, $\exists$ and $\hilbert$, respectively.  If $c$
+is declared to be a binder, then the
+\HOL\ parser will translate $c\ x${\small\verb+.+}$t$ to the combination
+{\small\verb+$+}$c${\small\verb+(\+}$x${\small\verb+.+}$t${\small\verb+)+}
+(\ie\ the application of the constant $c$ to the representation of
+the abstraction $\lquant{x}t$)\index{ function abstraction binder, in HOL logic@{\small\verb+\+} (function abstraction binder, in \HOL\ logic)}.
+
+In addition to the kinds of terms in the tables above,
+the parser also supports the following syntactic abbreviations.
+
+
+\begin{center}
+
+\index{variables, in HOL logic@variables, in \HOL\ logic!multiple bound}
+\index{list_mk_comb@\ml{list\_mk\_comb}|pin}
+\index{list_mk_abs@\ml{list\_mk\_abs}|pin}
+\index{list_mk_forall@\ml{list\_mk\_forall}|pin}
+\index{list_mk_exists@\ml{list\_mk\_exists}|pin}
+\index{combinations, in HOL logic@combinations, in \HOL\ logic!abbreviation for multiple}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!abbreviation for multiple}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!abbreviation for multiple}
+\begin{tabular}{|l|l|l|} \hline
+\multicolumn{3}{|c|}{ } \\
+\multicolumn{3}{|c|}{\bf Syntactic abbreviations} \\
+\multicolumn{3}{|c|}{ } \\
+{\it Abbreviated term} & {\it Meaning} &
+{\it Constructor expression} \\ \hline
+ & &  \\
+$t\ t_1 \cdots t_n$ &
+{\small\verb+(+}$\cdots${\small\verb+(+}$t\ t_1${\small\verb+)+}$\cdots t_n${\small\verb+)+} &
+{\small\verb+list_mk_comb(+}$t${\small\verb+,[+}$t_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$t_n${\small\verb+])+} \\ \hline
+{\small\verb+\+}$x_1\cdots x_n${\small\verb+.+}$t$ &
+{\small\verb+\+}$x_1${\small\verb+. +}$\cdots${\small\verb+ \+}$x_n${\small\verb+.+}$t$ &
+{\small\verb+list_mk_abs([+}$x_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$x_n${\small\verb+],+}$t${\small\verb+)+}
+\\ \hline
+{\small\verb+!+}$x_1\cdots x_n${\small\verb+.+}$t$ &
+{\small\verb+!+}$x_1${\small\verb+. +}$\cdots${\small\verb+ !+}$x_n${\small\verb+.+}$t$ &
+{\small\verb+list_mk_forall([+}$x_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$x_n${\small\verb+],+}$t${\small\verb+)+}
+\\ \hline
+{\small\verb+?+}$x_1\cdots x_n${\small\verb+.+}$t$ &
+{\small\verb+?+}$x_1${\small\verb+. +}$\cdots${\small\verb+ ?+}$x_n${\small\verb+.+}$t$ &
+{\small\verb+list_mk_exists([+}$x_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$x_n${\small\verb+],+}$t${\small\verb+)+} \\
 \hline
 \end{tabular}
-\caption{Commonly-used Theories}\label{CommonTheories}
 \end{center}
-\end{table}
 
-\section{Combinators and the theory \theoryimp{combin}}
+\noindent There are also constructors
+\ml{list\_mk\_conj}\index{list_mk_conj@\ml{list\_mk\_conj}},
+\ml{list\_mk\_disj}\index{list_mk_disj@\ml{list\_mk\_disj}},
+\ml{list\_mk\_imp}\index{list_mk_imp@\ml{list\_mk\_imp}} and
+\ml{list\_mk\_pair}\index{list_mk_pair@\ml{list\_mk\_pair}}
+for conjunctions, disjunctions, implications and tuples respectively.
+The corresponding destructor functions are called \ml{strip\_comb}, \etc,
+\index{term constructors, in HOL logic@term constructors, in \HOL\ logic|)}
+\index{terms, in HOL logic@terms, in \HOL\ logic!constructors for|)}
+
+\subsection{Theorems}
+
+A large number of theorems involving the logical constants are
+pre-proved in the theory \theoryimp{bool}. The following theorems
+illustrate how higher order logic allows concise expression of
+theorems supporting quantifier movement.
+
+\begin{boxed}
+\begin{verbatim}
+ LEFT_AND_FORALL_THM  |- !P Q. (!x. P x) /\ Q = !x. P x /\ Q
+ RIGHT_AND_FORALL_THM |- !P Q. P /\ (!x. Q x) = !x. P /\ Q x
+
+ LEFT_EXISTS_AND_THM  |- !P Q. (?x. P x /\ Q) = (?x. P x) /\ Q
+ RIGHT_EXISTS_AND_THM |- !P Q. (?x. P /\ Q x) = P /\ ?x. Q x
+
+ LEFT_EXISTS_IMP_THM  |- !P Q. (?x. P x ==> Q) = (!x. P x) ==> Q
+ RIGHT_EXISTS_IMP_THM |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
+
+ LEFT_FORALL_IMP_THM  |- !P Q. (!x. P x ==> Q) = (?x. P x) ==> Q
+ RIGHT_FORALL_IMP_THM |- !P Q. (!x. P ==> Q x) = P ==> !x. Q x
+
+ LEFT_FORALL_OR_THM   |- !Q P. (!x. P x \/ Q) = (!x. P x) \/ Q
+ RIGHT_FORALL_OR_THM  |- !P Q. (!x. P \/ Q x) = P \/ !x. Q x
+
+ LEFT_OR_EXISTS_THM   |- !P Q. (?x. P x) \/ Q = ?x. P x \/ Q
+ RIGHT_OR_EXISTS_THM  |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
+
+ EXISTS_OR_THM        |- !P Q. (?x. P x \/ Q x) = (?x. P x) \/ ?x. Q x
+ FORALL_AND_THM       |- !P Q. (!x. P x /\ Q x) = (!x. P x) /\ !x. Q x
+
+ NOT_EXISTS_THM       |- !P. ~(?x. P x) = !x. ~P x
+ NOT_FORALL_THM       |- !P. ~(!x. P x) = ?x. ~P x
+\end{verbatim}
+\end{boxed}
+
+Many other theorems may be found in \theoryimp{bool} theory.
+
+\subsection{Combinators}
 
 \index{function composition, in HOL logic@function composition, in \HOL\
 logic|(}
@@ -68,6 +691,7 @@ and
 
 \begin{hol} \index{K_DEF@\ml{K\_DEF}} \index{S_DEF@\ml{S\_DEF}}
 \index{I_DEF@\ml{I\_DEF}}
+{\small
 \begin{verbatim}
    o_DEF |- f o g = (\x. f(g x))
 
@@ -80,7 +704,7 @@ and
    W_DEF |- W = (\f x. f x x)
 
    C_DEF |- C = (\f x y. f y x)
-\end{verbatim}
+\end{verbatim}}
 \end{hol}
 
 
@@ -117,82 +741,8 @@ and \ml{I} are first hidden (see Section~\ref{hidden}).
 \index{function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|)}
 \index{function composition, in HOL logic@function composition, in \HOL{} logic|)}
 
-\section{The theory \theoryimp{relation}}\label{relation}
 
-Mathematical relations can be represented in \HOL{} by the type
-{\small\verb+:'a -> 'b -> bool+}. The theory {\small\verb+relation+}
-is intended to suppport this view of relations, but does not as yet
-provide a well-rounded collection of definitions; indeed, it is common
-to treat relations directly. For example, $R_1 \subseteq R_2$ can be
-phrased as {\small\verb+!x y. R1 x y ==> R2 x y+}. The theory
-\theoryimp{relation} currently provides definitions and theorems about
-the reflexive, transitive and symmetric closures of a relation, for
-wellfounded relations, and for some obvious extensions of these
-properties.  For example, the constant {\small\verb+RTC+} takes the
-reflexive and transitive closure of a relation, while the predicate
-{\small\verb+WFP+} is true of a relation and an element if the
-relation is well-founded at that element.
-
-\begin{hol}
-\begin{verbatim}
-   RC_DEF |- !R x y. RC R x y = (x = y) \/ R x y
-   SC_DEF |- !R x y. SC R x y = R x y \/ R y x
-   TC_DEF |- !R a b.
-               TC R a b =
-                 !P.
-                   (!x y. R x y ==> P x y) /\
-                   (!x y z. P x y /\ P y z ==> P x z)
-                   ==>
-                     P a b
-
-   WF_DEF |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
-\end{verbatim}
-\end{hol}
-
-Wellfoundedness is used to justify the principle of wellfounded
-induction and also a general recursion theorem. The statement of the
-recursion theorem requires that the notion of a function restriction be
-defined as well.
-
-\begin{hol}
-\begin{verbatim}
-   WF_INDUCTION_THM
-   |- !R:'a->'a->bool.
-          WF R
-            ==> !P. (!x. (!y. R y x ==> P y) ==> P x)
-            ==> !x. P x
-
-   RESTRICT_DEF |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
-
-   WFREC_COROLLARY
-   |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
-
-   WF_RECURSION_THM |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
-\end{verbatim}
-\end{hol}
-
-\noindent The theorems \ml{WF\_INDUCTION\_THM} and
-\ml{WFREC\_COROLLARY} are used to automate recursive definitions. A
-few basic combinators for wellfounded relations are also provided in
-this theory.
-
-\begin{hol}
-\begin{verbatim}
-   Empty_def      |- !x y. Empty x y = F
-
-   inv_image_def  |- !R f. inv_image R f = \x y. R (f x) (f y)
-
-   WF_Empty       |- WF Empty
-
-   WF_SUBSET      |- !R P. WF R /\ (!x y. P x y ==> R x y) ==> WF P
-
-   WF_TC          |- !R. WF R ==> WF (TC R)
-
-   WF_inv_image   |- !R f. WF R ==> WF (inv_image R f)
-\end{verbatim}
-\end{hol}
-
-\section{Pairs and the type {\tt prod}}\label{prod}
+\subsection{Pairs}\label{prod}
 
 \index{representing types, in HOL logic@representing types, in \HOL{} logic!pair example of|(}
 \index{pairs, in HOL logic@pairs, in \HOL{} logic|(}
@@ -347,7 +897,7 @@ definitions and the axiom \ml{prod\_TY\_DEF}.
 \index{bool, the HOL theory@\ml{bool}, the \HOL{} theory|)}
 
 
-\subsection{Paired abstractions}
+\subsubsection{Paired abstractions}
 \label{HOL-varstruct}
 \index{pairs, in HOL logic@pairs, in \HOL{} logic!in abstractions|(}
 \index{UNCURRY@\ml{UNCURRY}|(}
@@ -454,7 +1004,7 @@ Applications of paired abstraction to tuples can be $\beta$-reduced using
 \ml{PAIRED\_BETA\_CONV} (see Section~\ref{genbeta}).
 
 
-\subsection{{\tt let}-terms}
+\subsubsection{{\tt let}-terms}
 \label{let-exp}
 
 
@@ -530,7 +1080,7 @@ the surface syntax.
 \ml{let}-terms can be simplified with \ml{let\_CONV}; see
 Section~\ref{let-terms}.
 
-\section{Disjoint sums}\label{sum}
+\subsection{Disjoint sums}\label{sum}
 
 The theory \ml{sum}\index{sum@\ml{sum}} defines the binary  disjoint
 union\index{disjoint union theory, in HOL
@@ -623,7 +1173,7 @@ do with the discriminator functions \ml{ISL} and \ml{ISR}:
 
 \noindent which describe the projection functions \ml{OUTL} and \ml{OUTR}.
 
-\section{The theory \theoryimp{one}}%
+\subsection{The one-element type}%
 \index{one, the HOL theory@\ml{one}, the \HOL{} theory}%
 \index{one, the HOL type@\ml{one}, the \HOL{} type}%
 
@@ -649,7 +1199,7 @@ constructing more elaborate types.  The one value of the type
 value in \ML.  This is also the default way in which this value is
 printed by the system pretty-printer.
 
-\section{The theory \theoryimp{option}}
+\subsection{The option type}
 \index{option, the HOL theory@\ml{option}, the \HOL{} theory}
 
 The theory \theoryimp{option} defines a type operator \texttt{option}
@@ -669,41 +1219,53 @@ undefined $\alpha$ values to \texttt{NONE}.
 An inductive type, options have a recursion theorem supporting the
 definition of primitive recursive functions over option values.  Its
 name is \texttt{option\_Axiom}:
+{\small
 \begin{verbatim}
   !e : 'b. !f : 'a -> 'b
      ?h. 'a option -> 'b.
         (!x. h (SOME x) = f x) /\
         (h NONE = e)
 \end{verbatim}
-
+}
 The \theoryimp{option} theory also defines a case constant that allows
 one to inspect option values in a ``pattern-matching'' style.
+{\small
 \begin{verbatim}
    case e of
       NONE -> v
    || SOME a -> f a
 \end{verbatim}
+}
 The constant underlying this syntactic sugar is \texttt{option\_case},
 with definition
+{\small
 \begin{verbatim}
    option_case_def |- (option_case u f NONE = u) /\
                       (option_case u f (SOME x) = f x)
-\end{verbatim}
+\end{verbatim}}
 One other useful function in the \theoryimp{option} theory is
 \texttt{OPTION\_MAP}:
+{\small
 \begin{verbatim}
    OPTION_MAP_DEF  |- (OPTION_MAP f NONE = NONE) /\
                       (OPTION_MAP f (SOME x) = SOME (f x))
 \end{verbatim}
-
+}
 Finally, the \texttt{THE} function takes a \texttt{SOME} value to that
 constructor's argument, and is unspecified on \texttt{NONE}:
+{\small
 \begin{verbatim}
-   THE_DEF         |- THE (SOME x) = x
+   THE_DEF   |- THE (SOME x) = x
 \end{verbatim}
+}
 
+\section{Numbers}
 
-\section{Natural numbers}
+The natural numbers, integers, and real numbers are provided in a
+series of theories. Also available are theories of floating point and
+fixed point numbers. 
+
+\subsection{Natural numbers}
 
 The natural numbers are developed in a series of theories. First, the
 type of numbers is defined from the Axiom of Infinity, and Peano's
@@ -711,7 +1273,7 @@ axioms are derived. Then the primitive recursion theorem is
 proved. Based on that, a large theory treating the standard arithmetic
 operations is developed. Lastly, a theory of numerals is provided.
 
-\subsection{The theory \theoryimp{num}}
+\subsubsection{The theory \theoryimp{num}}
 
 The theory \theoryimp{num}
 \index{num, the theory in HOL logic@\ml{num}, the theory in \HOL{} logic}
@@ -750,7 +1312,7 @@ documentation in \REFERENCE\ for details), and
 \ml{Induct}\index{Induct@\ml{Induct}} (see
 Section~\ref{sec:high-level-proof-steps}).
 
-\subsection{The theory \theoryimp{prim\_rec}}\label{prim_rec}
+\subsubsection{The theory \theoryimp{prim\_rec}}\label{prim_rec}
 
 \index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL{} logic!automated|(}
 \index{primitive recursion theorem!for numbers|(}
@@ -974,7 +1536,7 @@ as well as the wellfoundedness of measure functions.
 \end{hol}
 
 
-\subsection{The theory \theoryimp{arithmetic}}
+\subsection{Arithmetic}
 
 The built-in theory {\small\verb%arithmetic%}\index{number theory, in HOL logic@number theory, in \HOL{} logic}
 \index{arithmetic@\ml{arithmetic}} contains primitive recursive
@@ -1049,7 +1611,7 @@ Operator & Strength & Associativity \\ \hline
 \end{tabular}}
 \end{center}
 
-\subsection{The theory \theoryimp{numeral}}\label{numeral}\index{numeral,
+\subsection{Numerals}\label{numeral}\index{numeral,
 the construction of in HOL logic@\ml{numeral}, the construction of in \HOL{} logic}
 
 The type \ml{num}\index{num, the type in \HOL\
@@ -1060,13 +1622,12 @@ The type \ml{num}\index{num, the type in \HOL\
   than $0$ are actually built up from the constants introduced by
   the following definitions:
 \begin{verbatim}
-   NUMERAL_DEF    |- !x. NUMERAL x = x
+   NUMERAL_DEF |- !x. NUMERAL x = x
 
-   BIT1           |- !x. BIT1 n = n + (n + SUC 0)
+   BIT1        |- !x. BIT1 n = n + (n + SUC 0)
+   BIT2        |- !x. BIT2 n = n + (n + SUC(SUC 0))
 
-   BIT2           |- !x. BIT2 n = n + (n + SUC(SUC 0))
-
-   ALT_ZERO       |- ALT_ZERO = 0
+   ALT_ZERO    |- ALT_ZERO = 0
 \end{verbatim}
 
 \noindent For example, the numeral $5$ is represented by the term
@@ -1180,7 +1741,7 @@ than {\small\verb+n+}. For information on how to install new character
 suffixes, consult the {\small\verb+add_numeral_info+} entry in
 \REFERENCE.
 
-\section{Integers}\label{integers}
+\subsection{Integers}\label{integers}
 
 There is an extensive theory of integers in \HOL. The type of integers
 is constructed as a quotient on pairs of natural numbers. A standard
@@ -1227,11 +1788,11 @@ Term `1i = &(1n + 0n)`;
 \end{session}
 
 
-\section{Real numbers and analysis}
+\subsection{Real numbers}
 
 There is an extensive collection of theories that make up the
 development of real numbers and analysis in HOL,
-due to John Harrison \cite{jrh:thesis}. We will only give an overview of
+due to John Harrison \cite{jrh:thesis}. We will only give a sketchy overview of
 the development; the interested reader should consult \REFERENCE\ and
 Harrison's thesis.
 
@@ -1281,13 +1842,12 @@ theorem.
 
 \end{description}
 
-A separate development that depends only on {\small\verb+realTheory+} is
-a theory of polynomials, found in {\small\verb+polyTheory+}. A standard
-collection of operations on polynomials, and theorems about them, are
-also derived.
+\section{Sequences}
 
-\section{Theories of sequences}
-\subsection{The theory {\tt list}}\label{avra_list}
+\HOL{} provides theories for various kinds of sequences: finite lists, lazy lists, 
+paths, finite strings, and $n$-bit words. 
+
+\subsection{Lists}\label{avra_list}
 \index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL{} logic}
 \index{recursive definitions, in HOL logic@recursive definitions, in \HOL{} logic!automated for lists|(}
 \index{types, in HOL logic@types, in \HOL{} logic!tools for construction of}
@@ -1483,6 +2043,124 @@ are also made in the theory \ml{list}:
 how the \HOL{} system has evolved. A more extensive theory of lists can
 be found in {\small\verb+rich_listTheory+}.
 
+%\subsection{The theory {\tt rich\_list}}\label{rich_list}
+%
+%The theory {\small\verb+list+} is relatively compact, largely because of
+%how the \HOL{} system has evolved. A more extensive theory of lists can be
+%found in {\small\verb+rich_listTheory+}, in which the following
+%list operations are defined:
+%
+%\begin{hol}
+%\begin{verbatim}
+%  [ALL_EL]
+%  |- (!P. ALL_EL P [] = T) /\
+%     !P x l. ALL_EL P (x::l) = P x /\ ALL_EL P l
+%
+%  [BUTFIRSTN]
+%  |- (!l. BUTFIRSTN 0 l = l) /\
+%     !n x l. BUTFIRSTN (SUC n) (x::l) = BUTFIRSTN n l
+%
+%  [BUTLASTN]
+%  |- (!l. BUTLASTN 0 l = l) /\
+%     !n x l. BUTLASTN (SUC n) (SNOC x l) = BUTLASTN n l
+%
+%  [BUTLAST_DEF] |- !l. BUTLAST l = SEG (PRE (LENGTH l)) 0 l
+%
+%  [ELL]
+%  |- (!l. ELL 0 l = LAST l) /\
+%     !n l. ELL (SUC n) l = ELL n (BUTLAST l)
+%
+%  [FIRSTN]
+%  |- (!l. FIRSTN 0 l = []) /\
+%     !n x l. FIRSTN (SUC n) (x::l) = x::FIRSTN n l
+%
+%  [GENLIST]
+%  |- (!f. GENLIST f 0 = []) /\
+%     !f n. GENLIST f (SUC n) = SNOC (f n) (GENLIST f n)
+%
+%  [IS_EL_DEF]
+%  |- !x l. IS_EL x l = SOME_EL ($= x) l
+%
+%  [IS_PREFIX]
+%  |- (!l. IS_PREFIX l [] = T) /\
+%     (!x l. IS_PREFIX [] (x::l) = F) /\
+%     !x1 l1 x2 l2. IS_PREFIX (x1::l1) (x2::l2) = (x1 = x2) /\ IS_PREFIX l1 l2
+%
+%  [IS_SUBLIST]
+%  |- (!l. IS_SUBLIST l [] = T) /\
+%     (!x l. IS_SUBLIST [] (x::l) = F) /\
+%     !x1 l1 x2 l2.
+%       IS_SUBLIST (x1::l1) (x2::l2) =
+%       (x1 = x2) /\ IS_PREFIX l1 l2 \/ IS_SUBLIST l1 (x2::l2)
+%
+%  [IS_SUFFIX]
+%  |- (!l. IS_SUFFIX l [] = T) /\
+%     (!x l. IS_SUFFIX [] (SNOC x l) = F) /\
+%     !x1 l1 x2 l2.
+%       IS_SUFFIX (SNOC x1 l1) (SNOC x2 l2) = (x1 = x2) /\ IS_SUFFIX l1 l2
+%
+%  [LASTN]
+%  |- (!l. LASTN 0 l = []) /\
+%     !n x l. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
+%
+%  [LAST_DEF]
+%  |- !l. LAST l = HD (SEG 1 (PRE (LENGTH l)) l)
+%
+%  [OR_EL_DEF] |- OR_EL = SOME_EL I
+%
+%  [PREFIX_DEF] |- !P l. PREFIX P l = FST (SPLITP ($~ o P) l)
+%
+%  [REPLICATE]
+%  |- (!x. REPLICATE 0 x = []) /\
+%     !n x. REPLICATE (SUC n) x = x::REPLICATE n x
+%
+%  [REVERSE]
+%  |- (REVERSE [] = []) /\
+%     !x l. REVERSE (x::l) = SNOC x (REVERSE l)
+%
+%  [SCANL]
+%  |- (!f e. SCANL f e [] = [e]) /\
+%     !f e x l. SCANL f e (x::l) = e::SCANL f (f e x) l
+%
+%  [SCANR]
+%  |- (!f e. SCANR f e [] = [e]) /\
+%     !f e x l. SCANR f e (x::l) = f x (HD (SCANR f e l))::SCANR f e l
+%
+%  [SEG]
+%  |- (!k l. SEG 0 k l = []) /\
+%     (!m x l. SEG (SUC m) 0 (x::l) = x::SEG m 0 l) /\
+%     !m k x l. SEG (SUC m) (SUC k) (x::l) = SEG (SUC m) k l
+%
+%  [SNOC]
+%  |- (!x. SNOC x [] = [x]) /\
+%     !x x' l. SNOC x (x'::l) = x'::SNOC x l
+%
+%  [SOME_EL]
+%  |- (!P. SOME_EL P [] = F) /\
+%     !P x l. SOME_EL P (x::l) = P x \/ SOME_EL P l
+%
+%  [SPLITP]
+%  |- (!P. SPLITP P [] = ([],[])) /\
+%     !P x l.
+%       SPLITP P (x::l) =
+%       (if P x then ([],x::l) else (x::FST (SPLITP P l),SND (SPLITP P l)))
+%
+%  [SUFFIX_DEF]
+%  |- !P l. SUFFIX P l = FOLDL (\l' x. (if P x then SNOC x l' else [])) [] l
+%
+%  [UNZIP]
+%  |- (UNZIP [] = ([],[])) /\
+%     !x l. UNZIP (x::l) = (FST x::FST (UNZIP l),SND x::SND (UNZIP l))
+%
+%  [ZIP]
+%   |- (ZIP ([],[]) = []) /\
+%       !x1 l1 x2 l2. ZIP (x1::l1,x2::l2) = (x1,x2)::ZIP (l1,l2)
+%\end{verbatim}\end{hol}
+%
+%A large number of theorems about these constants can be found in
+%{\small\verb+rich_listTheory+}.
+
+
 \index{list theorems, in HOL logic@list theorems, in \HOL{} logic|)}
 \index{lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL{} logic)|)}
 \index{list theory, in HOL logic@\ml{list} theory, in \HOL{} logic|)}
@@ -1677,139 +2355,20 @@ with a provided label.  If the first path is infinite, then the result
 is equal to that first path.  The defining equation
 
 
-%\subsection{The theory {\tt rich\_list}}\label{rich_list}
-%
-%The theory {\small\verb+list+} is relatively compact, largely because of
-%how the \HOL{} system has evolved. A more extensive theory of lists can be
-%found in {\small\verb+rich_listTheory+}, in which the following
-%list operations are defined:
-%
-%\begin{hol}
-%\begin{verbatim}
-%  [ALL_EL]
-%  |- (!P. ALL_EL P [] = T) /\
-%     !P x l. ALL_EL P (x::l) = P x /\ ALL_EL P l
-%
-%  [BUTFIRSTN]
-%  |- (!l. BUTFIRSTN 0 l = l) /\
-%     !n x l. BUTFIRSTN (SUC n) (x::l) = BUTFIRSTN n l
-%
-%  [BUTLASTN]
-%  |- (!l. BUTLASTN 0 l = l) /\
-%     !n x l. BUTLASTN (SUC n) (SNOC x l) = BUTLASTN n l
-%
-%  [BUTLAST_DEF] |- !l. BUTLAST l = SEG (PRE (LENGTH l)) 0 l
-%
-%  [ELL]
-%  |- (!l. ELL 0 l = LAST l) /\
-%     !n l. ELL (SUC n) l = ELL n (BUTLAST l)
-%
-%  [FIRSTN]
-%  |- (!l. FIRSTN 0 l = []) /\
-%     !n x l. FIRSTN (SUC n) (x::l) = x::FIRSTN n l
-%
-%  [GENLIST]
-%  |- (!f. GENLIST f 0 = []) /\
-%     !f n. GENLIST f (SUC n) = SNOC (f n) (GENLIST f n)
-%
-%  [IS_EL_DEF]
-%  |- !x l. IS_EL x l = SOME_EL ($= x) l
-%
-%  [IS_PREFIX]
-%  |- (!l. IS_PREFIX l [] = T) /\
-%     (!x l. IS_PREFIX [] (x::l) = F) /\
-%     !x1 l1 x2 l2. IS_PREFIX (x1::l1) (x2::l2) = (x1 = x2) /\ IS_PREFIX l1 l2
-%
-%  [IS_SUBLIST]
-%  |- (!l. IS_SUBLIST l [] = T) /\
-%     (!x l. IS_SUBLIST [] (x::l) = F) /\
-%     !x1 l1 x2 l2.
-%       IS_SUBLIST (x1::l1) (x2::l2) =
-%       (x1 = x2) /\ IS_PREFIX l1 l2 \/ IS_SUBLIST l1 (x2::l2)
-%
-%  [IS_SUFFIX]
-%  |- (!l. IS_SUFFIX l [] = T) /\
-%     (!x l. IS_SUFFIX [] (SNOC x l) = F) /\
-%     !x1 l1 x2 l2.
-%       IS_SUFFIX (SNOC x1 l1) (SNOC x2 l2) = (x1 = x2) /\ IS_SUFFIX l1 l2
-%
-%  [LASTN]
-%  |- (!l. LASTN 0 l = []) /\
-%     !n x l. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
-%
-%  [LAST_DEF]
-%  |- !l. LAST l = HD (SEG 1 (PRE (LENGTH l)) l)
-%
-%  [OR_EL_DEF] |- OR_EL = SOME_EL I
-%
-%  [PREFIX_DEF] |- !P l. PREFIX P l = FST (SPLITP ($~ o P) l)
-%
-%  [REPLICATE]
-%  |- (!x. REPLICATE 0 x = []) /\
-%     !n x. REPLICATE (SUC n) x = x::REPLICATE n x
-%
-%  [REVERSE]
-%  |- (REVERSE [] = []) /\
-%     !x l. REVERSE (x::l) = SNOC x (REVERSE l)
-%
-%  [SCANL]
-%  |- (!f e. SCANL f e [] = [e]) /\
-%     !f e x l. SCANL f e (x::l) = e::SCANL f (f e x) l
-%
-%  [SCANR]
-%  |- (!f e. SCANR f e [] = [e]) /\
-%     !f e x l. SCANR f e (x::l) = f x (HD (SCANR f e l))::SCANR f e l
-%
-%  [SEG]
-%  |- (!k l. SEG 0 k l = []) /\
-%     (!m x l. SEG (SUC m) 0 (x::l) = x::SEG m 0 l) /\
-%     !m k x l. SEG (SUC m) (SUC k) (x::l) = SEG (SUC m) k l
-%
-%  [SNOC]
-%  |- (!x. SNOC x [] = [x]) /\
-%     !x x' l. SNOC x (x'::l) = x'::SNOC x l
-%
-%  [SOME_EL]
-%  |- (!P. SOME_EL P [] = F) /\
-%     !P x l. SOME_EL P (x::l) = P x \/ SOME_EL P l
-%
-%  [SPLITP]
-%  |- (!P. SPLITP P [] = ([],[])) /\
-%     !P x l.
-%       SPLITP P (x::l) =
-%       (if P x then ([],x::l) else (x::FST (SPLITP P l),SND (SPLITP P l)))
-%
-%  [SUFFIX_DEF]
-%  |- !P l. SUFFIX P l = FOLDL (\l' x. (if P x then SNOC x l' else [])) [] l
-%
-%  [UNZIP]
-%  |- (UNZIP [] = ([],[])) /\
-%     !x l. UNZIP (x::l) = (FST x::FST (UNZIP l),SND x::SND (UNZIP l))
-%
-%  [ZIP]
-%   |- (ZIP ([],[]) = []) /\
-%       !x1 l1 x2 l2. ZIP (x1::l1,x2::l2) = (x1,x2)::ZIP (l1,l2)
-%\end{verbatim}\end{hol}
-%
-%A large number of theorems about these constants can be found in
-%{\small\verb+rich_listTheory+}.
+\subsection{Character strings}
 
+ASCII characters and character strings.
 
+\subsection{Theories of $n$-bit words}
 
-%\section{Partial functions and the {\tt option} type}
+Anthony's package.
 
+\section{Collections}
 
-%\section{Finite maps}
+\subsection{Sets (\theoryimp{pred\_set})}
 
-%\section{Strings}
-%\subsection{The theory {\tt ascii}}
-%\subsection{The theory {\tt string}}
+Sets as predicates. Finite sets.
 
-%\section{Sets}
-%\subsection{The theory {\tt set}}
-%\subsection{The theory {\tt pred\_set}}
-%%\subsection{The theory {\tt finset}}
-%
 %\subsection{Syntax for sets}\index{set theory notation}
 %
 %The special purpose set-theoretic notations
@@ -1893,175 +2452,108 @@ is equal to that first path.  The defining equation
 %
 %%\section{Multisets}
 %
-%\section{Restricted binders}\label{res-quant}
-%
-%\index{types, in HOL logic@types, in \HOL{} logic!dependent}
-%\index{dependent types in HOL logic@dependent types in \HOL{} logic}
-%\index{quantifiers!restricted}
-%
-%The theory \ml{res\_quan} contains the definitions of the constants
-%{\small\verb!RES_FORALL!}, {\small\verb!RES_EXISTS!},
-%{\small\verb!RES_SELECT!}, and {\small\verb!RES_ABSTRACT!},
-%which are used to support restricted
-%quantification\index{quantifiers!restricted} in the \HOL{} logic.  This
-%implements a method of simulating subtypes and dependent types with
-%predicates. The definitions are:
-%
-%\begin{hol}
-%\index{RES_FORALL@\ml{RES\_FORALL}}
-%\index{RES_EXISTS@\ml{RES\_EXISTS}}
-%\index{RES_SELECT@\ml{RES\_SELECT}}
-%\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}
-%\index{ARB@\ml{ARB}}
-%\begin{verbatim}
-%   RES_FORALL   |- !P B. RES_FORALL P B = (!x. P x ==> B x)
-%
-%   RES_EXISTS   |- !P B. RES_EXISTS P B = (?x. P x /\ B x)
-%
-%   RES_SELECT   |- !P B. RES_SELECT P B = (@x. P x /\ B x)
-%
-%   RES_ABSTRACT |- !P B. RES_ABSTRACT P B = (\x. if P x then B x else ARB)
-%\end{verbatim}\end{hol}
-%
-%
-%The new syntax automatically translates as follows:
-%
-%\begin{hol}
-%{\small\verb%   \%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_ABSTRACT %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-%{\small\verb%   !%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_FORALL   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-%{\small\verb%   ?%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_EXISTS   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-%{\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_SELECT   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}
-%\end{hol}
-%
-%Anything can be written between the binder and `\ml{::}' that can be
-%written between the binder and `\ml{.}`. See the examples below.
-%
-%Currently no derived rules are provided to support this notation, so
-%any inferences will need to work on the underlying semantic
-%representation.
-%
-%User-defined binders can also have restricted forms, which are set up
-%with the function:
-%
-%\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}|pin}
-%\begin{verbatim}
-%   associate_restriction : (string * string) -> *
-%\end{verbatim}\end{boxed}
-%
-%
-%\noindent If \m{c} is the name
-%of a binder and \ml{RES\_}\m{c} is the name of a suitable constant (which
-%must be explicitly defined), then executing:
-%
-%\begin{hol}
-%{\small\verb%   associate_restriction(`%}$c${\small\verb%`, `RES_%}$c${\small\verb%`)%}
-%\end{hol}
-%
-%\noindent will cause the parser and pretty-printer to support:
-%
-%\begin{hol}
-%{\small\verb%   %}$c$ $v${\small\verb%::%}$P${\small\verb%. %}$B${\small\verb%    <---->   RES_%}$c$ $P${\small\verb% (\%}$v${\small\verb%. %}$B${\small\verb%)%}
-%\end{hol}
-%
-%Here is an example session:
-%
-%\setcounter{sessioncount}{1}
-%\begin{session}\begin{verbatim}
-%#"!x y::P. x<y";;
-%"!x y :: P. x < y" : term
-%
-%#set_flag(`print_restrict`, false);;
-%true : bool
-%
-%#"!x y::P. x<y";;
-%"RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
-%
-%#"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
-%"RES_EXISTS
-% (\(m,n). m < n)
-% (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
-%: term
-%
-%#"\x y z::P.[0;x;y;z]";;
-%"RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
-%: term
-%\end{verbatim}\end{session}
-%
-%A conversion that rewrites away the constants \ml{RES\_ABSTRACT},
-%\ml{RES\_FORALL}, \ml{RES\_EXISTS} and \ml{RES\_SELECT} is:
-%
-%\begin{hol}\begin{verbatim}
-%   let RESTRICT_CONV =
-%        (PURE_REWRITE_CONV [definition `bool` `RES_ABSTRACT`;
-%                            definition `bool` `RES_FORALL`;
-%                            definition `bool` `RES_EXISTS`;
-%                            definition `bool` `RES_SELECT`])
-%        THENC (DEPTH_CONV BETA_CONV)
-%\end{verbatim}\end{hol}
-%
-%\noindent This is a bit unsatisfactory, as is shown by the artificial
-%example below:
-%
-%\setcounter{sessioncount}{1}
-%\begin{session}\begin{verbatim}
-%#let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
-%t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
-%
-%#RESTRICT_CONV t;;
-%|- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
-%   (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
-%\end{verbatim}\end{session}
-%
-%The variable $x$ in the definitions of the constants
-%\ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
-%\ml{RES\_SELECT} gets confused with the variable in the supplied term.
-%This can be avoided by changing \ml{RESTRICT\_CONV} to perform
-%explicit alpha-conversion. For example, by implementing a conversion:
-%
-%\begin{hol}
-%{\small\verb%   RES_FORALL %}$P${\small\verb% (\%}$v$\ml{.}$B$\ml{[}$v$\ml{])  ---->  !}$v$\ml{. }$P$ $v$\ml{ ==> }$B$\ml{[}$v$\ml{]}
-%\end{hol}
-%
-%\noindent Dealing with the case when
-%$v$ is a variable structure is also desirable. For example:
-%
-%\begin{session}\begin{verbatim}
-%#let t1 = "!(m,n)::P. m<n";;
-%t1 = "!(m,n) :: P. m < n" : term
-%
-%#RESTRICT_CONV t1;;
-%|- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
-%
-%\end{verbatim}\end{session}
-%
-%\noindent If anyone writes the desired conversions please let us know!
-%
-%Here is an example of a user-defined restriction:
-%
-%\begin{session}\begin{verbatim}
-%#new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
-%|- !p. $DURING p = $! p
-%
-%#"DURING x::(m,n). p x";;
-%no restriction constant associated with DURING
-%skipping: x " ;; parse failed
-%
-%#new_definition
-%# (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
-%|- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
-%
-%#associate_restriction(`DURING`,`RES_DURING`);;
-%() : void
-%
-%#"DURING x::(m,n). p x";;
-%"DURING x :: (m,n). p x" : term
-%
-%#set_flag(`print_restrict`,false);;
-%true : bool
-%
-%#"DURING x::(m,n). p x";;
-%"RES_DURING(m,n)(\x. p x)" : term
-%\end{verbatim}\end{session}
+
+\subsection{Multisets (\theoryimp{bag})}
+
+Multisets.
+
+\subsection{Relations (\theoryimp{relation})}\label{relation}
+
+Mathematical relations can be represented in \HOL{} by the type
+{\small\verb+:'a -> 'b -> bool+}. The theory {\small\verb+relation+}
+is intended to suppport this view of relations, but does not as yet
+provide a well-rounded collection of definitions; indeed, it is common
+to treat relations directly. For example, $R_1 \subseteq R_2$ can be
+phrased as {\small\verb+!x y. R1 x y ==> R2 x y+}. The theory
+\theoryimp{relation} currently provides definitions and theorems about
+the reflexive, transitive and symmetric closures of a relation, for
+wellfounded relations, and for some obvious extensions of these
+properties.  For example, the constant {\small\verb+RTC+} takes the
+reflexive and transitive closure of a relation, while the predicate
+{\small\verb+WFP+} is true of a relation and an element if the
+relation is well-founded at that element.
+
+\begin{hol}
+\begin{verbatim}
+   RC_DEF |- !R x y. RC R x y = (x = y) \/ R x y
+   SC_DEF |- !R x y. SC R x y = R x y \/ R y x
+   TC_DEF |- !R a b.
+               TC R a b =
+                 !P.
+                   (!x y. R x y ==> P x y) /\
+                   (!x y z. P x y /\ P y z ==> P x z)
+                   ==>
+                     P a b
+
+   WF_DEF |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
+\end{verbatim}
+\end{hol}
+
+Wellfoundedness is used to justify the principle of wellfounded
+induction and also a general recursion theorem. The statement of the
+recursion theorem requires that the notion of a function restriction be
+defined as well.
+
+\begin{hol}
+\begin{verbatim}
+   WF_INDUCTION_THM
+   |- !R:'a->'a->bool.
+          WF R
+            ==> !P. (!x. (!y. R y x ==> P y) ==> P x)
+            ==> !x. P x
+
+   RESTRICT_DEF |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
+
+   WFREC_COROLLARY
+   |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
+
+   WF_RECURSION_THM |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
+\end{verbatim}
+\end{hol}
+
+\noindent The theorems \ml{WF\_INDUCTION\_THM} and
+\ml{WFREC\_COROLLARY} are used to automate recursive definitions. A
+few basic combinators for wellfounded relations are also provided in
+this theory.
+
+\begin{hol}
+\begin{verbatim}
+   Empty_def      |- !x y. Empty x y = F
+
+   inv_image_def  |- !R f. inv_image R f = \x y. R (f x) (f y)
+
+   WF_Empty       |- WF Empty
+
+   WF_SUBSET      |- !R P. WF R /\ (!x y. P x y ==> R x y) ==> WF P
+
+   WF_TC          |- !R. WF R ==> WF (TC R)
+
+   WF_inv_image   |- !R f. WF R ==> WF (inv_image R f)
+\end{verbatim}
+\end{hol}
+
+\subsection{Finite maps (\theoryimp{finite\_map})}\label{finite_map}
+
+\section{Further Mathematics}
+
+\subsection{Divisibility and Greatest Common Divisor}
+
+\subsection{Analysis}
+
+\subsection{Polynomials}
+
+A separate development that depends only on {\small\verb+realTheory+} is
+a theory of polynomials, found in {\small\verb+polyTheory+}. A standard
+collection of operations on polynomials, and theorems about them, are
+also derived.
+
+\subsection{Probability}
+
+\subsection{Temporal Logic}
+\subsection{$\mu$-Calculus}
+\subsection{Computation Tree Logic (CTL)}
+\subsection{The State-transformer monad}
+\subsection{While-loops}
 
 %%% Local Variables:
 %%% mode: latex
