@@ -6,7 +6,7 @@ Documentation
 
 There is an improved interface to documentation:
 
-   * The A single HTML page gives organized access to
+   * A single HTML page gives organized access to
       * libraries (source)
       * theories (proved theorems and scripts)
       * proof support (documentation and source)
@@ -81,9 +81,9 @@ New theories
     rules are also provided, and these support fairly efficient term
     evaluation using WORD_CONV.
 
-    Although the word size and operations are fixed, the script
-    src/word32/word32Script.sml can be used as a basis for defining
-    bespoke word theories.  (The word length is given by a constant, WL.)
+    Although the word size and operations are fixed, the functor
+    src/word32/wordFunctor.sml can be used as a basis for defining
+    bespoke word theories.
 
   * A new theory of strings over an alphabet of (256) characters has
     been provided. String literals are no longer an infinite set of
@@ -163,6 +163,18 @@ New features
     functions called on terms of specified types.  For more details,
     see the documentation for Parse.add_user_printer in the REFERENCE.
 
+  * There is a new (simple) interface provided to the "call-by-value"
+    rewriter.  bossLib.EVAL and bossLib.EVAL_TAC "evaluate" terms and
+    goals respectively using a global set of rewrite theorems.  This
+    set is updated as theories load, so that running "functional
+    programs" in the logic should often be as simple a matter as
+    writing
+         EVAL ``FACT 6``
+    and getting back
+         > val it = |- FACT 6 = 720 : thm
+
+    Definitions made with Define also automatically update this global
+    set of rewrites.
 
 Behaviours changed:
 -------------------
@@ -241,3 +253,24 @@ Bugs fixed:
     now correct behaviour of constant hiding that wasn't correct prior
     to Taupo-6.
 
+"Gratuitous" incompatibilities:
+-------------------------------
+
+  * There is no longer any module called basicHol90Lib.  Instead,
+    proof scripts should open boolLib.
+
+  * The orientation of the theorems INTER_ASSOC and UNION_ASSOC from
+    pred_setTheory has been flipped.  This brings these theorems into
+    line with all of the other associativity theorems in the system,
+    which are of the form  "right-associated" = "left associated",
+    (e.g.  x + (y + z) = (x + y) + z).  This form is that expected by
+    the AC_CONV procedure.
+
+  * Quotations vs. terms.  New tactics from bossLib and definitional
+    principles take quotations (i.e., use `...`).  This allows tactics
+    to parse the quotations in the context of the current goal, and
+    allows definitional principles to cope with the fact that you may
+    be redefining a new version of an existing constant with the same
+    name.  Other functions take terms, or types (i.e., use ``...``, or
+    (Term`...`)).  This means that bossLib.DECIDE now takes a term,
+    not a quotation.
