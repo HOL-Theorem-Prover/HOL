@@ -1,0 +1,1988 @@
+(* ===================================================================== *)
+(* FILE          : Drule.sml                                             *)
+(* DESCRIPTION   : Derived theorems and rules. (Proper derivations are 	 *)
+(*		   given as comments.) Largely translated from hol88.    *)
+(*                                                                       *)
+(* AUTHORS       : (c) Mike Gordon and                                   *)
+(*                     Tom Melham, University of Cambridge, for hol88    *)
+(* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
+(* DATE          : September 11, 1991                                    *)
+(* ===================================================================== *)
+
+
+structure Drule :> Drule =
+struct
+
+open Feedback HolKernel Parse boolTheory boolSyntax;
+
+infix 5 ## |-> -->;
+
+val ERR = mk_HOL_ERR "Drule";
+
+
+(*---------------------------------------------------------------------------*
+ *  Add an assumption                                                        *
+ *                                                                           *
+ *      A |- t'                                                              *
+ *   -----------                                                             *
+ *    A,t |- t'                                                              *
+ *---------------------------------------------------------------------------*)
+
+fun ADD_ASSUM t th = MP (DISCH t th) (ASSUME t);
+
+
+(*---------------------------------------------------------------------------
+ * Transitivity of ==>
+ *
+ *   A1 |- t1 ==> t2            A2 |- t2 ==> t3
+ * ---------------------------------------------
+ *           A1 u A2 |- t1 ==> t3
+ *
+ * fun IMP_TRANS th1 th2 =
+ *    let val {ant, conseq} = dest_imp (concl th1)
+ *        val {ant=ant', conseq=conseq'} = dest_imp (concl th2)
+ *        val _ = thm_assert (aconv conseq ant') "" ""
+ *    in
+ *   make_thm Count.ImpTrans (Tag.merge (tag th1) (tag th2),
+ *                 union (hyp th1) (hyp th2),
+ *                 mk_imp{ant=ant, conseq=conseq'})
+ *    end
+ *   handle _ => THM_ERR "IMP_TRANS" "";
+ *
+ *
+ *  Modified: TFM 88.10.08 to use "union A1 A1" instead of A1 @ A2
+ *---------------------------------------------------------------------------*)
+
+fun IMP_TRANS th1 th2 =
+   let val {ant,conseq} = dest_imp(concl th1)
+   in DISCH ant (MP th2 (MP th1 (ASSUME ant)))
+   end
+   handle HOL_ERR _ => raise ERR "IMP_TRANS" "";
+
+
+(*---------------------------------------------------------------------------
+ *
+ *   A1 |- t1 ==> t2         A2 |- t2 ==> t1
+ *  -----------------------------------------
+ *            A1 u A2 |- t1 = t2
+ *
+ * fun IMP_ANTISYM_RULE th1 th2 =
+ *   let val {ant=ant1, conseq=conseq1} = dest_imp(concl th1)
+ *      and {ant=ant2, conseq=conseq2} = dest_imp(concl th2)
+ *     val _ = thm_assert (aconv ant1 conseq2 andalso aconv ant2 conseq1) "" ""
+ *   in
+ *    make_thm Count.ImpAntisymRule(Tag.merge (tag th1) (tag th2),
+ *                 union (hyp th1) (hyp th2),
+ *                 mk_eq{lhs=ant1, rhs=conseq1})
+ *  end
+ *  handle _ => THM_ERR "IMP_ANTISYM_RULE" "";
+ *  Modified: TFM 88.10.08 to use "union A1 A2" instead of A1 @ A2
+ *---------------------------------------------------------------------------*)
+
+ fun IMP_ANTISYM_RULE th1 th2 =
+    let val {ant,conseq} = dest_imp(concl th1)
+    in MP (MP (SPEC conseq (SPEC ant IMP_ANTISYM_AX)) th1) th2
+    end
+    handle HOL_ERR _ => raise ERR"IMP_ANTISYM_RULE" "";
+
+
+(*---------------------------------------------------------------------------*
+ * Introduce  =T                                                             *
+ *                                                                           *
+ *     A |- t                                                                *
+ *   ------------                                                            *
+ *     A |- t=T                                                              *
+ *                                                                           *
+ *  local val truth = mk_const{Name="T", Ty = Type.bool}                     *
+ *  in                                                                       *
+ *  fun EQT_INTRO th =                                                       *
+ *    let val t = concl th                                                   *
+ *    in                                                                     *
+ *      MP (MP (SPEC truth (SPEC t IMP_ANTISYM_AX))                          *
+ *             (DISCH t TRUTH))                                              *
+ *         (DISCH truth th)                                                  *
+ *    end                                                                    *
+ *  end;                                                                     *
+ *                                                                           *
+ *---------------------------------------------------------------------------*)
+
+local val eq_thm =
+        let val {Bvar,...} = dest_forall (concl boolTheory.EQ_CLAUSES)
+            val thm = CONJUNCT1(CONJUNCT2 (SPEC Bvar boolTheory.EQ_CLAUSES))
+        in GEN Bvar (SYM thm)
+        end
+in
+fun EQT_INTRO th = EQ_MP (SPEC (concl th) eq_thm) th
+                   handle HOL_ERR _ => raise ERR "EQT_INTRO" ""
+end;
+
+(*---------------------------------------------------------------------------
+ *  |- !x. t    ---->    x', |- t[x'/x]
+ *---------------------------------------------------------------------------*)
+
+fun SPEC_VAR th =
+   let val {Bvar,...} = dest_forall (concl th)
+       val bv' = variant (free_varsl (hyp th)) Bvar
+   in (bv', SPEC bv' th)
+   end;
+
+(*---------------------------------------------------------------------------
+ *
+ *       A |-  (!x. t1 = t2)
+ *   ---------------------------
+ *    A |- (?x.t1)  =  (?x.t2)
+ *
+ * fun MK_EXISTS bodyth =
+ *    let val {Bvar,Body} = dest_forall (concl bodyth)
+ *        val {lhs,rhs} = dest_eq Body
+ *    in
+ *    make_thm Count.MkExists (tag bodyth, hyp bodyth,
+ *                  mk_eq{lhs=mk_exists{Bvar=Bvar, Body=lhs},
+ *                        rhs=mk_exists{Bvar=Bvar, Body=rhs}})
+ *    end
+ *    handle _ => THM_ERR "MK_EXISTS" "";
+ *---------------------------------------------------------------------------*)
+
+fun MK_EXISTS bodyth =
+ let val (x, sth) = SPEC_VAR bodyth
+     val {lhs=a, rhs=b} = dest_eq (concl sth)
+     val (abimp,baimp) = EQ_IMP_RULE sth
+     fun HALF (p,q) pqimp =
+       let val xp = mk_exists{Bvar=x,Body=p}
+           and xq = mk_exists{Bvar=x,Body=q}
+       in DISCH xp (CHOOSE (x,ASSUME xp) (EXISTS (xq,x) (MP pqimp (ASSUME p))))
+       end
+ in
+    IMP_ANTISYM_RULE (HALF (a,b) abimp) (HALF (b,a) baimp)
+ end
+ handle HOL_ERR _ => raise ERR "MK_EXISTS" "";
+
+
+(*---------------------------------------------------------------------------
+ *               A |-  t1 = t2
+ *   ------------------------------------------- (xi not free in A)
+ *    A |- (?x1 ... xn. t1)  =  (?x1 ... xn. t2)
+ *---------------------------------------------------------------------------*)
+
+fun LIST_MK_EXISTS l th = itlist (fn x => fn th => MK_EXISTS(GEN x th)) l th;
+
+fun SIMPLE_EXISTS v th = EXISTS (mk_exists{Bvar=v, Body=concl th},v) th
+
+fun SIMPLE_CHOOSE v th =
+  case Thm.hyp th
+   of h::_ => CHOOSE(v, ASSUME (boolSyntax.mk_exists{Bvar=v,Body=h})) th
+    |  []  => raise ERR "SIMPLE_CHOOSE" "";
+
+
+
+(*---------------------------------------------------------------------------
+ *
+ *     A1 |- t1 = u1   ...   An |- tn = un       A |- t[ti]
+ *    -------------------------------------------------------
+ *               A1 u ... An u A |-  t[ui]
+ *
+ * fun GSUBS substfn ths th =
+ *    let val (oracles,h',s) = itlist (fn th => fn (O,H,L) =>
+ *             let val {lhs,rhs} = dest_eq (concl th)
+ *             in (Tag.merge (tag th) O,
+ *                 union (hyp th) H, (lhs |-> rhs)::L)
+ *             end) ths (tag th, hyp th,[])
+ *    in make_thm Count.Gsubs (oracles, h', substfn s (concl th))
+ *    end
+ *---------------------------------------------------------------------------*)
+
+local fun combine [] [] = []
+        | combine (v::rst1) (t::rst2) = (v |-> t) :: combine rst1 rst2
+        | combine _ _ = raise ERR "GSUBS.combine"
+                                        "Different length lists"
+in
+fun GSUBS substfn ths th =
+   let val ls = map (lhs o concl) ths
+       val vars = map (genvar o type_of) ls
+       val w = substfn (combine ls vars) (concl th)
+   in
+     SUBST (combine vars ths) w th
+   end
+end;
+
+
+(*---------------------------------------------------------------------------
+ *       A |- ti == ui
+ *    --------------------
+ *     A |- t[ti] = t[ui]
+ *
+ * fun SUBST_CONV replacements template tm =
+ *   let val (ltheta, rtheta, hyps,oracles) = itlist
+ *              (fn {redex,residue} => fn (ltheta,rtheta,hyps,O) =>
+ *                let val {lhs,rhs} = dest_eq (concl residue)
+ *                in ((redex |-> lhs)::ltheta, (redex |-> rhs)::rtheta,
+ *                    union (hyp residue) hyps,
+ *                    Tag.merge (tag residue) O)
+ *                end) replacements ([],[],[],std_tag)
+ *       val _ = thm_assert (aconv (subst ltheta template) tm) "" ""
+ *   in
+ *     make_thm Count.SubstConv(oracles, hyps,
+ *                              mk_eq{lhs=tm, rhs = subst rtheta template})
+ *   end
+ *   handle _ => THM_ERR "SUBST_CONV" "";
+ *---------------------------------------------------------------------------*)
+
+fun SUBST_CONV theta template tm =
+  let fun retheta {redex,residue} = (redex |-> genvar(type_of redex))
+      val theta0 = map retheta theta
+      val theta1 = map2 (curry (op |->))
+                        (map #residue theta0) (map #residue theta)
+  in
+   SUBST theta1 (mk_eq{lhs=tm,rhs=subst theta0 template}) (REFL tm)
+  end
+  handle HOL_ERR _ => raise ERR "SUBST_CONV" "";
+
+
+(*---------------------------------------------------------------------------
+ * Extensionality
+ *
+ *     A |- !x. t1 x = t2 x
+ *    ----------------------     (x not free in A, t1 or t2)
+ *        A |- t1 = t2
+ *
+ * fun EXT th =
+ *  let val {Bvar,Body} = dest_forall(concl th)
+ *      val {lhs,rhs} = dest_eq Body
+ *      val {Rator=Rator1, Rand=v1} = dest_comb lhs
+ *      val {Rator=Rator2, Rand=v2} = dest_comb rhs
+ *      val fv = union (free_vars Rator1) (free_vars Rator2)
+ *      val _ = thm_assert (not(mem Bvar fv) andalso
+ *                          (Bvar=v1) andalso (Bvar=v2))  "" ""
+ *    in make_thm Count.Ext(tag th, hyp th, mk_eq{lhs=Rator1, rhs=Rator2})
+ *    end
+ *    handle _ => THM_ERR "EXT" "";
+ *---------------------------------------------------------------------------*)
+
+fun EXT th =
+   let val {Bvar,...} = dest_forall(concl th)
+       val th1 = SPEC Bvar th
+       (* th1 = |- t1 x = t2 x *)
+       val {lhs=t1x, rhs=t2x} = dest_eq(concl th1)
+       val x = #Rand(dest_comb t1x)
+       val th2 = ABS x th1
+       (* th2 = |- (\x. t1 x) = (\x. t2 x) *)
+   in
+   TRANS (TRANS(SYM(ETA_CONV (mk_abs{Bvar=x, Body=t1x}))) th2)
+         (ETA_CONV (mk_abs{Bvar=x,Body=t2x}))
+   end
+   handle HOL_ERR _ => raise ERR "EXT" "";
+
+
+(*---------------------------------------------------------------------------
+ *       A |- !x. (t1 = t2)
+ *     ----------------------
+ *     A |- (\x.t1) = (\x.t2)
+ *
+ * fun MK_ABS th =
+ *    let val {Bvar,Body} = dest_forall(concl th)
+ *        val {lhs,rhs} = dest_eq Body
+ *    in
+ *    make_thm Count.MkAbs(tag th, hyp th,
+ *                 mk_eq{lhs=mk_abs{Bvar=Bvar, Body=lhs},
+ *                       rhs=mk_abs{Bvar=Bvar, Body=rhs}})
+ *    end
+ *    handle _ => THM_ERR"MK_ABS" "";
+ *---------------------------------------------------------------------------*)
+
+fun MK_ABS qth =
+   let val {Bvar,Body} = dest_forall (concl qth)
+       val ufun = mk_abs{Bvar=Bvar, Body=lhs Body}
+       and vfun = mk_abs{Bvar=Bvar, Body=rhs Body}
+       val gv = genvar (type_of Bvar)
+   in
+    EXT (GEN gv
+     (TRANS (TRANS (BETA_CONV (mk_comb{Rator=ufun,Rand=gv})) (SPEC gv qth))
+	    (SYM (BETA_CONV (mk_comb{Rator=vfun,Rand=gv})))))
+   end
+   handle HOL_ERR _ => raise ERR"MK_ABS" "";
+
+(*---------------------------------------------------------------------------
+ *  Contradiction rule
+ *
+ *   A |- F
+ *   ------
+ *   A |- t
+ *
+ * fun CONTR w fth =
+ *    (thm_assert ((type_of w = bool) andalso
+ *                 (concl fth = mk_const{Name="F",Ty=bool})) "CONTR" "";
+ *     make_thm Count.Contr(tag fth, hyp fth, w))
+ *---------------------------------------------------------------------------*)
+
+fun CONTR tm th = 
+  MP (SPEC tm FALSITY) th handle HOL_ERR _ => raise ERR "CONTR" "";
+
+(*---------------------------------------------------------------------------
+ *  Undischarging
+ *
+ *   A |- t1 ==> t2
+ *   -------------
+ *    A, t1 |- t2
+ *---------------------------------------------------------------------------*)
+
+fun UNDISCH th = 
+  MP th (ASSUME(#ant(dest_imp(concl th)))) 
+  handle HOL_ERR  _ => raise ERR "UNDISCH" "";
+
+(*---------------------------------------------------------------------------
+ * =T elimination
+ *
+ *   A |- t = T
+ *  ------------
+ *    A |- t
+ *---------------------------------------------------------------------------*)
+
+fun EQT_ELIM th = 
+  EQ_MP (SYM th) TRUTH handle HOL_ERR _ => raise ERR "EQT_ELIM" "";
+
+
+(*---------------------------------------------------------------------------
+ *
+ *      |- !x1 ... xn. t[xi]
+ *    --------------------------	SPECL [t1; ...; tn]
+ *          |-  t[ti]
+ *---------------------------------------------------------------------------*)
+
+fun SPECL tml th = 
+  rev_itlist SPEC tml th handle HOL_ERR _ => raise ERR"SPECL" "";
+
+val GENL = itlist GEN;
+
+
+(*---------------------------------------------------------------------------
+ * SELECT introduction
+ *
+ *    A |- P t
+ *  -----------------
+ *   A |- P($@ P)
+ *---------------------------------------------------------------------------*)
+
+local fun alpha_subst ty = [alpha |-> ty]
+in
+fun SELECT_INTRO th =
+ let val {Rator, Rand} = dest_comb(concl th)
+     val SELECT_AX' = INST_TYPE (alpha_subst (type_of Rand)) SELECT_AX
+ in
+   MP (SPEC Rand (SPEC Rator SELECT_AX')) th
+ end
+ handle HOL_ERR _ => raise ERR "SELECT_INTRO" ""
+end;
+
+
+(*---------------------------------------------------------------------------
+ * SELECT elimination (cases)
+ *
+ *   A1 |- P($? P)          A2, "P v" |- t
+ *  ------------------------------------------ (v occurs nowhere)
+ *              A1 u A2 |- t
+ *---------------------------------------------------------------------------*)
+
+fun SELECT_ELIM th1 (v,th2) =
+  let val {Rator, Rand} = dest_comb(concl th1)
+      val th3 = DISCH (mk_comb{Rator = Rator, Rand = v}) th2
+      (* th3 = |- P v ==> t *)
+  in
+  MP (SPEC Rand (GEN v th3)) th1
+  end
+  handle HOL_ERR _ => raise ERR "SELECT_ELIM" "";
+
+
+(*---------------------------------------------------------------------------
+ * SELECT introduction
+ *
+ *    A |- ?x. t[x]
+ *  -----------------
+ *   A |- t[@x.t[x]]
+ *---------------------------------------------------------------------------*)
+
+local fun alpha_subst ty = [alpha |-> ty]
+in
+fun SELECT_RULE th =
+   let val (tm as {Bvar, Body}) = dest_exists(concl th)
+       val v = genvar(type_of Bvar)
+       val P = mk_abs tm
+       val SELECT_AX' = INST_TYPE(alpha_subst(type_of Bvar)) SELECT_AX
+       val th1 = SPEC v (SPEC P SELECT_AX')
+       val {ant,conseq} = dest_imp(concl th1)
+       val th2 = BETA_CONV ant
+       and th3 = BETA_CONV conseq
+       val th4 = EQ_MP th3 (MP th1 (EQ_MP(SYM th2) (ASSUME (rhs(concl th2)))))
+   in
+     CHOOSE (v,th) th4
+   end
+   handle HOL_ERR _ => raise ERR "SELECT_RULE" ""
+end;
+
+
+(*---------------------------------------------------------------------------
+ * ! abstraction
+ *
+ *          A |- t1 = t2
+ *     -----------------------
+ *      A |- (!x.t1) = (!x.t2)
+ *---------------------------------------------------------------------------*)
+
+fun FORALL_EQ x =
+  let val forall = AP_TERM (inst [alpha |-> type_of x] boolSyntax.universal)
+  in fn th => forall (ABS x th)
+  end
+  handle HOL_ERR _ => raise ERR "FORALL_EQ" "";
+
+
+(*---------------------------------------------------------------------------
+ * ? abstraction
+ *
+ *          A |- t1 = t2
+ *     -----------------------
+ *      A |- (?x.t1) = (?x.t2)
+ *---------------------------------------------------------------------------*)
+
+fun EXISTS_EQ x =
+  let val exists = AP_TERM (inst [alpha |-> type_of x] boolSyntax.existential)
+   in fn th => exists (ABS x th)
+   end
+   handle HOL_ERR _ => raise ERR "EXISTS_EQ" "";
+
+
+(*---------------------------------------------------------------------------
+ * @ abstraction
+ *
+ *          A |- t1 = t2
+ *     -----------------------
+ *      A |- (@x.t1) = (@x.t2)
+ *---------------------------------------------------------------------------*)
+
+fun SELECT_EQ x =
+ let val ty = type_of x
+     val choose = inst [alpha |-> ty] boolSyntax.select
+ in fn th => AP_TERM choose (ABS x th)
+ end
+ handle HOL_ERR _ => raise ERR "SELECT_EQ" "";
+
+
+fun SUBS ths th =
+    GSUBS subst ths th handle HOL_ERR _ => raise ERR "SUBS" "";
+
+fun SUBS_OCCS nlths th =
+   let val (nll, ths) = unzip nlths
+   in GSUBS (subst_occs nll) ths th
+   end handle HOL_ERR _ => raise ERR "SUBS_OCCS" "";
+
+
+(*---------------------------------------------------------------------------
+ * Beta-conversion to the rhs of an equation
+ *
+ *   A |- t1 = (\x.t2)t3
+ *  --------------------
+ *   A |- t1 = t2[t3/x]
+ *---------------------------------------------------------------------------*)
+
+fun RIGHT_BETA th = 
+ TRANS th (BETA_CONV(#rhs(dest_eq(concl th))))
+  handle HOL_ERR _ => raise ERR "RIGHT_BETA" "";
+
+(*---------------------------------------------------------------------------
+ *  "(\x1 ... xn.t)t1 ... tn" -->
+ *    |- (\x1 ... xn.t)t1 ... tn = t[t1/x1] ... [tn/xn]
+ *---------------------------------------------------------------------------*)
+
+fun LIST_BETA_CONV tm =
+   let val {Rator,Rand} = dest_comb tm
+   in RIGHT_BETA (AP_THM (LIST_BETA_CONV Rator) Rand)
+   end handle HOL_ERR _ => REFL tm;
+
+
+fun RIGHT_LIST_BETA th = TRANS th (LIST_BETA_CONV(#rhs(dest_eq(concl th))));
+
+
+(*---------------------------------------------------------------------------
+ * let CONJUNCTS_CONV (t1,t2) =
+ *  letrec CONJUNCTS th =
+ *   (CONJUNCTS (CONJUNCT1 th) @ CONJUNCTS (CONJUNCT2 th)) ? [th]
+ *  in
+ *  letrec build_conj thl t =
+ *   (let l,r = dest_conj t
+ *    in  CONJ (build_conj thl l) (build_conj thl r)
+ *   )
+ *   ? find (\th. (concl th) = t) thl
+ *  in
+ *   (IMP_ANTISYM_RULE
+ *     (DISCH t1 (build_conj (CONJUNCTS (ASSUME t1)) t2))
+ *     (DISCH t2 (build_conj (CONJUNCTS (ASSUME t2)) t1))
+ *   ) ? failwith `CONJUNCTS_CONV`;;
+ *---------------------------------------------------------------------------*)
+
+fun CONJUNCTS_CONV (t1,t2) =
+   let fun CONJUNCTS th = (CONJUNCTS (CONJUNCT1 th) @ CONJUNCTS (CONJUNCT2 th))
+             handle HOL_ERR _ => [th]
+       fun build_conj thl t =
+          let val {conj1,conj2} = dest_conj t
+           in  CONJ (build_conj thl conj1) (build_conj thl conj2)
+          end
+          handle HOL_ERR _ => first (fn th => (concl th) = t) thl
+   in
+   IMP_ANTISYM_RULE (DISCH t1 (build_conj (CONJUNCTS (ASSUME t1)) t2))
+                    (DISCH t2 (build_conj (CONJUNCTS (ASSUME t2)) t1))
+   end
+   handle HOL_ERR _ => raise ERR "CONJUNCTS_CONV" "";
+
+(*---------------------------------------------------------------------------*
+ * let CONJ_SET_CONV l1 l2 =                                                 *
+ *  CONJUNCTS_CONV (list_mk_conj l1, list_mk_conj l2)                        *
+ *  ? failwith `CONJ_SET_CONV`;;                                             *
+ *---------------------------------------------------------------------------*)
+
+fun CONJ_SET_CONV l1 l2 =
+   CONJUNCTS_CONV (list_mk_conj l1, list_mk_conj l2)
+   handle HOL_ERR _ => raise ERR "CONJ_SET_CONV" "";
+
+(*---------------------------------------------------------------------------
+ * let FRONT_CONJ_CONV tml t =
+ *  letrec remove x l =
+ *     if ((hd l) = x)
+ *     then tl l
+ *     else (hd l).(remove x (tl l))
+ *  in
+ *  (CONJ_SET_CONV tml (t.(remove t tml)))
+ *  ? failwith `FRONT_CONJ_CONV`;;
+ *---------------------------------------------------------------------------*)
+
+fun FRONT_CONJ_CONV tml t =
+   let fun remove x l = if (hd l = x) then tl l else (hd l::remove x (tl l))
+   in CONJ_SET_CONV tml (t::remove t tml)
+   end handle HOL_ERR _ => raise ERR "FRONT_CONJ_CONV" "";
+
+(*---------------------------------------------------------------------------
+ *   |- (t1 /\ ... /\ t /\ ... /\ tn) = (t /\ t1 /\ ... /\ tn)
+ *
+ * local
+ * val APP_AND = AP_TERM(--`/\`--)
+ * in
+ * fun FRONT_CONJ_CONV tml t =
+ *    if (t = hd tml)
+ *    then REFL(list_mk_conj tml)
+ *    else if ((null(tl(tl tml)) andalso (t = hd(tl tml))))
+ *         then SPECL tml CONJ_SYM
+ *         else let val th1 = APP_AND (FRONT_CONJ_CONV (tl tml) t)
+ *                  val {conj1,conj2} = dest_conj(rhs(concl th1))
+ *                  val {conj1 = c2, conj2 = c3} = dest_conj conj2
+ *                  val th2 = AP_THM(APP_AND (SPECL[conj1,c2]CONJ_SYM)) c3
+ *              in
+ *              TRANS (TRANS (TRANS th1 (SPECL[conj1,c2,c3]CONJ_ASSOC)) th2)
+ *                    (SYM(SPECL[c2,conj1,c3]CONJ_ASSOC))
+ *              end
+ *              handle _ => raise ERR{function = "FRONT_CONJ_CONV",
+ *                                          message = ""}
+ * end;
+ *---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------
+ * |- (t1 /\ ... /\ tn) = (t1' /\ ... /\ tn') where {t1,...,tn}={t1',...,tn'}
+ *
+ * The genuine derived rule below only works if its argument
+ * lists are the same length.
+ *
+ * fun CONJ_SET_CONV l1 l2 =
+ *    if (l1 = l2)
+ *    then REFL(list_mk_conj l1)
+ *   else if (hd l1 = hd l2)
+ *        then AP_TERM (--`$/\ ^(hd l1)`--) (CONJ_SET_CONV(tl l1)(tl l2))
+ *        else let val th1 = SYM(FRONT_CONJ_CONV l2 (hd l1))
+ *                 val l2' = conjuncts(lhs(concl th1))
+ *                 val th2 = AP_TERM (--`$/\ ^(hd l1)`--)
+ *                                   (CONJ_SET_CONV(tl l1)(tl l2'))
+ *             in
+ *             TRANS th2 th1
+ *             end
+ *             handle _ => raise ERR{function = "CONJ_SET_CONV",
+ * 		                        message = ""};
+ *
+ * fun CONJ_SET_CONV l1 l2 =
+ *   (if (set_eq l1 l2)
+ *    then mk_drule_thm([],mk_eq{lhs = list_mk_conj l1, rhs = list_mk_conj l2})
+ *    else raise ERR{function = "CONJ_SET_CONV",message = ""})
+ *    handle _ => raise ERR{function = "CONJ_SET_CONV",message = ""};
+ *---------------------------------------------------------------------------*)
+
+
+(*---------------------------------------------------------------------------
+ * |- t1 = t2  if t1 and t2 are equivalent using idempotence, symmetry and
+ *                associativity of /\. I have not (yet) coded a genuine
+ *                derivation - it would be straightforward, but tedious.
+ *
+ * fun CONJUNCTS_CONV(t1,t2) =
+ *    if (set_eq (strip_conj t1)(strip_conj t2))
+ *    then mk_drule_thm([],mk_eq{lhs = t1, rhs = t2})
+ *    else raise ERR{function = "CONJUNCTS_CONV",message = ""};
+ *---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------
+ *           A,t |- t1 = t2
+ *    -----------------------------
+ *      A |- (t /\ t1) = (t /\ t2)
+ *---------------------------------------------------------------------------*)
+
+fun CONJ_DISCH t th =
+   let val {lhs,rhs} = dest_eq(concl th)
+       and th1 = DISCH t th
+       val left_t  = mk_conj{conj1 = t, conj2 = lhs}
+       val right_t = mk_conj{conj1 = t, conj2 = rhs}
+       val th2 = ASSUME left_t
+       and th3 = ASSUME right_t
+       val th4 = DISCH left_t
+                       (CONJ (CONJUNCT1 th2)
+                             (EQ_MP(MP th1 (CONJUNCT1 th2))
+                                   (CONJUNCT2 th2)))
+       and th5 = DISCH right_t
+                       (CONJ (CONJUNCT1 th3)
+                             (EQ_MP(SYM(MP th1 (CONJUNCT1 th3)))
+                                   (CONJUNCT2 th3)))
+   in
+     IMP_ANTISYM_RULE th4 th5
+   end;
+
+(*---------------------------------------------------------------------------
+ *                    A,t1,...,tn |- t = u
+ *    --------------------------------------------------------
+ *      A |- (t1 /\ ... /\ tn /\ t) = (t1 /\ ... /\ tn /\ u)
+ *---------------------------------------------------------------------------*)
+
+val CONJ_DISCHL = itlist CONJ_DISCH;
+
+
+(*---------------------------------------------------------------------------
+ *       A,t1 |- t2                A,t |- F
+ *     --------------              --------
+ *     A |- t1 ==> t2               A |- ~t
+ *---------------------------------------------------------------------------*)
+
+fun NEG_DISCH t th =
+  (if concl th = boolSyntax.F 
+      then NOT_INTRO (DISCH t th) else DISCH t th)
+  handle HOL_ERR _ => raise ERR "NEG_DISCH" ""
+
+
+(*---------------------------------------------------------------------------
+ *    A |- ~(t1 = t2)
+ *   -----------------
+ *    A |- ~(t2 = t1)
+ *---------------------------------------------------------------------------*)
+
+local fun flip {lhs,rhs} = {lhs=rhs, rhs=lhs}
+in
+fun NOT_EQ_SYM th =
+   let val t = (mk_eq o flip o dest_eq o dest_neg o concl) th
+   in MP (SPEC t IMP_F) (DISCH t (MP th (SYM(ASSUME t))))
+   end
+end;
+
+
+(* ---------------------------------------------------------------------*)
+(* EQF_INTRO: inference rule for introducing equality with "F".		*)
+(*									*)
+(* 	         ~tm							*)
+(*	     -----------    EQF_INTRO					*)
+(*	        tm = F							*)
+(*									*)
+(* [TFM 90.05.08]							*)
+(* ---------------------------------------------------------------------*)
+
+local val F = boolSyntax.F
+      val Fth = ASSUME F
+in
+fun EQF_INTRO th =
+   IMP_ANTISYM_RULE (NOT_ELIM th)
+                    (DISCH F (CONTR (dest_neg (concl th)) Fth))
+   handle HOL_ERR _ => raise ERR "EQF_INTRO" ""
+end;
+
+(* ---------------------------------------------------------------------*)
+(* EQF_ELIM: inference rule for eliminating equality with "F".		*)
+(*									*)
+(*	      |- tm = F							*)
+(*	     -----------    EQF_ELIM					*)
+(* 	       |- ~ tm							*)
+(*									*)
+(* [TFM 90.08.23]							*)
+(* ---------------------------------------------------------------------*)
+
+fun EQF_ELIM th =
+   let val {lhs,rhs} = dest_eq(concl th)
+       val _ = assert (equal boolSyntax.F) rhs
+   in NOT_INTRO(DISCH lhs (EQ_MP th (ASSUME lhs)))
+   end
+   handle HOL_ERR _ => raise ERR "EQF_ELIM" ""
+
+
+
+(* ---------------------------------------------------------------------*)
+(* ISPEC: specialization, with type instantation if necessary.		*)
+(*									*)
+(*     A |- !x:ty.tm							*)
+(*  -----------------------   ISPEC "t:ty'" 				*)
+(*      A |- tm[t/x]							*)
+(*									*)
+(* (where t is free for x in tm, and ty' is an instance of ty)		*)
+(* ---------------------------------------------------------------------*)
+
+fun ISPEC t th =
+   let val {Bvar,...} =
+         dest_forall(concl th) handle HOL_ERR _
+         => raise ERR"ISPEC"
+                 ": input theorem not universally quantified"
+       val (_,inst) = match_term Bvar t handle HOL_ERR _
+         => raise ERR "ISPEC"
+                 ": can't type-instantiate input theorem"
+   in SPEC t (INST_TYPE inst th) handle HOL_ERR _
+         => raise ERR "ISPEC"
+                ": type variable free in assumptions"
+   end;
+
+(* ---------------------------------------------------------------------*)
+(* ISPECL: iterated specialization, with type instantiation if necessary.*)
+(*									*)
+(*        A |- !x1...xn.tm						*)
+(*  ---------------------------------   ISPECL ["t1",...,"tn"]		*)
+(*      A |- tm[t1/x1,...,tn/xn]					*)
+(*									*)
+(* (where ti is free for xi in tm)					*)
+(*                                                                      *)
+(* Note: the following is simpler but it doesn't work.                  *)
+(*                                                                      *)
+(*  fun ISPECL tms th = rev_itlist ISPEC tms th                         *)
+(*                                                                      *)
+(* ---------------------------------------------------------------------*)
+
+local fun strip [] _ = []     (* Returns a list of (pat,ob) pairs. *)
+        | strip (tm::tml) M =
+            let val {Bvar,Body} = dest_forall M
+            in (type_of Bvar,type_of tm)::strip tml Body   end
+      fun merge [] theta = theta
+        | merge ((x as {redex,residue})::rst) theta =
+          case (subst_assoc (fn ty => (ty=redex)) theta)
+           of NONE      => x::merge rst theta
+            | SOME rdue => if (residue=rdue) then merge rst theta 
+                           else raise ERR "ISPECL" ""
+in
+fun ISPECL [] = I
+  | ISPECL [tm] = ISPEC tm
+  | ISPECL tms = fn th =>
+     let val pairs = strip tms (concl th) handle HOL_ERR _ 
+                     => raise ERR "ISPECL" "list of terms too long for theorem"
+         val inst = rev_itlist (fn (pat,ob) => fn ty_theta =>
+                      let val theta = Type.match_type pat ob
+                      in merge theta ty_theta end) pairs []
+                      handle HOL_ERR _ => raise ERR "ISPECL" 
+                              "can't type-instantiate input theorem"
+     in SPECL tms (INST_TYPE inst th) handle HOL_ERR _ 
+        => raise ERR "ISPECL" "type variable free in assumptions"
+     end
+end;
+
+
+(*---------------------------------------------------------------------------
+ * Generalise a theorem over all variables free in conclusion but not in hyps
+ *
+ *         A |- t[x1,...,xn]
+ *    ----------------------------
+ *     A |- !x1...xn.t[x1,...,xn]
+ *---------------------------------------------------------------------------*)
+
+fun GEN_ALL th =
+   itlist GEN (set_diff (free_vars(concl th))
+                        (free_varsl (hyp th))) th;
+
+
+(*---------------------------------------------------------------------------
+ *  Discharge all hypotheses
+ *
+ *       t1, ... , tn |- t
+ *  -------------------------------
+ *    |- t1 ==> ... ==> tn ==> t
+ *
+ * You can write a simpler version using "itlist DISCH (hyp th) th", but this
+ * may discharge two equivalent (alpha-convertible) assumptions.
+ *---------------------------------------------------------------------------*)
+
+fun DISCH_ALL th =
+   case hyp th
+    of []     => th
+     | (h::_) => DISCH_ALL (DISCH h th);
+
+
+
+(*----------------------------------------------------------------------------
+ *
+ *    A |- t1 ==> ... ==> tn ==> t
+ *  -------------------------------
+ *       A, t1, ..., tn |- t
+ *---------------------------------------------------------------------------*)
+
+fun UNDISCH_ALL th =
+   if (is_imp (concl th)) then UNDISCH_ALL (UNDISCH th) else th;
+
+
+(* ---------------------------------------------------------------------*)
+(* SPEC_ALL : thm -> thm						*)
+(*									*)
+(*     A |- !x1 ... xn. t[xi]						*)
+(*    ------------------------   where the xi' are distinct 		*)
+(*        A |- t[xi'/xi]	 and not free in the input theorem	*)
+(*									*)
+(* BUGFIX: added the "distinct" part and code to make the xi's not free *)
+(* in the conclusion !x1...xn.t[xi].		        [TFM 90.10.04]	*)
+(*									*)
+(* OLD CODE:								*)
+(* 									*)
+(* let SPEC_ALL th =							*)
+(*     let vars,() = strip_forall(concl th) in				*)
+(*     SPECL (map (variant (freesl (hyp th))) vars) th;;		*)
+(* ---------------------------------------------------------------------*)
+
+local fun f v (vs,l) = let val v' = variant vs v in (v'::vs, v'::l) end
+in
+fun SPEC_ALL th =
+   let val (hvs,con) = (free_varsl ## I) (hyp th, concl th)
+       val fvs = free_vars con
+       and vars = fst(strip_forall con)
+   in
+     SPECL (snd(itlist f vars (hvs@fvs,[]))) th
+   end
+end;
+
+
+(*---------------------------------------------------------------------------
+ * Use the conclusion of the first theorem to delete a hypothesis of
+ *   the second theorem.
+ *
+ *    A |- t1 	B, t1 |- t2
+ *    -----------------------
+ *         A u B |- t2
+ *---------------------------------------------------------------------------*)
+
+fun PROVE_HYP ath bth =  MP (DISCH (concl ath) bth) ath;
+
+
+(*---------------------------------------------------------------------------
+ * A |- t1/\t2  ---> A |- t1, A |- t2
+ *---------------------------------------------------------------------------*)
+
+fun CONJ_PAIR th = (CONJUNCT1 th, CONJUNCT2 th)
+  handle HOL_ERR _ => raise ERR "CONJ_PAIR" "";
+
+
+(*---------------------------------------------------------------------------
+ * ["A1|-t1"; ...; "An|-tn"]  ---> "A1u...uAn|-t1 /\ ... /\ tn", where n>0
+ *---------------------------------------------------------------------------*)
+
+val LIST_CONJ = end_itlist CONJ ;
+
+
+(*---------------------------------------------------------------------------
+ * "A |- t1 /\ (...(... /\ tn)...)"
+ *   --->
+ *   [ "A|-t1"; ...; "A|-tn"],  where n>0
+ *
+ * Inverse of LIST_CONJ : flattens only right conjuncts.
+ * You must specify n, since tn could itself be a conjunction
+ *---------------------------------------------------------------------------*)
+
+fun CONJ_LIST 1 th = [th] |
+    CONJ_LIST n th =  (CONJUNCT1 th) :: (CONJ_LIST (n-1) (CONJUNCT2 th))
+      handle HOL_ERR _ => raise ERR "CONJ_LIST" "";
+
+
+(*---------------------------------------------------------------------------
+ * "A |- t1 /\ ... /\ tn"   --->  [ "A|-t1"; ...; "A|-tn"],  where n>0
+ *
+ * Flattens out all conjuncts, regardless of grouping
+ *---------------------------------------------------------------------------*)
+
+fun CONJUNCTS th = 
+ (CONJUNCTS (CONJUNCT1 th) @ CONJUNCTS(CONJUNCT2 th))
+  handle HOL_ERR _ => [th];
+
+(*---------------------------------------------------------------------------
+ * "|- !x. (t1 /\ ...) /\ ... (!y. ... /\ tn)"
+ *   --->  [ "|-t1"; ...; "|-tn"],  where n>0
+ *
+ * Flattens out conjuncts even in bodies of forall's
+ *---------------------------------------------------------------------------*)
+
+fun BODY_CONJUNCTS th =
+   if is_forall (concl th)
+   then  BODY_CONJUNCTS (SPEC_ALL th)
+   else if is_conj (concl th)
+        then (BODY_CONJUNCTS (CONJUNCT1 th) @ BODY_CONJUNCTS (CONJUNCT2 th))
+        else [th];
+
+(*---------------------------------------------------------------------------
+ * Put a theorem
+ *
+ *       |- !x. t1 ==> !y. t2 ==> ... ==> tm ==>  t
+ *
+ * into canonical form by stripping out quantifiers and splitting
+ * conjunctions apart.
+ *
+ * 	t1 /\ t2	--->		t1,   t2
+ *      (t1/\t2)==>t	--->		t1==> (t2==>t)
+ *      (t1\/t2)==>t	--->		t1==>t, t2==>t
+ *      (?x.t1)==>t2	--->		t1[x'/x] ==> t2
+ *      !x.t1		--->		t1[x'/x]
+ *      (?x.t1)==>t2    --->            t1[x'/x] ==> t2)
+ *---------------------------------------------------------------------------*)
+
+fun IMP_CANON th =
+ let val w = concl th
+ in if is_forall w then IMP_CANON (SPEC_ALL th) else
+    if is_conj w then IMP_CANON(CONJUNCT1 th) @ IMP_CANON(CONJUNCT2 th) else
+    if is_imp w 
+    then let val {ant,...} = dest_imp w
+         in if is_conj ant
+            then let val {conj1,conj2} = dest_conj ant
+                 in IMP_CANON (DISCH conj1 (DISCH conj2 
+                        (MP th (CONJ(ASSUME conj1)(ASSUME conj2)))))
+                 end
+            else 
+            if is_disj ant
+            then let val {disj1,disj2} = dest_disj ant
+                 in IMP_CANON(DISCH disj1 (MP th (DISJ1(ASSUME disj1) disj2)))
+                    @
+                    IMP_CANON(DISCH disj2 (MP th (DISJ2 disj1 (ASSUME disj2))))
+                 end
+            else 
+            if is_exists ant
+            then let val {Bvar,Body} = dest_exists ant
+                     val bv' = variant (thm_free_vars th) Bvar
+                     val body' = subst [Bvar |-> bv'] Body
+                 in IMP_CANON (DISCH body'
+                        (MP th (EXISTS(ant, bv') (ASSUME body'))))
+                 end
+            else map (DISCH ant) (IMP_CANON (UNDISCH th))
+         end
+    else [th]
+   end;
+
+
+(*---------------------------------------------------------------------------
+ *  A1 |- t1   ...   An |- tn      A |- t1==>...==>tn==>t
+ *   -----------------------------------------------------
+ *            A u A1 u ... u An |- t
+ *---------------------------------------------------------------------------*)
+
+val LIST_MP  = rev_itlist (fn x => fn y => MP y x) ;
+
+
+(*---------------------------------------------------------------------------
+ *      A |-t1 ==> t2
+ *    -----------------
+ *    A |-  ~t2 ==> ~t1
+ *
+ * Rewritten by MJCG to return "~t2 ==> ~t1" rather than "~t2 ==> t1 ==>F".
+ *---------------------------------------------------------------------------*)
+
+local val imp_th = GEN_ALL (el 5 (CONJUNCTS (SPEC_ALL IMP_CLAUSES)))
+in
+fun CONTRAPOS impth =
+  let val {ant,conseq} = dest_imp (concl impth)
+      val notb = mk_neg conseq
+  in DISCH notb 
+      (EQ_MP (SPEC ant imp_th)
+             (DISCH ant (MP (ASSUME notb)
+                            (MP impth (ASSUME ant)))))
+  end
+  handle HOL_ERR _ => raise ERR "CONTRAPOS" ""
+end;
+
+
+(*---------------------------------------------------------------------------
+ *      A |- t1 \/ t2
+ *   --------------------
+ *     A |-  ~ t1 ==> t2
+ *
+ *---------------------------------------------------------------------------*)
+
+fun DISJ_IMP dth =
+   let val {disj1,disj2} = dest_disj (concl dth)
+       val nota = mk_neg disj1
+   in DISCH nota
+        (DISJ_CASES dth (CONTR disj2 (MP (ASSUME nota) (ASSUME disj1)))
+                        (ASSUME disj2))
+   end
+   handle HOL_ERR _ => raise ERR "DISJ_IMP" "";
+
+
+(*---------------------------------------------------------------------------
+ *  A |- t1 ==> t2
+ *  ---------------
+ *   A |- ~t1 \/ t2
+ *---------------------------------------------------------------------------*)
+
+fun IMP_ELIM th =
+   let val {ant,conseq} = dest_imp (concl th)
+       val not_t1 = mk_neg ant
+   in
+   DISJ_CASES (SPEC ant EXCLUDED_MIDDLE)
+              (DISJ2 not_t1 (MP th (ASSUME ant)))
+              (DISJ1 (ASSUME not_t1) conseq)
+   end
+   handle HOL_ERR _ => raise ERR "IMP_ELIM" "";
+
+
+(*---------------------------------------------------------------------------
+ *  A |- t1 \/ t2     A1, t1 |- t3      A2, t2 |- t4
+ *   ------------------------------------------------
+ *                A u A1 u A2 |- t3 \/ t4
+ *---------------------------------------------------------------------------*)
+
+fun DISJ_CASES_UNION dth ath bth =
+    DISJ_CASES dth (DISJ1 ath (concl bth)) (DISJ2 (concl ath) bth);
+
+
+(*---------------------------------------------------------------------------
+ *
+ *       |- A1 \/ ... \/ An     [A1 |- M, ..., An |- M]
+ *     ---------------------------------------------------
+ *                           |- M
+ *
+ * The order of the theorems in the list doesn't matter: an operation akin
+ * to sorting lines them up with the disjuncts in the theorem.
+ *---------------------------------------------------------------------------*)
+
+local fun organize eq =    (* a bit slow - analogous to insertion sort *)
+        let fun extract a alist =
+              let fun ex (_,[]) = raise ERR
+                         "DISJ_CASESL.organize" "not a permutation.1"
+                    | ex(left,h::t) =
+                         if (eq h a) then (h,rev left@t) else ex(h::left,t)
+              in ex ([],alist)
+              end
+            fun place [] [] = []
+               | place (a::rst) alist =
+                  let val (item,next) = extract a alist
+                  in item::place rst next
+                  end
+               | place _ _ = raise ERR
+                    "DISJ_CASESL.organize" "not a permutation.2"
+        in place
+        end
+in
+fun DISJ_CASESL disjth thl =
+ let val (_,c) = dest_thm disjth
+     fun eq th atm = Lib.exists (aconv atm) (#1(dest_thm th))
+     val tml = strip_disj c
+     fun DL th [] = raise ERR"DISJ_CASESL" "no cases"
+       | DL th [th1] = PROVE_HYP th th1
+       | DL th [th1,th2] = DISJ_CASES th th1 th2
+       | DL th (th1::rst) = DISJ_CASES th th1
+                               (DL(ASSUME(#disj2(dest_disj(concl th)))) rst)
+ in DL disjth (organize eq tml thl)
+end end;
+
+(*---------------------------------------------------------------------------
+ * Forward chain using an inference rule on top-level sub-parts of a theorem
+ * Could be extended to handle other connectives
+ * Commented out.
+ *
+ *fun SUB_CHAIN rule th =
+ *   let val w = concl th
+ *   in
+ *   if (is_conj w)
+ *   then CONJ (rule(CONJUNCT1 th)) (rule(CONJUNCT2 th))
+ *   else if (is_disj w)
+ *        then let val (a,b) = dest_disj w
+ *             in
+ *             DISJ_CASES_UNION th (rule (ASSUME a)) (rule (ASSUME b))
+ *             end
+ *        else if (is_imp w)
+ *             then let val (a,b) = dest_imp w
+ *                  in
+ *                  DISCH a (rule (UNDISCH th))
+ *                  end
+ *             else if (is_forall w)
+ *                  then let val (x', sth) = SPEC_VAR th in GEN x' (rule sth)
+ *                       end
+ *                  else th
+ *   end;
+ *
+ *infix thenf orelsef;
+ *fun f thenf g = fn x => g(f x);
+ *fun f orelsef g = (fn x => (f x) handle _ => (g x));
+ *
+ *(* Repeatedly apply the rule (looping if it never fails) *)
+ *fun REDEPTH_CHAIN rule x =
+ *   (SUB_CHAIN (REDEPTH_CHAIN rule) thenf
+ *    ((rule thenf (REDEPTH_CHAIN rule)) orelsef I))
+ *   x;
+ *
+ *
+ *(* Apply the rule no more than once in any one place *)
+ *fun ONCE_DEPTH_CHAIN rule x =
+ *   (rule  orelsef  SUB_CHAIN (ONCE_DEPTH_CHAIN rule))
+ *   x;
+ *
+ *
+ *(* "depth SPEC" : Specialize a theorem whose quantifiers are buried inside *)
+ *fun DSPEC x = ONCE_DEPTH_CHAIN (SPEC x);
+ *val DSPECL = rev_itlist DSPEC;
+ *
+ *val CLOSE_UP = GEN_ALL o DISCH_ALL;
+ *---------------------------------------------------------------------------*)
+
+
+(*---------------------------------------------------------------------------
+ *     A |- !x. t1 x = t2
+ *     ------------------
+ *      A |-  t1 = \x.t2
+ *
+ * fun HALF_MK_ABS qth =
+ *   let val {Bvar,Body} = dest_forall (concl qth)
+ *       val t = rhs Body
+ *       and gv = genvar (type_of Bvar)
+ *       val tfun = mk_abs{Bvar = Bvar, Body = t}
+ *   in
+ *   EXT (GEN gv 		(* |- !gv. u gv =< (\x.t) gv  *)
+ *	 (TRANS (SPEC gv qth)
+ *                (SYM (BETA_CONV (mk_comb{Rator = tfun, Rand = gv})))))
+ *   end
+ *   handle _ => raise ERR{function = "HALF_MK_ABS",message = ""};
+ *---------------------------------------------------------------------------*)
+
+
+(*---------------------------------------------------------------------------
+ * Rename the bound variable of a lambda-abstraction
+ *
+ *       "x"   "(\y.t)"   --->   |- "\y.t = \x. t[x/y]"
+ *
+ *---------------------------------------------------------------------------*)
+
+fun ALPHA_CONV x t =
+   let val x' = variant (free_vars t) x
+       val cmb = mk_comb{Rator=t, Rand=x'}
+       val th1 = SYM(ETA_CONV(mk_abs{Bvar=x', Body=cmb}))
+       and th2 = ABS x' (BETA_CONV cmb)
+   in
+     TRANS th1 th2
+   end
+   handle HOL_ERR _ => raise ERR "ALPHA_CONV" "";
+
+
+(*----------------------------------------------------------------------------
+ * Version of  ALPHA_CONV that renames "x" when necessary, but then it doesn't
+ * meet the specification. Is that really a problem? Notice that this version
+ * of ALPHA_CONV is more efficient.
+ *
+ *fun ALPHA_CONV x t =
+ *  if Term.free_in x t
+ *  then ALPHA_CONV (variant (free_vars t) x) t
+ *  else ALPHA t (mk_abs{Bvar = x,
+ *                       Body = Term.beta_conv(mk_comb{Rator = t,Rand = x})});
+ *---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------
+ * Rename bound variables
+ *
+ *       "x"   "(\y.t)"   --->    |- "\y.t  = \x. t[x/y]"
+ *       "x"   "(!y.t)"   --->    |- "!y.t  = !x. t[x/y]"
+ *       "x"   "(?y.t)"   --->    |- "?y.t  = ?x. t[x/y]"
+ *       "x"   "(?!y.t)"  --->    |- "?!y.t = ?!x. t[x/y]"
+ *       "x"   "(@y.t)"   --->    |- "@y.t  = @x. t[x/y]"
+ *---------------------------------------------------------------------------*)
+
+fun GEN_ALPHA_CONV x t =
+   if is_abs t
+   then ALPHA_CONV x t
+   else let val {Rator, Rand} = dest_comb t
+        in AP_TERM Rator (ALPHA_CONV x Rand)
+        end
+        handle HOL_ERR _ => raise ERR "GEN_ALPHA_CONV" "";
+
+
+
+(* ---------------------------------------------------------------------*)
+(* IMP_CONJ implements the following derived inference rule:		*)
+(*									*)
+(*  A1 |- P ==> Q    A2 |- R ==> S					*)
+(* --------------------------------- IMP_CONJ				*)
+(*   A1 u A2 |- P /\ R ==> Q /\ S					*)
+(* ---------------------------------------------------------------------*)
+
+fun IMP_CONJ th1 th2 =
+    let val {ant = A1, ...} = dest_imp (concl th1)
+        and {ant = A2, ...} = dest_imp (concl th2)
+        val conj = mk_conj{conj1 = A1, conj2 = A2}
+        val (a1,a2) = CONJ_PAIR (ASSUME conj)
+    in
+      DISCH conj (CONJ (MP th1 a1) (MP th2 a2))
+    end;
+
+(* ---------------------------------------------------------------------*)
+(* EXISTS_IMP : existentially quantify the antecedent and conclusion 	*)
+(* of an implication.							*)
+(*									*)
+(*        A |- P ==> Q							*)
+(* -------------------------- EXISTS_IMP `x`				*)
+(*   A |- (?x.P) ==> (?x.Q)						*)
+(*									*)
+(* ---------------------------------------------------------------------*)
+
+fun EXISTS_IMP x th =
+  if not (is_var x)
+  then raise ERR "EXISTS_IMP" "first argument not a variable"
+  else let val {ant,conseq} = dest_imp(concl th)
+           val th1 = EXISTS (mk_exists{Bvar=x, Body=conseq},x) (UNDISCH th)
+           val asm = mk_exists{Bvar=x, Body=ant}
+       in DISCH asm (CHOOSE (x,ASSUME asm) th1)
+       end
+       handle HOL_ERR _ => raise ERR "EXISTS_IMP" 
+                            "variable free in assumptions";
+
+
+(*---------------------------------------------------------------------------*
+ * Instantiate terms and types of a theorem. This is pretty slow, because    *
+ * it makes two full traversals of the theorem.                              *
+ *---------------------------------------------------------------------------*)
+
+fun INST_TY_TERM(Stm,Sty) th = INST Stm (INST_TYPE Sty th);
+
+
+(*---------------------------------------------------------------------------*
+ *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
+ *---------------------------------------------------------------------------*)
+
+fun GSPEC th =
+  let val (_,w) = dest_thm th
+  in if is_forall w
+     then GSPEC (SPEC (genvar (type_of (#Bvar (dest_forall w)))) th)
+     else th
+  end;
+
+
+(*---------------------------------------------------------------------------*
+ * Match a given part of "th" to a term, instantiating "th". The part        *
+ * should be free in the theorem, except for outer bound variables.          *
+ *---------------------------------------------------------------------------*)
+
+fun PART_MATCH partfn th =
+  let val pth = GSPEC (GEN_ALL th)
+      val pat = partfn(concl pth)
+      val matchfn = match_term pat
+  in fn tm => INST_TY_TERM (matchfn tm) pth
+  end;
+
+
+(* -------------------------------------------------------------------- *)
+(* MATCH_MP: Matching Modus Ponens for implications.			*)
+(*									*)
+(*    |- !x1 ... xn. P ==> Q     |- P' 					*)
+(* ---------------------------------------				*)
+(*                |- Q'  						*)
+(*									*)
+(* Matches all types in conclusion except those mentioned in hypotheses.*)
+(*									*)
+(* Reimplemented with bug fix [TFM 91.06.17]. 				*)
+(* OLD CODE:								*)
+(*									*)
+(* let MATCH_MP impth =							*)
+(*  let match = PART_MATCH (fst o dest_imp) impth ? failwith `MATCH_MP` *)
+(*     in								*)
+(*     \th. MP (match (concl th)) th;;					*)
+(*									*)
+(*									*)
+(* Pre - JRH version                                                    *)
+(* fun MATCH_MP impth =                                                 *)
+(*    let val (hy,c) = dest_thm impth                                   *)
+(*        val (vs,imp) = strip_forall c                                 *)
+(*        val pat = #ant(dest_imp imp)                                  *)
+(*                  handle _ => raise CONV_ERR{function = "MATCH_MP",   *)
+(*                                    message = "not an implication"}   *)
+(*        val fvs = set_diff (free_vars pat) (free_varsl hy)            *)
+(*        val gth = GSPEC (GENL fvs (SPECL vs impth))                   *)
+(*        val matchfn = Match.match_term (#ant(dest_imp(concl gth)))    *)
+(*    in                                                                *)
+(*    fn th => MP (INST_TY_TERM (matchfn (concl th)) gth) th            *)
+(*             handle _ => raise CONV_ERR{function = "MATCH_MP",        *)
+(* 				       message = "does not match"}      *)
+(*    end;                                                              *)
+(* -------------------------------------------------------------------- *)
+
+local
+fun mk_rsubst2 L = Lib.map2 (fn r1 => fn r2 => (r2 |-> r1)) L
+fun variants (_,[]) = []
+  | variants (av, h::rst) =
+      let val vh = variant av h
+      in vh::variants (vh::av, rst)
+      end
+fun rassoc_total x =
+ let fun rassc [] = x
+       | rassc({redex,residue}::t) = if x=redex then residue else rassc t
+ in rassc
+ end
+fun rassoc_option x =
+ let fun rassc [] = NONE
+       | rassc ({redex,residue}::t) =if x=redex then SOME residue else rassc t
+ in rassc
+ end
+fun req{redex,residue} = (redex=residue);
+in
+fun MATCH_MP ith =
+ let val bod = #ant(dest_imp(snd(strip_forall(concl ith))))
+ in
+ fn th =>
+   let val mfn = C Term.match_term (concl th)
+       val tth = INST_TYPE (snd(mfn bod)) ith
+       val tbod = #ant(dest_imp(snd(strip_forall(concl tth))))
+       val tmin = fst(mfn tbod)
+       val hy1 = free_varsl(hyp tth)
+       and hy2 = free_varsl(hyp th)
+       val (avs,{ant,conseq}) = (I ## dest_imp) (strip_forall (concl tth))
+       val (rvs,fvs) = partition (C free_in ant) (free_vars conseq)
+       val afvs = Lib.set_diff fvs (Lib.set_diff hy1 avs)
+       val cvs = free_varsl (map (C rassoc_total tmin) rvs)
+       val vfvs = mk_rsubst2 (variants (cvs@hy1@hy2, afvs)) afvs
+       val atmin = (filter (op not o op req) vfvs)@tmin
+       val (spl,ill) = partition (C mem avs o #redex) atmin
+       val fspl = map (C rassoc_total spl) avs
+       val mth = MP (SPECL fspl (INST ill tth)) th
+       fun loop [] = []
+         | loop (tm::rst) =
+              case rassoc_option tm vfvs
+                of NONE => loop rst
+                 | SOME x => x::loop rst
+   in
+     GENL (loop avs) mth
+   end
+ end
+end;
+
+
+(*---------------------------------------------------------------------------*
+ * Now higher-order versions of PART_MATCH and MATCH_MP                      *
+ *---------------------------------------------------------------------------*)
+
+(* ------------------------------------------------------------------------- *)
+(* Attempt alpha conversion.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+fun tryalpha v tm =
+ let val {Bvar,Body} = dest_abs tm
+ in if v = Bvar then tm else 
+    if var_occurs v Body then tryalpha (variant (free_vars tm) v) tm
+    else mk_abs{Bvar=v, Body=subst[Bvar |-> v] Body}
+ end
+
+
+(* ------------------------------------------------------------------------- *)
+(* Match up bound variables names.                                           *)
+(* ------------------------------------------------------------------------- *)
+
+fun match_bvs t1 t2 acc =
+ case (dest_term t1, dest_term t2)
+  of (LAMB{Bvar=v1,Body=b1}, LAMB{Bvar=v2,Body=b2})
+      => let val n1 = #Name(dest_var v1) 
+             val n2 = #Name(dest_var v2)
+             val newacc = if n1 = n2 then acc else insert (n1,n2) acc
+         in match_bvs b1 b2 newacc
+         end
+  | (COMB{Rator=l1, Rand=r1}, COMB{Rator=l2, Rand=r2})
+     => match_bvs l1 l2 (match_bvs r1 r2 acc)
+  | otherwise => acc;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Modify bound variable names at depth. (Not very efficient...)             *)
+(* ------------------------------------------------------------------------- *)
+
+fun deep_alpha [] tm = tm
+  | deep_alpha env tm =
+     case dest_term tm
+      of LAMB{Bvar,Body} =>
+          (let val {Name,Ty} = dest_var Bvar
+               val ((vn',_),newenv) = Lib.pluck (fn (_,x) => x = Name) env 
+               val tm' = tryalpha (mk_var{Name=vn', Ty=Ty}) tm
+               val {Bvar=iv,Body=ib} = dest_abs tm' 
+           in mk_abs{Bvar=iv, Body=deep_alpha newenv ib}
+           end
+           handle HOL_ERR _ => mk_abs{Bvar=Bvar, Body=deep_alpha env Body})
+       | COMB{Rator,Rand} => 
+             mk_comb{Rator=deep_alpha env Rator, Rand=deep_alpha env Rand}
+       | otherwise => tm
+
+(* ------------------------------------------------------------------------- 
+ * BETA_VAR
+ *
+ * Set up beta-conversion for head instances of free variable v in tm.       
+ *
+ * EXAMPLES
+ *
+ *   BETA_VAR (--`x:num`--) (--`(P:num->num->bool) x x`--);
+ *   BETA_VAR (--`x:num`--) (--`x + 1`--);
+ *
+ * Note (kxs): I am defining this before Conv, so some conversion(al)s are 
+ * p(re)-defined here. Ugh.
+ * -------------------------------------------------------------------------
+ * ------------------------------------------------------------------------- 
+ * PART_MATCH
+ *
+ * Match (higher-order) part of a theorem to a term.                         
+ *
+ * PART_MATCH (snd o strip_forall) BOOL_CASES_AX (--`(P = T) \/ (P = F)`--);
+ * val f = PART_MATCH lhs;
+ * profile2 f NOT_FORALL_THM (--`~!x. (P:num->num->bool) x y`--);
+ * profile2 f NOT_EXISTS_THM (--`?x. ~(P:num->num->bool) x y`--);
+ * profile2 f LEFT_AND_EXISTS_THM 
+ *             (--`(?x. (P:num->num->bool) x x) /\ Q (y:num)`--);
+ * profile LEFT_AND_EXISTS_CONV 
+ *           (--`(?x. (P:num->num->bool) x x) /\ Q (x:num)`--);
+ * profile2 f NOT_FORALL_THM (--`~!x. (P:num->num->bool) y x`--);
+ * profile NOT_FORALL_CONV (--`~!x. (P:num->num->bool) y x`--);
+ * val f = PART_MATCH (lhs o snd o strip_imp);
+ * val CRW_THM = mk_thm([],(--`P x ==> Q x (y:num) ==> (x + 0 = x)`--));
+ * f CRW_THM (--`y + 0`--);
+ *
+ * val beta_thm = prove(--`(\x:'a. P x) b = (P b:'b)`--)--,
+ *                      BETA_TAC THEN REFL_TAC);
+ * val f = profile PART_MATCH lhs beta_thm;
+ * profile f (--`(\x. I x) 1`--);
+ * profile f (--`(\x. x) 1`--);
+ * profile f (--`(\x. P x x:num) 1`--);
+ *
+ * The current version attempts to keep variable names constant.  This
+ * is courtesy of JRH.
+ *
+ * Non renaming version (also courtesy of JRH!!)
+ *
+ * fun PART_MATCH partfn th =
+ *   let val sth = SPEC_ALL th
+ *       val bod = concl sth
+ *       val possbetas = mapfilter (fn v => (v,BETA_VAR v bod)) (free_vars bod)
+ *       fun finish_fn tyin bvs =
+ *         let val npossbetas = map (inst tyin ## I) possbetas
+ *         in CONV_RULE (EVERY_CONV (mapfilter (C assoc npossbetas) bvs))
+ *         end
+ *       val pbod = partfn bod
+ *   in fn tm =>
+ *     let val (tmin,tyin) = match_term pbod tm
+ *         val th0 = INST tmin (INST_TYPE tyin sth)
+ *     in finish_fn tyin (map #redex tmin) th0
+ *     end
+ *   end;
+ * 
+ * EXAMPLES:
+ *
+ * val CET = mk_thm([],(--`(!c. P ($COND c x y) c) = (P x T /\ P y F)`--));
+
+ * PART_MATCH lhs FORALL_SIMP (--`!x. y + 1 = 2`--);
+ * PART_MATCH lhs FORALL_SIMP (--`!x. x + 1 = 2`--); (* fails *)
+ * PART_MATCH lhs CET (--`!b. ~(f (b => t | e))`--);
+ * PART_MATCH lhs option_CASE_ELIM (--`!b. ~(P (option_CASE e f b))`--);
+ * PART_MATCH lhs (MK_FORALL (--`c:bool`--) COND_ELIM_THM) 
+ *                (--`!b. ~(f (b => t | e))`--);
+ * PART_MATCH lhs (MK_FORALL (--`c:bool`--) COND_ELIM_THM) 
+ *                 (--`!b. ~(f (b => t | e))`--);
+ * ho_term_match [] (--`!c.  P ($COND c x y)`--) 
+ *
+ * BUG FIXES & TEST CASES
+ *
+ * Variable Renaming:
+ * PART_MATCH (lhs o snd o strip_forall) SKOLEM_THM (--`!p. ?GI. Q GI p`--);
+ * Before renaming this produced: |- (!x. ?y. Q y x) = (?y. !x. Q (y x) x)
+ * After renaming this produced: |- (!p. ?GI. Q GI p) = (?GI. !p. Q (GI p) p)
+ *
+ * Variable renaming problem (DRS, Feb 1996):  
+ * PART_MATCH lhs NOT_FORALL_THM (--`~!y. P x`--);
+ * Before fix produced:  |- ~(!x'. P x) = (?x'. ~(P x)) : thm
+ * After fix produced:  |- ~(!y. P x) = (?y. ~(P x))
+ * Fix:
+ *	val bvms = match_bvs tm (inst tyin pbod) []
+ * Became:
+ *      val bvms = match_bvs tm (partfn (concl th0)) []
+ *
+ * Variable renaming problem (DRS, Feb 1996):
+ * PART_MATCH lhs NOT_FORALL_THM (--`~!x. (\y. t) T`--);
+ * Before fix produced (--`?y. ~(\y. t) T`--);
+ * After fix produced (--`?x. ~(\y. t) T`--);
+ * Fix: 
+ *      Moved beta reduction to be before alpha renaming.  This makes
+ * match_bvs more accurate.  This was not a problem before the previous
+ * fix.
+ *
+ * Another bug (unfixed).  bvms =  [("x","y"),("E'","x")]
+ *   PART_MATCH lhs SWAP_EXISTS_THM  (--`?E' x const'.
+ *       ((s = s') /\
+ *         (E = E') /\
+ *       (val = Val_Constr (const',x)) /\
+ *       (sym = const)) /\
+ *      (a1 = NONE) /\
+ *      ~(const = const')`--)
+ * ------------------------------------------------------------------------- *)
+
+local fun COMB_CONV2 c1 c2 M =
+        let val {Rator,Rand} = dest_comb M in MK_COMB(c1 Rator, c2 Rand) end
+      fun ABS_CONV c M =
+        let val {Bvar,Body} = dest_abs M in ABS Bvar (c Body) end
+      fun RAND_CONV c M = 
+        let val {Rator,Rand} = dest_comb M in AP_TERM Rator (c Rand) end
+      fun RATOR_CONV c M =
+        let val {Rator,Rand} = dest_comb M in AP_THM (c Rator) Rand end
+      fun TRY_CONV c M = c M handle HOL_ERR _ => REFL M
+      fun THENC c1 c2 M = 
+        let val th = c1 M in TRANS th (c2 (rhs (concl th))) end;
+      fun EVERY_CONV convl = itlist THENC convl REFL
+      fun CONV_RULE conv th = EQ_MP (conv(concl th)) th
+      fun BETA_CONVS n =
+        if n = 1 then TRY_CONV BETA_CONV 
+        else THENC (RATOR_CONV (BETA_CONVS (n-1))) (TRY_CONV BETA_CONV)
+in
+fun BETA_VAR v tm = 
+ if is_abs tm 
+ then let val {Bvar,Body} = dest_abs tm
+      in if v=Bvar then failwith "BETA_VAR: UNCHANGED"
+         else ABS_CONV(BETA_VAR v Body) end
+ else 
+ case strip_comb tm
+  of (_,[]) => failwith "BETA_VAR: UNCHANGED"
+   | (oper,args) =>
+      if oper = v then BETA_CONVS (length args)
+      else let val {Rator,Rand} = dest_comb tm
+           in let val lconv = BETA_VAR v Rator
+              in let val rconv = BETA_VAR v Rand
+                 in COMB_CONV2 lconv rconv
+                 end handle HOL_ERR _ => RATOR_CONV lconv
+              end handle HOL_ERR _ => RAND_CONV (BETA_VAR v Rand)
+           end
+
+fun HO_PART_MATCH partfn th =
+ let val sth = SPEC_ALL th
+     val bod = concl sth
+     val pbod = partfn bod 
+     val possbetas = mapfilter (fn v => (v,BETA_VAR v bod)) (free_vars bod)
+     fun finish_fn tyin ivs =
+       let val npossbetas =
+            if null tyin then possbetas else map (inst tyin ## I) possbetas 
+       in if null npossbetas then Lib.I
+          else CONV_RULE (EVERY_CONV (mapfilter (C assoc npossbetas) ivs))
+       end
+     val lconsts = intersect (free_vars (concl th)) (free_varsl(hyp th)) 
+ in fn tm =>
+    let val (tmin,tyin) = ho_match_term lconsts pbod tm
+        val th0 = INST tmin (INST_TYPE tyin sth)
+        val th1 = finish_fn tyin (map #redex tmin) th0
+        val th1c = concl th1
+    in case match_bvs tm (partfn th1c) []
+        of [] => th1
+         | bvms => let val tm1 = deep_alpha bvms th1c 
+                   in EQ_MP (ALPHA th1c tm1) th1 
+                   end
+    end
+ end
+end;
+
+
+fun HO_MATCH_MP ith =
+ let val sth =
+       let val tm = concl ith
+           val (avs,bod) = strip_forall tm
+           val {ant,...} = dest_imp_only bod
+       in case partition (C free_in ant) avs
+           of (_,[]) => ith
+            | (svs,pvs) => 
+              let val th1 = SPECL avs (ASSUME tm)
+                  val th2 = GENL svs (DISCH ant (GENL pvs (UNDISCH th1)))
+              in MP (DISCH tm th2) ith
+              end
+       end handle HOL_ERR _ => raise ERR "MATCH_MP" "Not an implication"
+     val match_fun = HO_PART_MATCH (#ant o dest_imp_only) sth
+ in fn th => 
+     MP (match_fun (concl th)) th
+     handle HOL_ERR _ => raise ERR "MATCH_MP" "No match"
+ end;
+
+
+
+
+(* =====================================================================*)
+(* The "resolution" tactics for HOL (outmoded technologoy, but          *)
+(* sometimes useful) uses RES_CANON and SPEC_ALL 		        *)
+(* =====================================================================*)
+(*                                                                      *)
+(* Put a theorem 							*)
+(*									*)
+(*	 |- !x. t1 ==> !y. t2 ==> ... ==> tm ==>  t 			*)
+(*									*)
+(* into canonical form for resolution by splitting conjunctions apart   *)
+(* (like IMP_CANON but without the stripping out of quantifiers and only*)
+(* outermost negations being converted to implications).		*)
+(*									*)
+(*   ~t            --->          t ==> F        (at outermost level)	*)
+(*   t1 /\ t2	  --->		t1,   t2				*)
+(*   (t1/\t2)==>t  --->		t1==> (t2==>t)				*)
+(*   (t1\/t2)==>t  --->		t1==>t, t2==>t				*)
+(*									*)
+(*									*)
+(* Modification provided by David Shepherd of Inmos to make resolution  *)
+(* work with equalities as well as implications. HOL88.1.08,23 jun 1989.*)
+(*									*)
+(*   t1 = t2      --->          t1=t2, t1==>t2, t2==>t1			*)
+(*									*)
+(* Modification provided by T Melham to deal with the scope of 		*)
+(* universal quantifiers. [TFM 90.04.24]				*)
+(*									*)
+(*   !x. t1 ==> t2  --->  t1 ==> !x.t2   (x not free in t1)		*)
+(*									*)
+(* The old code is given below:						*)
+(* 									*)
+(*    letrec RES_CANON_FUN th =						*)
+(*     let w = concl th in						*)
+(*     if is_conj w 							*)
+(*     then RES_CANON_FUN(CONJUNCT1 th)@RES_CANON_FUN(CONJUNCT2 th)	*)
+(*     else if is_imp w & not(is_neg w) then				*)
+(* 	let ante,conc = dest_imp w in					*)
+(* 	if is_conj ante then						*)
+(* 	    let a,b = dest_conj ante in					*)
+(* 	    RES_CANON_FUN 						*)
+(* 	    (DISCH a (DISCH b (MP th (CONJ (ASSUME a) (ASSUME b)))))	*)
+(* 	else if is_disj ante then					*)
+(* 	    let a,b = dest_disj ante in					*)
+(* 	    RES_CANON_FUN (DISCH a (MP th (DISJ1 (ASSUME a) b))) @	*)
+(* 	    RES_CANON_FUN (DISCH b (MP th (DISJ2 a (ASSUME b))))	*)
+(* 	else								*)
+(* 	map (DISCH ante) (RES_CANON_FUN (UNDISCH th))			*)
+(*     else [th];							*)
+(* 									*)
+(* This version deleted for HOL 1.12 (see below)	[TFM 91.01.17]  *)
+(*									*)
+(* let RES_CANON = 							*)
+(*     letrec FN th = 							*)
+(*       let w = concl th in						*)
+(*       if (is_conj w) then FN(CONJUNCT1 th) @ FN(CONJUNCT2 th) else	*)
+(*       if ((is_imp w) & not(is_neg w)) then				*)
+(*       let ante,conc = dest_imp w in					*)
+(*       if (is_conj ante) then						*)
+(*          let a,b = dest_conj ante in					*)
+(* 	    let ath = ASSUME a and bth = ASSUME b			*)
+(*          in FN (DISCH a (DISCH b (MP th (CONJ ath bth)))) else       *)
+(*       if is_disj ante then                                           *)
+(*         let a,b = dest_disj ante in					*)
+(*         let ath = ASSUME a and bth = ASSUME b 			*)
+(* 	   in FN (DISCH a (MP th (DISJ1 ath b))) @			*)
+(*            FN (DISCH b (MP th (DISJ2 a bth)))                        *)
+(*       else map (GEN_ALL o (DISCH ante)) (FN (UNDISCH th))    	*)
+(*       else if is_eq w then						*)
+(*        let l,r = dest_eq w in					*)
+(*            if (type_of l = ":bool")                                  *)
+(*            then let (th1,th2) = EQ_IMP_RULE th                       *)
+(*                 in (GEN_ALL th) . ((FN  th1) @ (FN  th2)) 		*)
+(*            else [GEN_ALL th]                                         *)
+(*        else [GEN_ALL th] in                                          *)
+(*     \th. (let vars,w = strip_forall(concl th) in			*)
+(*           let th1 = if (is_neg w)	 				*)
+(* 	  		then NOT_ELIM(SPEC_ALL th) 			*)
+(* 			else (SPEC_ALL th) in				*)
+(*               map GEN_ALL (FN th1) ? failwith `RES_CANON`);		*)
+(* ---------------------------------------------------------------------*)
+(* ---------------------------------------------------------------------*)
+(* New RES_CANON for version 1.12.			 [TFM 90.12.07] *)
+(* 									*)
+(* The complete list of transformations is now:				*)
+(*									*)
+(*   ~t              --->       t ==> F        (at outermost level)	*)
+(*   t1 /\ t2	     --->	t1, t2	       (at outermost level)	*)
+(*   (t1/\t2)==>t    --->	t1==>(t2==>t), t2==>(t1==>t)		*)
+(*   (t1\/t2)==>t    --->	t1==>t, t2==>t				*)
+(*   t1 = t2         --->       t1==>t2, t2==>t1			*)
+(*   !x. t1 ==> t2   --->       t1 ==> !x.t2   (x not free in t1)	*)
+(*   (?x.t1) ==> t2  --->	!x'. t1[x'/x] ==> t2			*)
+(*									*)
+(* The function now fails if no implications can be derived from the 	*)
+(* input theorem.							*)
+(* ---------------------------------------------------------------------*)
+
+
+local fun not_elim th = 
+       if is_neg(concl th) then (true, NOT_ELIM th) else (false,th)
+fun canon (fl,th) = 
+   let val w = concl th 
+   in
+   if is_conj w 
+     then let val (th1,th2) = CONJ_PAIR th 
+          in (canon(fl,th1) @ canon(fl,th2)) 
+          end else 
+   if (is_imp w andalso not(is_neg w)) then 
+     let val {ant,...} = dest_imp w 
+     in if is_conj ant
+        then let val {conj1,conj2} = dest_conj ant 
+                 val cth = MP th (CONJ (ASSUME conj1) (ASSUME conj2)) 
+                 val th1 = DISCH conj2 cth 
+                 and th2 = DISCH conj1 cth 
+             in
+                canon(true,DISCH conj1 th1) @ canon(true,DISCH conj2 th2)
+             end else 
+        if is_disj ant 
+        then let val {disj1,disj2} = dest_disj ant 
+                 val ath = DISJ1 (ASSUME disj1) disj2 
+                 and bth = DISJ2 disj1 (ASSUME disj2) 
+                 val th1 = DISCH disj1 (MP th ath)
+                 and th2 = DISCH disj2 (MP th bth) 
+             in
+                 canon(true,th1) @ canon(true,th2)
+             end else 
+        if is_exists ant 
+        then let val {Bvar,Body} = dest_exists ant 
+                 val newv = variant(thm_free_vars th) Bvar
+                 val newa = subst [Bvar |-> newv] Body 
+                 val th1  = MP th (EXISTS (ant,newv) (ASSUME newa))
+             in
+               canon(true,DISCH newa th1)
+             end
+        else map (GEN_ALL o (DISCH ant)) (canon (true,UNDISCH th))
+     end else 
+   if is_eq w andalso (type_of (rand w) = Type.bool) 
+   then let val (th1,th2) = EQ_IMP_RULE th 
+        in (if fl then [GEN_ALL th] else [])@canon(true,th1)@canon(true,th2)
+        end else 
+   if is_forall w then 
+     let val (vs,_) = strip_forall w 
+         val fvs = mk_set (free_varsl(hyp th) @ free_vars (concl th))
+         val nvs = itlist (fn v => fn nv => variant (nv @ fvs) v::nv) vs []
+     in 
+        canon (fl, SPECL nvs th) 
+     end else 
+   if fl then [GEN_ALL th] else [] 
+   end
+in
+fun RES_CANON th =
+ let val conjlist = CONJUNCTS (SPEC_ALL th)
+     fun operate th accum = 
+          accum @ map GEN_ALL (canon (not_elim (SPEC_ALL th)))
+     val imps = Lib.rev_itlist operate conjlist []
+ in Lib.assert (op not o null) imps
+ end handle HOL_ERR _ 
+ => raise ERR "RES_CANON" "No implication is derivable from input thm"
+end;
+
+
+(*======================================================================*)
+(*       Routines supporting the definition of types                    *)
+(*                                                                      *)
+(* AUTHOR        : (c) Tom Melham, University of Cambridge              *)
+(*                                                                      *)
+(* NAME: define_new_type_bijections 					*)
+(*									*)
+(* DESCRIPTION: define isomorphism constants based on a type definition.*)
+(*									*)
+(* USAGE: define_new_type_bijections name ABS REP tyax                  *)
+(*									*)
+(* ARGUMENTS: tyax -- a type-defining axiom of the form returned by	*)
+(*		     new_type_definition. For example:			*)
+(*									*)
+(* 			?rep. TYPE_DEFINITION P rep			*)
+(*									*)
+(*            ABS  --- the name of the required abstraction function    *)
+(*									*)
+(*            REP  --- the name of the required representation function *)
+(*									*)
+(*            name --- the name under which the definition is stored    *)
+(*									*)
+(* SIDE EFFECTS:    Introduces a definition for two constants `ABS` and *)
+(*                  (--`REP`--) by the constant specification:          *)
+(*									*)
+(*  		   |- ?ABS REP. (!a. ABS(REP a) = a) /\                 *)
+(*                              (!r. P r = (REP(ABS r) = r)             *)
+(*									*)
+(*                 The resulting constant specification is stored under *)
+(*                 the name given as the first argument.                *)
+(*									*)
+(* FAILURE: if input theorem of wrong form.			        *)
+(*									*)
+(* RETURNS: The defining property of the representation and abstraction *)
+(*          functions, given by:                                        *)
+(*             								*)
+(*           |- (!a. ABS(REP a) = a) /\ (!r. P r = (REP(ABS r) = r)   	*)
+(* ---------------------------------------------------------------------*)
+
+fun define_new_type_bijections{name,ABS,REP,tyax} =
+  if not(null (hyp tyax))
+  then raise ERR "define_new_type_bijections"
+                 "input theorem must have no assumptions"
+  else 
+  let val (_,[P,rep]) = strip_comb(#Body(dest_exists(concl tyax)))
+      val (a,r) = Type.dom_rng (type_of rep)
+  in boolSyntax.new_specification
+      {name=name, 
+       sat_thm=MP(SPEC P (INST_TYPE[beta |-> a,alpha |-> r]ABS_REP_THM)) tyax,
+       consts = [{const_name = REP, fixity = Prefix},
+                 {const_name = ABS, fixity = Prefix}]}
+  end
+  handle e => raise (wrap_exn "Drule" "define_new_type_bijections" e)
+
+(* ---------------------------------------------------------------------*)
+(* NAME: prove_rep_fn_one_one	 					*)
+(*									*)
+(* DESCRIPTION: prove that a type representation function is one-to-one.*)
+(*									*)
+(* USAGE: if th is a theorem of the kind returned by the ML function	*)
+(*        define_new_type_bijections:					*)
+(*									*)
+(*           |- (!a. ABS(REP a) = a) /\ (!r. P r = (REP(ABS r) = r)   	*)
+(*									*)
+(*	 then prove_rep_fn_one_one th will prove and return a theorem	*)
+(*	 stating that the representation function REP is one-to-one:	*)
+(*									*)
+(*	    |- !a a'. (REP a = REP a') = (a = a')			*)
+(*									*)
+(* ---------------------------------------------------------------------*)
+
+fun prove_rep_fn_one_one th =
+   let val thm = CONJUNCT1 th
+       val {Body, ...} = dest_forall(concl thm)
+       val {Rator = A, Rand} = dest_comb(lhs Body)
+       val {Rator = R, ...} = dest_comb Rand
+       val {Args = [aty,rty],...} = Type.dest_type (type_of R)
+       val a = mk_primed_var{Name = "a", Ty = aty}
+       val a' = variant [a] a
+       val a_eq_a' = mk_eq{lhs = a, rhs = a'}
+       and Ra_eq_Ra' = mk_eq{lhs = mk_comb{Rator = R, Rand = a},
+                             rhs = mk_comb{Rator = R, Rand = a'}}
+       val th1 = AP_TERM A (ASSUME Ra_eq_Ra')
+       val ga1 = genvar aty
+       and ga2 = genvar aty
+       val th2 = SUBST [ga1 |-> SPEC a thm, ga2 |-> SPEC a' thm]
+                       (mk_eq{lhs = ga1, rhs = ga2}) th1
+       val th3 = DISCH a_eq_a' (AP_TERM R (ASSUME a_eq_a'))
+   in
+   GEN a (GEN a' (IMP_ANTISYM_RULE (DISCH Ra_eq_Ra' th2) th3))
+   end
+   handle HOL_ERR _ => raise ERR "prove_rep_fn_one_one"  "";
+
+(* --------------------------------------------------------------------- *)
+(* NAME: prove_rep_fn_onto	 					*)
+(*									*)
+(* DESCRIPTION: prove that a type representation function is onto. 	*)
+(*									*)
+(* USAGE: if th is a theorem of the kind returned by the ML function	*)
+(*        define_new_type_bijections:					*)
+(*									*)
+(*           |- (!a. ABS(REP a) = a) /\ (!r. P r = (REP(ABS r) = r)   	*)
+(*									*)
+(*	 then prove_rep_fn_onto th will prove and return a theorem	*)
+(*	 stating that the representation function REP is onto:		*)
+(*									*)
+(*	    |- !r. P r = (?a. r = REP a)				*)
+(*									*)
+(* --------------------------------------------------------------------- *)
+
+fun prove_rep_fn_onto th =
+   let val [th1,th2] = CONJUNCTS th
+       val {Bvar,Body} = dest_forall(concl th2)
+       val {rhs = eq, ...} = dest_eq Body
+       val {Rator = RE, Rand = ar} = dest_comb(lhs eq)
+       val a = mk_primed_var {Name = "a", Ty = type_of ar}
+       val sra = mk_eq{lhs = Bvar, rhs = mk_comb{Rator = RE, Rand = a}}
+       val ex = mk_exists{Bvar = a, Body = sra}
+       val imp1 = EXISTS (ex,ar) (SYM(ASSUME eq))
+       val v = genvar (type_of Bvar)
+       and A = rator ar
+       and ass = AP_TERM RE (SPEC a th1)
+       val th = SUBST[v |-> SYM(ASSUME sra)]
+                     (mk_eq{lhs = mk_comb{Rator = RE,
+                                          Rand = mk_comb{Rator = A, Rand = v}},
+                            rhs = v})
+                     ass
+       val imp2 = CHOOSE (a,ASSUME ex) th
+       val swap = IMP_ANTISYM_RULE (DISCH eq imp1) (DISCH ex imp2)
+   in
+   GEN Bvar (TRANS (SPEC Bvar th2) swap)
+   end
+   handle HOL_ERR _ => raise ERR "prove_rep_fn_onto" "";
+
+(* ---------------------------------------------------------------------*)
+(* NAME: prove_abs_fn_onto	 					*)
+(*									*)
+(* DESCRIPTION: prove that a type abstraction function is onto. 	*)
+(*									*)
+(* USAGE: if th is a theorem of the kind returned by the ML function	*)
+(*        define_new_type_bijections:					*)
+(*									*)
+(*           |- (!a. ABS(REP a) = a) /\ (!r. P r = (REP(ABS r) = r)   	*)
+(*									*)
+(*	 then prove_abs_fn_onto th will prove and return a theorem	*)
+(*	 stating that the abstraction function ABS is onto:		*)
+(*									*)
+(*	    |- !a. ?r. (a = ABS r) /\ P r				*)
+(*									*)
+(* ---------------------------------------------------------------------*)
+
+fun prove_abs_fn_onto th =
+   let val [th1,th2] = CONJUNCTS th
+       val {Bvar=bv_th1,Body} = dest_forall(concl th1)
+       val {Rator=A,Rand} = dest_comb(lhs Body)
+       val {Rator=R,...} = dest_comb Rand
+       val rb = mk_comb{Rator = R, Rand = bv_th1}
+       val bth1 = SPEC bv_th1 th1
+       val thm1 = EQT_ELIM(TRANS (SPEC rb th2) (EQT_INTRO (AP_TERM R bth1)))
+       val thm2 = SYM bth1
+       val {Bvar = r, Body} = dest_forall(concl th2)
+       val P = rator(lhs Body)
+       val ex = mk_exists{Bvar=r, Body=mk_conj
+                    {conj1=mk_eq{lhs=bv_th1, rhs=mk_comb{Rator=A, Rand=r}},
+                     conj2=mk_comb{Rator=P, Rand=r}}}
+   in GEN bv_th1 (EXISTS(ex,rb) (CONJ thm2 thm1))
+   end
+   handle HOL_ERR _ => raise ERR "prove_abs_fn_onto" "";
+
+
+(* ---------------------------------------------------------------------*)
+(* NAME: prove_abs_fn_one_one	 					*)
+(*									*)
+(* DESCRIPTION: prove that a type abstraction function is one-to-one. 	*)
+(*									*)
+(* USAGE: if th is a theorem of the kind returned by the ML function	*)
+(*        define_new_type_bijections:					*)
+(*									*)
+(*           |- (!a. ABS(REP a) = a) /\ (!r. P r = (REP(ABS r) = r)   	*)
+(*									*)
+(*	 then prove_abs_fn_one_one th will prove and return a theorem	*)
+(*	 stating that the abstraction function ABS is one-to-one:	*)
+(*									*)
+(*	    |- !r r'. P r ==>						*)
+(*		      P r' ==>						*)
+(*		      (ABS r = ABS r') ==> (r = r')			*)
+(*									*)
+(* ---------------------------------------------------------------------*)
+
+fun prove_abs_fn_one_one th =
+   let val [th1,th2] = CONJUNCTS th
+       val {Bvar = r, Body} = dest_forall(concl th2)
+       val P = rator(lhs Body)
+       val {Rator = A,Rand} = dest_comb(lhs(#Body(dest_forall(concl th1))))
+       val R = rator Rand
+       val r' = variant [r] r
+       val r_eq_r' = mk_eq {lhs = r, rhs = r'}
+       val Pr = mk_comb{Rator = P, Rand = r}
+       val Pr' = mk_comb{Rator = P, Rand = r'}
+       val as1 = ASSUME Pr
+       and as2 = ASSUME Pr'
+       val t1 = EQ_MP (SPEC r th2) as1
+       and t2 = EQ_MP (SPEC r' th2) as2
+       val eq = mk_eq{lhs = mk_comb{Rator = A, Rand = r},
+                      rhs = mk_comb{Rator = A, Rand = r'}}
+       val v1 = genvar(type_of r)
+       and v2 = genvar(type_of r)
+       val i1 = DISCH eq 
+                  (SUBST [v1 |-> t1, v2 |-> t2] 
+                         (mk_eq{lhs=v1, rhs=v2}) (AP_TERM R (ASSUME eq)))
+       val i2    = DISCH r_eq_r' (AP_TERM A (ASSUME r_eq_r'))
+       val thm   = IMP_ANTISYM_RULE i1 i2
+       val disch = DISCH Pr (DISCH Pr' thm)
+   in
+     GEN r (GEN r' disch)
+   end
+   handle HOL_ERR _ => raise ERR "prove_abs_fn_one_one"  "";
+
+end; (* Drule *)
