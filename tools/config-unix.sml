@@ -3,12 +3,12 @@
 local val XABLE  = "chmod a+x"   (* set execute permission *)
       open Process
 in
-fun mk_xable file = 
+fun mk_xable file =
   if system (XABLE^" "^file) = success then file
-  else (print ("unable to set execute permission on "^file^".\n"); 
+  else (print ("unable to set execute permission on "^file^".\n");
         raise Fail "mk_xable");
 
-val MK_XABLE_RHS = 
+val MK_XABLE_RHS =
   String.concat ["(Process.system (\"",XABLE," \"^file); file)"];
 
 end;
@@ -45,4 +45,4 @@ fun emit_hol_unquote_script target qfilter hol quse =
         Set C-compiler options for building robdd library.
  ---------------------------------------------------------------------------*)
 
-use "config-robdd.sml";
+use (fullPath [holdir, "tools", "config-robdd.sml"]);
