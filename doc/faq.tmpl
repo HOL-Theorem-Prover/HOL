@@ -1,16 +1,25 @@
-Q. HOL is failing to complete the build process.  It stops when trying
-   to create the HolBdd theory.  Why is this, and what should I do? (5)
+HOL98 Frequently Asked Questions
 
-  -- The problem is almost certainly that your copy of MoscowML hasn't
+<P>
+
+<DL>
+
+<DT><strong>HOL is failing to complete the build process.  It stops when trying
+   to create the HolBdd theory.  Why is this, and what should I do?</strong> (5)
+
+<DD> The problem is almost certainly that your copy of MoscowML hasn't
      been built with dynamic linking correctly enabled.  This in turn
      means that the Muddy BDD package that HolBdd uses can't load.
      You can test that this is the problem by running hol, and then
      trying
-
+<PRE>
      - load "HolBdd";
+</PRE>
 
      This should fail with an error message about not being able to
      load muddy.so.
+
+<P>
 
      If you decide you do want HolBdd (there is nothing else in HOL
      that depends on dynamic linking) you will probably need to build
@@ -23,192 +32,184 @@ Q. HOL is failing to complete the build process.  It stops when trying
      the src/Makefile.inc in the MoscowML distribution in line with
      the instructions in the comments there.
 
+<P>
      This advice seems to solve this problem for 90% of the people
      reporting it.  If it doesn't in your case, please get back to us.
 
+<P>
 
-Q. How do I antiquote types? (3)
+<DT><strong>How do I antiquote types?</strong> (3)
 
-  -- Antiquoting types works as you would expect when parsing types,
+<DD> Antiquoting types works as you would expect when parsing types,
      so that it is fine to write:
-       - val ty = Type`:bool`;
+<PRE>
+         - val ty = Type`:bool`;
+</PRE>
      and then
-       - Type`:num -> ^ty`;
+<PRE>
+         - Type`:num -> ^ty`;
+</PRE>
      However, you may wish to also introduce type antiquotations into
      term parses (as a type constraint on a variable for example).
      The problem is that you can't just write ^ty in this context,
      because the parsing function's type insists that all antiquotes
      be of type term.  You must use the ty_antiq function, which
      magically makes a type appear as a term:
-       - val antity = ty_antiq ty;
-       > val antity = `(ty_antiq(`:bool`))` : Term.term
+<PRE>
+         - val antity = ty_antiq ty;
+         > val antity = `(ty_antiq(`:bool`))` : term
+</PRE>
      Then:
-       - val x = Term`x:^antity`;
-
+<PRE>
+         - val x = Term `x:^antity`;
+</PRE>
      It's quite easy to figure out when and why ty_antiq is required
      if one understands the type of the parsing functions.  For
      example, Term and (fn q => -- q --) have type
-       term frag list -> term
+<PRE>
+         term frag list -> term
+</PRE>
      While Type and (fn q => == q ==) have type
+<PRE>
        hol_type frag list -> hol_type
-
+</PRE>
      The frag list refers to the fact that there is a quotation being
      consumed.  A quotation is something that appears between
      back-quotes.  A quotation consists of strings and antiquotations.
      A term frag list must have antiquotations that are of type term.
      A hol_type frag list must have antiquotations that are of type
      hol_type.
-
+<P>
      So, if you use Term to parse a term, you can't directly antiquote
      in types, because this would violate the typing rules (you can
      only antiquote in terms if you call Term, because it requires a
      term frag list).
-
+<P>
      So, in order to accomplish this there is a bit of magic called
      ty_antiq, which if you look at its type (hol_type -> term) turns
      a type into a term.  The term formed is completely bogus in a
      logical sense (it's actually a var with a special name and the
      given type), but can be pushed into the parsing function Term so
      as to give the effect of antiquoting a type.
-
+<P>
      The function Hol_datatype takes a hol_type frag list, so if you
      want to antiquote a type into the quotations it takes, you will
      not need to ty_antiq it.
+<P>
 
-Q. Are error messages during the build like the following a source for
-   concern? (2)
-
+<DT><strong> Are error messages during the build like the following a
+source for concern? </strong>(2)
+<PRE> 
    > File "Term.sml", line 1328, characters 10-42:
    > !   let val {const=Const(r1,_),theory,place} = const_decl name
    > !           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    > ! Warning: pattern matching is not exhaustive
-
-  -- No.  Nor is the following sort of output, when configuring the
+</PRE>
+<P>
+<DD> No.  Nor is the following sort of output, when configuring the
      system before building:
-
+<PRE>
      > /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
+</PRE>
+<P>
 
-Q. What's the syntax to make a real number like 1.23 ? (1)
+<DT><strong>Why can't I write ``MAP ~ x``?</strong> (1)
 
-  -- You will need to write 1 + 23/100 (or 123/100, or ...).  There's
-     no support currently for decimal constants.  To make it explicit
-     that you mean a real (and not an integer), you can write
-     123r/100, where the "r" suffix forces the numeral to be a real.
-     (This will likely only be an issue if you have both integerTheory
-     and realTheory loaded.)
-
-Q. What's the integer and real versions of num's DECIDE and arith_ss?
-   (1)
-
-  -- For the integers, you can use intLib.COOPER_{CONV,PROVE,TAC} The
-     performance of this is not very good at present, but it decides
-     small goals with small coefficients quickly enough.  It's
-     complete for Presburger arithmetic over both :num and :int (so
-     you can mix your quantifiers, and it also proves
-       !x:num. ~(2 * x = 5)
-     which ARITH_CONV and DECIDE both fail to prove.)
-
-     For the reals, realLib.REAL_ARITH proves universal goals.
-
-Q. Is there a nice way to print an arbitrary theory, or list its
-   axioms etc? (print_theory, axioms, theorems, etc only work on
-   current theory) (1)
-
-  -- You can use
-
-       DB.thy thyname;
-
-     to get a list of the axioms, theorems, and definitions in a 
-     theory.  Often, the nicest presentation is the theory file's
-     signature itself.  For example, listTheory.sig, in
-     <holdir>/src/list/src/.
-
-Q. Why can't I write ``MAP ~ x``? (1)
-
-  -- When you attempt this, you will get the error message
-
+<DD> When you attempt this, you will get the error message
+<PRE>
        No rule for [~]
-
+</PRE>
      meaning that the parser wants to do a reduction involving just
      the special symbol ~, and it can't find a rule that allows this.
      The rule in the grammar is TM ::= ~ TM.
-
+<P>
      ~ is treated specially, and not just as a function that you'd
      apply to arguments normally, for two reasons:
-
-        * it can have precedence weaker than just function
+<UL>
+<LI> it can have precedence weaker than just function
           application.  This means that when you write ~f x, this is
           parsed as ~(f x).
-
-        * it can group without needing extra parentheses, so you can
+<P>
+<LI> it can group without needing extra parentheses, so you can
           write ~~b; you don't need to write ~(~b).
-
+</UL>
+<P>
      To make ~ lose its special status, you should prefix it with a
      $.  ``MAP $~ x`` will work in the example, assuming that x has
      type :bool list.
+<P>
 
-Q. How do I prove strings equal or inequal? (1)
+<DT><strong> How do I prove strings equal or inequal?</strong> (1)
 
-  -- Use stringLib.string_EQ_CONV, which reduces equalities over
+<DD> Use stringLib.string_EQ_CONV, which reduces equalities over
      string literals to either T or F.  For example, to demonstrate
      that ``(if "foo" = "bar" then 3 else 1) = 1``, you could write:
-
+<PRE>
      - val t = ``(if "foo" = "bar" then 3 else 1)``;
      > val t = ``(if "foo" = "bar" then 3 else 1)`` : Term.term
      - (DEPTH_CONV stringLib.string_EQ_CONV THENC REWRITE_CONV []) t;
      > val it = |- (if "foo" = "bar" then 3 else 1) = 1 : Thm.thm
+</PRE>
+<P>
 
-Q. I'd like to use MEM as an infix, not a Prefix.  Can I do this? (1)
+<DT><strong> I'd like to use MEM as an infix, not a Prefix.  
+             Can I do this?</strong> (1)
 
-  -- Yes!  Use grammar manipulation functions such as set_fixity to
+<DD> Yes!  Use grammar manipulation functions such as set_fixity to
      alter its parsing information.  These changes can be made to
      persist when the current theory is exported.  For example:
-
+<PRE>
        - load "listTheory";
        - set_fixity "MEM" (Infixr 450);
        > val it = () : unit
        - listTheory.MEM;
        > val it =
            |- (!x. x MEM [] = F) /\ !x h t. x MEM (h::t) = (x = h) \/ x MEM t
-           : Thm.thm
+           : thm
+</PRE>
+<P>
 
-Q. How do I get a datatype's axiom after using Hol_datatype? (1)
+<DT><strong> How do I get a datatype's axiom after using 
+             Hol_datatype?</strong> (1) 
 
-  -- Use TypeBase.axiom_of (valOf (TypeBase.read "mytypename")).
+<DD> Use TypeBase.axiom_of (valOf (TypeBase.read "mytypename")).
      Hopefully you won't need to do this very much because many of the
      contexts in which you previously needed the axiom will be dealt
      with more smoothly.  For example, cases, induction, one-one and
      distinctness theorems are now proved automatically, and are
      available from the TypeBase.  For example,
-        TypeBase.one_one_of (valOf (TypeBase.read "mytypename"))
+<PRE>
+     TypeBase.one_one_of (valOf (TypeBase.read "mytypename"))
+</PRE>
+<P>
 
-Q. How to rewrite with a theorem the other way round? (0)
+<DT><strong> How to rewrite with a theorem the other way round?</strong> (0)
 
-  -- Use GSYM
+<DD> Use GSYM
+<P>
 
-Q. What's with all this "cut looping" stuff? (0)
+<DT><strong> What's with all this "cut looping" stuff?</strong> (0)
 
-  -- It's the simplifier, and it's turned off in Taupo releases
+<DD> It's the simplifier, and it's turned off in Taupo releases
      onwards unless you set the trace level to one or higher.
+<P>
 
-Q. How can I find out more information about a HOL_ERR <poly>
-   exception? (0)
+<DT><strong> How can I find out more information about a HOL_ERR <poly>
+     exception? </strong>(0)
 
-  -- If expression e is causing the grief, then write
+<DD> If expression e is causing the grief, then write
         (e) handle E => Raise E
      (Often the parentheses around e will not be required.)
 
+<DT><strong>How do I put hol98 in a state so that theorem assumptions are 
+   printed?</strong> (1)
 
-Q. How do I put hol98 in a state so that theorem assumptions are 
-   printed? (1)
-
-  -- show_assums := true;
-
-     It along with several other flags that control HOL behaviour can 
+<DD><PRE>show_assums := true; </PRE>
+<P>
+     This flag, along with several others that control HOL behaviour can 
      be found in the Globals structure. 
 
-Q. Is there a diagram of the theory hierarchy? (1)
+</DL>
+<P>
 
-  -- See 
-
-        http://www.cl.cam.ac.uk/Research/HVG/FTP/
+</BODY></HTML>
