@@ -50,6 +50,13 @@ val ETA_ss = SIMPSET {
             conv = K (K (ABS_CONV ETA_CONV))}],
   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
 
+(* ----------------------------------------------------------------------
+    BOOL_ss
+      This simpset fragment contains "standard" rewrites, as per the
+      default behaviour of REWRITE_TAC.  It also includes
+      beta-conversion.
+   ---------------------------------------------------------------------- *)
+
 
 val BOOL_ss = SIMPSET
   {convs=[{name="BETA_CONV (beta reduction)",
