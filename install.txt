@@ -5,7 +5,7 @@ Get the Hol98 sources by WWW from
 
      http://www.cl.cam.ac.uk/ftp/hvg/hol98/working.tar.gz
 
-and the Moscow ML compiler (version 1.44 or greater) from
+and the Moscow ML compiler (version 2.00) from
 
      http://www.dina.kvl.dk/~sestoft/mosml.html
 
@@ -25,7 +25,7 @@ A. First, install Moscow ML. This is usually straightforward. The
      from *source* in order to dynamically load C libraries, as is
      required by, e.g., HolBddLib. In this case, you will have to set a
      few shell variables; this is explained in the MoscowML installation
-     directions.  
+     directions.
 
      The upshot: if you are working on a Unix system, you should build
      MoscowML from source, making the necessary tweaks that enable
@@ -83,7 +83,7 @@ C. Enter the "tools" directory and edit the file "configure.sml".
         preprocessoer, so if you have selected "winNT" for your OS
         value, then you can ignore this.
 
-        Another tool that requires a C compiler to be built is the 
+        Another tool that requires a C compiler to be built is the
         SMV tool, found in temporalLib. If a C compiler is not
         designated, temporalLib is still usable, but some proof
         procedures in it will not work.
@@ -138,10 +138,10 @@ External tools.
 
 The Hol98 installation currently includes a C library (in HolBddLib) and
 the C sources for the SMV model-checker (in temporalLib). Both of these
-require a C compiler to have been specified in tools/configure.sml.  
+require a C compiler to have been specified in tools/configure.sml.
 
 Loading the BDD libraries muddyLib or HolBddLib will fail unless
-MoscowML has been built with dynamic linking enabled. 
+MoscowML has been built with dynamic linking enabled.
 
 
 Dealing with failure.
