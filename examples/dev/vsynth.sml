@@ -136,6 +136,41 @@ val ORvDef =
 \\n";
 
 (*****************************************************************************)
+(* Abstract delay element                                                    *)
+(*****************************************************************************)
+val DELvDef =
+"// Abstract delay, transparent on intialisation\n\
+\module DEL (inp,out);\n\
+\ parameter size = 31;\n\
+\ input  [size:0] inp;\n\
+\ output [size:0] out;\n\
+\ reg    [size:0] out;\n\
+\\n\
+\ initial out = inp;\n\
+\\n\
+\ always  out = #1 inp;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
+(* Abstract edge-triggered clocked flipflop                                  *)
+(*****************************************************************************)
+val DFFvDef =
+"// Abstract edge triggered flipflop\n\
+\module DFF (d,clk,q);\n\
+\ parameter size = 31;\n\
+\ input clk;\n\
+\ input  [size:0] d;\n\
+\ output [size:0] q;\n\
+\ reg    [size:0] q;\n\
+\\n\
+\ always @(posedge clk) q <= d;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
 (* Positive edge triggered Dtype register. Default is 32-bits wide.          *)
 (*****************************************************************************)
 val DtypevDef =
@@ -421,6 +456,62 @@ fun termToVerilog_MUX (out:string->unit) tm =
   else raise ERR "termToVerilog_MUX" "bad component term";
 
 (*****************************************************************************)
+(* Print an instance of an DEL with a given size                             *)
+(*****************************************************************************)
+val DELvInst_count = ref 0;
+fun DELvInst (out:string->unit) [("size",size)] [inp_name,out_name] =
+ let val count = !DELvInst_count
+     val _ = (DELvInst_count := count+1);
+     val inst_name = "DEL" ^ "_" ^ Int.toString count
+ in
+ (out " DEL        "; out inst_name;
+  out " (";out inp_name;out",";out out_name; out ");\n";
+  out "   defparam ";out inst_name; out ".size = "; out size; 
+  out ";\n\n")
+ end;
+
+fun termToVerilog_DEL (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DEL")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 2)
+     andalso all is_var (strip_pair(rand tm))
+  then DELvInst 
+        out 
+        [("size", var2size(last(strip_pair(rand tm))))] 
+        (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_DEL" "bad component term";
+
+(*****************************************************************************)
+(* Print an instance of a DFF with a given size                              *)
+(*****************************************************************************)
+val DFFvInst_count = ref 0;
+fun DFFvInst (out:string->unit) [("size",size)] [in_name,clk_name,out_name] =
+ let val count = !DFFvInst_count
+     val _ = (DFFvInst_count := count+1);
+     val inst_name = "DFF" ^ "_" ^ Int.toString count
+ in
+ (out " DFF      "; out inst_name;
+  out " (";out in_name;out",";out clk_name;out",";out out_name; out ");\n";
+  out "   defparam ";out inst_name; out ".size = "; out size; 
+  out ";\n\n")
+ end;
+
+fun termToVerilog_DFF (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DFF")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 3)
+     andalso all is_var (strip_pair(rand tm))
+  then DFFvInst 
+        out 
+        [("size", var2size(last(strip_pair(rand tm))))] 
+        (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_DFF" "bad component term";
+
+(*****************************************************************************)
 (* Print an instance of a Dtype with a given size                            *)
 (*****************************************************************************)
 val DtypevInst_count = ref 0;
@@ -622,6 +713,8 @@ fun termToVerilog out tm =
  termToVerilog_AND out tm        handle _ =>
  termToVerilog_OR out tm         handle _ =>
  termToVerilog_MUX out tm        handle _ =>
+ termToVerilog_DEL out tm        handle _ =>
+ termToVerilog_DFF out tm        handle _ =>
  termToVerilog_Dtype out tm      handle _ =>
  termToVerilog_Dff out tm        handle _ =>
  termToVerilog_CONSTANT out tm   handle _ =>
@@ -688,7 +781,9 @@ fun add_module (name,(vdef,vinst)) =
 val _ = 
  map
   add_module
-  [("Dtype",    (DtypevDef,      DtypevInst)),
+  [("DEL",      (DELvDef,        DELvInst)),
+   ("DFF",      (DFFvDef,        DFFvInst)),
+   ("Dtype",    (DtypevDef,      DtypevInst)),
    ("Dff",      (DffvDef,        DffvInst)),
    ("TRUE",     (TRUEvDef,       TRUEvInst)),
    ("NOT",      (NOTvDef,        NOTvInst)),
@@ -743,7 +838,7 @@ fun dest_cir thm =
      val inpl = strip_BUS_CONCAT inp_tm
      val outl = strip_BUS_CONCAT out_tm
  in
-  (spec_tm,(clk_tm,load_tm,inpl,done_tm,outl), vars, tml)
+  (spec_tm, (clk_tm,load_tm,inpl,done_tm,outl), vars, tml)
  end;
 
 (*****************************************************************************)
@@ -890,13 +985,14 @@ and stimulus =
  [(10, 12, [("inp1", "5"),("inp2","7")], 15),
   (10, 12, [("inp1", "5"),("inp2","0")], 15),
   (10, 12, [("inp1", "3"),("inp2","3")], 15)]
-and name = "Adder";
+and name = "Adder"
+and dump_all = true;
 
 printToFile "Foo.vl" (MAKE_SIMULATION maxtime period thm stimulus name);
 *)
 
 
-fun MAKE_SIMULATION name thm maxtime period stimulus out =
+fun MAKE_SIMULATION name thm maxtime period stimulus dump_all out =
  let val (spec_tm,
           (clk, load_tm,inpl,done_tm,outl), 
           vars, 
@@ -930,10 +1026,14 @@ fun MAKE_SIMULATION name thm maxtime period stimulus out =
   map (printStimulusLine out load_name) stimulus;
   out " end\n";
   out "\n";
-  out(" initial\n  begin\n   $dumpfile(\"" ^name ^ ".vcd\");\n   $dumpvars(1,");
-  map out (add_commas module_args);
-  out(");\n  end\n");
-  out "\n";
+  out(" initial\n  begin\n   $dumpfile(\"" ^name ^ ".vcd\");\n");
+  (if dump_all
+    then out("   $dumpvars(1, " ^ name ^ ");\n")
+    else
+     (out("   $dumpvars(1,");
+      map out (add_commas module_args);
+      out ");\n"));
+  out"  end\n\n";
   ClockvInst out [("period", Int.toString period)] [clk_name]; (* Create a clock *)
   out(" " ^ name ^ "    " ^ name ^ " (");
   map out (add_commas module_args);
@@ -962,6 +1062,12 @@ fun PRINT_VERILOG thm =
   printToFile (name ^ ".vl") (MAKE_VERILOG name thm)
  end;
 
+(*****************************************************************************)
+(* Flag (default false) to determine if all variables are dumped,            *)
+(* or just the top level ones.                                               *)
+(*****************************************************************************)
+val dump_all_flag = ref false;
+
 (*
 ** PRINT_SIMULATION
 **  (|- InRise clk 
@@ -972,18 +1078,160 @@ fun PRINT_VERILOG thm =
 **                (inp1 <> ... <> inpu) at clk,
 **                done at clk,
 **                (out1 <> ... <> outv) at clk))
-**  maxtime period stimulus
+**  maxtime period stimulus (!dump_all_flag)
 ** 
 ** Prints translation to Verilog and a stimulus to a file Spec.vl and creates 
 ** a module Main that invokes module Spec connected to a simulation environment
-** described by stimulus. 
+** described by stimulus. If 
 ** (fails if Spec isn't a constant)
 *)
 
 fun PRINT_SIMULATION thm maxtime period stimulus =
  let val name = fst(dest_const(#1(dest_cir thm)))
  in
-  printToFile (name ^ ".vl") (MAKE_SIMULATION name thm maxtime period stimulus)
+  printToFile 
+   (name ^ ".vl")
+   (MAKE_SIMULATION name thm maxtime period stimulus (!dump_all_flag))
  end;
 
- 
+(*****************************************************************************)
+(* Stuff to genenerate Verilog from unclocked netlists                       *)
+(*****************************************************************************)
+
+(*
+**     (?v0 .... vn. M1(...) /\ ... /\ Mp(...))
+**     ==>
+**     DEV Spec (load, inp1 <> ... <> inpu, done, out1 <> ... <> outv)
+**
+** -->
+**
+** (Spec,
+**  (``load``,[``inp1``,...,``inpu``],``done``,[``out1``,...,``outv``]),
+**  [``v0``, ... ,``vn``],
+**  [``M1(...)``, ... ,``Mp(...)``])
+*)
+
+fun dest_net thm =
+ let val tm = concl(SPEC_ALL thm)
+     val (tm3,tm4) = dest_imp tm
+     val spec_tm = rand(rator tm4)
+     val [load_tm,inp_tm,done_tm,out_tm] = strip_pair(rand tm4)
+     val (vars,bdy) = strip_exists tm3
+     val tml = strip_conj bdy
+     val inpl = strip_BUS_CONCAT inp_tm
+     val outl = strip_BUS_CONCAT out_tm
+ in
+  (spec_tm, (load_tm,inpl,done_tm,outl), vars, tml)
+ end;
+
+fun MAKE_NET_VERILOG name thm out =
+ let val (spec_tm,
+          (load_tm,inpl,done_tm,outl), 
+          vars, 
+          modules) = dest_net thm
+     val load_name = var_name load_tm
+     val inp_names = map var_name inpl
+     val done_name = var_name done_tm
+     val out_names = map var_name outl
+     val module_args = 
+          [load_name] @ inp_names @ [done_name] @ out_names;
+     val module_names  = map (fst o dest_const o fst o strip_comb) modules
+     val _ = if not(null(subtract module_names (map fst (!module_lib))))
+              then (print "unknown module in circuit: ";
+                    print(hd(subtract module_names (map fst (!module_lib))));
+                    print "\n";
+                    raise ERR "MAKE_NET_VERILOG" "unknown modules in circuit")
+              else ()
+ in
+ (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
+  out("// Definitions of components used in " ^ name ^ "\n\n");
+  map            (* Print definition of components *)
+   (fn(_,(def,_)) => out def)
+   (filter
+     (fn(name,_) => mem name module_names)
+     (!module_lib));
+  out("\n// Definition of module " ^ name ^ "\n");
+  out "module ";
+  out name; 
+  out " (";
+  map out (add_commas module_args);
+  out ");\n";
+  out(" input " ^ load_name ^ ";\n");
+  map 
+   (fn v => out(" input [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   inpl;
+  out(" output " ^ done_name ^ ";\n");
+  map 
+   (fn v => out(" output [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   outl;
+  out(" wire " ^ done_name ^ ";\n");
+  out "\n";
+  map 
+   (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   vars;
+  out "\n";
+  map
+   (termToVerilog out)
+   modules;
+  out"endmodule\n")
+ end;
+
+
+fun MAKE_NET_SIMULATION name thm maxtime period stimulus dump_all out =
+ let val (spec_tm,
+          (load_tm,inpl,done_tm,outl), 
+          vars, 
+          modules) = dest_net thm
+     val load_name = var_name load_tm
+     val inp_names = map var_name inpl
+     val done_name = var_name done_tm
+     val out_names = map var_name outl
+     val module_args = 
+          [load_name] @ inp_names @ [done_name] @ out_names;
+
+ in
+ (MAKE_NET_VERILOG name thm out;
+  out "\n";
+  out "module Main ();\n";
+  out(" parameter maxtime = " ^ Int.toString maxtime ^ ";\n");
+  out(" reg " ^ load_name ^ ";\n");
+  map 
+   (fn v => out(" reg [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
+   inpl;
+  out(" wire " ^ done_name ^ ";\n");
+  map 
+   (fn v => out(" wire [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
+   outl;
+  out "\n";
+  out(" initial #maxtime $finish;\n\n");
+  out " initial\n  begin\n";
+  map (printStimulusLine out load_name) stimulus;
+  out " end\n";
+  out "\n";
+  out(" initial\n  begin\n   $dumpfile(\"" ^name ^ ".vcd\");\n");
+  (if dump_all
+    then out("   $dumpvars(1, " ^ name ^ ");\n")
+    else
+     (out("   $dumpvars(1,");
+      map out (add_commas module_args);
+      out ");\n"));
+  out"  end\n\n";
+  out(" " ^ name ^ "    " ^ name ^ " (");
+  map out (add_commas module_args);
+  out ");\n\n";
+  out"endmodule\n")
+ end;
+
+fun PRINT_NET_VERILOG thm =
+ let val name = fst(dest_const(#1(dest_net thm)))
+ in
+  printToFile (name ^ ".vl") (MAKE_NET_VERILOG name thm)
+ end;
+
+fun PRINT_NET_SIMULATION thm maxtime period stimulus =
+ let val name = fst(dest_const(#1(dest_net thm)))
+ in
+  printToFile 
+   (name ^ ".vl")
+   (MAKE_NET_SIMULATION name thm maxtime period stimulus (!dump_all_flag))
+ end;
