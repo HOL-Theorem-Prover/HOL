@@ -25,7 +25,22 @@ fun Q_ERR func mesg =
 
 val ptm = Parse.Term
 val pty = Parse.Type;
-val ptm_with_ty = Parse.typedTerm
+fun normalise_quotation frags =
+  case frags of
+    [] => []
+  | [x] => [x]
+  | (QUOTE s1::QUOTE s2::rest) => normalise_quotation (QUOTE (s1^s2) :: rest)
+  | x::xs => x :: normalise_quotation xs
+
+fun ptm_with_ctxtty ctxt ty q = let
+  val q' = QUOTE "(" :: (q @ [QUOTE "):", ANTIQUOTE(Term.ty_antiq ty),
+                              QUOTE ""])
+in
+  Parse.parse_in_context ctxt (normalise_quotation q')
+end
+
+
+val ptm_with_ty = Parse.typedTerm;
 fun btm q = ptm_with_ty q bool;
 
 val mk_term_rsubst =
@@ -87,57 +102,39 @@ val ISPECL = Drule.ISPECL o map ptm;
 val ID_SPEC = W(Thm.SPEC o (#Bvar o dest_forall o concl))
 
 
-fun same_const_name s tm = (s = #Name(dest_const tm)) handle _ => false;
-
-fun assocName s =
-   let fun assq [] = NONE
-         | assq (v::rst) =
-            if (s = #Name(dest_var v)) then SOME v else assq rst
-   in assq
-   end;
-
-(*---------------------------------------------------------------------------*
- * If q1 is a variable, then find free var occurrence with same name. Use    *
- * that to get the type with which to parse q2 (which has to be a variable). *
- * If it's not a var, then it might be a constant, and the same applies.     *
- * Otherwise it's a comb or an abs. Look for an exact (aconv) occurrence.    *
- * If there isn't one, look for a match.                                     *
- *---------------------------------------------------------------------------*)
-
-fun SPEC_TAC (q1,q2) (g as (_,w)) =
-  let val N = ptm q1
-      val N' = (case (dest_term N)
-           of VAR {Name,...} =>
-                (case (assocName Name (free_vars w))
-                 of NONE => raise Q_ERR"SPEC_TAC" "variable not found"
-                  | SOME v => v)
-           | CONST{Name,...} => find_term (same_const_name Name) w
-           | _ =>  find_term (aconv N) w
-                      handle HOL_ERR _ => find_term (Lib.can (match_term N)) w)
-  in
-    Tactic.SPEC_TAC(N', ptm_with_ty q2 (type_of N')) g
-  end;
+fun SPEC_TAC (q1,q2) (g as (asl,w)) = let
+  val ctxt = free_varsl (w::asl)
+  val T1 = Parse.parse_in_context ctxt q1
+  val T2 = ptm_with_ctxtty ctxt (type_of T1) q2
+in
+  Tactic.SPEC_TAC(T1, T2) g
+end;
 
 (* Generalizes first free variable with given name to itself. *)
 
-fun ID_SPEC_TAC [QUOTE s] (g as (_,w)) =
-     let val V = free_vars w
-     in case (Lib.assoc2 s (Lib.zip V (map (#Name o dest_var) V)))
-          of NONE => raise Q_ERR"ID_SPEC_TAC" "variable not found"
-           | (SOME (v,_)) => Tactic.SPEC_TAC(v,v) g
-     end
-  | ID_SPEC_TAC _ _ = raise Q_ERR "ID_SPEC_TAC" "unexpected quote format"
+fun ID_SPEC_TAC q (g as (asl,w)) = let
+  val ctxt = free_varsl (w::asl)
+  val tm = Parse.parse_in_context ctxt q
+in
+  Tactic.SPEC_TAC (tm, tm) g
+end
 
 val EXISTS = Thm.EXISTS o (btm##btm);
 
-val EXISTS_TAC = fn q =>
-  W(Tactic.EXISTS_TAC o ptm_with_ty q o (type_of o #Bvar o dest_exists o snd));
-
+fun EXISTS_TAC q (g as (asl, w)) = let
+  val ctxt = free_varsl (w::asl)
+  val exvartype = type_of (#Bvar (Rsyntax.dest_exists w))
+in
+  Tactic.EXISTS_TAC (ptm_with_ctxtty ctxt exvartype q) g
+end
 fun ID_EX_TAC(g as (_,w)) = Tactic.EXISTS_TAC (#Bvar(Dsyntax.dest_exists w)) g;
 
-val X_CHOOSE_THEN = fn q => fn ttac =>
-      W(C X_CHOOSE_THEN ttac o ptm_with_ty q
-                             o (type_of o #Bvar o dest_exists o concl));
+fun X_CHOOSE_THEN q ttac thm (g as (asl,w))= let
+  val ty = type_of (#Bvar (dest_exists (concl thm)))
+  val ctxt = free_varsl (w::asl)
+in
+  Thm_cont.X_CHOOSE_THEN (ptm_with_ctxtty ctxt ty q) ttac thm g
+end
 val X_CHOOSE_TAC = C X_CHOOSE_THEN Tactic.ASSUME_TAC;
 
 val DISCH = Thm.DISCH o btm;
@@ -147,16 +144,26 @@ fun UNDISCH_THEN q ttac = PAT_UNDISCH_TAC q THEN DISCH_THEN ttac;
 fun PAT_ASSUM q ttac = Ho_tactics.PAT_ASSUM (ptm q) ttac;
 val UNDISCH_TAC = Tactic.UNDISCH_TAC o btm;
 
-(* val num_CONV = Num_conv.num_CONV o ptm *)
-
-val SUBGOAL_THEN = Tactical.SUBGOAL_THEN o btm
+fun SUBGOAL_THEN q ttac (g as (asl,w)) = let
+  val ctxt = free_varsl (w::asl)
+in
+  Tactical.SUBGOAL_THEN (ptm_with_ctxtty ctxt Type.bool q) ttac g
+end
 val ASSUME = ASSUME o btm
-val X_GEN_TAC = fn q =>
-  W(Tactic.X_GEN_TAC o ptm_with_ty q o (type_of o #Bvar o dest_forall o snd))
 
-fun X_FUN_EQ_CONV q =
- W(Conv.X_FUN_EQ_CONV o ptm_with_ty q
-                      o (Lib.trye hd o #Args o dest_type o type_of o lhs));
+fun X_GEN_TAC q (g as (asl, w)) = let
+  val ctxt = free_varsl (w::asl)
+  val ty = type_of (#Bvar (dest_forall w))
+in
+  Tactic.X_GEN_TAC (ptm_with_ctxtty ctxt ty q) g
+end
+
+fun X_FUN_EQ_CONV q tm = let
+  val ctxt = free_vars tm
+  val ty = #1 (dom_rng (type_of (lhs tm)))
+in
+  Conv.X_FUN_EQ_CONV (ptm_with_ctxtty ctxt ty q) tm
+end
 
 val list_mk_type = itlist (curry(op -->));
 
@@ -167,7 +174,12 @@ fun skolem_ty tm =
     else raise Q_ERR"XSKOLEM_CONV" "no universal prefix"
   end;
 
-fun X_SKOLEM_CONV q = W(Conv.X_SKOLEM_CONV o ptm_with_ty q o skolem_ty)
+fun X_SKOLEM_CONV q tm = let
+  val ctxt = free_vars tm
+  val ty = skolem_ty tm
+in
+  Conv.X_SKOLEM_CONV (ptm_with_ctxtty ctxt ty q) tm
+end
 
 fun AP_TERM (q as [QUOTE s]) th =
      (let val {const,...} = Term.const_decl s
@@ -178,17 +190,22 @@ fun AP_TERM (q as [QUOTE s]) th =
         Thm.AP_TERM (Term.inst theta const) th
       end
       handle HOL_ERR _ => Thm.AP_TERM(ptm q) th)
-  | AP_TERM _ _ = raise Q_ERR "AP_TERM" "unexpected quote format"
+  | AP_TERM q th = Thm.AP_TERM (ptm q) th
 
+fun AP_THM th q = let
+  val {lhs,rhs} = dest_eq(concl th)
+  val ty = fst (dom_rng (type_of lhs))
+  val ctxt = free_vars (concl th)
+in
+  Thm.AP_THM th (ptm_with_ctxtty ctxt ty q)
+end;
 
-fun AP_THM th =
-   let val {lhs,rhs} = dest_eq(concl th)
-       val ty = fst (dom_rng (type_of lhs))
-   in
-     Thm.AP_THM th o (Lib.C ptm_with_ty ty)
-   end;
-
-val ASM_CASES_TAC = Tactic.ASM_CASES_TAC o btm
+fun ASM_CASES_TAC q (g as (asl,w)) = let
+  val ctxt = free_varsl (w::asl)
+  val ty = Type.bool
+in
+  Tactic.ASM_CASES_TAC (ptm_with_ctxtty ctxt ty q) g
+end
 fun AC_CONV p = Conv.AC_CONV p o ptm;
 
 (* Could be smarter *)
@@ -199,12 +216,15 @@ val INST_TYPE = Thm.INST_TYPE o mk_type_rsubst;
 (*---------------------------------------------------------------------------
  * A couple from jrh.
  *---------------------------------------------------------------------------*)
-fun ABBREV_TAC q =
-  let val {lhs,rhs} = Dsyntax.dest_eq (ptm q)
-  in CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
-       (Thm.EXISTS (mk_exists{Bvar=lhs,Body=mk_eq{lhs=rhs,rhs=lhs}},rhs)
-                     (Thm.REFL rhs))
-  end;
+fun ABBREV_TAC q (g as (asl,w)) = let
+  val ctxt = free_varsl(w::asl)
+  val {lhs,rhs} = Dsyntax.dest_eq (Parse.parse_in_context ctxt q)
+in
+  CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
+  (Thm.EXISTS (mk_exists{Bvar=lhs,Body=mk_eq{lhs=rhs,rhs=lhs}},rhs)
+   (Thm.REFL rhs))
+  g
+end;
 
 fun UNABBREV_TAC [QUOTE s] =
         FIRST_ASSUM(SUBST1_TAC o SYM o
