@@ -20,19 +20,43 @@ cd /tmp/hol98
 $mosmldir/bin/mosml < tools/configure.sml
 
 echo Now building whole system
-bin/build -symlink
+if bin/build -symlink 2>&1 | tee build-log | grep "^Working in directory"
+then
+  :
+else
+  echo "Build failed!!" ; echo ; echo
+  echo "See build-log file for details"
+  exit 1
+fi
 
 echo Now building help index
 cd developers/help
 make
 
+echo Now building documentation
+cd /tmp/hol98/Manual/Reference
+make all
+mv reference.dvi /tmp
+make clean
+cd ../Description
+make all
+mv description.dvi /tmp
+make clean
+cd ../Tutorial
+make all
+mv tutorial.dvi /tmp
+make clean
+
 echo Now starting to clean up and make tar ball
 cd /tmp/hol98
+/bin/rm build-log
 bin/build -cleanAll
 /bin/rm -rf developers
 mv /tmp/configure.sml tools
 /bin/rm bin/*
 /bin/rm tools/build.sml tools/Holmake/*.{uo,ui} tools/hol98-mode.el
+/bin/rm tools/Holmake/{Holmake,Parser,Lexer}.sml tools/Holmake/Parser.sig
+(cd src/muddy/ ; make clean ; cd buddy17 ; make clean)
 
 cd /tmp
 tar czf hol98-$name.tar.gz hol98
