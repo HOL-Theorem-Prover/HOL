@@ -248,6 +248,25 @@ fun termToTermBdd tm =
  end;
 
 (*****************************************************************************)
+(*  MkPrevThm (|- R((v1,...,vn),(v1',...,vn')) = ...) =                      *)
+(*                                                                           *)
+(*    |- Prev R (Eq (v1',...,vn'))) (v1,...,vn) = ...                        *)
+(*****************************************************************************)
+
+fun MkPrevThm Rth =
+ let val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
+     val (s,s') = pairSyntax.dest_pair s_s'
+     val _ = print "Computing simplified backward image theorem ...\n"
+     val PrevTh =
+       (simpLib.SIMP_RULE
+        boolSimps.bool_ss
+        [pairTheory.EXISTS_PROD,MachineTransitionTheory.Eq_def,pairTheory.PAIR_EQ,Rth])
+       (ISPECL[Rcon,``Eq ^s'``,s]MachineTransitionTheory.Prev_def)
+ in
+  PrevTh
+ end;
+
+(*****************************************************************************)
 (* Flatten a varstruct term into a list of variables (also in StateEnum).    *)
 (*****************************************************************************)
 
@@ -740,17 +759,9 @@ fun extendSat varlist vm tbl =
 
 val traceBackPrevThm = ref TRUTH;
 
-(* Code that follows is gross -- varmap handling needs rethinking *)
 fun traceBack vm trl pth Rth =  
- let val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
-     val (s,s') = pairSyntax.dest_pair s_s'
-     val _ = print "Computing simplified backward image theorem ...\n"
-     val PrevTh =
-      time
-       (simpLib.SIMP_RULE
-        boolSimps.bool_ss
-        [pairTheory.EXISTS_PROD,MachineTransitionTheory.Eq_def,pairTheory.PAIR_EQ,Rth])
-       (ISPECL[Rcon,``Eq ^s'``,s]MachineTransitionTheory.Prev_def)
+ let val s = Term.rand(lhs(concl(SPEC_ALL pth)))
+     val PrevTh = MkPrevThm Rth
      val _ = (traceBackPrevThm := PrevTh)
      val vl = filter (fn v => type_of v = bool) (all_vars(concl PrevTh))
      val prime_var = mk_var o (prime ## I) o dest_var
@@ -758,7 +769,6 @@ fun traceBack vm trl pth Rth =
      val trl' = map (BddExtendVarmap vm') trl
      val ptb = eqToTermBdd (fn tm => raise computeFixedpointError) vm' pth
      val PrevThTb = eqToTermBdd failfn vm' PrevTh
-     val _ = print "done.\nSimplified theorem is !traceBackPrevThm\n"
      val lasttb = BddOp(And, hd trl', ptb)
      val prime_ass = List.map (fn (tb,tb') => (BddVar true vm' (prime_var(getTerm tb)), tb'))
      fun satfn tb = extendSat (strip_pair s) vm' (BddSatone tb)
