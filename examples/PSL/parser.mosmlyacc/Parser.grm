@@ -54,7 +54,7 @@ fun union [] S = S
 %start MainPathSERE
 %start MainPathFL
 
-%type <Data.bexp>                          Boolean    Boolean1 MainBoolean
+%type <Data.bexp>                          Boolean    MainBoolean
 %type <Data.sere>                          SERE       MainSERE
 %type <Data.sere>                          Sequence   Sequence_or_Boolean
 %type <Data.sere * Data.sere -> Data.sere> AndOrOp
@@ -86,18 +86,10 @@ MainOBE:
     OBE EOF                             { $1 }
 ;
 
-/******************************************************************************
-Boolean1 is extra non-terminal to disambiguate "&" in "a & [f1 U f2]" to F_AND 
-******************************************************************************/
-
-Boolean1:
-    Name                                { B_PROP $1 }
-  | EXCLAIM Boolean1                    { B_NOT $2 }
-  | LPAR Boolean RPAR                   { $2 }
-;
-
 Boolean:
-  | Boolean1                            { $1 }
+    Name                                { B_PROP $1 }
+  | EXCLAIM Boolean                     { B_NOT $2 }
+  | LPAR Boolean RPAR                   { $2 }
   | Boolean AMPERSANDAMPERSAND Boolean  { B_AND($1, $3) }
   | Boolean BARBAR Boolean              { B_OR($1, $3) }
   | Boolean LEFTARROW Boolean           { B_IMP($1, $3) }
@@ -155,11 +147,11 @@ Sequence_or_Boolean:
   | Boolean                             { S_BOOL $1 }
 
 FL:
-    Boolean1                            { F_BOOL $1 }
+    Name                                { F_BOOL(B_PROP $1) }
   | LPAR FL RPAR                        { $2 }
-  | FL AT Boolean1 EXCLAIM              { F_STRONG_CLOCK($1,$3) }
-  | FL AT Boolean1                      { F_WEAK_CLOCK($1,$3) }
-  | FL ABORT Boolean1                   { F_ABORT($1,$3) }
+  | FL AT Boolean  EXCLAIM              { F_STRONG_CLOCK($1,$3) }
+  | FL AT Boolean                       { F_WEAK_CLOCK($1,$3) }
+  | FL ABORT Boolean                    { F_ABORT($1,$3) }
   | EXCLAIM FL                          { F_NOT $2 }
   | FL AMPERSANDAMPERSAND FL            { F_AND($1, $3) }
   | FL BARBAR FL                        { F_OR($1, $3) }
@@ -241,7 +233,7 @@ FL:
 ;
 
 OBE:
-    Boolean1                            { O_BOOL $1 }
+    Boolean                             { O_BOOL $1 }
   | LPAR OBE RPAR                       { $2 }
   | EXCLAIM OBE                         { O_NOT $2 }
   | OBE AMPERSAND OBE                   { O_AND($1, $3) }

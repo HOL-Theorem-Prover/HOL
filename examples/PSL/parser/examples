@@ -64,3 +64,62 @@ EvalFL "                            {}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w
 EvalFL "                              {clk,b}{b}{clk} |= (a until! b)@clk"; (* w^7 *)
 EvalFL "                                     {b}{clk} |= (a until! b)@clk"; (* w^8 *)
 EvalFL "                                        {clk} |= (a until! b)@clk"; (* w^9 *)
+
+(******************************************************************************
+* Example 2 (LRM Version 1.0, page 45)
+*
+* time  0  1  2  3  4  5  6  7  8  9
+* ----------------------------------
+* clk1  0  1  0  1  0  1  0  1  0  1
+* a     0  0  0  1  1  1  0  0  0  0
+* b     0  0  0  0  0  1  0  1  1  0
+* c     1  0  0  0  0  1  1  0  0  0
+* clk2  1  0  0  1  0  0  1  0  0  1
+*
+*{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}
+*
+******************************************************************************)
+
+EvalFL "{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^0 *)
+EvalFL "        {clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= c && next! (a until! b)";  (* w^1 *)
+EvalFL "              {}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= c && next! (a until! b)";  (* w^2 *)
+EvalFL "                {clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= c && next! (a until! b)";  (* w^3 *)
+EvalFL "                             {a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= c && next! (a until! b)";  (* w^4 *)
+EvalFL "                                {clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= c && next! (a until! b)";  (* w^5 *)
+EvalFL "                                            {c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= c && next! (a until! b)";  (* w^6 *)
+EvalFL "                                                    {clk1,b}{b}{clk1,clk2}\
+\       |= c && next! (a until! b)";  (* w^7 *)
+EvalFL "                                                            {b}{clk1,clk2}\
+\       |= c && next! (a until! b)";  (* w^8 *)
+EvalFL "                                                               {clk1,clk2}\
+\       |= c && next! (a until! b)";  (* w^9 *)
+
+EvalFL "{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^0 *)
+EvalFL "        {clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^1 *)
+EvalFL "              {}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^2 *)
+EvalFL "                {clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^3 *)
+EvalFL "                             {a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^4 *)
+EvalFL "                                {clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^5 *)
+EvalFL "                                            {c,clk2}{clk1,b}{b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^6 *)
+EvalFL "                                                    {clk1,b}{b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^7 *)
+EvalFL "                                                            {b}{clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^8 *)
+EvalFL "                                                               {clk1,clk2}\
+\       |= (c && next! (a until! b))@clk1";  (* w^9 *)
+
+
