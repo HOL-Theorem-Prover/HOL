@@ -266,9 +266,7 @@ fn q => let
                                            Lib.quote (toString qb)]))
      else
        Raise (ERRORloc "Absyn" (snd (current qb))
-                    (String.concat
-                       ["Parse failed with ", Lib.quote(toString qb),
-                        " remaining"]))
+                    "Parse failed")
    end
 end;
 

@@ -192,7 +192,7 @@ in
   case qbuf.current strm of
     (base_tokens.BT_EOI,_) => result
   | (_,locn) => raise ERRloc "parse" locn
-                             ("Parse failed with "^qbuf.toString strm^"\nremaining")
+                             "Parse failed"
 end
 
 

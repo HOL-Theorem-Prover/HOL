@@ -49,7 +49,7 @@ struct
             Int.toString(c1)^" and "^Int.toString(c2)
         else
             "at frag "^Int.toString(nf1)^" row "^Int.toString(r1)^" col "^Int.toString(c1)
-  fun toString (Loc(LocA(r1,c1),LocA(r2,c2)))
+    | toString (Loc(LocA(r1,c1),LocA(r2,c2)))
       = if r1 <> r2 then
             "between line "^
             Int.toString(r1+1)^", character "^Int.toString(c1+1)^
@@ -78,11 +78,15 @@ struct
   fun locfrag nf = Loc(LocPBeg nf,LocPEnd nf)
 
   fun move_start delta (Loc(LocP(nf,r,c),e)) = Loc(LocP(nf,r,c+delta),e)
+    | move_start delta (Loc(LocA(r,c),e))    = Loc(LocA(r,c+delta),e)
     | move_start delta locn                  = locn
 
   fun split_at delta (Loc(LocP(nf,r,c),e))
       = (Loc(LocP(nf,r,c),LocP(nf,r,c+delta-1)),
          Loc(LocP(nf,r,c+delta),e))
+    | split_at delta (Loc(LocA(r,c),e))
+      = (Loc(LocA(r,c),LocA(r,c+delta-1)),
+         Loc(LocA(r,c+delta),e))
     | split_at delta locn
       = (locn,locn)
 

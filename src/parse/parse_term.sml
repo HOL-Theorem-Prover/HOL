@@ -968,6 +968,7 @@ fun parse_term (G : grammar) typeparser = let
   fun doit (tt, (top_item, top_token), in_vs) = let
     val (input_term, itlocn, _) = transform (hd in_vs) tt
     val top = dest_terminal top_item
+    val toplocn = #2 top_item
     val ttt = Terminal input_term
     fun less_action stack =
       (* if the next thing in the lookahead might begin a whole new phrase,
@@ -1035,7 +1036,8 @@ fun parse_term (G : grammar) typeparser = let
              NONE => let
              in
                print ("Don't expect to find a "^STtoString G input_term^
-                      " in this position after a "^STtoString G top^"\n");
+                      " in this position after a "^STtoString G top^"\n"^
+                      locn.toString itlocn^" and "^ locn.toString toplocn^".\n");
                fail
              end
            | SOME order => let
