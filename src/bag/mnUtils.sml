@@ -327,7 +327,9 @@ local
           GENL (rev vs) (Rsyntax.INST subst th)
            handle
             HOL_ERR {message, origin_function, origin_structure} =>
-           raise Fail ("gINST: "^origin_function^": "^message)
+           raise HOL_ERR {message =  origin_function^": "^message,
+                          origin_structure = "mnUtils",
+                          origin_function = "gINST"}
       end
 in
   fun gINST subst th = inst' subst th []
