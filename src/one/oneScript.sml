@@ -99,6 +99,27 @@ val one_Axiom = store_thm("one_Axiom",
      ONCE_REWRITE_TAC [one] THEN
      ASM_REWRITE_TAC[]]);
 
+(* ----------------------------------------------------------------------
+    Set up the one value to print as (), by analogy with SML's unit
+   ---------------------------------------------------------------------- *)
+
+val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
+                  fixity = CloseFix,
+                  paren_style = OnlyIfNecessary,
+                  pp_elements = [TOK "(", TOK ")"],
+                  term_name = "one"};
+
+(* doing the above does not affect the pretty-printer because the
+   printer works under the assumption that the only things with
+   pretty-printer rules are applications ("comb"s).  In order to get
+   ``one`` to print as ``()``, we overload it to that string.  This is
+   solely for its effect on the printing ("outward") direction; the
+   concrete syntax is such that Absyn parsing will never generate the
+   string "()" for later stages of the parsing process to see, and it
+   wouldn't matter if it did. *)
+
+val _ = overload_on ("()", ``one``);
+
 val _ = export_theory();
 
 end;
