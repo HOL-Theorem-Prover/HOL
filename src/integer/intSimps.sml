@@ -120,4 +120,6 @@ val INT_MUL_AC_ss =
     SIMPSET {ac = [(SPEC_ALL INT_MUL_ASSOC, SPEC_ALL INT_MUL_COMM)],
              convs = [], dprocs = [], filter = NONE, rewrs = [], congs = []}
 
+val _ = BasicProvers.augment_srw_ss [INT_REDUCE_ss]
+
 end;

@@ -16,8 +16,6 @@ open simpLib boolSimps SingleStep BasicProvers TotalDefn intSimps
 
 val ARITH_ss = numSimps.ARITH_ss
 
-val _ = augment_srw_ss [intSimps.INT_REDUCE_ss, numSimps.REDUCE_ss]
-
 val FORALL_PROD = pairTheory.FORALL_PROD;
 
 val MAP2_def = Define
@@ -314,7 +312,7 @@ val onlyuppers_satisfiable = store_thm(
 val rshadow_row_def = Define
   `(rshadow_row (upperc, (uppery:int)) [] = T) /\
    (rshadow_row (upperc, uppery) ((lowerc, lowery) :: rs) =
-      (&upperc * lowery <= &lowerc * uppery) /\ 
+      (&upperc * lowery <= &lowerc * uppery) /\
       rshadow_row (upperc, uppery) rs)`;
 
 val real_shadow_def = Define
