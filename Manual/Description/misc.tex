@@ -20,7 +20,7 @@ the parsers for \HOL\ types and terms.
 
 \section{Help}
 
- There are several kinds of help available in \holn{}, all accessible
+ There are several kinds of help available in \HOL{}, all accessible
  through the same incantation:
  \begin{verbatim}
      help <string>;
@@ -34,16 +34,16 @@ the parsers for \HOL\ types and terms.
    library routines is available, whether the library is loaded or not
    via \verb+help "Lib"+.
 
-\item [HOL overview.] This is a short summary of important information
-  about \holn{}.
+\item [\HOL{} overview.] This is a short summary of important information
+  about \HOL{}.
 
-\item [HOL help.] This is the on-line help from Hol88 and Hol90, and
-  is intended to document all HOL-specific functions available to the
-  user. It is very detailed and often accurate; however, it can be
-  out-of-date, refer to HOL90 or HOL88, or even be missing!
+\item [\HOL{} help.] This on-line help is intended to document all
+  HOL-specific functions available to the user. It is very detailed
+  and often accurate; however, it can be out-of-date, refer to earlier
+  versions of the system, or even be missing!
 
-\item [HOL structure information.]  For most structures in the \holn{}
-  source, one can get a listing of the entrypoints found in the
+\item [\HOL{} structure information.]  For most structures in the
+  \HOL{} source, one can get a listing of the entrypoints found in the
   accompanying signature. This is helpful for locating functions and
   is automatically derived from the system sources, so it is alway
   up-to-date.
@@ -51,7 +51,7 @@ the parsers for \HOL\ types and terms.
 \item [Theory facts.] These are automatically derived from theory
   files, so they are always up-to-date. The signature of each theory
   is available (since theories are represented by structures in
-  \holn{}). Also, each axiom, definition, and theorem in the theory can
+  \HOL{}). Also, each axiom, definition, and theorem in the theory can
   be accessed by name in the help system; the theorem itself is given.
  \end{description}
 
@@ -61,9 +61,9 @@ the parsers for \HOL\ types and terms.
 \begin{center}
  \begin{tabular}{|l|l|} \hline
   \verb+help "installPP"+ & Moscow ML help \\
-  \verb+help "hol"+ &  \holn{} overview \\
-  \verb+help "aconv"+ &  on-line HOL help \\
-  \verb+help "Tactic"+ & HOL source structure information \\
+  \verb+help "hol"+ &  \HOL{} overview \\
+  \verb+help "aconv"+ &  on-line \HOL{} help \\
+  \verb+help "Tactic"+ & \HOL{} source structure information \\
   \verb+help "boolTheory"+ &  theory structure signature \\
   \verb+help "list_Axiom"+ & theory structure signature and theorem
  statement \\ \hline
@@ -71,12 +71,12 @@ the parsers for \HOL\ types and terms.
 \end{center}
  \end{table}
 
-\section{\holmake---a tool for maintaining \HOL\ formalizations}
+ \section{\holmake---a tool for maintaining \HOL{} formalizations}
 \label{Holmake}
 
 The purpose of \holmake\footnote{\holmake{} was first written by Ken
   Larsen and then extended by Michael Norrish.} is to maintain
-dependencies in a \holn{} source directory. A single invocation of
+dependencies in a \HOL{} source directory. A single invocation of
 \holmake{} will compute dependencies between files, (re)compile plain
 ML code, (re)compile and execute theory scripts, and (re)compile the
 resulting theory modules. \holmake{} does not require the user to
@@ -201,13 +201,13 @@ structure, and the contents of a structure must be
   \verb+load+ is only defined for the interactive system.
 
 \item Take care not to have the string "Theory" embedded in the name
-  of any of your files. \holn{} generates files containing this
-  string, and when it cleans up after itself, it removes such files
-  using a regular expression. This will also remove other files with
-  names containing "Theory". For example, if, in your development
-  directory, you had a file of ML code named \texttt{MyTheory.sml} and
-  you also were managing a \holn{} development there with \holmake,
-  then \texttt{MyTheory.sml} would get deleted if {\tt Holmake clean}
+  of any of your files. \HOL{} generates files containing this string,
+  and when it cleans up after itself, it removes such files using a
+  regular expression. This will also remove other files with names
+  containing "Theory". For example, if, in your development directory,
+  you had a file of ML code named \texttt{MyTheory.sml} and you also
+  were managing a \HOL{} development there with \holmake, then
+  \texttt{MyTheory.sml} would get deleted if \texttt{Holmake~clean}
   was invoked.
 
 \end{enumerate}
@@ -622,13 +622,10 @@ printing\index{printing, in HOL logic@printing, in \HOL\ logic!structural depth 
    max_print_depth : int ref
 \end{verbatim}\end{boxed}
 
-\noindent The default print depth
-\index{default print depth, for HOL logic@default print depth, for
-       \HOL\ logic|(} is $-1$, which is interpreted as meaning no
-       maximum.
-Subterms nested more deeply than
-the maximum print depth are printed as
-{\small\verb%...%}. For example:
+\index{default print depth, for HOL logic@default print depth, for \HOL{} logic|(}
+\noindent The default print depth is $-1$, which is interpreted as
+meaning no maximum.  Subterms nested more deeply than the maximum
+print depth are printed as {\small\verb%...%}. For example:
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
@@ -642,7 +639,7 @@ the maximum print depth are printed as
 - ADD_CLAUSES;
 > val it = |- (... + ... = m) /\ (... = ...) /\ ... /\ ... : thm
 \end{verbatim}\end{session}
-\index{default print depth, for HOL logic@default print depth, for \HOL\ logic|)}
+\index{default print depth, for HOL logic@default print depth, for \HOL{} logic|)}
 
 \section{Timing and counting theorems}
 
@@ -736,7 +733,7 @@ Total: 165.
 
 \section{Quotation preprocessing}
 
-A person usually works with \holn{} by interacting with the ML top level
+A person usually works with \HOL{} by interacting with the ML top level
 loop in order to build formalizations and perform proofs. In this
 setting, the user often needs to enter expressions of the HOL logic to
 ML, and interpret the resulting responses. Since the ML representations

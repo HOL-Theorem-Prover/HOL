@@ -1,8 +1,10 @@
 \chapter{Commonly-used Libraries}\label{HOLlibraries}
 
-\section{A simple proof manager}\label{goalstack}
+\newcommand{\simpset}{simpset}
 
-The {\it goal stack\/} provides a simple interface to tactic-based
+\section{A simple proof manager}\label{sec:goalstack}
+
+The \texttt{goal stack} provides a simple interface to tactic-based
 proof. When one uses tactics to decompose a proof, many intermediate
 states arise; the goalstack takes care of the necessary bookeeping. The
 implementation of goalstacks reported here is a re-design of Larry
@@ -10,11 +12,11 @@ Paulson's original conception.
 
 The goalstack library is automatically loaded when \HOL\ starts up.
 
-The abstract types {\it goalstack\/} and {\it proofs\/} are the focus of
-backwards proof operations. The type \verb+proofs+ can be regarded as a
-list of independent goalstacks. Most operations act on the head of the
-list of goalstacks; there are operations so that the focus can
-be changed.
+The abstract types \textit{goalstack} and \textit{proofs} are the
+focus of backwards proof operations. The type \verb+proofs+ can be
+regarded as a list of independent goalstacks. Most operations act on
+the head of the list of goalstacks; there are operations so that the
+focus can be changed.
 
 \subsection{Starting a goalstack proof}
 
@@ -33,8 +35,8 @@ invokes the parser automatically, and it doesn't allow the the goal to
 have any assumptions.
 
 
-Calling \verb+set_goal+, or \verb+g+, adds a new proof attempt to
-the existing ones, {\it i.e.}, rather than overwriting the current
+Calling \verb+set_goal+, or \verb+g+, adds a new proof attempt to the
+existing ones, \textit{i.e.}, rather than overwriting the current
 proof attempt, the new attempt is stacked on top.
 
 \subsection{Applying a tactic to a goal}
@@ -157,7 +159,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 \newcommand{\recdspec}  {\mbox{\it record-spec}}
 \newcommand{\constr} {\mbox{\it constructor-spec}}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \begin{center}
 \begin{tabular}{|rcl|}
 \hline
@@ -207,7 +209,7 @@ component types, and giving those components names so as to facilitate
 access to them.  Record types are semantically equivalent to big pair
 (cross-product) types, but the ability to label the fields with names
 of one's own choosing is a great convenience.  Record types as
-implemented in \holn{} are similar to C's {\tt struct} types and to
+implemented in \HOL{} are similar to C's {\tt struct} types and to
 Pascal's records.
 
 Done correctly, record types provide useful maintainability features.
@@ -304,12 +306,13 @@ Thus,
 \paragraph{Using the theorems produced by record definition}
 
 As well as defining the type and the functions described above, record
-type definition also proves a suite of useful theorems.  These are
-all are saved (using {\tt save\_thm}) in the current segment.  Some
-are also added to the \texttt{TypeBase}'s simplifications for the
-type, so they will be automatically applied when simplifying with the
-\texttt{srw\_ss()} simpset, or with the tactics \texttt{RW\_TAC} and
-\texttt{SRW\_TAC}.
+type definition also proves a suite of useful theorems.  These are all
+are saved (using {\tt save\_thm}) in the current segment.  Some are
+also added to the \texttt{TypeBase}'s simplifications for the type, so
+they will be automatically applied when simplifying with the
+\texttt{srw\_ss()} \simpset, or with the tactics \texttt{RW\_TAC} and
+\texttt{SRW\_TAC} (see Sections~\ref{sec:automated-reasoners}
+and~\ref{sec:simpLib}).
 
 All of the theorems are saved under names that begin with the name of
 the type.  The list below is a sample of the theorems proved.  The
@@ -370,22 +373,23 @@ The pretty-printing of big records can be controlled with the
 
 
 \subsection{Support for high-level proof steps}
+\label{sec:high-level-proof-steps}
 
 The following functions use information in the database to ease the
-application of \holn{}'s underlying functionality:
+application of \HOL's underlying functionality:
 
 \begin{verbatim}
-        type_rws     : string -> thm list
-        Induct       : tactic
-        Cases        : tactic
-        Cases_on     : term quotation -> tactic
-        Induct_on    : term quotation -> tactic
+     type_rws     : string -> thm list
+     Induct       : tactic
+     Cases        : tactic
+     Cases_on     : term quotation -> tactic
+     Induct_on    : term quotation -> tactic
 \end{verbatim}
 
 \begin{itemize}
 
 \item
-The function \underline{\tt type\_rws} will search for the given type
+The function \texttt{type\_rws} will search for the given type
 by name in the underlying database and return useful
 rewrite rules for that type. The rewrite rules of the
 datatype are built from the injectivity and distinctness theorems, along
@@ -393,21 +397,21 @@ with the case constant definition. The pre-existing rewrite rules in the
 database are already integrated into the simplification sets provided
 by \verb+bossLib+; however rewrite rules arising from an invocation of
 \verb+Hol_datatype+, or which come from a user-defined theory, will have
-to be manually added into the simpsets used by the simplifier.
+to be manually added into the \simpset{}s used by the simplifier.
 
 \item
-The \underline{\tt Induct} tactic makes it convenient to invoke
+The \texttt{Induct} tactic makes it convenient to invoke
 induction. When it is applied to a goal, the leading universal
 quantifier is examined; if its type is that of a known datatype, the
 appropriate structural induction tactic is extracted and applied.
 
 \item
-The \underline{\tt Cases} tactic makes it convenient to invoke case
+The \texttt{Cases} tactic makes it convenient to invoke case
 analysis. The leading universal quantifier in the goal is examined; if
 its type is that of a known datatype, the appropriate structural
 case analysis theorem is extracted and applied.
 
-\item The \underline{\tt Cases\_on} tactic takes a quotation, which is
+\item The \texttt{Cases\_on} tactic takes a quotation, which is
 parsed into a term $M$, and then $M$ is searched for in the goal. If $M$
 is a variable, then a variable with the same name is searched for. Once
 the term to split over is known, its type and the associated facts are
@@ -419,7 +423,7 @@ least contain some free variables already appearing in the goal. Note
 that the \verb+Cases_on+ tactic is more general than \verb+Cases+, but
 it does require an explicit term to be given.
 
-\item The \underline{\tt Induct\_on} tactic takes a quotation, which is
+\item The \texttt{Induct\_on} tactic takes a quotation, which is
 parsed into a term $M$, and then $M$ is searched for in the goal. If $M$
 is a variable, then a variable with the same name is searched for. Once
 the term to induct on is known, its type and the associated facts are
@@ -437,23 +441,23 @@ are universally quantified. \verb+Induct_on+ is more general than
 Two supplementary entrypoints have been provided for more exotic
 inductions:
 \begin{description}
-\item [completeInduct\_on] performs complete
-induction on the term denoted by the given quotation. Complete induction
-allows a seemingly \footnote{Complete
-induction and ordinary mathematical induction are each derivable from
-the other.} stronger induction hypothesis than ordinary mathematical
-induction: to wit, when inducting on
-$n$, one is allowed to assume the property holds for {\it all\/} $m$
-smaller than $n$. Formally: $\forall P.\ (\forall x.\ (\forall y.\ y < x
-\supset P\, y) \supset P\,x) \supset \forall x.\ P\,x$. This allows the
-inductive hypothesis to be used more than once, and also allows
-instantiating the inductive hypothesis to other than the predecessor.
+\item [\texttt{completeInduct\_on}] performs complete induction on the
+  term denoted by the given quotation. Complete induction allows a
+  seemingly \footnote{Complete induction and ordinary mathematical
+    induction are each derivable from the other.} stronger induction
+  hypothesis than ordinary mathematical induction: to wit, when
+  inducting on $n$, one is allowed to assume the property holds for
+  \emph{all} $m$ smaller than $n$. Formally: $\forall P.\ (\forall x.\
+  (\forall y.\ y < x \supset P\, y) \supset P\,x) \supset \forall x.\
+  P\,x$. This allows the inductive hypothesis to be used more than
+  once, and also allows instantiating the inductive hypothesis to
+  other than the predecessor.
 
-\item [measureInduct\_on] takes a quotation, and breaks it apart
-to find a term and a measure function with which to induct. For
-example, if one wanted to induct on the length of a list \verb+L+, the
-invocation {\small\verb+measureInduct_on `LENGTH L`+} would be be
-appropriate.
+\item [\texttt{measureInduct\_on}] takes a quotation, and breaks it
+  apart to find a term and a measure function with which to induct.
+  For example, if one wanted to induct on the length of a list
+  \verb+L+, the invocation \ml{measureInduct\_on~`LENGTH L`}
+  would be be appropriate.
 
 \end{description}
 
@@ -465,8 +469,8 @@ appropriate.
     Hol_defn : string -> term quotation -> Defn.defn
 \end{verbatim}
 
-The \underline{\tt Define} function is a general-purpose function definition
-mechanism. The \underline{\tt xDefine} function is identical to
+The \texttt{Define} function is a general-purpose function definition
+mechanism. The \texttt{xDefine} function is identical to
 {\small\verb+Define+} except that it takes an explicit name to use when
 storing the definition in the current theory. {\small\tt Define}
 accepts the following syntax:
@@ -673,14 +677,16 @@ comprising the requested equations and the induction theorem.
 \end{verbatim}
 
 \subsection{Automated reasoners}
+\label{sec:automated-reasoners}
 
-\verb+bossLib+ brings together the most powerful reasoners in \holn{} and
+\verb+bossLib+ brings together the most powerful reasoners in \HOL{} and
 tries to make it easy to compose them in a simple way. We take our basic
-reasoners from \verb+mesonLib+, \verb+simpLib+, and \verb+decisionLib+,
+reasoners from \verb+mesonLib+, \verb+simpLib+, and \verb+numLib+,
 but the point of \verb+bossLib+ is to provide a layer of abstraction so
 the user has to know only a few entrypoints.\footnote{In the mid 1980's
 Graham Birtwistle advocated such an approach, calling it `Ten Tactic
-HOL'.}
+HOL'.} (These underlying libraries, and others providing similarly
+powerful tools are described in detail in sections below.)
 
 \begin{verbatim}
     PROVE      : thm list -> term quotation -> thm
@@ -690,38 +696,59 @@ HOL'.}
     DECIDE_TAC : tactic
 \end{verbatim}
 
-The inference rule \underline{\tt PROVE} (and the corresponding tactic
-\underline{\tt PROVE\_TAC}) takes a list of theorems and a quotation, and
-attempts to prove the term using a first order reasoner. The inference
-rule \underline{\tt DECIDE} (and the corresponding tactic \underline{\tt
-DECIDE\_TAC}) applies a decision procedure that (at least) handles
-statements of linear arithmetic.
+The inference rule \texttt{PROVE} (and the corresponding tactic
+\texttt{PROVE\_TAC}) takes a list of theorems and a quotation, and
+attempts to prove the term using a first order reasoner.  The
+\texttt{PROVE} entry-points refer to the \texttt{meson} library, which
+is further described in Section~\ref{sec:mesonLib} below. The
+inference rule \texttt{DECIDE} (and the corresponding tactic
+\texttt{DECIDE\_TAC}) applies a decision procedure that (at least)
+handles statements of linear arithmetic.
 
 \begin{verbatim}
     RW_TAC   : simpset -> thm list -> tactic
+    SRW_TAC  : ssdata list -> thm list -> tactic
     &&       : simpset * thm list -> simpset  (* infix *)
     std_ss   : simpset
     arith_ss : simpset
     list_ss  : simpset
+    srw_ss   : unit -> simpset
 \end{verbatim}
 
-The rewriting tactic \underline{\tt RW\_TAC} works by
-first adding the given theorems into the given \underline{\tt simpset}; then it
-simplifies the goal as much as possible; then it performs case splits on any
-conditional expressions in the goal; then it repeatedly (1) eliminates
-all hypotheses of the form $v = M$ or $M = v$ where $v$ is a variable
-not occurring in $M$, (2) breaks down any equations between constructor
-terms occurring anywhere in the goal. The infix combinator \verb+&&+ is used to
-build a new simpset from a given simpset and a list of theorems.
+The rewriting tactic \texttt{RW\_TAC} works by first adding the given
+theorems into the given \simpset; then it simplifies the goal as much
+as possible; then it performs case splits on any conditional
+expressions in the goal; then it repeatedly (1) eliminates all
+hypotheses of the form $v = M$ or $M = v$ where $v$ is a variable not
+occurring in $M$, (2) breaks down any equations between constructor
+terms occurring anywhere in the goal. Finally, \texttt{RW\_TAC} lifts
+\texttt{let}-expressions within the goal so that the binding equations
+appear as abbreviations\index{abbreviations!tactic-based proof} in the
+assumptions.
 
-Simplification sets for its native datatypes are provided
-by \verb+bossLib+. In general, these are extended versions of those
-found in \verb+simpLib+. The simpset for pure logic, sums, pairs, and the
-\verb+option+ type is named \verb+std_ss+. The simpset for arithmetic
-is named \verb+arith_ss+, and the simpset for lists is named
-\verb+list_ss+. The simpsets provided by {\tt bossLib} strictly increase
-in strength: {\tt std\_ss} is contained in {\tt arith\_ss}, and {\tt
-arith\_ss} is contained in {\tt list\_ss}.
+The tactic \texttt{SRW\_TAC} is similar to \texttt{RW\_TAC}, but works
+with respect to an underlying \simpset (accessible through the
+function \texttt{srw\_ss}) that is updated as new context is loaded.
+This \simpset{} can be augmented through the addition of ``\simpset{}
+fragments'' (\texttt{ssdata} values) and theorems.  In situations
+where there are many large types stored in the system,
+\texttt{RW\_TAC}'s performance can suffer because it repeatedly adds
+all of the rewrite theorems for the known types into a \simpset{}
+before attacking the goal.  On the other hand, \texttt{SRW\_TAC} loads
+rewrites into the \simpset{} underneath \texttt{srw\_ss()} just once,
+making for faster operation in this situation.
+
+\ml{bossLib} provides a number of simplification sets. In general,
+these are extended versions of those found in \verb+simpLib+. The
+simpset for pure logic, sums, pairs, and the \verb+option+ type is
+named \verb+std_ss+. The simpset for arithmetic is named
+\verb+arith_ss+, and the simpset for lists is named \verb+list_ss+.
+The simpsets provided by {\tt bossLib} strictly increase in strength:
+{\tt std\_ss} is contained in {\tt arith\_ss}, and {\tt arith\_ss} is
+contained in {\tt list\_ss}.  The infix combinator \verb+&&+ is used
+to build a new \simpset{} from a given \simpset{} and a list of
+theorems. \HOL's simplification technology is described further in
+Section~\ref{sec:simpLib} below and in the \REFERENCE.
 
 \begin{verbatim}
     STP_TAC  : simpset -> tactic -> tactic
@@ -731,8 +758,8 @@ arith\_ss} is contained in {\tt list\_ss}.
 The compound reasoners of \verb+bossLib+ take a basic approach: they
 simplify the goal as much as possible with \verb+RW_TAC+ and then a
 `finishing' tactic is applied. The primitive entrypoint for this is
-\underline{\tt STP\_TAC}. Currently, the most powerful reasoner is
-\underline{\tt ZAP\_TAC}, which features a finishing tactic that first
+\texttt{STP\_TAC}. Currently, the most powerful reasoner is
+\texttt{ZAP\_TAC}, which features a finishing tactic that first
 tries a tautology checking tactic; if that fails, \verb+DECIDE_TAC+ is
 called; if that fails, \verb+PROVE_TAC+ is called with the second
 argument. Although this general approach (simplify as much as possible,
@@ -745,906 +772,70 @@ situations.
     SPOSE_NOT_THEN : (thm -> tactic) -> tactic
 \end{verbatim}
 
-The function \underline{\tt by} is an infix operator that takes a
-quotation and a tactic $tac$. The quotation is parsed into a term
-$M$. When the invocation ``$M\ \mbox{\tt by}\ tac$'' is applied to a
-goal $(A,g)$, a new subgoal $(A,M)$ is created and $tac$ is applied to
-it. If the goal is proved, the resulting theorem is broken down and
-added to the assumptions of the original goal; thus the proof proceeds
-with the goal $((M::A), g)$. (Note however, that case-splitting will
-happen if the breaking-down of $\ \vdash M$ exposes disjunctions.) Thus
-\underline{\tt by} allows a useful style  of `assertional' or
-`Mizar-like' reasoning to be mixed with ordinary tactic
-proof`\footnote{Proofs in the Mizar system are readable documents,
-unlike almost all tactic-based proofs.}
+The function \texttt{by} is an infix operator that takes a quotation
+and a tactic $tac$. The quotation is parsed into a term $M$. When the
+invocation ``$M\texttt{ by } \mathit{tac}$'' is applied to a goal
+$(A,g)$, a new subgoal $(A,M)$ is created and $tac$ is applied to it.
+If the goal is proved, the resulting theorem is broken down and added
+to the assumptions of the original goal; thus the proof proceeds with
+the goal $((M::A), g)$. (Note however, that case-splitting will happen
+if the breaking-down of $\ \vdash M$ exposes disjunctions.) Thus
+\texttt{by} allows a useful style of `assertional' or `Mizar-like'
+reasoning to be mixed with ordinary tactic proof.\footnote{Proofs in
+  the Mizar system are readable documents, unlike almost all
+  tactic-based proofs.}
 
 
-\underline{\tt SPOSE\_NOT\_THEN} initiates a proof by
+\texttt{SPOSE\_NOT\_THEN} initiates a proof by
 contradiction by assuming the negation of the goal and driving the
 negation inwards through quantifiers. It provides the resulting theorem
 as an argument to the supplied function, which will use the theorem to
 build and apply a tactic.
 
-\noindent{\bf Note.} When the library \verb+bossLib+ is loaded, the
-infix parsing status of \verb+&&+ and ``{\tt by}'' must be re-asserted
-by the user.
+\section{The \texttt{meson} library}
+\label{sec:mesonLib}
+
+\index{decision procedures!first-order logic, meson@first-order logic, \ml{meson}}
+The \texttt{meson} library is an implementation of the
+model-elimination method for finding proofs of goals in first-order
+logic.  There are three main entry-points:
+
+\begin{verbatim}
+   MESON_TAC     : thm list -> tactic
+   ASM_MESON_TAC : thm list -> tactic
+   GEN_MESON_TAC : int -> int -> int -> thm list -> tactic
+\end{verbatim}
+
+Each of these tactics attempts to prove the goal.  They will either
+succeed in doing so, or fail with a ``depth exceeded'' exception.  If
+the branching factor in the search-space is high, the \texttt{meson}
+tactics may also take a very long time to reach the maximum depth.
+
+All of the \texttt{meson} tactics take a list of theorems.  These
+extra facts are used by the decision procedure to help prove the goal.
+\texttt{MESON\_TAC} ignores the goal's assumptions; the other two
+entry-points include the assumptions as part of the sequent to be
+proved.
+
+The extra parameters to \ml{GEN\_MESON\_TAC} provide extra control of
+the behaviour of the iterative deepening that is at the heart of the
+search for a proof.  In any given iteration, the algorithm searches
+for a proof of depth no more than a parameter $d$.  The default
+behaviour for \ml{MESON\_TAC} and \ml{ASM\_MESON\_TAC} is to start $d$
+at 0, to increment it by one each time a search fails, and to fail if
+$d$ exceeds the value stored in the reference value
+\ml{mesonLib.max\_depth}.  By way of contrast,
+\ml{GEN\_MESON\_TAC~min~max~step} starts $d$ at \ml{min}, increments
+it by \ml{step}, and gives up when $d$ exceeds \ml{max}.
+
+\section{The \texttt{simp} library}
+\label{sec:simpLib}
 
 
-\section{The {\tt meson} library}
-\section{The {\tt simp} library}
+
 \section{The {\tt num} library}
-
-\newpage
-\section{The type definition package}\label{types-package}\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|(}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system|(}
-
-\begin{center}
-\framebox{\parbox{0.8\textwidth}{\it All of this section of the
-    documentation is out of date.  Users of \holn{} should use
-    \texttt{Hol\_datatype} to define types, and \texttt{Define} or
-    \texttt{xDefine} to define functions over them.  The functions
-    described here do exist in \holn{} but generally with different
-    types.  This section was written for HOL88 and has not been
-    updated since.}}
-\end{center}
-
-In the \HOL\ system, new types and type operators can be
-introduced\index{extension, of HOL logic@extension, of \HOL\ logic}
-using the consistency-preserving definitional mechanism of type
-definitions\index{type definition extension, in HOL logic@type
-  definition extension, in \HOL\ logic|(} (see Sections~\ref{tydefs}
-and~\ref{type-defs}).  The \ML\ rule for introducing a new type is:
-
-\begin{hol}
-\index{new_type_definition@\ml{new\_type\_definition}}
-\begin{verbatim}
-   new_type_definition : (string # term # thm) -> thm
-\end{verbatim}\end{hol}
-
-\noindent This rule allows
-axioms of a restricted form to be added to the primitive basis of the logic.
-These axioms are analogous to definitional axioms for new constants: they
-define new types in terms of other type expressions already present in the
-logic. Like the rule \ml{new\_definition} for making constant definitions,
-the rule  \ml{new\_type\_definition}
- for type definitions
-ensures that adding a new syntactic entity (in this case, a type or
-type operator) is a conservative extension of the logic.
-
-The basic idea behind \ml{new\_type\_definition} is  that a  type definition is
-made by  adding an  axiom to  the logic  which asserts  that the  set of values
-denoted by a  new type  is isomorphic\index{isomorphism of types, in HOL logic@isomorphism of types, in \HOL\ logic}  to an  appropriate subset  of the values
-denoted by  a type  expression already  present in  the logic.   A definitional
-axiom\index{definitional axioms} of this form merely states
-that a  new type  is isomorphic  to a particular
-subset of an existing type.  From such type definition  axioms, it  is usual to
-prove theorems that characterize newly-defined types more abstractly.  The idea
-is to prove a collection of theorems that state  the essential  properties of a
-new type without reference to how it is defined.   These  theorems then
-constitute a derived `abstract axiomatization' of the new type, and
-once  they have  been proved they
-become the basis for all further reasoning about it.
-
-With this approach, introducing a new type (or type operator) in \HOL\
-involves two distinct steps:
-
-\setcounter{myenumi}{1}
-\begin{list}{\arabic{myenumi}.}{\usecounter{myenumi}
-\setlength{\leftmargin}{10mm}
-\setlength{\rightmargin}{5mm}
-\setlength{\labelwidth}{3mm}
-\setlength{\labelsep}{2mm}
-\setlength{\listparindent}{0mm}
-\setlength{\itemsep}{8pt plus1pt minus2pt}
-\setlength{\topsep}{3mm}
-\setlength{\parsep}{0mm}}
-\setlength{\abovedisplayshortskip}{8pt plus1pt minus1pt}
-\setlength{\belowdisplayshortskip}{8pt plus1pt minus1pt}
-
-\item Finding an appropriate representation for the new type, and making a type \mbox{definition} using \ml{new\_type\_definition} based
- on this representation.
-
-\item Using the axiomatic definition of the new type and the properties of its
-representation to prove a set of theorems that abstractly characterizes it.
-
-\end{list}
-
-Defining a new type using this approach can be hard work.  But a set of tools
-is provided in the system which---for a certain class of commonly-used {\it
-concrete recursive types\/}\index{types, in HOL logic@types, in \HOL\
-logic!tools for construction of}\index{concrete recursive types, in HOL
-logic@concrete recursive types, in \HOL\ logic}---automatically carries out all
-the formal proofs necessary to define these types and derive abstract
-characterizations from their definitions.  This section provides a user-level
-overview of these tools.  Details of the formal proofs carried out by these
-tools are discussed in~\cite{Melham-banff}.
-
-\subsection{Defining types}
-
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in recursive type definition|(}
-\index{recursive types, in HOL logic@recursive types, in \HOL\ logic!tools for construction of|(}
-The main \ML\ function in the \HOL\ type definition package is
-
-\begin{boxed}
-\index{define_type@\ml{define\_type}|pin}
-\begin{verbatim}
-   define_type : string -> string -> thm
-\end{verbatim}\end{boxed}
-
-\noindent This function can be used to define any concrete recursive type in
-the \HOL\ system.  These are types whose values are generated by a set of {\it
-constructors\/} (i.e.\ functions) which yield concrete representations for
-these values.  Examples include types which denote finite sets of atomic values
-(enumerated types), types which denote sets of structured values (record types)
-or finite disjoint unions of structured values (variant records), and types
-which denote sets of recursive data structures (recursive types).
-
-The two inputs to \ml{define\_type} are both strings.  The first string
-is a name  under which the results of making
-the type definition will be stored in the current theory segment. The second is
-a user-supplied informal\footnote{ In this context, {\it informal\/} means not
-in the language of higher order logic.} specification of the concrete
-recursive type to be defined.  This type specification is written in
-a notation (explained below) which resembles
-a data type declaration in functional programming languages like Standard
-\ML~\cite{sml}.  It simply states the names of the new type's
-constructors and the logical types of their \mbox{arguments.}  The output is a
-theorem which abstractly characterizes the properties of
-the desired recursive type---i.e.\ a
-derived `abstract axiomatization' of the type.
-
-\subsubsection{Input syntax}
-
-The type specification given as input\index{type definition package, in HOL system@type definition package, in \HOL\ system!input to|(} to \ml{define\_type}
-must be an \ML\ string\index{strings, in ML@strings, in \ML!as input to HOL type definition package@as input to \HOL\ type definition package} (of \ML\ type \ml{string}) of the form:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
-   `{\op} = \(C\sb{1}\;ty{}\sb{1}\sp{1}\;\ldots\;ty{}\sb{1}\sp{k\sb{1}} \) | \(\cdots\) | \(C\sb{m}\;ty{}\sb{m}\sp{1}\;\ldots\;ty{}\sb{m}\sp{k\sb{m}}\)`
-\end{alltt}\end{hol}}
-
-\noindent where each $ty_i^{j}$ is either a type expression already defined
-as a type in the current theory (this type expression must not
-contain \ty{op}) or is the name \ty{op} itself.  A string of this form
-describes an $n$-ary type operator \ty{op},
-where $n$ is the number of distinct type variables in the types
-$ty_i^{j}$ on the right hand side of the equation.
-If $n = 0$ then \ty{op} is a type constant;
-otherwise \ty{op} is an $n$-ary type operator.  The concrete
-type described has $m$
-distinct constructors \m{C_1, \dots, C_m} where $m \geq 1$.
-Each constructor \m{C_i} takes $k_i$ arguments, where $k_i \geq 0$;
-and the types of these arguments are given by the type
-expressions $ty_i^j$ for $1 \leq j \leq k_i$.  If one or more of the type
-expressions $ty_i^{j}$ is the type \ty{op} itself, then the \mbox{equation}
-specifies a {\it recursive\/} type.  In any specification of a recursive type,
-at least one constructor must be non-recursive---i.e.\ all its arguments must
-have types which already exist in the current theory.
-
-The input parser for \ml{define\_type} treats type expressions exactly as the
-\HOL\ quotation parser does, with precedences among the various built-in type
-operators in force.\index{type definition package, in HOL system@type definition package, in \HOL\ system!input to|)}
-
-\subsubsection{The type specified}
-
-The logical type described by an input string of the form
-shown above is intended
-to denote the set of all values which can be finitely
-generated using the constructors \m{C_1, \dots, C_m},
-where each constructor is one-to-one and any two
-different constructors yield different values.   Every value of this
-type will be denoted by some term of the form:
-
-\[ C_i\;x_i^1\;\ldots\;x_i^{k_i} \]
-
-\noindent where $x_i^j$ is a term of type $ty_i^j$ for $1 \leq j \leq
-k_i$. In addition, any two terms:
-
-\[ C_i\;x_i^1\;\ldots\;x_i^{k_i} \qquad {\rm and} \qquad
-   C_j\;x_j^1\;\ldots\;x_j^{k_j} \]
-
-\noindent denote equal values exactly when their constructors are the same
-(i.e.\ $i=j$) and these constructors are applied to equal arguments
-(i.e.\ $x_i^n = x_j^n\;\,{\rm for}\;\,1\leq n\leq k_i$).
-
-\subsubsection{The output}\label{define-type-output}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!output of|(}
-
-\noindent For any type specification
-in the form of an equation of the kind discussed above, executing:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}
-\index{define_type@\ml{define\_type}}
-\begin{alltt}
-   define\_type `\m{name}` `{\op} = \(C\sb{1}\;ty{}\sb{1}\sp{1}\;\ldots\;ty{}\sb{1}\sp{k\sb{1}} \) | \(\cdots\) | \(C\sb{m}\;ty{}\sb{m}\sp{1}\;\ldots\;ty{}\sb{m}\sp{k\sb{m}}\)`
-\end{alltt}\end{hol}}
-
-\noindent will make a formal definition for a
-type (or  type operator) \ty{op}
-in the current theory segment, make appropriate definitions for
-constants  \m{C_1, C_2,\dots, C_m},
-and automatically prove a theorem which
-provides an abstract
-characterization\index{characterizing theorem!for defined types}\index{automated derivation!of characterizing theorems for recursive types}
-of the newly-defined type \ty{op}.  This theorem, which is
-stored in the current theory segment under the name $name$ and also returned by
-\ml{define\_type}, has the form shown below:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
-   |- !f\(\sb{1}\:\cdots\:\)f\(\sb{m}\). ?!fn:{\op}->*.
-         !x\(\sb{1}\sp{1}\;\,\cdots\,\;\)x\(\sb{1}\sp{k\sb{1}}\). fn(\m{C}\(\sb{1}\,\) x\(\sb{1}\sp{1}\;\,\ldots\,\;\)x\(\sb{1}\sp{k\sb{1}}\)) = f\(\sb{1}\) (fn x\(\sb{1}\sp{1}\))\(\;\ldots\;\)(fn x\(\sb{1}\sp{k\sb{1}}\)) x\(\sb{1}\sp{1}\;\ldots\;\)x\(\sb{1}\sp{k\sb{1}}\)
-                                      \(\vdots\)
-         !x\(\sb{m}\sp{1}\;\cdots\;\)x\(\sb{1}\sp{k\sb{m}}\!\). fn(\m{C}\(\sb{m}\) x\(\sb{m}\sp{1}\;\ldots\;\)x\(\sb{m}\sp{k\sb{m}}\)) = f\(\sb{m}\) (fn x\(\sb{m}\sp{1}\))\(\;\ldots\;\)(fn x\(\sb{m}\sp{k\sb{m}}\)) x\(\sb{m}\sp{1}\;\ldots\;\)x\(\sb{m}\sp{k\sb{m}}\)
-\end{alltt}\end{hol}}
-
-
-\noindent where the right hand sides of the equations include recursive
-applications `$\ml{fn}\;\ml{x}_i^j$' only for variables  $\ml{x}_i^j$ of type
-\ty{op}.  (See the examples given below.) A theorem of this form asserts the
-unique existence of primitive recursive functions defined by cases on the
-constructors \m{C_1, C_2,\dots,C_m}.  This is a slight
-extension of the {\it initiality\/}\index{initiality} property by which
-structures of this kind are characterized in the `initial algebra' approach to
-specifying abstract data types~\cite{goguen}.  This property provides an
-abstract characterization of the type \ty{op} which is both succinct and
-complete, in the sense that it completely determines the structure of the
-values of \ty{op} up to isomorphism.
-
-The call to \ml{define\_type} shown above fails if:
-
-\begin{myenumerate}
-
-\item not in draft mode\index{draft mode, in HOL system@draft mode, in \HOL\ system};
-
-\item \ty{op} is already the name of a type constant or type operator in the
-current theory;
-
-\item any one of $C_1,\dots,C_{m}$ is already the name
-of a constant in the current theory.
-
-\item either \ty{op} or any one $C_{1},\dots,C_{m}$ is not a
-legal identifier.  Identifiers must start with a letter (as defined by
-\ml{is\_letter}) and contain only alphanumeric characters (as defined by
-\ml{is\_alphanum})
-
-\item $\ml{ABS\_}\ty{op}$\index{ABS_@\ml{ABS\_}$\ldots$}
- or $\ml{REP\_}\ty{op}$\index{REP_@\ml{REP\_}$\ldots$}
- are already constants in the
-current theory;
-
-\item there is already an axiom, definition, constant specification or type
-definition stored under either the name
-$\ty{op}\ml{\_TY\_DEF}$\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}} or the name
-$\ty{op}\ml{\_ISO\_DEF}$ in the current
-theory segment.
-
-\item there is already a theorem stored under the name \ml{`\m{name}`} in the
-current theory segment.
-
-\item the input type specification does not conform to the syntax described
-above.
-
-\end{myenumerate}
-\index{recursive types, in HOL logic@recursive types, in \HOL\ logic!tools for construction of|)}\index{type definition extension, in HOL logic@type definition extension, in \HOL\ logic|)}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!output of|)}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in recursive type definition|)}
-
-\subsubsection{Examples}\label{define-type-example}
-
-\index{primitive recursion theorem!a degenerate case|(}
-The session that follows illustrates the use of \ml{define\_type} in defining
-a variety of simple concrete types.  It is assumed that the session begins
-with the user in draft mode.
-
-The first definition is simple, the definition of a type \ml{three} with
-exactly three distinct values: \ml{ONE}, \ml{TWO}, and \ml{THREE}.
-
-\setcounter{sessioncount}{1}\label{types-session}
-\begin{session}\begin{verbatim}
-#let three_Axiom = define_type `three_Axiom` `three = ONE | TWO | THREE`;;
-three_Axiom =
-|- !e0 e1 e2. ?! fn. (fn ONE = e0) /\ (fn TWO = e1) /\ (fn THREE = e2)
-\end{verbatim}\end{session}
-
-\noindent The theorem returned by \ml{define\_type} provides a complete
-and abstract characterization of
-a defined logical type \ml{three} which denotes a set of
-exactly three elements.  This characterization takes the form of a
-degenerate `primitive recursion'
- theorem for the concrete type \ml{three}.
-Since \ml{three} is an enumerated type with no recursive constructors,
-the theorem returned by \ml{define\_type} simply
-states that any function defined by cases on the three constants  \ml{ONE},
-\ml{TWO}, and \ml{THREE} exists and is uniquely defined.
-
-It follows immediately from this theorem that the type constant \ml{three}
-denotes a set containing exactly three values: the fact that the function
-\ml{fn} always exists implies that the constants \ml{ONE}, \ml{TWO}, and
-\ml{THREE} denote distinct values of type \ml{three}, and the fact that \ml{fn}
-is uniquely determined by its values for \ml{ONE}, \ml{TWO}, and \ml{THREE}
-implies that these constants denote the only values of type \ml{three}.
-\index{primitive recursion theorem!a degenerate case|)}
-
-The next call to \ml{define\_type} defines a `record type' \ml{rec}, values of
-which are records with three boolean fields (essentially 3-tuples):
-
-\begin{session}\begin{verbatim}
-#let rec_Axiom = define_type `rec_Axiom` `rec = REC bool bool bool`;;
-rec_Axiom = |- !f. ?! fn. !b0 b1 b2. fn(REC b0 b1 b2) = f b0 b1 b2
-\end{verbatim}\end{session}\label{rec-def}
-
-\noindent Here, the resulting theorem states that a function \ml{fn} on
-record values of type \ml{rec} can be
-uniquely defined in terms of a function \ml{f} of the three components of
-the record.
-
-A more interesting {\it recursive\/}
-  example is the type of natural
-numbers\index{number theory, in HOL logic@number theory, in \HOL\ logic!type definition package version of}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, to build number theory}, which can be defined using \ml{define\_type} as follows:
-
-\begin{session}\begin{verbatim}
-#let nat_Axiom = define_type `nat_Axiom` `nat = Z | Suc nat`;;
-nat_Axiom = |- !e f. ?! fn. (fn Z = e) /\ (!n. fn(Suc n) = f(fn n)n)
-\end{verbatim}\end{session}
-
-\noindent Here, the input string describes a type \ml{nat} with two
-constructors: \ml{Z}, which stands for zero; and \ml{Suc}, which is the
-successor function on natural numbers.  (The names
-\ml{Z}, and \ml{Suc} are used here because \ml{0} and \ml{SUC} are already
-constants in the built-in \HOL\ theory \ml{num}.)
-The output theorem is just the primitive recursion
-theorem\footnote{See Section~\ref{prim_rec} for a discussion of
-the primitive recursion theorem.}
-for the natural numbers; it states that any primitive recursive definition on
-the natural numbers (\ie\ on values of type \ml{nat})
-uniquely defines a total function.
-
-A recursive type of labelled binary trees\index{binary tree theory, in HOL logic@binary tree theory, in \HOL\ logic|(}, where labels of type \ml{*}
-appear only on leaf nodes, can likewise be defined using \ml{define\_type}.
-The input states that a binary tree is either a leaf node (\ml{LEAF})
-labelled by a value of type \ml{*} or an internal node \ml{NODE} with
-two binary trees as subtrees:
-
-\begin{session}\begin{verbatim}
-#let btree_Axiom =
-#    define_type `btree_Axiom` `btree = LEAF * | NODE btree btree`;;
-btree_Axiom =
-|- !f0 f1.
-    ?! fn.
-     (!x. fn(LEAF x) = f0 x) /\
-     (!b1 b2. fn(NODE b1 b2) = f1(fn b1)(fn b2)b1 b2)
-\end{verbatim}\end{session}\label{btree-def}
-
-\noindent The result returned by the call to {\small \verb!define_type!} is,
-in this case, an abstract
-characterization for a defined type {\small\verb!(*)btree!},
-in the form of a `primitive recursion theorem' for the required
-type of labelled binary trees.\index{binary tree theory, in HOL logic@binary tree theory, in \HOL\ logic|)}
-
-Any simple  concrete  recursive  type  can  be  defined  automatically  from  a
-user-supplied equation using \ml{define\_type} in exactly the same way.
-
-\subsection{Defining recursive functions}\label{prim-rec-defs}
-
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in recursive function definition|(}
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for recursive types|(}
-\index{primitive recursion theorem!for binary trees|(}
-An important property of the characterizing theorems for concrete types
-shown in the examples given above is that they
-provide a formal
-means for defining recursive functions on those types.
-When a concrete
-recursive type  \ty{op} is
- characterized by a theorem of the kind returned by
-\ml{define\_type}\index{types, in HOL logic@types, in \HOL\ logic!tools for construction of} (see Section~\ref{define-type-output}) this theorem
-can be used to
-prove the existence of any
-{\it primitive recursive\/} function on \ty{op} and to
-define constants which denote such functions.
-
-This is illustrated
-for a particular
-example by the method of defining primitive recursive functions on
-the natural numbers  discussed in Section~\ref{num-prim-rec}.  In that section,
-an \ML\ function \ml{new\_prim\_rec\_definition}\index{new_prim_rec_definition@\ml{new\_prim\_rec\_definition}}
- was described which automates
-the logical inferences necessary to derive particular primitive recursive
-definitions on the built-in defined type \ml{num} of natural numbers.  The
-basis of this function is the primitive recursion theorem
-
-\begin{hol}
-\index{num_Axiom@\ml{num\_Axiom}}
-\begin{verbatim}
-   num_Axiom   |- !x f. ?!fn. (fn 0 = x) /\ (!n. fn(SUC n) = f (fn n) n)
-\end{verbatim}\end{hol}
-
-\noindent which is pre-proved and stored in the built-in theory \ml{prim\_rec}\index{prim_rec@\ml{prim\_rec}}
-(see Section~\ref{prim_rec}).  The \ML\ function
-\ml{new\_prim\_rec\_definition} uses \ml{num\_Axiom} to automate the
-justification of any user-supplied primitive recursive definition on the
-natural numbers.
-
-The type definition package\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system|(} provides a similar function for defining
-primitive recursive functions on
-arbitrary concrete recursive
-types.\footnote{In fact, {\tt new\_prim\_rec\_definition} is defined in ML
-using the more general tools provided by the type definition package.}
-The \ML\ function
-
-\begin{boxed}\index{new_recursive_definition@\ml{new\_recursive\_definition}|pin}
-\begin{verbatim}
-   new_recursive_definition : bool -> thm -> string -> term -> thm
-\end{verbatim}\end{boxed}
-
-\noindent automates the
-inferences necessary to justify any given primitive recursive definition on a
-concrete recursive type of the kind definable by \ml{define\_type}.
- It takes four arguments.  The first is a boolean
-flag which indicates if the function to be defined will be an infix\index{infixes, in HOL logic@infixes, in \HOL\ logic!in recursive type definitions} or not.
-The second is the primitive recursion theorem for the concrete type in question
-(\ie\ a theorem obtained from {\small\verb!define_type!}).\index{define_type@\ml{define\_type}}  The third
-argument is a name under which the resulting definition will be saved in the
-current theory segment.
-The fourth argument is a term giving the desired primitive recursive
-definition.  The value returned
-by  {\small\verb!new_recursive_definition!} is a theorem
-which states the primitive recursive definition requested by the
-user.  This theorem is derived by formal proof from an instance of the general
-primitive recursion theorem\index{automated derivation!of recursive definitions}
- given as the second argument.
-
-If the \ML\ variable \ty{op}\ml{\_Axiom} is bound to a theorem of the form
-returned by \ml{define\_type},
-then evaluating:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
-   new_recursive_definition
-     `\m{flag}` \op\_Axiom `\m{name}` "{\normalsize\it primitive recursive definition on \op}"
-\end{alltt}\end{hol}}
-
-\noindent  automatically proves the existence of the primitive recursive
-function supplied as the fourth argument,
-and then declares a new constant in the current theory
-with this definition as its
-specification. This constant specification is returned as a theorem
-and is saved in the current theory segment under the name
-$name$.
-If $flag$ is \ml{true}, the constant is given infix status.
-Failure occurs if:
-
-\begin{myenumerate}
-\item \HOL\ cannot prove there is a function
-satisfying the defining equations supplied by the user
-(\ie\ the term supplied to \ml{new\_recursive\_definition}
- is not a well-formed primitive recursive definition on values
-of type \ty{op});
-\item any other condition for making a constant specification is violated
-(see the failure conditions for \ml{new\_specification} in
-Section~\ref{conspec}).
-\end{myenumerate}
-
-Curried\index{currying, in ML@currying, in \ML!in recursive definitions}
-functions defined using \ml{new\_recursive\_definition} can be
-recursive on any one of their arguments.  Furthermore, defining equations need
-not be given for all the constructors of the concrete type in question.  See
-the examples given in the next section, or the examples of functions
-defined on \ml{num} given in Section~\ref{num-prim-rec} for more details.
-
-The \ML\ function
-
-\begin{boxed}
-\index{prove_rec_fn_exists@\ml{prove\_rec\_fn\_exists}|pin}
-\begin{verbatim}
-   prove_rec_fn_exists : thm -> term -> thm
-\end{verbatim}\end{boxed}
-
-\noindent is a version of \ml{new\_recursive\_definition} which proves only
-that the required function exists; it does not make a constant specification.
-The first argument is a theorem of the form returned by \ml{define\_type},
-and the second is a user-supplied primitive recursive function definition.
-The theorem which is returned asserts the existence of the recursively-defined
-function in question (if it is primitive recursive over the type characterized
-by the theorem given as the first argument).
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for recursive types|)}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in recursive function definition|)}
-\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system|)}
-
-\subsubsection{More examples}
-
-Continuing the example session started above in Section~\ref{define-type-example},
-the following interactions with the system show how the \ML\ function
-\ml{new\_recursive\_definition} can be used to define functions on concrete types,
-which have themselves been defined using \ml{define\_type}.
-
-Given the characterizing theorem
-\ml{btree\_Axiom} for the type of labelled binary trees
-defined in Section~\ref{types-session}, a recursive function \ml{Leaves}, which
-computes the number of leaf nodes in a binary tree,
-can be defined recursively in \HOL\ as shown below:
-
-\begin{session}\begin{verbatim}
-#let Leaves =
-#    new_recursive_definition false btree_Axiom `Leaves`
-#      "(Leaves (LEAF (x:*)) = 1) /\
-#       (Leaves (NODE t1 t2) = (Leaves t1) + (Leaves t2))";;
-Leaves =
-|- (!x. Leaves(LEAF x) = 1) /\
-   (!t1 t2. Leaves(NODE t1 t2) = (Leaves t1) + (Leaves t2))
-\end{verbatim}\end{session}
-
-\noindent The result of the call to {\small\verb!new_recursive_definition!} is
-a theorem which states that the constant {\small\verb!Leaves!} satisfies the
-primitive-recursive defining equations supplied by the user.  This theorem is
-derived automatically from an instance of the general primitive recursion
-theorem for binary trees ({\small\verb!btree_Axiom!}) and an appropriate
-constant specification for the constant {\small\verb!Leaves!}.
-
-The function defined using \ml{new\_recursive\_definition}\index{type
-definition package, in HOL system@type definition package, in \HOL\
-system!use of, in case definition} need not, in fact, be recursive.
-Here is the definition of a predicate \ml{IsLeaf}, which is true of
-binary trees which are leaves, but is false of the internal nodes in a
-binary tree:
-
-\begin{session}\begin{verbatim}
-#let IsLeaf =
-#    new_recursive_definition false btree_Axiom `IsLeaf`
-#      "(IsLeaf (NODE t1 t2) = F) /\ (IsLeaf (LEAF (x:*)) = T)";;
-IsLeaf = |- (!t1 t2. IsLeaf(NODE t1 t2) = F) /\ (!x. IsLeaf(LEAF x) = T)
-\end{verbatim}\end{session}
-
-\noindent Note that two equations defining a (recursive or non-recursive)
-function on binary trees by cases can be given in either order.  Here, the
-\ml{NODE} case is given first, and the \ml{LEAF} case second.  The reverse
-order was used in the above definition of \ml{Leaves}.
-
-The \ML\ function  {\small\verb!new_recursive_definition!} also allows the user
-to partially specify\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in partial definition} the value of a function defined on a concrete type, by
-allowing defining equations for some of the constructors to be omitted.  Here,
-for example, is the definition of a function \ml{Label} which extracts the
-label from a leaf node.  The value of \ml{Label} applied to an internal node
-is left unspecified:
-
-\begin{session}\begin{verbatim}
-#let Label =
-#    new_recursive_definition false btree_Axiom `Label`
-#      "Label (LEAF (x:*)) = x";;
-Label = |- !x. Label(LEAF x) = x
-\end{verbatim}\end{session}
-
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in curried infix definition|(}
-Curried functions can also be defined, and the recursion can be on any
-argument.  The next definition defines an infix (curried)
-function \ml{<<} which expresses the idea that one tree is a proper
-subtree of another.
-
-\begin{session}\begin{verbatim}
-#let Subtree =
-#    new_recursive_definition true btree_Axiom `Subtree`
-#      "(<< (t:(*)btree) (LEAF (x:*)) = F) /\
-#       (<< t (NODE t1 t2) = ((t=t1) \/ (t=t2) \/ (<< t t1) \/ (<< t t2)))";;
-Subtree =
-|- (!t x. t << (LEAF x) = F) /\
-   (!t t1 t2.
-     t << (NODE t1 t2) = (t = t1) \/ (t = t2) \/ t << t1 \/ t << t2)
-\end{verbatim}\end{session}
-
-\noindent Note that the first argument to the \ML\ function is \ml{true}
-(to indicate that the function being defined is to have infix status) and that
-the constant \ml{<<} is an infix after the definition has been made.
-Furthermore, the function \ml{<<} is recursive on its second argument\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in curried infix definition|)}.
-
-Finally, the function {\small\verb!new_recursive_definition!} can also be used
-to define functions by cases on enumerated types.  For example, a predicate
-\ml{One}, which is true of only the value \ml{ONE} of the three-valued type
-\ml{three} defined above in Section~\ref{types-session}, can be defined as
-follows:
-
-\begin{session}\begin{verbatim}
-#let One = new_recursive_definition false three_Axiom `One`
-#            "(One ONE = T) /\ (One TWO = F) /\ (One THREE = F)";;
-One = |- (One ONE = T) /\ (One TWO = F) /\ (One THREE = F)
-\end{verbatim}\end{session}
-
-The existence only of
-any function definable using \ml{new\_recursive\_definition} can be proved
-using \ml{prove\_rec\_fn\_exists}.  For example:
-
-\begin{session}\begin{verbatim}
-#close_theory();;
-() : void
-
-#let exists = prove_rec_fn_exists three_Axiom
-#             "(f ONE = T) /\ (f TWO = F) /\ (f THREE = F)";;
-exists = |- ?f. (f ONE = T) /\ (f TWO = F) /\ (f THREE = F)
-\end{verbatim}\end{session}
-
-\noindent The resulting theorem simply states the existence of the
-required function.  Here, a constant is not defined, and the user need
-not be in draft mode.
-\index{primitive recursion theorem!for binary trees|)}
-
-\subsection{Structural induction}
-
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, to build induction tools|(}
-\index{induction rule!structural, derivation of|(}
-For any concrete recursive type definable
- using the \HOL\ type definition package there is a structural induction
-theorem which states the validity of proof by induction
-on the structure of the type's values.  The \ML\ function
-
-\begin{boxed}
-\index{prove_induction_thm@\ml{prove\_induction\_thm}|pin}
-\begin{verbatim}
-   prove_induction_thm : thm -> thm
-\end{verbatim}\end{boxed}
-
-
-\noindent can be used to derive a structural induction\index{automated derivation!of structural induction theorems}\index{induction rule!for concrete recursive types}
-theorem for any concrete
-recursive type defined using \ml{define\_type}.  If the \ML\
-variable \ty{op}\ml{\_Axiom} is bound to a theorem of the form
-returned by \ml{define\_type},
-then executing
-
-\[ \ml{prove\_induction\_thm}\;\ty{op}\ml{\_Axiom} \]
-
-\noindent will prove  and  return a  structural induction  theorem for
-the concrete type
-\ty{op}.  The `induction' theorem is degenerate in the case of non-recursive
-types (see the examples given below). Failure occurs, or an unpredictable
-output theorem is returned, if the input theorem does not have the form
-of a theorem  returned by \ml{define\_type}.
-
-\subsubsection{Examples}
-
-A structural induction theorem on the type of binary trees defined in the session
-beginning on Section~\ref{types-session} can be proved by:
-
-\begin{session}\begin{verbatim}
-#let btree_Induct = prove_induction_thm btree_Axiom;;
-btree_Induct =
-|- !P.
-    (!x. P(LEAF x)) /\ (!b1 b2. P b1 /\ P b2 ==> P(NODE b1 b2)) ==>
-    (!b. P b)
-\end{verbatim}\end{session}
-
-
-\noindent The output theorem states that a predicate \ml{P} is true of all
-binary trees if it is true of all labelled leaf nodes, and whenever it is true
-of two binary trees \ml{b1} and \ml{b2} it is also true of the binary tree
-\ml{NODE b1 b2}, in which \ml{b1} and \ml{b2} occur as immediate left and right
-subtrees.
-
-For non-recursive types, the induction theorem returned by
-\ml{prove\_induction\_thm} is degenerate: there are no `step' cases in the
-induction.  For the two types \ml{three} and \ml{rec} defined in the preceding
-interactions of this session, the induction theorems are:
-
-\begin{session}\begin{verbatim}
-#let three_Induct = prove_induction_thm three_Axiom;;
-three_Induct = |- !P. P ONE /\ P TWO /\ P THREE ==> (!t. P t)
-
-#let rec_Induct = prove_induction_thm rec_Axiom;;
-rec_Induct = |- !P. (!b0 b1 b2. P(REC b0 b1 b2)) ==> (!r. P r)
-\end{verbatim}\end{session}
-
-\noindent Here, induction simply reduces to the consideration of
-cases,\index{case analysis, in HOL logic@case analysis, in \HOL\ logic!as instance  of induction} one for each of the constructors for the concrete type involved.
-\index{induction rule!structural, derivation of|)}
-
-\subsection{Structural induction tactics}
-\label{avrasi}
-%I added one paragraph because this section is so out of sequence. Avra 9/11/89.
-
-\index{theorem continuations!use of, in derivation of induction tactics|(}
-This section has been included here for reference
-because it relates chiefly to the
-type definition package, but it involves concepts not defined until
-later, in Chapter~\ref{tactics-and-tacticals}. Tactics, goals
-and subgoals are
-defined in Section~\ref{tactics}; and theorem continuations, in
-Section~\ref{asm-manip}. \ml{MAP\_EVERY} is defined in Section~\ref{avra_manip1}.
-\ml{ASSUME\_TAC} is defined in Section~\ref{avra_builtin}.
-\ml{MP\_TAC}  and \ml{INDUCT\_TAC} can be found in \REFERENCE.
-
-The \ML\ function
-
-\begin{boxed}
-\index{INDUCT_THEN@\ml{INDUCT\_THEN}|pin}
-\index{induction tactics!derivation of|(}
-\begin{verbatim}
-   INDUCT_THEN : thm -> (thm -> tactic) -> tactic
-\end{verbatim}\end{boxed}
-
-\noindent can be used to generate
-a structural induction tactic\index{automated derivation!of structural induction tactics}
-for any concrete types definable using \ml{define\_type}.\index{define_type@\ml{define\_type}}  The first argument
-is an induction theorem of the form returned by the function
-\ml{prove\_induction\_thm}\index{prove_induction_thm@\ml{prove\_induction\_thm}} discussed in the previous section.  The second
-argument is a theorem continuation\index{characterizing theorem!use of, in deriving induction} (see
-Chapter~\ref{tactics-and-tacticals}) that determines what is to be done with
-the induction hypotheses when the resulting tactic is applied to a goal.
-
-If $th$ is an induction theorem for a concrete type \ty{op} with
-$m$ constructors  \mbox{$C_1$, \dots, $C_m$}
-(\ie\ a theorem of the kind returned by
-\ml{prove\_induction\_thm}) and $F$ is a theorem continuation, then the
-tactic $\ml{INDUCT\_THEN}\;th\;F$ will reduce a goal
-{\small\verb%(%}$\Gamma${\small\verb%,"!%}$x{:}
-\ty{op}${\small\verb%.%}$t[x]${\small\verb%")%} to the collection of $m$
-induction subgoals generated by:
-
-\[ \begin{array}[t]{@{}l@{}l}
- \ml{MAP\_EVERY } F \ml{ [}th_1^1\ml{;}\;\ldots\ml{;}\;th_1^{k_1}\ml{]} &
-\ml{ (}\Gamma\ml{, "}t[ C_1\;x_1^1\;\ldots\;x_1^{k_1}]\ml{")},\\
-\qquad\qquad \vdots & \mbox{} \\
- \ml{MAP\_EVERY } F \ml{ [}th_m^1\ml{;}\;\ldots\ml{;}\;th_m^{k_m}\ml{]} &
-\ml{ (}\Gamma\ml{, "}t[ C_m\;x_m^1\;\ldots\;x_m^{k_m}]\ml{")}
- \end{array}
-\]\index{MAP_EVERY@\ml{MAP\_EVERY}}
-
-\noindent where $th_i^j$ is a theorem of the form $\ml{|- }t[x_i^j]$ asserting
-the truth of $t[x_i^j]$ for the $j$th recursive argument (for non-recursive
-arguments, there will be no $th_i^j$ in the list) of the $i$th constructor
-$C_i$ (for $1 \leq i \leq m$).
-
-The most common use of \ml{INDUCT\_THEN} is in conjunction with the theorem
-continuation \ml{ASSUME\_TAC}.  For example, the built-in
-induction tactic \ml{INDUCT\_TAC} for mathematical induction on
-the natural numbers is defined in \ML\ by:
-
-\begin{hol}
-\index{INDUCT_TAC@\ml{INDUCT\_TAC}}
-\begin{verbatim}
-   let INDUCT_TAC = INDUCT_THEN INDUCTION ASSUME_TAC
-\end{verbatim}\end{hol}
-
-\noindent This built-in tactic reduces a goal
- {\small\verb%(%}$\Gamma${\small\verb%,"!%}$n${\small\verb%.%}$t[n]${\small\verb%")%} to a basis subgoal
-{\small\verb%(%}$\Gamma${\small\verb%,"%}$t[${\small\verb%0%}$]${\small\verb%")%}
-and a step subgoal
-{\small\verb%(%}$\Gamma\cup\{${\small\verb%"%}$t[n]${\small\verb%"%}$\}${\small\verb%,"%}$t[${\small\verb%SUC %}$n]${\small\verb%")%}.
-The extra assumption  {\small\verb%"%}$t[n]${\small\verb%"%} (\ie\ the
-induction hypothesis)
-is added to the assumptions $\Gamma$ by \ml{ASSUME\_TAC}.
-
-By contrast, the
-induction tactic \ml{INDUCT\_MP\_TAC} (which is not built-in) defined
-by:
-
-\begin{hol}\begin{verbatim}
-   let INDUCT_MP_TAC = INDUCT_THEN INDUCTION MP_TAC
-\end{verbatim}\end{hol}
-
-\noindent reduces a goal
- {\small\verb%(%}$\Gamma${\small\verb%,"!%}$n${\small\verb%.%}$t[n]${\small\verb%")%} to a basis subgoal
-{\small\verb%(%}$\Gamma${\small\verb%,"%}$t[${\small\verb%0%}$]${\small\verb%")%}
-and an induction step subgoal
-{\small\verb%(%}$\Gamma${\small\verb%, "%}$t[n]${\small\verb% ==> %}$t[${\small\verb%SUC %}$n]${\small\verb%")%}.
-Here, the theorem continuation \ml{MP\_TAC} makes the induction hypothesis
-an antecedent of the step subgoal, rather than an assumption.
-
-As this example illustrates, the theorem continuation $F$ in
-an induction tactic
-
-\[ \ml{INDUCT\_THEN }th\;\;F \]
-
-\noindent generated using an induction theorem $th$ can be thought of as a
-function which determines what is to be done with the induction hypotheses
-corresponding to the recursive arguments of constructors in the step
-cases of a proof by structural induction.  When $F$ is \ml{ASSUME\_TAC},
-the induction hypotheses become assumptions in the subgoals generated; and when
-$F$ is \ml{MP\_TAC}, the induction hypotheses become the antecedents of
-implicative subgoals.  Other theorem continuations (for which, see
-Chapter~\ref{tactics-and-tacticals} and \REFERENCE) can also be used\index{theorem continuations!use of, in derivation of induction tactics|)}.
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, to build induction tools|)}\index{induction tactics!derivation of|)}
-
-\subsection{Other tools}
-
-The function
-
-\begin{boxed}
-\index{prove_constructors_one_one@\ml{prove\_constructors\_one\_one}|pin}
-\begin{verbatim}
-   prove_constructors_one_one : thm -> thm
-\end{verbatim}\end{boxed}
-
-\noindent proves that the constructors\index{constructors, of concrete types in HOL logic@constructors, of concrete types in \HOL\ logic!proving one-to-one}
- of a concrete type which take arguments
-are one-to-one\index{automated derivation!of one-to-one theorems}.  The argument to \ml{prove\_constructors\_one\_one} is a
-theorem of the form returned by \ml{define\_type}.
-
-The function
-
-\begin{boxed}
-\index{prove_constructors_distinct@\ml{prove\_constructors\_distinct}|pin}
-\begin{verbatim}
-   prove_constructors_distinct : thm -> thm
-\end{verbatim}\end{boxed}
-
-\noindent proves that the constructors\index{constructors, of concrete types in HOL logic@constructors, of concrete types in \HOL\ logic!proving distinct}
- of a concrete type yield distinct\index{automated derivation!of
-distinctness theorems} values.  The argument to
-\ml{prove\_constructors\_distinct} is again
-a theorem of the form returned by \ml{define\_type}.
-
-The function
-
-\begin{boxed}
-\index{prove_cases_thm@\ml{prove\_cases\_thm}|pin}
-\begin{verbatim}
-   prove_cases_thm : thm -> thm
-\end{verbatim}\end{boxed}
-
-\noindent proves a cases\index{automated derivation!of case analysis theorems}
- theorem\index{case analysis, in HOL logic@case analysis, in \HOL\ logic!theorems for} for any concrete type.  Such a theorem states that every
-value can be constructed using one of the type's constructors.  This property
-follows more easily (and therefore is faster to prove) from induction than from
-primitive recursion, so the function \ml{prove\_cases\_thm} takes as an
-argument an induction theorem of the kind returned by
-\ml{prove\_induction\_thm}.\index{prove_induction_thm@\ml{prove\_induction\_thm}}
-
-These auxiliary tools work for any concrete type definable using
-\ml{define\_type}.
-
-\subsubsection{Examples}
-
-The following interactions with the system show the proof that the constructor
-\ml{LEAF} for the type \ml{(*)btree}  is one-one,
-and also that the constructor \ml{REC} for the type \ml{rec} is one-to-one.
-
-\begin{session}\begin{verbatim}
-#let LEAF_one_one = prove_constructors_one_one btree_Axiom;;
-LEAF_one_one =
-|- (!x x'. (LEAF x = LEAF x') = (x = x')) /\
-   (!b1 b2 b1' b2'.
-     (NODE b1 b2 = NODE b1' b2') = (b1 = b1') /\ (b2 = b2'))
-
-#let REC_one_one = prove_constructors_one_one rec_Axiom;;
-REC_one_one =
-|- !b0 b1 b2 b0' b1' b2'.
-    (REC b0 b1 b2 = REC b0' b1' b2') =
-    (b0 = b0') /\ (b1 = b1') /\ (b2 = b2')
-\end{verbatim}\end{session}
-
-The function \ml{prove\_constructors\_one\_one} fails when the concrete
-type involved has no constructors that take arguments.  For example:
-
-\begin{session}\begin{verbatim}
-#let th = prove_constructors_one_one three_Axiom;;
-evaluation failed     prove_constructors_one_one: invalid input theorem
-\end{verbatim}\end{session}
-
-The function \ml{prove\_constructors\_distinct} returns the theorem stating
-that the constructors of a concrete type yield pair-wise distinct values.  For
-example:
-
-\begin{session}\begin{verbatim}
-#let NOT_LEAF_NODE = prove_constructors_distinct btree_Axiom;;
-NOT_LEAF_NODE = |- !x b1 b2. ~(LEAF x = NODE b1 b2)
-
-#let three_distinct = prove_constructors_distinct three_Axiom;;
-three_distinct = |- ~(ONE = TWO) /\ ~(ONE = THREE) /\ ~(TWO = THREE)
-\end{verbatim}\end{session}
-
-Cases theorems\index{case analysis, in HOL logic@case analysis, in \HOL\ logic!as instance  of induction} are proved from structural induction theorems. For the binary
-tree example considered in the present session, here is the cases theorem:
-
-\begin{session}\begin{verbatim}
-#let btree_cases = prove_cases_thm btree_Induct;;
-btree_cases = |- !b. (?x. b = LEAF x) \/ (?b1 b2. b = NODE b1 b2)
-\end{verbatim}\end{session}
-
-\noindent Note that the structural induction theorem for binary trees,
-\ml{btree\_Induct}, is used.
-\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|)}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system|)}
-
+\label{sec:numLib}
+\index{decision procedures!Presburger arithmetic over natural numbers}
 
 
 %%% Local Variables:

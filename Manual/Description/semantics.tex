@@ -148,8 +148,9 @@ there are no hypotheses\index{hypotheses!of sequents} (\ie\ $n=0$),
 just $\vdash t$ is written.
 
 In practice, a particular deductive system is usually specified by a
-number of (schematic) {\em rules of inference}\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!abstract form of
-primitive}, which take the form
+number of (schematic) \emph{rules of inference},
+\index{inference rules, of HOL logic@inference rules, of \HOL{} logic!abstract form of primitive}
+which take the form
 \[
 \Gamma_1\turn t_1 \qquad\cdots\qquad\Gamma_n\turn t_n
 \over
@@ -236,31 +237,24 @@ bound after substitution.
 \item Provided $x$ is not free in $\Gamma$.
 \end{itemize}
 
-\subsubsection*{Type instantiation [{\small\tt
-INST\_TYPE}]}\index{type instantiation, in HOL logic@type instantiation, in \HOL\ logic!abstract form of}
+\subsubsection*{Type instantiation [{\small\tt INST\_TYPE}]}
+\index{type instantiation, in HOL logic@type instantiation, in \HOL\
+  logic!abstract form of}
+\newcommand{\insttysub}{[\sigma_1,\ldots,\sigma_n/\alpha_1,\ldots,\alpha_n]}
 \[
 \Gamma\turn t
 \over
-\Gamma\turn t[\sigma_1,\ldots,\sigma_n/\alpha_1,\ldots,\alpha_n]
+\Gamma\insttysub\turn t\insttysub
 \]
 \begin{itemize}
-\item Where $t[\sigma_1,\ldots,\sigma_n/\alpha_1,\ldots,\alpha_n]$
-is the
-result of substituting, in parallel, the
-types $\sigma_1$, $\dots$, $\sigma_n$ for
-type variables $\alpha_1$, $\dots$, $\alpha_n$ in $t$, with the
-restrictions:
-\begin{myenumerate}
-\item none of the type variables
-$\alpha_1$, $\ldots$\ , $\alpha_n$ occur in $\Gamma$;
-\item no distinct variables in $t$ become identified after the
-instantiation.\footnote{The ML function implementing
-{\tt INST\_TYPE} in the HOL
-system  fails if side condition (i) is violated, but instead of failing
-if (ii) is violated, it
-automatically renames any variable whose type is instantiated if the variable
-is preceded in $t$ by a different variable with the same name.}
-\end{myenumerate}
+\item Where $t\insttysub$ is the result of substituting, in parallel,
+  the types $\sigma_1$, $\dots$, $\sigma_n$ for type variables
+  $\alpha_1$, $\dots$, $\alpha_n$ in $t$, and where $\Gamma\insttysub$
+  is the result of performing the same substitution across all of the
+  theorem's hypotheses.
+\item After the instantiation, variables free in the input can not
+  become bound, but distinct free variables in the input may become
+  identified.
 \end{itemize}
 
 \subsubsection*{Discharging an assumption [{\small\tt
@@ -311,11 +305,12 @@ Q}_0$, and then to derive more complex rules from it.
 \index{soundness!of HOL deductive system@of \HOL\ deductive system}
 \label{soundness}
 
-{\em The rules of the the \HOL\ deductive system are {\em sound} for
+\emph{The rules of the the \HOL\ deductive system are {\em sound} for
 the notion of satisfaction defined
 in Section~\ref{sequents}:
-for any instance of the rules of inference\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!formal semantics of}, if a
-(standard) model satisfies the hypotheses of the rule it also
+for any instance of the rules of inference,
+\index{inference rules, of HOL logic@inference rules, of \HOL{} logic!formal semantics of}
+if a (standard) model satisfies the hypotheses of the rule it also
 satisfies the conclusion.}
 
 \medskip
@@ -380,7 +375,7 @@ satisfies any sequents in the set of given  theorems, ${\sf
 Theorems}_{\cal T}$.
 
 \subsection{The theory {\tt MIN}}
-\label{min}
+\label{sec:min-thy}
 
 The {\it minimal theory\/}\index{MIN@\ml{MIN}}\index{minimal theory, of HOL logic@minimal theory, of \HOL\ logic} \theory{MIN} is defined by:
 \[
@@ -400,6 +395,10 @@ syntax, by exploiting the higher order constructs of \HOL\ one can
 construct a rather rich collection of terms over it. The following
 theory introduces names for some of these terms that denote useful
 logical operations in the model {\em Min}.
+
+In the implementation, the theory \theory{MIN} is given the name
+\theoryimp{min}, and also contains the distinguished binary type
+operator $\fun$, for constructing function spaces.
 
 \subsection{The theory {\tt LOG}}
 \index{LOG@\ml{LOG}}
@@ -610,11 +609,10 @@ the theory \theory{LOG}.
 \label{INIT}
 
 The theory \theory{INIT}\index{INIT@\ml{INIT}!abstract form of} is
-obtained by adding the following five axioms\index{axioms!abstract form of HOL logic's@abstract form of \HOL\ logic's} to the theory
+obtained by adding the following four axioms\index{axioms!abstract form of HOL logic's@abstract form of \HOL\ logic's} to the theory
 \theory{LOG}.
 \[
 \index{BOOL_CASES_AX@\ml{BOOL\_CASES\_AX}!abstract form of}
-\index{IMP_ANTISYM_AX@\ml{IMP\_ANTISYM\_AX}!abstract form of}
 \index{ETA_AX@\ml{ETA\_AX}!abstract form of}
 \index{SELECT_AX@\ml{SELECT\_AX}!abstract form of}
 \index{INFINITY_AX@\ml{INFINITY\_AX}!abstract form of}
@@ -622,10 +620,6 @@ obtained by adding the following five axioms\index{axioms!abstract form of HOL l
 \index{axiom of infinity!abstract form of}
 \begin{array}{@{}l@{\qquad}l}
 \mbox{\small\tt BOOL\_CASES\_AX}&\vdash \uquant{b} (b = \T ) \vee (b = \F )\\
- \\
-\mbox{\small\tt IMP\_ANTISYM\_AX} &
-\vdash \uquant{b_1\ b_2} (b_1 \imp b_2) \imp (b_2 \imp b_1) \imp
-(b_1 = b_2)\\
  \\
 \mbox{\small\tt ETA\_AX}&
 \vdash \uquant{f_{\alpha\fun\beta}}(\lquant{x}f\ x) = f\\
@@ -639,7 +633,7 @@ P({\hilbert}\ P)\\
 \end{array}
 \]
 
-The unique standard model of \theory{LOG} satisfies these five axioms
+The unique standard model of \theory{LOG} satisfies these four axioms
 and hence is the unique standard model of the theory
 \theory{INIT}.\index{INIT@\ml{INIT}!formal semantics of} (For axiom
 {\small\tt SELECT\_AX} one needs to use the definition of
@@ -647,9 +641,20 @@ $\den{\hilbert}$ given in Section~\ref{standard-signatures}; for axiom
 {\small\tt INFINITY\_AX} one needs the fact that $\den{\ind}=\inds$ is
 an infinite set.)
 
-The theory \theory{INIT} is the initial theory\index{initial theory, of HOL logic@initial theory, of \HOL\ logic!abstract form of} of the \HOL\
-logic. A theory which extends \theory{INIT} will be
-called a {\em standard theory}\index{standard theory}.
+The theory \theory{INIT} is the initial theory\index{initial theory,
+  of HOL logic@initial theory, of \HOL\ logic!abstract form of} of the
+\HOL\ logic. A theory which extends \theory{INIT} will be called a
+{\em standard theory}\index{standard theory}.
+
+\subsection{Implementing theories \texttt{LOG} and \texttt{INIT}}
+\label{sec:implementing-log-init}
+
+The implementation combines the theories \theory{LOG} and
+\theory{INIT} into a theory \theoryimp{bool}.  It includes all of the
+constants and axioms from those theories, and includes a number of
+derived results about those constants.  There are a number of other
+constants also defined in \theoryimp{bool}, for which see
+Section~\ref{boolfull}.
 
 \subsection{Consistency}
 \label{consistency}
@@ -1289,17 +1294,16 @@ a corollary of the corresponding proposition in the next section.
 \subsection{Extension by type specification\protect\footnotemark}
 \index{extension, of HOL logic@extension, of \HOL\ logic!by type specification|(}
 \label{tyspecs}
-\footnotetext{This theory extension mechanism is
-not implemented in Version 2.0 of the HOL system. It was proposed by
-T.~Melham and refines a suggestion from R.~Jones and R.~Arthan.}
-The type definition mechanism allows one to introduce new types by
-giving a concrete representation of the type as a `subtype' of an
-existing type. One might instead wish to introduce a new type
-satisfying some property without having to give an explicit
-representation for the type. For example, one might want to extend
-\theory{INIT} with an atomic
-type $\ty{one}$ satisfying $\turn\uquant{f_{\alpha\fun\ty{one}}\
-g_{\alpha\fun\ty{one}}}f=g$ without choosing a specific type in
+\footnotetext{This theory extension mechanism is not implemented in
+  the HOL4 system. It was proposed by T.~Melham and refines a
+  suggestion from R.~Jones and R.~Arthan.}  The type definition
+mechanism allows one to introduce new types by giving a concrete
+representation of the type as a `subtype' of an existing type. One
+might instead wish to introduce a new type satisfying some property
+without having to give an explicit representation for the type. For
+example, one might want to extend \theory{INIT} with an atomic type
+$\ty{one}$ satisfying $\turn\uquant{f_{\alpha\fun\ty{one}}\
+  g_{\alpha\fun\ty{one}}}f=g$ without choosing a specific type in
 $\theory{INIT}$ and saying that $\ty{one}$ is in bijection with a
 one-element subset of it. (The idea being that the choice of
 representing type is irrelevant to the properties of $\ty{one}$ that

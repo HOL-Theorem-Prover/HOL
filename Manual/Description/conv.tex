@@ -143,8 +143,8 @@ general.
 \section{Indicating unchangedness}
 
 All conversions may raise the special exception \ml{Conv.UNCHANGED} on
-an input term \ml{t}, as a ``short-hand'' instead returning the
-reflexive theorem \ml{|- t = t}.  This is done for efficiency reasons.
+an input term \ml{t}, as a ``short-hand'' instead of returning the
+reflexive theorem \ml{|-~t~=~t}.  This is done for efficiency reasons.
 All of the connectives described below in Section~\ref{avra1} handle
 this exception appropriately.  The standard function \ml{QCONV} is
 provided to automatically handle this exception in contexts where it

@@ -1,7 +1,6 @@
 \chapter{Syntax}
 {
  \newcommand{\term}       {\mbox{\it term}}
- \newcommand{\bs}         {\mbox{$\backslash$}}
  \newcommand{\IMP}       {\mbox{\tt ==>}}
  \newcommand{\ALL}       {\mbox{\tt !}}
  \newcommand{\EXISTS}       {\mbox{\tt ?}}
@@ -25,8 +24,7 @@ and formulas: HOL has only terms. Second, each term has a type: types
 are used in order to build well-formed terms. There are two ways to
 construct types and terms in HOL: by use of a parser, or by use of the
 programmer's interface. In this chapter, we will focus on the concrete
-syntax accepted by the parsers, leaving the programmer's interface for
-Chapter~\ref{api}.
+syntax accepted by the parsers.
 
 
 \section{Types}
@@ -47,9 +45,9 @@ a constant of arity $n$ applied to a list of $n$ types.
 \]
 Type constants are also known as type operators. They must be
 alphanumeric. Type variables are alphanumerics written with a leading
-prime ('). In \holn{}, the type constants {\tt bool}, {\tt fun}, and
+prime ('). In \HOL{}, the type constants {\tt bool}, {\tt fun}, and
 {\tt ind} are primitive. The introduction of new type constants is
-described in Chapter \ref{thy-ops}. {\tt bool} is the two element type
+described in Section~\ref{type-defs}. {\tt bool} is the two element type
 of truth values. The binary operator {\tt fun} is used to denote
 function types; it can be written with an infix arrow. The nullary
 type constant {\tt ind} denotes an infinite set of individuals; it is
@@ -71,8 +69,8 @@ is identical to
 \end{verbatim}
 The product (\verb+#+) and sum (\verb!+!) are other infix type
 operators, also right associative; however, they are not loaded by
-default in \holn{}. How to load in useful logical context is dealt with
-in Chapter~\ref{context}.
+default in \HOL{}. How to load in useful logical context is described
+in Section~\ref{theoryfns}.
 
 \section{Terms}
 
@@ -129,9 +127,9 @@ ML: identifiers can be alphanumeric or symbolic. Variables must be
 alphanumeric. A symbolic identifier is any concatenation of the characters
 in the following list:
 \begin{verbatim}
-    #?+*/\\=<>&%@!,:;_|~-
+    #?+*/\=<>&%@!,:;_|~-
 \end{verbatim}
-with the exception of the keywords \verb+\\+, \verb+;+, \verb+=>+,
+with the exception of the keywords \verb+\+, \verb+;+, \verb+=>+,
 \verb+|+, and \verb+:+ (colon). Any alphanumeric can be a constant except the
 keywords \verb+let+, \verb+in+, \verb+and+, and \verb+of+.
 
@@ -153,8 +151,8 @@ keywords \verb+let+, \verb+in+, \verb+and+, and \verb+of+.
 \subsection{Constants}
 
 The HOL grammar gets extended when a new constant is introduced. The
-introduction of new constants will be discussed in section
-\ref{thy-ops}. In order to provide some notational flexibility,
+introduction of new constants is discussed in
+Sections~\ref{sec:constant-definitions} and \ref{conspec}. In order to provide some notational flexibility,
 constants come in various flavours or {\it fixities}: besides being an
 ordinary constant (with a fixity of {\sf Prefix}), constants can also
 be {\it binders}, {\it true prefixes}\footnote{The use of the term
@@ -312,8 +310,8 @@ this, we can deduce that the type of `x' must be \verb+bool+.
 Ignoring the jargon ("scheme" and "instance") in the previous
 paragraph, we have conducted a type assignment to the term structure,
 ending up with a well-typed term. It would be very tedious for users
-to conduct such argumentation by hand for each term entered to \holn{}.
-Thus, \holn{} uses an adaptation of Milner's type inference algorithm
+to conduct such argumentation by hand for each term entered to \HOL{}.
+Thus, \HOL{} uses an adaptation of Milner's type inference algorithm
 for ML when constructing terms via parsing. At the end of type
 inference, unconstrained type variables get assigned by the system.
 Usually, this assignment does the right thing. However, at times, the
@@ -340,13 +338,12 @@ theory of lists introduces the constants \verb+NIL+ (the surface
 syntax \verb+[]+ can be used) and \verb+CONS+, as well as notation for
 enumerated lists. The theories of (Peano) numbers and strings
 introduce the constructors \verb+0+, \verb+SUC+, \verb+""+, and
-\verb+STRING+, as well as literals for numbers and strings. If the
-theory of restricted quantifiers is present, syntax is provided for
-constraining bound variables by predicates.
+\verb+STRING+, as well as literals for numbers and strings.
 
-Thus, if the theories of pairs, sets, numbers, strings, lists, and
-restricted quantifiers are loaded, the HOL grammar is an extension of
-that in Table \ref{expanded-grammar}.
+Thus, if the theories of pairs, sets, numbers, strings, and lists are
+loaded, the HOL grammar is an extension of that in
+Table~\ref{expanded-grammar}.
+
 \begin{table}
   \[
   \begin{array}{rclr}
@@ -396,8 +393,7 @@ that in Table \ref{expanded-grammar}.
 In the table, the varstruct ({\it vstr\/}) construct is used. A
 varstruct is (apparently) an arbitrarily nested tuple of variables,
 where each variable only occurs once. The translation of varstructs
-into the internal abstract syntax trees is complex, so we avoid the
-explanation (for this draft).
+into the internal abstract syntax trees is complex.
 \[
 \begin{array}{rcl}
   \vstr & ::= & \ident : \type \\
@@ -406,7 +402,10 @@ explanation (for this draft).
   & | & \verb+(+ \vstr \verb+)+\\
   & | & \verb+(+\vstr {\tt ::} \term\verb+)+\\
 \end{array}
-\] The {\tt ::} syntax is used with restricted quantifiers to allow
+\]
+
+\index{restricted quantification}
+The \texttt{::} syntax is used with restricted quantifiers to allow
 arbitrary predicates to restrict binding variables.  Further to the
 above, the default grammar also allows restricted quantification of
 all of a sequence of binding variables by putting the restriction at
@@ -476,16 +475,10 @@ The changes which may cause old terms to fail to parse are:
   literals be used as variables inside binding scopes.
 \end{itemize}
 
-\subsection{Error messages}
-
-When complete this subsection will document all of the possibly
-confusing error messages that the new parser and lexing code might
-generate.
-
 \subsection{Parser tricks and magic}
 
 Here we describe how to achieve some useful effects with the
-parser in \holn{}.
+parser in \HOL{}.
 
 \begin{description}
 \item [Mix-fix syntax for {\it if-then-else}:] The first step in
@@ -514,7 +507,7 @@ val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
   in \texttt{src/bool/boolScript.sml}.
 
 
-\item[Mix-fix syntax for term substitution:] Here we want to be able
+\item[Mix-fix syntax for term substitution:] Here the desire is to be able
   to write something like:
   \[
   \mbox{\texttt{[}}\,t_1\,\mbox{\texttt{/}}\,t_2\,\mbox{\texttt{]}}\,t_3
@@ -523,9 +516,9 @@ val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
   translating to \mbox{\texttt{SUB} $t_1$ $t_2$ $t_3$}.  This looks
 like it should be another \texttt{TruePrefix}, but the choice of the
 square brackets (\texttt{[} and \texttt{]}) as delimiters would
-conflict with the concrete syntax for list literals if we did this.
+conflict with the concrete syntax for list literals if this was done.
 Given that list literals are effectively of the \texttt{CloseFix}
-class, we need to make our new syntax the same.  This is easy enough
+class, the new syntax must be of the same class.  This is easy enough
 to do: we set up syntax \[
 \mbox{\texttt{[}}\,t_1\,\mbox{\texttt{/}}\,t_2\,\mbox{\texttt{]}}
   \] to map to \mbox{\texttt{SUB} $t_1$ $t_2$} a value of a functional
