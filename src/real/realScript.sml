@@ -2711,6 +2711,134 @@ val REAL_MAX_SUB = store_thm
    RW_TAC boolSimps.bool_ss [max_def, REAL_LE_SUB_RADD, REAL_SUB_ADD]);
 
 (* ------------------------------------------------------------------------- *)
+(* More theorems about sup, and corresponding theorems about an inf operator *)
+(* ------------------------------------------------------------------------- *)
+
+val inf_def = Define `inf p = ~(sup (\r. p (~r)))`;
+
+val REAL_SUP_EXISTS_UNIQUE = store_thm
+  ("REAL_SUP_EXISTS_UNIQUE",
+   ``!p : real -> bool.
+       (?x. p x) /\ (?z. !x. p x ==> x <= z) ==>
+       ?!s. !y. (?x. p x /\ y < x) = y < s``,
+   REPEAT STRIP_TAC
+   THEN CONV_TAC EXISTS_UNIQUE_CONV
+   THEN (RW_TAC boolSimps.bool_ss []
+         THEN1 (MP_TAC (Q.SPEC `p` REAL_SUP_LE) THEN PROVE_TAC []))
+   THEN REWRITE_TAC [GSYM REAL_LE_ANTISYM, GSYM REAL_NOT_LT]
+   THEN REPEAT STRIP_TAC
+   THENL [(SUFF_TAC ``!x : real. p x ==> ~(s' < x)`` THEN1 PROVE_TAC [])
+          THEN REPEAT STRIP_TAC
+          THEN (SUFF_TAC ``~((s' : real) < s')`` THEN1 PROVE_TAC [])
+          THEN REWRITE_TAC [REAL_LT_REFL],
+          (SUFF_TAC ``!x : real. p x ==> ~(s < x)`` THEN1 PROVE_TAC [])
+          THEN REPEAT STRIP_TAC
+          THEN (SUFF_TAC ``~((s : real) < s)`` THEN1 PROVE_TAC [])
+          THEN REWRITE_TAC [REAL_LT_REFL]]);
+
+val REAL_SUP_MAX = store_thm
+  ("REAL_SUP_MAX",
+   ``!p z. p z /\ (!x. p x ==> x <= z) ==> (sup p = z)``,
+    REPEAT STRIP_TAC
+    THEN (KNOW_TAC ``!y : real. (?x. p x /\ y < x) = y < z``
+          THEN1 (STRIP_TAC
+                 THEN REVERSE EQ_TAC THEN1 PROVE_TAC []
+                 THEN REPEAT STRIP_TAC
+                 THEN PROVE_TAC [REAL_LTE_TRANS]))
+    THEN STRIP_TAC
+    THEN (KNOW_TAC ``!y. (?x. p x /\ y < x) = y < sup p``
+          THEN1 PROVE_TAC [REAL_SUP_LE])
+    THEN STRIP_TAC
+    THEN (KNOW_TAC ``(?x : real. p x) /\ (?z. !x. p x ==> x <= z)``
+          THEN1 PROVE_TAC [])
+    THEN STRIP_TAC
+    THEN ASSUME_TAC ((SPEC ``p:real->bool`` o CONV_RULE
+                    (DEPTH_CONV EXISTS_UNIQUE_CONV)) REAL_SUP_EXISTS_UNIQUE)
+    THEN RES_TAC);
+
+val REAL_IMP_SUP_LE = store_thm
+  ("REAL_IMP_SUP_LE",
+   ``!p x. (?r. p r) /\ (!r. p r ==> r <= x) ==> sup p <= x``,
+   RW_TAC boolSimps.bool_ss []
+   THEN REWRITE_TAC [GSYM REAL_NOT_LT]
+   THEN STRIP_TAC
+   THEN MP_TAC (SPEC ``p:real->bool`` REAL_SUP_LE)
+   THEN RW_TAC boolSimps.bool_ss []
+   THENL [PROVE_TAC [],
+          PROVE_TAC [],
+          EXISTS_TAC ``x:real``
+          THEN RW_TAC boolSimps.bool_ss []
+          THEN PROVE_TAC [real_lte]]);
+
+val REAL_IMP_LE_SUP = store_thm
+  ("REAL_IMP_LE_SUP",
+   ``!p x.
+       (?r. p r) /\ (?z. !r. p r ==> r <= z) /\ (?r. p r /\ x <= r) ==>
+       x <= sup p``,
+   RW_TAC boolSimps.bool_ss []
+   THEN (SUFF_TAC ``!y. p y ==> y <= sup p`` THEN1 PROVE_TAC [REAL_LE_TRANS])
+   THEN MATCH_MP_TAC REAL_SUP_UBOUND_LE
+   THEN PROVE_TAC []);
+
+val REAL_INF_MIN = store_thm
+  ("REAL_INF_MIN",
+   ``!p z. p z /\ (!x. p x ==> z <= x) ==> (inf p = z)``,
+   RW_TAC boolSimps.bool_ss []
+   THEN MP_TAC (SPECL [``(\r. (p:real->bool) (~r))``, ``~(z:real)``]
+                REAL_SUP_MAX)
+   THEN RW_TAC boolSimps.bool_ss [REAL_NEGNEG, inf_def]
+   THEN (SUFF_TAC ``!x : real. p ~x ==> x <= ~z`` THEN1 PROVE_TAC [REAL_NEGNEG])
+   THEN REPEAT STRIP_TAC
+   THEN ONCE_REWRITE_TAC [GSYM REAL_NEGNEG]
+   THEN ONCE_REWRITE_TAC [REAL_LE_NEG]
+   THEN REWRITE_TAC [REAL_NEGNEG]
+   THEN PROVE_TAC []);
+
+val REAL_IMP_LE_INF = store_thm
+  ("REAL_IMP_LE_INF",
+   ``!p r. (?x. p x) /\ (!x. p x ==> r <= x) ==> r <= inf p``,
+   RW_TAC boolSimps.bool_ss [inf_def]
+   THEN POP_ASSUM MP_TAC
+   THEN ONCE_REWRITE_TAC [GSYM REAL_NEGNEG]
+   THEN Q.SPEC_TAC (`~r`, `r`)
+   THEN RW_TAC boolSimps.bool_ss [REAL_NEGNEG, REAL_LE_NEG]
+   THEN MATCH_MP_TAC REAL_IMP_SUP_LE
+   THEN RW_TAC boolSimps.bool_ss []
+   THEN PROVE_TAC [REAL_NEGNEG]);
+
+val REAL_IMP_INF_LE = store_thm
+  ("REAL_IMP_INF_LE",
+   ``!p r. (?z. !x. p x ==> z <= x) /\ (?x. p x /\ x <= r) ==> inf p <= r``,
+   RW_TAC boolSimps.bool_ss [inf_def]
+   THEN POP_ASSUM MP_TAC
+   THEN ONCE_REWRITE_TAC [GSYM REAL_NEGNEG]
+   THEN Q.SPEC_TAC (`~r`, `r`)
+   THEN RW_TAC boolSimps.bool_ss [REAL_NEGNEG, REAL_LE_NEG]
+   THEN MATCH_MP_TAC REAL_IMP_LE_SUP
+   THEN RW_TAC boolSimps.bool_ss []
+   THEN PROVE_TAC [REAL_NEGNEG, REAL_LE_NEG]);
+
+val REAL_INF_LT = store_thm
+  ("REAL_INF_LT",
+   ``!p z. (?x. p x) /\ inf p < z ==> (?x. p x /\ x < z)``,
+   RW_TAC boolSimps.bool_ss []
+   THEN (SUFF_TAC ``~(!x. p x ==> ~(x < z))`` THEN1 PROVE_TAC [])
+   THEN REWRITE_TAC [GSYM real_lte]
+   THEN STRIP_TAC
+   THEN Q.PAT_ASSUM `inf p < z` MP_TAC
+   THEN RW_TAC boolSimps.bool_ss [GSYM real_lte]
+   THEN MATCH_MP_TAC REAL_IMP_LE_INF
+   THEN PROVE_TAC []);
+
+val REAL_INF_CLOSE = store_thm
+  ("REAL_INF_CLOSE",
+   ``!p e. (?x. p x) /\ 0 < e ==> (?x. p x /\ x < inf p + e)``,
+   RW_TAC boolSimps.bool_ss []
+   THEN MATCH_MP_TAC REAL_INF_LT
+   THEN (CONJ_TAC THEN1 PROVE_TAC [])
+   THEN RW_TAC boolSimps.bool_ss [REAL_LT_ADDR]);
+
+(* ------------------------------------------------------------------------- *)
 (* Theorems to put in the real simpset                                       *)
 (* ------------------------------------------------------------------------- *)
 
