@@ -236,12 +236,6 @@ in
   SYSTEML (MOSMLCOMP::args)
 end;
 
-val _ =
-  if quit_on_failure andalso allfast then
-    warn "quit on (tactic) failure ignored for fast built theories"
-  else
-    ()
-
 fun die_with message = let
   open TextIO
 in
@@ -315,7 +309,18 @@ val additional_includes =
 val hmake_preincludes = includify (envlist "PRE_INCLUDES")
 val hmake_no_overlay = member "NO_OVERLAY" hmake_options
 val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
+val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
+
+val quit_on_failure = quit_on_failure orelse hmake_qof
+val _ =
+  if quit_on_failure andalso allfast then
+    warn "quit on (tactic) failure ignored for fast built theories"
+  else
+    ()
+
+
+
 
 val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
 val actual_overlay =

@@ -477,12 +477,12 @@ the core distribution if they choose as the compiler will find their
 own code before the distribution's.
 
 The \texttt{OPTIONS} variable is used for the specification of
-options.  There are currently only two possible (others are ignored):
-\texttt{NO\_SIGOBJ} and \texttt{NO\_OVERLAY}.  These have the same
-effect as the corresponding command-line options. The
-\texttt{EXTRA\_CLEANS} variable is used to specify the name of
-additional files that should be deleted when a \texttt{Holmake clean}
-command is issued.
+options.  There are currently just three possible (others are
+ignored): \texttt{NO\_SIGOBJ}, \texttt{NO\_OVERLAY}, and
+\texttt{QUIT\_ON\_FAILURE}.  These have the same effect as the
+corresponding command-line options. The \texttt{EXTRA\_CLEANS}
+variable is used to specify the name of additional files that should
+be deleted when a \texttt{Holmake clean} command is issued.
 
 Within a command, the variable \texttt{\$<} is used to stand for the
 name of the first dependency of the rule.  The variable \texttt{\$@} is
