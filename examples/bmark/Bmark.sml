@@ -237,7 +237,7 @@ val SUC_SUB1  = arithmeticTheory.SUC_SUB1;
 val SUB       = arithmeticTheory.SUB;
 
 val MULT_FUN_CURRY = new_recursive_definition
-   {name = "MULT_FUN_CURRY",fixity = Prefix, rec_axiom = num_Axiom,
+   {name = "MULT_FUN_CURRY", rec_axiom = num_Axiom,
     def = --`(MULT_FUN_CURRY 0 i1 i2 m t =
                   (t => (m,0,t) | ((i1=0)=>m|i2+m),0,T))
              /\
