@@ -106,11 +106,7 @@ fun html (name,sectionl) ostrm =
        out"\">HOL</A>&nbsp;&nbsp;";
        out release; out "</BODY></HTML>\n")
 
-     fun drop_structpart [] = []
-       | drop_structpart (FIELD("STRUCTURE", _) :: tl) = tl
-       | drop_structpart (h::t) = h :: drop_structpart t
-
-     val sectionl = drop_structpart (tl sectionl)
+     val sectionl = tl sectionl
 
   in
      front_matter name (hd sectionl);

@@ -239,13 +239,14 @@ fun install_structure_part fname sections = let
                         else true
          | _ => raise ParseError "Ill-formed \\STRUCTURE section")
     | _::t => has_struct_section t
-  fun insert2 x [] = [x]
-    | insert2 x (h::t) = h::x::t
+  fun insert3 x [] = [x]
+    | insert3 x [y] = [y, x]
+    | insert3 x (h1::h2::t) = h1::h2::x::t
   val name_parts = String.tokens (equal #".") (#file (Path.splitDirFile fname))
 in
   if not (has_struct_section sections) andalso length name_parts = 3
   then
-    insert2 (FIELD("STRUCTURE", [TEXT (all (hd name_parts))])) sections
+    insert3 (FIELD("STRUCTURE", [TEXT (all (hd name_parts))])) sections
   else sections
 end
 
@@ -280,6 +281,12 @@ fun check_char_section s =
 
 fun final_char_check slist = (List.app check_char_section slist; slist)
 
+(* check that the second field is the "TYPE" one *)
+fun check_type_field2 [] = raise ParseError "Empty field list!"
+  | check_type_field2 [x] = raise ParseError "Only one field!"
+  | check_type_field2 (x as (_::TYPE _::_)) = x
+  | check_type_field2 _ = raise ParseError "\\TYPE field not second"
+
 fun parse_file docfile = let
   fun db_out (BRKT ss) = BRKT (unescape_braces ss)
     | db_out (XMPL ss) = XMPL (unescape_braces ss)
@@ -301,6 +308,7 @@ fun parse_file docfile = let
         FIELD (tag, trimws (List.map db_out (paragraphs (markup ss))))
   val firstpass = List.map section (to_sections (fetch_contents docfile))
   val finalisation = final_char_check o
+                     check_type_field2 o
                      install_structure_part docfile o
                      install_doc_part docfile
 in
