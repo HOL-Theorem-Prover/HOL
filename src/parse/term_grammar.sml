@@ -5,6 +5,7 @@ val fnapp_special = "_ fnapp"
 val bracket_special = "_ bracket"
 val rec_special = "_ record select"
 val vs_cons_special = " _ vs cons"
+val resquan_special = " _ res quan special"
 
 fun reltoString (TOK s) = s
   | reltoString TM = "TM"
@@ -21,7 +22,7 @@ datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
 datatype suffix_rule = STD_suffix of rule_record list | TYPE_annotation
 datatype infix_rule =
   STD_infix of rule_record list * associativity |
-  RESQUAN of string list
+  RESQUAN_OP
 
 type listspec =
   {separator : string, leftdelim : string, rightdelim : string,
@@ -39,7 +40,8 @@ type grammar = {rules : (int option * grammar_rule) list,
                 specials : {type_intro : string,
                             lambda : string,
                             endbinding : string,
-                            restr_binders : (binder * string) list},
+                            restr_binders : (binder * string) list,
+                            res_quanop : string},
                 numeral_info : (char * string option) list}
 
 fun specials (G: grammar) = #specials G
@@ -52,20 +54,22 @@ fun fupdate_specials f {rules, specials, numeral_info} =
 fun fupdate_numinfo f {rules, specials, numeral_info} =
   {rules = rules, specials = specials, numeral_info = f numeral_info}
 
-fun update_restr_binders rb {lambda, endbinding, type_intro, restr_binders} =
+fun update_restr_binders rb
+  {lambda, endbinding, type_intro, restr_binders, res_quanop} =
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
-   restr_binders = rb}
+   restr_binders = rb, res_quanop = res_quanop}
 
-fun fupdate_restr_binders f {lambda, endbinding, type_intro, restr_binders} =
+fun fupdate_restr_binders f
+  {lambda, endbinding, type_intro, restr_binders, res_quanop} =
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
-   restr_binders = f restr_binders}
+   restr_binders = f restr_binders, res_quanop = res_quanop}
 
 fun map_rrfn_rule f r =
   case r of
     PREFIX (STD_prefix rlist) => PREFIX (STD_prefix (map f rlist))
   | PREFIX (BINDER _) => r
   | INFIX (STD_infix (rlist, a)) => INFIX (STD_infix (map f rlist, a))
-  | INFIX (RESQUAN _) => r
+  | INFIX RESQUAN_OP => r
   | SUFFIX (STD_suffix rlist) => SUFFIX (STD_suffix (map f rlist))
   | SUFFIX TYPE_annotation => r
   | CLOSEFIX rlist => CLOSEFIX (map f rlist)
@@ -112,17 +116,7 @@ in
   binders0 (#rules G) []
 end
 
-fun resquans (G: grammar) = let
-  fun recurse [] acc = Lib.mk_set acc
-    | recurse ((_, x)::xs) acc = let
-      in
-        case x of
-          INFIX (RESQUAN slist) => recurse xs (slist @ acc)
-        | _ => recurse xs acc
-      end
-in
-  recurse (#rules G) []
-end
+fun resquan_op (G: grammar) = #res_quanop (specials G)
 
 fun update_assoc (item as (k,v)) alist =
   case alist of
@@ -143,7 +137,7 @@ end
 
 datatype stack_terminal =
   STD_HOL_TOK of string | BOS | EOS | Id  | TypeColon | TypeTok | EndBinding |
-  VS_cons
+  VS_cons | ResquanOpTok
 
 fun STtoString (G:grammar) x =
   case x of
@@ -155,11 +149,13 @@ fun STtoString (G:grammar) x =
   | TypeColon => #type_intro (#specials G)
   | TypeTok => "<type>"
   | EndBinding => #endbinding (#specials G)
+  | ResquanOpTok => #res_quanop (#specials G)^" (res quan operator)"
 
 val std_binder_precedence = 0
 
 val stdhol : grammar =
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
+            (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, VSCONS),
             (SOME 1000, SUFFIX TYPE_annotation),
             (SOME 2000, FNAPP),
@@ -167,7 +163,7 @@ val stdhol : grammar =
                               elements = [TOK "(", TM, TOK ")"],
                               preferred = false}])],
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
-               restr_binders = []},
+               restr_binders = [], res_quanop = "::"},
    numeral_info = []}
 
 fun grammar_tokens G = let
@@ -187,7 +183,7 @@ fun grammar_tokens G = let
     | rule_specials (SUFFIX TYPE_annotation) = add (#type_intro (#specials G))
     | rule_specials (INFIX(STD_infix (rules, _))) =
         mmap (specials_from_elm o #elements) rules
-    | rule_specials (INFIX(RESQUAN slist)) = mmap add slist
+    | rule_specials (INFIX RESQUAN_OP) = ok
     | rule_specials (CLOSEFIX rules) =
         mmap (specials_from_elm o #elements) rules
     | rule_specials (LISTRULE rlist) = let
@@ -301,8 +297,7 @@ fun merge_rules (r1, r2) =
            priv_a2string a1^" and "^priv_a2string a2^") at same level")
       else
         INFIX(STD_infix(Lib.union i1 i2, a1))
-  | (INFIX (RESQUAN sl1), INFIX(RESQUAN sl2)) =>
-        INFIX(RESQUAN(Lib.union sl1 sl2))
+  | (INFIX RESQUAN_OP, INFIX RESQUAN_OP) => INFIX(RESQUAN_OP)
   | (CLOSEFIX c1, CLOSEFIX c2) => CLOSEFIX (c1 @ c2)
   | (FNAPP, FNAPP) => FNAPP
   | (LISTRULE lr1, LISTRULE lr2) => LISTRULE (lr1 @ lr2)
@@ -336,7 +331,6 @@ fun null_rule r =
   | PREFIX (STD_prefix slist) => null slist
   | PREFIX (BINDER slist) => null slist
   | INFIX (STD_infix(slist, _)) => null slist
-  | INFIX (RESQUAN slist) => null slist
   | CLOSEFIX slist => null slist
   | _ => false
 
@@ -362,8 +356,6 @@ in
     SUFFIX (STD_suffix slist) => SUFFIX (STD_suffix (List.filter rr_ok slist))
   | INFIX (STD_infix(slist, assoc)) =>
       INFIX(STD_infix (List.filter rr_ok slist, assoc))
-  | INFIX (RESQUAN slist) =>
-      INFIX(RESQUAN (List.filter (fn s' => s' <> s) slist))
   | PREFIX (STD_prefix slist) => PREFIX (STD_prefix (List.filter rr_ok slist))
   | PREFIX (BINDER slist) =>
       PREFIX (BINDER (List.filter (not o stringbinder) slist))

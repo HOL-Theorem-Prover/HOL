@@ -84,7 +84,6 @@ in
     val give_num_priority : char -> unit
     val remove_numeral_form : char -> unit
     val associate_restriction : (string * string) -> unit
-    val add_resquan_operator : (string * int) -> unit
     val prefer_form_with_tok : {term_name : string, tok : string} -> unit
     val clear_prefs_for_term : string -> unit
     val set_fixity : string -> fixity -> unit
@@ -104,7 +103,6 @@ in
     val temp_give_num_priority : char -> unit
     val temp_remove_numeral_form : char -> unit
     val temp_associate_restriction : (string * string) -> unit
-    val temp_add_resquan_operator : (string * int) -> unit
     val temp_prefer_form_with_tok : {term_name : string, tok : string} -> unit
     val temp_clear_prefs_for_term : string -> unit
     val temp_set_fixity : string -> fixity -> unit

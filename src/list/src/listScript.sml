@@ -114,10 +114,7 @@ new_definition("CONS_DEF",
 
 val _ = add_listform {separator = ";", leftdelim = "[", rightdelim = "]",
                       cons = "CONS", nilstr = "NIL"};
-(*
-val _ = add_rule ("CONS", term_grammar.Infix (HOLgrammars.RIGHT, 800),
-                  [term_grammar.TOK "::"])
-*)
+val _ = add_rule ("CONS", Infixr 300, [term_grammar.TOK "::"])
 
 (* ---------------------------------------------------------------------*)
 (* Now, prove the axiomatization of lists.				*)

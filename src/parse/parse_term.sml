@@ -74,11 +74,11 @@ exception PrecConflict of stack_terminal * stack_terminal
 fun mk_prec_matrix G = let
   exception NotFound
   exception BadTokList
-  val {lambda, endbinding, type_intro, restr_binders} = specials G
-  val resquans = resquans G
+  val {lambda, endbinding, type_intro, restr_binders, ...} = specials G
   val specs = grammar_tokens G
   val Grules = term_grammar.grammar_rules G
-  val alltoks = VS_cons :: STD_HOL_TOK fnapp_special :: all_tokens specs
+  val alltoks =
+    ResquanOpTok :: VS_cons :: STD_HOL_TOK fnapp_special :: all_tokens specs
   val matrix:(stack_terminal * stack_terminal, order) Polyhash.hash_table =
     Polyhash.mkPolyTable (length specs * length specs, NotFound)
   fun insert k v = let
@@ -112,7 +112,7 @@ fun mk_prec_matrix G = let
     | SUFFIX (STD_suffix rules) => app (insert_oplist o #elements) rules
     | SUFFIX TYPE_annotation => ()
     | INFIX (STD_infix (rules, _)) => app (insert_oplist o #elements) rules
-    | INFIX (RESQUAN _) => ()
+    | INFIX RESQUAN_OP => ()
     | CLOSEFIX rules => app (insert_oplist o #elements) rules
     | LISTRULE rlist => let
         fun process r = let
@@ -172,11 +172,11 @@ fun mk_prec_matrix G = let
   val first_tok = hd o List.mapPartial (fn TOK s => SOME s | _ => NONE)
   val last_tok = first_tok o List.rev
   val all_lhs =
-    TypeColon::BOS::VS_cons::
-    map STD_HOL_TOK (fnapp_special::(map_rule first_tok Grules @ resquans))
+    TypeColon::BOS::VS_cons::ResquanOpTok::
+    map STD_HOL_TOK (fnapp_special::(map_rule first_tok Grules))
   val all_rhs =
-    TypeTok::EndBinding::EOS::VS_cons::
-    map STD_HOL_TOK (fnapp_special::(map_rule last_tok Grules @ resquans))
+    TypeTok::EndBinding::EOS::VS_cons::ResquanOpTok::
+    map STD_HOL_TOK (fnapp_special::(map_rule last_tok Grules))
   (* Between things that are equal, the thing on the left is less than
      all possible left hand sides, and the thing on the right is
      greater than all possible right hand sides. *)
@@ -208,7 +208,7 @@ fun mk_prec_matrix G = let
   fun right_grabbing_elements rule =
     case rule of
       INFIX(STD_infix(rules, _)) => map rule_right rules
-    | INFIX(RESQUAN slist) => map STD_HOL_TOK slist
+    | INFIX RESQUAN_OP => [ResquanOpTok]
     | PREFIX (BINDER _) => [STD_HOL_TOK endbinding]
     | PREFIX (STD_prefix rules) => map rule_right rules
     | FNAPP => [STD_HOL_TOK fnapp_special]
@@ -217,7 +217,7 @@ fun mk_prec_matrix G = let
   fun left_grabbing_elements rule =
     case rule of
       INFIX (STD_infix(rules, _)) => map rule_left rules
-    | INFIX (RESQUAN slist) => map STD_HOL_TOK slist
+    | INFIX RESQUAN_OP => [ResquanOpTok]
     | SUFFIX (STD_suffix rules) => map rule_left rules
     | SUFFIX TYPE_annotation => [TypeColon]
     | FNAPP => [STD_HOL_TOK fnapp_special]
@@ -260,15 +260,13 @@ fun mk_prec_matrix G = let
           end
         | NONASSOC => ()
       end
-    | INFIX (RESQUAN slist) => let
+    | INFIX RESQUAN_OP => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
-        app (fn lower_right =>
-             app (fn s => insert(lower_right, STD_HOL_TOK s) GREATER) slist)
+        app (fn lower_right => insert(lower_right, ResquanOpTok) GREATER)
         lower_rights;
-        app (fn lower_left =>
-             app (fn s => insert(STD_HOL_TOK s, lower_left) LESS) slist)
+        app (fn lower_left => insert(ResquanOpTok, lower_left) LESS)
         lower_lefts
       end
     | PREFIX (STD_prefix rules) => let
@@ -372,7 +370,7 @@ fun mk_ruledb (G:grammar) = let
   fun addrule rule =
     case rule of
       INFIX (STD_infix(rules, _)) => app (insert_rule infix_rule infix_f) rules
-    | INFIX (RESQUAN _) => ()
+    | INFIX RESQUAN_OP => ()
     | PREFIX (STD_prefix rules) => app (insert_rule prefix_rule prefix_f) rules
     | PREFIX (BINDER s) => ()
     | SUFFIX (STD_suffix rules) => app (insert_rule suffix_rule suffix_f) rules
@@ -475,9 +473,8 @@ fun findpos P [] = NONE
 
 fun parse_term (G : grammar) typeparser = let
   val Grules = grammar_rules G
-  val {type_intro, lambda, endbinding, restr_binders} = specials G
+  val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
   val num_info = numeral_info G
-  val resquans = term_grammar.resquans G
   val closed_lefts = find_prefix_lhses G
   val ty_annote_prec = let
     val ty_annote =
@@ -492,17 +489,18 @@ fun parse_term (G : grammar) typeparser = let
   fun itemP P = lex >- (fn t => if P t then return t else fail)
   fun item t = itemP (fn t' => t = t')
 
-  fun transform (t:'a lookahead_item option) =
+  fun transform in_vs (t:'a lookahead_item option) =
     case t of
       NONE => EOS
     | SOME (Token x) => let
       in
         case x of
-          Ident _ =>     Id
+          Ident s => if s = res_quanop andalso in_vs then ResquanOpTok else Id
         | Symbol s =>
             if s = type_intro then TypeColon
             else if s = vs_cons_special then VS_cons
             else if s = endbinding then EndBinding
+            else if s = res_quanop andalso in_vs then ResquanOpTok
                  else (STD_HOL_TOK s)
         | Antiquote a => Id
         | Numeral _ => Id
@@ -800,7 +798,7 @@ fun parse_term (G : grammar) typeparser = let
              repeatn 3 pop >> push (NonTermVS [VPAIR(hd vsl2, hd vsl1)],
                                     Token (Ident "XXX"))
        end
-    | ((NonTerminal t, _)::(Terminal(STD_HOL_TOK r), _)::
+    | ((NonTerminal t, _)::(Terminal ResquanOpTok, _)::
        (NonTermVS vsl, _)::rest) => let
       in
          repeatn 3 pop >> push (NonTermVS (map (fn v => RESTYPEDV(v,t)) vsl),
@@ -844,24 +842,26 @@ fun parse_term (G : grammar) typeparser = let
 
   val shift =
     current_la >-
-    (fn la =>
-     case la of
-       [] => fail
-     | (x::xs) => let
-         val terminal = transform (SOME x)
-       in
-         push (Terminal terminal, x) >>
-         (if null xs then get_item else set_la xs) >>
-         (case terminal of
-            STD_HOL_TOK s => if is_binder s then into_vs
-                             else if member s resquans then outof_vs else ok
-          | EndBinding => outof_vs
-          | _ => ok)
-       end)
+    (fn la => invstructp >-
+     (fn in_vs =>
+      case la of
+        [] => fail
+      | (x::xs) => let
+          val terminal = transform in_vs (SOME x)
+        in
+          push (Terminal terminal, x) >>
+          (if null xs then get_item else set_la xs) >>
+             (case terminal of
+                STD_HOL_TOK s => if is_binder s then into_vs
+                                 else ok
+              | ResquanOpTok => outof_vs
+              | EndBinding => outof_vs
+              | _ => ok)
+        end))
 
 
-  fun doit (tt, (top_item, top_token)) = let
-    val input_term = transform tt
+  fun doit (tt, (top_item, top_token), in_vs) = let
+    val input_term = transform in_vs tt
     val top = dest_terminal top_item
     val ttt = Terminal input_term
     fun less_action stack =
@@ -934,7 +934,8 @@ fun parse_term (G : grammar) typeparser = let
   val basic_action =
     current_input >-                (fn tt (* term token *) =>
     topterm >-                      (fn top =>
-    doit (tt, top)))
+    invstructp >-                   (fn invs =>
+    doit (tt, top, invs))))
 in
   push (Terminal BOS, Token (Ident "XXX")) >> get_item >>
   mwhile (current_input >-
@@ -970,7 +971,6 @@ infix Gmerge
 
 val stdhol = add_binder term_grammar.stdhol ("!", 0)
 val stdhol = add_rule stdhol (",", Infix(RIGHT, 60), [TOK ","])
-val stdhol = add_grule stdhol (SOME 2, INFIX(RESQUAN ["::"]))
 val stdhol = associate_restriction stdhol (LAMBDA, "RES_ABSTRACT")
 val stdhol = associate_restriction stdhol (BinderString "!", "RES_FORALL")
 

@@ -175,7 +175,7 @@ fun print_type ty = Portable.output(Portable.std_out, type_to_string ty);
 
 local
   (* terms *)
-  open parse_term
+  open parse_term term_grammar
   fun restr_binding tyvs b tm s E = let
     open Parse_support
     (* have to return a (function of type preterm -> preterm) * env *)
@@ -313,6 +313,7 @@ local
 in
 
   fun do_parse G ty = let
+    open optmonad
     val pt = parse_term G ty
       handle PrecConflict(st1, st2) =>
         raise ERROR "Term"
@@ -525,22 +526,6 @@ in
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
-  fun temp_add_resquan_operator (s, p) = let
-    open term_grammar
-  in
-    the_term_grammar :=
-    add_grule (term_grammar()) (SOME p, INFIX(RESQUAN [s]));
-    term_grammar_changed := true
-  end
-
-  fun add_resquan_operator (s,p) = let
-    val cmdstring =
-      "val _ = Parse.temp_add_resquan_operator ("^quote s^", "^Int.toString p^
-      ");"
-  in
-    temp_add_resquan_operator (s,p);
-    adjoin_to_theory (toThyaddon cmdstring)
-  end
 
   fun temp_remove_term s = let
   in

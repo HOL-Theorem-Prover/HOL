@@ -68,7 +68,7 @@ val COND_DEF =
  new_definition
    ("COND_DEF", Term `COND = \t t1 t2. @x:'a. ((t=T) ==> (x=t1)) /\
                                               ((t=F) ==> (x=t2))`);
-val _ = add_rule("COND", Infix (HOLgrammars.RIGHT, 4),
+val _ = add_rule("COND", Infix (HOLgrammars.RIGHT, 3),
                  [TOK "=>", TM, TOK "|"]);
 val _ = add_rule("COND", TruePrefix 70,
                  [TOK "if", TM, TOK "then", TM, TOK "else"]);

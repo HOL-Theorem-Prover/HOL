@@ -6,6 +6,7 @@ datatype rule_element = TOK of string | TM
 val fnapp_special : string
 val bracket_special : string
 val vs_cons_special : string
+val resquan_special : string
 val rec_special : string
 val std_binder_precedence : int
 
@@ -20,7 +21,7 @@ datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
 datatype suffix_rule = STD_suffix of rule_record list | TYPE_annotation
 datatype infix_rule =
   STD_infix of rule_record list * associativity |
-  RESQUAN of string list
+  RESQUAN_OP
 
 type listspec =
   {separator : string, leftdelim : string, rightdelim : string,
@@ -41,14 +42,15 @@ val grammar_rules : grammar -> grammar_rule list
 val specials : grammar -> {type_intro : string,
                            lambda     : string,
                            endbinding : string,
-                           restr_binders : (binder * string) list}
+                           restr_binders : (binder * string) list,
+                           res_quanop : string}
 val numeral_info : grammar -> (char * string option) list
 
 val binders : grammar -> string list
 val is_binder : grammar -> string -> bool
 val binder_to_string : grammar -> binder -> string
 
-val resquans : grammar -> string list
+val resquan_op : grammar -> string
 val associate_restriction : grammar -> binder * string -> grammar
 
 val compatible_listrule :
@@ -57,7 +59,7 @@ val compatible_listrule :
 
 datatype stack_terminal =
   STD_HOL_TOK of string | BOS | EOS | Id  | TypeColon | TypeTok | EndBinding |
-  VS_cons
+  VS_cons | ResquanOpTok
 
 val STtoString : grammar -> stack_terminal -> string
 val stdhol : grammar

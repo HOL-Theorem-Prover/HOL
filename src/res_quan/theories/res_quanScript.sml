@@ -23,7 +23,6 @@ val _ = associate_restriction ("\\", "RES_ABSTRACT");
 val _ = associate_restriction ("!",  "RES_FORALL");
 val _ = associate_restriction ("?",  "RES_EXISTS");
 val _ = associate_restriction ("@",  "RES_SELECT");
-val _ = add_resquan_operator  ("::", 2)
 
 (* ===================================================================== *)
 (* Properties of restricted quantification.                              *)

@@ -85,7 +85,7 @@ in
   | SUFFIX (STD_suffix list) => map suffix list
   | SUFFIX TYPE_annotation => []
   | INFIX (STD_infix(list, a)) => map (mkifix a) list
-  | INFIX (RESQUAN slist) => map (fn s => (s, INFIX (RESQUAN [s]))) slist
+  | INFIX RESQUAN_OP => [(resquan_special, grule)]
   | CLOSEFIX lst => map closefix lst
   | FNAPP => [(fnapp_special, FNAPP)]
   | VSCONS => [(vs_cons_special, VSCONS)]
@@ -202,7 +202,7 @@ fun rule_to_rr rule =
   | _ => []
 
 fun pp_term (G : grammar) TyG = let
-  val {restr_binders,lambda,endbinding,type_intro} = specials G
+  val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val spec_table = let
     val toks = grammar_tokens G
     val table = Polyhash.mkPolyTable(50, Fail "")
@@ -211,7 +211,6 @@ fun pp_term (G : grammar) TyG = let
     table
   end
   val num_info = numeral_info G
-  val resquan_op = case (resquans G) of [] => NONE | (x::_) => SOME x
   val rule_table = Polyhash.mkPolyTable(50, Fail "")
   fun insert (grule, n) = let
     val keys_n_rules = grule_term_names G grule
@@ -234,9 +233,10 @@ fun pp_term (G : grammar) TyG = let
     handle Option =>
       raise PP_ERR "pp_term" "Grammar has no function application"
   val resquan_op_prec =
-    case resquan_op of
-      NONE => NONE
-    | SOME s => SOME (#1 (hd (valOf (lookup_term s))))
+    case (lookup_term resquan_special) of
+      SOME [] => raise Fail "term_pp : This really shouldn't happen"
+    | SOME (x::xs) => SOME (#1 x)
+    | NONE => NONE
   val vscons_prec = #1 (hd (valOf (lookup_term vs_cons_special)))
     handle Option =>
       raise PP_ERR "pp_term" "Grammar has no vstruct cons"
@@ -244,10 +244,6 @@ fun pp_term (G : grammar) TyG = let
     case resquan_op_prec of
       NONE => false
     | SOME p => p < vscons_prec
-  val _ =
-    null restr_binders orelse isSome resquan_op orelse
-    raise PP_ERR "pp_term"
-      "Grammar has restricted binders but no res. quan operator (e.g. ::)"
   fun assoc s [] = raise PP_ERR "assoc" "element not found"
     | assoc s (r::rs) = if #term_name r = s then #elements r else assoc s rs
   fun pr_term binderp showtypes vars_seen pps tm lgrav rgrav depth = let
@@ -279,7 +275,7 @@ fun pp_term (G : grammar) TyG = let
           begin_block CONSISTENT 0;
           add_string "(";
           pr_vstruct (Simple Bvar);
-          add_string (valOf (resquan_op));
+          add_string (res_quanop);
           add_break(0,2);
           pr_term Restrictor Top Top (depth - 1);
           add_string ")";
@@ -325,7 +321,7 @@ fun pp_term (G : grammar) TyG = let
        list of vstructs *)
     fun pr_vstructl vsl =
       case can_print_vstructl vsl of
-        SOME r => pr_res_vstructl r (valOf resquan_op) vsl
+        SOME r => pr_res_vstructl r res_quanop vsl
       | _ => let
         in
           begin_block INCONSISTENT 2;
@@ -336,10 +332,8 @@ fun pp_term (G : grammar) TyG = let
     fun pr_abs tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val restr_binder =
-        case resquan_op of
-          NONE => NONE
-        | SOME _ => find_partial (fn (b,s) => if b = LAMBDA then SOME s
-                                              else NONE) restr_binders
+        find_partial (fn (b,s) => if b = LAMBDA then SOME s else NONE)
+        restr_binders
       val (bvars, body) = strip_vstructs NONE restr_binder tm
       val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
       val old_seen = !bvars_seen
@@ -488,7 +482,7 @@ fun pp_term (G : grammar) TyG = let
           pr_term Rand prec rprec (depth - 1);
           end_block (); pend addparens
         end
-      | INFIX(RESQUAN _) => raise Fail "Res. quans shouldn't arise"
+      | INFIX RESQUANOP => raise Fail "Res. quans shouldn't arise"
       | SUFFIX (STD_suffix lst) => let
           val elements = assoc fname lst
           val addparens =
@@ -532,10 +526,7 @@ fun pp_term (G : grammar) TyG = let
       | PREFIX (BINDER _) => let
           fun find (BinderString bs, s) = if bs = fname then SOME s else NONE
             | find _ = NONE
-          val restr_binder =
-            case resquan_op of
-              NONE => NONE
-            | SOME _ => find_partial find restr_binders
+          val restr_binder = find_partial find restr_binders
           val (bvs, body) = strip_vstructs (SOME fname) restr_binder tm
           val bvars_seen_here = List.concat (map (free_vars o bv2term) bvs)
           val old_seen = !bvars_seen
@@ -765,7 +756,7 @@ fun pp_term (G : grammar) TyG = let
                   case rule of
                     INFIX(STD_infix(rrlist, _)) =>
                       numTMs (#elements (hd rrlist)) + 1 = length args
-                  | INFIX (RESQUAN _) => raise Fail "Can't happen 90212"
+                  | INFIX RESQUAN_OP => raise Fail "Can't happen 90212"
                   | PREFIX (STD_prefix list) =>
                       numTMs (#elements (hd list)) = length args
                   | PREFIX (BINDER _) => my_is_abs Rand andalso length args = 0
