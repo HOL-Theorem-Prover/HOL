@@ -1,6 +1,6 @@
 \DOC new_specification
 
-\TYPE{new_specification : string * string list * thm  -> thm}
+\TYPE {new_specification : string * string list * thm  -> thm}
 
 \SYNOPSIS
 Introduce a constant or constants satisfying a given property.
