@@ -475,18 +475,12 @@ fun fromFile f =
 (*** Construct primary dependencies *)
 (* Next, construct the primary dependency chain, for a given target *)
 fun primary_dependent f =
-  case extra_deps (fromFile f) of
-    SOME [] => NONE
-  | SOME (h::_) => SOME (toFile h)
-  | _ => let
-    in
-      case f of
-        UO c => SOME (SML c)
-      | UI c => SOME (SIG c)
-      | SML (Theory s) => SOME (SML (Script s))
-      | SIG (Theory s) => SOME (SML (Script s))
-      | _ => NONE
-    end
+    case f of
+      UO c => SOME (SML c)
+    | UI c => SOME (SIG c)
+    | SML (Theory s) => SOME (SML (Script s))
+    | SIG (Theory s) => SOME (SML (Script s))
+    | _ => NONE
 
 (*** Construction of secondary dependencies *)
 
@@ -603,7 +597,7 @@ end
 
 fun get_direct_dependencies (f : File) : File list = let
   val fname = fromFile f
-  val arg = holdep_arg f
+  val arg = holdep_arg f  (* arg is file to analyse for dependencies *)
 in
   if isSome arg then let
     val arg = valOf arg
@@ -647,7 +641,10 @@ in
       val file_dependencies =
         case actual_overlay of
           NONE => file_dependencies0
-        | SOME s => [toFile (fullPath [SIGOBJ, s])] @ file_dependencies0
+        | SOME s => if isSome (holdep_arg f) then
+                      toFile (fullPath [SIGOBJ, s]) :: file_dependencies0
+                    else
+                      file_dependencies0
     in
       case f of
         SML (Theory x) => let
@@ -884,20 +881,36 @@ in
         else
           cache_insert (target, false)
       end
-      else
-        if FileSys.access(fromFile target, [FileSys.A_READ]) then
-          (print (fromFile target ^ " found and OK.\n");
-           cache_insert (target, true))
-        else let
-          fun cantbuild () =
-            (warn ("Don't know how to make "^fromFile target^"\n");
-             cache_insert (target, false))
+      else let
+          val secondaries = get_dependencies target
+          val _ =
+            (print ("Secondary dependencies for "^fromFile target^" are: ");
+             print (print_list (map fromFile secondaries) ^ "\n"))
+          val tgt_str = fromFile target
         in
-          case extra_commands (fromFile target) of
-            SOME [] => cantbuild()
-          | SOME cs =>
-              run_extra_commands (fromFile target) cs = Process.success
-          | NONE => cantbuild()
+          if null secondaries then
+            case extra_commands tgt_str of
+              NONE => if FileSys.access(tgt_str, [FileSys.A_READ]) then
+                        cache_insert(target, true)
+                      else
+                        (warn ("*** No rule to make target `"^tgt_str^"'.\n");
+                         cache_insert(target, false))
+            | SOME cs => cache_insert(target, run_extra_commands tgt_str cs =
+                                              Process.success)
+          else if List.all (make_up_to_date (target::ctxt)) secondaries then
+            if List.exists
+               (fn dep => (fromFile dep) forces_update_of (fromFile target))
+               secondaries
+            then
+              case extra_commands (fromFile target) of
+                NONE => raise Fail "Impossible situation #1"
+              | SOME cs => cache_insert(target,
+                                        run_extra_commands tgt_str cs =
+                                        Process.success)
+            else
+              cache_insert(target, true)
+          else
+            cache_insert(target, false)
         end
 end handle CircularDependency => cache_insert (target, false)
          | Fail s => raise Fail s

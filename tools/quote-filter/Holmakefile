@@ -1,15 +1,10 @@
+OPTIONS = NO_OVERLAY
 
 quote-filter: quote-filter.uo filter.uo
 	MOSMLC -o quote-filter quote-filter.uo
 
-quote-filter.uo: quote-filter.sml filter.uo
-	MOSMLC -c quote-filter.sml
-
 filter.sml : filter.lex
 	MOSMLLEX filter.lex
-
-filter.uo: filter.sml
-	MOSMLC -c filter.sml
 
 Clean:
 	/bin/rm -f filter.uo filter.ui filter.sml quote-filter.uo filter.ui quote-filter
