@@ -2558,6 +2558,21 @@ traceBack : varmap
 (*****************************************************************************)
 $bnind&findTrace%
 findTrace : varmap -> thm -> thm -> thm -> thm * thm list * thm
+
+(*****************************************************************************)
+(* If t is satifiable (i.e. b is not FALSE)                                  *)
+(*                                                                           *)
+(*            a vm t |--> b                                                  *)
+(*      --------------------------                                           *)
+(*      a U {v1=c1,...,vn=cn} |- t                                           *)
+(*                                                                           *)
+(* Similar to BddFindModel followed by BddThmOracle, but checks the          *)
+(* assignment found by satone using proof, so is pure                        *)
+(* (i.e. result not tagged with HolBdd)                                      *)
+(*                                                                           *)
+(*****************************************************************************)
+$bnind&findModel%
+findModel : term_bdd -> thm
 \end{Verbatim}
 \end{footnotesize}
 
@@ -2569,9 +2584,6 @@ by the derived rules in \t{DerivedBddRules}. The signature file
 
 \begin{footnotesize}
 \begin{Verbatim}[commandchars=\$\&\%]
-
-
-
 signature MachineTransitionTheory =
 sig
   type thm = Thm.thm

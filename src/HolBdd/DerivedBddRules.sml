@@ -853,6 +853,45 @@ fun findTrace vm Rth Pth Qth =
  in
   (initth, transthl, finalth)
  end;
+
+
+(*****************************************************************************)
+(* If t is satifiable (i.e. b is not FALSE)                                  *)
+(*                                                                           *)
+(*            a vm t |--> b                                                  *)
+(*      --------------------------                                           *)
+(*      a U {v1=c1,...,vn=cn} |- t                                           *)
+(*                                                                           *)
+(* Similar to BddFindModel followed by BddThmOracle, but checks the          *)
+(* assignment found by satone using CBV_CONV, so is pure                     *)
+(* (i.e. result not tagged with HolBdd)                                      *)
+(*                                                                           *)
+(*****************************************************************************)
+
+exception findModelError;
+
+local
+open computeLib
+val compset = bool_compset()
+in
+fun findModel tb = 
+ let val (ass,vm,t,b) = dest_term_bdd tb
+     val assl         = bdd.getAssignment(bdd.satone b)
+     val setl         = List.map 
+                         (fn (n,tv) => 
+                           ((case assoc2 n vml of 
+                                SOME(s,_) => mk_var(s,bool)
+                              | NONE      => (print "This should not happen!\n";
+                                              raise findModelError)),
+                            if tv then T else F))
+                        assl
+ in
+  EQT_ELIM
+   (RIGHT_CONV_RULE 
+     (CBV_CONV compset)
+     (SUBST_CONV (List.map (fn(l,r) => (l |-> ASSUME(mk_eq(l,r)))) setl) t t))
+ end
+end;
  
 end;
 
