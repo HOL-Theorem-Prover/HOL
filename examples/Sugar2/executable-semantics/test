@@ -1,0 +1,49 @@
+(* -*-sml-*- *)
+(*****************************************************************************)
+(* Test "ExecuteSemantics": a derived fixpoint-style executable semantics    *)
+(*****************************************************************************)
+
+loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
+app load ["bossLib","ExecuteSemanticsTheory","regexpLib","pred_setLib"];
+
+quietdec := true;
+open bossLib FinitePathTheory UnclockedSemanticsTheory ExecuteSemanticsTheory;
+quietdec := false;
+
+val _ = computeLib.add_funs 
+         ([PathTheory.SEL_REC_AUX,
+           UF_SEM_F_UNTIL_REC,
+           UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX,
+           UF_SEM_F_SUFFIX_IMP_FINITE_REC,
+           UF_SEM_F_SUFFIX_IMP_REC]
+          @
+          CONJUNCTS B_SEM
+          @
+          [EVAL_US_SEM]);
+
+val _ = 
+ computeLib.add_convs
+  [(``$IN``,
+    2,
+    (pred_setLib.SET_SPEC_CONV ORELSEC pred_setLib.IN_CONV EVAL))];
+
+EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(f1,f2))``;
+EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL b1, F_BOOL b2))``;
+EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL(B_PROP p1), F_BOOL(B_PROP p2)))``;
+EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
+EVAL ``UF_SEM (FINITE[{1};{1};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
+EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
+
+(* Can't evaluate a variable regular expression
+EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_SUFFIX_IMP(r,f))``;
+EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_SUFFIX_IMP(r,f))``;
+*)
+
+EVAL ``UF_SEM (FINITE[{1};{3};{2}])
+       (F_SUFFIX_IMP (S_BOOL (B_PROP n), f))``;
+
+EVAL
+``UF_SEM (FINITE[{1};{3};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
+
+
+

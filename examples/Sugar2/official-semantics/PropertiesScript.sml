@@ -298,8 +298,9 @@ val NEXT_TRUE_GE =
 (******************************************************************************
 * Structural induction rule for SEREs
 ******************************************************************************)
-val sere_induct =
-  (Q.GEN
+val sere_induct = save_thm
+  ("sere_induct",
+   Q.GEN
     `P`
     (MATCH_MP
      (DECIDE ``(A ==> (B1 /\ B2 /\ B3)) ==> (A ==> B1)``)

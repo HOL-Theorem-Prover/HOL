@@ -1,4 +1,3 @@
-
 (*****************************************************************************)
 (* Create "ExecuteSemantics": a derived fixpoint-style executable semantics  *)
 (*                                                                           *)
@@ -15,10 +14,10 @@
 * Compile using "Holmake -I ../official-semantics -I ../regexp"
 ******************************************************************************)
 (* 
-*)
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
           "PropertiesTheory", "regexpLib"];
+*)
 
 (******************************************************************************
 * Boilerplate needed for compilation
@@ -30,17 +29,17 @@ open HolKernel Parse boolLib;
 ******************************************************************************)
 
 (* 
-*)
 quietdec := true;
+*)
 
 open bossLib metisLib rich_listTheory pred_setLib intLib;
+open regexpTheory matcherTheory;
 open FinitePathTheory PathTheory UnclockedSemanticsTheory
      ClockedSemanticsTheory PropertiesTheory
-open regexpTheory matcherTheory;
 
 (* 
-*)
 quietdec := false;
+*)
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
@@ -77,6 +76,8 @@ val op || = op ORELSE;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;
+
+val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
 (******************************************************************************
 * Start a new theory called "ExecuteSemantics"
@@ -285,6 +286,12 @@ val UF_SEM_F_SUFFIX_IMP_REC =
 (* Converting regexps from SyntaxTheory to regexpTheory.                     *)
 (*---------------------------------------------------------------------------*)
 
+val CONCAT_is_CONCAT = prove
+  (``FinitePath$CONCAT = regexp$CONCAT``,
+   RW_TAC std_ss [FUN_EQ_THM]
+   ++ Induct_on `x`
+   ++ RW_TAC std_ss [FinitePathTheory.CONCAT_def, regexpTheory.CONCAT_def]);
+
 val unclocked_def = Define
   `(unclocked (S_BOOL b) = T) /\
    (unclocked (S_CAT (r1, r2)) = unclocked r1 /\ unclocked r2) /\
@@ -305,24 +312,30 @@ val sere2regexp_def = Define
 val sere2regexp = prove
   (``!r l. unclocked r ==> (US_SEM l r = amatch (sere2regexp r) l)``,
    SIMP_TAC std_ss [amatch]
-   ++ Induct_on `r`
-   << [RW_TAC std_ss [US_SEM_def, sem_def, sere2regexp_def, ELEM_EL, EL],
-       Introduce `p = (r1,r2)`
+   ++ INDUCT_THEN sere_induct ASSUME_TAC
+   ++ RW_TAC std_ss
+      [US_SEM_def, sem_def, sere2regexp_def, ELEM_EL, EL, unclocked_def]
+   ++ CONV_TAC (DEPTH_CONV ETA_CONV)
+   ++ RW_TAC std_ss [CONCAT_is_CONCAT]);
 
-   THEN RW_TAC std_ss
-        [US_SEM_def, sem_def, sere2regexp_def, LENGTH_EQ_ONE, ELEM_EL, EL]
-, FinitePathTheory.RESTN_def, ]
+val EVAL_US_SEM = store_thm
+  ("EVAL_US_SEM",
+   ``!l r.
+       US_SEM l r =
+       if unclocked r then amatch (sere2regexp r) l else US_SEM l r``,
+   RW_TAC std_ss [GSYM sere2regexp]);
 
 (* Some examples of using EVAL
-*)
 val _ = computeLib.add_funs 
          ([SEL_REC_AUX,
            UF_SEM_F_UNTIL_REC ,
            UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX,
-           UF_SEM_F_SUFFIX_IMP_FINITE_REC,
-           UF_SEM_F_SUFFIX_IMP_REC]
+           UF_SEM_F_SUFFIX_IMP_FINITE_REC(*,
+           UF_SEM_F_SUFFIX_IMP_REC*)]
           @
-          CONJUNCTS B_SEM);
+          CONJUNCTS B_SEM
+          @
+          [(*EVAL_US_SEM*)]);
 
 val _ = 
  computeLib.add_convs
@@ -337,7 +350,14 @@ EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``
 EVAL ``UF_SEM (FINITE[{1};{1};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
 EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
 
+(* Can't evaluate a variable regular expression
 EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_SUFFIX_IMP(r,f))``;
+*)
+
+EVAL ``UF_SEM (FINITE[{1};{3};{2}])
+       (F_SUFFIX_IMP (S_BOOL (B_PROP n), f))``;
+
+EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
 *)
 
 val _ = export_theory();
