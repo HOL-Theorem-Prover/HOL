@@ -1,10 +1,10 @@
 functor wordFunctorLib (structure wordTheory : sig
   val HB_def : Thm.thm
   val WL_def : Thm.thm
-  val w_0 : Thm.thm
-  val w_1 : Thm.thm
-  val w_T : Thm.thm
-  val MODw_EVAL : Thm.thm
+  val word_0 : Thm.thm
+  val word_1 : Thm.thm
+  val word_T : Thm.thm
+  val MOD_WL_EVAL : Thm.thm
   val MSBn_def : Thm.thm
   val ADD_EVAL2 : Thm.thm
   val MUL_EVAL2 : Thm.thm
@@ -20,9 +20,9 @@ functor wordFunctorLib (structure wordTheory : sig
   val ASR_THM : Thm.thm
   val ROR_THM : Thm.thm
   val RRX_EVAL2 : Thm.thm
-  val BITw_def : Thm.thm
-  val BITSw_def : Thm.thm
-  val SLICEw_def : Thm.thm
+  val WORD_BIT_def : Thm.thm
+  val WORD_BITS_def : Thm.thm
+  val WORD_SLICE_def : Thm.thm
   val w2n_EVAL : Thm.thm
   val MSB_EVAL2 : Thm.thm
   val LSB_EVAL2 : Thm.thm
@@ -53,8 +53,8 @@ val sn = Arbnum.toString wl;
 val word_compset =
   let val rws = reduceLib.num_compset()
       val _ = add_thms
-     [THE_WL, HB_def, w_0, w_1, w_T,
-      MODw_EVAL, w2n_EVAL,
+     [THE_WL, HB_def, word_0, word_1, word_T,
+      MOD_WL_EVAL, w2n_EVAL,
       ADD_EVAL2, MUL_EVAL2, word_sub,
       REDUCE_RULE ONE_COMP_EVAL2,
       REDUCE_RULE TWO_COMP_EVAL2,
@@ -62,7 +62,7 @@ val word_compset =
       AND_EVAL2, OR_EVAL2, EOR_EVAL2,
       word_lsl, LSR_EVAL, ASR_THM, ROR_THM,
       REDUCE_RULE RRX_EVAL2,
-      BITw_def, BITSw_def, SLICEw_def,
+      WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
       MSB_EVAL2, LSB_EVAL2,
       numeralTheory.numeral_funpow,
       pairTheory.UNCURRY_DEF,
