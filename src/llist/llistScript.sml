@@ -132,11 +132,11 @@ val LDEST = new_definition(
 
 val LHD = new_definition(
   "LHD",
-  ``LHD ll = option_APPLY FST (ldest_rep (llist_rep ll))``);
+  ``LHD ll = OPTION_MAP FST (ldest_rep (llist_rep ll))``);
 
 val LTL = new_definition(
   "LTL",
-  ``LTL ll = option_APPLY (llist_abs o SND) (ldest_rep (llist_rep ll))``);
+  ``LTL ll = OPTION_MAP (llist_abs o SND) (ldest_rep (llist_rep ll))``);
 
 val lcons_rep = new_definition(
   "lcons_rep",
@@ -168,7 +168,7 @@ val lbuild_rep = new_definition(
          option_case
            NONE
            (\ (pfx', nthseed).
-               if pfx' = pfx then option_APPLY SND (f nthseed)
+               if pfx' = pfx then OPTION_MAP SND (f nthseed)
                else NONE)
            (lbuildn_rep f x (LENGTH pfx))``);
 
@@ -447,11 +447,11 @@ val LCONS_11 = store_thm(
   FULL_SIMP_TAC hol_ss [llist_absrep]);
 
 val lbuild_rep_nil = prove(
-  ``!f x. lbuild_rep f x [] = option_APPLY SND (f x)``,
+  ``!f x. lbuild_rep f x [] = OPTION_MAP SND (f x)``,
   SIMP_TAC hol_ss [lbuild_rep, lbuildn_rep])
 
 val lbuild_recurses = prove(
-  ``!f x. option_APPLY SND (ldest_rep (lbuild_rep f x)) =
+  ``!f x. OPTION_MAP SND (ldest_rep (lbuild_rep f x)) =
           option_case NONE (\ (y,h). SOME (lbuild_rep f y)) (f x)``,
   REPEAT GEN_TAC THEN Cases_on `f x` THENL [
     ASM_SIMP_TAC hol_ss [lbuild_rep, ldest_rep, lbuildn_rep],
@@ -466,8 +466,8 @@ val llist_Axiom = store_thm(
   "llist_Axiom",
   ``!f : 'a -> ('a # 'b) option.
       ?g.
-         (!x. LHD (g x) = option_APPLY SND (f x)) /\
-         (!x. LTL (g x) = option_APPLY (g o FST) (f x))``,
+         (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
+         (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))``,
   GEN_TAC THEN
   CONV_TAC (BINDER_CONV AND_FORALL_CONV) THEN
   Q.EXISTS_TAC `llist_abs o lbuild_rep f` THEN
@@ -542,7 +542,7 @@ val LTAKE_THM = store_thm(
   "LTAKE_THM",
   ``(!l. LTAKE 0 l = SOME []) /\
     (!n. LTAKE (SUC n) LNIL = NONE) /\
-    (!n h t. LTAKE (SUC n) (LCONS h t) = option_APPLY (CONS h) (LTAKE n t))``,
+    (!n h t. LTAKE (SUC n) (LCONS h t) = OPTION_MAP (CONS h) (LTAKE n t))``,
   SIMP_TAC hol_ss [LTAKE, LHD_THM, LTL_THM] THEN REPEAT GEN_TAC THEN
   Cases_on `LTAKE n t` THEN SIMP_TAC hol_ss []);
 
@@ -819,7 +819,7 @@ open arithLib
 val LLENGTH_THM = store_thm(
   "LLENGTH_THM",
   ``(LLENGTH LNIL = SOME 0) /\
-    (!h t. LLENGTH (LCONS h t) = option_APPLY SUC (LLENGTH t))``,
+    (!h t. LLENGTH (LCONS h t) = OPTION_MAP SUC (LLENGTH t))``,
   SIMP_TAC hol_ss [LLENGTH, LFINITE_THM] THEN REPEAT STRIP_TAC THENL [
     SIMP_TAC hol_ss [LTAKE_NIL_EQ_SOME, LTAKE_NIL_EQ_NONE] THEN
     Q.SUBGOAL_THEN `!n. (!m. m < n ==> (m = 0)) = (n <= 1)`
@@ -934,13 +934,13 @@ val LFINITE_INDUCTION = store_thm(
   `?n. LLENGTH ll = SOME n` by ASM_MESON_TAC [LFINITE_HAS_LENGTH] THEN
   REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll` llist_CASES) THENL [
     ASM_SIMP_TAC hol_ss [],
-    FULL_SIMP_TAC hol_ss [LLENGTH_THM, optionTheory.option_APPLY_EQ_SOME] THEN
+    FULL_SIMP_TAC hol_ss [LLENGTH_THM, optionTheory.OPTION_MAP_EQ_SOME] THEN
     FULL_SIMP_TAC hol_ss [],
     FULL_SIMP_TAC hol_ss [LLENGTH_THM],
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     FULL_SIMP_TAC hol_ss [LLENGTH_THM, LFINITE_THM, AND_IMP_INTRO] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
-    FULL_SIMP_TAC hol_ss [optionTheory.option_APPLY_EQ_SOME]
+    FULL_SIMP_TAC hol_ss [optionTheory.OPTION_MAP_EQ_SOME]
   ]);
 
 
@@ -1033,7 +1033,7 @@ val toList = new_definition(
 val toList_THM = store_thm(
   "toList_THM",
   ``(toList LNIL = SOME []) /\
-    (!h t. toList (LCONS h t) = option_APPLY (CONS h) (toList t))``,
+    (!h t. toList (LCONS h t) = OPTION_MAP (CONS h) (toList t))``,
   SIMP_TAC hol_ss [toList, LFINITE_THM, LLENGTH_THM, LTAKE_THM] THEN
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN SIMP_TAC hol_ss [] THEN
   IMP_RES_TAC LFINITE_HAS_LENGTH THEN
@@ -1080,7 +1080,7 @@ val to_fromList = store_thm(
 
 val LDROP = new_recursive_definition {
   def = ``(LDROP 0 ll = SOME ll) /\
-          (LDROP (SUC n) ll = option_JOIN (option_APPLY (LDROP n) (LTL ll)))``,
+          (LDROP (SUC n) ll = OPTION_JOIN (OPTION_MAP (LDROP n) (LTL ll)))``,
   rec_axiom = prim_recTheory.num_Axiom,
   name = "LDROP"};
 
@@ -1179,7 +1179,7 @@ val LNTH = new_recursive_definition{
   name = "LNTH",
   rec_axiom = prim_recTheory.num_Axiom,
   def = ``(LNTH 0 ll = LHD ll) /\
-          (LNTH (SUC n) ll = option_JOIN (option_APPLY (LNTH n) (LTL ll)))``};
+          (LNTH (SUC n) ll = OPTION_JOIN (OPTION_MAP (LNTH n) (LTL ll)))``};
 
 val LNTH_THM = store_thm(
   "LNTH_THM",
@@ -1189,14 +1189,14 @@ val LNTH_THM = store_thm(
   SIMP_TAC hol_ss [LNTH, LTL_THM, LHD_THM] THEN Induct THEN
   SIMP_TAC hol_ss [LNTH, LTL_THM, LHD_THM]);
 
-val minP = ``(option_APPLY P  (LNTH n ll) = SOME T) /\
-             !m. m < n ==> (option_APPLY P (LNTH m ll) = SOME F)``
+val minP = ``(OPTION_MAP P  (LNTH n ll) = SOME T) /\
+             !m. m < n ==> (OPTION_MAP P (LNTH m ll) = SOME F)``
 
 val firstPelemAt = new_definition(
   "firstPelemAt",
   ``firstPelemAt P n ll =
        option_case F P (LNTH n ll) /\
-       !m. m < n ==> (option_APPLY P (LNTH m ll) = SOME F)``);
+       !m. m < n ==> (OPTION_MAP P (LNTH m ll) = SOME F)``);
 val never = new_definition(
   "never",
   ``never P ll = !n. ~firstPelemAt P n ll``);
@@ -1284,7 +1284,7 @@ val LFILTER = new_specification {
           Q.SUBGOAL_THEN
             `!x.
                option_case F P (LNTH x (LCONS h t)) /\
-               (!m. m < x ==> (option_APPLY P (LNTH m (LCONS h t)) = SOME F)) =
+               (!m. m < x ==> (OPTION_MAP P (LNTH m (LCONS h t)) = SOME F)) =
                (x = 0)`
           (fn th => SIMP_TAC hol_ss [th]) THEN
           GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [LNTH_THM] THEN
@@ -1315,12 +1315,12 @@ val LFILTER = new_specification {
           Q.SUBGOAL_THEN
            `!x.
              option_case F P (LNTH x (LCONS h t)) /\
-             (!m. m < x ==> (option_APPLY P (LNTH m (LCONS h t)) = SOME F)) =
+             (!m. m < x ==> (OPTION_MAP P (LNTH m (LCONS h t)) = SOME F)) =
              (x = n)`
           (fn th => SIMP_TAC hol_ss [th]) THEN
           GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [] THEN
           REPEAT STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
-          FULL_SIMP_TAC hol_ss [optionTheory.option_APPLY_EQ_SOME] THEN
+          FULL_SIMP_TAC hol_ss [optionTheory.OPTION_MAP_EQ_SOME] THEN
           `x < n \/ n < x`
             by ASM_MESON_TAC [arithmeticTheory.LESS_LESS_CASES] THEN
           RES_TAC THEN FULL_SIMP_TAC hol_ss [],
@@ -1352,7 +1352,7 @@ val LFILTER = new_specification {
           `x < m \/ m < x`
             by ASM_MESON_TAC [arithmeticTheory.LESS_LESS_CASES] THEN
           FULL_SIMP_TAC hol_ss [firstPelemAt,
-                                optionTheory.option_APPLY_EQ_SOME] THEN
+                                optionTheory.OPTION_MAP_EQ_SOME] THEN
           RES_TAC THEN FULL_SIMP_TAC hol_ss [],
           ALL_TAC
         ] THEN
@@ -1479,7 +1479,7 @@ val LFLATTEN = new_specification {
          GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [firstPelemAt_CONS] THEN
          STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN ELIM_TAC THEN
          FULL_SIMP_TAC hol_ss [firstPelemAt,
-                               optionTheory.option_APPLY_EQ_SOME] THEN
+                               optionTheory.OPTION_MAP_EQ_SOME] THEN
          POP_ASSUM (STRIP_ASSUME_TAC o
                     MATCH_MP
                     (ARITH_PROVE ``!x y. ~(x = y) ==> x < y \/ y < x``)) THEN
