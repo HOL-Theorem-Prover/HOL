@@ -1,6 +1,8 @@
 signature word8CasesLib = sig
 
-val word8Define : Term.term -> Thm.thm
-val word8Cases_on : Term.term frag list -> Tactic.tactic
+include Abbrev
+
+ val word8Define : term quotation -> thm
+ val word8Cases_on : term quotation -> tactic
 
 end
