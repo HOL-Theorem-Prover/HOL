@@ -265,7 +265,9 @@ val LE_xnum_xnum_def =
    /\
    ($LE_xnum_xnum (XNUM (m:num)) INFINITY = T)
    /\
-   ($LE_xnum_xnum INFINITY (XNUM (n:num)) = F)`;
+   ($LE_xnum_xnum INFINITY (XNUM (n:num)) = F)
+   /\
+   ($LE_xnum_xnum INFINITY INFINITY = T)`;
 
 val LE = 
  save_thm("LE",LIST_CONJ[LE_num_xnum_def,LE_xnum_num_def,LE_xnum_xnum_def]);
