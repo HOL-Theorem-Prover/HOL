@@ -144,7 +144,7 @@ fun extern_of_conv rws conv tm =
 fun add_conv (cst,arity,conv) rws =
   add_extern (cst,arity,extern_of_conv rws conv) rws;
 
-fun set_skip compset c opt = 
+fun set_skip compset c opt =
  let val {Name,Thy,...} = dest_thy_const c
  in clauses.set_skip compset (Name,Thy) opt
  end
@@ -174,11 +174,11 @@ val EVAL_TAC = Tactic.CONV_TAC EVAL_CONV;
 infix Orelse;
 fun (p Orelse q) x = p x orelse q x;
 
-fun OR [] = false
+fun OR [] = K false
   | OR [x] = same_const x
   | OR (h::t) = same_const h Orelse OR t;
 
-fun RESTR_EVAL_CONV clist = 
+fun RESTR_EVAL_CONV clist =
   Lib.with_flag (stoppers,SOME (OR clist)) EVAL_CONV;
 
 val RESTR_EVAL_TAC  = Tactic.CONV_TAC o RESTR_EVAL_CONV;
@@ -213,16 +213,16 @@ fun add_persistent_funs [] = ()
         val (names,thms) = unzip alist
     in
        add_funs thms
-     ; Theory.adjoin_to_theory 
+     ; Theory.adjoin_to_theory
          {sig_ps = NONE,
-          struct_ps = SOME(fn ppstrm => 
+          struct_ps = SOME(fn ppstrm =>
              (PP.begin_block ppstrm CONSISTENT 0;
               PP.add_string ppstrm "val _ = computeLib.add_funs [";
               PP.begin_block ppstrm INCONSISTENT 0;
               pr_list_to_ppstream ppstrm
                  PP.add_string (C PP.add_string ",")
                  (C PP.add_break (0,0)) names;
-              PP.end_block ppstrm; 
+              PP.end_block ppstrm;
               PP.add_string ppstrm "];";
               PP.add_break ppstrm (2,0);
               PP.end_block ppstrm))}
