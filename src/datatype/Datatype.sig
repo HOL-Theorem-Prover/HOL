@@ -35,7 +35,7 @@ sig
    ParseDatatype.datatypeAST list -> (tyinfo * string list) list
 
  (* defines a size constant for a type *)
- val define_size_constant : typeBase -> tyinfo -> tyinfo
+ (* val define_size_constant : typeBase -> tyinfo -> tyinfo *)
 
 
   (* A "pure" operation that doesn't write the underlying database of facts *)

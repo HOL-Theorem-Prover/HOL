@@ -350,17 +350,41 @@ in
   extras
 end
 
-fun define_size_constant db tyinfo = let
-  val size_def = define_size (TypeBase.axiom_of tyinfo) (tysize_env db)
-in
-  TypeBase.put_size (defn_const size_def,size_def) tyinfo
-end
-
 fun primHol_datatype db q = let
   val parse_result = ParseDatatype.parse q
   val tyinfo_extras = deftype_from_parse parse_result
+  val ax = TypeBase.axiom_of (#1 (hd tyinfo_extras))
+  val size_defn_thm = define_size ax (tysize_env db)
+  val conjs = CONJUNCTS size_defn_thm
+  (* given an equivalence relation R, partition a list into a list of lists
+     such that everything in each list is related to each other *)
+  (* preserves the order of the elements within each partition with
+     respect to the order they were given in the original list *)
+  fun partition R l = let
+    fun partition0 parts [] = parts
+      | partition0 parts (x::xs) = let
+          fun srch_parts [] = [[x]]
+            | srch_parts (p::ps) = if R x (hd p) then (x::p)::ps
+                                   else p::(srch_parts ps)
+        in
+          partition0 (srch_parts parts) xs
+        end
+  in
+    map List.rev (partition0 [] l)
+  end
+  val head = rator o lhs o #2 o strip_forall o concl
+  fun same_head thm1 thm2 = head thm1 = head thm2
+  val partitioned_conjs = partition same_head conjs
+  val oktypes = Prim_rec.new_types ax
+  val ok_types_only =
+    List.filter (fn thml =>
+                 mem (#1 (dom_rng (type_of (head (hd (thml)))))) oktypes)
+    partitioned_conjs
+  val conjed_up = map LIST_CONJ ok_types_only
 in
-  map (fn (tyi, ex) => (define_size_constant db tyi, ex)) tyinfo_extras
+  ListPair.map (fn ((tyi, ex), sz_def) =>
+                (TypeBase.put_size (defn_const sz_def, sz_def) tyi, ex))
+  (tyinfo_extras, conjed_up)
 end
 handle e as HOL_ERR _ => Raise e;
 
