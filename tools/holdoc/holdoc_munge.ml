@@ -395,7 +395,11 @@ let rec mtok v t =
   | Ident(s,false) -> msym v s
   | Indent(n)      -> mindent n
   | White(s)       -> s
-  | Comment(s)     -> "\\tscomm{"^texify_text s^"}"
+  | Comment(s)     -> (if String.contains s '\n' then  (* anything split over a line must be long *)
+                         "\\tslongcomm{"
+                       else
+                         "\\tscomm{")
+                      ^texify_text s^"}"
   | Str(s)         -> "\\text{``"^texify_text s^"''}"
   | DirBlk(n,ts)   -> mdir v n ts
   | DirBeg         -> raise BadDirective
@@ -408,7 +412,7 @@ let rec mtok v t =
   | TeXEndHol      -> "$"
   | TeXEndHol0     -> ""
   | TeXNormal(s)   -> s
-  | HolStartTeX    -> "\\tscomm{"
+  | HolStartTeX    -> "\\tsholcomm{"
   | HolEndTeX      -> "}"
 
 
