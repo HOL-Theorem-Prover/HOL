@@ -331,6 +331,7 @@ make-files must conform to the following grammar:
 \prelim           & ::= & \texttt{OPTIONS}\;\; \texttt{=}\;\; \idlist\\
                   &  |  & \texttt{INCLUDES} \;\;\texttt{=}\;\; \idlist\\
                   &  |  & \texttt{PRE\_INCLUDES} \;\; \texttt{=}\;\;\idlist\\
+                  &  |  & \texttt{EXTRA\_CLEANS} \;\; \texttt{=}\;\;\idlist\\
 \hmrule           & ::= & \id\;\;\texttt{:}\;\;\idlist\;\;\commlist\\
 \idlist           & ::= & \hmtab^* \;\; \hmnewline\\
                   &  |  & \id \;\; \hmtab^* \;\; \idlist\\
@@ -364,6 +365,10 @@ The \texttt{OPTIONS} preliminary is used for the specification of
 options.  There are currently only two possible (others are ignored):
 \texttt{NO\_SIGOBJ} and \texttt{NO\_OVERLAY}.  These have the same
 effect as the corresponding command-line options.
+
+The \texttt{EXTRA\_CLEANS} preliminary is used to specify the name of
+additional files that should be deleted when a \texttt{Holmake clean}
+command is issued.
 
 Make-file rules are interpreted in the same way as by traditional
 \textsf{make}.  The files specified after the colon (if any) are those
@@ -400,61 +405,6 @@ The \texttt{MOSMLLEX} and \texttt{MOSMLYAC} abbreviations are really
 only useful if the originals aren't necessarily going to be on the
 user's ``path''.
 
-\section{Flags for the HOL logic}
-\label{HOLflags}
-
-\index{HOL system@\HOL\ system!adjustment of user interface of|(} The
-subset of flags\index{HOL system@\HOL\ system!flags in}\index{flags,
-  in ML@flags, in \ML} that control aspects of \HOL\ relating to the
-logic is summarized in the table below.
-
-
-\begin{center}
-\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs}
-\index{inferences, in HOL logic@inferences, in \HOL\ logic!counting of}
-\index{printing, in HOL logic@printing, in \HOL\ logic!of types}
-\index{types, in HOL logic@types, in \HOL\ logic!printing of}
-\index{types, in HOL logic@types, in \HOL\ logic!default}
-\index{theory files!pretty printing of}
-\index{pretty printing!flags for, in HOL system@flags for, in \HOL\ system}
-\index{type checking, in HOL logic@type checking, in \HOL\ logic!verbose errors in}
-\index{interface maps}
-\index{printing, in HOL logic@printing, in \HOL\ logic!of quantification}
-\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!pretty printing of}
-\index{infixes, in HOL logic@infixes, in \HOL\ logic!pretty printing of}
-\index{printing, in HOL logic@printing, in \HOL\ logic!pretty printing}
-%\index{printing, in HOL logic@printing, in \HOL\ logic!undischarging
-%IS_ASSUMPTION_OFs in@undischarging \ml{IS\_ASSUMPTION\_OF}s in}
-%\index{IS_ASSUMPTION_OF@\ml{IS\_ASSUMPTION\_OF}}
-\index{timing@\ml{timing}}
-\index{show_types@\ml{show\_types}}
-\index{theory_pp@\ml{theory\_pp}}
-\index{type_error@\ml{type\_error}}
-\index{interface_print@\ml{interface\_print}}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!pretty printing, of paired}
-\begin{tabular}{|l|l|l|} \hline
-\multicolumn{3}{|c|}{ } \\
-\multicolumn{3}{|c|}{\bf Settable system flags} \\
-\multicolumn{3}{|c|}{ } \\
-{\it Flag} & {\it Function} &
-{\it Default value} \\ \hline
- & &  \\
-\ml{timing} &    Print number of theorems proved& \ml{false}\\ \hline
-
-\ml{show\_types} &    Prints types in quotations   &    \ml{false}\\ \hline
-
-\ml{theory\_pp} & Pretty printing of theory files &   \ml{false} \\ \hline
-
-\ml{type\_error} & Verbose type checking errors in quotations& \ml{true} \\ \hline
-
-\ml{interface\_print}  &   Causes inverse of interface map &     \ml{true}\\[-1mm]
- &                       to be used when printing & \\ \hline
-
-\end{tabular}
-\end{center}
-
-
 \section{Hiding constants}
 \label{hidden}
 
@@ -464,13 +414,13 @@ The following function can be used to hide\index{constants, in HOL logic@constan
 the quotation parser.
 
 \begin{boxed}
-\index{hide_constant@\ml{hide\_constant}|pin}
+\index{hide@\ml{hide}|pin}
 \begin{verbatim}
-   hide_constant : string -> void
+  val hide   : string -> ({Name : string, Thy : string} list *
+                          {Name : string, Thy : string} list)
 \end{verbatim}\end{boxed}
 
-
-\noindent Evaluating \ml{hide\_constant\ `}$x$\ml{`}
+\noindent Evaluating \ml{hide "}$x$\ml{"}
 makes the quotation parser treat $x$ as a variable (lexical
 rules permitting), even if $x$ is the name of a constant in the current theory
 (constants and variables can have the same name).
@@ -478,29 +428,26 @@ This is useful if one wants to use variables\index{variables, in HOL logic@varia
 as previously declared (or built-in) constants (\eg\ \ml{o}, \ml{I}, \ml{S}
 \etc).
 The name $x$ is still a
-constant for the constructors, theories, etc; \ml{hide\_constant}
-affects only  parsing.
-
-Hiding a constant and then attempting to declare it as a new
-constant will fail (as it must, if the system is to remain sound).\index{soundness!of HOL logic@of \HOL\ logic}\index{constants, in HOL logic@constants, in \HOL\ logic!hiding status of|)}
+constant for the constructors, theories, etc; \ml{hide}
+affects only  parsing.  See the \REFERENCE{} entry for \ml{hide} for
+more details, including an explanation of the return type.
 
 The function
 
 \begin{boxed}
-\index{unhide_constant@\ml{unhide\_constant}|pin}
+\index{reveal@\ml{reveal}|pin}
 \begin{verbatim}
-   unhide_constant : string -> void
+   reveal : string -> unit
 \end{verbatim}\end{boxed}
 
-\noindent undoes the hiding; it fails if its argument is not a previously
-hidden constant.
+\noindent undoes hiding.
 
-The function:
+The function
 
 \begin{boxed}
-\index{is_hidden@\ml{is\_hidden}|pin}
+\index{hidden@\ml{hidden}|pin}
 \begin{verbatim}
-   is_hidden : string -> bool
+   hidden : string -> bool
 \end{verbatim}\end{boxed}
 
 \noindent tests whether a string is the name of a hidden constant.
@@ -511,95 +458,125 @@ The function:
 \section{Adjusting the pretty-print depth}
 
 \index{ML@\ML!pretty printer for|(}
-The following \ML\ function  can be used to adjust the maximum depth of
+The following \ML\ reference  can be used to adjust the maximum depth of
 printing\index{printing, in HOL logic@printing, in \HOL\ logic!structural depth adjustment in}.
 
 \begin{boxed}
 \index{max_print_depth@\ml{max\_print\_depth}|pin}
 \begin{verbatim}
-   max_print_depth : int -> int
+   max_print_depth : int ref
 \end{verbatim}\end{boxed}
 
-\noindent The default print depth\index{default print depth, for HOL logic@default print depth, for \HOL\ logic|(} is $500$. Evaluating
-\ml{max\_print\_depth}$\ n$ sets the maximum to $n$ and returns
-the previous value
-of the maximum. Subterms nested more deeply than
+\noindent The default print depth
+\index{default print depth, for HOL logic@default print depth, for
+       \HOL\ logic|(} is $-1$, which is interpreted as meaning no
+       maximum.
+Subterms nested more deeply than
 the maximum print depth are printed as
-{\small\verb%&%}. For example:
+{\small\verb%...%}. For example:
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-#ADD_CLAUSES;;
-Theorem ADD_CLAUSES autoloaded from theory `arithmetic`.
-ADD_CLAUSES =
-|- (0 + m = m) /\
-   (m + 0 = m) /\
-   ((SUC m) + n = SUC(m + n)) /\
-   (m + (SUC n) = SUC(m + n))
+- ADD_CLAUSES;
+> val it =
+    |- (0 + m = m) /\ (m + 0 = m) /\ (SUC m + n = SUC (m + n)) /\
+       (m + SUC n = SUC (m + n)) : thm
 
-|- (0 + m = m) /\
-   (m + 0 = m) /\
-   ((SUC m) + n = SUC(m + n)) /\
-   (m + (SUC n) = SUC(m + n))
-
-#max_print_depth 7;;
-500 : int
-
-#ADD_CLAUSES;;
-|- (& + & = m) /\ (& + & = m) /\ ((& + & = &(&) /\ (& + (& = &(&)
-
-#max_print_depth 5;;
-7 : int
-
-#ADD_CLAUSES;;
-|- (& /\ (& /\ (& /\ (&
-
-#max_print_depth 3;;
-5 : int
-
-#ADD_CLAUSES;;
-|- &
+- max_print_depth := 3;
+> val it = () : unit
+- ADD_CLAUSES;
+> val it = |- (... + ... = m) /\ (... = ...) /\ ... /\ ... : thm
 \end{verbatim}\end{session}
 \index{default print depth, for HOL logic@default print depth, for \HOL\ logic|)}
 
 \section{Timing and counting theorems}
 
-Whenever \HOL\  performs  a  primitive  inference  (or  accepts   an  axiom  or
-definition) a counter\index{inferences, in HOL logic@inferences, in \HOL\ logic!counting of}\index{timing of HOL evaluations@timing of \HOL\ evaluations}\index{HOL system@\HOL\ system!timing and counting inferences in}  is incremented.  The value of this counter is returned by
-the function:
+\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs|(}
+\index{inferences, in HOL logic@inferences, in \HOL\ logic!counting of|(}
+\index{timing of HOL evaluations@timing of \HOL\ evaluations|(}
+
+
+\HOL{} can be made to record its use of primitive
+inferences, axioms, definitions and use of oracles.  Such recording is
+enabled with the function
+
+\begin{boxed}
+\index{thm_counting@\ml{thm\_counting}|pin}
+\begin{verbatim}
+  val thm_counting : bool -> unit
+\end{verbatim}
+\end{boxed}
+
+\noindent (This function as with all the others in this section is
+found in the \texttt{Count} structure.)
+
+Calling \verb+thm_counting true+ enables counting, and
+\verb+thm_counting false+ disables it.  The default is for counting to
+be disabled.  If it is enabled, whenever \HOL\ performs a primitive
+inference (or accepts an axiom or definition) a
+counter is incremented.  A total count as well as counts per
+primitive inference are maintained.  The value of this counter is
+returned by the function:
 
 \begin{boxed}
 \index{thm_count@\ml{thm\_count}|pin}
-\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs}
 \begin{verbatim}
-   thm_count : void -> int
+  val thm_count : unit ->
+   {ASSUME : int, REFL : int, BETA_CONV : int, SUBST : int,
+    ABS : int, DISCH : int, MP : int, INST_TYPE : int, MK_COMB : int,
+    AP_TERM : int, AP_THM : int, ALPHA : int, ETA_CONV : int,
+    SYM : int, TRANS : int, EQ_MP : int, EQ_IMP_RULE : int,
+    INST : int, SPEC : int, GEN : int, EXISTS : int, CHOOSE : int,
+    CONJ : int, CONJUNCT1 : int, CONJUNCT2 : int, DISJ1 : int,
+    DISJ2 : int, DISJ_CASES : int, NOT_INTRO : int, NOT_ELIM : int,
+    CCONTR : int, GEN_ABS : int, definition : int, axiom : int,
+    from_disk : int, oracle :int, total :int }
 \end{verbatim}\end{boxed}
 
 \noindent This counter can be reset with the function:
 
 \begin{boxed}
-\index{set_thm_count@\ml{set\_thm\_count}|pin}
+\index{reset_thm_count@\ml{reset\_thm\_count}|pin}
 \begin{verbatim}
-   set_thm_count : int -> int
+   val reset_thm_count : unit -> unit
 \end{verbatim}\end{boxed}
 
-\noindent The previous value of the counter is returned.
-
-The following function is used to switch \ML\ into a  mode in  which the number
-of primitive inferences done during each top-level interaction is  shown.
-Run-time and garbage collection time are also shown.
+Finally, the \texttt{Count} structure also includes another function
+which easily enables the number of inferences performed by an \ML{}
+procedure to be assessed:
 
 \begin{boxed}
-\index{timer@\ml{timer}|pin}
+\index{Count.apply@\ml{Count.apply}|pin}
 \begin{verbatim}
-   timer : bool -> bool
-\end{verbatim}\end{boxed}
+   val apply : ('a -> 'b) -> 'a -> 'b
+\end{verbatim}
+\end{boxed}
 
-\noindent Executing \ml{timer true} causes  the number  of primitive inferences
-and timings to be  printed; \ml{timer  false} switches  the printing  off.  The
-previous setting  is
-returned.    Executing  \ml{timer}$\ b$  is equivalent to
-setting the flag \ml{timing} to the value $b$.
+An invocation, \ml{Count.apply f x}, applies the function \ml{f} to
+the argument \ml{x} and performs a count of inferences during this
+time.  This function also records the total time taken in the
+execution of the application.
+
+For example, timing the action of \ml{numLib}'s \ml{ARITH\_CONV}:
+
+\setcounter{sessioncount}{1}
+\begin{session}
+\begin{verbatim}
+- Count.apply numLib.ARITH_CONV ``x > y ==> 2 * x > y``;
+runtime: 0.010s,    gctime: 0.000s,     systime: 0.000s.
+Axioms asserted: 0.
+Definitions made: 0.
+Oracle invocations: 0.
+Theorems loaded from disk: 0.
+HOL primitive inference steps: 165.
+Total: 165.
+> val it = |- x > y ==> 2 * x > y = T : thm
+\end{verbatim}
+\end{session}
+
+\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs|)}
+\index{inferences, in HOL logic@inferences, in \HOL\ logic!counting of|)}
+\index{timing of HOL evaluations@timing of \HOL\ evaluations|)}
 
 
 \section{Quotation preprocessing}
@@ -619,17 +596,17 @@ existential witnesses, \etc\ Since it would be unbearable to make a type
 or term of any size `by hand', the system comes equipped with parsers
 for type and term expressions. The parser for types is called
 \verb+Type+, and the parser for terms is called \verb+Term+. These
-parsers take {\it quotations\/}.  A quotation {\tt `}$\ldots$ {\tt `} is
+parsers take {\it quotations\/}.  A quotation \mbox{{\tt `}$\ldots${\tt `}} is
 much like an SML string, except that it can span several lines without
 requiring awkward backslashes, as an ML string
 would.\footnote{Quotations were a feature in the original LCF
 system. See the MoscowML User's Manual for more information.}
 
-For added convenience, the \HOL\ system distribution supplies a version
-of \holn{} that features a {\it combined parser\/} that accepts both types
-and terms. Enclosing some object language concrete syntax between
-occurrences of \verb+``+ will result in the correct parser being
-invoked. For example
+For added convenience, the \HOL\ system distribution includes an
+executable that features a {\it combined parser\/} that accepts both
+types and terms. Enclosing some object language concrete syntax
+between occurrences of \verb+``+ will result in the correct parser
+being invoked. For example
 
 \begin{verbatim}
     ``x /\ y /\ z ==> ?p. p``
