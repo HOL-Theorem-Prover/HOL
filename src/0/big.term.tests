@@ -1,5 +1,5 @@
 (*===========================================================================
-    Testing term construction (and soon destruction) for big terms
+    Testing term construction and destruction for big terms
 
     When the terms get bigger, various things barf, like the 
     prettyprinter, and the naive way of doing list_mk_conj:
@@ -13,7 +13,6 @@ fun upto f b t =
   let fun up i acc = if i < t then up (i+1) (f i::acc) else rev acc
   in up b []
   end;
-
 
 val vars10 = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 10;
 val vars100 = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 100;
@@ -32,7 +31,40 @@ val body10K = list_mk_conj vars10K;
 val body50K = list_mk_conj vars50K;
 val body100K = list_mk_conj vars100K;
 val body500K = list_mk_conj vars500K;
-val body1M = list_mk_conj vars1M;
+val body1M = time list_mk_conj vars1M;   (* 9 secs *)
+
+val abs10   = (time HolKernel.list_mk_abs(vars10,body10); ());
+val abs100  = (time HolKernel.list_mk_abs(vars100,body100); ())
+val abs1K   = (time HolKernel.list_mk_abs(vars1K,body1K); ());
+val abs10K  = (time HolKernel.list_mk_abs(vars10K,body10K); ());
+val abs100K = (time HolKernel.list_mk_abs(vars100K,body100K); ());
+val abs500K = (time HolKernel.list_mk_abs(vars500K,body500K); ());
+val abs1M   = (time HolKernel.list_mk_abs(vars1M,body1M); ());
+
+val ALL10 =   (time list_mk_forall(vars10,body10); ());
+val ALL100 =  (time list_mk_forall(vars100,body100); ())
+val ALL1K =   (time list_mk_forall(vars1K,body1K); ());
+val ALL10K =  (time list_mk_forall(vars10K,body10K); ());
+val ALL100K = (time list_mk_forall(vars100K,body100K); ());
+val ALL500K = (time list_mk_forall(vars500K,body500K); ());
+val ALL1M =   (time list_mk_forall(vars1M,body1M); ());
+
+val dabs10  = let val abs10 = list_mk_abs(vars10,body10)
+               in time Term.strip_abs abs10 ; () end;
+val dabs100 = let val abs100 = list_mk_abs(vars100,body100)
+               in time Term.strip_abs abs100 ; () end;
+val dabs1K  = let val abs1K = list_mk_abs(vars1K,body1K)
+              in time Term.strip_abs abs1K ; () end;
+val dabs10K  = let val abs10K = list_mk_abs(vars10K,body10K)
+               in time Term.strip_abs abs10K ; () end;
+val dabs100K = let val abs100K = list_mk_abs(vars100K,body100K)
+               in time Term.strip_abs abs100K ; () end;
+val dabs100K' = let val abs100K' = list_mk_abs(vars10K,body100K)
+                in list_mk_abs(Term.strip_abs abs100K') = abs100K' end;
+val dabs500K = let val abs500K = list_mk_abs(vars500K,body500K)
+               in time Term.strip_abs abs500K ; () end;
+val dabs1M   = let val abs1M = time list_mk_abs(vars1M,body1M)
+                in time Term.strip_abs abs1M ; () end;
 
 fun old_list_mk_abs(V,t) = itlist(curry mk_abs) V t;
 fun old_list_mk_forall(V,t) = itlist(curry mk_forall) V t;
@@ -46,23 +78,46 @@ val abs100K = time old_list_mk_abs(vars100K,body100K); ());
 val abs500K = time old_list_mk_abs(vars500K,body500K);
 val abs1M = time old_list_mk_abs(vars1M,body1M);
 
+(* ---------------------------------------------------------------------------
+       Some renaming checks
+ --------------------------------------------------------------------------- *)
 
-val abs10   = (time HolKernel.list_mk_abs(vars10,body10); ());
-val abs100  = (time HolKernel.list_mk_abs(vars100,body100); ())
-val abs1K   = (time HolKernel.list_mk_abs(vars1K,body1K); ());
-val abs10K  = (time HolKernel.list_mk_abs(vars10K,body10K); ());
-val abs100K = (time HolKernel.list_mk_abs(vars100K,body100K); ());
-val abs500K = (time HolKernel.list_mk_abs(vars500K,body500K); ());
-val abs1M   = (time HolKernel.list_mk_abs(vars1M,body1M); ());
+val x = mk_var("x",bool)
+val x' = mk_var("x'",bool)
+val x'' = mk_var("x''",bool)
+val x''' = mk_var("x'''",bool)
+val x'''' = mk_var("x''''",bool)
+val y = mk_var("y",bool);
 
+strip_abs(beta_conv(Term `(\^x ^y. x) y`));
+strip_abs(beta_conv(Term `(\^y ^x' ^x. y) x`));
+strip_abs(beta_conv(Term `(\^y ^x ^x'. y) x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x ^x ^x. y /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ x') x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ x' /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ x' /\ x /\ x /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ !x. y /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x'''' ^x''' ^x ^x'' ^x'. y) x`));
 
-val ALL10 =   (time list_mk_forall(vars10,body10); ());
-val ALL100 =  (time list_mk_forall(vars100,body100); ())
-val ALL1K =   (time list_mk_forall(vars1K,body1K); ());
-val ALL10K =  (time list_mk_forall(vars10K,body10K); ());
-val ALL100K = (time list_mk_forall(vars100K,body100K); ());
-val ALL500K = (time list_mk_forall(vars500K,body500K); ());
-val ALL1M =   (time list_mk_forall(vars1M,body1M); ());
+(* Note: 
+
+   - strip_abs(beta_conv(Term `(\^y ^x'''' ^x''' ^x ^x'' ^x'. y) x`));
+   > val it = ([`x''''`, `x'''`, `x'''''`, `x''`, `x'`], `x`)
+
+but 
+
+   - beta_conv(Term `(\^y ^x'''' ^x''' ^x ^x'' ^x'. y) x`);
+   > val it = `\x'''' x''' x' x'' x'. x`
+
+The strip_abs only renames one bound variable to sort out the clash, 
+while the step-by-step version is different: it ends up with an 
+apparent shadow in the resulting scope. This isn't a bug, because the shadow
+doesn't bind anything, but still, doesn't seem quite right. 
+
+In any case, the strip_abs result and the step-by-step result are different,
+which may cause some things to break, or some puzzlement.
+*)
 
 
 (*---------------------------------------------------------------------------

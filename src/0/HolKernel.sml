@@ -60,6 +60,7 @@ end;
 
 fun single x = [x];
 
+(* Breaks term down until binop no longer occurs at top level in result list *)
 fun strip_binop dest =
  let fun strip A [] = rev A
        | strip A (h::t) =
@@ -92,30 +93,28 @@ fun dest_binder (name,thy) e M =
   end
 end;
 
-fun strip_binder dest =
-  let fun strip A M =
-       case dest M
-        of NONE => (List.rev A, M)
-         | SOME(Bvar,Body) => strip (Bvar::A) Body
-  in strip []
-  end
-
-val strip_abs = strip_binder (total dest_abs);
-
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
-val strip_fun = strip_binder (total dom_rng);
+
+val strip_fun = 
+  let val dest = total dom_rng
+      fun strip acc ty = 
+          case dest ty
+            of SOME (d,r) => strip (d::acc) r
+             | NONE => (rev acc, ty)
+  in strip []
+  end;
 
 
-local val destc = total dest_comb
-in
+
 val strip_comb =
- let fun strip rands M =
+ let val destc = total dest_comb
+     fun strip rands M =
       case destc M
        of NONE => (M, rands)
         | SOME(Rator,Rand) => strip (Rand::rands) Rator
  in strip []
- end
-end;
+ end;
+
 
 datatype lambda
    = VAR   of string * hol_type

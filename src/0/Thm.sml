@@ -46,9 +46,7 @@ val empty_tag = Tag.empty_tag
 
 (*---------------------------------------------------------------------------
     The following are here because I didn't want to Thm to be dependent
-    on Dsyntax, which is slated for extinction. Since we are inside an
-    abstract type, we can take some shortcuts with these routines (if
-    we are careful).
+    on soem derived syntax (now in boolSyntax). 
  ---------------------------------------------------------------------------*)
 
 val F = Susp.delay (fn () => mk_thy_const{Name="F", Thy="bool", Ty=bool});
@@ -107,46 +105,46 @@ end;
 (* datatype thm = datatype KernelTypes.thm *)
 
 fun single_hyp tm = HOLset.singleton Term.compare tm
-val empty_hyp = HOLset.empty Term.compare
+val empty_hyp = Term.empty_tmset
 fun list_hyp tml = HOLset.addList(empty_hyp,tml)
 
 fun tag  (THM(tg,_,_))  = tg
-fun hyp  (THM(_,asl,_)) = asl
-fun hypl (THM(_,asl,_)) = HOLset.listItems asl
 fun concl(THM(_,_,c))   = c
+fun hypset  (THM(_,asl,_)) = asl
+fun hyplist (THM(_,asl,_)) = HOLset.listItems asl
+val hyp = hyplist   (* backwards compatibility *)
 
-fun dest_thm(t as THM(_,asl,w)) = (hypl t,w)   (* Compatible with old code. *)
+fun dest_thm(t as THM(_,asl,w)) = (hyplist t,w) (* Compatible with old code. *)
 fun sdest_thm(THM(_,asl,w)) = (asl,w)
 fun make_thm R seq = (Count.inc_count R; THM seq);   (* internal only *)
 
-fun thm_frees (t as THM(_,asl,c)) = free_varsl (c::hypl t);
+fun thm_frees (t as THM(_,asl,c)) = free_varsl (c::hyplist t);
 
 fun add_hyp h asl = HOLset.add(asl,h)
 fun union_hyp asl1 asl2 = HOLset.union(asl1, asl2)
 
 fun tag_hyp_union thm_list =
   (itlist (Tag.merge o tag) (tl thm_list) (tag (hd thm_list)),
-   itlist (union_hyp o hyp) thm_list empty_hyp);
+   itlist (union_hyp o hypset) thm_list empty_hyp);
 
 fun var_occursl v l = isSome (HOLset.find (var_occurs v) l);
 
 fun hypset_all P s = not (isSome (HOLset.find (not o P) s))
 fun hypset_exists P s = isSome (HOLset.find P s)
-fun hypset_map f s =
-    HOLset.foldl (fn (i,s0) => HOLset.add(s0,f i)) empty_hyp s
+fun hypset_map f s = HOLset.foldl(fn(i,s0) => HOLset.add(s0,f i)) empty_hyp s
 
 fun thm_hypfreetys th =
-    HOLset.foldl (fn (h,tys) =>
+   HOLset.foldl (fn (h,tys) =>
                         List.foldl (fn (tyv,tys) => HOLset.add(tys,tyv))
                                    tys
                                    (Term.type_vars_in_term h))
                     (HOLset.empty Type.compare)
-                    (hyp th)
+                    (hypset th)
 
 fun thm_hypfrees th =
   HOLset.foldl 
       (fn (h,tms) => HOLset.union(Term.FVL[h] empty_tmset,tms))
-      empty_hyp (hyp th);
+      empty_hyp (hypset th);
 
 fun is_bool tm = (type_of tm = bool);
 
@@ -246,10 +244,7 @@ fun ABS v (THM(ocl,asl,c)) =
 
 fun INST_TYPE [] th = th
   | INST_TYPE theta (THM(ocl,asl,c)) =
-      make_thm Count.InstType 
-        (ocl, 
-         hypset_map (inst theta) asl, 
-         inst theta c)
+     make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c)
 
 (*---------------------------------------------------------------------------
  *          A |- M
@@ -378,7 +373,7 @@ fun ETA_CONV tm =
 fun SYM th =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
   in make_thm Count.Sym
-        (tag th, hyp th, mk_eq_nocheck ty rhs lhs)
+        (tag th, hypset th, mk_eq_nocheck ty rhs lhs)
  end
  handle HOL_ERR _ => ERR "SYM" "";
 
@@ -404,7 +399,7 @@ fun TRANS th1 th2 =
    let val (lhs1,rhs1,ty) = Term.dest_eq_ty (concl th1)
        and (lhs2,rhs2,_)  = Term.dest_eq_ty (concl th2)
        val   _  = Assert (aconv rhs1 lhs2) "" ""
-       val hyps = union_hyp (hyp th1) (hyp th2)
+       val hyps = union_hyp (hypset th1) (hypset th2)
        val ocls = Tag.merge (tag th1) (tag th2)
    in
      make_thm Count.Trans (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2)
@@ -431,7 +426,7 @@ fun MK_COMB (funth,argth) =
    in
      make_thm Count.MkComb
          (Tag.merge (tag funth) (tag argth),
-          union_hyp (hyp funth) (hyp argth),
+          union_hyp (hypset funth) (hypset argth),
           mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)))
    end
    handle HOL_ERR _ => ERR "MK_COMB" "";
@@ -457,7 +452,7 @@ fun MK_COMB (funth,argth) =
 fun AP_TERM f th =
  let val (lhs,rhs,_) = Term.dest_eq_ty (concl th)
  in make_thm Count.ApTerm
-       (tag th, hyp th,
+       (tag th, hypset th,
         mk_eq_nocheck (rng (type_of f)) (mk_comb(f,lhs)) (mk_comb(f,rhs)))
  end
  handle HOL_ERR _ => ERR "AP_TERM" "";
@@ -484,7 +479,7 @@ fun AP_TERM f th =
 fun AP_THM th tm =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
  in make_thm Count.ApThm
-       (tag th, hyp th,
+       (tag th, hypset th,
         mk_eq_nocheck (rng ty) (mk_comb(lhs,tm)) (mk_comb(rhs,tm)))
  end
  handle HOL_ERR _ => ERR "AP_THM" "";
@@ -509,7 +504,7 @@ fun EQ_MP th1 th2 =
        val _ = Assert (aconv lhs (concl th2)) "" ""
    in
     make_thm Count.EqMp (Tag.merge (tag th1) (tag th2),
-                         union_hyp (hyp th1) (hyp th2), rhs)
+                         union_hyp (hypset th1) (hypset th2), rhs)
    end handle HOL_ERR _ => ERR "EQ_MP" "";
 
 (*---------------------------------------------------------------------------
@@ -528,7 +523,7 @@ fun EQ_MP th1 th2 =
 
 fun EQ_IMP_RULE th =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
-     and A = hyp th
+     and A = hypset th
      and O = tag th
  in if ty = Type.bool
     then (make_thm Count.EqImpRule(O,A, Term.prim_mk_imp lhs rhs),
@@ -578,7 +573,7 @@ fun EQ_IMP_RULE th =
  * fun SPEC t th =
  *   let val {Bvar,Body} = dest_forall(concl th)
  *   in
- *   make_thm Count.(hyp th, subst[{redex = Bvar, residue = t}] Body)
+ *   make_thm Count.(hypset th, subst[{redex = Bvar, residue = t}] Body)
  *   end
  *   handle _ => ERR{function = "SPEC",message = ""};
  *---------------------------------------------------------------------------*)
@@ -589,7 +584,7 @@ fun SPEC t th =
  in
    Assert (Name="!" andalso Thy="bool") "" "";
    make_thm Count.Spec
-       (tag th, hyp th, beta_conv(mk_comb(Rand, t)))
+       (tag th, hypset th, beta_conv(mk_comb(Rand, t)))
  end
  handle HOL_ERR _ => ERR "SPEC" "";
 
@@ -665,7 +660,7 @@ fun EXISTS (w,t) th =
      val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" "not an existential"
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" "incompatible structure"
-   in make_thm Count.Exists (tag th, hyp th, w)
+   in make_thm Count.Exists (tag th, hypset th, w)
    end
 end;
 
@@ -730,7 +725,7 @@ fun CHOOSE (v,xth) bth =
 fun CONJ th1 th2 =
    make_thm Count.Conj
         (Tag.merge (tag th1) (tag th2),
-         union_hyp (hyp th1) (hyp th2),
+         union_hyp (hypset th1) (hypset th2),
          Susp.force mk_conj(concl th1, concl th2))
    handle HOL_ERR _ => ERR "CONJ" "";
 
@@ -760,7 +755,7 @@ fun conj1 tm =
 
 
 fun CONJUNCT1 th =
-  make_thm Count.Conjunct1 (tag th, hyp th, conj1 (concl th))
+  make_thm Count.Conjunct1 (tag th, hypset th, conj1 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
 
 
@@ -787,7 +782,7 @@ fun conj2 tm =
   end
 
 fun CONJUNCT2 th =
- make_thm Count.Conjunct2 (tag th, hyp th, conj2 (concl th))
+ make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -803,7 +798,7 @@ fun CONJUNCT2 th =
  *---------------------------------------------------------------------------*)
 
 fun DISJ1 th w = make_thm Count.Disj1
- (tag th, hyp th, Susp.force mk_disj (concl th, w))
+ (tag th, hypset th, Susp.force mk_disj (concl th, w))
  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
@@ -819,7 +814,7 @@ fun DISJ1 th w = make_thm Count.Disj1
  *---------------------------------------------------------------------------*)
 
 fun DISJ2 w th = make_thm Count.Disj2
- (tag th, hyp th, Susp.force mk_disj(w,concl th))
+ (tag th, hypset th, Susp.force mk_disj(w,concl th))
  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
@@ -855,8 +850,8 @@ fun DISJ_CASES dth ath bth =
   in
    make_thm Count.DisjCases
        (itlist Tag.merge [tag dth, tag ath, tag bth] empty_tag,
-        union_hyp (hyp dth) (union_hyp (disch(disj1, hyp ath))
-                                       (disch(disj2, hyp bth))),
+        union_hyp (hypset dth) (union_hyp (disch(disj1, hypset ath))
+                                       (disch(disj2, hypset bth))),
         concl ath)
   end
   handle HOL_ERR _ => ERR "DISJ_CASES" "";
@@ -879,7 +874,7 @@ fun DISJ_CASES dth ath bth =
 fun NOT_INTRO th =
   let val (ant,c) = dest_imp(concl th)
   in Assert (c = Susp.force F) "" "";
-     make_thm Count.NotIntro  (tag th, hyp th, Susp.force mk_neg ant)
+     make_thm Count.NotIntro  (tag th, hypset th, Susp.force mk_neg ant)
   end
   handle HOL_ERR _ => ERR "NOT_INTRO" "";
 
@@ -907,7 +902,7 @@ fun NOT_ELIM th =
   case with_exn dest (concl th) (thm_err "NOT_ELIM" "")
    of ({Name="~", Thy="bool",...},Rand)
        => make_thm Count.NotElim
-             (tag th, hyp th, Term.prim_mk_imp Rand (Susp.force F))
+             (tag th, hypset th, Term.prim_mk_imp Rand (Susp.force F))
     | otherwise => ERR "NOT_ELIM" ""
 end;
 
@@ -935,7 +930,7 @@ end;
 fun CCONTR w fth =
   (Assert (concl fth = Susp.force F) "CCONTR" "";
    make_thm Count.Ccontr
-       (tag fth, disch(Susp.force mk_neg w, hyp fth), w)
+       (tag fth, disch(Susp.force mk_neg w, hypset fth), w)
      handle HOL_ERR _ => ERR "CCONTR" "");
 
 
@@ -943,24 +938,11 @@ fun CCONTR w fth =
  * Instantiate free variables in a theorem                                   *
  *---------------------------------------------------------------------------*)
 
-local fun var_compare ((Name,Ty), (s,ty)) =
-          (case String.compare(Name,s)
-            of EQUAL => Type.compare (Ty,ty)
-             | x => x)
-      val init_varset = HOLset.empty var_compare
-in
 fun INST [] th = th
   | INST theta th =
-     let val asl = hyp th
-         val domvars = rev_itlist (fn {redex,...} => fn S =>
-                         HOLset.add(S,dest_var redex)) theta init_varset
-                  handle _ => ERR "INST" "non-variable in domain of subst"
-         fun in_dom v = HOLset.member(domvars,v)
-     in
-      make_thm Count.Inst (tag th, hypset_map (subst theta) asl,
+      make_thm Count.Inst (tag th, hypset_map (subst theta) (hypset th),
          subst theta (concl th) handle HOL_ERR _ => ERR "INST" "")
-     end
-end;
+
 
 (*---------------------------------------------------------------------------*
  * Now some derived rules optimized for computations, avoiding most          *
@@ -980,7 +962,7 @@ end;
 fun Beta th =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
    in make_thm Count.Beta
-        (empty_tag, hyp th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
+        (empty_tag, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
    end
    handle HOL_ERR _ => ERR "Beta" "";
 
@@ -996,7 +978,7 @@ fun Beta th =
 fun Eta th =
   let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
   in make_thm Count.EtaConv
-       (empty_tag, hyp th, mk_eq_nocheck ty lhs (eta_conv rhs))
+       (empty_tag, hypset th, mk_eq_nocheck ty lhs (eta_conv rhs))
   end
   handle HOL_ERR _ => ERR "Eta" "";
 
@@ -1063,7 +1045,7 @@ fun Mk_abs thm =
        fun mkthm th1' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
              val _ = Assert (EQ(lhs1,Body)) "" ""
-             val _ = Assert (not (var_occursl Bvar (hyp th1'))) "" ""
+             val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.Abs
 	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)))
@@ -1084,7 +1066,7 @@ fun Spec t th =
    in
      Assert (Thy="bool" andalso Name="!") "" "";
      make_thm Count.Spec
-        (tag th, hyp th, Term.lazy_beta_conv(mk_comb(Rand,t)))
+        (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)))
    end
    handle HOL_ERR _ => ERR "Spec" "";
 
@@ -1193,17 +1175,13 @@ fun parse_raw table =
    | otherwise => ERR "raw term parser" "expected a quotation"
  end;
 
-val mk_disk_thm  = make_thm Count.Disk;
-
+local val mk_disk_thm  = make_thm Count.Disk
+in
 fun disk_thm vect =
   let val rtp = parse_raw vect
-  in
-    fn (s,asl,w) => mk_disk_thm(Tag.read_disk_tag s,
-                                list_hyp (map rtp asl),
-                                rtp w)
-  end;
-
-val hypset = hyp
-val hyp = hypl
+  in fn (s,asl,w) => 
+        mk_disk_thm(Tag.read_disk_tag s,list_hyp (map rtp asl),rtp w)
+  end
+end;
 
 end; (* Thm *)

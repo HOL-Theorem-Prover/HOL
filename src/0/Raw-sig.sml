@@ -58,8 +58,6 @@ sig
 
   structure TermSig : Sig where type ty = KernelTypes.term
 
-  val empty_tmset   : term HOLset.set
-
   val type_of       : term -> hol_type
   val free_vars     : term -> term list
   val free_vars_lr  : term -> term list
@@ -91,6 +89,8 @@ sig
   val dest_const    : term -> string * hol_type
   val dest_comb     : term -> term * term
   val dest_abs      : term -> term * term
+  val strip_abs     : term -> term list * term
+  val strip_binder  : (term -> term option) -> term -> term list * term
   val is_var        : term -> bool
   val is_genvar     : term -> bool
   val is_const      : term -> bool
@@ -106,23 +106,24 @@ sig
   val beta_conv     : term -> term
   val eta_conv      : term -> term
   val subst         : (term,term) Lib.subst -> term -> term
-  val inst          : (hol_type,hol_type) Lib.subst -> term -> term
+  val inst          : (hol_type,hol_type) subst -> term -> term
   val raw_match     : hol_type list -> term set -> term -> term ->
-                      (term,term)Lib.subst *
-                      ((hol_type,hol_type)Lib.subst * hol_type list) ->
-                      (term,term)Lib.subst *
-                      ((hol_type,hol_type)Lib.subst * hol_type list)
-  val match_term     : term -> term
-                       -> (term,term)Lib.subst * (hol_type,hol_type)Lib.subst
-  val match_terml    : hol_type list -> term set -> term -> term
-                       -> (term,term)Lib.subst * (hol_type,hol_type)Lib.subst
+                      (term,term)subst *
+                      ((hol_type,hol_type)subst * hol_type list) ->
+                      (term,term)subst *
+                      ((hol_type,hol_type)subst * hol_type list)
+  val match_term    : term -> term
+                       -> (term,term)subst * (hol_type,hol_type)subst
+  val match_terml   : hol_type list -> term set -> term -> term
+                       -> (term,term)subst * (hol_type,hol_type)subst
   val norm_subst    : (hol_type,hol_type)subst
                         -> (term,term)subst -> (term,term)subst
-  val thy_consts     : string -> term list
-  val compare        : term * term -> order
-  (* val is_clos        : term -> bool *)
-  val push_clos      : term -> term
-  val norm_clos      : term -> term
+  val thy_consts    : string -> term list
+  val compare       : term * term -> order
+  val var_compare   : term * term -> order
+  val empty_tmset   : term set
+  val empty_varset  : term set
+
   val lazy_beta_conv : term -> term
   val imp            : term
   val dest_eq_ty     : term -> term * term * hol_type

@@ -17,8 +17,6 @@ sig
   type ('a,'b)subst = ('a,'b)Lib.subst
   type 'a set       = 'a HOLset.set
 
-  val empty_tmset   : term HOLset.set
-
   val type_of       : term -> hol_type
   val free_vars     : term -> term list
   val free_vars_lr  : term -> term list
@@ -51,6 +49,8 @@ sig
   val dest_const    : term -> string * hol_type
   val dest_thy_const: term -> {Thy:string, Name:string, Ty:hol_type}
   val dest_comb     : term -> term * term
+  val strip_binder  : (term -> term option) -> term -> term list * term
+  val strip_abs     : term -> term list * term
   val dest_abs      : term -> term * term
   val is_var        : term -> bool
   val is_genvar     : term -> bool
@@ -81,5 +81,9 @@ sig
   val norm_subst    : (hol_type,hol_type)subst
                         -> (term,term)subst -> (term,term)subst
 
+  val var_compare   : term * term -> order
   val compare       : term * term -> order
+
+  val empty_tmset   : term set
+  val empty_varset  : term set
 end;
