@@ -23,7 +23,7 @@ val term_subst    = mlibSubst.term_subst;
 val formula_subst = mlibSubst.formula_subst;
 
 (* ------------------------------------------------------------------------- *)
-(* Matching.                                                                 *)
+(* mlibMatching.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 fun raw_match env x tm =

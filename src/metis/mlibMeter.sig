@@ -14,14 +14,14 @@ val unlimited       : limit
 val expired         : limit
 val limit_to_string : limit -> string
 
-(* Meter readings *)
+(* mlibMeter readings *)
 type meter_reading          = {time : real, infs : int}
 val zero_reading            : meter_reading
 val add_readings            : meter_reading -> meter_reading -> meter_reading
 val pp_meter_reading        : meter_reading pp
 val meter_reading_to_string : meter_reading -> string
 
-(* Meters record time and inferences *)
+(* mlibMeters record time and inferences *)
 type meter
 val new_meter   : limit -> meter
 val sub_meter   : meter -> limit -> meter

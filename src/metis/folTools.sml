@@ -34,10 +34,12 @@ type vars        = term list * hol_type list;
 
 local
   open mlibUseful;
+  val module = "folTools";
 in
-  fun chat l m = trace {module = "folTools", message = m, level = l};
-  fun chatting l = visible {module = "folTools", level = l};
-  val ERR = mk_HOL_ERR "folTools";
+  val () = traces := {module = module, alignment = I} :: !traces;
+  fun chatting l = tracing {module = module, level = l};
+  fun chat s = (trace s; true)
+  val ERR = mk_HOL_ERR module;
   val BUG = BUG;
 end;
 
@@ -59,7 +61,7 @@ val defaults =
    boolean    = false,
    mapping    = folMapping.defaults};
 
-fun update_parm_equality f (parm : parameters) : parameters =
+fun update_equality f (parm : parameters) : parameters =
   let
     val {equality, boolean, combinator, mapping} = parm
   in
@@ -67,7 +69,7 @@ fun update_parm_equality f (parm : parameters) : parameters =
      mapping = mapping}
   end;
 
-fun update_parm_boolean f (parm : parameters) : parameters =
+fun update_boolean f (parm : parameters) : parameters =
   let
     val {equality, boolean, combinator, mapping} = parm
   in
@@ -75,7 +77,7 @@ fun update_parm_boolean f (parm : parameters) : parameters =
      mapping = mapping}
   end;
 
-fun update_parm_combinator f (parm : parameters) : parameters =
+fun update_combinator f (parm : parameters) : parameters =
   let
     val {equality, boolean, combinator, mapping} = parm
   in
@@ -83,7 +85,7 @@ fun update_parm_combinator f (parm : parameters) : parameters =
      mapping = mapping}
   end;
 
-fun update_parm_mapping f (parm : parameters) : parameters =
+fun update_mapping f (parm : parameters) : parameters =
   let
     val {equality, boolean, combinator, mapping} = parm
   in
@@ -100,7 +102,8 @@ fun possibly f x = f x handle HOL_ERR _ => x;
 fun timed_fn s f a =
   let
     val (t, r) = mlibUseful.timed f a
-    val () = chat 1 (s ^ mlibUseful.real_to_string t ^ "\n")
+    val _ = chatting 1 andalso chat
+      ("metis: " ^ s ^ " time: " ^ mlibUseful.real_to_string t ^ "\n")
   in
     r
   end;
@@ -146,14 +149,20 @@ fun const_scheme_n n f =
       end
   end;
 
-fun mk_vthm th =
+fun mk_vthm_ty tyV th =
   let
-    val tm = concl th
-    val tyV = subtract (type_vars_in_term tm) (type_vars_in_terms (hyp th))
-    val (tmV, _) = strip_forall tm
+    val (tmV, _) = strip_forall (concl th)
     val gtmV = map (genvar o type_of) tmV
   in
     ((gtmV, tyV), SPECL gtmV th)
+  end;
+
+fun mk_vthm th =
+  let
+    val tyV_c = type_vars_in_term (concl th)
+    val tyV_h = type_vars_in_terms (hyp th)
+  in
+    mk_vthm_ty (subtract tyV_c tyV_h) th
   end;
 
 fun list_mk_conj' [] = T
@@ -162,6 +171,14 @@ fun list_mk_conj' [] = T
 fun strip_disj' tm = if tm = F then [] else strip_disj tm;
 
 fun CONJUNCTS' th = if concl th = T then [] else CONJUNCTS th;
+
+fun GSPEC' th =
+  let
+    val (vs,_) = strip_forall (concl th)
+    val gvs = map (genvar o type_of) vs
+  in
+    (gvs, SPECL gvs th)
+  end;
 
 val thm_atoms = map (possibly dest_neg) o strip_disj' o concl;
 
@@ -199,6 +216,8 @@ val empty_map = new_map defaults;
 
 fun add_thm vth lmap : logic_map =
   let
+    val _ = chatting 3 andalso
+            chat ("adding thm:\n" ^ thm_to_string (snd vth) ^ "\n")
     val {parm, axioms, thms, hyps, consts} = lmap
     val th = hol_thm_to_fol (#mapping parm) vth
   in
@@ -208,6 +227,8 @@ fun add_thm vth lmap : logic_map =
 
 fun add_hyp vth lmap : logic_map =
   let
+    val _ = chatting 3 andalso
+            chat ("adding hyp:\n" ^ thm_to_string (snd vth) ^ "\n")
     val {parm, axioms, thms, hyps, consts} = lmap
     val th = hol_thm_to_fol (#mapping parm) vth
   in
@@ -222,36 +243,45 @@ fun add_const s {parm, axioms, thms, hyps, consts} : logic_map =
 val add_thms = C (foldl (uncurry add_thm));
 
 local
-  fun iconst (cs, th) =
-    let val c = NEW_SKOLEM_CONST th
-    in (fst (strip_comb c) :: cs, SKOLEM_CONST_RULE c th)
+  fun iconst (cs,th) =
+    let val c = (genvar o type_of o fst o dest_exists o concl) th
+    in (fst (dest_var c) :: cs, SKOLEM_CONST_RULE c th)
     end;
 
   fun ithm th =
     let
-      val (h, c) = (hyp th, concl th)
+      val (h,c) = (hyp th, concl th)
       val tyV = subtract (type_vars_in_term c) (type_vars_in_terms h)
-      val (cs, th) = curry (repeat iconst) [] th
-      val vths = map (mk_vthm o GEN_ALL) (CONJUNCTS' th)
+      val (cs,th) = repeat iconst ([],th)
+      val (tmV,th) = GSPEC' th
+      val vths = map (mlibUseful.pair (tmV,tyV)) (CONJUNCTS' th)
     in
-      (map (fst o dest_var) cs, map ((I ## K tyV) ## I) vths)
+      (cs, vths)
     end;
 
-  fun append2 (a, b) (c, d) = (a @ c, b @ d);
+  fun append2 (a,b) (c,d) = (a @ c, b @ d);
 
   fun carefully s f t m = f t m
     handle HOL_ERR _ =>
-      (chat 1 ("metis: raised exception adding a" ^ s ^ ": dropping.\n"); m);
+      (chatting 1 andalso chat
+       ("metis: raised exception adding " ^ s ^ ": dropping.\n"); m);
 
 in
   fun build_map (parm, thmhyps) =
     let
+      val _ = chatting 3 andalso chat "metis: beginning build_map.\n"
       val (thms, hyps) = partition (null o hyp) thmhyps
+      val _ = chatting 3 andalso
+              chat "metis: partitioned theorems and hypotheses.\n"
       val (cs, thms) = foldl (uncurry (C append2 o ithm)) ([], []) thms
+      val _ = chatting 3 andalso
+              chat "metis: applied ithm to theorems.\n"
       val (cs, hyps) = foldl (uncurry (C append2 o ithm)) (cs, []) hyps
+      val _ = chatting 3 andalso
+              chat "metis: applied ithm to hypotheses.\n"
       val lmap = new_map parm
-      val lmap = foldl (fn(t,m)=>carefully" theorem"add_thm t m) lmap thms
-      val lmap = foldl (fn(t,m)=>carefully"n assumption"add_hyp t m) lmap hyps
+      val lmap = foldl (fn(t,m)=>carefully"a theorem"add_thm t m) lmap thms
+      val lmap = foldl (fn(t,m)=>carefully"an assumption"add_hyp t m) lmap hyps
       val lmap = foldl (fn(c,m)=>add_const c m) lmap cs
     in
       lmap
@@ -291,7 +321,8 @@ val EQ_BOOL = prove
 
 val EQ_EXTENSION =
   CONV_RULE CNF_CONV EXT_POINT_DEF ::
-  CONJUNCTS (CONV_RULE CNF_CONV (INST_TYPE [beta |-> bool] EXT_POINT_DEF));
+  (map GEN_ALL o CONJUNCTS o SPEC_ALL o CONV_RULE CNF_CONV o
+   INST_TYPE [beta |-> bool]) EXT_POINT_DEF;
 
 local
   fun break tm (res, subtms) =
@@ -519,10 +550,11 @@ fun eliminate consts =
   mlibStream.filter
   (fn (_, ths) =>
    null (intersect consts (varnames (map concl ths))) orelse
-   (chat 1 "metis: solution contained a skolem const: dropping.\n";
+   (chatting 1 andalso
+    chat "metis: solution contained a skolem const: dropping.\n";
     chatting 2 andalso
-    (chat 2 (foldl (fn (h,t) => t ^ "  " ^ thm_to_string h ^ "\n") "" ths);
-     false)));
+    chat (foldl (fn (h,t) => t ^ "  " ^ thm_to_string h ^ "\n") "" ths);
+    false));
 
 fun FOL_SOLVE solv lmap lim =
   let
@@ -530,7 +562,7 @@ fun FOL_SOLVE solv lmap lim =
       (add_equality_axioms o add_boolean_thms o add_combinator_thms) lmap
     val (thms, hyps) = (rev thms, rev hyps)
     val solver =
-      timed_fn "metis: solver initialization time: "
+      timed_fn "solver initialization"
       (initialize_solver solv) {thms = thms, hyps = hyps, limit = lim}
     fun exn_handler f x = f x
       handle Time => raise ERR "FOL_SOLVER" "Time exception raised"
@@ -542,9 +574,8 @@ fun FOL_SOLVE solv lmap lim =
         else hol_literals_to_fol (#mapping parm) query
       val () = save_fol_problem (thms, hyps, q)
       val lift = fol_thms_to_hol (#mapping parm) (C assoc axioms) query
-      val timed_lift = timed_fn "metis: proof translation time: " lift
-      val timed_stream = mlibStream.map_thk
-        (timed_fn "metis: proof search time: " o exn_handler)
+      val timed_lift = timed_fn "proof translation" lift
+      val timed_stream = mlibStream.map_thk (timed_fn "proof search" o exn_handler)
     in
       eliminate consts
       (mlibStream.map timed_lift (timed_stream (fn () => solver q) ()))
@@ -572,15 +603,9 @@ fun FOL_TACTIC slv lmap lim = ACCEPT_TAC (FOL_REFUTE slv lmap lim);
 (* HOL normalization to first-order form.                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val FOL_NORM_CONV =
-  REDEPTH_CONV BETA_CONV    THENC
-  DELAMB_CONV               THENC
-  SIMP_CONV cond_lift_ss [] THENC
-  CNF_CONV;
+val FOL_NORM = MIN_CNF;
 
-val FOL_NORM_RULE = CONV_RULE FOL_NORM_CONV;
-
-(* Normalization tactic = Stripping + Elimination of @ + FOL_NORM_CONV *)
+(* Normalization tactic = Stripping + Elimination of @ *)
 
 fun NEW_CHOOSE_THEN ttac th =
   (X_CHOOSE_THEN o genvar o type_of o bvar o rand o concl) th ttac th;
@@ -592,32 +617,27 @@ val FOL_STRIP_ASSUME_TAC = REPEAT_TCL FOL_STRIP_THM_THEN CHECK_ASSUME_TAC;
 val NEW_GEN_TAC = W (X_GEN_TAC o genvar o type_of o fst o dest_forall o snd);
 
 val FOL_STRIP_TAC =
-  EQ_TAC ORELSE
-  NEW_GEN_TAC ORELSE
-  CONJ_TAC ORELSE
-  DISCH_THEN FOL_STRIP_ASSUME_TAC;
+  EQ_TAC
+  ORELSE NEW_GEN_TAC
+  ORELSE CONJ_TAC
+  ORELSE DISCH_THEN FOL_STRIP_ASSUME_TAC;
 
 val FOL_NORM_TAC =
-  timed_fn "metis: tactic normalization time: "
-  (REPEAT (POP_ASSUM MP_TAC) THEN
-   REPEAT FOL_STRIP_TAC THEN
-   CCONTR_TAC THEN
-   REPEAT (POP_ASSUM MP_TAC) THEN
-   SELECT_TAC THEN
-   CONV_TAC (REPEATC (REWR_CONV AND_IMP_INTRO)) THEN
-
-   (* Performing CNF here tends to give a big speed-up in the normalization *)
-   (* and proof translation phases. See GILMORE_9 for an example of this.   *)
-   CONV_TAC (RATOR_CONV (RAND_CONV FOL_NORM_CONV)) THEN
-
-   FOL_STRIP_TAC);
-
+  (REPEAT FOL_STRIP_TAC
+   THEN CCONTR_TAC
+   THEN REPEAT (POP_ASSUM MP_TAC)
+   THEN SELECT_TAC
+   THEN REPEAT FOL_STRIP_TAC);
 
 (* A flexible tactic that performs normalization of theorems and goal. *)
 
-fun FOL_NORM_TTAC tac =
-  let fun f tl = FOL_NORM_TAC THEN POP_ASSUM_LIST (fn al => tac (al @ tl))
-  in f o timed_fn "metis: normalization time: " (map FOL_NORM_RULE)
+fun FOL_NORM_TTAC tac ths =
+  let
+    fun f asms = FOL_NORM (asms @ ths)
+  in
+    timed_fn "tactic normalization" FOL_NORM_TAC
+    THEN POP_ASSUM_LIST (tac o timed_fn "theorem normalization" f)
   end;
 
 end
+

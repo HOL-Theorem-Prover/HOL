@@ -171,7 +171,7 @@ end;
 (* A datatype to antiquote both terms and formulas.                          *)
 (* ------------------------------------------------------------------------- *)
 
-datatype thing = Term of term | Formula of formula;
+datatype thing = mlibTerm of term | Formula of formula;
 
 (* ------------------------------------------------------------------------- *)
 (* Built-in infix operators and reserved symbols.                            *)
@@ -267,7 +267,7 @@ fun pp_term' ops =
           | pr pp tm = raise BUG "pp_term" "not a quantifier"
         fun pp_q pp t = (begin_block pp INCONSISTENT 2; pr pp t; end_block pp)
       in
-        (if is_q tm then (if r then pp_bracket ("(", ")") else I) pp_q
+        (if is_q tm then (if r then pp_bracket "(" ")" else I) pp_q
          else basic) pp tm
       end
     and molecule pp (tm, r) =
@@ -279,7 +279,7 @@ fun pp_term' ops =
         if is_op x then pp_btm pp x else quant pp (x, r);
         end_block pp
       end
-    and pp_btm pp tm = pp_bracket ("(", ")") pp_tm pp (tm, false)
+    and pp_btm pp tm = pp_bracket "(" ")" pp_tm pp (tm, false)
     and pp_tm pp tmr = iprinter idest molecule pp tmr
   in
     pp_map (C pair false) pp_tm
@@ -305,7 +305,7 @@ fun formula_to_string' ops len fm = PP.pp_to_string len (pp_formula' ops) fm;
 
 (* Pretty-printing things is needed for parsing thing quotations *)
 
-fun pp_thing ops pp (Term tm)    = pp_term'    ops pp tm
+fun pp_thing ops pp (mlibTerm tm)    = pp_term'    ops pp tm
   | pp_thing ops pp (Formula fm) = pp_formula' ops pp fm;
 
 fun pp_bracketed_thing ops pp th =
@@ -587,8 +587,6 @@ val rhs = snd o dest_eq;
 
 val eq_occurs = mem eq_rel o relations;
 
-val relations_no_eq = List.filter (non (equal eq_rel)) o relations;
-
 (* ------------------------------------------------------------------------- *)
 (* Free variables in terms and formulas.                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -617,9 +615,10 @@ local
     | fv vs ((av, Forall (x, p)) :: fms) = fv vs ((insert x av, p) :: fms)
     | fv vs ((av, Exists (x, p)) :: fms) = fv vs ((insert x av, p) :: fms);
 in    
-  fun FVT   tm  = rev (fvt [] [] [tm]);
-  fun FV    fm  = rev (fv  [] [([], fm)]);
-  fun FVL l fms = rev (fv  l  (map (pair []) fms));
+  fun FVT    tm  = rev (fvt [] [] [tm]);
+  fun FVTL l tms =      fvt [] l  tms;
+  fun FV     fm  = rev (fv  [] [([], fm)]);
+  fun FVL  l fms =      fv  l  (map (pair []) fms);
 end;
 
 val specialize = snd o strip_forall;
@@ -663,71 +662,6 @@ local
 in
   fun subterms p tm = f [(p, tm)] [];
   fun literal_subterms lit = g [] (dest_atom (literal_atom lit)) [] [];
-end;
-
-(* ------------------------------------------------------------------------- *)
-(* The Knuth-Bendix ordering.                                                *)
-(* ------------------------------------------------------------------------- *)
-
-type Weight       = string * int -> int;
-type Prec         = (string * int) * (string * int) -> order;
-type Termorder    = term * term -> order option;
-type Literalorder = formula * formula -> order option;
-
-val no_vars = mlibMultiset.empty String.compare;
-fun one_var v = mlibMultiset.insert (v, 1) no_vars;
-
-fun kb_weight w =
-  let
-    fun weight (Var v) = (0, one_var v)
-      | weight (Fn (f, a)) = foldl wght (w (f, length a), no_vars) a
-    and wght (t, (n, v)) = (curry op+ n ## mlibMultiset.union v) (weight t)
-  in
-    weight
-  end;
-
-(* The Knuth-Bendix ordering is partial when terms contain variables *)
-
-fun kb_compare w p =
-  let
-    fun kbo [] = SOME EQUAL
-      | kbo (tu :: rest) =
-      if op= tu then SOME EQUAL
-      else
-        let val ((wt, vt), (wu, vu)) = Df (kb_weight w) tu
-        in kbo1 (Int.compare (wt, wu)) (mlibMultiset.compare (vt, vu)) tu rest
-        end
-    and kbo1 _       NONE           _      _    = NONE
-      | kbo1 LESS    (SOME LESS)    _      _    = SOME LESS
-      | kbo1 GREATER (SOME LESS)    _      _    = NONE
-      | kbo1 EQUAL   (SOME LESS)    _      _    = SOME LESS
-      | kbo1 LESS    (SOME GREATER) _      _    = NONE
-      | kbo1 GREATER (SOME GREATER) _      _    = SOME GREATER
-      | kbo1 EQUAL   (SOME GREATER) _      _    = SOME GREATER
-      | kbo1 LESS    (SOME EQUAL)   _      _    = SOME LESS
-      | kbo1 GREATER (SOME EQUAL)   _      _    = SOME GREATER
-      | kbo1 EQUAL   (SOME EQUAL)   (t, u) rest = kbo2 t u rest
-    and kbo2 (Fn (f, a)) (Fn (g, b)) rest =
-      (case p ((f, length a), (g, length b)) of LESS => SOME LESS
-       | GREATER => SOME GREATER
-       | EQUAL => kbo (zip a b @ rest))
-      | kbo2 _ _ _ = raise BUG "kbo" "variable"
-  in
-    kbo o wrap
-  end;
-
-fun kb_lcompare w p = kb_compare w p o Df (dest_atom o literal_atom);
-
-(* Weight = uniform, Prec = by arity *)
-
-local
-  fun weight (f, m) = 1;
-    
-  fun prec ((f, m), (g, n)) =
-    if m < n then LESS else if m > n then GREATER else String.compare (f, g);
-in
-  val kb_comp  = kb_compare weight prec;
-  val kb_lcomp = kb_lcompare weight prec;
 end;
 
 end

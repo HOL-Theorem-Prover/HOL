@@ -6,18 +6,20 @@
 signature mlibSupport =
 sig
 
-type clause    = mlibClause.clause
+type id_clause = mlibClauseset.id_clause
 
-type parameters = {size_bias : int}
-val defaults : parameters
+type parameters = {size_power : real, literal_power : real}
+
+val defaults             : parameters
+val update_size_power    : (real -> real) -> parameters -> parameters
+val update_literal_power : (real -> real) -> parameters -> parameters
 
 type sos
 
-val new    : parameters -> sos
+val empty  : parameters -> sos
 val reset  : sos -> sos
 val size   : sos -> int
-val add    : clause -> sos -> sos
-val addl   : clause list -> sos -> sos       (* These get the same timestamp *)
-val remove : sos -> (clause * sos) option
+val add    : real -> id_clause list -> sos -> sos
+val remove : sos -> ((real * id_clause) * sos) option
 
 end

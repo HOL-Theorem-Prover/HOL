@@ -31,11 +31,10 @@ val formula_subst = mlibSubst.formula_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := {module = "mlibMeson", alignment = K 1} :: !traces;
-
-fun chat l m = trace {module = "mlibMeson", message = m, level = l};
-
-fun chatting l = visible {module = "mlibMeson", level = l};
+val module = "mlibMeson";
+val () = traces := {module = module, alignment = I} :: !traces;
+fun chatting l = tracing {module = module, level = l};
+fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
 (* Tuning parameters.                                                        *)
@@ -57,7 +56,9 @@ val defaults =
    divide_conquer   = false,
    unit_lemmaizing  = true};
 
-fun update_ancestor_pruning f parm =
+type 'a Parmupdate = ('a -> 'a) -> parameters -> parameters
+
+fun update_ancestor_pruning f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
          cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
@@ -66,7 +67,7 @@ fun update_ancestor_pruning f parm =
      cache_cutting = c, divide_conquer = d, unit_lemmaizing = u}
   end;
 
-fun update_ancestor_cutting f parm =
+fun update_ancestor_cutting f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
          cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
@@ -75,7 +76,7 @@ fun update_ancestor_cutting f parm =
      cache_cutting = c, divide_conquer = d, unit_lemmaizing = u}
   end;
 
-fun update_state_simplify f parm =
+fun update_state_simplify f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
          cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
@@ -84,7 +85,7 @@ fun update_state_simplify f parm =
      cache_cutting = c, divide_conquer = d, unit_lemmaizing = u}
   end;
 
-fun update_cache_cutting f parm =
+fun update_cache_cutting f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
          cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
@@ -93,7 +94,7 @@ fun update_cache_cutting f parm =
      cache_cutting = f c, divide_conquer = d, unit_lemmaizing = u}
   end;
 
-fun update_divide_conquer f parm =
+fun update_divide_conquer f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
          cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
@@ -102,7 +103,7 @@ fun update_divide_conquer f parm =
      cache_cutting = c, divide_conquer = f d, unit_lemmaizing = u}
   end;
 
-fun update_unit_lemmaizing f parm =
+fun update_unit_lemmaizing f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
          cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
@@ -172,28 +173,33 @@ type rule = {asms : formula list, c : formula, thm : thm, asmn : int};
 datatype rules = Rules of rule N.literalnet;
 
 fun dest_rules (Rules r) = r;
-val empty_rules = Rules N.empty;
+val empty_rules = Rules (N.empty ());
 val num_all_rules = N.size o dest_rules;
 val num_initial_rules = #f o N.size_profile o dest_rules;
 fun num_rules r = num_all_rules r - num_initial_rules r;
-val rules_unify = N.unify o dest_rules;
+fun rules_unify r = N.unify (dest_rules r);
+
+local fun dest ({asms, c, ...} : rule) = (asms,c);
+in val pp_rule = pp_map dest (pp_binop " ==>" (pp_list pp_formula) pp_formula);
+end;
+
+fun rule_to_string r = PP.pp_to_string (!LINE_LENGTH) pp_rule r;
 
 val pp_rules =
-  pp_map dest_rules
-  (N.pp_literalnet
-   (pp_map (fn {asms, c, ...} => (asms, c))
-    (pp_binop " ==>" (pp_list pp_formula) pp_formula)));
+  pp_map (map (fn _ |-> x => x) o N.to_maplets o dest_rules)
+  (pp_list pp_rule);
 
 fun add_contrapositives chosen sos th (Rules ruls) =
   let
     val th = FRESH_VARS th
     val lits = clause th
     val lits' = map negate lits
-    val base = map (fn l => (subtract lits' [negate l], l)) (chosen lits)
+    fun g l = (List.filter (not o equal (negate l)) lits', l)
+    val base = map g (chosen lits)
     val contrs = if sos then (lits', False) :: base else base
-    fun f (a, c) = c |-> {asms = a, c = c, thm = th, asmn = length a}
+    fun f (a,c) = c |-> {asms = a, c = c, thm = th, asmn = length a}
   in
-    Rules (foldl (fn (h, t) => N.insert (f h) t) ruls contrs)
+    Rules (foldl (fn (h,t) => N.insert (f h) t) ruls contrs)
   end;
 
 fun thms_to_rules chosen thms hyps =
@@ -357,38 +363,39 @@ fun swivelp m n = update_proof (swivel m n);
 fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
   let
     fun expand ancestors g cont (state as {env, ...}) =
-      if not (check_meter (!meter)) then
-        (NONE, CHOICE (fn () => expand ancestors g cont state))
-      else if ancestor_prune (#ancestor_pruning parm) env g ancestors then
-        raise ERR "meson" "ancestor pruning"
-      else if ancestor_cut (#ancestor_cutting parm) env g ancestors then
-        (record_infs (!meter) 1; cont (update_proof (cons (ASSUME g)) state))
-      else
-        let
-          val () = if not (chatting 4) then ()
-                   else chat 4 ("meson: " ^ formula_to_string g ^ ".\n")
-          fun reduction a () =
-            let
-              val state = update_env (K (unify_literals env g (negate a))) state
-              val state = update_proof (cons (ASSUME g)) state
-            in
-              (record_infs (!meter) 1; cont state)
-            end
-          val expansion = expand_rule ancestors g cont state
-        in
-          first_choice
-          (map reduction ancestors @
-           map expansion (rules_unify rules (formula_subst env g))) ()
-        end
+      (chatting 4 andalso
+       chat ("meson: "^formula_to_string (formula_subst env g)^".\n");
+       if not (check_meter (!meter)) then
+         (NONE, CHOICE (fn () => expand ancestors g cont state))
+       else if ancestor_prune (#ancestor_pruning parm) env g ancestors then
+         raise ERR "meson" "ancestor pruning"
+       else if ancestor_cut (#ancestor_cutting parm) env g ancestors then
+         (record_infs (!meter) 1; cont (update_proof (cons (ASSUME g)) state))
+       else
+         let
+           fun reduction a () =
+             let
+               val state = update_env (K(unify_literals env g (negate a))) state
+               val state = update_proof (cons (ASSUME g)) state
+             in
+               (record_infs (!meter) 1; cont state)
+             end
+           val expansion = expand_rule ancestors g cont state
+         in
+           first_choice
+           (map reduction ancestors @
+            map expansion (rules_unify rules (formula_subst env g))) ()
+         end)
     and expand_rule ancestors g cont {env, depth, proof, offset} r () =
       let
         val depth = depth - #asmn r
         val () =
           if 0 <= depth then ()
           else (saturated := false; raise ERR "meson" "too deep")
-        val (r, offset) = freshen_rule r offset
-        val (th, asms, env) = next_state (#state_simplify parm) env r g
+        val (r', offset) = freshen_rule r offset
+        val (th, asms, env) = next_state (#state_simplify parm) env r' g
         val () = record_infs (!meter) 1
+        val _ = chatting 5 andalso chat ("meson rule: "^rule_to_string r^"\n")
       in
         expands (g :: ancestors) asms (cont o modus_ponens th asms)
         {env = env, depth = depth, proof = proof, offset = offset}
@@ -420,7 +427,7 @@ fun meson_finally g ({env, proof, ...} : state) =
     val () = assert (length proof = length g) (BUG "meson" "bad final state")
     val g' = map (formula_subst env) g
     val proof' = map (INST env) (rev proof)
-    val () = chat 3
+    val _ = chatting 3 andalso chat
       (foldl (fn (h,t)=>t^"  "^thm_to_string h^"\n") "meson_finally:\n" proof')
     val () =
       assert (List.all (uncurry thm_proves) (zip proof' g'))
@@ -463,14 +470,16 @@ fun meson' parm =
    fn {slice, units, thms, hyps} =>
    let
      val ruls = meson_rules thms hyps
-     val () = chat 2
+     val _ = chatting 2 andalso chat
        ("meson--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
         "--#initial_rules=" ^ int_to_string (num_initial_rules ruls) ^ ".\n")
      val system as {saturated = b, ...} = mk_system parm units slice ruls
      fun d n = if !b then S.NIL else (b := true; S.CONS (n, fn () => d (n + 1)))
-     fun f q d = (chat 1 ("-" ^ int_to_string d); raw_meson system q d)
+     fun f q d =
+       (chatting 1 andalso chat ("-" ^ int_to_string d);
+        raw_meson system q d)
      fun unit_check goals NONE = U.prove (!units) goals | unit_check _ s = s
    in
      fn goals =>
@@ -488,7 +497,7 @@ fun delta' parm =
    let
      val ruls = meson_rules thms hyps
      val dgoals = thms_to_delta_goals hyps
-     val () = chat 2
+     val _ = chatting 2 andalso chat
        ("delta--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
@@ -496,8 +505,12 @@ fun delta' parm =
      val system as {saturated = b, ...} = mk_system parm units slice ruls
      val delta_goals = S.from_list dgoals
      fun d n = if !b then S.NIL else (b := true; S.CONS (n, fn () => d (n + 1)))
-     fun f d g = (chat 1 "+"; S.map (K NONE) (raw_meson system [g] d))
-     fun g d = (chat 1 (int_to_string d); S.flatten (S.map (f d) delta_goals))
+     fun f d g =
+       (chatting 1 andalso chat "+";
+        S.map (K NONE) (raw_meson system [g] d))
+     fun g d =
+       (chatting 1 andalso chat (int_to_string d);
+        S.flatten (S.map (f d) delta_goals))
      fun h () = S.flatten (S.map g (d 0))
      fun unit_check goals NONE = U.prove (!units) goals | unit_check _ s = s
    in
@@ -519,110 +532,11 @@ fun prolog' parm =
      fun comment S.NIL = "!\n"
        | comment (S.CONS (NONE, _)) = "-"
        | comment (S.CONS (SOME _, _)) = "$\n"
-     fun f t () = let val x = t () in chat 1 (comment x); x end
+     fun f t () = let val x = t () in chatting 1 andalso chat (comment x); x end
    in
      fn goals => S.map_thk f (fn () => raw_meson system goals prolog_depth) ()
    end};
 
 val prolog = prolog' defaults;
-
-(* quick testing
-load "UNLINK";
-open UNLINK;
-val time = Mosml.time;
-quotation := true;
-installPP pp_term;
-installPP pp_formula;
-installPP mlibSubst.pp_subst;
-installPP pp_rules;
-installPP pp_thm;
-
-val limit : limit ref = ref {infs = NONE, time = SOME 30.0};
-fun prolog_solve d q =
-  try
-  (solve
-   (initialize prolog {limit = !limit, thms = d, hyps = []})) q;
-fun meson_prove g =
-  try (time refute)
-  (initialize (set_of_support all_negative meson)
-   {limit = !limit, thms = [], hyps = axiomatize (Not (generalize g))});
-fun delta_prove g =
-  try (time refute)
-  (initialize  (set_of_support all_negative delta)
-   {limit = !limit, thms = [], hyps = eq_axiomatize (Not (generalize g))});
-
-(* Testing the delta prover *)
-
-val p48 = parse_formula (get equality "P48");
-delta_prove p48;
-
-(* Testing the prolog solver *)
-
-val database = (axiomatize o parse_formula)
-  `subset nil nil /\
-   (!v x y. subset x y ==> subset (v :: x) (v :: y)) /\
-   (!v x y. subset x y ==> subset x        (v :: y))`;
-
-try (prolog_solve database) [parse_formula `subset x (0 :: 1 :: 2 :: nil)`];
-(* takes ages
-try (prolog_solve database) [parse_formula `subset (0 :: 1 :: 2 :: nil) x`];
-*)
-
-val database = (axiomatize o parse_formula)
-  `p 0 3 /\
-   (!x. p x 4) /\
-   (!x. p x 3 ==> p (s (s (s x))) 3) /\
-   (!x. p (s x) 3 ==> p x 3)`;
-
-try (prolog_solve database) [parse_formula `p (s 0) 3`];
-
-(* Testing the meson prover *)
-
-meson_prove True;
-
-val p59 = parse_formula (get nonequality "P59");
-val ths = axiomatize (Not (generalize p59));
-val rules = meson_rules [] ths;
-rules_unify rules (parse_formula `~P 0`);
-meson_prove p59;
-
-val p39 = parse_formula (get nonequality "P39");
-clausal (Not (generalize p39));
-axiomatize (Not (generalize p39));
-meson_prove p39;
-
-val num14 = parse_formula (get tptp "NUM014-1");
-meson_prove num14;
-
-val p55 = parse_formula (get nonequality "P55");
-meson_prove p55;
-
-val p26 = parse_formula (get nonequality "P26");
-clausal (Not (generalize p26));
-meson_prove p26;
-
-val los = parse_formula (get nonequality "LOS");
-meson_prove los;
-
-val reduced_num284 = parse_formula
-  `fibonacci 0 (s 0) /\ fibonacci (s 0) (s 0) /\
-   (!x y z x' y' z'.
-      ~sum x (s (s 0)) z \/ ~sum y (s 0) z \/
-      ~fibonacci x x' \/ ~fibonacci y y' \/ ~sum x' y' z' \/
-      fibonacci z z') /\ (!x. sum x 0 x) /\
-   (!x y z. ~sum x y z \/ sum x (s y) (s z)) /\
-   (!x. ~fibonacci (s (s (s (s (s (s (s (s 0)))))))) x) ==> F`;
-meson_prove reduced_num284;
-
-val p29 = parse_formula (get nonequality "P29");
-clausal (Not (generalize p29));
-meson_prove p29;
-
-val num1 = parse_formula (get tptp "NUM001-1");
-meson_prove num1;
-
-val model_completeness = parse_formula (get nonequality "MODEL_COMPLETENESS");
-meson_prove model_completeness;
-*)
 
 end

@@ -20,9 +20,9 @@ type parameters =
   {higher_order : bool,       (* Application is a first-order function *)
    with_types   : bool};      (* First-order terms include HOL type info *)
 
-val defaults                 : parameters
-val update_parm_higher_order : (bool -> bool) -> parameters -> parameters
-val update_parm_with_types   : (bool -> bool) -> parameters -> parameters
+val defaults            : parameters
+val update_higher_order : (bool -> bool) -> parameters -> parameters
+val update_with_types   : (bool -> bool) -> parameters -> parameters
 
 (* Mapping HOL literals to FOL (need to pass in variables) *)
 val hol_literals_to_fol : parameters -> vars * term list -> formula1 list

@@ -4,8 +4,9 @@
 (* ========================================================================= *)
 
 (*
-loadPath := "../basic" :: "../fol" :: "../metis" :: "../normalize" :: !loadPath;
-app load ["tautLib", "mlibUseful", "mlibTerm", "mlibMatch", "mlibThm", "matchTools"];
+loadPath := "../mlib" :: "../normalize" :: !loadPath;
+app load
+["tautLib", "mlibUseful", "mlibTerm", "mlibMatch", "mlibThm", "matchTools"];
 *)
 
 (*
@@ -35,11 +36,12 @@ val PINST      = matchTools.PINST;
 
 local
   open mlibUseful;
+  val module = "folMapping";
 in
-  val () = traces := {module = "folMapping", alignment = K 1} :: !traces;
-  fun chat l m = trace {module = "folMapping", message = m, level = l};
-  fun chatting l = visible {module = "folMapping", level = l};
-  val ERR = mk_HOL_ERR "folMapping";
+  val () = traces := {module = module, alignment = I} :: !traces;
+  fun chatting l = tracing {module = module, level = l};
+  fun chat s = (trace s; true)
+  val ERR = mk_HOL_ERR module;
   val BUG = BUG;
 end;
 
@@ -55,12 +57,12 @@ val defaults =
   {higher_order = false,
    with_types   = false};
 
-fun update_parm_higher_order f (parm : parameters) : parameters =
+fun update_higher_order f (parm : parameters) : parameters =
   let val {higher_order, with_types} = parm
   in {higher_order = f higher_order, with_types = with_types}
   end;
 
-fun update_parm_with_types f (parm : parameters) : parameters =
+fun update_with_types f (parm : parameters) : parameters =
   let val {higher_order, with_types} = parm
   in {higher_order = higher_order, with_types = f with_types}
   end;
@@ -297,21 +299,33 @@ fun lit_subterm parm p lit =
 (* Operations for accessing literals, which are kept on the assumption list. *)
 (* ------------------------------------------------------------------------- *)
 
-val hide_literal = MATCH_MP HIDE_LITERAL THENR UNDISCH;
+fun hide_literal th = UNDISCH (MP (SPEC (concl th) HIDE_LITERAL) th);
 
-fun show_literal lit = DISCH (mk_neg lit) THENR MATCH_MP SHOW_LITERAL;
+fun show_literal lit =
+  let val lit' = mk_neg lit
+  in DISCH lit' THENR MP (SPEC lit SHOW_LITERAL)
+  end;
 
 local
-  val ROTATE_DISJ = CONV_RULE (REWR_CONV (GSYM DISJ_ASSOC));
-  val REMOVE_DISJ = MATCH_MP INITIALIZE_CLAUSE THENR UNDISCH;
-  val INIT = REPEATR (REPEATR ROTATE_DISJ THENR REMOVE_DISJ) THENR hide_literal;
+  fun REMOVE_DISJ th =
+    let val (a,b) = dest_disj (concl th)
+    in UNDISCH (MP (SPECL [a,b] INITIALIZE_CLAUSE) th)
+    end;
+
+  val INIT =
+    CONV_RULE (REPEATC (REWR_CONV (GSYM DISJ_ASSOC)))
+    THENR REPEATR REMOVE_DISJ
+    THENR hide_literal;
 in
   fun initialize_lits th =
     if concl th = F then ([], th) else (strip_disj (concl th), INIT th);
 end;
 
 local
-  fun final_lit lit = DISCH (mk_neg lit) THENR MATCH_MP FINALIZE_CLAUSE;
+  fun final_lit lit =
+    let val lit' = mk_neg lit
+    in fn th => MP (SPECL [lit, concl th] FINALIZE_CLAUSE) (DISCH lit' th)
+    end;
 in
   fun finalize_lits (lits, th) =
     case rev lits of [] => th
@@ -737,21 +751,22 @@ fun proof_step parm prev =
         val hol_lit = fol_literal_to_hol parm fol_lit
         val ((hol_ms1, hol_lits1), hol_th1) = res0 fol_th1 fol_lit
         val ((hol_ms2, hol_lits2), hol_th2) = res0 fol_th2 (negate fol_lit)
-(*
-        val () = chat 2 ("resolve: hol_lits1 =\n" ^ terms_to_string hol_lits1)
-        val () = chat 2 ("resolve: hol_lits2 =\n" ^ terms_to_string hol_lits2)
-        val () = chat 2 ("resolve: hol_ms1 =\n" ^ terms_to_string hol_ms1)
-        val () = chat 2 ("resolve: hol_ms2 =\n" ^ terms_to_string hol_ms2)
-*)
+        val _ = chatting 2 andalso chat
+          ("resolve: hol_lits1 =\n" ^ terms_to_string hol_lits1 ^
+           "resolve: hol_lits2 =\n" ^ terms_to_string hol_lits2 ^
+           "resolve: hol_ms1 =\n" ^ terms_to_string hol_ms1 ^
+           "resolve: hol_ms2 =\n" ^ terms_to_string hol_ms2)
         val sub = new_unify_ty (hol_lit :: hol_ms1 @ map negate_lit' hol_ms2)
-        val hol_lit' = pinst sub hol_lit
-        val hol_th1' = show_literal hol_lit'              (PINST sub hol_th1)
-        val hol_th2' = show_literal (negate_lit hol_lit') (PINST sub hol_th2)
+        val hol_lit'  = pinst sub hol_lit
+        val hol_nlit' = negate_lit hol_lit'
+        val hol_th1'  = show_literal hol_lit'  (PINST sub hol_th1)
+        val hol_th2'  = show_literal hol_nlit' (PINST sub hol_th2)
       in
         (map (pinst sub) (hol_lits1 @ hol_lits2),
-         MATCH_MP RESOLUTION
-         (if positive fol_lit then CONJ hol_th1' hol_th2'
-          else CONJ hol_th2' hol_th1'))
+         if positive fol_lit then
+           MP (SPEC hol_lit' RESOLUTION) (CONJ hol_th1' hol_th2')
+         else
+           MP (SPEC hol_nlit' RESOLUTION) (CONJ hol_th2' hol_th1'))
       end
       | step (_, Refl' fol_tm) =
       initialize_lits (Thm.REFL (fol_term_to_hol parm fol_tm))
@@ -784,8 +799,9 @@ fun proof_step parm prev =
           (case n of NONE => hol_lit' :: hol_lits
            | SOME n => mlibUseful.update_nth (K hol_lit') n hol_lits)
         val hol_lem = CONJ (DISCH eq hol_lit_th) (show_literal hol_lit hol_th)
+        val equal_step = SPECL [eq, hol_lit, hol_lit'] EQUAL_STEP
       in
-        (hol_lits', snd (initialize_lits (MATCH_MP EQUAL_STEP hol_lem)))
+        (hol_lits', snd (initialize_lits (MP equal_step hol_lem)))
       end;
   in
     fn p => freshen (step p)
@@ -802,7 +818,7 @@ local
     if not (chatting 1) then mlibThm.proof th else
       let
         val res = mlibThm.proof th
-        val () = chat 1 ("\n\nProof:\n" ^ mlibThm.proof_to_string res ^ "\n\n")
+        val _ = chat ("\n\nProof:\n" ^ mlibThm.proof_to_string res ^ "\n\n")
       in
         res
       end;
@@ -810,13 +826,12 @@ local
   fun chat_proof_step parm prev (p as (fol_th, inf)) =
     if not (chatting 1) then proof_step parm prev p else
       let
-        val () = chat 1
+        val _ = chat
           ("_____________________________________________________\n" ^
            "\nfol: " ^ mlibThm.thm_to_string fol_th ^ "\n" ^
            "\ninf: " ^ mlibThm.inference_to_string inf ^ "\n")
         val res = proof_step parm prev p
-        val () = chat 1
-          ("\nhol: " ^ thm_to_string (finalize_lits res) ^ "\n")
+        val _ = chat ("\nhol: " ^ thm_to_string (finalize_lits res) ^ "\n")
       in
         res
       end;

@@ -93,6 +93,13 @@ val NNF_CONV       : conv
 val SKOLEMIZE_CONV : conv
 
 (* ------------------------------------------------------------------------- *)
+(* Prenex Normal Form.                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+val PRENEX_CONV      : conv
+val ANTI_PRENEX_CONV : conv
+
+(* ------------------------------------------------------------------------- *)
 (* A basic tautology prover and simplifier for clauses                       *)
 (*                                                                           *)
 (* Examples:                                                                 *)
@@ -211,8 +218,8 @@ val SELECT_TAC : tactic
 (* Example:  f (if x then y else z)  =  (if x then f y else f z)             *)
 (* ------------------------------------------------------------------------- *)
 
-val cond_lift_SS  : ssdata
-val cond_lift_ss  : simpset      (* pure + cond_lift *)
+val cond_lift_SS : ssdata
+val cond_lift_ss : simpset      (* pure + cond_lift *)
 
 (* ------------------------------------------------------------------------- *)
 (* Converting boolean connectives to conditionals.                           *)
@@ -220,7 +227,15 @@ val cond_lift_ss  : simpset      (* pure + cond_lift *)
 (* Example:  x /\ ~(y ==> ~z)  =  (if x then (if y then z else F) else F)    *)
 (* ------------------------------------------------------------------------- *)
 
-val condify_SS    : ssdata
-val condify_ss    : simpset      (* pure + condify *)
+val condify_SS : ssdata
+val condify_ss : simpset      (* pure + condify *)
   
+(* ------------------------------------------------------------------------- *)
+(* Definitional CNF for feeding higher-order goals to a first-order prover.  *)
+(*                                                                           *)
+(* Example:                                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+val MIN_CNF : thm list -> thm list
+
 end

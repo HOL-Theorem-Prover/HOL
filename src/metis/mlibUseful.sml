@@ -57,7 +57,7 @@ fun timed f a =
     (Time.toReal usr + Time.toReal sys, res)
   end;
 
-val tracing = ref 0;
+val trace_level = ref 1;
 
 val traces : {module : string, alignment : int -> int} list ref = ref [];
 
@@ -68,16 +68,13 @@ local
     in case t of NONE => MAX | SOME {alignment, ...} => alignment l
     end;
 in
-  fun visible {module = m, level = l} =
-    0 < !tracing andalso (MAX <= !tracing orelse query m l <= !tracing);
+  fun tracing {module = m, level = l} =
+    let val t = !trace_level
+    in 0 < t andalso (MAX <= t orelse MAX <= l orelse query m l <= t)
+    end;
 end;
 
-local
-  val trace_printer = Lib.say;
-in
-  fun trace {module = m, message = s, level = l} =
-    if visible {module = m, level = l} then trace_printer s else ();
-end;
+val trace = print;
 
 (* ------------------------------------------------------------------------- *)
 (* Combinators                                                               *)
@@ -100,6 +97,10 @@ fun bool_to_string true = "true"
 
 fun non f = not o f;
 
+fun bool_compare (true,false) = LESS
+  | bool_compare (false,true) = GREATER
+  | bool_compare _ = EQUAL;
+  
 (* ------------------------------------------------------------------------- *)
 (* Pairs                                                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -207,6 +208,8 @@ fun cartwith f =
     let val xs' = rev xs in aux xs' [] xs' (rev ys) end
   end;
 
+fun cart xs ys = cartwith pair xs ys;
+
 local
   fun aux res l 0 = (rev res, l)
     | aux _ [] _ = raise Subscript
@@ -249,12 +252,19 @@ fun distinct [] = true
 (* Comparisons.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
+fun rev_order f xy =
+  case f xy of LESS => GREATER | EQUAL => EQUAL | GREATER => LESS;
+
+fun lex_combine f g ((a,c),(b,d)) = case f (a,b) of EQUAL => g (c,d) | x => x;
+
 fun lex_compare f =
   let
-    fun lex [] = EQUAL
-      | lex (x :: l) = case f x of EQUAL => lex l | y => y
+    fun lex [] [] = EQUAL
+      | lex [] (_ :: _) = LESS
+      | lex (_ :: _) [] = GREATER
+      | lex (x :: xs) (y :: ys) = case f (x,y) of EQUAL => lex xs ys | r => r
   in
-    lex
+    uncurry lex
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -300,6 +310,15 @@ fun sort cmp =
     f
   end;
 
+fun sort_map f cmp xs =
+  let
+    fun ncmp ((m,_),(n,_)) = cmp (m,n)
+    val nxs = map (fn x => (f x, x)) xs
+    val nys = sort ncmp nxs
+  in
+    map snd nys
+  end;
+
 (* ------------------------------------------------------------------------- *)
 (* Integers.                                                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -335,6 +354,18 @@ in
   fun primes n = looking [] n (K true) 2
 end;
 
+local
+  fun hcf 0 n = n | hcf 1 _ = 1 | hcf m n = hcf (n mod m) m;
+in
+  fun gcd m n =
+    let
+      val m = Int.abs m
+      val n = Int.abs n
+    in
+      if m < n then hcf m n else hcf n m
+    end;
+end;
+
 (* ------------------------------------------------------------------------- *)
 (* Strings.                                                                  *)
 (* ------------------------------------------------------------------------- *)
@@ -350,6 +381,11 @@ in
     else if Char.isUpper c then rotate upper c k
     else c;
 end;
+
+fun nchars x =
+  let fun dup _ 0 l = l | dup x n l = dup x (n - 1) (x :: l)
+  in fn n => implode (dup x n [])
+  end;
 
 fun variant x vars = if mem x vars then variant (x ^ "'") vars else x;
 
@@ -379,53 +415,40 @@ fun mk_prefix p s = p ^ s;
 
 val real_to_string = Real.toString;
 
+local val ln2 = Math.ln 2.0 in fun log2 x = Math.ln x / ln2 end;
+
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printing.                                                          *)
 (* ------------------------------------------------------------------------- *)
+
+(* Generic pretty-printers *)
 
 type 'a pp = ppstream -> 'a -> unit;
 
 val LINE_LENGTH = ref 75;
 
-fun unit_pp pp_a a pp () = pp_a pp a;
-
-fun pp_unit_pp pp upp = upp pp ();
-
 fun pp_map f pp_a (ppstrm : ppstream) x : unit = pp_a ppstrm (f x);
 
-fun pp_bracket (l, r) pp_a pp a =
+fun pp_bracket l r pp_a pp a =
   (PP.begin_block pp PP.INCONSISTENT (size l); PP.add_string pp l; pp_a pp a;
    PP.add_string pp r; PP.end_block pp);
 
-fun pp_sequence sep pp_a =
-  let
-    fun pp_elt pp x = (PP.add_string pp sep; PP.add_break pp (1, 0); pp_a pp x)
-    fun pp_seq pp []       = ()
-      | pp_seq pp (h :: t) = (pp_a pp h; app (pp_elt pp) t)
-  in
-    fn pp => fn l =>
-    (PP.begin_block pp PP.INCONSISTENT 0; pp_seq pp l; PP.end_block pp)
+fun pp_sequence sep pp_a pp =
+  let fun pp_x x = (PP.add_string pp sep; PP.add_break pp (1,0); pp_a pp x)
+  in fn [] => () | h :: t => (pp_a pp h; app pp_x t)
   end;
 
-fun pp_unop s pp_a pp a =
-  (PP.begin_block pp PP.CONSISTENT 0;
-   PP.add_string pp s;
-   PP.add_break pp (1, 0);
-   pp_a pp a;
-   PP.end_block pp);
-
-fun pp_binop s pp_a pp_b pp (a, b) =
+fun pp_binop s pp_a pp_b pp (a,b) =
   (PP.begin_block pp PP.INCONSISTENT 0;
    pp_a pp a;
    PP.add_string pp s;
-   PP.add_break pp (1, 0);
+   PP.add_break pp (1,0);
    pp_b pp b;
    PP.end_block pp);
 
-fun pp_nothing pp _ = (PP.begin_block pp PP.CONSISTENT 0; PP.end_block pp);
+(* Pretty-printers for common types *)
 
-fun pp_string pp s =
-  (PP.begin_block pp PP.CONSISTENT 0; PP.add_string pp s; PP.end_block pp);
+val pp_string = PP.add_string;
 
 fun pp_unit pp = pp_map (K "()") pp_string pp;
 
@@ -439,22 +462,47 @@ val pp_order =
   pp_map (fn LESS => "LESS" | EQUAL => "EQUAL" | GREATER => "GREATER")
   pp_string;
 
-fun pp_list pp_a = pp_bracket ("[", "]") (pp_sequence "," pp_a);
+val pp_porder =
+  pp_map (fn NONE => "INCOMPARABLE" | SOME LESS => "LESS" |
+          SOME EQUAL => "EQUAL" | SOME GREATER => "GREATER") pp_string;
 
-fun pp_pair pp_a pp_b = pp_bracket ("(", ")") (pp_binop "," pp_a pp_b);
+fun pp_list pp_a = pp_bracket "[" "]" (pp_sequence "," pp_a);
+
+fun pp_pair pp_a pp_b = pp_bracket "(" ")" (pp_binop "," pp_a pp_b);
 
 fun pp_triple pp_a pp_b pp_c =
-  pp_bracket ("(", ")")
+  pp_bracket "(" ")"
   (pp_map (fn (a, b, c) => (a, (b, c)))
    (pp_binop "," pp_a (pp_binop "," pp_b pp_c)));
 
-local fun pp_l pp = pp_sequence "," (pp_binop " =" pp_string pp_unit_pp) pp;
-in fun pp_record l = pp_bracket ("{", "}") (unit_pp pp_l l);
+local
+  fun pad1 n s = funpow (n - size s) (fn x => " " ^ x) s;
+
+  fun pad (l as [] :: _) = l
+    | pad l =
+    let
+      val hs = map hd l
+      val ts = pad (map tl l)
+      val (n,_) = min (Int.compare o swap) (map size hs)
+      val hs = map (pad1 n) hs
+    in
+      zipwith cons hs ts
+    end;
+
+  fun pp_row pp sl =
+    (pp_bracket "[ " " ]" (pp_sequence "" pp_string) pp sl;
+     PP.add_newline pp)
+in
+  fun pp_table pp tab =
+    let
+      val tab = pad tab
+    in
+      (PP.begin_block pp PP.INCONSISTENT 2;
+       app (pp_row pp) tab;
+       PP.end_block pp)
+    end;
 end;
-
-fun pp_option pp_a pp NONE = pp_string pp "NONE"
-  | pp_option pp_a pp (SOME a) = pp_unop "SOME" pp_a pp a;
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Sums.                                                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -548,5 +596,107 @@ val host = Option.getOpt (OS.Process.getEnv "HOSTNAME", "unknown");
 val date = Date.fmt "%H:%M:%S %d/%m/%Y" o Date.fromTimeLocal o Time.now;
 
 val today = Date.fmt "%d/%m/%Y" o Date.fromTimeLocal o Time.now;
+
+(* ------------------------------------------------------------------------- *)
+(* Command line arguments.                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+exception Optionexit of {message : string option, usage : bool, success : bool};
+
+type Opt = {switches : string list, arguments : string list,
+            description : string, processor : string list -> unit};
+
+type Allopts = {name : string, head : string, foot : string, opts : Opt list};
+
+val version_string = ref "";
+
+fun version_information () =
+  let
+    val s = !version_string
+  in
+    if s = "" then
+      raise Optionexit {message = SOME "no version information available",
+                        usage = false, success = true}
+    else
+      (print s;
+       raise Optionexit {message = NONE, usage = false, success = true})
+  end;
+
+val basic_options : Opt list =
+  [{switches = ["--verbosity"], arguments = ["0..10"],
+    description = "the degree of verbosity",
+    processor = fn l => trace_level := string_to_int (hd l)},
+   {switches = ["--secret"], arguments = [],
+    description = "process then hide the next option",
+    processor = fn _ => raise Fail "basic_options: --secret"},
+   {switches = ["--"], arguments = [],
+    description = "no more options",
+    processor = fn _ => raise Fail "basic_options: --"},
+   {switches = ["-?","--help"], arguments = [],
+    description = "display all options and exit",
+    processor = fn _ => raise Optionexit
+    {message = SOME "displaying all options", usage = true, success = true}},
+   {switches = ["-v", "--version"], arguments = [],
+    description = "display version information",
+    processor = fn _ => version_information ()}];
+
+fun process_options ({name, head, foot, opts} : Allopts) =
+  let
+    fun exit true = OS.Process.exit OS.Process.success
+      | exit false = OS.Process.exit OS.Process.failure
+    fun join _ [] = raise Fail "process_options"
+      | join s (h :: t) = foldl (fn (x,y) => y ^ s ^ x) h t
+    fun list_opts {switches = n, arguments = r, description = s, ...} =
+      (foldl (fn (x,y) => y ^ " " ^ x) (join ", " n) r, s)
+    val usage_message =
+      let
+        val l = map list_opts opts
+        val (n,_) = min (rev_order Int.compare) (map (size o fst) l)
+        fun f ((x,d),s) =
+          let val m = size x in s^"  "^x^nchars #" " (n + 2 - m) ^ d ^ "\n" end
+      in
+        head ^ foldl f "" l ^ foot
+      end
+    fun escape {message, usage, success} =
+      (case message of NONE => () | SOME m => print (name ^ ": " ^ m ^ "\n");
+       if usage then print usage_message else ();
+       exit success)
+
+    fun process [] = ([], [])
+      | process ("--" :: xs) = ([("--",[])], xs)
+      | process ("--secret" :: xs) = (tl ## I) (process xs)
+      | process (x :: xs) =
+      (case List.find (fn {switches = n, ...} => mem x n) opts of
+         NONE =>
+           if hd (explode x) <> #"-" then ([], x :: xs)
+           else escape {message = SOME ("unknown switch \"" ^ x ^ "\""),
+                        usage = true, success = false}
+       | SOME {arguments = r, processor = f, ...} =>
+         let
+           val m = length r
+           val () =
+             if m <= length xs then ()
+             else escape {message = SOME
+                          (x ^ " options needs "
+                           ^ (if m = 1 then "a following argument"
+                              else int_to_string m ^ " following arguments")
+                           ^ " (" ^ join " " r ^ ")"),
+                          usage = true, success = false}
+           val (ys,xs) = split xs m
+           val () = f ys
+         in
+           (cons (x,ys) ## I) (process xs)
+         end)
+  in
+    fn l =>
+    let
+      val () = if null l then version_information () else ()
+      val (a,b) = process l
+      val a = foldl (fn ((x,xs),ys) => x :: xs @ ys) [] (rev a)
+    in
+      (a,b)
+    end
+    handle Optionexit x => escape x
+  end;
 
 end

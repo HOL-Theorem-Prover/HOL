@@ -92,7 +92,7 @@ Etymology
      then eats her so that she can't produce a rival child. The child is
      instead born from Zeus's head as Athena."
 
-   The [5]Metis people of Canada are
+   The [5]Metis [6]people of Canada are
 
      "mixed-blood  offspring  of  French fur traders from the North West
      Company  or  Scottish and English fur traders from the Hudson's Bay
@@ -102,6 +102,19 @@ Etymology
      of the two and a new identity as Metis."
 
 Change Log
+
+  Version 1.3: 17 June 2002
+
+   Goals submitted to MESON_TAC when HOL is built .......... 1953
+   Proved by MESON_TAC ..................................... 1953
+   Proved by METIS_TAC within 10s .......................... 1946
+
+  Between Versions 1.2 and 1.3
+
+     * Implemention  of  definitional  CNF to reduce blow-up in number of
+       clauses (usually caused by nested boolean equivalences).
+     * Resolution  is  more  robust and efficient, and includes an option
+       (off by default) for clauses to inherit ordering constraints.
 
   Version 1.2: 19 November 2002
 
@@ -134,11 +147,11 @@ Change Log
        status information during proof (if HOL is in interactive mode).
      * Restricted   (universal   and  existential)  quantifiers  are  now
        normalized by the NNF conversion.
-     * Improved  performance in the model elimination proof procedure due
-       to better caching (following a suggestion from John Harrison).
+     * Improved performance in the model elimination proof procedure with
+       better caching (following a suggestion from John Harrison).
      * First-order substitutions are now fully Boultonized.
-     * The  first-order  logical kernel makes local tweaks to keep proofs
-       as small as possible.
+     * The  first-order  logical  kernel automatically performs peep-hole
+       optimizations to keep proofs as small as possible.
 
   Version 1.0: 18 July 2002
 
@@ -155,3 +168,4 @@ References
    3. http://www.seds.org/nineplanets/nineplanets/amalthea.html#metisx
    4. http://www.stir.ac.uk/Departments/Arts/ReligiousStudies/rlists/7212/7212-11.html
    5. http://www.turtle-island.com/metis.html
+   6. http://www.metisnation.org/

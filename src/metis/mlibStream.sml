@@ -16,10 +16,8 @@ infixr 0 oo ##;
 
 datatype 'a stream = NIL | CONS of 'a * (unit -> 'a stream);
 
-type 'a Sthk = unit -> 'a stream;
-
 (* ------------------------------------------------------------------------- *)
-(* mlibUseful functions.                                                         *)
+(* Basic operations.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
 fun cons h t = CONS (h, t);
@@ -36,6 +34,70 @@ fun repeat x = let fun rep () = CONS (x, rep) in rep () end;
 
 fun count n = CONS (n, fn () => count (n + 1));
 
+fun append NIL s = s ()
+  | append (CONS (h,t)) s = CONS (h, fn () => append (t ()) s);
+
+fun map f =
+  let
+    fun m NIL = NIL
+      | m (CONS (h, t)) = CONS (f h, fn () => m (t ()))
+  in
+    m
+  end;
+
+fun zipwith f =
+  let
+    fun z NIL _ = NIL
+      | z _ NIL = NIL
+      | z (CONS (x, xs)) (CONS (y, ys)) =
+      CONS (f x y, fn () => z (xs ()) (ys ()))
+  in
+    z
+  end;
+
+fun zip s t = zipwith pair s t;
+
+fun take 0 s = NIL
+  | take n NIL = raise Subscript
+  | take 1 (CONS (x, _)) = CONS (x, K NIL)
+  | take n (CONS (x, xs)) = CONS (x, fn () => take (n - 1) (xs ()));
+
+fun drop n s = funpow n tl s handle Empty => raise Subscript;
+
+(* ------------------------------------------------------------------------- *)
+(* mlibStream versions of standard list operations that might not terminate      *)
+(* ------------------------------------------------------------------------- *)
+
+fun length NIL = 0 | length (CONS (_,t)) = 1 + length (t ());
+
+fun exists pred =
+  let fun f NIL = false | f (CONS (h,t)) = pred h orelse f (t ()) in f end;
+
+fun all pred = not o exists (not o pred);
+
+fun partial_map f =
+  let
+    fun mp NIL = NIL
+      | mp (CONS (h, t)) =
+      case f h of NONE => mp (t ())
+      | SOME h' => CONS (h', fn () => mp (t ()))
+  in
+    mp
+  end;
+
+fun filter f = partial_map (fn x => if f x then SOME x else NONE);
+
+fun flatten NIL = NIL
+  | flatten (CONS (NIL, ss)) = flatten (ss ())
+  | flatten (CONS (CONS (x, xs), ss)) =
+  CONS (x, fn () => flatten (CONS (xs (), ss)));
+
+(* ------------------------------------------------------------------------- *)
+(* More complicated stream operations                                        *)
+(* ------------------------------------------------------------------------- *)
+
+type 'a Sthk = unit -> 'a stream;
+
 fun foldl f =
   let
     fun fold b NIL = INL b
@@ -47,14 +109,6 @@ fun foldl f =
 fun foldr b c =
   let fun f NIL = c | f (CONS (x, xs)) = b (x, fn () => f (xs ())) in f end;
 
-fun map f =
-  let
-    fun m NIL = NIL
-      | m (CONS (h, t)) = CONS (f h, fn () => m (t ()))
-  in
-    m
-  end;
-
 fun map_thk f =
   let
     fun mt NIL = NIL
@@ -62,16 +116,6 @@ fun map_thk f =
     and mt' t = f (fn () => mt (t ()))
   in
     mt'
-  end;
-
-fun partial_map f =
-  let
-    fun mp NIL = NIL
-      | mp (CONS (h, t)) =
-      case f h of NONE => mp (t ())
-      | SOME h' => CONS (h', fn () => mp (t ()))
-  in
-    mp
   end;
 
 fun maps f =
@@ -99,31 +143,9 @@ fun partial_maps f =
     mm
   end;
 
-fun filter f = partial_map (fn x => if f x then SOME x else NONE);
-
-fun flatten NIL = NIL
-  | flatten (CONS (NIL, ss)) = flatten (ss ())
-  | flatten (CONS (CONS (x, xs), ss)) =
-  CONS (x, fn () => flatten (CONS (xs (), ss)));
-
-fun zipwith f =
-  let
-    fun z NIL _ = NIL
-      | z _ NIL = NIL
-      | z (CONS (x, xs)) (CONS (y, ys)) =
-      CONS (f x y, fn () => z (xs ()) (ys ()))
-  in
-    z
-  end;
-
-fun zip s t = zipwith pair s t;
-
-fun take 0 s = NIL
-  | take n NIL = raise Subscript
-  | take 1 (CONS (x, _)) = CONS (x, K NIL)
-  | take n (CONS (x, xs)) = CONS (x, fn () => take (n - 1) (xs ()));
-
-fun drop n s = funpow n tl s handle Empty => raise Subscript;
+(* ------------------------------------------------------------------------- *)
+(* Maps to other data structures                                             *)
+(* ------------------------------------------------------------------------- *)
 
 local
   fun to_lst res NIL = rev res

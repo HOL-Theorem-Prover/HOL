@@ -32,15 +32,15 @@ val solve  : solver -> int -> formula list -> thm list list
 val find   : solver -> formula list -> thm list option
 val refute : solver -> thm option
 
-(* Solver nodes must construct themselves from the following form. *)
+(* mlibSolver nodes must construct themselves from the following form. *)
 
 type form =
   {slice : meter ref,                   (* A meter to stop after each slice *)
-   units : units ref,                   (* Solvers share a unit cache *)
+   units : units ref,                   (* mlibSolvers share a unit cache *)
    thms  : thm list,                    (* Context, assumed consistent *)
    hyps  : thm list}                    (* Hypothesis, or set of support *)
 
-(* Solver nodes also incorporate a name. *)
+(* mlibSolver nodes also incorporate a name. *)
 
 type node_data = {name : string, solver_con : form -> solver}
 type solver_node

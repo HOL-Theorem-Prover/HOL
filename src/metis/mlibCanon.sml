@@ -22,6 +22,18 @@ val term_subst    = mlibSubst.term_subst;
 val formula_subst = mlibSubst.formula_subst;
 
 (* ------------------------------------------------------------------------- *)
+(* Helper functions.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+fun sym lit =
+  let
+    val (x,y) = dest_eq lit
+    val () = assert (x <> y) (ERR "sym" "refl")
+  in
+    mk_eq (y,x)
+  end;
+
+(* ------------------------------------------------------------------------- *)
 (* Simplification.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
@@ -160,46 +172,62 @@ val full_skolemize = specialize o prenex o skolemize o nnf o simplify;
 (* ------------------------------------------------------------------------- *)
 
 fun tautologous lits =
-  let val (pos, neg) = List.partition positive lits
-  in intersect pos (map negate neg) <> []
+  let
+    val (pos,neg) = List.partition positive lits
+    val pos = List.mapPartial (total sym) pos @ pos
+    val neg = map negate neg
+  in
+    not (null (intersect pos neg))
   end;
 
 (* ------------------------------------------------------------------------- *)
 (* Conjunctive Normal Form.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-fun distrib s1 s2 = cartwith union s1 s2;
+local
+  fun distrib s1 s2 = cartwith union s1 s2;
+    
+  fun push (Or (p,q))  = distrib (push p) (push q)
+    | push (And (p,q)) = union (push p) (push q)
+    | push fm = [[fm]];
+in
+  fun simpcnf True = []
+    | simpcnf False = [[]]
+    | simpcnf fm = List.filter (non tautologous) (push fm);
+end;
 
-fun purecnf (Or (p, q))  = distrib (purecnf p) (purecnf q)
-  | purecnf (And (p, q)) = union (purecnf p) (purecnf q)
-  | purecnf fm = [[fm]];
-
-fun simpcnf True = []
-  | simpcnf False = [[]]
-  | simpcnf fm = List.filter (non tautologous) (purecnf fm);
-
-val clausal =
+val fullcnf =
   List.concat o map (simpcnf o specialize o prenex) o flatten_conj o
-  skolemize o nnf o simplify
+  skolemize o nnf o simplify;
 
-val cnf = list_mk_conj o map list_mk_disj o clausal;
+val purecnf = list_mk_conj o map list_mk_disj o simpcnf;
+
+val cnf = list_mk_conj o map list_mk_disj o fullcnf;
 
 local val is_clause = List.all is_literal o strip_disj o snd o strip_forall;
 in val is_cnf = List.all is_clause o strip_conj;
 end;
 
+(* ------------------------------------------------------------------------- *)
+(* Converting to clauses.                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+val clausal = fullcnf;
+
 val axiomatize = map AXIOM o clausal;
 
-fun eq_axiomatize fm =
+val eq_axioms =
   let
     val functions' = List.filter (fn (_,n) => 0 < n) o functions
+    val relations' = List.filter (non (equal eq_rel)) o relations
     val eqs = [REFLEXIVITY, SYMMETRY, TRANSITIVITY]
-    val rels = map REL_CONGRUENCE (relations_no_eq fm)
-    val funs = map FUN_CONGRUENCE (functions' fm)
+    val rels = map REL_CONGRUENCE o relations'
+    val funs = map FUN_CONGRUENCE o functions'
   in
-    eqs @ funs @ rels @ axiomatize fm
+    fn fm => eqs @ funs fm @ rels fm
   end;
 
-fun eq_axiomatize' fm = (if eq_occurs fm then eq_axiomatize else axiomatize) fm;
+fun eq_axiomatize fm =
+  (if eq_occurs fm then append (eq_axioms fm) else I) (axiomatize fm);
 
 end

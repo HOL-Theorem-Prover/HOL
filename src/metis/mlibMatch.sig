@@ -10,7 +10,7 @@ type term    = mlibTerm.term
 type formula = mlibTerm.formula
 type subst   = mlibSubst.subst
 
-(* Matching *)
+(* mlibMatching *)
 val matchl          : subst -> (term * term) list -> subst
 val match           : term -> term -> subst
 val matchl_literals : subst -> (formula * formula) list -> subst

@@ -19,13 +19,13 @@ val formula_subst = mlibSubst.formula_subst;
 
 datatype inference = Axiom | Refl | Assume | Inst | Factor | Resolve | Equality;
 
-datatype thm = Thm of formula list * (inference * thm list);
+datatype thm = mlibThm of formula list * (inference * thm list);
 
 (* ------------------------------------------------------------------------- *)
 (* Destruction of theorems is fine.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-fun dest_thm (Thm th) = th;
+fun dest_thm (mlibThm th) = th;
 
 val clause = fst o dest_thm;
 
@@ -34,28 +34,28 @@ val clause = fst o dest_thm;
 (* ------------------------------------------------------------------------- *)
 
 fun AXIOM cl =
-  if List.all is_literal cl then Thm (cl, (Axiom, []))
+  if List.all is_literal cl then mlibThm (cl, (Axiom, []))
   else raise ERR "AXIOM" "argument not a list of literals";
 
-fun REFL tm = Thm ([mk_eq (tm, tm)], (Refl, []));
+fun REFL tm = mlibThm ([mk_eq (tm, tm)], (Refl, []));
 
 fun ASSUME fm =
-  if is_literal fm then Thm ([fm, negate fm], (Assume, []))
+  if is_literal fm then mlibThm ([fm, negate fm], (Assume, []))
   else raise ERR "ASSUME" "argument not a literal";
 
-fun INST env (th as Thm (cl, pr)) =
+fun INST env (th as mlibThm (cl, pr)) =
   let
     val cl' = map (formula_subst env) cl
   in
     if cl' = cl then th else
       case pr of (Inst, [th'])
-        => if cl' = clause th' then th' else Thm (cl', (Inst, [th']))
-      | _ => Thm (cl', (Inst, [th]))
+        => if cl' = clause th' then th' else mlibThm (cl', (Inst, [th']))
+      | _ => mlibThm (cl', (Inst, [th]))
   end;
 
 fun FACTOR th =
   let val cl = rev (setify (clause th))
-  in if cl = clause th then th else Thm (cl, (Factor, [th]))
+  in if cl = clause th then th else mlibThm (cl, (Factor, [th]))
   end;
 
 fun RESOLVE fm th1 th2 =
@@ -68,7 +68,7 @@ fun RESOLVE fm th1 th2 =
   in
     if cl = cl1 then th1
     else if cl = cl2 then th2
-    else Thm (cl, (Resolve, [th1, th2]))
+    else mlibThm (cl, (Resolve, [th1, th2]))
   end;
 
 fun EQUALITY lit p r lr th =
@@ -81,7 +81,7 @@ fun EQUALITY lit p r lr th =
         NONE => literal_rewrite (p |-> r) lit :: th_lits
       | SOME n => update_nth (literal_rewrite (p |-> r)) n th_lits
   in
-    Thm (eq_lit :: other_lits, (Equality, [th]))
+    mlibThm (eq_lit :: other_lits, (Equality, [th]))
   end;
 
 end

@@ -21,10 +21,12 @@ type Subst   = (term, term) subst * tySubst;
 
 local
   open mlibUseful;
+  val module = "matchTools";
 in
-  val () = traces := {module = "matchTools", alignment = K 1} :: !traces;
-  fun chat l m = trace {module = "matchTools", message = m, level = l};
-  val ERR = mk_HOL_ERR "matchTools";
+  val () = traces := {module = module, alignment = I} :: !traces;
+  fun chatting l = tracing {module = module, level = l};
+  fun chat s = (trace s; true)
+  val ERR = mk_HOL_ERR module;
   val BUG = BUG;
 end;
 

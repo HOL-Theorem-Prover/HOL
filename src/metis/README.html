@@ -153,7 +153,8 @@ Metis is a consort of Zeus in <a href="http://www.stir.ac.uk/Departments/Arts/Re
 
 <p>
 
-The <a href="http://www.turtle-island.com/metis.html">Metis people</a>
+The <a href="http://www.turtle-island.com/metis.html">Metis</a>
+<a href="http://www.metisnation.org/">people</a>
 of Canada are
 
 <blockquote>
@@ -167,6 +168,26 @@ of Canada are
 
 
 <h2>Change Log</h2>
+
+<h3>Version 1.3: 17 June 2002</h3>
+
+<kbd>Goals submitted to MESON_TAC when HOL is built .......... 1953</kbd><br>
+<kbd>Proved by MESON_TAC ..................................... 1953</kbd><br>
+<kbd>Proved by METIS_TAC within 10s .......................... 1946</kbd><br>
+
+<h3>Between Versions 1.2 and 1.3</h3>
+
+<ul>
+
+<li>Implemention of definitional CNF to reduce blow-up in number of
+clauses (usually caused by nested boolean equivalences).</li>
+
+<li>Resolution is more robust and efficient, and includes an option
+(off by default) for clauses to inherit ordering constraints.</li>
+
+</ul>
+
+<p>
 
 <h3>Version 1.2: 19 November 2002</h3>
 
@@ -215,13 +236,13 @@ mode).</li>
 <li>Restricted (universal and existential) quantifiers are now
 normalized by the NNF conversion.</li>
 
-<li>Improved performance in the model elimination proof procedure due
-to better caching (following a suggestion from John Harrison).</li>
+<li>Improved performance in the model elimination proof procedure with
+better caching (following a suggestion from John Harrison).</li>
 
 <li>First-order substitutions are now fully Boultonized.</li>
 
-<li>The first-order logical kernel makes local tweaks to keep proofs
-as small as possible.</li>
+<li>The first-order logical kernel automatically performs peep-hole
+optimizations to keep proofs as small as possible.</li>
 
 </ul>
 

@@ -8,7 +8,7 @@ sig
 
 (* "Metis" trace levels:
    0: No output
-   1: The equivalent of the Meson: dots
+   1: The equivalent of Meson dots
    2: Timing information
    3: More detailed prover information: slice by slice
    4: Log of each step in proof translation
@@ -27,10 +27,10 @@ type Fparm      = folTools.parameters
 type Mparm      = mlibMetis.parameters
 type parameters = {interface : Fparm, solver : Mparm, limit : limit}
 
-val defaults              : parameters
-val update_parm_interface : (Fparm -> Fparm) -> parameters -> parameters
-val update_parm_solver    : (Mparm -> Mparm) -> parameters -> parameters
-val update_parm_limit     : (limit -> limit) -> parameters -> parameters
+val defaults         : parameters
+val update_interface : (Fparm -> Fparm) -> parameters -> parameters
+val update_solver    : (Mparm -> Mparm) -> parameters -> parameters
+val update_limit     : (limit -> limit) -> parameters -> parameters
 
 (* Prolog solver *)
 val PROLOG_SOLVE : thm list -> Query -> Result stream

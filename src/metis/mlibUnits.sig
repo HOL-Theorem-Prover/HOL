@@ -12,7 +12,7 @@ type thm     = mlibThm.thm
 
 type units
 
-val empty    : units
+val empty    : unit -> units
 val add      : thm -> units -> units
 val addl     : thm list -> units -> units
 val subsumes : units -> formula -> thm option

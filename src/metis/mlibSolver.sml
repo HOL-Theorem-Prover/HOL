@@ -31,9 +31,10 @@ val op ::> = mlibSubst.::>;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := {module = "mlibSolver", alignment = K 1} :: !traces;
-
-fun chat l m = trace {module = "mlibSolver", message = m, level = l};
+val module = "mlibSolver";
+val () = traces := {module = module, alignment = I} :: !traces;
+fun chatting l = tracing {module = module, level = l};
+fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -102,12 +103,12 @@ local
     let
       val fms = distinctivize (List.mapPartial (total dest_unit) ths)
     in
-      if non null (mlibSubsume.subsumes s fms) then (NONE, s)
+      if non S.null (mlibSubsume.subsumes s fms) then (NONE, s)
       else (SOME (SOME ths), mlibSubsume.add (fms |-> ()) s)
     end
     handle ERR_EXN _ => raise BUG "advance" "shouldn't fail";
 in
-  fun subsumed_filter s g = S.partial_maps advance mlibSubsume.empty (s g);
+  fun subsumed_filter s g = S.partial_maps advance (mlibSubsume.empty ()) (s g);
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -128,29 +129,29 @@ fun find s = total unwrap o (solve s 1);
 fun refute s = Option.map unwrap (find s [False]);
 
 (* ------------------------------------------------------------------------- *)
-(* Solver nodes must construct themselves from the following form.           *)
+(* mlibSolver nodes must construct themselves from the following form.           *)
 (* ------------------------------------------------------------------------- *)
 
 type form =
   {slice : meter ref,                   (* A meter to stop after each slice *)
-   units : units ref,                   (* Solvers share a unit cache *)
+   units : units ref,                   (* mlibSolvers share a unit cache *)
    thms  : thm list,                    (* Context, assumed consistent *)
    hyps  : thm list};                   (* Hypothesis, no assumptions *)
 
 (* ------------------------------------------------------------------------- *)
-(* Solver nodes also incorporate a name.                                     *)
+(* mlibSolver nodes also incorporate a name.                                     *)
 (* ------------------------------------------------------------------------- *)
 
 type node_data = {name : string, solver_con : form -> solver};
 
 datatype solver_node =
-  Solver_node of {name : string, initial : string, solver_con : form -> solver};
+  mlibSolver_node of {name : string, initial : string, solver_con : form -> solver};
 
 fun mk_solver_node {name, solver_con} =
-  Solver_node
+  mlibSolver_node
   {name = name, initial = (str o hd o explode) name, solver_con = solver_con};
 
-val pp_solver_node = pp_map (fn Solver_node {name, ...} => name) pp_string;
+val pp_solver_node = pp_map (fn mlibSolver_node {name, ...} => name) pp_string;
 
 (* ------------------------------------------------------------------------- *)
 (* At each step we schedule a time slice to the least cost solver node.      *)
@@ -175,8 +176,8 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun name (Solver_node {name, ...}) = name;
-  fun initial (Solver_node {initial, ...}) = initial;
+  fun name (mlibSolver_node {name, ...}) = name;
+  fun initial (mlibSolver_node {initial, ...}) = initial;
   fun seq f [] = ""
     | seq f (h :: t) = foldl (fn (n, s) => s ^ "," ^ f n) (f h) t;
 in
@@ -222,27 +223,30 @@ end;
 fun schedule check read stat =
   let
     fun sched nodes =
-      (chat 2 (stat nodes);
+      (chatting 2 andalso chat (stat nodes);
        if not (check ()) then
-         (chat 1 "?\n"; S.CONS (NONE, fn () => sched nodes))
+         (chatting 1 andalso chat "?\n"; S.CONS (NONE, fn () => sched nodes))
        else
-         case choose_subnode nodes of NONE => (chat 1 "!\n"; S.NIL)
+         case choose_subnode nodes of
+           NONE => (chatting 1 andalso chat "!\n"; S.NIL)
          | SOME n =>
            let
              val Subnode {name, used, solns, cost} = List.nth (nodes, n)
-             val () = chat 1 name
+             val _ = chatting 1 andalso chat name
              val seq = (Option.valOf solns) ()
              val r = read ()
-             val () = chat 2 ("--t=" ^ time_to_string (#time r) ^ "\n")
+             val _ = chatting 2 andalso
+                     chat ("--t=" ^ time_to_string (#time r) ^ "\n")
              val used = add_readings used r
              val (res, solns) =
                case seq of S.NIL => (NONE, NONE) | S.CONS (a, r) => (a, SOME r)
              val node =
                Subnode {name = name, used = used, cost = cost, solns = solns}
              val nodes = update_nth (K node) n nodes
-             val () =
-               case res of NONE => ()
-               | SOME _ => (chat 2 (stat nodes); chat 1 "#\n")
+             val _ =
+               Option.isSome res andalso
+               (chatting 2 andalso chat (stat nodes);
+                chatting 1 andalso chat "#\n")
            in
              S.CONS (res, fn () => sched nodes)
            end)
@@ -252,11 +256,11 @@ fun schedule check read stat =
 
 fun combine_solvers (n, i) csolvers {slice, units, thms, hyps} =
   let
-    val () = chat 2
+    val _ = chatting 2 andalso chat
       (n ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
        "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
     val meter = ref (new_meter expired)
-    fun f (Solver_node {initial, solver_con, ...}) =
+    fun f (mlibSolver_node {initial, solver_con, ...}) =
       (initial,
        solver_con {slice = meter, units = units, thms = thms, hyps = hyps})
     val cnodes = map (I ## f) csolvers
@@ -273,7 +277,7 @@ fun combine csolvers =
     val n = combine_names csolvers
     val i = combine_initials csolvers
   in
-    Solver_node
+    mlibSolver_node
     {name = n, initial = i, solver_con = combine_solvers (n, i) csolvers}
   end;
 
@@ -283,7 +287,7 @@ fun combine csolvers =
 
 fun sos_solver_con filt name solver_con {slice, units, thms, hyps} =
   let
-    val () = chat 2
+    val _ = chatting 2 andalso chat
       (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
        "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
     val (hyps', thms') = List.partition filt (thms @ hyps)
@@ -291,10 +295,10 @@ fun sos_solver_con filt name solver_con {slice, units, thms, hyps} =
     solver_con {slice = slice, units = units, thms = thms', hyps = hyps'}
   end;
 
-fun set_of_support filt (Solver_node {name, initial, solver_con}) =
+fun set_of_support filt (mlibSolver_node {name, initial, solver_con}) =
   let val name' = "!" ^ name
   in
-    Solver_node
+    mlibSolver_node
     {name = name', initial = initial,
      solver_con = sos_solver_con filt name' solver_con}
   end;
@@ -317,13 +321,13 @@ val nothing : thm -> bool = K false;
 
 type init_data = {limit : limit, thms : thm list, hyps : thm list}
 
-fun initialize (Solver_node {solver_con, ...}) {limit, thms, hyps} =
+fun initialize (mlibSolver_node {solver_con, ...}) {limit, thms, hyps} =
   case List.find is_contradiction (thms @ hyps) of SOME th
     => contradiction_solver th
   | NONE =>
     let
       val meter = ref (new_meter expired)
-      val units = ref U.empty
+      val units = ref (U.empty ())
       val solver =
         solver_con {slice = meter, units = units, thms = thms, hyps = hyps}
     in

@@ -6,7 +6,7 @@
 (*
 app load
  ["Moscow", "mlibUseful", "mlibTerm", "mlibThm", "mlibCanon", "mlibSupport",
-  "mlibStream", "mlibSolver", "mlibMeter", "mlibUnits", "mlibClauseset1"];
+  "mlibStream", "mlibSolver", "mlibMeter", "mlibUnits", "mlibClauseset"];
 *)
 
 (*
@@ -22,15 +22,16 @@ structure O = Option; local open Option in end;
 structure S = mlibStream; local open mlibStream in end;
 structure U = mlibUnits; local open mlibUnits in end;
 structure A = mlibSupport; local open mlibSupport in end;
-structure B = mlibClauseset1; local open mlibClauseset1 in end;
+structure B = mlibClauseset; local open mlibClauseset in end;
 
 (* ------------------------------------------------------------------------- *)
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := {module = "mlibResolution", alignment = I} :: !traces;
-
-fun chat l m = trace {module = "mlibResolution", message = m, level = l};
+val module = "mlibResolution";
+val () = traces := {module = module, alignment = I} :: !traces;
+fun chatting l = tracing {module = module, level = l};
+fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
 (* Parameters.                                                               *)
@@ -39,98 +40,135 @@ fun chat l m = trace {module = "mlibResolution", message = m, level = l};
 type parameters =
   {restart     : int option,
    clause_parm : mlibClause.parameters,
-   sos_parm    : mlibSupport.parameters};
+   sos_parm    : mlibSupport.parameters,
+   set_parm    : mlibClauseset.parameters};
 
 val defaults : parameters =
   {restart     = NONE,
    clause_parm = mlibClause.defaults,
-   sos_parm    = mlibSupport.defaults};
+   sos_parm    = mlibSupport.defaults,
+   set_parm    = mlibClauseset.defaults};
+
+type 'a Parmupdate = ('a -> 'a) -> parameters -> parameters;
+
+fun update_restart f (parm : parameters) : parameters =
+  let val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
+  in {restart = f r, clause_parm = c, sos_parm = a, set_parm = b}
+  end;
+
+fun update_clause_parm f (parm : parameters) : parameters =
+  let val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
+  in {restart = r, clause_parm = f c, sos_parm = a, set_parm = b}
+  end;
+
+fun update_sos_parm f (parm : parameters) : parameters =
+  let val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
+  in {restart = r, clause_parm = c, sos_parm = f a, set_parm = b}
+  end;
+
+fun update_set_parm f (parm : parameters) : parameters =
+  let val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
+  in {restart = r, clause_parm = c, sos_parm = a, set_parm = f b}
+  end;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun state_info (sos, used) =
+fun state_info (sos,used) =
   "(" ^ int_to_string (A.size sos) ^ "," ^ int_to_string (B.size used) ^ ")";
 
-fun add_unit units cl =
-  case total clause_thm cl of NONE => ()
-  | SOME th => if mlibThm.is_unit th then units := U.add th (!units) else ();
+fun ofilt _ NONE = NONE | ofilt p (s as SOME x) = if p x then s else NONE;
 
 (* ------------------------------------------------------------------------- *)
-(* Resolution procedure.                                                     *)
+(* An ugly way to get hold of the current state.                             *)
+(* ------------------------------------------------------------------------- *)
+
+val current_state = ref (mlibClauseset.empty (mlibClause.defaults,mlibClauseset.defaults));
+
+(* ------------------------------------------------------------------------- *)
+(* The resolution procedure as a solver_node.                                *)
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun comment (n,x) = (if n = 0 then () else chat 1 (int_to_string n ^ "x"); x);
+  fun comment (n,x) =
+    (0 < n andalso chatting 2 andalso chat ("x" ^ int_to_string n); x);
   fun select units used =
     let
       fun remove n sos =
-        case A.remove sos of NONE => (n, NONE)
-        | SOME (cl, sos) => check n sos (demodulate units (B.simplify used cl))
-      and check n sos cl =
-        if B.subsumed used cl then remove (n + 1) sos
-        else (n, SOME (cl, (sos, used)))
+        case A.remove sos of NONE => (n,NONE)
+        | SOME (dcl,sos) => check n sos dcl
+      and check n sos (d,cl) =
+        case ofilt (not o B.subsumed used) (B.strengthen used units cl) of
+          NONE => remove (n + 1) sos
+        | SOME cl => (n, SOME ((d,cl),(sos,used)))
     in
       remove 0
     end;
 in
-  fun select_clause units (sos, used) = comment (select units used sos);
+  fun select_clause units (sos,used) = comment (select units used sos);
 end;
 
-fun resolve record units_ref (sos, used) cl =
+fun resolve record units_ref (sos,used) (d,cl) =
   let
-    val () = chat 3 ("\ngiven clause:\n" ^ clause_to_string cl ^ "\n")
-    val () = add_unit units_ref cl
-    val used = B.add cl used
-    val units = !units_ref
-    val cl = FRESH_VARS cl
-    val cls = B.deduce used units cl
-    val () = app (add_unit units_ref) cls
+    val _ = chatting 4 andalso
+            chat ("\ngiven clause:\n" ^ B.id_clause_to_string cl ^ "\n")
+    val (cls,used) = B.add used (!units_ref) cl
+    val _ = chatting 2 andalso chat ("-" ^ int_to_string (length cls))
+    val (cls,used,units) = B.initialize (cls,used,!units_ref)
+    val () = units_ref := units
     val infs = length cls
-    val () = chat 3 (foldl (fn (h,t) => t ^ clause_to_string h ^ "\n")
-                     "\nnew clauses:\n" cls)
-    val () = (record infs; chat 1 (int_to_string infs ^ "+"))
-    val sos = A.addl cls sos
+    val _ = chatting 4 andalso
+            chat ("\nnew clauses:\n" ^ B.id_clauses_to_string cls ^ "\n")
+    val _ = (record infs; chatting 1 andalso chat ("+" ^ int_to_string infs))
+    val sos = A.add (d + log2 (Real.fromInt (1 + infs))) cls sos
   in
-    (sos, used)
+    (sos,used)
   end;
 
-fun resolution_stream (parm : parameters) slice_ref units_ref initials =
+fun resolution_stream (parm : parameters) slice_ref units_ref inits =
   let
-    fun thk func state () = (chat 2 (state_info state); func state)
+    fun thk func state () =
+      (chatting 3 andalso chat (state_info state); func state)
     fun reset N =
       let
         fun f 0 state = S.CONS (NONE, thk (reset (2 * N)) state)
           | f n state = g (n - 1) (select_clause (!units_ref) state)
         and g _ NONE = S.NIL
-          | g n (SOME (cl, state)) =
-          if not (null (clause_lits cl)) then h n (cl, state)
-          else S.CONS (SOME cl, thk (h n o pair cl) state)
-        and h n (cl, state) =
+          | g n (SOME (dcl,state)) =
+          case B.empty_id_clause (snd dcl) of NONE => h n (dcl,state)
+          | SOME ecl => S.CONS (SOME ecl, thk (h n o pair dcl) state)
+        and h n (dcl,state) =
           let
-            val state = resolve (record_infs (!slice_ref)) units_ref state cl
+            val state = resolve (record_infs (!slice_ref)) units_ref state dcl
+            val () = current_state := snd state
           in
             if check_meter (!slice_ref) then f n state
             else S.CONS (NONE, thk (f n) state)
           end
       in
-        fn (sos, used) =>
+        fn (sos,used) =>
         let
-          val () = chat 1 ("|" ^ (if N < 0 then "*" else int_to_string N) ^ "|")
-          val used = B.reset used
-          val initials = B.initialize used (!units_ref) initials
-          val () = chat 3
-            ("\nresolution': initials =\n" ^
-             PP.pp_to_string 60 (pp_list pp_clause) initials ^ "\n")
-          val sos = A.addl initials (A.reset sos)
+          val _ = chatting 1 andalso chat
+            ("|" ^ (if N < 0 then "*" else int_to_string N) ^ "|")
+          val (initials,used) =
+            let
+              val (rewrs,used) = B.reset used
+              val (init_ids,used,units) = B.initialize (inits,used,!units_ref)
+              val () = units_ref := units
+            in
+              (rewrs @ init_ids, used)
+            end
+          val sos = A.add 0.0 initials (A.reset sos)
+          val _ = chatting 4 andalso chat
+            ("\nresolution: initials =\n"^B.id_clauses_to_string initials^"\n")
         in
-          f N (sos, used)
+          f N (sos,used)
         end
       end
 
-    val {sos_parm, restart, ...} = parm
-    val initial_state = (A.new sos_parm, B.empty)
+    val {clause_parm, sos_parm, set_parm, restart, ...} = parm
+    val initial_state = (A.empty sos_parm, B.empty (clause_parm,set_parm))
   in
     thk (reset (case restart of SOME n => n | NONE => ~1)) initial_state ()
   end;
@@ -156,9 +194,7 @@ fun resolution' (parm : parameters) =
      fun stream f i =
        S.map (O.map f) (resolution_stream parm slice_ref units_ref i)
      val initials = map (NEQ_SIMP o mk_clause clause_parm) (thms @ hyps)
-     val () = app (add_unit units_ref) initials
-     val initials = map (demodulate (!units_ref)) initials
-     val () = chat 2
+     val _ = chatting 3 andalso chat
       ("resolution--initializing--#initials=" ^
        int_to_string (length initials) ^ ".\n")
    in
@@ -170,137 +206,5 @@ fun resolution' (parm : parameters) =
    end};
 
 val resolution = resolution' defaults;
-
-(* quick testing
-load "UNLINK";
-open mlibCanon UNLINK;
-val time = Moscow.time;
-quotation := true;
-
-installPP pp_term;
-installPP pp_formula;
-installPP mlibSubst.pp_subst;
-installPP mlibThm.pp_thm;
-fun initialize x y = try (fn (a,b) => mlibSolver.initialize a b) (x,y);
-fun refute x = try (time mlibSolver.refute) x;
-
-(* Testing the resolution prover *)
-
-val limit : limit ref = ref {infs = NONE, time = NONE};
-fun resolution_prove g = (fn x => refute o initialize x)
-  (resolution'
-   {restart     = NONE,
-    clause_parm = {literal_order = true,
-                   term_order = true,
-                   tracking = false},
-    sos_parm    = {size_bias = 100}})
-  {limit = !limit, thms = [],
-   hyps = eq_axiomatize' (Not (generalize g))};
-
-val attack = map (fn {name, goal} => (print ("\n\n" ^ name ^ "\n"); let val th = resolution_prove (parse_formula goal) val () = print ("\n" ^ mlibThm.proof_to_string (mlibThm.proof (Option.valOf th))) in th end));
-
-(*
-*)
-val avoided = ["P34", "P38", "GILMORE_9"];
-fun avoid set =
-  List.filter (fn ({name, ...} : 'a problem) => not (mem name avoided)) set;
-try attack (avoid equality);
-attack (avoid nonequality);
-
-val judita3 = parse_formula (get equality "JUDITA_3");
-eq_axiomatize' (Not (generalize judita3));
-resolution_prove judita3;
-
-val p49' = parse_formula
-  `p a /\ p b /\ ~(a = b) /\ ~p c /\ (!x. x = d \/ x = e) ==> F`;
-eq_axiomatize' (Not (generalize p49'));
-resolution_prove p49';
-
-val p49 = parse_formula (get equality "P49");
-eq_axiomatize' (Not (generalize p49));
-resolution_prove p49;
-
-val agatha = parse_formula (get equality "AGATHA");
-val Imp (h, And (c1, And (c2, c3))) = agatha;
-val agatha1 = Imp (h, c1);
-val agatha2 = Imp (h, c2);
-val agatha3 = Imp (h, c3);
-resolution_prove agatha1;
-resolution_prove agatha2;
-resolution_prove agatha3;
-resolution_prove agatha;
-
-val p51 = parse_formula (get equality "P51");
-resolution_prove p51;
-
-stop;
-
-axiomatize (Not (generalize True));
-resolution_prove True;
-
-val p_or_not_p = parse_formula (get nonequality "P_or_not_P");
-axiomatize (Not (generalize p_or_not_p));
-resolution_prove p_or_not_p;
-
-val prop13 = parse_formula (get nonequality "PROP_13");
-(*axiomatize (Not (generalize prop13));*)
-resolution_prove prop13;
-
-val p33 = parse_formula (get nonequality "P33");
-(*axiomatize (Not (generalize p33));*)
-resolution_prove p33;
-
-val p59 = parse_formula (get nonequality "P59");
-(*axiomatize (Not (generalize p59));*)
-resolution_prove p59;
-
-val p39 = parse_formula (get nonequality "P39");
-(*clausal (Not (generalize p39));*)
-(*axiomatize (Not (generalize p39));*)
-resolution_prove p39;
-
-val num14 = parse_formula (get tptp "NUM014-1");
-resolution_prove num14;
-
-val p55 = parse_formula (get nonequality "P55");
-resolution_prove p55;
-
-val p26 = parse_formula (get nonequality "P26");
-(*clausal (Not (generalize p26));*)
-resolution_prove p26;
-
-val los = parse_formula (get nonequality "LOS");
-resolution_prove los;
-
-val lcl107 = parse_formula (get tptp "LCL107-1");
-resolution_prove lcl107;
-
-val steamroller = parse_formula (get nonequality "STEAM_ROLLER");
-resolution_prove steamroller;
-
-val reduced_num284 = parse_formula
-  `fibonacci 0 (s 0) /\ fibonacci (s 0) (s 0) /\
-   (!x y z x' y' z'.
-      ~sum x (s (s 0)) z \/ ~sum y (s 0) z \/
-      ~fibonacci x x' \/ ~fibonacci y y' \/ ~sum x' y' z' \/
-      fibonacci z z') /\ (!x. sum x 0 x) /\
-   (!x y z. ~sum x y z \/ sum x (s y) (s z)) /\
-   (!x. ~fibonacci (s (s (s (s (s (s (s (s 0)))))))) x) ==> F`;
-resolution_prove reduced_num284;
-
-val p29 = parse_formula (get nonequality "P29");
-(*clausal (Not (generalize p29));*)
-resolution_prove p29;
-
-val num1 = parse_formula (get tptp "NUM001-1");
-resolution_prove num1;
-
-val gilmore9 = parse_formula (get nonequality "GILMORE_9");
-(*axiomatize (Not (generalize gilmore9));*)
-resolution_prove gilmore9;
-
-val model_completeness = parse_formula (get nonequality "MODEL_COMPLETENESS");
-resolution_prove model_completeness;
-*)
 
 end

@@ -66,7 +66,7 @@ local
   open mlibUseful;
 in
   fun pp_heap pp_a =
-    pp_map to_list (pp_bracket ("H[", "]") (pp_sequence "," pp_a));
+    pp_map to_list (pp_bracket "H[" "]" (pp_sequence "," pp_a));
 end;
 
 end

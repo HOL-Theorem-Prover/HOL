@@ -28,11 +28,11 @@ type parameters =
    combinator : bool,              (* Add combinator reduction rules *)
    mapping    : Mparm}
 
-val defaults               : parameters
-val update_parm_equality   : (bool -> bool) -> parameters -> parameters
-val update_parm_boolean    : (bool -> bool) -> parameters -> parameters
-val update_parm_combinator : (bool -> bool) -> parameters -> parameters
-val update_parm_mapping    : (Mparm -> Mparm) -> parameters -> parameters
+val defaults          : parameters
+val update_equality   : (bool -> bool) -> parameters -> parameters
+val update_boolean    : (bool -> bool) -> parameters -> parameters
+val update_combinator : (bool -> bool) -> parameters -> parameters
+val update_mapping    : (Mparm -> Mparm) -> parameters -> parameters
 
 (* If recent_fol_problems is set to NONE then nothing happens (the default). *)
 (* If it is set to SOME l then every compiled FOL problem is cons'ed to l. *)
@@ -58,9 +58,8 @@ val FOL_REFUTE : solver_node -> logic_map -> limit -> thm
 val FOL_TACTIC : solver_node -> logic_map -> limit -> tactic
 
 (* HOL normalization to conjunctive normal form *)
-val FOL_NORM_CONV : conv
-val FOL_NORM_RULE : rule
-val FOL_NORM_TAC  : tactic    (* Stripping + Elimination of @ + FOL_NORM_CONV *)
+val FOL_NORM      : thm list -> thm list   (* Minimal conversion to CNF *)
+val FOL_NORM_TAC  : tactic                 (* Stripping + Elimination of @ *)
 val FOL_NORM_TTAC : (thm list -> tactic) -> thm list -> tactic
 
 end

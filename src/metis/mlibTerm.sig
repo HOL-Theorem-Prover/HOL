@@ -98,19 +98,19 @@ val relations      : formula -> (string * int) list
 val relation_names : formula -> string list
 
 (* The equality relation has a special status *)
-val eq_rel          : string * int
-val mk_eq           : term * term -> formula
-val dest_eq         : formula -> term * term
-val is_eq           : formula -> bool
-val refl            : term -> formula
-val sym             : formula -> formula
-val lhs             : formula -> term
-val rhs             : formula -> term
-val eq_occurs       : formula -> bool
-val relations_no_eq : formula -> (string * int) list
+val eq_rel    : string * int
+val mk_eq     : term * term -> formula
+val dest_eq   : formula -> term * term
+val is_eq     : formula -> bool
+val refl      : term -> formula
+val sym       : formula -> formula
+val lhs       : formula -> term
+val rhs       : formula -> term
+val eq_occurs : formula -> bool
 
 (* Free variables *)
 val FVT        : term -> string list
+val FVTL       : string list -> term list -> string list
 val FV         : formula -> string list
 val FVL        : string list -> formula list -> string list
 val specialize : formula -> formula
@@ -124,19 +124,8 @@ val literal_subterm  : int list -> formula -> term
 val literal_rewrite  : (int list, term) maplet -> formula -> formula
 val literal_subterms : formula -> (int list, term) maplet list
 
-(* The Knuth-Bendix ordering *)
-type Weight       = string * int -> int
-type Prec         = (string * int) * (string * int) -> order
-type Termorder    = term * term -> order option
-type Literalorder = formula * formula -> order option
-val kb_weight   : Weight -> term -> int * string mlibMultiset.mset
-val kb_compare  : Weight -> Prec -> Termorder
-val kb_lcompare : Weight -> Prec -> Literalorder
-val kb_comp     : Termorder              (* Weight = uniform, Prec = by arity *)
-val kb_lcomp    : Literalorder
-
 (* A datatype to antiquote both terms and formulas *)
-datatype thing = Term of term | Formula of formula;
+datatype thing = mlibTerm of term | Formula of formula;
 
 (* Operators parsed and printed infix *)
 val infixes : infixities ref

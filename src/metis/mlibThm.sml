@@ -29,9 +29,10 @@ val pp_subst      = mlibSubst.pp_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val () = traces := {module = "mlibThm", alignment = K 1} :: !traces;
-
-fun chat l m = trace {module = "mlibThm", message = m, level = l};
+val module = "mlibThm";
+val () = traces := {module = module, alignment = I} :: !traces;
+fun chatting l = tracing {module = module, level = l};
+fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
 (* Annotated primitive inferences.                                           *)
@@ -49,15 +50,15 @@ datatype inference' =
 fun primitive_inference (Axiom'    cl              ) = AXIOM cl
   | primitive_inference (Refl'     tm              ) = REFL tm
   | primitive_inference (Assume'   l               ) = ASSUME l
-  | primitive_inference (Inst'     (s, th)         ) = INST s th
+  | primitive_inference (Inst'     (s,th)         ) = INST s th
   | primitive_inference (Factor'   th              ) = FACTOR th
-  | primitive_inference (Resolve'  (l, th1, th2)   ) = RESOLVE l th1 th2
-  | primitive_inference (Equality' (l, p, t, s, th)) = EQUALITY l p t s th;
+  | primitive_inference (Resolve'  (l,th1,th2)   ) = RESOLVE l th1 th2
+  | primitive_inference (Equality' (l,p,t,s,th)) = EQUALITY l p t s th;
 
 val clause = fst o dest_thm;
 
 fun dest_axiom th =
-  case dest_thm th of (lits, (Axiom, [])) => lits
+  case dest_thm th of (lits,(Axiom,[])) => lits
   | _ => raise ERR "dest_axiom" "";
 
 val is_axiom = can dest_axiom;
@@ -85,34 +86,81 @@ in
 end;
 
 local
-  fun pp_inf (Axiom'    a) = (Axiom,   C (pp_list pp_formula)                 a)
-    | pp_inf (Refl'     a) = (Refl,    C pp_term                              a)
-    | pp_inf (Assume'   a) = (Assume,  C pp_formula                           a)
-    | pp_inf (Inst'     a) = (Inst,    C (pp_pair pp_subst pp_thm)            a)
-    | pp_inf (Factor'   a) = (Factor,  C pp_thm                               a)
-    | pp_inf (Resolve'  a) = (Resolve, C (pp_triple pp_formula pp_thm pp_thm) a)
-    | pp_inf (Equality' (lit, p, r, lr, th)) =
+  open PP;
+
+  fun pp_inf (Axiom' a) = (Axiom, C (pp_list pp_formula) a)
+    | pp_inf (Refl' a) = (Refl, C pp_term a)
+    | pp_inf (Assume' a) = (Assume, C pp_formula a)
+    | pp_inf (Factor' a) = (Factor, C pp_thm a)
+    | pp_inf (Inst' (sub,thm)) =
+    (Inst,
+     fn pp =>
+     (begin_block pp INCONSISTENT 1;
+      add_string pp "{";
+      pp_binop " =" pp_string pp_subst pp ("sub",sub);
+      add_string pp ","; add_break pp (1,0);
+      pp_binop " =" pp_string pp_thm pp ("thm",thm);
+      add_string pp "}";
+      end_block pp))
+    | pp_inf (Resolve' (res,pos,neg)) =
+    (Resolve,
+     fn pp =>
+     (begin_block pp INCONSISTENT 1;
+      add_string pp "{";
+      pp_binop " =" pp_string pp_formula pp ("res",res);
+      add_string pp ","; add_break pp (1,0);
+      pp_binop " =" pp_string pp_thm pp ("pos",pos);
+      add_string pp ","; add_break pp (1,0);
+      pp_binop " =" pp_string pp_thm pp ("neg",neg);
+      add_string pp "}";
+      end_block pp))
+    | pp_inf (Equality' (lit,path,res,lr,thm)) =
     (Equality,
-     C (pp_record [("lit",  unit_pp pp_formula lit),
-                   ("path", unit_pp (pp_list pp_int) p),
-                   ("res",  unit_pp pp_term r),
-                   ("lr",   unit_pp pp_bool lr),
-                   ("thm",  unit_pp pp_thm th)]) ());
+     fn pp =>
+     (begin_block pp INCONSISTENT 1;
+      add_string pp "{";
+      pp_binop " =" pp_string pp_formula pp ("lit",lit);
+      add_string pp ","; add_break pp (1,0);
+      pp_binop " =" pp_string (pp_list pp_int) pp ("path",path);
+      add_string pp ","; add_break pp (1,0);
+      pp_binop " =" pp_string pp_term pp ("res",res);
+      add_string pp ","; add_break pp (1,0);
+      pp_binop " =" pp_string pp_bool pp ("lr",lr);
+      add_string pp ","; add_break pp (1,0);
+      pp_binop " =" pp_string pp_thm pp ("thm",thm);
+      add_string pp "}";
+      end_block pp));
 in
   fun pp_inference' pp inf =
-  let
-    open PP
-    val (i, ppf) = pp_inf inf
-  in
-    (begin_block pp INCONSISTENT 0;
-     pp_inference pp i;
-     add_break pp (1, 0);
-     ppf pp;
-     end_block pp)
-  end;
+    let
+      val (i,ppf) = pp_inf inf
+    in
+      (begin_block pp INCONSISTENT 0;
+       pp_inference pp i;
+       (if i = Axiom then () else (add_break pp (1,0); ppf pp));
+       end_block pp)
+    end;
 end;
 
-val pp_proof = pp_list (pp_pair pp_thm pp_inference');
+fun pp_proof pp =
+  let
+    open PP
+    fun pp_a (th,i) = (pp_thm pp th; add_newline pp; pp_inference' pp i)
+    fun pp_x x = (add_newline pp; add_newline pp; pp_a x)
+    fun pp_p [] = raise BUG "pp_proof" "empty"
+      | pp_p (h :: t) = (pp_a h; app pp_x t)
+  in
+    fn p =>
+    (begin_block pp CONSISTENT 0;
+     begin_block pp CONSISTENT 1;
+     add_string pp "[[[";
+     add_newline pp;
+     pp_p p;
+     end_block pp;
+     add_newline pp;
+     add_string pp "]]]";
+     end_block pp)
+  end;
 
 (* Purely functional pretty-printing *)
 
@@ -152,19 +200,16 @@ local
     | cmp Equality Equality = EQUAL;
 
   fun cm [] = EQUAL
-    | cm ((th1, th2) :: l) =
-    let
-      val (l1, (p1, ths1)) = dest_thm th1
-      val (l2, (p2, ths2)) = dest_thm th2
-    in
-      case Int.compare (length l1, length l2) of EQUAL
-        => (case lex_compare formula_compare (zip l1 l2) of EQUAL
-              => (case cmp p1 p2 of EQUAL
-                    => cm (zip ths1 ths2 @ l)
-                  | x => x)
-            | x => x)
-      | x => x
-    end
+    | cm ((th1,th2) :: l) =
+    if th1 = th2 then cm l else
+      let
+        val (l1,(p1,ths1)) = dest_thm th1
+        val (l2,(p2,ths2)) = dest_thm th2
+      in
+        case lex_compare formula_compare (l1,l2) of EQUAL
+          => (case cmp p1 p2 of EQUAL => cm (zip ths1 ths2 @ l) | x => x)
+        | x => x
+      end;
 in
   val thm_compare = cm o wrap;
 end;
@@ -172,19 +217,19 @@ end;
 local
   val deps = snd o snd o dest_thm;
   val empty = Binarymap.mkDict thm_compare;
-  fun peek th m = Binarymap.peek (m, th);
-  fun ins (th, a) m = Binarymap.insert (m, th, a);
+  fun peek th m = Binarymap.peek (m,th);
+  fun ins (th,a) m = Binarymap.insert (m,th,a);
 in
   fun thm_map f =
     let
       fun g th m =
-        case peek th m of SOME a => (a, m)
+        case peek th m of SOME a => (a,m)
         | NONE =>
           let
-            val (al, m) = maps g (deps th) m
-            val a = f (th, al)
+            val (al,m) = maps g (deps th) m
+            val a = f (th,al)
           in
-            (a, ins (th, a) m)
+            (a, ins (th,a) m)
           end
     in
       fn th => fst (g th empty)
@@ -194,11 +239,11 @@ end;
 local
   val deps = snd o snd o dest_thm;
   fun empty a = (Binaryset.empty thm_compare, a);
-  fun mem th (s, _) = Binaryset.member (s, th);
-  fun ins f th (s, a) = (Binaryset.add (s, th), f (th, a))
+  fun mem th (s,_) = Binaryset.member (s,th);
+  fun ins f th (s,a) = (Binaryset.add (s,th), f (th,a))
 in
   fun thm_foldr f =
-    let fun g (th, x) = if mem th x then x else ins f th (foldl g x (deps th))
+    let fun g (th,x) = if mem th x then x else ins f th (foldl g x (deps th))
     in fn a => fn th => snd (g (th, empty a))
     end;
 end;
@@ -207,48 +252,48 @@ end;
 (* Reconstructing proofs.                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun reconstruct_resolvant cl1 cl2 (cl1', cl2') =
+fun reconstruct_resolvant cl1 cl2 (cl1',cl2') =
   case (subtract (setify cl1) cl1', subtract (setify cl2) cl2') of
     (_ :: _ :: _, _) => NONE
   | (_, _ :: _ :: _) => NONE
-  | ([l], []) => SOME l
-  | ([], [l']) => SOME (negate l')
-  | ([l], [l']) => if negate l = l' then SOME l else NONE
-  | ([], []) => SOME False;
+  | ([l],[]) => SOME l
+  | ([],[l']) => SOME (negate l')
+  | ([l],[l']) => if negate l = l' then SOME l else NONE
+  | ([],[]) => SOME False;
 
 fun reconstruct_equality l r =
   let
-    fun recon_fn p (f, args) (f', args') rest =
+    fun recon_fn p (f,args) (f',args') rest =
       recon_tm
       (if f <> f' orelse length args <> length args' then rest
        else map (C cons p ## I) (enumerate 0 (zip args args')) @ rest)
     and recon_tm [] = NONE
-      | recon_tm ((p, (tm, tm')) :: rest) =
+      | recon_tm ((p,(tm,tm')) :: rest) =
       if tm = l andalso tm' = r then SOME (rev p)
       else
-        case (tm, tm') of (Fn a, Fn a') => recon_fn p a a' rest
+        case (tm,tm') of (Fn a, Fn a') => recon_fn p a a' rest
         | _ => recon_tm rest
 
     fun recon_lit (Not a) (Not a') = recon_lit a a'
       | recon_lit (Atom a) (Atom a') =
-      if l <> r andalso a = a' then NONE else recon_tm [([], (a, a'))]
+      if l <> r andalso a = a' then NONE else recon_tm [([],(a,a'))]
       | recon_lit _ _ = NONE
   in
-    fn (lit, lit') =>
-    case recon_lit lit lit' of SOME p => SOME (lit, p) | NONE => NONE
+    fn (lit,lit') =>
+    case recon_lit lit lit' of SOME p => SOME (lit,p) | NONE => NONE
   end;
 
-fun reconstruct (cl, (Axiom, [])) = Axiom' cl
-  | reconstruct ([lit], (Refl, [])) = Refl' (lhs lit)
-  | reconstruct ([fm, _], (Assume, [])) = Assume' fm
-  | reconstruct (cl, (Inst, [th])) =
+fun reconstruct (cl,(Axiom,[])) = Axiom' cl
+  | reconstruct ([lit],(Refl,[])) = Refl' (lhs lit)
+  | reconstruct ([fm, _], (Assume,[])) = Assume' fm
+  | reconstruct (cl, (Inst,[th])) =
   Inst' (matchl_literals |<>| (zip (clause th) cl), th)
-  | reconstruct (_, (Factor, [th])) = Factor' th
+  | reconstruct (_, (Factor,[th])) = Factor' th
   | reconstruct (cl, (Resolve, [th1, th2])) =
   let
     val f = reconstruct_resolvant (clause th1) (clause th2)
     val l =
-      case f (cl, cl) of SOME l => l
+      case f (cl,cl) of SOME l => l
       | NONE =>
         case first f (List.tabulate (length cl, split cl)) of SOME l => l
         | NONE =>
@@ -258,24 +303,24 @@ fun reconstruct (cl, (Axiom, [])) = Axiom' cl
            "\nth1 = " ^ thm_to_string th1 ^
            "\nth2 = " ^ thm_to_string th2)
   in
-    Resolve' (l, th1, th2)
+    Resolve' (l,th1,th2)
   end
-  | reconstruct (Not eq :: cl, (Equality, [th])) =
+  | reconstruct (Not eq :: cl, (Equality,[th])) =
     if length (clause th) < length cl then
       let
-        val (l, r) = dest_eq eq
+        val (l,r) = dest_eq eq
         val lit = hd cl
         fun f (p |-> t) =
-          if t = l then SOME (p, false)
-          else if t = r then SOME (p, true)
+          if t = l then SOME (p,false)
+          else if t = r then SOME (p,true)
           else NONE
       in
-        case first f (literal_subterms lit) of SOME (p, lr) =>
+        case first f (literal_subterms lit) of SOME (p,lr) =>
           let
-            val (l, r) = if lr then (l, r) else (r, l)
+            val (l,r) = if lr then (l,r) else (r,l)
             val lit = literal_rewrite (p |-> l) lit
           in
-            Equality' (lit, p, r, lr, th)
+            Equality' (lit,p,r,lr,th)
           end
         | NONE => raise BUG "inference" "couldn't reconstruct weak equality"
       end
@@ -283,11 +328,11 @@ fun reconstruct (cl, (Axiom, [])) = Axiom' cl
       let
         val line = zip (clause th) cl
         fun sync l r = first (reconstruct_equality l r) line
-        val (l, r) = dest_eq eq
+        val (l,r) = dest_eq eq
       in
-        case sync l r of SOME (lit, p) => Equality' (lit, p, r, true, th)
+        case sync l r of SOME (lit,p) => Equality' (lit,p,r,true,th)
         | NONE =>
-          case sync r l of SOME (lit, p) => Equality' (lit, p, l, false, th)
+          case sync r l of SOME (lit,p) => Equality' (lit,p,l,false,th)
           | NONE => raise BUG "inference" "couldn't reconstruct equality step"
       end
   | reconstruct _ = raise BUG "inference" "malformed inference";
@@ -304,7 +349,7 @@ fun inference th =
     i
   end;
 
-val proof = thm_foldr (fn (th, l) => (th, inference th) :: l) [];
+val proof = thm_foldr (fn (th,l) => (th, inference th) :: l) [];
 
 (* ------------------------------------------------------------------------- *)
 (* Contradictions and units.                                                 *)
@@ -361,24 +406,24 @@ val TRANSITIVITY =
   EQUALITY (mk_eq (Var "y", Var "z")) [0] (Var "x") false
   (ASSUME (Not (mk_eq (Var "y", Var "z"))));
 
-fun FUN_CONGRUENCE (function, arity) =
+fun FUN_CONGRUENCE (function,arity) =
   let
     val xs = List.tabulate (arity, fn i => Var ("x" ^ int_to_string i))
     val ys = List.tabulate (arity, fn i => Var ("y" ^ int_to_string i))
-    fun f (i, th) =
-      EQUALITY (List.last (clause th)) [1,i] (List.nth (ys, i)) true th
-    val refl = INST (("x" |-> Fn (function, xs)) ::> |<>|) REFLEXIVITY
+    fun f (i,th) =
+      EQUALITY (List.last (clause th)) [1,i] (List.nth (ys,i)) true th
+    val refl = INST (("x" |-> Fn (function,xs)) ::> |<>|) REFLEXIVITY
   in
     foldl f refl (rev (interval 0 arity))
   end;
 
-fun REL_CONGRUENCE (relation, arity) =
+fun REL_CONGRUENCE (relation,arity) =
   let
     val xs = List.tabulate (arity, fn i => Var ("x" ^ int_to_string i))
     val ys = List.tabulate (arity, fn i => Var ("y" ^ int_to_string i))
-    fun f (i, th) =
-      EQUALITY (List.last (clause th)) [i] (List.nth (ys, i)) true th
-    val refl = ASSUME (Not (Atom (Fn (relation, xs))))
+    fun f (i,th) =
+      EQUALITY (List.last (clause th)) [i] (List.nth (ys,i)) true th
+    val refl = ASSUME (Not (Atom (Fn (relation,xs))))
   in
     foldl f refl (rev (interval 0 arity))
   end;
@@ -386,7 +431,7 @@ fun REL_CONGRUENCE (relation, arity) =
 fun SYM lit th =
   let
     fun g x y = RESOLVE lit th (EQUALITY (refl x) [0] y true (REFL x))
-    fun f (true, (x,y)) = g x y | f (false, (x,y)) = g y x
+    fun f (true,(x,y)) = g x y | f (false,(x,y)) = g y x
   in
     f ((I ## dest_eq) (dest_literal lit))
   end;
@@ -394,7 +439,7 @@ fun SYM lit th =
 local
   fun psym lit =
     let
-      val (s, (x,y)) = (I ## dest_eq) (dest_literal lit)
+      val (s,(x,y)) = (I ## dest_eq) (dest_literal lit)
       val () = assert (x <> y) (ERR "psym" "refl")
     in
       mk_literal (s, mk_eq (y,x))
@@ -409,10 +454,10 @@ in
   val EQ_FACTOR = FACTOR o (W (syms o clause)) o FACTOR;
 end;
 
-fun SUBST (rw, lr, r) (th, lit, p) =
+fun SUBST (rw,lr,r) (th,lit,p) =
   RESOLVE (dest_unit rw) rw (EQUALITY lit p r lr th);
 
-fun REWR (rw, lr) tm =
+fun REWR (rw,lr) tm =
   let
     val (l,r) = (if lr then I else swap) (dest_unit_eq rw)
     val env = match l tm
@@ -422,77 +467,106 @@ fun REWR (rw, lr) tm =
 
 fun DEPTH conv =
   let
-    fun rewr1 (th, lit) (x as (_,_,r)) p =
-      (SUBST x (th, lit, p), literal_rewrite (p |-> r) lit)
+    fun rewr1 (th,lit) (x as (_,_,r)) p =
+      (SUBST x (th,lit,p), literal_rewrite (p |-> r) lit)
 
     fun rewr_top thl tm p =
-      (case total conv tm of NONE => (thl, tm)
+      (case total conv tm of NONE => (thl,tm)
        | SOME (x as (_,_,r)) => rewr_top (rewr1 thl x (rev p)) r p)
 
     fun rewr thl tm_orig p =
       let
-        val (thl, tm) = rewr_top thl tm_orig p
-        val (thl, tm) = rewr_sub thl tm p
-      (*val () = chat 3 ("rewr: " ^ term_to_string tm_orig ^ " --> " ^ term_to_string tm ^ "\n")*)
+        val _ = chatting 3 andalso
+                chat ("rewr input: " ^ term_to_string tm_orig ^ "\n")
+        val (thl,tm) = rewr_top thl tm_orig p
+        val (thl,tm) = rewr_sub thl tm p
+        val _ = chatting 2 andalso
+                chat ("rewr: " ^ term_to_string tm_orig ^
+                      " --> " ^ term_to_string tm ^ "\n")
       in
-        if tm = tm_orig then (thl, tm) else rewr thl tm p
+        if tm = tm_orig then (thl,tm) else rewr thl tm p
       end
-    and rewr_sub thl (tm as Var _) _ = (thl, tm)
-      | rewr_sub thl (tm as Fn (name, xs)) p =
+    and rewr_sub thl (tm as Var _) _ = (thl,tm)
+      | rewr_sub thl (tm as Fn (name,xs)) p =
       let
-        fun f ((n, x), (tl, ys)) =
-          let val (tl, y) = rewr tl x (n :: p) in (tl, y :: ys) end
-        val (thl, ys) = (I ## rev) (foldl f (thl, []) (enumerate 0 xs))
+        val _ = chatting 3 andalso
+                chat ("rewr_sub input: " ^ term_to_string tm ^ "\n")
+        fun f ((n,x),(tl,ys)) =
+          let val (tl,y) = rewr tl x (n :: p) in (tl, y :: ys) end
+        val (thl,ys) = (I ## rev) (foldl f (thl,[]) (enumerate 0 xs))
       in
-        (thl, if ys = xs then tm else Fn (name, ys))
+        (thl, if ys = xs then tm else Fn (name,ys))
       end
 
-    fun rewr_lits (lit, th) =
+    fun rewr_lits (lit,th) =
       if not (mem lit (clause th)) then
         (assert (is_eq (negate lit)) (BUG "DEPTH" "weird"); th)
-      else fst (fst (rewr_sub (th, lit) (dest_atom (literal_atom lit)) []))
+      else fst (fst (rewr_sub (th,lit) (dest_atom (literal_atom lit)) []))
   in
-    fn th => foldl rewr_lits th (clause th)
-(***    handle ERR_EXN _ => raise BUG "DEPTH" "shouldn't fail"*)
+    fn th =>
+    let
+      val th' = foldl rewr_lits th (clause th)
+      val _ = chatting 1 andalso
+              chat ("DEPTH: " ^ thm_to_string th ^
+                    " --> " ^ thm_to_string th' ^ "\n")
+    in
+      th'
+    end
+    handle ERR_EXN _ => raise BUG "DEPTH" "shouldn't fail"
   end;
  
-fun REWRITE ths =
+(* ------------------------------------------------------------------------- *)
+(* Rewriting                                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+type rewrs =
+  (term * term -> order option) *
+  (bool * int * thm * bool * term * term) T.termnet;
+
+fun empty_rewrs ord : rewrs = (ord, T.empty ());
+
+fun reset_rewrs ((ord,_) : rewrs) : rewrs = (ord, T.empty ());
+
+fun add_rewr (i,rw) (ord,net) =
   let
-    fun f th = let val (l,_) = dest_unit_eq th in T.insert (l |-> th) end
-    val net = foldl (uncurry f) T.empty ths
-    fun mat tm = first (fn th => total (REWR (th,true)) tm) (T.match net tm)
+    val lr as (l,r) = dest_unit_eq rw
+    val f =
+      case ord lr of SOME EQUAL => I
+      | SOME GREATER => T.insert (l |-> (true,i,rw,true,l,r))
+      | SOME LESS => T.insert (r |-> (true,i,rw,false,r,l))
+      | NONE => T.insert (l |-> (false,i,rw,true,l,r)) o
+                T.insert (r |-> (false,i,rw,false,r,l))
   in
-    DEPTH (partial (ERR "REWRITE" "no matching rewrites") mat)
+    (ord, f net)
+  end
+  handle ERR_EXN _ => raise BUG "add_rewr" "shouldn't fail";
+
+fun rewrite (_,net) ord (i,th) =
+  if T.size net = 0 then th else
+    let
+      fun f tm (x,j,rw,lr,l,r) =
+        let
+          val () = assert (i <> j) (ERR "rewrite" "same theorem")
+          val sub = match l tm
+          val r = term_subst sub r
+          val () = assert (x orelse ord (tm,r) = SOME GREATER)
+            (ERR "rewrite" "order violation")
+        in
+          (INST sub rw, lr, r)
+        end
+      fun mat tm = first (total (f tm)) (rev (T.match net tm))
+    in
+      DEPTH (partial (ERR "rewrite" "no matching rewrites") mat) th
+    end;
+
+fun ORD_REWRITE ord ths =
+  let
+    val rws = empty_rewrs ord
+    val rws = foldl (fn (th,n) => add_rewr (0, FRESH_VARS th) n) rws ths
+  in
+    rewrite rws ord o pair 1
   end;
 
-fun ORD_REWRITE ord rws =
-  let
-    fun f rw =
-      let
-        val lr as (l,r) = dest_unit_eq rw
-      in
-        case ord lr of SOME EQUAL => I
-        | SOME LESS => T.insert (r |-> (rw,false,r,l))
-        | SOME GREATER => T.insert (l |-> (rw,true,l,r))
-        | NONE => T.insert (l|->(rw,true,l,r)) o T.insert (r|->(rw,false,r,l))
-      end
-    val net = foldl (uncurry f) T.empty rws
-    fun g tm (rw,lr,l,r) =
-      let
-        val env = match l tm
-        val (l,r) = Df (term_subst env) (l,r)
-        val () = assert (ord (l,r) = SOME GREATER)
-                        (ERR "ORD_REWRITE" "order violation")
-      in
-        (INST env rw, lr, r)
-      end      
-    fun mat tm = first (total (g tm)) (T.match net tm)
-  in
-    fn th => DEPTH (partial (ERR "ORD_REWRITE" "no matching rewrites") mat) th
-    handle ERR_EXN _ =>
-      (print ("\nrewrs: " ^ PP.pp_to_string 60 (pp_list pp_thm) rws ^
-              "\nth: " ^ PP.pp_to_string 60 pp_thm th ^ "\n");
-       raise BUG "ORD_REWRITE" "shouldn't fail")
-  end;
+val REWRITE = ORD_REWRITE (K (SOME GREATER));
 
 end

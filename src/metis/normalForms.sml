@@ -5,7 +5,7 @@
 
 (*
 app load ["simpLib", "combinTheory", "boolSimps"];
-guessing_tyvars := false;
+guessing_tyvars := true;
 *)
 
 (*
@@ -15,17 +15,28 @@ struct
 
 open HolKernel Parse boolLib simpLib;
 
-infix THEN THENC ORELSEC ++ --> |-> THENQC ORELSEQC ##;
+infix THEN THENC ORELSEC ++ --> |-> ##;
 
 val (Type,Term) = Parse.parse_from_grammars combinTheory.combin_grammars;
-val op THENQC = op THENC;
-val op ORELSEQC = op ORELSEC;
+
+(* ------------------------------------------------------------------------- *)
+(* Tracing.                                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+val trace_level = ref 0;
+val () = register_trace ("normalForms", trace_level, 10);
+fun chatting l = l <= !trace_level;
+fun chat s = (Lib.say s; true);
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
 val ERR = mk_HOL_ERR "normalForms";
+
+fun subset [] _ = true
+  | subset _ [] = false
+  | subset s t = all (fn x => mem x t) s;
 
 fun distinct [] = true
   | distinct (x :: rest) = not (mem x rest) andalso distinct rest;
@@ -39,19 +50,11 @@ fun dest_beq tm =
 
 val is_beq = can dest_beq;
 
-fun MK_QCONV c tm =
-  let val th = c tm
-  in if rhs (concl th) = tm then raise Conv.UNCHANGED else th
-  end;
+fun JUNCTS_CONV p c =
+  let fun f t = (if p t then LAND_CONV c THENC RAND_CONV f else c) t in f end;
 
-fun FIRST_QCONV [] _ = raise ERR "FIRST_QCONV" "out of QCONVs"
-  | FIRST_QCONV (qc :: rest) tm = (qc ORELSEQC FIRST_QCONV rest) tm;
-
-fun JUNCTS_QCONV p c =
-  let fun f t = (if p t then LAND_CONV c THENQC RAND_CONV f else c) t in f end;
-
-val CONJUNCTS_QCONV = JUNCTS_QCONV is_conj;
-val DISJUNCTS_QCONV = JUNCTS_QCONV is_disj;
+val CONJUNCTS_CONV = JUNCTS_CONV is_conj;
+val DISJUNCTS_CONV = JUNCTS_CONV is_disj;
 
 fun FORALL_CONV c tm =
   if is_forall tm then QUANT_CONV c tm
@@ -66,6 +69,11 @@ fun STRIP_EXISTS_CONV c tm =
 
 fun STRIP_FORALL_CONV c tm =
   if is_forall tm then STRIP_QUANT_CONV c tm else c tm;
+
+fun ANTI_ETA_CONV v tm = SYM (ETA_CONV (mk_abs (v, mk_comb (tm, v))));
+
+fun ETA_EXPAND_CONV tm =
+  let val (ty,_) = dom_rng (type_of tm) in ANTI_ETA_CONV (genvar ty) tm end;
 
 fun ANTI_BETA_CONV vars tm =
   let
@@ -210,7 +218,15 @@ val MK_I = prove
    SIMP_TAC boolSimps.bool_ss
    [combinTheory.S_DEF, combinTheory.K_DEF, combinTheory.I_THM]);
 
-val SKI_CONV = COMBIN_CONV [MK_K, MK_I, MK_S];
+val SKI_SS =
+  simpLib.SIMPSET
+  {convs = [], rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
+
+val SKI_ss = simpLib.++ (pureSimps.pure_ss, SKI_SS);
+
+val SKI_CONV =
+  COMBIN_CONV [MK_K, MK_I, MK_S] THENC
+  SIMP_CONV SKI_ss [];
 
 (* ------------------------------------------------------------------------- *)
 (* Conversion to combinators {S,K,I,C,o}.                                    *)
@@ -235,7 +251,16 @@ val MK_o = prove
    SIMP_TAC boolSimps.bool_ss
    [combinTheory.S_DEF, combinTheory.K_DEF, combinTheory.o_DEF]);
 
-val SKICo_CONV = COMBIN_CONV [MK_K, MK_I, MK_C, MK_o, MK_S];
+val SKICo_SS =
+  simpLib.SIMPSET
+  {convs = [], rewrs = [combinTheory.I_o_ID], congs = [],
+   filter = NONE, ac = [], dprocs = []};
+
+val SKICo_ss = simpLib.++ (SKI_ss, SKICo_SS);
+
+val SKICo_CONV =
+  COMBIN_CONV [MK_K, MK_I, MK_C, MK_o, MK_S] THENC
+  SIMP_CONV SKICo_ss [];
 
 (* ------------------------------------------------------------------------- *)
 (* Beta reduction and simplifying boolean rewrites.                          *)
@@ -343,11 +368,11 @@ val NOT_RES_EXISTS = prove
    CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV) THEN
    REWRITE_TAC [IMP_DISJ_THM, DE_MORGAN_THM2, DE_MORGAN_THM1]);
 
-fun NNF_SUB_QCONV qc tm =
-  (if is_forall tm then QUANT_CONV qc
-   else if is_exists tm then QUANT_CONV qc
-   else if is_conj tm then LAND_CONV qc THENQC RAND_CONV qc
-   else if is_disj tm then LAND_CONV qc THENQC RAND_CONV qc
+fun NNF_SUB_CONV c tm =
+  (if is_forall tm then QUANT_CONV c
+   else if is_exists tm then QUANT_CONV c
+   else if is_conj tm then LAND_CONV c THENC RAND_CONV c
+   else if is_disj tm then LAND_CONV c THENC RAND_CONV c
    else NO_CONV) tm;
 
 local
@@ -362,18 +387,15 @@ local
       NNF_EXISTS_UNIQUE, NOT_EXISTS_UNIQUE,
       RES_FORALL_THM, RES_EXISTS_THM, NOT_RES_FORALL, NOT_RES_EXISTS] @
      [NOT_FORALL_CONV, NOT_EXISTS_CONV]);
-  val q_neg = REPEATC (MK_QCONV beta_neg) THENQC TRY_CONV (MK_QCONV push_neg);
+  val q_neg = REPEATC beta_neg THENC TRY_CONV push_neg;
 in
-  fun PARTIAL_NNF_QCONV qc tm =
-    (q_neg THENQC
-     (NNF_SUB_QCONV (PARTIAL_NNF_QCONV qc) ORELSEQC TRY_CONV qc)) tm;
+  fun PARTIAL_NNF_CONV c tm =
+    (q_neg THENC
+     (NNF_SUB_CONV (PARTIAL_NNF_CONV c) ORELSEC TRY_CONV c)) tm;
 end;
 
-fun PURE_NNF_QCONV' qc tm =
-  PARTIAL_NNF_QCONV (qc THENQC PURE_NNF_QCONV' qc) tm;
-val PURE_NNF_QCONV = PURE_NNF_QCONV' NO_CONV;
-
-fun PURE_NNF_CONV' qc = QCONV (PURE_NNF_QCONV' (MK_QCONV qc));
+fun PURE_NNF_CONV' c tm =
+  PARTIAL_NNF_CONV (c THENC PURE_NNF_CONV' c) tm;
 val PURE_NNF_CONV = PURE_NNF_CONV' NO_CONV;
 
 fun NNF_CONV' c = SIMPLIFY_CONV THENC PURE_NNF_CONV' c;
@@ -396,6 +418,37 @@ fun PULL_EXISTS_CONV tm =
 
 val SKOLEMIZE_CONV = DEPTH_CONV PULL_EXISTS_CONV;
 
+(* ------------------------------------------------------------------------- *)
+(* Prenex Normal Form.                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  val r1 = HO_REWR_CONV (GSYM FORALL_AND_THM);
+  val r2 = HO_REWR_CONV LEFT_AND_FORALL_THM;
+  val r3 = HO_REWR_CONV RIGHT_AND_FORALL_THM;
+  val r4 = HO_REWR_CONV (GSYM LEFT_FORALL_OR_THM);
+  val r5 = HO_REWR_CONV (GSYM RIGHT_FORALL_OR_THM);
+
+  fun p tm =
+    ((r1 ORELSEC r2 ORELSEC r3 ORELSEC r4 ORELSEC r5) THENC
+     TRY_CONV (QUANT_CONV p)) tm;
+in
+  val PRENEX_CONV = DEPTH_CONV p;
+end;
+
+local
+  val r1 = HO_REWR_CONV (GSYM LEFT_AND_FORALL_THM);
+  val r2 = HO_REWR_CONV (GSYM RIGHT_AND_FORALL_THM);
+  val r3 = HO_REWR_CONV FORALL_AND_THM;
+
+  fun p tm =
+    ((r1 THENC TRY_CONV (LAND_CONV p)) ORELSEC
+     (r2 THENC TRY_CONV (RAND_CONV p)) ORELSEC
+     r3 THENC BINOP_CONV (TRY_CONV p)) tm;
+in
+  val ANTI_PRENEX_CONV = DEPTH_CONV p;
+end;
+  
 (* ------------------------------------------------------------------------- *)
 (* A basic tautology prover and simplifier for clauses                       *)
 (*                                                                           *)
@@ -423,10 +476,6 @@ val T_AND = prove
 val AND_T = prove
   (``!t. t /\ T = t``,
    tautLib.TAUT_TAC);
-
-val FORALL_T = prove
-  (``(!x:'a. T) = T``,
-   ACCEPT_TAC (ISPEC T FORALL_SIMP));
 
 val OR_F = prove
   (``!t. t \/ F = t``,
@@ -502,11 +551,10 @@ local
            (MATCH_MP DISJ_CONGRUENCE b_th)
     end
 in
-  val CONTRACT_CONV =
-    W
+  val CONTRACT_CONV = W
     (fn tm =>
      if distinct (disjuncts tm) then NO_CONV
-     else QCONV (DEPTH_CONV DISJ_RASSOC_CONV THENQC MK_QCONV (contract [])))
+     else DEPTH_CONV DISJ_RASSOC_CONV THENC contract []);
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -522,43 +570,34 @@ val tautology_checking = ref true;
 
 val TSIMP_CONV =
   REWR_CONV OR_T ORELSEC REWR_CONV T_OR ORELSEC
-  REWR_CONV AND_T ORELSEC REWR_CONV T_AND ORELSEC
-  HO_REWR_CONV FORALL_T;
+  REWR_CONV AND_T ORELSEC REWR_CONV T_AND;
 
 local
   val r1 = REWR_CONV LEFT_OR_OVER_AND;
   val r2 = REWR_CONV RIGHT_OR_OVER_AND;
-  val r3 = HO_REWR_CONV (GSYM LEFT_AND_FORALL_THM);
-  val r4 = HO_REWR_CONV (GSYM RIGHT_AND_FORALL_THM);
-  val r5 = HO_REWR_CONV FORALL_AND_THM;
-  val r6 = HO_REWR_CONV (GSYM LEFT_FORALL_OR_THM);
-  val r7 = HO_REWR_CONV (GSYM RIGHT_FORALL_OR_THM);
-  val p1 = r1 ORELSEC r2 ORELSEC r3 ORELSEC r4 ORELSEC r5
-  val p2 = r6 ORELSEC r7
-  val p3 = TAUTOLOGY_CONV ORELSEC CONTRACT_CONV
+  val p1 = r1 ORELSEC r2;
+  val p2 = TAUTOLOGY_CONV ORELSEC CONTRACT_CONV;
   val ps = TRY_CONV TSIMP_CONV;
 in
   fun PUSH_ORS_CONV tm =
     (TSIMP_CONV ORELSEC
      (p1 THENC BINOP_CONV (TRY_CONV PUSH_ORS_CONV) THENC ps) ORELSEC
-     (p2 THENC QUANT_CONV (TRY_CONV PUSH_ORS_CONV) THENC ps) ORELSEC
-     (if !tautology_checking then p3 else NO_CONV)) tm;
+     (if !tautology_checking then p2 else NO_CONV)) tm;
 end;
 
-val CLEAN_CNF_QCONV =
-  STRIP_EXISTS_CONV
-  (DEPTH_CONV CONJ_RASSOC_CONV THENQC
-   CONJUNCTS_QCONV
-   (STRIP_FORALL_CONV
-    (DEPTH_CONV DISJ_RASSOC_CONV THENQC
-     DISJUNCTS_QCONV (MK_QCONV SKICo_CONV))));
-
-val CLEAN_CNF_CONV = QCONV CLEAN_CNF_QCONV;
+val CLEAN_CNF_CONV =
+  DEPTH_CONV (DISJ_RASSOC_CONV ORELSEC CONJ_RASSOC_CONV ORELSEC
+              REWR_CONV FORALL_SIMP ORELSEC REWR_CONV EXISTS_SIMP);
 
 val PURE_CNF_CONV =
-  STRIP_EXISTS_CONV (DEPTH_CONV PUSH_ORS_CONV) THENC CLEAN_CNF_CONV;
+  STRIP_EXISTS_CONV (STRIP_FORALL_CONV (DEPTH_CONV PUSH_ORS_CONV)) THENC
+  CLEAN_CNF_CONV;
 
-fun CNF_CONV' c = NNF_CONV' c THENC SKOLEMIZE_CONV THENC PURE_CNF_CONV;
+fun CNF_CONV' c =
+  NNF_CONV' c THENC
+  SKOLEMIZE_CONV THENC
+  PRENEX_CONV THENC
+  PURE_CNF_CONV;
 
 val CNF_CONV = CNF_CONV' NO_CONV;
 
@@ -594,12 +633,69 @@ val NEG_EQ = prove
   (``!a b. ~(a = b) = (a = ~b)``,
    tautLib.TAUT_TAC);
 
-val PURE_DEF_NNF_CONV =
-  SIMP_CONV simplify_ss
-  [IMP_DISJ_THM, NEG_EQ, hd (CONJUNCTS NOT_CLAUSES), NOT_FORALL_THM,
-   NOT_EXISTS_THM, DE_MORGAN_THM];
+fun DEF_NNF_SUB_CONV c tm =
+  (if is_forall tm then QUANT_CONV c
+   else if is_exists tm then QUANT_CONV c
+   else if is_conj tm then LAND_CONV c THENC RAND_CONV c
+   else if is_disj tm then LAND_CONV c THENC RAND_CONV c
+   else if is_beq tm then LAND_CONV c THENC RAND_CONV c
+   else NO_CONV) tm;
 
-val DEF_NNF_CONV = SIMPLIFY_CONV THENC PURE_DEF_NNF_CONV;
+local
+  fun NEG_CONV c tm = (if is_neg tm then RAND_CONV c else NO_CONV) tm;
+  val beta_neg =
+    REWR_CONV (CONJUNCT1 NOT_CLAUSES) ORELSEC
+    BETA_CONV ORELSEC NEG_CONV BETA_CONV;
+  val push_neg = FIRST_CONV
+    (map REWR_CONV
+     [NOT_TRUE, NOT_FALSE, IMP_DISJ_THM', NIMP_CONJ_THM, NEG_EQ,
+      COND_EXPAND', NCOND_EXPAND, DE_MORGAN_THM1, DE_MORGAN_THM2,
+      NNF_EXISTS_UNIQUE, NOT_EXISTS_UNIQUE,
+      RES_FORALL_THM, RES_EXISTS_THM, NOT_RES_FORALL, NOT_RES_EXISTS] @
+     [NOT_FORALL_CONV, NOT_EXISTS_CONV]);
+  val q_neg = REPEATC beta_neg THENC TRY_CONV push_neg;
+in
+  fun PARTIAL_DEF_NNF_CONV c tm =
+    (q_neg THENC
+     (DEF_NNF_SUB_CONV (PARTIAL_DEF_NNF_CONV c) ORELSEC TRY_CONV c)) tm;
+end;
+
+fun PURE_DEF_NNF_CONV' c tm =
+  PARTIAL_DEF_NNF_CONV (c THENC PURE_DEF_NNF_CONV' c) tm;
+val PURE_DEF_NNF_CONV = PURE_DEF_NNF_CONV' NO_CONV;
+
+fun DEF_NNF_CONV' c = SIMPLIFY_CONV THENC PURE_DEF_NNF_CONV' c;
+val DEF_NNF_CONV = DEF_NNF_CONV' NO_CONV;
+
+datatype nnf_pos = Formula_pos | Atom_pos | Inside_pos;
+
+fun find_nnf find_f =
+  let
+    val fp = Formula_pos
+    fun f [] = raise ERR "find_nnf" ""
+      | f (p_vs_tm :: tms) = if find_f p_vs_tm then p_vs_tm else g p_vs_tm tms
+    and g (Formula_pos,vs,tm) tms =
+      if is_conj tm then
+        let val (a,b) = dest_conj tm in f ((fp,vs,a)::(fp,vs,b)::tms) end
+      else if is_disj tm then
+        let val (a,b) = dest_disj tm in f ((fp,vs,a)::(fp,vs,b)::tms) end
+      else if is_beq tm then
+        let val (a,b) = dest_beq tm in f ((fp,vs,a)::(fp,vs,b)::tms) end
+      else if is_forall tm then
+        let val (v,b) = dest_forall tm in f ((fp, v :: vs, b) :: tms) end
+      else if is_exists tm then
+        let val (v,b) = dest_exists tm in f ((fp, v :: vs, b) :: tms) end
+      else if is_neg tm then
+        let val a = dest_neg tm in f ((fp, vs, a) :: tms) end
+      else f ((Atom_pos, vs, tm) :: tms)
+      | g (_,vs,tm) tms =
+      if not (is_comb tm) then f tms
+      else f ((Inside_pos, vs, rator tm) :: (Inside_pos, vs, rand tm) :: tms)
+  in
+    fn tm => f [(fp,[],tm)]
+  end;
+
+fun ATOM_CONV c tm = (if is_neg tm then RAND_CONV c else c) tm;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitional Conjunctive Normal Form                                      *)
@@ -693,38 +789,38 @@ fun PURE_DEF_CNF_CONV tm =
   let
     val (defs, tm) = gen_def_cnf tm
     fun push c = QUANT_CONV c THENC ONE_POINT_CONV
-    val th = funpow (length defs) push ALL_CONV tm
+    val th = QCONV (funpow (length defs) push ALL_CONV) tm
   in
     SYM th
   end;
 
 val def_cnf = snd o gen_def_cnf;
 
-val CLEAN_DEF_CNF_QCONV =
-  (REWR_CONV EQ_DEFCNF ORELSEQC
-   REWR_CONV AND_DEFCNF ORELSEQC
+val CLEAN_DEF_CNF_CONV =
+  (REWR_CONV EQ_DEFCNF ORELSEC
+   REWR_CONV AND_DEFCNF ORELSEC
    REWR_CONV OR_DEFCNF)
-  THENQC MK_QCONV (REWRITE_CONV [CONJUNCT1 NOT_CLAUSES]);
+  THENC REWRITE_CONV [CONJUNCT1 NOT_CLAUSES];
 
 local
   datatype btree = LEAF of term | BRANCH of btree * btree;
-
+    
   fun btree_fold b f (LEAF tm) = b tm
     | btree_fold b f (BRANCH (s, t)) = f (btree_fold b f s) (btree_fold b f t);
-
+    
   fun btree_strip_conj tm =
     if is_conj tm then
       (BRANCH o (btree_strip_conj ## btree_strip_conj) o dest_conj) tm
     else LEAF tm;
-
-  val rewr = QCONV (CLEAN_DEF_CNF_QCONV ORELSEQC DEPTH_CONV DISJ_RASSOC_CONV);
+      
+  val rewr = QCONV (CLEAN_DEF_CNF_CONV ORELSEC DEPTH_CONV DISJ_RASSOC_CONV);
 
   fun cleanup tm =
     let
       val b = btree_strip_conj tm
       val th = btree_fold rewr MK_CONJ_EQ b
     in
-      CONV_RULE (RAND_CONV (QCONV (DEPTH_CONV CONJ_RASSOC_CONV))) th
+      CONV_RULE (RAND_CONV (DEPTH_CONV CONJ_RASSOC_CONV)) th
     end;
 in
   val CLEANUP_DEF_CNF_CONV = STRIP_EXISTS_CONV cleanup;
@@ -835,29 +931,27 @@ val DELAMB_CONV = SIMP_CONV simplify_ss [EQ_LAMB_ELIM, LAMB_EQ_ELIM];
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun get vs tm =
-    case
-      (case dest_term tm of COMB (x, y) =>
-         (case get vs x of s as SOME _ => s | NONE => get vs y)
-       | LAMB (v, b) => get (v :: vs) b
-       | _ => NONE) of s as SOME _ => s
-       | NONE =>
-         if is_select (snd (strip_abs tm)) andalso
-           null (intersect (free_vars tm) vs) then SOME tm
-         else NONE;
-in
-  val get_vselect = partial (ERR "get_vselect" "not found") (get []);
-end;
+  fun norm vars tm =
+    let
+      val (a,b) = dest_comb tm
+      val _ = same_const select a orelse raise ERR "norm" "not a select"
+      val conv = ANTI_BETA_CONV (intersect (free_vars b) vars)
+      val conv =
+        if is_abs b then conv else
+          let
+            val (ty,_) = dom_rng (type_of b)
+            val v = variant (all_vars b) (mk_var ("v", ty))
+          in
+            RAND_CONV (ANTI_ETA_CONV v) THENC conv
+          end
+    in
+      conv tm
+    end;
 
-local
-  fun select_norm vars =
-    W
-    (SUB_CONV o select_norm o (fn LAMB (v, _) => v :: vars | _ => vars) o
-     dest_term) THENC
-    W
-    (fn tm =>
-     if is_select tm then ANTI_BETA_CONV (intersect (free_vars tm) vars)
-     else ALL_CONV);
+  fun select_norm vars tm =
+    let val svars = (case dest_term tm of LAMB (v,_) => v :: vars | _ => vars)
+    in SUB_CONV (select_norm svars) THENC TRY_CONV (norm vars)
+    end tm;
 in
   val SELECT_NORM_CONV = select_norm [];
 end;
@@ -885,6 +979,21 @@ fun SPEC_VSELECT_TAC vsel =
     AVOID_SPEC_TAC (vsel, mk_var (v, type_of vsel)) THEN
     GEN_TAC
   end;
+
+local
+  fun get vs tm =
+    case 
+      (case dest_term tm of COMB (x, y) =>
+         (case get vs x of s as SOME _ => s | NONE => get vs y)
+       | LAMB (v, b) => get (v :: vs) b
+       | _ => NONE) of s as SOME _ => s
+       | NONE =>
+         if is_select (snd (strip_abs tm)) andalso
+           null (intersect (free_vars tm) vs) then SOME tm
+         else NONE;
+in
+  val get_vselect = partial (ERR "get_vselect" "not found") (get []);
+end;
 
 val SPEC_ONE_SELECT_TAC = W (fn (_, tm) => SPEC_VSELECT_TAC (get_vselect tm));
 
@@ -984,15 +1093,273 @@ val condify_SS =
 
 val condify_ss = simpLib.++ (pureSimps.pure_ss, condify_SS);
 
+(* ------------------------------------------------------------------------- *)
+(* Conjunctive Normal Form for a first-order logic prover                    *)
+(*                                                                           *)
+(* Example:                                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+val COND_BOOL = prove
+  (``!c. (if c then T else F) = c``,
+   tautLib.TAUT_TAC);
+
+local
+  fun comb_beta (x,eq_th) =
+    CONV_RULE (RAND_CONV BETA_CONV) (MK_COMB (eq_th, REFL x));
+
+  fun mk_def defs vs tm =
+    let
+      val def_tm = list_mk_abs (vs,tm)
+    in
+      case List.find (aconv def_tm o fst) defs of
+        SOME (_, (vs, tm, def)) =>
+        let
+          val _ = chatting 2 andalso chat "min_cnf: reusing definition.\n"
+        in
+          (defs, vs, tm, def, NONE)
+        end
+      | NONE =>
+        let
+          val c = genvar (type_of def_tm)
+          val def0 = foldl comb_beta (ASSUME (mk_eq (c,def_tm))) vs
+          val def = SYM def0
+          val def_th = GENL vs def0
+          val defs = (def_tm,(vs,tm,def)) :: defs
+        in
+          (defs, vs, tm, def, SOME def_th)
+        end
+    end;
+
+  fun check_sub vs {redex,residue} =
+    mem redex vs andalso (type_of redex <> bool orelse is_var residue);
+
+  fun match_convish vs tm def tm' =
+    let
+      val (tmS,tyS) = match_term tm tm'
+      val _ = null tyS orelse raise ERR "rename" "type match"
+      val _ = all (check_sub vs) tmS orelse raise ERR "rename" "term match"
+    in
+      INST tmS def
+    end;
+in
+  fun rename defs vs tm =
+    let
+      val vs = filter (fn v => mem v vs) (free_vars tm)
+      val (defs,vs,tm,def,def_th) = mk_def defs vs tm
+      val convish = match_convish vs tm def
+    in
+      (defs, CONV_RULE (TOP_DEPTH_CONV convish), def_th)
+    end
+    handle e as HOL_ERR _
+      => (chat "normalForms.rename should never fail"; Raise e);
+end;
+
+(*
+local
+  fun is_a_bool (p,vs,tm) =
+    p = Inside_pos andalso    
+    type_of tm = bool andalso
+    tm <> T andalso tm <> F andalso
+    not let val (t,ws) = strip_comb tm in is_var t andalso subset ws vs end;
+in
+  fun extract_bools (defs,th,acc) =
+    let
+      val (_,vs,tm) = find_nnf is_a_bool (concl th)
+      val (defs,rule,vth) = rename defs vs tm
+      val acc = case vth of SOME vt => vt :: acc | NONE => acc
+    in
+      (defs, rule th, acc)
+    end;
+end;
+
+fun extract_lambdas (defs,th,acc) =
+  let
+    val (_,vs,tm) = find_nnf (is_abs o #3) (concl th)
+    val (defs,rule,vth) = rename defs vs tm
+    val acc = case vth of SOME vt => vt :: acc | NONE => acc
+  in
+    (defs, rule th, acc)
+  end;
+*)
+
+local
+  val condify_bool = REWR_CONV (GSYM COND_BOOL);
+
+  fun is_a_bool tm = type_of tm = bool andalso tm <> T andalso tm <> F;
+
+  fun lift_cond tm =
+    TRY_CONV
+    (COMB_CONV lift_bool
+     THENC (REWR_CONV COND_RATOR
+            ORELSEC REWR_CONV COND_RAND
+            ORELSEC ALL_CONV)) tm
+  and lift_bool tm =
+    (chatting 3 andalso chat ("lift_bool: tm = " ^ term_to_string tm ^ "\n");
+     (if is_cond tm then ALL_CONV
+      else if is_a_bool tm then condify_bool
+      else lift_cond) tm);
+in
+  val lift_bool_conv = ATOM_CONV (CHANGED_CONV lift_cond);
+end;
+
+fun min_cnf_prep defs acc [] = (defs, rev acc)
+  | min_cnf_prep defs acc (th :: ths) =
+  let
+    val th = CONV_RULE DELAMB_CONV th
+    val th = CONV_RULE (DEF_NNF_CONV' lift_bool_conv) th
+(*
+    val (defs,th,bs) = repeat extract_bools (defs,th,[])
+    val (defs,th,ls) = repeat extract_lambdas (defs,th,[])
+*)
+  in
+    min_cnf_prep defs (th :: acc) ths
+  end;
+
+datatype formula = Formula of (int * int) * term list * term * skeleton
+and skeleton =
+    Conj of formula * formula
+  | Disj of formula * formula
+  | Beq of formula * formula
+  | Lit;
+
+fun conj_count (ap,an) (bp,bn) = (ap + bp, an * bn);
+fun disj_count (ap,an) (bp,bn) = (ap * bp, an + bn);
+fun beq_count (ap,an) (bp,bn) = (ap * bn + an * bp, ap * bp + an * bn);
+
+fun count_cnf vs tm =
+  if is_exists tm then
+    let
+      val (v,b) = dest_exists tm
+    in
+      count_cnf (v :: vs) b
+    end
+  else if is_forall tm then
+    let
+      val (v,b) = dest_forall tm
+    in
+      count_cnf (v :: vs) b
+    end
+  else if is_conj tm then
+    let
+      val (a,b) = dest_conj tm
+      val af as Formula (ac,_,_,_) = count_cnf vs a
+      val bf as Formula (bc,_,_,_) = count_cnf vs b
+    in
+      Formula (conj_count ac bc, vs, tm, Conj (af,bf))
+    end
+  else if is_disj tm then
+    let
+      val (a,b) = dest_disj tm
+      val af as Formula (ac,_,_,_) = count_cnf vs a
+      val bf as Formula (bc,_,_,_) = count_cnf vs b
+    in
+      Formula (disj_count ac bc, vs, tm, Disj (af,bf))
+    end
+  else if is_beq tm then
+    let
+      val (a,b) = dest_beq tm
+      val af as Formula (ac,_,_,_) = count_cnf vs a
+      val bf as Formula (bc,_,_,_) = count_cnf vs b
+    in
+      Formula (beq_count ac bc, vs, tm, Beq (af,bf))
+    end
+  else Formula ((1,1),vs,tm,Lit);
+
+local
+  fun check best [] = best
+    | check best ((f, form) :: rest) =
+    let
+      val (n,_,_) = best
+      val Formula ((pos,neg), vs, tm, skel) = form
+      val m = f (1,1) + pos + neg
+      val best = if m < n then (m,vs,tm) else best
+    in
+      break best f skel rest
+    end
+  and break best f (Conj (a,b)) rest =
+    let
+      val Formula (ac,_,_,_) = a
+      val Formula (bc,_,_,_) = b
+      fun fa ac = f (conj_count ac bc)
+      fun fb bc = f (conj_count ac bc)
+      val rest = (fa,a) :: (fb,b) :: rest
+    in
+      check best rest
+    end
+    | break best f (Disj (a,b)) rest =
+    let
+      val Formula (ac,_,_,_) = a
+      val Formula (bc,_,_,_) = b
+      fun fa ac = f (disj_count ac bc)
+      fun fb bc = f (disj_count ac bc)
+      val rest = (fa,a) :: (fb,b) :: rest
+    in
+      check best rest
+    end
+    | break best f (Beq (a,b)) rest =
+    let
+      val Formula (ac,_,_,_) = a
+      val Formula (bc,_,_,_) = b
+      fun fa ac = f (beq_count ac bc)
+      fun fb bc = f (beq_count ac bc)
+      val rest = (fa,a) :: (fb,b) :: rest
+    in
+      check best rest
+    end
+    | break best _ Lit rest = check best rest;
+in
+  val min_cnf_search = check;
+end;
+
+val simple_cnf_rule = CONV_RULE (CNF_CONV' (CHANGED_CONV SKICo_CONV));
+
+fun min_cnf_norm defs acc [] = (defs, rev acc)
+  | min_cnf_norm defs acc (th :: ths) =
+  let
+    val concl_th = concl th
+    val form as Formula ((m,_),_,_,_) = count_cnf [] concl_th
+    val (n,vs,tm) = min_cnf_search (m,[],concl_th) [(fst,form)]
+  in
+    if n < m then
+      let
+        val _ =
+          chatting 1 andalso
+          chat ("min_cnf: "^Int.toString m^" -> "^Int.toString n^" clauses\n")
+        val _ =
+          chatting 2 andalso
+          chat ("min_cnf: renaming\n" ^ term_to_string tm ^ "\n")
+        val (defs,rule,dth) = rename defs vs tm
+        val ths = case dth of SOME dt => dt :: ths | NONE => ths
+      in
+        min_cnf_norm defs acc (rule th :: ths)
+      end
+    else
+      min_cnf_norm defs (simple_cnf_rule th :: acc) ths
+  end;
+
+fun MIN_CNF ths =
+  let
+    val ths = map GEN_ALL ths
+    val defs = []
+    val (defs,ths) = min_cnf_prep defs [] ths
+    val (defs,ths) = min_cnf_norm defs [] ths
+  in
+    ths
+  end;
+
 (* Quick testing
 val Term = Parse.Term;
 val Type = Parse.Type;
-show_assums := true;
+(*show_assums := true;*)
 Globals.guessing_tyvars := true;
-app load ["UNLINK", "numLib", "arithmeticTheory", "bossLib"];
-open UNLINK numLib arithmeticTheory bossLib;
+Globals.priming := SOME "";
+app load ["numLib", "arithmeticTheory", "pred_setTheory", "bossLib"];
+quietdec := true;
+open numLib arithmeticTheory pred_setTheory bossLib;
+quietdec := false;
 Parse.reveal "C";
 
+(*
 PRETTIFY_VARS_CONV (rhs (concl (DEF_CNF_CONV ``~(p = q) ==> q /\ r``)));
 
 try SKI_CONV ``?f. !y. f y = y + 1``;
@@ -1026,7 +1393,7 @@ val tm = ``~(0 <= m ==>
               (n <= 1 \/ (m + 1 = 1 + n) \/ m <= 0 /\ 1 + n <= 1) \/
               m <= 1 /\ n <= 1 + 0 =
               (m = n)))``;
-PARTIAL_NNF_QCONV (MK_QCONV (REWR_CONV NOT_NUM_EQ)) tm;
+PARTIAL_NNF_CONV (REWR_CONV NOT_NUM_EQ) tm;
 PURE_NNF_CONV' (REWR_CONV NOT_NUM_EQ) tm;
 
 SKOLEMIZE_CONV ``!x. (?y. Q y \/ !z. ~P z \/ ~Q z) \/ ~P x``;
@@ -1041,7 +1408,6 @@ CNF_CONV ``((p = q) = r) = (p = (q = r))``;
 CNF_CONV ``~(((p = q) = r) = (p = (q = r)))``;
 CNF_CONV ``?y. x < y ==> (!u. ?v. x * u < y * v)``;
 CNF_CONV ``!x. P(x) ==> (?y z. Q(y) \/ ~(?z. P(z) /\ Q(z)))``;
-CNF_CONV ``?x y. x + y = 2``;
 
 val th = DNF_CONV' (REWR_CONV NOT_NUM_EQ)
     ``~(0 <= m ==>
@@ -1075,15 +1441,45 @@ g `!p. 0 = @x. (?y w. (@z. z + w = p + q + y + x) = 2) = (?a b. (@c. c + a = p +
 e SELECT_TAC;
 drop ();
 
+g `!p. 0 = @x. (?y v. (@(z,r). z + v + r = p + q + y + x) = (2,3)) = (?a b. (@c. c + a = p + q + b + x) < 3)`;
+e SELECT_TAC;
+drop ();
+
 g `(!x. x IN p ==> (f x = f' x)) ==> ((@x. x IN p /\ f x) = @x. x IN p /\ f' x)`;
 e STRIP_TAC;
-e (CONV_TAC SELECT_NORM_CONV);
+e SELECT_TAC;
+drop ();
+
+g `($@ p) = 3`;
 e SELECT_TAC;
 drop ();
 
 try (SIMP_CONV cond_lift_ss []) ``f (if x then 7 else 1)``;
 
 try (SIMP_CONV condify_ss []) ``x /\ ~(y ==> ~z)``;
+*)
+
+(MIN_CNF o map ASSUME)
+[``!b. ~(p (c:bool) (b:bool))``];
+
+(MIN_CNF o map ASSUME)
+[``!t. ~(p = f (if x then y else z) (if a then b else c)
+        (\q. r (if s then t else u)))``];
+
+(MIN_CNF o map ASSUME)
+[``!x. p (\y. y + x)``, ``!z. q (\y. y + z)``];
+
+(MIN_CNF o map ASSUME) [``!q. ~(p /\ f (q /\ r))``];
+
+MIN_CNF [GSPECIFICATION,
+         ASSUME ``!x. x IN {y + 1 | y < n \/ y < m} ==> x <= m + n``];
+
+val p34 = mk_neg
+  ``((?x. !y. (p : 'a -> bool) x = p y) = ((?x. q x) = !y. q y)) =
+    ((?x. !y. q x = q y) = ((?x. p x) = !y. p y))``;
+
+CNF_CONV p34;
+MIN_CNF [ASSUME p34];
 
 (* Expensive tests
 val p28 =
@@ -1112,6 +1508,10 @@ val p34 =
 time CNF_CONV (mk_neg p34);
 
 (* Large formulas *)
+load "UNLINK";
+quietdec := true;
+open UNLINK;
+quietdec := false;
 
 val DEF_CNF_CONV' =
   time DEF_NNF_CONV THENC

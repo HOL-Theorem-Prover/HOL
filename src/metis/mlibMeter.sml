@@ -36,7 +36,7 @@ fun limit_to_string {time, infs} =
    "}";
 
 (* ------------------------------------------------------------------------- *)
-(* Meter readings.                                                           *)
+(* mlibMeter readings.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
 type meter_reading = {time : real, infs : int};
@@ -73,7 +73,7 @@ fun meter_reading_to_string r =
   PP.pp_to_string (!LINE_LENGTH) pp_meter_reading r;
 
 (* ------------------------------------------------------------------------- *)
-(* Meters record time and inferences.                                        *)
+(* mlibMeters record time and inferences.                                        *)
 (* ------------------------------------------------------------------------- *)
 
 type meter = {read : unit -> meter_reading, log : (int -> unit), lim : limit};

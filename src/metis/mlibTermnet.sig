@@ -6,20 +6,26 @@
 signature mlibTermnet =
 sig
 
-type 'a pp           = 'a mlibUseful.pp
-type ('a, 'b) maplet = ('a, 'b) mlibUseful.maplet
-type term            = mlibTerm.term
+type 'a pp          = 'a mlibUseful.pp
+type ('a,'b) maplet = ('a,'b) mlibUseful.maplet
+type term           = mlibTerm.term
 
 type 'a termnet
 
-val empty        : 'a termnet
-val insert       : (term, 'a) maplet -> 'a termnet -> 'a termnet
-val match        : 'a termnet -> term -> 'a list
-val matched      : 'a termnet -> term -> 'a list
-val unify        : 'a termnet -> term -> 'a list
+(* Basic operations *)
+val empty        : unit -> 'a termnet
 val size         : 'a termnet -> int
-val from_maplets : (term, 'a) maplet list -> 'a termnet
-val to_list      : 'a termnet -> 'a list
-val pp_termnet   : 'a pp -> 'a termnet pp
+val insert       : (term,'a) maplet -> 'a termnet -> 'a termnet
+val from_maplets : (term,'a) maplet list -> 'a termnet
+val filter       : ('a -> bool) -> 'a termnet -> 'a termnet
+
+(* mlibMatching and unifying *)
+val match   : 'a termnet -> term -> 'a list
+val matched : 'a termnet -> term -> 'a list
+val unify   : 'a termnet -> term -> 'a list
+
+(* Pretty-printing *)
+val to_maplets : 'a termnet -> (term,'a) maplet list
+val pp_termnet : 'a pp -> 'a termnet pp
 
 end
