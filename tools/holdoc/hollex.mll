@@ -168,14 +168,28 @@ and
 
 and
   textoken = parse
-    tnormal*       { TeXNormal (Lexing.lexeme lexbuf) }
-  | tstarthol      { TeXStartHol }
+
+(* this would be nice up front, but as the note says above, it's
+   wrong; instead, we put it at the end and break up the TeX into much
+   smaller fragments :-(
+
+    tnormal+ { TeXNormal (Lexing.lexeme lexbuf) }
+  |
+   *)
+
+    tstarthol      { TeXStartHol }
   | tstarthol0     { TeXStartHol0 }
   | endtex         { HolEndTeX }
   | tstartdir      { DirBeg }
   | startdir       { DirBeg }   (* recognised also, for .mni files that may
                                    be included in either HOL or TeX. *)
+
+  (* see comment above for these two rules *)
+  | [^ '[' '<' ':' '*' '(' ')' ]+  { TeXNormal (Lexing.lexeme lexbuf) }
+  | _                              { TeXNormal (Lexing.lexeme lexbuf) }
+
   | eof            { raise Eof }
+
 
 {
 
