@@ -157,9 +157,10 @@ GEN_TAC THEN REWRITE_TAC[WF_DEF]
  THEN Q.EXISTS_TAC`min` THEN ASM_REWRITE_TAC[]);
 
 
-val INDUCTION_WF_THM = Q.prove
-`!R:'a->'a->bool. (!P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x) ==> WF R`
-(GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[WF_DEF] THEN GEN_TAC THEN 
+val INDUCTION_WF_THM = Q.prove(
+`!R:'a->'a->bool. 
+     (!P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x) ==> WF R`,
+GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[WF_DEF] THEN GEN_TAC THEN 
  CONV_TAC CONTRAPOS_CONV THEN NNF_TAC THEN 
  DISCH_THEN (fn th => POP_ASSUM (MATCH_MP_TAC o BETA_RULE o Q.SPEC`\w. ~B w`)
                       THEN ASSUME_TAC th) THEN GEN_TAC THEN 
@@ -194,9 +195,9 @@ val WF_INDUCT_TAC =
  end;
 
 
-val ex_lem = Q.prove
-`!x. (?y. y = x) /\ ?y. x=y`
-(GEN_TAC THEN CONJ_TAC THEN Q.EXISTS_TAC`x` THEN REFL_TAC);
+val ex_lem = Q.prove(
+`!x. (?y. y = x) /\ ?y. x=y`,
+GEN_TAC THEN CONJ_TAC THEN Q.EXISTS_TAC`x` THEN REFL_TAC);
 
 val WF_NOT_REFL = Q.store_thm("WF_NOT_REFL",
 `!R x y. WF R ==> R x y ==> ~(x=y)`,
@@ -346,11 +347,11 @@ THEN ASM_REWRITE_TAC[]);
  * Two restricted functions are equal just when they are equal on each
  * element of their domain.
  *---------------------------------------------------------------------------*)
-val CUTS_EQ = Q.prove
+val CUTS_EQ = Q.prove(
 `!R f g (x:'a). 
    (RESTRICT f R x = RESTRICT g R x) 
-    = !y:'a. R y x ==> (f y:'b = g y)`
-(REPEAT GEN_TAC THEN REWRITE_TAC[RESTRICT_DEF]
+    = !y:'a. R y x ==> (f y:'b = g y)`,
+REPEAT GEN_TAC THEN REWRITE_TAC[RESTRICT_DEF]
  THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN EQ_TAC
  THENL
  [ CONV_TAC RIGHT_IMP_FORALL_CONV THEN GEN_TAC 
@@ -408,17 +409,20 @@ val approx_the_fun1 = ONCE_REWRITE_RULE [GSYM the_fun_def] approx_SELECT1;
 val approx_the_fun2 = SUBS [Q.SPECL[`R`,`M`,`x`,`the_fun R M x`] approx_ext]
                            approx_the_fun1;
 
-val the_fun_rw1 = Q.prove
-    `(?g:'a->'b. approx R M x g) 
-      ==> !w. R w x ==> (the_fun R M x w = M (RESTRICT (the_fun R M x) R w) w)`
-(DISCH_THEN (MP_TAC o MP approx_the_fun2) THEN
+val the_fun_rw1 = Q.prove(
+ `(?g:'a->'b. approx R M x g) 
+      ==> 
+  !w. R w x 
+       ==> 
+     (the_fun R M x w = M (RESTRICT (the_fun R M x) R w) w)`,
+ DISCH_THEN (MP_TAC o MP approx_the_fun2) THEN
  DISCH_THEN (fn th => GEN_TAC THEN MP_TAC (SPEC_ALL th)) 
  THEN COND_CASES_TAC 
  THEN ASM_REWRITE_TAC[]);
 
-val the_fun_rw2 = Q.prove
- `(?g:'a->'b. approx R M x g)  ==> !w. ~R w x ==> (the_fun R M x w = ARB)`
-(DISCH_THEN (MP_TAC o MP approx_the_fun2) THEN
+val the_fun_rw2 = Q.prove(
+ `(?g:'a->'b. approx R M x g)  ==> !w. ~R w x ==> (the_fun R M x w = ARB)`,
+DISCH_THEN (MP_TAC o MP approx_the_fun2) THEN
  DISCH_THEN (fn th => GEN_TAC THEN MP_TAC (SPEC_ALL th)) 
  THEN COND_CASES_TAC 
  THEN ASM_REWRITE_TAC[]);
@@ -447,13 +451,13 @@ Q.new_definition
  * Two approximations agree on their common domain.
  *---------------------------------------------------------------------------*)
 
-val APPROX_EQUAL_BELOW = Q.prove
+val APPROX_EQUAL_BELOW = Q.prove(
 `!R M f g u v. 
   WF R /\ transitive R /\
   approx R M u f /\ approx R M v g 
   ==> !x:'a. R x u ==> R x v 
-             ==> (f x:'b = g x)`
-(REWRITE_TAC[approx_ext] THEN REPEAT GEN_TAC THEN STRIP_TAC
+             ==> (f x:'b = g x)`,
+REWRITE_TAC[approx_ext] THEN REPEAT GEN_TAC THEN STRIP_TAC
   THEN WF_INDUCT_TAC THEN Q.EXISTS_TAC`R` 
   THEN ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC
   THEN REPEAT COND_CASES_TAC THEN RES_TAC
@@ -473,15 +477,15 @@ val AGREE_BELOW =
  * A specialization of AGREE_BELOW
  *---------------------------------------------------------------------------*)
 
-val RESTRICT_FUN_EQ = Q.prove
+val RESTRICT_FUN_EQ = Q.prove(
 `!R M f (g:'a->'b) u v.
      WF R /\
      transitive R   /\
      approx R M u f /\
      approx R M v g /\
      R v u
-     ==> (RESTRICT f R v = g)`
-(REWRITE_TAC[RESTRICT_DEF,transitive_def] THEN REPEAT STRIP_TAC
+     ==> (RESTRICT f R v = g)`,
+REWRITE_TAC[RESTRICT_DEF,transitive_def] THEN REPEAT STRIP_TAC
   THEN CONV_TAC (Q.X_FUN_EQ_CONV`w`) THEN BETA_TAC THEN GEN_TAC 
   THEN COND_CASES_TAC (* on R w v *)
   THENL [ MATCH_MP_TAC AGREE_BELOW THEN REPEAT Q.ID_EX_TAC 
@@ -495,9 +499,9 @@ val RESTRICT_FUN_EQ = Q.prove
  * Every x has an approximation. This is the crucial theorem.
  *---------------------------------------------------------------------------*)
 
-val EXISTS_LEMMA = Q.prove
-`!R M. WF R /\ transitive R ==> !x. ?f:'a->'b. approx R M x f`
-(REPEAT GEN_TAC THEN STRIP_TAC
+val EXISTS_LEMMA = Q.prove(
+`!R M. WF R /\ transitive R ==> !x. ?f:'a->'b. approx R M x f`,
+REPEAT GEN_TAC THEN STRIP_TAC
   THEN WF_INDUCT_TAC 
   THEN Q.EXISTS_TAC`R` THEN ASM_REWRITE_TAC[] THEN GEN_TAC
   THEN DISCH_THEN  (* Adjust IH by applying Choice *)
@@ -521,12 +525,12 @@ val EXISTS_LEMMA = Q.prove
   THEN RES_TAC);
 
  
-val the_fun_unroll = Q.prove
+val the_fun_unroll = Q.prove(
  `!R M x (w:'a).
      WF R /\ transitive R 
        ==> R w x 
-        ==> (the_fun R M x w:'b = M (RESTRICT (the_fun R M x) R w) w)`
-(REPEAT GEN_TAC THEN DISCH_TAC 
+        ==> (the_fun R M x w:'b = M (RESTRICT (the_fun R M x) R w) w)`,
+REPEAT GEN_TAC THEN DISCH_TAC 
   THEN Q.ID_SPEC_TAC`w`
   THEN MATCH_MP_TAC the_fun_rw1 
   THEN MATCH_MP_TAC EXISTS_LEMMA
@@ -547,10 +551,9 @@ val the_fun_TC0 =
 (*---------------------------------------------------------------------------
  * There's a rewrite rule that simplifies this mess.
  *---------------------------------------------------------------------------*)
-val TC_RESTRICT_LEMMA = 
-Q.prove`!(f:'a->'b) R w. 
-           RESTRICT (RESTRICT f (TC R) w) R w = RESTRICT f R w`
-(REPEAT GEN_TAC 
+val TC_RESTRICT_LEMMA = Q.prove(
+ `!(f:'a->'b) R w. RESTRICT (RESTRICT f (TC R) w) R w = RESTRICT f R w`,
+REPEAT GEN_TAC 
   THEN REWRITE_TAC[RESTRICT_DEF]
   THEN CONV_TAC (Q.X_FUN_EQ_CONV`p`) 
   THEN BETA_TAC THEN GEN_TAC 
