@@ -14,53 +14,56 @@ mv new-config hol98/tools/configure.sml
 echo Building filter.c
 cd hol98/src/quote-filter
 make filter.c
+cd /tmp/hol98
+mv bin/README /tmp/bin-README
+mv sigobj/README /tmp/sigobj-README
 
 echo "Running configure script (original in /tmp)"
 cd /tmp/hol98
 $mosmldir/bin/mosml < tools/configure.sml
 
 echo Now building whole system
-if bin/build -symlink 2>&1 | tee build-log | \
-   perl -e 'chomp; $| = 1;
-             if (m|^Working in directory /tmp/hol98/src/(.*)$|) {
-                          print $1, " ";
-             }'
+echo "Working in directories:"
+if bin/build -symlink 2>&1 | tee build-log | perl developers/prettifier.pl
 then
   :
 else
   echo "Build failed!!" ; echo ; echo
-  echo "See build-log file for details"
+  echo "See /tmp/hol98/build-log file for details"
   exit 1
 fi
 
 echo Now building help index
 cd developers/help
 make
+cat /tmp/hol98/tools/documentation-directories | \
+ while read foo ; do echo $foo ; /bin/rm /tmp/hol98/$foo/*.doc ; done
 
 echo Now building documentation
 cd /tmp/hol98/Manual/Reference
 make all
 mv reference.dvi /tmp
-make clean
 cd ../Description
 make all
 mv description.dvi /tmp
-make clean
+/bin/rm description.ps
 cd ../Tutorial
 make all
 mv tutorial.dvi /tmp
-make clean
 
 echo Now starting to clean up and make tar ball
 cd /tmp/hol98
 /bin/rm build-log
 bin/build -cleanAll
 /bin/rm -rf developers
+/bin/rm -rf Manual
 mv /tmp/configure.sml tools
 /bin/rm bin/*
 /bin/rm tools/build.sml tools/Holmake/*.{uo,ui} tools/hol98-mode.el
 /bin/rm tools/Holmake/{Holmake,Parser,Lexer}.sml tools/Holmake/Parser.sig
 (cd src/muddy/ ; make clean ; cd buddy17 ; make clean)
+mv ../bin-README bin/README
+mv ../sigobj-README sigobj/README
 
 cd /tmp
 tar czf hol98-$name.tar.gz hol98
