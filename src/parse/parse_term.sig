@@ -29,6 +29,7 @@ signature parse_term = sig
                  lookahead : 'a lookahead_item list,
                  in_vstruct : (vsres_state * int) list}
     val pstack : 'a PStack -> ('a stack_item * 'a lookahead_item) list
+    val initial_pstack : 'a PStack
 
     exception PrecConflict of stack_terminal * stack_terminal
     exception ParseTermError of string

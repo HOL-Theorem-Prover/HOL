@@ -161,7 +161,7 @@ in
         val (final_frags, stropt) = quoted_string frags2
       in
         case stropt of
-          NONE => raise LEX_ERR "Quoted string fails to terminate"
+          NONE => raise LEX_ERR "quoted string fails to terminate"
         | SOME s => (final_frags, SOME (Ident s))
       end
       else let (* it's some sort of symbol *)
@@ -173,6 +173,7 @@ in
           if sub(str0, 0) = #"$" then (true, slice(str0, 1, NONE))
           else (false, str0)
         val c2 = sub(str, 0)
+          handle Subscript => raise LEX_ERR "isolated dollar-sign meaningless"
         fun ok_inid c =
           Char.isAlpha c orelse Char.isDigit c orelse
           c = #"_" orelse c = #"'"
@@ -190,7 +191,7 @@ in
             in
               case getc rest of
                 NONE =>
-                  raise LEX_ERR ("Long $-id "^string id^" with no sub-part")
+                  raise LEX_ERR ("long $-id "^string id^" with no sub-part")
               | SOME(c3, rest) => let (* c3 will be alphabetic or a hol sym *)
                   fun grab_id P = let
                     val (sub_id, push_this_back) = splitl P rest
@@ -207,7 +208,7 @@ in
                     if fromLex Lexis.hol_symbols c3 then
                       grab_id (fromLex Lexis.hol_symbols)
                     else
-                      raise LEX_ERR ("Sub-component starting with "^
+                      raise LEX_ERR ("sub-component starting with "^
                                      String.str c3^ " after "^string id^
                                      " lexically bad")
                 end
@@ -230,7 +231,7 @@ in
             handle_symbolics dollared ss final_frags
           end
           else
-            raise LEX_ERR ("Can't make lexical sense of "^string str)
+            raise LEX_ERR ("can't make lexical sense of "^string str)
       end (* "some sort of symbol" let *)
     end (* SOME (QUOTE s) let *)
 end (* newlex *)

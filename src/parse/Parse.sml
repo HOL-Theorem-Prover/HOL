@@ -300,14 +300,15 @@ in
            term_grammar.STtoString G st2)
   in
     fn q => let
-      val ((cs, p), _) = pt (q, PStack {lookahead = [], stack = [],
-                                        in_vstruct = [(VSRES_Normal, 0)]})
+      val ((cs, p), _) = pt (q, initial_pstack)
         handle term_tokens.LEX_ERR s =>
           raise ERROR "Term" ("Lexical error - "^s)
-
     in
-      case pstack p of
-        [(NonTerminal pt, _), (Terminal BOS, _)] => let
+      case p of
+        PStack {lookahead = [],
+                stack = [(NonTerminal pt, _), (Terminal BOS, _)],
+                in_vstruct = [(VSRES_Normal, 0)]} =>
+        let
           infix ++ >>
           val (_, res) =
             (many (fragstr.comment ++ fragstr.grab_whitespace) >>

@@ -992,6 +992,9 @@ in
   basic_action
 end
 
+val initial_pstack = PStack {stack = [], lookahead = [],
+                             in_vstruct = [(VSRES_Normal, 0)]}
+
 
 val recupd_errstring =
   "Record list must have (fld := value) or (fld updated_by f) elements only"
@@ -1058,11 +1061,10 @@ and remove_recupdate' updatelist bottom =
 
 
 
-
+(*
 infix Gmerge
 
 
-(*
 Useful functions to test with:
 fun do_parse0 G ty = let
   val pt = parse_term G ty
