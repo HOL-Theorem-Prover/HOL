@@ -29,26 +29,28 @@ fun quant_ty ty =  (ty --> bool) --> bool;
 val b2b2b = infix_ty bool bool;
 
 exception BAD
+
 fun dest_monop M s e =
    let val {Rator=c, Rand=tm} = Term.dest_comb M
-   in if ((#Name(dest_const c) = s) handle HOL_ERR _ => false)
-      then (c,tm) else raise e
+   in if #Name(dest_const c) = s then (c,tm) else raise e
    end
+   handle HOL_ERR _ => raise e;
 
 fun dest_binop M s e =
   let val {Rator,Rand=tm2} = Term.dest_comb M
       val {Rator=c,Rand=tm1} = Term.dest_comb Rator
   in
-    if ((#Name(dest_const c) = s) handle HOL_ERR _ => false)
-     then (c,tm1,tm2) else raise e
+    if #Name(dest_const c) = s then (c,tm1,tm2) else raise e
   end
+  handle HOL_ERR _ => raise e
 
 fun dest_binder M s e =
   let val {Rator=c, Rand} = Term.dest_comb M
   in
-     if ((#Name(dest_const c) = s) handle HOL_ERR _ => false)
-     then dest_abs Rand else raise e
+     if #Name(dest_const c) = s then dest_abs Rand else raise e
   end
+  handle HOL_ERR _ => raise e
+
 
 (*---------------------------------------------------------------------------
  * Derived syntax from theory "min"
