@@ -166,14 +166,14 @@ fun report n tb =
  end;
 
 (*****************************************************************************)
-(* Use DerivedBddRulesTheory.ReachIn_rec                                     *)
+(* Use MachineTransitionTheory.ReachIn_rec                                   *)
 (*****************************************************************************)
 
 val (in_th0,in_thsuc) = 
  time
   (REWRITE_RULE[HexSolitaireInit_def] ## REWRITE_RULE[HexSolitaireTrans_def])
   (MkIterThms 
-    DerivedBddRulesTheory.ReachIn_rec 
+    MachineTransitionTheory.ReachIn_rec 
     (lhs(concl(SPEC_ALL HexSolitaireTrans_def)))
     (lhs(concl(SPEC_ALL HexSolitaireInit_def))));
 

@@ -110,7 +110,7 @@ exception nameError;
 fun name v = 
  if is_var v andalso type_of v = bool
   then fst(dest_var v)
-  else (print_term v; print "is not a boolean variable\n"; raise nameError);
+  else (print_term v; print " is not a boolean variable\n"; raise nameError);
 
 (*****************************************************************************)
 (* Oracle function                                                           *)
