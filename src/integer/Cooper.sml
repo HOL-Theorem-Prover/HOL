@@ -18,6 +18,8 @@ fun ERR f msg = HOL_ERR {origin_function = f,
 
 val not_tm = Term.mk_const{Name = "~", Ty = Type.bool --> Type.bool}
 val num_ty = Type.mk_type{Tyop = "num", Args = []}
+val true_tm = Term.mk_const {Name = "T", Ty = Type.bool}
+val false_tm = Term.mk_const {Name = "F", Ty = Type.bool}
 
 local open listTheory in end;
 
@@ -59,7 +61,8 @@ local
                   boolTheory.IMP_DISJ_THM, boolTheory.EQ_IMP_THM,
                   elim_eq, elim_le, elim_ge, elim_gt,
                   INT_SUB_CALCULATE, INT_RDISTRIB, INT_LDISTRIB,
-                  INT_NEG_LMUL, INT_NEG_ADD, INT_NEGNEG, INT_NEG_0]
+                  INT_NEG_LMUL, INT_NEG_ADD, INT_NEGNEG, INT_NEG_0,
+                  INT_MUL_RZERO, INT_MUL_LZERO]
   fun flip_muls tm =
     if is_mult tm andalso not (is_var (rand tm)) then let
       val mcands = strip_mult tm
@@ -82,8 +85,6 @@ end
 
 (*
 
-val true_tm = Term.mk_const {Name = "T", Ty = Type.bool}
-val false_tm = Term.mk_const {Name = "F", Ty = Type.bool}
 val AND_CLAUSES0 = CONJUNCTS (Q.ID_SPEC AND_CLAUSES)
 val OR_CLAUSES0 = CONJUNCTS (Q.ID_SPEC OR_CLAUSES)
 val T_and_l = GEN_ALL (List.nth(AND_CLAUSES0, 0))
@@ -1164,6 +1165,64 @@ val obvious_improvements =
                             INT_ADD_LID, INT_ADD_RID, INT_LT_ADD_NUMERAL,
                             INT_LT_LADD]
 
+val boolcases_elim_thm = tautLib.TAUT_PROVE
+  (Term`!p Q Q1 Q2. (p ==> (Q = Q1)) /\ (~p ==> (Q = Q2)) ==>
+                    (Q = p /\ Q1 \/ ~p /\ Q2)`);
+
+val specialised_cond_elim = let
+  fun eliminate_cond ctm tm = let
+    (* given a ctm, a boolean valued term that is the guard of some
+       conditional expression(s), transform the term by doing case
+       analysis on ctm and using boolcases_elim_thm above *)
+    val pos_case = DISCH_ALL (REWRITE_CONV [ASSUME ctm] tm)
+    val neg_case = DISCH_ALL (REWRITE_CONV [ASSUME (mk_neg ctm)] tm)
+  in
+    CONV_RULE (REWRITE_CONV [])
+      (MATCH_MP boolcases_elim_thm (CONJ pos_case neg_case))
+  end
+  fun find_minimal_cond_guard curpos ctxt tm = let
+    (* either returns NONE, or returns SOME(tm, cval) where tm is the
+       guard of a conditional expression, and cval is the conversional
+       pointing to a point in the term where eliminate_cond tm will
+       succeed *)
+    (* ctxt is a list of pairs of variables and cvals.  The variables are
+       bound names, and the cval points at the body underneath the binder
+       for that name.  The deeper the variable, the earlier in the list.
+    *)
+    (* curpos is a cval pointing to our current position *)
+  in
+    if is_forall tm orelse is_exists tm orelse is_uexists tm then let
+      val (bvar, body) = dest_abs (rand tm)
+      val bodypos = curpos o BINDER_CONV
+    in
+      find_minimal_cond_guard bodypos ((bvar, bodypos)::ctxt) body
+    end
+    else if is_cond tm then let
+      val (guard, _, _) = dest_cond tm
+      val guardpos = curpos o RATOR_CONV o RATOR_CONV o RAND_CONV
+    in
+      case find_minimal_cond_guard guardpos ctxt guard of
+        NONE => let
+        in
+          case List.find (fn (v,_) => free_in v guard) ctxt of
+            NONE => SOME (guard, I)
+          | SOME (_, c) => SOME(guard, c)
+        end
+      | x => x
+    end
+    else if is_comb tm then
+      case find_minimal_cond_guard (curpos o RATOR_CONV) ctxt (rator tm) of
+        NONE => find_minimal_cond_guard (curpos o RAND_CONV) ctxt (rand tm)
+      | x => x
+    else NONE
+  end
+  fun COND_ELIM_CONV tm =
+    case find_minimal_cond_guard I [] tm of
+      NONE => NO_CONV tm
+    | SOME (ctm,c) => c (eliminate_cond ctm) tm
+in
+  DEPTH_CONV (REWR_CONV COND_ID) THENC REPEATC COND_ELIM_CONV
+end
 
 val decide_pure_presburger_term = let
   (* no free variables allowed *)
@@ -1224,6 +1283,7 @@ fun non_presburger_subterms0 ctxt tm =
     non_presburger_subterms0 ctxt (rand tm)
   else if is_int_literal tm then []
   else if is_var tm andalso type_of tm = int_ty then []
+  else if (tm = true_tm orelse tm = false_tm) then []
   else [(tm, not (List.exists (fn v => free_in v tm) ctxt))]
 
 val is_presburger = null o non_presburger_subterms0 []
@@ -1267,8 +1327,8 @@ val dealwith_nats = let
   open arithmeticTheory simpLib boolSimps
   val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
                   GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
-                  GSYM INT_MUL, INT_NUM_SUB, INT, PRE_SUB1, INT_NUM_COND]
-
+                  GSYM INT_MUL, INT_NUM_SUB, INT, PRE_SUB1, INT_NUM_COND,
+                  ODD_EXISTS, EVEN_EXISTS]
   fun seek_natqs tm = let
   in
     if is_forall tm orelse is_exists tm orelse is_uexists tm then let
