@@ -38,7 +38,7 @@ in
   val _ = installPP goalstackLib.pp_proofs
   val _ = installPP goalstackLib.pp_goalstack
   val _ = installPP Rewrite.pp_rewrites
-  val _ = installPP TypeBase.TypeInfo.pp_tyinfo
+  val _ = installPP TypeBasePure.pp_tyinfo
   val _ = installPP DefnBase.pp_defn
 end;
 
@@ -52,7 +52,7 @@ local
   fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
   val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
 in
-  val () = indexfiles := HELP "HOL.Help" :: !indexfiles 
+  val () = indexfiles := HELP "HOL.Help" :: !indexfiles
   val () = helpdirs   := HOLDIR :: SIGOBJ :: !helpdirs
   val () = Help.specialfiles :=
              {file = "README.Hol98", term = "hol", title = "Hol98 Overview"}
