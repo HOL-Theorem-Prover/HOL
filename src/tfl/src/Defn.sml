@@ -1105,10 +1105,11 @@ fun vnames_of (VAQ tm) S = union (map (fst o Term.dest_var) (all_vars tm)) S
 
 fun names_of (AQ tm) S = union (map (fst o Term.dest_var) (all_vars tm)) S
   | names_of (IDENT s) S = union [s] S
+  | names_of (APP(IDENT "case_arrow__magic", _)) S = S
   | names_of (APP(M,N)) S = names_of M (names_of N S)
   | names_of (LAM (v,M)) S = names_of M (vnames_of v S)
   | names_of (TYPED(M,_)) S = names_of M S
-  | names_of (QIDENT _) S = []
+  | names_of (QIDENT _) S = S
 end;
 
 local val v_vary = vary "v"
