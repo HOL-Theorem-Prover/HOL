@@ -13,4 +13,6 @@ val one_case_tm = prim_mk_const{Thy="one",Name="one_case"}
 fun mk_one_case x = 
    list_mk_comb(inst[alpha |-> type_of x]one_case_tm,[x,one_tm])
 
+fun lift_one ty () = one_tm
+
 end

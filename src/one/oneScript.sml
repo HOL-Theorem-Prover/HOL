@@ -35,11 +35,9 @@ val _ = new_theory "one";
 (* prove the (trivial) theorem: ?b.(\b.b)b.				*)
 (*----------------------------------------------------------------------*)
 
-val EXISTS_ONE_REP =
-   prove(--`?b:bool. (\b.b) b`--,
-         EXISTS_TAC (--`T`--) THEN
-         CONV_TAC BETA_CONV THEN
-         ACCEPT_TAC TRUTH);
+val EXISTS_ONE_REP = prove
+(--`?b:bool. (\b.b) b`--,
+ EXISTS_TAC (--`T`--) THEN CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
 
 (*---------------------------------------------------------------------------*)
 (* Use the type definition mechanism to introduce the new type.              *)
@@ -66,7 +64,7 @@ val one_axiom = store_thm("one_axiom",
     THEN REFL_TAC);
 
 (*---------------------------------------------------------------------------
-    Define the constant `one` of type one....
+    Define the constant `one` of type one.
  ---------------------------------------------------------------------------*)
 
 val one_DEF = new_definition ("one_DEF", Term`one = @x:one.T`);
@@ -175,4 +173,4 @@ val _ = adjoin_to_theory
 
 val _ = export_theory();
 
-end;
+end
