@@ -430,6 +430,22 @@ in
 		      TINT_LT_ADD, TINT_LT_MUL])}
 end;
 
+val _ = Theory.save_thm ("INT_10",INT_10)
+val _ = Theory.save_thm ("INT_ADD_SYM",INT_ADD_SYM)
+val _ = Theory.save_thm ("INT_MUL_SYM",INT_MUL_SYM)
+val _ = Theory.save_thm ("INT_ADD_ASSOC",INT_ADD_ASSOC)
+val _ = Theory.save_thm ("INT_MUL_ASSOC",INT_MUL_ASSOC)
+val _ = Theory.save_thm ("INT_LDISTRIB",INT_LDISTRIB)
+val _ = Theory.save_thm ("INT_ADD_LID",INT_ADD_LID)
+val _ = Theory.save_thm ("INT_MUL_LID",INT_MUL_LID)
+val _ = Theory.save_thm ("INT_ADD_LINV",INT_ADD_LINV)
+val _ = Theory.save_thm ("INT_LT_TOTAL",INT_LT_TOTAL)
+val _ = Theory.save_thm ("INT_LT_REFL",INT_LT_REFL)
+val _ = Theory.save_thm ("INT_LT_TRANS",INT_LT_TRANS)
+val _ = Theory.save_thm ("INT_LT_LADD_IMP",INT_LT_LADD_IMP)
+val _ = Theory.save_thm ("INT_LT_MUL",INT_LT_MUL)
+;
+
 val int_tybij = definition "int_tybij";
 
 val natplus = Term`$+`;
