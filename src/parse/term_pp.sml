@@ -666,13 +666,14 @@ fun pp_term (G : grammar) TyG = let
               if isPrefix recsel_special s andalso isSome recsel_info
               then let
                 val (prec0, fldtok) = valOf recsel_info
+                (* assumes that field selection is always left associative *)
                 val add_l =
                   case lgrav of
-                    Prec(n, _) => n > prec0
+                    Prec(n, _) => n >= prec0
                   | _ => false
                 val add_r =
                   case rgrav of
-                    Prec(n, _) => n >= prec0
+                    Prec(n, _) => n > prec0
                   | _ => false
                 val prec = Prec(prec0, recsel_special)
                 val add_parens = add_l orelse add_r

@@ -39,7 +39,7 @@ fun mk_pair (fst,snd) =
      val fsty = type_of fst
      val sndty = type_of snd
      val c = mk_thy_const{Name=",",Thy="pair",
-              Ty=fsty --> sndty 
+              Ty=fsty --> sndty
                    --> mk_thy_type{Tyop="prod",Thy="pair",Args=[fsty,sndty]}}
  in list_mk_comb(c,[fst,snd])
  end;
@@ -184,8 +184,8 @@ val list_mk_select  = list_mk_binder mk_select;
 local fun err0 str = ERR "dest_binder" ("Expected a "^Lib.quote str)
       fun dest_term_binder s tm ex =
        let val (c,lam) = dest_comb tm
-       in if fst(Term.dest_const c) <> s 
-            then raise ex 
+       in if fst(Term.dest_const c) <> s
+            then raise ex
             else dest_lam (AQ lam)
        end handle HOL_ERR _ => raise ex
 in
