@@ -31,7 +31,7 @@ sig
   val variant    : term list -> term -> term
   val type_of    : term -> hol_type
   val type_vars_in_term : term -> hol_type list
-  val dest_term  : term -> Term.lambda
+  val dest_term  : term -> Term.term Term.lambda
   
   (* Prelogic *)
   val aconv     : term -> term -> bool
