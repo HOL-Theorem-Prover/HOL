@@ -147,4 +147,3 @@ REWRITE_TAC [SYM Fn_def]
                          arithmeticTheory.ADD_CLAUSES]
        THEN DISCH_TAC THEN Q.PAT_ASSUM `x ==> y` MP_TAC
        THEN RW_TAC arith_ss [lam_size_def,DECIDE`x<y+1 = x<=y`]]]);
-
