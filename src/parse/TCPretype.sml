@@ -162,15 +162,8 @@ fun fromType t =
       UVar(ref (SOME ty')) => remove_made_links ty'
     | Tyop(s, args) => Tyop(s, map remove_made_links args)
     | _ => ty
-  val a_code = Char.ord #"a"
   fun generate_new_name r used_so_far = let
-    fun guess n = let
-      val guess_str = String.implode [#"'", Char.chr n]
-    in
-      if Lib.mem guess_str used_so_far then guess (n + 1)
-      else guess_str
-    end
-    val result = guess a_code
+    val result = Lib.gen_variant Lib.tyvar_vary used_so_far "'a"
     val _ = r := SOME (Vartype result)
   in
     (result::used_so_far, SOME ())
