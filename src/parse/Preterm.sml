@@ -29,8 +29,8 @@ datatype preterm = Var   of {Name:string,  Ty:pretype}
      by the time clean is called.
  ---------------------------------------------------------------------------*)
 
-fun clean shr = 
- let fun 
+fun clean shr =
+ let fun
    cl(Var{Name,Ty})       = Term.mk_var(Name, shr Ty)
  | cl(Const{Name,Thy,Ty}) = Term.mk_thy_const{Name=Name,Thy=Thy,Ty=shr Ty}
  | cl(Comb{Rator,Rand})   = Term.mk_comb(cl Rator,cl Rand)
@@ -73,16 +73,16 @@ fun to_term tm =
  let fun cleanup tm =
        let open optmonad infix >> >-
            val clean = Pretype.clean o Pretype.remove_made_links
-       in case tm 
-           of Var{Name,Ty} => Pretype.replace_null_links Ty >- (fn _ 
+       in case tm
+           of Var{Name,Ty} => Pretype.replace_null_links Ty >- (fn _
                => return (Term.mk_var(Name, clean Ty)))
-            | Const{Name,Thy,Ty} => Pretype.replace_null_links Ty >- (fn _ 
+            | Const{Name,Thy,Ty} => Pretype.replace_null_links Ty >- (fn _
                => return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty}))
-            | Comb{Rator, Rand} => cleanup Rator >- (fn Rator' 
-                                => cleanup Rand  >- (fn Rand'  
+            | Comb{Rator, Rand} => cleanup Rator >- (fn Rator'
+                                => cleanup Rand  >- (fn Rand'
                   => return (Term.mk_comb(Rator', Rand'))))
-            | Abs{Bvar, Body} => cleanup Bvar >- (fn Bvar' 
-                              => cleanup Body >- (fn Body' 
+            | Abs{Bvar, Body} => cleanup Bvar >- (fn Bvar'
+                              => cleanup Body >- (fn Body'
                   => return (Term.mk_abs(Bvar', Body'))))
             | Antiq t => return t
             | Constrained(tm, ty) => cleanup tm
@@ -337,7 +337,9 @@ fun TC printers =
        => let val tmp = !Globals.show_types
               val _   = Globals.show_types := true
               val Rator' = to_term (overloading_resolution Rator)
+                handle e => (Globals.show_types := tmp; raise e)
               val Rand'  = to_term (overloading_resolution Rand)
+                handle e => (Globals.show_types := tmp; raise e)
           in
             Lib.say "\nType inference failure: unable to infer a type \
                               \for the application of\n\n";
@@ -361,8 +363,7 @@ fun TC printers =
        => let val tmp = !Globals.show_types
               val _ = Globals.show_types := true
               val real_term = to_term (overloading_resolution tm)
-                handle HOL_ERR _ =>
-                  raise ERR "typecheck" "internal to_term failed"
+                handle e => (Globals.show_types := tmp; raise e)
           in
             Lib.say "\nType inference failure: the term\n\n";
             ptm real_term; Lib.say "\n\n";
