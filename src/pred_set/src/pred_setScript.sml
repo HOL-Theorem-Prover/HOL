@@ -3002,7 +3002,9 @@ val _ = export_rewrites
      "SUBSET_EMPTY", "SUBSET_FINITE", "SUBSET_INSERT", "SUBSET_REFL",
      (* "UNION" *)
      "IN_UNION", "UNION_EMPTY", "UNION_IDEMPOT", "UNION_UNIV", "UNION_SUBSET",
-     "SUBSET_UNION"
+     "SUBSET_UNION",
+     (* UNIV *)
+     "IN_UNIV", "EMPTY_NOT_UNIV"
 ];
 
 
