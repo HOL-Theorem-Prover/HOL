@@ -49,7 +49,7 @@ parse `"` { ECHO lexbuf; STRING lexbuf  }
   | eof { () }
 
 and STRING =
-parse "\\\"" { ECHO lexbuf }
+parse "\\\"" { ECHO lexbuf; STRING lexbuf }
     | "\""   { ECHO lexbuf; INITIAL lexbuf }
     | newline { print "\n"; TextIO.flushOut (!output_stream); STRING lexbuf }
     | _      { ECHO lexbuf; STRING lexbuf }
