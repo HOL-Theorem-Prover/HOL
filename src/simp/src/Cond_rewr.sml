@@ -1,4 +1,4 @@
-structure Cond_rewr :> Cond_rewr = 
+structure Cond_rewr :> Cond_rewr =
 struct
 
 open HolKernel boolLib liteLib Trace;
@@ -27,7 +27,7 @@ val stack_limit = ref 4;
  * -----------------------------------------------------------------------*)
 
 fun size_of_term tm =
-     case dest_term tm 
+     case dest_term tm
       of LAMB(Bvar,Body) => 1 + size_of_term Body
        | COMB(Rator,Rand) => size_of_term Rator + size_of_term Rand
        | _ => 1
@@ -40,7 +40,7 @@ fun size_of_term tm =
     | (CONST _, VAR _) => LESS
     | (COMB (Rator,Rand), VAR _) => if is_comb Rator then GREATER else LESS
     | (VAR v1, VAR v2) => String.compare(fst v1, fst v2)
-    | (CONST c1, CONST c2) => 
+    | (CONST c1, CONST c2) =>
         (case String.compare(#Name c1,#Name c2)
           of EQUAL => String.compare(#Thy c1,#Thy c2)
            | other => other)
@@ -62,7 +62,7 @@ fun size_of_term tm =
     * ---------------------------------------------------------------------*)
 
    fun vperm(tm1,tm2) =
-    case (dest_term tm1, dest_term tm2) 
+    case (dest_term tm1, dest_term tm2)
      of (VAR v1,VAR v2)   => (snd v1 = snd v2)
       | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
       | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
@@ -90,7 +90,7 @@ fun size_of_term tm =
             val (l,r) = dest_eq eqn
             val _ =
               if Term.aconv l r then
-                (trace(1, IGNORE ("Rewrite loops", conditional_eqn));
+                (trace(4, IGNORE ("Rewrite loops", conditional_eqn));
                  failwith "looping rewrite")
               else ()
 
@@ -229,7 +229,7 @@ handle e => WRAP_ERR("IMP_EQ_CANON",e);
 
 
 fun QUANTIFY_CONDITIONS thm =
- if is_imp (concl thm) then 
+ if is_imp (concl thm) then
    let val free_in_eqn = (free_vars (snd(dest_imp (concl thm))))
        val free_in_thm = (free_vars (concl thm))
        val free_in_hyp = free_varsl (hyp thm)
@@ -239,7 +239,7 @@ fun QUANTIFY_CONDITIONS thm =
        val quan_thm = itlist quantify free_in_conditions thm
    in [quan_thm]
    end
- else [thm] 
+ else [thm]
  handle e => WRAP_ERR("QUANTIFY_CONDITIONS",e);
 
 
