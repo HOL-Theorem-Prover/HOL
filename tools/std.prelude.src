@@ -16,7 +16,7 @@ end;
 
 val _ = app load ["HolKernel", "boolLib", "goalstackLib"];
 
-open HolKernel boolLib goalstackLib Psyntax;
+open HolKernel Parse boolLib goalstackLib;
 
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 infixr 3 -->;

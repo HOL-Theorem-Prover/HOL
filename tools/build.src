@@ -151,7 +151,7 @@ fun rem_file f =
 
 fun clean_sigobj() =
   let val _ = print ("Cleaning out "^SIGOBJ^"\n")
-  in
+  in 
      map_dir (rem_file o normPath o Path.concat) SIGOBJ
   end;
 

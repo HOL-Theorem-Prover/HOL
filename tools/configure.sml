@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir =
-val holdir   =
+val mosmldir = 
+val holdir   = 
 val OS       = "linux";   (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -54,7 +54,7 @@ end;
  ---------------------------------------------------------------------------*)
 
 val SRCDIRS =
- ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack",
+ ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack", 
   "src/taut", "src/compute/src", "src/q", "src/combin", "src/lite",
   "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
@@ -66,7 +66,7 @@ val SRCDIRS =
   "src/llist", "src/integer", "src/res_quan/src",
   "src/pred_set/src",  "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src",
-  "src/finite_map", "src/real", "src/bag", "src/ring/src",
+  "src/finite_map", "src/real", "src/bag", "src/ring/src", 
   "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob"]
   @
   (if OS="linux" orelse OS="solaris"
@@ -200,6 +200,48 @@ val _ =
     FileSys.chDir current_dir
   end
 handle _ => (print "Couldn't build Holmake\n"; Process.exit Process.failure)
+(*
+val _ =
+ let val _ = echo "Making bin/Holmake."
+     val current_dir = FileSys.getDir()
+     val hmakedir    = normPath(Path.concat(holdir, "tools/Holmake"))
+     val   _        = FileSys.chDir hmakedir
+     val src       = "Holmake.src"
+     val target    = "Holmake.sml"
+     val bin       = fullPath [holdir, "bin/Holmake"]
+     val compiler  = fullPath [mosmldir, "bin/mosmlc"]
+     val lexer     = fullPath [mosmldir, "bin/mosmllex"]
+     val yaccer    = fullPath [mosmldir, "bin/mosmlyac"]
+     fun systeml l = 
+       let val command = String.concat l
+       in if Process.system command = Process.success then ()
+          else (print ("Executing\n  "^command^"\nfailed.\n"); raise Fail "")
+       end
+  in
+    fill_holes (src,target)
+       ["val HOLDIR = _;\n"
+          --> String.concat["val HOLDIR = ",    quote holdir,";\n"],
+        "val MOSMLDIR = _;\n"
+          -->  String.concat["val MOSMLDIR = ", quote mosmldir, ";\n"],
+        "val DEPDIR = _;\n"
+          -->  String.concat["val DEPDIR = ",   quote DEPDIR, ";\n"],
+        "fun MK_XABLE file = _;\n"
+          -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"]];
+    systeml [yaccer, space, "Parser.grm"];
+    systeml [lexer, space, "Lexer.lex"];
+    systeml [compiler, " -c ", "Parser.sig"];
+    systeml [compiler, " -c ", "Parser.sml"];
+    systeml [compiler, " -c ", "Lexer.sml" ];
+    systeml [compiler, " -c ", "Holdep.sml"];
+    if OS <> "winNT" then
+      systeml [compiler, " -standalone -o ", bin, space, target]
+    else
+      systeml [compiler, " -o ", bin, space, target];
+    mk_xable bin;
+    FileSys.chDir current_dir
+  end
+handle _ => (print "Couldn't build Holmake\n"; Process.exit Process.failure)
+*)
 
 (*---------------------------------------------------------------------------
     Instantiate tools/build.src, compile it, and put it in bin/build.
