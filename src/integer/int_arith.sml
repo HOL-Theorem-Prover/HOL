@@ -14,6 +14,7 @@ fun ERR f msg = HOL_ERR {origin_function = f,
                          origin_structure = "int_arith"};
 
 val not_tm = Term.mk_const{Name = "~", Ty = Type.bool --> Type.bool}
+val num_ty = Type.mk_type{Tyop = "num", Args = []}
 
 local open listTheory in end;
 
@@ -66,7 +67,8 @@ in
   (* to push negations inwards; formula must be quantifier free *)
   REDUCE_CONV THENC
   REWRITE_CONV [boolTheory.DE_MORGAN_THM, boolTheory.NOT_IMP, not_less,
-                boolTheory.IMP_DISJ_THM, elim_eq, elim_le, elim_ge, elim_gt,
+                boolTheory.IMP_DISJ_THM, boolTheory.EQ_IMP_THM,
+                elim_eq, elim_le, elim_ge, elim_gt,
                 INT_SUB_CALCULATE, INT_RDISTRIB, INT_LDISTRIB,
                 INT_NEG_LMUL] THENC
   remove_negated_vars THENC remove_bare_vars THENC flip_muls THENC REDUCE_CONV
@@ -1090,8 +1092,6 @@ in
   phase0_CONV THENC mainwork
 end
 
-datatype pb_analysis = SUBVARS of int | BADDIES of term list
-
 (* this draws on similar code in Richard Boulton's natural number
    arithmetic decision procedure *)
 
@@ -1106,7 +1106,10 @@ fun land tm = rand (rator tm)
    that is true if none of the variables that occur in the term are
    bound by a quantifier. *)
 fun non_presburger_subterms0 ctxt tm =
-  if is_forall tm orelse is_uexists tm orelse is_exists tm then let
+  if
+    (is_forall tm orelse is_uexists tm orelse is_exists tm) andalso
+    (type_of (bvar (rand tm)) = int_ty)
+  then let
     val abst = rand tm
   in
     non_presburger_subterms0 (Lib.union [bvar abst] ctxt) (body abst)
@@ -1158,42 +1161,126 @@ in
        #1 (dest_atom (hd fvs))^"...) but it was false")
 end
 
+
+fun abs_inj inj_n tm = let
+  val gv = genvar int_ty
+  val tm1 = Term.subst [inj_n |-> gv] tm
+in
+  GSYM (BETA_CONV (mk_comb(mk_abs(gv,tm1), inj_n)))
+end
+
+val dealwith_nats = let
+  open arithmeticTheory simpLib boolSimps
+  val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
+                  GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
+                  GSYM INT_MUL, INT_NUM_SUB, INT, PRE_SUB1]
+
+  fun seek_natqs tm = let
+  in
+    if is_forall tm orelse is_exists tm orelse is_uexists tm then let
+      val (bvar, body) = dest_abs (rand tm)
+      val inj_bvar = mk_comb(int_injection, bvar)
+      val rewrite_qaway =
+        REWR_CONV (if is_forall tm then INT_NUM_FORALL
+                   else if is_exists tm then INT_NUM_EXISTS
+                   else INT_NUM_UEXISTS) THENC
+        BINDER_CONV (RAND_CONV BETA_CONV)
+    in
+      if type_of bvar = num_ty then
+        BINDER_CONV (abs_inj inj_bvar) THENC rewrite_qaway THENC
+        BINDER_CONV seek_natqs
+      else
+        BINDER_CONV seek_natqs
+    end
+    else if (is_conj tm orelse is_disj tm orelse is_eq tm orelse
+             is_imp tm) then
+      BINOP_CONV seek_natqs
+    else if is_neg tm then
+      RAND_CONV seek_natqs
+    else if is_cond tm then
+      RATOR_CONV (RATOR_CONV (RAND_CONV seek_natqs))
+    else ALL_CONV
+  end tm handle HOL_ERR {origin_function = "REWR_CONV", ...} =>
+    raise ERR "ARITH_CONV" "Uneliminable natural number term remains"
+in
+  PURE_REWRITE_CONV rewrites THENC seek_natqs
+end
+
+
 (* subterms is a list of subterms all of integer type *)
 fun decide_nonpbints_presburger subterms tm = let
-  fun gen (subterm, base) = let
-    val gv = genvar int_ty
-  in
-    mk_forall(gv, Term.subst [subterm |-> gv] base)
-  end
-  val newgoal = List.foldr gen tm subterms
+  fun tactic subtm tm =
+    (* return both a new term and a function that will convert a theorem
+       of the form <new term> = T into tm = T *)
+    if is_comb subtm andalso rator subtm = int_injection then let
+      val n = rand subtm
+      val thm0 = abs_inj subtm tm (* |- tm = P subtm *)
+      val tm0 = rhs (concl thm0)
+      val gv = genvar num_ty
+      val tm1 = mk_forall(gv, mk_comb (rator tm0, mk_comb(int_injection, gv)))
+      val thm1 =  (* |- (!gv. P gv) = !x. 0 <= x ==> P x *)
+        (REWR_CONV INT_NUM_FORALL THENC
+         BINDER_CONV (RAND_CONV BETA_CONV)) tm1
+      fun prove_it thm = let
+        val without_true = EQT_ELIM thm (* |- !x. 0 <= x ==> P x *)
+        val univ_nat = EQ_MP (SYM thm1) without_true
+        val spec_nat = SPEC n univ_nat
+      in
+        EQT_INTRO (EQ_MP (SYM thm0) spec_nat)
+      end
+    in
+      (rhs (concl thm1), prove_it)
+    end
+    else let
+      val gv = genvar int_ty
+    in
+      (mk_forall(gv, Term.subst [subtm |-> gv] tm),
+       EQT_INTRO o SPEC subtm o EQT_ELIM)
+    end
+  fun gen_overall_tactic tmlist =
+    case tmlist of
+      [] => raise Fail "Can't happen in decide_nonpbints_presburger"
+    | [t] => tactic t
+    | (t::ts) => let
+        fun doit base = let
+          val (subgoal, vfn) = gen_overall_tactic ts base
+          val (finalgoal, vfn') = tactic t subgoal
+        in
+          (finalgoal, vfn o vfn')
+        end
+      in
+        doit
+      end
+  val overall_tactic = gen_overall_tactic subterms
+  val (goal, vfn) = overall_tactic tm
+  val thm = decide_fv_presburger goal
 in
-  EQT_INTRO (SPECL subterms (EQT_ELIM (decide_fv_presburger newgoal)))
-  handle HOL_ERR _ =>
-    raise ERR "INT_ARITH_CONV"
+  vfn thm handle HOL_ERR _ =>
+    raise ERR "ARITH_CONV"
       ("Tried to prove generalised goal (generalising "^
        term_to_string (hd subterms)^"...) but it was false")
 end
 
-fun INT_ARITH_CONV tm =
-  case non_presburger_subterms0 [] tm of
-    [] => decide_fv_presburger tm
-  | non_pbs => let
-      fun bad_term (t,b) = not b orelse type_of t <> int_ty
-    in
-      case List.find bad_term non_pbs of
-        NONE => decide_nonpbints_presburger (map #1 non_pbs) tm
-      | SOME (t,_) => raise ERR "INT_ARITH_CONV"
-          ("Not in the allowed subset; consider "^term_to_string t)
-    end
+fun ARITH_CONV tm = let
+  fun stage2 tm =
+    case non_presburger_subterms0 [] tm of
+      [] => decide_fv_presburger tm
+    | non_pbs => let
+        fun bad_term (t,b) = not b orelse type_of t <> int_ty
+      in
+        case List.find bad_term non_pbs of
+          NONE => decide_nonpbints_presburger (map #1 non_pbs) tm
+        | SOME (t,_) => raise ERR "ARITH_CONV"
+            ("Not in the allowed subset; consider "^term_to_string t)
+      end
+in
+  dealwith_nats THENC stage2
+end tm
 
-val INT_ARITH_PROVE = EQT_ELIM o INT_ARITH_CONV
+val ARITH_PROVE = EQT_ELIM o ARITH_CONV
 
 (*
 fun NUM_ARITH_CONV tm = let
-  open arithmeticTheory simpLib boolSimps
-  val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
-                  GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
-                  GSYM INT_MUL]
   val elim_nat_quant
   val munged = rhs (concl (SIMP_CONV bool_ss rewrites tm))
 *)

@@ -324,4 +324,12 @@ val INT_NUM_UEXISTS = store_thm(
     PROVE_TAC [INT_INJ, ZERO_LESS_EQ, INT_LE]
   ]);
 
+val INT_NUM_SUB = store_thm(
+  "INT_NUM_SUB",
+  Term`!n m:num. &(n - m) = if int_of_num n < &m then 0i else &n - &m`,
+  SIMP_TAC (bool_ss ++ COND_elim_ss) [INT_LT, INT_INJ] THEN
+  REPEAT GEN_TAC THEN Q.ASM_CASES_TAC `n < m` THEN
+  ASM_SIMP_TAC bool_ss [SUB_EQ_0, LESS_OR_EQ] THEN
+  PROVE_TAC [INT_SUB, NOT_LESS]);
+
 val _ = export_theory();
