@@ -51,13 +51,6 @@ fun ERR func mesg =
 val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
 
-fun join f g x =
-  case (g x)
-   of NONE => NONE
-    | SOME y => (case (f y)
-                  of NONE => NONE
-                   | SOME(x,_) => SOME x);
-
 fun num_variant vlist v =
   let val counter = ref 0
       val {Name,Ty} = dest_var v
@@ -123,47 +116,7 @@ val Zero  = Term`0`
 val One   = Term`1`
 val numty = mk_type{Tyop="num", Args=[]};
 val Plus  = mk_const{Name="+", Ty=Type`:num -> num -> num`};
-
 fun mk_plus x y = list_mk_comb(Plus,[x,y]);
-
-fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero};
-
-fun drop [] ty = fst(dom_rng ty)
-  | drop (_::t) ty = drop t (snd(dom_rng ty));
-
-
-(*---------------------------------------------------------------------------*
- * The following is the prototype code for tysize and may give some insight  *
- * into what it does.                                                        *
- *                                                                           *
- *   fun tysize ty =                                                         *
- *    if is_vartype ty then Term`\x:^(ty_antiq ty).0`                        *
- *    else case (dest_type ty)                                               *
- *          of {Tyop="bool",...}         => Term`\x:bool. 0`                 *
- *           | {Tyop="fun",...}          => Term`\x:^(ty_antiq ty). 0`       *
- *           | {Tyop="num",...}          => Term`\x:num. x`                  *
- *           | {Tyop="list",Args=[ety]}  => Term`list_size ^(tysize ety)`    *
- *           | {Tyop="prod",Args=[ty1,ty2]} => Term                          *
- *               `\(x:^(ty_antiq ty1),                                       *
- *                 (y:^(ty_antiq ty2))). ^(tysize ty1) x + ^(tysize ty2) y`  *
- *           | _ => raise ERR "tysize" "unknown type";                       *
- *                                                                           *
- *---------------------------------------------------------------------------*)
-
-fun tysize (theta,gamma) ty  =
-   case (theta ty)
-     of SOME fvar => fvar
-      | NONE =>
-         let val {Tyop,Args} = dest_type ty
-         in case (gamma Tyop)
-             of SOME f =>
-                  let val vty = drop Args (type_of f)
-                      val sigma = Type.match_type vty ty
-                  in list_mk_comb(inst sigma f,
-                                  map (tysize (theta,gamma)) Args)
-                  end
-              | NONE => K0 ty
-         end;
 
 local fun num_variant vlist v =
         let val counter = ref 1
@@ -204,10 +157,9 @@ fun define_size ax tysize_env =
      val preamble = list_mk_comb(v,arglist)
      val f0 = zip Args arglist
      fun theta tyv = case (assoc1 tyv f0) of SOME(_,x) => SOME x | _ => NONE
-     fun gamma str =
-          if (str = Tyop) then SOME v
-          else tysize_env str
-     fun mk_app x = mk_comb{Rator=tysize(theta,gamma) (type_of x), Rand=x}
+     fun gamma str = if str=Tyop then SOME v else tysize_env str
+     val sizer = TypeBase.tysize(theta,gamma)
+     fun mk_app x = mk_comb{Rator=sizer (type_of x), Rand=x}
      fun capp2rhs capp =
           case snd(strip_comb capp)
            of [] => Zero
@@ -224,17 +176,6 @@ fun define_size ax tysize_env =
  end
  handle HOL_ERR _ => raise ERR "define_size" "failed"
 end;
-
-
-fun tysize_env db = join TypeBase.size_of (TypeBase.get db);
-
-
-fun type_size db ty =
-  let fun theta ty =
-        if (is_vartype ty) then SOME (K0 ty) else NONE
-  in
-    tysize (theta,tysize_env db) ty
-  end;
 
 
 (*---------------------------------------------------------------------------
@@ -270,6 +211,15 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
            S ("      distinct="^distinct^"});")
        end)};
 
+
+fun join f g x =
+  case (g x)
+   of NONE => NONE
+    | SOME y => (case (f y)
+                  of NONE => NONE
+                   | SOME(x,_) => SOME x);
+
+fun tysize_env db = join TypeBase.size_of (TypeBase.get db);
 
 (*---------------------------------------------------------------------------
 
