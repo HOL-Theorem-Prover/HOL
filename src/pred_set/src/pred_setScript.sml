@@ -18,7 +18,11 @@ app load ["pairLib", "numLib", "PGspec", "PSet_ind", "SingleStep", "Q",
           "Defn", "TotalDefn", "metisLib"];
 *)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
-     numTheory prim_recTheory arithmeticTheory BasicProvers;
+     pairTheory numTheory prim_recTheory arithmeticTheory 
+    BasicProvers SingleStep metisLib mesonLib simpLib boolSimps;
+
+val AP = numLib.ARITH_PROVE
+val arith_ss = bool_ss ++ numSimps.ARITH_ss
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
@@ -109,6 +113,15 @@ val GSPECIFICATION = new_specification
 (* --------------------------------------------------------------------- *)
 
 val SET_SPEC_CONV = PGspec.SET_SPEC_CONV GSPECIFICATION;
+
+val SET_SPEC_ss = SIMPSET 
+                    {ac=[], congs=[], dprocs=[], filter=NONE, rewrs=[],
+                     convs = [{conv = K (K SET_SPEC_CONV),
+                               key = SOME([], ``x IN GSPEC f``),
+                               name = "SET_SPEC_CONV", trace = 2}]}
+
+val _ = augment_srw_ss [SET_SPEC_ss]
+
 
 (* --------------------------------------------------------------------- *)
 (* activate generalized specification parser/pretty-printer.		 *)
@@ -1311,6 +1324,15 @@ val INJ_EMPTY =
      REWRITE_TAC [INJ_DEF,NOT_IN_EMPTY,EXTENSION] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC);
 
+val INJ_DELETE = Q.prove 
+(`!s t f. INJ f s t ==> !e. e IN s ==> INJ f (s DELETE e) (t DELETE (f e))`,
+RW_TAC bool_ss [INJ_DEF, DELETE_DEF] THENL
+[`~(e = x)` by FULL_SIMP_TAC bool_ss
+                 [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN
+  FULL_SIMP_TAC bool_ss [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN 
+  METIS_TAC [],
+METIS_TAC [IN_DIFF]]);
+
 
 (* ===================================================================== *)
 (* Surjective functions on a set.					 *)
@@ -1391,6 +1413,18 @@ val BIJ_COMPOSE =
      PURE_REWRITE_TAC [BIJ_DEF] THEN
      REPEAT STRIP_TAC THENL
      [IMP_RES_TAC INJ_COMPOSE,IMP_RES_TAC SURJ_COMPOSE]);
+
+val BIJ_DELETE = Q.prove (
+`!s t f. BIJ f s t ==> !e. e IN s ==> BIJ f (s DELETE e) (t DELETE (f e))`, 
+RW_TAC bool_ss [BIJ_DEF, SURJ_DEF, INJ_DELETE, DELETE_DEF, INJ_DEF] THENL
+[FULL_SIMP_TAC bool_ss [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN 
+  METIS_TAC [],
+  `?y. y IN s /\ (f y = x)` by METIS_TAC [IN_DIFF] THEN
+  Q.EXISTS_TAC `y` THEN RW_TAC bool_ss [] THEN
+  `~(y = e)` by (FULL_SIMP_TAC bool_ss [DIFF_DEF, DIFF_INSERT, DIFF_EMPTY,
+                                       IN_DELETE] THEN
+                 METIS_TAC [IN_DIFF]) THEN
+  FULL_SIMP_TAC bool_ss [DIFF_DEF, DIFF_INSERT, DIFF_EMPTY, IN_DELETE]]);
 
 (* ===================================================================== *)
 (* Left and right inverses.						 *)
@@ -1563,7 +1597,7 @@ val FINITE_DELETE =
      [MATCH_ACCEPT_TAC DELETE_FINITE,
       DISCH_THEN (MATCH_ACCEPT_TAC o MATCH_MP FINITE_DELETE)]);
 
-open SingleStep simpLib boolSimps
+
 val UNION_FINITE = prove(
   --`!s:'a set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)`--,
   SET_INDUCT_TAC THENL [
@@ -1679,9 +1713,6 @@ val IMAGE_FINITE =
      SET_INDUCT_TAC THENL
      [REWRITE_TAC [IMAGE_EMPTY,FINITE_EMPTY],
       ASM_REWRITE_TAC [IMAGE_INSERT,FINITE_INSERT]]);
-
-open metisLib
-
 
 val FINITELY_INJECTIVE_IMAGE_FINITE = store_thm(
   "FINITELY_INJECTIVE_IMAGE_FINITE",
@@ -2071,11 +2102,25 @@ val LESS_CARD_DIFF =
      IMP_RES_TAC (PURE_ONCE_REWRITE_RULE [GSYM NOT_LESS] th4)
      end);
 
-val FINITE_COMPLETE_INDUCTION = store_thm(
+val FINITE_BIJ_CARD_EQ = Q.prove (
+`!S. FINITE S ==> !t f. BIJ f S t /\ FINITE t ==> (CARD S = CARD t)`,
+SET_INDUCT_TAC THEN RW_TAC bool_ss [BIJ_EMPTY, CARD_EMPTY] THEN
+`BIJ f s (t DELETE (f e))` by 
+     METIS_TAC [DELETE_NON_ELEMENT, IN_INSERT, DELETE_INSERT, BIJ_DELETE] THEN
+RW_TAC bool_ss [CARD_INSERT] THEN
+Q.PAT_ASSUM `$! m` (MP_TAC o Q.SPECL [`t DELETE f e`, `f`]) THEN
+RW_TAC bool_ss [FINITE_DELETE] THEN
+`f e IN t` by (Q.PAT_ASSUM `BIJ f (e INSERT s) t` MP_TAC THEN
+               RW_TAC (bool_ss++SET_SPEC_ss) [BIJ_DEF, INJ_DEF, INSERT_DEF]) THEN
+RW_TAC arith_ss [CARD_DELETE] THEN
+`~(CARD t = 0)` by METIS_TAC [EMPTY_DEF, IN_DEF, CARD_EQ_0] THEN
+RW_TAC arith_ss []);
+
+
+val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   "FINITE_COMPLETE_INDUCTION",
-  Term`!P.
-          (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x) ==>
-          !x. FINITE x ==> P x`,
+  `!P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x) 
+       ==> !x. FINITE x ==> P x`,
   GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ((BETA_RULE o
                  Q.ISPEC `\x. FINITE x ==> P x` o
@@ -2590,10 +2635,6 @@ val FINITE_ISO_NUM =
      DISJ2_TAC THEN EXISTS_TAC (--`n:num`--) THEN
      REWRITE_TAC [ASSUME (--`n < CARD (s:'a set)`--)]]]]);
 
-open simpLib boolSimps mesonLib SingleStep
-infix ++
-val AP = numLib.ARITH_PROVE
-val arith_ss = bool_ss ++ numSimps.ARITH_ss
 
 val FINITE_WEAK_ENUMERATE = store_thm(
   "FINITE_WEAK_ENUMERATE",
@@ -2770,6 +2811,7 @@ val FINITE_BIGUNION_EQ = store_thm(
   ]);
 val _ = export_rewrites ["FINITE_BIGUNION_EQ"]
 
+
 (* ----------------------------------------------------------------------
     BIGINTER (intersection of a set of sets)
    ---------------------------------------------------------------------- *)
@@ -2823,7 +2865,7 @@ val DISJOINT_BIGINTER = store_thm(
 (* Cross product of sets                                                  *)
 (* ====================================================================== *)
 
-open pairTheory
+
 val CROSS_DEF = new_definition(
   "CROSS_DEF",
   ``CROSS P Q = { p | FST p IN P /\ SND p IN Q }``);
@@ -3344,7 +3386,40 @@ val SUM_IMAGE_upper_bound = store_thm(
   SRW_TAC [][] THEN
   PROVE_TAC [LESS_EQ_LESS_EQ_MONO, ADD_COMM]);
 
-(* SUM_SET sums the elements of a set of natural numbers *)
+val DISJ_BIGUNION_CARD = Q.prove (
+`!P. FINITE P 
+     ==> (!s. s IN P ==> FINITE s) /\
+         (!s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t) 
+     ==> (CARD (BIGUNION P) = SUM_IMAGE CARD P)`,
+SET_INDUCT_TAC THEN 
+RW_TAC bool_ss [CARD_EMPTY,BIGUNION_EMPTY,SUM_IMAGE_THM,BIGUNION_INSERT] THEN
+`FINITE (BIGUNION s) /\ FINITE e` by METIS_TAC [FINITE_BIGUNION, IN_INSERT] THEN
+`!s'. s' IN s ==> DISJOINT e s'`  by METIS_TAC [IN_INSERT] THEN
+`CARD (e INTER (BIGUNION s)) = 0` by METIS_TAC [DISJOINT_DEF,DISJOINT_BIGUNION,CARD_EMPTY] THEN
+`CARD (e UNION BIGUNION s) = CARD (e UNION BIGUNION s) + 
+                             CARD (e INTER (BIGUNION s))` 
+  by RW_TAC arith_ss [] THEN
+ONCE_ASM_REWRITE_TAC [] THEN
+FULL_SIMP_TAC arith_ss [CARD_UNION, DELETE_NON_ELEMENT] THEN
+METIS_TAC [IN_INSERT]);
+
+val SUM_SAME_IMAGE = Q.prove (
+`!P. FINITE P 
+     ==> !f p. p IN P /\ (!q. q IN P ==> (f p = f q)) 
+               ==> (SUM_IMAGE f P = CARD P * f p)`,
+SET_INDUCT_TAC THEN
+RW_TAC arith_ss [CARD_EMPTY, SUM_IMAGE_THM, CARD_INSERT] THEN
+FULL_SIMP_TAC arith_ss [DELETE_NON_ELEMENT,
+                        arithmeticTheory.RIGHT_ADD_DISTRIB,
+                        Q.prove (`(SUC x) = 1 + x`, RW_TAC arith_ss [])] THEN
+Cases_on `s = {}` THENL
+[RW_TAC arith_ss [SUM_IMAGE_THM, CARD_EMPTY, COMPONENT],
+METIS_TAC [COMPONENT, IN_INSERT, MEMBER_NOT_EMPTY]]);
+
+
+(*---------------------------------------------------------------------------*)
+(* SUM_SET sums the elements of a set of natural numbers                     *)
+(*---------------------------------------------------------------------------*)
 
 val SUM_SET_DEF = new_definition("SUM_SET_DEF", ``SUM_SET = SUM_IMAGE I``);
 
@@ -3550,12 +3625,6 @@ val partition_def = new_definition(
   ``partition R s =
       { t | ?x. x IN s /\ (t = { y | y IN s /\ R x y})}``);
 
-val GSPEC_ss = SIMPSET {ac = [], congs = [],
-                        convs = [{conv = K (K SET_SPEC_CONV),
-                                  key = SOME([], ``x IN GSPEC f``),
-                                  name = "SET_SPEC_CONV", trace = 2}],
-                        dprocs = [], filter = NONE, rewrs = []}
-val _ = augment_srw_ss [GSPEC_ss]
 
 val BIGUNION_partition = store_thm(
   "BIGUNION_partition",
@@ -3602,6 +3671,23 @@ val partition_elements_interrelate = store_thm(
                          !x y. x IN t /\ y IN t ==> R x y``,
   SIMP_TAC (srw_ss()) [partition_def, GSYM LEFT_FORALL_IMP_THM] THEN
   PROVE_TAC [equiv_on_def]);
+
+val partition_SUBSET = Q.prove (
+`!R s t. R equiv_on s /\ t IN (partition R s) ==> t SUBSET s`, 
+RW_TAC bool_ss [partition_def, GSPECIFICATION, SUBSET_DEF] THEN
+FULL_SIMP_TAC bool_ss [GSPECIFICATION,pairTheory.PAIR_EQ]);
+
+val FINITE_partition = Q.prove (
+`!R s. R equiv_on s /\ FINITE s 
+       ==> FINITE (partition R s) /\ 
+           !t. t IN (partition R s) ==> FINITE t`,
+METIS_TAC [FINITE_BIGUNION_EQ, partition_SUBSET, 
+           SUBSET_FINITE, BIGUNION_partition]);
+
+val partition_CARD = Q.prove (
+`!R s. R equiv_on s /\ FINITE s ==> (CARD s = SUM_IMAGE CARD (partition R s))`,
+METIS_TAC [FINITE_partition, BIGUNION_partition, DISJ_BIGUNION_CARD,
+           partition_elements_disjoint, FINITE_BIGUNION, partition_def]);
 
 (* ----------------------------------------------------------------------
     A proof of Koenig's Lemma
