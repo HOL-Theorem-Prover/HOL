@@ -77,11 +77,11 @@ val std_ss =
       numSimps.REDUCE_ss ++ sumSimps.SUM_ss)
 
 val arith_ss = std_ss ++ numSimps.ARITH_ss
-val list_ss  = arith_ss ++ listSimps.list_ss
+val list_ss  = arith_ss ++ listSimps.LIST_ss
 
-val _ = BasicProvers.augment_srw_ss 
+val _ = BasicProvers.augment_srw_ss
                [pairSimps.PAIR_ss, optionSimps.OPTION_ss,
-                numSimps.REDUCE_ss, sumSimps.SUM_ss, listSimps.list_ss]
+                numSimps.REDUCE_ss, sumSimps.SUM_ss, listSimps.LIST_ss]
 
 end
 
