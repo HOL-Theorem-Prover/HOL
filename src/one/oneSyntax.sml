@@ -15,4 +15,6 @@ fun mk_one_case x =
 
 fun lift_one ty () = one_tm
 
+val _ = Drop.is_one_hook := Lib.equal one_tm;
+
 end
