@@ -1024,6 +1024,7 @@ fun UNDISCH_ALL th =
 
 fun GSYM th = GENL (#1(strip_forall(concl th))) (SYM (SPEC_ALL th));
 
+(* 
 fun nested_function thy name {proto_def,SV,WFR,pats,extracta} =
  let val aux_name = name^"_aux"
      val R1 = rand WFR
@@ -1114,6 +1115,111 @@ fun nested_function thy name {proto_def,SV,WFR,pats,extracta} =
      R = R1,
      theory = theory1, aux_def = def, def = def1, 
      aux_rules = inst'd,
+     aux_ind = aux_ind
+     }
+ end;
+*)
+
+fun nested_function thy name {proto_def,SV,WFR,pats,extracta} =
+ let val aux_name = name^"_aux"
+     val R1 = rand WFR
+     val {lhs=f,rhs=rhs_proto_def} = dest_eq proto_def
+     (* make parameterized definition *)
+     val {Name,Ty} = Lib.trye dest_var f
+     val faux = mk_var{Name=aux_name, 
+                       Ty = itlist (curry (op-->)) 
+                                   (map type_of (R1::SV)) Ty}
+     val (def,theory) = 
+           Thry.make_definition thy aux_name
+               (mk_eq{lhs=list_mk_comb(faux,R1::SV), rhs=rhs_proto_def})
+     val def' = SPEC_ALL def
+     val faux_capp = lhs(concl def')
+     val faux_const = #1(strip_comb faux_capp)
+     val tych = Thry.typecheck theory
+     val (extractants,TCl_0,_) = unzip3 extracta
+     val TCs_0 = op_U aconv TCl_0
+     val disch'd = itlist (DISCH o tych) (proto_def::WFR::TCs_0) 
+                          (LIST_CONJ extractants)
+     val inst'd = GEN (tych R1)
+                   (MP (SPEC (tych faux_capp) (GEN (tych f) disch'd)) def')
+     fun kdisch keep th = 
+       itlist (fn h => fn th =>
+                 if op_mem aconv h keep then th else (DISCH o tych) h th)
+              (hyp th) th
+     val disch'dl_0 = map ((DISCH o tych) proto_def o
+                           (DISCH o tych) WFR o kdisch [proto_def,WFR])
+                        extractants
+     val disch'dl_1 = map (fn d => 
+          MP (SPEC (tych faux_capp) (GEN (tych f) d)) def')
+          disch'dl_0
+     fun gen_all away tm = 
+        let val FV = free_vars tm
+        in itlist (fn v => fn tm =>
+              if mem v away then tm else mk_forall{Bvar=v,Body=tm}) FV tm
+        end
+     val TCl = map (map (gen_all (R1::f::SV) o subst[f |-> faux_capp])) TCl_0
+     val TCs = op_U aconv TCl
+     val full_rqt = WFR::TCs
+     val R2 = mk_select{Bvar=R1, Body=list_mk_conj full_rqt}
+     val R2abs = rand R2
+     val R2inst'd = SPEC R2 inst'd
+     val fvar = mk_var{Name = #Name (dest_var f),
+                  Ty = itlist (curry op-->) (map type_of SV) (type_of f)}
+     val fvar_app = list_mk_comb(fvar,SV)
+     val (def1,theory1) = Thry.make_definition thy name
+               (mk_eq{lhs=fvar_app, rhs=list_mk_comb(faux_const,R2::SV)})
+     val var_wits = LIST_CONJ (map (ASSUME o tych) full_rqt)
+     val TC_choice_thm =
+          MP (BETA_RULE(ISPECL[tych R2abs, tych R1] SELECT_AX)) var_wits
+     val elim_chosenTCs = 
+           rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) R2inst'd
+     val rules = simplify [GSYM def1] elim_chosenTCs
+     val pat_TCs_list = merge (map pat_of pats) (zip (givens pats) TCl)
+
+     (* and now induction *)
+
+     val aux_ind = mk_induction theory1
+                     {fconst=faux_const, R=R1,SV=SV,pat_TCs_list=pat_TCs_list}
+     val nested_guards = op_set_diff aconv (hyp rules) (hyp aux_ind)
+     val ics = strip_conj(#ant(dest_imp(#Body(dest_forall(concl aux_ind)))))
+     fun dest_ic tm = if is_imp tm then strip_conj (#ant(dest_imp tm)) else []
+     val ihs = Lib.flatten (map (dest_ic o snd o strip_forall) ics)
+     val nested_ihs = filter (can (find_term (aconv faux_const))) ihs
+     (* a nested ih is of the form 
+
+           c1/\.../\ck ==> R a pat ==> P a
+
+        where "aux R N" occurs in "c1/\.../\ck" or "a". In the latter case,
+        we have a nested recursion; in the former, there's just a call
+        to aux in the context. In both cases, we want to eliminate "R a pat"
+        by assuming "c1/\.../\ck ==> R a pat" and doing some work.
+     *)
+     fun nested_guard tm = 
+         let val ngthm = SPEC_ALL (ASSUME tm)
+         in
+           if is_imp (concl ngthm)
+           then UNDISCH ngthm
+           else ngthm
+         end
+     val ng_thms = map nested_guard nested_guards
+     val nested_ihs' = map (Rules.simpl_conv ng_thms) nested_ihs
+     fun disch_context thm = 
+          if length(hyp thm) = 2
+          then DISCH (#ant(dest_imp(lhs (concl thm)))) thm
+          else thm
+     val nested_ihs'' = map disch_context nested_ihs'
+     val nested_ihs''' = map (simplify [Thms.imp_elim]) nested_ihs''
+     val ind0 = simplify nested_ihs''' aux_ind
+     val ind1 = UNDISCH_ALL (SPEC R2 (GEN R1 (DISCH_ALL ind0)))
+     val ind2 = simplify [GSYM def1] ind1
+     val ind3 = itlist PROVE_HYP (CONJUNCTS TC_choice_thm) ind2
+ in 
+    {rules = rules,
+     ind = ind3,
+     SV = SV,
+     R = R1,
+     theory = theory1, aux_def = def, def = def1, 
+     aux_rules = LIST_CONJ disch'dl_1,
      aux_ind = aux_ind
      }
  end;
