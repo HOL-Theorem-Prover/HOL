@@ -24,7 +24,7 @@ local
   infixr -->;
   val prod_size_info =
     (Term`\f g. UNCURRY(\(x:'a) (y:'b). f x + g y)`,
-     pairTheory.UNCURRY_DEF)
+     TypeBase.ORIG pairTheory.UNCURRY_DEF)
   val prod_info' =
     TypeBase.put_size prod_size_info
     (Option.valOf(TypeBase.read"prod"))
@@ -34,7 +34,7 @@ local
     REPEAT GEN_TAC
       THEN BOOL_CASES_TAC (Term`y:bool`)
      THEN Rewrite.ASM_REWRITE_TAC[boolTheory.bool_case_DEF]);
-  val bool_size_info = (Term`bool_case 0 0`, bool_case_rw)
+  val bool_size_info = (Term`bool_case 0 0`, TypeBase.ORIG bool_case_rw)
   val bool_info' = TypeBase.put_size bool_size_info bool_info
 
   val sum_info = Option.valOf(TypeBase.read "sum")
@@ -45,13 +45,13 @@ local
   val g = mk_var{Name="g",Ty=mk_vartype"'c" --> num}
   val s = mk_var{Name="s",Ty=mk_type{Tyop="sum",Args=[beta, mk_vartype "'c"]}}
   val tm = list_mk_abs ([f,g,s], list_mk_comb(sum_case_into_num,[f,g,s]))
-  val sum_size_info = (tm,sumTheory.sum_case_def)
+  val sum_size_info = (tm,TypeBase.ORIG sumTheory.sum_case_def)
   val sum_info' = TypeBase.put_size sum_size_info sum_info
 
   val option_info = Option.valOf(TypeBase.read "option")
   val option_size_info =
        (Parse.Term`\f. option_case 0 (\x:'a. SUC (f x))`,
-        optionTheory.option_case_def)
+        TypeBase.ORIG optionTheory.option_case_def)
   val option_info' = TypeBase.put_size option_size_info option_info
 
 in
