@@ -992,7 +992,7 @@ fun pp_term (G : grammar) TyG = let
     fun const_is_polymorphic (r as {Name,Thy}) = let
       val genconst = prim_mk_const r
     in
-      not (null (type_vars (type_of genconst)))
+      Type.polymorphic (type_of genconst)
     end
 
     fun const_has_multi_ovl (r as {Name,Thy}) =
