@@ -85,6 +85,7 @@ in
 
 local
 
+type assums = term HOLset.set;
 datatype term_bdd = TermBdd of (term HOLset.set) * varmap * term * bdd.bdd;
 
 in
@@ -219,7 +220,7 @@ fun BddEqMp th (TermBdd(ass,vm,t1,b)) =
 (*   vm                                                                      *)
 (*   (subst[v1 |-> v1', ... , vi |-> vi']tm)                                 *)
 (*   |-->                                                                    *)
-(*   replace b (makepairSet(map (var ## var) [(b1,b1'), ... , (bi,bi')]))    *)
+(*   replace b (makepairSet[(var b1, var b1'), ... , (var bi, var bi')])     *)
 (*****************************************************************************)
 
 exception BddReplaceError;
@@ -300,7 +301,7 @@ exception BddComposeError;
 fun BddCompose 
      (TermBdd(ass,vm,v,b), TermBdd(ass1,vm1,tm1,b1)) 
      (TermBdd(ass2,vm2,tm2,b2)) =
- if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
+ if is_var v andalso Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
   then TermBdd(HOLset.union(ass,HOLset.union(ass1,ass2)),
                vm, 
                subst[v |-> tm1]tm2, 
@@ -308,16 +309,16 @@ fun BddCompose
   else (print "different varmaps\n"; raise BddComposeError);
 
 (*****************************************************************************)
-(*         [(ass1 vm v1 |--> b1  , ass1' vm v1' |--> b1'),                   *)
+(*         [(ass1 vm v1 |--> b1  , ass1' vm tm1 |--> b1'),                   *)
 (*                               .                                           *)
 (*                               .                                           *)
 (*                               .                                           *)
-(*           (assi vm vi |--> bi , assi' vm vi' |--> bi')]                   *)
+(*           (assi vm vi |--> bi , assi' vm tmi |--> bi')]                   *)
 (*           ass vm tm |--> b                                                *)
 (*  ------------------------------------------------------------------------ *)
 (*   (ass1 U ass1' ... assi U assi' U ass)                                   *)
 (*   vm                                                                      *)
-(*   (subst[v1 |-> v1', ... , vi |-> vi']tm)                                 *)
+(*   (subst[v1 |-> tm1, ... , vi |-> tmi]tm)                                 *)
 (*   |-->                                                                    *)
 (*   veccompose (composeSet (map (var ## I) [(b1,b1'), ... , (bi,bi')])) b   *)
 (*****************************************************************************)
@@ -400,9 +401,9 @@ val tb4 = BddListCompose tbl tb;
 (*  ---------------------------------------------------------------          *)
 (*   (ass1 U ass1' ... assi U assi' U ass)                                   *)
 (*   vm                                                                      *)
-(*   (subst[v1 |-> v1', ... , vi |-> vi']tm)                                 *)
+(*   (subst[v1 |-> c1, ... , vi |-> ci]tm)                                   *)
 (*   |-->                                                                    *)
-(*   restrict b (assignment[(var b1,mlval c1),...,(var i, mlval ci)]         *)
+(*   restrict b (assignment[(var b1,mlval c1),...,(var i, mlval ci)])        *)
 (*****************************************************************************)
 
 exception BddRestrictError;
@@ -418,22 +419,29 @@ in
 
 fun BddRestrict tbl tb =
  let val TermBdd(ass,vm,tm,b) = tb
-     val (ass_union, substl, restrictl) = 
+     val (ass_union, (l,l') ,restrictl) = 
        foldr
-        (fn((TermBdd(ass1,vm1,v,b),TermBdd(ass2,vm2,c,_)), 
-            (ass, substl, restrictl))
+        (fn(((TermBdd(ass1,vm1,v,b)),(TermBdd(ass2,vm2,c,_))), 
+            (ass, (l,l'), restrictl))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
-            then (print "unequal varmaps\n"; raise BddRestrictError) 
+            then (                print "unequal varmaps\n";
+                                  raise BddListComposeError) else
+           if not(is_var v)
+            then (print_term v  ; print " should be a variable\n";
+                                  raise BddListComposeError) else
+           if mem v l
+            then (print_term v  ; print" repeated\n";
+                                  raise BddListComposeError) 
             else (HOLset.union(ass,HOLset.union(ass1,ass2)),
-                  ((v |-> c)::substl), 
+                  (v :: l, c :: l'),
                   ((bdd.var b, mlval c)::restrictl)))
-        (ass, [], [])
+        (ass, ([],[]), [])
         tbl
  in
   TermBdd(ass_union, 
           vm, 
-          subst substl tm, 
+          subst (ListPair.map (fn(v,c)=>(v|->c)) (l,l')) tm, 
           bdd.restrict b (bdd.assignment restrictl))
  end
 
@@ -548,7 +556,13 @@ exception BddForallError;
 
 fun BddForall vl (TermBdd(ass,vm,t,b)) =
  let open HOLset bdd
-     val tml = intersection(ass, FVL vl empty_tmset)
+     val tml = intersection
+                (addList(empty_tmset, vl), 
+                foldl (fn (t,s) => FVL [t] s) empty_tmset ass)
+(* Possibly less efficient code:
+     val tml = intersection
+                (addList(empty_tmset, vl), FVL (listItems ass) empty_tmset)
+*)
  in
   if isEmpty tml
    then
