@@ -18,7 +18,7 @@ app load ["numLib",
           "UnwindSimps",
           "Ho_rewrite",
           "jrhUtils",
-          "limTheory", 
+          "limTheory",
           "listTheory",
           "pred_setTheory",
           "RealSS", "RealArith"];
@@ -99,7 +99,7 @@ val LEFT_IMP_EXISTS_THM = prove (
 (* Extra theorems needed about the naturals *)
 
 val NOT_LE = arithmeticTheory.NOT_LESS_EQUAL;
-val SUC_INJ = prove (``!m n. (SUC m = SUC n) = m = n``, CONV_TAC ARITH_CONV);
+val SUC_INJ = prim_recTheory.INV_SUC_EQ
 
 val LT_SUC_LE = prove (``!m n. m < SUC n = m <= n``, ARITH_TAC);
 

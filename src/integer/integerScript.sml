@@ -183,7 +183,7 @@ val _ = print "Define equivalence relation over pairs of naturals\n"
 val tint_eq =
     new_infixr_definition
     ("tint_eq",
-     Term `$tint_eq (x1,y1) (x2,y2) = x1 + y2 = x2 + y1`,
+     Term `$tint_eq (x1,y1) (x2,y2) = (x1 + y2 = x2 + y1)`,
      450);
 
 val TINT_EQ_REFL =
@@ -1687,7 +1687,7 @@ val INT_DIV_NEG = store_thm(
   Term`!p q. ~(q = 0) ==> ((~p / q = ~(p / q)) /\ (p/~q = ~p/q))`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Cases_on `0 <= q` THENL [
-    `?n. q = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN 
+    `?n. q = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
     Cases_on `0 <= p` THENL [
       `?m. p = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
@@ -1697,7 +1697,7 @@ val INT_DIV_NEG = store_thm(
                            INT_NEG_GE0, NUM_OF_INT, INT_NEGNEG, INT_NEG_EQ0,
                            INT_NEG_GT0, INT_NEG_0] THEN
       ASM_SIMP_TAC (int_ss ++ boolSimps.COND_elim_ss) [
-        GSYM IMP_DISJ_THM, ZERO_DIV, INT_NEG_EQ0, 
+        GSYM IMP_DISJ_THM, ZERO_DIV, INT_NEG_EQ0,
         INT_NEG_0, INT_NEG_EQ, INT_NEGNEG],
       `?m. p = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
                                   INT_LE_LT] THEN
@@ -2316,9 +2316,9 @@ val INT_EXP_SUBTRACT_EXPONENTS = store_thm(
     REPEAT STRIP_TAC THEN
     `n = 0` by ASM_SIMP_TAC int_ss [] THEN
     RW_TAC int_ss [int_exp, ONE, INT_EXP, DIV_ONE, INT_DIV],
-    REPEAT GEN_TAC THEN Cases_on `n = SUC m` THENL 
+    REPEAT GEN_TAC THEN Cases_on `n = SUC m` THENL
     [ASM_SIMP_TAC int_ss [int_exp, INT_DIV_ID, INT_ENTIRE, INT_EXP_EQ0],
-     STRIP_TAC THEN `n <= m` by ASM_SIMP_TAC int_ss [] 
+     STRIP_TAC THEN `n <= m` by ASM_SIMP_TAC int_ss []
        THEN ASM_SIMP_TAC int_ss [SUB, int_exp] THEN
        `p ** m % p ** n = 0` by PROVE_TAC [INT_EXP_MOD] THEN
        `p * p ** m / p ** n = p * (p ** m / p ** n)`

@@ -1,5 +1,5 @@
 
-open HolKernel Parse basicHol90Lib 
+open HolKernel Parse basicHol90Lib
      TotalDefn Datatype BasicProvers SingleStep;
 
 infix THEN THENL;
@@ -10,7 +10,7 @@ open prelimTheory;
 
 
 val _ = Hol_datatype
- ` index= 
+ ` index=
      Left_idx of index
    | Right_idx of index
    | End_idx `;
@@ -31,7 +31,7 @@ val index_discr = tl (type_rws "index");
 
 
 val compare_index_equal = store_thm("compare_index_equal",
-  --` !i1 i2. (index_compare i1 i2 = EQUAL) = i1 = i2 `--,
+  --` !i1 i2. (index_compare i1 i2 = EQUAL) = (i1 = i2) `--,
 Induct THEN Induct THEN
 RW_TAC bool_ss (index_compare_def :: index_discr));
 
@@ -41,7 +41,7 @@ val compare_list_index =
 	   MATCH_MP compare_equal compare_index_equal);
 
 
-val index_lt_def = Define ` index_lt i1 i2 = index_compare i1 i2 = LESS `;
+val index_lt_def = Define ` index_lt i1 i2 = (index_compare i1 i2 = LESS) `;
 
 
 val _ = Hol_datatype

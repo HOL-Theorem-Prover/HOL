@@ -1,4 +1,4 @@
-open HolKernel Parse basicHol90Lib 
+open HolKernel Parse basicHol90Lib
      TotalDefn Datatype BasicProvers SingleStep;
 
 infix THEN THENL |->;
@@ -38,8 +38,8 @@ val list_compare_def = Define `
      (* x>y *) GREATER) `;
 
 val compare_equal = store_thm("compare_equal",
-  --` (!x y. (cmp x y = EQUAL) = x = y)
-      ==> !l1 l2. (list_compare cmp l1 l2 = EQUAL) = l1 = l2 `--,
+  --` (!x y. (cmp x y = EQUAL) = (x = y))
+      ==> !l1 l2. (list_compare cmp l1 l2 = EQUAL) = (l1 = l2)`--,
 DISCH_THEN (fn tha =>
 (Induct THENL [ALL_TAC,GEN_TAC]) THEN
 (Induct THENL [ALL_TAC,GEN_TAC]) THEN
@@ -52,7 +52,7 @@ val list_merge_def = Define `
    (list_merge a_lt l1 [] = l1)
 /\ (list_merge a_lt [] l2 = l2)
 /\ (list_merge a_lt (x:'a :: l1) (y::l2) =
-      if a_lt x y 
+      if a_lt x y
       then x::list_merge a_lt l1 (y::l2)
       else y::list_merge a_lt (x::l1) l2) `;
 

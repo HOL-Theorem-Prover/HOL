@@ -247,7 +247,7 @@ val treal_inv = new_definition("treal_inv",
 (*---------------------------------------------------------------------------*)
 
 val treal_eq = new_infixr_definition("treal_eq",
-  (--`treal_eq (x1,y1) (x2,y2) = x1 hreal_add y2 = x2 hreal_add y1`--), 450);
+  (--`treal_eq (x1,y1) (x2,y2) = (x1 hreal_add y2 = x2 hreal_add y1)`--), 450);
 
 val TREAL_EQ_REFL = prove_thm("TREAL_EQ_REFL",
   (--`!x. x treal_eq x`--),
