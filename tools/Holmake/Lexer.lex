@@ -125,8 +125,8 @@ and TokenN = parse
   | ")"		{ NULL }
   | ";"         { NULL }
   | (eof | `\^Z`) { EOF }
-  | "``"        { DQuotation lexbuf; TokenN lexbuf }
-  | `\``        { Quotation lexbuf; TokenN lexbuf }
+  | "``"        { DQuotation lexbuf }
+  | `\``        { Quotation lexbuf }
   | ""          { TokenId lexbuf }
 
 and TokenId = parse
@@ -189,10 +189,12 @@ and SkipString = parse
       { SkipString lexbuf }
 
 and Quotation = parse
-    "`" { () }
+    "`" { NULL }
+  | (eof | `\^Z`) { EOF }
   | _ { Quotation lexbuf }
 and DQuotation = parse
-    "``" { () }
+    "``" { NULL }
+  | (eof | `\^Z`) { EOF }
   | _ {DQuotation lexbuf }
 
 ;
