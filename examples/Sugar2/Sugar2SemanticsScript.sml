@@ -29,13 +29,7 @@ load "PathTheory"; load "rich_listTheory"; load "intLib";
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open Globals HolKernel Parse boolLib;
-infixr 3 -->;
-infix 8 by;
-infix &&;
-infix ++;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-open bossLib;
+open Globals HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
 * Open theories of paths and lists

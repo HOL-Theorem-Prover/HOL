@@ -2,22 +2,22 @@
 (* Create PathTheory to support Sugar2Theory                                 *)
 (*****************************************************************************)
 
-(* Load additional definitions of functions on lists 
-   (commented out for compilation)
+(******************************************************************************
+* Load theories
+* (commented out for compilation)
+******************************************************************************)
+(* 
 load "rich_listTheory"; load "intLib";
 *)
 
-(* Boilerplate needed for compilation *)
-open Globals HolKernel Parse boolLib;
-infixr 3 -->;
-infix 8 by;
-infix &&;
-infix ++;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-open bossLib;
+(******************************************************************************
+* Boilerplate needed for compilation
+******************************************************************************)
+open Globals HolKernel Parse boolLib bossLib listTheory rich_listTheory intLib;
 
-open listTheory rich_listTheory intLib;
-
+(******************************************************************************
+* Set default parsing to natural numbers rather than integers 
+******************************************************************************)
 val _ = intLib.deprecate_int();
 
 (******************************************************************************

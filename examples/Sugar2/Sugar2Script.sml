@@ -14,31 +14,26 @@ load "Sugar2SemanticsTheory"; load "rich_listTheory"; load "intLib";
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-
 open Globals HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-
 open Sugar2SemanticsTheory PathTheory listTheory rich_listTheory;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
 ******************************************************************************)
-
 val _ = intLib.deprecate_int();
 
 (******************************************************************************
 * Start a new theory called Sugar2
 ******************************************************************************)
-
 val _ = new_theory "Sugar2";
 
 (******************************************************************************
 * w |=T= b is equivalent to ?l. (w =[l]) /\ l |= b
 ******************************************************************************)
-
 val S_BOOL_TRUE =
  store_thm
   ("S_BOOL_TRUE",
@@ -54,7 +49,6 @@ val S_BOOL_TRUE =
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
 ******************************************************************************)
-
 val S_REPEAT_BOOL_TRUE =
  store_thm
   ("S_REPEAT_BOOL_TRUE",
@@ -291,7 +285,6 @@ val FIRST_RISE_REVIMP =
           Q.EXISTS_TAC `getL M (PATH_EL p (SUC n))`          
            THEN RW_TAC list_ss [PATH_SEG_EL]]]);
 
-
 val FIRST_RISE =
  store_thm
   ("FIRST_RISE",
@@ -389,56 +382,30 @@ val NEXT_RISE_TRUE_EXISTS =
     THEN RW_TAC std_ss 
      [SIMP_RULE arith_ss [] (Q.SPECL[`p`,`j`,`j`](GEN_ALL NEXT_RISE_TRUE))]);
 
-
-val F_NEG_FREE_def =
- Define
-  `(F_NEG_FREE (F_BOOL b)            = T)
-   /\
-   (F_NEG_FREE (F_NOT f)             = F) 
-   /\
-   (F_NEG_FREE (F_AND(f1,f2))        = F_NEG_FREE f1 /\ F_NEG_FREE f2)
-   /\
-   (F_NEG_FREE (F_NEXT f)            = F_NEG_FREE f)
-   /\
-   (F_NEG_FREE (F_UNTIL(f1,f2))      = F_NEG_FREE f1 /\ F_NEG_FREE f2)
-   /\
-   (F_NEG_FREE (F_SUFFIX_IMP(r,f))   = F_NEG_FREE f)
-   /\
-   (F_NEG_FREE (F_STRONG_IMP(r1,r2)) = T)
-   /\
-   (F_NEG_FREE (F_WEAK_IMP(r1,r2))   = T)
-   /\
-   (F_NEG_FREE (F_ABORT (f,b))       = F_NEG_FREE f)
-   /\
-   (F_NEG_FREE (F_WEAK_CLOCK v)      = T)
-   /\
-   (F_NEG_FREE (F_STRONG_CLOCK v)    = T)`;
-
-val F_SEM_TRUE_EQ_LEMMA =
- store_thm
-  ("F_SEM_TRUE_EQ_LEMMA",
-   ``!M p v1 f v2.
-       (v1 = STRONG_CLOCK B_TRUE) /\
-       (v2 = WEAK_CLOCK B_TRUE)   /\
-       F_NEG_FREE f
-       ==>
-       (F_SEM M p v1 f =
-         F_SEM M p v2 f)``,
-   recInduct (fetch "Sugar2Semantics" "F_SEM_ind")
-    THEN REPEAT CONJ_TAC
-    THEN RW_TAC std_ss 
-          [F_SEM_def,FIRST_RISE_TRUE,B_SEM_def,F_NEG_FREE_def,
-           intLib.COOPER_PROVE ``(?k. !l. ~(l > k))=F``,NEXT_RISE_TRUE_EXISTS]
-    THEN PROVE_TAC[]);
+val fl_induct =
+  (Q.GEN
+    `P`
+    (MATCH_MP
+     (DECIDE ``(A ==> (B1 /\ B2 /\ B3)) ==> (A ==> B1)``)
+     (SIMP_RULE
+       std_ss
+       [pairTheory.FORALL_PROD,
+        PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
+        PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
+       (Q.SPECL
+         [`P`,`\(f1,f2). P f1 /\ P f2`,`\(f,b). P f`,`\(r,f). P f`]
+         (TypeBase.induction_of "fl")))));
 
 val F_SEM_TRUE_EQ =
  store_thm
   ("F_SEM_TRUE_EQ",
-   ``!M p v1 f v2. 
-       F_NEG_FREE f
-       ==>
-       (F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f)``,
-   RW_TAC std_ss [F_SEM_TRUE_EQ_LEMMA]);
+   ``!f M p. 
+      (F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f)``,
+   INDUCT_THEN fl_induct ASSUME_TAC
+    THEN RW_TAC std_ss 
+          [F_SEM_def,FIRST_RISE_TRUE,B_SEM_def,
+           intLib.COOPER_PROVE ``(?k. !l. ~(l > k))=F``,NEXT_RISE_TRUE_EXISTS]
+    THEN PROVE_TAC[]);
 
 (******************************************************************************
 * US_SEM M w r means "w is in the language of r" in the unclocked semantics
@@ -664,16 +631,15 @@ val F_CLOCK_FREE_def =
 val INIT_TAC =
  RW_TAC std_ss 
   [F_SEM_def,UF_SEM_def,F_CLOCK_FREE_def,FIRST_RISE_TRUE,RESTN_def,
-   F_NEG_FREE_def,DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``];
+   DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``];
 
 val F_SEM_TRUE_LEMMA =
  store_thm
   ("F_SEM_TRUE_LEMMA",
    ``!M p f. 
-      F_CLOCK_FREE f /\ F_NEG_FREE f
+      F_CLOCK_FREE f 
       ==>
-      (F_SEM M p (STRONG_CLOCK B_TRUE) f =
-        UF_SEM M p f)``,
+      (F_SEM M p (STRONG_CLOCK B_TRUE) f = UF_SEM M p f)``,
    recInduct (fetch "-" "UF_SEM_ind")
     THEN REPEAT CONJ_TAC
     THENL
@@ -684,7 +650,7 @@ val F_SEM_TRUE_LEMMA =
       (* F_BOOL b *)
       INIT_TAC,
       (* F_NOT b *)
-      INIT_TAC,
+      INIT_TAC THEN RW_TAC std_ss [GSYM F_SEM_TRUE_EQ],
       (* F_AND (f1,f2) *)
       INIT_TAC,
       (* F_NEXT f *)

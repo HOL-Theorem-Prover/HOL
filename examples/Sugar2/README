@@ -7,13 +7,10 @@ Note that as a result of trying to prove some `sanity checking'
 properties, bugs were found in the version of the HOL semantics
 corresponding to the Accellera submission.  The current semantics has
 been modified and now passes the initial `sanity checks' (see
-PathScript.sml). However, the proofs about FL formulas have a
-seriously unsatisfactory feature: to get them to go through I have had
-to screen out negation formulas, as the induction bombs on them for
-reasons I don't understand.
+PathScript.sml). 
 
-Until this is sorted out and confirmation that the changes I've made
-are correct has been given, the semantics should be regarded as
+Until confirmation that the changes I've made are correct has been
+given by the Sugar authorities, the semantics should be regarded as
 provisional. Also, further checking might reveal more bugs.
 
 The contents of this directory are
@@ -26,4 +23,4 @@ Sugar2SemanticsScript.sml .. The semantics in HOL
 
 
 MJCG
-Thu May 30 22:02:47 BST 2002
+Fri May 31 11:27:49 BST 2002
