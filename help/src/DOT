@@ -240,7 +240,7 @@ fun theory_to_html ppstrm theory_name =
        fun sig_block(ob_pr1, obs1, ob_pr2,obs2) =
            if null type_constants andalso null term_constants then ()
            else
-             ( title "Signature";
+             ( title "Signature"; add_newline();
                begin_block CONSISTENT 4;
                begin_block CONSISTENT 0;
                 add_string "<center>"; add_newline(); 
