@@ -146,16 +146,16 @@ fun split_after n alist =
 
 
 fun itlist f L base_value =
-   let fun it [] = base_value
-         | it (a::rst) = f a (it rst)
-   in it L
+   let fun itl [] = base_value
+         | itl (a::rst) = f a (itl rst)
+   in itl L
    end;
 
 fun itlist2 f L1 L2 base_value =
-  let fun it ([],[]) = base_value
-        | it (a::rst1, b::rst2) = f a b (it (rst1,rst2))
-        | it _ = raise ERR "itlist2" "lists of different length"
-   in  it (L1,L2)
+  let fun itl ([],[]) = base_value
+        | itl (a::rst1, b::rst2) = f a b (itl (rst1,rst2))
+        | itl _ = raise ERR "itlist2" "lists of different length"
+   in  itl (L1,L2)
    end;
 
 fun rev_itlist f =

@@ -54,9 +54,9 @@ fun (f orelsef g) x =
 val repeat = Lib.repeat
 
 fun foldr f e L =
-   let fun it [] = e
-         | it (a::rst) = f (a,it rst)
-   in it L 
+   let fun itl [] = e
+         | itl (a::rst) = f (a,itl rst)
+   in itl L 
    end;
 
 fun foldl f e L =
