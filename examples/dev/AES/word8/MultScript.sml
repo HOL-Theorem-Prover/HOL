@@ -19,55 +19,19 @@ val _ = new_theory "Mult";
 
 fun n2w_TAC v = ASSUME_TAC (Q.SPEC v word_nchotomy) THEN RW_TAC std_ss []
 
-val lem = Q.prove (
-`!n h a. n <= h ==> (BIT n (BITS h 0 a) = BIT n a)`,
-RW_TAC arith_ss [BIT_def, BITS_COMP_THM])
-
 val EQ_BIT_THM = Q.prove (
 `!a b. (a = b) = (!n. n < 8 ==> (BIT n (w2n a) = BIT n (w2n b)))`,
 REPEAT STRIP_TAC THEN n2w_TAC `a` THEN n2w_TAC `b` THEN
 RW_TAC arith_ss [n2w_11, w2n_EVAL, MOD_WL_THM, GSYM BIT_BITS_THM, HB_def,
-                 LE_LT1, lem])
-
-val BIT_SHIFT_THM = Q.prove (
-`!n a s. BIT (n + s) (a * 2 ** s) = BIT n a`,
-EVAL_TAC THEN
-RW_TAC arith_ss [SUC_SUB, EXP_ADD] THEN
-METIS_TAC [GSYM DIV_DIV_DIV_MULT, ZERO_LT_TWOEXP,
-           MULT_DIV, MULT_SYM])
-
-val BIT_SHIFT_THM2 = Q.prove (
-`!n a s. s <= n ==> (BIT n (a * 2 ** s) = BIT (n - s) a)`,
-RW_TAC arith_ss [GSYM (Q.SPECL [`n-s`, `a`, `s`] BIT_SHIFT_THM)])
-
-val EXP_SUB = Q.prove (
-`!p q n. 0 < n /\ q <= p ==> (n ** (p - q) = n ** p DIV n ** q)`,
-REPEAT STRIP_TAC THEN
-(`0 < n ** p /\ 0 < n ** q` by Cases_on `n` THEN 
-    FULL_SIMP_TAC arith_ss [ZERO_LESS_EXP]) THEN
-RW_TAC arith_ss [DIV_P] THEN
-Q.EXISTS_TAC `0` THEN RW_TAC arith_ss [GSYM EXP_ADD])
-
-val EVEN_EVENEXP = Q.prove (
-`!m n. n > 0 /\ EVEN m ==> EVEN (m ** n)`,
-STRIP_TAC THEN Cases_on `n` THEN RW_TAC arith_ss [EXP, EVEN_MULT])
-
-val BIT_ZERO = Q.prove (
-`!n a s. (n < s) ==> (BIT n (a * 2 ** s) = F)`,
-EVAL_TAC THEN
-RW_TAC arith_ss [SUC_SUB, NOT_MOD2_LEM2, GSYM EVEN_MOD2] THEN
-RW_TAC arith_ss [DIV_P, ZERO_LT_TWOEXP] THEN
-Q.EXISTS_TAC `a * 2 ** (s - n)` THEN Q.EXISTS_TAC `0` THEN
-RW_TAC arith_ss [ZERO_LT_TWOEXP,GSYM MULT_ASSOC, GSYM EXP_ADD, EVEN_MULT,
-                 EVEN_EVENEXP])
+                 LE_LT1, BIT_OF_BITS_THM])
 
 val EOR_AC = Q.store_thm
 ("EOR_AC",
 `!a b c. ((a # b) # c = a # (b # c)) /\ (a # b = b # a)`,
 REPEAT STRIP_TAC THEN
 n2w_TAC `a` THEN n2w_TAC `b` THEN n2w_TAC `c` THEN
-RW_TAC arith_ss [EQ_BIT_THM, EOR_EVAL, EOR_def, w2n_EVAL, MOD_WL_THM, lem,
-                 HB_def, WL_def, BITWISE_THM] THEN
+RW_TAC arith_ss [EQ_BIT_THM, EOR_EVAL, EOR_def, w2n_EVAL, MOD_WL_THM,
+                 BIT_OF_BITS_THM, HB_def, WL_def, BITWISE_THM] THEN
 METIS_TAC []);
 
 (* Should prove this without brute force, so the proof would work for other 
@@ -116,11 +80,11 @@ val xtime_distrib = Q.store_thm
  FULL_SIMP_TAC std_ss [] THEN RW_TAC std_ss [] THEN
  n2w_TAC `a` THEN n2w_TAC `b` THEN
  RW_TAC arith_ss [EOR_EVAL, LSL_EVAL, HB_def, MUL_EVAL, w2n_EVAL, MOD_WL_THM,
-                  MIN_DEF, lem, EOR_def, WL_def, BITWISE_THM] THEN
+                  MIN_DEF, BIT_OF_BITS_THM, EOR_def, WL_def, BITWISE_THM] THEN
  PURE_ONCE_REWRITE_TAC [Q.prove (`!a. a * 2 = a * 2 ** 1`, RW_TAC arith_ss [])]
  THEN
  Cases_on `n<1` THEN
- FULL_SIMP_TAC arith_ss [BIT_ZERO, NOT_LESS, BIT_SHIFT_THM2, BITWISE_THM] THEN
+ FULL_SIMP_TAC arith_ss [BIT_SHIFT_THM3, NOT_LESS, BIT_SHIFT_THM2, BITWISE_THM] THEN
  METIS_TAC []);
 
 
