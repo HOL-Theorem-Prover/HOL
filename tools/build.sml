@@ -32,6 +32,43 @@ val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
 val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
 
+(* ----------------------------------------------------------------------
+    Analysing the command-line
+   ---------------------------------------------------------------------- *)
+
+val cmdline = CommandLine.arguments()
+
+(* use the experimental kernel? *)
+val (use_expk, cmdline) =   let
+  val (expks, rest) = List.partition (fn e => e = "-expk") cmdline
+in
+  (not (null expks), rest)
+end
+
+(* do self-tests? *)
+val (do_selftests, cmdline) = let
+  val (selftests, rest) = List.partition (fn e => e = "-selftest") cmdline
+in
+  (not (null selftests), rest)
+end
+
+(* use a non-standard build sequence? *)
+val (bseq_fname, cmdline) = let
+  fun analyse (acc as (fname, args')) num_seen args =
+      case args of
+        [] => (fname, List.rev args')
+      | ["-seq"] => (warn "Trailing -seq command-line option ignored\n";
+                     acc)
+      | ("-seq"::fname::rest) =>
+        (if num_seen = 1 then warn "Multiple -seq options; taking last one\n"
+         else ();
+         analyse (fname, args') (num_seen + 1) rest)
+      | (x::rest) => analyse (fname, x::args') num_seen rest
+in
+  analyse (fullPath [HOLDIR, "tools", "build-sequence"], []) 0 cmdline
+end
+
+
 (*---------------------------------------------------------------------------
      Source directories.
  ---------------------------------------------------------------------------*)
@@ -61,26 +98,12 @@ val SRCDIRS0 = let
                      read_file acc fstr)
             end
         end
-  val bseq_fname = fullPath [HOLDIR, "tools", "build-sequence"]
   val bseq_file =
       TextIO.openIn bseq_fname
       handle Io {cause, function, name} =>
              die ("Couldn't open build sequence file: "^bseq_fname)
 in
   read_file [] bseq_file before TextIO.closeIn bseq_file
-end
-
-val (use_expk, cmdline) =   let
-  val (expks, rest) =
-      List.partition (fn e => e = "-expk") (CommandLine.arguments())
-in
-  (not (null expks), rest)
-end
-
-val (do_selftests, cmdline) = let
-  val (selftests, rest) = List.partition (fn e => e = "-selftest") cmdline
-in
-  (not (null selftests), rest)
 end
 
 val SRCDIRS =
@@ -434,7 +457,8 @@ val help_mesg = "Usage: build\n\
                 \   or: build cleanAll\n\
                 \   or: build help.\n\
                 \Add -expk to build an experimental kernel.\n\
-                \Add -selftest to do self-tests, where defined.\n";
+                \Add -selftest to do self-tests, where defined.\n\
+                \Add -seq <fname> to use fname as build-sequence\n";
 
 fun check_against s = let
   open Time
