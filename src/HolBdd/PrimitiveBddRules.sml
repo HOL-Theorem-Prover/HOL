@@ -15,6 +15,7 @@
 (* BddEqMp                                                                   *)
 (* BddReplace                                                                *)
 (* BddCompose                                                                *)
+(* BddListCompose                                                            *)
 (* BddRestrict                                                               *)
 (* BddT                                                                      *)
 (* BddF                                                                      *)
@@ -192,18 +193,17 @@ fun BddEqMp th (TermBdd(vm,t1,b)) =
 (*  ------------------------------------------------------------------------ *)
 (*   vm (subst[v1 |-> v1', ... , vi |-> vi']tm)                              *)
 (*   |-->                                                                    *)
-(*   bdd.replace b (makepairSet(map (var ## var) [(b1,b1'), ... , (bi,bi')]) *)
+(*   replace b (makepairSet(map (var ## var) [(b1,b1'), ... , (bi,bi')]))    *)
 (*****************************************************************************)
 
 exception BddReplaceError;
 
-fun BddReplace tbl tb =
- let val TermBdd(vm,tm,b) = tb
-     val (vml,(l,l'),replacel) = 
+fun BddReplace tbl (TermBdd(vm,tm,b)) =
+ let val (_,(l,l'),replacel) = 
        List.foldr
-        (fn(((TermBdd(vm,tm,b)),(TermBdd(vm',tm',b'))), (vml,(l,l'),replacel))
+        (fn(((TermBdd(vm,tm,b)),(TermBdd(vm',tm',b'))), (vm_,(l,l'),replacel))
            =>
-           if not(Varmap.eq(hd vml,vm) andalso Varmap.eq(vm,vm'))
+           if not(Varmap.eq(vm_,vm) andalso Varmap.eq(vm,vm'))
             then (                print "unequal varmaps\n";       raise BddReplaceError) else
            if not(is_var tm)
             then (print_term tm ; print " should be a variable\n"; raise BddReplaceError) else
@@ -213,10 +213,10 @@ fun BddReplace tbl tb =
             then (print_term tm ; print" repeated\n";              raise BddReplaceError) else
            if mem tm' l'
             then (print_term tm'; print" repeated\n";              raise BddReplaceError) 
-            else ((vm::vm'::vml), 
+            else (vm', 
                   (tm :: l, tm' :: l'),
                   ((bdd.var b, bdd.var b')::replacel)))
-        ([vm], ([],[]), [])
+        (vm, ([],[]), [])
         tbl
  in
   TermBdd(vm, 
@@ -256,17 +256,90 @@ val tb4 = BddReplace tbl tb;
 ======================================================= End of test examples *)
 
 (*****************************************************************************)
-(*    vm v |--> b    vm tm1 |--> b1    vm tm2 |--> b2                        *)
-(*  -----------------------------------------------------                    *)
-(*  vm (subst [v |-> tm2] tm1) |--> compose b1 b2 (var b)                    *)
+(*    (vm v |--> b, vm tm1 |--> b1)    vm tm2 |--> b2                        *)
+(*  ------------------------------------------------------                   *)
+(*  vm (subst [v |-> tm1] tm2) |--> compose (var b, b1) b2                   *)
 (*****************************************************************************)
 
 exception BddComposeError;
 
-fun BddCompose (TermBdd(vm,v,b)) (TermBdd(vm1,tm1,b1)) (TermBdd(vm2,tm2,b2)) =
+fun BddCompose (TermBdd(vm,v,b), TermBdd(vm1,tm1,b1)) (TermBdd(vm2,tm2,b2)) =
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
-  then TermBdd(vm, subst[v |-> tm2]tm1, compose (var b, b2) b1)
+  then TermBdd(vm, subst[v |-> tm1]tm2, compose (var b, b1) b2)
   else (print "different varmaps\n"; raise BddComposeError);
+
+(*****************************************************************************)
+(*                    [(vm v1 |--> b1 , vm v1' |--> b1'),                    *)
+(*                                    .                                      *)
+(*                                    .                                      *)
+(*                                    .                                      *)
+(*                     (vm vi |--> bi , vm vi' |--> bi')]                    *)
+(*                    vm tm |--> b                                           *)
+(*  ------------------------------------------------------------------------ *)
+(*   vm (subst[v1 |-> v1', ... , vi |-> vi']tm)                              *)
+(*   |-->                                                                    *)
+(*   veccompose (composeSet (map (var ## I) [(b1,b1'), ... , (bi,bi')])) b   *)
+(*****************************************************************************)
+
+exception BddListComposeError;
+
+fun BddListCompose tbl (TermBdd(vm,tm,b)) =
+ let val (_,(l,l'),composel) = 
+       List.foldr
+        (fn(((TermBdd(vm,tm,b)),(TermBdd(vm',tm',b'))), (vm_,(l,l'),composel))
+           =>
+           if not(Varmap.eq(vm_,vm) andalso Varmap.eq(vm,vm'))
+            then (                print "unequal varmaps\n";
+                                  raise BddListComposeError) else
+           if not(is_var tm)
+            then (print_term tm ; print " should be a variable\n";
+                                  raise BddListComposeError) else
+           if mem tm l
+            then (print_term tm ; print" repeated\n";
+                                  raise BddListComposeError) 
+            else (vm', 
+                  (tm :: l, tm' :: l'),
+                  ((bdd.var b, b')::composel)))
+        (vm, ([],[]), [])
+        tbl
+ in
+  TermBdd(vm, 
+          subst (ListPair.map (fn(v,v')=>(v|->v')) (l,l')) tm, 
+          bdd.veccompose (bdd.composeSet composel) b)
+ end;
+
+
+(* Test examples ==================================================================
+
+val tb1 = termToTermBdd ``x /\ y /\ z``;
+
+val tbx = termToTermBdd ``x:bool``
+and tby = termToTermBdd ``y:bool``
+and tbz = termToTermBdd ``z:bool``
+and tbp = termToTermBdd ``p:bool``
+and tbq = termToTermBdd ``q:bool``;
+
+(* Repeat to sync all the varmaps! *)
+
+val tb = tb1 and tbl = [(tbx,tbp),(tby,tbq)];
+val tb = BddListCompose tbl tb;
+
+val tb = tb1 and tbl = [(tbx,tby),(tby,tbz),(tbz,tbx)];
+val tb = BddListCompose tbl tb;
+
+val tb = tb1 and tbl = [(tbx,tby),(tby,tbz)];
+val tb = BddListCompose tbl tb;
+(* ! Fail  "Trying to replace with variables already in the bdd" *)
+
+val tb = tb1 and tbl = [(tbx,tby),(tby,tbx)];
+val tb = BddListCompose tbl tb;
+
+val tb = tb1 and tbl = [(tbx,tbp),(tby,tbp)];
+val tb4 = BddListCompose tbl tb;
+(* p repeated *)
+
+======================================================= End of test examples *)
+
 
 (*****************************************************************************)
 (* BddRestrict [((vm v1 |--> b1),c1),...,(vm vi |--> bi),ci)] (vm tm |--> b) *)
