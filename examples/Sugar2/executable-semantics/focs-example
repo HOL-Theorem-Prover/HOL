@@ -832,11 +832,24 @@ fun regexp_ra req ack =
 
 val r1 = regexp_ra ``StoB_REQ`` ``BtoS_ACK``;
 
-val d = try (extract_dfa alph) r1;
+val d1 = try (extract_dfa alph) r1;
 
-val s = print ("\n\n" ^ verilog_dfa alph r1 ^ "\n");
+val s1 = print ("\n\n" ^ verilog_dfa alph r1 ^ "\n");
 
-stop;
+val r2 =
+  ``sere2regexp
+    (S_REPEAT(S_BOOL B_TRUE) ;;
+     S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
+     S_BOOL(B_PROP BtoS_ACK) ;;
+     S_REPEAT(S_BOOL(B_AND(B_PROP BtoS_ACK,
+                           B_NOT(B_PROP RtoB_ACK)))) ;;
+     S_REPEAT(S_BOOL(B_AND(B_NOT(B_PROP BtoS_ACK),
+                           B_NOT(B_PROP RtoB_ACK)))) ;;
+     S_BOOL(B_PROP BtoS_ACK))``;
+
+val d2 = try (extract_dfa alph) r2;
+
+val s2 = print ("\n\n" ^ verilog_dfa alph r2 ^ "\n");
 
 (******************************************************************************
 * vunit four_phase_handskake_left (page 23, FoCs User's Manual, Version 1.0)

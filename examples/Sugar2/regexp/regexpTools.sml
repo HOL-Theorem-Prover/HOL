@@ -324,9 +324,13 @@ local
 
       fun f bs th =
         let val (_,tm) = dest_eq (concl th) in
-          case total dest_cond tm of NONE => Leaf (tm, g bs th)
+          case total (dest_cond o find_term is_cond) tm of
+            NONE => Leaf (tm, g bs th)
           | SOME (c,_,_) =>
             let
+              val () = if not (chatting 3) then ()
+                       else chat 3 ("extract_dfa.mk_condition: th =\n" ^
+                                    thm_to_string th ^ "\n")
               val t = find_term (can d) c
               val v = d t
               val s = #Name (dest_thy_const v)
@@ -361,6 +365,8 @@ local
              ", s = " ^ type_to_string (type_of s) ^
              ", x = " ^ type_to_string (type_of x))
       val th = EVAL t
+      val () = if not (chatting 3) then ()
+               else chat 3 ("extract_dfa.trans: th =\n"^thm_to_string th^"\n")
     in
       mk_condition (mvar,dvar,gen) th
     end;
@@ -429,7 +435,9 @@ local
     (begin_block pp CONSISTENT 2;
      add_string pp (Int.toString i ^ ":");
      add_break pp (1,0);
-     if a then add_string pp "$display (\"Checker: property violated!\");"
+     if a then
+       add_string pp
+         "begin $display (\"Checker: property violated!\"); $finish; end"
      else pp_condition pp t;
      end_block pp;
      add_newline pp;
@@ -440,20 +448,22 @@ local
 
      begin_block pp INCONSISTENT (size "module Checker (");
      add_string pp "module Checker (";
-     pp_alphs "," pp alph;
+     pp_alphs "," pp (alph @ ["state"]);
      add_string pp ");";
      end_block pp;
      add_newline pp;
      add_newline pp;
 
      begin_block pp INCONSISTENT (size "input ");
-     add_string pp "input ";
+     add_string pp "input  ";
      pp_alphs "," pp alph;
      add_string pp ";";
      end_block pp;
      add_newline pp;
 
-     add_string pp ("reg   [" ^ log2 (length table) ^ ":0] state;");
+     add_string pp ("output [" ^ log2 (length table) ^ ":0] state;");
+     add_newline pp;
+     add_string pp ("reg    [" ^ log2 (length table) ^ ":0] state;");
      add_newline pp;
      add_newline pp;
 
@@ -474,7 +484,8 @@ local
      add_string pp "case (state)";
      add_newline pp;
      app (pp_case pp) table;
-     add_string pp "default: $display (\"Checker: unknown state\");";
+     add_string pp
+       "default: begin $display (\"Checker: unknown state\"); $finish; end";
      end_block pp;
      add_newline pp;
      add_string pp "endcase";
