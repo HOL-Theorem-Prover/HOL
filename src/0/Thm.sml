@@ -243,7 +243,7 @@ fun ABS v (THM(ocl,asl,c)) =
 fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
  let open HOLset
      val vset = addList(Term.empty_varset,vlist)
-     val hset = hypset th
+     val hset = hyp_frees th
  in if isEmpty (intersection(vset,hset))
     then let val (lhs,rhs,ty) = with_exn Term.dest_eq_ty c
                                   (thm_err "GEN_ABS" "not an equality")
@@ -672,14 +672,17 @@ fun GEN x th =
  *
  *---------------------------------------------------------------------------*)
 
-local val err = thm_err "EXISTS" ""
+local
+  val mesg1 = "First argument not of form `?x. P`"
+  val mesg2 = "(2nd argument)/(bound var) in body of 1st argument is not theorem's conclusion"
+  val err = thm_err "EXISTS" mesg1
 in
 fun EXISTS (w,t) th =
  let val (ex,Rand) = with_exn dest_comb w err
      val {Name,Thy,...}  = with_exn dest_thy_const ex err
-     val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" "not an existential"
+     val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" mesg1
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
-                    "EXISTS" "incompatible structure"
+                    "EXISTS" mesg2
    in make_thm Count.Exists (tag th, hypset th, w)
    end
 end;
