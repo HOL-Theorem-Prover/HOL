@@ -326,6 +326,54 @@ fun new_recursive_definition {name,fixity,rec_axiom,def} =
  end;
 
 
+(*---------------------------------------------------------------------------*
+ * Define a case constant for a datatype. This is used by TFL's              *
+ * pattern-matching translation and are generally useful as replacements     *
+ * for "destructor" operations.                                              *
+ *---------------------------------------------------------------------------*)
+
+fun num_variant vlist v =
+  let val counter = ref 0
+      val {Name,Ty} = dest_var v
+      val slist = ref (map (#Name o dest_var) vlist)
+      fun pass str =
+         if (mem str (!slist))
+         then ( counter := !counter + 1;
+                pass (Lib.concat Name (Lib.int_to_string(!counter))))
+         else (slist := str :: !slist; str)
+  in
+  mk_var{Name=pass Name,  Ty=Ty}
+  end;
+
+fun define_case_constant ax = let
+  val exu = snd(strip_forall(concl ax))
+  val {Rator,Rand} = dest_comb exu
+  val {Name = "?!",...} = dest_const Rator
+  val {Bvar,Body} = dest_abs Rand
+  val ty = type_of Bvar
+  val (dty,rty) = Type.dom_rng ty
+  val {Tyop,Args} = dest_type dty
+  val clist = map (rand o lhs o #2 o strip_forall) (strip_conj Body)
+  fun mk_cfun ctm (nv,away) = let
+    val (c,args) = strip_comb ctm
+    val fty = itlist (curry (op -->)) (map type_of args) rty
+    val vname = if (length args = 0) then "v" else "f"
+    val v = num_variant away (mk_var{Name = vname, Ty = fty})
+  in
+    (v::nv, v::away)
+  end
+  val arg_list = rev(fst(rev_itlist mk_cfun clist ([],free_varsl clist)))
+  val v = mk_var{Name = Tyop^"_case",
+                 Ty = itlist (curry (op -->)) (map type_of arg_list) ty}
+  val preamble = list_mk_comb(v,arg_list)
+  fun clause (a,c) = mk_eq{lhs = mk_comb{Rator=preamble,Rand=c},
+                           rhs = list_mk_comb(a, rev(free_vars c))}
+  val defn = list_mk_conj (map clause (zip arg_list clist))
+in
+  new_recursive_definition
+  {name=Tyop^"_case_def", fixity=Prefix, rec_axiom=ax, def = defn}
+end;
+
 
 (*---------------------------------------------------------------------------
  * Addition 17.1.98: Induct_then, prove_induction_thm, and prove_cases_thm

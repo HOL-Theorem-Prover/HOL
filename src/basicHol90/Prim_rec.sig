@@ -18,6 +18,8 @@ sig
 
    val new_recursive_definition
      : {name:string, fixity: Parse.fixity, rec_axiom:thm, def:term} -> thm
+   val define_case_constant : thm -> thm
+
 
    val INDUCT_THEN                 : thm -> (thm -> tactic) -> tactic
    val prove_rec_fn_exists         : thm -> term -> thm
