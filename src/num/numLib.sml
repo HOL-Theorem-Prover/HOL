@@ -21,7 +21,7 @@ struct
 
 local open numeralTheory in end;
 
-open HolKernel basicHol90Lib Num_conv Parse;
+open HolKernel boolLib Rsyntax Num_conv Parse;
 infix THEN THENC THENL;
 
 type conv = Abbrev.conv
@@ -127,11 +127,11 @@ fun SUC_ELIM_CONV tm =
        val suck_suc = Rsyntax.subst [mk_SUC v |-> sn] bod
        val suck_n = Rsyntax.subst [v |-> n] suck_suc
        val _ = assert (fn x => x <> tm) suck_n
-       val th1 = ISPEC (list_mk_abs ([sn,n],suck_n)) 
+       val th1 = ISPEC (list_mk_abs ([sn,n],suck_n))
                      arithmeticTheory.SUC_ELIM_THM
        val BETA2_CONV = (RATOR_CONV BETA_CONV) THENC BETA_CONV
        val th2 = CONV_RULE (LHS_CONV (QUANT_CONV BETA2_CONV)) th1
-       val th3 = CONV_RULE (RHS_CONV (QUANT_CONV 
+       val th3 = CONV_RULE (RHS_CONV (QUANT_CONV
                     (FORK_CONV (ALL_CONV, BETA2_CONV)))) th2
    in th3
    end

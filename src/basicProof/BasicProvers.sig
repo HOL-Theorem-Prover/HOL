@@ -1,8 +1,6 @@
 signature BasicProvers =
 sig
-  type thm      = Thm.thm
-  type term     = Term.term
-  type tactic   = Abbrev.tactic
+  include Abbrev
   type simpset  = simpLib.simpset
 
   (* Various basic automated reasoners *)

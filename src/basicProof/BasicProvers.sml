@@ -7,19 +7,13 @@
 structure BasicProvers :> BasicProvers =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel boolLib Rsyntax;
+type simpset = simpLib.simpset;
 
-  type thm      = Thm.thm
-  type term     = Term.term
-  type tactic   = Abbrev.tactic
-  type simpset  = simpLib.simpset
 
 infix THEN THENL ORELSE;
 
-fun ERR func mesg =
-     HOL_ERR{origin_structure = "BasicProvers",
-             origin_function = func,
-             message = mesg};
+val ERR = mk_HOL_ERR "BasicProvers";
 
 local open simpLib
       infix ++
@@ -54,9 +48,9 @@ fun orient th =
       val {lhs,rhs} = dest_eq c
   in if is_var lhs
      then if is_var rhs
-          then if term_lt lhs rhs (* both vars, rewrite to textually smaller *)
-               then SYM th
-               else th
+          then case Term.compare (lhs, rhs) 
+                of LESS  => SYM th
+                 | other => th
           else th
      else SYM th
   end;
@@ -90,13 +84,16 @@ fun ASSUMS_TAC f P = W (fn (asl,_) =>
 
 fun CONCL_TAC f P = W (fn (_,c) => if (P c) then f else NO_TAC);
 
+fun const_coords c = 
+  let val {Name,Thy,...} = dest_thy_const c in (Name,Thy) end;
+
 fun constructed constr_set tm =
   let val {lhs,rhs} = dest_eq tm
   in
   (aconv lhs rhs)
      orelse
-   let val maybe1 = #Name(dest_const(fst(strip_comb lhs)))
-       val maybe2 = #Name(dest_const(fst(strip_comb rhs)))
+   let val maybe1 = const_coords(fst(strip_comb lhs))
+       val maybe2 = const_coords(fst(strip_comb rhs))
    in Binaryset.member(constr_set,maybe1)
          andalso
       Binaryset.member(constr_set,maybe2)
@@ -110,20 +107,18 @@ fun LIFT_SIMP ss tm =
 
 
 local fun DTHEN (ttac:Abbrev.thm_tactic) :tactic = fn (asl,w) =>
-        if (is_neg w) then raise ERR "DTHEN" "negation"
-        else let val {ant,conseq} = Dsyntax.dest_imp w
-                 val (gl,prf) = ttac (Thm.ASSUME ant) (asl,conseq)
-             in (gl, Thm.DISCH ant o prf)
-             end
+        let val {ant,conseq} = dest_imp_only w
+            val (gl,prf) = ttac (Thm.ASSUME ant) (asl,conseq)
+        in (gl, Thm.DISCH ant o prf)
+        end
 in
-val BOSS_STRIP_TAC =
-      Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
+val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
 fun add_constr tyinfo set =
    let open TypeBase
        val C = constructors_of tyinfo
-   in Binaryset.addList (set, map (#Name o dest_const) C)
+   in Binaryset.addList (set, map const_coords C)
    end;
 
 infix &&;
@@ -172,7 +167,11 @@ fun breakable tm = (is_exists tm orelse is_conj tm orelse is_disj tm);
 
  ---------------------------------------------------------------------------*)
 
-local val constr_set0 = Binaryset.empty String.compare
+local fun compare ((s1,s2),(t1,t2)) =
+        case String.compare(s1,t1)
+         of EQUAL => String.compare (s2,t2)
+          | other => other
+      val constr_set0 = Binaryset.empty compare
 in
 fun PRIM_STP_TAC ss finisher =
   let open TypeBase

@@ -14,7 +14,7 @@ structure Num_induct :> Num_induct =
 struct
 
 
-open HolKernel Parse Drule Tactic Prim_rec;
+open HolKernel Rsyntax Parse Drule Tactic Prim_rec;
 
 infix |->;
 
@@ -67,7 +67,7 @@ end;
 (*   [A] t[0]  ,  [A,t[n]] t[SUC x]                                      *)
 (* --------------------------------------------------------------------- *)
 
-fun INDUCT_TAC g = 
+fun INDUCT_TAC g =
   INDUCT_THEN INDUCTION ASSUME_TAC g
    handle _ => raise NUM_INDUCT_ERR "INDUCT_TAC" "";
 

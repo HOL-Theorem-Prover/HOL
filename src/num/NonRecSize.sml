@@ -11,7 +11,7 @@ struct
 
 
 local
-  open HolKernel basicHol90Lib Parse;
+  open HolKernel boolLib Parse Rsyntax
 
   val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
   fun -- q x = Term q
@@ -38,9 +38,9 @@ local
   val bool_info' = TypeBase.put_size bool_size_info bool_info
 
   val sum_info = Option.valOf(TypeBase.read "sum")
-  val sum_case = #const(Term.const_decl "sum_case")
-  val num = Type`:num`
-  val sum_case_into_num = inst [alpha |-> num] sum_case
+  val sum_case = Term`sum$sum_case`
+  val num = numSyntax.num_ty
+  val sum_case_into_num = Rsyntax.inst [alpha |-> num] sum_case
   val f = mk_var{Name="f",Ty=beta-->num}
   val g = mk_var{Name="g",Ty=mk_vartype"'c" --> num}
   val s = mk_var{Name="s",Ty=mk_type{Tyop="sum",Args=[beta, mk_vartype "'c"]}}
@@ -50,7 +50,7 @@ local
 
   val option_info = Option.valOf(TypeBase.read "option")
   val option_size_info =
-       (Parse.Term`\f. option_case 0 (\x:'a. SUC (f x))`,
+       (Term`\f. option_case 0 (\x:'a. SUC (f x))`,
         TypeBase.ORIG optionTheory.option_case_def)
   val option_info' = TypeBase.put_size option_size_info option_info
 
