@@ -11,6 +11,43 @@ infixr -->
 
 val ERR = mk_HOL_ERR "Cooper";
 
+fun normalise_mult t = let
+  (* t is a multiplication term, over either :num or :int *)
+  val (dest, strip, mk, listmk, AC, is_lit) =
+      if numSyntax.is_mult t then
+        (numSyntax.dest_mult,
+         numSyntax.strip_mult,
+         numSyntax.mk_mult,
+         numSyntax.list_mk_mult,
+         EQT_ELIM o AC_CONV (MULT_ASSOC, MULT_COMM),
+         numSyntax.is_numeral)
+      else
+        (intSyntax.dest_mult,
+         intSyntax.strip_mult,
+         intSyntax.mk_mult,
+         intSyntax.list_mk_mult,
+         EQT_ELIM o AC_CONV (INT_MUL_ASSOC, INT_MUL_COMM),
+         intSyntax.is_int_literal)
+in
+  case strip t of
+    [ _ ] => NO_CONV
+  | ms => let
+      val (nums, others) = partition is_lit ms
+    in
+      if null nums orelse length nums = 1 andalso hd nums = #1 (dest t) then
+        NO_CONV
+      else if null others then
+        REDUCE_CONV
+      else let
+          val newt =
+              mk(listmk nums, listmk (Listsort.sort Term.compare others))
+        in
+          K (AC (mk_eq(t,newt))) THENC LAND_CONV REDUCE_CONV
+        end
+    end
+end t
+
+
 (* this draws on similar code in Richard Boulton's natural number
    arithmetic decision procedure *)
 
@@ -64,6 +101,44 @@ fun non_presburger_subterms0 ctxt tm =
 
 val is_presburger = null o non_presburger_subterms0 []
 val non_presburger_subterms = map #1 o non_presburger_subterms0 []
+
+fun is_natlin_mult tm =
+    numSyntax.is_mult tm andalso
+    not (contains_var (land tm) andalso contains_var (rand tm))
+
+fun nat_nonpresburgers tm =
+    if is_forall tm orelse is_exists tm orelse is_exists1 tm then
+      nat_nonpresburgers (body (rand tm))
+    else if is_conj tm orelse is_disj tm orelse
+            (is_imp tm andalso not (is_imp tm)) orelse
+            is_great tm orelse is_leq tm orelse is_eq tm orelse
+            is_minus tm orelse is_less tm orelse is_geq tm orelse
+            is_linear_mult tm
+    then
+      HOLset.union (nat_nonpresburgers (land tm), nat_nonpresburgers (rand tm))
+    else if is_neg tm orelse is_injected tm orelse
+            numSyntax.is_suc tm
+    then
+      nat_nonpresburgers (rand tm)
+    else if is_cond tm then
+      HOLset.union
+      (HOLset.union (nat_nonpresburgers (rand (rator (rator tm))),
+                     nat_nonpresburgers (land tm)),
+       nat_nonpresburgers (rand tm))
+    else
+      let open numSyntax
+      in
+        if is_great tm orelse is_geq tm orelse is_less tm orelse
+           is_leq tm orelse is_plus tm orelse is_minus tm orelse
+           is_natlin_mult tm
+        then
+          HOLset.union (nat_nonpresburgers (land tm),
+                        nat_nonpresburgers (rand tm))
+        else if is_numeral tm then empty_tmset
+        else if is_var tm then empty_tmset
+        else if type_of tm = num then HOLset.add(empty_tmset, tm)
+        else empty_tmset
+      end
 
 fun decide_fv_presburger tm = let
   fun is_int_const tm = type_of tm = int_ty andalso is_const tm
@@ -130,7 +205,7 @@ end tm handle HOL_ERR {origin_function = "REWR_CONV", ...} =>
   raise ERR "ARITH_CONV" "Uneliminable natural number term remains"
 
 
-val dealwith_nats = let
+local
   open arithmeticTheory numSyntax
   val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
                   GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
@@ -150,7 +225,7 @@ val dealwith_nats = let
     in
       UNBETA_CONV to_elim THENC REWR_CONV rwt THENC
       STRIP_QUANT_CONV (RAND_CONV (RAND_CONV BETA_CONV))
-    end
+    end handle HOL_ERR _ => ALL_CONV
   in
     EVERY_CONV (map elim_t divmods) t
   end
@@ -164,10 +239,56 @@ val dealwith_nats = let
   in
     recurse t
   end
+  fun tacTHEN t1 t2 tm = let
+    val (g1, v1) = t1 tm
+    val (g2, v2) = t2 g1
+  in
+    (g2, v1 o v2)
+  end
+  fun tacALL tm = (tm, I)
+  fun tacMAP_EVERY tlist =
+      case tlist of
+        [] => tacALL
+      | (t1::ts) => tacTHEN t1 (tacMAP_EVERY ts)
+  fun tacCONV c tm = let
+    val thm = c tm
+  in
+    (rhs (concl thm), TRANS thm)
+  end
+  fun subtm_rel (t1, t2) = if free_in t1 t2 then GREATER
+                           else if free_in t2 t1 then LESS
+                           else EQUAL
 in
-  Sub_and_cond.SUB_AND_COND_ELIM_CONV THENC elim_div_mod THENC
-  PURE_REWRITE_CONV rewrites THENC eliminate_nat_quants
+val dealwith_nats = let
+  val phase1 =
+      tacCONV (ONCE_DEPTH_CONV normalise_mult THENC
+               Sub_and_cond.SUB_AND_COND_ELIM_CONV THENC
+               elim_div_mod)
+  fun do_pbs tm = let
+    val non_pbs =
+        Listsort.sort subtm_rel (HOLset.listItems (nat_nonpresburgers tm))
+    fun tactic subtm tm = let
+      (* return both a newtm and a function that will convert a theorem
+         of the form <new term> = T into tm = T *)
+      val gv = genvar numSyntax.num
+      val newterm = mk_forall (gv, Term.subst [subtm |-> gv] tm)
+      fun prove_it thm =
+          EQT_INTRO (SPEC subtm (EQT_ELIM thm))
+          handle HOL_ERR _ =>
+                 raise ERR "COOPER_CONV"
+                           ("Tried to prove generalised goal (generalising "^
+                            Parse.term_to_string subtm^"...) but it was false")
+    in
+      (newterm, prove_it)
+    end
+  in
+    tacMAP_EVERY (map tactic non_pbs)
+  end tm
+in
+ tacTHEN (tacTHEN phase1 do_pbs)
+         (tacCONV (PURE_REWRITE_CONV rewrites THENC eliminate_nat_quants))
 end
+end (* local *)
 
 (* subterms is a list of subterms all of integer type *)
 fun decide_nonpbints_presburger subterms tm = let
@@ -224,6 +345,7 @@ in
 end
 
 fun COOPER_CONV tm = let
+  val (natgoal, natvalidation) = dealwith_nats tm
   fun stage2 tm =
     case non_presburger_subterms0 [] tm of
       [] => decide_fv_presburger tm
@@ -236,8 +358,8 @@ fun COOPER_CONV tm = let
             ("Not in the allowed subset; consider "^Parse.term_to_string t)
       end
 in
-  dealwith_nats THENC stage2
-end tm
+  natvalidation (stage2 natgoal)
+end
 
 val COOPER_PROVE = EQT_ELIM o COOPER_CONV
 val COOPER_TAC = CONV_TAC COOPER_CONV;
