@@ -305,7 +305,6 @@ fun get db s = Binaryset.find (fn f => (s = ty_name_of f)) db;
 fun add db f = Binaryset.add(db,f);
 val listItems = Binaryset.listItems;
 
-
 (*---------------------------------------------------------------------------
       General facility for interpreting types as terms. It takes a
       couple of environments (theta,gamma); theta maps type variables
@@ -354,7 +353,7 @@ fun type_size db ty =
 end
 
 (*---------------------------------------------------------------------------
-    Map a HOL type (ty) into a term having type :ty -> bool list.
+    Encoding: map a HOL type (ty) into a term having type :ty -> bool list
  ---------------------------------------------------------------------------*)
 
 local

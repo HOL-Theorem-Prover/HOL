@@ -315,12 +315,12 @@ fun lift_bool _ true  = T
 (*--------------------------------------------------------------------------*)
 
 val (comm_tm,assoc_tm,idem_tm,ldistrib_tm,rdistrib_tm) =
-    let val f = mk_var("f",Type.alpha --> Type.alpha --> Type.alpha)
-        val g = mk_var("g",Type.alpha --> Type.alpha --> Type.alpha)
-        val g1 = mk_var("g",Type.alpha --> Type.alpha)
-        val x = mk_var("x",Type.alpha)
-        val y = mk_var("y",Type.alpha)
-        val z = mk_var("z",Type.alpha)
+    let val f = mk_var("f",alpha --> alpha --> alpha)
+        val g = mk_var("g",alpha --> alpha --> alpha)
+        val g1 = mk_var("g",alpha --> alpha)
+        val x = mk_var("x",alpha)
+        val y = mk_var("y",alpha)
+        val z = mk_var("z",alpha)
    in (mk_eq(list_mk_comb(f,[x,y]),list_mk_comb(f,[y,x])),
        mk_eq(list_mk_comb(f,[x,list_mk_comb(f,[y,z])]),
              list_mk_comb(f,[list_mk_comb(f,[x,y]),z])),
