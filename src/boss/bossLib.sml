@@ -519,10 +519,22 @@ local
         optionTheory.option_case_def)
   val option_info' = TypeBase.put_size option_size_info option_info
 
+  val sum_info = Option.valOf(TypeBase.read "sum")
+  val sum_case = #const(Term.const_decl "sum_case")
+  val num = Type`:num`
+  val sum_case_into_num = inst [mk_vartype "'c" |-> num] sum_case
+  val f = mk_var{Name="f",Ty=alpha-->num}
+  val g = mk_var{Name="g",Ty=beta-->num}
+  val s = mk_var{Name="s",Ty=mk_type{Tyop="sum",Args=[alpha,beta]}}
+  val tm = list_mk_abs ([f,g,s], list_mk_comb(sum_case_into_num,[f,g,s]))
+  val sum_size_info = (tm,sumTheory.sum_case_def)
+  val sum_info' = TypeBase.put_size sum_size_info sum_info
+
 in
    val _ = TypeBase.write bool_info'
    val _ = TypeBase.write prod_info'
    val _ = TypeBase.write option_info'
+   val _ = TypeBase.write sum_info'
 end
 
 
