@@ -1648,6 +1648,14 @@ val FINITE_DIFF =
        FIRST_ASSUM (fn th => fn g => ASSUME_TAC (SPEC (--`t:'a set`--)th) g)
        THEN IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT]]);
 
+val FINITE_DIFF_down = store_thm(
+  "FINITE_DIFF_down",
+  ``!P Q. FINITE (P DIFF Q) /\ FINITE Q ==> FINITE P``,
+  Q_TAC SUFF_TAC `!Q. FINITE Q ==> !P. FINITE (P DIFF Q) ==> FINITE P` THEN1
+    PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][DIFF_EMPTY] THEN
+  PROVE_TAC [DIFF_INSERT, FINITE_DELETE]);
+
 val FINITE_SING =
     store_thm
     ("FINITE_SING",
@@ -1674,47 +1682,36 @@ val IMAGE_FINITE =
 
 open metisLib
 
-val finite_image0 = prove(
-  ``(!x y. (f x = f y) = (x = y)) ==>
-    !s. FINITE s ==> !s'. (s = IMAGE f s') ==> FINITE s'``,
-  STRIP_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
-  CONJ_TAC THENL [
-    SRW_TAC [][EXTENSION, IN_IMAGE] THEN
-    METIS_TAC [SET_CASES, IN_INSERT,
-               NOT_IN_EMPTY, FINITE_EMPTY],
-    Q.X_GEN_TAC `s` THEN STRIP_TAC THEN
-    Q.X_GEN_TAC `e` THEN STRIP_TAC THEN
-    Q.X_GEN_TAC `t` THEN STRIP_TAC THEN
-    `?x. x IN t /\ (f x = e)`
-        by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
-            METIS_TAC []) THEN
-    Q_TAC SUFF_TAC `?s0. (t = x INSERT s0) /\ (s = IMAGE f s0)` THEN1
-          NTAC 2 (SRW_TAC [][]) THEN
-    Q.EXISTS_TAC `t DELETE x` THEN
-    SRW_TAC [][INSERT_DELETE] THEN
-    SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
-    Q.X_GEN_TAC `y` THEN EQ_TAC THENL [
-      STRIP_TAC THEN
-      `?u. u IN t /\ (y = f u)`
-         by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, IN_IMAGE] THEN
-             METIS_TAC []) THEN
-      Q.EXISTS_TAC `u` THEN SRW_TAC [][IN_DELETE] THEN METIS_TAC [],
-      SIMP_TAC (srw_ss())[IN_DELETE] THEN
-      DISCH_THEN (Q.X_CHOOSE_THEN `z` STRIP_ASSUME_TAC) THEN
-      SRW_TAC [][] THEN
-      `f z IN IMAGE f t` by SRW_TAC [][IN_IMAGE] THEN
-      `f z IN (f x INSERT s)` by ASM_REWRITE_TAC [] THEN
-      POP_ASSUM MP_TAC THEN SRW_TAC [][]
-    ]
-  ]);
+
+val FINITELY_INJECTIVE_IMAGE_FINITE = store_thm(
+  "FINITELY_INJECTIVE_IMAGE_FINITE",
+  ``!f. (!x. FINITE { y | x = f y }) ==>
+        !s. FINITE (IMAGE f s) = FINITE s``,
+  GEN_TAC THEN STRIP_TAC THEN
+  SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM, IMAGE_FINITE] THEN
+  Q_TAC SUFF_TAC `!Q. FINITE Q ==> !P. (IMAGE f P = Q) ==> FINITE P` THEN1
+     SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][IMAGE_EQ_EMPTY] THEN
+  `Q = IMAGE f (P DIFF { y | e = f y})`
+     by (POP_ASSUM MP_TAC THEN
+         SRW_TAC [][EXTENSION, IN_IMAGE, GSPECIFICATION] THEN
+         PROVE_TAC []) THEN
+  `FINITE (P DIFF { y | e = f y})` by PROVE_TAC [] THEN
+  METIS_TAC [FINITE_DIFF_down]);
 
 val INJECTIVE_IMAGE_FINITE = store_thm(
   "INJECTIVE_IMAGE_FINITE",
   ``!f. (!x y. (f x = f y) = (x = y)) ==>
         !s. FINITE (IMAGE f s) = FINITE s``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  SRW_TAC [][EQ_IMP_THM, IMAGE_FINITE] THEN
-  IMP_RES_TAC finite_image0 THEN METIS_TAC []);
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC FINITELY_INJECTIVE_IMAGE_FINITE THEN
+  GEN_TAC THEN Cases_on `?e. x = f e` THENL [
+    POP_ASSUM STRIP_ASSUME_TAC THEN
+    Q_TAC SUFF_TAC `{y | x = f y} = {e}` THEN1 SRW_TAC [][] THEN
+    ASM_SIMP_TAC (srw_ss()) [GSPECIFICATION, EXTENSION] THEN PROVE_TAC [],
+    Q_TAC SUFF_TAC `{y | x = f y} = {}` THEN1 SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss()) [EXTENSION, GSPECIFICATION]
+  ]);
 val _ = export_rewrites ["INJECTIVE_IMAGE_FINITE"]
 
 (* =====================================================================*)
@@ -2672,6 +2669,14 @@ val BIGUNION_EMPTY = store_thm(
   ``BIGUNION EMPTY = EMPTY``,
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, NOT_IN_EMPTY]);
 
+val BIGUNION_EQ_EMPTY = store_thm(
+  "BIGUNION_EQ_EMPTY",
+  ``!P. ((BIGUNION P = {}) = (P = {}) \/ (P = {{}})) /\
+        (({} = BIGUNION P) = (P = {}) \/ (P = {{}}))``,
+  SRW_TAC [][EXTENSION, IN_BIGUNION, EQ_IMP_THM, FORALL_AND_THM] THEN
+  METIS_TAC [EXTENSION]);
+val _ = export_rewrites ["BIGUNION_EQ_EMPTY"]
+
 val BIGUNION_SING = store_thm(
   "BIGUNION_SING",
   ``!x. BIGUNION {x} = x``,
@@ -2718,6 +2723,52 @@ val FINITE_BIGUNION = store_thm(
   SIMP_TAC bool_ss [NOT_IN_EMPTY, FINITE_EMPTY, BIGUNION_EMPTY,
                     IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
                     BIGUNION_INSERT, FINITE_UNION]);
+
+val FINITE_BIGUNION_EQ = store_thm(
+  "FINITE_BIGUNION_EQ",
+  ``!P. FINITE (BIGUNION P) = FINITE P /\ (!s. s IN P ==> FINITE s)``,
+  SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM, FINITE_BIGUNION] THEN
+  Q_TAC SUFF_TAC
+        `!P. FINITE P ==>
+             !Q. (BIGUNION Q = P) ==> FINITE Q /\ !s. s IN Q ==> FINITE s`
+         THEN1 PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SIMP_TAC (srw_ss()) [DISJ_IMP_THM] THEN
+  REPEAT (GEN_TAC ORELSE DISCH_THEN STRIP_ASSUME_TAC) THEN
+  `BIGUNION (IMAGE (\s. s DELETE e) Q) = P`
+     by (REWRITE_TAC [EXTENSION] THEN
+         ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
+                      [IN_BIGUNION, IN_IMAGE, IN_DELETE] THEN
+         GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+           `x IN BIGUNION Q`
+              by (SRW_TAC [][IN_BIGUNION] THEN METIS_TAC []) THEN
+           POP_ASSUM MP_TAC THEN SRW_TAC [][],
+           `x IN (e INSERT P)` by SRW_TAC [][] THEN
+           `~(x = e)` by PROVE_TAC [] THEN
+           `x IN BIGUNION Q` by SRW_TAC [][] THEN
+           POP_ASSUM MP_TAC THEN SRW_TAC [][IN_BIGUNION]
+         ]) THEN
+  `FINITE (IMAGE (\s. s DELETE e) Q) /\
+   !s. s IN IMAGE (\s. s DELETE e) Q ==> FINITE s` by PROVE_TAC [] THEN
+  CONJ_TAC THENL [
+    Q_TAC SUFF_TAC `!x. FINITE { y | x = (\s. s DELETE e) y }` THEN1
+       METIS_TAC [FINITELY_INJECTIVE_IMAGE_FINITE] THEN
+    GEN_TAC THEN SIMP_TAC (srw_ss()) [] THEN
+    Cases_on `e IN x` THENL [
+      Q_TAC SUFF_TAC `{y | x = y DELETE e} = {}` THEN1 SRW_TAC [][] THEN
+      SRW_TAC [][EXTENSION, IN_DELETE, GSPECIFICATION] THEN
+      PROVE_TAC [],
+      Q_TAC SUFF_TAC `{y | x = y DELETE e} = {x; e INSERT x}` THEN1
+         SRW_TAC [][] THEN
+      SRW_TAC [][EXTENSION, IN_DELETE, GSPECIFICATION] THEN METIS_TAC []
+    ],
+    REPEAT STRIP_TAC THEN
+    `(s DELETE e) IN IMAGE (\s. s DELETE e) Q`
+        by (SRW_TAC [][IN_IMAGE] THEN PROVE_TAC []) THEN
+    `FINITE (s DELETE e)` by PROVE_TAC [] THEN
+    PROVE_TAC [FINITE_DELETE]
+  ]);
+val _ = export_rewrites ["FINITE_BIGUNION_EQ"]
 
 (* ----------------------------------------------------------------------
     BIGINTER (intersection of a set of sets)
@@ -3528,10 +3579,10 @@ val KL_lemma1 = prove(
           SRW_TAC [][GSYM RIGHT_EXISTS_AND_THM, IN_BIGUNION, IN_IMAGE,
                      GSPECIFICATION] THEN
           PROVE_TAC [relationTheory.RTC_CASES1]) THEN
-  POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][] THEN
-  MATCH_MP_TAC FINITE_BIGUNION THEN
-  SRW_TAC [][IMAGE_FINITE, IN_IMAGE, GSPECIFICATION] THEN
-  RES_TAC);
+  POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][IN_IMAGE] THENL [
+    SRW_TAC [][IMAGE_FINITE, IN_IMAGE, GSPECIFICATION],
+    RES_TAC
+  ]);
 
 (* effectively taking the contrapositive of the above, saying that if R is
    finitely branching, and we're on top of an infinite R tree, then one of
