@@ -356,7 +356,7 @@ in
        BinIO.output(ostrm, v);
        BinIO.closeIn instrm;
        BinIO.closeOut ostrm;
-       mk_xable tgt0;
+       mk_xable tgt;
        true
      end handle e => false
   then
