@@ -23,7 +23,7 @@ val is_pair = pairSyntax.is_pair
 
 val UNCURRY_THM = pairTheory.UNCURRY
 
-val hol_ss = bool_ss ++ optionSimps.OPTION_ss ++ listSimps.list_ss ++
+val hol_ss = bool_ss ++ optionSimps.OPTION_ss ++ listSimps.LIST_ss ++
                         numSimps.ARITH_ss ++ numSimps.REDUCE_ss ++
                         pairSimps.PAIR_ss ++ rewrites [UNCURRY_THM] ++
                         combinSimps.COMBIN_ss
