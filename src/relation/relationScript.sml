@@ -314,6 +314,17 @@ GEN_TAC
  THEN TC_INDUCT_TAC
  THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]);
 
+val TC_MONOTONE = store_thm(
+  "TC_MONOTONE",
+  ``!R Q. (!x y. R x y ==> Q x y) ==> (!x y. TC R x y ==> TC Q x y)``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN TC_INDUCT_TAC THEN
+  ASM_MESON_TAC [TC_RULES]);
+
+val RTC_MONOTONE = store_thm(
+  "RTC_MONOTONE",
+  ``!R Q. (!x y. R x y ==> Q x y) ==> (!x y. RTC R x y ==> RTC Q x y)``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN
+  ASM_MESON_TAC [RTC_RULES]);
 
 (*---------------------------------------------------------------------------*
  * Wellfounded relations. Applications of wellfoundedness to specific types  *
