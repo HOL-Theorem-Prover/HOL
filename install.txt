@@ -5,7 +5,7 @@ Get the Hol98 sources by WWW from
 
      http://www.cl.cam.ac.uk/ftp/hvg/hol98/working.tar.gz
 
-and the Moscow ML compiler (version 1.43 or greater) from
+and the Moscow ML compiler (version 1.44 or greater) from
 
      http://www.dina.kvl.dk/~sestoft/mosml.html
 
@@ -16,11 +16,12 @@ Building the Hol98 system.
 A. First, install Moscow ML. This is usually straightforward. The
    directory where it lives will be called <mosml-dir> in the following.
 
-   [Notice that, if you intend to use ML embeddings of C libraries, 
-    like the Robdd library, you are so far restricted to running on Linux,
-    Solaris, and OSF/1. Furthermore, you may have to set a few shell
-    variables in order to use C libraries; this is explained in the
-    MoscowML installation directions.]
+   [ Notice that, if you intend to use ML embeddings of C libraries, 
+     like the Robdd library, you are so far restricted to running on Linux,
+     Solaris, and OSF/1. Furthermore, you may have to set a few shell
+     variables in order to use C libraries; this is explained in the
+     MoscowML installation directions.
+   ]
 
 
 B. Unpack Hol98 with the commands
@@ -112,8 +113,12 @@ Dealing with failure.
 ---------------------
 
    * Send a message to hol-support@cl.cam.ac.uk giving a full transcript of
-     the failed installation, including details of the hardware and OS (and
-     also the version of MoscowML being used).
+     the failed installation. Also make sure that you include the
+     following details:
+
+           . hardware/OS the build failed on
+           . version of MoscowML being used
+           . version of Hol98 being built
 
    * If a build attempt fails for some reason, you should attempt to invoke 
 
