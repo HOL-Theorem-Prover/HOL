@@ -11,6 +11,7 @@
 (require 'thingatpt)
 
 (define-prefix-command 'hol-map)
+(define-prefix-command 'hol-d-map)
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
 (make-variable-buffer-local 'hol-loaded-modules)
@@ -525,7 +526,10 @@ name of the module to load."
     (call-interactively 'hol-open-string)))
 
 
-
+(defun hol-db-match (tm)
+  "Does a DB.match [] on the given TERM (given as a string, without quotes)."
+  (interactive "sTerm to match on: ")
+  (send-raw-string-to-hol (format "DB.match [] (Term`%s`)" tm)))
 
 (define-key global-map "\M-h" 'hol-map)
 
@@ -538,7 +542,9 @@ name of the module to load."
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
 (define-key hol-map "\M-v" 'hol-scroll-down)
 (define-key hol-map "b"    'hol-backup)
-(define-key hol-map "d"    'hol-drop-goal)
+(define-key hol-map "d"    'hol-d-map)
+  (define-key hol-d-map "r"  'hol-drop-goal)
+  (define-key hol-d-map "m"  'hol-db-match)
 (define-key hol-map "e"    'copy-region-as-hol-tactic)
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "h"    'hol98)
