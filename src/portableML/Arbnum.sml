@@ -383,25 +383,35 @@ fun gcd(i,j) = if i = zero then j
                else gcd' i j
 end
 
+fun intexp(base,exponent) = let
+  fun recurse acc b n =
+      if Int.<=(n,0) then acc
+      else if Int.mod(n,2) = 1 then
+        recurse (Int.*(acc, b)) b (Int.-(n,1))
+      else recurse acc (Int.*(b,b)) (Int.div(n,2))
+in
+  recurse 1 base exponent
+end
+
 fun genFromString rdx = let
   open StringCvt
-  val (chunksize, chunkshift) =
+  val (base, chunksize, chunkshift) =
       case rdx of
-        BIN => (10, fromInt 1024)
-      | OCT => (5, fromInt 32768)
-      | DEC => (5, fromInt 100000)
-      | HEX => (5, fromInt 1048576)
+        BIN => (2, 10, fromInt 1024)
+      | OCT => (8, 5, fromInt 32768)
+      | DEC => (10, 5, fromInt 100000)
+      | HEX => (16, 5, fromInt 1048576)
   val scanner = Int.scan rdx
   fun readchunk s = StringCvt.scanString scanner s
   fun recurse acc s = let
     val sz = size s
   in
     if Int.<=(sz, chunksize) then
-      chunkshift * acc + fromInt (valOf (readchunk s))
+      fromInt (intexp(base,sz)) * acc + fromInt (valOf (readchunk s))
     else let
         val sz_less_cs = Int.-(sz, chunksize)
-        val pfx = substring(s, 0, sz_less_cs)
-        val sfx = substring(s, sz_less_cs, chunksize)
+        val pfx = substring(s, 0, chunksize)
+        val sfx = String.extract(s, chunksize, NONE)
       in
         recurse (chunkshift * acc + fromInt (valOf (readchunk pfx))) sfx
       end
