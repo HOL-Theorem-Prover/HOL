@@ -33,6 +33,13 @@ in
   compset
 end;
 
+(* ----------------------------------------------------------------------
+    add integer reductions to the global compset
+   ---------------------------------------------------------------------- *)
+
+val _ = let open computeLib in add_funs elim_thms end;
+
+
 val REDUCE_CONV = computeLib.CBV_CONV (int_compset())
 
 
