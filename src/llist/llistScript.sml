@@ -1,20 +1,27 @@
-open HolKernel boolLib Parse
+structure llistScript = 
+struct
 
-open SingleStep mesonLib Rsyntax Prim_rec
+(* interactive use:
+app load ["boolSimps","pairSimps","combinSimps",
+          "optionSimps", "arithSimps", "listSimps",
+          "mesonLib","SingleStep", "Q", "numLib"];
+
+ open SingleStep mesonLib Rsyntax Prim_rec simpLib 
+      boolSimps pairSimps combinSimps optionSimps arithSimps listSimps;
+*)
+open HolKernel boolLib Parse
+      SingleStep mesonLib Rsyntax Prim_rec simpLib 
+      boolSimps pairSimps combinSimps optionSimps arithSimps listSimps;
 
 local open listTheory optionTheory pairTheory in end;
 
 infix THEN THENL THENC ++
 infix 8 by
 
-open simpLib boolSimps
 
 val is_pair = pairSyntax.is_pair
 
-val UNCURRY_THM = prove(
-  ``!p f. UNCURRY f p = f (FST p) (SND p)``,
-  REPEAT GEN_TAC THEN Cases_on `p` THEN
-  SIMP_TAC bool_ss [pairTheory.UNCURRY_DEF, pairTheory.FST, pairTheory.SND]);
+val UNCURRY_THM = pairTheory.UNCURRY
 
 val hol_ss = bool_ss ++ optionSimps.OPTION_ss ++ listSimps.list_ss ++
                         arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss ++
@@ -26,8 +33,7 @@ val ELIM1_TAC =
   let fun apply thm =
         let fun chkeq thm =
               let val con = concl thm
-              in
-                  is_var (lhs con) andalso not (free_in (lhs con) (rhs con))
+              in is_var (lhs con) andalso not (free_in (lhs con) (rhs con))
               end
             fun check thm =
               let val con = concl thm in
@@ -93,8 +99,8 @@ val type_inhabited = prove(
   Q.EXISTS_TAC `\x. NONE` THEN
   SIMP_TAC bool_ss [lrep_ok, optionTheory.NOT_NONE_SOME]);
 
-val llist_tydef = Rsyntax.new_type_definition
-  {name = "llist", inhab_thm = type_inhabited};
+val llist_tydef = 
+  new_type_definition ("llist", type_inhabited);
 
 val repabs_fns = define_new_type_bijections {
   name = "llist_absrep",
@@ -320,8 +326,10 @@ val LHDTL_CONS_THM = store_thm(
   REPEAT STRIP_TAC THEN SIMP_TAC hol_ss [LHD, LCONS, lcons_repabs, LTL] THEN
   SIMP_TAC hol_ss [lcons_rep, ldest_rep, llist_absrep]);
 
+(* &&& FAILS  ... last tactic ... appears not to understand alpha-conv! ... *)
 val lrep_ltl = prove(
-  ``!h t. lrep_ok t ==> lrep_ok (\sfx. t (h::sfx))``,
+(*  ``!h t. lrep_ok t ==> lrep_ok (\sfx. t (h::sfx))``, *)
+  ``!h t. lrep_ok t ==> lrep_ok (\l. t (h::l))``,
   SIMP_TAC hol_ss [lrep_ok] THEN REPEAT STRIP_TAC THEN
   RES_TAC THEN IMP_RES_TAC lrep_take_LENGTH THEN
   FULL_SIMP_TAC hol_ss [] THEN ELIM_TAC THEN
@@ -402,14 +410,13 @@ val LHD_THM = store_thm(
   SIMP_TAC hol_ss [LHDTL_CONS_THM] THEN
   SIMP_TAC hol_ss [LHD, LNIL, lnil_repabs, ldest_rep] THEN
   SIMP_TAC hol_ss [lnil_rep]);
+
 val LTL_THM = store_thm(
   "LTL_THM",
   ``(LTL LNIL = NONE) /\ (!h t. LTL (LCONS h t) = SOME t)``,
   SIMP_TAC hol_ss [LHDTL_CONS_THM] THEN
   SIMP_TAC hol_ss [LTL, LNIL, lnil_repabs, ldest_rep] THEN
   SIMP_TAC hol_ss [lnil_rep]);
-
-
 
 val LCONS_NOT_NIL = store_thm(
   "LCONS_NOT_NIL",
@@ -498,7 +505,7 @@ val LHDTL_EQ_SOME = store_thm(
 
 
 (* now we can define MAP  *)
-val LMAP = Rsyntax.new_specification {
+val LMAP = new_specification {
   consts = [{const_name = "LMAP", fixity = Prefix}], name = "LMAP",
   sat_thm = prove(
     ``?LMAP. (!f. LMAP f LNIL = LNIL) /\
@@ -518,7 +525,6 @@ val LMAP = Rsyntax.new_specification {
                  Q.SPEC `f`) THEN
       ASM_SIMP_TAC hol_ss [LHDTL_EQ_SOME]
     ])};
-
 
 
 val LTAKE = Prim_rec.new_recursive_definition {
@@ -645,7 +651,7 @@ val LAPPEND = new_specification{
     ``?LAPPEND. (!x. LAPPEND LNIL x = x) /\
                (!h t x. LAPPEND (LCONS h t) x = LCONS h (LAPPEND t x))``,
     STRIP_ASSUME_TAC
-       (Q.ISPEC `\ (l1,l2).
+       (Q.ISPEC `\(l1,l2).
                      if l1 = LNIL then
                         if l2 = LNIL then NONE
                         else SOME ((l1, THE (LTL l2)), THE (LHD l2))
@@ -1580,3 +1586,4 @@ val LFLATTEN_APPEND = store_thm(
 
 val _ = export_theory();
 
+end;
