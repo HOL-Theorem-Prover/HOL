@@ -297,11 +297,18 @@ local
   end
 
 
-  fun remove_lets t =
-    traverse (fn COMB(COMB(VAR "let", _), _) => true | _ => false)
-    (fn f => (fn COMB(COMB(VAR "let", t1), t2) => munge_let (f t1) (f t2)
-  | _ => raise Fail "Can't happen")) t
-
+  fun remove_lets t0 = let
+    fun let_remove f (COMB(COMB(VAR "let", t1), t2)) = munge_let (f t1) (f t2)
+      | let_remove _ _ = raise Fail "Can't happen"
+    val t1 =
+      traverse (fn COMB(COMB(VAR "let", _), _) => true | _ => false) let_remove
+      t0
+    val _ =
+      traverse (fn VAR("and") => true | _ => false)
+      (fn _ => raise ERROR "Term" "Invalid use of reserved word and") t1
+  in
+    t1
+  end
 in
 
   fun do_parse G ty = let
