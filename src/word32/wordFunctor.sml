@@ -303,8 +303,8 @@ val BITWISE_ONE_COMP_LEM = prove(
   Induct_on `n`
     THEN REPEAT STRIP_TAC
     THENL [
-      R_RW_TAC [SET_def,BIT_def,BITWISE_def,NOT_BITS2],
-      A_RW_TAC [BITWISE_def,SET_def,REWRITE_RULE [SLICE_THM] BITS_SUC2]
+      R_RW_TAC [SBIT_def,BIT_def,BITWISE_def,NOT_BITS2],
+      A_RW_TAC [BITWISE_def,SBIT_def,REWRITE_RULE [SLICE_THM] BITS_SUC2]
         THEN RULE_ASSUM_TAC (SIMP_RULE bool_ss [NOT_BIT,NOT_BITS,BIT_def])
         THEN ASM_A_SIMP_TAC [MULT_CLAUSES]
         THENL [
@@ -488,43 +488,43 @@ val BIT_DIV2 = prove(
 );
 
 val lemma1 = prove(
-  `!a b n. 0 < n ==> ((a + SET b n) DIV 2 = a DIV 2 + SET b (n - 1))`,
-  A_RW_TAC [SET_def]
+  `!a b n. 0 < n ==> ((a + SBIT b n) DIV 2 = a DIV 2 + SBIT b (n - 1))`,
+  A_RW_TAC [SBIT_def]
     THEN IMP_RES_TAC LESS_ADD_1
     THEN A_FULL_SIMP_TAC [GSYM ADD1,ADD_DIV_ADD_DIV2,EXP]
 );
 
 val lemma2 = prove(
-  `!b n. 2 * (SET b n) = SET b (n + 1)`,
-  B_RW_TAC [MULT_CLAUSES,SET_def,GSYM ADD1,EXP]
+  `!b n. 2 * (SBIT b n) = SBIT b (n + 1)`,
+  B_RW_TAC [MULT_CLAUSES,SBIT_def,GSYM ADD1,EXP]
 );
 
 val lemma3 = prove(
-  `!n op a b. 0 < n ==> (BITWISE n op a b MOD 2 = SET (op (LSBn a) (LSBn b)) 0)`,
+  `!n op a b. 0 < n ==> (BITWISE n op a b MOD 2 = SBIT (op (LSBn a) (LSBn b)) 0)`,
   B_RW_TAC [LSBn_def]
     THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC [MATCH_MP ((GSYM o SPEC `0`) BITWISE_THM) th])
-    THEN B_RW_TAC [GSYM LSBn_def,LSB_ODD,ODD_MOD2_LEM,SET_def,EXP]
+    THEN B_RW_TAC [GSYM LSBn_def,LSB_ODD,ODD_MOD2_LEM,SBIT_def,EXP]
     THEN B_FULL_SIMP_TAC [GSYM NOT_MOD2_LEM]
 );
 
 val lemma4 = prove(
-  `!n op a b. 0 < n /\ BITWISE n op a b <= SET (op (LSBn a) (LSBn b)) 0 ==>
-              (BITWISE n op a b = SET (op (LSBn a) (LSBn b)) 0)`,
-  A_RW_TAC [LSBn_def,SET_def,EXP]
+  `!n op a b. 0 < n /\ BITWISE n op a b <= SBIT (op (LSBn a) (LSBn b)) 0 ==>
+              (BITWISE n op a b = SBIT (op (LSBn a) (LSBn b)) 0)`,
+  A_RW_TAC [LSBn_def,SBIT_def,EXP]
     THEN IMP_RES_TAC BIT_SET_NOT_ZERO_COR2
     THEN ASM_A_SIMP_TAC []
 );
 
 val BITWISE_ISTEP = store_thm("BITWISE_ISTEP",
   `!n op a b. 0 < n ==> (BITWISE n op (a DIV 2) (b DIV 2) =
-                        (BITWISE n op a b) DIV 2 + SET (op (BIT n a) (BIT n b)) (n - 1))`,
+                        (BITWISE n op a b) DIV 2 + SBIT (op (BIT n a) (BIT n b)) (n - 1))`,
   Induct_on `n`
     THEN REPEAT STRIP_TAC
     THENL [
        A_FULL_SIMP_TAC [],
        Cases_on `n = 0`
          THENL [
-            R_RW_TAC [BITWISE_def,SET_def,BIT_DIV2],
+            R_RW_TAC [BITWISE_def,SBIT_def,BIT_DIV2],
             B_FULL_SIMP_TAC [NOT_ZERO_LT_ZERO,BITWISE_def,SUC_SUB1,BIT_DIV2,lemma1]
          ]
     ]
@@ -532,7 +532,7 @@ val BITWISE_ISTEP = store_thm("BITWISE_ISTEP",
 
 val BITWISE_EVAL = store_thm("BITWISE_EVAL",
   `!n op a b. BITWISE (SUC n) op a b =
-         2 * (BITWISE n op (a DIV 2) (b DIV 2)) + SET (op (LSBn a) (LSBn b)) 0`,
+         2 * (BITWISE n op (a DIV 2) (b DIV 2)) + SBIT (op (LSBn a) (LSBn b)) 0`,
   REPEAT STRIP_TAC
     THEN Cases_on `n = 0`
     THENL [
@@ -564,12 +564,12 @@ val BITWISE_WELLDEF = store_thm("BITWISE_WELLDEF",
          THEN Cases_on `n < WL`
          THENL [
             IMP_RES_TAC BIT_EQUIV THEN NTAC 4 (POP_ASSUM (K ALL_TAC))
-              THEN A_RW_TAC [SET_def]
+              THEN A_RW_TAC [SBIT_def]
               THEN B_FULL_SIMP_TAC [EQUIV_def]
               THEN ONCE_REWRITE_TAC [MOD_ADD]
               THEN ASM_B_SIMP_TAC [],
             RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS])
-              THEN A_RW_TAC [SET_def]
+              THEN A_RW_TAC [SBIT_def]
               THEN B_FULL_SIMP_TAC [EQUIV_def]
               THEN ONCE_REWRITE_TAC [MOD_ADD]
               THEN ASM_A_SIMP_TAC [MODw_IDEM2,MODw_2EXP_GT_WL]
@@ -625,9 +625,9 @@ val TOw_WELLDEF = store_thm("TOw_WELLDEF",
 (* -------------------------------------------------------- *)
 
 val LSR_ONE_def = Define `LSR_ONE a = MODw a DIV 2`;
-val ASR_ONE_def = Define `ASR_ONE a = LSR_ONE a + SET (MSBn a) HB`;
-val ROR_ONE_def = Define `ROR_ONE a = LSR_ONE a + SET (LSBn a) HB`;
-val RRXn_def    = Define `RRXn c a  = LSR_ONE a + SET c HB`;
+val ASR_ONE_def = Define `ASR_ONE a = LSR_ONE a + SBIT (MSBn a) HB`;
+val ROR_ONE_def = Define `ROR_ONE a = LSR_ONE a + SBIT (LSBn a) HB`;
+val RRXn_def    = Define `RRXn c a  = LSR_ONE a + SBIT c HB`;
 
 val LSR_ONE_WELLDEF = store_thm("LSR_ONE_WELLDEF",
   `!a b. a == b ==> LSR_ONE a == LSR_ONE b`,
@@ -718,6 +718,8 @@ val [ADDw,ADD_0w,ADD1w,ADD_ASSOCw,ADD_CLAUSESw,
 
 val _ = remove_termtok {term_name = "COND", tok = "=>"};
 
+val _ = overload_on ("NOT", Term`$word_1comp`);
+
 val _ = overload_on ("+", Term`$word_add`);
 val _ = overload_on ("*", Term`$word_mul`);
 val _ = overload_on ("&", Term`$bitwise_and`);
@@ -730,6 +732,7 @@ val _ = add_infix("#",600,HOLgrammars.LEFT);
 val _ = add_infix("<<",680,HOLgrammars.LEFT);
 val _ = add_infix(">>",680,HOLgrammars.LEFT);
 val _ = add_infix(">>>",680,HOLgrammars.LEFT);
+val _ = add_infix("#>>",680,HOLgrammars.LEFT);
 
 val bool_not = Term`$~`
 val _ = overload_on ("~", Term`$word_2comp`);
@@ -814,14 +817,15 @@ val word_asr_def =
   new_infixl_definition
    ("word_asr",`$word_asr a n = FUNPOW word_asr1 n a`,680);
 
+val word_ror_def =
+  new_infixl_definition
+   ("word_ror",`$word_ror a n = FUNPOW word_ror1 n a`,680);
+
 val _ = overload_on ("-", Term`$word_sub`);
 val _ = overload_on ("<<", Term`$word_lsl`);
 val _ = overload_on (">>", Term`$word_asr`);
 val _ = overload_on (">>>", Term`$word_lsr`);
-
-val word_ror_def =
-  new_infixl_definition
-   ("word_ror",`$ROR a n = FUNPOW word_ror1 n a`,680);
+val _ = overload_on ("#>>", Term`$word_ror`);
 
 val BITw_def   = Define `BITw b n = BIT b (w2n n)`;
 val BITSw_def  = Define `BITSw h l n = BITS h l (w2n n)`;
@@ -883,7 +887,7 @@ val SUB_SUBw = store_thm("SUB_SUBw",
 );
 
 val ONE_COMP_TWO_COMP = store_thm("ONE_COMP_TWO_COMP",
-  `!a. word_1comp a = ~a - w_1`,
+  `!a. NOT a = ~a - w_1`,
   B_RW_TAC [TWO_COMP_ONE_COMP,ADD_SUBw]
 );
 
@@ -981,7 +985,7 @@ val MUL_EVAL = store_thm("MUL_EVAL",
   SELECT_WORD_TAC word_mul_def MUL_WELLDEF);
 
 val ONE_COMP_EVAL = store_thm("ONE_COMP_EVAL",
-  `word_1comp (n2w a) = n2w (ONE_COMP a)`,
+  `NOT (n2w a) = n2w (ONE_COMP a)`,
   SELECT_WORD_TAC word_1comp_def ONE_COMP_WELLDEF);
 
 val TWO_COMP_EVAL = store_thm("TWO_COMP_EVAL",
@@ -1065,7 +1069,7 @@ val ASR_ADD = store_thm("ASR_ADD",
 );
 
 val ROR_ADD = store_thm("ROR_ADD",
-  `!a m n. a ROR m ROR n = a ROR (m + n)`,
+  `!a m n. a #>> m #>> n = a #>> (m + n)`,
   A_SIMP_TAC [word_ror_def,FUNPOW_COMP]
 );
 
@@ -1192,12 +1196,12 @@ val BITS00 = GEN_ALL (REWRITE_CONV [SUC_SUB,DIV1,EXP,EXP_1,SYM TWO,BITS_THM] (Te
 val SPEC_MOD_PLUS_1 = REWRITE_RULE [WL_POS] (SPEC `WL` MOD_PLUS_1);
 val SPEC_MOD_ADD_1  = REWRITE_RULE [WL_POS] (SPEC `WL` MOD_ADD_1);
 
-(* |- !n x. n ROR (SUC x) = word_ror1 (n ROR x) *)
+(* |- !n x. n #>> (SUC x) = word_ror1 (n #>> x) *)
 val ROR_LEM = GEN_ALL (RIGHT_REWRITE_RULE [GSYM word_ror_def]
-                 (SIMP_CONV bool_ss [word_ror_def,FUNPOW_THM2] (Term`n ROR (SUC x)`)));
+                 (SIMP_CONV bool_ss [word_ror_def,FUNPOW_THM2] (Term`n #>> (SUC x)`)));
 
 val ROR_THM = store_thm("ROR_THM",
-  `!x n. (n2w n) ROR x = let x' = x MOD WL in
+  `!x n. (n2w n) #>> x = let x' = x MOD WL in
                           n2w (BITS HB x' n + (BITS (x' - 1) 0 n) * 2 EXP (WL - x'))`,
   Induct_on `x`
     THEN REPEAT STRIP_TAC
@@ -1212,7 +1216,7 @@ val ROR_THM = store_thm("ROR_THM",
                             MODw_ELIM,ADD_DIV_ADD_DIV,BITS_DIV_THM2,BITS_ZERO,
                             LSB_ODD,ODD_MOD2_LEM,MOD_TIMES]
              THENL [
-               R_RW_TAC [SET_def,BIT_def] THEN B_FULL_SIMP_TAC [NOT_BITS2],
+               R_RW_TAC [SBIT_def,BIT_def] THEN B_FULL_SIMP_TAC [NOT_BITS2],
                IMP_RES_TAC NOT_ZERO_ADD1
                  THEN ASM_B_SIMP_TAC [SUC_SUB1,SIMP_RULE arith_ss [] (SPECL [`p`,`0`] BITS_SUC)]
              ],
@@ -1239,7 +1243,7 @@ val ROR_THM = store_thm("ROR_THM",
 );
 
 val ROR_CYCLE = store_thm("ROR_CYCLE",
-  `!x w. w ROR (x * WL) = w`,
+  `!x w. w #>> (x * WL) = w`,
   REPEAT STRIP_TAC
     THEN STRUCT_CASES_TAC (SPEC `w` word_nchotomy)
     THEN A_SIMP_TAC [MOD_EQ_0,WL_POS,ROR_THM,n2w_TIMES2,SYM MODw_THM,MODw_ELIM]
@@ -1361,9 +1365,9 @@ val ASR_THM = store_thm("ASR_THM",
     THENL [
       A_RW_TAC [word_asr_def,FUNPOW,MIN_DEF,SYM MODw_THM,MODw_ELIM],
       POP_ASSUM
-        (fn th => S_RW_TAC [th,REDUCE_RULE (SPEC `F` SET_def),lem3,lem7,
+        (fn th => S_RW_TAC [th,REDUCE_RULE (SPEC `F` SBIT_def),lem3,lem7,
                             lem,lem2,MIN_DEF,ASR_LEM,ASR_ONE_EVAL,ASR_ONE_def])
-        THEN A_FULL_SIMP_TAC [BITS_ZERO,lem9,SET_def]
+        THEN A_FULL_SIMP_TAC [BITS_ZERO,lem9,SBIT_def]
         THEN ASM_A_SIMP_TAC [lem8c,lem4,BITS_ZERO,WL_SUB_HB,WL_SUB_SUC_X]
         THENL [
           RW_TAC arithr_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
@@ -1402,13 +1406,13 @@ val ASR_LIMIT = store_thm("ASR_LIMIT",
 
 val ZERO_SHIFT = store_thm("ZERO_SHIFT",
   `(!n. w_0 << n = w_0) /\ (!n. w_0 >> n = w_0) /\
-   (!n. w_0 >>> n = w_0) /\ (!n. w_0 ROR n = w_0)`,
+   (!n. w_0 >>> n = w_0) /\ (!n. w_0 #>> n = w_0)`,
   A_RW_TAC [MUL_EVAL,word_lsl_def,w_0,ASR_THM,BITS_ZERO2,MSBn_def,BIT_def,LSR_THM,ROR_THM]
 );
 
 val ZERO_SHIFT2 = store_thm("ZERO_SHIFT2",
   `(!a. a << 0 = a) /\ (!a. a >> 0 = a) /\
-   (!a. a >>> 0 = a) /\ (!a. a ROR 0 = a)`,
+   (!a. a >>> 0 = a) /\ (!a. a #>> 0 = a)`,
   A_RW_TAC [word_lsr_def,word_asr_def,word_ror_def,word_lsl_def,FUNPOW,GSYM w_1,MULT_CLAUSESw]
 );
 
@@ -1451,19 +1455,19 @@ val ASR_w_T = store_thm("ASR_w_T",
     THENL [
       REWRITE_TAC [ZERO_SHIFT2],
       ASM_REWRITE_TAC [ASR_LEM,ASR_ONE_EVAL,w_T_def,GSYM n2w_def,ASR_ONE_def,LSR_ONE,BITS_THM,EXP_1,
-                       SET_def,MSB_COMP0]
+                       SBIT_def,MSB_COMP0]
         THEN A_SIMP_TAC [COMP0_def,ONE_COMP_def,MODw_THM,BITS_ZERO2,WL_def,lem4,lem5]
         THEN REWRITE_TAC [EXP]
     ]
 );
 
 val ROR_w_T = store_thm("ROR_w_T",
-  `!n. w_T ROR n = w_T`,
+  `!n. w_T #>> n = w_T`,
   Induct_on `n`
     THENL [
       REWRITE_TAC [ZERO_SHIFT2],
       ASM_REWRITE_TAC [ROR_LEM,ROR_ONE_EVAL,w_T_def,GSYM n2w_def,ROR_ONE_def,LSR_ONE,BITS_THM,EXP_1,
-                       SET_def,LSB_COMP0]
+                       SBIT_def,LSB_COMP0]
         THEN A_SIMP_TAC [COMP0_def,ONE_COMP_def,MODw_THM,BITS_ZERO2,WL_def,lem4,lem5]
         THEN REWRITE_TAC [EXP]
     ]
@@ -1526,7 +1530,7 @@ val BITWISE_EVAL2 = store_thm("BITWISE_EVAL2",
     THEN Cases_on `n = 0`
     THEN ASM_REWRITE_TAC [BITWISE_def]
     THEN IMP_RES_TAC NOT_ZERO_ADD1
-    THEN A_FULL_SIMP_TAC [BITWISE_EVAL,SET_def,EXP,LSB_ODD]
+    THEN A_FULL_SIMP_TAC [BITWISE_EVAL,SBIT_def,EXP,LSB_ODD]
 );
 
 (* -------------------------------------------------------- *)

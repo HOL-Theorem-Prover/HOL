@@ -38,7 +38,7 @@ val word_compset =
       numeralTheory.numeral_funpow,
       pairTheory.UNCURRY_DEF,
       TIMES_2EXP_def,DIV_2EXP_def,MOD_2EXP_def,DIVMOD_2EXP_def,
-      MSBn_def,SET_def,BITS_THM,BIT_def,SLICE_def,LET_THM] rws
+      MSBn_def,SBIT_def,BITS_THM,BIT_def,SLICE_def,LET_THM] rws
 in
    rws
 end;

@@ -21,7 +21,7 @@ val MOD_2EXP_def    = Define `MOD_2EXP x n = n MOD 2 EXP x`;
 
 val DIVMOD_2EXP_def = Define `DIVMOD_2EXP x n = (n DIV 2 EXP x,n MOD 2 EXP x)`;
  
-val SET_def         = Define `SET b n = if b then 2 EXP n else 0`;
+val SBIT_def        = Define `SBIT b n = if b then 2 EXP n else 0`;
  
 val BITS_def        = Define `BITS h l n = MOD_2EXP (SUC h-l) (DIV_2EXP l n)`;
  
@@ -35,7 +35,7 @@ val BITWISE_def =
   Define`
      (BITWISE 0 op x y = 0)
   /\ (BITWISE (SUC n) op x y =
-         BITWISE n op x y + SET (op (BIT n x) (BIT n y)) n)`;
+         BITWISE n op x y + SBIT (op (BIT n x) (BIT n y)) n)`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -481,12 +481,12 @@ val BIT_SLICE = store_thm("BIT_SLICE",
 );
 
 val BIT_SLICE_LEM = store_thm("BIT_SLICE_LEM",
-  `!y x n. SET (BIT x n) (x + y) = (SLICE x x n) * 2 EXP y`,
-  A_RW_TAC [SET_def,BIT_SLICE,SLICE_THM,BIT_def,EXP_ADD]
+  `!y x n. SBIT (BIT x n) (x + y) = (SLICE x x n) * 2 EXP y`,
+  A_RW_TAC [SBIT_def,BIT_SLICE,SLICE_THM,BIT_def,EXP_ADD]
     THEN B_FULL_SIMP_TAC [GSYM NOT_BITS]
 );
 
-(* |- !x n. SET (BIT x n) x = SLICE x x n *)
+(* |- !x n. SBIT (BIT x n) x = SLICE x x n *)
 val BIT_SLICE_THM = save_thm("BIT_SLICE_THM",
    SIMP_RULE arith_ss [EXP] (SPEC `0` BIT_SLICE_LEM)
 );
@@ -505,29 +505,29 @@ val SUB_BITS = prove(
     ]
 );
  
-val SET_DIV = store_thm("SET_DIV",
-  `!b m n. n < m ==> (SET b (m - n) = SET b m DIV 2 EXP n)`,
-  B_RW_TAC [SET_def,ZERO_DIV,ZERO_LT_TWOEXP,SIMP_RULE arith_ss [] (SPEC `1` lem4)]
+val SBIT_DIV = store_thm("SBIT_DIV",
+  `!b m n. n < m ==> (SBIT b (m - n) = SBIT b m DIV 2 EXP n)`,
+  B_RW_TAC [SBIT_def,ZERO_DIV,ZERO_LT_TWOEXP,SIMP_RULE arith_ss [] (SPEC `1` lem4)]
 );
 
 val BITS_SUC = store_thm("BITS_SUC",
   `!h l n.  l <= SUC h ==>
-         (SET (BIT (SUC h) n) (SUC h - l) + BITS h l n = BITS (SUC h) l n)`,
+         (SBIT (BIT (SUC h) n) (SUC h - l) + BITS h l n = BITS (SUC h) l n)`,
   REPEAT STRIP_TAC
     THEN Cases_on `l = SUC h`
     THENL [
-      A_RW_TAC [EXP,BITS_ZERO,SET_def,BIT_def]
+      A_RW_TAC [EXP,BITS_ZERO,SBIT_def,BIT_def]
         THEN B_FULL_SIMP_TAC [NOT_BITS2],
       `l <= h` by ASM_A_SIMP_TAC []
         THEN IMP_RES_TAC LESS_EQ_IMP_LESS_SUC
-        THEN ASM_A_SIMP_TAC [SET_DIV,BIT_SLICE_THM,SLICE_THM,lem4,SPECL [`SUC h`,`h`] BIT_COMP_THM3]
+        THEN ASM_A_SIMP_TAC [SBIT_DIV,BIT_SLICE_THM,SLICE_THM,lem4,SPECL [`SUC h`,`h`] BIT_COMP_THM3]
     ]
 );
 
 val BITS_SUC_THM = store_thm("BITS_SUC_THM",
   `!h l n. BITS (SUC h) l n = if SUC h < l
                               then 0
-                              else SET (BIT (SUC h) n) (SUC h - l) + BITS h l n`,
+                              else SBIT (BIT (SUC h) n) (SUC h - l) + BITS h l n`,
   A_RW_TAC [BITS_ZERO,BITS_SUC]
 );
 
@@ -584,7 +584,7 @@ val BIT_BITS_THM = store_thm("BIT_BITS_THM",
 val BITWISE_LT_2EXP = store_thm("BITWISE_LT_2EXP",
   `!n op a b. BITWISE n op a b < 2 EXP n`,
   Induct_on `n`
-    THEN B_RW_TAC [ADD_0,TIMES2,LESS_IMP_LESS_ADD,LESS_MONO_ADD,BITWISE_def,SET_def,EXP]
+    THEN B_RW_TAC [ADD_0,TIMES2,LESS_IMP_LESS_ADD,LESS_MONO_ADD,BITWISE_def,SBIT_def,EXP]
     THEN REDUCE_TAC
 );
 
@@ -599,7 +599,7 @@ val LESS_EXP_MULT2 = store_thm("LESS_EXP_MULT2",
  
 val BITWISE_LEM = store_thm("BITWISE_THM",
   `!n op a b. BIT n (BITWISE (SUC n) op a b) = op (BIT n a) (BIT n b)`,
-  A_RW_TAC [SET_def,BITWISE_def,NOT_BIT]
+  A_RW_TAC [SBIT_def,BITWISE_def,NOT_BIT]
     THENL [
        R_SIMP_TAC [BIT_def,BITS_THM,SUC_SUB,
                   REWRITE_RULE [BITWISE_LT_2EXP] (SPECL [`BITWISE n op a b`,`2 EXP n`] DIV_MULT_1)],
@@ -619,7 +619,7 @@ val BITWISE_THM = store_thm("BITWISE_THM",
         THENL [
            ASM_REWRITE_TAC [BITWISE_LEM],
            `x < n` by ASM_A_SIMP_TAC []
-              THEN A_RW_TAC [BITWISE_def,SET_def]
+              THEN A_RW_TAC [BITWISE_def,SBIT_def]
               THEN LEFT_REWRITE_TAC [BIT_def]
               THEN ASM_REWRITE_TAC [BITS_THM]
               THEN IMP_RES_TAC LESS_EXP_MULT2
