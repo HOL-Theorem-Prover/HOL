@@ -558,6 +558,20 @@ Induct THEN REWRITE_TAC [EVERY_DEF,MEM]
            THEN ASM_REWRITE_TAC [MEM]]);
 
 
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "local val hocongs = [EXISTS_CONG,EVERY_CONG,MAP_CONG,";
+   S "                     FOLDL_CONG, FOLDR_CONG,list_size_cong]";
+   S "in";
+   S "val _ = Defn0.write_context (hocongs@Defn0.read_context())";
+   S "end;"
+ end)};
+
+
 val _ = export_theory();
 
 end;
