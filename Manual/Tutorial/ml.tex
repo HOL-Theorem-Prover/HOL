@@ -233,9 +233,9 @@ raised.  This exception passed to whatever invoked the evaluation.
 This context can either propagate the failure (this is the default) or
 it can {\it trap\/} it. These two possibilities are illustrated below.
 An exception trap is an expression of the form
-$e_1${\small\verb|handle _ => |}$e_2$. An expression of this form is
+$e_1${\small\verb| handle _ => |}$e_2$. An expression of this form is
 evaluated by first evaluating $e_1$. If the evaluation succeeds (\ie\
-doesn't fail) then the value of the whole expressionis the value of
+doesn't fail) then the value of the whole expression is the value of
 $e_1$.  If the evaluation of $e_1$ raises an exception, then the value
 of the whole is obtained by evaluating $e_2$.\footnote{This
   description of exception handling is actually a gross simplification
@@ -253,13 +253,10 @@ of the whole is obtained by evaluating $e_2$.\footnote{This
 \end{verbatim}
 \end{session}
 
-The sessions above are enough to give a feel for \ML.  For a much
-longer example, which illustrates most of the main features of the
-language, see the introduction to \ML\ in \DESCRIPTION.
-
-In the next chapter, the logic supported by the \HOL\ system (higher
-order logic) will be introduced, together with the tools in \ML\ for
-manipulating it.
+The sessions above are enough to give a feel for \ML.  In the next
+chapter, the logic supported by the \HOL\ system (higher order logic)
+will be introduced, together with the tools in \ML\ for manipulating
+it.
 
 
 
