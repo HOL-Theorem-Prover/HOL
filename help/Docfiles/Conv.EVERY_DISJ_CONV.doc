@@ -48,5 +48,6 @@ sub-terms within a term without having to worry about the exact
 structure of its disjunctive skeleton.
 
 \SEEALSO
-Conv.EVERY_CONJ_CONV, Conv.RATOR_CONV, Conv.RAND_CONV, Conv.LAND_CONV.
+Conv.EVERY_CONJ_CONV, Conv.RATOR_CONV, Conv.RAND_CONV, Conv.LAND_CONV,
+numLib.REDUCE_CONV.
 \ENDDOC

@@ -3,29 +3,28 @@
 \TYPE {FINITE_CONV : conv}
 
 \SYNOPSIS
-Proves finiteness of sets of the form {"{{x1,...,xn}}"}.
+Proves finiteness of sets of the form {{t1;...;tn}}.
 
-\LIBRARY pred_sets
+\LIBRARY pred_set
 
 \DESCRIBE 
 The conversion {FINITE_CONV} expects its term argument to be an assertion of
-the form {"FINITE {{x1,...,xn}}"}. Given such a term, the conversion returns
+the form {FINITE {t1;...;tn}}. Given such a term, the conversion returns
 the theorem
 {
-   |- FINITE {{x1,...,xn}} = T
+   |- FINITE {t1;...;tn} = T
 }
 
 \EXAMPLE
 {
-#FINITE_CONV "FINITE {{1,2,3}}";;
-|- FINITE{{1,2,3}} = T
+- FINITE_CONV ``FINITE {1;2;3}``;
+> val it = |- FINITE{1;2;3} = T : thm
 
-#FINITE_CONV "FINITE ({{}}:num->bool)";;
-|- FINITE{{}} = T
+- FINITE_CONV ``FINITE ({}:num->bool)``;
+> val it = |- FINITE {} = T : thm
 }
 
 \FAILURE
-Fails if applied to a term not of the form {"FINITE {{x1,...,xn}}"}.
+Fails if applied to a term not of the form {FINITE {t1;...;tn}}.
 
 \ENDDOC
-

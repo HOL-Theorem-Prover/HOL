@@ -36,5 +36,6 @@ when applied to those arguments.  (The latter case would imply that
 
 
 \SEEALSO
-Conv.FORK_CONV, Conv.LAND_CONV, Conv.RAND_CONV, Conv.RATOR_CONV.
+Conv.FORK_CONV, Conv.LAND_CONV, Conv.RAND_CONV, Conv.RATOR_CONV, 
+numLib.REDUCE_CONV.
 \ENDDOC

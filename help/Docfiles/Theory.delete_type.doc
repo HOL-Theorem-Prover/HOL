@@ -51,8 +51,7 @@ new_type ("foo", 2);
 > val it = () : unit
 
 - thm;
-Exception raised at type_pp.pp_type:
-old->foo<-old: no such type operator in grammar
+> val it = |- (x :(('a, 'b) scratch$old->f<-old)) = x : thm
 }
 
 \COMMENTS
