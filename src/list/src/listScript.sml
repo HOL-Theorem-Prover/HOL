@@ -992,6 +992,32 @@ val _ = BasicProvers.export_rewrites
            "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR", "FILTER",
            "ALL_DISTINCT"];
 
+val nil_tm = Term.prim_mk_const{Name="NIL",Thy="list"};
+val cons_tm = Term.prim_mk_const{Name="CONS",Thy="list"};
+
+fun dest_cons M = 
+  case strip_comb M 
+   of (c,[p,q]) => if Term.same_const c cons_tm then (p,q)
+                   else raise ERR "listScript" "dest_cons" 
+    | otherwise => raise ERR "listScript" "dest_cons" ;
+
+fun dest_list M = 
+   case total dest_cons M
+    of NONE => if same_const nil_tm M then [] 
+               else raise ERR "dest_list" "not terminated with nil"
+     | SOME(h,t) => h::dest_list t
+
+val _ = Drop.dest_cons_hook := dest_cons;
+val _ = Drop.dest_list_hook := dest_list;
+val _ = Drop.is_list_hook   := can dest_list;
+
+(* Missing some that deal with numbers, like LENGTH *)
+val _ = Drop.exportML("list",
+         map Drop.DEFN [NULL_DEF, HD, TL, APPEND, FLAT, MAP,
+                        MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
+                        EXISTS_DEF, MAP2, ZIP, UNZIP, REVERSE_DEF,
+                        LAST_CONS, FRONT_CONS, ALL_DISTINCT]);
+
 val _ = export_theory();
 
 end
