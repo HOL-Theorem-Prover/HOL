@@ -5,21 +5,24 @@ open HolKernel Parse boolLib simpLib
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
-val const_term = ``ARB : bool -> bool (ARB : bool -> bool ARB)``
-val test_term = ``^const_term /\ x /\ y``
-
-fun infloop_protect startstr endfn f x = let
-  val _ =  print (StringCvt.padRight #" " 70 startstr)
-  val r = f x
-in
-  if endfn r then
-    (print "OK\n"; (true, r))
-  else
-    (print "FAILED\n"; (false, r))
-end handle Interrupt => (print "FAILED\n"; (false, TRUTH))
+fun infloop_protect (startstr : string) (endfn : 'a -> bool)
+    (f : 'b -> 'a) (x : 'b) =
+    let
+      val _ =  print (StringCvt.padRight #" " 70 startstr)
+      val r = f x
+    in
+      if endfn r then
+        (print "OK\n"; (true, SOME r))
+      else
+        (print "FAILED\n"; (false, SOME r))
+    end handle Interrupt => (print "FAILED\n"; (false, NONE))
+             | e => (print "EXN\n"; Raise e)
 
 (* earlier versions of the simplifier would go into an infinite loop on
    terms of this form. *)
+val const_term = ``ARB : bool -> bool (ARB : bool -> bool ARB)``
+val test_term = ``^const_term /\ x /\ y``
+
 val (test1_flag, result1) =
     infloop_protect
       "AC looping (if this test appears to hang, it has failed)... "
@@ -29,7 +32,7 @@ val (test1_flag, result1) =
       test_term
 
 (* test that AC works with the arguments messed up *)
-fun test2P th2 = aconv (rhs (concl result1)) (rhs (concl th2))
+fun test2P th2 = aconv (rhs (concl (valOf result1))) (rhs (concl th2))
 val (test2_flag, _) =
     infloop_protect "Permuted AC arguments... "
                     test2P
@@ -48,9 +51,28 @@ val (test3_flag, _) =
                          Q.ASSUME `y:'a = g (x:'a)`]))
       ``P (x:'a) : bool``
 
+(* test abbreviations in tactics *)
+fun test4P (sgs, vfn) =
+    length sgs = 1 andalso
+    (let val (asms, gl) = hd sgs
+     in
+       aconv gl ``Q (f (x:'a) : 'b) : bool`` andalso
+       length asms = 1 andalso
+       aconv (hd asms) ``P (f (x:'a) : 'b) : bool``
+     end)
+
+val (test4_flag, _) =
+    infloop_protect
+      "Abbreviations + ASM_SIMP_TAC... "
+      test4P
+      (ASM_SIMP_TAC boolSimps.bool_ss [markerLib.Abbr`y`])
+      ([``Abbrev (y:'b = f (x : 'a))``, ``P (y:'b) : bool``],
+       ``Q (y:'b) : bool``)
+
 (* ---------------------------------------------------------------------- *)
 
-val _ = Process.exit (if List.all I [test1_flag, test2_flag, test3_flag] then
-                        Process.success
-                      else
-                        Process.failure);
+val _ = Process.exit
+          (if List.all I [test1_flag, test2_flag, test3_flag, test4_flag] then
+             Process.success
+           else
+             Process.failure);

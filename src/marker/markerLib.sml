@@ -78,4 +78,27 @@ val AC_tm = prim_mk_const{Name="AC",Thy="marker"}
 val Cong_tm = prim_mk_const{Name="Cong",Thy="marker"};
 
 
+fun Abbr q =
+    case q of
+      [QUOTE s] => REFL (mk_var(s, mk_vartype "'abbrev"))
+    | _ => raise mk_HOL_ERR "BasicProvers" "Abbr" "Ill-formed quotation"
+
+fun is_Abbr th = let
+  val (l,r,ty) = dest_eq_ty (concl th)
+  val vname = dest_vartype ty
+in
+  vname = "'abbrev" andalso #1 (dest_var l) = #1 (dest_var r)
+end handle HOL_ERR _ => false
+
+fun dest_Abbr th = let
+  val _ = assert is_Abbr th
+in
+  [QUOTE (#1 (dest_var(lhs (concl th))))]
+end
+
+val Abbrev_tm = prim_mk_const {Name = "Abbrev", Thy = "marker"}
+
+
+
+
 end

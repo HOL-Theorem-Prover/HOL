@@ -352,21 +352,11 @@ val RM_ALL_ABBREVS_TAC = REPEAT (FIRST_X_ASSUM (K ALL_TAC o DeAbbrev))
     ABBRS_THEN
    ---------------------------------------------------------------------- *)
 
+open markerLib
 fun ABBRS_THEN ttac thl = let
-  fun abbr_check th = let
-    val (l,r,ty) = dest_eq_ty (concl th)
-    val vname = dest_vartype ty
-  in
-    vname = "'abbrev" andalso #1 (dest_var l) = #1 (dest_var r)
-  end handle HOL_ERR _ => false
-  val (abbrs, rest) = List.partition abbr_check thl
-  fun do_unabbr th = let
-    val (s,_) = dest_var(lhs (concl th))
-  in
-    UNABBREV_TAC [QUOTE s]
-  end
+  val (abbrs, rest) = List.partition is_Abbr thl
 in
-  MAP_EVERY do_unabbr abbrs THEN ttac rest
+  MAP_EVERY (UNABBREV_TAC o dest_Abbr) abbrs THEN ttac rest
 end
 
 end; (* Q *)

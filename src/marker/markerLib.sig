@@ -2,28 +2,33 @@ signature markerLib =
 sig
   include Abbrev
 
-  val stmark_term : conv
+  val stmark_term              : conv
 
-  val stmark_conjunct : (term -> bool) -> conv
-  val stmark_disjunct : (term -> bool) -> conv
+  val stmark_conjunct          : (term -> bool) -> conv
+  val stmark_disjunct          : (term -> bool) -> conv
 
-  val move_stmarked_conj_left : conv
+  val move_stmarked_conj_left  : conv
   val move_stmarked_conj_right : conv
-  val move_stmarked_disj_left : conv
+  val move_stmarked_disj_left  : conv
   val move_stmarked_disj_right : conv
 
-  val move_conj_left : (term -> bool) -> conv
-  val move_conj_right : (term -> bool) -> conv
-  val move_disj_left : (term -> bool) -> conv
-  val move_disj_right : (term -> bool) -> conv
+  val move_conj_left           : (term -> bool) -> conv
+  val move_conj_right          : (term -> bool) -> conv
+  val move_disj_left           : (term -> bool) -> conv
+  val move_disj_right          : (term -> bool) -> conv
 
-  val AC_tm   : term
-  val AC      : thm -> thm -> thm
-  val unAC    : thm -> thm * thm
+  val AC_tm                    : term
+  val AC                       : thm -> thm -> thm
+  val unAC                     : thm -> thm * thm
 
-  val Cong_tm : term
-  val Cong    : thm -> thm
-  val unCong  : thm -> thm
+  val Cong_tm                  : term
+  val Cong                     : thm -> thm
+  val unCong                   : thm -> thm
+
+  val Abbr                     : term quotation -> thm
+  val dest_Abbr                : thm -> term quotation
+  val is_Abbr                  : thm -> bool
+  val Abbrev_tm                : term
 
 end
 
@@ -68,5 +73,12 @@ end
 
    [move_disj_right P t] moves a disjunct satisfying P to the right.
    Analogous to move_conj_left.
+
+   [Abbr q] encodes a quotation of the form [QUOTE s] into a theorem, such
+   that the string s can be extracted with dest_Abbr below.
+
+   [Abbrev_tm] is the term used to encode abbreviations in the assumptions
+
+   [dest_Abbr th] returns the quotation encoded by Abbr.
 
 *)

@@ -267,11 +267,15 @@ end;
 
 fun SIMP_TAC ss l = Q.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l
 
-fun ASM_SIMP_TAC ss l (asms,gl) =
-  let val working = labelLib.LLABEL_RESOLVE l asms
+fun ASM_SIMP_TAC ss l = let
+  fun base thl (asms, gl) = let
+    val working = labelLib.LLABEL_RESOLVE thl asms
   in
-    SIMP_TAC ss working (asms,gl)
+    SIMP_TAC ss working (asms, gl)
   end
+in
+  Q.ABBRS_THEN base l
+end
 
 fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
 
@@ -279,22 +283,26 @@ fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
 fun FULL_SIMP_TAC ss l =
        let fun drop n (asms,g) =
-	   let val l = length asms
-	       fun f asms =
-		   MAP_EVERY ASSUME_TAC (rev (fst (split_after (l-n) asms)))
-	   in if (n > l) then ERR ("drop", "Bad cut off number")
-	      else POP_ASSUM_LIST f (asms,g)
-	   end
+	       let val l = length asms
+	           fun f asms =
+		       MAP_EVERY ASSUME_TAC
+                                 (rev (fst (split_after (l-n) asms)))
+	       in
+                 if (n > l) then ERR ("drop", "Bad cut off number")
+	         else POP_ASSUM_LIST f (asms,g)
+	       end
 
            (* differs only in that it doesn't call DISCARD_TAC *)
            val STRIP_ASSUME_TAC' =
-	       (REPEAT_TCL STRIP_THM_THEN)
-	       (fn th => FIRST [CONTR_TAC th, ACCEPT_TAC th, ASSUME_TAC th])
+	       REPEAT_TCL STRIP_THM_THEN
+	                  (fn th => FIRST [CONTR_TAC th, ACCEPT_TAC th,
+                                           ASSUME_TAC th])
 	   fun simp_asm (t,l') = SIMP_RULE ss (l'@l) t::l'
 	   fun f asms =
 	       MAP_EVERY STRIP_ASSUME_TAC' (foldl simp_asm [] asms)
 	       THEN drop (length asms)
-       in ASSUM_LIST f THEN ASM_SIMP_TAC ss l
+       in
+         Q.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) l
        end
 
 
