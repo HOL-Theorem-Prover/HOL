@@ -194,7 +194,11 @@ val num_CASES = store_thm ("num_CASES",
     THEN EXISTS_TAC (--`(m:num)`--)
     THEN REWRITE_TAC[]);
 
-
+val NOT_ZERO_LT_ZERO = store_thm(
+  "NOT_ZERO_LT_ZERO",
+  Term`!n. ~(n = 0) = 0 < n`,
+  GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `n` num_CASES) THEN
+  REWRITE_TAC [NOT_LESS_0, LESS_0, NOT_SUC]);
 
 (* --------------------------------------------------------------------- *)
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)
@@ -2051,6 +2055,16 @@ val DIV_ONE = save_thm("DIV_ONE",
     (MP (SPECL [(--`SUC 0`--), (--`q:num`--)] MULT_DIV)
         (SPEC (--`0`--) LESS_0))));
 
+val DIVMOD_ID = store_thm(
+  "DIVMOD_ID",
+  Term`!n. 0 < n ==> (n DIV n = 1) /\ (n MOD n = 0)`,
+  REPEAT STRIP_TAC THENL [
+    MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `0` THEN
+    ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES],
+    MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `1` THEN
+    ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES]
+  ]);
+
 val Less_lemma = prove(
 Term`!m n. m<n ==> ?p. (n = m + p) /\ 0<p`,
  GEN_TAC THEN INDUCT_TAC THENL[
@@ -2225,12 +2239,6 @@ val MULT_INCREASES = store_thm(
     FIRST_ASSUM ACCEPT_TAC
   ]);
 
-val NOT_ZERO_LT_ZERO = store_thm(
-  "NOT_ZERO_LT_ZERO",
-  Term`!n. ~(n = 0) = 0 < n`,
-  GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `n` num_CASES) THEN
-  REWRITE_TAC [NOT_LESS_0, LESS_0, NOT_SUC]);
-
 val EXP_ALWAYS_BIG_ENOUGH = store_thm(
   "EXP_ALWAYS_BIG_ENOUGH",
   Term`!b. 1 < b ==> !n. ?m. n <= b EXP m`,
@@ -2303,38 +2311,38 @@ val EXP_INJECTIVE = store_thm(
 
 
 val EXISTS_GREATEST = store_thm("EXISTS_GREATEST",
---`!P. (?x. P x) /\ (?x:num. !y. y > x ==> ~P y) 
-                 = 
+--`!P. (?x. P x) /\ (?x:num. !y. y > x ==> ~P y)
+                 =
        ?x. P x /\ !y. y > x ==> ~P y`--,
 GEN_TAC THEN EQ_TAC THENL
  [REWRITE_TAC[GREATER_DEF] THEN
    DISCH_THEN (CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
-   SUBGOAL_THEN 
+   SUBGOAL_THEN
      (Term`(?x. !y. x < y ==> ~P y) = (?x. (\x. !y. x < y ==> ~P y) x)`)
         SUBST1_TAC THENL
     [BETA_TAC THEN REFL_TAC,
      DISCH_THEN (MP_TAC o MATCH_MP WOP)
-      THEN BETA_TAC THEN CONV_TAC (DEPTH_CONV NOT_FORALL_CONV) 
+      THEN BETA_TAC THEN CONV_TAC (DEPTH_CONV NOT_FORALL_CONV)
       THEN STRIP_TAC THEN EXISTS_TAC (Term`n:num`) THEN ASM_REWRITE_TAC[]
       THEN NTAC 2 (POP_ASSUM MP_TAC)
-      THEN STRUCT_CASES_TAC (SPEC (Term`n:num`) num_CASES) 
+      THEN STRUCT_CASES_TAC (SPEC (Term`n:num`) num_CASES)
       THEN REPEAT STRIP_TAC THENL
-      [UNDISCH_THEN (Term`!y. 0 < y ==> ~P y`) 
+      [UNDISCH_THEN (Term`!y. 0 < y ==> ~P y`)
             (MP_TAC o CONV_RULE (ONCE_DEPTH_CONV CONTRAPOS_CONV))
-         THEN REWRITE_TAC[] THEN STRIP_TAC THEN RES_TAC 
-         THEN MP_TAC (SPEC (Term`x:num`) LESS_0_CASES) 
+         THEN REWRITE_TAC[] THEN STRIP_TAC THEN RES_TAC
+         THEN MP_TAC (SPEC (Term`x:num`) LESS_0_CASES)
          THEN ASM_REWRITE_TAC[] THEN DISCH_THEN (SUBST_ALL_TAC o SYM)
          THEN ASM_REWRITE_TAC[],
        POP_ASSUM (MP_TAC o SPEC (Term`n':num`))
          THEN REWRITE_TAC [prim_recTheory.LESS_SUC_REFL]
          THEN DISCH_THEN (CHOOSE_THEN MP_TAC)
          THEN SUBGOAL_THEN (Term`!x y. ~(x ==> ~y) = x /\ y`)
-               (fn th => REWRITE_TAC[th] THEN STRIP_TAC) THENL 
+               (fn th => REWRITE_TAC[th] THEN STRIP_TAC) THENL
          [REWRITE_TAC [NOT_IMP],
-           UNDISCH_THEN (Term`!y. SUC n' < y ==> ~P y`) 
-              (MP_TAC o CONV_RULE (ONCE_DEPTH_CONV CONTRAPOS_CONV) 
+           UNDISCH_THEN (Term`!y. SUC n' < y ==> ~P y`)
+              (MP_TAC o CONV_RULE (ONCE_DEPTH_CONV CONTRAPOS_CONV)
                  o SPEC (Term`y:num`))
-            THEN ASM_REWRITE_TAC[NOT_LESS,LESS_OR_EQ] 
+            THEN ASM_REWRITE_TAC[NOT_LESS,LESS_OR_EQ]
             THEN DISCH_THEN (DISJ_CASES_THEN2 ASSUME_TAC SUBST_ALL_TAC)
             THENL [IMP_RES_TAC LESS_LESS_SUC, ASM_REWRITE_TAC[]]]]],
   REPEAT STRIP_TAC THEN EXISTS_TAC (Term`x:num`) THEN ASM_REWRITE_TAC[]]);
