@@ -37,6 +37,60 @@ The last round of analysis using HOL revealed two problems.
 2. The clocked and unclocked semantics of suffix implications {r}(f)
    were incompatible. This was fixed by changing the clocked semantics.
 
+The main results in PropertiesTheory are as follows.
+
+SUMMARY OF MAIN PROPERTIES PROVED SO FAR
+========================================
+
+Glossary
+--------
+
+!x. P x                  All x: P x
+P ==> Q                  P implies Q
+|- P                     P proved by HOL
+
+ELEM w n                 nth element of w
+B_TRUE                   Boolean expression T
+B_SEM s b                s |= b   (semantics of Boolean expressions)
+US_SEM w r               w |= r   (unclocked semantics of SEREs)
+S_SEM w c r              w |=c r  (clocked semantics of SEREs)
+UF_SEM w f               w |= f   (unclocked formula semantics with |w|>0 for boolean formulas)
+OLD_UF_SEM w f           w |= f   (original LRM unclocked semantics of formulas)
+F_SEM w c f              w |=c f  (clocked semantics of formulas)
+S_CLOCK_FREE r           SERE r contains no clocked sub-expressions
+F_CLOCK_FREE r           Formula f contains no clocked sub-formulas
+S_CLOCK_COMP c r         Result of applying official (LRM) PSL rewrites to SERE r@c
+F_CLOCK_COMP c f         Result of applying official (LRM) PSL rewrites to formula f@c
+F_INIT_CLOCK_COMP c f    Result of applying Eisner `abort-modified' PSL rewrites to f@c
+
+Properties proved
+-----------------
+
+S_SEM_TRUE_LEMMA
+|- !r w. S_CLOCK_FREE r ==> (S_SEM w B_TRUE r = US_SEM w r)
+
+F_SEM_STRONG_FREE_TRUE_LEMMA
+|- !f p. F_CLOCK_FREE f ==> (F_SEM p B_TRUE f = UF_SEM p f)
+
+S_CLOCK_COMP_ELIM
+|- !r w c. S_SEM w c r = US_SEM w (S_CLOCK_COMP c r)
+
+F_CLOCK_COMP_CORRECT
+|- !f w c.
+    B_SEM (ELEM w 0) c ==> (F_SEM w c f = UF_SEM w (F_CLOCK_COMP c f))
+
+F_INIT_CLOCK_COMP_CORRECT
+|- !f w c. F_SEM w c f = UF_SEM w (F_INIT_CLOCK_COMP c f)
+
+INIT_CLOCK_COMP_EQUIV
+|- !f w c. 
+    B_SEM (ELEM w 0) c 
+    ==> 
+    (UF_SEM w (F_CLOCK_COMP c f) = UF_SEM w (F_INIT_CLOCK_COMP c f))
+
+OLD_UF_SEM_UF_SEM
+|- !f w. LENGTH w > 0 /\ F_CLOCK_FREE f ==> (OLD_UF_SEM w f = UF_SEM w f)
+
 (*****************************************************************************)
 (*                             ACKNOWLEDGEMENT                               *)
 (* The work here would not have been possible without the help of Cindy      *)
