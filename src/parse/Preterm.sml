@@ -47,8 +47,14 @@ fun ptremove {Name, Ty} = {Name = Name, Ty = TCPretype.toType Ty}
 fun to_term (Var n) = Term.mk_var (ptremove n)
   | to_term (Const r) = constify (ptremove r)
   | to_term (Overloaded {Name,Ty,...}) =
-  constify (ptremove {Name = Name, Ty = Ty})
-  | to_term (Comb{Rator,Rand}) = Combify{Rator=to_term Rator,Rand=to_term Rand}
+      constify (ptremove {Name = Name, Ty = Ty})
+  | to_term (t as Comb{Rator,Rand}) = let
+    in
+      case Rator of
+        Const{Name,...} => if Name = nat_elim_term then to_term Rand
+                           else Combify{Rator=to_term Rator,Rand=to_term Rand}
+      | _ => Combify{Rator = to_term Rator, Rand = to_term Rand}
+    end
   | to_term (Abs{Bvar,Body}) = Term.mk_abs{Bvar=to_term Bvar,Body=to_term Body}
   | to_term (Antiq tm) = tm
   | to_term (Constrained(tm,_)) = to_term tm;
@@ -58,7 +64,16 @@ fun is_atom (Var _) = true
   | is_atom (Const _) = true
   | is_atom (Constrained(tm,_)) = is_atom tm
   | is_atom (Overloaded _) = true
-  | is_atom t = Term.is_numeral (to_term t)
+  | is_atom (t as Comb{Rator,Rand}) = let
+    in
+      Term.is_numeral (to_term t) orelse
+      Term.is_numeral (to_term Rand) andalso
+        (case Rator of
+           Overloaded{Name,...} => Name = fromNum_str
+         | Const{Name,...} => Name = nat_elim_term
+         | _ => false)
+    end
+  | is_atom t = false
 
 
 (*---------------------------------------------------------------------------

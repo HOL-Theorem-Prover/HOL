@@ -90,6 +90,9 @@ in
     val preTerm : term frag list -> Preterm.preterm
     val Term : term frag list -> term
     val -- : term frag list -> 'a -> term
+    val parse_from_grammars :
+      (parse_type.grammar * term_grammar.grammar) ->
+      ((hol_type frag list -> hol_type) * (term frag list -> term))
     val term_grammar : unit -> grammar
 
     (* the following functions modify the grammar, and do so in such a
@@ -122,16 +125,10 @@ in
     val add_record_update : string * term -> unit
     val add_record_fupdate : string * term -> unit
 
-    val temp_allow_for_overloading_on : string * Type.hol_type -> unit
-    val temp_overload_on : string * term -> unit
-    val temp_overload_on_by_nametype : string * string * Type.hol_type -> unit
-    val temp_clear_overloads_on : string -> unit
-    val temp_add_record_field : string * term -> unit
-    val temp_add_record_update : string * term -> unit
-    val temp_add_record_fupdate : string * term -> unit
 
     (* the following functions affect the grammar, but not so that the
        grammar exported to disk will be modified *)
+    val temp_set_grammars : (parse_type.grammar * term_grammar.grammar) -> unit
     val temp_add_binder : (string * int) -> unit
     val temp_add_rule :
       {term_name : string, fixity : fixity,
@@ -153,6 +150,14 @@ in
     val temp_remove_term : string -> unit
     val temp_remove_termtok : {term_name : string, tok : string} -> unit
     val temp_set_associativity : (int * associativity) -> unit
+
+    val temp_allow_for_overloading_on : string * Type.hol_type -> unit
+    val temp_overload_on : string * term -> unit
+    val temp_overload_on_by_nametype : string * string * Type.hol_type -> unit
+    val temp_clear_overloads_on : string -> unit
+    val temp_add_record_field : string * term -> unit
+    val temp_add_record_update : string * term -> unit
+    val temp_add_record_fupdate : string * term -> unit
   end
 
   (* Pretty printing *)
@@ -193,6 +198,14 @@ in
   val export_theory_as_docfiles : string -> unit
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
   val print_theory : unit -> unit
+  val theory_grammars :
+    unit -> (string * (parse_type.grammar * term_grammar.grammar)) list
+  val push_theory_grammar :
+    string -> (parse_type.grammar * term_grammar.grammar) -> unit
+  val pop_theory_grammar : unit -> (parse_type.grammar * term_grammar.grammar)
+  val get_theory_grammars :
+    string -> (parse_type.grammar * term_grammar.grammar)
+
 
   (* stuff inserted rather after the fact that used to be in old Parse,
      and is still needed *)

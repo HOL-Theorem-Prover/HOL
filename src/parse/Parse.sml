@@ -69,6 +69,9 @@ fun update_type_fns () =
   end
   else ()
 
+fun munge_cmdstring s =
+  s ^ "\n  val _ = swap_grefs()\n  " ^ s ^ "\n  val _ = swap_grefs()"
+
 local
   (* types *)
   open parse_type
@@ -78,9 +81,7 @@ in
     | ftoString (QUOTE s :: rest) = s ^ ftoString rest
     | ftoString (ANTIQUOTE x :: rest) = "..." ^ ftoString rest
 
-  fun Type q = let
-    val _ = update_type_fns()
-    val parser = (!type_parser2)
+  fun parse_Type parser q = let
     open optmonad monadic_parse fragstr
     infix >> >->
     val (rest, parse_result) = (parse (token (item #":") >> parser)) q
@@ -88,16 +89,24 @@ in
     case parse_result of
       NONE => let
         val errstring =
-          "Couldn't make any sense with remaining input of \"" ^ ftoString rest^"\""
+          "Couldn't make any sense with remaining input of \"" ^
+          ftoString rest^"\""
       in
         raise ERROR "Type" errstring
       end
     | SOME pt => TCPretype.toType pt
   end
 
-  fun toThyaddon s =
-    {sig_ps = NONE,
-     struct_ps = SOME (fn pps => Portable.add_string pps s)}
+  fun Type q = let
+    val _ = update_type_fns()
+    val parser = (!type_parser2)
+  in
+    parse_Type parser q
+  end
+
+  fun pureThyaddon s =
+    {sig_ps = NONE, struct_ps = SOME (fn pps => Portable.add_string pps s)}
+  fun toThyaddon s = pureThyaddon (munge_cmdstring s)
 
 
   fun == q x = Type q
@@ -352,17 +361,34 @@ in
   in
     Parse_support.make_preterm (toTermInEnv oinfo pt0)
   end
-  fun toTerm pt = let
+  fun toTerm G pt = let
     val prfns = SOME(term_to_string, type_to_string)
-    val oinfo = term_grammar.overload_info (term_grammar())
+    val oinfo = term_grammar.overload_info G
     open Parse_support
   in
     Preterm.typecheck prfns (make_preterm (toTermInEnv oinfo pt))
   end
 
-  val Term = toTerm o parse_preTerm
-
+  fun Term q = let
+    val pt = parse_preTerm q
+  in
+    toTerm (term_grammar()) pt
+  end (* not good enough to have
+            Term = toTerm (term_grammar()) o parse_preTerm
+         as term_grammar may be updated as a result of evaluating
+         parse_preTerm *)
   fun -- q x = Term q
+  fun parse_from_grammars (tyG, tmG) = let
+    val ty_parser = parse_type.parse_type typ2_rec false tyG
+    (* this next parser is used within the term parser *)
+    val ty_parser' = parse_type.parse_type typ1_rec false tyG
+    val basic_parser = do_parse tmG ty_parser'
+    val tm_parser = toTerm tmG o remove_lets o basic_parser
+  in
+    (parse_Type ty_parser, tm_parser)
+  end
+
+
 
   fun temp_add_infix(s, prec, associativity) = let
   in
@@ -440,6 +466,14 @@ in
   in
     {term_name = name, fixity = fixity, pp_elements = pels,
      paren_style = pstyle, block_style = bstyle}
+  end
+
+  fun temp_set_grammars(tyG, tmG) = let
+  in
+    the_term_grammar := tmG;
+    the_type_grammar := tyG;
+    term_grammar_changed := true;
+    type_grammar_changed := true
   end
 
   fun temp_add_binder(name, prec) = let
@@ -916,9 +950,38 @@ in
   res
 end
 
+val theory_grammar_stack =
+  ref ([] : (string * (parse_type.grammar * term_grammar.grammar)) list)
+
+fun theory_grammars () = !theory_grammar_stack
+fun push_theory_grammar s Gs =
+  theory_grammar_stack := (s, Gs) :: (!theory_grammar_stack)
+fun get_theory_grammars s = Lib.assoc s (!theory_grammar_stack)
+fun pop_theory_grammar () =
+  case !theory_grammar_stack of
+    [] => (parse_type.empty_grammar, term_grammar.stdhol)
+  | (x::_) => #2 x
+
 fun new_theory s = Theory.new_theory0 (SOME pp_thm) s
-fun export_theory () = Theory.export_theory0 (SOME pp_thm)
+fun export_theory () = let
+  val thyname = current_theory()
+  val lastcmdstring =
+    "val _ = Parse.push_theory_grammar " ^ quote thyname ^
+    " (!internal_grammar_ref)"
+  val g_decl_string =
+    String.concat ["val ", thyname, "_grammars = (!internal_grammar_ref)"]
+  val g_decl_sig =
+    String.concat ["val ", thyname, "_grammars : (parse_type.grammar * ",
+                   "term_grammar.grammar)"]
+in
+  adjoin_to_theory (pureThyaddon lastcmdstring);
+  adjoin_to_theory
+  {sig_ps = SOME (fn pps => Portable.add_string pps g_decl_sig),
+   struct_ps = SOME (fn pps => Portable.add_string pps g_decl_string)};
+  Theory.export_theory0 (SOME pp_thm)
+end
 fun print_theory () = Theory.print_theory0 {pp_thm = pp_thm, pp_type = pp_type}
+
 
 fun export_theorems_as_docfiles dirname thms = let
   val {arcs,...} = Path.fromString dirname
