@@ -1,4 +1,4 @@
-HOL98 COPYRIGHT NOTICE, LICENSE AND DISCLAIMER.
+HOL COPYRIGHT NOTICE, LICENSE AND DISCLAIMER.
 
 Copyright 1998, 1999 by Konrad Slind.
 Copyright 2000, 2001 by Michael Norrish and Konrad Slind.
@@ -32,3 +32,16 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
 TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
+
+----------------------------------------------------------------------
+
+Some files we distribute with HOL are the work of others, and are not
+part of the core distribution.  Their copyrights may differ from the
+above.  In particular, the following sub-directories are governed by
+different copyright notices:
+
+  examples/sunrise
+  src/muddy
+  src/temporal/smv
+
+----------------------------------------------------------------------
