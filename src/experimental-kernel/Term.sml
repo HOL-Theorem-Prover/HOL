@@ -498,20 +498,17 @@ end
 val emptyvsubst = Map.mkDict compare
 val emptysubst = Map.mkDict compare
 
-fun free_names0 t A k =
-    case t of
-      Var(s, _) => k (HOLset.add(A, s))
-    | Const _ => k A
-    | App(f,x) => free_names0 f A (fn q => free_names0 x q k)
-    | Abs(v,bdy) => let val nm = #1 (dest_var v)
-                    in
-                      if HOLset.member(A, nm) then
-                        free_names0 bdy A k
-                      else
-                        free_names0 bdy A (fn q => k (safe_delete(q, nm)))
-                    end
-fun free_names A t = free_names0 t A I
+(* it's hard to calculate free names simply by traversing a term because
+   of the situation where \x:ty1. body has x:ty1 and x:ty2 as free variables
+   in body.  So, though it may be slightly less efficient, my solution here
+   is to just calculate the free variables and then calculate the image of
+   this set under name extraction *)
 val empty_stringset = HOLset.empty String.compare
+val free_names = let
+  fun fold_name (v, acc) = HOLset.add(acc, #1 (dest_var v))
+in
+  (fn t => HOLset.foldl fold_name empty_stringset (FVL [t] empty_tmset))
+end
 
 (* jrh's caml light HOL Light code
 let vsubst =
@@ -679,69 +676,7 @@ local
           if numItems theta' = 0 then raise Unchanged
           else augvsubst theta' fvi tm
         end
-(*
-  fun vasubst theta tm =
-      case tm of
-        Var _ => (case peek(theta, tm) of
-                    NONE => raise Unchanged
-                  | SOME(_, t) => (t, HOLset.add(empty_tmset, tm)))
-      | Const _ => raise Unchanged
-      | App(l,r) => (let val (l', vs) = vasubst theta l
-                     in
-                       let val (r', vt) = vasubst theta r
-                       in
-                         (App(l', r'), HOLset.union(vs, vt))
-                       end handle Unchanged => (App(l',r), vs)
-                     end handle Unchanged =>
-                                let val (r', vt) = vasubst theta r
-                                in
-                                  (App(l, r'), vt)
-                                end)
-      | Abs(v,bod) => let
-          val theta' = #1 (remove(theta, v)) handle Map.NotFound => theta
-          val _ = numItems theta' > 0 orelse raise Unchanged
-          val (bod', vs) = vasubst theta' bod
-          fun foldthis (v, acc) =
-              HOLset.union(force (#1 (find(theta', v))), acc)
-              handle Map.NotFound => raise Fail "Urk"
-          (* initial_vset is the set of free variables of the body, less the
-             variables that we know have been substituted out (vs) *)
-          val initial_vset = HOLset.difference(FVL [bod] empty_varset, vs)
-          (* initial_nmset is the set of names of initial_vset; the image
-             of (#1 o dest_var) over initial_vset *)
-          val initial_nmset =
-              HOLset.foldl (fn(v,acc) => HOLset.add(acc, #1 (dest_var v)))
-                           empty_stringset initial_vset
-          (* fvs is the set of free names occurring in what was substituted
-             into the term *)
-          val fvs = HOLset.foldl foldthis empty_stringset  vs
-          val (vname, ty) = dest_var v
-        in
-          if HOLset.member(fvs, vname) then let
-              (* if our binding variable has the same name as something that
-                 was substituted in, then calculate a new name, that must
-                 also avoid the body's initial free names *)
-              val vname' =
-                  set_name_variant (HOLset.union(fvs, initial_nmset)) vname
-              val v' = mk_var(vname', ty)
-              val v'set = delay (fn () => HOLset.add(empty_stringset, vname'))
-              val vset = HOLset.add(empty_tmset, v)
-              val (bod', vars') = vasubst (insert(theta', v, (v'set, v'))) bod
-            in
-              (Abs(v', bod'), HOLset.difference(vars', vset))
-            end
-          else
-            (Abs(v,bod'), vs)
-        end
 
-  fun vsubst theta tm =
-      case tm of
-        Var _ => (case peek(theta, tm) of NONE => raise Unchanged
-                                        | SOME (_, t) => t)
-      | Const _ => raise Unchanged
-      | App p  => qcomb App (vsubst theta) p
-      | Abs _ => #1 ((* Profile.profile "vasubst" *) (vasubst theta) tm)
-*)
   fun ssubst theta t =
       (* only used to substitute in fresh variables (genvars), so no
          capture check.  *)
@@ -765,7 +700,7 @@ local
           end
 
   fun vsub_insert(fm, k, v) =
-      insert(fm, k, (delay (fn () => free_names empty_stringset v), v))
+      insert(fm, k, (delay (fn () => free_names v), v))
 
 in
 
