@@ -2385,12 +2385,12 @@ val _ = adjoin_to_theory
  in
    S "val _ = TypeBase.write";
    S "  (TypeBase.mk_tyinfo";
-   S "     {ax=prim_recTheory.num_Axiom,";
+   S "     {ax=TypeBase.ORIG prim_recTheory.num_Axiom,";
    S "      case_def=num_case_def,";
    S "      case_cong=num_case_cong,";
-   S "      induction=numTheory.INDUCTION,";
+   S "      induction=TypeBase.ORIG numTheory.INDUCTION,";
    S "      nchotomy=num_CASES,";
-   S "      size=SOME(Parse.Term`\\x:num. x`, boolTheory.REFL_CLAUSE),";
+   S "      size=SOME(Parse.Term`\\x:num. x`, TypeBase.ORIG boolTheory.REFL_CLAUSE),";
    S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
    S "      distinct=SOME numTheory.NOT_SUC});"
  end)};
