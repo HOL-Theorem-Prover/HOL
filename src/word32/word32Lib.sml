@@ -12,7 +12,8 @@ open HolKernel boolLib computeLib bossLib
 val word_compset =
   let val rws = reduceLib.num_compset()
       val _ = add_thms 
-     [w_0,w_1,w_T,
+     [SIMP_RULE arith_ss [HB_def,arithmeticTheory.ADD1] WL_def,
+      w_0,w_1,w_T,HB_def,
       MODw_EVAL,
       ADD_EVAL2,
       MUL_EVAL2,
@@ -31,13 +32,13 @@ val word_compset =
       BITw_def,
       BITSw_def,
       SLICEw_def,
-      NUMw_EVAL,
+      w2n_EVAL,
       MSB_EVAL2,
       LSB_EVAL2,
       numeralTheory.numeral_funpow,
       pairTheory.UNCURRY_DEF,
       TIMES_2EXP_def,DIV_2EXP_def,MOD_2EXP_def,DIVMOD_2EXP_def,
-      SET_def,BITS_THM,BIT_def,SLICE_def,LET_THM] rws
+      MSBn_def,SET_def,BITS_THM,BIT_def,SLICE_def,LET_THM] rws
 in
    rws
 end;
