@@ -1,0 +1,200 @@
+!! This file is being edited and is in an inconsistent state [MJCG 11.01.05] !!
+
+===============================================================================
+== This directory contains Juliano's HOL files modified by MJCG & KXS        ==
+== [Revised version incorporating Juliano's new treatment of recursion]      ==
+== [Revised version incorporating liveness]                                  ==
+== [04.01.05: improved proofs from KXS in composeScript.sml & devScript.sml] ==
+== [09.01.05: MJCG added converter to combinators Atm, Seq, Par, Ite, Rec]   ==
+== [13.01.05: major tidy and update by MJCG]                                 ==
+===============================================================================
+
+composeScript.sml ......... definition of devices and their composition
+devScript.sml.............. definition and theorems on liveness
+compileScript.sml ......... definitions and theorems to support compiler
+compile.sml ............... convert to combinators and compile to devices
+FactScript.sml ............ an example
+
+The main functions provided in compile.sml are
+
+Convert : thm -> thm
+--------------------
+
+Convert (|- f x = e) returns a theorem |- f = p, where p is a
+combinatory expression built from the combinators Seq, Par and Ite.
+
+
+RecConvert: : thm -> thm -> thm
+-------------------------------
+
+RecConvert (|- f x = if f1 x then f2 x else f(f3 x)) (|- TOTAL(f1,f2,f3))
+returns a theorem
+
+ |- f = Rec(p1,p2,p3)
+
+where p1, p2 and p3 are combinatory expressions built from the
+combinators Seq, Par and Ite.
+
+
+Compile : thm list -> thm list -> term -> thm
+---------------------------------------------
+
+Compile takes a library of verified components and a program and a
+constant defined in the program
+
+ Compile : thm list -> thm list -> term -> thm
+           -------     --------    ----
+           library     program   constant
+
+The theorems in the Library are things like:
+
+      |- SEQ
+          (SEQ
+             (SEQ
+                (PAR (ATM (\(m,n). m))
+                   (PAR (ATM (\(m,n). n)) (ATM (\(m,n). 0))))
+                (REC
+                   (SEQ (PAR (ATM (\(m,n,acc). m)) (ATM (\(m,n,acc). 0)))
+                      (ATM (UNCURRY $=)))
+                   (PAR (ATM (\(m,n,acc). 0))
+                      (PAR (ATM (\(m,n,acc). n)) (ATM (\(m,n,acc). acc))))
+                   (PAR
+                      (SEQ (PAR (ATM (\(m,n,acc). m)) (ATM (\(m,n,acc). 1)))
+                         (ATM (UNCURRY $-)))
+                      (PAR (ATM (\(m,n,acc). n))
+                         (SEQ
+                            (PAR (ATM (\(m,n,acc). n))
+                               (ATM (\(m,n,acc). acc)))
+                            (ATM (UNCURRY $+))))))) (ATM SND)) (ATM SND) 
+         ===>
+         DEV (UNCURRY $*)
+
+where |= P ===> Q = !x. P x ==> Q x
+
+When the compiler encounters a function that isn't an application of
+Seq, Par or Ite it searches the library for a theorem of the form
+
+ |- C ===> DEV f
+
+and uses the first one it finds. It no library implementation is
+found, then the compiler generates
+
+ |- ATM f ===> DEV f
+
+
+ConvertCompile : thm list -> thm -> thm
+---------------------------------------
+
+Converts a non-recursive equation to combinators and then compiles to
+a device implementation (first argument is a library of component
+implementations).
+
+Example: 
+
+ Fact;
+ > val it = |- !n. Fact n = SND (FactIter (n,1)) : thm
+
+ - ConvertCompile [] Fact;
+ > val it =
+     |- SEQ (SEQ (PAR (ATM (\n. n)) (ATM (\n. 1))) (ATM FactIter)) (ATM SND) 
+        ===> 
+        DEV Fact : thm
+
+
+RecConvertCompile : thm list -> thm -> thm -> thm
+-------------------------------------------------
+
+Converts a recursive equation to combinators and then compiles to a
+device implementation Needs a totality theorem (user-supplied as third
+argument).
+
+Example:
+
+- val FactIter =
+    |- FactIter (n,acc) =
+       (if n = 0 then (n,acc) else FactIter (n - 1,n * acc))
+
+- val FactIter_TOTAL =
+    |- TOTAL
+         ((\(n,acc). n = 0),(\(n,acc). (n,acc)),(\(n,acc). (n - 1,n * acc)))
+
+ - RecConvertCompile [] FactIter FactIter_TOTAL;
+ > val it =
+    |- REC
+         (SEQ (PAR (ATM (\(n,acc). n)) (ATM (\(n,acc). 0)))
+              (ATM (UNCURRY $=)))
+         (PAR (ATM (\(n,acc). n)) (ATM (\(n,acc). acc)))
+         (PAR
+            (SEQ (PAR (ATM (\(n,acc). n)) (ATM (\(n,acc). 1)))
+                 (ATM (UNCURRY $-)))
+            (SEQ (PAR (ATM (\(n,acc). n)) (ATM (\(n,acc). acc)))
+                 (ATM (UNCURRY $*)))) 
+       ===> 
+       DEV FactIter
+
+
+xDev_defn : thm list -> string -> term frag list -> thm * thm
+-------------------------------------------------------------
+
+Tales a library, a name (string "f") of a function to be defined an
+equation of the form `f x = <expression>` and then creates a
+definition of f (using TFL) and then an implementation using
+ConvertCompile.
+
+Example:
+
+ - xDev_defn [] "Suc" `Suc n = n + 1`;
+ Definition has been stored under "Suc_def".
+ > val it =
+     (|- !n. Suc n = n + 1,
+      |- SEQ (PAR (ATM (\n. n)) (ATM (\n. 1))) (ATM (UNCURRY $+)) ===> DEV Suc)
+      : thm * thm
+
+See FactScript.sml for more examples.
+
+
+xRecDev_defn : thm list -> string -> term frag list -> term frag list -> thm * thm * thm
+-----------------------------------------------------------------------------------------
+
+Tales a library, a name (string "f") of a function to be defined an
+equation of the form `f x = if f1 x then f2 x else f (f3 x)` and a
+measure function `\x. <expression>` and then creates a definition of f
+(using TFL) and then an implementation using RecConvertCompile.
+
+Example:
+
+  xRecDev_defn
+   []
+   "MultIter"
+   `MultIter (m,n,acc) =
+     if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc)`
+   `\(m,n,acc). m`;
+ > val it =
+     (|- MultIter (m,n,acc) =
+         (if m = 0 then (0,n,acc) else MultIter (m - 1,n,n + acc)),
+      |- !P.
+           (!m n acc. (~(m = 0) ==> P (m - 1,n,n + acc)) ==> P (m,n,acc)) ==>
+           !v v1 v2. P (v,v1,v2),
+      |- REC
+           (SEQ (PAR (ATM (\(m,n,acc). m)) (ATM (\(m,n,acc). 0)))
+              (ATM (UNCURRY $=)))
+           (PAR (ATM (\(m,n,acc). 0))
+              (PAR (ATM (\(m,n,acc). n)) (ATM (\(m,n,acc). acc))))
+           (PAR
+              (SEQ (PAR (ATM (\(m,n,acc). m)) (ATM (\(m,n,acc). 1)))
+                 (ATM (UNCURRY $-)))
+              (PAR (ATM (\(m,n,acc). n))
+                 (SEQ (PAR (ATM (\(m,n,acc). n)) (ATM (\(m,n,acc). acc)))
+                    (ATM (UNCURRY $+))))) ===> DEV MultIter) : thm * thm * thm
+
+See FactScript.sml for more examples.
+
+=============================================================================== 
+MJCG
+Thu Jul 15 2004
+
+JMI
+Mon Sep 27 2004
+
+MJCG
+Mon Jan 13 2005
