@@ -18,7 +18,7 @@
 structure Solve_ineqs :> Solve_ineqs =
 struct
   open Arbint HolKernel boolLib
-       Int_extra Arith_cons Term_coeffs Qconv Theorems Thm_convs
+       Int_extra Arith_cons Term_coeffs RJBConv Theorems Thm_convs
        Norm_arith Norm_ineqs reduceLib;
 
 val << = String.<

@@ -24,7 +24,7 @@ struct
 
 open HolKernel boolLib Rsyntax reduceLib Arith_cons;
 open Term_coeffs;
-open Qconv; infix THENC;
+open RJBConv; infix THENC;
 open Norm_arith;
 open Norm_ineqs;
 open Sol_ranges;

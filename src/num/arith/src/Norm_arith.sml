@@ -18,7 +18,7 @@
 structure Norm_arith :> Norm_arith =
 struct
   open Arbint HolKernel boolLib Rsyntax
-       Arith_cons Term_coeffs Qconv Theorems Thm_convs reduceLib;
+       Arith_cons Term_coeffs RJBConv Theorems Thm_convs reduceLib;
 
 
   val << = String.<

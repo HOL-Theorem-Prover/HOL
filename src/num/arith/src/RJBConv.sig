@@ -1,4 +1,4 @@
-signature Qconv =
+signature RJBConv =
 sig
    include Abbrev
 

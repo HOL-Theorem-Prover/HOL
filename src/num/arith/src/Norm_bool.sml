@@ -18,7 +18,7 @@
 structure Norm_bool :> Norm_bool =
 struct
 
-open Arbint HolKernel boolSyntax Arith_cons Thm_convs Qconv;
+open Arbint HolKernel boolSyntax Arith_cons Thm_convs RJBConv;
 
 infix THENC;
 

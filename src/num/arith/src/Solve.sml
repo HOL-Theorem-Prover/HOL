@@ -18,7 +18,7 @@
 structure Solve :> Solve =
 struct
   open Arbint HolKernel boolLib;
-  open Arith_cons Term_coeffs Qconv Theorems Thm_convs
+  open Arith_cons Term_coeffs RJBConv Theorems Thm_convs
        Norm_arith Norm_ineqs Solve_ineqs;
 
 infix THENC;

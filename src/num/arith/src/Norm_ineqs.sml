@@ -19,7 +19,7 @@ structure Norm_ineqs :> Norm_ineqs =
 struct
 
 
-open Arbint HolKernel Arith_cons Qconv 
+open Arbint HolKernel Arith_cons RJBConv 
      Term_coeffs Thm_convs Norm_bool Norm_arith;
 
 infix THENC <<;

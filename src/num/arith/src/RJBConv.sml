@@ -17,12 +17,12 @@
 (* DATE          : 12th February 1993                                        *)
 (*****************************************************************************)
 
-structure Qconv :> Qconv =
+structure RJBConv :> RJBConv =
 struct
 
 open HolKernel boolLib Arbint;
 
-val ERR = mk_HOL_ERR "Qconv";
+val ERR = mk_HOL_ERR "RJBconv";
 
 fun failwith function = raise (ERR function "");
 
