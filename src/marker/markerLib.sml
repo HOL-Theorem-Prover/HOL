@@ -4,6 +4,7 @@ open markerTheory
 
 infix THENC ORELSEC
 
+val stmarker_t = prim_mk_const{Thy = "marker", Name = "stmarker"};
 val stmark_term = REWR_CONV (GSYM stmarker_def)
 
 fun stmark_conjunct P tm = let
@@ -22,12 +23,7 @@ in
   else NO_CONV
 end tm
 
-fun is_stmarked tm = let
-  val (f, _) = dest_comb tm
-  val {Name,Thy,...} = dest_thy_const f
-in
-  Name = "stmarker" andalso Thy = "marker"
-end handle HOL_ERR _ => false
+fun is_stmarked t = same_const stmarker_t (rator t) handle HOL_ERR _ => false
 
 val [comm, assoc, commassoc] = CONJUNCTS (SPEC_ALL markerTheory.move_left_conj)
 open QConv
