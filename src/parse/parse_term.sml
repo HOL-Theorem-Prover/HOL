@@ -57,8 +57,6 @@ and 'a preterm
   | AQ of 'a
   | TYPED of ('a preterm locn.located * Pretype.pretype locn.located)
 
-fun CCOMB(x,y) = (COMB(y,x),locn.between (#2 y) (#2 x))
-
 infix --
 fun (l1 -- []) = l1
   | (l1 -- (x::xs)) = List.filter (fn y => y <> x) l1 -- xs
@@ -687,7 +685,7 @@ fun parse_term (G : grammar) typeparser = let
         case translated_rhs0 of
           (TM::rest) => (rest, true)
         | _ => (translated_rhs0, false)
-      val ((_,llocn),_) = List.hd (if top_was_tm then List.tl rhs else rhs)
+      val ((_,llocn),_) = List.hd rhs
       val lrlocn = locn.between llocn rlocn
       val rule = valOf (Polyhash.peek rule_db translated_rhs)
         handle Option => let
@@ -696,42 +694,42 @@ fun parse_term (G : grammar) typeparser = let
           valOf (handle_list_reduction translated_rhs)
           handle Option => FAILloc lrlocn errmsg
         end
-      val _ =
-        case rule of
-          infix_rule s => top_was_tm orelse
-            FAILloc lrlocn ("missing left argument to "^s)
-        | suffix_rule s => top_was_tm orelse
-              FAILloc lrlocn ("missing first argument to "^s)
-        | _ => true
-      fun item_to_pterm ((NonTerminal p,locn), _) = SOME (p,locn)
-        | item_to_pterm _ = NONE
-      val lrhs = length rhs
-      val mapP = List.mapPartial
-      val n = if top_was_tm then 1 else 0
-      val (numtopop, newterm) =
+      val ignore_top_item =
+          case rule of
+              infix_rule   s => if top_was_tm then false else
+                                FAILloc lrlocn ("missing left argument to "^s)
+            | suffix_rule  s => if top_was_tm then false else
+                                FAILloc lrlocn ("missing first argument to "^s)
+            | _              => top_was_tm
+      (* rhs' is the actual stack segment matched by the rule, and llocn' is its left edge,
+         unlike rhs and llocn which may contain a spurious TM on the left *)
+      val rhs' = if ignore_top_item then tl rhs else rhs
+      val ((_,llocn'),_) = List.hd rhs'
+      val lrlocn' = locn.between llocn' rlocn
+      fun seglocs xs als mal = (* extract TM items, and locations of right edges of
+                                  maximal initial segments containing them *)
+          case (xs,mal) of
+              ((((NonTerminal p,locn),_)::xs), NONE       ) => seglocs xs      als  (SOME((p,locn),locn))
+            | ((((NonTerminal p,locn),_)::xs), SOME al    ) => seglocs xs (al::als) (SOME((p,locn),locn))
+            | ((((_            ,locn),_)::xs), NONE       ) => seglocs xs als mal
+            | ((((_            ,locn),_)::xs), SOME (pl,_)) => seglocs xs als (SOME(pl,locn))
+            | ([]                            , NONE       ) => List.rev als
+            | ([]                            , SOME al    ) => List.rev (al::als)
+      val args_w_seglocs = seglocs rhs' [] NONE
+      fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
+      val newterm =
         case rule of
           listfix_rule r => let
-            val args = mapP item_to_pterm rhs
-            fun mk_list [] = (VAR (#nilstr r),locn.Loc_None)
-              | mk_list (x::xs) = (COMB((COMB((VAR (#cons r),locn.Loc_None), x),#2 x), mk_list xs),locn.between (#2 x) rlocn)
+            fun mk_list [] = (VAR (#nilstr r),rlocn)
+              | mk_list ((x,_)::xs) = (COMB((COMB((VAR (#cons r),#2 x), x),#2 x), mk_list xs),locn.between (#2 x) rlocn)
           in
-            (lrhs - n, mk_list args)
+            mk_list args_w_seglocs
           end
-        | _ => let
-            val (args, numtopop, head) =
-              case rule of
-                infix_rule s => (mapP item_to_pterm rhs, lrhs, s)
-              | prefix_rule s => (mapP item_to_pterm (tl rhs), lrhs - n, s)
-              | suffix_rule s => (mapP item_to_pterm rhs, lrhs, s)
-              | closefix_rule s => (mapP item_to_pterm (tl rhs), lrhs - n, s)
-              | _ => FAILloc lrlocn "parse_term : can't happen"
-          in
-            (numtopop, List.foldl CCOMB (VAR head,locn.Loc_None) args)
-            (* using Loc_None allows for the head to be either at left or right *)
-          end
+        | _ => 
+          List.foldl CCOMB (VAR (summary_toString rule),llocn') args_w_seglocs
     in
-      repeatn numtopop pop >> push ((NonTerminal (#1 newterm),lrlocn), XXX)
-                                    (* force location to entire RHS, including tokens *)
+      repeatn (length rhs') pop >> push ((NonTerminal (#1 newterm),lrlocn'), XXX)
+                            (* lrlocn: force location to entire RHS, including tokens *)
     end
   else
     case rhs of
