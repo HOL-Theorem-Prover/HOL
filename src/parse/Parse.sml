@@ -547,7 +547,7 @@ local
     val gtf = give_types_to_fvs ctxt
   in
     case tm of
-      Var{Name, Ty, ...} => let
+      Var{Name, Ty, Locn} => let
       in
         if has_any_uvars Ty andalso not(Lib.op_mem Preterm.eq tm boundvars) then
           case List.find (fn ctxttm => name_eq Name ctxttm) ctxt of
@@ -559,7 +559,7 @@ local
                           "can't have type\n\n" ^
                           type_to_string (type_of ctxt_tm) ^
                           "\n\nas given by context.\n\n");
-                 raise ERROR "parse_in_context" "unify failed")
+                 raise ERRORloc "parse_in_context" Locn "unify failed")
         else
           ()
       end

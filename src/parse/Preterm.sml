@@ -6,6 +6,7 @@ infix ##
 infixr -->
 
 val ERR = mk_HOL_ERR "Preterm"
+val ERRloc = mk_HOL_ERRloc "Preterm"
 
 
 
@@ -58,17 +59,19 @@ fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...}) 
      attempt to make some sort of constant (non-deterministic), but we
      could just as well fail, since Overloaded nodes should be gone
      by the time clean is called.
+
+     shr takes a location for now, until Preterm has a location built-in.
  ---------------------------------------------------------------------------*)
 
 fun clean shr =
  let fun
-   cl(Var{Name,Ty,...})       = Term.mk_var(Name, shr Ty)
- | cl(Const{Name,Thy,Ty,...}) = Term.mk_thy_const{Name=Name,Thy=Thy,Ty=shr Ty}
- | cl(Comb{Rator,Rand,...})   = Term.mk_comb(cl Rator,cl Rand)
- | cl(Abs{Bvar,Body,...})     = Term.mk_abs(cl Bvar, cl Body)
- | cl(Antiq{Tm,...})          = Tm
- | cl(Constrained{Ptm,...})    = cl Ptm
- | cl(Overloaded{Name,Ty,...}) = Term.mk_const(Name, shr Ty)
+   cl(Var{Name,Ty,Locn})            = Term.mk_var(Name, shr Locn Ty)
+ | cl(Const{Name,Thy,Ty,Locn})      = Term.mk_thy_const{Name=Name,Thy=Thy,Ty=shr Locn Ty}
+ | cl(Comb{Rator,Rand,...})         = Term.mk_comb(cl Rator,cl Rand)
+ | cl(Abs{Bvar,Body,...})           = Term.mk_abs(cl Bvar, cl Body)
+ | cl(Antiq{Tm,...})                = Tm
+ | cl(Constrained{Ptm,...})         = cl Ptm
+ | cl(Overloaded{Name,Ty,Locn,...}) = Term.mk_const(Name, shr Locn Ty)
  in cl
  end;
 
@@ -121,7 +124,7 @@ fun to_term tm =
                   => return (Term.mk_abs(Bvar', Body'))))
             | Antiq{Tm,...} => return Tm
             | Constrained{Ptm,...} => cleanup Ptm
-            | Overloaded _ => raise ERR "to_term" "applied to Overloaded"
+            | Overloaded _ => raise ERRloc "to_term" (locn tm) "applied to Overloaded"
        end
     val V = tyVars tm
     val (newV, result) = cleanup tm V
@@ -137,9 +140,9 @@ fun to_term tm =
     valOf result
  end
  else
- let fun shr ty =
+ let fun shr l ty =
       if has_free_uvar ty
-      then raise ERR"typecheck.to_term"
+      then raise ERRloc "typecheck.to_term" l
          "Unconstrained type variable (and Globals.guessing_tyvars is false)"
       else Pretype.clean (Pretype.remove_made_links ty)
  in
@@ -159,7 +162,7 @@ fun to_term tm =
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
-exception phase1_exn of string * hol_type
+exception phase1_exn of locn.locn * string * hol_type
 fun remove_overloading_phase1 ptm =
   case ptm of
     Comb{Rator, Rand, Locn} => Comb{Rator = remove_overloading_phase1 Rator,
@@ -178,7 +181,7 @@ fun remove_overloading_phase1 ptm =
      in
       case possible_ops of
         [] =>
-        raise phase1_exn("No possible type for overloaded constant "^Name^"\n",
+        raise phase1_exn(Locn, "No possible type for overloaded constant "^Name^"\n",
                          Pretype.toType Ty)
       | [{Ty = ty,Name,Thy}] => let
           val pty = Pretype.rename_typevars (Pretype.fromType ty)
@@ -280,7 +283,7 @@ fun do_overloading_removal ptm0 = let
       end
 in
   case cases result of
-    NONE => raise ERR "do_overloading_removal"
+    NONE => raise ERRloc "do_overloading_removal" (locn ptm0)
       "Couldn't find a sensible resolution for overloaded constants"
   | SOME ((env,clist),xs) =>
       if not (!Globals.guessing_overloads)
@@ -290,7 +293,7 @@ in
          of NONE => (apply_subst env; #1 (do_csubst clist ptm))
           | SOME _ => let in
               if not (!Globals.guessing_overloads)
-                 then raise ERR "do_overloading_removal"
+                 then raise ERRloc "do_overloading_removal" (locn ptm0)
                          "More than one resolution of overloading possible"
                  else ();
               if !Globals.interactive then
@@ -324,8 +327,8 @@ val overloading_resolution0 = remove_elim_magics o do_overloading_removal
 
 fun overloading_resolution ptm =
     overloading_resolution0 ptm
-    handle phase1_exn(s,ty) =>
-           (Lib.say s ; raise ERR "overloading_resolution" s)
+    handle phase1_exn(l,s,ty) =>
+           (Lib.say s ; raise ERRloc "overloading_resolution" l s)
 
 (*---------------------------------------------------------------------------
  * Type inference for HOL terms. Looks ugly because of error messages, but is
@@ -388,14 +391,15 @@ fun TC printers = let
             Lib.say "\nType inference failure: unable to infer a type \
                               \for the application of\n\n";
             ptm Rator';
-            Lib.say "\n\n";
+            Lib.say ("\n\n"^locn.toString (locn Rator)^"\n\n");
 
             if (is_atom Rator) then ()
             else(Lib.say"which has type\n\n";
                  pty(Term.type_of Rator');
                  Lib.say"\n\n");
 
-            Lib.say "to\n\n"; ptm Rand'; Lib.say "\n\n";
+            Lib.say "to\n\n"; ptm Rand';
+            Lib.say ("\n\n"^locn.toString (locn Rand)^"\n\n");
 
             if (is_atom Rand) then ()
             else(Lib.say"which has type\n\n";
@@ -404,7 +408,7 @@ fun TC printers = let
 
             Lib.say ("unification failure message: "^message^"\n");
             Globals.show_types := tmp;
-            raise ERR"typecheck" "failed"
+            raise ERRloc"typecheck" (locn Rand (* arbitrary *)) "failed"
           end)
     | check (Abs{Bvar, Body, Locn}) = (check Bvar; check Body)
     | check (Constrained{Ptm,Ty,Locn}) =
@@ -419,7 +423,8 @@ fun TC printers = let
                 handle e => (Globals.show_types := tmp; raise e)
           in
             Lib.say "\nType inference failure: the term\n\n";
-            ptm real_term; Lib.say "\n\n";
+            ptm real_term;
+            Lib.say ("\n\n"^locn.toString (locn Ptm)^"\n\n");
             if (is_atom Ptm) then ()
             else(Lib.say"which has type\n\n";
                  pty(Term.type_of real_term);
@@ -428,7 +433,7 @@ fun TC printers = let
             pty real_type;
             Lib.say ("\n\nunification failure message: "^message^"\n");
             Globals.show_types := tmp;
-            raise ERR"typecheck" "failed"
+            raise ERRloc"typecheck" Locn "failed"
           end)
     | check _ = ()
 in check
@@ -436,16 +441,16 @@ end end;
 
 fun typecheck_phase1 pfns ptm =
     TC pfns ptm
-    handle phase1_exn(s,ty) => let
+    handle phase1_exn(l,s,ty) => let
            in
              case pfns of
-               NONE => (Lib.say s; raise ERR "typecheck" s)
+               NONE => (Lib.say s; raise ERRloc "typecheck" l s)
              | SOME (_, typ) =>
                (Lib.say s;
                 Lib.say "Wanted it to have type:  ";
                 Lib.say (typ ty);
                 Lib.say "\n";
-                raise ERR "typecheck" s)
+                raise ERRloc "typecheck" l s)
            end
 
 (* ---------------------------------------------------------------------- *)
@@ -552,15 +557,15 @@ fun typecheck pfns ptm0 = let
   val ptm = overloading_resolution0 ptm0
 in
   remove_case_magic (to_term ptm)
-end handle phase1_exn(s,ty) =>
+end handle phase1_exn(l,s,ty) =>
            case pfns of
-             NONE => (Lib.say s; raise ERR "typecheck" s)
+             NONE => (Lib.say s; raise ERRloc "typecheck" l s)
            | SOME (_, typ) =>
              (Lib.say s;
               Lib.say "Wanted it to have type:  ";
               Lib.say (typ ty);
               Lib.say "\n";
-              raise ERR "typecheck" s)
+              raise ERRloc "typecheck" l s)
 
 
 end; (* Preterm *)
