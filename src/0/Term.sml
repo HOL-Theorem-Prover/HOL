@@ -1066,14 +1066,12 @@ end;
 (*---------------------------------------------------------------------------*
  * Hidden information sharing between Term and Preterm.                      *
  *---------------------------------------------------------------------------*)
-local val used = ref false
-      fun constify{Name,Ty} =
-        let val (Const(r,_)) = #const(const_decl Name)
-        in Const(r,Ty)
-        end
+local
+  val used = ref false
+  fun mk_const0 {Name,Ty} = Const(ref Name, Ty)
 in
-fun Preterm_init r1 r2 =
-  if !used then () else (r1 := constify; r2 := Comb; used := true)
+  fun Preterm_init r1 r2 = if !used then ()
+                           else (r1 := mk_const0; r2 := Comb; used := true)
 end;
 
 
