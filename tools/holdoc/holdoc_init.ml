@@ -131,9 +131,9 @@ let dir_proc n ts =
   in
   let rec goident ts =
     match ts with
-      (White(_)::ts)   -> goId ts
-    | (Indent(_)::ts)  -> goId ts
-    | (Comment(_)::ts) -> goId ts
+      (White(_)::ts)   -> goident ts
+    | (Indent(_)::ts)  -> goident ts
+    | (Comment(_)::ts) -> goident ts
     | (Ident(s,_)::ts) -> s
     | (t::ts)          -> prerr_endline ("Unexpected token, wanted identifier: "^render_token t);
                           raise BadDirective
