@@ -1107,41 +1107,65 @@ fun COMB_SYNTH_CONV tm =
             handle HOL_ERR _ => raise ERR "SYNTH_COMB" "input match failure"
    in
     if is_var bdy andalso can (assoc bdy) args_match
-     then prove
-           (``^tm = (^out_bus = ^(assoc bdy args_match))``,
-            REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
-             THEN GEN_BETA_TAC 
-             THEN REWRITE_TAC[])
+     then let val goal = ``^tm = (^out_bus = ^(assoc bdy args_match))``
+          in
+           prove
+            (goal,
+             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
+              THEN GEN_BETA_TAC 
+              THEN REWRITE_TAC[])
+           handle HOL_ERR _ =>
+           (print "Can't prove:\n";print_term goal;
+            raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+          end
      else if is_const bdy orelse numSyntax.is_numeral bdy
-     then prove
-           (``^tm = CONSTANT ^bdy ^out_bus``,
-            REWRITE_TAC[COMB_def,CONSTANT_def,FUN_EQ_THM] 
-             THEN GEN_BETA_TAC 
-             THEN REWRITE_TAC[])
+     then let val goal = ``^tm = CONSTANT ^bdy ^out_bus``
+          in
+           prove
+            (goal,
+             REWRITE_TAC[COMB_def,CONSTANT_def,FUN_EQ_THM] 
+              THEN GEN_BETA_TAC 
+              THEN REWRITE_TAC[])
+           handle HOL_ERR _ =>
+           (print "Can't prove:\n";print_term goal;
+            raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+          end
      else if is_comb bdy andalso is_const(rator bdy)
      then let val arg = rand bdy
               val v = genvar ``:^time_ty -> ^(type_of arg)``
+              val goal =
+                   ``^tm = ?^v. COMB ^(mk_pabs(args, arg)) (^in_bus,^v) 
+                                /\
+                                COMB ^(rator bdy) (^v, ^out_bus)``
           in
            prove
-             (``^tm = ?^v. COMB ^(mk_pabs(args, arg)) (^in_bus,^v) /\ 
-                           COMB ^(rator bdy) (^v, ^out_bus)``,
+             (goal,
               REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
                THEN GEN_BETA_TAC 
                THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
                THEN REWRITE_TAC[])
+           handle HOL_ERR _ =>
+           (print "Can't prove:\n";print_term goal;
+            raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_pair bdy andalso is_BUS_CONCAT out_bus
      then let val (bdy1,bdy2) = dest_pair bdy
               val (out_bus1,out_bus2) = dest_BUS_CONCAT out_bus
+              val goal = 
+                   ``^tm = 
+                     COMB ^(mk_pabs(args, bdy1)) (^in_bus,^out_bus1) /\
+                     COMB ^(mk_pabs(args, bdy2)) (^in_bus,^out_bus2)``
           in
           prove
-           (``^tm = COMB ^(mk_pabs(args, bdy1)) (^in_bus,^out_bus1) /\ 
-                    COMB ^(mk_pabs(args, bdy2)) (^in_bus,^out_bus2)``,
+           (goal,
             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
              THEN GEN_BETA_TAC 
              THEN REWRITE_TAC[PAIR_EQ]
              THEN EQ_TAC
              THEN RW_TAC bool_ss [])
+           handle HOL_ERR _ =>
+           (print "Can't prove:\n";print_term goal;
+            raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_comb bdy 
               andalso is_comb(rator bdy) 
@@ -1151,17 +1175,22 @@ fun COMB_SYNTH_CONV tm =
               val arg2 = rand bdy
               val v1 = genvar ``:^time_ty -> ^(type_of arg1)``
               val v2 = genvar ``:^time_ty -> ^(type_of arg2)``
+              val goal = 
+                   ``^tm = ?^v1 ^v2. 
+                       COMB ^(mk_pabs(args, arg1)) (^in_bus,^v1) /\ 
+                       COMB ^(mk_pabs(args, arg2)) (^in_bus,^v2) /\ 
+                       COMB (UNCURRY ^opr) (^v1 <> ^v2, ^out_bus)``
           in
            prove
-            (``^tm = ?^v1 ^v2. 
-                      COMB ^(mk_pabs(args, arg1)) (^in_bus,^v1) /\ 
-                      COMB ^(mk_pabs(args, arg2)) (^in_bus,^v2) /\ 
-                      COMB (UNCURRY ^opr) (^v1 <> ^v2, ^out_bus)``,
+            (goal,
              REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
               THEN GEN_BETA_TAC 
               THEN REWRITE_TAC[UNCURRY]
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
               THEN REWRITE_TAC[])
+           handle HOL_ERR _ =>
+           (print "Can't prove:\n";print_term goal;
+            raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else raise ERR "COMB_SYNTH_CONV" "disallowed case"
    end
