@@ -861,32 +861,25 @@ fun dest_eq_ty t =
 end;
 
 (*---------------------------------------------------------------------------
-   Normalizing names (before pretty-printing with pp_raw, or trav) and
-   full propagation of substitutions.
+   Full propagation of substitutions.
  ---------------------------------------------------------------------------*)
 
 local val subs_comp = Subst.comp mk_clos
   fun vars_sigma_norm (s,t) =
-    case t
-     of Comb(Rator,Rand) =>
-         let val (a,fva) = vars_sigma_norm (s,Rator)
-             val (b,fvb) = vars_sigma_norm (s,Rand)
-         in (Comb(a, b), union fva fvb)
-         end
-      | Bv i =>
-        (case Subst.exp_rel(s,i)
-          of (0, SOME v)   => vars_sigma_norm (Subst.id, v)
-           | (lams,SOME v) => vars_sigma_norm (Subst.shift(lams,Subst.id),v)
-           | (lams,NONE)   => (Bv lams, []))
-      | Abs(Bvar,Body) =>
-        let val (bd,fv) = vars_sigma_norm (Subst.lift(1,s), Body)
-        in (Abs(variant fv Bvar, bd), fv)
-        end
-      | Fv _ => (t,[t])
-      | Clos(Env,Body) => vars_sigma_norm (subs_comp(s,Env), Body)
-      | _ => (t, [])
+    case t of
+      Comb(Rator,Rand) => Comb(vars_sigma_norm(s, Rator),
+                               vars_sigma_norm(s, Rand))
+    | Bv i =>
+        (case Subst.exp_rel(s,i) of
+           (0, SOME v)   => vars_sigma_norm (Subst.id, v)
+         | (lams,SOME v) => vars_sigma_norm (Subst.shift(lams,Subst.id),v)
+         | (lams,NONE)   => Bv lams)
+    | Abs(Bvar,Body) => Abs(Bvar, vars_sigma_norm  (Subst.lift(1,s), Body))
+    | Fv _ => t
+    | Clos(Env,Body) => vars_sigma_norm (subs_comp(s,Env), Body)
+    | _ => t  (* i.e., a const *)
 in
-fun norm_clos tm = fst (vars_sigma_norm(Subst.id,tm))
+fun norm_clos tm = vars_sigma_norm(Subst.id,tm)
 end
 
 (*---------------------------------------------------------------------------*
