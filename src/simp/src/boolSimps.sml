@@ -6,8 +6,8 @@ open HolKernel boolLib liteLib simpLib pureSimps Ho_Rewrite tautLib;
 infix THEN ORELSE THENL THENQC ++;
 
 val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
+fun -- q x = Term q handle e => Raise e;
+fun == q x = Type q handle e => Raise e;
 
 (* ---------------------------------------------------------------------
  * bool_ss
