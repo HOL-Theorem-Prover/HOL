@@ -82,17 +82,17 @@ let rec format_location : (Lexing.position * Lexing.position) -> string
             string_of_int l0.Lexing.pos_lnum ^ ":" ^ string_of_int l0_col ^
             begin
               if l0_col = l1_col then
-                ""
+                ":"
               else
-                "-" ^ string_of_int l1_col
+                "-" ^ string_of_int l1_col ^ ":"
             end
           else if l1.Lexing.pos_lnum = l0.Lexing.pos_lnum + 1 && l1_col = 0 then  (* to end of line *)
-            string_of_int l0.Lexing.pos_lnum ^ ":" ^ string_of_int l0_col ^ "-"
+            string_of_int l0.Lexing.pos_lnum ^ ":" ^ string_of_int l0_col ^ "-:"
           else (* lines differ *)
             string_of_int l0.Lexing.pos_lnum ^ ":" ^ string_of_int l0_col ^
-            "-" ^ string_of_int l1.Lexing.pos_lnum ^ ":" ^ string_of_int l1_col
+            "-" ^ string_of_int l1.Lexing.pos_lnum ^ ":" ^ string_of_int l1_col ^ ":"
         end
       else (* filenames differ *)
         l0.Lexing.pos_fname ^ ":" ^ string_of_int l0.Lexing.pos_lnum ^ ":" ^ string_of_int l0_col ^
-        "-" ^ l1.Lexing.pos_fname ^ ":" ^ string_of_int l1.Lexing.pos_lnum ^ ":" ^ string_of_int l1_col
+        "-" ^ l1.Lexing.pos_fname ^ ":" ^ string_of_int l1.Lexing.pos_lnum ^ ":" ^ string_of_int l1_col ^ ":"
       end

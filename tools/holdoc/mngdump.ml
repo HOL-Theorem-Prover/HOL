@@ -21,8 +21,8 @@ let format_badarg : string located -> string
 
 (* non-fatal error condition *)
 let write_warning (s,l) =
-  print_string ("% "^format_location l^" WARNING: "^s^".\n");
-  prerr_endline (format_location l ^ ":WARNING: " ^ s ^ ".")
+  print_string ("% "^format_location l^"WARNING: "^s^".\n");
+  prerr_endline (format_location l ^ "WARNING: " ^ s ^ ".")
 
 (* log an unrecognised string *)
 let unseen_strings = Hashtbl.create 100
