@@ -448,6 +448,7 @@ fun pp_theory_struct ppstrm info_record = let
       add_string "val internal_grammar_ref = ref (Parse.pop_theory_grammar())";
       add_newline();
       add_string swap_fregs_def;
+      add_newline();
       pblock ("Parents", add_string o pparent, thid_sort parents);
       add_newline();
       pp_incorporate theory parents types constants; add_newline();
