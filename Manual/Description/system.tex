@@ -332,7 +332,7 @@ the abstraction
 $\lquant{x}t$; it fails if $x$ is not a variable.
 
 
-There are four primitive destructor
+There are four primitive destructor functions on terms:
 %
 \index{term destructors, in HOL logic@term destructors, in \HOL{} logic}
 \index{variables, in HOL logic@variables, in \HOL{} logic!destructor for}
@@ -341,7 +341,6 @@ There are four primitive destructor
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!destructor for}
 \index{function application, in HOL logic@function application, in \HOL{} logic!destructor for}
 %
-functions on terms:
 
 \begin{boxed}
 
@@ -350,10 +349,10 @@ functions on terms:
 \index{dest_comb@\ml{dest\_comb}|pin}
 \index{dest_abs@\ml{dest\_abs}|pin}
 \begin{verbatim}
-   dest_var   : term -> (string * hol_type)
+   dest_var       : term -> (string * hol_type)
    dest_thy_const : term -> {Name:string, Thy:string, Ty:hol_type}
-   dest_comb  : term -> (term * term)
-   dest_abs   : term -> (term * term)
+   dest_comb      : term -> (term * term)
+   dest_abs       : term -> (term * term)
 \end{verbatim}
 \end{boxed}
 
@@ -430,11 +429,12 @@ value (of \ML\ type \ml{hol\_type}) as
 %
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic}
 %
-can be used instead of\footnote{In order to be processed successfully, this
-quotation requires the theory of arithmetic to have already been loaded, which
-can be accomplished by \ml{load "arithmeticTheory"}.}
+can be used instead of\footnote{In order to be processed successfully,
+  this quotation requires the theory of arithmetic to have already
+  been loaded, which can be accomplished in the interactive system by
+  \ml{load "arithmeticTheory"}.}
 
-{\small\baselineskip\HOLSpacing
+\begin{hol}
 \begin{verbatim}
    let val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
    in
@@ -449,13 +449,17 @@ can be accomplished by \ml{load "arithmeticTheory"}.}
                  mk_thy_const{Name="ZERO",Thy="arithmetic",Ty=numty}))))
    end
 \end{verbatim}
-}
+\end{hol}
 
- The \HOL{} printer, which is integrated into the \ML{} toplevel loop,
+The \HOL{} printer, which is integrated into the \ML{} toplevel loop,
 also outputs types and terms using this syntax.
+%
 \index{printing, in HOL logic@printing, in \HOL{} logic!of quotation syntax}
+%
 Types are printed
+%
 \index{printing, in HOL logic@printing, in \HOL{} logic!of types}
+%
 in the form $\holquote{:\mathit{type}}$. For example, the \ML\ value
 of type \ml{hol\_type} representing
 $\alpha\fun(\ty{ind}\fun\ty{bool})$ would be printed out
@@ -492,24 +496,24 @@ illustrated in the following session.
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
-   - ``x = (x = 1)``;
-   Type inference failure: unable to infer a type for the application of
+- ``x = (x = 1)``;
+Type inference failure: unable to infer a type for the application of
 
-   $= (x :num)
+$= (x :num)
 
-   which has type
+which has type
 
-   :num -> bool
+:num -> bool
 
-   to
+to
 
-   (x :num) = (1 :num)
+(x :num) = (1 :num)
 
-   which has type
+which has type
 
-   :bool
+:bool
 
-   unification failure message: unify failed
+unification failure message: unify failed
 \end{verbatim}
 \end{session}
 
@@ -518,11 +522,11 @@ functions:
 
 \begin{session}
 \begin{verbatim}
-   - mk_eq
-      (mk_var("x",bool),
-       mk_eq(mk_var("x",numty),
-             mk_numeral (Arbnum.fromString "1")));
-   > val it = ``x = x = 1`` : term
+- mk_eq
+   (mk_var("x",bool),
+    mk_eq(mk_var("x",numty),
+          mk_numeral (Arbnum.fromString "1")));
+> val it = ``x = x = 1`` : term
 \end{verbatim}
 \end{session}
 
@@ -533,8 +537,8 @@ above to infer a sensible type for all variables occurring in a term.
 At times, the user may want to control the exact type of a subterm. To
 support such functionality, types can be explicitly indicated by
 following any subterm with a colon and then a type.  For example,
-\ml{``f(x:num):bool``} will type check with \ml{f} and \ml{x}
-getting types \ml{num->bool} and \ml{num} respectively.
+\holtxt{``f(x:num):bool``} will type check with \holtxt{f} and \holtxt{x}
+getting types \holtxt{num->bool} and \holtxt{num} respectively.
 This treatment of types within quotations is inherited from
 \LCF.
 %
@@ -568,14 +572,14 @@ The following session illustrates antiquotation.
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
-   - val y = ``x+1``;
-   > val y = ``x + 1`` : term
+- val y = ``x+1``;
+> val y = ``x + 1`` : term
 
-   val z = ``y = ^y``;
-   > val z = ``y = x + 1`` : term
+val z = ``y = ^y``;
+> val z = ``y = x + 1`` : term
 
-   - ``!x:num.?y:num.^z``;
-   > val it = ``!x. ?y. y = x + 1`` : term
+- ``!x:num.?y:num.^z``;
+> val it = ``!x. ?y. y = x + 1`` : term
 \end{verbatim}
 \end{session}
 
@@ -593,7 +597,9 @@ The following session illustrates antiquotation.
 \end{session}
 
 \noindent Antiquoting a type into a term quotation requires the use of
-{\verb+ty_antiq+}. For example,
+{\verb+ty_antiq+}. For example,%
+%
+\index{ty_antiq@\ml{ty\_antiq}}
 
 \begin{session}
 \begin{verbatim}
@@ -614,11 +620,14 @@ The following session illustrates antiquotation.
 
 \subsection{Viewing the grammar}
 
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!grammars for}
+\index{printing, in HOL logic@printing, in \HOL{} logic!grammars for}
 The behaviour of the \HOL{} quotation parser and printer is determined
-by the current grammar. Thus, a familiarity with the basic
-vocabulary of the standard collection of \HOL{} theories is important
-if one is to use \HOL effectively. One can examine the current grammar used by the
-parser with the functions \verb+type_grammar+ and \verb+term_grammar+.
+by the current grammar. Thus, a familiarity with the basic vocabulary
+of the standard collection of \HOL{} theories is important if one is
+to use \HOL{} effectively. One can examine the current grammar used by
+the parser with the functions \verb+type_grammar+ and
+\verb+term_grammar+.
 
 For example, in the following session, we see that the type grammar
 used in the startup context of \HOL{} has the type operators
@@ -1101,10 +1110,14 @@ In \HOL, primitive inference schemes are represented by \ML{} functions
 that return theorems as values.  That is, for particular \HOL{} terms,
 the \ML{} functions return the instance of the theorem at those terms.
 The \ML{} functions are part of the \ML{} abstract type
-\ml{thm}\index{thm@\ml{thm}}: although \ml{thm} has no primitive
-constructors, it has (eight) operations which return theorems as
-values: \ml{ASSUME}, \ml{REFL}, \ml{BETA\_CONV}, \ml{SUBST}, \ml{ABS},
-\ml{INST\_TYPE}, \ml{DISCH} and \ml{MP}.
+\ml{thm}:
+%
+\index{thm (ML type)@\ml{thm} (\ML{} type)}
+%
+although \ml{thm} has no primitive constructors, it has (eight)
+operations which return theorems as values: \ml{ASSUME}, \ml{REFL},
+\ml{BETA\_CONV}, \ml{SUBST}, \ml{ABS}, \ml{INST\_TYPE}, \ml{DISCH} and
+\ml{MP}.
 %
 \index{inference schemes, in HOL logic@inference schemes, in \HOL{} logic}
 

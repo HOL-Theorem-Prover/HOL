@@ -12,6 +12,10 @@
 % displaying a HOL session in a box (boxed or session environments).
 % In that case, put the session flush against the left margin
 
+% Rather than wrapping begin{verbatim} blocks in \small, which does
+% terrible things to line-spacing in the vicinity, use the hol
+% environment, thus \begin{hol}\begin{verbatim}...\end{verbatim}\end{hol}
+
 \newcommand{\konst}[1]{\ensuremath{\mbox{\small{\textbf{\sf{#1}}}}}}
 \newcommand{\nil}{\mathbf{[} \;\mathbf{]}}
 \newcommand{\cons}[2]{{#1}\mathbf{:}\mathbf{:}{#2}}
@@ -288,8 +292,7 @@ useful constants.
 \begin{hol}
 \index{COND, the HOL constant@\holtxt{COND}, the \HOL{} constant}
 \index{LET, the HOL constant@\ml{LET}, the \HOL{} constant}
-\index{conditional predicate, in HOL logic@conditional predicate, in \HOL{} logic!definitional axiom for}
-\index{conditionals, in HOL logic@conditionals, in \HOL{} logic}
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic!definitional axiom for}
 \begin{verbatim}
    LET_DEF  |- LET  = \f x. f x
    COND_DEF |- COND = \t t1 t2. @x. ((t=T)==>(x=t1)) /\ ((t=F)==>(x=t2))
@@ -315,7 +318,6 @@ The constant \holtxt{COND} is used to represent conditional
 expressions. The concrete syntax
 %
 \index{terms, in HOL logic@terms, in \HOL{} logic!conditional}%
-\index{conditional predicate, in HOL logic@conditional predicate, in \HOL{} logic}%
 \index{conditionals, in HOL logic@conditionals, in \HOL{} logic}%
 %
 $\holtxt{if}\,t_1\,\holtxt{then}\,t_2\,\holtxt{else}\,t_3$ abbreviates the
@@ -445,7 +447,6 @@ values (of type \ml{term}) as the other quotations in the same row.
 \index{ choice function, in HOL logic@\holtxt{"@} (choice function, in \HOL{} logic)}
 \index{terms, in HOL logic@terms, in \HOL{} logic!non-primitive}
 \index{terms, in HOL logic@terms, in \HOL{} logic!constructors for}
-\index{conditional predicate, in HOL logic@conditional predicate, in \HOL{} logic}
 \index{conditionals, in HOL logic@conditionals, in \HOL{} logic}
 \index{conjunction, in HOL logic@conjunction, in \HOL{} logic!constructor for}
 \index{disjunction, in HOL logic@disjunction, in \HOL{} logic!constructor for}
@@ -497,7 +498,7 @@ $\exists$-quantification & {\small\verb+?+}$x${\small\verb+.+}$t$ &
 $\hilbert$-term & {\small\verb+@+}$x${\small\verb+.+}$t$ &
 \holtxt{\$@(\bs}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_select(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
 %
-Conditional\index{COND@\holtxt{COND}} & {\small\verb+if +}$t\ ${\small\verb+then +}$t_1${\small\verb+ else +}$t_2$ &
+Conditional & {\small\verb+if +}$t\ ${\small\verb+then +}$t_1${\small\verb+ else +}$t_2$ &
 {\small\verb+COND +}$t\ t_1\ t_2$ & {\small\verb+mk_cond(+}$t${\small\verb+,+}$t_1${\small\verb+,+}$t_2${\small\verb+)+}
  \\ \hline
 %
@@ -697,17 +698,20 @@ and \ml{C},
 \end{hol}
 
 Having the symbols \ml{o}, \ml{S}, \ml{K}, \ml{I}, \ml{W}, and \ml{C}
-as built-in constants \index{variables, in HOL logic@variables, in
-  \HOL{} logic!with constant names} is sometimes inconvenient because
-they are often wanted as mnemonic names for variables (\eg\ \ml{S} to
-range over sets and \ml{o} to range over outputs).\footnote{Constants
-  declared in new theories can freely re-use these names, with
-  ambiguous inputs resolved by type inference.}  Variables with these
-names can be used in the current system if \ml{o}, \ml{S}, \ml{K},
-\ml{I}, \ml{W}, and \ml{C} are first hidden (see
-Section~\ref{hidden}).  In fact, this happens so often with the
-constant \holtxt{C} that it is ``hidden'' by default.  While hidden,
-it must be written in fully-qualified form, as \holtxt{combin\$C}.
+as built-in constants
+%
+\index{variables, in HOL logic@variables, in \HOL{} logic!with constant names}
+%
+is sometimes inconvenient because they are often wanted as mnemonic
+names for variables (\eg\ \ml{S} to range over sets and \ml{o} to
+range over outputs).\footnote{Constants declared in new theories can
+  freely re-use these names, with ambiguous inputs resolved by type
+  inference.}  Variables with these names can be used in the current
+system if \ml{o}, \ml{S}, \ml{K}, \ml{I}, \ml{W}, and \ml{C} are first
+hidden (see Section~\ref{hidden}).  In fact, this happens so often
+with the constant \holtxt{C} that it is ``hidden'' by default.  While
+hidden, it must be written in fully-qualified form, as
+\holtxt{combin\$C}.
 %
 \index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|)}
 \index{function composition, in HOL logic@function composition, in \HOL{} logic|)}
@@ -1043,7 +1047,7 @@ parses to
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!paired|)}
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!uncurrying, in paired|)}
 \index{pairs, in HOL logic@pairs, in \HOL{} logic!in abstractions|)}
-\index{terms, in HOL logic@terms, in \HOL{} logic!pair|)}\index{UNCURRY@\ml{UNCURRY}|)}
+\index{terms, in HOL logic@terms, in \HOL{} logic!pair|)}
 
 
 \subsubsection{\texttt{let}-terms}
@@ -1245,7 +1249,7 @@ value in \ML.  This is also the default way in which this value is
 printed by the system pretty-printer.
 
 \subsection{The option type}
-\index{option, the HOL theory@\ml{option}, the \HOL{} theory}
+\index{options, the HOL theory of@options, the \HOL{} theory of}
 
 The theory \theoryimp{option} defines a type operator \verb+option+
 that `lifts' its argument type, creating a type with all of the
@@ -1763,8 +1767,7 @@ Operator & Strength & Associativity \\ \hline
 \end{tabular}}
 \end{center}
 
-\subsection{Numerals}\label{numeral}\index{numeral,
-the construction of in HOL logic@\ml{numeral}, the construction of in \HOL{} logic}
+\subsection{Numerals}\label{numeral}
 
 The type \ml{num}
 \index{num, the type in \HOL{} logic@\ml{num}, the type in \HOL{} logic}
@@ -1807,6 +1810,7 @@ seconds.
 \end{boxed}
 
 \paragraph {Construction of numerals}
+\index{numerals, in HOL logic@numerals, in \HOL{} logic!construction of}
 
 Numerals may of course be built using \ml{mk\_comb}, and taken apart with
 \ml{dest\_comb}; however, a more convenient interface to this
@@ -1838,7 +1842,7 @@ operations, using the usual names for the operations, \eg \verb|+|,
 %
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of numerals}
 \index{tokens!parsing numerals}
-\index{numerals!parsing}
+\index{numerals, in HOL logic@numerals, in \HOL{} logic!parsing}
 %
 Simple digit sequences are parsed as decimal numbers, but the parser
 also supports the input of numbers in binary, octal and hexadecimal
@@ -2329,7 +2333,7 @@ The constant \ml{word\_T} represents `true' for the Boolean operations
 -- every bit is set high.  Likewise, \ml{word\_{}0} represents the
 number zero and also `false'.  In the two's complement system
 \ml{word\_L} is the most negative value and \ml{word\_H} is the most
-positive value.  This is captured the theorems \ml{WORD\_L\_LESS\_EQ}
+positive value.  This is captured in the theorems \ml{WORD\_L\_LESS\_EQ}
 and \ml{WORD\_LESS\_EQ\_H}.
 
 \paragraph{Table of Operators}
@@ -2436,8 +2440,8 @@ These functions are helpful when checking the results of computations.
 
 \subsubsection{Working with Multiple Word Sizes} \label{multiple}
 
-The executable \ml{mkword.exe} can be run as many times as is needed
--- generating theories for different word sizes.  If multiple word
+The executable \ml{mkword.exe} can be run as many times as is needed,
+generating theories for different word sizes.  If multiple word
 theories are opened then one has to ensure that the operator
 overloading is resolved correctly.  The session below shows how to do
 this by declaring the type of a variable, or by using the theory
@@ -2711,8 +2715,7 @@ list starts its indexing from 0.
 There are functions for mapping a function $f : \alpha \to \beta$ over
 a single list (\holtxt{MAP}) or a function $f : \alpha \to \beta
 \to \gamma$ over two lists (\holtxt{MAP2}).
-%
-{\small
+\begin{hol}
 \begin{verbatim}
    MAP
      |- (!f. MAP f [] = []) /\
@@ -2721,14 +2724,14 @@ a single list (\holtxt{MAP}) or a function $f : \alpha \to \beta
      |- (!f. MAP2 f [] [] = []) /\
         !f h1 t1 h2 t2. MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2
 \end{verbatim}
-}
-%
-The behaviour of \holtxt{MAP2} in the two cases when it is given
-one empty list and one non-empty list is unspecified.
+\end{hol}
+The behaviour of \holtxt{MAP2} in the cases when it is given lists of
+unequal lengths is unspecified.
 
 \paragraph {Predicates over lists}
 \index{FILTER, the HOL constant@\ml{FILTER}, the \HOL{} constant}
 \index{EVERY, the HOL constant@\ml{EVERY}, the \HOL{} constant}
+\index{ALL_DISTINCT, the HOL constant@\ml{ALL\_DISTINCT}, the \HOL{} constant}
 \index{EXISTS, the HOL constant (over lists)@\ml{EXISTS}, the \HOL{}
   constant (over lists)}
 
@@ -2738,8 +2741,7 @@ predicate must hold of some element in the list). This functionality
 is supported by \holtxt{EVERY} and \holtxt{EXISTS}, respectively. The
 elimination of all elements in list not satisfying a given predicate
 is performed by \holtxt{FILTER}.
-%
-{\small
+\begin{hol}
 \begin{verbatim}
    EVERY_DEF
      |- (!P. EVERY P [] = T) /\
@@ -2754,10 +2756,9 @@ is performed by \holtxt{FILTER}.
      |- (ALL_DISTINCT [] = T) /\
         (!h t. ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t)
 \end{verbatim}
-}
-%
-The predicate \holtxt{ALL\_DISTINCT} holds on a list  just
-in case no element in the list is equal to any other.
+\end{hol}
+The predicate \holtxt{ALL\_DISTINCT} holds on a list just in case no
+element in the list is equal to any other.
 
 \paragraph {Folding}
 \index{FOLDL, the HOL constant@\ml{FOLDL}, the \HOL{} constant}
@@ -2768,8 +2769,7 @@ through a list and accumulating the result is known as
 \emph{folding}. At times, it is necessary to do this operation
 from left-to-right (\holtxt{FOLDL}), and at others the
 right-to-left direction (\holtxt{FOLDR}) is required.
-%
-{\small
+\begin{hol}
 \begin{verbatim}
    FOLDL
      |- (!f e. FOLDL f e [] = e) /\
@@ -2778,13 +2778,13 @@ right-to-left direction (\holtxt{FOLDR}) is required.
      |- (!f e. FOLDR f e [] = e) /\
         (!f e x l. FOLDR f e (x::l) = f x (FOLDR f e l))
 \end{verbatim}
-}
+\end{hol}
 
 \paragraph {List reversal}
 
 The reversal of a list (\holtxt{REVERSE}) and its tail recursive
 counterpart \holtxt{REV} are defined in \theoryimp{list}.
-{\small
+\begin{hol}
 \begin{verbatim}
    REVERSE_DEF
      |- (REVERSE [] = []) /\
@@ -2793,23 +2793,22 @@ counterpart \holtxt{REV} are defined in \theoryimp{list}.
      |- (!acc. REV [] acc = acc) /\
         (!h t acc. REV (h::t) acc = REV t (h::acc))
 \end{verbatim}
-}
+\end{hol}
 
 \paragraph {Conversion to sets}
 
-Lists can be converted to sets ({\small\verb+LIST_TO_SET+}) by
-partial application of {\small\verb+MEM+}. The somewhat
-terse definition is used to derive the theorem
-{\small\verb+IN_LIST_TO_SET+}.
+Lists can be converted to sets (\ml{LIST\_TO\_SET}) by partial
+application of \holtxt{MEM}. The somewhat terse definition is used to
+derive the theorem \ml{IN\_LIST\_TO\_SET}.
 %
-{\small
+\begin{hol}
 \begin{verbatim}
   LIST_TO_SET
     |- LIST_TO_SET = combin$C MEM
   IN_LIST_TO_SET
     |- x IN LIST_TO_SET l = MEM x l
 \end{verbatim}
-}
+\end{hol}
 %
 Further support for translating between different kinds of
 collections may be found in the \theoryimp{container} theory.
@@ -2821,8 +2820,7 @@ the {\small\verb+ZIP+} operation. The result is unspecified
 when the lists are not the same length. The inverse operation,
 {\small\verb+UNZIP+}, translates a list of pairs into a pair of
 lists.
-%
-{\small
+\begin{hol}
 \begin{verbatim}
   ZIP
     |- (ZIP ([],[]) = []) /\
@@ -2831,16 +2829,17 @@ lists.
     |- (UNZIP [] = ([],[])) /\
        (UNZIP ((x,y)::t) = let (L1,L2) = UNZIP t in (x::L1,y::L2))
 \end{verbatim}
-}
+\end{hol}
 
 \paragraph {Alternate access}
-
+\index{LAST, the HOL constant@\ml{LAST}, the \HOL{} constant}
+\index{FRONT, the HOL constant@\ml{FRONT}, the \HOL{} constant}
+%
 Lists are essentially treated in a stack-like manner. However, at
 times it is convenient to access the last element
-({\small\verb+LAST+}) of a non-empty list directly. The last element
-of a non-empty list is dropped by {\small\verb+FRONT+}.
-%
-{\small
+(\holtxt{LAST}) of a non-empty list directly. The last element
+of a non-empty list is dropped by \holtxt{FRONT}.
+\begin{hol}
 \begin{verbatim}
   LAST_DEF
     |- !h t. LAST (h::t) = if t = [] then h else LAST t
@@ -2849,14 +2848,15 @@ of a non-empty list is dropped by {\small\verb+FRONT+}.
   APPEND_FRONT_LAST
     |- !l. ~(l = []) ==> (FRONT l ++ [LAST l] = l)
 \end{verbatim}
-}
+\end{hol}
 %
 Joining the front part and the last element of a non-empty list yields
-the original list.  Both {\small\verb+LAST+} and {\small\verb+FRONT+}
+the original list.  Both \holtxt{LAST} and \holtxt{FRONT}
 are unspecified on empty lists.
 
+\vspace{1ex}
 \noindent For a complete list of available theorems in
-{\small\verb+list+}, see \REFERENCE.  Further development of list
+\theoryimp{list}, see \REFERENCE.  Further development of list
 theory can be found in \theoryimp{rich\_list}.
 
 \index{lists, the HOL theory of@lists, the \HOL{} theory of|)}
@@ -2873,15 +2873,14 @@ are analogous to constants in the theory of (necessarily finite)
 lists.  The \theoryimp{llist} versions of these constants have the
 same names, but with a capital `L\/' prepended.  Thus, some of the core
 constants in this theory are:
-
-{\small
+\begin{hol}
 \begin{verbatim}
    LNIL  : 'a llist
    LCONS : 'a -> 'a llist -> 'a llist
    LHD   : 'a llist -> 'a option
    LTL   : 'a llist -> 'a llist option
 \end{verbatim}
-}
+\end{hol}
 
 The \ml{LHD} and \ml{LTL} constants return \ml{NONE} when applied to
 the empty sequence, \ml{LNIL}.  This use of an option type is another
@@ -2895,30 +2894,30 @@ domains of type \ml{llist}.  Rather, \ml{llist} is a coinductive type,
 and has an axiom that justifies the definition of (co-)recursive
 functions that map into the \ml{llist} type.  This axiom has the name
 \ml{llist\_Axiom}, and states
-{\small
+\begin{hol}
 \begin{verbatim}
    !f : 'a -> ('a # 'b) option.
       ?g : 'a -> 'b llist.
          (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
          (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))
 \end{verbatim}
-}
+\end{hol}
 \noindent An equivalent form of the above is
-{\small
+\begin{hol}
 \begin{verbatim}
    !f. ?g.
       !x. g x = case f x of
                    NONE -> LNIL
                 || SOME (x',y) -> LCONS y (g x')
 \end{verbatim}
-}
+\end{hol}
 
 Other constants in the theory \theoryimp{llist} include \texttt{LTAKE},
 \texttt{LDROP}, \texttt{LMAP}, \texttt{LFINITE} and
 \texttt{LFILTER}. Their types are
 %
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for possibly infinite sequences}
-{\small
+\begin{hol}
 \begin{verbatim}
    LTAKE   : num -> 'a llist -> 'a list
    LDROP   : num -> 'a llist -> 'a llist
@@ -2926,9 +2925,9 @@ Other constants in the theory \theoryimp{llist} include \texttt{LTAKE},
    LFINITE : 'a llist -> bool
    LFILTER : ('a -> bool) -> 'a llist -> 'a llist
 \end{verbatim}
-}
-\noindent They are characterised by the following theorems
-{\small
+\end{hol}
+They are characterised by the following theorems
+\begin{hol}
 \begin{verbatim}
    LTAKE_THM
       |- (LTAKE 0 l = SOME []) /\
@@ -2953,7 +2952,7 @@ Other constants in the theory \theoryimp{llist} include \texttt{LTAKE},
          (LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
                                   else LFILTER P t)
 \end{verbatim}
-}
+\end{hol}
 
 \paragraph{Proof principles}
 
@@ -2961,15 +2960,14 @@ Finally, there are two very important proof principles for proving
 that two \texttt{llist} values are equal.  The first states that two
 sequences are equal if they return the same prefixes of length $n$ for
 all possible values of $n$:
-{\small
+\begin{hol}
 \begin{verbatim}
    LTAKE_EQ |- (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)
 \end{verbatim}
-}
-\noindent This theorem is subsequently used to derive the bisimulation
+\end{hol}
+This theorem is subsequently used to derive the bisimulation
 principle:
-{
-\small
+\begin{hol}
 \begin{verbatim}
    LLIST_BISIMULATION
             |- (ll1 = ll2) =
@@ -2979,7 +2977,7 @@ principle:
                              (LHD ll3 = LHD ll4) /\
                              R (THE (LTL ll3)) (THE (LTL ll4))
 \end{verbatim}
-}
+\end{hol}
 The principle of bisimulation states that two \ml{llist} values $l_1$
 and $l_2$ are equal if (and only if) it is possible to find a
 relation $R$ such that
@@ -3147,13 +3145,12 @@ hold:
 The type \verb+string+ is inductively characterized by the
 constructors
 %
-{\small
+\begin{hol}
 \begin{verbatim}
-  EMPTYSTRING : string
-  STRING      : char -> string -> string
+   EMPTYSTRING : string
+   STRING      : char -> string -> string
 \end{verbatim}
-}
-%
+\end{hol}
 The \HOL{} parser maps the syntax \verb+""+ to
 {\small\verb+EMPTYSTRING+}, and the \HOL{} printer inverts this.
 The parser expands string literals of the form \verb+"+$c_1 c_2
@@ -3170,31 +3167,30 @@ $c_n$ \ {\small\verb+EMPTYSTRING+})) $\ldots$ )
 \noindent As a result of the characterization, the following basic theorems
 hold:
 %
-{\small
+\begin{hol}
 \begin{verbatim}
-  STRING_11
-    |- !c1 c2 s1 s2. (STRING c1 s1 = STRING c2 s2) = (c1=c2) /\ (s1=s2)
-  STRING_DISTINCT
-    |- !c s. ~("" = STRING c s)) /\ (!c s. ~(STRING c s = ""))
-  string_Axiom
-    |- !b g. ?f.  (f "" = b) /\
-                  (!c t. f (STRING c t) = g c t (f t))
-  STRING_INDUCT_THM
-    |- !P. P "" /\ (!s. P s ==> !c. P (STRING c s)) ==> !s. P s
-  STRING_CASES
-    |- !s. (s = "") \/ (?c str. s = STRING c str)
+   STRING_11
+     |- !c1 c2 s1 s2. (STRING c1 s1 = STRING c2 s2) = (c1=c2) /\ (s1=s2)
+   STRING_DISTINCT
+     |- !c s. ~("" = STRING c s)) /\ (!c s. ~(STRING c s = ""))
+   string_Axiom
+     |- !b g. ?f.  (f "" = b) /\
+                   (!c t. f (STRING c t) = g c t (f t))
+   STRING_INDUCT_THM
+     |- !P. P "" /\ (!s. P s ==> !c. P (STRING c s)) ==> !s. P s
+   STRING_CASES
+     |- !s. (s = "") \/ (?c str. s = STRING c str)
 \end{verbatim}
-}
-%
+\end{hol}
 There is also a destructor function {\small\verb+DEST_STRING+} for
 strings which returns an option type.
-{\small
+\begin{hol}
 \begin{verbatim}
   DEST_STRING
     |- (DEST_STRING "" = NONE) /\
        (DEST_STRING (STRING c rst) = SOME(c,rst))
 \end{verbatim}
-}
+\end{hol}
 
 
 \paragraph{Case expressions}
@@ -3202,26 +3198,24 @@ strings which returns an option type.
 Compound \HOL{} expressions that branch based on
 whether a term is an empty or non-empty string have the
 surface syntax
-%
-{\small
+\begin{hol}
 \begin{verbatim}
    case s
     of "" -> e1
     || STRING c rst -> e2
 \end{verbatim}
-}
+\end{hol}
 %
 Such an expression is translated to
-$\konst{string\_case}\ e_1 \ (\lambda c\; rst.\ e_2)\ s$ where the constant
-{\small\verb+string_case+} is defined as follows:
-%
-{\small
+\holtxt{string\_case $e_1$ ($\lambda c\; rst.\ e_2)\ s$} where the constant
+\holtxt{string\_case} is defined as follows:
+\begin{hol}
 \begin{verbatim}
   STRING_CASE_DEF
     |- (string_case b f ""  = b) /\
        (string_case b f (STRING c s) = f c s)
 \end{verbatim}
-}
+\end{hol}
 
 \paragraph {Length and concatenation}
 
@@ -3229,8 +3223,7 @@ The length of a string ({\small\verb+STRLEN+}) is defined by primitive
 recursion. The concatenation of strings ({\small\verb+STRCAT+}) may be
 expressed recursively ({\small\verb+STRCAT_EQNS+})or as a fold
 ({\small\verb+STRCAT_EXPLODE+}):
-%
-{\small
+\begin{hol}
 \begin{verbatim}
    STRLEN_DEF
      |- (STRLEN "" = 0) /\
@@ -3243,7 +3236,7 @@ expressed recursively ({\small\verb+STRCAT_EQNS+})or as a fold
    STRCAT_EXPLODE
      |- !s1 s2. STRCAT s1 s2 = FOLDR STRING s2 (EXPLODE s1)
 \end{verbatim}
-}
+\end{hol}
 
 
 \paragraph {Strings and lists}
@@ -3303,34 +3296,28 @@ instead of $\alpha \to \konst{bool}$. Sets may be finite or
 infinite. All of the elements in a set must have the same type.
 
 \emph{Set membership} is the basic notion that formalized set theory
-is based on. In HOL, membership is represented by a the infix constant
-{\small\verb+IN+}, defined in theory {\small\verb+bool+} for
+is based on. In \HOL, membership is represented by a the infix
+constant \holtxt{IN}, defined in theory \theoryimp{bool} for
 convenience.
-%
-{\small
+\begin{hol}
 \begin{verbatim}
-   IN_DEF  |- IN = \x f. f x
+   IN_DEF   |- IN = \x f. f x
 \end{verbatim}
-}
-%
-The {\small\verb+IN+} operator is merely a way of applying the
-characteristic function to an item, as the following
-trivial consequence of the definition shows:
-%
-{\small
+\end{hol}
+The \holtxt{IN} operator is merely a way of applying the
+characteristic function to an item, as the following trivial
+consequence of the definition shows:
+\begin{hol}
 \begin{verbatim}
-   SPECIFICATION  |- !P x. x IN P = P x
+   SPECIFICATION   |- !P x. x IN P = P x
 \end{verbatim}
-}
-%
-\noindent Two sets are equal if they have the same elements.
-%
-{\small
+\end{hol}
+Two sets are equal if they have the same elements.
+\begin{hol}
 \begin{verbatim}
-   EXTENSION
-     |- !s t. (s = t) = (!x. (x IN s) = (x IN t))
+   EXTENSION   |- !s t. (s = t) = (!x. (x IN s) = (x IN t))
 \end{verbatim}
-}
+\end{hol}
 
 \paragraph{Empty and universal sets}
 
@@ -3339,14 +3326,13 @@ false. The constant {\small\verb+EMPTY+} denotes the empty set; it may
 be written as {\small\verb+{}+}. The universal set {\small\verb+UNIV+}
 on a type is the characteristic function that is always true for
 elements of that type.
-%
-{\small
+\begin{hol}
 \begin{verbatim}
-  EMPTY_DEF   |- {} = (\x. F)
-  UNIV_DEF    |- UNIV = (\x. T)
+   EMPTY_DEF   |- {} = (\x. F)
+   UNIV_DEF    |- UNIV = (\x. T)
 \end{verbatim}
-}
-%
+\end{hol}
+
 \paragraph{Insertion, union, and intersection}
 
 The insertion ({\small\verb+INSERT+}, written infix) of an element
@@ -3354,28 +3340,25 @@ into a set is defined with a set comprehension. Set comprehension is
 discussed in the next subsection. Set union ({\small\verb+UNION+},
 written infix) and intersection ({\small\verb+INTER+}, also infix)
 are given their usual definitions by set comprehension.
-%
-{\small
+\begin{hol}
 \begin{verbatim}
-  INSERT_DEF  |- !x s. x INSERT s = {y | (y = x) \/ y IN s}
-  UNION_DEF   |- !s t. s UNION t = {x | x IN s \/ x IN t}
-  INTER_DEF   |- !s t. s INTER t = {x | x IN s /\ x IN t}
+   INSERT_DEF  |- !x s. x INSERT s = {y | (y = x) \/ y IN s}
+   UNION_DEF   |- !s t. s UNION t = {x | x IN s \/ x IN t}
+   INTER_DEF   |- !s t. s INTER t = {x | x IN s /\ x IN t}
 \end{verbatim}
-}
-%
-{\small\verb+UNION+} and {\small\verb+INTER+} are binary
+\end{hol}
+\holtxt{UNION} and \holtxt{INTER} are binary
 operations. Indexed union and intersection operations, \ie,
 $\bigcup_{i \in P}$ and $\bigcap_{i \in P}$ are provided by the
-definitions of  {\small\verb+BIGUNION+} and {\small\verb+BIGINTER+}.
-{\small
+definitions of  \holtxt{BIGUNION} and \holtxt{BIGINTER}.
+\begin{hol}
 \begin{verbatim}
-  BIGUNION    |- !P. BIGUNION P = {x | ?s. s IN P /\ x IN s}
-  BIGINTER    |- !P. BIGINTER P = {x | !s. s IN P ==> x IN s}
+   BIGUNION    |- !P. BIGUNION P = {x | ?s. s IN P /\ x IN s}
+   BIGINTER    |- !P. BIGINTER P = {x | !s. s IN P ==> x IN s}
 \end{verbatim}
-}
-%
-Both {\small\verb+BIGUNION+} and {\small\verb+BIGINTER+} reduce
-a set of sets to a set and thus have the type
+\end{hol}
+Both \holtxt{BIGUNION} and \holtxt{BIGINTER} reduce a set of sets to a
+set and thus have the type
 $((\alpha\to\konst{bool})\to\konst{bool})\to (\alpha\to\konst{bool})$.
 
 \paragraph{Subsets}
@@ -4302,15 +4285,14 @@ The empty map (\holtxt{FEMPTY}), the updating of a map
 (\holtxt{FUPDATE}), the application of a map to an argument
 (\holtxt{FAPPLY}), and the domain of a map (\holtxt{FDOM}) are the
 main notions in the theory.
-%
-{\small
+\begin{hol}
 \begin{verbatim}
-  FEMPTY  : 'a |-> 'b
-  FUPDATE : ('a |-> 'b) -> 'a # 'b -> ('a |-> 'b)
-  FAPPLY  : ('a |-> 'b) -> 'a -> 'b
-  FDOM    : ('a |-> 'b) -> 'a set
+   FEMPTY  : 'a |-> 'b
+   FUPDATE : ('a |-> 'b) -> 'a # 'b -> ('a |-> 'b)
+   FAPPLY  : ('a |-> 'b) -> 'a -> 'b
+   FDOM    : ('a |-> 'b) -> 'a set
 \end{verbatim}
-}
+\end{hol}
 
 The \HOL{} parser and printer will treat the syntax \verb+f ' x+ as
 the application of finite map \verb+f+ to argument \verb+x+, ie, as
@@ -4328,37 +4310,34 @@ properties of finite maps by induction on the construction of the map
 just the cardinality of its domain ({\small\verb+FCARD_DEF+}); from
 this a recursive characterization ({\small\verb+FCARD_FUPDATE+}) is
 derived.
-%
-{\small
+\begin{hol}
 \begin{verbatim}
-  FAPPLY_FUPDATE_THM
-    |- !f a b x. (f |+ (a,b)) ' x = (if x = a then b else f ' x)
-  fmap_EXT
-    |- !f g. (f = g) =
-             (FDOM f = FDOM g) /\ (!x. x IN FDOM f ==> (f ' x = g ' x))
-  fmap_INDUCT
-    |- !P. P FEMPTY /\
-           (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (f |+ (x,y))) ==> !f. P f
-  FCARD_DEF  |- FCARD fm = CARD (FDOM fm)
-  FCARD_FUPDATE
-    |- !fm a b. FCARD(fm |+ (a,b)) =
-                  if a IN FDOM fm then FCARD fm else 1 + FCARD fm
+   FAPPLY_FUPDATE_THM
+     |- !f a b x. (f |+ (a,b)) ' x = (if x = a then b else f ' x)
+   fmap_EXT
+     |- !f g. (f = g) =
+              (FDOM f = FDOM g) /\ (!x. x IN FDOM f ==> (f ' x = g ' x))
+   fmap_INDUCT
+     |- !P. P FEMPTY /\
+            (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (f |+ (x,y))) ==> !f. P f
+   FCARD_DEF  |- FCARD fm = CARD (FDOM fm)
+   FCARD_FUPDATE
+     |- !fm a b. FCARD(fm |+ (a,b)) =
+                   if a IN FDOM fm then FCARD fm else 1 + FCARD fm
 \end{verbatim}
-}
-
-Iterated updates ({\small\verb+FUPDATE_LIST+}) to a map are
-useful. The infix notation \verb#|++# may also be used.
-For example, {\small\verb#fm |++ [(k1,v1) ; (k2,v2)]#} is equal
-to {\small\verb#(fm |+ (k1,v1)) |+ (k2,v2)#}.
-%
-{\small
+\end{hol}
+Iterated updates (\holtxt{FUPDATE\_LIST}) to a map are useful. The
+infix notation \holtxt{|++} may also be used.  For example, \holtxt{fm
+  |++ [(k1,v1); (k2,v2)]} is equal to \holtxt{(fm |+ (k1,v1)) |+
+  (k2,v2)}.
+\begin{hol}
 \begin{verbatim}
   FUPDATE_LIST  |- FUPDATE_LIST = FOLDL FUPDATE
   FUPDATE_LIST_THM
     |- !f. (f |++ [] = f) /\
            (!h t. f |++ (h::t) = (f |+ h) |++ t)
 \end{verbatim}
-}
+\end{hol}
 
 
 \paragraph {Domain and range}
