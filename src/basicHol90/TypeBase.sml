@@ -96,7 +96,7 @@ fun put_size (size_tm,size_rw) (FACTS(s,
  * Returns the datatype name and the constructors. The code is a copy of     *
  * the beginning of "Datatype.define_case".                                  *
  *---------------------------------------------------------------------------*)
-
+(*
 fun ax_info ax =
   let val exu = snd(strip_forall(concl ax))
       val {Rator,Rand} = dest_comb exu
@@ -108,6 +108,18 @@ fun ax_info ax =
   in
    (Tyop,  map (fst o strip_comb) clist)
   end;
+*)
+
+fun basic_info case_def =
+ let val clauses = (strip_conj o concl) case_def
+     val lefts = map (#lhs o dest_eq o #2 o strip_forall) clauses
+     val constrs = map (#1 o strip_comb o rand) lefts
+     val ty = type_of (rand (Lib.trye hd lefts))
+ in
+   (#Tyop(dest_type ty), constrs)
+ end
+ handle HOL_ERR _ => raise ERR "basic_info" "";
+  
 
 val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
@@ -121,7 +133,7 @@ val defn_const =
 
 fun mk_tyinfo {ax,case_def,case_cong,induction,
                nchotomy,size,one_one,distinct} =
-  let val (ty_name,constructors) = ax_info ax
+  let val (ty_name,constructors) = basic_info case_def
       val inj = case one_one of NONE => [] | SOME x => [x]
       val D = case distinct of NONE => [] | SOME x => CONJUNCTS x
   in
@@ -138,6 +150,19 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
       size         = size,
       axiom        = ax})
   end;
+
+
+fun gen_tyinfo {ax, case_def} = 
+ let val induct_thm = prove_induction_thm ax
+     val nchotomy   = prove_cases_thm induct_thm
+    val case_cong  = case_cong_thm nchotomy case_def
+   val one_one = SOME (prove_constructors_one_one ax) handle HOL_ERR _ => NONE
+  val distinct = SOME (prove_constructors_distinct ax) handle HOL_ERR _ => NONE
+in
+  mk_tyinfo {ax=ax,case_def=case_def,case_cong=case_cong,
+             induction=induct_thm,nchotomy=nchotomy, size = NONE,
+             one_one=one_one,distinct=distinct}
+end;
 
 
 fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
@@ -194,18 +219,6 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
 end;
 
 
-fun gen_tyinfo {ax, case_def} = 
-let
-  val induct_thm = prove_induction_thm ax
-  val nchotomy   = prove_cases_thm induct_thm
-  val case_cong  = case_cong_thm nchotomy case_def
-  val one_one = SOME (prove_constructors_one_one ax) handle HOL_ERR _ => NONE
-  val distinct = SOME (prove_constructors_distinct ax) handle HOL_ERR _ => NONE
-in
-  mk_tyinfo {ax=ax,case_def=case_def,case_cong=case_cong,
-             induction=induct_thm,nchotomy=nchotomy, size = NONE,
-             one_one=one_one,distinct=distinct}
-end;
 
 (*---------------------------------------------------------------------------*
  * Databases of facts.                                                       *
@@ -286,7 +299,7 @@ val elts = listItems o theTypeBase;
 open boolTheory;
 
 val boolAxiom = prove(Term`!(e0:'a) e1. ?!fn. (fn T = e0) /\ (fn F = e1)`,
-SUBST_TAC[INST_TYPE[Type`:'a` |-> Type`:bool -> 'a`] EXISTS_UNIQUE_DEF]
+SUBST_TAC[INST_TYPE[Type.alpha |-> Type`:bool -> 'a`] EXISTS_UNIQUE_DEF]
   THEN BETA_TAC THEN BETA_TAC THEN REPEAT GEN_TAC THEN CONJ_TAC THENL
   [EXISTS_TAC(Term`\x. (x=T) => (e0:'a) | e1`) THEN BETA_TAC
      THEN SUBST_TAC[EQT_INTRO(REFL(Term`T`)),
