@@ -12,4 +12,4 @@ filter.uo: filter.sml
 	MOSMLC -c filter.sml
 
 Clean:
-	/bin/rm -f filter.{uo,ui,sml} quote-filter.{uo,ui} quote-filter
+	/bin/rm -f filter.uo filter.ui filter.sml quote-filter.uo filter.ui quote-filter
