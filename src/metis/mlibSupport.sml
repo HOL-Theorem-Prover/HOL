@@ -59,7 +59,7 @@ fun update_literal_power f (parm : parameters) : parameters =
 local
   fun sz n []                         = n
     | sz n (Fn (":", [tm, _]) :: tms) = sz n (tm :: tms)
-    | sz n (Var _ :: tms)             = sz n tms
+    | sz n (Var _ :: tms)             = sz (n + 1) tms
     | sz n (Fn (_,l) :: tms)          = sz (n + 1) (l @ tms);
   fun lsz (l,n) = sz n [dest_atom (literal_atom l)];
 in
