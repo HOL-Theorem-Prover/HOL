@@ -18,7 +18,7 @@ load "pairLib";
 load "Pair_basic";
 load "numLib";
 load "PrimitiveBddRules";
-load "HolBddTheory";
+load "DerivedBddRulesTheory";
 
 val _ = if not(bdd.isRunning()) then bdd.init 1000000 10000 else ();
 *)
@@ -688,8 +688,8 @@ fun TraceBack vm trl pth Rth =
       time
        (simpLib.SIMP_RULE
         boolSimps.bool_ss
-        [pairTheory.EXISTS_PROD,HolBddTheory.Eq_def,pairTheory.PAIR_EQ,Rth])
-       (ISPECL[Rcon,``Eq ^s'``,s]HolBddTheory.Prev_def)
+        [pairTheory.EXISTS_PROD,DerivedBddRulesTheory.Eq_def,pairTheory.PAIR_EQ,Rth])
+       (ISPECL[Rcon,``Eq ^s'``,s]DerivedBddRulesTheory.Prev_def)
      val _ = (TraceBackPrevThm := PrevTh)
      val PrevThTb = eqToTermBdd failfn vm PrevTh
      val _ = print "done.\nSimplified theorem is !TraceBackPrevThm\n";
