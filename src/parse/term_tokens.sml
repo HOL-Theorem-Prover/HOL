@@ -47,7 +47,9 @@ in
   if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" then
     (advance qb; s)
   else if s0 = #"'" then
-    raise LEX_ERR "Term idents can't begin with prime characters"
+    if size s > 1 then
+      raise LEX_ERR "Term idents can't begin with prime characters"
+    else (advance qb; s)
   else if s0 = #"$" then
       "$" ^ split_ident nonagg_specs (String.extract(s, 1, NONE)) qb
   else (* have a symbolic identifier *)
