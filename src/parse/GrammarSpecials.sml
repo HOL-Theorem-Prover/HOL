@@ -15,5 +15,9 @@ struct
   val fromNum_str = "&"
   val std_binder_precedence = 0
 
+  val case_special = "case__magic"
+  val case_split_special = "case_split__magic"
+  val case_arrow_special = "case_arrow__magic"
+
 
 end

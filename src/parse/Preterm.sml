@@ -2,6 +2,8 @@ structure Preterm :> Preterm =
 struct
 
 open Feedback Lib GrammarSpecials;
+infix ##
+infixr -->
 
 val ERR = mk_HOL_ERR "Preterm"
 
@@ -317,8 +319,7 @@ fun is_atom (Var _) = true
 
 
 local
-  fun -->(ty1,ty2) = Pretype.Tyop{Thy = "min", Tyop = "fun", Args = [ty1, ty2]}
-  infix  -->
+  fun ty1 --> ty2 = Pretype.Tyop{Thy = "min", Tyop = "fun", Args = [ty1, ty2]}
   fun ptype_of (Var{Ty, ...}) = Ty
     | ptype_of (Const{Ty, ...}) = Ty
     | ptype_of (Comb{Rator, ...}) = Pretype.chase (ptype_of Rator)
@@ -329,18 +330,18 @@ local
   fun default_typrinter x = "<hol_type>"
   fun default_tmprinter x = "<term>"
 in
-fun TC printers =
- let val (ptm, pty) =
+fun TC printers = let
+  val (ptm, pty) =
       case printers
        of SOME (x,y) =>
-           let val typrint = Lib.say o y
-               fun tmprint tm =
+          let val typrint = Lib.say o y
+              fun tmprint tm =
                   if Term.is_const tm
-                     then (Lib.say (x tm ^ " " ^ y (Term.type_of tm)))
-                     else Lib.say (x tm)
-           in
-              (tmprint, typrint)
-           end
+                  then (Lib.say (x tm ^ " " ^ y (Term.type_of tm)))
+                  else Lib.say (x tm)
+          in
+            (tmprint, typrint)
+          end
         | NONE => (Lib.say o default_tmprinter, Lib.say o default_typrinter)
   fun check(Comb{Rator, Rand}) =
       (check Rator;
@@ -407,15 +408,114 @@ end end;
 
 fun typecheck_phase1 pfns ptm =
     TC pfns ptm
-    handle phase1_exn(s,ty) =>
-           case pfns of
-             NONE => (Lib.say s; raise ERR "typecheck" s)
-           | SOME (_, typ) =>
-             (Lib.say s;
-              Lib.say "Wanted it to have type:  ";
-              Lib.say (typ ty);
-              Lib.say "\n";
-              raise ERR "typecheck" s);
+    handle phase1_exn(s,ty) => let
+           in
+             case pfns of
+               NONE => (Lib.say s; raise ERR "typecheck" s)
+             | SOME (_, typ) =>
+               (Lib.say s;
+                Lib.say "Wanted it to have type:  ";
+                Lib.say (typ ty);
+                Lib.say "\n";
+                raise ERR "typecheck" s)
+           end
+
+(* ---------------------------------------------------------------------- *)
+(* function to do the equivalent of strip_conj, but where the "conj" is   *)
+(* the magic binary operator bool$<GrammarSpecials.case_split_special     *)
+(* ---------------------------------------------------------------------- *)
+
+open HolKernel
+fun dest_binop n c t = let
+  val (f,args) = strip_comb t
+  val {Name,Thy,...} = dest_thy_const f
+      handle HOL_ERR _ =>
+             raise ERR ("dest_case"^n) ("Not a "^n^" term")
+  val _ = (Name = c andalso Thy = "bool") orelse
+          raise ERR ("dest_case"^n) ("Not a "^n^" term")
+  val _ = length args = 2 orelse
+          raise ERR ("dest_case_"^n) ("case "^n^" 'op' with bad # of args")
+in
+  (hd args, hd (tl args))
+end
+
+val dest_case_split = dest_binop "split" case_split_special
+val dest_case_arrow = dest_binop "arrow" case_arrow_special
+
+fun strip_splits t0 = let
+  fun trav acc t = let
+    val (l,r) = dest_case_split t
+  in
+    trav (trav acc r) l
+  end handle HOL_ERR _ => t::acc
+in
+  trav [] t0
+end
+
+fun mk_conj(t1, t2) = let
+  val c = mk_thy_const{Name = "/\\", Thy = "bool",
+                       Ty = Type.bool --> Type.bool --> Type.bool}
+in
+  mk_comb(mk_comb(c,t1), t2)
+end
+
+fun list_mk_conj [] = raise ERR "list_mk_conj" "empty list"
+  | list_mk_conj [h] = h
+  | list_mk_conj (h::t) = mk_conj(h, list_mk_conj t)
+fun mk_eq(t1, t2) = let
+  val ty = type_of t1
+  val c = mk_thy_const{Name = "=", Thy = "min", Ty = ty --> ty --> Type.bool}
+in
+  mk_comb(mk_comb(c,t1),t2)
+end
+
+fun remove_case_magic tm0 =
+    case !mk_functional_ref of
+      NONE => tm0
+    | SOME mk_functional => let
+        fun traverse t =
+            if is_abs t then
+              (mk_abs o (I ## traverse) o dest_abs) t
+            else if is_comb t then let
+                val (f0, args0) = strip_comb t
+                val args = map traverse args0
+                val f = traverse f0
+              in
+                let
+                  val {Name,Thy,Ty} = dest_thy_const f
+                in
+                  if Name = case_special andalso Thy = "bool"
+                  then let
+                      val _ = length args = 2 orelse
+                              raise ERR "remove_case_magic"
+                                    "case constant has wrong # of args"
+                      val split_on_t = hd args
+                      val cases = strip_splits (hd (tl args))
+                      val patbody_pairs = map dest_case_arrow cases
+                          handle HOL_ERR _ =>
+                                 raise ERR "remove_case_magic"
+                                       ("Case expression has invalid syntax "^
+                                        "where there should be arrows")
+                      val split_on_t_ty = type_of split_on_t
+                      val result_ty = type_of t
+                      val fakef = genvar (split_on_t_ty --> result_ty)
+                      val fake_eqns =
+                          list_mk_conj(map (fn (l,r) =>
+                                               mk_eq(mk_comb(fakef, l), r))
+                                       patbody_pairs)
+                      val functional = mk_functional fake_eqns
+                    in
+                      mk_comb(rator (#2 (strip_abs functional)), split_on_t)
+                    end
+                  else
+                    list_mk_comb(f, args)
+                end handle HOL_ERR _ => list_mk_comb(f, args)
+              end
+            else t
+      in
+        traverse tm0
+      end
+
 
 
 
@@ -423,7 +523,7 @@ fun typecheck pfns ptm0 = let
   val () = TC pfns ptm0
   val ptm = overloading_resolution0 ptm0
 in
-  to_term ptm
+  remove_case_magic (to_term ptm)
 end handle phase1_exn(s,ty) =>
            case pfns of
              NONE => (Lib.say s; raise ERR "typecheck" s)
