@@ -224,7 +224,7 @@ sometimes build on earlier ones.
 
 There are four
 %
-\index{universal quantifier, in HOL logic@universalquantifier, in \HOL{} logic!in four primitive axioms}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!in four primitive axioms}
 %
 axioms in the theory \theoryimp{bool};
 %
@@ -732,10 +732,14 @@ is sometimes inconvenient because they are often wanted
 as mnemonic names for variables (\eg\ \ml{S} to range over sets and
 \ml{o} to range over outputs).  Variables (though not constants) with
 these names can be used in the current system if \ml{o}, \ml{S}, \ml{K},
-\ml{I}, \ml{W}, and \ml{C} are first hidden (see Section~\ref{hidden}).
+\ml{I}, \ml{W}, and \ml{C} are first hidden (see
+Section~\ref{hidden}).  In fact, this happens so often with the
+constant \holtxt{C}, that it is ``hidden'' by default.  While hidden,
+it must be written in fully-qualified form, as \holtxt{combin\$C}.
 %
 \index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|)}
 \index{function composition, in HOL logic@function composition, in \HOL{} logic|)}
+\index{constants, in HOL logic@constants, in \HOL{} logic!fully-qualified names of}
 
 
 \subsection{Pairs}\label{prod}
@@ -1232,10 +1236,6 @@ do with the discriminator functions \ml{ISL} and \ml{ISR}:
 relating the projection functions and the discriminators.
 
 \begin{hol}
-\index{OUTL, the theorem in HOL logic@\ml{OUTL}, the theorem in \HOL{} logic}
-\index{OUTR, the theorem in HOL logic@\ml{OUTR}, the theorem in \HOL{} logic}
-\index{INL, the theorem in HOL logic@\ml{INL}, the theorem in \HOL{} logic}
-\index{INR, the theorem in HOL logic@\ml{INR}, the theorem in \HOL{} logic}
 {\small
 \begin{verbatim}
    OUTL        |- !x. OUTL(INL x) = x
@@ -1863,6 +1863,7 @@ operations, using the usual names for the operations, \eg \verb|+|,
 %
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of numerals}
 \index{tokens!parsing numerals}
+\index{numerals!parsing}
 %
 Simple digit sequences are parsed as decimal numbers, but the parser
 also supports the input of numbers in binary, octal and hexadecimal
@@ -1979,7 +1980,7 @@ The functions {\verb+mk_numeral+}, {\verb+dest_numeral+}, and
 {\verb+is_numeral+} only work for numerals, and not for numeric
 literals with character suffixes other than {\small\verb+n+}. For
 information on how to install new character suffixes, consult the
-{\small\verb+add_numeral_info+} entry in \REFERENCE.
+\ml{add\_numeral\_info} entry in \REFERENCE.
 
 \subsection{Integers}\label{integers}
 
@@ -2463,7 +2464,7 @@ are unspecified on empty lists.
 theory can be found in \theoryimp{rich\_list}.
 
 \index{list theorems, in HOL logic@list theorems, in \HOL{} logic|)}
-\index{lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL{} logic)|)}
+\index{ lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL{} logic)|)}
 \index{list theory, in HOL logic@\ml{list} theory, in \HOL{} logic|)}
 \index{lists, in HOL logic@lists, in \HOL{} logic|)}
 \index{recursive definitions, in HOL logic@recursive definitions, in \HOL{} logic!automated for lists|)}

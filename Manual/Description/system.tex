@@ -39,19 +39,26 @@ their own application specific theories.
 \section{Lexical matters}\label{HOL-lex}
 
 \index{identifiers, in HOL logic@identifiers, in \HOL{} logic|(} The name
-of a \HOL{} variable\index{variables, in HOL logic@variables, in \HOL\
-logic!names of|(} can be any \ML\ string, but the quotation mechanism
-will parse only names that are identifiers (see Section~\ref{ident}
-below).  The use of non-identifiers as variable names is discouraged
-except in special circumstances (for example, when writing derived rules
-that generate variables with names that are guaranteed to be different
-from existing names). The name of a type variable\index{type variables,
-in HOL logic@type variables, in \HOL{} logic!names of} in the \HOL{} logic
-is formed by a prime (\ml{'}) followed by an alphanumeric which itself
-contains no prime (see Section~\ref{tyvars} for examples).  The name of
-a type constant or a term constant in the \HOL{} logic can be any
-identifier, although some names are treated specially by the HOL parser
-and printer and should therefore be avoided.
+of a \HOL{} variable
+%
+\index{variables, in HOL logic@variables, in \HOL{} logic!names of|(}
+%
+can be any \ML{} string, but the quotation mechanism will parse only
+names that are identifiers (see Section~\ref{ident} below).  The use
+of non-identifiers as variable names is discouraged except in special
+circumstances (for example, when writing derived rules that generate
+variables with names that are guaranteed to be different from existing
+names). The name of a type variable
+%
+\index{type variables, in HOL logic@type variables, in \HOL{} logic!names of}
+%
+in the \HOL{} logic is formed by a prime (\ml{'}) followed by an
+alphanumeric which itself contains no prime (see Section~\ref{tyvars}
+for examples).  The name of a type constant or a term constant in the
+\HOL{} logic can be any identifier, although some names are treated
+specially by the HOL parser and printer and should therefore be
+avoided.
+%
 \index{identifiers, in HOL logic@identifiers, in \HOL{} logic|)}
 
 \subsubsection{Identifiers}\label{ident}
@@ -64,7 +71,8 @@ combination of the following characters:
 \begin{hol}
 \begin{verbatim}
   #  ?  +  *  /  \  =  <  >  &  %  @  !  ,  :  ;  _  |  ~  -
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 \end{myenumerate}
 %
 A letter is a member of the list:
@@ -720,9 +728,11 @@ explicitly specified.
 \end{verbatim}
 \end{session}
 Note how the \holtxt{<} symbol is not treated as an infix by the
-parser when given in ``fully-quantified'' form.  Syntactically, such
+parser when given in ``fully-qualified'' form.  Syntactically, such
 tokens are never given special treatment by the parser of \HOL's
 concrete syntax.
+%
+\index{constants, in HOL logic@constants, in \HOL{} logic!fully-qualified names of}
 
 \section{Ways to construct types and terms}
 
