@@ -256,6 +256,15 @@ s,\;i,\;p & ((\verb+p+\;t_1)\;\verb+i+\;t_2)\;\verb+s+\\
 \end{array}
 \]
 
+\subsubsection{Closefixes}
+
+Closefix terms are operators that completely enclose their arguments.
+An example one might use in the development of a theory of
+denotational semantics is semantic brackets.  Thus, the HOL parsing
+facilities can be configured to allow one to write \texttt{denotation x}
+as \texttt{[| x |]}.  Closefixes are not associated with precedences
+because they can not compete for arguments with other operators.
+
 \subsection{Type constraints}
 
 A term can be constrained to be of a certain type.  For example,
@@ -289,15 +298,6 @@ the argument list of terms [\verb+bool+, \verb+->+, \verb+bool+,
     $= :bool->bool->bool
 \end{verbatim}
 is parsed as the symbolic identifier "=" constrained by a type.
-
-\subsubsection{Closefixes}
-
-Closefix terms are operators that completely enclose their arguments.
-An example one might use in the development of a theory of
-denotational semantics is semantic brackets.  Thus, the HOL parsing
-facilities can be configured to allow one to write \texttt{denotation x}
-as \texttt{[| x |]}.  Closefixes are not associated with precedences
-because they can not compete for arguments with other operators.
 
 \subsubsection{Type inference}
 
@@ -353,7 +353,8 @@ that in Table \ref{expanded-grammar}.
     \term & ::= & \term : \type & \mbox{(type constraint)} \\
     & | & \term\ \term & \mbox{(application)} \\
     & | & \CONS\ \term \ \term & \mbox{(list builder)} \\
-    & | & \INSERT\ \term \ \term & \mbox{(set builder)} \\
+    & | & \term\ \verb|::|\ \term & \mbox{(list builder)}\\
+    & | & \term \ \INSERT\ \term & \mbox{(set builder)} \\
     & | & \SUC\ \term & \mbox{(successor)} \\
     & | & \verb+~+ \term & \mbox{(negation)} \\
     & | & \term\ =\ \term & \mbox{(equality)} \\
@@ -365,6 +366,7 @@ that in Table \ref{expanded-grammar}.
     & | & \term\ \verb!*! \ \term & \mbox{(multiplication)} \\
     & | & \term\ \verb!-! \ \term & \mbox{(subtraction)} \\
     & | & \term\ \verb+=>+\ \term\ |\ \term & \mbox{(conditional)} \\
+    & | & \verb|if|\ \term\ \verb|then|\ \term\ \verb|else|\ \term & \mbox{(conditional)}\\
     & | & \bs\vstr_1\ldots\vstr_n.\ \term & \mbox{(lambda abstraction)} \\
     & | & \ALL \vstr_1\ldots\vstr_n.\ \term & \mbox{(forall)} \\
     & | & \EXISTS \vstr_1\ldots\vstr_n.\ \term & \mbox{(exists)} \\
@@ -415,14 +417,17 @@ the end of the sequence, thus with a universal quantification: \[
 Also, in the term grammar a \charseq\ is just a finite sequence of
 characters.
 
+The current term grammar is available interactively through a call to
+the function \texttt{term\_grammar()}.
+
 
 \section{Changes from older versions}
 
 This section of the manual documents the (extensive) changes made to
-the parsing of HOL terms and types in the Taupo release and beyond
-from the point of view of a user who doesn't want to know how to use
-the new facilities, but wants to make sure that their old code
-continues to work cleanly.
+the parsing of HOL terms and types in the Taupo release (one of the
+HOL3 releases) and beyond from the point of view of a user who doesn't
+want to know how to use the new facilities, but wants to make sure
+that their old code continues to work cleanly.
 
 The changes which may cause old terms to fail to parse are:
 \begin{itemize}
