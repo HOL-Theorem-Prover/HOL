@@ -18,9 +18,11 @@ fun oracles_of (TAG(O,_)) = O;
 fun axioms_of  (TAG(_,A)) = A;
 
 val empty_tag  = TAG ([],[])
+val disk_only_tag  = TAG (["DISK_THM"],[])
 fun ax_tag r = TAG ([],[r])
 
 val isEmpty = equal empty_tag;
+val isDisk = equal disk_only_tag;
 
 (*---------------------------------------------------------------------------*
  * Create a tag. The input string should be an alphanumeric identifier,      *
@@ -46,7 +48,7 @@ local fun smerge t1 [] = t1
 in
 fun merge (TAG(o1,ax1)) (TAG(o2,ax2)) = TAG(smerge o1 o2, Lib.union ax1 ax2)
 fun read_disk_tag s  = 
-     if s = "" then TAG (["DISK_THM"],[])
+     if s = "" then disk_only_tag
                else TAG (smerge ["DISK_THM"] (Lib.words2 " " s), [])
 end;
 

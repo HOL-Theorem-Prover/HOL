@@ -3,8 +3,6 @@ struct
 
  open HolKernel Abbrev
  local open listTheory in end;
- infix |->
- infixr -->
 
 val ERR = mk_HOL_ERR "listSyntax";
 
@@ -192,8 +190,9 @@ val is_list = can dest_list;
 (*---------------------------------------------------------------------------*)
 
 fun lift_list ty =
-  let val Nil = TypeBasePure.cinst ty nil_tm
-      val Cons = TypeBasePure.cinst ty cons_tm
+  let open TypeBasePure
+      val Nil = cinst ty nil_tm
+      val Cons = cinst ty cons_tm
       fun lift f [] = Nil
         | lift f (h::t) = list_mk_comb(Cons,[f h,lift f t])
   in lift

@@ -148,6 +148,7 @@ sig
   val empty_tag     : tag
   val ax_tag        : string ref -> tag
   val isEmpty       : tag -> bool
+  val isDisk        : tag -> bool
   val merge         : tag -> tag -> tag
   val read          : string -> tag
   val read_disk_tag : string -> tag
@@ -226,6 +227,7 @@ sig
  type num = Arbnum.num
 
  val pp_type : string -> string -> ppstream -> hol_type -> unit
+ val pp_sig_hook : (unit -> unit) ref
  val pp_sig :
    (ppstream -> thm -> unit)
     -> {name        : string,

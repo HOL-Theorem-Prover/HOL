@@ -14,6 +14,8 @@ sig
 
  val pp_type : string -> string -> ppstream -> hol_type -> unit
 
+ val pp_sig_hook : (unit -> unit) ref
+
  val pp_sig
    : (ppstream -> thm -> unit)
      -> {name        : string,

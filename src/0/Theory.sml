@@ -645,10 +645,10 @@ fun incorporate_consts thy consts =
  *         PRINTING THEORIES OUT AS ML STRUCTURES AND SIGNATURES.            *
  *---------------------------------------------------------------------------*)
 
-fun theory_out f {name,style} ostrm =
+fun theory_out f width {name,style} ostrm =
  let val ppstrm = Portable.mk_ppstream
                     {consumer = Portable.outputc ostrm,
-                     linewidth=75, flush = fn () => Portable.flush_out ostrm}
+                     linewidth=width, flush = fn () => Portable.flush_out ostrm}
  in f ppstrm handle e => (Portable.close_out ostrm; raise e);
     Portable.flush_ppstream ppstrm;
     Portable.close_out ostrm
@@ -741,10 +741,10 @@ fun export_theory () =
             val tstr = Time.toString time_since
         in
           mesg ("Exporting theory "^Lib.quote thyname^" ... ");
-          theory_out (TheoryPP.pp_sig (!pp_thm) sigthry)
-                     {name=name, style="signature"} ostrm1;
-          theory_out (TheoryPP.pp_struct structthry)
+          theory_out (TheoryPP.pp_struct structthry) 75
                      {name=name, style="structure"} ostrm2;
+          theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) 85
+                     {name=name, style="signature"} ostrm1;
           set_ct_consistency true;
           mesg "done.\n";
           if !report_times then

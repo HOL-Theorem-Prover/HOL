@@ -4,9 +4,6 @@ struct
 open Portable HolKernel term_grammar
      HOLtokens HOLgrammars GrammarSpecials;
 
-
-
-
 val PP_ERR = mk_HOL_ERR "term_pp";
 
 (*---------------------------------------------------------------------------
@@ -147,7 +144,6 @@ fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
 
 
-
 fun dest_atom tm = dest_var tm handle HOL_ERR _ => dest_const tm
 
 fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
@@ -210,7 +206,9 @@ end
 exception SimpleExit
 exception DoneExit
 
-fun symbolic s = List.all HOLsym (String.explode s)
+(* fun symbolic s = List.all HOLsym (String.explode s) *)
+
+fun symbolic s = HOLsym (String.sub(s,String.size(s)-1));
 
 (* term tm can be seen to have name s according to grammar G *)
 fun has_name G s tm = let
@@ -1165,7 +1163,7 @@ fun pp_term (G : grammar) TyG = let
         in
           pbegin addparens; begin_block INCONSISTENT 2;
           add_string fname;
-          spacep (not (symbolic fname));
+          spacep (not (symbolic fname)); 
           pr_vstructl bvs;
           add_string endbinding; spacep true;
           begin_block CONSISTENT 0;

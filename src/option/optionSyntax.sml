@@ -3,7 +3,7 @@ struct
 
 local open sumTheory optionTheory in end;
 
-open HolKernel Abbrev; infix |->;
+open HolKernel Abbrev;
 
 val ERR = mk_HOL_ERR "optionSyntax";
 
@@ -112,8 +112,9 @@ val is_option_case = can dest_option_case
 (*---------------------------------------------------------------------------*)
 
 fun lift_option ty =
-  let val none = TypeBasePure.cinst ty none_tm
-      val some = TypeBasePure.cinst ty some_tm
+  let open TypeBasePure
+      val none = cinst ty none_tm
+      val some = cinst ty some_tm
       fun lift f NONE = none
         | lift f (SOME x) = mk_comb(some,f x)
   in lift

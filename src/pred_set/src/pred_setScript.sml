@@ -4002,7 +4002,48 @@ val _ =
                \    | toList (INSERT(a,s)) = a::toList s"]))
 end;
 
+val _ = 
+ let open Parse
+ in temp_overload_on ("&cup;", prim_mk_const{Name="UNION",Thy="pred_set"});
+    temp_overload_on ("&cap;", prim_mk_const{Name="INTER",Thy="pred_set"}); 
+    temp_overload_on ("&sube;", prim_mk_const{Name="SUBSET",Thy="pred_set"});
+    temp_overload_on ("&sub;",  prim_mk_const{Name="PSUBSET",Thy="pred_set"});
+    temp_overload_on ("&empty;", prim_mk_const{Name="EMPTY",Thy="pred_set"});
+    temp_set_fixity "&cup;" (Infixl 500);
+    temp_set_fixity "&cap;" (Infixl 600);
+    temp_set_fixity "&sube;" (Infixr 450);
+    temp_set_fixity "&sub;" (Infixr 450);
+    temp_add_listform {leftdelim = [TOK "{"], rightdelim = [TOK "}"],
+                      separator = [TOK ";", BreakSpace(1,0)],
+                      cons = "INSERT", nilstr = "&empty;"}
+end;
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "val _ = ";
+   S " let open TheoryPP Parse";
+   S "     fun f() = ";
+   S "      (temp_overload_on (\"&cup;\", prim_mk_const{Name=\"UNION\",Thy=\"pred_set\"});";
+   S "       temp_overload_on (\"&cap;\", prim_mk_const{Name=\"INTER\",Thy=\"pred_set\"});";
+   S "       temp_overload_on (\"&sube;\", prim_mk_const{Name=\"SUBSET\",Thy=\"pred_set\"});";
+   S "       temp_overload_on (\"&sub;\", prim_mk_const{Name=\"PSUBSET\",Thy=\"pred_set\"});";
+   S "       temp_overload_on (\"&empty;\", prim_mk_const{Name=\"EMPTY\",Thy=\"pred_set\"});";
+   S "       temp_set_fixity \"&cup;\" (Infixl 500);";
+   S "       temp_set_fixity \"&cap;\" (Infixl 600);";
+   S "       temp_set_fixity \"&sube;\" (Infixr 450);";
+   S "       temp_set_fixity \"&sub;\" (Infixr 450);";
+   S "       temp_add_listform {leftdelim = [TOK \"{\"], rightdelim = [TOK \"}\"],";
+   S "           separator = [TOK \";\", BreakSpace(1,0)],";
+   S "           cons = \"INSERT\", nilstr = \"&empty;\"})";
+   S " in";
+   S " pp_sig_hook := (f o !pp_sig_hook)";
+   S " end;"
+ end)};
+
 val _ = export_theory();
 
 end
-

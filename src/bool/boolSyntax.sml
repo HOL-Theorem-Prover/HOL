@@ -39,6 +39,7 @@ val bounded_tm   = prim_mk_const {Name="BOUNDED",   Thy="bool"};
 
 
 
+
 (*---------------------------------------------------------------------------
           Derived syntax operations
  ---------------------------------------------------------------------------*)
@@ -204,7 +205,6 @@ fun gen_all tm = list_mk_forall (free_vars tm, tm);
 
 val list_mk_fun = HolKernel.list_mk_fun;
 val strip_fun   = HolKernel.strip_fun
-
 
 
 (*---------------------------------------------------------------------------
@@ -409,10 +409,42 @@ val is_res_select        = can dest_res_select;
 val is_res_abstract      = can dest_res_abstract;
 
 fun mk n = prim_mk_const{Name = n, Thy = "bool"}
-val res_forall_tm = mk "RES_FORALL"
-val res_exists_tm = mk "RES_EXISTS"
+
+val res_forall_tm  = mk "RES_FORALL"
+val res_exists_tm  = mk "RES_EXISTS"
 val res_exists1_tm = mk "RES_EXISTS_UNIQUE"
-val res_select_tm = mk "RES_SELECT"
+val res_select_tm  = mk "RES_SELECT"
 val res_abstract_tm = mk "RES_ABSTRACT"
+
+(*---------------------------------------------------------------------------*)
+(* Supporting HTML symbols in files xTheory.sig.                             *)
+(*---------------------------------------------------------------------------*)
+
+val _ = 
+ let open TheoryPP Parse
+     val in_tm = prim_mk_const {Name="IN", Thy="bool"}
+     fun f() = 
+      (temp_overload_on("&and;", conjunction);  
+       temp_overload_on("&or;", disjunction);
+       temp_overload_on("&rArr;", implication); 
+       temp_overload_on("&forall;", universal); 
+       temp_overload_on("&exist;", existential);
+       temp_overload_on("&exist;!",exists1);
+       temp_overload_on("&epsilon;", select);
+       temp_overload_on("&isin;", in_tm); 
+       temp_set_fixity "&and;" (Infixr 400);
+       temp_set_fixity "&or;" (Infixr 300);
+       temp_set_fixity "&rArr;" (Infixr 200);
+       temp_add_rule {term_name = "~",fixity=TruePrefix 900,
+         pp_elements = [TOK "&not;"],paren_style = OnlyIfNecessary,
+         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
+       temp_set_fixity "&forall;" Binder;
+       temp_set_fixity "&exist;" Binder;
+       temp_set_fixity "&exist;!" Binder;
+       temp_set_fixity "&epsilon;" Binder;
+       temp_set_fixity "&isin;" (Infix(NONASSOC,425)))
+ in 
+   pp_sig_hook := f
+ end
 
 end

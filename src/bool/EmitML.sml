@@ -134,6 +134,7 @@ fun term_to_ML openthys ppstrm =
   fun pp i tm =
      if is_var tm then pp_var tm else
      if is_cond tm then pp_cond i tm else
+     if is_arb tm then pp_arb i else
      if !is_num_literal_hook tm then pp_num_literal tm else
      if !is_int_literal_hook tm then pp_int_literal tm else
      if !is_string_literal_hook tm then pp_string tm else
@@ -311,6 +312,13 @@ fun term_to_ML openthys ppstrm =
          ; add_string (Lib.quote (fname^": "^s))
          ; end_block()
        end
+  and pp_arb i =
+      (lparen i maxprec
+       ; begin_block CONSISTENT 3
+       ; add_string "raise Fail \"\""
+       ; end_block()
+       ; rparen i maxprec)
+
   and pp_var tm = add_string(fst(dest_var tm))
   and pp_const i tm = 
       if same_const tm boolSyntax.conjunction 
@@ -589,7 +597,6 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
             decls
   ; end_block()
  end;
-
 
 (*---------------------------------------------------------------------------*)
 (* Get the name of all constants introduced by the definition. Probably      *)

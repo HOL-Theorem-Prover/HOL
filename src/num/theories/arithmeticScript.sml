@@ -3237,6 +3237,43 @@ val _ = adjoin_to_theory
    S "      distinct=SOME numTheory.NOT_SUC}];"
  end)};
 
+(*---------------------------------------------------------------------------*)
+(* For HTML symbols in arithmeticTheory.sig                                  *)
+(*---------------------------------------------------------------------------*)
+
+val _ = 
+ let open Parse
+ in temp_overload_on ("&lt;", prim_mk_const{Name="<",Thy="prim_rec"});
+    temp_overload_on ("&gt;", prim_mk_const{Name=">",Thy="arithmetic"});
+    temp_overload_on ("&le;", prim_mk_const{Name="<=",Thy="arithmetic"});
+    temp_overload_on ("&ge;", prim_mk_const{Name=">=",Thy="arithmetic"});
+    set_fixity "&lt;" (Infixr 450);
+    set_fixity "&gt;" (Infixr 450);
+    set_fixity "&le;" (Infixr 450);
+    set_fixity "&ge;" (Infixr 450)
+ end;
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "val _ = ";
+   S " let open TheoryPP Parse";
+   S "     fun f() = ";
+   S "      (temp_overload_on (\"&lt;\", prim_mk_const{Name=\"<\",Thy=\"prim_rec\"});";
+   S "       temp_overload_on (\"&gt;\", prim_mk_const{Name=\">\",Thy=\"arithmetic\"});";
+   S "       temp_overload_on (\"&le;\", prim_mk_const{Name=\"<=\",Thy=\"arithmetic\"});";
+   S "       temp_overload_on (\"&ge;\", prim_mk_const{Name=\">=\",Thy=\"arithmetic\"});";
+   S "       set_fixity \"&lt;\" (Infixr 450);";
+   S "       set_fixity \"&gt;\" (Infixr 450);";
+   S "       set_fixity \"&le;\" (Infixr 450);";
+   S "       set_fixity \"&ge;\" (Infixr 450))";
+   S " in";
+   S " pp_sig_hook := (f o !pp_sig_hook)";
+   S " end;"
+ end)};
 
 val _ = export_theory();
 
