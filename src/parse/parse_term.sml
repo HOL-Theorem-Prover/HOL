@@ -84,10 +84,11 @@ fun mk_prec_matrix G = let
   fun insert k v = let
     val insert_result = Polyhash.peekinsert matrix (k, v)
   in
-    if isSome insert_result andalso valOf insert_result <> v then
-      raise PrecConflict k
-    else
-      ()
+    case (insert_result, v) of
+      (SOME EQUAL, _) => ()  (* ignore this *)
+    | (SOME _, EQUAL) => Polyhash.insert matrix (k,v)  (* EQUAL overrides *)
+    | (SOME oldv, _) => if oldv <> v then raise PrecConflict k else ()
+    | (NONE, _) => ()
   end
   fun insert_eqs rule = let
     fun insert_oplist list = let

@@ -273,7 +273,8 @@ local
     fun dest_eq (COMB(COMB(VAR "=", t1), t2)) = (t1, t2)
       | dest_eq _ = raise Fail "(pre-)term not an equality"
     val _ =
-      List.all is_eq binding_clauses orelse raise Fail "let with non-equality"
+      List.all is_eq binding_clauses orelse
+      raise ERROR "Term" "let with non-equality"
     val (lhses, rhses) =
       ListPair.unzip (map (reform_def o dest_eq) binding_clauses)
     val central_abstraction = List.foldr ABS body lhses

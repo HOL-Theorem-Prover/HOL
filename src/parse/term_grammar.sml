@@ -275,6 +275,12 @@ fun aug_compare (NONE, NONE) = EQUAL
   | aug_compare (NONE, _) = GREATER
   | aug_compare (SOME n, SOME m) = Int.compare(n,m)
 
+fun priv_a2string a =
+  case a of
+    LEFT => "LEFT"
+  | RIGHT => "RIGHT"
+  | NONASSOC => "NONASSOC"
+
 fun merge_rules (r1, r2) =
   case (r1, r2) of
     (SUFFIX (STD_suffix sl1), SUFFIX (STD_suffix sl2)) =>
@@ -286,7 +292,8 @@ fun merge_rules (r1, r2) =
   | (INFIX(STD_infix (i1, a1)), INFIX(STD_infix(i2, a2))) =>
       if a1 <> a2 then
         raise GrammarError
-          "Attempt to have differently associated infixes at same level"
+          ("Attempt to have differently associated infixes ("^
+           priv_a2string a1^" and "^priv_a2string a2^") at same level")
       else
         INFIX(STD_infix(Lib.union i1 i2, a1))
   | (INFIX (RESQUAN sl1), INFIX(RESQUAN sl2)) =>
