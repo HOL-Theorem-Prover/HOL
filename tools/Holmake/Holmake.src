@@ -609,7 +609,7 @@ in
         val _ =
           app (fn s => FileSys.remove s handle OS.SysErr _ => ())
           [thysmlfile, thysigfile]
-        val res2    = system (fullPath [".", script'])
+        val res2    = system (fullPath [FileSys.getDir(), script'])
         val _       = app FileSys.remove [script', scriptuo, scriptui]
       in
         (res2 = success) andalso
