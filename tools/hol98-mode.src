@@ -18,6 +18,8 @@
 (set-default 'hol-buffer-ready nil)
 (set-default 'hol-buffer-name nil)
 
+(set-default 'hol-default-buffer nil)
+
 (defvar hol98-executable HOL98-EXECUTABLE
   "*Path-name for the HOL98 executable.")
 
@@ -71,13 +73,14 @@ process in it."
      (cond (hol-buffer-name (concat hol-buffer-name " not valid anymore."))
            (t "Please choose a HOL to attach this buffer to.")))
     (sleep-for 1)
-    (setq hol-buffer-name (read-buffer "HOL buffer: " nil t))
+    (setq hol-buffer-name (read-buffer "HOL buffer: " hol-default-buffer t))
     (while (not (hol-buffer-ok hol-buffer-name))
       (ding)
       (message "Not a valid HOL process")
       (sleep-for 1)
       (setq hol-buffer-name
-            (read-buffer "HOL buffer: " nil t)))
+            (read-buffer "HOL buffer: " hol-default-buffer t)))
+    (setq hol-default-buffer hol-buffer-name)
     hol-buffer-name))
 
 
