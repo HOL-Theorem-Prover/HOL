@@ -1,4 +1,7 @@
-
+(*
+load "bossLib";
+load "computeLib";
+*)
 open bossLib computeLib;
 
 
@@ -10,47 +13,52 @@ fun Define_rw q =
   in add_thm thm; thm end
 ;
 
-val inf_egal_def = Define_rw
- ` (inf_egal 0       n       = T)
-/\ (inf_egal (SUC k) 0       = F)
-/\ (inf_egal (SUC k) (SUC l) = inf_egal k l) `
+val le_nat_def = Define_rw
+ ` (le_nat 0       n       = T)
+/\ (le_nat (SUC k) 0       = F)
+/\ (le_nat (SUC k) (SUC l) = le_nat k l) `
+;
+
+val append_def = Define_rw
+ ` (append [] l2          = l2)
+/\ (append (CONS x l1) l2 = (CONS x (append l1 l2))) `
 ;
 
 (* merge sort *)
 
-val fusion_def = Define_rw
- ` (fusion (CONS h1 t1) (CONS h2 t2) =
-      if (inf_egal h1 h2) then (CONS h1 (fusion t1 (CONS h2 t2)))
-      else (CONS h2 (fusion (CONS h1 t1) t2)))
-/\ (fusion [] l2 = l2)
-/\ (fusion l1 [] = l1) `
+val merge_def = Define_rw
+ ` (merge (CONS h1 t1) (CONS h2 t2) =
+      if (le_nat h1 h2) then (CONS h1 (merge t1 (CONS h2 t2)))
+      else (CONS h2 (merge (CONS h1 t1) t2)))
+/\ (merge [] l2 = l2)
+/\ (merge l1 [] = l1) `
 ;
 
 
 val _ = Hol_datatype ` arbin =
-            Fe 
-          | Br of num => arbin => arbin `
+            Lf 
+          | Nd of num => arbin => arbin `
 ;
 
-val Tas2Ln_def = Define_rw
- ` (Tas2Ln Fe           = [])
-/\ (Tas2Ln (Br n a1 a2) = CONS n (fusion (Tas2Ln a1) (Tas2Ln a2))) `
+val Tree2List_def = Define_rw
+ ` (Tree2List Lf           = [])
+/\ (Tree2List (Nd n a1 a2) = CONS n (merge (Tree2List a1) (Tree2List a2))) `
 ;
 
-val insTas_def = Define_rw
- ` (insTas Fe           n = Br n Fe Fe)
-/\ (insTas (Br m a1 a2) n =
-     if (inf_egal n m) then Br n a2 (insTas a1 m)
-     else Br m a2 (insTas a1 n)) `
+val insTree_def = Define_rw
+ ` (insTree Lf           n = Nd n Lf Lf)
+/\ (insTree (Nd m a1 a2) n =
+     if (le_nat n m) then Nd n a2 (insTree a1 m)
+     else Nd m a2 (insTree a1 n)) `
 ;
 
-val Ln2Tas_def = Define_rw
-`  (Ln2Tas []          = Fe)
-/\ (Ln2Tas (CONS n ns) = insTas (Ln2Tas ns) n) `
+val List2Tree_def = Define_rw
+`  (List2Tree []          = Lf)
+/\ (List2Tree (CONS n ns) = insTree (List2Tree ns) n) `
 ;
 
-val tri_heap_def = Define_rw
- ` (tri_heap l = Tas2Ln (Ln2Tas l)) `
+val merge_sort_def = Define_rw
+ ` (merge_sort l = Tree2List (List2Tree l)) `
 ;
 
 
@@ -68,70 +76,71 @@ fun app_l20 l =
 	     ^l )))))))))))))))))))) `--
 ;
 
+val L0 = --`[] : num list`--;
+val L20 = app_l20 L0;
+val L100 = funpow 5 app_l20 L0;
 
-val L20 = app_l20 (--`[]:num list`--);
-val L100 = funpow 5 app_l20 (--`[]:num list`--);
 
-
-val L2_def = Define_rw ` L2 = [ ^n2; 0] `;
-val L4_def = Define_rw ` L4 = [ ^n2; 0; ^n1; 0] `;
-val L8_def = Define_rw ` L8 = [ ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0] `;
-val L12_def = Define_rw
+val L2_def   = Define_rw ` L2 = [ ^n2; 0] `;
+val L4_def   = Define_rw ` L4 = [ ^n2; 0; ^n1; 0] `;
+val L8_def   = Define_rw ` L8 = [ ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0] `;
+val L12_def  = Define_rw
     ` L12 = [ ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0] `;
-val L16_def = Define_rw
+val L16_def  = Define_rw
   ` L16 = [ ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0] `;
-val L20_def = Define_rw ` L20 = ^L20 `;
 val L20'_def = Define_rw
   ` L20' = [ ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0;
 	     ^n2; 0; ^n1; 0] `;
+val L40'_def   = Define_rw ` L40' = append L20' L20'`;
+val L80'_def   = Define_rw ` L80' = append L40' L40'`;
 
 
-val append_def = Define_rw
- ` (append [] l2          = l2)
-/\ (append (CONS x l1) l2 = (CONS x (append l1 l2))) `
-;
+val L20_def    = Define_rw ` L20 = ^L20 `;
+val L40_def    = Define_rw ` L40 = append L20 L20`;
 
-val L40_def = Define_rw ` L40 = append L20 L20`;
-val L40'_def = Define_rw ` L40' = append L20' L20'`;
-val L80'_def = Define_rw ` L80' = append L40' L40'`;
-
-val L100_def = Define_rw ` L100 = ^L100 `;
-val L200_def = Define_rw ` L200 = append L100 L100 `;
-val L400_def = Define_rw ` L400 = append L200 L200 `;
-val L1200_def = Define_rw ` L1200 = append L400 (append L400 L400) `;
-val L2400_def = Define_rw ` L2400 = append L1200 L1200 `;
-val L4800_def = Define_rw ` L4800 = append L2400 L2400 `;
-val L9600_def = Define_rw ` L9600 = append L4800 L4800 `;
+val L100_def   = Define_rw ` L100 = ^L100 `;
+val L200_def   = Define_rw ` L200 = append L100 L100 `;
+val L400_def   = Define_rw ` L400 = append L200 L200 `;
+val L1200_def  = Define_rw ` L1200 = append L400 (append L400 L400) `;
+val L2400_def  = Define_rw ` L2400 = append L1200 L1200 `;
+val L4800_def  = Define_rw ` L4800 = append L2400 L2400 `;
+val L9600_def  = Define_rw ` L9600 = append L4800 L4800 `;
 val L19200_def = Define_rw ` L19200 = append L9600 L9600 `;
 val L38400_def = Define_rw ` L38400 = append L19200 L19200 `;
 
 
-(* Save the state *)
+(* Save the useful thms *)
 val sort_thms = !thms;
 
-val rws = from_list false [boolTheory.COND_CLAUSES];
+val rws = from_list false [COND_CLAUSES];
 val _ = add_clauses true sort_thms rws;
 
+fun norm q = time (CBV_CONV rws) (--q--);
 
-fun norm q = CBV_CONV rws (--q--);
-
-
-norm ` tri_heap L4 `;  (* ~ 0.03s *)
-norm ` tri_heap L12 `;
-norm ` tri_heap L20 `; (* ~ 0.33s *)
-norm ` tri_heap L200 `;
-  (* ~ 12s = 3300 times more than Moscow ML (without expl. subst.) *)
+(* rules.sml implemented witout expl. subst. *)
+norm ` merge_sort L4 `;  (* ~ 0.03s *)
+norm ` merge_sort L12 `; (* ~ 0.11s *)
+norm ` merge_sort L20 `; (* ~ 0.31s *)
+norm ` merge_sort L40 `; (* ~ 0.89s *)
+norm ` merge_sort L200 `;  (* ~ 11.3s = 3300 times slower than Moscow ML *)
+norm ` merge_sort L1200 `; (* ~ 393s *)
 
 
 (* Compare with REWRITE_CONV *)
 
-val rw_norm = REWRITE_CONV sort_thms;
+fun rw_norm q = time (REWRITE_CONV sort_thms) (--q--);
 
-rw_norm (--`tri_heap L4`--);  (* ~ 0.06s *)
-rw_norm (--`tri_heap L12`--); (* ~ 3.4s *)
-rw_norm (--`tri_heap L20`--); (* ~ 15mn *)
+rw_norm `merge_sort L4`;  (* ~ 0.06s *)
+rw_norm `merge_sort L12`; (* ~ 3.4s *)
+rw_norm `merge_sort L20`; (* ~ 15mn *)
 
-(*
-SIMP_CONV empty_ss thms (--`tri_heap L12`--);
-*)
+(* And SIMP_CONV *)
+val srws =
+   map SPEC_ALL
+   (flatten (map (CONJUNCTS o SPEC_ALL) (COND_CLAUSES::sort_thms)));
+
+fun simp_norm q = time (SIMP_CONV empty_ss srws) (--q--);
+
+simp_norm `merge_sort L12`; (* ~ 5s *)
+
 

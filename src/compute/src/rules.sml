@@ -34,6 +34,8 @@ fun dest_eq_ty tm =
   {lhs=lhs, rhs=rhs, ty=type_of lhs}
   end;
 
+fun Spec tm thm = SPEC tm thm;
+
 (* end of inefficient implementation. *)
 
 

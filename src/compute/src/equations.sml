@@ -30,7 +30,7 @@ fun match_var (bds,tbds) var arg =
 (* Tries to match a list of pattern to a list of arguments.
  * We assume that we already checked the lengths (probably a good short-cut)
  *
- * Returns a list of bindings (that extend the ones given as
+ * Returns a list of bindings that extend the ones given as
  * argument (bds), or a No_match exception.
  *)
 
@@ -62,11 +62,12 @@ fun try_rwn ibds lt =
 (* Instanciating the rule according to the ouptut of the matching
  *)
 
-fun comb_ct {Rws=(0,_,_)::l,...} arg =
-      raise DEAD_CODE "comb_ct: yet rules to match"
-  | comb_ct {Head,Args,Rws=(n,ty,rws)::l} arg =
-      CST{Head=Head, Args=arg::Args, Rws=(n-1,ty,rws)::l }
-  | comb_ct {Head,Args,Rws=[]} arg = CST{Head=Head,Args=arg::Args,Rws=[]}
+fun comb_ct {Head,Args,Rws=NeedArg tail} arg =
+      CST{Head=Head, Args=arg::Args, Rws=tail }
+  | comb_ct {Head,Args,Rws=EndDb} arg =
+      CST{Head=Head, Args=arg::Args, Rws=EndDb}
+  | comb_ct {Rws=Try _,...} arg =
+      raise DEAD_CODE "comb_ct: yet rules to try"
 ;
 
 fun mk_clos(env,t) =
@@ -83,31 +84,32 @@ local
 fun del [] A = A
   | del ((rr as {redex,residue})::rst) A =
       if (redex=residue) then del rst A else del rst (rr::A)
-in fun del_ty_sub theta = del theta []
+in
+fun del_ty_sub theta = del theta []
 end;
 
 
 (* TODO: reverse order of quantified vars to avoid rev *)
 fun inst_rw {Rule=RW{thm,rhs,...}, Inst=(bds,tbds)} =
-  let fun inst_one_var ((tm,v),(th,lv)) = (tm::th, v::lv)
+  let fun inst_one_var ((tm,v),(thm,lv)) = (Spec tm thm, v::lv)
       val tysub = del_ty_sub tbds
       val tirhs = inst_dt tysub rhs
-      val (tenv,venv) = Array.foldl inst_one_var ([],[]) bds
-      val ith = SPECL (rev tenv) (INST_TYPE tysub thm) in
-  {Thm=ith, Residue=mk_clos(venv,tirhs)}
+      val tithm = INST_TYPE tysub thm
+      val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds in
+  {Thm=spec_thm, Residue=mk_clos(venv,tirhs)}
   end
 ;
 
 
-(* TODO: match type in from_term. *)
-fun reduce_cst {Head, Args, Rws=(0,ty,rws)::arw} =
+(* TODO: match type in from_term? *)
+fun reduce_cst {Head, Args, Rws=Try{Ty,Rws,Tail}} =
       (let val inst =
- 	     Type.match_type ty (type_of Head)
+ 	     Type.match_type Ty (type_of Head)
  	     handle HOL_ERR _ => raise No_match
- 	   val rule_inst = (try_rwn inst Args) rws in
+ 	   val rule_inst = (try_rwn inst Args) Rws in
        LEFT (inst_rw rule_inst)
        end
-       handle No_match => reduce_cst {Head=Head, Args=Args, Rws=arw})
+       handle No_match => reduce_cst {Head=Head, Args=Args, Rws=Tail})
   | reduce_cst cst = RIGHT cst
 ;
 

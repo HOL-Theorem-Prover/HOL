@@ -8,6 +8,11 @@ type rewrite = rewrite;
 type comp_rws = comp_rws;
 
 
+(* Precondition: [S]arg is a closure corresponding to b.
+ * Given   (arg,(|- M = (a b), Stk)),
+ * returns (|- a = a, (<fun>,(|- b = b, [S]arg))::Stk)
+ * where   <fun> =  (|- a = a' , |- b = b') |-> |- M = (a' b')
+ *)
 fun push_in_stk env (arg,(th,stk)) =
       let val (tha,thb,mka) = Mk_comb th in
       (tha, (mka,(thb,mk_clos(env,arg)))::stk)
@@ -87,6 +92,11 @@ fun norm_wk rws t =
  * using rewrites rws.
  *)
 fun CBV_CONV rws t = strong (norm_wk rws t);
+
+(* WEAK_CBV_CONV is the same as CBV_CONV except that it does not reduce
+ * under abstractions (except arguments of variables that are always
+ * strongly reduced.
+ *)
 fun WEAK_CBV_CONV rws t = fst (norm_wk rws t);
 
 end;
