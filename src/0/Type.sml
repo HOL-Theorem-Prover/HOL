@@ -28,9 +28,22 @@ datatype hol_type = Utv of string              (* User-given type variables *)
 
 
 (*---------------------------------------------------------------------------*
- * A dummy type. Not constructible by users.                                 *
+ * Make a type variable. Simple sharing scheme. A bonafide hash table        *
+ * would be better.                                                          *
  *---------------------------------------------------------------------------*)
-val dummy = Utv"dummy";
+local val a = Utv "'a"      val b  = Utv "'b"
+      val c = Utv "'c"      val d  = Utv "'d"
+      val e = Utv "'e"      val f  = Utv "'f"
+in
+fun mk_vartype "'a" = a  | mk_vartype "'b" = b
+  | mk_vartype "'c" = c  | mk_vartype "'d" = d
+  | mk_vartype "'e" = e  | mk_vartype "'f" = f
+  | mk_vartype s = if Lexis.allowed_user_type_var s then Utv s
+      else raise TYPE_ERR "mk_vartype" "incorrect syntax"
+end;
+
+val alpha = mk_vartype "'a"
+val beta  = mk_vartype "'b";
 
 
 (*---------------------------------------------------------------------------*
@@ -41,7 +54,7 @@ val dummy = Utv"dummy";
  * to have type construction be a part of Type. Hence, I need a "backward"   *
  * reference from Theory to Type.                                            *
  *---------------------------------------------------------------------------*)
-local val mk_type_ref  = ref (fn _:{Tyop:string,Args:hol_type list} => dummy)
+local val mk_type_ref  = ref (fn _:{Tyop:string,Args:hol_type list} => alpha)
       val current_revision_ref  = ref (fn _:string => ~1)
       val started = ref false
 in
@@ -78,24 +91,6 @@ fun dom_rng ty =
      of {Tyop="fun", Args=[x,y]} => (x,y)
       | _ => raise TYPE_ERR "dom_rng" "not a function type";
 
-
-(*---------------------------------------------------------------------------*
- * Make a type variable. Simple sharing scheme. A bonafide hash table        *
- * would be better.                                                          *
- *---------------------------------------------------------------------------*)
-local val a = Utv "'a"      val b  = Utv "'b"
-      val c = Utv "'c"      val d  = Utv "'d"
-      val e = Utv "'e"      val f  = Utv "'f"
-in
-fun mk_vartype "'a" = a  | mk_vartype "'b" = b
-  | mk_vartype "'c" = c  | mk_vartype "'d" = d
-  | mk_vartype "'e" = e  | mk_vartype "'f" = f
-  | mk_vartype s = if (Lexis.allowed_user_type_var s) then Utv s
-      else raise TYPE_ERR "mk_vartype" "incorrect syntax"
-end;
-
-val alpha = mk_vartype "'a"
-val beta = mk_vartype "'b";
 
 (*---------------------------------------------------------------------------*
  * Take a type variable apart.                                               *
@@ -154,27 +149,6 @@ fun type_compare ty1 ty2 =
     else if type_lt ty1 ty2 then LESS else GREATER;
 
 (*---------------------------------------------------------------------------*
- * An "all" function defined for uncurried predicates.                       *
- *---------------------------------------------------------------------------*)
-fun pr_all2 f =
-   let fun trav (a1::rst1) (a2::rst2) = f(a1,a2) andalso trav rst1 rst2
-         | trav [] [] = true
-         | trav _ _ = false
-   in trav
-   end;
-
-
-(*---------------------------------------------------------------------------*
- * Are two types equal? This is Standard ML. A non-Standard version could    *
- * replace the "=" test with something like what is done in Term.aconv:      *
- *                                                                           *
- *    open System.Unsafe  (NJSML only)                                       *
- *    fun EQ (M:hol_type,N:hol_type) = ((cast M:int) = (cast N:int))         *
- *                                                                           *
- *---------------------------------------------------------------------------*)
-fun ty_eq pr = (op =) pr
-
-(*---------------------------------------------------------------------------*
  * Support datatypes and functions.                                          *
  *---------------------------------------------------------------------------*)
 datatype 'a delta = SAME | DIFF of 'a;
@@ -187,7 +161,6 @@ fun apply f ty =
                         of SAME     => NOPE(ty::L)
                          | DIFF ty' => YUP(ty'::L)
    in appl end   ;
-
 
 (*---------------------------------------------------------------------------*
  * Substitute in a type.                                                     *

@@ -18,8 +18,6 @@ sig
   val type_vars  : hol_type -> hol_type list
   val type_varsl : hol_type list -> hol_type list
 
-  val dummy : hol_type
-
   (* function types and booleans *)
   val -->     : hol_type * hol_type -> hol_type  (* infixr 3 --> *)
   val dom_rng : hol_type -> hol_type * hol_type  (* inverts -->  *)
