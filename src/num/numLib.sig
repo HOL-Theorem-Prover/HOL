@@ -8,10 +8,24 @@
 
 signature numLib = 
 sig
- val ADD_CONV : Abbrev.conv
- val num_EQ_CONV : Abbrev.conv
- val EXISTS_LEAST_CONV : Abbrev.conv
- val EXISTS_GREATEST_CONV : Abbrev.conv
- val num_CONV : Abbrev.conv
- val INDUCT_TAC : Abbrev.tactic
+  type thm = Thm.thm
+  type conv = Abbrev.conv
+  type tactic = Abbrev.tactic
+
+(* val ADD_CONV : conv
+   val num_EQ_CONV : conv
+*)
+ val EXISTS_LEAST_CONV : conv
+ val EXISTS_GREATEST_CONV : conv
+ val num_CONV : conv
+ val INDUCT_TAC : tactic
+
+ val REDUCE_CONV : conv
+ val REDUCE_RULE : thm -> thm
+ val REDUCE_TAC  : tactic
+
+ val ARITH_CONV  : conv 
+ val ARITH_PROVE : conv
+ val ARITH_TAC   : tactic
+
 end;

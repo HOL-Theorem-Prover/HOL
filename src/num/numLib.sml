@@ -9,16 +9,23 @@
 (* UPDATE        : October'94 bugfix to num_EQ_CONV (KLS;bugfix from tfm)*)
 (* UPDATE        : January'99 fix to use "Norrish" numerals (MN)         *)
 (* UPDATE        : August'99 to incorporate num_CONV and INDUCT_TAC      *)
+(* UPDATE        : Nov'99 to incorporate main entrypoints from           *)
+(*                 reduceLib and arithLib. Also, ADD_CONV and            *)
+(*                 num_EQ_CONV are banished: use the stuff in reduceLib  *)
+(*                 instead.                                              *)
 (* ===================================================================== *)
 
 
 structure numLib :> numLib =
 struct
 
-local open arithmeticTheory numeralTheory in end;
+local open numeralTheory in end;
 
 open HolKernel basicHol90Lib Num_conv Parse;
 infix THEN THENC THENL;
+
+  type conv = Abbrev.conv
+  type tactic = Abbrev.tactic
 
 fun NUM_ERR{function,message} =
     HOL_ERR{origin_structure = "Num",
@@ -33,6 +40,7 @@ fun -- q x = Term q
 
 val N = Type`:num`
 
+(*
 (* --------------------------------------------------------------------- *)
 (* ADD_CONV: addition of natural number constants (numerals).            *)
 (*                                                                       *)
@@ -98,6 +106,7 @@ fun num_EQ_CONV tm =
  end
  handle HOL_ERR _ => raise NUM_ERR{function="num_EQ_CONV",message = ""}
 end;
+*)
 
 
 (* --------------------------------------------------------------------- *)
@@ -176,5 +185,13 @@ end;
 
 val num_CONV   = Num_conv.num_CONV
 val INDUCT_TAC = Num_induct.INDUCT_TAC
+
+val REDUCE_CONV = reduceLib.REDUCE_CONV
+val REDUCE_RULE = reduceLib.REDUCE_RULE
+val REDUCE_TAC  = reduceLib.REDUCE_TAC
+
+val ARITH_CONV  = arithLib.ARITH_CONV
+val ARITH_PROVE = arithLib.ARITH_PROVE
+val ARITH_TAC   = CONV_TAC ARITH_CONV;
 
 end; (* numLib *)
