@@ -15,9 +15,13 @@
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
-fun warn s = (TextIO.output(TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
-
 open Systeml;
+
+
+val execname = Path.file (CommandLine.name())
+fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
+              TextIO.flushOut TextIO.stdErr)
+
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
@@ -60,7 +64,7 @@ in
 fun quote s = String.concat["\"", expand_backslash s, "\""]
 end;
 
-
+fun exists_readable s = FileSys.access(s, [FileSys.A_READ])
 
 (** Command line parsing *)
 
@@ -158,6 +162,7 @@ fun parse_command_line list = let
   val (rem, interactive_flag) = find_alternative_tags ["--interactive", "-i"]
                                 rem
   val (rem, keep_going_flag) = find_alternative_tags ["-k", "--keep-going"] rem
+  val (rem, quiet_flag) = find_toggle "--quiet" rem
 in
   {targets=rem, debug=debug, show_usage=help,
    always_rebuild_deps=rebuild_deps,
@@ -175,7 +180,7 @@ in
      | [x] => SOME x
      |  _  => let
        in
-         warn "Ignoring all but last --holdir spec.\n";
+         warn "Ignoring all but last --holdir spec.";
          SOME (List.last cmdl_HOLDIRs)
        end,
    cmdl_MOSMLDIR =
@@ -184,10 +189,11 @@ in
      | [x] => SOME x
      | _ => let
        in
-         warn "Ignoring all but last --mosmldir spec.\n";
+         warn "Ignoring all but last --mosmldir spec.";
          SOME (List.last cmdl_MOSMLDIRs)
        end,
-   keep_going_flag = keep_going_flag}
+   keep_going_flag = keep_going_flag,
+   quiet_flag = quiet_flag}
 end
 
 
@@ -198,8 +204,17 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      cmdl_HOLDIR, cmdl_MOSMLDIR,
      no_sigobj = cline_no_sigobj,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
-     user_overlay, keep_going_flag} =
+     user_overlay, keep_going_flag, quiet_flag} =
   parse_command_line (CommandLine.arguments())
+
+fun warn s = if not quiet_flag then
+               (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
+                TextIO.flushOut TextIO.stdErr)
+             else ()
+fun info s = if not quiet_flag then print (execname^": "^s^"\n") else ()
+fun tgtfatal s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
+                  TextIO.flushOut TextIO.stdErr)
+
 
 (* find HOLDIR and MOSMLDIR by first looking at command-line, then looking
    for a value compiled into the code.
@@ -223,7 +238,7 @@ end;
 
 val _ =
   if quit_on_failure andalso allfast then
-    print "Warning: quit on (tactic) failure ignored for fast built theories"
+    warn "quit on (tactic) failure ignored for fast built theories"
   else
     ()
 
@@ -239,7 +254,7 @@ val hmakefile =
   case user_hmakefile of
     NONE => "Holmakefile"
   | SOME s =>
-      if FileSys.access(s, [FileSys.A_READ]) then s
+      if exists_readable s then s
       else die_with ("Couldn't read/find makefile: "^s)
 
 fun base_environment s = let
@@ -260,7 +275,7 @@ in
 end
 
 val hmakefile_toks =
-  if FileSys.access(hmakefile, [FileSys.A_READ]) andalso not no_hmakefile
+  if exists_readable hmakefile andalso not no_hmakefile
   then let
       open Holmake_types
       fun createLexerStream is =
@@ -383,13 +398,14 @@ fun run_extra_command tgt c = let
   val c = dovrefs ["HOLMOSMLC-C", "HOLMOSMLC", "MOSMLC", "MOSMLLEX",
                    "MOSMLYAC"] c
   val () =
-      if not noecho then (TextIO.output(TextIO.stdOut, c ^ "\n");
-                          TextIO.flushOut TextIO.stdOut)
+      if not noecho andalso not quiet_flag then
+        (TextIO.output(TextIO.stdOut, c ^ "\n");
+         TextIO.flushOut TextIO.stdOut)
       else ()
   val result = Process.system c
 in
   if result <> Process.success andalso ignore_error then
-    (warn ("Holmake: ["^tgt^"] Error (ignored)\n");
+    (warn ("["^tgt^"] Error (ignored)");
      Process.success)
   else result
 end
@@ -402,7 +418,7 @@ fun run_extra_commands tgt commands =
       if run_extra_command tgt c = Process.success then
         run_extra_commands tgt cs
       else
-        (TextIO.output(TextIO.stdOut, "Failed. Couldn't build "^tgt^"\n");
+        (tgtfatal ("*** ["^tgt^"] Error");
          Process.failure)
 
 
@@ -687,7 +703,7 @@ in
          built, and won't exist; mainly because the file we're trying to
          compute dependencies for doesn't exist either.  In this case, we
          can only return the empty list *)
-      if FileSys.access (depfile, [FileSys.A_READ]) then
+      if exists_readable depfile then
         get_dependencies_from_file depfile
       else
         []
@@ -752,7 +768,7 @@ in
              dependent on these, and should add them.  They will be listed
              in the dependencies for UO (Theory x). *)
           val additional_theories =
-              if FileSys.access(fromFile f, [FileSys.A_READ]) then
+              if exists_readable (fromFile f) then
                 List.mapPartial
                   (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
                   (get_implicit_dependencies (UO x))
@@ -821,7 +837,7 @@ in
   case c of
     MOSMLC =>
      let val file = fromFile arg
-         val _ = FileSys.access(file, [FileSys.A_READ]) orelse
+         val _ = exists_readable file orelse
                   (print ("Wanted to compile "^file^", but it wasn't there\n");
                    raise FileNotFound)
          val _ = print ("Compiling "^file^"\n")
@@ -894,11 +910,11 @@ in
                       else ()
       in
         (res2 = success) andalso
-        (FileSys.access(thysmlfile, [FileSys.A_READ]) orelse
+        (exists_readable thysmlfile orelse
          (print ("Script file "^script'^" didn't produce "^thysmlfile^"; \n\
                  \  maybe need export_theory() at end of "^scriptsml^"\n");
          false)) andalso
-        (FileSys.access(thysigfile, [FileSys.A_READ]) orelse
+        (exists_readable thysigfile orelse
          (print ("Script file "^script'^" didn't produce "^thysigfile^"; \n\
                  \  maybe need export_theory() at end of "^scriptsml^"\n");
          false))
@@ -939,7 +955,7 @@ fun no_full_extra_rule tgt =
 val up_to_date_cache:(File, bool)Polyhash.hash_table =
   Polyhash.mkPolyTable(50, NotFound)
 fun cache_insert(f, b) = (Polyhash.insert up_to_date_cache (f, b); b)
-fun make_up_to_date am_at_top ctxt target = let
+fun make_up_to_date ctxt target = let
   fun print s =
     if debug then (nspaces TextIO.print (length ctxt);
                    TextIO.print s)
@@ -948,7 +964,7 @@ fun make_up_to_date am_at_top ctxt target = let
   val pdep = primary_dependent target
   val _ = List.all (fn d => d <> target) ctxt orelse
     (warn (fromFile target ^
-           " seems to depend on itself - failing to build it\n");
+           " seems to depend on itself - failing to build it");
      raise CircularDependency)
   val cached_result = Polyhash.peek up_to_date_cache target
 in
@@ -962,14 +978,14 @@ in
       if isSome pdep andalso no_full_extra_rule target then let
         val pdep = valOf pdep
       in
-        if make_up_to_date false (target::ctxt) pdep then let
+        if make_up_to_date (target::ctxt) pdep then let
           val secondaries = set_union (get_implicit_dependencies target)
                                       (get_explicit_dependencies target)
           val _ =
             (print ("Secondary dependencies for "^fromFile target^" are: ");
              print (print_list (map fromFile secondaries) ^ "\n"))
         in
-          if (List.all (make_up_to_date false (target::ctxt)) secondaries) then
+          if (List.all (make_up_to_date (target::ctxt)) secondaries) then
             if (List.exists
                 (fn dep =>
                  (fromFile dep) forces_update_of (fromFile target))
@@ -987,33 +1003,55 @@ in
           val tgt_str = fromFile target
         in
           case extra_rule_for tgt_str of
-            NONE => if FileSys.access(tgt_str, [FileSys.A_READ]) then
-                      (if am_at_top then
-                         warn ("*** Nothing to be done for `"^tgt_str^"'.\n")
+            NONE => if exists_readable tgt_str then
+                      (if null ctxt then
+                         info ("Nothing to be done for `"^tgt_str^"'.")
                        else ();
                        cache_insert(target, true))
-                    else
-                      (warn ("*** No rule to make target `"^tgt_str^"'.\n");
-                       cache_insert(target, false))
+                    else let
+                        val termstr = if keep_going_flag then ""
+                                      else "  Stop."
+                      in
+                        case ctxt of
+                          [] => tgtfatal ("*** No rule to make target `"^
+                                          tgt_str^"'."^termstr)
+                        | (f::_) => tgtfatal ("*** No rule to make target `"^
+                                              tgt_str^"', needed by `"^
+                                              fromFile f^"'."^termstr);
+                        cache_insert(target, false)
+                      end
           | SOME {dependencies, commands, ...} => let
               val _ =
                   (print ("Secondary dependencies for "^tgt_str^" are: ");
                    print (print_list dependencies ^ "\n"))
               val depfiles = map toFile dependencies
             in
-              if List.all (make_up_to_date false (target::ctxt)) depfiles
+              if List.all (make_up_to_date (target::ctxt)) depfiles
               then
-                if not (FileSys.access(tgt_str, [FileSys.A_READ])) orelse
+                if not (exists_readable tgt_str) orelse
                    List.exists
                      (fn dep => dep forces_update_of tgt_str)
                      dependencies orelse
+                   List.exists (not o exists_readable) dependencies orelse
                    tgt_str in_target ".PHONY"
                 then
-                  cache_insert(target,
-                               run_extra_commands tgt_str commands =
-                               Process.success)
+                  if null commands then
+                    (if null ctxt then
+                       info ("Nothing to be done for `"^tgt_str^"'.")
+                     else ();
+                     cache_insert(target, true))
+                  else
+                    cache_insert(target,
+                                 run_extra_commands tgt_str commands =
+                                 Process.success)
                 else (* target is up-to-date wrts its dependencies already *)
-                  cache_insert(target, true)
+                  (if null ctxt then
+                     if null commands then
+                       info ("Nothing to be done for `"^tgt_str^ "'.")
+                     else
+                       info ("`"^tgt_str^"' is up to date.")
+                   else ();
+                   cache_insert(target, true))
               else (* failed to make a dependency *)
                 cache_insert(target, false)
             end
@@ -1082,9 +1120,9 @@ in
                        true) handle _ => false)
         | "cleanDeps" => clean_deps()
         | "cleanAll" => clean_action() andalso clean_deps()
-        | _ => make_up_to_date true [] (toFile x)
+        | _ => make_up_to_date [] (toFile x)
       end
-    | SOME _ => make_up_to_date true [] (toFile x)
+    | SOME _ => make_up_to_date [] (toFile x)
   else true
 end
 
@@ -1118,15 +1156,16 @@ end
 
 
 fun deal_with_targets list = let
+  open TextIO
   fun stop_on_failure tgts =
       case tgts of
         [] => true
-      | (t::ts) => if do_target t then stop_on_failure ts else false
+      | (t::ts) => do_target t andalso stop_on_failure ts
   fun keep_going tgts = let
     fun recurse acc tgts =
         case tgts of
           [] => acc
-        | (t::ts) => recurse (do_target t andalso acc) tgts
+        | (t::ts) => recurse (do_target t andalso acc) ts
   in
     recurse true tgts
   end
@@ -1171,6 +1210,7 @@ val _ =
      "    --no_sigobj | -n     : don't use any HOL files from sigobj\n",
      "    --overlay <file>     : use given .ui file as overlay\n",
      "    --qof                : quit on tactic failure\n",
+     "    --quiet              : be quieter in operation\n",
      "    --rebuild_deps | -r  : always rebuild dependency info files \n"]
   else let
       open Process
@@ -1178,7 +1218,7 @@ val _ =
         handle Fail s => (print ("Fail exception: "^s^"\n"); exit failure)
     in
       if result then exit success
-      else die_with "Something went wrong somewhere."
+      else exit failure
     end
 
 
