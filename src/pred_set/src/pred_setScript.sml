@@ -2645,12 +2645,12 @@ val FINITE_BIGUNION = store_thm(
 
 val BIGINTER = new_definition(
   "BIGINTER",
-  ``BIGINTER B x = !P. P IN B ==> x IN P``);
+  ``BIGINTER B = { x | !P. P IN B ==> x IN P}``);
 
 val IN_BIGINTER = store_thm(
   "IN_BIGINTER",
   ``x IN BIGINTER B = !P. P IN B ==> x IN P``,
-  REWRITE_TAC [BIGINTER, SPECIFICATION]);
+  SIMP_TAC bool_ss [BIGINTER, GSPECIFICATION, pairTheory.PAIR_EQ]);
 
 val BIGINTER_INSERT = store_thm(
   "BIGINTER_INSERT",
