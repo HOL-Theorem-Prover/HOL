@@ -11,6 +11,14 @@ quietdec := true;
 open HolKernel Parse boolLib bossLib;
 quietdec := false;
 
+(******************************************************************************
+* Set the trace level of the regular expression library:      
+* 0: silent
+* 1: 1 character (either - or +) for each list element processed
+* 2: matches as they are discovered
+* 3: transitions as they are calculated
+* 4: internal state of the automata
+******************************************************************************)
 set_trace "regexpTools" 2;
 
 (*---------------------------------------------------------------------------*)

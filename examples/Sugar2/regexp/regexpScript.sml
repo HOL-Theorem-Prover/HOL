@@ -209,7 +209,8 @@ val () = Hol_datatype
    | Fuse of regexp => regexp             (* Fusion                   *)
    | Or of regexp => regexp               (* Disjunction              *)
    | And of regexp => regexp              (* Conjunction              *)
-   | Repeat of regexp`;                   (* Iterated concat, >= 0    *)
+   | Repeat of regexp                     (* Iterated concat, >= 0    *)
+   | Prefix of regexp`;                   (* Prefix                   *)
 
 val Dot_def  = Define `Dot  = Atom (\x : 'a. T)`;
 val Zero_def = Define `Zero = Atom (\x : 'a. F)`;
@@ -249,7 +250,10 @@ val sem_def =
      sem r1 w \/ sem r2 w)                                                /\
    (sem (r1&r2) w    = 
      sem r1 w /\ sem r2 w)                                                /\
-   (sem (Repeat r) w = ?wlist. (w = CONCAT wlist) /\ EVERY (sem r) wlist)`;
+   (sem (Repeat r) w =
+     ?wlist. (w = CONCAT wlist) /\ EVERY (sem r) wlist)                   /\
+   (sem (Prefix r) w =
+     ?w'. sem r (w <> w'))`;
 
 val sem_Dot = prove
   (``!l. sem Dot l = (LENGTH l = 1)``,
@@ -342,7 +346,8 @@ val match_defn = Hol_defn
 /\ (match (Repeat r) l = 
       if NULL l then T 
       else EXISTS (\(s1,s2). match r s1 /\ match (Repeat r) s2) 
-                  (TL(SPLITS l)))`;
+                  (TL(SPLITS l)))
+/\ (match (Prefix r) l = ?l'. match r (l <> l'))`;
 
 val (match_def, match_ind) = Defn.tprove
 (match_defn,
@@ -408,6 +413,7 @@ val sem_match = store_thm
       ,
       `?wlist. (p_2=CONCAT wlist) /\ EVERY (sem r) wlist` by PROVE_TAC[] THEN 
       Q.EXISTS_TAC `p_1::wlist` THEN RW_TAC list_ss [CONCAT_def] THEN 
-      PROVE_TAC [MEM_TL,SPLITS_NON_EMPTY,SPLITS_APPEND]]]]);
+      PROVE_TAC [MEM_TL,SPLITS_NON_EMPTY,SPLITS_APPEND]]],
+    RW_TAC std_ss [sem_def, match_def]]);
 
 val () = export_theory ();
