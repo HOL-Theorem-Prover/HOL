@@ -26,9 +26,9 @@ local
           if isDir s then dodir docfound (s::acc)
           else
             if String.size s < 6 orelse
-              String.extract(s, String.size s - 5, NONE) <> ".adoc"
+               String.extract(s, String.size s - 4, NONE) <> ".doc"
             then
-                (remove s; dodir docfound acc)
+              (remove s; dodir docfound acc)
             else
               dodir true acc
     val (docfound, subdirectories) = dodir false []
@@ -57,7 +57,8 @@ val header = "\
 \AppVersion         = "^sysname^"\n\
 \DefaultDirName     = {pf}\\Hol\n\
 \DefaultGroupName   = HOL\n\
-\CompressLevel      = 9\n";
+\Compression        = bzip\n\
+\OutputBaseFilename = HOL-install\n";
 
 fun mem s [] = false | mem s (h::t) = s = h orelse mem s t
 
