@@ -1355,12 +1355,12 @@ universal quantifiers and is often the first thing one does in a proof.
 
 \begin{itemize}
 
-\item{\bf Summary:} Breaks a goal apart.
-{\small\verb|STRIP_TAC|} removes one outer connective from the goal, using
-{\small\verb%CONJ_TAC%}, {\small\verb|DISCH_TAC|}, {\small\verb%GEN_TAC%}, \etc\
-If the goal is
-$t_1${\small\verb%/\%}$\cdots${\small\verb%/\%}$t_n${\small\verb| ==> |}$t$
-then {\small\verb|DISCH_TAC|} makes each $t_i$ into a separate assumption.
+\item{\bf Summary:} Breaks a goal apart.  {\small\verb|STRIP_TAC|}
+  removes one outer connective from the goal, using
+  {\small\verb|CONJ_TAC|}, {\small\verb|DISCH_TAC|},
+  {\small\verb|GEN_TAC|}, \etc\ If the goal is
+$t_1${\small\verb|/\|}$\cdots${\small\verb|/\|}$t_n${\small\verb| ==> |}$t$
+then {\small\verb|STRIP_TAC|} makes each $t_i$ into a separate assumption.
 
 \item{\bf Uses:} Useful for splitting a goal up into manageable pieces.
 Often the best thing to do first is {\small\verb|REPEAT STRIP_TAC|}.

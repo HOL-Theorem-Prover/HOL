@@ -143,7 +143,7 @@ searched for must be known before the help system is useful.
 Alternatively, the functions in \verb+DB+ are often easier to use.
 \verb+DB.match+ allows the use of first order patterns to look for the
 relevant items, while \verb+DB.find+ will use fragments of names as
-keys with with to lookup information.
+keys with which to lookup information.
 
 Once a proof of a proposition has been found, it is customary, although
 not necessary, to embark on a process of \emph{revision}, in which the
@@ -584,20 +584,20 @@ A polished proof of {\small{\it DIVIDES\_FACT\/}} is the following:
 We will examine this proof in detail, so we should first attempt to
 understand why the theorem is true. What's the underlying intuition?
 Suppose $0 < m \leq n$, and so $\mbox{\tt FACT}\ n = 1 * \cdots * m *
-\cdots * n$. To show $m\ \mbox{\tt divides}\ (\mbox{\tt FACT}\ n)$ means
-exhibiting a $q$ such that $q * m = \mbox{\tt FACT}\ n$. Thus $q =
-\mbox{\tt FACT}\ n \div m$. If we were to take this approach to the
-proof, we would end up having to find and apply lemmas about
-$\div$. This seems to take us a little out of our way; isn't there a
-proof that doesn't use division? Well yes, we can prove the theorem by
+\cdots * n$. To show $m\ \mbox{\tt divides}\ (\mbox{\tt FACT}\ n)$
+means exhibiting a $q$ such that $q * m = \mbox{\tt FACT}\ n$. Thus $q
+= \mbox{\tt FACT}\ n \div m$. If we were to take this approach to the
+proof, we would end up having to find and apply lemmas about $\div$.
+This seems to take us a little out of our way; isn't there a proof
+that doesn't use division? Well yes, we can prove the theorem by
 induction on $n - m$: in the base case, we will have to prove $n\;
 \mbox{\tt divides}\ (\mbox{\tt FACT}\; n)$, which ought to be easy; in
 the inductive case, the inductive hypothesis seems like it should give
-us what we need. This last is a bit vague, because we are trying to
-mentally picture a slightly complicated formula, but we can rely on the
-system to accurately calculate the cases of the induction for us. If the
-inductive case turns out to be not what we expect, we will have to
-re-think our approach.
+us what we need. This strategy for the inductive case is a bit vague,
+because we are trying to mentally picture a slightly complicated
+formula, but we can rely on the system to accurately calculate the
+cases of the induction for us. If the inductive case turns out to be
+not what we expect, we will have to re-think our approach.
 \begin{session}\begin{verbatim}
 - g `!m n. 0 < m /\ m <= n ==> m divides (FACT n)`;
 
@@ -667,12 +667,16 @@ trivial goal; if it is a successor, then we can use the definition of
 >     ------------------------------------
 >       0 < 0
 \end{verbatim}\end{session}
+
     Here the first sub-goal goal has an assumption that is false.  We
     can demonstrate this to the system by using the \ml{DECIDE}
     function to prove a simple fact about arithmetic (namely, that no
     number $x$ is less than itself), and then passing the resulting
     theorem to \ml{PROVE\_TAC}, which can combine this with the
-    contradictory assumption.
+    contradictory assumption.\footnote{Note how the interactive system
+      prints out the proved theorem with \ml{[.]} before the
+      turnstile.  This notation indicates that a theorem has an
+    assumption (the false $0 < 0$ in this case).}
 
 \begin{session}\begin{verbatim}
 - e (PROVE_TAC [DECIDE `!x. ~(x < x)`]);

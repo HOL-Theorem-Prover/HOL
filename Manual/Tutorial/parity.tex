@@ -93,7 +93,7 @@ $f${\small\tt (}$n${\small\tt)} is even.
     (PARITY 0 f = T) /\
     (PARITY(SUC n)f = if f(SUC n) then ~(PARITY n f) else PARITY n f)`;
 Definition stored under "PARITY_def".
-> val PARITY_DEF =
+> val PARITY_def =
     |- (!f. PARITY 0 f = T) /\
        !n f. PARITY (SUC n) f =
              (if f (SUC n) then ~PARITY n f else PARITY n f)
@@ -112,13 +112,14 @@ of variables in \ML.  The user is generally free to manage these names
 however he or she wishes (subject to the various lexical
 requirements), but a common convention is (as here) to give the
 definition of a constant {\small\tt CON} the name
-{\small\verb|CON_DEF|} in the theory and also in \ML.  Another
+{\small\verb|CON_def|} in the theory and also in \ML.  Another
 commonly-used convention is to use just {\small\verb|CON|} for the
 theory and \ML{} name of the definition of a constant
 {\small\verb|CON|}.  Unfortunately, the \HOL{} system does not use a
 uniform convention, but users are recommended to adopt one.  In this
 case \ml{Define} has made one of the choices for us, but there are
-other scenarios where have to choose the name used in the theory file.
+other scenarios where we have to choose the name used in the theory
+file.
 
 The specification of the parity checking device can now be given as:
 
@@ -225,7 +226,7 @@ OK..
 \end{session}
 
 \noindent The assumptions of the two subgoals
-are shown in numbered underneath the horizontal lines of hyphens. The
+are shown numbered underneath the horizontal lines of hyphens. The
 last goal printed is the one on the top of the stack, which is the
 basis case. This is solved by rewriting with its assumptions and the
 definition of {\small\verb|PARITY|}.
@@ -255,7 +256,7 @@ the step case of the induction. This goal is also solved by rewriting.
 
 \begin{session}
 \begin{verbatim}
-- expand(ASM_REWRITE_TAC[PARITY_DEF]);
+- expand(ASM_REWRITE_TAC[PARITY_def]);
 OK..
 
 Goal proved.
