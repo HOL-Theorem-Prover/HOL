@@ -18,6 +18,7 @@ src/bool
 src/goalstack
 
 src/taut
+src/dep_rewrite
 src/compute/src
 src/marker
 src/q
@@ -55,6 +56,7 @@ src/sort
 src/string
 src/pred_set/src
 src/res_quan/src
+src/quotient/src
 src/finite_map
 src/bag
 src/Boolify/src

@@ -23,11 +23,11 @@ open HolKernel Parse boolLib
 val _ = new_theory "integer";
 
 (* interactive mode
-  app load ["jrhUtils", "EquivType", "liteLib", "QLib",
+  app load ["jrhUtils", "quotient", "liteLib", "QLib",
             "SingleStep", "BasicProvers", "boolSimps", "pairSimps",
             "numSimps", "numLib", "metisLib"];
 *)
-open jrhUtils EquivType liteLib
+open jrhUtils quotient liteLib
      arithmeticTheory prim_recTheory numTheory
      simpLib numLib boolTheory liteLib metisLib BasicProvers;
 
@@ -408,6 +408,63 @@ val TINT_LT_WELLDEF =
      unfold_dec[tint_eq,tint_lt]);
 
 (*--------------------------------------------------------------------------*)
+(* Now define the inclusion homomorphism tint_of_num:num->tint.             *)
+(*--------------------------------------------------------------------------*)
+
+val tint_of_num =
+    new_recursive_definition
+      {name = "tint_of_num",
+       rec_axiom = prim_recTheory.num_Axiom,
+       def = Term `(tint_of_num 0 = tint_0) /\
+                   (tint_of_num (SUC n) = (tint_of_num n) tint_add tint_1)`};
+
+(* Could do the following if wished:
+val _ = add_numeral_form(#"t", SOME "tint_of_num");
+*)
+
+val TINT_OF_NUM_WELLDEF =
+    store_thm
+    ("TINT_OF_NUM_WELLDEF",
+     Term `!n m. (n = m) ==> tint_of_num n tint_eq tint_of_num m`,
+     REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[TINT_EQ_REFL]);
+
+val tint_of_num_PAIR =
+    GEN_ALL (SYM (ISPEC(Term `tint_of_num n`) (pairTheory.PAIR)));
+
+val tint_of_num_eq =
+    store_thm("tint_of_num_eq",
+	      Term `!n. FST (tint_of_num n) = SND (tint_of_num n) + n`,
+	      INDUCT_TAC
+              THENL
+                [ SIMP_TAC int_ss [tint_of_num,tint_0],
+
+                  REWRITE_TAC [tint_of_num]
+                  THEN ONCE_REWRITE_TAC [tint_of_num_PAIR]
+                  THEN ASM_REWRITE_TAC [tint_1,tint_add]
+                  THEN SIMP_TAC int_ss []
+                ])
+
+val TINT_INJ =
+    store_thm("TINT_INJ",
+	      Term `!m n. (tint_of_num m tint_eq tint_of_num n) = (m = n)`,
+	      INDUCT_TAC THEN INDUCT_TAC
+              THEN REPEAT (POP_ASSUM MP_TAC)
+              THEN REWRITE_TAC [tint_of_num]
+              THEN ONCE_REWRITE_TAC [tint_of_num_PAIR]
+              THEN REWRITE_TAC [tint_0,tint_1,tint_add,tint_eq,tint_of_num_eq]
+              THEN SIMP_TAC int_ss [])
+
+val NUM_POSTINT_EX =
+    store_thm("NUM_POSTINT_EX",
+	      Term `!t. ~(t tint_lt tint_0) ==> ?n. t tint_eq tint_of_num n`,
+		  GEN_TAC THEN DISCH_TAC THEN
+		  Q.EXISTS_TAC `FST t - SND t`
+                   THEN POP_ASSUM MP_TAC
+                   THEN ONCE_REWRITE_TAC [GSYM pairTheory.PAIR]
+                   THEN REWRITE_TAC [tint_0,tint_lt,tint_eq,tint_of_num_eq]
+                   THEN SIMP_TAC int_ss []);
+
+(*--------------------------------------------------------------------------*)
 (* Now define the functions over the equivalence classes                    *)
 (*--------------------------------------------------------------------------*)
 
@@ -420,7 +477,8 @@ in
 	 INT_ADD_ASSOC, INT_MUL_ASSOC, INT_LDISTRIB,
 	 INT_ADD_LID, INT_MUL_LID, INT_ADD_LINV,
 	 INT_LT_TOTAL, INT_LT_REFL, INT_LT_TRANS,
-	 INT_LT_LADD_IMP, INT_LT_MUL] =
+	 INT_LT_LADD_IMP, INT_LT_MUL,
+         int_of_num, INT_INJ, NUM_POSINT_EX] =
 	define_equivalence_type
 	{name = "int", equiv = TINT_EQ_EQUIV,
 	 defs = [mk_def ("int_0", Term `tint_0`,     "int_0", Prefix),
@@ -428,17 +486,21 @@ in
 		 mk_def ("int_neg",Term `tint_neg`,  "int_neg",   Prefix),
 		 mk_def ("int_add",Term `$tint_add`, "int_add",   Infixl 500),
 		 mk_def ("int_mul",Term `$tint_mul`, "int_mul",   Infixl 600),
-		 mk_def ("int_lt",Term `$tint_lt`,   "int_lt",    Infixr 450)],
+		 mk_def ("int_lt",Term `$tint_lt`,   "int_lt",    Infixr 450),
+                 mk_def ("int_of_num",Term `tint_of_num`,"int_of_num",Prefix)],
 
 	 welldefs = [TINT_NEG_WELLDEF, TINT_LT_WELLDEF,
-		     TINT_ADD_WELLDEF, TINT_MUL_WELLDEF],
+		     TINT_ADD_WELLDEF, TINT_MUL_WELLDEF, TINT_OF_NUM_WELLDEF],
 	 old_thms = ([TINT_10] @
 		     (map (GEN_ALL o MATCH_MP TINT_EQ_AP o SPEC_ALL)
 		      [TINT_ADD_SYM, TINT_MUL_SYM, TINT_ADD_ASSOC,
 		       TINT_MUL_ASSOC, TINT_LDISTRIB]) @
 		     [TINT_ADD_LID, TINT_MUL_LID, TINT_ADD_LINV,
 		      TINT_LT_TOTAL, TINT_LT_REFL, TINT_LT_TRANS,
-		      TINT_LT_ADD, TINT_LT_MUL])}
+		      TINT_LT_ADD, TINT_LT_MUL,
+                      LIST_CONJ (map (GEN_ALL o MATCH_MP TINT_EQ_AP o SPEC_ALL)
+                                     (CONJUNCTS tint_of_num)),
+                      TINT_INJ, NUM_POSTINT_EX])}
 end;
 
 val _ = Theory.save_thm ("INT_10",INT_10)
@@ -454,9 +516,10 @@ val _ = Theory.save_thm ("INT_LT_REFL",INT_LT_REFL)
 val _ = Theory.save_thm ("INT_LT_TRANS",INT_LT_TRANS)
 val _ = Theory.save_thm ("INT_LT_LADD_IMP",INT_LT_LADD_IMP)
 val _ = Theory.save_thm ("INT_LT_MUL",INT_LT_MUL)
+val _ = Theory.save_thm ("int_of_num",int_of_num)
+val _ = Theory.save_thm ("INT_INJ",INT_INJ)
+val _ = Theory.save_thm ("NUM_POSINT_EX",NUM_POSINT_EX)
 ;
-
-val int_tybij = DB.fetch "-" "int_tybij";
 
 val _ = overload_on ("+", Term`$int_add`);
 val _ = overload_on ("<", Term`$int_lt`);
@@ -502,15 +565,8 @@ val int_ge =
 val _ = overload_on (">=", Term`$int_ge`);
 
 (*--------------------------------------------------------------------------*)
-(* Now define the inclusion homomorphism int_of_num:num->int.               *)
+(* Now use the lifted inclusion homomorphism int_of_num:num->int.           *)
 (*--------------------------------------------------------------------------*)
-
-val int_of_num =
-    new_recursive_definition
-      {name = "int_of_num",
-       rec_axiom = prim_recTheory.num_Axiom,
-       def = Term `(int_of_num 0 = int_0) /\
-                   (int_of_num (SUC n) = (int_of_num n) + int_1)`};
 
 val _ = add_numeral_form(#"i", SOME "int_of_num");
 
@@ -1524,99 +1580,22 @@ val INT_LT_CALCULATE = store_thm(
   ]);
 
 (*--------------------------------------------------------------------------*)
-(* Some nasty hacking round to show that the positive integers are a copy   *)
-(* of the natural numbers.                                                  *)
+(* A nice proof that the positive integers are a copy of the natural        *)
+(* numbers (replacing a nasty hack which poked under the quotient).         *)
 (*--------------------------------------------------------------------------*)
 
 val _ = print "Proving +ve integers are a copy of natural numbers\n"
-
-val INT_DECOMPOSE =
-    store_thm("INT_DECOMPOSE",
-	      Term `!i. ?m n. i = mk_int($tint_eq(m,n))`,
-	      GEN_TAC THEN
-	      MP_TAC(Q.SPEC `dest_int i` (CONJUNCT2 int_tybij)) THEN
-	      REWRITE_TAC[CONJUNCT1 int_tybij] THEN BETA_TAC THEN
-	      DISCH_THEN(X_CHOOSE_THEN (Term `x:num#num`) MP_TAC) THEN
-	      DISCH_THEN(MP_TAC o AP_TERM (Term `mk_int`)) THEN
-	      REWRITE_TAC[CONJUNCT1 int_tybij] THEN
-	      DISCH_THEN SUBST1_TAC THEN
-	      MAP_EVERY Q.EXISTS_TAC [`FST (x:num#num)`,`SND (x:num#num)`] THEN
-	      SIMP_TAC int_ss []);
-
-val DEST_MK_EQCLASS =
-    store_thm("DEST_MK_EQCLASS",
-	      Term `!v. dest_int (mk_int ($tint_eq v)) = $tint_eq v`,
-	      GEN_TAC THEN REWRITE_TAC[GSYM int_tybij] THEN
-	      BETA_TAC THEN EXISTS_TAC (Term `v:num#num`) THEN REFL_TAC);
-
-val REP_EQCLASS =
-    store_thm("REP_EQCLASS",
-	      Term `!v. $@($tint_eq v) tint_eq v`,
-	      GEN_TAC THEN ONCE_REWRITE_TAC[TINT_EQ_SYM] THEN
-	      MATCH_MP_TAC SELECT_AX THEN
-	      EXISTS_TAC (Term (`v:num#num`)) THEN
-	      MATCH_ACCEPT_TAC TINT_EQ_REFL);
-
-val NUM_LEMMA =
-    store_thm("NUM_LEMMA",
-	      Term `!i. 0 <= i ==> ?n. i = mk_int($tint_eq (n,0n))`,
-		  GEN_TAC THEN
-		  X_CHOOSE_THEN (Term `m:num`)
-		           (X_CHOOSE_THEN (Term `n:num`) SUBST1_TAC)
-		  (SPEC (Term `i:int`) INT_DECOMPOSE) THEN
-		  REWRITE_TAC[GSYM INT_0, fetch "-" "int_lt",
-                              fetch "-" "int_0", int_le, tint_lt] THEN
-		  REWRITE_TAC[DEST_MK_EQCLASS] THEN
-		  DISCH_TAC THEN Q.EXISTS_TAC `m - n`
-		  THEN AP_TERM_TAC THEN
-		  REWRITE_TAC[GSYM TINT_EQ_EQUIV, tint_eq] THEN
-		  REWRITE_TAC[ADD_CLAUSES] THEN CONV_TAC SYM_CONV THEN
-		  MATCH_MP_TAC SUB_ADD THEN POP_ASSUM MP_TAC THEN
-		  CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[GSYM NOT_LESS] THEN
-		  DISCH_TAC THEN
-		  SUBGOAL_THEN (Term `$@($tint_eq(m,n)) tint_eq (m,n) /\
-				$@($tint_eq tint_0) tint_eq (1,1)`)
-		  (fn th => REWRITE_TAC[MATCH_MP TINT_LT_WELLDEF th])
-		  THENL [REWRITE_TAC[REP_EQCLASS, tint_0], ALL_TAC] THEN
-		  REWRITE_TAC[tint_lt] THEN
-		  GEN_REWRITE_TAC RAND_CONV empty_rewrites [ADD_SYM] THEN
-		  ASM_REWRITE_TAC[LESS_MONO_ADD_EQ]);
-
-val NUM_DECOMPOSE =
-    store_thm("NUM_DECOMPOSE",
-	      Term `!n. &n = mk_int($tint_eq (n,0))`,
-	      INDUCT_TAC THEN
-              REWRITE_TAC[int_of_num, fetch "-" "int_0", tint_0] THENL
-	      [AP_TERM_TAC THEN
-                REWRITE_TAC[GSYM TINT_EQ_EQUIV, tint_eq, ADD_CLAUSES],
-	       ASM_REWRITE_TAC
-                   [fetch "-" "int_1", fetch "-" "int_add",tint_1] THEN
-	       AP_TERM_TAC THEN REWRITE_TAC[GSYM TINT_EQ_EQUIV,
-					    DEST_MK_EQCLASS] THEN
-	       REWRITE_TAC[TINT_EQ_EQUIV] THEN
-	       SUBGOAL_THEN (Term `$@($tint_eq(n,0)) tint_eq (n,0) /\
-			     $@($tint_eq(1 + 1,1)) tint_eq (1 + 1,1)`)
-	       (fn th => REWRITE_TAC[REWRITE_RULE[TINT_EQ_EQUIV]
-				     (MATCH_MP TINT_ADD_WELLDEF th)])
-	       THENL [REWRITE_TAC[REP_EQCLASS, tint_0], ALL_TAC] THEN
-	       REWRITE_TAC[tint_add, GSYM TINT_EQ_EQUIV, tint_eq] THEN
-	       REWRITE_TAC[num_CONV (Term `1n`), ADD_CLAUSES]]);
 
 val NUM_POSINT =
     store_thm("NUM_POSINT",
 	      Term `!i. 0 <= i ==> ?!n. i = &n`,
 		  GEN_TAC THEN DISCH_TAC THEN
 		  CONV_TAC EXISTS_UNIQUE_CONV THEN
-		  CONJ_TAC THENL
-		  [ALL_TAC,
-		   REPEAT GEN_TAC THEN
-		   GEN_REWRITE_TAC RAND_CONV empty_rewrites [GSYM INT_INJ] THEN
-		   DISCH_THEN(CONJUNCTS_THEN (SUBST1_TAC o SYM)) THEN
-		   REFL_TAC] THEN
-		  POP_ASSUM
-		  (fn th => X_CHOOSE_THEN (Term `n:num`) SUBST1_TAC
-		                   (MATCH_MP NUM_LEMMA th)) THEN
-		  EXISTS_TAC (Term `n:num`) THEN REWRITE_TAC[NUM_DECOMPOSE]);
+		  CONJ_TAC THEN POP_ASSUM MP_TAC THENL
+		   [ REWRITE_TAC[int_le, GSYM INT_0, NUM_POSINT_EX],
+                     REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN
+                     ASM_REWRITE_TAC[INT_INJ]
+                   ]);
 
 open SingleStep
 
