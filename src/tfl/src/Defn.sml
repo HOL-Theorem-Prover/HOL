@@ -8,10 +8,6 @@ type thry   = TypeBasePure.typeBase
 type proofs = GoalstackPure.proofs
 type absyn  = Absyn.absyn;
 
-infixr 3 -->;
-infix 3 |->;
-infix 4 ##;
-
 val ERR = mk_HOL_ERR "Defn";
 val ERRloc = mk_HOL_ERRloc "Defn";
 
@@ -520,9 +516,14 @@ type wfrec_eqns_result = {WFR : term,
                           proto_def : term,
                           extracta  : (thm * term list * bool) list,
                           pats  : pattern list}
+fun protect_rhs eqn = mk_eq(lhs eqn,combinSyntax.mk_I(rhs eqn))
+fun protect eqns = list_mk_conj (map protect_rhs (strip_conj eqns));
+
+val unprotect_term = rhs o concl o PURE_REWRITE_CONV [combinTheory.I_THM];
+val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM]
 
 fun wfrec_eqns thy eqns =
- let val {functional,pats} = mk_functional thy eqns
+ let val {functional,pats} = mk_functional thy (protect eqns)
      val SV = free_vars functional    (* schematic variables *)
      val (f, Body) = dest_abs functional
      val (x,_) = dest_abs Body
@@ -541,12 +542,13 @@ fun wfrec_eqns thy eqns =
      val eqns_consts = find_terms is_const functional (* could be a set *)
      val (case_rewrites,context_congs) = extraction_thms eqns_consts thy
      val RW = REWRITES_CONV (add_rewrites empty_rewrites case_rewrites)
-     val rule = RIGHT_CONV_RULE
-                  (LIST_BETA_CONV THENC REPEATC (RW THENC LIST_BETA_CONV))
+     val rule = unprotect_thm o 
+                RIGHT_CONV_RULE
+                   (LIST_BETA_CONV THENC REPEATC (RW THENC LIST_BETA_CONV))
      val corollaries' = map rule corollaries
      val Xtract = extract [R1] context_congs f (proto_def,WFR)
  in
-    {proto_def=proto_def,
+    {proto_def = proto_def,
      SV=Listsort.sort Term.compare SV,
      WFR=WFR,
      pats=pats,
