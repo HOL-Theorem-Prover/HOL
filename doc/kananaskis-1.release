@@ -14,6 +14,22 @@ Bugs fixed:
 Behaviours changed:
 -------------------
 
+  * There are now four (4!) hol executables.  They are:
+      hol, hol.bare, hol.unquote, and hol.bare.unquote
+    all found in the bin/ directory.  We recommend hol.unquote as the
+    standard starting point.
+
+    In more detail, the ".unquote" suffix means that the ``...``
+    preprocessor is enabled.  The ".bare" indicates that the
+    executable starts up with a minimal logical context (just
+    boolTheory, the goal-stack and the 'standard' tactics and
+    conversions loaded).  This is like the old behaviour of the hol
+    and hol.unquote executables.  The absence of the ".bare" indicates
+    an executable that loads "bossLib" as it starts.  This provides a
+    much richer logical environment (lists, natural numbers, pairs,
+    options, disjoint sums), with additional tools too (arithmetic
+    decision procedure, definition principles).
+
   * Overloading now works slightly differently.  Constants are
     automatically overloaded to "themselves".  Thus, if you define a
     constant called "foo", and then another called "bar", and want to
@@ -70,10 +86,9 @@ New theories:
 
     Theorems are provided for reasoning about bit-fields, as well as
     arithmetic (Commutative Ring properties) and the logical
-    operations (Boolean Algebra properties).
-
-    A number of rewrite rules are also provided, and these support
-    fairly efficient term evaluation using WORD_CONV.
+    operations (Boolean Algebra properties).  A number of rewrite
+    rules are also provided, and these support fairly efficient term
+    evaluation using WORD_CONV.
 
     Although the word size and operations are fixed---the script can
     be used as a basis for defining bespoke word theories.  (The word
