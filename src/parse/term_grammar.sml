@@ -96,15 +96,16 @@ type parser_info = (string,unit) Binarymap.dict
 
 type printer_info =
   ({Name:string,Thy:string},term_pp_types.userprinter) Binarymap.dict
+type special_info = {type_intro : string,
+                     lambda : string,
+                     endbinding : string,
+                     restr_binders : (binder * string) list,
+                     res_quanop : string}
 
 
 datatype grammar = GCONS of
   {rules : (int option * grammar_rule) list,
-   specials : {type_intro : string,
-               lambda : string,
-               endbinding : string,
-               restr_binders : (binder * string) list,
-               res_quanop : string},
+   specials : special_info,
    numeral_info : (char * string option) list,
    overload_info : overload_info,
    user_additions : {parsers : parser_info, printers : printer_info}}

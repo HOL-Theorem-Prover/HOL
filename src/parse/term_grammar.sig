@@ -100,16 +100,15 @@ sig
     ({Name:string, Thy:string}, term_pp_types.userprinter)Binarymap.dict
 
 
-
+  type special_info = {type_intro    : string,
+                       lambda        : string,
+                       endbinding    : string,
+                       restr_binders : (binder * string) list,
+                       res_quanop    : string}
   val rules          : grammar -> (int option * grammar_rule) list
   val grammar_rules  : grammar -> grammar_rule list
-  val specials       : grammar
-                         -> {type_intro    : string,
-                             lambda        : string,
-                             endbinding    : string,
-                             restr_binders : (binder * string) list,
-                             res_quanop    : string
-                            }
+  val specials       : grammar -> special_info
+  val fupdate_specials : (special_info -> special_info) -> grammar -> grammar
   val numeral_info   : grammar -> (char * string option) list
   val overload_info  : grammar -> overload_info
 
