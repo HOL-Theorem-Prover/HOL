@@ -1,10 +1,13 @@
-OCAMLPATH=/usr/groups/netsem/ocaml/bin
-
-OCAMLC=$(OCAMLPATH)/ocamlc -pp $(OCAMLPATH)/camlp4o
+# override this by setting OCAMLPATH in your .profile; if your OCaml
+# version is before 3.03a, also set OCAMLPPFLAGS to the empty string.
+OCAMLPATH?=/usr/groups/netsem/ocaml/bin
+OCAMLPPFLAGS?=-pp $(OCAMLPATH)/camlp4o
 # add -pp camlp4o for ocaml version 3.03a and above, apparently
 
+OCAMLC=$(OCAMLPATH)/ocamlc $(OCAMLPPFLAGS)
 OCAMLLEX=$(OCAMLPATH)/ocamllex
-OCAMLDEP=$(OCAMLPATH)/ocamldep -pp $(OCAMLPATH)/camlp4o
+OCAMLYACC=${OCAMLPATH}/ocamlyacc
+OCAMLDEP=$(OCAMLPATH)/ocamldep $(OCAMLPPFLAGS)
 
 LATEX=latex
 DVIPS=dvips
