@@ -94,8 +94,6 @@ int prevstate = INITIAL;
 <QUOTE>\n         { fprintf(yyout, " \",\nQUOTE \""); }
 
 <TMQUOTE>``       { fprintf(yyout, "\"])"); BEGIN INITIAL; }
-<TMQUOTE>:{ws}*\^ { fprintf(yyout, ":\",ANTIQUOTE (Term.ty_antiq ");
-                    prevstate = TMQUOTE; BEGIN ANTIQUOTE; }
 <TMQUOTE>\^       { fprintf(yyout, "\",ANTIQUOTE (");
                     prevstate = TMQUOTE; BEGIN ANTIQUOTE; }
 <TMQUOTE>\\       { fprintf(yyout, "\\\\"); }
