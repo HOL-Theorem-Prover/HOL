@@ -21,15 +21,37 @@ Current branches:
 -----------------
   term_with_closure: initiated by Bruno Barras as an investigation
                      into representing substitutions as closures.
+                     Work from this branch was merged back into the
+                     main branch, but by hand, not using CVS, so it
+                     should be regarded as finished.
+
   parse: initiated by Michael Norrish as a reworking of the hol90
          parser.  Finished, and merged back into the main branch to
          start the Taupo series of releases.
 
+  athabasca5: initiated by Michael Norrish to branch off from the
+              athabasca-4 release and allow a release fixing problems
+              in athabasca-4 without interfering with the development
+              of Taupo releases.
+
+              There shouldn't be an athabasca-6 release at all, but if
+              there was, it could still sit on this branch.
+              The only need for the branch is to allow improvements to
+              athabasca-5 to be released without having to also
+              release the new Taupo parser.
 
 Other tags:
 -----------
-  athabasca-4   - a semi-official release, used as the basis for much
-                  of the first year's work on the Prosper project.
-  now-need-mosml-144 - tag marking switch to MoscowML 1.44
-  start - beginning of the repository, version slightly predating
-          athabasca-4
+  athabasca-4        - a semi-official release, used as the basis for
+                       much of the first year's work on the Prosper
+                       project.
+
+  athabasca-5        - another semi-official release, fixing
+                       athabasca-4 to run under MoscowML 1.44, and
+                       also fixing a bug in the string library.
+
+  now-need-mosml-144 - tag marking switch to MoscowML 1.44 on the main
+                       branch.
+
+  start              - beginning of the repository, version slightly
+                       predating athabasca-4
