@@ -1,7 +1,6 @@
 (* ===================================================================== *)
 (* FILE          : num_lib.sig  (Formerly num.sml)                       *)
 (* DESCRIPTION   : Signature for useful proof support for :num.          *)
-(*                 Translated from hol88.                                *)
 (*                                                                       *)
 (* ===================================================================== *)
 
@@ -12,13 +11,11 @@ sig
   type conv = Abbrev.conv
   type tactic = Abbrev.tactic
 
-(* val ADD_CONV : conv
-   val num_EQ_CONV : conv
-*)
- val EXISTS_LEAST_CONV : conv
+ val EXISTS_LEAST_CONV    : conv
  val EXISTS_GREATEST_CONV : conv
- val num_CONV : conv
- val INDUCT_TAC : tactic
+ val SUC_ELIM_CONV : conv
+ val num_CONV      : conv
+ val INDUCT_TAC    : tactic
 
  val REDUCE_CONV : conv
  val REDUCE_RULE : thm -> thm

@@ -24,11 +24,11 @@ local open numeralTheory in end;
 open HolKernel basicHol90Lib Num_conv Parse;
 infix THEN THENC THENL;
 
-  type conv = Abbrev.conv
-  type tactic = Abbrev.tactic
+type conv = Abbrev.conv
+type tactic = Abbrev.tactic
 
-fun NUM_ERR{function,message} =
-    HOL_ERR{origin_structure = "Num",
+fun ERR function message =
+    HOL_ERR{origin_structure = "numLib",
             origin_function = function,
             message = message};
 
@@ -39,75 +39,6 @@ val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
 
 val N = Type`:num`
-
-(*
-(* --------------------------------------------------------------------- *)
-(* ADD_CONV: addition of natural number constants (numerals).            *)
-(*                                                                       *)
-(* If n and m are numerals (i.e 0,1,2,3,...) then:                       *)
-(*                                                                       *)
-(*      ADD_CONV `n + m`                                                 *)
-(*                                                                       *)
-(* returns                                                               *)
-(*                                                                       *)
-(*      |- n + m = s                                                     *)
-(*                                                                       *)
-(* where s is the numeral denoting the sum of n and m.                   *)
-(*                                                                       *)
-(* NOTE: binary numerals allow this to be done with rewriting            *)
-(* --------------------------------------------------------------------- *)
-
-local open numeralTheory
-      val RW = REWRITE_CONV
-         [numeral_add, numeral_distrib, numeral_suc, numeral_iisuc]
-in
-fun ADD_CONV tm =
- let val (f, args) = strip_comb tm
-     val _ = assert (fn t => #Name(dest_const t) = "+") f
-     val _ = assert (fn l => length l = 2) args
-     val _ = assert is_numeral (hd args)
-     val _ = assert is_numeral (hd (tl args))
- in
-    RW tm
- end handle HOL_ERR _ => raise NUM_ERR{function = "ADD_CONV",message = ""}
-end;
-
-
-(* --------------------------------------------------------------------- *)
-(* num_EQ_CONV: equality of natural number constants.                    *)
-(*                                                                       *)
-(* If n and m are numerals (i.e 0,1,2,3,...) or sucessors of numerals    *)
-(* (e.g. SUC 0, SUC(SUC 2), etc), then:                                  *)
-(*                                                                       *)
-(*      num_EQ_CONV `n = m`                                              *)
-(*                                                                       *)
-(* returns                                                               *)
-(*                                                                       *)
-(*      |- (n = m) = T           if n=m                                  *)
-(*      |- (n = m) = F           if ~(n=m)                               *)
-(*                                                                       *)
-(* and if n and m are syntactically identical terms of type :num, then   *)
-(*                                                                       *)
-(*      num_EQ_CONV `n = m`  returns |- (n = m) = T                      *)
-(*                                                                       *)
-(* --------------------------------------------------------------------- *)
-
-local open numeralTheory
-      val RW = REWRITE_CONV [numeral_eq, numeral_distrib]
-in
-fun num_EQ_CONV tm =
- let val {lhs=n, rhs=m} = dest_eq tm
-     val _ = assert (fn t => type_of t = N) n
- in
-   if n=m then EQT_INTRO (REFL n) else
-   if is_numeral n andalso is_numeral m then RW tm
-   else raise NUM_ERR{function = "num_EQ_CONV",
-               message = "Terms are neither identical nor numerals"}
- end
- handle HOL_ERR _ => raise NUM_ERR{function="num_EQ_CONV",message = ""}
-end;
-*)
-
 
 (* --------------------------------------------------------------------- *)
 (* EXISTS_LEAST_CONV: applies the well-ordering property to non-empty    *)
@@ -142,7 +73,7 @@ fun EXISTS_LEAST_CONV tm =
    in
    IMP_ANTISYM_RULE imp1 (DISCH eltm thm5)
    end
-   handle _ => raise NUM_ERR{function = "EXISTS_LEAST_CONV",message = ""}
+   handle _ => raise ERR "EXISTS_LEAST_CONV" ""
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -179,9 +110,32 @@ fun EXISTS_GREATEST_CONV tm =
    in
    Lib.S (Lib.C EQ_MP) (Lib.C ALPHA rqd o concl) prealpha
    end
-   handle _ => raise NUM_ERR{function = "EXISTS_GREATEST_CONV",message = ""}
+   handle _ => raise ERR "EXISTS_GREATEST_CONV" ""
 end;
 
+
+local open Psyntax
+      val SUC = mk_const("SUC", mk_type("fun", [N, N]))
+      fun mk_SUC t = mk_comb(SUC, t)
+      fun SEC_ERR m = ERR "SUC_ELIM_CONV" m
+      fun assert f x = f x orelse raise SEC_ERR "assertion failed"
+in
+fun SUC_ELIM_CONV tm =
+   let val (v,bod) = dest_forall tm
+       val _ = assert (fn x => type_of x = N) v
+       val (sn,n) = (genvar N, genvar N)
+       val suck_suc = Rsyntax.subst [mk_SUC v |-> sn] bod
+       val suck_n = Rsyntax.subst [v |-> n] suck_suc
+       val _ = assert (fn x => x <> tm) suck_n
+       val th1 = ISPEC (list_mk_abs ([sn,n],suck_n)) 
+                     arithmeticTheory.SUC_ELIM_THM
+       val BETA2_CONV = (RATOR_CONV BETA_CONV) THENC BETA_CONV
+       val th2 = CONV_RULE (LHS_CONV (QUANT_CONV BETA2_CONV)) th1
+       val th3 = CONV_RULE (RHS_CONV (QUANT_CONV 
+                    (FORK_CONV (ALL_CONV, BETA2_CONV)))) th2
+   in th3
+   end
+end;
 
 val num_CONV   = Num_conv.num_CONV
 val INDUCT_TAC = Num_induct.INDUCT_TAC
