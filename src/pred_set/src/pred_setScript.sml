@@ -167,6 +167,8 @@ val NOT_IN_EMPTY =
      CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
      REPEAT STRIP_TAC);
 
+val _ = export_rewrites ["NOT_IN_EMPTY"]
+
 val MEMBER_NOT_EMPTY =
     store_thm
     ("MEMBER_NOT_EMPTY",
@@ -248,6 +250,8 @@ val SUBSET_EMPTY =
      (--`!s:'a set. s SUBSET EMPTY = (s = EMPTY)`--),
      PURE_REWRITE_TAC [SUBSET_DEF,NOT_IN_EMPTY] THEN
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY]);
+
+val _ = export_rewrites ["SUBSET_EMPTY"]
 
 val SUBSET_UNIV =
     store_thm
@@ -365,6 +369,8 @@ val UNION_EMPTY =
       (!s:'a set. s UNION EMPTY = s)`--),
      REWRITE_TAC [IN_UNION,EXTENSION,NOT_IN_EMPTY]);
 
+val _ = export_rewrites ["UNION_EMPTY"]
+
 val UNION_UNIV =
     store_thm
     ("UNION_UNIV",
@@ -372,10 +378,13 @@ val UNION_UNIV =
       (!s:'a set. s UNION UNIV = UNIV)`--),
      REWRITE_TAC [IN_UNION,EXTENSION,IN_UNIV]);
 
+val _ = export_rewrites ["UNION_UNIV"]
+
 val EMPTY_UNION = store_thm("EMPTY_UNION",
 (--`!s:'a set. !t. (s UNION t = EMPTY) = ((s = EMPTY) /\ (t = EMPTY))`--),
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY,IN_UNION,DE_MORGAN_THM] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC);
+val _ = export_rewrites ["EMPTY_UNION"]
 
 
 
@@ -438,6 +447,8 @@ val INTER_EMPTY =
      (--`(!s:'a set. EMPTY INTER s = EMPTY) /\
       (!s:'a set. s INTER EMPTY = EMPTY)`--),
      REWRITE_TAC [IN_INTER,EXTENSION,NOT_IN_EMPTY]);
+
+val _ = export_rewrites ["INTER_EMPTY"]
 
 val INTER_UNIV =
     store_thm
@@ -605,6 +616,8 @@ val IN_INSERT =
       CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
       REPEAT GEN_TAC THEN REFL_TAC);
 
+val _ = export_rewrites ["IN_INSERT"]
+
 val COMPONENT =
      store_thm
      ("COMPONENT",
@@ -689,6 +702,10 @@ val NOT_EMPTY_INSERT =
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
      REPEAT GEN_TAC THEN EXISTS_TAC (--`x:'a`--) THEN
      REWRITE_TAC []);
+
+val _ = export_rewrites ["NOT_INSERT_EMPTY"];
+(* don't need both because simplifier's rewrite creator automatically gives
+   both senses to inequalities *)
 
 val INSERT_UNION = store_thm (
   "INSERT_UNION",
@@ -820,6 +837,8 @@ val EMPTY_DELETE =
     ("EMPTY_DELETE",
      (--`!x:'a. EMPTY DELETE x = EMPTY`--),
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY,IN_DELETE]);
+
+val _ = export_rewrites ["EMPTY_DELETE"];
 
 val DELETE_DELETE =
     store_thm
@@ -1501,6 +1520,8 @@ val FINITE_INSERT =
      [MATCH_ACCEPT_TAC INSERT_FINITE,
       DISCH_THEN (MATCH_ACCEPT_TAC o MATCH_MP FINITE_INSERT)]);
 
+val _ = export_rewrites ["FINITE_EMPTY", "FINITE_INSERT"]
+
 val DELETE_FINITE =
     TAC_PROOF
     (([], (--`!x:'a. !s. FINITE (s DELETE x) ==> FINITE s`--)),
@@ -1557,6 +1578,8 @@ val FINITE_UNION =
      REPEAT STRIP_TAC THEN EQ_TAC THENL
      [REPEAT STRIP_TAC THEN IMP_RES_TAC FINITE_UNION,
       REPEAT STRIP_TAC THEN IMP_RES_TAC UNION_FINITE]);
+
+val _ = export_rewrites ["FINITE_DELETE", "FINITE_UNION"]
 
 val INTER_FINITE =
     store_thm
@@ -3045,110 +3068,160 @@ val COMMUTING_ITSET_RECURSES = store_thm(
     ASM_SIMP_TAC bool_ss [COMMUTING_ITSET_INSERT, delete_non_element]
   ]);
 
-val SUM_SET_def = new_definition("SUM_SET_def", ``SUM_SET s = ITSET (+) s 0``);
 
-val SUM_SET_THM = store_thm(
-  "SUM_SET_THM",
-  ``(SUM_SET {} = 0) /\
-    (!x s. FINITE s ==> (SUM_SET (x INSERT s) = x + SUM_SET (s DELETE x)))``,
-  CONJ_TAC THEN REWRITE_TAC [SUM_SET_def] THENL [
-    SIMP_TAC bool_ss [FINITE_EMPTY, ITSET_THM],
-    PROVE_TAC [SIMP_RULE arith_ss [] (Q.ISPEC `(+)` COMMUTING_ITSET_RECURSES)]
+val SUM_IMAGE_DEF = new_definition(
+  "SUM_IMAGE_DEF",
+  ``SUM_IMAGE f s = ITSET (\e acc. f e + acc) s 0``);
+
+val SUM_IMAGE_THM = store_thm(
+  "SUM_IMAGE_THM",
+  ``!f. (SUM_IMAGE f {} = 0) /\
+        (!e s. FINITE s ==>
+               (SUM_IMAGE f (e INSERT s) =
+                f e + SUM_IMAGE f (s DELETE e)))``,
+  REPEAT STRIP_TAC THENL [
+    SIMP_TAC (srw_ss()) [ITSET_THM, SUM_IMAGE_DEF],
+    SIMP_TAC (srw_ss()) [SUM_IMAGE_DEF] THEN
+    Q.ABBREV_TAC `g = \e acc. f e + acc` THEN
+    Q_TAC SUFF_TAC `ITSET g (e INSERT s) 0 =
+                    g e (ITSET g (s DELETE e) 0)` THEN1
+       SRW_TAC [][] THEN
+    MATCH_MP_TAC COMMUTING_ITSET_RECURSES THEN
+    SRW_TAC [numSimps.ARITH_ss][]
   ]);
 
-val SUM_SET_SING = store_thm(
-  "SUM_SET_SING",
-  ``!n. SUM_SET {n} = n``,
-  SIMP_TAC arith_ss [FINITE_EMPTY, SUM_SET_THM, EMPTY_DELETE]);
+val SUM_IMAGE_SING = store_thm(
+  "SUM_IMAGE_SING",
+  ``!f e. SUM_IMAGE f {e} = f e``,
+  SRW_TAC [][SUM_IMAGE_THM]);
 
-val SUM_SET_SUBSET_LE = store_thm(
-  "SUM_SET_SUBSET_LE",
-  ``!s t. FINITE t /\ s SUBSET t ==> SUM_SET s <= SUM_SET t``,
-  Q_TAC SUFF_TAC
-     `!t. FINITE t ==> !s. s SUBSET t ==> SUM_SET s <= SUM_SET t` THEN1
-     PROVE_TAC [] THEN
+val SUM_IMAGE_SUBSET_LE = store_thm(
+  "SUM_IMAGE_SUBSET_LE",
+  ``!f s t. FINITE s /\ t SUBSET s ==> SUM_IMAGE f t <= SUM_IMAGE f s``,
+  GEN_TAC THEN
+  Q_TAC SUFF_TAC `!s. FINITE s ==>
+                      !t. t SUBSET s ==> SUM_IMAGE f t <= SUM_IMAGE f s` THEN1
+    PROVE_TAC [] THEN
   HO_MATCH_MP_TAC FINITE_INDUCT THEN
-  SRW_TAC [][SUBSET_EMPTY, SUM_SET_THM, delete_non_element] THEN
-  Cases_on `e IN s` THENL [
-    Q.ABBREV_TAC `u = s DELETE e` THEN
-    `s = e INSERT u` by SRW_TAC [][INSERT_DELETE] THEN
+  SIMP_TAC (srw_ss()) [SUM_IMAGE_THM, delete_non_element] THEN
+  REPEAT STRIP_TAC THEN Cases_on `e IN t` THENL [
+    Q.ABBREV_TAC `u = t DELETE e` THEN
+    `t = e INSERT u` by SRW_TAC [][INSERT_DELETE] THEN
     `FINITE u` by PROVE_TAC [FINITE_DELETE, SUBSET_FINITE, FINITE_INSERT] THEN
     `~(e IN u)` by PROVE_TAC [IN_DELETE] THEN
-    ASM_SIMP_TAC arith_ss [SUM_SET_THM, delete_non_element] THEN
+    ASM_SIMP_TAC arith_ss [SUM_IMAGE_THM, delete_non_element] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     FULL_SIMP_TAC bool_ss [SUBSET_INSERT_DELETE],
     FULL_SIMP_TAC bool_ss [SUBSET_INSERT] THEN
     RES_TAC THEN ASM_SIMP_TAC arith_ss []
   ]);
 
+val SUM_IMAGE_IN_LE = store_thm(
+  "SUM_IMAGE_IN_LE",
+  ``!f s e. FINITE s /\ e IN s ==> f e <= SUM_IMAGE f s``,
+  REPEAT STRIP_TAC THEN
+  `{e} SUBSET s` by SRW_TAC [][SUBSET_DEF] THEN
+  PROVE_TAC [SUM_IMAGE_SING, SUM_IMAGE_SUBSET_LE]);
+
+val SUM_IMAGE_DELETE = store_thm(
+  "SUM_IMAGE_DELETE",
+  ``!f s. FINITE s ==>
+          !e. SUM_IMAGE f (s DELETE e) = if e IN s then SUM_IMAGE f s - f e
+                                         else SUM_IMAGE f s``,
+  GEN_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][SUM_IMAGE_THM, DELETE_INSERT] THEN
+  COND_CASES_TAC THENL [
+    POP_ASSUM SUBST_ALL_TAC THEN ASM_SIMP_TAC arith_ss [],
+    ASM_SIMP_TAC bool_ss [SUM_IMAGE_THM, FINITE_DELETE, IN_DELETE,
+                          delete_non_element] THEN
+    COND_CASES_TAC THEN REWRITE_TAC [] THEN
+    `f e' <= SUM_IMAGE f s` by PROVE_TAC [SUM_IMAGE_IN_LE] THEN
+    FULL_SIMP_TAC arith_ss []
+  ]);
+
+val SUM_IMAGE_UNION = store_thm(
+  "SUM_IMAGE_UNION",
+  ``!f s t. FINITE s /\ FINITE t ==>
+            (SUM_IMAGE f (s UNION t) =
+             SUM_IMAGE f s + SUM_IMAGE f t - SUM_IMAGE f (s INTER t))``,
+  GEN_TAC THEN
+  Q_TAC SUFF_TAC
+    `!s. FINITE s ==>
+         !t. FINITE t ==>
+             (SUM_IMAGE f (s UNION t) =
+              SUM_IMAGE f s + SUM_IMAGE f t - SUM_IMAGE f (s INTER t))` THEN1
+    PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN CONJ_TAC THEN1
+    SRW_TAC [numSimps.ARITH_ss][SUM_IMAGE_THM] THEN
+  SIMP_TAC (srw_ss()) [INSERT_UNION_EQ, SUM_IMAGE_THM, INSERT_INTER] THEN
+  REPEAT STRIP_TAC THEN
+  Cases_on `e IN t` THEN
+  ASM_SIMP_TAC arith_ss [INSERT_INTER, INTER_FINITE, FINITE_INSERT,
+                         SUM_IMAGE_THM, IN_UNION, delete_non_element]
+  THENL [
+    `s UNION t DELETE e = s UNION (t DELETE e)` by
+       (SRW_TAC [][EXTENSION, IN_UNION, IN_DELETE] THEN PROVE_TAC []) THEN
+    ASM_SIMP_TAC bool_ss [FINITE_DELETE, SUM_IMAGE_DELETE, INTER_FINITE,
+                          IN_INTER] THEN
+    `s INTER (t DELETE e) = s INTER t DELETE e` by
+       (SRW_TAC [][EXTENSION, IN_INTER, IN_DELETE] THEN PROVE_TAC []) THEN
+    ASM_SIMP_TAC bool_ss [SUM_IMAGE_DELETE, INTER_FINITE, IN_INTER] THEN
+    `f e <= SUM_IMAGE f t` by PROVE_TAC [SUM_IMAGE_IN_LE] THEN
+    `s INTER t SUBSET t` by PROVE_TAC [INTER_SUBSET] THEN
+    `SUM_IMAGE f (s INTER t) <= SUM_IMAGE f t` by
+       PROVE_TAC [SUM_IMAGE_SUBSET_LE] THEN
+    Q_TAC SUFF_TAC `f e + SUM_IMAGE f (s INTER t) <= SUM_IMAGE f t` THEN1
+       ASM_SIMP_TAC arith_ss [] THEN
+    Q_TAC SUFF_TAC
+          `f e + SUM_IMAGE f (s INTER t) =
+             SUM_IMAGE f (e INSERT s INTER t)` THEN1
+          ASM_SIMP_TAC bool_ss [SUM_IMAGE_SUBSET_LE,
+                                SUBSET_DEF, IN_INTER, IN_INSERT,
+                                DISJ_IMP_THM, FORALL_AND_THM] THEN
+    ASM_SIMP_TAC bool_ss [INTER_FINITE, SUM_IMAGE_THM, IN_INTER,
+                          delete_non_element],
+    `s INTER t SUBSET t` by PROVE_TAC [INTER_SUBSET] THEN
+    `SUM_IMAGE f (s INTER t) <= SUM_IMAGE f t`
+       by PROVE_TAC [SUM_IMAGE_SUBSET_LE] THEN
+    ASM_SIMP_TAC arith_ss []
+  ]);
+
+val SUM_SET_DEF = new_definition("SUM_SET_DEF", ``SUM_SET = SUM_IMAGE I``);
+
+val SUM_SET_THM = store_thm(
+  "SUM_SET_THM",
+  ``(SUM_SET {} = 0) /\
+    (!x s. FINITE s ==> (SUM_SET (x INSERT s) = x + SUM_SET (s DELETE x)))``,
+  SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_THM]);
+
+val SUM_SET_SING = store_thm(
+  "SUM_SET_SING",
+  ``!n. SUM_SET {n} = n``,
+  SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_SING]);
+
+val SUM_SET_SUBSET_LE = store_thm(
+  "SUM_SET_SUBSET_LE",
+  ``!s t. FINITE t /\ s SUBSET t ==> SUM_SET s <= SUM_SET t``,
+  SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_SUBSET_LE]);
+
 val SUM_SET_IN_LE = store_thm(
   "SUM_SET_IN_LE",
   ``!x s. FINITE s /\ x IN s ==> x <= SUM_SET s``,
-  REPEAT STRIP_TAC THEN
-  `{x} SUBSET s` by ASM_SIMP_TAC bool_ss [IN_SING, SUBSET_DEF] THEN
-  `SUM_SET {x} <= SUM_SET s` by PROVE_TAC [SUM_SET_SUBSET_LE] THEN
-  PROVE_TAC [SUM_SET_SING]);
+  SRW_TAC [][SUM_SET_DEF] THEN
+  PROVE_TAC [combinTheory.I_THM, SUM_IMAGE_IN_LE]);
 
 val SUM_SET_DELETE = store_thm(
   "SUM_SET_DELETE",
   ``!s. FINITE s ==> !e. SUM_SET (s DELETE e) = if e IN s then SUM_SET s - e
                                                 else SUM_SET s``,
-  HO_MATCH_MP_TAC FINITE_INDUCT THEN
-  SRW_TAC [][SUM_SET_THM, EMPTY_DELETE, IN_INSERT, DELETE_INSERT] THEN
-  COND_CASES_TAC THENL [
-    POP_ASSUM SUBST_ALL_TAC THEN ASM_SIMP_TAC arith_ss [],
-    ASM_SIMP_TAC bool_ss [SUM_SET_THM, FINITE_DELETE, IN_DELETE,
-                          delete_non_element] THEN
-    COND_CASES_TAC THENL [
-      REWRITE_TAC [] THEN
-      `e' <= SUM_SET s` by PROVE_TAC [SUM_SET_IN_LE] THEN
-      FULL_SIMP_TAC arith_ss [],
-      REWRITE_TAC []
-    ]
-  ]);
+  SIMP_TAC (srw_ss()) [SUM_SET_DEF, SUM_IMAGE_DELETE]);
 
 val SUM_SET_UNION = store_thm(
   "SUM_SET_UNION",
   ``!s t. FINITE s /\ FINITE t ==>
           (SUM_SET (s UNION t) =
              SUM_SET s + SUM_SET t - SUM_SET (s INTER t))``,
-  Q_TAC SUFF_TAC `!s. FINITE s ==>
-                      !t. FINITE t ==>
-                          (SUM_SET (s UNION t) =
-                           SUM_SET s + SUM_SET t - SUM_SET (s INTER t))` THEN1
-    PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC FINITE_INDUCT THEN
-  SIMP_TAC arith_ss [SUM_SET_THM, INSERT_UNION_EQ, UNION_EMPTY,
-                     FINITE_UNION, delete_non_element, INTER_EMPTY] THEN
-  REPEAT STRIP_TAC THEN
-  Cases_on `e IN t` THEN
-  ASM_SIMP_TAC arith_ss [INSERT_INTER, INTER_FINITE, FINITE_INSERT,
-                         SUM_SET_THM, IN_UNION, delete_non_element]
-  THENL [
-    `s UNION t DELETE e = s UNION (t DELETE e)` by
-       (SRW_TAC [][EXTENSION, IN_UNION, IN_DELETE] THEN PROVE_TAC []) THEN
-    ASM_SIMP_TAC bool_ss [FINITE_DELETE, SUM_SET_DELETE, INTER_FINITE,
-                          IN_INTER] THEN
-    `s INTER (t DELETE e) = s INTER t DELETE e` by
-       (SRW_TAC [][EXTENSION, IN_INTER, IN_DELETE] THEN PROVE_TAC []) THEN
-    ASM_SIMP_TAC bool_ss [SUM_SET_DELETE, INTER_FINITE, IN_INTER] THEN
-    `e <= SUM_SET t` by PROVE_TAC [SUM_SET_IN_LE] THEN
-    `s INTER t SUBSET t` by PROVE_TAC [INTER_SUBSET] THEN
-    `SUM_SET (s INTER t) <= SUM_SET t` by PROVE_TAC [SUM_SET_SUBSET_LE] THEN
-    Q_TAC SUFF_TAC `e + SUM_SET (s INTER t) <= SUM_SET t` THEN1
-       ASM_SIMP_TAC arith_ss [] THEN
-    Q_TAC SUFF_TAC
-          `e + SUM_SET (s INTER t) = SUM_SET (e INSERT s INTER t)` THEN1
-          ASM_SIMP_TAC bool_ss [SUM_SET_SUBSET_LE,
-                                SUBSET_DEF, IN_INTER, IN_INSERT,
-                                DISJ_IMP_THM, FORALL_AND_THM] THEN
-    ASM_SIMP_TAC bool_ss [INTER_FINITE, SUM_SET_THM, IN_INTER,
-                          delete_non_element],
-    `s INTER t SUBSET t` by PROVE_TAC [INTER_SUBSET] THEN
-    `SUM_SET (s INTER t) <= SUM_SET t` by PROVE_TAC [SUM_SET_SUBSET_LE] THEN
-    ASM_SIMP_TAC arith_ss []
-  ]);
-
+  SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_UNION]);
 
 val max_lemma = prove(
   ``!s. FINITE s ==> ~(s = {}) ==> ?x. x IN s /\ !y. y IN s ==> y <= x``,
@@ -3250,21 +3323,17 @@ val _ = export_rewrites
      "COMPL_CLAUSES", "COMPL_COMPL", "COMPL_EMPTY", "IN_COMPL",
      (* "DELETE" theorems *)
      "IN_DELETE", "DELETE_DELETE", "DELETE_EQ_SING", "DELETE_SUBSET",
-     "EMPTY_DELETE",
      (* "DIFF" theorems *)
      "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV", "EMPTY_DIFF",
      (* "DISJOINT" theorems *)
      "DISJOINT_EMPTY", "DISJOINT_INSERT", "DISJOINT_UNION_BOTH",
-     (* "FINITE" theorems *)
-     "FINITE_DELETE", "FINITE_EMPTY", "FINITE_INSERT", "FINITE_UNION",
      (* "IMAGE" theorems *)
      "IMAGE_EMPTY", "IMAGE_DELETE", "IMAGE_FINITE", "IMAGE_ID", "IMAGE_IN",
      "IMAGE_INSERT", "IMAGE_SUBSET", "IMAGE_UNION", "IN_IMAGE",
      (* "INSERT" theorems *)
      "INSERT_DELETE", "INSERT_DIFF", "INSERT_INSERT", "INSERT_SUBSET",
-     "IN_INSERT", "NOT_IN_EMPTY", "NOT_INSERT_EMPTY", "NOT_EMPTY_INSERT",
      (* "INTER" theorems *)
-     "IN_INTER", "INTER_EMPTY", "INTER_FINITE", "INTER_IDEMPOT",
+     "IN_INTER", "INTER_FINITE", "INTER_IDEMPOT",
      "INTER_SUBSET", "INTER_UNIV", "SUBSET_INTER",
      (* "PSUBSET" *)
      "PSUBSET_IRREFL", "PSUBSET_FINITE",
@@ -3273,9 +3342,9 @@ val _ = export_rewrites
      (* "SING" *)
      "SING", "SING_FINITE",
      (* "SUBSET" *)
-     "SUBSET_EMPTY", "SUBSET_FINITE", "SUBSET_INSERT", "SUBSET_REFL",
+     "SUBSET_FINITE", "SUBSET_INSERT", "SUBSET_REFL",
      (* "UNION" *)
-     "IN_UNION", "UNION_EMPTY", "UNION_IDEMPOT", "UNION_UNIV", "UNION_SUBSET",
+     "IN_UNION", "UNION_IDEMPOT", "UNION_SUBSET",
      "SUBSET_UNION",
      (* UNIV *)
      "IN_UNIV", "EMPTY_NOT_UNIV"
