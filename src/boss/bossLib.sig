@@ -20,9 +20,6 @@ in
   val Hol_defn     : string -> term quotation -> defn
   val WF_REL_TAC   : defn -> term quotation -> tactic
  
-  val ind_suffix : string ref
-  val def_suffix : string ref
-
   (* Fetch the rewrite rules for a type. *)
 
   val type_rws : string -> thm list

@@ -50,9 +50,6 @@ val Define     = TotalDefn.Define
 val Hol_defn   = Defn.Hol_defn;
 val WF_REL_TAC = TotalDefn.WF_REL_TAC;
 
-val ind_suffix = TotalDefn.ind_suffix
-val def_suffix = TotalDefn.def_suffix;
-
 
 (*---------------------------------------------------------------------------
             Automated proof operations
