@@ -305,7 +305,10 @@ val arithmetic_rewrites = [
    SUB_RIGHT_GREATER_EQ, SUB_RIGHT_LESS_EQ, prim_recTheory.PRE,
 
    (* order relations and arith. ops *)
-   LESS_EQ_0, LESS_MONO_ADD_EQ, add_sym LESS_MONO_ADD_EQ,
+   LESS_EQ_0, prim_recTheory.LESS_0,
+   ARITH ``0 <= x``, ARITH ``SUC x > 0``, ARITH ``x >= 0``,
+   LESS_EQ_REFL, ARITH ``x >= x``,
+   LESS_MONO_ADD_EQ, add_sym LESS_MONO_ADD_EQ,
    ADD_MONO_LESS_EQ, add_sym ADD_MONO_LESS_EQ,
    EQ_MONO_ADD_EQ, add_sym EQ_MONO_ADD_EQ,
    ARITH (Term `!x y w. x + y < w + x = y < w`),
@@ -316,7 +319,8 @@ val arithmetic_rewrites = [
    MULT_EXP_MONO,
   (* falsities *)
    NOT_EXP_0, NOT_ODD_EQ_EVEN, NOT_SUC_ADD_LESS_EQ,
-   NOT_SUC_LESS_EQ_0, prim_recTheory.NOT_LESS_0,
+   NOT_SUC_LESS_EQ_0, prim_recTheory.NOT_LESS_0, prim_recTheory.LESS_REFL,
+   ARITH ``~(x > x)``,
 
    (* mins and maxs *)
    MIN_0, MAX_0, MIN_IDEM, MAX_IDEM, MIN_LE, MAX_LE, MIN_LT, MAX_LT,
