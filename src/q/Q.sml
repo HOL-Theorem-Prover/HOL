@@ -285,6 +285,7 @@ fun find' f [] = NONE
 fun PAT_ABBREV_TAC q (g as (asl, w)) =
     let val ctxt = free_varsl(w::asl)
         val (l,r) = dest_eq(Parse.parse_in_context ctxt q)
+        val l = variant (free_varsl (r :: w :: asl)) l
     in
       case find' (Lib.total (find_term (can (match_term r)))) (w::asl) of
         NONE => raise Q_ERR "PAT_ABBREV_TAC" "No matching term found"
