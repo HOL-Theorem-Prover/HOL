@@ -163,11 +163,19 @@ fun proveTotal tac defn =
 fun get_orig (TypeBase.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
 
+val default_simps =
+         [combinTheory.o_DEF,
+          combinTheory.I_THM,
+          prim_recTheory.measure_def,
+          relationTheory.inv_image_def,
+          pairTheory.LEX_DEF];
+
+
 fun TC_SIMP_CONV simps tm =
  (REPEATC
    (CHANGED_CONV
      (Rewrite.REWRITE_CONV
-        (simps @ mapfilter TypeBase.TypeInfo.case_def_of
+        (simps @ default_simps @ mapfilter TypeBase.TypeInfo.case_def_of
                (TypeBase.TypeInfo.listItems (TypeBase.TypeInfo.theTypeBase())))
        THENC REDEPTH_CONV GEN_BETA_CONV))
   THENC Rewrite.REWRITE_CONV
@@ -193,13 +201,6 @@ in
 fun WF_TAC thms = REPEAT (MAP_FIRST BC_TAC (thms@WFthms) ORELSE CONJ_TAC)
 end;
 
-val default_simps =
-         [combinTheory.o_DEF,
-          combinTheory.I_THM,
-          prim_recTheory.measure_def,
-          relationTheory.inv_image_def,
-          pairTheory.LEX_DEF];
-
 val ASM_ARITH_TAC =
  REPEAT STRIP_TAC
     THEN REPEAT (POP_ASSUM
@@ -209,7 +210,7 @@ val ASM_ARITH_TAC =
 
 fun TC_SIMP_TAC WFthl thl =
    WF_TAC WFthl THEN
-   CONV_TAC (TC_SIMP_CONV (thl@default_simps)) THEN
+   CONV_TAC (TC_SIMP_CONV thl) THEN
    TRY ASM_ARITH_TAC;
 
 
@@ -273,11 +274,11 @@ fun primDefine defn =
      val _ = save_defn defn'
      val eqns = eqns_of defn'
      val _ = if null (params_of defn')
-           then computeLib.add_funs [eqns]
+           then computeLib.add_funs eqns
          else WARN "primDefine"
           "Extra free vars in right-hand side!! Making schematic definition!!"
  in
-    eqns
+    LIST_CONJ eqns
  end
 end;
 

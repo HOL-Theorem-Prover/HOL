@@ -45,6 +45,11 @@ fun dest_hd_eqn eqs =
   in (strip_comb lhs, rhs)
   end;
 
+fun dest_hd_eqnl (hd_eqn::_) =
+  let val (lhs,rhs) = dest_eq (concl hd_eqn)
+  in (strip_comb lhs, rhs)
+  end;
+
 fun extract_info db =
  let val (rws,congs) = rev_itlist
      (fn tyinfo => fn (R,C) =>
@@ -139,14 +144,13 @@ fun ModusPonens th1 th2 =
   handle _ => raise ERR "ModusPonens" "failed";
 
 
-fun eqns_of (ABBREV  {eqn, ...}) = eqn
-  | eqns_of (NONREC  {eqs, ...}) = eqs
-  | eqns_of (PRIMREC {eqs, ...}) = eqs
+fun eqns_of (ABBREV  {eqn, ...}) = [eqn]
+  | eqns_of (NONREC  {eqs, ...}) = [eqs]
+  | eqns_of (PRIMREC {eqs, ...}) = [eqs]
   | eqns_of (STDREC  {eqs, ...}) = eqs
   | eqns_of (NESTREC {eqs, ...}) = eqs
   | eqns_of (MUTREC  {eqs, ...}) = eqs;
 
-fun eqnl_of d = CONJUNCTS (eqns_of d)
 
 fun aux_defn (NESTREC {aux, ...}) = SOME aux
   | aux_defn     _  = NONE;
@@ -174,9 +178,9 @@ fun schematic defn = not(List.null (params_of defn));
 fun tcs_of (ABBREV _)  = []
   | tcs_of (NONREC _)  = []
   | tcs_of (PRIMREC _) = []
-  | tcs_of (STDREC  {ind, ...}) = hyp ind
-  | tcs_of (NESTREC {ind, ...}) = hyp ind  (* this is wrong! *)
-  | tcs_of (MUTREC  {ind, ...}) = hyp ind;
+  | tcs_of (STDREC  {eqs,...}) = op_U aconv (map hyp eqs)
+  | tcs_of (NESTREC {eqs,...}) = op_U aconv (map hyp eqs)
+  | tcs_of (MUTREC  {eqs,...}) = op_U aconv (map hyp eqs);
 
 
 fun reln_of (ABBREV _)  = NONE
@@ -200,18 +204,18 @@ fun INST_THM theta th =
 fun isubst (tmtheta,tytheta) tm = subst tmtheta (inst tytheta tm);
 
 fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
-      STDREC {eqs=INST_THM theta eqs,
+      STDREC {eqs=map (INST_THM theta) eqs,
               ind=INST_THM theta ind,
               R=isubst theta R,
               SV=map (isubst theta) SV, stem=stem}
   | inst_defn (NESTREC{eqs,ind,R,SV,aux,stem}) theta =
-      NESTREC {eqs=INST_THM theta eqs,
+      NESTREC {eqs=map (INST_THM theta) eqs,
                ind=INST_THM theta ind,
                R=isubst theta R,
                SV=map (isubst theta) SV,
                aux=inst_defn aux theta, stem=stem}
   | inst_defn (MUTREC{eqs,ind,R,SV,union,stem}) theta =
-      MUTREC {eqs=INST_THM theta eqs,
+      MUTREC {eqs=map (INST_THM theta) eqs,
               ind=INST_THM theta ind,
               R=isubst theta R,
               SV=map (isubst theta) SV,
@@ -233,27 +237,31 @@ fun set_reln def R =
                     handle e => (HOL_MESG"set_reln: unable"; raise e);
 
 
-fun PROVE_HYPL thl th =
-  let val thm = itlist PROVE_HYP thl th
-  in if null(hyp thm) then thm
-     else raise ERR "PROVE_HYPL" "remaining termination conditions"
+fun PROVE_HYPL thl th = itlist PROVE_HYP thl th
+
+fun MATCH_HYPL thms th = 
+  let val aslthms = mapfilter (EQT_ELIM o REWRITE_CONV thms) (hyp th)
+  in itlist PROVE_HYP aslthms th
   end;
 
 
-(* Should perhaps be extended to existential theorems. *)
+(* We use PROVE_HYPL on induction theorems, since their tcs are fully
+   quantified. We use MATCH_HYPL on equations, since their tcs are
+   bare.
+*)
 
 fun elim_tcs (STDREC {eqs, ind, R, SV,stem}) thms =
      STDREC{R=R, SV=SV, stem=stem,
-            eqs=PROVE_HYPL thms eqs,
+            eqs=map (MATCH_HYPL thms) eqs,
             ind=PROVE_HYPL thms ind}
   | elim_tcs (NESTREC {eqs, ind, R,  SV, aux, stem}) thms =
      NESTREC{R=R, SV=SV, stem=stem,
-            eqs=PROVE_HYPL thms eqs,
+            eqs=map (MATCH_HYPL thms) eqs,
             ind=PROVE_HYPL thms ind,
             aux=elim_tcs aux thms}
   | elim_tcs (MUTREC {eqs, ind, R, SV, union, stem}) thms =
      MUTREC{R=R, SV=SV, stem=stem,
-            eqs=PROVE_HYPL thms eqs,
+            eqs=map (MATCH_HYPL thms) eqs,
             ind=PROVE_HYPL thms ind,
             union=elim_tcs union thms}
   | elim_tcs x _ = x;
@@ -281,16 +289,16 @@ fun SIMP_HYPL conv th = itlist (simp_assum conv) (hyp th) th;
 
 fun simp_tcs (STDREC {eqs, ind, R, SV, stem}) conv =
      STDREC{R=rhs(concl(conv R)), SV=SV, stem=stem,
-            eqs=SIMP_HYPL conv eqs,
+            eqs=map (SIMP_HYPL conv) eqs,
             ind=SIMP_HYPL conv ind}
   | simp_tcs (NESTREC {eqs, ind, R,  SV, aux, stem}) conv =
      NESTREC{R=rhs(concl(conv R)), SV=SV, stem=stem,
-            eqs=SIMP_HYPL conv eqs,
+            eqs=map (SIMP_HYPL conv) eqs,
             ind=SIMP_HYPL conv ind,
             aux=simp_tcs aux conv}
   | simp_tcs (MUTREC {eqs, ind, R, SV, union, stem}) conv =
      MUTREC{R=rhs(concl(conv R)), SV=SV, stem=stem,
-            eqs=SIMP_HYPL conv eqs,
+            eqs=map (SIMP_HYPL conv) eqs,
             ind=SIMP_HYPL conv ind,
             union=simp_tcs union conv}
   | simp_tcs x _ = x;
@@ -301,16 +309,16 @@ fun TAC_HYPL tac th =
 
 fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
      STDREC{R=R, SV=SV, stem=stem,
-            eqs=TAC_HYPL tac eqs,
+            eqs=map (TAC_HYPL tac) eqs,
             ind=TAC_HYPL tac ind}
   | prove_tcs (NESTREC {eqs, ind, R,  SV, aux, stem}) tac =
      NESTREC{R=R, SV=SV, stem=stem,
-            eqs=TAC_HYPL tac eqs,
+            eqs=map (TAC_HYPL tac) eqs,
             ind=TAC_HYPL tac ind,
             aux=prove_tcs aux tac}
   | prove_tcs (MUTREC {eqs, ind, R, SV, union, stem}) tac =
      MUTREC{R=R, SV=SV, stem=stem,
-            eqs=TAC_HYPL tac eqs,
+            eqs=map (TAC_HYPL tac) eqs,
             ind=TAC_HYPL tac ind,
             union=prove_tcs union tac}
   | prove_tcs x _ = x;
@@ -344,19 +352,19 @@ fun store(stem,eqs,ind) =
   end;
 
 fun handle_nested (stem,eqs,ind) =
-  if null(hyp eqs)
-  then store(stem,eqs,ind)
+  if null(hyp ind)
+  then store(stem,LIST_CONJ eqs,ind)
   else raise ERR "store_defn"
    "Nested mutually recursive function with unproven termination conditions";
 
 fun save_defn (ABBREV {bind, ...}) = been_stored bind
   | save_defn (PRIMREC{bind, ...}) = been_stored bind
   | save_defn (NONREC {eqs, ind, stem}) = store(stem,eqs,ind)
-  | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
-  | save_defn (MUTREC {eqs, ind, stem, union, ...}) =
-      (case union
-        of NESTREC _ => handle_nested (stem,eqs,ind)
-         | otherwise => store(stem,eqs,ind))
+  | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ eqs,ind)
+  | save_defn (MUTREC {eqs, ind, stem, union, ...})
+      = (case union
+          of NESTREC _ => handle_nested (stem,eqs,ind)
+           | otherwise => store(stem,LIST_CONJ eqs,ind))
   | save_defn (NESTREC{eqs,ind,stem, ...}) = handle_nested (stem,eqs,ind);
 
 
@@ -562,7 +570,8 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
            MP (BETA_RULE(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
  in
     {theory = theory, R=R1, SV=SV,
-     rules = rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) def',
+     rules = CONJUNCTS 
+              (rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) def'),
      full_pats_TCs = merge (map pat_of pats) (zip (givens pats) TCl),
      patterns = pats}
  end;
@@ -659,12 +668,12 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val ind2 = simplify [GSYM def1] ind1
      val ind3 = itlist PROVE_HYP (CONJUNCTS TC_choice_thm) ind2
  in
-    {rules = rules,
+    {rules = CONJUNCTS rules,
      ind = ind3,
      SV = SV,
      R = R1,
      theory = theory1, aux_def = def, def = def1,
-     aux_rules = LIST_CONJ disch'dl_1,
+     aux_rules = map UNDISCH_ALL disch'dl_1,
      aux_ind = aux_ind
      }
  end;
@@ -790,14 +799,14 @@ fun mutrec thy bindstem eqns =
               end
         else let val {rules,R,SV,theory,full_pats_TCs,...}
                       = stdrec thy mut_name wfrec_res
-             val f = #1(dest_comb(lhs (concl(Lib.trye CONJUNCT1 rules))))
+             val f = #1(dest_comb(lhs (concl(Lib.trye hd rules))))
              val ind = Induction.mk_induction theory
                          {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
              in {rules=rules, ind=ind, theory=theory, aux=NONE}
              end
       val theory1 = #theory defn
       val mut_rules = #rules defn
-      val mut_constSV = #1(dest_comb(lhs(#1(dest_conj(concl mut_rules)))))
+      val mut_constSV = #1(dest_comb(lhs(concl (hd mut_rules))))
       val (mut_const,params) = strip_comb mut_constSV
       fun define_subfn (n,((fvar,(argtys,rng)),ftupvar)) thy =
          let val inbar  = assoc ftupvar injmap
@@ -828,15 +837,16 @@ fun mutrec thy bindstem eqns =
              val (_,outf) = Lib.first matches Uout_map
          in AP_TERM outf th
          end
-      val mut_rules1 = LIST_CONJ (map apply_outmap (CONJUNCTS mut_rules))
+      val mut_rules1 = map apply_outmap mut_rules
       val simp = Rules.simplify (OUTL::OUTR::map GSYM defns)
       (* finally *)
-      val mut_rules2 = simp mut_rules1
+      val mut_rules2 = map simp mut_rules1
 
       (* induction *)
       val mut_ind0 = simp (#ind defn)
       val pindices = enumerate (map fst div_tys)
-      val vary = Term.variant(Term.all_varsl(concl mut_rules2::hyp mut_rules2))
+      val vary = Term.variant(Term.all_varsl
+                    (concl (hd mut_rules2)::hyp (hd mut_rules2)))
       fun mkP (tyl,i) def =
           let val V0 = snd(strip_comb(lhs(snd(strip_forall(concl def)))))
               val V = drop (#SV wfrec_res) V0
@@ -912,7 +922,7 @@ fun pairf (stem,eqs0) =
                                (variants [f])
                                (map (curry mk_var "x") argtys))
      fun untuple_args (rules,induction) =
-      let val eq1 = concl(CONJUNCT1 rules handle HOL_ERR _ => rules)
+      let val eq1 = concl(hd rules)
           val (lhs,rhs) = dest_eq(snd(strip_forall eq1))
           val (tuplec,args) = strip_comb lhs
           val (SV,p) = front_last args
@@ -923,7 +933,7 @@ fun pairf (stem,eqs0) =
           val def  = new_definition (argMunge stem,
                       mk_eq(list_mk_comb(fvar, def_args),
                             list_mk_comb(tuplecSV, [list_mk_pair defvars])))
-          val rules' = Rewrite.PURE_REWRITE_RULE[GSYM def] rules
+          val rules' = map (Rewrite.PURE_REWRITE_RULE[GSYM def]) rules
           val induction' =
              let val P   = fst(dest_var(fst(dest_forall(concl induction))))
                  val Qty = itlist (curry Type.-->) argtys Type.bool
@@ -952,8 +962,8 @@ fun non_wfrec_defn (facts,bind,eqns) =
        of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
         | SOME tyinfo =>
            let val def = Prim_rec.new_recursive_definition
-                       {name=bind,def=eqns,
-                        rec_axiom=TypeBase.TypeInfo.axiom_of tyinfo}
+                          {name=bind,def=eqns,
+                           rec_axiom=TypeBase.TypeInfo.axiom_of tyinfo}
                val ind = TypeBase.TypeInfo.induction_of tyinfo
            in PRIMREC{eqs=def, ind=ind, bind=bind}
            end
@@ -985,18 +995,18 @@ fun nestrec_defn (fb,(stem,stem'),wfrec_res,untuple) =
 
 fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
  let val {rules,R,SV,full_pats_TCs,...} = stdrec facts stem' wfrec_res
-     val ((f,_),_) = dest_hd_eqn (concl rules)
+     val ((f,_),_) = dest_hd_eqnl rules
      val ind = Induction.mk_induction facts
                  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
  in
- case hyp rules
+ case hyp (LIST_CONJ rules)
  of []     => raise ERR "stdrec_defn" "Empty hypotheses"
   | [WF_R] =>   (* non-recursive defn via complex patterns *)
        (let val (WF,R)    = dest_comb WF_R
             val theta     = [Type.alpha |-> hd(snd(dest_type (type_of R)))]
             val Empty_thm = INST_TYPE theta relationTheory.WF_EMPTY_REL
             val (r1, i1)  = untuple(rules, ind)
-            val r2        = MATCH_MP (DISCH_ALL r1) Empty_thm
+            val r2        = MATCH_MP (DISCH_ALL (LIST_CONJ r1)) Empty_thm
             val i2        = MATCH_MP (DISCH_ALL i1) Empty_thm
         in
            NONREC {eqs=r2, ind=i2, stem=stem}
@@ -1220,7 +1230,7 @@ fun mangle th [] = th
 
 fun TC_TAC defn =
  let infix THEN
-     val E = eqns_of defn
+     val E = LIST_CONJ (eqns_of defn)
      val I = Option.valOf (ind_of defn)
      val th = CONJ E I
      val tac = MATCH_MP_TAC (GEN_ALL (mangle th (hyp th)))
