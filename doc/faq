@@ -27,7 +27,7 @@ Q. HOL is failing to complete the build process.  It stops when trying
      reporting it.  If it doesn't in your case, please get back to us.
 
 
-Q. How do I antiquote types? (2)
+Q. How do I antiquote types? (3)
 
   -- Antiquoting types works as you would expect when parsing types,
      so that it is fine to write:
@@ -44,6 +44,36 @@ Q. How do I antiquote types? (2)
        > val antity = `(ty_antiq(`:bool`))` : Term.term
      Then:
        - val x = Term`x:^antity`;
+
+     It's quite easy to figure out when and why ty_antiq is required
+     if one understands the type of the parsing functions.  For
+     example, Term and (fn q => -- q --) have type
+       term frag list -> term
+     While Type and (fn q => == q ==) have type
+       hol_type frag list -> hol_type
+
+     The frag list refers to the fact that there is a quotation being
+     consumed.  A quotation is something that appears between
+     back-quotes.  A quotation consists of strings and antiquotations.
+     A term frag list must have antiquotations that are of type term.
+     A hol_type frag list must have antiquotations that are of type
+     hol_type.
+
+     So, if you use Term to parse a term, you can't directly antiquote
+     in types, because this would violate the typing rules (you can
+     only antiquote in terms if you call Term, because it requires a
+     term frag list).
+
+     So, in order to accomplish this there is a bit of magic called
+     ty_antiq, which if you look at its type (hol_type -> term) turns
+     a type into a term.  The term formed is completely bogus in a
+     logical sense (you won't be able to mk_comb it with anything for
+     example), but can be pushed into the parsing function Term so as
+     to give the effect of antiquoting a type.
+
+     The function Hol_datatype takes a hol_type frag list, so if you
+     want to antiquote a type into the quotations it takes, you will
+     not need to ty_antiq it.
 
 Q. Are error messages during the build like the following a source for
    concern? (2)
