@@ -46,7 +46,7 @@ val std_tag = Tag.std_tag
     The following are here because I didn't want to Thm to be dependent 
     on Dsyntax, which is slated for extinction. Since we are inside an
     abstract type, we can take some shortcuts with these routines (if 
-    we are careful). The shortcuts will be noted.
+    we are careful).
  ---------------------------------------------------------------------------*)
  
 val F = Susp.delay (fn () => mk_thy_const{Name="F", Thy="bool", Ty=bool});
@@ -895,27 +895,24 @@ fun NOT_ELIM th =
 end;
   
 
-
-
-(*---------------------------------------------------------------------------
- * Classical contradiction rule
- *
- *   A,"~t" |- F
- *   --------------
- *       A |- t
- *
- * fun CCONTR t th =
- *   let val th1 = RIGHT_BETA(AP_THM NOT_DEF t)
- *       and v   = genvar (--`:bool`--)
- *       val th2 = EQT_ELIM (ASSUME (--`^t = T`--))
- *       val th3 = SUBST [(th1,v)] (--`^v ==> F`--) (DISCH (--`~ ^t`--) th)
- *       val th4 = SUBST[(ASSUME(--`^t = F`--),v)] (--`(^v ==> F) ==> F`--) th3
- *       val th5 = MP th4 (EQT_ELIM (CONJUNCT2 IMP_CLAUSE4))
- *       val th6 = EQ_MP (SYM(ASSUME (--`^t = F`--))) th5
- *   in
- *   DISJ_CASES (SPEC t BOOL_CASES_AX) th2 th6
- *   end
- *   handle _ => ERR{function = "CCONTR",message = ""};
+(*---------------------------------------------------------------------------*
+ * Classical contradiction rule                                              *
+ *                                                                           *
+ *   A,"~t" |- F                                                             *
+ *   --------------                                                          *
+ *       A |- t                                                              *
+ *                                                                           *
+ * fun CCONTR t th =                                                         *
+ * let val th1 = RIGHT_BETA(AP_THM NOT_DEF t)                                *
+ *     and v   = genvar (--`:bool`--)                                        *
+ *     val th2 = EQT_ELIM (ASSUME (--`^t = T`--))                            *
+ *     val th3 = SUBST [(th1,v)] (--`^v ==> F`--) (DISCH (--`~ ^t`--) th)    *
+ *     val th4 = SUBST[(ASSUME(--`^t = F`--),v)] (--`(^v ==>F)==>F`--)th3    *
+ *     val th5 = MP th4 (EQT_ELIM (CONJUNCT2 IMP_CLAUSE4))                   *
+ *     val th6 = EQ_MP (SYM(ASSUME (--`^t = F`--))) th5                      *
+ * in                                                                        *
+ * DISJ_CASES (SPEC t BOOL_CASES_AX) th2 th6                                 *
+ * end handle _ => ERR{function = "CCONTR",message = ""}                     *
  *---------------------------------------------------------------------------*)
 
 fun CCONTR w fth =
@@ -925,8 +922,8 @@ fun CCONTR w fth =
      handle HOL_ERR _ => ERR "CCONTR" "");
 
 
-(*---------------------------------------------------------------------------
- * Instantiate free variables in a theorem
+(*---------------------------------------------------------------------------*
+ * Instantiate free variables in a theorem                                   *
  *---------------------------------------------------------------------------*)
 
 local fun var_compare ((Name,Ty), (s,ty)) = 
@@ -950,19 +947,19 @@ fun INST [] th = th
      end
 end;
      
-(*---------------------------------------------------------------------------
- * Now some derived rules optimized for computations, avoiding most 
- * of useless type-checking, using pointer equality and delayed 
- * substitutions. See computeLib for further details.
+(*---------------------------------------------------------------------------*
+ * Now some derived rules optimized for computations, avoiding most          *
+ * of useless type-checking, using pointer equality and delayed              *
+ * substitutions. See computeLib for further details.                        *
  *---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------
- *    A |- t = (\x.m) n
- *  ---------------------
- *     A |- t = m{x\n}
- *
- * Other implementation (less efficient not using explicit subst.):
- *   val Beta = Drule.RIGHT_BETA
+(*---------------------------------------------------------------------------*
+ *    A |- t = (\x.m) n                                                      *
+ *  --------------------- Beta                                               *
+ *     A |- t = m{x\n}                                                       *
+ *                                                                           *
+ * Other implementation (less efficient not using explicit subst.):          *
+ *   val Beta = Drule.RIGHT_BETA                                             *
  *---------------------------------------------------------------------------*)
 
 fun Beta th =
@@ -972,13 +969,13 @@ fun Beta th =
    end
    handle HOL_ERR _ => ERR "Beta" "";
 
-(*---------------------------------------------------------------------------
- *    A |- t = (\x.f x)
- *  --------------------- x not free in f
- *     A |- t = f
- *
- * Other implementation
- *   fun Eta thm = TRANS thm (ETA_CONV (rhs (concl thm)))
+(*---------------------------------------------------------------------------*
+ *    A |- t = (\x.f x)                                                      *
+ *  --------------------- x not free in f                                    *
+ *     A |- t = f                                                            *
+ *                                                                           *
+ * Other implementation                                                      *
+ *   fun Eta thm = TRANS thm (ETA_CONV (rhs (concl thm)))                    *
  *---------------------------------------------------------------------------*)
 
 fun Eta th =
@@ -989,26 +986,26 @@ fun Eta th =
   handle HOL_ERR _ => ERR "Eta" "";
 
 
-(*---------------------------------------------------------------------------
- * This rule behaves like a tactic: given a goal (reducing the rhs of thm),
- * it returns two subgoals (reducing the rhs of th1 and th2), together
- * with a validation (mkthm), that builds the normal form of t from the
- * normal forms of u and v.
- * NB: we do not have to typecheck the rator u, and we replaced the alpha
- * conversion test with pointer equality.
- *
- *                     |- u = u    (th1)        |- v = v    (th2)
- *       (thm)             ...                     ...
- *    A |- t = u v    A' |- u = u' (th1')     A'' |- v = v' (th2')
- *  ----------------------------------------------------------------
- *                A u A' u A'' |- t = u' v'
- *
- * Could be implemented outside Thm as:
- *   fun Mk_comb th =
- *     let val {Rator,Rand} = dest_comb(rhs (concl th))
- *         fun mka th1 th2 = TRANS th (MK_COMB(th1,th2)) in
- *     (REFL Rator, REFL Rand, mka)
- *     end
+(*---------------------------------------------------------------------------*
+ * This rule behaves like a tactic: given a goal (reducing the rhs of thm),  *
+ * it returns two subgoals (reducing the rhs of th1 and th2), together       *
+ * with a validation (mkthm), that builds the normal form of t from the      *
+ * normal forms of u and v.                                                  *
+ * NB: we do not have to typecheck the rator u, and we replaced the alpha    *
+ * conversion test with pointer equality.                                    *
+ *                                                                           *
+ *                     |- u = u    (th1)        |- v = v    (th2)            *
+ *       (thm)             ...                     ...                       *
+ *    A |- t = u v    A' |- u = u' (th1')     A'' |- v = v' (th2')           *
+ *  ----------------------------------------------------------------         *
+ *                A u A' u A'' |- t = u' v'                                  *
+ *                                                                           *
+ * Could be implemented outside Thm as:                                      *
+ *   fun Mk_comb th =                                                        *
+ *     let val {Rator,Rand} = dest_comb(rhs (concl th))                      *
+ *         fun mka th1 th2 = TRANS th (MK_COMB(th1,th2)) in                  *
+ *     (REFL Rator, REFL Rand, mka)                                          *
+ *     end                                                                   *
  *---------------------------------------------------------------------------*)
 
 fun Mk_comb thm =
@@ -1031,18 +1028,18 @@ fun Mk_comb thm =
    end
    handle HOL_ERR _ => ERR "Mk_comb" "";
 
-(*---------------------------------------------------------------------------
- *                      |- u = u    (th1)
- *       (thm)              ...
- *    A |- t = \x.u    A' |- u = u' (th1')
- *  ---------------------------------------- x not in FV(A')
- *            A u A' |- t = \x.u'
- *
- * Could be implemented outside Thm as:
- *   fun Mk_abs th =
- *     let val {Bvar,Body} = dest_abs(rhs (concl th)) in
- *     (Bvar, REFL Body, (fn th1 => TRANS th (ABS Bvar th1)))
- *     end
+(*---------------------------------------------------------------------------*
+ *                      |- u = u    (th1)                                    *
+ *       (thm)              ...                                              *
+ *    A |- t = \x.u    A' |- u = u' (th1')                                   *
+ *  ---------------------------------------- x not in FV(A')                 *
+ *            A u A' |- t = \x.u'                                            *
+ *                                                                           *
+ * Could be implemented outside Thm as:                                      *
+ *   fun Mk_abs th =                                                         *
+ *     let val {Bvar,Body} = dest_abs(rhs (concl th)) in                     *
+ *     (Bvar, REFL Body, (fn th1 => TRANS th (ABS Bvar th1)))                *
+ *     end                                                                   *
  *---------------------------------------------------------------------------*)
 
 fun Mk_abs thm =
@@ -1062,8 +1059,8 @@ fun Mk_abs thm =
    end
    handle HOL_ERR _ => ERR "Mk_abs" "";
 
-(*---------------------------------------------------------------------------
- * Same as SPEC, but without propagating the substitution.  Spec = SPEC.
+(*---------------------------------------------------------------------------*
+ * Same as SPEC, but without propagating the substitution.  Spec = SPEC.     *
  *---------------------------------------------------------------------------*)
 
 fun Spec t th =
@@ -1076,8 +1073,8 @@ fun Spec t th =
    end
    handle HOL_ERR _ => ERR "Spec" "";
 
-(*---------------------------------------------------------------------------
- * Construct a theorem directly and attach the given tag to it.
+(*---------------------------------------------------------------------------*
+ * Construct a theorem directly and attach the given tag to it.              *
  *---------------------------------------------------------------------------*)
 
 fun mk_oracle_thm tg (asl,c) =
@@ -1088,10 +1085,10 @@ fun mk_oracle_thm tg (asl,c) =
 val mk_thm = mk_oracle_thm (Tag.read "MK_THM");
 
 
-(*---------------------------------------------------------------------------
-     The following two are only used in Theory, and are not 
-     externally available. 
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*
+ *    The following two are only used in Theory, and are not                 *
+ *     externally available.                                                 *
+ *---------------------------------------------------------------------------*)
 
 fun mk_axiom_thm (r,c) =
    (Assert (type_of c = bool) "mk_axiom_thm"  "Not a proposition!";

@@ -159,7 +159,7 @@ local fun vars (v as Fv _) A        = Lib.insert v A
 	| vars (t as Clos _) A      = vars (push_clos t) A
         | vars _ A = A
 in
-  fun all_vars tm = vars tm []
+fun all_vars tm = vars tm []
 end;
 
 fun free_varsl tm_list = itlist (union o free_vars) tm_list []

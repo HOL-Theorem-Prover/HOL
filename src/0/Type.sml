@@ -128,20 +128,18 @@ fun thy_types s =
  *         Type variables                                                    *
  *---------------------------------------------------------------------------*)
 
-local val a = Tyv "'a"  val b = Tyv "'b"  val c = Tyv "'c" 
-      val d = Tyv "'d"  val e = Tyv "'e"  val f = Tyv "'f"
-in
-fun mk_vartype "'a" = a  | mk_vartype "'b" = b
-  | mk_vartype "'c" = c  | mk_vartype "'d" = d
-  | mk_vartype "'e" = e  | mk_vartype "'f" = f
+val alpha = Tyv "'a"
+val beta  = Tyv "'b";
+val gamma = Tyv "'c"
+val delta = Tyv "'d"
+val evar  = Tyv "'e"
+val fvar =  Tyv "'f"
+
+fun mk_vartype "'a" = alpha  | mk_vartype "'b" = beta
+  | mk_vartype "'c" = gamma  | mk_vartype "'d" = delta
+  | mk_vartype "'e" = evar   | mk_vartype "'f" = fvar
   | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
                    else raise ERR "mk_vartype" "incorrect syntax"
-end;
-
-val alpha = mk_vartype "'a"
-val beta  = mk_vartype "'b";
-val gamma = mk_vartype "'c"
-val delta = mk_vartype "'d"
 
 fun dest_vartype (Tyv s) = s
   | dest_vartype _ = raise ERR "dest_vartype" "not a type variable";
@@ -239,11 +237,12 @@ end;
 
 fun compare (Tyv s1, Tyv s2) = String.compare (s1,s2)
   | compare (Tyv _, _) = LESS
-  | compare (Tyapp((c1,_),A1), Tyapp((c2,_),A2))
-     = (case KernelTypes.compare (c1, c2)
-         of EQUAL => Lib.list_compare compare (A1,A2)
-          |   x   => x)
-  | compare (Tyapp _, _) = GREATER;
+  | compare (Tyapp _, Tyv _) = GREATER
+  | compare (Tyapp((c1,_),A1), Tyapp((c2,_),A2)) = 
+      case KernelTypes.compare (c1, c2)
+       of EQUAL => Lib.list_compare compare (A1,A2)
+        |   x   => x;
+
 
 
 (*---------------------------------------------------------------------------
