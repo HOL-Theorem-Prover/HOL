@@ -190,7 +190,6 @@ val RESTR_EVAL_RULE = Conv.CONV_RULE o RESTR_EVAL_CONV;
 
 fun write_datatype_info tyinfo =
  let open TypeBasePure Drule
-     val tyname = ty_name_of tyinfo
      val size_opt =
        case size_of0 tyinfo
         of SOME (_, ORIG def) => SOME def
@@ -199,16 +198,9 @@ fun write_datatype_info tyinfo =
        case boolify_of0 tyinfo
         of SOME (_, ORIG def) => SOME def
          | otherwise => NONE
-     val distinct_opt =  (* Needed since the GSYM'ed eqns are not there! *)
-       case distinct_of tyinfo
-        of SOME th => SOME (LIST_CONJ(th::map Conv.GSYM (CONJUNCTS th)))
-         | otherwise => NONE
-
-     val compset_addns =
-           [one_one_of tyinfo, distinct_opt,
-            size_opt, boolify_opt, SOME (lazyfy_thm (case_def_of tyinfo))]
+     val compset_addns = [size_opt, boolify_opt]
  in
-    add_funs (mapfilter Option.valOf compset_addns)
+    add_funs (mapfilter Option.valOf compset_addns @ simpls_of tyinfo)
  end
 
 fun add_persistent_funs [] = ()

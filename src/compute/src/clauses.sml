@@ -30,13 +30,13 @@ fun check_arg_form trm =
           val (free',pat1) = chk Rand [] free in
       chk Rator (pat1::stk) free'
       end
-    else if (is_var t) 
-         then if stk=[] 
-              then let val newi = length free 
+    else if (is_var t)
+         then if stk=[]
+              then let val newi = length free
                    in (free, Pvar (newi - index (equal t) free - 1))
                       handle HOL_ERR _ => (t::free, Pvar newi)
                    end
-              else raise CL_ERR "check_arg_form" 
+              else raise CL_ERR "check_arg_form"
                   (Lib.quote (fst(dest_var t))^
                    " occurs as a variable on lhs")
     else if is_const t then (free, Papp{Head=t, Args=rev stk})
@@ -59,11 +59,11 @@ fun check_arg_form trm =
  *   that arguments of a variable are immediatly strongly reduced.
  *---------------------------------------------------------------------------*)
 
-datatype 'a fterm 
+datatype 'a fterm
     = (* order of Args: outermost ahead *)
-      CST of { Head : term, 
-               Args : (term * 'a fterm) list, 
-               Rws  : 'a, 
+      CST of { Head : term,
+               Args : (term * 'a fterm) list,
+               Rws  : 'a,
                Skip : int option }
     | NEUTR
     | CLOS of { Env : 'a fterm list, Term : 'a dterm }
@@ -81,7 +81,7 @@ datatype 'a fterm
  *   rhs.
  *---------------------------------------------------------------------------*)
 
-and 'a dterm 
+and 'a dterm
     = Bv of int
     | Fv
     | Cst of term * ('a * int option) ref
@@ -96,7 +96,7 @@ fun appl(App(a,l1),arg) = App(a,arg::l1)
 ;
 
 (*---------------------------------------------------------------------------
- * Type variable instantiation in dterm. Make it tail-recursive ? 
+ * Type variable instantiation in dterm. Make it tail-recursive ?
  *---------------------------------------------------------------------------*)
 
 fun inst_type_dterm ([],v) = v
@@ -156,28 +156,28 @@ fun is_skip (_, CST {Skip=SOME n,Args,...}) = (n <= List.length Args)
  * according to the width of their lhs.
  *---------------------------------------------------------------------------*)
 
-datatype comp_rws 
+datatype comp_rws
    = RWS of (string * string, (db * int option) ref) Polyhash.hash_table;
 
 fun empty_rws () = RWS (Polyhash.mkPolyTable(29,CL_ERR "empty_rws" ""));
 
 fun assoc_clause (RWS rws) cst =
-  case Polyhash.peek rws cst 
+  case Polyhash.peek rws cst
    of SOME rl => rl
-    | NONE => let val mt = ref (EndDb, NONE) 
+    | NONE => let val mt = ref (EndDb, NONE)
               in Polyhash.insert rws (cst,mt)
                ; mt
               end
 ;
 
 fun add_in_db_upd rws (name,arity,hcst) act =
-  let val (rl as ref(db,sk)) = assoc_clause rws name 
+  let val (rl as ref(db,sk)) = assoc_clause rws name
   in rl := (add_in_db (arity,hcst,act,db), sk)
   end
 ;
 
 fun set_skip (rws as RWS htbl) p sk =
-  let val (rl as ref(db,_)) = assoc_clause rws p 
+  let val (rl as ref(db,_)) = assoc_clause rws p
   in rl := (db,sk)
   end;
 
@@ -220,17 +220,29 @@ fun mk_rewrite rws eq_thm =
   end
 ;
 
-fun enter_thm rws thm0 =
-  let val thm = eq_intro thm0
-      val rw  = mk_rewrite rws thm handle e 
-                => raise (wrap_exn "clauses" 
-                             ("enter_thm: computeLib cannot use thm\n"
-                              ^Parse.thm_to_string thm0) e)
-  in add_in_db_upd rws (key_of rw) (Rewrite [rw])
-  end;
+fun unsuitable th = let
+  val (l, r) = dest_eq (concl th)
+in
+  can (match_term l) r
+end
+
+fun enter_thm rws thm0 = let
+  val thm = eq_intro thm0
+in
+  if unsuitable thm then ()
+  else let
+      val rw  = mk_rewrite rws thm
+          handle e =>
+                 raise (wrap_exn "clauses"
+                                 ("enter_thm: computeLib cannot use thm\n"
+                                  ^Parse.thm_to_string thm0) e)
+    in
+      add_in_db_upd rws (key_of rw) (Rewrite [rw])
+    end
+end
 
 
-fun add_thms lthm rws = 
+fun add_thms lthm rws =
   List.app (List.app (enter_thm rws) o BODY_CONJUNCTS) lthm;
 
 fun add_extern (cst,arity,fconv) rws =
@@ -239,13 +251,13 @@ fun add_extern (cst,arity,fconv) rws =
   end;
 
 fun new_rws () =
-  let val rws = empty_rws() 
+  let val rws = empty_rws()
   in add_thms [boolTheory.REFL_CLAUSE] rws
    ; rws
   end;
 
 fun from_list lthm =
-  let val rws = new_rws() 
+  let val rws = new_rws()
   in add_thms lthm rws
    ; rws
   end;
