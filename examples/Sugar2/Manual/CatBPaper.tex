@@ -207,13 +207,14 @@ bench uses. As industrial strength languages go it is remarkably
 elegant, consisting of a small kernel conservatively extended by
 numerous definitions.
 
-We have constructed a semantic embedding of \Sugar in the version
-of higher order logic supported by the \Hol system  and are contemplating
-a variety of applications. For example, we want to `sanity check' our embedding
-by subjecting it to `formal challenges', and we hope to exploit existing work
-to build a Sugar model checker inside \Hol. In the longer term
-we want to investigate the use of theorem proving to model check infinite designs,
-which might involve developing extensions of \Sugar.
+We have constructed a semantic embedding of \Sugar in the version of
+higher order logic supported by the \Hol system and are contemplating
+a variety of applications. For example, we want to `sanity check' our
+embedding by subjecting it to `formal challenges', and we hope to
+exploit existing work to build a Sugar model checker inside \Hol. In
+the longer term we want to investigate the use of theorem proving to
+reason about models with infinite state spaces, which might involve
+developing extensions of \Sugar.
 \end{abstract}
 
 
@@ -253,9 +254,9 @@ Four contributions were initially considered
 
 \item IBM's Sugar (the language of its RuleBase FV toolset);
 
-\item Intel's ForSpec (entered jointly by Intel and Synopsys);
+\item Intel's ForSpec;
 
-\item Verisity's {\it e} language (the language of Specman Elite testbench).
+\item Verisity's {\it e} language (the language of the Specman Elite testbench).
 
 \end{itemize}
 
@@ -267,7 +268,7 @@ selected IBM's submission, \Sugar.
 
 
 \Sugar is primarily an LTL-based language that is a successor to 
-the CTL-based {\it Sugar~1\/} \cite{ClarkeBook}. A key idea of both languages is the use
+the CTL-based {\it Sugar~1\/} \cite{sugar}. A key idea of both languages is the use
 of ITL-like \cite{ITL} constructs called {\it Sugar Extended Regular Expressions}.
 \Sugar retains CTL constructs in its {\it Optional Branching Extension} (OBE),
 but this is de-emphasised in the defining document.
@@ -362,7 +363,7 @@ functional definitions. Thus \Sugar has educational potential for
 training \Hol users. In fact, the semantics described in this paper
 will be an example distributed with the next release of \Hol.
 
-\section{Review of semantic embedding in higher order logic}
+\section{Review of semantic embedding in higher order logic}\label{review}
 
 Higher order logic is an extension of first-order predicate calculus
 that allows quantification over functions and relations. It is a
@@ -392,7 +393,9 @@ $(\t{S}_{\t{M}},{\t{S}_0}_{\t{M}},\t{R}_{\t{M}},\t{P}_{\t{M}},\t{L}_{\t{M}})$, w
 is a set of states, ${\t{S}_0}_{\t{M}}$ is the subset of initial states, $\t{R}_{\t{M}}$ is a
 transition relation (so $\t{R}_{\t{M}}(s,s')$ means $s'$ is a possible
 successor state to $s$), $\t{P}_{\t{M}}$ is a set of atomic propositions, and
-$\L_{\t{M}}$ is a valuation that (so $\L~s~\t{p}$ is true iff atomic proposition
+$\L_{\t{M}}$ is a valuation that maps a state to the
+set of atomic propositions that hold at the state
+(so $\L~s~\t{p}$ is true iff atomic proposition
 \t{p} is true in state $s$).
 
 The syntax of boolean expressions \t{b}
@@ -421,7 +424,7 @@ Let \t{l} range over predicates on $\t{P}_{\t{M}}$, called ``truth assignments''
 documentation.
 The semantics of boolean expressions
 is given by defining a semantic function \Bsem such that
-$\Bsem~\t{M}~\t{l}~\t{b}$ if true iff \t{b} is build from propositions in $\t{P}_{\t{M}}$ and
+$\Bsem~\t{M}~\t{l}~\t{b}$ if true iff \t{b} is built from propositions in $\t{P}_{\t{M}}$ and
 it is true with respect to the truth assignment \t{l}.
 
 If we write $\bSem{M}{l}{b}$ for $\Bsem~\t{M}~\t{l}~\t{b}$
@@ -528,7 +531,10 @@ holds for every \texttt{w} in \texttt{wlist}.
      {\Exists}wlist. (w = \CONCAT{wlist}) {\And} \EVERY{({\Lam}w. {\SSem{M}{w}{\c}{r}})}{wlist})
 \end{alltt}}
 
+\vspace*{-6mm}
+
 \subsection{LTL: Sugar Foundation Language (FL)}
+
 
 
 \Sugar has a kernel combining standard LTL notation
@@ -541,7 +547,7 @@ additional notations are introduced by definitions (which are
 conservative extensions of the language, and can be formalised as
 definitions in \Hol).
 
-\medskip
+\smallskip
 
 $\begin{array}{llll}
 {\t{f}} & {\rm ::=} & \t{p}
@@ -552,12 +558,14 @@ $\begin{array}{llll}
   & \mbox{\rm(Conjunction)}\\
  & \phantom{\rm ::}\mid & \texttt{X!}{\t{f}}
   & \mbox{\rm(Successor)}\\
- & \phantom{\rm ::}\mid & [{\t{f}}_1~\texttt{U}~{\t{f}}_2]\texttt{!}~~~~
+ & \phantom{\rm ::}\mid & [{\t{f}}_1~\texttt{U}~{\t{f}}_2]~~~~
   & \mbox{\rm(Until)}\\
  & \phantom{\rm ::}\mid & \{{\t{r}}\}({\t{f}})~~~~
   & \mbox{\rm(Suffix implication)}\\
  & \phantom{\rm ::}\mid & \{{\t{r}}_1\}~\texttt{|->}~\{{\t{r}}_2\}\texttt{!}~~~~
-  & \mbox{\rm(Strong suffix next implication)}\\
+  & \mbox{\rm(Strong suffix implication)}\\
+ & \phantom{\rm ::}\mid & \{{\t{r}}_1\}~\texttt{|->}~\{{\t{r}}_2\}~~~~
+  & \mbox{\rm(Weak suffix implication)}\\
  & \phantom{\rm ::}\mid & \t{f}~\texttt{abort}~{\t{b}}~~~~
   & \mbox{\rm(Abort)}\\
 \end{array}$
@@ -592,31 +600,32 @@ $\t{L}_{\t{M}}$ to finite sequences of states
 
 {\begin{alltt}
     ({\FSem{M}{{\pi}}{{\c}}{\FBool{b}}} = 
-      {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{0})}{b}}
+     {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{0})}{b}}
     {\And}
-    ({\FSem{M}{{\pi}}{{\c}}{\fNot{f}}} = 
-      {\Not}({\FSem{M}{{\pi}}{\c}{f}})) 
+    ({\FSem{M}{{\pi}}{{\c}}{\fNot{f}}} =
+     {\Not}({\FSem{M}{{\pi}}{\c}{f}})) 
     {\And}
-    ({\FSem{M}{{\pi}}{{\c}}{\fAnd{f1}{f2}}} = 
-      {\FSem{M}{\pi}{{\c}}{f1}} {\And} {\FSem{M}{\pi}{{\c}}{f2}})
+    ({\FSem{M}{{\pi}}{{\c}}{\fAnd{f1}{f2}}} =
+     {\FSem{M}{\pi}{{\c}}{f1}} {\And} {\FSem{M}{\pi}{{\c}}{f2}})
     {\And}
-    ({\FSem{M}{{\pi}}{{\c}}{\fNext{f}}} = 
-      {\FSem{M}{\restN{{\pi}}{1}}{{\c}}{f)}}
+    ({\FSem{M}{{\pi}}{{\c}}{\fNext{f}}} =
+     {\FSem{M}{\restN{{\pi}}{1}}{{\c}}{f)}}
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fUntil{f1}{f2}}} = 
-      {\Exists}k. {\FSem{M}{\restN{{\pi}}{k}}{\c}{f2}} 
-           {\And}
-           {\Forall}j. j \Le k \Imp {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f1}})
+      {\Exists}k. {\FSem{M}{\restN{{\pi}}{k}}{\c}{f2}} {\And} {\Forall}j. j \Le k \Imp {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f1}})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fSuffixImp{r}{f}}} = 
-      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r}
-           {\Imp}
-           {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f}})
+      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r} {\Imp} {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fStrongImp{r1}{r2}}} = 
-      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1}
-           {\Imp}
-           {\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
+      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} {\Imp} {\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\c}}{\fWeakImp{r1}{r2}}} = 
+     {\FSem{M}{{\pi}}{{\c}}{\fStrongImp{r1}{r2}}}
+      \Or
+      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} 
+          \And 
+          {\Forall}k. k \Ge j {\Imp} {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))w}{\c}{r2})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fAbort{f}{b}}} =
       ({\FSem{M}{\pi}{{\c}}{f }}
@@ -691,7 +700,9 @@ Write $\oSem{M}{s}{f}$ for \texttt{\Osem~M~s~f}, and then the semantics of the O
 
 The semantics that follows is derived from of a deep semantic embedding of
 {\it Sugar 2.0} in higher order logic (HOL-4 version).
-The official  \Sugar semantics can be found in the Accellera submission document
+The official  \Sugar semantics 
+can be found in the Accellera submission document \cite{Accellera}
+
 
 \medskip
 
@@ -717,7 +728,7 @@ The HOL definitions can be seen in
 
 \medskip
 
-~~{\url{http://www.cl.cam.ac.uk/~mjcg/Sugar}}
+~~{\url{http://www.cl.cam.ac.uk/{\homedir}mjcg/Sugar}}
 
 \medskip
 
@@ -798,8 +809,8 @@ one of the formal challenges to which we hope to submit the semantics.
 
 \subsection{Finite paths}\label{finite}
 
-\Sugar two gives a semantics to formulas for both finite and infinite
-paths.  To represent this we model a path as being either a finite
+\Sugar gives a semantics to formulas for both finite and infinite
+paths.  To represent this, we model a path as being either a finite
 list of states or a function from natural numbers to states and define a
 predicate \t{finite} to test if a path is a finite list. The function
 \t{length} gives the length of a finite path (it is not defined on
@@ -807,30 +818,28 @@ paths for which \t{finite} is not true).
 
 \noindent We interpret the official semantics locution 
 
-``for every $j < \t{length}(\pi)$:$~\cdots~j~\cdots$''
+~~``for every $j < \t{length}(\pi)$:$~\cdots~j~\cdots$''
 
 \noindent as meaning 
 
-``for every $j$: (\t{finite}~$\pi$ implies $j < \t{length}(\pi)$) implies $~\cdots~j~\cdots$''
+~~``for every $j$: (\t{finite}~$\pi$ implies $j < \t{length}(\pi)$) implies $~\cdots~j~\cdots$''
 
 \noindent and we interpret the official semantics locution 
 
-``there exists $j < \t{length}(\pi)$ s.t.$~\cdots~j~\cdots$''
+~~``there exists $j < \t{length}(\pi)$ s.t.$~\cdots~j~\cdots$''
 
 \noindent as meaning 
 
-``there exists $j$ s.t. (\t{finite}~$\pi$ implies $j < \t{length}(\pi)$) and $~\cdots~j~\cdots$''
+~~``there exists $j$ s.t. (\t{finite}~$\pi$ implies $j < \t{length}(\pi)$) and $~\cdots~j~\cdots$''
 
+%\medskip
 
-The following four sub-sections  consist of manually
-typeset versions of the HOL definitions of the semantic functions. The
-typesetting was done as algorithmically as I could by editing the HOL
-sources (using emacs and latex macros etc.). I hope to have avoided
-transcription errors, but this cannot be guaranteed!
+The following four sub-sections are the manually typeset HOL semantics of \Sugar.
 
 \subsection{Boolean expressions}
 
-%The semantics below is identical to that given earlier.
+The semantics below is identical to that given earlier
+in Section~\ref{review}.
 
 {\begin{alltt}
    ({\BSem{M}{l}{\bProp{p}}}     = \(p\) {\In} P\(\sb{M}\) {\And} \(p\) {\In} l)
@@ -1128,8 +1137,9 @@ collapses to that in Section~\ref{SimpleSERE} when the clock is \T.
 
 \section{Acknowledgements}
 
-Cindy Eisner has patiently answered several email questions
-in great detail.
+Cindy Eisner patiently answered several email questions
+in great detail. She also supplied valuable comments and corrections
+to an earlier version of this paper.
 
 \bibliographystyle{plain}{\bibliography{CatBPaper}}
 
