@@ -5,7 +5,7 @@ fun print s = BasicIO.print;
 fun printb s = print (s ^ " ");
 %}
 
-%token ID EQUALS NULL OPEN QUAL_ID STAR 
+%token ID EQUALS NULL OPEN QUAL_ID STAR INCLUDE
 %token <string> ID QUAL_ID
 %token EOF
 %start MLtext
@@ -19,9 +19,10 @@ MLtext :
 ;
 
 MLfrag :
-    NULL		{ [] }    
+    NULL		{ [] }
   | LongIdent		{ $1 }
   | OPEN UnitName_seq  	{ $2 }
+  | INCLUDE UnitName_seq{ $2 }
 ;
 
 MLseq :

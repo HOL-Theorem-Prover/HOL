@@ -28,6 +28,7 @@ val () =
      ("handle",     NULL),
      ("if",         NULL),
      ("in",         NULL),
+     ("include",    INCLUDE),
      ("infix",      NULL),
      ("infixr",     NULL),
      ("let",        NULL),
