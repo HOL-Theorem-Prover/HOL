@@ -6,7 +6,7 @@
 # Pathnames: Helpd = hol help directory, MAKEINDEX = makeindex program
 # ---------------------------------------------------------------------
 Helpd=../../help
-MAKEINDEX=../LaTeX/makeindex  ../../ 
+MAKEINDEX=makeindex
 D2TSED=bin/doc-to-tex.sed
 
 HOLdir=../../
@@ -18,7 +18,7 @@ default:
 	@echo "   Type \"make thmdoc\" to make doc files for theorems"
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind *.toc
 	@echo "\begin{theindex}" > index.tex
 	@echo "\mbox{}" >> index.tex
 	@echo "\end{theindex}" >> index.tex
@@ -61,26 +61,26 @@ theorems:
 	@echo "\section{Theorems used to define types}" >> theorems.tex
 	/bin/sh bin/doc-to-tex ${D2TSED} ${Helpd}/THEOREMS/tydefs theorems.tex
 
-reference: 
+reference:
 	latex reference.tex
 
-index: 
-	${MAKEINDEX}  reference.idx  index.tex 
+index:
+	${MAKEINDEX}  reference.idx
 
-all: 
+all:
 	make clean; make tex; make reference; make index; make reference
 
-thmdoc:	
+thmdoc:
 	(cd $(THMDIR)axioms;    make thmdoc) ;
-	(cd $(THMDIR)functions; $(MAKEDOC) fun) ; 
-	(cd $(THMDIR)one;       $(MAKEDOC) one) ; 
-	(cd $(THMDIR)combin;    $(MAKEDOC) combin) ; 
-	(cd $(THMDIR)sum;       $(MAKEDOC) sum) ; 
-	(cd $(THMDIR)arith;     $(MAKEDOC) num) ; 
-	(cd $(THMDIR)arith;     $(MAKEDOC) prim_rec) ; 
-	(cd $(THMDIR)arith;     $(MAKEDOC) arithmetic) ; 
-	(cd $(THMDIR)list;      $(MAKEDOC) list) ; 
-	(cd $(THMDIR)tree;      $(MAKEDOC) tree) ; 
-	(cd $(THMDIR)tree;      $(MAKEDOC) ltree) ; 
-	(cd $(THMDIR)tydefs;    $(MAKEDOC) tydefs) ; 
+	(cd $(THMDIR)functions; $(MAKEDOC) fun) ;
+	(cd $(THMDIR)one;       $(MAKEDOC) one) ;
+	(cd $(THMDIR)combin;    $(MAKEDOC) combin) ;
+	(cd $(THMDIR)sum;       $(MAKEDOC) sum) ;
+	(cd $(THMDIR)arith;     $(MAKEDOC) num) ;
+	(cd $(THMDIR)arith;     $(MAKEDOC) prim_rec) ;
+	(cd $(THMDIR)arith;     $(MAKEDOC) arithmetic) ;
+	(cd $(THMDIR)list;      $(MAKEDOC) list) ;
+	(cd $(THMDIR)tree;      $(MAKEDOC) tree) ;
+	(cd $(THMDIR)tree;      $(MAKEDOC) ltree) ;
+	(cd $(THMDIR)tydefs;    $(MAKEDOC) tydefs) ;
 	@echo "===> .doc files for theorems created"
