@@ -388,7 +388,6 @@ that the buffer has already had HOL terms, comments and strings removed."
 
 (defun send-string-to-hol (string &optional echoit)
   "Send a string to HOL process."
-  (interactive "sString to send to HOL process: \nP")
   (let ((buf (ensure-hol-buffer-ok))
         (tmpbuf (generate-new-buffer "*HOL temporary*"))
         (old-mark-active mark-active))
@@ -431,6 +430,13 @@ that the buffer has already had HOL terms, comments and strings removed."
     ;; in the temporary buffer.  We fix this here, thereby keeping the mark
     ;; active, if it is active.
     (if deactivate-mark (setq deactivate-mark nil))))
+
+(defun interactive-send-string-to-hol (string &optional echoit)
+   "Send a string to HOL process."
+   (interactive "sString to send to HOL process: \nP")
+   (if hol-emit-time-elapsed-p
+       (send-timed-string-to-hol string echoit)
+     (send-string-to-hol string echoit)))
 
 (defun send-raw-string-to-hol (string &optional echoit)
   "Sends a string in the raw to HOL.  Not for interactive use."
@@ -689,5 +695,5 @@ already loaded.)"
 (define-key hol-map "r"    'hol-rotate)
 (define-key hol-map "R"    'hol-restart-goal)
 (define-key hol-map "t"    'mark-hol-tactic)
-(define-key hol-map "s"    'send-string-to-hol)
+(define-key hol-map "s"    'interactive-send-string-to-hol)
 (define-key hol-map "u"    'hol-use-file)
