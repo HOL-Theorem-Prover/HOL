@@ -39,14 +39,18 @@ type grammar = {rules : (int option * grammar_rule) list,
                 specials : {type_intro : string,
                             lambda : string,
                             endbinding : string,
-                            restr_binders : (binder * string) list}}
+                            restr_binders : (binder * string) list},
+                numeral_info : (char * string option) list}
 
 fun specials (G: grammar) = #specials G
+fun numeral_info (G: grammar) = #numeral_info G
 
-fun fupdate_rules f {rules, specials} =
-  {rules = f rules, specials = specials}
-fun fupdate_specials f {rules, specials} =
-  {rules = rules, specials = f specials}
+fun fupdate_rules f {rules, specials, numeral_info} =
+  {rules = f rules, specials = specials, numeral_info = numeral_info}
+fun fupdate_specials f {rules, specials, numeral_info} =
+  {rules = rules, specials = f specials, numeral_info = numeral_info}
+fun fupdate_numinfo f {rules, specials, numeral_info} =
+  {rules = rules, specials = specials, numeral_info = f numeral_info}
 
 fun update_restr_binders rb {lambda, endbinding, type_intro, restr_binders} =
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
@@ -163,7 +167,8 @@ val stdhol : grammar =
                               elements = [TOK "(", TM, TOK ")"],
                               preferred = false}])],
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
-               restr_binders = []}}
+               restr_binders = []},
+   numeral_info = []}
 
 fun grammar_tokens G = let
   open stmonad
@@ -315,14 +320,14 @@ fun resolve_same_precs [] = []
     end
 
 infix Gmerge
-(* only merges rules, keeps specials as in g1 *)
+(* only merges rules, keeps rest as in g1 *)
 fun ((g1:grammar) Gmerge (g2:(int option * grammar_rule) list)) = let
   val g0_rules =
     Listsort.sort (fn (e1,e2) => aug_compare(#1 e1, #1 e2))
     (#rules g1 @ g2)
   val g_rules =  resolve_same_precs g0_rules
 in
-  {rules = g_rules, specials = #specials g1}
+  fupdate_rules (fn _ => g_rules) g1
 end
 
 fun null_rule r =
@@ -335,7 +340,7 @@ fun null_rule r =
   | CLOSEFIX slist => null slist
   | _ => false
 
-fun map_rules f {rules, specials} = let
+fun map_rules f G = let
   fun recurse r =
     case r of
       [] => []
@@ -346,7 +351,7 @@ fun map_rules f {rules, specials} = let
         if null_rule newrule then rest else (prec, newrule)::rest
       end
 in
-  {rules = recurse rules, specials = specials}
+  fupdate_rules recurse G
 end
 
 fun remove_form s rule = let
@@ -484,3 +489,30 @@ in
   find_partial check_rule rules
 end
 
+fun update_assoc (k,v) alist = let
+    val (_, newlist) = Lib.pluck (fn (k', _) => k' = k) alist
+  in
+    (k,v)::newlist
+  end handle _ => (k,v)::alist
+
+
+fun check c =
+  if Char.isAlpha c then Char.toLower c
+  else raise GrammarError "Numeric type suffixes must be letters"
+
+fun add_numeral_form G (c, stropt) =
+  fupdate_numinfo (update_assoc (check c, stropt)) G
+
+fun give_num_priority G c = let
+  val realc = check c
+  fun update_fn alist = let
+    val (oldval, rest) = Lib.pluck (fn (k,_) => k = realc) alist
+  in
+    oldval::rest
+  end handle _ => raise GrammarError "No such numeral type in grammar"
+in
+  fupdate_numinfo update_fn G
+end
+
+fun remove_numeral_form G c =
+  fupdate_numinfo (List.filter (fn (k,v) => k <> (check c))) G

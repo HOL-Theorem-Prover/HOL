@@ -203,6 +203,7 @@ fun rule_to_rr rule =
 
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,endbinding,type_intro} = specials G
+  val num_info = numeral_info G
   val resquan_op = case (resquans G) of [] => NONE | (x::_) => SOME x
   val rule_table = Polyhash.mkPolyTable(50, Fail "")
   fun insert (grule, n) = let
@@ -347,6 +348,17 @@ fun pp_term (G : grammar) TyG = let
       pend addparens; end_block()
     end
 
+    fun atom_name tm = #Name (dest_var tm) handle _ => #Name (dest_const tm)
+    fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
+    fun pr_numeral stropt tm =
+      if #2 (hd num_info) = stropt then
+        add_string (arbnum.toString (Term.dest_numeral tm))
+      else let
+        val (k, _) = valOf (List.find (fn (_, s') => s' = stropt) num_info)
+      in
+        add_string (arbnum.toString (Term.dest_numeral tm) ^ str k)
+      end
+
     fun pr_comb tm t1 t2 = let
       val add_l =
         case lgrav of
@@ -358,11 +370,14 @@ fun pp_term (G : grammar) TyG = let
         | _ => false
       val addparens = add_l orelse add_r
       val _ =
-        if is_numeral tm then
-          (add_string (arbnum.toString (Term.dest_numeral tm));
-           raise SimpleExit)
+        if is_numeral tm andalso can_pr_numeral NONE then
+          (pr_numeral NONE tm; raise SimpleExit)
         else
           ()
+      val _ =
+        (if is_numeral t2 andalso can_pr_numeral (SOME (atom_name t1)) then
+           (pr_numeral (SOME (atom_name t1)) t2; raise SimpleExit)
+         else ()) handle SimpleExit => raise SimpleExit | _ => ()
       val _ =
         if my_is_abs tm then (pr_abs tm; raise SimpleExit)
         else ()
@@ -671,7 +686,7 @@ fun pp_term (G : grammar) TyG = let
           end
         in
           if isSome crules then pr_sole_name cname (map #2 (valOf crules))
-          else if cname = "ZERO" then add_string "0"
+          else if cname = "ZERO" then pr_numeral NONE tm
                else
                  if Lexis.is_string_literal cname then
                    print_string_literal cname

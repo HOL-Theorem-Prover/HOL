@@ -3,6 +3,7 @@ local
 in
   val antiq : ('a, 'a frag) Parser
   val item : char -> (char, 'a frag) Parser
+  val itemP : (char -> bool) -> (char, 'a frag) Parser
   val many_charP : (char -> bool) -> (string, 'a frag) Parser
   val many1_charP : (char -> bool) -> (string, 'a frag) Parser
   val string : string -> (string, 'a frag) Parser

@@ -462,6 +462,47 @@ in
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
+  fun temp_add_numeral_form x = let
+  in
+    the_term_grammar := term_grammar.add_numeral_form (term_grammar()) x;
+    term_grammar_changed := true
+  end
+  fun add_numeral_form (c, stropt) = let
+    val cmdstring =
+      "val _ = Parse.temp_add_numeral_form (#\""^str c^"\", "^
+      (case stropt of NONE => "NONE" | SOME s => "SOME "^quote s)^");"
+  in
+    temp_add_numeral_form (c, stropt);
+    adjoin_to_theory (toThyaddon cmdstring)
+  end
+
+  fun temp_give_num_priority c = let
+  in
+    the_term_grammar := term_grammar.give_num_priority (term_grammar()) c;
+    term_grammar_changed := true
+  end
+  fun give_num_priority c = let
+    val cmdstring =
+      "val _ = Parse.temp_give_num_priority #\""^str c^"\";"
+  in
+    temp_give_num_priority c;
+    adjoin_to_theory (toThyaddon cmdstring)
+  end
+
+  fun temp_remove_numeral_form c = let
+  in
+    the_term_grammar := term_grammar.remove_numeral_form (term_grammar()) c;
+    term_grammar_changed := true
+  end
+  fun remove_numeral_form c = let
+    val cmdstring =
+      "val _ = Parse.temp_remove_numeral_form #\""^str c^"\";"
+  in
+    temp_remove_numeral_form c;
+    adjoin_to_theory (toThyaddon cmdstring)
+  end
+
+
   fun temp_associate_restriction (bs, s) = let
     val lambda = #lambda (specials (term_grammar()))
     val b = if lambda = bs then LAMBDA else BinderString bs

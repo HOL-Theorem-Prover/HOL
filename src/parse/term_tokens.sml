@@ -1,6 +1,7 @@
 (* add comments ; comments should skip over antiquotations *)
 datatype 'a term_token =
-  Ident of string | Symbol of string | Antiquote of 'a
+  Ident of string | Symbol of string | Antiquote of 'a |
+  Numeral of (string * char option)
 
 open optmonad monadic_parse
 open fragstr
@@ -155,6 +156,9 @@ fun lex keywords0 = let
 in
   (token antiq >- return o Antiquote) ++
   (token quoted_string >- return o Ident) ++
+  (token (many1_charP Char.isDigit >-       (fn dp =>
+          optional (itemP Char.isAlpha) >-  (fn csuffix =>
+          return (Numeral(dp, Option.map Char.toLower csuffix)))))) ++
   (token ((optional (item #"$")) >- return o isSome >-   (fn b =>
           many1_charP (HOLsym OR HOLid) >- doit b)))
 end

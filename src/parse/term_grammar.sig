@@ -42,6 +42,7 @@ val specials : grammar -> {type_intro : string,
                            lambda     : string,
                            endbinding : string,
                            restr_binders : (binder * string) list}
+val numeral_info : grammar -> (char * string option) list
 
 val binders : grammar -> string list
 val is_binder : grammar -> string -> bool
@@ -65,9 +66,21 @@ val grammar_tokens : grammar -> string list
 val find_suffix_rhses : grammar -> stack_terminal list
 val find_prefix_lhses : grammar -> stack_terminal list
 
+val add_binder : grammar -> (string * int) -> grammar
 val add_listform : grammar -> {separator : string, leftdelim : string,
                                rightdelim : string, cons : string,
                                nilstr : string} -> grammar
+datatype rule_fixity =
+  Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
+
+val rule_fixityToString : rule_fixity -> string
+val add_rule : grammar -> (string * rule_fixity * rule_element list) -> grammar
+val add_grule : grammar -> (int option * grammar_rule) -> grammar
+
+val add_numeral_form : grammar -> (char * string option) -> grammar
+val give_num_priority : grammar -> char -> grammar
+val remove_numeral_form : grammar -> char -> grammar
+
 (* this removes all those rules which give special status to the
    given string.  If there is a rule saying that COND is written
       if _ then _ else _
@@ -75,20 +88,21 @@ val add_listform : grammar -> {separator : string, leftdelim : string,
       remove_standard_form G "COND"
 *)
 val remove_standard_form : grammar -> string -> grammar
+
+(* this one removes those rules relating to the term which also include
+   a token of the form given.  Thus, if you had two rules for COND, and you
+   wanted to get rid of the one with the "if" token in it, you would
+   use
+     remove_form_with_tok G {term_name = "COND", tok = "if"}
+*)
 val remove_form_with_tok :
   grammar -> {term_name : string, tok: string} -> grammar
 
+(* for pretty-printing *)
 val clear_prefs_for : string -> grammar -> grammar
 val prefer_form_with_tok :
   grammar -> {term_name : string, tok : string} -> grammar
 
-val add_binder : grammar -> (string * int) -> grammar
-
-datatype rule_fixity =
-  Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
-val rule_fixityToString : rule_fixity -> string
-val add_rule : grammar -> (string * rule_fixity * rule_element list) -> grammar
-val add_grule : grammar -> (int option * grammar_rule) -> grammar
 
 val set_associativity_at_level : grammar -> (int * associativity) -> grammar
 val get_precedence : grammar -> string -> rule_fixity option

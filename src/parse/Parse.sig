@@ -80,6 +80,9 @@ in
     val add_listform : {separator : string, leftdelim : string,
                         rightdelim : string, cons : string,
                         nilstr : string} -> unit
+    val add_numeral_form : (char * string option) -> unit
+    val give_num_priority : char -> unit
+    val remove_numeral_form : char -> unit
     val associate_restriction : (string * string) -> unit
     val add_resquan_operator : (string * int) -> unit
     val prefer_form_with_tok : {term_name : string, tok : string} -> unit
@@ -97,6 +100,9 @@ in
     val temp_add_listform : {separator : string, leftdelim : string,
                              rightdelim : string, cons : string,
                              nilstr : string} -> unit
+    val temp_add_numeral_form : (char * string option) -> unit
+    val temp_give_num_priority : char -> unit
+    val temp_remove_numeral_form : char -> unit
     val temp_associate_restriction : (string * string) -> unit
     val temp_add_resquan_operator : (string * int) -> unit
     val temp_prefer_form_with_tok : {term_name : string, tok : string} -> unit

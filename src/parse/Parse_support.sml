@@ -129,22 +129,6 @@ fun make_bvar (s,E) = (Preterm.Var{Name = s, Ty = lookup_bvar(s,E)},E);
 
 
 (*---------------------------------------------------------------------------
- * Constants not in the symbol table: numeric and string literals.
- *---------------------------------------------------------------------------*)
-
-fun int2numeral tyvars nstr =
-  Term.prim_mk_numeral {mkCOMB = Preterm.Comb,
-                        mkNUM_CONST = gen_const tyvars,
-                        mkNUM2_CONST = gen_const tyvars}
-  (arbnum.fromString nstr)
-
-fun make_num_literal tyvars (s,E) =
-  if Globals.nums_defined()
-  then (int2numeral tyvars s, E)
-  else raise PARSE_SUPPORT_ERR "make_num_literal"
-    "numbers not yet defined - load \"arithmeticTheory\""
-
-(*---------------------------------------------------------------------------
  * Makes the assumption that s is already quoted (except for emptystring).
  *---------------------------------------------------------------------------*)
 fun make_string s E =
@@ -187,14 +171,11 @@ fun make_atom tyvars s E =
    => if (hidden s)
       then make_free_var tyvars (s,E)
       else (gen_const tyvars s, E)
-           handle HOL_ERR _
-             => if (Lexis.is_num_literal s)
-                then make_num_literal tyvars (s,E)
-                else
-                  if (Lexis.is_string_literal s) then
-                    raise PARSE_SUPPORT_ERR "make_atom"
-                      "strings not lexically OK until stringTheory loaded"
-                  else make_free_var tyvars (s,E);
+           handle HOL_ERR _ =>
+             if (Lexis.is_string_literal s) then
+               raise PARSE_SUPPORT_ERR "make_atom"
+                 "strings not lexically OK until stringTheory loaded"
+             else make_free_var tyvars (s,E);
 
 
 (*---------------------------------------------------------------------------

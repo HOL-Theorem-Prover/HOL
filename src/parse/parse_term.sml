@@ -476,6 +476,7 @@ fun findpos P [] = NONE
 fun parse_term (G : grammar) typeparser = let
   val Grules = grammar_rules G
   val {type_intro, lambda, endbinding, restr_binders} = specials G
+  val num_info = numeral_info G
   val resquans = term_grammar.resquans G
   val closed_lefts = find_prefix_lhses G
   val ty_annote_prec = let
@@ -504,6 +505,7 @@ fun parse_term (G : grammar) typeparser = let
             else if s = endbinding then EndBinding
                  else (STD_HOL_TOK s)
         | Antiquote a => Id
+        | Numeral _ => Id
       end
     | SOME (PreType ty) => TypeTok
 
@@ -668,13 +670,49 @@ fun parse_term (G : grammar) typeparser = let
            push (NonTerminal (AQ a), tt))
       end
     | ((Terminal Id, Token tt)::_) => let
+        exception Temp
       in
         pop >> invstructp >-
-        (fn inv =>
-         if inv then
-           push (NonTermVS [SIMPLE (token_string tt)], Token tt)
-         else
-           push (NonTerminal (VAR (token_string tt)), Token tt))
+        (fn inv => let
+          val thing_to_push =
+            case (inv, tt) of
+              (true, Numeral _) => let
+              in
+                print "Can't have numerals in binding positions\n";
+                raise Temp
+              end
+            | (false, Numeral(dp, copt)) => let
+                val numeral_part =
+                  Term.prim_mk_numeral
+                  {mkCOMB = (fn {Rator, Rand} => COMB(Rator, Rand)),
+                   mkNUM_CONST = VAR,
+                   mkNUM2_CONST = VAR} (arbnum.fromString dp)
+                fun inject_np NONE = numeral_part
+                  | inject_np (SOME s) = COMB(VAR s, numeral_part)
+              in
+                case copt of
+                  SOME c => let
+                    val injector = List.find (fn (k,v) => k = c) num_info
+                  in
+                    case injector of
+                      NONE => let
+                      in
+                        print ("Invalid suffix "^str c^" for numeral\n");
+                        raise Temp
+                      end
+                    | SOME (_, strop) => NonTerminal (inject_np strop)
+                  end
+                | NONE =>
+                  if null num_info then
+                    (print "No numerals currently allowed.\n"; raise Temp)
+                  else
+                    NonTerminal (inject_np (#2 (hd num_info)))
+              end
+            | (true, _) => NonTermVS [SIMPLE (token_string tt)]
+            | (false, _) => NonTerminal (VAR (token_string tt))
+        in
+           push (thing_to_push, Token tt)
+        end handle Temp => fail)
       end
     | ((Terminal TypeTok, PreType ty)::(Terminal TypeColon, _)::
        (NonTerminal t, _)::rest) => let
