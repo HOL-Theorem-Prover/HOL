@@ -140,8 +140,6 @@ end
 
 fun token Prser = many (grab_whitespace ++ comment) >> Prser
 
-fun parse P =
-  P >-> (many (grab_whitespace ++ comment) >> eof)
 
 fun symbol s = token (string s)
 
@@ -153,3 +151,7 @@ fun eof cs =
         ([], SOME ())
       else
         (x, NONE)
+
+fun parse P =
+  P >-> (many (grab_whitespace ++ comment) >> eof)
+

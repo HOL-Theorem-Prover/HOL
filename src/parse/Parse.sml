@@ -82,7 +82,8 @@ in
     | ftoString (ANTIQUOTE x :: rest) = "..." ^ ftoString rest
 
   fun parse_Type parser q = let
-    open optmonad monadic_parse fragstr
+    open optmonad monadic_parse
+    open fragstr
     infix >> >->
     val (rest, parse_result) = (parse (token (item #":") >> parser)) q
   in
