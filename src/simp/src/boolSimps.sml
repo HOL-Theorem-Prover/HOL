@@ -172,7 +172,7 @@ val bool_ss =
 
 
 val NESTED_COND = prove(
-  Term`!p q r s.
+  Term`!p (q:'a) (r:'a) s.
           (COND p (COND p q r) s = COND p q s) /\
           (COND p q (COND p r s) = COND p q s) /\
           (COND p (COND (~p) q r) s = COND p r s) /\
@@ -228,7 +228,8 @@ val COND_elim_ss =
                              trace = 2},
                             {conv = K (K COND_ABS_CONV),
                              name = "conditional lifting under abstractions",
-                             key = SOME([], Term`\x:'a. COND p (q x) (r x)`),
+                             key = SOME([],
+                                        Term`\x:'a. COND p (q x:'b) (r x)`),
                              trace = 2}],
                    dprocs = [], filter = NONE,
                    rewrs = [boolTheory.COND_RATOR, boolTheory.COND_EXPAND,
@@ -242,7 +243,8 @@ val LIFT_COND_ss =
                                trace = 2},
                               {conv = K (K COND_ABS_CONV),
                                name = "conditional lifting under abstractions",
-                               key = SOME([], Term`\x:'a. COND p (q x) (r x)`),
+                               key = SOME([],
+                                          Term`\x:'a. COND p (q x:'b) (r x)`),
                                trace = 2}],
                      dprocs = [], filter = NONE,
                      rewrs = [boolTheory.COND_RATOR, NESTED_COND]}
