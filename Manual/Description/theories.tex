@@ -2717,7 +2717,15 @@ trivial consequence of the definition shows:
 \begin{verbatim}
   SPECIFICATION  |- !P x. x IN P = P x
 \end{verbatim}}
+% 
+\noindent Two sets are equal if they have the same elements.
 %
+{\small
+\begin{verbatim}
+  EXTENSION
+    |- !s t. (s = t) = (!x. (x IN s) = (x IN t))
+\end{verbatim}}
+
 \paragraph{Empty and universal sets}
 
 The empty set is the characteristic function that is constantly
@@ -2956,82 +2964,313 @@ proved:
 
 The special purpose set-theoretic notations
 {\small\verb%{%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%}%} and
-{\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} are available.
-The normal interpretation of the former is the finite set containing
-just $t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
-is the set of all $t$s such that $p$. For example,
-%
-\begin{hol}\begin{verbatim}
-   {1;2;3;4}
-\end{verbatim}\end{hol}
-%
-\noindent parses to
-%
-\begin{hol}\begin{verbatim}
+{\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} are recognized 
+by the \HOL{} parser and printer when the theory \theoryimp{pred\_set} 
+is loaded.
+
+The normal interpretation of 
+{\small\verb%{%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%}%} is the finite set containing just
+$t_1,t_2,\ldots, t_n$. This can be modelled by starting with the empty
+  set and performing a sequence of insertions. For example, \verb+{1;2;3;4}+ parses to
+
+\begin{hol}{\small
+\begin{verbatim}
    1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))
-\end{verbatim}\end{hol}
-%
-\noindent Similarly, {\small\verb%{%}$t${\small\verb%|%}$p${\small\verb%}%}
-parses to:
+\end{verbatim}}\end{hol}
+
+\paragraph {Set comprehensions}
+
+The normal interpretation of 
+{\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} is
+the set of all $t$s such that $p$. In \HOL, such syntax parses to:
 %
 \texttt{GSPEC(\bs($x_1$,$\ldots$,$x_n$).($t$,$p$))}
 %
-\noindent where $x_1, \ldots, x_n$ are the free variables occurring in both $t$
-and $p$.  If there are no such free variables then an error results.
-The order in which the variables are listed in the variable structure
-of the paired abstraction is an unspecified function of the structure
-of $t$ (it is approximately left to right).
-
-For example,
-
-\begin{hol}\begin{verbatim}
-   {x+y | (x < y) /\ (y < z)}
-\end{verbatim}\end{hol}
-
-%\noindent parses to:
-
-\begin{hol}\begin{verbatim}
-   GSPEC(\(x,y). ((x+y), (x < y) /\ (y < z)))
-\end{verbatim}\end{hol}
-
-\noindent where \ml{GSPEC} is characterized by:
-
-\begin{hol}\begin{verbatim}
-   GSECIFICATION |- !f v. (v IN GSPEC f) = ?x. (v,T) = f x
-\end{verbatim}\end{hol}
+\noindent where $x_1, \ldots, x_n$ are those free variables that 
+occur in both $t$ and $p$.  If there are no such free variables 
+then an error results. The order in which the variables are listed in 
+the variable structure of the paired abstraction is an unspecified
+function of the structure of $t$ (it is approximately left to
+right). For example, 
 %
-Other examples are:
+\begin{hol}{\small\begin{verbatim}
+   {p+q | p < q /\ q < r}
+\end{verbatim}}\end{hol}
+%
+\noindent parses to:
+%
+\begin{hol}{\small\begin{verbatim}
+   GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
+\end{verbatim}}\end{hol}
+%
+where \ml{GSPEC} is characterized by:
+%
+\begin{hol}{\small\begin{verbatim}
+   GSPECIFICATION  |- !f v. (v IN GSPEC f) = (?x. (v,T) = f x)
+\end{verbatim}}\end{hol}
 
-\begin{hol}\begin{verbatim}
-   {x+y+z | (x < y) /\ (y < z)}
-\end{verbatim}\end{hol}
-
-\noindent will parse to:
-
-\begin{hol}\begin{verbatim}
-   GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))
-\end{verbatim}\end{hol}
-
-\noindent and
-
-\begin{hol}\begin{verbatim}
-   {x+y+w | (x < y) /\ (y < z)}
-\end{verbatim}\end{hol}
-
-\noindent will parse to:
-
-\begin{hol}\begin{verbatim}
-   GSPEC(\(x,y). (x+y+w, (x < y /\ y < z)))
-\end{verbatim}\end{hol}
+This somewhat cryptic specification can be understood by exercising an
+example. The syntax 
+%
+{\small
+\begin{verbatim}
+   3 IN {p+q | p < q /\ q < r}
+\end{verbatim}}
+%
+is mapped by the \HOL{} parser to 
+{\small
+\begin{verbatim}
+   3 IN GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
+\end{verbatim}}
+%
+which, by {\small\verb+GSPECIFICATION+}, is equal to 
+{\small
+\begin{verbatim}
+   ?x. (3,T) = (\(p,q). ((p+q), (p < q /\ q < r))) x
+\end{verbatim}}
+%
+The existentially quantified variable \verb+x+ has a pair type,
+so it can be replaced by a pair \verb+(p,q)+ and a
+paired-$\beta$-reduction can be performed, yielding
+%
+{\small
+\begin{verbatim}
+   ?(p,q). (3,T) = ((p+q), (p < q /\ q < r))
+\end{verbatim}}
+%
+which is equal to the intended meaning of the original
+syntax:
+%
+{\small
+\begin{verbatim}
+   ?(p,q). (p+q = 3) /\ (p < q /\ q < r)
+\end{verbatim}}
 
 \subsection{Multisets (\theoryimp{bag})}\label{multiset}
 
-Multisets (also known as \emph{bags}) are similar to sets, except that
+Multisets, also known as \emph{bags}, are similar to sets, except that
 they allow repeat occurrences of an element. Whereas sets are
 represented by functions of type $\alpha\to\konst{bool}$, which signal
-the presence, or not, of an element, multisets are represented
-by function of type $\alpha\to\konst{num}$, which give the
-multiplicity of each element in the multiset.
+the presence, or absence, of an element, multisets are represented
+by functions of type $\alpha\to\konst{num}$, which give the
+multiplicity of each element in the multiset. Multisets may be finite
+or infinite.
+
+The type abbreviations $\alpha\;\konst{multiset}$ and
+$\alpha\;\konst{bag}$ can be used instead of $\alpha\to\konst{num}$.
+
+\paragraph {Empty multiset}
+
+The empty bag has no elements. Thus, the function implementing it
+returns $0$ for every input.
+%
+{\small
+\begin{verbatim}
+  EMPTY_BAG  |- EMPTY_BAG = K 0
+\end{verbatim}}
+
+\noindent The special syntax {\verb+{||}+} can be used to represent the empty
+bag.
+
+\paragraph {Membership}
+
+Much of the theory can be based on the notion of membership in a
+bag. There are two notions: does an element occur at least $n$ times
+in a bag ({\small\verb+BAG_INN+}); and does an element occur in a bag
+at all ({\small\verb+BAG_IN+}).
+%
+{\small
+\begin{verbatim}
+  BAG_INN  |- BAG_INN e n b = (b e >= n)
+  BAG_IN   |- BAG_IN e b = BAG_INN e 1 b
+\end{verbatim}}
+%
+\noindent Two bags are equal if all elements have the same tally.
+%
+{\small
+\begin{verbatim}
+  BAG_EXTENSION
+    |- !b1 b2. (b1 = b2) = (!n e. BAG_INN e n b1 = BAG_INN e n b2)
+\end{verbatim}}
+
+\paragraph{Sub-multiset}
+
+A sub-bag relationship ({\small\verb+SUB_BAG+}) holds between $b_1$ and
+$b_2$ provided that every element in $b_1$ occurs at least as often in
+$b_2$. The notion of a proper sub-bag ({\small\verb+PSUB_BAG+}) is
+easily defined. 
+%
+{\small
+\begin{verbatim}
+  SUB_BAG
+    |- SUB_BAG b1 b2 = !x n. BAG_INN x n b1 ==> BAG_INN x n b2
+  PSUB_BAG
+    |- PSUB_BAG b1 b2 = SUB_BAG b1 b2 /\ ~(b1 = b2)
+\end{verbatim}}
+
+\paragraph{Insertion}
+
+Inserting an element into a bag ({\small\verb+BAG_INSERT+}) updates
+the tally for that element and leaves the others unchanged.
+%
+{\small
+\begin{verbatim}
+  BAG_INSERT
+    |- BAG_INSERT e b = (\x. if (x = e) then b e + 1 else b x)
+\end{verbatim}}
+
+Explicitly-given multisets are supported by the syntax
+{\small\verb%{|%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%|}%}, where
+there may, of course, be repetitions. This is modelled by starting with the empty
+multiset and performing a sequence of insertions. For example,
+\verb+{|1; 2; 3; 2; 1|}+ parses to
+
+\begin{hol}{\small
+\begin{verbatim}
+  BAG_INSERT 1 (BAG_INSERT 2 (BAG_INSERT 3 (BAG_INSERT 2 (BAG_INSERT 1 {||}))))
+\end{verbatim}}\end{hol}
+
+
+\paragraph{Union and difference}
+
+The union ({\small\verb+BAG_UNION+}) and difference
+({\small\verb+BAG_DIFF+}) operations on bags both reduce to an arithmetic
+calculation on their elements. Deleting a single element from a bag
+may be expressed by taking the multiset difference with a single-element
+multiset; however, there is also a relational presentation
+({\small\verb+BAG_DELETE+}). 
+%
+{\small
+\begin{verbatim}
+  BAG_UNION
+    |- BAG_UNION b c = \x. b x + c x
+  BAG_DIFF
+    |- BAG_DIFF b1 b2 = \x. b1 x - b2 x
+  BAG_DELETE
+    |- BAG_DELETE b0 e b = (b0 = BAG_INSERT e b)
+\end{verbatim}}
+
+\paragraph {Intersection, merge, and filter}
+
+The intersection of two bags ({\small\verb+BAG_INTER+}) takes the
+pointwise minimum. The dual operation, merging
+({\small\verb+BAG_MERGE+}), takes the pointwise maximum. A bag can be
+`filtered' by a set to return the bag where all the elements not in
+the set have been dropped ({\small\verb+BAG_FILTER+}).
+%
+{\small
+\begin{verbatim}
+  BAG_INTER
+    |- BAG_INTER b1 b2 = (\x. if (b1 x < b2 x) then b1 x else b2 x)
+  BAG_MERGE
+    |- BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)
+  BAG_FILTER_DEF
+    |- BAG_FILTER P b = (\e. if P e then b e else 0)
+\end{verbatim}}
+
+\paragraph {Sets and Multisets}
+
+Moving between bags and sets is accomplished by the following two
+definitions.
+%
+{\small
+\begin{verbatim}
+  SET_OF_BAG
+    |- SET_OF_BAG b = \x. BAG_IN x b
+  BAG_OF_SET
+    |- BAG_OF_SET P = \x. if x IN P then 1 else 0
+\end{verbatim}}
+
+\paragraph {Image}
+
+Taking the image of a function on a multiset
+to get a new multiset seems to be simply a
+matter of applying the function to each element of the multiset. However, there
+is a problem if $f$ is non-injective and the multiset is infinite. For
+example, take the multiset consisting of all the natural numbers and
+apply $\lambda x.\; 1$ to each element. The resulting multiset would hold an
+infinite number of $1$s. To avoid this requires some constraints: for
+example, stipulating that the function be only finitely non-injective,
+or that the input multiset be finite. Such conditions would be onerous
+in proof; the compromise is to map the multipicity of problematic
+elements to $0$.
+%
+{\small
+\begin{verbatim}
+  BAG_IMAGE_DEF
+    |- BAG_IMAGE f b = 
+         \e. let sb = BAG_FILTER (\e0. f e0 = e) b
+             in
+               if FINITE_BAG sb then BAG_CARD sb else 0
+\end{verbatim}}
+
+
+\paragraph {Finite multisets}
+
+The finite multisets ({\small\verb+FINITE_BAG+}) are defined inductively as those
+built from the empty bag by a finite number of insertions.
+%
+{\small
+\begin{verbatim}
+  FINITE_BAG
+    |- FINITE_BAG b =
+         !P. P EMPTY_BAG /\ 
+             (!b. P b ==> (!e. P (BAG_INSERT e b))) ==> P b
+\end{verbatim}}
+%
+\noindent The finite multisets have an induction theorem, and also a strong
+induction theorem.
+%
+{\small
+\begin{verbatim}
+  FINITE_BAG_INDUCT
+    |- !P. P {||} /\
+           (!b. P b ==> (!e. P (BAG_INSERT e b))) 
+           ==> (!b. FINITE_BAG b ==> P b)
+
+  STRONG_FINITE_BAG_INDUCT
+    |- !P. P {||} /\ 
+           (!b. FINITE_BAG b /\ P b ==> !e. P (BAG_INSERT e b)) 
+           ==> (!b. FINITE_BAG b ==> P b)
+\end{verbatim}}
+%
+The cardinality ({\small\verb+BAG_CARD+}) of a multiset counts the
+total number of occurrences. It is only specified for finite multisets.
+%
+{\small
+\begin{verbatim}
+ BAG_CARD_THM 
+   |- (BAG_CARD {||} = 0) /\
+      (!b. FINITE_BAG b ==> !e. BAG_CARD (BAG_INSERT e b) = BAG_CARD b + 1)
+\end{verbatim}}
+
+\paragraph{Recursive functions on multisets}
+
+Recursive functions on multiset may be defined by wellfounded
+recursion. Usually, the totality of such a function is established by
+measuring the cardinality of the (finite) multiset. However, 
+a fold ({\small\verb+ITBAG+}) for finite sets is provided.
+Provided a function $f:\alpha\to\beta\to\beta$ obeys a condition
+known as \emph{left-commutativity}, namely, $f\;x\;(f\;y\;z) =
+f\;y\;(f\;x\;z)$, then $f$ can be applied by folding it on the multiset
+in a tail-recursive fashion.
+%
+{\small
+\begin{verbatim}
+ ITBAG_EMPTY
+   |- !f acc. ITSET f {||} acc = acc
+ COMMUTING_ITBAG_INSERT
+   |- !f b. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
+            !x a. ITBAG f (BAG_INSERT x b) a = ITBAG f b (f x a)
+\end{verbatim}}
+%
+\noindent A recursive version is also available:
+{\small
+\begin{verbatim}
+ COMMUTING_ITBAG_RECURSES
+   |- !f e b a. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
+                (ITBAG f (BAG_INSERT e b) a = f e (ITBAG f b a))
+\end{verbatim}}
 
 \subsection{Relations (\theoryimp{relation})}\label{relation}
 
@@ -3155,7 +3394,6 @@ relation closed under transitivity and reflexivity.
     |- TC R a b =
          !P. (!x y. R x y ==> P x y) /\
              (!x y z. P x y /\ P y z ==> P x z) ==> P a b
-
   RTC_DEF 
     |- RTC R a b =
          !P. (!x. P x x) /\
@@ -3344,8 +3582,8 @@ that they propagate wellfoundedness.
 \paragraph {Term Rewriting}
 
 A few basic definitions from Term Rewriting theory 
-(the diamond property (\verb+diamond+), the (Weak) Church-Rosser
-property ({\small\verb+CR+}), and Strong
+(the diamond property (\verb+diamond+), the Church-Rosser
+property ({\small\verb+CR+} and {\small\verb+WCR+}), and Strong
 Normalization ({\small\verb+SN+})) appear
 in \theoryimp{relation}. 
 %
@@ -3354,18 +3592,15 @@ in \theoryimp{relation}.
 \begin{verbatim}
   diamond_def
     |- diamond R = !x y z. R x y /\ R x z ==> ?u. R y u /\ R z u
-
   CR_def
     |- CR R = diamond (RTC R)
-
   WCR_def
     |- WCR R = !x y z. R x y /\ R x z ==> ?u. RTC R y u /\ RTC R z u
-
   SN_def
     |- SN R = WF (inv R)
 \end{verbatim}}
 \end{hol}
-
+%
 \noindent From those, Newman's Lemma is proved.
 %
 \begin{hol}
@@ -3377,11 +3612,189 @@ in \theoryimp{relation}.
 
 \subsection{Finite maps (\theoryimp{finite\_map})}\label{finite_map}
 
+The theory \theoryimp{finite\_map} formalizes a type
+$(\alpha,\beta)$\verb+fmap+ of finite functions. These notionally have
+type $\alpha\to\beta$, but additionally have only finitely many
+elements in their domain. The representing type is $\alpha\to\beta +
+\konst{one}$, where only a finite number of the $\alpha$ map to a
+$\beta$ and the rest map to \verb+one+. The syntax
+$\alpha$\verb+|->+$\beta$ is recognized by the parser as an
+alternative to $(\alpha,\beta)$\verb+fmap+.
+
+\paragraph {Basic notions}
+
+The empty map ({\small\verb+FEMPTY+}), the domain of a map
+({\small\verb+FDOM+}), the updating of a map
+({\small\verb+FUPDATE+}), and the application of a map to an argument
+({\small\verb+FAPPLY+}) are the main notions in the theory. 
+%
+{\small
+\begin{verbatim}
+  FEMPTY  : 'a |-> 'b
+  FDOM    : ('a |-> 'b) -> 'a set
+  FUPDATE : ('a |-> 'b) -> 'a # 'b -> ('a |-> 'b)
+  FAPPLY  : ('a |-> 'b) -> 'a -> 'b
+\end{verbatim}}
+
+The \HOL{} parser and printer will treat the syntax \verb+f ' x+ as
+the application of finite map \verb+f+ to argument \verb+x+, ie, as 
+{\small\verb+FAPPLY f x+}. Also, the notation \verb#f |+ (x,y)#
+represents the updating of finite map \verb+f+ by the pair
+\verb+(x,y)+, \ie, as {\small\verb+FUPDATE f (x,y)+}.
+
+The basic constants have obscure definitions from which the following
+are a few of the more perspicious properties that are derived:
+%
+{\small
+\begin{verbatim}
+  FDOM_FUPDATE
+    |- !f a b. FDOM (f |+ (a,b)) = (a INSERT (FDOM f))
+  FDOM_FINITE
+    |- !fm. FINITE (FDOM fm)
+
+  FAPPLY_FUPDATE_THM
+    |- !f a b x. (f |+ (a,b)) ' x = if x=a then b else f'x
+
+  lookup_DEF
+    |- FLOOKUP f x = (if x IN FDOM f then SOME (f'x) else NONE)
+  FRANGE_DEF
+    |- FRANGE f = {y | ?x. x IN FDOM f /\ (f'x = y)}
+  fmap_EQ_THM
+    |- !f g. (FDOM f = FDOM g) /\ 
+             (!x. x IN FDOM f ==> (FAPPLY f x = FAPPLY g x)) = (f = g)
+\end{verbatim}}
+
+There is support for iterated updates ({\small\verb+FUPDATE_LIST+},
+infix) to a map:
+%
+{\small
+\begin{verbatim}
+  FUPDATE_LIST  |- $FUPDATE_LIST = FOLDL FUPDATE
+  FUPDATE_LIST_THM
+    |- !f. (f FUPDATE_LIST [] = f) /\
+           (!h t. f FUPDATE_LIST (h::t) = (FUPDATE f h) FUPDATE_LIST t)
+\end{verbatim}}
+%
+\noindent Thus {\small\verb+fm FUPDATE_LIST (k1,v1) (k2,v2)+} is equal
+to {\small\verb+(fm |- (k1,v1)) |- (k2,v2)+}.
+
+\paragraph {Induction}
+
+There is an induction theorem for finite maps.
+%
+{\small
+\begin{verbatim}
+  fmap_INDUCT
+    |- !P. P FEMPTY /\
+           (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (FUPDATE f (x,y))) 
+          ==> !f. P f
+\end{verbatim}}
+
+\paragraph{Cardinality}
+
+The cardinality of a finite map is the cardinality of its domain.
+%
+{\small
+\begin{verbatim}
+  FCARD_DEF  |- FCARD fm = CARD (FDOM fm)
+  FCARD_FUPDATE
+    |- !fm a b. FCARD (FUPDATE fm (a, b)) = 
+                  if a IN FDOM fm then FCARD fm else 1 + FCARD fm
+\end{verbatim}}
+
+\paragraph {Sub-maps}
+
+The notion of a finite map being a submap of another
+({\small\verb+SUBMAP+}, infix) is defined. 
+{\small
+\begin{verbatim}
+  SUBMAP_DEF
+    |- !f g. (f SUBMAP g) =
+               !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)
+\end{verbatim}}
+
+\paragraph {Domain and range restriction}
+
+A finite map may have its domain restricted ({\small\verb+DRESTRICT+})
+by intersecting with by a set. There is also the notion of domain
+subtraction (\verb+\\+, infix).
+{\small
+\begin{verbatim}
+  DRESTRICT_DEF
+    |- !f r. (FDOM (DRESTRICT f r) = FDOM f INTER r) /\
+             (!x. DRESTRICT f r ' x = 
+                    (if x IN FDOM f INTER r then f ' x else FEMPTY ' x)
+  DRESTRICT_FUPDATE
+    |- !f r x y.
+          DRESTRICT (FUPDATE f (x,y)) r =
+            if x IN r then FUPDATE (DRESTRICT f r) (x,y) else DRESTRICT f r
+
+  RRESTRICT_DEF
+    |- !f r.
+         (FDOM (RRESTRICT f r) = {x | x IN FDOM f /\ f ' x IN r}) /\
+         !x.
+           RRESTRICT f r ' x =
+           (if x IN FDOM f /\ f ' x IN r then f ' x else FEMPTY ' x)
+  RRESTRICT_FEMPTY
+    |- !r. RRESTRICT FEMPTY r = FEMPTY : thm
+  RRESTRICT_FUPDATE
+    |- !f r x y.
+         RRESTRICT (f |+ (x,y)) r =
+         (if y IN r then RRESTRICT f r |+ (x,y)
+                    else RRESTRICT (DRESTRICT f (COMPL {x})) r)
+
+  fmap_domsub
+    |- fm \\ k = DRESTRICT fm (COMPL {k})
+   DOMSUB_FUPDATE_THM
+    |- !fm k1 k2 v. (fm |+ (k1,v)) \\ k2 = 
+                     if (k1 = k2) then (fm \\ k2) else (fm \\ k2) |+ (k1, v)
+\end{verbatim}}
+
+\paragraph {Union}
+
+{\small
+\begin{verbatim}
+  FUNION_DEF
+    |- !f g.
+         (FDOM (FUNION f g) = FDOM f UNION FDOM g) /\
+         !x. FUNION f g ' x = (if x IN FDOM f then f'x else g'x)
+
+  FUNION_FEMPTY_1  |- !g. FUNION FEMPTY g = g
+  FUNION_FEMPTY_2  |- !f. FUNION f FEMPTY = f
+  FUNION_FUPDATE_1 
+    |- !f g x y. FUNION (f |+ (x,y)) g = (FUNION f g) |+ (x,y)
+  FUNION_FUPDATE_2
+    |- !f g x y.
+        FUNION f (FUPDATE g (x,y)) =
+          if x IN FDOM f then FUNION f g else (FUNION f g) |+ (x,y)
+\end{verbatim}}
+
+\paragraph {Composition and lifting}
+Composition of two finite maps (\verb+f_o_f+, infix). Composition of a
+finite map with an ordinary function (\verb+o_f+, infix).
+
+{\small
+\begin{verbatim}
+  f_o_f_DEF
+    |- !f g.
+         (FDOM (f f_o_f g) = (FDOM g) INTER {x | g ' x IN FDOM f}) /\
+         !x. x IN FDOM (f f_o_f g) ==> ((f f_o_f g) ' x = f ' (g ' x))
+  o_f_DEF
+    |- !f g.
+         (FDOM (f o_f g) = FDOM g) /\
+         !x. x IN FDOM (f o_f g) ==> ((f o_f g) ' x = f (g ' x))
+  f_o_DEF
+    |- ((f:('b,'c)fmap) f_o (g:'a->'b)) = f f_o_f (FUN_FMAP g { x | g x IN FDOM f})
+  FUN_FMAP_DEF
+    |- !f P.
+         FINITE P ==>
+         (FDOM (FUN_FMAP f P) = P) /\
+         !x. x IN P ==> (FUN_FMAP f P ' x = f x)
+\end{verbatim}}
+
 \section{Further Mathematics}
 
 \subsection{Divisibility and Greatest Common Divisor}
-
-\subsection{Analysis}
 
 \subsection{Polynomials}
 
