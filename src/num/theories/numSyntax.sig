@@ -24,7 +24,10 @@ sig
   val even_tm       : term
   val odd_tm        : term
   val num_case_tm   : term
+  val fact_tm       : term
   val funpow_tm     : term
+  val while_tm      : term
+  val least_tm      : term
 
   val mk_suc        : term -> term
   val mk_pre        : term -> term
@@ -41,7 +44,10 @@ sig
   val mk_even       : term -> term
   val mk_odd        : term -> term
   val mk_num_case   : term * term * term -> term
+  val mk_fact       : term -> term
   val mk_funpow     : term * term * term -> term
+  val mk_while      : term * term * term -> term
+  val mk_least      : term -> term
 
   val dest_suc      : term -> term
   val dest_pre      : term -> term
@@ -58,7 +64,10 @@ sig
   val dest_even     : term -> term
   val dest_odd      : term -> term
   val dest_num_case : term -> term * term * term
+  val dest_fact     : term -> term
   val dest_funpow   : term -> term * term * term
+  val dest_while    : term -> term * term * term
+  val dest_least    : term -> term
 
   val is_suc        : term -> bool
   val is_pre        : term -> bool
@@ -75,7 +84,10 @@ sig
   val is_even       : term -> bool
   val is_odd        : term -> bool
   val is_num_case   : term -> bool
+  val is_fact       : term -> bool
   val is_funpow     : term -> bool
+  val is_while      : term -> bool
+  val is_least      : term -> bool
 
   val is_numeral    : term -> bool
   val mk_numeral    : Arbnum.num -> Term.term

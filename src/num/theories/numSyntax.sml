@@ -36,7 +36,9 @@ struct
   val odd_tm       = prim_mk_const {Name="ODD",          Thy="arithmetic"}
   val num_case_tm  = prim_mk_const {Name="num_case",     Thy="arithmetic"}
   val fact_tm      = prim_mk_const {Name="FACT",         Thy="arithmetic"}
-  val funpow_tm    = prim_mk_const {Name="FUNPOW",       Thy="arithmetic"};
+  val funpow_tm    = prim_mk_const {Name="FUNPOW",       Thy="arithmetic"}
+  val while_tm     = prim_mk_const {Name="WHILE",        Thy="arithmetic"}
+  val least_tm     = prim_mk_const {Name="LEAST",        Thy="arithmetic"};
 
 
 (*---------------------------------------------------------------------------
@@ -68,6 +70,12 @@ struct
   fun mk_funpow(f,n,x) =
       list_mk_comb(inst [alpha |-> type_of x] funpow_tm, [f,n,x]);
 
+  fun mk_while(P,g,x) =
+      list_mk_comb(inst [alpha |-> type_of x] while_tm, [P,g,x]);
+
+  fun mk_least P = 
+      mk_comb(inst [alpha |-> fst(dom_rng(type_of P))] least_tm, P);
+
 (*---------------------------------------------------------------------------
           Destructors
  ---------------------------------------------------------------------------*)
@@ -87,6 +95,7 @@ struct
   val dest_even    = dest_monop even_tm    (ERR "dest_even" "")
   val dest_odd     = dest_monop odd_tm     (ERR "dest_odd" "");
   val dest_fact    = dest_monop fact_tm    (ERR "dest_fact" "");
+  val dest_least   = dest_monop least_tm   (ERR "dest_least" "");
 
   fun dest_num_case tm =
     case strip_comb tm
@@ -101,8 +110,17 @@ struct
      of (funpow,[f,n,x]) =>
          if same_const funpow_tm funpow
          then (f,n,x)
-         else raise ERR "dest_funpow" "not an application of \"funpow\""
-      | _ => raise ERR "dest_funpow" "not an application of \"funpow\"";
+         else raise ERR "dest_funpow" "not an application of \"FUNPOW\""
+      | _ => raise ERR "dest_funpow" "not an application of \"FUNPOW\"";
+
+
+  fun dest_while tm =
+    case strip_comb tm
+     of (whle,[P,g,x]) =>
+         if same_const while_tm whle
+         then (P,g,x)
+         else raise ERR "dest_while" "not an application of \"WHILE\""
+      | _ => raise ERR "dest_funpow" "not an application of \"WHILE\"";
 
 
 (*---------------------------------------------------------------------------
@@ -126,6 +144,8 @@ struct
   val is_num_case = can dest_num_case
   val is_fact     = can dest_fact
   val is_funpow   = can dest_funpow
+  val is_while   = can dest_while
+  val is_least   = can dest_least
 
 
 (*---------------------------------------------------------------------------
