@@ -217,5 +217,5 @@ val (Evals_def,Evals_ind) =
         THEN Induct_on `l` 
         THEN RW_TAC list_ss [size_def,listTheory.MEM]
         THENL [PROVE_TAC [DECIDE (Term`x < y+(x+2n)`)],
-               PROVE_TAC [DECIDE (Term `x < 1n+y ==> x < y+(z+2)`)]])
+               PROVE_TAC [DECIDE (Term `x < y+1n ==> x < y+(z+2)`)]])
  end;

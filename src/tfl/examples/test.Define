@@ -2,7 +2,7 @@
      A battery of tests for the "Define" function in bossLib.
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib"]; open TotalDefn bossLib;
+open TotalDefn bossLib;
 
 (*---------------------------------------------------------------------------
         First, a few straightforward recursions, some with 
@@ -21,7 +21,11 @@ val assoc_def =
     `assoc (x:'a) ((a,y)::t) = if x=a then y else assoc x t`;
 
 Define`step x = x`;
+
 val SM = Define `SM s n = if n=0 then s else SM (step s) (n-1)`;
+
+Hol_datatype `tau = Ctr of bool # bool # bool`;
+Define `goo(Ctr(d,_,_)) = d`;
 
 (*---------------------------------------------------------------------------
    For the following 3, a "normal" size measure like LENGTH wouldn't 
@@ -118,7 +122,6 @@ val smaller_def = Define
         if SUC y = i then i else
         if SUC x = j then j 
         else smaller((x,i), (y,j)))`;
-
 
 val min_def = Define
     `(min (SUC x) (SUC y) = min x y + 1)
@@ -604,3 +607,61 @@ val ltree_SIZE_def =
  Hol_defn 
      "ltree_SIZE"
      `ltree_SIZE f (LNODE v tl) = 1 + f v + sumf (ltree_SIZE f) tl`;
+
+(*---------------------------------------------------------------------------
+   TC extraction, case of regexp matching
+ ---------------------------------------------------------------------------*)
+
+load "stringTheory";
+
+val _ = set_fixity "<>" (Infixl 500);
+val _ = overload_on ("<>", Term`APPEND`);
+
+Hol_datatype `regexp =
+   Any                       (* Any character *)
+ | Epsilon                   (* Empty string *)
+ | Atom of char              (* Specific character *)
+ | Or of regexp => regexp    (* Union *)
+ | Then of regexp => regexp  (* Concatenation *)
+ | Repeat of regexp`;        (* Iterated concat, >= 0 *)
+
+
+val SPLIT_def = Define
+  `(SPLIT P [] acc = NONE) /\
+   (SPLIT P (h::t) acc = if P h then SOME (acc, h, t)
+                                else SPLIT P t (acc<>[h]))`;
+
+val csp_def = Define
+  `(csp [] ns = []) 
+/\ (csp ((Repeat r::cdr, w, s)::b::c) ns = 
+     if b = (r::Repeat r::cdr, w, SOME (Repeat r::cdr)) 
+       then (Repeat r::cdr, w, ns)::b::c
+       else (Repeat r::cdr, w, ns)::csp (b::c) ns) 
+/\ (csp ((Any::cdr, w, s)::c) ns     = (Any::cdr, w, ns)::c) 
+/\ (csp ((Atom c1::cdr, w, s)::c) ns = (Atom c1::cdr, w, ns) :: c)
+/\ (csp ((rl,w,s)::c) ns             = (rl,w,ns)::csp c ns)`;
+
+val nS_defn = Hol_defn 
+ "nS"
+ `nS ms =
+   case SPLIT (\x. ?r l w. x = (Repeat r::l, w, SOME (Repeat r::l))) ms [] 
+    of NONE -> ms
+    || SOME (l1, (bad_r, bad_w, bad_s), z) ->
+         case SPLIT (\x. ?s. x = (bad_r, bad_w, s)) l1 []
+          of NONE -> []
+          || SOME (x1, (rl,w1,s1), y) -> nS (x1 <> [(rl, w1, s1)] <> csp z s1)`;
+
+Hol_defn "foo" 
+  `foo L = case SPLIT ($= 3) L []
+            of NONE -> L
+            || SOME(L1,x,L2) ->
+                case SPLIT ($=2) L1 []
+                 of NONE -> []
+                 || SOME (L1a,y, L1b) -> foo (L1a <> [y] <> L2)`;
+
+Hol_defn "foo" 
+  `bar L = case L 
+            of [] -> 1
+            || h::t -> case t
+                        of [] -> 2
+                        || h1::t1 -> bar t1`;

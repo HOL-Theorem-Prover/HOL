@@ -24,8 +24,8 @@ val PSUBSET_DIFF = Q.prove
 (* We enforce that there are only finitely many nodes in the graph by use of *)
 (* "Nodes" (actually parent nodes). The parent nodes of the graph are those  *)
 (* that have a non-empty list of children via G. If the parent nodes are     *)
-(* then the entire graph is finite, because there can only be finitely many  *)
-(* children of any parent (because G produces a list).                       *)
+(* finite then the entire graph is finite, because there can only be         *)
+(* finitely many children of any parent (because G produces a list).         *)
 (*---------------------------------------------------------------------------*)
 
 val Nodes = Define `Nodes G = {x | ~(G x = [])}`;
@@ -65,8 +65,8 @@ val (def,ind) = Defn.tprove
       THEN PROVE_TAC [DELETE_NON_ELEMENT,DIFF_INSERT],
     DISJ1_TAC THEN `v IN Nodes G` by SRW_TAC [] [Nodes] 
       THEN MATCH_MP_TAC 
-             (Ho_Rewrite.REWRITE_RULE [GSYM RIGHT_FORALL_IMP_THM,AND_IMP_INTRO] 
-                  CARD_PSUBSET)
+           (Ho_Rewrite.REWRITE_RULE [GSYM RIGHT_FORALL_IMP_THM,AND_IMP_INTRO] 
+                 CARD_PSUBSET)
       THEN SRW_TAC [] [FINITE_DIFF,PSUBSET_DEF, SUBSET_DEF,
                        DIFF_INSERT,DIFF_DEF,IN_DELETE,SET_EQ_THM]
       THEN PROVE_TAC []]);
