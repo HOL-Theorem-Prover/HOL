@@ -76,5 +76,25 @@ in
   else print "OK\n"
 end
 
+fun test f x = f x orelse (print "FAILED!\n"; Process.exit Process.failure)
+val oldconstants_test = let
+  val _ = print "Identity of old constants test  ... "
+  val defn1_t = mk_eq(mk_var("foo", bool), boolSyntax.T)
+  val defn2_t = mk_eq(mk_var("foo", bool), boolSyntax.F)
+  val defn1 = new_definition("foo", defn1_t)
+  val defn2 = new_definition("foo2", defn2_t)
+  val defn3 = new_definition("foo3", defn1_t)
+  val c1 = lhs (concl defn1)
+  val c2 = lhs (concl defn2)
+  val _ = test (fn (c1,c2) => Term.compare(c1, c2) <> EQUAL) (c1, c2)
+  val _ = test (not o uncurry aconv) (c1, c2)
+  val _ = test (not o uncurry aconv) (c1, c3)
+  val _ = test (not o uncurry aconv) (c2, c3)
+  val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c1
+  val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c2
+in
+  print "OK\n"
+end
+
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
