@@ -603,7 +603,9 @@ and munge v xs = (* munge a line of tokens *)
   | []      -> ""
 
 and munget v s = (* munge a string *)
-  s
+  let hack_re1 = Str.regexp "\\[\\[" in
+  let hack_re2 = Str.regexp "\\]\\]" in
+  Str.global_replace hack_re2 "$" (Str.global_replace hack_re1 "$" s)
 
 and mungelab v s = (* munge the label *)
   let rec go xs =
