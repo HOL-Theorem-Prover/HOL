@@ -13,7 +13,7 @@ let rulebody = `\t` cmdtext
 let ident = (alpha | number | `_` ) +
 let comment = `#` cmdtext
 (* text where comments possible, but not including the comments *)
-let composs_text = ([^ `\n` `#` `\\`] | "\\" _ | "\\#")* `\\`?
+let composs_text = ([^ `\n` `#` `\\` `\r`] | "\\" _ | "\\#")* `\\`?
 (* text that actually includes comments, allowing for later processing to
    remove them *)
 let include_com_text =
