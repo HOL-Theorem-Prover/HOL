@@ -1,6 +1,6 @@
 (* program to output iss file *)
 (* to compile this structure, cd to the tools directory, and
-     mosml -o make_iss.exe -I Holmake -I ..\sigobj
+     mosmlc -o make_iss.exe -I Holmake -I ..\sigobj make_iss.sml
 *)
 structure make_iss = struct
 
