@@ -286,6 +286,22 @@ Wish list
 - fix potential_vars so that it picks up all variables in a multi-line
   existential or universal, rather than just the first line.
 
+- allow VAR_PREFIXes to optionally specify replacement TeX, eg
+
+    G  "\Gamma"
+    G'  "\Gamma'"
+    G'' "\Gamma''"
+    G''' "\Gamma'''"
+
+
+- allow the addition of suffixes, eg 'k'.  (have it check for non-ambiguity?)
+
+   nk "\tsvar{n}_k "
+    ek "\tsvar{e}_k "
+    xk "\tsvar{x}_k "
+    hk "\tsvar{h}_k "
+
+- have some mechanism for general sub/superscripting
 
  --==[ THE END ]==--
 
