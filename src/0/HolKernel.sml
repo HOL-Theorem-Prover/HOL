@@ -14,10 +14,9 @@ struct
      Miscellaneous other stuff that builds on top of kernel facilities.
  ---------------------------------------------------------------------------*)
 
-local val ERR = mk_HOL_ERR "HolKernel"
-      infix |->
-      infixr -->
-in
+infixr -->;  infix |->;
+
+val ERR = mk_HOL_ERR "HolKernel";
 
  (*---------------------------------------------------------------------------
        Type antiquotations (required in term parser)
@@ -234,9 +233,6 @@ fun subst_occs occ_lists tm_subst tm =
    in subst theta template
    end
 end;
-
-fun thm_free_vars th =
-  let val (asl,c) = dest_thm th in free_varsl (c::asl) end;
 
 
 (*---------------------------------------------------------------------------
@@ -458,115 +454,4 @@ end handle e => raise (wrap_exn "HolKernel" "ho_match_term" e)
 
 end (* local *)
 
-
-(*
-datatype theory
-     = THEORY of {name : string,
-                  types : (string * int),
-                  consts : (string * hol_type) list,
-                  parents : theory list,
-                  axioms : thm list,
-                  definitions : thm list,
-                  theorems : thm list,
-                  extras : (ppstream -> unit) list};
-
-fun dest_theory() =
-  THEORY
-    {name = current_theory(),
-     types = types(),
-     consts = constants(),
-     parents = parents(),
-     axioms = axioms(),
-     definitions = definitions(),
-     theorems = theorems()};
-
-end ;
-
-
-
-(*--------------------------------------------------------------------------*
- * Print a theory for the user.                                             *
- *--------------------------------------------------------------------------*)
-
-val CONSISTENT   = Portable.CONSISTENT
-val INCONSISTENT = Portable.INCONSISTENT;
-
-fun pp_theory {pp_thm,pp_type} ppstrm thy =
-let
-  val {thid,con_wrt_disk,facts,overwritten,adjoin} = thy
-  val {add_string,add_break,begin_block,end_block, add_newline,
-       flush_ppstream,...} = Portable.with_ppstream ppstrm
-  val pp_thm = pp_thm ppstrm
-  val pp_type = pp_type ppstrm
-  fun vblock(header, ob_pr, obs) =
-    ( begin_block CONSISTENT 4;
-     add_string (header^":");
-     add_newline();
-     Portable.pr_list ob_pr
-     (fn () => ()) add_newline obs;
-     end_block(); add_newline(); add_newline())
-  fun pr_thm (heading, ths) =
-    vblock(heading, (fn (s,th) =>
-                     (begin_block CONSISTENT 0; add_string s; add_break(1,0);
-                      pp_thm th; end_block())),  ths)
-  val thyname = thyid_name thid
-  fun pp_consistency b =
-    add_string ("Theory "^(Lib.quote thyname)^" is "^
-                (if b then "consistent" else "inconsistent")^" with disk.\n")
-  val (A,D,T) = unkind facts
-  val types = thy_types thyname
-  val constants = Lib.mapfilter dconst (thy_constants thyname)
-in
-    begin_block CONSISTENT 0;
-    add_string ("Theory: "^thyname);
-    add_newline();   add_newline() ;
-    vblock ("Parents", add_string, map thyid_name (Graph.fringe()))
-      ;
-    vblock ("Type constants",
-            (fn (name,arity) =>
-                (add_string name; add_string (" "^Lib.int_to_string arity))),
-            rev types)
-      ;
-    vblock ("Term constants",
-             (fn (name,htype)
-              => (begin_block CONSISTENT 0;
-                  add_string (name^" ");
-                  add_break(3,0);
-                  pp_type htype;
-                  end_block())),
-                 rev constants)
-      ;
-    pr_thm ("Axioms", A);
-    pr_thm ("Definitions", D);
-    pr_thm ("Theorems", T);
-    pp_consistency con_wrt_disk;
-    end_block();
-    flush_ppstream()
- end;
-
-
-fun print_theory_to_outstream printers outstream =
-  let val def_Cons = Portable.defaultConsumer()
-      val consumer = {consumer = Portable.outputc outstream,
-                      flush = #flush def_Cons,
-                      linewidth = #linewidth def_Cons}
-      val stream = Portable.mk_ppstream consumer
-      val _ = pp_theory printers stream (theCT())
-      val _ = Portable.flush_out outstream
-  in outstream end
-
-fun print_theory_to_file printers file =
-    let val outfile = Portable.open_out file
-    in Portable.close_out (print_theory_to_outstream printers outfile)
-    end
-
-fun print_theory0 printers =
-   pp_theory printers (Portable.mk_ppstream
-                       (Portable.defaultConsumer()))
-   (theCT())
-
-
-*)
-
-end (* local open Feedback *)
-end;
+end

@@ -1866,7 +1866,7 @@ fun PCHOOSE_THEN ttac pth :tactic =
 	handle HOL_ERR _ => failwith "CHOOSE_THEN" 
     in
 	fn (asl,w) =>
-	let val q = pvariant ((thm_free_vars pth) @ (free_varsl (w::asl))) p 
+	let val q = pvariant ((thm_frees pth) @ (free_varsl (w::asl))) p 
 	    val th =
 		itlist
 		    ADD_ASSUM
@@ -2113,7 +2113,7 @@ val FILTER_PSTRIP_TAC = FILTER_PSTRIP_THEN PSTRIP_ASSUME_TAC;
 
 fun PEXT th =
     let val (p,_) = dest_pforall (concl th) 
-	val p' = pvariant (thm_free_vars th) p 
+	val p' = pvariant (thm_frees th) p 
 	val th1 = PSPEC p' th 
 	val th2 = PABS p' th1 
 	val th3 = (CONV_RULE (RATOR_CONV (RAND_CONV PETA_CONV))) th2 

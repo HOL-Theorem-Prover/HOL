@@ -3,6 +3,7 @@ sig
 
  type term = Term.term
  type thm = Thm.thm
+ type theory = Hol_pp.theory
 
  datatype class = Thm | Axm | Def
 
@@ -20,6 +21,9 @@ sig
   val match       : string list -> term -> data list 
   val apropos     : term -> data list 
   val listDB      : unit -> data list
+
+  val dest_theory  : string -> theory
+  val print_theory : string -> unit
 
   val export_theory_as_docfiles : string -> unit
 

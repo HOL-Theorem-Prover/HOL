@@ -218,15 +218,15 @@ local fun norm_name "-" = CTname()
           | NONE => raise ERR style 
                       ("couldn't find "^style^" named "^Lib.quote name)
 in
- val types         = thy_types o norm_name
- val constants     = thy_constants o norm_name
- fun curr_axioms() = map drop_pthmkind (thy_axioms (theCT()))
- fun curr_defs()   = map drop_pthmkind (thy_defns (theCT()))
- fun curr_thms()   = map drop_pthmkind (thy_theorems (theCT()))
- fun get_parents s = if norm_name s = CTname() 
-                       then Graph.fringe() else thy_parents s
- val parents       = map thyid_name o get_parents
- val ancestry      = map thyid_name o Graph.ancestryl o get_parents
+ val types            = thy_types o norm_name
+ val constants        = thy_constants o norm_name
+ fun get_parents s    = if norm_name s = CTname() 
+                         then Graph.fringe() else thy_parents s
+ val parents          = map thyid_name o get_parents
+ val ancestry         = map thyid_name o Graph.ancestryl o get_parents
+ fun current_axioms() = map drop_pthmkind (thy_axioms (theCT()))
+ fun current_theorems() = map drop_pthmkind (thy_theorems (theCT()))
+ fun current_definitions() = map drop_pthmkind (thy_defns (theCT()))
 end;
 
    
@@ -265,37 +265,19 @@ fun add_term {name,theory,htype}
            | TermSig.CLOBBER _ => true
       end};
 
-(*---------------------------------------------------------------------------
- * We allow axioms to overwrite "themselves", and definitions to overwrite
- * definitions, and axioms, definitions, and theorems to overwrite theorems.
- * We want to prohibit the sequence of steps
- *
- *     |- c = T  (* via mk_axiom *)
- *     |- c = F  (* via mk_axiom *)
- *
- * because we could then conclude |- F, but then the current theory only
- * has the one axiom and we can't find out where to assign blame. This is
- * handled by having axioms be tracked in inference.
- *---------------------------------------------------------------------------*)
-
 local fun pluck1 x L =
-       let fun get [] A = NONE
-             | get ((p as (x',_))::rst) A =
-               if x=x' then SOME (p,rst@A) else get rst (p::A)
-       in get L []
-       end
-fun overwrite (p as (s,f)) l =
- case pluck1 s l
-  of NONE => (p::l, false)
-   | SOME ((_,f'),l') =>
-       (case (f,f')
-         of (Defn _, Defn _)   => (p::l', true)
-          | (Axiom _, Axiom _) => (p::l', true)
-          | (_ , Defn _)       => raise ERR"overwrite_fact"
-                   "overwriting a defn with an axiom or a theorem not allowed"
-          | (_, Thm _)         => (p::l', false)
-          | (_, Axiom _)       => raise ERR"overwrite_fact"
-                  "overwriting an axiom with a defn or a theorem not allowed")
+        let fun get [] A = NONE
+              | get ((p as (x',_))::rst) A =
+                if x=x' then SOME (p,rst@A) else get rst (p::A)
+        in get L []
+        end
+      fun overwrite (p as (s,f)) l =
+       case pluck1 s l
+        of NONE => (p::l, false)
+         | SOME ((_,f'),l') =>
+            (case f'
+              of Thm _ => (p::l', false)
+               |  _    => (p::l', true))
 in
 fun add_fact (th as (s,_)) {thid, con_wrt_disk,facts,overwritten,adjoin}
   = let val (X,b) = overwrite th facts
@@ -335,32 +317,18 @@ fun del_type (name,thyname) {thid,facts,con_wrt_disk,overwritten,adjoin}
          (WARN "del_type" (fullname(name,thyname)^" not found");
           overwritten)}
 
+(*---------------------------------------------------------------------------
+        Remove a constant from the signature. 
+ ---------------------------------------------------------------------------*)
+
 fun del_const (name,thyname) {thid,facts,con_wrt_disk,overwritten,adjoin}
-  = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-     overwritten = Term.TermSig.delete (name,thyname) 
-         orelse 
-         (WARN "del_const" (fullname(name,thyname)^" not found");
-          overwritten)}
+ = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
+     overwritten = Term.TermSig.delete (name,thyname) orelse  
+       (WARN "del_const" (fullname(name,thyname)^" not found"); overwritten)}
 
-
-fun del_axiom name {thid,facts,con_wrt_disk,overwritten,adjoin} =
-  {facts = filter (fn (s, Axiom _) => (s=name) | _ => false) facts, 
+fun del_binding name {thid,facts,con_wrt_disk,overwritten,adjoin} =
+  {facts = filter (fn (s, _) => not(s=name)) facts, 
    thid=thid, adjoin=adjoin, con_wrt_disk=con_wrt_disk, overwritten=true};
-
-
-(*---------------------------------------------------------------------------*
- * Note: deleting a definition does not delete the constant(s) introduced    *
- * by the definition from the signature; that has to be dealt with           *
- * separately.                                                               *
- *---------------------------------------------------------------------------*)
-
-fun del_defn name {thid,facts,con_wrt_disk,overwritten,adjoin} =
-  {facts = filter (fn (s, Defn _) => (s=name) | _ => false) facts,
-   thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin, overwritten=true}
-
-fun del_theorem name {thid,facts,con_wrt_disk,overwritten,adjoin} =
-  {facts = filter (fn (s, Thm _) => (s=name) | _ => false) facts, thid=thid,
-   con_wrt_disk=con_wrt_disk, overwritten=overwritten,adjoin=adjoin};
 
 (*---------------------------------------------------------------------------
    Clean out the segment. Note: this clears out the segment, and the
@@ -398,12 +366,11 @@ in
 
   fun delete_type n     = inCT del_type  (n,CTname())
   fun delete_const n    = inCT del_const (n,CTname())
-  val delete_axiom      = inCT del_axiom
-  val delete_theorem    = inCT del_theorem
-  val delete_definition = inCT del_defn
+  val delete_binding    = inCT del_binding
 
   fun set_MLname s1 s2  = inCT set_MLbind (s1,s2)
   val adjoin_to_theory  = inCT new_addon
+  val zapCT             = inCT zap_segment
 
   fun set_ct_consistency b = makeCT(set_consistency b (theCT()))
 end;
@@ -797,7 +764,7 @@ fun new_theory str =
   in
    if str=thyname
       then (HOL_MESG("Restarting theory "^Lib.quote str); 
-            zap_segment str thy; initialize())
+            zapCT str; initialize())
    else
    if mem str (ancestry thyname)
       then raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
@@ -810,4 +777,4 @@ fun new_theory str =
     )
   end;
 
-end; (* Theory *)
+end (* Theory *)

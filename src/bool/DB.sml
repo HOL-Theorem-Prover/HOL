@@ -19,6 +19,7 @@ structure DB :> DB =
 struct
 
 open HolKernel;
+type theory = Hol_pp.theory;
 
 val ERR = mk_HOL_ERR "DB";
 
@@ -61,9 +62,9 @@ fun bindl thy blist = DBref := Lib.rev_itlist (addb thy) blist (lemmas())
 fun CT() =
   let val thyname = Theory.current_theory()
   in
-    itlist (add o classify thyname Def) (Theory.curr_defs ())
-     (itlist (add o classify thyname Axm) (Theory.curr_axioms ())
-      (itlist (add o classify thyname Thm) (Theory.curr_thms ())
+    itlist (add o classify thyname Def) (Theory.current_definitions ())
+     (itlist (add o classify thyname Axm) (Theory.current_axioms ())
+      (itlist (add o classify thyname Thm) (Theory.current_theorems ())
               (lemmas())))
   end
 end;
@@ -130,14 +131,37 @@ fun fetch s1 s2 = fst (thm_class s1 s2);
 fun thm_of ((_,n),(th,_)) = (n,th);
 fun is x (_,(_,cl)) = (cl=x)
 
-val thms        = List.map thm_of o thy
-val theorems    = List.map thm_of o Lib.filter (is Thm) o thy
-val definitions = List.map thm_of o Lib.filter (is Def) o thy
-val axioms      = List.map thm_of o Lib.filter (is Axm) o thy
+val thms        = rev o List.map thm_of o thy
+val theorems    = rev o List.map thm_of o Lib.filter (is Thm) o thy
+val definitions = rev o List.map thm_of o Lib.filter (is Def) o thy
+val axioms      = rev o List.map thm_of o Lib.filter (is Axm) o thy
 
 
 (*---------------------------------------------------------------------------
-    Refugee from Parse
+     Support for print_theory
+ ---------------------------------------------------------------------------*)
+
+fun dest_theory s =
+ let val thyname = if s = "-" then Theory.current_theory () else s
+ in
+   Hol_pp.THEORY (thyname,
+    {types = rev (Theory.types thyname),
+     consts = rev (map dest_const (Theory.constants thyname)),
+     parents = Theory.parents thyname,
+     axioms = axioms thyname,
+     definitions = definitions thyname,
+     theorems = theorems thyname})
+ end;
+
+fun print_theory str =
+ let val ppstrm = Portable.mk_ppstream (Portable.defaultConsumer())
+ in Hol_pp.pp_theory ppstrm (dest_theory str)
+  ; Portable.flush_ppstream  ppstrm
+  ; TextIO.output(TextIO.stdOut,"\n")
+ end;
+
+(*---------------------------------------------------------------------------
+    Refugee from Parse structure
  ---------------------------------------------------------------------------*)
 
 fun export_theory_as_docfiles dirname = 

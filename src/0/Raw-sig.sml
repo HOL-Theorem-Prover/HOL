@@ -260,18 +260,16 @@ sig
   val save_thm       : string * thm -> thm
   val delete_type    : string -> unit
   val delete_const   : string -> unit
-  val delete_definition : string -> unit
-  val delete_axiom   : string -> unit
-  val delete_theorem : string -> unit
+  val delete_binding : string -> unit
   val current_theory : unit -> string
   val parents        : string -> string list
   val ancestry       : string -> string list
   val types          : string -> (string * int) list
   val constants      : string -> term list
-  val curr_axioms    : unit -> (string * thm) list
-  val curr_defs      : unit -> (string * thm) list
-  val curr_thms      : unit -> (string * thm) list
-  val new_theory     : string -> unit
+  val current_axioms : unit -> (string * thm) list
+  val current_definitions : unit -> (string * thm) list
+  val current_theorems : unit -> (string * thm) list
+  val new_theory       : string -> unit
   val after_new_theory : (string -> unit) -> unit
   val adjoin_to_theory : thy_addon -> unit
   val export_theory    : unit -> unit
@@ -283,8 +281,8 @@ sig
   val uptodate_term      : term -> bool
   val uptodate_thm       : thm -> bool
   val scrub              : unit -> unit
-  val set_MLname : string -> string -> unit
-  val store_definition : string * string list * witness * thm -> thm
+  val set_MLname         : string -> string -> unit
+  val store_definition   : string * string list * witness * thm -> thm
   val store_type_definition : string * string * witness * thm -> thm
 end
 

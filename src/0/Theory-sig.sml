@@ -12,20 +12,18 @@ sig
 
   val new_theory         : string -> unit
 
-(* Adding to the current theory *)
+(* Add to the current theory segment *)
 
   val new_type           : string * int -> unit
   val new_constant       : string * hol_type -> unit
   val new_axiom          : string * term -> thm
   val save_thm           : string * thm -> thm
 
-(* Delete from the current theory *)
+(* Delete from the current theory segment *)
 
   val delete_type        : string -> unit
   val delete_const       : string -> unit
-  val delete_axiom       : string -> unit
-  val delete_definition  : string -> unit
-  val delete_theorem     : string -> unit
+  val delete_binding     : string -> unit
 
 (* Information on the current theory segment *)
 
@@ -34,9 +32,9 @@ sig
   val ancestry           : string -> string list
   val types              : string -> (string * int) list
   val constants          : string -> term list
-  val curr_axioms        : unit -> (string * thm) list
-  val curr_defs          : unit -> (string * thm) list
-  val curr_thms          : unit -> (string * thm) list
+  val current_axioms     : unit -> (string * thm) list
+  val current_theorems   : unit -> (string * thm) list
+  val current_definitions : unit -> (string * thm) list
 
 (* Support for persistent theories *)
 
@@ -62,4 +60,4 @@ sig
   val incorporate_types  : string -> (string*int) list -> unit
   val incorporate_consts : string -> (string*hol_type)list -> unit
 
-end;
+end

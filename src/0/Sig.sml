@@ -23,10 +23,10 @@ sig
   val app         : (entry list -> entry list) -> unit
   val slice       : string -> entry list
   val filter      : (entry -> bool) -> unit
+  val scope       : (entry -> bool) -> unit
   val del_segment : string -> unit
   val anachronize : string -> unit
   val all_entries : unit -> entry list
-  val scope       : (entry -> bool) -> unit
 end;
 
 

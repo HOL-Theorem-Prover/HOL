@@ -1,6 +1,5 @@
 signature computeLib =
 sig
-
   include Abbrev
 
   (* compsets and their operations *)

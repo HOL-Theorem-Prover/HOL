@@ -264,7 +264,7 @@ fun IMP_CANON th =
             end else
        if is_exists ant
        then let val (Bvar,Body) = dest_exists ant
-                val bv' = variant (thm_free_vars th) Bvar
+                val bv' = variant (thm_frees th) Bvar
                 val body' = subst [Bvar |-> bv'] Body
             in
               IMP_CANON (DISCH body' (MP th (EXISTS(ant, bv') (ASSUME body'))))
