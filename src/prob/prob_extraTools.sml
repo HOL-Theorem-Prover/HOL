@@ -3,11 +3,12 @@
 (* development.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-structure probExtraTools :> probExtraTools = 
+structure prob_extraTools :> prob_extraTools = 
 struct
 
 open HolKernel Parse boolLib;
-open bossLib pred_setTheory probUtil probExtraTheory;
+open bossLib pred_setTheory
+     probTools prob_extraTheory;
 
 infixr 0 ++ || ORELSEC ## THENC -->;
 infix 1 >> |->;
@@ -21,7 +22,7 @@ val op>> = op THEN1;
 (* Error handling.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val ERROR = mk_HOL_ERR "probExtraTools";
+val ERROR = mk_HOL_ERR "prob_extraTools";
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
 

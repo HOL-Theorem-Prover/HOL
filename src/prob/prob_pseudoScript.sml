@@ -2,7 +2,7 @@
 *)
 open HolKernel Parse boolLib;
 
-val _ = new_theory "probPseudo";
+val _ = new_theory "prob_pseudo";
 
 (* interactive mode
 if !show_assums then () else
@@ -16,17 +16,17 @@ if !show_assums then () else
   load "pairTheory";
   load "combinTheory";
   load "probUtil";
-  load "booleanSequenceTheory";
-  load "booleanSequenceTools";
-  load "probExtraTheory";
-  load "probExtraTools";
+  load "boolean_sequenceTheory";
+  load "boolean_sequenceTools";
+  load "prob_extraTheory";
+  load "prob_extraTools";
   show_assums := true);
 *)
 
 open bossLib arithmeticTheory numTheory realTheory seqTheory pred_setTheory
      ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
-     probUtil booleanSequenceTheory booleanSequenceTools probExtraTheory
-     probExtraTools;
+     probTools boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
+     prob_extraTools;
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >> |->;
@@ -36,16 +36,6 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-
-(* ------------------------------------------------------------------------- *)
-(* Error handling.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-fun ERROR f s
-  = HOL_ERR{origin_structure = "probPseudo",
-		      origin_function = f, message = s};
-fun assert_false f s = raise ERROR f s;
-fun assert b f s = if b then () else assert_false f s;
 
 (* ------------------------------------------------------------------------- *)
 (* The definition of the pseudo-random number generator.                     *)

@@ -1,4 +1,4 @@
-signature probUtil =
+signature probTools =
 sig
   include Abbrev
 

@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib;
 
-val _ = new_theory "probExtra";
+val _ = new_theory "prob_extra";
 
 (* interactive mode
 if !show_assums then () else (
@@ -11,13 +11,13 @@ if !show_assums then () else (
   load "ind_typeTheory";
   load "rich_listTheory";
   load "pairTheory";
-  load "probUtil";
+  load "probTools";
   show_assums := true
 );
 *)
 
 open bossLib arithmeticTheory realTheory seqTheory pred_setTheory pairLib
-     ind_typeTheory listTheory rich_listTheory pairTheory realLib probUtil;
+     listTheory rich_listTheory pairTheory realLib probTools;
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >>;
@@ -32,15 +32,6 @@ type term = Term.term
 type sequent = term list * term
 type tactic = Abbrev.tactic
 type conv = Abbrev.conv
-
-(* ------------------------------------------------------------------------- *)
-(* Error handling.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-val ERROR = mk_HOL_ERR "probExtraTheory";
-
-fun assert_false f s = raise ERROR f s;
-fun assert b f s = if b then () else assert_false f s;
 
 (* ------------------------------------------------------------------------- *)
 (* Extra definitions/theorems from boolTheory.                               *)

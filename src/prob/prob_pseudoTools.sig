@@ -1,4 +1,4 @@
-signature probPseudoTools =
+signature prob_pseudoTools =
 sig
 
   val SHD_PSEUDO_CONV : Term.term -> Thm.thm;

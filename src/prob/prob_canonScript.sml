@@ -2,7 +2,7 @@
 *)
 open HolKernel Parse boolLib;
 
-val _ = new_theory "probCanon";
+val _ = new_theory "prob_canon";
 
 (* interactive mode
 if !show_assums then () else (
@@ -19,7 +19,8 @@ if !show_assums then () else (
 *)
 
 open bossLib arithmeticTheory realTheory seqTheory pred_setTheory pairLib
-     listTheory rich_listTheory pairTheory realLib probUtil probExtraTheory;
+     listTheory rich_listTheory pairTheory realLib
+     probTools prob_extraTheory;
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >>;
@@ -29,14 +30,6 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-
-(* ------------------------------------------------------------------------- *)
-(* Error handling.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-val ERROR = mk_HOL_ERR "probCanon";
-fun assert_false f s = raise ERROR f s;
-fun assert b f s = if b then () else assert_false f s;
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of the canonicalisation of algebra elements.                   *)

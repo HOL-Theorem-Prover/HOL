@@ -2,7 +2,7 @@
 *)
 open HolKernel Parse boolLib;
 
-val _ = new_theory "probAlgebra";
+val _ = new_theory "prob_algebra";
 
 (* interactive mode
 if !show_assums then () else (
@@ -15,21 +15,21 @@ if !show_assums then () else (
   load "rich_listTheory";
   load "pairTheory";
   load "combinTheory";
-  load "probUtil";
+  load "probTools";
   load "booleanSequenceTheory";
   load "booleanSequenceTools";
-  load "probExtraTheory";
-  load "probExtraTools";
-  load "probCanonTheory";
-  load "probCanonTools";
+  load "prob_extraTheory";
+  load "prob_extraTools";
+  load "prob_canonTheory";
+  load "prob_canonTools";
   show_assums := true
 );
 *)
 
 open bossLib arithmeticTheory realTheory seqTheory pred_setTheory
      ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
-     probUtil booleanSequenceTheory booleanSequenceTools probExtraTheory
-     probExtraTools probCanonTheory probCanonTools numSyntax;
+     probTools boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
+     prob_extraTools prob_canonTheory prob_canonTools numSyntax;
 
 infixr 0 ++ << || ORELSEC ## -->;
 infix 1 >> |->;
@@ -39,16 +39,6 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-
-(* ------------------------------------------------------------------------- *)
-(* Error handling.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-fun ERROR f s
-  = HOL_ERR{origin_structure = "probAlgebra",
-		      origin_function = f, message = s};
-fun assert_false f s = raise ERROR f s;
-fun assert b f s = if b then () else assert_false f s;
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of the embedding function from boolean list lists to boolean   *)

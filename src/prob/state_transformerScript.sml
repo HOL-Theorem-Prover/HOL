@@ -1,7 +1,7 @@
 (* non-interactive mode *)
 open HolKernel Parse boolLib;
 
-val _ = new_theory "stateTransformer";
+val _ = new_theory "state_transformer";
 
 (* interactive mode
 if !show_assums then () else (
@@ -26,9 +26,8 @@ val op>> = op THEN1;
 (* Error handling.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun ERROR f s
-  = HOL_ERR{origin_structure = "stateTransformer",
-		      origin_function = f, message = s};
+fun ERROR f s = HOL_ERR{origin_structure = "state_transformerScript",
+                        origin_function = f, message = s};
 fun assert_false f s = raise ERROR f s;
 fun assert b f s = if b then () else assert_false f s;
 

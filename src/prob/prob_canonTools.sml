@@ -2,10 +2,10 @@
 (* A simpset for the canonicalisation procedure.                             *)
 (* ------------------------------------------------------------------------- *)
 
-structure probCanonTools :> probCanonTools =
+structure prob_canonTools :> prob_canonTools =
 struct
 
-open Drule bossLib rich_listTheory probCanonTheory;
+open Drule bossLib rich_listTheory prob_canonTheory;
 
 val prob_canon_ss = simpLib.++(list_ss, simpLib.SIMPSET {
   ac = [],

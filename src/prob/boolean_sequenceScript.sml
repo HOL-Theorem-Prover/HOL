@@ -2,19 +2,19 @@
 *)
 open HolKernel Parse boolLib;
 
-val _ = new_theory "booleanSequence";
+val _ = new_theory "boolean_sequence";
 
 (* interactive mode
 if !show_assums then () else
  (load "bossLib";
   load "arithmeticTheory";
-  load "probUtil";
-  load "probExtraTheory";
+  load "probTools";
+  load "prob_extraTheory";
   show_assums := true);
 *)
 
 open bossLib arithmeticTheory combinTheory
-     probUtil probExtraTheory;
+     probTools prob_extraTheory;
 
 infixr 0 ++ || ORELSEC;
 infix 1 >>;
@@ -23,16 +23,6 @@ nonfix THEN ORELSE;
 val op++ = op THEN;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-
-(* ------------------------------------------------------------------------- *)
-(* Error handling.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-fun ERROR f s
-  = Feedback.HOL_ERR{origin_structure = "booleanSequenceTheory",
-		      origin_function = f, message = s};
-fun assert_false f s = raise ERROR f s;
-fun assert b f s = if b then () else assert_false f s;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

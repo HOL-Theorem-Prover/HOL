@@ -4,7 +4,7 @@
 
 (* non-interactive mode
 *)
-structure probPseudoTools :> probPseudoTools =
+structure prob_pseudoTools :> prob_pseudoTools =
 struct
 
 open HolKernel Parse boolLib;
@@ -13,11 +13,11 @@ open HolKernel Parse boolLib;
 if !show_assums then () else
  (load "bossLib";
   load "reduceLib";
-  load "probPseudoTheory";
+  load "prob_pseudoTheory";
   show_assums := true);
 *)
 
-open Drule bossLib reduceLib probPseudoTheory;
+open Drule bossLib reduceLib prob_pseudoTheory;
 
 infix 1 THENC
 infix 0 ORELSEC;

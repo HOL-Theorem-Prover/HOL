@@ -2,7 +2,7 @@
 *)
 open HolKernel Parse boolLib;
 
-val _ = new_theory "probUniform";
+val _ = new_theory "prob_uniform";
 
 (* interactive mode
 if !show_assums then () else
@@ -16,24 +16,24 @@ if !show_assums then () else
   load "pairTheory";
   load "combinTheory";
   load "probUtil";
-  load "booleanSequenceTheory";
-  load "booleanSequenceTools";
-  load "probExtraTheory";
-  load "probExtraTools";
-  load "probCanonTheory";
-  load "probCanonTools";
-  load "probAlgebraTheory";
+  load "boolean_sequenceTheory";
+  load "boolean_sequenceTools";
+  load "prob_extraTheory";
+  load "prob_extraTools";
+  load "prob_canonTheory";
+  load "prob_canonTools";
+  load "prob_algebraTheory";
   load "probTheory";
-  load "stateTransformerTheory";
-  load "probIndepTheory";
+  load "state_transformerTheory";
+  load "prob_indepTheory";
   show_assums := true);
 *)
 
 open bossLib arithmeticTheory numTheory realTheory seqTheory pred_setTheory
-     ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
-     probUtil booleanSequenceTheory booleanSequenceTools probExtraTheory
-     probExtraTools probCanonTheory probCanonTools probAlgebraTheory
-     probTheory stateTransformerTheory probIndepTheory;
+     listTheory rich_listTheory pairTheory combinTheory realLib
+     probTools boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
+     prob_extraTools prob_canonTheory prob_canonTools prob_algebraTheory
+     probTheory state_transformerTheory prob_indepTheory;
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >> |->;
@@ -43,16 +43,6 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-
-(* ------------------------------------------------------------------------- *)
-(* Error handling.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-fun ERROR f s
-  = HOL_ERR{origin_structure = "probUniform",
-		      origin_function = f, message = s};
-fun assert_false f s = raise ERROR f s;
-fun assert b f s = if b then () else assert_false f s;
 
 (* ------------------------------------------------------------------------- *)
 (* The definition of the uniform random number generator.                    *)
