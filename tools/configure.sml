@@ -307,15 +307,27 @@ val _ =
 val _ =
   if OS <> "winNT"
   then let val _ = print "Attempting to compile quote filter ... "
+           open Process
+           fun make_src () = let
+             val qfdir = fullPath [holdir, "src/quote-filter"]
+           in
+             system ("cd "^qfdir^" ; make -s filter.c")
+           end
            val src    = fullPath [holdir, "src/quote-filter/filter.c"]
            val target = fullPath [holdir, "bin/unquote"]
-           open Process
+           fun check_src () =
+               FileSys.access(src, [FileSys.A_READ]) orelse
+               (print "(filter.c: ";
+                if make_src() = success then
+                  (print "OK) "; true)
+                else (print "failed!) "; false))
        in
-         if system (String.concat [CC," ", src," -o ", target]) = success
-           then (mk_xable target; print "successful.\n") handle _
+         if check_src() andalso
+            system (String.concat [CC," ", src," -o ", target]) = success
+         then (mk_xable target; print "successful.\n") handle _
                 => print(String.concat["\n>>>>>Failed to move quote filter!",
                               "(continuing anyway)\n\n"])
-           else print
+         else print
              "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
        end
   else
