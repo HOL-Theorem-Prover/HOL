@@ -1,4 +1,7 @@
 \documentclass[10pt]{article}
+\addtolength\textwidth{1cm}
+\addtolength\textheight{2cm}
+\pagestyle{empty}
 
 \begin{document}
 
@@ -7,8 +10,9 @@
 All of these commands are executed by first typing the HOL prefix
 (Meta-h, or {\tt Esc}-h) and then the appropriate letter.
 
-\begin{description}
 
+\begin{description}
+\small
 \item [h ``hol98''] Starts the HOL session.
 \item [C-c ``hol-interrupt''] Interrupts the HOL session.  Useful for
   those tactics that don't always return.
@@ -16,29 +20,45 @@ All of these commands are executed by first typing the HOL prefix
   in, so that the most text is visible with the bottom of the text
   at the bottom of the screen.
 \item [C-v ``hol-scroll-up''] Scrolls the HOL window.
+\item [C-t ``hol-toggle-show-types''] Toggles the value of the {\tt
+    show\_types} variable, affecting how terms are printed.
+\item [M-b  ``backward-hol-tactic''] Moves the cursor back over the
+  previous tactic in the source text in the current buffer.  With a
+  \emph{prefix argument}, moves back that many tactics.
+\item [M-f   ``forward-hol-tactic''] Moves the cursor forward over the
+  next tactic in the source text in the current buffer.  With a \emph{prefix
+  argument}, moves that many.
+\item [M-r   ``send-region''] Sends the \emph{region} to the HOL
+  process, where it is evaluated at the top level.  Can be used both
+  to define new ML bindings, and to evaluate epxressions.
 \item [M-v ``hol-scroll-down''] Scrolls the HOL window.
 \item [b   ``hol-backup''] Backs up one stage in the goalstack.
+\item [d  ``hol-drop-goal''] Drops the current goal, removing it from
+  the goal-stack entirely.
 \item [e ``expand-hol-tactic''] Sends the region to the HOL process as
   a tactic, where it is applied to the current goal.
-\item [g ``hol-goal''] Sets the current goal.  With a \emph{prefix
-    argument}, replaces the existing one.
-\item [l ``hol-load-file''] Loads a HOL library.  Prompts for the name
-  of the library.
+\item [g ``hol-goal''] Sets the current goal.  Sends the term at point
+  (delimited on both sides by back-quotes) to the HOL process.  With a
+  \emph{prefix argument}, or if in transient mark mode with an active
+  region, sends the selected region at the goal instead.
+\item [l ``hol-load-file''] Loads a HOL library.  If there is a region
+  marked, uses that string as the library to load.  Otherwise, if the
+  cursor (point) is over a likely name, it uses that for the library
+  to load.  As a last resort (or in all situations, if there is a
+  \emph{prefix argument}), prompts for the name of the library.
 \item [n ``hol-name-top-theorem''] Prompts for a name to give to the
   ``top theorem'' (i.e., the theorem just proved in the goalstack).
+  With a \emph{prefix argument} also drops the goal.
 \item [p ``hol-print''] Prints the top goal in the goalstack.
-\item [r ``hol-rotate''] Rotates goals in the goalstack (typically
-  used after a case split where you want to prove things in a
-  different order.  Can't make a logical difference as a goal rotated
-  out of the way will still need to be proved eventually.  With a
+\item [r ``hol-rotate''] Rotates goals in the goalstack.  With a
   numeric \emph{prefix argument} rotates that many out of the way,
   instead of just one.
 \item [R ``hol-restart''] Restarts the current proof.
-\item [M-r   ``send-region''] Sends the \emph{region} to the HOL
-  process, where it is evaluated at the top level.  Can be used both
-  to define new ML bindings, and to evaluate existing ones.
 \item [s ``send-string-to-hol''] Prompts for a string to be evaluated
   by SML, like ``M-r''.
+\item [t ``mark-hol-tactic''] Marks the tactic at point, putting mark
+  at the start of the tactic, and point at the end.  Useful as a
+  prelude to applying the tactic with ``expand-hol-tactic''.
 \item [u ``hol-use-file''] Prompts for a file-name to be \emph{use}-d
   at the top level.
 
