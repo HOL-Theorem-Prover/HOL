@@ -92,7 +92,7 @@ val list_Axiom_old = store_thm(
   Term`!x f. ?!fn1:'a list -> 'b.
           (fn1 [] = x) /\ (!h t. fn1 (h::t) = f (fn1 t) h t)`,
   REPEAT GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL [
-    ASSUME_TAC (Thm.INST_TYPE [(Type`:'Z` |-> Type.beta)] list_Axiom) THEN
+    ASSUME_TAC list_Axiom THEN
     POP_ASSUM (ACCEPT_TAC o BETA_RULE o Q.SPECL [`x`, `\x y z. f z x y`]),
     REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
     Ho_resolve.MATCH_MP_TAC (TypeBase.induction_of listinfo) THEN
