@@ -168,7 +168,21 @@ val add_funs = Lib.C add_thms the_compset;
 val add_convs = List.app (Lib.C add_conv the_compset);
 
 val EVAL_CONV = CBV_CONV the_compset;
+val EVAL_RULE = Conv.CONV_RULE EVAL_CONV;
+val EVAL_TAC = Tactic.CONV_TAC EVAL_CONV;
 
+infix Orelse;
+fun (p Orelse q) x = p x orelse q x;
+
+fun OR [] = raise ERR "OR" "empty list"
+  | OR [x] = same_const x
+  | OR (h::t) = same_const h Orelse OR t;
+
+fun RESTR_EVAL_CONV clist = 
+  Lib.with_flag (stoppers,SOME (OR clist)) EVAL_CONV;
+
+val RESTR_EVAL_TAC  = Tactic.CONV_TAC o RESTR_EVAL_CONV;
+val RESTR_EVAL_RULE = Conv.CONV_RULE o RESTR_EVAL_CONV;
 
 (*---------------------------------------------------------------------------
       Support for persistence of the_compset
@@ -181,7 +195,7 @@ fun write_datatype_info tyinfo =
        case size_of0 tyinfo
         of SOME (_, ORIG def) => SOME def
          | otherwise => NONE
-      val distinct_opt =  (* Needed since the GSYM'ed eqns are not there! *)
+     val distinct_opt =  (* Needed since the GSYM'ed eqns are not there! *)
        case distinct_of tyinfo
         of SOME th => SOME (LIST_CONJ(th::map Conv.GSYM (CONJUNCTS th)))
          | otherwise => NONE

@@ -111,29 +111,26 @@ fun inst_rw (th,monitoring,{Rule=RW{thm,rhs,...}, Inst=(bds,tysub)}) =
 end;
 
 val monitoring = ref NONE : (term -> bool) option ref;
+val stoppers = ref NONE : (term -> bool) option ref;
 
 (*---------------------------------------------------------------------------
  * Reducing a constant
  *---------------------------------------------------------------------------*)
 
 fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
-      (let val (_,tytheta) = match_term Hcst Head 
-                             handle HOL_ERR _ => raise No_match
-           val rule_inst = try_rwn tytheta Args rls
-           val mon = case !monitoring 
-                    of NONE => false
-                     | SOME f => f Head
-           val insted = inst_rw(th,mon,rule_inst)
-(*           val _ = case !monitoring 
-                    of NONE => ()
-                     | SOME f => if f Head
-                                 then (Hol_pp.print_term(concl (fst insted)); 
-                                       print"\n")
-                                 else ()
-*)
-       in (true, insted)
-       end handle No_match
-       => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
+      (let val _ = (case !stoppers 
+                     of NONE => ()
+                      | SOME p => if p Head then raise No_match else ())
+           val (_,tytheta) = match_term Hcst Head 
+                                 handle HOL_ERR _ => raise No_match
+               val rule_inst = try_rwn tytheta Args rls
+               val mon = case !monitoring 
+                          of NONE => false
+                           | SOME f => f Head
+               val insted = inst_rw(th,mon,rule_inst)
+           in (true, insted)
+           end handle No_match
+           => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
   | reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Conv fconv,Tail},Skip}) =
       (let val (thm, ft) = fconv (rhs_concl th) in
        (true, (trans_thm th thm, ft))
