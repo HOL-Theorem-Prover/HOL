@@ -25,7 +25,8 @@ let indent_width s =
       | ' '    -> w+1
       | '\t'   -> w-(w mod 8)+8  (* account for tabs *)
       | '\r'   -> 0
-      | '\012' -> 0)
+      | '\012' -> 0
+      | _      -> 0)
             in
   go 0 0
 
@@ -75,7 +76,7 @@ and
   | white+                 { White (Lexing.lexeme lexbuf) }
   | startcom               { comments := [];
                              comment lexbuf;
-                             Comment (String.concat "" !comments)}
+                             Comment (String.concat "" (List.rev !comments))}
   | nonagg                 { Sep (Lexing.lexeme lexbuf) }
   | stoppat                { raise Finished }
   | _                      { raise BadChar }
@@ -84,7 +85,10 @@ and
   comment = parse
     incomm*        { comments := (Lexing.lexeme lexbuf) :: !comments;
                      comment lexbuf }
-  | startcom       { comment lexbuf }
+  | startcom       { comments := "(*" :: !comments;
+                     comment lexbuf;
+                     comments := "*)" :: !comments;
+                     comment lexbuf; }
   | stopcom        { }
 
 

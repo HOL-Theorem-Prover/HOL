@@ -6,9 +6,9 @@ open Hollex
 let render_token t =
   match t with
     Ident(s)   -> "I:"^s
-  | Indent(n)  -> "\n"^(String.make n '>')
+  | Indent(n)  -> "\nN:"^(String.make n '>')
   | White(s)   -> "W:"^s
-  | Comment(s) -> "C:(*"^s^"*):C"
+  | Comment(s) -> "C:(*"^s^"*)-C"
   | Sep(s)     -> "S:"^s
 
 let _ =

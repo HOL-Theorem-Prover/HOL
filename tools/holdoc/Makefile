@@ -6,7 +6,7 @@ OCAMLDEP=$(OCAMLPATH)/ocamldep
 
 # main target:
 
-all: simpledump
+all: simpledump lts_to_latex
 
 # program targets:
 
@@ -14,6 +14,11 @@ SIMPLEDUMP_OBJS=hollex.cmo simpledump.cmo
 
 simpledump : $(SIMPLEDUMP_OBJS)
 	$(OCAMLC) $(SIMPLEDUMP_OBJS) -o simpledump
+
+LTS_TO_LATEX_OBJS=hollex.cmo lts_to_latex.cmo
+
+lts_to_latex : $(LTS_TO_LATEX_OBJS)
+	$(OCAMLC) $(LTS_TO_LATEX_OBJS) -o lts_to_latex
 
 # other targets:
 
