@@ -1,0 +1,121 @@
+{
+val output_stream = ref TextIO.stdOut
+fun ECHO lb = TextIO.output(!output_stream, Lexing.getLexeme lb)
+fun print s = TextIO.output(!output_stream, s)
+val comdepth = ref 0
+val pardepth = ref 0
+val antiquote = ref false
+fun inc r = (r := !r + 1)
+fun dec r = (r := !r - 1)
+
+fun drop_upto c s = let
+  (* returns the substring of s that follows the first occurrence of c *)
+  open Substring
+  val ss = all s
+  val remainder = dropl (fn c' => c <> c') ss
+in
+  string remainder
+end
+
+}
+
+let letter = [ `A` - `Z` `a` - `z` ]
+let digit = [ `0` - `9` ]
+let symbol = [ `!` `%` `&` `$` `+` `/` `:` `<` `=` `>` `?` `@` `~` `|` `-`
+               `#` `*` `\\` `^`]
+let id = letter (letter | digit | `_`)* | symbol +
+let ws = [ ` ` `\t` ]
+let newline = [`\n` `\r`]
+
+rule INITIAL =
+parse `"` { ECHO lexbuf; STRING lexbuf  }
+  | "(*" { ECHO lexbuf; inc comdepth; COMMENT lexbuf }
+  | "("  { ECHO lexbuf; inc pardepth; INITIAL lexbuf }
+  | ")"  { ECHO lexbuf; dec pardepth;
+           if !antiquote andalso !pardepth < 1 then () else INITIAL lexbuf }
+  | "==" ws * "`" { print "(Type [QUOTE \""; OLDTYQUOTE lexbuf }
+  | "--" ws * "`" { print "(Term [QUOTE \""; OLDTMQUOTE lexbuf }
+  | "``" ws * `:` (letter | ws | [`(` `'` ]) {
+      print "(Type [QUOTE \"";
+      print (drop_upto #":" (Lexing.getLexeme lexbuf));
+      TYQUOTE lexbuf
+    }
+  | "``" ws * ":^" { print "(Type [QUOTE \"\", ANTIQUOTE (";
+                     ANTIQUOTE lexbuf; TYQUOTE lexbuf }
+  | "``" { print "(Term [QUOTE \""; TMQUOTE lexbuf }
+  | "`"  { print "[QUOTE \""; QUOTE lexbuf }
+  | newline { print "\n"; TextIO.flushOut (!output_stream); INITIAL lexbuf }
+  | _ { ECHO lexbuf; INITIAL lexbuf }
+  | eof { () }
+
+and STRING =
+parse "\\\"" { ECHO lexbuf }
+    | "\""   { ECHO lexbuf; INITIAL lexbuf }
+    | _      { ECHO lexbuf; STRING lexbuf }
+
+and COMMENT =
+parse "(*"   { ECHO lexbuf; inc comdepth; COMMENT lexbuf }
+    | "*)"   { ECHO lexbuf; dec comdepth;
+               if !comdepth < 1 then INITIAL lexbuf
+               else COMMENT lexbuf }
+    | _      { ECHO lexbuf; COMMENT lexbuf }
+
+and QUOTE =
+parse "`"    { print "\"]"; INITIAL lexbuf }
+    | `^`    { print "\", ANTIQUOTE ("; ANTIQUOTE lexbuf; QUOTE lexbuf }
+    | `\\`   { print "\\\\"; QUOTE lexbuf }
+    | `"`   { print "\\\""; QUOTE lexbuf }
+    | `\t`   { print "\\t"; QUOTE lexbuf }
+    | `\n`   { print " \",\nQUOTE \""; QUOTE lexbuf }
+    | _      { ECHO lexbuf; QUOTE lexbuf }
+
+and TMQUOTE =
+parse "``"   { print "\"])"; INITIAL lexbuf }
+    | `^`    { print "\", ANTIQUOTE ("; ANTIQUOTE lexbuf; TMQUOTE lexbuf }
+    | `\\`   { print "\\\\"; TMQUOTE lexbuf }
+    | `"`   { print "\\\""; TMQUOTE lexbuf }
+    | `\t`   { print "\\t"; TMQUOTE lexbuf }
+    | `\n`   { print " \",\nQUOTE \""; TMQUOTE lexbuf }
+    | _      { ECHO lexbuf; TMQUOTE lexbuf }
+
+and TYQUOTE =
+parse "``"   { print "\"])"; INITIAL lexbuf }
+    | `^`    { print "\", ANTIQUOTE ("; ANTIQUOTE lexbuf; TYQUOTE lexbuf }
+    | `\\`   { print "\\\\"; TYQUOTE lexbuf }
+    | `"`   { print "\\\""; TYQUOTE lexbuf }
+    | `\t`   { print "\\t"; TYQUOTE lexbuf }
+    | `\n`   { print " \",\nTYQUOTE \""; TYQUOTE lexbuf }
+    | _      { ECHO lexbuf; TYQUOTE lexbuf }
+
+and OLDTMQUOTE =
+parse "`" ws * "--"  { print "\"])"; INITIAL lexbuf }
+    | `^`    { print "\", ANTIQUOTE ("; ANTIQUOTE lexbuf;
+               OLDTMQUOTE lexbuf
+             }
+    | `\\`   { print "\\\\"; OLDTMQUOTE lexbuf }
+    | `"`   { print "\\\""; OLDTMQUOTE lexbuf }
+    | `\t`   { print "\\t"; OLDTMQUOTE lexbuf }
+    | `\n`   { print " \",\nOLDTMQUOTE \""; OLDTMQUOTE lexbuf }
+    | _      { ECHO lexbuf; OLDTMQUOTE lexbuf }
+
+and OLDTYQUOTE =
+parse "`" ws * "=="  { print "\"])"; INITIAL lexbuf }
+    | `^`    { print "\", ANTIQUOTE ("; ANTIQUOTE lexbuf;
+               OLDTYQUOTE lexbuf
+             }
+    | `\\`   { print "\\\\"; OLDTYQUOTE lexbuf }
+    | `"`   { print "\\\""; OLDTYQUOTE lexbuf }
+    | `\t`   { print "\\t"; OLDTYQUOTE lexbuf }
+    | `\n`   { print " \",\nOLDTYQUOTE \""; OLDTYQUOTE lexbuf }
+    | _      { ECHO lexbuf; OLDTYQUOTE lexbuf }
+
+and ANTIQUOTE =
+parse id { ECHO lexbuf; print "),QUOTE \"" }
+    | `(` { let val oldanti = !antiquote in
+              ECHO lexbuf; pardepth := 1; antiquote := true; INITIAL lexbuf;
+              print "),QUOTE \""; antiquote := oldanti
+            end }
+    | ws + { ANTIQUOTE lexbuf }
+    | _    { ECHO lexbuf }
+
+;
