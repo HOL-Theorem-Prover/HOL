@@ -7,7 +7,8 @@
   app load ["tablesTheory", "word8Theory", "metisLib", "word8CasesLib"];
 *)
 
-open HolKernel Parse boolLib bossLib word8Theory tablesTheory bitsTheory
+open HolKernel Parse boolLib bossLib 
+     word8Theory tablesTheory bitsTheory
      word8Lib arithmeticTheory metisLib word8CasesLib;
 
 val _ = new_theory "Mult";
@@ -35,7 +36,6 @@ val BIT_SHIFT_THM2 = Q.prove (
 `!n a s. s <= n ==> (BIT n (a * 2 ** s) = BIT (n - s) a)`,
 RW_TAC arith_ss [GSYM (Q.SPECL [`n-s`, `a`, `s`] BIT_SHIFT_THM)])
 
-
 val EXP_SUB = Q.prove (
 `!p q n. 0 < n /\ q <= p ==> (n ** (p - q) = n ** p DIV n ** q)`,
 REPEAT STRIP_TAC THEN
@@ -48,7 +48,6 @@ val EVEN_EVENEXP = Q.prove (
 `!m n. n > 0 /\ EVEN m ==> EVEN (m ** n)`,
 STRIP_TAC THEN Cases_on `n` THEN RW_TAC arith_ss [EXP, EVEN_MULT])
 
-
 val BIT_ZERO = Q.prove (
 `!n a s. (n < s) ==> (BIT n (a * 2 ** s) = F)`,
 EVAL_TAC THEN
@@ -58,21 +57,27 @@ Q.EXISTS_TAC `a * 2 ** (s - n)` THEN Q.EXISTS_TAC `0` THEN
 RW_TAC arith_ss [ZERO_LT_TWOEXP,GSYM MULT_ASSOC, GSYM EXP_ADD, EVEN_MULT,
                  EVEN_EVENEXP])
 
-val EOR_AC = Q.prove (
+val EOR_AC = Q.store_thm
+("EOR_AC",
 `!a b c. ((a # b) # c = a # (b # c)) /\ (a # b = b # a)`,
 REPEAT STRIP_TAC THEN
 n2w_TAC `a` THEN n2w_TAC `b` THEN n2w_TAC `c` THEN
 RW_TAC arith_ss [EQ_BIT_THM, EOR_EVAL, EOR_def, w2n_EVAL, MOD_WL_THM, lem,
                  HB_def, WL_def, BITWISE_THM] THEN
-METIS_TAC [])
+METIS_TAC []);
 
 (* Should prove this without brute force, so the proof would work for other 
    bit widths *)
-val EOR_ID = Q.prove (
+val EOR_ID = Q.store_thm ("EOR_ID",
 `!x. x # 0w = x`,
-STRIP_TAC THEN word8Cases_on `x` THEN WORD_TAC);
+STRIP_TAC THEN word8Cases_on `x` THEN POP_ASSUM SUBST_ALL_TAC THEN WORD_TAC);
 
 val [a, c] = map GEN_ALL (CONJUNCTS (SPEC_ALL EOR_AC))
+
+val EOR_INV = Q.store_thm 
+("EOR_INV",
+ `!x. x # x = 0w`,
+ STRIP_TAC THEN word8Cases_on `x` THEN POP_ASSUM SUBST_ALL_TAC THEN WORD_TAC);
 
 (*
 val LSR1_LESS = Q.prove (
@@ -133,7 +138,7 @@ val (ConstMult_def,ConstMult_ind) =
    (* It would be nice to use LSR1_LESS instead of brute force, but
       I didn't finish proving it.  *)
    STRIP_TAC THEN word8Cases_on `b1` THEN 
-   REPEAT (POP_ASSUM MP_TAC) THEN WORD_TAC)
+   RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN WORD_TAC)
 
 val _ = save_thm("ConstMult_def",ConstMult_def);
 val _ = save_thm("ConstMult_ind",ConstMult_ind);
@@ -164,7 +169,7 @@ val (IterConstMult_def,IterConstMult_ind) =
   (defn,
    WF_REL_TAC `measure (w2n o FST)` THEN STRIP_TAC THEN
    word8Cases_on `b1` THEN 
-   REPEAT (POP_ASSUM MP_TAC) THEN WORD_TAC);
+   RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN WORD_TAC);
 
 val _ = save_thm("IterConstMult_def",IterConstMult_def);
 val _ = save_thm("IterConstMult_ind",IterConstMult_ind);
@@ -187,7 +192,7 @@ val ConstMultEq = Q.store_thm
 (*---------------------------------------------------------------------------*)
 (* Specialized version, with partially evaluated multiplication. Uses tables *)
 (* from tablesTheory.                                                        *)
-(*---------------------------------------------------------------------------*) 
+(*---------------------------------------------------------------------------*)
 
 val TableConstMult_def = word8Define
  `(tcm 0x2w = GF256_by_2)  /\
@@ -204,9 +209,9 @@ val TableConstMult_def = word8Define
 
 val MultEquiv = Count.apply Q.store_thm
  ("MultEquiv",
-  `!b. (tcm 0x2w b = 0x2w ** b)   /\
+  `!b. (tcm 0x2w b = 0x2w ** b) /\
        (tcm 0x3w b = 0x3w ** b) /\
-       (tcm 0x9w b = 0x9w ** b)  /\
+       (tcm 0x9w b = 0x9w ** b) /\
        (tcm 0xBw b = 0xBw ** b) /\
        (tcm 0xDw b = 0xDw ** b) /\
        (tcm 0xEw b = 0xEw ** b)`,

@@ -141,8 +141,7 @@ fun word8Define q =
   end
   handle e => Raise (wrap_exn "word8CasesLib" "word8Define" e);
 
-fun word8Cases_on var = 
-ASSUME_TAC (Q.SPEC var word8Nchotomy) THEN RW_TAC bool_ss []
+fun word8Cases_on var = STRIP_ASSUME_TAC (Q.SPEC var word8Nchotomy) ;
 
 
 end
