@@ -138,10 +138,11 @@ Makefile uses this trick.
 The first directive is built into holdoc_munge.ml.
 
 (*[ VARS x y z ]*) adds the named variables to the list of identifiers
-that will be typeset as variables (rather than unknown).  Scope in LTS
-mode is the entire current rule, and the directive is only processed
-when it occurs in the list of vars after a binder such as !.  Scope in
-MNG is the rest of the source file.
+that will be typeset as variables with \tsvar{} (rather than unknown
+with \tsunknown{}).  Scope in LTS mode is the entire current rule, and
+the directive is only processed when it occurs in the list of vars
+after a binder such as !.  Scope in MNG is the rest of the source
+file.
 
 The rest of the directives are defined in holdoc_init.ml.
 
@@ -230,7 +231,8 @@ can be useful to identify the version of munged rules.
 (*[ INDENT ]*) turns on indent mode (this is on by default).  This
 means that indentation (white space) at the beginning of a line will
 be turned into some number of \quads, according to an appropriate
-formula.  This takes effect immediately.
+formula, and newlines will be marked by TeX `\\'.  This takes effect
+immediately.
 
 (*[ NOINDENT ]*) turns indent mode off.  Indentation (white space at
 the beginning of a line) is ignored.  This takes effect immediately.

@@ -315,7 +315,7 @@ let mindent n = (* munge an indentation of level n *)
     else
       x :: ntimes (n-1) x in
   let m = (n-5) / 2 in
-  "\n" ^ String.concat "" (ntimes m "\\quad") ^ " "
+  "{}\\\\{}\n" ^ String.concat "" (ntimes m "\\quad") ^ " "
 
 let mdir v n ts = (* munge a directive *)
   let rec go ts =
