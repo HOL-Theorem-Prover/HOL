@@ -1,0 +1,23 @@
+\DOC reset_trace
+
+\TYPE {reset_trace : string -> unit}
+
+\SYNOPSIS
+Resets a tracing variable to its default value.
+
+\KEYWORDS
+Tracing.
+
+\DESCRIBE
+A call to {reset_trace n} resets the tracing variable associated with
+the name {n} to its default value, i.e., the value it had when it was
+registered.
+
+\FAILURE
+Fails if the name given is not associated with a registered tracing
+variable.
+
+\SEEALSO
+current_trace, register_trace, reset_traces, trace, traces.
+
+\ENDDOC

@@ -1,0 +1,24 @@
+\DOC register_trace.doc
+
+\TYPE {register_trace.doc : string -> int ref -> unit}
+
+\SYNOPSIS
+Registers a new tracing variable.
+
+\KEYWORDS
+Tracing.
+
+\DESCRIBE
+A call to {register_trace n r} registers the integer reference
+variable {r} as a tracing variable associated with name {n}.  Its
+value at the time of registration is considered its default value,
+which will be restored by a call to {reset_trace n} or {reset_traces}.
+
+\FAILURE
+Fails if there is already a tracing variable registered under the
+name given.
+
+\SEEALSO
+current_trace, reset_trace, reset_traces, trace, traces.
+
+\ENDDOC

@@ -1,0 +1,42 @@
+\DOC trace
+
+\TYPE {trace : string -> int -> unit}
+
+\SYNOPSIS
+Sets a tracing variable to a new value.
+
+\KEYWORDS
+Tracing.
+
+\DESCRIBE
+The {trace} function is used to set the value of a tracing variable.
+These variable control the verboseness of various tools within the
+system.  The higher these numbers, the more verbose the tools become.
+This can be useful both when debugging proofs (with the simplifier for
+example), and also as a guide to how an automatic proof is proceeding
+(with {mesonLib} for example).
+
+A call to {trace nm v} attempts to set the tracing variable associated
+with the string {nm} to value {v}.  A tracing variable is associated
+with a string by registering it using the function {register_trace}.
+
+\FAILURE
+Fails if the name given is not associated with a registered tracing
+variable.
+
+\EXAMPLE
+{
+- REWRITE_CONV [] (Term`p /\ T /\ q`);
+> val it = |- p /\ T /\ q = p /\ q : Thm.thm
+- trace "rewrite" 1;
+> val it = () : unit
+- REWRITE_CONV [] (Term`p /\ T /\ q`);
+<<HOL message: Rewrite:
+|- T /\ q = q.>>
+> val it = |- p /\ T /\ q = p /\ q : Thm.thm
+}
+
+\SEEALSO
+current_trace, register_trace, reset_trace, reset_traces, traces.
+
+\ENDDOC
