@@ -8,8 +8,11 @@ val () =
   ["../../datatype/", "../../list/src", "../../tfl/src", "../src"] @
   !loadPath;
 
-app load
-["sumTheory", "Datatype", "listTheory", "Encode", "bossLib"];
+val () = app load
+["sumTheory", "Datatype", "listTheory", "Encode", "bossLib",
+ "EncodeTheory", "DecodeTheory", "CoderTheory", "EncodeVarTheory"];
+
+open EncodeTheory DecodeTheory CoderTheory EncodeVarTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -85,3 +88,25 @@ try boolify (Term `(Num 1, Nums [2; 3])`);
 try boolify (Term `Tree [Tree []; Tree [Tree []; Tree []]; Tree []]`);
 try boolify (Term `[INL TWO; INR (Bool0 T)]`);
 try boolify (Term `Assignment ([1; 2], [Numeral 1])`);
+
+(* ------------------------------------------------------------------------- *)
+(* Deboolification of terms.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+val decode_numlist =
+  MATCH_MP (INST_TYPE [alpha |-> ``:num``] decode_list)
+  (Q.SPEC `K T` wf_decode_num);
+
+val () =
+  computeLib.add_funs
+  [encode_list_def, encode_num_def, decode_numlist, decode_num];
+
+val th1 = bossLib.EVAL ``encode_list encode_num [1; 2]``;
+
+val r = rhs (concl th1);
+
+val th2 =
+  simpLib.SIMP_CONV boolSimps.bool_ss [decode_numlist, decode_num]
+  ``decode_list (ALL_EL (K T)) (decode_num (K T)) ^r``;
+
+val th2 = bossLib.EVAL ``decode_list (ALL_EL (K T)) (decode_num (K T)) ^r``;
