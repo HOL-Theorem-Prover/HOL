@@ -332,8 +332,8 @@ val COMPONENT_THM = Q.prove(
 `!P. (?!f:'A->('B#'C). P f) = ?!p. P(\a.(FST p a, SND p a))`,
 GEN_TAC THEN CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
   THEN EQ_TAC THEN RW_TAC std_ss [] THENL
-  [Q.EXISTS_TAC `FST o (f:'A->'B#'C), SND o (f:'A->'B#'C)`
-    THEN RW_TAC std_ss [combinTheory.o_THM],
+  [Q.EXISTS_TAC `FST o f, SND o f`
+    THEN RW_TAC std_ss [combinTheory.o_THM,ETA_THM],
    Cases_on `p` THEN Cases_on `p'`
      THEN RULE_ASSUM_TAC (REWRITE_RULE pairTheory.pair_rws)
      THEN `(\a:'A. (q a, r a):'B#'C) =  \a:'A. (q' a, r' a)` by RES_TAC
@@ -341,8 +341,8 @@ GEN_TAC THEN CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
    PROVE_TAC[],
    Q.PAT_ASSUM `$! M`
       (MP_TAC o Q.SPECL [`(FST o f, SND o f)`, `(FST o f', SND o f')`])
-     THEN ZAP_TAC (std_ss && [combinTheory.o_THM, FUN_EQ_THM])
-            [pairTheory.PAIR_EQ,pairTheory.PAIR]]);
+     THEN RW_TAC std_ss [combinTheory.o_THM, FUN_EQ_THM,ETA_THM]
+     THEN PROVE_TAC [pairTheory.PAIR_EQ,pairTheory.PAIR,FUN_EQ_THM]]);
 
 
 val wee_lemma = Q.prove(

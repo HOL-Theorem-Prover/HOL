@@ -148,3 +148,11 @@ val eight_three_five =
 (* Natural number version *)
 val eight_three_five = 
   Count.apply intLib.COOPER_PROVE (Term `!i:num. ?j k. i+8 = 3*j + 5*k`);
+
+(* Equivalence with a more natural statement *)
+val equiv = 
+  Count.apply intLib.COOPER_PROVE (Term 
+   `(!i:int. ?j k. i+8 = 3*j + 5*k) 
+      =
+    (!i:int. 7<i ==> ?j k. i = 3*j + 5*k)`);
+
