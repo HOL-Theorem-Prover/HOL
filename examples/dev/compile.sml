@@ -1139,8 +1139,20 @@ fun COMB_SYNTH_CONV tm =
             handle HOL_ERR _ => raise ERR "SYNTH_COMB" "input match failure"
    in
     if is_pure_abs abstr
-     then (if_print "COMB_SYNTH_CONV warning, following not compiled:\n";
-           if_print_term abstr;if_print"\n"; raise ERR "COMB_SYNTH_CONV" "pure abstraction")
+     then (if aconv args bdy
+           then 
+            let val goal = ``^tm = (^out_bus = ^in_bus)``
+            in
+             prove
+              (goal,
+               REWRITE_TAC[COMB_def,FUN_EQ_THM] 
+               THEN GEN_BETA_TAC 
+               THEN REWRITE_TAC[])
+             handle HOL_ERR _ =>
+             (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+              if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+            end
+           else raise ERR "COMB_SYNTH_CONV" "pure abstraction")
     else if is_var bdy andalso can (assoc bdy) args_match
      then let val goal = ``^tm = (^out_bus = ^(assoc bdy args_match))``
           in
@@ -1419,7 +1431,7 @@ val at_thms =
 (*****************************************************************************)
 val MAKE_NETLIST =
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
- Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR,COMB_ID]               o
+ Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
  SIMP_RULE std_ss [UNCURRY]                                                o
@@ -1451,7 +1463,7 @@ val MAKE_CIRCUIT =
  Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
  DEV_IMP_FORALL                                                            o
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
- Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR,COMB_ID]               o
+ Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
  SIMP_RULE std_ss [UNCURRY]                                                o
