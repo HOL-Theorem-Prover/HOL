@@ -218,8 +218,8 @@ fun CONJ_TO_FRONT_CONV conj term =
  * maintain the structure of nestings T1, T2 etc.
  *
  * NOTE
- *   The implementation of this routine uses REWRITE_TAC.  A more
- * efficient implementation is certainly possible, but gross
+ *   The implementation of this routine uses tautLib.  A more
+ * efficient implementation may be possible, but gross
  * to code up!!  Please  supply one if you can work out
  * the fiddly details of the proof strategy.
  *
@@ -243,45 +243,13 @@ fun strip_imp' tm =
     end
     handle HOL_ERR _ => ([],tm);
 
-fun prove_imps_imply imp1 imp2 = let
-  (* given imp1 and imp2, both implications, prove that imp1 implies imp2
-  *)
-  val imp1_th = ASSUME imp1
-  fun get_ants tm =
-    if is_imp tm then let
-      val (ant,con) = Psyntax.dest_imp tm
-    in
-      (CONJUNCTS (ASSUME ant)) @ get_ants con
-    end
-    else []
-  val hypset = get_ants imp2
-  fun find_th tm =
-    if is_conj tm then uncurry CONJ ((find_th ## find_th)(dest_conj tm))
-    else valOf (List.find (fn th => concl th = tm) hypset)
-      handle Option.Option =>
-        raise HOL_ERR {origin_structure = "Unwind",
-                       origin_function = "prove_imps_imply",
-                       message = "Implications not equivalent"}
-  fun transform th =
-    if is_imp (concl th) then let
-      val (a,_) = dest_imp (concl th)
-      val a_th = find_th a
-    in
-      transform (MP th a_th)
-    end
-    else th
-in
-  List.foldr (uncurry DISCH) (transform imp1_th) (imp1::(#1 (strip_imp imp2)))
-end
-
-
 fun IMP_TO_FRONT_CONV ante tm = let
   val (antes,concl) = strip_imp' tm;
   val (front,e,back) = split_at (fn x => ante = x) antes
     handle HOL_ERR _ => failwith "IMP_TO_FRONT_CONV"
   val rhs = list_mk_imp (e::(front @ back),concl)
 in
-  IMP_ANTISYM_RULE (prove_imps_imply tm rhs) (prove_imps_imply rhs tm)
+  tautLib.TAUT_PROVE (mk_eq(tm, rhs))
 end
 handle e as HOL_ERR _ => WRAP_ERR("IMP_TO_FRONT_CONV",e);
 
@@ -420,7 +388,7 @@ fun ELIM_FORALL_CONV (var,conj) =
 
 fun UNWIND_EXISTS_CONV tm =
   let val (vars, body) = strip_exists tm
-  in if length vars = 0 then failwith "UNWIND_FORALL_CONV: not applicable" else
+  in if length vars = 0 then failwith "UNWIND_EXISTS_CONV: not applicable" else
   let val (conj,value) = find_var_value (hd vars) (strip_conj body)
       handle HOL_ERR _ => failwith "UNWIND_EXISTS_CONV: can't eliminate"
   in (MOVE_EXISTS_RIGHT_CONV
