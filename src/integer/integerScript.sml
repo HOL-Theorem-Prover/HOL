@@ -2477,6 +2477,16 @@ val INT_MAX_LT = store_thm(
   SIMP_TAC bool_ss [INT_MAX] THEN REPEAT GEN_TAC THEN COND_CASES_TAC THEN
   PROVE_TAC [INT_LT_TRANS, INT_LT_TOTAL]);
 
+val INT_MIN_NUM = store_thm(
+  "INT_MIN_NUM",
+  ``!m n. int_min (&m) (&n) = &(MIN m n)``,
+  SIMP_TAC (bool_ss ++ COND_elim_ss) [INT_MIN, MIN_DEF, INT_LT]);
+
+val INT_MAX_NUM = store_thm(
+  "INT_MAX_NUM",
+  ``!m n. int_max (&m) (&n) = &(MAX m n)``,
+  SIMP_TAC (bool_ss ++ COND_elim_ss) [INT_MAX, MAX_DEF, INT_LT]);
+
 (*----------------------------------------------------------------------*)
 (* Prove rewrites for calculation with integers                         *)
 (*----------------------------------------------------------------------*)
