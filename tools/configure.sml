@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/local/scratch/kxs/143"
-val holdir   = "/local/scratch/kxs/working"
+val mosmldir = _
+val holdir   = _
 val OS       = "unix";    (* Operating system; alternatives are: winNT      *)
 val CC       = "gcc";     (* C compiler (for building quote filter)         *)
 
