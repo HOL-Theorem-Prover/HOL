@@ -43,6 +43,16 @@ Q. I'd like to use MEM as an infix, not a Prefix.  Can I do this? (1)
            |- (!x. x MEM [] = F) /\ !x h t. x MEM (h::t) = (x = h) \/ x MEM t
            : Thm.thm
 
+Q. How do I get a datatype's axiom after using Hol_datatype? (1)
+
+  -- Use TypeBase.axiom_of (valOf (TypeBase.read "mytypename")).
+     Hopefully you won't need to do this very much because many of the
+     contexts in which you previously needed the axiom will be dealt
+     with more smoothly.  For example, cases, induction, one-one and
+     distinctness theorems are now proved automatically, and are
+     available from the TypeBase.  For example,
+        TypeBase.one_one_of (valOf (TypeBase.read "mytypename"))
+
 Q. How to rewrite with a theorem the other way round? (0)
 
   -- Use GSYM
