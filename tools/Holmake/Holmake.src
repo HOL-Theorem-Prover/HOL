@@ -585,7 +585,10 @@ fun make_up_to_date ctxt target = let
   fun warn s = (TextIO.output(TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
   val _ = print ("Working on target: "^fromFile target^"\n")
   val pdep = primary_dependent target
-  val _ = List.all (fn d => d <> target) ctxt orelse raise CircularDependency
+  val _ = List.all (fn d => d <> target) ctxt orelse
+    (warn (fromFile target ^
+           " seems to depend on itself - failing to build it\n");
+     raise CircularDependency)
   val cached_result = Polyhash.peek up_to_date_cache target
 in
   if isSome cached_result then
