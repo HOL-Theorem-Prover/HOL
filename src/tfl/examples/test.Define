@@ -356,27 +356,8 @@ val (Pr_eqns, Pr_ind) = Defn.tprove
 
 
 (*---------------------------------------------------------------------------
-      The following definition is in destructor style, and fails 
-      to prove termination. (Very strange looking definition - is it
-      correctly transcribed?)
+    Binary trees (again).
  ---------------------------------------------------------------------------*)
-
-Define `Gate (l:num list,x) = 
-           if l=[] then  1 
-           else (let rst = Gate (TL l, x) in FST (HD l, x))`;
-
-(*---------------------------------------------------------------------------
-       Constructor style succeeds. 
- ---------------------------------------------------------------------------*)
-
-Define `(Gate ([],x) = 1)
-     /\ (Gate (h::t, x) = let rst = Gate (t, x) in (h+rst))`;
-
-Define `(Gate ([],x) = 1)
-     /\ (Gate (h::t, x) = h + Gate (t,x))`;
-
-
-(* Binary trees (again). *)
 
 Hol_datatype 
     `Btree = Leaf of 'a
@@ -430,7 +411,9 @@ Define`(Lin (Leaf x) = Leaf x)
 
 
 (*---------------------------------------------------------------------------
-     Majority vote, in a variety of slightly different presentations.
+     Majority vote, in a variety of slightly different presentations, 
+     some of which at one time or other made our naive termination 
+     prover fail.
  ---------------------------------------------------------------------------*)
 
 Define 
