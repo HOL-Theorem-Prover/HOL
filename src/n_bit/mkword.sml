@@ -63,15 +63,6 @@ val _ =
 val _ = Systeml.systeml[MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui",
                         "wordFunctorLib.ui", lib_file ^ ".sml"];
 
-val _ = let
-  val {vol,...} = Path.fromString ""
-in
-  Systeml.systeml[Path.toString{arcs=["bin","sh"],isAbs=true,vol=vol},
-                  fullPath [Systeml.HOLDIR,"src","n_bit","wordn-doc"],
-                  fullPath [Systeml.HOLDIR,"src","n_bit","wordn-doc.sed"],
-                  fullPath [Systeml.HOLDIR,"src","n_bit","help","thms","wordn"]]
-end;
-
 (* --------------------------------------------------------------------- *)
 
 val _ = if sys_inst then

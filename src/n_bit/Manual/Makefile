@@ -50,6 +50,7 @@ theorems:
 	@echo "\section{The Theory \texttt{numeral\\_bits}}">>theorems.tex
 	/bin/sh ${DOCTOTEXTHM} ${DOCTOTEXSED} ${Help}/thms/numeral_bits theorems.tex
 	@echo "\section{The Theory \texttt{word<n>}}">>theorems.tex
+	/bin/sh wordn-doc wordn-doc.sed ${Help}/thms/wordn
 	/bin/sh ${DOCTOTEXTHM} ${DOCTOTEXSED} ${Help}/thms/wordn theorems.tex
 
 index:
