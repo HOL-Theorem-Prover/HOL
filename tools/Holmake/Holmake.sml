@@ -484,7 +484,7 @@ fun primary_dependent f =
       UO c => SOME (SML c)
     | UI c => SOME (SIG c)
     | SML (Theory s) => SOME (SML (Script s))
-    | SIG (Theory s) => SOME (SML (Script s))
+    | SIG (Theory s) => SOME (SML (Theory s))
     | _ => NONE
 
 (*** Construction of secondary dependencies *)
@@ -832,7 +832,9 @@ fun do_a_build_command target pdep secondaries =
          UO c           => build_command MOSMLC pdep
        | UI c           => build_command MOSMLC pdep
        | SML (Theory s) => build_command (BuildScript s) pdep
-       | SIG (Theory s) => build_command (BuildScript s) pdep
+       | SIG (Theory s) => true (* because building our primary dependent,
+                                   the Theory.sml file, will have built us too
+                                *)
        | x => raise Fail ("Don't know how to build a "^fromFile x^"\n")
     end
 

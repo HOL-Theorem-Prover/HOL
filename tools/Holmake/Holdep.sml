@@ -92,18 +92,16 @@ fun outname assumes cdir s =
   case isTheory s of
     SOME n => let
     in
-      case access assumes cdir (n^"Script") "sig" of
+      (* allow a dependency on a theory if we can see a script.sml file *)
+      case access assumes cdir (n^"Script") "sml" of
         SOME s' => res := addThExt s s' "ui" :: !res
-      | _  => let
+      | NONE => let
         in
-          case access assumes cdir (n^"Script") "sml" of
-            SOME s' => res := addThExt s s' "uo" :: !res
-          | NONE => let
-            in
-              case access assumes cdir (n^"Theory") "uo" of
-                SOME s' => res := addThExt s s' "uo" :: !res
-              | NONE => ()
-            end
+          (* or, if we can see the theory.ui file already; which might
+             happen if the theory file is in sigobj *)
+          case access assumes cdir (n^"Theory") "ui" of
+            SOME s' => res := addThExt s s' "ui" :: !res
+          | NONE => ()
         end
     end
   | _ => let
@@ -113,6 +111,11 @@ fun outname assumes cdir s =
       | _       => let
         in
           case access assumes cdir s "sml" of
+            (* this case handles the situation where there is no .sig file
+               locally, but a .sml file instead; compiling this will generate
+               the .ui file too.  We have to say that we're dependent
+               on the .uo file because the automatic logic will then
+               correctly hunt back to the .sml file *)
             SOME s' => res := addExt s' "uo" :: !res
           | _       => let
             in
@@ -120,12 +123,13 @@ fun outname assumes cdir s =
                  are dependent on module foo, but we can't find foo.sml or
                  foo.sig.  This can happen when foo.sml exists in some
                  HOL directory but no foo.sig.  In this situation, the HOL
-                 build process only copies foo.ui and foo.uo across to sigobj,
+                 build process only copies foo.ui and foo.uo across to
+                 sigobj (and not the .sig file that we usually find there),
                  so making the dependency analysis ignore foo.  We cover
-                 this possibility by looking to see if we can see a .uo
+                 this possibility by looking to see if we can see a .ui
                  file; if so, we can retain the dependency *)
-              case access assumes cdir s "uo" of
-                SOME s' => res := addExt s' "uo" :: !res
+              case access assumes cdir s "ui" of
+                SOME s' => res := addExt s' "ui" :: !res
               | NONE => ()
             end
         end
