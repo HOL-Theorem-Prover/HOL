@@ -137,8 +137,10 @@ val normalise = let
 in
   STRIP_QUANT_CONV (Canon.NNF_CONV leaf_normalise false THENC
                     CSimp.csimp leaf_normalise) THENC
-  check_for_early_equalities THENC
-  (ISCONST_CONV ORELSEC (STRIP_QUANT_CONV Canon.PROP_DNF_CONV THENC push_exs))
+  push_exs THENC
+  EVERY_DISJ_CONV (check_for_early_equalities THENC
+                   (ISCONST_CONV ORELSEC
+                    (STRIP_QUANT_CONV Canon.PROP_DNF_CONV THENC push_exs)))
 end
 
 
