@@ -60,7 +60,7 @@
  \maketitle
 
 
- \section*{Introduction}
+\section*{Introduction}
 
  {\bf Hol98} is the latest in a line of verification systems originating
  from the original HOL system \cite{hol88:book}, which was itself
@@ -183,7 +183,7 @@ installation problems, one of which Mike Norrish fixed.
  As usual, at least in Unix systems, Hol98 can be exited by entering
  \verb+^D+. Invoking \verb+quit();+ will serve the same purpose.
 
- \section{Help}
+\section{Help}
  There are several kinds of help available in Hol98, all accessible
  through the same incantation:
  \begin{verbatim}
@@ -559,7 +559,7 @@ This can instead be rendered
 Infix constants can associate in one of three different ways: right,
 left or not at all.  (If \verb-+- were non-associative, then {\tt 3 +
   4 + 5} would fail to parse; one would have to write {\tt (3 + 4) +
-  5} or {\tt 3 + (4 + 5)} depending on the desired meaning.  The
+  5} or {\tt 3 + (4 + 5)} depending on the desired meaning).  The
 precedence ordering for the initial set of infixes is \verb+/\+,
 \verb+\/+, \verb+==>+, \verb+=+,
  \begin{Large}\verb+,+\end{Large} (comma\footnote{When {\tt pairTheory} has
@@ -591,7 +591,10 @@ lower precedence than function application.  Normally
   \mbox{\tt \~{}}\; x\; y\qquad\mbox{is parsed as}\qquad
   \mbox{\tt \~{}}\; (x\; y)
 \] because the precedence of \verb+~+ is lower than that of function
-  application.
+application.  The unary negation symbol would also typically be
+defined as a true prefix, if only to allow one to write \[ {\it
+  negop}\,{\it negop}\,3
+\] (whatever {\it negop} happened to be) without needing extra parentheses.
 
 \subsubsection{Suffixes}
 
@@ -663,113 +666,119 @@ because they can not compete for arguments with other operators.
 
 \subsubsection{Type inference}
 
-Consider the term \verb+x = T+.
-Each term (and all of its subterms), has a type in the HOL
-logic. Now, \verb+T+ has type \verb+bool+. This means that the constant
-\verb+=+ has type \verb+xty -> bool -> bool+, for some type
-\verb+xty+. Since the type scheme for \verb+=+ is
+Consider the term \verb+x = T+.  Each term (and all of its subterms),
+has a type in the HOL logic. Now, \verb+T+ has type \verb+bool+. This
+means that the constant \verb+=+ has type \verb+xty -> bool -> bool+,
+for some type \verb+xty+. Since the type scheme for \verb+=+ is
 \verb+'a -> 'a -> bool+, we know that \verb+xty+ must in fact be
 \verb+bool+ in order for the type instance to be well-formed. Knowing
 this, we can deduce that the type of `x' must be \verb+bool+.
 
-   Ignoring the jargon ("scheme" and "instance") in the previous
+Ignoring the jargon ("scheme" and "instance") in the previous
 paragraph, we have conducted a type assignment to the term structure,
-ending up with a well-typed term. It would be very tedious for users to
-conduct such argumentation by hand for each term entered to Hol98. Thus,
-Hol98 uses an adaptation of Milner's type inference algorithm for ML
-when constructing terms via parsing. At the end of type inference,
-unconstrained type variables get assigned by the system. Usually, this
-assignment does the right thing. However, at times, the most general
-type is not what is desired and the user must add type constraints to
-the relevant subterms. For tricky situations, the global variable
-\verb+show_types+ can be assigned. When this flag is set, the prettyprinters
-for terms and theorems will show how types have been assigned to
-subterms. If you do not want the system to assign type variables for
-you, the global variable \verb+guessing_tyvars+ can be set to
-\verb+false+, in which case the existence of unassigned type variables
-at the end of type inference will raise an exception.
+ending up with a well-typed term. It would be very tedious for users
+to conduct such argumentation by hand for each term entered to Hol98.
+Thus, Hol98 uses an adaptation of Milner's type inference algorithm
+for ML when constructing terms via parsing. At the end of type
+inference, unconstrained type variables get assigned by the system.
+Usually, this assignment does the right thing. However, at times, the
+most general type is not what is desired and the user must add type
+constraints to the relevant subterms. For tricky situations, the
+global variable \verb+show_types+ can be assigned. When this flag is
+set, the prettyprinters for terms and theorems will show how types
+have been assigned to subterms. If you do not want the system to
+assign type variables for you, the global variable
+\verb+guessing_tyvars+ can be set to \verb+false+, in which case the
+existence of unassigned type variables at the end of type inference
+will raise an exception.
 
 \subsection{Expanded term grammar}
 
-There is some further syntax that is specially treated by the
- parser. The theory of pairs introduces the infix pairing operator
- (\begin{Large}\verb+,+\end{Large}) as well as the corresponding infix
- product (\verb+#+) type operator. The theory of sets introduces
- notation for the empty set \verb+{}+ (or \verb+EMPTY+), membership (the
- infix \verb+IN+) insertion (the infix \verb+INSERT+), set
- comprehension, enumerated sets, and many other defined constants. The
- theory of lists introduces the constants \verb+NIL+ (the surface syntax
- \verb+[]+ can be used) and \verb+CONS+, as well as notation for
- enumerated lists. The theories of (Peano) numbers and strings introduce
- the constructors \verb+0+, \verb+SUC+, \verb+""+, and \verb+STRING+, as
- well as literals for numbers and strings. If the theory of restricted
- quantifiers is present, syntax is provided for constraining bound
- variables by predicates.
+There is some further syntax that is specially treated by the parser.
+The theory of pairs introduces the infix pairing operator
+(\begin{Large}\verb+,+\end{Large}) as well as the corresponding infix
+product (\verb+#+) type operator. The theory of sets introduces
+notation for the empty set \verb+{}+ (or \verb+EMPTY+), membership
+(the infix \verb+IN+) insertion (the infix \verb+INSERT+), set
+comprehension, enumerated sets, and many other defined constants. The
+theory of lists introduces the constants \verb+NIL+ (the surface
+syntax \verb+[]+ can be used) and \verb+CONS+, as well as notation for
+enumerated lists. The theories of (Peano) numbers and strings
+introduce the constructors \verb+0+, \verb+SUC+, \verb+""+, and
+\verb+STRING+, as well as literals for numbers and strings. If the
+theory of restricted quantifiers is present, syntax is provided for
+constraining bound variables by predicates.
 
 Thus, if the theories of pairs, sets, numbers, strings, lists, and
 restricted quantifiers are loaded, the HOL grammar is an extension of
 that in Table \ref{expanded-grammar}.
- \begin{table}
- \[
- \begin{array}{rclr}
-  \term & ::= & \term : \type & \mbox{(type constraint)} \\
-  & | & \term\ \term & \mbox{(application)} \\
-  & | & \CONS\ \term \ \term & \mbox{(list builder)} \\
-  & | & \INSERT\ \term \ \term & \mbox{(set builder)} \\
-  & | & \SUC\ \term & \mbox{(successor)} \\
-  & | & \verb+~+ \term & \mbox{(negation)} \\
-  & | & \term\ =\ \term & \mbox{(equality)} \\
-  & | & \term\ \IMP\ \term & \mbox{(implication)} \\
-  & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
-  & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
-  & | & \term\ \verb+<+ \ \term & \mbox{(less-than)} \\
-  & | & \term\ \verb!+! \ \term & \mbox{(addition)} \\
-  & | & \term\ \verb!*! \ \term & \mbox{(multiplication)} \\
-  & | & \term\ \verb!-! \ \term & \mbox{(subtraction)} \\
-  & | & \term\ \verb+=>+\ \term\ |\ \term & \mbox{(conditional)} \\
-  & | & \bs\vstr_1\ldots\vstr_n[\verb+::+\term].\ \term & \mbox{(lambda abstraction)} \\
-  & | & \ALL \vstr_1\ldots\vstr_n[\verb+::+\term].\ \term & \mbox{(forall)} \\
-  & | & \EXISTS \vstr_1\ldots\vstr_n[\verb+::+\term].\ \term & \mbox{(exists)} \\
-  & | & \CHOOSE \vstr_1\ldots\vstr_n[\verb+::+\term].\ \term & \mbox{(choose)} \\
-  & | & \EXISTSONE \vstr_1\ldots\vstr_n[\verb+::+\term].\ \term &\mbox{(exists-unique)} \\
-  & | & \LET\; \vstr = \term  & \\
-  &   & [\und\ \vstr = \term]^{*}\ \IN\ \term & \mbox{(let expression)} \\
-  & | & \verb+T+ & \mbox{(truth)} \\
-  & | & \verb+F+ & \mbox{(falsity)} \\
-  & | & \verb+0+ & \mbox{(zero)} \\
-  & | & \verb+[]+ & \mbox{(empty list)} \\
-  & | & \verb+{}+ & \mbox{(empty set)} \\
-  & | & \verb+(+ \term \verb+,+ \term \verb+)+ & \mbox{(pair)} \\
-  & | & \ident & \mbox{(constant or variable)} \\
-  & | & \numeral & \mbox{(numeric literal)} \\
-  & | & \verb+"+\charseq \verb+"+& \mbox{(string literal)} \\
-  & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)} \\
-  & | & \verb+[+ \term \verb+;+ \ldots \verb+;+ \term \verb+]+ &
- \mbox{(enumerated list)} \\
-  & | & \verb+{+ \term \verb+;+ \ldots \verb+;+ \term \verb+}+ &
- \mbox{(enumerated set)} \\
-  & | & \verb+{+ \term \ \verb+|+\  \term \verb+}+ & \mbox{(set comprehension)}
- \end{array}
- \]
- \caption{Expanded Term Grammar} \label{expanded-grammar}
- \end{table}
+\begin{table}
+  \[
+  \begin{array}{rclr}
+    \term & ::= & \term : \type & \mbox{(type constraint)} \\
+    & | & \term\ \term & \mbox{(application)} \\
+    & | & \CONS\ \term \ \term & \mbox{(list builder)} \\
+    & | & \INSERT\ \term \ \term & \mbox{(set builder)} \\
+    & | & \SUC\ \term & \mbox{(successor)} \\
+    & | & \verb+~+ \term & \mbox{(negation)} \\
+    & | & \term\ =\ \term & \mbox{(equality)} \\
+    & | & \term\ \IMP\ \term & \mbox{(implication)} \\
+    & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
+    & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
+    & | & \term\ \verb+<+ \ \term & \mbox{(less-than)} \\
+    & | & \term\ \verb!+! \ \term & \mbox{(addition)} \\
+    & | & \term\ \verb!*! \ \term & \mbox{(multiplication)} \\
+    & | & \term\ \verb!-! \ \term & \mbox{(subtraction)} \\
+    & | & \term\ \verb+=>+\ \term\ |\ \term & \mbox{(conditional)} \\
+    & | & \bs\vstr_1\ldots\vstr_n.\ \term & \mbox{(lambda abstraction)} \\
+    & | & \ALL \vstr_1\ldots\vstr_n.\ \term & \mbox{(forall)} \\
+    & | & \EXISTS \vstr_1\ldots\vstr_n.\ \term & \mbox{(exists)} \\
+    & | & \CHOOSE \vstr_1\ldots\vstr_n.\ \term & \mbox{(choose)} \\
+    & | & \EXISTSONE \vstr_1\ldots\vstr_n.\ \term &\mbox{(exists-unique)} \\
+    & | & \LET\; \vstr = \term  & \\
+    &   & [\und\ \vstr = \term]^{*}\ \IN\ \term & \mbox{(let expression)} \\
+    & | & \verb+T+ & \mbox{(truth)} \\
+    & | & \verb+F+ & \mbox{(falsity)} \\
+    & | & \verb+[]+ & \mbox{(empty list)} \\
+    & | & \verb+{}+ & \mbox{(empty set)} \\
+    & | & \verb+(+ \term \verb+,+ \term \verb+)+ & \mbox{(pair)} \\
+    & | & \ident & \mbox{(constant or variable)} \\
+    & | & \numeral & \mbox{(numeric literal)} \\
+    & | & \verb+"+\charseq \verb+"+& \mbox{(string literal)} \\
+    & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)} \\
+    & | & \verb+[+ \term \verb+;+ \ldots \verb+;+ \term \verb+]+ &
+    \mbox{(enumerated list)} \\
+    & | & \verb+{+ \term \verb+;+ \ldots \verb+;+ \term \verb+}+ &
+    \mbox{(enumerated set)} \\
+    & | & \verb+{+ \term \ \verb+|+\  \term \verb+}+ & \mbox{(set comprehension)}
+  \end{array}
+  \]
+  \caption{Expanded Term Grammar} \label{expanded-grammar}
+\end{table}
 
- In the table, the varstruct ({\it vstr\/}) construct is used. A
- varstruct is (apparently) an arbitrarily nested tuple of variables, where
- each variable only occurs once. The translation of varstructs into the
- internal abstract syntax trees is complex, so we avoid
- the explanation (for this draft).
- \[
- \begin{array}{rcl}
+In the table, the varstruct ({\it vstr\/}) construct is used. A
+varstruct is (apparently) an arbitrarily nested tuple of variables,
+where each variable only occurs once. The translation of varstructs
+into the internal abstract syntax trees is complex, so we avoid the
+explanation (for this draft).
+\[
+\begin{array}{rcl}
   \vstr & ::= & \ident : \type \\
   & | & \ident  \\
   & | & \vstr \verb+,+ \vstr \\
-  & | & \verb+(+ \vstr \verb+)+
- \end{array}
- \]
+  & | & \verb+(+ \vstr \verb+)+\\
+  & | & \verb+(+\vstr {\tt ::} \term\verb+)+\\
+\end{array}
+\] The {\tt ::} syntax is used with restricted quantifiers to allow
+arbitrary predicates to restrict binding variables.  Further to the
+above, the default grammar also allows restricted quantification of
+all of a sequence of binding variables by putting the restriction at
+the end of the sequence, thus with a universal quantification: \[
+\forall x \, y \, z \, {\tt ::} \; P \, . \; Q(x,y,z)
+\] Here the predicate $P$ restricts all of $x$, $y$ and $z$.
 
-\noindent Also, in the term grammar a \charseq\ is just a finite sequence of
- characters.
+Also, in the term grammar a \charseq\ is just a finite sequence of
+characters.
 
 
 \section{Changes from older versions}
@@ -782,6 +791,7 @@ continues to work cleanly.
 
 The changes which may cause old terms to fail to parse are:
 \begin{itemize}
+\newcommand\condexp{\mbox{$p \; {\tt =>} \; q \; {\tt |} \; r$}}
 \item The precedence of type annotations has completely changed.  It
   is now a very tight suffix (though with a precedence weaker than
   that associated with function application), instead of a weak one.
@@ -795,7 +805,42 @@ The changes which may cause old terms to fail to parse are:
   (x\,:\,\tau_1, \;(y\,:\,\tau_2, \dots (z\,:\,\tau_n)))
   \] where extra parentheses have had to be added just to allow one to
   write a frequently occurring form of constraint.
+\item Most arithmetic operators are now left associative instead of
+  right associative.  In particular, $+$, $-$, $*$ and {\tt DIV} are
+  all left associative.  Similarly, the analogous operators in other
+  numeric theories such as {\tt integer} and {\tt real} are also left
+  associative.  This brings the HOL parser in line with standard
+  mathematical practice.
+\item The binding equality in {\tt let} expressions is treated exactly
+  the same way as equalities in other contexts.  In previous versions
+  of HOL, equalities in this context have a different, weak binding
+  precedence.  This difference can be seen in the following expression
+  which parses successfully in the old version:
+  \[ {\tt let} \; x \; = \; \condexp \; {\tt
+  in} \;Q \] In Taupo releases and later, this expression will not
+  parse because the conditional expression binds to the left more
+  weakly than the equality binds to the right, and the parser ends up
+  believing that the binding between the \verb+let+ and the \verb+in+
+  is not an equality after all, as it should be.
+\item Old style conditional expressions in the right half of set
+  comprehensions have to be parenthesised to avoid confusing the
+  parser.  Thus \[
+  \{ \; x \; | \; \condexp \; \}
+   \qquad\mbox{must be written} \qquad
+  \{ \; x \; | \; (\condexp) \; \}
+  \] Better yet, {\tt if}-{\tt then}-{\tt else} syntax could be used
+  for the conditional expression.
+\item Some lexical categories are more strictly policed.  String
+  literals (strings inside double quotes) and numerals can't be used
+  unless the relevant theories have been loaded.  Nor can these
+  literals be used as variables inside binding scopes.
 \end{itemize}
+
+\subsection{Error messages}
+
+When complete this subsection will document all of the possibly
+confusing error messages that the new parser and lexing code might
+generate.
 
 \chapter{Proof}
 
