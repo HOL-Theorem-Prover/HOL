@@ -2621,54 +2621,82 @@ GEN_TAC THEN EQ_TAC THENL
             THENL [IMP_RES_TAC LESS_LESS_SUC, ASM_REWRITE_TAC[]]]]],
   REPEAT STRIP_TAC THEN EXISTS_TAC (Term`x:num`) THEN ASM_REWRITE_TAC[]]);
 
+val EXISTS_NUM = store_thm(
+  "EXISTS_NUM",
+  ``!P. (?n. P n) = P 0 \/ (?m. P (SUC m))``,
+  PROVE_TAC [num_CASES]);
+
+val FORALL_NUM = store_thm(
+  "FORALL_NUM",
+  ``!P. (!n. P n) = P 0 /\ !n. P (SUC n)``,
+  PROVE_TAC [num_CASES]);
+
 (* ----------------------------------------------------------------------
     least n satisfying P
    ---------------------------------------------------------------------- *)
 
-open optionTheory
-val iterate_def =
-    new_recursive_definition
-    { def = ``(iterate 0 P g h x = NONE) /\
-              (iterate (SUC n) P g h x = if P x then SOME (g x)
-                                         else iterate n P g h (h x))``,
-      name = "iterate_def",
-      rec_axiom = num_Axiom};
+val SELECT_ELIM = prove(
+  ``!P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P)``,
+  PROVE_TAC [SELECT_AX]);
 
-val EXISTS_NUM = store_thm(
-  "EXISTS_NUM",
-  ``!P. (?n. P n) = P 0 \/ (?m. P (SUC m))``,
-  GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN PROVE_TAC [num_CASES]);
+fun SELECT_ELIM_TAC (asl, w) = let
+  val t = find_term is_select w
+in
+  CONV_TAC (UNBETA_CONV t) THEN
+  MATCH_MP_TAC SELECT_ELIM THEN BETA_TAC
+end (asl, w)
 
-val tail_recursion_principle = store_thm(
-  "tail_recursion_principle",
-  ``!P g h. ?f. !x. f x = if P x then g x else f (h x)``,
+val ITERATION = store_thm(
+  "ITERATION",
+  ``!P g. ?f. !x. f x = if P x then x else f (g x)``,
   REPEAT GEN_TAC THEN
-  Q.EXISTS_TAC `\x. if ?y n. iterate n P g h x = SOME y then
-                      @y. ?n. iterate n P g h x = SOME y
+  Q.EXISTS_TAC `\x. if ?n. P (FUNPOW g n x) then
+                      FUNPOW g (@n. P (FUNPOW g n x) /\
+                                    !m.  m < n ==> ~P (FUNPOW g m x)) x
                     else ARB` THEN BETA_TAC THEN
   GEN_TAC THEN COND_CASES_TAC THENL [
     POP_ASSUM STRIP_ASSUME_TAC THEN
     COND_CASES_TAC THENL [
-      Ho_Rewrite.ONCE_REWRITE_TAC [EXISTS_NUM] THEN
-      SRW_TAC [][iterate_def],
-      CONV_TAC (LAND_CONV (Ho_Rewrite.ONCE_REWRITE_CONV [EXISTS_NUM])) THEN
-      SRW_TAC [][iterate_def] THEN
-      POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss []) THEN
-      Q.SPEC_THEN `n` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) num_CASES THEN
-      FULL_SIMP_TAC (srw_ss()) [iterate_def]
+      SELECT_ELIM_TAC THEN CONJ_TAC THENL [
+        Q.EXISTS_TAC `0` THEN
+        ASM_REWRITE_TAC [FUNPOW, NOT_LESS_0],
+        Q.X_GEN_TAC `m` THEN REPEAT STRIP_TAC THEN
+        Q.SUBGOAL_THEN `m = 0` (fn th => REWRITE_TAC [th, FUNPOW]) THEN
+        Q.SPEC_THEN `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+                    num_CASES THEN
+        REWRITE_TAC [] THEN
+        FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
+        ASM_REWRITE_TAC [FUNPOW, LESS_0]
+      ],
+      SELECT_ELIM_TAC THEN
+      CONJ_TAC THENL [
+        Q.SPEC_THEN `\n. P (FUNPOW g n x)` (IMP_RES_TAC o BETA_RULE) WOP THEN
+        PROVE_TAC [],
+        Q.X_GEN_TAC `m` THEN REPEAT STRIP_TAC THEN
+        Q.SUBGOAL_THEN `?p. m = SUC p` (CHOOSE_THEN SUBST_ALL_TAC) THENL [
+          Q.SPEC_THEN `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+                      num_CASES THEN
+          FULL_SIMP_TAC bool_ss [FUNPOW] THEN PROVE_TAC [],
+          ALL_TAC
+        ] THEN
+        FULL_SIMP_TAC bool_ss [FUNPOW] THEN
+        Q.SUBGOAL_THEN `?n. P (FUNPOW g n (g x))`
+                       (fn th => REWRITE_TAC [th]) THEN1 PROVE_TAC [] THEN
+        POP_ASSUM (Q.SPEC_THEN `SUC m` (ASSUME_TAC o GEN_ALL o
+                                        SIMP_RULE bool_ss [FUNPOW,
+                                                           LESS_MONO_EQ])) THEN
+        SELECT_ELIM_TAC THEN CONJ_TAC THENL [
+          PROVE_TAC [],
+          Q.X_GEN_TAC `m` THEN REPEAT STRIP_TAC THEN
+          PROVE_TAC [LESS_LESS_CASES]
+        ]
+      ]
     ],
-    POP_ASSUM (ASSUME_TAC o CONV_RULE SWAP_VARS_CONV o
-               SIMP_RULE bool_ss []) THEN
-    POP_ASSUM (ASSUME_TAC o CONV_RULE SWAP_VARS_CONV o
-               SIMP_RULE (srw_ss() ++ COND_elim_ss) [iterate_def] o
-               GEN_ALL o SPEC ``SUC n``) THEN
-    Q.SUBGOAL_THEN `~ P x` ASSUME_TAC THENL [
-      POP_ASSUM (Q.SPEC_THEN `g x` MP_TAC) THEN SIMP_TAC bool_ss [],
-      ALL_TAC
-    ] THEN
-    FULL_SIMP_TAC bool_ss []
+    POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss []) THEN
+    FIRST_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss [FUNPOW] o
+                 GEN_ALL o SPEC ``SUC n``) THEN
+    ASM_REWRITE_TAC [] THEN PROVE_TAC [FUNPOW]
   ]);
-
 
 val search_from_def = new_specification (
   "search_from_def", ["search_from"],
@@ -2677,9 +2705,8 @@ val search_from_def = new_specification (
         (CONV_RULE SKOLEM_CONV
                    (GEN_ALL
                       (BETA_RULE
-                         (ISPECL [``P : num -> bool``, ``(\x:num. x)``,
-                                  ``\x. x + 1``]
-                                 tail_recursion_principle)))) THEN
+                         (ISPECL [``P : num -> bool``, ``\x. x + 1``]
+                                 ITERATION)))) THEN
         Q.EXISTS_TAC `\n P. f P n` THEN BETA_TAC THEN
         REPEAT GEN_TAC THEN POP_ASSUM MATCH_ACCEPT_TAC));
 
@@ -2692,8 +2719,7 @@ val LEAST_INTRO = store_thm(
   "LEAST_INTRO",
   ``!P x. P x ==> P ($LEAST P)``,
   GEN_TAC THEN SIMP_TAC (srw_ss()) [LEAST_DEF] THEN
-  Q_TAC SUFF_TAC `!m x n. (m + n = x) /\ P x ==>
-                          P (search_from n P)`
+  Q_TAC SUFF_TAC `!m n. P (m + n) ==> P (search_from n P)`
   THENL [
     SRW_TAC [][] THEN
     FIRST_X_ASSUM (Q.SPECL_THEN [`x`,`0`] MP_TAC) THEN
