@@ -1,9 +1,8 @@
 
 (*****************************************************************************)
 (* Create "PathTheory", the theory of (finite and infinite) sequences.       *)
-(* Note that finite paths can be empty in the "SEM_1" semantics.             *)
+(* Note that finite paths can be empty.                                      *)
 (*                                                                           *)
-(* Created Wed Dec 25 23:02:12 GMT 2002                                      *)
 (*****************************************************************************)
 
 (*****************************************************************************)

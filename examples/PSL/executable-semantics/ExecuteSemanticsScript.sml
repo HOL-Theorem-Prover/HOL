@@ -35,8 +35,8 @@ quietdec := true;
 
 open bossLib metisLib rich_listTheory pred_setLib intLib;
 open regexpTheory matcherTheory;
-open FinitePathTheory PathTheory UnclockedSemanticsTheory
-     ClockedSemanticsTheory PropertiesTheory;
+open SyntacticSugarTheory FinitePathTheory PathTheory 
+      UnclockedSemanticsTheory ClockedSemanticsTheory PropertiesTheory;
 
 (*
 quietdec := false;
@@ -86,11 +86,13 @@ val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 ******************************************************************************)
 val _ = new_theory "ExecuteSemantics";
 
+(*
 (******************************************************************************
 * Boolean expression SEREs representing truth and falsity
 ******************************************************************************)
 val S_TRUE_def  = Define `S_TRUE  = S_BOOL B_TRUE`;
 val S_FALSE_def = Define `S_FALSE = S_BOOL B_FALSE`;
+*)
 
 (******************************************************************************
 * Executable semantics of [f1 U f2]
@@ -506,22 +508,22 @@ val EVAL_UF_SEM_F_WEAK_IMP = store_thm
 (******************************************************************************
 * always{r} = {T[*]} |-> {r}
 ******************************************************************************)
-val F_ALWAYS_def = Define
-  `F_ALWAYS r = F_WEAK_IMP(S_REPEAT S_TRUE, r)`;
+val F_SERE_ALWAYS_def = Define
+  `F_SERE_ALWAYS r = F_WEAK_IMP(S_REPEAT S_TRUE, r)`;
 
 (******************************************************************************
 * never{r} = {T[*];r} |-> {F}
 ******************************************************************************)
-val F_NEVER_def = Define
-  `F_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
+val F_SERE_NEVER_def = Define
+  `F_SERE_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
 
-val F_NEVER_amatch = store_thm
-  ("F_NEVER_amatch",
+val F_SERE_NEVER_amatch = store_thm
+  ("F_SERE_NEVER_amatch",
    ``!r w.
        S_CLOCK_FREE r /\ IS_INFINITE w ==>
-       (UF_SEM w (F_NEVER r) =
+       (UF_SEM w (F_SERE_NEVER r) =
         !n. ~amatch (sere2regexp (S_CAT (S_REPEAT S_TRUE,r))) (SEL w (0,n)))``,
-   RW_TAC std_ss [F_NEVER_def]
+   RW_TAC std_ss [F_SERE_NEVER_def]
    ++ Know `LENGTH w = INFINITY`
    >> PROVE_TAC [PathTheory.IS_INFINITE_EXISTS, PathTheory.LENGTH_def]
    ++ RW_TAC list_resq_ss [UF_SEM_def, xnum_to_def]

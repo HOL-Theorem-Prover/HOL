@@ -1,11 +1,7 @@
 
 (*****************************************************************************)
-(* IPSL is an attempt to make Accellera PSL (Sugar) closer to ITL by         *)
-(* defining SEREs as formulas via a chop operator.                           *)
+(* Create "SyntaxTheory" representing abstract syntax of PSL                 *)
 (*                                                                           *)
-(* Create "SyntaxTheory" representing abstract syntax of IPSL                *)
-(*                                                                           *)
-(* Created Thu Feb  6 10:01:51 GMT 2003                                      *)
 (*****************************************************************************)
 
 (*****************************************************************************)
@@ -39,27 +35,6 @@ val bexp_def =
   `bexp = B_PROP   of 'a                         (* atomic proposition       *)
         | B_NOT    of bexp                       (* negation                 *)
         | B_AND    of bexp # bexp`;              (* conjunction              *)
-
-(******************************************************************************
-* Definition of disjunction
-******************************************************************************)
-
-val B_OR_def =
- pureDefine `B_OR(b1,b2) = B_NOT(B_AND(B_NOT b1, B_NOT b2))`;
-
-(******************************************************************************
-* Definition of truth
-******************************************************************************)
-
-val B_TRUE_def =
- pureDefine `B_TRUE = B_OR(B_PROP ARB, B_NOT(B_PROP ARB))`;
-
-(******************************************************************************
-* Definition of falsity
-******************************************************************************)
-
-val B_FALSE_def =
- pureDefine `B_FALSE = B_NOT B_TRUE`;
 
 (******************************************************************************
 * Sugar Extended Regular Expressions (SEREs) 

@@ -17,8 +17,12 @@ functions on lists (commented out for compilation)
 (*
 quietdec := true;
 map load 
- ["SyntaxTheory", "PathTheory", "KripkeTheory", "rich_listTheory", "intLib"];
-open SyntaxTheory PathTheory KripkeTheory listTheory rich_listTheory intLib;
+ ["SyntaxTheory", "SyntacticSugarTheory", "PathTheory", "KripkeTheory", 
+  "rich_listTheory", "intLib"];
+
+open SyntaxTheory SyntacticSugarTheory
+     PathTheory KripkeTheory listTheory rich_listTheory intLib;
+
 val _ = intLib.deprecate_int();
 quietdec := false;
 *)
@@ -31,7 +35,8 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories of sequences and lists
 ******************************************************************************)
-open SyntaxTheory PathTheory KripkeTheory listTheory rich_listTheory intLib;
+open SyntaxTheory SyntacticSugarTheory PathTheory KripkeTheory 
+     listTheory rich_listTheory intLib;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
