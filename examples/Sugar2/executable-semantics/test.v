@@ -1,5 +1,4 @@
-// BUF from Chapter 4 of FoCs User's Manual 
-// (www.haifa.il.ibm.com/projects/verification/focs/)
+// BUF from Chapter 4 of FoCs User's Manual (www.haifa.il.ibm.com/projects/verification/focs/)
 
 //---------------------------------- Sender ----------------------------------
 // Send the sequence 0, 1, 2, ... , 99
@@ -24,8 +23,11 @@ initial
   while (DI_reg < 100)
    begin
     StoB_REQ_reg = 1;            // Assert request
-     @(posedge BtoS_ACK)         // Wait for ack
+     @(posedge BtoS_ACK)         // Wait for ack to be asserted
+     #10                         // Wait 10 time units
      StoB_REQ_reg = 0;           // Deassert request
+     #10                         // Wait 10 time units
+     @(negedge BtoS_ACK)         // Wait for ack to be de-asserted
      #10                         // Wait 10 time units before incrementing data
      DI_reg = DI_reg + 1;        // Increment data to be sent next iteration
     end
@@ -37,8 +39,9 @@ endmodule
 //---------------------------------- BUF -------------------------------------
 // Receive data from Sender and then send it to Receiver
 
-module BUF (StoB_REQ, RtoB_ACK, DI, BtoS_ACK, BtoR_REQ, DO);
+module BUF (clk,StoB_REQ, RtoB_ACK, DI, BtoS_ACK, BtoR_REQ, DO);
 
+input         clk;
 input         StoB_REQ;
 input         RtoB_ACK;
 input  [31:0] DI;
@@ -52,7 +55,7 @@ reg           BtoR_REQ_reg;      // Drives BtoR_REQ
 reg    [31:0] DO_reg;            // Drives DO
 
 // BUF internal state registers
-reg           free;              // Flag: 1 iff BUF is free to receive new data
+reg           free;              // Flag to say if BUF is free to receive new data
 reg    [31:0] data;              // Data last read from Sender
 
 assign BtoS_ACK = BtoS_ACK_reg;  // Drive wire BtoS_ACK
@@ -64,22 +67,23 @@ initial
   BtoS_ACK_reg = 0;              // Initially BtoS_ACK not asserted
   BtoR_REQ_reg = 0;              // Initially BtoR_REQ not asserted
   free = 1;                      // Initially free is true
-  forever
-   if (StoB_REQ && free)         // Wait for StoB_REQ to be asserted & BUF free
-    begin 
-     free = 0;                   // Set BUF to be not free
-     data = DI;                  // Read data
-     #10 BtoS_ACK_reg = 1;       // Tell Sender data is aquired
-     #10 DO_reg = data;          // Put dat on DO
-     #10 BtoR_REQ_reg = 1;       // Assert BtoR_REQ
-     @(posedge RtoB_ACK)         // Wait for Receiver to acknowledge data
-     #10 BtoR_REQ_reg = 0;       // Deassert BtoR_REQ
-     #10 BtoS_ACK_reg = 0;       // Deassert BtoS_ACK
-     free = 1;                   // Set BUF to be free
-    end
-   else 
-    #10 begin end
- end
+ end  
+
+always @(posedge clk)
+ if (StoB_REQ && free)           // Wait for StoB_REQ to be asserted and BUF free
+  begin 
+   free = 0;                     // Set BUF to be not free
+   data = DI;                    // Read data
+   #10 BtoS_ACK_reg = 1;         // Tell Sender data is aquired
+   #10 DO_reg = data;            // Put dat on DO
+   #10 BtoR_REQ_reg = 1;         // Assert BtoR_REQ
+   @(posedge RtoB_ACK)           // Wait for Receiver to acknowledge receipt of data
+   #10 BtoR_REQ_reg = 0;         // Deassert BtoR_REQ
+   #10 BtoS_ACK_reg = 0;         // Deassert BtoS_ACK
+   free = 1;                     // Set BUF to be free
+  end
+ else 
+  #10 begin end
 
 endmodule
 
@@ -121,10 +125,20 @@ module test ();
 
 wire         StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK;
 wire  [31:0] DI, DO;
+reg          clk;
 
 Sender   M1(BtoS_ACK, StoB_REQ, DI);
-BUF      M2(StoB_REQ, RtoB_ACK, DI, BtoS_ACK, BtoR_REQ, DO);
+BUF      M2(clk,StoB_REQ, RtoB_ACK, DI, BtoS_ACK, BtoR_REQ, DO);
 Receiver M3(BtoR_REQ, DO, RtoB_ACK);
+
+// Make clock tick
+initial
+ forever 
+  begin
+   #10 clk = 0;
+   #10 clk = 1;
+  end
+
 
 // Xtreme kludge to generate output that can be munged
 // into SimRun example in test (have eliminated strings)
@@ -132,12 +146,19 @@ Receiver M3(BtoR_REQ, DO, RtoB_ACK);
 initial
  begin
  $monitor 
-  ("((if %0d=1 then {StoB_REQ} else {}) UNION\
-(if %0d=1 then {BtoS_ACK} else {}) UNION\
-(if %0d=1 then {BtoR_REQ} else {}) UNION\
-(if %0d=1 then {RtoB_ACK} else {}));",
-   StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK);
+   ("Time = %0d, clk = %0d, StoB_REQ = %0d, BtoS_ACK = %0d, DI = %0d, BtoR_REQ = %0d, RtoB_ACK = %0d, DO = %0d",
+    $time, clk, StoB_REQ, BtoS_ACK, DI, BtoR_REQ, RtoB_ACK, DO);
  end
+
+//initial
+// begin
+// $monitor 
+//  ("((if %0d=1 then {\"StoB_REQ\"} else {}) UNION\
+//(if %0d=1 then {\"BtoS_ACK\"} else {}) UNION\
+//(if %0d=1 then {\"BtoR_REQ\"} else {}) UNION\
+//(if %0d=1 then {\"RtoB_ACK\"} else {}));",
+//   StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK);
+// end
 
 endmodule
 
@@ -147,3 +168,15 @@ endmodule
 // $monitor 
 //  ("val At_%0d = ``(StoB_REQ = %0d) /\\ (BtoS_ACK = %0d) /\\ (BtoR_REQ = %0d) /\\ (RtoB_ACK = %0d)``;",
 //   $time, StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK);
+
+
+
+//initial
+// begin
+// $monitor 
+//   ("Time = %0d, clk = %0d, StoB_REQ = %0d, BtoS_ACK = %0d, DI = %0d, BtoR_REQ = %0d, RtoB_ACK = %0d, DO = %0d",
+//    $time, clk, StoB_REQ, BtoS_ACK, DI, BtoR_REQ, RtoB_ACK, DO);
+// end
+
+
+
