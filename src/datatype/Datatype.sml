@@ -41,6 +41,8 @@ struct
 
 open HolKernel Parse boolLib Prim_rec ParseDatatype;
 
+local open ind_typeTheory in end;
+
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 
 infix ## |-> THEN THENC THENL;
@@ -95,8 +97,8 @@ fun mk_tyvar_size vty (V,away) =
   end
 end;
 
-fun tysize_env db = 
-     Option.map fst o 
+fun tysize_env db =
+     Option.map fst o
      Option.composePartial (TypeBasePure.size_of, TypeBasePure.get db)
 
 (*---------------------------------------------------------------------------*
@@ -253,7 +255,7 @@ val define_type = ind_types.define_type;
 (*---------------------------------------------------------------------------
       Support for quoted input
  ---------------------------------------------------------------------------*)
-       
+
 local fun find_dup [] = NONE
         | find_dup [x] = NONE
         | find_dup (x::y::xs) = if x=y then SOME x else find_dup (y::xs)
