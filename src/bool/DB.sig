@@ -19,7 +19,7 @@ sig
   val matcher     : (term -> term -> 'a) -> string list -> term -> data list
   val match       : string list -> term -> data list 
   val apropos     : term -> data list 
-  val all_thys    : unit -> data list
+  val listDB      : unit -> data list
 
   val export_theory_as_docfiles : string -> unit
 

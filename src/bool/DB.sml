@@ -4,11 +4,12 @@
 (*   following ways:                                                         *)
 (*                                                                           *)
 (*     - strings used to denote (part of) the name of the binding,           *)
-(*       or theory of interest. Case is not significant.                     *)
+(*       or the full name of the theory of interest. Case is not             *)
+(*       significant.                                                        *)
 (*                                                                           *)
 (*     - a general matcher on the term structure of theorems.                *)
 (*                                                                           *)
-(*     - matching (first order) on the term structure of theorems.           *)
+(*     - matching (higher order) on the term structure of theorems.          *)
 (*                                                                           *)
 (*     - looking up a specific theorem in a specific segment.                *)
 (*                                                                           *)
@@ -17,7 +18,9 @@
 structure DB :> DB =
 struct
 
-open HolKernel Binarymap;
+open HolKernel;
+
+val ERR = mk_HOL_ERR "DB";
 
 datatype class = Thm | Axm | Def
 
@@ -26,20 +29,9 @@ datatype class = Thm | Axm | Def
     The pair of strings is theory * bindname
  ---------------------------------------------------------------------------*)
 
-type data = (string * string) * (thm * class)
+type data    = (string * string) * (thm * class)
+type keydata = (string * string) * data
 
-(*---------------------------------------------------------------------------
-     Create the database
- ---------------------------------------------------------------------------*)
-
-local open String
-      fun comp ((s1,s2),(t1,t2)) =
-          case compare(s1,t1) of EQUAL => compare(s2,t2) | x => x
-in
-val DBref = ref (mkDict comp :(string*string, data) dict)
-
-fun lemmas() = !DBref
-end;
 
 (*---------------------------------------------------------------------------
    Map keys to canonical case
@@ -48,19 +40,33 @@ end;
 fun toLower s =
  let open Char CharVector in tabulate(size s, fn i => toLower(sub(s,i))) end
 
-fun add ((p as (s1,s2)),x) db = insert (db,(toLower s1, toLower s2),(p,x))
-
-
 (*---------------------------------------------------------------------------
      Persistence: bindl is used to populate the database when a theory
      is loaded.
  ---------------------------------------------------------------------------*)
 
-fun bindl thyname blist =
-  let fun addb (thname,th,cl) = add ((thyname,thname),(th,cl))
+local val DBref = ref [] : keydata list ref
+      fun lemmas() = !DBref
+      fun add ((p as (s1,s2)),x) = cons ((toLower s1, toLower s2),(p,x))
+      fun addb thy (name,th,cl) = add ((thy,name),(th,cl))
+      fun classify thy cl (s,th) = ((thy,s),(th,cl))
+in
+fun bindl thy blist = DBref := Lib.rev_itlist (addb thy) blist (lemmas())
+
+(*---------------------------------------------------------------------------
+    To the database representing all ancestor theories, add the
+    entries in the current theory segment.
+ ---------------------------------------------------------------------------*)
+
+fun CT() =
+  let val thyname = Theory.current_theory()
   in
-     DBref := Lib.rev_itlist addb blist (lemmas())
-  end;
+    itlist (add o classify thyname Def) (Theory.curr_defs ())
+     (itlist (add o classify thyname Axm) (Theory.curr_axioms ())
+      (itlist (add o classify thyname Thm) (Theory.curr_thms ())
+              (lemmas())))
+  end
+end;
 
 
 (*---------------------------------------------------------------------------
@@ -75,34 +81,14 @@ fun norm_thyname "-" = current_theory()
 
 
 (*---------------------------------------------------------------------------
-    To the database representing all ancestor theories, add the
-    entries in the current theory segment.
- ---------------------------------------------------------------------------*)
-
-local fun classify thy cl (s,th) = ((thy,s),(th,cl))
-in
-fun CT() =
-  let val thyname = Theory.current_theory()
-  in
-    itlist (add o classify thyname Def) (Theory.curr_defs ())
-     (itlist (add o classify thyname Axm) (Theory.curr_axioms ())
-      (itlist (add o classify thyname Thm) (Theory.curr_thms ())
-              (lemmas())))
-  end
-end;
-
-
-(*---------------------------------------------------------------------------
      thy  : All entries in a specified theory
      find : Look up something by name fragment
  ---------------------------------------------------------------------------*)
 
-fun prim_thy P  = foldr (fn ((s1,_),x,A) => if P s1 then x::A else A) []
-fun prim_find P = foldr (fn ((_,s2),x,A) => if P s2 then x::A else A) []
-fun prim_match P = foldr (fn (_,x,A) => if P x then x::A else A) [];
+fun thy s = 
+   map snd (filter (equal(toLower(norm_thyname s)) o fst o fst) (CT()));
 
-fun thy s  = prim_thy  (equal (toLower (norm_thyname s))) (CT())
-fun find s = prim_find (occurs(toLower s)) (CT());
+fun find s = map snd (filter (occurs(toLower s) o snd o fst) (CT()));
 
 
 (*---------------------------------------------------------------------------
@@ -115,7 +101,7 @@ fun matchp P thylist =
         of []   => (fn (_,(th,_)) => P th)
          | strl => (fn ((s,_),(th,_)) => Lib.mem s strl andalso P th)
  in
-   prim_match matchfn (CT())
+   map snd (filter (matchfn o snd) (CT()))
  end
 
 
@@ -126,12 +112,18 @@ val match = matcher (ho_match_term [] empty_tmset);
 val apropos = match [];
 
 
+fun listDB () = map snd (CT());
+
 (*---------------------------------------------------------------------------
       Some other lookup functions
  ---------------------------------------------------------------------------*)
 
-fun thm_class thyname thmname =
- #2 (Binarymap.find (CT(), (toLower (norm_thyname thyname), toLower thmname)))
+fun thm_class thy name = 
+  case filter (equal (norm_thyname thy,name) o fst o snd) (CT())
+   of [(_,p)] => snd p
+    | [] => raise ERR "thm_class" "not found"
+    | other => raise ERR "thm_class" "multiple things with the same name";
+
 
 fun fetch s1 s2 = fst (thm_class s1 s2);
 
@@ -143,8 +135,6 @@ val theorems    = List.map thm_of o Lib.filter (is Thm) o thy
 val definitions = List.map thm_of o Lib.filter (is Def) o thy
 val axioms      = List.map thm_of o Lib.filter (is Axm) o thy
 
-
-fun all_thys () = List.map snd (Binarymap.listItems (CT()));
 
 (*---------------------------------------------------------------------------
     Refugee from Parse
