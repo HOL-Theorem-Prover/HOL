@@ -750,14 +750,54 @@ fun compare p =
 
 val empty_tmset = HOLset.empty compare
 
-(* ----------------------------------------------------------------------
-    Matching (first order, modulo alpha conversion) of terms, including a
-    set of variables to avoid binding.
-   ---------------------------------------------------------------------- *)
+(*---------------------------------------------------------------------------
+    Matching (first order, modulo alpha conversion) of terms, including 
+    sets of variables and type variables to avoid binding. 
+ ---------------------------------------------------------------------------*)
 
-local fun MERR() = raise ERR "match_term.red" ""
+local fun MERR s = raise ERR "raw_match_term" s
       fun free (Bv i) n             = i<n
-        | free (Comb(Rator,Rand)) n = free Rator n andalso free Rand n
+        | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
+        | free (Abs(_,Body)) n      = free Body (n+1)
+        | free (t as Clos _) n      = free (push_clos t) n
+        | free _ _ = true
+      fun bound_by_scope M = not (free M 0)
+in
+fun raw_match tyavoids avoidset =
+ let val tymatch = Type.raw_match_type tyavoids
+     fun dont_bind v = HOLset.member(avoidset,v)
+   fun RM (v as Fv(_,Ty)) tm (S as (tmS,tyS))
+        = if v=tm then S else
+          if dont_bind v then MERR "1" else
+          if bound_by_scope tm then MERR "2" else 
+          ((case Lib.subst_assoc (equal v) tmS 
+             of NONE => (v |-> tm)::tmS
+              | SOME tm' => if aconv tm' tm then tmS else MERR"3"),
+           tymatch Ty (type_of tm) tyS)
+     | RM (Const(c1, ty1)) (Const(c2, ty2)) (tmS,tyS)
+        = (if c1 <> c2 then MERR "4" else 
+           case (ty1,ty2)
+            of (GRND _, POLY _) => MERR"5"
+             | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) else MERR"6"
+             | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
+             | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
+     | RM (Abs(Fv(_,ty1),M)) (Abs(Fv(_,ty2),N)) (tmS,tyS)
+        = RM M N (tmS, tymatch ty1 ty2 tyS)
+     | RM (Comb(M,N)) (Comb(P,Q)) S = RM M P (RM N Q S)
+     | RM (Bv i) (Bv j) S         = if i=j then S else MERR"7"
+     | RM (pat as Clos _) ob S    = RM (push_clos pat) ob S
+     | RM pat (ob as Clos _) S    = RM pat (push_clos ob) S
+     | RM all other things = MERR"8"
+ in
+    RM
+ end
+end (* local *)
+
+
+(*
+local fun MERR s = raise ERR "raw_match_term" s
+      fun free (Bv i) n             = i<n
+        | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
         | free (Abs(_,Body)) n      = free Body (n+1)
         | free (t as Clos _) n      = free (push_clos t) n
         | free _ _ = true
@@ -768,28 +808,29 @@ fun raw_match tyavoids avoidset pat ob (S as (tmS,tyS)) =
  in
   case (pat, ob)
    of (v as Fv(_,Ty), tm) =>
-      if HOLset.member(avoidset,v) andalso v <> tm then MERR()
-      else if not(free tm 0) then MERR()
+      if HOLset.member(avoidset,v) andalso v <> tm then MERR "1"
+      else if not(free tm 0) then MERR "2"
       else ((case Lib.subst_assoc (equal v) tmS of
                NONE => (v |-> tm)::tmS
-             | SOME tm' => if aconv tm' tm then tmS else MERR()),
+             | SOME tm' => if aconv tm' tm then tmS else MERR"3"),
             tymatch tyavoids Ty (type_of tm) tyS)
     | (Const(c1, ty1), Const(c2, ty2)) =>
-       if c1 <> c2 then MERR()
+       if c1 <> c2 then MERR "4"
        else (case (ty1,ty2)
-              of (GRND _, POLY _) => MERR()
-               | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) else MERR()
+              of (GRND _, POLY _) => MERR"5"
+               | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) else MERR"6"
                | (POLY pat,GRND obj) => (tmS, tymatch tyavoids pat obj tyS)
                | (POLY pat,POLY obj) => (tmS, tymatch tyavoids pat obj tyS))
     | (Abs(Fv(_,ty1),M), Abs(Fv(_,ty2),N))
          => matchr M N (tmS, tymatch tyavoids ty1 ty2 tyS)
     | (Comb(M,N),Comb(P,Q)) => matchr M P (matchr N Q S)
-    | (Bv i, Bv j)       => if i=j then S else MERR()
-    | (Clos _, tm)       => matchr (push_clos pat) tm S
-    | (pt, tm as Clos _) => matchr pt (push_clos tm) S
-    | otherwise          => MERR()
+    | (Bv i, Bv j)          => if i=j then S else MERR"7"
+    | (Clos _, _)           => matchr (push_clos pat) ob S
+    | (_, Clos _)           => matchr pat (push_clos ob) S
+    | otherwise             => MERR"8"
  end
 end (* local *)
+*)
 
 fun norm_subst tytheta =
  let val Theta = inst tytheta

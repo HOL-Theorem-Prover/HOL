@@ -226,28 +226,26 @@ fun polymorphic (Tyv _) = true
  ---------------------------------------------------------------------------*)
 
 local
+  fun MERR s = raise ERR "tymatch" s
   fun lookup x ids =
    let fun look [] = if Lib.mem x ids then SOME x else NONE
          | look ({redex,residue}::t) = if x=redex then SOME residue else look t
    in look end
 in
-fun tymatch avoids pat ob (p as (S, ids)) = let
-  val tymatch = tymatch avoids
-in
-  case (pat, ob) of
-    (v as Tyv _, ty) =>
-    if Lib.mem v avoids andalso v <> ty then raise ERR "tymatch" ""
-    else (case lookup v ids S of
-            NONE     => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
-          | SOME ty1 => if ty1=ty then p else raise ERR "tymatch" "")
-  | (Tyapp(c1,A1), Tyapp(c2,A2)) =>
-    if c1=c2 then rev_itlist2 tymatch A1 A2 p else raise ERR "tymatch" ""
-  | _ =>  raise ERR "tymatch" ""
+fun raw_match_type avoids =
+ let fun M (v as Tyv _) ty (Sids as (S,ids)) = 
+           (case lookup v ids S 
+             of NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
+              | SOME ty1 => if ty1=ty then Sids else MERR "1")
+       | M (Tyapp(c1,A1)) (Tyapp(c2,A2)) Sids =
+            if c1=c2 then rev_itlist2 M A1 A2 Sids else MERR "2"
+       | M _ _ _ =  MERR "3"
+ in
+   fn pat => fn ob => fn (S,ids) => M pat ob (S,union avoids ids)
 end
 
-fun match_typel l pat ob = fst (tymatch l pat ob ([], []))
+fun match_typel l pat ob = fst (raw_match_type l pat ob ([], []))
 val match_type = match_typel []
-val raw_match_type = tymatch
 end;
 
 
