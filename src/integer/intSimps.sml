@@ -9,7 +9,7 @@ val int_ty = mk_type{Tyop = "int", Args = []}
 val int_2op = int_ty --> (int_ty --> int_ty)
 val int_rel = int_ty --> (int_ty --> Type.bool)
 
-val int_injection = mk_const{Name = "&", Ty = num_ty --> int_ty}
+val int_injection = mk_const{Name = "int_of_num", Ty = num_ty --> int_ty}
 val int_negation = mk_const{Name = "int_neg", Ty = int_ty --> int_ty}
 fun is_int_literal t =
   (rator t = int_injection andalso Term.is_numeral (rand t)) orelse
