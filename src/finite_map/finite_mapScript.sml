@@ -189,6 +189,8 @@ val FAPPLY_FUPDATE = Q.store_thm ("FAPPLY_FUPDATE",
     THEN REWRITE_TAC [REP_ABS_update] THEN BETA_TAC
     THEN REWRITE_TAC [sumTheory.OUTL]);
 
+val _ = export_rewrites ["FAPPLY_FUPDATE"]
+
 val NOT_EQ_FAPPLY = Q.store_thm ("NOT_EQ_FAPPLY",
 `!(f:'a|-> 'b) a x y . ~(a=x) ==> (FAPPLY (FUPDATE f (x,y)) a = FAPPLY f a)`,
 REPEAT STRIP_TAC
@@ -249,6 +251,8 @@ REWRITE_TAC [EXTENSION, NOT_IN_EMPTY] THEN
 REWRITE_TAC [SPECIFICATION, FDOM_DEF, FEMPTY_DEF, REP_ABS_empty,
              sumTheory.ISL]);
 
+val _ = export_rewrites ["FDOM_FEMPTY"]
+
 val dom_update_rep = BETA_RULE (Q.prove
 (`!f a b x. ISL(^update_rep (f:'a -> 'b+one ) a b x) = ((x=a) \/ ISL (f x))`,
 REPEAT GEN_TAC THEN BETA_TAC
@@ -263,6 +267,8 @@ val FDOM_FUPDATE = Q.store_thm(
   REWRITE_TAC [SPECIFICATION, FDOM_DEF,FUPDATE_DEF, REP_ABS_update] THEN
   BETA_TAC THEN GEN_TAC THEN Q.ASM_CASES_TAC `x = a` THEN
   ASM_REWRITE_TAC [sumTheory.ISL]);
+
+val _ = export_rewrites ["FDOM_FUPDATE"]
 
 val FAPPLY_FUPDATE_THM = Q.store_thm("FAPPLY_FUPDATE_THM",
 `!(f:'a |-> 'b) a b x.
@@ -292,6 +298,8 @@ val NOT_EQ_FEMPTY_FUPDATE = Q.store_thm (
   REPEAT GEN_TAC THEN
   DISCH_THEN (MP_TAC o Q.AP_TERM `FDOM`) THEN
   SRW_TAC [][FDOM_FEMPTY, FDOM_FUPDATE, EXTENSION, EXISTS_OR_THM]);
+
+val _ = export_rewrites ["NOT_EQ_FEMPTY_FUPDATE"]
 
 val FDOM_EQ_FDOM_FUPDATE = Q.store_thm(
   "FDOM_EQ_FDOM_FUPDATE",
@@ -332,10 +340,10 @@ val FUPDATE_ABSORB_THM = Q.prove (
        x IN FDOM f /\ (FAPPLY f x = y) ==> (FUPDATE f (x,y) = f)`,
   INDUCT_THEN fmap_SIMPLE_INDUCT STRIP_ASSUME_TAC THEN
   ASM_SIMP_TAC (srw_ss()) [FDOM_FEMPTY, FDOM_FUPDATE, DISJ_IMP_THM,
-                           FORALL_AND_THM, FUPDATE_EQ, FAPPLY_FUPDATE] THEN
+                           FORALL_AND_THM, FUPDATE_EQ] THEN
   REPEAT STRIP_TAC THEN
   Q.ASM_CASES_TAC `x = x'` THENL [
-     ASM_SIMP_TAC (srw_ss()) [FUPDATE_EQ, FAPPLY_FUPDATE],
+     ASM_SIMP_TAC (srw_ss()) [FUPDATE_EQ],
      ASM_SIMP_TAC (srw_ss()) [FAPPLY_FUPDATE_THM] THEN
      FIRST_ASSUM (FREEZE_THEN (fn th => REWRITE_TAC [th]) o
                   MATCH_MP FUPDATE_COMMUTES) THEN
@@ -1035,7 +1043,7 @@ val SAME_KEY_UPDATES_DIFFER = store_thm(
   "SAME_KEY_UPDATES_DIFFER",
   ``!f1 f2 k v1 v2. ~(v1 = v2) ==> ~(f1 |+ (k, v1) = f2 |+ (k, v2))``,
   SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, RIGHT_AND_OVER_OR,
-             EXISTS_OR_THM, FAPPLY_FUPDATE]);
+             EXISTS_OR_THM]);
 
 val FUPD11_SAME_BASE = store_thm(
   "FUPD11_SAME_BASE",
@@ -1070,6 +1078,11 @@ val LMEM_THM = store_thm(
   "LMEM_THM",
   ``(LMEM [] = {}) /\ (!h t. LMEM (h::t) = h INSERT LMEM t)``,
   SRW_TAC [][EXTENSION, SPECIFICATION, LMEM_DEF]);
+
+val IN_LMEM = store_thm(
+  "IN_LMEM",
+  ``!x l. x IN LMEM l = MEM x l``,
+  SRW_TAC [][SPECIFICATION, LMEM_DEF]);
 
 val FDOM_FUPDATE_LIST = store_thm(
   "FDOM_FUPDATE_LIST",
@@ -1117,7 +1130,7 @@ val FUPDATE_LIST_SAME_KEYS_UNWIND = store_thm(
   SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM] THEN STRIP_TAC THEN
   `kvl1 = t2` by PROVE_TAC [] THEN POP_ASSUM SUBST_ALL_TAC THEN
   `v = v2` by (FIRST_X_ASSUM (MP_TAC o C Q.AP_THM `k` o Q.AP_TERM `(')`) THEN
-               SRW_TAC [][FUPDATE_LIST_APPLY_NOT_MEM, FAPPLY_FUPDATE]) THEN
+               SRW_TAC [][FUPDATE_LIST_APPLY_NOT_MEM]) THEN
   SRW_TAC [][] THEN
   `(kvl = []) \/ (?k' v' t. kvl = (k',v') :: t)` by
      PROVE_TAC (map TypeBase.nchotomy_of ["prod", "list"]) THEN
@@ -1126,12 +1139,45 @@ val FUPDATE_LIST_SAME_KEYS_UNWIND = store_thm(
   SIMP_TAC (srw_ss()) [GSYM FUPDATE_LIST_THM] THEN
   ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_SAME_UPDATE]);
 
+val lemma = prove(
+  ``!kvl k fm. MEM k (MAP FST kvl) ==>
+               MEM (k, (fm FUPDATE_LIST kvl) ' k) kvl``,
+  Induct THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, FUPDATE_LIST_THM,
+                           DISJ_IMP_THM, FORALL_AND_THM] THEN
+  REPEAT STRIP_TAC THEN
+  Cases_on `MEM p_1 (MAP FST kvl)` THEN
+  SRW_TAC [][FUPDATE_LIST_APPLY_NOT_MEM]);
+
+val FM_CONCRETE_EQ_ENUMERATE_CASES = store_thm(
+  "FMEQ_ENUMERATE_CASES",
+  ``!f1 kvl p. (f1 |+ p = FEMPTY FUPDATE_LIST kvl) ==> MEM p kvl``,
+  SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, GSYM fmap_EQ_THM,
+                       FDOM_FUPDATE, FDOM_FUPDATE_LIST, DISJ_IMP_THM,
+                       FORALL_AND_THM, FDOM_FEMPTY] THEN
+  REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [pred_setTheory.EXTENSION, IN_LMEM] THEN
+  PROVE_TAC [lemma]);
+
+val FMEQ_SINGLE_SIMPLE_ELIM = store_thm(
+  "FMEQ_SINGLE_SIMPLE_ELIM",
+  ``!P k v ck cv nv. (?fm. (fm |+ (k, v) = FEMPTY |+ (ck, cv)) /\
+                           P (fm |+ (k, nv))) =
+                     (k = ck) /\ (v = cv) /\ P (FEMPTY |+ (ck, nv))``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    `FEMPTY |+ (ck, cv) = FEMPTY FUPDATE_LIST [(ck,cv)]`
+       by SRW_TAC [][FUPDATE_LIST_THM] THEN
+    `MEM (k,v) [(ck, cv)]` by PROVE_TAC [FM_CONCRETE_EQ_ENUMERATE_CASES] THEN
+    FULL_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM] THEN
+    PROVE_TAC [FUPD_SAME_KEY_UNWIND],
+    Q.EXISTS_TAC `FEMPTY` THEN SRW_TAC [][]
+  ]);
+
 (* ----------------------------------------------------------------------
     to close...
    ---------------------------------------------------------------------- *)
 
-val _ = export_rewrites ["FDOM_FUPDATE", "FDOM_FEMPTY", "FAPPLY_FUPDATE",
-                         "DRESTRICT_FEMPTY", "FRANGE_FEMPTY"]
+val _ = export_rewrites ["DRESTRICT_FEMPTY", "FRANGE_FEMPTY"]
 
 
 
