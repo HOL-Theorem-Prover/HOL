@@ -44,7 +44,7 @@ val equivalence_def = new_definition(
   "equivalence_def",
   ``equivalence (R:'a->'a->bool) = reflexive R /\ symmetric R /\ transitive R``);
 
-val total_def = new_definition 
+val total_def = new_definition
 ("total_def", Term`total (R:'a->'a->bool) = !x y. R x y \/ R y x`);
 
 (*---------------------------------------------------------------------------*)
@@ -140,6 +140,31 @@ val RC_REFLEXIVE = store_thm(
   MESON_TAC [reflexive_def, RC_DEF]);
 val reflexive_RC = save_thm("reflexive_RC", RC_REFLEXIVE);
 val _ = export_rewrites ["reflexive_RC"]
+
+val RC_lifts_monotonicities = store_thm(
+  "RC_lifts_monotonicities",
+  ``(!x y. R x y ==> R (f x) (f y)) ==> !x y. RC R x y ==> RC R (f x) (f y)``,
+  METIS_TAC [RC_DEF]);
+
+val RC_lifts_invariants = store_thm(
+  "RC_lifts_invariants",
+  ``(!x y. P x /\ R x y ==> P y) ==> (!x y. P x /\ RC R x y ==> P y)``,
+  METIS_TAC [RC_DEF]);
+
+val RC_lifts_equalities = store_thm(
+  "RC_lifts_equalities",
+  ``(!x y. R x y ==> (f x = f y)) ==> (!x y. RC R x y ==> (f x = f y))``,
+  METIS_TAC [RC_DEF]);
+
+val SC_lifts_monotonicities = store_thm(
+  "SC_lifts_monotonicities",
+  ``(!x y. R x y ==> R (f x) (f y)) ==> !x y. SC R x y ==> SC R (f x) (f y)``,
+  METIS_TAC [SC_DEF]);
+
+val SC_lifts_equalities = store_thm(
+  "SC_lifts_equalities",
+  ``(!x y. R x y ==> (f x = f y)) ==> !x y. SC R x y ==> (f x = f y)``,
+  METIS_TAC [SC_DEF]);
 
 val symmetric_RC = store_thm(
   "symmetric_RC",
@@ -316,6 +341,25 @@ val TC_STRONG_INDUCT_RIGHT1 = store_thm(
           (!x y z. P x y /\ TC R x y /\ R y z ==> P x z) ==>
           (!u v. TC R u v ==> P u v)``,
   REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT_RIGHT1_0);
+
+val TC_lifts_monotonicities = store_thm(
+  "TC_lifts_monotonicities",
+  ``(!x y. R x y ==> R (f x) (f y)) ==>
+    !x y. TC R x y ==> TC R (f x) (f y)``,
+  STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN
+  METIS_TAC [TC_RULES]);
+
+val TC_lifts_invariants = store_thm(
+  "TC_lifts_invariants",
+  ``(!x y. P x /\ R x y ==> P y) ==> (!x y. P x /\ TC R x y ==> P y)``,
+  STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!x y. TC R x y ==> P x ==> P y` THEN1 METIS_TAC [] THEN
+  HO_MATCH_MP_TAC TC_INDUCT THEN METIS_TAC []);
+
+val TC_lifts_equalities = store_thm(
+  "TC_lifts_equalities",
+  ``(!x y. R x y ==> (f x = f y)) ==> (!x y. TC R x y ==> (f x = f y))``,
+  STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN METIS_TAC []);
 
 val TC_RTC = store_thm(
   "TC_RTC",
