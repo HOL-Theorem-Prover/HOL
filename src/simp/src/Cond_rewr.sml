@@ -249,7 +249,7 @@ fun IMP_CANON th =
     then IMP_CANON (CONJUNCT1 th) @ IMP_CANON (CONJUNCT2 th) else
     if is_imp w
     then
-    let val (ant,_) = dest_imp w
+    let val (ant,c) = dest_imp w
     in if is_conj ant
        then let val (conj1,conj2) = dest_conj ant
             in IMP_CANON
@@ -269,6 +269,12 @@ fun IMP_CANON th =
             in
               IMP_CANON (DISCH body' (MP th (EXISTS(ant, bv') (ASSUME body'))))
             end
+       else if c = boolSyntax.F then [NOT_INTRO th]
+         (* we want [.] |- F theorems to rewrite to [.] |- x = F, done above in
+            IMP_EQ_CANON, but we don't want this to be done for |- P ==> F,
+            which would set up a rewrite of the form |- P ==> (x = F),
+            which would match any boolean term and force endless attempts
+            to prove P.  Instead, convert to |- ~P *)
        else map (DISCH ant) (IMP_CANON (UNDISCH th))
     end
     else if (is_forall w) then IMP_CANON (SPEC_ALL th) else [th]
