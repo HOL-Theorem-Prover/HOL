@@ -9,7 +9,6 @@ structure relationScript =
 struct
 
 open HolKernel Parse boolLib QLib tautLib mesonLib Rsyntax simpLib boolSimps;
-infix ORELSE ORELSEC THEN THENL |->;
 
 val _ = new_theory "relation";
 
@@ -31,9 +30,18 @@ val RTC_DEF = new_definition(
            P a b``);
 
 val RC_DEF = new_definition(
-  "RC_def",
+  "RC_DEF",
   ``RC (R:'a->'a->bool) x y = (x = y) \/ R x y``);
 
+val SC_DEF = new_definition(
+  "SC_DEF",
+  ``SC (R:'a->'a->bool) x y = R x y \/ R y x``);
+
+val EQC_DEF = new_definition(
+  "EQC_DEF",
+  ``EQC (R:'a->'a->bool) = RC (TC (SC R))``);
+
+(* corresponding properties of relations *)
 val transitive_def =
 Q.new_definition
 ("transitive_def",
@@ -43,6 +51,19 @@ val reflexive_def = new_definition(
   "reflexive_def",
   ``reflexive (R:'a->'a->bool) = !x. R x x``);
 
+val symmetric_def = new_definition(
+  "symmetric_def",
+  ``symmetric (R:'a->'a->bool) = !x y. R x y = R y x``);
+
+val equivalence_def = new_definition(
+  "equivalence_def",
+  ``equivalence (R:'a->'a->bool) = reflexive R /\ symmetric R /\
+                                   transitive R``);
+
+val SC_SYMMETRIC = store_thm(
+  "SC_SYMMETRIC",
+  ``!R. symmetric (SC R)``,
+  REWRITE_TAC [symmetric_def, SC_DEF] THEN MESON_TAC []);
 
 val TC_TRANSITIVE = Q.store_thm("TC_TRANSITIVE",
  `!R:'a->'a->bool. transitive(TC R)`,
@@ -98,6 +119,14 @@ val RC_REFLEXIVE = store_thm(
   "RC_REFLEXIVE",
   ``!R:'a->'a->bool. reflexive (RC R)``,
   MESON_TAC [reflexive_def, RC_DEF]);
+
+val symmetric_RC = store_thm(
+  "symmetric_RC",
+  ``!R. symmetric (RC R) = symmetric R``,
+  REWRITE_TAC [symmetric_def, RC_DEF] THEN
+  REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_MESON_TAC []);
+
+
 
 val TC_SUBSET = Q.store_thm("TC_SUBSET",
 `!R x (y:'a). R x y ==> TC R x y`,
@@ -249,31 +278,81 @@ val TC_RC_EQNS = store_thm(
     HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [TC_RULES, RC_DEF]
   ]);
 
+val EXTEND_RTC_TC = store_thm(
+  "EXTEND_RTC_TC",
+  ``!R x y z. R x y /\ RTC R y z ==> TC R x z``,
+  GEN_TAC THEN
+  Q_TAC SUFF_TAC `!y z. RTC R y z ==> !x. R x y ==> TC R x z` THEN1
+        MESON_TAC [] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN
+  MESON_TAC [TC_RULES]);
+
+val reflexive_RC_identity = store_thm(
+  "reflexive_RC_identity",
+  ``!R. reflexive R ==> (RC R = R)``,
+  SIMP_TAC bool_ss [reflexive_def, RC_DEF, FUN_EQ_THM] THEN MESON_TAC []);
+
+val symmetric_SC_identity = store_thm(
+  "symmetric_SC_identity",
+  ``!R. symmetric R ==> (SC R = R)``,
+  SIMP_TAC bool_ss [symmetric_def, SC_DEF, FUN_EQ_THM]);
+
+val transitive_TC_identity = store_thm(
+  "transitive_TC_identity",
+  ``!R. transitive R ==> (TC R = R)``,
+  SIMP_TAC bool_ss [transitive_def, FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM,
+                    TC_RULES] THEN GEN_TAC THEN STRIP_TAC THEN
+  HO_MATCH_MP_TAC TC_INDUCT THEN ASM_MESON_TAC []);
+
 val RC_IDEM = store_thm(
   "RC_IDEM",
   ``!R:'a->'a->bool.  RC (RC R) = RC R``,
-  GEN_TAC THEN
-  CONV_TAC (Q.X_FUN_EQ_CONV `u`) THEN GEN_TAC THEN
-  CONV_TAC (Q.X_FUN_EQ_CONV `v`) THEN GEN_TAC THEN
-  SIMP_TAC bool_ss [RC_DEF] THEN MESON_TAC []);
+  SIMP_TAC bool_ss [RC_REFLEXIVE, reflexive_RC_identity]);
+
+val SC_IDEM = store_thm(
+  "SC_IDEM",
+  ``!R:'a->'a->bool. SC (SC R) = SC R``,
+  SIMP_TAC bool_ss [SC_SYMMETRIC, symmetric_SC_identity]);
 
 val TC_IDEM = store_thm(
   "TC_IDEM",
   ``!R:'a->'a->bool.  TC (TC R) = TC R``,
-  GEN_TAC THEN
-  CONV_TAC (Q.X_FUN_EQ_CONV `u`) THEN GEN_TAC THEN
-  CONV_TAC (Q.X_FUN_EQ_CONV `v`) THEN GEN_TAC THEN
-  EQ_TAC THEN Q.ID_SPEC_TAC `v` THEN Q.ID_SPEC_TAC `u` THEN
-  HO_MATCH_MP_TAC TC_INDUCT THEN MESON_TAC [TC_RULES]);
+  SIMP_TAC bool_ss [TC_TRANSITIVE, transitive_TC_identity]);
+
+val RC_MOVES_OUT = store_thm(
+  "RC_MOVES_OUT",
+  ``!R. (SC (RC R) = RC (SC R)) /\ (RC (RC R) = RC R) /\
+        (TC (RC R) = RC (TC R))``,
+  REWRITE_TAC [TC_RC_EQNS, RC_IDEM] THEN
+  SIMP_TAC bool_ss [SC_DEF, RC_DEF, FUN_EQ_THM] THEN MESON_TAC []);
+
+val symmetric_TC = store_thm(
+  "symmetric_TC",
+  ``!R. symmetric R ==> symmetric (TC R)``,
+  REWRITE_TAC [symmetric_def] THEN GEN_TAC THEN STRIP_TAC THEN
+  SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
+    HO_MATCH_MP_TAC TC_INDUCT,
+    CONV_TAC SWAP_VARS_CONV THEN HO_MATCH_MP_TAC TC_INDUCT
+  ] THEN ASM_MESON_TAC [TC_RULES]);
+
+
+val EQC_EQUIVALENCE = store_thm(
+  "EQC_EQUIVALENCE",
+  ``!R. equivalence (EQC R)``,
+  REWRITE_TAC [equivalence_def, EQC_DEF, RC_REFLEXIVE, symmetric_RC] THEN
+  MESON_TAC [symmetric_TC, TC_RC_EQNS, TC_TRANSITIVE, SC_SYMMETRIC]);
+
+val EQC_IDEM = store_thm(
+  "EQC_IDEM",
+  ``!R:'a->'a->bool. EQC(EQC R) = EQC R``,
+  SIMP_TAC bool_ss [EQC_DEF, RC_MOVES_OUT, symmetric_SC_identity,
+                    symmetric_TC, SC_SYMMETRIC, TC_IDEM]);
+
 
 val RTC_IDEM = store_thm(
   "RTC_IDEM",
   ``!R:'a->'a->bool.  RTC (RTC R) = RTC R``,
-  GEN_TAC THEN
-  CONV_TAC (Q.X_FUN_EQ_CONV `u`) THEN GEN_TAC THEN
-  CONV_TAC (Q.X_FUN_EQ_CONV `v`) THEN GEN_TAC THEN
-  EQ_TAC THEN Q.ID_SPEC_TAC `v` THEN Q.ID_SPEC_TAC `u` THEN
-  HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [RTC_RULES, RTC_RTC]);
+  SIMP_TAC bool_ss [GSYM TC_RC_EQNS, RC_MOVES_OUT, TC_IDEM]);
 
 val RTC_CASES1 = store_thm(
   "RTC_CASES1",
@@ -326,6 +405,28 @@ val RTC_MONOTONE = store_thm(
   ``!R Q. (!x y. R x y ==> Q x y) ==> (!x y. RTC R x y ==> RTC Q x y)``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN
   ASM_MESON_TAC [RTC_RULES]);
+
+val EQC_INDUCTION = store_thm(
+  "EQC_INDUCTION",
+  ``!R P. (!x y. R x y ==> P x y) /\
+          (!x. P x x) /\
+          (!x y. P x y ==> P y x) /\
+          (!x y z. P x y /\ P y z ==> P x z) ==>
+          (!x y. EQC R x y ==> P x y)``,
+  REWRITE_TAC [EQC_DEF] THEN REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC bool_ss [RC_DEF] THEN
+  Q.PAT_ASSUM `TC R x y` MP_TAC THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
+  HO_MATCH_MP_TAC TC_INDUCT THEN REWRITE_TAC [SC_DEF] THEN
+  ASM_MESON_TAC []);
+
+val ALT_equivalence = store_thm(
+  "ALT_equivalence",
+  ``!R. equivalence R = !x y. R x y = (R x = R y)``,
+  REWRITE_TAC [equivalence_def, reflexive_def, symmetric_def,
+               transitive_def, FUN_EQ_THM, EQ_IMP_THM] THEN
+  MESON_TAC []);
+
 
 (*---------------------------------------------------------------------------*
  * Wellfounded relations. Wellfoundedness: Every non-empty set has an        *
@@ -392,7 +493,7 @@ GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[WF_DEF] THEN GEN_TAC THEN
 val WF_EQ_INDUCTION_THM = Q.store_thm("WF_EQ_INDUCTION_THM",
  `!R:'a->'a->bool.
      WF R = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x`,
-GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL 
+GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
    [IMP_RES_TAC WF_INDUCTION_THM, IMP_RES_TAC INDUCTION_WF_THM]);
 
 
@@ -874,7 +975,7 @@ val WFP_INDUCT = Q.store_thm
 val WFP_CASES = Q.store_thm
   ("WFP_CASES",
    `!R x. WFP R x = !y. R y x ==> WFP R y`,
-   REPEAT STRIP_TAC THEN EQ_TAC 
+   REPEAT STRIP_TAC THEN EQ_TAC
     THENL [Q.ID_SPEC_TAC `x` THEN HO_MATCH_MP_TAC WFP_INDUCT, ALL_TAC]
     THEN MESON_TAC [WFP_RULES]);
 
@@ -884,8 +985,8 @@ val WFP_CASES = Q.store_thm
 
 val WFP_STRONG_INDUCT = Q.store_thm
   ("WFP_STRONG_INDUCT",
-   `!R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x) 
-          ==> 
+   `!R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x)
+          ==>
         !x. WFP R x ==> P x`,
  REPEAT GEN_TAC THEN STRIP_TAC
    THEN ONCE_REWRITE_TAC[TAUT `a ==> b = a ==> a /\ b`]
@@ -901,9 +1002,81 @@ val WF_EQ_WFP = Q.store_thm
  `!R. WF R = !x. WFP R x`,
  GEN_TAC THEN EQ_TAC THENL
  [REWRITE_TAC [WF_EQ_INDUCTION_THM] THEN MESON_TAC [WFP_RULES],
-  DISCH_TAC THEN MATCH_MP_TAC (SPEC_ALL INDUCTION_WF_THM) 
+  DISCH_TAC THEN MATCH_MP_TAC (SPEC_ALL INDUCTION_WF_THM)
     THEN GEN_TAC THEN MP_TAC (SPEC_ALL WFP_STRONG_INDUCT)
     THEN ASM_REWRITE_TAC []]);
+
+
+(* ----------------------------------------------------------------------
+    inverting a relation
+   ---------------------------------------------------------------------- *)
+
+val inv_DEF = new_definition(
+  "inv_DEF",
+  ``inv (R:'a->'a->bool) x y = R y x``);
+
+val inv_inv = store_thm(
+  "inv_inv",
+  ``!R. inv (inv R) = R``,
+  SIMP_TAC bool_ss [FUN_EQ_THM, inv_DEF]);
+
+val inv_RC = store_thm(
+  "inv_RC",
+  ``!R. inv (RC R) = RC (inv R)``,
+  SIMP_TAC bool_ss [RC_DEF, inv_DEF, FUN_EQ_THM] THEN MESON_TAC []);
+
+val inv_SC = store_thm(
+  "inv_SC",
+  ``!R. (inv (SC R) = SC R) /\ (SC (inv R) = SC R)``,
+  SIMP_TAC bool_ss [inv_DEF, SC_DEF, FUN_EQ_THM] THEN MESON_TAC []);
+
+val inv_TC = store_thm(
+  "inv_TC",
+  ``!R. inv (TC R) = TC (inv R)``,
+  GEN_TAC THEN SIMP_TAC bool_ss [FUN_EQ_THM, inv_DEF, EQ_IMP_THM,
+                                 FORALL_AND_THM] THEN
+  CONJ_TAC THENL [
+    CONV_TAC SWAP_VARS_CONV,
+    ALL_TAC
+  ] THEN HO_MATCH_MP_TAC TC_INDUCT THEN
+  MESON_TAC [inv_DEF, TC_RULES]);
+
+val inv_EQC = store_thm(
+  "inv_EQC",
+  ``!R. (inv (EQC R) = EQC R) /\ (EQC (inv R) = EQC R)``,
+  SIMP_TAC bool_ss [EQC_DEF, inv_TC, inv_SC, inv_RC]);
+
+val inv_MOVES_OUT = store_thm(
+  "inv_MOVES_OUT",
+  ``!R. (inv (inv R) = R) /\ (SC (inv R) = SC R) /\
+        (RC (inv R) = inv (RC R)) /\ (TC (inv R) = inv (TC R)) /\
+        (RTC (inv R) = inv (RTC R)) /\ (EQC (inv R) = EQC R)``,
+  SIMP_TAC bool_ss [GSYM TC_RC_EQNS, EQC_DEF, inv_TC, inv_SC, inv_inv, inv_RC])
+
+val reflexive_inv = store_thm(
+  "reflexive_inv",
+  ``!R. reflexive (inv R) = reflexive R``,
+  SIMP_TAC bool_ss [inv_DEF, reflexive_def]);
+
+val symmetric_inv = store_thm(
+  "symmetric_inv",
+  ``!R. symmetric (inv R) = symmetric R``,
+  SIMP_TAC bool_ss [inv_DEF, symmetric_def] THEN MESON_TAC []);
+
+val transitive_inv = store_thm(
+  "transitive_inv",
+  ``!R. transitive (inv R) = transitive R``,
+  SIMP_TAC bool_ss [inv_DEF, transitive_def] THEN MESON_TAC []);
+
+val symmetric_inv_identity = store_thm(
+  "symmetric_inv_identity",
+  ``!R. symmetric R ==> (inv R = R)``,
+  SIMP_TAC bool_ss [inv_DEF, symmetric_def, FUN_EQ_THM]);
+
+val equivalence_inv_identity = store_thm(
+  "equivalence_inv_identity",
+  ``!R. equivalence R ==> (inv R = R)``,
+  SIMP_TAC bool_ss [equivalence_def, symmetric_inv_identity]);
 
 val _ = export_theory();
 
