@@ -157,9 +157,9 @@ val UNCURRY = Q.new_definition
 
 val UNCURRY_VAR = save_thm("UNCURRY_VAR", UNCURRY);  (* compatibility *)
 
-val ELIM_UNCURRY = store_thm(
+val ELIM_UNCURRY = Q.store_thm(
   "ELIM_UNCURRY",
-  ``!f:'a -> 'b -> 'c. UNCURRY f = \x. f (FST x) (SND x)``,
+  `!f:'a -> 'b -> 'c. UNCURRY f = \x. f (FST x) (SND x)`,
   GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
   REWRITE_TAC [UNCURRY] THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
   REFL_TAC);
@@ -306,50 +306,49 @@ val FORALL_PROD = Q.store_thm("FORALL_PROD",
  THEN ASM_REWRITE_TAC[]);
 
 
-val pair_induction = save_thm("pair_induction", #2 (EQ_IMP_RULE FORALL_PROD));
+val pair_induction = save_thm("pair_induction", #2(EQ_IMP_RULE FORALL_PROD));
 
+(* ------------------------------------------------------------------------- *)
+(* ELIM_PEXISTS = |- !P. (?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2           *)
+(* ------------------------------------------------------------------------- *)
+
+val ELIM_PEXISTS = Q.store_thm
+("ELIM_PEXISTS",
+ `(?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2`,
+ EQ_TAC THEN STRIP_TAC THENL
+ [MAP_EVERY Q.EXISTS_TAC [`FST p`, `SND p`] THEN ASM_REWRITE_TAC [],
+  Q.EXISTS_TAC `(p1,p2)` THEN ASM_REWRITE_TAC [FST,SND]]);
+
+(* ------------------------------------------------------------------------- *)
+(* ELIM_PFORALL = |- !P. (!p. P (FST p) (SND p)) = !p1 p2. P p1 p2           *)
+(* ------------------------------------------------------------------------- *)
+
+val ELIM_PFORALL = Q.store_thm
+("ELIM_PFORALL",
+ `(!p. P (FST p) (SND p)) = !p1 p2. P p1 p2`,
+ EQ_TAC THEN REPEAT STRIP_TAC THENL
+ [POP_ASSUM (MP_TAC o Q.SPEC `(p1,p2)`) THEN REWRITE_TAC [FST,SND],
+  ASM_REWRITE_TAC []]);
 
 (* ------------------------------------------------------------------------- *)
 (* PFORALL_THM = |- !P. (!x y. P x y) = (!(x,y). P x y)                      *)
 (* ------------------------------------------------------------------------- *)
 
-val PFORALL_THM = Q.prove
-(`!P:'a -> 'b -> bool. (!x y. P x y) = !(x,y). P x y`,
- GEN_TAC THEN EQ_TAC THENL
- [ DISCH_TAC THEN
-   REWRITE_TAC [FORALL_DEF] THEN BETA_TAC THEN ASM_REWRITE_TAC []
-   THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN BETA_TAC
-   THEN MP_TAC (SPEC(Term`p:'a#'b`) ABS_PAIR_THM) THEN STRIP_TAC
-   THEN ASM_REWRITE_TAC [UNCURRY_DEF],
-
-   DISCH_THEN (fn th => REPEAT GEN_TAC THEN
-     MP_TAC (SPEC (Term`(x,y): 'a#'b`)
-             (BETA_RULE (CONV_RULE FUN_EQ_CONV
-              (BETA_RULE (REWRITE_RULE [FORALL_DEF] th))))))
-   THEN REWRITE_TAC[UNCURRY_DEF] THEN BETA_TAC THEN STRIP_TAC]);
-
-val _ = save_thm("PFORALL_THM",PFORALL_THM);
+val PFORALL_THM = Q.store_thm
+("PFORALL_THM",
+ `!P:'a -> 'b -> bool. (!x y. P x y) = !(x,y). P x y`,
+ REWRITE_TAC [ELIM_UNCURRY] THEN BETA_TAC THEN 
+ MATCH_ACCEPT_TAC (GSYM ELIM_PFORALL));
 
 (* ------------------------------------------------------------------------- *)
 (* PEXISTS_THM = |- !P. (?x y. P x y) = (?(x,y). P x y)                      *)
 (* ------------------------------------------------------------------------- *)
 
-val PEXISTS_THM = Q.prove
-(`!P:'a -> 'b -> bool. (?x y. P x y) = ?(x,y). P x y`,
-GEN_TAC THEN EQ_TAC
-  THEN SUBST1_TAC
-        (SYM (ETA_CONV (Term`\p. UNCURRY (\x:'a y:'b. P x y:bool) p`))) THENL
-  [STRIP_TAC
-      THEN Q.EXISTS_TAC `(x,y)`
-      THEN REWRITE_TAC [UNCURRY_VAR, FST, SND] THEN BETA_TAC
-      THEN ASM_REWRITE_TAC [],
-   REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
-     THEN STRIP_TAC
-     THEN Q.EXISTS_TAC `FST p`
-     THEN Q.EXISTS_TAC `SND p`
-     THEN ASM_REWRITE_TAC[]]);
-
-val _ = save_thm("PEXISTS_THM",PEXISTS_THM);
+val PEXISTS_THM = Q.store_thm
+("PEXISTS_THM",
+ `!P:'a -> 'b -> bool. (?x y. P x y) = ?(x,y). P x y`,
+ REWRITE_TAC [ELIM_UNCURRY] THEN BETA_TAC THEN 
+ MATCH_ACCEPT_TAC (GSYM ELIM_PEXISTS));
 
 (*---------------------------------------------------------------------------
         Map for pairs
@@ -675,7 +674,6 @@ val _ = BasicProvers.export_rewrites
         ["PAIR", "FST", "SND", "CLOSED_PAIR_EQ", "CURRY_UNCURRY_THM",
          "UNCURRY_CURRY_THM", "CURRY_ONE_ONE_THM", "UNCURRY_ONE_ONE_THM",
          "UNCURRY", "CURRY_DEF", "PAIR_MAP_THM"]
-
 
 val _ = export_theory();
 

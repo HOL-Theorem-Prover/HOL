@@ -1,10 +1,10 @@
 structure pairTools :> pairTools =
 struct
 
-open HolKernel Parse boolLib pairSyntax;
+open HolKernel Parse boolLib pairSyntax pairTheory;
 
-infix |-> ## THEN;
-infixr -->
+
+infix |-> ## THEN THENC;  infixr -->;
 
 val PERR = mk_HOL_ERR "pairTools";
 
@@ -237,5 +237,53 @@ end;
 fun LET_EQ_TAC thml = 
   Ho_Rewrite.PURE_REWRITE_TAC thml
   THEN REPEAT (LET_INTRO_TAC THEN DISCH_TAC);
+
+(*---------------------------------------------------------------------------
+   Eliminate tupled quantification
+     
+       -----------------------------------  TUPLED_QUANT_CONV `<Q><vstr>. P`
+       |- <Q><vstr>. P = <Q> v1 ... vn. P 
+
+   where <Q> is one of {?,!} and <vstruct> is a varstruct made
+   from the variables v1,...,vn.
+
+   This is slightly imprecise: some of the rewrites done by CONV will 
+   be attempted everywhere in the term. To make them happen just in
+   the quantifier prefix is a little more work (but not much).
+ ---------------------------------------------------------------------------*)
+
+
+val is_uncurry_tm  = same_const pairSyntax.uncurry_tm
+val is_universal   = same_const boolSyntax.universal
+val is_existential = same_const boolSyntax.existential;
+
+
+local 
+  val CONV = Ho_Rewrite.REWRITE_CONV [ELIM_UNCURRY] THENC
+             DEPTH_CONV BETA_CONV THENC
+             Ho_Rewrite.REWRITE_CONV [ELIM_PEXISTS,ELIM_PFORALL]
+  fun dest_tupled_quant tm =
+    case total dest_comb tm
+     of NONE => NONE
+      | SOME(f,x) =>
+        if is_comb x andalso is_uncurry_tm (rator x)
+        then if is_existential f then SOME (strip_exists, list_mk_exists) else
+             if is_universal f   then SOME (strip_forall, list_mk_forall)
+             else NONE
+        else NONE
+in
+fun ELIM_TUPLED_QUANT_CONV tm =
+ case dest_tupled_quant tm
+  of NONE => raise Fail "TUPLED_QUANT_CONV"
+   | SOME (strip_quant, list_mk_quant) => 
+     let val V = strip_pair(fst(dest_pabs(rand tm)))
+         val thm = CONV tm
+         val rside = rhs (concl thm)
+         val (W,body) = strip_quant rside
+     in TRANS thm 
+          (ALPHA rside 
+              (list_mk_quant(V, subst(map2 (curry op|->) W V) body)))
+ end
+end ;
 
 end;
